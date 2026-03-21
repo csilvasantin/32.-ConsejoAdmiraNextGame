@@ -63,6 +63,7 @@ function renderMachines(data) {
     fragment.querySelector(".machine-role").textContent = machine.machineRole ?? "Sin clasificar";
     fragment.querySelector(".location").textContent = machine.location;
     fragment.querySelector(".platform").textContent = machine.platform;
+    fragment.querySelector(".color").textContent = machine.color ?? "—";
     fragment.querySelector(".last-seen").textContent = formatDate(machine.lastSeen);
     fragment.querySelector(".note").textContent = machine.note;
     fragment.querySelector(".current-focus").textContent = machine.currentFocus ?? "Sin foco operativo";

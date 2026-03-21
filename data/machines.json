@@ -1,6 +1,6 @@
 {
   "team": "AdmiraNext Team",
-  "updatedAt": "2026-03-21T14:45:00Z",
+  "updatedAt": "2026-03-21T18:10:00Z",
   "machines": [
     {
       "id": "admira-mac-01",
@@ -13,7 +13,13 @@
       "status": "online",
       "lastSeen": "2026-03-21T14:45:00Z",
       "currentFocus": "Bots, despliegues y sincronizacion del equipo",
-      "note": "Equipo principal de trabajo"
+      "note": "Equipo principal de trabajo",
+      "ssh": {
+        "enabled": true,
+        "user": "cesar",
+        "host": "admira-mac-01.local",
+        "connect": "ssh cesar@admira-mac-01.local"
+      }
     },
     {
       "id": "admira-mac-02",
@@ -26,7 +32,13 @@
       "status": "busy",
       "lastSeen": "2026-03-21T14:45:00Z",
       "currentFocus": "Instalando bots, paneles y acceso entre maquinas",
-      "note": "Preparando onboarding y bots"
+      "note": "Preparando onboarding y bots",
+      "ssh": {
+        "enabled": true,
+        "user": "carlos",
+        "host": "admira-mac-02.local",
+        "connect": "ssh carlos@admira-mac-02.local"
+      }
     },
     {
       "id": "admira-win-01",
@@ -39,7 +51,34 @@
       "status": "offline",
       "lastSeen": "2026-03-20T18:00:00Z",
       "currentFocus": "Pendiente de reactivar para pruebas cruzadas",
-      "note": "Pendiente de reactivar"
+      "note": "Pendiente de reactivar",
+      "ssh": {
+        "enabled": false,
+        "user": null,
+        "host": null,
+        "connect": null,
+        "note": "Pendiente activar OpenSSH Server en Windows"
+      }
+    },
+    {
+      "id": "admira-mac-carla",
+      "member": "Carla",
+      "role": "Desarrollo y operaciones",
+      "name": "MacBook Air de Carla",
+      "machineRole": "Equipo activo",
+      "location": "Madrid",
+      "platform": "macOS 26.3.1",
+      "status": "online",
+      "lastSeen": "2026-03-21T18:10:00Z",
+      "currentFocus": "Onboarding completado, SSH activo, gh CLI instalado",
+      "note": "SSH activado hoy. IP local: 192.168.0.107",
+      "ssh": {
+        "enabled": true,
+        "user": "csilvasantin",
+        "host": "MacBook-Air-de-Carla.local",
+        "ip": "192.168.0.107",
+        "connect": "ssh csilvasantin@192.168.0.107"
+      }
     }
   ]
 }

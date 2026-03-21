@@ -8,23 +8,22 @@
       "color": "plata",
       "member": "Cesar",
       "role": "Coordinacion y automatizacion",
-      "name": "Mac principal",
+      "name": "MacBook Air Luna (Cesar)",
       "machineRole": "Equipo principal",
       "location": "Madrid",
       "platform": "macOS",
       "status": "online",
-      "lastSeen": "2026-03-21T14:45:00Z",
-      "currentFocus": "Bots, despliegues y sincronizacion del equipo",
-      "note": "Equipo principal de trabajo",
+      "lastSeen": "2026-03-21T19:00:00Z",
+      "currentFocus": "Tailscale activo y conectado",
+      "note": "Tailscale: macbookairluna.tail48b61c.ts.net",
       "ssh": {
         "enabled": true,
         "user": "csilvasantin",
-        "host": "admira-mac-01.local",
+        "host": "macbookairluna.tail48b61c.ts.net",
         "ip_local": "192.168.0.120",
-        "ip_tailscale": null,
+        "ip_tailscale": "100.98.68.63",
         "connect_local": "ssh csilvasantin@192.168.0.120",
-        "connect_tailscale": null,
-        "note": "Pendiente conectar a Tailscale"
+        "connect_tailscale": "ssh csilvasantin@100.98.68.63"
       }
     },
     {

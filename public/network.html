@@ -4,7 +4,7 @@
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>AdmiraNext — Mapa de Red</title>
-    <link rel="stylesheet" href="./styles.css?v=20260321-4">
+    <link rel="stylesheet" href="./styles.css?v=20260323-1">
     <style>
       .map-wrap {
         margin-top: 18px;
@@ -19,26 +19,16 @@
         align-items: center;
         gap: 24px;
       }
-      svg { width: 100%; max-width: 900px; height: auto; }
+      svg { width: 100%; max-width: 960px; height: auto; }
       .label-main { font: 700 13px "Avenir Next","Segoe UI",sans-serif; fill: #173127; }
       .label-sub  { font: 400 10px "Avenir Next","Segoe UI",sans-serif; fill: #5f7469; }
       .label-ip   { font: 600 10px "SF Mono","Fira Mono",monospace; fill: #1a7f5a; }
       .label-ts   { font: 600 10px "SF Mono","Fira Mono",monospace; fill: #7c3aed; }
       .badge      { font: 700 8px "Avenir Next","Segoe UI",sans-serif; fill: white; letter-spacing:.06em; }
       .section-label { font: 700 11px "Avenir Next","Segoe UI",sans-serif; fill: #5f7469; letter-spacing:.12em; }
-      .tabs { display: flex; gap: 10px; }
-      .tab {
-        padding: 8px 20px;
-        border-radius: 999px;
-        border: 1px solid rgba(23,49,39,0.15);
-        background: white;
-        font: 600 13px "Avenir Next","Segoe UI",sans-serif;
-        color: #5f7469;
-        cursor: pointer;
-      }
-      .tab.active { background: #173127; color: white; border-color: #173127; }
-      .map-view { display: none; width: 100%; }
-      .map-view.active { display: flex; justify-content: center; }
+      .link-ok    { stroke: #1a7f5a; stroke-width: 2; }
+      .link-off   { stroke: #8b5b63; stroke-width: 1.5; stroke-dasharray: 4 6; }
+      .link-vpn   { stroke: #7c3aed; stroke-width: 2; stroke-dasharray: 6 3; }
     </style>
   </head>
   <body>
@@ -46,176 +36,103 @@
       <header class="hero">
         <p class="eyebrow">Infraestructura</p>
         <h1>Mapa de Red</h1>
-        <p class="subtitle">AdmiraNext · 5 equipos · tail48b61c.ts.net</p>
+        <p class="subtitle">AdmiraNext · 6 equipos · tail48b61c.ts.net · Actualizado 23/03/2026</p>
       </header>
 
       <div class="map-wrap">
-        <div class="tabs">
-          <button class="tab active" onclick="showMap('local',event)">Red Local</button>
-          <button class="tab" onclick="showMap('tailscale',event)">Tailscale VPN</button>
-        </div>
+        <!-- TAILSCALE VPN MAP -->
+        <svg viewBox="0 0 960 680" xmlns="http://www.w3.org/2000/svg">
+          <text class="section-label" x="480" y="22" text-anchor="middle">TAILSCALE VPN · tail48b61c.ts.net · SSH desde Mac Mini</text>
 
-        <!-- RED LOCAL -->
-        <div class="map-view active" id="map-local">
-          <svg viewBox="0 0 900 560" xmlns="http://www.w3.org/2000/svg">
-            <text class="section-label" x="450" y="22" text-anchor="middle">Red local · 192.168.0.0/24</text>
+          <!-- Hub central: Mac Mini -->
+          <ellipse cx="480" cy="310" rx="110" ry="65" fill="#e6f4ee" stroke="#1a7f5a" stroke-width="3"/>
+          <text x="480" y="295" text-anchor="middle" fill="#173127" font-weight="700" font-size="14">Mac Mini</text>
+          <text x="480" y="312" text-anchor="middle" fill="#1a7f5a" font-weight="600" font-size="11">HUB CENTRAL</text>
+          <text x="480" y="328" text-anchor="middle" fill="#5f7469" font-size="10">100.74.101.14</text>
+          <text x="480" y="342" text-anchor="middle" fill="#5f7469" font-size="9">Carlos · csilvasantin</text>
 
-            <!-- Links -->
-            <line stroke="#1a7f5a" stroke-width="2" x1="450" y1="210" x2="130" y2="110"/>
-            <line stroke="#1a7f5a" stroke-width="2" x1="450" y1="210" x2="350" y2="110"/>
-            <line stroke="#1a7f5a" stroke-width="2" x1="450" y1="210" x2="570" y2="110"/>
-            <line stroke="#1a7f5a" stroke-width="2" x1="450" y1="210" x2="450" y2="340"/>
-            <line stroke="#8b5b63" stroke-width="2" stroke-dasharray="5 5" x1="450" y1="210" x2="770" y2="110"/>
+          <!-- Links from Hub to nodes -->
+          <!-- Mac Mini -> macbookairnines (SSH OK) -->
+          <line class="link-ok" x1="410" y1="260" x2="160" y2="140"/>
+          <text x="270" y="188" text-anchor="middle" fill="#1a7f5a" font-size="8" font-weight="600">SSH OK</text>
 
-            <!-- ROUTER -->
-            <rect x="368" y="162" width="164" height="80" rx="14" fill="#173127" filter="drop-shadow(0 4px 12px rgba(23,49,39,0.2))"/>
-            <text class="label-main" x="450" y="190" text-anchor="middle" fill="white">Router</text>
-            <text class="label-ip"   x="450" y="207" text-anchor="middle" fill="#7ecdb0">192.168.0.1</text>
-            <text class="label-sub"  x="450" y="224" text-anchor="middle" fill="rgba(255,255,255,0.4)">Gateway</text>
+          <!-- Mac Mini -> macbookpronegro14 (SSH OK) -->
+          <line class="link-ok" x1="480" y1="245" x2="480" y2="140"/>
+          <text x="505" y="195" fill="#1a7f5a" font-size="8" font-weight="600">SSH OK</text>
 
-            <!-- CESAR -->
-            <rect x="30"  y="44" width="190" height="104" rx="12" fill="#f0f0f0" filter="drop-shadow(0 3px 8px rgba(0,0,0,0.08))"/>
-            <rect x="30"  y="44" width="190" height="24" rx="12" fill="#b0b8b4"/>
-            <rect x="30"  y="56" width="190" height="12" fill="#b0b8b4"/>
-            <text class="badge"      x="125" y="54" text-anchor="middle">● ONLINE</text>
-            <text class="label-main" x="125" y="84" text-anchor="middle">Cesar</text>
-            <text class="label-sub"  x="125" y="99" text-anchor="middle">MacBook Air Luna · plata</text>
-            <text class="label-ip"   x="125" y="114" text-anchor="middle">192.168.0.120</text>
-            <text class="label-sub"  x="125" y="130" text-anchor="middle">csilvasantin@192.168.0.120</text>
+          <!-- Mac Mini -> macbookair16 (SSH OK) -->
+          <line class="link-ok" x1="550" y1="260" x2="800" y2="140"/>
+          <text x="690" y="188" text-anchor="middle" fill="#1a7f5a" font-size="8" font-weight="600">SSH OK</text>
 
-            <!-- DG -->
-            <rect x="248" y="44" width="190" height="104" rx="12" fill="#f0f0f0" filter="drop-shadow(0 3px 8px rgba(0,0,0,0.08))"/>
-            <rect x="248" y="44" width="190" height="24" rx="12" fill="#b0b8b4"/>
-            <rect x="248" y="56" width="190" height="12" fill="#b0b8b4"/>
-            <text class="badge"      x="343" y="54" text-anchor="middle">● ONLINE</text>
-            <text class="label-main" x="343" y="84" text-anchor="middle">Director General</text>
-            <text class="label-sub"  x="343" y="99" text-anchor="middle">MacBook Air 16 · plata</text>
-            <text class="label-ip"   x="343" y="114" text-anchor="middle">IP local desconocida</text>
-            <text class="label-sub"  x="343" y="130" text-anchor="middle">Tailscale activo</text>
+          <!-- Mac Mini -> macbookairluna (offline) -->
+          <line class="link-off" x1="410" y1="360" x2="160" y2="520"/>
+          <text x="270" y="450" text-anchor="middle" fill="#8b5b63" font-size="8" font-weight="600">OFFLINE</text>
 
-            <!-- CARLOS -->
-            <rect x="462" y="44" width="190" height="104" rx="12" fill="#e8f0fb" filter="drop-shadow(0 3px 8px rgba(0,0,0,0.08))"/>
-            <rect x="462" y="44" width="190" height="24" rx="12" fill="#d0891f"/>
-            <rect x="462" y="56" width="190" height="12" fill="#d0891f"/>
-            <text class="badge"      x="557" y="54" text-anchor="middle">● ONLINE · SSH ✗</text>
-            <text class="label-main" x="557" y="84" text-anchor="middle">Carlos</text>
-            <text class="label-sub"  x="557" y="99" text-anchor="middle">Mac Mini · azul</text>
-            <text class="label-ip"   x="557" y="114" text-anchor="middle">192.168.0.118</text>
-            <text class="label-sub"  x="557" y="130" text-anchor="middle">Remote Login pendiente</text>
+          <!-- Mac Mini -> macbook-air-de-carla (idle) -->
+          <line class="link-vpn" x1="550" y1="360" x2="800" y2="520"/>
+          <text x="690" y="450" text-anchor="middle" fill="#7c3aed" font-size="8" font-weight="600">IDLE</text>
 
-            <!-- LABORATORIO -->
-            <rect x="676" y="44" width="190" height="104" rx="12" fill="#e8e8e8" filter="drop-shadow(0 3px 8px rgba(0,0,0,0.06))"/>
-            <rect x="676" y="44" width="190" height="24" rx="12" fill="#8b5b63"/>
-            <rect x="676" y="56" width="190" height="12" fill="#8b5b63"/>
-            <text class="badge"      x="771" y="54" text-anchor="middle">● OFFLINE</text>
-            <text class="label-main" x="771" y="84" text-anchor="middle">Laboratorio</text>
-            <text class="label-sub"  x="771" y="99" text-anchor="middle">PC auxiliar · negro · Windows</text>
-            <text class="label-sub"  x="771" y="114" text-anchor="middle">OpenSSH pendiente</text>
+          <!-- NODE: macbookairnines -->
+          <rect x="50" y="54" width="210" height="90" rx="14" fill="#f0faf5" filter="drop-shadow(0 3px 8px rgba(0,0,0,0.08))"/>
+          <rect x="50" y="54" width="210" height="26" rx="14" fill="#1a7f5a"/>
+          <rect x="50" y="68" width="210" height="12" fill="#1a7f5a"/>
+          <text class="badge" x="155" y="68" text-anchor="middle">SSH ✓ · ONLINE</text>
+          <text class="label-main" x="155" y="100" text-anchor="middle">Nines</text>
+          <text class="label-sub"  x="155" y="114" text-anchor="middle">MacBook Air Nines · plata</text>
+          <text class="label-ts"   x="155" y="128" text-anchor="middle">100.76.96.50</text>
 
-            <!-- CARLA -->
-            <rect x="355" y="340" width="190" height="104" rx="12" fill="#f5f5f5" filter="drop-shadow(0 3px 8px rgba(0,0,0,0.08))"/>
-            <rect x="355" y="340" width="190" height="24" rx="12" fill="#1a7f5a"/>
-            <rect x="355" y="352" width="190" height="12" fill="#1a7f5a"/>
-            <text class="badge"      x="450" y="360" text-anchor="middle">● ESTE EQUIPO</text>
-            <text class="label-main" x="450" y="389" text-anchor="middle">Carla</text>
-            <text class="label-sub"  x="450" y="404" text-anchor="middle">MacBook Air · gris</text>
-            <text class="label-ip"   x="450" y="419" text-anchor="middle">192.168.0.107</text>
-            <text class="label-sub"  x="450" y="435" text-anchor="middle">csilvasantin@192.168.0.107</text>
+          <!-- NODE: macbookpronegro14 -->
+          <rect x="375" y="54" width="210" height="90" rx="14" fill="#f0faf5" filter="drop-shadow(0 3px 8px rgba(0,0,0,0.08))"/>
+          <rect x="375" y="54" width="210" height="26" rx="14" fill="#1a7f5a"/>
+          <rect x="375" y="68" width="210" height="12" fill="#1a7f5a"/>
+          <text class="badge" x="480" y="68" text-anchor="middle">SSH ✓ · ONLINE</text>
+          <text class="label-main" x="480" y="100" text-anchor="middle">Carlos</text>
+          <text class="label-sub"  x="480" y="114" text-anchor="middle">MacBook Pro Negro 14</text>
+          <text class="label-ts"   x="480" y="128" text-anchor="middle">100.101.192.1</text>
 
-            <g transform="translate(30,530)">
-              <circle cx="8" cy="0" r="4" fill="#1a7f5a"/><text class="label-sub" x="16" y="4">online</text>
-              <circle cx="68" cy="0" r="4" fill="#8b5b63"/><text class="label-sub" x="76" y="4">offline</text>
-              <text class="label-sub" x="900" y="4" text-anchor="end">Solo funciona en la misma red WiFi</text>
-            </g>
-          </svg>
-        </div>
+          <!-- NODE: macbookair16 -->
+          <rect x="700" y="54" width="210" height="90" rx="14" fill="#f0faf5" filter="drop-shadow(0 3px 8px rgba(0,0,0,0.08))"/>
+          <rect x="700" y="54" width="210" height="26" rx="14" fill="#1a7f5a"/>
+          <rect x="700" y="68" width="210" height="12" fill="#1a7f5a"/>
+          <text class="badge" x="805" y="68" text-anchor="middle">SSH ✓ · ONLINE</text>
+          <text class="label-main" x="805" y="100" text-anchor="middle">Director General</text>
+          <text class="label-sub"  x="805" y="114" text-anchor="middle">MacBook Air 16 · plata</text>
+          <text class="label-ts"   x="805" y="128" text-anchor="middle">100.99.176.126</text>
 
-        <!-- TAILSCALE VPN -->
-        <div class="map-view" id="map-tailscale">
-          <svg viewBox="0 0 900 560" xmlns="http://www.w3.org/2000/svg">
-            <text class="section-label" x="450" y="22" text-anchor="middle">Tailscale VPN · tail48b61c.ts.net · Funciona desde cualquier red</text>
+          <!-- NODE: macbookairluna (offline) -->
+          <rect x="50" y="480" width="210" height="90" rx="14" fill="#f5f0f0" filter="drop-shadow(0 3px 8px rgba(0,0,0,0.06))"/>
+          <rect x="50" y="480" width="210" height="26" rx="14" fill="#8b5b63"/>
+          <rect x="50" y="494" width="210" height="12" fill="#8b5b63"/>
+          <text class="badge" x="155" y="494" text-anchor="middle">OFFLINE</text>
+          <text class="label-main" x="155" y="526" text-anchor="middle">Cesar</text>
+          <text class="label-sub"  x="155" y="540" text-anchor="middle">MacBook Air Luna · plata</text>
+          <text class="label-ts"   x="155" y="554" text-anchor="middle">100.98.68.63</text>
 
-            <!-- Nube central -->
-            <ellipse cx="450" cy="230" rx="95" ry="58" fill="#ede9fe" stroke="#7c3aed" stroke-width="2"/>
-            <text x="450" y="224" text-anchor="middle" fill="#7c3aed" font-weight="700" font-size="13">Tailscale</text>
-            <text x="450" y="240" text-anchor="middle" fill="#7c3aed" font-size="10">DERP · mad</text>
+          <!-- NODE: macbook-air-de-carla (idle) -->
+          <rect x="700" y="480" width="210" height="90" rx="14" fill="#f5f0ff" filter="drop-shadow(0 3px 8px rgba(0,0,0,0.06))"/>
+          <rect x="700" y="480" width="210" height="26" rx="14" fill="#7c3aed"/>
+          <rect x="700" y="494" width="210" height="12" fill="#7c3aed"/>
+          <text class="badge" x="805" y="494" text-anchor="middle">IDLE · TAILSCALE</text>
+          <text class="label-main" x="805" y="526" text-anchor="middle">Carla</text>
+          <text class="label-sub"  x="805" y="540" text-anchor="middle">MacBook Air de Carla · gris</text>
+          <text class="label-ts"   x="805" y="554" text-anchor="middle">100.110.80.2</text>
 
-            <!-- Links -->
-            <line stroke="#7c3aed" stroke-width="2" stroke-dasharray="6 3" x1="450" y1="172" x2="130" y2="110"/>
-            <line stroke="#7c3aed" stroke-width="2" stroke-dasharray="6 3" x1="450" y1="172" x2="345" y2="110"/>
-            <line stroke="#7c3aed" stroke-width="2" stroke-dasharray="6 3" x1="450" y1="172" x2="560" y2="110"/>
-            <line stroke="#7c3aed" stroke-width="2" stroke-dasharray="6 3" x1="450" y1="288" x2="450" y2="350"/>
-            <line stroke="#8b5b63" stroke-width="1.5" stroke-dasharray="4 6" x1="355" y1="230" x2="780" y2="110"/>
-
-            <!-- CESAR -->
-            <rect x="30"  y="44" width="196" height="112" rx="12" fill="#f0f0f0" filter="drop-shadow(0 3px 8px rgba(0,0,0,0.08))"/>
-            <rect x="30"  y="44" width="196" height="24" rx="12" fill="#b0b8b4"/>
-            <rect x="30"  y="56" width="196" height="12" fill="#b0b8b4"/>
-            <text class="badge"      x="128" y="54" text-anchor="middle">● ONLINE · TAILSCALE</text>
-            <text class="label-main" x="128" y="84" text-anchor="middle">Cesar</text>
-            <text class="label-sub"  x="128" y="99" text-anchor="middle">MacBook Air Luna · plata</text>
-            <text class="label-ts"   x="128" y="115" text-anchor="middle">100.98.68.63</text>
-            <text class="label-sub"  x="128" y="131" text-anchor="middle">macbookairluna.tail48b61c.ts.net</text>
-
-            <!-- DG -->
-            <rect x="248" y="44" width="196" height="112" rx="12" fill="#f0f0f0" filter="drop-shadow(0 3px 8px rgba(0,0,0,0.08))"/>
-            <rect x="248" y="44" width="196" height="24" rx="12" fill="#b0b8b4"/>
-            <rect x="248" y="56" width="196" height="12" fill="#b0b8b4"/>
-            <text class="badge"      x="346" y="54" text-anchor="middle">● TAILSCALE ✓ · SSH ✗</text>
-            <text class="label-main" x="346" y="84" text-anchor="middle">Director General</text>
-            <text class="label-sub"  x="346" y="99" text-anchor="middle">MacBook Air 16 · plata</text>
-            <text class="label-ts"   x="346" y="115" text-anchor="middle">100.99.176.126</text>
-            <text class="label-sub"  x="346" y="131" text-anchor="middle">Remote Login pendiente</text>
-
-            <!-- CARLOS -->
-            <rect x="462" y="44" width="196" height="112" rx="12" fill="#e8f0fb" filter="drop-shadow(0 3px 8px rgba(0,0,0,0.08))"/>
-            <rect x="462" y="44" width="196" height="24" rx="12" fill="#d0891f"/>
-            <rect x="462" y="56" width="196" height="12" fill="#d0891f"/>
-            <text class="badge"      x="560" y="54" text-anchor="middle">● TAILSCALE ✓ · SSH ✗</text>
-            <text class="label-main" x="560" y="84" text-anchor="middle">Carlos</text>
-            <text class="label-sub"  x="560" y="99" text-anchor="middle">Mac Mini · azul</text>
-            <text class="label-ts"   x="560" y="115" text-anchor="middle">100.74.101.14</text>
-            <text class="label-sub"  x="560" y="131" text-anchor="middle">Remote Login pendiente</text>
-
-            <!-- LABORATORIO -->
-            <rect x="682" y="44" width="188" height="90" rx="12" fill="#e8e8e8" filter="drop-shadow(0 3px 8px rgba(0,0,0,0.05))"/>
-            <rect x="682" y="44" width="188" height="24" rx="12" fill="#8b5b63"/>
-            <rect x="682" y="56" width="188" height="12" fill="#8b5b63"/>
-            <text class="badge"      x="776" y="54" text-anchor="middle">● OFFLINE</text>
-            <text class="label-main" x="776" y="84" text-anchor="middle">Laboratorio</text>
-            <text class="label-sub"  x="776" y="100" text-anchor="middle">PC auxiliar · negro · pendiente</text>
-
-            <!-- CARLA -->
-            <rect x="352" y="350" width="196" height="112" rx="12" fill="#f5f5f5" filter="drop-shadow(0 3px 8px rgba(0,0,0,0.08))"/>
-            <rect x="352" y="350" width="196" height="24" rx="12" fill="#1a7f5a"/>
-            <rect x="352" y="362" width="196" height="12" fill="#1a7f5a"/>
-            <text class="badge"      x="450" y="370" text-anchor="middle">● ESTE EQUIPO</text>
-            <text class="label-main" x="450" y="398" text-anchor="middle">Carla</text>
-            <text class="label-sub"  x="450" y="413" text-anchor="middle">MacBook Air · gris</text>
-            <text class="label-ts"   x="450" y="429" text-anchor="middle">100.110.80.2</text>
-            <text class="label-sub"  x="450" y="445" text-anchor="middle">macbook-air-de-carla.tail48b61c.ts.net</text>
-
-            <g transform="translate(30,530)">
-              <circle cx="8" cy="0" r="4" fill="#7c3aed"/><text class="label-sub" x="16" y="4">Tailscale</text>
-              <circle cx="80" cy="0" r="4" fill="#1a7f5a"/><text class="label-sub" x="88" y="4">online</text>
-              <circle cx="138" cy="0" r="4" fill="#8b5b63"/><text class="label-sub" x="146" y="4">offline</text>
-              <text class="label-sub" x="900" y="4" text-anchor="end">Funciona desde cualquier red</text>
-            </g>
-          </svg>
-        </div>
+          <!-- Legend -->
+          <g transform="translate(50,650)">
+            <line x1="0" y1="0" x2="20" y2="0" class="link-ok"/>
+            <text class="label-sub" x="26" y="4">SSH verificado</text>
+            <line x1="130" y1="0" x2="150" y2="0" class="link-vpn"/>
+            <text class="label-sub" x="156" y="4">Tailscale idle</text>
+            <line x1="260" y1="0" x2="280" y2="0" class="link-off"/>
+            <text class="label-sub" x="286" y="4">Offline</text>
+            <text class="label-sub" x="960" y="4" text-anchor="end">23 marzo 2026 · Verificado por Claude desde Mac Mini</text>
+          </g>
+        </svg>
       </div>
 
       <p style="text-align:center; color:#5f7469; margin-top:18px; font-size:13px;">
-        Actualizado 21/03/2026 · <a href="./index.html" style="color:#1a7f5a">Ver panel de equipo</a>
+        <a href="./index.html" style="color:#1a7f5a">Ver panel de equipo</a>
       </p>
     </main>
-    <script>
-      function showMap(type, e) {
-        document.querySelectorAll('.map-view').forEach(el => el.classList.remove('active'));
-        document.querySelectorAll('.tab').forEach(el => el.classList.remove('active'));
-        document.getElementById('map-' + type).classList.add('active');
-        e.target.classList.add('active');
-      }
-    </script>
   </body>
 </html>

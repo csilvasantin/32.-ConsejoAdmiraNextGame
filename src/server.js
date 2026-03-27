@@ -17,8 +17,14 @@ const MIME_TYPES = {
   ".json": "application/json; charset=utf-8"
 };
 
+const CORS_HEADERS = {
+  "Access-Control-Allow-Origin": "*",
+  "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+  "Access-Control-Allow-Headers": "Content-Type"
+};
+
 function sendJson(response, statusCode, payload) {
-  response.writeHead(statusCode, { "Content-Type": "application/json; charset=utf-8" });
+  response.writeHead(statusCode, { "Content-Type": "application/json; charset=utf-8", ...CORS_HEADERS });
   response.end(JSON.stringify(payload));
 }
 
@@ -49,6 +55,12 @@ function readRequestBody(request) {
 
 const server = createServer(async (request, response) => {
   const url = new URL(request.url || "/", `http://${request.headers.host}`);
+
+  if (request.method === "OPTIONS") {
+    response.writeHead(204, CORS_HEADERS);
+    response.end();
+    return;
+  }
 
   if (request.method === "GET" && url.pathname === "/api/machines") {
     const data = await readMachines();

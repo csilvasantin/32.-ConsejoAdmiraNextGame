@@ -7,6 +7,12 @@ const historyList = document.querySelector("#historyList");
 
 let machines = [];
 let isStaticMode = false;
+const FUNNEL_URL = "https://macmini.tail48b61c.ts.net";
+const isRemote = location.hostname !== "localhost" && location.hostname !== "127.0.0.1";
+
+function apiUrl(path) {
+  return isRemote ? `${FUNNEL_URL}${path}` : path;
+}
 
 function showFeedback(text, ok) {
   feedback.textContent = text;
@@ -60,16 +66,11 @@ function parseQuickInput(text) {
 }
 
 async function send(machineId, prompt) {
-  if (isStaticMode) {
-    showFeedback("Modo solo lectura — conecta al servidor local para enviar", false);
-    return;
-  }
-
   sendBtn.disabled = true;
   sendBtn.textContent = "Enviando...";
 
   try {
-    const res = await fetch("/api/teamwork/send", {
+    const res = await fetch(apiUrl("/api/teamwork/send"), {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ machineId, prompt })
@@ -128,7 +129,7 @@ function renderHistory(entries) {
 
 async function loadHistory() {
   try {
-    const res = await fetch("/api/teamwork/history", { cache: "no-store" });
+    const res = await fetch(apiUrl("/api/teamwork/history"), { cache: "no-store" });
     const data = await res.json();
     renderHistory(data.entries || []);
   } catch {
@@ -144,7 +145,7 @@ function populateSelect() {
 
 async function loadMachines() {
   try {
-    const res = await fetch("/api/machines", { cache: "no-store" });
+    const res = await fetch(apiUrl("/api/machines"), { cache: "no-store" });
     if (!res.ok) throw new Error("api unavailable");
     const data = await res.json();
     machines = data.machines.filter((m) => m.ssh?.enabled);

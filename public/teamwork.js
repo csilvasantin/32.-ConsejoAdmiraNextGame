@@ -6,7 +6,8 @@ const historyList = document.querySelector("#historyList");
 let machines = [];
 let isStaticMode = false;
 const FUNNEL_URL = "https://macmini.tail48b61c.ts.net";
-const isRemote = location.hostname !== "localhost" && location.hostname !== "127.0.0.1";
+const FUNNEL_HOST = "macmini.tail48b61c.ts.net";
+const isLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1" || location.hostname === FUNNEL_HOST;
 
 // Redirect GitHub Pages to Funnel
 if (location.hostname === "csilvasantin.github.io") {
@@ -14,7 +15,7 @@ if (location.hostname === "csilvasantin.github.io") {
 }
 
 function apiUrl(path) {
-  return isRemote ? `${FUNNEL_URL}${path}` : path;
+  return isLocal ? path : `${FUNNEL_URL}${path}`;
 }
 
 function showFeedback(text, ok) {

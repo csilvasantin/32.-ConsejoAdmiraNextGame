@@ -250,16 +250,73 @@
 
       .tw-machine-row {
         display: grid;
-        grid-template-columns: auto 1fr auto auto auto auto;
+        grid-template-columns: 1fr;
         gap: 8px;
-        align-items: center;
-        padding: 10px 0;
+        padding: 14px 0;
         border-bottom: 1px solid var(--line);
       }
       .tw-machine-row:last-child { border-bottom: none; }
 
+      .tw-machine-top {
+        display: grid;
+        grid-template-columns: auto 1fr auto auto auto auto;
+        gap: 8px;
+        align-items: center;
+      }
+
       .tw-machine-label {
         min-width: 140px;
+      }
+
+      .tw-machine-monitor {
+        aspect-ratio: 16/9;
+        width: 100%;
+        border-radius: 10px;
+        overflow: hidden;
+        background: #1a1a2e;
+        color: #a8e6cf;
+        font-family: "SF Mono", "Menlo", "Monaco", monospace;
+        font-size: 10px;
+        line-height: 1.3;
+        position: relative;
+        border: 2px solid #2a2a3e;
+      }
+      .tw-machine-monitor::after {
+        content: "";
+        position: absolute;
+        bottom: -8px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 40px;
+        height: 6px;
+        background: #2a2a3e;
+        border-radius: 0 0 4px 4px;
+      }
+      .tw-machine-monitor pre {
+        margin: 0;
+        padding: 8px 10px;
+        white-space: pre-wrap;
+        word-break: break-all;
+        overflow: hidden;
+        height: 100%;
+      }
+      .tw-machine-monitor-empty {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        height: 100%;
+        color: #5f7469;
+        font-size: 11px;
+      }
+      .tw-machine-monitor-time {
+        position: absolute;
+        bottom: 4px;
+        right: 8px;
+        font-size: 9px;
+        color: #5f7469;
+      }
+      .tw-machine-monitor-wrap {
+        margin-bottom: 4px;
       }
 
       .tw-machine-input {
@@ -428,9 +485,9 @@
     </main>
 
     <footer style="text-align:center;padding:24px 0 8px;color:var(--muted);font-size:12px;">
-      AdmiraNext Control v1.2.0 — 2026-03-27
+      AdmiraNext Control v1.3.0 — 2026-03-27
     </footer>
 
-    <script src="./teamwork.js?v=20260327-13" type="module"></script>
+    <script src="./teamwork.js?v=20260327-14" type="module"></script>
   </body>
 </html>

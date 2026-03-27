@@ -232,6 +232,56 @@
         min-height: 18px;
       }
 
+      .tw-machines-approve {
+        margin-top: 18px;
+        padding: 24px;
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        background: var(--panel);
+        backdrop-filter: blur(12px);
+        box-shadow: 0 16px 40px rgba(23, 49, 39, 0.06);
+      }
+
+      .tw-machines-approve h3 {
+        margin: 0 0 14px;
+        font-size: 16px;
+        color: var(--muted);
+      }
+
+      .tw-machine-row {
+        display: grid;
+        grid-template-columns: 1fr auto auto;
+        gap: 10px;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .tw-machine-row:last-child { border-bottom: none; }
+
+      .tw-machine-name {
+        font-weight: 600;
+        font-size: 14px;
+      }
+      .tw-machine-member {
+        font-size: 12px;
+        color: var(--muted);
+      }
+
+      .tw-approve-sm {
+        padding: 8px 16px;
+        border-radius: 10px;
+        border: none;
+        font: inherit;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: opacity 0.2s;
+      }
+      .tw-approve-sm:hover { opacity: 0.88; }
+      .tw-approve-sm:disabled { opacity: 0.5; cursor: default; }
+      .tw-approve-sm.claude { background: #d4a574; color: white; }
+      .tw-approve-sm.codex { background: #4a7c59; color: white; }
+
       .tw-empty { color: var(--muted); font-size: 14px; }
 
       @media (max-width: 640px) {
@@ -261,6 +311,11 @@
           <button class="tw-approve-btn tw-approve-codex" id="approveCodexBtn">Aprobar Codex</button>
           <div class="tw-approve-result" id="approveCodexResult"></div>
         </div>
+      </section>
+
+      <section class="tw-machines-approve">
+        <h3>Aprobar por equipo</h3>
+        <div id="machineApproveList"></div>
       </section>
 
       <section class="tw-panel">
@@ -300,6 +355,6 @@
       </section>
     </main>
 
-    <script src="./teamwork.js?v=20260327-7" type="module"></script>
+    <script src="./teamwork.js?v=20260327-8" type="module"></script>
   </body>
 </html>

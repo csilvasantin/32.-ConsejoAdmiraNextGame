@@ -187,6 +187,7 @@ async function loadMachines() {
     machines = data.machines.filter((m) => m.ssh?.enabled);
     isStaticMode = false;
     populateSelect();
+    renderMachineApproveList();
   } catch {
     try {
       const res = await fetch("./machines.json?v=20260327-1", { cache: "no-store" });
@@ -194,6 +195,7 @@ async function loadMachines() {
       machines = data.machines.filter((m) => m.ssh?.enabled);
       isStaticMode = true;
       populateSelect();
+      renderMachineApproveList();
       sendBtn.textContent = "Solo lectura";
       sendBtn.disabled = true;
     } catch {
@@ -216,6 +218,52 @@ sendBtn.addEventListener("click", () => {
     handleFormSend();
   }
 });
+
+// Per-machine approve
+const machineApproveList = document.querySelector("#machineApproveList");
+
+function renderMachineApproveList() {
+  const filtered = machines.filter((m) => m.id !== "admira-macmini");
+  if (!filtered.length) {
+    machineApproveList.innerHTML = '<p class="tw-empty">Sin equipos disponibles.</p>';
+    return;
+  }
+
+  machineApproveList.innerHTML = filtered.map((m) => `
+    <div class="tw-machine-row" data-id="${m.id}">
+      <div>
+        <span class="tw-machine-name">${m.name}</span><br>
+        <span class="tw-machine-member">${m.member}</span>
+      </div>
+      <button class="tw-approve-sm claude" data-machine="${m.id}" data-target="claude">Claude</button>
+      <button class="tw-approve-sm codex" data-machine="${m.id}" data-target="codex">Codex</button>
+    </div>
+  `).join("");
+
+  machineApproveList.querySelectorAll(".tw-approve-sm").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const machineId = btn.dataset.machine;
+      const target = btn.dataset.target;
+      const origText = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = "...";
+
+      try {
+        const res = await fetch(apiUrl("/api/teamwork/approve-machine"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ machineId, target })
+        });
+        const data = await res.json();
+        btn.textContent = data.ok ? "OK" : "Error";
+        setTimeout(() => { btn.textContent = origText; btn.disabled = false; }, 2000);
+      } catch {
+        btn.textContent = "Error";
+        setTimeout(() => { btn.textContent = origText; btn.disabled = false; }, 2000);
+      }
+    });
+  });
+}
 
 // Approve buttons
 const approveClaudeBtn = document.querySelector("#approveClaudeBtn");

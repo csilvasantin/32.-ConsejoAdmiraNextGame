@@ -253,6 +253,32 @@ export async function approveAll(target) {
   return results.map((r) => r.value || { ok: false, error: "rejected" });
 }
 
+export async function approveMachine(machineId, target) {
+  const data = await readMachines();
+  const machine = data.machines.find((m) => m.id === machineId);
+  if (!machine || !machine.ssh?.enabled) {
+    return { machine: machineId, ok: false, error: "No encontrada o SSH deshabilitado" };
+  }
+
+  const appName = TARGET_APPS[target] || TARGET_APPS.claude;
+
+  function attempt(useLocal) {
+    return new Promise((resolve) => {
+      const sshArgs = buildSshArgs(machine, useLocal);
+      sshArgs.push(`osascript -e 'tell application "${appName}" to activate' -e 'delay 0.3' -e 'tell application "System Events" to key code 36 using control down'`);
+      execFile("ssh", sshArgs, { timeout: TIMEOUT_MS }, (error) => {
+        resolve({ machine: machine.name, id: machine.id, ok: !error, error: error?.message });
+      });
+    });
+  }
+
+  let result = await attempt(false);
+  if (!result.ok && deriveLocalHostname(machine)) {
+    result = await attempt(true);
+  }
+  return result;
+}
+
 export function resolveMachineName(machines, input) {
   const q = input.toLowerCase().replace(/[\s-_]+/g, "");
   return machines.find((m) => {

@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
 
 import { readMachines, updateMachineStatus, updateMachineSync } from "./store.js";
-import { sendPromptToMachine, resolveMachineName, getCapture, approveAll } from "./ssh-exec.js";
+import { sendPromptToMachine, resolveMachineName, getCapture, approveAll, approveMachine } from "./ssh-exec.js";
 import { addEntry, getHistory } from "./teamwork-store.js";
 
 const PORT = 3030;
@@ -156,6 +156,19 @@ const server = createServer(async (request, response) => {
     const target = parsed.target || "claude";
     const results = await approveAll(target);
     sendJson(response, 200, { ok: true, results });
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/teamwork/approve-machine") {
+    const rawBody = await readRequestBody(request);
+    const parsed = rawBody ? JSON.parse(rawBody) : {};
+    const { machineId, target } = parsed;
+    if (!machineId) {
+      sendJson(response, 400, { error: "machineId obligatorio" });
+      return;
+    }
+    const result = await approveMachine(machineId, target || "claude");
+    sendJson(response, 200, result);
     return;
   }
 

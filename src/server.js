@@ -3,7 +3,7 @@ import { readFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
 
 import { readMachines, updateMachineStatus, updateMachineSync } from "./store.js";
-import { sendPromptToMachine, resolveMachineName } from "./ssh-exec.js";
+import { sendPromptToMachine, resolveMachineName, getTerminalCapture } from "./ssh-exec.js";
 import { addEntry, getHistory } from "./teamwork-store.js";
 
 const PORT = 3030;
@@ -144,13 +144,24 @@ const server = createServer(async (request, response) => {
     }
 
     const result = await sendPromptToMachine(machineId, prompt);
-    const entry = addEntry(machineId, result.name || machineId, prompt, result.ok, result.error);
+    const entry = addEntry(machineId, result.name || machineId, prompt, result.ok, result.error, result.captureId);
     sendJson(response, result.ok ? 200 : 502, { ...result, entry });
     return;
   }
 
   if (request.method === "GET" && url.pathname === "/api/teamwork/history") {
     sendJson(response, 200, { entries: getHistory() });
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname.startsWith("/api/teamwork/capture/")) {
+    const captureId = url.pathname.split("/").pop();
+    const text = getTerminalCapture(captureId);
+    if (text) {
+      sendJson(response, 200, { ok: true, text });
+    } else {
+      sendJson(response, 202, { ok: false, pending: true });
+    }
     return;
   }
 

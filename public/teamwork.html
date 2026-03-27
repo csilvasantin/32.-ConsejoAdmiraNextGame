@@ -90,11 +90,7 @@
       .tw-history h3 { font-size: 16px; color: var(--muted); margin: 0 0 12px; }
 
       .tw-entry {
-        display: grid;
-        grid-template-columns: auto 1fr auto;
-        gap: 10px;
-        align-items: center;
-        padding: 10px 0;
+        padding: 12px 0;
         border-bottom: 1px solid var(--line);
         font-size: 14px;
       }
@@ -120,6 +116,38 @@
       }
       .tw-entry-status.sent { background: var(--accent); }
       .tw-entry-status.error { background: var(--offline); }
+
+      .tw-entry-header {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .tw-terminal {
+        margin-top: 10px;
+        border-radius: 12px;
+        overflow: hidden;
+        background: #1a1a2e;
+        color: #a8e6cf;
+        font-family: "SF Mono", "Menlo", "Monaco", monospace;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+      .tw-terminal pre {
+        margin: 0;
+        padding: 14px 16px;
+        white-space: pre-wrap;
+        word-break: break-all;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+      .tw-terminal-loading {
+        display: block;
+        padding: 14px 16px;
+        color: #5f7469;
+        font-style: italic;
+      }
 
       .tw-empty { color: var(--muted); font-size: 14px; }
 
@@ -166,6 +194,6 @@
       </section>
     </main>
 
-    <script src="./teamwork.js?v=20260327-2" type="module"></script>
+    <script src="./teamwork.js?v=20260327-4" type="module"></script>
   </body>
 </html>

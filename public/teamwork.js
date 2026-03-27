@@ -118,13 +118,41 @@ function renderHistory(entries) {
     return;
   }
 
-  historyList.innerHTML = entries.map((e) => `
-    <div class="tw-entry">
-      <span class="tw-entry-machine">${e.machineName}<span class="tw-entry-status ${e.status}"></span></span>
-      <span class="tw-entry-prompt">${e.prompt}</span>
-      <span class="tw-entry-time">${formatTime(e.sentAt)}</span>
-    </div>
-  `).join("");
+  historyList.innerHTML = entries.map((e) => {
+    const captureHtml = e.captureId
+      ? `<div class="tw-terminal" id="capture-${e.captureId}"><span class="tw-terminal-loading">Capturando terminal...</span></div>`
+      : "";
+    return `
+      <div class="tw-entry">
+        <div class="tw-entry-header">
+          <span class="tw-entry-machine">${e.machineName}<span class="tw-entry-status ${e.status}"></span></span>
+          <span class="tw-entry-prompt">${e.prompt}</span>
+          <span class="tw-entry-time">${formatTime(e.sentAt)}</span>
+        </div>
+        ${captureHtml}
+      </div>`;
+  }).join("");
+
+  // Load terminal captures
+  for (const e of entries) {
+    if (e.captureId) loadCapture(e.captureId);
+  }
+}
+
+async function loadCapture(captureId) {
+  const el = document.querySelector(`#capture-${captureId}`);
+  if (!el || el.dataset.loaded === "true") return;
+
+  try {
+    const res = await fetch(apiUrl(`/api/teamwork/capture/${captureId}`), { cache: "no-store" });
+    const data = await res.json();
+    if (data.ok && data.text) {
+      el.innerHTML = `<pre>${data.text.replace(/</g, "&lt;")}</pre>`;
+      el.dataset.loaded = "true";
+    }
+  } catch {
+    // will retry on next poll
+  }
 }
 
 async function loadHistory() {

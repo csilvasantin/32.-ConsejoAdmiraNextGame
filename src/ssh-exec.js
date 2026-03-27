@@ -2,6 +2,7 @@ import { execFile } from "node:child_process";
 import { readMachines } from "./store.js";
 
 const TIMEOUT_MS = 15_000;
+const CAPTURE_DELAY_MS = 3000;
 
 function sanitizePrompt(text) {
   return text
@@ -40,6 +41,32 @@ function buildSshArgs(machine, useLocal) {
   return args;
 }
 
+function captureTerminalText(machine, useLocal) {
+  return new Promise((resolve) => {
+    setTimeout(() => {
+      const sshArgs = buildSshArgs(machine, useLocal);
+      sshArgs.push(`osascript -e 'tell application "Terminal" to get contents of front window'`);
+
+      execFile("ssh", sshArgs, { timeout: TIMEOUT_MS }, (error, stdout) => {
+        if (error) {
+          resolve(null);
+        } else {
+          const lines = stdout.trim().split("\n");
+          const last30 = lines.slice(-30).join("\n");
+          resolve(last30);
+        }
+      });
+    }, CAPTURE_DELAY_MS);
+  });
+}
+
+// In-memory store for terminal captures, keyed by entry id
+const terminalCaptures = new Map();
+
+export function getTerminalCapture(entryId) {
+  return terminalCaptures.get(entryId) || null;
+}
+
 export async function sendPromptToMachine(machineId, prompt) {
   const data = await readMachines();
   const machine = data.machines.find((m) => m.id === machineId);
@@ -76,9 +103,30 @@ export async function sendPromptToMachine(machineId, prompt) {
 
   // Try Tailscale first, fallback to .local
   let result = await tryExec(false);
+  let usedLocal = false;
   if (!result.ok && deriveLocalHostname(machine)) {
     result = await tryExec(true);
+    usedLocal = true;
   }
+
+  // Capture Terminal text after delay (async, doesn't block response)
+  if (result.ok) {
+    result.captureStatus = "capturing";
+    const captureId = `${machineId}-${Date.now()}`;
+    result.captureId = captureId;
+
+    captureTerminalText(machine, usedLocal).then((text) => {
+      if (text) {
+        terminalCaptures.set(captureId, text);
+        // Keep max 100 captures
+        if (terminalCaptures.size > 100) {
+          const oldest = terminalCaptures.keys().next().value;
+          terminalCaptures.delete(oldest);
+        }
+      }
+    });
+  }
+
   return result;
 }
 

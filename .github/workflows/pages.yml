@@ -32,6 +32,8 @@ jobs:
           cp public/styles.css _site/styles.css
           cp public/app.js _site/app.js
           cp public/network.html _site/network.html
+          cp public/teamwork.html _site/teamwork.html
+          cp public/teamwork.js _site/teamwork.js
           cp data/machines.json _site/machines.json
 
       - name: Setup Pages

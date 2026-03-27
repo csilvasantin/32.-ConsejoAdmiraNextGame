@@ -223,6 +223,36 @@ export async function sendPromptToMachine(machineId, prompt, target = "terminal"
   return result;
 }
 
+export async function approveAll(target) {
+  const data = await readMachines();
+  const appName = TARGET_APPS[target] || TARGET_APPS.claude;
+  const sshEnabled = data.machines.filter((m) => m.ssh?.enabled && m.id !== "admira-macmini");
+
+  const results = await Promise.allSettled(
+    sshEnabled.map((machine) => {
+      return new Promise((resolve) => {
+        // Try Tailscale first, then .local
+        function attempt(useLocal) {
+          const sshArgs = buildSshArgs(machine, useLocal);
+          // Ctrl+Enter = key code 36 with control modifier
+          sshArgs.push(`osascript -e 'tell application "${appName}" to activate' -e 'delay 0.3' -e 'tell application "System Events" to key code 36 using control down'`);
+
+          execFile("ssh", sshArgs, { timeout: TIMEOUT_MS }, (error) => {
+            if (error && !useLocal && deriveLocalHostname(machine)) {
+              attempt(true);
+            } else {
+              resolve({ machine: machine.name, id: machine.id, ok: !error, error: error?.message });
+            }
+          });
+        }
+        attempt(false);
+      });
+    })
+  );
+
+  return results.map((r) => r.value || { ok: false, error: "rejected" });
+}
+
 export function resolveMachineName(machines, input) {
   const q = input.toLowerCase().replace(/[\s-_]+/g, "");
   return machines.find((m) => {

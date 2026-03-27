@@ -217,6 +217,39 @@ sendBtn.addEventListener("click", () => {
   }
 });
 
+// Approve buttons
+const approveClaudeBtn = document.querySelector("#approveClaudeBtn");
+const approveCodexBtn = document.querySelector("#approveCodexBtn");
+const approveClaudeResult = document.querySelector("#approveClaudeResult");
+const approveCodexResult = document.querySelector("#approveCodexResult");
+
+async function approveAll(target, btn, resultEl) {
+  btn.disabled = true;
+  btn.textContent = "Aprobando...";
+  resultEl.textContent = "";
+
+  try {
+    const res = await fetch(apiUrl("/api/teamwork/approve"), {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ target })
+    });
+    const data = await res.json();
+    const ok = data.results.filter((r) => r.ok).length;
+    const fail = data.results.filter((r) => !r.ok).length;
+    const names = data.results.map((r) => `${r.machine}: ${r.ok ? "OK" : "error"}`).join(" | ");
+    resultEl.textContent = `${ok} aprobados, ${fail} errores — ${names}`;
+  } catch (err) {
+    resultEl.textContent = `Error: ${err.message}`;
+  }
+
+  btn.disabled = false;
+  btn.textContent = target === "claude" ? "Aprobar Claude" : "Aprobar Codex";
+}
+
+approveClaudeBtn.addEventListener("click", () => approveAll("claude", approveClaudeBtn, approveClaudeResult));
+approveCodexBtn.addEventListener("click", () => approveAll("codex", approveCodexBtn, approveCodexResult));
+
 loadMachines();
 loadHistory();
 setInterval(loadHistory, 10_000);

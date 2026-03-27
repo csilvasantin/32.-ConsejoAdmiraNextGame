@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <meta name="viewport" content="width=device-width, initial-scale=1">
-    <title>AdmiraNext TeamWork</title>
+    <title>AdmiraNext Control</title>
     <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
     <meta http-equiv="Pragma" content="no-cache" />
     <meta http-equiv="Expires" content="0" />
@@ -174,6 +174,64 @@
         font-style: italic;
       }
 
+      .tw-approve-section {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 14px;
+        margin-top: 18px;
+      }
+
+      .tw-approve-card {
+        padding: 20px;
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        background: var(--panel);
+        backdrop-filter: blur(12px);
+        box-shadow: 0 16px 40px rgba(23, 49, 39, 0.06);
+        text-align: center;
+      }
+
+      .tw-approve-card h3 {
+        margin: 0 0 6px;
+        font-size: 18px;
+      }
+
+      .tw-approve-card p {
+        margin: 0 0 14px;
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      .tw-approve-btn {
+        width: 100%;
+        padding: 14px 20px;
+        border-radius: 14px;
+        border: none;
+        font: inherit;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: opacity 0.2s;
+      }
+      .tw-approve-btn:hover { opacity: 0.88; }
+      .tw-approve-btn:disabled { opacity: 0.5; cursor: default; }
+
+      .tw-approve-claude {
+        background: linear-gradient(135deg, #d4a574, #c4956a);
+        color: white;
+      }
+      .tw-approve-codex {
+        background: linear-gradient(135deg, #4a7c59, #3a6349);
+        color: white;
+      }
+
+      .tw-approve-result {
+        margin-top: 10px;
+        font-size: 12px;
+        color: var(--muted);
+        min-height: 18px;
+      }
+
       .tw-empty { color: var(--muted); font-size: 14px; }
 
       @media (max-width: 640px) {
@@ -184,11 +242,26 @@
   <body>
     <main class="app">
       <header class="hero">
-        <p class="eyebrow">Comunicacion remota</p>
-        <h1>TeamWork</h1>
-        <p class="subtitle">Envía prompts a Claude en cualquier máquina del equipo.</p>
+        <p class="eyebrow">Control remoto</p>
+        <h1>AdmiraNext Control</h1>
+        <p class="subtitle">Envía prompts y aprueba acciones en Claude y Codex de todo el equipo.</p>
         <nav class="tw-nav"><a href="./index.html">Volver al dashboard</a></nav>
       </header>
+
+      <section class="tw-approve-section">
+        <div class="tw-approve-card">
+          <h3>Claude</h3>
+          <p>Aprobar en todos los equipos</p>
+          <button class="tw-approve-btn tw-approve-claude" id="approveClaudeBtn">Aprobar Claude</button>
+          <div class="tw-approve-result" id="approveClaudeResult"></div>
+        </div>
+        <div class="tw-approve-card">
+          <h3>Codex</h3>
+          <p>Aprobar en todos los equipos</p>
+          <button class="tw-approve-btn tw-approve-codex" id="approveCodexBtn">Aprobar Codex</button>
+          <div class="tw-approve-result" id="approveCodexResult"></div>
+        </div>
+      </section>
 
       <section class="tw-panel">
         <div class="tw-command">
@@ -227,6 +300,6 @@
       </section>
     </main>
 
-    <script src="./teamwork.js?v=20260327-6" type="module"></script>
+    <script src="./teamwork.js?v=20260327-7" type="module"></script>
   </body>
 </html>

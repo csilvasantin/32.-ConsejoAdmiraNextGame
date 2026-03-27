@@ -248,8 +248,8 @@ function renderMachineApproveList(snapshots) {
         <option value="terminal">Terminal</option>
       </select>
       <button class="tw-machine-send" data-machine-send="${m.id}">Enviar</button>
-      <button class="tw-approve-sm claude" data-machine="${m.id}" data-target="claude">Aprobar</button>
-      <button class="tw-approve-sm codex" data-machine="${m.id}" data-target="codex">Aprobar</button>
+      <button class="tw-approve-sm claude" data-machine="${m.id}" data-target="claude">Claude</button>
+      <button class="tw-approve-sm codex" data-machine="${m.id}" data-target="codex">Codex</button>
     </div>`;
   }).join("");
 

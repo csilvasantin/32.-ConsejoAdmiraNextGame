@@ -747,6 +747,58 @@ function hasClaudeToolApproval(buttonsStr) {
   return false;
 }
 
+// Detect approval prompts by reading terminal content on a remote/local machine
+async function detectTerminalApproval(machine) {
+  // Read the last 30 lines of every Terminal tab to find approval prompts
+  const script = `
+set result to ""
+tell application "Terminal"
+  repeat with w in every window
+    repeat with t in every tab of w
+      try
+        set c to contents of t
+        -- Get last 800 chars (where the prompt would be)
+        set cLen to length of c
+        if cLen > 800 then
+          set c to text (cLen - 800) thru cLen of c
+        end if
+        -- Check for Claude Code approval patterns
+        if c contains "Do you want to proceed?" or c contains "Allow" or c contains "allow this" or c contains "Tool Use" or c contains "wants to" or c contains "Approve" or c contains "approve" or c contains "Y/n" or c contains "y/N" or c contains "Accept" or c contains "permit" then
+          set result to result & "CLAUDE_TERM:PENDING|"
+        end if
+        -- Check for Codex approval patterns (numbered options)
+        if c contains "1)" and c contains "2)" and (c contains "approve" or c contains "Allow" or c contains "always" or c contains "deny" or c contains "Deny" or c contains "Skip" or c contains "skip") then
+          set result to result & "CODEX_TERM:PENDING|"
+        end if
+      end try
+    end repeat
+  end repeat
+end tell
+return result`;
+
+  if (isLocalMachine(machine)) {
+    const { error, stdout } = await execLocal(script, 10000);
+    return error ? "" : stdout?.trim() || "";
+  }
+
+  const lines = script.split("\n").map((l) => `-e '${l.trim()}'`).filter(l => l !== "-e ''").join(" ");
+  function attempt(useLocal) {
+    return new Promise((resolve_) => {
+      const sshArgs = buildSshArgs(machine, useLocal);
+      sshArgs.push(`osascript ${lines}`);
+      execFile("ssh", sshArgs, { timeout: 12_000 }, (error, stdout) => {
+        resolve_(error ? "" : stdout?.trim() || "");
+      });
+    });
+  }
+
+  if (deriveLocalHostname(machine) && !isLocalMachine(machine)) {
+    const r = await attempt(true);
+    if (r) return r;
+  }
+  return attempt(false);
+}
+
 async function watchdogCheck() {
   if (!watchdogState.enabled) return;
 
@@ -759,31 +811,48 @@ async function watchdogCheck() {
       const mState = watchdogState.perMachine[machine.id];
       if (!mState.enabled) return;
 
-      // Check app states (window titles)
+      // Check GUI app states (window titles)
       const raw = await captureAllAppsState(machine);
       const apps = parseAppsState(raw);
       mState.claudeState = apps.claude;
       mState.codexState = apps.codex;
 
-      // --- CLAUDE DETECTION ---
-      // Scan Claude's accessibility buttons for tool-approval indicators
+      let claudeApproved = false;
+      let codexApproved = false;
+
+      // --- CLAUDE DESKTOP DETECTION ---
       if (apps.claude && apps.claude !== "no-window") {
         const buttonsStr = await detectClaudeApprovalButtons(machine);
-        mState.claudeButtons = buttonsStr; // store for debugging
+        mState.claudeButtons = buttonsStr;
         if (hasClaudeToolApproval(buttonsStr)) {
           await autoApprove(machine, "claude", mState);
+          claudeApproved = true;
         }
       }
 
-      // --- CODEX DETECTION ---
-      // Only approve Codex when we detect actual approval-pending state
-      // Codex window title changes when waiting (e.g. contains "approve", "confirm")
+      // --- CODEX DESKTOP DETECTION ---
       if (apps.codex && apps.codex !== "no-window" && apps.codex !== "OFF") {
         const codexTitle = (apps.codex || "").toLowerCase();
         const codexNeedsApproval = ["approve", "aprobar", "confirm", "confirmar",
           "accept", "aceptar", "permission", "permiso", "waiting", "esperando",
           "y/n", "allow", "permitir"].some((kw) => codexTitle.includes(kw));
         if (codexNeedsApproval) {
+          await autoApprove(machine, "codex", mState);
+          codexApproved = true;
+        }
+      }
+
+      // --- TERMINAL DETECTION (Claude Code CLI / Codex CLI) ---
+      // Only check Terminal if we haven't already approved via Desktop apps
+      if (!claudeApproved || !codexApproved) {
+        const termResult = await detectTerminalApproval(machine);
+        mState.terminalState = termResult; // debug
+        if (!claudeApproved && termResult.includes("CLAUDE_TERM:PENDING")) {
+          // Claude Code in Terminal needs Ctrl+Enter
+          await autoApprove(machine, "terminal_claude", mState);
+        }
+        if (!codexApproved && termResult.includes("CODEX_TERM:PENDING")) {
+          // Codex in Terminal — send "2" only when we KNOW it's pending
           await autoApprove(machine, "codex", mState);
         }
       }
@@ -792,7 +861,9 @@ async function watchdogCheck() {
 }
 
 async function autoApprove(machine, target, mState) {
-  const appName = TARGET_APPS[target];
+  // terminal_claude uses Terminal app with Ctrl+Enter
+  const effectiveTarget = target === "terminal_claude" ? "terminal" : target;
+  const appName = TARGET_APPS[effectiveTarget] || TARGET_APPS.claude;
   let result;
   if (deriveLocalHostname(machine) && !isLocalMachine(machine)) {
     result = await sendKeystroke(machine, true, appName);
@@ -802,7 +873,7 @@ async function autoApprove(machine, target, mState) {
   }
 
   if (result.ok) {
-    if (target === "claude") mState.claudeCount++;
+    if (target === "claude" || target === "terminal_claude") mState.claudeCount++;
     else if (target === "codex") mState.codexCount++;
     mState.lastApproval = new Date().toISOString();
     mState.lastTarget = target;

@@ -419,6 +419,11 @@ function updateSnapshotsInPlace(snapshots) {
         (snap?.codexState ? `<span class="tw-app-tag codex" title="Codex: ${snap.codexState}">X</span>` : "");
     }
   }
+
+  // Re-sort rows: online first, offline last (moves DOM nodes, preserves event listeners)
+  const rows = [...machineApproveList.querySelectorAll(".tw-machine-row")];
+  rows.sort((a, b) => (snapshots?.[b.dataset.id] ? 1 : 0) - (snapshots?.[a.dataset.id] ? 1 : 0));
+  rows.forEach((row) => machineApproveList.appendChild(row));
 }
 
 async function loadSnapshots() {

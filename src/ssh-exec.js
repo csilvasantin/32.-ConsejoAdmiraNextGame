@@ -462,8 +462,8 @@ async function captureDesktopScreenshot(machine) {
   function attempt(useLocal) {
     return new Promise((resolve_) => {
       const sshArgs = buildSshArgs(machine, useLocal);
-      // Cmd+Shift+3 = native screenshot to Desktop, then convert and clean up
-      sshArgs.push(`osascript -e 'tell application "System Events" to key code 20 using {command down, shift down}' && sleep 2 && latest=$(find "$HOME/Desktop" -name "Captura de pantalla*" -o -name "Screenshot*" 2>/dev/null | sort -r | head -1) && [ -n "$latest" ] && sips -Z 960 -s format jpeg "$latest" --out /tmp/tw_screen.jpg >/dev/null 2>&1 && rm "$latest" && echo OK`);
+      // Cmd+Ctrl+Shift+3 = silent screenshot to clipboard, then save via osascript
+      sshArgs.push(`osascript -e 'tell application "System Events" to key code 20 using {command down, shift down, control down}' -e 'delay 1' -e 'set png to the clipboard as «class PNGf»' -e 'set f to open for access POSIX file "/tmp/tw_screen_raw.png" with write permission' -e 'write png to f' -e 'close access f' && sips -Z 960 -s format jpeg /tmp/tw_screen_raw.png --out /tmp/tw_screen.jpg >/dev/null 2>&1 && rm /tmp/tw_screen_raw.png && echo OK`);
 
       execFile("ssh", sshArgs, { timeout: 20_000 }, (err, stdout) => {
         if (err || !stdout?.includes("OK")) {
@@ -776,12 +776,14 @@ async function watchdogCheck() {
       }
 
       // --- CODEX DETECTION ---
-      // Codex: if running, send periodic approval (2+Enter is safe - ignored if nothing pending)
-      // Codex doesn't expose accessibility buttons, so we approve proactively
+      // Only approve Codex when we detect actual approval-pending state
+      // Codex window title changes when waiting (e.g. contains "approve", "confirm")
       if (apps.codex && apps.codex !== "no-window" && apps.codex !== "OFF") {
-        // Only auto-approve Codex every other cycle to avoid spam
-        mState._codexCycle = (mState._codexCycle || 0) + 1;
-        if (mState._codexCycle % 2 === 0) {
+        const codexTitle = (apps.codex || "").toLowerCase();
+        const codexNeedsApproval = ["approve", "aprobar", "confirm", "confirmar",
+          "accept", "aceptar", "permission", "permiso", "waiting", "esperando",
+          "y/n", "allow", "permitir"].some((kw) => codexTitle.includes(kw));
+        if (codexNeedsApproval) {
           await autoApprove(machine, "codex", mState);
         }
       }

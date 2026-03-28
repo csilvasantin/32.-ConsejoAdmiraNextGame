@@ -528,16 +528,56 @@
       .tw-machine-row { border-color: rgba(0,255,70,0.08) !important; }
       .tw-auto-badge { background: rgba(0,255,70,0.1) !important; color: #00ff46 !important; }
       .tw-watchdog-section { color: #5a9a6a; }
+
+      .hero-inner {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 24px;
+        align-items: center;
+      }
+      .hero-text { min-width: 0; }
+      .hero-pills {
+        flex-shrink: 0;
+        width: 260px;
+        border-radius: 16px;
+        overflow: hidden;
+        position: relative;
+      }
+      .hero-pills img {
+        width: 100%;
+        display: block;
+        border-radius: 16px;
+        filter: saturate(0.7) brightness(0.75) hue-rotate(80deg);
+        mix-blend-mode: lighten;
+      }
+      .hero-pills::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: 16px;
+        background: linear-gradient(135deg, rgba(0,255,70,0.08) 0%, rgba(0,0,0,0.4) 100%);
+        pointer-events: none;
+      }
+      @media (max-width: 600px) {
+        .hero-pills { display: none; }
+      }
     </style>
   </head>
   <body>
     <canvas id="matrixCanvas"></canvas>
     <main class="app">
       <header class="hero">
-        <p class="eyebrow">Control remoto — v1.9.8</p>
-        <h1>AdmiraNext Control</h1>
-        <p class="subtitle">Envía prompts y aprueba acciones en Claude y Codex de todos los equipos de Admira Next.</p>
-        <nav class="tw-nav"><a href="./index.html">Volver al dashboard</a></nav>
+        <div class="hero-inner">
+          <div class="hero-text">
+            <p class="eyebrow">Control remoto — v1.9.9</p>
+            <h1>AdmiraNext Control</h1>
+            <p class="subtitle">Envía prompts y aprueba acciones en Claude y Codex de todos los equipos de Admira Next.</p>
+            <nav class="tw-nav"><a href="./index.html">Volver al dashboard</a></nav>
+          </div>
+          <div class="hero-pills">
+            <img src="./matrix-pills.jpg" alt="Red pill or blue pill?" draggable="false">
+          </div>
+        </div>
       </header>
 
       <section class="tw-panel">
@@ -599,7 +639,7 @@
       AdmiraNext Control v1.9.8 — 2026-03-28
     </footer>
 
-    <script src="./teamwork.js?v=20260328-12" type="module"></script>
+    <script src="./teamwork.js?v=20260328-13" type="module"></script>
     <script>
       (function() {
         const c = document.getElementById("matrixCanvas");

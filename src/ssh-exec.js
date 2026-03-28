@@ -463,7 +463,7 @@ async function captureDesktopScreenshot(machine) {
     return new Promise((resolve_) => {
       const sshArgs = buildSshArgs(machine, useLocal);
       // Cmd+Shift+3 = native screenshot to Desktop, then convert and clean up
-      sshArgs.push(`osascript -e 'tell application "System Events" to key code 20 using {command down, shift down}' && sleep 2 && latest=$(ls -t "$HOME/Desktop/Captura de pantalla"*.png "$HOME/Desktop/Screenshot"*.png 2>/dev/null | head -1) && [ -n "$latest" ] && sips -Z 960 -s format jpeg "$latest" --out /tmp/tw_screen.jpg >/dev/null 2>&1 && rm "$latest" && echo OK`);
+      sshArgs.push(`osascript -e 'tell application "System Events" to key code 20 using {command down, shift down}' && sleep 2 && latest=$(find "$HOME/Desktop" -name "Captura de pantalla*" -o -name "Screenshot*" 2>/dev/null | sort -r | head -1) && [ -n "$latest" ] && sips -Z 960 -s format jpeg "$latest" --out /tmp/tw_screen.jpg >/dev/null 2>&1 && rm "$latest" && echo OK`);
 
       execFile("ssh", sshArgs, { timeout: 20_000 }, (err, stdout) => {
         if (err || !stdout?.includes("OK")) {

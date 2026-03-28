@@ -503,15 +503,31 @@
       }
       /* Matrix background */
       #matrixCanvas {
-        position: fixed; top: 0; left: 0; width: 100%; height: 100%;
-        z-index: -1; opacity: 0.6;
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        z-index: 0; pointer-events: none;
       }
-      body { background: #050a08 !important; }
+      body { background: #030806 !important; }
       .app { position: relative; z-index: 1; }
       .hero, .tw-panel, .tw-approve-section, .tw-machines-approve, .tw-history {
-        background: rgba(238,244,241,0.92) !important;
-        backdrop-filter: blur(8px);
+        background: rgba(10, 20, 15, 0.85) !important;
+        backdrop-filter: blur(6px);
+        color: #c0dcc8 !important;
+        border-color: rgba(0,255,70,0.15) !important;
       }
+      .hero h1, .tw-machine-name, h3 { color: #00ff46 !important; }
+      .hero .eyebrow, .hero .subtitle, .tw-machine-member, .tw-watchdog-label { color: #5a9a6a !important; }
+      .hero .tw-nav a { color: #00cc3a !important; }
+      .tw-approve-card { background: rgba(10,20,15,0.9) !important; border-color: rgba(0,255,70,0.12) !important; }
+      .tw-approve-card h3 { color: #e0e0e0 !important; }
+      .tw-approve-card p { color: #5a9a6a !important; }
+      .tw-machine-input, .tw-approve-sm {
+        background: rgba(0,20,10,0.8) !important; color: #00ff46 !important;
+        border-color: rgba(0,255,70,0.2) !important;
+      }
+      .tw-machine-input::placeholder { color: rgba(0,255,70,0.3) !important; }
+      .tw-machine-row { border-color: rgba(0,255,70,0.08) !important; }
+      .tw-auto-badge { background: rgba(0,255,70,0.1) !important; color: #00ff46 !important; }
+      .tw-watchdog-section { color: #5a9a6a; }
     </style>
   </head>
   <body>
@@ -598,7 +614,7 @@
         const drops = Array(columns).fill(1);
 
         function draw() {
-          ctx.fillStyle = "rgba(5, 10, 8, 0.04)";
+          ctx.fillStyle = "rgba(3, 8, 6, 0.05)";
           ctx.fillRect(0, 0, c.width, c.height);
           ctx.fillStyle = "#0f0";
           ctx.font = fontSize + "px monospace";

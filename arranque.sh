@@ -5,6 +5,11 @@
 
 set -e
 
+# ── TERMINAL: Homebrew como perfil por defecto ───────────────
+defaults write com.apple.Terminal "Default Window Settings" -string "Homebrew"
+defaults write com.apple.Terminal "Startup Window Settings" -string "Homebrew"
+echo "→ Terminal default -> Homebrew"
+
 # Obtener dimensiones del monitor principal via Finder
 BOUNDS=$(osascript -e 'tell application "Finder" to get bounds of window of desktop' 2>/dev/null || true)
 

@@ -410,6 +410,52 @@
         font-size: 12px;
       }
 
+      .bootstrap-panel {
+        padding: 22px;
+      }
+
+      .bootstrap-panel h2 {
+        margin: 0;
+        font-size: 22px;
+      }
+
+      .bootstrap-panel p {
+        margin: 8px 0 0;
+        color: var(--muted);
+      }
+
+      .bootstrap-pill-row {
+        display: flex;
+        gap: 10px;
+        flex-wrap: wrap;
+        margin-top: 14px;
+      }
+
+      .bootstrap-preview {
+        margin-top: 16px;
+        padding: 16px;
+        border-radius: 18px;
+        background: #182026;
+        color: #d5f7e9;
+        font-family: "SF Mono", "Menlo", "Monaco", monospace;
+        font-size: 12px;
+        line-height: 1.6;
+        overflow: auto;
+        max-height: 340px;
+      }
+
+      .bootstrap-actions {
+        display: flex;
+        gap: 12px;
+        flex-wrap: wrap;
+        margin-top: 16px;
+      }
+
+      .bootstrap-actions button {
+        width: auto;
+        min-width: 190px;
+      }
+
       .tip-list {
         display: grid;
         gap: 10px;
@@ -662,6 +708,7 @@
             <div class="intake-actions" style="margin-top:14px;">
               <button id="submitButton" class="button-accent" type="submit">Registrar alta</button>
               <button id="downloadButton" class="button-warm" type="button">Descargar ficha JSON</button>
+              <button id="downloadBootstrapButton" class="button-warm" type="button">Descargar bootstrap .command</button>
               <button id="copyButton" class="button-ghost" type="button">Copiar resumen</button>
               <button id="resetButton" class="button-ghost" type="button">Empezar de nuevo</button>
             </div>
@@ -777,6 +824,26 @@
             </div>
           </section>
 
+          <section class="bootstrap-panel intake-panel">
+            <h2>Arranque express</h2>
+            <p>Después de rellenar la ficha, este script deja el Mac listo lo más rápido posible. Automatiza instalaciones, clona `onboarding` y te lleva hasta el punto donde solo faltan logins y permisos de macOS.</p>
+
+            <div class="bootstrap-pill-row">
+              <span class="mini-pill ok">automatiza Homebrew</span>
+              <span class="mini-pill ok">instala `gh`, Python y Tailscale</span>
+              <span class="mini-pill warn">requiere login manual en GitHub y Tailscale</span>
+              <span class="mini-pill warn">requiere permisos de Accesibilidad y Grabacion</span>
+            </div>
+
+            <pre id="bootstrapPreview" class="bootstrap-preview">#!/bin/zsh
+# El script de arranque aparecera aqui en cuanto haya datos suficientes.</pre>
+
+            <div class="bootstrap-actions">
+              <button id="copyBootstrapButton" class="button-ghost" type="button">Copiar script</button>
+              <button id="downloadBootstrapAsideButton" class="button-ghost" type="button">Descargar script</button>
+            </div>
+          </section>
+
           <section class="intake-preview-card">
             <div class="preview-card-top">
               <div>
@@ -850,6 +917,6 @@
       <option value="Equipo de respaldo"></option>
     </datalist>
 
-    <script src="./new-member.js?v=20260330-2" type="module"></script>
+    <script src="./new-member.js?v=20260330-3" type="module"></script>
   </body>
 </html>

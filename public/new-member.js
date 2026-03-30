@@ -8,7 +8,10 @@ const form = document.querySelector("#intakeForm");
 const feedbackNode = document.querySelector("#feedback");
 const submitButton = document.querySelector("#submitButton");
 const downloadButton = document.querySelector("#downloadButton");
+const downloadBootstrapButton = document.querySelector("#downloadBootstrapButton");
+const downloadBootstrapAsideButton = document.querySelector("#downloadBootstrapAsideButton");
 const copyButton = document.querySelector("#copyButton");
+const copyBootstrapButton = document.querySelector("#copyBootstrapButton");
 const resetButton = document.querySelector("#resetButton");
 const modeBadge = document.querySelector("#modeBadge");
 const modeHint = document.querySelector("#modeHint");
@@ -16,6 +19,7 @@ const tailnetHint = document.querySelector("#tailnetHint");
 const previewMode = document.querySelector("#previewMode");
 const previewChecklist = document.querySelector("#previewChecklist");
 const jsonPreview = document.querySelector("#jsonPreview");
+const bootstrapPreview = document.querySelector("#bootstrapPreview");
 
 const previewNodes = {
   name: document.querySelector("#previewName"),
@@ -315,6 +319,7 @@ function renderPreview() {
   previewNodes.focus.textContent = draft.currentFocus || DEFAULT_FOCUS;
   previewChecklist.textContent = derived.checklistSummary;
   jsonPreview.textContent = JSON.stringify(derived.machineRecord, null, 2);
+  bootstrapPreview.textContent = buildBootstrapScript(draft, derived);
   tailnetHint.textContent = context.tailnet
     ? `Si lo indicas, se convertira en ${cleanString(draft.hostAlias) ? `${normalizeToken(draft.hostAlias)}.${context.tailnet}` : `<alias>.${context.tailnet}`}.`
     : "Si lo indicas, se convertira en tu host completo.";
@@ -358,6 +363,183 @@ function downloadJson(filename, content) {
   URL.revokeObjectURL(url);
 }
 
+function downloadTextFile(filename, content, mimeType = "text/plain;charset=utf-8") {
+  const blob = new Blob([content], { type: mimeType });
+  const url = URL.createObjectURL(blob);
+  const anchor = document.createElement("a");
+  anchor.href = url;
+  anchor.download = filename;
+  anchor.click();
+  URL.revokeObjectURL(url);
+}
+
+function shellEscape(value) {
+  return String(value || "").replace(/'/g, `'\\''`);
+}
+
+function buildBootstrapScript(draft, derived) {
+  const promptText = "Haz onboarding leyendo este repositorio primero. Después instala y activa los bots de Admira Next ejecutando setup_admira_next_bots_mac.sh.";
+  const member = draft.member || "Nuevo miembro";
+  const role = draft.role || "Sin rol";
+  const teamArea = draft.teamArea || "Admira Next";
+  const machineName = draft.machineName || "Mac creativo";
+  const hostAlias = normalizeToken(draft.hostAlias) || "pendiente-host";
+  const focus = draft.currentFocus || DEFAULT_FOCUS;
+  const note = draft.note || derived.machineRecord.note;
+
+  return `#!/bin/zsh
+set -euo pipefail
+
+MEMBER_NAME='${shellEscape(member)}'
+ROLE_NAME='${shellEscape(role)}'
+TEAM_AREA='${shellEscape(teamArea)}'
+MACHINE_NAME='${shellEscape(machineName)}'
+HOST_ALIAS='${shellEscape(hostAlias)}'
+CURRENT_FOCUS='${shellEscape(focus)}'
+INTAKE_NOTE='${shellEscape(note)}'
+BASE_DIR="\${HOME}/Documents/Codex"
+ONBOARDING_DIR="\${BASE_DIR}/onboarding"
+
+step() {
+  printf "\\n==> %s\\n" "$1"
+}
+
+pause_for_user() {
+  printf "\\nPulsa Enter cuando este paso este completo..."
+  read -r _
+}
+
+ensure_xcode_tools() {
+  if xcode-select -p >/dev/null 2>&1; then
+    return
+  fi
+
+  step "Instalando Command Line Tools de Apple"
+  xcode-select --install || true
+  echo "macOS abrira el instalador. Cuando termine, vuelve a ejecutar este script."
+  exit 1
+}
+
+ensure_homebrew() {
+  if command -v brew >/dev/null 2>&1; then
+    return
+  fi
+
+  step "Instalando Homebrew"
+  /bin/bash -c "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/HEAD/install.sh)"
+
+  if [ -x /opt/homebrew/bin/brew ]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+  elif [ -x /usr/local/bin/brew ]; then
+    eval "$(/usr/local/bin/brew shellenv)"
+  fi
+}
+
+ensure_brew_shellenv() {
+  if [ -x /opt/homebrew/bin/brew ]; then
+    eval "$(/opt/homebrew/bin/brew shellenv)"
+  elif [ -x /usr/local/bin/brew ]; then
+    eval "$(/usr/local/bin/brew shellenv)"
+  fi
+}
+
+ensure_formula() {
+  local formula="$1"
+  if brew list "$formula" >/dev/null 2>&1; then
+    return
+  fi
+
+  step "Instalando $formula"
+  brew install "$formula"
+}
+
+ensure_cask() {
+  local cask="$1"
+  if brew list --cask "$cask" >/dev/null 2>&1; then
+    return
+  fi
+
+  step "Instalando $cask"
+  brew install --cask "$cask"
+}
+
+ensure_repo() {
+  local repo_name="$1"
+  local repo_path="\${BASE_DIR}/\${repo_name}"
+  local repo_url="https://github.com/csilvasantin/\${repo_name}.git"
+
+  if [ -d "\${repo_path}/.git" ]; then
+    git -C "\${repo_path}" pull --ff-only || true
+  else
+    git clone "\${repo_url}" "\${repo_path}"
+  fi
+}
+
+step "Preparando el alta de \${MEMBER_NAME}"
+echo "Rol: \${ROLE_NAME}"
+echo "Equipo: \${TEAM_AREA}"
+echo "Mac: \${MACHINE_NAME}"
+echo "Host sugerido: \${HOST_ALIAS}"
+echo "Foco inicial: \${CURRENT_FOCUS}"
+echo "Nota: \${INTAKE_NOTE}"
+
+ensure_xcode_tools
+ensure_homebrew
+ensure_brew_shellenv
+ensure_formula gh
+ensure_formula python
+ensure_cask tailscale
+
+step "Abriendo Tailscale"
+open -a Tailscale || true
+echo "Entra en Tailscale y conecta este Mac a la tailnet de Admira Next."
+pause_for_user
+
+step "Activando acceso remoto"
+echo "Ve a Ajustes del Sistema > General > Compartir > Inicio de sesion remoto."
+echo "Activa SSH antes de continuar."
+pause_for_user
+
+step "Autenticando GitHub CLI"
+if ! gh auth status >/dev/null 2>&1; then
+  gh auth login --hostname github.com --git-protocol https --web
+fi
+
+step "Clonando onboarding"
+mkdir -p "\${BASE_DIR}"
+ensure_repo onboarding
+
+step "Contexto para la IA"
+echo "Abre onboarding y pega este prompt:"
+echo
+printf '%s\\n' '${shellEscape(promptText)}'
+echo
+echo "Ruta local: \${ONBOARDING_DIR}"
+
+step "Instalando ClaudeBot y CodexBot"
+chmod +x "\${ONBOARDING_DIR}/setup_admira_next_bots_mac.sh"
+(cd "\${ONBOARDING_DIR}" && ./setup_admira_next_bots_mac.sh)
+
+step "Permisos de macOS"
+echo "1. Ajustes del Sistema > Privacidad y seguridad > Accesibilidad"
+echo "   Añade Terminal o iTerm y actívalo."
+echo "2. Ajustes del Sistema > Privacidad y seguridad > Grabacion de pantalla"
+echo "   Añade Terminal o iTerm y actívalo."
+echo "3. Si macOS pide permisos extra de automatizacion al primer uso, aceptalos."
+pause_for_user
+
+step "Checklist final"
+echo "- Tailscale conectado"
+echo "- SSH habilitado"
+echo "- gh auth status correcto"
+echo "- onboarding clonado"
+echo "- ClaudeBot activo"
+echo "- CodexBot activo"
+echo
+echo "Alta express completada. Si falta algo, vuelve a la ficha web y actualiza el checklist."
+`;
+}
+
 async function copySummaryToClipboard() {
   const draft = readDraftFromForm();
   const derived = buildDerivedRecord(draft);
@@ -378,6 +560,32 @@ async function copySummaryToClipboard() {
 
   await navigator.clipboard.writeText(summary);
   showFeedback("Resumen copiado. Ya puedes pegarlo en chat o compartirlo con el equipo.", "ok");
+}
+
+function downloadBootstrapScript() {
+  const draft = readDraftFromForm();
+  const missing = validateDraft(draft);
+  if (missing.length) {
+    showFeedback(`Antes de generar el script, completa: ${missing.join(", ")}.`, "err");
+    return;
+  }
+
+  const derived = buildDerivedRecord(draft);
+  downloadTextFile(`alta-${derived.machineRecord.id}.command`, buildBootstrapScript(draft, derived), "text/x-shellscript;charset=utf-8");
+  showFeedback("Script de arranque descargado. El nuevo miembro ya puede ejecutarlo para automatizar el setup inicial.", "ok");
+}
+
+async function copyBootstrapToClipboard() {
+  const draft = readDraftFromForm();
+  const missing = validateDraft(draft);
+  if (missing.length) {
+    showFeedback(`Antes de copiar el script, completa: ${missing.join(", ")}.`, "err");
+    return;
+  }
+
+  const derived = buildDerivedRecord(draft);
+  await navigator.clipboard.writeText(buildBootstrapScript(draft, derived));
+  showFeedback("Script de arranque copiado al portapapeles.", "ok");
 }
 
 async function loadContext() {
@@ -484,11 +692,22 @@ downloadButton.addEventListener("click", () => {
   showFeedback("Ficha descargada en JSON.", "ok");
 });
 
+downloadBootstrapButton.addEventListener("click", downloadBootstrapScript);
+downloadBootstrapAsideButton.addEventListener("click", downloadBootstrapScript);
+
 copyButton.addEventListener("click", async () => {
   try {
     await copySummaryToClipboard();
   } catch {
     showFeedback("No pude copiar el resumen al portapapeles.", "err");
+  }
+});
+
+copyBootstrapButton.addEventListener("click", async () => {
+  try {
+    await copyBootstrapToClipboard();
+  } catch {
+    showFeedback("No pude copiar el script de arranque.", "err");
   }
 });
 

@@ -769,13 +769,21 @@
               <div class="setup-step">
                 <div class="setup-step-num">4</div>
                 <div>
+                  <strong>Instalar Google Chrome y ponerlo por defecto</strong>
+                  <span>Usaremos Chrome como navegador operativo del equipo para logins, GitHub y flujos compartidos desde el primer minuto.</span>
+                </div>
+              </div>
+
+              <div class="setup-step">
+                <div class="setup-step-num">5</div>
+                <div>
                   <strong>Instalar GitHub CLI</strong>
                   <span>Necesitamos <code>gh</code> disponible para clonar repos y autenticar el entorno de trabajo.</span>
                 </div>
               </div>
 
               <div class="setup-step">
-                <div class="setup-step-num">5</div>
+                <div class="setup-step-num">6</div>
                 <div>
                   <strong>Hacer login en GitHub</strong>
                   <span>Ejecuta <code>gh auth login --hostname github.com --git-protocol https --web</code> y deja la sesion valida.</span>
@@ -783,7 +791,7 @@
               </div>
 
               <div class="setup-step">
-                <div class="setup-step-num">6</div>
+                <div class="setup-step-num">7</div>
                 <div>
                   <strong>Clonar el repositorio onboarding</strong>
                   <span>El primer repo que se abre en una maquina nueva es <code>csilvasantin/onboarding</code>, nunca el proyecto final directamente.</span>
@@ -791,7 +799,7 @@
               </div>
 
               <div class="setup-step">
-                <div class="setup-step-num">7</div>
+                <div class="setup-step-num">8</div>
                 <div>
                   <strong>Pedir a la IA “haz onboarding”</strong>
                   <span>Con eso la IA ya carga el contexto de Admira Next antes de tocar otros repos o automatizaciones.</span>
@@ -799,7 +807,7 @@
               </div>
 
               <div class="setup-step">
-                <div class="setup-step-num">8</div>
+                <div class="setup-step-num">9</div>
                 <div>
                   <strong>Instalar Python y ejecutar el setup de bots</strong>
                   <span>En Mac nuevo, necesitamos Python 3.11+ y luego ejecutar <code>./setup_admira_next_bots_mac.sh</code> desde onboarding.</span>
@@ -807,18 +815,10 @@
               </div>
 
               <div class="setup-step">
-                <div class="setup-step-num">9</div>
-                <div>
-                  <strong>Dar permiso de Accesibilidad</strong>
-                  <span>Ve a <code>Ajustes del Sistema &gt; Privacidad y seguridad &gt; Accesibilidad</code> y añade Terminal o iTerm. Sin esto, ClaudeBot y CodexBot no pueden actuar.</span>
-                </div>
-              </div>
-
-              <div class="setup-step">
                 <div class="setup-step-num">10</div>
                 <div>
-                  <strong>Dar permiso de Grabacion de pantalla y validar</strong>
-                  <span>Ve a <code>Ajustes del Sistema &gt; Privacidad y seguridad &gt; Grabacion de pantalla</code> y añade Terminal o iTerm. Despues, comprueba Tailscale, SSH, GitHub, ClaudeBot y CodexBot. Si macOS pide permisos extra de automatizacion al primer uso, aceptalos.</span>
+                  <strong>Dar permisos y validar</strong>
+                  <span>Ve a <code>Ajustes del Sistema &gt; Privacidad y seguridad &gt; Accesibilidad</code> y <code>Grabacion de pantalla</code>, añade Terminal o iTerm y acepta cualquier permiso extra de automatizacion. Despues, comprueba Chrome por defecto, Tailscale, SSH, GitHub, ClaudeBot y CodexBot.</span>
                 </div>
               </div>
             </div>
@@ -830,7 +830,8 @@
 
             <div class="bootstrap-pill-row">
               <span class="mini-pill ok">automatiza Homebrew</span>
-              <span class="mini-pill ok">instala `gh`, Python y Tailscale</span>
+              <span class="mini-pill ok">instala Chrome, `gh`, Python y Tailscale</span>
+              <span class="mini-pill ok">pone Chrome por defecto</span>
               <span class="mini-pill warn">requiere login manual en GitHub y Tailscale</span>
               <span class="mini-pill warn">requiere permisos de Accesibilidad y Grabacion</span>
             </div>
@@ -917,6 +918,6 @@
       <option value="Equipo de respaldo"></option>
     </datalist>
 
-    <script src="./new-member.js?v=20260330-3" type="module"></script>
+    <script src="./new-member.js?v=20260330-4" type="module"></script>
   </body>
 </html>

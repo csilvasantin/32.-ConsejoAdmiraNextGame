@@ -486,9 +486,15 @@ echo "Nota: \${INTAKE_NOTE}"
 ensure_xcode_tools
 ensure_homebrew
 ensure_brew_shellenv
+ensure_formula defaultbrowser
 ensure_formula gh
 ensure_formula python
+ensure_cask google-chrome
 ensure_cask tailscale
+
+step "Configurando Google Chrome"
+defaultbrowser chrome || true
+open -a "Google Chrome" || true
 
 step "Abriendo Tailscale"
 open -a Tailscale || true
@@ -529,6 +535,7 @@ echo "3. Si macOS pide permisos extra de automatizacion al primer uso, aceptalos
 pause_for_user
 
 step "Checklist final"
+echo "- Google Chrome instalado y por defecto"
 echo "- Tailscale conectado"
 echo "- SSH habilitado"
 echo "- gh auth status correcto"

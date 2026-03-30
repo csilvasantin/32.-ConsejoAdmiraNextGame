@@ -25,5 +25,6 @@ AdmiraNext Team
 - La misma URL genera ahora un script `.command` de arranque express para automatizar Homebrew, `gh`, Python, Tailscale, clon de `onboarding` y lanzamiento del setup de bots con las pausas manuales justas.
 - El arranque express instala tambien Google Chrome y lo fija como navegador por defecto para unificar el flujo operativo desde el primer uso.
 - Claude y Codex pasan a ser obligatorios en el alta: aparecen como checklist propio y el arranque express abre sus paginas oficiales y bloquea la continuidad hasta que ambas apps esten instaladas y abiertas.
+- El flujo ya contempla modo delegado: si el nuevo Mac activa `Inicio de sesion remoto` y comparte `usuario + IP`, la IA puede asumir la mayor parte del alta por SSH y limitar la intervencion humana a logins y permisos de macOS.
 - Se han añadido rutas cortas de acceso (`/alta`, `/creativa`, `/alta-creativa`) para evitar errores al teclear la URL manualmente desde equipos nuevos.
 - Se ha dado de alta una entrada provisional para `MacBook Air creativo`, en estado `maintenance`, con checklist vacia y foco en primer arranque para poder seguir el onboarding desde el panel.

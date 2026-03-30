@@ -23,3 +23,4 @@ AdmiraNext Team
 - Se ha añadido una URL guiada especifica para el lado creativo del consejo cuando el nuevo MacBook Air llega completamente limpio, sin Tailscale, GitHub ni bots instalados.
 - La URL guiada incluye ya un bloque de 10 pasos con foco en permisos de macOS, Tailscale, GitHub CLI, onboarding y validacion final.
 - La misma URL genera ahora un script `.command` de arranque express para automatizar Homebrew, `gh`, Python, Tailscale, clon de `onboarding` y lanzamiento del setup de bots con las pausas manuales justas.
+- Se ha dado de alta una entrada provisional para `MacBook Air creativo`, en estado `maintenance`, con checklist vacia y foco en primer arranque para poder seguir el onboarding desde el panel.

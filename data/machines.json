@@ -1,6 +1,6 @@
 {
   "team": "AdmiraNext Team",
-  "updatedAt": "2026-03-27T18:25:12.622Z",
+  "updatedAt": "2026-03-30T10:25:00.000Z",
   "tailnet": "tail48b61c.ts.net",
   "machines": [
     {
@@ -127,6 +127,41 @@
         "host": "macbook-air-de-carla.tail48b61c.ts.net",
         "ip_tailscale": "100.110.80.2",
         "connect_tailscale": "ssh csilvasantin@100.110.80.2"
+      }
+    },
+    {
+      "id": "admira-macbookair-creativo",
+      "color": "plata",
+      "member": "Nuevo miembro creativo",
+      "role": "Creatividad y experiencia",
+      "name": "MacBook Air creativo",
+      "machineRole": "Equipo creativo",
+      "location": "Madrid",
+      "platform": "macOS",
+      "status": "maintenance",
+      "lastSeen": "2026-03-30T10:25:00.000Z",
+      "currentFocus": "Primer arranque del MacBook Air creativo",
+      "note": "Alta inicial. Equipo nuevo sin instalar. Pendiente de Tailscale, GitHub, SSH, ClaudeBot y CodexBot.",
+      "ssh": {
+        "enabled": false,
+        "user": "csilvasantin",
+        "host": "",
+        "ip_tailscale": "",
+        "connect_tailscale": "",
+        "hostAlias": ""
+      },
+      "intake": {
+        "source": "new-member-form",
+        "submittedAt": "2026-03-30T10:25:00.000Z",
+        "teamArea": "Consejo creativo",
+        "checklist": {
+          "tailscaleReady": false,
+          "sshReady": false,
+          "githubReady": false,
+          "claudeBotReady": false,
+          "codexBotReady": false,
+          "needsHelp": "Equipo nuevo sin instalar. Pendiente de Tailscale, GitHub, ClaudeBot y CodexBot."
+        }
       }
     }
   ]

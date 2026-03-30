@@ -74,6 +74,8 @@ function buildChecklistSummary(checklist) {
   labels.push(checklist.tailscaleReady ? "Tailscale listo" : "Tailscale pendiente");
   labels.push(checklist.sshReady ? "SSH listo" : "SSH pendiente");
   labels.push(checklist.githubReady ? "GitHub listo" : "GitHub pendiente");
+  labels.push(checklist.claudeReady ? "Claude listo" : "Claude pendiente");
+  labels.push(checklist.codexReady ? "Codex listo" : "Codex pendiente");
   labels.push(checklist.claudeBotReady ? "ClaudeBot listo" : "ClaudeBot pendiente");
   labels.push(checklist.codexBotReady ? "CodexBot listo" : "CodexBot pendiente");
 
@@ -167,6 +169,8 @@ export async function createMachineEntry(payload) {
     tailscaleReady: Boolean(payload.onboarding?.tailscaleReady),
     sshReady: Boolean(payload.onboarding?.sshReady),
     githubReady: Boolean(payload.onboarding?.githubReady),
+    claudeReady: Boolean(payload.onboarding?.claudeReady),
+    codexReady: Boolean(payload.onboarding?.codexReady),
     claudeBotReady: Boolean(payload.onboarding?.claudeBotReady),
     codexBotReady: Boolean(payload.onboarding?.codexBotReady),
     needsHelp: cleanString(payload.onboarding?.needsHelp)

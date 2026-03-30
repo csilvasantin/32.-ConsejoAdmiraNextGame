@@ -671,6 +671,16 @@
                 </label>
 
                 <label class="check">
+                  <input type="checkbox" name="claudeReady">
+                  <span><strong>Claude instalado</strong>La app de Claude ya esta instalada, abierta y lista para usarse.</span>
+                </label>
+
+                <label class="check">
+                  <input type="checkbox" name="codexReady">
+                  <span><strong>Codex instalado</strong>La app de Codex ya esta instalada, abierta y lista para usarse.</span>
+                </label>
+
+                <label class="check">
                   <input type="checkbox" name="claudeBotReady">
                   <span><strong>ClaudeBot activo</strong>El bot de apoyo ya esta instalado y funcionando.</span>
                 </label>
@@ -779,16 +789,16 @@
               <div class="setup-step">
                 <div class="setup-step-num">5</div>
                 <div>
-                  <strong>Instalar GitHub CLI</strong>
-                  <span>Necesitamos <code>gh</code> disponible para clonar repos y autenticar el entorno de trabajo.</span>
+                  <strong>Instalar Claude y Codex</strong>
+                  <span>Las dos apps son obligatorias en AdmiraNext: instalalas, abre sesion si hace falta y lanzalas al menos una vez antes de seguir.</span>
                 </div>
               </div>
 
               <div class="setup-step">
                 <div class="setup-step-num">6</div>
                 <div>
-                  <strong>Hacer login en GitHub</strong>
-                  <span>Ejecuta <code>gh auth login --hostname github.com --git-protocol https --web</code> y deja la sesion valida.</span>
+                  <strong>Instalar GitHub CLI y hacer login</strong>
+                  <span>Necesitamos <code>gh</code> disponible y autenticado con <code>gh auth login --hostname github.com --git-protocol https --web</code>.</span>
                 </div>
               </div>
 
@@ -820,7 +830,7 @@
                 <div class="setup-step-num">10</div>
                 <div>
                   <strong>Dar permisos y validar</strong>
-                  <span>Ve a <code>Ajustes del Sistema &gt; Privacidad y seguridad &gt; Accesibilidad</code> y <code>Grabacion de pantalla</code>, añade Terminal o iTerm y acepta cualquier permiso extra de automatizacion. Despues, comprueba Chrome por defecto, Tailscale, SSH, GitHub, ClaudeBot y CodexBot.</span>
+                  <span>Ve a <code>Ajustes del Sistema &gt; Privacidad y seguridad &gt; Accesibilidad</code> y <code>Grabacion de pantalla</code>, añade Terminal o iTerm y acepta cualquier permiso extra de automatizacion. Despues, comprueba Chrome por defecto, Tailscale, SSH, GitHub, Claude, Codex, ClaudeBot y CodexBot.</span>
                 </div>
               </div>
             </div>
@@ -828,13 +838,14 @@
 
           <section class="bootstrap-panel intake-panel">
             <h2>Arranque express</h2>
-            <p>Después de rellenar la ficha, este script deja el Mac listo lo más rápido posible. Automatiza instalaciones, clona `onboarding` y te lleva hasta el punto donde solo faltan logins y permisos de macOS.</p>
+            <p>Despues de rellenar la ficha, este script deja el Mac listo lo mas rapido posible. Automatiza instalaciones, abre las descargas oficiales de Claude y Codex, clona <code>onboarding</code> y te lleva hasta el punto donde solo faltan logins y permisos de macOS.</p>
 
             <div class="bootstrap-pill-row">
               <span class="mini-pill ok">automatiza Homebrew</span>
               <span class="mini-pill ok">instala Chrome, `gh`, Python y Tailscale</span>
+              <span class="mini-pill ok">fuerza Claude y Codex como paso obligatorio</span>
               <span class="mini-pill ok">pone Chrome por defecto</span>
-              <span class="mini-pill warn">requiere login manual en GitHub y Tailscale</span>
+              <span class="mini-pill warn">requiere login manual en GitHub, Tailscale, Claude y Codex</span>
               <span class="mini-pill warn">requiere permisos de Accesibilidad y Grabacion</span>
             </div>
 
@@ -920,6 +931,6 @@
       <option value="Equipo de respaldo"></option>
     </datalist>
 
-    <script src="./new-member.js?v=20260330-4" type="module"></script>
+    <script src="./new-member.js?v=20260330-5" type="module"></script>
   </body>
 </html>

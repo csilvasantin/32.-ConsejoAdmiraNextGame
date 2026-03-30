@@ -1,6 +1,6 @@
 {
   "team": "AdmiraNext Team",
-  "updatedAt": "2026-03-30T10:25:00.000Z",
+  "updatedAt": "2026-03-30T10:51:20Z",
   "tailnet": "tail48b61c.ts.net",
   "machines": [
     {
@@ -141,7 +141,7 @@
       "status": "maintenance",
       "lastSeen": "2026-03-30T10:25:00.000Z",
       "currentFocus": "Primer arranque del MacBook Air creativo",
-      "note": "Alta inicial. Equipo nuevo sin instalar. Pendiente de Tailscale, GitHub, SSH, ClaudeBot y CodexBot.",
+      "note": "Alta inicial. Equipo nuevo sin instalar. Pendiente de Tailscale, GitHub, SSH, Claude, Codex, ClaudeBot y CodexBot.",
       "ssh": {
         "enabled": false,
         "user": "csilvasantin",
@@ -158,9 +158,11 @@
           "tailscaleReady": false,
           "sshReady": false,
           "githubReady": false,
+          "claudeReady": false,
+          "codexReady": false,
           "claudeBotReady": false,
           "codexBotReady": false,
-          "needsHelp": "Equipo nuevo sin instalar. Pendiente de Tailscale, GitHub, ClaudeBot y CodexBot."
+          "needsHelp": "Equipo nuevo sin instalar. Pendiente de Tailscale, GitHub, Claude, Codex, ClaudeBot y CodexBot."
         }
       }
     }

@@ -24,5 +24,6 @@ AdmiraNext Team
 - La URL guiada incluye ya un bloque de 10 pasos con foco en permisos de macOS, Tailscale, GitHub CLI, onboarding y validacion final.
 - La misma URL genera ahora un script `.command` de arranque express para automatizar Homebrew, `gh`, Python, Tailscale, clon de `onboarding` y lanzamiento del setup de bots con las pausas manuales justas.
 - El arranque express instala tambien Google Chrome y lo fija como navegador por defecto para unificar el flujo operativo desde el primer uso.
+- Claude y Codex pasan a ser obligatorios en el alta: aparecen como checklist propio y el arranque express abre sus paginas oficiales y bloquea la continuidad hasta que ambas apps esten instaladas y abiertas.
 - Se han añadido rutas cortas de acceso (`/alta`, `/creativa`, `/alta-creativa`) para evitar errores al teclear la URL manualmente desde equipos nuevos.
 - Se ha dado de alta una entrada provisional para `MacBook Air creativo`, en estado `maintenance`, con checklist vacia y foco en primer arranque para poder seguir el onboarding desde el panel.

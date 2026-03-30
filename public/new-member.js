@@ -1,5 +1,5 @@
 const STORAGE_KEY = "admira-next-new-member-draft-v1";
-const MACHINES_CACHE_BUST = "20260330-1";
+const MACHINES_CACHE_BUST = "20260330-2";
 const DEFAULT_FOCUS = "Onboarding y puesta a punto del equipo";
 const DEFAULT_LOCATION = "Madrid";
 const DEFAULT_MACHINE_ROLE = "Equipo principal";
@@ -52,6 +52,8 @@ const defaultDraft = {
   tailscaleReady: false,
   sshReady: false,
   githubReady: false,
+  claudeReady: false,
+  codexReady: false,
   claudeBotReady: false,
   codexBotReady: false,
   needsHelp: "",
@@ -78,9 +80,11 @@ const intakePresets = {
     tailscaleReady: false,
     sshReady: false,
     githubReady: false,
+    claudeReady: false,
+    codexReady: false,
     claudeBotReady: false,
     codexBotReady: false,
-    needsHelp: "Equipo nuevo sin instalar. Pendiente de Tailscale, GitHub, ClaudeBot y CodexBot."
+    needsHelp: "Equipo nuevo sin instalar. Pendiente de Tailscale, GitHub, Claude, Codex, ClaudeBot y CodexBot."
   }
 };
 
@@ -171,6 +175,8 @@ function readDraftFromForm() {
     tailscaleReady: formData.get("tailscaleReady") === "on",
     sshReady: formData.get("sshReady") === "on",
     githubReady: formData.get("githubReady") === "on",
+    claudeReady: formData.get("claudeReady") === "on",
+    codexReady: formData.get("codexReady") === "on",
     claudeBotReady: formData.get("claudeBotReady") === "on",
     codexBotReady: formData.get("codexBotReady") === "on",
     needsHelp: cleanString(formData.get("needsHelp")),
@@ -183,6 +189,8 @@ function buildChecklist(draft) {
     tailscaleReady: draft.tailscaleReady,
     sshReady: draft.sshReady,
     githubReady: draft.githubReady,
+    claudeReady: draft.claudeReady,
+    codexReady: draft.codexReady,
     claudeBotReady: draft.claudeBotReady,
     codexBotReady: draft.codexBotReady,
     needsHelp: draft.needsHelp
@@ -194,6 +202,8 @@ function buildChecklistSummary(checklist) {
     checklist.tailscaleReady ? "Tailscale listo" : "Tailscale pendiente",
     checklist.sshReady ? "SSH listo" : "SSH pendiente",
     checklist.githubReady ? "GitHub listo" : "GitHub pendiente",
+    checklist.claudeReady ? "Claude listo" : "Claude pendiente",
+    checklist.codexReady ? "Codex listo" : "Codex pendiente",
     checklist.claudeBotReady ? "ClaudeBot listo" : "ClaudeBot pendiente",
     checklist.codexBotReady ? "CodexBot listo" : "CodexBot pendiente"
   ].join(" | ");
@@ -378,7 +388,7 @@ function shellEscape(value) {
 }
 
 function buildBootstrapScript(draft, derived) {
-  const promptText = "Haz onboarding leyendo este repositorio primero. Después instala y activa los bots de Admira Next ejecutando setup_admira_next_bots_mac.sh.";
+  const promptText = "Haz onboarding leyendo este repositorio primero. Despues instala y valida Claude y Codex, y finalmente activa los bots de Admira Next ejecutando setup_admira_next_bots_mac.sh.";
   const member = draft.member || "Nuevo miembro";
   const role = draft.role || "Sin rol";
   const teamArea = draft.teamArea || "Admira Next";
@@ -399,6 +409,8 @@ CURRENT_FOCUS='${shellEscape(focus)}'
 INTAKE_NOTE='${shellEscape(note)}'
 BASE_DIR="\${HOME}/Documents/Codex"
 ONBOARDING_DIR="\${BASE_DIR}/onboarding"
+CLAUDE_DOWNLOAD_URL="https://claude.com/download"
+CODEX_DOWNLOAD_URL="https://openai.com/codex/"
 
 step() {
   printf "\\n==> %s\\n" "$1"
@@ -463,6 +475,31 @@ ensure_cask() {
   brew install --cask "$cask"
 }
 
+ensure_app_or_prompt_install() {
+  local app_name="$1"
+  local download_url="$2"
+
+  if open -Ra "$app_name" >/dev/null 2>&1; then
+    step "$app_name ya esta instalado"
+    open -a "$app_name" || true
+    return
+  fi
+
+  step "Instalando $app_name"
+  open "$download_url" || true
+  echo "Descarga e instala $app_name desde la pagina oficial que se ha abierto."
+  echo "Abre la app al menos una vez antes de continuar."
+  pause_for_user
+
+  if ! open -Ra "$app_name" >/dev/null 2>&1; then
+    echo "No detecto la app $app_name instalada todavia."
+    echo "Completa la instalacion y vuelve a lanzar este script."
+    exit 1
+  fi
+
+  open -a "$app_name" || true
+}
+
 ensure_repo() {
   local repo_name="$1"
   local repo_path="\${BASE_DIR}/\${repo_name}"
@@ -495,6 +532,12 @@ ensure_cask tailscale
 step "Configurando Google Chrome"
 defaultbrowser chrome || true
 open -a "Google Chrome" || true
+
+step "Instalando y validando Claude"
+ensure_app_or_prompt_install "Claude" "$CLAUDE_DOWNLOAD_URL"
+
+step "Instalando y validando Codex"
+ensure_app_or_prompt_install "Codex" "$CODEX_DOWNLOAD_URL"
 
 step "Abriendo Tailscale"
 open -a Tailscale || true
@@ -540,6 +583,8 @@ echo "- Tailscale conectado"
 echo "- SSH habilitado"
 echo "- gh auth status correcto"
 echo "- onboarding clonado"
+echo "- Claude instalado y abierto"
+echo "- Codex instalado y abierto"
 echo "- ClaudeBot activo"
 echo "- CodexBot activo"
 echo

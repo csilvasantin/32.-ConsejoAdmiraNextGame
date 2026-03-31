@@ -76,6 +76,15 @@
         min-height: 18px;
       }
 
+      .tw-watchdog-inline {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        justify-self: end;
+        padding: 0 8px;
+        color: #5a9a6a;
+      }
+
       .tw-row { display: grid; grid-template-columns: 1fr auto 2fr auto; gap: 10px; align-items: end; }
 
       .tw-label {
@@ -586,6 +595,7 @@
         .tw-command-bar { grid-template-columns: 1fr; }
         .tw-action-btn { min-width: 0; }
         .tw-inline-results { grid-template-columns: 1fr; }
+        .tw-watchdog-inline { justify-self: start; padding: 0; }
       }
       /* Matrix background */
       #matrixCanvas {
@@ -690,7 +700,7 @@
       <header class="hero">
         <div class="hero-inner">
           <div class="hero-text">
-            <p class="eyebrow">Control remoto — v2.3.9</p>
+            <p class="eyebrow">Control remoto — v2.3.10</p>
             <h1>AdmiraNext Control</h1>
             <p class="subtitle">Opera por separado el Consejo de Administracion en Mac y el Equipo en PC desde un mismo panel.</p>
           </div>
@@ -719,6 +729,16 @@
             <button class="tw-send tw-action-btn tw-send-codex" id="approveCodexBtn">Aprobar Codex</button>
             <button class="tw-send tw-action-btn tw-send-claude" id="approveClaudeBtn">Aprobar Claude</button>
             <button class="tw-send tw-action-btn tw-send-onboarding" id="onboardingAllBtn">Onboarding all</button>
+            <div class="tw-watchdog-inline">
+              <label class="tw-toggle">
+                <input type="checkbox" id="watchdogToggle">
+                <span class="tw-toggle-slider"></span>
+              </label>
+              <span class="tw-watchdog-label">
+                Auto-Approve
+                <span class="tw-watchdog-pulse off" id="watchdogPulse"></span>
+              </span>
+            </div>
           </div>
           <div class="tw-inline-results">
             <div class="tw-approve-result tw-inline-result" id="approveCodexResult"></div>
@@ -728,17 +748,6 @@
         </div>
         <div class="tw-feedback" id="feedback"></div>
       </section>
-
-      <div class="tw-watchdog-section">
-        <label class="tw-toggle">
-          <input type="checkbox" id="watchdogToggle">
-          <span class="tw-toggle-slider"></span>
-        </label>
-        <span class="tw-watchdog-label">
-          Auto-Approve
-          <span class="tw-watchdog-pulse off" id="watchdogPulse"></span>
-        </span>
-      </div>
 
       <section class="tw-machines-approve">
         <h3>Consejo y Equipo</h3>
@@ -752,7 +761,7 @@
     </main>
 
       <footer style="text-align:center;padding:24px 0 8px;color:var(--muted);font-size:12px;">
-          AdmiraNext Control v2.3.9 — 2026-03-31
+          AdmiraNext Control v2.3.10 — 2026-03-31
       </footer>
 
     <script>
@@ -767,7 +776,7 @@
         }
       });
     </script>
-      <script src="./teamwork.js?v=20260331-10" type="module"></script>
+      <script src="./teamwork.js?v=20260331-11" type="module"></script>
     <script>
       (function() {
         const c = document.getElementById("matrixCanvas");

@@ -529,6 +529,17 @@ ensure_formula python
 ensure_cask google-chrome
 ensure_cask tailscale
 
+step "Configurando politica de actualizaciones del sistema"
+echo "Activando comprobacion automatica y parches menores de macOS."
+echo "Los upgrades grandes de macOS siguen siendo una decision manual validada por el equipo."
+sudo softwareupdate --schedule on || true
+sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate AutomaticDownload -bool true || true
+sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate AutomaticallyInstallMacOSUpdates -bool true || true
+sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate ConfigDataInstall -bool true || true
+sudo defaults write /Library/Preferences/com.apple.SoftwareUpdate CriticalUpdateInstall -bool true || true
+sudo defaults write /Library/Preferences/com.apple.commerce AutoUpdate -bool true || true
+sudo softwareupdate --background --force || true
+
 step "Configurando politica de energia"
 echo "Aplicando: hasta 4 horas enchufado y 1 hora en bateria."
 sudo pmset -c sleep 240 || true
@@ -584,6 +595,7 @@ pause_for_user
 
 step "Checklist final"
 echo "- Google Chrome instalado y por defecto"
+echo "- actualizaciones automaticas de parches menores y seguridad activadas"
 echo "- energia: sleep 240 en corriente y sleep 60 en bateria"
 echo "- Tailscale conectado"
 echo "- SSH habilitado"

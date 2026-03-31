@@ -28,17 +28,19 @@ jobs:
       - name: Prepare static site
         run: |
           mkdir -p _site
-          cp public/index.html _site/index.html
-          cp public/alta.html _site/alta.html
-          cp public/consejo.html _site/consejo.html
-          cp public/styles.css _site/styles.css
-          cp public/app.js _site/app.js
-          cp public/new-member.html _site/new-member.html
-          cp public/new-member.js _site/new-member.js
-          cp public/network.html _site/network.html
-          cp public/teamwork.html _site/teamwork.html
-          cp public/teamwork.js _site/teamwork.js
-          cp data/machines.json _site/machines.json
+          cp docs/index.html _site/index.html
+          cp docs/styles.css _site/styles.css
+          cp docs/app.js _site/app.js
+          cp docs/machines.json _site/machines.json
+          cp docs/teamwork.html _site/teamwork.html
+          cp docs/teamwork.js _site/teamwork.js
+          cp docs/snapshots.json _site/snapshots.json
+          cp -r docs/snapshots _site/snapshots
+          cp public/alta.html _site/alta.html 2>/dev/null || true
+          cp public/consejo.html _site/consejo.html 2>/dev/null || true
+          cp public/new-member.html _site/new-member.html 2>/dev/null || true
+          cp public/new-member.js _site/new-member.js 2>/dev/null || true
+          cp public/network.html _site/network.html 2>/dev/null || true
 
       - name: Setup Pages
         uses: actions/configure-pages@v5

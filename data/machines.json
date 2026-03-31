@@ -1,6 +1,6 @@
 {
   "team": "AdmiraNext Team",
-  "updatedAt": "2026-03-31T19:05:00Z",
+  "updatedAt": "2026-03-31T19:22:00Z",
   "tailnet": "tail48b61c.ts.net",
   "machines": [
     {
@@ -273,18 +273,18 @@
       "machineRole": "Worker de operacion continua",
       "location": "Sitges",
       "platform": "Windows",
-      "status": "offline",
-      "lastSeen": "2026-03-31T19:05:00Z",
-      "currentFocus": "Pendiente de reconexion real al hub. Identificado tambien como PCSitges en LAN historica 192.168.0.122",
-      "note": "Primer worker real identificado para Sitges. Host previsto: pcsitges3monitores.tail48b61c.ts.net. Alias historico en LAN: PCSitges (192.168.0.122). No responde por Tailscale ni por LAN en esta sesion.",
+      "status": "online",
+      "lastSeen": "2026-03-31T19:22:00Z",
+      "currentFocus": "Worker local de Sitges detectado en esta sesion como equipo Windows activo",
+      "note": "Este mismo ordenador responde como OmenGdG en LAN 192.168.0.118. Se mantiene el nombre funcional PC Sitges 3 Monitores, pero la identidad real detectada en esta sesion es OmenGdG. Pendiente implementar canal de automatizacion Windows equivalente al flujo macOS.",
       "ssh": {
         "enabled": false,
         "user": "csilvasantin",
-        "host": "pcsitges3monitores.tail48b61c.ts.net",
+        "host": "OmenGdG",
         "ip_tailscale": "",
-        "ip_lan": "192.168.0.122",
-        "connect_tailscale": "ssh csilvasantin@pcsitges3monitores.tail48b61c.ts.net",
-        "hostAlias": "pcsitges3monitores"
+        "ip_lan": "192.168.0.118",
+        "connect_tailscale": "",
+        "hostAlias": "omengdg"
       }
     }
   ]

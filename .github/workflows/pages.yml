@@ -38,6 +38,7 @@ jobs:
           cp -r docs/snapshots _site/snapshots
           cp public/alta.html _site/alta.html 2>/dev/null || true
           cp public/consejo.html _site/consejo.html 2>/dev/null || true
+          cp public/matrix-pills.jpg _site/matrix-pills.jpg 2>/dev/null || true
           cp public/new-member.html _site/new-member.html 2>/dev/null || true
           cp public/new-member.js _site/new-member.js 2>/dev/null || true
           cp public/network.html _site/network.html 2>/dev/null || true

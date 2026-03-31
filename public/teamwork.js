@@ -17,6 +17,7 @@ const GROUP_LABELS = {
   council: "Consejo de Administracion",
   worker: "Equipo"
 };
+const LIVE_PREVIEW_WINDOW_MS = 10 * 60 * 1000;
 
 // Redirect GitHub Pages to Funnel
 if (location.hostname === "csilvasantin.github.io") {
@@ -247,6 +248,18 @@ function formatTimeShort(iso) {
   catch { return ""; }
 }
 
+function hasLivePreview(machine, snapshots) {
+  const snap = snapshots?.[machine.id];
+  if (!snap?.updatedAt) return false;
+  const updatedAt = new Date(snap.updatedAt).getTime();
+  if (!Number.isFinite(updatedAt)) return false;
+  const hasVisual =
+    (snap.type === "image" && Boolean(snap.image)) ||
+    (snap.type === "images" && Array.isArray(snap.images) && snap.images.length > 0) ||
+    Boolean(snap.text);
+  return hasVisual && (Date.now() - updatedAt) <= LIVE_PREVIEW_WINDOW_MS;
+}
+
 function renderMachineRow(m, snapshots) {
   const group = m.unitType || "council";
   const snap = snapshots?.[m.id];
@@ -318,13 +331,14 @@ function renderMachineApproveList(snapshots) {
   for (const group of ["council", "worker"]) {
     const items = grouped[group];
     if (!items.length) continue;
-    const expanded = group === "council" ? "true" : "false";
-    const hidden = group === "council" ? "" : "hidden";
+    const shouldExpand = items.some((m) => hasLivePreview(m, snapshots));
+    const expanded = shouldExpand ? "true" : "false";
+    const hidden = shouldExpand ? "" : "hidden";
     sections.push(`
       <section class="tw-group-block tw-group-block-${group}">
         <button class="tw-group-toggle tw-group-${group}" data-group-toggle="${group}" aria-expanded="${expanded}" type="button">
           <span>${GROUP_LABELS[group] || group}</span>
-          <span class="tw-group-toggle-icon">${group === "council" ? "−" : "+"}</span>
+          <span class="tw-group-toggle-icon">${shouldExpand ? "−" : "+"}</span>
         </button>
         <div class="tw-group-rows" data-group-panel="${group}" ${hidden}>
           ${items.map((m) => renderMachineRow(m, snapshots)).join("")}

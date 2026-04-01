@@ -16,8 +16,9 @@ AdmiraNext Team
 ## Estado actual
 
 - El dashboard principal sirve ya como vista de situacion, no solo como inventario.
-- El panel de control remoto queda versionado como `v2.4.1`.
+- El panel de control remoto queda versionado como `v2.4.2`.
 - El alias `control.html` vuelve a quedar sincronizado con la version real y con el cache-buster publicado para evitar redirecciones a builds antiguas.
 - El panel deja de usar `offline` como cajon de sastre: ahora diferencia `estado del equipo`, `preview` y `canal remoto`, para no confundir equipos activos sin snapshot o sin canal con maquinas realmente caidas.
 - El cliente vuelve a refrescar maquinas, snapshots y watchdog en bucle, de forma que los previos online no se quedan congelados tras la carga inicial.
+- Los desplegables de `Consejo` y `Equipo` se abren ahora cuando existe al menos una maquina activa en ese grupo, y se quedan cerrados si no hay actividad.
 - La publicacion publica y la local vuelven a estar alineadas en rutas y recursos.

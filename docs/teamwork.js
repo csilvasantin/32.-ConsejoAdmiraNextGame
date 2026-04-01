@@ -429,7 +429,7 @@ function renderMachineApproveList(snapshots) {
   for (const group of ["council", "worker"]) {
     const items = grouped[group];
     if (!items.length) continue;
-    const shouldExpand = items.some((m) => hasLivePreview(m, snapshots));
+    const shouldExpand = items.some((m) => ACTIVE_MACHINE_STATUSES.has(m.status));
     const expanded = shouldExpand ? "true" : "false";
     const hidden = shouldExpand ? "" : "hidden";
     sections.push(`

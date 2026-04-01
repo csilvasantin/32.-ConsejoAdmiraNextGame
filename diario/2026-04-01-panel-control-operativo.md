@@ -16,5 +16,6 @@ AdmiraNext Team
 ## Estado actual
 
 - El dashboard principal sirve ya como vista de situacion, no solo como inventario.
-- El panel de control remoto queda versionado como `v2.2.0`.
+- El panel de control remoto queda versionado como `v2.4.0`.
+- El alias `control.html` vuelve a quedar sincronizado con la version real y con el cache-buster publicado para evitar redirecciones a builds antiguas.
 - La publicacion publica y la local vuelven a estar alineadas en rutas y recursos.

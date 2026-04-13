@@ -149,7 +149,14 @@
         .status-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
-            gap: 1.5rem;
+            gap: 1rem;
+        }
+        .status-grid.conversation-mode {
+            grid-template-columns: 1fr 1fr;
+            grid-template-rows: auto auto;
+        }
+        .status-grid.conversation-mode .side-panel.sintesis {
+            grid-column: 1 / -1;
         }
 
         .side-panel {
@@ -160,6 +167,61 @@
         }
         .side-panel.creativo { border-color: #e74c3c; }
         .side-panel.racional { border-color: #3498db; }
+        .side-panel.sintesis {
+            border-color: #daa520;
+            display: none;
+        }
+        .status-grid.conversation-mode .side-panel.sintesis { display: block; }
+
+        /* Board mode: panel as whiteboard */
+        .board-content {
+            display: none;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .conversation-mode .board-content { display: block; }
+        .conversation-mode .member-row { display: none; }
+        .board-entry {
+            padding: 8px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            animation: fadeIn 0.3s;
+        }
+        .board-entry:last-child { border-bottom: none; }
+        @keyframes fadeIn { from { opacity: 0; transform: translateY(4px); } to { opacity: 1; transform: translateY(0); } }
+        .board-speaker {
+            font-weight: 700;
+            font-size: 0.8rem;
+            margin-bottom: 3px;
+        }
+        .board-speaker.racional { color: #e74c3c; }
+        .board-speaker.creativo { color: #3498db; }
+        .board-speaker.sintesis { color: #daa520; }
+        .board-text {
+            font-size: 0.85rem;
+            color: #bbb;
+            line-height: 1.5;
+        }
+        .board-user {
+            color: #daa520;
+            font-weight: 700;
+            font-size: 0.8rem;
+            margin-bottom: 3px;
+        }
+        /* Back to status button */
+        .back-status {
+            display: none;
+            margin: 0.8rem auto 0;
+            background: none;
+            border: 1px solid #333;
+            color: #666;
+            font-size: 0.75rem;
+            padding: 5px 14px;
+            border-radius: 6px;
+            cursor: pointer;
+            transition: all 0.2s;
+        }
+        .back-status:hover { border-color: #888; color: #aaa; }
+        .conversation-mode ~ .back-status-wrap .back-status { display: inline-block; }
 
         .side-title {
             font-size: 1.1rem;
@@ -832,20 +894,24 @@
             </div>
         </div>
 
-        <div class="output-panel" id="output-panel">
-            <h3 id="output-title">Resultados del debate</h3>
-            <div id="output-content"></div>
-        </div>
-
-        <div class="status-grid">
+        <div class="status-grid" id="status-grid">
             <div class="side-panel racional">
                 <div class="side-title">🧠 Racional <span class="side-machines">🔴 Sillas rojas</span></div>
                 <div id="racional-members"></div>
+                <div class="board-content" id="board-racional"></div>
             </div>
             <div class="side-panel creativo">
                 <div class="side-title">🎨 Creativo <span class="side-machines">🔵 Sillas azules</span></div>
                 <div id="creativo-members"></div>
+                <div class="board-content" id="board-creativo"></div>
             </div>
+            <div class="side-panel sintesis">
+                <div class="side-title">⚡ Síntesis <span class="side-machines">🟡 Consenso</span></div>
+                <div class="board-content" id="board-sintesis" style="display:block;"></div>
+            </div>
+        </div>
+        <div class="back-status-wrap" style="text-align:center;">
+            <button class="back-status" id="back-status" onclick="exitConversation()">← Volver al estado de máquinas</button>
         </div>
 
         <div class="subtitle" style="margin-top:1rem;">
@@ -1536,6 +1602,48 @@
         btn.classList.toggle("off", !nameplatesVisible);
     }
 
+    // Enter conversation mode — panels become whiteboards
+    let conversationMode = false;
+    function enterConversation() {
+        if (conversationMode) return;
+        conversationMode = true;
+        document.getElementById("status-grid").classList.add("conversation-mode");
+        document.getElementById("back-status").style.display = "inline-block";
+        if (nameplatesVisible) toggleNameplates();
+    }
+
+    function exitConversation() {
+        conversationMode = false;
+        document.getElementById("status-grid").classList.remove("conversation-mode");
+        document.getElementById("back-status").style.display = "none";
+        document.getElementById("board-racional").innerHTML = "";
+        document.getElementById("board-creativo").innerHTML = "";
+        document.getElementById("board-sintesis").innerHTML = "";
+        // Restore member rows visibility
+        document.querySelectorAll(".member-row").forEach(r => r.style.display = "");
+        if (!nameplatesVisible) toggleNameplates();
+        setActionLine("Escribe aquí para hablar con el consejo...");
+    }
+
+    function addBoardEntry(boardId, icon, name, persona, side, text) {
+        const board = document.getElementById(boardId);
+        const entry = document.createElement("div");
+        entry.className = "board-entry";
+        entry.innerHTML = '<div class="board-speaker ' + side + '">' + icon + ' ' + name + ' — ' + persona + '</div><div class="board-text">' + text + '</div>';
+        board.appendChild(entry);
+        board.scrollTop = board.scrollHeight;
+    }
+
+    function addUserEntry(text) {
+        // Show user message in the synthesis panel
+        const board = document.getElementById("board-sintesis");
+        const entry = document.createElement("div");
+        entry.className = "board-entry";
+        entry.innerHTML = '<div class="board-user">👤 Tú</div><div class="board-text">' + text.replace(/</g,'&lt;') + '</div>';
+        board.appendChild(entry);
+        board.scrollTop = board.scrollHeight;
+    }
+
     // Send message to council
     function sendMessage() {
         const input = document.getElementById("action-input");
@@ -1543,41 +1651,38 @@
         if (!text) return;
         input.value = "";
 
-        // Auto-hide nameplates on first message
-        if (nameplatesVisible) toggleNameplates();
-
-        // Show user message in output panel
-        const panel = document.getElementById("output-panel");
-        const content = document.getElementById("output-content");
-        document.getElementById("output-title").textContent = "Conversación";
-        panel.classList.add("visible");
-
-        const userEntry = document.createElement("div");
-        userEntry.className = "output-entry";
-        userEntry.innerHTML = '<div class="output-speaker" style="color:#daa520;">👤 Tú</div><div class="output-text">' + text.replace(/</g,'&lt;') + '</div>';
-        content.appendChild(userEntry);
-
-        // Simulate council response
-        simulateCouncilResponse(text, content, panel);
+        enterConversation();
+        addUserEntry(text);
+        simulateCouncilResponse(text);
     }
 
-    async function simulateCouncilResponse(question, content, panel) {
+    async function simulateCouncilResponse(question) {
         const members = COUNCIL.filter(m => m.gen === currentGen);
-        // Pick 2-3 random members to respond
-        const responders = members.sort(() => Math.random() - 0.5).slice(0, 2 + Math.floor(Math.random() * 2));
+        const racionales = members.filter(m => m.side === "racional").sort(() => Math.random() - 0.5).slice(0, 1 + Math.floor(Math.random() * 2));
+        const creativos = members.filter(m => m.side === "creativo").sort(() => Math.random() - 0.5).slice(0, 1 + Math.floor(Math.random() * 2));
 
-        for (const m of responders) {
+        // Racional side responds
+        for (const m of racionales) {
             showSpeechBubble(m.persona, m.name, "[" + m.persona + " está pensando...]");
             highlightNameplate(m.persona);
             await new Promise(r => setTimeout(r, 1000));
-
-            const entry = document.createElement("div");
-            entry.className = "output-entry";
-            entry.innerHTML = '<div class="output-speaker ' + m.side + '">' + m.icon + " " + m.name + " — " + m.persona + '</div><div class="output-text">[Simulación] ' + m.persona + ' responde a tu mensaje.</div>';
-            content.appendChild(entry);
-            panel.scrollTop = panel.scrollHeight;
+            addBoardEntry("board-racional", m.icon, m.name, m.persona, "racional", "[Simulación] " + m.persona + " analiza desde el lado operativo.");
             clearNameplateHighlight();
         }
+
+        // Creativo side responds
+        for (const m of creativos) {
+            showSpeechBubble(m.persona, m.name, "[" + m.persona + " está pensando...]");
+            highlightNameplate(m.persona);
+            await new Promise(r => setTimeout(r, 1000));
+            addBoardEntry("board-creativo", m.icon, m.name, m.persona, "creativo", "[Simulación] " + m.persona + " responde desde el lado creativo.");
+            clearNameplateHighlight();
+        }
+
+        // Synthesis
+        await new Promise(r => setTimeout(r, 500));
+        addBoardEntry("board-sintesis", "⚡", "Consejo", "Síntesis", "sintesis", "[Simulación] El consejo sintetiza las perspectivas racional y creativa.");
+
         hideSpeechBubble();
         setActionLine("Escribe para seguir la conversación...");
     }
@@ -1596,27 +1701,38 @@
 
     async function runSimulation(verb) {
         debateRunning = true;
+        enterConversation();
         const members = COUNCIL.filter(m => m.gen === currentGen);
+        const racionales = members.filter(m => m.side === "racional");
+        const creativos = members.filter(m => m.side === "creativo");
         const roundName = { presentar:"Propuestas", debatir:"Debate", sintetizar:"Síntesis" }[verb];
+        const verbAction = { presentar:"presenta su visión", debatir:"debate los puntos", sintetizar:"ofrece su síntesis" }[verb];
+        const verbGerund = { presentar:"presentando", debatir:"debatiendo", sintetizar:"sintetizando" }[verb];
         document.getElementById("round-indicator").textContent = "Ronda: " + roundName;
         setActionLine(roundName + " en curso...");
-        const panel = document.getElementById("output-panel");
-        const content = document.getElementById("output-content");
-        document.getElementById("output-title").textContent = "Ronda: " + roundName;
-        panel.classList.add("visible");
-        content.innerHTML = "";
-        for (let i = 0; i < members.length; i++) {
-            const m = members[i];
-            showSpeechBubble(m.persona, m.name, "[" + m.persona + " está " + (verb === 'presentar' ? 'presentando' : verb === 'debatir' ? 'debatiendo' : 'sintetizando') + "...]");
+
+        // Racional side
+        for (const m of racionales) {
+            showSpeechBubble(m.persona, m.name, "[" + m.persona + " está " + verbGerund + "...]");
             highlightNameplate(m.persona);
-            const entry = document.createElement("div");
-            entry.className = "output-entry";
-            entry.innerHTML = '<div class="output-speaker ' + m.side + '">' + m.icon + " " + m.name + " — " + m.persona + '</div><div class="output-text">[Simulación] ' + m.persona + " " + (verb === 'presentar' ? 'presenta su visión' : verb === 'debatir' ? 'debate los puntos' : 'ofrece su síntesis') + '.</div>';
-            content.appendChild(entry);
-            panel.scrollTop = panel.scrollHeight;
             await new Promise(r => setTimeout(r, 800));
+            addBoardEntry("board-racional", m.icon, m.name, m.persona, "racional", "[Simulación] " + m.persona + " " + verbAction + ".");
             clearNameplateHighlight();
         }
+
+        // Creativo side
+        for (const m of creativos) {
+            showSpeechBubble(m.persona, m.name, "[" + m.persona + " está " + verbGerund + "...]");
+            highlightNameplate(m.persona);
+            await new Promise(r => setTimeout(r, 800));
+            addBoardEntry("board-creativo", m.icon, m.name, m.persona, "creativo", "[Simulación] " + m.persona + " " + verbAction + ".");
+            clearNameplateHighlight();
+        }
+
+        // Synthesis
+        await new Promise(r => setTimeout(r, 500));
+        addBoardEntry("board-sintesis", "⚡", "Consejo", "Síntesis", "sintesis", "[Simulación] El consejo sintetiza la ronda de " + roundName.toLowerCase() + ".");
+
         hideSpeechBubble();
         debateRunning = false;
         document.getElementById("round-indicator").textContent = "Ronda: " + roundName + " ✓";

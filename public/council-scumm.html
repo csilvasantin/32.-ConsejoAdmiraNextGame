@@ -1346,6 +1346,8 @@
                 ${p.persona}<span class="np-role">${p.role}</span>
             </div>`;
         }).join("");
+        // Re-apply preguntar styles after nameplate DOM rebuild
+        if (typeof _applyPreguntarStyles === 'function') _applyPreguntarStyles();
 
         document.getElementById("summary").innerHTML = `
             <div class="summary-item">
@@ -1746,10 +1748,8 @@
         selectedAgent = null;
         // Make nameplates visible and clickable
         if (!nameplatesVisible) toggleNameplates();
-        document.querySelectorAll('.np').forEach(np => {
-            np.classList.add('selectable');
-            np.onclick = function() { selectAgentForQuestion(this); };
-        });
+        // Add selectable class (re-applied after each render via _applyPreguntarStyles)
+        _applyPreguntarStyles();
         setActionLine("👆 Selecciona un consejero para preguntarle...");
     }
 
@@ -1758,9 +1758,25 @@
         selectedAgent = null;
         document.querySelectorAll('.np').forEach(np => {
             np.classList.remove('selectable', 'selected');
-            np.onclick = null;
         });
     }
+
+    function _applyPreguntarStyles() {
+        if (!preguntarMode) return;
+        document.querySelectorAll('.np').forEach(np => {
+            np.classList.add('selectable');
+            if (selectedAgent && np.getAttribute('data-persona') === selectedAgent.persona) {
+                np.classList.add('selected');
+            }
+        });
+    }
+
+    // Event delegation: handle clicks on nameplates container
+    document.getElementById("nameplates").addEventListener("click", function(e) {
+        const np = e.target.closest('.np');
+        if (!np || !preguntarMode) return;
+        selectAgentForQuestion(np);
+    });
 
     function selectAgentForQuestion(npEl) {
         const persona = npEl.getAttribute('data-persona');

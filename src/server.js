@@ -6,7 +6,7 @@ import { createMachineEntry, readMachines, updateMachineStatus, updateMachineSyn
 import { sendPromptToMachine, resolveMachineName, getCapture, getImageBuffer, approveAll, approveMachine, getAllSnapshots, getReachableMachines, getWatchdogState, setWatchdogEnabled, setMachineWatchdog, sendOnboardingToAll, startWatchdog } from "./ssh-exec.js";
 import { addEntries, addEntry, getHistory } from "./teamwork-store.js";
 
-const PORT = 3030;
+const PORT = Number(process.env.PORT || 3030);
 const HOST = "0.0.0.0";
 const PUBLIC_DIR = resolve(import.meta.dirname, "../public");
 

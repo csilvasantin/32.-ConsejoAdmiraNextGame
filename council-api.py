@@ -338,6 +338,13 @@ class AskRequest(BaseModel):
     context: Optional[list] = None
 
 
+class AskOneRequest(BaseModel):
+    message: str
+    agent_name: str  # e.g. "CEO", "CTO", "CCO"...
+    generation: str = "leyendas"
+    context: Optional[list] = None
+
+
 class AgentReply(BaseModel):
     name: str
     role: str
@@ -464,6 +471,56 @@ async def council_ask(
     _send_query_report(req.message, list(all_replies), query_cost, gen)
 
     return AskResponse(racional=racional_replies, creativo=creativo_replies)
+
+
+@app.post("/api/council/ask-one")
+async def council_ask_one(
+    req: AskOneRequest,
+    _rate=Depends(check_rate_limit),
+    _auth=Depends(verify_token),
+):
+    """Ask a single specific agent. Used by 'Preguntar' verb."""
+    check_budget()
+
+    gen = req.generation if req.generation in AGENTS else "leyendas"
+    group = AGENTS[gen]
+    all_classes = list(group["racional"]) + list(group["creativo"])
+
+    # Find the requested agent by name
+    target_cls = None
+    for cls in all_classes:
+        agent = get_agent(cls)
+        if agent.name == req.agent_name:
+            target_cls = cls
+            break
+
+    if not target_cls:
+        raise HTTPException(status_code=404, detail=f"Agent '{req.agent_name}' not found in {gen}")
+
+    agent = get_agent(target_cls)
+    cost_before = _load_budget()["total_cost_eur"]
+
+    loop = asyncio.get_event_loop()
+    content, inp_tok, out_tok = await loop.run_in_executor(
+        None, agent_ask, agent, req.message, req.context
+    )
+    track_usage(inp_tok, out_tok, agent.name)
+
+    reply = AgentReply(
+        name=agent.name,
+        role=agent.role,
+        persona=agent.persona,
+        side=agent.side,
+        icon=ICONS.get(agent.name, "🎯"),
+        content=content,
+    )
+
+    # Report to Telegram
+    cost_after = _load_budget()["total_cost_eur"]
+    query_cost = cost_after - cost_before
+    _send_query_report(req.message, [reply], query_cost, gen)
+
+    return reply
 
 
 @app.get("/api/council/health")

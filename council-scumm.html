@@ -942,6 +942,11 @@
 
         /* Speaking LED */
         .np.speaking::after { content: ''; display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: #44ff44; box-shadow: 0 0 6px #44ff44; margin-left: 4px; animation: blink-led 0.8s infinite; vertical-align: middle; }
+        /* Preguntar mode — nameplates become clickable selectors */
+        .np.selectable { cursor: pointer; animation: pulse-select 1.5s infinite; }
+        .np.selectable:hover { background: rgba(52, 152, 219, 0.9); transform: scale(1.15); box-shadow: 0 0 12px rgba(52, 152, 219, 0.6); }
+        .np.selected { background: rgba(46, 204, 113, 0.9) !important; box-shadow: 0 0 15px rgba(46, 204, 113, 0.7); animation: none; transform: scale(1.1); }
+        @keyframes pulse-select { 0%, 100% { box-shadow: 0 0 5px rgba(52, 152, 219, 0.3); } 50% { box-shadow: 0 0 12px rgba(52, 152, 219, 0.6); } }
         @keyframes blink-led { 0%, 100% { opacity: 1; } 50% { opacity: 0.3; } }
 
         /* Output panel */
@@ -958,7 +963,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>AdmiraNext Consejo <span style="font-size:0.45em;-webkit-text-fill-color:#555;background:none;">v26.13.04.2</span></h1>
+        <h1>AdmiraNext Consejo <span style="font-size:0.45em;-webkit-text-fill-color:#555;background:none;">v26.13.04.3</span></h1>
 
         <div class="top-bar">
             <div class="gen-toggle">
@@ -1012,7 +1017,7 @@
             </div>
             <div class="scumm-bottom">
                 <div class="verb-grid">
-                    <button class="verb-btn verb-primary" data-verb="presentar" onclick="selectVerb(this)">Presentar</button>
+                    <button class="verb-btn verb-primary" data-verb="preguntar" onclick="selectVerb(this)">Preguntar</button>
                     <button class="verb-btn verb-primary" data-verb="debatir" onclick="selectVerb(this)">Debatir</button>
                     <button class="verb-btn verb-primary" data-verb="sintetizar" onclick="selectVerb(this)">Sintetizar</button>
                     <button class="verb-btn" data-verb="mirar" onclick="selectVerb(this)">Mirar</button>
@@ -1706,13 +1711,25 @@
     let currentVerb = null;
     let currentProject = null;
     let debateRunning = false;
+    let selectedAgent = null; // { name, persona, side, icon } of selected agent for "Preguntar"
+    let preguntarMode = false;
 
     function selectVerb(btn) {
         document.querySelectorAll('.verb-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         currentVerb = btn.dataset.verb;
+
+        // Exit preguntar mode if switching to another verb
+        if (currentVerb !== 'preguntar') {
+            exitPreguntarMode();
+        }
+
         updateActionLine();
-        if (['presentar','debatir','sintetizar'].includes(currentVerb)) {
+
+        if (currentVerb === 'preguntar') {
+            enterPreguntarMode();
+        }
+        if (['debatir','sintetizar'].includes(currentVerb)) {
             if (!currentProject) { setActionLine("Selecciona un proyecto del inventario"); return; }
             executeCouncilVerb(currentVerb);
         }
@@ -1724,11 +1741,47 @@
         if (currentVerb === 'salir') { setActionLine("Volviendo..."); setTimeout(() => window.location.href = '../', 1000); }
     }
 
+    function enterPreguntarMode() {
+        preguntarMode = true;
+        selectedAgent = null;
+        // Make nameplates visible and clickable
+        if (!nameplatesVisible) toggleNameplates();
+        document.querySelectorAll('.np').forEach(np => {
+            np.classList.add('selectable');
+            np.onclick = function() { selectAgentForQuestion(this); };
+        });
+        setActionLine("👆 Selecciona un consejero para preguntarle...");
+    }
+
+    function exitPreguntarMode() {
+        preguntarMode = false;
+        selectedAgent = null;
+        document.querySelectorAll('.np').forEach(np => {
+            np.classList.remove('selectable', 'selected');
+            np.onclick = null;
+        });
+    }
+
+    function selectAgentForQuestion(npEl) {
+        const persona = npEl.getAttribute('data-persona');
+        const members = COUNCIL.filter(m => m.gen === currentGen);
+        const agent = members.find(m => m.persona === persona);
+        if (!agent) return;
+
+        // Highlight selected
+        document.querySelectorAll('.np').forEach(n => n.classList.remove('selected'));
+        npEl.classList.add('selected');
+        selectedAgent = agent;
+
+        setActionLine("❓ Pregunta a " + agent.icon + " " + agent.persona + " (" + agent.name + ") — escribe y pulsa Enviar");
+        showSpeechBubble(agent.persona, agent.name, agent.persona + " espera tu pregunta...");
+    }
+
     function updateActionLine() {
-        const names = { presentar:"Presentar", debatir:"Debatir", sintetizar:"Sintetizar", mirar:"Mirar", hablar:"Hablar con", leer:"Leer", votar:"Votar", comparar:"Comparar", salir:"Salir" };
+        const names = { preguntar:"Preguntar", debatir:"Debatir", sintetizar:"Sintetizar", mirar:"Mirar", hablar:"Hablar con", leer:"Leer", votar:"Votar", comparar:"Comparar", salir:"Salir" };
         const v = names[currentVerb] || "";
         const p = currentProject ? ' "' + currentProject + '"' : "";
-        if (v) document.getElementById("action-input").placeholder = v + p + "...";
+        if (v && !preguntarMode) document.getElementById("action-input").placeholder = v + p + "...";
     }
 
     function setActionLine(text) { document.getElementById("action-input").placeholder = text; }
@@ -1764,6 +1817,7 @@
         document.getElementById("conv-racional").innerHTML = "";
         document.getElementById("conv-creativo").innerHTML = "";
         conversationHistory = [];
+        exitPreguntarMode();
         if (!nameplatesVisible) toggleNameplates();
         setActionLine("Escribe aquí para hablar con el consejo...");
     }
@@ -1795,6 +1849,14 @@
         const text = input.value.trim();
         if (!text) return;
         input.value = "";
+
+        // If in "preguntar" mode with a selected agent, ask only that one
+        if (preguntarMode && selectedAgent) {
+            enterConversation();
+            addUserEntry(text);
+            askSingleAgent(text, selectedAgent);
+            return;
+        }
 
         enterConversation();
         addUserEntry(text);
@@ -1858,6 +1920,73 @@
         }
         activeApiUrl = null; // Reset cache if all failed
         return null; // triggers fallback
+    }
+
+    async function askOneAgentAPI(message, agentName) {
+        /** Call /api/council/ask-one for a single agent. */
+        const urls = activeApiUrl ? [activeApiUrl] : COUNCIL_API_URLS;
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + "/api/council/ask-one", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Council-Token": COUNCIL_API_TOKEN,
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        agent_name: agentName,
+                        generation: currentGen,
+                        context: conversationHistory.slice(-6),
+                    }),
+                });
+                if (res.status === 402) { setActionLine("💰 Presupuesto agotado"); return null; }
+                if (res.status === 403) { setActionLine("🔒 Error de autenticación"); return null; }
+                if (res.status === 429) { setActionLine("⏱️ Demasiadas peticiones"); return null; }
+                if (!res.ok) throw new Error("API " + res.status);
+                activeApiUrl = baseUrl;
+                return await res.json();
+            } catch (err) {
+                console.warn("ask-one failed at " + baseUrl + ":", err.message);
+            }
+        }
+        activeApiUrl = null;
+        return null;
+    }
+
+    async function askSingleAgent(question, agent) {
+        /** Ask a single selected agent via the API. */
+        const panelId = agent.side === "racional" ? "conv-racional" : "conv-creativo";
+
+        // Show thinking
+        showSpeechBubble(agent.persona, agent.name, agent.persona + " está pensando...");
+        highlightNameplate(agent.persona);
+        setActionLine("🧠 " + agent.persona + " está pensando...");
+
+        conversationHistory.push({ role: "user", content: question });
+
+        const reply = await askOneAgentAPI(question, agent.name);
+
+        hideSpeechBubble();
+        clearNameplateHighlight();
+
+        if (reply) {
+            // Show the speech bubble with the response
+            showSpeechBubble(agent.persona, reply.name, reply.content.substring(0, 80) + "...");
+            highlightNameplate(agent.persona);
+            addConvEntry(panelId, reply.icon, reply.name, reply.persona, reply.side, reply.content);
+            conversationHistory.push({ role: "assistant", content: reply.name + ": " + reply.content });
+
+            setActionLine("✅ " + agent.persona + " ha respondido — escribe para seguir preguntando");
+            // Keep agent selected for follow-up questions
+            await new Promise(r => setTimeout(r, 3000));
+            hideSpeechBubble();
+        } else {
+            // Fallback
+            addConvEntry(panelId, agent.icon, agent.name, agent.persona, agent.side,
+                "[Offline] " + agent.persona + " no está disponible.");
+            setActionLine("⚠️ API no disponible — " + agent.persona + " no pudo responder");
+        }
     }
 
     async function simulateCouncilResponse(question) {
@@ -1943,18 +2072,17 @@
         const members = COUNCIL.filter(m => m.gen === currentGen);
         const racionales = members.filter(m => m.side === "racional");
         const creativos = members.filter(m => m.side === "creativo");
-        const roundName = { presentar:"Propuestas", debatir:"Debate", sintetizar:"Síntesis" }[verb];
-        const verbGerund = { presentar:"presentando", debatir:"debatiendo", sintetizar:"sintetizando" }[verb];
+        const roundName = { debatir:"Debate", sintetizar:"Síntesis" }[verb] || verb;
+        const verbGerund = { debatir:"debatiendo", sintetizar:"sintetizando" }[verb] || verb;
         document.getElementById("round-indicator").textContent = "Ronda: " + roundName;
         setActionLine("🧠 " + roundName + " en curso — los consejeros deliberan con Claude...");
 
         // Build the prompt based on the verb + project
         const verbPrompts = {
-            presentar: "Como miembro del Consejo de Dirección de AdmiraNext, presenta tu propuesta inicial para el proyecto '" + (currentProject || "nuevo proyecto") + "'. Da tu perspectiva profesional desde tu rol. Sé concreto y propositivo.",
             debatir: "Estamos en fase de debate sobre el proyecto '" + (currentProject || "nuevo proyecto") + "'. Analiza las propuestas anteriores del consejo, valida lo fuerte, cuestiona lo débil, y propón mejoras.",
             sintetizar: "Genera tu síntesis final sobre el proyecto '" + (currentProject || "nuevo proyecto") + "'. Integra las mejores ideas del debate y da tu conclusión ejecutiva.",
         };
-        const prompt = verbPrompts[verb] || verbPrompts.presentar;
+        const prompt = verbPrompts[verb] || verbPrompts.debatir;
 
         // Show thinking animation
         for (const m of [...racionales, ...creativos]) highlightNameplate(m.persona);
@@ -1996,7 +2124,7 @@
         } else {
             // Fallback offline
             setActionLine("⚠️ API no disponible — modo offline");
-            const verbAction = { presentar:"presenta su visión", debatir:"debate los puntos", sintetizar:"ofrece su síntesis" }[verb];
+            const verbAction = { debatir:"debate los puntos", sintetizar:"ofrece su síntesis" }[verb] || "responde";
             for (const m of racionales) {
                 addConvEntry("conv-racional", m.icon, m.name, m.persona, "racional", "[Offline] " + m.persona + " " + verbAction + ".");
                 await new Promise(r => setTimeout(r, 200));

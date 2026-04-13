@@ -958,7 +958,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>AdmiraNext Consejo <span style="font-size:0.45em;-webkit-text-fill-color:#555;background:none;">v26.13.04.1</span></h1>
+        <h1>AdmiraNext Consejo <span style="font-size:0.45em;-webkit-text-fill-color:#555;background:none;">v26.13.04.2</span></h1>
 
         <div class="top-bar">
             <div class="gen-toggle">
@@ -1802,30 +1802,57 @@
     }
 
     // ── Council API config ──
-    const COUNCIL_API = "http://localhost:8420";
+    // Tries Cloudflare tunnel first, then localhost fallback
+    const COUNCIL_API_URLS = [
+        "https://persian-principal-pediatric-pmc.trycloudflare.com",  // Cloudflare tunnel
+        "http://localhost:8420",                                       // Local dev fallback
+    ];
+    const COUNCIL_API_TOKEN = "G3ADHakfWlP6JfzZMkhcT3NXyGp5r8UXXZu5gX0uGMA";
+    let activeApiUrl = null;
     let conversationHistory = [];
 
     async function askCouncilAPI(message) {
         /**
          * Calls the real council API backed by Claude.
-         * Falls back to simulation if the API is unreachable.
+         * Tries configured URLs in order, caches the working one.
+         * Falls back to simulation if all are unreachable.
          */
-        try {
-            const res = await fetch(COUNCIL_API + "/api/council/ask", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                    message: message,
-                    generation: currentGen,
-                    context: conversationHistory.slice(-6),
-                }),
-            });
-            if (!res.ok) throw new Error("API " + res.status);
-            return await res.json();
-        } catch (err) {
-            console.warn("Council API not available:", err.message);
-            return null; // triggers fallback
+        const urls = activeApiUrl ? [activeApiUrl] : COUNCIL_API_URLS;
+
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + "/api/council/ask", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Council-Token": COUNCIL_API_TOKEN,
+                    },
+                    body: JSON.stringify({
+                        message: message,
+                        generation: currentGen,
+                        context: conversationHistory.slice(-6),
+                    }),
+                });
+                if (res.status === 403) {
+                    console.error("Council API: invalid token");
+                    setActionLine("🔒 Error de autenticación con la API");
+                    return null;
+                }
+                if (res.status === 429) {
+                    console.warn("Council API: rate limited");
+                    setActionLine("⏱️ Demasiadas peticiones — espera unos minutos");
+                    return null;
+                }
+                if (!res.ok) throw new Error("API " + res.status);
+                activeApiUrl = baseUrl; // Cache working URL
+                console.log("Council API connected:", baseUrl);
+                return await res.json();
+            } catch (err) {
+                console.warn("Council API not available at " + baseUrl + ":", err.message);
+            }
         }
+        activeApiUrl = null; // Reset cache if all failed
+        return null; // triggers fallback
     }
 
     async function simulateCouncilResponse(question) {

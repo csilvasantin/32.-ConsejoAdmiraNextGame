@@ -1,1290 +1,719 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AdmiraNext Council — SCUMM Interface</title>
-<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
-<link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700;800&display=swap" rel="stylesheet">
-<style>
-/* ===== RESET ===== */
-*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>AdmiraNext Council — SCUMM Interface</title>
+    <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background: #0a0a14;
+            color: #e0e0e0;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
 
-:root {
-  --ink: #173127;
-  --muted: #5f7469;
-  --accent: #1a7f5a;
-  --line: rgba(23, 49, 39, 0.12);
-}
+        /* ── Header (from dashboard) ── */
+        .container { max-width: 1200px; margin: 0 auto; padding: 1.5rem 1.5rem 0; width: 100%; }
 
-html, body {
-  background: #0a0a0a;
-  min-height: 100vh;
-  font-family: 'JetBrains Mono', 'Avenir Next', 'Segoe UI', sans-serif;
-  color: var(--ink);
-}
+        h1 {
+            text-align: center;
+            font-size: 1.8rem;
+            margin-bottom: 0.3rem;
+            background: linear-gradient(135deg, #e74c3c, #3498db);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+        .version {
+            text-align: center;
+            color: #444;
+            font-size: 0.7rem;
+            margin-bottom: 0.3rem;
+        }
+        .subtitle {
+            text-align: center;
+            color: #555;
+            margin-bottom: 1rem;
+            font-size: 0.9rem;
+        }
+        .subtitle .live { color: #44bb44; }
 
-/* ===== CRT SCANLINE OVERLAY ===== */
-#crt-overlay {
-  position: fixed; inset: 0; z-index: 9999; pointer-events: none;
-  background: repeating-linear-gradient(
-    to bottom,
-    transparent 0px, transparent 3px,
-    rgba(0,0,0,0.08) 3px, rgba(0,0,0,0.08) 4px
-  );
-}
-#crt-overlay::after {
-  content: ''; position: absolute; inset: 0;
-  background: radial-gradient(ellipse at center, transparent 60%, rgba(0,0,0,0.25) 100%);
-}
+        /* Generation toggle */
+        .gen-toggle {
+            display: flex;
+            justify-content: center;
+            gap: 0;
+            margin-bottom: 1rem;
+        }
+        .gen-btn {
+            padding: 0.7rem 2rem;
+            font-size: 1rem;
+            font-weight: 700;
+            border: 2px solid #333;
+            background: #1a1a2e;
+            color: #666;
+            cursor: pointer;
+            transition: all 0.3s;
+            letter-spacing: 0.5px;
+        }
+        .gen-btn:first-child { border-radius: 10px 0 0 10px; }
+        .gen-btn:last-child { border-radius: 0 10px 10px 0; }
+        .gen-btn:hover { background: #222; color: #aaa; }
+        .gen-btn.active-leyendas {
+            background: linear-gradient(135deg, #b8860b, #daa520);
+            color: #fff;
+            border-color: #daa520;
+            box-shadow: 0 0 15px rgba(218, 165, 32, 0.3);
+        }
+        .gen-btn.active-coetaneos {
+            background: linear-gradient(135deg, #2980b9, #3498db);
+            color: #fff;
+            border-color: #3498db;
+            box-shadow: 0 0 15px rgba(52, 152, 219, 0.3);
+        }
 
-/* ===== MAIN LAYOUT ===== */
-#game-wrapper {
-  max-width: 1180px;
-  margin: 0 auto;
-  display: flex;
-  flex-direction: column;
-  min-height: 100vh;
-}
+        /* Summary bar */
+        .summary {
+            display: flex;
+            justify-content: center;
+            gap: 1.5rem;
+            margin: 0.5rem 0 1rem;
+            flex-wrap: wrap;
+        }
+        .summary-item {
+            text-align: center;
+            padding: 0.5rem 1rem;
+            background: #1a1a2e;
+            border-radius: 10px;
+        }
+        .summary-number { font-size: 1.5rem; font-weight: 800; }
+        .summary-number.green { color: #44bb44; }
+        .summary-number.red { color: #e74c3c; }
+        .summary-number.blue { color: #3498db; }
+        .summary-label { font-size: 0.65rem; color: #888; margin-top: 0.2rem; }
 
-/* ===== PIXEL BOARD (from consejo.html / styles.css) ===== */
-.pixel-board {
-  position: relative;
-  min-height: 1120px;
-  border-radius: 0;
-  padding: 28px;
-  background:
-    linear-gradient(180deg, rgba(250,253,251,0.96), rgba(228,237,232,0.92)),
-    repeating-linear-gradient(0deg, rgba(23,49,39,0.04) 0, rgba(23,49,39,0.04) 1px, transparent 1px, transparent 16px),
-    repeating-linear-gradient(90deg, rgba(23,49,39,0.04) 0, rgba(23,49,39,0.04) 1px, transparent 1px, transparent 16px);
-  overflow: hidden;
-  border-left: 4px solid #173127;
-  border-right: 4px solid #173127;
-  border-top: 4px solid #173127;
-  flex: 1;
-}
+        /* Council image */
+        .council-image {
+            position: relative;
+            width: 100%;
+            max-width: 1000px;
+            margin: 0 auto;
+            border-radius: 12px 12px 0 0;
+            overflow: hidden;
+            box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+        }
+        .council-image img {
+            width: 100%;
+            display: block;
+            transition: opacity 0.3s ease;
+        }
 
-.pixel-seat, .pixel-table { position: absolute; }
+        /* Nameplate overlays */
+        .nameplates {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+        }
+        .np {
+            position: absolute;
+            padding: 2px 6px;
+            font-size: 0.55rem;
+            font-weight: 800;
+            text-align: center;
+            border-radius: 3px;
+            line-height: 1.2;
+            text-transform: uppercase;
+            letter-spacing: 0.3px;
+            white-space: nowrap;
+            transform: translateX(-50%);
+            transition: all 0.3s ease;
+            border: 1px solid rgba(0,0,0,0.3);
+            text-shadow: 0 1px 1px rgba(0,0,0,0.3);
+        }
+        .np.gold {
+            background: linear-gradient(180deg, #daa520, #b8860b);
+            color: #fff;
+            box-shadow: 0 0 6px rgba(218,165,32,0.5);
+        }
+        .np.gray {
+            background: linear-gradient(180deg, #555, #3a3a3a);
+            color: #888;
+            box-shadow: none;
+        }
+        .np .np-role {
+            font-size: 0.45rem;
+            opacity: 0.8;
+            display: block;
+        }
+        .np.speaking::after {
+            content: '';
+            display: inline-block;
+            width: 6px; height: 6px;
+            border-radius: 50%;
+            background: #44ff44;
+            box-shadow: 0 0 6px #44ff44;
+            margin-left: 4px;
+            animation: blink-led 0.8s infinite;
+            vertical-align: middle;
+        }
+        @keyframes blink-led {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.3; }
+        }
 
-.pixel-seat {
-  width: 220px;
-  padding: 14px;
-  border: 4px solid #173127;
-  border-radius: 0;
-  background: #ffffff;
-  box-shadow: 8px 8px 0 rgba(23,49,39,0.18);
-  z-index: 2;
-  text-align: center;
-  cursor: pointer;
-  transition: transform 0.15s, box-shadow 0.15s;
-}
-.pixel-seat:hover {
-  transform: translateY(-3px);
-  box-shadow: 10px 12px 0 rgba(23,49,39,0.22);
-}
-.pixel-seat::before {
-  content: "";
-  position: absolute;
-  inset: 8px;
-  border: 1px dashed rgba(23,49,39,0.12);
-  pointer-events: none;
-}
+        /* ══════════════════════════════════════════════
+           SCUMM BAR — verb grid + action line + inventory
+           ══════════════════════════════════════════════ */
+        .scumm-bar {
+            width: 100%;
+            max-width: 1000px;
+            margin: 0 auto;
+            background: #0d0818;
+            border: 2px solid #1a1a2e;
+            border-top: 1px solid #2a1a3a;
+            border-radius: 0 0 12px 12px;
+            padding: 0;
+            font-family: 'Press Start 2P', monospace;
+        }
 
-.pixel-seat .seat-photo {
-  margin-bottom: 10px;
-  border-radius: 0;
-  border: 4px solid #173127;
-  image-rendering: pixelated;
-  filter: saturate(0.92) contrast(1.04);
-  object-position: center 20%;
-}
+        .action-line {
+            text-align: center;
+            font-size: 9px;
+            color: #daa520;
+            padding: 8px 12px;
+            min-height: 28px;
+            border-bottom: 1px solid #1a1a2e;
+            text-shadow: 0 0 8px rgba(218,165,32,0.4);
+            letter-spacing: 0.5px;
+        }
 
-.seat-photo {
-  width: 100%;
-  aspect-ratio: 4/3;
-  object-fit: cover;
-  display: block;
-  margin-bottom: 14px;
-  background: rgba(23,49,39,0.08);
-}
+        .scumm-bottom {
+            display: flex;
+        }
 
-.pixel-seat strong {
-  display: block;
-  margin-top: 8px;
-  font-size: 18px;
-}
+        .verb-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 2px;
+            padding: 8px;
+            flex: 1;
+        }
+        .verb-btn {
+            background: transparent;
+            border: none;
+            color: #b8860b;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 8px;
+            padding: 6px 4px;
+            cursor: pointer;
+            transition: all 0.15s;
+            text-transform: uppercase;
+            letter-spacing: 0.5px;
+            border-radius: 3px;
+        }
+        .verb-btn:hover {
+            color: #daa520;
+            text-shadow: 0 0 8px rgba(218,165,32,0.5);
+            background: rgba(218,165,32,0.08);
+        }
+        .verb-btn.active {
+            color: #fff;
+            text-shadow: 0 0 12px rgba(218,165,32,0.8);
+            background: rgba(218,165,32,0.15);
+        }
+        .verb-btn.verb-primary { color: #e74c3c; }
+        .verb-btn.verb-primary:hover {
+            color: #ff6b6b;
+            text-shadow: 0 0 8px rgba(231,76,60,0.5);
+            background: rgba(231,76,60,0.08);
+        }
+        .verb-btn.verb-primary.active {
+            color: #fff;
+            text-shadow: 0 0 12px rgba(231,76,60,0.8);
+            background: rgba(231,76,60,0.15);
+        }
 
-.seat-badge {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  min-width: 56px;
-  font-family: 'JetBrains Mono', monospace;
-  font-size: .7rem;
-  font-weight: 700;
-  padding: 2px 10px;
-  border-radius: 0;
-  background: #173127;
-  color: #eef4f1;
-  letter-spacing: .08em;
-  text-transform: uppercase;
-  margin-bottom: 4px;
-}
+        .inventory {
+            width: 240px;
+            border-left: 1px solid #1a1a2e;
+            padding: 6px 8px;
+            display: flex;
+            flex-direction: column;
+        }
+        .inventory-title {
+            font-size: 6px;
+            color: #555;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            margin-bottom: 6px;
+            text-align: center;
+        }
+        .inventory-list {
+            display: flex;
+            flex-direction: column;
+            gap: 2px;
+            flex: 1;
+            overflow-y: auto;
+            max-height: 80px;
+        }
+        .inv-item {
+            font-size: 7px;
+            color: #3498db;
+            padding: 3px 6px;
+            cursor: pointer;
+            border-radius: 3px;
+            transition: all 0.15s;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .inv-item:hover {
+            background: rgba(52,152,219,0.1);
+            color: #5dade2;
+        }
+        .inv-item.selected {
+            background: rgba(52,152,219,0.15);
+            color: #fff;
+        }
 
-.seat-current {
-  margin: 8px 0 0;
-  font-size: 11px;
-  font-weight: 800;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  color: var(--muted);
-}
+        /* ── Speech bubble ── */
+        .speech-overlay {
+            position: absolute;
+            top: 0; left: 0; right: 0; bottom: 0;
+            pointer-events: none;
+            z-index: 10;
+        }
+        .speech-bubble {
+            position: absolute;
+            background: rgba(10, 10, 20, 0.92);
+            border: 2px solid #daa520;
+            border-radius: 10px;
+            padding: 10px 14px;
+            font-size: 0.75rem;
+            color: #e0e0e0;
+            max-width: 300px;
+            line-height: 1.5;
+            display: none;
+            box-shadow: 0 0 15px rgba(218,165,32,0.2);
+        }
+        .speech-bubble .speaker {
+            font-weight: 700;
+            color: #daa520;
+            margin-bottom: 4px;
+            font-size: 0.65rem;
+            text-transform: uppercase;
+        }
+        .speech-bubble::after {
+            content: '';
+            position: absolute;
+            bottom: -8px;
+            left: 20px;
+            border-left: 8px solid transparent;
+            border-right: 8px solid transparent;
+            border-top: 8px solid #daa520;
+        }
 
-.seat-legend {
-  margin: 8px 0 0;
-  font-size: 13px;
-  font-weight: 700;
-  color: var(--accent);
-}
+        .round-indicator {
+            position: absolute;
+            top: 10px;
+            left: 10px;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 8px;
+            color: #daa520;
+            background: rgba(10,10,20,0.85);
+            padding: 5px 10px;
+            border-radius: 5px;
+            border: 1px solid #333;
+            z-index: 5;
+        }
 
-/* Seat positions */
-.pixel-seat-1 { top: 24px; left: 50%; transform: translateX(-50%); }
-.pixel-seat-2 { top: 160px; left: 40px; }
-.pixel-seat-3 { top: 440px; left: 20px; }
-.pixel-seat-4 { bottom: 120px; left: 80px; }
-.pixel-seat-5 { top: 160px; right: 40px; }
-.pixel-seat-6 { top: 440px; right: 20px; }
-.pixel-seat-7 { bottom: 120px; right: 80px; }
-.pixel-seat-8 { bottom: 24px; left: 50%; transform: translateX(-50%); }
+        /* ── Output panel ── */
+        .output-panel {
+            width: 100%;
+            max-width: 1000px;
+            margin: 12px auto 1.5rem;
+            background: #1a1a2e;
+            border-radius: 12px;
+            padding: 1rem 1.2rem;
+            display: none;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        .output-panel.visible { display: block; }
+        .output-panel h3 {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 10px;
+            color: #daa520;
+            margin-bottom: 12px;
+        }
+        .output-entry {
+            padding: 8px 0;
+            border-bottom: 1px solid #222;
+        }
+        .output-entry:last-child { border-bottom: none; }
+        .output-speaker {
+            font-weight: 700;
+            font-size: 0.8rem;
+            margin-bottom: 4px;
+        }
+        .output-speaker.racional { color: #e74c3c; }
+        .output-speaker.creativo { color: #3498db; }
+        .output-text {
+            font-size: 0.85rem;
+            color: #bbb;
+            line-height: 1.6;
+        }
 
-/* Hover override for transformed seats */
-.pixel-seat-1:hover, .pixel-seat-8:hover {
-  transform: translateX(-50%) translateY(-3px);
-}
+        .footer {
+            text-align: center;
+            color: #333;
+            font-size: 0.7rem;
+            padding: 1rem;
+            margin-top: auto;
+        }
 
-/* Agent LED indicator on seats */
-.seat-led {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  background: #444;
-  border: 2px solid #173127;
-  z-index: 5;
-  transition: background 0.3s, box-shadow 0.3s;
-}
-.seat-led.idle { background: #444; }
-.seat-led.thinking { background: #d4a017; box-shadow: 0 0 6px #d4a017; animation: pulse 0.8s infinite; }
-.seat-led.speaking { background: #0f0; box-shadow: 0 0 8px #0f0; animation: pulse 0.5s infinite; }
+        .crt-overlay {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 9999;
+            background: repeating-linear-gradient(
+                to bottom, transparent 0px, transparent 3px,
+                rgba(0,0,0,0.06) 3px, rgba(0,0,0,0.06) 4px
+            );
+        }
 
-@keyframes pulse {
-  0%,100% { opacity: 1; }
-  50% { opacity: 0.5; }
-}
-
-/* Speech bubble on seats */
-.seat-bubble {
-  position: absolute;
-  top: -12px; left: 50%; transform: translateX(-50%) translateY(-100%);
-  padding: 8px 10px;
-  background: rgba(0,0,0,0.92);
-  border: 2px solid #1a7f5a;
-  border-radius: 4px;
-  font-family: 'Press Start 2P', monospace;
-  font-size: 6px;
-  color: #ddd;
-  max-width: 220px;
-  line-height: 1.6;
-  display: none;
-  z-index: 10;
-  pointer-events: none;
-  white-space: normal;
-}
-.seat-bubble::after {
-  content: '';
-  position: absolute;
-  top: 100%; left: 50%; transform: translateX(-50%);
-  border: 6px solid transparent;
-  border-top-color: #1a7f5a;
-}
-.seat-bubble.visible { display: block; animation: fadeInBubble 0.3s ease; }
-
-@keyframes fadeInBubble {
-  from { opacity: 0; transform: translateX(-50%) translateY(calc(-100% + 6px)); }
-  to { opacity: 1; transform: translateX(-50%) translateY(-100%); }
-}
-
-/* Pixel Table */
-.pixel-table {
-  top: 250px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(560px, calc(100% - 320px));
-  height: 560px;
-  border: 8px solid #173127;
-  border-radius: 42px;
-  background: repeating-linear-gradient(45deg, #ba8a5f 0, #ba8a5f 12px, #a8774f 12px, #a8774f 24px);
-  box-shadow: inset 0 0 0 8px #e6c8a5, 12px 12px 0 rgba(23,49,39,0.18);
-  text-decoration: none;
-  color: inherit;
-  cursor: pointer;
-  transition: transform 120ms ease, box-shadow 120ms ease;
-  font: inherit;
-  appearance: none;
-  -webkit-appearance: none;
-  padding: 0;
-  z-index: 3;
-}
-.pixel-table::before, .pixel-table::after {
-  content: "";
-  position: absolute;
-  left: 50%;
-  transform: translateX(-50%);
-  width: 56px;
-  background: #6f4d33;
-  border: 6px solid #173127;
-}
-.pixel-table::before { height: 90px; bottom: -84px; }
-.pixel-table::after { width: 180px; height: 26px; bottom: -110px; }
-
-.pixel-table-inner {
-  position: absolute;
-  inset: 50% auto auto 50%;
-  transform: translate(-50%, -50%);
-  width: calc(100% - 80px);
-  padding: 22px;
-  border: 4px solid #173127;
-  background: rgba(255,248,236,0.9);
-  text-align: center;
-  z-index: 1;
-}
-.pixel-table:hover {
-  transform: translateX(-50%) translateY(-4px);
-  box-shadow: inset 0 0 0 8px #e6c8a5, 16px 16px 0 rgba(23,49,39,0.18);
-}
-.pixel-table-title, .pixel-table-subtitle { display: block; }
-.pixel-table-title { font-size: 28px; font-weight: 800; }
-.pixel-table-subtitle { margin-top: 8px; font-size: 13px; letter-spacing: 0.12em; text-transform: uppercase; color: var(--muted); }
-.pixel-table-cta {
-  display: inline-block;
-  margin-top: 14px;
-  padding: 8px 12px;
-  border: 3px solid #173127;
-  background: #1a7f5a;
-  color: #fff;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.08em;
-  text-transform: uppercase;
-}
-
-/* Brief on table */
-.table-brief {
-  position: absolute;
-  top: 250px;
-  left: 50%;
-  transform: translateX(-50%);
-  width: min(460px, calc(100% - 400px));
-  z-index: 4;
-  text-align: center;
-  font-family: 'Press Start 2P', monospace;
-  font-size: 8px;
-  color: #173127;
-  background: rgba(255,248,236,0.95);
-  border: 2px solid #173127;
-  padding: 10px 14px;
-  line-height: 1.6;
-  display: none;
-}
-.table-brief.visible { display: block; }
-
-/* Brief input on table */
-.brief-input-wrap {
-  position: absolute;
-  top: 480px;
-  left: 50%;
-  transform: translateX(-50%);
-  z-index: 5;
-  display: none;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-}
-.brief-input-wrap.visible { display: flex; }
-#brief-input {
-  width: 400px; padding: 10px 14px;
-  font-family: 'Press Start 2P', monospace; font-size: 8px;
-  color: #173127;
-  background: rgba(255,248,236,0.95);
-  border: 3px solid #173127;
-  outline: none; text-align: center;
-}
-#brief-input::placeholder { color: #999; }
-#brief-hint {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 6px; color: var(--accent);
-}
-
-/* Round indicator */
-#round-indicator {
-  position: absolute; top: 12px; left: 16px; z-index: 20;
-  font-family: 'Press Start 2P', monospace;
-  font-size: 7px; color: #fff;
-  background: rgba(0,0,0,0.75); padding: 6px 10px; border-radius: 3px;
-  border: 1px solid #333;
-}
-
-/* Council toggle */
-#council-toggle {
-  position: absolute; top: 12px; right: 16px; z-index: 20;
-  font-family: 'Press Start 2P', monospace; font-size: 7px;
-  background: rgba(0,0,0,0.75); color: #aaa; border: 2px solid #555;
-  padding: 6px 10px; cursor: pointer; border-radius: 3px;
-}
-#council-toggle:hover { color: #fff; border-color: #888; }
-
-/* ===== LEGEND OVERLAY ===== */
-.legend-overlay {
-  position: fixed;
-  inset: 0;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  padding: 24px;
-  background: rgba(11,22,17,0.72);
-  backdrop-filter: blur(8px);
-  z-index: 40;
-}
-.legend-overlay.is-open { display: flex; }
-
-.legend-panel {
-  width: min(1080px, 100%);
-  max-height: calc(100vh - 48px);
-  overflow: auto;
-  padding: 24px;
-  border: 4px solid #173127;
-  background: linear-gradient(180deg, rgba(255,253,247,0.98), rgba(241,246,243,0.98));
-  box-shadow: 16px 16px 0 rgba(23,49,39,0.22);
-}
-
-.legend-panel-head {
-  display: flex;
-  align-items: start;
-  justify-content: space-between;
-  gap: 16px;
-}
-.legend-panel-head .member {
-  text-transform: uppercase;
-  font-size: 12px;
-  font-weight: 800;
-  letter-spacing: 0.15em;
-  color: var(--muted);
-  margin-bottom: 6px;
-}
-.legend-panel-head .name {
-  font-size: 22px;
-  font-weight: 800;
-}
-
-.legend-close {
-  width: auto;
-  padding: 12px 16px;
-  border: 3px solid #173127;
-  border-radius: 0;
-  background: #173127;
-  color: #fff;
-  font-weight: 800;
-  cursor: pointer;
-  font-size: 14px;
-}
-
-.pixel-board-legend {
-  min-height: 1120px;
-  margin-top: 18px;
-}
-
-/* ===== SCUMM ACTION BAR ===== */
-#scumm-bar {
-  background: #14091e;
-  border-top: 3px solid #330033;
-  font-family: 'Press Start 2P', monospace;
-}
-
-#action-line {
-  background: #000;
-  color: #fff;
-  font-family: 'Press Start 2P', monospace;
-  font-size: 8px;
-  padding: 10px 16px;
-  text-align: center;
-  border-top: 2px solid #330033;
-  border-bottom: 2px solid #220022;
-  min-height: 32px;
-  line-height: 1.4;
-}
-
-#scumm-bottom {
-  display: flex;
-  background: #14091e;
-  border-bottom: 4px solid #330033;
-}
-
-#verb-grid {
-  width: 50%;
-  padding: 12px 16px;
-  display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  grid-template-rows: repeat(3, 1fr);
-  gap: 4px;
-}
-
-.verb-btn {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 9px;
-  background: transparent;
-  color: #ff44cc;
-  border: 2px solid transparent;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  text-align: center;
-  padding: 8px 4px;
-  transition: color 0.15s, border-color 0.15s;
-}
-.verb-btn:hover { color: #ffaaff; }
-.verb-btn.selected { color: #ffffff; border-color: #ffffff; }
-.verb-btn.disabled { color: #333; cursor: default; pointer-events: none; }
-
-#inventory {
-  width: 50%;
-  padding: 12px 16px;
-  border-left: 2px solid #330033;
-  display: flex;
-  flex-direction: column;
-}
-#inv-title {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 7px;
-  color: #ff44cc;
-  margin-bottom: 8px;
-  opacity: 0.7;
-}
-#inv-list {
-  flex: 1;
-  overflow-y: auto;
-  max-height: 120px;
-}
-.inv-item {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 7px;
-  color: #8a8a8a;
-  padding: 6px 8px;
-  cursor: pointer;
-  border: 1px solid transparent;
-  margin-bottom: 4px;
-  transition: color 0.15s, border-color 0.15s;
-}
-.inv-item:hover { color: #ffaaff; }
-.inv-item.selected { color: #ffffff; border-color: #ff44cc; }
-.inv-item::before { content: '\1F4C4 '; }
-
-/* ===== MODAL ===== */
-#modal {
-  position: fixed; inset: 0; z-index: 50;
-  background: rgba(0,0,0,0.85);
-  display: none; align-items: center; justify-content: center;
-}
-#modal.visible { display: flex; }
-#modal-content {
-  background: #14091e;
-  border: 3px solid #ff44cc;
-  padding: 20px 24px;
-  max-width: 620px;
-  max-height: 80vh;
-  overflow-y: auto;
-  border-radius: 4px;
-}
-#modal-title {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 10px;
-  margin-bottom: 12px;
-  color: #ff44cc;
-}
-#modal-body {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 7px;
-  color: #c8b89a;
-  line-height: 1.8;
-}
-#modal-close {
-  font-family: 'Press Start 2P', monospace;
-  font-size: 7px;
-  background: transparent;
-  color: #ff44cc;
-  border: 1px solid #ff44cc;
-  padding: 6px 12px;
-  cursor: pointer;
-  margin-top: 14px;
-}
-#modal-close:hover { color: #fff; border-color: #fff; }
-
-/* ===== DOCUMENT VIEW ===== */
-#doc-view {
-  position: fixed; inset: 0; z-index: 50;
-  background: rgba(0,0,0,0.9);
-  display: none; align-items: center; justify-content: center;
-}
-#doc-view.visible { display: flex; }
-#doc-paper {
-  background: #f5e6c8; color: #1a1a1a;
-  padding: 24px 28px;
-  max-width: 640px; max-height: 80vh; overflow-y: auto;
-  border-radius: 2px;
-  box-shadow: 4px 4px 0 rgba(0,0,0,0.5);
-  font-family: 'JetBrains Mono', monospace;
-  font-size: 12px; line-height: 1.6;
-}
-#doc-paper h2 {
-  font-size: 16px; margin-bottom: 12px; color: #2a1608;
-  font-family: 'JetBrains Mono', monospace;
-}
-#doc-paper .doc-entry { font-size: 11px; line-height: 1.8; margin-bottom: 10px; color: #333; }
-#doc-paper .doc-entry strong { color: #1a0e05; }
-#doc-close {
-  font-family: 'Press Start 2P', monospace; font-size: 7px;
-  background: #2a1608; color: #f5e6c8; border: none;
-  padding: 6px 12px; cursor: pointer; margin-top: 14px; display: block;
-}
-
-/* Scrollbar */
-::-webkit-scrollbar { width: 6px; }
-::-webkit-scrollbar-track { background: #111; }
-::-webkit-scrollbar-thumb { background: #444; border-radius: 3px; }
-
-/* ===== RESPONSIVE ===== */
-@media (max-width: 900px) {
-  .pixel-board { min-height: auto; }
-  .pixel-seat { width: 140px; padding: 8px; font-size: 12px; }
-  .pixel-seat strong { font-size: 12px; }
-  .pixel-table-title { font-size: 18px; }
-  #verb-grid { padding: 8px; }
-  .verb-btn { font-size: 7px; }
-}
-</style>
+        @media (max-width: 768px) {
+            .scumm-bottom { flex-direction: column; }
+            .inventory { width: 100%; border-left: none; border-top: 1px solid #1a1a2e; }
+            .gen-btn { padding: 0.5rem 1.2rem; font-size: 0.85rem; }
+        }
+    </style>
 </head>
 <body>
+    <div class="crt-overlay"></div>
 
-<div id="crt-overlay"></div>
-
-<div id="game-wrapper">
-
-  <!-- ===== PIXEL BOARD — COUNCIL ROOM ===== -->
-  <section class="pixel-board" id="pixel-board" aria-label="Mesa del consejo en pixel art">
-
-    <div id="round-indicator">Ronda: --</div>
-    <button id="council-toggle">Leyendas</button>
-
-    <article class="pixel-seat pixel-seat-1" data-idx="0">
-      <div class="seat-led idle"></div>
-      <div class="seat-bubble"></div>
-      <img class="seat-photo" src="https://commons.wikimedia.org/wiki/Special:FilePath/Elon%20Musk%20(cropped).jpg" alt="Elon Musk">
-      <span class="seat-badge">CEO</span>
-      <strong>Elon Musk</strong>
-      <p class="seat-current">Actual</p>
-      <p class="seat-legend">Leyenda: Steve Jobs</p>
-    </article>
-
-    <article class="pixel-seat pixel-seat-2" data-idx="1">
-      <div class="seat-led idle"></div>
-      <div class="seat-bubble"></div>
-      <img class="seat-photo" src="https://commons.wikimedia.org/wiki/Special:FilePath/RuthPorat2016.jpg" alt="Ruth Porat">
-      <span class="seat-badge">CFO</span>
-      <strong>Ruth Porat</strong>
-      <p class="seat-current">Actual</p>
-      <p class="seat-legend">Leyenda: Warren Buffett</p>
-    </article>
-
-    <article class="pixel-seat pixel-seat-3" data-idx="2">
-      <div class="seat-led idle"></div>
-      <div class="seat-bubble"></div>
-      <img class="seat-photo" src="https://commons.wikimedia.org/wiki/Special:FilePath/Gwynne%20Shotwell%20at%202018%20Commercial%20Crew%20announcement.jpg" alt="Gwynne Shotwell">
-      <span class="seat-badge">COO</span>
-      <strong>Gwynne Shotwell</strong>
-      <p class="seat-current">Actual</p>
-      <p class="seat-legend">Leyenda: Tim Cook</p>
-    </article>
-
-    <article class="pixel-seat pixel-seat-4" data-idx="3">
-      <div class="seat-led idle"></div>
-      <div class="seat-bubble"></div>
-      <img class="seat-photo" src="https://commons.wikimedia.org/wiki/Special:FilePath/Jensen%20Huang%20(cropped)%20(2024).jpg" alt="Jensen Huang">
-      <span class="seat-badge">CTO</span>
-      <strong>Jensen Huang</strong>
-      <p class="seat-current">Actual</p>
-      <p class="seat-legend">Leyenda: Steve Wozniak</p>
-    </article>
-
-    <article class="pixel-seat pixel-seat-5" data-idx="4">
-      <div class="seat-led idle"></div>
-      <div class="seat-bubble"></div>
-      <img class="seat-photo" src="https://commons.wikimedia.org/wiki/Special:FilePath/John%20Lasseter%202002.jpg" alt="John Lasseter">
-      <span class="seat-badge">CCO</span>
-      <strong>John Lasseter</strong>
-      <p class="seat-current">Actual</p>
-      <p class="seat-legend">Leyenda: Walt Disney</p>
-    </article>
-
-    <article class="pixel-seat pixel-seat-6" data-idx="5">
-      <div class="seat-led idle"></div>
-      <div class="seat-bubble"></div>
-      <img class="seat-photo" src="https://commons.wikimedia.org/wiki/Special:FilePath/Ryan%20Reynolds%20by%20Gage%20Skidmore.jpg" alt="Ryan Reynolds">
-      <span class="seat-badge">CSO</span>
-      <strong>Ryan Reynolds</strong>
-      <p class="seat-current">Actual</p>
-      <p class="seat-legend">Leyenda: George Lucas</p>
-    </article>
-
-    <article class="pixel-seat pixel-seat-7" data-idx="6">
-      <div class="seat-led idle"></div>
-      <div class="seat-bubble"></div>
-      <img class="seat-photo" src="https://commons.wikimedia.org/wiki/Special:FilePath/Carlo%20Ratti%20(3330956571).jpg" alt="Carlo Ratti">
-      <span class="seat-badge">CXO</span>
-      <strong>Carlo Ratti</strong>
-      <p class="seat-current">Actual</p>
-      <p class="seat-legend">Leyenda: Es Devlin</p>
-    </article>
-
-    <article class="pixel-seat pixel-seat-8" data-idx="7">
-      <div class="seat-led idle"></div>
-      <div class="seat-bubble"></div>
-      <img class="seat-photo" src="https://commons.wikimedia.org/wiki/Special:FilePath/Jonathan%20Ive%20(OTRS).jpg" alt="Jony Ive">
-      <span class="seat-badge">CDO</span>
-      <strong>Jony Ive</strong>
-      <p class="seat-current">Actual</p>
-      <p class="seat-legend">Leyenda: Dieter Rams</p>
-    </article>
-
-    <!-- Central table -->
-    <button class="pixel-table" id="pixel-table-btn" type="button" aria-controls="legend-overlay" aria-expanded="false" aria-label="Abrir el consejo de leyendas">
-      <div class="pixel-table-inner">
-        <span class="pixel-table-title">Mesa Actual del Consejo</span>
-        <span class="pixel-table-subtitle">4 operativos + 4 creativos</span>
-        <span class="pixel-table-cta">Pulsa para ver leyendas</span>
-      </div>
-    </button>
-
-    <!-- Brief on table -->
-    <div class="table-brief" id="table-brief"></div>
-
-    <!-- Brief input -->
-    <div class="brief-input-wrap" id="brief-input-wrap">
-      <input id="brief-input" type="text" placeholder="Escribe tu proyecto o brief..." maxlength="200" autocomplete="off">
-      <span id="brief-hint">Pulsa ENTER para presentar</span>
-    </div>
-  </section>
-
-  <!-- ===== SCUMM BAR ===== -->
-  <div id="scumm-bar">
-    <div id="action-line">Bienvenido al Consejo AdmiraNext</div>
-    <div id="scumm-bottom">
-      <div id="verb-grid">
-        <button class="verb-btn" data-verb="presentar">Presentar</button>
-        <button class="verb-btn" data-verb="debatir">Debatir</button>
-        <button class="verb-btn" data-verb="sintetizar">Sintetizar</button>
-        <button class="verb-btn" data-verb="mirar">Mirar</button>
-        <button class="verb-btn" data-verb="hablar">Hablar con</button>
-        <button class="verb-btn" data-verb="leer">Leer</button>
-        <button class="verb-btn" data-verb="votar">Votar</button>
-        <button class="verb-btn" data-verb="comparar">Comparar</button>
-        <button class="verb-btn" data-verb="salir">Salir</button>
-      </div>
-      <div id="inventory">
-        <div id="inv-title">PROYECTOS</div>
-        <div id="inv-list"></div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- ===== LEGEND OVERLAY ===== -->
-<section class="legend-overlay" id="legend-overlay" aria-hidden="true">
-  <div class="legend-panel">
-    <div class="legend-panel-head">
-      <div>
-        <p class="member">Consejo de leyendas</p>
-        <h2 class="name">Las leyendas ocupan la mesa</h2>
-      </div>
-      <button class="legend-close" type="button" aria-label="Cerrar consejo de leyendas">Cerrar</button>
-    </div>
-
-    <section class="pixel-board pixel-board-legend" aria-label="Mesa de leyendas en pixel art">
-      <article class="pixel-seat pixel-seat-1">
-        <img class="seat-photo" src="https://commons.wikimedia.org/wiki/Special:FilePath/Steve_Jobs_Headshot_2010-CROP.jpg" alt="Steve Jobs">
-        <span class="seat-badge">CEO</span>
-        <strong>Steve Jobs</strong>
-        <p class="seat-current">Leyenda</p>
-        <p class="seat-legend">Producto, criterio y foco extremo</p>
-      </article>
-      <article class="pixel-seat pixel-seat-2">
-        <img class="seat-photo" src="https://commons.wikimedia.org/wiki/Special:FilePath/Warren_Buffett_KU_Visit.jpg" alt="Warren Buffett">
-        <span class="seat-badge">CFO</span>
-        <strong>Warren Buffett</strong>
-        <p class="seat-current">Leyenda</p>
-        <p class="seat-legend">Capital, paciencia y sostenibilidad</p>
-      </article>
-      <article class="pixel-seat pixel-seat-3">
-        <img class="seat-photo" src="https://commons.wikimedia.org/wiki/Special:FilePath/Tim_Cook_2009.jpg" alt="Tim Cook">
-        <span class="seat-badge">COO</span>
-        <strong>Tim Cook</strong>
-        <p class="seat-current">Leyenda</p>
-        <p class="seat-legend">Escala, disciplina y excelencia operativa</p>
-      </article>
-      <article class="pixel-seat pixel-seat-4">
-        <img class="seat-photo" src="https://commons.wikimedia.org/wiki/Special:FilePath/Steve_Wozniak_by_Gage_Skidmore.jpg" alt="Steve Wozniak">
-        <span class="seat-badge">CTO</span>
-        <strong>Steve Wozniak</strong>
-        <p class="seat-current">Leyenda</p>
-        <p class="seat-legend">Ingenio tecnico y elegancia al construir</p>
-      </article>
-      <article class="pixel-seat pixel-seat-5">
-        <img class="seat-photo" src="https://commons.wikimedia.org/wiki/Special:FilePath/Walt_Disney_1946.JPG" alt="Walt Disney">
-        <span class="seat-badge">CCO</span>
-        <strong>Walt Disney</strong>
-        <p class="seat-current">Leyenda</p>
-        <p class="seat-legend">Mundo de marca y experiencia memorable</p>
-      </article>
-      <article class="pixel-seat pixel-seat-6">
-        <img class="seat-photo" src="https://commons.wikimedia.org/wiki/Special:FilePath/George_Lucas_cropped_2009.jpg" alt="George Lucas">
-        <span class="seat-badge">CSO</span>
-        <strong>George Lucas</strong>
-        <p class="seat-current">Leyenda</p>
-        <p class="seat-legend">Storyworld, expansion y coherencia narrativa</p>
-      </article>
-      <article class="pixel-seat pixel-seat-7">
-        <img class="seat-photo" src="https://commons.wikimedia.org/wiki/Special:FilePath/Es_Devlin_-_2020.jpg" alt="Es Devlin">
-        <span class="seat-badge">CXO</span>
-        <strong>Es Devlin</strong>
-        <p class="seat-current">Leyenda</p>
-        <p class="seat-legend">Escenografia, inmersion y cohesion sensorial</p>
-      </article>
-      <article class="pixel-seat pixel-seat-8">
-        <img class="seat-photo" src="https://commons.wikimedia.org/wiki/Special:FilePath/Dieter_Rams.jpg" alt="Dieter Rams">
-        <span class="seat-badge">CDO</span>
-        <strong>Dieter Rams</strong>
-        <p class="seat-current">Leyenda</p>
-        <p class="seat-legend">Orden, funcion y claridad radical</p>
-      </article>
-
-      <div class="pixel-table" aria-hidden="true">
-        <div class="pixel-table-inner">
-          <span class="pixel-table-title">Mesa de Leyendas</span>
-          <span class="pixel-table-subtitle">mismos asientos, otra capa de lectura</span>
+    <div class="container">
+        <h1>AdmiraNext Council Dashboard</h1>
+        <div class="version">v26.11.04.2</div>
+        <div class="subtitle">
+            Estado en tiempo real del Consejo de Dirección · <span class="live" id="live-dot">● LIVE</span> · <span id="last-check">hace 0s</span>
         </div>
-      </div>
-    </section>
-  </div>
-</section>
 
-<!-- ===== MODAL ===== -->
-<div id="modal">
-  <div id="modal-content">
-    <div id="modal-title"></div>
-    <div id="modal-body"></div>
-    <button id="modal-close">Cerrar</button>
-  </div>
-</div>
+        <div class="gen-toggle">
+            <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
+            <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
+        </div>
 
-<!-- ===== DOCUMENT VIEW ===== -->
-<div id="doc-view">
-  <div id="doc-paper">
-    <h2>Documento de Brainstorming</h2>
-    <div id="doc-entries"></div>
-    <button id="doc-close">Cerrar</button>
-  </div>
-</div>
+        <div class="summary" id="summary"></div>
+    </div>
 
-<script>
-/* ===== GLOBAL API HOOK (null = simulation mode) ===== */
-const COUNCIL_API = null;
+    <div style="max-width:1000px;margin:0 auto;width:100%;padding:0 1.5rem;">
+        <div class="council-image" id="council-image">
+            <img id="council-img" src="../assets/council-leyendas.jpg" alt="Consejo AdmiraNext">
+            <div class="nameplates" id="nameplates"></div>
+            <div class="speech-overlay" id="speech-overlay">
+                <div class="speech-bubble" id="speech-bubble">
+                    <div class="speaker"></div>
+                    <div class="speech-text"></div>
+                </div>
+            </div>
+            <div class="round-indicator" id="round-indicator">Ronda: --</div>
+        </div>
 
-/* ===== COUNCIL DATA ===== */
-const COUNCILS = {
-  actual: {
-    label: 'Actual',
-    agents: [
-      { idx:0, role:'CEO', name:'Elon Musk',       color:'#ffd700', bio:'CEO de Tesla y SpaceX. Visionario de la energia sostenible, exploracion espacial e innovacion radical. Empuja los limites de lo posible.' },
-      { idx:1, role:'CFO', name:'Ruth Porat',       color:'#f44336', bio:'CFO de Alphabet/Google. Disciplina financiera en empresas de hipercrecimiento. Vision estrategica de inversiones tecnologicas.' },
-      { idx:2, role:'COO', name:'Gwynne Shotwell',  color:'#4caf50', bio:'Presidenta de SpaceX. Maestra de operaciones a escala, logistica de lanzamiento y ejecucion impecable bajo presion extrema.' },
-      { idx:3, role:'CTO', name:'Jensen Huang',     color:'#00e5ff', bio:'CEO de NVIDIA. Visionario de la computacion por GPU, IA y aceleracion de datos. Transformo la industria del hardware.' },
-      { idx:4, role:'CCO', name:'John Lasseter',    color:'#e040fb', bio:'Cofundador creativo de Pixar. Maestro del storytelling visual y la animacion. Revoluciono el cine con tecnologia y emocion.' },
-      { idx:5, role:'CSO', name:'Ryan Reynolds',    color:'#ab47bc', bio:'Actor, productor y empresario. Maestro del marketing viral, narrativa de marca y conexion directa con el publico.' },
-      { idx:6, role:'CXO', name:'Carlo Ratti',      color:'#ff9800', bio:'Arquitecto y director del MIT Senseable City Lab. Experto en ciudades inteligentes, datos urbanos y experiencia del espacio.' },
-      { idx:7, role:'CDO', name:'Jony Ive',         color:'#448aff', bio:'Ex-CDO de Apple. Maestro del diseno minimalista. Creo el iPhone, iMac y la estetica que definio una era tecnologica.' }
-    ]
-  },
-  leyendas: {
-    label: 'Leyendas',
-    agents: [
-      { idx:0, role:'CEO', name:'Steve Jobs',       color:'#ffd700', bio:'Visionario cofundador de Apple. Enfoque obsesivo en producto, diseno y experiencia de usuario. Pensamiento de "interseccion" entre tecnologia y humanidades.' },
-      { idx:1, role:'CFO', name:'Warren Buffett',   color:'#f44336', bio:'El Oraculo de Omaha. Inversionista legendario con vision a largo plazo. Busca valor intrinseco y ventajas competitivas duraderas.' },
-      { idx:2, role:'COO', name:'Tim Cook',         color:'#4caf50', bio:'Maestro de operaciones y supply chain. Transforma vision en ejecucion impecable a escala global. Eficiencia sin comprometer calidad.' },
-      { idx:3, role:'CTO', name:'Steve Wozniak',    color:'#00e5ff', bio:'Genio ingeniero, cofundador de Apple. Maestro del hardware y software elegante. Cree en la tecnologia accesible y abierta.' },
-      { idx:4, role:'CCO', name:'Walt Disney',      color:'#e040fb', bio:'Padre de la animacion moderna y los parques tematicos. Maestro del storytelling y la experiencia inmersiva.' },
-      { idx:5, role:'CSO', name:'George Lucas',     color:'#ab47bc', bio:'Creador de Star Wars e Indiana Jones. Visionario del worldbuilding, narrativa epica y tecnologia cinematografica revolucionaria.' },
-      { idx:6, role:'CXO', name:'Es Devlin',        color:'#ff9800', bio:'Escenografa de renombre mundial. Maestra de la inmersion sensorial, escultura y cohesion visual a gran escala.' },
-      { idx:7, role:'CDO', name:'Dieter Rams',      color:'#448aff', bio:'Disenador industrial legendario. Sus 10 principios del buen diseno guian generaciones. "Menos pero mejor."' }
-    ]
-  }
-};
+        <div class="scumm-bar">
+            <div class="action-line" id="action-line">Bienvenido al Consejo AdmiraNext</div>
+            <div class="scumm-bottom">
+                <div class="verb-grid">
+                    <button class="verb-btn verb-primary" data-verb="presentar" onclick="selectVerb(this)">Presentar</button>
+                    <button class="verb-btn verb-primary" data-verb="debatir" onclick="selectVerb(this)">Debatir</button>
+                    <button class="verb-btn verb-primary" data-verb="sintetizar" onclick="selectVerb(this)">Sintetizar</button>
+                    <button class="verb-btn" data-verb="mirar" onclick="selectVerb(this)">Mirar</button>
+                    <button class="verb-btn" data-verb="hablar" onclick="selectVerb(this)">Hablar con</button>
+                    <button class="verb-btn" data-verb="leer" onclick="selectVerb(this)">Leer</button>
+                    <button class="verb-btn" data-verb="votar" onclick="selectVerb(this)">Votar</button>
+                    <button class="verb-btn" data-verb="comparar" onclick="selectVerb(this)">Comparar</button>
+                    <button class="verb-btn" data-verb="salir" onclick="selectVerb(this)">Salir</button>
+                </div>
+                <div class="inventory">
+                    <div class="inventory-title">Proyectos</div>
+                    <div class="inventory-list" id="inventory-list">
+                        <div class="inv-item" onclick="selectProject(this)">Brief de ejemplo</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-/* ===== STATE ===== */
-let currentCouncil = 'actual';
-let selectedVerb = null;
-let selectedInvItem = null;
-let currentBrief = null;
-let round = 0;
-let agentResponses = {};
-let isProcessing = false;
+    <div class="output-panel" id="output-panel">
+        <h3 id="output-title">Resultados del debate</h3>
+        <div id="output-content"></div>
+    </div>
 
-/* ===== DOM REFS ===== */
-const actionText = document.getElementById('action-line');
-const briefInputWrap = document.getElementById('brief-input-wrap');
-const briefInput = document.getElementById('brief-input');
-const tableBrief = document.getElementById('table-brief');
-const invList = document.getElementById('inv-list');
-const roundInd = document.getElementById('round-indicator');
-const modal = document.getElementById('modal');
-const modalTitle = document.getElementById('modal-title');
-const modalBody = document.getElementById('modal-body');
-const docView = document.getElementById('doc-view');
-const docEntries = document.getElementById('doc-entries');
-const councilToggle = document.getElementById('council-toggle');
+    <div class="footer">
+        AdmiraNext Council SCUMM · Última comprobación: <span id="footer-check">—</span>
+    </div>
 
-/* ===== LEGEND OVERLAY ===== */
-const legendOverlay = document.getElementById('legend-overlay');
-const openLegendBtn = document.getElementById('pixel-table-btn');
-const closeLegendBtn = document.querySelector('.legend-close');
+    <script>
+    const CONTROL_API = "http://localhost:3030/api/machines";
+    const COUNCIL_API = null;
 
-function openLegend() {
-  legendOverlay.classList.add('is-open');
-  legendOverlay.setAttribute('aria-hidden', 'false');
-  openLegendBtn.setAttribute('aria-expanded', 'true');
-}
-function closeLegend() {
-  legendOverlay.classList.remove('is-open');
-  legendOverlay.setAttribute('aria-hidden', 'true');
-  openLegendBtn.setAttribute('aria-expanded', 'false');
-}
+    const COUNCIL = [
+        { name: "CEO", role: "Chief Executive Officer",   persona: "Steve Jobs",      side: "racional", gen: "leyendas", icon: "🏛️", machineId: "admira-macbookair16" },
+        { name: "CTO", role: "Chief Technology Officer",  persona: "Steve Wozniak",   side: "racional", gen: "leyendas", icon: "⚙️", machineId: "admira-macbookpronegro14" },
+        { name: "COO", role: "Chief Operations Officer",  persona: "Tim Cook",        side: "racional", gen: "leyendas", icon: "📋", machineId: null },
+        { name: "CFO", role: "Chief Financial Officer",   persona: "Warren Buffett",  side: "racional", gen: "leyendas", icon: "💰", machineId: "admira-macmini" },
+        { name: "CCO", role: "Chief Creative Officer",    persona: "Walt Disney",     side: "creativo", gen: "leyendas", icon: "💡", machineId: null },
+        { name: "CDO", role: "Chief Design Officer",      persona: "Dieter Rams",     side: "creativo", gen: "leyendas", icon: "🎨", machineId: "admira-macbookairblanco" },
+        { name: "CXO", role: "Chief Experience Officer",  persona: "Howard Schultz",  side: "creativo", gen: "leyendas", icon: "🧭", machineId: null },
+        { name: "CSO", role: "Chief Storytelling Officer", persona: "George Lucas",    side: "creativo", gen: "leyendas", icon: "📖", machineId: null },
+        { name: "CEO", role: "Chief Executive Officer",   persona: "Elon Musk",       side: "racional", gen: "coetaneos", icon: "🏛️", machineId: "admira-macbookair16" },
+        { name: "CTO", role: "Chief Technology Officer",  persona: "Jensen Huang",    side: "racional", gen: "coetaneos", icon: "⚙️", machineId: "admira-macbookpronegro14" },
+        { name: "COO", role: "Chief Operations Officer",  persona: "Gwynne Shotwell", side: "racional", gen: "coetaneos", icon: "📋", machineId: null },
+        { name: "CFO", role: "Chief Financial Officer",   persona: "Ruth Porat",      side: "racional", gen: "coetaneos", icon: "💰", machineId: "admira-macmini" },
+        { name: "CCO", role: "Chief Creative Officer",    persona: "John Lasseter",   side: "creativo", gen: "coetaneos", icon: "💡", machineId: null },
+        { name: "CDO", role: "Chief Design Officer",      persona: "Jony Ive",        side: "creativo", gen: "coetaneos", icon: "🎨", machineId: "admira-macbookairblanco" },
+        { name: "CXO", role: "Chief Experience Officer",  persona: "Carlos Ratti",    side: "creativo", gen: "coetaneos", icon: "🧭", machineId: null },
+        { name: "CSO", role: "Chief Storytelling Officer", persona: "Ryan Reynolds",   side: "creativo", gen: "coetaneos", icon: "📖", machineId: null },
+    ];
 
-openLegendBtn.addEventListener('click', openLegend);
-closeLegendBtn.addEventListener('click', closeLegend);
-legendOverlay.addEventListener('click', (e) => { if (e.target === legendOverlay) closeLegend(); });
-window.addEventListener('keydown', (e) => { if (e.key === 'Escape' && legendOverlay.classList.contains('is-open')) closeLegend(); });
+    const NAMEPLATE_POS = {
+        leyendas: [
+            { role: "CEO", persona: "Steve Jobs",      x: 17, y: 88, machineId: "admira-macbookair16" },
+            { role: "CTO", persona: "Steve Wozniak",   x: 22, y: 60, machineId: "admira-macbookpronegro14" },
+            { role: "COO", persona: "Tim Cook",        x: 37, y: 52, machineId: null },
+            { role: "CFO", persona: "Warren Buffett",  x: 37, y: 38, machineId: "admira-macmini" },
+            { role: "CCO", persona: "Walt Disney",     x: 53, y: 52, machineId: null },
+            { role: "CDO", persona: "Dieter Rams",     x: 63, y: 55, machineId: "admira-macbookairblanco" },
+            { role: "CXO", persona: "Howard Schultz",  x: 72, y: 60, machineId: null },
+            { role: "CSO", persona: "George Lucas",    x: 83, y: 88, machineId: null },
+        ],
+        coetaneos: [
+            { role: "CEO", persona: "Elon Musk",       x: 17, y: 88, machineId: "admira-macbookair16" },
+            { role: "CTO", persona: "Jensen Huang",    x: 24, y: 62, machineId: "admira-macbookpronegro14" },
+            { role: "COO", persona: "Gwynne Shotwell", x: 35, y: 52, machineId: null },
+            { role: "CFO", persona: "Ruth Porat",      x: 42, y: 52, machineId: "admira-macmini" },
+            { role: "CCO", persona: "John Lasseter",   x: 53, y: 52, machineId: null },
+            { role: "CDO", persona: "Jony Ive",        x: 63, y: 58, machineId: "admira-macbookairblanco" },
+            { role: "CXO", persona: "Carlos Ratti",    x: 75, y: 62, machineId: null },
+            { role: "CSO", persona: "Ryan Reynolds",   x: 85, y: 88, machineId: null },
+        ],
+    };
 
-/* ===== SEAT CLICK HANDLING ===== */
-document.querySelectorAll('.pixel-seat[data-idx]').forEach(seat => {
-  seat.addEventListener('click', () => {
-    const idx = parseInt(seat.dataset.idx);
-    onAgentClick(idx);
-  });
-});
+    let machineStatus = {};
+    let apiOk = false;
+    let currentGen = "leyendas";
+    let currentVerb = null;
+    let currentProject = null;
+    let debateRunning = false;
 
-function onAgentClick(idx) {
-  const agent = COUNCILS[currentCouncil].agents[idx];
-  if (selectedVerb === 'mirar') {
-    showModal(agent.name + ' \u2014 ' + agent.role, agent.bio, agent.color);
-    clearVerb();
-  } else if (selectedVerb === 'hablar') {
-    const lastResp = getLastResponse(idx);
-    if (lastResp) {
-      showModal(agent.name + ' dice:', lastResp, agent.color);
-    } else {
-      showModal(agent.name, 'Aun no ha dicho nada en este consejo.', agent.color);
+    function setGen(gen) {
+        currentGen = gen;
+        document.getElementById("btn-leyendas").className = "gen-btn" + (gen === "leyendas" ? " active-leyendas" : "");
+        document.getElementById("btn-coetaneos").className = "gen-btn" + (gen === "coetaneos" ? " active-coetaneos" : "");
+        const img = document.getElementById("council-img");
+        img.style.opacity = "0";
+        setTimeout(() => {
+            img.src = gen === "leyendas" ? "../assets/council-leyendas.jpg" : "../assets/council-coetaneos.jpg";
+            img.style.opacity = "1";
+        }, 300);
+        render();
     }
-    clearVerb();
-  } else {
-    setAction(agent.name + ' (' + agent.role + ')');
-  }
-}
 
-function getLastResponse(idx) {
-  for (let r = round; r >= 1; r--) {
-    if (agentResponses[r] && agentResponses[r][idx]) return agentResponses[r][idx];
-  }
-  return null;
-}
-
-/* ===== VERB HANDLING ===== */
-document.querySelectorAll('.verb-btn').forEach(btn => {
-  btn.addEventListener('click', () => {
-    if (isProcessing) return;
-    const verb = btn.dataset.verb;
-    document.querySelectorAll('.verb-btn').forEach(b => b.classList.remove('selected'));
-    selectedVerb = verb;
-    btn.classList.add('selected');
-
-    if (verb === 'presentar') onPresentar();
-    else if (verb === 'debatir') onDebatir();
-    else if (verb === 'sintetizar') onSintetizar();
-    else if (verb === 'leer') onLeer();
-    else if (verb === 'votar') onVotar();
-    else if (verb === 'comparar') onComparar();
-    else if (verb === 'salir') onSalir();
-    else {
-      setAction(verb === 'mirar' ? 'Mirar... (haz clic en un consejero)' : 'Hablar con... (haz clic en un consejero)');
-    }
-  });
-});
-
-/* ===== VERB ACTIONS ===== */
-function onPresentar() {
-  setAction('Presentar proyecto en la mesa');
-  briefInputWrap.classList.add('visible');
-  briefInput.focus();
-}
-
-briefInput.addEventListener('keydown', (e) => {
-  if (e.key === 'Enter' && briefInput.value.trim()) {
-    e.preventDefault();
-    submitBrief(briefInput.value.trim());
-  }
-});
-
-function submitBrief(text) {
-  currentBrief = text;
-  round = 0;
-  agentResponses = {};
-  briefInputWrap.classList.remove('visible');
-  briefInput.value = '';
-  tableBrief.textContent = '\uD83D\uDCC4 ' + text;
-  tableBrief.classList.add('visible');
-  addInventoryItem(text);
-  setAction('Proyecto presentado: "' + (text.length > 50 ? text.slice(0,50) + '...' : text) + '"');
-  clearVerb();
-  startRound(1);
-}
-
-function onDebatir() {
-  if (!currentBrief) { setAction('Primero debes PRESENTAR un proyecto'); clearVerb(); return; }
-  if (round < 1) { setAction('Espera a que termine la ronda actual'); clearVerb(); return; }
-  if (round >= 3) { setAction('El debate ha concluido. Usa SINTETIZAR.'); clearVerb(); return; }
-  startRound(round + 1);
-  clearVerb();
-}
-
-function onSintetizar() {
-  if (!currentBrief || round < 1) { setAction('No hay debate que sintetizar'); clearVerb(); return; }
-  runSynthesis();
-  clearVerb();
-}
-
-function onLeer() {
-  if (!currentBrief) { setAction('No hay documento que leer'); clearVerb(); return; }
-  showDocument();
-  clearVerb();
-}
-
-function onVotar() {
-  if (!currentBrief || round < 1) { setAction('No hay propuesta para votar'); clearVerb(); return; }
-  runVote();
-  clearVerb();
-}
-
-function onComparar() {
-  if (Object.keys(agentResponses).length < 2) { setAction('Se necesitan al menos 2 rondas para comparar'); clearVerb(); return; }
-  showComparison();
-  clearVerb();
-}
-
-function onSalir() {
-  if (confirm('\u00bfSalir del Consejo AdmiraNext?')) {
-    window.location.href = './index.html';
-  }
-  clearVerb();
-}
-
-/* ===== ROUND LOGIC ===== */
-function getSeatEl(idx) {
-  return document.querySelector('.pixel-seat[data-idx="' + idx + '"]');
-}
-
-function startRound(r) {
-  if (isProcessing) return;
-  isProcessing = true;
-  round = r;
-  roundInd.textContent = 'Ronda: ' + round + '/3';
-  agentResponses[round] = {};
-  clearAllBubbles();
-
-  const agents = COUNCILS[currentCouncil].agents;
-  setAction('Ronda ' + round + ' \u2014 Los consejeros estan deliberando...');
-
-  // Set all LEDs to thinking
-  document.querySelectorAll('.pixel-seat[data-idx] .seat-led').forEach(led => {
-    led.className = 'seat-led thinking';
-  });
-
-  if (COUNCIL_API) {
-    // Future: call real API
-  }
-
-  // Simulation mode
-  const responses = generateSimulatedResponses(round, agents);
-  let delay = 800;
-  agents.forEach((agent, i) => {
-    setTimeout(() => {
-      const seat = getSeatEl(i);
-      if (!seat) return;
-      const led = seat.querySelector('.seat-led');
-      const bubble = seat.querySelector('.seat-bubble');
-
-      led.className = 'seat-led speaking';
-      setAction(agent.name + ' dice:');
-
-      const text = responses[i];
-      agentResponses[round][i] = text;
-      bubble.textContent = text;
-      bubble.classList.add('visible');
-
-      setTimeout(() => {
-        led.className = 'seat-led idle';
-        bubble.classList.remove('visible');
-
-        if (i === agents.length - 1) {
-          isProcessing = false;
-          if (round < 3) {
-            setAction('Ronda ' + round + ' completada. Usa DEBATIR para continuar.');
-          } else {
-            setAction('Debate finalizado. Usa SINTETIZAR para la conclusion.');
-          }
+    async function fetchMachines() {
+        try {
+            const res = await fetch(CONTROL_API);
+            const data = await res.json();
+            machineStatus = {};
+            (data.machines || []).forEach(m => {
+                const isOnline = m.status === "online" || m.status === "idle" || m.status === "busy";
+                machineStatus[m.id] = { status: m.status, name: m.name, online: isOnline };
+            });
+            apiOk = true;
+        } catch (e) {
+            apiOk = false;
         }
-      }, 3500);
-    }, delay);
-    delay += 2200;
-  });
-}
-
-function generateSimulatedResponses(r, agents) {
-  const briefShort = currentBrief.length > 30 ? currentBrief.slice(0,30) + '...' : currentBrief;
-  const roundPhrases = {
-    1: [
-      (a) => 'Desde ' + a.role + ', veo gran potencial en "' + briefShort + '". Propongo enfocarnos en diferenciacion.',
-      (a) => 'Los numeros deben cuadrar. Necesito un analisis de ROI antes de comprometer recursos.',
-      (a) => 'Puedo estructurar la operacion en 3 fases para minimizar riesgo y maximizar eficiencia.',
-      (a) => 'Tecnicamente viable. Necesitamos evaluar la arquitectura y escalabilidad del proyecto.',
-      (a) => 'La narrativa es clave. Debemos crear una historia que conecte emocionalmente con el publico.',
-      (a) => 'Estrategicamente, esto nos posiciona contra la competencia de forma unica.',
-      (a) => 'La experiencia del usuario lo es todo. Cada touchpoint debe ser memorable.',
-      (a) => 'El diseno debe ser invisible. Funcionalidad pura, sin decoracion innecesaria.'
-    ],
-    2: [
-      (a) => 'Coincido con el CCO en la narrativa, pero el producto debe hablar por si mismo.',
-      (a) => 'Con las fases que propone el COO, el breakeven seria en 18 meses. Aceptable.',
-      (a) => 'Si el CTO confirma los plazos, tengo el plan operativo listo en 48 horas.',
-      (a) => 'He analizado la viabilidad. Podemos usar tecnologia existente y reducir time-to-market.',
-      (a) => 'Imaginad: el usuario abre esto y siente magia. Eso es lo que debemos lograr.',
-      (a) => 'La estrategia de lanzamiento deberia ser por fases: beta cerrada, luego publica.',
-      (a) => 'Los tests con usuarios que propongo validaran si la experiencia realmente funciona.',
-      (a) => 'Menos features, mejor ejecutadas. Propongo reducir el scope inicial un 40%.'
-    ],
-    3: [
-      (a) => 'Mi posicion final: esto puede cambiar las reglas del juego si ejecutamos con excelencia.',
-      (a) => 'Apruebo la inversion con las metricas propuestas. Revision trimestral obligatoria.',
-      (a) => 'Plan operativo consolidado. Timeline agresivo pero alcanzable.',
-      (a) => 'Stack definido, equipo necesario estimado. Estoy listo para comenzar el sprint 0.',
-      (a) => 'La campana de lanzamiento esta conceptualizada. Sera inolvidable.',
-      (a) => 'Plan estrategico a 3 anos con milestones claros. Vamos a por ello.',
-      (a) => 'Journey del usuario mapeado. Cada momento de friccion identificado y resuelto.',
-      (a) => 'El sistema de diseno esta definido. Coherencia visual garantizada.'
-    ]
-  };
-  return (roundPhrases[r] || roundPhrases[1]).map((fn, i) => fn(agents[i]));
-}
-
-function runSynthesis() {
-  if (isProcessing) return;
-  isProcessing = true;
-  setAction('El CEO sintetiza las conclusiones del consejo...');
-  const ceoSeat = getSeatEl(0);
-  clearAllBubbles();
-  if (ceoSeat) ceoSeat.querySelector('.seat-led').className = 'seat-led speaking';
-
-  setTimeout(() => {
-    const synthesis = 'SINTESIS DEL CONSEJO: El proyecto "' + currentBrief + '" ha sido evaluado en ' + round + ' rondas. ' +
-      'El equipo recomienda proceder con un MVP en 3 fases, ' +
-      'inversion controlada con revision trimestral, ' +
-      'diseno minimalista centrado en el usuario, ' +
-      'y estrategia de lanzamiento por fases. ' +
-      'Decision: APROBADO con condiciones.';
-    if (ceoSeat) {
-      const bubble = ceoSeat.querySelector('.seat-bubble');
-      bubble.textContent = synthesis;
-      bubble.classList.add('visible');
     }
-    agentResponses['sintesis'] = { 0: synthesis };
-    setAction(COUNCILS[currentCouncil].agents[0].name + ' ha presentado la sintesis final.');
-    roundInd.textContent = 'COMPLETADO';
 
-    setTimeout(() => {
-      if (ceoSeat) ceoSeat.querySelector('.seat-led').className = 'seat-led idle';
-      isProcessing = false;
-    }, 6000);
-  }, 2500);
-}
+    function render() {
+        const filtered = COUNCIL.filter(m => m.gen === currentGen);
+        const liveEl = document.getElementById("live-dot");
+        liveEl.textContent = apiOk ? "● LIVE" : "● OFFLINE";
+        liveEl.style.color = apiOk ? "#44bb44" : "#e74c3c";
 
-function runVote() {
-  if (isProcessing) return;
-  isProcessing = true;
-  setAction('Los consejeros votan...');
-  const agents = COUNCILS[currentCouncil].agents;
-  const votes = ['A FAVOR', 'A FAVOR', 'A FAVOR', 'CON RESERVAS', 'A FAVOR', 'A FAVOR', 'A FAVOR', 'A FAVOR'];
-  let delay = 500;
+        let onlineCount = 0, offlineCount = 0;
+        let totalMachinesOnline = Object.values(machineStatus).filter(m => m.online).length;
 
-  clearAllBubbles();
+        filtered.forEach(m => {
+            const machine = m.machineId ? machineStatus[m.machineId] : null;
+            if (machine && machine.online) onlineCount++; else offlineCount++;
+        });
 
-  agents.forEach((agent, i) => {
-    setTimeout(() => {
-      const seat = getSeatEl(i);
-      if (!seat) return;
-      const led = seat.querySelector('.seat-led');
-      const bubble = seat.querySelector('.seat-bubble');
-      led.className = 'seat-led speaking';
-      bubble.textContent = '\uD83D\uDDF3\uFE0F ' + votes[i];
-      bubble.classList.add('visible');
+        document.getElementById("summary").innerHTML = `
+            <div class="summary-item">
+                <div class="summary-number green">${onlineCount}</div>
+                <div class="summary-label">Consejeros activos</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-number red">${offlineCount}</div>
+                <div class="summary-label">Sin conexión</div>
+            </div>
+            <div class="summary-item">
+                <div class="summary-number blue">${totalMachinesOnline}</div>
+                <div class="summary-label">Máquinas online</div>
+            </div>
+        `;
 
-      setTimeout(() => {
-        led.className = 'seat-led idle';
-        if (i === agents.length - 1) {
-          isProcessing = false;
-          setAction('Votacion: 7 a favor, 1 con reservas. APROBADO.');
+        const npEl = document.getElementById("nameplates");
+        const plates = NAMEPLATE_POS[currentGen] || [];
+        npEl.innerHTML = plates.map(p => {
+            const machine = p.machineId ? machineStatus[p.machineId] : null;
+            const isOnline = machine ? machine.online : false;
+            const cls = isOnline ? "gold" : "gray";
+            return `<div class="np ${cls}" data-persona="${p.persona}" style="left:${p.x}%;top:${p.y}%">
+                ${p.persona}<span class="np-role">${p.role}</span>
+            </div>`;
+        }).join("");
+
+        const now = new Date().toLocaleString("es-ES");
+        document.getElementById("footer-check").textContent = now;
+    }
+
+    /* ═══ SCUMM verbs ═══ */
+    function selectVerb(btn) {
+        document.querySelectorAll('.verb-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentVerb = btn.dataset.verb;
+        updateActionLine();
+
+        if (['presentar','debatir','sintetizar'].includes(currentVerb)) {
+            if (!currentProject) { setActionLine("Selecciona un proyecto del inventario"); return; }
+            executeCouncilVerb(currentVerb);
         }
-      }, 2000);
-    }, delay);
-    delay += 600;
-  });
-}
+        if (currentVerb === 'mirar') setActionLine("Mirar... haz clic en un consejero");
+        if (currentVerb === 'hablar') setActionLine("Hablar con... selecciona un consejero");
+        if (currentVerb === 'leer') setActionLine("Leer el último informe del consejo");
+        if (currentVerb === 'votar') setActionLine("Votar sobre la propuesta actual");
+        if (currentVerb === 'comparar') setActionLine("Comparar Leyendas vs Coetáneos");
+        if (currentVerb === 'salir') {
+            setActionLine("Volviendo al dashboard...");
+            setTimeout(() => { window.location.href = '../'; }, 1000);
+        }
+    }
 
-function showComparison() {
-  let html = '';
-  const agents = COUNCILS[currentCouncil].agents;
-  for (let r = 1; r <= round; r++) {
-    if (!agentResponses[r]) continue;
-    html += '<div style="margin-bottom:14px"><strong style="color:#ff44cc">\u2014 Ronda ' + r + ' \u2014</strong></div>';
-    agents.forEach((a, i) => {
-      if (agentResponses[r][i]) {
-        html += '<div style="margin-bottom:6px"><strong style="color:' + a.color + '">' + a.name + ' (' + a.role + '):</strong> ' + agentResponses[r][i] + '</div>';
-      }
-    });
-  }
-  showModal('Comparacion de Rondas', html, '#ff44cc', true);
-}
+    function updateActionLine() {
+        const names = { presentar:"Presentar", debatir:"Debatir", sintetizar:"Sintetizar", mirar:"Mirar", hablar:"Hablar con", leer:"Leer", votar:"Votar", comparar:"Comparar", salir:"Salir" };
+        const v = names[currentVerb] || "";
+        const p = currentProject ? ` "${currentProject}"` : "";
+        if (v) document.getElementById("action-line").textContent = v + p;
+    }
 
-/* ===== DOCUMENT VIEW ===== */
-function showDocument() {
-  let html = '<div class="doc-entry"><strong>BRIEF:</strong> ' + currentBrief + '</div><hr style="border-color:#ccc;margin:10px 0">';
-  const agents = COUNCILS[currentCouncil].agents;
-  for (let r = 1; r <= round; r++) {
-    if (!agentResponses[r]) continue;
-    html += '<div class="doc-entry"><strong>RONDA ' + r + ':</strong></div>';
-    agents.forEach((a, i) => {
-      if (agentResponses[r][i]) {
-        html += '<div class="doc-entry"><strong>' + a.name + ':</strong> ' + agentResponses[r][i] + '</div>';
-      }
-    });
-    html += '<hr style="border-color:#ccc;margin:10px 0">';
-  }
-  if (agentResponses['sintesis']) {
-    html += '<div class="doc-entry"><strong>SINTESIS:</strong> ' + agentResponses['sintesis'][0] + '</div>';
-  }
-  docEntries.innerHTML = html;
-  docView.classList.add('visible');
-}
+    function setActionLine(text) { document.getElementById("action-line").textContent = text; }
 
-document.getElementById('doc-close').addEventListener('click', () => {
-  docView.classList.remove('visible');
-});
+    function selectProject(el) {
+        document.querySelectorAll('.inv-item').forEach(i => i.classList.remove('selected'));
+        el.classList.add('selected');
+        currentProject = el.textContent.trim();
+        updateActionLine();
+    }
 
-/* ===== MODAL ===== */
-function showModal(title, body, color, isHtml) {
-  modalTitle.style.color = color || '#ff44cc';
-  modalTitle.textContent = title;
-  if (isHtml) {
-    modalBody.innerHTML = body;
-  } else {
-    modalBody.textContent = body;
-  }
-  modal.classList.add('visible');
-}
+    /* ═══ Council execution ═══ */
+    async function executeCouncilVerb(verb) {
+        if (debateRunning) { setActionLine("Debate en curso... espera"); return; }
+        if (COUNCIL_API) { runRealCouncil(verb); } else { runSimulation(verb); }
+    }
 
-document.getElementById('modal-close').addEventListener('click', () => {
-  modal.classList.remove('visible');
-});
+    async function runSimulation(verb) {
+        debateRunning = true;
+        const members = COUNCIL.filter(m => m.gen === currentGen);
+        const roundName = { presentar:"Propuestas", debatir:"Debate", sintetizar:"Síntesis" }[verb];
 
-modal.addEventListener('click', (e) => { if (e.target === modal) modal.classList.remove('visible'); });
+        document.getElementById("round-indicator").textContent = `Ronda: ${roundName}`;
+        setActionLine(`${roundName} en curso...`);
 
-/* ===== INVENTORY ===== */
-function addInventoryItem(text) {
-  const div = document.createElement('div');
-  div.className = 'inv-item';
-  div.textContent = text.length > 30 ? text.slice(0,30) + '...' : text;
-  div.title = text;
-  div.addEventListener('click', () => {
-    document.querySelectorAll('.inv-item').forEach(it => it.classList.remove('selected'));
-    div.classList.add('selected');
-    selectedInvItem = text;
-    setAction('Seleccionado: "' + (text.length > 40 ? text.slice(0,40) + '...' : text) + '"');
-  });
-  invList.appendChild(div);
-}
+        const panel = document.getElementById("output-panel");
+        const content = document.getElementById("output-content");
+        document.getElementById("output-title").textContent = `Ronda: ${roundName}`;
+        panel.classList.add("visible");
+        content.innerHTML = "";
 
-/* ===== COUNCIL TOGGLE ===== */
-councilToggle.addEventListener('click', () => {
-  if (isProcessing) return;
-  currentCouncil = currentCouncil === 'actual' ? 'leyendas' : 'actual';
-  councilToggle.textContent = COUNCILS[currentCouncil].label;
-  updateSeatVisuals();
-  // Reset state
-  currentBrief = null;
-  round = 0;
-  agentResponses = {};
-  tableBrief.classList.remove('visible');
-  roundInd.textContent = 'Ronda: --';
-  invList.innerHTML = '';
-  clearAllBubbles();
-  setAction('Consejo cambiado a: ' + COUNCILS[currentCouncil].label);
-});
+        for (let i = 0; i < members.length; i++) {
+            const m = members[i];
+            showSpeechBubble(m.persona, m.name, `[${m.persona} está ${verb === 'presentar' ? 'presentando' : verb === 'debatir' ? 'debatiendo' : 'sintetizando'}...]`);
+            highlightNameplate(m.persona);
 
-function updateSeatVisuals() {
-  const agents = COUNCILS[currentCouncil].agents;
-  document.querySelectorAll('.pixel-seat[data-idx]').forEach(seat => {
-    const idx = parseInt(seat.dataset.idx);
-    const agent = agents[idx];
-    if (!agent) return;
-    seat.querySelector('strong').textContent = agent.name;
-    seat.querySelector('.seat-badge').textContent = agent.role;
-  });
-}
+            const entry = document.createElement("div");
+            entry.className = "output-entry";
+            entry.innerHTML = `
+                <div class="output-speaker ${m.side}">${m.icon} ${m.name} — ${m.persona}</div>
+                <div class="output-text">[Simulación] ${m.persona} ${verb === 'presentar' ? 'presenta su visión' : verb === 'debatir' ? 'debate los puntos' : 'ofrece su síntesis'}.</div>
+            `;
+            content.appendChild(entry);
+            panel.scrollTop = panel.scrollHeight;
 
-/* ===== HELPERS ===== */
-function setAction(text) {
-  actionText.textContent = text;
-}
+            await sleep(800);
+            clearNameplateHighlight();
+        }
 
-function clearVerb() {
-  selectedVerb = null;
-  document.querySelectorAll('.verb-btn').forEach(b => b.classList.remove('selected'));
-}
+        hideSpeechBubble();
+        debateRunning = false;
+        document.getElementById("round-indicator").textContent = `Ronda: ${roundName} ✓`;
+        setActionLine(`${roundName} completada — ${members.length} consejeros`);
+    }
 
-function clearAllBubbles() {
-  document.querySelectorAll('.seat-bubble').forEach(b => b.classList.remove('visible'));
-}
+    function showSpeechBubble(persona, role, text) {
+        const b = document.getElementById("speech-bubble");
+        b.querySelector(".speaker").textContent = `${role} — ${persona}`;
+        b.querySelector(".speech-text").textContent = text;
+        b.style.display = "block";
+        const np = document.querySelector(`.np[data-persona="${persona}"]`);
+        if (np) {
+            b.style.left = Math.max(5, Math.min(parseFloat(np.style.left) - 10, 60)) + "%";
+            b.style.top = Math.max(5, parseFloat(np.style.top) - 20) + "%";
+        } else { b.style.left = "30%"; b.style.top = "10%"; }
+    }
 
-/* ===== INIT ===== */
-councilToggle.textContent = COUNCILS[currentCouncil].label;
-</script>
+    function hideSpeechBubble() { document.getElementById("speech-bubble").style.display = "none"; }
 
+    function highlightNameplate(persona) {
+        document.querySelectorAll('.np').forEach(n => n.classList.remove('speaking'));
+        const np = document.querySelector(`.np[data-persona="${persona}"]`);
+        if (np) np.classList.add('speaking');
+    }
+
+    function clearNameplateHighlight() { document.querySelectorAll('.np').forEach(n => n.classList.remove('speaking')); }
+
+    function sleep(ms) { return new Promise(r => setTimeout(r, ms)); }
+
+    async function runRealCouncil(verb) {
+        debateRunning = true;
+        setActionLine("Conectando con el motor del consejo...");
+        try {
+            const res = await fetch(`${COUNCIL_API}/${verb}`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ brief: currentProject, generation: currentGen })
+            });
+            const data = await res.json();
+            setActionLine(`${verb} completado`);
+        } catch (e) {
+            setActionLine("Error: no se pudo conectar con el motor");
+        }
+        debateRunning = false;
+    }
+
+    /* ═══ Init ═══ */
+    async function refresh() { await fetchMachines(); render(); }
+    refresh();
+    setInterval(refresh, 15000);
+
+    let lastRefresh = Date.now();
+    setInterval(() => {
+        document.getElementById("last-check").textContent = `hace ${Math.floor((Date.now() - lastRefresh) / 1000)}s`;
+    }, 1000);
+    </script>
 </body>
 </html>

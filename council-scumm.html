@@ -260,6 +260,55 @@
             font-size: 0.8rem;
             margin-bottom: 3px;
         }
+        /* Conversation area below SCUMM bar */
+        .conv-area {
+            display: none;
+            max-width: 1000px;
+            margin: 0.8rem auto 0;
+        }
+        .conv-area.active { display: block; }
+        .conv-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.8rem;
+        }
+        .conv-panel {
+            background: #1a1a2e;
+            border-radius: 10px;
+            padding: 0.8rem 1rem;
+            border-top: 3px solid;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+        .conv-panel.racional { border-color: #e74c3c; }
+        .conv-panel.creativo { border-color: #3498db; }
+        .conv-panel-title {
+            font-size: 0.8rem;
+            font-weight: 700;
+            color: #daa520;
+            margin-bottom: 0.5rem;
+            text-align: center;
+        }
+        .conv-entry {
+            padding: 5px 0;
+            border-bottom: 1px solid rgba(255,255,255,0.06);
+            animation: fadeIn 0.3s;
+        }
+        .conv-entry:last-child { border-bottom: none; }
+        .conv-speaker {
+            font-weight: 700;
+            font-size: 0.75rem;
+            margin-bottom: 2px;
+        }
+        .conv-speaker.racional { color: #e74c3c; }
+        .conv-speaker.creativo { color: #3498db; }
+        .conv-speaker.user { color: #daa520; }
+        .conv-text {
+            font-size: 0.8rem;
+            color: #bbb;
+            line-height: 1.5;
+        }
+
         /* Back to status button */
         .back-status {
             display: none;
@@ -920,15 +969,15 @@
         </div>
 
         <div class="status-grid" id="status-grid">
-            <div class="side-panel racional" id="panel-racional">
-                <div class="side-title" onclick="togglePanel('panel-racional')">🧠 Racional <span class="collapse-arrow">▼</span> <span class="side-machines">🔴 Sillas rojas</span></div>
+            <div class="side-panel racional collapsed" id="panel-racional">
+                <div class="side-title" onclick="togglePanel('panel-racional')">🧠 Racional <span class="collapse-arrow">▼</span> <span class="side-machines">🔴 Sillas rojas · <span id="count-racional">0/4</span></span></div>
                 <div class="panel-body">
                     <div id="racional-members"></div>
                     <div class="board-content" id="board-racional"></div>
                 </div>
             </div>
-            <div class="side-panel creativo" id="panel-creativo">
-                <div class="side-title" onclick="togglePanel('panel-creativo')">🎨 Creativo <span class="collapse-arrow">▼</span> <span class="side-machines">🔵 Sillas azules</span></div>
+            <div class="side-panel creativo collapsed" id="panel-creativo">
+                <div class="side-title" onclick="togglePanel('panel-creativo')">🎨 Creativo <span class="collapse-arrow">▼</span> <span class="side-machines">🔵 Sillas azules · <span id="count-creativo">0/4</span></span></div>
                 <div class="panel-body">
                     <div id="creativo-members"></div>
                     <div class="board-content" id="board-creativo"></div>
@@ -982,8 +1031,21 @@
             </div>
         </div>
 
-        <div class="back-status-wrap" style="text-align:center;">
-            <button class="back-status" id="back-status" onclick="exitConversation()">← Volver al estado de máquinas</button>
+        <!-- Conversation area below SCUMM bar -->
+        <div class="conv-area" id="conv-area">
+            <div class="conv-grid">
+                <div class="conv-panel racional">
+                    <div class="conv-panel-title">🧠 Racional</div>
+                    <div class="conv-content" id="conv-racional"></div>
+                </div>
+                <div class="conv-panel creativo">
+                    <div class="conv-panel-title">🎨 Creativo</div>
+                    <div class="conv-content" id="conv-creativo"></div>
+                </div>
+            </div>
+            <div class="back-status-wrap" style="text-align:center;margin-top:0.5rem;">
+                <button class="back-status" id="back-status" onclick="exitConversation()" style="display:inline-block;">← Limpiar conversación</button>
+            </div>
         </div>
 
         <div class="subtitle" style="margin-top:1rem;">
@@ -1294,6 +1356,14 @@
                 <div class="summary-label">Máquinas online</div>
             </div>
         `;
+
+        // Update x/4 counters on collapsed panel titles
+        const racOnline = filtered.filter(m => m.side === "racional" && m.machineId && machineStatus[m.machineId]?.online).length;
+        const racTotal = filtered.filter(m => m.side === "racional").length;
+        const creOnline = filtered.filter(m => m.side === "creativo" && m.machineId && machineStatus[m.machineId]?.online).length;
+        const creTotal = filtered.filter(m => m.side === "creativo").length;
+        document.getElementById("count-racional").textContent = racOnline + "/" + racTotal;
+        document.getElementById("count-creativo").textContent = creOnline + "/" + creTotal;
 
         document.getElementById("last-check").textContent = new Date().toLocaleString("es-ES");
         lastCheckTime = Date.now();
@@ -1679,46 +1749,42 @@
         btn.classList.toggle("off", !nameplatesVisible);
     }
 
-    // Enter conversation mode — show overlays on illustration windows
+    // Enter conversation mode — show conv area below SCUMM bar
     let conversationMode = false;
     function enterConversation() {
         if (conversationMode) return;
         conversationMode = true;
-        document.getElementById("win-racional").classList.add("active");
-        document.getElementById("win-creativo").classList.add("active");
-        document.getElementById("back-status").style.display = "inline-block";
+        document.getElementById("conv-area").classList.add("active");
         if (nameplatesVisible) toggleNameplates();
     }
 
     function exitConversation() {
         conversationMode = false;
-        document.getElementById("win-racional").classList.remove("active");
-        document.getElementById("win-creativo").classList.remove("active");
-        // Clear window overlay content (keep titles)
-        document.querySelectorAll(".window-entry").forEach(e => e.remove());
-        document.getElementById("back-status").style.display = "none";
+        document.getElementById("conv-area").classList.remove("active");
+        document.getElementById("conv-racional").innerHTML = "";
+        document.getElementById("conv-creativo").innerHTML = "";
         if (!nameplatesVisible) toggleNameplates();
         setActionLine("Escribe aquí para hablar con el consejo...");
     }
 
-    function addWindowEntry(winId, icon, name, persona, side, text) {
-        const win = document.getElementById(winId);
+    function addConvEntry(panelId, icon, name, persona, side, text) {
+        const panel = document.getElementById(panelId);
         const entry = document.createElement("div");
-        entry.className = "window-entry";
-        entry.innerHTML = '<div class="window-speaker ' + side + '">' + icon + ' ' + name + '</div><div class="window-text">' + text + '</div>';
-        win.appendChild(entry);
-        win.scrollTop = win.scrollHeight;
+        entry.className = "conv-entry";
+        entry.innerHTML = '<div class="conv-speaker ' + side + '">' + icon + ' ' + name + '</div><div class="conv-text">' + text + '</div>';
+        panel.appendChild(entry);
+        panel.scrollTop = panel.scrollHeight;
     }
 
     function addUserEntry(text) {
-        // Show user message in both windows
-        ["win-racional", "win-creativo"].forEach(winId => {
-            const win = document.getElementById(winId);
+        // Show user message in both conv panels
+        ["conv-racional", "conv-creativo"].forEach(panelId => {
+            const panel = document.getElementById(panelId);
             const entry = document.createElement("div");
-            entry.className = "window-entry";
-            entry.innerHTML = '<div class="window-speaker user">👤 Tú</div><div class="window-text">' + text.replace(/</g,'&lt;') + '</div>';
-            win.appendChild(entry);
-            win.scrollTop = win.scrollHeight;
+            entry.className = "conv-entry";
+            entry.innerHTML = '<div class="conv-speaker user">👤 Tú</div><div class="conv-text">' + text.replace(/</g,'&lt;') + '</div>';
+            panel.appendChild(entry);
+            panel.scrollTop = panel.scrollHeight;
         });
     }
 
@@ -1739,21 +1805,21 @@
         const racionales = members.filter(m => m.side === "racional").sort(() => Math.random() - 0.5).slice(0, 1 + Math.floor(Math.random() * 2));
         const creativos = members.filter(m => m.side === "creativo").sort(() => Math.random() - 0.5).slice(0, 1 + Math.floor(Math.random() * 2));
 
-        // Racional side responds — left window
+        // Racional side responds
         for (const m of racionales) {
             showSpeechBubble(m.persona, m.name, "[" + m.persona + " está pensando...]");
             highlightNameplate(m.persona);
             await new Promise(r => setTimeout(r, 1000));
-            addWindowEntry("win-racional", m.icon, m.name, m.persona, "racional", "[Simulación] " + m.persona + " analiza desde el lado operativo.");
+            addConvEntry("conv-racional", m.icon, m.name, m.persona, "racional", "[Simulación] " + m.persona + " analiza desde el lado operativo.");
             clearNameplateHighlight();
         }
 
-        // Creativo side responds — right window
+        // Creativo side responds
         for (const m of creativos) {
             showSpeechBubble(m.persona, m.name, "[" + m.persona + " está pensando...]");
             highlightNameplate(m.persona);
             await new Promise(r => setTimeout(r, 1000));
-            addWindowEntry("win-creativo", m.icon, m.name, m.persona, "creativo", "[Simulación] " + m.persona + " responde desde el lado creativo.");
+            addConvEntry("conv-creativo", m.icon, m.name, m.persona, "creativo", "[Simulación] " + m.persona + " responde desde el lado creativo.");
             clearNameplateHighlight();
         }
 
@@ -1785,21 +1851,21 @@
         document.getElementById("round-indicator").textContent = "Ronda: " + roundName;
         setActionLine(roundName + " en curso...");
 
-        // Racional side — left window
+        // Racional side
         for (const m of racionales) {
             showSpeechBubble(m.persona, m.name, "[" + m.persona + " está " + verbGerund + "...]");
             highlightNameplate(m.persona);
             await new Promise(r => setTimeout(r, 800));
-            addWindowEntry("win-racional", m.icon, m.name, m.persona, "racional", "[Simulación] " + m.persona + " " + verbAction + ".");
+            addConvEntry("conv-racional", m.icon, m.name, m.persona, "racional", "[Simulación] " + m.persona + " " + verbAction + ".");
             clearNameplateHighlight();
         }
 
-        // Creativo side — right window
+        // Creativo side
         for (const m of creativos) {
             showSpeechBubble(m.persona, m.name, "[" + m.persona + " está " + verbGerund + "...]");
             highlightNameplate(m.persona);
             await new Promise(r => setTimeout(r, 800));
-            addWindowEntry("win-creativo", m.icon, m.name, m.persona, "creativo", "[Simulación] " + m.persona + " " + verbAction + ".");
+            addConvEntry("conv-creativo", m.icon, m.name, m.persona, "creativo", "[Simulación] " + m.persona + " " + verbAction + ".");
             clearNameplateHighlight();
         }
 

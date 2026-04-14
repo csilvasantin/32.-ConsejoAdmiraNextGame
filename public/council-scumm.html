@@ -973,6 +973,14 @@
             background: radial-gradient(ellipse at 50% 30%, rgba(46, 204, 113, 0.3), rgba(46, 204, 113, 0.08));
             box-shadow: 0 0 20px rgba(46, 204, 113, 0.45);
         }
+        /* Apple II overlay PNG — siempre visible, sentado sobre la mesa */
+        .apple-ii-overlay {
+            position: absolute;
+            pointer-events: none;
+            z-index: 3;
+            user-select: none;
+            filter: drop-shadow(0 6px 10px rgba(0, 0, 0, 0.5));
+        }
         /* Apple II hotspot — pantalla del ordenador en la mesa, activa cuando MIRAR está seleccionado */
         .apple-ii-hotspot {
             position: absolute;
@@ -1118,9 +1126,12 @@
                 <div class="window-overlay-title">🎨 Creativo</div>
             </div>
             <div class="body-hotspots" id="body-hotspots"></div>
-            <!-- Apple II en el centro de la mesa: hotspot para el verbo MIRAR -->
+            <!-- Apple II overlay: PNG transparente posicionado sobre la mesa -->
+            <img src="../assets/apple-ii.png" class="apple-ii-overlay" alt="Apple II"
+                 style="left:42%;top:46%;width:16%">
+            <!-- Hotspot del verbo MIRAR: cubre la pantalla del Apple II -->
             <div class="apple-ii-hotspot" id="apple-ii-hotspot"
-                 style="left:44%;top:55%;width:13%;height:18%"
+                 style="left:42%;top:46%;width:16%;height:24%"
                  title="Apple II — pulsa MIRAR y haz clic"></div>
             <div class="apple-ii-preview" id="apple-ii-preview"></div>
             <div class="nameplates" id="nameplates"></div>

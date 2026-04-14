@@ -36,6 +36,9 @@ load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"), ov
 
 from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.staticfiles import StaticFiles
+import urllib.parse
+import subprocess
 from pydantic import BaseModel
 
 # Add admiranext to path
@@ -444,20 +447,20 @@ def _build_conversation(agent: CouncilAgent, message: str, context: Optional[lis
     return conv_system, messages
 
 
-def agent_ask_anthropic(agent: CouncilAgent, message: str, context: Optional[list], model_id: str) -> tuple:
+def agent_ask_anthropic(agent: CouncilAgent, message: str, context: Optional[list], model_id: str, max_tokens: int = 300) -> tuple:
     """Call Anthropic Claude API. Returns (text, input_tokens, output_tokens)."""
     conv_system, messages = _build_conversation(agent, message, context)
 
     response = client.messages.create(
         model=model_id,
-        max_tokens=300,
+        max_tokens=max_tokens,
         system=conv_system,
         messages=messages,
     )
     return response.content[0].text, response.usage.input_tokens, response.usage.output_tokens
 
 
-def agent_ask_groq(agent: CouncilAgent, message: str, context: Optional[list], model_id: str) -> tuple:
+def agent_ask_groq(agent: CouncilAgent, message: str, context: Optional[list], model_id: str, max_tokens: int = 300) -> tuple:
     """Call Groq API (OpenAI-compatible). Returns (text, input_tokens, output_tokens)."""
     if not GROQ_API_KEY:
         raise ValueError("GROQ_API_KEY not configured — add it to .env (free at console.groq.com)")
@@ -474,11 +477,13 @@ def agent_ask_groq(agent: CouncilAgent, message: str, context: Optional[list], m
     payload = {
         "model": model_id,
         "messages": groq_messages,
-        "max_tokens": 300,
+        "max_tokens": max_tokens,
         "temperature": 0.7,
     }
 
-    resp = http_requests.post(GROQ_API_URL, json=payload, headers=headers, timeout=30)
+    # Para resúmenes largos el timeout 30s puede no bastar
+    timeout = 120 if max_tokens > 1000 else 30
+    resp = http_requests.post(GROQ_API_URL, json=payload, headers=headers, timeout=timeout)
     if resp.status_code != 200:
         raise ValueError(f"Groq API error {resp.status_code}: {resp.text[:200]}")
 
@@ -488,14 +493,14 @@ def agent_ask_groq(agent: CouncilAgent, message: str, context: Optional[list], m
     return text, usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0)
 
 
-def agent_ask(agent: CouncilAgent, message: str, context: Optional[list], llm_key: str = "claude-sonnet") -> tuple:
+def agent_ask(agent: CouncilAgent, message: str, context: Optional[list], llm_key: str = "claude-sonnet", max_tokens: int = 300) -> tuple:
     """Route to the correct LLM provider. Returns (text, input_tokens, output_tokens)."""
     model_cfg = LLM_MODELS.get(llm_key, LLM_MODELS["claude-sonnet"])
 
     if model_cfg["provider"] == "anthropic":
-        return agent_ask_anthropic(agent, message, context, model_cfg["model_id"])
+        return agent_ask_anthropic(agent, message, context, model_cfg["model_id"], max_tokens)
     elif model_cfg["provider"] == "groq":
-        return agent_ask_groq(agent, message, context, model_cfg["model_id"])
+        return agent_ask_groq(agent, message, context, model_cfg["model_id"], max_tokens)
     else:
         raise ValueError(f"Unknown provider: {model_cfg['provider']}")
 
@@ -694,6 +699,268 @@ async def budget_status(request: Request, _auth=Depends(verify_token)):
         "warn_at_eur": round(BUDGET_LIMIT_EUR * BUDGET_WARN_PCT, 2),
         "critical_at_eur": round(BUDGET_LIMIT_EUR * BUDGET_CRITICAL_PCT, 2),
     }
+
+
+# ╔══════════════════════════════════════════════════════════════╗
+# ║  DAILY BOOK — Un consejero pone un libro sobre la mesa       ║
+# ╚══════════════════════════════════════════════════════════════╝
+
+DAILY_STATE_DIR = Path.home() / ".council-daily"
+DAILY_STATE_FILE = DAILY_STATE_DIR / "state.json"
+AUDIO_DIR = Path.home() / "Audio" / "council-daily"
+DAILY_STATE_DIR.mkdir(parents=True, exist_ok=True)
+AUDIO_DIR.mkdir(parents=True, exist_ok=True)
+
+# Voces macOS say por consejero
+VOICE_MAP = {
+    "CEO": "Eddy",       # Steve Jobs / Tim Cook (coetáneo)
+    "CTO": "Grandpa",    # Wozniak
+    "COO": "Eddy",
+    "CFO": "Grandpa",    # Buffett
+    "CCO": "Mónica",
+    "CDO": "Paulina",
+    "CXO": "Flo",
+    "CSO": "Mónica",
+}
+DEFAULT_VOICE = "Eddy"
+
+# Rotación de 16 días: leyendas primero, después coetáneos
+DAILY_ROTATION = [
+    ("leyendas", "CEO"), ("leyendas", "CTO"), ("leyendas", "COO"), ("leyendas", "CFO"),
+    ("leyendas", "CCO"), ("leyendas", "CDO"), ("leyendas", "CXO"), ("leyendas", "CSO"),
+    ("coetaneos", "CEO"), ("coetaneos", "CTO"), ("coetaneos", "COO"), ("coetaneos", "CFO"),
+    ("coetaneos", "CCO"), ("coetaneos", "CDO"), ("coetaneos", "CXO"), ("coetaneos", "CSO"),
+]
+
+
+def _daily_load_state() -> dict:
+    if DAILY_STATE_FILE.exists():
+        try:
+            return json.loads(DAILY_STATE_FILE.read_text(encoding="utf-8"))
+        except (json.JSONDecodeError, IOError):
+            pass
+    return {"rotation_index": 0, "history": []}
+
+
+def _daily_save_state(state: dict):
+    DAILY_STATE_FILE.write_text(
+        json.dumps(state, indent=2, ensure_ascii=False), encoding="utf-8"
+    )
+
+
+def _daily_find_today(state: dict) -> Optional[dict]:
+    today = datetime.now().date().isoformat()
+    for h in state["history"]:
+        if h.get("date") == today:
+            return h
+    return None
+
+
+def _daily_find_agent(generation: str, agent_name: str) -> CouncilAgent:
+    group = AGENTS.get(generation, AGENTS["leyendas"])
+    for cls in list(group["racional"]) + list(group["creativo"]):
+        agent = get_agent(cls)
+        if agent.name == agent_name:
+            return agent
+    raise ValueError(f"Agente no encontrado: {generation}/{agent_name}")
+
+
+def _daily_history_titles(state: dict) -> list:
+    return [h.get("title", "") for h in state["history"] if h.get("title")]
+
+
+def _daily_pick_book(agent: CouncilAgent, llm_key: str, history_titles: list) -> dict:
+    """Pide al agente que elija un libro nuevo. Devuelve {title, author, why}."""
+    avoid = "\n".join(f"- {t}" for t in history_titles[-50:]) if history_titles else "(ninguno todavía)"
+    prompt = (
+        "Elige UN libro real y conocido relacionado con tu especialidad, filosofía y trayectoria, "
+        "que NO esté en esta lista de libros ya tratados:\n"
+        f"{avoid}\n\n"
+        "Responde SOLO en formato JSON estricto, sin markdown, sin ``` y sin texto extra. "
+        "Formato exacto:\n"
+        '{"title": "Título exacto del libro", "author": "Nombre del autor", '
+        '"why": "1-2 frases sobre por qué hoy lo pones sobre la mesa"}'
+    )
+    text, _, _ = agent_ask(agent, prompt, None, llm_key, max_tokens=400)
+    t = text.strip()
+    # Quita fences de markdown si los hay
+    if t.startswith("```"):
+        lines = t.split("\n")
+        if lines[-1].strip() == "```":
+            lines = lines[1:-1]
+        else:
+            lines = lines[1:]
+        t = "\n".join(lines)
+    s, e = t.find("{"), t.rfind("}")
+    if s < 0 or e <= s:
+        raise ValueError(f"No se encontró JSON en la respuesta: {text[:300]}")
+    data = json.loads(t[s:e + 1])
+    return {
+        "title": str(data.get("title", "")).strip(),
+        "author": str(data.get("author", "")).strip(),
+        "why": str(data.get("why", "")).strip(),
+    }
+
+
+def _daily_summary(agent: CouncilAgent, llm_key: str, title: str, author: str) -> str:
+    prompt = (
+        f"Cuéntame el libro '{title}' de {author} en tu propia voz, como si me lo "
+        f"estuvieras explicando en una sobremesa. Habla en primera persona, conecta las "
+        f"ideas del libro con tu experiencia y tu filosofía, da ejemplos concretos cuando "
+        f"sirvan.\n\n"
+        f"Importante: prosa fluida, sin títulos, sin listas, sin numeración, sin emojis. "
+        f"Aproximadamente 1500 palabras (unos 8 minutos en voz alta). Empieza directamente "
+        f"con la idea central del libro, sin saludos ni introducciones del estilo "
+        f"'hola, hoy te voy a contar...'."
+    )
+    text, _, _ = agent_ask(agent, prompt, None, llm_key, max_tokens=3000)
+    return text.strip()
+
+
+def _daily_fetch_cover(title: str, author: str) -> Optional[str]:
+    """Busca la portada en Google Books API (sin auth, gratis, legal)."""
+    if not http_requests:
+        return None
+    try:
+        for q_str in (f'intitle:"{title}" inauthor:"{author}"', f"{title} {author}"):
+            q = urllib.parse.quote(q_str)
+            url = f"https://www.googleapis.com/books/v1/volumes?q={q}&maxResults=1"
+            r = http_requests.get(url, timeout=10)
+            if r.status_code != 200:
+                continue
+            items = r.json().get("items", [])
+            if not items:
+                continue
+            links = items[0].get("volumeInfo", {}).get("imageLinks", {})
+            cover = links.get("thumbnail") or links.get("smallThumbnail")
+            if cover:
+                return cover.replace("http://", "https://")
+    except Exception:
+        pass
+    return None
+
+
+def _daily_voice_for(agent_name: str) -> str:
+    return VOICE_MAP.get(agent_name, DEFAULT_VOICE)
+
+
+def _daily_generate_audio(text: str, voice: str, out_path: Path):
+    """Genera m4a/AAC con macOS `say`. Pasa el texto por stdin para evitar límites de argv."""
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    cmd = [
+        "/usr/bin/say",
+        "-v", voice,
+        "--file-format=m4af",
+        "--data-format=aac",
+        "-o", str(out_path),
+    ]
+    res = subprocess.run(cmd, input=text, text=True, capture_output=True, timeout=600)
+    if res.returncode != 0:
+        raise RuntimeError(f"say falló (code {res.returncode}): {res.stderr.strip()}")
+    if not out_path.exists() or out_path.stat().st_size == 0:
+        raise RuntimeError("say no produjo audio")
+
+
+def daily_generate(llm_key: str = "llama-70b", force: bool = False) -> dict:
+    """Genera (o devuelve si ya existe) el libro de hoy."""
+    state = _daily_load_state()
+
+    if not force:
+        existing = _daily_find_today(state)
+        if existing:
+            return existing
+
+    idx = state["rotation_index"] % len(DAILY_ROTATION)
+    generation, agent_name = DAILY_ROTATION[idx]
+    agent = _daily_find_agent(generation, agent_name)
+
+    history_titles = _daily_history_titles(state)
+    pick = _daily_pick_book(agent, llm_key, history_titles)
+    if not pick.get("title"):
+        raise RuntimeError("El consejero no devolvió título")
+
+    cover = _daily_fetch_cover(pick["title"], pick["author"])
+    summary = _daily_summary(agent, llm_key, pick["title"], pick["author"])
+
+    today = datetime.now().date().isoformat()
+    voice = _daily_voice_for(agent.name)
+    safe_title = "".join(c if c.isalnum() else "_" for c in pick["title"])[:40]
+    audio_path = AUDIO_DIR / f"{today}_{agent.name}_{safe_title}.m4a"
+    _daily_generate_audio(summary, voice, audio_path)
+
+    entry = {
+        "date": today,
+        "generation": generation,
+        "agent_name": agent.name,
+        "agent_role": agent.role,
+        "agent_persona": agent.persona,
+        "agent_icon": ICONS.get(agent.name, "🎯"),
+        "agent_side": getattr(agent, "side", "racional"),
+        "title": pick["title"],
+        "author": pick["author"],
+        "why": pick["why"],
+        "cover_url": cover,
+        "summary_text": summary,
+        "audio_filename": audio_path.name,
+        "audio_url": f"/audio/{audio_path.name}",
+        "voice": voice,
+        "llm": llm_key,
+        "created_at": datetime.now().isoformat(),
+    }
+
+    state["history"].append(entry)
+    state["rotation_index"] = (state["rotation_index"] + 1) % len(DAILY_ROTATION)
+    _daily_save_state(state)
+
+    # Telegram opcional (no rompe si falla)
+    try:
+        msg = (
+            f"📖 *Libro del día*\n\n"
+            f"{entry['agent_icon']} *{agent.persona}* ({agent.role}) pone sobre la mesa:\n\n"
+            f"📚 *{pick['title']}*\n"
+            f"✍️ {pick['author']}\n\n"
+            f"_{pick['why']}_"
+        )
+        _send_telegram(msg)
+    except Exception as e:
+        print(f"⚠️  Telegram notify failed: {e}")
+
+    return entry
+
+
+@app.get("/api/council/daily")
+async def council_daily_get():
+    """Devuelve el libro de hoy si existe (sin generar). null si todavía no hay."""
+    state = _daily_load_state()
+    return _daily_find_today(state)
+
+
+class LeerRequest(BaseModel):
+    llm: str = "llama-70b"
+    force: bool = False
+
+
+@app.post("/api/council/leer")
+async def council_leer(
+    req: LeerRequest,
+    _rate=Depends(check_rate_limit),
+    _auth=Depends(verify_token),
+):
+    """Trigger manual del libro del día. Si ya existe el de hoy, lo devuelve;
+    en caso contrario genera uno nuevo (rotación + LLM + cover + audio)."""
+    llm_key = req.llm if req.llm in LLM_MODELS else "llama-70b"
+    if not LLM_MODELS[llm_key]["free"]:
+        check_budget()
+    loop = asyncio.get_event_loop()
+    try:
+        entry = await loop.run_in_executor(None, daily_generate, llm_key, req.force)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"daily_generate failed: {e}")
+    return entry
+
+
+# Sirve los MP4/M4A generados. Externa via Funnel: /api/audio/X.m4a → backend /audio/X.m4a
+app.mount("/audio", StaticFiles(directory=str(AUDIO_DIR)), name="audio")
 
 
 # ── Run ──────────────────────────────────────────────────────

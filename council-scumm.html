@@ -1842,7 +1842,9 @@
         }
         if (currentVerb === 'mirar') setActionLine("Mirar... haz clic en un consejero");
         if (currentVerb === 'hablar') setActionLine("Hablar con... selecciona un consejero");
-        if (currentVerb === 'leer') setActionLine("Leer el último informe del consejo");
+        if (currentVerb === 'leer') {
+            triggerLeer();
+        }
         if (currentVerb === 'votar') setActionLine("Votar sobre la propuesta actual");
         if (currentVerb === 'comparar') setActionLine("Comparar Leyendas vs Coetáneos");
         if (currentVerb === 'salir') { setActionLine("Volviendo..."); setTimeout(() => window.location.href = '../', 1000); }
@@ -2013,6 +2015,154 @@
     const COUNCIL_API_TOKEN = "G3ADHakfWlP6JfzZMkhcT3NXyGp5r8UXXZu5gX0uGMA";
     let activeApiUrl = null;
     let conversationHistory = [];
+
+    // ── LEER: libro del día ──────────────────────────────────
+    async function triggerLeer() {
+        // Si ya hay overlay abierto, ciérralo (toggle)
+        const existing = document.getElementById("daily-book-overlay");
+        if (existing) { existing.remove(); return; }
+
+        setActionLine("📖 Buscando el libro del día… (puede tardar ~30s la primera vez)");
+
+        const urls = activeApiUrl ? [activeApiUrl] : COUNCIL_API_URLS;
+        let entry = null;
+        let lastErr = null;
+
+        // 1) Mira si ya hay libro de hoy generado (rápido)
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + "/api/council/daily", {
+                    headers: { "X-Council-Token": COUNCIL_API_TOKEN },
+                    signal: AbortSignal.timeout(8000),
+                });
+                if (res.ok) {
+                    entry = await res.json();
+                    if (entry) { activeApiUrl = baseUrl; break; }
+                }
+            } catch (e) { lastErr = e; }
+        }
+
+        // 2) Si no hay, dispara generación (lento: LLM + cover + audio)
+        if (!entry) {
+            for (const baseUrl of urls) {
+                try {
+                    const res = await fetch(baseUrl + "/api/council/leer", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-Council-Token": COUNCIL_API_TOKEN,
+                        },
+                        body: JSON.stringify({ llm: selectedLLM || "llama-70b" }),
+                        signal: AbortSignal.timeout(180000),  // 3 min
+                    });
+                    if (res.ok) {
+                        entry = await res.json();
+                        activeApiUrl = baseUrl;
+                        break;
+                    }
+                    lastErr = new Error("HTTP " + res.status + ": " + (await res.text()).slice(0, 200));
+                } catch (e) { lastErr = e; }
+            }
+        }
+
+        if (!entry) {
+            setActionLine("⚠️ No se pudo generar el libro del día — " + (lastErr ? lastErr.message : "API no disponible"));
+            return;
+        }
+
+        showDailyBookOverlay(entry);
+        setActionLine("📖 " + entry.agent_persona + " trae: " + entry.title);
+    }
+
+    function showDailyBookOverlay(entry) {
+        const old = document.getElementById("daily-book-overlay");
+        if (old) old.remove();
+
+        const audioFullUrl = (activeApiUrl || COUNCIL_API_URLS[0]) + entry.audio_url;
+        const cover = entry.cover_url || "";
+        const sideColor = entry.agent_side === "creativo" ? "#3b82f6" : "#ef4444";
+
+        const ov = document.createElement("div");
+        ov.id = "daily-book-overlay";
+        ov.style.cssText = `
+            position: fixed; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.75);
+            z-index: 9999;
+            font-family: inherit;
+        `;
+        ov.innerHTML = `
+            <div style="
+                background: #1a1428;
+                border: 2px solid ${sideColor};
+                border-radius: 12px;
+                padding: 24px;
+                max-width: 560px; width: 90%;
+                color: #f0e8d4;
+                box-shadow: 0 0 40px rgba(0,0,0,0.8);
+                position: relative;
+            ">
+                <button id="dbo-close" style="
+                    position: absolute; top: 8px; right: 12px;
+                    background: none; border: none; color: #f0e8d4;
+                    font-size: 22px; cursor: pointer;
+                ">×</button>
+
+                <div style="display: flex; gap: 18px; align-items: flex-start;">
+                    ${cover ? `<img src="${cover}" alt="" style="
+                        width: 110px; height: auto;
+                        border-radius: 4px;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+                        flex-shrink: 0;
+                    ">` : `<div style="
+                        width: 110px; height: 160px;
+                        background: #2a1f3d;
+                        border-radius: 4px;
+                        display: flex; align-items: center; justify-content: center;
+                        font-size: 32px;
+                        flex-shrink: 0;
+                    ">📚</div>`}
+
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-size: 11px; color: ${sideColor}; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">
+                            📖 Libro del día · ${entry.date}
+                        </div>
+                        <div style="font-size: 18px; font-weight: bold; line-height: 1.3; margin-bottom: 4px;">
+                            ${escapeHtml(entry.title)}
+                        </div>
+                        <div style="font-size: 13px; color: #b8a890; margin-bottom: 12px;">
+                            ${escapeHtml(entry.author)}
+                        </div>
+                        <div style="font-size: 12px; color: #d4c8a8; padding-top: 10px; border-top: 1px solid #3a2f4a;">
+                            ${entry.agent_icon} <strong>${escapeHtml(entry.agent_persona)}</strong>
+                            <span style="color: #8a7a60;"> · ${escapeHtml(entry.agent_role)}</span>
+                        </div>
+                        <div style="font-size: 12px; color: #a89880; margin-top: 6px; font-style: italic;">
+                            "${escapeHtml(entry.why || "")}"
+                        </div>
+                    </div>
+                </div>
+
+                <audio controls preload="metadata" style="
+                    width: 100%; margin-top: 18px;
+                    filter: invert(0.85) hue-rotate(180deg);
+                " src="${audioFullUrl}"></audio>
+
+                <div style="font-size: 10px; color: #6a5a40; margin-top: 8px; text-align: right;">
+                    🎙️ ${entry.voice} · ${entry.llm}
+                </div>
+            </div>
+        `;
+        document.body.appendChild(ov);
+        document.getElementById("dbo-close").onclick = () => ov.remove();
+        ov.addEventListener("click", (e) => { if (e.target === ov) ov.remove(); });
+    }
+
+    function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, c => ({
+            "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+        }[c]));
+    }
 
     async function askCouncilAPI(message) {
         /**

@@ -34,11 +34,6 @@ const MACHINE_STATUS_META = {
   maintenance: { label: "mantenimiento", tone: "warn" }
 };
 
-// Redirect GitHub Pages to Funnel
-if (location.hostname === "csilvasantin.github.io") {
-  location.href = FUNNEL_URL + "/teamwork.html";
-}
-
 function apiUrl(path) {
   return isLocal ? path : `${FUNNEL_URL}${path}`;
 }

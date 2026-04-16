@@ -11,7 +11,8 @@ let isStaticMode = false;
 let latestSnapshots = {};
 const FUNNEL_URL = "https://macmini.tail48b61c.ts.net";
 const FUNNEL_HOST = "macmini.tail48b61c.ts.net";
-const isLocal = location.hostname === "localhost" || location.hostname === "127.0.0.1" || location.hostname === FUNNEL_HOST;
+const ON_GITHUB_PAGES = location.hostname.endsWith("github.io");
+const isLocal = ON_GITHUB_PAGES || location.hostname === "localhost" || location.hostname === "127.0.0.1" || location.hostname === FUNNEL_HOST;
 const DEFAULT_ONBOARDING_PROMPT =
   "Haz onboarding leyendo el repositorio onboarding de Admira Next primero. Carga el contexto compartido, identifica los repositorios activos y queda listo para continuar sin pedir de nuevo el contexto base.";
 const LOCAL_ONBOARDING_COMMANDS = new Set(["onboarding", "haz onboarding"]);
@@ -1062,10 +1063,12 @@ function updateWatchdogUI() {
 // ─── Init ──────────────────────────────────────────────────────────
 
 loadMachines();
-loadHistory();
-setTimeout(loadSnapshots, 2000);
-setTimeout(loadWatchdogStats, 3000);
-setInterval(loadMachines, MACHINE_REFRESH_MS);
-setInterval(loadHistory, 10_000);
-setInterval(loadSnapshots, SNAPSHOT_REFRESH_MS);
-setInterval(loadWatchdogStats, WATCHDOG_REFRESH_MS);
+if (!ON_GITHUB_PAGES) {
+  loadHistory();
+  setTimeout(loadSnapshots, 2000);
+  setTimeout(loadWatchdogStats, 3000);
+  setInterval(loadMachines, MACHINE_REFRESH_MS);
+  setInterval(loadHistory, 10_000);
+  setInterval(loadSnapshots, SNAPSHOT_REFRESH_MS);
+  setInterval(loadWatchdogStats, WATCHDOG_REFRESH_MS);
+}

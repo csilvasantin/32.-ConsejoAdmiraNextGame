@@ -1271,7 +1271,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>AdmiraNext Consejo <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" style="font-size:0.45em;-webkit-text-fill-color:#555;background:none;text-decoration:none;cursor:pointer;transition:all 0.3s;" onmouseover="this.style.webkitTextFillColor='#daa520'" onmouseout="this.style.webkitTextFillColor='#555'">v26.16.04.8</a></h1>
+        <h1>AdmiraNext Consejo <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" style="font-size:0.45em;-webkit-text-fill-color:#555;background:none;text-decoration:none;cursor:pointer;transition:all 0.3s;" onmouseover="this.style.webkitTextFillColor='#daa520'" onmouseout="this.style.webkitTextFillColor='#555'">v26.16.04.9</a></h1>
 
         <div class="top-bar">
             <div class="gen-toggle">
@@ -1341,7 +1341,7 @@
                     <button class="verb-btn" data-verb="hablar" onclick="selectVerb(this)">Hablar con</button>
                     <button class="verb-btn" data-verb="leer" onclick="selectVerb(this)">Leer</button>
                     <button class="verb-btn" data-verb="votar" onclick="selectVerb(this)">Votar</button>
-                    <button class="verb-btn" data-verb="comparar" onclick="selectVerb(this)">Comparar</button>
+                    <button class="verb-btn" data-verb="analizar" onclick="selectVerb(this)">Analizar</button>
                     <button class="verb-btn" data-verb="salir" onclick="selectVerb(this)">Salir</button>
                 </div>
                 <div class="inventory">
@@ -1385,14 +1385,12 @@
                             <div class="inv-item votar-option" data-votar="posponer" onclick="selectSubOption('votar', this)">🔄 Posponer</div>
                         </div>
                     </div>
-                    <!-- Panel COMPARAR: dimensión a comparar -->
-                    <div class="inv-panel" data-panel="comparar">
-                        <div class="inventory-title">Dimensión</div>
+                    <!-- Panel ANALIZAR: fuente del análisis -->
+                    <div class="inv-panel" data-panel="analizar">
+                        <div class="inventory-title">Fuente</div>
                         <div class="inventory-list">
-                            <div class="inv-item comparar-option selected" data-comparar="impacto" onclick="selectSubOption('comparar', this)">🏆 Impacto</div>
-                            <div class="inv-item comparar-option" data-comparar="sabiduria" onclick="selectSubOption('comparar', this)">🧠 Sabiduría</div>
-                            <div class="inv-item comparar-option" data-comparar="creatividad" onclick="selectSubOption('comparar', this)">🎨 Creatividad</div>
-                            <div class="inv-item comparar-option" data-comparar="velocidad" onclick="selectSubOption('comparar', this)">⚡ Velocidad</div>
+                            <div class="inv-item analizar-option selected" data-analizar="url" onclick="selectSubOption('analizar', this)">🔗 URL</div>
+                            <div class="inv-item analizar-option" data-analizar="fichero" onclick="selectSubOption('analizar', this)">📄 Fichero</div>
                         </div>
                     </div>
                     <!-- Panel SALIR: destino de navegación -->
@@ -2128,7 +2126,7 @@
     let selectedLeer = "audio";         // Sub-opción del verbo LEER
     let selectedMirar = "presentacion"; // Sub-opción del verbo MIRAR
     let selectedVotar = "favor";        // Sub-opción del verbo VOTAR
-    let selectedComparar = "impacto";   // Sub-opción del verbo COMPARAR
+    let selectedAnalizar = "url";        // Sub-opción del verbo ANALIZAR
     let selectedSalir = "inicio";       // Sub-opción del verbo SALIR
 
     // Mapea cada verbo al panel del inventario que debe mostrarse
@@ -2140,7 +2138,7 @@
         leer:      "leer",
         mirar:     "mirar",
         votar:     "votar",
-        comparar:  "comparar",
+        analizar:  "analizar",
         salir:     "salir",
     };
 
@@ -2159,7 +2157,7 @@
         if (verb === "leer")     selectedLeer     = el.dataset.leer;
         if (verb === "mirar")    selectedMirar    = el.dataset.mirar;
         if (verb === "votar")    selectedVotar    = el.dataset.votar;
-        if (verb === "comparar") selectedComparar = el.dataset.comparar;
+        if (verb === "analizar") selectedAnalizar = el.dataset.analizar;
         if (verb === "salir")    selectedSalir    = el.dataset.salir;
     }
 
@@ -2212,7 +2210,7 @@
             triggerLeer();
         }
         if (currentVerb === 'votar') triggerVotar();
-        if (currentVerb === 'comparar') triggerComparar();
+        if (currentVerb === 'analizar') triggerAnalizar();
         if (currentVerb === 'salir') triggerSalir();
     }
 
@@ -2285,7 +2283,7 @@
     }
 
     function updateActionLine() {
-        const names = { preguntar:"Preguntar", debatir:"Debatir", sintetizar:"Sintetizar", mirar:"Mirar", hablar:"Hablar con", leer:"Leer", votar:"Votar", comparar:"Comparar", salir:"Salir" };
+        const names = { preguntar:"Preguntar", debatir:"Debatir", sintetizar:"Sintetizar", mirar:"Mirar", hablar:"Hablar con", leer:"Leer", votar:"Votar", analizar:"Analizar", salir:"Salir" };
         const v = names[currentVerb] || "";
         const p = currentProject ? ' "' + currentProject + '"' : "";
         if (v && !preguntarMode) document.getElementById("action-input").placeholder = v + p + "...";
@@ -2962,63 +2960,82 @@
     }
 
     // ═══════════════════════════════════
-    // COMPARAR
+    // ANALIZAR
     // ═══════════════════════════════════
-    function triggerComparar() {
-        const old = document.getElementById("compare-overlay");
+    function triggerAnalizar() {
+        const old = document.getElementById("analizar-overlay");
         if (old) { old.remove(); return; }
 
-        const dimLabels = { impacto: "🏆 Impacto", sabiduria: "🧠 Sabiduría", creatividad: "🎨 Creatividad", velocidad: "⚡ Velocidad" };
-        const dimLabel = dimLabels[selectedComparar] || selectedComparar;
-
-        function score(persona, dim) {
-            const h = (persona + dim).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-            return 55 + (h % 45); // 55–99
-        }
-
-        function memberRow(m, color) {
-            const s = score(m.persona, selectedComparar);
-            const filled = Math.round(s / 10);
-            const bar = "█".repeat(filled) + "░".repeat(10 - filled);
-            return `<tr>
-                <td style="padding:3px 6px;white-space:nowrap">${m.icon} <span style="color:#ccc;font-size:0.8em">${m.persona}</span></td>
-                <td style="font-family:monospace;color:${color};padding:3px 6px;letter-spacing:1px;font-size:0.75em">${bar}</td>
-                <td style="padding:3px 6px;color:#aaa;font-size:0.8em;text-align:right">${s}</td>
-            </tr>`;
-        }
-
-        const leyendas  = COUNCIL.filter(m => m.gen === "leyendas");
-        const coetaneos = COUNCIL.filter(m => m.gen === "coetaneos");
-        const leyScore  = Math.round(leyendas.reduce((s, m) => s + score(m.persona, selectedComparar), 0) / leyendas.length);
-        const coetScore = Math.round(coetaneos.reduce((s, m) => s + score(m.persona, selectedComparar), 0) / coetaneos.length);
-        const winner    = leyScore >= coetScore ? "🏛️ Leyendas" : "🌟 Coetáneos";
-        const winColor  = leyScore >= coetScore ? "#daa520" : "#3498db";
+        const isUrl = selectedAnalizar === "url";
 
         const ov = document.createElement("div");
-        ov.id = "compare-overlay";
+        ov.id = "analizar-overlay";
         ov.style.cssText = "position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.82);z-index:9999;font-family:inherit;";
         ov.innerHTML = `
-            <div style="background:#1a1a2e;border:1px solid #333;border-radius:12px;padding:2rem;max-width:680px;width:92%;max-height:82vh;overflow-y:auto;">
-                <h3 style="color:#88ccff;font-family:'Press Start 2P',monospace;font-size:0.7rem;margin-bottom:0.8rem;text-align:center">COMPARAR GENERACIONES</h3>
-                <p style="color:#aaa;text-align:center;margin-bottom:1.2rem">${dimLabel}</p>
-                <div style="display:grid;grid-template-columns:1fr 1fr;gap:1.5rem;margin-bottom:1.2rem">
-                    <div>
-                        <div style="color:#daa520;font-weight:700;margin-bottom:0.6rem;text-align:center;font-size:0.9rem">🏛️ Leyendas — <strong>${leyScore}</strong></div>
-                        <table style="width:100%">${leyendas.map(m => memberRow(m, "#daa520")).join('')}</table>
-                    </div>
-                    <div>
-                        <div style="color:#3498db;font-weight:700;margin-bottom:0.6rem;text-align:center;font-size:0.9rem">🌟 Coetáneos — <strong>${coetScore}</strong></div>
-                        <table style="width:100%">${coetaneos.map(m => memberRow(m, "#3498db")).join('')}</table>
-                    </div>
+            <div style="background:#1a1a2e;border:2px solid #3a6aaa;border-radius:0;padding:1.6rem;max-width:540px;width:92%;font-family:'Press Start 2P',monospace;image-rendering:pixelated;">
+                <h3 style="color:#88ccff;font-size:0.65rem;margin:0 0 1.2rem;text-align:center;letter-spacing:1px;">ANALIZAR</h3>
+                ${isUrl ? `
+                <div style="margin-bottom:1rem;">
+                    <label style="color:#aaa;font-size:0.5rem;display:block;margin-bottom:0.5rem;letter-spacing:1px;">🔗 URL</label>
+                    <input id="analizar-url" type="url" placeholder="https://..." style="width:100%;box-sizing:border-box;background:#000033;border:2px solid #555;color:#eee;padding:0.5rem 0.6rem;border-radius:0;font-size:0.75rem;font-family:monospace;">
                 </div>
-                <p style="text-align:center;font-size:1rem;font-weight:700;color:${winColor};margin-bottom:1.2rem">Ganador en ${dimLabel}: ${winner}</p>
-                <div style="text-align:center">
-                    <button onclick="document.getElementById('compare-overlay').remove()" style="background:#333;color:#ccc;border:1px solid #555;border-radius:6px;padding:0.5rem 1.5rem;cursor:pointer;font-family:inherit;font-size:0.85rem">Cerrar</button>
+                ` : `
+                <div style="margin-bottom:1rem;">
+                    <label style="color:#aaa;font-size:0.5rem;display:block;margin-bottom:0.5rem;letter-spacing:1px;">📄 FICHERO</label>
+                    <input id="analizar-file" type="file" accept=".txt,.md,.html,.js,.py,.json,.csv,.xml" style="color:#eee;font-family:monospace;font-size:0.7rem;width:100%;">
                 </div>
+                `}
+                <div style="margin-bottom:1.2rem;">
+                    <label style="color:#aaa;font-size:0.5rem;display:block;margin-bottom:0.5rem;letter-spacing:1px;">📝 PREGUNTA (opcional)</label>
+                    <textarea id="analizar-q" rows="2" placeholder="¿Qué quieres saber?" style="width:100%;box-sizing:border-box;background:#000033;border:2px solid #555;color:#eee;padding:0.5rem 0.6rem;border-radius:0;font-size:0.75rem;font-family:monospace;resize:vertical;"></textarea>
+                </div>
+                <div style="display:flex;gap:0.8rem;justify-content:flex-end;">
+                    <button id="analizar-cancel" style="background:#222;color:#ccc;border:2px solid #555;border-radius:0;padding:0.4rem 1rem;cursor:pointer;font-family:'Press Start 2P',monospace;font-size:0.5rem;">CANCELAR</button>
+                    <button id="analizar-submit" style="background:#003399;color:#fff;border:2px solid #4488ff;border-radius:0;padding:0.4rem 1rem;cursor:pointer;font-family:'Press Start 2P',monospace;font-size:0.5rem;">🔍 ANALIZAR</button>
+                </div>
+                <div id="analizar-status" style="margin-top:0.8rem;color:#ffaa00;font-size:0.45rem;min-height:1em;text-align:center;letter-spacing:1px;"></div>
             </div>`;
         document.body.appendChild(ov);
+
+        document.getElementById("analizar-cancel").onclick = () => ov.remove();
         ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
-        setActionLine("📊 Comparando " + dimLabel + " — ganador: " + winner);
+
+        document.getElementById("analizar-submit").onclick = async () => {
+            const statusEl = document.getElementById("analizar-status");
+            const question = (document.getElementById("analizar-q")?.value || "").trim();
+            let content = "";
+            let shortLabel = "";
+
+            if (isUrl) {
+                const url = (document.getElementById("analizar-url")?.value || "").trim();
+                if (!url) { statusEl.textContent = "⚠ INTRODUCE UNA URL"; return; }
+                content = `URL a analizar: ${url}`;
+                shortLabel = "🔗 " + url.replace(/^https?:\/\//, "").slice(0, 50);
+            } else {
+                const fileInput = document.getElementById("analizar-file");
+                if (!fileInput?.files?.length) { statusEl.textContent = "⚠ SELECCIONA UN FICHERO"; return; }
+                const file = fileInput.files[0];
+                statusEl.textContent = "LEYENDO FICHERO…";
+                try {
+                    const text = await file.text();
+                    content = `Fichero: ${file.name}\n\n${text.slice(0, 8000)}`;
+                    shortLabel = "📄 " + file.name;
+                } catch {
+                    statusEl.textContent = "⚠ ERROR LEYENDO EL FICHERO";
+                    return;
+                }
+            }
+
+            const prompt = question
+                ? `Analiza lo siguiente y responde a: "${question}"\n\n${content}`
+                : `Analiza lo siguiente desde tu perspectiva y expertise:\n\n${content}`;
+
+            ov.remove();
+            enterConversation();
+            addUserEntry(shortLabel + (question ? " — " + question : ""));
+            simulateCouncilResponse(prompt);
+            setActionLine("🔍 Analizando: " + shortLabel);
+        };
     }
 
     // ═══════════════════════════════════

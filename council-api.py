@@ -94,9 +94,9 @@ LLM_MODELS = {
         "icon": "🌀",
     },
     "gemini-flash": {
-        "name": "Gemini 2.0 Flash",
+        "name": "Gemini 2.5 Flash",
         "provider": "gemini",
-        "model_id": "gemini-2.0-flash",
+        "model_id": "gemini-2.5-flash",
         "free": False,
         "icon": "✨",
     },

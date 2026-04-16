@@ -1271,7 +1271,7 @@
 </head>
 <body>
     <div class="container">
-        <h1>AdmiraNext Consejo <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" style="font-size:0.45em;-webkit-text-fill-color:#555;background:none;text-decoration:none;cursor:pointer;transition:all 0.3s;" onmouseover="this.style.webkitTextFillColor='#daa520'" onmouseout="this.style.webkitTextFillColor='#555'">v26.16.04.11</a></h1>
+        <h1>AdmiraNext Consejo <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" style="font-size:0.45em;-webkit-text-fill-color:#555;background:none;text-decoration:none;cursor:pointer;transition:all 0.3s;" onmouseover="this.style.webkitTextFillColor='#daa520'" onmouseout="this.style.webkitTextFillColor='#555'">v26.16.04.12</a></h1>
 
         <div class="top-bar">
             <div class="gen-toggle">
@@ -2730,12 +2730,27 @@
         const racionales = members.filter(m => m.side === "racional");
         const creativos = members.filter(m => m.side === "creativo");
 
-        // Show "thinking" animation
-        setActionLine("🧠 Los consejeros están deliberando con Claude...");
+        // Show "thinking" animation — mensaje según LLM activo y tipo de contenido
+        const llmNameMap = {
+            "claude-sonnet": "Claude Sonnet 4",
+            "llama-70b": "Llama 3.3 70B",
+            "deepseek-r1": "DeepSeek R1",
+            "gemma-9b": "Gemma 2 9B",
+            "gemini-flash": "Gemini 2.5 Flash",
+        };
+        const llmLabel = llmNameMap[selectedLLM] || selectedLLM;
+        const isVideoAnalysis = selectedLLM === "gemini-flash" && YT_RE.test(question);
+        const thinkingMsg = isVideoAnalysis
+            ? "📺 Gemini analizando vídeo de YouTube... (10–30s)"
+            : "🧠 Los consejeros están deliberando con " + llmLabel + "...";
+        const bubbleMsg = isVideoAnalysis
+            ? "Viendo el vídeo..."
+            : "Los 8 consejeros están pensando...";
+        setActionLine(thinkingMsg);
         for (const m of [...racionales, ...creativos]) {
             highlightNameplate(m.persona);
         }
-        showSpeechBubble(racionales[0].persona, "Consejo", "Los 8 consejeros están pensando...");
+        showSpeechBubble(racionales[0].persona, "Consejo", bubbleMsg);
 
         // Add to conversation history
         conversationHistory.push({ role: "user", content: question });
@@ -2969,12 +2984,13 @@
         const hint = document.getElementById("analizar-url-hint");
         if (!hint) return;
         if (YT_RE.test(val)) {
-            hint.textContent = "▶ YouTube detectado — usa ✨ Gemini 2.5 Flash para analizar vídeo";
-            // Auto-switch LLM to Gemini if not already selected
+            hint.textContent = "▶ YouTube detectado — auto-seleccionado ✨ Gemini 2.5 Flash";
+            // Auto-switch LLM to Gemini sin password (usuario ya eligió Analizar + pegó URL)
             const geminiBtn = document.querySelector('.llm-option[data-llm="gemini-flash"]');
-            const currentLlm = document.querySelector('.llm-option.selected')?.dataset?.llm;
-            if (geminiBtn && currentLlm !== "gemini-flash") {
-                geminiBtn.click();
+            if (geminiBtn && selectedLLM !== "gemini-flash") {
+                document.querySelectorAll('.llm-option').forEach(i => i.classList.remove('selected'));
+                geminiBtn.classList.add('selected');
+                selectedLLM = "gemini-flash";
             }
         } else {
             hint.textContent = "";

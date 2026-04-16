@@ -536,13 +536,16 @@ def agent_ask_gemini(agent: CouncilAgent, message: str, context: Optional[list],
                 mime_type="video/youtube",
             )),
         ]
+        # Video analysis needs more tokens: 300 corta respuestas a mitad.
+        effective_max = max(max_tokens, 800)
     else:
         parts = [message]
+        effective_max = max_tokens
 
     response = model.generate_content(
         parts,
         generation_config=genai.GenerationConfig(
-            max_output_tokens=max_tokens,
+            max_output_tokens=effective_max,
             temperature=0.7,
         ),
     )

@@ -1569,12 +1569,18 @@
 
         // Try Mac Mini API
         try {
-            const res = await fetch(CONTROL_API, { signal: AbortSignal.timeout(4000) });
+            const res = await fetch(CONTROL_API, {
+                signal: AbortSignal.timeout(4000),
+                redirect: 'error',
+                credentials: 'omit'
+            });
             const data = await res.json();
             loadMachines(data);
             apiOk = true;
+            apiFail = 0;
         } catch (e) {
             apiOk = false;
+            apiFail = (apiFail || 0) + 1;
         }
         // Always merge GitHub data for machines not in local API
         try {
@@ -1603,16 +1609,15 @@
             }
             demoMode = true;
             btn.classList.add("active");
-            // Fast polling: every 3 seconds
-            clearInterval(demoInterval);
-            demoInterval = setInterval(refresh, 3000);
+            apiFail = 0;
+            scheduleRefresh();
             refresh();
             startThumbRefresh();
         } else {
             demoMode = false;
             btn.classList.remove("active");
-            clearInterval(demoInterval);
-            demoInterval = null;
+            apiFail = 0;
+            scheduleRefresh();
             stopThumbRefresh();
         }
     }
@@ -1921,8 +1926,17 @@
         render();
     }
 
-    refresh();
-    setInterval(refresh, 15000);
+    let apiFail = 0;
+    let refreshTimer = null;
+    const BACKOFF = [15, 30, 60, 120, 300]; // segundos: normal → hasta 5min
+
+    function scheduleRefresh() {
+        if (refreshTimer) clearTimeout(refreshTimer);
+        const delaySec = demoMode ? 3 : BACKOFF[Math.min(apiFail, BACKOFF.length - 1)];
+        refreshTimer = setTimeout(async () => { await refresh(); scheduleRefresh(); }, delaySec * 1000);
+    }
+
+    refresh().then(scheduleRefresh);
     setInterval(updateCheckTicker, 1000);
 
     // ═══════════════════════════════════════════

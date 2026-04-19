@@ -716,6 +716,136 @@
             animation: pulse 1s infinite;
         }
 
+        /* Design mode toggle — entre hack y control */
+        .design-toggle {
+            position: fixed;
+            bottom: 1rem;
+            left: 9rem;
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1rem;
+            border-radius: 999px;
+            font-size: 0.75rem;
+            font-weight: 700;
+            cursor: pointer;
+            border: 2px solid #333;
+            background: #1a1a2e;
+            color: #666;
+            transition: all 0.3s;
+            font-family: inherit;
+        }
+        .design-toggle:hover { border-color: #ffdd00; color: #ffdd00; }
+        .design-toggle.active {
+            background: linear-gradient(135deg, #ffdd00, #daa520);
+            border-color: #ffdd00;
+            color: #000;
+            box-shadow: 0 0 20px rgba(255, 221, 0, 0.5);
+        }
+        .design-dot {
+            width: 8px; height: 8px;
+            border-radius: 50%;
+            background: #666;
+        }
+        .design-toggle.active .design-dot { background: #000; }
+
+        /* Design overlay — reglas, grid y lectura de coordenadas */
+        .design-overlay {
+            position: absolute;
+            inset: 0;
+            display: none;
+            pointer-events: none;
+            z-index: 50;
+        }
+        .design-overlay.active { display: block; }
+        .design-grid {
+            position: absolute;
+            inset: 0;
+            background-image:
+                repeating-linear-gradient(to right,
+                    rgba(255, 221, 0, 0.15) 0,
+                    rgba(255, 221, 0, 0.15) 1px,
+                    transparent 1px,
+                    transparent 5%),
+                repeating-linear-gradient(to bottom,
+                    rgba(255, 221, 0, 0.15) 0,
+                    rgba(255, 221, 0, 0.15) 1px,
+                    transparent 1px,
+                    transparent 5%);
+        }
+        .design-grid::before,
+        .design-grid::after {
+            content: "";
+            position: absolute;
+            background: rgba(255, 68, 68, 0.4);
+        }
+        .design-grid::before { /* línea central vertical */
+            left: 50%; top: 0; bottom: 0; width: 1px;
+        }
+        .design-grid::after { /* línea central horizontal */
+            top: 50%; left: 0; right: 0; height: 1px;
+        }
+        .design-ruler {
+            position: absolute;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 7px;
+            color: #ffdd00;
+            background: rgba(0, 0, 20, 0.85);
+            letter-spacing: 0;
+        }
+        .design-ruler-h {
+            top: 0; left: 0; right: 0; height: 14px;
+            display: flex;
+            border-bottom: 1px solid rgba(255, 221, 0, 0.6);
+        }
+        .design-ruler-h span {
+            flex: 1 0 10%;
+            display: flex; align-items: center; justify-content: flex-start;
+            padding-left: 2px;
+            border-right: 1px solid rgba(255, 221, 0, 0.3);
+        }
+        .design-ruler-v {
+            left: 0; top: 14px; bottom: 0; width: 22px;
+            display: flex; flex-direction: column;
+            border-right: 1px solid rgba(255, 221, 0, 0.6);
+        }
+        .design-ruler-v span {
+            flex: 1 0 10%;
+            display: flex; align-items: flex-start; justify-content: center;
+            padding-top: 1px;
+            border-bottom: 1px solid rgba(255, 221, 0, 0.3);
+        }
+        .design-cursor {
+            position: absolute;
+            width: 10px; height: 10px;
+            border: 1px solid #ff4444;
+            transform: translate(-50%, -50%);
+            pointer-events: none;
+            mix-blend-mode: difference;
+            display: none;
+        }
+        .design-overlay.active .design-cursor { display: block; }
+        .design-readout {
+            position: fixed;
+            bottom: 4rem;
+            left: 50%;
+            transform: translateX(-50%);
+            z-index: 9998;
+            background: rgba(0, 0, 20, 0.95);
+            color: #ffdd00;
+            border: 2px solid #ffdd00;
+            padding: 0.4rem 0.8rem;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.55rem;
+            letter-spacing: 1px;
+            white-space: nowrap;
+            display: none;
+            box-shadow: 3px 3px 0 #000;
+        }
+        .design-overlay.active ~ .design-readout,
+        body.design-on .design-readout { display: block; }
+
         /* Control panel link — centered between hack and demo */
         .control-toggle {
             position: fixed;
@@ -1308,7 +1438,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.19.04.9</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.19.04.10</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -1342,6 +1472,12 @@
             <div class="window-overlay creativo" id="win-creativo">
                 <div class="window-overlay-title">🔍 URLs ANALIZADAS</div>
                 <ol class="analizar-list" id="analizar-list"></ol>
+            </div>
+            <div class="design-overlay" id="design-overlay">
+                <div class="design-grid"></div>
+                <div class="design-ruler design-ruler-h" id="design-ruler-h"></div>
+                <div class="design-ruler design-ruler-v" id="design-ruler-v"></div>
+                <div class="design-cursor" id="design-cursor"></div>
             </div>
             <div class="body-hotspots" id="body-hotspots"></div>
             <!-- Vídeo de presentación: cubre la imagen del consejo. Su poster (primer fotograma generado
@@ -1485,6 +1621,11 @@
     <button class="demo-toggle" id="demo-btn" onclick="toggleDemo()">
         <span class="demo-dot"></span> DEMO
     </button>
+
+    <button class="design-toggle" id="design-btn" onclick="toggleDesign()">
+        <span class="design-dot"></span> DISEÑO
+    </button>
+    <div class="design-readout" id="design-readout">—</div>
 
     <script>
     const CONTROL_API = "https://macmini.tail48b61c.ts.net/api/machines";
@@ -3021,6 +3162,60 @@
         document.body.appendChild(ov);
         ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
         setActionLine("🗳️ Votación sobre «" + tema + "» — " + resultLabel);
+    }
+
+    // ═══════════════════════════════════
+    // DISEÑO (reglas + grid sobre la imagen del consejo)
+    // ═══════════════════════════════════
+    function buildDesignRulers() {
+        const h = document.getElementById("design-ruler-h");
+        const v = document.getElementById("design-ruler-v");
+        if (!h || !v || h.children.length) return;
+        for (let i = 0; i < 10; i++) {
+            const sh = document.createElement("span"); sh.textContent = (i * 10) + "%";
+            h.appendChild(sh);
+            const sv = document.createElement("span"); sv.textContent = (i * 10);
+            v.appendChild(sv);
+        }
+    }
+    function onDesignMouseMove(e) {
+        const host = document.querySelector(".council-image");
+        const readout = document.getElementById("design-readout");
+        const cursor = document.getElementById("design-cursor");
+        if (!host || !readout) return;
+        const r = host.getBoundingClientRect();
+        const x = e.clientX - r.left;
+        const y = e.clientY - r.top;
+        if (x < 0 || y < 0 || x > r.width || y > r.height) {
+            readout.textContent = "— fuera del consejo —";
+            return;
+        }
+        const px = (x / r.width * 100).toFixed(1);
+        const py = (y / r.height * 100).toFixed(1);
+        const pr = (100 - x / r.width * 100).toFixed(1);
+        const pb = (100 - y / r.height * 100).toFixed(1);
+        readout.textContent = `L:${px}% T:${py}%  R:${pr}% B:${pb}%  (${Math.round(x)}x${Math.round(y)}px)`;
+        if (cursor) {
+            cursor.style.left = x + "px";
+            cursor.style.top = y + "px";
+        }
+    }
+    function toggleDesign() {
+        const btn = document.getElementById("design-btn");
+        const ov = document.getElementById("design-overlay");
+        if (!btn || !ov) return;
+        buildDesignRulers();
+        const turningOn = !ov.classList.contains("active");
+        ov.classList.toggle("active", turningOn);
+        btn.classList.toggle("active", turningOn);
+        document.body.classList.toggle("design-on", turningOn);
+        const host = document.querySelector(".council-image");
+        if (host) {
+            if (turningOn) host.addEventListener("mousemove", onDesignMouseMove);
+            else host.removeEventListener("mousemove", onDesignMouseMove);
+        }
+        const readout = document.getElementById("design-readout");
+        if (readout && !turningOn) readout.textContent = "—";
     }
 
     // ═══════════════════════════════════

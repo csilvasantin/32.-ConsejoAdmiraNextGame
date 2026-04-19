@@ -208,6 +208,23 @@
             right: 1%; top: 2%;
             width: 28%; height: 38%;
         }
+        /* Analizar history (en la ventana Racional) */
+        .analizar-list {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 6px;
+            color: #cce;
+            line-height: 1.9;
+            list-style: decimal;
+            padding-left: 1.4em;
+            margin: 0;
+        }
+        .analizar-list li { margin-bottom: 2px; }
+        .analizar-list a { color: #8cf; text-decoration: none; }
+        .analizar-list a:hover { color: #fff; text-decoration: underline; }
+        .analizar-list .empty {
+            list-style: none; margin-left: -1.2em;
+            color: #778; font-style: italic;
+        }
         .window-entry {
             padding: 3px 0;
             border-bottom: 1px solid rgba(255,255,255,0.06);
@@ -1291,7 +1308,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.19.04.3</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.19.04.4</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -1319,8 +1336,9 @@
         <div class="council-image">
             <img id="council-img" src="assets/council-leyendas.jpg?v=5" alt="Consejo AdmiraNext">
             <!-- Conversation overlays on background windows -->
-            <div class="window-overlay racional" id="win-racional">
-                <div class="window-overlay-title">🧠 Racional</div>
+            <div class="window-overlay racional active" id="win-racional">
+                <div class="window-overlay-title">🔍 URLs ANALIZADAS</div>
+                <ol class="analizar-list" id="analizar-list"></ol>
             </div>
             <div class="window-overlay creativo" id="win-creativo">
                 <div class="window-overlay-title">🎨 Creativo</div>
@@ -2620,6 +2638,7 @@
                 video.pause();
             });
         }
+        renderAnalyzedList();
     });
 
     async function askCouncilAPI(message) {
@@ -2996,6 +3015,39 @@
     // ═══════════════════════════════════
     // ANALIZAR
     // ═══════════════════════════════════
+    const ANALIZAR_HIST_KEY = "admiranext_analizar_urls";
+    const ANALIZAR_HIST_MAX = 10;
+    function loadAnalyzedUrls() {
+        try { return JSON.parse(localStorage.getItem(ANALIZAR_HIST_KEY) || "[]"); }
+        catch { return []; }
+    }
+    function saveAnalyzedUrls(list) {
+        try { localStorage.setItem(ANALIZAR_HIST_KEY, JSON.stringify(list.slice(0, ANALIZAR_HIST_MAX))); } catch {}
+    }
+    function pushAnalyzedUrl(url) {
+        if (!url) return;
+        const list = loadAnalyzedUrls();
+        const idx = list.findIndex(e => e.url === url);
+        if (idx >= 0) list.splice(idx, 1);
+        list.unshift({ url, ts: Date.now() });
+        saveAnalyzedUrls(list);
+        renderAnalyzedList();
+    }
+    function renderAnalyzedList() {
+        const ol = document.getElementById("analizar-list");
+        if (!ol) return;
+        const list = loadAnalyzedUrls();
+        if (!list.length) {
+            ol.innerHTML = '<li class="empty">(sin URLs aún)</li>';
+            return;
+        }
+        const esc = s => String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        ol.innerHTML = list.map(e => {
+            const short = e.url.replace(/^https?:\/\//, "").slice(0, 32);
+            return `<li><a href="${esc(e.url)}" target="_blank" rel="noopener" title="${esc(e.url)}">${esc(short)}</a></li>`;
+        }).join("");
+    }
+
     const YT_RE = /https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?[^\s]*v=|youtu\.be\/)[\w-]+/;
 
     function analizarUrlHint(val) {
@@ -3065,6 +3117,7 @@
                 if (!url) { statusEl.textContent = "⚠ INTRODUCE UNA URL"; return; }
                 content = `URL a analizar: ${url}`;
                 shortLabel = "🔗 " + url.replace(/^https?:\/\//, "").slice(0, 50);
+                pushAnalyzedUrl(url);
             } else {
                 const fileInput = document.getElementById("analizar-file");
                 if (!fileInput?.files?.length) { statusEl.textContent = "⚠ SELECCIONA UN FICHERO"; return; }

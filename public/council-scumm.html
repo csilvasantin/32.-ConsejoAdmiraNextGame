@@ -222,6 +222,16 @@
         .analizar-list li { margin-bottom: 2px; }
         .analizar-list a { color: #8cf; text-decoration: none; }
         .analizar-list a:hover { color: #fff; text-decoration: underline; }
+        .analizar-list .analizar-desc {
+            font-size: 5px;
+            color: #ffdd80;
+            font-family: 'Press Start 2P', monospace;
+            line-height: 1.5;
+            margin-top: 1px;
+            letter-spacing: 0;
+            white-space: normal;
+            word-break: break-word;
+        }
         .analizar-list .empty {
             list-style: none; margin-left: -1.2em;
             color: #778; font-style: italic;
@@ -1439,7 +1449,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.19.04.11</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.19.04.12</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -3231,12 +3241,12 @@
     function saveAnalyzedUrls(list) {
         try { localStorage.setItem(ANALIZAR_HIST_KEY, JSON.stringify(list.slice(0, ANALIZAR_HIST_MAX))); } catch {}
     }
-    function pushAnalyzedUrl(url) {
+    function pushAnalyzedUrl(url, desc) {
         if (!url) return;
         const list = loadAnalyzedUrls();
         const idx = list.findIndex(e => e.url === url);
         if (idx >= 0) list.splice(idx, 1);
-        list.unshift({ url, ts: Date.now() });
+        list.unshift({ url, desc: (desc || "").trim(), ts: Date.now() });
         saveAnalyzedUrls(list);
         renderAnalyzedList();
     }
@@ -3251,7 +3261,10 @@
         const esc = s => String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
         ol.innerHTML = list.map(e => {
             const short = e.url.replace(/^https?:\/\//, "").slice(0, 32);
-            return `<li><a href="${esc(e.url)}" target="_blank" rel="noopener" title="${esc(e.url)}">${esc(short)}</a></li>`;
+            const descLine = e.desc
+                ? `<div class="analizar-desc">${esc(e.desc)}</div>`
+                : "";
+            return `<li><a href="${esc(e.url)}" target="_blank" rel="noopener" title="${esc(e.url)}">${esc(short)}</a>${descLine}</li>`;
         }).join("");
     }
 
@@ -3292,6 +3305,10 @@
                     <input id="analizar-url" type="url" placeholder="https://..." style="width:100%;box-sizing:border-box;background:#000033;border:2px solid #555;color:#eee;padding:0.5rem 0.6rem;border-radius:0;font-size:0.75rem;font-family:monospace;" oninput="analizarUrlHint(this.value)">
                     <div id="analizar-url-hint" style="margin-top:0.4rem;font-size:0.45rem;color:#ffaa00;letter-spacing:1px;min-height:1em;"></div>
                 </div>
+                <div style="margin-bottom:1rem;">
+                    <label style="color:#aaa;font-size:0.5rem;display:block;margin-bottom:0.5rem;letter-spacing:1px;">🏷 DESCRIPCIÓN</label>
+                    <input id="analizar-desc" type="text" placeholder="Ej: Presentación Q2, demo cliente…" maxlength="80" style="width:100%;box-sizing:border-box;background:#000033;border:2px solid #555;color:#eee;padding:0.5rem 0.6rem;border-radius:0;font-size:0.75rem;font-family:monospace;">
+                </div>
                 ` : `
                 <div style="margin-bottom:1rem;">
                     <label style="color:#aaa;font-size:0.5rem;display:block;margin-bottom:0.5rem;letter-spacing:1px;">📄 FICHERO</label>
@@ -3322,9 +3339,12 @@
             if (isUrl) {
                 const url = (document.getElementById("analizar-url")?.value || "").trim();
                 if (!url) { statusEl.textContent = "⚠ INTRODUCE UNA URL"; return; }
-                content = `URL a analizar: ${url}`;
+                const desc = (document.getElementById("analizar-desc")?.value || "").trim();
+                content = desc
+                    ? `URL a analizar: ${url}\nDescripción: ${desc}`
+                    : `URL a analizar: ${url}`;
                 shortLabel = "🔗 " + url.replace(/^https?:\/\//, "").slice(0, 50);
-                pushAnalyzedUrl(url);
+                pushAnalyzedUrl(url, desc);
             } else {
                 const fileInput = document.getElementById("analizar-file");
                 if (!fileInput?.files?.length) { statusEl.textContent = "⚠ SELECCIONA UN FICHERO"; return; }

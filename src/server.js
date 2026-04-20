@@ -1,4 +1,4 @@
-import { createServer } from "node:http";
+import { createServer, request as httpRequest } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
 
@@ -366,6 +366,24 @@ const server = createServer(async (request, response) => {
     }
     setMachineWatchdog(parsed.machineId, !!parsed.enabled);
     sendJson(response, 200, { ok: true, machineId: parsed.machineId, enabled: !!parsed.enabled });
+    return;
+  }
+
+  if (url.pathname.startsWith("/yarig")) {
+    const rawBody = (request.method !== "GET" && request.method !== "HEAD")
+      ? await readRequestBody(request)
+      : null;
+    const proxyReq = httpRequest(
+      { hostname: "localhost", port: 9124, path: url.pathname + url.search, method: request.method,
+        headers: { "content-type": request.headers["content-type"] || "application/json" } },
+      (proxyRes) => {
+        response.writeHead(proxyRes.statusCode, { "content-type": proxyRes.headers["content-type"] || "application/json", ...CORS_HEADERS });
+        proxyRes.pipe(response);
+      }
+    );
+    proxyReq.on("error", () => sendJson(response, 502, { error: "Yarig no disponible" }));
+    if (rawBody) proxyReq.write(rawBody);
+    proxyReq.end();
     return;
   }
 

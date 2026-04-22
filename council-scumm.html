@@ -1449,7 +1449,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.19.04.12</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.22.04.1</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -1574,6 +1574,7 @@
                         <div class="inventory-title">Fuente</div>
                         <div class="inventory-list">
                             <div class="inv-item analizar-option selected" data-analizar="url" onclick="selectSubOption('analizar', this)">🔗 URL</div>
+                            <div class="inv-item analizar-option" data-analizar="texto" onclick="selectSubOption('analizar', this)">📋 Texto</div>
                             <div class="inv-item analizar-option" data-analizar="fichero" onclick="selectSubOption('analizar', this)">📄 Fichero</div>
                         </div>
                     </div>
@@ -3272,6 +3273,7 @@
 
     function analizarUrlHint(val) {
         const hint = document.getElementById("analizar-url-hint");
+        const cost = document.getElementById("analizar-cost-warn");
         if (!hint) return;
         if (YT_RE.test(val)) {
             hint.textContent = "▶ YouTube detectado — auto-seleccionado ✨ Gemini 2.5 Flash";
@@ -3282,8 +3284,16 @@
                 geminiBtn.classList.add('selected');
                 selectedLLM = "gemini-flash";
             }
+            // Aviso de coste estimado (Gemini 2.5 Flash: ~263 tok/s vídeo · $0.30/M in · $2.50/M out)
+            if (cost) {
+                cost.style.display = "block";
+                cost.innerHTML = "💰 COSTE ESTIMADO (GEMINI 2.5 FLASH)<br>" +
+                    "· 1 min ≈ $0.005 &nbsp;· 10 min ≈ $0.05<br>" +
+                    "· 30 min ≈ $0.14 &nbsp;· 60 min ≈ $0.29";
+            }
         } else {
             hint.textContent = "";
+            if (cost) { cost.style.display = "none"; cost.innerHTML = ""; }
         }
     }
 
@@ -3291,7 +3301,33 @@
         const old = document.getElementById("analizar-overlay");
         if (old) { old.remove(); return; }
 
-        const isUrl = selectedAnalizar === "url";
+        const mode = selectedAnalizar;        // "url" | "texto" | "fichero"
+
+        const inputBlock =
+            mode === "url" ? `
+                <div style="margin-bottom:1rem;">
+                    <label style="color:#aaa;font-size:0.5rem;display:block;margin-bottom:0.5rem;letter-spacing:1px;">🔗 URL</label>
+                    <input id="analizar-url" type="url" placeholder="https://..." style="width:100%;box-sizing:border-box;background:#000033;border:2px solid #555;color:#eee;padding:0.5rem 0.6rem;border-radius:0;font-size:0.75rem;font-family:monospace;" oninput="analizarUrlHint(this.value)">
+                    <div id="analizar-url-hint" style="margin-top:0.4rem;font-size:0.45rem;color:#ffaa00;letter-spacing:1px;min-height:1em;"></div>
+                    <div id="analizar-cost-warn" style="display:none;margin-top:0.4rem;padding:0.4rem 0.6rem;background:#2a1a00;border:1px solid #663300;color:#ffcc66;font-size:0.42rem;letter-spacing:1px;line-height:1.5;"></div>
+                </div>
+                <div style="margin-bottom:1rem;">
+                    <label style="color:#aaa;font-size:0.5rem;display:block;margin-bottom:0.5rem;letter-spacing:1px;">🏷 DESCRIPCIÓN</label>
+                    <input id="analizar-desc" type="text" placeholder="Ej: Presentación Q2, demo cliente…" maxlength="80" style="width:100%;box-sizing:border-box;background:#000033;border:2px solid #555;color:#eee;padding:0.5rem 0.6rem;border-radius:0;font-size:0.75rem;font-family:monospace;">
+                </div>
+            ` :
+            mode === "texto" ? `
+                <div style="margin-bottom:1rem;">
+                    <label style="color:#aaa;font-size:0.5rem;display:block;margin-bottom:0.5rem;letter-spacing:1px;">📋 TEXTO</label>
+                    <textarea id="analizar-texto" rows="8" placeholder="Pega aquí el texto a analizar…" style="width:100%;box-sizing:border-box;background:#000033;border:2px solid #555;color:#eee;padding:0.5rem 0.6rem;border-radius:0;font-size:0.75rem;font-family:monospace;resize:vertical;"></textarea>
+                    <div id="analizar-texto-info" style="margin-top:0.3rem;font-size:0.42rem;color:#888;letter-spacing:1px;min-height:1em;">0 caracteres · 0 palabras</div>
+                </div>
+            ` : `
+                <div style="margin-bottom:1rem;">
+                    <label style="color:#aaa;font-size:0.5rem;display:block;margin-bottom:0.5rem;letter-spacing:1px;">📄 FICHERO</label>
+                    <input id="analizar-file" type="file" accept=".txt,.md,.html,.js,.py,.json,.csv,.xml" style="color:#eee;font-family:monospace;font-size:0.7rem;width:100%;">
+                </div>
+            `;
 
         const ov = document.createElement("div");
         ov.id = "analizar-overlay";
@@ -3299,22 +3335,7 @@
         ov.innerHTML = `
             <div style="background:#1a1a2e;border:2px solid #3a6aaa;border-radius:0;padding:1.6rem;max-width:540px;width:92%;font-family:'Press Start 2P',monospace;image-rendering:pixelated;">
                 <h3 style="color:#88ccff;font-size:0.65rem;margin:0 0 1.2rem;text-align:center;letter-spacing:1px;">ANALIZAR</h3>
-                ${isUrl ? `
-                <div style="margin-bottom:1rem;">
-                    <label style="color:#aaa;font-size:0.5rem;display:block;margin-bottom:0.5rem;letter-spacing:1px;">🔗 URL</label>
-                    <input id="analizar-url" type="url" placeholder="https://..." style="width:100%;box-sizing:border-box;background:#000033;border:2px solid #555;color:#eee;padding:0.5rem 0.6rem;border-radius:0;font-size:0.75rem;font-family:monospace;" oninput="analizarUrlHint(this.value)">
-                    <div id="analizar-url-hint" style="margin-top:0.4rem;font-size:0.45rem;color:#ffaa00;letter-spacing:1px;min-height:1em;"></div>
-                </div>
-                <div style="margin-bottom:1rem;">
-                    <label style="color:#aaa;font-size:0.5rem;display:block;margin-bottom:0.5rem;letter-spacing:1px;">🏷 DESCRIPCIÓN</label>
-                    <input id="analizar-desc" type="text" placeholder="Ej: Presentación Q2, demo cliente…" maxlength="80" style="width:100%;box-sizing:border-box;background:#000033;border:2px solid #555;color:#eee;padding:0.5rem 0.6rem;border-radius:0;font-size:0.75rem;font-family:monospace;">
-                </div>
-                ` : `
-                <div style="margin-bottom:1rem;">
-                    <label style="color:#aaa;font-size:0.5rem;display:block;margin-bottom:0.5rem;letter-spacing:1px;">📄 FICHERO</label>
-                    <input id="analizar-file" type="file" accept=".txt,.md,.html,.js,.py,.json,.csv,.xml" style="color:#eee;font-family:monospace;font-size:0.7rem;width:100%;">
-                </div>
-                `}
+                ${inputBlock}
                 <div style="margin-bottom:1.2rem;">
                     <label style="color:#aaa;font-size:0.5rem;display:block;margin-bottom:0.5rem;letter-spacing:1px;">📝 PREGUNTA (opcional)</label>
                     <textarea id="analizar-q" rows="2" placeholder="¿Qué quieres saber?" style="width:100%;box-sizing:border-box;background:#000033;border:2px solid #555;color:#eee;padding:0.5rem 0.6rem;border-radius:0;font-size:0.75rem;font-family:monospace;resize:vertical;"></textarea>
@@ -3330,13 +3351,26 @@
         document.getElementById("analizar-cancel").onclick = () => ov.remove();
         ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
 
+        // Contador vivo del textarea en modo texto
+        if (mode === "texto") {
+            const ta = document.getElementById("analizar-texto");
+            const info = document.getElementById("analizar-texto-info");
+            const update = () => {
+                const v = ta.value;
+                const words = v.trim() ? v.trim().split(/\s+/).length : 0;
+                info.textContent = `${v.length} caracteres · ${words} palabras`;
+            };
+            ta.addEventListener("input", update);
+            setTimeout(() => ta.focus(), 50);
+        }
+
         document.getElementById("analizar-submit").onclick = async () => {
             const statusEl = document.getElementById("analizar-status");
             const question = (document.getElementById("analizar-q")?.value || "").trim();
             let content = "";
             let shortLabel = "";
 
-            if (isUrl) {
+            if (mode === "url") {
                 const url = (document.getElementById("analizar-url")?.value || "").trim();
                 if (!url) { statusEl.textContent = "⚠ INTRODUCE UNA URL"; return; }
                 const desc = (document.getElementById("analizar-desc")?.value || "").trim();
@@ -3345,6 +3379,12 @@
                     : `URL a analizar: ${url}`;
                 shortLabel = "🔗 " + url.replace(/^https?:\/\//, "").slice(0, 50);
                 pushAnalyzedUrl(url, desc);
+            } else if (mode === "texto") {
+                const texto = (document.getElementById("analizar-texto")?.value || "").trim();
+                if (!texto) { statusEl.textContent = "⚠ PEGA ALGO DE TEXTO"; return; }
+                const preview = texto.slice(0, 12000);
+                content = `Texto pegado (${texto.length} caracteres):\n\n${preview}${texto.length > 12000 ? "\n\n[…truncado]" : ""}`;
+                shortLabel = "📋 Texto " + texto.length + "c";
             } else {
                 const fileInput = document.getElementById("analizar-file");
                 if (!fileInput?.files?.length) { statusEl.textContent = "⚠ SELECCIONA UN FICHERO"; return; }

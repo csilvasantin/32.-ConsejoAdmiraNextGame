@@ -1349,10 +1349,10 @@
         .action-send:hover { background: #ddcc00; color: #000; border-color: #ffff44; box-shadow: none; }
         .verb-btn { border-radius: 0; color: #ffffff; text-shadow: none; }
         .verb-btn:hover { color: #ffff00; text-shadow: none; background: #7a5a2e; }
-        .verb-btn.active { color: #ffff00; text-shadow: none; background: #7a5a2e; }
+        .verb-btn.active { color: #000000; text-shadow: none; background: #daa520; font-weight: bold; }
         .verb-btn.verb-primary { color: #ffaaaa; text-shadow: none; }
         .verb-btn.verb-primary:hover { color: #ffff00; background: #7a5a2e; text-shadow: none; }
-        .verb-btn.verb-primary.active { color: #ffff00; background: #7a5a2e; text-shadow: none; }
+        .verb-btn.verb-primary.active { color: #000000; text-shadow: none; background: #e74c3c; font-weight: bold; }
         .inventory { border-left: 2px solid #3a2410; }
         .inventory-title { color: #ffee88; }
         .inv-item { border-radius: 0; }
@@ -1525,7 +1525,7 @@
                     <button class="verb-btn" data-verb="leer" onclick="selectVerb(this)">Leer</button>
                     <button class="verb-btn" data-verb="votar" onclick="selectVerb(this)">Votar</button>
                     <button class="verb-btn" data-verb="analizar" onclick="selectVerb(this)">Analizar</button>
-                    <button class="verb-btn" data-verb="salir" onclick="selectVerb(this)">Salir</button>
+                    <button class="verb-btn" data-verb="presentar" onclick="selectVerb(this)">Presentar</button>
                 </div>
                 <div class="inventory">
                     <!-- Panel LLM: por defecto y para verbos que usan modelo (preguntar, debatir, sintetizar, hablar) -->
@@ -1578,14 +1578,14 @@
                             <div class="inv-item analizar-option" data-analizar="fichero" onclick="selectSubOption('analizar', this)">📄 Fichero</div>
                         </div>
                     </div>
-                    <!-- Panel SALIR: destino de navegación -->
-                    <div class="inv-panel" data-panel="salir">
-                        <div class="inventory-title">Destino</div>
+                    <!-- Panel PRESENTAR: modo de presentación -->
+                    <div class="inv-panel" data-panel="presentar">
+                        <div class="inventory-title">Modo</div>
                         <div class="inventory-list">
-                            <div class="inv-item salir-option selected" data-salir="inicio" onclick="selectSubOption('salir', this)">🏠 Inicio</div>
-                            <div class="inv-item salir-option" data-salir="control" onclick="selectSubOption('salir', this)">📊 Control</div>
-                            <div class="inv-item salir-option" data-salir="equipo" onclick="selectSubOption('salir', this)">👥 Equipo</div>
-                            <div class="inv-item salir-option" data-salir="repos" onclick="selectSubOption('salir', this)">📁 Repos</div>
+                            <div class="inv-item presentar-option selected" data-presentar="fullscreen" onclick="selectSubOption('presentar', this)">🖥️ Pantalla completa</div>
+                            <div class="inv-item presentar-option" data-presentar="limpia" onclick="selectSubOption('presentar', this)">🧹 Vista limpia</div>
+                            <div class="inv-item presentar-option" data-presentar="coetaneos" onclick="selectSubOption('presentar', this)">🚀 Coetáneos</div>
+                            <div class="inv-item presentar-option" data-presentar="compartir" onclick="selectSubOption('presentar', this)">🔗 Compartir URL</div>
                         </div>
                     </div>
                 </div>
@@ -2343,7 +2343,7 @@
     let selectedMirar = "presentacion"; // Sub-opción del verbo MIRAR
     let selectedVotar = "favor";        // Sub-opción del verbo VOTAR
     let selectedAnalizar = "url";        // Sub-opción del verbo ANALIZAR
-    let selectedSalir = "inicio";       // Sub-opción del verbo SALIR
+    let selectedPresentar = "fullscreen"; // Sub-opción del verbo PRESENTAR
 
     // Mapea cada verbo al panel del inventario que debe mostrarse
     const VERB_TO_PANEL = {
@@ -2355,7 +2355,7 @@
         mirar:     "mirar",
         votar:     "votar",
         analizar:  "analizar",
-        salir:     "salir",
+        presentar: "presentar",
     };
 
     function updateInventoryPanel(verb) {
@@ -2374,7 +2374,7 @@
         if (verb === "mirar")    selectedMirar    = el.dataset.mirar;
         if (verb === "votar")    selectedVotar    = el.dataset.votar;
         if (verb === "analizar") selectedAnalizar = el.dataset.analizar;
-        if (verb === "salir")    selectedSalir    = el.dataset.salir;
+        if (verb === "presentar") selectedPresentar = el.dataset.presentar;
     }
 
     function selectLLM(el) {
@@ -2438,7 +2438,7 @@
         }
         if (currentVerb === 'votar') triggerVotar();
         if (currentVerb === 'analizar') triggerAnalizar();
-        if (currentVerb === 'salir') triggerSalir();
+        if (currentVerb === 'presentar') triggerPresentar();
     }
 
     function enterPreguntarMode() {
@@ -2510,7 +2510,7 @@
     }
 
     function updateActionLine() {
-        const names = { preguntar:"Preguntar", debatir:"Debatir", sintetizar:"Sintetizar", mirar:"Mirar", hablar:"Hablar con", leer:"Leer", votar:"Votar", analizar:"Analizar", salir:"Salir" };
+        const names = { preguntar:"Preguntar", debatir:"Debatir", sintetizar:"Sintetizar", mirar:"Mirar", hablar:"Hablar con", leer:"Leer", votar:"Votar", analizar:"Analizar", presentar:"Presentar" };
         const v = names[currentVerb] || "";
         const p = currentProject ? ' "' + currentProject + '"' : "";
         if (v && !preguntarMode) document.getElementById("action-input").placeholder = v + p + "...";
@@ -2814,6 +2814,10 @@
 
     // Wire del click del hotspot y del fin de vídeo
     document.addEventListener("DOMContentLoaded", () => {
+        // Seleccionar PREGUNTAR por defecto al cargar
+        const defaultBtn = document.querySelector('[data-verb="preguntar"]');
+        if (defaultBtn) selectVerb(defaultBtn);
+
         const hotspot = document.getElementById("apple-ii-hotspot");
         if (hotspot) {
             hotspot.addEventListener("click", () => {
@@ -3439,20 +3443,36 @@
     }
 
     // ═══════════════════════════════════
-    // SALIR
+    // PRESENTAR
     // ═══════════════════════════════════
-    function triggerSalir() {
-        const destinations = {
-            inicio:  'https://csilvasantin.github.io/',
-            control: 'https://csilvasantin.github.io/03.-ControlCodexClaude/teamwork.html',
-            equipo:  'https://csilvasantin.github.io/32.-ConsejoAdmiraNextGame/equipo.html',
-            repos:   'https://csilvasantin.github.io/18.-diario/repos.html',
-        };
-        const labels = { inicio: "🏠 Inicio", control: "📊 Control", equipo: "👥 Equipo", repos: "📁 Repos" };
-        const dest  = destinations[selectedSalir] || '../';
-        const label = labels[selectedSalir] || selectedSalir;
-        setActionLine("🚪 Navegando a " + label + "…");
-        setTimeout(() => { window.location.href = dest; }, 800);
+    function triggerPresentar() {
+        if (selectedPresentar === 'fullscreen') {
+            setActionLine("🖥️ Entrando en pantalla completa…");
+            setTimeout(() => {
+                const el = document.documentElement;
+                if (el.requestFullscreen) el.requestFullscreen();
+                else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
+            }, 300);
+        } else if (selectedPresentar === 'limpia') {
+            setActionLine("🧹 Vista limpia activada…");
+            const panels = document.querySelectorAll('.side-panel, .bottom-bar-left, .bottom-bar-right');
+            const hidden = document.body.classList.toggle('vista-limpia');
+            panels.forEach(p => p.style.display = hidden ? 'none' : '');
+        } else if (selectedPresentar === 'coetaneos') {
+            setActionLine("🚀 Cambiando a vista Coetáneos…");
+            setTimeout(() => {
+                const url = new URL(window.location.href);
+                url.searchParams.set('vista', 'coetaneos');
+                window.location.href = url.toString();
+            }, 500);
+        } else if (selectedPresentar === 'compartir') {
+            const url = window.location.href.split('?')[0];
+            navigator.clipboard.writeText(url).then(() => {
+                setActionLine("🔗 URL copiada al portapapeles");
+            }).catch(() => {
+                setActionLine("🔗 " + url);
+            });
+        }
     }
 
     </script>

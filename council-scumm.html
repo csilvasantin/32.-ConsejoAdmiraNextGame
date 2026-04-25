@@ -3,8 +3,18 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <!-- DEV: cache bust — borrar en release -->
-    <script>if(!location.search.includes('_v='))location.replace(location.pathname+'?_v='+Date.now());</script>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+    <meta http-equiv="Pragma" content="no-cache">
+    <meta http-equiv="Expires" content="0">
+    <script>
+        // Force fresh load: redirect to ?_v=<now> if param missing or older than 5 min
+        (function(){
+            var p = new URLSearchParams(location.search);
+            var v = parseInt(p.get('_v') || '0', 10);
+            if (!v || Date.now() - v > 300000)
+                location.replace(location.pathname + '?_v=' + Date.now());
+        })();
+    </script>
     <title>AdmiraNext Council — SCUMM Interface</title>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
@@ -1347,12 +1357,41 @@
             box-shadow: 2px 2px 0 #000;
         }
         .action-send:hover { background: #ddcc00; color: #000; border-color: #ffff44; box-shadow: none; }
+        /* ── PRESENTAR overlay ── */
+        .presentar-overlay { display:none; position:absolute; inset:0; background:rgba(0,0,16,0.93); z-index:60; flex-direction:column; align-items:center; justify-content:center; padding:20px; }
+        .presentar-overlay.active { display:flex; }
+        .presentar-dialog { background:#1a0e05; border:3px solid #8b5a14; border-top-color:#a07828; padding:18px; width:100%; max-width:560px; font-family:'Press Start 2P',monospace; }
+        .presentar-title { font-size:8px; color:#daa520; text-align:center; margin-bottom:14px; letter-spacing:1px; }
+        .presentar-prompt { width:100%; background:#0d0800; border:2px solid #5a3a1e; color:#ffee88; font-family:'Press Start 2P',monospace; font-size:7px; padding:10px; resize:vertical; min-height:72px; box-sizing:border-box; line-height:1.8; }
+        .presentar-prompt:focus { outline:none; border-color:#daa520; }
+        .presentar-fmt-row { display:flex; gap:6px; flex-wrap:wrap; margin:10px 0; }
+        .presentar-fmt-btn { font-family:'Press Start 2P',monospace; font-size:6px; background:#2a1a08; border:2px solid #5a3a1e; color:#886633; padding:5px 8px; cursor:pointer; transition:all .1s; }
+        .presentar-fmt-btn.active { border-color:#daa520; color:#daa520; background:#3a2510; }
+        .presentar-file-label { display:block; margin:8px 0; border:2px dashed #5a3a1e; padding:7px; text-align:center; font-family:'Press Start 2P',monospace; font-size:6px; color:#886633; cursor:pointer; }
+        .presentar-file-label:hover { border-color:#daa520; color:#daa520; }
+        .presentar-gen-btn { width:100%; padding:10px; background:#2a1a08; border:2px solid #daa520; border-top-color:#f0c040; color:#daa520; font-family:'Press Start 2P',monospace; font-size:8px; cursor:pointer; margin-top:8px; }
+        .presentar-gen-btn:hover { background:#daa520; color:#000; }
+        .presentar-cancel-btn { width:100%; padding:5px; background:transparent; border:1px solid #3a2a1a; color:#554433; font-family:'Press Start 2P',monospace; font-size:6px; cursor:pointer; margin-top:4px; }
+        .presentar-status { font-family:'Press Start 2P',monospace; font-size:7px; color:#ffee88; line-height:2; white-space:pre-wrap; text-align:left; min-height:40px; }
+        .presentar-progress-wrap { margin:12px 0 4px; border:2px solid #5a3a1e; padding:3px; background:#0d0800; }
+        .presentar-progress-bar { height:10px; background:#daa520; width:0%; transition:width 0.6s ease; position:relative; }
+        .presentar-progress-bar::after { content:''; position:absolute; top:0; right:0; bottom:0; width:4px; background:#f0c040; animation:pp-blink .5s step-end infinite; }
+        @keyframes pp-blink { 0%,100%{opacity:1} 50%{opacity:0} }
+        .presentar-progress-bar.done { background:#44cc44; }
+        .presentar-progress-bar.done::after { display:none; }
+        .presentar-progress-pct { font-family:'Press Start 2P',monospace; font-size:6px; color:#886633; text-align:right; margin-bottom:8px; }
+        .presentar-step { font-family:'Press Start 2P',monospace; font-size:6px; color:#daa520; margin:6px 0 2px; }
+        .presentar-result-item { display:block; padding:8px; background:#2a1a08; border:2px solid #5a3a1e; color:#daa520; font-family:'Press Start 2P',monospace; font-size:7px; text-align:center; text-decoration:none; margin-bottom:8px; }
+        .presentar-result-item:hover { background:#daa520; color:#000; }
+        .presentar-section-list { font-family:'Press Start 2P',monospace; font-size:6px; color:#ffee88; line-height:2.2; }
+        .presentar-section-list div { border-bottom:1px solid #2a1a08; padding:3px 0; }
+        /* ── end PRESENTAR overlay ── */
         .verb-btn { border-radius: 0; color: #ffffff; text-shadow: none; }
         .verb-btn:hover { color: #ffff00; text-shadow: none; background: #7a5a2e; }
-        .verb-btn.active { color: #ffff00; text-shadow: none; background: #7a5a2e; }
+        .verb-btn.active { color: #000000; text-shadow: none; background: #daa520; font-weight: bold; }
         .verb-btn.verb-primary { color: #ffaaaa; text-shadow: none; }
         .verb-btn.verb-primary:hover { color: #ffff00; background: #7a5a2e; text-shadow: none; }
-        .verb-btn.verb-primary.active { color: #ffff00; background: #7a5a2e; text-shadow: none; }
+        .verb-btn.verb-primary.active { color: #000000; text-shadow: none; background: #e74c3c; font-weight: bold; }
         .inventory { border-left: 2px solid #3a2410; }
         .inventory-title { color: #ffee88; }
         .inv-item { border-radius: 0; }
@@ -1449,7 +1488,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.22.04.2</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.25.04.4</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -1506,6 +1545,45 @@
                     <div class="speech-text"></div>
                 </div>
             </div>
+            <!-- ── PRESENTAR overlay ─────────────────────────────── -->
+            <div class="presentar-overlay" id="presentar-overlay">
+                <!-- Estado: INPUT -->
+                <div class="presentar-dialog" id="pdlg-input">
+                    <div class="presentar-title">🏛️ CREAR PRESENTACIÓN</div>
+                    <textarea class="presentar-prompt" id="presentar-prompt"
+                        placeholder="Describe el tema...&#10;Ej: Resumen del estado del consejo&#10;    Análisis de productividad&#10;    Pitch de nuevo proyecto"></textarea>
+                    <div style="font-family:'Press Start 2P',monospace;font-size:6px;color:#886633;margin:8px 0 4px">FORMATO DE SALIDA:</div>
+                    <div class="presentar-fmt-row">
+                        <button class="presentar-fmt-btn active" data-fmt="audio" onclick="setPresentarFmt(this)">🎙️ Audio</button>
+                        <button class="presentar-fmt-btn" data-fmt="pdf"   onclick="setPresentarFmt(this)">📄 PDF</button>
+                        <button class="presentar-fmt-btn" data-fmt="ambos" onclick="setPresentarFmt(this)">🎙️+📄 Ambos</button>
+                        <button class="presentar-fmt-btn" data-fmt="slides" onclick="setPresentarFmt(this)">📊 Slides</button>
+                    </div>
+                    <label class="presentar-file-label" id="presentar-file-label">
+                        📎 Adjuntar fichero (opcional)
+                        <input type="file" id="presentar-file" style="display:none" onchange="onPresentarFile(this)">
+                    </label>
+                    <button class="presentar-gen-btn" onclick="generatePresentacion()">⚡ GENERAR</button>
+                    <button class="presentar-cancel-btn" onclick="closePresentarOverlay()">CANCELAR</button>
+                </div>
+                <!-- Estado: LOADING -->
+                <div class="presentar-dialog" id="pdlg-loading" style="display:none;">
+                    <div class="presentar-title">⚡ GENERANDO...</div>
+                    <div class="presentar-step" id="presentar-step">Iniciando...</div>
+                    <div class="presentar-progress-wrap">
+                        <div class="presentar-progress-bar" id="presentar-progress-bar"></div>
+                    </div>
+                    <div class="presentar-progress-pct" id="presentar-progress-pct">0%</div>
+                    <div class="presentar-status" id="presentar-status"></div>
+                </div>
+                <!-- Estado: RESULT -->
+                <div class="presentar-dialog" id="pdlg-result" style="display:none;">
+                    <div class="presentar-title">✅ PRESENTACIÓN LISTA</div>
+                    <div id="presentar-result-content"></div>
+                    <button class="presentar-gen-btn" style="margin-top:12px" onclick="closePresentarOverlay()">CERRAR</button>
+                </div>
+            </div>
+            <!-- ── end PRESENTAR overlay ───────────────────────── -->
             <div class="round-indicator" id="round-indicator">Ronda: --</div>
             <button class="np-toggle" id="np-toggle" onclick="toggleNameplates()" title="Mostrar/ocultar nameplates">🏷 Ocultar</button>
         </div>
@@ -1525,7 +1603,7 @@
                     <button class="verb-btn" data-verb="leer" onclick="selectVerb(this)">Leer</button>
                     <button class="verb-btn" data-verb="votar" onclick="selectVerb(this)">Votar</button>
                     <button class="verb-btn" data-verb="analizar" onclick="selectVerb(this)">Analizar</button>
-                    <button class="verb-btn" data-verb="salir" onclick="selectVerb(this)">Salir</button>
+                    <button class="verb-btn" data-verb="presentar" onclick="selectVerb(this)">Presentar</button>
                 </div>
                 <div class="inventory">
                     <!-- Panel LLM: por defecto y para verbos que usan modelo (preguntar, debatir, sintetizar, hablar) -->
@@ -1578,14 +1656,14 @@
                             <div class="inv-item analizar-option" data-analizar="fichero" onclick="selectSubOption('analizar', this)">📄 Fichero</div>
                         </div>
                     </div>
-                    <!-- Panel SALIR: destino de navegación -->
-                    <div class="inv-panel" data-panel="salir">
-                        <div class="inventory-title">Destino</div>
+                    <!-- Panel PRESENTAR: formato de salida -->
+                    <div class="inv-panel" data-panel="presentar">
+                        <div class="inventory-title">Formato</div>
                         <div class="inventory-list">
-                            <div class="inv-item salir-option selected" data-salir="inicio" onclick="selectSubOption('salir', this)">🏠 Inicio</div>
-                            <div class="inv-item salir-option" data-salir="control" onclick="selectSubOption('salir', this)">📊 Control</div>
-                            <div class="inv-item salir-option" data-salir="equipo" onclick="selectSubOption('salir', this)">👥 Equipo</div>
-                            <div class="inv-item salir-option" data-salir="repos" onclick="selectSubOption('salir', this)">📁 Repos</div>
+                            <div class="inv-item presentar-option selected" data-presentar="audio" onclick="selectSubOption('presentar', this)">🎙️ Audio</div>
+                            <div class="inv-item presentar-option" data-presentar="pdf" onclick="selectSubOption('presentar', this)">📄 PDF</div>
+                            <div class="inv-item presentar-option" data-presentar="ambos" onclick="selectSubOption('presentar', this)">🎙️+📄 Ambos</div>
+                            <div class="inv-item presentar-option" data-presentar="slides" onclick="selectSubOption('presentar', this)">📊 Slides</div>
                         </div>
                     </div>
                 </div>
@@ -2343,7 +2421,7 @@
     let selectedMirar = "presentacion"; // Sub-opción del verbo MIRAR
     let selectedVotar = "favor";        // Sub-opción del verbo VOTAR
     let selectedAnalizar = "url";        // Sub-opción del verbo ANALIZAR
-    let selectedSalir = "inicio";       // Sub-opción del verbo SALIR
+    let selectedPresentar = "audio"; // Sub-opción del verbo PRESENTAR (formato salida)
 
     // Mapea cada verbo al panel del inventario que debe mostrarse
     const VERB_TO_PANEL = {
@@ -2355,7 +2433,7 @@
         mirar:     "mirar",
         votar:     "votar",
         analizar:  "analizar",
-        salir:     "salir",
+        presentar: "presentar",
     };
 
     function updateInventoryPanel(verb) {
@@ -2374,7 +2452,7 @@
         if (verb === "mirar")    selectedMirar    = el.dataset.mirar;
         if (verb === "votar")    selectedVotar    = el.dataset.votar;
         if (verb === "analizar") selectedAnalizar = el.dataset.analizar;
-        if (verb === "salir")    selectedSalir    = el.dataset.salir;
+        if (verb === "presentar") selectedPresentar = el.dataset.presentar;
     }
 
     function selectLLM(el) {
@@ -2438,7 +2516,7 @@
         }
         if (currentVerb === 'votar') triggerVotar();
         if (currentVerb === 'analizar') triggerAnalizar();
-        if (currentVerb === 'salir') triggerSalir();
+        if (currentVerb === 'presentar') triggerPresentar();
     }
 
     function enterPreguntarMode() {
@@ -2510,7 +2588,7 @@
     }
 
     function updateActionLine() {
-        const names = { preguntar:"Preguntar", debatir:"Debatir", sintetizar:"Sintetizar", mirar:"Mirar", hablar:"Hablar con", leer:"Leer", votar:"Votar", analizar:"Analizar", salir:"Salir" };
+        const names = { preguntar:"Preguntar", debatir:"Debatir", sintetizar:"Sintetizar", mirar:"Mirar", hablar:"Hablar con", leer:"Leer", votar:"Votar", analizar:"Analizar", presentar:"Presentar" };
         const v = names[currentVerb] || "";
         const p = currentProject ? ' "' + currentProject + '"' : "";
         if (v && !preguntarMode) document.getElementById("action-input").placeholder = v + p + "...";
@@ -2814,6 +2892,10 @@
 
     // Wire del click del hotspot y del fin de vídeo
     document.addEventListener("DOMContentLoaded", () => {
+        // Seleccionar PREGUNTAR por defecto al cargar
+        const defaultBtn = document.querySelector('[data-verb="preguntar"]');
+        if (defaultBtn) selectVerb(defaultBtn);
+
         const hotspot = document.getElementById("apple-ii-hotspot");
         if (hotspot) {
             hotspot.addEventListener("click", () => {
@@ -3439,20 +3521,164 @@
     }
 
     // ═══════════════════════════════════
-    // SALIR
+    // PRESENTAR
     // ═══════════════════════════════════
-    function triggerSalir() {
-        const destinations = {
-            inicio:  'https://csilvasantin.github.io/',
-            control: 'https://csilvasantin.github.io/03.-ControlCodexClaude/teamwork.html',
-            equipo:  'https://csilvasantin.github.io/32.-ConsejoAdmiraNextGame/equipo.html',
-            repos:   'https://csilvasantin.github.io/18.-diario/repos.html',
-        };
-        const labels = { inicio: "🏠 Inicio", control: "📊 Control", equipo: "👥 Equipo", repos: "📁 Repos" };
-        const dest  = destinations[selectedSalir] || '../';
-        const label = labels[selectedSalir] || selectedSalir;
-        setActionLine("🚪 Navegando a " + label + "…");
-        setTimeout(() => { window.location.href = dest; }, 800);
+    let _presentarFmt = 'audio';
+    let _presentarFileContent = null;
+    let _presentarFileName = null;
+
+    function triggerPresentar() {
+        showPresentarOverlay();
+    }
+
+    function showPresentarOverlay() {
+        document.getElementById('presentar-overlay').classList.add('active');
+        document.getElementById('pdlg-input').style.display   = '';
+        document.getElementById('pdlg-loading').style.display = 'none';
+        document.getElementById('pdlg-result').style.display  = 'none';
+        setActionLine("🏛️ Crear presentación — escribe el tema y pulsa Generar");
+    }
+
+    function closePresentarOverlay() {
+        document.getElementById('presentar-overlay').classList.remove('active');
+        // Volver a PREGUNTAR
+        const btn = document.querySelector('[data-verb="preguntar"]');
+        if (btn) selectVerb(btn);
+    }
+
+    function setPresentarFmt(btn) {
+        document.querySelectorAll('.presentar-fmt-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        _presentarFmt = btn.dataset.fmt;
+        selectedPresentar = _presentarFmt;
+    }
+
+    function onPresentarFile(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const label = document.getElementById('presentar-file-label');
+        label.childNodes[0].textContent = `📎 ${file.name} `;
+        _presentarFileName = file.name;
+        const reader = new FileReader();
+        if (file.type.startsWith('text') || /\.(md|txt|csv|json)$/.test(file.name)) {
+            reader.onload = e => { _presentarFileContent = e.target.result; };
+            reader.readAsText(file);
+        } else {
+            reader.onload = e => { _presentarFileContent = e.target.result; };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function _setProgress(pct, step) {
+        const bar = document.getElementById('presentar-progress-bar');
+        const pctEl = document.getElementById('presentar-progress-pct');
+        const stepEl = document.getElementById('presentar-step');
+        if (bar) { bar.style.width = pct + '%'; if (pct >= 100) bar.classList.add('done'); }
+        if (pctEl) pctEl.textContent = pct + '%';
+        if (stepEl && step) stepEl.textContent = step;
+    }
+
+    async function generatePresentacion() {
+        const prompt = document.getElementById('presentar-prompt').value.trim();
+        if (!prompt && !_presentarFileContent) {
+            setActionLine("⚠️ Escribe un tema o adjunta un fichero");
+            return;
+        }
+
+        document.getElementById('pdlg-input').style.display   = 'none';
+        document.getElementById('pdlg-loading').style.display = '';
+        document.getElementById('presentar-progress-bar').classList.remove('done');
+        const statusEl = document.getElementById('presentar-status');
+        statusEl.textContent = '';
+        _setProgress(5, '🤖 Claude generando estructura...');
+
+        // Simulated progress ticker while waiting for API
+        let _fakePct = 5;
+        const STEPS = [
+            [15, '📡 Conectando con la API...'],
+            [30, '🤖 Claude analizando el tema...'],
+            [50, '✍️ Generando contenido estructurado...'],
+            [68, _presentarFmt === 'audio' ? '🎙️ Sintetizando audio...' :
+                 _presentarFmt === 'pdf'   ? '📄 Compilando PDF...' :
+                 _presentarFmt === 'slides'? '📊 Construyendo slides...' : '🎙️ Generando audio + PDF...'],
+            [82, '⚙️ Procesando y guardando archivos...'],
+            [92, '📦 Empaquetando resultado...'],
+        ];
+        let _stepIdx = 0;
+        const _ticker = setInterval(() => {
+            if (_stepIdx < STEPS.length) {
+                const [p, s] = STEPS[_stepIdx++];
+                if (p > _fakePct) _setProgress(p, s);
+            }
+        }, 4000);
+
+        try {
+            const urls = activeApiUrl ? [activeApiUrl] : COUNCIL_API_URLS;
+            let result = null;
+
+            for (const baseUrl of urls) {
+                try {
+                    const resp = await fetch(`${baseUrl}/api/council/presentar`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-Council-Token': COUNCIL_API_TOKEN },
+                        body: JSON.stringify({
+                            prompt,
+                            file_content: _presentarFileContent,
+                            file_name: _presentarFileName,
+                            formato: _presentarFmt
+                        }),
+                        signal: AbortSignal.timeout(120000)
+                    });
+                    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                    result = await resp.json();
+                    activeApiUrl = baseUrl;
+                    break;
+                } catch(e) {
+                    statusEl.textContent += `⚠️ ${e.message}\n`;
+                }
+            }
+
+            clearInterval(_ticker);
+            if (!result) throw new Error('API no disponible — arranca council-api.py');
+            _setProgress(100, '✅ ¡Presentación lista!');
+            await new Promise(r => setTimeout(r, 600));
+            showPresentarResult(result);
+
+        } catch(e) {
+            clearInterval(_ticker);
+            document.getElementById('pdlg-loading').style.display = 'none';
+            document.getElementById('pdlg-input').style.display   = '';
+            setActionLine("❌ " + e.message);
+        }
+    }
+
+    function showPresentarResult(result) {
+        document.getElementById('pdlg-loading').style.display = 'none';
+        document.getElementById('pdlg-result').style.display  = '';
+
+        let html = '';
+        if (result.title) {
+            html += `<div style="font-family:'Press Start 2P',monospace;font-size:8px;color:#daa520;margin-bottom:12px;text-align:center">${result.title}</div>`;
+        }
+        if (result.audio_url) {
+            html += `<div style="margin-bottom:10px">
+                <div style="font-family:'Press Start 2P',monospace;font-size:6px;color:#886633;margin-bottom:6px">🎙️ AUDIO</div>
+                <audio controls style="width:100%" src="${result.audio_url}"></audio>
+            </div>`;
+        }
+        if (result.pdf_url) {
+            html += `<a class="presentar-result-item" href="${result.pdf_url}" target="_blank">📄 DESCARGAR PDF</a>`;
+        }
+        if (result.slides_url) {
+            html += `<a class="presentar-result-item" href="${result.slides_url}" target="_blank">📊 VER SLIDES</a>`;
+        }
+        if (result.sections?.length) {
+            html += `<div style="font-family:'Press Start 2P',monospace;font-size:6px;color:#886633;margin:10px 0 4px">ESTRUCTURA:</div>
+            <div class="presentar-section-list">
+                ${result.sections.map((s,i) => `<div>${i+1}. ${s}</div>`).join('')}
+            </div>`;
+        }
+        document.getElementById('presentar-result-content').innerHTML = html;
     }
 
     </script>

@@ -42,8 +42,15 @@ import subprocess
 import unicodedata
 from pydantic import BaseModel
 
-# Add admiranext to path
-sys.path.insert(0, os.path.expanduser("~/GitHub/admiranext"))
+# Add admiranext to path — try multiple locations
+for _p in [
+    os.path.expanduser("~/GitHub/admiranext"),
+    os.path.expanduser("~/Documents/New project/csilvasantin-repos/admiranext"),
+    os.environ.get("ADMIRANEXT_PATH", ""),
+]:
+    if _p and os.path.isdir(_p):
+        sys.path.insert(0, _p)
+        break
 
 from admiranext.agents.base import CouncilAgent
 from admiranext.agents.racional.leyendas import CEO, CTO, COO, CFO
@@ -817,7 +824,7 @@ class PresentarRequest(BaseModel):
 @app.post("/api/council/presentar")
 async def council_presentar(req: PresentarRequest, request: Request):
     """Pipeline: Claude genera contenido estructurado → audio/PDF/slides según formato."""
-    _check_rate_limit(request)
+    check_rate_limit(request)
 
     # ── 1. Claude genera el documento estructurado ──────────────
     system_prompt = (
@@ -836,13 +843,30 @@ async def council_presentar(req: PresentarRequest, request: Request):
         else:
             user_content += f"\n\nContenido de '{req.file_name or 'adjunto'}':\n{req.file_content[:8000]}"
 
-    llm_resp = client.messages.create(
-        model="claude-sonnet-4-20250514",
-        max_tokens=4000,
-        system=system_prompt,
-        messages=[{"role": "user", "content": user_content}],
-    )
-    raw = llm_resp.content[0].text
+    # Usar claude CLI (OAuth, sin API key) si no hay ANTHROPIC_API_KEY válida
+    anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
+    if not anthropic_key or len(anthropic_key) < 20:
+        cli_prompt = (
+            f"{system_prompt}\n\n"
+            f"Tema: {user_content}\n\n"
+            "IMPORTANTE: responde ÚNICAMENTE con el JSON, sin texto antes ni después, sin bloques ```json."
+        )
+        proc = await asyncio.create_subprocess_exec(
+            "claude", "-p", cli_prompt,
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE,
+            env={**os.environ, "CLAUDECODE": ""},
+        )
+        stdout, _ = await proc.communicate()
+        raw = stdout.decode("utf-8", errors="replace").strip()
+    else:
+        llm_resp = client.messages.create(
+            model="claude-sonnet-4-20250514",
+            max_tokens=4000,
+            system=system_prompt,
+            messages=[{"role": "user", "content": user_content}],
+        )
+        raw = llm_resp.content[0].text
 
     import re
     try:

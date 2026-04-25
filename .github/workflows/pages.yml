@@ -52,6 +52,8 @@ jobs:
           cp public/teamwork.html _site/teamwork.html 2>/dev/null || true
           cp public/styles.css _site/public-styles.css 2>/dev/null || true
           mkdir -p _site/assets
+          cp public/assets/*.jpg _site/assets/ 2>/dev/null || true
+          cp public/assets/*.png _site/assets/ 2>/dev/null || true
           cp assets/*.jpg _site/assets/ 2>/dev/null || true
           cp assets/*.png _site/assets/ 2>/dev/null || true
 

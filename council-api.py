@@ -42,7 +42,7 @@ import subprocess
 import unicodedata
 from pydantic import BaseModel
 
-# Add admiranext to path — try multiple locations
+# Add admiranext to path — try multiple locations (optional, not needed on Render)
 for _p in [
     os.path.expanduser("~/GitHub/admiranext"),
     os.path.expanduser("~/Documents/New project/csilvasantin-repos/admiranext"),
@@ -52,15 +52,27 @@ for _p in [
         sys.path.insert(0, _p)
         break
 
-from admiranext.agents.base import CouncilAgent
-from admiranext.agents.racional.leyendas import CEO, CTO, COO, CFO
-from admiranext.agents.racional.coetaneos import (
-    CEO_Coetaneo, CTO_Coetaneo, COO_Coetaneo, CFO_Coetaneo,
-)
-from admiranext.agents.creativo.leyendas import CCO, CDO, CXO, CSO
-from admiranext.agents.creativo.coetaneos import (
-    CCO_Coetaneo, CDO_Coetaneo, CXO_Coetaneo, CSO_Coetaneo,
-)
+try:
+    from admiranext.agents.base import CouncilAgent
+    from admiranext.agents.racional.leyendas import CEO, CTO, COO, CFO
+    from admiranext.agents.racional.coetaneos import (
+        CEO_Coetaneo, CTO_Coetaneo, COO_Coetaneo, CFO_Coetaneo,
+    )
+    from admiranext.agents.creativo.leyendas import CCO, CDO, CXO, CSO
+    from admiranext.agents.creativo.coetaneos import (
+        CCO_Coetaneo, CDO_Coetaneo, CXO_Coetaneo, CSO_Coetaneo,
+    )
+    _ADMIRANEXT_AVAILABLE = True
+except ImportError:
+    _ADMIRANEXT_AVAILABLE = False
+    # Stub mínimo para que el resto del código no explote en Render
+    class CouncilAgent:
+        name = "Unknown"
+        def __init__(self, *a, **kw): pass
+    CEO = CTO = COO = CFO = CouncilAgent
+    CEO_Coetaneo = CTO_Coetaneo = COO_Coetaneo = CFO_Coetaneo = CouncilAgent
+    CCO = CDO = CXO = CSO = CouncilAgent
+    CCO_Coetaneo = CDO_Coetaneo = CXO_Coetaneo = CSO_Coetaneo = CouncilAgent
 
 import re
 import anthropic
@@ -780,7 +792,8 @@ async def budget_status(request: Request, _auth=Depends(verify_token)):
 # ║  PRESENTATIONS — Vídeos en la pantalla del Apple II          ║
 # ╚══════════════════════════════════════════════════════════════╝
 
-PRESENTATIONS_DIR = Path.home() / "Presentations" / "council"
+_BASE_DIR = Path(os.path.dirname(os.path.abspath(__file__)))
+PRESENTATIONS_DIR = Path(os.environ.get("PRESENTATIONS_DIR", str(_BASE_DIR / "presentations")))
 PRESENTATIONS_STATE_FILE = PRESENTATIONS_DIR / "state.json"
 PRESENTATIONS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -909,42 +922,50 @@ async def council_presentar(req: PresentarRequest, request: Request):
 
 
 def _presentar_pdf(data: dict, timestamp: str, safe_title: str) -> "Path | None":
-    import subprocess
     try:
-        md = f"# {data.get('title','Presentación')}\n\n"
-        md += f"*AdmiraNext Council — {datetime.now().strftime('%d/%m/%Y')}*\n\n"
+        from fpdf import FPDF
+        pdf = FPDF()
+        pdf.set_auto_page_break(auto=True, margin=15)
+        pdf.add_page()
+        pdf.set_font("Helvetica", "B", 20)
+        title = data.get("title", "Presentación")
+        pdf.multi_cell(0, 12, title, align="C")
+        pdf.set_font("Helvetica", "I", 10)
+        pdf.cell(0, 8, f"AdmiraNext Council — {datetime.now().strftime('%d/%m/%Y')}", align="C", new_x="LMARGIN", new_y="NEXT")
+        pdf.ln(6)
+
+        def section_block(heading, body, bullets=None):
+            pdf.set_font("Helvetica", "B", 13)
+            pdf.multi_cell(0, 8, heading)
+            pdf.ln(2)
+            pdf.set_font("Helvetica", "", 10)
+            pdf.multi_cell(0, 6, body or "")
+            for b in (bullets or []):
+                pdf.set_font("Helvetica", "", 10)
+                pdf.multi_cell(0, 6, f"  ▶ {b}")
+            pdf.ln(4)
+
         if data.get("summary"):
-            md += f"## Resumen Ejecutivo\n\n{data['summary']}\n\n"
+            section_block("Resumen Ejecutivo", data["summary"])
         for s in data.get("sections", []):
             if isinstance(s, dict):
-                md += f"## {s.get('title','')}\n\n{s.get('content','')}\n\n"
-                for b in s.get("bullets", []):
-                    md += f"- {b}\n"
-                md += "\n"
+                section_block(s.get("title", ""), s.get("content", ""), s.get("bullets", []))
         if data.get("conclusion"):
-            md += f"## Conclusión\n\n{data['conclusion']}\n\n"
+            section_block("Conclusión", data["conclusion"])
         if data.get("sources"):
-            md += "## Fuentes\n\n" + "".join(f"- {s}\n" for s in data["sources"])
-
-        md_path = PRESENTATIONS_DIR / f"{timestamp}_{safe_title}.md"
-        md_path.write_text(md, encoding="utf-8")
+            section_block("Fuentes", "\n".join(f"• {src}" for src in data["sources"]))
 
         pdf_path = PRESENTATIONS_DIR / f"{timestamp}_{safe_title}.pdf"
-        r = subprocess.run(
-            ["pandoc", str(md_path), "-o", str(pdf_path)],
-            capture_output=True, timeout=30
-        )
-        if r.returncode == 0 and pdf_path.exists():
-            return pdf_path
-        return md_path  # fallback: serve markdown
+        pdf.output(str(pdf_path))
+        return pdf_path
     except Exception as e:
         print(f"PDF error: {e}")
         return None
 
 
 def _presentar_audio(data: dict, timestamp: str, safe_title: str) -> "Path | None":
-    import subprocess
     try:
+        from gtts import gTTS
         text = f"{data.get('title','')}. {data.get('summary','')} "
         for s in data.get("sections", []):
             if isinstance(s, dict):
@@ -952,21 +973,10 @@ def _presentar_audio(data: dict, timestamp: str, safe_title: str) -> "Path | Non
         text += data.get("conclusion", "")
         text = text[:3000]
 
-        aiff_path = AUDIO_DIR / f"{timestamp}_{safe_title}.aiff"
-        mp3_path  = AUDIO_DIR / f"{timestamp}_{safe_title}.mp3"
-
-        r = subprocess.run(["say", "-o", str(aiff_path), text], capture_output=True, timeout=120)
-        if r.returncode != 0 or not aiff_path.exists():
-            return None
-
-        conv = subprocess.run(
-            ["ffmpeg", "-i", str(aiff_path), "-q:a", "4", str(mp3_path), "-y"],
-            capture_output=True, timeout=60
-        )
-        if conv.returncode == 0 and mp3_path.exists():
-            aiff_path.unlink(missing_ok=True)
-            return mp3_path
-        return aiff_path
+        mp3_path = AUDIO_DIR / f"{timestamp}_{safe_title}.mp3"
+        tts = gTTS(text=text, lang="es", slow=False)
+        tts.save(str(mp3_path))
+        return mp3_path
     except Exception as e:
         print(f"Audio error: {e}")
         return None
@@ -1026,9 +1036,9 @@ p{{font-size:9px;line-height:2.2;margin-bottom:16px}}
 # ║  DAILY BOOK — Un consejero pone un libro sobre la mesa       ║
 # ╚══════════════════════════════════════════════════════════════╝
 
-DAILY_STATE_DIR = Path.home() / ".council-daily"
+DAILY_STATE_DIR = Path(os.environ.get("DAILY_STATE_DIR", str(_BASE_DIR / ".council-daily")))
 DAILY_STATE_FILE = DAILY_STATE_DIR / "state.json"
-AUDIO_DIR = Path.home() / "Audio" / "council-daily"
+AUDIO_DIR = Path(os.environ.get("AUDIO_DIR", str(_BASE_DIR / "audio")))
 DAILY_STATE_DIR.mkdir(parents=True, exist_ok=True)
 AUDIO_DIR.mkdir(parents=True, exist_ok=True)
 

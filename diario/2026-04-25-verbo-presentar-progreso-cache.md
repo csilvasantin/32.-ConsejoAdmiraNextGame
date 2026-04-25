@@ -225,15 +225,60 @@ Si no hay `GROQ_API_KEY`, el endpoint devuelve HTTP 503 con mensaje claro.
 
 ---
 
+### 8. Deploy en Render.com — API independiente del Mac — v26.25.04.9
+
+Para que el Consejo funcione aunque el Mac esté apagado, se despliega `council-api.py`
+en **Render.com** (tier gratuito, siempre encendido).
+
+#### Cambios para hacer la API cloud-compatible
+
+| Dependencia macOS | Sustituto cloud | Motivo |
+|---|---|---|
+| `say` + ffmpeg | **gTTS** (Google TTS, gratis) | `say` es solo macOS |
+| `pandoc` | **fpdf2** (Python puro) | pandoc no está en Render |
+| `~/Presentations/council` | `./presentations/` (relativo) | `Path.home()` no aplica |
+| `~/Audio/council-daily` | `./audio/` (relativo) | ídem |
+| admiranext import | Import con try/except + stubs | No está en Render |
+
+#### Archivos nuevos
+
+- **`requirements.txt`** — dependencias pip para Render
+- **`render.yaml`** — configuración del servicio web + disco persistente 1 GB
+- **`main.py`** — entry point para uvicorn (el guión en `council-api.py` impide importarlo directamente)
+
+#### Pasos para activar en Render
+
+1. [render.com](https://render.com) → New → Web Service → conectar repo GitHub
+2. Render detecta `render.yaml` automáticamente
+3. En Environment Variables añadir:
+   - `COUNCIL_API_TOKEN=admira2026`
+   - `GROQ_API_KEY=gsk_...`
+   - `TELEGRAM_BOT_TOKEN=...`
+   - `TELEGRAM_CHAT_ID=...`
+4. Deploy → copiar URL pública `https://consejo-admira-api.onrender.com`
+5. En `public/council-scumm.html` añadir esa URL como `apiEndpoints[2]`
+
+#### Arranque local (sin cambios)
+
+```bash
+cd ~/Claude/ConsejoAdmiraNextGame
+python3 council-api.py   # sigue funcionando en local igual que antes
+```
+
+---
+
 ## Archivos modificados
 
 | Archivo | Cambio |
 |---------|--------|
 | `public/council-scumm.html` | Todo: PRESENTAR, barra progreso, no-cache, tabs, PREVIO, audio-stop — v26.25.04.8 |
 | `council-scumm.html` (raíz) | Sincronizado con public/ en cada commit |
-| `council-api.py` | PRESENTAR vía Groq (100% gratis), fix path admiranext, fix rate_limit |
-| `.github/workflows/pages.yml` | Auto-sync raíz desde public/ en cada deploy |
+| `council-api.py` | PRESENTAR vía Groq, gTTS, fpdf2, rutas relativas, admiranext opcional |
+| `requirements.txt` | **Nuevo** — dependencias pip para Render |
+| `render.yaml` | **Nuevo** — configuración Render.com |
+| `main.py` | **Nuevo** — entry point uvicorn para Render |
 | `.env` | GROQ_API_KEY añadida |
+| `.github/workflows/pages.yml` | Auto-sync raíz desde public/ en cada deploy |
 | `diario/2026-04-25-*.md` | Esta entrada |
 
 ## Versiones
@@ -248,3 +293,4 @@ Si no hay `GROQ_API_KEY`, el endpoint devuelve HTTP 503 con mensaje claro.
 | v26.25.04.6 | Tabs inline, chime Do-Mi-Sol, flash dorado, botones NUEVA/CERRAR |
 | v26.25.04.7 | Verbo PREVIO — abre última presentación sin regenerar |
 | v26.25.04.8 | Fix audio al cerrar overlay + PRESENTAR vía Groq (gratis, sin API key Anthropic) |
+| v26.25.04.9 | Deploy Render.com: gTTS, fpdf2, rutas relativas, admiranext opcional |

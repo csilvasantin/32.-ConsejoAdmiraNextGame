@@ -1385,6 +1385,17 @@
         .presentar-result-item:hover { background:#daa520; color:#000; }
         .presentar-section-list { font-family:'Press Start 2P',monospace; font-size:6px; color:#ffee88; line-height:2.2; }
         .presentar-section-list div { border-bottom:1px solid #2a1a08; padding:3px 0; }
+        /* result tabs */
+        .presentar-tabs { display:flex; gap:4px; margin-bottom:10px; }
+        .presentar-tab { flex:1; padding:6px 4px; font-family:'Press Start 2P',monospace; font-size:6px; background:#2a1a08; border:2px solid #5a3a1e; color:#886633; cursor:pointer; text-align:center; }
+        .presentar-tab.active { border-color:#daa520; color:#daa520; background:#3a2510; }
+        .presentar-tab-panel { display:none; }
+        .presentar-tab-panel.active { display:block; }
+        .presentar-embed { width:100%; height:300px; border:2px solid #5a3a1e; background:#000; }
+        .presentar-dl-btn { display:block; padding:7px; background:#2a1a08; border:2px solid #5a3a1e; color:#daa520; font-family:'Press Start 2P',monospace; font-size:6px; text-align:center; text-decoration:none; margin-top:6px; }
+        .presentar-dl-btn:hover { background:#daa520; color:#000; }
+        .presentar-done-flash { animation:pdone-flash .6s ease-out; }
+        @keyframes pdone-flash { 0%{background:#daa520} 100%{background:#1a0e05} }
         /* ── end PRESENTAR overlay ── */
         .verb-btn { border-radius: 0; color: #ffffff; text-shadow: none; }
         .verb-btn:hover { color: #ffff00; text-shadow: none; background: #7a5a2e; }
@@ -1488,7 +1499,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.25.04.5</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.25.04.6</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -1577,10 +1588,14 @@
                     <div class="presentar-status" id="presentar-status"></div>
                 </div>
                 <!-- Estado: RESULT -->
-                <div class="presentar-dialog" id="pdlg-result" style="display:none;">
-                    <div class="presentar-title">✅ PRESENTACIÓN LISTA</div>
+                <div class="presentar-dialog" id="pdlg-result" style="display:none;max-width:640px;">
+                    <div class="presentar-title" id="pdlg-result-title">✅ PRESENTACIÓN LISTA</div>
+                    <div class="presentar-tabs" id="presentar-tabs"></div>
                     <div id="presentar-result-content"></div>
-                    <button class="presentar-gen-btn" style="margin-top:12px" onclick="closePresentarOverlay()">CERRAR</button>
+                    <div style="display:flex;gap:6px;margin-top:10px;">
+                        <button class="presentar-gen-btn" style="flex:1" onclick="showPresentarInput()">🔄 NUEVA</button>
+                        <button class="presentar-gen-btn" style="flex:1;border-color:#886633;color:#886633" onclick="closePresentarOverlay()">✖ CERRAR</button>
+                    </div>
                 </div>
             </div>
             <!-- ── end PRESENTAR overlay ───────────────────────── -->
@@ -3652,45 +3667,111 @@
         }
     }
 
+    function _pingDone() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            [523, 659, 784].forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain); gain.connect(ctx.destination);
+                osc.frequency.value = freq;
+                osc.type = 'sine';
+                const t = ctx.currentTime + i * 0.12;
+                gain.gain.setValueAtTime(0, t);
+                gain.gain.linearRampToValueAtTime(0.25, t + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+                osc.start(t); osc.stop(t + 0.36);
+            });
+        } catch(e) {}
+    }
+
+    function _selectPresentarTab(id) {
+        document.querySelectorAll('.presentar-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === id));
+        document.querySelectorAll('.presentar-tab-panel').forEach(p => p.classList.toggle('active', p.id === 'ptab-' + id));
+    }
+
+    function showPresentarInput() {
+        document.getElementById('pdlg-result').style.display  = 'none';
+        document.getElementById('pdlg-input').style.display   = '';
+        document.getElementById('presentar-prompt').value = '';
+        document.getElementById('presentar-file-label').childNodes[0].textContent = '📎 Adjuntar fichero (opcional) ';
+        _presentarFileContent = null; _presentarFileName = null;
+    }
+
     function showPresentarResult(result) {
         document.getElementById('pdlg-loading').style.display = 'none';
-        document.getElementById('pdlg-result').style.display  = '';
+        const dlg = document.getElementById('pdlg-result');
+        dlg.style.display = '';
+        dlg.classList.remove('presentar-done-flash');
+        void dlg.offsetWidth; // reflow para reiniciar animación
+        dlg.classList.add('presentar-done-flash');
 
-        // Los archivos viven en el servidor API local — prefijar baseUrl
+        _pingDone();
+
         const base = (activeApiUrl || '').replace(/\/$/, '');
         const absUrl = u => u ? (u.startsWith('http') ? u : base + u) : null;
 
-        let html = '';
+        const audioUrl  = absUrl(result.audio_url);
+        const pdfUrl    = absUrl(result.pdf_url);
+        const slidesUrl = absUrl(result.slides_url);
+
         if (result.title) {
-            html += `<div style="font-family:'Press Start 2P',monospace;font-size:8px;color:#daa520;margin-bottom:12px;text-align:center">${result.title}</div>`;
+            document.getElementById('pdlg-result-title').textContent = '✅ ' + result.title;
         }
-        const audioUrl = absUrl(result.audio_url);
+
+        // Construir tabs según qué archivos existen
+        const tabs = [];
+        if (audioUrl)  tabs.push({ id:'audio',  label:'🎙️ Audio' });
+        if (pdfUrl)    tabs.push({ id:'pdf',     label:'📄 PDF' });
+        if (slidesUrl) tabs.push({ id:'slides',  label:'📊 Slides' });
+        if (result.sections?.length) tabs.push({ id:'estructura', label:'📋 Índice' });
+        if (!tabs.length) tabs.push({ id:'noapi', label:'⚠️ Sin API' });
+
+        document.getElementById('presentar-tabs').innerHTML = tabs
+            .map((t,i) => `<button class="presentar-tab${i===0?' active':''}" data-tab="${t.id}" onclick="_selectPresentarTab('${t.id}')">${t.label}</button>`)
+            .join('');
+
+        // Construir paneles
+        let html = '';
+
         if (audioUrl) {
-            html += `<div style="margin-bottom:10px">
-                <div style="font-family:'Press Start 2P',monospace;font-size:6px;color:#886633;margin-bottom:6px">🎙️ AUDIO</div>
-                <audio controls style="width:100%" src="${audioUrl}"></audio>
-                <a class="presentar-result-item" href="${audioUrl}" download style="margin-top:4px">⬇️ DESCARGAR AUDIO</a>
+            html += `<div class="presentar-tab-panel${tabs[0].id==='audio'?' active':''}" id="ptab-audio">
+                <audio controls style="width:100%;margin-bottom:6px" src="${audioUrl}"></audio>
+                <a class="presentar-dl-btn" href="${audioUrl}" download>⬇️ Descargar audio</a>
             </div>`;
         }
-        const pdfUrl = absUrl(result.pdf_url);
         if (pdfUrl) {
-            html += `<a class="presentar-result-item" href="${pdfUrl}" target="_blank">📄 DESCARGAR PDF</a>`;
+            html += `<div class="presentar-tab-panel${tabs[0].id==='pdf'?' active':''}" id="ptab-pdf">
+                <object class="presentar-embed" data="${pdfUrl}" type="application/pdf">
+                    <p style="font-family:'Press Start 2P',monospace;font-size:6px;color:#886633;padding:10px">
+                        Tu navegador no puede mostrar el PDF inline.
+                    </p>
+                </object>
+                <a class="presentar-dl-btn" href="${pdfUrl}" target="_blank">⬇️ Abrir / Descargar PDF</a>
+            </div>`;
         }
-        const slidesUrl = absUrl(result.slides_url);
         if (slidesUrl) {
-            html += `<a class="presentar-result-item" href="${slidesUrl}" target="_blank">📊 VER SLIDES</a>`;
+            html += `<div class="presentar-tab-panel${tabs[0].id==='slides'?' active':''}" id="ptab-slides">
+                <iframe class="presentar-embed" src="${slidesUrl}" style="border:none"></iframe>
+                <a class="presentar-dl-btn" href="${slidesUrl}" target="_blank">↗ Abrir slides en ventana</a>
+            </div>`;
         }
         if (result.sections?.length) {
-            html += `<div style="font-family:'Press Start 2P',monospace;font-size:6px;color:#886633;margin:10px 0 4px">ESTRUCTURA:</div>
-            <div class="presentar-section-list">
-                ${result.sections.map((s,i) => `<div>${i+1}. ${s}</div>`).join('')}
+            const isFirst = tabs[0].id === 'estructura';
+            html += `<div class="presentar-tab-panel${isFirst?' active':''}" id="ptab-estructura">
+                <div class="presentar-section-list">
+                    ${result.sections.map((s,i) => `<div>${i+1}. ${s}</div>`).join('')}
+                </div>
             </div>`;
         }
         if (!audioUrl && !pdfUrl && !slidesUrl) {
-            html += `<div style="font-family:'Press Start 2P',monospace;font-size:6px;color:#886633;text-align:center;padding:10px">
-                ⚠️ Arranca council-api.py<br>para generar archivos reales
+            html += `<div class="presentar-tab-panel active" id="ptab-noapi">
+                <div style="font-family:'Press Start 2P',monospace;font-size:6px;color:#886633;text-align:center;padding:16px;line-height:2">
+                    ⚠️ API no activa<br>Arranca council-api.py<br>para generar archivos reales
+                </div>
             </div>`;
         }
+
         document.getElementById('presentar-result-content').innerHTML = html;
     }
 

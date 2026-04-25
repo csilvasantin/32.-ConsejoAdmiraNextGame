@@ -1499,7 +1499,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.25.04.6</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.25.04.7</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -1619,6 +1619,7 @@
                     <button class="verb-btn" data-verb="votar" onclick="selectVerb(this)">Votar</button>
                     <button class="verb-btn" data-verb="analizar" onclick="selectVerb(this)">Analizar</button>
                     <button class="verb-btn" data-verb="presentar" onclick="selectVerb(this)">Presentar</button>
+                    <button class="verb-btn" data-verb="previo" id="btn-previo" onclick="selectVerb(this)" style="display:none;border-left:2px solid #5a3a1e">▶ Previo</button>
                 </div>
                 <div class="inventory">
                     <!-- Panel LLM: por defecto y para verbos que usan modelo (preguntar, debatir, sintetizar, hablar) -->
@@ -2449,6 +2450,7 @@
         votar:     "votar",
         analizar:  "analizar",
         presentar: "presentar",
+        previo:    "presentar",
     };
 
     function updateInventoryPanel(verb) {
@@ -2532,6 +2534,7 @@
         if (currentVerb === 'votar') triggerVotar();
         if (currentVerb === 'analizar') triggerAnalizar();
         if (currentVerb === 'presentar') triggerPresentar();
+        if (currentVerb === 'previo') triggerPrevio();
     }
 
     function enterPreguntarMode() {
@@ -2603,7 +2606,7 @@
     }
 
     function updateActionLine() {
-        const names = { preguntar:"Preguntar", debatir:"Debatir", sintetizar:"Sintetizar", mirar:"Mirar", hablar:"Hablar con", leer:"Leer", votar:"Votar", analizar:"Analizar", presentar:"Presentar" };
+        const names = { preguntar:"Preguntar", debatir:"Debatir", sintetizar:"Sintetizar", mirar:"Mirar", hablar:"Hablar con", leer:"Leer", votar:"Votar", analizar:"Analizar", presentar:"Presentar", previo:"▶ Ver Previo" };
         const v = names[currentVerb] || "";
         const p = currentProject ? ' "' + currentProject + '"' : "";
         if (v && !preguntarMode) document.getElementById("action-input").placeholder = v + p + "...";
@@ -3536,7 +3539,22 @@
     }
 
     // ═══════════════════════════════════
-    // PRESENTAR
+    // PRESENTAR / PREVIO
+    let _lastPresentarResult = null;
+
+    function triggerPrevio() {
+        if (!_lastPresentarResult) {
+            setActionLine("⚠️ Aún no hay ninguna presentación generada");
+            const btn = document.querySelector('[data-verb="presentar"]');
+            if (btn) selectVerb(btn);
+            return;
+        }
+        showPresentarOverlay();
+        document.getElementById('pdlg-input').style.display   = 'none';
+        document.getElementById('pdlg-loading').style.display = 'none';
+        showPresentarResult(_lastPresentarResult);
+    }
+
     // ═══════════════════════════════════
     let _presentarFmt = 'audio';
     let _presentarFileContent = null;
@@ -3699,11 +3717,15 @@
     }
 
     function showPresentarResult(result) {
+        _lastPresentarResult = result;
+        const previoBtn = document.getElementById('btn-previo');
+        if (previoBtn) previoBtn.style.display = '';
+
         document.getElementById('pdlg-loading').style.display = 'none';
         const dlg = document.getElementById('pdlg-result');
         dlg.style.display = '';
         dlg.classList.remove('presentar-done-flash');
-        void dlg.offsetWidth; // reflow para reiniciar animación
+        void dlg.offsetWidth;
         dlg.classList.add('presentar-done-flash');
 
         _pingDone();

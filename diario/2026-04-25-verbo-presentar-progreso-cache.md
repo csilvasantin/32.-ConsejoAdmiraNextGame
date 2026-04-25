@@ -185,14 +185,55 @@ TELEGRAM_CHAT_ID=-1003841065210
 
 ---
 
+---
+
+### 7. PRESENTAR vía Groq — 100% gratis — v26.25.04.8
+
+El endpoint `/api/council/presentar` ya no usa Claude CLI ni la API de Anthropic.
+Usa **Groq (llama-3.3-70b-versatile)** — tier gratuito, sin consumir tokens de Anthropic.
+
+#### Cambio en `council-api.py`
+
+```python
+# Antes: claude CLI con CLAUDECODE="" para bypass nested session
+# Ahora:
+groq_resp = http_requests.post(
+    GROQ_API_URL,
+    headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
+    json={
+        "model": "llama-3.3-70b-versatile",
+        "messages": [
+            {"role": "system", "content": system_prompt},
+            {"role": "user", "content": user_content},
+        ],
+        "max_tokens": 4000,
+        "temperature": 0.3,
+    },
+    timeout=60,
+)
+groq_resp.raise_for_status()
+raw = groq_resp.json()["choices"][0]["message"]["content"]
+```
+
+#### `.env` actualizado
+
+```
+GROQ_API_KEY=gsk_...  # gratis en console.groq.com
+```
+
+Si no hay `GROQ_API_KEY`, el endpoint devuelve HTTP 503 con mensaje claro.
+
+---
+
 ## Archivos modificados
 
 | Archivo | Cambio |
 |---------|--------|
-| `public/council-scumm.html` | Todo: PRESENTAR, barra progreso, no-cache, tabs, PREVIO — v26.25.04.7 |
+| `public/council-scumm.html` | Todo: PRESENTAR, barra progreso, no-cache, tabs, PREVIO, audio-stop — v26.25.04.8 |
 | `council-scumm.html` (raíz) | Sincronizado con public/ en cada commit |
-| `council-api.py` | Endpoint PRESENTAR, fix path admiranext, fix rate_limit, CLI fallback |
+| `council-api.py` | PRESENTAR vía Groq (100% gratis), fix path admiranext, fix rate_limit |
 | `.github/workflows/pages.yml` | Auto-sync raíz desde public/ en cada deploy |
+| `.env` | GROQ_API_KEY añadida |
 | `diario/2026-04-25-*.md` | Esta entrada |
 
 ## Versiones
@@ -206,3 +247,4 @@ TELEGRAM_CHAT_ID=-1003841065210
 | v26.25.04.5 | Fix URLs resultado (prefijar activeApiUrl) |
 | v26.25.04.6 | Tabs inline, chime Do-Mi-Sol, flash dorado, botones NUEVA/CERRAR |
 | v26.25.04.7 | Verbo PREVIO — abre última presentación sin regenerar |
+| v26.25.04.8 | Fix audio al cerrar overlay + PRESENTAR vía Groq (gratis, sin API key Anthropic) |

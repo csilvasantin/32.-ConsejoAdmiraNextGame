@@ -843,30 +843,26 @@ async def council_presentar(req: PresentarRequest, request: Request):
         else:
             user_content += f"\n\nContenido de '{req.file_name or 'adjunto'}':\n{req.file_content[:8000]}"
 
-    # Usar claude CLI (OAuth, sin API key) si no hay ANTHROPIC_API_KEY válida
-    anthropic_key = os.environ.get("ANTHROPIC_API_KEY", "")
-    if not anthropic_key or len(anthropic_key) < 20:
-        cli_prompt = (
-            f"{system_prompt}\n\n"
-            f"Tema: {user_content}\n\n"
-            "IMPORTANTE: responde ÚNICAMENTE con el JSON, sin texto antes ni después, sin bloques ```json."
-        )
-        proc = await asyncio.create_subprocess_exec(
-            "claude", "-p", cli_prompt,
-            stdout=asyncio.subprocess.PIPE,
-            stderr=asyncio.subprocess.PIPE,
-            env={**os.environ, "CLAUDECODE": ""},
-        )
-        stdout, _ = await proc.communicate()
-        raw = stdout.decode("utf-8", errors="replace").strip()
-    else:
-        llm_resp = client.messages.create(
-            model="claude-sonnet-4-20250514",
-            max_tokens=4000,
-            system=system_prompt,
-            messages=[{"role": "user", "content": user_content}],
-        )
-        raw = llm_resp.content[0].text
+    # Usar Groq (llama-3.3-70b-versatile) — gratis, sin consumir tokens de Anthropic
+    if not GROQ_API_KEY:
+        raise HTTPException(status_code=503, detail="GROQ_API_KEY no configurada — obtén una gratis en console.groq.com")
+
+    groq_resp = http_requests.post(
+        GROQ_API_URL,
+        headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
+        json={
+            "model": "llama-3.3-70b-versatile",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_content},
+            ],
+            "max_tokens": 4000,
+            "temperature": 0.3,
+        },
+        timeout=60,
+    )
+    groq_resp.raise_for_status()
+    raw = groq_resp.json()["choices"][0]["message"]["content"]
 
     import re
     try:

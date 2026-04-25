@@ -1347,6 +1347,27 @@
             box-shadow: 2px 2px 0 #000;
         }
         .action-send:hover { background: #ddcc00; color: #000; border-color: #ffff44; box-shadow: none; }
+        /* ── PRESENTAR overlay ── */
+        .presentar-overlay { display:none; position:absolute; inset:0; background:rgba(0,0,16,0.93); z-index:60; flex-direction:column; align-items:center; justify-content:center; padding:20px; }
+        .presentar-overlay.active { display:flex; }
+        .presentar-dialog { background:#1a0e05; border:3px solid #8b5a14; border-top-color:#a07828; padding:18px; width:100%; max-width:560px; font-family:'Press Start 2P',monospace; }
+        .presentar-title { font-size:8px; color:#daa520; text-align:center; margin-bottom:14px; letter-spacing:1px; }
+        .presentar-prompt { width:100%; background:#0d0800; border:2px solid #5a3a1e; color:#ffee88; font-family:'Press Start 2P',monospace; font-size:7px; padding:10px; resize:vertical; min-height:72px; box-sizing:border-box; line-height:1.8; }
+        .presentar-prompt:focus { outline:none; border-color:#daa520; }
+        .presentar-fmt-row { display:flex; gap:6px; flex-wrap:wrap; margin:10px 0; }
+        .presentar-fmt-btn { font-family:'Press Start 2P',monospace; font-size:6px; background:#2a1a08; border:2px solid #5a3a1e; color:#886633; padding:5px 8px; cursor:pointer; transition:all .1s; }
+        .presentar-fmt-btn.active { border-color:#daa520; color:#daa520; background:#3a2510; }
+        .presentar-file-label { display:block; margin:8px 0; border:2px dashed #5a3a1e; padding:7px; text-align:center; font-family:'Press Start 2P',monospace; font-size:6px; color:#886633; cursor:pointer; }
+        .presentar-file-label:hover { border-color:#daa520; color:#daa520; }
+        .presentar-gen-btn { width:100%; padding:10px; background:#2a1a08; border:2px solid #daa520; border-top-color:#f0c040; color:#daa520; font-family:'Press Start 2P',monospace; font-size:8px; cursor:pointer; margin-top:8px; }
+        .presentar-gen-btn:hover { background:#daa520; color:#000; }
+        .presentar-cancel-btn { width:100%; padding:5px; background:transparent; border:1px solid #3a2a1a; color:#554433; font-family:'Press Start 2P',monospace; font-size:6px; cursor:pointer; margin-top:4px; }
+        .presentar-status { font-family:'Press Start 2P',monospace; font-size:7px; color:#ffee88; line-height:2; white-space:pre-wrap; text-align:left; min-height:60px; }
+        .presentar-result-item { display:block; padding:8px; background:#2a1a08; border:2px solid #5a3a1e; color:#daa520; font-family:'Press Start 2P',monospace; font-size:7px; text-align:center; text-decoration:none; margin-bottom:8px; }
+        .presentar-result-item:hover { background:#daa520; color:#000; }
+        .presentar-section-list { font-family:'Press Start 2P',monospace; font-size:6px; color:#ffee88; line-height:2.2; }
+        .presentar-section-list div { border-bottom:1px solid #2a1a08; padding:3px 0; }
+        /* ── end PRESENTAR overlay ── */
         .verb-btn { border-radius: 0; color: #ffffff; text-shadow: none; }
         .verb-btn:hover { color: #ffff00; text-shadow: none; background: #7a5a2e; }
         .verb-btn.active { color: #000000; text-shadow: none; background: #daa520; font-weight: bold; }
@@ -1449,7 +1470,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.25.04.1</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.25.04.2</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -1506,6 +1527,40 @@
                     <div class="speech-text"></div>
                 </div>
             </div>
+            <!-- ── PRESENTAR overlay ─────────────────────────────── -->
+            <div class="presentar-overlay" id="presentar-overlay">
+                <!-- Estado: INPUT -->
+                <div class="presentar-dialog" id="pdlg-input">
+                    <div class="presentar-title">🏛️ CREAR PRESENTACIÓN</div>
+                    <textarea class="presentar-prompt" id="presentar-prompt"
+                        placeholder="Describe el tema...&#10;Ej: Resumen del estado del consejo&#10;    Análisis de productividad&#10;    Pitch de nuevo proyecto"></textarea>
+                    <div style="font-family:'Press Start 2P',monospace;font-size:6px;color:#886633;margin:8px 0 4px">FORMATO DE SALIDA:</div>
+                    <div class="presentar-fmt-row">
+                        <button class="presentar-fmt-btn active" data-fmt="audio" onclick="setPresentarFmt(this)">🎙️ Audio</button>
+                        <button class="presentar-fmt-btn" data-fmt="pdf"   onclick="setPresentarFmt(this)">📄 PDF</button>
+                        <button class="presentar-fmt-btn" data-fmt="ambos" onclick="setPresentarFmt(this)">🎙️+📄 Ambos</button>
+                        <button class="presentar-fmt-btn" data-fmt="slides" onclick="setPresentarFmt(this)">📊 Slides</button>
+                    </div>
+                    <label class="presentar-file-label" id="presentar-file-label">
+                        📎 Adjuntar fichero (opcional)
+                        <input type="file" id="presentar-file" style="display:none" onchange="onPresentarFile(this)">
+                    </label>
+                    <button class="presentar-gen-btn" onclick="generatePresentacion()">⚡ GENERAR</button>
+                    <button class="presentar-cancel-btn" onclick="closePresentarOverlay()">CANCELAR</button>
+                </div>
+                <!-- Estado: LOADING -->
+                <div class="presentar-dialog" id="pdlg-loading" style="display:none;text-align:center;">
+                    <div class="presentar-title">⚡ GENERANDO...</div>
+                    <div class="presentar-status" id="presentar-status"></div>
+                </div>
+                <!-- Estado: RESULT -->
+                <div class="presentar-dialog" id="pdlg-result" style="display:none;">
+                    <div class="presentar-title">✅ PRESENTACIÓN LISTA</div>
+                    <div id="presentar-result-content"></div>
+                    <button class="presentar-gen-btn" style="margin-top:12px" onclick="closePresentarOverlay()">CERRAR</button>
+                </div>
+            </div>
+            <!-- ── end PRESENTAR overlay ───────────────────────── -->
             <div class="round-indicator" id="round-indicator">Ronda: --</div>
             <button class="np-toggle" id="np-toggle" onclick="toggleNameplates()" title="Mostrar/ocultar nameplates">🏷 Ocultar</button>
         </div>
@@ -1578,14 +1633,14 @@
                             <div class="inv-item analizar-option" data-analizar="fichero" onclick="selectSubOption('analizar', this)">📄 Fichero</div>
                         </div>
                     </div>
-                    <!-- Panel PRESENTAR: modo de presentación -->
+                    <!-- Panel PRESENTAR: formato de salida -->
                     <div class="inv-panel" data-panel="presentar">
-                        <div class="inventory-title">Modo</div>
+                        <div class="inventory-title">Formato</div>
                         <div class="inventory-list">
-                            <div class="inv-item presentar-option selected" data-presentar="fullscreen" onclick="selectSubOption('presentar', this)">🖥️ Pantalla completa</div>
-                            <div class="inv-item presentar-option" data-presentar="limpia" onclick="selectSubOption('presentar', this)">🧹 Vista limpia</div>
-                            <div class="inv-item presentar-option" data-presentar="coetaneos" onclick="selectSubOption('presentar', this)">🚀 Coetáneos</div>
-                            <div class="inv-item presentar-option" data-presentar="compartir" onclick="selectSubOption('presentar', this)">🔗 Compartir URL</div>
+                            <div class="inv-item presentar-option selected" data-presentar="audio" onclick="selectSubOption('presentar', this)">🎙️ Audio</div>
+                            <div class="inv-item presentar-option" data-presentar="pdf" onclick="selectSubOption('presentar', this)">📄 PDF</div>
+                            <div class="inv-item presentar-option" data-presentar="ambos" onclick="selectSubOption('presentar', this)">🎙️+📄 Ambos</div>
+                            <div class="inv-item presentar-option" data-presentar="slides" onclick="selectSubOption('presentar', this)">📊 Slides</div>
                         </div>
                     </div>
                 </div>
@@ -2343,7 +2398,7 @@
     let selectedMirar = "presentacion"; // Sub-opción del verbo MIRAR
     let selectedVotar = "favor";        // Sub-opción del verbo VOTAR
     let selectedAnalizar = "url";        // Sub-opción del verbo ANALIZAR
-    let selectedPresentar = "fullscreen"; // Sub-opción del verbo PRESENTAR
+    let selectedPresentar = "audio"; // Sub-opción del verbo PRESENTAR (formato salida)
 
     // Mapea cada verbo al panel del inventario que debe mostrarse
     const VERB_TO_PANEL = {
@@ -3445,34 +3500,129 @@
     // ═══════════════════════════════════
     // PRESENTAR
     // ═══════════════════════════════════
+    let _presentarFmt = 'audio';
+    let _presentarFileContent = null;
+    let _presentarFileName = null;
+
     function triggerPresentar() {
-        if (selectedPresentar === 'fullscreen') {
-            setActionLine("🖥️ Entrando en pantalla completa…");
-            setTimeout(() => {
-                const el = document.documentElement;
-                if (el.requestFullscreen) el.requestFullscreen();
-                else if (el.webkitRequestFullscreen) el.webkitRequestFullscreen();
-            }, 300);
-        } else if (selectedPresentar === 'limpia') {
-            setActionLine("🧹 Vista limpia activada…");
-            const panels = document.querySelectorAll('.side-panel, .bottom-bar-left, .bottom-bar-right');
-            const hidden = document.body.classList.toggle('vista-limpia');
-            panels.forEach(p => p.style.display = hidden ? 'none' : '');
-        } else if (selectedPresentar === 'coetaneos') {
-            setActionLine("🚀 Cambiando a vista Coetáneos…");
-            setTimeout(() => {
-                const url = new URL(window.location.href);
-                url.searchParams.set('vista', 'coetaneos');
-                window.location.href = url.toString();
-            }, 500);
-        } else if (selectedPresentar === 'compartir') {
-            const url = window.location.href.split('?')[0];
-            navigator.clipboard.writeText(url).then(() => {
-                setActionLine("🔗 URL copiada al portapapeles");
-            }).catch(() => {
-                setActionLine("🔗 " + url);
-            });
+        showPresentarOverlay();
+    }
+
+    function showPresentarOverlay() {
+        document.getElementById('presentar-overlay').classList.add('active');
+        document.getElementById('pdlg-input').style.display   = '';
+        document.getElementById('pdlg-loading').style.display = 'none';
+        document.getElementById('pdlg-result').style.display  = 'none';
+        setActionLine("🏛️ Crear presentación — escribe el tema y pulsa Generar");
+    }
+
+    function closePresentarOverlay() {
+        document.getElementById('presentar-overlay').classList.remove('active');
+        // Volver a PREGUNTAR
+        const btn = document.querySelector('[data-verb="preguntar"]');
+        if (btn) selectVerb(btn);
+    }
+
+    function setPresentarFmt(btn) {
+        document.querySelectorAll('.presentar-fmt-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        _presentarFmt = btn.dataset.fmt;
+        selectedPresentar = _presentarFmt;
+    }
+
+    function onPresentarFile(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const label = document.getElementById('presentar-file-label');
+        label.childNodes[0].textContent = `📎 ${file.name} `;
+        _presentarFileName = file.name;
+        const reader = new FileReader();
+        if (file.type.startsWith('text') || /\.(md|txt|csv|json)$/.test(file.name)) {
+            reader.onload = e => { _presentarFileContent = e.target.result; };
+            reader.readAsText(file);
+        } else {
+            reader.onload = e => { _presentarFileContent = e.target.result; };
+            reader.readAsDataURL(file);
         }
+    }
+
+    async function generatePresentacion() {
+        const prompt = document.getElementById('presentar-prompt').value.trim();
+        if (!prompt && !_presentarFileContent) {
+            setActionLine("⚠️ Escribe un tema o adjunta un fichero");
+            return;
+        }
+
+        document.getElementById('pdlg-input').style.display   = 'none';
+        document.getElementById('pdlg-loading').style.display = '';
+        const statusEl = document.getElementById('presentar-status');
+        statusEl.textContent = '🤖 Claude generando estructura...\n';
+
+        try {
+            const urls = activeApiUrl ? [activeApiUrl] : COUNCIL_API_URLS;
+            let result = null;
+
+            for (const baseUrl of urls) {
+                try {
+                    statusEl.textContent += `📡 Conectando con ${baseUrl}...\n`;
+                    const resp = await fetch(`${baseUrl}/api/council/presentar`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-Council-Token': COUNCIL_API_TOKEN },
+                        body: JSON.stringify({
+                            prompt,
+                            file_content: _presentarFileContent,
+                            file_name: _presentarFileName,
+                            formato: _presentarFmt
+                        }),
+                        signal: AbortSignal.timeout(120000)
+                    });
+                    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                    result = await resp.json();
+                    activeApiUrl = baseUrl;
+                    break;
+                } catch(e) {
+                    statusEl.textContent += `⚠️ ${e.message}\n`;
+                }
+            }
+
+            if (!result) throw new Error('API no disponible — arranca council-api.py');
+            statusEl.textContent += '✅ Presentación generada\n';
+            showPresentarResult(result);
+
+        } catch(e) {
+            document.getElementById('pdlg-loading').style.display = 'none';
+            document.getElementById('pdlg-input').style.display   = '';
+            setActionLine("❌ " + e.message);
+        }
+    }
+
+    function showPresentarResult(result) {
+        document.getElementById('pdlg-loading').style.display = 'none';
+        document.getElementById('pdlg-result').style.display  = '';
+
+        let html = '';
+        if (result.title) {
+            html += `<div style="font-family:'Press Start 2P',monospace;font-size:8px;color:#daa520;margin-bottom:12px;text-align:center">${result.title}</div>`;
+        }
+        if (result.audio_url) {
+            html += `<div style="margin-bottom:10px">
+                <div style="font-family:'Press Start 2P',monospace;font-size:6px;color:#886633;margin-bottom:6px">🎙️ AUDIO</div>
+                <audio controls style="width:100%" src="${result.audio_url}"></audio>
+            </div>`;
+        }
+        if (result.pdf_url) {
+            html += `<a class="presentar-result-item" href="${result.pdf_url}" target="_blank">📄 DESCARGAR PDF</a>`;
+        }
+        if (result.slides_url) {
+            html += `<a class="presentar-result-item" href="${result.slides_url}" target="_blank">📊 VER SLIDES</a>`;
+        }
+        if (result.sections?.length) {
+            html += `<div style="font-family:'Press Start 2P',monospace;font-size:6px;color:#886633;margin:10px 0 4px">ESTRUCTURA:</div>
+            <div class="presentar-section-list">
+                ${result.sections.map((s,i) => `<div>${i+1}. ${s}</div>`).join('')}
+            </div>`;
+        }
+        document.getElementById('presentar-result-content').innerHTML = html;
     }
 
     </script>

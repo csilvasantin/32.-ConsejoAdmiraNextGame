@@ -805,6 +805,204 @@ app.mount("/presentations", StaticFiles(directory=str(PRESENTATIONS_DIR)), name=
 
 
 # ╔══════════════════════════════════════════════════════════════╗
+# ║  PRESENTAR — Claude genera estructura + audio/PDF/slides     ║
+# ╚══════════════════════════════════════════════════════════════╝
+
+class PresentarRequest(BaseModel):
+    prompt: str
+    file_content: Optional[str] = None
+    file_name: Optional[str] = None
+    formato: str = "audio"  # audio | pdf | ambos | slides
+
+@app.post("/api/council/presentar")
+async def council_presentar(req: PresentarRequest, request: Request):
+    """Pipeline: Claude genera contenido estructurado → audio/PDF/slides según formato."""
+    _check_rate_limit(request)
+
+    # ── 1. Claude genera el documento estructurado ──────────────
+    system_prompt = (
+        "Eres el secretario del Consejo de Administración de AdmiraNext. "
+        "Genera el contenido estructurado de una presentación profesional. "
+        "Responde SOLO con JSON válido con esta estructura:\n"
+        '{"title":"...","summary":"...","sections":['
+        '{"title":"...","content":"...","bullets":["...","..."]}],'
+        '"sources":["..."],"conclusion":"..."}\n'
+        "Incluye 4-6 secciones. Sé conciso pero completo. Sin texto fuera del JSON."
+    )
+    user_content = req.prompt
+    if req.file_content:
+        if req.file_content.startswith("data:"):
+            user_content += f"\n\n[Fichero adjunto: {req.file_name or 'archivo'}]"
+        else:
+            user_content += f"\n\nContenido de '{req.file_name or 'adjunto'}':\n{req.file_content[:8000]}"
+
+    llm_resp = client.messages.create(
+        model="claude-sonnet-4-20250514",
+        max_tokens=4000,
+        system=system_prompt,
+        messages=[{"role": "user", "content": user_content}],
+    )
+    raw = llm_resp.content[0].text
+
+    import re
+    try:
+        m = re.search(r'\{.*\}', raw, re.DOTALL)
+        data = json.loads(m.group()) if m else {"title": req.prompt[:60], "sections": [], "summary": raw}
+    except Exception:
+        data = {"title": req.prompt[:60], "sections": [], "summary": raw}
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
+    safe_title = re.sub(r'[^\w]', '_', data.get("title", "presentacion"))[:30]
+
+    result: dict = {
+        "ok": True,
+        "title": data.get("title", "Presentación"),
+        "sections": [s.get("title", s) if isinstance(s, dict) else s for s in data.get("sections", [])],
+    }
+
+    # ── 2. Generar salidas según formato ────────────────────────
+    if req.formato in ("pdf", "ambos"):
+        p = _presentar_pdf(data, timestamp, safe_title)
+        if p: result["pdf_url"] = f"/presentations/{p.name}"
+
+    if req.formato in ("audio", "ambos"):
+        p = _presentar_audio(data, timestamp, safe_title)
+        if p: result["audio_url"] = f"/audio/{p.name}"
+
+    if req.formato == "slides":
+        p = _presentar_slides(data, timestamp, safe_title)
+        if p: result["slides_url"] = f"/presentations/{p.name}"
+
+    # ── 3. Guardar en estado de presentaciones ───────────────────
+    state = _presentations_load_state()
+    item = {
+        "slug": f"{timestamp}_{safe_title}",
+        "title": data.get("title", "Presentación"),
+        "created_at": datetime.now().isoformat(),
+        **{k: result[k] for k in ("audio_url","pdf_url","slides_url") if k in result},
+    }
+    state["items"] = [item] + state.get("items", [])[:9]
+    state["active"] = item["slug"]
+    PRESENTATIONS_STATE_FILE.write_text(json.dumps(state, indent=2, ensure_ascii=False), encoding="utf-8")
+
+    return result
+
+
+def _presentar_pdf(data: dict, timestamp: str, safe_title: str) -> "Path | None":
+    import subprocess
+    try:
+        md = f"# {data.get('title','Presentación')}\n\n"
+        md += f"*AdmiraNext Council — {datetime.now().strftime('%d/%m/%Y')}*\n\n"
+        if data.get("summary"):
+            md += f"## Resumen Ejecutivo\n\n{data['summary']}\n\n"
+        for s in data.get("sections", []):
+            if isinstance(s, dict):
+                md += f"## {s.get('title','')}\n\n{s.get('content','')}\n\n"
+                for b in s.get("bullets", []):
+                    md += f"- {b}\n"
+                md += "\n"
+        if data.get("conclusion"):
+            md += f"## Conclusión\n\n{data['conclusion']}\n\n"
+        if data.get("sources"):
+            md += "## Fuentes\n\n" + "".join(f"- {s}\n" for s in data["sources"])
+
+        md_path = PRESENTATIONS_DIR / f"{timestamp}_{safe_title}.md"
+        md_path.write_text(md, encoding="utf-8")
+
+        pdf_path = PRESENTATIONS_DIR / f"{timestamp}_{safe_title}.pdf"
+        r = subprocess.run(
+            ["pandoc", str(md_path), "-o", str(pdf_path)],
+            capture_output=True, timeout=30
+        )
+        if r.returncode == 0 and pdf_path.exists():
+            return pdf_path
+        return md_path  # fallback: serve markdown
+    except Exception as e:
+        print(f"PDF error: {e}")
+        return None
+
+
+def _presentar_audio(data: dict, timestamp: str, safe_title: str) -> "Path | None":
+    import subprocess
+    try:
+        text = f"{data.get('title','')}. {data.get('summary','')} "
+        for s in data.get("sections", []):
+            if isinstance(s, dict):
+                text += f"{s.get('title','')}. {s.get('content','')} "
+        text += data.get("conclusion", "")
+        text = text[:3000]
+
+        aiff_path = AUDIO_DIR / f"{timestamp}_{safe_title}.aiff"
+        mp3_path  = AUDIO_DIR / f"{timestamp}_{safe_title}.mp3"
+
+        r = subprocess.run(["say", "-o", str(aiff_path), text], capture_output=True, timeout=120)
+        if r.returncode != 0 or not aiff_path.exists():
+            return None
+
+        conv = subprocess.run(
+            ["ffmpeg", "-i", str(aiff_path), "-q:a", "4", str(mp3_path), "-y"],
+            capture_output=True, timeout=60
+        )
+        if conv.returncode == 0 and mp3_path.exists():
+            aiff_path.unlink(missing_ok=True)
+            return mp3_path
+        return aiff_path
+    except Exception as e:
+        print(f"Audio error: {e}")
+        return None
+
+
+def _presentar_slides(data: dict, timestamp: str, safe_title: str) -> "Path | None":
+    try:
+        title   = data.get("title", "Presentación")
+        sections = data.get("sections", [])
+        total   = len(sections) + 1
+
+        def slide(num, stitle, scontent, bullets=None):
+            bl = "".join(f'<div class="bullet">▶ {b}</div>' for b in (bullets or [])[:5])
+            return (
+                f'<section class="slide">'
+                f'<span class="num">{num:02d}/{total:02d}</span>'
+                f'<h2>{stitle}</h2>'
+                f'<p>{scontent[:400]}</p>{bl}'
+                f'</section>\n'
+            )
+
+        html = f"""<!DOCTYPE html><html lang="es"><head><meta charset="UTF-8">
+<title>{title}</title>
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+*{{box-sizing:border-box;margin:0;padding:0}}
+body{{background:#0a0a1e;color:#ffee88;font-family:'Press Start 2P',monospace;scroll-snap-type:y mandatory;overflow-y:scroll;height:100vh}}
+.slide{{min-height:100vh;padding:60px 80px;display:flex;flex-direction:column;justify-content:center;scroll-snap-align:start;border-bottom:3px solid #daa520}}
+.num{{font-size:7px;color:#554433;margin-bottom:16px}}
+h2{{font-size:16px;color:#daa520;margin-bottom:24px;line-height:1.6}}
+p{{font-size:9px;line-height:2.2;margin-bottom:16px}}
+.bullet{{font-size:8px;padding:8px 0 8px 20px;line-height:1.8;border-bottom:1px solid #1a1a3e}}
+.badge{{position:fixed;bottom:12px;right:16px;font-size:6px;color:#332211}}
+</style></head><body>
+{slide(0, title, data.get('summary','')[:400])}
+"""
+        for i, s in enumerate(sections):
+            if isinstance(s, dict):
+                html += slide(i+1, s.get("title",""), s.get("content",""), s.get("bullets",[]))
+            else:
+                html += slide(i+1, str(s), "")
+
+        if data.get("conclusion"):
+            html += slide(total, "Conclusión", data["conclusion"])
+
+        html += f'<div class="badge">AdmiraNext Consejo · {datetime.now().strftime("%d/%m/%Y")}</div></body></html>'
+
+        path = PRESENTATIONS_DIR / f"{timestamp}_{safe_title}_slides.html"
+        path.write_text(html, encoding="utf-8")
+        return path
+    except Exception as e:
+        print(f"Slides error: {e}")
+        return None
+
+
+# ╔══════════════════════════════════════════════════════════════╗
 # ║  DAILY BOOK — Un consejero pone un libro sobre la mesa       ║
 # ╚══════════════════════════════════════════════════════════════╝
 

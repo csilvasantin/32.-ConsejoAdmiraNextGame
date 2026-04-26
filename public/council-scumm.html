@@ -1314,8 +1314,27 @@
         }
         .table-viewer-content .tv-card .tv-open:hover { background: rgba(255,255,255,0.22); }
         .crear-spinner {
-            font-size: 28px;
+            font-size: 20px;
             animation: crear-spin 1.4s linear infinite;
+        }
+        .table-viewer-content .tv-card.crear-loading {
+            gap: 4px;
+            padding: 8px 10px;
+            justify-content: center;
+        }
+        .crear-loading .tv-domain { font-size: 0.55rem; }
+        .crear-prompt-text {
+            font-size: 0.5rem;
+            opacity: 0.8;
+            line-height: 1.35;
+            max-width: 92%;
+            text-align: center;
+            display: -webkit-box;
+            -webkit-line-clamp: 2;
+            -webkit-box-orient: vertical;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            word-break: break-word;
         }
         @keyframes crear-spin {
             0%, 100% { transform: scale(1) rotate(0deg); }
@@ -1325,8 +1344,8 @@
         .table-viewer.mode-hologram .crear-spinner { filter: drop-shadow(0 0 8px #aaeeff); }
         /* Barra de progreso indeterminada para Crear */
         .crear-progress {
-            width: 80%;
-            height: 8px;
+            width: 70%;
+            height: 6px;
             background: rgba(0, 0, 0, 0.55);
             border: 1px solid currentColor;
             position: relative;
@@ -1818,7 +1837,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.26.04.15</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.26.04.16</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -3655,10 +3674,9 @@
         content.innerHTML =
             '<div class="tv-card crear-loading">' +
             '<div class="crear-spinner">🎨</div>' +
-            '<div class="tv-domain">Generando imagen…</div>' +
             '<div class="crear-progress"></div>' +
             '<div class="crear-phase" id="crear-phase">CONECTANDO…</div>' +
-            '<div style="font-size:0.55rem;opacity:0.85;line-height:1.5;max-width:90%;text-align:center;">' + promptEsc + '</div>' +
+            '<div class="crear-prompt-text" title="' + promptEsc + '">' + promptEsc + '</div>' +
             '</div>';
         viewer.classList.add('active');
         // Rotar mensaje de fase para dar sensación de progreso

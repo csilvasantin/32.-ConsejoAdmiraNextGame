@@ -165,6 +165,7 @@ SMTP_PASS = os.environ.get("SMTP_PASS", "")
 # Budget tracking file
 BUDGET_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "budget.json")
 ENTRENAR_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "entrenar_corpus.json")
+ENTRENAR_FILE_BAK = ENTRENAR_FILE + ".bak"
 
 # ── Budget tracker ───────────────────────────────────────────
 _budget_lock = threading.Lock()
@@ -197,20 +198,28 @@ def _normalize_entrenar_item(raw) -> Optional[dict]:
 
 
 def _load_entrenar_store() -> dict:
-    if Path(ENTRENAR_FILE).exists():
-        try:
-            with open(ENTRENAR_FILE, "r", encoding="utf-8") as f:
-                data = json.load(f)
-                if isinstance(data, dict):
-                    return data
-        except (json.JSONDecodeError, IOError):
-            pass
+    for candidate in [ENTRENAR_FILE, ENTRENAR_FILE_BAK]:
+        if Path(candidate).exists():
+            try:
+                with open(candidate, "r", encoding="utf-8") as f:
+                    data = json.load(f)
+                    if isinstance(data, dict):
+                        return data
+            except (json.JSONDecodeError, IOError):
+                pass
     return {}
 
 
 def _save_entrenar_store(data: dict):
-    with open(ENTRENAR_FILE, "w", encoding="utf-8") as f:
+    tmp_file = ENTRENAR_FILE + ".tmp"
+    with open(tmp_file, "w", encoding="utf-8") as f:
         json.dump(data, f, indent=2, ensure_ascii=False)
+    try:
+        if Path(ENTRENAR_FILE).exists():
+            Path(ENTRENAR_FILE).replace(ENTRENAR_FILE_BAK)
+    except OSError:
+        pass
+    Path(tmp_file).replace(ENTRENAR_FILE)
 
 
 def _merge_entrenar_items(existing: list, incoming: list) -> list:

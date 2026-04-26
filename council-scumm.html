@@ -1880,7 +1880,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.27.04.1</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.27.04.2</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -3176,33 +3176,82 @@
             saveEntrenar(gen, m.persona, items);
         }
     }
-    async function _fetchEntrenarSnapshot(gen) {
+    function _snapshotTotal(snapshot) {
+        if (snapshot && typeof snapshot.total === 'number') return snapshot.total;
+        const personas = (snapshot && snapshot.personas && typeof snapshot.personas === 'object') ? snapshot.personas : {};
+        return Object.values(personas).reduce((acc, items) => acc + (Array.isArray(items) ? items.length : 0), 0);
+    }
+    function _sameEntrenarItems(a, b) {
+        const left = _mergeEntrenarItems([], a);
+        const right = _mergeEntrenarItems([], b);
+        if (left.length !== right.length) return false;
+        return left.every((item, idx) => JSON.stringify(item) === JSON.stringify(right[idx]));
+    }
+    async function _fetchEntrenarSnapshots(gen) {
         const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
-        let lastErr = null;
+        const snapshots = [];
         for (const baseUrl of urls) {
             try {
                 const res = await fetch(baseUrl + '/api/council/entrenar/' + encodeURIComponent(gen), {
                     headers: { 'X-Council-Token': COUNCIL_API_TOKEN },
                     signal: AbortSignal.timeout(12000)
                 });
-                if ([404, 405, 429, 500, 502, 503, 504].includes(res.status)) {
-                    lastErr = new Error('HTTP ' + res.status);
-                    continue;
-                }
+                if ([404, 405, 429, 500, 502, 503, 504].includes(res.status)) continue;
                 if (!res.ok) throw new Error('HTTP ' + res.status);
-                activeApiUrl = baseUrl;
-                return res.json();
+                const snapshot = await res.json();
+                snapshots.push({ baseUrl, snapshot });
             } catch (e) {
-                lastErr = e;
+                console.warn('Entrenar snapshot failed at', baseUrl, e);
             }
         }
-        throw lastErr || new Error('Entrenar API no disponible');
+        if (!snapshots.length) throw new Error('Entrenar API no disponible');
+        return snapshots;
+    }
+    function _mergeEntrenarSnapshots(gen, snapshots) {
+        const personas = {};
+        for (const m of COUNCIL.filter(x => x.gen === gen)) {
+            let merged = [];
+            for (const entry of snapshots || []) {
+                const items = entry && entry.snapshot && entry.snapshot.personas ? entry.snapshot.personas[m.persona] : [];
+                merged = _mergeEntrenarItems(merged, items);
+            }
+            personas[m.persona] = merged;
+        }
+        return {
+            gen,
+            personas,
+            total: Object.values(personas).reduce((acc, items) => acc + items.length, 0)
+        };
+    }
+    async function _reconcileEntrenarGen(gen, mergedSnapshot, snapshots) {
+        for (const entry of snapshots || []) {
+            for (const m of COUNCIL.filter(x => x.gen === gen)) {
+                const mergedItems = mergedSnapshot.personas[m.persona] || [];
+                const remoteItems = entry && entry.snapshot && entry.snapshot.personas ? (entry.snapshot.personas[m.persona] || []) : [];
+                if (!mergedItems.length || _sameEntrenarItems(remoteItems, mergedItems)) continue;
+                try {
+                    await fetch(entry.baseUrl + '/api/council/entrenar/' + encodeURIComponent(gen) + '/' + encodeURIComponent(m.persona) + '/merge', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Council-Token': COUNCIL_API_TOKEN
+                        },
+                        body: JSON.stringify({ items: mergedItems }),
+                        signal: AbortSignal.timeout(15000)
+                    });
+                } catch (e) {
+                    console.warn('Entrenar reconcile failed at', entry.baseUrl, e);
+                }
+            }
+        }
     }
     async function _mergeEntrenarPersonaRemote(gen, persona, items) {
         const mergedLocal = _mergeEntrenarItems(loadEntrenar(gen, persona), items);
         saveEntrenar(gen, persona, mergedLocal);
         const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
         let lastErr = null;
+        let okCount = 0;
+        let lastPayload = null;
         for (const baseUrl of urls) {
             try {
                 const res = await fetch(baseUrl + '/api/council/entrenar/' + encodeURIComponent(gen) + '/' + encodeURIComponent(persona) + '/merge', {
@@ -3219,15 +3268,16 @@
                     continue;
                 }
                 if (!res.ok) throw new Error('HTTP ' + res.status);
-                activeApiUrl = baseUrl;
-                const payload = await res.json();
-                saveEntrenar(gen, persona, payload.items || mergedLocal);
-                return loadEntrenar(gen, persona);
+                activeApiUrl = activeApiUrl || baseUrl;
+                lastPayload = await res.json();
+                okCount += 1;
             } catch (e) {
                 lastErr = e;
             }
         }
-        throw lastErr || new Error('Entrenar API no disponible');
+        if (!okCount) throw lastErr || new Error('Entrenar API no disponible');
+        saveEntrenar(gen, persona, (lastPayload && lastPayload.items) || mergedLocal);
+        return loadEntrenar(gen, persona);
     }
     async function _migrateLegacyEntrenar(gen) {
         let migrated = false;
@@ -3255,8 +3305,11 @@
         entrenarLoadPromises[gen] = (async () => {
             let needsRefetch = force || !entrenarLoadedGens.has(gen);
             try {
-                const snapshot = await _fetchEntrenarSnapshot(gen);
-                _applyEntrenarSnapshot(snapshot, gen);
+                const snapshots = await _fetchEntrenarSnapshots(gen);
+                const mergedSnapshot = _mergeEntrenarSnapshots(gen, snapshots);
+                _applyEntrenarSnapshot(mergedSnapshot, gen);
+                activeApiUrl = snapshots.slice().sort((a, b) => _snapshotTotal(b.snapshot) - _snapshotTotal(a.snapshot))[0]?.baseUrl || activeApiUrl;
+                await _reconcileEntrenarGen(gen, mergedSnapshot, snapshots);
             } catch (e) {
                 console.warn('Entrenar snapshot unavailable', e);
             }
@@ -3267,8 +3320,11 @@
             }
             if (needsRefetch) {
                 try {
-                    const snapshot = await _fetchEntrenarSnapshot(gen);
-                    _applyEntrenarSnapshot(snapshot, gen);
+                    const snapshots = await _fetchEntrenarSnapshots(gen);
+                    const mergedSnapshot = _mergeEntrenarSnapshots(gen, snapshots);
+                    _applyEntrenarSnapshot(mergedSnapshot, gen);
+                    activeApiUrl = snapshots.slice().sort((a, b) => _snapshotTotal(b.snapshot) - _snapshotTotal(a.snapshot))[0]?.baseUrl || activeApiUrl;
+                    await _reconcileEntrenarGen(gen, mergedSnapshot, snapshots);
                 } catch (e) {
                     console.warn('Entrenar refresh failed', e);
                 }
@@ -3581,11 +3637,8 @@
                 return;
             }
             const title = await _fetchUrlTitle(url);
-            for (const m of targets) {
-                const arr = loadEntrenar(currentGen, m.persona);
-                arr.push({ url, source, kind, ts, title: title || undefined });
-                saveEntrenar(currentGen, m.persona, arr);
-            }
+            const entry = { url, source, kind, ts, title: title || undefined };
+            await Promise.all(targets.map(m => _mergeEntrenarPersonaRemote(currentGen, m.persona, [entry])));
             enterConversation();
             const titleEsc = title ? title.replace(/</g,'&lt;').slice(0, 80) : '';
             const titleHtml = titleEsc ? ' <span style="color:#ccc">"' + titleEsc + '"</span>' : '';
@@ -3714,8 +3767,8 @@
     // El mount /council hace strip del prefijo:
     // baseUrl + "/api/council/ask" → ".../council/api/council/ask" → backend /api/council/ask
     const COUNCIL_API_URLS = [
-        "https://three2-consejoadmiranextgame.onrender.com", // Render.com — siempre online
-        "https://macmini.tail48b61c.ts.net/council",         // Tailscale Funnel /council → 8420
+        "https://macmini.tail48b61c.ts.net/council",         // MacMini maestro persistente
+        "https://three2-consejoadmiranextgame.onrender.com", // Render.com — réplica/fallback
         "http://localhost:8420",                              // Local dev fallback
     ];
     const COUNCIL_API_TOKEN = "admira2026";

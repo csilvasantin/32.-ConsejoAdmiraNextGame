@@ -1376,6 +1376,23 @@
         .entrenar-corpus-row { transition: background 0.12s; padding: 2px 4px; }
         .entrenar-corpus-row:hover { background: rgba(218,165,32,0.18); }
         .entrenar-corpus-row.active { background: rgba(218,165,32,0.32); box-shadow: inset 2px 0 0 #daa520; }
+        /* Modo "elige destinatario": filas con pulso dorado */
+        .entrenar-corpus-row.pickable { animation: entrenar-pickable 1.4s ease-in-out infinite; }
+        @keyframes entrenar-pickable {
+            0%, 100% { background: rgba(218,165,32,0.06); }
+            50% { background: rgba(218,165,32,0.32); }
+        }
+        .entrenar-pick-all {
+            background: linear-gradient(to right, #5a3a1e, #8b5a14, #5a3a1e) !important;
+            border: 1px solid #daa520;
+            color: #ffee88 !important;
+            text-align: center;
+            padding: 4px;
+            margin-bottom: 4px;
+            box-shadow: inset 0 0 0 1px #2a1a08;
+        }
+        .entrenar-pick-all:hover { background: linear-gradient(to right, #8b5a14, #ddcc00, #8b5a14) !important; color: #2a1a08 !important; }
+        .entrenar-picker-header { font-family: 'Press Start 2P', monospace; }
         /* Scrollbar SCUMM (madera + borde dorado) para el panel del corpus */
         #entrenar-list {
             max-height: 120px;
@@ -1715,7 +1732,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.26.04.9</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.26.04.10</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -2048,6 +2065,7 @@
             img.style.opacity = "1";
         }, 300);
         render();
+        _pendingEntrenar = null;
         if (currentVerb === 'entrenar') renderEntrenarList();
         closeTableViewer();
     }
@@ -3079,6 +3097,7 @@
         document.getElementById('win-creativo').classList.add('active');
     }
     let _entrenarPanelHandler = null;
+    let _pendingEntrenar = null;
     function enterEntrenarMode() {
         captureOverlayOriginals();
         document.getElementById('win-racional').addEventListener('click', _entrenarListClick);
@@ -3087,9 +3106,15 @@
             _entrenarPanelHandler = (e) => {
                 const row = e.target.closest('.entrenar-corpus-row[data-persona]');
                 if (!row) return;
+                const persona = row.getAttribute('data-persona');
+                if (_pendingEntrenar) {
+                    _completePendingPick(persona);
+                    return;
+                }
+                if (persona === '__all__') return;
                 document.querySelectorAll('.entrenar-corpus-row').forEach(r => r.classList.remove('active'));
                 row.classList.add('active');
-                showEntrenarFor(row.getAttribute('data-persona'));
+                showEntrenarFor(persona);
             };
             document.getElementById('entrenar-list').addEventListener('click', _entrenarPanelHandler);
         }
@@ -3101,6 +3126,7 @@
             document.getElementById('entrenar-list').removeEventListener('click', _entrenarPanelHandler);
             _entrenarPanelHandler = null;
         }
+        _pendingEntrenar = null;
         closeTableViewer();
         hideEntrenarOverlays();
         restoreOverlayOriginals();
@@ -3165,51 +3191,91 @@
         const source = detectVideoSource(url);
         const kind = classifyEntrenarUrl(url);
         const ts = Date.now();
-        const allMembers = COUNCIL.filter(m => m.gen === currentGen);
 
         setActionLine("🔍 Buscando destinatario para esta URL…");
         const title = await _fetchUrlTitle(url);
         const detected = _detectTargetConsejeros(title + ' ' + url, currentGen);
-        const wasTargeted = detected.length > 0;
-        const targets = wasTargeted ? detected : allMembers;
-
-        for (const m of targets) {
-            const arr = loadEntrenar(currentGen, m.persona);
-            arr.push({ url: url, source: source, kind: kind, ts: ts, title: title || undefined });
-            saveEntrenar(currentGen, m.persona, arr);
-        }
-
-        enterConversation();
         const kindIcon = kind === "book" ? "📚" : kind === "video" ? "📼" : "🔗";
         const kindLabel = kind === "book" ? "Libro" : kind === "video" ? "Vídeo" : "Enlace";
+
+        if (detected.length === 0) {
+            // Sin match: abrir picker manual sobre el panel del corpus
+            _renderEntrenarPicker({ url, source, kind, ts, title, kindIcon, kindLabel });
+            return;
+        }
+
+        // Match automático: archivar en los detectados
+        for (const m of detected) {
+            const arr = loadEntrenar(currentGen, m.persona);
+            arr.push({ url, source, kind, ts, title: title || undefined });
+            saveEntrenar(currentGen, m.persona, arr);
+        }
+        enterConversation();
         const titleEsc = title ? title.replace(/</g,'&lt;').slice(0, 80) : '';
         const titleHtml = titleEsc ? ' <span style="color:#ccc">"' + titleEsc + '"</span>' : '';
-        const targetTag = wasTargeted
-            ? ' → <span style="color:#daa520">' + targets.map(m => m.persona).join(', ') + '</span>'
-            : ' → <span style="opacity:0.7">todos</span>';
+        const targetTag = ' → <span style="color:#daa520">' + detected.map(m => m.persona).join(', ') + '</span>';
         addUserEntry('🎓 ' + kindLabel + ' (' + source + ')' + titleHtml + targetTag + '<br><a href="' + url + '" target="_blank" style="color:#8cf">' + url + '</a>');
-
-        if (wasTargeted) {
-            for (const m of targets) {
-                const panel = m.side === 'racional' ? 'conv-racional' : 'conv-creativo';
-                addConvEntry(panel, m.icon, m.name, m.persona, m.side,
-                    kindIcon + " Específicamente para mí. Lo archivo desde la perspectiva de " + (m.territory || m.role).toLowerCase() + ".");
-            }
-            setActionLine("✅ " + kindLabel + " asignado a " + targets.map(m => m.persona).join(', '));
-        } else {
+        for (const m of detected) {
+            const panel = m.side === 'racional' ? 'conv-racional' : 'conv-creativo';
+            addConvEntry(panel, m.icon, m.name, m.persona, m.side,
+                kindIcon + " Específicamente para mí. Lo archivo desde la perspectiva de " + (m.territory || m.role).toLowerCase() + ".");
+        }
+        setActionLine("✅ " + kindLabel + " asignado a " + detected.map(m => m.persona).join(', '));
+        renderEntrenarList();
+    }
+    function _renderEntrenarPicker(entry) {
+        _pendingEntrenar = entry;
+        const ul = document.getElementById('entrenar-list');
+        if (!ul) return;
+        const summary = entrenarSummary(currentGen);
+        const titleShort = (entry.title || entry.url).slice(0, 64);
+        ul.innerHTML =
+            '<div class="inv-item entrenar-picker-header" style="font-size:7px;color:#daa520;border-bottom:1px solid #daa520;margin-bottom:4px;padding-bottom:3px;text-align:center;">🎯 ELIGE DESTINATARIO</div>' +
+            '<div class="inv-item" style="font-size:0.6rem;opacity:0.85;margin-bottom:6px;line-height:1.4;">' + _entrenarEsc(titleShort) + '</div>' +
+            '<div class="inv-item entrenar-corpus-row entrenar-pick-all" data-persona="__all__" style="font-size:0.7rem;cursor:pointer;">👥 Todos</div>' +
+            summary.map(s => '<div class="inv-item entrenar-corpus-row pickable" data-persona="' + _entrenarEsc(s.persona) + '" title="Asignar a ' + _entrenarEsc(s.persona) + '" style="font-size:0.7rem;display:flex;justify-content:space-between;cursor:pointer"><span>' + s.persona + '</span><span style="color:#daa520">' + s.count + '</span></div>').join('');
+        setActionLine('🎯 Sin destinatario claro — elige uno o pulsa "Todos"');
+    }
+    function _completePendingPick(persona) {
+        if (!_pendingEntrenar) return false;
+        const e = _pendingEntrenar;
+        const allMembers = COUNCIL.filter(m => m.gen === currentGen);
+        const targets = persona === '__all__' ? allMembers : allMembers.filter(m => m.persona === persona);
+        if (targets.length === 0) return false;
+        for (const m of targets) {
+            const arr = loadEntrenar(currentGen, m.persona);
+            arr.push({ url: e.url, source: e.source, kind: e.kind, ts: e.ts, title: e.title || undefined });
+            saveEntrenar(currentGen, m.persona, arr);
+        }
+        _pendingEntrenar = null;
+        renderEntrenarList();
+        enterConversation();
+        const titleEsc = e.title ? e.title.replace(/</g,'&lt;').slice(0, 80) : '';
+        const titleHtml = titleEsc ? ' <span style="color:#ccc">"' + titleEsc + '"</span>' : '';
+        const tag = persona === '__all__'
+            ? ' → <span style="opacity:0.85">todos (manual)</span>'
+            : ' → <span style="color:#daa520">' + _entrenarEsc(persona) + ' (manual)</span>';
+        addUserEntry('🎓 ' + e.kindLabel + ' (' + e.source + ')' + titleHtml + tag + '<br><a href="' + e.url + '" target="_blank" style="color:#8cf">' + e.url + '</a>');
+        if (persona === '__all__') {
             const racionales = targets.filter(m => m.side === "racional");
             const creativos  = targets.filter(m => m.side === "creativo");
             for (const m of racionales) {
                 addConvEntry("conv-racional", m.icon, m.name, m.persona, "racional",
-                    kindIcon + " Guardado. " + m.persona + " lo archivará desde la perspectiva de " + (m.territory || m.role).toLowerCase() + ".");
+                    e.kindIcon + " Guardado. " + m.persona + " lo archivará desde la perspectiva de " + (m.territory || m.role).toLowerCase() + ".");
             }
             for (const m of creativos) {
                 addConvEntry("conv-creativo", m.icon, m.name, m.persona, "creativo",
-                    kindIcon + " Guardado. " + m.persona + " lo archivará desde la perspectiva de " + (m.territory || m.role).toLowerCase() + ".");
+                    e.kindIcon + " Guardado. " + m.persona + " lo archivará desde la perspectiva de " + (m.territory || m.role).toLowerCase() + ".");
             }
-            setActionLine("ℹ️ Sin destinatario claro — archivado por los " + targets.length + " consejeros");
+            setActionLine('✅ ' + e.kindLabel + ' archivado por los ' + targets.length + ' consejeros');
+        } else {
+            const m = targets[0];
+            const panel = m.side === 'racional' ? 'conv-racional' : 'conv-creativo';
+            addConvEntry(panel, m.icon, m.name, m.persona, m.side,
+                e.kindIcon + ' Recibido. ' + m.persona + ' lo archiva desde la perspectiva de ' + (m.territory || m.role).toLowerCase() + '.');
+            setActionLine('✅ ' + e.kindLabel + ' asignado a ' + m.persona);
         }
-        renderEntrenarList();
+        return true;
     }
 
     // ── Council API config ──

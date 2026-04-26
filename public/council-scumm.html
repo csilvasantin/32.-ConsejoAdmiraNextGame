@@ -8,11 +8,14 @@
     <meta http-equiv="Expires" content="0">
     <script>
         // Force fresh load: redirect to ?_v=<now> if param missing or older than 5 min
+        // Preserve other params (e.g. ?train=<url> from Telegram magic link)
         (function(){
             var p = new URLSearchParams(location.search);
             var v = parseInt(p.get('_v') || '0', 10);
-            if (!v || Date.now() - v > 300000)
-                location.replace(location.pathname + '?_v=' + Date.now());
+            if (!v || Date.now() - v > 300000) {
+                p.set('_v', Date.now());
+                location.replace(location.pathname + '?' + p.toString());
+            }
         })();
     </script>
     <title>AdmiraNext Council — SCUMM Interface</title>
@@ -1732,7 +1735,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.26.04.10</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.26.04.11</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -3498,9 +3501,28 @@
 
     // Wire del click del hotspot y del fin de vídeo
     document.addEventListener("DOMContentLoaded", () => {
-        // Seleccionar PREGUNTAR por defecto al cargar
-        const defaultBtn = document.querySelector('[data-verb="preguntar"]');
-        if (defaultBtn) selectVerb(defaultBtn);
+        // Magic link Telegram: ?train=<url> auto-activa Entrenar y procesa la URL
+        const params = new URLSearchParams(location.search);
+        const trainUrl = params.get('train');
+        if (trainUrl) {
+            const entrenarBtn = document.querySelector('button[data-verb="entrenar"]');
+            if (entrenarBtn) selectVerb(entrenarBtn);
+            setTimeout(() => {
+                const input = document.getElementById('action-input');
+                if (input) {
+                    input.value = trainUrl;
+                    sendMessage();
+                }
+                // Limpiar el param para que un refresh no re-dispare
+                const clean = new URLSearchParams(location.search);
+                clean.delete('train');
+                history.replaceState({}, '', location.pathname + '?' + clean.toString());
+            }, 200);
+        } else {
+            // Seleccionar PREGUNTAR por defecto al cargar
+            const defaultBtn = document.querySelector('[data-verb="preguntar"]');
+            if (defaultBtn) selectVerb(defaultBtn);
+        }
 
         const hotspot = document.getElementById("apple-ii-hotspot");
         if (hotspot) {

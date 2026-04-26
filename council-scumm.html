@@ -1780,7 +1780,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.26.04.13</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.26.04.14</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -3543,11 +3543,26 @@
             return;
         }
         const ts = Date.now();
+        const job = { prompt, ts, calidad: selectedCrear, gen: currentGen, status: 'pending' };
+        try { localStorage.setItem('crear:lastJob', JSON.stringify(job)); } catch(e) {}
         _renderCrearGenerating(prompt);
         setActionLine("🎨 Generando imagen — el agente la dejará en la mesa cuando esté lista");
-        // TODO: cuando el backend exponga /api/council/crear, postear { prompt, calidad: selectedCrear, ts }
-        // y arrancar polling cada 3s a /api/council/crear/<ts>. Por ahora el placeholder se mantiene
-        // visible hasta que se cargue manualmente la imagen resultado o se cambie de verbo.
+        // Polling: el agente dejará { status:'done', imageUrl } en localStorage 'crear:lastJob'
+        // cuando termine. Aquí pollemos cada 2 s hasta detectarlo y rendear la imagen.
+        if (window._crearPollTimer) clearInterval(window._crearPollTimer);
+        window._crearPollTimer = setInterval(() => {
+            try {
+                const raw = localStorage.getItem('crear:lastJob');
+                if (!raw) return;
+                const j = JSON.parse(raw);
+                if (j.ts === ts && j.status === 'done' && j.imageUrl) {
+                    clearInterval(window._crearPollTimer);
+                    window._crearPollTimer = null;
+                    _renderCrearImage(j.imageUrl, prompt);
+                    setActionLine("✅ Imagen lista — sobre la mesa");
+                }
+            } catch(e) {}
+        }, 2000);
     }
     let _crearPhaseTimer = null;
     function _renderCrearGenerating(prompt) {

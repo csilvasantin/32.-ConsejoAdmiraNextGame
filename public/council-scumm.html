@@ -1372,6 +1372,10 @@
             text-decoration: none;
         }
         .ext-link:hover { opacity: 1; color: #fff; }
+        /* Filas clicables del corpus */
+        .entrenar-corpus-row { transition: background 0.12s; padding: 2px 4px; }
+        .entrenar-corpus-row:hover { background: rgba(218,165,32,0.18); }
+        .entrenar-corpus-row.active { background: rgba(218,165,32,0.32); box-shadow: inset 2px 0 0 #daa520; }
         /* Scrollbar SCUMM (madera + borde dorado) para el panel del corpus */
         #entrenar-list {
             max-height: 120px;
@@ -1711,7 +1715,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.26.04.6</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.26.04.7</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -2956,7 +2960,7 @@
             return;
         }
         ul.innerHTML = '<div class="inv-item" style="font-size:0.7rem;opacity:0.85;border-bottom:1px solid rgba(255,255,255,0.1);margin-bottom:4px;">🎓 Total: ' + total + ' · ' + currentGen + '</div>' +
-            summary.map(s => '<div class="inv-item" style="font-size:0.7rem;display:flex;justify-content:space-between"><span>' + s.persona + '</span><span style="color:#daa520">' + s.count + '</span></div>').join('');
+            summary.map(s => '<div class="inv-item entrenar-corpus-row" data-persona="' + _entrenarEsc(s.persona) + '" title="Ver corpus de ' + _entrenarEsc(s.persona) + '" style="font-size:0.7rem;display:flex;justify-content:space-between;cursor:pointer"><span>' + s.persona + '</span><span style="color:#daa520">' + s.count + '</span></div>').join('');
     }
     function triggerEntrenar() {
         renderEntrenarList();
@@ -3076,6 +3080,7 @@
         document.getElementById('win-creativo').classList.add('active');
     }
     let _entrenarLeaveHandler = null;
+    let _entrenarPanelHandler = null;
     function enterEntrenarMode() {
         captureOverlayOriginals();
         if (!nameplatesVisible) toggleNameplates();
@@ -3101,6 +3106,16 @@
         }
         document.getElementById('win-racional').addEventListener('click', _entrenarListClick);
         document.getElementById('win-creativo').addEventListener('click', _entrenarListClick);
+        if (!_entrenarPanelHandler) {
+            _entrenarPanelHandler = (e) => {
+                const row = e.target.closest('.entrenar-corpus-row[data-persona]');
+                if (!row) return;
+                document.querySelectorAll('.entrenar-corpus-row').forEach(r => r.classList.remove('active'));
+                row.classList.add('active');
+                showEntrenarFor(row.getAttribute('data-persona'));
+            };
+            document.getElementById('entrenar-list').addEventListener('click', _entrenarPanelHandler);
+        }
     }
     function exitEntrenarMode() {
         document.getElementById('nameplates').classList.remove('entrenar-active');
@@ -3117,6 +3132,10 @@
         }
         document.getElementById('win-racional').removeEventListener('click', _entrenarListClick);
         document.getElementById('win-creativo').removeEventListener('click', _entrenarListClick);
+        if (_entrenarPanelHandler) {
+            document.getElementById('entrenar-list').removeEventListener('click', _entrenarPanelHandler);
+            _entrenarPanelHandler = null;
+        }
         closeTableViewer();
         hideEntrenarOverlays();
         restoreOverlayOriginals();

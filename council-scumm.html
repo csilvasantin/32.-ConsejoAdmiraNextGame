@@ -1125,7 +1125,8 @@
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; z-index: 3;
         }
-        .body-hotspots.preguntar-active { pointer-events: auto; }
+        .body-hotspots.preguntar-active,
+        .body-hotspots.entrenar-active { pointer-events: auto; }
         .body-hotspot {
             position: absolute;
             cursor: pointer;
@@ -1189,7 +1190,8 @@
         }
         /* Preguntar mode — nameplates become clickable selectors */
         /* Preguntar mode — enable pointer events on nameplates */
-        .nameplates.preguntar-active { pointer-events: auto; }
+        .nameplates.preguntar-active,
+        .nameplates.entrenar-active { pointer-events: auto; }
         .np.selectable {
             cursor: pointer;
             pointer-events: auto;
@@ -1499,7 +1501,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.26.04.1</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.26.04.2</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -2505,20 +2507,23 @@
         currentVerb = btn.dataset.verb;
         updateInventoryPanel(currentVerb);
 
-        // Historial URLs analizadas: sólo visible con verbo Analizar
-        const winCreativo = document.getElementById('win-creativo');
-        if (winCreativo) {
-            if (currentVerb === 'analizar') {
-                winCreativo.classList.add('active');
-                renderAnalyzedList();
-            } else {
-                winCreativo.classList.remove('active');
-            }
-        }
+        // Exit modes that don't match the new verb
+        if (currentVerb !== 'preguntar') exitPreguntarMode();
+        if (currentVerb !== 'entrenar') exitEntrenarMode();
 
-        // Exit preguntar mode if switching to another verb
-        if (currentVerb !== 'preguntar') {
-            exitPreguntarMode();
+        // Background-window overlays: per-verb activation
+        const winCreativo = document.getElementById('win-creativo');
+        const winRacional = document.getElementById('win-racional');
+        if (currentVerb === 'analizar') {
+            winCreativo.classList.add('active');
+            winRacional.classList.remove('active');
+            renderAnalyzedList();
+        } else if (currentVerb === 'entrenar') {
+            winCreativo.classList.add('active');
+            winRacional.classList.add('active');
+        } else {
+            winCreativo.classList.remove('active');
+            winRacional.classList.remove('active');
         }
 
         updateActionLine();
@@ -2531,6 +2536,7 @@
             executeCouncilVerb(currentVerb);
         }
         if (currentVerb === 'entrenar') {
+            enterEntrenarMode();
             triggerEntrenar();
         }
         if (currentVerb === 'mirar') {
@@ -2732,12 +2738,82 @@
             ul.innerHTML = '<div class="inv-item" style="font-size:0.7rem;opacity:0.7">Pega una URL en la línea superior y pulsa Enviar</div>';
             return;
         }
-        ul.innerHTML = '<div class="inv-item" style="font-size:0.7rem;opacity:0.85;border-bottom:1px solid rgba(255,255,255,0.1);margin-bottom:4px;">📼 Total: ' + total + ' vídeos · ' + currentGen + '</div>' +
+        ul.innerHTML = '<div class="inv-item" style="font-size:0.7rem;opacity:0.85;border-bottom:1px solid rgba(255,255,255,0.1);margin-bottom:4px;">🎓 Total: ' + total + ' · ' + currentGen + '</div>' +
             summary.map(s => '<div class="inv-item" style="font-size:0.7rem;display:flex;justify-content:space-between"><span>' + s.persona + '</span><span style="color:#daa520">' + s.count + '</span></div>').join('');
     }
     function triggerEntrenar() {
         renderEntrenarList();
-        setActionLine("🎓 Entrenar — pega la URL del vídeo y pulsa Enviar");
+        setActionLine("🎓 Entrenar — pega la URL (vídeo o libro) y pulsa Enviar");
+    }
+
+    // ── ENTRENAR: overlays de fondo (vídeos izq · libros der) por consejero ──
+    let _winOriginalHtml = null;
+    let _entrenarHoverHandler = null;
+    function captureOverlayOriginals() {
+        if (_winOriginalHtml) return;
+        _winOriginalHtml = {
+            racional: document.getElementById('win-racional').innerHTML,
+            creativo: document.getElementById('win-creativo').innerHTML
+        };
+    }
+    function restoreOverlayOriginals() {
+        if (!_winOriginalHtml) return;
+        document.getElementById('win-racional').innerHTML = _winOriginalHtml.racional;
+        document.getElementById('win-creativo').innerHTML = _winOriginalHtml.creativo;
+    }
+    function _entrenarEsc(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+    function _entrenarItemsHtml(arr) {
+        if (!arr.length) return '<li class="empty">(vacío)</li>';
+        return arr.map(it => {
+            const short = it.url.replace(/^https?:\/\//,'').slice(0, 32);
+            return '<li><a href="' + _entrenarEsc(it.url) + '" target="_blank" rel="noopener" title="' + _entrenarEsc(it.url) + '">' + _entrenarEsc(short) + '</a></li>';
+        }).join('');
+    }
+    function showEntrenarPlaceholder() {
+        const left = '<div class="window-overlay-title">🎓 VÍDEOS</div><ol class="analizar-list"><li class="empty">Pasa el ratón sobre un consejero…</li></ol>';
+        const right = '<div class="window-overlay-title">📚 LIBROS</div><ol class="analizar-list"><li class="empty">Pasa el ratón sobre un consejero…</li></ol>';
+        document.getElementById('win-racional').innerHTML = left;
+        document.getElementById('win-creativo').innerHTML = right;
+    }
+    function showEntrenarFor(persona) {
+        const items = loadEntrenar(currentGen, persona);
+        const videos = items.filter(it => (it.kind || classifyEntrenarUrl(it.url)) === 'video');
+        const books  = items.filter(it => (it.kind || classifyEntrenarUrl(it.url)) === 'book');
+        document.getElementById('win-racional').innerHTML =
+            '<div class="window-overlay-title">🎓 VÍDEOS · ' + _entrenarEsc(persona) + ' (' + videos.length + ')</div>' +
+            '<ol class="analizar-list">' + _entrenarItemsHtml(videos) + '</ol>';
+        document.getElementById('win-creativo').innerHTML =
+            '<div class="window-overlay-title">📚 LIBROS · ' + _entrenarEsc(persona) + ' (' + books.length + ')</div>' +
+            '<ol class="analizar-list">' + _entrenarItemsHtml(books) + '</ol>';
+    }
+    function enterEntrenarMode() {
+        captureOverlayOriginals();
+        if (!nameplatesVisible) toggleNameplates();
+        document.getElementById('nameplates').classList.add('entrenar-active');
+        document.getElementById('body-hotspots').classList.add('entrenar-active');
+        showEntrenarPlaceholder();
+        if (!_entrenarHoverHandler) {
+            _entrenarHoverHandler = (e) => {
+                if (currentVerb !== 'entrenar') return;
+                const tgt = e.target.closest('[data-persona]');
+                if (!tgt) return;
+                showEntrenarFor(tgt.getAttribute('data-persona'));
+            };
+            document.getElementById('body-hotspots').addEventListener('mouseover', _entrenarHoverHandler);
+            document.getElementById('nameplates').addEventListener('mouseover', _entrenarHoverHandler);
+        }
+    }
+    function exitEntrenarMode() {
+        document.getElementById('nameplates').classList.remove('entrenar-active');
+        document.getElementById('body-hotspots').classList.remove('entrenar-active');
+        if (_entrenarHoverHandler) {
+            document.getElementById('body-hotspots').removeEventListener('mouseover', _entrenarHoverHandler);
+            document.getElementById('nameplates').removeEventListener('mouseover', _entrenarHoverHandler);
+            _entrenarHoverHandler = null;
+        }
+        restoreOverlayOriginals();
     }
     function isLikelyUrl(s) {
         return /^(https?:\/\/|www\.)\S+$/i.test(s);
@@ -2751,6 +2827,17 @@
         if (/\.(mp4|mov|webm|m4v)(\?|$)/i.test(url)) return "Vídeo";
         return "Enlace";
     }
+    function classifyEntrenarUrl(url) {
+        // Video sources
+        if (/youtu\.be\/|youtube\.com\/|vimeo\.com\/|twitch\.tv\/|tiktok\.com\/|instagram\.com\/(reel|tv)|\.(mp4|mov|webm|m4v)(\?|$)/i.test(url)) {
+            return "video";
+        }
+        // Book sources
+        if (/amazon\.[a-z.]+\/(?:[^?#]*\/)?(?:dp|gp\/product)\/|goodreads\.com\/|librotea\.|casadellibro\.|libreriacanaima\.|fnac\.[a-z.]+\/|bookdepository\.com\/|\.(pdf|epub|mobi)(\?|$)/i.test(url)) {
+            return "book";
+        }
+        return "other";
+    }
     function executeEntrenar(text) {
         if (!isLikelyUrl(text)) {
             setActionLine("❌ Eso no parece una URL — pega un enlace que empiece por http(s):// o www.");
@@ -2758,27 +2845,30 @@
         }
         const url = text.startsWith("http") ? text : "https://" + text;
         const source = detectVideoSource(url);
+        const kind = classifyEntrenarUrl(url);
         const ts = Date.now();
         const members = COUNCIL.filter(m => m.gen === currentGen);
         for (const m of members) {
             const arr = loadEntrenar(currentGen, m.persona);
-            arr.push({ url: url, source: source, ts: ts });
+            arr.push({ url: url, source: source, kind: kind, ts: ts });
             saveEntrenar(currentGen, m.persona, arr);
         }
         enterConversation();
-        addUserEntry('🎓 URL de entrenamiento (' + source + '): <a href="' + url + '" target="_blank" style="color:#8cf">' + url + '</a>');
+        const kindIcon = kind === "book" ? "📚" : kind === "video" ? "📼" : "🔗";
+        const kindLabel = kind === "book" ? "Libro" : kind === "video" ? "Vídeo" : "Enlace";
+        addUserEntry('🎓 ' + kindLabel + ' de entrenamiento (' + source + '): <a href="' + url + '" target="_blank" style="color:#8cf">' + url + '</a>');
         const racionales = members.filter(m => m.side === "racional");
         const creativos  = members.filter(m => m.side === "creativo");
         for (const m of racionales) {
             addConvEntry("conv-racional", m.icon, m.name, m.persona, "racional",
-                "📼 Guardado. " + m.persona + " lo archivará desde la perspectiva de " + (m.territory || m.role).toLowerCase() + ".");
+                kindIcon + " Guardado. " + m.persona + " lo archivará desde la perspectiva de " + (m.territory || m.role).toLowerCase() + ".");
         }
         for (const m of creativos) {
             addConvEntry("conv-creativo", m.icon, m.name, m.persona, "creativo",
-                "📼 Guardado. " + m.persona + " lo archivará desde la perspectiva de " + (m.territory || m.role).toLowerCase() + ".");
+                kindIcon + " Guardado. " + m.persona + " lo archivará desde la perspectiva de " + (m.territory || m.role).toLowerCase() + ".");
         }
         renderEntrenarList();
-        setActionLine("✅ Vídeo guardado para entrenamiento — " + members.length + " consejeros lo han archivado");
+        setActionLine("✅ " + kindLabel + " guardado — " + members.length + " consejeros lo han archivado");
     }
 
     // ── Council API config ──

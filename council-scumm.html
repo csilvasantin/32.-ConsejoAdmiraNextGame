@@ -1191,8 +1191,8 @@
         /* ── ENTRENAR table viewer: pinta el vídeo/libro seleccionado sobre la mesa ── */
         .table-viewer {
             position: absolute;
-            left: 22%; top: 36%;
-            width: 56%; height: 38%;
+            left: 32%; top: 65%;
+            width: 36%; height: 26%;
             display: none;
             z-index: 12;
         }
@@ -1356,6 +1356,32 @@
             text-decoration: none;
         }
         .ext-link:hover { opacity: 1; color: #fff; }
+        /* Scrollbar SCUMM (madera + borde dorado) para el panel del corpus */
+        #entrenar-list {
+            max-height: 120px;
+            overflow-y: scroll;
+            scrollbar-width: thin;
+            scrollbar-color: #a07828 #2a1a08;
+            scrollbar-gutter: stable;
+        }
+        #entrenar-list::-webkit-scrollbar {
+            -webkit-appearance: none;
+            width: 10px;
+        }
+        #entrenar-list::-webkit-scrollbar-track {
+            background: #2a1a08;
+            border-left: 1px solid #5a3a1e;
+            box-shadow: inset 1px 0 0 #1a0d04;
+        }
+        #entrenar-list::-webkit-scrollbar-thumb {
+            background: linear-gradient(to right, #8b5a14, #a07828, #8b5a14);
+            border: 1px solid #5a3a1e;
+            box-shadow: inset 1px 1px 0 #ddcc00;
+            border-radius: 0;
+        }
+        #entrenar-list::-webkit-scrollbar-thumb:hover {
+            background: linear-gradient(to right, #a07828, #ddcc00, #a07828);
+        }
         /* Preguntar mode — nameplates become clickable selectors */
         /* Preguntar mode — enable pointer events on nameplates */
         .nameplates.preguntar-active,
@@ -1669,7 +1695,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.26.04.4</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.26.04.5</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>

@@ -1880,7 +1880,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.27.04.3</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.27.04.4</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -3355,7 +3355,7 @@
     }
     function triggerEntrenar() {
         renderEntrenarList();
-        setActionLine("🎓 Entrenar — pega la URL (vídeo o libro) y pulsa Enviar");
+        setActionLine("🎓 Entrenar — pega la URL o usa 'para/to': https://... para Walt Disney");
         void ensureEntrenarLoaded(currentGen);
     }
 
@@ -3393,9 +3393,20 @@
             return '<li>' +
                 '<a href="' + url + '" data-entrenar-url="' + url + '" rel="noopener" title="' + url + '">' + label + '</a>' +
                 '<a href="' + url + '" data-entrenar-ext="1" target="_blank" rel="noopener" class="ext-link" title="Abrir en pestaña">↗</a>' +
-                '<div class="analizar-desc">' + _entrenarEsc(short) + (desc && desc !== label ? ' · ' + desc : '') + '</div>' +
+                '<div class="analizar-desc">' + (desc && desc !== label ? desc : '') + '</div>' +
                 '</li>';
         }).join('');
+    }
+    function _extractEntrenarPayload(rawText) {
+        const text = String(rawText || '').trim();
+        if (!text) return { urlText: '', targetText: '', hadTargetClause: false };
+        const m = text.match(/^(https?:\/\/\S+|www\.\S+)\s+(?:to|para)\s*(.*)$/i);
+        if (!m) return { urlText: text, targetText: '', hadTargetClause: false };
+        return {
+            urlText: m[1].trim(),
+            targetText: (m[2] || '').trim(),
+            hadTargetClause: true
+        };
     }
     function hideEntrenarOverlays() {
         document.getElementById('win-racional').classList.remove('active');
@@ -3613,11 +3624,13 @@
     }
     async function executeEntrenar(text) {
         await ensureEntrenarLoaded(currentGen);
-        if (!isLikelyUrl(text)) {
+        const parsed = _extractEntrenarPayload(text);
+        const candidate = parsed.urlText;
+        if (!isLikelyUrl(candidate)) {
             setActionLine("❌ Eso no parece una URL — pega un enlace que empiece por http(s):// o www.");
             return;
         }
-        const url = text.startsWith("http") ? text : "https://" + text;
+        const url = candidate.startsWith("http") ? candidate : "https://" + candidate;
         const source = detectVideoSource(url);
         const kind = classifyEntrenarUrl(url);
         const ts = Date.now();
@@ -3625,8 +3638,16 @@
         const kindLabel = kind === "book" ? "Libro" : kind === "video" ? "Vídeo" : "Enlace";
 
         // Si vino target explícito desde magic link (?target=…)
-        const explicitTarget = window._trainTarget;
+        const explicitTarget = parsed.hadTargetClause ? parsed.targetText : window._trainTarget;
         window._trainTarget = null; // consumido
+        if (parsed.hadTargetClause) {
+            const title = await _fetchUrlTitle(url);
+            if (!explicitTarget) {
+                _renderEntrenarPicker({ url, source, kind, ts, title, kindIcon, kindLabel });
+                setActionLine('🎯 Escribe el nombre tras "para/to" o elígelo en la lista');
+                return;
+            }
+        }
         if (explicitTarget) {
             const resolved = _resolveTrainTarget(explicitTarget, currentGen);
             const all = COUNCIL.filter(m => m.gen === currentGen);
@@ -3712,6 +3733,7 @@
         ul.innerHTML =
             '<div class="inv-item entrenar-picker-header" style="font-size:7px;color:#daa520;border-bottom:1px solid #daa520;margin-bottom:4px;padding-bottom:3px;text-align:center;">🎯 ELIGE DESTINATARIO</div>' +
             '<div class="inv-item" style="font-size:0.6rem;opacity:0.85;margin-bottom:6px;line-height:1.4;">' + _entrenarEsc(titleShort) + '</div>' +
+            '<div class="inv-item" style="font-size:0.55rem;opacity:0.6;margin-bottom:6px;line-height:1.5;">Tip: también puedes escribir <span style="color:#daa520">URL para Walt Disney</span> o <span style="color:#daa520">URL to Steve Jobs</span></div>' +
             '<div class="inv-item entrenar-corpus-row entrenar-pick-all" data-persona="__all__" style="font-size:0.7rem;cursor:pointer;">👥 Todos</div>' +
             summary.map(s => '<div class="inv-item entrenar-corpus-row pickable" data-persona="' + _entrenarEsc(s.persona) + '" title="Asignar a ' + _entrenarEsc(s.persona) + '" style="font-size:0.7rem;display:flex;justify-content:space-between;cursor:pointer"><span>' + s.persona + '</span><span style="color:#daa520">' + s.count + '</span></div>').join('');
         setActionLine('🎯 Sin destinatario claro — elige uno o pulsa "Todos"');

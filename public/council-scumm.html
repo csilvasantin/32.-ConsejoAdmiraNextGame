@@ -1880,7 +1880,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.27.04.2</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.27.04.3</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -3389,10 +3389,11 @@
             const short = it.url.replace(/^https?:\/\//,'').slice(0, 26);
             const url = _entrenarEsc(it.url);
             const desc = _entrenarEsc(_entrenarItemDesc(it));
+            const label = _entrenarEsc((it.title && it.title.trim()) ? it.title.trim().slice(0, 96) : short);
             return '<li>' +
-                '<a href="' + url + '" data-entrenar-url="' + url + '" rel="noopener" title="' + url + '">' + _entrenarEsc(short) + '</a>' +
+                '<a href="' + url + '" data-entrenar-url="' + url + '" rel="noopener" title="' + url + '">' + label + '</a>' +
                 '<a href="' + url + '" data-entrenar-ext="1" target="_blank" rel="noopener" class="ext-link" title="Abrir en pestaña">↗</a>' +
-                '<div class="analizar-desc">' + desc + '</div>' +
+                '<div class="analizar-desc">' + _entrenarEsc(short) + (desc && desc !== label ? ' · ' + desc : '') + '</div>' +
                 '</li>';
         }).join('');
     }

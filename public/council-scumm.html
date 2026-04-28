@@ -143,6 +143,7 @@
             transition: all 0.3s ease;
             border: 1px solid rgba(0,0,0,0.3);
             text-shadow: 0 1px 1px rgba(0,0,0,0.3);
+            z-index: 3;
         }
         .np.gold {
             background: linear-gradient(180deg, #daa520, #b8860b);
@@ -158,6 +159,30 @@
             font-size: 0.45rem;
             opacity: 0.8;
             display: block;
+        }
+        .np .np-turn {
+            position: absolute;
+            left: 50%;
+            top: -8px;
+            transform: translate(-50%, -100%);
+            min-width: 18px;
+            height: 18px;
+            padding: 0 4px;
+            border-radius: 999px;
+            background: #44ff44;
+            color: #081018;
+            border: 1px solid rgba(0,0,0,0.55);
+            box-shadow: 0 0 8px rgba(68,255,68,0.45);
+            font-size: 0.42rem;
+            line-height: 16px;
+            font-weight: 900;
+            text-align: center;
+            display: none;
+        }
+        .np.has-turn .np-turn { display: block; }
+        .np.gray .np-turn {
+            background: #8ccfff;
+            box-shadow: 0 0 8px rgba(140,207,255,0.38);
         }
 
         /* Status grid */
@@ -1882,7 +1907,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.28.04.2</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.28.04.3</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -2138,6 +2163,7 @@
 
     <script>
     const CONTROL_API = "https://macmini.tail48b61c.ts.net/api/machines";
+    const TEAMWORK_SNAPSHOTS_API = "https://macmini.tail48b61c.ts.net/api/teamwork/snapshots";
     const GITHUB_FALLBACK = "https://raw.githubusercontent.com/csilvasantin/03.-ControlCodexClaude/main/data/machines.json";
     const DEMO_API = "https://macmini.tail48b61c.ts.net/demo/status";
     const DEMO_PING = "https://macmini.tail48b61c.ts.net/demo/ping";
@@ -2202,8 +2228,10 @@
     };
 
     let machineStatus = {};
+    let teamworkSnapshots = {};
     let apiOk = false;
     let currentGen = "leyendas";
+    let speakerTurnMap = {};
     // Maquinas dormidas manualmente desde el dashboard (display sleep)
     // El Mac sigue en Tailscale como "online" pero la pantalla esta apagada
     const sleepingMachines = new Set();
@@ -2234,10 +2262,34 @@
             if (sleepingMachines.has(m.id)) {
                 isOnline = false;
             }
-            machineStatus[m.id] = { status: isOnline ? m.status : "offline", name: m.name, online: isOnline };
+            machineStatus[m.id] = {
+                status: isOnline ? m.status : "offline",
+                name: m.name,
+                online: isOnline,
+                currentFocus: m.currentFocus || "",
+                note: m.note || "",
+                platform: m.platform || "",
+                member: m.member || "",
+            };
             if (isOnline) onlineMachines++;
         });
         return onlineMachines;
+    }
+
+    async function fetchTeamworkSnapshots() {
+        if (ON_GITHUB_PAGES) return;
+        try {
+            const res = await fetch(TEAMWORK_SNAPSHOTS_API + "?t=" + Date.now(), {
+                signal: AbortSignal.timeout(2500),
+                redirect: 'error',
+                credentials: 'omit'
+            });
+            if (!res.ok) throw new Error("snapshots " + res.status);
+            const data = await res.json();
+            teamworkSnapshots = data.snapshots || {};
+        } catch (e) {
+            teamworkSnapshots = teamworkSnapshots || {};
+        }
     }
 
     let demoMode = false;
@@ -2266,6 +2318,7 @@
             });
             const data = await res.json();
             loadMachines(data);
+            await fetchTeamworkSnapshots();
             apiOk = true;
             apiFail = 0;
         } catch (e) {
@@ -2279,7 +2332,15 @@
             (data.machines || []).forEach(m => {
                 if (!machineStatus[m.id]) {
                     const isOnline = m.status === "online" || m.status === "idle" || m.status === "busy";
-                    machineStatus[m.id] = { status: m.status, name: m.name, online: isOnline };
+                    machineStatus[m.id] = {
+                        status: m.status,
+                        name: m.name,
+                        online: isOnline,
+                        currentFocus: m.currentFocus || "",
+                        note: m.note || "",
+                        platform: m.platform || "",
+                        member: m.member || "",
+                    };
                 }
             });
             if (!apiOk) apiOk = true;
@@ -2413,9 +2474,11 @@
             const isOnline = machine ? machine.online : false;
             const cls = isOnline ? "gold" : "gray";
             return `<div class="np ${cls}" data-persona="${p.persona}" style="left:${p.x}%;top:${p.y}%">
+                <span class="np-turn"></span>
                 ${p.persona}<span class="np-role">${p.role}</span>
             </div>`;
         }).join("");
+        applySpeakerTurns();
 
         // Render body hotspots (clickable zones over character bodies)
         const bhEl = document.getElementById("body-hotspots");
@@ -4428,15 +4491,31 @@
     async function askSingleAgent(question, agent) {
         /** Ask a single selected agent via the API. */
         const panelId = agent.side === "racional" ? "conv-racional" : "conv-creativo";
+        resetSpeakerTurns();
 
         // Show thinking — include LLM name
         const llmEl = document.querySelector('.llm-option.selected');
         const llmLabel = llmEl ? llmEl.textContent.trim().replace('FREE','').trim() : 'Claude';
         showSpeechBubble(agent.persona, agent.name, agent.persona + " está pensando...");
-        highlightNameplate(agent.persona);
+        highlightNameplate(agent.persona, 1);
         setActionLine("🧠 " + agent.persona + " está pensando con " + llmLabel + "...");
 
         conversationHistory.push({ role: "user", content: question });
+
+        if (isScreenEmissionQuestion(question)) {
+            await fetchTeamworkSnapshots();
+            const deterministic = buildScreenObservationAnswer(agent);
+            hideSpeechBubble();
+            clearNameplateHighlight();
+            showSpeechBubble(agent.persona, agent.name, deterministic.substring(0, 80) + "...");
+            highlightNameplate(agent.persona, 1);
+            addConvEntry(panelId, agent.icon, agent.name, agent.persona, agent.side, deterministic);
+            conversationHistory.push({ role: "assistant", content: agent.name + ": " + deterministic });
+            setActionLine("🖥️ " + agent.persona + " ha respondido desde el estado visual real de las pantallas");
+            await new Promise(r => setTimeout(r, 3000));
+            hideSpeechBubble();
+            return;
+        }
 
         const reply = await askOneAgentAPI(question, agent.name);
 
@@ -4446,7 +4525,7 @@
         if (reply) {
             // Show the speech bubble with the response
             showSpeechBubble(agent.persona, reply.name, reply.content.substring(0, 80) + "...");
-            highlightNameplate(agent.persona);
+            highlightNameplate(agent.persona, 1);
             addConvEntry(panelId, reply.icon, reply.name, reply.persona, reply.side, reply.content);
             conversationHistory.push({ role: "assistant", content: reply.name + ": " + reply.content });
 
@@ -4467,6 +4546,7 @@
         const members = COUNCIL.filter(m => m.gen === currentGen);
         const racionales = members.filter(m => m.side === "racional");
         const creativos = members.filter(m => m.side === "creativo");
+        resetSpeakerTurns();
 
         // Show "thinking" animation — mensaje según LLM activo y tipo de contenido
         const llmNameMap = {
@@ -4505,27 +4585,30 @@
 
         if (apiResponse) {
             // Real Claude responses — show them one by one with animation
+            let turnNumber = 1;
             for (const reply of apiResponse.racional) {
                 const member = members.find(m => m.name === reply.name);
                 if (member) {
                     showSpeechBubble(member.persona, reply.name, reply.content.substring(0, 60) + "...");
-                    highlightNameplate(member.persona);
+                    highlightNameplate(member.persona, turnNumber);
                 }
                 addConvEntry("conv-racional", reply.icon, reply.name, reply.persona, "racional", reply.content);
                 conversationHistory.push({ role: "assistant", content: reply.name + ": " + reply.content });
                 await new Promise(r => setTimeout(r, 400));
                 clearNameplateHighlight();
+                turnNumber += 1;
             }
             for (const reply of apiResponse.creativo) {
                 const member = members.find(m => m.name === reply.name);
                 if (member) {
                     showSpeechBubble(member.persona, reply.name, reply.content.substring(0, 60) + "...");
-                    highlightNameplate(member.persona);
+                    highlightNameplate(member.persona, turnNumber);
                 }
                 addConvEntry("conv-creativo", reply.icon, reply.name, reply.persona, "creativo", reply.content);
                 conversationHistory.push({ role: "assistant", content: reply.name + ": " + reply.content });
                 await new Promise(r => setTimeout(r, 400));
                 clearNameplateHighlight();
+                turnNumber += 1;
             }
             hideSpeechBubble();
             setActionLine("✅ " + (apiResponse.racional.length + apiResponse.creativo.length) + " consejeros han respondido — escribe para continuar");
@@ -4561,6 +4644,7 @@
     async function runSimulation(verb) {
         debateRunning = true;
         enterConversation();
+        resetSpeakerTurns();
         const members = COUNCIL.filter(m => m.gen === currentGen);
         const racionales = members.filter(m => m.side === "racional");
         const creativos = members.filter(m => m.side === "creativo");
@@ -4587,27 +4671,30 @@
 
         if (apiResponse) {
             // Show real Claude responses with animation
+            let turnNumber = 1;
             for (const reply of apiResponse.racional) {
                 const member = members.find(m => m.name === reply.name);
                 if (member) {
                     showSpeechBubble(member.persona, reply.name, reply.content.substring(0, 60) + "...");
-                    highlightNameplate(member.persona);
+                    highlightNameplate(member.persona, turnNumber);
                 }
                 addConvEntry("conv-racional", reply.icon, reply.name, reply.persona, "racional", reply.content);
                 conversationHistory.push({ role: "assistant", content: reply.name + ": " + reply.content });
                 await new Promise(r => setTimeout(r, 500));
                 clearNameplateHighlight();
+                turnNumber += 1;
             }
             for (const reply of apiResponse.creativo) {
                 const member = members.find(m => m.name === reply.name);
                 if (member) {
                     showSpeechBubble(member.persona, reply.name, reply.content.substring(0, 60) + "...");
-                    highlightNameplate(member.persona);
+                    highlightNameplate(member.persona, turnNumber);
                 }
                 addConvEntry("conv-creativo", reply.icon, reply.name, reply.persona, "creativo", reply.content);
                 conversationHistory.push({ role: "assistant", content: reply.name + ": " + reply.content });
                 await new Promise(r => setTimeout(r, 500));
                 clearNameplateHighlight();
+                turnNumber += 1;
             }
             hideSpeechBubble();
             const total = apiResponse.racional.length + apiResponse.creativo.length;
@@ -4644,13 +4731,95 @@
 
     function hideSpeechBubble() { document.getElementById("speech-bubble").style.display = "none"; }
 
-    function highlightNameplate(persona) {
+    function setSpeakerTurn(persona, turn) {
+        if (!persona) return;
+        if (turn === null || turn === undefined || turn === "") {
+            delete speakerTurnMap[persona];
+        } else {
+            speakerTurnMap[persona] = String(turn);
+        }
+        applySpeakerTurns();
+    }
+
+    function resetSpeakerTurns() {
+        speakerTurnMap = {};
+        applySpeakerTurns();
+    }
+
+    function applySpeakerTurns() {
+        document.querySelectorAll('.np').forEach(np => {
+            const persona = np.getAttribute('data-persona');
+            const badge = np.querySelector('.np-turn');
+            const turn = speakerTurnMap[persona];
+            if (!badge) return;
+            if (turn) {
+                badge.textContent = turn;
+                np.classList.add('has-turn');
+            } else {
+                badge.textContent = '';
+                np.classList.remove('has-turn');
+            }
+        });
+    }
+
+    function highlightNameplate(persona, turn = null) {
         document.querySelectorAll('.np').forEach(n => n.classList.remove('speaking'));
         const np = document.querySelector('.np[data-persona="' + persona + '"]');
+        if (turn !== null && turn !== undefined) setSpeakerTurn(persona, turn);
         if (np) np.classList.add('speaking');
     }
 
     function clearNameplateHighlight() { document.querySelectorAll('.np').forEach(n => n.classList.remove('speaking')); }
+
+    function isScreenEmissionQuestion(text) {
+        const q = String(text || '').toLowerCase();
+        const talksAboutScreens = /(pantalla|pantallas|screen|screens|monitor|monitores|display|displays)/.test(q);
+        const asksContent = /(que|qué|muestra|muestran|emite|emiten|sale|salen|hay|ponen|aparece|aparecen|viendo|ves|contenido)/.test(q);
+        return talksAboutScreens && asksContent;
+    }
+
+    function visibleMachineIdsForGen(gen) {
+        return (NAMEPLATE_POS[gen] || []).map(p => p.machineId).filter(Boolean);
+    }
+
+    function summarizeMachineScreen(machineId) {
+        const machine = machineStatus[machineId] || {};
+        const snap = teamworkSnapshots[machineId] || {};
+        const observed = [];
+        const codexState = String(snap.codexState || '').trim();
+        const claudeState = String(snap.claudeState || '').trim();
+        const textState = String(snap.text || '').trim();
+        const currentFocus = String(machine.currentFocus || '').trim();
+
+        if (codexState && codexState !== 'OFF' && codexState !== 'no-window') observed.push("Codex: " + codexState);
+        if (claudeState && claudeState !== 'OFF' && claudeState !== 'no-window') observed.push("Claude: " + claudeState);
+        if (textState) observed.push("Texto visible: " + textState.slice(0, 120));
+        if (currentFocus && !/ssh verificado/i.test(currentFocus)) observed.push("Foco: " + currentFocus);
+        if (!observed.length) observed.push(machine.online ? "sin lectura fiable de ventana ahora mismo" : "pantalla sin conexión");
+
+        return observed.join(" · ");
+    }
+
+    function buildScreenObservationAnswer(agent) {
+        const members = COUNCIL.filter(m => m.gen === currentGen);
+        const ordered = visibleMachineIdsForGen(currentGen)
+            .map(machineId => members.find(m => m.machineId === machineId))
+            .filter(Boolean);
+        const selected = ordered.filter(m => m.machineId === agent.machineId);
+        const others = ordered.filter(m => m.machineId !== agent.machineId);
+        const rows = selected.concat(others).slice(0, 6).map(m =>
+            "• " + m.persona + " — " + summarizeMachineScreen(m.machineId)
+        );
+        if (!rows.length) {
+            return "No tengo lectura fiable de pantallas ahora mismo. Prefiero no confundirlo con el hilo musical ni inventar contenido visual.";
+        }
+        return [
+            "Leyendo pantallas, no hilo musical.",
+            "Ahora mismo veo esto en la mesa:",
+            rows.join("\n"),
+            "Si una pantalla no tiene ventana legible, la marco como sin lectura fiable en lugar de deducir audio."
+        ].join("\n");
+    }
 
     // ═══════════════════════════════════
     // VOTAR

@@ -1882,7 +1882,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.28.04.1</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.28.04.2</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -4816,25 +4816,43 @@
         const cost = document.getElementById("analizar-cost-warn");
         if (!hint) return;
         if (YT_RE.test(val)) {
-            hint.textContent = "▶ YouTube detectado — auto-seleccionado ✨ Gemini 2.5 Flash";
-            // Auto-switch LLM to Gemini sin password (usuario ya eligió Analizar + pegó URL)
-            const geminiBtn = document.querySelector('.llm-option[data-llm="gemini-flash"]');
-            if (geminiBtn && selectedLLM !== "gemini-flash") {
-                document.querySelectorAll('.llm-option').forEach(i => i.classList.remove('selected'));
-                geminiBtn.classList.add('selected');
-                selectedLLM = "gemini-flash";
-            }
-            // Aviso de coste estimado (Gemini 2.5 Flash: ~263 tok/s vídeo · $0.30/M in · $2.50/M out)
+            hint.textContent = "▶ YouTube detectado — se preparará contexto PRO (metadatos + subtítulos) antes del debate";
+            // Aviso de coste estimado si luego decides pasar a Gemini el prompt enriquecido
             if (cost) {
                 cost.style.display = "block";
-                cost.innerHTML = "💰 COSTE ESTIMADO (GEMINI 2.5 FLASH)<br>" +
-                    "· 1 min ≈ $0.005 &nbsp;· 10 min ≈ $0.05<br>" +
-                    "· 30 min ≈ $0.14 &nbsp;· 60 min ≈ $0.29";
+                cost.innerHTML = "📺 YOUTUBE PRO<br>" +
+                    "· Se extraen metadatos y subtítulos si existen<br>" +
+                    "· Luego el Consejo debate sobre ese contexto";
             }
         } else {
             hint.textContent = "";
             if (cost) { cost.style.display = "none"; cost.innerHTML = ""; }
         }
+    }
+
+    async function buildYoutubeAnalysisPrompt(url, desc, question) {
+        const urls = activeApiUrl ? [activeApiUrl] : COUNCIL_API_URLS;
+        let lastErr = null;
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + "/api/council/analyze-youtube", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Council-Token": COUNCIL_API_TOKEN
+                    },
+                    body: JSON.stringify({ url, note: desc || "", question: question || "" }),
+                    signal: AbortSignal.timeout(120000),
+                });
+                if (!res.ok) throw new Error("HTTP " + res.status);
+                const data = await res.json();
+                activeApiUrl = baseUrl;
+                return data;
+            } catch (e) {
+                lastErr = e;
+            }
+        }
+        throw lastErr || new Error("YouTube analysis API unavailable");
     }
 
     function triggerAnalizar() {
@@ -4909,16 +4927,29 @@
             const question = (document.getElementById("analizar-q")?.value || "").trim();
             let content = "";
             let shortLabel = "";
+            let preparedPrompt = "";
 
             if (mode === "url") {
                 const url = (document.getElementById("analizar-url")?.value || "").trim();
                 if (!url) { statusEl.textContent = "⚠ INTRODUCE UNA URL"; return; }
                 const desc = (document.getElementById("analizar-desc")?.value || "").trim();
-                content = desc
-                    ? `URL a analizar: ${url}\nDescripción: ${desc}`
-                    : `URL a analizar: ${url}`;
-                shortLabel = "🔗 " + url.replace(/^https?:\/\//, "").slice(0, 50);
+                shortLabel = (YT_RE.test(url) ? "▶ " : "🔗 ") + url.replace(/^https?:\/\//, "").slice(0, 50);
                 pushAnalyzedUrl(url, desc);
+                if (YT_RE.test(url)) {
+                    statusEl.textContent = "📺 PREPARANDO CONTEXTO YOUTUBE…";
+                    try {
+                        const yt = await buildYoutubeAnalysisPrompt(url, desc, question);
+                        shortLabel = "▶ " + (yt.title || shortLabel).slice(0, 60);
+                        preparedPrompt = yt.preparedPrompt;
+                    } catch (e) {
+                        statusEl.textContent = "⚠ ERROR PREPARANDO YOUTUBE";
+                        return;
+                    }
+                } else {
+                    content = desc
+                        ? `URL a analizar: ${url}\nDescripción: ${desc}`
+                        : `URL a analizar: ${url}`;
+                }
             } else if (mode === "texto") {
                 const texto = (document.getElementById("analizar-texto")?.value || "").trim();
                 if (!texto) { statusEl.textContent = "⚠ PEGA ALGO DE TEXTO"; return; }
@@ -4940,9 +4971,11 @@
                 }
             }
 
-            const prompt = question
-                ? `Analiza lo siguiente y responde a: "${question}"\n\n${content}`
-                : `Analiza lo siguiente desde tu perspectiva y expertise:\n\n${content}`;
+            const prompt = preparedPrompt || (
+                question
+                    ? `Analiza lo siguiente y responde a: "${question}"\n\n${content}`
+                    : `Analiza lo siguiente desde tu perspectiva y expertise:\n\n${content}`
+            );
 
             ov.remove();
             enterConversation();

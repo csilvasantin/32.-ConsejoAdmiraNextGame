@@ -552,6 +552,12 @@ class AskOneRequest(BaseModel):
     llm: str = "claude-sonnet"  # LLM model key from LLM_MODELS
 
 
+class AnalyzeYoutubeRequest(BaseModel):
+    url: str
+    question: Optional[str] = None
+    note: Optional[str] = None
+
+
 class AgentReply(BaseModel):
     name: str
     role: str
@@ -898,6 +904,163 @@ async def list_models():
             "available": available,
         })
     return {"models": models}
+
+
+def _yt_clean_text(text: str) -> str:
+    text = (text or "").replace("\r", "\n")
+    text = re.sub(r"<[^>]+>", " ", text)
+    text = re.sub(r"[ \t]+", " ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
+
+
+def _yt_pick_caption_track(info: dict) -> Optional[dict]:
+    preferred_langs = ("es", "es-es", "es-419", "en", "en-us", "en-gb")
+    groups = [
+        info.get("subtitles") or {},
+        info.get("automatic_captions") or {},
+    ]
+    for langs in groups:
+        if not isinstance(langs, dict):
+            continue
+        lower_map = {str(k).lower(): v for k, v in langs.items()}
+        for lang in preferred_langs:
+            tracks = lower_map.get(lang)
+            if not isinstance(tracks, list):
+                continue
+            for ext in ("json3", "srv3", "vtt", "ttml"):
+                for track in tracks:
+                    if str(track.get("ext", "")).lower() == ext and track.get("url"):
+                        return track
+            for track in tracks:
+                if track.get("url"):
+                    return track
+    return None
+
+
+def _yt_download_caption_text(track: dict) -> str:
+    if not track or not track.get("url") or not http_requests:
+        return ""
+    resp = http_requests.get(track["url"], timeout=30)
+    if resp.status_code != 200:
+        return ""
+    ext = str(track.get("ext", "")).lower()
+    if ext in ("json3", "srv3"):
+        try:
+            data = resp.json()
+            out = []
+            for ev in data.get("events", []):
+                segs = ev.get("segs") or []
+                parts = [seg.get("utf8", "") for seg in segs if isinstance(seg, dict)]
+                chunk = "".join(parts).strip()
+                if chunk:
+                    out.append(chunk)
+            return _yt_clean_text("\n".join(out))
+        except Exception:
+            return ""
+    text = resp.text
+    lines = []
+    for line in text.splitlines():
+        stripped = line.strip()
+        if not stripped:
+            continue
+        if stripped == "WEBVTT":
+            continue
+        if "-->" in stripped:
+            continue
+        if re.fullmatch(r"[0-9]+", stripped):
+            continue
+        lines.append(stripped)
+    return _yt_clean_text("\n".join(lines))
+
+
+def _yt_fetch_info(url: str) -> dict:
+    cmd = [
+        "yt-dlp",
+        "--dump-single-json",
+        "--no-playlist",
+        "--skip-download",
+        url,
+    ]
+    res = subprocess.run(cmd, capture_output=True, text=True, timeout=120)
+    if res.returncode != 0:
+        raise RuntimeError(f"yt-dlp failed ({res.returncode}): {res.stderr.strip()[:200]}")
+    try:
+        return json.loads(res.stdout)
+    except json.JSONDecodeError as e:
+        raise RuntimeError(f"yt-dlp returned invalid JSON: {e}")
+
+
+def _yt_build_context(info: dict, transcript: str, note: str = "", question: str = "") -> dict:
+    title = str(info.get("title") or "YouTube video").strip()
+    channel = str(info.get("channel") or info.get("uploader") or "").strip()
+    duration = info.get("duration")
+    duration_label = ""
+    if isinstance(duration, (int, float)) and duration > 0:
+        mins = int(duration) // 60
+        secs = int(duration) % 60
+        duration_label = f"{mins}m {secs:02d}s"
+    description = _yt_clean_text(str(info.get("description") or ""))
+    description = description[:1800]
+    transcript_excerpt = transcript[:14000] if transcript else ""
+    meta = [
+        f"Título: {title}",
+        f"Canal: {channel or 'n/d'}",
+        f"Duración: {duration_label or 'n/d'}",
+        f"Fecha publicación: {info.get('upload_date') or 'n/d'}",
+    ]
+    if note:
+        meta.append(f"Nota del usuario: {note}")
+    if question:
+        meta.append(f"Pregunta del usuario: {question}")
+    sections = [
+        "ANÁLISIS YOUTUBE PRO",
+        "\n".join(meta),
+    ]
+    if description:
+        sections.append("DESCRIPCIÓN DEL VIDEO\n" + description)
+    if transcript_excerpt:
+        sections.append("TRANSCRIPCIÓN / SUBTÍTULOS\n" + transcript_excerpt)
+    else:
+        sections.append("TRANSCRIPCIÓN / SUBTÍTULOS\nNo disponibles. Analiza apoyándote en metadatos y contexto.")
+    prepared = (
+        "Analiza este vídeo de YouTube para el Consejo de AdmiraNext. "
+        "Quiero: resumen, ideas clave, riesgos, oportunidades, citas o momentos destacables y acciones propuestas.\n\n"
+        + "\n\n".join(sections)
+    )
+    return {
+        "title": title,
+        "channel": channel,
+        "duration": duration,
+        "durationLabel": duration_label,
+        "description": description,
+        "transcriptChars": len(transcript_excerpt),
+        "hasTranscript": bool(transcript_excerpt),
+        "preparedPrompt": prepared,
+    }
+
+
+@app.post("/api/council/analyze-youtube")
+async def council_analyze_youtube(
+    req: AnalyzeYoutubeRequest,
+    _rate=Depends(check_rate_limit),
+    _auth=Depends(verify_token),
+):
+    url = (req.url or "").strip()
+    if not url or not YOUTUBE_RE.search(url):
+        raise HTTPException(status_code=400, detail="YouTube URL required")
+    loop = asyncio.get_event_loop()
+
+    def build():
+        info = _yt_fetch_info(url)
+        track = _yt_pick_caption_track(info)
+        transcript = _yt_download_caption_text(track) if track else ""
+        return _yt_build_context(info, transcript, req.note or "", req.question or "")
+
+    try:
+        return await loop.run_in_executor(None, build)
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"youtube_analyze failed: {e}")
 
 
 @app.get("/api/council/health")

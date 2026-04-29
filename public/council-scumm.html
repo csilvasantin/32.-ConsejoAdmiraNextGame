@@ -2050,7 +2050,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.29.04.21</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.29.04.22</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -3329,7 +3329,7 @@
             } catch (e) {
                 console.warn('Yarig auto refresh failed', e.message);
             }
-        }, 30000);
+        }, 60000);
     }
     function stopYarigAutoRefresh() {
         if (!yarigAutoRefreshTimer) return;
@@ -3844,6 +3844,12 @@
         if (!items.length) return '<li class="empty">(' + _entrenarEsc(emptyLabel) + ')</li>';
         return items.map(item => '<li><span class="analizar-link">' + _entrenarEsc(item) + '</span></li>').join('');
     }
+    function _yarFmtTime(iso) {
+        if (!iso) return '--:--';
+        const d = new Date(iso);
+        if (Number.isNaN(d.getTime())) return '--:--';
+        return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    }
     function _extractEntrenarPayload(rawText) {
         const text = String(rawText || '').trim();
         if (!text) return { urlText: '', targetText: '', hadTargetClause: false };
@@ -3947,12 +3953,14 @@
             const pendientes = tareasActivas.filter(item => !/^En proceso\b/i.test(String(item || '').trim()));
             const foco = yarContext.focus ? '<div class="analizar-desc">Foco: ' + _entrenarEsc(yarContext.focus) + '</div>' : '';
             const ayuda = yarContext.ask ? '<div class="analizar-desc">Ayuda: ' + _entrenarEsc(yarContext.ask) + '</div>' : '';
+            const jornada = '<div class="analizar-desc">Jornada · inicio ' + _yarFmtTime(yarContext.dayStartAt) + ' · fin ' + _yarFmtTime(yarContext.dayEndAt) + '</div>';
             document.getElementById('win-racional').innerHTML =
                 '<div class="window-overlay-title">FINALIZADAS · Yarig.AI (' + finalizadas.length + ')</div>' +
                 foco +
                 '<ol class="analizar-list">' + _yarSimpleListHtml(finalizadas, 'sin tareas finalizadas') + '</ol>';
             document.getElementById('win-proceso').innerHTML =
                 '<div class="window-overlay-title">EN PROCESO · Yarig.AI (' + enProceso.length + ')</div>' +
+                jornada +
                 '<ol class="analizar-list">' + _yarSimpleListHtml(enProceso, 'sin tareas en proceso') + '</ol>';
             document.getElementById('win-creativo').innerHTML =
                 '<div class="window-overlay-title">PENDIENTES · Yarig.AI (' + pendientes.length + ')</div>' +

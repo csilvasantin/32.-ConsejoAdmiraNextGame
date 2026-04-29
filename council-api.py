@@ -307,6 +307,8 @@ def _normalize_yar_context(raw) -> dict:
             cleaned_pending.append(txt[:240])
     if cleaned_tasks:
         cleaned_pending = cleaned_tasks[:12]
+    day_start_at = str(raw.get("dayStartAt", "") or "").strip()
+    day_end_at = str(raw.get("dayEndAt", "") or "").strip()
     return {
         "focus": str(raw.get("focus", "") or "").strip()[:240],
         "doing": str(raw.get("doing", "") or "").strip()[:600],
@@ -315,7 +317,29 @@ def _normalize_yar_context(raw) -> dict:
         "pending": cleaned_pending[:12],
         "ask": str(raw.get("ask", "") or "").strip()[:400],
         "updatedAt": str(raw.get("updatedAt", "") or "").strip() or datetime.now().isoformat(),
+        "dayStartAt": day_start_at,
+        "dayEndAt": day_end_at,
     }
+
+
+def _merge_yar_day_meta(current: dict, next_data: dict) -> dict:
+    now = datetime.now()
+    current_start = str(current.get("dayStartAt", "") or "").strip()
+    next_tasks = [str(x).strip() for x in (next_data.get("tasks") or []) if str(x).strip()]
+    has_in_progress = any(re.match(r"^En proceso\b", item, re.I) for item in next_tasks)
+    same_day = False
+    if current_start:
+        try:
+            same_day = datetime.fromisoformat(current_start.replace("Z", "+00:00")).date() == now.date()
+        except Exception:
+            same_day = False
+    next_data["dayStartAt"] = current_start if (current_start and same_day) else now.isoformat()
+    if has_in_progress:
+        next_data["dayEndAt"] = ""
+    else:
+        current_end = str(current.get("dayEndAt", "") or "").strip()
+        next_data["dayEndAt"] = current_end if (current_end and same_day) else now.isoformat()
+    return next_data
 
 
 def _load_yar_context() -> dict:
@@ -534,7 +558,7 @@ app = FastAPI(title="AdmiraNext Council API", version="4.0.0")
 
 @app.get("/")
 async def root():
-    return {"status": "ok", "service": "AdmiraNext Council API", "version": "v26.29.04.21"}
+    return {"status": "ok", "service": "AdmiraNext Council API", "version": "v26.29.04.22"}
 
 app.add_middleware(
     CORSMiddleware,
@@ -984,6 +1008,7 @@ async def get_yar_context(_auth=Depends(verify_token)):
 @app.post("/api/council/yar-context")
 async def save_yar_context(req: YarContextRequest, _auth=Depends(verify_token)):
     with _yar_lock:
+        current = _load_yar_context()
         data = {
             "focus": req.focus,
             "doing": req.doing,
@@ -993,6 +1018,7 @@ async def save_yar_context(req: YarContextRequest, _auth=Depends(verify_token)):
             "ask": req.ask,
             "updatedAt": datetime.now().isoformat(),
         }
+        data = _merge_yar_day_meta(current, data)
         _save_yar_context(data)
         return _load_yar_context()
 
@@ -1188,6 +1214,7 @@ async def sync_yar_context_from_logged_session(_auth=Depends(verify_token)):
             "ask": current.get("ask", ""),
             "updatedAt": datetime.now().isoformat(),
         }
+        data = _merge_yar_day_meta(current, data)
         _save_yar_context(data)
         context = _load_yar_context()
     return {

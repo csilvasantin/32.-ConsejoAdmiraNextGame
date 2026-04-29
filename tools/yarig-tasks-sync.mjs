@@ -12,7 +12,7 @@ const ONCE = process.argv.includes("--once");
 const DUMP_JSON = process.argv.includes("--dump-json");
 const PREPARE_LOGIN = process.argv.includes("--prepare-login");
 const WATCH_AFTER_LOGIN = process.argv.includes("--watch-after-login");
-const POLL_MS = Number(process.env.YARIG_SYNC_POLL_MS || 120000);
+const POLL_MS = Number(process.env.YARIG_SYNC_POLL_MS || 60000);
 const LOGIN_WAIT_MS = Number(process.env.YARIG_LOGIN_WAIT_MS || 300000);
 
 const CHROME_EXECUTABLE =

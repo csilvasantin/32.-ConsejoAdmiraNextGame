@@ -2036,7 +2036,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.29.04.3</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.29.04.4</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -2087,7 +2087,7 @@
             <div class="apple-ii-hotspot" id="apple-ii-hotspot"
                  style="left:46%;top:53%;width:10%;height:11%"
                  title="Apple II — pulsa MIRAR y haz clic"></div>
-            <div class="nameplates" id="nameplates"></div>
+            <div class="nameplates hidden" id="nameplates"></div>
             <div class="speech-overlay" id="speech-overlay">
                 <div class="speech-bubble" id="speech-bubble">
                     <div class="speaker"></div>
@@ -2147,12 +2147,12 @@
             </div>
             <!-- ── end PRESENTAR overlay ───────────────────────── -->
             <div class="round-indicator" id="round-indicator">Ronda: --</div>
-            <button class="np-toggle" id="np-toggle" onclick="toggleNameplates()" title="Mostrar/ocultar nameplates">🏷 Ocultar</button>
+            <button class="np-toggle off" id="np-toggle" onclick="toggleNameplates()" title="Mostrar/ocultar nameplates">🏷 Mostrar</button>
         </div>
 
         <div class="scumm-bar">
             <div class="action-line">
-                <input class="action-input" id="action-input" type="text" placeholder="Escribe aquí para hablar con el consejo..." autocomplete="off" onkeydown="if(event.key==='Enter')sendMessage()">
+                <input class="action-input" id="action-input" type="text" placeholder="Escribe aquí o usa /help..." autocomplete="off" onkeydown="if(event.key==='Enter')sendMessage()">
                 <button class="action-send" onclick="sendMessage()">Enviar</button>
             </div>
             <div class="scumm-bottom">
@@ -3223,8 +3223,6 @@
     function enterPreguntarMode() {
         preguntarMode = true;
         selectedAgent = null;
-        // Make nameplates visible and clickable
-        if (!nameplatesVisible) toggleNameplates();
         document.getElementById("nameplates").classList.add("preguntar-active");
         document.getElementById("body-hotspots").classList.add("preguntar-active");
         _applyPreguntarStyles();
@@ -3297,20 +3295,62 @@
 
     function setActionLine(text) { document.getElementById("action-input").placeholder = text; }
 
+    function showCliHelp() {
+        enterConversation();
+        addUserEntry('/help');
+        addConvEntry('conv-racional', '⌨️', 'CLI', 'Consejo CLI', 'racional',
+            '<strong>Comandos disponibles</strong><br>' +
+            '/help<br>' +
+            '/nombres on<br>' +
+            '/nombres off<br>' +
+            '/nombres toggle');
+        addConvEntry('conv-creativo', '🧭', 'Yarig.AI', 'Yarig.AI', 'creativo',
+            '<strong>Atajos de contexto</strong><br>' +
+            'foco: &lt;objetivo&gt;<br>' +
+            'hecho: &lt;avance&gt;<br>' +
+            'pend: &lt;tarea&gt;<br>' +
+            'ayuda: &lt;qué debe vigilar el Consejo&gt;');
+        setActionLine('⌨️ CLI lista — usa /nombres on|off o /help');
+    }
+
+    function handleCliCommand(raw) {
+        const text = String(raw || '').trim();
+        if (!text) return false;
+        const helpMatch = text.match(/^\/help$/i);
+        if (helpMatch) {
+            showCliHelp();
+            return true;
+        }
+        const namesMatch = text.match(/^\/?nombres(?:\s+(on|off|toggle))?$/i);
+        if (namesMatch) {
+            const action = (namesMatch[1] || 'toggle').toLowerCase();
+            if (action === 'on') setNameplatesVisible(true);
+            else if (action === 'off') setNameplatesVisible(false);
+            else setNameplatesVisible(!nameplatesVisible);
+            const state = nameplatesVisible ? 'visibles' : 'ocultos';
+            setActionLine('🏷 Nombres ' + state + ' — usa /help para ver más comandos');
+            return true;
+        }
+        return false;
+    }
+
     // Toggle collapsible panels
     function togglePanel(panelId) {
         document.getElementById(panelId).classList.toggle("collapsed");
     }
 
     // Toggle nameplates visibility
-    let nameplatesVisible = true;
-    function toggleNameplates() {
+    let nameplatesVisible = false;
+    function setNameplatesVisible(visible) {
         const np = document.getElementById("nameplates");
         const btn = document.getElementById("np-toggle");
-        nameplatesVisible = !nameplatesVisible;
+        nameplatesVisible = !!visible;
         np.classList.toggle("hidden", !nameplatesVisible);
         btn.textContent = nameplatesVisible ? "🏷 Ocultar" : "🏷 Mostrar";
         btn.classList.toggle("off", !nameplatesVisible);
+    }
+    function toggleNameplates() {
+        setNameplatesVisible(!nameplatesVisible);
     }
 
     // Enter conversation mode — show conv area below SCUMM bar
@@ -3319,7 +3359,6 @@
         if (conversationMode) return;
         conversationMode = true;
         document.getElementById("conv-area").classList.add("active");
-        if (nameplatesVisible) toggleNameplates();
     }
 
     function exitConversation() {
@@ -3329,8 +3368,7 @@
         document.getElementById("conv-creativo").innerHTML = "";
         conversationHistory = [];
         exitPreguntarMode();
-        if (!nameplatesVisible) toggleNameplates();
-        setActionLine("Escribe aquí para hablar con el consejo...");
+        setActionLine("Escribe aquí o usa /help...");
     }
 
     function addConvEntry(panelId, icon, name, persona, side, text) {
@@ -3360,6 +3398,10 @@
         const text = input.value.trim();
         if (!text) return;
         input.value = "";
+
+        if (handleCliCommand(text)) {
+            return;
+        }
 
         // If in "preguntar" mode with a selected agent, ask only that one
         if (preguntarMode && selectedAgent) {

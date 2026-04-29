@@ -309,6 +309,8 @@ def _normalize_yar_context(raw) -> dict:
         cleaned_pending = cleaned_tasks[:12]
     day_start_at = str(raw.get("dayStartAt", "") or "").strip()
     day_end_at = str(raw.get("dayEndAt", "") or "").strip()
+    sync_user = str(raw.get("syncUser", "") or "").strip()[:200]
+    sync_source = str(raw.get("syncSource", "") or "").strip()[:80]
     return {
         "focus": str(raw.get("focus", "") or "").strip()[:240],
         "doing": str(raw.get("doing", "") or "").strip()[:600],
@@ -319,6 +321,8 @@ def _normalize_yar_context(raw) -> dict:
         "updatedAt": str(raw.get("updatedAt", "") or "").strip() or datetime.now().isoformat(),
         "dayStartAt": day_start_at,
         "dayEndAt": day_end_at,
+        "syncUser": sync_user,
+        "syncSource": sync_source,
     }
 
 
@@ -558,7 +562,7 @@ app = FastAPI(title="AdmiraNext Council API", version="4.0.0")
 
 @app.get("/")
 async def root():
-    return {"status": "ok", "service": "AdmiraNext Council API", "version": "v26.29.04.22"}
+    return {"status": "ok", "service": "AdmiraNext Council API", "version": "v26.29.04.24"}
 
 app.add_middleware(
     CORSMiddleware,
@@ -1017,6 +1021,8 @@ async def save_yar_context(req: YarContextRequest, _auth=Depends(verify_token)):
             "pending": req.tasks or req.pending,
             "ask": req.ask,
             "updatedAt": datetime.now().isoformat(),
+            "syncUser": current.get("syncUser", ""),
+            "syncSource": current.get("syncSource", ""),
         }
         data = _merge_yar_day_meta(current, data)
         _save_yar_context(data)
@@ -1117,6 +1123,7 @@ async def sync_yar_context_from_logged_session(_auth=Depends(verify_token)):
                     "tasks": parsed["tasks"],
                     "done": parsed["done"],
                     "source": "browser-tab",
+                    "loginUser": "",
                 }
             except Exception:
                 continue
@@ -1141,6 +1148,7 @@ async def sync_yar_context_from_logged_session(_auth=Depends(verify_token)):
                 "done": done,
                 "source": str(raw.get("source", "") or source_name).strip() or source_name,
                 "savedAt": saved_at,
+                "loginUser": str(raw.get("loginUser", "") or raw.get("syncUser", "")).strip(),
             }
 
         try:
@@ -1213,6 +1221,8 @@ async def sync_yar_context_from_logged_session(_auth=Depends(verify_token)):
             "pending": tasks,
             "ask": current.get("ask", ""),
             "updatedAt": datetime.now().isoformat(),
+            "syncUser": str(payload.get("loginUser", "") or payload.get("syncUser", "") or current.get("syncUser", "")).strip(),
+            "syncSource": str(payload.get("source", "") or current.get("syncSource", "")).strip(),
         }
         data = _merge_yar_day_meta(current, data)
         _save_yar_context(data)

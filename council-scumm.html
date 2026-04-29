@@ -2060,7 +2060,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.29.04.23</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.29.04.24</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -3335,6 +3335,7 @@
                 await loadYarContext();
                 if (yarigWindowsPinned && (!selectedAgent || currentVerb === 'hablar')) {
                     showEntrenarFor('__yarig__');
+                    setYarigPromptStatus('🧭 Yarig.AI visible');
                 }
             } catch (e) {
                 console.warn('Yarig auto refresh failed', e.message);
@@ -3351,6 +3352,7 @@
         captureOverlayOriginals();
         showEntrenarFor('__yarig__');
         startYarigAutoRefresh();
+        setYarigPromptStatus('🧭 Yarig.AI visible');
     }
 
     function hideYarigWindows() {
@@ -3440,7 +3442,7 @@
             }
             void loadYarContext().then(() => {
                 showYarigWindows();
-                setActionLine('🧭 Yarig.AI visible — Finalizadas y Pendientes sobre la mesa');
+                setYarigPromptStatus('🧭 Yarig.AI visible');
             });
             return true;
         }
@@ -4293,7 +4295,7 @@
     const YAR_DONE_BLOCK_END = '[/YAR_DONE]';
     let activeApiUrl = null;
     let conversationHistory = [];
-    let yarContext = { focus: "", doing: "", done: [], tasks: [], pending: [], ask: "", updatedAt: "" };
+    let yarContext = { focus: "", doing: "", done: [], tasks: [], pending: [], ask: "", updatedAt: "", syncUser: "", syncSource: "", dayStartAt: "", dayEndAt: "" };
     window._crearRequestSeq = window._crearRequestSeq || 0;
     window._crearActiveJobId = window._crearActiveJobId || null;
     window._crearPollTimer = window._crearPollTimer || null;
@@ -4340,7 +4342,25 @@
             pending,
             ask: String(raw?.ask || '').trim(),
             updatedAt: String(raw?.updatedAt || '').trim(),
+            syncUser: String(raw?.syncUser || '').trim(),
+            syncSource: String(raw?.syncSource || '').trim(),
+            dayStartAt: String(raw?.dayStartAt || '').trim(),
+            dayEndAt: String(raw?.dayEndAt || '').trim(),
         };
+    }
+
+    function _yarFmtSyncTime(iso) {
+        if (!iso) return '--:--';
+        const d = new Date(iso);
+        if (Number.isNaN(d.getTime())) return '--:--';
+        return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function setYarigPromptStatus(prefix) {
+        const syncAt = _yarFmtSyncTime(yarContext.updatedAt);
+        const syncUser = yarContext.syncUser || 'usuario no detectado';
+        const lead = prefix || '🧭 Yarig.AI';
+        setActionLine(lead + ' · sync ' + syncAt + ' · login ' + syncUser);
     }
 
     function updateYarChip() {
@@ -4477,7 +4497,7 @@
                 addConvEntry('conv-creativo', '🧭', 'Yarig.AI', 'Yarig.AI', 'creativo',
                     'La mesa ya trabaja con la última versión visible en www.yarig.ai para el usuario que esté loginado.');
                 if (status) status.textContent = 'Yarig.AI importado desde sesión abierta';
-                setActionLine('🧭 Yarig.AI sincro — pendientes y finalizadas ya están sobre la mesa');
+                setYarigPromptStatus('🧭 Yarig.AI sincro');
                 return;
             } catch (e) {
                 lastErr = e;
@@ -4605,7 +4625,7 @@
                 addUserEntry('🧭 Yarig.AI · ' + raw);
                 addConvEntry('conv-racional', '🧭', 'Yarig.AI', 'Yarig.AI', 'racional', summary + '. Contexto listo para la mesa.');
                 addConvEntry('conv-creativo', '🧭', 'Yarig.AI', 'Yarig.AI', 'creativo', 'Recogida y envío activos. El Consejo ya recibe este contexto en las siguientes consultas.');
-                setActionLine('🧭 Yarig.AI activo — la mesa ya trabaja con este contexto');
+                setYarigPromptStatus('🧭 Yarig.AI activo');
                 return;
             } catch (e) {
                 console.warn('Yarig save via action line failed at', baseUrl, e.message);

@@ -143,6 +143,59 @@ function extractTaskBucketsFromText(text) {
   };
 }
 
+async function extractTaskBucketsFromDom(activePage) {
+  return activePage.evaluate(() => {
+    const rootText = document.body?.innerText || "";
+    const emailRe = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/ig;
+    const dateRe = /Tarea añadida el \d{2}\/\d{2}\/\d{4}/;
+    const descRe = /Descripción:\s*([^\n]+)/i;
+    const statusPatterns = [
+      { label: "En proceso", re: /\bEn proceso\b/i },
+      { label: "Pendiente", re: /\bPendiente\b/i },
+      { label: "Finalizada", re: /\bFinalizada\b/i },
+      { label: "Finalizado", re: /\bFinalizado\b/i },
+    ];
+    const attrTexts = [];
+    document.querySelectorAll("[title],[aria-label],[alt]").forEach((el) => {
+      ["title", "aria-label", "alt"].forEach((attr) => {
+        const value = el.getAttribute(attr);
+        if (value) attrTexts.push(value);
+      });
+    });
+    const loginUser = ((rootText + "\n" + attrTexts.join("\n")).match(emailRe) || [])[0] || "";
+    const candidates = Array.from(document.querySelectorAll("div, article, section, li"))
+      .filter((el) => {
+        const text = el.innerText || "";
+        return dateRe.test(text) && descRe.test(text);
+      })
+      .filter((el) => {
+        return !Array.from(el.children || []).some((child) => {
+          const text = child.innerText || "";
+          return dateRe.test(text) && descRe.test(text);
+        });
+      });
+    const seen = new Set();
+    const activeTasks = [];
+    const doneTasks = [];
+    for (const el of candidates) {
+      const text = (el.innerText || "").replace(/\r/g, "").trim();
+      if (!text || seen.has(text)) continue;
+      seen.add(text);
+      const desc = text.match(descRe)?.[1]?.trim();
+      if (!desc) continue;
+      const status = (statusPatterns.find(({ re }) => re.test(text))?.label) || "Pendiente";
+      const line = `${status} - ${desc}`.slice(0, 240);
+      if (/^Finalizad[ao]$/i.test(status)) doneTasks.push(line);
+      else activeTasks.push(line);
+    }
+    return {
+      tasks: activeTasks.slice(0, 12),
+      done: doneTasks.slice(0, 12),
+      loginUser,
+    };
+  });
+}
+
 async function inspectCurrentPage(activePage) {
   const title = await activePage.title();
   const url = activePage.url();
@@ -153,14 +206,21 @@ async function inspectCurrentPage(activePage) {
   if (!bodyText.includes("Mis tareas")) {
     throw new Error(`La página abierta no parece la lista de tareas de Yarig.ai (${title})`);
   }
+  const domPayload = await extractTaskBucketsFromDom(activePage);
   return {
-    ...extractTaskBucketsFromText(bodyText),
+    ...((domPayload.tasks.length || domPayload.done.length) ? domPayload : extractTaskBucketsFromText(bodyText)),
     currentUrl: url,
     title,
+    loginUser: domPayload.loginUser || "",
   };
 }
 
-async function fetchVisibleTasks(activePage) {
+async function fetchVisibleTasks(activePage, opts = {}) {
+  if (opts.preferCurrent) {
+    try {
+      return await inspectCurrentPage(activePage);
+    } catch {}
+  }
   await activePage.goto(YARIG_URL, { waitUntil: "domcontentloaded" });
   await activePage.waitForLoadState("domcontentloaded");
   return inspectCurrentPage(activePage);
@@ -168,12 +228,12 @@ async function fetchVisibleTasks(activePage) {
 
 async function syncOnce() {
   const activePage = await ensureBrowser();
-  const livePayload = await fetchVisibleTasks(activePage);
+  const livePayload = await fetchVisibleTasks(activePage, { preferCurrent: true });
   return syncPayloadToApi(livePayload, activePage);
 }
 
 async function syncPayloadToApi(livePayload, activePage = null) {
-  const { tasks, done } = livePayload;
+  const { tasks, done, loginUser } = livePayload;
   const current = await api("/api/council/yar-context");
   const payload = {
     focus: current.focus || "",
@@ -182,6 +242,7 @@ async function syncPayloadToApi(livePayload, activePage = null) {
     tasks,
     pending: tasks,
     ask: current.ask || "",
+    syncUser: loginUser || current.syncUser || "",
   };
   const saved = await api("/api/council/yar-context", {
     method: "POST",
@@ -194,6 +255,7 @@ async function syncPayloadToApi(livePayload, activePage = null) {
     currentUrl: livePayload.currentUrl || activePage?.url?.() || "",
     title: livePayload.title || (activePage ? await activePage.title() : ""),
     source: "worker-sync",
+    loginUser: loginUser || "",
   });
   log(`Sincronizadas ${tasks.length} tareas activas y ${done.length} finalizadas desde Yarig.ai`);
   return saved;
@@ -215,6 +277,7 @@ async function prepareLoginWindow() {
         currentUrl: payload.currentUrl,
         title: payload.title,
         source: "prepare-login",
+        loginUser: payload.loginUser || "",
       });
       log(`Sesion de Yarig.ai lista con ${payload.tasks.length} tareas activas y ${payload.done.length} finalizadas`);
       return payload;
@@ -230,7 +293,7 @@ async function watchLoop(activePage) {
   log(`Watcher de Yarig.ai activo cada ${Math.round(POLL_MS / 1000)}s`);
   do {
     try {
-      const livePayload = await fetchVisibleTasks(activePage);
+      const livePayload = await fetchVisibleTasks(activePage, { preferCurrent: true });
       await syncPayloadToApi(livePayload, activePage);
     } catch (error) {
       log("Fallo del watcher Yarig.ai", error.message);
@@ -270,13 +333,14 @@ async function main() {
   }
   if (DUMP_JSON) {
     const activePage = await ensureBrowser();
-    const payload = await fetchVisibleTasks(activePage);
+    const payload = await fetchVisibleTasks(activePage, { preferCurrent: true });
     await saveSnapshot({
       tasks: payload.tasks,
       done: payload.done,
       currentUrl: payload.currentUrl,
       title: payload.title,
       source: "dump-json",
+      loginUser: payload.loginUser || "",
     });
     process.stdout.write(JSON.stringify(payload));
     await closeBrowser();

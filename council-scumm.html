@@ -262,11 +262,14 @@
         }
         .window-overlay-title {
             font-family: 'Press Start 2P', monospace;
-            font-size: 7px;
+            font-size: 6px;
             color: #daa520;
             margin-bottom: 4px;
             text-align: center;
             opacity: 0.8;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
         }
         /* Left window (Racional) — espejo de la derecha (mismo tamaño y altura) */
         .window-overlay.racional {
@@ -2036,7 +2039,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.29.04.6</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.29.04.7</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -3876,12 +3879,11 @@
         const foco = yarContext.focus ? '<div class="analizar-desc">Foco: ' + _entrenarEsc(yarContext.focus) + '</div>' : '';
         const ayuda = yarContext.ask ? '<div class="analizar-desc">Ayuda: ' + _entrenarEsc(yarContext.ask) + '</div>' : '';
         document.getElementById('win-racional').innerHTML =
-            '<div class="window-overlay-title">✅ HECHOS · Yarig.AI (' + hechos.length + ')</div>' +
+            '<div class="window-overlay-title">HECHOS · Yarig.AI (' + hechos.length + ')</div>' +
             foco +
             '<ol class="analizar-list">' + _yarSimpleListHtml(hechos, 'sin hechos todavía') + '</ol>';
         document.getElementById('win-creativo').innerHTML =
-            '<div class="window-overlay-title">🧩 PENDIENTES · Yarig.AI (' + tareas.length + ')</div>' +
-            '<div class="analizar-desc">Tareas: ' + _entrenarEsc(String(tareas.length)) + '</div>' +
+            '<div class="window-overlay-title">PENDIENTES · Yarig.AI (' + tareas.length + ')</div>' +
             ayuda +
             '<ol class="analizar-list">' + _yarSimpleListHtml(tareas, 'sin tareas') + '</ol>';
         document.getElementById('win-racional').classList.add('active');

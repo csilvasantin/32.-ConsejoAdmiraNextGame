@@ -11,6 +11,7 @@ const YARIG_URL = process.env.YARIG_URL || "https://www.yarig.ai/tasks";
 const ONCE = process.argv.includes("--once");
 const DUMP_JSON = process.argv.includes("--dump-json");
 const PREPARE_LOGIN = process.argv.includes("--prepare-login");
+const WATCH_AFTER_LOGIN = process.argv.includes("--watch-after-login");
 const POLL_MS = Number(process.env.YARIG_SYNC_POLL_MS || 120000);
 const LOGIN_WAIT_MS = Number(process.env.YARIG_LOGIN_WAIT_MS || 300000);
 
@@ -168,6 +169,10 @@ async function fetchVisibleTasks(activePage) {
 async function syncOnce() {
   const activePage = await ensureBrowser();
   const livePayload = await fetchVisibleTasks(activePage);
+  return syncPayloadToApi(livePayload, activePage);
+}
+
+async function syncPayloadToApi(livePayload, activePage = null) {
   const { tasks, done } = livePayload;
   const current = await api("/api/council/yar-context");
   const payload = {
@@ -186,8 +191,8 @@ async function syncOnce() {
   await saveSnapshot({
     tasks,
     done,
-    currentUrl: livePayload.currentUrl || activePage.url(),
-    title: livePayload.title || await activePage.title(),
+    currentUrl: livePayload.currentUrl || activePage?.url?.() || "",
+    title: livePayload.title || (activePage ? await activePage.title() : ""),
     source: "worker-sync",
   });
   log(`Sincronizadas ${tasks.length} tareas activas y ${done.length} finalizadas desde Yarig.ai`);
@@ -221,7 +226,35 @@ async function prepareLoginWindow() {
   throw lastError || new Error("Yarig login no se completo a tiempo");
 }
 
+async function watchLoop(activePage) {
+  log(`Watcher de Yarig.ai activo cada ${Math.round(POLL_MS / 1000)}s`);
+  do {
+    try {
+      const livePayload = await fetchVisibleTasks(activePage);
+      await syncPayloadToApi(livePayload, activePage);
+    } catch (error) {
+      log("Fallo del watcher Yarig.ai", error.message);
+    }
+    await sleep(POLL_MS);
+  } while (true);
+}
+
 async function main() {
+  if (WATCH_AFTER_LOGIN) {
+    const payload = await prepareLoginWindow();
+    process.stdout.write(JSON.stringify({
+      ok: true,
+      prepared: true,
+      watching: true,
+      currentUrl: payload.currentUrl,
+      title: payload.title,
+      tasks: payload.tasks,
+      done: payload.done,
+    }));
+    await syncPayloadToApi(payload, page);
+    await watchLoop(page);
+    return;
+  }
   if (PREPARE_LOGIN) {
     const payload = await prepareLoginWindow();
     process.stdout.write(JSON.stringify({

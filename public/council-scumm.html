@@ -2050,7 +2050,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.29.04.20</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.29.04.21</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -3316,16 +3316,38 @@
     function setActionLine(text) { document.getElementById("action-input").placeholder = text; }
 
     let yarigWindowsPinned = false;
+    let yarigAutoRefreshTimer = null;
+    function startYarigAutoRefresh() {
+        if (yarigAutoRefreshTimer) return;
+        yarigAutoRefreshTimer = setInterval(async () => {
+            if (!yarigWindowsPinned) return;
+            try {
+                await loadYarContext();
+                if (yarigWindowsPinned && (!selectedAgent || currentVerb === 'hablar')) {
+                    showEntrenarFor('__yarig__');
+                }
+            } catch (e) {
+                console.warn('Yarig auto refresh failed', e.message);
+            }
+        }, 30000);
+    }
+    function stopYarigAutoRefresh() {
+        if (!yarigAutoRefreshTimer) return;
+        clearInterval(yarigAutoRefreshTimer);
+        yarigAutoRefreshTimer = null;
+    }
     function showYarigWindows() {
         yarigWindowsPinned = true;
         captureOverlayOriginals();
-        showEntrenarFor(selectedAgent?.persona || '__yarig__');
+        showEntrenarFor('__yarig__');
+        startYarigAutoRefresh();
     }
 
     function hideYarigWindows() {
         yarigWindowsPinned = false;
         hideEntrenarOverlays();
         restoreOverlayOriginals();
+        stopYarigAutoRefresh();
     }
 
     function showCliHelp() {
@@ -4485,11 +4507,11 @@
                 enterConversation();
                 addUserEntry('🧭 /yarig.ai login');
                 addConvEntry('conv-racional', '🧭', 'Yarig.AI', 'Yarig.AI', 'racional',
-                    'Ventana de login abierta en el perfil persistente del sync. Entra allí y luego usa /yarig.ai sincro.');
+                    'Ventana de login abierta en el perfil persistente del sync. Entra allí y el watcher mantendrá Yarig.AI actualizado en la mesa.');
                 addConvEntry('conv-creativo', '🧭', 'Yarig.AI', 'Yarig.AI', 'creativo',
-                    'PID ' + (data.pid || 'n/a') + '. El Consejo quedará listo para importar las tareas del usuario que se autentique.');
+                    'PID ' + (data.pid || 'n/a') + '. Cuando el usuario se autentique, el watcher importará tareas pendientes, en proceso y finalizadas sin tener que lanzar sincro cada vez.');
                 if (status) status.textContent = 'Ventana de login abierta para Yarig.AI';
-                setActionLine('🧭 Ventana de login de Yarig.AI abierta — entra y luego lanza /yarig.ai sincro');
+                setActionLine('🧭 Ventana de login de Yarig.AI abierta — entra y el watcher hará el sync continuo');
                 return;
             } catch (e) {
                 lastErr = e;

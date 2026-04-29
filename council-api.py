@@ -534,7 +534,7 @@ app = FastAPI(title="AdmiraNext Council API", version="4.0.0")
 
 @app.get("/")
 async def root():
-    return {"status": "ok", "service": "AdmiraNext Council API", "version": "v26.29.04.18"}
+    return {"status": "ok", "service": "AdmiraNext Council API", "version": "v26.29.04.21"}
 
 app.add_middleware(
     CORSMiddleware,
@@ -1225,7 +1225,11 @@ async def prepare_yar_login_session(_auth=Depends(verify_token)):
                 timeout=5,
             )
             cmdline = (res.stdout or "").strip()
-            return res.returncode == 0 and "yarig-tasks-sync.mjs" in cmdline and "--prepare-login" in cmdline
+            return (
+                res.returncode == 0
+                and "yarig-tasks-sync.mjs" in cmdline
+                and ("--prepare-login" in cmdline or "--watch-after-login" in cmdline)
+            )
         except Exception:
             return False
 
@@ -1246,7 +1250,7 @@ async def prepare_yar_login_session(_auth=Depends(verify_token)):
             except Exception:
                 pass
     out = open(login_log, "a", encoding="utf-8")
-    cmd = ["node", str(tool_path), "--prepare-login"]
+    cmd = ["node", str(tool_path), "--watch-after-login"]
     try:
         proc = subprocess.Popen(
             cmd,
@@ -1264,7 +1268,7 @@ async def prepare_yar_login_session(_auth=Depends(verify_token)):
     return {
         "ok": True,
         "pid": proc.pid,
-        "message": "Ventana de Yarig.ai abierta para login en el perfil persistente del sync",
+        "message": "Ventana de Yarig.ai abierta para login y watcher persistente del sync",
         "logPath": str(login_log),
     }
 

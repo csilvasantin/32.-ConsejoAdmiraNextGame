@@ -7,8 +7,9 @@ import { chromium } from "playwright-core";
 
 const API_BASE_URL = process.env.COUNCIL_API_BASE_URL || "https://three2-consejoadmiranextgame.onrender.com";
 const API_TOKEN = process.env.COUNCIL_API_TOKEN || "admira2026";
-const YARIG_URL = process.env.YARIG_URL || "https://yarig.ai/tasks";
+const YARIG_URL = process.env.YARIG_URL || "https://www.yarig.ai/tasks";
 const ONCE = process.argv.includes("--once");
+const DUMP_JSON = process.argv.includes("--dump-json");
 const POLL_MS = Number(process.env.YARIG_SYNC_POLL_MS || 120000);
 
 const CHROME_EXECUTABLE =
@@ -30,6 +31,7 @@ function sleep(ms) {
 }
 
 function log(message, extra = null) {
+  if (DUMP_JSON) return;
   const stamp = new Date().toISOString();
   if (extra == null) console.log(`[${stamp}] ${message}`);
   else console.log(`[${stamp}] ${message}`, extra);
@@ -129,14 +131,18 @@ async function fetchVisibleTasks(activePage) {
   await activePage.waitForLoadState("domcontentloaded");
   const title = await activePage.title();
   const url = activePage.url();
-  if (/login|auth/i.test(url) || !/yarig\.ai/.test(url)) {
+  if (/login|auth/i.test(url) || !/(^|\.)yarig\.ai/i.test(new URL(url).hostname)) {
     throw new Error(`Yarig.ai no está accesible en sesión reutilizable: ${url}`);
   }
   const bodyText = await activePage.locator("body").innerText();
   if (!bodyText.includes("Mis tareas")) {
     throw new Error(`La página abierta no parece la lista de tareas de Yarig.ai (${title})`);
   }
-  return extractTaskBucketsFromText(bodyText);
+  return {
+    ...extractTaskBucketsFromText(bodyText),
+    currentUrl: url,
+    title,
+  };
 }
 
 async function syncOnce() {
@@ -161,6 +167,13 @@ async function syncOnce() {
 }
 
 async function main() {
+  if (DUMP_JSON) {
+    const activePage = await ensureBrowser();
+    const payload = await fetchVisibleTasks(activePage);
+    process.stdout.write(JSON.stringify(payload));
+    await closeBrowser();
+    return;
+  }
   log(`Yarig sync listo. API: ${API_BASE_URL}`);
   do {
     try {

@@ -534,7 +534,7 @@ app = FastAPI(title="AdmiraNext Council API", version="4.0.0")
 
 @app.get("/")
 async def root():
-    return {"status": "ok", "service": "AdmiraNext Council API", "version": "v26.29.04.10"}
+    return {"status": "ok", "service": "AdmiraNext Council API", "version": "v26.29.04.11"}
 
 app.add_middleware(
     CORSMiddleware,
@@ -995,6 +995,58 @@ async def save_yar_context(req: YarContextRequest, _auth=Depends(verify_token)):
         }
         _save_yar_context(data)
         return _load_yar_context()
+
+
+@app.post("/api/council/yar-sync")
+async def sync_yar_context_from_logged_session(_auth=Depends(verify_token)):
+    tool_path = Path(__file__).resolve().parent / "tools" / "yarig-tasks-sync.mjs"
+    if not tool_path.exists():
+        raise HTTPException(status_code=501, detail="yarig-tasks-sync.mjs no disponible en este backend")
+
+    env = os.environ.copy()
+    cmd = ["node", str(tool_path), "--dump-json"]
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=90, env=env)
+    except subprocess.TimeoutExpired as e:
+        raise HTTPException(status_code=504, detail=f"yarig sync timeout: {(e.stderr or e.stdout or '').strip()[:240]}")
+    except FileNotFoundError:
+        raise HTTPException(status_code=501, detail="node no disponible para lanzar yarig sync")
+
+    if res.returncode != 0:
+        detail = (res.stderr or res.stdout or "yarig sync failed").strip()[:400]
+        raise HTTPException(status_code=502, detail=detail)
+
+    try:
+        payload = json.loads((res.stdout or "").strip() or "{}")
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=502, detail=f"yarig sync devolvió JSON inválido: {e}")
+
+    tasks = [str(x).strip() for x in (payload.get("tasks") or []) if str(x).strip()][:12]
+    done = [str(x).strip() for x in (payload.get("done") or []) if str(x).strip()][:12]
+
+    with _yar_lock:
+        current = _load_yar_context()
+        data = {
+            "focus": current.get("focus", ""),
+            "doing": current.get("doing", ""),
+            "done": done,
+            "tasks": tasks,
+            "pending": tasks,
+            "ask": current.get("ask", ""),
+            "updatedAt": datetime.now().isoformat(),
+        }
+        _save_yar_context(data)
+        context = _load_yar_context()
+    return {
+        "ok": True,
+        "context": context,
+        "sourceUrl": payload.get("currentUrl", ""),
+        "sourceTitle": payload.get("title", ""),
+        "imported": {
+            "tasks": len(tasks),
+            "done": len(done),
+        },
+    }
 
 
 def _yt_clean_text(text: str) -> str:

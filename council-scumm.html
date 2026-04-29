@@ -2039,7 +2039,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.29.04.10</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.29.04.11</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -3325,6 +3325,7 @@
             '/nombres toggle<br>' +
             '/tarea &lt;texto&gt;<br>' +
             '/finalizada &lt;texto&gt;<br>' +
+            '/yarig.ai sincro<br>' +
             '/yarig.ai on<br>' +
             '/yarig.ai off');
         addConvEntry('conv-creativo', '🧭', 'Yarig.AI', 'Yarig.AI', 'creativo',
@@ -3362,6 +3363,11 @@
         const finalizadaMatch = text.match(/^\/finalizada\s+(.+)$/i);
         if (finalizadaMatch) {
             void executeYarig('finalizada: ' + finalizadaMatch[1].trim());
+            return true;
+        }
+        const yarigSyncMatch = text.match(/^\/yarig\.ai\s+(sincro|sync|sincronizar|sincroniza)$/i);
+        if (yarigSyncMatch) {
+            void syncYarigFromLoggedSession();
             return true;
         }
         const yarigMatch = text.match(/^\/yarig\.ai(?:\s+(on|off|toggle))?$/i);
@@ -4364,6 +4370,51 @@
         }
         if (status) status.textContent = '⚠️ No se pudo sincronizar YAR';
         setActionLine('⚠️ No se pudo sincronizar YAR');
+    }
+
+    async function syncYarigFromLoggedSession() {
+        const status = document.getElementById('yar-status');
+        if (status) status.textContent = 'IMPORTANDO DESDE YARIG.AI…';
+        setActionLine('🧭 Yarig.AI sincro — importando tareas pendientes y finalizadas desde la sesión abierta…');
+        const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
+        let lastErr = null;
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + '/api/council/yar-sync', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Council-Token': COUNCIL_API_TOKEN,
+                    },
+                    body: JSON.stringify({ source: 'cli' }),
+                    signal: AbortSignal.timeout(95000),
+                });
+                if (!res.ok) {
+                    const body = await res.text();
+                    throw new Error('HTTP ' + res.status + (body ? ': ' + body.slice(0, 160) : ''));
+                }
+                const data = await res.json();
+                yarContext = _normalizeYarContext(data.context || data);
+                activeApiUrl = baseUrl;
+                updateYarChip();
+                fillYarForm();
+                showYarigWindows();
+                enterConversation();
+                addUserEntry('🧭 /yarig.ai sincro');
+                addConvEntry('conv-racional', '🧭', 'Yarig.AI', 'Yarig.AI', 'racional',
+                    'Importadas ' + ((yarContext.tasks || []).length) + ' tareas pendientes y ' + ((yarContext.done || []).length) + ' finalizadas desde la sesión abierta.');
+                addConvEntry('conv-creativo', '🧭', 'Yarig.AI', 'Yarig.AI', 'creativo',
+                    'La mesa ya trabaja con la última versión visible en www.yarig.ai para el usuario que esté loginado.');
+                if (status) status.textContent = 'Yarig.AI importado desde sesión abierta';
+                setActionLine('🧭 Yarig.AI sincro — pendientes y finalizadas ya están sobre la mesa');
+                return;
+            } catch (e) {
+                lastErr = e;
+                console.warn('Yarig sync from session failed at', baseUrl, e.message);
+            }
+        }
+        if (status) status.textContent = '⚠️ No se pudo importar desde Yarig.ai';
+        setActionLine('⚠️ Yarig.AI sincro falló — ' + (lastErr ? lastErr.message : 'sin backend disponible'));
     }
 
     async function executeYarig(text) {

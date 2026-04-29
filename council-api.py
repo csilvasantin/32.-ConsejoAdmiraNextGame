@@ -534,7 +534,7 @@ app = FastAPI(title="AdmiraNext Council API", version="4.0.0")
 
 @app.get("/")
 async def root():
-    return {"status": "ok", "service": "AdmiraNext Council API", "version": "v26.29.04.16"}
+    return {"status": "ok", "service": "AdmiraNext Council API", "version": "v26.29.04.17"}
 
 app.add_middleware(
     CORSMiddleware,
@@ -1003,28 +1003,121 @@ async def sync_yar_context_from_logged_session(_auth=Depends(verify_token)):
     if not tool_path.exists():
         raise HTTPException(status_code=501, detail="yarig-tasks-sync.mjs no disponible en este backend")
 
+    def _parse_yar_tasks_from_text(text: str) -> dict:
+        chunks = re.split(r"Tarea añadida el \d{2}/\d{2}/\d{4}:", text or "")
+        active, done = [], []
+        for chunk in chunks[1:]:
+            desc_match = re.search(r"Descripción:\s*([^\n]+)", chunk)
+            status_match = re.search(r"\b(En proceso|Pendiente|Finalizada|Finalizado)\b", chunk)
+            desc = desc_match.group(1).strip() if desc_match else ""
+            status = status_match.group(1).strip() if status_match else "Pendiente"
+            if not desc:
+                continue
+            line = f"{status} - {desc}"[:240]
+            if re.fullmatch(r"Finalizad[ao]", status, re.I):
+                done.append(line)
+            else:
+                active.append(line)
+        return {
+            "tasks": active[:12],
+            "done": done[:12],
+        }
+
+    def _run_osascript(lines: list[str], timeout: int = 6) -> str:
+        args = []
+        for line in lines:
+            args.extend(["-e", line])
+        res = subprocess.run(["osascript", *args], capture_output=True, text=True, timeout=timeout)
+        if res.returncode != 0:
+            raise RuntimeError((res.stderr or res.stdout or "osascript error").strip())
+        return (res.stdout or "").strip()
+
+    def _scrape_yar_from_browser_tabs() -> Optional[dict]:
+        js = 'JSON.stringify({title:document.title || "", body:(document.body && document.body.innerText) ? document.body.innerText : ""})'
+        scripts = [
+            [
+                'tell application "Safari"',
+                'repeat with w in windows',
+                'repeat with t in tabs of w',
+                'try',
+                'set tabUrl to URL of t',
+                'if tabUrl contains "yarig.ai" then',
+                'set payload to do JavaScript "' + js.replace('"', '\\"') + '" in t',
+                'return tabUrl & linefeed & payload',
+                'end if',
+                'end try',
+                'end repeat',
+                'end repeat',
+                'end tell',
+                'return ""',
+            ],
+            [
+                'tell application "Google Chrome"',
+                'repeat with w in windows',
+                'repeat with t in tabs of w',
+                'try',
+                'set tabUrl to URL of t',
+                'if tabUrl contains "yarig.ai" then',
+                'set payload to execute t javascript "' + js.replace('"', '\\"') + '"',
+                'return tabUrl & linefeed & payload',
+                'end if',
+                'end try',
+                'end repeat',
+                'end repeat',
+                'end tell',
+                'return ""',
+            ],
+        ]
+        for lines in scripts:
+            try:
+                raw = _run_osascript(lines)
+                if not raw:
+                    continue
+                first_break = raw.find("\n")
+                if first_break == -1:
+                    continue
+                source_url = raw[:first_break].strip()
+                payload_text = raw[first_break + 1:].strip()
+                payload = json.loads(payload_text)
+                body = str(payload.get("body") or "").strip()
+                if "Mis tareas" not in body:
+                    continue
+                parsed = _parse_yar_tasks_from_text(body)
+                return {
+                    "currentUrl": source_url,
+                    "title": str(payload.get("title") or "").strip(),
+                    "tasks": parsed["tasks"],
+                    "done": parsed["done"],
+                    "source": "browser-tab",
+                }
+            except Exception:
+                continue
+        return None
+
     env = os.environ.copy()
-    cmd = ["node", str(tool_path), "--dump-json"]
-    try:
-        res = subprocess.run(cmd, capture_output=True, text=True, timeout=90, env=env)
-    except subprocess.TimeoutExpired as e:
-        raise HTTPException(status_code=504, detail=f"yarig sync timeout: {(e.stderr or e.stdout or '').strip()[:240]}")
-    except FileNotFoundError:
-        raise HTTPException(status_code=501, detail="node no disponible para lanzar yarig sync")
+    payload = _scrape_yar_from_browser_tabs()
+    if not payload:
+        cmd = ["node", str(tool_path), "--dump-json"]
+        try:
+            res = subprocess.run(cmd, capture_output=True, text=True, timeout=90, env=env)
+        except subprocess.TimeoutExpired as e:
+            raise HTTPException(status_code=504, detail=f"yarig sync timeout: {(e.stderr or e.stdout or '').strip()[:240]}")
+        except FileNotFoundError:
+            raise HTTPException(status_code=501, detail="node no disponible para lanzar yarig sync")
 
-    if res.returncode != 0:
-        detail = (res.stderr or res.stdout or "yarig sync failed").strip()[:400]
-        if "ProcessSingleton" in detail or "already in use by another instance of Chromium" in detail:
-            raise HTTPException(
-                status_code=409,
-                detail="El perfil persistente de Yarig.AI está abierto en otra ventana. Termina el login, espera a que esa ventana se cierre y luego repite /yarig.ai sincro.",
-            )
-        raise HTTPException(status_code=502, detail=detail)
+        if res.returncode != 0:
+            detail = (res.stderr or res.stdout or "yarig sync failed").strip()[:400]
+            if "ProcessSingleton" in detail or "already in use by another instance of Chromium" in detail:
+                raise HTTPException(
+                    status_code=409,
+                    detail="El perfil persistente de Yarig.AI está abierto en otra ventana. Termina el login, espera a que esa ventana se cierre y luego repite /yarig.ai sincro.",
+                )
+            raise HTTPException(status_code=502, detail=detail)
 
-    try:
-        payload = json.loads((res.stdout or "").strip() or "{}")
-    except json.JSONDecodeError as e:
-        raise HTTPException(status_code=502, detail=f"yarig sync devolvió JSON inválido: {e}")
+        try:
+            payload = json.loads((res.stdout or "").strip() or "{}")
+        except json.JSONDecodeError as e:
+            raise HTTPException(status_code=502, detail=f"yarig sync devolvió JSON inválido: {e}")
 
     tasks = [str(x).strip() for x in (payload.get("tasks") or []) if str(x).strip()][:12]
     done = [str(x).strip() for x in (payload.get("done") or []) if str(x).strip()][:12]

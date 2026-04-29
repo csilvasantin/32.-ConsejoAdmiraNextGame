@@ -86,6 +86,26 @@
             border-color: #3498db;
             box-shadow: 0 0 15px rgba(52, 152, 219, 0.3);
         }
+        .yar-btn {
+            padding: 0.7rem 1rem;
+            font-size: 0.9rem;
+            font-weight: 700;
+            border: 2px solid #335544;
+            background: #112211;
+            color: #7dff95;
+            cursor: pointer;
+            transition: all 0.3s;
+            letter-spacing: 0.5px;
+            border-radius: 10px;
+        }
+        .yar-btn:hover { background: #1b321e; color: #d9ffe0; }
+        .yar-chip {
+            display: block;
+            margin-top: 4px;
+            font-size: 0.52rem;
+            color: #d8ffd8;
+            opacity: 0.82;
+        }
 
         /* Summary bar — inline with toggle */
         .summary {
@@ -1160,6 +1180,93 @@
         .speech-bubble { position: absolute; background: rgba(10,10,20,0.92); border: 2px solid #daa520; border-radius: 10px; padding: 10px 14px; font-size: 0.75rem; color: #e0e0e0; max-width: 300px; line-height: 1.5; display: none; box-shadow: 0 0 15px rgba(218,165,32,0.2); }
         .speech-bubble .speaker { font-weight: 700; color: #daa520; margin-bottom: 4px; font-size: 0.65rem; text-transform: uppercase; }
         .speech-bubble::after { content: ''; position: absolute; bottom: -8px; left: 20px; border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 8px solid #daa520; }
+        .yar-overlay {
+            position: fixed;
+            inset: 0;
+            background: rgba(2, 4, 14, 0.86);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 10050;
+            padding: 1rem;
+        }
+        .yar-overlay.active { display: flex; }
+        .yar-dialog {
+            width: min(760px, 96vw);
+            background: #0a0a33;
+            border: 2px solid #7dff95;
+            box-shadow: 4px 4px 0 #000;
+            padding: 1rem;
+        }
+        .yar-title {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.62rem;
+            color: #7dff95;
+            margin-bottom: 0.9rem;
+            text-align: center;
+        }
+        .yar-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 0.8rem;
+        }
+        .yar-field {
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+        .yar-field.full { grid-column: 1 / -1; }
+        .yar-label {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.42rem;
+            color: #ffee88;
+        }
+        .yar-input, .yar-textarea {
+            width: 100%;
+            background: #000022;
+            color: #e8f7ea;
+            border: 2px solid #335544;
+            border-radius: 0;
+            padding: 0.55rem 0.65rem;
+            font-size: 0.78rem;
+            font-family: monospace;
+        }
+        .yar-textarea { min-height: 96px; resize: vertical; }
+        .yar-help {
+            font-size: 0.72rem;
+            color: #8fb39a;
+            line-height: 1.45;
+        }
+        .yar-actions {
+            display: flex;
+            gap: 0.6rem;
+            margin-top: 0.95rem;
+        }
+        .yar-save, .yar-cancel {
+            flex: 1;
+            border-radius: 0;
+            border: 2px solid #557755;
+            background: #112211;
+            color: #d9ffe0;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.48rem;
+            padding: 0.7rem;
+            cursor: pointer;
+            box-shadow: 3px 3px 0 #000;
+        }
+        .yar-cancel {
+            background: #221111;
+            border-color: #775555;
+            color: #ffb3b3;
+        }
+        .yar-status {
+            min-height: 1.2em;
+            margin-top: 0.6rem;
+            text-align: center;
+            color: #7dff95;
+            font-size: 0.46rem;
+            font-family: 'Press Start 2P', monospace;
+        }
 
         /* Round indicator */
         .round-indicator { position: absolute; top: 10px; left: 10px; font-family: 'Press Start 2P', monospace; font-size: 8px; color: #daa520; background: rgba(10,10,20,0.85); padding: 5px 10px; border-radius: 5px; border: 1px solid #333; z-index: 5; }
@@ -1697,6 +1804,18 @@
             border-color: #66aaff;
             box-shadow: 3px 3px 0 #000;
         }
+        .yar-btn {
+            border-radius: 0;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.42rem;
+            border: 2px solid #557755;
+            background: #112211;
+            color: #7dff95;
+            padding: 0.5rem 0.8rem;
+            box-shadow: 3px 3px 0 #000;
+        }
+        .yar-btn:hover { background: #1a341a; color: #d9ffe0; }
+        .yar-chip { font-size: 0.32rem; color: #d8ffd8; opacity: 0.82; }
         .version-badge {
             font-family: 'Press Start 2P', monospace;
             font-size: 0.5rem;
@@ -1834,6 +1953,16 @@
             font-size: 0.5rem;
         }
         .speech-bubble::after { border-top-color: #ffff00; }
+        .yar-dialog {
+            border-radius: 0;
+            background: #0a0a33;
+            border: 2px solid #7dff95;
+            box-shadow: 4px 4px 0 #000;
+        }
+        .yar-title, .yar-label, .yar-save, .yar-cancel, .yar-status {
+            font-family: 'Press Start 2P', monospace;
+        }
+        .yar-save, .yar-cancel { font-size: 0.42rem; }
         .round-indicator {
             border-radius: 0;
             border: 2px solid #ffff00;
@@ -1907,11 +2036,12 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.28.04.3</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.29.04.1</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
             </div>
+            <button class="yar-btn" id="yar-btn" onclick="openYarOverlay()">🧭 YAR<span class="yar-chip" id="yar-chip">sin contexto</span></button>
             <div class="summary" id="summary"></div>
         </div>
 
@@ -2111,6 +2241,38 @@
                         </div>
                     </div>
                 </div>
+            </div>
+        </div>
+
+        <div class="yar-overlay" id="yar-overlay" onclick="if(event.target===this) closeYarOverlay()">
+            <div class="yar-dialog">
+                <div class="yar-title">🧭 YAR BRIDGE — CONTEXTO COMPARTIDO DEL CONSEJO</div>
+                <div class="yar-grid">
+                    <div class="yar-field">
+                        <label class="yar-label" for="yar-focus">FOCO</label>
+                        <input class="yar-input" id="yar-focus" type="text" placeholder="Qué estamos intentando conseguir ahora">
+                    </div>
+                    <div class="yar-field">
+                        <label class="yar-label" for="yar-ask">AYUDA QUE QUEREMOS</label>
+                        <input class="yar-input" id="yar-ask" type="text" placeholder="Qué debe optimizar o vigilar el Consejo">
+                    </div>
+                    <div class="yar-field full">
+                        <label class="yar-label" for="yar-doing">QUÉ ESTAMOS HACIENDO</label>
+                        <textarea class="yar-textarea" id="yar-doing" placeholder="Describe el trabajo en curso para que la mesa tenga contexto real"></textarea>
+                    </div>
+                    <div class="yar-field full">
+                        <label class="yar-label" for="yar-pending">LABORES PENDIENTES</label>
+                        <textarea class="yar-textarea" id="yar-pending" placeholder="Una tarea por línea"></textarea>
+                    </div>
+                    <div class="yar-field full">
+                        <div class="yar-help">Este contexto se guarda en el backend del Consejo y se inyecta automáticamente en cada consulta para que la mesa sepa en qué estamos y qué queda pendiente.</div>
+                    </div>
+                </div>
+                <div class="yar-actions">
+                    <button class="yar-save" onclick="saveYarContext()">GUARDAR YAR</button>
+                    <button class="yar-cancel" onclick="closeYarOverlay()">CERRAR</button>
+                </div>
+                <div class="yar-status" id="yar-status"></div>
             </div>
         </div>
 
@@ -3904,9 +4066,141 @@
     const COUNCIL_API_TOKEN = "admira2026";
     let activeApiUrl = null;
     let conversationHistory = [];
+    let yarContext = { focus: "", doing: "", pending: [], ask: "", updatedAt: "" };
     window._crearRequestSeq = window._crearRequestSeq || 0;
     window._crearActiveJobId = window._crearActiveJobId || null;
     window._crearPollTimer = window._crearPollTimer || null;
+
+    function _normalizeYarContext(raw) {
+        const pending = Array.isArray(raw?.pending) ? raw.pending.map(x => String(x || '').trim()).filter(Boolean).slice(0, 12) : [];
+        return {
+            focus: String(raw?.focus || '').trim(),
+            doing: String(raw?.doing || '').trim(),
+            pending,
+            ask: String(raw?.ask || '').trim(),
+            updatedAt: String(raw?.updatedAt || '').trim(),
+        };
+    }
+
+    function updateYarChip() {
+        const chip = document.getElementById('yar-chip');
+        if (!chip) return;
+        const pendingCount = (yarContext.pending || []).length;
+        if (!yarContext.focus && !yarContext.doing && !pendingCount && !yarContext.ask) {
+            chip.textContent = 'sin contexto';
+            return;
+        }
+        const focus = yarContext.focus ? yarContext.focus.slice(0, 18) : 'contexto activo';
+        chip.textContent = focus + ' · ' + pendingCount + ' pend.';
+    }
+
+    function fillYarForm() {
+        const focus = document.getElementById('yar-focus');
+        const doing = document.getElementById('yar-doing');
+        const pending = document.getElementById('yar-pending');
+        const ask = document.getElementById('yar-ask');
+        if (focus) focus.value = yarContext.focus || '';
+        if (doing) doing.value = yarContext.doing || '';
+        if (pending) pending.value = (yarContext.pending || []).join('\n');
+        if (ask) ask.value = yarContext.ask || '';
+    }
+
+    function openYarOverlay() {
+        fillYarForm();
+        const status = document.getElementById('yar-status');
+        if (status) status.textContent = yarContext.updatedAt ? ('Última sync: ' + yarContext.updatedAt.replace('T', ' ').slice(0, 16)) : '';
+        document.getElementById('yar-overlay')?.classList.add('active');
+    }
+
+    function closeYarOverlay() {
+        document.getElementById('yar-overlay')?.classList.remove('active');
+    }
+
+    async function loadYarContext() {
+        const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + '/api/council/yar-context', {
+                    headers: { 'X-Council-Token': COUNCIL_API_TOKEN },
+                    signal: AbortSignal.timeout(8000),
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                yarContext = _normalizeYarContext(await res.json());
+                activeApiUrl = baseUrl;
+                updateYarChip();
+                return yarContext;
+            } catch (e) {
+                console.warn('YAR context fetch failed at', baseUrl, e.message);
+            }
+        }
+        updateYarChip();
+        return yarContext;
+    }
+
+    async function saveYarContext() {
+        const status = document.getElementById('yar-status');
+        if (status) status.textContent = 'GUARDANDO…';
+        const payload = {
+            focus: document.getElementById('yar-focus')?.value || '',
+            doing: document.getElementById('yar-doing')?.value || '',
+            pending: (document.getElementById('yar-pending')?.value || '').split('\n').map(x => x.trim()).filter(Boolean),
+            ask: document.getElementById('yar-ask')?.value || '',
+        };
+        const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + '/api/council/yar-context', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Council-Token': COUNCIL_API_TOKEN,
+                    },
+                    body: JSON.stringify(payload),
+                    signal: AbortSignal.timeout(10000),
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                yarContext = _normalizeYarContext(await res.json());
+                activeApiUrl = baseUrl;
+                updateYarChip();
+                if (status) status.textContent = 'YAR sincronizado con la mesa';
+                setActionLine('🧭 YAR sincronizado — el Consejo ya conoce foco y pendientes');
+                return;
+            } catch (e) {
+                console.warn('YAR context save failed at', baseUrl, e.message);
+            }
+        }
+        if (status) status.textContent = '⚠️ No se pudo sincronizar YAR';
+        setActionLine('⚠️ No se pudo sincronizar YAR');
+    }
+
+    function buildLiveCouncilState() {
+        const bits = [];
+        if (currentVerb) bits.push('Verbo actual: ' + currentVerb);
+        if (currentProject) bits.push('Proyecto activo: ' + currentProject);
+        bits.push('Generación activa: ' + currentGen);
+        bits.push('Motor seleccionado: ' + selectedLLM);
+        return bits.join(' · ');
+    }
+
+    function buildCouncilPrompt(message) {
+        const ctx = _normalizeYarContext(yarContext);
+        const hasYar = ctx.focus || ctx.doing || ctx.ask || (ctx.pending && ctx.pending.length);
+        if (!hasYar) return message;
+        const sections = [
+            'CONTEXTO YAR DEL CONSEJO',
+            ctx.focus ? ('Foco: ' + ctx.focus) : '',
+            ctx.doing ? ('Trabajo en curso: ' + ctx.doing) : '',
+            ctx.pending.length ? ('Pendientes:\n- ' + ctx.pending.join('\n- ')) : '',
+            ctx.ask ? ('Ayuda esperada del consejo: ' + ctx.ask) : '',
+            'Estado vivo de la mesa: ' + buildLiveCouncilState(),
+            '',
+            'Usa este contexto para priorizar, detectar bloqueos y proponer siguientes pasos concretos.',
+            '',
+            'PETICIÓN ACTUAL:',
+            message,
+        ].filter(Boolean);
+        return sections.join('\n');
+    }
 
     // ── PENSAR: libro del día ────────────────────────────────
     async function triggerLeer() {
@@ -4403,6 +4697,7 @@
         }
         renderAnalyzedList();
         void ensureEntrenarLoaded(currentGen);
+        void loadYarContext();
     });
 
     async function askCouncilAPI(message) {
@@ -4412,6 +4707,7 @@
          * Falls back to simulation if all are unreachable.
          */
         const urls = activeApiUrl ? [activeApiUrl] : COUNCIL_API_URLS;
+        const effectiveMessage = buildCouncilPrompt(message);
 
         for (const baseUrl of urls) {
             try {
@@ -4422,7 +4718,7 @@
                         "X-Council-Token": COUNCIL_API_TOKEN,
                     },
                     body: JSON.stringify({
-                        message: message,
+                        message: effectiveMessage,
                         generation: currentGen,
                         context: conversationHistory.slice(-6),
                         llm: selectedLLM,
@@ -4458,6 +4754,7 @@
     async function askOneAgentAPI(message, agentName) {
         /** Call /api/council/ask-one for a single agent. */
         const urls = activeApiUrl ? [activeApiUrl] : COUNCIL_API_URLS;
+        const effectiveMessage = buildCouncilPrompt(message);
         for (const baseUrl of urls) {
             try {
                 const res = await fetch(baseUrl + "/api/council/ask-one", {
@@ -4467,7 +4764,7 @@
                         "X-Council-Token": COUNCIL_API_TOKEN,
                     },
                     body: JSON.stringify({
-                        message: message,
+                        message: effectiveMessage,
                         agent_name: agentName,
                         generation: currentGen,
                         context: conversationHistory.slice(-6),

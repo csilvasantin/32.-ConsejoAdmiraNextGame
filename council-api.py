@@ -197,11 +197,14 @@ SMTP_PASS = os.environ.get("SMTP_PASS", "")
 BUDGET_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "budget.json")
 ENTRENAR_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "entrenar_corpus.json")
 ENTRENAR_FILE_BAK = ENTRENAR_FILE + ".bak"
+YAR_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "yar_context.json")
+YAR_FILE_BAK = YAR_FILE + ".bak"
 
 # ── Budget tracker ───────────────────────────────────────────
 _budget_lock = threading.Lock()
 _alert_sent = {"warn": False, "critical": False, "blocked": False}
 _entrenar_lock = threading.Lock()
+_yar_lock = threading.Lock()
 
 
 def _normalize_entrenar_item(raw) -> Optional[dict]:
@@ -280,6 +283,47 @@ def _entrenar_gen_snapshot(gen: str) -> dict:
             personas[persona] = merged
             total += len(merged)
     return {"gen": gen, "personas": personas, "total": total}
+
+
+def _normalize_yar_context(raw) -> dict:
+    raw = raw if isinstance(raw, dict) else {}
+    pending = raw.get("pending") if isinstance(raw.get("pending"), list) else []
+    cleaned_pending = []
+    for item in pending:
+        txt = str(item or "").strip()
+        if txt:
+            cleaned_pending.append(txt[:240])
+    return {
+        "focus": str(raw.get("focus", "") or "").strip()[:240],
+        "doing": str(raw.get("doing", "") or "").strip()[:600],
+        "pending": cleaned_pending[:12],
+        "ask": str(raw.get("ask", "") or "").strip()[:400],
+        "updatedAt": str(raw.get("updatedAt", "") or "").strip() or datetime.now().isoformat(),
+    }
+
+
+def _load_yar_context() -> dict:
+    for candidate in [YAR_FILE, YAR_FILE_BAK]:
+        if Path(candidate).exists():
+            try:
+                with open(candidate, "r", encoding="utf-8") as f:
+                    return _normalize_yar_context(json.load(f))
+            except (json.JSONDecodeError, IOError):
+                pass
+    return _normalize_yar_context({})
+
+
+def _save_yar_context(data: dict):
+    tmp_file = YAR_FILE + ".tmp"
+    normalized = _normalize_yar_context(data)
+    with open(tmp_file, "w", encoding="utf-8") as f:
+        json.dump(normalized, f, indent=2, ensure_ascii=False)
+    try:
+        if Path(YAR_FILE).exists():
+            Path(YAR_FILE).replace(YAR_FILE_BAK)
+    except OSError:
+        pass
+    Path(tmp_file).replace(YAR_FILE)
 
 
 def _load_budget() -> dict:
@@ -474,7 +518,7 @@ app = FastAPI(title="AdmiraNext Council API", version="4.0.0")
 
 @app.get("/")
 async def root():
-    return {"status": "ok", "service": "AdmiraNext Council API", "version": "v26.25.04.9"}
+    return {"status": "ok", "service": "AdmiraNext Council API", "version": "v26.29.04.1"}
 
 app.add_middleware(
     CORSMiddleware,
@@ -556,6 +600,13 @@ class AnalyzeYoutubeRequest(BaseModel):
     url: str
     question: Optional[str] = None
     note: Optional[str] = None
+
+
+class YarContextRequest(BaseModel):
+    focus: str = ""
+    doing: str = ""
+    pending: list[str] = []
+    ask: str = ""
 
 
 class AgentReply(BaseModel):
@@ -904,6 +955,26 @@ async def list_models():
             "available": available,
         })
     return {"models": models}
+
+
+@app.get("/api/council/yar-context")
+async def get_yar_context(_auth=Depends(verify_token)):
+    with _yar_lock:
+        return _load_yar_context()
+
+
+@app.post("/api/council/yar-context")
+async def save_yar_context(req: YarContextRequest, _auth=Depends(verify_token)):
+    with _yar_lock:
+        data = {
+            "focus": req.focus,
+            "doing": req.doing,
+            "pending": req.pending,
+            "ask": req.ask,
+            "updatedAt": datetime.now().isoformat(),
+        }
+        _save_yar_context(data)
+        return _load_yar_context()
 
 
 def _yt_clean_text(text: str) -> str:

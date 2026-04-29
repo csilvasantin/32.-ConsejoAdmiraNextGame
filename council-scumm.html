@@ -2036,12 +2036,12 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.29.04.1</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.29.04.2</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
             </div>
-            <button class="yar-btn" id="yar-btn" onclick="openYarOverlay()">🧭 YAR<span class="yar-chip" id="yar-chip">sin contexto</span></button>
+            <button class="yar-btn" id="yar-btn" onclick="openYarOverlay()">🧭 Yarig.AI<span class="yar-chip" id="yar-chip">sin contexto</span></button>
             <div class="summary" id="summary"></div>
         </div>
 
@@ -2161,7 +2161,7 @@
                     <button class="verb-btn verb-primary" data-verb="debatir" onclick="selectVerb(this)">Debatir</button>
                     <button class="verb-btn verb-primary" data-verb="entrenar" onclick="selectVerb(this)">Entrenar</button>
                     <button class="verb-btn" data-verb="crear" onclick="selectVerb(this)">Crear</button>
-                    <button class="verb-btn" data-verb="hablar" onclick="selectVerb(this)">Hablar con</button>
+                    <button class="verb-btn" data-verb="hablar" onclick="selectVerb(this)">Yarig.AI</button>
                     <button class="verb-btn" data-verb="leer" onclick="selectVerb(this)">Pensar</button>
                     <button class="verb-btn" data-verb="votar" onclick="selectVerb(this)">Votar</button>
                     <button class="verb-btn" data-verb="analizar" onclick="selectVerb(this)">Analizar</button>
@@ -2246,7 +2246,7 @@
 
         <div class="yar-overlay" id="yar-overlay" onclick="if(event.target===this) closeYarOverlay()">
             <div class="yar-dialog">
-                <div class="yar-title">🧭 YAR BRIDGE — CONTEXTO COMPARTIDO DEL CONSEJO</div>
+                <div class="yar-title">🧭 YARIG.AI — RECOGIDA Y ENVÍO DE CONTEXTO</div>
                 <div class="yar-grid">
                     <div class="yar-field">
                         <label class="yar-label" for="yar-focus">FOCO</label>
@@ -2265,7 +2265,7 @@
                         <textarea class="yar-textarea" id="yar-pending" placeholder="Una tarea por línea"></textarea>
                     </div>
                     <div class="yar-field full">
-                        <div class="yar-help">Este contexto se guarda en el backend del Consejo y se inyecta automáticamente en cada consulta para que la mesa sepa en qué estamos y qué queda pendiente.</div>
+                        <div class="yar-help">Este contexto se guarda en el backend del Consejo y se inyecta automáticamente en cada consulta para que la mesa sepa en qué estamos, qué queda pendiente y qué información debe recogerse o enviarse.</div>
                     </div>
                 </div>
                 <div class="yar-actions">
@@ -3203,7 +3203,10 @@
         } else {
             exitCrearMode();
         }
-        if (currentVerb === 'hablar') setActionLine("Hablar con... selecciona un consejero");
+        if (currentVerb === 'hablar') {
+            openYarOverlay();
+            setActionLine("🧭 Yarig.AI — escribe foco:, ayuda:, pend: o una nota para recoger y enviar contexto");
+        }
         if (currentVerb === 'leer') {
             triggerLeer();
         }
@@ -3282,7 +3285,7 @@
     }
 
     function updateActionLine() {
-        const names = { preguntar:"Preguntar", debatir:"Debatir", entrenar:"Entrenar", crear:"Crear", hablar:"Hablar con", leer:"Pensar", votar:"Votar", analizar:"Analizar", presentar:"Presentar", previo:"▶ Ver Previo" };
+        const names = { preguntar:"Preguntar", debatir:"Debatir", entrenar:"Entrenar", crear:"Crear", hablar:"Yarig.AI", leer:"Pensar", votar:"Votar", analizar:"Analizar", presentar:"Presentar", previo:"▶ Ver Previo" };
         const v = names[currentVerb] || "";
         const p = currentProject ? ' "' + currentProject + '"' : "";
         if (v && !preguntarMode) document.getElementById("action-input").placeholder = v + p + "...";
@@ -3369,6 +3372,11 @@
 
         if (currentVerb === 'crear') {
             executeCrear(text);
+            return;
+        }
+
+        if (currentVerb === 'hablar') {
+            executeYarig(text);
             return;
         }
 
@@ -4171,6 +4179,70 @@
         }
         if (status) status.textContent = '⚠️ No se pudo sincronizar YAR';
         setActionLine('⚠️ No se pudo sincronizar YAR');
+    }
+
+    async function executeYarig(text) {
+        const raw = String(text || '').trim();
+        if (!raw) {
+            openYarOverlay();
+            setActionLine('🧭 Yarig.AI — abre el panel o escribe foco:, ayuda:, pend: o una nota libre');
+            return;
+        }
+        await loadYarContext();
+        const next = _normalizeYarContext(yarContext);
+        const lower = raw.toLowerCase();
+        let summary = '';
+
+        if (/^(focus|foco):/i.test(raw)) {
+            next.focus = raw.replace(/^(focus|foco):/i, '').trim();
+            summary = 'Foco actualizado';
+        } else if (/^(ask|ayuda):/i.test(raw)) {
+            next.ask = raw.replace(/^(ask|ayuda):/i, '').trim();
+            summary = 'Ayuda esperada actualizada';
+        } else if (/^(doing|haciendo):/i.test(raw)) {
+            next.doing = raw.replace(/^(doing|haciendo):/i, '').trim();
+            summary = 'Trabajo en curso actualizado';
+        } else if (/^(pend|pending|todo):/i.test(raw)) {
+            const item = raw.replace(/^(pend|pending|todo):/i, '').trim();
+            if (item) next.pending = (next.pending || []).concat([item]).slice(-12);
+            summary = 'Pendiente añadido';
+        } else {
+            next.doing = next.doing ? (next.doing + '\n• ' + raw) : ('• ' + raw);
+            summary = 'Nota añadida al trabajo en curso';
+        }
+
+        const status = document.getElementById('yar-status');
+        if (status) status.textContent = 'SINCRONIZANDO…';
+        const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + '/api/council/yar-context', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Council-Token': COUNCIL_API_TOKEN,
+                    },
+                    body: JSON.stringify(next),
+                    signal: AbortSignal.timeout(10000),
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                yarContext = _normalizeYarContext(await res.json());
+                activeApiUrl = baseUrl;
+                updateYarChip();
+                fillYarForm();
+                if (status) status.textContent = 'Yarig.AI sincronizado';
+                enterConversation();
+                addUserEntry('🧭 Yarig.AI · ' + raw);
+                addConvEntry('conv-racional', '🧭', 'Yarig.AI', 'Yarig.AI', 'racional', summary + '. Contexto listo para la mesa.');
+                addConvEntry('conv-creativo', '🧭', 'Yarig.AI', 'Yarig.AI', 'creativo', 'Recogida y envío activos. El Consejo ya recibe este contexto en las siguientes consultas.');
+                setActionLine('🧭 Yarig.AI activo — la mesa ya trabaja con este contexto');
+                return;
+            } catch (e) {
+                console.warn('Yarig save via action line failed at', baseUrl, e.message);
+            }
+        }
+        if (status) status.textContent = '⚠️ Yarig.AI no pudo sincronizar';
+        setActionLine('⚠️ Yarig.AI no pudo sincronizar');
     }
 
     function buildLiveCouncilState() {

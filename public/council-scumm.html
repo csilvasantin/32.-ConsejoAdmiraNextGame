@@ -270,7 +270,7 @@
         }
         /* Left window (Racional) — espejo de la derecha (mismo tamaño y altura) */
         .window-overlay.racional {
-            left: 15%; top: 5.3%;
+            left: 15%; top: 3.7%;
             width: 19.5%; height: 16%;
             overflow-y: auto;
             overflow-x: hidden;
@@ -278,7 +278,7 @@
         /* Right window (Creativo) — encajada exactamente en la ventana del rascacielos
            Coords usuario (modo Diseño): 655,30 → 850,120 sobre imagen 1000×565 */
         .window-overlay.creativo {
-            right: 15%; top: 5.3%;
+            right: 15%; top: 3.7%;
             width: 19.5%; height: 16%;
             overflow-y: auto;
             overflow-x: hidden;
@@ -2036,7 +2036,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.29.04.5</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.29.04.6</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -2263,7 +2263,7 @@
                         <textarea class="yar-textarea" id="yar-done" placeholder="Un hecho o avance por línea"></textarea>
                     </div>
                     <div class="yar-field full">
-                        <label class="yar-label" for="yar-pending">LABORES PENDIENTES</label>
+                        <label class="yar-label" for="yar-pending">TAREAS</label>
                         <textarea class="yar-textarea" id="yar-pending" placeholder="Una tarea por línea"></textarea>
                     </div>
                     <div class="yar-field full">
@@ -3872,7 +3872,7 @@
     function showEntrenarFor(persona) {
         const hechosFuente = (Array.isArray(yarContext.done) ? yarContext.done : []).slice(-12).reverse();
         const hechos = hechosFuente.length ? hechosFuente : _yarListFromBlock(yarContext.doing).reverse();
-        const pendientes = (Array.isArray(yarContext.pending) ? yarContext.pending : []).slice(-12).reverse();
+        const tareas = (Array.isArray(yarContext.tasks) ? yarContext.tasks : (Array.isArray(yarContext.pending) ? yarContext.pending : [])).slice(-12).reverse();
         const foco = yarContext.focus ? '<div class="analizar-desc">Foco: ' + _entrenarEsc(yarContext.focus) + '</div>' : '';
         const ayuda = yarContext.ask ? '<div class="analizar-desc">Ayuda: ' + _entrenarEsc(yarContext.ask) + '</div>' : '';
         document.getElementById('win-racional').innerHTML =
@@ -3880,9 +3880,10 @@
             foco +
             '<ol class="analizar-list">' + _yarSimpleListHtml(hechos, 'sin hechos todavía') + '</ol>';
         document.getElementById('win-creativo').innerHTML =
-            '<div class="window-overlay-title">🧩 PENDIENTES · Yarig.AI (' + pendientes.length + ')</div>' +
+            '<div class="window-overlay-title">🧩 PENDIENTES · Yarig.AI (' + tareas.length + ')</div>' +
+            '<div class="analizar-desc">Tareas: ' + _entrenarEsc(String(tareas.length)) + '</div>' +
             ayuda +
-            '<ol class="analizar-list">' + _yarSimpleListHtml(pendientes, 'sin pendientes') + '</ol>';
+            '<ol class="analizar-list">' + _yarSimpleListHtml(tareas, 'sin tareas') + '</ol>';
         document.getElementById('win-racional').classList.add('active');
         document.getElementById('win-creativo').classList.add('active');
     }
@@ -4176,7 +4177,7 @@
     const YAR_DONE_BLOCK_END = '[/YAR_DONE]';
     let activeApiUrl = null;
     let conversationHistory = [];
-    let yarContext = { focus: "", doing: "", done: [], pending: [], ask: "", updatedAt: "" };
+    let yarContext = { focus: "", doing: "", done: [], tasks: [], pending: [], ask: "", updatedAt: "" };
     window._crearRequestSeq = window._crearRequestSeq || 0;
     window._crearActiveJobId = window._crearActiveJobId || null;
     window._crearPollTimer = window._crearPollTimer || null;
@@ -4210,11 +4211,16 @@
 
     function _normalizeYarContext(raw) {
         const parsed = _decodeYarDoing(raw?.doing, raw?.done);
-        const pending = Array.isArray(raw?.pending) ? raw.pending.map(x => String(x || '').trim()).filter(Boolean).slice(0, 12) : [];
+        const tasks = (Array.isArray(raw?.tasks) ? raw.tasks : (Array.isArray(raw?.tareas) ? raw.tareas : (Array.isArray(raw?.pending) ? raw.pending : [])))
+            .map(x => String(x || '').trim()).filter(Boolean).slice(0, 12);
+        const pending = tasks.length
+            ? tasks.slice()
+            : (Array.isArray(raw?.pending) ? raw.pending.map(x => String(x || '').trim()).filter(Boolean).slice(0, 12) : []);
         return {
             focus: String(raw?.focus || '').trim(),
             doing: parsed.doing,
             done: parsed.done,
+            tasks,
             pending,
             ask: String(raw?.ask || '').trim(),
             updatedAt: String(raw?.updatedAt || '').trim(),
@@ -4225,7 +4231,7 @@
         const chip = document.getElementById('yar-chip');
         if (!chip) return;
         const doneCount = (yarContext.done || []).length;
-        const pendingCount = (yarContext.pending || []).length;
+        const pendingCount = (yarContext.tasks || yarContext.pending || []).length;
         if (!yarContext.focus && !yarContext.doing && !doneCount && !pendingCount && !yarContext.ask) {
             chip.textContent = 'sin contexto';
             return;
@@ -4243,7 +4249,7 @@
         if (focus) focus.value = yarContext.focus || '';
         if (doing) doing.value = yarContext.doing || '';
         if (done) done.value = (yarContext.done || []).join('\n');
-        if (pending) pending.value = (yarContext.pending || []).join('\n');
+        if (pending) pending.value = ((yarContext.tasks && yarContext.tasks.length ? yarContext.tasks : yarContext.pending) || []).join('\n');
         if (ask) ask.value = yarContext.ask || '';
     }
 
@@ -4282,6 +4288,7 @@
     async function saveYarContext() {
         const status = document.getElementById('yar-status');
         if (status) status.textContent = 'GUARDANDO…';
+        const tasks = (document.getElementById('yar-pending')?.value || '').split('\n').map(x => x.trim()).filter(Boolean);
         const payload = {
             focus: document.getElementById('yar-focus')?.value || '',
             doing: _encodeYarDoing(
@@ -4289,7 +4296,8 @@
                 (document.getElementById('yar-done')?.value || '').split('\n').map(x => x.trim()).filter(Boolean)
             ),
             done: (document.getElementById('yar-done')?.value || '').split('\n').map(x => x.trim()).filter(Boolean),
-            pending: (document.getElementById('yar-pending')?.value || '').split('\n').map(x => x.trim()).filter(Boolean),
+            tasks,
+            pending: tasks,
             ask: document.getElementById('yar-ask')?.value || '',
         };
         const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
@@ -4345,8 +4353,11 @@
             summary = 'Hecho añadido';
         } else if (/^(pend|pending|todo):/i.test(raw)) {
             const item = raw.replace(/^(pend|pending|todo):/i, '').trim();
-            if (item) next.pending = (next.pending || []).concat([item]).slice(-12);
-            summary = 'Pendiente añadido';
+            if (item) {
+                next.tasks = (next.tasks || next.pending || []).concat([item]).slice(-12);
+                next.pending = next.tasks.slice();
+            }
+            summary = 'Tarea añadida';
         } else {
             next.doing = next.doing ? (next.doing + '\n• ' + raw) : ('• ' + raw);
             summary = 'Nota añadida al trabajo en curso';
@@ -4365,6 +4376,8 @@
                     },
                     body: JSON.stringify({
                         ...next,
+                        tasks: next.tasks || next.pending || [],
+                        pending: next.tasks || next.pending || [],
                         doing: _encodeYarDoing(next.doing, next.done),
                     }),
                     signal: AbortSignal.timeout(10000),
@@ -4400,14 +4413,14 @@
 
     function buildCouncilPrompt(message) {
         const ctx = _normalizeYarContext(yarContext);
-        const hasYar = ctx.focus || ctx.doing || ctx.ask || (ctx.done && ctx.done.length) || (ctx.pending && ctx.pending.length);
+        const hasYar = ctx.focus || ctx.doing || ctx.ask || (ctx.done && ctx.done.length) || (ctx.tasks && ctx.tasks.length) || (ctx.pending && ctx.pending.length);
         if (!hasYar) return message;
         const sections = [
             'CONTEXTO YAR DEL CONSEJO',
             ctx.focus ? ('Foco: ' + ctx.focus) : '',
             ctx.doing ? ('Trabajo en curso: ' + ctx.doing) : '',
             ctx.done.length ? ('Hechos:\n- ' + ctx.done.join('\n- ')) : '',
-            ctx.pending.length ? ('Pendientes:\n- ' + ctx.pending.join('\n- ')) : '',
+            (ctx.tasks && ctx.tasks.length) ? ('Tareas pendientes:\n- ' + ctx.tasks.join('\n- ')) : (ctx.pending.length ? ('Pendientes:\n- ' + ctx.pending.join('\n- ')) : ''),
             ctx.ask ? ('Ayuda esperada del consejo: ' + ctx.ask) : '',
             'Estado vivo de la mesa: ' + buildLiveCouncilState(),
             '',

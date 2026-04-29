@@ -293,16 +293,25 @@ def _normalize_yar_context(raw) -> dict:
         txt = str(item or "").strip()
         if txt:
             cleaned_done.append(txt[:240])
+    tasks = raw.get("tasks") if isinstance(raw.get("tasks"), list) else (raw.get("tareas") if isinstance(raw.get("tareas"), list) else [])
+    cleaned_tasks = []
+    for item in tasks:
+        txt = str(item or "").strip()
+        if txt:
+            cleaned_tasks.append(txt[:240])
     pending = raw.get("pending") if isinstance(raw.get("pending"), list) else []
     cleaned_pending = []
     for item in pending:
         txt = str(item or "").strip()
         if txt:
             cleaned_pending.append(txt[:240])
+    if cleaned_tasks:
+        cleaned_pending = cleaned_tasks[:12]
     return {
         "focus": str(raw.get("focus", "") or "").strip()[:240],
         "doing": str(raw.get("doing", "") or "").strip()[:600],
         "done": cleaned_done[:12],
+        "tasks": cleaned_tasks[:12],
         "pending": cleaned_pending[:12],
         "ask": str(raw.get("ask", "") or "").strip()[:400],
         "updatedAt": str(raw.get("updatedAt", "") or "").strip() or datetime.now().isoformat(),
@@ -525,7 +534,7 @@ app = FastAPI(title="AdmiraNext Council API", version="4.0.0")
 
 @app.get("/")
 async def root():
-    return {"status": "ok", "service": "AdmiraNext Council API", "version": "v26.29.04.5"}
+    return {"status": "ok", "service": "AdmiraNext Council API", "version": "v26.29.04.6"}
 
 app.add_middleware(
     CORSMiddleware,
@@ -613,6 +622,7 @@ class YarContextRequest(BaseModel):
     focus: str = ""
     doing: str = ""
     done: list[str] = []
+    tasks: list[str] = []
     pending: list[str] = []
     ask: str = ""
 
@@ -978,7 +988,8 @@ async def save_yar_context(req: YarContextRequest, _auth=Depends(verify_token)):
             "focus": req.focus,
             "doing": req.doing,
             "done": req.done,
-            "pending": req.pending,
+            "tasks": req.tasks or req.pending,
+            "pending": req.tasks or req.pending,
             "ask": req.ask,
             "updatedAt": datetime.now().isoformat(),
         }

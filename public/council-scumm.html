@@ -2039,7 +2039,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.29.04.9</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.29.04.10</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -3180,12 +3180,15 @@
         // Background-window overlays: per-verb activation
         const winCreativo = document.getElementById('win-creativo');
         const winRacional = document.getElementById('win-racional');
-        if (yarigWindowsPinned) {
-            showYarigWindows();
+        if (currentVerb === 'entrenar') {
+            winCreativo.classList.remove('active');
+            winRacional.classList.remove('active');
         } else if (currentVerb === 'analizar') {
             winCreativo.classList.add('active');
             winRacional.classList.remove('active');
             renderAnalyzedList();
+        } else if (yarigWindowsPinned) {
+            showYarigWindows();
         } else {
             // entrenar tampoco activa las ventanas aquí: aparecen sólo al hover sobre un consejero
             winCreativo.classList.remove('active');
@@ -3885,18 +3888,41 @@
         openInTableViewer(main.getAttribute('data-entrenar-url'));
     }
     function showEntrenarFor(persona) {
-        const finalizadas = (Array.isArray(yarContext.done) ? yarContext.done : []).slice(-12).reverse();
-        const tareas = (Array.isArray(yarContext.tasks) ? yarContext.tasks : (Array.isArray(yarContext.pending) ? yarContext.pending : [])).slice(-12).reverse();
-        const foco = yarContext.focus ? '<div class="analizar-desc">Foco: ' + _entrenarEsc(yarContext.focus) + '</div>' : '';
-        const ayuda = yarContext.ask ? '<div class="analizar-desc">Ayuda: ' + _entrenarEsc(yarContext.ask) + '</div>' : '';
+        if (persona === '__yarig__') {
+            const finalizadas = (Array.isArray(yarContext.done) ? yarContext.done : []).slice(-12).reverse();
+            const tareas = (Array.isArray(yarContext.tasks) ? yarContext.tasks : (Array.isArray(yarContext.pending) ? yarContext.pending : [])).slice(-12).reverse();
+            const foco = yarContext.focus ? '<div class="analizar-desc">Foco: ' + _entrenarEsc(yarContext.focus) + '</div>' : '';
+            const ayuda = yarContext.ask ? '<div class="analizar-desc">Ayuda: ' + _entrenarEsc(yarContext.ask) + '</div>' : '';
+            document.getElementById('win-racional').innerHTML =
+                '<div class="window-overlay-title">FINALIZADAS · Yarig.AI (' + finalizadas.length + ')</div>' +
+                foco +
+                '<ol class="analizar-list">' + _yarSimpleListHtml(finalizadas, 'sin tareas finalizadas') + '</ol>';
+            document.getElementById('win-creativo').innerHTML =
+                '<div class="window-overlay-title">PENDIENTES · Yarig.AI (' + tareas.length + ')</div>' +
+                ayuda +
+                '<ol class="analizar-list">' + _yarSimpleListHtml(tareas, 'sin tareas') + '</ol>';
+            document.getElementById('win-racional').classList.add('active');
+            document.getElementById('win-creativo').classList.add('active');
+            return;
+        }
+
+        const items = loadEntrenar(currentGen, persona);
+        const videos = items.filter(it => classifyEntrenarUrl(it.url) === 'video');
+        const books = items.filter(it => classifyEntrenarUrl(it.url) === 'book');
+        const others = items.filter(it => classifyEntrenarUrl(it.url) === 'other');
+        const rightItems = books.concat(others);
+        const rightTitle = books.length && others.length
+            ? 'LIBROS / ENLACES'
+            : books.length
+                ? 'LIBROS'
+                : 'ENLACES';
+
         document.getElementById('win-racional').innerHTML =
-            '<div class="window-overlay-title">FINALIZADAS · Yarig.AI (' + finalizadas.length + ')</div>' +
-            foco +
-            '<ol class="analizar-list">' + _yarSimpleListHtml(finalizadas, 'sin tareas finalizadas') + '</ol>';
+            '<div class="window-overlay-title">VIDEOS · ' + _entrenarEsc(persona) + ' (' + videos.length + ')</div>' +
+            '<ol class="analizar-list">' + _entrenarItemsHtml(videos) + '</ol>';
         document.getElementById('win-creativo').innerHTML =
-            '<div class="window-overlay-title">PENDIENTES · Yarig.AI (' + tareas.length + ')</div>' +
-            ayuda +
-            '<ol class="analizar-list">' + _yarSimpleListHtml(tareas, 'sin tareas') + '</ol>';
+            '<div class="window-overlay-title">' + rightTitle + ' · ' + _entrenarEsc(persona) + ' (' + rightItems.length + ')</div>' +
+            '<ol class="analizar-list">' + _entrenarItemsHtml(rightItems) + '</ol>';
         document.getElementById('win-racional').classList.add('active');
         document.getElementById('win-creativo').classList.add('active');
     }

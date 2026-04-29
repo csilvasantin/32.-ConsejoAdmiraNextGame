@@ -104,17 +104,24 @@ async function closeBrowser() {
   }
 }
 
-function extractTasksFromText(text) {
+function extractTaskBucketsFromText(text) {
   const clean = String(text || "").replace(/\r/g, "").trim();
   const chunks = clean.split(/Tarea añadida el \d{2}\/\d{2}\/\d{4}:/).slice(1);
+  const activeTasks = [];
+  const doneTasks = [];
   const tasks = [];
   for (const chunk of chunks) {
     const desc = chunk.match(/Descripción:\s*([^\n]+)/)?.[1]?.trim();
-    const status = chunk.match(/\b(En proceso|Pendiente)\b/)?.[1]?.trim() || "Pendiente";
+    const status = chunk.match(/\b(En proceso|Pendiente|Finalizada|Finalizado)\b/)?.[1]?.trim() || "Pendiente";
     if (!desc) continue;
-    tasks.push(`${status} - ${desc}`.slice(0, 240));
+    const line = `${status} - ${desc}`.slice(0, 240);
+    if (/^Finalizad[ao]$/i.test(status)) doneTasks.push(line);
+    else activeTasks.push(line);
   }
-  return tasks.slice(0, 12);
+  return {
+    tasks: activeTasks.slice(0, 12),
+    done: doneTasks.slice(0, 12),
+  };
 }
 
 async function fetchVisibleTasks(activePage) {
@@ -129,17 +136,17 @@ async function fetchVisibleTasks(activePage) {
   if (!bodyText.includes("Mis tareas")) {
     throw new Error(`La página abierta no parece la lista de tareas de Yarig.ai (${title})`);
   }
-  return extractTasksFromText(bodyText);
+  return extractTaskBucketsFromText(bodyText);
 }
 
 async function syncOnce() {
   const activePage = await ensureBrowser();
-  const tasks = await fetchVisibleTasks(activePage);
+  const { tasks, done } = await fetchVisibleTasks(activePage);
   const current = await api("/api/council/yar-context");
   const payload = {
     focus: current.focus || "",
     doing: current.doing || "",
-    done: Array.isArray(current.done) ? current.done : [],
+    done,
     tasks,
     pending: tasks,
     ask: current.ask || "",
@@ -149,7 +156,7 @@ async function syncOnce() {
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(payload),
   });
-  log(`Sincronizadas ${tasks.length} tareas desde Yarig.ai`);
+  log(`Sincronizadas ${tasks.length} tareas activas y ${done.length} finalizadas desde Yarig.ai`);
   return saved;
 }
 

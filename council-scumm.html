@@ -273,16 +273,16 @@
         }
         /* Left window (Racional) — espejo de la derecha (mismo tamaño y altura) */
         .window-overlay.racional {
-            left: 15%; top: 3.7%;
-            width: 19.5%; height: 16%;
+            left: 14%; top: 3.7%;
+            width: 21.5%; height: 16%;
             overflow-y: auto;
             overflow-x: hidden;
         }
         /* Right window (Creativo) — encajada exactamente en la ventana del rascacielos
            Coords usuario (modo Diseño): 655,30 → 850,120 sobre imagen 1000×565 */
         .window-overlay.creativo {
-            right: 15%; top: 3.7%;
-            width: 19.5%; height: 16%;
+            right: 14%; top: 3.7%;
+            width: 21.5%; height: 16%;
             overflow-y: auto;
             overflow-x: hidden;
         }
@@ -2039,7 +2039,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.29.04.8</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.29.04.9</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -2262,8 +2262,8 @@
                         <textarea class="yar-textarea" id="yar-doing" placeholder="Describe el trabajo en curso para que la mesa tenga contexto real"></textarea>
                     </div>
                     <div class="yar-field full">
-                        <label class="yar-label" for="yar-done">HECHOS / AVANCES</label>
-                        <textarea class="yar-textarea" id="yar-done" placeholder="Un hecho o avance por línea"></textarea>
+                        <label class="yar-label" for="yar-done">FINALIZADAS</label>
+                        <textarea class="yar-textarea" id="yar-done" placeholder="Una tarea finalizada por línea"></textarea>
                     </div>
                     <div class="yar-field full">
                         <label class="yar-label" for="yar-pending">TAREAS</label>
@@ -3212,7 +3212,7 @@
         }
         if (currentVerb === 'hablar') {
             openYarOverlay();
-            setActionLine("🧭 Yarig.AI — escribe foco:, ayuda:, tarea: o hecho: para recoger y enviar contexto");
+            setActionLine("🧭 Yarig.AI — escribe foco:, ayuda:, tarea: o finalizada: para recoger y enviar contexto");
         }
         if (currentVerb === 'leer') {
             triggerLeer();
@@ -3321,13 +3321,13 @@
             '/nombres off<br>' +
             '/nombres toggle<br>' +
             '/tarea &lt;texto&gt;<br>' +
-            '/hecho &lt;texto&gt;<br>' +
+            '/finalizada &lt;texto&gt;<br>' +
             '/yarig.ai on<br>' +
             '/yarig.ai off');
         addConvEntry('conv-creativo', '🧭', 'Yarig.AI', 'Yarig.AI', 'creativo',
             '<strong>Atajos de contexto</strong><br>' +
             'foco: &lt;objetivo&gt;<br>' +
-            'hecho: &lt;avance&gt;<br>' +
+            'finalizada: &lt;tarea ya terminada&gt;<br>' +
             'tarea: &lt;tarea&gt;<br>' +
             'ayuda: &lt;qué debe vigilar el Consejo&gt;');
         setActionLine('⌨️ CLI lista — usa /nombres on|off o /help');
@@ -3356,9 +3356,9 @@
             void executeYarig('tarea: ' + tareaMatch[1].trim());
             return true;
         }
-        const hechoMatch = text.match(/^\/hecho\s+(.+)$/i);
-        if (hechoMatch) {
-            void executeYarig('hecho: ' + hechoMatch[1].trim());
+        const finalizadaMatch = text.match(/^\/finalizada\s+(.+)$/i);
+        if (finalizadaMatch) {
+            void executeYarig('finalizada: ' + finalizadaMatch[1].trim());
             return true;
         }
         const yarigMatch = text.match(/^\/yarig\.ai(?:\s+(on|off|toggle))?$/i);
@@ -3379,7 +3379,7 @@
             }
             void loadYarContext().then(() => {
                 showYarigWindows();
-                setActionLine('🧭 Yarig.AI visible — Hechos y Pendientes sobre la mesa');
+                setActionLine('🧭 Yarig.AI visible — Finalizadas y Pendientes sobre la mesa');
             });
             return true;
         }
@@ -3885,15 +3885,14 @@
         openInTableViewer(main.getAttribute('data-entrenar-url'));
     }
     function showEntrenarFor(persona) {
-        const hechosFuente = (Array.isArray(yarContext.done) ? yarContext.done : []).slice(-12).reverse();
-        const hechos = hechosFuente.length ? hechosFuente : _yarListFromBlock(yarContext.doing).reverse();
+        const finalizadas = (Array.isArray(yarContext.done) ? yarContext.done : []).slice(-12).reverse();
         const tareas = (Array.isArray(yarContext.tasks) ? yarContext.tasks : (Array.isArray(yarContext.pending) ? yarContext.pending : [])).slice(-12).reverse();
         const foco = yarContext.focus ? '<div class="analizar-desc">Foco: ' + _entrenarEsc(yarContext.focus) + '</div>' : '';
         const ayuda = yarContext.ask ? '<div class="analizar-desc">Ayuda: ' + _entrenarEsc(yarContext.ask) + '</div>' : '';
         document.getElementById('win-racional').innerHTML =
-            '<div class="window-overlay-title">HECHOS · Yarig.AI (' + hechos.length + ')</div>' +
+            '<div class="window-overlay-title">FINALIZADAS · Yarig.AI (' + finalizadas.length + ')</div>' +
             foco +
-            '<ol class="analizar-list">' + _yarSimpleListHtml(hechos, 'sin hechos todavía') + '</ol>';
+            '<ol class="analizar-list">' + _yarSimpleListHtml(finalizadas, 'sin tareas finalizadas') + '</ol>';
         document.getElementById('win-creativo').innerHTML =
             '<div class="window-overlay-title">PENDIENTES · Yarig.AI (' + tareas.length + ')</div>' +
             ayuda +
@@ -4331,7 +4330,7 @@
                 activeApiUrl = baseUrl;
                 updateYarChip();
                 if (status) status.textContent = 'YAR sincronizado con la mesa';
-                setActionLine('🧭 YAR sincronizado — el Consejo ya conoce foco, hechos y tareas');
+                setActionLine('🧭 YAR sincronizado — el Consejo ya conoce foco, finalizadas y tareas');
                 return;
             } catch (e) {
                 console.warn('YAR context save failed at', baseUrl, e.message);
@@ -4345,7 +4344,7 @@
         const raw = String(text || '').trim();
         if (!raw) {
             openYarOverlay();
-            setActionLine('🧭 Yarig.AI — abre el panel o escribe foco:, ayuda:, tarea:, hecho: o una nota libre');
+            setActionLine('🧭 Yarig.AI — abre el panel o escribe foco:, ayuda:, tarea:, finalizada: o una nota libre');
             return;
         }
         await loadYarContext();
@@ -4361,10 +4360,10 @@
         } else if (/^(doing|haciendo):/i.test(raw)) {
             next.doing = raw.replace(/^(doing|haciendo):/i, '').trim();
             summary = 'Trabajo en curso actualizado';
-        } else if (/^(done|hecho|hechos):/i.test(raw)) {
-            const item = raw.replace(/^(done|hecho|hechos):/i, '').trim();
+        } else if (/^(done|finalizada|finalizadas|hecho|hechos):/i.test(raw)) {
+            const item = raw.replace(/^(done|finalizada|finalizadas|hecho|hechos):/i, '').trim();
             if (item) next.done = (next.done || []).concat([item]).slice(-12);
-            summary = 'Hecho añadido';
+            summary = 'Finalizada añadida';
         } else if (/^(tarea|tareas|pend|pending|todo):/i.test(raw)) {
             const item = raw.replace(/^(tarea|tareas|pend|pending|todo):/i, '').trim();
             if (item) {

@@ -285,28 +285,84 @@ def _entrenar_gen_snapshot(gen: str) -> dict:
     return {"gen": gen, "personas": personas, "total": total}
 
 
+_YAR_STATUS_RE = re.compile(r"^\s*(En proceso|Pendiente|Finalizada|Finalizado)\s*(?:[-:–—]\s*)?(.*)$", re.I)
+
+
+def _clean_yar_line(item, limit: int = 240) -> str:
+    txt = re.sub(r"\s+", " ", str(item or "")).strip()
+    return txt[:limit]
+
+
+def _yar_status_key(line: str, fallback: str = "pending") -> str:
+    match = _YAR_STATUS_RE.match(str(line or ""))
+    if not match:
+        return fallback
+    status = match.group(1).lower()
+    if "proceso" in status:
+        return "inProgress"
+    if "finalizad" in status:
+        return "done"
+    return "pending"
+
+
+def _normalize_yar_task_buckets(raw: dict, tasks: list[str], pending: list[str], done: list[str]) -> dict:
+    raw_buckets = raw.get("taskBuckets") if isinstance(raw.get("taskBuckets"), dict) else {}
+
+    def _list(key: str) -> list[str]:
+        values = raw_buckets.get(key) if isinstance(raw_buckets.get(key), list) else []
+        return [line for line in (_clean_yar_line(item) for item in values) if line][:12]
+
+    in_progress = _list("inProgress")
+    bucket_pending = _list("pending")
+    bucket_done = _list("done")
+
+    if not (in_progress or bucket_pending or bucket_done):
+        active_source = tasks or pending
+        derived_done = []
+        for item in active_source:
+            status = _yar_status_key(item, "pending")
+            if status == "inProgress":
+                in_progress.append(item)
+            elif status == "done":
+                derived_done.append(item)
+            else:
+                bucket_pending.append(item)
+        bucket_done = done or derived_done
+    elif done and not bucket_done:
+        bucket_done = done
+
+    return {
+        "inProgress": in_progress[:12],
+        "pending": bucket_pending[:12],
+        "done": bucket_done[:12],
+    }
+
+
 def _normalize_yar_context(raw) -> dict:
     raw = raw if isinstance(raw, dict) else {}
     done = raw.get("done") if isinstance(raw.get("done"), list) else []
     cleaned_done = []
     for item in done:
-        txt = str(item or "").strip()
+        txt = _clean_yar_line(item)
         if txt:
-            cleaned_done.append(txt[:240])
+            cleaned_done.append(txt)
     tasks = raw.get("tasks") if isinstance(raw.get("tasks"), list) else (raw.get("tareas") if isinstance(raw.get("tareas"), list) else [])
     cleaned_tasks = []
     for item in tasks:
-        txt = str(item or "").strip()
+        txt = _clean_yar_line(item)
         if txt:
-            cleaned_tasks.append(txt[:240])
+            cleaned_tasks.append(txt)
     pending = raw.get("pending") if isinstance(raw.get("pending"), list) else []
     cleaned_pending = []
     for item in pending:
-        txt = str(item or "").strip()
+        txt = _clean_yar_line(item)
         if txt:
-            cleaned_pending.append(txt[:240])
-    if cleaned_tasks:
-        cleaned_pending = cleaned_tasks[:12]
+            cleaned_pending.append(txt)
+    task_buckets = _normalize_yar_task_buckets(raw, cleaned_tasks, cleaned_pending, cleaned_done)
+    cleaned_tasks = (task_buckets["inProgress"] + task_buckets["pending"])[:12] or cleaned_tasks[:12]
+    cleaned_pending = cleaned_tasks[:12]
+    cleaned_done = task_buckets["done"][:12] or cleaned_done[:12]
+    active_task = _clean_yar_line(raw.get("activeTask") or (task_buckets["inProgress"][0] if task_buckets["inProgress"] else ""))
     day_start_at = str(raw.get("dayStartAt", "") or "").strip()
     day_end_at = str(raw.get("dayEndAt", "") or "").strip()
     sync_user = str(raw.get("syncUser", "") or "").strip()[:200]
@@ -317,6 +373,8 @@ def _normalize_yar_context(raw) -> dict:
         "done": cleaned_done[:12],
         "tasks": cleaned_tasks[:12],
         "pending": cleaned_pending[:12],
+        "taskBuckets": task_buckets,
+        "activeTask": active_task,
         "ask": str(raw.get("ask", "") or "").strip()[:400],
         "updatedAt": str(raw.get("updatedAt", "") or "").strip() or datetime.now().isoformat(),
         "dayStartAt": day_start_at,
@@ -330,7 +388,8 @@ def _merge_yar_day_meta(current: dict, next_data: dict) -> dict:
     now = datetime.now()
     current_start = str(current.get("dayStartAt", "") or "").strip()
     next_tasks = [str(x).strip() for x in (next_data.get("tasks") or []) if str(x).strip()]
-    has_in_progress = any(re.match(r"^En proceso\b", item, re.I) for item in next_tasks)
+    next_buckets = next_data.get("taskBuckets") if isinstance(next_data.get("taskBuckets"), dict) else {}
+    has_in_progress = bool(next_buckets.get("inProgress")) or any(re.match(r"^En proceso\b", item, re.I) for item in next_tasks)
     same_day = False
     if current_start:
         try:
@@ -652,11 +711,16 @@ class YarContextRequest(BaseModel):
     done: list[str] = []
     tasks: list[str] = []
     pending: list[str] = []
+    taskBuckets: dict = {}
+    activeTask: str = ""
     ask: str = ""
+    syncUser: str = ""
+    syncSource: str = ""
 
 
 class YarTaskActionRequest(BaseModel):
     action: str = ""
+    taskHint: str = ""
 
 
 class AgentReply(BaseModel):
@@ -1023,10 +1087,12 @@ async def save_yar_context(req: YarContextRequest, _auth=Depends(verify_token)):
             "done": req.done,
             "tasks": req.tasks or req.pending,
             "pending": req.tasks or req.pending,
+            "taskBuckets": req.taskBuckets,
+            "activeTask": req.activeTask,
             "ask": req.ask,
             "updatedAt": datetime.now().isoformat(),
-            "syncUser": current.get("syncUser", ""),
-            "syncSource": current.get("syncSource", ""),
+            "syncUser": req.syncUser or current.get("syncUser", ""),
+            "syncSource": req.syncSource or current.get("syncSource", ""),
         }
         data = _merge_yar_day_meta(current, data)
         _save_yar_context(data)
@@ -1043,7 +1109,7 @@ async def sync_yar_context_from_logged_session(_auth=Depends(verify_token)):
 
     def _parse_yar_tasks_from_text(text: str) -> dict:
         chunks = re.split(r"Tarea añadida el \d{2}/\d{2}/\d{4}:", text or "")
-        active, done = [], []
+        in_progress, pending, done = [], [], []
         for chunk in chunks[1:]:
             desc_match = re.search(r"Descripción:\s*([^\n]+)", chunk)
             status_match = re.search(r"\b(En proceso|Pendiente|Finalizada|Finalizado)\b", chunk)
@@ -1054,11 +1120,20 @@ async def sync_yar_context_from_logged_session(_auth=Depends(verify_token)):
             line = f"{status} - {desc}"[:240]
             if re.fullmatch(r"Finalizad[ao]", status, re.I):
                 done.append(line)
+            elif re.fullmatch(r"En proceso", status, re.I):
+                in_progress.append(line)
             else:
-                active.append(line)
+                pending.append(line)
+        active = (in_progress + pending)[:12]
         return {
             "tasks": active[:12],
             "done": done[:12],
+            "taskBuckets": {
+                "inProgress": in_progress[:12],
+                "pending": pending[:12],
+                "done": done[:12],
+            },
+            "activeTask": in_progress[0] if in_progress else "",
         }
 
     def _run_osascript(lines: list[str], timeout: int = 6) -> str:
@@ -1126,6 +1201,8 @@ async def sync_yar_context_from_logged_session(_auth=Depends(verify_token)):
                     "title": str(payload.get("title") or "").strip(),
                     "tasks": parsed["tasks"],
                     "done": parsed["done"],
+                    "taskBuckets": parsed["taskBuckets"],
+                    "activeTask": parsed["activeTask"],
                     "source": "browser-tab",
                     "loginUser": "",
                 }
@@ -1141,8 +1218,9 @@ async def sync_yar_context_from_logged_session(_auth=Depends(verify_token)):
                 now_dt = datetime.now(saved_dt.tzinfo) if saved_dt.tzinfo else datetime.now()
                 if (now_dt - saved_dt).total_seconds() > max_age_seconds:
                     return None
-            tasks = [str(x).strip() for x in (raw.get("tasks") or []) if str(x).strip()][:12]
-            done = [str(x).strip() for x in (raw.get("done") or []) if str(x).strip()][:12]
+            normalized = _normalize_yar_context(raw)
+            tasks = normalized["tasks"]
+            done = normalized["done"]
             if not tasks and not done:
                 return None
             return {
@@ -1150,6 +1228,8 @@ async def sync_yar_context_from_logged_session(_auth=Depends(verify_token)):
                 "title": str(raw.get("title", "") or "").strip(),
                 "tasks": tasks,
                 "done": done,
+                "taskBuckets": normalized["taskBuckets"],
+                "activeTask": normalized["activeTask"],
                 "source": str(raw.get("source", "") or source_name).strip() or source_name,
                 "savedAt": saved_at,
                 "loginUser": str(raw.get("loginUser", "") or raw.get("syncUser", "")).strip(),
@@ -1212,8 +1292,11 @@ async def sync_yar_context_from_logged_session(_auth=Depends(verify_token)):
                 if not payload:
                     raise HTTPException(status_code=502, detail=f"yarig sync devolvió JSON inválido: {e}")
 
-    tasks = [str(x).strip() for x in (payload.get("tasks") or []) if str(x).strip()][:12]
-    done = [str(x).strip() for x in (payload.get("done") or []) if str(x).strip()][:12]
+    normalized_payload = _normalize_yar_context(payload)
+    tasks = normalized_payload["tasks"]
+    done = normalized_payload["done"]
+    task_buckets = normalized_payload["taskBuckets"]
+    active_task = normalized_payload["activeTask"]
 
     with _yar_lock:
         current = _load_yar_context()
@@ -1223,6 +1306,8 @@ async def sync_yar_context_from_logged_session(_auth=Depends(verify_token)):
             "done": done,
             "tasks": tasks,
             "pending": tasks,
+            "taskBuckets": task_buckets,
+            "activeTask": active_task,
             "ask": current.get("ask", ""),
             "updatedAt": datetime.now().isoformat(),
             "syncUser": str(payload.get("loginUser", "") or payload.get("syncUser", "") or current.get("syncUser", "")).strip(),
@@ -1296,7 +1381,10 @@ async def yar_task_action(req: YarTaskActionRequest, _auth=Depends(verify_token)
             except Exception:
                 pass
 
+    task_hint = _clean_yar_line(req.taskHint)
     cmd = ["node", str(tool_path), "--task-action", action]
+    if task_hint:
+        cmd.extend(["--task-hint", task_hint])
     try:
         res = subprocess.run(cmd, capture_output=True, text=True, timeout=120, env=env)
     except subprocess.TimeoutExpired as e:
@@ -1481,6 +1569,8 @@ async def yar_logout_session(_auth=Depends(verify_token)):
             "done": [],
             "tasks": [],
             "pending": [],
+            "taskBuckets": {"inProgress": [], "pending": [], "done": []},
+            "activeTask": "",
             "ask": current.get("ask", ""),
             "updatedAt": datetime.now().isoformat(),
             "syncUser": "",

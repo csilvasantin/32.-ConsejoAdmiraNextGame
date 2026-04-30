@@ -2090,7 +2090,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.30.04.2</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.30.04.3</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -4050,10 +4050,10 @@
     }
     function showEntrenarFor(persona) {
         if (persona === '__yarig__') {
-            const finalizadas = (Array.isArray(yarContext.done) ? yarContext.done : []).slice(-12).reverse();
-            const tareasActivas = (Array.isArray(yarContext.tasks) ? yarContext.tasks : (Array.isArray(yarContext.pending) ? yarContext.pending : [])).slice(-12).reverse();
-            const enProceso = tareasActivas.filter(item => /^En proceso\b/i.test(String(item || '').trim()));
-            const pendientes = tareasActivas.filter(item => !/^En proceso\b/i.test(String(item || '').trim()));
+            const buckets = _normalizeYarContext(yarContext).taskBuckets;
+            const finalizadas = (buckets.done || []).slice(-12).reverse();
+            const enProceso = (buckets.inProgress || []).slice(-12).reverse();
+            const pendientes = (buckets.pending || []).slice(-12).reverse();
             const foco = yarContext.focus ? '<div class="analizar-desc">Foco: ' + _entrenarEsc(yarContext.focus) + '</div>' : '';
             const ayuda = yarContext.ask ? '<div class="analizar-desc">Ayuda: ' + _entrenarEsc(yarContext.ask) + '</div>' : '';
             const jornada = '<div class="window-meta">Jornada · inicio ' + _yarFmtTime(yarContext.dayStartAt) + ' · fin ' + _yarFmtTime(yarContext.dayEndAt) + '</div>';
@@ -4387,7 +4387,7 @@
     const YAR_DONE_BLOCK_END = '[/YAR_DONE]';
     let activeApiUrl = null;
     let conversationHistory = [];
-    let yarContext = { focus: "", doing: "", done: [], tasks: [], pending: [], ask: "", updatedAt: "", syncUser: "", syncSource: "", dayStartAt: "", dayEndAt: "" };
+    let yarContext = { focus: "", doing: "", done: [], tasks: [], pending: [], taskBuckets: { inProgress: [], pending: [], done: [] }, activeTask: "", ask: "", updatedAt: "", syncUser: "", syncSource: "", dayStartAt: "", dayEndAt: "" };
     window._crearRequestSeq = window._crearRequestSeq || 0;
     window._crearActiveJobId = window._crearActiveJobId || null;
     window._crearPollTimer = window._crearPollTimer || null;
@@ -4419,19 +4419,57 @@
         return (cleanDoing + block).trim();
     }
 
+    function _yarTaskStatusKey(line, fallback) {
+        const match = String(line || '').trim().match(/^(En proceso|Pendiente|Finalizada|Finalizado)\b/i);
+        if (!match) return fallback || 'pending';
+        if (/proceso/i.test(match[1])) return 'inProgress';
+        if (/finalizad/i.test(match[1])) return 'done';
+        return 'pending';
+    }
+
+    function _yarCleanLines(items) {
+        return (Array.isArray(items) ? items : [])
+            .map(x => String(x || '').replace(/\s+/g, ' ').trim())
+            .filter(Boolean)
+            .slice(0, 12);
+    }
+
+    function _yarBucketsFromRaw(raw, parsedDone) {
+        const rawBuckets = raw?.taskBuckets && typeof raw.taskBuckets === 'object' ? raw.taskBuckets : null;
+        const buckets = {
+            inProgress: _yarCleanLines(rawBuckets?.inProgress),
+            pending: _yarCleanLines(rawBuckets?.pending),
+            done: _yarCleanLines(rawBuckets?.done),
+        };
+        if (buckets.inProgress.length || buckets.pending.length || buckets.done.length) {
+            if (!buckets.done.length) buckets.done = _yarCleanLines(parsedDone);
+            return buckets;
+        }
+        const tasks = _yarCleanLines(Array.isArray(raw?.tasks) ? raw.tasks : (Array.isArray(raw?.tareas) ? raw.tareas : raw?.pending));
+        for (const item of tasks) {
+            const key = _yarTaskStatusKey(item, 'pending');
+            if (key === 'inProgress') buckets.inProgress.push(item);
+            else if (key === 'done') buckets.done.push(item);
+            else buckets.pending.push(item);
+        }
+        buckets.done = buckets.done.length ? buckets.done.slice(0, 12) : _yarCleanLines(parsedDone);
+        return buckets;
+    }
+
     function _normalizeYarContext(raw) {
         const parsed = _decodeYarDoing(raw?.doing, raw?.done);
-        const tasks = (Array.isArray(raw?.tasks) ? raw.tasks : (Array.isArray(raw?.tareas) ? raw.tareas : (Array.isArray(raw?.pending) ? raw.pending : [])))
-            .map(x => String(x || '').trim()).filter(Boolean).slice(0, 12);
-        const pending = tasks.length
-            ? tasks.slice()
-            : (Array.isArray(raw?.pending) ? raw.pending.map(x => String(x || '').trim()).filter(Boolean).slice(0, 12) : []);
+        const taskBuckets = _yarBucketsFromRaw(raw, parsed.done);
+        const tasks = taskBuckets.inProgress.concat(taskBuckets.pending).slice(0, 12);
+        const pending = tasks.slice();
+        const activeTask = String(raw?.activeTask || taskBuckets.inProgress[0] || '').trim();
         return {
             focus: String(raw?.focus || '').trim(),
             doing: parsed.doing,
-            done: parsed.done,
+            done: taskBuckets.done,
             tasks,
             pending,
+            taskBuckets,
+            activeTask,
             ask: String(raw?.ask || '').trim(),
             updatedAt: String(raw?.updatedAt || '').trim(),
             syncUser: String(raw?.syncUser || '').trim(),
@@ -4460,21 +4498,24 @@
     function setYarigPromptStatus(prefix) {
         const syncAt = _yarFmtSyncTime(yarContext.updatedAt);
         const syncUser = yarContext.syncUser || 'usuario no detectado';
+        const buckets = _normalizeYarContext(yarContext).taskBuckets;
         const lead = prefix || '🧭 Yarig.AI';
-        setActionLine(lead + ' · sync ' + syncAt + ' · login ' + syncUser);
+        setActionLine(lead + ' · sync ' + syncAt + ' · login ' + syncUser + ' · ' + buckets.inProgress.length + ' proceso / ' + buckets.pending.length + ' pendientes / ' + buckets.done.length + ' fin');
     }
 
     function updateYarChip() {
         const chip = document.getElementById('yar-chip');
         if (!chip) return;
-        const doneCount = (yarContext.done || []).length;
-        const pendingCount = (yarContext.tasks || yarContext.pending || []).length;
-        if (!yarContext.focus && !yarContext.doing && !doneCount && !pendingCount && !yarContext.ask) {
+        const buckets = _normalizeYarContext(yarContext).taskBuckets;
+        const doneCount = buckets.done.length;
+        const processCount = buckets.inProgress.length;
+        const pendingCount = buckets.pending.length;
+        if (!yarContext.focus && !yarContext.doing && !doneCount && !processCount && !pendingCount && !yarContext.ask) {
             chip.textContent = 'sin contexto';
             return;
         }
         const focus = yarContext.focus ? yarContext.focus.slice(0, 18) : 'contexto activo';
-        chip.textContent = focus + ' · ' + doneCount + '/' + pendingCount;
+        chip.textContent = focus + ' · ' + processCount + '/' + pendingCount + '/' + doneCount;
     }
 
     function fillYarForm() {
@@ -4526,15 +4567,19 @@
         const status = document.getElementById('yar-status');
         if (status) status.textContent = 'GUARDANDO…';
         const tasks = (document.getElementById('yar-pending')?.value || '').split('\n').map(x => x.trim()).filter(Boolean);
+        const done = (document.getElementById('yar-done')?.value || '').split('\n').map(x => x.trim()).filter(Boolean);
+        const taskBuckets = _yarBucketsFromRaw({ tasks, done }, done);
         const payload = {
             focus: document.getElementById('yar-focus')?.value || '',
             doing: _encodeYarDoing(
                 document.getElementById('yar-doing')?.value || '',
-                (document.getElementById('yar-done')?.value || '').split('\n').map(x => x.trim()).filter(Boolean)
+                done
             ),
-            done: (document.getElementById('yar-done')?.value || '').split('\n').map(x => x.trim()).filter(Boolean),
+            done,
             tasks,
             pending: tasks,
+            taskBuckets,
+            activeTask: taskBuckets.inProgress[0] || '',
             ask: document.getElementById('yar-ask')?.value || '',
         };
         const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
@@ -4592,9 +4637,10 @@
                 fillYarForm();
                 showYarigWindows();
                 enterConversation();
+                const buckets = _normalizeYarContext(yarContext).taskBuckets;
                 addUserEntry('🧭 /yarig.ai sincro');
                 addConvEntry('conv-racional', '🧭', 'Yarig.AI', 'Yarig.AI', 'racional',
-                    'Importadas ' + ((yarContext.tasks || []).length) + ' tareas pendientes y ' + ((yarContext.done || []).length) + ' finalizadas desde la sesión abierta.');
+                    'Importadas ' + ((buckets.inProgress || []).length) + ' en proceso, ' + ((buckets.pending || []).length) + ' pendientes y ' + ((buckets.done || []).length) + ' finalizadas desde la sesión abierta.');
                 addConvEntry('conv-creativo', '🧭', 'Yarig.AI', 'Yarig.AI', 'creativo',
                     'La mesa ya trabaja con la última versión visible en www.yarig.ai para el usuario que esté loginado.');
                 if (status) status.textContent = 'Yarig.AI importado desde sesión abierta';
@@ -4637,7 +4683,7 @@
                         'Content-Type': 'application/json',
                         'X-Council-Token': COUNCIL_API_TOKEN,
                     },
-                    body: JSON.stringify({ action }),
+                    body: JSON.stringify({ action, taskHint: yarContext.activeTask || (yarContext.taskBuckets?.inProgress || [])[0] || '' }),
                     signal: AbortSignal.timeout(120000),
                 });
                 if (!res.ok) {
@@ -4791,6 +4837,11 @@
 
         const status = document.getElementById('yar-status');
         if (status) status.textContent = 'SINCRONIZANDO…';
+        const nextBuckets = _yarBucketsFromRaw({ tasks: next.tasks || next.pending || [], done: next.done }, next.done);
+        next.tasks = nextBuckets.inProgress.concat(nextBuckets.pending).slice(0, 12);
+        next.pending = next.tasks.slice();
+        next.taskBuckets = nextBuckets;
+        next.activeTask = nextBuckets.inProgress[0] || '';
         const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
         for (const baseUrl of urls) {
             try {
@@ -4802,8 +4853,6 @@
                     },
                     body: JSON.stringify({
                         ...next,
-                        tasks: next.tasks || next.pending || [],
-                        pending: next.tasks || next.pending || [],
                         doing: _encodeYarDoing(next.doing, next.done),
                     }),
                     signal: AbortSignal.timeout(10000),
@@ -4839,14 +4888,16 @@
 
     function buildCouncilPrompt(message) {
         const ctx = _normalizeYarContext(yarContext);
+        const buckets = ctx.taskBuckets || { inProgress: [], pending: [], done: [] };
         const hasYar = ctx.focus || ctx.doing || ctx.ask || (ctx.done && ctx.done.length) || (ctx.tasks && ctx.tasks.length) || (ctx.pending && ctx.pending.length);
         if (!hasYar) return message;
         const sections = [
             'CONTEXTO YAR DEL CONSEJO',
             ctx.focus ? ('Foco: ' + ctx.focus) : '',
             ctx.doing ? ('Trabajo en curso: ' + ctx.doing) : '',
-            ctx.done.length ? ('Hechos:\n- ' + ctx.done.join('\n- ')) : '',
-            (ctx.tasks && ctx.tasks.length) ? ('Tareas pendientes:\n- ' + ctx.tasks.join('\n- ')) : (ctx.pending.length ? ('Pendientes:\n- ' + ctx.pending.join('\n- ')) : ''),
+            buckets.inProgress.length ? ('En proceso en Yarig.ai:\n- ' + buckets.inProgress.join('\n- ')) : '',
+            buckets.pending.length ? ('Pendientes en Yarig.ai:\n- ' + buckets.pending.join('\n- ')) : '',
+            buckets.done.length ? ('Finalizadas en Yarig.ai:\n- ' + buckets.done.join('\n- ')) : '',
             ctx.ask ? ('Ayuda esperada del consejo: ' + ctx.ask) : '',
             'Estado vivo de la mesa: ' + buildLiveCouncilState(),
             '',

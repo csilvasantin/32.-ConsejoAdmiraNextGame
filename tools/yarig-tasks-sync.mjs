@@ -14,6 +14,8 @@ const PREPARE_LOGIN = process.argv.includes("--prepare-login");
 const WATCH_AFTER_LOGIN = process.argv.includes("--watch-after-login");
 const TASK_ACTION_INDEX = process.argv.indexOf("--task-action");
 const TASK_ACTION = TASK_ACTION_INDEX >= 0 ? String(process.argv[TASK_ACTION_INDEX + 1] || "").trim().toLowerCase() : "";
+const TASK_HINT_INDEX = process.argv.indexOf("--task-hint");
+const TASK_HINT = TASK_HINT_INDEX >= 0 ? String(process.argv[TASK_HINT_INDEX + 1] || "").trim() : "";
 const LOGOUT = process.argv.includes("--logout");
 const POLL_MS = Number(process.env.YARIG_SYNC_POLL_MS || 60000);
 const LOGIN_WAIT_MS = Number(process.env.YARIG_LOGIN_WAIT_MS || 300000);
@@ -149,28 +151,62 @@ async function clearBrowserState(activePage) {
   } catch {}
 }
 
+function normalizeTaskStatus(status) {
+  const clean = String(status || "").trim().toLowerCase();
+  if (/en\s+proceso/.test(clean)) return "En proceso";
+  if (/finalizad[ao]/.test(clean)) return "Finalizada";
+  return "Pendiente";
+}
+
+function taskBucketKey(status) {
+  const normalized = normalizeTaskStatus(status);
+  if (normalized === "En proceso") return "inProgress";
+  if (normalized === "Finalizada") return "done";
+  return "pending";
+}
+
+function taskLine(status, desc) {
+  return `${normalizeTaskStatus(status)} - ${String(desc || "").replace(/\s+/g, " ").trim()}`.slice(0, 240);
+}
+
+function payloadFromTaskRecords(records, extra = {}) {
+  const taskBuckets = { inProgress: [], pending: [], done: [] };
+  const seen = new Set();
+  for (const record of records) {
+    const desc = String(record?.desc || "").replace(/\s+/g, " ").trim();
+    if (!desc) continue;
+    const line = taskLine(record.status, desc);
+    if (seen.has(line)) continue;
+    seen.add(line);
+    taskBuckets[taskBucketKey(record.status)].push(line);
+  }
+  taskBuckets.inProgress = taskBuckets.inProgress.slice(0, 12);
+  taskBuckets.pending = taskBuckets.pending.slice(0, 12);
+  taskBuckets.done = taskBuckets.done.slice(0, 12);
+  return {
+    tasks: taskBuckets.inProgress.concat(taskBuckets.pending).slice(0, 12),
+    done: taskBuckets.done,
+    taskBuckets,
+    activeTask: taskBuckets.inProgress[0] || "",
+    ...extra,
+  };
+}
+
 function extractTaskBucketsFromText(text) {
   const clean = String(text || "").replace(/\r/g, "").trim();
   const chunks = clean.split(/Tarea añadida el \d{2}\/\d{2}\/\d{4}:/).slice(1);
-  const activeTasks = [];
-  const doneTasks = [];
-  const tasks = [];
+  const records = [];
   for (const chunk of chunks) {
     const desc = chunk.match(/Descripción:\s*([^\n]+)/)?.[1]?.trim();
     const status = chunk.match(/\b(En proceso|Pendiente|Finalizada|Finalizado)\b/)?.[1]?.trim() || "Pendiente";
     if (!desc) continue;
-    const line = `${status} - ${desc}`.slice(0, 240);
-    if (/^Finalizad[ao]$/i.test(status)) doneTasks.push(line);
-    else activeTasks.push(line);
+    records.push({ status, desc });
   }
-  return {
-    tasks: activeTasks.slice(0, 12),
-    done: doneTasks.slice(0, 12),
-  };
+  return payloadFromTaskRecords(records);
 }
 
 async function extractTaskBucketsFromDom(activePage) {
-  return activePage.evaluate(() => {
+  const dom = await activePage.evaluate(() => {
     const rootText = document.body?.innerText || "";
     const emailRe = /[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/ig;
     const dateRe = /Tarea añadida el \d{2}\/\d{2}\/\d{4}/;
@@ -201,8 +237,7 @@ async function extractTaskBucketsFromDom(activePage) {
         });
       });
     const seen = new Set();
-    const activeTasks = [];
-    const doneTasks = [];
+    const records = [];
     for (const el of candidates) {
       const text = (el.innerText || "").replace(/\r/g, "").trim();
       if (!text || seen.has(text)) continue;
@@ -210,16 +245,14 @@ async function extractTaskBucketsFromDom(activePage) {
       const desc = text.match(descRe)?.[1]?.trim();
       if (!desc) continue;
       const status = (statusPatterns.find(({ re }) => re.test(text))?.label) || "Pendiente";
-      const line = `${status} - ${desc}`.slice(0, 240);
-      if (/^Finalizad[ao]$/i.test(status)) doneTasks.push(line);
-      else activeTasks.push(line);
+      records.push({ status, desc });
     }
     return {
-      tasks: activeTasks.slice(0, 12),
-      done: doneTasks.slice(0, 12),
+      records,
       loginUser,
     };
   });
+  return payloadFromTaskRecords(dom.records || [], { loginUser: dom.loginUser || "" });
 }
 
 async function inspectCurrentPage(activePage) {
@@ -355,7 +388,7 @@ async function syncOnce() {
 }
 
 async function syncPayloadToApi(livePayload, activePage = null) {
-  const { tasks, done, loginUser } = livePayload;
+  const { tasks, done, taskBuckets, activeTask, loginUser } = livePayload;
   const current = await api("/api/council/yar-context");
   const payload = {
     focus: current.focus || "",
@@ -363,8 +396,11 @@ async function syncPayloadToApi(livePayload, activePage = null) {
     done,
     tasks,
     pending: tasks,
+    taskBuckets: taskBuckets || { inProgress: [], pending: tasks || [], done: done || [] },
+    activeTask: activeTask || "",
     ask: current.ask || "",
     syncUser: loginUser || current.syncUser || "",
+    syncSource: "worker-sync",
   };
   const saved = await api("/api/council/yar-context", {
     method: "POST",
@@ -374,6 +410,8 @@ async function syncPayloadToApi(livePayload, activePage = null) {
   await saveSnapshot({
     tasks,
     done,
+    taskBuckets: taskBuckets || { inProgress: [], pending: tasks || [], done: done || [] },
+    activeTask: activeTask || "",
     currentUrl: livePayload.currentUrl || activePage?.url?.() || "",
     title: livePayload.title || (activePage ? await activePage.title() : ""),
     source: "worker-sync",
@@ -383,10 +421,18 @@ async function syncPayloadToApi(livePayload, activePage = null) {
   return saved;
 }
 
-async function runTaskAction(action) {
+async function runTaskAction(action, taskHint = "") {
   const activePage = await ensureBrowser();
   const currentPayload = await fetchVisibleTasks(activePage, { preferCurrent: true });
-  const currentTask = (currentPayload.tasks || []).find((item) => /^En proceso\b/i.test(normalizeTaskLine(item)));
+  const inProgress = currentPayload.taskBuckets?.inProgress || [];
+  const normalizedHint = normalizeTaskLine(taskHint);
+  const currentTask = (normalizedHint
+    ? inProgress.find((item) => {
+        const itemLine = normalizeTaskLine(item);
+        const itemDesc = normalizeTaskLine(taskDescriptionFromLine(item));
+        return itemLine.includes(normalizedHint) || itemDesc.includes(normalizedHint) || normalizedHint.includes(itemDesc);
+      })
+    : "") || currentPayload.activeTask || inProgress[0] || (currentPayload.tasks || []).find((item) => /^En proceso\b/i.test(normalizeTaskLine(item)));
   if (!currentTask) {
     throw new Error("No hay ninguna tarea en proceso en Yarig.ai para controlar");
   }
@@ -401,6 +447,8 @@ async function runTaskAction(action) {
     title: refreshedPayload.title,
     tasks: refreshedPayload.tasks,
     done: refreshedPayload.done,
+    taskBuckets: refreshedPayload.taskBuckets,
+    activeTask: refreshedPayload.activeTask,
     context: saved,
   };
 }
@@ -433,11 +481,15 @@ async function logoutSession() {
     title: await activePage.title(),
     tasks: [],
     done: [],
+    taskBuckets: { inProgress: [], pending: [], done: [] },
+    activeTask: "",
     loginUser: "",
   };
   await saveSnapshot({
     tasks: [],
     done: [],
+    taskBuckets: { inProgress: [], pending: [], done: [] },
+    activeTask: "",
     currentUrl: payload.currentUrl,
     title: payload.title,
     source: "logout",
@@ -459,6 +511,8 @@ async function prepareLoginWindow() {
       await saveSnapshot({
         tasks: payload.tasks,
         done: payload.done,
+        taskBuckets: payload.taskBuckets,
+        activeTask: payload.activeTask,
         currentUrl: payload.currentUrl,
         title: payload.title,
         source: "prepare-login",
@@ -495,7 +549,7 @@ async function main() {
     return;
   }
   if (TASK_ACTION) {
-    const payload = await runTaskAction(TASK_ACTION);
+    const payload = await runTaskAction(TASK_ACTION, TASK_HINT);
     process.stdout.write(JSON.stringify(payload));
     await closeBrowser();
     return;
@@ -510,6 +564,8 @@ async function main() {
       title: payload.title,
       tasks: payload.tasks,
       done: payload.done,
+      taskBuckets: payload.taskBuckets,
+      activeTask: payload.activeTask,
     }));
     await syncPayloadToApi(payload, page);
     await watchLoop(page);
@@ -524,6 +580,8 @@ async function main() {
       title: payload.title,
       tasks: payload.tasks,
       done: payload.done,
+      taskBuckets: payload.taskBuckets,
+      activeTask: payload.activeTask,
     }));
     await closeBrowser();
     return;
@@ -534,6 +592,8 @@ async function main() {
     await saveSnapshot({
       tasks: payload.tasks,
       done: payload.done,
+      taskBuckets: payload.taskBuckets,
+      activeTask: payload.activeTask,
       currentUrl: payload.currentUrl,
       title: payload.title,
       source: "dump-json",

@@ -14,6 +14,7 @@ const PREPARE_LOGIN = process.argv.includes("--prepare-login");
 const WATCH_AFTER_LOGIN = process.argv.includes("--watch-after-login");
 const TASK_ACTION_INDEX = process.argv.indexOf("--task-action");
 const TASK_ACTION = TASK_ACTION_INDEX >= 0 ? String(process.argv[TASK_ACTION_INDEX + 1] || "").trim().toLowerCase() : "";
+const LOGOUT = process.argv.includes("--logout");
 const POLL_MS = Number(process.env.YARIG_SYNC_POLL_MS || 60000);
 const LOGIN_WAIT_MS = Number(process.env.YARIG_LOGIN_WAIT_MS || 300000);
 
@@ -123,6 +124,29 @@ async function closeBrowser() {
     try { await context.close(); } catch {}
     context = null;
   }
+}
+
+async function clearBrowserState(activePage) {
+  try {
+    await context?.clearCookies();
+  } catch {}
+  try {
+    await activePage.evaluate(async () => {
+      try { localStorage.clear(); } catch {}
+      try { sessionStorage.clear(); } catch {}
+      try {
+        const dbs = await indexedDB.databases();
+        await Promise.all((dbs || []).map((db) => db?.name ? new Promise((resolve) => {
+          const req = indexedDB.deleteDatabase(db.name);
+          req.onsuccess = req.onerror = req.onblocked = () => resolve();
+        }) : Promise.resolve()));
+      } catch {}
+      try {
+        const keys = await caches.keys();
+        await Promise.all(keys.map((key) => caches.delete(key)));
+      } catch {}
+    });
+  } catch {}
 }
 
 function extractTaskBucketsFromText(text) {
@@ -381,6 +405,47 @@ async function runTaskAction(action) {
   };
 }
 
+async function logoutSession() {
+  const activePage = await ensureBrowser();
+  const logoutUrls = [
+    "https://www.yarig.ai/registration/logout",
+    "https://yarig.ai/registration/logout",
+    "https://www.yarig.ai/logout",
+    "https://yarig.ai/logout",
+    "https://www.yarig.ai/registration/login",
+  ];
+  for (const url of logoutUrls) {
+    try {
+      await activePage.goto(url, { waitUntil: "domcontentloaded", timeout: 15000 });
+      await activePage.waitForTimeout(1200);
+      break;
+    } catch {}
+  }
+  await clearBrowserState(activePage);
+  try {
+    await activePage.goto("https://www.yarig.ai/registration/login", { waitUntil: "domcontentloaded", timeout: 15000 });
+    await activePage.waitForTimeout(1200);
+  } catch {}
+  const payload = {
+    ok: true,
+    logout: true,
+    currentUrl: activePage.url(),
+    title: await activePage.title(),
+    tasks: [],
+    done: [],
+    loginUser: "",
+  };
+  await saveSnapshot({
+    tasks: [],
+    done: [],
+    currentUrl: payload.currentUrl,
+    title: payload.title,
+    source: "logout",
+    loginUser: "",
+  });
+  return payload;
+}
+
 async function prepareLoginWindow() {
   const activePage = await ensureBrowser();
   await activePage.goto(YARIG_URL, { waitUntil: "domcontentloaded" });
@@ -423,6 +488,12 @@ async function watchLoop(activePage) {
 }
 
 async function main() {
+  if (LOGOUT) {
+    const payload = await logoutSession();
+    process.stdout.write(JSON.stringify(payload));
+    await closeBrowser();
+    return;
+  }
   if (TASK_ACTION) {
     const payload = await runTaskAction(TASK_ACTION);
     process.stdout.write(JSON.stringify(payload));

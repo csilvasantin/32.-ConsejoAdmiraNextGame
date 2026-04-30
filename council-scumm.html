@@ -2090,7 +2090,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.29.04.26</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">AdmiraNext Consejo v26.30.04.1</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -3357,6 +3357,7 @@
 
     let yarigWindowsPinned = false;
     let yarigAutoRefreshTimer = null;
+    let cliHelpVisible = false;
     function startYarigAutoRefresh() {
         if (yarigAutoRefreshTimer) return;
         yarigAutoRefreshTimer = setInterval(async () => {
@@ -3392,7 +3393,55 @@
         stopYarigAutoRefresh();
     }
 
+    function hideCliHelpWindows() {
+        cliHelpVisible = false;
+        if (yarigWindowsPinned) {
+            showYarigWindows();
+            return;
+        }
+        if (currentVerb === 'entrenar') {
+            const activeRow = document.querySelector('.entrenar-corpus-row.active[data-persona]');
+            const persona = activeRow ? activeRow.getAttribute('data-persona') : '';
+            if (persona && persona !== '__all__') {
+                captureOverlayOriginals();
+                showEntrenarFor(persona);
+                return;
+            }
+        }
+        hideEntrenarOverlays();
+        restoreOverlayOriginals();
+    }
+
     function showCliHelp() {
+        cliHelpVisible = true;
+        captureOverlayOriginals();
+        document.getElementById('win-racional').innerHTML =
+            '<div class="window-overlay-title">CLI · GENERAL</div>' +
+            '<ol class="analizar-list">' +
+            '<li><strong>/help</strong> — muestra u oculta esta ayuda</li>' +
+            '<li><strong>/nombres on|off|toggle</strong> — enseña u oculta los consejeros</li>' +
+            '<li><strong>/yarig on|off|toggle</strong> — fija u oculta Yarig en la mesa</li>' +
+            '<li><strong>/yarig login</strong> — abre la sesión persistente de Yarig</li>' +
+            '</ol>';
+        document.getElementById('win-proceso').innerHTML =
+            '<div class="window-overlay-title">CLI · YARIG</div>' +
+            '<ol class="analizar-list">' +
+            '<li><strong>/yarig logout</strong> — cierra la sesión persistente de Yarig</li>' +
+            '<li><strong>/yarig sincro</strong> — importa tareas desde Yarig.ai</li>' +
+            '<li><strong>Finalizar / Pausar / Cancelar</strong> — actúan sobre la tarea en curso</li>' +
+            '<li><strong>sync automático</strong> — refresco cada 60 segundos</li>' +
+            '</ol>';
+        document.getElementById('win-creativo').innerHTML =
+            '<div class="window-overlay-title">CLI · CONTEXTO</div>' +
+            '<ol class="analizar-list">' +
+            '<li><strong>/tarea &lt;texto&gt;</strong> — añade una tarea al contexto</li>' +
+            '<li><strong>/finalizada &lt;texto&gt;</strong> — marca una tarea acabada</li>' +
+            '<li><strong>foco:</strong> define el objetivo actual</li>' +
+            '<li><strong>ayuda:</strong> pide al Consejo qué vigilar</li>' +
+            '</ol>';
+        document.getElementById('win-racional').classList.add('active');
+        document.getElementById('win-proceso').classList.add('active');
+        document.getElementById('win-creativo').classList.add('active');
         enterConversation();
         addUserEntry('/help');
         addConvEntry('conv-racional', '⌨️', 'CLI', 'Consejo CLI', 'racional',
@@ -3404,6 +3453,7 @@
             '/tarea &lt;texto&gt;<br>' +
             '/finalizada &lt;texto&gt;<br>' +
             '/yarig login <span style="opacity:0.7">(alias de /yarig.ai login)</span><br>' +
+            '/yarig logout <span style="opacity:0.7">(alias de /yarig.ai logout)</span><br>' +
             '/yarig sincro <span style="opacity:0.7">(alias de /yarig.ai sincro)</span><br>' +
             '/yarig on <span style="opacity:0.7">(alias de /yarig.ai on)</span><br>' +
             '/yarig off <span style="opacity:0.7">(alias de /yarig.ai off)</span>');
@@ -3413,7 +3463,7 @@
             'finalizada: &lt;tarea ya terminada&gt;<br>' +
             'tarea: &lt;tarea&gt;<br>' +
             'ayuda: &lt;qué debe vigilar el Consejo&gt;');
-        setActionLine('⌨️ CLI lista — usa /nombres on|off o /help');
+        setActionLine('⌨️ CLI visible — repite /help para ocultarla');
     }
 
     function handleCliCommand(raw) {
@@ -3421,6 +3471,12 @@
         if (!text) return false;
         const helpMatch = text.match(/^\/help$/i);
         if (helpMatch) {
+            if (cliHelpVisible) {
+                addUserEntry('/help');
+                hideCliHelpWindows();
+                setActionLine('⌨️ CLI oculta — usa /help para volver a verla');
+                return true;
+            }
             showCliHelp();
             return true;
         }
@@ -3447,6 +3503,11 @@
         const yarigLoginMatch = text.match(/^\/yarig(?:\.ai)?\s+(login|loguear|entrar)$/i);
         if (yarigLoginMatch) {
             void prepareYarigLoginSession();
+            return true;
+        }
+        const yarigLogoutMatch = text.match(/^\/yarig(?:\.ai)?\s+(logout|salir|cerrar-sesion|cerrarsesion)$/i);
+        if (yarigLogoutMatch) {
+            void logoutYarigSession();
             return true;
         }
         const yarigSyncMatch = text.match(/^\/yarig(?:\.ai)?\s+(sincro|sync|sincronizar|sincroniza)$/i);
@@ -4645,6 +4706,51 @@
         }
         if (status) status.textContent = '⚠️ No se pudo abrir el login de Yarig.AI';
         setActionLine('⚠️ No se pudo abrir el login de Yarig.AI — ' + (lastErr ? lastErr.message : 'sin backend disponible'));
+    }
+
+    async function logoutYarigSession() {
+        const status = document.getElementById('yar-status');
+        if (status) status.textContent = 'CERRANDO SESIÓN DE YARIG.AI…';
+        setActionLine('🧭 Cerrando la sesión persistente de Yarig.AI…');
+        const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
+        let lastErr = null;
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + '/api/council/yar-logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Council-Token': COUNCIL_API_TOKEN,
+                    },
+                    body: JSON.stringify({ source: 'cli' }),
+                    signal: AbortSignal.timeout(60000),
+                });
+                if (!res.ok) {
+                    const body = await res.text();
+                    throw new Error('HTTP ' + res.status + (body ? ': ' + body.slice(0, 160) : ''));
+                }
+                const data = await res.json();
+                yarContext = _normalizeYarContext(data.context || data);
+                activeApiUrl = baseUrl;
+                updateYarChip();
+                fillYarForm();
+                showYarigWindows();
+                enterConversation();
+                addUserEntry('🧭 /yarig.ai logout');
+                addConvEntry('conv-racional', '🧭', 'Yarig.AI', 'Yarig.AI', 'racional',
+                    'Sesión persistente cerrada. La mesa ya no queda asociada a ningún usuario de Yarig.ai.');
+                addConvEntry('conv-creativo', '🧭', 'Yarig.AI', 'Yarig.AI', 'creativo',
+                    'Pendientes, en proceso y finalizadas se han limpiado del sync hasta que vuelvas a hacer login.');
+                if (status) status.textContent = 'Yarig.AI logout OK';
+                setYarigPromptStatus('🧭 Yarig.AI logout');
+                return;
+            } catch (e) {
+                lastErr = e;
+                console.warn('Yarig logout failed at', baseUrl, e.message);
+            }
+        }
+        if (status) status.textContent = '⚠️ No se pudo cerrar la sesión de Yarig.AI';
+        setActionLine('⚠️ No se pudo cerrar la sesión de Yarig.AI — ' + (lastErr ? lastErr.message : 'sin backend disponible'));
     }
 
     async function executeYarig(text) {

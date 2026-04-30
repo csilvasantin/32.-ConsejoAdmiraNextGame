@@ -562,7 +562,7 @@ app = FastAPI(title="AdmiraNext Council API", version="4.0.0")
 
 @app.get("/")
 async def root():
-    return {"status": "ok", "service": "AdmiraNext Council API", "version": "v26.29.04.26"}
+    return {"status": "ok", "service": "AdmiraNext Council API", "version": "v26.30.04.1"}
 
 app.add_middleware(
     CORSMiddleware,
@@ -1410,6 +1410,92 @@ async def prepare_yar_login_session(_auth=Depends(verify_token)):
         "pid": proc.pid,
         "message": "Ventana de Yarig.ai abierta para login y watcher persistente del sync",
         "logPath": str(login_log),
+    }
+
+
+@app.post("/api/council/yar-logout")
+async def yar_logout_session(_auth=Depends(verify_token)):
+    tool_path = Path(__file__).resolve().parent / "tools" / "yarig-tasks-sync.mjs"
+    if not tool_path.exists():
+        raise HTTPException(status_code=501, detail="yarig-tasks-sync.mjs no disponible en este backend")
+
+    env = os.environ.copy()
+    log_dir = Path.home() / "Library" / "Logs" / "council-api"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    pid_file = log_dir / "yarig-login.pid"
+
+    def _is_same_yarig_login_process(pid: int) -> bool:
+        try:
+            res = subprocess.run(
+                ["ps", "-p", str(pid), "-o", "command="],
+                capture_output=True,
+                text=True,
+                timeout=5,
+            )
+            cmdline = (res.stdout or "").strip()
+            return (
+                res.returncode == 0
+                and "yarig-tasks-sync.mjs" in cmdline
+                and ("--prepare-login" in cmdline or "--watch-after-login" in cmdline)
+            )
+        except Exception:
+            return False
+
+    if pid_file.exists():
+        try:
+            existing_pid = int(pid_file.read_text(encoding="utf-8").strip())
+            if _is_same_yarig_login_process(existing_pid):
+                try:
+                    subprocess.run(["kill", "-9", str(existing_pid)], capture_output=True, text=True, timeout=5)
+                except Exception:
+                    pass
+            pid_file.unlink(missing_ok=True)
+        except Exception:
+            try:
+                pid_file.unlink(missing_ok=True)
+            except Exception:
+                pass
+
+    cmd = ["node", str(tool_path), "--logout"]
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=60, env=env)
+    except subprocess.TimeoutExpired as e:
+        raise HTTPException(status_code=504, detail=f"yarig logout timeout: {(e.stderr or e.stdout or '').strip()[:240]}")
+    except FileNotFoundError:
+        raise HTTPException(status_code=501, detail="node no disponible para lanzar yarig logout")
+
+    if res.returncode != 0:
+        detail = (res.stderr or res.stdout or "yarig logout failed").strip()[:500]
+        raise HTTPException(status_code=502, detail=detail)
+
+    try:
+        payload = json.loads((res.stdout or "").strip() or "{}")
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=502, detail=f"yarig logout devolvió JSON inválido: {e}")
+
+    with _yar_lock:
+        current = _load_yar_context()
+        data = {
+            "focus": current.get("focus", ""),
+            "doing": current.get("doing", ""),
+            "done": [],
+            "tasks": [],
+            "pending": [],
+            "ask": current.get("ask", ""),
+            "updatedAt": datetime.now().isoformat(),
+            "syncUser": "",
+            "syncSource": "",
+        }
+        data = _merge_yar_day_meta(current, data)
+        _save_yar_context(data)
+        context = _load_yar_context()
+
+    return {
+        "ok": True,
+        "logout": True,
+        "context": context,
+        "sourceUrl": payload.get("currentUrl", ""),
+        "sourceTitle": payload.get("title", ""),
     }
 
 

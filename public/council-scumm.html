@@ -2090,7 +2090,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">Admira v.26.05.03.r2</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">Admira v.26.05.03.r3</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -3420,6 +3420,7 @@
             '<ol class="analizar-list">' +
             '<li><strong>/help</strong> — muestra u oculta esta ayuda</li>' +
             '<li><strong>/nombres on|off|toggle</strong> — enseña u oculta los consejeros</li>' +
+            '<li><strong>/google</strong> — abre la hoja Drive de enlaces Entrenar</li>' +
             '<li><strong>/yarig on|off|toggle</strong> — fija u oculta Yarig en la mesa</li>' +
             '<li><strong>/yarig login</strong> — abre la sesión persistente de Yarig</li>' +
             '</ol>';
@@ -3447,6 +3448,7 @@
         addConvEntry('conv-racional', '⌨️', 'CLI', 'Consejo CLI', 'racional',
             '<strong>Comandos disponibles</strong><br>' +
             '/help<br>' +
+            '/google <span style="opacity:0.7">(abre la hoja de enlaces Entrenar)</span><br>' +
             '/nombres on<br>' +
             '/nombres off<br>' +
             '/nombres toggle<br>' +
@@ -3466,6 +3468,20 @@
         setActionLine('⌨️ CLI visible — repite /help para ocultarla');
     }
 
+    const GOOGLE_ENTRENAR_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1y3p_avIu-VLqWNU1KON_GoLYVAIxDyHOY4IhgJcTIrk/edit';
+
+    function openGoogleEntrenarSheet() {
+        const opened = window.open(GOOGLE_ENTRENAR_SHEET_URL, '_blank');
+        if (opened) opened.opener = null;
+        enterConversation();
+        addUserEntry('/google');
+        addConvEntry('conv-racional', '📊', 'Google Drive', 'Entrenar Links', 'racional',
+            'Abriendo la hoja de cálculo con todos los enlaces guardados desde Entrenar.<br><a href="' + GOOGLE_ENTRENAR_SHEET_URL + '" target="_blank" rel="noopener" style="color:#8cf">Consejo AdmiraNext - Backup Entrenar Links</a>');
+        addConvEntry('conv-creativo', '🎓', 'Entrenar', 'Corpus compartido', 'creativo',
+            opened ? 'Hoja abierta en una pestaña nueva.' : 'El navegador ha bloqueado la pestaña. Usa el enlace de la ventana racional para abrirla.');
+        setActionLine(opened ? '📊 Google Drive abierto — hoja de enlaces Entrenar' : '📊 Google Drive listo — pulsa el enlace si el navegador bloqueó la pestaña');
+    }
+
     function handleCliCommand(raw) {
         const text = String(raw || '').trim();
         if (!text) return false;
@@ -3478,6 +3494,11 @@
                 return true;
             }
             showCliHelp();
+            return true;
+        }
+        const googleMatch = text.match(/^\/google(?:\s+(drive|sheet|sheets|hoja|entrenar))?$/i);
+        if (googleMatch) {
+            openGoogleEntrenarSheet();
             return true;
         }
         const namesMatch = text.match(/^\/?nombres(?:\s+(on|off|toggle))?$/i);

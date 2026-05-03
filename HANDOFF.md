@@ -6,14 +6,14 @@ Proyecto: `32.-ConsejoAdmiraNextGame`
 ## Punto de entrada
 
 - URL pública: [https://csilvasantin.github.io/32.-ConsejoAdmiraNextGame/council-scumm.html](https://csilvasantin.github.io/32.-ConsejoAdmiraNextGame/council-scumm.html)
-- Versión visible: `Admira v.26.05.03.r2`
+- Versión visible: `Admira v.26.05.03.r3`
 - Rama: `main`
 - Commit actual: ver último commit publicado en `main`
 
 ## Qué comprobar al retomar
 
 1. Abrir la URL pública.
-2. Verificar arriba que pone `Admira v.26.05.03.r2`.
+2. Verificar arriba que pone `Admira v.26.05.03.r3`.
 3. Si se va a desarrollar, clonar y actualizar:
 
 ```bash
@@ -76,6 +76,11 @@ El hash debe coincidir con el commit publicado indicado arriba o ser posterior.
 
 - Corregido el destino por defecto de Telegram al chat `AdmiraXP`.
 - Documentada la rutina de publicación con URL cache-busted y envío obligatorio a Telegram.
+
+### `Admira v.26.05.03.r3`
+
+- Añadido comando `/google` para abrir la hoja `Consejo AdmiraNext - Backup Entrenar Links` en Google Drive.
+- `/help` documenta el nuevo acceso directo a la hoja de enlaces guardados desde Entrenar.
 
 ## Riesgos y notas abiertas
 

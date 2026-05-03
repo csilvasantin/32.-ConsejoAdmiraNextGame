@@ -1,19 +1,19 @@
 # HANDOFF — Consejo AdmiraNext
 
-Actualizado: 2026-04-30  
+Actualizado: 2026-05-03  
 Proyecto: `32.-ConsejoAdmiraNextGame`
 
 ## Punto de entrada
 
 - URL pública: [https://csilvasantin.github.io/32.-ConsejoAdmiraNextGame/council-scumm.html](https://csilvasantin.github.io/32.-ConsejoAdmiraNextGame/council-scumm.html)
-- Versión visible: `AdmiraNext Consejo v26.30.04.2`
+- Versión visible: `Admira v.26.05.03.r1`
 - Rama: `main`
-- Commit actual: `3883d45`
+- Commit actual: ver último commit publicado en `main`
 
 ## Qué comprobar al retomar
 
 1. Abrir la URL pública.
-2. Verificar arriba que pone `AdmiraNext Consejo v26.30.04.2`.
+2. Verificar arriba que pone `Admira v.26.05.03.r1`.
 3. Si se va a desarrollar, clonar y actualizar:
 
 ```bash
@@ -24,7 +24,7 @@ git pull
 git rev-parse --short HEAD
 ```
 
-El hash debe coincidir con `3883d45` o ser posterior.
+El hash debe coincidir con el commit publicado indicado arriba o ser posterior.
 
 ## Estado operativo actual
 
@@ -65,6 +65,11 @@ El hash debe coincidir con `3883d45` o ser posterior.
 - Ventanas laterales superiores más altas.
 - Ventana central más ancha y algo más alta.
 - La cota superior de las tres se mantiene.
+
+### `Admira v.26.05.03.r1`
+
+- Publicación de la última versión del Consejo con formato de release pública normalizado.
+- URL pública verificada: `https://csilvasantin.github.io/32.-ConsejoAdmiraNextGame/council-scumm.html`.
 
 ## Riesgos y notas abiertas
 

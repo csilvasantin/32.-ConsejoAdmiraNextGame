@@ -6,7 +6,7 @@
 
 ## 🎮 Demo en vivo
 
-**[→ Jugar ahora](https://csilvasantin.github.io/ConsejoAdmiraNextGame/council-scumm.html)**
+**[→ Jugar ahora](https://csilvasantin.github.io/32.-ConsejoAdmiraNextGame/council-scumm.html)**
 
 ---
 
@@ -72,8 +72,8 @@ Los 8 consejeros de AdmiraNext en traje formal con corbata del color de su rol. 
 ## Ejecución local
 
 ```bash
-git clone https://github.com/csilvasantin/ConsejoAdmiraNextGame
-cd ConsejoAdmiraNextGame
+git clone https://github.com/csilvasantin/32.-ConsejoAdmiraNextGame
+cd 32.-ConsejoAdmiraNextGame
 npm start
 # Abre http://localhost:3030/game.html
 ```

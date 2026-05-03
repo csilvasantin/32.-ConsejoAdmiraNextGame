@@ -95,7 +95,7 @@ if [ -n "$TUNNEL_URL" ]; then
     echo -e "  ${GREEN}${TUNNEL_URL}${NC}"
 fi
 echo ""
-echo -e "  Frontend:     ${BLUE}https://csilvasantin.github.io/ConsejoAdmiraNextGame/council-scumm.html${NC}"
+echo -e "  Frontend:     ${BLUE}https://csilvasantin.github.io/32.-ConsejoAdmiraNextGame/council-scumm.html${NC}"
 echo ""
 echo -e "  API PID:      $API_PID"
 echo -e "  Tunnel PID:   $TUNNEL_PID"

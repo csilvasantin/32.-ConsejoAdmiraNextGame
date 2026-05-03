@@ -2090,7 +2090,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">Admira v.26.05.03.r4</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">Admira v.26.05.03.r5</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -3493,11 +3493,23 @@
         enterConversation();
         addUserEntry('/importar ' + cleanUrl);
         addConvEntry('conv-racional', '📥', 'Importar', 'Google Drive', 'racional',
-            'Descargando el vídeo y subiéndolo a Google Drive. Puede tardar unos minutos.');
-        setActionLine('📥 Importando vídeo a Google Drive…');
+            'Importación iniciada: descarga, copia en Google Drive y alta del entreno en la hoja.');
+        let lastProgressKey = '';
+        const renderProgress = (job) => {
+            const pct = Number.isFinite(Number(job.progress)) ? Math.round(Number(job.progress)) : 0;
+            const step = job.step || job.status || 'Trabajando';
+            const key = step + ':' + pct;
+            setActionLine('📥 ' + step + (pct ? ' — ' + pct + '%' : ''));
+            if (key !== lastProgressKey && (pct === 0 || pct >= 95 || pct % 10 === 0)) {
+                lastProgressKey = key;
+                addConvEntry('conv-racional', '⏳', 'Importar', step, 'racional',
+                    'Progreso: ' + pct + '%' + (job.detail ? '<br><code>' + escapeHtml(job.detail) + '</code>' : ''));
+            }
+        };
         const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
         let lastErr = null;
         for (const baseUrl of urls) {
+            let importStartedAtBackend = false;
             try {
                 const res = await fetch(baseUrl + '/api/council/importar-video', {
                     method: 'POST',
@@ -3511,17 +3523,53 @@
                 const data = await res.json().catch(() => ({}));
                 if (!res.ok) throw new Error(data.detail || ('HTTP ' + res.status));
                 activeApiUrl = baseUrl;
-                const sizeMb = data.bytes ? (data.bytes / 1024 / 1024).toFixed(1) + ' MB' : 'tamano n/d';
+                if (!data.id) {
+                    const sizeMb = data.bytes ? (data.bytes / 1024 / 1024).toFixed(1) + ' MB' : 'tamano n/d';
+                    addConvEntry('conv-creativo', '✅', 'Google Drive', 'Importado', 'creativo',
+                        '<strong>' + escapeHtml(data.title || 'Vídeo importado') + '</strong><br>' +
+                        'Carpeta: ' + escapeHtml(data.driveSubdir || 'AdmiraNext/Importados') + '<br>' +
+                        'Archivo: <code>' + escapeHtml(data.drivePath || '') + '</code><br>' +
+                        'Peso: ' + sizeMb);
+                    setActionLine('✅ Vídeo importado a Google Drive — ' + (data.title || 'listo'));
+                    return;
+                }
+                let job = data;
+                importStartedAtBackend = true;
+                renderProgress(job);
+                const started = Date.now();
+                while (job.status !== 'done' && job.status !== 'error') {
+                    if (Date.now() - started > 1800000) throw new Error('Tiempo máximo agotado esperando la importación');
+                    await new Promise(resolve => setTimeout(resolve, 2500));
+                    const statusRes = await fetch(baseUrl + '/api/council/importar-video/' + encodeURIComponent(data.id), {
+                        headers: { 'X-Council-Token': COUNCIL_API_TOKEN },
+                        signal: AbortSignal.timeout(30000),
+                    });
+                    job = await statusRes.json().catch(() => ({}));
+                    if (!statusRes.ok) throw new Error(job.detail || ('HTTP ' + statusRes.status));
+                    renderProgress(job);
+                }
+                if (job.status === 'error') throw new Error(job.error || 'Importación fallida');
+                const sizeMb = job.bytes ? (job.bytes / 1024 / 1024).toFixed(1) + ' MB' : 'tamano n/d';
+                const sheet = job.sheet || {};
+                const driveLine = job.driveUrl
+                    ? 'Drive: <a href="' + escapeHtml(job.driveUrl) + '" target="_blank" rel="noopener" style="color:#8cf">abrir vídeo en Google Drive</a><br>'
+                    : '';
+                const sheetLine = sheet.updated
+                    ? 'Hoja: entreno dado de alta.<br>'
+                    : 'Hoja: alta en cola para sincronizar.<br>';
                 addConvEntry('conv-creativo', '✅', 'Google Drive', 'Importado', 'creativo',
-                    '<strong>' + (data.title || 'Vídeo importado') + '</strong><br>' +
-                    'Carpeta: ' + (data.driveSubdir || 'AdmiraNext/Importados') + '<br>' +
-                    'Archivo: <code>' + (data.drivePath || '').replace(/</g, '&lt;') + '</code><br>' +
+                    '<strong>' + escapeHtml(job.title || 'Vídeo importado') + '</strong><br>' +
+                    'Carpeta: ' + escapeHtml(job.driveSubdir || 'AdmiraNext/Importados') + '<br>' +
+                    driveLine +
+                    sheetLine +
+                    'Archivo: <code>' + escapeHtml(job.drivePath || '') + '</code><br>' +
                     'Peso: ' + sizeMb);
-                setActionLine('✅ Vídeo importado a Google Drive — ' + (data.title || 'listo'));
+                setActionLine('✅ Vídeo importado y registrado — ' + (job.title || 'listo'));
                 return;
             } catch (e) {
                 lastErr = e;
                 console.warn('Importar video failed at', baseUrl, e.message);
+                if (importStartedAtBackend) break;
             }
         }
         addConvEntry('conv-creativo', '⚠️', 'Google Drive', 'Importar', 'creativo',

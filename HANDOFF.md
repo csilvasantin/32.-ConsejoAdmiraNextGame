@@ -6,14 +6,14 @@ Proyecto: `32.-ConsejoAdmiraNextGame`
 ## Punto de entrada
 
 - URL pública: [https://csilvasantin.github.io/32.-ConsejoAdmiraNextGame/council-scumm.html](https://csilvasantin.github.io/32.-ConsejoAdmiraNextGame/council-scumm.html)
-- Versión visible: `Admira v.26.05.03.r4`
+- Versión visible: `Admira v.26.05.03.r5`
 - Rama: `main`
 - Commit actual: ver último commit publicado en `main`
 
 ## Qué comprobar al retomar
 
 1. Abrir la URL pública.
-2. Verificar arriba que pone `Admira v.26.05.03.r4`.
+2. Verificar arriba que pone `Admira v.26.05.03.r5`.
 3. Si se va a desarrollar, clonar y actualizar:
 
 ```bash
@@ -87,6 +87,12 @@ El hash debe coincidir con el commit publicado indicado arriba o ser posterior.
 - Añadido comando `/importar <url>` para descargar un vídeo con `yt-dlp` y copiarlo a Google Drive Desktop.
 - Nuevo endpoint `POST /api/council/importar-video`, pensado para ejecutarse en el backend MacMini/local con Drive Desktop activo.
 - La carpeta de destino por defecto es `AdmiraNext/Importados` dentro de Google Drive.
+
+### `Admira v.26.05.03.r5`
+
+- `/importar <url>` pasa a trabajar con jobs y feedback de progreso: preparación, descarga, copia a Drive y registro del entreno.
+- Nuevo endpoint `GET /api/council/importar-video/{job_id}` para consultar el estado de la descarga desde el frontend.
+- Tras importar, el backend intenta dar de alta el entreno en la hoja `Entrenar Links` con estado, fecha, ruta, URL de Drive y peso; si Google Sheets no está autenticado, deja una cola CSV/JSONL en la carpeta de Drive para no perder el alta.
 
 ## Riesgos y notas abiertas
 

@@ -28,6 +28,7 @@ import random
 import threading
 import shutil
 import tempfile
+import csv
 from typing import Optional
 from collections import defaultdict
 from datetime import datetime
@@ -626,7 +627,7 @@ app = FastAPI(title="AdmiraNext Council API", version="4.0.0")
 
 @app.get("/")
 async def root():
-    return {"status": "ok", "service": "AdmiraNext Council API", "version": "Admira v.26.05.03.r4"}
+    return {"status": "ok", "service": "AdmiraNext Council API", "version": "Admira v.26.05.03.r5"}
 
 app.add_middleware(
     CORSMiddleware,
@@ -1724,11 +1725,190 @@ def _ensure_drive_subdir(write_root: Path, subdir: str) -> Path:
     return dst_dir
 
 
-def _download_video_to_drive(url: str, subdir: str = "AdmiraNext/Importados") -> dict:
+IMPORTAR_SHEET_ID = os.environ.get("IMPORTAR_SHEET_ID", "1y3p_avIu-VLqWNU1KON_GoLYVAIxDyHOY4IhgJcTIrk")
+IMPORTAR_SHEET_TAB = os.environ.get("IMPORTAR_SHEET_TAB", "Entrenar Links")
+IMPORTAR_SHEET_URL = f"https://docs.google.com/spreadsheets/d/{IMPORTAR_SHEET_ID}/edit"
+IMPORTAR_SHEET_EXTRA_HEADERS = ["importStatus", "importedAt", "drivePath", "driveUrl", "bytes"]
+_import_jobs_lock = threading.Lock()
+_import_jobs: dict[str, dict] = {}
+
+
+def _import_job_update(job_id: str, **fields) -> dict:
+    with _import_jobs_lock:
+        job = _import_jobs.setdefault(job_id, {})
+        job.update(fields)
+        job["updatedAt"] = datetime.now().isoformat()
+        return dict(job)
+
+
+def _import_job_snapshot(job_id: str) -> dict:
+    with _import_jobs_lock:
+        job = _import_jobs.get(job_id)
+        if not job:
+            raise KeyError(job_id)
+        return dict(job)
+
+
+def _drive_search_url(path: Path) -> str:
+    return "https://drive.google.com/drive/search?q=" + urllib.parse.quote(path.name)
+
+
+def _csv_escape_sheet(value) -> str:
+    text = "" if value is None else str(value)
+    if text and text[0] in ("=", "+", "-", "@"):
+        return "'" + text
+    return text
+
+
+def _col_name(index: int) -> str:
+    name = ""
+    while index > 0:
+        index, rem = divmod(index - 1, 26)
+        name = chr(65 + rem) + name
+    return name
+
+
+def _get_google_sheet_service():
+    scopes = ["https://www.googleapis.com/auth/spreadsheets"]
+    try:
+        from googleapiclient.discovery import build
+        from google.oauth2 import service_account
+        import google.auth
+    except Exception as e:
+        raise RuntimeError(f"Google Sheets API no disponible: {e}")
+
+    sa_json = os.environ.get("GOOGLE_SERVICE_ACCOUNT_JSON", "").strip()
+    sa_file = os.environ.get("GOOGLE_APPLICATION_CREDENTIALS", "").strip()
+    if sa_json:
+        info = json.loads(sa_json)
+        creds = service_account.Credentials.from_service_account_info(info, scopes=scopes)
+    elif sa_file and Path(sa_file).exists():
+        creds = service_account.Credentials.from_service_account_file(sa_file, scopes=scopes)
+    else:
+        creds, _project = google.auth.default(scopes=scopes)
+    return build("sheets", "v4", credentials=creds, cache_discovery=False)
+
+
+def _queue_imported_training_for_sheet(import_data: dict, queue_dir: Path, reason: str) -> dict:
+    queue_dir.mkdir(parents=True, exist_ok=True)
+    pending_jsonl = queue_dir / "_importar_sheet_pending.jsonl"
+    pending_csv = queue_dir / "_importar_sheet_pending.csv"
+    row = {
+        "generation": "importado",
+        "persona": "",
+        "kind": "video",
+        "source": "Importar",
+        "title": import_data.get("title") or "Vídeo importado",
+        "url": import_data.get("sourceUrl") or "",
+        "ts": str(int(time.time() * 1000)),
+        "createdAt": datetime.now().isoformat(),
+        "importStatus": "importado",
+        "importedAt": datetime.now().isoformat(),
+        "drivePath": import_data.get("drivePath") or "",
+        "driveUrl": import_data.get("driveUrl") or "",
+        "bytes": str(import_data.get("bytes") or ""),
+        "sheetError": reason[:300],
+    }
+    with pending_jsonl.open("a", encoding="utf-8") as f:
+        f.write(json.dumps(row, ensure_ascii=False) + "\n")
+    write_header = not pending_csv.exists()
+    with pending_csv.open("a", encoding="utf-8", newline="") as f:
+        writer = csv.DictWriter(f, fieldnames=list(row.keys()))
+        if write_header:
+            writer.writeheader()
+        writer.writerow(row)
+    return {
+        "updated": False,
+        "queued": True,
+        "reason": reason[:300],
+        "queuePath": str(pending_csv),
+        "sheetUrl": IMPORTAR_SHEET_URL,
+    }
+
+
+def _register_imported_training(import_data: dict, queue_dir: Path) -> dict:
+    try:
+        service = _get_google_sheet_service()
+        sheet = service.spreadsheets().values()
+        header_resp = sheet.get(
+            spreadsheetId=IMPORTAR_SHEET_ID,
+            range=f"'{IMPORTAR_SHEET_TAB}'!1:1",
+        ).execute()
+        headers = list((header_resp.get("values") or [[]])[0])
+        if not headers:
+            headers = ["generation", "persona", "kind", "source", "title", "url", "ts", "createdAt"]
+        for header in IMPORTAR_SHEET_EXTRA_HEADERS:
+            if header not in headers:
+                headers.append(header)
+        last_col = _col_name(len(headers))
+        sheet.update(
+            spreadsheetId=IMPORTAR_SHEET_ID,
+            range=f"'{IMPORTAR_SHEET_TAB}'!A1:{last_col}1",
+            valueInputOption="USER_ENTERED",
+            body={"values": [headers]},
+        ).execute()
+
+        now = datetime.now().isoformat()
+        row_map = {
+            "generation": "importado",
+            "persona": "",
+            "kind": "video",
+            "source": "Importar",
+            "title": import_data.get("title") or "Vídeo importado",
+            "url": import_data.get("sourceUrl") or "",
+            "ts": str(int(time.time() * 1000)),
+            "createdAt": now,
+            "importStatus": "importado",
+            "importedAt": now,
+            "drivePath": import_data.get("drivePath") or "",
+            "driveUrl": import_data.get("driveUrl") or "",
+            "bytes": str(import_data.get("bytes") or ""),
+        }
+        row = [_csv_escape_sheet(row_map.get(header, "")) for header in headers]
+
+        values_resp = sheet.get(
+            spreadsheetId=IMPORTAR_SHEET_ID,
+            range=f"'{IMPORTAR_SHEET_TAB}'!A2:{last_col}",
+        ).execute()
+        source_col = headers.index("url") if "url" in headers else -1
+        target_row = None
+        if source_col >= 0:
+            for offset, existing in enumerate(values_resp.get("values") or [], start=2):
+                if len(existing) > source_col and existing[source_col] == row_map["url"]:
+                    target_row = offset
+                    break
+        if target_row:
+            sheet.update(
+                spreadsheetId=IMPORTAR_SHEET_ID,
+                range=f"'{IMPORTAR_SHEET_TAB}'!A{target_row}:{last_col}{target_row}",
+                valueInputOption="USER_ENTERED",
+                body={"values": [row]},
+            ).execute()
+        else:
+            sheet.append(
+                spreadsheetId=IMPORTAR_SHEET_ID,
+                range=f"'{IMPORTAR_SHEET_TAB}'!A:{last_col}",
+                valueInputOption="USER_ENTERED",
+                insertDataOption="INSERT_ROWS",
+                body={"values": [row]},
+            ).execute()
+        return {
+            "updated": True,
+            "queued": False,
+            "row": target_row,
+            "sheetUrl": IMPORTAR_SHEET_URL,
+        }
+    except Exception as e:
+        return _queue_imported_training_for_sheet(import_data, queue_dir, str(e))
+
+
+def _download_video_to_drive(url: str, subdir: str = "AdmiraNext/Importados", progress=None) -> dict:
     if not HTTP_URL_RE.search(url):
         raise RuntimeError("La URL debe empezar por http:// o https://")
     if shutil.which("yt-dlp") is None:
         raise RuntimeError("yt-dlp no está instalado en este backend")
+    if progress:
+        progress(status="preparing", step="Preparando Google Drive", progress=0)
     write_root = _detect_google_drive_write_root()
     dst_dir = _ensure_drive_subdir(write_root, subdir)
     max_size = os.environ.get("IMPORTAR_VIDEO_MAX_SIZE", "750M")
@@ -1747,20 +1927,47 @@ def _download_video_to_drive(url: str, subdir: str = "AdmiraNext/Importados") ->
             "mp4",
             "-o",
             output_tpl,
+            "--newline",
             "--print",
             "after_move:filepath",
             url,
         ]
-        res = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
-        if res.returncode != 0:
-            detail = (res.stderr or res.stdout or "").strip().splitlines()[-6:]
+        if progress:
+            progress(status="downloading", step="Descargando vídeo", progress=1)
+        proc = subprocess.Popen(
+            cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.STDOUT,
+            text=True,
+            bufsize=1,
+        )
+        lines = []
+        started = time.time()
+        assert proc.stdout is not None
+        for raw_line in proc.stdout:
+            line = raw_line.strip()
+            if line:
+                lines.append(line)
+            if time.time() - started > 1800:
+                proc.kill()
+                raise RuntimeError("yt-dlp superó el tiempo máximo de descarga")
+            match = re.search(r"\[download\]\s+(\d+(?:\.\d+)?)%", line)
+            if match and progress:
+                pct = max(1, min(95, float(match.group(1))))
+                progress(status="downloading", step="Descargando vídeo", progress=round(pct, 1), detail=line[:220])
+        returncode = proc.wait(timeout=10)
+        if returncode != 0:
+            detail = lines[-6:]
             raise RuntimeError("yt-dlp falló: " + " ".join(detail)[:500])
         downloaded = None
-        for line in reversed((res.stdout or "").splitlines()):
-            candidate = Path(line.strip())
-            if candidate.exists() and candidate.is_file():
-                downloaded = candidate
-                break
+        for line in reversed(lines):
+            try:
+                candidate = Path(line.strip())
+                if candidate.exists() and candidate.is_file():
+                    downloaded = candidate
+                    break
+            except OSError:
+                continue
         if downloaded is None:
             files = [p for p in tmp_dir.iterdir() if p.is_file()]
             downloaded = max(files, key=lambda p: p.stat().st_size) if files else None
@@ -1771,7 +1978,10 @@ def _download_video_to_drive(url: str, subdir: str = "AdmiraNext/Importados") ->
         suffix = downloaded.suffix or ".mp4"
         dst_name = f"{_safe_import_name(title)}_{int(time.time())}{suffix}"
         dst = dst_dir / dst_name
+        if progress:
+            progress(status="uploading", step="Copiando a Google Drive", progress=96)
         shutil.copy2(downloaded, dst)
+        drive_url = _drive_search_url(dst)
         status = dst.with_suffix(dst.suffix + ".upload_status.txt")
         status.write_text(
             "\n".join([
@@ -1780,18 +1990,51 @@ def _download_video_to_drive(url: str, subdir: str = "AdmiraNext/Importados") ->
                 f"source_url={url}",
                 f"source={downloaded}",
                 f"destination={dst}",
+                f"drive_url={drive_url}",
             ]) + "\n",
             encoding="utf-8",
         )
+        if progress:
+            progress(status="sheet", step="Registrando entreno importado", progress=98)
         return {
             "ok": True,
             "title": title,
             "sourceUrl": url,
             "drivePath": str(dst),
+            "driveUrl": drive_url,
             "driveStatus": str(status),
             "driveSubdir": str(dst_dir.relative_to(write_root)),
             "bytes": dst.stat().st_size,
         }
+
+
+def _run_import_video_job(job_id: str, url: str, subdir: str) -> None:
+    try:
+        _import_job_update(job_id, status="queued", step="En cola", progress=0)
+
+        def progress(**fields):
+            _import_job_update(job_id, **fields)
+
+        result = _download_video_to_drive(url, subdir, progress=progress)
+        queue_dir = Path(result["drivePath"]).parent
+        sheet_result = _register_imported_training(result, queue_dir)
+        result["sheet"] = sheet_result
+        _import_job_update(
+            job_id,
+            status="done",
+            step="Importación completada",
+            progress=100,
+            **result,
+        )
+    except Exception as e:
+        _import_job_update(
+            job_id,
+            status="error",
+            step="Importación fallida",
+            progress=0,
+            ok=False,
+            error=str(e),
+        )
 
 
 def _yt_build_context(info: dict, transcript: str, note: str = "", question: str = "") -> dict:
@@ -1875,11 +2118,39 @@ async def council_importar_video(
     url = (req.url or "").strip()
     if not HTTP_URL_RE.search(url):
         raise HTTPException(status_code=400, detail="URL http(s) requerida")
-    loop = asyncio.get_event_loop()
+    job_id = uuid.uuid4().hex
+    now = datetime.now().isoformat()
+    _import_job_update(
+        job_id,
+        id=job_id,
+        ok=True,
+        status="queued",
+        step="En cola",
+        progress=0,
+        sourceUrl=url,
+        createdAt=now,
+        updatedAt=now,
+    )
+    thread = threading.Thread(
+        target=_run_import_video_job,
+        args=(job_id, url, req.subdir),
+        daemon=True,
+        name=f"importar-video-{job_id[:8]}",
+    )
+    thread.start()
+    return _import_job_snapshot(job_id)
+
+
+@app.get("/api/council/importar-video/{job_id}")
+async def council_importar_video_status(
+    job_id: str,
+    _rate=Depends(check_rate_limit),
+    _auth=Depends(verify_token),
+):
     try:
-        return await loop.run_in_executor(None, lambda: _download_video_to_drive(url, req.subdir))
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"importar_video failed: {e}")
+        return _import_job_snapshot(job_id)
+    except KeyError:
+        raise HTTPException(status_code=404, detail="Import job no encontrado")
 
 
 @app.get("/api/council/health")

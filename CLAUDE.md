@@ -26,4 +26,14 @@ Cuando el usuario escriba `handoff`:
    - commit del handoff
 5. responder con la URL pública del Consejo, la URL del handoff y el commit del handoff.
 
+## Rutina de publicación
+
+Al publicar una mejora:
+
+1. actualizar la versión visible con formato `Admira v.AA.MM.DD.rN`;
+2. commit + push a `main`;
+3. verificar GitHub Pages con URL cache-busted (`?_v=<commit-o-timestamp>`);
+4. enviar Telegram al chat `AdmiraXP` (`TELEGRAM_CHAT_ID=-1003841065210`) con URL pública cache-busted, versión visible y commit;
+5. responder al usuario con la URL pública verificada, versión visible y commit.
+
 El `HANDOFF.md` es preferible al diario para continuidad operativa rápida. El diario queda para cierre del día o sesiones largas.

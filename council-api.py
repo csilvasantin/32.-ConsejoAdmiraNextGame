@@ -186,7 +186,7 @@ BUDGET_CRITICAL_PCT = 0.95     # Critical alert at 95% = €19
 
 # Alert config
 TELEGRAM_BOT_TOKEN = os.environ.get("TELEGRAM_BOT_TOKEN", "8753533419:AAHrZSbJhYZu4EZjCw7HSFuv4p-vactPTvc")
-TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "8663681")
+TELEGRAM_CHAT_ID = os.environ.get("TELEGRAM_CHAT_ID", "-1003841065210")
 ALERT_EMAIL = os.environ.get("ALERT_EMAIL", "csilvasantin@gmail.com")
 SMTP_HOST = os.environ.get("SMTP_HOST", "smtp.gmail.com")
 SMTP_PORT = int(os.environ.get("SMTP_PORT", "587"))
@@ -621,7 +621,7 @@ app = FastAPI(title="AdmiraNext Council API", version="4.0.0")
 
 @app.get("/")
 async def root():
-    return {"status": "ok", "service": "AdmiraNext Council API", "version": "Admira v.26.05.03.r1"}
+    return {"status": "ok", "service": "AdmiraNext Council API", "version": "Admira v.26.05.03.r2"}
 
 app.add_middleware(
     CORSMiddleware,

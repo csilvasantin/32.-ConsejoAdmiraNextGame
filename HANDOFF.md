@@ -32,9 +32,8 @@ El hash debe coincidir con `3883d45` o ser posterior.
 
 - La build pública y la copia local del HTML suelen mantenerse sincronizadas.
 - La referencia principal para probar el producto es siempre GitHub Pages.
-- Tras cada update significativo se envía Telegram con:
-  - URL exacta
-  - versión visible
+- Al final de cada mejora hay que actualizar la release pública, verificar GitHub Pages y pasar al usuario la URL pública con versión visible.
+- El formato de release visible es: `Admira v.AA.MM.DD.rN` (año, mes, día y número de release del día).
 
 ### Yarig.AI
 
@@ -93,7 +92,7 @@ Cuando el usuario escriba `handoff`, actualizar este archivo con:
 
 - fecha
 - URL pública
-- versión visible
+- versión visible en formato `Admira v.AA.MM.DD.rN`
 - URL directa de este `HANDOFF.md`
 - commit
 - últimos cambios

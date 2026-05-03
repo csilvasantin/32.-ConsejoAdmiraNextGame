@@ -2090,7 +2090,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">Admira v.26.05.03.r3</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">Admira v.26.05.03.r4</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -3419,6 +3419,7 @@
             '<div class="window-overlay-title">CLI · GENERAL</div>' +
             '<ol class="analizar-list">' +
             '<li><strong>/help</strong> — muestra u oculta esta ayuda</li>' +
+            '<li><strong>/importar &lt;url&gt;</strong> — descarga vídeo y lo sube a Drive</li>' +
             '<li><strong>/nombres on|off|toggle</strong> — enseña u oculta los consejeros</li>' +
             '<li><strong>/google</strong> — abre la hoja Drive de enlaces Entrenar</li>' +
             '<li><strong>/yarig on|off|toggle</strong> — fija u oculta Yarig en la mesa</li>' +
@@ -3448,6 +3449,7 @@
         addConvEntry('conv-racional', '⌨️', 'CLI', 'Consejo CLI', 'racional',
             '<strong>Comandos disponibles</strong><br>' +
             '/help<br>' +
+            '/importar &lt;url&gt; <span style="opacity:0.7">(descarga vídeo y lo sube a Drive)</span><br>' +
             '/google <span style="opacity:0.7">(abre la hoja de enlaces Entrenar)</span><br>' +
             '/nombres on<br>' +
             '/nombres off<br>' +
@@ -3482,6 +3484,51 @@
         setActionLine(opened ? '📊 Google Drive abierto — hoja de enlaces Entrenar' : '📊 Google Drive listo — pulsa el enlace si el navegador bloqueó la pestaña');
     }
 
+    async function executeImportarVideo(url) {
+        const cleanUrl = String(url || '').trim();
+        if (!/^https?:\/\//i.test(cleanUrl)) {
+            setActionLine('📥 /importar necesita una URL que empiece por http(s)://');
+            return;
+        }
+        enterConversation();
+        addUserEntry('/importar ' + cleanUrl);
+        addConvEntry('conv-racional', '📥', 'Importar', 'Google Drive', 'racional',
+            'Descargando el vídeo y subiéndolo a Google Drive. Puede tardar unos minutos.');
+        setActionLine('📥 Importando vídeo a Google Drive…');
+        const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
+        let lastErr = null;
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + '/api/council/importar-video', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Council-Token': COUNCIL_API_TOKEN
+                    },
+                    body: JSON.stringify({ url: cleanUrl, subdir: 'AdmiraNext/Importados' }),
+                    signal: AbortSignal.timeout(1800000),
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.detail || ('HTTP ' + res.status));
+                activeApiUrl = baseUrl;
+                const sizeMb = data.bytes ? (data.bytes / 1024 / 1024).toFixed(1) + ' MB' : 'tamano n/d';
+                addConvEntry('conv-creativo', '✅', 'Google Drive', 'Importado', 'creativo',
+                    '<strong>' + (data.title || 'Vídeo importado') + '</strong><br>' +
+                    'Carpeta: ' + (data.driveSubdir || 'AdmiraNext/Importados') + '<br>' +
+                    'Archivo: <code>' + (data.drivePath || '').replace(/</g, '&lt;') + '</code><br>' +
+                    'Peso: ' + sizeMb);
+                setActionLine('✅ Vídeo importado a Google Drive — ' + (data.title || 'listo'));
+                return;
+            } catch (e) {
+                lastErr = e;
+                console.warn('Importar video failed at', baseUrl, e.message);
+            }
+        }
+        addConvEntry('conv-creativo', '⚠️', 'Google Drive', 'Importar', 'creativo',
+            'No se pudo importar el vídeo. ' + (lastErr ? lastErr.message : 'Backend no disponible'));
+        setActionLine('⚠️ No se pudo importar el vídeo — ' + (lastErr ? lastErr.message : 'backend no disponible'));
+    }
+
     function handleCliCommand(raw) {
         const text = String(raw || '').trim();
         if (!text) return false;
@@ -3499,6 +3546,11 @@
         const googleMatch = text.match(/^\/google(?:\s+(drive|sheet|sheets|hoja|entrenar))?$/i);
         if (googleMatch) {
             openGoogleEntrenarSheet();
+            return true;
+        }
+        const importarMatch = text.match(/^\/importar\s+(\S.+)$/i);
+        if (importarMatch) {
+            void executeImportarVideo(importarMatch[1].trim());
             return true;
         }
         const namesMatch = text.match(/^\/?nombres(?:\s+(on|off|toggle))?$/i);

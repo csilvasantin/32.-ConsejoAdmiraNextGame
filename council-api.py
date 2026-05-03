@@ -26,6 +26,8 @@ import uuid
 import smtplib
 import random
 import threading
+import shutil
+import tempfile
 from typing import Optional
 from collections import defaultdict
 from datetime import datetime
@@ -158,6 +160,7 @@ NVIDIA_API_KEY = os.environ.get("NVIDIA_API_KEY", "")
 NVIDIA_API_URL = "https://integrate.api.nvidia.com/v1/chat/completions"
 
 YOUTUBE_RE = re.compile(r'https?://(?:www\.)?(?:youtube\.com/watch\?[^\s]*v=|youtu\.be/)[\w-]+')
+HTTP_URL_RE = re.compile(r"^https?://", re.I)
 
 # ── Config ──────────────────────────────────────────────────
 COUNCIL_API_TOKEN = os.environ.get("COUNCIL_API_TOKEN", "")
@@ -166,8 +169,10 @@ ALLOWED_ORIGINS = [
     "http://localhost:8080",
     "http://localhost:3000",
     "http://localhost:3030",
+    "http://localhost:3033",
     "http://127.0.0.1:8080",
     "http://127.0.0.1:3030",
+    "http://127.0.0.1:3033",
 ]
 
 # Rate limiting: max requests per IP per window
@@ -621,7 +626,7 @@ app = FastAPI(title="AdmiraNext Council API", version="4.0.0")
 
 @app.get("/")
 async def root():
-    return {"status": "ok", "service": "AdmiraNext Council API", "version": "Admira v.26.05.03.r3"}
+    return {"status": "ok", "service": "AdmiraNext Council API", "version": "Admira v.26.05.03.r4"}
 
 app.add_middleware(
     CORSMiddleware,
@@ -703,6 +708,11 @@ class AnalyzeYoutubeRequest(BaseModel):
     url: str
     question: Optional[str] = None
     note: Optional[str] = None
+
+
+class ImportVideoRequest(BaseModel):
+    url: str
+    subdir: str = "AdmiraNext/Importados"
 
 
 class YarContextRequest(BaseModel):
@@ -1674,6 +1684,116 @@ def _yt_fetch_info(url: str) -> dict:
         raise RuntimeError(f"yt-dlp returned invalid JSON: {e}")
 
 
+def _safe_import_name(value: str, fallback: str = "video") -> str:
+    cleaned = unicodedata.normalize("NFKD", str(value or "")).encode("ascii", "ignore").decode("ascii")
+    cleaned = re.sub(r"[^A-Za-z0-9._-]+", "_", cleaned).strip("._-")
+    return (cleaned or fallback)[:90]
+
+
+def _detect_google_drive_write_root() -> Path:
+    cloud_root = Path.home() / "Library" / "CloudStorage"
+    if not cloud_root.exists():
+        raise RuntimeError("Google Drive Desktop no está disponible en este backend")
+    candidates = sorted(
+        [p for p in cloud_root.iterdir() if p.is_dir() and p.name.startswith("GoogleDrive-")],
+        key=lambda p: p.name.lower(),
+    )
+    if not candidates:
+        raise RuntimeError("No se encontró GoogleDrive-*; abre Google Drive Desktop e inicia sesión")
+    drive_root = candidates[0]
+    for name in ("Mi unidad", "My Drive"):
+        write_root = drive_root / name
+        if write_root.exists() and write_root.is_dir():
+            return write_root
+    for child in sorted([p for p in drive_root.iterdir() if p.is_dir()], key=lambda p: p.name.lower()):
+        if os.access(child, os.W_OK | os.X_OK):
+            return child
+    raise RuntimeError("No se encontró una carpeta escribible dentro de Google Drive")
+
+
+def _ensure_drive_subdir(write_root: Path, subdir: str) -> Path:
+    clean = str(subdir or "AdmiraNext/Importados").strip().strip("/")
+    if not clean:
+        clean = "AdmiraNext/Importados"
+    dst_dir = (write_root / clean).resolve()
+    try:
+        dst_dir.relative_to(write_root.resolve())
+    except Exception:
+        raise RuntimeError("Subcarpeta de Drive inválida")
+    dst_dir.mkdir(parents=True, exist_ok=True)
+    return dst_dir
+
+
+def _download_video_to_drive(url: str, subdir: str = "AdmiraNext/Importados") -> dict:
+    if not HTTP_URL_RE.search(url):
+        raise RuntimeError("La URL debe empezar por http:// o https://")
+    if shutil.which("yt-dlp") is None:
+        raise RuntimeError("yt-dlp no está instalado en este backend")
+    write_root = _detect_google_drive_write_root()
+    dst_dir = _ensure_drive_subdir(write_root, subdir)
+    max_size = os.environ.get("IMPORTAR_VIDEO_MAX_SIZE", "750M")
+
+    with tempfile.TemporaryDirectory(prefix="council-importar-") as tmp:
+        tmp_dir = Path(tmp)
+        output_tpl = str(tmp_dir / "%(title).90s [%(id)s].%(ext)s")
+        cmd = [
+            "yt-dlp",
+            "--no-playlist",
+            "--max-filesize",
+            max_size,
+            "-f",
+            "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b",
+            "--merge-output-format",
+            "mp4",
+            "-o",
+            output_tpl,
+            "--print",
+            "after_move:filepath",
+            url,
+        ]
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=1800)
+        if res.returncode != 0:
+            detail = (res.stderr or res.stdout or "").strip().splitlines()[-6:]
+            raise RuntimeError("yt-dlp falló: " + " ".join(detail)[:500])
+        downloaded = None
+        for line in reversed((res.stdout or "").splitlines()):
+            candidate = Path(line.strip())
+            if candidate.exists() and candidate.is_file():
+                downloaded = candidate
+                break
+        if downloaded is None:
+            files = [p for p in tmp_dir.iterdir() if p.is_file()]
+            downloaded = max(files, key=lambda p: p.stat().st_size) if files else None
+        if downloaded is None or not downloaded.exists():
+            raise RuntimeError("yt-dlp no dejó ningún archivo descargado")
+
+        title = downloaded.stem
+        suffix = downloaded.suffix or ".mp4"
+        dst_name = f"{_safe_import_name(title)}_{int(time.time())}{suffix}"
+        dst = dst_dir / dst_name
+        shutil.copy2(downloaded, dst)
+        status = dst.with_suffix(dst.suffix + ".upload_status.txt")
+        status.write_text(
+            "\n".join([
+                "state=UPLOADED",
+                f"updated_at={datetime.now().isoformat()}",
+                f"source_url={url}",
+                f"source={downloaded}",
+                f"destination={dst}",
+            ]) + "\n",
+            encoding="utf-8",
+        )
+        return {
+            "ok": True,
+            "title": title,
+            "sourceUrl": url,
+            "drivePath": str(dst),
+            "driveStatus": str(status),
+            "driveSubdir": str(dst_dir.relative_to(write_root)),
+            "bytes": dst.stat().st_size,
+        }
+
+
 def _yt_build_context(info: dict, transcript: str, note: str = "", question: str = "") -> dict:
     title = str(info.get("title") or "YouTube video").strip()
     channel = str(info.get("channel") or info.get("uploader") or "").strip()
@@ -1744,6 +1864,22 @@ async def council_analyze_youtube(
         return await loop.run_in_executor(None, build)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"youtube_analyze failed: {e}")
+
+
+@app.post("/api/council/importar-video")
+async def council_importar_video(
+    req: ImportVideoRequest,
+    _rate=Depends(check_rate_limit),
+    _auth=Depends(verify_token),
+):
+    url = (req.url or "").strip()
+    if not HTTP_URL_RE.search(url):
+        raise HTTPException(status_code=400, detail="URL http(s) requerida")
+    loop = asyncio.get_event_loop()
+    try:
+        return await loop.run_in_executor(None, lambda: _download_video_to_drive(url, req.subdir))
+    except Exception as e:
+        raise HTTPException(status_code=500, detail=f"importar_video failed: {e}")
 
 
 @app.get("/api/council/health")

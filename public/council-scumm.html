@@ -2090,7 +2090,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">Admira v.26.05.03.r5</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">Admira v.26.05.04.r1</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -2329,6 +2329,7 @@
                 </div>
                 <div class="yar-actions">
                     <button class="yar-save" onclick="saveYarContext()">GUARDAR YAR</button>
+                    <button class="yar-save" onclick="checkYarigStatus()">ESTADO YARIG</button>
                     <button class="yar-cancel" onclick="closeYarOverlay()">CERRAR</button>
                 </div>
                 <div class="yar-status" id="yar-status"></div>
@@ -3424,6 +3425,7 @@
             '<li><strong>/google</strong> — abre la hoja Drive de enlaces Entrenar</li>' +
             '<li><strong>/yarig on|off|toggle</strong> — fija u oculta Yarig en la mesa</li>' +
             '<li><strong>/yarig login</strong> — abre la sesión persistente de Yarig</li>' +
+            '<li><strong>/yarig estado</strong> — comprueba watcher y frescura del sync</li>' +
             '</ol>';
         document.getElementById('win-proceso').innerHTML =
             '<div class="window-overlay-title">CLI · YARIG</div>' +
@@ -3457,6 +3459,7 @@
             '/tarea &lt;texto&gt;<br>' +
             '/finalizada &lt;texto&gt;<br>' +
             '/yarig login <span style="opacity:0.7">(alias de /yarig.ai login)</span><br>' +
+            '/yarig estado <span style="opacity:0.7">(watcher y frescura del sync)</span><br>' +
             '/yarig logout <span style="opacity:0.7">(alias de /yarig.ai logout)</span><br>' +
             '/yarig sincro <span style="opacity:0.7">(alias de /yarig.ai sincro)</span><br>' +
             '/yarig on <span style="opacity:0.7">(alias de /yarig.ai on)</span><br>' +
@@ -3634,6 +3637,11 @@
         const yarigSyncMatch = text.match(/^\/yarig(?:\.ai)?\s+(sincro|sync|sincronizar|sincroniza)$/i);
         if (yarigSyncMatch) {
             void syncYarigFromLoggedSession();
+            return true;
+        }
+        const yarigStatusMatch = text.match(/^\/yarig(?:\.ai)?\s+(estado|status|salud|health)$/i);
+        if (yarigStatusMatch) {
+            void checkYarigStatus();
             return true;
         }
         const yarigMatch = text.match(/^\/yarig(?:\.ai)?(?:\s+(on|off|toggle))?$/i);
@@ -4509,6 +4517,7 @@
     let activeApiUrl = null;
     let conversationHistory = [];
     let yarContext = { focus: "", doing: "", done: [], tasks: [], pending: [], taskBuckets: { inProgress: [], pending: [], done: [] }, activeTask: "", ask: "", updatedAt: "", syncUser: "", syncSource: "", dayStartAt: "", dayEndAt: "" };
+    let yarStatus = null;
     window._crearRequestSeq = window._crearRequestSeq || 0;
     window._crearActiveJobId = window._crearActiveJobId || null;
     window._crearPollTimer = window._crearPollTimer || null;
@@ -4607,6 +4616,15 @@
         return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
     }
 
+    function _yarAgeLabel(seconds) {
+        if (!Number.isFinite(Number(seconds))) return 'sin dato';
+        const s = Math.max(0, Number(seconds));
+        if (s < 60) return Math.round(s) + 's';
+        if (s < 3600) return Math.round(s / 60) + 'm';
+        if (s < 86400) return Math.round(s / 3600) + 'h';
+        return Math.round(s / 86400) + 'd';
+    }
+
     function _yarTaskControlHtml(enProceso) {
         const disabled = enProceso.length ? '' : ' disabled';
         return '<div class="yar-task-controls">' +
@@ -4621,7 +4639,9 @@
         const syncUser = yarContext.syncUser || 'usuario no detectado';
         const buckets = _normalizeYarContext(yarContext).taskBuckets;
         const lead = prefix || '🧭 Yarig.AI';
-        setActionLine(lead + ' · sync ' + syncAt + ' · login ' + syncUser + ' · ' + buckets.inProgress.length + ' proceso / ' + buckets.pending.length + ' pendientes / ' + buckets.done.length + ' fin');
+        const stale = yarStatus && yarStatus.contextFresh === false ? ' · contexto caducado ' + _yarAgeLabel(yarStatus.contextAgeSeconds) : '';
+        const watcher = yarStatus?.worker?.watcherAlive ? ' · watcher vivo' : (yarStatus ? ' · watcher parado' : '');
+        setActionLine(lead + ' · sync ' + syncAt + stale + watcher + ' · login ' + syncUser + ' · ' + buckets.inProgress.length + ' proceso / ' + buckets.pending.length + ' pendientes / ' + buckets.done.length + ' fin');
     }
 
     function updateYarChip() {
@@ -4631,6 +4651,10 @@
         const doneCount = buckets.done.length;
         const processCount = buckets.inProgress.length;
         const pendingCount = buckets.pending.length;
+        if (yarStatus && yarStatus.contextFresh === false) {
+            chip.textContent = 'caducado · ' + _yarAgeLabel(yarStatus.contextAgeSeconds);
+            return;
+        }
         if (!yarContext.focus && !yarContext.doing && !doneCount && !processCount && !pendingCount && !yarContext.ask) {
             chip.textContent = 'sin contexto';
             return;
@@ -4674,6 +4698,7 @@
                 if (!res.ok) throw new Error('HTTP ' + res.status);
                 yarContext = _normalizeYarContext(await res.json());
                 activeApiUrl = baseUrl;
+                void fetchYarigStatus(baseUrl);
                 updateYarChip();
                 return yarContext;
             } catch (e) {
@@ -4682,6 +4707,57 @@
         }
         updateYarChip();
         return yarContext;
+    }
+
+    async function fetchYarigStatus(preferredBaseUrl) {
+        const urls = preferredBaseUrl ? [preferredBaseUrl].concat(COUNCIL_API_URLS.filter(u => u !== preferredBaseUrl)) : (activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice());
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + '/api/council/yar-status', {
+                    headers: { 'X-Council-Token': COUNCIL_API_TOKEN },
+                    signal: AbortSignal.timeout(8000),
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                yarStatus = await res.json();
+                activeApiUrl = baseUrl;
+                updateYarChip();
+                return yarStatus;
+            } catch (e) {
+                console.warn('Yarig status fetch failed at', baseUrl, e.message);
+            }
+        }
+        return yarStatus;
+    }
+
+    async function checkYarigStatus() {
+        const statusEl = document.getElementById('yar-status');
+        if (statusEl) statusEl.textContent = 'COMPROBANDO ESTADO YARIG…';
+        const status = await fetchYarigStatus();
+        enterConversation();
+        addUserEntry('🧭 /yarig estado');
+        if (!status) {
+            if (statusEl) statusEl.textContent = '⚠️ Estado Yarig no disponible';
+            addConvEntry('conv-racional', '🧭', 'Yarig.AI', 'Estado', 'racional', 'No se pudo consultar el estado del backend Yarig.');
+            setActionLine('⚠️ Yarig.AI estado no disponible');
+            return null;
+        }
+        const counts = status.counts || {};
+        const worker = status.worker || {};
+        const fresh = status.contextFresh ? 'fresco' : 'caducado ' + _yarAgeLabel(status.contextAgeSeconds);
+        const watcher = worker.watcherAlive ? 'vivo, PID ' + (worker.pid || 'n/d') : 'parado';
+        const snap = worker.snapshotSavedAt ? ('Snapshot: ' + worker.snapshotSavedAt.replace('T', ' ').slice(0, 16) + ' (' + _yarAgeLabel(worker.snapshotAgeSeconds) + ')') : 'Snapshot: sin dato';
+        const html = 'Contexto ' + fresh + '<br>' +
+            'Watcher: ' + watcher + '<br>' +
+            snap + '<br>' +
+            'Tareas: ' + (counts.inProgress || 0) + ' en proceso, ' + (counts.pending || 0) + ' pendientes, ' + (counts.done || 0) + ' finalizadas';
+        addConvEntry('conv-racional', '🧭', 'Yarig.AI', 'Estado', 'racional', html);
+        if (!status.contextFresh || !worker.watcherAlive) {
+            addConvEntry('conv-creativo', '🧭', 'Yarig.AI', 'Acción recomendada', 'creativo',
+                'Usa <strong>/yarig login</strong> para abrir la sesión persistente y reactivar el watcher, o <strong>/yarig sincro</strong> si ya hay una sesión visible abierta.');
+        }
+        if (statusEl) statusEl.textContent = 'Yarig ' + fresh + ' · watcher ' + watcher;
+        setYarigPromptStatus('🧭 Yarig.AI estado');
+        return status;
     }
 
     async function saveYarContext() {

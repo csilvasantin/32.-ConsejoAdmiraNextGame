@@ -435,6 +435,82 @@ def _save_yar_context(data: dict):
     Path(tmp_file).replace(YAR_FILE)
 
 
+def _yar_log_dir() -> Path:
+    log_dir = Path.home() / "Library" / "Logs" / "council-api"
+    log_dir.mkdir(parents=True, exist_ok=True)
+    return log_dir
+
+
+def _yar_tool_env() -> dict:
+    env = os.environ.copy()
+    env.setdefault("COUNCIL_API_BASE_URL", "http://127.0.0.1:8420")
+    env.setdefault("COUNCIL_API_TOKEN", COUNCIL_API_TOKEN or "admira2026")
+    return env
+
+
+def _is_yarig_worker_process(pid: int) -> bool:
+    try:
+        res = subprocess.run(
+            ["ps", "-p", str(pid), "-o", "command="],
+            capture_output=True,
+            text=True,
+            timeout=5,
+        )
+        cmdline = (res.stdout or "").strip()
+        return (
+            res.returncode == 0
+            and "yarig-tasks-sync.mjs" in cmdline
+            and ("--prepare-login" in cmdline or "--watch-after-login" in cmdline)
+        )
+    except Exception:
+        return False
+
+
+def _yar_iso_age_seconds(iso_text: str) -> Optional[int]:
+    try:
+        saved_dt = datetime.fromisoformat(str(iso_text or "").replace("Z", "+00:00"))
+        now_dt = datetime.now(saved_dt.tzinfo) if saved_dt.tzinfo else datetime.now()
+        return max(0, int((now_dt - saved_dt).total_seconds()))
+    except Exception:
+        return None
+
+
+def _yar_worker_status() -> dict:
+    log_dir = _yar_log_dir()
+    pid_file = log_dir / "yarig-login.pid"
+    snapshot_path = log_dir / "yarig-last.json"
+    login_log_path = log_dir / "yarig-login.log"
+    pid = None
+    watcher_alive = False
+    if pid_file.exists():
+        try:
+            pid = int(pid_file.read_text(encoding="utf-8").strip())
+            watcher_alive = _is_yarig_worker_process(pid)
+        except Exception:
+            pid = None
+    snapshot = {}
+    if snapshot_path.exists():
+        try:
+            snapshot = json.loads(snapshot_path.read_text(encoding="utf-8"))
+        except Exception:
+            snapshot = {}
+    saved_at = str(snapshot.get("savedAt", "") or "").strip()
+    age_seconds = _yar_iso_age_seconds(saved_at)
+    fresh = bool(age_seconds is not None and age_seconds <= int(os.environ.get("YARIG_STALE_SECONDS", "900")))
+    return {
+        "watcherAlive": watcher_alive,
+        "pid": pid,
+        "pidFile": str(pid_file),
+        "snapshotPath": str(snapshot_path),
+        "loginLogPath": str(login_log_path),
+        "snapshotSavedAt": saved_at,
+        "snapshotAgeSeconds": age_seconds,
+        "snapshotFresh": fresh,
+        "snapshotSource": str(snapshot.get("source", "") or "").strip(),
+        "loginUser": str(snapshot.get("loginUser", "") or "").strip(),
+    }
+
+
 def _load_budget() -> dict:
     """Load budget tracking data from disk."""
     if Path(BUDGET_FILE).exists():
@@ -627,7 +703,7 @@ app = FastAPI(title="AdmiraNext Council API", version="4.0.0")
 
 @app.get("/")
 async def root():
-    return {"status": "ok", "service": "AdmiraNext Council API", "version": "Admira v.26.05.03.r5"}
+    return {"status": "ok", "service": "AdmiraNext Council API", "version": "Admira v.26.05.04.r1"}
 
 app.add_middleware(
     CORSMiddleware,
@@ -1088,6 +1164,28 @@ async def get_yar_context(_auth=Depends(verify_token)):
         return _load_yar_context()
 
 
+@app.get("/api/council/yar-status")
+async def get_yar_status(_auth=Depends(verify_token)):
+    with _yar_lock:
+        context = _load_yar_context()
+    worker = _yar_worker_status()
+    context_age = _yar_iso_age_seconds(context.get("updatedAt", ""))
+    return {
+        "ok": True,
+        "contextUpdatedAt": context.get("updatedAt", ""),
+        "contextAgeSeconds": context_age,
+        "contextFresh": bool(context_age is not None and context_age <= int(os.environ.get("YARIG_STALE_SECONDS", "900"))),
+        "counts": {
+            "inProgress": len((context.get("taskBuckets") or {}).get("inProgress") or []),
+            "pending": len((context.get("taskBuckets") or {}).get("pending") or []),
+            "done": len((context.get("taskBuckets") or {}).get("done") or []),
+        },
+        "syncUser": context.get("syncUser", ""),
+        "syncSource": context.get("syncSource", ""),
+        "worker": worker,
+    }
+
+
 @app.post("/api/council/yar-context")
 async def save_yar_context(req: YarContextRequest, _auth=Depends(verify_token)):
     with _yar_lock:
@@ -1268,7 +1366,7 @@ async def sync_yar_context_from_logged_session(_auth=Depends(verify_token)):
         except Exception:
             return None
 
-    env = os.environ.copy()
+    env = _yar_tool_env()
     payload = _scrape_yar_from_browser_tabs()
     if not payload:
         cmd = ["node", str(tool_path), "--dump-json"]
@@ -1351,34 +1449,16 @@ async def yar_task_action(req: YarTaskActionRequest, _auth=Depends(verify_token)
     if action not in {"pause", "cancel", "finalize"}:
         raise HTTPException(status_code=400, detail="Acción de Yarig no soportada")
 
-    env = os.environ.copy()
-    log_dir = Path.home() / "Library" / "Logs" / "council-api"
-    log_dir.mkdir(parents=True, exist_ok=True)
+    env = _yar_tool_env()
+    log_dir = _yar_log_dir()
     login_log = log_dir / "yarig-login.log"
     pid_file = log_dir / "yarig-login.pid"
-
-    def _is_same_yarig_login_process(pid: int) -> bool:
-        try:
-            res = subprocess.run(
-                ["ps", "-p", str(pid), "-o", "command="],
-                capture_output=True,
-                text=True,
-                timeout=5,
-            )
-            cmdline = (res.stdout or "").strip()
-            return (
-                res.returncode == 0
-                and "yarig-tasks-sync.mjs" in cmdline
-                and ("--prepare-login" in cmdline or "--watch-after-login" in cmdline)
-            )
-        except Exception:
-            return False
 
     had_watcher = False
     if pid_file.exists():
         try:
             existing_pid = int(pid_file.read_text(encoding="utf-8").strip())
-            if _is_same_yarig_login_process(existing_pid):
+            if _is_yarig_worker_process(existing_pid):
                 had_watcher = True
                 try:
                     subprocess.run(["kill", "-9", str(existing_pid)], capture_output=True, text=True, timeout=5)
@@ -1449,33 +1529,15 @@ async def prepare_yar_login_session(_auth=Depends(verify_token)):
     if not tool_path.exists():
         raise HTTPException(status_code=501, detail="yarig-tasks-sync.mjs no disponible en este backend")
 
-    env = os.environ.copy()
-    log_dir = Path.home() / "Library" / "Logs" / "council-api"
-    log_dir.mkdir(parents=True, exist_ok=True)
+    env = _yar_tool_env()
+    log_dir = _yar_log_dir()
     login_log = log_dir / "yarig-login.log"
     pid_file = log_dir / "yarig-login.pid"
-
-    def _is_same_yarig_login_process(pid: int) -> bool:
-        try:
-            res = subprocess.run(
-                ["ps", "-p", str(pid), "-o", "command="],
-                capture_output=True,
-                text=True,
-                timeout=5,
-            )
-            cmdline = (res.stdout or "").strip()
-            return (
-                res.returncode == 0
-                and "yarig-tasks-sync.mjs" in cmdline
-                and ("--prepare-login" in cmdline or "--watch-after-login" in cmdline)
-            )
-        except Exception:
-            return False
 
     if pid_file.exists():
         try:
             existing_pid = int(pid_file.read_text(encoding="utf-8").strip())
-            if _is_same_yarig_login_process(existing_pid):
+            if _is_yarig_worker_process(existing_pid):
                 return {
                     "ok": True,
                     "pid": existing_pid,
@@ -1518,32 +1580,14 @@ async def yar_logout_session(_auth=Depends(verify_token)):
     if not tool_path.exists():
         raise HTTPException(status_code=501, detail="yarig-tasks-sync.mjs no disponible en este backend")
 
-    env = os.environ.copy()
-    log_dir = Path.home() / "Library" / "Logs" / "council-api"
-    log_dir.mkdir(parents=True, exist_ok=True)
+    env = _yar_tool_env()
+    log_dir = _yar_log_dir()
     pid_file = log_dir / "yarig-login.pid"
-
-    def _is_same_yarig_login_process(pid: int) -> bool:
-        try:
-            res = subprocess.run(
-                ["ps", "-p", str(pid), "-o", "command="],
-                capture_output=True,
-                text=True,
-                timeout=5,
-            )
-            cmdline = (res.stdout or "").strip()
-            return (
-                res.returncode == 0
-                and "yarig-tasks-sync.mjs" in cmdline
-                and ("--prepare-login" in cmdline or "--watch-after-login" in cmdline)
-            )
-        except Exception:
-            return False
 
     if pid_file.exists():
         try:
             existing_pid = int(pid_file.read_text(encoding="utf-8").strip())
-            if _is_same_yarig_login_process(existing_pid):
+            if _is_yarig_worker_process(existing_pid):
                 try:
                     subprocess.run(["kill", "-9", str(existing_pid)], capture_output=True, text=True, timeout=5)
                 except Exception:

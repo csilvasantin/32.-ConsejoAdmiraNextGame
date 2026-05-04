@@ -6,14 +6,14 @@ Proyecto: `32.-ConsejoAdmiraNextGame`
 ## Punto de entrada
 
 - URL pública: [https://csilvasantin.github.io/32.-ConsejoAdmiraNextGame/council-scumm.html](https://csilvasantin.github.io/32.-ConsejoAdmiraNextGame/council-scumm.html)
-- Versión visible: `Admira v.26.05.03.r5`
+- Versión visible: `Admira v.26.05.04.r1`
 - Rama: `main`
 - Commit actual: ver último commit publicado en `main`
 
 ## Qué comprobar al retomar
 
 1. Abrir la URL pública.
-2. Verificar arriba que pone `Admira v.26.05.03.r5`.
+2. Verificar arriba que pone `Admira v.26.05.04.r1`.
 3. Si se va a desarrollar, clonar y actualizar:
 
 ```bash
@@ -44,6 +44,7 @@ El hash debe coincidir con el commit publicado indicado arriba o ser posterior.
   - `/yarig login` y `/yarig.ai login`
   - `/yarig logout` y `/yarig.ai logout`
   - `/yarig sincro` y `/yarig.ai sincro`
+  - `/yarig estado` y `/yarig.ai estado`
 - `/help` es toggle y usa las 3 ventanas superiores.
 - La mesa de Yarig reparte:
   - izquierda: `Finalizadas`
@@ -93,6 +94,12 @@ El hash debe coincidir con el commit publicado indicado arriba o ser posterior.
 - `/importar <url>` pasa a trabajar con jobs y feedback de progreso: preparación, descarga, copia a Drive y registro del entreno.
 - Nuevo endpoint `GET /api/council/importar-video/{job_id}` para consultar el estado de la descarga desde el frontend.
 - Tras importar, el backend intenta dar de alta el entreno en la hoja `Entrenar Links` con estado, fecha, ruta, URL de Drive y peso; si Google Sheets no está autenticado, deja una cola CSV/JSONL en la carpeta de Drive para no perder el alta.
+
+### `Admira v.26.05.04.r1`
+
+- Añadido estado operativo de Yarig con `GET /api/council/yar-status` y comando `/yarig estado`.
+- El worker de Yarig lanzado por el backend del Mac Mini sincroniza ahora contra `http://127.0.0.1:8420` en vez de Render, evitando que el contexto local quede desactualizado.
+- El watcher de Yarig intenta recuperarse si la página/contexto de Chrome se cierra durante el bucle persistente.
 
 ## Riesgos y notas abiertas
 

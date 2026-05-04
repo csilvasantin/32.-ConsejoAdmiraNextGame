@@ -5,7 +5,7 @@ import path from "node:path";
 import fs from "node:fs/promises";
 import { chromium } from "playwright-core";
 
-const API_BASE_URL = process.env.COUNCIL_API_BASE_URL || "https://three2-consejoadmiranextgame.onrender.com";
+const API_BASE_URL = process.env.COUNCIL_API_BASE_URL || "http://127.0.0.1:8420";
 const API_TOKEN = process.env.COUNCIL_API_TOKEN || "admira2026";
 const YARIG_URL = process.env.YARIG_URL || "https://www.yarig.ai/tasks";
 const ONCE = process.argv.includes("--once");
@@ -105,7 +105,12 @@ async function ensureAutomationProfileSeeded() {
 }
 
 async function ensureBrowser() {
-  if (page) return page;
+  if (page && !page.isClosed()) return page;
+  if (page?.isClosed()) page = null;
+  if (context) {
+    try { await context.close(); } catch {}
+    context = null;
+  }
   await ensureAutomationProfileSeeded();
   try {
     context = await launchChromeContext(CHROME_AUTOMATION_USER_DATA_DIR);
@@ -532,10 +537,19 @@ async function watchLoop(activePage) {
   log(`Watcher de Yarig.ai activo cada ${Math.round(POLL_MS / 1000)}s`);
   do {
     try {
+      if (!activePage || activePage.isClosed()) {
+        page = null;
+        activePage = await ensureBrowser();
+      }
       const livePayload = await fetchVisibleTasks(activePage, { preferCurrent: true });
       await syncPayloadToApi(livePayload, activePage);
     } catch (error) {
       log("Fallo del watcher Yarig.ai", error.message);
+      if (/Target page|context or browser has been closed|Protocol error|Session closed/i.test(String(error.message || ""))) {
+        page = null;
+        try { await context?.close(); } catch {}
+        context = null;
+      }
     }
     await sleep(POLL_MS);
   } while (true);

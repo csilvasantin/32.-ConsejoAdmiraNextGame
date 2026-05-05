@@ -1311,6 +1311,30 @@
             flex-wrap: wrap;
             gap: 0.45rem;
         }
+        .yar-project-picker {
+            display: flex;
+            gap: 0.5rem;
+            align-items: stretch;
+        }
+        .yar-project-picker .yar-input {
+            flex: 1;
+        }
+        .yar-project-refresh {
+            flex: 0 0 auto;
+            min-width: 112px;
+            border: 2px solid #446688;
+            background: #08152c;
+            color: #d6ecff;
+            box-shadow: 2px 2px 0 #000;
+            padding: 0.45rem 0.55rem;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.42rem;
+            cursor: pointer;
+        }
+        .yar-project-refresh[disabled] {
+            opacity: 0.45;
+            cursor: default;
+        }
         .yar-estimate-btn {
             min-width: 56px;
             border: 2px solid #446688;
@@ -2142,7 +2166,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">Admira v.2026.05.05.r1</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">Admira v.2026.05.05.r2</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -2396,7 +2420,11 @@
                             </div>
                             <div class="yar-field">
                                 <label class="yar-label" for="yar-task-project">PROYECTO</label>
-                                <input class="yar-input" id="yar-task-project" type="text" value="Admira (Admira Digital Networks S.L.)" placeholder="Proyecto de Yarig">
+                                <div class="yar-project-picker">
+                                    <input class="yar-input" id="yar-task-project" type="text" list="yar-task-projects" value="Admira (Admira Digital Networks S.L.)" placeholder="Proyecto de Yarig">
+                                    <button class="yar-project-refresh" id="yar-task-project-refresh" type="button" onclick="loadYarProjectOptions(true)">RECARGAR</button>
+                                </div>
+                                <datalist id="yar-task-projects"></datalist>
                             </div>
                             <div class="yar-field full">
                                 <div class="yar-meta">
@@ -4604,6 +4632,8 @@
     let yarContext = { focus: "", doing: "", done: [], tasks: [], pending: [], taskBuckets: { inProgress: [], pending: [], done: [] }, activeTask: "", ask: "", updatedAt: "", syncUser: "", syncSource: "", dayStartAt: "", dayEndAt: "" };
     let yarStatus = null;
     let yarTaskEstimateHours = 1;
+    let yarProjectOptions = [];
+    let yarProjectsLoaded = false;
     window._crearRequestSeq = window._crearRequestSeq || 0;
     window._crearActiveJobId = window._crearActiveJobId || null;
     window._crearPollTimer = window._crearPollTimer || null;
@@ -4770,6 +4800,67 @@
         counter.textContent = String(remaining);
     }
 
+    function renderYarProjectOptions() {
+        const datalist = document.getElementById('yar-task-projects');
+        if (!datalist) return;
+        datalist.innerHTML = '';
+        yarProjectOptions.forEach((project) => {
+            const option = document.createElement('option');
+            option.value = project;
+            datalist.appendChild(option);
+        });
+    }
+
+    async function loadYarProjectOptions(forceRefresh = false) {
+        const status = document.getElementById('yar-status');
+        const btn = document.getElementById('yar-task-project-refresh');
+        if (btn) btn.disabled = true;
+        if (status) status.textContent = forceRefresh ? 'YARIG.AI RECARGANDO PROYECTOS…' : 'YARIG.AI CARGANDO PROYECTOS…';
+        const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter((u) => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
+        let lastErr = null;
+        try {
+            for (const baseUrl of urls) {
+                try {
+                    const res = await fetch(baseUrl + '/api/council/yar-projects', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Council-Token': COUNCIL_API_TOKEN,
+                        },
+                        body: JSON.stringify({ refresh: forceRefresh }),
+                        signal: AbortSignal.timeout(180000),
+                    });
+                    if (!res.ok) {
+                        const body = await res.text();
+                        throw new Error('HTTP ' + res.status + (body ? ': ' + body.slice(0, 180) : ''));
+                    }
+                    const data = await res.json();
+                    yarProjectOptions = Array.isArray(data.projects) ? data.projects.filter(Boolean) : [];
+                    yarProjectsLoaded = true;
+                    activeApiUrl = baseUrl;
+                    renderYarProjectOptions();
+                    const projectInput = document.getElementById('yar-task-project');
+                    if (projectInput && !projectInput.value.trim() && yarProjectOptions.length) {
+                        projectInput.value = yarProjectOptions[0];
+                    }
+                    if (status) status.textContent = yarProjectOptions.length
+                        ? ('YARIG.AI ' + yarProjectOptions.length + ' proyectos cargados')
+                        : 'YARIG.AI sin proyectos visibles en el selector';
+                    setActionLine('🧭 Yarig.AI proyectos cargados — ya puedes escoger proyecto real del combo');
+                    return yarProjectOptions;
+                } catch (e) {
+                    lastErr = e;
+                    console.warn('Yarig projects fetch failed at', baseUrl, e.message);
+                }
+            }
+            if (status) status.textContent = '⚠️ No se pudo cargar la lista de proyectos';
+            setActionLine('⚠️ Yarig.AI no pudo listar proyectos — ' + (lastErr ? lastErr.message : 'sin backend disponible'));
+            return [];
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    }
+
     function setYarTaskEstimate(hours, btn) {
         yarTaskEstimateHours = Math.max(1, Math.min(8, Number(hours) || 1));
         document.querySelectorAll('#yar-task-estimates .yar-estimate-btn').forEach((el) => {
@@ -4796,6 +4887,7 @@
         const status = document.getElementById('yar-status');
         if (status) status.textContent = yarContext.updatedAt ? ('Última sync: ' + yarContext.updatedAt.replace('T', ' ').slice(0, 16)) : '';
         document.getElementById('yar-overlay')?.classList.add('active');
+        if (!yarProjectsLoaded) void loadYarProjectOptions(false);
     }
 
     function closeYarOverlay() {

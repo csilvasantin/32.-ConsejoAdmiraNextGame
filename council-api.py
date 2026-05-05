@@ -703,7 +703,7 @@ app = FastAPI(title="AdmiraNext Council API", version="4.0.0")
 
 @app.get("/")
 async def root():
-    return {"status": "ok", "service": "AdmiraNext Council API", "version": "Admira v.2026.05.05.r1"}
+    return {"status": "ok", "service": "AdmiraNext Council API", "version": "Admira v.2026.05.05.r2"}
 
 app.add_middleware(
     CORSMiddleware,
@@ -816,6 +816,10 @@ class YarTaskCreateRequest(BaseModel):
     description: str = ""
     estimateHours: int = 1
     project: str = "Admira"
+
+
+class YarProjectsRequest(BaseModel):
+    refresh: bool = False
 
 
 class AgentReply(BaseModel):
@@ -1655,6 +1659,90 @@ async def yar_create_task(req: YarTaskCreateRequest, _auth=Depends(verify_token)
         "project": payload.get("project", project),
         "sourceUrl": payload.get("currentUrl", ""),
         "sourceTitle": payload.get("title", ""),
+    }
+
+
+@app.post("/api/council/yar-projects")
+async def yar_projects(req: YarProjectsRequest | None = None, _auth=Depends(verify_token)):
+    tool_path = Path(__file__).resolve().parent / "tools" / "yarig-tasks-sync.mjs"
+    if not tool_path.exists():
+        raise HTTPException(status_code=501, detail="yarig-tasks-sync.mjs no disponible en este backend")
+
+    env = _yar_tool_env()
+    log_dir = _yar_log_dir()
+    login_log = log_dir / "yarig-login.log"
+    pid_file = log_dir / "yarig-login.pid"
+
+    had_watcher = False
+    if pid_file.exists():
+        try:
+            existing_pid = int(pid_file.read_text(encoding="utf-8").strip())
+            if _is_yarig_worker_process(existing_pid):
+                had_watcher = True
+                try:
+                    subprocess.run(["kill", "-9", str(existing_pid)], capture_output=True, text=True, timeout=5)
+                except Exception:
+                    pass
+                time.sleep(1.0)
+            pid_file.unlink(missing_ok=True)
+        except Exception:
+            try:
+                pid_file.unlink(missing_ok=True)
+            except Exception:
+                pass
+
+    cmd = ["node", str(tool_path), "--list-projects"]
+
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=180, env=env)
+    except subprocess.TimeoutExpired as e:
+        raise HTTPException(status_code=504, detail=f"yarig list projects timeout: {(e.stderr or e.stdout or '').strip()[:240]}")
+    except FileNotFoundError:
+        raise HTTPException(status_code=501, detail="node no disponible para lanzar yarig list projects")
+
+    if res.returncode != 0:
+        detail = (res.stderr or res.stdout or "yarig list projects failed").strip()[:500]
+        if "ProcessSingleton" in detail or "already in use by another instance of Chromium" in detail:
+            raise HTTPException(status_code=409, detail="El perfil persistente de Yarig.AI está ocupado por otra ventana o watcher. Cierra esa sesión del sync y vuelve a intentarlo.")
+        if "login" in detail.lower() or "auth" in detail.lower() or "identif" in detail.lower():
+            raise HTTPException(status_code=401, detail="La sesión persistente de Yarig.AI necesita login antes de listar proyectos.")
+        raise HTTPException(status_code=502, detail=detail)
+
+    try:
+        payload = json.loads((res.stdout or "").strip() or "{}")
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=502, detail=f"yarig list projects devolvió JSON inválido: {e}")
+    finally:
+        if had_watcher:
+            out = open(login_log, "a", encoding="utf-8")
+            try:
+                proc = subprocess.Popen(
+                    ["node", str(tool_path), "--watch-after-login"],
+                    stdout=out,
+                    stderr=out,
+                    text=True,
+                    env=env,
+                    cwd=str(Path(__file__).resolve().parent),
+                    start_new_session=True,
+                )
+                pid_file.write_text(str(proc.pid), encoding="utf-8")
+            except Exception:
+                out.close()
+
+    projects = [
+        _clean_yar_line(item, limit=160)
+        for item in (payload.get("projects") or [])
+        if _clean_yar_line(item, limit=160)
+    ]
+    deduped_projects = list(dict.fromkeys(projects))
+
+    return {
+        "ok": True,
+        "projects": deduped_projects,
+        "count": len(deduped_projects),
+        "sourceUrl": payload.get("currentUrl", ""),
+        "sourceTitle": payload.get("title", ""),
+        "refreshedAt": datetime.utcnow().isoformat() + "Z",
     }
 
 

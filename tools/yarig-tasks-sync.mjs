@@ -12,6 +12,7 @@ const ONCE = process.argv.includes("--once");
 const DUMP_JSON = process.argv.includes("--dump-json");
 const PREPARE_LOGIN = process.argv.includes("--prepare-login");
 const WATCH_AFTER_LOGIN = process.argv.includes("--watch-after-login");
+const LIST_PROJECTS = process.argv.includes("--list-projects");
 const TASK_ACTION_INDEX = process.argv.indexOf("--task-action");
 const TASK_ACTION = TASK_ACTION_INDEX >= 0 ? String(process.argv[TASK_ACTION_INDEX + 1] || "").trim().toLowerCase() : "";
 const TASK_HINT_INDEX = process.argv.indexOf("--task-hint");
@@ -49,7 +50,7 @@ function sleep(ms) {
 }
 
 function log(message, extra = null) {
-  if (DUMP_JSON || TASK_ACTION || CREATE_TASK) return;
+  if (DUMP_JSON || TASK_ACTION || CREATE_TASK || LIST_PROJECTS) return;
   const stamp = new Date().toISOString();
   if (extra == null) console.log(`[${stamp}] ${message}`);
   else console.log(`[${stamp}] ${message}`, extra);
@@ -578,6 +579,121 @@ async function fillProjectField(activePage, projectName) {
   return project;
 }
 
+async function getVisibleProjectInput(activePage) {
+  const inputCandidates = [
+    activePage.locator('input[role="combobox"]'),
+    activePage.locator('input[type="search"]'),
+    activePage.locator('input[type="text"]'),
+    activePage.locator('input:not([type])'),
+  ];
+
+  for (const locator of inputCandidates) {
+    try {
+      const count = await locator.count();
+      for (let i = 0; i < count; i += 1) {
+        const input = locator.nth(i);
+        if (await input.isVisible()) return input;
+      }
+    } catch {}
+  }
+  return null;
+}
+
+function normalizeProjectText(text) {
+  return String(text || "")
+    .replace(/\s+/g, " ")
+    .replace(/^[•·\-–—\s]+/, "")
+    .trim();
+}
+
+function isLikelyProjectName(text) {
+  if (!text) return false;
+  if (text.length < 2 || text.length > 120) return false;
+  const blacklist = new Set([
+    "guardar",
+    "cancelar",
+    "añadir",
+    "adición de tareas",
+    "nueva tarea",
+    "proyecto al que pertenece la tarea:",
+    "proyecto",
+    "descripción de la tarea:",
+    "máx 255 caracteres",
+    "estimación de tiempo para la tarea:",
+  ]);
+  return !blacklist.has(text.toLowerCase());
+}
+
+async function collectProjectOptions(activePage) {
+  const selectors = [
+    '[role="option"]',
+    '[role="listbox"] [role="option"]',
+    '[role="listbox"] li',
+    'ul[role="listbox"] li',
+    '.mat-mdc-option',
+    '.mat-option',
+    '.ng-option',
+    '.p-dropdown-item',
+    '.vs__dropdown-option',
+    '.select__option',
+    '.autocomplete-item',
+    '.autocomplete-items > *',
+  ];
+
+  const found = new Set();
+  for (const selector of selectors) {
+    const locator = activePage.locator(selector);
+    let count = 0;
+    try {
+      count = Math.min(await locator.count(), 200);
+    } catch {
+      count = 0;
+    }
+    for (let i = 0; i < count; i += 1) {
+      try {
+        const item = locator.nth(i);
+        if (!(await item.isVisible())) continue;
+        const text = normalizeProjectText(await item.innerText());
+        if (isLikelyProjectName(text)) found.add(text);
+      } catch {}
+    }
+    if (found.size >= 4) break;
+  }
+
+  return Array.from(found).sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
+}
+
+async function listProjects(activePage) {
+  await openTaskCreationDialog(activePage);
+  const input = await getVisibleProjectInput(activePage);
+  if (!input) {
+    throw new Error("No pude localizar el selector de proyecto en Yarig.ai");
+  }
+
+  const queries = ["", "a", "e", "i", "o"];
+  const found = new Set();
+  for (const query of queries) {
+    try {
+      await input.click({ clickCount: 3 });
+      await input.press("Backspace").catch(() => {});
+      if (query) await input.fill(query);
+      await activePage.waitForTimeout(500);
+      await input.press("ArrowDown").catch(() => {});
+      await activePage.waitForTimeout(500);
+      for (const project of await collectProjectOptions(activePage)) found.add(project);
+    } catch {}
+  }
+
+  const projects = Array.from(found).sort((a, b) => a.localeCompare(b, "es", { sensitivity: "base" }));
+  const title = await activePage.title().catch(() => "");
+  return {
+    ok: true,
+    projects,
+    currentUrl: activePage.url(),
+    title,
+  };
+}
+
 async function fillTaskDescription(activePage, description) {
   const text = String(description || "").trim().slice(0, 255);
   if (!text) throw new Error("La descripción de la tarea está vacía");
@@ -742,6 +858,13 @@ async function main() {
   }
   if (CREATE_TASK) {
     const payload = await runCreateTask(TASK_DESC, TASK_PROJECT, TASK_ESTIMATE_HOURS);
+    process.stdout.write(JSON.stringify(payload));
+    await closeBrowser();
+    return;
+  }
+  if (LIST_PROJECTS) {
+    const activePage = await ensureBrowser();
+    const payload = await listProjects(activePage);
     process.stdout.write(JSON.stringify(payload));
     await closeBrowser();
     return;

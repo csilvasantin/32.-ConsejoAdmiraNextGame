@@ -1291,6 +1291,58 @@
             color: #8fb39a;
             line-height: 1.45;
         }
+        .yar-subpanel {
+            grid-column: 1 / -1;
+            margin-top: 0.3rem;
+            padding: 0.85rem;
+            border: 2px solid #335577;
+            background: linear-gradient(180deg, rgba(8, 15, 44, 0.96), rgba(5, 8, 28, 0.96));
+            box-shadow: inset 0 0 0 1px rgba(125, 255, 149, 0.08);
+        }
+        .yar-subtitle {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.45rem;
+            color: #88ccff;
+            margin-bottom: 0.6rem;
+            text-transform: uppercase;
+        }
+        .yar-estimate-row {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.45rem;
+        }
+        .yar-estimate-btn {
+            min-width: 56px;
+            border: 2px solid #446688;
+            background: #08152c;
+            color: #d6ecff;
+            box-shadow: 2px 2px 0 #000;
+            padding: 0.45rem 0.55rem;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.46rem;
+            cursor: pointer;
+        }
+        .yar-estimate-btn.active {
+            background: #0f3a2f;
+            border-color: #7dff95;
+            color: #eaffef;
+        }
+        .yar-meta {
+            display: flex;
+            justify-content: space-between;
+            gap: 0.6rem;
+            color: #8fb39a;
+            font-size: 0.62rem;
+        }
+        .yar-meta strong {
+            color: #e8f7ea;
+            font-weight: 700;
+        }
+        .yar-inline-help {
+            font-size: 0.66rem;
+            color: #89a9c8;
+            line-height: 1.45;
+        }
         .yar-actions {
             display: flex;
             gap: 0.6rem;
@@ -2090,7 +2142,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">Admira v.26.05.04.r1</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">Admira v.2026.05.05.r1</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -2326,9 +2378,42 @@
                     <div class="yar-field full">
                         <div class="yar-help">Este contexto se guarda en el backend del Consejo y se inyecta automáticamente en cada consulta para que la mesa sepa en qué estamos, qué hechos ya tenemos, qué queda pendiente y qué información debe recogerse o enviarse.</div>
                     </div>
+                    <div class="yar-subpanel">
+                        <div class="yar-subtitle">➕ Alta de tarea en Yarig.AI</div>
+                        <div class="yar-grid">
+                            <div class="yar-field">
+                                <label class="yar-label">ESTIMACIÓN</label>
+                                <div class="yar-estimate-row" id="yar-task-estimates">
+                                    <button class="yar-estimate-btn active" type="button" data-hours="1" onclick="setYarTaskEstimate(1, this)">1H</button>
+                                    <button class="yar-estimate-btn" type="button" data-hours="2" onclick="setYarTaskEstimate(2, this)">2H</button>
+                                    <button class="yar-estimate-btn" type="button" data-hours="3" onclick="setYarTaskEstimate(3, this)">3H</button>
+                                    <button class="yar-estimate-btn" type="button" data-hours="4" onclick="setYarTaskEstimate(4, this)">4H</button>
+                                    <button class="yar-estimate-btn" type="button" data-hours="5" onclick="setYarTaskEstimate(5, this)">5H</button>
+                                    <button class="yar-estimate-btn" type="button" data-hours="6" onclick="setYarTaskEstimate(6, this)">6H</button>
+                                    <button class="yar-estimate-btn" type="button" data-hours="7" onclick="setYarTaskEstimate(7, this)">7H</button>
+                                    <button class="yar-estimate-btn" type="button" data-hours="8" onclick="setYarTaskEstimate(8, this)">8H</button>
+                                </div>
+                            </div>
+                            <div class="yar-field">
+                                <label class="yar-label" for="yar-task-project">PROYECTO</label>
+                                <input class="yar-input" id="yar-task-project" type="text" value="Admira (Admira Digital Networks S.L.)" placeholder="Proyecto de Yarig">
+                            </div>
+                            <div class="yar-field full">
+                                <div class="yar-meta">
+                                    <span>Descripción de la tarea</span>
+                                    <span><strong id="yar-task-chars">255</strong> caracteres restantes</span>
+                                </div>
+                                <textarea class="yar-textarea" id="yar-task-desc" maxlength="255" placeholder="Describe la tarea que quieres crear en Yarig.AI" oninput="updateYarTaskChars()"></textarea>
+                            </div>
+                            <div class="yar-field full">
+                                <div class="yar-inline-help">Esto crea una tarea real en Yarig.AI usando la sesión persistente del sync. Si no hay login activo, el Consejo te lo dirá antes de intentar guardar nada.</div>
+                            </div>
+                        </div>
+                    </div>
                 </div>
                 <div class="yar-actions">
                     <button class="yar-save" onclick="saveYarContext()">GUARDAR YAR</button>
+                    <button class="yar-save" onclick="createYarigTask()">NUEVA TAREA</button>
                     <button class="yar-save" onclick="checkYarigStatus()">ESTADO YARIG</button>
                     <button class="yar-cancel" onclick="closeYarOverlay()">CERRAR</button>
                 </div>
@@ -4518,6 +4603,7 @@
     let conversationHistory = [];
     let yarContext = { focus: "", doing: "", done: [], tasks: [], pending: [], taskBuckets: { inProgress: [], pending: [], done: [] }, activeTask: "", ask: "", updatedAt: "", syncUser: "", syncSource: "", dayStartAt: "", dayEndAt: "" };
     let yarStatus = null;
+    let yarTaskEstimateHours = 1;
     window._crearRequestSeq = window._crearRequestSeq || 0;
     window._crearActiveJobId = window._crearActiveJobId || null;
     window._crearPollTimer = window._crearPollTimer || null;
@@ -4676,8 +4762,37 @@
         if (ask) ask.value = yarContext.ask || '';
     }
 
+    function updateYarTaskChars() {
+        const input = document.getElementById('yar-task-desc');
+        const counter = document.getElementById('yar-task-chars');
+        if (!input || !counter) return;
+        const remaining = Math.max(0, 255 - String(input.value || '').length);
+        counter.textContent = String(remaining);
+    }
+
+    function setYarTaskEstimate(hours, btn) {
+        yarTaskEstimateHours = Math.max(1, Math.min(8, Number(hours) || 1));
+        document.querySelectorAll('#yar-task-estimates .yar-estimate-btn').forEach((el) => {
+            el.classList.toggle('active', Number(el.dataset.hours) === yarTaskEstimateHours);
+        });
+        if (btn) btn.classList.add('active');
+    }
+
+    function resetYarTaskForm() {
+        const project = document.getElementById('yar-task-project');
+        const desc = document.getElementById('yar-task-desc');
+        if (project && !project.value.trim()) project.value = 'Admira (Admira Digital Networks S.L.)';
+        if (desc) desc.value = '';
+        yarTaskEstimateHours = 1;
+        document.querySelectorAll('#yar-task-estimates .yar-estimate-btn').forEach((el) => {
+            el.classList.toggle('active', Number(el.dataset.hours) === 1);
+        });
+        updateYarTaskChars();
+    }
+
     function openYarOverlay() {
         fillYarForm();
+        resetYarTaskForm();
         const status = document.getElementById('yar-status');
         if (status) status.textContent = yarContext.updatedAt ? ('Última sync: ' + yarContext.updatedAt.replace('T', ' ').slice(0, 16)) : '';
         document.getElementById('yar-overlay')?.classList.add('active');
@@ -4685,6 +4800,62 @@
 
     function closeYarOverlay() {
         document.getElementById('yar-overlay')?.classList.remove('active');
+    }
+
+    async function createYarigTask() {
+        const status = document.getElementById('yar-status');
+        const project = (document.getElementById('yar-task-project')?.value || '').trim() || 'Admira';
+        const description = (document.getElementById('yar-task-desc')?.value || '').trim();
+        if (!description) {
+            if (status) status.textContent = '⚠️ Describe la tarea antes de crearla';
+            setActionLine('⚠️ Falta la descripción de la nueva tarea de Yarig.AI');
+            return;
+        }
+        if (status) status.textContent = 'YARIG.AI CREANDO TAREA…';
+        setActionLine('🧭 Yarig.AI creando tarea nueva en la sesión persistente…');
+        const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
+        let lastErr = null;
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + '/api/council/yar-create-task', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Council-Token': COUNCIL_API_TOKEN,
+                    },
+                    body: JSON.stringify({
+                        description,
+                        estimateHours: yarTaskEstimateHours,
+                        project,
+                    }),
+                    signal: AbortSignal.timeout(180000),
+                });
+                if (!res.ok) {
+                    const body = await res.text();
+                    throw new Error('HTTP ' + res.status + (body ? ': ' + body.slice(0, 180) : ''));
+                }
+                const data = await res.json();
+                yarContext = _normalizeYarContext(data.context || data);
+                activeApiUrl = baseUrl;
+                updateYarChip();
+                fillYarForm();
+                showYarigWindows();
+                addUserEntry('🧭 /yarig nueva tarea · ' + description);
+                addConvEntry('conv-racional', '🧭', 'Yarig.AI', 'Yarig.AI', 'racional',
+                    'Tarea creada en Yarig.ai con ' + yarTaskEstimateHours + 'h estimadas y proyecto ' + project + '.');
+                addConvEntry('conv-creativo', '🧭', 'Yarig.AI', 'Yarig.AI', 'creativo',
+                    'Nueva tarea registrada: ' + (data.createdTask || description) + '. La mesa ya trabaja con ese nuevo frente.');
+                if (status) status.textContent = 'Yarig.AI tarea creada OK';
+                setYarigPromptStatus('🧭 Yarig.AI nueva tarea');
+                resetYarTaskForm();
+                return;
+            } catch (e) {
+                lastErr = e;
+                console.warn('Yarig create task failed at', baseUrl, e.message);
+            }
+        }
+        if (status) status.textContent = '⚠️ No se pudo crear la tarea';
+        setActionLine('⚠️ Yarig.AI no pudo crear la tarea — ' + (lastErr ? lastErr.message : 'sin backend disponible'));
     }
 
     async function loadYarContext() {
@@ -5081,6 +5252,21 @@
         bits.push('Generación activa: ' + currentGen);
         bits.push('Motor seleccionado: ' + selectedLLM);
         return bits.join(' · ');
+    }
+
+    function requiresExpensiveVideoApproval(message) {
+        return selectedLLM === "gemini-flash" && YT_RE.test(String(message || ""));
+    }
+
+    function confirmExpensiveVideoApproval(message, agentName) {
+        if (!requiresExpensiveVideoApproval(message)) return true;
+        const target = agentName ? (" para " + agentName) : "";
+        return window.confirm(
+            "Esta consulta usará Gemini con un vídeo de YouTube" + target + ".\n\n" +
+            "Puede consumir muchos tokens y gastar varios euros en una sola petición.\n" +
+            "Además, por seguridad, el Consejo limitará esta consulta a un solo consejero.\n\n" +
+            "Pulsa Aceptar solo si quieres continuar ahora."
+        );
     }
 
     function buildCouncilPrompt(message) {
@@ -5612,6 +5798,14 @@
          */
         const urls = activeApiUrl ? [activeApiUrl] : COUNCIL_API_URLS;
         const effectiveMessage = buildCouncilPrompt(message);
+        const confirmedExpensiveVideo = confirmExpensiveVideoApproval(effectiveMessage);
+        if (!confirmedExpensiveVideo) {
+            setActionLine("💸 Consulta cancelada — Gemini + YouTube requiere confirmación explícita");
+            return null;
+        }
+        if (requiresExpensiveVideoApproval(effectiveMessage)) {
+            setActionLine("💸 Gemini + YouTube confirmado — consulta limitada a un solo consejero");
+        }
 
         for (const baseUrl of urls) {
             try {
@@ -5626,8 +5820,14 @@
                         generation: currentGen,
                         context: conversationHistory.slice(-6),
                         llm: selectedLLM,
+                        confirm_expensive_video: confirmedExpensiveVideo,
                     }),
                 });
+                if (res.status === 409) {
+                    console.warn("Council API: expensive video confirmation required");
+                    setActionLine("💸 Gemini + YouTube bloqueado hasta confirmar el coste");
+                    return null;
+                }
                 if (res.status === 402) {
                     console.error("Council API: budget exceeded");
                     setActionLine("💰 Presupuesto agotado — contacta con el administrador para añadir crédito");
@@ -5659,6 +5859,14 @@
         /** Call /api/council/ask-one for a single agent. */
         const urls = activeApiUrl ? [activeApiUrl] : COUNCIL_API_URLS;
         const effectiveMessage = buildCouncilPrompt(message);
+        const confirmedExpensiveVideo = confirmExpensiveVideoApproval(effectiveMessage, agentName);
+        if (!confirmedExpensiveVideo) {
+            setActionLine("💸 Consulta cancelada — Gemini + YouTube requiere confirmación explícita");
+            return null;
+        }
+        if (requiresExpensiveVideoApproval(effectiveMessage)) {
+            setActionLine("💸 Gemini + YouTube confirmado — consulta limitada a un solo consejero");
+        }
         for (const baseUrl of urls) {
             try {
                 const res = await fetch(baseUrl + "/api/council/ask-one", {
@@ -5673,8 +5881,10 @@
                         generation: currentGen,
                         context: conversationHistory.slice(-6),
                         llm: selectedLLM,
+                        confirm_expensive_video: confirmedExpensiveVideo,
                     }),
                 });
+                if (res.status === 409) { setActionLine("💸 Gemini + YouTube bloqueado hasta confirmar el coste"); return null; }
                 if (res.status === 402) { setActionLine("💰 Presupuesto agotado"); return null; }
                 if (res.status === 403) { setActionLine("🔒 Error de autenticación"); return null; }
                 if (res.status === 429) { setActionLine("⏱️ Demasiadas peticiones"); return null; }

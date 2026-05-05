@@ -16,6 +16,13 @@ const TASK_ACTION_INDEX = process.argv.indexOf("--task-action");
 const TASK_ACTION = TASK_ACTION_INDEX >= 0 ? String(process.argv[TASK_ACTION_INDEX + 1] || "").trim().toLowerCase() : "";
 const TASK_HINT_INDEX = process.argv.indexOf("--task-hint");
 const TASK_HINT = TASK_HINT_INDEX >= 0 ? String(process.argv[TASK_HINT_INDEX + 1] || "").trim() : "";
+const CREATE_TASK = process.argv.includes("--create-task");
+const TASK_DESC_INDEX = process.argv.indexOf("--task-desc");
+const TASK_DESC = TASK_DESC_INDEX >= 0 ? String(process.argv[TASK_DESC_INDEX + 1] || "").trim() : "";
+const TASK_PROJECT_INDEX = process.argv.indexOf("--task-project");
+const TASK_PROJECT = TASK_PROJECT_INDEX >= 0 ? String(process.argv[TASK_PROJECT_INDEX + 1] || "").trim() : "";
+const TASK_ESTIMATE_INDEX = process.argv.indexOf("--task-estimate");
+const TASK_ESTIMATE_HOURS = TASK_ESTIMATE_INDEX >= 0 ? Number(process.argv[TASK_ESTIMATE_INDEX + 1] || 1) : 1;
 const LOGOUT = process.argv.includes("--logout");
 const POLL_MS = Number(process.env.YARIG_SYNC_POLL_MS || 60000);
 const LOGIN_WAIT_MS = Number(process.env.YARIG_LOGIN_WAIT_MS || 300000);
@@ -42,7 +49,7 @@ function sleep(ms) {
 }
 
 function log(message, extra = null) {
-  if (DUMP_JSON || TASK_ACTION) return;
+  if (DUMP_JSON || TASK_ACTION || CREATE_TASK) return;
   const stamp = new Date().toISOString();
   if (extra == null) console.log(`[${stamp}] ${message}`);
   else console.log(`[${stamp}] ${message}`, extra);
@@ -458,6 +465,177 @@ async function runTaskAction(action, taskHint = "") {
   };
 }
 
+function escapeRegExp(text) {
+  return String(text || "").replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+async function clickVisibleLocator(locator) {
+  try {
+    const count = await locator.count();
+    for (let i = 0; i < count; i += 1) {
+      const item = locator.nth(i);
+      if (await item.isVisible()) {
+        await item.click();
+        return true;
+      }
+    }
+  } catch {}
+  return false;
+}
+
+async function ensureTasksPage(activePage) {
+  await activePage.goto(YARIG_URL, { waitUntil: "domcontentloaded" });
+  await activePage.waitForLoadState("domcontentloaded");
+  const url = activePage.url();
+  if (/login|auth/i.test(url)) {
+    throw new Error("login required for Yarig task creation");
+  }
+  const bodyText = await activePage.locator("body").innerText();
+  if (!bodyText.includes("Mis tareas")) {
+    throw new Error("Yarig.ai no está mostrando la lista de tareas");
+  }
+}
+
+async function openTaskCreationDialog(activePage) {
+  await ensureTasksPage(activePage);
+
+  const triggerCandidates = [
+    activePage.getByRole("button", { name: /añadir tareas|adición de tareas|nueva tarea|agregar tarea|add task/i }),
+    activePage.locator('button[title*="Añadir" i], button[aria-label*="Añadir" i], button[title*="Nueva" i], button[aria-label*="Nueva" i]'),
+    activePage.locator("button").filter({ hasText: /añadir|nueva tarea|agregar/i }),
+  ];
+
+  let opened = false;
+  for (const locator of triggerCandidates) {
+    if (await clickVisibleLocator(locator)) {
+      opened = true;
+      break;
+    }
+  }
+
+  if (!opened) {
+    throw new Error("No pude abrir el diálogo de alta de tareas en Yarig.ai");
+  }
+
+  const title = activePage.getByText(/Adición de tareas|Añadir tareas|Nueva tarea/i).first();
+  await title.waitFor({ state: "visible", timeout: 15000 });
+  return title;
+}
+
+async function selectEstimateHours(activePage, estimateHours) {
+  const hours = Math.max(1, Math.min(8, Number(estimateHours) || 1));
+  const rx = new RegExp(`^\\s*${hours}h\\s*$`, "i");
+  const candidates = [
+    activePage.getByText(rx),
+    activePage.locator("label, button, span, div").filter({ hasText: rx }),
+  ];
+  for (const locator of candidates) {
+    if (await clickVisibleLocator(locator)) return hours;
+  }
+  throw new Error(`No pude seleccionar la estimación ${hours}h en Yarig.ai`);
+}
+
+async function fillProjectField(activePage, projectName) {
+  const project = String(projectName || "").trim();
+  if (!project) return "";
+
+  const bodyText = await activePage.locator("body").innerText();
+  if (bodyText.includes(project)) return project;
+
+  const inputCandidates = [
+    activePage.locator('input[role="combobox"]'),
+    activePage.locator('input[type="search"]'),
+    activePage.locator('input[type="text"]'),
+    activePage.locator('input:not([type])'),
+  ];
+
+  for (const locator of inputCandidates) {
+    try {
+      const count = await locator.count();
+      for (let i = 0; i < count; i += 1) {
+        const input = locator.nth(i);
+        if (!(await input.isVisible())) continue;
+        await input.click({ clickCount: 3 });
+        await input.fill(project);
+        await activePage.waitForTimeout(700);
+        const option = activePage.getByText(new RegExp(escapeRegExp(project), "i")).last();
+        if (await option.count()) {
+          try {
+            if (await option.isVisible()) {
+              await option.click();
+              return project;
+            }
+          } catch {}
+        }
+        await input.press("ArrowDown").catch(() => {});
+        await input.press("Enter").catch(() => {});
+        await activePage.waitForTimeout(400);
+        return project;
+      }
+    } catch {}
+  }
+
+  return project;
+}
+
+async function fillTaskDescription(activePage, description) {
+  const text = String(description || "").trim().slice(0, 255);
+  if (!text) throw new Error("La descripción de la tarea está vacía");
+  const textareas = activePage.locator("textarea");
+  const count = await textareas.count();
+  for (let i = count - 1; i >= 0; i -= 1) {
+    const textarea = textareas.nth(i);
+    if (!(await textarea.isVisible())) continue;
+    await textarea.click();
+    await textarea.fill(text);
+    return text;
+  }
+  throw new Error("No pude rellenar la descripción de la tarea en Yarig.ai");
+}
+
+async function saveCreatedTask(activePage) {
+  const addClicked = await clickVisibleLocator(activePage.getByRole("button", { name: /^Añadir$/i }));
+  if (!addClicked) {
+    throw new Error("No pude pulsar el botón Añadir en Yarig.ai");
+  }
+  await activePage.waitForTimeout(800);
+  const saveCandidates = [
+    activePage.getByRole("button", { name: /^Guardar$/i }),
+    activePage.locator("button").filter({ hasText: /^Guardar$/i }),
+  ];
+  for (const locator of saveCandidates) {
+    if (await clickVisibleLocator(locator)) {
+      await activePage.waitForTimeout(1800);
+      return;
+    }
+  }
+  throw new Error("No pude pulsar el botón Guardar en Yarig.ai");
+}
+
+async function runCreateTask(description, projectName, estimateHours) {
+  const activePage = await ensureBrowser();
+  await openTaskCreationDialog(activePage);
+  const selectedHours = await selectEstimateHours(activePage, estimateHours);
+  const selectedProject = await fillProjectField(activePage, projectName);
+  const taskDescription = await fillTaskDescription(activePage, description);
+  await saveCreatedTask(activePage);
+  const refreshedPayload = await fetchVisibleTasks(activePage, { preferCurrent: true });
+  const saved = await syncPayloadToApi(refreshedPayload, activePage);
+  return {
+    ok: true,
+    createdTask: taskDescription,
+    estimateHours: selectedHours,
+    project: selectedProject || projectName || "",
+    currentUrl: refreshedPayload.currentUrl,
+    title: refreshedPayload.title,
+    tasks: refreshedPayload.tasks,
+    done: refreshedPayload.done,
+    taskBuckets: refreshedPayload.taskBuckets,
+    activeTask: refreshedPayload.activeTask,
+    context: saved,
+  };
+}
+
 async function logoutSession() {
   const activePage = await ensureBrowser();
   const logoutUrls = [
@@ -558,6 +736,12 @@ async function watchLoop(activePage) {
 async function main() {
   if (LOGOUT) {
     const payload = await logoutSession();
+    process.stdout.write(JSON.stringify(payload));
+    await closeBrowser();
+    return;
+  }
+  if (CREATE_TASK) {
+    const payload = await runCreateTask(TASK_DESC, TASK_PROJECT, TASK_ESTIMATE_HOURS);
     process.stdout.write(JSON.stringify(payload));
     await closeBrowser();
     return;

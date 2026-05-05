@@ -703,7 +703,7 @@ app = FastAPI(title="AdmiraNext Council API", version="4.0.0")
 
 @app.get("/")
 async def root():
-    return {"status": "ok", "service": "AdmiraNext Council API", "version": "Admira v.26.05.04.r1"}
+    return {"status": "ok", "service": "AdmiraNext Council API", "version": "Admira v.2026.05.05.r1"}
 
 app.add_middleware(
     CORSMiddleware,
@@ -771,6 +771,7 @@ class AskRequest(BaseModel):
     generation: str = "leyendas"
     context: Optional[list] = None
     llm: str = "claude-sonnet"  # LLM model key from LLM_MODELS
+    confirm_expensive_video: bool = False
 
 
 class AskOneRequest(BaseModel):
@@ -779,6 +780,7 @@ class AskOneRequest(BaseModel):
     generation: str = "leyendas"
     context: Optional[list] = None
     llm: str = "claude-sonnet"  # LLM model key from LLM_MODELS
+    confirm_expensive_video: bool = False
 
 
 class AnalyzeYoutubeRequest(BaseModel):
@@ -808,6 +810,12 @@ class YarContextRequest(BaseModel):
 class YarTaskActionRequest(BaseModel):
     action: str = ""
     taskHint: str = ""
+
+
+class YarTaskCreateRequest(BaseModel):
+    description: str = ""
+    estimateHours: int = 1
+    project: str = "Admira"
 
 
 class AgentReply(BaseModel):
@@ -853,6 +861,17 @@ def _build_conversation(agent: CouncilAgent, message: str, context: Optional[lis
         "- Usa tu experiencia y filosofía para dar respuestas genuinas.\n"
     )
     return conv_system, messages
+
+
+def _requires_expensive_video_confirmation(llm_key: str, message: str) -> bool:
+    """Flag Gemini + YouTube requests because they can consume a very large token budget."""
+    model_cfg = LLM_MODELS.get(llm_key, LLM_MODELS["claude-sonnet"])
+    return model_cfg["provider"] == "gemini" and bool(YOUTUBE_RE.search(message or ""))
+
+
+def _is_expensive_video_request(llm_key: str, message: str) -> bool:
+    """Gemini + YouTube should be limited to a single agent even after confirmation."""
+    return _requires_expensive_video_confirmation(llm_key, message)
 
 
 def agent_ask_anthropic(agent: CouncilAgent, message: str, context: Optional[list], model_id: str, max_tokens: int = 300) -> tuple:
@@ -1035,6 +1054,12 @@ async def council_ask(
     llm_key = req.llm if req.llm in LLM_MODELS else "claude-sonnet"
     model_cfg = LLM_MODELS[llm_key]
 
+    if _requires_expensive_video_confirmation(llm_key, req.message) and not req.confirm_expensive_video:
+        raise HTTPException(
+            status_code=409,
+            detail="Gemini + YouTube requiere confirmación explícita por coste antes de enviar la consulta.",
+        )
+
     # Only check budget for paid models
     if not model_cfg["free"]:
         check_budget()
@@ -1042,11 +1067,16 @@ async def council_ask(
     gen = req.generation if req.generation in AGENTS else "leyendas"
     group = AGENTS[gen]
     loop = asyncio.get_event_loop()
+    expensive_video_request = _is_expensive_video_request(llm_key, req.message)
 
-    # Pick 1 random agent from each side
-    racional_cls = random.choice(group["racional"])
-    creativo_cls = random.choice(group["creativo"])
-    selected = [racional_cls, creativo_cls]
+    if expensive_video_request:
+        # Hard cap: one single agent for Gemini + YouTube requests.
+        selected = [random.choice(list(group["racional"]) + list(group["creativo"]))]
+    else:
+        # Pick 1 random agent from each side
+        racional_cls = random.choice(group["racional"])
+        creativo_cls = random.choice(group["creativo"])
+        selected = [racional_cls, creativo_cls]
 
     cost_before = _load_budget()["total_cost_eur"]
 
@@ -1089,6 +1119,12 @@ async def council_ask_one(
     """Ask a single specific agent. Used by 'Preguntar' verb."""
     llm_key = req.llm if req.llm in LLM_MODELS else "claude-sonnet"
     model_cfg = LLM_MODELS[llm_key]
+
+    if _requires_expensive_video_confirmation(llm_key, req.message) and not req.confirm_expensive_video:
+        raise HTTPException(
+            status_code=409,
+            detail="Gemini + YouTube requiere confirmación explícita por coste antes de enviar la consulta.",
+        )
 
     # Only check budget for paid models
     if not model_cfg["free"]:
@@ -1518,6 +1554,105 @@ async def yar_task_action(req: YarTaskActionRequest, _auth=Depends(verify_token)
         "action": action,
         "context": context,
         "currentTask": payload.get("currentTask", ""),
+        "sourceUrl": payload.get("currentUrl", ""),
+        "sourceTitle": payload.get("title", ""),
+    }
+
+
+@app.post("/api/council/yar-create-task")
+async def yar_create_task(req: YarTaskCreateRequest, _auth=Depends(verify_token)):
+    tool_path = Path(__file__).resolve().parent / "tools" / "yarig-tasks-sync.mjs"
+    if not tool_path.exists():
+        raise HTTPException(status_code=501, detail="yarig-tasks-sync.mjs no disponible en este backend")
+
+    description = _clean_yar_line(req.description)
+    if not description:
+        raise HTTPException(status_code=400, detail="La descripción de la tarea es obligatoria")
+
+    estimate_hours = int(req.estimateHours or 1)
+    if estimate_hours < 1 or estimate_hours > 8:
+        raise HTTPException(status_code=400, detail="estimateHours debe estar entre 1 y 8")
+
+    project = _clean_yar_line(req.project or "Admira") or "Admira"
+
+    env = _yar_tool_env()
+    log_dir = _yar_log_dir()
+    login_log = log_dir / "yarig-login.log"
+    pid_file = log_dir / "yarig-login.pid"
+
+    had_watcher = False
+    if pid_file.exists():
+        try:
+            existing_pid = int(pid_file.read_text(encoding="utf-8").strip())
+            if _is_yarig_worker_process(existing_pid):
+                had_watcher = True
+                try:
+                    subprocess.run(["kill", "-9", str(existing_pid)], capture_output=True, text=True, timeout=5)
+                except Exception:
+                    pass
+                time.sleep(1.0)
+            pid_file.unlink(missing_ok=True)
+        except Exception:
+            try:
+                pid_file.unlink(missing_ok=True)
+            except Exception:
+                pass
+
+    cmd = [
+        "node",
+        str(tool_path),
+        "--create-task",
+        "--task-desc",
+        description,
+        "--task-project",
+        project,
+        "--task-estimate",
+        str(estimate_hours),
+    ]
+
+    try:
+        res = subprocess.run(cmd, capture_output=True, text=True, timeout=180, env=env)
+    except subprocess.TimeoutExpired as e:
+        raise HTTPException(status_code=504, detail=f"yarig create task timeout: {(e.stderr or e.stdout or '').strip()[:240]}")
+    except FileNotFoundError:
+        raise HTTPException(status_code=501, detail="node no disponible para lanzar yarig create task")
+
+    if res.returncode != 0:
+        detail = (res.stderr or res.stdout or "yarig create task failed").strip()[:500]
+        if "ProcessSingleton" in detail or "already in use by another instance of Chromium" in detail:
+            raise HTTPException(status_code=409, detail="El perfil persistente de Yarig.AI está ocupado por otra ventana o watcher. Cierra esa sesión del sync y vuelve a intentarlo.")
+        if "login" in detail.lower() or "auth" in detail.lower() or "identif" in detail.lower():
+            raise HTTPException(status_code=401, detail="La sesión persistente de Yarig.AI necesita login antes de crear tareas.")
+        raise HTTPException(status_code=502, detail=detail)
+
+    try:
+        payload = json.loads((res.stdout or "").strip() or "{}")
+    except json.JSONDecodeError as e:
+        raise HTTPException(status_code=502, detail=f"yarig create task devolvió JSON inválido: {e}")
+    finally:
+        if had_watcher:
+            out = open(login_log, "a", encoding="utf-8")
+            try:
+                proc = subprocess.Popen(
+                    ["node", str(tool_path), "--watch-after-login"],
+                    stdout=out,
+                    stderr=out,
+                    text=True,
+                    env=env,
+                    cwd=str(Path(__file__).resolve().parent),
+                    start_new_session=True,
+                )
+                pid_file.write_text(str(proc.pid), encoding="utf-8")
+            except Exception:
+                out.close()
+
+    context = payload.get("context") or _load_yar_context()
+    return {
+        "ok": True,
+        "context": context,
+        "createdTask": payload.get("createdTask", description),
+        "estimateHours": estimate_hours,
+        "project": payload.get("project", project),
         "sourceUrl": payload.get("currentUrl", ""),
         "sourceTitle": payload.get("title", ""),
     }

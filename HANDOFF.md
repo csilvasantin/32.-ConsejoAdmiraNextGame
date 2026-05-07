@@ -6,14 +6,14 @@ Proyecto: `32.-ConsejoAdmiraNextGame`
 ## Punto de entrada
 
 - URL pública: [https://www.admira.live](https://www.admira.live)
-- Versión visible: `Admira v.26.05.07.r2`
+- Versión visible: `Admira v.26.05.07.r3`
 - Rama: `main`
 - Commit actual: ver último commit publicado en `main`
 
 ## Qué comprobar al retomar
 
 1. Abrir la URL pública.
-2. Verificar arriba que pone `Admira v.26.05.07.r2`.
+2. Verificar arriba que pone `Admira v.26.05.07.r3`.
 3. Si se va a desarrollar, clonar y actualizar:
 
 ```bash
@@ -56,6 +56,26 @@ El hash debe coincidir con el commit publicado indicado arriba o ser posterior.
   - `Cancelar`
 
 ## Últimos cambios relevantes
+
+### `Admira v.26.05.07.r3`
+
+- Autodescubrimiento de MAC addresses: el backend ya no necesita que se
+  rellenen manualmente las MAC en `machines.json`. Para cada Mac
+  encendido del consejo:
+  1. ARP local — ping a `host_local` (mDNS `.local`) o `ip_local` y
+     lectura de `arp -n`. Solo aplica a máquinas en la MISMA LAN que el
+     Mac Mini que sirve la API (las IPs Tailscale `100.x.x.x` no
+     aparecen en ARP).
+  2. SSH `ifconfig` — fallback que cubre el resto: el Mac remoto se
+     contesta a sí mismo con la MAC de su interfaz por defecto.
+  3. Persistencia atómica en `data/machines.json` (campo `mac_address`
+     + `mac_discovered_at`).
+- Nuevo endpoint: `POST /api/council/hackeo/discover-macs` — solo
+  descubre y guarda; no lanza la simulación.
+- `POST /api/council/hackeo` ahora descubre la MAC on-the-fly cuando
+  encuentra un consejero encendido y sin MAC registrada, así que tras
+  el primer `HACKEO` con todos encendidos, los apagados se podrán
+  despertar por WoL en próximas pulsaciones.
 
 ### `Admira v.26.05.07.r2`
 

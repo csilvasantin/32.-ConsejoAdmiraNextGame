@@ -703,7 +703,7 @@ app = FastAPI(title="AdmiraNext Council API", version="4.0.0")
 
 @app.get("/")
 async def root():
-    return {"status": "ok", "service": "AdmiraNext Council API", "version": "Admira v.26.05.07.r2"}
+    return {"status": "ok", "service": "AdmiraNext Council API", "version": "Admira v.26.05.07.r3"}
 
 app.add_middleware(
     CORSMiddleware,
@@ -3294,6 +3294,122 @@ def _hk_ssh_stop(user: str, host: str) -> tuple:
         return False, f"ssh stop error: {e}"
 
 
+def _hk_normalize_mac(mac: str) -> str:
+    """Normaliza una MAC a `aa:bb:cc:dd:ee:ff` (lowercase). '' si inválida."""
+    raw = re.sub(r"[^0-9a-fA-F]", "", mac or "").lower()
+    if len(raw) != 12:
+        return ""
+    return ":".join(raw[i:i + 2] for i in range(0, 12, 2))
+
+
+def _hk_arp_lookup(target: str) -> str:
+    """Busca la MAC asociada a `target` (host o IP) en la tabla ARP local."""
+    if not target:
+        return ""
+    try:
+        r = subprocess.run(["arp", "-n", target], capture_output=True, timeout=2)
+        txt = (r.stdout or b"").decode("utf-8", "ignore")
+    except Exception:
+        return ""
+    m = re.search(r"([0-9a-fA-F]{1,2}(?::[0-9a-fA-F]{1,2}){5})", txt)
+    return _hk_normalize_mac(m.group(1)) if m else ""
+
+
+def _hk_discover_mac(machine: dict) -> tuple:
+    """Intenta descubrir la MAC del Mac remoto. Devuelve (mac, source).
+
+    Estrategia:
+      1. Si hay `host_local` (ej. MacBookProNegro14.local) → ping mDNS y
+         leer la tabla ARP local. Solo funciona si el host que ejecuta
+         este backend está en la MISMA LAN física que la máquina remota
+         (las IPs Tailscale 100.x.x.x no aparecen en ARP).
+      2. SSH al host Tailscale y preguntarle su propia MAC con
+         `route get default` + `ifconfig <iface>`. Funciona siempre
+         que SSH responda — que es justo cuando queremos descubrirla.
+    """
+    ssh = machine.get("ssh") or {}
+    user = ssh.get("user", "")
+    host = ssh.get("host", "")
+    host_local = ssh.get("host_local", "")
+    ip_local = ssh.get("ip_local", "")
+
+    # 1) ARP local (mDNS .local o IP LAN)
+    for tgt in (host_local, ip_local):
+        if not tgt:
+            continue
+        try:
+            subprocess.run(["ping", "-c", "1", "-W", "1", tgt],
+                           capture_output=True, timeout=2)
+        except Exception:
+            pass
+        mac = _hk_arp_lookup(tgt)
+        if mac:
+            return mac, f"arp:{tgt}"
+
+    # 2) SSH ifconfig (cubre el caso Tailscale-only)
+    if user and host:
+        remote = (
+            "iface=$(route -n get default 2>/dev/null | awk '/interface:/{print $2}'); "
+            "[ -z \"$iface\" ] && iface=en0; "
+            "ifconfig \"$iface\" 2>/dev/null | awk '/ether/{print $2; exit}'"
+        )
+        ssh_cmd = [
+            "ssh",
+            "-o", "StrictHostKeyChecking=no",
+            "-o", "BatchMode=yes",
+            "-o", f"ConnectTimeout={_HK_SSH_TIMEOUT}",
+            f"{user}@{host}",
+            remote,
+        ]
+        try:
+            r = subprocess.run(ssh_cmd, capture_output=True, timeout=_HK_SSH_TIMEOUT + 2)
+            raw = (r.stdout or b"").decode("utf-8", "ignore").strip()
+            mac = _hk_normalize_mac(raw)
+            if mac:
+                return mac, "ssh:ifconfig"
+        except Exception:
+            pass
+
+    return "", ""
+
+
+_HK_SAVE_LOCK = threading.Lock()
+
+
+def _hk_save_macs(updates: dict) -> int:
+    """Persiste las MACs descubiertas en machines.json (escritura atómica).
+
+    `updates` es un dict {machine_id: mac}. Solo se sobrescriben las
+    entradas cuya MAC ha cambiado. Devuelve el nº de entradas modificadas.
+    """
+    if not updates:
+        return 0
+    with _HK_SAVE_LOCK:
+        try:
+            data = json.loads(_HK_MACHINES_PATH.read_text(encoding="utf-8"))
+        except Exception:
+            return 0
+        n = 0
+        now = datetime.utcnow().isoformat() + "Z"
+        for m in data.get("machines", []):
+            mid = m.get("id")
+            if mid in updates and updates[mid]:
+                if (m.get("mac_address") or "") != updates[mid]:
+                    m["mac_address"] = updates[mid]
+                    m["mac_discovered_at"] = now
+                    n += 1
+        if n == 0:
+            return 0
+        data["updatedAt"] = now
+        tmp = _HK_MACHINES_PATH.with_suffix(".json.tmp")
+        tmp.write_text(
+            json.dumps(data, indent=2, ensure_ascii=False) + "\n",
+            encoding="utf-8",
+        )
+        os.replace(tmp, _HK_MACHINES_PATH)
+        return n
+
+
 def _hk_send_wol(mac: str) -> tuple:
     """Envía un magic packet Wake-on-LAN al MAC dado (broadcast UDP)."""
     if not mac:
@@ -3351,6 +3467,14 @@ def _hk_process_one(machine: dict, action: str) -> dict:
         return result
 
     if alive:
+        # Si está encendida y aún no tenemos su MAC, la descubrimos ahora
+        # (ARP local + SSH ifconfig) para poder hacerle WoL la próxima vez
+        # aunque esté apagada. El endpoint la persistirá en machines.json.
+        if not mac:
+            disc_mac, disc_src = _hk_discover_mac(machine)
+            if disc_mac:
+                result["discovered_mac"] = disc_mac
+                result["mac_source"] = disc_src
         ok, detail = _hk_ssh_launch(user, host)
         result["action"] = "ssh_launched"
         result["ok"] = ok
@@ -3379,6 +3503,10 @@ async def council_hackeo(_auth=Depends(verify_token)):
         for r in pool.map(lambda m: _hk_process_one(m, "start"), machines):
             results.append(r)
 
+    # Persistir las MACs que se hayan descubierto en este lanzamiento.
+    updates = {r["id"]: r["discovered_mac"] for r in results if r.get("discovered_mac")}
+    saved = _hk_save_macs(updates) if updates else 0
+
     summary = {
         "total": len(results),
         "online": sum(1 for r in results if r["online"]),
@@ -3386,10 +3514,11 @@ async def council_hackeo(_auth=Depends(verify_token)):
         "ssh_ok": sum(1 for r in results if r["action"] == "ssh_launched" and r["ok"]),
         "wol_sent": sum(1 for r in results if r["action"] == "wol_sent"),
         "failed": sum(1 for r in results if not r["ok"]),
+        "macs_discovered": saved,
     }
     return {
         "ok": True,
-        "version": "Admira v.26.05.07.r2",
+        "version": "Admira v.26.05.07.r3",
         "ts": datetime.utcnow().isoformat() + "Z",
         "summary": summary,
         "machines": results,
@@ -3406,8 +3535,62 @@ async def council_hackeo_stop(_auth=Depends(verify_token)):
             results.append(r)
     return {
         "ok": True,
-        "version": "Admira v.26.05.07.r2",
+        "version": "Admira v.26.05.07.r3",
         "ts": datetime.utcnow().isoformat() + "Z",
+        "machines": results,
+    }
+
+
+def _hk_discover_one(machine: dict) -> dict:
+    ssh = machine.get("ssh") or {}
+    host = ssh.get("host", "")
+    alive = _hk_ping(host)
+    out = {
+        "id": machine.get("id"),
+        "name": machine.get("name") or machine.get("id"),
+        "host": host,
+        "online": alive,
+        "mac_before": machine.get("mac_address", ""),
+        "mac": "",
+        "source": "",
+    }
+    if alive:
+        mac, src = _hk_discover_mac(machine)
+        out["mac"] = mac
+        out["source"] = src
+    return out
+
+
+@app.post("/api/council/hackeo/discover-macs")
+async def council_hackeo_discover_macs(_auth=Depends(verify_token)):
+    """Autodescubre las MAC de los Macs encendidos y las persiste en
+    machines.json para que la próxima vez podamos despertarlos por
+    Wake-on-LAN aunque estén apagados.
+
+    No lanza la simulación de hackeo; solo descubre y guarda.
+    """
+    machines = _hk_load_council()
+    if not machines:
+        return {"ok": False, "error": "no council machines", "machines": []}
+
+    results: list = []
+    with _HkPool(max_workers=min(8, len(machines))) as pool:
+        for r in pool.map(_hk_discover_one, machines):
+            results.append(r)
+
+    updates = {r["id"]: r["mac"] for r in results if r["mac"]}
+    saved = _hk_save_macs(updates) if updates else 0
+
+    return {
+        "ok": True,
+        "version": "Admira v.26.05.07.r3",
+        "ts": datetime.utcnow().isoformat() + "Z",
+        "summary": {
+            "total": len(results),
+            "online": sum(1 for r in results if r["online"]),
+            "discovered": len(updates),
+            "saved": saved,
+        },
         "machines": results,
     }
 

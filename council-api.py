@@ -703,7 +703,7 @@ app = FastAPI(title="AdmiraNext Council API", version="4.0.0")
 
 @app.get("/")
 async def root():
-    return {"status": "ok", "service": "AdmiraNext Council API", "version": "Admira v.26.05.07.r4"}
+    return {"status": "ok", "service": "AdmiraNext Council API", "version": "Admira v.26.05.07.r5"}
 
 app.add_middleware(
     CORSMiddleware,
@@ -3246,9 +3246,13 @@ def _hk_ssh_launch(user: str, host: str) -> tuple:
         return False, "missing ssh user/host"
     # Nota: el script va base64 para no pelearse con escapes a través de
     # ssh + osascript + AppleScript + bash.
+    # `caffeinate -u -t 2 && sleep 1` despierta el display y desactiva
+    # el screensaver durante 2s antes de lanzar osascript: si la GUI
+    # está bloqueada, Terminal.app no puede recibir AppleEvents.
     import base64 as _b64
     payload = _b64.b64encode(_HK_REMOTE_PY.encode("utf-8")).decode("ascii")
     remote_cmd = (
+        "caffeinate -u -t 2 && sleep 1 && "
         "osascript -e 'tell application \"Terminal\" to activate' "
         "-e 'tell application \"Terminal\" to do script "
         f"\"clear; echo \\\"== ADMIRA HACK SIMULATION ==\\\"; "
@@ -3518,7 +3522,7 @@ async def council_hackeo(_auth=Depends(verify_token)):
     }
     return {
         "ok": True,
-        "version": "Admira v.26.05.07.r4",
+        "version": "Admira v.26.05.07.r5",
         "ts": datetime.utcnow().isoformat() + "Z",
         "summary": summary,
         "machines": results,
@@ -3535,7 +3539,7 @@ async def council_hackeo_stop(_auth=Depends(verify_token)):
             results.append(r)
     return {
         "ok": True,
-        "version": "Admira v.26.05.07.r4",
+        "version": "Admira v.26.05.07.r5",
         "ts": datetime.utcnow().isoformat() + "Z",
         "machines": results,
     }
@@ -3583,7 +3587,7 @@ async def council_hackeo_discover_macs(_auth=Depends(verify_token)):
 
     return {
         "ok": True,
-        "version": "Admira v.26.05.07.r4",
+        "version": "Admira v.26.05.07.r5",
         "ts": datetime.utcnow().isoformat() + "Z",
         "summary": {
             "total": len(results),

@@ -6,14 +6,14 @@ Proyecto: `32.-ConsejoAdmiraNextGame`
 ## Punto de entrada
 
 - URL pública: [https://www.admira.live](https://www.admira.live)
-- Versión visible: `Admira v.26.05.07.r4`
+- Versión visible: `Admira v.26.05.07.r5`
 - Rama: `main`
 - Commit actual: ver último commit publicado en `main`
 
 ## Qué comprobar al retomar
 
 1. Abrir la URL pública.
-2. Verificar arriba que pone `Admira v.26.05.07.r4`.
+2. Verificar arriba que pone `Admira v.26.05.07.r5`.
 3. Si se va a desarrollar, clonar y actualizar:
 
 ```bash
@@ -56,6 +56,18 @@ El hash debe coincidir con el commit publicado indicado arriba o ser posterior.
   - `Cancelar`
 
 ## Últimos cambios relevantes
+
+### `Admira v.26.05.07.r5`
+
+- Fix: el comando SSH del HACKEO (función `_hk_ssh_launch` en
+  `council-api.py`) ahora antepone `caffeinate -u -t 2 && sleep 1 &&`
+  antes del `osascript`. Si el MacBook tiene el screensaver activo o
+  el display dormido, la GUI está bloqueada y `Terminal.app` no acepta
+  AppleEvents → la simulación de hackeo no aparecía. `caffeinate -u -t 2`
+  despierta el display y lo mantiene 2 s; el `sleep 1` da margen al
+  WindowServer para procesar el unlock antes de pedir activate de
+  Terminal. Coste: +3 s en el SSH a cada Mac vivo (entra dentro del
+  margen del subprocess timeout `_HK_SSH_TIMEOUT + 2`).
 
 ### `Admira v.26.05.07.r4`
 

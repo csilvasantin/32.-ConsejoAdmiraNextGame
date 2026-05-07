@@ -6,14 +6,14 @@ Proyecto: `32.-ConsejoAdmiraNextGame`
 ## Punto de entrada
 
 - URL pública: [https://www.admira.live](https://www.admira.live)
-- Versión visible: `Admira v.26.05.07.r5`
+- Versión visible: `Admira v.26.05.07.r6`
 - Rama: `main`
 - Commit actual: ver último commit publicado en `main`
 
 ## Qué comprobar al retomar
 
 1. Abrir la URL pública.
-2. Verificar arriba que pone `Admira v.26.05.07.r5`.
+2. Verificar arriba que pone `Admira v.26.05.07.r6`.
 3. Si se va a desarrollar, clonar y actualizar:
 
 ```bash
@@ -56,6 +56,21 @@ El hash debe coincidir con el commit publicado indicado arriba o ser posterior.
   - `Cancelar`
 
 ## Últimos cambios relevantes
+
+### `Admira v.26.05.07.r6`
+
+- Fix: mixed-content. Cuando la página se sirve por HTTPS
+  (`https://www.admira.live`), el navegador bloquea cualquier `fetch`
+  a `http://` (incluido `localhost:8420` y el puerto 8420 directo
+  del MacMini). Eso producía el error "Failed to fetch — animación
+  local" del HACKEO aunque hubiese backends UP.
+- `COUNCIL_API_URLS` en `council-scumm.html` ahora se construye
+  según `location.protocol`:
+  - HTTPS (producción): solo `https://macmini.tail48b61c.ts.net/council`
+    (Funnel) y `https://three2-...onrender.com` (Render).
+  - HTTP (operador en local): `http://localhost:8420`,
+    `http://macmini.tail48b61c.ts.net:8420` (requiere Tailscale en el
+    host) y Render como red de seguridad.
 
 ### `Admira v.26.05.07.r5`
 

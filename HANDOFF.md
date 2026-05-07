@@ -6,14 +6,14 @@ Proyecto: `32.-ConsejoAdmiraNextGame`
 ## Punto de entrada
 
 - URL pública: [https://www.admira.live](https://www.admira.live)
-- Versión visible: `Admira v.26.05.07.r1`
+- Versión visible: `Admira v.26.05.07.r2`
 - Rama: `main`
 - Commit actual: ver último commit publicado en `main`
 
 ## Qué comprobar al retomar
 
 1. Abrir la URL pública.
-2. Verificar arriba que pone `Admira v.26.05.07.r1`.
+2. Verificar arriba que pone `Admira v.26.05.07.r2`.
 3. Si se va a desarrollar, clonar y actualizar:
 
 ```bash
@@ -56,6 +56,26 @@ El hash debe coincidir con el commit publicado indicado arriba o ser posterior.
   - `Cancelar`
 
 ## Últimos cambios relevantes
+
+### `Admira v.26.05.07.r2`
+
+- Nuevo endpoint backend: `POST /api/council/hackeo` (y `…/hackeo/stop`) en
+  `council-api.py`. Para cada máquina del consejo (`unitType=="council"` con
+  SSH habilitado en `data/machines.json`):
+  1. Hace ping por Tailscale (`hostname.tail48b61c.ts.net`).
+  2. Si responde → SSH y abre `Terminal.app` con un script Python embebido
+     que pinta líneas tipo "hackeo en curso".
+  3. Si NO responde → envía paquete Wake-on-LAN (UDP 7/9 broadcast) al
+     `mac_address` de la máquina.
+- `data/machines.json` ahora incluye campo `mac_address` (vacío por defecto).
+  **HAY QUE RELLENAR las MAC** para que WoL funcione de verdad; mientras
+  estén vacías el backend devuelve `action: "wol_skipped"`.
+- El frontend (botón `HACKEO` en la barra inferior) llama al nuevo endpoint
+  vía `COUNCIL_API_URLS` con `X-Council-Token: admira2026`. La animación
+  local se mantiene; encima del overlay se pinta:
+  - Banner con resumen `total / online / ssh_ok / wol_sent / failed`.
+  - Badge por panel: `● HACKED`, `◐ WoL`, `✗ no MAC`, `○ offline`, `✗ FAIL`.
+- Versión visible bumpeada a `Admira v.26.05.07.r2`.
 
 ### `v26.30.04.1`
 

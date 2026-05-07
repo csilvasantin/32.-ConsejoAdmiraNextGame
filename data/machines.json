@@ -1,6 +1,6 @@
 {
   "team": "AdmiraNext Team",
-  "updatedAt": "2026-03-31T20:35:00Z",
+  "updatedAt": "2026-05-07T12:00:00Z",
   "tailnet": "tail48b61c.ts.net",
   "machines": [
     {
@@ -23,7 +23,8 @@
         "host": "macmini.tail48b61c.ts.net",
         "ip_tailscale": "100.74.101.14",
         "connect_tailscale": "ssh csilvasantin@100.74.101.14"
-      }
+      },
+      "mac_address": ""
     },
     {
       "id": "admira-macbookairnines",
@@ -45,7 +46,8 @@
         "host": "macbookairnines.tail48b61c.ts.net",
         "ip_tailscale": "100.76.96.50",
         "connect_tailscale": "ssh -o ProxyCommand='tailscale nc %h %p' csilvasantin@macbookairnines"
-      }
+      },
+      "mac_address": ""
     },
     {
       "id": "admira-macbookpronegro14",
@@ -69,7 +71,8 @@
         "ip_tailscale": "100.101.192.1",
         "connect_lan": "ssh csilvasantin@MacBookProNegro14.local",
         "connect_tailscale": "ssh -o ProxyCommand='tailscale nc %h %p' csilvasantin@macbookpronegro14"
-      }
+      },
+      "mac_address": ""
     },
     {
       "id": "admira-macbookair16",
@@ -93,7 +96,8 @@
         "ip_tailscale": "100.99.176.126",
         "connect_lan": "ssh csilvasantin@MacBookAir16.local",
         "connect_tailscale": "ssh csilvasantin@100.99.176.126"
-      }
+      },
+      "mac_address": ""
     },
     {
       "id": "admira-macbookairluna",
@@ -115,7 +119,8 @@
         "host": "macbookairluna.tail48b61c.ts.net",
         "ip_tailscale": "100.98.68.63",
         "connect_tailscale": "ssh csilvasantin@100.98.68.63"
-      }
+      },
+      "mac_address": ""
     },
     {
       "id": "admira-macbook-carla",
@@ -137,7 +142,8 @@
         "host": "macbook-air-de-carla.tail48b61c.ts.net",
         "ip_tailscale": "100.110.80.2",
         "connect_tailscale": "ssh csilvasantin@100.110.80.2"
-      }
+      },
+      "mac_address": ""
     },
     {
       "id": "admira-macbookairblanco",
@@ -177,7 +183,8 @@
           "codexBotReady": true,
           "needsHelp": "Ninguna. Perfil CEO operativo."
         }
-      }
+      },
+      "mac_address": ""
     },
     {
       "id": "admira-pc-runner-01",
@@ -205,7 +212,8 @@
         "host": "",
         "ip_tailscale": "",
         "connect_tailscale": ""
-      }
+      },
+      "mac_address": ""
     },
     {
       "id": "admira-pc-ocr-01",
@@ -233,7 +241,8 @@
         "host": "",
         "ip_tailscale": "",
         "connect_tailscale": ""
-      }
+      },
+      "mac_address": ""
     },
     {
       "id": "admira-pc-bot-01",
@@ -261,7 +270,8 @@
         "host": "",
         "ip_tailscale": "",
         "connect_tailscale": ""
-      }
+      },
+      "mac_address": ""
     },
     {
       "id": "admira-pcsitges3monitores",
@@ -296,7 +306,8 @@
         "enabled": true,
         "channel": "windows-local",
         "mode": "desktop-sendkeys"
-      }
+      },
+      "mac_address": ""
     }
   ]
 }

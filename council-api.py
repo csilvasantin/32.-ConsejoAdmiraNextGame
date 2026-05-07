@@ -703,7 +703,7 @@ app = FastAPI(title="AdmiraNext Council API", version="4.0.0")
 
 @app.get("/")
 async def root():
-    return {"status": "ok", "service": "AdmiraNext Council API", "version": "Admira v.2026.05.05.r2"}
+    return {"status": "ok", "service": "AdmiraNext Council API", "version": "Admira v.26.05.07.r2"}
 
 app.add_middleware(
     CORSMiddleware,
@@ -3146,6 +3146,270 @@ async def crear_set_error(job_id: str, req: CrearErrorRequest, _auth=Depends(ver
     job["error"] = req.error[:500]
     job["completedAt"] = time.time()
     return _crear_public_job(job)
+
+
+# ─────────────────────────────────────────────────────────────
+# HACKEO — ping + SSH (encendidas) / Wake-on-LAN (apagadas)
+# ─────────────────────────────────────────────────────────────
+# Para cada máquina del consejo:
+#   1. Ping por Tailscale (hostname.tail48b61c.ts.net)
+#   2. Si responde → SSH lanza simulación de hackeo en su Terminal
+#   3. Si no responde → envía paquete Wake-on-LAN (requiere mac_address
+#      en data/machines.json — RELLENAR los campos vacíos para que WoL
+#      funcione de verdad; sin MAC el backend devuelve action="skipped").
+import socket as _hk_socket
+from concurrent.futures import ThreadPoolExecutor as _HkPool
+
+_HK_MACHINES_PATH = Path(__file__).parent / "data" / "machines.json"
+_HK_SSH_TIMEOUT = 4
+_HK_PING_TIMEOUT = 2
+
+# Script Python que se ejecuta DENTRO del Terminal remoto: imprime
+# líneas tipo "hackeo en curso" hasta que se cierra el terminal.
+_HK_REMOTE_PY = r'''
+import time, random, sys, socket
+LINES = [
+ "$ ssh -o StrictHostKeyChecking=no root@10.0.0.1",
+ "Connecting to 10.0.0.1:22...",
+ "Authenticating with stolen RSA key...",
+ "ACCESS GRANTED -- Welcome to "+socket.gethostname(),
+ "$ sudo cat /etc/shadow",
+ "root:$6$xQ9Z..redacted:19471:0:99999:7:::",
+ "$ find / -name '*.pem' -o -name '*.key' 2>/dev/null",
+ "/etc/ssl/private/server.key",
+ "$ mysqldump --all-databases > /tmp/dump.sql",
+ "Dumping database 'admira_prod'... [OK] 847 tables (312MB)",
+ "$ nmap -sS -p 1-65535 100.74.101.14",
+ "PORT      STATE  SERVICE",
+ "22/tcp    open   ssh",
+ "443/tcp   open   https",
+ "$ echo 'Exfiltrating data...'",
+ "Uploading dump.sql to c2.server... [=====>] 100%",
+ "$ history -c && echo '' > ~/.bash_history",
+ "Tracks cleared.",
+]
+i = 0
+try:
+    while True:
+        line = LINES[i % len(LINES)]
+        for c in line:
+            sys.stdout.write(c); sys.stdout.flush()
+            time.sleep(random.uniform(0.005, 0.04))
+        sys.stdout.write("\n"); sys.stdout.flush()
+        i += 1
+        time.sleep(random.uniform(0.15, 0.5))
+except (KeyboardInterrupt, BrokenPipeError):
+    pass
+'''
+
+
+def _hk_load_council() -> list:
+    """Devuelve solo las máquinas con unitType=='council' y SSH habilitado."""
+    try:
+        data = json.loads(_HK_MACHINES_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    out = []
+    for m in data.get("machines", []):
+        if m.get("unitType") != "council":
+            continue
+        ssh = m.get("ssh") or {}
+        if not ssh.get("enabled"):
+            continue
+        if not ssh.get("host"):
+            continue
+        out.append(m)
+    return out
+
+
+def _hk_ping(host: str) -> bool:
+    """Ping ICMP rápido por hostname Tailscale. True si responde."""
+    if not host:
+        return False
+    try:
+        # macOS / Linux: ping -c 1 -W 1000 (ms en macOS, s en Linux)
+        # Usamos -c1 -W1; si falla, devolvemos False sin lanzar.
+        cmd = ["ping", "-c", "1", "-W", "1", host]
+        r = subprocess.run(cmd, capture_output=True, timeout=_HK_PING_TIMEOUT)
+        return r.returncode == 0
+    except Exception:
+        return False
+
+
+def _hk_ssh_launch(user: str, host: str) -> tuple:
+    """Lanza la simulación de hackeo en el Terminal del Mac remoto.
+
+    Usa osascript para abrir Terminal.app y arranca el script Python
+    embebido. Devuelve (ok, detail).
+    """
+    if not user or not host:
+        return False, "missing ssh user/host"
+    # Nota: el script va base64 para no pelearse con escapes a través de
+    # ssh + osascript + AppleScript + bash.
+    import base64 as _b64
+    payload = _b64.b64encode(_HK_REMOTE_PY.encode("utf-8")).decode("ascii")
+    remote_cmd = (
+        "osascript -e 'tell application \"Terminal\" to activate' "
+        "-e 'tell application \"Terminal\" to do script "
+        f"\"clear; echo \\\"== ADMIRA HACK SIMULATION ==\\\"; "
+        f"echo {payload} | base64 -D | python3 -\"'"
+    )
+    ssh_cmd = [
+        "ssh",
+        "-o", "StrictHostKeyChecking=no",
+        "-o", "BatchMode=yes",
+        "-o", f"ConnectTimeout={_HK_SSH_TIMEOUT}",
+        f"{user}@{host}",
+        remote_cmd,
+    ]
+    try:
+        r = subprocess.run(ssh_cmd, capture_output=True, timeout=_HK_SSH_TIMEOUT + 2)
+        if r.returncode == 0:
+            return True, "ssh launched"
+        err = (r.stderr or b"").decode("utf-8", "ignore").strip()[:200]
+        return False, f"ssh rc={r.returncode}: {err or 'no stderr'}"
+    except subprocess.TimeoutExpired:
+        return False, "ssh timeout"
+    except Exception as e:
+        return False, f"ssh error: {e}"
+
+
+def _hk_ssh_stop(user: str, host: str) -> tuple:
+    """Cierra el Terminal en el Mac remoto."""
+    if not user or not host:
+        return False, "missing ssh user/host"
+    remote_cmd = "osascript -e 'tell application \"Terminal\" to quit' >/dev/null 2>&1; true"
+    ssh_cmd = [
+        "ssh",
+        "-o", "StrictHostKeyChecking=no",
+        "-o", "BatchMode=yes",
+        "-o", f"ConnectTimeout={_HK_SSH_TIMEOUT}",
+        f"{user}@{host}",
+        remote_cmd,
+    ]
+    try:
+        r = subprocess.run(ssh_cmd, capture_output=True, timeout=_HK_SSH_TIMEOUT + 2)
+        return r.returncode == 0, "ssh stop ok" if r.returncode == 0 else f"ssh rc={r.returncode}"
+    except Exception as e:
+        return False, f"ssh stop error: {e}"
+
+
+def _hk_send_wol(mac: str) -> tuple:
+    """Envía un magic packet Wake-on-LAN al MAC dado (broadcast UDP)."""
+    if not mac:
+        return False, "no mac_address (RELLENAR en data/machines.json)"
+    raw = re.sub(r"[^0-9a-fA-F]", "", mac)
+    if len(raw) != 12:
+        return False, f"mac inválida: {mac!r}"
+    try:
+        mac_bytes = bytes.fromhex(raw)
+        packet = b"\xff" * 6 + mac_bytes * 16
+        sock = _hk_socket.socket(_hk_socket.AF_INET, _hk_socket.SOCK_DGRAM)
+        sock.setsockopt(_hk_socket.SOL_SOCKET, _hk_socket.SO_BROADCAST, 1)
+        # Enviamos al broadcast directo y al subnet local; ambos son
+        # comunes según cómo esté la red.
+        for addr in ("255.255.255.255", "<broadcast>"):
+            try:
+                sock.sendto(packet, (addr, 9))
+                sock.sendto(packet, (addr, 7))
+            except Exception:
+                pass
+        sock.close()
+        return True, f"wol sent to {mac}"
+    except Exception as e:
+        return False, f"wol error: {e}"
+
+
+def _hk_process_one(machine: dict, action: str) -> dict:
+    ssh = machine.get("ssh") or {}
+    host = ssh.get("host", "")
+    user = ssh.get("user", "")
+    mac = machine.get("mac_address", "")
+    name = machine.get("name") or machine.get("id")
+
+    alive = _hk_ping(host)
+    result = {
+        "id": machine.get("id"),
+        "name": name,
+        "host": host,
+        "online": alive,
+        "action": "none",
+        "ok": False,
+        "detail": "",
+    }
+
+    if action == "stop":
+        if alive:
+            ok, detail = _hk_ssh_stop(user, host)
+            result["action"] = "ssh_stop"
+            result["ok"] = ok
+            result["detail"] = detail
+        else:
+            result["action"] = "skipped"
+            result["detail"] = "offline, nothing to stop"
+            result["ok"] = True
+        return result
+
+    if alive:
+        ok, detail = _hk_ssh_launch(user, host)
+        result["action"] = "ssh_launched"
+        result["ok"] = ok
+        result["detail"] = detail
+    else:
+        ok, detail = _hk_send_wol(mac)
+        result["action"] = "wol_sent" if ok else "wol_skipped"
+        result["ok"] = ok
+        result["detail"] = detail
+    return result
+
+
+@app.post("/api/council/hackeo")
+async def council_hackeo(_auth=Depends(verify_token)):
+    """Lanza la simulación de hackeo en cada máquina del consejo.
+
+    Para cada consejero: ping → si vive, SSH; si no, Wake-on-LAN.
+    Devuelve el estado por máquina para que el frontend pinte el resultado.
+    """
+    machines = _hk_load_council()
+    if not machines:
+        return {"ok": False, "error": "no council machines", "machines": []}
+
+    results: list = []
+    with _HkPool(max_workers=min(8, len(machines))) as pool:
+        for r in pool.map(lambda m: _hk_process_one(m, "start"), machines):
+            results.append(r)
+
+    summary = {
+        "total": len(results),
+        "online": sum(1 for r in results if r["online"]),
+        "offline": sum(1 for r in results if not r["online"]),
+        "ssh_ok": sum(1 for r in results if r["action"] == "ssh_launched" and r["ok"]),
+        "wol_sent": sum(1 for r in results if r["action"] == "wol_sent"),
+        "failed": sum(1 for r in results if not r["ok"]),
+    }
+    return {
+        "ok": True,
+        "version": "Admira v.26.05.07.r2",
+        "ts": datetime.utcnow().isoformat() + "Z",
+        "summary": summary,
+        "machines": results,
+    }
+
+
+@app.post("/api/council/hackeo/stop")
+async def council_hackeo_stop(_auth=Depends(verify_token)):
+    """Detiene la simulación cerrando Terminal en cada máquina viva."""
+    machines = _hk_load_council()
+    results: list = []
+    with _HkPool(max_workers=min(8, max(1, len(machines)))) as pool:
+        for r in pool.map(lambda m: _hk_process_one(m, "stop"), machines):
+            results.append(r)
+    return {
+        "ok": True,
+        "version": "Admira v.26.05.07.r2",
+        "ts": datetime.utcnow().isoformat() + "Z",
+        "machines": results,
+    }
 
 
 # ── Run ──────────────────────────────────────────────────────

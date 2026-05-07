@@ -1,6 +1,6 @@
 {
   "team": "AdmiraNext Team",
-  "updatedAt": "2026-05-07T12:00:00Z",
+  "updatedAt": "2026-05-07T09:31:23Z",
   "tailnet": "tail48b61c.ts.net",
   "machines": [
     {
@@ -24,7 +24,9 @@
         "ip_tailscale": "100.74.101.14",
         "connect_tailscale": "ssh csilvasantin@100.74.101.14"
       },
-      "mac_address": ""
+      "mac_address": "1c:f6:4c:3b:f0:17",
+      "mac_discovered_at": "2026-05-07T09:31:23Z",
+      "mac_source": "ssh:ifconfig (via macmini)"
     },
     {
       "id": "admira-macbookairnines",
@@ -97,7 +99,9 @@
         "connect_lan": "ssh csilvasantin@MacBookAir16.local",
         "connect_tailscale": "ssh csilvasantin@100.99.176.126"
       },
-      "mac_address": ""
+      "mac_address": "fe:e3:3e:4d:b6:70",
+      "mac_discovered_at": "2026-05-07T09:31:23Z",
+      "mac_source": "ssh:ifconfig (via macmini)"
     },
     {
       "id": "admira-macbookairluna",
@@ -184,7 +188,9 @@
           "needsHelp": "Ninguna. Perfil CEO operativo."
         }
       },
-      "mac_address": ""
+      "mac_address": "00:e0:4c:3d:35:98",
+      "mac_discovered_at": "2026-05-07T09:31:23Z",
+      "mac_source": "ssh:ifconfig (via macmini)"
     },
     {
       "id": "admira-pc-runner-01",

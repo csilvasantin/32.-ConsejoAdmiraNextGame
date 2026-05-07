@@ -2166,7 +2166,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">Admira v.26.05.07.r3</a>
+            <a href="https://www.youtube.com/watch?v=cHuqhQmc4ok" target="_blank" class="version-badge">Admira v.26.05.07.r4</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -4701,13 +4701,20 @@
     }
 
     // ── Council API config ──
-    // Tailscale Funnel del Mac Mini (Gran de Gracia) → council-api.py:8420
-    // El mount /council hace strip del prefijo:
-    // baseUrl + "/api/council/ask" → ".../council/api/council/ask" → backend /api/council/ask
+    // Cadena de fallbacks en orden de preferencia:
+    //  1. MacMini Funnel (Gran de Gracia) → council-api.py:8420 (el mount
+    //     /council hace strip del prefijo: baseUrl+"/api/council/ask" →
+    //     ".../council/api/council/ask" → backend /api/council/ask).
+    //  2. Render.com — réplica permanente. Cubre cuando el MacMini está
+    //     parado o sin conectividad pública.
+    //  3. localhost:8420 — backup en el propio Mac de quien edita. Desde
+    //     v.26.05.07.r4 se considera fallback de runtime, no solo dev:
+    //     si el operador tiene su council-api.py local levantado, el
+    //     frontend cae aquí cuando tanto MacMini como Render fallan.
     const COUNCIL_API_URLS = [
-        "https://macmini.tail48b61c.ts.net/council",         // MacMini maestro persistente
-        "https://three2-consejoadmiranextgame.onrender.com", // Render.com — réplica/fallback
-        "http://localhost:8420",                              // Local dev fallback
+        "https://macmini.tail48b61c.ts.net/council",
+        "https://three2-consejoadmiranextgame.onrender.com",
+        "http://localhost:8420",
     ];
     const COUNCIL_API_TOKEN = "admira2026";
     const YAR_DONE_BLOCK_START = '[YAR_DONE]';

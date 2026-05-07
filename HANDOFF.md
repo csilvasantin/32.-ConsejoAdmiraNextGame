@@ -6,14 +6,14 @@ Proyecto: `32.-ConsejoAdmiraNextGame`
 ## Punto de entrada
 
 - URL pública: [https://www.admira.live](https://www.admira.live)
-- Versión visible: `Admira v.26.05.07.r3`
+- Versión visible: `Admira v.26.05.07.r4`
 - Rama: `main`
 - Commit actual: ver último commit publicado en `main`
 
 ## Qué comprobar al retomar
 
 1. Abrir la URL pública.
-2. Verificar arriba que pone `Admira v.26.05.07.r3`.
+2. Verificar arriba que pone `Admira v.26.05.07.r4`.
 3. Si se va a desarrollar, clonar y actualizar:
 
 ```bash
@@ -56,6 +56,25 @@ El hash debe coincidir con el commit publicado indicado arriba o ser posterior.
   - `Cancelar`
 
 ## Últimos cambios relevantes
+
+### `Admira v.26.05.07.r4`
+
+- Backup de runtime de `council-api.py` arrancado en el Mac de Carlos
+  (`localhost:8420`, Python 3.13). Deps instaladas globalmente con
+  `pip3 install -r requirements.txt --break-system-packages`. Daemon
+  lanzado con `nohup python3 council-api.py > /tmp/council-api-local.log 2>&1 &`.
+- `COUNCIL_API_URLS` en `council-scumm.html` mantiene `localhost:8420`
+  como tercer fallback (después de MacMini Funnel y Render). El
+  comentario se reescribe: ya no se considera "dev only", sino backup
+  legítimo de runtime para cuando MacMini y Render fallan.
+- ⚠️ Macmini sigue en `v.2026.05.05.r1`. El `launchd` agent
+  `com.csilvasantin.council-api` apunta a una copia vieja del repo
+  (`~/GitHub/ConsejoAdmiraNextGame`) y arranca con Python 3.9
+  (incompatible con la sintaxis PEP 604 del código nuevo, línea 1666
+  de `council-api.py`). Cualquier `pkill -f council-api.py` es
+  estéril porque launchd respawnea inmediatamente desde la copia
+  vieja. Pendiente: reapuntar el plist y/o instalar deps en
+  `python3.12` del Mac Mini.
 
 ### `Admira v.26.05.07.r3`
 

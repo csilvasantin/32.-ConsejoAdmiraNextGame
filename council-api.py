@@ -703,7 +703,7 @@ app = FastAPI(title="AdmiraNext Council API", version="4.0.0")
 
 @app.get("/")
 async def root():
-    return {"status": "ok", "service": "AdmiraNext Council API", "version": "Admira v.26.05.07.r3"}
+    return {"status": "ok", "service": "AdmiraNext Council API", "version": "Admira v.26.05.07.r4"}
 
 app.add_middleware(
     CORSMiddleware,
@@ -3518,7 +3518,7 @@ async def council_hackeo(_auth=Depends(verify_token)):
     }
     return {
         "ok": True,
-        "version": "Admira v.26.05.07.r3",
+        "version": "Admira v.26.05.07.r4",
         "ts": datetime.utcnow().isoformat() + "Z",
         "summary": summary,
         "machines": results,
@@ -3535,7 +3535,7 @@ async def council_hackeo_stop(_auth=Depends(verify_token)):
             results.append(r)
     return {
         "ok": True,
-        "version": "Admira v.26.05.07.r3",
+        "version": "Admira v.26.05.07.r4",
         "ts": datetime.utcnow().isoformat() + "Z",
         "machines": results,
     }
@@ -3583,7 +3583,7 @@ async def council_hackeo_discover_macs(_auth=Depends(verify_token)):
 
     return {
         "ok": True,
-        "version": "Admira v.26.05.07.r3",
+        "version": "Admira v.26.05.07.r4",
         "ts": datetime.utcnow().isoformat() + "Z",
         "summary": {
             "total": len(results),

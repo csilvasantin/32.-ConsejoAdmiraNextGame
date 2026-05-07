@@ -67,14 +67,24 @@ El hash debe coincidir con el commit publicado indicado arriba o ser posterior.
   como tercer fallback (después de MacMini Funnel y Render). El
   comentario se reescribe: ya no se considera "dev only", sino backup
   legítimo de runtime para cuando MacMini y Render fallan.
-- ⚠️ Macmini sigue en `v.2026.05.05.r1`. El `launchd` agent
-  `com.csilvasantin.council-api` apunta a una copia vieja del repo
-  (`~/GitHub/ConsejoAdmiraNextGame`) y arranca con Python 3.9
-  (incompatible con la sintaxis PEP 604 del código nuevo, línea 1666
-  de `council-api.py`). Cualquier `pkill -f council-api.py` es
-  estéril porque launchd respawnea inmediatamente desde la copia
-  vieja. Pendiente: reapuntar el plist y/o instalar deps en
-  `python3.12` del Mac Mini.
+- ✅ **Macmini desbloqueado y al día.** El `launchd` agent
+  `com.csilvasantin.council-api` ahora apunta a:
+  - `WorkingDirectory = /Users/csilvasantin/32.-ConsejoAdmiraNextGame`
+  - `ProgramArguments[0] = /opt/homebrew/bin/python3.12`
+  Backup del plist anterior: `~/Library/LaunchAgents/com.csilvasantin.council-api.plist.bak.20260507-114630`.
+  Backup del `.env` anterior del repo nuevo:
+  `~/32.-ConsejoAdmiraNextGame/.env.bak.20260507-114845` (el `.env`
+  nuevo es ahora copia del que usaba el daemon viejo, con todas las
+  API keys + `COUNCIL_API_TOKEN`).
+  Deps instaladas: `pip3.12 install fastapi uvicorn anthropic
+  python-dotenv requests --break-system-packages` (en
+  `~/Library/Python/3.12/`).
+  Reinstalación del agente: `launchctl bootout gui/$UID … && launchctl
+  bootstrap gui/$UID …`; tras `git pull` un `launchctl kickstart -k`
+  basta para recargar.
+- **3 backends en `v.26.05.07.r4`:** MacMini Funnel + Render + local
+  Mac de Carlos. La cadena de fallback del frontend es operativa de
+  punta a punta.
 
 ### `Admira v.26.05.07.r3`
 

@@ -57,6 +57,11 @@
   .win h2{margin:6px 0 2px;font-size:20px}
   .win .det{color:var(--mut);font-size:12px;font-family:monospace;margin-bottom:14px}
   .win .det b{color:var(--ink)}
+  .preview{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#000;margin-bottom:12px;aspect-ratio:16/9;display:flex;align-items:center;justify-content:center}
+  .preview video,.preview img{width:100%;height:100%;object-fit:cover;display:block}
+  .preview .mute{position:absolute;right:8px;bottom:8px;background:rgba(2,8,13,.82);border:1px solid var(--line);color:var(--ink);border-radius:8px;font-size:15px;line-height:1;padding:7px 9px;cursor:pointer}
+  .preview .mute:hover{border-color:var(--brand)}
+  .preview .empty{color:var(--mut);font-family:monospace;font-size:11px}
   .btn{display:flex;align-items:center;justify-content:center;gap:8px;width:100%;border:0;border-radius:10px;padding:13px;font-weight:800;font-size:14px;cursor:pointer;font-family:-apple-system,sans-serif}
   .btn.go{background:var(--good);color:#001620;margin-bottom:8px}
   .btn.go.ok{background:var(--brand)}
@@ -106,6 +111,7 @@
     <div class="k" id="win-k">Adjudicado</div>
     <h2 id="win-name">—</h2>
     <div class="det">€<b id="win-amt">0.00</b> · <b id="win-space">espacio</b></div>
+    <div id="win-preview" class="preview hidden"></div>
     <button class="btn go" id="launch-btn" type="button">🪙 Lanzar creativo a la pantalla</button>
     <button class="btn ghost" id="again-btn" type="button">↻ Nueva subasta</button>
   </div>
@@ -195,6 +201,7 @@ function closeAuction(){
     const lb=$('launch-btn');
     lb.textContent='(sin pantalla asociada)'; lb.disabled=true;
   }
+  revealWinningCreative();
   win.scrollIntoView({behavior:'smooth',block:'center'});
 }
 
@@ -213,8 +220,11 @@ $('bid-btn').addEventListener('click',()=>{
 });
 $('bid-input').addEventListener('keydown',e=>{ if(e.key==='Enter') $('bid-btn').click(); });
 
-// Lanzar el creativo del ganador a la pantalla real del gemelo (cierra el loop)
-let stockCache=null;
+// Creativo ganador: se elige al cerrar la subasta, se previsualiza en el
+// panel (vídeo muteado por defecto, con toggle de sonido) y es el que se
+// lanza a la pantalla real del gemelo (cierra el loop subasta→pantalla).
+let stockCache=null, winningCreative=null;
+function pushKind(t){ return t==='image'?'image':'video'; }
 async function stockCreatives(){
   if(stockCache) return stockCache;
   try{
@@ -227,18 +237,34 @@ async function stockCreatives(){
     return v;
   }catch{ return []; }
 }
-$('launch-btn').addEventListener('click',async()=>{
-  const b=$('launch-btn');
-  if(b.disabled) return;
-  b.disabled=true; b.classList.remove('ok','err'); b.textContent='… enviando a la pantalla';
+function renderPreview(cre){
+  const box=$('win-preview'); box.classList.remove('hidden');
+  if(!cre){ box.innerHTML='<span class="empty">sin creativo disponible en Stock</span>'; return; }
+  if(pushKind(cre.type)==='video'){
+    // Autoplay exige empezar muteado; el botón 🔇/🔊 deja oírlo a voluntad.
+    box.innerHTML='<video id="prev-v" src="'+cre.url+'" autoplay loop muted playsinline></video>'+
+      '<button class="mute" id="mute-btn" type="button" title="Oír / silenciar el creativo">🔇</button>';
+    const v=$('prev-v'), mb=$('mute-btn');
+    mb.addEventListener('click',function(){ v.muted=!v.muted; mb.textContent=v.muted?'🔇':'🔊'; if(!v.muted){ try{ v.play(); }catch(e){} } });
+  }else{
+    box.innerHTML='<img src="'+cre.url+'" alt="creativo ganador">';
+  }
+}
+async function revealWinningCreative(){
   const cs=await stockCreatives();
-  if(!cs.length){ b.classList.add('err'); b.textContent='Sin creativos en Stock'; setTimeout(()=>{b.disabled=false;b.classList.remove('err');b.textContent='🪙 Lanzar creativo a la pantalla';},2600); return; }
-  const cre=cs[Math.floor(Math.random()*cs.length)];
-  const kind=cre.type==='image'?'image':'video';
+  winningCreative = cs.length ? cs[Math.floor(Math.random()*cs.length)] : null;
+  renderPreview(winningCreative);
+  if(!winningCreative && SCREEN){ const lb=$('launch-btn'); lb.disabled=true; lb.textContent='Sin creativos en Stock'; }
+}
+$('launch-btn').addEventListener('click',async()=>{
+  const b=$('launch-btn'); if(b.disabled) return;
+  const cre=winningCreative;
+  if(!cre){ b.classList.add('err'); b.textContent='Sin creativo que lanzar'; setTimeout(()=>{b.classList.remove('err');b.textContent='🪙 Lanzar creativo a la pantalla';},2200); return; }
+  b.disabled=true; b.classList.remove('ok','err'); b.textContent='… enviando a la pantalla';
   const title='🪙 '+topWho+' ganó '+spaceLabel()+' · €'+fmt(topAmt);
   try{
     const r=await fetch(PIXER+'/signage/push',{method:'POST',headers:{'Content-Type':'application/json'},
-      body:JSON.stringify({kind,src:cre.url,mime:cre.mime||null,title})});
+      body:JSON.stringify({kind:pushKind(cre.type),src:cre.url,mime:cre.mime||null,title})});
     if(!r.ok) throw new Error('http '+r.status);
     b.classList.add('ok'); b.textContent='✓ En la pantalla del gemelo';
   }catch(e){

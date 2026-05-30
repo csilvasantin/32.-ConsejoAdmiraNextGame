@@ -2169,7 +2169,8 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.05.24.r1</a>
+            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.05.30.r1</a>
+            <a href="https://csilvasantin.github.io/diario/" target="_blank" rel="noopener" class="version-badge" title="Diario operativo del Consejo">📓 Diario</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
@@ -3624,6 +3625,8 @@
             '<li><strong>/importar &lt;url&gt;</strong> — descarga vídeo y lo sube a Drive</li>' +
             '<li><strong>/nombres on|off|toggle</strong> — enseña u oculta los consejeros</li>' +
             '<li><strong>/google</strong> — abre la hoja Drive de enlaces Entrenar</li>' +
+            '<li><strong>/diario</strong> — muestra el diario operativo del Consejo</li>' +
+            '<li><strong>/diario &lt;texto&gt;</strong> — registra una decisión en el diario</li>' +
             '<li><strong>/yarig on|off|toggle</strong> — fija u oculta Yarig en la mesa</li>' +
             '<li><strong>/yarig login</strong> — abre la sesión persistente de Yarig</li>' +
             '<li><strong>/yarig estado</strong> — comprueba watcher y frescura del sync</li>' +
@@ -3654,6 +3657,8 @@
             '/help<br>' +
             '/importar &lt;url&gt; <span style="opacity:0.7">(descarga vídeo y lo sube a Drive)</span><br>' +
             '/google <span style="opacity:0.7">(abre la hoja de enlaces Entrenar)</span><br>' +
+            '/diario <span style="opacity:0.7">(muestra el diario operativo)</span><br>' +
+            '/diario &lt;texto&gt; <span style="opacity:0.7">(registra una decisión del Consejo)</span><br>' +
             '/nombres on<br>' +
             '/nombres off<br>' +
             '/nombres toggle<br>' +
@@ -3781,6 +3786,115 @@
         setActionLine('⚠️ No se pudo importar el vídeo — ' + (lastErr ? lastErr.message : 'backend no disponible'));
     }
 
+    // ── Diario operativo (integración Consejo ↔ diario, repo 18.-diario) ──
+    const DIARIO_PUBLIC_URL = 'https://csilvasantin.github.io/diario/';
+
+    // Llama al backend probando los URLs en orden (igual que callCouncilHackeo).
+    async function callCouncilApi(path, { method = 'GET', body = null } = {}) {
+        const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
+        let lastErr = null;
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + path, {
+                    method,
+                    headers: { 'Content-Type': 'application/json', 'X-Council-Token': COUNCIL_API_TOKEN },
+                    body: body ? JSON.stringify(body) : undefined,
+                    signal: AbortSignal.timeout(20000),
+                });
+                if (!res.ok) {
+                    let detail = 'HTTP ' + res.status;
+                    try { const j = await res.json(); if (j && j.detail) detail = j.detail; } catch (_) {}
+                    lastErr = detail; continue;
+                }
+                activeApiUrl = baseUrl;
+                return await res.json();
+            } catch (e) {
+                lastErr = e.message || String(e);
+            }
+        }
+        throw new Error(lastErr || 'council-api no disponible');
+    }
+
+    function diarioEscape(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // Render markdown ligero del diario (títulos, bullets, negrita, código inline).
+    function diarioMdToHtml(md) {
+        const lines = String(md || '').split('\n');
+        const out = [];
+        for (const line of lines) {
+            let s = diarioEscape(line);
+            s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+                 .replace(/`([^`]+)`/g, '<code style="background:#012;color:#8cf;padding:0 3px;border-radius:3px">$1</code>');
+            const raw = line.trim();
+            if (raw.startsWith('# ')) out.push('<div style="color:var(--matrix-bright,#7CFC9B);font-weight:700;margin-top:6px">' + s.replace(/^#\s*/, '') + '</div>');
+            else if (raw.startsWith('## ')) out.push('<div style="color:#8cf;font-weight:600;margin-top:5px">' + s.replace(/^##\s*/, '') + '</div>');
+            else if (/^-\s+/.test(raw)) out.push('<div style="padding-left:8px">• ' + s.replace(/^\s*-\s+/, '') + '</div>');
+            else if (raw === '') out.push('<div style="height:4px"></div>');
+            else out.push('<div>' + s + '</div>');
+        }
+        return out.join('');
+    }
+
+    // /diario → muestra las entradas recientes del diario operativo.
+    async function openDiario() {
+        enterConversation();
+        addUserEntry('/diario');
+        setActionLine('📓 Consultando el diario operativo…');
+        try {
+            const data = await callCouncilApi('/api/council/diario?limit=8');
+            const entries = (data && data.entries) || [];
+            if (!entries.length) {
+                addConvEntry('conv-racional', '📓', 'Diario', 'Diario operativo', 'racional',
+                    'Sin entradas legibles' + (data && data.available === false ? ' — el diario no está montado en este backend (<code>' + diarioEscape(data.dir || '') + '</code>).' : '.'));
+            } else {
+                const html = entries.map(e => {
+                    const badge = e.hasConsejo ? ' <span style="color:var(--matrix-bright,#7CFC9B)">· 🏛️ Consejo</span>' : '';
+                    return '<details style="margin:4px 0;border-left:2px solid #244;padding-left:8px">' +
+                        '<summary style="cursor:pointer;color:#8cf"><strong>' + diarioEscape(e.date) + '</strong>' +
+                        (e.author ? ' <span style="opacity:0.7">[' + diarioEscape(e.author) + ']</span>' : '') + badge + '</summary>' +
+                        '<div style="font-size:0.82rem;margin-top:4px;max-height:240px;overflow:auto">' + diarioMdToHtml(e.markdown) + '</div>' +
+                        '</details>';
+                }).join('');
+                addConvEntry('conv-racional', '📓', 'Diario', 'Diario operativo', 'racional',
+                    '<strong>Últimas ' + entries.length + ' entradas</strong>' + html);
+            }
+            addConvEntry('conv-creativo', '🏛️', 'Consejo', 'Integración diario', 'creativo',
+                'Registra una decisión operativa con <strong>/diario &lt;texto&gt;</strong>.<br>' +
+                'Diario público: <a href="' + DIARIO_PUBLIC_URL + '" target="_blank" rel="noopener" style="color:#8cf">' + DIARIO_PUBLIC_URL + '</a>');
+            setActionLine('📓 Diario operativo cargado — usa /diario <texto> para registrar una decisión');
+        } catch (e) {
+            addConvEntry('conv-racional', '⚠️', 'Diario', 'Error', 'racional',
+                'No se pudo leer el diario: ' + diarioEscape(e.message || String(e)));
+            setActionLine('⚠️ Diario no disponible — ¿está vivo el backend?');
+        }
+    }
+
+    // /diario <texto> → registra una decisión del Consejo en la entrada del día.
+    async function registrarDiario(texto) {
+        enterConversation();
+        addUserEntry('/diario ' + texto);
+        setActionLine('📓 Registrando decisión en el diario…');
+        try {
+            const data = await callCouncilApi('/api/council/diario/append', { method: 'POST', body: { text: texto, author: 'Consejo' } });
+            const pub = (data && data.publish) || {};
+            const estado = pub.pushed ? 'publicado en el diario público' : (pub.committed ? 'guardado localmente (push pendiente)' : 'guardado en el fichero del día');
+            const url = (data && data.url) || DIARIO_PUBLIC_URL;
+            addConvEntry('conv-racional', '🏛️', 'Consejo', 'Decisión registrada', 'racional',
+                '<strong>' + diarioEscape(texto) + '</strong><br>' +
+                '<span style="opacity:0.8">Entrada ' + diarioEscape((data && data.date) || '') + ' · ' + estado + '.</span><br>' +
+                '<a href="' + url + '" target="_blank" rel="noopener" style="color:#8cf">' + url + '</a>' +
+                (pub.error ? '<br><span style="color:#f88;font-size:0.8rem">git: ' + diarioEscape(pub.error) + '</span>' : ''));
+            setActionLine(pub.pushed ? '📓 Decisión publicada en el diario' : '📓 Decisión guardada — push pendiente');
+        } catch (e) {
+            addConvEntry('conv-racional', '⚠️', 'Diario', 'Error', 'racional',
+                'No se pudo registrar en el diario: ' + diarioEscape(e.message || String(e)));
+            setActionLine('⚠️ No se pudo escribir en el diario');
+        }
+    }
+
     function handleCliCommand(raw) {
         const text = String(raw || '').trim();
         if (!text) return false;
@@ -3823,6 +3937,16 @@
         const finalizadaMatch = text.match(/^\/finalizada\s+(.+)$/i);
         if (finalizadaMatch) {
             void executeYarig('finalizada: ' + finalizadaMatch[1].trim());
+            return true;
+        }
+        const diarioAppendMatch = text.match(/^\/diario\s+(\S.*)$/i);
+        if (diarioAppendMatch) {
+            void registrarDiario(diarioAppendMatch[1].trim());
+            return true;
+        }
+        const diarioMatch = text.match(/^\/diario$/i);
+        if (diarioMatch) {
+            void openDiario();
             return true;
         }
         const yarigLoginMatch = text.match(/^\/yarig(?:\.ai)?\s+(login|loguear|entrar)$/i);

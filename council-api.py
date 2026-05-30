@@ -210,6 +210,11 @@ ENTRENAR_FILE_BAK = ENTRENAR_FILE + ".bak"
 YAR_FILE = os.path.join(os.path.dirname(os.path.abspath(__file__)), "yar_context.json")
 YAR_FILE_BAK = YAR_FILE + ".bak"
 
+# Diario operativo (repo 18.-diario) — integración Consejo ↔ diario.
+# El Consejo lee las entradas del diario y registra sus decisiones operativas.
+DIARIO_DIR = os.environ.get("DIARIO_DIR", os.path.expanduser("~/Claude/diario"))
+DIARIO_PUBLIC_URL = os.environ.get("DIARIO_PUBLIC_URL", "https://csilvasantin.github.io/diario/")
+
 # ── Budget tracker ───────────────────────────────────────────
 _budget_lock = threading.Lock()
 _alert_sent = {"warn": False, "critical": False, "blocked": False}
@@ -826,6 +831,11 @@ class YarProjectsRequest(BaseModel):
     refresh: bool = False
 
 
+class DiarioAppendRequest(BaseModel):
+    text: str = ""
+    author: str = "Consejo"
+
+
 class AgentReply(BaseModel):
     name: str
     role: str
@@ -1227,6 +1237,148 @@ async def get_yar_status(_auth=Depends(verify_token)):
         "syncUser": context.get("syncUser", ""),
         "syncSource": context.get("syncSource", ""),
         "worker": worker,
+    }
+
+
+# ---------------------------------------------------------------------------
+# Diario operativo — integración Consejo ↔ diario (repo 18.-diario)
+# ---------------------------------------------------------------------------
+
+_DIARIO_LOCK = threading.Lock()
+_DIARIO_ENTRY_RE = re.compile(r"^\d{4}-\d{2}-\d{2}\.md$")
+_DIARIO_MESES = [
+    "enero", "febrero", "marzo", "abril", "mayo", "junio",
+    "julio", "agosto", "septiembre", "octubre", "noviembre", "diciembre",
+]
+_DIARIO_CONSEJO_MARKER = "## Consejo — registro operativo"
+
+
+def _diario_dir() -> Path:
+    return Path(DIARIO_DIR).expanduser()
+
+
+def _diario_es_date(dt: Optional[datetime] = None) -> str:
+    dt = dt or datetime.now()
+    return f"{dt.day} de {_DIARIO_MESES[dt.month - 1]} de {dt.year}"
+
+
+def _diario_list_entries(limit: int = 20) -> list:
+    d = _diario_dir()
+    if not d.exists():
+        return []
+    files = sorted(
+        (p for p in d.glob("*.md") if _DIARIO_ENTRY_RE.match(p.name)),
+        key=lambda p: p.name,
+        reverse=True,
+    )[: max(1, min(limit, 90))]
+    entries = []
+    for p in files:
+        try:
+            raw = p.read_text(encoding="utf-8")
+        except OSError:
+            continue
+        title = ""
+        author = ""
+        for line in raw.splitlines():
+            s = line.strip()
+            if s.startswith("# "):
+                title = s.lstrip("# ").strip()
+                m = re.search(r"\[([^\]]+)\]\s*$", title)
+                if m:
+                    author = m.group(1).strip()
+                break
+        entries.append({
+            "date": p.stem,
+            "title": title or f"Diario {p.stem}",
+            "author": author,
+            "hasConsejo": _DIARIO_CONSEJO_MARKER in raw,
+            "markdown": raw,
+            "url": DIARIO_PUBLIC_URL.rstrip("/") + f"/{p.name}",
+        })
+    return entries
+
+
+def _diario_git_publish(path: Path, message: str) -> dict:
+    d = _diario_dir()
+    out = {"committed": False, "pushed": False, "error": ""}
+    try:
+        subprocess.run(["git", "-C", str(d), "add", path.name],
+                       capture_output=True, text=True, timeout=20)
+        cm = subprocess.run(["git", "-C", str(d), "commit", "-m", message],
+                            capture_output=True, text=True, timeout=20)
+        out["committed"] = cm.returncode == 0
+        if not out["committed"]:
+            out["error"] = (cm.stderr or cm.stdout or "").strip()[:240]
+            return out
+        # Integrar remoto antes de publicar para evitar non-fast-forward.
+        subprocess.run(["git", "-C", str(d), "pull", "--rebase", "--autostash", "origin", "main"],
+                       capture_output=True, text=True, timeout=60)
+        pu = subprocess.run(["git", "-C", str(d), "push", "origin", "HEAD:main"],
+                            capture_output=True, text=True, timeout=60)
+        out["pushed"] = pu.returncode == 0
+        if not out["pushed"]:
+            out["error"] = (pu.stderr or pu.stdout or "").strip()[:240]
+    except subprocess.TimeoutExpired:
+        out["error"] = "git timeout"
+    except Exception as e:  # noqa: BLE001 - publicación best-effort
+        out["error"] = str(e)[:240]
+    return out
+
+
+@app.get("/api/council/diario")
+async def get_diario(limit: int = 20, _auth=Depends(verify_token)):
+    """Devuelve las entradas recientes del diario operativo (repo 18.-diario)."""
+    d = _diario_dir()
+    entries = _diario_list_entries(limit)
+    return {
+        "ok": True,
+        "dir": str(d),
+        "available": d.exists(),
+        "publicUrl": DIARIO_PUBLIC_URL,
+        "count": len(entries),
+        "entries": entries,
+    }
+
+
+@app.post("/api/council/diario/append")
+async def append_diario(req: DiarioAppendRequest, _auth=Depends(verify_token)):
+    """Registra una decisión operativa del Consejo en la entrada del día (append-only)."""
+    text = str(req.text or "").strip()[:4000]
+    if not text:
+        raise HTTPException(status_code=400, detail="Falta el texto de la decisión del Consejo")
+    author = (str(req.author or "Consejo").strip() or "Consejo")[:40]
+    d = _diario_dir()
+    if not d.exists():
+        raise HTTPException(status_code=501, detail=f"Diario no disponible en {d}")
+
+    ts = datetime.now().strftime("%H:%M")
+    bullets = [f"- **{ts} · {author}**: {ln.strip()}" for ln in text.splitlines() if ln.strip()]
+    block = "\n".join(bullets) if bullets else f"- **{ts} · {author}**: {text}"
+
+    with _DIARIO_LOCK:
+        path = d / f"{datetime.now().strftime('%Y-%m-%d')}.md"
+        new_file = not path.exists()
+        try:
+            if new_file:
+                head = f"# Diario - {_diario_es_date()} [{author}]\n\n{_DIARIO_CONSEJO_MARKER}\n"
+                path.write_text(f"{head}\n{block}\n", encoding="utf-8")
+            else:
+                existing = path.read_text(encoding="utf-8")
+                prefix = "" if existing.endswith("\n") else "\n"
+                section = "" if _DIARIO_CONSEJO_MARKER in existing else f"\n{_DIARIO_CONSEJO_MARKER}\n"
+                path.write_text(f"{existing}{prefix}{section}\n{block}\n", encoding="utf-8")
+        except OSError as e:
+            raise HTTPException(status_code=500, detail=f"No se pudo escribir el diario: {e}")
+        publish = _diario_git_publish(
+            path, f"Consejo: registro operativo {datetime.now().strftime('%Y-%m-%d %H:%M')}")
+
+    return {
+        "ok": True,
+        "date": path.stem,
+        "file": path.name,
+        "url": DIARIO_PUBLIC_URL.rstrip("/") + f"/{path.name}",
+        "newFile": new_file,
+        "publish": publish,
     }
 
 

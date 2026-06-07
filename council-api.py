@@ -2643,8 +2643,7 @@ def _tube_import_sync(url: str, fmt: str, comment) -> dict:
         return {"ok": False, "error": str(e)[:300]}
 
 
-@app.post("/tube/import-to-stock")
-async def tube_import_to_stock(req: TubeImportRequest):
+async def _tube_route(req: TubeImportRequest):
     url = (req.url or "").strip()
     if not HTTP_URL_RE.search(url):
         raise HTTPException(status_code=400, detail="URL http(s) requerida")
@@ -2653,6 +2652,18 @@ async def tube_import_to_stock(req: TubeImportRequest):
     if not result.get("ok"):
         raise HTTPException(status_code=502, detail=result.get("error", "import failed"))
     return result
+
+
+@app.post("/tube/import-to-stock")
+async def tube_import_to_stock(req: TubeImportRequest):
+    return await _tube_route(req)
+
+
+# Alias bajo /api/council/* — es el prefijo que el gateway openclaw espeja al
+# exterior (Funnel). El worker pixer-eleven llama aquí para importar a Stock.
+@app.post("/api/council/import-to-stock")
+async def council_import_to_stock(req: TubeImportRequest):
+    return await _tube_route(req)
 
 
 @app.get("/api/council/health")

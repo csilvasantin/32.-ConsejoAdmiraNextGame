@@ -2579,6 +2579,82 @@ async def council_importar_video_status(
         raise HTTPException(status_code=404, detail="Import job no encontrado")
 
 
+# ── Importar vídeo/audio de una URL a Pixer Stock (lo llama el worker pixer-eleven) ──
+# El bot de Telegram (worker) recibe una URL y hace POST aquí; descargamos con
+# yt-dlp y publicamos en /stock/publish del worker (que clasifica y notifica).
+# Sin auth a propósito: solo accesible por Tailscale.
+PIXER_STOCK_PUBLISH_URL = os.environ.get(
+    "PIXER_STOCK_PUBLISH_URL", "https://pixer-eleven.csilvasantin.workers.dev/stock/publish")
+TUBE_MAX_BYTES = int(os.environ.get("TUBE_MAX_BYTES", str(70 * 1024 * 1024)))
+
+
+class TubeImportRequest(BaseModel):
+    url: str
+    format: Optional[str] = "video"
+    comment: Optional[str] = None
+
+
+def _tube_import_sync(url: str, fmt: str, comment) -> dict:
+    import base64 as _b64, mimetypes
+    if shutil.which("yt-dlp") is None:
+        return {"ok": False, "error": "yt-dlp no instalado en el backend"}
+    try:
+        with tempfile.TemporaryDirectory(prefix="tube-stock-") as tmp:
+            tmp_dir = Path(tmp)
+            out_tpl = str(tmp_dir / "%(title).90s [%(id)s].%(ext)s")
+            if fmt == "audio":
+                cmd = ["yt-dlp", "--no-playlist", "--max-filesize", "80M",
+                       "-x", "--audio-format", "mp3", "-o", out_tpl, url]
+            else:
+                cmd = ["yt-dlp", "--no-playlist", "--max-filesize", "80M",
+                       "-f", "bv*[ext=mp4]+ba[ext=m4a]/b[ext=mp4]/bv*+ba/b",
+                       "--merge-output-format", "mp4", "-o", out_tpl, url]
+            r = subprocess.run(cmd, capture_output=True, text=True, timeout=900)
+            if r.returncode != 0:
+                return {"ok": False, "error": "yt-dlp: " + (r.stderr or r.stdout or "")[-300:]}
+            files = [p for p in tmp_dir.iterdir() if p.is_file()]
+            if not files:
+                return {"ok": False, "error": "yt-dlp no dejó ningún archivo (¿privado/eliminado?)"}
+            f = max(files, key=lambda p: p.stat().st_size)
+            data = f.read_bytes()
+            if len(data) > TUBE_MAX_BYTES:
+                return {"ok": False, "error": f"archivo demasiado grande ({len(data)//1024//1024}MB; máx {TUBE_MAX_BYTES//1024//1024}MB)"}
+            mime = mimetypes.guess_type(str(f))[0] or ("audio/mpeg" if fmt == "audio" else "video/mp4")
+            payload = {
+                "type": "music" if fmt == "audio" else "video",
+                "motor": "import",
+                "title": f.stem,
+                "comment": comment or "",
+                "sourceUrl": url,
+                "mime": mime,
+                "base64": _b64.b64encode(data).decode(),
+            }
+            resp = http_requests.post(PIXER_STOCK_PUBLISH_URL, json=payload, timeout=180)
+            if resp.status_code >= 300:
+                return {"ok": False, "error": f"stock/publish {resp.status_code}: {resp.text[:200]}"}
+            try:
+                jd = resp.json()
+            except Exception:
+                jd = {}
+            return {"ok": True, "id": jd.get("id"), "title": f.stem, "bytes": len(data)}
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "error": "yt-dlp superó el tiempo máximo"}
+    except Exception as e:
+        return {"ok": False, "error": str(e)[:300]}
+
+
+@app.post("/tube/import-to-stock")
+async def tube_import_to_stock(req: TubeImportRequest):
+    url = (req.url or "").strip()
+    if not HTTP_URL_RE.search(url):
+        raise HTTPException(status_code=400, detail="URL http(s) requerida")
+    fmt = "audio" if (req.format or "").lower() in ("audio", "mp3") else "video"
+    result = await asyncio.to_thread(_tube_import_sync, url, fmt, req.comment)
+    if not result.get("ok"):
+        raise HTTPException(status_code=502, detail=result.get("error", "import failed"))
+    return result
+
+
 @app.get("/api/council/health")
 async def health():
     budget = _load_budget()

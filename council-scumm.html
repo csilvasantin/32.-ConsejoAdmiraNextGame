@@ -2163,6 +2163,199 @@
         .hack-terminal { border-radius: 0; }
         .screen-overlay img { border-radius: 0; box-shadow: 4px 4px 0 #000; }
         .screen-overlay-time { border-radius: 0; }
+
+        /* ── Private Meeting Room (Sala de Reuniones Privada) ── */
+        .meeting-overlay {
+            display: none;
+            position: fixed;
+            inset: 0;
+            z-index: 10000;
+            background: #0a0a14;
+            overflow: hidden;
+        }
+        .meeting-overlay.visible { display: flex; flex-direction: column; }
+        .meeting-bg {
+            position: absolute;
+            inset: 0;
+            background: 
+                radial-gradient(ellipse at 50% 50%, #1a1a2e 0%, #0a0a14 70%),
+                url('data:image/svg+xml,<svg xmlns="http://www.w3.org/2000/svg" width="100" height="100" viewBox="0 0 100 100"><rect fill="%23111" width="100" height="100"/><path d="M0 0h100v100H0z" fill="%231a1a2e" opacity="0.1"/></svg>');
+            background-size: cover;
+        }
+        .meeting-bg::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background-image: 
+                repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.15) 2px, rgba(0,0,0,0.15) 4px);
+            pointer-events: none;
+        }
+        .meeting-room {
+            position: relative;
+            z-index: 2;
+            flex: 1;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            padding: 2rem;
+        }
+        .meeting-advisor {
+            position: relative;
+            width: 280px;
+            height: 280px;
+            margin-bottom: 1.5rem;
+        }
+        .meeting-advisor-img {
+            width: 100%;
+            height: 100%;
+            object-fit: contain;
+            image-rendering: pixelated;
+            filter: drop-shadow(0 0 20px rgba(218,165,32,0.3));
+            animation: meeting-float 4s ease-in-out infinite;
+        }
+        @keyframes meeting-float {
+            0%, 100% { transform: translateY(0); }
+            50% { transform: translateY(-8px); }
+        }
+        .meeting-advisor-glow {
+            position: absolute;
+            inset: -20px;
+            border-radius: 50%;
+            background: radial-gradient(circle, rgba(218,165,32,0.15) 0%, transparent 70%);
+            pointer-events: none;
+            animation: meeting-pulse 3s ease-in-out infinite;
+        }
+        @keyframes meeting-pulse {
+            0%, 100% { opacity: 0.5; transform: scale(1); }
+            50% { opacity: 0.8; transform: scale(1.1); }
+        }
+        .meeting-info {
+            text-align: center;
+            margin-bottom: 1rem;
+        }
+        .meeting-advisor-name {
+            font-family: 'Press Start 2P', monospace;
+            font-size: 1rem;
+            color: #daa520;
+            text-shadow: 0 0 10px rgba(218,165,32,0.5);
+        }
+        .meeting-advisor-role {
+            font-size: 0.7rem;
+            color: #888;
+            margin-top: 0.3rem;
+        }
+        .meeting-advisor-persona {
+            font-size: 0.6rem;
+            color: #666;
+            font-style: italic;
+            margin-top: 0.2rem;
+        }
+        .meeting-side-badge {
+            display: inline-block;
+            padding: 0.2rem 0.6rem;
+            border-radius: 999px;
+            font-size: 0.5rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            margin-top: 0.5rem;
+        }
+        .meeting-side-badge.racional { background: #e74c3c; color: #fff; }
+        .meeting-side-badge.creativo { background: #3498db; color: #fff; }
+        .meeting-chat {
+            width: 100%;
+            max-width: 600px;
+            flex: 1;
+            background: rgba(26,26,46,0.9);
+            border: 2px solid #333;
+            border-radius: 8px;
+            padding: 1rem;
+            overflow-y: auto;
+            margin-bottom: 1rem;
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+        }
+        .meeting-msg {
+            padding: 0.5rem 0;
+            border-bottom: 1px solid rgba(255,255,255,0.05);
+            animation: fadeIn 0.3s;
+        }
+        .meeting-msg:last-child { border-bottom: none; }
+        .meeting-msg.user { text-align: right; }
+        .meeting-speaker {
+            font-weight: 700;
+            font-size: 0.75rem;
+            margin-bottom: 0.2rem;
+        }
+        .meeting-speaker.user { color: #daa520; }
+        .meeting-speaker.advisor { color: #44bb44; }
+        .meeting-text {
+            font-size: 0.85rem;
+            color: #ddd;
+            line-height: 1.5;
+        }
+        .meeting-input-area {
+            width: 100%;
+            max-width: 600px;
+            display: flex;
+            gap: 0.5rem;
+            margin-bottom: 1rem;
+        }
+        .meeting-input {
+            flex: 1;
+            background: #1a1a2e;
+            border: 2px solid #333;
+            border-radius: 6px;
+            padding: 0.7rem 1rem;
+            color: #e0e0e0;
+            font-size: 0.9rem;
+            font-family: inherit;
+        }
+        .meeting-input:focus { outline: none; border-color: #daa520; }
+        .meeting-send {
+            background: linear-gradient(135deg, #b8860b, #daa520);
+            border: none;
+            color: #fff;
+            font-weight: 700;
+            padding: 0.7rem 1.5rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.6rem;
+            transition: all 0.2s;
+        }
+        .meeting-send:hover { transform: scale(1.05); box-shadow: 0 0 15px rgba(218,165,32,0.4); }
+        .meeting-close {
+            background: none;
+            border: 1px solid #444;
+            color: #888;
+            padding: 0.5rem 1rem;
+            border-radius: 6px;
+            cursor: pointer;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.5rem;
+            transition: all 0.2s;
+            align-self: center;
+        }
+        .meeting-close:hover { border-color: #e74c3c; color: #e74c3c; }
+        .meeting-typing {
+            font-size: 0.7rem;
+            color: #666;
+            font-style: italic;
+            text-align: center;
+            padding: 0.5rem;
+        }
+        .meeting-door-hotspot {
+            position: absolute;
+            cursor: pointer;
+            transition: all 0.3s;
+            border-radius: 4px;
+        }
+        .meeting-door-hotspot:hover {
+            background: rgba(218,165,32,0.15);
+            box-shadow: 0 0 20px rgba(218,165,32,0.3);
+            border: 2px solid rgba(218,165,32,0.5);
+        }
+
         /* ── fin retro override ── */
     </style>
 </head>
@@ -2224,6 +2417,10 @@
             <div class="apple-ii-hotspot" id="apple-ii-hotspot"
                  style="left:46%;top:53%;width:10%;height:11%"
                  title="Apple II — pulsa MIRAR y haz clic"></div>
+            <!-- Door hotspot to enter Private Meeting Room (Sala del Consejo) -->
+            <div class="meeting-door-hotspot" id="meeting-door-hotspot"
+                 style="right:3%;top:15%;width:8%;height:25%"
+                 title="Sala de Reuniones Privada — haz clic para entrar"></div>
             <div class="nameplates hidden" id="nameplates"></div>
             <div class="speech-overlay" id="speech-overlay">
                 <div class="speech-bubble" id="speech-bubble">
@@ -2301,6 +2498,7 @@
                     <button class="verb-btn" data-verb="votar" onclick="selectVerb(this)">Votar</button>
                     <button class="verb-btn" data-verb="analizar" onclick="selectVerb(this)">Analizar</button>
                     <button class="verb-btn" data-verb="presentar" onclick="selectVerb(this)">Presentar</button>
+                    <button class="verb-btn verb-primary" data-verb="reunion" onclick="selectVerb(this)">🚪 Reunión</button>
                     <button class="verb-btn" data-verb="previo" id="btn-previo" onclick="selectVerb(this)" style="display:none;border-left:2px solid #5a3a1e">▶ Previo</button>
                 </div>
                 <div class="inventory">
@@ -2450,6 +2648,30 @@
                     <button class="yar-cancel" onclick="closeYarOverlay()">CERRAR</button>
                 </div>
                 <div class="yar-status" id="yar-status"></div>
+            </div>
+        </div>
+
+        <!-- Private Meeting Room (Sala de Reuniones Privada) -->
+        <div class="meeting-overlay" id="meeting-overlay">
+            <div class="meeting-bg"></div>
+            <div class="meeting-room">
+                <div class="meeting-advisor">
+                    <div class="meeting-advisor-glow"></div>
+                    <img class="meeting-advisor-img" id="meeting-advisor-img" src="" alt="Consejero">
+                </div>
+                <div class="meeting-info">
+                    <div class="meeting-advisor-name" id="meeting-advisor-name">—</div>
+                    <div class="meeting-advisor-role" id="meeting-advisor-role">—</div>
+                    <div class="meeting-advisor-persona" id="meeting-advisor-persona">—</div>
+                    <span class="meeting-side-badge" id="meeting-side-badge">—</span>
+                </div>
+                <div class="meeting-chat" id="meeting-chat"></div>
+                <div class="meeting-input-area">
+                    <input class="meeting-input" id="meeting-input" type="text" placeholder="Escribe tu mensaje..." autocomplete="off" onkeydown="if(event.key==='Enter')sendPrivateMessage()">
+                    <button class="meeting-send" onclick="sendPrivateMessage()">ENVIAR</button>
+                </div>
+                <div class="meeting-typing" id="meeting-typing" style="display:none;"></div>
+                <button class="meeting-close" onclick="exitPrivateMeeting()">← SALIR DE LA REUNIÓN</button>
             </div>
         </div>
 
@@ -2982,7 +3204,12 @@
 
     // ESC to close overlay
     window.addEventListener("keydown", (e) => {
-        if (e.key === "Escape") closeScreenOverlay();
+        if (e.key === "Escape") {
+            closeScreenOverlay();
+            if (document.getElementById("meeting-overlay").classList.contains("visible")) {
+                exitPrivateMeeting();
+            }
+        }
     });
 
     // Refresh thumbnails every 10s in demo mode — preload to avoid flicker
@@ -3345,6 +3572,7 @@
         analizar:  "analizar",
         presentar: "presentar",
         previo:    "presentar",
+        reunion:   "llm",
     };
 
     function updateInventoryPanel(verb) {
@@ -3481,6 +3709,9 @@
         if (currentVerb === 'analizar') triggerAnalizar();
         if (currentVerb === 'presentar') triggerPresentar();
         if (currentVerb === 'previo') triggerPrevio();
+        if (currentVerb === 'reunion') {
+            enterReunionMode();
+        }
     }
 
     function enterPreguntarMode() {
@@ -3527,6 +3758,11 @@
         const bh = e.target.closest('.body-hotspot');
         if (!bh || !preguntarMode) return;
         selectAgentByPersona(bh.getAttribute('data-persona'));
+    });
+
+    // Meeting door hotspot click
+    document.getElementById("meeting-door-hotspot").addEventListener("click", function(e) {
+        enterReunionMode();
     });
 
     function selectAgentByPersona(persona) {
@@ -4031,6 +4267,114 @@
         conversationHistory = [];
         exitPreguntarMode();
         setActionLine("Escribe aquí o usa /help...");
+    }
+
+    // ─── Private Meeting Room (Sala de Reuniones Privada) ───
+    let meetingAdvisor = null;
+
+    function enterReunionMode() {
+        // Show advisor selection in inventory panel
+        const invPanel = document.querySelector('.inv-panel[data-panel="llm"]');
+        if (invPanel) {
+            invPanel.innerHTML = `
+                <div class="inventory-title">Selecciona Consejero</div>
+                <div class="inventory-list" id="reunion-advisor-list">
+                    ${COUNCIL.filter(m => m.gen === currentGen).map(m => 
+                        `<div class="inv-item" data-persona="${m.persona}" onclick="selectAdvisorForMeeting('${m.persona}')">
+                            ${m.icon} ${m.persona} (${m.name}) — ${m.side === 'racional' ? '🧠 Racional' : '🎨 Creativo'}
+                        </div>`
+                    ).join('')}
+                </div>
+            `;
+        }
+        // Switch to LLM panel to show advisor list
+        document.querySelectorAll('.inv-panel').forEach(p => p.classList.remove('active'));
+        document.querySelector('.inv-panel[data-panel="llm"]').classList.add('active');
+        setActionLine("👆 Selecciona un consejero para la reunión privada...");
+    }
+
+    function selectAdvisorForMeeting(persona) {
+        const members = COUNCIL.filter(m => m.gen === currentGen);
+        const agent = members.find(m => m.persona === persona);
+        if (!agent) return;
+
+        meetingAdvisor = agent;
+        enterPrivateMeeting(agent);
+    }
+
+    function enterPrivateMeeting(agent) {
+        document.getElementById("meeting-overlay").classList.add("visible");
+        
+        // Set advisor image and info
+        const img = document.getElementById("meeting-advisor-img");
+        const side = agent.side === "racional" ? "left" : "right";
+        const idx = COUNCIL.filter(m => m.gen === currentGen && m.side === agent.side).findIndex(m => m.persona === agent.persona);
+        // Use a placeholder - in production would load actual advisor portrait
+        img.src = `assets/advisor-${agent.role.toLowerCase()}.png`;
+        img.onerror = () => { img.src = `assets/council-${currentGen}.jpg?v=5`; };
+        
+        document.getElementById("meeting-advisor-name").textContent = agent.name;
+        document.getElementById("meeting-advisor-role").textContent = agent.role;
+        document.getElementById("meeting-advisor-persona").textContent = "Persona: " + agent.persona;
+        const badge = document.getElementById("meeting-side-badge");
+        badge.textContent = agent.side === "racional" ? "🧠 Racional" : "🎨 Creativo";
+        badge.className = "meeting-side-badge " + agent.side;
+        
+        // Clear chat
+        document.getElementById("meeting-chat").innerHTML = "";
+        
+        // Add welcome message
+        addMeetingMsg(agent, "Bienvenido a la reunión privada. ¿En qué puedo ayudarte?");
+        
+        // Focus input
+        setTimeout(() => document.getElementById("meeting-input").focus(), 300);
+    }
+
+    function exitPrivateMeeting() {
+        document.getElementById("meeting-overlay").classList.remove("visible");
+        meetingAdvisor = null;
+        document.getElementById("meeting-chat").innerHTML = "";
+        setActionLine("Escribe aquí o usa /help...");
+    }
+
+    function addMeetingMsg(agent, text, isUser = false) {
+        const chat = document.getElementById("meeting-chat");
+        const entry = document.createElement("div");
+        entry.className = "meeting-msg" + (isUser ? " user" : "");
+        const speakerClass = isUser ? "user" : "advisor";
+        const speakerLabel = isUser ? "👤 Tú" : agent.icon + " " + agent.name;
+        entry.innerHTML = '<div class="meeting-speaker ' + speakerClass + '">' + speakerLabel + '</div><div class="meeting-text">' + text + '</div>';
+        chat.appendChild(entry);
+        chat.scrollTop = chat.scrollHeight;
+    }
+
+    async function sendPrivateMessage() {
+        const input = document.getElementById("meeting-input");
+        const text = input.value.trim();
+        if (!text || !meetingAdvisor) return;
+        
+        input.value = "";
+        addMeetingMsg(meetingAdvisor, text, true);
+        
+        // Show typing indicator
+        const typing = document.getElementById("meeting-typing");
+        typing.textContent = meetingAdvisor.name + " está escribiendo...";
+        typing.style.display = "block";
+        
+        try {
+            // Call API for single agent
+            const reply = await askOneAgentAPI(text, meetingAdvisor.name);
+            typing.style.display = "none";
+            
+            if (reply) {
+                addMeetingMsg(meetingAdvisor, reply.content);
+            } else {
+                addMeetingMsg(meetingAdvisor, "Lo siento, no he podido procesar tu mensaje.");
+            }
+        } catch (e) {
+            typing.style.display = "none";
+            addMeetingMsg(meetingAdvisor, "Error de conexión: " + e.message);
+        }
     }
 
     function addConvEntry(panelId, icon, name, persona, side, text) {

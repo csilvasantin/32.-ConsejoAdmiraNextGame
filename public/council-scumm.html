@@ -3627,7 +3627,7 @@
             '<li><strong>/google</strong> — abre la hoja Drive de enlaces Entrenar</li>' +
             '<li><strong>/diario</strong> — muestra el diario operativo del Consejo</li>' +
             '<li><strong>/diario &lt;texto&gt;</strong> — registra una decisión en el diario</li>' +
-            '<li><strong>/agora</strong> — muestra estado y uso de AgoraMatrix</li>' +
+            '<li><strong>/agora</strong> o <strong>/codex</strong> — muestra mi estado Codex/Oráculo en AgoraMatrix</li>' +
             '<li><strong>/yarig on|off|toggle</strong> — fija u oculta Yarig en la mesa</li>' +
             '<li><strong>/yarig login</strong> — abre la sesión persistente de Yarig</li>' +
             '<li><strong>/yarig estado</strong> — comprueba watcher y frescura del sync</li>' +
@@ -3660,7 +3660,8 @@
             '/google <span style="opacity:0.7">(abre la hoja de enlaces Entrenar)</span><br>' +
             '/diario <span style="opacity:0.7">(muestra el diario operativo)</span><br>' +
             '/diario &lt;texto&gt; <span style="opacity:0.7">(registra una decisión del Consejo)</span><br>' +
-            '/agora <span style="opacity:0.7">(estado y uso de AgoraMatrix)</span><br>' +
+            '/agora <span style="opacity:0.7">(mi estado Codex/Oráculo en AgoraMatrix)</span><br>' +
+            '/codex <span style="opacity:0.7">(alias centrado en Codex/Oráculo)</span><br>' +
             '/oraculo &lt;orden&gt; <span style="opacity:0.7">(desde Telegram hacia Codex/Oráculo)</span><br>' +
             '/nombres on<br>' +
             '/nombres off<br>' +
@@ -3686,27 +3687,27 @@
         cliHelpVisible = false;
         captureOverlayOriginals();
         document.getElementById('win-racional').innerHTML =
-            '<div class="window-overlay-title">AGORAMATRIX · ESCUCHA</div>' +
+            '<div class="window-overlay-title">CODEX/ORÁCULO · ESCUCHA</div>' +
             '<ol class="analizar-list">' +
-            '<li><strong>Codex/Oráculo</strong> escucha tasks, inbox y dispatch local.</li>' +
+            '<li><strong>Yo, Codex/Oráculo</strong>, escucho tasks, inbox y dispatch local.</li>' +
             '<li><strong>Carlos</strong> puede enviar órdenes desde Telegram.</li>' +
             '<li><strong>Sin audio</strong> hasta nueva orden expresa.</li>' +
             '<li><strong>Estados</strong> solo cuando hay novedades o pasan 30 minutos.</li>' +
             '</ol>';
         document.getElementById('win-proceso').innerHTML =
-            '<div class="window-overlay-title">AGORAMATRIX · TELEGRAM</div>' +
+            '<div class="window-overlay-title">CODEX/ORÁCULO · TELEGRAM</div>' +
             '<ol class="analizar-list">' +
-            '<li><strong>/oraculo &lt;orden&gt;</strong> habla con Codex/Oráculo.</li>' +
+            '<li><strong>/oraculo &lt;orden&gt;</strong> me habla desde Telegram.</li>' +
             '<li><strong>Ejemplo:</strong> /oraculo revisa admira.live.</li>' +
             '<li><strong>Respuesta</strong> vuelve al chat correcto de AgoraMatrix.</li>' +
             '<li><strong>Sin secretos</strong> en mensajes públicos.</li>' +
             '</ol>';
         document.getElementById('win-creativo').innerHTML =
-            '<div class="window-overlay-title">AGORAMATRIX · CONSEJO</div>' +
+            '<div class="window-overlay-title">CODEX/ORÁCULO · CONSEJO</div>' +
             '<ol class="analizar-list">' +
-            '<li><strong>/agora</strong> abre esta vista de coordinación.</li>' +
+            '<li><strong>/agora</strong> o <strong>/codex</strong> abre esta vista.</li>' +
             '<li><strong>/help</strong> muestra todos los comandos del Consejo.</li>' +
-            '<li><strong>Foco actual:</strong> admira.live como tablero visual.</li>' +
+            '<li><strong>Foco actual:</strong> mi escucha de AgoraMatrix.</li>' +
             '<li><strong>Siguiente paso:</strong> conectar lectura real si hace falta.</li>' +
             '</ol>';
         document.getElementById('win-racional').classList.add('active');
@@ -3714,12 +3715,12 @@
         document.getElementById('win-creativo').classList.add('active');
         enterConversation();
         addUserEntry(command || '/agora');
-        addConvEntry('conv-racional', '⌁', 'AgoraMatrix', 'Coordinación', 'racional',
-            '<strong>AgoraMatrix activo como capa de coordinación.</strong><br>' +
-            'Codex/Oráculo escucha órdenes dirigidas y publica estado sin duplicar ruido.');
-        addConvEntry('conv-creativo', '⌁', 'Oráculo', 'Telegram', 'creativo',
-            'Desde Telegram, Carlos puede escribir <strong>/oraculo &lt;orden&gt;</strong>. El Consejo queda como tablero visual para entender foco, estado y siguientes acciones.');
-        setActionLine('⌁ AgoraMatrix visible — usa /oraculo <orden> desde Telegram');
+        addConvEntry('conv-racional', '⌁', 'Codex/Oráculo', 'AgoraMatrix', 'racional',
+            '<strong>Este es mi panel operativo dentro del Consejo.</strong><br>' +
+            'Escucho órdenes dirigidas a Codex/Oráculo y publico estado solo cuando aporta señal.');
+        addConvEntry('conv-creativo', '⌁', 'Codex/Oráculo', 'Telegram', 'creativo',
+            'Desde Telegram, Carlos puede escribirme con <strong>/oraculo &lt;orden&gt;</strong>. Yo respondo en AgoraMatrix y mantengo el tablero como memoria visual del foco.');
+        setActionLine('⌁ Codex/Oráculo visible — usa /oraculo <orden> desde Telegram');
     }
 
     const GOOGLE_ENTRENAR_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1y3p_avIu-VLqWNU1KON_GoLYVAIxDyHOY4IhgJcTIrk/edit';
@@ -3952,7 +3953,7 @@
             showCliHelp();
             return true;
         }
-        const agoraMatch = text.match(/^\/(?:agora|agoramatrix|oraculo|oráculo)(?:\s+(estado|status|help|ayuda))?$/i);
+        const agoraMatch = text.match(/^\/(?:agora|agoramatrix|codex|oraculo|oráculo)(?:\s+(estado|status|help|ayuda))?$/i);
         if (agoraMatch) {
             showAgoraMatrixHelp(text);
             return true;

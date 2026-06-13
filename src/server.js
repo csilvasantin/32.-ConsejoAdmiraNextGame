@@ -363,6 +363,31 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  if ((request.method === "GET" || request.method === "HEAD") && url.pathname === "/api/agora/coetaneos") {
+    // Lectura para el panel de COETÁNEOS de admira.live: feed en vivo + presencia.
+    // Origin-gated (reusa la allowlist del Consejo) → SIN clave en el sitio público.
+    if (!isAllowedCouncilOrigin(request)) {
+      sendJson(response, 403, { ok: false, error: "Origen no permitido" });
+      return;
+    }
+    try {
+      const limit = Math.max(1, Math.min(60, Number(url.searchParams.get("limit")) || 24));
+      const [feed, who] = await Promise.all([
+        runAgora(["read", "--last", String(limit)], { timeoutMs: 12000 }),
+        runAgora(["who"], { timeoutMs: 10000 }),
+      ]);
+      sendJson(response, 200, {
+        ok: true,
+        feed: splitAgoraLines(feed.stdout),
+        who: who.stdout || "",
+        fetchedAt: new Date().toISOString(),
+      });
+    } catch (error) {
+      sendJson(response, 502, { ok: false, error: error instanceof Error ? error.message : "Agora no disponible" });
+    }
+    return;
+  }
+
   if (request.method === "POST" && url.pathname === "/api/agora/send") {
     const denied = verifyAgoraAccess(request, url);
     if (denied) {

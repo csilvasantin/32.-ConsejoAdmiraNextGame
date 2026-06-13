@@ -2935,6 +2935,14 @@
         ],
     };
 
+    // Posición de la BOCA por gen y rol, en % de la imagen del consejo.
+    // Las dos composiciones (leyendas/coetáneos) son imágenes distintas, así que
+    // cada una lleva sus coordenadas medidas sobre la cara real de cada consejero.
+    const MOUTH_POS = {
+        leyendas:  { CEO:[11,53], CTO:[22,43], COO:[33,38], CFO:[44,38], CCO:[57,37], CDO:[70,38], CXO:[80,42], CSO:[90,58] },
+        coetaneos: { CEO:[13,62], CTO:[26,56], COO:[37,47], CFO:[46,47], CCO:[58,49], CDO:[67,51], CXO:[79,52], CSO:[90,58] },
+    };
+
     let machineStatus = {};
     let teamworkSnapshots = {};
     let apiOk = false;
@@ -3338,8 +3346,9 @@
                 const machine = p.machineId ? machineStatus[p.machineId] : null;
                 const isOnline = machine ? machine.online : false;
                 if (isOnline) _mouthMachineAlive.add(p.persona); else _mouthMachineAlive.delete(p.persona);
-                const cx = b.left + b.width / 2;            // centro horizontal de la cara
-                const cy = b.top + b.height * 0.17;          // boca ≈ parte alta del cuerpo (la cara)
+                const mp = (MOUTH_POS[currentGen] || {})[p.role];
+                const cx = mp ? mp[0] : (b.left + b.width / 2);   // boca medida sobre la cara real
+                const cy = mp ? mp[1] : (b.top + b.height * 0.17);
                 return `<div class="mouth" data-persona="${p.persona}" style="left:${cx}%;top:${cy}%">
                     <div class="lips" style="animation-delay:${((i * 0.17) % 1).toFixed(2)}s"></div></div>`;
             }).join("");

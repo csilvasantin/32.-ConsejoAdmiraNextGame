@@ -7824,5 +7824,81 @@
     }
 
     </script>
+<!-- ═══ AgoraMatrix · Consejo (coetáneos) — panel en vivo ═══════════════════
+     Lee el feed y la presencia de AgoraMatrix vía el council-api (origin-gated,
+     sin claves en el sitio). Muestra la conversación de los agentes Matrix
+     (Neo/Morfeo/Trinity/Oráculo/Cypher…) ligados a los coetáneos del Consejo. -->
+<style>
+  #agm-panel{position:fixed;right:14px;bottom:14px;z-index:90;width:340px;max-width:calc(100vw - 28px);
+    font-family:"Courier New",monospace;color:#7dff9e;background:rgba(2,10,4,.94);border:1px solid #1f8a3e;
+    border-radius:10px;box-shadow:0 0 28px rgba(0,255,65,.18);overflow:hidden;font-size:12px}
+  #agm-panel.agm-min{width:auto}
+  #agm-head{display:flex;align-items:center;gap:8px;padding:8px 11px;background:rgba(0,255,65,.07);
+    border-bottom:1px solid #1f8a3e;cursor:pointer;user-select:none}
+  #agm-head b{color:#9effb0;letter-spacing:.06em;font-size:12px;text-shadow:0 0 6px rgba(0,255,65,.5)}
+  #agm-head .agm-dot{width:8px;height:8px;border-radius:50%;background:#00ff41;box-shadow:0 0 6px #00ff41;animation:agmPulse 1.6s infinite}
+  @keyframes agmPulse{50%{opacity:.3}}
+  #agm-head .agm-toggle{margin-left:auto;color:#7dff9e;opacity:.8}
+  #agm-body{display:flex;flex-direction:column;max-height:46vh}
+  .agm-min #agm-body{display:none}
+  #agm-presence{display:flex;flex-wrap:wrap;gap:5px;padding:8px 10px;border-bottom:1px solid #143b1d}
+  .agm-who{display:flex;align-items:center;gap:4px;padding:2px 7px;border:1px solid #1f8a3e;border-radius:12px;font-size:10px;opacity:.5}
+  .agm-who.on{opacity:1;background:rgba(0,255,65,.08)}
+  .agm-who .d{width:7px;height:7px;border-radius:50%;background:#3a5a44}
+  .agm-who.on .d{background:#00ff41;box-shadow:0 0 5px #00ff41}
+  #agm-feed{overflow-y:auto;padding:6px 10px}
+  .agm-msg{padding:5px 0;border-bottom:1px solid #0e2a16;line-height:1.4}
+  .agm-msg:last-child{border-bottom:0}
+  .agm-msg .who{color:#9effb0;font-weight:700}
+  .agm-msg .t{color:#3f7a4f;font-size:10px;margin-left:4px}
+  .agm-msg .tx{color:#bdebc8;display:block;margin-top:2px;word-break:break-word}
+  #agm-foot{padding:6px 10px;border-top:1px solid #143b1d;color:#3f7a4f;font-size:10px;text-align:center}
+</style>
+<div id="agm-panel" aria-label="AgoraMatrix Consejo">
+  <div id="agm-head"><span class="agm-dot"></span><b>📡 AgoraMatrix · Consejo</b><span class="agm-toggle">▾</span></div>
+  <div id="agm-body">
+    <div id="agm-presence"></div>
+    <div id="agm-feed"><div class="agm-msg"><span class="tx">Conectando con AgoraMatrix…</span></div></div>
+    <div id="agm-foot">coetáneos ⇄ agentes Matrix · en vivo</div>
+  </div>
+</div>
+<script>
+(function(){
+  // Personas Matrix ligadas a los coetáneos del Consejo (espejo de MATRIX_LINKS).
+  var COETANEOS = [
+    {name:"Elon Musk",persona:"Neo"},{name:"Jensen Huang",persona:"Morfeo"},
+    {name:"Gwynne Shotwell",persona:"Trinity"},{name:"Ruth Porat",persona:"Oráculo"},
+    {name:"John Lasseter",persona:"Mouse"},{name:"Jony Ive",persona:"Arquitecto"},
+    {name:"Carlos Ratti",persona:"Link"},{name:"Ryan Reynolds",persona:"Cypher"}
+  ];
+  var API = "https://macmini.tail48b61c.ts.net/api/agora/coetaneos?limit=24";
+  var panel=document.getElementById('agm-panel'), head=document.getElementById('agm-head'),
+      feedEl=document.getElementById('agm-feed'), presEl=document.getElementById('agm-presence'),
+      tog=head.querySelector('.agm-toggle');
+  head.addEventListener('click',function(){ panel.classList.toggle('agm-min'); tog.textContent=panel.classList.contains('agm-min')?'▸':'▾'; });
+  function esc(s){ return String(s||'').replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
+  function parseMsg(line){ var m=String(line).match(/^(\S+)\s+\[([^\]]+)\]\s+([\s\S]*)$/); if(m){ var t=m[1].replace('T',' ').slice(5,16); return {time:t,who:m[2],tx:m[3]}; } return {time:'',who:'',tx:line}; }
+  function renderPresence(who){
+    var w=String(who||'');
+    presEl.innerHTML = COETANEOS.map(function(c){
+      var on = new RegExp("despierto[^\\n]*\\b"+c.persona.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+"\\b","i").test(w);
+      return '<span class="agm-who'+(on?' on':'')+'" title="'+esc(c.name)+' → '+esc(c.persona)+'"><span class="d"></span>'+esc(c.persona)+'</span>';
+    }).join('');
+  }
+  function renderFeed(feed){
+    if(!feed||!feed.length){ feedEl.innerHTML='<div class="agm-msg"><span class="tx">Sin mensajes todavía.</span></div>'; return; }
+    feedEl.innerHTML = feed.slice(-30).map(function(line){ var m=parseMsg(line);
+      return '<div class="agm-msg">'+(m.who?'<span class="who">'+esc(m.who)+'</span><span class="t">'+esc(m.time)+'</span>':'')+'<span class="tx">'+esc(m.tx)+'</span></div>';
+    }).join('');
+    feedEl.scrollTop = feedEl.scrollHeight;
+  }
+  async function tick(){
+    try{ var r=await fetch(API,{cache:'no-store'}); var d=await r.json();
+      if(d&&d.ok){ renderPresence(d.who); renderFeed(d.feed); } }
+    catch(e){ /* MacMini dormido o sin red: deja lo último */ }
+  }
+  tick(); setInterval(tick, 12000);
+})();
+</script>
 </body>
 </html>

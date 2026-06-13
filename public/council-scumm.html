@@ -2534,6 +2534,24 @@
         { name: "CSO", role: "Chief Storytelling Officer", persona: "Ryan Reynolds",   side: "creativo", gen: "coetaneos", icon: "📖", machineId: "admira-macbookaircrema",   machine: "MacBook Air Crema",    member: "Carla Rosa",     pair: "CEO", pairPersona: "Elon Musk",         territory: "Marketing viral y narrativa de marca" },
     ];
 
+    const MATRIX_LINKS = {
+        coetaneos: {
+            "Elon Musk":       { alias: "Neo",        channel: "Neo" },
+            "Jensen Huang":    { alias: "Morfeo",     channel: "Morfeo" },
+            "Gwynne Shotwell": { alias: "Trinity",    channel: "Trinity" },
+            "Ruth Porat":      { alias: "Oráculo",    channel: "Oraculo" },
+            "John Lasseter":   { alias: "Mouse",      channel: "Mouse" },
+            "Jony Ive":        { alias: "Arquitecto", channel: "Arquitecto" },
+            "Carlos Ratti":    { alias: "Link",       channel: "Link" },
+            "Ryan Reynolds":   { alias: "Cypher",     channel: "Cypher" },
+        },
+    };
+
+    function getMatrixLink(agent) {
+        if (!agent) return null;
+        return (MATRIX_LINKS[agent.gen] || {})[agent.persona] || null;
+    }
+
     // Nameplate positions on image (% from left, % from top) mapped to each character
     // Positions match the visual location of each person in the pixel art
     // 1 consejero = 1 máquina. machineId null = sin máquina asignada (gris)
@@ -2760,6 +2778,10 @@
             const powerSvg = `<svg class="power-icon" viewBox="0 0 24 24" fill="none" stroke="${isOnline ? '#44bb44' : '#666'}" stroke-width="2.5" stroke-linecap="round"><path d="M12 2v6"/><path d="M16.24 7.76a6 6 0 1 1-8.49 0"/></svg>`;
             const btnClass = isOnline ? "on" : "off";
             const machineIdAttr = member.machineId || "";
+            const matrixLink = getMatrixLink(member);
+            const matrixRow = matrixLink
+                ? `<div class="cd-row"><span class="cd-key">Matrix</span><span class="cd-val">${matrixLink.alias}</span></div>`
+                : "";
 
             let thumbHtml;
             if (demoMode && machineIdAttr) {
@@ -2794,6 +2816,7 @@
                                 ${member.name} <span class="cd-badge ${member.side}">${member.side === 'racional' ? 'Operativo' : 'Creativo'}</span>
                             </div>
                             <div class="cd-row"><span class="cd-key">Consejero</span><span class="cd-val">${member.persona}</span></div>
+                            ${matrixRow}
                             <div class="cd-row"><span class="cd-key">Operador</span><span class="cd-val">${member.member || '—'}</span></div>
                             <div class="cd-row"><span class="cd-key">Maquina</span><span class="cd-val">${member.machine || machineName}</span></div>
                             <div class="cd-row"><span class="cd-key">Estado</span><span class="cd-val" style="color:${isOnline ? '#44bb44' : '#e74c3c'}">${isOnline ? (machineStatusText || 'online') : 'offline'}</span></div>
@@ -3556,8 +3579,10 @@
 
         const llmEl = document.querySelector('.llm-option.selected');
         const llmShort = llmEl ? llmEl.textContent.trim().replace('FREE','').trim().split(' ').slice(1).join(' ') : 'Claude';
-        setActionLine("❓ Pregunta a " + agent.icon + " " + agent.persona + " (" + agent.name + ") via " + llmShort + " — escribe y pulsa Enviar");
-        showSpeechBubble(agent.persona, agent.name, agent.persona + " espera tu pregunta...");
+        const matrixLink = getMatrixLink(agent);
+        const matrixLabel = matrixLink ? " · Matrix: " + matrixLink.alias : "";
+        setActionLine("❓ Pregunta a " + agent.icon + " " + agent.persona + " (" + agent.name + matrixLabel + ") via " + llmShort + " — escribe y pulsa Enviar");
+        showSpeechBubble(agent.persona, agent.name, agent.persona + (matrixLink ? " / " + matrixLink.alias : "") + " espera tu pregunta...");
     }
 
     function updateActionLine() {
@@ -4907,10 +4932,14 @@
             'http://macmini.tail48b61c.ts.net:8420',
             'https://three2-consejoadmiranextgame.onrender.com',
         ];
+    const AGORA_COUNCIL_API_URLS = isSecure
+        ? ['https://macmini.tail48b61c.ts.net']
+        : ['http://localhost:3030', 'https://macmini.tail48b61c.ts.net'];
     const COUNCIL_API_TOKEN = "admira2026";
     const YAR_DONE_BLOCK_START = '[YAR_DONE]';
     const YAR_DONE_BLOCK_END = '[/YAR_DONE]';
     let activeApiUrl = null;
+    let activeAgoraCouncilUrl = null;
     let conversationHistory = [];
     let yarContext = { focus: "", doing: "", done: [], tasks: [], pending: [], taskBuckets: { inProgress: [], pending: [], done: [] }, activeTask: "", ask: "", updatedAt: "", syncUser: "", syncSource: "", dayStartAt: "", dayEndAt: "" };
     let yarStatus = null;
@@ -6311,6 +6340,47 @@
         return null;
     }
 
+    async function notifyAgoraCouncil(event, question, agent, answer = "") {
+        const matrixLink = getMatrixLink(agent);
+        if (!matrixLink) return null;
+        const payload = {
+            event,
+            question,
+            answer,
+            persona: agent.persona,
+            role: agent.name,
+            side: agent.side,
+            generation: agent.gen,
+            matrixAlias: matrixLink.alias,
+            matrixChannel: matrixLink.channel,
+            llm: selectedLLM,
+            url: location.href,
+        };
+        const urls = activeAgoraCouncilUrl
+            ? [activeAgoraCouncilUrl].concat(AGORA_COUNCIL_API_URLS.filter(u => u !== activeAgoraCouncilUrl))
+            : AGORA_COUNCIL_API_URLS.slice();
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + "/api/agora/council-question", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Council-Token": COUNCIL_API_TOKEN,
+                    },
+                    body: JSON.stringify(payload),
+                    signal: AbortSignal.timeout(45000),
+                });
+                if (!res.ok) throw new Error("Agora " + res.status);
+                activeAgoraCouncilUrl = baseUrl;
+                return await res.json();
+            } catch (err) {
+                console.warn("Agora council bridge failed at " + baseUrl + ":", err.message);
+            }
+        }
+        activeAgoraCouncilUrl = null;
+        return null;
+    }
+
     async function askSingleAgent(question, agent) {
         /** Ask a single selected agent via the API. */
         const panelId = agent.side === "racional" ? "conv-racional" : "conv-creativo";
@@ -6319,11 +6389,14 @@
         // Show thinking — include LLM name
         const llmEl = document.querySelector('.llm-option.selected');
         const llmLabel = llmEl ? llmEl.textContent.trim().replace('FREE','').trim() : 'Claude';
+        const matrixLink = getMatrixLink(agent);
+        const matrixThinking = matrixLink ? " + Matrix " + matrixLink.alias : "";
         showSpeechBubble(agent.persona, agent.name, agent.persona + " está pensando...");
         highlightNameplate(agent.persona, 1);
-        setActionLine("🧠 " + agent.persona + " está pensando con " + llmLabel + "...");
+        setActionLine("🧠 " + agent.persona + " está pensando con " + llmLabel + matrixThinking + "...");
 
         conversationHistory.push({ role: "user", content: question });
+        void notifyAgoraCouncil("question", question, agent);
 
         if (isScreenEmissionQuestion(question)) {
             await fetchTeamworkSnapshots();
@@ -6335,6 +6408,7 @@
             addConvEntry(panelId, agent.icon, agent.name, agent.persona, agent.side, deterministic);
             conversationHistory.push({ role: "assistant", content: agent.name + ": " + deterministic });
             setActionLine("🖥️ " + agent.persona + " ha respondido desde el estado visual real de las pantallas");
+            void notifyAgoraCouncil("answer", question, agent, deterministic);
             await new Promise(r => setTimeout(r, 3000));
             hideSpeechBubble();
             return;
@@ -6351,6 +6425,7 @@
             highlightNameplate(agent.persona, 1);
             addConvEntry(panelId, reply.icon, reply.name, reply.persona, reply.side, reply.content);
             conversationHistory.push({ role: "assistant", content: reply.name + ": " + reply.content });
+            void notifyAgoraCouncil("answer", question, agent, reply.content);
 
             setActionLine("✅ " + agent.persona + " ha respondido — escribe para seguir preguntando");
             // Keep agent selected for follow-up questions
@@ -6361,6 +6436,7 @@
             addConvEntry(panelId, agent.icon, agent.name, agent.persona, agent.side,
                 "[Offline] " + agent.persona + " no está disponible.");
             setActionLine("⚠️ API no disponible — " + agent.persona + " no pudo responder");
+            void notifyAgoraCouncil("offline", question, agent);
         }
     }
 

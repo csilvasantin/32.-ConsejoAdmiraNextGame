@@ -14,6 +14,9 @@ const AGORA_BIN = process.env.AGORA_BIN || "agora";
 const AGORA_FROM = process.env.AGORA_FROM || "Codex";
 const AGORA_READ_LAST = Number(process.env.AGORA_READ_LAST || 20);
 const AGORA_PANEL_KEY = process.env.AGORA_PANEL_KEY || process.env.COUNCIL_API_TOKEN || "";
+const AGORA_COUNCIL_TOKEN = process.env.AGORA_COUNCIL_TOKEN || process.env.COUNCIL_API_TOKEN || "";
+const AGORA_COUNCIL_WINDOW_MS = Number(process.env.AGORA_COUNCIL_WINDOW_MS || 60000);
+const AGORA_COUNCIL_LIMIT = Number(process.env.AGORA_COUNCIL_LIMIT || 40);
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -30,9 +33,27 @@ const VALID_STATUSES = new Set(["online", "idle", "busy", "offline", "maintenanc
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, X-Agora-Panel-Key",
+  "Access-Control-Allow-Headers": "Content-Type, X-Agora-Panel-Key, X-Council-Token",
   "Access-Control-Allow-Private-Network": "true"
 };
+const MATRIX_COUNCIL_LINKS = new Map([
+  ["Elon Musk", { alias: "Neo", role: "CEO" }],
+  ["Jensen Huang", { alias: "Morfeo", role: "CTO" }],
+  ["Gwynne Shotwell", { alias: "Trinity", role: "COO" }],
+  ["Ruth Porat", { alias: "Oráculo", role: "CFO" }],
+  ["John Lasseter", { alias: "Mouse", role: "CCO" }],
+  ["Jony Ive", { alias: "Arquitecto", role: "CDO" }],
+  ["Carlos Ratti", { alias: "Link", role: "CXO" }],
+  ["Ryan Reynolds", { alias: "Cypher", role: "CSO" }]
+]);
+const AGORA_COUNCIL_ALLOWED_ORIGINS = new Set([
+  "http://www.admira.live",
+  "https://www.admira.live",
+  "http://admira.live",
+  "https://admira.live",
+  "https://csilvasantin.github.io"
+]);
+const agoraCouncilHits = new Map();
 const FRIENDLY_ROUTES = new Map([
   ["/control", "/teamwork.html?v=20260613-1"],
   ["/equipo", "/index.html"],
@@ -69,6 +90,112 @@ function verifyAgoraAccess(request, url) {
 
   const provided = request.headers["x-agora-panel-key"] || url.searchParams.get("key") || "";
   return provided === AGORA_PANEL_KEY ? null : "Clave AgoraMatrix invalida";
+}
+
+function isAllowedCouncilOrigin(request) {
+  const origin = String(request.headers.origin || "");
+  if (!origin) return true;
+  if (AGORA_COUNCIL_ALLOWED_ORIGINS.has(origin)) return true;
+  return /^https?:\/\/(localhost|127\.0\.0\.1|\[::1\])(?::\d+)?$/i.test(origin);
+}
+
+function verifyAgoraCouncilAccess(request) {
+  if (!isAllowedCouncilOrigin(request)) {
+    return "Origen no autorizado para el puente del Consejo";
+  }
+
+  if (!AGORA_COUNCIL_TOKEN) {
+    return isLocalRequest(request) ? null : "AGORA_COUNCIL_TOKEN no configurado";
+  }
+
+  const provided = request.headers["x-council-token"] || "";
+  return provided === AGORA_COUNCIL_TOKEN ? null : "Token del Consejo invalido";
+}
+
+function checkAgoraCouncilRateLimit(request) {
+  const forwarded = String(request.headers["x-forwarded-for"] || "").split(",")[0].trim();
+  const key = forwarded || request.socket?.remoteAddress || "unknown";
+  const now = Date.now();
+  const recent = (agoraCouncilHits.get(key) || []).filter((ts) => now - ts < AGORA_COUNCIL_WINDOW_MS);
+  if (recent.length >= AGORA_COUNCIL_LIMIT) {
+    agoraCouncilHits.set(key, recent);
+    return false;
+  }
+  recent.push(now);
+  agoraCouncilHits.set(key, recent);
+  return true;
+}
+
+function compactAgoraText(value, maxLength) {
+  const text = String(value || "")
+    .replace(/[\u0000-\u001f\u007f]+/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+  return text.length > maxLength ? `${text.slice(0, Math.max(0, maxLength - 1))}…` : text;
+}
+
+function buildCouncilAgoraMessage(parsed) {
+  const persona = compactAgoraText(parsed.persona, 80);
+  const matrix = MATRIX_COUNCIL_LINKS.get(persona);
+  if (!matrix) {
+    return { ok: false, error: "Persona sin enlace Matrix" };
+  }
+
+  const event = String(parsed.event || "question").toLowerCase();
+  const question = compactAgoraText(parsed.question, 700);
+  const answer = compactAgoraText(parsed.answer, 1400);
+  const url = compactAgoraText(parsed.url, 180);
+  const llm = compactAgoraText(parsed.llm, 60);
+  const role = compactAgoraText(parsed.role || matrix.role, 20);
+  const generation = compactAgoraText(parsed.generation || "coetaneos", 24);
+  const target = `${matrix.alias} (${persona}/${role})`;
+
+  if (!question) {
+    return { ok: false, error: "Pregunta obligatoria" };
+  }
+
+  if (event === "answer") {
+    if (!answer) {
+      return { ok: false, error: "Respuesta obligatoria" };
+    }
+    return {
+      ok: true,
+      alias: matrix.alias,
+      text: [
+        `AdmiraLive <- ${target}`,
+        `Pregunta: ${question}`,
+        `Respuesta web: ${answer}`,
+        llm ? `Motor: ${llm}` : "",
+        url ? `Abrir: ${url}` : ""
+      ].filter(Boolean).join(" | ")
+    };
+  }
+
+  if (event === "offline") {
+    return {
+      ok: true,
+      alias: matrix.alias,
+      text: [
+        `AdmiraLive -> ${target}`,
+        `Pregunta: ${question}`,
+        "Estado: la web no obtuvo respuesta del motor LLM; queda dirigida aqui en AgoraMatrix.",
+        url ? `Abrir: ${url}` : ""
+      ].filter(Boolean).join(" | ")
+    };
+  }
+
+  return {
+    ok: true,
+    alias: matrix.alias,
+    text: [
+      `AdmiraLive -> ${target}`,
+      `Pregunta de Carlos: ${question}`,
+      `Generacion: ${generation}`,
+      llm ? `Motor web: ${llm}` : "",
+      "Responde aqui como ese alias si estas activo; la web tambien intentara responder en pantalla.",
+      url ? `Abrir: ${url}` : ""
+    ].filter(Boolean).join(" | ")
+  };
 }
 
 function runAgora(args, { input = "", timeoutMs = 15000 } = {}) {
@@ -263,6 +390,38 @@ const server = createServer(async (request, response) => {
       });
     } catch (error) {
       sendJson(response, 500, { ok: false, error: error instanceof Error ? error.message : "Error AgoraMatrix" });
+    }
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/agora/council-question") {
+    const denied = verifyAgoraCouncilAccess(request);
+    if (denied) {
+      sendJson(response, 403, { ok: false, error: denied });
+      return;
+    }
+    if (!checkAgoraCouncilRateLimit(request)) {
+      sendJson(response, 429, { ok: false, error: "Demasiadas preguntas del Consejo en poco tiempo" });
+      return;
+    }
+
+    try {
+      const parsed = await readJsonBody(request);
+      const message = buildCouncilAgoraMessage(parsed);
+      if (!message.ok) {
+        sendJson(response, 400, message);
+        return;
+      }
+
+      const result = await runAgora(["send", "--from", AGORA_FROM, message.text], { timeoutMs: 45000 });
+      sendJson(response, result.ok ? 200 : 502, {
+        ok: result.ok,
+        alias: message.alias,
+        output: result.stdout,
+        error: result.ok ? null : result.stderr || result.error || "No se pudo publicar la pregunta en AgoraMatrix",
+      });
+    } catch (error) {
+      sendJson(response, 500, { ok: false, error: error instanceof Error ? error.message : "Error puente Consejo/Agora" });
     }
     return;
   }

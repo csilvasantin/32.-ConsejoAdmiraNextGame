@@ -15,4 +15,11 @@ if [[ -z "$NODE_BIN" ]]; then
 fi
 
 cd "$REPO_ROOT"
+if [[ -f "$REPO_ROOT/.env" ]]; then
+  set -a
+  # shellcheck disable=SC1091
+  source "$REPO_ROOT/.env"
+  set +a
+fi
+
 exec "$NODE_BIN" src/server.js

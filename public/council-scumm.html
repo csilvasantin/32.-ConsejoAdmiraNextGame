@@ -2287,7 +2287,7 @@
 
         <div class="scumm-bar">
             <div class="action-line">
-                <input class="action-input" id="action-input" type="text" placeholder="Escribe aquí o usa /help..." autocomplete="off" onkeydown="if(event.key==='Enter')sendMessage()">
+                <input class="action-input" id="action-input" type="text" placeholder="escribe aquí · /help para todos los comandos" autocomplete="off" onkeydown="if(event.key==='Enter')sendMessage()">
                 <button class="action-send" onclick="sendMessage()">Enviar</button>
             </div>
             <div class="scumm-bottom">
@@ -3523,7 +3523,7 @@
         document.getElementById("nameplates").classList.add("preguntar-active");
         document.getElementById("body-hotspots").classList.add("preguntar-active");
         _applyPreguntarStyles();
-        setActionLine("👆 Selecciona un consejero para preguntarle...");
+        setActionLine("escribe aquí · /help para todos los comandos");
     }
 
     function exitPreguntarMode() {
@@ -3664,6 +3664,7 @@
             '<li><strong>/diario</strong> — muestra el diario operativo del Consejo</li>' +
             '<li><strong>/diario &lt;texto&gt;</strong> — registra una decisión en el diario</li>' +
             '<li><strong>/agora</strong> o <strong>/codex</strong> — muestra mi estado Codex/Oráculo en AgoraMatrix</li>' +
+            '<li><strong>/agoramatrix on|off|toggle</strong> — muestra/oculta el panel AgoraMatrix (movible · redimensionable)</li>' +
             '<li><strong>/yarig on|off|toggle</strong> — fija u oculta Yarig en la mesa</li>' +
             '<li><strong>/yarig login</strong> — abre la sesión persistente de Yarig</li>' +
             '<li><strong>/yarig estado</strong> — comprueba watcher y frescura del sync</li>' +

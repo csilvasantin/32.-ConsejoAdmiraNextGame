@@ -791,12 +791,105 @@
 
       .tw-empty { color: var(--muted); font-size: 14px; }
 
+      .tw-agora {
+        display: grid;
+        gap: 16px;
+      }
+
+      .tw-agora-head,
+      .tw-agora-send {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        gap: 10px;
+        align-items: end;
+      }
+
+      .tw-agora-head h3 {
+        margin: 0 0 4px;
+      }
+
+      .tw-agora-status {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .tw-agora-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+        gap: 12px;
+      }
+
+      .tw-agora-box {
+        min-width: 0;
+        padding: 14px;
+        border: 1px solid rgba(0,255,70,0.1);
+        border-radius: 16px;
+        background: rgba(0, 12, 6, 0.48);
+      }
+
+      .tw-agora-box h4 {
+        margin: 0 0 10px;
+        color: #00ff46;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .tw-agora-list,
+      .tw-agora-feed {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 8px;
+        color: #c0dcc8;
+        font-size: 13px;
+      }
+
+      .tw-agora-feed {
+        max-height: 220px;
+        overflow-y: auto;
+      }
+
+      .tw-agora-presence {
+        white-space: pre-wrap;
+        color: #9bd9aa;
+        font-family: "SF Mono", "Menlo", "Monaco", monospace;
+        font-size: 12px;
+        line-height: 1.45;
+        margin: 0;
+      }
+
+      .tw-agora-key,
+      .tw-agora-message {
+        width: 100%;
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid rgba(0,255,70,0.2);
+        background: rgba(0,20,10,0.8);
+        color: #00ff46;
+        font: inherit;
+      }
+
+      .tw-agora-key {
+        min-width: 180px;
+      }
+
+      .tw-agora-message::placeholder,
+      .tw-agora-key::placeholder {
+        color: rgba(0,255,70,0.35);
+      }
+
       @media (max-width: 640px) {
         .tw-row { grid-template-columns: 1fr; }
         .tw-command-bar { grid-template-columns: 1fr; }
         .tw-action-btn { min-width: 0; }
         .tw-inline-results { grid-template-columns: 1fr; }
         .tw-watchdog-inline { justify-self: start; padding: 0; }
+        .tw-agora-head,
+        .tw-agora-send,
+        .tw-agora-grid { grid-template-columns: 1fr; }
       }
       /* Matrix background */
       #matrixCanvas {
@@ -975,6 +1068,39 @@
         <div class="tw-feedback" id="feedback"></div>
       </section>
 
+      <section class="tw-panel tw-agora" id="agoraPanel">
+        <div class="tw-agora-head">
+          <div>
+            <h3>AgoraMatrix</h3>
+            <p class="tw-agora-status" id="agoraStatus">conectando...</p>
+          </div>
+          <input class="tw-agora-key" id="agoraKey" type="password" placeholder="Clave operador" autocomplete="off">
+          <button class="tw-send" id="agoraRefreshBtn" type="button">Actualizar</button>
+        </div>
+        <div class="tw-agora-grid">
+          <div class="tw-agora-box">
+            <h4>Presencia</h4>
+            <pre class="tw-agora-presence" id="agoraWho">—</pre>
+          </div>
+          <div class="tw-agora-box">
+            <h4>Feed</h4>
+            <ul class="tw-agora-feed" id="agoraFeed"></ul>
+          </div>
+          <div class="tw-agora-box">
+            <h4>Tareas</h4>
+            <ul class="tw-agora-list" id="agoraTasks"></ul>
+          </div>
+          <div class="tw-agora-box">
+            <h4>Inbox</h4>
+            <ul class="tw-agora-list" id="agoraInbox"></ul>
+          </div>
+        </div>
+        <div class="tw-agora-send">
+          <input class="tw-agora-message" id="agoraMessage" type="text" placeholder="Mensaje para AgoraMatrix..." autocomplete="off">
+          <button class="tw-send tw-send-codex" id="agoraSendBtn" type="button">Enviar</button>
+        </div>
+      </section>
+
       <section class="tw-machines-approve">
         <h3>Consejo y Equipo</h3>
         <div id="machineApproveList"></div>
@@ -987,10 +1113,10 @@
     </main>
 
       <footer style="text-align:center;padding:24px 0 8px;color:var(--muted);font-size:12px;">
-          AdmiraNext Control v2.5.3 — 2026-04-03
+          Admira v.26.06.13.r1 · Control AgoraMatrix
       </footer>
 
-      <script src="./teamwork.js?v=20260415-1" type="module"></script>
+      <script src="./teamwork.js?v=20260613-1" type="module"></script>
     <script>
       (function() {
         const c = document.getElementById("matrixCanvas");

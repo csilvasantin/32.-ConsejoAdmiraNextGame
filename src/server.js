@@ -1,6 +1,7 @@
 import { createServer, request as httpRequest } from "node:http";
 import { readFile } from "node:fs/promises";
 import { extname, resolve } from "node:path";
+import { spawn } from "node:child_process";
 
 import { createMachineEntry, readMachines, updateMachineStatus, updateMachineSync } from "./store.js";
 import { sendPromptToMachine, resolveMachineName, getCapture, getImageBuffer, approveAll, approveMachine, getAllSnapshots, getReachableMachines, getWatchdogState, setWatchdogEnabled, setMachineWatchdog, sendOnboardingToAll, startWatchdog } from "./ssh-exec.js";
@@ -9,6 +10,10 @@ import { addEntries, addEntry, getHistory } from "./teamwork-store.js";
 const PORT = Number(process.env.PORT || 3030);
 const HOST = "0.0.0.0";
 const PUBLIC_DIR = resolve(import.meta.dirname, "../public");
+const AGORA_BIN = process.env.AGORA_BIN || "agora";
+const AGORA_FROM = process.env.AGORA_FROM || "Codex";
+const AGORA_READ_LAST = Number(process.env.AGORA_READ_LAST || 20);
+const AGORA_PANEL_KEY = process.env.AGORA_PANEL_KEY || process.env.COUNCIL_API_TOKEN || "";
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -25,10 +30,10 @@ const VALID_STATUSES = new Set(["online", "idle", "busy", "offline", "maintenanc
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type"
+  "Access-Control-Allow-Headers": "Content-Type, X-Agora-Panel-Key"
 };
 const FRIENDLY_ROUTES = new Map([
-  ["/control", "/teamwork.html"],
+  ["/control", "/teamwork.html?v=20260613-1"],
   ["/equipo", "/index.html"],
   ["/team", "/index.html"],
   ["/admin", "/consejo.html"],
@@ -45,6 +50,114 @@ const DEFAULT_ONBOARDING_PROMPT =
 function sendJson(response, statusCode, payload) {
   response.writeHead(statusCode, { "Content-Type": "application/json; charset=utf-8", ...CORS_HEADERS });
   response.end(JSON.stringify(payload));
+}
+
+function isLocalRequest(request) {
+  const rawHost = String(request.headers.host || "").split(":")[0].replace(/^\[|\]$/g, "");
+  return rawHost === "localhost" || rawHost === "127.0.0.1" || rawHost === "::1" || rawHost === "0.0.0.0";
+}
+
+function verifyAgoraAccess(request, url) {
+  if (isLocalRequest(request) && !AGORA_PANEL_KEY) {
+    return null;
+  }
+
+  if (!AGORA_PANEL_KEY) {
+    return "AGORA_PANEL_KEY no configurada en el backend";
+  }
+
+  const provided = request.headers["x-agora-panel-key"] || url.searchParams.get("key") || "";
+  return provided === AGORA_PANEL_KEY ? null : "Clave AgoraMatrix invalida";
+}
+
+function runAgora(args, { input = "", timeoutMs = 15000 } = {}) {
+  return new Promise((resolveRun) => {
+    const child = spawn(AGORA_BIN, args, {
+      env: process.env,
+      stdio: ["pipe", "pipe", "pipe"],
+    });
+    let stdout = "";
+    let stderr = "";
+    let settled = false;
+
+    const finish = (result) => {
+      if (settled) return;
+      settled = true;
+      clearTimeout(timer);
+      resolveRun({
+        stdout: stdout.trim(),
+        stderr: stderr.trim(),
+        ...result,
+      });
+    };
+
+    const timer = setTimeout(() => {
+      child.kill("SIGTERM");
+      finish({ ok: false, code: null, signal: "timeout", error: "agora timeout" });
+    }, timeoutMs);
+
+    child.stdout.on("data", (chunk) => {
+      stdout = (stdout + chunk.toString("utf8")).slice(-30000);
+    });
+    child.stderr.on("data", (chunk) => {
+      stderr = (stderr + chunk.toString("utf8")).slice(-12000);
+    });
+    child.on("error", (error) => finish({ ok: false, code: null, error: error.message }));
+    child.on("close", (code, signal) => finish({ ok: code === 0, code, signal }));
+
+    child.stdin.end(input);
+  });
+}
+
+async function runAgoraJson(args) {
+  const result = await runAgora(args);
+  if (!result.ok) {
+    return { ok: false, items: [], raw: result.stdout, error: result.stderr || result.error || "agora failed" };
+  }
+
+  try {
+    const parsed = JSON.parse(result.stdout || "[]");
+    return { ok: true, items: Array.isArray(parsed) ? parsed : [], raw: result.stdout };
+  } catch {
+    const items = splitAgoraLines(result.stdout)
+      .filter((line) => !/^\((sin|buz[oó]n vac[ií]o)/i.test(line))
+      .map((line) => ({ text: line }));
+    return { ok: true, items, raw: result.stdout };
+  }
+}
+
+function splitAgoraLines(text) {
+  return String(text || "")
+    .split(/\r?\n/)
+    .map((line) => line.trim())
+    .filter(Boolean);
+}
+
+async function getAgoraStatus() {
+  const [whoami, who, feed, tasks, inbox] = await Promise.all([
+    runAgora(["whoami", "--from", AGORA_FROM], { timeoutMs: 8000 }),
+    runAgora(["who"], { timeoutMs: 10000 }),
+    runAgora(["read", "--last", String(AGORA_READ_LAST)], { timeoutMs: 10000 }),
+    runAgoraJson(["tasks", "--from", AGORA_FROM, "--peek", "--json"]),
+    runAgoraJson(["inbox", "--from", AGORA_FROM, "--peek", "--json"]),
+  ]);
+
+  const errors = [whoami, who, feed, tasks, inbox]
+    .filter((item) => !item.ok)
+    .map((item) => item.error || item.stderr || "agora failed");
+
+  return {
+    ok: errors.length === 0,
+    service: "agora",
+    from: AGORA_FROM,
+    identity: whoami.stdout || "",
+    who: who.stdout || "",
+    feed: splitAgoraLines(feed.stdout),
+    tasks: tasks.items,
+    inbox: inbox.items,
+    fetchedAt: new Date().toISOString(),
+    errors,
+  };
 }
 
 function addHistoryFromResults(results, { prompt, target, action }) {
@@ -87,12 +200,69 @@ function readRequestBody(request) {
   });
 }
 
+async function readJsonBody(request) {
+  const rawBody = await readRequestBody(request);
+  return rawBody ? JSON.parse(rawBody) : {};
+}
+
 const server = createServer(async (request, response) => {
   const url = new URL(request.url || "/", `http://${request.headers.host}`);
 
   if (request.method === "OPTIONS") {
     response.writeHead(204, CORS_HEADERS);
     response.end();
+    return;
+  }
+
+  if (url.pathname === "/api/agora/status") {
+    if (request.method !== "GET") {
+      sendJson(response, 405, { error: "Method not allowed" });
+      return;
+    }
+
+    const denied = verifyAgoraAccess(request, url);
+    if (denied) {
+      sendJson(response, 403, { ok: false, error: denied });
+      return;
+    }
+
+    try {
+      const status = await getAgoraStatus();
+      sendJson(response, status.ok ? 200 : 502, status);
+    } catch (error) {
+      sendJson(response, 502, { ok: false, error: error instanceof Error ? error.message : "Agora no disponible" });
+    }
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/agora/send") {
+    const denied = verifyAgoraAccess(request, url);
+    if (denied) {
+      sendJson(response, 403, { ok: false, error: denied });
+      return;
+    }
+
+    try {
+      const parsed = await readJsonBody(request);
+      const text = String(parsed.text || "").trim();
+      if (!text) {
+        sendJson(response, 400, { ok: false, error: "Mensaje obligatorio" });
+        return;
+      }
+      if (text.length > 1200) {
+        sendJson(response, 400, { ok: false, error: "Mensaje demasiado largo" });
+        return;
+      }
+
+      const result = await runAgora(["send", "--from", AGORA_FROM, text], { timeoutMs: 20000 });
+      sendJson(response, result.ok ? 200 : 502, {
+        ok: result.ok,
+        output: result.stdout,
+        error: result.ok ? null : result.stderr || result.error || "No se pudo publicar en AgoraMatrix",
+      });
+    } catch (error) {
+      sendJson(response, 500, { ok: false, error: error instanceof Error ? error.message : "Error AgoraMatrix" });
+    }
     return;
   }
 
@@ -392,5 +562,7 @@ const server = createServer(async (request, response) => {
 
 server.listen(PORT, HOST, () => {
   console.log(`AdmiraNext Team escuchando en http://${HOST}:${PORT}`);
-  startWatchdog(); // Auto-Approve ON por defecto al arrancar
+  if (process.env.WATCHDOG_ON_START !== "0") {
+    startWatchdog(); // Auto-Approve ON por defecto al arrancar
+  }
 });

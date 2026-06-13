@@ -5,14 +5,21 @@ const sendAllTarget = document.querySelector("#sendAllTarget");
 const feedback = document.querySelector("#feedback");
 const historyList = document.querySelector("#historyList");
 const watchdogOverview = document.querySelector("#watchdogOverview");
+const agoraStatus = document.querySelector("#agoraStatus");
+const agoraWho = document.querySelector("#agoraWho");
+const agoraFeed = document.querySelector("#agoraFeed");
+const agoraTasks = document.querySelector("#agoraTasks");
+const agoraInbox = document.querySelector("#agoraInbox");
+const agoraKey = document.querySelector("#agoraKey");
+const agoraRefreshBtn = document.querySelector("#agoraRefreshBtn");
+const agoraMessage = document.querySelector("#agoraMessage");
+const agoraSendBtn = document.querySelector("#agoraSendBtn");
 
 let machines = [];
 let isStaticMode = false;
 let latestSnapshots = {};
 const FUNNEL_URL = "https://macmini.tail48b61c.ts.net";
 const FUNNEL_HOST = "macmini.tail48b61c.ts.net";
-const ON_GITHUB_PAGES = location.hostname.endsWith("github.io");
-const isLocal = ON_GITHUB_PAGES || location.hostname === "localhost" || location.hostname === "127.0.0.1" || location.hostname === FUNNEL_HOST;
 const DEFAULT_ONBOARDING_PROMPT =
   "Haz onboarding leyendo el repositorio onboarding de Admira Next primero. Carga el contexto compartido, identifica los repositorios activos y queda listo para continuar sin pedir de nuevo el contexto base.";
 const LOCAL_ONBOARDING_COMMANDS = new Set(["onboarding", "haz onboarding"]);
@@ -26,7 +33,9 @@ const WATCHDOG_SIGNAL_WINDOW_MS = 2 * 60 * 1000;
 const SNAPSHOT_REFRESH_MS = 15_000;
 const MACHINE_REFRESH_MS = 30_000;
 const WATCHDOG_REFRESH_MS = 15_000;
+const AGORA_REFRESH_MS = 30_000;
 const ACTIVE_MACHINE_STATUSES = new Set(["online", "idle", "busy"]);
+const API_HOST_IS_LOCAL = location.hostname === "localhost" || location.hostname === "127.0.0.1" || location.hostname === FUNNEL_HOST;
 const MACHINE_STATUS_META = {
   online: { label: "en linea", tone: "ok" },
   idle: { label: "disponible", tone: "idle" },
@@ -36,7 +45,8 @@ const MACHINE_STATUS_META = {
 };
 
 function apiUrl(path) {
-  return isLocal ? path : `${FUNNEL_URL}${path}`;
+  // Public Pages/custom-domain hosts need the live Funnel backend for API calls.
+  return API_HOST_IS_LOCAL ? path : `${FUNNEL_URL}${path}`;
 }
 
 function normalizeCommand(text) {
@@ -72,6 +82,94 @@ function escapeHtml(value) {
     '"': "&quot;",
     "'": "&#39;"
   }[char]));
+}
+
+function agoraHeaders(json = false) {
+  const headers = {};
+  const key = agoraKey?.value.trim();
+  if (key) headers["X-Agora-Panel-Key"] = key;
+  if (json) headers["Content-Type"] = "application/json";
+  return headers;
+}
+
+function renderAgoraList(node, items, emptyLabel) {
+  if (!node) return;
+  if (!items?.length) {
+    node.innerHTML = `<li class="tw-empty">${escapeHtml(emptyLabel)}</li>`;
+    return;
+  }
+
+  node.innerHTML = items.slice(0, 12).map((item) => {
+    const who = item.who || item.from || "humano";
+    const text = item.text || item.message || JSON.stringify(item);
+    return `<li><strong>${escapeHtml(who)}</strong> · ${escapeHtml(text)}</li>`;
+  }).join("");
+}
+
+function renderAgoraFeed(lines) {
+  if (!agoraFeed) return;
+  const visible = Array.isArray(lines) ? lines.slice(-20) : [];
+  if (!visible.length) {
+    agoraFeed.innerHTML = '<li class="tw-empty">Sin mensajes recientes.</li>';
+    return;
+  }
+  agoraFeed.innerHTML = visible.map((line) => `<li>${escapeHtml(line)}</li>`).join("");
+}
+
+async function loadAgoraStatus() {
+  if (!agoraStatus) return;
+  agoraStatus.textContent = "actualizando...";
+  try {
+    const res = await fetch(apiUrl("/api/agora/status"), {
+      headers: agoraHeaders(),
+      cache: "no-store"
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) {
+      throw new Error(data.error || (data.errors || []).join(" · ") || `HTTP ${res.status}`);
+    }
+
+    agoraStatus.textContent = `${data.identity || data.from || "AgoraMatrix"} · ${new Date(data.fetchedAt).toLocaleTimeString("es-ES")}`;
+    if (agoraWho) agoraWho.textContent = data.who || data.identity || "Sin presencia";
+    renderAgoraFeed(data.feed || []);
+    renderAgoraList(agoraTasks, data.tasks || [], "Sin tareas para Oraculo.");
+    renderAgoraList(agoraInbox, data.inbox || [], "Inbox vacio.");
+  } catch (err) {
+    agoraStatus.textContent = `sin conexion AgoraMatrix · ${err.message}`;
+    if (agoraWho) agoraWho.textContent = "—";
+    renderAgoraFeed([]);
+    renderAgoraList(agoraTasks, [], "Sin datos.");
+    renderAgoraList(agoraInbox, [], "Sin datos.");
+  }
+}
+
+async function sendAgoraMessage() {
+  const text = agoraMessage?.value.trim();
+  if (!text) {
+    showFeedback("Escribe un mensaje para AgoraMatrix", false);
+    return;
+  }
+
+  agoraSendBtn.disabled = true;
+  agoraSendBtn.textContent = "Enviando...";
+  try {
+    const res = await fetch(apiUrl("/api/agora/send"), {
+      method: "POST",
+      headers: agoraHeaders(true),
+      body: JSON.stringify({ text })
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok || data.ok === false) {
+      throw new Error(data.error || `HTTP ${res.status}`);
+    }
+    agoraMessage.value = "";
+    showFeedback("Publicado en AgoraMatrix", true);
+    loadAgoraStatus();
+  } catch (err) {
+    showFeedback(`AgoraMatrix: ${err.message}`, false);
+  }
+  agoraSendBtn.disabled = false;
+  agoraSendBtn.textContent = "Enviar";
 }
 
 function formatHistoryTarget(target) {
@@ -830,6 +928,18 @@ onboardingAllBtn.addEventListener("click", () => sendOnboardingAll());
 
 approveClaudeBtn.addEventListener("click", () => approveAll("claude", approveClaudeBtn, approveClaudeResult));
 approveCodexBtn.addEventListener("click", () => approveAll("codex", approveCodexBtn, approveCodexResult));
+agoraKey?.addEventListener("change", () => {
+  sessionStorage.setItem("admira:agora-key", agoraKey.value.trim());
+  loadAgoraStatus();
+});
+agoraRefreshBtn?.addEventListener("click", loadAgoraStatus);
+agoraSendBtn?.addEventListener("click", sendAgoraMessage);
+agoraMessage?.addEventListener("keydown", (event) => {
+  if (event.key === "Enter") {
+    event.preventDefault();
+    sendAgoraMessage();
+  }
+});
 
 function updateSnapshotsInPlace(snapshots) {
   for (const m of machines) {
@@ -1063,12 +1173,13 @@ function updateWatchdogUI() {
 // ─── Init ──────────────────────────────────────────────────────────
 
 loadMachines();
-if (!ON_GITHUB_PAGES) {
-  loadHistory();
-  setTimeout(loadSnapshots, 2000);
-  setTimeout(loadWatchdogStats, 3000);
-  setInterval(loadMachines, MACHINE_REFRESH_MS);
-  setInterval(loadHistory, 10_000);
-  setInterval(loadSnapshots, SNAPSHOT_REFRESH_MS);
-  setInterval(loadWatchdogStats, WATCHDOG_REFRESH_MS);
-}
+if (agoraKey) agoraKey.value = sessionStorage.getItem("admira:agora-key") || "";
+loadHistory();
+loadAgoraStatus();
+setTimeout(loadSnapshots, 2000);
+setTimeout(loadWatchdogStats, 3000);
+setInterval(loadMachines, MACHINE_REFRESH_MS);
+setInterval(loadHistory, 10_000);
+setInterval(loadAgoraStatus, AGORA_REFRESH_MS);
+setInterval(loadSnapshots, SNAPSHOT_REFRESH_MS);
+setInterval(loadWatchdogStats, WATCHDOG_REFRESH_MS);

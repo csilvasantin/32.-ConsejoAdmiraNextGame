@@ -7327,7 +7327,7 @@
 <!-- ═══ AgoraMatrix · Consejo (coetáneos) — panel en vivo ═══ -->
 <style>
   #agm-panel{position:fixed;right:14px;bottom:14px;z-index:90;width:340px;height:430px;
-    min-width:250px;min-height:140px;max-width:96vw;max-height:90vh;resize:both;display:flex;flex-direction:column;
+    min-width:250px;min-height:140px;max-width:96vw;max-height:90vh;resize:both;display:none;flex-direction:column;
     font-family:"Courier New",monospace;color:#7dff9e;background:rgba(2,10,4,.94);border:1px solid #1f8a3e;
     border-radius:10px;box-shadow:0 0 28px rgba(0,255,65,.18);overflow:hidden;font-size:12px}
   #agm-panel.agm-min{width:auto!important;height:auto!important;min-height:0;resize:none}
@@ -7388,10 +7388,11 @@
   head.addEventListener('pointermove',function(e){ if(!_drag)return; var dx=e.clientX-_sx,dy=e.clientY-_sy; if(Math.abs(dx)+Math.abs(dy)>3)_agmMoved=true; panel.style.left=Math.max(0,Math.min(window.innerWidth-60,_ox+dx))+'px'; panel.style.top=Math.max(0,Math.min(window.innerHeight-40,_oy+dy))+'px'; });
   head.addEventListener('pointerup',function(e){ if(!_drag)return; _drag=false; try{head.releasePointerCapture(e.pointerId);}catch(_){} if(_agmMoved)agmSaveGeom(); });
   if(window.ResizeObserver){ var _ro=new ResizeObserver(function(){ if(!_drag)agmSaveGeom(); }); _ro.observe(panel); }
-  function agmApplyVis(v){ panel.style.display = v ? '' : 'none'; }
-  window.agmSetVisible=function(v){ var cur=panel.style.display!=='none'; var nv=(v===null||v===undefined)?!cur:!!v; agmApplyVis(nv); try{localStorage.setItem(VIS_KEY,nv?'1':'0');}catch(e){} return nv; };
+  function agmApplyVis(v){ panel.style.display = v ? 'flex' : 'none'; }
+  window.agmSetVisible=function(v){ var cur=panel.style.display!=='none'; var nv=(v===null||v===undefined)?!cur:!!v; agmApplyVis(nv); try{localStorage.setItem(VIS_KEY,nv?'1':'0');}catch(e){} if(nv) tick(); return nv; };
   window.agmIsVisible=function(){ return panel.style.display!=='none'; };
-  try{ if(localStorage.getItem(VIS_KEY)==='0') agmApplyVis(false); }catch(e){}
+  // Por defecto OCULTA: solo aparece si se invocó con /agoramatrix on (VIS_KEY==='1').
+  try{ agmApplyVis(localStorage.getItem(VIS_KEY)==='1'); }catch(e){ agmApplyVis(false); }
   var input=document.getElementById('agm-input'), sendBtn=document.getElementById('agm-send');
   async function sendMsg(){ var t=(input.value||'').trim(); if(!t) return; sendBtn.disabled=true; var ov=input.value; input.value='';
     try{ var r=await fetch("https://macmini.tail48b61c.ts.net/api/agora/say",{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:t,from:'Consejo'})}); var d=await r.json();
@@ -7417,6 +7418,7 @@
     feedEl.scrollTop = feedEl.scrollHeight;
   }
   async function tick(){
+    if(panel.style.display==='none') return;
     try{ var r=await fetch(API,{cache:'no-store'}); var d=await r.json();
       if(d&&d.ok){ renderPresence(d.who); renderFeed(d.feed); } }
     catch(e){}

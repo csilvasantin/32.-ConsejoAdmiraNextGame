@@ -2164,6 +2164,9 @@
         .screen-overlay img { border-radius: 0; box-shadow: 4px 4px 0 #000; }
         .screen-overlay-time { border-radius: 0; }
         /* ── fin retro override ── */
+        body.cli-menu-hidden .top-bar,
+        body.cli-menu-hidden .status-grid,
+        body.cli-menu-hidden .legend-strip { display: none !important; }
     </style>
 </head>
 <body>
@@ -3665,6 +3668,7 @@
             '<li><strong>/diario &lt;texto&gt;</strong> — registra una decisión en el diario</li>' +
             '<li><strong>/agora</strong> o <strong>/codex</strong> — muestra mi estado Codex/Oráculo en AgoraMatrix</li>' +
             '<li><strong>/agoramatrix on|off|toggle</strong> — muestra/oculta el panel AgoraMatrix (movible · redimensionable)</li>' +
+            '<li><strong>/menu on|off|toggle</strong> — oculta/enseña los menús de arriba (más espacio)</li>' +
             '<li><strong>/yarig on|off|toggle</strong> — fija u oculta Yarig en la mesa</li>' +
             '<li><strong>/yarig login</strong> — abre la sesión persistente de Yarig</li>' +
             '<li><strong>/yarig estado</strong> — comprueba watcher y frescura del sync</li>' +
@@ -3988,6 +3992,17 @@
                 return true;
             }
             showCliHelp();
+            return true;
+        }
+        const menuMatch = text.match(/^\/menu\s*(on|off|toggle)?$/i);
+        if (menuMatch) {
+            const action = (menuMatch[1] || 'toggle').toLowerCase();
+            const hidden = document.body.classList.contains('cli-menu-hidden');
+            const nv = action === 'off' ? true : action === 'on' ? false : !hidden;
+            document.body.classList.toggle('cli-menu-hidden', nv);
+            try { localStorage.setItem('councilMenuHidden', nv ? '1' : '0'); } catch (e) {}
+            addUserEntry(text);
+            setActionLine('🗂 Menús ' + (nv ? 'ocultos (más espacio) — /menu on para verlos' : 'visibles') + ' · /menu on · off · toggle');
             return true;
         }
         const agmPanelMatch = text.match(/^\/agoramatrix\s*(on|off|toggle)$/i);
@@ -6194,6 +6209,7 @@
 
     // Wire del click del hotspot y del fin de vídeo
     document.addEventListener("DOMContentLoaded", () => {
+        try { if (localStorage.getItem('councilMenuHidden') === '1') document.body.classList.add('cli-menu-hidden'); } catch (e) {}
         refreshLLMAvailability();
         // Magic link Telegram: ?train=<url> auto-activa Entrenar y procesa la URL
         const params = new URLSearchParams(location.search);

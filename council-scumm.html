@@ -2433,6 +2433,10 @@
         body.cli-menu-hidden .top-bar,
         body.cli-menu-hidden .status-grid,
         body.cli-menu-hidden .legend-strip { display: none !important; }
+        /* Menú intermedio SCUMM plegable: oculta los verbos+motor, deja la línea de acción */
+        .scumm-bar.scumm-collapsed .scumm-bottom { display: none !important; }
+        .scumm-fold { background: transparent; border: 1px solid #886633; color: #dca85a; border-radius: 6px; cursor: pointer; padding: 0 9px; font-size: 0.8rem; line-height: 1.6; }
+        .scumm-fold:hover { border-color: #dca85a; color: #ffd27a; }
     </style>
 </head>
 <body>
@@ -2571,6 +2575,7 @@
             <div class="action-line">
                 <input class="action-input" id="action-input" type="text" placeholder="escribe aquí · /help para todos los comandos" autocomplete="off" onkeydown="if(event.key==='Enter')sendMessage()">
                 <button class="action-send" onclick="sendMessage()">Enviar</button>
+                <button class="scumm-fold" id="scumm-fold" onclick="toggleScumm()" title="Plegar / desplegar el menú (verbos)" aria-label="Plegar menú">▾</button>
             </div>
             <div class="scumm-bottom">
                 <div class="verb-grid">
@@ -3998,6 +4003,14 @@
     }
 
     function setActionLine(text) { document.getElementById("action-input").placeholder = text; }
+    // Menú intermedio SCUMM plegable (persistente)
+    function setScummCollapsed(collapsed) {
+        const bar = document.querySelector('.scumm-bar'); if (!bar) return;
+        bar.classList.toggle('scumm-collapsed', collapsed);
+        const f = document.getElementById('scumm-fold'); if (f) f.textContent = collapsed ? '▸' : '▾';
+        try { localStorage.setItem('scummCollapsed', collapsed ? '1' : '0'); } catch (e) {}
+    }
+    function toggleScumm() { const bar = document.querySelector('.scumm-bar'); setScummCollapsed(!(bar && bar.classList.contains('scumm-collapsed'))); }
 
     let yarigWindowsPinned = false;
     let yarigAutoRefreshTimer = null;
@@ -4071,6 +4084,7 @@
             '<li><strong>/agora</strong> o <strong>/codex</strong> — muestra mi estado Codex/Oráculo en AgoraMatrix</li>' +
             '<li><strong>/agoramatrix on|off|toggle</strong> — muestra/oculta el panel AgoraMatrix (movible · redimensionable)</li>' +
             '<li><strong>/menu on|off|toggle</strong> — oculta/enseña los menús de arriba (más espacio)</li>' +
+            '<li><strong>/scumm on|off|toggle</strong> — pliega/despliega el menú intermedio (verbos) — o el botón ▾</li>' +
             '<li><strong>/yarig on|off|toggle</strong> — fija u oculta Yarig en la mesa</li>' +
             '<li><strong>/yarig login</strong> — abre la sesión persistente de Yarig</li>' +
             '<li><strong>/yarig estado</strong> — comprueba watcher y frescura del sync</li>' +
@@ -4394,6 +4408,17 @@
                 return true;
             }
             showCliHelp();
+            return true;
+        }
+        const scummMatch = text.match(/^\/(?:scumm|verbos)\s*(on|off|toggle)?$/i);
+        if (scummMatch) {
+            const action = (scummMatch[1] || 'toggle').toLowerCase();
+            const bar = document.querySelector('.scumm-bar');
+            const collapsed = !!(bar && bar.classList.contains('scumm-collapsed'));
+            const nv = action === 'off' ? true : action === 'on' ? false : !collapsed;
+            setScummCollapsed(nv);
+            addUserEntry(text);
+            setActionLine('🎛 Menú SCUMM ' + (nv ? 'plegado' : 'desplegado') + ' · /scumm on · off · toggle');
             return true;
         }
         const menuMatch = text.match(/^\/menu\s*(on|off|toggle)?$/i);
@@ -6720,6 +6745,7 @@
     // Wire del click del hotspot y del fin de vídeo
     document.addEventListener("DOMContentLoaded", () => {
         try { if (localStorage.getItem('councilMenuHidden') === '1') document.body.classList.add('cli-menu-hidden'); } catch (e) {}
+        try { if (localStorage.getItem('scummCollapsed') === '1') setScummCollapsed(true); } catch (e) {}
         refreshLLMAvailability();
         // Magic link Telegram: ?train=<url> auto-activa Entrenar y procesa la URL
         const params = new URLSearchParams(location.search);

@@ -1937,6 +1937,78 @@
             border-color: #66aaff;
             box-shadow: 3px 3px 0 #000;
         }
+        .legend-strip {
+            display: grid;
+            grid-template-columns: minmax(180px, 1.1fr) minmax(0, 2.2fr);
+            gap: 8px;
+            margin: 8px 0 10px;
+            padding: 8px;
+            border: 2px solid #aa7722;
+            background: #18100a;
+            box-shadow: 4px 4px 0 #000;
+        }
+        .legend-strip.hidden {
+            display: none;
+        }
+        .legend-head {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            gap: 4px;
+            min-width: 0;
+        }
+        .legend-kicker {
+            color: #ffdd88;
+            font-size: 0.42rem;
+            line-height: 1.5;
+        }
+        .legend-active {
+            color: #fff0aa;
+            font-size: 0.58rem;
+            line-height: 1.6;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .legend-focus {
+            color: #ccaa66;
+            font-size: 0.42rem;
+            line-height: 1.6;
+        }
+        .legend-grid {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 6px;
+        }
+        .legend-chip {
+            min-height: 42px;
+            border: 2px solid #664400;
+            background: #221600;
+            color: #d8b65c;
+            box-shadow: 2px 2px 0 #000;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.38rem;
+            line-height: 1.45;
+            cursor: pointer;
+            padding: 5px 6px;
+            text-align: left;
+        }
+        .legend-chip:hover,
+        .legend-chip.active {
+            border-color: #ffdd55;
+            background: #4b3200;
+            color: #fff6aa;
+        }
+        .legend-chip span {
+            display: block;
+            color: #aa8844;
+            font-size: 0.34rem;
+            margin-top: 3px;
+        }
+        @media (max-width: 820px) {
+            .legend-strip { grid-template-columns: 1fr; }
+            .legend-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+        }
         .yar-btn {
             border-radius: 0;
             font-family: 'Press Start 2P', monospace;
@@ -2389,6 +2461,15 @@
             </div>
         </div>
 
+        <div class="legend-strip" id="legend-strip">
+            <div class="legend-head">
+                <div class="legend-kicker">⭐ LEYENDAS · CONSEJO BASE</div>
+                <div class="legend-active" id="legend-active">Selecciona una leyenda</div>
+                <div class="legend-focus" id="legend-focus">Criterio, memoria larga y oficio fundador.</div>
+            </div>
+            <div class="legend-grid" id="legend-grid"></div>
+        </div>
+
         <div class="council-image">
             <img id="council-img" src="assets/council-leyendas.jpg?v=20260613-r2" alt="Consejo AdmiraNext">
             <!-- Conversation overlays on background windows -->
@@ -2811,7 +2892,42 @@
     let apiOk = false;
     let currentGen = "leyendas";
     let speakerTurnMap = {};
+    let activeLegendPersona = "Steve Jobs";
     const COUNCIL_IMAGE_VERSION = "20260613-r2";
+    const LEGEND_MANDATES = {
+        "Steve Jobs": {
+            short: "foco producto",
+            prompt: "Steve Jobs, baja esto a una decisión de producto impecable: ¿qué sobra, qué duele y cuál es el gesto simple que lo hace inevitable?"
+        },
+        "Steve Wozniak": {
+            short: "ingeniería honesta",
+            prompt: "Steve Wozniak, revisa la solución como sistema: ¿qué arquitectura simple, robusta y divertida permitiría construirlo sin deuda innecesaria?"
+        },
+        "Tim Cook": {
+            short: "operación y escala",
+            prompt: "Tim Cook, conviértelo en plan operativo: responsables, secuencia, riesgos de ejecución y métrica de control."
+        },
+        "Warren Buffett": {
+            short: "capital paciente",
+            prompt: "Warren Buffett, evalúa esto como inversión: moat, coste de oportunidad, margen de seguridad y decisión de capital."
+        },
+        "Walt Disney": {
+            short: "magia de marca",
+            prompt: "Walt Disney, transforma esto en experiencia memorable: escena, emoción, ritual de entrada y promesa al público."
+        },
+        "Dieter Rams": {
+            short: "claridad radical",
+            prompt: "Dieter Rams, reduce esto a lo esencial: qué eliminar, qué ordenar y qué regla visual debe gobernarlo."
+        },
+        "Howard Schultz": {
+            short: "comunidad y ritual",
+            prompt: "Howard Schultz, diseña la experiencia humana: hospitalidad, pertenencia, recorrido sensorial y hábito repetible."
+        },
+        "George Lucas": {
+            short: "mundo narrativo",
+            prompt: "George Lucas, conviértelo en saga: mito, personajes, conflicto, expansión y continuidad narrativa."
+        }
+    };
     // Maquinas dormidas manualmente desde el dashboard (display sleep)
     // El Mac sigue en Tailscale como "online" pero la pantalla esta apagada
     const sleepingMachines = new Set();
@@ -2841,6 +2957,54 @@
         _pendingEntrenar = null;
         if (currentVerb === 'entrenar') renderEntrenarList();
         closeTableViewer();
+        renderLegendStrip();
+    }
+
+    function renderLegendStrip() {
+        const strip = document.getElementById("legend-strip");
+        const grid = document.getElementById("legend-grid");
+        if (!strip || !grid) return;
+        const legends = COUNCIL.filter(m => m.gen === "leyendas");
+        strip.classList.toggle("hidden", currentGen !== "leyendas");
+        if (currentGen !== "leyendas") return;
+        if (!legends.some(m => m.persona === activeLegendPersona)) activeLegendPersona = legends[0]?.persona || "";
+        grid.innerHTML = legends.map(m => {
+            const mandate = LEGEND_MANDATES[m.persona] || {};
+            const active = m.persona === activeLegendPersona ? " active" : "";
+            return `<button class="legend-chip${active}" type="button" data-persona="${m.persona}" onclick="activateLegend('${m.persona.replace(/'/g, "\\'")}')">${m.icon} ${m.persona}<span>${m.name} · ${mandate.short || m.territory || ""}</span></button>`;
+        }).join("");
+        updateLegendReadout();
+    }
+
+    function updateLegendReadout() {
+        const activeEl = document.getElementById("legend-active");
+        const focusEl = document.getElementById("legend-focus");
+        const member = COUNCIL.find(m => m.gen === "leyendas" && m.persona === activeLegendPersona);
+        if (!activeEl || !focusEl || !member) return;
+        const mandate = LEGEND_MANDATES[member.persona] || {};
+        activeEl.textContent = member.icon + " " + member.persona + " · " + member.name + " · " + member.role;
+        focusEl.textContent = mandate.short ? (mandate.short + " · " + member.territory) : member.territory;
+    }
+
+    function activateLegend(persona) {
+        if (currentGen !== "leyendas") setGen("leyendas");
+        activeLegendPersona = persona;
+        renderLegendStrip();
+        const askBtn = document.querySelector('.verb-btn[data-verb="preguntar"]');
+        if (askBtn && currentVerb !== "preguntar") selectVerb(askBtn);
+        if (typeof selectAgentByPersona === "function") selectAgentByPersona(persona);
+        const member = COUNCIL.find(m => m.gen === "leyendas" && m.persona === persona);
+        const mandate = LEGEND_MANDATES[persona] || {};
+        const input = document.getElementById("action-input");
+        if (input && mandate.prompt) {
+            input.value = mandate.prompt;
+            input.focus();
+        }
+        if (member) {
+            showSpeechBubble(member.persona, member.name, (mandate.short || member.territory || "Listo").slice(0, 80) + "...");
+            highlightNameplate(member.persona);
+            setActionLine("⭐ Leyenda activa: " + member.persona + " — pulsa Enviar para preguntarle o edita la pregunta");
+        }
     }
 
     function loadMachines(data) {
@@ -3120,6 +3284,7 @@
 
         document.getElementById("last-check").textContent = new Date().toLocaleString("es-ES");
         lastCheckTime = Date.now();
+        renderLegendStrip();
     }
 
     let lastCheckTime = null;

@@ -1,0 +1,30 @@
+{
+  "admira-macbookair16": {
+    "claudeState": "Claude",
+    "codexState": "Codex",
+    "type": "image",
+    "image": "snapshots/admira-macbookair16.jpg",
+    "updatedAt": "2026-04-03T15:28:36.202Z"
+  },
+  "admira-macbookpronegro14": {
+    "claudeState": "no-window",
+    "codexState": "no-window",
+    "type": "image",
+    "image": "snapshots/admira-macbookpronegro14.jpg",
+    "updatedAt": "2026-04-03T15:28:35.425Z"
+  },
+  "admira-macbookairblanco": {
+    "claudeState": "Claude",
+    "codexState": null,
+    "type": "image",
+    "image": "snapshots/admira-macbookairblanco.jpg",
+    "updatedAt": "2026-04-03T15:28:41.953Z"
+  },
+  "admira-macmini": {
+    "claudeState": null,
+    "codexState": null,
+    "type": "text",
+    "text": "SSH activo — sin sesion grafica",
+    "updatedAt": "2026-04-03T15:26:56.435Z"
+  }
+}

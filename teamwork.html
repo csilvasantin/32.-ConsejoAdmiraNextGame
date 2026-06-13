@@ -1,0 +1,1264 @@
+<!doctype html>
+<html lang="es">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>AdmiraNext Control</title>
+    <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate" />
+    <meta http-equiv="Pragma" content="no-cache" />
+    <meta http-equiv="Expires" content="0" />
+    <link rel="stylesheet" href="./styles.css?v=20260401-2">
+    <style>
+      .tw-nav { margin-top: 14px; text-align: right; }
+      .tw-nav a { color: var(--accent); text-decoration: none; font-size: 14px; font-weight: 600; }
+      .tw-nav a:hover { text-decoration: underline; }
+
+      .tw-panel {
+        margin-top: 18px;
+        padding: 24px;
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        background: var(--panel);
+        backdrop-filter: blur(12px);
+        box-shadow: 0 16px 40px rgba(23, 49, 39, 0.06);
+      }
+
+      .tw-command {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 12px;
+      }
+
+      .tw-command-bar {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto auto auto;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .tw-quick {
+        width: 100%;
+        padding: 16px 18px;
+        border-radius: 16px;
+        border: 2px solid var(--line);
+        font: inherit;
+        font-size: 17px;
+        transition: border-color 0.2s;
+      }
+      .tw-quick:focus { outline: none; border-color: var(--accent); }
+      .tw-quick::placeholder { color: var(--muted); }
+
+      .tw-action-btn {
+        height: 100%;
+        min-width: 148px;
+      }
+
+      .tw-send-onboarding {
+        background: linear-gradient(135deg, #1f8f63, #247d58);
+      }
+
+      .tw-send-codex {
+        background: linear-gradient(135deg, #0984e3, #2471a3);
+      }
+
+      .tw-send-claude {
+        background: linear-gradient(135deg, #d63031, #c0392b);
+      }
+
+      .tw-inline-results {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+
+      .tw-inline-result {
+        margin-top: 0;
+        min-height: 18px;
+      }
+
+      .tw-watchdog-inline {
+        display: inline-flex;
+        align-items: center;
+        gap: 10px;
+        justify-self: end;
+        padding: 0 8px;
+        color: #5a9a6a;
+      }
+      .tw-watchdog-overview {
+        display: grid;
+        gap: 10px;
+        padding: 14px 16px;
+        border-radius: 16px;
+        border: 1px solid rgba(0, 255, 70, 0.12);
+        background: rgba(5, 18, 11, 0.68);
+      }
+      .tw-watchdog-overview.hot {
+        border-color: rgba(214, 48, 49, 0.28);
+        background: linear-gradient(135deg, rgba(62, 12, 16, 0.72), rgba(18, 22, 12, 0.72));
+      }
+      .tw-watchdog-overview.recent {
+        border-color: rgba(9, 132, 227, 0.26);
+        background: linear-gradient(135deg, rgba(8, 25, 39, 0.72), rgba(11, 20, 16, 0.72));
+      }
+      .tw-watchdog-overview-title {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #c8ead2;
+      }
+      .tw-watchdog-overview-meta {
+        font-size: 11px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        color: #81c995;
+      }
+      .tw-watchdog-overview.hot .tw-watchdog-overview-meta { color: #ff8f8f; }
+      .tw-watchdog-overview.recent .tw-watchdog-overview-meta { color: #8fc8ff; }
+      .tw-watchdog-overview-body {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 8px;
+      }
+      .tw-watchdog-overview-empty {
+        color: var(--muted);
+        font-size: 13px;
+      }
+
+      .tw-row { display: grid; grid-template-columns: 1fr auto 2fr auto; gap: 10px; align-items: end; }
+
+      .tw-label {
+        display: block;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        margin-bottom: 6px;
+      }
+
+      .tw-select, .tw-textarea {
+        width: 100%;
+        border-radius: 14px;
+        border: 1px solid var(--line);
+        padding: 12px 14px;
+        font: inherit;
+      }
+      #sendAllTarget {
+        background: linear-gradient(135deg, #d63031, #c0392b);
+        color: white;
+        border: none;
+        font-weight: 600;
+        cursor: pointer;
+      }
+
+      .tw-textarea { resize: vertical; min-height: 44px; }
+
+      .tw-send {
+        padding: 12px 28px;
+        border-radius: 14px;
+        border: none;
+        background: linear-gradient(135deg, #0984e3, #2471a3);
+        color: white;
+        font: inherit;
+        font-weight: 600;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .tw-send:hover { opacity: 0.92; }
+      .tw-send:disabled { opacity: 0.5; cursor: default; }
+
+      .tw-feedback {
+        margin-top: 12px;
+        padding: 12px 16px;
+        border-radius: 14px;
+        font-size: 14px;
+        display: none;
+      }
+      .tw-feedback.ok { display: block; background: rgba(26, 127, 90, 0.12); color: var(--accent); }
+      .tw-feedback.err { display: block; background: rgba(139, 91, 99, 0.12); color: var(--offline); }
+
+      .tw-history { margin-top: 24px; }
+      .tw-history h3 { font-size: 16px; color: var(--muted); margin: 0 0 12px; }
+
+      .tw-entry {
+        padding: 12px 0;
+        border-bottom: 1px solid var(--line);
+        font-size: 14px;
+      }
+
+      .tw-entry-machine {
+        font-weight: 700;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        color: var(--accent);
+      }
+
+      .tw-entry-prompt { color: var(--ink); }
+
+      .tw-entry-time { color: var(--muted); font-size: 12px; white-space: nowrap; }
+
+      .tw-entry-status {
+        display: inline-block;
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        margin-left: 6px;
+      }
+      .tw-entry-status.sent { background: var(--accent); }
+      .tw-entry-status.error { background: var(--offline); }
+
+      .tw-entry-target {
+        display: inline-block;
+        padding: 2px 8px;
+        border-radius: 6px;
+        font-size: 10px;
+        font-weight: 700;
+        text-transform: uppercase;
+        letter-spacing: 0.06em;
+        background: rgba(26, 127, 90, 0.12);
+        color: var(--accent);
+        margin: 0 4px;
+        vertical-align: middle;
+      }
+
+      .tw-entry-header {
+        display: grid;
+        grid-template-columns: auto 1fr auto;
+        gap: 10px;
+        align-items: center;
+      }
+
+      .tw-screenshot {
+        margin-top: 10px;
+        border-radius: 12px;
+        overflow: hidden;
+        border: 1px solid var(--line);
+      }
+      .tw-screenshot img {
+        width: 100%;
+        display: block;
+      }
+
+      .tw-terminal {
+        margin-top: 10px;
+        border-radius: 12px;
+        overflow: hidden;
+        background: #1a1a2e;
+        color: #a8e6cf;
+        font-family: "SF Mono", "Menlo", "Monaco", monospace;
+        font-size: 12px;
+        line-height: 1.5;
+      }
+      .tw-terminal pre {
+        margin: 0;
+        padding: 14px 16px;
+        white-space: pre-wrap;
+        word-break: break-all;
+        max-height: 300px;
+        overflow-y: auto;
+      }
+      .tw-terminal-loading {
+        display: block;
+        padding: 14px 16px;
+        color: #5f7469;
+        font-style: italic;
+      }
+
+      .tw-approve-btn {
+        width: 100%;
+        padding: 14px 20px;
+        border-radius: 14px;
+        border: none;
+        font: inherit;
+        font-size: 15px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: opacity 0.2s;
+      }
+      .tw-approve-btn:hover { opacity: 0.88; }
+      .tw-approve-btn:disabled { opacity: 0.5; cursor: default; }
+
+      .tw-approve-claude {
+        background: linear-gradient(135deg, #d63031, #c0392b);
+        color: white;
+      }
+      .tw-approve-codex {
+        background: linear-gradient(135deg, #0984e3, #2471a3);
+        color: white;
+      }
+
+      .tw-approve-result {
+        margin-top: 10px;
+        font-size: 12px;
+        color: var(--muted);
+        min-height: 18px;
+        padding: 6px 10px;
+        border-radius: 8px;
+        transition: all 0.3s ease;
+      }
+      .tw-approve-success {
+        background: rgba(45, 106, 79, 0.12);
+        color: #2d6a4f;
+        border: 1px solid rgba(45, 106, 79, 0.2);
+      }
+      .tw-approve-error {
+        background: rgba(193, 18, 31, 0.08);
+        color: #c1121f;
+        border: 1px solid rgba(193, 18, 31, 0.15);
+      }
+
+      /* Watchdog toggle */
+      .tw-watchdog-section {
+        display: flex; align-items: center; justify-content: center;
+        gap: 12px; margin-top: 16px; padding: 12px 0;
+      }
+      .tw-toggle { position: relative; width: 48px; height: 26px; }
+      .tw-toggle input { opacity: 0; width: 0; height: 0; }
+      .tw-toggle-slider {
+        position: absolute; cursor: pointer; inset: 0;
+        background: #ccc; border-radius: 26px; transition: .3s;
+      }
+      .tw-toggle-slider::before {
+        content: ""; position: absolute; height: 20px; width: 20px;
+        left: 3px; bottom: 3px; background: white; border-radius: 50%; transition: .3s;
+      }
+      .tw-toggle input:checked + .tw-toggle-slider { background: #2d6a4f; }
+      .tw-toggle input:checked + .tw-toggle-slider::before { transform: translateX(22px); }
+
+      .tw-watchdog-label { font-size: 13px; font-weight: 600; color: var(--ink); }
+      .tw-watchdog-pulse {
+        display: inline-block; width: 8px; height: 8px;
+        background: #2d6a4f; border-radius: 50%; margin-left: 6px;
+        animation: pulse 1.5s infinite;
+      }
+      .tw-watchdog-pulse.off { background: #999; animation: none; }
+      @keyframes pulse {
+        0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(45,106,79,.6); }
+        50% { opacity: .7; box-shadow: 0 0 0 6px rgba(45,106,79,0); }
+      }
+
+      /* Auto-approval badge */
+      .tw-auto-badge {
+        display: inline-flex; align-items: center; gap: 3px;
+        font-size: 11px; color: var(--muted); margin-left: 8px;
+        background: rgba(45,106,79,0.08); padding: 2px 8px;
+        border-radius: 12px; white-space: nowrap;
+      }
+      .tw-auto-badge.has-approvals { color: #2d6a4f; font-weight: 600; }
+      .tw-auto-badge-live {
+        background: rgba(214, 48, 49, 0.12) !important;
+        color: #ff9b9b !important;
+      }
+      .tw-auto-badge-warn {
+        background: rgba(195, 139, 45, 0.14) !important;
+        color: #c38b2d !important;
+      }
+      .tw-auto-badge-off {
+        opacity: 0.82;
+        background: rgba(255,255,255,0.06) !important;
+        color: #8aa393 !important;
+      }
+
+      /* App status tags */
+      .tw-app-status { display: inline-flex; gap: 4px; margin-left: 4px; }
+      .tw-app-tag {
+        display: inline-block; font-size: 9px; font-weight: 700;
+        padding: 1px 5px; border-radius: 4px; color: white;
+        line-height: 14px; cursor: default;
+      }
+      .tw-app-tag.claude { background: #d63031; }
+      .tw-app-tag.codex { background: #0984e3; }
+
+      .tw-machines-approve {
+        margin-top: 18px;
+        padding: 24px;
+        border: 1px solid var(--line);
+        border-radius: 22px;
+        background: var(--panel);
+        backdrop-filter: blur(12px);
+        box-shadow: 0 16px 40px rgba(23, 49, 39, 0.06);
+      }
+
+      .tw-machines-approve h3 {
+        margin: 0 0 14px;
+        font-size: 16px;
+        color: var(--muted);
+      }
+
+      .tw-machine-row {
+        display: grid;
+        grid-template-columns: auto auto 1fr auto auto auto;
+        gap: 8px;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--line);
+      }
+      .tw-machine-row:last-child { border-bottom: none; }
+      .tw-machine-row-alert {
+        border-color: rgba(214, 48, 49, 0.22) !important;
+        box-shadow: inset 0 0 0 1px rgba(214, 48, 49, 0.14);
+      }
+      .tw-machine-row-recent {
+        border-color: rgba(9, 132, 227, 0.18) !important;
+        box-shadow: inset 0 0 0 1px rgba(9, 132, 227, 0.12);
+      }
+
+      .tw-machine-label {
+        min-width: 120px;
+        max-width: 180px;
+      }
+
+      .tw-machine-monitor {
+        aspect-ratio: 16/9;
+        border-radius: 6px;
+        overflow: hidden;
+        background: #1a1a2e;
+        color: #a8e6cf;
+        font-family: "SF Mono", "Menlo", "Monaco", monospace;
+        line-height: 1.3;
+        position: relative;
+        border: 2px solid #2a2a3e;
+        cursor: pointer;
+        transition: all 0.3s ease;
+      }
+      .tw-machine-monitor.small {
+        width: 120px;
+        font-size: 5px;
+      }
+      .tw-machine-monitor.expanded {
+        position: absolute;
+        width: 500px;
+        z-index: 10;
+        right: 0;
+        top: -10px;
+        font-size: 10px;
+        box-shadow: 0 8px 30px rgba(0,0,0,0.3);
+      }
+      .tw-machine-monitor::after {
+        content: "";
+        position: absolute;
+        bottom: -6px;
+        left: 50%;
+        transform: translateX(-50%);
+        width: 24px;
+        height: 4px;
+        background: #2a2a3e;
+        border-radius: 0 0 3px 3px;
+      }
+      .tw-machine-monitor pre {
+        margin: 0;
+        padding: 6px 8px;
+        white-space: pre-wrap;
+        word-break: break-all;
+        overflow: hidden;
+        height: 100%;
+      }
+      .tw-machine-monitor-empty {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        gap: 4px;
+        height: 100%;
+        color: #5f7469;
+        font-size: 11px;
+        text-align: center;
+        padding: 8px;
+      }
+      .tw-machine-monitor-empty strong {
+        color: #dcefe3;
+        font-size: 10px;
+        letter-spacing: 0.04em;
+        text-transform: uppercase;
+      }
+      .tw-machine-monitor-empty span {
+        color: #8fb0a0;
+        font-size: 9px;
+      }
+      .tw-machine-monitor.small .tw-machine-monitor-empty { font-size: 8px; }
+      .tw-machine-monitor-time {
+        position: absolute;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        display: flex;
+        justify-content: flex-end;
+        align-items: flex-end;
+        padding: 10px 6px 4px;
+        font-size: 8px;
+        font-weight: 700;
+        letter-spacing: 0.04em;
+        color: #dcefe3;
+        text-shadow: 0 1px 2px rgba(0, 0, 0, 0.7);
+        background: linear-gradient(180deg, rgba(4, 12, 9, 0) 0%, rgba(4, 12, 9, 0.82) 100%);
+        pointer-events: none;
+      }
+      .tw-machine-monitor.small .tw-machine-monitor-time {
+        font-size: 5px;
+        padding: 7px 4px 3px;
+      }
+      .tw-machine-monitor.expanded .tw-machine-monitor-time {
+        font-size: 9px;
+        padding: 12px 8px 5px;
+      }
+      .tw-multi-monitor {
+        display: flex;
+        height: 100%;
+        gap: 1px;
+        background: #000;
+        align-items: center;
+      }
+      .tw-multi-screen {
+        flex: 1;
+        overflow: hidden;
+        position: relative;
+        height: 100%;
+      }
+      /* Studio Display — landscape, shorter — creates the H crossbar */
+      .tw-multi-screen.landscape {
+        height: 55%;
+        border-radius: 2px;
+      }
+      .tw-multi-screen img {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        display: block;
+      }
+      .tw-screen-label {
+        position: absolute;
+        bottom: 0;
+        left: 0;
+        right: 0;
+        text-align: center;
+        font-size: 4px;
+        color: rgba(255,255,255,0.8);
+        background: rgba(0,0,0,0.45);
+        padding: 1px 0;
+        font-family: "SF Mono", monospace;
+        letter-spacing: 0.3px;
+      }
+      .tw-machine-row { position: relative; }
+
+      .tw-machine-input {
+        padding: 8px 12px;
+        border-radius: 10px;
+        border: 1px solid var(--line);
+        font: inherit;
+        font-size: 13px;
+        min-width: 0;
+        width: 100%;
+      }
+      .tw-machine-input::placeholder { color: var(--muted); }
+
+      .tw-machine-send {
+        padding: 8px 14px;
+        border-radius: 10px;
+        border: none;
+        background: linear-gradient(135deg, #0984e3, #2471a3);
+        color: white;
+        font: inherit;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .tw-machine-send:hover { opacity: 0.88; }
+      .tw-machine-send:disabled { opacity: 0.5; }
+
+      .tw-machine-approve {
+        padding: 8px 14px;
+        border-radius: 10px;
+        border: none;
+        background: #d63031;
+        color: white;
+        font: inherit;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        white-space: nowrap;
+      }
+      .tw-machine-approve:hover { opacity: 0.88; }
+      .tw-machine-approve:disabled { opacity: 0.5; }
+
+      .tw-machine-info {
+        display: flex;
+        gap: 12px;
+        align-items: start;
+      }
+
+      .tw-machine-name {
+        font-weight: 600;
+        font-size: 14px;
+      }
+      .tw-machine-member {
+        font-size: 12px;
+        color: var(--muted);
+      }
+      .tw-machine-route {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 6px;
+        font-size: 11px;
+        color: var(--muted);
+      }
+      .tw-machine-route-badge {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        padding: 2px 7px;
+        border-radius: 999px;
+        font-size: 9px;
+        font-weight: 800;
+        letter-spacing: 0.06em;
+        text-transform: uppercase;
+      }
+      .tw-machine-route-badge.lan {
+        background: rgba(26, 127, 90, 0.14);
+        color: #2d6a4f;
+      }
+      .tw-machine-route-badge.hybrid {
+        background: linear-gradient(135deg, rgba(26, 127, 90, 0.16), rgba(9, 132, 227, 0.16));
+        color: #1f5f7a;
+      }
+      .tw-machine-route-badge.tailscale {
+        background: rgba(9, 132, 227, 0.14);
+        color: #2471a3;
+      }
+      .tw-machine-route-target {
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+      .tw-machine-statuses {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 6px;
+      }
+      .tw-machine-status {
+        display: inline-flex;
+        padding: 2px 8px;
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 700;
+        letter-spacing: 0.02em;
+      }
+      .tw-machine-status-ok {
+        background: rgba(26, 127, 90, 0.12);
+        color: #2d6a4f;
+      }
+      .tw-machine-status-idle {
+        background: rgba(9, 132, 227, 0.12);
+        color: #2471a3;
+      }
+      .tw-machine-status-busy {
+        background: rgba(214, 48, 49, 0.12);
+        color: #d63031;
+      }
+      .tw-machine-status-warn {
+        background: rgba(195, 139, 45, 0.14);
+        color: #c38b2d;
+      }
+      .tw-machine-status-off {
+        background: rgba(95, 116, 105, 0.14);
+        color: #6d8175;
+      }
+      .tw-machine-watchdog {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 8px;
+      }
+      .tw-watchdog-chip {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        padding: 4px 8px;
+        border-radius: 999px;
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.03em;
+        line-height: 1.2;
+        border: 1px solid transparent;
+        background: rgba(26, 127, 90, 0.12);
+        color: #81c995;
+      }
+      .tw-watchdog-chip.pending {
+        background: rgba(214, 48, 49, 0.14);
+        border-color: rgba(214, 48, 49, 0.24);
+        color: #ffb4b4;
+      }
+      .tw-watchdog-chip.auto-approved {
+        background: rgba(9, 132, 227, 0.14);
+        border-color: rgba(9, 132, 227, 0.24);
+        color: #a5d8ff;
+      }
+      .tw-watchdog-chip.cooldown {
+        background: rgba(195, 139, 45, 0.16);
+        border-color: rgba(195, 139, 45, 0.24);
+        color: #ffd38f;
+      }
+      .tw-watchdog-chip-label {
+        white-space: nowrap;
+      }
+      .tw-watchdog-chip-time {
+        opacity: 0.8;
+      }
+
+      .tw-group-title {
+        margin: 18px 0 8px;
+        font-size: 12px;
+        font-weight: 800;
+        letter-spacing: 0.16em;
+        text-transform: uppercase;
+        color: #5a9a6a;
+      }
+
+      .tw-machine-caps {
+        display: flex;
+        flex-wrap: wrap;
+        gap: 6px;
+        margin-top: 6px;
+      }
+
+      .tw-machine-cap {
+        display: inline-flex;
+        padding: 2px 8px;
+        border-radius: 999px;
+        background: rgba(0, 255, 70, 0.08);
+        color: #63d98a;
+        font-size: 10px;
+        font-weight: 700;
+      }
+
+      .tw-machine-snapshot {
+        width: 280px;
+        max-height: 120px;
+        overflow: hidden;
+        border-radius: 8px;
+        background: #1a1a2e;
+        color: #a8e6cf;
+        font-family: "SF Mono", "Menlo", "Monaco", monospace;
+        font-size: 9px;
+        line-height: 1.3;
+        padding: 6px 8px;
+        flex-shrink: 0;
+      }
+      .tw-machine-snapshot pre {
+        margin: 0;
+        white-space: pre-wrap;
+        word-break: break-all;
+      }
+      .tw-machine-snapshot-empty {
+        width: 280px;
+        height: 60px;
+        border-radius: 8px;
+        background: rgba(26, 127, 90, 0.04);
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 11px;
+        color: var(--muted);
+        flex-shrink: 0;
+      }
+      .tw-machine-snapshot-time {
+        font-size: 10px;
+        color: #5f7469;
+        margin-top: 2px;
+      }
+
+      .tw-approve-sm {
+        padding: 8px 16px;
+        border-radius: 10px;
+        border: none;
+        font: inherit;
+        font-size: 12px;
+        font-weight: 700;
+        cursor: pointer;
+        transition: opacity 0.2s;
+      }
+      .tw-approve-sm:hover { opacity: 0.88; }
+      .tw-approve-sm:disabled { opacity: 0.5; cursor: default; }
+      .tw-approve-sm.claude { background: #d63031; color: white; }
+      .tw-approve-sm.codex { background: #0984e3; color: white; }
+
+      .tw-empty { color: var(--muted); font-size: 14px; }
+
+      .tw-agora {
+        display: grid;
+        gap: 16px;
+      }
+
+      .tw-agora-head,
+      .tw-agora-send {
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) auto auto;
+        gap: 10px;
+        align-items: end;
+      }
+
+      .tw-agora-head h3 {
+        margin: 0 0 4px;
+      }
+
+      .tw-agora-status {
+        margin: 0;
+        color: var(--muted);
+        font-size: 12px;
+      }
+
+      .tw-agora-grid {
+        display: grid;
+        grid-template-columns: minmax(0, 0.8fr) minmax(0, 1.2fr);
+        gap: 12px;
+      }
+
+      .tw-agora-box {
+        min-width: 0;
+        padding: 14px;
+        border: 1px solid rgba(0,255,70,0.1);
+        border-radius: 16px;
+        background: rgba(0, 12, 6, 0.48);
+      }
+
+      .tw-agora-box h4 {
+        margin: 0 0 10px;
+        color: #00ff46;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .tw-agora-list,
+      .tw-agora-feed {
+        margin: 0;
+        padding: 0;
+        list-style: none;
+        display: grid;
+        gap: 8px;
+        color: #c0dcc8;
+        font-size: 13px;
+      }
+
+      .tw-agora-feed {
+        max-height: 220px;
+        overflow-y: auto;
+      }
+
+      .tw-agora-presence {
+        white-space: pre-wrap;
+        color: #9bd9aa;
+        font-family: "SF Mono", "Menlo", "Monaco", monospace;
+        font-size: 12px;
+        line-height: 1.45;
+        margin: 0;
+      }
+
+      .tw-agora-key,
+      .tw-agora-message {
+        width: 100%;
+        padding: 12px 14px;
+        border-radius: 14px;
+        border: 1px solid rgba(0,255,70,0.2);
+        background: rgba(0,20,10,0.8);
+        color: #00ff46;
+        font: inherit;
+      }
+
+      .tw-agora-key {
+        min-width: 180px;
+      }
+
+      .tw-agora-message::placeholder,
+      .tw-agora-key::placeholder {
+        color: rgba(0,255,70,0.35);
+      }
+
+      @media (max-width: 640px) {
+        .tw-row { grid-template-columns: 1fr; }
+        .tw-command-bar { grid-template-columns: 1fr; }
+        .tw-action-btn { min-width: 0; }
+        .tw-inline-results { grid-template-columns: 1fr; }
+        .tw-watchdog-inline { justify-self: start; padding: 0; }
+        .tw-agora-head,
+        .tw-agora-send,
+        .tw-agora-grid { grid-template-columns: 1fr; }
+      }
+      /* Matrix background */
+      #matrixCanvas {
+        position: fixed; top: 0; left: 0; width: 100vw; height: 100vh;
+        z-index: 0; pointer-events: none;
+      }
+      body { background: #030806 !important; }
+      .app { position: relative; z-index: 1; }
+      .hero, .tw-panel, .tw-machines-approve, .tw-history {
+        background: rgba(10, 20, 15, 0.85) !important;
+        backdrop-filter: blur(6px);
+        color: #c0dcc8 !important;
+        border-color: rgba(0,255,70,0.15) !important;
+      }
+      .hero h1, .tw-machine-name, h3 { color: #00ff46 !important; }
+      .hero .eyebrow, .hero .subtitle, .tw-machine-member, .tw-watchdog-label { color: #5a9a6a !important; }
+      .hero .tw-nav a { color: #00cc3a !important; }
+      .tw-machine-input, .tw-approve-sm {
+        background: rgba(0,20,10,0.8) !important; color: #00ff46 !important;
+        border-color: rgba(0,255,70,0.2) !important;
+      }
+      .tw-machine-input::placeholder { color: rgba(0,255,70,0.3) !important; }
+      .tw-machine-row { border-color: rgba(0,255,70,0.08) !important; }
+      .tw-machine-row-alert {
+        border-color: rgba(214,48,49,0.28) !important;
+        box-shadow: inset 0 0 0 1px rgba(214,48,49,0.18) !important;
+      }
+      .tw-machine-row-recent {
+        border-color: rgba(9,132,227,0.24) !important;
+        box-shadow: inset 0 0 0 1px rgba(9,132,227,0.16) !important;
+      }
+      .tw-auto-badge { background: rgba(0,255,70,0.1) !important; color: #00ff46 !important; }
+      .tw-auto-badge-live { background: rgba(214,48,49,0.18) !important; color: #ffb4b4 !important; }
+      .tw-watchdog-overview { border-color: rgba(0,255,70,0.16) !important; }
+      .tw-watchdog-overview.hot {
+        border-color: rgba(214,48,49,0.3) !important;
+        background: linear-gradient(135deg, rgba(48, 8, 12, 0.78), rgba(10, 20, 15, 0.82)) !important;
+      }
+      .tw-watchdog-overview.recent {
+        border-color: rgba(9,132,227,0.28) !important;
+        background: linear-gradient(135deg, rgba(6, 22, 36, 0.8), rgba(10, 20, 15, 0.82)) !important;
+      }
+      .tw-watchdog-chip.pending {
+        background: rgba(214,48,49,0.18) !important;
+        border-color: rgba(214,48,49,0.28) !important;
+        color: #ffb4b4 !important;
+      }
+      .tw-watchdog-chip.auto-approved {
+        background: rgba(9,132,227,0.18) !important;
+        border-color: rgba(9,132,227,0.28) !important;
+        color: #a5d8ff !important;
+      }
+      .tw-watchdog-chip.cooldown {
+        background: rgba(195,139,45,0.2) !important;
+        border-color: rgba(195,139,45,0.28) !important;
+        color: #ffd38f !important;
+      }
+      .tw-watchdog-section { color: #5a9a6a; }
+
+      .hero-inner {
+        display: grid;
+        grid-template-columns: 1fr auto;
+        gap: 24px;
+        align-items: center;
+      }
+      .hero-text { min-width: 0; }
+      .hero-pills {
+        flex-shrink: 0;
+        width: 260px;
+        border-radius: 16px;
+        overflow: visible;
+        position: relative;
+        margin-top: -20px;
+      }
+      .hero-pills img {
+        width: 100%;
+        display: block;
+        border-radius: 16px;
+        filter: saturate(0.7) brightness(0.75) hue-rotate(80deg);
+        mix-blend-mode: lighten;
+        overflow: hidden;
+      }
+      .hero-pills::after {
+        content: "";
+        position: absolute;
+        inset: 0;
+        border-radius: 16px;
+        background: linear-gradient(135deg, rgba(0,255,70,0.08) 0%, rgba(0,0,0,0.4) 100%);
+        pointer-events: none;
+      }
+      .pill-glow {
+        position: absolute;
+        border-radius: 50%;
+        pointer-events: none;
+        z-index: 2;
+        mix-blend-mode: screen;
+      }
+      .pill-glow-red {
+        width: 90px; height: 90px;
+        left: 8%; top: 38%;
+        background: radial-gradient(circle, rgba(214,48,49,0.95) 0%, rgba(214,48,49,0.3) 45%, transparent 70%);
+        animation: pillPulseRed 2.2s ease-in-out infinite alternate;
+      }
+      .pill-glow-blue {
+        width: 90px; height: 90px;
+        right: 8%; top: 38%;
+        background: radial-gradient(circle, rgba(9,132,227,0.95) 0%, rgba(9,132,227,0.3) 45%, transparent 70%);
+        animation: pillPulseBlue 2.2s ease-in-out infinite alternate-reverse;
+      }
+      @keyframes pillPulseRed {
+        from { opacity: 0.35; transform: scale(0.85); }
+        to   { opacity: 1;    transform: scale(1.2);  }
+      }
+      @keyframes pillPulseBlue {
+        from { opacity: 0.35; transform: scale(0.85); }
+        to   { opacity: 1;    transform: scale(1.2);  }
+      }
+      @media (max-width: 600px) {
+        .hero-pills { display: none; }
+      }
+    </style>
+  </head>
+  <body>
+    <canvas id="matrixCanvas"></canvas>
+    <main class="app">
+      <header class="hero">
+        <div class="hero-inner">
+          <div class="hero-text">
+            <p class="eyebrow">Control remoto — v2.5.2</p>
+            <h1>AdmiraNext Control</h1>
+            <p class="subtitle">Opera por separado el Consejo de Administracion en Mac y el Equipo en PC desde un mismo panel.</p>
+          </div>
+          <div class="hero-pills">
+            <div class="pill-glow pill-glow-red"></div>
+            <div class="pill-glow pill-glow-blue"></div>
+            <img src="./matrix-pills.jpg?v=20260401-3" alt="Red pill or blue pill?" draggable="false">
+            <nav class="tw-nav" style="margin-top:10px;text-align:center;"><a href="./new-member.html">Alta nueva</a> · <a href="./index.html">Volver al dashboard</a></nav>
+          </div>
+        </div>
+      </header>
+
+      <section class="tw-panel">
+        <div class="tw-command">
+          <div class="tw-command-bar">
+            <input class="tw-quick" id="quickInput" type="text"
+                   placeholder="Escribe un prompt para consejo y equipo..."
+                   autocomplete="off" autofocus>
+            <select class="tw-select" id="sendAllTarget" style="height:100%;min-width:120px;">
+              <option value="all">Claude + Codex</option>
+              <option value="claude">Solo Claude</option>
+              <option value="codex">Solo Codex</option>
+              <option value="terminal">Solo Terminal</option>
+            </select>
+            <button class="tw-send tw-action-btn" id="sendAllBtn">Enviar a todos</button>
+            <button class="tw-send tw-action-btn tw-send-codex" id="approveCodexBtn">Aprobar Codex</button>
+            <button class="tw-send tw-action-btn tw-send-claude" id="approveClaudeBtn">Aprobar Claude</button>
+            <button class="tw-send tw-action-btn tw-send-onboarding" id="onboardingAllBtn">Onboarding all</button>
+            <div class="tw-watchdog-inline">
+              <label class="tw-toggle">
+                <input type="checkbox" id="watchdogToggle">
+                <span class="tw-toggle-slider"></span>
+              </label>
+              <span class="tw-watchdog-label">
+                Auto-Approve
+                <span class="tw-watchdog-pulse off" id="watchdogPulse"></span>
+              </span>
+            </div>
+          </div>
+          <div class="tw-inline-results">
+            <div class="tw-approve-result tw-inline-result" id="approveCodexResult"></div>
+            <div class="tw-approve-result tw-inline-result" id="approveClaudeResult"></div>
+          </div>
+          <div class="tw-watchdog-overview" id="watchdogOverview"></div>
+          <p style="margin:10px 0 0;color:var(--muted);font-size:12px;">`onboarding` es local para esta sesion. `onboarding all` refresca consejo y equipo alcanzables usando una sola IA por maquina.</p>
+        </div>
+        <div class="tw-feedback" id="feedback"></div>
+      </section>
+
+      <section class="tw-panel tw-agora" id="agoraPanel">
+        <div class="tw-agora-head">
+          <div>
+            <h3>AgoraMatrix</h3>
+            <p class="tw-agora-status" id="agoraStatus">conectando...</p>
+          </div>
+          <input class="tw-agora-key" id="agoraKey" type="password" placeholder="Clave operador" autocomplete="off">
+          <button class="tw-send" id="agoraRefreshBtn" type="button">Actualizar</button>
+        </div>
+        <div class="tw-agora-grid">
+          <div class="tw-agora-box">
+            <h4>Presencia</h4>
+            <pre class="tw-agora-presence" id="agoraWho">—</pre>
+          </div>
+          <div class="tw-agora-box">
+            <h4>Feed</h4>
+            <ul class="tw-agora-feed" id="agoraFeed"></ul>
+          </div>
+          <div class="tw-agora-box">
+            <h4>Tareas</h4>
+            <ul class="tw-agora-list" id="agoraTasks"></ul>
+          </div>
+          <div class="tw-agora-box">
+            <h4>Inbox</h4>
+            <ul class="tw-agora-list" id="agoraInbox"></ul>
+          </div>
+        </div>
+        <div class="tw-agora-send">
+          <input class="tw-agora-message" id="agoraMessage" type="text" placeholder="Mensaje para AgoraMatrix..." autocomplete="off">
+          <button class="tw-send tw-send-codex" id="agoraSendBtn" type="button">Enviar</button>
+        </div>
+      </section>
+
+      <section class="tw-machines-approve">
+        <h3>Consejo y Equipo</h3>
+        <div id="machineApproveList"></div>
+      </section>
+
+      <section class="tw-panel tw-history">
+        <h3>Historial</h3>
+        <div id="historyList"><p class="tw-empty">Sin comandos enviados todavía.</p></div>
+      </section>
+    </main>
+
+      <footer style="text-align:center;padding:24px 0 8px;color:var(--muted);font-size:12px;">
+          Admira v.26.06.13.r1 · Control AgoraMatrix
+      </footer>
+
+      <script src="./teamwork.js?v=20260613-1" type="module"></script>
+    <script>
+      (function() {
+        const c = document.getElementById("matrixCanvas");
+        const ctx = c.getContext("2d");
+        c.width = window.innerWidth;
+        c.height = window.innerHeight;
+        window.addEventListener("resize", () => { c.width = window.innerWidth; c.height = window.innerHeight; columns = Math.floor(c.width / fontSize); });
+
+        const chars = "アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン01234567890ABCDEFGHIJKLMNOPQRSTUVWXYZ<>{}[]=/\\*+-_";
+        const citas = [
+          "El mayor riesgo es no tomar ninguno",
+          "Haz algo hoy que tu yo del futuro agradezca",
+          "Si puedes soñarlo puedes hacerlo",
+          "No busques clientes para tu producto busca productos para tus clientes",
+          "La innovacion distingue al lider del seguidor",
+          "Tu tiempo es limitado no lo desperdicies viviendo la vida de otro",
+          "El exito no es definitivo el fracaso no es fatal lo que cuenta es el coraje",
+          "Empieza donde estas usa lo que tienes haz lo que puedas",
+          "Las grandes cosas se hacen con una serie de cosas pequeñas",
+          "No tengas miedo de renunciar a lo bueno para ir a por lo grandioso",
+          "La mejor forma de predecir el futuro es crearlo",
+          "Mueve rapido y rompe cosas",
+          "Trabaja duro en silencio deja que el exito haga el ruido",
+          "El unico modo de hacer un gran trabajo es amar lo que haces",
+          "Cada experto fue una vez un principiante",
+          "Lo imposible solo tarda un poco mas",
+          "Piensa diferente actua diferente se diferente",
+          "Un emprendedor ve oportunidades donde otros ven problemas",
+          "El fracaso es simplemente la oportunidad de empezar de nuevo",
+          "No cuentes los dias haz que los dias cuenten"
+        ];
+        const fontSize = 14;
+        let columns = Math.floor(c.width / fontSize);
+        const drops = Array(columns).fill(1);
+
+        // Some columns show quote characters instead of Matrix chars
+        const quoteColumns = {};  // { colIndex: { text, charIdx } }
+
+        function assignQuote(col) {
+          const cita = citas[Math.floor(Math.random() * citas.length)];
+          quoteColumns[col] = { text: cita, charIdx: 0 };
+        }
+
+        // Initially assign ~8% of columns to quotes
+        for (let i = 0; i < columns; i++) {
+          if (Math.random() < 0.08) assignQuote(i);
+        }
+
+        function draw() {
+          ctx.fillStyle = "rgba(3, 8, 6, 0.05)";
+          ctx.fillRect(0, 0, c.width, c.height);
+          ctx.font = fontSize + "px monospace";
+
+          for (let i = 0; i < drops.length; i++) {
+            let char;
+            const q = quoteColumns[i];
+
+            if (q) {
+              // Quote column: show next char from the quote
+              char = q.text[q.charIdx] || " ";
+              q.charIdx++;
+              if (q.charIdx >= q.text.length + 5) {
+                // Quote finished, maybe assign a new one or go back to matrix
+                if (Math.random() < 0.4) assignQuote(i);
+                else delete quoteColumns[i];
+              }
+              ctx.fillStyle = "#fff";  // white for quotes
+            } else {
+              char = chars[Math.floor(Math.random() * chars.length)];
+              ctx.fillStyle = Math.random() > 0.98 ? "#fff" : "#0f0";
+              // Randomly start a new quote on this column
+              if (Math.random() < 0.001) assignQuote(i);
+            }
+
+            ctx.fillText(char, i * fontSize, drops[i] * fontSize);
+            if (drops[i] * fontSize > c.height && Math.random() > 0.975) {
+              drops[i] = 0;
+              if (quoteColumns[i]) quoteColumns[i].charIdx = 0;
+            }
+            drops[i]++;
+          }
+        }
+        setInterval(draw, 45);
+      })();
+    </script>
+    <script>
+      // Matrix glitch effect on subtitle text — zero layout shift
+      (function () {
+        const CHARS = 'アイウエオカキクケコサシスセソタチツテトナニヌネノハヒフヘホマミムメモヤユヨラリルレロワヲン0123456789ABCDEFGHIJKLMNOPQRSTUVWXYZ';
+        function initMatrixGlitch(el) {
+          const original = el.textContent;
+          el.textContent = '';
+
+          // Spaces render as plain text nodes — no wrapper, no collapse.
+          // Non-space chars get a relative wrapper + absolute glitch overlay.
+          const chars = original.split('').map((ch) => {
+            if (ch === ' ') {
+              el.appendChild(document.createTextNode('\u00a0'));
+              return null; // not eligible for glitch
+            }
+            const wrapper = document.createElement('span');
+            wrapper.style.cssText = 'position:relative;display:inline-block;';
+
+            const real = document.createElement('span');
+            real.textContent = ch;
+
+            const glitch = document.createElement('span');
+            glitch.textContent = ch;
+            glitch.style.cssText = 'position:absolute;left:0;top:0;width:100%;text-align:center;opacity:0;color:#00ff41;text-shadow:0 0 6px #00ff41;pointer-events:none;';
+
+            wrapper.appendChild(real);
+            wrapper.appendChild(glitch);
+            el.appendChild(wrapper);
+            return { real, glitch, ch };
+          }).filter(Boolean);
+
+          function glitchNext() {
+            const eligible = chars.filter((c) => c.ch.trim() !== '');
+            const count = Math.floor(Math.random() * 3) + 1;
+            for (let i = 0; i < count; i++) {
+              const c = eligible[Math.floor(Math.random() * eligible.length)];
+              let iter = 0;
+              const total = Math.floor(Math.random() * 7) + 4;
+              const tid = setInterval(() => {
+                c.glitch.textContent = CHARS[Math.floor(Math.random() * CHARS.length)];
+                c.glitch.style.opacity = Math.random() > 0.25 ? '1' : '0.3';
+                c.real.style.opacity = '0';
+                if (++iter >= total) {
+                  clearInterval(tid);
+                  c.glitch.style.opacity = '0';
+                  c.real.style.opacity = '';
+                }
+              }, 55);
+            }
+            setTimeout(glitchNext, Math.random() * 1800 + 400);
+          }
+          glitchNext();
+        }
+
+        const subtitle = document.querySelector('.subtitle');
+        if (subtitle) initMatrixGlitch(subtitle);
+      })();
+    </script>
+  </body>
+</html>

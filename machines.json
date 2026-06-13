@@ -1,0 +1,302 @@
+{
+  "team": "AdmiraNext Team",
+  "updatedAt": "2026-03-31T20:35:00Z",
+  "tailnet": "tail48b61c.ts.net",
+  "machines": [
+    {
+      "id": "admira-macmini",
+      "unitType": "council",
+      "color": "plata",
+      "member": "Carlos",
+      "role": "Coordinacion central y automatizacion",
+      "name": "Mac Mini (Carlos)",
+      "machineRole": "Servidor central / Hub",
+      "location": "Madrid",
+      "platform": "macOS",
+      "status": "online",
+      "lastSeen": "2026-03-23T21:00:00Z",
+      "currentFocus": "Hub SSH — controla todos los equipos remotamente",
+      "note": "Tailscale: macmini.tail48b61c.ts.net",
+      "ssh": {
+        "enabled": true,
+        "user": "csilvasantin",
+        "host": "macmini.tail48b61c.ts.net",
+        "ip_tailscale": "100.74.101.14",
+        "connect_tailscale": "ssh csilvasantin@100.74.101.14"
+      }
+    },
+    {
+      "id": "admira-macbookairnines",
+      "unitType": "council",
+      "color": "plata",
+      "member": "Nines",
+      "role": "Operaciones",
+      "name": "MacBook Air Nines",
+      "machineRole": "Equipo activo",
+      "location": "Madrid",
+      "platform": "macOS",
+      "status": "online",
+      "lastSeen": "2026-03-27T18:25:12.622Z",
+      "currentFocus": "SSH verificado — accesible desde Mac Mini",
+      "note": "Tailscale: macbookairnines.tail48b61c.ts.net",
+      "ssh": {
+        "enabled": true,
+        "user": "csilvasantin",
+        "host": "macbookairnines.tail48b61c.ts.net",
+        "ip_tailscale": "100.76.96.50",
+        "connect_tailscale": "ssh -o ProxyCommand='tailscale nc %h %p' csilvasantin@macbookairnines"
+      }
+    },
+    {
+      "id": "admira-macbookpronegro14",
+      "unitType": "council",
+      "color": "negro",
+      "member": "Carlos",
+      "role": "Desarrollo y pruebas",
+      "name": "MacBook Pro Negro 14",
+      "machineRole": "Equipo de desarrollo",
+      "location": "Madrid",
+      "platform": "macOS",
+      "status": "online",
+      "lastSeen": "2026-03-23T21:00:00Z",
+      "currentFocus": "SSH verificado — accesible desde Mac Mini",
+      "note": "Tailscale: macbookpronegro14.tail48b61c.ts.net",
+      "ssh": {
+        "enabled": true,
+        "user": "csilvasantin",
+        "host": "macbookpronegro14.tail48b61c.ts.net",
+        "host_local": "MacBookProNegro14.local",
+        "ip_tailscale": "100.101.192.1",
+        "connect_lan": "ssh csilvasantin@MacBookProNegro14.local",
+        "connect_tailscale": "ssh -o ProxyCommand='tailscale nc %h %p' csilvasantin@macbookpronegro14"
+      }
+    },
+    {
+      "id": "admira-macbookair16",
+      "unitType": "council",
+      "color": "plata",
+      "member": "Director General",
+      "role": "Direccion",
+      "name": "MacBook Air 16 (DG)",
+      "machineRole": "Direccion",
+      "location": "Madrid",
+      "platform": "macOS",
+      "status": "online",
+      "lastSeen": "2026-03-23T21:00:00Z",
+      "currentFocus": "SSH verificado — accesible desde Mac Mini (user: Carlos)",
+      "note": "Tailscale: macbookair16.tail48b61c.ts.net",
+      "ssh": {
+        "enabled": true,
+        "user": "csilvasantin",
+        "host": "macbookair16.tail48b61c.ts.net",
+        "host_local": "MacBookAir16.local",
+        "ip_tailscale": "100.99.176.126",
+        "connect_lan": "ssh csilvasantin@MacBookAir16.local",
+        "connect_tailscale": "ssh csilvasantin@100.99.176.126"
+      }
+    },
+    {
+      "id": "admira-macbookairluna",
+      "unitType": "council",
+      "color": "plata",
+      "member": "Cesar",
+      "role": "Coordinacion y automatizacion",
+      "name": "MacBook Air Luna (Cesar)",
+      "machineRole": "Equipo principal",
+      "location": "Madrid",
+      "platform": "macOS",
+      "status": "offline",
+      "lastSeen": "2026-03-23T20:50:00Z",
+      "currentFocus": "Offline — ultima conexion hace minutos",
+      "note": "Tailscale: macbookairluna.tail48b61c.ts.net",
+      "ssh": {
+        "enabled": true,
+        "user": "csilvasantin",
+        "host": "macbookairluna.tail48b61c.ts.net",
+        "ip_tailscale": "100.98.68.63",
+        "connect_tailscale": "ssh csilvasantin@100.98.68.63"
+      }
+    },
+    {
+      "id": "admira-macbook-carla",
+      "unitType": "council",
+      "color": "gris",
+      "member": "Carla",
+      "role": "Desarrollo y operaciones",
+      "name": "MacBook Air de Carla",
+      "machineRole": "Equipo activo",
+      "location": "Madrid",
+      "platform": "macOS",
+      "status": "idle",
+      "lastSeen": "2026-03-23T21:00:00Z",
+      "currentFocus": "Tailscale conectado — idle",
+      "note": "Tailscale: macbook-air-de-carla.tail48b61c.ts.net",
+      "ssh": {
+        "enabled": true,
+        "user": "csilvasantin",
+        "host": "macbook-air-de-carla.tail48b61c.ts.net",
+        "ip_tailscale": "100.110.80.2",
+        "connect_tailscale": "ssh csilvasantin@100.110.80.2"
+      }
+    },
+    {
+      "id": "admira-macbookairblanco",
+      "unitType": "council",
+      "color": "plata",
+      "member": "Cesar",
+      "role": "CEO",
+      "name": "MacBook Air Blanco (Cesar)",
+      "machineRole": "Direccion",
+      "location": "Madrid",
+      "platform": "macOS",
+      "status": "idle",
+      "lastSeen": "2026-03-30T12:19:13Z",
+      "currentFocus": "Direccion ejecutiva y coordinacion del DreamTeam",
+      "note": "Tailscale, SSH y GitHub operativos. Chrome, Claude y Codex instalados. ClaudeBot y CodexBot activos. Perfil principal CEO listo para trabajo diario.",
+      "ssh": {
+        "enabled": true,
+        "user": "csilvasantin",
+        "host": "macbookairblanco.tail48b61c.ts.net",
+        "host_local": "MacBookAirBlanco.local",
+        "ip_tailscale": "100.75.118.75",
+        "connect_lan": "ssh csilvasantin@MacBookAirBlanco.local",
+        "connect_tailscale": "ssh csilvasantin@100.75.118.75",
+        "hostAlias": "macbook-air-de-csilvasantin"
+      },
+      "intake": {
+        "source": "new-member-form",
+        "submittedAt": "2026-03-30T10:25:00.000Z",
+        "teamArea": "Consejo ejecutivo",
+        "checklist": {
+          "tailscaleReady": true,
+          "sshReady": true,
+          "githubReady": true,
+          "claudeReady": true,
+          "codexReady": true,
+          "claudeBotReady": true,
+          "codexBotReady": true,
+          "needsHelp": "Ninguna. Perfil CEO operativo."
+        }
+      }
+    },
+    {
+      "id": "admira-pc-runner-01",
+      "unitType": "worker",
+      "agentProfile": "qa-runner",
+      "capabilities": [
+        "tests",
+        "builds",
+        "validacion"
+      ],
+      "color": "grafito",
+      "member": "Runner 01",
+      "role": "Agente de QA y validacion",
+      "name": "PC Runner 01",
+      "machineRole": "PC de validacion rutinaria",
+      "location": "Madrid",
+      "platform": "Windows",
+      "status": "idle",
+      "lastSeen": "2026-03-31T18:05:00Z",
+      "currentFocus": "Esperando tareas de test, build y comprobacion final",
+      "note": "PC pensado para pipelines, builds y smoke tests repetitivos. Pendiente de conexion remota real.",
+      "ssh": {
+        "enabled": false,
+        "user": "",
+        "host": "",
+        "ip_tailscale": "",
+        "connect_tailscale": ""
+      }
+    },
+    {
+      "id": "admira-pc-ocr-01",
+      "unitType": "worker",
+      "agentProfile": "document-ops",
+      "capabilities": [
+        "ocr",
+        "pdf",
+        "extraccion"
+      ],
+      "color": "grafito",
+      "member": "OCR 01",
+      "role": "Agente documental",
+      "name": "PC OCR 01",
+      "machineRole": "PC de backoffice",
+      "location": "Madrid",
+      "platform": "Windows",
+      "status": "idle",
+      "lastSeen": "2026-03-31T18:05:00Z",
+      "currentFocus": "Preparado para OCR, clasificacion y extraccion de datos",
+      "note": "Ideal para lotes de facturas, contratos y tareas de oficina. Pendiente de conexion remota real.",
+      "ssh": {
+        "enabled": false,
+        "user": "",
+        "host": "",
+        "ip_tailscale": "",
+        "connect_tailscale": ""
+      }
+    },
+    {
+      "id": "admira-pc-bot-01",
+      "unitType": "worker",
+      "agentProfile": "browser-automation",
+      "capabilities": [
+        "browser-automation",
+        "reporting",
+        "cms"
+      ],
+      "color": "grafito",
+      "member": "Bot 01",
+      "role": "Agente de automatizacion web",
+      "name": "PC Bot 01",
+      "machineRole": "PC operativo",
+      "location": "Madrid",
+      "platform": "Windows",
+      "status": "maintenance",
+      "lastSeen": "2026-03-31T18:05:00Z",
+      "currentFocus": "Pendiente de alta para tareas repetitivas de navegador y reporting",
+      "note": "Reservado para automatizaciones web, CMS y actualizaciones de rutina. Aun no conectado al hub.",
+      "ssh": {
+        "enabled": false,
+        "user": "",
+        "host": "",
+        "ip_tailscale": "",
+        "connect_tailscale": ""
+      }
+    },
+    {
+      "id": "admira-pcsitges3monitores",
+      "unitType": "worker",
+      "agentProfile": "operations-desk",
+      "capabilities": [
+        "browser-automation",
+        "reporting",
+        "multi-monitor"
+      ],
+      "color": "grafito",
+      "member": "PCSitges3Monitores",
+      "role": "Agente operativo de Sitges",
+      "name": "PC Sitges 3 Monitores",
+      "machineRole": "PC de operacion continua",
+      "location": "Sitges",
+      "platform": "Windows",
+      "status": "online",
+      "lastSeen": "2026-03-31T20:35:00Z",
+      "currentFocus": "PC local de Sitges operativo en esta sesion con canal Windows activo desde AdmiraNext Control",
+      "note": "Este mismo ordenador responde como OmenGdG en LAN 192.168.0.118. Se mantiene el nombre funcional PC Sitges 3 Monitores y ya usa un canal de automatizacion Windows local para foco, envio de prompts, aprobacion y captura.",
+      "ssh": {
+        "enabled": false,
+        "user": "csilvasantin",
+        "host": "OmenGdG",
+        "ip_tailscale": "",
+        "ip_lan": "192.168.0.118",
+        "connect_tailscale": "",
+        "hostAlias": "omengdg"
+      },
+      "automation": {
+        "enabled": true,
+        "channel": "windows-local",
+        "mode": "desktop-sendkeys"
+      }
+    }
+  ]
+}

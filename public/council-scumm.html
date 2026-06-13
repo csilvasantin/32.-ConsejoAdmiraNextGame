@@ -1474,6 +1474,37 @@
             0%, 100% { box-shadow: 0 0 18px rgba(80, 255, 120, 0.4), inset 0 0 12px rgba(80, 255, 120, 0.2); }
             50% { box-shadow: 0 0 28px rgba(80, 255, 120, 0.6), inset 0 0 18px rgba(80, 255, 120, 0.35); }
         }
+        /* ── Bocas que se mueven cuando el consejero está "vivo" ──
+           alive  = su máquina está online (habla despacio, idle)
+           active = acaba de hablar en AgoraMatrix/Telegram (habla rápido) */
+        .mouth-overlays {
+            position: absolute; top: 0; left: 0; width: 100%; height: 100%;
+            pointer-events: none; z-index: 4;
+        }
+        body.mouths-off .mouth-overlays { display: none; }
+        .mouth {
+            position: absolute; width: 1.6%; height: 1.1%;
+            transform: translate(-50%, -50%);
+            pointer-events: none; display: none;
+        }
+        .mouth.alive { display: block; }
+        .mouth .lips {
+            width: 100%; height: 100%; border-radius: 50%;
+            background: radial-gradient(ellipse at 50% 35%, #7a2727, #2a0c0c 75%);
+            box-shadow: 0 0 5px rgba(255, 70, 70, 0.5), inset 0 -1px 2px rgba(0, 0, 0, 0.6);
+            transform-origin: center; transform: scaleY(0.28); opacity: 0.88;
+        }
+        .mouth.alive .lips { animation: mouth-talk 1.5s ease-in-out infinite; }
+        .mouth.alive.active .lips {
+            animation-duration: 0.42s;
+            box-shadow: 0 0 9px rgba(255, 90, 90, 0.85), inset 0 -1px 2px rgba(0, 0, 0, 0.6);
+        }
+        @keyframes mouth-talk {
+            0%, 100% { transform: scaleY(0.25); }
+            30% { transform: scaleY(1); }
+            55% { transform: scaleY(0.42); }
+            78% { transform: scaleY(0.92); }
+        }
         /* ── ENTRENAR table viewer: pinta el vídeo/libro seleccionado sobre la mesa ── */
         .table-viewer {
             position: absolute;
@@ -2228,6 +2259,8 @@
                 <div class="design-cursor" id="design-cursor"></div>
             </div>
             <div class="body-hotspots" id="body-hotspots"></div>
+            <!-- Bocas animadas: se mueven cuando el consejero está vivo (máquina online / hablando en AgoraMatrix) -->
+            <div class="mouth-overlays" id="mouth-overlays"></div>
             <!-- Vídeo de presentación: cubre la imagen del consejo. Su poster (primer fotograma generado
                  con qlmanage) ya muestra el Apple II integrado en la mesa con el mismo estilo SCUMM. -->
             <video id="presentation-video" class="presentation-video"
@@ -2607,6 +2640,39 @@
     // El Mac sigue en Tailscale como "online" pero la pantalla esta apagada
     const sleepingMachines = new Set();
 
+    // ── Bocas animadas ────────────────────────────────────────
+    // Un consejero "habla" (mueve la boca) cuando está vivo. "Vivo" = su máquina
+    // online (lo marca render) O presente en AgoraMatrix/Telegram (lo marca el
+    // panel). "active" (boca rápida) = acaba de postear en AgoraMatrix.
+    let _mouthMachineAlive = new Set();   // personas vivas por máquina (render)
+    let _mouthAgoraAlive = new Set();     // personas presentes en AgoraMatrix (panel)
+    let _mouthTalking = new Set();        // personas posteando ahora mismo (panel)
+    function applyMouths() {
+        document.querySelectorAll('#mouth-overlays .mouth').forEach(el => {
+            const persona = el.getAttribute('data-persona');
+            const alive = _mouthMachineAlive.has(persona) || _mouthAgoraAlive.has(persona);
+            el.classList.toggle('alive', alive);
+            el.classList.toggle('active', alive && _mouthTalking.has(persona));
+        });
+    }
+    // El panel AgoraMatrix llama a esto (traduce alias→persona real) para que un
+    // coetáneo presente/hablando mueva la boca aunque no haya estado de máquina.
+    window.councilUpdateAgora = function (alivePersonas, talkingPersonas) {
+        _mouthAgoraAlive = new Set(alivePersonas || []);
+        if (Array.isArray(talkingPersonas)) _mouthTalking = new Set(talkingPersonas);
+        applyMouths();
+    };
+    // Ráfaga: <persona real> acaba de hablar → boca rápida unos segundos.
+    window.councilMouthBurst = function (persona) {
+        if (!persona) return;
+        _mouthTalking.add(persona);
+        applyMouths();
+        clearTimeout((window._mouthBurstTimers ||= {})[persona]);
+        window._mouthBurstTimers[persona] = setTimeout(() => {
+            _mouthTalking.delete(persona); applyMouths();
+        }, 5000);
+    };
+
     function setGen(gen) {
         currentGen = gen;
         document.getElementById("btn-leyendas").className = "gen-btn" + (gen === "leyendas" ? " active-leyendas" : "");
@@ -2874,6 +2940,23 @@
             return `<div class="body-hotspot" data-persona="${p.persona}" title="${p.persona} (${p.role})"
                 style="left:${b.left}%;top:${b.top}%;width:${b.width}%;height:${b.height}%"></div>`;
         }).join("");
+
+        // Render bocas (se mueven cuando el consejero está "vivo" = su máquina online)
+        const moEl = document.getElementById("mouth-overlays");
+        if (moEl) {
+            moEl.innerHTML = plates.map((p, i) => {
+                if (!p.body) return '';
+                const b = p.body;
+                const machine = p.machineId ? machineStatus[p.machineId] : null;
+                const isOnline = machine ? machine.online : false;
+                if (isOnline) _mouthMachineAlive.add(p.persona); else _mouthMachineAlive.delete(p.persona);
+                const cx = b.left + b.width / 2;            // centro horizontal de la cara
+                const cy = b.top + b.height * 0.17;          // boca ≈ parte alta del cuerpo (la cara)
+                return `<div class="mouth" data-persona="${p.persona}" style="left:${cx}%;top:${cy}%">
+                    <div class="lips" style="animation-delay:${((i * 0.17) % 1).toFixed(2)}s"></div></div>`;
+            }).join("");
+            applyMouths();
+        }
 
         // Re-apply preguntar styles after DOM rebuild
         if (typeof _applyPreguntarStyles === 'function') _applyPreguntarStyles();
@@ -3621,6 +3704,10 @@
         try { localStorage.setItem('topCollapsed', collapsed ? '1' : '0'); } catch (e) {}
     }
     function toggleTopMenu() { const c = document.querySelector('.container'); setTopCollapsed(!(c && c.classList.contains('top-collapsed'))); }
+    function setMouthsEnabled(on) {
+        document.body.classList.toggle('mouths-off', !on);
+        try { localStorage.setItem('mouthsOff', on ? '0' : '1'); } catch (e) {}
+    }
 
     let yarigWindowsPinned = false;
     let yarigAutoRefreshTimer = null;
@@ -3696,6 +3783,7 @@
             '<li><strong>/menu on|off|toggle</strong> — oculta/enseña los menús de arriba (más espacio)</li>' +
             '<li><strong>/scumm on|off|toggle</strong> — pliega/despliega el menú intermedio (verbos) — o el botón ▾</li>' +
             '<li><strong>/top on|off|toggle</strong> — pliega/despliega el menú superior (botón ▾)</li>' +
+            '<li><strong>/bocas on|off|toggle</strong> — los consejeros vivos mueven la boca (hablan)</li>' +
             '<li><strong>/yarig on|off|toggle</strong> — fija u oculta Yarig en la mesa</li>' +
             '<li><strong>/yarig login</strong> — abre la sesión persistente de Yarig</li>' +
             '<li><strong>/yarig estado</strong> — comprueba watcher y frescura del sync</li>' +
@@ -4041,6 +4129,16 @@
             setTopCollapsed(nv);
             addUserEntry(text);
             setActionLine('🔼 Menú superior ' + (nv ? 'plegado' : 'desplegado') + ' · /top on · off · toggle');
+            return true;
+        }
+        const bocasMatch = text.match(/^\/(?:bocas|boca)\s*(on|off|toggle)?$/i);
+        if (bocasMatch) {
+            const action = (bocasMatch[1] || 'toggle').toLowerCase();
+            const off = document.body.classList.contains('mouths-off');
+            const nv = action === 'off' ? false : action === 'on' ? true : off;
+            setMouthsEnabled(nv);
+            addUserEntry(text);
+            setActionLine('👄 Bocas ' + (nv ? 'activas (los vivos hablan)' : 'quietas') + ' · /bocas on · off · toggle');
             return true;
         }
         const menuMatch = text.match(/^\/menu\s*(on|off|toggle)?$/i);
@@ -6261,6 +6359,7 @@
         try { if (localStorage.getItem('councilMenuHidden') === '1') document.body.classList.add('cli-menu-hidden'); } catch (e) {}
         try { setScummCollapsed(localStorage.getItem('scummCollapsed') !== '0'); } catch (e) { setScummCollapsed(true); }
         try { if (localStorage.getItem('topCollapsed') === '1') setTopCollapsed(true); } catch (e) {}
+        try { if (localStorage.getItem('mouthsOff') === '1') setMouthsEnabled(false); } catch (e) {}
         refreshLLMAvailability();
         // Magic link Telegram: ?train=<url> auto-activa Entrenar y procesa la URL
         const params = new URLSearchParams(location.search);
@@ -7472,10 +7571,29 @@
   function parseMsg(line){ var m=String(line).match(/^(\S+)\s+\[([^\]]+)\]\s+([\s\S]*)$/); if(m){ var t=m[1].replace('T',' ').slice(5,16); return {time:t,who:m[2],tx:m[3]}; } return {time:'',who:'',tx:line}; }
   function renderPresence(who){
     var w=String(who||'');
+    var aliveReal=[];
     presEl.innerHTML = COETANEOS.map(function(c){
       var on = new RegExp("despierto[^\\n]*\\b"+c.persona.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+"\\b","i").test(w);
+      if(on) aliveReal.push(c.name);   // c.name = persona real del Consejo (Elon Musk…)
       return '<span class="agm-who'+(on?' on':'')+'" title="'+esc(c.name)+' → '+esc(c.persona)+'"><span class="d"></span>'+esc(c.persona)+'</span>';
     }).join('');
+    // Que los coetáneos presentes en AgoraMatrix muevan la boca en el Consejo.
+    if(window.councilUpdateAgora) window.councilUpdateAgora(aliveReal);
+  }
+  // alias AgoraMatrix (Neo, Morfeo…) → persona real del Consejo (Elon Musk…)
+  function aliasToReal(alias){
+    var a=String(alias||'').trim().toLowerCase();
+    for(var i=0;i<COETANEOS.length;i++){ if(COETANEOS[i].persona.toLowerCase()===a) return COETANEOS[i].name; }
+    return null;
+  }
+  var _lastFeedKey='';
+  function burstFromFeed(feed){
+    if(!feed||!feed.length) return;
+    var last=feed[feed.length-1]; var key=String(last);
+    if(key===_lastFeedKey) return;          // sin mensaje nuevo
+    _lastFeedKey=key;
+    var m=parseMsg(last); var real=aliasToReal(m.who);
+    if(real && window.councilMouthBurst) window.councilMouthBurst(real);
   }
   function renderFeed(feed){
     if(!feed||!feed.length){ feedEl.innerHTML='<div class="agm-msg"><span class="tx">Sin mensajes todavía.</span></div>'; return; }
@@ -7487,7 +7605,7 @@
   async function tick(){
     if(panel.style.display==='none') return;
     try{ var r=await fetch(API,{cache:'no-store'}); var d=await r.json();
-      if(d&&d.ok){ renderPresence(d.who); renderFeed(d.feed); } }
+      if(d&&d.ok){ renderPresence(d.who); renderFeed(d.feed); burstFromFeed(d.feed); } }
     catch(e){}
   }
   tick(); setInterval(tick, 12000);

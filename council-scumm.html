@@ -2437,6 +2437,11 @@
         .scumm-bar.scumm-collapsed .scumm-bottom { display: none !important; }
         .scumm-fold { background: transparent; border: 1px solid #886633; color: #dca85a; border-radius: 6px; cursor: pointer; padding: 0 9px; font-size: 0.8rem; line-height: 1.6; }
         .scumm-fold:hover { border-color: #dca85a; color: #ffd27a; }
+        /* Menú superior plegable: oculta paneles + banda, deja el toolbar (con el botón) */
+        .container.top-collapsed .status-grid,
+        .container.top-collapsed .legend-strip { display: none !important; }
+        .top-fold { background: transparent; border: 1px solid #2a4a6a; color: #9ccfff; border-radius: 6px; cursor: pointer; padding: 0 9px; font-size: 0.8rem; line-height: 1.6; }
+        .top-fold:hover { border-color: #9ccfff; color: #cfe8ff; }
     </style>
 </head>
 <body>
@@ -2450,6 +2455,7 @@
             </div>
             <button class="yar-btn" id="yar-btn" onclick="openYarOverlay()">🧭 Yarig.AI<span class="yar-chip" id="yar-chip">sin contexto</span></button>
             <div class="summary" id="summary"></div>
+            <button class="top-fold" id="top-fold" onclick="toggleTopMenu()" title="Plegar / desplegar el menú superior" aria-label="Plegar menú superior">▾</button>
         </div>
 
         <div class="status-grid" id="status-grid">
@@ -2571,7 +2577,7 @@
             <!-- ── end PRESENTAR overlay ───────────────────────── -->
         </div>
 
-        <div class="scumm-bar">
+        <div class="scumm-bar scumm-collapsed">
             <div class="action-line">
                 <input class="action-input" id="action-input" type="text" placeholder="escribe aquí · /help para todos los comandos" autocomplete="off" onkeydown="if(event.key==='Enter')sendMessage()">
                 <button class="action-send" onclick="sendMessage()">Enviar</button>
@@ -4011,6 +4017,14 @@
         try { localStorage.setItem('scummCollapsed', collapsed ? '1' : '0'); } catch (e) {}
     }
     function toggleScumm() { const bar = document.querySelector('.scumm-bar'); setScummCollapsed(!(bar && bar.classList.contains('scumm-collapsed'))); }
+    // Menú superior plegable (persistente)
+    function setTopCollapsed(collapsed) {
+        const c = document.querySelector('.container'); if (!c) return;
+        c.classList.toggle('top-collapsed', collapsed);
+        const f = document.getElementById('top-fold'); if (f) f.textContent = collapsed ? '▸' : '▾';
+        try { localStorage.setItem('topCollapsed', collapsed ? '1' : '0'); } catch (e) {}
+    }
+    function toggleTopMenu() { const c = document.querySelector('.container'); setTopCollapsed(!(c && c.classList.contains('top-collapsed'))); }
 
     let yarigWindowsPinned = false;
     let yarigAutoRefreshTimer = null;
@@ -4085,6 +4099,7 @@
             '<li><strong>/agoramatrix on|off|toggle</strong> — muestra/oculta el panel AgoraMatrix (movible · redimensionable)</li>' +
             '<li><strong>/menu on|off|toggle</strong> — oculta/enseña los menús de arriba (más espacio)</li>' +
             '<li><strong>/scumm on|off|toggle</strong> — pliega/despliega el menú intermedio (verbos) — o el botón ▾</li>' +
+            '<li><strong>/top on|off|toggle</strong> — pliega/despliega el menú superior (botón ▾)</li>' +
             '<li><strong>/yarig on|off|toggle</strong> — fija u oculta Yarig en la mesa</li>' +
             '<li><strong>/yarig login</strong> — abre la sesión persistente de Yarig</li>' +
             '<li><strong>/yarig estado</strong> — comprueba watcher y frescura del sync</li>' +
@@ -4419,6 +4434,17 @@
             setScummCollapsed(nv);
             addUserEntry(text);
             setActionLine('🎛 Menú SCUMM ' + (nv ? 'plegado' : 'desplegado') + ' · /scumm on · off · toggle');
+            return true;
+        }
+        const topMatch = text.match(/^\/top\s*(on|off|toggle)?$/i);
+        if (topMatch) {
+            const action = (topMatch[1] || 'toggle').toLowerCase();
+            const c = document.querySelector('.container');
+            const collapsed = !!(c && c.classList.contains('top-collapsed'));
+            const nv = action === 'off' ? true : action === 'on' ? false : !collapsed;
+            setTopCollapsed(nv);
+            addUserEntry(text);
+            setActionLine('🔼 Menú superior ' + (nv ? 'plegado' : 'desplegado') + ' · /top on · off · toggle');
             return true;
         }
         const menuMatch = text.match(/^\/menu\s*(on|off|toggle)?$/i);
@@ -6745,7 +6771,8 @@
     // Wire del click del hotspot y del fin de vídeo
     document.addEventListener("DOMContentLoaded", () => {
         try { if (localStorage.getItem('councilMenuHidden') === '1') document.body.classList.add('cli-menu-hidden'); } catch (e) {}
-        try { if (localStorage.getItem('scummCollapsed') === '1') setScummCollapsed(true); } catch (e) {}
+        try { setScummCollapsed(localStorage.getItem('scummCollapsed') !== '0'); } catch (e) { setScummCollapsed(true); }
+        try { if (localStorage.getItem('topCollapsed') === '1') setTopCollapsed(true); } catch (e) {}
         refreshLLMAvailability();
         // Magic link Telegram: ?train=<url> auto-activa Entrenar y procesa la URL
         const params = new URLSearchParams(location.search);

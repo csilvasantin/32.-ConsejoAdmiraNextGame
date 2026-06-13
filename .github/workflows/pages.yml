@@ -31,6 +31,8 @@ jobs:
       - name: Prepare static site
         run: |
           mkdir -p _site
+          cp CNAME _site/CNAME
+          cp .nojekyll _site/.nojekyll
           cp docs/index.html _site/index.html
           cp docs/styles.css _site/styles.css
           cp docs/app.js _site/app.js

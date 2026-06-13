@@ -388,6 +388,37 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  if (request.method === "POST" && url.pathname === "/api/agora/say") {
+    // Chat del panel del Consejo → AgoraMatrix. Origin-gated (sin clave) + rate-limit.
+    // Publica como "Consejo" (o `from`); las respuestas aparecen en el feed que ya pollea el panel.
+    if (!isAllowedCouncilOrigin(request)) {
+      sendJson(response, 403, { ok: false, error: "Origen no permitido" });
+      return;
+    }
+    if (!checkAgoraCouncilRateLimit(request)) {
+      sendJson(response, 429, { ok: false, error: "Demasiados mensajes en poco tiempo" });
+      return;
+    }
+    try {
+      const parsed = await readJsonBody(request);
+      const text = compactAgoraText(parsed.text, 600);
+      if (!text) {
+        sendJson(response, 400, { ok: false, error: "Mensaje vacío" });
+        return;
+      }
+      const from = compactAgoraText(parsed.from, 40) || "Consejo";
+      const result = await runAgora(["send", "--from", from, text], { timeoutMs: 45000 });
+      sendJson(response, result.ok ? 200 : 502, {
+        ok: result.ok,
+        from,
+        error: result.ok ? null : (result.stderr || result.error || "No se pudo enviar a AgoraMatrix"),
+      });
+    } catch (error) {
+      sendJson(response, 500, { ok: false, error: error instanceof Error ? error.message : "Error al enviar" });
+    }
+    return;
+  }
+
   if (request.method === "POST" && url.pathname === "/api/agora/send") {
     const denied = verifyAgoraAccess(request, url);
     if (denied) {

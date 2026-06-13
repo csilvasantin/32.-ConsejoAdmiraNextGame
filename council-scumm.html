@@ -7853,12 +7853,17 @@
   .agm-msg .t{color:#3f7a4f;font-size:10px;margin-left:4px}
   .agm-msg .tx{color:#bdebc8;display:block;margin-top:2px;word-break:break-word}
   #agm-foot{padding:6px 10px;border-top:1px solid #143b1d;color:#3f7a4f;font-size:10px;text-align:center}
+  #agm-chat{display:flex;gap:6px;padding:7px 10px;border-top:1px solid #143b1d}
+  #agm-chat input{flex:1;min-width:0;background:#03140a;border:1px solid #1f8a3e;color:#bdebc8;border-radius:6px;padding:5px 8px;font-family:inherit;font-size:11px;outline:none}
+  #agm-chat button{background:#0c3;border:0;color:#02140a;border-radius:6px;padding:0 12px;font-weight:700;cursor:pointer}
+  #agm-chat button:disabled{opacity:.5;cursor:default}
 </style>
 <div id="agm-panel" aria-label="AgoraMatrix Consejo">
   <div id="agm-head"><span class="agm-dot"></span><b>📡 AgoraMatrix · Consejo</b><span class="agm-toggle">▾</span></div>
   <div id="agm-body">
     <div id="agm-presence"></div>
     <div id="agm-feed"><div class="agm-msg"><span class="tx">Conectando con AgoraMatrix…</span></div></div>
+    <div id="agm-chat"><input id="agm-input" placeholder="escribe al canal AgoraMatrix…" maxlength="600" autocomplete="off"><button id="agm-send" title="Enviar">➤</button></div>
     <div id="agm-foot">coetáneos ⇄ agentes Matrix · en vivo</div>
   </div>
 </div>
@@ -7876,6 +7881,16 @@
       feedEl=document.getElementById('agm-feed'), presEl=document.getElementById('agm-presence'),
       tog=head.querySelector('.agm-toggle');
   head.addEventListener('click',function(){ panel.classList.toggle('agm-min'); tog.textContent=panel.classList.contains('agm-min')?'▸':'▾'; });
+  // Chat bidireccional: escribir al canal AgoraMatrix (como "Consejo"); las respuestas
+  // entran por el feed que ya se pollea. Sin clave (endpoint origin-gated /api/agora/say).
+  var input=document.getElementById('agm-input'), sendBtn=document.getElementById('agm-send');
+  async function sendMsg(){ var t=(input.value||'').trim(); if(!t) return; sendBtn.disabled=true; var ov=input.value; input.value='';
+    try{ var r=await fetch("https://macmini.tail48b61c.ts.net/api/agora/say",{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:t,from:'Consejo'})}); var d=await r.json();
+      if(!(r.ok&&d.ok)){ input.value=ov; alert('No se pudo enviar: '+((d&&d.error)||r.status)); } else { setTimeout(tick,900); } }
+    catch(e){ input.value=ov; alert('Sin conexión con AgoraMatrix'); }
+    finally{ sendBtn.disabled=false; input.focus(); } }
+  sendBtn.addEventListener('click',sendMsg);
+  input.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); sendMsg(); } });
   function esc(s){ return String(s||'').replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
   function parseMsg(line){ var m=String(line).match(/^(\S+)\s+\[([^\]]+)\]\s+([\s\S]*)$/); if(m){ var t=m[1].replace('T',' ').slice(5,16); return {time:t,who:m[2],tx:m[3]}; } return {time:'',who:'',tx:line}; }
   function renderPresence(who){

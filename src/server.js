@@ -30,7 +30,8 @@ const VALID_STATUSES = new Set(["online", "idle", "busy", "offline", "maintenanc
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, X-Agora-Panel-Key"
+  "Access-Control-Allow-Headers": "Content-Type, X-Agora-Panel-Key",
+  "Access-Control-Allow-Private-Network": "true"
 };
 const FRIENDLY_ROUTES = new Map([
   ["/control", "/teamwork.html?v=20260613-1"],

@@ -246,7 +246,7 @@ function buildTaskDispatchText(task) {
     `Encargo: ${title}`,
     detail ? `Detalle: ${detail}` : "",
     `Prioridad: ${priority}`,
-    "Cuando avances responde aquí; marca 'done' al terminar."
+    `Para el seguimiento responde aquí citando ${task.id} y di si está 'en curso', 'bloqueada' o 'hecha' (se actualiza solo en el tablero).`
   ].filter(Boolean).join(" | ");
 }
 
@@ -406,6 +406,78 @@ async function dispatchTaskNow(task, target) {
     channel: "agora",
     target: task.assignee?.id || ""
   };
+}
+
+// ───── Auto-seguimiento: el feed de AgoraMatrix actualiza el estado de las tareas ─────
+// Cuando un consejero responde citando "task-NNN" + 'hecha'/'en curso'/'bloqueada',
+// el estado del tablero se actualiza solo. Cierra el lazo sin tocar el panel.
+const TASK_SEEN_LINES = new Set();
+let taskSyncPrimed = false;
+
+function normLine(s) {
+  return String(s || "").normalize("NFD").replace(/[̀-ͯ]/g, "").toLowerCase();
+}
+
+function detectTaskStatus(normText) {
+  if (/(bloquead|blocked|atascad|stuck|⛔)/.test(normText)) return "blocked";
+  if (/(hecho|hecha|done|completad|terminad|finalizad|resuelt|✅)/.test(normText)) return "done";
+  if (/(en curso|empezand|working|wip|in progress|trabajand|avanzand|retomand|on it)/.test(normText)) return "in_progress";
+  return null;
+}
+
+async function syncTasksFromAgora() {
+  const feedRes = await runAgora(["read", "--last", "30"], { timeoutMs: 10000 });
+  if (!feedRes.ok) return;
+  const lines = splitAgoraLines(feedRes.stdout);
+
+  if (!taskSyncPrimed) {
+    // Primer pase: registra lo ya existente sin actuar (no reabrir la historia).
+    lines.forEach((l) => TASK_SEEN_LINES.add(l));
+    taskSyncPrimed = true;
+    return;
+  }
+
+  const fresh = lines.filter((l) => !TASK_SEEN_LINES.has(l));
+  if (!fresh.length) return;
+  fresh.forEach((l) => TASK_SEEN_LINES.add(l));
+  if (TASK_SEEN_LINES.size > 400) {
+    const arr = [...TASK_SEEN_LINES];
+    TASK_SEEN_LINES.clear();
+    arr.slice(-200).forEach((l) => TASK_SEEN_LINES.add(l));
+  }
+
+  let tasks;
+  try { tasks = await listTasks(); } catch { return; }
+  const open = tasks.filter((t) => t.status !== "done");
+  if (!open.length) return;
+
+  for (const line of fresh) {
+    const m = line.match(/\[([^\]]+)\]\s*([\s\S]*)$/);
+    const who = m ? m[1].trim() : "";
+    const text = m ? m[2] : line;
+    if (/^consejo$/i.test(who)) continue; // no auto-procesar nuestros propios envíos
+    const norm = normLine(text);
+    const ids = norm.match(/task-\d+/g);
+    if (!ids) continue;
+    const status = detectTaskStatus(norm);
+    if (!status) continue;
+    for (const id of [...new Set(ids)]) {
+      const task = open.find((t) => t.id.toLowerCase() === id);
+      if (!task || task.status === status) continue;
+      try {
+        await updateTaskStatus(task.id, status, {
+          from: who || "AgoraMatrix",
+          note: `auto desde AgoraMatrix (${who || "?"}): "${text.slice(0, 120)}"`
+        });
+        task.status = status;
+      } catch { /* sigue con el resto */ }
+    }
+  }
+}
+
+function startTaskAgoraSync() {
+  syncTasksFromAgora().catch(() => {});
+  setInterval(() => { syncTasksFromAgora().catch(() => {}); }, 20000);
 }
 
 const server = createServer(async (request, response) => {
@@ -955,5 +1027,8 @@ server.listen(PORT, HOST, () => {
   console.log(`AdmiraNext Team escuchando en http://${HOST}:${PORT}`);
   if (process.env.WATCHDOG_ON_START !== "0") {
     startWatchdog(); // Auto-Approve ON por defecto al arrancar
+  }
+  if (process.env.TASK_SYNC_ON_START !== "0") {
+    startTaskAgoraSync(); // El feed de AgoraMatrix actualiza el estado de las tareas
   }
 });

@@ -2478,13 +2478,14 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.15.r1</a>
+            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.15.r2</a>
             <a href="https://csilvasantin.github.io/diario/" target="_blank" rel="noopener" class="version-badge" title="Diario operativo del Consejo">📓 Diario</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
                 <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
             </div>
             <button class="yar-btn" id="yar-btn" onclick="openYarOverlay()">🧭 Yarig.AI<span class="yar-chip" id="yar-chip">sin contexto</span></button>
+            <button class="version-badge" id="tk-toolbtn" onclick="window.tkSetVisible&&window.tkSetVisible(true)" title="Tareas del Consejo — abre el panel (/tareas)">🗂️ Tareas<span class="tk-toolchip" id="tk-badge">0</span></button>
             <div class="summary" id="summary"></div>
             <button class="top-fold" id="top-fold" onclick="toggleTopMenu()" title="Plegar / desplegar el menú superior" aria-label="Plegar menú superior">▾</button>
         </div>
@@ -8198,6 +8199,10 @@
   .tk-acts button.tk-go{border-color:#0c3;color:#0f6}
   #tk-empty{color:#3f7a4f;text-align:center;padding:18px 8px;font-size:11px}
   #tk-foot{padding:6px 10px;border-top:1px solid #143b1d;color:#3f7a4f;font-size:10px;text-align:center}
+  .tk-toolchip{display:inline-block;margin-left:6px;min-width:16px;padding:0 5px;border-radius:9px;font-size:.68rem;
+    line-height:1.5;text-align:center;background:#1f8a3e;color:#02140a;font-weight:700}
+  .tk-toolchip.tk-zero{background:#2a4a3a;color:#7dff9e;opacity:.7}
+  .tk-toolchip.tk-alert{background:#c33;color:#fff;animation:agmPulse 1.6s infinite}
 </style>
 <div id="task-panel" aria-label="Tareas del Consejo">
   <div id="tk-head"><span class="tk-dot"></span><b>🗂️ Tareas del Consejo</b><span class="tk-count" id="tk-count"></span><span class="tk-toggle">▾</span></div>
@@ -8304,10 +8309,19 @@
     countEl.textContent=pend+' activas · '+tasks.length;
   }
 
+  var badgeEl=document.getElementById('tk-badge');
+  function updateBadge(tasks){
+    if(!badgeEl) return;
+    var active=tasks.filter(function(t){return t.status!=='done';});
+    var blocked=active.filter(function(t){return t.status==='blocked';}).length;
+    badgeEl.textContent=String(active.length);
+    badgeEl.className='tk-toolchip'+(active.length===0?' tk-zero':(blocked?' tk-alert':''));
+  }
   async function tick(){
-    if(panel.style.display==='none') return;
+    // Sondea SIEMPRE (también con el panel oculto) para mantener vivo el contador
+    // de la barra superior; la lista pesada solo se pinta si el panel está visible.
     try{ var r=await fetch(API+"/api/council/tasks",{cache:'no-store'}); var d=await r.json();
-      if(d&&d.ok) render(d.tasks); }
+      if(d&&d.ok){ updateBadge(d.tasks); if(panel.style.display!=='none') render(d.tasks); } }
     catch(e){ /* server dormido: deja lo último */ }
   }
 

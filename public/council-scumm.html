@@ -7,14 +7,15 @@
     <meta http-equiv="Pragma" content="no-cache">
     <meta http-equiv="Expires" content="0">
     <script>
-        // Force fresh load: redirect to ?_v=<now> if param missing or older than 5 min
-        // Preserve other params (e.g. ?train=<url> from Telegram magic link)
+        // URL limpia: si llega ?_v (de versiones antiguas) lo quitamos SIN recargar.
+        // La frescura ya la cubren los meta no-cache de arriba. Conserva otros
+        // parámetros (p.ej. ?train=<url> de los magic-links de Telegram).
         (function(){
             var p = new URLSearchParams(location.search);
-            var v = parseInt(p.get('_v') || '0', 10);
-            if (!v || Date.now() - v > 300000) {
-                p.set('_v', Date.now());
-                location.replace(location.pathname + '?' + p.toString());
+            if (p.has('_v')) {
+                p.delete('_v');
+                var qs = p.toString();
+                history.replaceState(null, '', location.pathname + (qs ? '?' + qs : '') + location.hash);
             }
         })();
     </script>
@@ -2211,7 +2212,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.15.r2</a>
+            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.15.r3</a>
             <a href="https://csilvasantin.github.io/diario/" target="_blank" rel="noopener" class="version-badge" title="Diario operativo del Consejo">📓 Diario</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>

@@ -2478,7 +2478,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.13.r2</a>
+            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.15.r1</a>
             <a href="https://csilvasantin.github.io/diario/" target="_blank" rel="noopener" class="version-badge" title="Diario operativo del Consejo">📓 Diario</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
@@ -4193,6 +4193,7 @@
             '<li><strong>/diario &lt;texto&gt;</strong> — registra una decisión en el diario</li>' +
             '<li><strong>/agora</strong> o <strong>/codex</strong> — muestra mi estado Codex/Oráculo en AgoraMatrix</li>' +
             '<li><strong>/agoramatrix on|off|toggle</strong> — muestra/oculta el panel AgoraMatrix (movible · redimensionable)</li>' +
+            '<li><strong>/tareas on|off|toggle</strong> — panel de Tareas del Consejo: reparto + seguimiento (crear, asignar, entregar, estado)</li>' +
             '<li><strong>/menu on|off|toggle</strong> — oculta/enseña los menús de arriba (más espacio)</li>' +
             '<li><strong>/scumm on|off|toggle</strong> — pliega/despliega el menú intermedio (verbos) — o el botón ▾</li>' +
             '<li><strong>/top on|off|toggle</strong> — pliega/despliega el menú superior (botón ▾)</li>' +
@@ -4571,6 +4572,14 @@
             const vis = window.agmSetVisible(action === 'on' ? true : action === 'off' ? false : null);
             addUserEntry(text);
             setActionLine('📡 Panel AgoraMatrix ' + (vis ? 'visible' : 'oculto') + ' — /agoramatrix on · off · toggle');
+            return true;
+        }
+        const taskPanelMatch = text.match(/^\/(?:tareas|tasks)\s*(on|off|toggle)?$/i);
+        if (taskPanelMatch && window.tkSetVisible) {
+            const action = (taskPanelMatch[1] || 'toggle').toLowerCase();
+            const vis = window.tkSetVisible(action === 'on' ? true : action === 'off' ? false : null);
+            addUserEntry(text);
+            setActionLine('🗂️ Panel Tareas del Consejo ' + (vis ? 'visible' : 'oculto') + ' — /tareas on · off · toggle');
             return true;
         }
         const agoraMatch = text.match(/^\/(?:agora|agoramatrix|codex|oraculo|oráculo)(?:\s+(estado|status|help|ayuda))?$/i);
@@ -8137,6 +8146,204 @@
     catch(e){ /* MacMini dormido o sin red: deja lo último */ }
   }
   tick(); setInterval(tick, 12000);
+})();
+</script>
+
+<!-- ===== Panel TAREAS DEL CONSEJO — reparto + seguimiento =====
+     Crea tareas, las asigna a un agente de AgoraMatrix (Neo/Morfeo…) o a una
+     máquina por SSH, las entrega (dispatch) y sigue su estado. Fuente de verdad:
+     council-api (data/tasks.json, persistente). Endpoints origin-gated → sin clave. -->
+<style>
+  #task-panel{position:fixed;left:14px;bottom:14px;z-index:91;width:360px;height:480px;
+    min-width:270px;min-height:160px;max-width:96vw;max-height:90vh;resize:both;display:none;flex-direction:column;
+    font-family:"Courier New",monospace;color:#7dff9e;background:rgba(2,10,4,.95);border:1px solid #1f8a3e;
+    border-radius:10px;box-shadow:0 0 28px rgba(0,255,65,.18);overflow:hidden;font-size:12px}
+  #task-panel.tk-min{width:auto!important;height:auto!important;min-height:0;resize:none}
+  #tk-head{display:flex;align-items:center;gap:8px;padding:8px 11px;background:rgba(0,255,65,.07);
+    border-bottom:1px solid #1f8a3e;cursor:grab;user-select:none;touch-action:none}
+  #tk-head:active{cursor:grabbing}
+  #tk-head b{color:#9effb0;letter-spacing:.06em;font-size:12px;text-shadow:0 0 6px rgba(0,255,65,.5)}
+  #tk-head .tk-dot{width:8px;height:8px;border-radius:50%;background:#00ff41;box-shadow:0 0 6px #00ff41;animation:agmPulse 1.6s infinite}
+  #tk-head .tk-count{margin-left:auto;font-size:10px;color:#3f7a4f}
+  #tk-head .tk-toggle{color:#7dff9e;opacity:.8;margin-left:6px}
+  #tk-body{display:flex;flex-direction:column;flex:1;min-height:0}
+  .tk-min #tk-body{display:none}
+  #tk-form{display:flex;flex-direction:column;gap:5px;padding:8px 10px;border-bottom:1px solid #143b1d}
+  #tk-form input,#tk-form select,#tk-form textarea{background:#03140a;border:1px solid #1f8a3e;color:#bdebc8;
+    border-radius:6px;padding:5px 8px;font-family:inherit;font-size:11px;outline:none;width:100%}
+  #tk-form textarea{resize:vertical;min-height:30px;max-height:90px}
+  .tk-row{display:flex;gap:5px}
+  .tk-row > *{flex:1;min-width:0}
+  #tk-form .tk-create{background:#0c3;border:0;color:#02140a;border-radius:6px;padding:6px;font-weight:700;cursor:pointer;flex:none}
+  #tk-form .tk-create:disabled{opacity:.5;cursor:default}
+  .tk-send-now{display:flex;align-items:center;gap:6px;font-size:10px;color:#9effb0;flex:1.4}
+  .tk-send-now input{width:auto!important}
+  #tk-list{flex:1;min-height:0;overflow-y:auto;padding:6px 8px}
+  .tk-item{padding:7px 8px;border:1px solid #143b1d;border-radius:7px;margin-bottom:6px;background:rgba(0,40,12,.25)}
+  .tk-item .tk-top{display:flex;align-items:center;gap:6px;margin-bottom:3px}
+  .tk-item .tk-title{color:#e9ffe9;font-weight:700;flex:1;word-break:break-word;line-height:1.3}
+  .tk-chip{font-size:9px;padding:1px 6px;border-radius:10px;border:1px solid;white-space:nowrap}
+  .tk-st-pending{color:#9aa;border-color:#556}
+  .tk-st-sent{color:#5cf;border-color:#39c}
+  .tk-st-in_progress{color:#fc3;border-color:#a82}
+  .tk-st-blocked{color:#f66;border-color:#a33;background:rgba(120,20,20,.2)}
+  .tk-st-done{color:#0f6;border-color:#0a4;background:rgba(0,80,30,.2)}
+  .tk-meta{font-size:9px;color:#5b9c6c;margin:2px 0 4px;display:flex;flex-wrap:wrap;gap:6px}
+  .tk-detail{font-size:10px;color:#a7d8b4;margin:0 0 4px;word-break:break-word;line-height:1.35}
+  .tk-acts{display:flex;flex-wrap:wrap;gap:4px}
+  .tk-acts button{background:#06200f;border:1px solid #1f8a3e;color:#9effb0;border-radius:5px;
+    padding:2px 7px;font-size:10px;cursor:pointer;font-family:inherit}
+  .tk-acts button:hover{background:#0a3318}
+  .tk-acts button.tk-del{border-color:#a33;color:#f88}
+  .tk-acts button.tk-go{border-color:#0c3;color:#0f6}
+  #tk-empty{color:#3f7a4f;text-align:center;padding:18px 8px;font-size:11px}
+  #tk-foot{padding:6px 10px;border-top:1px solid #143b1d;color:#3f7a4f;font-size:10px;text-align:center}
+</style>
+<div id="task-panel" aria-label="Tareas del Consejo">
+  <div id="tk-head"><span class="tk-dot"></span><b>🗂️ Tareas del Consejo</b><span class="tk-count" id="tk-count"></span><span class="tk-toggle">▾</span></div>
+  <div id="tk-body">
+    <form id="tk-form" autocomplete="off">
+      <input id="tk-title" placeholder="Nueva tarea… (qué hay que hacer)" maxlength="280" required>
+      <div class="tk-row">
+        <select id="tk-assignee" title="Asignar a"><option value="">Asignar a…</option></select>
+        <select id="tk-priority" title="Prioridad">
+          <option value="normal">🟡 normal</option>
+          <option value="high">🟠 alta</option>
+          <option value="urgent">🔴 urgente</option>
+          <option value="low">⚪ baja</option>
+        </select>
+      </div>
+      <textarea id="tk-detail" placeholder="Detalle / contexto (opcional)" maxlength="700"></textarea>
+      <div class="tk-row">
+        <label class="tk-send-now"><input type="checkbox" id="tk-now" checked> entregar ya</label>
+        <button type="submit" class="tk-create" id="tk-create">+ Crear</button>
+      </div>
+    </form>
+    <div id="tk-list"><div id="tk-empty">Cargando tareas…</div></div>
+    <div id="tk-foot">reparto + seguimiento · persistente</div>
+  </div>
+</div>
+<script>
+(function(){
+  var API="https://macmini.tail48b61c.ts.net";
+  var panel=document.getElementById('task-panel'), head=document.getElementById('tk-head'),
+      listEl=document.getElementById('tk-list'), countEl=document.getElementById('tk-count'),
+      tog=head.querySelector('.tk-toggle'), form=document.getElementById('tk-form'),
+      titleEl=document.getElementById('tk-title'), detailEl=document.getElementById('tk-detail'),
+      assigneeEl=document.getElementById('tk-assignee'), prioEl=document.getElementById('tk-priority'),
+      nowEl=document.getElementById('tk-now'), createBtn=document.getElementById('tk-create');
+  var ASSIGNEES=[];
+  var ST_LABEL={pending:'pendiente',sent:'enviada',in_progress:'en curso',blocked:'bloqueada',done:'hecha'};
+  var PRIO_ICON={urgent:'🔴',high:'🟠',normal:'🟡',low:'⚪'};
+
+  function esc(s){ return String(s||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function ago(iso){ try{ var s=Math.max(0,(Date.now()-new Date(iso).getTime())/1000);
+    if(s<60)return'ahora'; if(s<3600)return Math.floor(s/60)+'m'; if(s<86400)return Math.floor(s/3600)+'h'; return Math.floor(s/86400)+'d'; }catch(e){return'';} }
+
+  // ── Caja flotante: movible + redimensionable + persistente ──
+  var _tkMoved=false, GEOM_KEY='taskPanelGeom', VIS_KEY='taskPanelVisible';
+  try{ var _g=JSON.parse(localStorage.getItem(GEOM_KEY)||'null'); if(_g){ panel.style.left=_g.left+'px'; panel.style.top=_g.top+'px'; panel.style.right='auto'; panel.style.bottom='auto'; if(_g.w)panel.style.width=_g.w+'px'; if(_g.h)panel.style.height=_g.h+'px'; } }catch(e){}
+  function tkSaveGeom(){ try{ var r=panel.getBoundingClientRect(); localStorage.setItem(GEOM_KEY,JSON.stringify({left:Math.round(r.left),top:Math.round(r.top),w:Math.round(r.width),h:Math.round(r.height)})); }catch(e){} }
+  head.addEventListener('click',function(){ if(_tkMoved){ _tkMoved=false; return; } panel.classList.toggle('tk-min'); tog.textContent=panel.classList.contains('tk-min')?'▸':'▾'; });
+  var _drag=false,_sx,_sy,_ox,_oy;
+  head.addEventListener('pointerdown',function(e){ if(e.target.closest('.tk-toggle'))return; _drag=true;_tkMoved=false; var r=panel.getBoundingClientRect(); _ox=r.left;_oy=r.top;_sx=e.clientX;_sy=e.clientY; panel.style.left=_ox+'px';panel.style.top=_oy+'px';panel.style.right='auto';panel.style.bottom='auto'; try{head.setPointerCapture(e.pointerId);}catch(_){} });
+  head.addEventListener('pointermove',function(e){ if(!_drag)return; var dx=e.clientX-_sx,dy=e.clientY-_sy; if(Math.abs(dx)+Math.abs(dy)>3)_tkMoved=true; panel.style.left=Math.max(0,Math.min(window.innerWidth-60,_ox+dx))+'px'; panel.style.top=Math.max(0,Math.min(window.innerHeight-40,_oy+dy))+'px'; });
+  head.addEventListener('pointerup',function(e){ if(!_drag)return; _drag=false; try{head.releasePointerCapture(e.pointerId);}catch(_){} if(_tkMoved)tkSaveGeom(); });
+  if(window.ResizeObserver){ var _ro=new ResizeObserver(function(){ if(!_drag)tkSaveGeom(); }); _ro.observe(panel); }
+
+  function tkApplyVis(v){ panel.style.display = v ? 'flex' : 'none'; }
+  window.tkSetVisible=function(v){ var cur=panel.style.display!=='none'; var nv=(v===null||v===undefined)?!cur:!!v; tkApplyVis(nv); try{localStorage.setItem(VIS_KEY,nv?'1':'0');}catch(e){} if(nv){ loadAssignees(); tick(); } return nv; };
+  window.tkIsVisible=function(){ return panel.style.display!=='none'; };
+  try{ tkApplyVis(localStorage.getItem(VIS_KEY)==='1'); }catch(e){ tkApplyVis(false); }
+
+  async function loadAssignees(){
+    if(ASSIGNEES.length) return;
+    try{ var r=await fetch(API+"/api/council/assignees",{cache:'no-store'}); var d=await r.json();
+      if(!d||!d.ok) return;
+      ASSIGNEES=[];
+      var html='<option value="">Asignar a…</option>';
+      if(d.agora&&d.agora.length){ html+='<optgroup label="Agentes AgoraMatrix">';
+        d.agora.forEach(function(a){ html+='<option value="'+ASSIGNEES.length+'">🤖 '+esc(a.label)+'</option>'; ASSIGNEES.push(a); });
+        html+='</optgroup>'; }
+      if(d.machines&&d.machines.length){ html+='<optgroup label="Máquinas (SSH)">';
+        d.machines.forEach(function(m){ html+='<option value="'+ASSIGNEES.length+'">💻 '+esc(m.label)+'</option>'; ASSIGNEES.push(m); });
+        html+='</optgroup>'; }
+      assigneeEl.innerHTML=html;
+    }catch(e){}
+  }
+
+  function itemHtml(t){
+    var st=t.status||'pending';
+    var acts='';
+    if(st!=='done'){
+      acts+='<button class="tk-go" data-act="dispatch" data-id="'+t.id+'">'+(t.dispatch?'↻ reenviar':'➤ entregar')+'</button>';
+      if(st!=='in_progress') acts+='<button data-act="in_progress" data-id="'+t.id+'">▶ curso</button>';
+      acts+='<button data-act="done" data-id="'+t.id+'">✓ hecha</button>';
+      if(st!=='blocked') acts+='<button data-act="blocked" data-id="'+t.id+'">⛔ bloq</button>';
+    } else {
+      acts+='<button data-act="in_progress" data-id="'+t.id+'">↩ reabrir</button>';
+    }
+    acts+='<button class="tk-del" data-act="delete" data-id="'+t.id+'">🗑</button>';
+    var who=(t.assignee&&t.assignee.label)||'sin asignar';
+    var disp = t.dispatch ? (t.dispatch.ok?('· enviada '+ago(t.dispatch.sentAt)):'· ⚠ fallo envío') : '';
+    return '<div class="tk-item">'
+      +'<div class="tk-top"><span class="tk-title">'+(PRIO_ICON[t.priority]||'')+' '+esc(t.title)+'</span>'
+      +'<span class="tk-chip tk-st-'+st+'">'+(ST_LABEL[st]||st)+'</span></div>'
+      +'<div class="tk-meta"><span>'+esc(who)+'</span><span>'+esc(t.id)+'</span><span>'+ago(t.createdAt)+' '+disp+'</span></div>'
+      +(t.detail?'<div class="tk-detail">'+esc(t.detail)+'</div>':'')
+      +(t.result?'<div class="tk-detail">✅ '+esc(t.result)+'</div>':'')
+      +'<div class="tk-acts">'+acts+'</div></div>';
+  }
+
+  function render(tasks){
+    if(!tasks||!tasks.length){ listEl.innerHTML='<div id="tk-empty">Sin tareas. Crea la primera arriba.</div>'; countEl.textContent=''; return; }
+    var order={blocked:0,in_progress:1,sent:2,pending:3,done:4};
+    tasks=tasks.slice().sort(function(a,b){ var d=(order[a.status]||9)-(order[b.status]||9); return d!==0?d:(new Date(b.createdAt)-new Date(a.createdAt)); });
+    listEl.innerHTML=tasks.map(itemHtml).join('');
+    var pend=tasks.filter(function(t){return t.status!=='done';}).length;
+    countEl.textContent=pend+' activas · '+tasks.length;
+  }
+
+  async function tick(){
+    if(panel.style.display==='none') return;
+    try{ var r=await fetch(API+"/api/council/tasks",{cache:'no-store'}); var d=await r.json();
+      if(d&&d.ok) render(d.tasks); }
+    catch(e){ /* server dormido: deja lo último */ }
+  }
+
+  form.addEventListener('submit',async function(e){
+    e.preventDefault();
+    var title=(titleEl.value||'').trim(); if(!title) return;
+    var idx=assigneeEl.value; var a=(idx!=='')?ASSIGNEES[Number(idx)]:null;
+    if(!a){ alert('Elige a quién se asigna la tarea.'); return; }
+    createBtn.disabled=true;
+    try{
+      var body={ title:title, detail:(detailEl.value||'').trim(), priority:prioEl.value||'normal',
+        assignee:{kind:a.kind,id:a.id,label:a.label}, dispatch:!!nowEl.checked };
+      var r=await fetch(API+"/api/council/tasks",{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(body)});
+      var d=await r.json();
+      if(r.ok&&d.ok){ titleEl.value=''; detailEl.value=''; if(d.dispatch&&!d.dispatch.ok){ alert('Tarea creada, pero no se pudo entregar: '+(d.dispatch.error||'')); } tick(); }
+      else alert('No se pudo crear: '+((d&&d.error)||r.status));
+    }catch(e){ alert('Sin conexión con el council-api'); }
+    finally{ createBtn.disabled=false; titleEl.focus(); }
+  });
+
+  listEl.addEventListener('click',async function(e){
+    var btn=e.target.closest('button[data-act]'); if(!btn) return;
+    var act=btn.getAttribute('data-act'), id=btn.getAttribute('data-id'); if(!id) return;
+    btn.disabled=true;
+    try{
+      var url, opts={method:'POST',headers:{'Content-Type':'application/json'}};
+      if(act==='dispatch'){ url=API+"/api/council/tasks/"+id+"/dispatch"; opts.body='{}'; }
+      else if(act==='delete'){ if(!confirm('¿Borrar la tarea '+id+'?')){ btn.disabled=false; return; } url=API+"/api/council/tasks/"+id+"/delete"; opts.body='{}'; }
+      else { url=API+"/api/council/tasks/"+id+"/status"; opts.body=JSON.stringify({status:act,from:'Consejo'}); }
+      var r=await fetch(url,opts); var d=await r.json();
+      if(!(r.ok&&d.ok)) alert('No se pudo: '+((d&&d.error)||r.status));
+    }catch(e){ alert('Sin conexión con el council-api'); }
+    finally{ tick(); }
+  });
+
+  tick(); setInterval(tick, 15000);
 })();
 </script>
 </body>

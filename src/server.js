@@ -6,6 +6,17 @@ import { spawn } from "node:child_process";
 import { createMachineEntry, readMachines, updateMachineStatus, updateMachineSync } from "./store.js";
 import { sendPromptToMachine, resolveMachineName, getCapture, getImageBuffer, approveAll, approveMachine, getAllSnapshots, getReachableMachines, getWatchdogState, setWatchdogEnabled, setMachineWatchdog, sendOnboardingToAll, startWatchdog } from "./ssh-exec.js";
 import { addEntries, addEntry, getHistory } from "./teamwork-store.js";
+import {
+  listTasks,
+  getTask,
+  createTask,
+  updateTaskStatus,
+  recordDispatch,
+  addTaskNote,
+  deleteTask,
+  TASK_STATUSES,
+  TASK_PRIORITIES
+} from "./tasks-store.js";
 
 const PORT = Number(process.env.PORT || 3030);
 const HOST = "0.0.0.0";
@@ -198,6 +209,47 @@ function buildCouncilAgoraMessage(parsed) {
   };
 }
 
+const PRIORITY_LABELS = { urgent: "🔴 urgente", high: "🟠 alta", normal: "🟡 normal", low: "⚪ baja" };
+
+async function buildAssigneeList() {
+  const agora = [...MATRIX_COUNCIL_LINKS.entries()].map(([persona, { alias, role }]) => ({
+    kind: "agora",
+    id: alias,
+    label: `${alias} · ${role}`,
+    persona,
+    role
+  }));
+
+  let machines = [];
+  try {
+    const data = await readMachines();
+    machines = (data.machines || []).map((m) => ({
+      kind: "machine",
+      id: m.id,
+      label: m.name || m.id,
+      role: m.role || m.machineRole || "",
+      status: m.status || "unknown"
+    }));
+  } catch {
+    machines = [];
+  }
+  return { agora, machines };
+}
+
+function buildTaskDispatchText(task) {
+  const label = compactAgoraText(task.assignee?.label || task.assignee?.id, 60);
+  const title = compactAgoraText(task.title, 280);
+  const detail = compactAgoraText(task.detail, 700);
+  const priority = PRIORITY_LABELS[task.priority] || task.priority;
+  return [
+    `📋 TAREA ${task.id} → ${label}`,
+    `Encargo: ${title}`,
+    detail ? `Detalle: ${detail}` : "",
+    `Prioridad: ${priority}`,
+    "Cuando avances responde aquí; marca 'done' al terminar."
+  ].filter(Boolean).join(" | ");
+}
+
 function runAgora(args, { input = "", timeoutMs = 15000 } = {}) {
   return new Promise((resolveRun) => {
     const child = spawn(AGORA_BIN, args, {
@@ -331,6 +383,29 @@ function readRequestBody(request) {
 async function readJsonBody(request) {
   const rawBody = await readRequestBody(request);
   return rawBody ? JSON.parse(rawBody) : {};
+}
+
+async function dispatchTaskNow(task, target) {
+  if (task.assignee?.kind === "machine") {
+    const selected = target || "claude";
+    const prompt = [task.title, task.detail].filter(Boolean).join("\n\n");
+    const result = await sendPromptToMachine(task.assignee.id, prompt, selected);
+    return {
+      ok: !!result.ok,
+      error: result.ok ? null : (result.error || "No se pudo enviar a la máquina"),
+      channel: `ssh:${selected}`,
+      target: selected
+    };
+  }
+
+  const text = buildTaskDispatchText(task);
+  const result = await runAgora(["send", "--from", "Consejo", text], { timeoutMs: 45000 });
+  return {
+    ok: !!result.ok,
+    error: result.ok ? null : (result.stderr || result.error || "No se pudo publicar en AgoraMatrix"),
+    channel: "agora",
+    target: task.assignee?.id || ""
+  };
 }
 
 const server = createServer(async (request, response) => {
@@ -478,6 +553,106 @@ const server = createServer(async (request, response) => {
       });
     } catch (error) {
       sendJson(response, 500, { ok: false, error: error instanceof Error ? error.message : "Error puente Consejo/Agora" });
+    }
+    return;
+  }
+
+  // ───────── Tareas del Consejo (reparto + seguimiento) ─────────
+  // Origin-gated (admira.live en la allowlist) → SIN clave en el sitio público.
+  // Mutaciones también pasan por rate-limit.
+  if (url.pathname === "/api/council/assignees") {
+    if (request.method !== "GET") { sendJson(response, 405, { error: "Method not allowed" }); return; }
+    if (!isAllowedCouncilOrigin(request)) { sendJson(response, 403, { ok: false, error: "Origen no permitido" }); return; }
+    try {
+      sendJson(response, 200, { ok: true, ...(await buildAssigneeList()) });
+    } catch (error) {
+      sendJson(response, 500, { ok: false, error: error instanceof Error ? error.message : "Error" });
+    }
+    return;
+  }
+
+  if (url.pathname === "/api/council/tasks") {
+    if (!isAllowedCouncilOrigin(request)) { sendJson(response, 403, { ok: false, error: "Origen no permitido" }); return; }
+
+    if (request.method === "GET") {
+      try {
+        const tasks = await listTasks({
+          status: url.searchParams.get("status") || undefined,
+          assignee: url.searchParams.get("assignee") || undefined
+        });
+        sendJson(response, 200, { ok: true, tasks, fetchedAt: new Date().toISOString() });
+      } catch (error) {
+        sendJson(response, 500, { ok: false, error: error instanceof Error ? error.message : "Error" });
+      }
+      return;
+    }
+
+    if (request.method === "POST") {
+      if (!checkAgoraCouncilRateLimit(request)) { sendJson(response, 429, { ok: false, error: "Demasiadas peticiones" }); return; }
+      try {
+        const parsed = await readJsonBody(request);
+        const task = await createTask(parsed);
+        let dispatch = null;
+        if (parsed.dispatch) {
+          const res = await dispatchTaskNow(task, parsed.target);
+          await recordDispatch(task.id, { ...res, from: parsed.createdBy || "Consejo" });
+          dispatch = res;
+        }
+        const fresh = await getTask(task.id);
+        sendJson(response, 201, { ok: true, task: fresh, dispatch });
+      } catch (error) {
+        sendJson(response, 400, { ok: false, error: error instanceof Error ? error.message : "No se pudo crear la tarea" });
+      }
+      return;
+    }
+
+    sendJson(response, 405, { error: "Method not allowed" });
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname.startsWith("/api/council/tasks/")) {
+    if (!isAllowedCouncilOrigin(request)) { sendJson(response, 403, { ok: false, error: "Origen no permitido" }); return; }
+    if (!checkAgoraCouncilRateLimit(request)) { sendJson(response, 429, { ok: false, error: "Demasiadas peticiones" }); return; }
+
+    const parts = url.pathname.split("/"); // ["", "api","council","tasks", id, action]
+    const id = parts[4];
+    const action = parts[5] || "";
+    try {
+      const parsed = await readJsonBody(request);
+
+      if (action === "status") {
+        if (!TASK_STATUSES.has(parsed.status)) { sendJson(response, 400, { ok: false, error: "Estado inválido" }); return; }
+        const task = await updateTaskStatus(id, parsed.status, { note: parsed.note, from: parsed.from, result: parsed.result });
+        if (!task) { sendJson(response, 404, { ok: false, error: "Tarea no encontrada" }); return; }
+        sendJson(response, 200, { ok: true, task });
+        return;
+      }
+
+      if (action === "dispatch") {
+        const task = await getTask(id);
+        if (!task) { sendJson(response, 404, { ok: false, error: "Tarea no encontrada" }); return; }
+        const res = await dispatchTaskNow(task, parsed.target);
+        const updated = await recordDispatch(id, { ...res, from: parsed.from || "Consejo" });
+        sendJson(response, res.ok ? 200 : 502, { ok: res.ok, task: updated, dispatch: res, error: res.error });
+        return;
+      }
+
+      if (action === "note") {
+        const task = await addTaskNote(id, { note: parsed.note, from: parsed.from });
+        if (!task) { sendJson(response, 404, { ok: false, error: "Tarea no encontrada" }); return; }
+        sendJson(response, 200, { ok: true, task });
+        return;
+      }
+
+      if (action === "delete") {
+        const ok = await deleteTask(id);
+        sendJson(response, ok ? 200 : 404, { ok, error: ok ? null : "Tarea no encontrada" });
+        return;
+      }
+
+      sendJson(response, 404, { ok: false, error: "Acción desconocida" });
+    } catch (error) {
+      sendJson(response, 400, { ok: false, error: error instanceof Error ? error.message : "Error" });
     }
     return;
   }

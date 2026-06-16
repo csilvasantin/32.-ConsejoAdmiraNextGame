@@ -2634,7 +2634,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.16.r13</a>
+            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.16.r14</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-gen" onclick="toggleGen()" title="Cambiar entre Leyendas y Coetáneos">⭐ Leyendas</button>
             </div>
@@ -8359,6 +8359,8 @@
   .tk-form-toggle:hover{background:#0a3318}
   .tk-form-toggle .tk-fc{margin-left:auto;opacity:.85}
   #task-panel.tk-form-min #tk-form{display:none}
+  #task-panel.tk-hist-min #tk-health,
+  #task-panel.tk-hist-min #tk-list{display:none}
   .tk-toolchip{display:inline-block;margin-left:6px;min-width:16px;padding:0 5px;border-radius:9px;font-size:.68rem;
     line-height:1.5;text-align:center;background:#1f8a3e;color:#02140a;font-weight:700}
   .tk-toolchip.tk-zero{background:#2a4a3a;color:#7dff9e;opacity:.7}
@@ -8406,6 +8408,7 @@
       <button type="button" id="tk-clear-done" style="font-size:0.62rem;padding:2px 7px;cursor:pointer">🧹 Limpiar hechas</button>
       <button type="button" id="tk-toggle-arch" style="font-size:0.62rem;padding:2px 7px;cursor:pointer">📦 Ver archivadas</button>
     </div>
+    <button type="button" id="tk-hist-toggle" class="tk-form-toggle" title="Mostrar / ocultar bots y el histórico de tareas">🗂️ Histórico (bots y tareas)<span class="tk-fc" id="tk-hist-caret">▸</span></button>
     <div id="tk-health" title="Salud de los bots"></div>
     <div id="tk-list"><div id="tk-empty">Cargando tareas…</div></div>
     <div id="tk-foot">reparto + seguimiento · persistente</div>
@@ -8438,6 +8441,14 @@
     var collapsed; try{ var v=localStorage.getItem(FKEY); collapsed=(v===null?true:v==='1'); }catch(e){ collapsed=true; }
     apply(collapsed);
     if(t) t.addEventListener('click',function(){ var nc=!panel.classList.contains('tk-form-min'); apply(nc); try{localStorage.setItem(FKEY, nc?'1':'0');}catch(e){} if(!nc&&titleEl) titleEl.focus(); });
+  })();
+  // Histórico (bots + lista de tareas): plegable, COLAPSADO por defecto.
+  (function(){
+    var HKEY='tkHistCollapsed', t=document.getElementById('tk-hist-toggle'), caret=document.getElementById('tk-hist-caret');
+    function apply(c){ panel.classList.toggle('tk-hist-min', c); if(caret) caret.textContent=c?'▸':'▾'; }
+    var collapsed; try{ var v=localStorage.getItem(HKEY); collapsed=(v===null?true:v==='1'); }catch(e){ collapsed=true; }
+    apply(collapsed);
+    if(t) t.addEventListener('click',function(){ var nc=!panel.classList.contains('tk-hist-min'); apply(nc); try{localStorage.setItem(HKEY, nc?'1':'0');}catch(e){} });
   })();
   // Adjuntar imagen a la tarea (pegar Ctrl/⌘+V o botón 📎). Se reescala para no pesar mucho.
   var pendingImage=null;

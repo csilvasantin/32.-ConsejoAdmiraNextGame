@@ -61,6 +61,11 @@ const MATRIX_COUNCIL_LINKS = new Map([
   ["Carlos Ratti", { alias: "Link", role: "CXO" }],
   ["Ryan Reynolds", { alias: "Cypher", role: "CSO" }]
 ]);
+// Agentes extra del Consejo (fuera de las 8 leyendas Matrix). Smith = OpenCode+DeepSeek,
+// soporte al resto del equipo, atendido por un demonio agora-attend en su máquina.
+const EXTRA_COUNCIL_AGENTS = [
+  { alias: "Smith", role: "Soporte", persona: "Agent Smith", engine: "OpenCode·DeepSeek" }
+];
 const AGORA_COUNCIL_ALLOWED_ORIGINS = new Set([
   "http://www.admira.live",
   "https://www.admira.live",
@@ -240,6 +245,10 @@ async function buildAssigneeList() {
     persona,
     role
   }));
+  // Agentes extra (Smith, etc.) también dispatchables desde el Consejo.
+  for (const a of EXTRA_COUNCIL_AGENTS) {
+    agora.push({ kind: "agora", id: a.alias, label: `${a.alias} · ${a.role}`, persona: a.persona, role: a.role });
+  }
 
   let machines = [];
   try {

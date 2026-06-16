@@ -2634,7 +2634,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.16.r12</a>
+            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.16.r13</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-gen" onclick="toggleGen()" title="Cambiar entre Leyendas y Coetáneos">⭐ Leyendas</button>
             </div>
@@ -8353,6 +8353,12 @@
   .tk-hb .tk-hb-sub{opacity:.7}
   #tk-empty{color:#3f7a4f;text-align:center;padding:18px 8px;font-size:11px}
   #tk-foot{padding:6px 10px;border-top:1px solid #143b1d;color:#3f7a4f;font-size:10px;text-align:center}
+  .tk-form-toggle{width:100%;text-align:left;background:#06200f;border:1px solid #1f8a3e;color:#9effb0;
+    border-radius:6px;padding:6px 9px;font-family:inherit;font-size:0.66rem;cursor:pointer;margin:0 0 6px;
+    display:flex;align-items:center;gap:6px}
+  .tk-form-toggle:hover{background:#0a3318}
+  .tk-form-toggle .tk-fc{margin-left:auto;opacity:.85}
+  #task-panel.tk-form-min #tk-form{display:none}
   .tk-toolchip{display:inline-block;margin-left:6px;min-width:16px;padding:0 5px;border-radius:9px;font-size:.68rem;
     line-height:1.5;text-align:center;background:#1f8a3e;color:#02140a;font-weight:700}
   .tk-toolchip.tk-zero{background:#2a4a3a;color:#7dff9e;opacity:.7}
@@ -8361,6 +8367,7 @@
 <div id="task-panel" aria-label="Tareas del Consejo">
   <div id="tk-head"><span class="tk-dot"></span><b>🗂️ Tareas del Consejo</b><span class="tk-count" id="tk-count"></span><span class="tk-toggle">▾</span></div>
   <div id="tk-body">
+    <button type="button" id="tk-form-toggle" class="tk-form-toggle" title="Mostrar / ocultar el formulario de crear tarea">➕ Nueva tarea<span class="tk-fc" id="tk-form-caret">▸</span></button>
     <form id="tk-form" autocomplete="off">
       <input id="tk-title" placeholder="Nueva tarea… (qué hay que hacer)" maxlength="280" required>
       <div class="tk-row">
@@ -8424,6 +8431,14 @@
       nowEl=document.getElementById('tk-now'), createBtn=document.getElementById('tk-create'),
       whenEl=document.getElementById('tk-when'), tplEl=document.getElementById('tk-template');
   if(tplEl) tplEl.addEventListener('change',function(){ if(tplEl.value){ titleEl.value=tplEl.value; tplEl.value=''; titleEl.focus(); } });
+  // Formulario de crear: plegable, COLAPSADO por defecto (no se ve por encima de "Limpiar hechas").
+  (function(){
+    var FKEY='tkFormCollapsed', t=document.getElementById('tk-form-toggle'), caret=document.getElementById('tk-form-caret');
+    function apply(c){ panel.classList.toggle('tk-form-min', c); if(caret) caret.textContent=c?'▸':'▾'; }
+    var collapsed; try{ var v=localStorage.getItem(FKEY); collapsed=(v===null?true:v==='1'); }catch(e){ collapsed=true; }
+    apply(collapsed);
+    if(t) t.addEventListener('click',function(){ var nc=!panel.classList.contains('tk-form-min'); apply(nc); try{localStorage.setItem(FKEY, nc?'1':'0');}catch(e){} if(!nc&&titleEl) titleEl.focus(); });
+  })();
   // Adjuntar imagen a la tarea (pegar Ctrl/⌘+V o botón 📎). Se reescala para no pesar mucho.
   var pendingImage=null;
   (function(){

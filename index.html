@@ -1482,7 +1482,7 @@
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; z-index: 4;
         }
-        body.mouths-off .mouth-overlays { display: none; }
+        .mouth-overlays { display: none !important; } /* bocas desactivadas: quedaban mal */
         .mouth {
             position: absolute; width: 1.6%; height: 1.1%;
             transform: translate(-50%, -50%);
@@ -2479,7 +2479,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.16.r2</a>
+            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.16.r3</a>
             <a href="https://csilvasantin.github.io/diario/" target="_blank" rel="noopener" class="version-badge" title="Diario operativo del Consejo">📓 Diario</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
@@ -3339,23 +3339,9 @@
                 style="left:${b.left}%;top:${b.top}%;width:${b.width}%;height:${b.height}%"></div>`;
         }).join("");
 
-        // Render bocas (se mueven cuando el consejero está "vivo" = su máquina online)
+        // Bocas DESACTIVADAS (quedaban mal): no se renderizan overlays sobre las caras.
         const moEl = document.getElementById("mouth-overlays");
-        if (moEl) {
-            moEl.innerHTML = plates.map((p, i) => {
-                if (!p.body) return '';
-                const b = p.body;
-                const machine = p.machineId ? machineStatus[p.machineId] : null;
-                const isOnline = machine ? machine.online : false;
-                if (isOnline) _mouthMachineAlive.add(p.persona); else _mouthMachineAlive.delete(p.persona);
-                const mp = (MOUTH_POS[currentGen] || {})[p.role];
-                const cx = mp ? mp[0] : (b.left + b.width / 2);   // boca medida sobre la cara real
-                const cy = mp ? mp[1] : (b.top + b.height * 0.17);
-                return `<div class="mouth" data-persona="${p.persona}" style="left:${cx}%;top:${cy}%">
-                    <div class="lips" style="animation-delay:${((i * 0.17) % 1).toFixed(2)}s"></div></div>`;
-            }).join("");
-            applyMouths();
-        }
+        if (moEl) moEl.innerHTML = "";
 
         // Re-apply preguntar styles after DOM rebuild
         if (typeof _applyPreguntarStyles === 'function') _applyPreguntarStyles();
@@ -8198,6 +8184,7 @@
   .tk-acts button:hover{background:#0a3318}
   .tk-acts button.tk-del{border-color:#a33;color:#f88}
   .tk-acts button.tk-go{border-color:#0c3;color:#0f6}
+  .tk-acts button.tk-fin{border-color:#caa400;color:#ffe27a}
   #tk-empty{color:#3f7a4f;text-align:center;padding:18px 8px;font-size:11px}
   #tk-foot{padding:6px 10px;border-top:1px solid #143b1d;color:#3f7a4f;font-size:10px;text-align:center}
   .tk-toolchip{display:inline-block;margin-left:6px;min-width:16px;padding:0 5px;border-radius:9px;font-size:.68rem;
@@ -8225,6 +8212,10 @@
         <button type="submit" class="tk-create" id="tk-create">+ Crear</button>
       </div>
     </form>
+    <div class="tk-row" id="tk-bulk" style="gap:6px;justify-content:flex-start;flex-wrap:wrap;margin:2px 0 4px">
+      <button type="button" id="tk-clear-done" style="font-size:0.62rem;padding:2px 7px;cursor:pointer">🧹 Limpiar hechas</button>
+      <button type="button" id="tk-toggle-arch" style="font-size:0.62rem;padding:2px 7px;cursor:pointer">📦 Ver archivadas</button>
+    </div>
     <div id="tk-list"><div id="tk-empty">Cargando tareas…</div></div>
     <div id="tk-foot">reparto + seguimiento · persistente</div>
   </div>
@@ -8239,7 +8230,7 @@
       assigneeEl=document.getElementById('tk-assignee'), prioEl=document.getElementById('tk-priority'),
       nowEl=document.getElementById('tk-now'), createBtn=document.getElementById('tk-create');
   var ASSIGNEES=[];
-  var ST_LABEL={pending:'pendiente',sent:'enviada',in_progress:'en curso',blocked:'bloqueada',done:'hecha'};
+  var ST_LABEL={pending:'pendiente',sent:'enviada',in_progress:'en curso',blocked:'bloqueada',done:'hecha',archived:'archivada'};
   var PRIO_ICON={urgent:'🔴',high:'🟠',normal:'🟡',low:'⚪'};
 
   function esc(s){ return String(s||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
@@ -8297,13 +8288,20 @@
   function itemHtml(t){
     var st=t.status||'pending';
     var acts='';
-    if(st!=='done'){
-      acts+='<button class="tk-go" data-act="dispatch" data-id="'+t.id+'">'+(t.dispatch?'↻ reenviar':'➤ entregar')+'</button>';
-      if(st!=='in_progress') acts+='<button data-act="in_progress" data-id="'+t.id+'">▶ curso</button>';
-      acts+='<button data-act="done" data-id="'+t.id+'">✓ hecha</button>';
-      if(st!=='blocked') acts+='<button data-act="blocked" data-id="'+t.id+'">⛔ bloq</button>';
+    if(st==='archived'){
+      acts+='<button data-act="in_progress" data-id="'+t.id+'">↩ restaurar</button>';
     } else {
-      acts+='<button data-act="in_progress" data-id="'+t.id+'">↩ reabrir</button>';
+      if(st!=='done'){
+        acts+='<button class="tk-go" data-act="dispatch" data-id="'+t.id+'">'+(t.dispatch?'↻ reenviar':'➤ entregar')+'</button>';
+        if(st!=='in_progress') acts+='<button data-act="in_progress" data-id="'+t.id+'">▶ curso</button>';
+        acts+='<button data-act="done" data-id="'+t.id+'">✓ hecha</button>';
+        if(st!=='blocked') acts+='<button data-act="blocked" data-id="'+t.id+'">⛔ bloq</button>';
+      } else {
+        acts+='<button data-act="in_progress" data-id="'+t.id+'">↩ reabrir</button>';
+      }
+      // Finalizar = archivar (guarda en histórico, no se pierde). Sirve para cualquier
+      // estado, también para cerrar atascadas/bloqueadas.
+      acts+='<button class="tk-fin" data-act="archive" data-id="'+t.id+'">📦 Finalizar</button>';
     }
     acts+='<button class="tk-del" data-act="delete" data-id="'+t.id+'">🗑</button>';
     var who=(t.assignee&&t.assignee.label)||'sin asignar';
@@ -8321,7 +8319,7 @@
 
   function render(tasks){
     if(!tasks||!tasks.length){ listEl.innerHTML='<div id="tk-empty">Sin tareas. Crea la primera arriba.</div>'; countEl.textContent=''; return; }
-    var order={blocked:0,in_progress:1,sent:2,pending:3,done:4};
+    var order={blocked:0,in_progress:1,sent:2,pending:3,done:4,archived:5};
     tasks=tasks.slice().sort(function(a,b){ var d=(order[a.status]||9)-(order[b.status]||9); return d!==0?d:(new Date(b.createdAt)-new Date(a.createdAt)); });
     listEl.innerHTML=tasks.map(itemHtml).join('');
     var pend=tasks.filter(function(t){return t.status!=='done';}).length;
@@ -8336,11 +8334,19 @@
     badgeEl.textContent=String(active.length);
     badgeEl.className='tk-toolchip'+(active.length===0?' tk-zero':(blocked?' tk-alert':''));
   }
+  var viewArchived=false;   // vista "histórico" (tareas finalizadas/archivadas)
   async function tick(){
     // Sondea SIEMPRE (también con el panel oculto) para mantener vivo el contador
     // de la barra superior; la lista pesada solo se pinta si el panel está visible.
     try{ var r=await fetch(API+"/api/council/tasks",{cache:'no-store'}); var d=await r.json();
-      if(d&&d.ok){ updateBadge(d.tasks); if(panel.style.display!=='none') render(d.tasks); } }
+      if(d&&d.ok){ updateBadge(d.tasks);
+        if(panel.style.display!=='none'){
+          if(viewArchived){
+            var ra=await fetch(API+"/api/council/tasks?status=archived",{cache:'no-store'}); var da=await ra.json();
+            render((da&&da.ok)?da.tasks:[]);
+          } else { render(d.tasks); }
+        }
+      } }
     catch(e){ /* server dormido: deja lo último */ }
   }
 
@@ -8368,12 +8374,28 @@
     try{
       var url, opts={method:'POST',headers:{'Content-Type':'application/json'}};
       if(act==='dispatch'){ url=API+"/api/council/tasks/"+id+"/dispatch"; opts.body='{}'; }
-      else if(act==='delete'){ if(!confirm('¿Borrar la tarea '+id+'?')){ btn.disabled=false; return; } url=API+"/api/council/tasks/"+id+"/delete"; opts.body='{}'; }
+      else if(act==='delete'){ if(!confirm('¿Borrar la tarea '+id+'? (se pierde; usa Finalizar para archivar)')){ btn.disabled=false; return; } url=API+"/api/council/tasks/"+id+"/delete"; opts.body='{}'; }
+      else if(act==='archive'){ url=API+"/api/council/tasks/"+id+"/archive"; opts.body=JSON.stringify({from:'Consejo'}); }
       else { url=API+"/api/council/tasks/"+id+"/status"; opts.body=JSON.stringify({status:act,from:'Consejo'}); }
       var r=await fetch(url,opts); var d=await r.json();
       if(!(r.ok&&d.ok)) alert('No se pudo: '+((d&&d.error)||r.status));
     }catch(e){ alert('Sin conexión con el council-api'); }
     finally{ tick(); }
+  });
+
+  // Limpiar hechas = archivarlas en bloque (van al histórico, no se borran).
+  document.getElementById('tk-clear-done').addEventListener('click',async function(){
+    if(!confirm('¿Archivar todas las tareas hechas? Se guardan en el histórico (📦 Ver archivadas).')) return;
+    try{ var r=await fetch(API+"/api/council/tasks/_archive-done",{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}); var d=await r.json(); if(!(d&&d.ok)) alert('No se pudo archivar'); }
+    catch(e){ alert('Sin conexión con el council-api'); }
+    tick();
+  });
+  var archBtn=document.getElementById('tk-toggle-arch');
+  archBtn.addEventListener('click',function(){
+    viewArchived=!viewArchived;
+    archBtn.textContent=viewArchived?'📋 Ver activas':'📦 Ver archivadas';
+    archBtn.style.background=viewArchived?'#1f8a3e':'';
+    tick();
   });
 
   loadAssignees(); tick(); setInterval(tick, 15000);

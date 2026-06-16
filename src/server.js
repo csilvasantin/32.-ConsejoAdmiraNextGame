@@ -14,6 +14,8 @@ import {
   recordDispatch,
   addTaskNote,
   deleteTask,
+  archiveTasks,
+  recoverStuckTasks,
   TASK_STATUSES,
   TASK_PRIORITIES
 } from "./tasks-store.js";
@@ -703,6 +705,19 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  // Bulk: archivar (finalizar guardando) todas las tareas hechas — "Limpiar hechas".
+  if (request.method === "POST" && url.pathname === "/api/council/tasks/_archive-done") {
+    if (!isAllowedCouncilOrigin(request)) { sendJson(response, 403, { ok: false, error: "Origen no permitido" }); return; }
+    if (!checkAgoraCouncilRateLimit(request)) { sendJson(response, 429, { ok: false, error: "Demasiadas peticiones" }); return; }
+    try {
+      const archived = await archiveTasks({ onlyStatus: "done" });
+      sendJson(response, 200, { ok: true, archived });
+    } catch (error) {
+      sendJson(response, 500, { ok: false, error: error instanceof Error ? error.message : "Error" });
+    }
+    return;
+  }
+
   if (request.method === "POST" && url.pathname.startsWith("/api/council/tasks/")) {
     if (!isAllowedCouncilOrigin(request)) { sendJson(response, 403, { ok: false, error: "Origen no permitido" }); return; }
     if (!checkAgoraCouncilRateLimit(request)) { sendJson(response, 429, { ok: false, error: "Demasiadas peticiones" }); return; }
@@ -733,6 +748,13 @@ const server = createServer(async (request, response) => {
 
       if (action === "note") {
         const task = await addTaskNote(id, { note: parsed.note, from: parsed.from });
+        if (!task) { sendJson(response, 404, { ok: false, error: "Tarea no encontrada" }); return; }
+        sendJson(response, 200, { ok: true, task });
+        return;
+      }
+
+      if (action === "archive") {
+        const task = await updateTaskStatus(id, "archived", { from: parsed.from || "Consejo", note: "finalizada (archivada)" });
         if (!task) { sendJson(response, 404, { ok: false, error: "Tarea no encontrada" }); return; }
         sendJson(response, 200, { ok: true, task });
         return;
@@ -1067,5 +1089,13 @@ server.listen(PORT, HOST, () => {
   }
   if (process.env.TASK_SYNC_ON_START !== "0") {
     startTaskAgoraSync(); // El feed de AgoraMatrix actualiza el estado de las tareas
+  }
+  // Watchdog de tareas atascadas en "in_progress" (bot muerto/reiniciado a media):
+  // las reencola (→sent) o, si reinciden, las marca "blocked". Cada 2 min.
+  if (process.env.TASK_WATCHDOG_ON_START !== "0") {
+    const stuckMs = Number(process.env.TASK_STUCK_MS || 12 * 60 * 1000);
+    const run = () => recoverStuckTasks(stuckMs).then((n) => { if (n) console.log(`watchdog: ${n} tarea(s) atascada(s) recuperada(s)`); }).catch(() => {});
+    run();
+    setInterval(run, 120000);
   }
 });

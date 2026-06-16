@@ -14,7 +14,8 @@ export const TASK_STATUSES = new Set([
   "sent",         // entregada al consejero (agora/SSH)
   "in_progress",  // el consejero la está haciendo
   "blocked",      // bloqueada / necesita ayuda
-  "done"          // completada
+  "done",         // completada
+  "archived"      // finalizada y guardada en histórico (oculta del tablero activo)
 ]);
 export const TASK_PRIORITIES = new Set(["low", "normal", "high", "urgent"]);
 export const ASSIGNEE_KINDS = new Set(["agora", "machine"]);
@@ -78,11 +79,56 @@ export async function listTasks({ status, assignee } = {}) {
   let tasks = data.tasks;
   if (status && TASK_STATUSES.has(status)) {
     tasks = tasks.filter((t) => t.status === status);
+  } else {
+    // Por defecto el tablero activo NO muestra las archivadas (están en el histórico).
+    tasks = tasks.filter((t) => t.status !== "archived");
   }
   if (assignee) {
     tasks = tasks.filter((t) => t.assignee?.id === assignee);
   }
   return tasks;
+}
+
+// Archiva (finaliza guardando en histórico) todas las tareas, o solo las de un estado
+// (p.ej. "done" para el botón "Limpiar hechas"). Devuelve cuántas archivó.
+export async function archiveTasks({ onlyStatus } = {}) {
+  const data = await readTasks();
+  let n = 0;
+  for (const t of data.tasks) {
+    if (t.status === "archived") continue;
+    if (onlyStatus && t.status !== onlyStatus) continue;
+    t.status = "archived";
+    t.updatedAt = nowIso();
+    t.log.push(logEntry("status", { from: "Consejo", status: "archived", note: "archivada" }));
+    n++;
+  }
+  if (n) await writeTasks(data);
+  return n;
+}
+
+// Watchdog: recupera tareas atascadas en "in_progress" (el bot murió/reinició a media).
+// Primer rescate → vuelve a "sent" (se reencola); si reincide → "blocked" para que se vea.
+export async function recoverStuckTasks(maxMs = 12 * 60 * 1000) {
+  const data = await readTasks();
+  const now = Date.now();
+  let n = 0;
+  for (const t of data.tasks) {
+    if (t.status !== "in_progress") continue;
+    const age = now - new Date(t.updatedAt || t.createdAt).getTime();
+    if (!(age >= maxMs)) continue;
+    if (t._recovered) {
+      t.status = "blocked";
+      t.log.push(logEntry("status", { from: "watchdog", status: "blocked", note: "Atascada en curso; no se completó tras reintento" }));
+    } else {
+      t.status = "sent";
+      t._recovered = true;
+      t.log.push(logEntry("status", { from: "watchdog", status: "sent", note: "Recuperada: el bot no terminó; reencolada" }));
+    }
+    t.updatedAt = nowIso();
+    n++;
+  }
+  if (n) await writeTasks(data);
+  return n;
 }
 
 export async function getTask(id) {

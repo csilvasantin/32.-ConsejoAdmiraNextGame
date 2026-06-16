@@ -16,6 +16,7 @@ import {
   deleteTask,
   archiveTasks,
   recoverStuckTasks,
+  setTaskImage,
   TASK_STATUSES,
   TASK_PRIORITIES
 } from "./tasks-store.js";
@@ -746,6 +747,11 @@ const server = createServer(async (request, response) => {
       try {
         const parsed = await readJsonBody(request);
         const task = await createTask(parsed);
+        // Adjunto de imagen del usuario (pegada/subida): se guarda y se enlaza a la tarea.
+        if (parsed.imageData) {
+          const imgUrl = await saveTaskProof(`${task.id}-img`, parsed.imageData);
+          if (imgUrl) { await setTaskImage(task.id, imgUrl); task.image = imgUrl; }
+        }
         let dispatch = null;
         const dueNow = !task.scheduledAt || new Date(task.scheduledAt).getTime() <= Date.now();
         if (parsed.dispatch && dueNow) {

@@ -167,6 +167,7 @@ export async function createTask(payload) {
     createdAt: now,
     updatedAt: now,
     scheduledAt,
+    image: cleanString(payload.image) || null,   // adjunto del usuario (URL servida)
     dispatch: null,
     result: "",
     log: [logEntry("create", { from: createdBy, status: "pending", note: scheduledAt ? `programada para ${scheduledAt}` : title })]
@@ -225,6 +226,16 @@ export async function recordDispatch(id, { channel, ok, error, from, target } = 
     status: task.status,
     note: ok ? `Enviada (${channel})` : `Fallo al enviar: ${error || "desconocido"}`
   }));
+  await writeTasks(data);
+  return task;
+}
+
+export async function setTaskImage(id, url) {
+  const data = await readTasks();
+  const task = data.tasks.find((t) => t.id === id);
+  if (!task) return null;
+  task.image = cleanString(url) || null;
+  task.updatedAt = nowIso();
   await writeTasks(data);
   return task;
 }

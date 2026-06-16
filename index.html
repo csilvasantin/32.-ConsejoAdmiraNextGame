@@ -2479,7 +2479,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.16.r5</a>
+            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.16.r6</a>
             <a href="https://csilvasantin.github.io/diario/" target="_blank" rel="noopener" class="version-badge" title="Diario operativo del Consejo">📓 Diario</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
@@ -8222,7 +8222,12 @@
         </select>
         <input id="tk-when" type="datetime-local" title="Programar (opcional)" style="flex:1;font-size:10px">
       </div>
-      <textarea id="tk-detail" placeholder="Detalle / contexto (opcional)" maxlength="700"></textarea>
+      <textarea id="tk-detail" placeholder="Detalle / contexto (opcional) — puedes pegar una imagen con Ctrl/⌘+V" maxlength="700"></textarea>
+      <div class="tk-row" style="align-items:center;gap:6px">
+        <input id="tk-img" type="file" accept="image/*" style="display:none">
+        <button type="button" id="tk-img-btn" style="font-size:0.62rem;padding:2px 7px;cursor:pointer">📎 Imagen</button>
+        <span id="tk-img-prev" style="font-size:10px;color:#9effb0"></span>
+      </div>
       <div class="tk-row">
         <label class="tk-send-now"><input type="checkbox" id="tk-now" checked> entregar ya</label>
         <button type="submit" class="tk-create" id="tk-create">+ Crear</button>
@@ -8257,6 +8262,18 @@
       nowEl=document.getElementById('tk-now'), createBtn=document.getElementById('tk-create'),
       whenEl=document.getElementById('tk-when'), tplEl=document.getElementById('tk-template');
   if(tplEl) tplEl.addEventListener('change',function(){ if(tplEl.value){ titleEl.value=tplEl.value; tplEl.value=''; titleEl.focus(); } });
+  // Adjuntar imagen a la tarea (pegar Ctrl/⌘+V o botón 📎). Se reescala para no pesar mucho.
+  var pendingImage=null;
+  (function(){
+    var inp=document.getElementById('tk-img'), btn=document.getElementById('tk-img-btn'), prev=document.getElementById('tk-img-prev');
+    function setImg(u){ pendingImage=u||null; if(prev){ prev.innerHTML=pendingImage?'🖼️ imagen adjunta · <a href="#" id="tk-img-x" style="color:#f88">quitar</a>':''; var x=document.getElementById('tk-img-x'); if(x) x.onclick=function(e){e.preventDefault();setImg(null);}; } }
+    function downscale(file,cb){ var im=new Image(), url=URL.createObjectURL(file); im.onload=function(){ var m=1400,w=im.width,h=im.height; if(w>m||h>m){ if(w>h){h=Math.round(h*m/w);w=m;}else{w=Math.round(w*m/h);h=m;} } var c=document.createElement('canvas'); c.width=w;c.height=h; c.getContext('2d').drawImage(im,0,0,w,h); URL.revokeObjectURL(url); cb(c.toDataURL('image/jpeg',0.85)); }; im.onerror=function(){URL.revokeObjectURL(url);cb(null);}; im.src=url; }
+    if(btn&&inp){ btn.addEventListener('click',function(){inp.click();}); inp.addEventListener('change',function(){ var f=inp.files&&inp.files[0]; if(f) downscale(f,setImg); inp.value=''; }); }
+    var pnl=document.getElementById('task-panel');
+    if(pnl) pnl.addEventListener('paste',function(e){ var it=(e.clipboardData||{}).items||[]; for(var i=0;i<it.length;i++){ if(it[i].type&&it[i].type.indexOf('image')===0){ var f=it[i].getAsFile(); if(f){ downscale(f,setImg); e.preventDefault(); } break; } } });
+    window._tkClearImg=function(){ setImg(null); };
+    window._tkPendingImage=function(){ return pendingImage; };
+  })();
   var ASSIGNEES=[];
   var ST_LABEL={pending:'pendiente',sent:'enviada',in_progress:'en curso',blocked:'bloqueada',done:'hecha',archived:'archivada'};
   var PRIO_ICON={urgent:'🔴',high:'🟠',normal:'🟡',low:'⚪'};
@@ -8340,6 +8357,7 @@
       +'<div class="tk-meta"><span>'+esc(who)+'</span><span>'+esc(t.id)+'</span><span>'+ago(t.createdAt)+' '+disp+'</span></div>'
       +(t.detail?'<div class="tk-detail">'+esc(t.detail)+'</div>':'')
       +((t.scheduledAt&&(t.status==='pending'))?'<div class="tk-detail">⏰ programada: '+esc(new Date(t.scheduledAt).toLocaleString())+'</div>':'')
+      +(t.image?'<a class="tk-proof" href="'+API+t.image+'" target="_blank" title="Imagen adjunta a la tarea"><img src="'+API+t.image+'" alt="adjunto" loading="lazy" style="max-width:100%;margin-top:4px;border-radius:6px;border:1px solid #2a4a6a"></a>':'')
       +(t.result?'<div class="tk-detail">✅ '+esc(t.result)+'</div>':'')
       +(t.host?'<div class="tk-meta"><span>🖥️ alojado en '+esc(t.host)+'</span></div>':'')
       +(t.proof?'<a class="tk-proof" href="'+API+t.proof+'" target="_blank" title="Captura de prueba en el ordenador del bot"><img src="'+API+t.proof+'" alt="captura de prueba" loading="lazy" style="max-width:100%;margin-top:4px;border-radius:6px;border:1px solid #2c5a3a"></a>':'')
@@ -8403,10 +8421,11 @@
       var body={ title:title, detail:(detailEl.value||'').trim(), priority:prioEl.value||'normal',
         assignee:{kind:a.kind,id:a.id,label:a.label}, dispatch:!!nowEl.checked };
       if(whenEl&&whenEl.value){ var dt=new Date(whenEl.value); if(!isNaN(dt.getTime())) body.scheduledAt=dt.toISOString(); }
+      if(pendingImage) body.imageData=pendingImage;
       var r=await fetch(API+"/api/council/tasks",{method:'POST',headers:whdrs(),body:JSON.stringify(body)});
       if(w401(r)){ createBtn.disabled=false; return; }
       var d=await r.json();
-      if(r.ok&&d.ok){ titleEl.value=''; detailEl.value=''; if(whenEl)whenEl.value=''; if(d.dispatch&&!d.dispatch.ok){ alert('Tarea creada, pero no se pudo entregar: '+(d.dispatch.error||'')); } tick(); }
+      if(r.ok&&d.ok){ titleEl.value=''; detailEl.value=''; if(whenEl)whenEl.value=''; if(window._tkClearImg)window._tkClearImg(); if(d.dispatch&&!d.dispatch.ok){ alert('Tarea creada, pero no se pudo entregar: '+(d.dispatch.error||'')); } tick(); }
       else alert('No se pudo crear: '+((d&&d.error)||r.status));
     }catch(e){ alert('Sin conexión con el council-api'); }
     finally{ createBtn.disabled=false; titleEl.focus(); }

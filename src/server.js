@@ -1,6 +1,6 @@
 import { createServer, request as httpRequest } from "node:http";
-import { readFile } from "node:fs/promises";
-import { extname, resolve } from "node:path";
+import { readFile, writeFile, mkdir } from "node:fs/promises";
+import { extname, resolve, basename } from "node:path";
 import { spawn } from "node:child_process";
 
 import { createMachineEntry, readMachines, updateMachineStatus, updateMachineSync } from "./store.js";
@@ -21,6 +21,7 @@ import {
 const PORT = Number(process.env.PORT || 3030);
 const HOST = "0.0.0.0";
 const PUBLIC_DIR = resolve(import.meta.dirname, "../public");
+const PROOFS_DIR = resolve(import.meta.dirname, "../data/proofs");
 const AGORA_BIN = process.env.AGORA_BIN || "agora";
 const AGORA_FROM = process.env.AGORA_FROM || "Codex";
 const AGORA_READ_LAST = Number(process.env.AGORA_READ_LAST || 20);
@@ -385,6 +386,26 @@ async function readJsonBody(request) {
   return rawBody ? JSON.parse(rawBody) : {};
 }
 
+// Guarda una captura (data URL base64) como prueba de la tarea y devuelve su URL pública
+// /proofs/<id>.jpg. Devuelve null si no hay imagen o falla (la tarea sigue sin prueba).
+async function saveTaskProof(id, dataUrl) {
+  if (typeof dataUrl !== "string" || dataUrl.length < 64) return null;
+  const m = dataUrl.match(/^data:image\/(png|jpeg|jpg);base64,(.+)$/s);
+  const b64 = m ? m[2] : dataUrl;
+  const ext = m && m[1] === "png" ? "png" : "jpg";
+  try {
+    const buf = Buffer.from(b64, "base64");
+    if (!buf.length || buf.length > 6_000_000) return null; // tope 6MB
+    await mkdir(PROOFS_DIR, { recursive: true });
+    const safe = basename(String(id)).replace(/[^a-zA-Z0-9_-]/g, "");
+    if (!safe) return null;
+    await writeFile(resolve(PROOFS_DIR, `${safe}.${ext}`), buf);
+    return `/proofs/${safe}.${ext}`;
+  } catch {
+    return null;
+  }
+}
+
 async function dispatchTaskNow(task, target) {
   if (task.assignee?.kind === "machine") {
     const selected = target || "claude";
@@ -694,7 +715,8 @@ const server = createServer(async (request, response) => {
 
       if (action === "status") {
         if (!TASK_STATUSES.has(parsed.status)) { sendJson(response, 400, { ok: false, error: "Estado inválido" }); return; }
-        const task = await updateTaskStatus(id, parsed.status, { note: parsed.note, from: parsed.from, result: parsed.result });
+        const proof = parsed.proofImage ? await saveTaskProof(id, parsed.proofImage) : undefined;
+        const task = await updateTaskStatus(id, parsed.status, { note: parsed.note, from: parsed.from, result: parsed.result, host: parsed.host, proof });
         if (!task) { sendJson(response, 404, { ok: false, error: "Tarea no encontrada" }); return; }
         sendJson(response, 200, { ok: true, task });
         return;
@@ -1017,6 +1039,21 @@ const server = createServer(async (request, response) => {
     proxyReq.on("error", () => sendJson(response, 502, { error: "Yarig no disponible" }));
     if (rawBody) proxyReq.write(rawBody);
     proxyReq.end();
+    return;
+  }
+
+  // Capturas de prueba de las tareas (servidas desde data/proofs, fuera de PUBLIC_DIR).
+  if ((request.method === "GET" || request.method === "HEAD") && url.pathname.startsWith("/proofs/")) {
+    const safe = basename(url.pathname).replace(/[^a-zA-Z0-9_.-]/g, "");
+    const ext = extname(safe).toLowerCase();
+    if (!safe || (ext !== ".jpg" && ext !== ".jpeg" && ext !== ".png")) { response.writeHead(404, { "Content-Type": "text/plain" }); response.end("not found"); return; }
+    try {
+      const buf = await readFile(resolve(PROOFS_DIR, safe));
+      response.writeHead(200, { "Content-Type": ext === ".png" ? "image/png" : "image/jpeg", "Cache-Control": "public, max-age=86400", ...CORS_HEADERS });
+      response.end(buf);
+    } catch {
+      response.writeHead(404, { "Content-Type": "text/plain" }); response.end("not found");
+    }
     return;
   }
 

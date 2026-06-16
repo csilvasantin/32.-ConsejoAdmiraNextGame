@@ -3,3 +3,6 @@ budget.json
 __pycache__/
 *.pyc
 node_modules/
+
+# capturas de prueba de tareas (runtime)
+data/proofs/

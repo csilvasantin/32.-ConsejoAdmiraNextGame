@@ -127,7 +127,7 @@ export async function createTask(payload) {
   return task;
 }
 
-export async function updateTaskStatus(id, status, { note, from, result } = {}) {
+export async function updateTaskStatus(id, status, { note, from, result, host, proof } = {}) {
   if (!TASK_STATUSES.has(status)) throw new Error("Estado inválido");
   const data = await readTasks();
   const task = data.tasks.find((t) => t.id === id);
@@ -137,6 +137,13 @@ export async function updateTaskStatus(id, status, { note, from, result } = {}) 
   task.updatedAt = nowIso();
   if (typeof result === "string" && result.trim()) {
     task.result = result.trim();
+  }
+  // Trazabilidad: en qué ordenador se ejecutó (host) y captura de prueba (URL servida).
+  if (typeof host === "string" && host.trim()) {
+    task.host = host.trim();
+  }
+  if (typeof proof === "string" && proof.trim()) {
+    task.proof = proof.trim();
   }
   if (status === "done" && !task.completedAt) {
     task.completedAt = task.updatedAt;

@@ -126,6 +126,21 @@ function verifyAgoraCouncilAccess(request) {
   return provided === AGORA_COUNCIL_TOKEN ? null : "Token del Consejo invalido";
 }
 
+// Guardia de ESCRITURA: las operaciones que mandan comandos a las máquinas (crear,
+// dispatch, cambiar estado, archivar, borrar) exigen token secreto. Las LECTURAS (GET)
+// siguen abiertas con origin. Si COUNCIL_WRITE_TOKEN no está configurado, no exige nada
+// (compatibilidad durante el despliegue); en cuanto se define en el server, queda activo.
+const COUNCIL_WRITE_TOKEN = process.env.COUNCIL_WRITE_TOKEN || "";
+function requireCouncilWrite(request, response) {
+  if (!isAllowedCouncilOrigin(request)) { sendJson(response, 403, { ok: false, error: "Origen no permitido" }); return false; }
+  if (COUNCIL_WRITE_TOKEN) {
+    const provided = request.headers["x-council-token"] || "";
+    if (provided !== COUNCIL_WRITE_TOKEN) { sendJson(response, 401, { ok: false, error: "Token del Consejo requerido o inválido" }); return false; }
+  }
+  if (!checkAgoraCouncilRateLimit(request)) { sendJson(response, 429, { ok: false, error: "Demasiadas peticiones" }); return false; }
+  return true;
+}
+
 function checkAgoraCouncilRateLimit(request) {
   const forwarded = String(request.headers["x-forwarded-for"] || "").split(",")[0].trim();
   const key = forwarded || request.socket?.remoteAddress || "unknown";
@@ -667,9 +682,8 @@ const server = createServer(async (request, response) => {
   }
 
   if (url.pathname === "/api/council/tasks") {
-    if (!isAllowedCouncilOrigin(request)) { sendJson(response, 403, { ok: false, error: "Origen no permitido" }); return; }
-
     if (request.method === "GET") {
+      if (!isAllowedCouncilOrigin(request)) { sendJson(response, 403, { ok: false, error: "Origen no permitido" }); return; }
       try {
         const tasks = await listTasks({
           status: url.searchParams.get("status") || undefined,
@@ -683,7 +697,7 @@ const server = createServer(async (request, response) => {
     }
 
     if (request.method === "POST") {
-      if (!checkAgoraCouncilRateLimit(request)) { sendJson(response, 429, { ok: false, error: "Demasiadas peticiones" }); return; }
+      if (!requireCouncilWrite(request, response)) return;   // crear tarea = escritura → token
       try {
         const parsed = await readJsonBody(request);
         const task = await createTask(parsed);
@@ -707,8 +721,7 @@ const server = createServer(async (request, response) => {
 
   // Bulk: archivar (finalizar guardando) todas las tareas hechas — "Limpiar hechas".
   if (request.method === "POST" && url.pathname === "/api/council/tasks/_archive-done") {
-    if (!isAllowedCouncilOrigin(request)) { sendJson(response, 403, { ok: false, error: "Origen no permitido" }); return; }
-    if (!checkAgoraCouncilRateLimit(request)) { sendJson(response, 429, { ok: false, error: "Demasiadas peticiones" }); return; }
+    if (!requireCouncilWrite(request, response)) return;
     try {
       const archived = await archiveTasks({ onlyStatus: "done" });
       sendJson(response, 200, { ok: true, archived });
@@ -719,8 +732,7 @@ const server = createServer(async (request, response) => {
   }
 
   if (request.method === "POST" && url.pathname.startsWith("/api/council/tasks/")) {
-    if (!isAllowedCouncilOrigin(request)) { sendJson(response, 403, { ok: false, error: "Origen no permitido" }); return; }
-    if (!checkAgoraCouncilRateLimit(request)) { sendJson(response, 429, { ok: false, error: "Demasiadas peticiones" }); return; }
+    if (!requireCouncilWrite(request, response)) return;
 
     const parts = url.pathname.split("/"); // ["", "api","council","tasks", id, action]
     const id = parts[4];

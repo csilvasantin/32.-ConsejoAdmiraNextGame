@@ -2212,7 +2212,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.16.r3</a>
+            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.16.r4</a>
             <a href="https://csilvasantin.github.io/diario/" target="_blank" rel="noopener" class="version-badge" title="Diario operativo del Consejo">📓 Diario</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
@@ -7859,12 +7859,12 @@
     var act=btn.getAttribute('data-act'), id=btn.getAttribute('data-id'); if(!id) return;
     btn.disabled=true;
     try{
-      var url, opts={method:'POST',headers:{'Content-Type':'application/json'}};
+      var url, opts={method:'POST',headers:whdrs()};
       if(act==='dispatch'){ url=API+"/api/council/tasks/"+id+"/dispatch"; opts.body='{}'; }
       else if(act==='delete'){ if(!confirm('¿Borrar la tarea '+id+'? (se pierde; usa Finalizar para archivar)')){ btn.disabled=false; return; } url=API+"/api/council/tasks/"+id+"/delete"; opts.body='{}'; }
       else if(act==='archive'){ url=API+"/api/council/tasks/"+id+"/archive"; opts.body=JSON.stringify({from:'Consejo'}); }
       else { url=API+"/api/council/tasks/"+id+"/status"; opts.body=JSON.stringify({status:act,from:'Consejo'}); }
-      var r=await fetch(url,opts); var d=await r.json();
+      var r=await fetch(url,opts); if(w401(r)){ btn.disabled=false; return; } var d=await r.json();
       if(!(r.ok&&d.ok)) alert('No se pudo: '+((d&&d.error)||r.status));
     }catch(e){ alert('Sin conexión con el council-api'); }
     finally{ tick(); }
@@ -7873,7 +7873,7 @@
   // Limpiar hechas = archivarlas en bloque (van al histórico, no se borran).
   document.getElementById('tk-clear-done').addEventListener('click',async function(){
     if(!confirm('¿Archivar todas las tareas hechas? Se guardan en el histórico (📦 Ver archivadas).')) return;
-    try{ var r=await fetch(API+"/api/council/tasks/_archive-done",{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'}); var d=await r.json(); if(!(d&&d.ok)) alert('No se pudo archivar'); }
+    try{ var r=await fetch(API+"/api/council/tasks/_archive-done",{method:'POST',headers:whdrs(),body:'{}'}); if(w401(r))return; var d=await r.json(); if(!(d&&d.ok)) alert('No se pudo archivar'); }
     catch(e){ alert('Sin conexión con el council-api'); }
     tick();
   });

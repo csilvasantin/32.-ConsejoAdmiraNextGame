@@ -2212,7 +2212,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.15.r3</a>
+            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.16.r1</a>
             <a href="https://csilvasantin.github.io/diario/" target="_blank" rel="noopener" class="version-badge" title="Diario operativo del Consejo">📓 Diario</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
@@ -7743,20 +7743,36 @@
   window.tkIsVisible=function(){ return panel.style.display!=='none'; };
   try{ tkApplyVis(localStorage.getItem(VIS_KEY)==='1'); }catch(e){ tkApplyVis(false); }
 
+  function paintAssignees(){
+    if(!ASSIGNEES.length) return;
+    var ag='', mc='';
+    ASSIGNEES.forEach(function(a,i){
+      var opt='<option value="'+i+'">'+(a.kind==='agora'?'🤖 ':'💻 ')+esc(a.label)+'</option>';
+      if(a.kind==='agora') ag+=opt; else mc+=opt;
+    });
+    var html='<option value="">Asignar a…</option>';
+    if(ag) html+='<optgroup label="Agentes AgoraMatrix">'+ag+'</optgroup>';
+    if(mc) html+='<optgroup label="Máquinas (SSH)">'+mc+'</optgroup>';
+    var cur=assigneeEl.value;            // conserva la selección si la había
+    assigneeEl.innerHTML=html;
+    if(cur){ assigneeEl.value=cur; }
+  }
+  // Carga ROBUSTA de destinatarios: pinta siempre lo último conocido (memoria o
+  // localStorage) para que el desplegable NUNCA quede vacío, refresca en segundo plano
+  // (con timeout) y NO borra nada si la API tiene un hipo; reintenta si seguimos sin lista.
   async function loadAssignees(){
-    if(ASSIGNEES.length) return;
-    try{ var r=await fetch(API+"/api/council/assignees",{cache:'no-store'}); var d=await r.json();
-      if(!d||!d.ok) return;
-      ASSIGNEES=[];
-      var html='<option value="">Asignar a…</option>';
-      if(d.agora&&d.agora.length){ html+='<optgroup label="Agentes AgoraMatrix">';
-        d.agora.forEach(function(a){ html+='<option value="'+ASSIGNEES.length+'">🤖 '+esc(a.label)+'</option>'; ASSIGNEES.push(a); });
-        html+='</optgroup>'; }
-      if(d.machines&&d.machines.length){ html+='<optgroup label="Máquinas (SSH)">';
-        d.machines.forEach(function(m){ html+='<option value="'+ASSIGNEES.length+'">💻 '+esc(m.label)+'</option>'; ASSIGNEES.push(m); });
-        html+='</optgroup>'; }
-      assigneeEl.innerHTML=html;
-    }catch(e){}
+    if(!ASSIGNEES.length){ try{ var c=JSON.parse(localStorage.getItem('tkAssignees')||'[]'); if(c&&c.length){ ASSIGNEES=c; } }catch(e){} }
+    paintAssignees();
+    try{
+      var ctrl=new AbortController(), to=setTimeout(function(){ctrl.abort();},8000);
+      var r=await fetch(API+"/api/council/assignees",{cache:'no-store',signal:ctrl.signal}); clearTimeout(to);
+      var d=await r.json();
+      if(d&&d.ok&&((d.agora&&d.agora.length)||(d.machines&&d.machines.length))){
+        ASSIGNEES=[].concat(d.agora||[], d.machines||[]);
+        try{ localStorage.setItem('tkAssignees',JSON.stringify(ASSIGNEES)); }catch(e){}
+        paintAssignees();
+      }
+    }catch(e){ if(!ASSIGNEES.length) setTimeout(loadAssignees,5000); }
   }
 
   function itemHtml(t){
@@ -7839,7 +7855,7 @@
     finally{ tick(); }
   });
 
-  tick(); setInterval(tick, 15000);
+  loadAssignees(); tick(); setInterval(tick, 15000);
 })();
 </script>
 </body>

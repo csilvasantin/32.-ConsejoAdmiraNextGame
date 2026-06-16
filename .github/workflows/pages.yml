@@ -53,8 +53,10 @@ jobs:
           cp public/new-member.js _site/new-member.js 2>/dev/null || true
           cp public/network.html _site/network.html 2>/dev/null || true
           cp public/council-scumm.html _site/council-scumm.html 2>/dev/null || true
+          cp public/council-icon.png _site/council-icon.png 2>/dev/null || true
           cp public/dashboard.html _site/dashboard.html 2>/dev/null || true
           cp public/game.html _site/game.html 2>/dev/null || true
+          cp -r public/mcp _site/mcp 2>/dev/null || true
           cp public/teamwork.html _site/teamwork.html 2>/dev/null || true
           cp public/styles.css _site/public-styles.css 2>/dev/null || true
           mkdir -p _site/assets

@@ -2474,12 +2474,123 @@
         .container.top-collapsed .legend-strip { display: none !important; }
         .top-fold { background: transparent; border: 1px solid #2a4a6a; color: #9ccfff; border-radius: 6px; cursor: pointer; padding: 0 9px; font-size: 0.8rem; line-height: 1.6; }
         .top-fold:hover { border-color: #9ccfff; color: #cfe8ff; }
+
+        /* ════ Menú superior: UNA sola línea, estética SCUMM Monkey Island ════ */
+        .top-bar {
+            flex-wrap: nowrap;            /* todo en una línea */
+            justify-content: center;
+            align-items: stretch;
+            gap: 0.4rem;
+            margin: 0 auto 1rem;
+            padding: 0.5rem 0.6rem;
+            max-width: 100%;
+            overflow-x: auto;             /* salvavidas en pantallas estrechas */
+            background: #5a3a1e;          /* madera Monkey Island */
+            border: 3px solid #8b5a14;
+            border-top-color: #a07828;
+            box-shadow: 4px 4px 0 #000;
+            scrollbar-width: thin;
+            scrollbar-color: #a07828 #3a2410;
+        }
+        .top-bar::-webkit-scrollbar { height: 7px; }
+        .top-bar::-webkit-scrollbar-track { background: #3a2410; }
+        .top-bar::-webkit-scrollbar-thumb { background: #a07828; border: 1px solid #5a3a1e; }
+
+        /* todos los botones como pastillas pixel uniformes */
+        .top-bar .version-badge,
+        .top-bar .yar-btn,
+        .top-bar .gen-btn,
+        .top-bar .top-fold {
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            align-self: stretch;
+            flex: 0 0 auto;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.46rem;
+            line-height: 1.5;
+            letter-spacing: 0.5px;
+            padding: 0.45rem 0.6rem;
+            border-radius: 0;
+            box-shadow: 2px 2px 0 #000;
+            white-space: nowrap;
+        }
+
+        /* badges (versión · Diario · Tareas) en madera oscura, texto ámbar */
+        .top-bar .version-badge {
+            background: #2a1a08;
+            border: 2px solid #8b5a14;
+            color: #ffdd66;
+        }
+        .top-bar .version-badge:hover {
+            background: #8b5a14;
+            border-color: #f0c040;
+            color: #fff;
+        }
+        .top-bar .tk-toolchip { margin: 4px 0 0; }
+
+        /* toggle Leyendas / Coetáneos pegados */
+        .top-bar .gen-toggle { display: flex; gap: 0; flex: 0 0 auto; }
+        .top-bar .gen-btn {
+            border: 2px solid #5a3a1e;
+            background: #2a1a08;
+            color: #b89060;
+        }
+        .top-bar .gen-btn:first-child,
+        .top-bar .gen-btn:last-child { border-radius: 0; }
+        .top-bar .gen-btn:hover { background: #3a2510; color: #ffdd66; }
+        .top-bar .gen-btn.active-leyendas {
+            background: linear-gradient(180deg, #daa520, #b8860b);
+            color: #1a0e05; border-color: #f0c040;
+            box-shadow: 2px 2px 0 #000;
+        }
+        .top-bar .gen-btn.active-coetaneos {
+            background: linear-gradient(180deg, #3498db, #2471a3);
+            color: #fff; border-color: #5dade2;
+            box-shadow: 2px 2px 0 #000;
+        }
+
+        /* Yarig.AI: verde fósforo, compacto */
+        .top-bar .yar-btn {
+            background: #112211;
+            border: 2px solid #335544;
+            color: #7dff95;
+        }
+        .top-bar .yar-btn:hover { background: #1b321e; color: #d9ffe0; }
+        .top-bar .yar-chip { margin-top: 3px; font-size: 0.38rem; }
+
+        /* contadores en línea, mismas pastillas de madera */
+        .top-bar .summary { flex-wrap: nowrap; gap: 0.4rem; flex: 0 0 auto; }
+        .top-bar .summary-item {
+            display: flex; flex-direction: column; justify-content: center;
+            padding: 0.3rem 0.55rem;
+            border: 2px solid #5a3a1e;
+            background: #2a1a08;
+            box-shadow: 2px 2px 0 #000;
+        }
+        .top-bar .summary-number { font-size: 0.8rem; }
+        .top-bar .summary-label { font-size: 0.34rem; color: #b89060; }
+
+        /* botón plegar al mismo estilo madera */
+        .top-bar .top-fold {
+            background: #2a1a08;
+            border: 2px solid #8b5a14;
+            color: #ffdd66;
+            font-size: 0.7rem;
+        }
+        .top-bar .top-fold:hover { background: #8b5a14; border-color: #f0c040; color: #fff; }
+
+        /* en móvil dejamos que respire en 2 líneas otra vez */
+        @media (max-width: 760px) {
+            .top-bar { flex-wrap: wrap; justify-content: center; }
+        }
     </style>
 </head>
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.16.r7</a>
+            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.16.r8</a>
             <a href="https://csilvasantin.github.io/diario/" target="_blank" rel="noopener" class="version-badge" title="Diario operativo del Consejo">📓 Diario</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>

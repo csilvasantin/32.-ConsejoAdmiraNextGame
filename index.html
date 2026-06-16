@@ -2244,7 +2244,31 @@
             font-size: 0.42rem;
             box-shadow: 3px 3px 0 #000;
         }
-        .hack-dot, .control-dot, .demo-dot { border-radius: 0; }
+        .hack-dot, .control-dot, .demo-dot, .diario-dot { border-radius: 0; }
+        /* Diario movido abajo, emparejado con CONTROL (CONTROL a la izq del centro, Diario a la dcha) */
+        .control-toggle { left: 50%; transform: translateX(calc(-100% - 5px)); }
+        .diario-toggle {
+            position: fixed;
+            bottom: 1rem;
+            left: 50%;
+            transform: translateX(5px);
+            z-index: 999;
+            display: flex;
+            align-items: center;
+            gap: 0.5rem;
+            padding: 0.5rem 1.2rem;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 0.42rem;
+            border: 2px solid #8b5a14;
+            background: #2a1a08;
+            color: #ffdd66;
+            text-decoration: none;
+            box-shadow: 3px 3px 0 #000;
+            transition: all 0.2s;
+            white-space: nowrap;
+        }
+        .diario-toggle:hover { background: #8b5a14; border-color: #f0c040; color: #fff; }
+        .diario-dot { width: 8px; height: 8px; background: #ffdd66; }
         .hack-toggle.active {
             background: #006600;
             border-color: #00ff41;
@@ -2590,11 +2614,9 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.16.r8</a>
-            <a href="https://csilvasantin.github.io/diario/" target="_blank" rel="noopener" class="version-badge" title="Diario operativo del Consejo">📓 Diario</a>
+            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.16.r9</a>
             <div class="gen-toggle">
-                <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
-                <button class="gen-btn" id="btn-coetaneos" onclick="setGen('coetaneos')">🚀 Coetáneos</button>
+                <button class="gen-btn active-leyendas" id="btn-gen" onclick="toggleGen()" title="Cambiar entre Leyendas y Coetáneos">⭐ Leyendas</button>
             </div>
             <button class="yar-btn" id="yar-btn" onclick="openYarOverlay()">🧭 Yarig.AI<span class="yar-chip" id="yar-chip">sin contexto</span></button>
             <button class="version-badge" id="tk-toolbtn" onclick="window.tkSetVisible&&window.tkSetVisible(true)" title="Tareas del Consejo — abre el panel (/tareas)">🗂️ Tareas<span class="tk-toolchip" id="tk-badge">0</span></button>
@@ -2955,6 +2977,10 @@
         <span class="control-dot"></span> CONTROL
     </a>
 
+    <a class="diario-toggle" href="https://csilvasantin.github.io/diario/" target="_blank" rel="noopener" title="Diario operativo del Consejo">
+        <span class="diario-dot"></span> 📓 DIARIO
+    </a>
+
     <a class="demo-toggle" id="demo-btn" href="https://www.admira.studio/" target="_blank" rel="noopener" title="Abrir ADmiraNeXT Studio">
         <span class="demo-dot"></span> DEMO
     </a>
@@ -3134,10 +3160,15 @@
         }, 5000);
     };
 
+    function toggleGen() { setGen(currentGen === "leyendas" ? "coetaneos" : "leyendas"); }
+
     function setGen(gen) {
         currentGen = gen;
-        document.getElementById("btn-leyendas").className = "gen-btn" + (gen === "leyendas" ? " active-leyendas" : "");
-        document.getElementById("btn-coetaneos").className = "gen-btn" + (gen === "coetaneos" ? " active-coetaneos" : "");
+        const gb = document.getElementById("btn-gen");
+        if (gb) {
+            gb.className = "gen-btn " + (gen === "leyendas" ? "active-leyendas" : "active-coetaneos");
+            gb.textContent = gen === "leyendas" ? "⭐ Leyendas" : "🚀 Coetáneos";
+        }
         const img = document.getElementById("council-img");
         const nextSrc = gen === "leyendas"
             ? `assets/council-leyendas.jpg?v=${COUNCIL_IMAGE_VERSION}`

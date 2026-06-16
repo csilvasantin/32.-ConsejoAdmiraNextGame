@@ -2479,7 +2479,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.16.r4</a>
+            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.16.r5</a>
             <a href="https://csilvasantin.github.io/diario/" target="_blank" rel="noopener" class="version-badge" title="Diario operativo del Consejo">📓 Diario</a>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-leyendas" onclick="setGen('leyendas')">⭐ Leyendas</button>
@@ -8185,6 +8185,10 @@
   .tk-acts button.tk-del{border-color:#a33;color:#f88}
   .tk-acts button.tk-go{border-color:#0c3;color:#0f6}
   .tk-acts button.tk-fin{border-color:#caa400;color:#ffe27a}
+  #tk-health{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 5px}
+  .tk-hb{font-size:0.58rem;border:1px solid #1f5a30;border-radius:5px;padding:1px 5px;background:#06200f;color:#9effb0;white-space:nowrap}
+  .tk-hb.off{border-color:#553;color:#998;background:#1a1a12}
+  .tk-hb .tk-hb-sub{opacity:.7}
   #tk-empty{color:#3f7a4f;text-align:center;padding:18px 8px;font-size:11px}
   #tk-foot{padding:6px 10px;border-top:1px solid #143b1d;color:#3f7a4f;font-size:10px;text-align:center}
   .tk-toolchip{display:inline-block;margin-left:6px;min-width:16px;padding:0 5px;border-radius:9px;font-size:.68rem;
@@ -8206,6 +8210,18 @@
           <option value="low">⚪ baja</option>
         </select>
       </div>
+      <div class="tk-row">
+        <select id="tk-template" title="Plantillas rápidas">
+          <option value="">⚡ Plantilla…</option>
+          <option>Apagar monitor</option>
+          <option>Encender monitor</option>
+          <option>Abrir YouTube</option>
+          <option>Cerrar Google Chrome</option>
+          <option>Conéctate por SSH al Mac Mini</option>
+          <option>Haz una captura de pantalla</option>
+        </select>
+        <input id="tk-when" type="datetime-local" title="Programar (opcional)" style="flex:1;font-size:10px">
+      </div>
       <textarea id="tk-detail" placeholder="Detalle / contexto (opcional)" maxlength="700"></textarea>
       <div class="tk-row">
         <label class="tk-send-now"><input type="checkbox" id="tk-now" checked> entregar ya</label>
@@ -8216,6 +8232,7 @@
       <button type="button" id="tk-clear-done" style="font-size:0.62rem;padding:2px 7px;cursor:pointer">🧹 Limpiar hechas</button>
       <button type="button" id="tk-toggle-arch" style="font-size:0.62rem;padding:2px 7px;cursor:pointer">📦 Ver archivadas</button>
     </div>
+    <div id="tk-health" title="Salud de los bots"></div>
     <div id="tk-list"><div id="tk-empty">Cargando tareas…</div></div>
     <div id="tk-foot">reparto + seguimiento · persistente</div>
   </div>
@@ -8237,7 +8254,9 @@
       tog=head.querySelector('.tk-toggle'), form=document.getElementById('tk-form'),
       titleEl=document.getElementById('tk-title'), detailEl=document.getElementById('tk-detail'),
       assigneeEl=document.getElementById('tk-assignee'), prioEl=document.getElementById('tk-priority'),
-      nowEl=document.getElementById('tk-now'), createBtn=document.getElementById('tk-create');
+      nowEl=document.getElementById('tk-now'), createBtn=document.getElementById('tk-create'),
+      whenEl=document.getElementById('tk-when'), tplEl=document.getElementById('tk-template');
+  if(tplEl) tplEl.addEventListener('change',function(){ if(tplEl.value){ titleEl.value=tplEl.value; tplEl.value=''; titleEl.focus(); } });
   var ASSIGNEES=[];
   var ST_LABEL={pending:'pendiente',sent:'enviada',in_progress:'en curso',blocked:'bloqueada',done:'hecha',archived:'archivada'};
   var PRIO_ICON={urgent:'🔴',high:'🟠',normal:'🟡',low:'⚪'};
@@ -8320,6 +8339,7 @@
       +'<span class="tk-chip tk-st-'+st+'">'+(ST_LABEL[st]||st)+'</span></div>'
       +'<div class="tk-meta"><span>'+esc(who)+'</span><span>'+esc(t.id)+'</span><span>'+ago(t.createdAt)+' '+disp+'</span></div>'
       +(t.detail?'<div class="tk-detail">'+esc(t.detail)+'</div>':'')
+      +((t.scheduledAt&&(t.status==='pending'))?'<div class="tk-detail">⏰ programada: '+esc(new Date(t.scheduledAt).toLocaleString())+'</div>':'')
       +(t.result?'<div class="tk-detail">✅ '+esc(t.result)+'</div>':'')
       +(t.host?'<div class="tk-meta"><span>🖥️ alojado en '+esc(t.host)+'</span></div>':'')
       +(t.proof?'<a class="tk-proof" href="'+API+t.proof+'" target="_blank" title="Captura de prueba en el ordenador del bot"><img src="'+API+t.proof+'" alt="captura de prueba" loading="lazy" style="max-width:100%;margin-top:4px;border-radius:6px;border:1px solid #2c5a3a"></a>':'')
@@ -8343,8 +8363,22 @@
     badgeEl.textContent=String(active.length);
     badgeEl.className='tk-toolchip'+(active.length===0?' tk-zero':(blocked?' tk-alert':''));
   }
+  function renderHealth(bots){
+    var el=document.getElementById('tk-health'); if(!el) return;
+    el.innerHTML=(bots||[]).map(function(b){
+      var dot=b.online?'🟢':'⚪';
+      var sub=[]; if(b.host) sub.push(esc(b.host));
+      sub.push(b.login===false?'🔑✗':'🔑'); sub.push(b.capture?'📸':'📷✗');
+      var last=b.lastTask?(' · últ: '+(ST_LABEL[b.lastTask.status]||b.lastTask.status)+' '+ago(b.lastTask.at)):'';
+      return '<span class="tk-hb '+(b.online?'on':'off')+'" title="'+esc(b.label||b.id)+(b.host?(' @ '+esc(b.host)):'')+(b.online?'':' · OFFLINE')+last+'">'+dot+' '+esc(b.id)+' <span class="tk-hb-sub">'+sub.join(' ')+'</span></span>';
+    }).join('');
+  }
+  async function loadHealth(){
+    try{ var r=await fetch(API+"/api/council/health",{cache:'no-store'}); var d=await r.json(); if(d&&d.ok) renderHealth(d.bots); }catch(e){}
+  }
   var viewArchived=false;   // vista "histórico" (tareas finalizadas/archivadas)
   async function tick(){
+    if(panel.style.display!=='none') loadHealth();
     // Sondea SIEMPRE (también con el panel oculto) para mantener vivo el contador
     // de la barra superior; la lista pesada solo se pinta si el panel está visible.
     try{ var r=await fetch(API+"/api/council/tasks",{cache:'no-store'}); var d=await r.json();
@@ -8368,10 +8402,11 @@
     try{
       var body={ title:title, detail:(detailEl.value||'').trim(), priority:prioEl.value||'normal',
         assignee:{kind:a.kind,id:a.id,label:a.label}, dispatch:!!nowEl.checked };
+      if(whenEl&&whenEl.value){ var dt=new Date(whenEl.value); if(!isNaN(dt.getTime())) body.scheduledAt=dt.toISOString(); }
       var r=await fetch(API+"/api/council/tasks",{method:'POST',headers:whdrs(),body:JSON.stringify(body)});
       if(w401(r)){ createBtn.disabled=false; return; }
       var d=await r.json();
-      if(r.ok&&d.ok){ titleEl.value=''; detailEl.value=''; if(d.dispatch&&!d.dispatch.ok){ alert('Tarea creada, pero no se pudo entregar: '+(d.dispatch.error||'')); } tick(); }
+      if(r.ok&&d.ok){ titleEl.value=''; detailEl.value=''; if(whenEl)whenEl.value=''; if(d.dispatch&&!d.dispatch.ok){ alert('Tarea creada, pero no se pudo entregar: '+(d.dispatch.error||'')); } tick(); }
       else alert('No se pudo crear: '+((d&&d.error)||r.status));
     }catch(e){ alert('Sin conexión con el council-api'); }
     finally{ createBtn.disabled=false; titleEl.focus(); }

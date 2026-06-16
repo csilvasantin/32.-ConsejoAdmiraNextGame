@@ -146,6 +146,10 @@ export async function createTask(payload) {
   const priority = TASK_PRIORITIES.has(payload.priority) ? payload.priority : "normal";
   const detail = cleanString(payload.detail);
   const createdBy = cleanString(payload.createdBy, "Consejo");
+  // Programación opcional: ISO en el futuro → no se entrega hasta esa hora (poller).
+  let scheduledAt = null;
+  const sched = cleanString(payload.scheduledAt);
+  if (sched) { const d = new Date(sched); if (!isNaN(d.getTime())) scheduledAt = d.toISOString(); }
 
   const data = await readTasks();
   const id = `task-${String(data.nextId).padStart(3, "0")}`;
@@ -162,9 +166,10 @@ export async function createTask(payload) {
     createdBy,
     createdAt: now,
     updatedAt: now,
+    scheduledAt,
     dispatch: null,
     result: "",
-    log: [logEntry("create", { from: createdBy, status: "pending", note: title })]
+    log: [logEntry("create", { from: createdBy, status: "pending", note: scheduledAt ? `programada para ${scheduledAt}` : title })]
   };
 
   data.tasks.unshift(task);

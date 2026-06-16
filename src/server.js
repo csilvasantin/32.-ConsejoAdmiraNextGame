@@ -68,6 +68,8 @@ const AGORA_COUNCIL_ALLOWED_ORIGINS = new Set([
   "https://csilvasantin.github.io"
 ]);
 const agoraCouncilHits = new Map();
+const councilHeartbeats = new Map();  // alias -> {host, capture, login, ver, at} (salud de bots)
+function cleanStr(v, fb = "") { return (typeof v === "string" && v.trim()) ? v.trim() : fb; }
 const FRIENDLY_ROUTES = new Map([
   ["/control", "/teamwork.html?v=20260613-1"],
   ["/equipo", "/index.html"],
@@ -681,6 +683,49 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  // Salud de los bots: los demonios mandan latido; el panel lo lee. Fin del "acto de fe".
+  if (url.pathname === "/api/council/heartbeat" && request.method === "POST") {
+    if (!requireCouncilWrite(request, response)) return;
+    try {
+      const p = await readJsonBody(request);
+      const alias = cleanStr(p.alias);
+      if (alias) {
+        councilHeartbeats.set(alias, {
+          alias, host: cleanStr(p.host), capture: !!p.capture, login: p.login !== false,
+          ver: cleanStr(p.ver), at: Date.now()
+        });
+      }
+      sendJson(response, 200, { ok: true });
+    } catch (error) {
+      sendJson(response, 400, { ok: false, error: error instanceof Error ? error.message : "Error" });
+    }
+    return;
+  }
+  if (url.pathname === "/api/council/health" && request.method === "GET") {
+    if (!isAllowedCouncilOrigin(request)) { sendJson(response, 403, { ok: false, error: "Origen no permitido" }); return; }
+    try {
+      const { agora } = await buildAssigneeList();
+      const all = await listTasks({});
+      const now = Date.now();
+      const bots = (agora || []).map((a) => {
+        const hb = councilHeartbeats.get(a.id);
+        const mine = all.filter((t) => t.assignee?.id === a.id);
+        const last = mine.sort((x, y) => new Date(y.updatedAt) - new Date(x.updatedAt))[0];
+        return {
+          id: a.id, label: a.label, persona: a.persona, role: a.role,
+          online: !!hb && (now - hb.at) < 90000,
+          host: hb?.host || null, capture: hb?.capture ?? null, login: hb?.login ?? null,
+          lastSeen: hb?.at || null,
+          lastTask: last ? { id: last.id, title: last.title, status: last.status, at: last.updatedAt } : null
+        };
+      });
+      sendJson(response, 200, { ok: true, bots, fetchedAt: new Date().toISOString() });
+    } catch (error) {
+      sendJson(response, 500, { ok: false, error: error instanceof Error ? error.message : "Error" });
+    }
+    return;
+  }
+
   if (url.pathname === "/api/council/tasks") {
     if (request.method === "GET") {
       if (!isAllowedCouncilOrigin(request)) { sendJson(response, 403, { ok: false, error: "Origen no permitido" }); return; }
@@ -702,7 +747,8 @@ const server = createServer(async (request, response) => {
         const parsed = await readJsonBody(request);
         const task = await createTask(parsed);
         let dispatch = null;
-        if (parsed.dispatch) {
+        const dueNow = !task.scheduledAt || new Date(task.scheduledAt).getTime() <= Date.now();
+        if (parsed.dispatch && dueNow) {
           const res = await dispatchTaskNow(task, parsed.target);
           await recordDispatch(task.id, { ...res, from: parsed.createdBy || "Consejo" });
           dispatch = res;
@@ -1101,6 +1147,24 @@ server.listen(PORT, HOST, () => {
   }
   if (process.env.TASK_SYNC_ON_START !== "0") {
     startTaskAgoraSync(); // El feed de AgoraMatrix actualiza el estado de las tareas
+  }
+  // Programador: entrega las tareas programadas cuando llega su hora. Cada 30s.
+  if (process.env.TASK_SCHEDULER_ON_START !== "0") {
+    const dispatchDue = async () => {
+      try {
+        const tasks = await listTasks({});
+        const now = Date.now();
+        for (const t of tasks) {
+          if (t.status !== "pending" || !t.scheduledAt || t.dispatch) continue;
+          if (new Date(t.scheduledAt).getTime() > now) continue;
+          const res = await dispatchTaskNow(t, undefined);
+          await recordDispatch(t.id, { ...res, from: "Programador" });
+          console.log(`programador: entregada ${t.id} (${t.scheduledAt})`);
+        }
+      } catch {}
+    };
+    dispatchDue();
+    setInterval(dispatchDue, 30000);
   }
   // Watchdog de tareas atascadas en "in_progress" (bot muerto/reiniciado a media):
   // las reencola (→sent) o, si reinciden, las marca "blocked". Cada 2 min.

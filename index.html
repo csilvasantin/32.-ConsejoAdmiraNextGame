@@ -8367,7 +8367,11 @@
     if(panel.style.display==='none') return;   // oculta → no pollear
     try{ var r=await fetch(API,{cache:'no-store'}); var d=await r.json();
       if(d&&d.ok){ renderPresence(d.who); renderAgentBrief(d.feed,d.who); renderFeed(d.feed); burstFromFeed(d.feed); } }
-    catch(e){ /* MacMini dormido o sin red: deja lo último */ }
+    catch(e){
+      if(feedEl.textContent.indexOf('Conectando')!==-1){
+        feedEl.innerHTML='<div class="agm-msg"><span class="tx">Sin conexion con AgoraMatrix. Revisa Tailscale/MacMini.</span></div>';
+      }
+    }
   }
   tick(); setInterval(tick, 12000);
 })();

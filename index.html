@@ -8413,6 +8413,11 @@
   #tk-skynet-status .sky-chip.wait{border-color:#caa400;color:#ffe27a;background:#1d1803}
   #tk-skynet-status .sky-chip.off{border-color:#553;color:#aaa;background:#171711}
   #tk-skynet-status a{color:#7dff9e;text-decoration:none;border-bottom:1px dotted #7dff9e}
+  #tk-skynet-status .sky-progress{height:5px;border:1px solid #24506f;border-radius:5px;overflow:hidden;background:#031018;margin-top:3px}
+  #tk-skynet-status .sky-progress i{display:block;height:100%;width:42%;border-radius:5px;
+    background:linear-gradient(90deg,#2d7cff,#7dff9e,#2d7cff);animation:skyScan 1.15s linear infinite}
+  #tk-skynet-status .sky-warn{color:#ffe27a}
+  @keyframes skyScan{0%{transform:translateX(-110%)}100%{transform:translateX(250%)}}
   .tk-send-now{display:flex;align-items:center;gap:6px;font-size:10px;color:#9effb0;flex:1.4}
   .tk-send-now input{width:auto!important}
   #tk-list{flex:1;min-height:0;overflow-y:auto;padding:6px 8px}
@@ -8573,6 +8578,7 @@
   var PRIO_ICON={urgent:'🔴',high:'🟠',normal:'🟡',low:'⚪'};
   var APPROVAL_LABEL={full_access:'🟢 permisos completos',auto_approve:'🟡 acepta peticiones',ask:'🔴 pedir permisos'};
   var MONITOR_LABEL={silicio:'⚙️ Silicio',carbono:'🫀 Carbono',skynet:'🛰️ Skynet'};
+  var skynetTimer=null, skynetStartedAt=0;
   function syncSkynetButton(){
     if(!skynetBtn||!monitorEl) return;
     skynetBtn.disabled=monitorEl.value!=='skynet';
@@ -8582,6 +8588,27 @@
   syncSkynetButton();
 
   function esc(s){ return String(s||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function stopSkynetProgress(){ if(skynetTimer){ clearInterval(skynetTimer); skynetTimer=null; } }
+  function startSkynetProgress(){
+    if(!skynetStatus) return;
+    stopSkynetProgress();
+    skynetStartedAt=Date.now();
+    var phases=[
+      'conectando con el Consejo',
+      'revisando equipos en red',
+      'consultando Claude Code',
+      'capturando pantallas disponibles',
+      'esperando respuestas SSH lentas'
+    ];
+    function paint(){
+      var s=Math.floor((Date.now()-skynetStartedAt)/1000);
+      var phase=phases[Math.min(phases.length-1, Math.floor(s/6))];
+      var warn=s>=30?' <span class="sky-warn">tarda mas de lo normal, sigo esperando...</span>':'';
+      skynetStatus.innerHTML='<div>Skynet activo · '+phase+' · '+s+'s'+warn+'</div><div class="sky-progress"><i></i></div>';
+    }
+    paint();
+    skynetTimer=setInterval(paint,1000);
+  }
   function capLinks(x){
     var c=x&&x.capture, links=[];
     if(c&&c.image) links.push(c.image);
@@ -8590,6 +8617,7 @@
   }
   function renderSkynetStatus(res){
     if(!skynetStatus) return;
+    stopSkynetProgress();
     res=res||[];
     var ok=res.filter(function(x){return x.ok;});
     var caps=res.filter(function(x){return x.capture;});
@@ -8768,19 +8796,19 @@
   if(skynetBtn) skynetBtn.addEventListener('click',async function(){
     if(monitorEl&&monitorEl.value!=='skynet') return;
     skynetBtn.disabled=true;
-    if(skynetStatus) skynetStatus.textContent='revisando equipos…';
+    startSkynetProgress();
     try{
       var r=await fetch(API+"/api/teamwork/skynet/claude-audit",{method:'POST',headers:whdrs(),body:'{}'});
       if(w401(r)){ syncSkynetButton(); return; }
       var d=await r.json();
-      if(!(r.ok&&d&&d.ok)){ alert('No se pudo auditar: '+((d&&d.error)||r.status)); }
+      if(!(r.ok&&d&&d.ok)){ stopSkynetProgress(); alert('No se pudo auditar: '+((d&&d.error)||r.status)); }
       else{
         var res=d.results||[];
         renderSkynetStatus(res);
         var waiting=res.filter(function(x){return x.status==='waiting-captured';}).map(function(x){return x.machine||x.id;});
         if(waiting.length) alert('Skynet capturó Claude esperando en: '+waiting.join(', '));
       }
-    }catch(e){ alert('Sin conexión con Skynet'); }
+    }catch(e){ stopSkynetProgress(); if(skynetStatus) skynetStatus.innerHTML='<span class="sky-warn">Sin conexion con Skynet.</span>'; alert('Sin conexión con Skynet'); }
     finally{ syncSkynetButton(); }
   });
 

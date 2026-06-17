@@ -462,6 +462,31 @@ function parseAwakeAgoraAliases(whoText) {
   return [...new Set(aliases)];
 }
 
+function parseAwakeAgoraPresence(whoText) {
+  const known = new Set([
+    ...[...MATRIX_COUNCIL_LINKS.values()].map((item) => item.alias),
+    ...EXTRA_COUNCIL_AGENTS.map((item) => item.alias),
+  ]);
+  const presence = new Map();
+  for (const line of splitAgoraLines(whoText)) {
+    if (!/despierto/i.test(line)) continue;
+    for (const alias of known) {
+      if (!new RegExp(`\\b${alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(line)) continue;
+      const hostMatch = line.match(/activo hace[^·\n]*·\s*([^·\n]+)/i);
+      const host = cleanStr(hostMatch?.[1] || "");
+      const ageMatch = line.match(/activo hace\s+(\d+)\s*(s|seg|min|m|h|d)\b/i);
+      const n = Number(ageMatch?.[1] || 0);
+      const unit = String(ageMatch?.[2] || "s").toLowerCase();
+      const ageMs = unit === "d" ? n * 86400000 : unit === "h" ? n * 3600000 : (unit === "min" || unit === "m") ? n * 60000 : n * 1000;
+      const current = presence.get(alias);
+      if (!current || ageMs < current.ageMs) {
+        presence.set(alias, { alias, host, at: Date.now() - ageMs, ageMs, source: "agora-who" });
+      }
+    }
+  }
+  return presence;
+}
+
 async function requestAgoraAgentStatus() {
   const stamp = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14);
   const who = await runAgora(["who"], { timeoutMs: 10000 });
@@ -862,15 +887,20 @@ const server = createServer(async (request, response) => {
       const { agora } = await buildAssigneeList();
       const all = await listTasks({});
       const now = Date.now();
+      const who = await runAgora(["who"], { timeoutMs: 10000 });
+      const agoraPresence = who.ok ? parseAwakeAgoraPresence(who.stdout) : new Map();
       const bots = (agora || []).map((a) => {
         const hb = councilHeartbeats.get(a.id);
+        const ag = agoraPresence.get(a.id);
+        const online = (!!hb && (now - hb.at) < 90000) || !!ag;
         const mine = all.filter((t) => t.assignee?.id === a.id);
         const last = mine.sort((x, y) => new Date(y.updatedAt) - new Date(x.updatedAt))[0];
         return {
           id: a.id, label: a.label, persona: a.persona, role: a.role,
-          online: !!hb && (now - hb.at) < 90000,
-          host: hb?.host || null, capture: hb?.capture ?? null, login: hb?.login ?? null,
-          lastSeen: hb?.at || null,
+          online,
+          host: hb?.host || ag?.host || null, capture: hb?.capture ?? null, login: hb?.login ?? null,
+          lastSeen: hb?.at || ag?.at || null,
+          presenceSource: hb ? "heartbeat" : (ag ? "agora-who" : null),
           lastTask: last ? { id: last.id, title: last.title, status: last.status, at: last.updatedAt } : null
         };
       });

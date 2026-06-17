@@ -479,8 +479,12 @@ function parseAwakeAgoraPresence(whoText) {
       const unit = String(ageMatch?.[2] || "s").toLowerCase();
       const ageMs = unit === "d" ? n * 86400000 : unit === "h" ? n * 3600000 : (unit === "min" || unit === "m") ? n * 60000 : n * 1000;
       const current = presence.get(alias);
+      const session = { host, at: Date.now() - ageMs, ageMs, source: "agora-who" };
+      const sessions = [...(current?.sessions || []), session].sort((a, b) => a.ageMs - b.ageMs);
       if (!current || ageMs < current.ageMs) {
-        presence.set(alias, { alias, host, at: Date.now() - ageMs, ageMs, source: "agora-who" });
+        presence.set(alias, { alias, host, at: session.at, ageMs, source: "agora-who", sessions });
+      } else {
+        presence.set(alias, { ...current, sessions });
       }
     }
   }
@@ -898,7 +902,9 @@ const server = createServer(async (request, response) => {
         return {
           id: a.id, label: a.label, persona: a.persona, role: a.role,
           online,
-          host: hb?.host || ag?.host || null, capture: hb?.capture ?? null, login: hb?.login ?? null,
+          host: hb?.host || (ag?.sessions?.map((s) => s.host).filter(Boolean).join(" + ") || ag?.host) || null,
+          sessions: ag?.sessions || [],
+          capture: hb?.capture ?? null, login: hb?.login ?? null,
           lastSeen: hb?.at || ag?.at || null,
           presenceSource: hb ? "heartbeat" : (ag ? "agora-who" : null),
           lastTask: last ? { id: last.id, title: last.title, status: last.status, at: last.updatedAt } : null

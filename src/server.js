@@ -236,6 +236,41 @@ function buildCouncilAgoraMessage(parsed) {
 }
 
 const PRIORITY_LABELS = { urgent: "🔴 urgente", high: "🟠 alta", normal: "🟡 normal", low: "⚪ baja" };
+const APPROVAL_MODE_LABELS = {
+  full_access: "🟢 Omitir permisos / acceso completo",
+  auto_approve: "🟡 Aceptar peticiones del agente",
+  ask: "🔴 Solicitar permisos al Consejo",
+};
+const APPROVAL_MODE_INSTRUCTIONS = {
+  full_access: [
+    "Modo permisos: Omitir permisos / acceso completo.",
+    "Codex: usa Acceso completo.",
+    "Claude Code: trabaja sin pedir confirmaciones intermedias; si existe modo skip/auto-approve, activalo.",
+    "OpenCode: ejecuta con permisos completos/auto-approve.",
+    "No preguntes por permisos durante la tarea salvo secretos, pagos, borrados destructivos, reescritura de historial o riesgo irreversible.",
+    "Al terminar, reporta resultado, commit/URL y verificacion.",
+  ],
+  auto_approve: [
+    "Modo permisos: Aceptar peticiones del agente.",
+    "Codex: usa Aprobar por mi.",
+    "Claude Code/OpenCode: pide aprobacion solo cuando tu herramienta lo exija; el Consejo puede aceptar esas peticiones.",
+    "Agrupa permisos cuando sea posible y continua hasta terminar.",
+  ],
+  ask: [
+    "Modo permisos: Solicitar permisos al Consejo.",
+    "Codex: usa Solicitar aprobacion.",
+    "Claude Code/OpenCode: pausa y pide permiso antes de acciones sensibles o fuera del alcance.",
+    "No avances en acciones dudosas hasta recibir respuesta del Consejo.",
+  ],
+};
+
+function taskApprovalMode(task) {
+  return APPROVAL_MODE_LABELS[task.approvalMode] ? task.approvalMode : "full_access";
+}
+
+function taskApprovalInstruction(task) {
+  return APPROVAL_MODE_INSTRUCTIONS[taskApprovalMode(task)].join(" ");
+}
 
 async function buildAssigneeList() {
   const agora = [...MATRIX_COUNCIL_LINKS.entries()].map(([persona, { alias, role }]) => ({
@@ -271,11 +306,14 @@ function buildTaskDispatchText(task) {
   const title = compactAgoraText(task.title, 280);
   const detail = compactAgoraText(task.detail, 700);
   const priority = PRIORITY_LABELS[task.priority] || task.priority;
+  const approvalMode = taskApprovalMode(task);
   return [
     `📋 TAREA ${task.id} → ${label}`,
     `Encargo: ${title}`,
     detail ? `Detalle: ${detail}` : "",
     `Prioridad: ${priority}`,
+    `Permisos: ${APPROVAL_MODE_LABELS[approvalMode]}`,
+    taskApprovalInstruction(task),
     `Para el seguimiento responde aquí citando ${task.id} y di si está 'en curso', 'bloqueada' o 'hecha' (se actualiza solo en el tablero).`
   ].filter(Boolean).join(" | ");
 }
@@ -478,7 +516,13 @@ async function saveTaskProof(id, dataUrl) {
 async function dispatchTaskNow(task, target) {
   if (task.assignee?.kind === "machine") {
     const selected = target || "claude";
-    const prompt = [task.title, task.detail].filter(Boolean).join("\n\n");
+    const approvalMode = taskApprovalMode(task);
+    const prompt = [
+      task.title,
+      task.detail,
+      `Permisos: ${APPROVAL_MODE_LABELS[approvalMode]}`,
+      taskApprovalInstruction(task),
+    ].filter(Boolean).join("\n\n");
     const result = await sendPromptToMachine(task.assignee.id, prompt, selected);
     return {
       ok: !!result.ok,

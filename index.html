@@ -8406,7 +8406,13 @@
   #tk-skynet-audit{background:#06200f;border:1px solid #2d7cff;color:#9dc5ff;border-radius:6px;padding:5px 8px;
     font-family:inherit;font-size:10px;cursor:pointer}
   #tk-skynet-audit:disabled{opacity:.45;cursor:default;border-color:#24506f;color:#6c899e}
-  #tk-skynet-status{flex:1.8;color:#6faad4;font-size:10px;align-self:center;min-width:120px;line-height:1.25}
+  #tk-skynet-status{flex:1.8;color:#6faad4;font-size:10px;align-self:center;min-width:120px;line-height:1.35}
+  #tk-skynet-status .sky-row{display:flex;flex-wrap:wrap;gap:4px;margin-top:2px}
+  #tk-skynet-status .sky-chip{display:inline-flex;align-items:center;gap:3px;border:1px solid #24506f;border-radius:5px;
+    padding:1px 5px;background:#04131b;color:#9dc5ff;max-width:100%;white-space:nowrap}
+  #tk-skynet-status .sky-chip.wait{border-color:#caa400;color:#ffe27a;background:#1d1803}
+  #tk-skynet-status .sky-chip.off{border-color:#553;color:#aaa;background:#171711}
+  #tk-skynet-status a{color:#7dff9e;text-decoration:none;border-bottom:1px dotted #7dff9e}
   .tk-send-now{display:flex;align-items:center;gap:6px;font-size:10px;color:#9effb0;flex:1.4}
   .tk-send-now input{width:auto!important}
   #tk-list{flex:1;min-height:0;overflow-y:auto;padding:6px 8px}
@@ -8570,12 +8576,38 @@
   function syncSkynetButton(){
     if(!skynetBtn||!monitorEl) return;
     skynetBtn.disabled=monitorEl.value!=='skynet';
-    if(skynetStatus&&monitorEl.value!=='skynet') skynetStatus.textContent='';
+    if(skynetStatus&&monitorEl.value!=='skynet') skynetStatus.innerHTML='';
   }
   if(monitorEl) monitorEl.addEventListener('change',syncSkynetButton);
   syncSkynetButton();
 
   function esc(s){ return String(s||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function capLinks(x){
+    var c=x&&x.capture, links=[];
+    if(c&&c.image) links.push(c.image);
+    if(c&&c.images&&c.images.length) links=links.concat(c.images);
+    return links.map(function(u,i){ return '<a href="'+API+esc(u)+'" target="_blank" title="'+esc(x.machine||x.id)+'">captura '+(i+1)+'</a>'; }).join(' ');
+  }
+  function renderSkynetStatus(res){
+    if(!skynetStatus) return;
+    res=res||[];
+    var ok=res.filter(function(x){return x.ok;});
+    var caps=res.filter(function(x){return x.capture;});
+    var active=ok.filter(function(x){return x.status==='active';});
+    var waiting=ok.filter(function(x){return x.status==='waiting-captured';});
+    var off=res.filter(function(x){return !x.ok;});
+    var chips=res.map(function(x){
+      var cls=x.ok?(x.status==='waiting-captured'?' wait':''):' off';
+      var icon=x.ok?(x.status==='waiting-captured'?'📸':'🟢'):'⚪';
+      var label=(x.machine||x.id||'equipo')+(x.ok?(x.status==='waiting-captured'?' · capturado':' · activo'):' · offline');
+      var links=capLinks(x);
+      return '<span class="sky-chip'+cls+'">'+icon+' '+esc(label)+(links?' · '+links:'')+'</span>';
+    }).join('');
+    skynetStatus.innerHTML='<div>'+ok.length+'/'+res.length+' equipos · '+caps.length+' capturas · activos: '+(active.map(function(x){return x.machine||x.id;}).join(', ')||'ninguno')+'</div>'
+      +'<div class="sky-row">'+chips+'</div>'
+      +(waiting.length?'<div class="sky-row">Esperando: '+waiting.map(function(x){return esc(x.machine||x.id);}).join(', ')+'</div>':'')
+      +(off.length?'<div class="sky-row">Sin respuesta: '+off.map(function(x){return esc(x.machine||x.id);}).join(', ')+'</div>':'');
+  }
   function ago(iso){ try{ var s=Math.max(0,(Date.now()-new Date(iso).getTime())/1000);
     if(s<60)return'ahora'; if(s<3600)return Math.floor(s/60)+'m'; if(s<86400)return Math.floor(s/3600)+'h'; return Math.floor(s/86400)+'d'; }catch(e){return'';} }
 
@@ -8743,8 +8775,8 @@
       var d=await r.json();
       if(!(r.ok&&d&&d.ok)){ alert('No se pudo auditar: '+((d&&d.error)||r.status)); }
       else{
-        var res=d.results||[], ok=res.filter(function(x){return x.ok;}).length, cap=res.filter(function(x){return x.capture;}).length;
-        if(skynetStatus) skynetStatus.textContent=ok+'/'+res.length+' equipos · '+cap+' capturas';
+        var res=d.results||[];
+        renderSkynetStatus(res);
         var waiting=res.filter(function(x){return x.status==='waiting-captured';}).map(function(x){return x.machine||x.id;});
         if(waiting.length) alert('Skynet capturó Claude esperando en: '+waiting.join(', '));
       }

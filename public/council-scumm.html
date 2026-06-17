@@ -522,6 +522,29 @@
             transition: all 0.3s;
         }
         .member-row:hover { background: rgba(255,255,255,0.05); }
+        .member-row.compact-offline {
+            min-height: 34px;
+            padding: 0.25rem 0.45rem;
+            opacity: 0.62;
+            gap: 0.35rem;
+        }
+        .member-row.compact-offline .power-btn,
+        .member-row.compact-offline .member-icon {
+            transform: scale(0.86);
+        }
+        .member-row.compact-offline .member-role,
+        .member-row.compact-offline .screen-placeholder,
+        .member-row.compact-offline .screen-wrap {
+            display: none;
+        }
+        .member-row.compact-offline .machine-tag {
+            font-size: 0.58rem;
+            padding: 0.12rem 0.35rem;
+            max-width: 96px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
 
         .status-dot {
             width: 10px;
@@ -739,6 +762,19 @@
             border-radius: 8px;
             box-shadow: 0 0 40px rgba(0,0,0,0.8);
         }
+        .screen-overlay-empty {
+            max-width: min(720px, 88vw);
+            padding: 1.25rem 1.5rem;
+            border: 1px solid rgba(255,255,255,0.12);
+            background: rgba(10,10,18,0.92);
+            color: #bbb;
+            font-size: 0.9rem;
+            line-height: 1.5;
+            text-align: center;
+            display: none;
+        }
+        .screen-overlay.empty img { display: none; }
+        .screen-overlay.empty .screen-overlay-empty { display: block; }
         .screen-overlay-label {
             color: #aaa;
             font-size: 0.85rem;
@@ -2526,6 +2562,7 @@
     <div class="screen-overlay" id="screen-overlay" onclick="closeScreenOverlay()">
         <button class="screen-overlay-close" onclick="closeScreenOverlay()">&times;</button>
         <img id="screen-overlay-img" src="" alt="Captura de pantalla">
+        <div class="screen-overlay-empty" id="screen-overlay-empty"></div>
         <div class="screen-overlay-label" id="screen-overlay-label"></div>
     </div>
 
@@ -2749,6 +2786,37 @@
         }
     }
 
+    function controlBaseUrl() {
+        return CONTROL_API.replace(/\/api\/machines$/, "");
+    }
+
+    function absolutizeControlPath(path) {
+        if (!path) return "";
+        return String(path).startsWith("http") ? String(path) : controlBaseUrl() + String(path);
+    }
+
+    function snapshotImageForMachine(machineId, full = false) {
+        const snap = teamworkSnapshots[machineId] || {};
+        let src = "";
+        if (snap.type === "image" && snap.image) {
+            src = snap.image;
+        } else if (snap.type === "images" && Array.isArray(snap.images) && snap.images.length) {
+            src = snap.images[0];
+        }
+        if (!src) return "";
+        const abs = absolutizeControlPath(src);
+        const sep = abs.includes("?") ? "&" : "?";
+        return `${abs}${sep}t=${Date.now()}${full ? "&full=1" : ""}`;
+    }
+
+    function demoScreenshotForMachine(machineId, full = false) {
+        return `https://macmini.tail48b61c.ts.net/demo/screenshot/${machineId}?t=${Date.now()}${full ? "&full=1" : ""}`;
+    }
+
+    function previewSrcForMachine(machineId, full = false) {
+        return snapshotImageForMachine(machineId, full) || lastThumbSrc[machineId] || (demoMode ? demoScreenshotForMachine(machineId, full) : "");
+    }
+
     let demoMode = false;
     let demoInterval = null;
 
@@ -2872,10 +2940,11 @@
                 ? `<div class="cd-row"><span class="cd-key">Matrix</span><span class="cd-val">${matrixLink.alias}</span></div>`
                 : "";
 
+            const previewSrc = machineIdAttr ? previewSrcForMachine(machineIdAttr, false) : "";
             let thumbHtml;
-            if (demoMode && machineIdAttr) {
+            if (machineIdAttr && previewSrc) {
                 const cachedSrc = lastThumbSrc[machineIdAttr];
-                const thumbSrc = cachedSrc || `https://macmini.tail48b61c.ts.net/demo/screenshot/${machineIdAttr}?t=${Date.now()}`;
+                const thumbSrc = previewSrc || cachedSrc;
                 const liveCls = isOnline ? ' live' : '';
                 const now = new Date().toLocaleTimeString("es-ES", {hour:"2-digit", minute:"2-digit"});
                 thumbHtml = `<div class="screen-wrap">
@@ -2894,7 +2963,7 @@
             }
 
             const html = `
-                <div class="member-row ${isOnline ? 'nameplate-gold' : 'nameplate-gray'}">
+                <div class="member-row ${isOnline ? 'nameplate-gold' : 'nameplate-gray'} ${isOnline ? '' : 'compact-offline'}">
                     <button class="power-btn ${btnClass}" onclick="togglePower('${machineIdAttr}', ${isOnline})" title="${isOnline ? 'Apagar' : 'Encender'} ${machineName}">
                         ${powerSvg}
                     </button>
@@ -3063,10 +3132,42 @@
         const overlay = document.getElementById("screen-overlay");
         const img = document.getElementById("screen-overlay-img");
         const lbl = document.getElementById("screen-overlay-label");
+        const empty = document.getElementById("screen-overlay-empty");
         const machine = machineStatus[machineId];
         const isOnline = machine && machine.online;
 
-        img.src = `https://macmini.tail48b61c.ts.net/demo/screenshot/${machineId}?t=${Date.now()}&full=1`;
+        function setOverlayImage() {
+            const candidates = [
+                snapshotImageForMachine(machineId, true),
+                lastThumbSrc[machineId],
+                demoMode ? demoScreenshotForMachine(machineId, true) : ""
+            ].filter(Boolean);
+
+            overlay.classList.remove("empty");
+            if (empty) empty.textContent = "";
+            img.onerror = () => {
+                candidates.shift();
+                if (candidates.length) {
+                    img.src = candidates[0];
+                    return;
+                }
+                overlay.classList.add("empty");
+                if (empty) {
+                    empty.textContent = `${label}: sin captura disponible ahora mismo. El equipo no esta accesible o aun no hay preview vivo guardado.`;
+                }
+            };
+            if (candidates.length) {
+                img.src = candidates[0];
+            } else {
+                overlay.classList.add("empty");
+                if (empty) {
+                    empty.textContent = `${label}: sin captura disponible ahora mismo.`;
+                }
+                img.removeAttribute("src");
+            }
+        }
+
+        setOverlayImage();
 
         // Build label: always show a timestamp
         function buildLabel() {
@@ -3091,7 +3192,7 @@
         if (isOnline) {
             overlay._refreshInterval = setInterval(() => {
                 if (overlay.classList.contains("visible")) {
-                    img.src = `https://macmini.tail48b61c.ts.net/demo/screenshot/${machineId}?t=${Date.now()}&full=1`;
+                    setOverlayImage();
                     lbl.innerHTML = buildLabel();
                 }
             }, 5000);

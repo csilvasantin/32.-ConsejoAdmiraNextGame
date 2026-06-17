@@ -1632,21 +1632,18 @@ tell application "System Events"
       tell process "${config.appName}"
         if (count of windows) > 0 then
           ${allowFullscreen ? "try\n            set value of attribute \"AXFullScreen\" of front window to true\n          end try" : `set skynetResult to "${target}-focused-layout-preserved"`}
+          try
+            perform action "AXRaise" of front window
+          end try
+        else
+          set skynetResult to "${target}-no-window"
         end if
       end tell
     end try
     return skynetResult
   end if
 end tell
-try
-  tell application "${config.appName}" to activate
-  delay 1.0
-  set skynetResult to "${target}-opened"
-on error
-  ${buildTerminalActivateScript("")}
-  delay 0.6
-  set skynetResult to "terminal-focused"
-end try
+set skynetResult to "${target}-not-running"
 return skynetResult`;
 
   const { error, stdout } = await runMacAutomationScript(machine, script, 16_000);
@@ -1658,29 +1655,170 @@ return skynetResult`;
   };
 }
 
-async function captureSkynetEvidence(machine) {
-  const captureId = `skynet-${machine.id}-${Date.now()}`;
-  const snap = await captureOneSnapshot(machine);
-  if (!snap) {
-    const text = await captureTextFallback(machine);
-    if (text) {
-      captures.set(captureId, { type: "text", text });
-      return { captureId, capture: { type: "text", text } };
+function buildQuartzAppWindowCaptureCommand(appName, outPath) {
+  return `APP_NAME=${shellQuote(appName)} OUT=${shellQuote(outPath)} sh <<'SHELL'
+set -eu
+PYTHON_BIN=""
+for candidate in python3 /opt/homebrew/bin/python3 /usr/local/bin/python3 /Library/Developer/CommandLineTools/usr/bin/python3; do
+  if [ -x "$candidate" ]; then
+    bin="$candidate"
+  elif command -v "$candidate" >/dev/null 2>&1; then
+    bin="$(command -v "$candidate")"
+  else
+    continue
+  fi
+
+  if "$bin" - <<'PYCHK' >/dev/null 2>&1
+import Quartz.CoreGraphics as CG
+from AppKit import NSBitmapImageRep, NSJPEGFileType
+PYCHK
+  then
+    PYTHON_BIN="$bin"
+    break
+  fi
+done
+
+test -n "$PYTHON_BIN"
+"$PYTHON_BIN" - <<'PY'
+import os
+import sys
+import Quartz.CoreGraphics as CG
+from AppKit import NSBitmapImageRep, NSJPEGFileType
+
+app = os.environ.get("APP_NAME", "")
+out = os.environ.get("OUT", "")
+windows = CG.CGWindowListCopyWindowInfo(CG.kCGWindowListOptionOnScreenOnly, CG.kCGNullWindowID) or []
+matches = []
+for w in windows:
+    owner = str(w.get("kCGWindowOwnerName", ""))
+    if owner.lower() != app.lower():
+        continue
+    if int(w.get("kCGWindowLayer", 99)) != 0:
+        continue
+    bounds = w.get("kCGWindowBounds") or {}
+    width = int(bounds.get("Width", 0))
+    height = int(bounds.get("Height", 0))
+    if width < 120 or height < 80:
+        continue
+    matches.append((width * height, int(w.get("kCGWindowNumber")), w))
+
+if not matches:
+    sys.exit(2)
+
+_, window_id, _ = sorted(matches, reverse=True)[0]
+image = CG.CGWindowListCreateImage(
+    CG.CGRectNull,
+    CG.kCGWindowListOptionIncludingWindow,
+    window_id,
+    CG.kCGWindowImageBoundsIgnoreFraming,
+)
+if image is None:
+    sys.exit(3)
+rep = NSBitmapImageRep.alloc().initWithCGImage_(image)
+data = rep.representationUsingType_properties_(NSJPEGFileType, {})
+if data is None:
+    sys.exit(4)
+data.writeToFile_atomically_(out, True)
+PY
+SHELL`;
+}
+
+async function captureTargetAppWindow(machine, rawTarget = "claude") {
+  const target = normalizeSkynetTarget(rawTarget);
+  const config = SKYNET_TARGETS[target];
+  const imageKey = `skynet-${machine.id}-${target}-${Date.now()}`;
+
+  if (isWindowsMachine(machine)) {
+    return null;
+  }
+
+  const appName = config.appName;
+  const remoteOut = `/tmp/${imageKey}.jpg`;
+  const remoteCmd = `${buildQuartzAppWindowCaptureCommand(appName, remoteOut)} && sips -Z 1200 ${shellQuote(remoteOut)} --out ${shellQuote(remoteOut)} >/dev/null 2>&1 && base64 -i ${shellQuote(remoteOut)}; rm -f ${shellQuote(remoteOut)}`;
+
+  async function attemptLocal() {
+    const tmpPath = join(tmpdir(), `${imageKey}.jpg`);
+    const ok = await new Promise((resolve) => {
+      execFile("bash", ["-lc", buildQuartzAppWindowCaptureCommand(appName, tmpPath)], { timeout: 12_000 }, (err) => {
+        resolve(!err);
+      });
+    });
+    if (!ok) return null;
+    await new Promise((resolve) => {
+      execFile("sips", ["-Z", "1200", tmpPath, "--out", tmpPath], { timeout: 5_000 }, () => resolve());
+    });
+    try {
+      return await readFile(tmpPath);
+    } catch {
+      return null;
+    } finally {
+      unlink(tmpPath).catch(() => {});
     }
-    return { captureId: null, capture: null };
   }
 
-  if (snap.type === "image" && snap.image) {
-    const imageKey = snap.image.split("/").pop();
-    return { captureId: imageKey || captureId, capture: snap };
+  if (isLocalMacMachine(machine)) {
+    return attemptLocal();
   }
 
-  if (snap.type === "images" && Array.isArray(snap.images)) {
-    return { captureId, capture: snap };
+  async function attemptRemote(useLocal) {
+    const { error, stdout } = await execRemote(machine, useLocal, remoteCmd, 18_000, 30 * 1024 * 1024);
+    const b64 = stdout?.trim();
+    if (error || !b64) return null;
+    try {
+      return Buffer.from(b64, "base64");
+    } catch {
+      return null;
+    }
   }
 
-  captures.set(captureId, snap);
-  return { captureId, capture: snap };
+  if (deriveLocalHostname(machine)) {
+    const local = await attemptRemote(true);
+    if (local) return local;
+  }
+  return attemptRemote(false);
+}
+
+async function captureTargetAppText(machine, rawTarget = "claude") {
+  const target = normalizeSkynetTarget(rawTarget);
+  const config = SKYNET_TARGETS[target];
+  const appName = config.appName;
+  const script = `set appName to "${appName}"
+tell application "System Events"
+  if not (exists process appName) then return appName & " — OFF"
+  tell process appName
+    if (count of windows) is 0 then return appName & " — no-window"
+    try
+      return appName & " — " & (name of front window)
+    on error
+      return appName & " — ventana activa sin titulo"
+    end try
+  end tell
+end tell`;
+  const { error, stdout } = await runMacAutomationScript(machine, script, 8_000);
+  return error ? null : stdout?.trim() || null;
+}
+
+async function captureSkynetEvidence(machine, rawTarget = "claude", state = null) {
+  const target = normalizeSkynetTarget(rawTarget);
+  const captureId = `skynet-${machine.id}-${Date.now()}`;
+  const imageKey = `${captureId}-${target}`;
+  const targetState = state || "sin estado";
+  if (!hasUsefulAppActivity(targetState)) {
+    const text = `${SKYNET_TARGETS[target].label} en ${machine.name || machine.id}: ${targetState || "OFF"}`;
+    captures.set(captureId, { type: "text", text });
+    return { captureId, capture: { type: "text", text } };
+  }
+
+  const buf = await captureTargetAppWindow(machine, target);
+  if (buf?.length) {
+    imageBuffers.set(imageKey, buf);
+    captures.set(captureId, { type: "image", path: `/api/screenshots/${imageKey}` });
+    return { captureId, capture: { type: "image", path: `/api/screenshots/${imageKey}` } };
+  }
+
+  const text = await captureTargetAppText(machine, target) || `${SKYNET_TARGETS[target].label} en ${machine.name || machine.id}: ${targetState}`;
+  captures.set(captureId, { type: "text", text });
+  return { captureId, capture: { type: "text", text } };
 }
 
 export async function runSkynetAudit(rawTarget = "claude") {
@@ -1708,14 +1846,16 @@ export async function runSkynetAudit(rawTarget = "claude") {
       markMachineOnline(machine.id);
       const before = parseAppsState(beforeRaw);
       const activeBefore = hasUsefulAppActivity(before[config.stateKey]);
-      const focus = await focusAppForSkynet(machine, target);
-      await new Promise((resolve_) => setTimeout(resolve_, 1200));
+      const focus = activeBefore
+        ? await focusAppForSkynet(machine, target)
+        : { ok: true, action: `${target}-inactive`, target, error: null };
+      if (activeBefore) {
+        await new Promise((resolve_) => setTimeout(resolve_, 1200));
+      }
 
-      const [afterRaw, evidence] = await Promise.all([
-        captureAllAppsState(machine),
-        captureSkynetEvidence(machine)
-      ]);
+      const afterRaw = await captureAllAppsState(machine);
       const after = parseAppsState(afterRaw);
+      const evidence = await captureSkynetEvidence(machine, target, after[config.stateKey] || before[config.stateKey]);
       const activeAfter = hasUsefulAppActivity(after[config.stateKey]);
       const mState = watchdogState.perMachine[machine.id] || {};
       watchdogState.perMachine[machine.id] = {

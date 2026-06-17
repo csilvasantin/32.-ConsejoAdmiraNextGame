@@ -1461,14 +1461,103 @@ function finalizeMachineSignal(mState, signal, status) {
 }
 
 const SKYNET_TARGETS = {
-  claude: { appName: "Claude", stateKey: "claude", label: "Claude Code" },
-  codex: { appName: "Codex", stateKey: "codex", label: "Codex" },
-  opencode: { appName: "OpenCode", stateKey: "opencode", label: "OpenCode" }
+  claude: {
+    appName: "Claude",
+    stateKey: "claude",
+    label: "Claude Code",
+    terminalStateKey: "claudeTerminal",
+    terminalLabel: "Claude Code"
+  },
+  codex: {
+    appName: "Codex",
+    stateKey: "codex",
+    label: "Codex",
+    terminalStateKey: "codexTerminal",
+    terminalLabel: "Codex CLI"
+  },
+  opencode: {
+    appName: "OpenCode",
+    stateKey: "opencode",
+    label: "OpenCode",
+    terminalStateKey: "opencodeTerminal",
+    terminalLabel: "OpenCode CLI"
+  }
 };
 
 function normalizeSkynetTarget(target = "claude") {
   const key = String(target || "claude").toLowerCase();
   return SKYNET_TARGETS[key] ? key : "claude";
+}
+
+async function captureTerminalRuntimeState(machine) {
+  if (isWindowsMachine(machine)) {
+    return "";
+  }
+
+  const script = `set r to ""
+set claudeTerm to ""
+set codexTerm to ""
+set opencodeTerm to ""
+on inspectTerminalText(appLabel, c)
+  set out to ""
+  set lc to c
+  if lc contains "Claude Code" or lc contains "claude-code" or lc contains " claude" or lc contains "claude " then set out to out & "CLAUDE_TERM:Claude Code · " & appLabel & "|||"
+  if lc contains "Codex" or lc contains " codex" or lc contains "codex " then set out to out & "CODEX_TERM:Codex CLI · " & appLabel & "|||"
+  if lc contains "OpenCode" or lc contains "opencode" or lc contains " open-code" then set out to out & "OPENCODE_TERM:OpenCode CLI · " & appLabel & "|||"
+  return out
+end inspectTerminalText
+try
+  if application "Terminal" is running then
+    tell application "Terminal"
+      repeat with w in every window
+        repeat with t in every tab of w
+          try
+            set c to contents of t
+            set cLen to length of c
+            if cLen > 3000 then set c to text (cLen - 2999) thru cLen of c
+            set r to r & my inspectTerminalText("Terminal", c)
+          end try
+        end repeat
+      end repeat
+    end tell
+  end if
+end try
+try
+  if application "iTerm2" is running then
+    tell application "iTerm2"
+      repeat with w in every window
+        repeat with t in every tab of w
+          repeat with s in every session of t
+            try
+              set c to contents of s
+              set cLen to length of c
+              if cLen > 3000 then set c to text (cLen - 2999) thru cLen of c
+              set r to r & my inspectTerminalText("iTerm2", c)
+            end try
+          end repeat
+        end repeat
+      end repeat
+    end tell
+  end if
+end try
+tell application "System Events"
+  repeat with appName in {"Warp", "Ghostty"}
+    if exists process appName then
+      tell process appName
+        repeat with w in windows
+          try
+            set wt to name of w
+            set r to r & my inspectTerminalText(appName as text, wt)
+          end try
+        end repeat
+      end tell
+    end if
+  end repeat
+end tell
+return r`;
+
+  const { error, stdout } = await runMacAutomationScript(machine, script, 12_000);
+  return error ? "" : stdout?.trim() || "";
 }
 
 // Check Claude, Codex and OpenCode status on a machine (not just frontmost app)
@@ -1478,9 +1567,13 @@ tell application "System Events"
   if exists process "Claude" then
     set claudeTitle to "no-window"
     try
-      set claudeTitle to name of front window of process "Claude"
+      tell process "Claude"
+        if (count of windows) > 0 then
+          set claudeTitle to name of front window
+          if claudeTitle is missing value or claudeTitle is "" then set claudeTitle to "window"
+        end if
+      end tell
     end try
-    if claudeTitle is missing value or claudeTitle is "" then set claudeTitle to "no-window"
     set r to r & "CLAUDE:" & claudeTitle
   else
     set r to r & "CLAUDE:OFF"
@@ -1489,9 +1582,13 @@ tell application "System Events"
   if exists process "Codex" then
     set codexTitle to "no-window"
     try
-      set codexTitle to name of front window of process "Codex"
+      tell process "Codex"
+        if (count of windows) > 0 then
+          set codexTitle to name of front window
+          if codexTitle is missing value or codexTitle is "" then set codexTitle to "window"
+        end if
+      end tell
     end try
-    if codexTitle is missing value or codexTitle is "" then set codexTitle to "no-window"
     set r to r & "CODEX:" & codexTitle
   else
     set r to r & "CODEX:OFF"
@@ -1500,9 +1597,13 @@ tell application "System Events"
   if exists process "OpenCode" then
     set openCodeTitle to "no-window"
     try
-      set openCodeTitle to name of front window of process "OpenCode"
+      tell process "OpenCode"
+        if (count of windows) > 0 then
+          set openCodeTitle to name of front window
+          if openCodeTitle is missing value or openCodeTitle is "" then set openCodeTitle to "window"
+        end if
+      end tell
     end try
-    if openCodeTitle is missing value or openCodeTitle is "" then set openCodeTitle to "no-window"
     set r to r & "OPENCODE:" & openCodeTitle
   else
     set r to r & "OPENCODE:OFF"
@@ -1523,9 +1624,15 @@ Write-Output ("CLAUDE:{0}|||CODEX:{1}|||OPENCODE:{2}" -f $claudeTitle, $codexTit
     const { error, stdout } = await execWindows(script, 8_000);
     return error ? null : stdout?.trim() || null;
   }
+
+  async function withTerminalState(raw) {
+    const terminalRaw = await captureTerminalRuntimeState(machine);
+    return terminalRaw ? `${raw || ""}|||${terminalRaw}` : raw;
+  }
+
   if (isLocalMachine(machine)) {
     const { error, stdout } = await execLocal(script, 8000);
-    return error ? null : stdout?.trim() || null;
+    return error ? null : withTerminalState(stdout?.trim() || "");
   }
 
   const lines = script.split("\n").map((l) => `-e '${l.trim()}'`).join(" ");
@@ -1543,16 +1650,17 @@ Write-Output ("CLAUDE:{0}|||CODEX:{1}|||OPENCODE:{2}" -f $claudeTitle, $codexTit
 
   if (deriveLocalHostname(machine) && !isLocalMachine(machine)) {
     const r = await attempt(true);
-    if (r) return r;
+    if (r) return withTerminalState(r);
   }
-  return attempt(false);
+  const remote = await attempt(false);
+  return remote ? withTerminalState(remote) : remote;
 }
 
-// Parse "CLAUDE:windowTitle|||CODEX:windowTitle|||OPENCODE:windowTitle" into app states
+// Parse app and terminal states into a structured snapshot.
 function parseAppsState(raw) {
-  if (!raw) return { claude: null, codex: null, opencode: null };
+  if (!raw) return { claude: null, codex: null, opencode: null, claudeTerminal: null, codexTerminal: null, opencodeTerminal: null };
   const parts = raw.split("|||");
-  const result = { claude: null, codex: null, opencode: null };
+  const result = { claude: null, codex: null, opencode: null, claudeTerminal: null, codexTerminal: null, opencodeTerminal: null };
   for (const part of parts) {
     if (part.startsWith("CLAUDE:")) {
       const val = part.slice(7).trim();
@@ -1566,6 +1674,15 @@ function parseAppsState(raw) {
       const val = part.slice(9).trim();
       result.opencode = val === "OFF" ? null : val;
     }
+    if (part.startsWith("CLAUDE_TERM:") && !result.claudeTerminal) {
+      result.claudeTerminal = part.slice(12).trim();
+    }
+    if (part.startsWith("CODEX_TERM:") && !result.codexTerminal) {
+      result.codexTerminal = part.slice(11).trim();
+    }
+    if (part.startsWith("OPENCODE_TERM:") && !result.opencodeTerminal) {
+      result.opencodeTerminal = part.slice(14).trim();
+    }
   }
   return result;
 }
@@ -1574,6 +1691,11 @@ function hasUsefulAppActivity(state) {
   const title = String(state || "").trim().toLowerCase();
   if (!title) return false;
   return !["off", "no-window", "sin ventana"].includes(title);
+}
+
+function parseTerminalAppFromState(state) {
+  const match = String(state || "").match(/·\s*([^·]+)$/);
+  return match ? match[1].trim() : "";
 }
 
 function buildOsaCommand(script) {
@@ -1655,6 +1777,29 @@ return skynetResult`;
   };
 }
 
+async function focusTerminalForSkynet(machine, rawTarget = "claude", terminalApp = "") {
+  const target = normalizeSkynetTarget(rawTarget);
+  const preferred = terminalApp || "Terminal";
+  const script = `${buildTerminalActivateScript(preferred)}
+delay 0.6
+tell application "System Events"
+  try
+    tell process "${preferred}"
+      if (count of windows) > 0 then perform action "AXRaise" of front window
+    end tell
+  end try
+end tell
+return "${target}-terminal-focused:${preferred}"`;
+  const { error, stdout } = await runMacAutomationScript(machine, script, 12_000);
+  return {
+    ok: !error,
+    action: stdout?.trim() || (error ? "terminal-focus-failed" : `${target}-terminal-focused`),
+    target,
+    terminalApp: preferred,
+    error: error?.message || null
+  };
+}
+
 function buildQuartzAppWindowCaptureCommand(appName, outPath) {
   return `APP_NAME=${shellQuote(appName)} OUT=${shellQuote(outPath)} sh <<'SHELL'
 set -eu
@@ -1723,7 +1868,7 @@ PY
 SHELL`;
 }
 
-async function captureTargetAppWindow(machine, rawTarget = "claude") {
+async function captureTargetAppWindow(machine, rawTarget = "claude", overrideAppName = "") {
   const target = normalizeSkynetTarget(rawTarget);
   const config = SKYNET_TARGETS[target];
   const imageKey = `skynet-${machine.id}-${target}-${Date.now()}`;
@@ -1732,7 +1877,7 @@ async function captureTargetAppWindow(machine, rawTarget = "claude") {
     return null;
   }
 
-  const appName = config.appName;
+  const appName = overrideAppName || config.appName;
   const remoteOut = `/tmp/${imageKey}.jpg`;
   const remoteCmd = `${buildQuartzAppWindowCaptureCommand(appName, remoteOut)} && sips -Z 1200 ${shellQuote(remoteOut)} --out ${shellQuote(remoteOut)} >/dev/null 2>&1 && base64 -i ${shellQuote(remoteOut)}; rm -f ${shellQuote(remoteOut)}`;
 
@@ -1798,7 +1943,7 @@ end tell`;
   return error ? null : stdout?.trim() || null;
 }
 
-async function captureSkynetEvidence(machine, rawTarget = "claude", state = null) {
+async function captureSkynetEvidence(machine, rawTarget = "claude", state = null, terminalApp = "") {
   const target = normalizeSkynetTarget(rawTarget);
   const captureId = `skynet-${machine.id}-${Date.now()}`;
   const imageKey = `${captureId}-${target}`;
@@ -1809,11 +1954,20 @@ async function captureSkynetEvidence(machine, rawTarget = "claude", state = null
     return { captureId, capture: { type: "text", text } };
   }
 
-  const buf = await captureTargetAppWindow(machine, target);
+  const buf = await captureTargetAppWindow(machine, target, terminalApp);
   if (buf?.length) {
     imageBuffers.set(imageKey, buf);
     captures.set(captureId, { type: "image", path: `/api/screenshots/${imageKey}` });
     return { captureId, capture: { type: "image", path: `/api/screenshots/${imageKey}` } };
+  }
+
+  if (!isLocalMultiDisplayMachine(machine)) {
+    const focusedScreen = await captureDesktopScreenshot(machine);
+    if (focusedScreen?.length) {
+      imageBuffers.set(imageKey, focusedScreen);
+      captures.set(captureId, { type: "image", path: `/api/screenshots/${imageKey}` });
+      return { captureId, capture: { type: "image", path: `/api/screenshots/${imageKey}` } };
+    }
   }
 
   const text = await captureTargetAppText(machine, target) || `${SKYNET_TARGETS[target].label} en ${machine.name || machine.id}: ${targetState}`;
@@ -1845,9 +1999,15 @@ export async function runSkynetAudit(rawTarget = "claude") {
 
       markMachineOnline(machine.id);
       const before = parseAppsState(beforeRaw);
-      const activeBefore = hasUsefulAppActivity(before[config.stateKey]);
+      const beforeGuiState = before[config.stateKey];
+      const beforeTerminalState = before[config.terminalStateKey];
+      const useTerminalBefore = !hasUsefulAppActivity(beforeGuiState) && hasUsefulAppActivity(beforeTerminalState);
+      const terminalAppBefore = useTerminalBefore ? parseTerminalAppFromState(beforeTerminalState) : "";
+      const activeBefore = hasUsefulAppActivity(beforeGuiState) || hasUsefulAppActivity(beforeTerminalState);
       const focus = activeBefore
-        ? await focusAppForSkynet(machine, target)
+        ? (useTerminalBefore
+          ? await focusTerminalForSkynet(machine, target, terminalAppBefore)
+          : await focusAppForSkynet(machine, target))
         : { ok: true, action: `${target}-inactive`, target, error: null };
       if (activeBefore) {
         await new Promise((resolve_) => setTimeout(resolve_, 1200));
@@ -1855,8 +2015,14 @@ export async function runSkynetAudit(rawTarget = "claude") {
 
       const afterRaw = await captureAllAppsState(machine);
       const after = parseAppsState(afterRaw);
-      const evidence = await captureSkynetEvidence(machine, target, after[config.stateKey] || before[config.stateKey]);
-      const activeAfter = hasUsefulAppActivity(after[config.stateKey]);
+      const afterGuiState = after[config.stateKey];
+      const afterTerminalState = after[config.terminalStateKey];
+      const useTerminalAfter = !hasUsefulAppActivity(afterGuiState) && hasUsefulAppActivity(afterTerminalState);
+      const auditedStateBefore = useTerminalBefore ? beforeTerminalState : beforeGuiState;
+      const auditedStateAfter = useTerminalAfter ? afterTerminalState : afterGuiState;
+      const terminalAppAfter = useTerminalAfter ? parseTerminalAppFromState(afterTerminalState) : "";
+      const evidence = await captureSkynetEvidence(machine, target, auditedStateAfter || auditedStateBefore, terminalAppAfter);
+      const activeAfter = hasUsefulAppActivity(afterGuiState) || hasUsefulAppActivity(afterTerminalState);
       const mState = watchdogState.perMachine[machine.id] || {};
       watchdogState.perMachine[machine.id] = {
         ...mState,
@@ -1865,6 +2031,9 @@ export async function runSkynetAudit(rawTarget = "claude") {
         claudeState: after.claude,
         codexState: after.codex,
         opencodeState: after.opencode,
+        claudeTerminalState: after.claudeTerminal,
+        codexTerminalState: after.codexTerminal,
+        opencodeTerminalState: after.opencodeTerminal,
         lastSkynetAuditAt: checkedAt,
         lastSkynetAuditStatus: activeAfter ? "active" : (focus?.ok ? "captured-waiting" : "capture-attempted")
       };
@@ -1882,9 +2051,11 @@ export async function runSkynetAudit(rawTarget = "claude") {
         opencodeBefore: before.opencode,
         opencodeAfter: after.opencode,
         auditedTarget: target,
-        auditedStateBefore: before[config.stateKey],
-        auditedStateAfter: after[config.stateKey],
-        auditedLabel: config.label,
+        auditedStateBefore,
+        auditedStateAfter,
+        auditedLabel: useTerminalAfter ? config.terminalLabel : config.label,
+        auditedSurface: useTerminalAfter ? "terminal" : "app",
+        auditedTerminalApp: terminalAppAfter || terminalAppBefore || null,
         captureId: evidence.captureId,
         capture: evidence.capture,
         error: focus?.error || null

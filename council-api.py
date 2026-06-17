@@ -165,6 +165,19 @@ HTTP_URL_RE = re.compile(r"^https?://", re.I)
 
 # ── Config ──────────────────────────────────────────────────
 COUNCIL_API_TOKEN = os.environ.get("COUNCIL_API_TOKEN", "")
+
+# ── Auth real (Google SSO + allowlist) ──────────────────────
+# GOOGLE_CLIENT_ID: OAuth 2.0 Web Client ID (Google Cloud Console). Publico, no es secreto.
+# COUNCIL_ALLOWED_EMAILS: lista separada por comas de correos con acceso.
+# COUNCIL_MACHINE_TOKEN: secreto SOLO servidor para llamadas maquina-a-maquina
+#   (hermes/agora/scripts). NUNCA en el frontend. Sustituye al token publico.
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
+ALLOWED_EMAILS = {
+    e.strip().lower()
+    for e in os.environ.get("COUNCIL_ALLOWED_EMAILS", "csilvasantin@gmail.com").split(",")
+    if e.strip()
+}
+COUNCIL_MACHINE_TOKEN = os.environ.get("COUNCIL_MACHINE_TOKEN", "")
 ALLOWED_ORIGINS = [
     "https://csilvasantin.github.io",
     "https://www.admira.live",
@@ -740,13 +753,55 @@ def check_rate_limit(request: Request):
     _rate_store[ip].append(now)
 
 
+def _verify_google_identity(token: str):
+    """Verifica la firma del ID token de Google y comprueba la allowlist."""
+    from google.oauth2 import id_token as _gid
+    from google.auth.transport import requests as _greq
+    try:
+        info = _gid.verify_oauth2_token(token, _greq.Request(), GOOGLE_CLIENT_ID)
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid Google identity token")
+    if info.get("iss") not in ("accounts.google.com", "https://accounts.google.com"):
+        raise HTTPException(status_code=401, detail="Bad token issuer")
+    if not info.get("email_verified"):
+        raise HTTPException(status_code=403, detail="Email not verified")
+    email = (info.get("email") or "").lower()
+    if email not in ALLOWED_EMAILS:
+        raise HTTPException(status_code=403, detail="Email not authorized")
+    return {"sub": info.get("sub"), "email": email}
+
+
 def verify_token(request: Request):
-    """Verify the API token from the X-Council-Token header."""
-    if not COUNCIL_API_TOKEN:
-        return
-    token = request.headers.get("x-council-token", "")
-    if token != COUNCIL_API_TOKEN:
+    """Auth real del Consejo.
+
+    Acepta, por orden:
+      1) Bearer/X-Council-Token == COUNCIL_MACHINE_TOKEN  (secreto SOLO servidor: hermes/agora/scripts).
+      2) Authorization: Bearer <ID token de Google>  → firma verificada + email en allowlist.
+      3) Fallback transitorio al token legacy SOLO mientras no se haya configurado
+         ni GOOGLE_CLIENT_ID ni COUNCIL_MACHINE_TOKEN (evita tumbar la API en el deploy).
+    """
+    auth = request.headers.get("authorization", "")
+    bearer = auth[7:].strip() if auth[:7].lower() == "bearer " else ""
+
+    # 1) Token maquina-a-maquina
+    if COUNCIL_MACHINE_TOKEN:
+        cand = bearer or request.headers.get("x-council-token", "")
+        if cand and cand == COUNCIL_MACHINE_TOKEN:
+            return {"sub": "machine", "email": "machine@admira.live"}
+
+    # 2) Identidad Google (allowlist)
+    if GOOGLE_CLIENT_ID and bearer:
+        return _verify_google_identity(bearer)
+
+    # 3) Fallback transitorio (aun sin auth nueva configurada)
+    if not GOOGLE_CLIENT_ID and not COUNCIL_MACHINE_TOKEN:
+        if not COUNCIL_API_TOKEN:
+            return None
+        if request.headers.get("x-council-token", "") == COUNCIL_API_TOKEN:
+            return {"sub": "legacy", "email": "legacy"}
         raise HTTPException(status_code=403, detail="Invalid or missing API token")
+
+    raise HTTPException(status_code=401, detail="Authentication required")
 
 
 # ── Shared Anthropic client ─────────────────────────────────

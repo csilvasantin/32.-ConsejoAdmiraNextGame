@@ -13,6 +13,13 @@ services:
         sync: false
       - key: TELEGRAM_CHAT_ID
         sync: false
+      # ── Auth real (Google SSO) ──
+      - key: GOOGLE_CLIENT_ID          # OAuth Web Client ID (publico)
+        sync: false
+      - key: COUNCIL_ALLOWED_EMAILS    # correos con acceso, separados por comas
+        sync: false
+      - key: COUNCIL_MACHINE_TOKEN     # secreto SOLO servidor (hermes/agora/scripts)
+        sync: false
     disk:
       name: council-data
       mountPath: /opt/render/project/src/presentations

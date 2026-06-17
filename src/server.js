@@ -370,6 +370,46 @@ async function getAgoraStatus() {
   };
 }
 
+function parseAwakeAgoraAliases(whoText) {
+  const known = new Set([
+    ...[...MATRIX_COUNCIL_LINKS.values()].map((item) => item.alias),
+    ...EXTRA_COUNCIL_AGENTS.map((item) => item.alias),
+  ]);
+  const aliases = [];
+  for (const line of splitAgoraLines(whoText)) {
+    if (!/despierto/i.test(line)) continue;
+    for (const alias of known) {
+      if (new RegExp(`\\b${alias.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}\\b`, "i").test(line)) {
+        aliases.push(alias);
+      }
+    }
+  }
+  return [...new Set(aliases)];
+}
+
+async function requestAgoraAgentStatus() {
+  const stamp = new Date().toISOString().replace(/[-:T.Z]/g, "").slice(0, 14);
+  const who = await runAgora(["who"], { timeoutMs: 10000 });
+  const aliases = parseAwakeAgoraAliases(who.stdout)
+    .filter((alias) => !/^consejo$/i.test(alias));
+  const targets = aliases.length ? aliases : [...MATRIX_COUNCIL_LINKS.values()].map((item) => item.alias);
+  const results = [];
+  for (const alias of targets) {
+    const text = [
+      `📡 ESTADO status-${stamp}-${alias} → ${alias}`,
+      `Encargo: responde con "${alias} · <maquina> · <estado/tarea actual>"`,
+      "Publica la respuesta aqui; admira.live la mostrara en el panel Agentes.",
+    ].join(" | ");
+    const result = await runAgora(["send", "--from", "Consejo", text], { timeoutMs: 45000 });
+    results.push({
+      alias,
+      ok: !!result.ok,
+      error: result.ok ? null : (result.stderr || result.error || "No se pudo publicar"),
+    });
+  }
+  return { targets, results };
+}
+
 function addHistoryFromResults(results, { prompt, target, action }) {
   return addEntries(
     results.map((result) => ({
@@ -612,6 +652,27 @@ const server = createServer(async (request, response) => {
       });
     } catch (error) {
       sendJson(response, 500, { ok: false, error: error instanceof Error ? error.message : "Error al enviar" });
+    }
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/agora/request-status") {
+    // Puesto de mando admira.live → peticiones dirigidas a agentes activos.
+    // Origin-gated + rate-limit, igual que /api/agora/say.
+    if (!isAllowedCouncilOrigin(request)) {
+      sendJson(response, 403, { ok: false, error: "Origen no permitido" });
+      return;
+    }
+    if (!checkAgoraCouncilRateLimit(request)) {
+      sendJson(response, 429, { ok: false, error: "Demasiadas peticiones en poco tiempo" });
+      return;
+    }
+    try {
+      const status = await requestAgoraAgentStatus();
+      const ok = status.results.some((item) => item.ok);
+      sendJson(response, ok ? 200 : 502, { ok, ...status, fetchedAt: new Date().toISOString() });
+    } catch (error) {
+      sendJson(response, 500, { ok: false, error: error instanceof Error ? error.message : "Error al pedir estado" });
     }
     return;
   }

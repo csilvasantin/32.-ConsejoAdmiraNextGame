@@ -2645,6 +2645,7 @@
             <a href="https://csilvasantin.github.io/diario/" target="_blank" rel="noopener" class="version-badge" title="Diario operativo del Consejo">📓 Diario</a>
             <a href="https://www.admira.live/control.html" target="_blank" rel="noopener" class="version-badge" title="Panel de control operativo de admira.live">🎛️ Control</a>
             <a href="https://www.admira.live/mcp/" target="_blank" rel="noopener" class="version-badge" title="Documentacion publica del MCP Admira Live">🔌 MCP</a>
+            <button class="version-badge" onclick="window.agmSetVisible&&window.agmSetVisible(null)" title="Abrir el puesto de mando AgoraMatrix">📡 Agentes</button>
             <div class="gen-toggle">
                 <button class="gen-btn active-leyendas" id="btn-gen" onclick="toggleGen()" title="Cambiar entre Leyendas y Coetáneos">⭐ Leyendas</button>
             </div>
@@ -8205,6 +8206,12 @@
   .agm-who .d{width:7px;height:7px;border-radius:50%;background:#3a5a44}
   .agm-who.on .d{background:#00ff41;box-shadow:0 0 5px #00ff41}
   #agm-feed{flex:1;min-height:0;overflow-y:auto;padding:6px 10px}
+  #agm-brief{display:grid;gap:5px;padding:7px 10px;border-bottom:1px solid #143b1d;background:rgba(0,255,65,.035);max-height:118px;overflow-y:auto}
+  .agm-agent{display:grid;grid-template-columns:auto 1fr;gap:3px 7px;padding:5px 6px;border:1px solid #143b1d;border-radius:7px;background:rgba(0,40,12,.2)}
+  .agm-agent b{color:#9effb0;font-size:10px}
+  .agm-agent small{color:#5b9c6c;font-size:9px;text-align:right}
+  .agm-agent span{grid-column:1 / -1;color:#bdebc8;font-size:10px;line-height:1.35}
+  .agm-agent.empty{display:block;color:#3f7a4f;font-size:10px;text-align:center}
   .agm-msg{padding:5px 0;border-bottom:1px solid #0e2a16;line-height:1.4}
   .agm-msg:last-child{border-bottom:0}
   .agm-msg .who{color:#9effb0;font-weight:700}
@@ -8215,12 +8222,18 @@
   #agm-chat input{flex:1;min-width:0;background:#03140a;border:1px solid #1f8a3e;color:#bdebc8;border-radius:6px;padding:5px 8px;font-family:inherit;font-size:11px;outline:none}
   #agm-chat button{background:#0c3;border:0;color:#02140a;border-radius:6px;padding:0 12px;font-weight:700;cursor:pointer}
   #agm-chat button:disabled{opacity:.5;cursor:default}
+  #agm-actions{display:flex;gap:6px;padding:7px 10px;border-top:1px solid #143b1d}
+  #agm-actions button{flex:1;background:#06200f;border:1px solid #1f8a3e;color:#9effb0;border-radius:6px;padding:5px 7px;font-family:inherit;font-size:10px;cursor:pointer}
+  #agm-actions button:hover{background:#0a3318}
+  #agm-actions button:disabled{opacity:.5;cursor:default}
 </style>
 <div id="agm-panel" aria-label="AgoraMatrix Consejo">
   <div id="agm-head"><span class="agm-dot"></span><b>📡 AgoraMatrix · Consejo</b><span class="agm-toggle">▾</span></div>
   <div id="agm-body">
     <div id="agm-presence"></div>
+    <div id="agm-brief"><div class="agm-agent empty">Pide estado para ver aqui que hace cada agente.</div></div>
     <div id="agm-feed"><div class="agm-msg"><span class="tx">Conectando con AgoraMatrix…</span></div></div>
+    <div id="agm-actions"><button id="agm-ask-status" type="button" title="Pedir a todos los agentes que contesten con persona, maquina y tarea actual">Pedir estado a todos</button></div>
     <div id="agm-chat"><input id="agm-input" placeholder="escribe al canal AgoraMatrix…" maxlength="600" autocomplete="off"><button id="agm-send" title="Enviar">➤</button></div>
     <div id="agm-foot">coetáneos ⇄ agentes Matrix · en vivo</div>
   </div>
@@ -8237,6 +8250,7 @@
   var API = "https://macmini.tail48b61c.ts.net/api/agora/coetaneos?limit=24";
   var panel=document.getElementById('agm-panel'), head=document.getElementById('agm-head'),
       feedEl=document.getElementById('agm-feed'), presEl=document.getElementById('agm-presence'),
+      briefEl=document.getElementById('agm-brief'), askBtn=document.getElementById('agm-ask-status'),
       tog=head.querySelector('.agm-toggle');
   head.addEventListener('click',function(){ if(_agmMoved){ _agmMoved=false; return; } panel.classList.toggle('agm-min'); tog.textContent=panel.classList.contains('agm-min')?'▸':'▾'; });
   // ── Caja flotante: movible + redimensionable + persistente (preferencia global) ──
@@ -8257,15 +8271,65 @@
   // Chat bidireccional: escribir al canal AgoraMatrix (como "Consejo"); las respuestas
   // entran por el feed que ya se pollea. Sin clave (endpoint origin-gated /api/agora/say).
   var input=document.getElementById('agm-input'), sendBtn=document.getElementById('agm-send');
-  async function sendMsg(){ var t=(input.value||'').trim(); if(!t) return; sendBtn.disabled=true; var ov=input.value; input.value='';
+  async function postAgora(t, restoreInput){ if(!t) return false;
     try{ var r=await fetch("https://macmini.tail48b61c.ts.net/api/agora/say",{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:t,from:'Consejo'})}); var d=await r.json();
-      if(!(r.ok&&d.ok)){ input.value=ov; alert('No se pudo enviar: '+((d&&d.error)||r.status)); } else { setTimeout(tick,900); } }
+      if(!(r.ok&&d.ok)){ if(restoreInput!==undefined) input.value=restoreInput; alert('No se pudo enviar: '+((d&&d.error)||r.status)); return false; }
+      setTimeout(tick,900); return true; }
+    catch(e){ if(restoreInput!==undefined) input.value=restoreInput; alert('Sin conexion con AgoraMatrix'); }
+    return false;
+  }
+  async function sendMsg(){ var t=(input.value||'').trim(); if(!t) return; sendBtn.disabled=true; var ov=input.value; input.value='';
+    try{ await postAgora(t, ov); }
     catch(e){ input.value=ov; alert('Sin conexión con AgoraMatrix'); }
     finally{ sendBtn.disabled=false; input.focus(); } }
   sendBtn.addEventListener('click',sendMsg);
   input.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); sendMsg(); } });
+  if(askBtn) askBtn.addEventListener('click',async function(){
+    askBtn.disabled=true;
+    var msg='Agentes, reportad estado ahora con este formato exacto: <Persona> · <maquina> · <estado/tarea actual>. Ejemplo: Neo · MacBook-Pro-16.local · en curso: publicando web. Responde cada uno en AgoraMatrix.';
+    try{
+      var r=await fetch("https://macmini.tail48b61c.ts.net/api/agora/request-status",{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+      var d=await r.json();
+      if(!(r.ok&&d&&d.ok)) await postAgora(msg);
+      else setTimeout(tick,900);
+    }
+    catch(e){ await postAgora(msg); }
+    finally{ askBtn.disabled=false; input.focus(); }
+  });
   function esc(s){ return String(s||'').replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
   function parseMsg(line){ var m=String(line).match(/^(\S+)\s+\[([^\]]+)\]\s+([\s\S]*)$/); if(m){ var t=m[1].replace('T',' ').slice(5,16); return {time:t,who:m[2],tx:m[3]}; } return {time:'',who:'',tx:line}; }
+  function hostFromText(tx){
+    var m=String(tx||'').match(/\b([A-Za-z0-9_-]+(?:\.local|MacMini|MacBookProNegro14|MacBook-Pro-16|MacBookAir)[A-Za-z0-9_.-]*)\b/);
+    return m?m[1]:'';
+  }
+  function renderAgentBrief(feed, whoText){
+    var by={};
+    COETANEOS.forEach(function(c){ by[c.persona]={persona:c.persona,host:'',state:'sin respuesta reciente',time:'',online:false}; });
+    String(whoText||'').split(/\n/).forEach(function(line){
+      COETANEOS.forEach(function(c){
+        if(new RegExp("\\b"+c.persona.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+"\\b","i").test(line)){
+          by[c.persona].online=/despierto/i.test(line);
+          by[c.persona].host=hostFromText(line)||by[c.persona].host;
+          by[c.persona].state=line.replace(/^.*?\b(?:despierto|dormido)\b/i,'').replace(/\s+/g,' ').trim()||by[c.persona].state;
+        }
+      });
+    });
+    (feed||[]).forEach(function(line){
+      var m=parseMsg(line), p=m.who;
+      if(!by[p]) return;
+      var tx=String(m.tx||'');
+      if(/\b(en curso|bloquead|disponible|hecho|haciendo|trabajando|revisando|publicando|task-\d+|estado)\b/i.test(tx) || / · /.test(tx)){
+        by[p].state=tx.replace(/^task-\d+\s*/i,'').slice(0,140);
+        by[p].time=m.time||by[p].time;
+        by[p].host=hostFromText(tx)||by[p].host;
+      }
+    });
+    var rows=Object.keys(by).map(function(k){return by[k];}).filter(function(a){return a.online || a.state!=='sin respuesta reciente';});
+    if(!rows.length){ briefEl.innerHTML='<div class="agm-agent empty">Pide estado para ver aqui que hace cada agente.</div>'; return; }
+    briefEl.innerHTML=rows.map(function(a){
+      return '<div class="agm-agent"><b>'+(a.online?'🟢 ':'⚪ ')+esc(a.persona)+'</b><small>'+esc(a.host||a.time||'sin maquina')+'</small><span>'+esc(a.state)+'</span></div>';
+    }).join('');
+  }
   function renderPresence(who){
     var w=String(who||'');
     var aliveReal=[];
@@ -8302,7 +8366,7 @@
   async function tick(){
     if(panel.style.display==='none') return;   // oculta → no pollear
     try{ var r=await fetch(API,{cache:'no-store'}); var d=await r.json();
-      if(d&&d.ok){ renderPresence(d.who); renderFeed(d.feed); burstFromFeed(d.feed); } }
+      if(d&&d.ok){ renderPresence(d.who); renderAgentBrief(d.feed,d.who); renderFeed(d.feed); burstFromFeed(d.feed); } }
     catch(e){ /* MacMini dormido o sin red: deja lo último */ }
   }
   tick(); setInterval(tick, 12000);

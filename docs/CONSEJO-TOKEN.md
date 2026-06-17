@@ -31,3 +31,22 @@ PY
 Usalo solo para rellenar el prompt `Token del Consejo` o para enviarlo como
 cabecera `X-Council-Token` en llamadas automatizadas. No lo publiques en
 AgoraMatrix, logs, commits, capturas ni respuestas de agentes.
+
+## Login con Google
+
+El backend tambien puede aceptar un `id_token` de Google en lugar del token
+legado. Esto permite iniciar sesion desde la web del Consejo sin compartir la
+clave de escritura.
+
+Variables necesarias en el servidor:
+
+- `GOOGLE_CLIENT_ID`: OAuth Web Client ID autorizado para el dominio real de la web.
+- `GOOGLE_ALLOWED_EMAILS`: lista separada por comas con las cuentas permitidas.
+- `GOOGLE_ALLOWED_DOMAIN`: alternativa por dominio si no se usan emails concretos.
+
+Notas operativas:
+
+- El frontend descubre esta configuracion via `GET /api/council/auth/google-config`.
+- Se mantiene compatibilidad con `COUNCIL_WRITE_TOKEN` mientras dure la transicion.
+- Si `GOOGLE_CLIENT_ID` no esta autorizado para `admira.live`, el boton de Google
+  aparecera pero el login fallara con error de origen en Google.

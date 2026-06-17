@@ -5213,7 +5213,173 @@
     const AGORA_COUNCIL_API_URLS = isSecure
         ? ['https://macmini.tail48b61c.ts.net']
         : ['http://localhost:3030', 'https://macmini.tail48b61c.ts.net'];
-    const COUNCIL_API_TOKEN = "admira2026";
+    let COUNCIL_API_TOKEN = "";
+    const COUNCIL_AUTH_STORAGE_KEY = "councilToken";
+    let councilAuthConfigPromise = null;
+    let councilGoogleScriptPromise = null;
+    let councilAuthDialog = null;
+
+    function getStoredCouncilToken() {
+        try { return localStorage.getItem(COUNCIL_AUTH_STORAGE_KEY) || ""; } catch (error) { return ""; }
+    }
+
+    function setStoredCouncilToken(token) {
+        COUNCIL_API_TOKEN = String(token || "").trim();
+        try {
+            if (COUNCIL_API_TOKEN) localStorage.setItem(COUNCIL_AUTH_STORAGE_KEY, COUNCIL_API_TOKEN);
+            else localStorage.removeItem(COUNCIL_AUTH_STORAGE_KEY);
+        } catch (error) {}
+        return COUNCIL_API_TOKEN;
+    }
+
+    COUNCIL_API_TOKEN = getStoredCouncilToken();
+
+    async function fetchCouncilAuthConfig() {
+        if (!councilAuthConfigPromise) {
+            councilAuthConfigPromise = _pickCouncilApi('/api/council/auth/google-config').then(async ({ baseUrl }) => {
+                const response = await fetch(baseUrl + '/api/council/auth/google-config', {
+                    signal: AbortSignal.timeout(8000),
+                });
+                if (!response.ok) throw new Error('HTTP ' + response.status);
+                const data = await response.json();
+                return { baseUrl, data };
+            }).catch((error) => {
+                councilAuthConfigPromise = null;
+                throw error;
+            });
+        }
+        return councilAuthConfigPromise;
+    }
+
+    function removeCouncilAuthDialog() {
+        if (councilAuthDialog && councilAuthDialog.parentNode) councilAuthDialog.parentNode.removeChild(councilAuthDialog);
+        councilAuthDialog = null;
+    }
+
+    async function ensureGoogleIdentity(clientId) {
+        if (window.google && window.google.accounts && window.google.accounts.id) return;
+        if (!councilGoogleScriptPromise) {
+            councilGoogleScriptPromise = new Promise((resolve, reject) => {
+                const script = document.createElement('script');
+                script.src = 'https://accounts.google.com/gsi/client';
+                script.async = true;
+                script.defer = true;
+                script.onload = resolve;
+                script.onerror = () => reject(new Error('No se pudo cargar Google Identity Services'));
+                document.head.appendChild(script);
+            }).catch((error) => {
+                councilGoogleScriptPromise = null;
+                throw error;
+            });
+        }
+        await councilGoogleScriptPromise;
+        if (!(window.google && window.google.accounts && window.google.accounts.id && clientId)) {
+            throw new Error('Google Sign-In no disponible');
+        }
+    }
+
+    async function promptCouncilLogin(force, reason) {
+        if (!force) {
+            const current = COUNCIL_API_TOKEN || getStoredCouncilToken();
+            if (current) {
+                COUNCIL_API_TOKEN = current;
+                return current;
+            }
+        }
+
+        let config;
+        try {
+            config = await fetchCouncilAuthConfig();
+        } catch (error) {
+            config = { data: { google: { enabled: false }, legacyTokenEnabled: true } };
+        }
+
+        const googleEnabled = !!(config.data && config.data.google && config.data.google.enabled && config.data.google.clientId);
+        const allowLegacy = !!(config.data && config.data.legacyTokenEnabled);
+        if (!googleEnabled) {
+            const typed = (prompt('Credencial del Consejo' + (reason ? ' · ' + reason : '') + ':', COUNCIL_API_TOKEN || '') || '').trim();
+            return typed ? setStoredCouncilToken(typed) : "";
+        }
+
+        await ensureGoogleIdentity(config.data.google.clientId);
+        return await new Promise((resolve) => {
+            removeCouncilAuthDialog();
+            const overlay = document.createElement('div');
+            overlay.style.cssText = 'position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(3,8,17,.72);z-index:99999;padding:16px';
+            overlay.innerHTML = ''
+                + '<div style="width:min(420px,100%);background:#0f1724;border:1px solid rgba(255,255,255,.14);border-radius:18px;padding:22px;box-shadow:0 24px 80px rgba(0,0,0,.45);color:#eef3ff;font-family:Georgia,serif">'
+                +   '<div style="font-size:1.2rem;margin-bottom:8px">Acceso al Consejo</div>'
+                +   '<div style="font-size:.95rem;line-height:1.45;color:#c8d4ef;margin-bottom:16px">Inicia sesión con Google para autorizar esta acción.' + (reason ? ' ' + reason + '.' : '') + '</div>'
+                +   '<div id="council-google-button" style="display:flex;justify-content:center;margin-bottom:14px"></div>'
+                +   '<div style="display:flex;gap:8px;justify-content:flex-end">'
+                +     (allowLegacy ? '<button type="button" id="council-google-legacy" style="border:1px solid rgba(255,255,255,.16);background:#111b2d;color:#eef3ff;border-radius:999px;padding:8px 14px;cursor:pointer">Usar token</button>' : '')
+                +     '<button type="button" id="council-google-cancel" style="border:1px solid rgba(255,255,255,.16);background:transparent;color:#eef3ff;border-radius:999px;padding:8px 14px;cursor:pointer">Cancelar</button>'
+                +   '</div>'
+                + '</div>';
+            document.body.appendChild(overlay);
+            councilAuthDialog = overlay;
+
+            const finish = (token) => {
+                removeCouncilAuthDialog();
+                resolve(token ? setStoredCouncilToken(token) : "");
+            };
+
+            const cancelBtn = overlay.querySelector('#council-google-cancel');
+            if (cancelBtn) cancelBtn.onclick = () => finish("");
+            if (allowLegacy) {
+                const legacyBtn = overlay.querySelector('#council-google-legacy');
+                if (legacyBtn) {
+                    legacyBtn.onclick = () => {
+                        const typed = (prompt('Token legado del Consejo:', COUNCIL_API_TOKEN || '') || '').trim();
+                        finish(typed);
+                    };
+                }
+            }
+
+            window.google.accounts.id.initialize({
+                client_id: config.data.google.clientId,
+                callback: (response) => finish(String(response && response.credential || '').trim())
+            });
+            window.google.accounts.id.renderButton(
+                overlay.querySelector('#council-google-button'),
+                { theme: 'outline', size: 'large', width: 280, shape: 'pill', text: 'continue_with' }
+            );
+        });
+    }
+    window.promptCouncilLogin = promptCouncilLogin;
+
+    const originalCouncilFetch = window.fetch.bind(window);
+    window.fetch = async function(input, init) {
+        const requestUrl = typeof input === 'string' ? input : (input && input.url) || '';
+        const requestMethod = String((init && init.method) || (input && input.method) || 'GET').toUpperCase();
+        const headers = new Headers((init && init.headers) || ((input instanceof Request) ? input.headers : undefined) || {});
+        const councilRequest = /\/api\/council\//.test(requestUrl) || /\/api\/teamwork\/skynet\//.test(requestUrl);
+        const requiresCouncilAuth = councilRequest && (
+            requestMethod !== 'GET' && requestMethod !== 'HEAD' && requestMethod !== 'OPTIONS'
+            || headers.has('X-Council-Token')
+            || headers.has('Authorization')
+        );
+
+        let finalInit = init;
+        if (requiresCouncilAuth) {
+            let token = headers.get('X-Council-Token') || '';
+            if (!token) token = COUNCIL_API_TOKEN || getStoredCouncilToken();
+            if (!token) token = await promptCouncilLogin(false, 'Necesitamos autorización para el Consejo');
+            if (token) headers.set('X-Council-Token', token);
+            finalInit = { ...(init || {}), headers };
+        }
+
+        let response = await originalCouncilFetch(input, finalInit);
+        if (requiresCouncilAuth && response.status === 401) {
+            setStoredCouncilToken('');
+            const retryToken = await promptCouncilLogin(true, 'La sesión del Consejo ha caducado');
+            if (retryToken) {
+                headers.set('X-Council-Token', retryToken);
+                response = await originalCouncilFetch(input, { ...(finalInit || {}), headers });
+            }
+        }
+        return response;
+    };
     const YAR_DONE_BLOCK_START = '[YAR_DONE]';
     const YAR_DONE_BLOCK_END = '[/YAR_DONE]';
     let activeApiUrl = null;
@@ -7829,11 +7995,12 @@
   var API="https://macmini.tail48b61c.ts.net";
   function ctoken(force){
     var t=''; try{ t=localStorage.getItem('councilToken')||''; }catch(e){}
-    if(!t||force){ var v=(prompt('Token del Consejo (para enviar/gestionar tareas en las máquinas):',t)||'').trim(); if(v){ t=v; try{localStorage.setItem('councilToken',t);}catch(e){} } }
+    if(t && !force) return t;
+    if(window.promptCouncilLogin){ window.promptCouncilLogin(!!force, 'Enviar o gestionar tareas en las máquinas'); }
     return t;
   }
   function whdrs(){ return {'Content-Type':'application/json','X-Council-Token':ctoken()}; }
-  function w401(r){ if(r&&r.status===401){ try{localStorage.removeItem('councilToken');}catch(e){} alert('Token del Consejo inválido. Vuelve a intentarlo e introdúcelo de nuevo.'); return true; } return false; }
+  function w401(r){ if(r&&r.status===401){ try{localStorage.removeItem('councilToken');}catch(e){} alert('La sesión del Consejo ha caducado. Repite la acción y vuelve a iniciar sesión.'); return true; } return false; }
   var panel=document.getElementById('task-panel'), head=document.getElementById('tk-head'),
       listEl=document.getElementById('tk-list'), countEl=document.getElementById('tk-count'),
       tog=head.querySelector('.tk-toggle'), form=document.getElementById('tk-form'),

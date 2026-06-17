@@ -2,6 +2,7 @@ import { createServer, request as httpRequest } from "node:http";
 import { readFile, writeFile, mkdir } from "node:fs/promises";
 import { extname, resolve, basename } from "node:path";
 import { spawn } from "node:child_process";
+import { createPublicKey, verify as verifySignature } from "node:crypto";
 
 import { createMachineEntry, readMachines, updateMachineStatus, updateMachineSync } from "./store.js";
 import { sendPromptToMachine, resolveMachineName, getCapture, getImageBuffer, approveAll, approveMachine, getAllSnapshots, getReachableMachines, getWatchdogState, setWatchdogEnabled, setMachineWatchdog, sendOnboardingToAll, startWatchdog, runSkynetAudit, runSkynetAudits } from "./ssh-exec.js";
@@ -32,6 +33,15 @@ const AGORA_PANEL_KEY = process.env.AGORA_PANEL_KEY || process.env.COUNCIL_API_T
 const AGORA_COUNCIL_TOKEN = process.env.AGORA_COUNCIL_TOKEN || process.env.COUNCIL_API_TOKEN || "";
 const AGORA_COUNCIL_WINDOW_MS = Number(process.env.AGORA_COUNCIL_WINDOW_MS || 60000);
 const AGORA_COUNCIL_LIMIT = Number(process.env.AGORA_COUNCIL_LIMIT || 40);
+const COUNCIL_WRITE_TOKEN = String(process.env.COUNCIL_WRITE_TOKEN || "").trim();
+const GOOGLE_CLIENT_ID = String(process.env.GOOGLE_CLIENT_ID || "").trim();
+const GOOGLE_ALLOWED_DOMAIN = String(process.env.GOOGLE_ALLOWED_DOMAIN || "").trim().toLowerCase();
+const GOOGLE_ALLOWED_EMAILS = String(process.env.GOOGLE_ALLOWED_EMAILS || "")
+  .split(",")
+  .map((item) => item.trim().toLowerCase())
+  .filter(Boolean);
+const GOOGLE_JWKS_URL = "https://www.googleapis.com/oauth2/v3/certs";
+const googleJwksCache = { keys: null, exp: 0 };
 
 const MIME_TYPES = {
   ".html": "text/html; charset=utf-8",
@@ -48,7 +58,7 @@ const VALID_STATUSES = new Set(["online", "idle", "busy", "offline", "maintenanc
 const CORS_HEADERS = {
   "Access-Control-Allow-Origin": "*",
   "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
-  "Access-Control-Allow-Headers": "Content-Type, X-Agora-Panel-Key, X-Council-Token",
+  "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Agora-Panel-Key, X-Council-Token",
   "Access-Control-Allow-Private-Network": "true"
 };
 const MATRIX_COUNCIL_LINKS = new Map([
@@ -135,18 +145,136 @@ function verifyAgoraCouncilAccess(request) {
 }
 
 // Guardia de ESCRITURA: las operaciones que mandan comandos a las máquinas (crear,
-// dispatch, cambiar estado, archivar, borrar) exigen token secreto. Las LECTURAS (GET)
-// siguen abiertas con origin. Si COUNCIL_WRITE_TOKEN no está configurado, no exige nada
-// (compatibilidad durante el despliegue); en cuanto se define en el server, queda activo.
-const COUNCIL_WRITE_TOKEN = process.env.COUNCIL_WRITE_TOKEN || "";
-function requireCouncilWrite(request, response) {
+// dispatch, cambiar estado, archivar, borrar) exigen credencial. Las LECTURAS (GET)
+// siguen abiertas con origin. Se acepta token legado y, si se configura, login Google.
+async function requireCouncilWrite(request, response) {
   if (!isAllowedCouncilOrigin(request)) { sendJson(response, 403, { ok: false, error: "Origen no permitido" }); return false; }
-  if (COUNCIL_WRITE_TOKEN) {
-    const provided = request.headers["x-council-token"] || "";
-    if (provided !== COUNCIL_WRITE_TOKEN) { sendJson(response, 401, { ok: false, error: "Token del Consejo requerido o inválido" }); return false; }
+  const auth = await authorizeCouncilWrite(request);
+  if (!auth.ok) {
+    sendJson(response, auth.status || 401, { ok: false, error: auth.error || "Credencial del Consejo requerida o inválida" });
+    return false;
   }
   if (!checkAgoraCouncilRateLimit(request)) { sendJson(response, 429, { ok: false, error: "Demasiadas peticiones" }); return false; }
   return true;
+}
+
+function getCouncilAuthToken(request) {
+  const authHeader = String(request.headers.authorization || "").trim();
+  const bearerMatch = authHeader.match(/^Bearer\s+(.+)$/i);
+  if (bearerMatch && bearerMatch[1]) return bearerMatch[1].trim();
+  return String(request.headers["x-council-token"] || "").trim();
+}
+
+function b64urlToBuffer(value) {
+  let base64 = String(value || "").replace(/-/g, "+").replace(/_/g, "/");
+  while (base64.length % 4) base64 += "=";
+  return Buffer.from(base64, "base64");
+}
+
+function b64urlToJson(value) {
+  return JSON.parse(b64urlToBuffer(value).toString("utf8"));
+}
+
+async function getGoogleJwks() {
+  const now = Date.now();
+  if (googleJwksCache.keys && now < googleJwksCache.exp) return googleJwksCache.keys;
+  const response = await fetch(GOOGLE_JWKS_URL);
+  if (!response.ok) throw new Error(`google_jwks_http_${response.status}`);
+  const payload = await response.json();
+  const cacheControl = String(response.headers.get("cache-control") || "");
+  const ttlMatch = cacheControl.match(/max-age=(\d+)/i);
+  const ttlMs = ttlMatch ? Number(ttlMatch[1]) * 1000 : 3600 * 1000;
+  googleJwksCache.keys = Array.isArray(payload?.keys) ? payload.keys : [];
+  googleJwksCache.exp = now + ttlMs;
+  return googleJwksCache.keys;
+}
+
+async function verifyGoogleIdToken(idToken) {
+  if (!GOOGLE_CLIENT_ID) return { ok: false, error: "google_client_id_not_configured" };
+  const parts = String(idToken || "").split(".");
+  if (parts.length !== 3) return { ok: false, error: "not_a_jwt" };
+
+  let header;
+  let payload;
+  try {
+    header = b64urlToJson(parts[0]);
+    payload = b64urlToJson(parts[1]);
+  } catch {
+    return { ok: false, error: "bad_jwt_encoding" };
+  }
+
+  if (header.alg !== "RS256") return { ok: false, error: "bad_alg" };
+  if (payload.iss !== "accounts.google.com" && payload.iss !== "https://accounts.google.com") {
+    return { ok: false, error: "bad_iss" };
+  }
+  if (payload.aud !== GOOGLE_CLIENT_ID) return { ok: false, error: "bad_aud" };
+  const now = Math.floor(Date.now() / 1000);
+  if (typeof payload.exp !== "number" || payload.exp < now) return { ok: false, error: "expired" };
+  if (payload.email_verified !== true && payload.email_verified !== "true") {
+    return { ok: false, error: "email_not_verified" };
+  }
+
+  const email = String(payload.email || "").trim().toLowerCase();
+  const hostedDomain = String(payload.hd || "").trim().toLowerCase();
+  if (GOOGLE_ALLOWED_EMAILS.length && !GOOGLE_ALLOWED_EMAILS.includes(email)) {
+    return { ok: false, error: "email_not_allowed" };
+  }
+  if (!GOOGLE_ALLOWED_EMAILS.length && GOOGLE_ALLOWED_DOMAIN) {
+    if (hostedDomain !== GOOGLE_ALLOWED_DOMAIN && !email.endsWith(`@${GOOGLE_ALLOWED_DOMAIN}`)) {
+      return { ok: false, error: "domain_not_allowed" };
+    }
+  }
+
+  let jwk;
+  try {
+    const keys = await getGoogleJwks();
+    jwk = keys.find((item) => item?.kid === header.kid);
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "google_jwks_error" };
+  }
+  if (!jwk) return { ok: false, error: "kid_not_found" };
+
+  try {
+    const verifier = createPublicKey({ key: jwk, format: "jwk" });
+    const signed = Buffer.from(`${parts[0]}.${parts[1]}`, "utf8");
+    const signature = b64urlToBuffer(parts[2]);
+    const valid = verifySignature("RSA-SHA256", signed, verifier, signature);
+    if (!valid) return { ok: false, error: "bad_signature" };
+  } catch (error) {
+    return { ok: false, error: error instanceof Error ? error.message : "google_verify_error" };
+  }
+
+  return {
+    ok: true,
+    actor: {
+      kind: "google",
+      email,
+      name: String(payload.name || "").trim(),
+      sub: String(payload.sub || "").trim()
+    }
+  };
+}
+
+async function authorizeCouncilWrite(request) {
+  if (!COUNCIL_WRITE_TOKEN && !GOOGLE_CLIENT_ID) {
+    return { ok: true, actor: { kind: "open" } };
+  }
+
+  const provided = getCouncilAuthToken(request);
+  if (!provided) {
+    return { ok: false, status: 401, error: "Login del Consejo requerido" };
+  }
+
+  if (COUNCIL_WRITE_TOKEN && provided === COUNCIL_WRITE_TOKEN) {
+    return { ok: true, actor: { kind: "legacy_token" } };
+  }
+
+  if (provided.split(".").length === 3) {
+    const verified = await verifyGoogleIdToken(provided);
+    if (verified.ok) return verified;
+  }
+
+  return { ok: false, status: 401, error: "Credencial del Consejo requerida o inválida" };
 }
 
 function checkAgoraCouncilRateLimit(request) {
@@ -867,9 +995,22 @@ const server = createServer(async (request, response) => {
     return;
   }
 
+  if (url.pathname === "/api/council/auth/google-config" && request.method === "GET") {
+    if (!isAllowedCouncilOrigin(request)) { sendJson(response, 403, { ok: false, error: "Origen no permitido" }); return; }
+    sendJson(response, 200, {
+      ok: true,
+      google: {
+        enabled: !!GOOGLE_CLIENT_ID,
+        clientId: GOOGLE_CLIENT_ID || null
+      },
+      legacyTokenEnabled: !!COUNCIL_WRITE_TOKEN
+    });
+    return;
+  }
+
   // Salud de los bots: los demonios mandan latido; el panel lo lee. Fin del "acto de fe".
   if (url.pathname === "/api/council/heartbeat" && request.method === "POST") {
-    if (!requireCouncilWrite(request, response)) return;
+    if (!(await requireCouncilWrite(request, response))) return;
     try {
       const p = await readJsonBody(request);
       const alias = cleanStr(p.alias);
@@ -933,7 +1074,7 @@ const server = createServer(async (request, response) => {
     }
 
     if (request.method === "POST") {
-      if (!requireCouncilWrite(request, response)) return;   // crear tarea = escritura → token
+      if (!(await requireCouncilWrite(request, response))) return;   // crear tarea = escritura → token
       try {
         const parsed = await readJsonBody(request);
         const task = await createTask(parsed);
@@ -963,7 +1104,7 @@ const server = createServer(async (request, response) => {
 
   // Bulk: archivar (finalizar guardando) todas las tareas hechas — "Limpiar hechas".
   if (request.method === "POST" && url.pathname === "/api/council/tasks/_archive-done") {
-    if (!requireCouncilWrite(request, response)) return;
+    if (!(await requireCouncilWrite(request, response))) return;
     try {
       const archived = await archiveTasks({ onlyStatus: "done" });
       sendJson(response, 200, { ok: true, archived });
@@ -974,7 +1115,7 @@ const server = createServer(async (request, response) => {
   }
 
   if (request.method === "POST" && url.pathname.startsWith("/api/council/tasks/")) {
-    if (!requireCouncilWrite(request, response)) return;
+    if (!(await requireCouncilWrite(request, response))) return;
 
     const parts = url.pathname.split("/"); // ["", "api","council","tasks", id, action]
     const id = parts[4];
@@ -1247,13 +1388,13 @@ const server = createServer(async (request, response) => {
 
   const skynetAuditMatch = url.pathname.match(/^\/api\/teamwork\/skynet\/(claude|codex|opencode)-audit$/);
   if (request.method === "POST" && skynetAuditMatch) {
-    if (!requireCouncilWrite(request, response)) return;
+    if (!(await requireCouncilWrite(request, response))) return;
     const result = await runSkynetAudit(skynetAuditMatch[1]);
     sendJson(response, 200, { ok: true, ...result });
     return;
   }
   if (request.method === "POST" && url.pathname === "/api/teamwork/skynet/audit") {
-    if (!requireCouncilWrite(request, response)) return;
+    if (!(await requireCouncilWrite(request, response))) return;
     const rawBody = await readRequestBody(request);
     const parsed = rawBody ? JSON.parse(rawBody) : {};
     const result = await runSkynetAudits(parsed.targets || parsed.target || ["claude"]);

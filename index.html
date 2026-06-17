@@ -2642,7 +2642,6 @@
     <div class="container">
         <div class="top-bar">
             <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.17.r2</a>
-            <a href="https://csilvasantin.github.io/diario/" target="_blank" rel="noopener" class="version-badge" title="Diario operativo del Consejo">📓 Diario</a>
             <a href="https://www.admira.live/control.html" target="_blank" rel="noopener" class="version-badge" title="Panel de control operativo de admira.live">🎛️ Control</a>
             <a href="https://www.admira.live/mcp/" target="_blank" rel="noopener" class="version-badge" title="Documentacion publica del MCP Admira Live">🔌 MCP</a>
             <button class="version-badge" onclick="window.agmSetVisible&&window.agmSetVisible(null)" title="Abrir el puesto de mando AgoraMatrix">📡 Agentes</button>
@@ -8437,6 +8436,7 @@
   .tk-form-toggle:hover{background:#0a3318}
   .tk-form-toggle .tk-fc{margin-left:auto;opacity:.85}
   #task-panel.tk-form-min #tk-form{display:none}
+  #task-panel.tk-hist-min #tk-bulk,
   #task-panel.tk-hist-min #tk-health,
   #task-panel.tk-hist-min #tk-list{display:none}
   .tk-toolchip{display:inline-block;margin-left:6px;min-width:16px;padding:0 5px;border-radius:9px;font-size:.68rem;
@@ -8482,11 +8482,11 @@
         <button type="submit" class="tk-create" id="tk-create">+ Crear</button>
       </div>
     </form>
+    <button type="button" id="tk-hist-toggle" class="tk-form-toggle" title="Mostrar / ocultar bots y el histórico de tareas">🗂️ Histórico (bots y tareas)<span class="tk-fc" id="tk-hist-caret">▸</span></button>
     <div class="tk-row" id="tk-bulk" style="gap:6px;justify-content:flex-start;flex-wrap:wrap;margin:2px 0 4px">
       <button type="button" id="tk-clear-done" style="font-size:0.62rem;padding:2px 7px;cursor:pointer">🧹 Limpiar hechas</button>
       <button type="button" id="tk-toggle-arch" style="font-size:0.62rem;padding:2px 7px;cursor:pointer">📦 Ver archivadas</button>
     </div>
-    <button type="button" id="tk-hist-toggle" class="tk-form-toggle" title="Mostrar / ocultar bots y el histórico de tareas">🗂️ Histórico (bots y tareas)<span class="tk-fc" id="tk-hist-caret">▸</span></button>
     <div id="tk-health" title="Salud de los bots"></div>
     <div id="tk-list"><div id="tk-empty">Cargando tareas…</div></div>
     <div id="tk-foot">reparto + seguimiento · persistente</div>

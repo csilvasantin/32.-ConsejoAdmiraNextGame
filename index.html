@@ -8465,6 +8465,11 @@
           <option value="auto_approve">🟡 Aceptar peticiones del agente</option>
           <option value="ask">🔴 Solicitar permisos al Consejo</option>
         </select>
+        <select id="tk-monitor" title="Cómo se monitoriza el feedback y pantallazos del agente">
+          <option value="silicio">⚙️ Silicio · feedback normal</option>
+          <option value="carbono">🫀 Carbono · feedback humano</option>
+          <option value="skynet">🛰️ Skynet · vigilancia estricta</option>
+        </select>
       </div>
       <div class="tk-row">
         <select id="tk-template" title="Plantillas rápidas">
@@ -8516,7 +8521,7 @@
       tog=head.querySelector('.tk-toggle'), form=document.getElementById('tk-form'),
       titleEl=document.getElementById('tk-title'), detailEl=document.getElementById('tk-detail'),
       assigneeEl=document.getElementById('tk-assignee'), prioEl=document.getElementById('tk-priority'),
-      approvalEl=document.getElementById('tk-approval'),
+      approvalEl=document.getElementById('tk-approval'), monitorEl=document.getElementById('tk-monitor'),
       nowEl=document.getElementById('tk-now'), createBtn=document.getElementById('tk-create'),
       whenEl=document.getElementById('tk-when'), tplEl=document.getElementById('tk-template');
   if(tplEl) tplEl.addEventListener('change',function(){ if(tplEl.value){ titleEl.value=tplEl.value; tplEl.value=''; titleEl.focus(); } });
@@ -8552,6 +8557,7 @@
   var ST_LABEL={pending:'pendiente',sent:'enviada',in_progress:'en curso',blocked:'bloqueada',done:'hecha',archived:'archivada'};
   var PRIO_ICON={urgent:'🔴',high:'🟠',normal:'🟡',low:'⚪'};
   var APPROVAL_LABEL={full_access:'🟢 permisos completos',auto_approve:'🟡 acepta peticiones',ask:'🔴 pedir permisos'};
+  var MONITOR_LABEL={silicio:'⚙️ Silicio',carbono:'🫀 Carbono',skynet:'🛰️ Skynet'};
 
   function esc(s){ return String(s||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
   function ago(iso){ try{ var s=Math.max(0,(Date.now()-new Date(iso).getTime())/1000);
@@ -8628,10 +8634,11 @@
     var who=(t.assignee&&t.assignee.label)||'sin asignar';
     var disp = t.dispatch ? (t.dispatch.ok?('· enviada '+ago(t.dispatch.sentAt)):'· ⚠ fallo envío') : '';
     var approval = APPROVAL_LABEL[t.approvalMode||'full_access'] || APPROVAL_LABEL.full_access;
+    var monitor = MONITOR_LABEL[t.monitorMode||'silicio'] || MONITOR_LABEL.silicio;
     return '<div class="tk-item">'
       +'<div class="tk-top"><span class="tk-title">'+(PRIO_ICON[t.priority]||'')+' '+esc(t.title)+'</span>'
       +'<span class="tk-chip tk-st-'+st+'">'+(ST_LABEL[st]||st)+'</span></div>'
-      +'<div class="tk-meta"><span>'+esc(who)+'</span><span>'+esc(t.id)+'</span><span>'+esc(approval)+'</span><span>'+ago(t.createdAt)+' '+disp+'</span></div>'
+      +'<div class="tk-meta"><span>'+esc(who)+'</span><span>'+esc(t.id)+'</span><span>'+esc(approval)+'</span><span>'+esc(monitor)+'</span><span>'+ago(t.createdAt)+' '+disp+'</span></div>'
       +(t.detail?'<div class="tk-detail">'+esc(t.detail)+'</div>':'')
       +((t.scheduledAt&&(t.status==='pending'))?'<div class="tk-detail">⏰ programada: '+esc(new Date(t.scheduledAt).toLocaleString())+'</div>':'')
       +(t.image?'<a class="tk-proof" href="'+API+t.image+'" target="_blank" title="Imagen adjunta a la tarea"><img src="'+API+t.image+'" alt="adjunto" loading="lazy" style="max-width:100%;margin-top:4px;border-radius:6px;border:1px solid #2a4a6a"></a>':'')
@@ -8697,6 +8704,7 @@
     try{
       var body={ title:title, detail:(detailEl.value||'').trim(), priority:prioEl.value||'normal',
         approvalMode:(approvalEl&&approvalEl.value)||'full_access',
+        monitorMode:(monitorEl&&monitorEl.value)||'silicio',
         assignee:{kind:a.kind,id:a.id,label:a.label}, dispatch:!!nowEl.checked };
       if(whenEl&&whenEl.value){ var dt=new Date(whenEl.value); if(!isNaN(dt.getTime())) body.scheduledAt=dt.toISOString(); }
       if(pendingImage) body.imageData=pendingImage;

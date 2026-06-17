@@ -19,6 +19,7 @@ export const TASK_STATUSES = new Set([
 ]);
 export const TASK_PRIORITIES = new Set(["low", "normal", "high", "urgent"]);
 export const APPROVAL_MODES = new Set(["full_access", "auto_approve", "ask"]);
+export const MONITOR_MODES = new Set(["silicio", "carbono", "skynet"]);
 export const ASSIGNEE_KINDS = new Set(["agora", "machine"]);
 
 function cleanString(value, fallback = "") {
@@ -146,6 +147,7 @@ export async function createTask(payload) {
 
   const priority = TASK_PRIORITIES.has(payload.priority) ? payload.priority : "normal";
   const approvalMode = APPROVAL_MODES.has(payload.approvalMode) ? payload.approvalMode : "full_access";
+  const monitorMode = MONITOR_MODES.has(payload.monitorMode) ? payload.monitorMode : "silicio";
   const detail = cleanString(payload.detail);
   const createdBy = cleanString(payload.createdBy, "Consejo");
   // Programación opcional: ISO en el futuro → no se entrega hasta esa hora (poller).
@@ -165,6 +167,7 @@ export async function createTask(payload) {
     assignee,
     priority,
     approvalMode,
+    monitorMode,
     status: "pending",
     createdBy,
     createdAt: now,

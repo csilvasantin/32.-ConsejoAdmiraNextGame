@@ -263,6 +263,28 @@ const APPROVAL_MODE_INSTRUCTIONS = {
     "No avances en acciones dudosas hasta recibir respuesta del Consejo.",
   ],
 };
+const MONITOR_MODE_LABELS = {
+  silicio: "⚙️ Modo Silicio",
+  carbono: "🫀 Modo Carbono",
+  skynet: "🛰️ Modo Skynet",
+};
+const MONITOR_MODE_INSTRUCTIONS = {
+  silicio: [
+    "Feedback: Modo Silicio.",
+    "Reporta inicio, bloqueo y cierre.",
+    "Si quedas parado, sin actividad clara o esperando mas de 15 minutos, envia pantallazo/captura al Consejo y pide siguiente paso.",
+  ],
+  carbono: [
+    "Feedback: Modo Carbono.",
+    "Reporta con tono humano solo hitos, dudas y cierre.",
+    "Si quedas parado o necesitas criterio, explica la situacion; envia pantallazo si ayuda a decidir siguiente paso.",
+  ],
+  skynet: [
+    "Feedback: Modo Skynet.",
+    "Vigilancia estricta: no permanezcas inactivo en silencio.",
+    "Si no estas ejecutando una accion concreta, si una herramienta espera permisos, o si pasan 5 minutos sin progreso visible, envia pantallazo/captura al Consejo con estado y siguiente decision recomendada.",
+  ],
+};
 
 function taskApprovalMode(task) {
   return APPROVAL_MODE_LABELS[task.approvalMode] ? task.approvalMode : "full_access";
@@ -270,6 +292,14 @@ function taskApprovalMode(task) {
 
 function taskApprovalInstruction(task) {
   return APPROVAL_MODE_INSTRUCTIONS[taskApprovalMode(task)].join(" ");
+}
+
+function taskMonitorMode(task) {
+  return MONITOR_MODE_LABELS[task.monitorMode] ? task.monitorMode : "silicio";
+}
+
+function taskMonitorInstruction(task) {
+  return MONITOR_MODE_INSTRUCTIONS[taskMonitorMode(task)].join(" ");
 }
 
 async function buildAssigneeList() {
@@ -307,6 +337,7 @@ function buildTaskDispatchText(task) {
   const detail = compactAgoraText(task.detail, 700);
   const priority = PRIORITY_LABELS[task.priority] || task.priority;
   const approvalMode = taskApprovalMode(task);
+  const monitorMode = taskMonitorMode(task);
   return [
     `📋 TAREA ${task.id} → ${label}`,
     `Encargo: ${title}`,
@@ -314,6 +345,8 @@ function buildTaskDispatchText(task) {
     `Prioridad: ${priority}`,
     `Permisos: ${APPROVAL_MODE_LABELS[approvalMode]}`,
     taskApprovalInstruction(task),
+    `Feedback: ${MONITOR_MODE_LABELS[monitorMode]}`,
+    taskMonitorInstruction(task),
     `Para el seguimiento responde aquí citando ${task.id} y di si está 'en curso', 'bloqueada' o 'hecha' (se actualiza solo en el tablero).`
   ].filter(Boolean).join(" | ");
 }
@@ -517,11 +550,14 @@ async function dispatchTaskNow(task, target) {
   if (task.assignee?.kind === "machine") {
     const selected = target || "claude";
     const approvalMode = taskApprovalMode(task);
+    const monitorMode = taskMonitorMode(task);
     const prompt = [
       task.title,
       task.detail,
       `Permisos: ${APPROVAL_MODE_LABELS[approvalMode]}`,
       taskApprovalInstruction(task),
+      `Feedback: ${MONITOR_MODE_LABELS[monitorMode]}`,
+      taskMonitorInstruction(task),
     ].filter(Boolean).join("\n\n");
     const result = await sendPromptToMachine(task.assignee.id, prompt, selected);
     return {

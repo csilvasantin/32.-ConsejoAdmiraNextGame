@@ -4,7 +4,7 @@ import { extname, resolve, basename } from "node:path";
 import { spawn } from "node:child_process";
 
 import { createMachineEntry, readMachines, updateMachineStatus, updateMachineSync } from "./store.js";
-import { sendPromptToMachine, resolveMachineName, getCapture, getImageBuffer, approveAll, approveMachine, getAllSnapshots, getReachableMachines, getWatchdogState, setWatchdogEnabled, setMachineWatchdog, sendOnboardingToAll, startWatchdog, runSkynetClaudeAudit } from "./ssh-exec.js";
+import { sendPromptToMachine, resolveMachineName, getCapture, getImageBuffer, approveAll, approveMachine, getAllSnapshots, getReachableMachines, getWatchdogState, setWatchdogEnabled, setMachineWatchdog, sendOnboardingToAll, startWatchdog, runSkynetAudit } from "./ssh-exec.js";
 import { addEntries, addEntry, getHistory } from "./teamwork-store.js";
 import {
   listTasks,
@@ -1245,9 +1245,10 @@ const server = createServer(async (request, response) => {
     return;
   }
 
-  if (request.method === "POST" && url.pathname === "/api/teamwork/skynet/claude-audit") {
+  const skynetAuditMatch = url.pathname.match(/^\/api\/teamwork\/skynet\/(claude|codex|opencode)-audit$/);
+  if (request.method === "POST" && skynetAuditMatch) {
     if (!requireCouncilWrite(request, response)) return;
-    const result = await runSkynetClaudeAudit();
+    const result = await runSkynetAudit(skynetAuditMatch[1]);
     sendJson(response, 200, { ok: true, ...result });
     return;
   }

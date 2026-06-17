@@ -217,6 +217,10 @@ const WINDOWS_TARGET_APPS = {
   codex: {
     processNames: ["Codex", "codex"],
     titleHints: ["Codex"]
+  },
+  opencode: {
+    processNames: ["OpenCode", "opencode"],
+    titleHints: ["OpenCode"]
   }
 };
 
@@ -1456,7 +1460,18 @@ function finalizeMachineSignal(mState, signal, status) {
   mState.lastResolutionAt = resolvedAt;
 }
 
-// Check BOTH Claude AND Codex status on a machine (not just frontmost app)
+const SKYNET_TARGETS = {
+  claude: { appName: "Claude", stateKey: "claude", label: "Claude Code" },
+  codex: { appName: "Codex", stateKey: "codex", label: "Codex" },
+  opencode: { appName: "OpenCode", stateKey: "opencode", label: "OpenCode" }
+};
+
+function normalizeSkynetTarget(target = "claude") {
+  const key = String(target || "claude").toLowerCase();
+  return SKYNET_TARGETS[key] ? key : "claude";
+}
+
+// Check Claude, Codex and OpenCode status on a machine (not just frontmost app)
 async function captureAllAppsState(machine) {
   const script = `set r to ""
 tell application "System Events"
@@ -1481,6 +1496,17 @@ tell application "System Events"
   else
     set r to r & "CODEX:OFF"
   end if
+  set r to r & "|||"
+  if exists process "OpenCode" then
+    set openCodeTitle to "no-window"
+    try
+      set openCodeTitle to name of front window of process "OpenCode"
+    end try
+    if openCodeTitle is missing value or openCodeTitle is "" then set openCodeTitle to "no-window"
+    set r to r & "OPENCODE:" & openCodeTitle
+  else
+    set r to r & "OPENCODE:OFF"
+  end if
 end tell
 return r`;
 
@@ -1488,9 +1514,11 @@ return r`;
     const script = `
 $claude = Get-Process -Name "Claude" -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 -or $_.MainWindowTitle } | Select-Object -First 1
 $codex = Get-Process -Name "Codex" -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 -or $_.MainWindowTitle } | Select-Object -First 1
+$opencode = Get-Process -Name "OpenCode" -ErrorAction SilentlyContinue | Where-Object { $_.MainWindowHandle -ne 0 -or $_.MainWindowTitle } | Select-Object -First 1
 $claudeTitle = if ($claude) { if ($claude.MainWindowTitle) { $claude.MainWindowTitle } else { "no-window" } } else { "OFF" }
 $codexTitle = if ($codex) { if ($codex.MainWindowTitle) { $codex.MainWindowTitle } else { "no-window" } } else { "OFF" }
-Write-Output ("CLAUDE:{0}|||CODEX:{1}" -f $claudeTitle, $codexTitle)
+$opencodeTitle = if ($opencode) { if ($opencode.MainWindowTitle) { $opencode.MainWindowTitle } else { "no-window" } } else { "OFF" }
+Write-Output ("CLAUDE:{0}|||CODEX:{1}|||OPENCODE:{2}" -f $claudeTitle, $codexTitle, $opencodeTitle)
 `.trim();
     const { error, stdout } = await execWindows(script, 8_000);
     return error ? null : stdout?.trim() || null;
@@ -1520,11 +1548,11 @@ Write-Output ("CLAUDE:{0}|||CODEX:{1}" -f $claudeTitle, $codexTitle)
   return attempt(false);
 }
 
-// Parse "CLAUDE:windowTitle|||CODEX:windowTitle" into { claude, codex } states
+// Parse "CLAUDE:windowTitle|||CODEX:windowTitle|||OPENCODE:windowTitle" into app states
 function parseAppsState(raw) {
-  if (!raw) return { claude: null, codex: null };
+  if (!raw) return { claude: null, codex: null, opencode: null };
   const parts = raw.split("|||");
-  const result = { claude: null, codex: null };
+  const result = { claude: null, codex: null, opencode: null };
   for (const part of parts) {
     if (part.startsWith("CLAUDE:")) {
       const val = part.slice(7).trim();
@@ -1534,11 +1562,15 @@ function parseAppsState(raw) {
       const val = part.slice(6).trim();
       result.codex = val === "OFF" ? null : val;
     }
+    if (part.startsWith("OPENCODE:")) {
+      const val = part.slice(9).trim();
+      result.opencode = val === "OFF" ? null : val;
+    }
   }
   return result;
 }
 
-function hasUsefulClaudeActivity(state) {
+function hasUsefulAppActivity(state) {
   const title = String(state || "").trim().toLowerCase();
   if (!title) return false;
   return !["off", "no-window", "sin ventana"].includes(title);
@@ -1574,30 +1606,32 @@ async function runMacAutomationScript(machine, script, timeout = 12_000) {
   return attempt(false);
 }
 
-async function focusClaudeForSkynet(machine) {
+async function focusAppForSkynet(machine, rawTarget = "claude") {
+  const target = normalizeSkynetTarget(rawTarget);
+  const config = SKYNET_TARGETS[target];
   if (isLocalWindowsMachine(machine)) {
     const { error, stdout } = await execWindows(`
-${buildWindowsAutomationPrelude("claude")}
-Write-Output "claude-windows"
+${buildWindowsAutomationPrelude(target)}
+Write-Output "${target}-windows"
 `.trim(), 10_000);
-    return { ok: !error, action: "focused", target: "claude", detail: stdout || "Claude Windows", error: error?.message || null };
+    return { ok: !error, action: "focused", target, detail: stdout || `${config.label} Windows`, error: error?.message || null };
   }
 
   if (isWindowsMachine(machine)) {
-    return { ok: false, action: "unsupported", target: "claude", error: "Skynet remoto Windows aun no implementado" };
+    return { ok: false, action: "unsupported", target, error: "Skynet remoto Windows aun no implementado" };
   }
 
   const allowFullscreen = !isLocalMultiDisplayMachine(machine);
   const script = `set skynetResult to "none"
 tell application "System Events"
-  if exists process "Claude" then
-    tell application "Claude" to activate
+  if exists process "${config.appName}" then
+    tell application "${config.appName}" to activate
     delay 0.6
-    set skynetResult to "claude-focused"
+    set skynetResult to "${target}-focused"
     try
-      tell process "Claude"
+      tell process "${config.appName}"
         if (count of windows) > 0 then
-          ${allowFullscreen ? "try\n            set value of attribute \"AXFullScreen\" of front window to true\n          end try" : "set skynetResult to \"claude-focused-layout-preserved\""}
+          ${allowFullscreen ? "try\n            set value of attribute \"AXFullScreen\" of front window to true\n          end try" : `set skynetResult to "${target}-focused-layout-preserved"`}
         end if
       end tell
     end try
@@ -1605,9 +1639,9 @@ tell application "System Events"
   end if
 end tell
 try
-  tell application "Claude" to activate
+  tell application "${config.appName}" to activate
   delay 1.0
-  set skynetResult to "claude-opened"
+  set skynetResult to "${target}-opened"
 on error
   ${buildTerminalActivateScript("")}
   delay 0.6
@@ -1619,7 +1653,7 @@ return skynetResult`;
   return {
     ok: !error,
     action: stdout?.trim() || (error ? "focus-failed" : "focused"),
-    target: "claude",
+    target,
     error: error?.message || null
   };
 }
@@ -1649,7 +1683,9 @@ async function captureSkynetEvidence(machine) {
   return { captureId, capture: snap };
 }
 
-export async function runSkynetClaudeAudit() {
+export async function runSkynetAudit(rawTarget = "claude") {
+  const target = normalizeSkynetTarget(rawTarget);
+  const config = SKYNET_TARGETS[target];
   const data = await readMachines();
   const machines = (data.machines || []).filter((machine) => isAutomationReady(machine));
   const checkedAt = new Date().toISOString();
@@ -1671,11 +1707,11 @@ export async function runSkynetClaudeAudit() {
 
       markMachineOnline(machine.id);
       const before = parseAppsState(beforeRaw);
-      const active = hasUsefulClaudeActivity(before.claude);
+      const active = hasUsefulAppActivity(before[config.stateKey]);
       let focus = null;
 
       if (!active) {
-        focus = await focusClaudeForSkynet(machine);
+        focus = await focusAppForSkynet(machine, target);
         await new Promise((resolve_) => setTimeout(resolve_, 1200));
       }
 
@@ -1691,6 +1727,7 @@ export async function runSkynetClaudeAudit() {
         lastSeenAt: checkedAt,
         claudeState: after.claude,
         codexState: after.codex,
+        opencodeState: after.opencode,
         lastSkynetAuditAt: checkedAt,
         lastSkynetAuditStatus: active ? "active" : (focus?.ok ? "captured-waiting" : "capture-attempted")
       };
@@ -1703,7 +1740,13 @@ export async function runSkynetClaudeAudit() {
         action: active ? "observed" : (focus?.action || "capture-attempted"),
         claudeBefore: before.claude,
         claudeAfter: after.claude,
+        codexBefore: before.codex,
         codexAfter: after.codex,
+        opencodeBefore: before.opencode,
+        opencodeAfter: after.opencode,
+        auditedTarget: target,
+        auditedStateBefore: before[config.stateKey],
+        auditedStateAfter: after[config.stateKey],
         captureId: evidence.captureId,
         capture: evidence.capture,
         error: focus?.error || null
@@ -1727,14 +1770,18 @@ export async function runSkynetClaudeAudit() {
   watchdogState.log.push({
     machine: "Skynet",
     machineId: "all",
-    target: "claude",
-    summary: `Auditoria Claude Code: ${results.filter((r) => r.ok).length}/${results.length} equipos`,
+    target,
+    summary: `Auditoria ${config.label}: ${results.filter((r) => r.ok).length}/${results.length} equipos`,
     status: "audited",
     at: checkedAt
   });
   if (watchdogState.log.length > 50) watchdogState.log.shift();
 
   return { checkedAt, results };
+}
+
+export function runSkynetClaudeAudit() {
+  return runSkynetAudit("claude");
 }
 
 // Play a notification sound locally (always on Mac Mini, regardless of which machine triggered)

@@ -63,31 +63,53 @@ echo "→ Estado actual de Tailscale Serve:"
 "$TAILSCALE" serve status 2>/dev/null || echo "  (no hay configuración activa o error al leer)"
 echo ""
 
-# Eliminar el path conflictivo /teamwork.html de Tailscale Serve
-echo "→ Eliminando path /teamwork.html de Tailscale Serve (OpenClaw)..."
-"$TAILSCALE" serve https /teamwork.html off 2>/dev/null && echo "  ✓ /teamwork.html eliminado" || echo "  (no estaba configurado — ok)"
+CFG_FILE="$(mktemp -t admiranext-tailscale.XXXXXX.json)"
+trap 'rm -f "$CFG_FILE"' EXIT
 
-# Restaurar configuración canónica
+echo "→ Leyendo configuración actual..."
+"$TAILSCALE" serve get-config --all "$CFG_FILE"
+
+python3 - "$CFG_FILE" "$ADMIRA_PORT" "$DEMO_PORT" "$OPENCLAW_PORT" <<'PY'
+import json
+import sys
+
+cfg_path, admira_port, demo_port, openclaw_port = sys.argv[1:]
+with open(cfg_path, "r", encoding="utf-8") as fh:
+    raw = fh.read().strip()
+
+data = json.loads(raw) if raw else {"version": "0.0.1"}
+data.setdefault("TCP", {}).setdefault("443", {"HTTPS": True})
+web = data.setdefault("Web", {})
+host = next(iter(web.keys()), "macmini.tail48b61c.ts.net:443")
+entry = web.setdefault(host, {})
+handlers = entry.setdefault("Handlers", {})
+
+handlers["/"] = {"Proxy": f"http://127.0.0.1:{admira_port}"}
+handlers.pop("/teamwork.html", None)
+
+if demo_port:
+    handlers["/demo"] = {"Proxy": f"http://127.0.0.1:{demo_port}"}
+
+if openclaw_port:
+    handlers["/claw-gateway"] = {"Proxy": f"http://127.0.0.1:{openclaw_port}"}
+
+with open(cfg_path, "w", encoding="utf-8") as fh:
+    json.dump(data, fh, indent=2)
+    fh.write("\n")
+PY
+
 echo ""
 echo "→ Restaurando configuración canónica..."
-
-# AdmiraNext Control (Node.js en 3030)
-"$TAILSCALE" serve https / "http://127.0.0.1:${ADMIRA_PORT}"
+"$TAILSCALE" serve set-config --all "$CFG_FILE"
 echo "  ✓ / → localhost:${ADMIRA_PORT} (AdmiraNext Control)"
 
-# Demo server en 3032 (si está corriendo)
 if curl -sf "http://127.0.0.1:${DEMO_PORT}/ping" >/dev/null 2>&1; then
-  "$TAILSCALE" serve https /demo "http://127.0.0.1:${DEMO_PORT}"
   echo "  ✓ /demo → localhost:${DEMO_PORT} (Demo server)"
 else
-  echo "  ⚠ Demo server no responde en :${DEMO_PORT} — /demo no configurado"
+  echo "  ⚠ Demo server no responde en :${DEMO_PORT}; la ruta queda configurada igualmente"
 fi
 
-# OpenClaw en /claw-gateway (si se especificó puerto)
 if [[ -n "${OPENCLAW_PORT}" ]]; then
-  echo ""
-  echo "→ Configurando OpenClaw en /claw-gateway (puerto ${OPENCLAW_PORT})..."
-  "$TAILSCALE" serve https /claw-gateway "http://127.0.0.1:${OPENCLAW_PORT}"
   echo "  ✓ /claw-gateway → localhost:${OPENCLAW_PORT} (OpenClaw)"
   echo ""
   echo "  ⚠ Cambia la ruta base de OpenClaw de /teamwork.html a /claw-gateway"
@@ -98,15 +120,9 @@ else
   echo "    --openclaw-port PUERTO_DE_OPENCLAW"
 fi
 
-# Activar Funnel
 echo ""
 echo "→ Activando Tailscale Funnel..."
-"$TAILSCALE" funnel 443 on 2>/dev/null || \
-"$TAILSCALE" funnel https on 2>/dev/null || \
-"$TAILSCALE" serve --funnel 2>/dev/null || {
-  echo "  ⚠ No se pudo activar Funnel automáticamente."
-  echo "    Actívalo manualmente en el menú de Tailscale > Serve > Enable Funnel"
-}
+"$TAILSCALE" funnel --bg "${ADMIRA_PORT}" >/dev/null
 
 echo ""
 echo "→ Configuración final:"

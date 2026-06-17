@@ -1707,19 +1707,16 @@ export async function runSkynetAudit(rawTarget = "claude") {
 
       markMachineOnline(machine.id);
       const before = parseAppsState(beforeRaw);
-      const active = hasUsefulAppActivity(before[config.stateKey]);
-      let focus = null;
-
-      if (!active) {
-        focus = await focusAppForSkynet(machine, target);
-        await new Promise((resolve_) => setTimeout(resolve_, 1200));
-      }
+      const activeBefore = hasUsefulAppActivity(before[config.stateKey]);
+      const focus = await focusAppForSkynet(machine, target);
+      await new Promise((resolve_) => setTimeout(resolve_, 1200));
 
       const [afterRaw, evidence] = await Promise.all([
         captureAllAppsState(machine),
         captureSkynetEvidence(machine)
       ]);
       const after = parseAppsState(afterRaw);
+      const activeAfter = hasUsefulAppActivity(after[config.stateKey]);
       const mState = watchdogState.perMachine[machine.id] || {};
       watchdogState.perMachine[machine.id] = {
         ...mState,
@@ -1729,15 +1726,15 @@ export async function runSkynetAudit(rawTarget = "claude") {
         codexState: after.codex,
         opencodeState: after.opencode,
         lastSkynetAuditAt: checkedAt,
-        lastSkynetAuditStatus: active ? "active" : (focus?.ok ? "captured-waiting" : "capture-attempted")
+        lastSkynetAuditStatus: activeAfter ? "active" : (focus?.ok ? "captured-waiting" : "capture-attempted")
       };
 
       return {
         id: machine.id,
         machine: machine.name || machine.id,
         ok: true,
-        status: active ? "active" : "waiting-captured",
-        action: active ? "observed" : (focus?.action || "capture-attempted"),
+        status: activeAfter ? "active" : "waiting-captured",
+        action: focus?.action || (activeBefore ? "observed" : "capture-attempted"),
         claudeBefore: before.claude,
         claudeAfter: after.claude,
         codexBefore: before.codex,
@@ -1747,6 +1744,7 @@ export async function runSkynetAudit(rawTarget = "claude") {
         auditedTarget: target,
         auditedStateBefore: before[config.stateKey],
         auditedStateAfter: after[config.stateKey],
+        auditedLabel: config.label,
         captureId: evidence.captureId,
         capture: evidence.capture,
         error: focus?.error || null
@@ -1778,6 +1776,22 @@ export async function runSkynetAudit(rawTarget = "claude") {
   if (watchdogState.log.length > 50) watchdogState.log.shift();
 
   return { checkedAt, results };
+}
+
+export async function runSkynetAudits(rawTargets = ["claude"]) {
+  const targets = [...new Set((Array.isArray(rawTargets) ? rawTargets : [rawTargets]).map(normalizeSkynetTarget))];
+  const checkedAt = new Date().toISOString();
+  const audits = [];
+  for (const target of targets.length ? targets : ["claude"]) {
+    const audit = await runSkynetAudit(target);
+    audits.push({ target, ...audit });
+  }
+  return {
+    checkedAt,
+    targets: audits.map((audit) => audit.target),
+    audits,
+    results: audits.flatMap((audit) => audit.results.map((result) => ({ ...result, auditedTarget: audit.target })))
+  };
 }
 
 export function runSkynetClaudeAudit() {

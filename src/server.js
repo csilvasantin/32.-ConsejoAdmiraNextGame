@@ -4,7 +4,7 @@ import { extname, resolve, basename } from "node:path";
 import { spawn } from "node:child_process";
 
 import { createMachineEntry, readMachines, updateMachineStatus, updateMachineSync } from "./store.js";
-import { sendPromptToMachine, resolveMachineName, getCapture, getImageBuffer, approveAll, approveMachine, getAllSnapshots, getReachableMachines, getWatchdogState, setWatchdogEnabled, setMachineWatchdog, sendOnboardingToAll, startWatchdog, runSkynetAudit } from "./ssh-exec.js";
+import { sendPromptToMachine, resolveMachineName, getCapture, getImageBuffer, approveAll, approveMachine, getAllSnapshots, getReachableMachines, getWatchdogState, setWatchdogEnabled, setMachineWatchdog, sendOnboardingToAll, startWatchdog, runSkynetAudit, runSkynetAudits } from "./ssh-exec.js";
 import { addEntries, addEntry, getHistory } from "./teamwork-store.js";
 import {
   listTasks,
@@ -1249,6 +1249,14 @@ const server = createServer(async (request, response) => {
   if (request.method === "POST" && skynetAuditMatch) {
     if (!requireCouncilWrite(request, response)) return;
     const result = await runSkynetAudit(skynetAuditMatch[1]);
+    sendJson(response, 200, { ok: true, ...result });
+    return;
+  }
+  if (request.method === "POST" && url.pathname === "/api/teamwork/skynet/audit") {
+    if (!requireCouncilWrite(request, response)) return;
+    const rawBody = await readRequestBody(request);
+    const parsed = rawBody ? JSON.parse(rawBody) : {};
+    const result = await runSkynetAudits(parsed.targets || parsed.target || ["claude"]);
     sendJson(response, 200, { ok: true, ...result });
     return;
   }

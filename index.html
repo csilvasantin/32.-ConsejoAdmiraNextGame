@@ -2641,7 +2641,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.17.r4</a>
+            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.17.r5</a>
             <a href="https://www.admira.live/control.html" target="_blank" rel="noopener" class="version-badge" title="Panel de control operativo de admira.live">🎛️ Control</a>
             <a href="https://www.admira.live/mcp/" target="_blank" rel="noopener" class="version-badge" title="Documentacion publica del MCP Admira Live">🔌 MCP</a>
             <button class="version-badge" onclick="window.agmSetVisible&&window.agmSetVisible(null)" title="Abrir el puesto de mando AgoraMatrix">📡 Agentes</button>
@@ -8405,6 +8405,9 @@
   #tk-form .tk-create:disabled{opacity:.5;cursor:default}
   #tk-skynet-row{display:none}
   #tk-skynet-row.tk-skynet-on{display:flex}
+  .tk-skynet-choice{display:flex;align-items:center;gap:4px;flex:0 0 auto;border:1px solid #24506f;border-radius:6px;
+    padding:4px 6px;background:#04131b;color:#9dc5ff;font-size:10px;white-space:nowrap}
+  .tk-skynet-choice input{width:auto!important;margin:0}
   .tk-skynet-audit{background:#06200f;border:1px solid #2d7cff;color:#9dc5ff;border-radius:6px;padding:5px 8px;
     font-family:inherit;font-size:10px;cursor:pointer}
   .tk-skynet-audit:disabled{opacity:.45;cursor:default;border-color:#24506f;color:#6c899e}
@@ -8494,9 +8497,10 @@
       </div>
       <span id="tk-monitor-help">Silicio: inicio, hitos compactos, bloqueo y cierre con verificación.</span>
       <div class="tk-row" id="tk-skynet-row">
-        <button type="button" class="tk-skynet-audit" data-skynet-target="claude" title="Revisar Claude Code en todos los equipos automatizables">🛰️ Auditar Claude</button>
-        <button type="button" class="tk-skynet-audit" data-skynet-target="codex" title="Revisar Codex en todos los equipos automatizables">🛰️ Auditar Codex</button>
-        <button type="button" class="tk-skynet-audit" data-skynet-target="opencode" title="Revisar OpenCode en todos los equipos automatizables">🛰️ Auditar OpenCode</button>
+        <label class="tk-skynet-choice"><input type="checkbox" class="tk-skynet-target" value="claude" checked>Claude</label>
+        <label class="tk-skynet-choice"><input type="checkbox" class="tk-skynet-target" value="codex" checked>Codex</label>
+        <label class="tk-skynet-choice"><input type="checkbox" class="tk-skynet-target" value="opencode">OpenCode</label>
+        <button type="button" id="tk-skynet-audit" class="tk-skynet-audit" title="Auditar los motores seleccionados en todos los equipos automatizables">🛰️ Auditar selección</button>
         <span id="tk-skynet-status"></span>
       </div>
       <div class="tk-row">
@@ -8552,7 +8556,7 @@
       approvalEl=document.getElementById('tk-approval'), monitorEl=document.getElementById('tk-monitor'),
       nowEl=document.getElementById('tk-now'), createBtn=document.getElementById('tk-create'),
       whenEl=document.getElementById('tk-when'), tplEl=document.getElementById('tk-template'),
-      skynetRow=document.getElementById('tk-skynet-row'), skynetButtons=[].slice.call(document.querySelectorAll('.tk-skynet-audit')), skynetStatus=document.getElementById('tk-skynet-status');
+      skynetRow=document.getElementById('tk-skynet-row'), skynetBtn=document.getElementById('tk-skynet-audit'), skynetTargets=[].slice.call(document.querySelectorAll('.tk-skynet-target')), skynetStatus=document.getElementById('tk-skynet-status');
   if(tplEl) tplEl.addEventListener('change',function(){ if(tplEl.value){ titleEl.value=tplEl.value; tplEl.value=''; titleEl.focus(); } });
   // Formulario de crear: plegable, COLAPSADO por defecto (no se ve por encima de "Limpiar hechas").
   (function(){
@@ -8605,7 +8609,8 @@
     syncMonitorHelp();
     var on=monitorEl.value==='skynet';
     if(skynetRow) skynetRow.classList.toggle('tk-skynet-on', on);
-    skynetButtons.forEach(function(btn){ btn.disabled=!on; });
+    if(skynetBtn) skynetBtn.disabled=!on;
+    skynetTargets.forEach(function(input){ input.disabled=!on; });
     if(skynetStatus&&!on) skynetStatus.innerHTML='';
   }
   if(monitorEl) monitorEl.addEventListener('change',syncSkynetButton);
@@ -8616,11 +8621,17 @@
   function skynetTargetLabel(target){
     return target==='codex'?'Codex':(target==='opencode'?'OpenCode':'Claude Code');
   }
-  function startSkynetProgress(target){
+  function selectedSkynetTargets(){
+    return skynetTargets.filter(function(input){return input.checked;}).map(function(input){return input.value;});
+  }
+  function skynetTargetsLabel(targets){
+    return (targets||[]).map(skynetTargetLabel).join(' + ') || 'sin motores';
+  }
+  function startSkynetProgress(targets){
     if(!skynetStatus) return;
     stopSkynetProgress();
     skynetStartedAt=Date.now();
-    var label=skynetTargetLabel(target);
+    var label=skynetTargetsLabel(targets);
     var phases=[
       'conectando con el Consejo',
       'revisando equipos en red',
@@ -8655,14 +8666,16 @@
     var chips=res.map(function(x){
       var cls=x.ok?(x.status==='waiting-captured'?' wait':''):' off';
       var icon=x.ok?(x.status==='waiting-captured'?'📸':'🟢'):'⚪';
-      var label=(x.machine||x.id||'equipo')+(x.ok?(x.status==='waiting-captured'?' · capturado':' · activo'):' · offline');
+      var model=skynetTargetLabel(x.auditedTarget);
+      var state=x.auditedStateAfter||x.auditedStateBefore||'sin ventana';
+      var label=model+' · '+(x.machine||x.id||'equipo')+(x.ok?(x.status==='waiting-captured'?' · capturado':' · activo'):' · offline')+' · '+state;
       var links=capLinks(x);
       return '<span class="sky-chip'+cls+'">'+icon+' '+esc(label)+(links?' · '+links:'')+'</span>';
     }).join('');
-    skynetStatus.innerHTML='<div>'+ok.length+'/'+res.length+' equipos · '+caps.length+' capturas · activos: '+(active.map(function(x){return x.machine||x.id;}).join(', ')||'ninguno')+'</div>'
+    skynetStatus.innerHTML='<div>'+ok.length+'/'+res.length+' revisiones · '+caps.length+' capturas · activos: '+(active.map(function(x){return skynetTargetLabel(x.auditedTarget)+'@'+(x.machine||x.id);}).join(', ')||'ninguno')+'</div>'
       +'<div class="sky-row">'+chips+'</div>'
-      +(waiting.length?'<div class="sky-row">Esperando: '+waiting.map(function(x){return esc(x.machine||x.id);}).join(', ')+'</div>':'')
-      +(off.length?'<div class="sky-row">Sin respuesta: '+off.map(function(x){return esc(x.machine||x.id);}).join(', ')+'</div>':'');
+      +(waiting.length?'<div class="sky-row">Capturado/esperando: '+waiting.map(function(x){return esc(skynetTargetLabel(x.auditedTarget)+'@'+(x.machine||x.id));}).join(', ')+'</div>':'')
+      +(off.length?'<div class="sky-row">Sin respuesta: '+off.map(function(x){return esc(skynetTargetLabel(x.auditedTarget)+'@'+(x.machine||x.id));}).join(', ')+'</div>':'');
   }
   function ago(iso){ try{ var s=Math.max(0,(Date.now()-new Date(iso).getTime())/1000);
     if(s<60)return'ahora'; if(s<3600)return Math.floor(s/60)+'m'; if(s<86400)return Math.floor(s/3600)+'h'; return Math.floor(s/86400)+'d'; }catch(e){return'';} }
@@ -8821,14 +8834,15 @@
     finally{ createBtn.disabled=false; titleEl.focus(); }
   });
 
-  skynetButtons.forEach(function(skynetBtn){
-  skynetBtn.addEventListener('click',async function(){
+  if(skynetBtn) skynetBtn.addEventListener('click',async function(){
     if(monitorEl&&monitorEl.value!=='skynet') return;
-    var target=skynetBtn.getAttribute('data-skynet-target')||'claude';
-    skynetButtons.forEach(function(btn){ btn.disabled=true; });
-    startSkynetProgress(target);
+    var targets=selectedSkynetTargets();
+    if(!targets.length){ alert('Selecciona al menos un motor para auditar.'); return; }
+    skynetBtn.disabled=true;
+    skynetTargets.forEach(function(input){ input.disabled=true; });
+    startSkynetProgress(targets);
     try{
-      var r=await fetch(API+"/api/teamwork/skynet/"+target+"-audit",{method:'POST',headers:whdrs(),body:'{}'});
+      var r=await fetch(API+"/api/teamwork/skynet/audit",{method:'POST',headers:whdrs(),body:JSON.stringify({targets:targets})});
       if(w401(r)){ syncSkynetButton(); return; }
       var d=await r.json();
       if(!(r.ok&&d&&d.ok)){ stopSkynetProgress(); alert('No se pudo auditar: '+((d&&d.error)||r.status)); }
@@ -8836,11 +8850,10 @@
         var res=d.results||[];
         renderSkynetStatus(res);
         var waiting=res.filter(function(x){return x.status==='waiting-captured';}).map(function(x){return x.machine||x.id;});
-        if(waiting.length) alert('Skynet capturó '+skynetTargetLabel(target)+' esperando en: '+waiting.join(', '));
+        if(waiting.length) alert('Skynet capturó motores esperando en: '+waiting.join(', '));
       }
     }catch(e){ stopSkynetProgress(); if(skynetStatus) skynetStatus.innerHTML='<span class="sky-warn">Sin conexion con Skynet.</span>'; alert('Sin conexión con Skynet'); }
     finally{ syncSkynetButton(); }
-  });
   });
 
   listEl.addEventListener('click',async function(e){

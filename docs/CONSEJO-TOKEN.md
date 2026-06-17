@@ -5,7 +5,8 @@ documentacion. La fuente canonica es la boveda Cloudflare `admira-vault`.
 
 ## Secreto
 
-- Nombre: `COUNCIL_WRITE_TOKEN`
+- Nombre facil: `TOKEN_CONSEJO_SILICIO`
+- Nombre tecnico compatible: `COUNCIL_WRITE_TOKEN`
 - Boveda: `https://admira-vault.csilvasantin.workers.dev`
 - Lectura: `GRID_KEY` local en `~/.agents-comms/.synckey`
 
@@ -17,7 +18,7 @@ import json, pathlib, urllib.parse, urllib.request
 
 vault = "https://admira-vault.csilvasantin.workers.dev"
 grid = pathlib.Path("~/.agents-comms/.synckey").expanduser().read_text().strip()
-url = f"{vault}/secret/COUNCIL_WRITE_TOKEN?" + urllib.parse.urlencode({"key": grid})
+url = f"{vault}/secret/TOKEN_CONSEJO_SILICIO?" + urllib.parse.urlencode({"key": grid})
 req = urllib.request.Request(url, headers={"User-Agent": "AdmiraAgent"})
 
 with urllib.request.urlopen(req, timeout=20) as r:

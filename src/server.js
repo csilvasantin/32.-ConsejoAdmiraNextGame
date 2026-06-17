@@ -271,8 +271,10 @@ const MONITOR_MODE_LABELS = {
 const MONITOR_MODE_INSTRUCTIONS = {
   silicio: [
     "Feedback: Modo Silicio.",
-    "Reporta inicio, bloqueo y cierre.",
+    "Trabaja con ritmo tecnico: confirma inicio, reporta solo hitos compactos que cambien el estado, bloqueo y cierre.",
+    "Cada cierre debe incluir que hiciste, donde, commit/URL si aplica y verificacion ejecutada.",
     "Si quedas parado, sin actividad clara o esperando mas de 15 minutos, envia pantallazo/captura al Consejo y pide siguiente paso.",
+    "Evita mensajes repetidos: si ya diste un estado suficiente, envia solo el delta.",
   ],
   carbono: [
     "Feedback: Modo Carbono.",

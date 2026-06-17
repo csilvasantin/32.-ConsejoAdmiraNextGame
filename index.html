@@ -2641,7 +2641,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.17.r2</a>
+            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.17.r3</a>
             <a href="https://www.admira.live/control.html" target="_blank" rel="noopener" class="version-badge" title="Panel de control operativo de admira.live">🎛️ Control</a>
             <a href="https://www.admira.live/mcp/" target="_blank" rel="noopener" class="version-badge" title="Documentacion publica del MCP Admira Live">🔌 MCP</a>
             <button class="version-badge" onclick="window.agmSetVisible&&window.agmSetVisible(null)" title="Abrir el puesto de mando AgoraMatrix">📡 Agentes</button>
@@ -8418,6 +8418,10 @@
     background:linear-gradient(90deg,#2d7cff,#7dff9e,#2d7cff);animation:skyScan 1.15s linear infinite}
   #tk-skynet-status .sky-warn{color:#ffe27a}
   @keyframes skyScan{0%{transform:translateX(-110%)}100%{transform:translateX(250%)}}
+  #tk-monitor-help{display:block;margin-top:-2px;color:#6faad4;font-size:10px;line-height:1.35;min-height:14px}
+  #tk-monitor-help.silicio{color:#8fe8a2}
+  #tk-monitor-help.carbono{color:#ffb8c9}
+  #tk-monitor-help.skynet{color:#9dc5ff}
   .tk-send-now{display:flex;align-items:center;gap:6px;font-size:10px;color:#9effb0;flex:1.4}
   .tk-send-now input{width:auto!important}
   #tk-list{flex:1;min-height:0;overflow-y:auto;padding:6px 8px}
@@ -8481,11 +8485,12 @@
           <option value="ask">🔴 Solicitar permisos al Consejo</option>
         </select>
         <select id="tk-monitor" title="Cómo se monitoriza el feedback y pantallazos del agente">
-          <option value="silicio">⚙️ Silicio · feedback normal</option>
-          <option value="carbono">🫀 Carbono · feedback humano</option>
+          <option value="silicio">⚙️ Silicio · ritmo técnico</option>
+          <option value="carbono">🫀 Carbono · criterio humano</option>
           <option value="skynet">🛰️ Skynet · vigilancia estricta</option>
         </select>
       </div>
+      <span id="tk-monitor-help">Silicio: inicio, hitos compactos, bloqueo y cierre con verificación.</span>
       <div class="tk-row">
         <button type="button" id="tk-skynet-audit" title="Revisar Claude Code en todos los equipos automatizables">🛰️ Auditar Claude</button>
         <span id="tk-skynet-status"></span>
@@ -8578,9 +8583,22 @@
   var PRIO_ICON={urgent:'🔴',high:'🟠',normal:'🟡',low:'⚪'};
   var APPROVAL_LABEL={full_access:'🟢 permisos completos',auto_approve:'🟡 acepta peticiones',ask:'🔴 pedir permisos'};
   var MONITOR_LABEL={silicio:'⚙️ Silicio',carbono:'🫀 Carbono',skynet:'🛰️ Skynet'};
+  var MONITOR_HELP={
+    silicio:'Silicio: inicio, hitos compactos, bloqueo y cierre con verificación.',
+    carbono:'Carbono: menos ruido; solo dudas, decisiones humanas e hitos importantes.',
+    skynet:'Skynet: vigilancia activa; captura si hay espera, permisos o silencio operativo.'
+  };
   var skynetTimer=null, skynetStartedAt=0;
+  function syncMonitorHelp(){
+    var help=document.getElementById('tk-monitor-help');
+    if(!help||!monitorEl) return;
+    var mode=monitorEl.value||'silicio';
+    help.className=mode;
+    help.textContent=MONITOR_HELP[mode]||MONITOR_HELP.silicio;
+  }
   function syncSkynetButton(){
     if(!skynetBtn||!monitorEl) return;
+    syncMonitorHelp();
     skynetBtn.disabled=monitorEl.value!=='skynet';
     if(skynetStatus&&monitorEl.value!=='skynet') skynetStatus.innerHTML='';
   }

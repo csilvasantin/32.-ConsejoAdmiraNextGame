@@ -4,7 +4,7 @@ import { extname, resolve, basename } from "node:path";
 import { spawn } from "node:child_process";
 
 import { createMachineEntry, readMachines, updateMachineStatus, updateMachineSync } from "./store.js";
-import { sendPromptToMachine, resolveMachineName, getCapture, getImageBuffer, approveAll, approveMachine, getAllSnapshots, getReachableMachines, getWatchdogState, setWatchdogEnabled, setMachineWatchdog, sendOnboardingToAll, startWatchdog } from "./ssh-exec.js";
+import { sendPromptToMachine, resolveMachineName, getCapture, getImageBuffer, approveAll, approveMachine, getAllSnapshots, getReachableMachines, getWatchdogState, setWatchdogEnabled, setMachineWatchdog, sendOnboardingToAll, startWatchdog, runSkynetClaudeAudit } from "./ssh-exec.js";
 import { addEntries, addEntry, getHistory } from "./teamwork-store.js";
 import {
   listTasks,
@@ -282,6 +282,8 @@ const MONITOR_MODE_INSTRUCTIONS = {
   skynet: [
     "Feedback: Modo Skynet.",
     "Vigilancia estricta: no permanezcas inactivo en silencio.",
+    "El Consejo monitoriza todos los equipos de la red; para empezar revisa Claude Code/Claude Desktop en cada maquina.",
+    "Si Claude Code no tiene actividad clara, abre Claude Code a pantalla completa cuando sea seguro y captura que esta esperando.",
     "Si no estas ejecutando una accion concreta, si una herramienta espera permisos, o si pasan 5 minutos sin progreso visible, envia pantallazo/captura al Consejo con estado y siguiente decision recomendada.",
   ],
 };
@@ -1202,6 +1204,13 @@ const server = createServer(async (request, response) => {
 
   if (request.method === "GET" && url.pathname === "/api/teamwork/snapshots") {
     sendJson(response, 200, { ok: true, snapshots: getAllSnapshots() });
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/teamwork/skynet/claude-audit") {
+    if (!requireCouncilWrite(request, response)) return;
+    const result = await runSkynetClaudeAudit();
+    sendJson(response, 200, { ok: true, ...result });
     return;
   }
 

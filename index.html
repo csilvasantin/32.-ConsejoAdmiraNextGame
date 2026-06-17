@@ -8403,6 +8403,10 @@
   .tk-row > *{flex:1;min-width:0}
   #tk-form .tk-create{background:#0c3;border:0;color:#02140a;border-radius:6px;padding:6px;font-weight:700;cursor:pointer;flex:none}
   #tk-form .tk-create:disabled{opacity:.5;cursor:default}
+  #tk-skynet-audit{background:#06200f;border:1px solid #2d7cff;color:#9dc5ff;border-radius:6px;padding:5px 8px;
+    font-family:inherit;font-size:10px;cursor:pointer}
+  #tk-skynet-audit:disabled{opacity:.45;cursor:default;border-color:#24506f;color:#6c899e}
+  #tk-skynet-status{flex:1.8;color:#6faad4;font-size:10px;align-self:center;min-width:120px;line-height:1.25}
   .tk-send-now{display:flex;align-items:center;gap:6px;font-size:10px;color:#9effb0;flex:1.4}
   .tk-send-now input{width:auto!important}
   #tk-list{flex:1;min-height:0;overflow-y:auto;padding:6px 8px}
@@ -8472,6 +8476,10 @@
         </select>
       </div>
       <div class="tk-row">
+        <button type="button" id="tk-skynet-audit" title="Revisar Claude Code en todos los equipos automatizables">🛰️ Auditar Claude</button>
+        <span id="tk-skynet-status"></span>
+      </div>
+      <div class="tk-row">
         <select id="tk-template" title="Plantillas rápidas">
           <option value="">⚡ Plantilla…</option>
           <option>Apagar monitor</option>
@@ -8523,7 +8531,8 @@
       assigneeEl=document.getElementById('tk-assignee'), prioEl=document.getElementById('tk-priority'),
       approvalEl=document.getElementById('tk-approval'), monitorEl=document.getElementById('tk-monitor'),
       nowEl=document.getElementById('tk-now'), createBtn=document.getElementById('tk-create'),
-      whenEl=document.getElementById('tk-when'), tplEl=document.getElementById('tk-template');
+      whenEl=document.getElementById('tk-when'), tplEl=document.getElementById('tk-template'),
+      skynetBtn=document.getElementById('tk-skynet-audit'), skynetStatus=document.getElementById('tk-skynet-status');
   if(tplEl) tplEl.addEventListener('change',function(){ if(tplEl.value){ titleEl.value=tplEl.value; tplEl.value=''; titleEl.focus(); } });
   // Formulario de crear: plegable, COLAPSADO por defecto (no se ve por encima de "Limpiar hechas").
   (function(){
@@ -8558,6 +8567,13 @@
   var PRIO_ICON={urgent:'🔴',high:'🟠',normal:'🟡',low:'⚪'};
   var APPROVAL_LABEL={full_access:'🟢 permisos completos',auto_approve:'🟡 acepta peticiones',ask:'🔴 pedir permisos'};
   var MONITOR_LABEL={silicio:'⚙️ Silicio',carbono:'🫀 Carbono',skynet:'🛰️ Skynet'};
+  function syncSkynetButton(){
+    if(!skynetBtn||!monitorEl) return;
+    skynetBtn.disabled=monitorEl.value!=='skynet';
+    if(skynetStatus&&monitorEl.value!=='skynet') skynetStatus.textContent='';
+  }
+  if(monitorEl) monitorEl.addEventListener('change',syncSkynetButton);
+  syncSkynetButton();
 
   function esc(s){ return String(s||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
   function ago(iso){ try{ var s=Math.max(0,(Date.now()-new Date(iso).getTime())/1000);
@@ -8715,6 +8731,25 @@
       else alert('No se pudo crear: '+((d&&d.error)||r.status));
     }catch(e){ alert('Sin conexión con el council-api'); }
     finally{ createBtn.disabled=false; titleEl.focus(); }
+  });
+
+  if(skynetBtn) skynetBtn.addEventListener('click',async function(){
+    if(monitorEl&&monitorEl.value!=='skynet') return;
+    skynetBtn.disabled=true;
+    if(skynetStatus) skynetStatus.textContent='revisando equipos…';
+    try{
+      var r=await fetch(API+"/api/teamwork/skynet/claude-audit",{method:'POST',headers:whdrs(),body:'{}'});
+      if(w401(r)){ syncSkynetButton(); return; }
+      var d=await r.json();
+      if(!(r.ok&&d&&d.ok)){ alert('No se pudo auditar: '+((d&&d.error)||r.status)); }
+      else{
+        var res=d.results||[], ok=res.filter(function(x){return x.ok;}).length, cap=res.filter(function(x){return x.capture;}).length;
+        if(skynetStatus) skynetStatus.textContent=ok+'/'+res.length+' equipos · '+cap+' capturas';
+        var waiting=res.filter(function(x){return x.status==='waiting-captured';}).map(function(x){return x.machine||x.id;});
+        if(waiting.length) alert('Skynet capturó Claude esperando en: '+waiting.join(', '));
+      }
+    }catch(e){ alert('Sin conexión con Skynet'); }
+    finally{ syncSkynetButton(); }
   });
 
   listEl.addEventListener('click',async function(e){

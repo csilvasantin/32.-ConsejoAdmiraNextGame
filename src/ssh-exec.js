@@ -341,6 +341,10 @@ function sanitizePrompt(text) {
     .slice(0, 2000);
 }
 
+function shellQuote(value) {
+  return `'${String(value || "").replace(/'/g, `'\\''`)}'`;
+}
+
 function isIpv4Address(value) {
   return /^\d{1,3}(?:\.\d{1,3}){3}$/.test(String(value || "").trim());
 }
@@ -1532,6 +1536,205 @@ function parseAppsState(raw) {
     }
   }
   return result;
+}
+
+function hasUsefulClaudeActivity(state) {
+  const title = String(state || "").trim().toLowerCase();
+  if (!title) return false;
+  return !["off", "no-window", "sin ventana"].includes(title);
+}
+
+function buildOsaCommand(script) {
+  return `osascript ${script
+    .split("\n")
+    .map((line) => line.trim())
+    .filter(Boolean)
+    .map((line) => `-e ${shellQuote(line)}`)
+    .join(" ")}`;
+}
+
+async function runMacAutomationScript(machine, script, timeout = 12_000) {
+  if (isLocalMachine(machine)) {
+    const args = script
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean)
+      .flatMap((line) => ["-e", line]);
+    return execLocalMulti(args, timeout);
+  }
+
+  async function attempt(useLocal) {
+    return execRemote(machine, useLocal, buildOsaCommand(script), timeout);
+  }
+
+  if (deriveLocalHostname(machine)) {
+    const local = await attempt(true);
+    if (!local.error) return local;
+  }
+  return attempt(false);
+}
+
+async function focusClaudeForSkynet(machine) {
+  if (isLocalWindowsMachine(machine)) {
+    const { error, stdout } = await execWindows(`
+${buildWindowsAutomationPrelude("claude")}
+Write-Output "claude-windows"
+`.trim(), 10_000);
+    return { ok: !error, action: "focused", target: "claude", detail: stdout || "Claude Windows", error: error?.message || null };
+  }
+
+  if (isWindowsMachine(machine)) {
+    return { ok: false, action: "unsupported", target: "claude", error: "Skynet remoto Windows aun no implementado" };
+  }
+
+  const allowFullscreen = !isLocalMultiDisplayMachine(machine);
+  const script = `set skynetResult to "none"
+tell application "System Events"
+  if exists process "Claude" then
+    tell application "Claude" to activate
+    delay 0.6
+    set skynetResult to "claude-focused"
+    try
+      tell process "Claude"
+        if (count of windows) > 0 then
+          ${allowFullscreen ? "try\n            set value of attribute \"AXFullScreen\" of front window to true\n          end try" : "set skynetResult to \"claude-focused-layout-preserved\""}
+        end if
+      end tell
+    end try
+    return skynetResult
+  end if
+end tell
+try
+  tell application "Claude" to activate
+  delay 1.0
+  set skynetResult to "claude-opened"
+on error
+  ${buildTerminalActivateScript("")}
+  delay 0.6
+  set skynetResult to "terminal-focused"
+end try
+return skynetResult`;
+
+  const { error, stdout } = await runMacAutomationScript(machine, script, 16_000);
+  return {
+    ok: !error,
+    action: stdout?.trim() || (error ? "focus-failed" : "focused"),
+    target: "claude",
+    error: error?.message || null
+  };
+}
+
+async function captureSkynetEvidence(machine) {
+  const captureId = `skynet-${machine.id}-${Date.now()}`;
+  const snap = await captureOneSnapshot(machine);
+  if (!snap) {
+    const text = await captureTextFallback(machine);
+    if (text) {
+      captures.set(captureId, { type: "text", text });
+      return { captureId, capture: { type: "text", text } };
+    }
+    return { captureId: null, capture: null };
+  }
+
+  if (snap.type === "image" && snap.image) {
+    const imageKey = snap.image.split("/").pop();
+    return { captureId: imageKey || captureId, capture: snap };
+  }
+
+  if (snap.type === "images" && Array.isArray(snap.images)) {
+    return { captureId, capture: snap };
+  }
+
+  captures.set(captureId, snap);
+  return { captureId, capture: snap };
+}
+
+export async function runSkynetClaudeAudit() {
+  const data = await readMachines();
+  const machines = (data.machines || []).filter((machine) => isAutomationReady(machine));
+  const checkedAt = new Date().toISOString();
+
+  const settled = await Promise.allSettled(
+    machines.map(async (machine) => {
+      const beforeRaw = await captureAllAppsState(machine);
+      if (!beforeRaw && !isLocalMachine(machine)) {
+        markMachineFailed(machine.id);
+        return {
+          id: machine.id,
+          machine: machine.name || machine.id,
+          ok: false,
+          status: "offline",
+          action: "unreachable",
+          error: "No responde por automatizacion"
+        };
+      }
+
+      markMachineOnline(machine.id);
+      const before = parseAppsState(beforeRaw);
+      const active = hasUsefulClaudeActivity(before.claude);
+      let focus = null;
+
+      if (!active) {
+        focus = await focusClaudeForSkynet(machine);
+        await new Promise((resolve_) => setTimeout(resolve_, 1200));
+      }
+
+      const [afterRaw, evidence] = await Promise.all([
+        captureAllAppsState(machine),
+        captureSkynetEvidence(machine)
+      ]);
+      const after = parseAppsState(afterRaw);
+      const mState = watchdogState.perMachine[machine.id] || {};
+      watchdogState.perMachine[machine.id] = {
+        ...mState,
+        enabled: mState.enabled !== false,
+        lastSeenAt: checkedAt,
+        claudeState: after.claude,
+        codexState: after.codex,
+        lastSkynetAuditAt: checkedAt,
+        lastSkynetAuditStatus: active ? "active" : (focus?.ok ? "captured-waiting" : "capture-attempted")
+      };
+
+      return {
+        id: machine.id,
+        machine: machine.name || machine.id,
+        ok: true,
+        status: active ? "active" : "waiting-captured",
+        action: active ? "observed" : (focus?.action || "capture-attempted"),
+        claudeBefore: before.claude,
+        claudeAfter: after.claude,
+        codexAfter: after.codex,
+        captureId: evidence.captureId,
+        capture: evidence.capture,
+        error: focus?.error || null
+      };
+    })
+  );
+
+  const results = settled.map((entry, index) => {
+    if (entry.status === "fulfilled") return entry.value;
+    const machine = machines[index];
+    return {
+      id: machine?.id || "unknown",
+      machine: machine?.name || machine?.id || "unknown",
+      ok: false,
+      status: "error",
+      action: "failed",
+      error: entry.reason instanceof Error ? entry.reason.message : "skynet rejected"
+    };
+  });
+
+  watchdogState.log.push({
+    machine: "Skynet",
+    machineId: "all",
+    target: "claude",
+    summary: `Auditoria Claude Code: ${results.filter((r) => r.ok).length}/${results.length} equipos`,
+    status: "audited",
+    at: checkedAt
+  });
+  if (watchdogState.log.length > 50) watchdogState.log.shift();
+
+  return { checkedAt, results };
 }
 
 // Play a notification sound locally (always on Mac Mini, regardless of which machine triggered)

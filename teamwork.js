@@ -18,6 +18,7 @@ const agoraSendBtn = document.querySelector("#agoraSendBtn");
 let machines = [];
 let isStaticMode = false;
 let latestSnapshots = {};
+let claudeStatus = { byId: {}, byName: {} };
 const FUNNEL_URL = "https://macmini.tail48b61c.ts.net";
 const FUNNEL_HOST = "macmini.tail48b61c.ts.net";
 const DEFAULT_ONBOARDING_PROMPT =
@@ -394,6 +395,58 @@ async function loadMachines() {
       // no machines
     }
   }
+}
+
+// Estado Claude por máquina (council-api /machine-status): cuenta logueada,
+// versión de Claude Code y si está corriendo. Aditivo: pinta un badge en
+// cada fila sin alterar el resto del render.
+async function loadClaudeStatus() {
+  try {
+    const res = await fetch(apiUrl("/api/council/machine-status"), { cache: "no-store" });
+    if (!res.ok) return;
+    const data = await res.json();
+    const byId = {}, byName = {};
+    for (const r of (data.machines || [])) {
+      if (r.id != null) byId[r.id] = r;
+      if (r.name) byName[r.name] = r;
+    }
+    claudeStatus = { byId, byName };
+    updateClaudeBadges();
+  } catch { /* backend no disponible: se ignora */ }
+}
+
+function updateClaudeBadges() {
+  if (!machineApproveList) return;
+  machineApproveList.querySelectorAll(".tw-machine-row").forEach((row) => {
+    const id = row.dataset.id;
+    const nameEl = row.querySelector(".tw-machine-name");
+    const name = nameEl ? nameEl.textContent.trim() : "";
+    const r = claudeStatus.byId[id] || claudeStatus.byName[name];
+    if (!r) return;
+    const statuses = row.querySelector(".tw-machine-statuses");
+    if (!statuses) return;
+    let badge = statuses.querySelector(".tw-claude-acct");
+    if (!badge) {
+      badge = document.createElement("span");
+      badge.className = "tw-claude-acct";
+      badge.style.cssText = "display:inline-flex;align-items:center;gap:5px;margin-left:6px;padding:2px 7px;border-radius:8px;font-size:10px;border:1px solid var(--line);background:var(--panel);color:var(--ink);";
+      statuses.appendChild(badge);
+    }
+    const c = r.claude || {};
+    const running = !!c.claude_running;
+    const cc = (Array.isArray(c.app_claude_code) && c.app_claude_code[0]) || c.cli_version || "";
+    let label, dot;
+    if (r.online && c.account) {
+      label = c.account + (cc ? (" · cc " + cc) : "");
+      dot = running ? "#36d399" : "#9aa0a6";
+    } else if (r.online) {
+      label = "online · sin cuenta"; dot = "#9aa0a6";
+    } else {
+      label = "offline"; dot = "#5b5f66";
+    }
+    badge.title = "Cuenta Claude / Claude Code" + (running ? " · corriendo" : "");
+    badge.innerHTML = '<span style="width:7px;height:7px;border-radius:50%;display:inline-block;background:' + dot + ';"></span>' + escapeHtml(label);
+  });
 }
 
 // Per-machine approve
@@ -847,6 +900,7 @@ function renderMachineApproveList(snapshots) {
 
   updateWatchdogRows();
   renderWatchdogOverview();
+  updateClaudeBadges();
 }
 
 // Approve buttons
@@ -1176,9 +1230,11 @@ loadMachines();
 if (agoraKey) agoraKey.value = sessionStorage.getItem("admira:agora-key") || "";
 loadHistory();
 loadAgoraStatus();
+setTimeout(loadClaudeStatus, 1200);
 setTimeout(loadSnapshots, 2000);
 setTimeout(loadWatchdogStats, 3000);
 setInterval(loadMachines, MACHINE_REFRESH_MS);
+setInterval(loadClaudeStatus, MACHINE_REFRESH_MS);
 setInterval(loadHistory, 10_000);
 setInterval(loadAgoraStatus, AGORA_REFRESH_MS);
 setInterval(loadSnapshots, SNAPSHOT_REFRESH_MS);

@@ -822,6 +822,10 @@ function renderMachineRow(m, snapshots) {
           <span class="tw-machine-status tw-machine-status-${statusMeta.tone}">${statusMeta.label}</span>
           <span class="tw-machine-status tw-machine-status-${previewMeta.tone}" data-preview-status="${m.id}">${previewMeta.label}</span>
         </div>
+        ${remoteReady && m.platform !== "Windows" ? `<div class="tw-machine-actions" style="margin-top:4px;display:flex;gap:5px;flex-wrap:wrap;">
+          <button class="tw-mact" data-mact-action="claude-open" data-mact-machine="${m.id}" title="Abrir Claude Code en ${escapeHtml(m.name)}" style="font-size:10px;padding:2px 7px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer;">▶ Abrir Claude</button>
+          <button class="tw-mact" data-mact-action="claude-quit" data-mact-machine="${m.id}" title="Cerrar Claude Code en ${escapeHtml(m.name)}" style="font-size:10px;padding:2px 7px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer;">■ Cerrar</button>
+        </div>` : ""}
         ${m.unitType === "worker" ? `<div class="tw-machine-caps"><span class="tw-machine-cap tw-machine-cap-kind">PC</span>${(m.capabilities || []).map((cap) => `<span class="tw-machine-cap">${cap}</span>`).join("")}</div>` : ""}
         <span class="tw-app-status">
           ${snap?.claudeState ? `<span class="tw-app-tag claude" title="Claude: ${snap.claudeState}">C</span>` : ""}
@@ -927,6 +931,41 @@ function renderMachineApproveList(snapshots) {
         showFeedback(`${machineId}: sin conexión con el backend`, false);
         renderMachineFeedback(machineId, { statusText: "✗ Sin conexión con el backend" });
         setTimeout(() => { btn.textContent = "Enviar"; btn.disabled = false; }, 2500);
+      }
+    });
+  });
+
+  // Per-machine control actions (lista blanca: abrir/cerrar Claude Code)
+  machineApproveList.querySelectorAll(".tw-mact").forEach((btn) => {
+    btn.addEventListener("click", async () => {
+      const machineId = btn.dataset.mactMachine;
+      const action = btn.dataset.mactAction;
+      const orig = btn.textContent;
+      const verb = action === "claude-quit" ? "Cerrando" : "Abriendo";
+      btn.disabled = true;
+      btn.textContent = "…";
+      renderMachineFeedback(machineId, { statusText: `⏳ ${verb} Claude Code…` });
+      try {
+        const res = await fetch(apiUrl("/api/teamwork/machine-action"), {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ machineId, action })
+        });
+        const data = await res.json().catch(() => ({}));
+        if (data.ok) {
+          renderMachineFeedback(machineId, { statusText: `✓ Claude Code ${action === "claude-quit" ? "cerrado" : "abierto"}` });
+          setTimeout(loadClaudeStatus, 2500);
+        } else {
+          const msg = data.error || `HTTP ${res.status}`;
+          showFeedback(`${machineId}: ${msg}`, false);
+          renderMachineFeedback(machineId, { statusText: `✗ ${msg}` });
+        }
+      } catch {
+        showFeedback(`${machineId}: sin conexión con el backend`, false);
+        renderMachineFeedback(machineId, { statusText: "✗ Sin conexión con el backend" });
+      } finally {
+        btn.disabled = false;
+        btn.textContent = orig;
       }
     });
   });

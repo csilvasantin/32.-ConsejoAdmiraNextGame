@@ -972,6 +972,57 @@ export async function getCouncilClaudeStatus() {
   return Promise.all(machines.map(probeMachineClaude));
 }
 
+// ── Acciones de control acotadas (lista blanca) ─────────────────────────
+// SOLO acciones predefinidas; nunca comando libre ni sudo. Cada acción es
+// un osascript/comando seguro ejecutado por SSH en la máquina del consejo.
+const MACHINE_ACTIONS = {
+  "claude-open": { label: "Abrir Claude Code", osa: 'tell application "Claude" to activate' },
+  "claude-quit": { label: "Cerrar Claude Code", osa: 'tell application "Claude" to quit' }
+};
+
+export function listMachineActions() {
+  return Object.entries(MACHINE_ACTIONS).map(([key, v]) => ({ key, label: v.label }));
+}
+
+export async function runMachineAction(machineId, action) {
+  const spec = MACHINE_ACTIONS[action];
+  if (!spec) return { ok: false, error: `acción no permitida: ${action}` };
+
+  const data = await readMachines();
+  let machine = data.machines.find((m) => m.id === machineId);
+  if (!machine) {
+    const resolved = resolveMachineName(data.machines, machineId);
+    if (resolved) machine = resolved;
+  }
+  if (!machine) return { ok: false, error: `Máquina '${machineId}' no encontrada` };
+  if (!isAutomationReady(machine)) return { ok: false, error: `Canal de automatizacion no habilitado en '${machine.name}'` };
+
+  // Local: osascript directo.
+  if (isLocalMachine(machine)) {
+    const { error } = await execLocalMulti(["-e", spec.osa]);
+    return error ? { ok: false, error: error.message } : { ok: true, name: machine.name, action };
+  }
+
+  // Remoto: despierta el display 2s (la GUI bloqueada no acepta AppleEvents) y lanza osascript.
+  const remoteCmd = `caffeinate -u -t 2 && sleep 1 && osascript -e '${spec.osa.replace(/'/g, "'\\''")}'`;
+  const attempt = (useLocal) => new Promise((resolve) => {
+    if (useLocal && !deriveLocalHostname(machine)) { resolve(null); return; }
+    const args = buildSshArgs(machine, useLocal);
+    args.push(remoteCmd);
+    execFile("ssh", args, { timeout: TIMEOUT_MS }, (error) => {
+      if (error) resolve({ ok: false, error: (error.message || "ssh error").slice(0, 180) });
+      else resolve({ ok: true, machine: machineId, name: machine.name, action });
+    });
+  });
+
+  let result = await attempt(false);
+  if ((!result || !result.ok) && deriveLocalHostname(machine)) {
+    const r2 = await attempt(true);
+    if (r2 && r2.ok) result = r2;
+  }
+  return result || { ok: false, error: "sin respuesta SSH" };
+}
+
 export function getAllSnapshots() {
   const result = {};
   for (const [id, snap] of machineSnapshots) {

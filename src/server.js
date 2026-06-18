@@ -5,7 +5,7 @@ import { spawn } from "node:child_process";
 import { createPublicKey, verify as verifySignature } from "node:crypto";
 
 import { createMachineEntry, readMachines, updateMachineStatus, updateMachineSync } from "./store.js";
-import { sendPromptToMachine, resolveMachineName, getCapture, getImageBuffer, approveAll, approveMachine, getAllSnapshots, getReachableMachines, getWatchdogState, setWatchdogEnabled, setMachineWatchdog, sendOnboardingToAll, startWatchdog, runSkynetAudit, runSkynetAudits, getCouncilClaudeStatus } from "./ssh-exec.js";
+import { sendPromptToMachine, resolveMachineName, getCapture, getImageBuffer, approveAll, approveMachine, getAllSnapshots, getReachableMachines, getWatchdogState, setWatchdogEnabled, setMachineWatchdog, sendOnboardingToAll, startWatchdog, runSkynetAudit, runSkynetAudits, getCouncilClaudeStatus, runMachineAction, listMachineActions } from "./ssh-exec.js";
 import { addEntries, addEntry, getHistory } from "./teamwork-store.js";
 import {
   listTasks,
@@ -1383,6 +1383,24 @@ const server = createServer(async (request, response) => {
 
   if (request.method === "GET" && url.pathname === "/api/teamwork/snapshots") {
     sendJson(response, 200, { ok: true, snapshots: getAllSnapshots() });
+    return;
+  }
+
+  if (request.method === "GET" && url.pathname === "/api/teamwork/machine-actions") {
+    sendJson(response, 200, { ok: true, actions: listMachineActions() });
+    return;
+  }
+
+  if (request.method === "POST" && url.pathname === "/api/teamwork/machine-action") {
+    const rawBody = await readRequestBody(request);
+    const parsed = rawBody ? JSON.parse(rawBody) : {};
+    const { machineId, action } = parsed;
+    if (!machineId || !action) {
+      sendJson(response, 400, { error: "machineId y action son obligatorios" });
+      return;
+    }
+    const result = await runMachineAction(machineId, action);
+    sendJson(response, result.ok ? 200 : 502, result);
     return;
   }
 

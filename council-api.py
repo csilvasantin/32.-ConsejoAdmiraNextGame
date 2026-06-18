@@ -3895,38 +3895,49 @@ def _machine_status_probe(machine: dict) -> dict:
         "claude": None,
         "error": None,
     }
-    if not ssh.get("enabled") or not host:
+    # Candidatos para alcanzar la máquina, en orden: hostname Tailscale,
+    # IP Tailscale, hostname/IP local. NO gateamos por ping ICMP porque
+    # los hosts Tailscale a menudo no responden a ping aunque el SSH sí.
+    targets = [t for t in (host, ssh.get("ip_tailscale"), ssh.get("host_local"), ssh.get("ip_local")) if t]
+    # dedupe conservando orden, y limitamos a 2 intentos para acotar tiempo
+    seen = set(); targets = [t for t in targets if not (t in seen or seen.add(t))][:2]
+    if not ssh.get("enabled") or not targets:
         out["error"] = "ssh disabled or no host"
-        return out
-    out["online"] = bool(_hk_ping(host))
-    if not out["online"]:
         return out
     import base64 as _b64
     payload = _b64.b64encode(_HK_REMOTE_STATUS_PY.encode("utf-8")).decode("ascii")
     remote_cmd = "echo {} | base64 -D | python3 -".format(payload)
-    ssh_cmd = [
-        "ssh",
-        "-o", "StrictHostKeyChecking=no",
-        "-o", "BatchMode=yes",
-        "-o", f"ConnectTimeout={_HK_SSH_TIMEOUT}",
-        f"{user}@{host}" if user else host,
-        remote_cmd,
-    ]
-    try:
-        r = subprocess.run(ssh_cmd, capture_output=True, timeout=_HK_SSH_TIMEOUT + 12)
-        if r.returncode != 0:
-            err = (r.stderr or b"").decode("utf-8", "ignore").strip()[:200]
-            out["error"] = err or f"ssh rc={r.returncode}"
-            return out
-        data = (r.stdout or b"").decode("utf-8", "ignore").strip()
+    last_err = None
+    for tgt in targets:
+        dest = f"{user}@{tgt}" if user else tgt
+        ssh_cmd = [
+            "ssh",
+            "-o", "StrictHostKeyChecking=no",
+            "-o", "BatchMode=yes",
+            "-o", f"ConnectTimeout={_HK_SSH_TIMEOUT}",
+            dest,
+            remote_cmd,
+        ]
         try:
-            out["claude"] = json.loads(data.splitlines()[-1]) if data else None
-        except Exception:
-            out["error"] = "probe parse error: " + data[:150]
-    except subprocess.TimeoutExpired:
-        out["error"] = "ssh timeout"
-    except Exception as e:
-        out["error"] = (f"ssh error: {e}")[:200]
+            r = subprocess.run(ssh_cmd, capture_output=True, timeout=_HK_SSH_TIMEOUT + 12)
+            if r.returncode != 0:
+                last_err = (r.stderr or b"").decode("utf-8", "ignore").strip()[:200] or f"ssh rc={r.returncode}"
+                continue
+            data = (r.stdout or b"").decode("utf-8", "ignore").strip()
+            try:
+                out["claude"] = json.loads(data.splitlines()[-1]) if data else None
+                out["online"] = True
+                out["reached_via"] = tgt
+                return out
+            except Exception:
+                last_err = "probe parse error: " + data[:150]
+        except subprocess.TimeoutExpired:
+            last_err = "ssh timeout"
+        except Exception as e:
+            last_err = (f"ssh error: {e}")[:200]
+    # Ningún SSH respondió: usamos ping solo como pista de "encendida".
+    out["online"] = bool(_hk_ping(host))
+    out["error"] = last_err or "unreachable"
     return out
 
 

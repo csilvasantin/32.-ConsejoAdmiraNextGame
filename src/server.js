@@ -5,7 +5,7 @@ import { spawn } from "node:child_process";
 import { createPublicKey, verify as verifySignature } from "node:crypto";
 
 import { createMachineEntry, readMachines, updateMachineStatus, updateMachineSync } from "./store.js";
-import { sendPromptToMachine, resolveMachineName, getCapture, getImageBuffer, approveAll, approveMachine, getAllSnapshots, getReachableMachines, getWatchdogState, setWatchdogEnabled, setMachineWatchdog, sendOnboardingToAll, startWatchdog, runSkynetAudit, runSkynetAudits } from "./ssh-exec.js";
+import { sendPromptToMachine, resolveMachineName, getCapture, getImageBuffer, approveAll, approveMachine, getAllSnapshots, getReachableMachines, getWatchdogState, setWatchdogEnabled, setMachineWatchdog, sendOnboardingToAll, startWatchdog, runSkynetAudit, runSkynetAudits, getCouncilClaudeStatus } from "./ssh-exec.js";
 import { addEntries, addEntry, getHistory } from "./teamwork-store.js";
 import {
   listTasks,
@@ -1383,6 +1383,26 @@ const server = createServer(async (request, response) => {
 
   if (request.method === "GET" && url.pathname === "/api/teamwork/snapshots") {
     sendJson(response, 200, { ok: true, snapshots: getAllSnapshots() });
+    return;
+  }
+
+  if (request.method === "GET" && (url.pathname === "/api/council/machine-status" || url.pathname === "/api/teamwork/machine-status")) {
+    try {
+      const machines = await getCouncilClaudeStatus();
+      sendJson(response, 200, {
+        ok: true,
+        ts: new Date().toISOString(),
+        summary: {
+          total: machines.length,
+          online: machines.filter((m) => m.online).length,
+          with_account: machines.filter((m) => m.claude && m.claude.account).length,
+          claude_running: machines.filter((m) => m.claude && m.claude.claude_running).length
+        },
+        machines
+      });
+    } catch (err) {
+      sendJson(response, 500, { ok: false, error: String(err && err.message || err) });
+    }
     return;
   }
 

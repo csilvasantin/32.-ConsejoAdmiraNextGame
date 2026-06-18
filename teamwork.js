@@ -19,6 +19,7 @@ let machines = [];
 let isStaticMode = false;
 let latestSnapshots = {};
 let claudeStatus = { byId: {}, byName: {} };
+let historyEntries = [];
 const FUNNEL_URL = "https://macmini.tail48b61c.ts.net";
 const FUNNEL_HOST = "macmini.tail48b61c.ts.net";
 const DEFAULT_ONBOARDING_PROMPT =
@@ -368,10 +369,85 @@ async function loadHistory() {
   try {
     const res = await fetch(apiUrl("/api/teamwork/history"), { cache: "no-store" });
     const data = await res.json();
-    renderHistory(data.entries || []);
+    historyEntries = data.entries || [];
+    renderHistory(historyEntries);
+    updateAllMachineFeedback();
   } catch {
     // silently fail
   }
+}
+
+// ── Feedback por máquina (en la propia fila) ─────────────────────────
+// Muestra estado del envío, error real y la captura del resultado, además
+// del mini-historial de las últimas órdenes a esa máquina.
+function entriesForMachine(machineId) {
+  return historyEntries.filter((e) => e.machineId === machineId).slice(0, 3);
+}
+
+async function loadCaptureInto(captureId, el) {
+  if (!el || el.dataset.loaded === "true") return;
+  try {
+    const res = await fetch(apiUrl(`/api/teamwork/capture/${captureId}`), { cache: "no-store" });
+    const data = await res.json();
+    if (data.ok) {
+      if (data.type === "image") {
+        el.className = "tw-screenshot tw-fb-cap";
+        el.innerHTML = `<img src="${apiUrl(data.path)}" alt="Captura del resultado" loading="lazy">`;
+      } else if (data.type === "text") {
+        el.className = "tw-terminal tw-fb-cap";
+        el.innerHTML = `<pre>${String(data.text || "").replace(/</g, "&lt;")}</pre>`;
+      }
+      el.dataset.loaded = "true";
+    }
+  } catch { /* reintenta en la próxima pasada */ }
+}
+
+function ensureFeedbackEl(row) {
+  let fb = row.querySelector(".tw-machine-fb");
+  if (!fb) {
+    fb = document.createElement("div");
+    fb.className = "tw-machine-fb";
+    fb.style.cssText = "grid-column:1/-1;width:100%;margin-top:6px;font-size:11px;color:var(--ink);";
+    row.appendChild(fb);
+  }
+  return fb;
+}
+
+function renderMachineFeedback(machineId, opts) {
+  if (!machineApproveList) return;
+  const row = machineApproveList.querySelector(`.tw-machine-row[data-id="${machineId}"]`);
+  if (!row) return;
+  const entries = entriesForMachine(machineId);
+  const statusText = opts && opts.statusText;
+  if (!entries.length && !statusText) return;
+  const fb = ensureFeedbackEl(row);
+  const head = statusText
+    ? `<div class="tw-fb-status" style="margin-bottom:4px;font-weight:600;">${escapeHtml(statusText)}</div>`
+    : "";
+  const list = entries.map((e) => {
+    const isErr = e.status === "error";
+    const dot = isErr ? "#ff6b6b" : "#36d399";
+    const err = (isErr && e.error) ? ` · <span style="color:var(--offline);">${escapeHtml(e.error)}</span>` : "";
+    const prompt = escapeHtml((e.prompt || "").slice(0, 70));
+    const cap = e.captureId
+      ? `<div class="tw-terminal tw-fb-cap" data-capture="${e.captureId}" style="margin-top:4px;"><span class="tw-terminal-loading">Capturando resultado…</span></div>`
+      : "";
+    return `<div style="padding:3px 0;border-top:1px solid var(--line);">
+        <span style="display:inline-block;width:7px;height:7px;border-radius:50%;background:${dot};margin-right:5px;"></span>
+        <span title="${escapeHtml(e.prompt || "")}">${prompt}</span>${err}
+        <span style="float:right;color:var(--muted);">${formatTime(e.sentAt)}</span>${cap}
+      </div>`;
+  }).join("");
+  fb.innerHTML = head + list;
+  fb.querySelectorAll(".tw-fb-cap[data-capture]").forEach((el) => loadCaptureInto(el.dataset.capture, el));
+}
+
+function updateAllMachineFeedback() {
+  if (!machineApproveList) return;
+  machineApproveList.querySelectorAll(".tw-machine-row").forEach((row) => {
+    const id = row.dataset.id;
+    if (entriesForMachine(id).length) renderMachineFeedback(id);
+  });
 }
 
 async function loadMachines() {
@@ -822,7 +898,8 @@ function renderMachineApproveList(snapshots) {
       if (!prompt) return;
 
       btn.disabled = true;
-      btn.textContent = "...";
+      btn.textContent = "…";
+      renderMachineFeedback(machineId, { statusText: "⏳ Enviando orden…" });
 
       try {
         const res = await fetch(apiUrl("/api/teamwork/send"), {
@@ -830,14 +907,26 @@ function renderMachineApproveList(snapshots) {
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({ machineId, prompt, target: targetSel?.value || "claude" })
         });
-        const data = await res.json();
-        btn.textContent = data.ok ? "OK" : "Error";
-        if (data.ok) input.value = "";
-        setTimeout(() => { btn.textContent = "Enviar"; btn.disabled = false; }, 2000);
-        loadHistory();
+        const data = await res.json().catch(() => ({}));
+        if (data.ok) {
+          btn.textContent = "✓ Enviado";
+          input.value = "";
+          renderMachineFeedback(machineId, { statusText: "✓ Entregado · capturando resultado…" });
+        } else {
+          btn.textContent = "✗ Error";
+          const msg = data.error || `HTTP ${res.status}`;
+          showFeedback(`${machineId}: ${msg}`, false);
+          renderMachineFeedback(machineId, { statusText: `✗ No entregado: ${msg}` });
+        }
+        setTimeout(() => { btn.textContent = "Enviar"; btn.disabled = false; }, 2500);
+        await loadHistory();
+        // La captura del resultado aparece ~4s después: reintentos.
+        [800, 5000, 9000].forEach((d) => setTimeout(() => renderMachineFeedback(machineId), d));
       } catch {
-        btn.textContent = "Error";
-        setTimeout(() => { btn.textContent = "Enviar"; btn.disabled = false; }, 2000);
+        btn.textContent = "✗ Error";
+        showFeedback(`${machineId}: sin conexión con el backend`, false);
+        renderMachineFeedback(machineId, { statusText: "✗ Sin conexión con el backend" });
+        setTimeout(() => { btn.textContent = "Enviar"; btn.disabled = false; }, 2500);
       }
     });
   });
@@ -901,6 +990,7 @@ function renderMachineApproveList(snapshots) {
   updateWatchdogRows();
   renderWatchdogOverview();
   updateClaudeBadges();
+  updateAllMachineFeedback();
 }
 
 // Approve buttons

@@ -898,6 +898,80 @@ export async function getReachableMachines() {
   return data.machines.filter((m) => isAutomationReady(m) && (hasWindowsAutomationChannel(m) || isReachable(m) || isLocalMachine(m)));
 }
 
+// ── Estado de Claude Code por máquina (monitor de la mesa) ──────────────
+// Sondea por SSH cada máquina del consejo y devuelve cuenta logueada,
+// versión de Claude Code (CLI o embebido en la app) y si está corriendo.
+// Alcanzabilidad por SSH real (hostname Tailscale → red local), no por ping.
+const CLAUDE_STATUS_PROBE_PY = `
+import json, os, subprocess
+def sh(c):
+    try:
+        return subprocess.run(["zsh","-lc",c], capture_output=True, text=True, timeout=6).stdout.strip()
+    except Exception:
+        return ""
+o = {}
+o["host"] = sh("hostname")
+o["user"] = sh("whoami")
+o["macos"] = sh("sw_vers -productVersion")
+try:
+    d = json.load(open(os.path.expanduser("~/.claude.json")))
+    a = d.get("oauthAccount") or {}
+    o["account"] = a.get("emailAddress")
+    o["org"] = a.get("organizationName")
+except Exception:
+    o["account"] = None
+    o["org"] = None
+cli = sh("command -v claude")
+o["cli_path"] = cli or None
+o["cli_version"] = (sh("claude --version") or None) if cli else None
+ccdir = os.path.expanduser("~/Library/Application Support/Claude/claude-code")
+try:
+    o["app_claude_code"] = sorted(os.listdir(ccdir)) if os.path.isdir(ccdir) else []
+except Exception:
+    o["app_claude_code"] = []
+o["claude_running"] = bool(sh("pgrep -f claude-code/"))
+print(json.dumps(o))
+`;
+
+function probeMachineClaude(machine) {
+  const out = { id: machine.id, name: machine.name || machine.id, online: false, claude: null, error: null };
+  const ssh = machine.ssh || {};
+  if (!ssh.enabled || (!ssh.host && !ssh.ip_tailscale)) {
+    out.error = "ssh disabled or no host";
+    return Promise.resolve(out);
+  }
+  const payload = Buffer.from(CLAUDE_STATUS_PROBE_PY, "utf8").toString("base64");
+  const remoteCmd = `echo ${payload} | base64 -D | python3 -`;
+
+  const attempt = (useLocal) => new Promise((resolve) => {
+    if (useLocal && !deriveLocalHostname(machine)) { resolve(null); return; }
+    const args = buildSshArgs(machine, useLocal);
+    args.push(remoteCmd);
+    execFile("ssh", args, { timeout: 20_000 }, (error, stdout) => {
+      if (error) { out.error = (error.message || "ssh error").slice(0, 180); resolve(null); return; }
+      try {
+        const line = String(stdout || "").trim().split("\n").pop();
+        out.claude = JSON.parse(line);
+        out.online = true;
+        out.reached_via = useLocal ? deriveLocalHostname(machine) : (ssh.ip_tailscale || ssh.host);
+        out.error = null;
+        resolve(out);
+      } catch (e) {
+        out.error = "probe parse error: " + String(stdout || "").slice(0, 120);
+        resolve(null);
+      }
+    });
+  });
+
+  return attempt(false).then((r) => r || attempt(true)).then((r) => r || out);
+}
+
+export async function getCouncilClaudeStatus() {
+  const data = await readMachines();
+  const machines = (data.machines || []).filter((m) => (m.unitType || "council") === "council" && (m.ssh || {}).enabled);
+  return Promise.all(machines.map(probeMachineClaude));
+}
+
 export function getAllSnapshots() {
   const result = {};
   for (const [id, snap] of machineSnapshots) {

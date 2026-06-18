@@ -3845,6 +3845,128 @@ async def council_hackeo_discover_macs(_auth=Depends(verify_token)):
     }
 
 
+# ── Estado de máquinas (monitor) ─────────────────────────────
+# Sondea por SSH cada máquina del consejo y devuelve estado real +
+# cuenta Claude logueada + versión de Claude Code (CLI y/o embebido en
+# la app de escritorio) + si hay un proceso de Claude Code corriendo.
+# Solo lectura: no ejecuta nada en la máquina remota salvo el sondeo.
+_HK_REMOTE_STATUS_PY = '''
+import json, os, subprocess
+def sh(c):
+    try:
+        return subprocess.run(["zsh","-lc",c], capture_output=True, text=True, timeout=6).stdout.strip()
+    except Exception:
+        return ""
+o = {}
+o["host"] = sh("hostname")
+o["user"] = sh("whoami")
+o["macos"] = sh("sw_vers -productVersion")
+try:
+    d = json.load(open(os.path.expanduser("~/.claude.json")))
+    a = d.get("oauthAccount") or {}
+    o["account"] = a.get("emailAddress")
+    o["org"] = a.get("organizationName")
+except Exception:
+    o["account"] = None
+    o["org"] = None
+cli = sh("command -v claude")
+o["cli_path"] = cli or None
+o["cli_version"] = (sh("claude --version") or None) if cli else None
+ccdir = os.path.expanduser("~/Library/Application Support/Claude/claude-code")
+try:
+    o["app_claude_code"] = sorted(os.listdir(ccdir)) if os.path.isdir(ccdir) else []
+except Exception:
+    o["app_claude_code"] = []
+o["claude_running"] = bool(sh("pgrep -f claude-code/"))
+print(json.dumps(o))
+'''
+
+
+def _machine_status_probe(machine: dict) -> dict:
+    """Ping + sondeo SSH de una máquina. Devuelve estado y datos de Claude."""
+    ssh = machine.get("ssh") or {}
+    host = ssh.get("host", "")
+    user = ssh.get("user", "")
+    out = {
+        "id": machine.get("id"),
+        "name": machine.get("name") or machine.get("id"),
+        "host": host,
+        "online": False,
+        "claude": None,
+        "error": None,
+    }
+    if not ssh.get("enabled") or not host:
+        out["error"] = "ssh disabled or no host"
+        return out
+    out["online"] = bool(_hk_ping(host))
+    if not out["online"]:
+        return out
+    import base64 as _b64
+    payload = _b64.b64encode(_HK_REMOTE_STATUS_PY.encode("utf-8")).decode("ascii")
+    remote_cmd = "echo {} | base64 -D | python3 -".format(payload)
+    ssh_cmd = [
+        "ssh",
+        "-o", "StrictHostKeyChecking=no",
+        "-o", "BatchMode=yes",
+        "-o", f"ConnectTimeout={_HK_SSH_TIMEOUT}",
+        f"{user}@{host}" if user else host,
+        remote_cmd,
+    ]
+    try:
+        r = subprocess.run(ssh_cmd, capture_output=True, timeout=_HK_SSH_TIMEOUT + 12)
+        if r.returncode != 0:
+            err = (r.stderr or b"").decode("utf-8", "ignore").strip()[:200]
+            out["error"] = err or f"ssh rc={r.returncode}"
+            return out
+        data = (r.stdout or b"").decode("utf-8", "ignore").strip()
+        try:
+            out["claude"] = json.loads(data.splitlines()[-1]) if data else None
+        except Exception:
+            out["error"] = "probe parse error: " + data[:150]
+    except subprocess.TimeoutExpired:
+        out["error"] = "ssh timeout"
+    except Exception as e:
+        out["error"] = (f"ssh error: {e}")[:200]
+    return out
+
+
+@app.get("/api/council/machine-status")
+async def council_machine_status(_auth=Depends(verify_token)):
+    """Estado real de todas las máquinas del consejo (online + cuenta Claude + versión)."""
+    machines = _hk_load_council()
+    if not machines:
+        return {"ok": False, "error": "no council machines", "machines": []}
+    results: list = []
+    with _HkPool(max_workers=min(8, len(machines))) as pool:
+        for r in pool.map(_machine_status_probe, machines):
+            results.append(r)
+    return {
+        "ok": True,
+        "version": "Admira v.26.06.18.r1",
+        "ts": datetime.utcnow().isoformat() + "Z",
+        "summary": {
+            "total": len(results),
+            "online": sum(1 for r in results if r["online"]),
+            "with_account": sum(1 for r in results if (r.get("claude") or {}).get("account")),
+            "claude_running": sum(1 for r in results if (r.get("claude") or {}).get("claude_running")),
+        },
+        "machines": results,
+    }
+
+
+@app.get("/api/council/machine-status/{mid}")
+async def council_machine_status_one(mid: str, _auth=Depends(verify_token)):
+    """Estado de una sola máquina del consejo, por id o por nombre."""
+    for m in _hk_load_council():
+        if str(m.get("id")) == mid or m.get("name") == mid:
+            return {
+                "ok": True,
+                "ts": datetime.utcnow().isoformat() + "Z",
+                "machine": _machine_status_probe(m),
+            }
+    raise HTTPException(status_code=404, detail="machine not found")
+
+
 # ── Run ──────────────────────────────────────────────────────
 if __name__ == "__main__":
     import uvicorn

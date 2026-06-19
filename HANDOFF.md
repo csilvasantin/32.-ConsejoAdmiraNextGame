@@ -6,14 +6,14 @@ Proyecto: `32.-ConsejoAdmiraNextGame`
 ## Punto de entrada
 
 - URL pública: [https://www.admira.live](https://www.admira.live) · Mesa: [https://www.admira.live/teamwork.html](https://www.admira.live/teamwork.html) · Fichas: [https://www.admira.live/consejero.html?p=steve-jobs](https://www.admira.live/consejero.html?p=steve-jobs)
-- Versión visible: `Admira v.26.06.19.r2`
+- Versión visible: `Admira v.26.06.19.r3`
 - Rama: `main`
-- Commit actual: `fdef4f5` (último en `main`)
+- Commit actual: `7676ea1` (último en `main`)
 
 ## Qué comprobar al retomar
 
 1. Abrir la URL pública.
-2. Verificar arriba que pone `Admira v.26.06.19.r2`.
+2. Verificar arriba que pone `Admira v.26.06.19.r3`.
 3. Si se va a desarrollar, clonar y actualizar:
 
 ```bash
@@ -56,6 +56,11 @@ El hash debe coincidir con el commit publicado indicado arriba o ser posterior.
   - `Cancelar`
 
 ## Últimos cambios relevantes
+
+### `Admira v.26.06.19.r3`
+
+- **Biografías a fondo para los 16 consejeros**: cada ficha (`consejero.html`) pasa de una bio de una línea a 3 párrafos (qué silla representa, su filosofía, y su dinámica/pareja en la mesa), al nivel de Steve Jobs. El contenido vive en el array `COUNCIL` de `consejero.html`.
+- Versión unificada a `v.26.06.19.r3`.
 
 ### `Admira v.26.06.19.r2`
 

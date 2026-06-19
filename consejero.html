@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Consejero · AdmiraNext Council</title>
+  <meta name="admiranext-version" content="v.26.06.19.r2">
+  <link rel="icon" href="/council-icon.ico?v=20260522-r1" sizes="any">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0a0a14; --bg2:#0d1024; --ink:#e7e7ef; --muted:#9aa0b4;
+      --wood:#2a1a08; --wood-line:#8b5a14; --amber:#ffdd66; --amber-soft:#f0c040;
+      --red:#e74c3c; --blue:#3498db; --green:#44bb44;
+    }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{
+      font-family:'Press Start 2P',monospace;
+      background:
+        radial-gradient(1200px 600px at 50% -10%, #181d3a 0%, transparent 60%),
+        linear-gradient(180deg,#0a0a14,#0a0a14 60%,#070710);
+      color:var(--ink); min-height:100vh; padding:14px;
+      image-rendering:pixelated; -webkit-font-smoothing:none;
+    }
+    a{color:inherit;text-decoration:none}
+    .wrap{max-width:1040px;margin:0 auto}
+
+    /* barra superior estilo home */
+    .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:stretch;margin-bottom:18px}
+    .pill{
+      background:var(--wood);border:2px solid var(--wood-line);color:var(--amber);
+      font-size:.46rem;line-height:1.5;letter-spacing:.5px;padding:.55rem .7rem;
+      box-shadow:2px 2px 0 #000;display:flex;align-items:center;gap:6px;white-space:nowrap;
+      cursor:pointer;transition:.12s;
+    }
+    .pill:hover{background:var(--wood-line);border-color:var(--amber-soft);color:#fff}
+    .pill.flat{cursor:default}
+    .bar-spacer{flex:1 1 auto}
+
+    /* hero */
+    .hero{
+      display:grid;grid-template-columns:200px 1fr;gap:20px;align-items:stretch;
+      border:3px solid var(--wood-line);background:linear-gradient(180deg,#12162e,#0c0f22);
+      box-shadow:5px 5px 0 #000;padding:18px;
+    }
+    .portrait{
+      border:3px solid #000;outline:2px solid var(--wood-line);outline-offset:-5px;
+      background-repeat:no-repeat;background-color:#05060d;
+      image-rendering:pixelated;min-height:240px;position:relative;
+    }
+    .portrait .seat{
+      position:absolute;left:0;bottom:0;right:0;font-size:.42rem;color:var(--amber);
+      background:linear-gradient(0deg,rgba(0,0,0,.85),transparent);padding:14px 8px 7px;
+    }
+    .hmeta{display:flex;flex-direction:column;justify-content:center;gap:12px;min-width:0}
+    .role-chip{
+      display:inline-flex;align-items:center;gap:8px;align-self:flex-start;
+      background:var(--wood);border:2px solid var(--wood-line);color:var(--amber);
+      font-size:.5rem;padding:.4rem .6rem;box-shadow:2px 2px 0 #000;
+    }
+    .name{font-size:1.5rem;line-height:1.25;color:#fff;text-shadow:3px 3px 0 #000;word-break:break-word}
+    .badges{display:flex;gap:8px;flex-wrap:wrap}
+    .badge{font-size:.44rem;padding:.35rem .5rem;border:2px solid #000;box-shadow:2px 2px 0 #000}
+    .b-racional{background:linear-gradient(135deg,#e74c3c,#c0392b);color:#fff}
+    .b-creativo{background:linear-gradient(135deg,#2980b9,#3498db);color:#fff}
+    .b-gen{background:#1a1f3d;color:var(--amber);border-color:var(--wood-line)}
+    .b-alias{background:#0c2417;color:#7CFFb0;border-color:#1f6b44}
+    .terr{font-size:.6rem;line-height:1.8;color:var(--amber-soft)}
+
+    /* secciones */
+    .grid{display:grid;grid-template-columns:1fr 1fr;gap:14px;margin-top:14px}
+    .card{
+      border:2px solid var(--wood-line);background:#0c0f22;box-shadow:4px 4px 0 #000;padding:14px;
+    }
+    .card h2{font-size:.6rem;color:var(--amber);margin-bottom:12px;letter-spacing:1px}
+    .row{display:flex;justify-content:space-between;gap:10px;font-size:.5rem;line-height:1.7;
+      padding:7px 0;border-bottom:1px dashed #2a3057}
+    .row:last-child{border-bottom:0}
+    .row .k{color:var(--muted)}
+    .row .v{color:var(--ink);text-align:right}
+    .dot{display:inline-block;width:8px;height:8px;margin-right:6px;vertical-align:middle}
+
+    .bio{border:2px solid var(--wood-line);background:#0c0f22;box-shadow:4px 4px 0 #000;
+      padding:18px;margin-top:14px}
+    .bio h2{font-size:.6rem;color:var(--amber);margin-bottom:14px;letter-spacing:1px}
+    .bio p{font-size:.58rem;line-height:2;color:#d7dcf0;margin-bottom:14px;font-family:'Press Start 2P',monospace}
+    .bio p:last-child{margin-bottom:0}
+    .quote{
+      border-left:4px solid var(--amber-soft);background:#12081e22;margin-top:14px;padding:14px 16px;
+      font-size:.6rem;line-height:2;color:var(--amber);font-style:normal
+    }
+    .quote .who{display:block;margin-top:10px;font-size:.44rem;color:var(--muted)}
+
+    .cta{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
+    .cta .pill{font-size:.5rem;padding:.7rem .9rem}
+    .cta .go{background:var(--wood-line);color:#fff;border-color:var(--amber-soft)}
+
+    .foot{text-align:center;color:var(--muted);font-size:.42rem;line-height:2;margin:22px 0 6px}
+
+    .notfound{border:2px solid var(--red);background:#1a0a0a;padding:18px;font-size:.6rem;
+      line-height:2;color:#ffb3b3;box-shadow:4px 4px 0 #000}
+
+    @media(max-width:720px){
+      .hero{grid-template-columns:1fr}
+      .portrait{min-height:280px}
+      .grid{grid-template-columns:1fr}
+      .name{font-size:1.15rem}
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap" id="app"></div>
+
+  <script>
+    // ── Datos del Consejo (autónomos; reflejan COUNCIL/NAMEPLATE_POS de index.html) ──
+    // 1 plantilla para los 16 consejeros: la ficha se genera por slug (?p=steve-jobs).
+    const slugify = s => (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"")
+      .replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+
+    const IMG = { leyendas:"assets/council-leyendas.jpg", coetaneos:"assets/council-coetaneos.jpg" };
+
+    const COUNCIL = [
+      // leyendas
+      { role:"CEO", roleFull:"Chief Executive Officer", persona:"Steve Jobs", side:"racional", gen:"leyendas", icon:"🏛️",
+        machine:"MacBook Air 16", member:"Carlos", pair:"CSO", pairPersona:"George Lucas",
+        territory:"Producto, criterio y foco extremo", crop:{l:7,t:44,w:7,h:17},
+        quote:"La gente no sabe lo que quiere hasta que se lo enseñas.",
+        bio:[
+          "Es la silla del CEO en su versión leyenda: la conciencia de PRODUCTO del Consejo. Su trabajo no es sumar funciones, sino decidir qué se queda fuera. Cada propuesta de AdmiraNeXT pasa por su filtro de \"¿esto es lo suficientemente bueno para llevar nuestro nombre?\".",
+          "Defiende el cruce entre tecnología y humanidades: una pantalla, un robot o una experiencia no valen por lo que hacen, sino por cómo se sienten al usarlos. Empuja a simplificar hasta que solo quede lo esencial, y a cuidar los detalles que nadie ve porque ahí está el alma del producto.",
+          "En la mesa hace de contrapeso del lado creativo: marca el foco, dice \"no\" a las mil distracciones y obliga al equipo a perseguir la excelencia en lugar de la novedad. Cuando algo sale al mundo con la marca Admira, es porque ha superado su listón."
+        ] },
+      { role:"CTO", roleFull:"Chief Technology Officer", persona:"Steve Wozniak", side:"racional", gen:"leyendas", icon:"⚙️",
+        machine:"MacBook Pro Negro 14", member:"Carlos Silva", pair:"CCO", pairPersona:"Walt Disney",
+        territory:"Ingenio técnico y elegancia al construir", crop:{l:18,t:36,w:8,h:21},
+        quote:"La mejor ingeniería es la que cabe en la cabeza de una persona.",
+        bio:["Representa el ingenio técnico puro: hacer mucho con poco y disfrutar construyéndolo. En el Consejo aporta soluciones elegantes y artesanales, recordando que detrás de cada producto hay ingeniería que debe ser sólida, comprensible y reparable."] },
+      { role:"COO", roleFull:"Chief Operations Officer", persona:"Tim Cook", side:"racional", gen:"leyendas", icon:"📋",
+        machine:"MacBook Air Plata", member:"Nines", pair:"CXO", pairPersona:"Howard Schultz",
+        territory:"Escala, disciplina y excelencia operativa", crop:{l:31,t:30,w:8,h:24},
+        quote:"La excelencia operativa es una ventaja competitiva.",
+        bio:["La voz de la operación: convertir las ideas en una cadena que funciona todos los días, a escala y sin drama. Aporta disciplina, logística y previsibilidad, y cuida que la promesa del producto se cumpla también en la entrega."] },
+      { role:"CFO", roleFull:"Chief Financial Officer", persona:"Warren Buffett", side:"racional", gen:"leyendas", icon:"💰",
+        machine:"Mac Mini", member:"Braulio Blanco", pair:"CDO", pairPersona:"Dieter Rams",
+        territory:"Capital, paciencia y sostenibilidad", crop:{l:43,t:27,w:8,h:26},
+        quote:"El precio es lo que pagas; el valor es lo que recibes.",
+        bio:["El criterio financiero del Consejo: paciencia, sentido común y foco en el valor a largo plazo. Recuerda que toda apuesta creativa necesita una base sostenible y que la mejor inversión es la que se entiende."] },
+      { role:"CCO", roleFull:"Chief Creative Officer", persona:"Walt Disney", side:"creativo", gen:"leyendas", icon:"💡",
+        machine:"MacBook Air Blanco", member:"Cesar", pair:"CTO", pairPersona:"Steve Wozniak",
+        territory:"Mundo de marca y experiencia memorable", crop:{l:55,t:27,w:8,h:26},
+        quote:"Si puedes soñarlo, puedes hacerlo.",
+        bio:["El constructor de mundos: marca, magia y experiencias que se recuerdan. En la mesa empuja a pensar en historias y emociones, no solo en funciones, y a tratar cada producto como un lugar al que la gente quiere volver."] },
+      { role:"CDO", roleFull:"Chief Design Officer", persona:"Dieter Rams", side:"creativo", gen:"leyendas", icon:"🎨",
+        machine:"MacBook Air Azul", member:"Consejero", pair:"CFO", pairPersona:"Warren Buffett",
+        territory:"Orden, función y claridad radical", crop:{l:66,t:31,w:7,h:23},
+        quote:"Menos, pero mejor.",
+        bio:["La conciencia del diseño funcional: orden, claridad y honestidad. Sus diez principios son la vara de medir del Consejo: buen diseño es el menos diseño posible, útil, comprensible y duradero."] },
+      { role:"CXO", roleFull:"Chief Experience Officer", persona:"Howard Schultz", side:"creativo", gen:"leyendas", icon:"🧭",
+        machine:"AdmiraTwin (PC)", member:"Laboratorio", pair:"COO", pairPersona:"Tim Cook",
+        territory:"Escenografía, inmersión y cohesión sensorial", crop:{l:77,t:34,w:8,h:21},
+        quote:"No estamos en el negocio del café; servimos a personas.",
+        bio:["El arquitecto de la experiencia: el \"tercer lugar\", la atmósfera y la coherencia sensorial. Cuida que cada punto de contacto con Admira se sienta cálido, propio y conectado con el resto."] },
+      { role:"CSO", roleFull:"Chief Storytelling Officer", persona:"George Lucas", side:"creativo", gen:"leyendas", icon:"📖",
+        machine:"MacBook Air Crema", member:"Carla Rosa", pair:"CEO", pairPersona:"Steve Jobs",
+        territory:"Storyworld, expansión y coherencia narrativa", crop:{l:88,t:41,w:9,h:17},
+        quote:"Una historia bien construida es un universo que crece solo.",
+        bio:["El guardián del relato: universos narrativos coherentes que se expanden sin romperse. Pareja natural del CEO leyenda — entre los dos equilibran foco de producto y ambición de historia."] },
+      // coetaneos
+      { role:"CEO", roleFull:"Chief Executive Officer", persona:"Elon Musk", side:"racional", gen:"coetaneos", icon:"🏛️",
+        machine:"MacBook Air 16", member:"Carlos", pair:"CSO", pairPersona:"Ryan Reynolds", alias:"Neo",
+        territory:"Innovación radical y visión de futuro", crop:{l:7,t:44,w:7,h:17},
+        quote:"Cuando algo es lo bastante importante, lo haces aunque las probabilidades no estén a tu favor.",
+        bio:["La versión contemporánea de la silla CEO: ambición radical y primeros principios. Empuja al Consejo a pensar a 10×, a cuestionar lo que se da por hecho y a moverse rápido hacia el futuro."] },
+      { role:"CTO", roleFull:"Chief Technology Officer", persona:"Jensen Huang", side:"racional", gen:"coetaneos", icon:"⚙️",
+        machine:"MacBook Pro Negro 14", member:"Carlos Silva", pair:"CCO", pairPersona:"John Lasseter", alias:"Morfeo",
+        territory:"IA, GPUs y plataformas de cómputo", crop:{l:18,t:36,w:8,h:21},
+        quote:"Cuanto más compras, más ahorras.",
+        bio:["El CTO de la era de la IA: cómputo, GPUs y plataformas como cimiento de todo lo demás. Aporta la visión de que la inteligencia artificial es infraestructura, no adorno."] },
+      { role:"COO", roleFull:"Chief Operations Officer", persona:"Gwynne Shotwell", side:"racional", gen:"coetaneos", icon:"📋",
+        machine:"MacBook Air Plata", member:"Nines", pair:"CXO", pairPersona:"Carlos Ratti", alias:"Trinity",
+        territory:"Ejecución a escala y logística", crop:{l:31,t:30,w:8,h:24},
+        quote:"La visión sin ejecución es alucinación.",
+        bio:["La maestra de la ejecución: convertir lo imposible en un calendario que se cumple. Aporta rigor operativo y la capacidad de coordinar muchas piezas hacia un lanzamiento real."] },
+      { role:"CFO", roleFull:"Chief Financial Officer", persona:"Ruth Porat", side:"racional", gen:"coetaneos", icon:"💰",
+        machine:"Mac Mini", member:"Braulio Blanco", pair:"CDO", pairPersona:"Jony Ive", alias:"Oráculo",
+        territory:"Gestión financiera y crecimiento sostenible", crop:{l:43,t:27,w:8,h:26},
+        quote:"La disciplina financiera es la que hace posible la ambición.",
+        bio:["El CFO contemporáneo: crecimiento sostenible y asignación de capital con cabeza. Equilibra la audacia del Consejo con métricas claras y solidez."] },
+      { role:"CCO", roleFull:"Chief Creative Officer", persona:"John Lasseter", side:"creativo", gen:"coetaneos", icon:"💡",
+        machine:"MacBook Air Blanco", member:"Cesar", pair:"CTO", pairPersona:"Jensen Huang", alias:"Mouse",
+        territory:"Animación, storytelling y creatividad", crop:{l:55,t:27,w:8,h:26},
+        quote:"La calidad es el mejor plan de negocio.",
+        bio:["La creatividad con corazón: animación y narrativa donde la tecnología sirve a la emoción. Recuerda que la historia siempre va por delante del efecto."] },
+      { role:"CDO", roleFull:"Chief Design Officer", persona:"Jony Ive", side:"creativo", gen:"coetaneos", icon:"🎨",
+        machine:"MacBook Air Azul", member:"Consejero", pair:"CFO", pairPersona:"Ruth Porat", alias:"Arquitecto",
+        territory:"Diseño industrial y simplicidad", crop:{l:66,t:31,w:7,h:23},
+        quote:"La simplicidad no es ausencia, es claridad.",
+        bio:["El diseño industrial llevado a la obsesión: materiales, simplicidad y cuidado por lo invisible. Define cómo se ve y se toca lo que hace Admira."] },
+      { role:"CXO", roleFull:"Chief Experience Officer", persona:"Carlos Ratti", side:"creativo", gen:"coetaneos", icon:"🧭",
+        machine:"AdmiraTwin (PC)", member:"Laboratorio", pair:"COO", pairPersona:"Gwynne Shotwell", alias:"Link",
+        territory:"Ciudades inteligentes y experiencia urbana", crop:{l:77,t:34,w:8,h:21},
+        quote:"El espacio responde a quien lo habita.",
+        bio:["El arquitecto de espacios sensibles: entornos que reaccionan a las personas. Lleva al Consejo la experiencia física y urbana, donde lo digital y lo construido se funden."] },
+      { role:"CSO", roleFull:"Chief Storytelling Officer", persona:"Ryan Reynolds", side:"creativo", gen:"coetaneos", icon:"📖",
+        machine:"MacBook Air Crema", member:"Carla Rosa", pair:"CEO", pairPersona:"Elon Musk", alias:"Cypher",
+        territory:"Marketing viral y narrativa de marca", crop:{l:88,t:41,w:9,h:17},
+        quote:"Si haces reír a la gente, te dejan entrar.",
+        bio:["El narrador viral: marca con humor, oportunidad y cultura de internet. Pareja del CEO contemporáneo — entre ambición e historia, pone el ingenio que hace que la gente comparta."] },
+    ];
+
+    const BY_SLUG = {};
+    COUNCIL.forEach(c => { c.slug = slugify(c.persona); BY_SLUG[c.slug] = c; });
+
+    function cropStyle(c){
+      // Recorta la cara del consejero desde la imagen de grupo (coords body en % de la imagen).
+      const {l,t,w,h} = c.crop;
+      const sx = (10000/w).toFixed(1), sy = (10000/h).toFixed(1);
+      const px = (l/(100-w)*100).toFixed(2), py = (t/(100-h)*100).toFixed(2);
+      return `background-image:url('${IMG[c.gen]}');background-size:${sx}% ${sy}%;background-position:${px}% ${py}%;`;
+    }
+
+    function render(){
+      const params = new URLSearchParams(location.search);
+      const slug = slugify(params.get("p") || params.get("persona") || "steve-jobs");
+      const c = BY_SLUG[slug];
+      const app = document.getElementById("app");
+
+      if(!c){
+        document.title = "Consejero no encontrado · AdmiraNext Council";
+        app.innerHTML = `
+          <div class="bar">
+            <a class="pill" href="index.html">◀ Volver al Consejo</a>
+            <span class="bar-spacer"></span>
+            <span class="pill flat">v.26.06.19.r2</span>
+          </div>
+          <div class="notfound">No encuentro al consejero «${(params.get("p")||"").replace(/[<>]/g,"")}».<br><br>
+            Consejeros disponibles: ${Object.keys(BY_SLUG).join(" · ")}</div>`;
+        return;
+      }
+
+      document.title = `${c.persona} · ${c.role} · AdmiraNext Council`;
+      const sideLabel = c.side === "racional" ? "Racional" : "Creativo";
+      const genLabel = c.gen === "leyendas" ? "Leyenda" : "Coetáneo";
+      const aliasBadge = c.alias ? `<span class="badge b-alias">Matrix · ${c.alias}</span>` : "";
+
+      app.innerHTML = `
+        <div class="bar">
+          <a class="pill" href="index.html">◀ Consejo</a>
+          <a class="pill" href="https://www.admiranext.com" target="_blank" rel="noopener">🏠 AdmiraNeXT</a>
+          <span class="bar-spacer"></span>
+          <span class="pill flat">${c.icon} ${c.role}</span>
+          <span class="pill flat">v.26.06.19.r2</span>
+        </div>
+
+        <div class="hero">
+          <div class="portrait" style="${cropStyle(c)}">
+            <div class="seat">${c.role} · ${sideLabel}</div>
+          </div>
+          <div class="hmeta">
+            <span class="role-chip">${c.icon} ${c.role} — ${c.roleFull}</span>
+            <div class="name">${c.persona}</div>
+            <div class="badges">
+              <span class="badge b-${c.side}">${sideLabel}</span>
+              <span class="badge b-gen">${genLabel}</span>
+              ${aliasBadge}
+            </div>
+            <div class="terr">“${c.territory}”</div>
+          </div>
+        </div>
+
+        <div class="grid">
+          <div class="card">
+            <h2>En el Consejo</h2>
+            <div class="row"><span class="k">Rol</span><span class="v">${c.role} · ${c.roleFull}</span></div>
+            <div class="row"><span class="k">Lado</span><span class="v">${sideLabel}</span></div>
+            <div class="row"><span class="k">Generación</span><span class="v">${genLabel}</span></div>
+            <div class="row"><span class="k">Pareja</span><span class="v">${c.pair} · ${c.pairPersona}</span></div>
+            ${c.alias ? `<div class="row"><span class="k">Alias Matrix</span><span class="v">${c.alias}</span></div>`:""}
+          </div>
+          <div class="card">
+            <h2>Asignación</h2>
+            <div class="row"><span class="k">Operador</span><span class="v">${c.member || "—"}</span></div>
+            <div class="row"><span class="k">Máquina</span><span class="v">${c.machine || "—"}</span></div>
+            <div class="row"><span class="k">Territorio</span><span class="v">${c.territory}</span></div>
+          </div>
+        </div>
+
+        <div class="bio">
+          <h2>Quién es en AdmiraNeXT</h2>
+          ${c.bio.map(p=>`<p>${p}</p>`).join("")}
+          <div class="quote">“${c.quote}”<span class="who">— ${c.persona}, ${c.role} del Consejo</span></div>
+        </div>
+
+        <div class="cta">
+          <a class="pill go" href="index.html#${c.slug}">💬 Preguntarle en el Consejo</a>
+          <a class="pill" href="index.html">◀ Volver a la mesa</a>
+        </div>
+
+        <div class="foot">
+          AdmiraNeXT · Consejo de Silicio · admira.live<br>
+          Ficha de consejero · v.26.06.19.r2
+        </div>`;
+    }
+
+    render();
+    window.addEventListener("popstate", render);
+  </script>
+</body>
+</html>

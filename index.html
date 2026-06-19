@@ -2641,7 +2641,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.19.r1</a>
+            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.19.r2</a>
             <a href="https://www.admiranext.com" target="_blank" rel="noopener" class="version-badge" title="Ir a la matriz AdmiraNeXT">🏠 AdmiraNeXT</a>
             <a href="https://www.admira.live/control.html" target="_blank" rel="noopener" class="version-badge" title="Panel de control operativo de admira.live">🎛️ Control</a>
             <a href="https://www.admira.live/mcp/" target="_blank" rel="noopener" class="version-badge" title="Documentacion publica del MCP Admira Live">🔌 MCP</a>
@@ -3073,6 +3073,12 @@
         return (MATRIX_LINKS[agent.gen] || {})[agent.persona] || null;
     }
 
+    // Slug del consejero para la ficha de detalle (consejero.html?p=<slug>).
+    function cSlug(s) {
+        return (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+            .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    }
+
     // Nameplate positions on image (% from left, % from top) mapped to each character
     // Positions match the visual location of each person in the pixel art
     // 1 consejero = 1 máquina. machineId null = sin máquina asignada (gris)
@@ -3472,6 +3478,7 @@
                             <div class="cd-row"><span class="cd-key">Estado</span><span class="cd-val" style="color:${isOnline ? '#44bb44' : '#e74c3c'}">${isOnline ? (machineStatusText || 'online') : 'offline'}</span></div>
                             <div class="cd-row"><span class="cd-key">Pareja</span><span class="cd-val">${member.pair || '—'} (${member.pairPersona || '—'})</span></div>
                             ${member.territory ? `<div class="cd-focus"><div class="cd-focus-label">Territorio</div>${member.territory}</div>` : ''}
+                            <a class="cd-ficha" href="consejero.html?p=${cSlug(member.persona)}" onclick="event.stopPropagation()" target="_blank" rel="noopener" style="display:block;margin-top:8px;padding:6px 8px;text-align:center;font-size:9px;background:#2a1a08;border:1px solid #8b5a14;color:#ffdd66;text-decoration:none;border-radius:3px;">📋 Ver ficha completa →</a>
                         </div>
                     </span>
                     <div class="member-info">

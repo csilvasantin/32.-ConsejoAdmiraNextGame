@@ -512,7 +512,10 @@ function updateClaudeBadges() {
     const running = !!c.claude_running;
     const cc = (Array.isArray(c.app_claude_code) && c.app_claude_code[0]) || c.cli_version || "";
     let label, dot;
-    if (r.online && c.account) {
+    if (r.monitor === "unsupported") {
+      // Worker Windows / sin SSH: aparece en la mesa con el motivo, no como "offline".
+      label = r.reason || "sin sondeo"; dot = "#c08a3e";
+    } else if (r.online && c.account) {
       label = c.account + (cc ? (" · cc " + cc) : "");
       dot = running ? "#36d399" : "#9aa0a6";
     } else if (r.online) {
@@ -520,7 +523,9 @@ function updateClaudeBadges() {
     } else {
       label = "offline"; dot = "#5b5f66";
     }
-    badge.title = "Cuenta Claude / Claude Code" + (running ? " · corriendo" : "");
+    badge.title = r.monitor === "unsupported"
+      ? "Monitor de cuenta no disponible en esta máquina"
+      : "Cuenta Claude / Claude Code" + (running ? " · corriendo" : "");
     badge.innerHTML = '<span style="width:7px;height:7px;border-radius:50%;display:inline-block;background:' + dot + ';"></span>' + escapeHtml(label);
   });
 }
@@ -800,6 +805,15 @@ function compareMachinesForDisplay(a, b, snapshots) {
   return a.name.localeCompare(b.name, "es", { sensitivity: "base" });
 }
 
+// Acciones acotadas por máquina (lista blanca; el backend valida de nuevo).
+// Cada entrada: botón, tooltip y los textos de feedback (gerundio/hecho).
+const MACT_LABELS = {
+  "claude-open":     { btn: "▶ Abrir Claude", title: "Abrir Claude Code", doing: "Abriendo Claude Code…", done: "Claude Code abierto" },
+  "claude-quit":     { btn: "■ Cerrar",        title: "Cerrar Claude Code", doing: "Cerrando Claude Code…", done: "Claude Code cerrado" },
+  "claude-restart":  { btn: "↻ Reiniciar",     title: "Reiniciar Claude Code", doing: "Reiniciando Claude Code…", done: "Claude Code reiniciado" },
+  "refresh-capture": { btn: "📸 Captura",       title: "Refrescar captura", doing: "Refrescando captura…", done: "Captura actualizada" }
+};
+
 function renderMachineRow(m, snapshots) {
   const group = m.unitType || "council";
   const snap = snapshots?.[m.id];
@@ -823,8 +837,7 @@ function renderMachineRow(m, snapshots) {
           <span class="tw-machine-status tw-machine-status-${previewMeta.tone}" data-preview-status="${m.id}">${previewMeta.label}</span>
         </div>
         ${remoteReady && m.platform !== "Windows" ? `<div class="tw-machine-actions" style="margin-top:4px;display:flex;gap:5px;flex-wrap:wrap;">
-          <button class="tw-mact" data-mact-action="claude-open" data-mact-machine="${m.id}" title="Abrir Claude Code en ${escapeHtml(m.name)}" style="font-size:10px;padding:2px 7px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer;">▶ Abrir Claude</button>
-          <button class="tw-mact" data-mact-action="claude-quit" data-mact-machine="${m.id}" title="Cerrar Claude Code en ${escapeHtml(m.name)}" style="font-size:10px;padding:2px 7px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer;">■ Cerrar</button>
+          ${Object.entries(MACT_LABELS).map(([action, meta]) => `<button class="tw-mact" data-mact-action="${action}" data-mact-machine="${m.id}" title="${escapeHtml(meta.title)} en ${escapeHtml(m.name)}" style="font-size:10px;padding:2px 7px;border-radius:8px;border:1px solid var(--line);background:var(--panel);color:var(--ink);cursor:pointer;">${meta.btn}</button>`).join("")}
         </div>` : ""}
         ${m.unitType === "worker" ? `<div class="tw-machine-caps"><span class="tw-machine-cap tw-machine-cap-kind">PC</span>${(m.capabilities || []).map((cap) => `<span class="tw-machine-cap">${cap}</span>`).join("")}</div>` : ""}
         <span class="tw-app-status">
@@ -935,16 +948,16 @@ function renderMachineApproveList(snapshots) {
     });
   });
 
-  // Per-machine control actions (lista blanca: abrir/cerrar Claude Code)
+  // Per-machine control actions (lista blanca: abrir/cerrar/reiniciar Claude Code, refrescar captura)
   machineApproveList.querySelectorAll(".tw-mact").forEach((btn) => {
     btn.addEventListener("click", async () => {
       const machineId = btn.dataset.mactMachine;
       const action = btn.dataset.mactAction;
+      const meta = MACT_LABELS[action] || { doing: "Ejecutando…", done: "Hecho" };
       const orig = btn.textContent;
-      const verb = action === "claude-quit" ? "Cerrando" : "Abriendo";
       btn.disabled = true;
       btn.textContent = "…";
-      renderMachineFeedback(machineId, { statusText: `⏳ ${verb} Claude Code…` });
+      renderMachineFeedback(machineId, { statusText: `⏳ ${meta.doing}` });
       try {
         const res = await fetch(apiUrl("/api/teamwork/machine-action"), {
           method: "POST",
@@ -953,8 +966,14 @@ function renderMachineApproveList(snapshots) {
         });
         const data = await res.json().catch(() => ({}));
         if (data.ok) {
-          renderMachineFeedback(machineId, { statusText: `✓ Claude Code ${action === "claude-quit" ? "cerrado" : "abierto"}` });
-          setTimeout(loadClaudeStatus, 2500);
+          renderMachineFeedback(machineId, { statusText: `✓ ${meta.done}` });
+          if (action === "refresh-capture") {
+            // La captura ya viene en data.snapshot: refresca snapshots y repinta el monitor.
+            await loadSnapshots();
+            renderMachineFeedback(machineId);
+          } else {
+            setTimeout(loadClaudeStatus, 2500);
+          }
         } else {
           const msg = data.error || `HTTP ${res.status}`;
           showFeedback(`${machineId}: ${msg}`, false);

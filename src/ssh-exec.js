@@ -968,16 +968,40 @@ function probeMachineClaude(machine) {
 
 export async function getCouncilClaudeStatus() {
   const data = await readMachines();
-  const machines = (data.machines || []).filter((m) => (m.unitType || "council") === "council" && (m.ssh || {}).enabled);
-  return Promise.all(machines.map(probeMachineClaude));
+  const all = data.machines || [];
+  // El monitor cubre TODA la flota, no solo el consejo:
+  //  - Sondeo real (SSH + Python) en las máquinas con SSH habilitado y que no sean Windows.
+  //  - Los workers Windows / sin SSH se incluyen marcados `monitor:"unsupported"` con el motivo,
+  //    para que aparezcan en la mesa en vez de desaparecer. En cuanto un worker tenga SSH, se sondea solo.
+  return Promise.all(all.map((m) => {
+    const ssh = m.ssh || {};
+    const probeable = ssh.enabled && (ssh.host || ssh.ip_tailscale) && m.platform !== "Windows";
+    if (probeable) return probeMachineClaude(m);
+    return Promise.resolve({
+      id: m.id,
+      name: m.name || m.id,
+      online: false,
+      claude: null,
+      monitor: "unsupported",
+      reason: m.platform === "Windows" ? "Windows · sin sondeo de cuenta (requiere agente)" : "sin canal SSH",
+      unitType: m.unitType || "council",
+      platform: m.platform || null
+    });
+  }));
 }
 
 // ── Acciones de control acotadas (lista blanca) ─────────────────────────
 // SOLO acciones predefinidas; nunca comando libre ni sudo. Cada acción es
 // un osascript/comando seguro ejecutado por SSH en la máquina del consejo.
 const MACHINE_ACTIONS = {
-  "claude-open": { label: "Abrir Claude Code", osa: 'tell application "Claude" to activate' },
-  "claude-quit": { label: "Cerrar Claude Code", osa: 'tell application "Claude" to quit' }
+  "claude-open": { label: "Abrir Claude Code", osa: ['tell application "Claude" to activate'] },
+  "claude-quit": { label: "Cerrar Claude Code", osa: ['tell application "Claude" to quit'] },
+  // Reinicio: cerrar y reabrir Claude Code (útil cuando queda colgado). Sigue siendo
+  // solo AppleEvents acotados; el delay deja que cierre antes de reactivar.
+  "claude-restart": { label: "Reiniciar Claude Code", osa: ['tell application "Claude" to quit', "delay 2", 'tell application "Claude" to activate'] },
+  // Refrescar captura: vuelve a tomar el pantallazo + estado de apps de esa máquina
+  // (mismo flujo que el refresco periódico, pero bajo demanda). kind:capture, sin osascript.
+  "refresh-capture": { label: "Refrescar captura", kind: "capture" }
 };
 
 export function listMachineActions() {
@@ -997,14 +1021,31 @@ export async function runMachineAction(machineId, action) {
   if (!machine) return { ok: false, error: `Máquina '${machineId}' no encontrada` };
   if (!isAutomationReady(machine)) return { ok: false, error: `Canal de automatizacion no habilitado en '${machine.name}'` };
 
-  // Local: osascript directo.
+  // Acción de captura: recaptura pantalla + estado de apps bajo demanda y actualiza el snapshot.
+  if (spec.kind === "capture") {
+    const [snap, appsRaw] = await Promise.all([captureOneSnapshot(machine), captureAllAppsState(machine)]);
+    if (!snap && !appsRaw && !isLocalMachine(machine)) {
+      markMachineFailed(machine.id);
+      return { ok: false, error: "sin respuesta de la máquina al capturar" };
+    }
+    markMachineOnline(machine.id);
+    const apps = parseAppsState(appsRaw);
+    const existing = machineSnapshots.get(machine.id) || {};
+    machineSnapshots.set(machine.id, mergeMachineSnapshot(existing, snap, { claudeState: apps.claude, codexState: apps.codex }));
+    return { ok: true, name: machine.name, action, snapshot: machineSnapshots.get(machine.id) };
+  }
+
+  const osaLines = Array.isArray(spec.osa) ? spec.osa : [spec.osa];
+
+  // Local: osascript directo (varias sentencias → varios -e).
   if (isLocalMachine(machine)) {
-    const { error } = await execLocalMulti(["-e", spec.osa]);
+    const { error } = await execLocalMulti(osaLines.flatMap((line) => ["-e", line]));
     return error ? { ok: false, error: error.message } : { ok: true, name: machine.name, action };
   }
 
   // Remoto: despierta el display 2s (la GUI bloqueada no acepta AppleEvents) y lanza osascript.
-  const remoteCmd = `caffeinate -u -t 2 && sleep 1 && osascript -e '${spec.osa.replace(/'/g, "'\\''")}'`;
+  const remoteOsa = osaLines.map((line) => `-e '${line.replace(/'/g, "'\\''")}'`).join(" ");
+  const remoteCmd = `caffeinate -u -t 2 && sleep 1 && osascript ${remoteOsa}`;
   const attempt = (useLocal) => new Promise((resolve) => {
     if (useLocal && !deriveLocalHostname(machine)) { resolve(null); return; }
     const args = buildSshArgs(machine, useLocal);

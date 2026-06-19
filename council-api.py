@@ -22,6 +22,7 @@ import os
 import json
 import asyncio
 import time
+import hmac
 import uuid
 import smtplib
 import random
@@ -178,6 +179,9 @@ ALLOWED_EMAILS = {
     if e.strip()
 }
 COUNCIL_MACHINE_TOKEN = os.environ.get("COUNCIL_MACHINE_TOKEN", "")
+# Token dedicado y FUERTE solo para los endpoints destructivos de hackeo
+# (abren Terminal / ejecutan en los Macs). Server-only, NUNCA en el frontend.
+COUNCIL_HACK_TOKEN = os.environ.get("COUNCIL_HACK_TOKEN", "")
 ALLOWED_ORIGINS = [
     "https://csilvasantin.github.io",
     "https://www.admira.live",
@@ -802,6 +806,50 @@ def verify_token(request: Request):
         raise HTTPException(status_code=403, detail="Invalid or missing API token")
 
     raise HTTPException(status_code=401, detail="Authentication required")
+
+
+_HK_AUDIT_PATH = Path(__file__).parent / "hackeo-audit.log"
+
+
+def _hk_audit(ev: dict):
+    """Registra cada intento sobre los endpoints de hackeo (JSONL)."""
+    try:
+        line = json.dumps({"t": datetime.utcnow().isoformat() + "Z", **ev}, ensure_ascii=False)
+        with open(_HK_AUDIT_PATH, "a", encoding="utf-8") as f:
+            f.write(line + "\n")
+    except Exception:
+        pass
+
+
+def verify_hack_token(request: Request):
+    """Auth REFORZADA solo para los endpoints destructivos de hackeo.
+
+    Acepta, por orden:
+      1) X-Council-Hack-Token == COUNCIL_HACK_TOKEN  (comparación timing-safe).
+      2) Authorization: Bearer <ID token de Google> en la allowlist.
+    Fail-closed: si no hay COUNCIL_HACK_TOKEN ni GOOGLE_CLIENT_ID configurados,
+    deniega (el hackeo queda desactivado hasta configurar el secreto en el Mini).
+    No acepta NUNCA el token legacy público (admira2026).
+    """
+    ip = request.headers.get("cf-connecting-ip",
+         request.headers.get("x-forwarded-for",
+         request.client.host if request.client else "unknown"))
+    # 1) Hack-token dedicado (server-only)
+    if COUNCIL_HACK_TOKEN:
+        provided = request.headers.get("x-council-hack-token", "")
+        if provided and hmac.compare_digest(provided, COUNCIL_HACK_TOKEN):
+            _hk_audit({"ip": ip, "auth": "hack_token", "path": request.url.path})
+            return {"sub": "hack", "email": "hack@admira.live"}
+    # 2) Identidad Google (allowlist)
+    auth = request.headers.get("authorization", "")
+    bearer = auth[7:].strip() if auth[:7].lower() == "bearer " else ""
+    if GOOGLE_CLIENT_ID and bearer:
+        ident = _verify_google_identity(bearer)
+        _hk_audit({"ip": ip, "auth": "google", "email": ident.get("email"), "path": request.url.path})
+        return ident
+    # Fail-closed
+    _hk_audit({"ip": ip, "auth": "denied", "path": request.url.path})
+    raise HTTPException(status_code=403, detail="Hackeo requiere hack-token dedicado o login autorizado")
 
 
 # ── Shared Anthropic client ─────────────────────────────────
@@ -3793,7 +3841,7 @@ def _hk_process_one(machine: dict, action: str) -> dict:
 
 
 @app.post("/api/council/hackeo")
-async def council_hackeo(_auth=Depends(verify_token)):
+async def council_hackeo(_rate=Depends(check_rate_limit), _auth=Depends(verify_hack_token)):
     """Lanza la simulación de hackeo en cada máquina del consejo.
 
     Para cada consejero: ping → si vive, SSH; si no, Wake-on-LAN.
@@ -3831,7 +3879,7 @@ async def council_hackeo(_auth=Depends(verify_token)):
 
 
 @app.post("/api/council/hackeo/stop")
-async def council_hackeo_stop(_auth=Depends(verify_token)):
+async def council_hackeo_stop(_auth=Depends(verify_hack_token)):
     """Detiene la simulación cerrando Terminal en cada máquina viva."""
     machines = _hk_load_council()
     results: list = []
@@ -3867,7 +3915,7 @@ def _hk_discover_one(machine: dict) -> dict:
 
 
 @app.post("/api/council/hackeo/discover-macs")
-async def council_hackeo_discover_macs(_auth=Depends(verify_token)):
+async def council_hackeo_discover_macs(_rate=Depends(check_rate_limit), _auth=Depends(verify_hack_token)):
     """Autodescubre las MAC de los Macs encendidos y las persiste en
     machines.json para que la próxima vez podamos despertarlos por
     Wake-on-LAN aunque estén apagados.

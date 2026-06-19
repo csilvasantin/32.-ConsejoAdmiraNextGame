@@ -10,3 +10,6 @@ data/proofs/
 # FleetControl — nunca commitear el token ni el log de auditoría
 fleet-control/.fleet-token
 fleet-control/audit.log
+
+# council-api: log de auditoría del hackeo (runtime)
+hackeo-audit.log

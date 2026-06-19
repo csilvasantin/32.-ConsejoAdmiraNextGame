@@ -5,15 +5,15 @@ Proyecto: `32.-ConsejoAdmiraNextGame`
 
 ## Punto de entrada
 
-- URL pública: [https://www.admira.live](https://www.admira.live) · Mesa: [https://www.admira.live/teamwork.html](https://www.admira.live/teamwork.html)
-- Versión visible: `Admira v.26.06.19.r1`
+- URL pública: [https://www.admira.live](https://www.admira.live) · Mesa: [https://www.admira.live/teamwork.html](https://www.admira.live/teamwork.html) · Fichas: [https://www.admira.live/consejero.html?p=steve-jobs](https://www.admira.live/consejero.html?p=steve-jobs)
+- Versión visible: `Admira v.26.06.19.r2`
 - Rama: `main`
-- Commit actual: `99647c4` (último en `main`)
+- Commit actual: `fdef4f5` (último en `main`)
 
 ## Qué comprobar al retomar
 
 1. Abrir la URL pública.
-2. Verificar arriba que pone `Admira v.26.06.19.r1`.
+2. Verificar arriba que pone `Admira v.26.06.19.r2`.
 3. Si se va a desarrollar, clonar y actualizar:
 
 ```bash
@@ -56,6 +56,13 @@ El hash debe coincidir con el commit publicado indicado arriba o ser posterior.
   - `Cancelar`
 
 ## Últimos cambios relevantes
+
+### `Admira v.26.06.19.r2`
+
+- **Fichas de detalle por consejero** (`consejero.html?p=<slug>`): una sola plantilla reutilizable sirve a los 16 consejeros. Lee el slug de la persona (p. ej. `steve-jobs`, `elon-musk`), recorta el retrato por CSS desde la imagen de grupo (`assets/council-*.jpg`, coords body de `NAMEPLATE_POS`) y pinta rol, lado, generación, pareja, alias Matrix, operador/máquina, territorio, bio y cita — todo con el tema SCUMM. Steve Jobs a fondo; los 15 restantes con ficha completa.
+- **Enlace desde la mesa**: el dropdown de cada consejero en `index.html` añade "📋 Ver ficha completa →" con `consejero.html?p=${cSlug(persona)}` (helper `cSlug`).
+- Página solo en raíz (la sirve GitHub Pages, que es el sitio público). Para añadir/editar bios: tocar el array `COUNCIL` dentro de `consejero.html`.
+- Versión visible unificada a `v.26.06.19.r2` (homepage, mesa, control).
 
 ### `Admira v.26.06.19.r1`
 

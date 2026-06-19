@@ -1413,7 +1413,8 @@
             pointer-events: none; z-index: 3;
         }
         .body-hotspots.preguntar-active,
-        .body-hotspots.entrenar-active { pointer-events: auto; }
+        .body-hotspots.entrenar-active,
+        .body-hotspots.ficha-active { pointer-events: auto; }
         .body-hotspot {
             position: absolute;
             cursor: pointer;
@@ -3515,9 +3516,11 @@
         bhEl.innerHTML = plates.map(p => {
             if (!p.body) return '';
             const b = p.body;
-            return `<div class="body-hotspot" data-persona="${p.persona}" title="${p.persona} (${p.role})"
+            return `<div class="body-hotspot" data-persona="${p.persona}" title="Ver ficha de ${p.persona} (${p.role})"
                 style="left:${b.left}%;top:${b.top}%;width:${b.width}%;height:${b.height}%"></div>`;
         }).join("");
+        // El clic sobre el cuerpo abre la ficha del consejero (salvo en modo preguntar, que selecciona para preguntar).
+        bhEl.classList.add("ficha-active");
 
         // Bocas DESACTIVADAS (quedaban mal): no se renderizan overlays sobre las caras.
         const moEl = document.getElementById("mouth-overlays");
@@ -4230,9 +4233,17 @@
     // Event delegation: handle clicks on body hotspots
     document.getElementById("body-hotspots").addEventListener("click", function(e) {
         const bh = e.target.closest('.body-hotspot');
-        if (!bh || !preguntarMode) return;
-        selectAgentByPersona(bh.getAttribute('data-persona'));
+        if (!bh) return;
+        const persona = bh.getAttribute('data-persona');
+        if (preguntarMode) { selectAgentByPersona(persona); return; }
+        openFichaConsejero(persona);   // modo normal: clic en el consejo abre su ficha de detalle
     });
+
+    // Abre la ficha de detalle del consejero (consejero.html?p=<slug>) en pestaña nueva.
+    function openFichaConsejero(persona) {
+        if (!persona) return;
+        window.open("consejero.html?p=" + cSlug(persona), "_blank", "noopener");
+    }
 
     // Meeting door hotspot click
     document.getElementById("meeting-door-hotspot").addEventListener("click", function(e) {

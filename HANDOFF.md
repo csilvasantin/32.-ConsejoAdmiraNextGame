@@ -6,14 +6,14 @@ Proyecto: `32.-ConsejoAdmiraNextGame`
 ## Punto de entrada
 
 - URL pública: [https://www.admira.live](https://www.admira.live) · Mesa: [https://www.admira.live/teamwork.html](https://www.admira.live/teamwork.html) · Fichas: [https://www.admira.live/consejero.html?p=steve-jobs](https://www.admira.live/consejero.html?p=steve-jobs)
-- Versión visible: `Admira v.26.06.19.r4`
+- Versión visible: `Admira v.26.06.19.r5`
 - Rama: `main`
-- Commit actual: `7297c8e` (último en `main`)
+- Commit actual: `cda559c` (último en `main`)
 
 ## Qué comprobar al retomar
 
 1. Abrir la URL pública.
-2. Verificar arriba que pone `Admira v.26.06.19.r4`.
+2. Verificar arriba que pone `Admira v.26.06.19.r5`.
 3. Si se va a desarrollar, clonar y actualizar:
 
 ```bash
@@ -56,6 +56,14 @@ El hash debe coincidir con el commit publicado indicado arriba o ser posterior.
   - `Cancelar`
 
 ## Últimos cambios relevantes
+
+### `Admira v.26.06.19.r5` — Cierre de seguridad del control remoto
+
+- **Agujero cerrado:** los endpoints de ESCRITURA bajo `/api/teamwork/*` del servidor Node (`src/server.js`) NO pasaban por `requireCouncilWrite`. Como el servicio launchd `com.admiranext.control` (puerto 3030 del Mac Mini) se publica a internet vía el Funnel de Tailscale (`https://macmini.tail48b61c.ts.net`), cualquiera en internet podía mandar prompts arbitrarios a Claude/Codex de toda la flota (`send`/`send-all`), abrir/cerrar/reiniciar Claude por máquina (`machine-action`) o aprobar peticiones (`approve*`) **sin autenticación**.
+- **Fix:** se añade `if (!(await requireCouncilWrite(request, response))) return;` como primera línea de cada POST: `send`, `send-all`, `onboarding-all`, `approve`, `approve-machine`, `machine-action`, `watchdog`, `watchdog/machine` (los `skynet/*audit` ya lo tenían). Mismo guard que `/api/council/tasks` (origen permitido + token del Consejo / login Google + rate limit).
+- **Lecturas intactas:** `machine-status`, `machine-actions`, `snapshots`, `history`, `capture/*`, `watchdog` (GET) siguen abiertas con origin.
+- **Desplegado y verificado en vivo (Mac Mini):** `git fetch origin && git checkout origin/main -- src/server.js …` + `launchctl kickstart -k gui/$(id -u)/com.admiranext.control`. Comprobado contra el Funnel público: `POST /api/teamwork/send` y `/machine-action` sin credencial → **HTTP 401** (`Login del Consejo requerido`); `GET history/snapshots/machine-actions` → **200**.
+- Aviso enviado a Telegram `AdmiraXP`.
 
 ### `Admira v.26.06.19.r4`
 

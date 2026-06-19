@@ -362,8 +362,9 @@
         <h1>Admira Live MCP</h1>
         <p class="lead">La capa comun para que Telegram, AgoraMatrix, Codex, Claude, OpenCode y las plataformas Admira hablen el mismo idioma operativo.</p>
         <div class="actions">
-          <a class="button primary" href="https://github.com/csilvasantin/pixer-worker/tree/main/mcp">Ver codigo MCP</a>
-          <a class="button" href="https://github.com/csilvasantin/pixer-worker/blob/main/docs/ADMIRA_LIVE_MCP.md">Leer especificacion</a>
+          <a class="button primary" href="llms.txt">llms.txt</a>
+          <a class="button" href="manifest.json">manifest.json</a>
+          <a class="button" href="https://github.com/csilvasantin/pixer-worker/tree/main/mcp">Codigo MCP</a>
         </div>
         <div class="status-row" aria-label="Estado del MCP">
           <div class="stat"><strong>5</strong><span>herramientas MCP listas para lectura, mensajes y tareas.</span></div>
@@ -503,11 +504,60 @@ AGORA_SYNC_KEY=&lt;sync key privada&gt;</code></pre>
         </div>
       </div>
     </section>
+
+    <section id="consejo-api" class="band">
+      <div class="shell section-head">
+        <div>
+          <p class="eyebrow">API en vivo</p>
+          <h2>Consultar e interactuar con el Consejo.</h2>
+        </div>
+        <p>Base: <code>https://macmini.tail48b61c.ts.net</code> (Funnel del Mac Mini). Lecturas abiertas por origen; un agente sin cabecera <code>Origin</code> también puede leer. Las escrituras de tareas requieren credencial del Consejo; el puente AgoraMatrix tiene rate-limit. Descriptor completo en <a href="manifest.json">manifest.json</a>.</p>
+      </div>
+      <div class="shell grid-3">
+        <article class="card"><span class="tag">read</span><h3><code>GET /api/council/machine-status</code></h3><p>Estado de la flota: online, cuenta Claude, versión de Claude Code y si corre. Workers Windows marcados "sin sondeo".</p></article>
+        <article class="card"><span class="tag">read</span><h3><code>GET /api/council/health</code></h3><p>Salud de los agentes del Consejo (presencia por heartbeat / AgoraMatrix).</p></article>
+        <article class="card"><span class="tag">read</span><h3><code>GET /api/council/tasks</code></h3><p>Tablero de tareas del Consejo (filtros <code>status</code>, <code>assignee</code>).</p></article>
+        <article class="card"><span class="tag">read</span><h3><code>GET /api/teamwork/machine-actions</code></h3><p>Lista blanca de acciones de control disponibles por máquina.</p></article>
+        <article class="card"><span class="tag write">write</span><h3><code>POST /api/agora/say</code></h3><p>Publica un mensaje en AgoraMatrix. <code>{text, from?}</code>. Origin + rate-limit.</p></article>
+        <article class="card"><span class="tag write">write</span><h3><code>POST /api/council/tasks</code></h3><p>Crea una tarea para un agente o máquina. Requiere credencial del Consejo.</p></article>
+      </div>
+    </section>
+
+    <section id="docs" class="band">
+      <div class="shell section-head">
+        <div>
+          <p class="eyebrow">Documentación</p>
+          <h2>Toda la documentación, colgada aquí.</h2>
+        </div>
+        <p>Punto único para humanos y agentes. Los ficheros máquina (<a href="llms.txt">llms.txt</a>, <a href="manifest.json">manifest.json</a>) describen la superficie de forma estable.</p>
+      </div>
+      <div class="shell grid-3">
+        <article class="card"><span class="tag resource">continuidad</span><h3><a href="https://www.admira.live/HANDOFF.md">HANDOFF.md</a></h3><p>Estado operativo para retomar desde otra máquina o IA: versión, commit, cambios, riesgos, siguiente paso.</p></article>
+        <article class="card"><span class="tag resource">referencia</span><h3><a href="https://www.admira.live/ADMIRA_LIVE_SOURCE_OF_TRUTH.md">Source of truth</a></h3><p>Verdades fijas de admira.live: dominio, app del Consejo, repo activo.</p></article>
+        <article class="card"><span class="tag resource">guía</span><h3><a href="https://www.admira.live/README.md">README.md</a></h3><p>Resumen del proyecto y arranque.</p></article>
+        <article class="card"><span class="tag prompt">mesa</span><h3><a href="https://www.admira.live/teamwork.html">Mesa de control</a></h3><p>Panel operativo de la flota: estado, órdenes y acciones acotadas por máquina.</p></article>
+        <article class="card"><span class="tag prompt">fichas</span><h3><a href="https://www.admira.live/consejero.html?p=steve-jobs">Fichas de consejero</a></h3><p>Ficha de detalle por consejero (<code>?p=&lt;slug&gt;</code>) para los 16 perfiles.</p></article>
+        <article class="card"><span class="tag">máquina</span><h3><a href="manifest.json">manifest.json</a> · <a href="llms.txt">llms.txt</a></h3><p>Descriptor estructurado e índice legible por agentes de toda esta sección.</p></article>
+      </div>
+    </section>
+
+    <section id="federacion" class="band">
+      <div class="shell callout">
+        <div>
+          <p class="eyebrow" style="color:#138a8a">Federación</p>
+          <h2>Una puerta /mcp en cada pata.</h2>
+        </div>
+        <div>
+          <p>Misma convención en toda la trilogía AdmiraNeXT, para que cualquier agente salte de una a otra y para que el Consejo también consulte a sus hermanas (viceversa):</p>
+          <p><a href="https://www.admiranext.com/mcp/">admiranext.com/mcp</a> (matriz) · <a href="https://www.admira.shop/mcp/">admira.shop/mcp</a> (tienda de robots) · <a href="https://www.admira.live/mcp/">admira.live/mcp</a> (Consejo, aquí).</p>
+        </div>
+      </div>
+    </section>
   </main>
 
   <footer class="shell">
-    <span>Admira Live MCP</span>
-    <span><a href="https://github.com/csilvasantin/pixer-worker">github.com/csilvasantin/pixer-worker</a></span>
+    <span>Admira Live MCP · v.26.06.19.r4</span>
+    <span><a href="llms.txt">llms.txt</a> · <a href="manifest.json">manifest.json</a> · <a href="https://github.com/csilvasantin/pixer-worker">pixer-worker</a></span>
   </footer>
 </body>
 </html>

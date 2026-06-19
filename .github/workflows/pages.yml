@@ -43,10 +43,7 @@ jobs:
           cp docs/teamwork.js _site/teamwork.js
           cp docs/snapshots.json _site/snapshots.json
           cp -r docs/snapshots _site/snapshots
-          # AgoraMatrix (control operativo de la mesa) → /agora.html (antes /control)
-          cp docs/control.html _site/agora.html 2>/dev/null || true
-          # FleetControl (panel de la flota de Macs) → /control y /control/
-          mkdir -p _site/control && cp control/index.html _site/control/index.html
+          cp docs/control.html _site/control.html 2>/dev/null || true
           cp docs/equipo.html _site/equipo.html 2>/dev/null || true
           cp docs/admin.html _site/admin.html 2>/dev/null || true
           cp public/alta.html _site/alta.html 2>/dev/null || true

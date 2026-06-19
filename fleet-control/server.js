@@ -17,6 +17,7 @@
 'use strict';
 const http = require('http');
 const { spawn } = require('child_process');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 
@@ -25,14 +26,32 @@ const PORT = parseInt(process.env.FLEET_PORT || '9140', 10);
 const BASE = '/fleet';                       // prefijo de ruta (lo pone el funnel)
 const ALLOW_ORIGINS = ['https://www.admira.live', 'https://admira.live', 'https://macmini.tail48b61c.ts.net'];
 
+// Endurecimiento (S1-B / S2 / S3). El funnel es público y oculta la IP real
+// del cliente (todo llega como 127.0.0.1), así que NO hacemos lockout por IP
+// —bloquearía al propio operador—: usamos tarpit creciente en fallos de auth,
+// un techo anti-flood y log de auditoría en fleet-control/audit.log.
+const RL_WINDOW_MS = 60000;
+const RL_MAX = 300;                          // techo de peticiones/min (anti-flood, no afecta a uso normal)
+const TARPIT_MAX_MS = 2000;                  // retardo máximo por fallo de auth
+const AUDIT_FILE = path.join(DIR, 'audit.log');
+
 function loadJSON(f, fallback) { try { return JSON.parse(fs.readFileSync(path.join(DIR, f), 'utf8')); } catch (e) { return fallback; } }
 const FLEET = loadJSON('fleet.json', { machines: [] });
 
-function token() {
+// Token con rotación en caliente: env manda; si no, se relee .fleet-token
+// (cache 5s) para poder rotar sin reiniciar el servicio.
+let _tokCache = '';
+let _tokAt = 0;
+function currentToken() {
   if (process.env.FLEET_TOKEN) return process.env.FLEET_TOKEN.trim();
-  try { return fs.readFileSync(path.join(DIR, '.fleet-token'), 'utf8').trim(); } catch (e) { return ''; }
+  const now = Date.now();
+  if (now - _tokAt > 5000) {
+    try { _tokCache = fs.readFileSync(path.join(DIR, '.fleet-token'), 'utf8').trim(); } catch (e) { _tokCache = ''; }
+    _tokAt = now;
+  }
+  return _tokCache;
 }
-const TOKEN = token();
+const TOKEN = currentToken();
 
 /* ----- ejecutar en una máquina (local o ssh) -------------------------------- */
 function machineById(id) { return FLEET.machines.find(m => m.id === id); }
@@ -95,7 +114,47 @@ function cors(req, res) {
   res.setHeader('Access-Control-Max-Age', '600');
 }
 function json(res, code, obj) { res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(obj)); }
-function authed(req) { return TOKEN && (req.headers['x-fleet-token'] === TOKEN); }
+
+// Comparación de token en tiempo constante (S3). La diferencia de longitud
+// se filtra (inevitable), pero no el contenido.
+function safeEqual(a, b) {
+  const ba = Buffer.from(String(a || '')), bb = Buffer.from(String(b || ''));
+  if (ba.length !== bb.length || ba.length === 0) return false;
+  return crypto.timingSafeEqual(ba, bb);
+}
+function authed(req) { return safeEqual(req.headers['x-fleet-token'], currentToken()); }
+
+// --- auditoría + anti-abuso ---
+function clientIp(req) {
+  const xff = String(req.headers['x-forwarded-for'] || '').split(',')[0].trim();
+  return xff || req.socket.remoteAddress || 'unknown';
+}
+function audit(ev) {
+  try { fs.appendFile(AUDIT_FILE, JSON.stringify({ t: new Date().toISOString(), ...ev }) + '\n', () => {}); } catch (e) {}
+}
+const _hits = new Map();
+function rateLimited(ip) {
+  const now = Date.now();
+  const arr = (_hits.get(ip) || []).filter(ts => now - ts < RL_WINDOW_MS);
+  arr.push(now); _hits.set(ip, arr);
+  return arr.length > RL_MAX;
+}
+let _recentFails = [];
+function tarpitMs() {
+  const now = Date.now();
+  _recentFails = _recentFails.filter(ts => now - ts < RL_WINDOW_MS);
+  return Math.min(TARPIT_MAX_MS, 250 * _recentFails.length);
+}
+// Exige token; si falla, audita + tarpit creciente. Devuelve true si autorizado.
+async function gate(req, res, ip) {
+  if (authed(req)) return true;
+  _recentFails.push(Date.now());
+  const wait = tarpitMs();
+  audit({ ip, ev: 'auth_fail', url: req.url, wait });
+  if (wait) await new Promise(r => setTimeout(r, wait));
+  json(res, 401, { error: 'token requerido' });
+  return false;
+}
 function readBody(req) {
   return new Promise((resolve) => { let b = ''; req.on('data', d => { b += d; if (b.length > 1e6) b = b.slice(0, 1e6); }); req.on('end', () => { try { resolve(b ? JSON.parse(b) : {}); } catch (e) { resolve({}); } }); });
 }
@@ -104,15 +163,18 @@ function readBody(req) {
 const server = http.createServer(async (req, res) => {
   cors(req, res);
   if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
+  const ip = clientIp(req);
   let url = req.url.split('?')[0];
   if (url.startsWith(BASE)) url = url.slice(BASE.length) || '/';
 
+  if (rateLimited(ip)) { audit({ ip, ev: 'rate_limited', url }); return json(res, 429, { error: 'demasiadas peticiones' }); }
+
   // salud (sin token)
-  if (url === '/api/health' || url === '/health') return json(res, 200, { ok: true, service: 'fleet-control', machines: FLEET.machines.length, hasToken: !!TOKEN });
+  if (url === '/api/health' || url === '/health') return json(res, 200, { ok: true, service: 'fleet-control', machines: FLEET.machines.length, hasToken: !!currentToken() });
 
   // estado de la flota (lectura) — requiere token (el funnel es público)
   if (url === '/api/status') {
-    if (!authed(req)) return json(res, 401, { error: 'token requerido' });
+    if (!(await gate(req, res, ip))) return;
     const probe = 'echo ONLINE; scutil --get ComputerName 2>/dev/null || hostname';
     const results = await Promise.all(FLEET.machines.map(async (m) => {
       const r = await run(m, probe, 9000);
@@ -124,24 +186,26 @@ const server = http.createServer(async (req, res) => {
 
   // ejecutar comando libre
   if (url === '/api/run' && req.method === 'POST') {
-    if (!authed(req)) return json(res, 401, { error: 'token requerido' });
+    if (!(await gate(req, res, ip))) return;
     const body = await readBody(req);
     const m = machineById(body.machine);
     if (!m) return json(res, 400, { error: 'máquina desconocida' });
     if (!body.cmd || !String(body.cmd).trim()) return json(res, 400, { error: 'comando vacío' });
     const r = await run(m, String(body.cmd), Math.min(body.timeoutMs || 25000, 60000));
+    audit({ ip, ev: 'run', machine: m.id, cmd: String(body.cmd).slice(0, 500), rc: r.rc, ms: r.ms });
     return json(res, 200, { machine: m.id, ...r });
   }
 
   // acción predefinida
   if (url === '/api/action' && req.method === 'POST') {
-    if (!authed(req)) return json(res, 401, { error: 'token requerido' });
+    if (!(await gate(req, res, ip))) return;
     const body = await readBody(req);
     const m = machineById(body.machine);
     if (!m) return json(res, 400, { error: 'máquina desconocida' });
     const fn = ACTIONS[body.action];
     if (!fn) return json(res, 400, { error: 'acción desconocida', acciones: Object.keys(ACTIONS) });
     const r = await run(m, fn(body.arg), 25000);
+    audit({ ip, ev: 'action', machine: m.id, action: body.action, arg: body.arg != null ? String(body.arg).slice(0, 200) : undefined, rc: r.rc, ms: r.ms });
     return json(res, 200, { machine: m.id, action: body.action, ...r });
   }
 

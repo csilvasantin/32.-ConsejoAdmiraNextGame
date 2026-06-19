@@ -6,3 +6,7 @@ node_modules/
 
 # capturas de prueba de tareas (runtime)
 data/proofs/
+
+# FleetControl — nunca commitear el token ni el log de auditoría
+fleet-control/.fleet-token
+fleet-control/audit.log

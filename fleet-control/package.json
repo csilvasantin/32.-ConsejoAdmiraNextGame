@@ -1,0 +1,6 @@
+{
+  "name": "fleet-control",
+  "private": true,
+  "type": "commonjs",
+  "description": "Hub de control de la flota de Macs (CommonJS, sin dependencias). El package.json raíz es ESM; este lo aísla como CommonJS."
+}

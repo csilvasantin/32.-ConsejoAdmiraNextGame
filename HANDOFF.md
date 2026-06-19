@@ -6,14 +6,14 @@ Proyecto: `32.-ConsejoAdmiraNextGame`
 ## Punto de entrada
 
 - URL pública: [https://www.admira.live](https://www.admira.live) · Mesa: [https://www.admira.live/teamwork.html](https://www.admira.live/teamwork.html) · Fichas: [https://www.admira.live/consejero.html?p=steve-jobs](https://www.admira.live/consejero.html?p=steve-jobs)
-- Versión visible: `Admira v.26.06.19.r6`
+- Versión visible: `Admira v.26.06.19.r7`
 - Rama: `main`
-- Commit actual: `02ea2fe` (último en `main`)
+- Commit actual: `30f29d1` (último en `main`)
 
 ## Qué comprobar al retomar
 
 1. Abrir la URL pública.
-2. Verificar arriba que pone `Admira v.26.06.19.r6`.
+2. Verificar arriba que pone `Admira v.26.06.19.r7`.
 3. Si se va a desarrollar, clonar y actualizar:
 
 ```bash
@@ -56,6 +56,14 @@ El hash debe coincidir con el commit publicado indicado arriba o ser posterior.
   - `Cancelar`
 
 ## Últimos cambios relevantes
+
+### `Admira v.26.06.19.r7` — Control de energía (Dormir/Despertar) + diagnóstico SSH/MAC
+
+- **Energía por máquina** (lista blanca, `POST /api/teamwork/machine-action`): `sleep` (dormir, `pmset sleepnow`, sin sudo) y `wake` (Wake-on-LAN). El WoL manda el magic packet por `dgram` (UDP broadcast 9 y 7) usando la `mac_address`; **no exige SSH** (la máquina puede estar apagada), solo la MAC. Nunca duerme el propio servidor. Botones 💤 Dormir / ⏻ Despertar en la mesa.
+- **Diagnóstico SSH + autodescubrir MAC** (`POST /api/teamwork/ssh-check`, gateado): prueba SSH a cada máquina y, de paso, lee la MAC de la interfaz por defecto y la persiste en `data/machines.json`. Botón global "🔌 Probar SSH / MAC". **Hay que pasarlo antes de usar WoL** (rellena las MAC que faltan; 5 de 8 Macs no la tenían).
+- **Reparada la auth de los botones de control**: tras el fix de seguridad r5, los `POST /api/teamwork/*` exigen token (`legacyTokenEnabled:true`) pero el frontend no lo enviaba → todos los botones daban **401**. Nuevo `councilHeaders()` envía la **"Clave operador"** (campo `agoraKey`) como credencial del Consejo (`Authorization: Bearer` + `X-Council-Token`). **Para operar la mesa: pega la Clave operador arriba.**
+- **Límites del WoL**: cada Mac necesita *"Wake for network access"* activado y estar en la **misma LAN** que el Mac Mini (WoL es L2, no cruza redes; Sitges no se despertaría desde el Mac Mini). Los 4 PC Windows siguen con `ssh.enabled:false` (no remoteables hasta habilitar SSH en cada uno).
+- Versión unificada a `v.26.06.19.r7` + cache-bust `teamwork.js?v=20260619-2`.
 
 ### `Admira v.26.06.19.r6` — Clic en el consejo → ficha de detalle
 

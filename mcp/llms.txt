@@ -58,7 +58,7 @@ Código y spec: https://github.com/csilvasantin/pixer-worker/tree/main/mcp
 El Consejo también consulta a sus hermanos de la trilogía AdmiraNeXT. Misma convención
 `/mcp/` en cada pata:
 - Matriz: https://www.admiranext.com/mcp/
-- Tienda de robots: https://www.admira.shop/mcp/
+- Tienda de robots: https://admira.shop/mcp/
 
 ## Convenciones
 

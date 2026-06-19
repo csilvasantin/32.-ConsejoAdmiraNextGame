@@ -3783,15 +3783,21 @@
         "Tracks cleared.",
     ];
 
+    // ⚠️ INVARIANTE: cada `id` DEBE existir en data/machines.json con
+    // unitType:"council" y ssh.enabled:true. El backend /api/council/hackeo
+    // ataca ESE inventario y devuelve el estado por id; si un id de aquí no
+    // existe allí, su panel se queda en "? not in machines.json" y "el hackeo
+    // no funciona en ese bot". (Antes había 4 seats fantasma — airplata/airazul/
+    // pctwin/aircrema — que no existían en el inventario; reapuntados al fleet real.)
     const HACK_MACHINES = [
-        { id: "admira-macbookair16",      role: "CEO", persona: "Steve Jobs",      ip: "100.99.176.126",  host: "MacBookAir16",   user: "csilvasantin" },
-        { id: "admira-macbookpronegro14", role: "CTO", persona: "Steve Wozniak",   ip: "100.101.192.1",   host: "MacBookPro14",   user: "csilvasantin" },
-        { id: "admira-macbookairplata",   role: "COO", persona: "Tim Cook",        ip: "100.114.113.88",  host: "MacBookAirPlata",user: "csilvasantin" },
-        { id: "admira-macmini",           role: "CFO", persona: "Warren Buffett",  ip: "100.74.101.14",   host: "MacMini",        user: "csilvasantin" },
-        { id: "admira-macbookairblanco",  role: "CCO", persona: "Walt Disney",     ip: "100.75.118.75",   host: "MacBookAirBlanco",user: "csilvasantin" },
-        { id: "admira-macbookairazul",    role: "CDO", persona: "Dieter Rams",     ip: "100.84.81.45",    host: "MacBookAirAzul", user: "csilvasantin" },
-        { id: "admira-pctwin",            role: "CXO", persona: "Howard Schultz",  ip: "100.121.18.12",   host: "AdmiraTwin",     user: "34665" },
-        { id: "admira-macbookaircrema",   role: "CSO", persona: "George Lucas",    ip: "100.110.80.2",    host: "MacBookAirCrema",user: "csilvasantin" },
+        { id: "admira-macbookair16",      role: "CEO", persona: "Steve Jobs",     ip: "100.99.176.126", host: "MacBookAir16",      user: "csilvasantin" },
+        { id: "admira-macbookpronegro14", role: "CTO", persona: "Steve Wozniak",  ip: "100.101.192.1",  host: "MacBookProNegro14", user: "csilvasantin" },
+        { id: "admira-macbookpro16",      role: "COO", persona: "Tim Cook",       ip: "100.114.181.54", host: "MacBookPro16",      user: "csilvasantin" },
+        { id: "admira-macmini",           role: "CFO", persona: "Warren Buffett", ip: "100.74.101.14",  host: "MacMini",           user: "csilvasantin" },
+        { id: "admira-macbookairblanco",  role: "CCO", persona: "Walt Disney",    ip: "100.75.118.75",  host: "MacBookAirBlanco",  user: "csilvasantin" },
+        { id: "admira-macbookairnines",   role: "CDO", persona: "Dieter Rams",    ip: "100.76.96.50",   host: "MacBookAirNines",   user: "csilvasantin" },
+        { id: "admira-macbookairluna",    role: "CXO", persona: "Howard Schultz", ip: "100.98.68.63",   host: "MacBookAirLuna",    user: "csilvasantin" },
+        { id: "admira-macbook-carla",     role: "CSO", persona: "George Lucas",   ip: "100.110.80.2",   host: "MacBookCarla",      user: "csilvasantin" },
     ];
 
     function fillHackLine(line, machine) {

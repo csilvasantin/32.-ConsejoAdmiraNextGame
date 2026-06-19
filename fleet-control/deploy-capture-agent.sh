@@ -19,6 +19,10 @@ while true; do
   if [ -n "$n" ] && [ "$n" != "$last" ]; then
     last="$n"
     rm -f "$P"
+    # despertar la pantalla por si está apagada por inactividad (laptops ociosos)
+    caffeinate -u -t 4 >/dev/null 2>&1 &
+    /usr/bin/pmset touch >/dev/null 2>&1 || true
+    sleep 1
     open -W -n -a "$HOME/Applications/AgoraCapture.app" >/dev/null 2>&1
     for i in 1 2 3 4 5 6; do [ -f "$P" ] && break; sleep 0.4; done
     if [ -f "$P" ] && [ "$(wc -c < "$P" 2>/dev/null)" -gt 1000 ]; then

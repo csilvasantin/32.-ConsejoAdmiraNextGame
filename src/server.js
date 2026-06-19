@@ -1255,6 +1255,7 @@ const server = createServer(async (request, response) => {
   }
 
   if (request.method === "POST" && url.pathname === "/api/teamwork/send") {
+    if (!(await requireCouncilWrite(request, response))) return;
     const rawBody = await readRequestBody(request);
     const parsed = rawBody ? JSON.parse(rawBody) : {};
     let { machineId, prompt, target } = parsed;
@@ -1287,6 +1288,7 @@ const server = createServer(async (request, response) => {
   }
 
   if (request.method === "POST" && url.pathname === "/api/teamwork/send-all") {
+    if (!(await requireCouncilWrite(request, response))) return;
     const rawBody = await readRequestBody(request);
     const parsed = rawBody ? JSON.parse(rawBody) : {};
     const prompt = parsed.prompt?.trim();
@@ -1334,6 +1336,7 @@ const server = createServer(async (request, response) => {
   }
 
   if (request.method === "POST" && url.pathname === "/api/teamwork/onboarding-all") {
+    if (!(await requireCouncilWrite(request, response))) return;
     const rawBody = await readRequestBody(request);
     const parsed = rawBody ? JSON.parse(rawBody) : {};
     const prompt = parsed.prompt?.trim() || DEFAULT_ONBOARDING_PROMPT;
@@ -1344,6 +1347,7 @@ const server = createServer(async (request, response) => {
   }
 
   if (request.method === "POST" && url.pathname === "/api/teamwork/approve") {
+    if (!(await requireCouncilWrite(request, response))) return;
     const rawBody = await readRequestBody(request);
     const parsed = rawBody ? JSON.parse(rawBody) : {};
     const target = parsed.target || "claude";
@@ -1358,6 +1362,7 @@ const server = createServer(async (request, response) => {
   }
 
   if (request.method === "POST" && url.pathname === "/api/teamwork/approve-machine") {
+    if (!(await requireCouncilWrite(request, response))) return;
     const rawBody = await readRequestBody(request);
     const parsed = rawBody ? JSON.parse(rawBody) : {};
     const { machineId, target } = parsed;
@@ -1392,6 +1397,7 @@ const server = createServer(async (request, response) => {
   }
 
   if (request.method === "POST" && url.pathname === "/api/teamwork/machine-action") {
+    if (!(await requireCouncilWrite(request, response))) return;
     const rawBody = await readRequestBody(request);
     const parsed = rawBody ? JSON.parse(rawBody) : {};
     const { machineId, action } = parsed;
@@ -1476,6 +1482,7 @@ const server = createServer(async (request, response) => {
   }
 
   if (request.method === "POST" && url.pathname === "/api/teamwork/watchdog") {
+    if (!(await requireCouncilWrite(request, response))) return;
     const rawBody = await readRequestBody(request);
     const parsed = rawBody ? JSON.parse(rawBody) : {};
     setWatchdogEnabled(!!parsed.enabled);
@@ -1484,6 +1491,7 @@ const server = createServer(async (request, response) => {
   }
 
   if (request.method === "POST" && url.pathname === "/api/teamwork/watchdog/machine") {
+    if (!(await requireCouncilWrite(request, response))) return;
     const rawBody = await readRequestBody(request);
     const parsed = rawBody ? JSON.parse(rawBody) : {};
     if (!parsed.machineId) {

@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>FleetControl · AdmiraNext</title>
+<style>
+  :root{
+    --bg:#0b0e14;--panel:#131822;--panel2:#1a212e;--line:#26303f;--ink:#e8eef7;--mut:#8a97ab;
+    --acc:#5bd6c0;--acc2:#7aa2ff;--warn:#ffb454;--bad:#ff6b6b;--ok:#5bd6c0;
+    --mono:'SF Mono',ui-monospace,Menlo,Consolas,monospace;--sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%}
+  body{background:radial-gradient(120% 90% at 50% 0%,#101622,#0b0e14);color:var(--ink);font-family:var(--sans)}
+  header{display:flex;align-items:center;gap:14px;padding:14px 22px;border-bottom:1px solid var(--line)}
+  header h1{font-size:17px;margin:0;font-weight:800;letter-spacing:.3px}
+  header h1 .tag{color:var(--acc);font-family:var(--mono)}
+  header .sub{color:var(--mut);font-size:12px}
+  .spacer{flex:1}
+  .pill{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:5px 11px;color:var(--mut);cursor:pointer}
+  .pill.ok{color:var(--ok);border-color:var(--ok)}
+  .pill.bad{color:var(--bad);border-color:var(--bad)}
+  .wrap{max-width:1100px;margin:0 auto;padding:22px}
+  .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px}
+  .card .top{display:flex;align-items:center;gap:11px}
+  .card .em{font-size:30px;line-height:1}
+  .card .nm{font-weight:700;font-size:15px}
+  .card .role{color:var(--mut);font-size:12px}
+  .dot{width:10px;height:10px;border-radius:50%;background:#5a6678;flex:none}
+  .dot.on{background:var(--ok);box-shadow:0 0 9px var(--ok)}
+  .info{font-family:var(--mono);font-size:11.5px;color:var(--mut);white-space:pre-wrap;line-height:1.6;min-height:18px}
+  .acts{display:flex;flex-wrap:wrap;gap:6px}
+  button{font-family:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:9px;padding:6px 10px;font-size:12px;transition:.12s}
+  button:hover{border-color:var(--acc);color:#fff}
+  button:disabled{opacity:.4;cursor:not-allowed}
+  button.primary{background:var(--acc);color:#06231e;border-color:var(--acc);font-weight:700}
+  button.bad:hover{border-color:var(--bad);color:var(--bad)}
+  .console{margin-top:18px;background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px}
+  .console h3{margin:0 0 10px;font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:var(--mut)}
+  .crow{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+  select,input[type=text]{font-family:inherit;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:8px 10px;font-size:13px;outline:none}
+  input[type=text]{flex:1;min-width:200px;font-family:var(--mono)}
+  select:focus,input:focus{border-color:var(--acc2)}
+  .out{margin-top:12px;display:flex;flex-direction:column;gap:8px;max-height:340px;overflow:auto}
+  .res{border:1px solid var(--line);border-radius:10px;overflow:hidden}
+  .res .h{display:flex;align-items:center;gap:8px;padding:6px 10px;background:#161d28;font-size:12px}
+  .res .h .who{font-weight:700}
+  .res .h .rc{margin-left:auto;font-family:var(--mono);font-size:11px}
+  .res .h .rc.ok{color:var(--ok)} .res .h .rc.err{color:var(--bad)}
+  .res pre{margin:0;padding:9px 11px;font-family:var(--mono);font-size:11.5px;line-height:1.5;white-space:pre-wrap;color:#cdd8e8;max-height:200px;overflow:auto}
+  .empty{color:var(--mut);font-size:13px;text-align:center;padding:18px}
+  .note{color:var(--mut);font-size:11px;margin-top:8px}
+</style>
+</head>
+<body>
+<header>
+  <h1>Fleet<span class="tag">Control</span></h1>
+  <span class="sub">control de la flota · AdmiraNext</span>
+  <span class="spacer"></span>
+  <span class="pill" id="connPill" title="estado de conexión">conectando…</span>
+  <span class="pill" id="tokenPill" title="cambiar token">🔑 token</span>
+</header>
+
+<div class="wrap">
+  <div class="cards" id="cards"></div>
+
+  <div class="console">
+    <h3>⌘ Consola</h3>
+    <div class="crow">
+      <select id="csMachine"></select>
+      <input type="text" id="csCmd" placeholder="comando shell… (p.ej. uptime; df -h /)" autocomplete="off">
+      <button class="primary" id="csRun">▶ ejecutar</button>
+      <button id="csClear">limpiar</button>
+    </div>
+    <div class="note">El comando se ejecuta de verdad en la máquina elegida (MacMini local · 16/14 por SSH). Requiere token.</div>
+    <div class="out" id="out"><div class="empty">Sin resultados todavía.</div></div>
+  </div>
+</div>
+
+<script>
+const API='https://macmini.tail48b61c.ts.net/fleet/api';
+const $=s=>document.querySelector(s);
+let TOKEN=localStorage.getItem('fleet_token')||'';
+let MACHINES=[];
+
+function setToken(){
+  const t=prompt('Token de FleetControl:', TOKEN||'');
+  if(t!==null){ TOKEN=t.trim(); localStorage.setItem('fleet_token',TOKEN); refresh(); }
+}
+$('#tokenPill').onclick=setToken;
+
+function hdrs(){ return {'Content-Type':'application/json','X-Fleet-Token':TOKEN}; }
+
+async function api(path, opts){
+  const r=await fetch(API+path,{...opts,headers:{...hdrs(),...(opts&&opts.headers||{})}});
+  if(r.status===401){ throw {code:401,msg:'token inválido o ausente'}; }
+  return r.json();
+}
+
+/* ---------- estado de la flota ---------- */
+async function refresh(){
+  if(!TOKEN){ $('#connPill').textContent='🔑 falta token'; $('#connPill').className='pill bad'; renderCards([]); return; }
+  try{
+    const d=await api('/status');
+    MACHINES=d.machines;
+    const up=MACHINES.filter(m=>m.online).length;
+    $('#connPill').textContent='🟢 '+up+'/'+MACHINES.length+' online';
+    $('#connPill').className='pill ok';
+    renderCards(MACHINES);
+    fillSelect();
+  }catch(e){
+    $('#connPill').textContent = e.code===401 ? '🔑 token inválido' : '🔴 sin conexión';
+    $('#connPill').className='pill bad';
+    if(e.code===401) renderCards([]);
+  }
+}
+
+function renderCards(ms){
+  const el=$('#cards');
+  if(!ms.length){ el.innerHTML='<div class="empty" style="grid-column:1/-1">Introduce el token (🔑) para ver la flota.</div>'; return; }
+  el.innerHTML=ms.map(m=>`
+    <div class="card">
+      <div class="top">
+        <span class="em">${m.emoji||'💻'}</span>
+        <div><div class="nm">${m.name} <span class="dot ${m.online?'on':''}"></span></div>
+        <div class="role">${m.role||''}${m.local?' · local':' · ssh'}</div></div>
+      </div>
+      <div class="info">${m.online?(m.info||'').replace(/</g,'&lt;'):'— sin respuesta —'}</div>
+      <div class="acts" ${m.online?'':'style="opacity:.4;pointer-events:none"'}>
+        <button data-a="sysinfo" data-m="${m.id}">🩺 info</button>
+        <button data-a="volume" data-m="${m.id}">🔊 volumen</button>
+        <button data-a="displaysleep" data-m="${m.id}">😴 pantalla</button>
+        <button data-a="say" data-m="${m.id}">🗣️ decir</button>
+        <button data-a="notify" data-m="${m.id}">🔔 avisar</button>
+        <button data-a="open" data-m="${m.id}">📂 abrir app</button>
+      </div>
+    </div>`).join('');
+}
+
+/* ---------- acciones rápidas ---------- */
+const NEEDS_ARG={ volume:'Volumen 0-100:', say:'¿Qué digo?', notify:'Texto del aviso:', open:'¿Qué app abrir? (p.ej. Safari)' };
+$('#cards').addEventListener('click', async e=>{
+  const b=e.target.closest('button[data-a]'); if(!b) return;
+  const action=b.dataset.a, machine=b.dataset.m;
+  let arg='';
+  if(NEEDS_ARG[action]){ arg=prompt(NEEDS_ARG[action], action==='volume'?'50':''); if(arg===null) return; }
+  b.disabled=true;
+  try{
+    const d=await api('/action',{method:'POST',body:JSON.stringify({machine,action,arg})});
+    pushResult(machine, '⚡ '+action+(arg?(' '+arg):''), d);
+  }catch(err){ pushResult(machine,'⚡ '+action,{rc:-1,stdout:'',stderr:err.msg||'error'}); }
+  b.disabled=false;
+});
+
+/* ---------- consola libre ---------- */
+function fillSelect(){
+  const s=$('#csMachine'); const cur=s.value;
+  s.innerHTML=MACHINES.map(m=>`<option value="${m.id}">${m.emoji||''} ${m.name}${m.online?'':' (offline)'}</option>`).join('');
+  if(cur) s.value=cur;
+}
+async function runCmd(){
+  const machine=$('#csMachine').value, cmd=$('#csCmd').value.trim();
+  if(!cmd) return;
+  $('#csRun').disabled=true;
+  try{
+    const d=await api('/run',{method:'POST',body:JSON.stringify({machine,cmd})});
+    pushResult(machine,'$ '+cmd,d);
+  }catch(err){ pushResult(machine,'$ '+cmd,{rc:-1,stdout:'',stderr:err.msg||'error'}); }
+  $('#csRun').disabled=false;
+}
+$('#csRun').onclick=runCmd;
+$('#csCmd').addEventListener('keydown',e=>{ if(e.key==='Enter') runCmd(); });
+$('#csClear').onclick=()=>{ $('#out').innerHTML='<div class="empty">Sin resultados todavía.</div>'; };
+
+function pushResult(machine, label, d){
+  const m=MACHINES.find(x=>x.id===machine)||{name:machine,emoji:''};
+  const out=$('#out'); if(out.querySelector('.empty')) out.innerHTML='';
+  const body=((d.stdout||'')+(d.stderr?('\n⚠️ '+d.stderr):'')).trim()||'(sin salida)';
+  const ok=d.rc===0;
+  const div=document.createElement('div'); div.className='res';
+  div.innerHTML=`<div class="h"><span class="who">${m.emoji||''} ${m.name}</span><span style="color:var(--mut)">${label.replace(/</g,'&lt;').slice(0,80)}</span>
+    <span class="rc ${ok?'ok':'err'}">rc=${d.rc}${d.ms!=null?(' · '+d.ms+'ms'):''}</span></div>
+    <pre>${body.replace(/</g,'&lt;')}</pre>`;
+  out.insertBefore(div, out.firstChild);
+}
+
+/* ---------- arranque ---------- */
+if(!TOKEN) setTimeout(setToken, 300);
+refresh();
+setInterval(refresh, 8000);
+</script>
+</body>
+</html>

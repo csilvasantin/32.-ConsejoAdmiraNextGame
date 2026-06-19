@@ -1,0 +1,29 @@
+{
+  "team": "AdmiraNext Fleet",
+  "machines": [
+    {
+      "id": "macmini",
+      "name": "Mac Mini",
+      "emoji": "🖥️",
+      "role": "Hub central",
+      "local": true,
+      "host": "macmini.tail48b61c.ts.net"
+    },
+    {
+      "id": "mbp16",
+      "name": "MacBook Pro 16",
+      "emoji": "💻",
+      "role": "Equipo de trabajo",
+      "host": "macbook-pro-16.tail48b61c.ts.net",
+      "user": "csilvasantin"
+    },
+    {
+      "id": "mbp14",
+      "name": "MacBook Pro 14",
+      "emoji": "💻",
+      "role": "Desarrollo y pruebas",
+      "host": "macbookpronegro14.tail48b61c.ts.net",
+      "user": "csilvasantin"
+    }
+  ]
+}

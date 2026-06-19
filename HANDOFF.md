@@ -6,14 +6,14 @@ Proyecto: `32.-ConsejoAdmiraNextGame`
 ## Punto de entrada
 
 - URL pública: [https://www.admira.live](https://www.admira.live) · Mesa: [https://www.admira.live/teamwork.html](https://www.admira.live/teamwork.html) · Fichas: [https://www.admira.live/consejero.html?p=steve-jobs](https://www.admira.live/consejero.html?p=steve-jobs)
-- Versión visible: `Admira v.26.06.19.r3`
+- Versión visible: `Admira v.26.06.19.r4`
 - Rama: `main`
-- Commit actual: `7676ea1` (último en `main`)
+- Commit actual: `7297c8e` (último en `main`)
 
 ## Qué comprobar al retomar
 
 1. Abrir la URL pública.
-2. Verificar arriba que pone `Admira v.26.06.19.r3`.
+2. Verificar arriba que pone `Admira v.26.06.19.r4`.
 3. Si se va a desarrollar, clonar y actualizar:
 
 ```bash
@@ -56,6 +56,16 @@ El hash debe coincidir con el commit publicado indicado arriba o ser posterior.
   - `Cancelar`
 
 ## Últimos cambios relevantes
+
+### `Admira v.26.06.19.r4`
+
+- **Sección /mcp consultable e interactuable por agentes** (la "puerta oculta" del proyecto). En `mcp/`:
+  - `llms.txt`: índice estándar legible por agentes (qué es, API en vivo, docs, agentes, federación).
+  - `manifest.json`: descriptor estructurado de la API real del Funnel + bridge AgoraMatrix + docs + federación (`/mcp` en cada pata de la trilogía).
+  - `index.html`: nuevas secciones "API del Consejo" (endpoints en vivo: machine-status, health, tasks, machine-actions, agora/say…), "Documentación" (todos los docs colgados) y "Federación".
+- URLs: https://www.admira.live/mcp/ · /mcp/llms.txt · /mcp/manifest.json
+- ⚠️ **Seguridad pendiente**: los endpoints de ESCRITURA `/api/teamwork/*` (`send`, `send-all`, `machine-action`, `approve*`) NO pasan por `requireCouncilWrite` y el Funnel es público → cualquiera podría mandar prompts a la flota o abrir/cerrar Claude. Las tareas (`/api/council/tasks`) sí exigen credencial. Pendiente: gatear los `/api/teamwork/*` de escritura.
+- Versión unificada a `v.26.06.19.r4`.
 
 ### `Admira v.26.06.19.r3`
 

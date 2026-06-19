@@ -1238,6 +1238,9 @@
         .speech-bubble { position: absolute; background: rgba(10,10,20,0.92); border: 2px solid #daa520; border-radius: 10px; padding: 10px 14px; font-size: 0.75rem; color: #e0e0e0; max-width: 300px; line-height: 1.5; display: none; box-shadow: 0 0 15px rgba(218,165,32,0.2); }
         .speech-bubble .speaker { font-weight: 700; color: #daa520; margin-bottom: 4px; font-size: 0.65rem; text-transform: uppercase; }
         .speech-bubble::after { content: ''; position: absolute; bottom: -8px; left: 20px; border-left: 8px solid transparent; border-right: 8px solid transparent; border-top: 8px solid #daa520; }
+        .speech-bubble { pointer-events: auto; }
+        .speech-ficha { display: inline-block; margin-top: 8px; padding-top: 7px; border-top: 1px solid rgba(218,165,32,0.35); color: #ffdd66; text-decoration: none; font-size: 0.62rem; }
+        .speech-ficha:hover { color: #fff; text-decoration: underline; }
         .yar-overlay {
             position: fixed;
             inset: 0;
@@ -2642,7 +2645,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.19.r5</a>
+            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.19.r6</a>
             <a href="https://www.admiranext.com" target="_blank" rel="noopener" class="version-badge" title="Ir a la matriz AdmiraNeXT">🏠 AdmiraNeXT</a>
             <a href="https://www.admira.live/control.html" target="_blank" rel="noopener" class="version-badge" title="Panel de control operativo de admira.live">🎛️ Control</a>
             <a href="https://www.admira.live/mcp/" target="_blank" rel="noopener" class="version-badge" title="Documentacion publica del MCP Admira Live">🔌 MCP</a>
@@ -2721,6 +2724,7 @@
                 <div class="speech-bubble" id="speech-bubble">
                     <div class="speaker"></div>
                     <div class="speech-text"></div>
+                    <a class="speech-ficha" target="_blank" rel="noopener">📋 Ver ficha completa →</a>
                 </div>
             </div>
             <!-- ENTRENAR table viewer: render del item seleccionado sobre la mesa.
@@ -4236,7 +4240,8 @@
         if (!bh) return;
         const persona = bh.getAttribute('data-persona');
         if (preguntarMode) { selectAgentByPersona(persona); return; }
-        openFichaConsejero(persona);   // modo normal: clic en el consejo abre su ficha de detalle
+        if (currentVerb && currentVerb !== 'preguntar') return; // otros verbos manejan sus propios clics
+        openFichaConsejero(persona);   // sin verbo interactivo: clic en el consejo abre su ficha
     });
 
     // Abre la ficha de detalle del consejero (consejero.html?p=<slug>) en pestaña nueva.
@@ -7502,6 +7507,8 @@
         const b = document.getElementById("speech-bubble");
         b.querySelector(".speaker").textContent = role + " — " + persona;
         b.querySelector(".speech-text").textContent = text;
+        const fichaLink = b.querySelector(".speech-ficha");
+        if (fichaLink) fichaLink.href = "consejero.html?p=" + cSlug(persona);
         b.style.display = "block";
         const np = document.querySelector('.np[data-persona="' + persona + '"]');
         if (np) {

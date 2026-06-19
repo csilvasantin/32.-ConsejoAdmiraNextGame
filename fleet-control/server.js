@@ -52,7 +52,7 @@ function run(machine, cmd, timeoutMs) {
     let out = '', err = '', done = false;
     const ch = spawn(bin, args, { env: process.env });
     const kill = setTimeout(() => { if (!done) { done = true; try { ch.kill('SIGKILL'); } catch (e) {} resolve({ rc: 124, stdout: out, stderr: (err + '\n[timeout]').trim(), ms: Date.now() - t0 }); } }, timeoutMs);
-    ch.stdout.on('data', d => { out += d; if (out.length > 200000) out = out.slice(-200000); });
+    ch.stdout.on('data', d => { out += d; if (out.length > 4000000) out = out.slice(-4000000); });
     ch.stderr.on('data', d => { err += d; if (err.length > 40000) err = err.slice(-40000); });
     ch.on('error', e => { if (!done) { done = true; clearTimeout(kill); resolve({ rc: 127, stdout: out, stderr: String(e.message || e), ms: Date.now() - t0 }); } });
     ch.on('close', code => { if (!done) { done = true; clearTimeout(kill); resolve({ rc: code == null ? -1 : code, stdout: out.trim(), stderr: err.trim(), ms: Date.now() - t0 }); } });
@@ -75,7 +75,14 @@ const ACTIONS = {
   say: (arg) => 'say ' + sh(arg) + '; echo "dicho"',
   notify: (arg) => 'osascript -e ' + sh('display notification "' + String(arg).replace(/"/g, "'") + '" with title "FleetControl"') + '; echo "notificado"',
   open: (arg) => 'open -a ' + sh(arg) + ' && echo "abierto: ' + String(arg).replace(/"/g, '') + '"',
-  screenshot: () => 'P=/tmp/fleet-shot.jpg; /usr/sbin/screencapture -x -t jpg "$P" 2>&1 && /usr/bin/base64 "$P" | tr -d "\\n"'
+  // Captura vía el mini-agente de captura (LaunchAgent en la sesión del usuario,
+  // que SÍ tiene TCC). Handshake por ficheros: tocamos capture.req → el agente
+  // (WatchPaths) captura y deja base64 en capture.out (más nuevo que la petición).
+  screenshot: () =>
+    'D="$HOME/.fleet"; mkdir -p "$D"; O="$D/capture.out"; N="fc-$(date +%s)-$$-$RANDOM"; ' +
+    'printf "%s" "$N" > "$D/capture.req"; ' +
+    'for i in $(seq 1 30); do [ "$(head -1 "$O" 2>/dev/null)" = "$N" ] && break; sleep 0.3; done; ' +
+    'if [ "$(head -1 "$O" 2>/dev/null)" = "$N" ]; then tail -n +2 "$O"; else echo ERR_NO_CAPTURE; fi'
 };
 
 /* ----- helpers HTTP --------------------------------------------------------- */

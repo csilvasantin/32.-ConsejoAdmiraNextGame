@@ -1,8 +1,9 @@
 import { execFile } from "node:child_process";
+import dgram from "node:dgram";
 import { readFile, unlink, writeFile } from "node:fs/promises";
 import { hostname, homedir, tmpdir } from "node:os";
 import { join } from "node:path";
-import { readMachines } from "./store.js";
+import { readMachines, writeMachines } from "./store.js";
 
 const SSH_IDENTITY = join(homedir(), ".ssh", "admiranext_ed25519");
 const WINDOWS_SCREENSHOT_PYTHON = join(homedir(), "Documents", "Codex", "ClaudeBot", ".venv", "Scripts", "python.exe");
@@ -1001,8 +1002,70 @@ const MACHINE_ACTIONS = {
   "claude-restart": { label: "Reiniciar Claude Code", osa: ['tell application "Claude" to quit', "delay 2", 'tell application "Claude" to activate'] },
   // Refrescar captura: vuelve a tomar el pantallazo + estado de apps de esa máquina
   // (mismo flujo que el refresco periódico, pero bajo demanda). kind:capture, sin osascript.
-  "refresh-capture": { label: "Refrescar captura", kind: "capture" }
+  "refresh-capture": { label: "Refrescar captura", kind: "capture" },
+  // Energía (par reversible, sin sudo): dormir por SSH y despertar por Wake-on-LAN.
+  "sleep": { label: "Dormir", kind: "sleep" },
+  "wake":  { label: "Despertar (WoL)", kind: "wol" }
 };
+
+// Wake-on-LAN: magic packet (6×0xFF + 16×MAC) por broadcast UDP a los puertos 9 y 7.
+// La máquina destino debe tener "Wake for network access" activado y estar en la LAN
+// del servidor (WoL es L2, no cruza redes). Mejor-esfuerzo: resolvemos ok al enviar.
+function sendWol(mac) {
+  return new Promise((resolve) => {
+    const clean = String(mac || "").replace(/[^0-9a-fA-F]/g, "");
+    if (clean.length !== 12) { resolve({ ok: false, error: "MAC inválida o ausente" }); return; }
+    const macBuf = Buffer.from(clean, "hex");
+    const packet = Buffer.alloc(102, 0xff);          // primeros 6 bytes = 0xFF
+    for (let i = 0; i < 16; i++) macBuf.copy(packet, 6 + i * 6);
+    const sock = dgram.createSocket("udp4");
+    let settled = false;
+    const done = (res) => { if (settled) return; settled = true; try { sock.close(); } catch {} resolve(res); };
+    sock.once("error", (e) => done({ ok: false, error: e.message }));
+    sock.bind(() => {
+      try { sock.setBroadcast(true); } catch {}
+      sock.send(packet, 0, packet.length, 9, "255.255.255.255", () => {});
+      sock.send(packet, 0, packet.length, 7, "255.255.255.255", () => {});
+      setTimeout(() => done({ ok: true }), 1200);
+    });
+  });
+}
+
+// Diagnóstico SSH de la flota + autodescubrimiento de MAC (para WoL).
+// Para cada máquina con SSH: prueba la conexión y, de paso, lee la MAC de la interfaz
+// por defecto; persiste las MAC nuevas en data/machines.json. Solo lectura remota, sin sudo.
+export async function sshDiagnoseFleet() {
+  const data = await readMachines();
+  const machines = data.machines || [];
+  const macCmd = `IFACE=$(route -n get default 2>/dev/null | awk '/interface:/{print $2}'); ifconfig "$IFACE" 2>/dev/null | awk '/ether/{print $2; exit}'`;
+  let changed = false;
+  const results = await Promise.all(machines.map((m) => new Promise((resolve) => {
+    const ssh = m.ssh || {};
+    const base = { id: m.id, name: m.name || m.id, platform: m.platform || null, unitType: m.unitType || "council", sshEnabled: !!ssh.enabled, mac: m.mac_address || null };
+    if (!ssh.enabled || (!ssh.host && !ssh.ip_tailscale)) {
+      resolve({ ...base, sshOk: false, reason: ssh.enabled ? "sin host/ip" : "SSH no habilitado" });
+      return;
+    }
+    const attempt = (useLocal) => new Promise((res) => {
+      if (useLocal && !deriveLocalHostname(m)) { res(null); return; }
+      const args = buildSshArgs(m, useLocal);
+      args.push(macCmd);
+      execFile("ssh", args, { timeout: 12000 }, (error, stdout) => {
+        if (error) { res(null); return; }
+        res({ mac: String(stdout || "").trim().split("\n").pop().trim() });
+      });
+    });
+    attempt(false).then((r) => r || attempt(true)).then((r) => {
+      if (!r) { resolve({ ...base, sshOk: false, reason: "sin respuesta SSH" }); return; }
+      const mac = /^[0-9a-f:]{17}$/i.test(r.mac) ? r.mac.toLowerCase() : null;
+      let discovered = false;
+      if (mac && mac !== String(m.mac_address || "").toLowerCase()) { m.mac_address = mac; changed = true; discovered = true; }
+      resolve({ ...base, sshOk: true, mac: m.mac_address || mac || null, discovered });
+    });
+  })));
+  if (changed) { try { await writeMachines(data); } catch {} }
+  return { ts: new Date().toISOString(), changed, machines: results };
+}
 
 export function listMachineActions() {
   return Object.entries(MACHINE_ACTIONS).map(([key, v]) => ({ key, label: v.label }));
@@ -1019,7 +1082,33 @@ export async function runMachineAction(machineId, action) {
     if (resolved) machine = resolved;
   }
   if (!machine) return { ok: false, error: `Máquina '${machineId}' no encontrada` };
+
+  // Despertar (WoL): la máquina puede estar apagada/dormida → NO exige canal de
+  // automatización, solo la MAC. Si falta MAC, pide pasar antes "Probar SSH/MAC".
+  if (spec.kind === "wol") {
+    if (!machine.mac_address) return { ok: false, error: `Sin MAC en '${machine.name}': ejecuta "Probar SSH/MAC" primero` };
+    const res = await sendWol(machine.mac_address);
+    return res.ok
+      ? { ok: true, name: machine.name, action, detail: `WoL enviado a ${machine.mac_address}` }
+      : { ok: false, error: res.error };
+  }
+
   if (!isAutomationReady(machine)) return { ok: false, error: `Canal de automatizacion no habilitado en '${machine.name}'` };
+
+  // Dormir: nunca al propio servidor (mataría el panel). pmset sleepnow no necesita sudo;
+  // se programa 1s después para que el SSH cierre limpio. El corte de conexión es esperado.
+  if (spec.kind === "sleep") {
+    if (isLocalMachine(machine)) return { ok: false, error: "No se puede dormir el propio servidor del panel" };
+    const remoteCmd = `nohup sh -c 'sleep 1; pmset sleepnow' >/dev/null 2>&1 &`;
+    const attempt = (useLocal) => new Promise((resolve) => {
+      if (useLocal && !deriveLocalHostname(machine)) { resolve(null); return; }
+      const args = buildSshArgs(machine, useLocal);
+      args.push(remoteCmd);
+      execFile("ssh", args, { timeout: TIMEOUT_MS }, () => resolve({ ok: true, machine: machineId, name: machine.name, action }));
+    });
+    const r = await attempt(false) || (deriveLocalHostname(machine) ? await attempt(true) : null);
+    return r || { ok: true, name: machine.name, action };
+  }
 
   // Acción de captura: recaptura pantalla + estado de apps bajo demanda y actualiza el snapshot.
   if (spec.kind === "capture") {

@@ -94,6 +94,17 @@ function agoraHeaders(json = false) {
   return headers;
 }
 
+// Credencial de ESCRITURA del Consejo: reutiliza la "Clave operador" (agoraKey),
+// enviándola como token del Consejo. Necesaria desde el fix de seguridad r5, que gatea
+// los POST de control (`/api/teamwork/*`) con requireCouncilWrite (token o login Google).
+function councilHeaders(json = false) {
+  const headers = {};
+  const key = agoraKey?.value.trim();
+  if (key) { headers["Authorization"] = "Bearer " + key; headers["X-Council-Token"] = key; }
+  if (json) headers["Content-Type"] = "application/json";
+  return headers;
+}
+
 function renderAgoraList(node, items, emptyLabel) {
   if (!node) return;
   if (!items?.length) {
@@ -811,7 +822,9 @@ const MACT_LABELS = {
   "claude-open":     { btn: "▶ Abrir Claude", title: "Abrir Claude Code", doing: "Abriendo Claude Code…", done: "Claude Code abierto" },
   "claude-quit":     { btn: "■ Cerrar",        title: "Cerrar Claude Code", doing: "Cerrando Claude Code…", done: "Claude Code cerrado" },
   "claude-restart":  { btn: "↻ Reiniciar",     title: "Reiniciar Claude Code", doing: "Reiniciando Claude Code…", done: "Claude Code reiniciado" },
-  "refresh-capture": { btn: "📸 Captura",       title: "Refrescar captura", doing: "Refrescando captura…", done: "Captura actualizada" }
+  "refresh-capture": { btn: "📸 Captura",       title: "Refrescar captura", doing: "Refrescando captura…", done: "Captura actualizada" },
+  "sleep":           { btn: "💤 Dormir",        title: "Dormir el equipo (reversible con Despertar)", doing: "Durmiendo el equipo…", done: "Equipo durmiendo" },
+  "wake":            { btn: "⏻ Despertar",      title: "Despertar por Wake-on-LAN", doing: "Enviando Wake-on-LAN…", done: "Wake-on-LAN enviado" }
 };
 
 function renderMachineRow(m, snapshots) {
@@ -961,7 +974,7 @@ function renderMachineApproveList(snapshots) {
       try {
         const res = await fetch(apiUrl("/api/teamwork/machine-action"), {
           method: "POST",
-          headers: { "Content-Type": "application/json" },
+          headers: councilHeaders(true),
           body: JSON.stringify({ machineId, action })
         });
         const data = await res.json().catch(() => ({}));
@@ -1387,3 +1400,40 @@ setInterval(loadHistory, 10_000);
 setInterval(loadAgoraStatus, AGORA_REFRESH_MS);
 setInterval(loadSnapshots, SNAPSHOT_REFRESH_MS);
 setInterval(loadWatchdogStats, WATCHDOG_REFRESH_MS);
+
+// Diagnóstico SSH de la flota + autodescubrimiento de MAC (para WoL). Botón "Probar SSH / MAC".
+const sshCheckBtn = document.getElementById("sshCheckBtn");
+const sshCheckResult = document.getElementById("sshCheckResult");
+if (sshCheckBtn) {
+  sshCheckBtn.addEventListener("click", async () => {
+    sshCheckBtn.disabled = true;
+    const orig = sshCheckBtn.textContent;
+    sshCheckBtn.textContent = "Probando…";
+    if (sshCheckResult) sshCheckResult.textContent = "Probando SSH a la flota…";
+    try {
+      const res = await fetch(apiUrl("/api/teamwork/ssh-check"), { method: "POST", headers: councilHeaders(true), body: "{}" });
+      const data = await res.json().catch(() => ({}));
+      if (data.ok) {
+        const ms = data.machines || [];
+        const enabled = ms.filter((m) => m.sshEnabled);
+        const ok = enabled.filter((m) => m.sshOk).length;
+        const macs = ms.filter((m) => m.discovered).length;
+        const fail = enabled.filter((m) => !m.sshOk).map((m) => m.name);
+        if (sshCheckResult) {
+          sshCheckResult.textContent = `SSH ${ok}/${enabled.length} OK`
+            + (macs ? ` · ${macs} MAC nuevas` : "")
+            + (fail.length ? ` · sin SSH: ${fail.join(", ")}` : "");
+        }
+        loadMachines();
+        setTimeout(loadClaudeStatus, 800);
+      } else {
+        if (sshCheckResult) sshCheckResult.textContent = "✗ " + (data.error || `HTTP ${res.status}`) + (res.status === 401 ? " — pega la Clave operador arriba" : "");
+      }
+    } catch {
+      if (sshCheckResult) sshCheckResult.textContent = "✗ sin conexión con el backend";
+    } finally {
+      sshCheckBtn.disabled = false;
+      sshCheckBtn.textContent = orig;
+    }
+  });
+}

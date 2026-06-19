@@ -5,7 +5,7 @@ import { spawn } from "node:child_process";
 import { createPublicKey, verify as verifySignature } from "node:crypto";
 
 import { createMachineEntry, readMachines, updateMachineStatus, updateMachineSync } from "./store.js";
-import { sendPromptToMachine, resolveMachineName, getCapture, getImageBuffer, approveAll, approveMachine, getAllSnapshots, getReachableMachines, getWatchdogState, setWatchdogEnabled, setMachineWatchdog, sendOnboardingToAll, startWatchdog, runSkynetAudit, runSkynetAudits, getCouncilClaudeStatus, runMachineAction, listMachineActions } from "./ssh-exec.js";
+import { sendPromptToMachine, resolveMachineName, getCapture, getImageBuffer, approveAll, approveMachine, getAllSnapshots, getReachableMachines, getWatchdogState, setWatchdogEnabled, setMachineWatchdog, sendOnboardingToAll, startWatchdog, runSkynetAudit, runSkynetAudits, getCouncilClaudeStatus, runMachineAction, listMachineActions, sshDiagnoseFleet } from "./ssh-exec.js";
 import { addEntries, addEntry, getHistory } from "./teamwork-store.js";
 import {
   listTasks,
@@ -1407,6 +1407,18 @@ const server = createServer(async (request, response) => {
     }
     const result = await runMachineAction(machineId, action);
     sendJson(response, result.ok ? 200 : 502, result);
+    return;
+  }
+
+  // Diagnóstico SSH de la flota + autodescubrimiento de MAC (para WoL). Escritura → token.
+  if (request.method === "POST" && url.pathname === "/api/teamwork/ssh-check") {
+    if (!(await requireCouncilWrite(request, response))) return;
+    try {
+      const result = await sshDiagnoseFleet();
+      sendJson(response, 200, { ok: true, ...result });
+    } catch (err) {
+      sendJson(response, 500, { ok: false, error: String((err && err.message) || err) });
+    }
     return;
   }
 

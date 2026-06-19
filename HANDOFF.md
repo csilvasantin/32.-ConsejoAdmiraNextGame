@@ -1,19 +1,19 @@
 # HANDOFF — Consejo AdmiraNext
 
-Actualizado: 2026-05-07  
+Actualizado: 2026-06-19  
 Proyecto: `32.-ConsejoAdmiraNextGame`
 
 ## Punto de entrada
 
-- URL pública: [https://www.admira.live](https://www.admira.live)
-- Versión visible: `Admira v.26.05.07.r6`
+- URL pública: [https://www.admira.live](https://www.admira.live) · Mesa: [https://www.admira.live/teamwork.html](https://www.admira.live/teamwork.html)
+- Versión visible: `Admira v.26.06.19.r1`
 - Rama: `main`
-- Commit actual: ver último commit publicado en `main`
+- Commit actual: `99647c4` (último en `main`)
 
 ## Qué comprobar al retomar
 
 1. Abrir la URL pública.
-2. Verificar arriba que pone `Admira v.26.05.07.r6`.
+2. Verificar arriba que pone `Admira v.26.06.19.r1`.
 3. Si se va a desarrollar, clonar y actualizar:
 
 ```bash
@@ -56,6 +56,16 @@ El hash debe coincidir con el commit publicado indicado arriba o ser posterior.
   - `Cancelar`
 
 ## Últimos cambios relevantes
+
+### `Admira v.26.06.19.r1`
+
+Mesa de control (servidor Node `src/server.js` + `src/ssh-exec.js`, servicio launchd `com.admiranext.control` en el Mac Mini; frontend `teamwork.*` por GitHub Pages). Tres frentes desplegados y verificados en vivo:
+
+- **Acciones acotadas (lista blanca, `POST /api/teamwork/machine-action`)**: añadidas `claude-restart` (quit→activate) y `refresh-capture` (recaptura pantalla+apps bajo demanda) a las ya existentes `claude-open`/`claude-quit`. `runMachineAction` soporta osascript multilínea y `kind:capture`. Frontend con botones y handler data-driven (`MACT_LABELS`): ▶ Abrir / ■ Cerrar / ↻ Reiniciar / 📸 Captura. Sin comando libre ni sudo.
+- **Monitor de flota (`GET /api/council/machine-status`)**: `getCouncilClaudeStatus` cubre ahora TODA la flota (12 máquinas). Sondea por SSH+Python las Mac del consejo; los workers Windows/sin-SSH salen marcados `monitor:"unsupported"` con motivo ("sin sondeo · requiere agente"), badge ámbar, en vez de ocultarse. Se auto-sondean al ganar SSH.
+- **Versión visible unificada** a `v.26.06.19.r1` en homepage (`index.html`), mesa (`teamwork.html`) y control (`control.html`) + cache-bust `?v=20260619-1`. Resuelve el desfase r1/r2/r3.
+
+Despliegue al Mac Mini fichero-a-fichero (repo divergido): `git fetch origin && git checkout origin/main -- src/ssh-exec.js` + `launchctl kickstart -k gui/$(id -u)/com.admiranext.control`. Pendiente real del monitor: agente nativo Windows (PowerShell por SSH o heartbeat reverso a `/api/council/heartbeat`) para sondear cuenta en los PC worker.
 
 ### `Admira v.26.05.07.r6`
 

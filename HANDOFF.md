@@ -6,14 +6,14 @@ Proyecto: `32.-ConsejoAdmiraNextGame`
 ## Punto de entrada
 
 - URL pública: [https://www.admira.live](https://www.admira.live) · Mesa: [https://www.admira.live/teamwork.html](https://www.admira.live/teamwork.html) · Fichas: [https://www.admira.live/consejero.html?p=steve-jobs](https://www.admira.live/consejero.html?p=steve-jobs)
-- Versión visible: `Admira v.26.06.19.r5`
+- Versión visible: `Admira v.26.06.19.r6`
 - Rama: `main`
-- Commit actual: `cda559c` (último en `main`)
+- Commit actual: `02ea2fe` (último en `main`)
 
 ## Qué comprobar al retomar
 
 1. Abrir la URL pública.
-2. Verificar arriba que pone `Admira v.26.06.19.r5`.
+2. Verificar arriba que pone `Admira v.26.06.19.r6`.
 3. Si se va a desarrollar, clonar y actualizar:
 
 ```bash
@@ -56,6 +56,12 @@ El hash debe coincidir con el commit publicado indicado arriba o ser posterior.
   - `Cancelar`
 
 ## Últimos cambios relevantes
+
+### `Admira v.26.06.19.r6` — Clic en el consejo → ficha de detalle
+
+- **La zona clicable de cada consejero enlaza con su ficha** (`consejero.html?p=<slug>`). El bocadillo (speech bubble) que aparece al clicar una cara/cuerpo ahora lleva un enlace "📋 Ver ficha completa →" (vía `cSlug(persona)`), así que el flujo natural es: clic en el consejo → menú/bocadillo → ficha completa.
+- Los `.body-hotspot` son clicables por defecto (clase `ficha-active`). Fuera de un verbo interactivo, el clic abre la ficha directamente (`openFichaConsejero`); en modo **preguntar** (verbo por defecto) se mantiene la selección para preguntar y el bocadillo es el que lleva el enlace a la ficha.
+- Versión unificada a `v.26.06.19.r6`.
 
 ### `Admira v.26.06.19.r5` — Cierre de seguridad del control remoto
 

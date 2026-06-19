@@ -735,7 +735,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_methods=["POST", "GET", "OPTIONS"],
-    allow_headers=["Content-Type", "X-Council-Token"],
+    allow_headers=["Content-Type", "X-Council-Token", "X-Council-Hack-Token", "Authorization"],
 )
 
 # ── Rate limiter ─────────────────────────────────────────────

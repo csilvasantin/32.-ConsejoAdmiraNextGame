@@ -3796,15 +3796,17 @@
         "Tracks cleared.",
     ];
 
+    // Alineado con data/machines.json (Macs con ssh.enabled). El backend abre
+    // Terminal en estas mismas máquinas; el overlay refleja la flota real.
     const HACK_MACHINES = [
-        { id: "admira-macbookair16",      role: "CEO", persona: "Steve Jobs",      ip: "100.99.176.126",  host: "MacBookAir16",   user: "csilvasantin" },
-        { id: "admira-macbookpronegro14", role: "CTO", persona: "Steve Wozniak",   ip: "100.101.192.1",   host: "MacBookPro14",   user: "csilvasantin" },
-        { id: "admira-macbookairplata",   role: "COO", persona: "Tim Cook",        ip: "100.114.113.88",  host: "MacBookAirPlata",user: "csilvasantin" },
-        { id: "admira-macmini",           role: "CFO", persona: "Warren Buffett",  ip: "100.74.101.14",   host: "MacMini",        user: "csilvasantin" },
-        { id: "admira-macbookairblanco",  role: "CCO", persona: "Walt Disney",     ip: "100.75.118.75",   host: "MacBookAirBlanco",user: "csilvasantin" },
-        { id: "admira-macbookairazul",    role: "CDO", persona: "Dieter Rams",     ip: "100.84.81.45",    host: "MacBookAirAzul", user: "csilvasantin" },
-        { id: "admira-pctwin",            role: "CXO", persona: "Howard Schultz",  ip: "100.121.18.12",   host: "AdmiraTwin",     user: "34665" },
-        { id: "admira-macbookaircrema",   role: "CSO", persona: "George Lucas",    ip: "100.110.80.2",    host: "MacBookAirCrema",user: "csilvasantin" },
+        { id: "admira-macmini",           role: "Coordinación central", persona: "Mac Mini",           ip: "100.74.101.14",        host: "macmini",             user: "csilvasantin" },
+        { id: "admira-macbookairnines",   role: "Operaciones",          persona: "MacBook Air Nines",  ip: "macbookairnines",      host: "macbookairnines",     user: "csilvasantin" },
+        { id: "admira-macbookpronegro14", role: "Desarrollo y pruebas", persona: "MacBook Pro 14",     ip: "100.101.192.1",        host: "macbookpronegro14",   user: "csilvasantin" },
+        { id: "admira-macbookpro16",      role: "Agente operativo",     persona: "MacBook Pro 16",     ip: "100.114.181.54",       host: "macbook-pro-16",      user: "csilvasantin" },
+        { id: "admira-macbookair16",      role: "Dirección",            persona: "MacBook Air 16",     ip: "macbookair16",         host: "macbookair16",        user: "csilvasantin" },
+        { id: "admira-macbookairluna",    role: "Coordinación",         persona: "MacBook Air Luna",   ip: "macbookairluna",       host: "macbookairluna",      user: "csilvasantin" },
+        { id: "admira-macbook-carla",     role: "Desarrollo",           persona: "MacBook Air Carla",  ip: "macbook-air-de-carla", host: "macbook-air-de-carla",user: "csilvasantin" },
+        { id: "admira-macbookairblanco",  role: "CEO",                  persona: "MacBook Air Blanco", ip: "macbookairblanco",     host: "macbookairblanco",    user: "csilvasantin" },
     ];
 
     function fillHackLine(line, machine) {
@@ -3819,6 +3821,14 @@
 
         if (!hackMode) {
             // === ACTIVATE HACK ===
+            // Gate de seguridad: el backend exige X-Council-Hack-Token (secreto server-only).
+            // Se pide una vez por navegador y se guarda en localStorage.
+            let hackTok = localStorage.getItem("council_hack_token") || "";
+            if (!hackTok) {
+                hackTok = (prompt("Token de HACKEO (lo tienes en el .env del Mac Mini · COUNCIL_HACK_TOKEN):") || "").trim();
+                if (!hackTok) return;  // cancelado
+                localStorage.setItem("council_hack_token", hackTok);
+            }
             hackMode = true;
             btn.classList.add("active");
             btn.querySelector(".hack-dot").style.background = "#000";
@@ -3882,8 +3892,14 @@
                     paintHackeoStatus({ error: "no response" });
                 }
             } catch (e) {
-                console.warn("HACK: council-api unreachable, local animation only", e.message);
-                paintHackeoStatus({ error: e.message });
+                // 403 → token de hackeo inválido: lo borramos para volver a pedirlo.
+                if (/\b403\b/.test(e.message || "")) {
+                    localStorage.removeItem("council_hack_token");
+                    paintHackeoStatus({ error: "token de hackeo inválido — vuelve a activar para reintroducirlo" });
+                } else {
+                    paintHackeoStatus({ error: e.message });
+                }
+                console.warn("HACK: council-api error", e.message);
             }
 
         } else {
@@ -3920,6 +3936,7 @@
                     headers: {
                         "Content-Type": "application/json",
                         "X-Council-Token": COUNCIL_API_TOKEN,
+                        "X-Council-Hack-Token": localStorage.getItem("council_hack_token") || "",
                     },
                     signal: AbortSignal.timeout(20000),
                 });

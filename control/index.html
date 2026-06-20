@@ -197,10 +197,28 @@ function pushResult(machine, label, d){
   out.insertBefore(div, out.firstChild);
 }
 
+/* ---------- auto-login en máquinas de AgoraMatrix (tailnet) ---------- */
+// El Mini sirve el TOKEN_OPERADOR sólo a nodos de la tailnet identificados
+// (puerto 8443, NO funnel). En tus Macs entra solo; desde fuera, pide token.
+async function fetchOperatorToken(){
+  try{
+    const r = await fetch('https://macmini.tail48b61c.ts.net:8443/optoken/token', { signal: AbortSignal.timeout(2500) });
+    if(!r.ok) return null;
+    const d = await r.json();
+    return d && d.token ? d.token : null;
+  }catch(e){ return null; }
+}
+
 /* ---------- arranque ---------- */
-if(!TOKEN) setTimeout(setToken, 300);
-refresh();
-setInterval(refresh, 8000);
+(async () => {
+  if(!TOKEN){
+    const auto = await fetchOperatorToken();
+    if(auto){ TOKEN = auto; localStorage.setItem('fleet_token', TOKEN); }
+  }
+  if(!TOKEN) setTimeout(setToken, 300);
+  refresh();
+  setInterval(refresh, 8000);
+})();
 </script>
 </body>
 </html>

@@ -4182,26 +4182,21 @@ async def council_hackeo(request: Request, _rate=Depends(check_rate_limit), _aut
         return {"ok": False, "error": "no council machines", "machines": []}
 
     excluded = None
-    _dbg = ""
     try:
         _raw = await request.body()
         _body = json.loads(_raw.decode("utf-8")) if _raw else {}
         exclude_ip = str((_body or {}).get("exclude_ip") or "").strip()
-        _dbg = "rawlen=%d ip=%r" % (len(_raw), exclude_ip)
-    except Exception as e:
+    except Exception:
         exclude_ip = ""
-        _dbg = "err=%r" % (e,)
     if exclude_ip:
-        ehost = _hk_resolve_host_by_ip(exclude_ip)
-        if ehost:
-            kept = []
-            for m in machines:
-                mhost = (m.get("ssh") or {}).get("host", "").split(".")[0]
-                if mhost and mhost == ehost:
-                    excluded = m.get("id")
-                else:
-                    kept.append(m)
-            machines = kept
+        # Match directo contra ssh.ip_tailscale (robusto, sin subprocess).
+        kept = []
+        for m in machines:
+            if (m.get("ssh") or {}).get("ip_tailscale") == exclude_ip:
+                excluded = m.get("id")
+            else:
+                kept.append(m)
+        machines = kept
 
     results: list = []
     with _HkPool(max_workers=min(8, len(machines))) as pool:
@@ -4228,7 +4223,6 @@ async def council_hackeo(request: Request, _rate=Depends(check_rate_limit), _aut
         "summary": summary,
         "machines": results,
         "excluded": excluded,
-        "_dbg": _dbg,
     }
 
 

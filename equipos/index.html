@@ -177,7 +177,7 @@ function render(){
     const rtOpts=DATA.runtimes.map(r=>`<option value="${r.id}" ${r.id===asg.runtime?"selected":""}>${r.label}</option>`).join("");
     card.innerHTML=`
       <div class="top"><span class="em">${ag.emoji||"🤖"}</span>
-        <div><div class="nm">${ag.role} · ${ag.name||""}</div><div class="role">${ag.id.toUpperCase()}</div></div>
+        <div><div class="nm">${ag.role} · ${ag.name||""}</div><div class="role">${ag.title||ag.id.toUpperCase()}</div></div>
         <span class="sidebadge">${ag.side}</span></div>
       <div class="field"><label>Equipo</label><select data-a="${ag.id}" data-k="team">${teamOpts}</select></div>
       <div class="field"><label>LLM / runtime</label><select data-a="${ag.id}" data-k="runtime">${rtOpts}</select></div>`;

@@ -1328,8 +1328,17 @@ DEFAULT_RUNTIMES = [
 ]
 
 
+# El paquete no trae emoji; mapeamos por código de rol (como los consejeros).
+_AGENT_EMOJI = {"ceo": "🚀", "cfo": "💰", "coo": "⚙️", "cto": "🔧",
+                "cco": "🎨", "cdo": "📐", "cxo": "✨", "cso": "🎬"}
+
+
 def _council_agents() -> list:
-    """Los 8 agentes del consejo (gen. leyendas) con role/name/side/emoji."""
+    """Los 8 agentes del consejo (gen. leyendas).
+
+    En CouncilAgent: name=código ("CEO"), role=título ("Chief Executive
+    Officer"), persona=leyenda ("Steve Jobs"), side=racional|creativo.
+    """
     out, seen = [], set()
     for side_key in ("racional", "creativo"):
         for cls in AGENTS["leyendas"][side_key]:
@@ -1337,16 +1346,18 @@ def _council_agents() -> list:
                 a = get_agent(cls)
             except Exception:
                 continue
-            rid = str(getattr(a, "role", "")).lower().strip()
+            code = str(getattr(a, "name", "")).strip()  # "CEO"
+            rid = code.lower()
             if not rid or rid in seen:
                 continue
             seen.add(rid)
             out.append({
                 "id": rid,
-                "role": getattr(a, "role", rid.upper()),
-                "name": getattr(a, "name", ""),
+                "role": code,                                # "CEO"
+                "title": getattr(a, "role", ""),             # "Chief Executive Officer"
+                "name": getattr(a, "persona", ""),           # "Steve Jobs"
                 "side": getattr(a, "side", side_key),
-                "emoji": getattr(a, "icon", "🤖"),
+                "emoji": _AGENT_EMOJI.get(rid, "🤖"),
             })
     return out
 

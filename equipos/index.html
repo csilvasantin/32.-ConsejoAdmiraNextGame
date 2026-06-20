@@ -38,6 +38,8 @@
   .card .top{display:flex;align-items:center;gap:11px}
   .card .em{font-size:28px;line-height:1}
   .card .nm{font-weight:700;font-size:15px}
+  .card .nm a{color:inherit;text-decoration:none}
+  .card .nm a:hover{color:var(--acc);text-decoration:underline}
   .card .role{color:var(--mut);font-size:12px}
   .card .sidebadge{margin-left:auto;font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.5px;color:var(--mut);border:1px solid var(--line);border-radius:999px;padding:3px 8px}
   .grid2{display:grid;grid-template-columns:1fr 1fr;gap:9px}
@@ -195,7 +197,7 @@ function render(){
     const uOpts=DATA.usuarios.map(u=>`<option value="${u.id}" ${u.id===asg.usuario?"selected":""}>${u.name}</option>`).join("");
     card.innerHTML=`
       <div class="top"><span class="em">${ag.emoji||"🤖"}</span>
-        <div><div class="nm">${ag.role} · ${ag.name||""}</div><div class="role">${ag.title||ag.id.toUpperCase()}</div></div>
+        <div><div class="nm"><a href="/consejero.html?p=${encodeURIComponent(slug(ag.name||ag.role))}" title="Ver ficha del consejero">${ag.role} · ${ag.name||""}</a></div><div class="role">${ag.title||ag.id.toUpperCase()}</div></div>
         <span class="sidebadge">${ag.side}</span></div>
       <div class="field full"><label>Equipo (máquina)</label><select data-a="${ag.id}" data-k="machine">${mOpts}</select></div>
       <div class="field full" data-cap="${ag.id}" style="${asg.machine?'':'display:none'}">

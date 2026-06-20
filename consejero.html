@@ -337,7 +337,7 @@
             <div class="row"><span class="k">Pareja</span><span class="v">${c.pair} · ${c.pairPersona}</span></div>
             ${c.alias ? `<div class="row"><span class="k">Alias Matrix</span><span class="v">${c.alias}</span></div>`:""}
           </div>
-          <div class="card">
+          <div class="card" id="asig">
             <h2>Asignación</h2>
             <div class="row"><span class="k">Operador</span><span class="v">${c.member || "—"}</span></div>
             <div class="row"><span class="k">Máquina</span><span class="v">${c.machine || "—"}</span></div>
@@ -360,6 +360,41 @@
           AdmiraNeXT · Consejo de Silicio · admira.live<br>
           Ficha de consejero · v.26.06.19.r3
         </div>`;
+
+      loadLive(c);
+    }
+
+    // Asignación real desde /equipos (auto-login en máquinas de la tailnet).
+    async function fetchOperatorToken(){
+      try{ const r=await fetch("https://macmini.tail48b61c.ts.net:8443/optoken/token",{signal:AbortSignal.timeout(2500)}); if(!r.ok)return null; const d=await r.json(); return d&&d.token?d.token:null; }catch(e){ return null; }
+    }
+    async function loadLive(c){
+      const asig=document.getElementById("asig"); if(!asig) return;
+      let token=localStorage.getItem("council_hack_token")||"";
+      if(!token){ token=await fetchOperatorToken()||""; if(token) localStorage.setItem("council_hack_token",token); }
+      if(!token) return;  // sin token: se quedan los valores estáticos
+      try{
+        const r=await fetch("https://macmini.tail48b61c.ts.net/council/api/council/teams",{headers:{"X-Council-Hack-Token":token},signal:AbortSignal.timeout(9000)});
+        if(!r.ok) return;
+        const d=await r.json();
+        const aid=(c.role||"").toLowerCase();
+        const asg=(d.assignments||{})[aid]; if(!asg) return;
+        const mach=(d.machines||[]).find(m=>m.id===asg.machine);
+        const user=(d.usuarios||[]).find(u=>u.id===asg.usuario);
+        const RL={codex:"Codex",claude:"Claude",opencode:"OpenCode"};
+        const rt=RL[asg.runtime]||asg.runtime||"—";
+        const acc=(user&&user.account)||"";
+        const ident=(RL[asg.runtime]&&acc)?(RL[asg.runtime]+"·"+acc):"";
+        const task=ident?((d.identities||{})[ident]):null;
+        const esc=s=>String(s==null?"":s).replace(/[<>&]/g,x=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[x]));
+        const row=(k,v)=>`<div class="row"><span class="k">${k}</span><span class="v">${v}</span></div>`;
+        asig.innerHTML=`<h2>Asignación</h2>`
+          +row("Máquina", mach?esc(mach.name):"— sin asignar —")
+          +row("LLM / runtime", esc(rt))
+          +row("Operador", user?esc(user.name):"—")
+          +row("Territorio", esc(c.territory))
+          +((task&&task.text)?row("Tarea", esc(task.text)+(task.persona?` <span style="opacity:.6">· ${esc(task.persona)}</span>`:"")):"");
+      }catch(e){}
     }
 
     render();

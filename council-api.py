@@ -1315,6 +1315,125 @@ async def list_models():
     return {"models": models}
 
 
+# ── Equipos + asignación de LLM por agente ───────────────────
+# Modelo: equipos DINÁMICOS (creables) + por cada agente del consejo un
+# runtime/LLM (Codex / Claude / OpenCode·DeepSeek). Solo datos+asignación;
+# el enrutado real de prompts al runtime es una fase posterior.
+_TEAMS_PATH = Path(__file__).parent / "data" / "teams.json"
+
+DEFAULT_RUNTIMES = [
+    {"id": "codex", "label": "Codex", "engine": "Codex", "model": ""},
+    {"id": "claude", "label": "Claude", "engine": "Claude Code", "model": ""},
+    {"id": "opencode", "label": "OpenCode·DeepSeek", "engine": "OpenCode", "model": "DeepSeek"},
+]
+
+
+def _council_agents() -> list:
+    """Los 8 agentes del consejo (gen. leyendas) con role/name/side/emoji."""
+    out, seen = [], set()
+    for side_key in ("racional", "creativo"):
+        for cls in AGENTS["leyendas"][side_key]:
+            try:
+                a = get_agent(cls)
+            except Exception:
+                continue
+            rid = str(getattr(a, "role", "")).lower().strip()
+            if not rid or rid in seen:
+                continue
+            seen.add(rid)
+            out.append({
+                "id": rid,
+                "role": getattr(a, "role", rid.upper()),
+                "name": getattr(a, "name", ""),
+                "side": getattr(a, "side", side_key),
+                "emoji": getattr(a, "icon", "🤖"),
+            })
+    return out
+
+
+def _default_teams_doc() -> dict:
+    teams = [
+        {"id": "creativo", "name": "Creativo", "color": "#7aa2ff"},
+        {"id": "tecnologico", "name": "Tecnológico", "color": "#5bd6c0"},
+    ]
+    assignments = {}
+    for a in _council_agents():
+        team = "creativo" if a["side"] == "creativo" else "tecnologico"
+        assignments[a["id"]] = {"team": team, "runtime": "claude"}
+    return {"teams": teams, "runtimes": DEFAULT_RUNTIMES, "assignments": assignments}
+
+
+def _load_teams() -> dict:
+    try:
+        doc = json.loads(_TEAMS_PATH.read_text(encoding="utf-8"))
+        assert isinstance(doc, dict)
+    except Exception:
+        doc = _default_teams_doc()
+    doc.setdefault("teams", [])
+    doc.setdefault("runtimes", DEFAULT_RUNTIMES)
+    doc.setdefault("assignments", {})
+    return doc
+
+
+def _save_teams(doc: dict):
+    _TEAMS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    tmp = _TEAMS_PATH.with_suffix(".json.tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(doc, f, indent=2, ensure_ascii=False)
+    os.replace(tmp, _TEAMS_PATH)
+
+
+class TeamsSaveRequest(BaseModel):
+    teams: list = []
+    assignments: dict = {}
+    runtimes: Optional[list] = None
+
+
+@app.get("/api/council/teams")
+async def get_teams(_auth=Depends(verify_hack_token)):
+    doc = _load_teams()
+    return {
+        "agents": _council_agents(),
+        "teams": doc["teams"],
+        "runtimes": doc["runtimes"],
+        "assignments": doc["assignments"],
+    }
+
+
+@app.post("/api/council/teams")
+async def save_teams(req: TeamsSaveRequest, _auth=Depends(verify_hack_token)):
+    agent_ids = {a["id"] for a in _council_agents()}
+    runtimes = req.runtimes if req.runtimes else _load_teams()["runtimes"]
+    runtime_ids = {str(r.get("id")) for r in runtimes if r.get("id")}
+    # Saneado de equipos
+    teams, team_ids = [], set()
+    for t in (req.teams or []):
+        tid = str(t.get("id") or "").strip()
+        name = str(t.get("name") or "").strip()
+        if not tid or not name or tid in team_ids:
+            continue
+        team_ids.add(tid)
+        teams.append({"id": tid, "name": name, "color": str(t.get("color") or "#7aa2ff")})
+    if not teams:
+        raise HTTPException(status_code=400, detail="Hace falta al menos un equipo")
+    fallback_rt = "claude" if "claude" in runtime_ids else (next(iter(runtime_ids)) if runtime_ids else "claude")
+    # Saneado de asignaciones (solo agentes/equipos/runtimes válidos)
+    assignments = {}
+    for aid, asg in (req.assignments or {}).items():
+        if aid not in agent_ids or not isinstance(asg, dict):
+            continue
+        team = str(asg.get("team") or "")
+        runtime = str(asg.get("runtime") or "")
+        if team not in team_ids:
+            team = teams[0]["id"]
+        if runtime not in runtime_ids:
+            runtime = fallback_rt
+        assignments[aid] = {"team": team, "runtime": runtime}
+    doc = {"teams": teams, "runtimes": runtimes, "assignments": assignments}
+    _save_teams(doc)
+    return {"ok": True, **doc}
+
+
 @app.get("/api/council/yar-context")
 async def get_yar_context(_auth=Depends(verify_token)):
     with _yar_lock:

@@ -3860,6 +3860,25 @@ def _hk_load_council() -> list:
     return out
 
 
+_TS_BIN = "/Applications/Tailscale.app/Contents/MacOS/Tailscale"
+
+
+def _hk_resolve_host_by_ip(ip: str) -> str:
+    """IP tailnet → hostname corto (vía `tailscale status`). Para excluir la
+    máquina desde la que se lanza el hackeo (su pantalla no debe taparse)."""
+    if not ip:
+        return ""
+    try:
+        r = subprocess.run([_TS_BIN, "status"], capture_output=True, timeout=6)
+        for line in r.stdout.decode("utf-8", "ignore").splitlines():
+            parts = line.split()
+            if parts and parts[0] == ip:
+                return parts[1] if len(parts) > 1 else ""
+    except Exception:
+        pass
+    return ""
+
+
 def _hk_ping(host: str) -> bool:
     """Ping ICMP rápido por hostname Tailscale. True si responde."""
     if not host:
@@ -4153,16 +4172,35 @@ def _hk_process_one(machine: dict, action: str) -> dict:
     return result
 
 
+class HackeoRequest(BaseModel):
+    exclude_ip: str = ""
+
+
 @app.post("/api/council/hackeo")
-async def council_hackeo(_rate=Depends(check_rate_limit), _auth=Depends(verify_hack_token)):
+async def council_hackeo(req: Optional[HackeoRequest] = None, _rate=Depends(check_rate_limit), _auth=Depends(verify_hack_token)):
     """Lanza la simulación de hackeo en cada máquina del consejo.
 
     Para cada consejero: ping → si vive, SSH; si no, Wake-on-LAN.
-    Devuelve el estado por máquina para que el frontend pinte el resultado.
+    Excluye la máquina desde la que se lanza (exclude_ip) para no tapar la
+    pantalla del operador. Devuelve el estado por máquina.
     """
     machines = _hk_load_council()
     if not machines:
         return {"ok": False, "error": "no council machines", "machines": []}
+
+    excluded = None
+    exclude_ip = (req.exclude_ip if req else "") or ""
+    if exclude_ip:
+        ehost = _hk_resolve_host_by_ip(exclude_ip)
+        if ehost:
+            kept = []
+            for m in machines:
+                mhost = (m.get("ssh") or {}).get("host", "").split(".")[0]
+                if mhost and mhost == ehost:
+                    excluded = m.get("id")
+                else:
+                    kept.append(m)
+            machines = kept
 
     results: list = []
     with _HkPool(max_workers=min(8, len(machines))) as pool:
@@ -4188,6 +4226,7 @@ async def council_hackeo(_rate=Depends(check_rate_limit), _auth=Depends(verify_h
         "ts": datetime.utcnow().isoformat() + "Z",
         "summary": summary,
         "machines": results,
+        "excluded": excluded,
     }
 
 

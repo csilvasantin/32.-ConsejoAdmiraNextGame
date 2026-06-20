@@ -3818,11 +3818,13 @@
     // Auto-login en máquinas de AgoraMatrix: el Mini sirve el TOKEN_OPERADOR
     // sólo a nodos de la tailnet identificados (8443, NO funnel). Si responde,
     // entra sin pedir token; desde fuera de la tailnet devuelve null → prompt.
+    let MY_TAILNET_IP = "";  // IP tailnet de ESTA máquina (para no hackearse a sí misma)
     async function fetchOperatorToken(){
         try{
             const r = await fetch('https://macmini.tail48b61c.ts.net:8443/optoken/token', { signal: AbortSignal.timeout(2500) });
             if(!r.ok) return null;
             const d = await r.json();
+            if(d && d.ip) MY_TAILNET_IP = d.ip;
             return d && d.token ? d.token : null;
         }catch(e){ return null; }
     }
@@ -3944,6 +3946,9 @@
     // mode: "start" → /api/council/hackeo, "stop" → /api/council/hackeo/stop
     async function callCouncilHackeo(mode) {
         const path = mode === "stop" ? "/api/council/hackeo/stop" : "/api/council/hackeo";
+        // Al lanzar, excluir ESTA máquina (no taparle la pantalla al operador).
+        if (mode !== "stop" && !MY_TAILNET_IP) { try { await fetchOperatorToken(); } catch(e){} }
+        const body = mode === "stop" ? "{}" : JSON.stringify({ exclude_ip: MY_TAILNET_IP || "" });
         const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
         let lastErr = null;
         for (const baseUrl of urls) {
@@ -3955,6 +3960,7 @@
                         "X-Council-Token": COUNCIL_API_TOKEN,
                         "X-Council-Hack-Token": localStorage.getItem("council_hack_token") || "",
                     },
+                    body: body,
                     signal: AbortSignal.timeout(20000),
                 });
                 if (!res.ok) { lastErr = "HTTP " + res.status; continue; }

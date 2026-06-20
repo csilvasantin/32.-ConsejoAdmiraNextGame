@@ -1340,6 +1340,16 @@ DEFAULT_USUARIOS = [
 
 _RUNTIME_LABEL = {"codex": "Codex", "claude": "Claude", "opencode": "OpenCode"}
 _AGORA_LOG = os.path.expanduser("~/.agents-comms/agora.jsonl")
+_AGORA_CFG = os.path.expanduser("~/.agents-comms/config.json")
+
+
+def _agora_personas() -> dict:
+    """Identidad Runtime·cuenta → persona (Neo, Morfeo, Trinity, Oráculo, Cypher)."""
+    try:
+        cfg = json.loads(open(_AGORA_CFG, encoding="utf-8").read())
+        return {str(k): str(v) for k, v in (cfg.get("personas") or {}).items()}
+    except Exception:
+        return {}
 
 
 def _user_account(u: dict) -> str:
@@ -1354,8 +1364,15 @@ def _user_account(u: dict) -> str:
 
 
 def _agora_last_by_identity() -> dict:
-    """Última actividad de AgoraMatrix por identidad Runtime·cuenta."""
-    out = {}
+    """Último REPORTE por identidad Runtime·cuenta.
+
+    El agente informa bajo su PERSONA (Neo, Morfeo…) con `from` exacto =
+    persona (sus `agora send/done`). Los `Carlos→Identidad` son preguntas
+    dirigidas A la identidad, NO lo que hizo → se ignoran.
+    """
+    personas = _agora_personas()              # identidad -> persona
+    persona_set = set(personas.values())
+    last_by_persona = {}
     try:
         with open(_AGORA_LOG, encoding="utf-8") as f:
             for line in f:
@@ -1366,15 +1383,18 @@ def _agora_last_by_identity() -> dict:
                     d = json.loads(line)
                 except Exception:
                     continue
-                m = re.search(r"(Claude|Codex|OpenCode)·([A-Za-z0-9_]+)", str(d.get("from") or ""))
-                if not m:
+                frm = str(d.get("from") or "").strip()
+                if frm not in persona_set:        # solo reportes propios de la persona
                     continue
-                ident = m.group(0)
                 ts = str(d.get("ts") or "")
-                if ident not in out or ts > out[ident]["ts"]:
-                    out[ident] = {"ts": ts, "text": (d.get("text") or "")[:300]}
+                if frm not in last_by_persona or ts > last_by_persona[frm]["ts"]:
+                    last_by_persona[frm] = {"ts": ts, "text": (d.get("text") or "")[:300]}
     except Exception:
         pass
+    out = {}
+    for ident, persona in personas.items():
+        info = last_by_persona.get(persona) or {"ts": "", "text": ""}
+        out[ident] = {"ts": info["ts"], "text": info["text"], "persona": persona}
     return out
 
 

@@ -114,9 +114,10 @@ function fillTask(aid){
   const asg=DATA.assignments[aid]; const box=document.querySelector('[data-task="'+aid+'"]'); if(!asg||!box) return;
   const id=agentIdentity(asg);
   if(!id){ box.innerHTML='<span class="tmut">— elige LLM y usuario —</span>'; return; }
-  const t=(DATA.identities||{})[id];
-  if(t&&t.text){ box.innerHTML='<div class="ttext">'+escTxt(t.text)+'</div><div class="thint">'+escTxt(id)+' · '+escTxt(fmtTs(t.ts))+'</div>'; }
-  else { box.innerHTML='<span class="tmut">— sin actividad de '+escTxt(id)+' en AgoraMatrix —</span>'; }
+  const t=(DATA.identities||{})[id]||{};
+  const who=t.persona?(escTxt(t.persona)+" · "+escTxt(id)):escTxt(id);
+  if(t.text){ box.innerHTML='<div class="ttext">'+escTxt(t.text)+'</div><div class="thint">'+who+' · '+escTxt(fmtTs(t.ts))+'</div>'; }
+  else { box.innerHTML='<span class="tmut">— '+who+' · sin reportes en AgoraMatrix —</span>'; }
 }
 async function refreshTasks(){
   try{ const r=await apiCall("/api/council/agora-tasks","GET"); DATA.identities=r.identities||{}; DATA.agents.forEach(a=>fillTask(a.id)); $("#status").textContent="↻ tareas "+new Date().toLocaleTimeString("es-ES"); }

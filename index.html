@@ -4746,6 +4746,39 @@
             showCliHelp();
             return true;
         }
+        // ── Sites de Admira: /admira.studio abre, /admira.live recarga, etc.
+        const SITES = {
+            'admira.live':     { reload: true,                                  label: 'admira.live (recarga)' },
+            'admira.studio':   { url: 'https://www.admira.studio/',             label: 'Admira Studio' },
+            'admiranext.com':  { url: 'https://www.admiranext.com/',            label: 'AdmiraNeXT' },
+            'admiranext':      { url: 'https://www.admiranext.com/',            label: 'AdmiraNeXT' },
+            'admira.app':      { url: 'https://www.admira.app/',                label: 'Admira App' },
+            'clearchannel.tv': { url: 'https://www.clearchannel.tv/',           label: 'Clear Channel TV' },
+            'clearchannel':    { url: 'https://www.clearchannel.tv/',           label: 'Clear Channel TV' },
+            'pixeria.com':     { url: 'https://www.pixeria.com/',               label: 'Pixeria' },
+            'pixeria':         { url: 'https://www.pixeria.com/',               label: 'Pixeria' },
+            'equipos':         { url: 'https://www.admira.live/equipos',        label: 'Equipos (asignación)' },
+            'control':         { url: 'https://www.admira.live/control',        label: 'FleetControl' }
+        };
+        const sitesListMatch = text.match(/^\/sites?$/i);
+        if (sitesListMatch) {
+            addUserEntry(text);
+            const seen = {}; const items = [];
+            Object.keys(SITES).forEach(k => { const u = SITES[k].url || 'recarga'; if (!seen[u]) { seen[u] = 1; items.push('/' + k); } });
+            setActionLine('🌐 Sites: ' + items.join(' · '));
+            return true;
+        }
+        const siteMatch = text.match(/^\/(www\.)?([a-z0-9.\-]+)$/i);
+        if (siteMatch) {
+            const key = siteMatch[2].toLowerCase().replace(/\/+$/, '');
+            const site = SITES[key];
+            if (site) {
+                addUserEntry(text);
+                if (site.reload) { setActionLine('🔄 Recargando admira.live…'); setTimeout(() => location.reload(), 150); }
+                else { window.open(site.url, '_blank', 'noopener'); setActionLine('🚀 Abriendo ' + (site.label || key) + ' → ' + site.url); }
+                return true;
+            }
+        }
         const scummMatch = text.match(/^\/(?:scumm|verbos)\s*(on|off|toggle)?$/i);
         if (scummMatch) {
             const action = (scummMatch[1] || 'toggle').toLowerCase();

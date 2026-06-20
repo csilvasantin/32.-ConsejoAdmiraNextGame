@@ -44,9 +44,12 @@
   .field{display:flex;flex-direction:column;gap:5px}
   .field.full{grid-column:1/-1}
   .field label{font-size:11px;text-transform:uppercase;letter-spacing:.5px;color:var(--mut)}
-  select,input.taskinput{font-family:inherit;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:9px 10px;font-size:13px;outline:none;width:100%}
-  select{cursor:pointer}
-  select:focus,input.taskinput:focus{border-color:var(--acc2)}
+  select{font-family:inherit;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:9px 10px;font-size:13px;outline:none;width:100%;cursor:pointer}
+  select:focus{border-color:var(--acc2)}
+  .taskbox{background:var(--panel2);border:1px solid var(--line);border-radius:9px;padding:9px 10px;font-size:13px;min-height:38px}
+  .taskbox .ttext{color:var(--ink);line-height:1.35}
+  .taskbox .thint{font-family:var(--mono);font-size:10px;color:var(--mut);margin-top:4px}
+  .taskbox .tmut{color:var(--mut);font-style:italic;font-size:12px}
   .caprow{display:flex;align-items:center;gap:8px;margin-top:2px}
   .capbtn{font-family:inherit;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:7px 10px;font-size:12px;cursor:pointer;white-space:nowrap}
   .capbtn:hover{border-color:var(--acc)} .capbtn:disabled{opacity:.5;cursor:progress}
@@ -89,6 +92,7 @@
 
 <div class="savebar">
   <span class="status" id="status"></span>
+  <button class="ghost" id="reftasks">↻ tareas</button>
   <button class="ghost" id="reload">Recargar</button>
   <button class="primary" id="save">Guardar</button>
 </div>
@@ -98,8 +102,26 @@ const API_BASES = ["https://macmini.tail48b61c.ts.net/council", "https://three2-
 const USER_COLORS = ["#7aa2ff","#5bd6c0","#ffb454","#ff8fab","#b59cff","#8ef06c","#ff6b6b","#6ee7f5"];
 const $ = s => document.querySelector(s);
 let TOKEN = localStorage.getItem("council_hack_token") || "";
-let DATA = { agents:[], machines:[], usuarios:[], runtimes:[], assignments:{} };
+let DATA = { agents:[], machines:[], usuarios:[], runtimes:[], assignments:{}, identities:{} };
 let activeBase = null;
+const RUNTIME_LABEL = {codex:"Codex", claude:"Claude", opencode:"OpenCode"};
+
+function userAccount(uid){ const u=DATA.usuarios.find(x=>x.id===uid)||{}; return (u.account||"").toLowerCase(); }
+function agentIdentity(asg){ const rl=RUNTIME_LABEL[asg.runtime]||""; const acc=userAccount(asg.usuario); return (rl&&acc)?(rl+"·"+acc):""; }
+function escTxt(s){ return String(s==null?"":s).replace(/[&<>]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;"}[c])); }
+function fmtTs(ts){ if(!ts) return ""; try{ return new Date(ts).toLocaleString("es-ES",{day:"2-digit",month:"2-digit",hour:"2-digit",minute:"2-digit"}); }catch(e){ return ts.slice(0,16); } }
+function fillTask(aid){
+  const asg=DATA.assignments[aid]; const box=document.querySelector('[data-task="'+aid+'"]'); if(!asg||!box) return;
+  const id=agentIdentity(asg);
+  if(!id){ box.innerHTML='<span class="tmut">— elige LLM y usuario —</span>'; return; }
+  const t=(DATA.identities||{})[id];
+  if(t&&t.text){ box.innerHTML='<div class="ttext">'+escTxt(t.text)+'</div><div class="thint">'+escTxt(id)+' · '+escTxt(fmtTs(t.ts))+'</div>'; }
+  else { box.innerHTML='<span class="tmut">— sin actividad de '+escTxt(id)+' en AgoraMatrix —</span>'; }
+}
+async function refreshTasks(){
+  try{ const r=await apiCall("/api/council/agora-tasks","GET"); DATA.identities=r.identities||{}; DATA.agents.forEach(a=>fillTask(a.id)); $("#status").textContent="↻ tareas "+new Date().toLocaleTimeString("es-ES"); }
+  catch(e){ if(e.code) onAuthFail(); }
+}
 
 function hash(s){ let h=0; for(const c of String(s)) h=(h*31+c.charCodeAt(0))|0; return h; }
 function slug(s){ return (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-+|-+$/g,"") || ("u-"+Math.abs(hash(s))); }
@@ -180,18 +202,19 @@ function render(){
         <div class="shot" data-shot="${ag.id}" style="display:none"></div>
       </div>
       <div class="field full"><label>LLM / runtime</label><select data-a="${ag.id}" data-k="runtime">${rOpts}</select></div>
-      <div class="field full"><label>Tarea (última)</label><input class="taskinput" data-a="${ag.id}" data-k="tarea" value="${esc(asg.tarea)}" placeholder="última tarea del bot…"></div>
-      <div class="field full"><label>Usuario (login)</label><select data-a="${ag.id}" data-k="usuario">${uOpts}</select></div>`;
+      <div class="field full"><label>Usuario (login)</label><select data-a="${ag.id}" data-k="usuario">${uOpts}</select></div>
+      <div class="field full"><label>Tarea (AgoraMatrix)</label><div class="taskbox" data-task="${ag.id}"></div></div>`;
     card.querySelectorAll("select").forEach(sel=>{
       sel.onchange=e=>{ const aid=e.target.dataset.a, k=e.target.dataset.k; DATA.assignments[aid][k]=e.target.value;
         if(k==="usuario"){ card.style.setProperty("--c",userColor(e.target.value)); renderCounts(); }
         if(k==="machine"){ const cap=card.querySelector("[data-cap]"); cap.style.display=e.target.value?"":"none";
           if(e.target.value){ captureFor(aid); } else { card.querySelector('[data-shot="'+aid+'"]').style.display="none"; setCapSt(aid,"",""); } }
+        if(k==="runtime"||k==="usuario"){ fillTask(aid); }
       };
     });
-    card.querySelector(".taskinput").oninput=e=>{ DATA.assignments[e.target.dataset.a].tarea=e.target.value; };
     card.querySelector("[data-capbtn]").onclick=()=>captureFor(ag.id);
     ae.appendChild(card);
+    fillTask(ag.id);
   });
 }
 function renderCounts(){ document.querySelectorAll(".user-chip").forEach((chip,i)=>{ const u=DATA.usuarios[i]; if(!u)return; const n=Object.values(DATA.assignments).filter(a=>a.usuario===u.id).length; const el=chip.querySelector(".count"); if(el) el.textContent=n; }); }
@@ -223,6 +246,7 @@ $("#save").onclick=async()=>{
   btn.disabled=false;
 };
 $("#reload").onclick=load;
+$("#reftasks").onclick=refreshTasks;
 $("#connPill").onclick=()=>{ if($("#connPill").classList.contains("bad")) setToken(); };
 load();
 </script>

@@ -1330,10 +1330,52 @@ DEFAULT_RUNTIMES = [
     {"id": "opencode", "label": "OpenCode·DeepSeek", "engine": "OpenCode", "model": "DeepSeek"},
 ]
 # Usuarios con los que los LLM de terceros hacen login (editable).
+# `account` = sufijo de cuenta que usa AgoraMatrix en las identidades Runtime·cuenta
+# (Claude·admira, Codex·gmail, OpenCode·grok) para enlazar la tarea real.
 DEFAULT_USUARIOS = [
-    {"id": "csilva", "name": "csilva@admira.com"},
-    {"id": "csilvasantin", "name": "csilvasantin@gmail.com"},
+    {"id": "csilva", "name": "csilva@admira.com", "account": "admira"},
+    {"id": "csilvasantin", "name": "csilvasantin@gmail.com", "account": "gmail"},
+    {"id": "grok", "name": "grok (OpenCode)", "account": "grok"},
 ]
+
+_RUNTIME_LABEL = {"codex": "Codex", "claude": "Claude", "opencode": "OpenCode"}
+_AGORA_LOG = os.path.expanduser("~/.agents-comms/agora.jsonl")
+
+
+def _user_account(u: dict) -> str:
+    """Sufijo de cuenta AgoraMatrix de un usuario (admira/gmail/grok…)."""
+    acc = str(u.get("account") or "").strip().lower()
+    if acc:
+        return acc
+    name = str(u.get("name") or "")
+    if "@" in name:
+        return name.split("@", 1)[1].split(".", 1)[0].lower()
+    return re.sub(r"[^a-z0-9]+", "", str(u.get("id") or "").lower())
+
+
+def _agora_last_by_identity() -> dict:
+    """Última actividad de AgoraMatrix por identidad Runtime·cuenta."""
+    out = {}
+    try:
+        with open(_AGORA_LOG, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    d = json.loads(line)
+                except Exception:
+                    continue
+                m = re.search(r"(Claude|Codex|OpenCode)·([A-Za-z0-9_]+)", str(d.get("from") or ""))
+                if not m:
+                    continue
+                ident = m.group(0)
+                ts = str(d.get("ts") or "")
+                if ident not in out or ts > out[ident]["ts"]:
+                    out[ident] = {"ts": ts, "text": (d.get("text") or "")[:300]}
+    except Exception:
+        pass
+    return out
 
 
 def _machine_emoji(s: str) -> str:
@@ -1438,7 +1480,14 @@ async def get_teams(_auth=Depends(verify_hack_token)):
         "usuarios": doc["usuarios"],
         "runtimes": doc["runtimes"],
         "assignments": doc["assignments"],
+        "identities": _agora_last_by_identity(),
     }
+
+
+@app.get("/api/council/agora-tasks")
+async def agora_tasks(_auth=Depends(verify_hack_token)):
+    """Última actividad de AgoraMatrix por identidad Runtime·cuenta (para refrescar la Tarea)."""
+    return {"identities": _agora_last_by_identity()}
 
 
 @app.post("/api/council/teams")
@@ -1455,7 +1504,7 @@ async def save_teams(req: TeamsSaveRequest, _auth=Depends(verify_hack_token)):
         if not uid or not name or uid in user_ids:
             continue
         user_ids.add(uid)
-        usuarios.append({"id": uid, "name": name})
+        usuarios.append({"id": uid, "name": name, "account": _user_account(u)})
     if not usuarios:
         usuarios = [dict(u) for u in DEFAULT_USUARIOS]
         user_ids = {u["id"] for u in usuarios}

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Consejero · AdmiraNext Council</title>
-  <meta name="admiranext-version" content="v.26.06.19.r3">
+  <meta name="admiranext-version" content="v.26.06.20.r1">
   <link rel="icon" href="/council-icon.ico?v=20260522-r1" sizes="any">
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
@@ -94,6 +94,22 @@
     .cta{display:flex;gap:10px;flex-wrap:wrap;margin-top:18px}
     .cta .pill{font-size:.5rem;padding:.7rem .9rem}
     .cta .go{background:var(--wood-line);color:#fff;border-color:var(--amber-soft)}
+
+    /* Chat con el consejero (vía AgoraMatrix → reflejo en Telegram) */
+    .chat{margin-top:14px}
+    .chat-status{font-size:.42rem;color:var(--muted);letter-spacing:0}
+    .chat-status.on{color:#7CFC00}.chat-status.off{color:#e0623c}
+    .chat-thread{min-height:90px;max-height:340px;overflow-y:auto;display:flex;flex-direction:column;gap:8px;padding:6px 2px;margin-bottom:12px}
+    .chat-empty{font-size:.5rem;color:var(--muted);line-height:1.9;text-align:center;padding:20px 10px}
+    .chat-msg{font-size:.5rem;line-height:1.7;padding:8px 10px;border:1px solid #2a3057;max-width:88%}
+    .chat-msg.me{align-self:flex-end;background:#15183a;border-color:var(--amber-soft);color:#fff}
+    .chat-msg.them{align-self:flex-start;background:#0c0f22;color:#d7dcf0}
+    .chat-msg .who{display:block;font-size:.4rem;color:var(--muted);margin-bottom:4px}
+    .chat-form{display:flex;gap:8px}
+    .chat-form input{flex:1;background:#080a18;border:2px solid var(--wood-line);color:var(--ink);font:inherit;font-size:.5rem;padding:.7rem .8rem}
+    .chat-form input:disabled{opacity:.5}
+    .chat-form button{background:var(--wood-line);color:#fff;border:2px solid var(--amber-soft);font:inherit;font-size:.5rem;padding:.7rem 1rem;cursor:pointer}
+    .chat-form button:disabled{opacity:.45;cursor:not-allowed}
 
     .foot{text-align:center;color:var(--muted);font-size:.42rem;line-height:2;margin:22px 0 6px}
 
@@ -291,7 +307,7 @@
           <div class="bar">
             <a class="pill" href="index.html">◀ Volver al Consejo</a>
             <span class="bar-spacer"></span>
-            <span class="pill flat">v.26.06.19.r3</span>
+            <span class="pill flat">v.26.06.20.r1</span>
           </div>
           <div class="notfound">No encuentro al consejero «${(params.get("p")||"").replace(/[<>]/g,"")}».<br><br>
             Consejeros disponibles: ${Object.keys(BY_SLUG).join(" · ")}</div>`;
@@ -309,7 +325,7 @@
           <a class="pill" href="https://www.admiranext.com" target="_blank" rel="noopener">🏠 AdmiraNeXT</a>
           <span class="bar-spacer"></span>
           <span class="pill flat">${c.icon} ${c.role}</span>
-          <span class="pill flat">v.26.06.19.r3</span>
+          <span class="pill flat">v.26.06.20.r1</span>
         </div>
 
         <div class="hero">
@@ -351,6 +367,15 @@
           <div class="quote">“${c.quote}”<span class="who">— ${c.persona}, ${c.role} del Consejo</span></div>
         </div>
 
+        <div class="card chat" id="chat">
+          <h2>💬 Conversación <span class="chat-status" id="chatStatus">· comprobando conexión…</span></h2>
+          <div class="chat-thread" id="chatThread"><div class="chat-empty">Conecta a ${c.persona} a un equipo con su LLM (Asignación) para conversar. La charla se refleja en Telegram.</div></div>
+          <form class="chat-form" id="chatForm" autocomplete="off">
+            <input id="chatInput" type="text" placeholder="Escribe a ${c.persona}…" disabled>
+            <button type="submit" id="chatSend" disabled>Enviar</button>
+          </form>
+        </div>
+
         <div class="cta">
           <a class="pill go" href="index.html#${c.slug}">💬 Preguntarle en el Consejo</a>
           <a class="pill" href="index.html">◀ Volver a la mesa</a>
@@ -358,7 +383,7 @@
 
         <div class="foot">
           AdmiraNeXT · Consejo de Silicio · admira.live<br>
-          Ficha de consejero · v.26.06.19.r3
+          Ficha de consejero · v.26.06.20.r1
         </div>`;
 
       loadLive(c);
@@ -394,7 +419,36 @@
           +row("Operador", user?esc(user.name):"—")
           +row("Territorio", esc(c.territory))
           +((task&&task.text)?row("Tarea", esc(task.text)+(task.persona?` <span style="opacity:.6">· ${esc(task.persona)}</span>`:"")):"");
+        try{ setupChat(c,{machine:mach?mach.name:"",machineId:asg.machine||"",runtime:rt,runtimeId:asg.runtime||"",identity:ident,account:acc,token}); }catch(_){}
       }catch(e){}
+    }
+
+    // Chat con el consejero: enruta por AgoraMatrix a su agente (Codex/Claude/OpenCode)
+    // en su máquina; el agente responde en persona y se refleja en Telegram. El hilo se
+    // lee del council-api. Si el backend (fase 2) aún no responde, queda en "pendiente".
+    const CHAT_API="https://macmini.tail48b61c.ts.net/council";
+    function setupChat(c, ctx){
+      const st=document.getElementById("chatStatus"), inp=document.getElementById("chatInput"),
+            btn=document.getElementById("chatSend"), form=document.getElementById("chatForm"),
+            thread=document.getElementById("chatThread");
+      if(!st||!form) return;
+      const esc=s=>String(s==null?"":s).replace(/[<>&]/g,x=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[x]));
+      if(!ctx.machineId||!ctx.identity){ st.textContent="· sin equipo asignado"; st.className="chat-status off"; return; }
+      st.textContent="· conectado a "+ctx.machine+" · "+ctx.runtime+" ("+ctx.identity+")"; st.className="chat-status on";
+      inp.disabled=false; btn.disabled=false; let since=0, primed=false;
+      function bubble(who,text,me){ if(!primed){ thread.innerHTML=""; primed=true; } const d=document.createElement("div");
+        d.className="chat-msg "+(me?"me":"them"); d.innerHTML='<span class="who">'+esc(who)+'</span>'+esc(text);
+        thread.appendChild(d); thread.scrollTop=thread.scrollHeight; }
+      form.addEventListener("submit", async e=>{ e.preventDefault(); const msg=inp.value.trim(); if(!msg)return; inp.value=""; bubble("Tú",msg,true);
+        try{ const r=await fetch(CHAT_API+"/api/council/talk",{method:"POST",headers:{"Content-Type":"application/json","X-Council-Hack-Token":ctx.token},
+              body:JSON.stringify({role:c.role,persona:c.persona,identity:ctx.identity,runtime:ctx.runtimeId,machine:ctx.machineId,message:msg})});
+          if(r.status===404){ st.textContent="· enrutado pendiente (backend fase 2)"; st.className="chat-status off"; }
+          else if(!r.ok){ bubble("sistema","error "+r.status,false); }
+        }catch(_){ bubble("sistema","sin conexión",false); }
+      });
+      async function poll(){ try{ const r=await fetch(CHAT_API+"/api/council/talk-thread?role="+encodeURIComponent(c.role)+"&since="+since,{headers:{"X-Council-Hack-Token":ctx.token}});
+        if(r.ok){ const d=await r.json(); for(const m of (d.messages||[])){ since=Math.max(since,m.ts||0); if((m.from||"")!=="Tú"&&(m.role||"")!=="me") bubble(m.from||c.persona, m.text||"", false); } } }catch(_){} }
+      setInterval(poll,4000); poll();
     }
 
     render();

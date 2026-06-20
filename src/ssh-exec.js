@@ -1,8 +1,9 @@
 import { execFile } from "node:child_process";
+import dgram from "node:dgram";
 import { readFile, unlink, writeFile } from "node:fs/promises";
 import { hostname, homedir, tmpdir } from "node:os";
 import { join } from "node:path";
-import { readMachines } from "./store.js";
+import { readMachines, writeMachines } from "./store.js";
 
 const SSH_IDENTITY = join(homedir(), ".ssh", "admiranext_ed25519");
 const WINDOWS_SCREENSHOT_PYTHON = join(homedir(), "Documents", "Codex", "ClaudeBot", ".venv", "Scripts", "python.exe");
@@ -898,6 +899,260 @@ export async function getReachableMachines() {
   return data.machines.filter((m) => isAutomationReady(m) && (hasWindowsAutomationChannel(m) || isReachable(m) || isLocalMachine(m)));
 }
 
+// ── Estado de Claude Code por máquina (monitor de la mesa) ──────────────
+// Sondea por SSH cada máquina del consejo y devuelve cuenta logueada,
+// versión de Claude Code (CLI o embebido en la app) y si está corriendo.
+// Alcanzabilidad por SSH real (hostname Tailscale → red local), no por ping.
+const CLAUDE_STATUS_PROBE_PY = `
+import json, os, subprocess
+def sh(c):
+    try:
+        return subprocess.run(["zsh","-lc",c], capture_output=True, text=True, timeout=6).stdout.strip()
+    except Exception:
+        return ""
+o = {}
+o["host"] = sh("hostname")
+o["user"] = sh("whoami")
+o["macos"] = sh("sw_vers -productVersion")
+try:
+    d = json.load(open(os.path.expanduser("~/.claude.json")))
+    a = d.get("oauthAccount") or {}
+    o["account"] = a.get("emailAddress")
+    o["org"] = a.get("organizationName")
+except Exception:
+    o["account"] = None
+    o["org"] = None
+cli = sh("command -v claude")
+o["cli_path"] = cli or None
+o["cli_version"] = (sh("claude --version") or None) if cli else None
+ccdir = os.path.expanduser("~/Library/Application Support/Claude/claude-code")
+try:
+    o["app_claude_code"] = sorted(os.listdir(ccdir)) if os.path.isdir(ccdir) else []
+except Exception:
+    o["app_claude_code"] = []
+o["claude_running"] = bool(sh("pgrep -f claude-code/"))
+print(json.dumps(o))
+`;
+
+function probeMachineClaude(machine) {
+  const out = { id: machine.id, name: machine.name || machine.id, online: false, claude: null, error: null };
+  const ssh = machine.ssh || {};
+  if (!ssh.enabled || (!ssh.host && !ssh.ip_tailscale)) {
+    out.error = "ssh disabled or no host";
+    return Promise.resolve(out);
+  }
+  const payload = Buffer.from(CLAUDE_STATUS_PROBE_PY, "utf8").toString("base64");
+  const remoteCmd = `echo ${payload} | base64 -D | python3 -`;
+
+  const attempt = (useLocal) => new Promise((resolve) => {
+    if (useLocal && !deriveLocalHostname(machine)) { resolve(null); return; }
+    const args = buildSshArgs(machine, useLocal);
+    args.push(remoteCmd);
+    execFile("ssh", args, { timeout: 20_000 }, (error, stdout) => {
+      if (error) { out.error = (error.message || "ssh error").slice(0, 180); resolve(null); return; }
+      try {
+        const line = String(stdout || "").trim().split("\n").pop();
+        out.claude = JSON.parse(line);
+        out.online = true;
+        out.reached_via = useLocal ? deriveLocalHostname(machine) : (ssh.ip_tailscale || ssh.host);
+        out.error = null;
+        resolve(out);
+      } catch (e) {
+        out.error = "probe parse error: " + String(stdout || "").slice(0, 120);
+        resolve(null);
+      }
+    });
+  });
+
+  return attempt(false).then((r) => r || attempt(true)).then((r) => r || out);
+}
+
+export async function getCouncilClaudeStatus() {
+  const data = await readMachines();
+  const all = data.machines || [];
+  // El monitor cubre TODA la flota, no solo el consejo:
+  //  - Sondeo real (SSH + Python) en las máquinas con SSH habilitado y que no sean Windows.
+  //  - Los workers Windows / sin SSH se incluyen marcados `monitor:"unsupported"` con el motivo,
+  //    para que aparezcan en la mesa en vez de desaparecer. En cuanto un worker tenga SSH, se sondea solo.
+  return Promise.all(all.map((m) => {
+    const ssh = m.ssh || {};
+    const probeable = ssh.enabled && (ssh.host || ssh.ip_tailscale) && m.platform !== "Windows";
+    if (probeable) return probeMachineClaude(m);
+    return Promise.resolve({
+      id: m.id,
+      name: m.name || m.id,
+      online: false,
+      claude: null,
+      monitor: "unsupported",
+      reason: m.platform === "Windows" ? "Windows · sin sondeo de cuenta (requiere agente)" : "sin canal SSH",
+      unitType: m.unitType || "council",
+      platform: m.platform || null
+    });
+  }));
+}
+
+// ── Acciones de control acotadas (lista blanca) ─────────────────────────
+// SOLO acciones predefinidas; nunca comando libre ni sudo. Cada acción es
+// un osascript/comando seguro ejecutado por SSH en la máquina del consejo.
+const MACHINE_ACTIONS = {
+  "claude-open": { label: "Abrir Claude Code", osa: ['tell application "Claude" to activate'] },
+  "claude-quit": { label: "Cerrar Claude Code", osa: ['tell application "Claude" to quit'] },
+  // Reinicio: cerrar y reabrir Claude Code (útil cuando queda colgado). Sigue siendo
+  // solo AppleEvents acotados; el delay deja que cierre antes de reactivar.
+  "claude-restart": { label: "Reiniciar Claude Code", osa: ['tell application "Claude" to quit', "delay 2", 'tell application "Claude" to activate'] },
+  // Refrescar captura: vuelve a tomar el pantallazo + estado de apps de esa máquina
+  // (mismo flujo que el refresco periódico, pero bajo demanda). kind:capture, sin osascript.
+  "refresh-capture": { label: "Refrescar captura", kind: "capture" },
+  // Energía (par reversible, sin sudo): dormir por SSH y despertar por Wake-on-LAN.
+  "sleep": { label: "Dormir", kind: "sleep" },
+  "wake":  { label: "Despertar (WoL)", kind: "wol" }
+};
+
+// Wake-on-LAN: magic packet (6×0xFF + 16×MAC) por broadcast UDP a los puertos 9 y 7.
+// La máquina destino debe tener "Wake for network access" activado y estar en la LAN
+// del servidor (WoL es L2, no cruza redes). Mejor-esfuerzo: resolvemos ok al enviar.
+function sendWol(mac) {
+  return new Promise((resolve) => {
+    const clean = String(mac || "").replace(/[^0-9a-fA-F]/g, "");
+    if (clean.length !== 12) { resolve({ ok: false, error: "MAC inválida o ausente" }); return; }
+    const macBuf = Buffer.from(clean, "hex");
+    const packet = Buffer.alloc(102, 0xff);          // primeros 6 bytes = 0xFF
+    for (let i = 0; i < 16; i++) macBuf.copy(packet, 6 + i * 6);
+    const sock = dgram.createSocket("udp4");
+    let settled = false;
+    const done = (res) => { if (settled) return; settled = true; try { sock.close(); } catch {} resolve(res); };
+    sock.once("error", (e) => done({ ok: false, error: e.message }));
+    sock.bind(() => {
+      try { sock.setBroadcast(true); } catch {}
+      sock.send(packet, 0, packet.length, 9, "255.255.255.255", () => {});
+      sock.send(packet, 0, packet.length, 7, "255.255.255.255", () => {});
+      setTimeout(() => done({ ok: true }), 1200);
+    });
+  });
+}
+
+// Diagnóstico SSH de la flota + autodescubrimiento de MAC (para WoL).
+// Para cada máquina con SSH: prueba la conexión y, de paso, lee la MAC de la interfaz
+// por defecto; persiste las MAC nuevas en data/machines.json. Solo lectura remota, sin sudo.
+export async function sshDiagnoseFleet() {
+  const data = await readMachines();
+  const machines = data.machines || [];
+  const macCmd = `IFACE=$(route -n get default 2>/dev/null | awk '/interface:/{print $2}'); ifconfig "$IFACE" 2>/dev/null | awk '/ether/{print $2; exit}'`;
+  let changed = false;
+  const results = await Promise.all(machines.map((m) => new Promise((resolve) => {
+    const ssh = m.ssh || {};
+    const base = { id: m.id, name: m.name || m.id, platform: m.platform || null, unitType: m.unitType || "council", sshEnabled: !!ssh.enabled, mac: m.mac_address || null };
+    if (!ssh.enabled || (!ssh.host && !ssh.ip_tailscale)) {
+      resolve({ ...base, sshOk: false, reason: ssh.enabled ? "sin host/ip" : "SSH no habilitado" });
+      return;
+    }
+    const attempt = (useLocal) => new Promise((res) => {
+      if (useLocal && !deriveLocalHostname(m)) { res(null); return; }
+      const args = buildSshArgs(m, useLocal);
+      args.push(macCmd);
+      execFile("ssh", args, { timeout: 12000 }, (error, stdout) => {
+        if (error) { res(null); return; }
+        res({ mac: String(stdout || "").trim().split("\n").pop().trim() });
+      });
+    });
+    attempt(false).then((r) => r || attempt(true)).then((r) => {
+      if (!r) { resolve({ ...base, sshOk: false, reason: "sin respuesta SSH" }); return; }
+      const mac = /^[0-9a-f:]{17}$/i.test(r.mac) ? r.mac.toLowerCase() : null;
+      let discovered = false;
+      if (mac && mac !== String(m.mac_address || "").toLowerCase()) { m.mac_address = mac; changed = true; discovered = true; }
+      resolve({ ...base, sshOk: true, mac: m.mac_address || mac || null, discovered });
+    });
+  })));
+  if (changed) { try { await writeMachines(data); } catch {} }
+  return { ts: new Date().toISOString(), changed, machines: results };
+}
+
+export function listMachineActions() {
+  return Object.entries(MACHINE_ACTIONS).map(([key, v]) => ({ key, label: v.label }));
+}
+
+export async function runMachineAction(machineId, action) {
+  const spec = MACHINE_ACTIONS[action];
+  if (!spec) return { ok: false, error: `acción no permitida: ${action}` };
+
+  const data = await readMachines();
+  let machine = data.machines.find((m) => m.id === machineId);
+  if (!machine) {
+    const resolved = resolveMachineName(data.machines, machineId);
+    if (resolved) machine = resolved;
+  }
+  if (!machine) return { ok: false, error: `Máquina '${machineId}' no encontrada` };
+
+  // Despertar (WoL): la máquina puede estar apagada/dormida → NO exige canal de
+  // automatización, solo la MAC. Si falta MAC, pide pasar antes "Probar SSH/MAC".
+  if (spec.kind === "wol") {
+    if (!machine.mac_address) return { ok: false, error: `Sin MAC en '${machine.name}': ejecuta "Probar SSH/MAC" primero` };
+    const res = await sendWol(machine.mac_address);
+    return res.ok
+      ? { ok: true, name: machine.name, action, detail: `WoL enviado a ${machine.mac_address}` }
+      : { ok: false, error: res.error };
+  }
+
+  if (!isAutomationReady(machine)) return { ok: false, error: `Canal de automatizacion no habilitado en '${machine.name}'` };
+
+  // Dormir: nunca al propio servidor (mataría el panel). pmset sleepnow no necesita sudo;
+  // se programa 1s después para que el SSH cierre limpio. El corte de conexión es esperado.
+  if (spec.kind === "sleep") {
+    if (isLocalMachine(machine)) return { ok: false, error: "No se puede dormir el propio servidor del panel" };
+    const remoteCmd = `nohup sh -c 'sleep 1; pmset sleepnow' >/dev/null 2>&1 &`;
+    const attempt = (useLocal) => new Promise((resolve) => {
+      if (useLocal && !deriveLocalHostname(machine)) { resolve(null); return; }
+      const args = buildSshArgs(machine, useLocal);
+      args.push(remoteCmd);
+      execFile("ssh", args, { timeout: TIMEOUT_MS }, () => resolve({ ok: true, machine: machineId, name: machine.name, action }));
+    });
+    const r = await attempt(false) || (deriveLocalHostname(machine) ? await attempt(true) : null);
+    return r || { ok: true, name: machine.name, action };
+  }
+
+  // Acción de captura: recaptura pantalla + estado de apps bajo demanda y actualiza el snapshot.
+  if (spec.kind === "capture") {
+    const [snap, appsRaw] = await Promise.all([captureOneSnapshot(machine), captureAllAppsState(machine)]);
+    if (!snap && !appsRaw && !isLocalMachine(machine)) {
+      markMachineFailed(machine.id);
+      return { ok: false, error: "sin respuesta de la máquina al capturar" };
+    }
+    markMachineOnline(machine.id);
+    const apps = parseAppsState(appsRaw);
+    const existing = machineSnapshots.get(machine.id) || {};
+    machineSnapshots.set(machine.id, mergeMachineSnapshot(existing, snap, { claudeState: apps.claude, codexState: apps.codex }));
+    return { ok: true, name: machine.name, action, snapshot: machineSnapshots.get(machine.id) };
+  }
+
+  const osaLines = Array.isArray(spec.osa) ? spec.osa : [spec.osa];
+
+  // Local: osascript directo (varias sentencias → varios -e).
+  if (isLocalMachine(machine)) {
+    const { error } = await execLocalMulti(osaLines.flatMap((line) => ["-e", line]));
+    return error ? { ok: false, error: error.message } : { ok: true, name: machine.name, action };
+  }
+
+  // Remoto: despierta el display 2s (la GUI bloqueada no acepta AppleEvents) y lanza osascript.
+  const remoteOsa = osaLines.map((line) => `-e '${line.replace(/'/g, "'\\''")}'`).join(" ");
+  const remoteCmd = `caffeinate -u -t 2 && sleep 1 && osascript ${remoteOsa}`;
+  const attempt = (useLocal) => new Promise((resolve) => {
+    if (useLocal && !deriveLocalHostname(machine)) { resolve(null); return; }
+    const args = buildSshArgs(machine, useLocal);
+    args.push(remoteCmd);
+    execFile("ssh", args, { timeout: TIMEOUT_MS }, (error) => {
+      if (error) resolve({ ok: false, error: (error.message || "ssh error").slice(0, 180) });
+      else resolve({ ok: true, machine: machineId, name: machine.name, action });
+    });
+  });
+
+  let result = await attempt(false);
+  if ((!result || !result.ok) && deriveLocalHostname(machine)) {
+    const r2 = await attempt(true);
+    if (r2 && r2.ok) result = r2;
+  }
+  return result || { ok: false, error: "sin respuesta SSH" };
+}
+
 export function getAllSnapshots() {
   const result = {};
   for (const [id, snap] of machineSnapshots) {
@@ -1461,14 +1716,103 @@ function finalizeMachineSignal(mState, signal, status) {
 }
 
 const SKYNET_TARGETS = {
-  claude: { appName: "Claude", stateKey: "claude", label: "Claude Code" },
-  codex: { appName: "Codex", stateKey: "codex", label: "Codex" },
-  opencode: { appName: "OpenCode", stateKey: "opencode", label: "OpenCode" }
+  claude: {
+    appName: "Claude",
+    stateKey: "claude",
+    label: "Claude Code",
+    terminalStateKey: "claudeTerminal",
+    terminalLabel: "Claude Code"
+  },
+  codex: {
+    appName: "Codex",
+    stateKey: "codex",
+    label: "Codex",
+    terminalStateKey: "codexTerminal",
+    terminalLabel: "Codex CLI"
+  },
+  opencode: {
+    appName: "OpenCode",
+    stateKey: "opencode",
+    label: "OpenCode",
+    terminalStateKey: "opencodeTerminal",
+    terminalLabel: "OpenCode CLI"
+  }
 };
 
 function normalizeSkynetTarget(target = "claude") {
   const key = String(target || "claude").toLowerCase();
   return SKYNET_TARGETS[key] ? key : "claude";
+}
+
+async function captureTerminalRuntimeState(machine) {
+  if (isWindowsMachine(machine)) {
+    return "";
+  }
+
+  const script = `set r to ""
+set claudeTerm to ""
+set codexTerm to ""
+set opencodeTerm to ""
+on inspectTerminalText(appLabel, c)
+  set out to ""
+  set lc to c
+  if lc contains "Claude Code" or lc contains "claude-code" or lc contains " claude" or lc contains "claude " then set out to out & "CLAUDE_TERM:Claude Code · " & appLabel & "|||"
+  if lc contains "Codex" or lc contains " codex" or lc contains "codex " then set out to out & "CODEX_TERM:Codex CLI · " & appLabel & "|||"
+  if lc contains "OpenCode" or lc contains "opencode" or lc contains " open-code" then set out to out & "OPENCODE_TERM:OpenCode CLI · " & appLabel & "|||"
+  return out
+end inspectTerminalText
+try
+  if application "Terminal" is running then
+    tell application "Terminal"
+      repeat with w in every window
+        repeat with t in every tab of w
+          try
+            set c to contents of t
+            set cLen to length of c
+            if cLen > 3000 then set c to text (cLen - 2999) thru cLen of c
+            set r to r & my inspectTerminalText("Terminal", c)
+          end try
+        end repeat
+      end repeat
+    end tell
+  end if
+end try
+try
+  if application "iTerm2" is running then
+    tell application "iTerm2"
+      repeat with w in every window
+        repeat with t in every tab of w
+          repeat with s in every session of t
+            try
+              set c to contents of s
+              set cLen to length of c
+              if cLen > 3000 then set c to text (cLen - 2999) thru cLen of c
+              set r to r & my inspectTerminalText("iTerm2", c)
+            end try
+          end repeat
+        end repeat
+      end repeat
+    end tell
+  end if
+end try
+tell application "System Events"
+  repeat with appName in {"Warp", "Ghostty"}
+    if exists process appName then
+      tell process appName
+        repeat with w in windows
+          try
+            set wt to name of w
+            set r to r & my inspectTerminalText(appName as text, wt)
+          end try
+        end repeat
+      end tell
+    end if
+  end repeat
+end tell
+return r`;
+
+  const { error, stdout } = await runMacAutomationScript(machine, script, 12_000);
+  return error ? "" : stdout?.trim() || "";
 }
 
 // Check Claude, Codex and OpenCode status on a machine (not just frontmost app)
@@ -1478,9 +1822,13 @@ tell application "System Events"
   if exists process "Claude" then
     set claudeTitle to "no-window"
     try
-      set claudeTitle to name of front window of process "Claude"
+      tell process "Claude"
+        if (count of windows) > 0 then
+          set claudeTitle to name of front window
+          if claudeTitle is missing value or claudeTitle is "" then set claudeTitle to "window"
+        end if
+      end tell
     end try
-    if claudeTitle is missing value or claudeTitle is "" then set claudeTitle to "no-window"
     set r to r & "CLAUDE:" & claudeTitle
   else
     set r to r & "CLAUDE:OFF"
@@ -1489,9 +1837,13 @@ tell application "System Events"
   if exists process "Codex" then
     set codexTitle to "no-window"
     try
-      set codexTitle to name of front window of process "Codex"
+      tell process "Codex"
+        if (count of windows) > 0 then
+          set codexTitle to name of front window
+          if codexTitle is missing value or codexTitle is "" then set codexTitle to "window"
+        end if
+      end tell
     end try
-    if codexTitle is missing value or codexTitle is "" then set codexTitle to "no-window"
     set r to r & "CODEX:" & codexTitle
   else
     set r to r & "CODEX:OFF"
@@ -1500,9 +1852,13 @@ tell application "System Events"
   if exists process "OpenCode" then
     set openCodeTitle to "no-window"
     try
-      set openCodeTitle to name of front window of process "OpenCode"
+      tell process "OpenCode"
+        if (count of windows) > 0 then
+          set openCodeTitle to name of front window
+          if openCodeTitle is missing value or openCodeTitle is "" then set openCodeTitle to "window"
+        end if
+      end tell
     end try
-    if openCodeTitle is missing value or openCodeTitle is "" then set openCodeTitle to "no-window"
     set r to r & "OPENCODE:" & openCodeTitle
   else
     set r to r & "OPENCODE:OFF"
@@ -1523,9 +1879,15 @@ Write-Output ("CLAUDE:{0}|||CODEX:{1}|||OPENCODE:{2}" -f $claudeTitle, $codexTit
     const { error, stdout } = await execWindows(script, 8_000);
     return error ? null : stdout?.trim() || null;
   }
+
+  async function withTerminalState(raw) {
+    const terminalRaw = await captureTerminalRuntimeState(machine);
+    return terminalRaw ? `${raw || ""}|||${terminalRaw}` : raw;
+  }
+
   if (isLocalMachine(machine)) {
     const { error, stdout } = await execLocal(script, 8000);
-    return error ? null : stdout?.trim() || null;
+    return error ? null : withTerminalState(stdout?.trim() || "");
   }
 
   const lines = script.split("\n").map((l) => `-e '${l.trim()}'`).join(" ");
@@ -1543,16 +1905,17 @@ Write-Output ("CLAUDE:{0}|||CODEX:{1}|||OPENCODE:{2}" -f $claudeTitle, $codexTit
 
   if (deriveLocalHostname(machine) && !isLocalMachine(machine)) {
     const r = await attempt(true);
-    if (r) return r;
+    if (r) return withTerminalState(r);
   }
-  return attempt(false);
+  const remote = await attempt(false);
+  return remote ? withTerminalState(remote) : remote;
 }
 
-// Parse "CLAUDE:windowTitle|||CODEX:windowTitle|||OPENCODE:windowTitle" into app states
+// Parse app and terminal states into a structured snapshot.
 function parseAppsState(raw) {
-  if (!raw) return { claude: null, codex: null, opencode: null };
+  if (!raw) return { claude: null, codex: null, opencode: null, claudeTerminal: null, codexTerminal: null, opencodeTerminal: null };
   const parts = raw.split("|||");
-  const result = { claude: null, codex: null, opencode: null };
+  const result = { claude: null, codex: null, opencode: null, claudeTerminal: null, codexTerminal: null, opencodeTerminal: null };
   for (const part of parts) {
     if (part.startsWith("CLAUDE:")) {
       const val = part.slice(7).trim();
@@ -1566,6 +1929,15 @@ function parseAppsState(raw) {
       const val = part.slice(9).trim();
       result.opencode = val === "OFF" ? null : val;
     }
+    if (part.startsWith("CLAUDE_TERM:") && !result.claudeTerminal) {
+      result.claudeTerminal = part.slice(12).trim();
+    }
+    if (part.startsWith("CODEX_TERM:") && !result.codexTerminal) {
+      result.codexTerminal = part.slice(11).trim();
+    }
+    if (part.startsWith("OPENCODE_TERM:") && !result.opencodeTerminal) {
+      result.opencodeTerminal = part.slice(14).trim();
+    }
   }
   return result;
 }
@@ -1574,6 +1946,11 @@ function hasUsefulAppActivity(state) {
   const title = String(state || "").trim().toLowerCase();
   if (!title) return false;
   return !["off", "no-window", "sin ventana"].includes(title);
+}
+
+function parseTerminalAppFromState(state) {
+  const match = String(state || "").match(/·\s*([^·]+)$/);
+  return match ? match[1].trim() : "";
 }
 
 function buildOsaCommand(script) {
@@ -1632,21 +2009,18 @@ tell application "System Events"
       tell process "${config.appName}"
         if (count of windows) > 0 then
           ${allowFullscreen ? "try\n            set value of attribute \"AXFullScreen\" of front window to true\n          end try" : `set skynetResult to "${target}-focused-layout-preserved"`}
+          try
+            perform action "AXRaise" of front window
+          end try
+        else
+          set skynetResult to "${target}-no-window"
         end if
       end tell
     end try
     return skynetResult
   end if
 end tell
-try
-  tell application "${config.appName}" to activate
-  delay 1.0
-  set skynetResult to "${target}-opened"
-on error
-  ${buildTerminalActivateScript("")}
-  delay 0.6
-  set skynetResult to "terminal-focused"
-end try
+set skynetResult to "${target}-not-running"
 return skynetResult`;
 
   const { error, stdout } = await runMacAutomationScript(machine, script, 16_000);
@@ -1658,29 +2032,202 @@ return skynetResult`;
   };
 }
 
-async function captureSkynetEvidence(machine) {
-  const captureId = `skynet-${machine.id}-${Date.now()}`;
-  const snap = await captureOneSnapshot(machine);
-  if (!snap) {
-    const text = await captureTextFallback(machine);
-    if (text) {
-      captures.set(captureId, { type: "text", text });
-      return { captureId, capture: { type: "text", text } };
+async function focusTerminalForSkynet(machine, rawTarget = "claude", terminalApp = "") {
+  const target = normalizeSkynetTarget(rawTarget);
+  const preferred = terminalApp || "Terminal";
+  const script = `${buildTerminalActivateScript(preferred)}
+delay 0.6
+tell application "System Events"
+  try
+    tell process "${preferred}"
+      if (count of windows) > 0 then perform action "AXRaise" of front window
+    end tell
+  end try
+end tell
+return "${target}-terminal-focused:${preferred}"`;
+  const { error, stdout } = await runMacAutomationScript(machine, script, 12_000);
+  return {
+    ok: !error,
+    action: stdout?.trim() || (error ? "terminal-focus-failed" : `${target}-terminal-focused`),
+    target,
+    terminalApp: preferred,
+    error: error?.message || null
+  };
+}
+
+function buildQuartzAppWindowCaptureCommand(appName, outPath) {
+  return `APP_NAME=${shellQuote(appName)} OUT=${shellQuote(outPath)} sh <<'SHELL'
+set -eu
+PYTHON_BIN=""
+for candidate in python3 /opt/homebrew/bin/python3 /usr/local/bin/python3 /Library/Developer/CommandLineTools/usr/bin/python3; do
+  if [ -x "$candidate" ]; then
+    bin="$candidate"
+  elif command -v "$candidate" >/dev/null 2>&1; then
+    bin="$(command -v "$candidate")"
+  else
+    continue
+  fi
+
+  if "$bin" - <<'PYCHK' >/dev/null 2>&1
+import Quartz.CoreGraphics as CG
+from AppKit import NSBitmapImageRep, NSJPEGFileType
+PYCHK
+  then
+    PYTHON_BIN="$bin"
+    break
+  fi
+done
+
+test -n "$PYTHON_BIN"
+"$PYTHON_BIN" - <<'PY'
+import os
+import sys
+import Quartz.CoreGraphics as CG
+from AppKit import NSBitmapImageRep, NSJPEGFileType
+
+app = os.environ.get("APP_NAME", "")
+out = os.environ.get("OUT", "")
+windows = CG.CGWindowListCopyWindowInfo(CG.kCGWindowListOptionOnScreenOnly, CG.kCGNullWindowID) or []
+matches = []
+for w in windows:
+    owner = str(w.get("kCGWindowOwnerName", ""))
+    if owner.lower() != app.lower():
+        continue
+    if int(w.get("kCGWindowLayer", 99)) != 0:
+        continue
+    bounds = w.get("kCGWindowBounds") or {}
+    width = int(bounds.get("Width", 0))
+    height = int(bounds.get("Height", 0))
+    if width < 120 or height < 80:
+        continue
+    matches.append((width * height, int(w.get("kCGWindowNumber")), w))
+
+if not matches:
+    sys.exit(2)
+
+_, window_id, _ = sorted(matches, reverse=True)[0]
+image = CG.CGWindowListCreateImage(
+    CG.CGRectNull,
+    CG.kCGWindowListOptionIncludingWindow,
+    window_id,
+    CG.kCGWindowImageBoundsIgnoreFraming,
+)
+if image is None:
+    sys.exit(3)
+rep = NSBitmapImageRep.alloc().initWithCGImage_(image)
+data = rep.representationUsingType_properties_(NSJPEGFileType, {})
+if data is None:
+    sys.exit(4)
+data.writeToFile_atomically_(out, True)
+PY
+SHELL`;
+}
+
+async function captureTargetAppWindow(machine, rawTarget = "claude", overrideAppName = "") {
+  const target = normalizeSkynetTarget(rawTarget);
+  const config = SKYNET_TARGETS[target];
+  const imageKey = `skynet-${machine.id}-${target}-${Date.now()}`;
+
+  if (isWindowsMachine(machine)) {
+    return null;
+  }
+
+  const appName = overrideAppName || config.appName;
+  const remoteOut = `/tmp/${imageKey}.jpg`;
+  const remoteCmd = `${buildQuartzAppWindowCaptureCommand(appName, remoteOut)} && sips -Z 1200 ${shellQuote(remoteOut)} --out ${shellQuote(remoteOut)} >/dev/null 2>&1 && base64 -i ${shellQuote(remoteOut)}; rm -f ${shellQuote(remoteOut)}`;
+
+  async function attemptLocal() {
+    const tmpPath = join(tmpdir(), `${imageKey}.jpg`);
+    const ok = await new Promise((resolve) => {
+      execFile("bash", ["-lc", buildQuartzAppWindowCaptureCommand(appName, tmpPath)], { timeout: 12_000 }, (err) => {
+        resolve(!err);
+      });
+    });
+    if (!ok) return null;
+    await new Promise((resolve) => {
+      execFile("sips", ["-Z", "1200", tmpPath, "--out", tmpPath], { timeout: 5_000 }, () => resolve());
+    });
+    try {
+      return await readFile(tmpPath);
+    } catch {
+      return null;
+    } finally {
+      unlink(tmpPath).catch(() => {});
     }
-    return { captureId: null, capture: null };
   }
 
-  if (snap.type === "image" && snap.image) {
-    const imageKey = snap.image.split("/").pop();
-    return { captureId: imageKey || captureId, capture: snap };
+  if (isLocalMacMachine(machine)) {
+    return attemptLocal();
   }
 
-  if (snap.type === "images" && Array.isArray(snap.images)) {
-    return { captureId, capture: snap };
+  async function attemptRemote(useLocal) {
+    const { error, stdout } = await execRemote(machine, useLocal, remoteCmd, 18_000, 30 * 1024 * 1024);
+    const b64 = stdout?.trim();
+    if (error || !b64) return null;
+    try {
+      return Buffer.from(b64, "base64");
+    } catch {
+      return null;
+    }
   }
 
-  captures.set(captureId, snap);
-  return { captureId, capture: snap };
+  if (deriveLocalHostname(machine)) {
+    const local = await attemptRemote(true);
+    if (local) return local;
+  }
+  return attemptRemote(false);
+}
+
+async function captureTargetAppText(machine, rawTarget = "claude") {
+  const target = normalizeSkynetTarget(rawTarget);
+  const config = SKYNET_TARGETS[target];
+  const appName = config.appName;
+  const script = `set appName to "${appName}"
+tell application "System Events"
+  if not (exists process appName) then return appName & " — OFF"
+  tell process appName
+    if (count of windows) is 0 then return appName & " — no-window"
+    try
+      return appName & " — " & (name of front window)
+    on error
+      return appName & " — ventana activa sin titulo"
+    end try
+  end tell
+end tell`;
+  const { error, stdout } = await runMacAutomationScript(machine, script, 8_000);
+  return error ? null : stdout?.trim() || null;
+}
+
+async function captureSkynetEvidence(machine, rawTarget = "claude", state = null, terminalApp = "") {
+  const target = normalizeSkynetTarget(rawTarget);
+  const captureId = `skynet-${machine.id}-${Date.now()}`;
+  const imageKey = `${captureId}-${target}`;
+  const targetState = state || "sin estado";
+  if (!hasUsefulAppActivity(targetState)) {
+    const text = `${SKYNET_TARGETS[target].label} en ${machine.name || machine.id}: ${targetState || "OFF"}`;
+    captures.set(captureId, { type: "text", text });
+    return { captureId, capture: { type: "text", text } };
+  }
+
+  const buf = await captureTargetAppWindow(machine, target, terminalApp);
+  if (buf?.length) {
+    imageBuffers.set(imageKey, buf);
+    captures.set(captureId, { type: "image", path: `/api/screenshots/${imageKey}` });
+    return { captureId, capture: { type: "image", path: `/api/screenshots/${imageKey}` } };
+  }
+
+  if (!isLocalMultiDisplayMachine(machine)) {
+    const focusedScreen = await captureDesktopScreenshot(machine);
+    if (focusedScreen?.length) {
+      imageBuffers.set(imageKey, focusedScreen);
+      captures.set(captureId, { type: "image", path: `/api/screenshots/${imageKey}` });
+      return { captureId, capture: { type: "image", path: `/api/screenshots/${imageKey}` } };
+    }
+  }
+
+  const text = await captureTargetAppText(machine, target) || `${SKYNET_TARGETS[target].label} en ${machine.name || machine.id}: ${targetState}`;
+  captures.set(captureId, { type: "text", text });
+  return { captureId, capture: { type: "text", text } };
 }
 
 export async function runSkynetAudit(rawTarget = "claude") {
@@ -1707,16 +2254,30 @@ export async function runSkynetAudit(rawTarget = "claude") {
 
       markMachineOnline(machine.id);
       const before = parseAppsState(beforeRaw);
-      const activeBefore = hasUsefulAppActivity(before[config.stateKey]);
-      const focus = await focusAppForSkynet(machine, target);
-      await new Promise((resolve_) => setTimeout(resolve_, 1200));
+      const beforeGuiState = before[config.stateKey];
+      const beforeTerminalState = before[config.terminalStateKey];
+      const useTerminalBefore = !hasUsefulAppActivity(beforeGuiState) && hasUsefulAppActivity(beforeTerminalState);
+      const terminalAppBefore = useTerminalBefore ? parseTerminalAppFromState(beforeTerminalState) : "";
+      const activeBefore = hasUsefulAppActivity(beforeGuiState) || hasUsefulAppActivity(beforeTerminalState);
+      const focus = activeBefore
+        ? (useTerminalBefore
+          ? await focusTerminalForSkynet(machine, target, terminalAppBefore)
+          : await focusAppForSkynet(machine, target))
+        : { ok: true, action: `${target}-inactive`, target, error: null };
+      if (activeBefore) {
+        await new Promise((resolve_) => setTimeout(resolve_, 1200));
+      }
 
-      const [afterRaw, evidence] = await Promise.all([
-        captureAllAppsState(machine),
-        captureSkynetEvidence(machine)
-      ]);
+      const afterRaw = await captureAllAppsState(machine);
       const after = parseAppsState(afterRaw);
-      const activeAfter = hasUsefulAppActivity(after[config.stateKey]);
+      const afterGuiState = after[config.stateKey];
+      const afterTerminalState = after[config.terminalStateKey];
+      const useTerminalAfter = !hasUsefulAppActivity(afterGuiState) && hasUsefulAppActivity(afterTerminalState);
+      const auditedStateBefore = useTerminalBefore ? beforeTerminalState : beforeGuiState;
+      const auditedStateAfter = useTerminalAfter ? afterTerminalState : afterGuiState;
+      const terminalAppAfter = useTerminalAfter ? parseTerminalAppFromState(afterTerminalState) : "";
+      const evidence = await captureSkynetEvidence(machine, target, auditedStateAfter || auditedStateBefore, terminalAppAfter);
+      const activeAfter = hasUsefulAppActivity(afterGuiState) || hasUsefulAppActivity(afterTerminalState);
       const mState = watchdogState.perMachine[machine.id] || {};
       watchdogState.perMachine[machine.id] = {
         ...mState,
@@ -1725,6 +2286,9 @@ export async function runSkynetAudit(rawTarget = "claude") {
         claudeState: after.claude,
         codexState: after.codex,
         opencodeState: after.opencode,
+        claudeTerminalState: after.claudeTerminal,
+        codexTerminalState: after.codexTerminal,
+        opencodeTerminalState: after.opencodeTerminal,
         lastSkynetAuditAt: checkedAt,
         lastSkynetAuditStatus: activeAfter ? "active" : (focus?.ok ? "captured-waiting" : "capture-attempted")
       };
@@ -1742,9 +2306,11 @@ export async function runSkynetAudit(rawTarget = "claude") {
         opencodeBefore: before.opencode,
         opencodeAfter: after.opencode,
         auditedTarget: target,
-        auditedStateBefore: before[config.stateKey],
-        auditedStateAfter: after[config.stateKey],
-        auditedLabel: config.label,
+        auditedStateBefore,
+        auditedStateAfter,
+        auditedLabel: useTerminalAfter ? config.terminalLabel : config.label,
+        auditedSurface: useTerminalAfter ? "terminal" : "app",
+        auditedTerminalApp: terminalAppAfter || terminalAppBefore || null,
         captureId: evidence.captureId,
         capture: evidence.capture,
         error: focus?.error || null

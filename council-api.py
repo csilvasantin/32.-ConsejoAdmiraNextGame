@@ -22,6 +22,7 @@ import os
 import json
 import asyncio
 import time
+import hmac
 import uuid
 import smtplib
 import random
@@ -165,12 +166,32 @@ HTTP_URL_RE = re.compile(r"^https?://", re.I)
 
 # ── Config ──────────────────────────────────────────────────
 COUNCIL_API_TOKEN = os.environ.get("COUNCIL_API_TOKEN", "")
+
+# ── Auth real (Google SSO + allowlist) ──────────────────────
+# GOOGLE_CLIENT_ID: OAuth 2.0 Web Client ID (Google Cloud Console). Publico, no es secreto.
+# COUNCIL_ALLOWED_EMAILS: lista separada por comas de correos con acceso.
+# COUNCIL_MACHINE_TOKEN: secreto SOLO servidor para llamadas maquina-a-maquina
+#   (hermes/agora/scripts). NUNCA en el frontend. Sustituye al token publico.
+GOOGLE_CLIENT_ID = os.environ.get("GOOGLE_CLIENT_ID", "")
+ALLOWED_EMAILS = {
+    e.strip().lower()
+    for e in os.environ.get("COUNCIL_ALLOWED_EMAILS", "csilvasantin@gmail.com").split(",")
+    if e.strip()
+}
+COUNCIL_MACHINE_TOKEN = os.environ.get("COUNCIL_MACHINE_TOKEN", "")
+# Token dedicado y FUERTE solo para los endpoints destructivos de hackeo
+# (abren Terminal / ejecutan en los Macs). Server-only, NUNCA en el frontend.
+COUNCIL_HACK_TOKEN = os.environ.get("COUNCIL_HACK_TOKEN", "")
 ALLOWED_ORIGINS = [
     "https://csilvasantin.github.io",
     "https://www.admira.live",
     "https://admira.live",
     "https://www.admira.studio",
     "https://admira.studio",
+    "https://www.pixeria.com",
+    "https://pixeria.com",
+    "https://www.admira.tv",
+    "https://admira.tv",
     "http://localhost:8080",
     "http://localhost:3000",
     "http://localhost:3030",
@@ -718,7 +739,7 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=ALLOWED_ORIGINS,
     allow_methods=["POST", "GET", "OPTIONS"],
-    allow_headers=["Content-Type", "X-Council-Token"],
+    allow_headers=["Content-Type", "X-Council-Token", "X-Council-Hack-Token", "Authorization"],
 )
 
 # ── Rate limiter ─────────────────────────────────────────────
@@ -740,13 +761,99 @@ def check_rate_limit(request: Request):
     _rate_store[ip].append(now)
 
 
+def _verify_google_identity(token: str):
+    """Verifica la firma del ID token de Google y comprueba la allowlist."""
+    from google.oauth2 import id_token as _gid
+    from google.auth.transport import requests as _greq
+    try:
+        info = _gid.verify_oauth2_token(token, _greq.Request(), GOOGLE_CLIENT_ID)
+    except Exception:
+        raise HTTPException(status_code=401, detail="Invalid Google identity token")
+    if info.get("iss") not in ("accounts.google.com", "https://accounts.google.com"):
+        raise HTTPException(status_code=401, detail="Bad token issuer")
+    if not info.get("email_verified"):
+        raise HTTPException(status_code=403, detail="Email not verified")
+    email = (info.get("email") or "").lower()
+    if email not in ALLOWED_EMAILS:
+        raise HTTPException(status_code=403, detail="Email not authorized")
+    return {"sub": info.get("sub"), "email": email}
+
+
 def verify_token(request: Request):
-    """Verify the API token from the X-Council-Token header."""
-    if not COUNCIL_API_TOKEN:
-        return
-    token = request.headers.get("x-council-token", "")
-    if token != COUNCIL_API_TOKEN:
+    """Auth real del Consejo.
+
+    Acepta, por orden:
+      1) Bearer/X-Council-Token == COUNCIL_MACHINE_TOKEN  (secreto SOLO servidor: hermes/agora/scripts).
+      2) Authorization: Bearer <ID token de Google>  → firma verificada + email en allowlist.
+      3) Fallback transitorio al token legacy SOLO mientras no se haya configurado
+         ni GOOGLE_CLIENT_ID ni COUNCIL_MACHINE_TOKEN (evita tumbar la API en el deploy).
+    """
+    auth = request.headers.get("authorization", "")
+    bearer = auth[7:].strip() if auth[:7].lower() == "bearer " else ""
+
+    # 1) Token maquina-a-maquina
+    if COUNCIL_MACHINE_TOKEN:
+        cand = bearer or request.headers.get("x-council-token", "")
+        if cand and cand == COUNCIL_MACHINE_TOKEN:
+            return {"sub": "machine", "email": "machine@admira.live"}
+
+    # 2) Identidad Google (allowlist)
+    if GOOGLE_CLIENT_ID and bearer:
+        return _verify_google_identity(bearer)
+
+    # 3) Fallback transitorio (aun sin auth nueva configurada)
+    if not GOOGLE_CLIENT_ID and not COUNCIL_MACHINE_TOKEN:
+        if not COUNCIL_API_TOKEN:
+            return None
+        if request.headers.get("x-council-token", "") == COUNCIL_API_TOKEN:
+            return {"sub": "legacy", "email": "legacy"}
         raise HTTPException(status_code=403, detail="Invalid or missing API token")
+
+    raise HTTPException(status_code=401, detail="Authentication required")
+
+
+_HK_AUDIT_PATH = Path(__file__).parent / "hackeo-audit.log"
+
+
+def _hk_audit(ev: dict):
+    """Registra cada intento sobre los endpoints de hackeo (JSONL)."""
+    try:
+        line = json.dumps({"t": datetime.utcnow().isoformat() + "Z", **ev}, ensure_ascii=False)
+        with open(_HK_AUDIT_PATH, "a", encoding="utf-8") as f:
+            f.write(line + "\n")
+    except Exception:
+        pass
+
+
+def verify_hack_token(request: Request):
+    """Auth REFORZADA solo para los endpoints destructivos de hackeo.
+
+    Acepta, por orden:
+      1) X-Council-Hack-Token == COUNCIL_HACK_TOKEN  (comparación timing-safe).
+      2) Authorization: Bearer <ID token de Google> en la allowlist.
+    Fail-closed: si no hay COUNCIL_HACK_TOKEN ni GOOGLE_CLIENT_ID configurados,
+    deniega (el hackeo queda desactivado hasta configurar el secreto en el Mini).
+    No acepta NUNCA el token legacy público (admira2026).
+    """
+    ip = request.headers.get("cf-connecting-ip",
+         request.headers.get("x-forwarded-for",
+         request.client.host if request.client else "unknown"))
+    # 1) Hack-token dedicado (server-only)
+    if COUNCIL_HACK_TOKEN:
+        provided = request.headers.get("x-council-hack-token", "")
+        if provided and hmac.compare_digest(provided, COUNCIL_HACK_TOKEN):
+            _hk_audit({"ip": ip, "auth": "hack_token", "path": request.url.path})
+            return {"sub": "hack", "email": "hack@admira.live"}
+    # 2) Identidad Google (allowlist)
+    auth = request.headers.get("authorization", "")
+    bearer = auth[7:].strip() if auth[:7].lower() == "bearer " else ""
+    if GOOGLE_CLIENT_ID and bearer:
+        ident = _verify_google_identity(bearer)
+        _hk_audit({"ip": ip, "auth": "google", "email": ident.get("email"), "path": request.url.path})
+        return ident
+    # Fail-closed
+    _hk_audit({"ip": ip, "auth": "denied", "path": request.url.path})
+    raise HTTPException(status_code=403, detail="Hackeo requiere hack-token dedicado o login autorizado")
 
 
 # ── Shared Anthropic client ─────────────────────────────────
@@ -1210,6 +1317,295 @@ async def list_models():
             "available": available,
         })
     return {"models": models}
+
+
+# ── Asignación: personaje × equipo(máquina) × categoría × LLM ─
+# Cada agente del consejo (personaje) se asigna a UNA combinación:
+#   - equipo  = la máquina/ordenador donde corre (de la flota, data/machines.json)
+#   - runtime = LLM hospedado en esa máquina (Codex / Claude / OpenCode·DeepSeek)
+#   - categoría = creativo / tecnológico / business (editables)
+# Solo datos+asignación; el enrutado real de prompts al runtime es fase 2.
+_TEAMS_PATH = Path(__file__).parent / "data" / "teams.json"
+_MACHINES_PATH = Path(__file__).parent / "data" / "machines.json"
+
+DEFAULT_RUNTIMES = [
+    {"id": "codex", "label": "Codex", "engine": "Codex", "model": ""},
+    {"id": "claude", "label": "Claude", "engine": "Claude Code", "model": ""},
+    {"id": "opencode", "label": "OpenCode·DeepSeek", "engine": "OpenCode", "model": "DeepSeek"},
+]
+# Usuarios con los que los LLM de terceros hacen login (editable).
+# `account` = sufijo de cuenta que usa AgoraMatrix en las identidades Runtime·cuenta
+# (Claude·admira, Codex·gmail, OpenCode·grok) para enlazar la tarea real.
+DEFAULT_USUARIOS = [
+    {"id": "csilva", "name": "csilva@admira.com", "account": "admira"},
+    {"id": "csilvasantin", "name": "csilvasantin@gmail.com", "account": "gmail"},
+    {"id": "grok", "name": "grok (OpenCode)", "account": "grok"},
+]
+
+_RUNTIME_LABEL = {"codex": "Codex", "claude": "Claude", "opencode": "OpenCode"}
+_AGORA_LOG = os.path.expanduser("~/.agents-comms/agora.jsonl")
+_AGORA_CFG = os.path.expanduser("~/.agents-comms/config.json")
+
+
+def _agora_personas() -> dict:
+    """Identidad Runtime·cuenta → persona (Neo, Morfeo, Trinity, Oráculo, Cypher)."""
+    try:
+        cfg = json.loads(open(_AGORA_CFG, encoding="utf-8").read())
+        return {str(k): str(v) for k, v in (cfg.get("personas") or {}).items()}
+    except Exception:
+        return {}
+
+
+def _user_account(u: dict) -> str:
+    """Sufijo de cuenta AgoraMatrix de un usuario (admira/gmail/grok…)."""
+    acc = str(u.get("account") or "").strip().lower()
+    if acc:
+        return acc
+    name = str(u.get("name") or "")
+    if "@" in name:
+        return name.split("@", 1)[1].split(".", 1)[0].lower()
+    return re.sub(r"[^a-z0-9]+", "", str(u.get("id") or "").lower())
+
+
+def _agora_last_by_identity() -> dict:
+    """Último REPORTE por identidad Runtime·cuenta.
+
+    El agente informa bajo su PERSONA (Neo, Morfeo…) con `from` exacto =
+    persona (sus `agora send/done`). Los `Carlos→Identidad` son preguntas
+    dirigidas A la identidad, NO lo que hizo → se ignoran.
+    """
+    personas = _agora_personas()              # identidad -> persona
+    persona_set = set(personas.values())
+    last_by_persona = {}
+    try:
+        with open(_AGORA_LOG, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    d = json.loads(line)
+                except Exception:
+                    continue
+                frm = str(d.get("from") or "").strip()
+                if frm not in persona_set:        # solo reportes propios de la persona
+                    continue
+                ts = str(d.get("ts") or "")
+                if frm not in last_by_persona or ts > last_by_persona[frm]["ts"]:
+                    last_by_persona[frm] = {"ts": ts, "text": (d.get("text") or "")[:300]}
+    except Exception:
+        pass
+    out = {}
+    for ident, persona in personas.items():
+        info = last_by_persona.get(persona) or {"ts": "", "text": ""}
+        out[ident] = {"ts": info["ts"], "text": info["text"], "persona": persona}
+    return out
+
+
+def _machine_emoji(s: str) -> str:
+    s = s.lower()
+    if any(k in s for k in ("mini", "pc", "runner", "ocr", "bot", "sitges", "twin")):
+        return "🖥️"
+    return "💻"
+
+
+def _assign_machines() -> list:
+    """Máquinas de la flota para el selector de 'equipo' (data/machines.json)."""
+    try:
+        raw = json.loads(_MACHINES_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    ms = raw if isinstance(raw, list) else raw.get("machines", [])
+    out = []
+    for m in ms:
+        mid = str(m.get("id") or "").strip()
+        if not mid:
+            continue
+        name = m.get("name") or mid
+        out.append({"id": mid, "name": name, "emoji": _machine_emoji(mid + " " + name)})
+    return out
+
+
+# El paquete no trae emoji; mapeamos por código de rol (como los consejeros).
+_AGENT_EMOJI = {"ceo": "🚀", "cfo": "💰", "coo": "⚙️", "cto": "🔧",
+                "cco": "🎨", "cdo": "📐", "cxo": "✨", "cso": "🎬"}
+
+
+def _council_agents() -> list:
+    """Los 8 agentes del consejo (gen. leyendas).
+
+    En CouncilAgent: name=código ("CEO"), role=título ("Chief Executive
+    Officer"), persona=leyenda ("Steve Jobs"), side=racional|creativo.
+    """
+    out, seen = [], set()
+    for side_key in ("racional", "creativo"):
+        for cls in AGENTS["leyendas"][side_key]:
+            try:
+                a = get_agent(cls)
+            except Exception:
+                continue
+            code = str(getattr(a, "name", "")).strip()  # "CEO"
+            rid = code.lower()
+            if not rid or rid in seen:
+                continue
+            seen.add(rid)
+            out.append({
+                "id": rid,
+                "role": code,                                # "CEO"
+                "title": getattr(a, "role", ""),             # "Chief Executive Officer"
+                "name": getattr(a, "persona", ""),           # "Steve Jobs"
+                "side": getattr(a, "side", side_key),
+                "emoji": _AGENT_EMOJI.get(rid, "🤖"),
+            })
+    return out
+
+
+def _default_teams_doc() -> dict:
+    assignments = {}
+    for a in _council_agents():
+        assignments[a["id"]] = {"machine": "", "runtime": "claude", "usuario": "csilva", "tarea": ""}
+    return {"usuarios": [dict(u) for u in DEFAULT_USUARIOS],
+            "runtimes": [dict(r) for r in DEFAULT_RUNTIMES],
+            "assignments": assignments}
+
+
+def _load_teams() -> dict:
+    try:
+        doc = json.loads(_TEAMS_PATH.read_text(encoding="utf-8"))
+        assert isinstance(doc, dict)
+    except Exception:
+        doc = _default_teams_doc()
+    doc.setdefault("usuarios", [dict(u) for u in DEFAULT_USUARIOS])
+    doc.setdefault("runtimes", [dict(r) for r in DEFAULT_RUNTIMES])
+    doc.setdefault("assignments", {})
+    return doc
+
+
+def _save_teams(doc: dict):
+    _TEAMS_PATH.parent.mkdir(parents=True, exist_ok=True)
+    tmp = _TEAMS_PATH.with_suffix(".json.tmp")
+    with open(tmp, "w", encoding="utf-8") as f:
+        json.dump(doc, f, indent=2, ensure_ascii=False)
+    os.replace(tmp, _TEAMS_PATH)
+
+
+class TeamsSaveRequest(BaseModel):
+    usuarios: list = []
+    assignments: dict = {}
+    runtimes: Optional[list] = None
+
+
+@app.get("/api/council/teams")
+async def get_teams(_auth=Depends(verify_hack_token)):
+    doc = _load_teams()
+    return {
+        "agents": _council_agents(),
+        "machines": _assign_machines(),
+        "usuarios": doc["usuarios"],
+        "runtimes": doc["runtimes"],
+        "assignments": doc["assignments"],
+        "identities": _agora_last_by_identity(),
+    }
+
+
+@app.get("/api/council/agora-tasks")
+async def agora_tasks(_auth=Depends(verify_hack_token)):
+    """Última actividad de AgoraMatrix por identidad Runtime·cuenta (para refrescar la Tarea)."""
+    return {"identities": _agora_last_by_identity()}
+
+
+@app.post("/api/council/teams")
+async def save_teams(req: TeamsSaveRequest, _auth=Depends(verify_hack_token)):
+    agent_ids = {a["id"] for a in _council_agents()}
+    machine_ids = {m["id"] for m in _assign_machines()}
+    runtimes = req.runtimes if req.runtimes else _load_teams()["runtimes"]
+    runtime_ids = {str(r.get("id")) for r in runtimes if r.get("id")}
+    # Saneado de usuarios (editables)
+    usuarios, user_ids = [], set()
+    for u in (req.usuarios or []):
+        uid = str(u.get("id") or "").strip()
+        name = str(u.get("name") or "").strip()
+        if not uid or not name or uid in user_ids:
+            continue
+        user_ids.add(uid)
+        usuarios.append({"id": uid, "name": name, "account": _user_account(u)})
+    if not usuarios:
+        usuarios = [dict(u) for u in DEFAULT_USUARIOS]
+        user_ids = {u["id"] for u in usuarios}
+    fallback_rt = "claude" if "claude" in runtime_ids else (next(iter(runtime_ids)) if runtime_ids else "claude")
+    fallback_user = next(iter(user_ids))
+    # Saneado de asignaciones (máquina vacía = sin asignar)
+    assignments = {}
+    for aid, asg in (req.assignments or {}).items():
+        if aid not in agent_ids or not isinstance(asg, dict):
+            continue
+        machine = str(asg.get("machine") or "")
+        if machine and machine not in machine_ids:
+            machine = ""
+        rt = str(asg.get("runtime") or "")
+        if rt not in runtime_ids:
+            rt = fallback_rt
+        usuario = str(asg.get("usuario") or "")
+        if usuario not in user_ids:
+            usuario = fallback_user
+        tarea = str(asg.get("tarea") or "")[:500]
+        assignments[aid] = {"machine": machine, "runtime": rt, "usuario": usuario, "tarea": tarea}
+    doc = {"usuarios": usuarios, "runtimes": runtimes, "assignments": assignments}
+    _save_teams(doc)
+    return {"ok": True, **doc}
+
+
+# Captura de pantalla de una máquina (confirmar el "match" al asignarla).
+# Reutiliza el mini-agente AgoraCapture (handshake por ficheros ~/.fleet),
+# el mismo de FleetControl. Requiere que la máquina tenga ese agente.
+_CAPTURE_SH = (
+    'D="$HOME/.fleet"; mkdir -p "$D"; O="$D/capture.out"; '
+    'N="cap-$(date +%s)-$$-$RANDOM"; printf "%s" "$N" > "$D/capture.req"; '
+    'for i in $(seq 1 40); do [ "$(head -1 "$O" 2>/dev/null)" = "$N" ] && break; sleep 0.3; done; '
+    'if [ "$(head -1 "$O" 2>/dev/null)" = "$N" ]; then tail -n +2 "$O"; else echo ERR_NO_CAPTURE; fi'
+)
+
+
+def _machine_by_id(mid: str):
+    try:
+        raw = json.loads(_MACHINES_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    ms = raw if isinstance(raw, list) else raw.get("machines", [])
+    for m in ms:
+        if str(m.get("id")) == mid:
+            return m
+    return None
+
+
+class CaptureRequest(BaseModel):
+    machine: str
+
+
+@app.post("/api/council/capture")
+async def council_capture(req: CaptureRequest, _rate=Depends(check_rate_limit), _auth=Depends(verify_hack_token)):
+    m = _machine_by_id(req.machine)
+    if not m:
+        raise HTTPException(status_code=404, detail="máquina desconocida")
+    ssh = m.get("ssh") or {}
+    user = ssh.get("user") or "csilvasantin"
+    host = ssh.get("host")
+    if not ssh.get("enabled") or not host:
+        return {"ok": False, "machine": req.machine, "error": "máquina sin SSH configurado"}
+    ssh_cmd = ["ssh", "-o", "StrictHostKeyChecking=no", "-o", "BatchMode=yes",
+               "-o", "ConnectTimeout=8", f"{user}@{host}", _CAPTURE_SH]
+    try:
+        r = subprocess.run(ssh_cmd, capture_output=True, timeout=22)
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "machine": req.machine, "error": "timeout (¿máquina apagada?)"}
+    except Exception as e:
+        return {"ok": False, "machine": req.machine, "error": str(e)[:180]}
+    out = (r.stdout or b"").decode("utf-8", "ignore").strip()
+    err = (r.stderr or b"").decode("utf-8", "ignore").strip()
+    if r.returncode != 0 or not out or "ERR_NO_CAPTURE" in out:
+        detail = err[:180] or "sin captura (¿AgoraCapture instalado en esa máquina?)"
+        return {"ok": False, "machine": req.machine, "error": detail}
+    return {"ok": True, "machine": req.machine, "image": "data:image/jpeg;base64," + out}
 
 
 @app.get("/api/council/yar-context")
@@ -2665,6 +3061,25 @@ async def tube_import_to_stock(req: TubeImportRequest):
 async def council_import_to_stock(req: TubeImportRequest):
     return await _tube_route(req)
 
+# ── Passthrough al worker pixer-eleven (los ISP ES bloquean *.workers.dev; el
+#    navegador llega al Mac Mini por Funnel y este reenvia servidor->servidor) ──
+PIXER_WORKER_BASE = "https://pixer-eleven.csilvasantin.workers.dev"
+from fastapi.responses import Response as _PTResponse
+@app.api_route("/w/{path:path}", methods=["GET", "POST", "DELETE", "PUT", "PATCH"])
+async def pixer_worker_passthrough(path: str, request: Request):
+    target = f"{PIXER_WORKER_BASE}/{path}"
+    if request.url.query:
+        target += "?" + request.url.query
+    body = await request.body()
+    ct = request.headers.get("content-type", "application/json")
+    def _do():
+        return http_requests.request(request.method, target, data=body, headers={"Content-Type": ct}, timeout=180)
+    try:
+        resp = await asyncio.to_thread(_do)
+    except Exception as e:
+        return _PTResponse(content=b'{"ok":false,"error":"passthrough"}', status_code=502, media_type="application/json")
+    return _PTResponse(content=resp.content, status_code=resp.status_code, media_type=resp.headers.get("content-type", "application/json"))
+
 
 @app.get("/api/council/health")
 async def health():
@@ -3468,6 +3883,25 @@ def _hk_load_council() -> list:
     return out
 
 
+_TS_BIN = "/Applications/Tailscale.app/Contents/MacOS/Tailscale"
+
+
+def _hk_resolve_host_by_ip(ip: str) -> str:
+    """IP tailnet → hostname corto (vía `tailscale status`). Para excluir la
+    máquina desde la que se lanza el hackeo (su pantalla no debe taparse)."""
+    if not ip:
+        return ""
+    try:
+        r = subprocess.run([_TS_BIN, "status"], capture_output=True, timeout=6)
+        for line in r.stdout.decode("utf-8", "ignore").splitlines():
+            parts = line.split()
+            if parts and parts[0] == ip:
+                return parts[1] if len(parts) > 1 else ""
+    except Exception:
+        pass
+    return ""
+
+
 def _hk_ping(host: str) -> bool:
     """Ping ICMP rápido por hostname Tailscale. True si responde."""
     if not host:
@@ -3497,12 +3931,17 @@ def _hk_ssh_launch(user: str, host: str) -> tuple:
     # está bloqueada, Terminal.app no puede recibir AppleEvents.
     import base64 as _b64
     payload = _b64.b64encode(_HK_REMOTE_PY.encode("utf-8")).decode("ascii")
+    # Escribimos el simulacro a un fichero con NOMBRE y lo lanzamos con `exec`:
+    # así el proceso del Terminal es `python3 …/hacksim.py`, que el stop puede
+    # matar de forma fiable con `pkill -f hacksim.py` ANTES de cerrar → sin el
+    # diálogo "¿terminar el proceso en ejecución?".
     remote_cmd = (
-        "caffeinate -u -t 2 && sleep 1 && "
+        "caffeinate -u -t 2 && sleep 1 && mkdir -p \"$HOME/.fleet\" && "
+        f"echo {payload} | base64 -D > \"$HOME/.fleet/hacksim.py\" && "
         "osascript -e 'tell application \"Terminal\" to activate' "
         "-e 'tell application \"Terminal\" to do script "
-        f"\"clear; echo \\\"== ADMIRA HACK SIMULATION ==\\\"; "
-        f"echo {payload} | base64 -D | python3 -\"'"
+        "\"clear; echo \\\"== ADMIRA HACK SIMULATION ==\\\"; "
+        "exec python3 $HOME/.fleet/hacksim.py\"'"
     )
     ssh_cmd = [
         "ssh",
@@ -3528,7 +3967,19 @@ def _hk_ssh_stop(user: str, host: str) -> tuple:
     """Cierra el Terminal en el Mac remoto."""
     if not user or not host:
         return False, "missing ssh user/host"
-    remote_cmd = "osascript -e 'tell application \"Terminal\" to quit' >/dev/null 2>&1; true"
+    # Primero matamos el proceso del simulacro (un `python3 -` en bucle): si no,
+    # `Terminal to quit` se queda colgado en el diálogo "hay un proceso en
+    # ejecución". Ya sin proceso vivo, el quit cierra las ventanas sin diálogo.
+    # El `[ ]` evita que pkill -f se mate a sí mismo: el patrón casa el simulacro
+    # real ("ADMIRA HACK SIMULATION" / "python3 -", con espacios) pero NO la propia
+    # línea del stop (que contiene los corchetes literales, no un espacio).
+    remote_cmd = (
+        "pkill -f 'hacksim[.]py' 2>/dev/null; "                 # simulacro nuevo (fichero con nombre)
+        "pkill -f 'ADMIRA[ ]HACK[ ]SIMULATION' 2>/dev/null; "   # shell del simulacro viejo
+        "pkill -f 'python3[ ]-$' 2>/dev/null; "                 # best-effort para el python del simulacro viejo
+        "sleep 0.4; "
+        "osascript -e 'tell application \"Terminal\" to quit' >/dev/null 2>&1; true"
+    )
     ssh_cmd = [
         "ssh",
         "-o", "StrictHostKeyChecking=no",
@@ -3737,16 +4188,43 @@ def _hk_process_one(machine: dict, action: str) -> dict:
     return result
 
 
+class HackeoRequest(BaseModel):
+    exclude_ip: str = ""
+
+
 @app.post("/api/council/hackeo")
-async def council_hackeo(_auth=Depends(verify_token)):
+async def council_hackeo(request: Request, _rate=Depends(check_rate_limit), _auth=Depends(verify_hack_token)):
     """Lanza la simulación de hackeo en cada máquina del consejo.
 
     Para cada consejero: ping → si vive, SSH; si no, Wake-on-LAN.
-    Devuelve el estado por máquina para que el frontend pinte el resultado.
+    Excluye la máquina desde la que se lanza (exclude_ip) para no tapar la
+    pantalla del operador. Devuelve el estado por máquina.
     """
     machines = _hk_load_council()
     if not machines:
         return {"ok": False, "error": "no council machines", "machines": []}
+
+    excluded = None
+    _dbg = ""
+    try:
+        _raw = await request.body()
+        _body = json.loads(_raw.decode("utf-8")) if _raw else {}
+        exclude_ip = str((_body or {}).get("exclude_ip") or "").strip()
+        _dbg = "rawlen=%d ip=%r" % (len(_raw), exclude_ip)
+    except Exception as e:
+        exclude_ip = ""
+        _dbg = "err=%r" % (e,)
+    if exclude_ip:
+        ehost = _hk_resolve_host_by_ip(exclude_ip)
+        if ehost:
+            kept = []
+            for m in machines:
+                mhost = (m.get("ssh") or {}).get("host", "").split(".")[0]
+                if mhost and mhost == ehost:
+                    excluded = m.get("id")
+                else:
+                    kept.append(m)
+            machines = kept
 
     results: list = []
     with _HkPool(max_workers=min(8, len(machines))) as pool:
@@ -3772,11 +4250,13 @@ async def council_hackeo(_auth=Depends(verify_token)):
         "ts": datetime.utcnow().isoformat() + "Z",
         "summary": summary,
         "machines": results,
+        "excluded": excluded,
+        "_dbg": _dbg,
     }
 
 
 @app.post("/api/council/hackeo/stop")
-async def council_hackeo_stop(_auth=Depends(verify_token)):
+async def council_hackeo_stop(_auth=Depends(verify_hack_token)):
     """Detiene la simulación cerrando Terminal en cada máquina viva."""
     machines = _hk_load_council()
     results: list = []
@@ -3812,7 +4292,7 @@ def _hk_discover_one(machine: dict) -> dict:
 
 
 @app.post("/api/council/hackeo/discover-macs")
-async def council_hackeo_discover_macs(_auth=Depends(verify_token)):
+async def council_hackeo_discover_macs(_rate=Depends(check_rate_limit), _auth=Depends(verify_hack_token)):
     """Autodescubre las MAC de los Macs encendidos y las persiste en
     machines.json para que la próxima vez podamos despertarlos por
     Wake-on-LAN aunque estén apagados.

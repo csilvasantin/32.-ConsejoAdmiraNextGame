@@ -3899,7 +3899,14 @@ def _hk_ssh_launch(user: str, host: str) -> tuple:
         "osascript -e 'tell application \"Terminal\" to activate' "
         "-e 'tell application \"Terminal\" to do script "
         "\"clear; echo \\\"== ADMIRA HACK SIMULATION ==\\\"; "
-        "exec python3 $HOME/.fleet/hacksim.py\"'"
+        "exec python3 $HOME/.fleet/hacksim.py\"' "
+        # Maximizar (siempre funciona, solo Automation) y luego intentar
+        # fullscreen REAL con Ctrl-Cmd-F (necesita permiso de Accesibilidad;
+        # si no, se queda maximizado). Todo en try para no romper el lanzamiento.
+        "-e 'delay 0.5' "
+        "-e 'try' -e 'tell application \"Terminal\" to set bounds of front window to {0, 0, 9999, 9999}' -e 'end try' "
+        "-e 'delay 0.3' "
+        "-e 'try' -e 'tell application \"System Events\" to keystroke \"f\" using {control down, command down}' -e 'end try'"
     )
     ssh_cmd = [
         "ssh",

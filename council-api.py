@@ -4182,11 +4182,15 @@ async def council_hackeo(request: Request, _rate=Depends(check_rate_limit), _aut
         return {"ok": False, "error": "no council machines", "machines": []}
 
     excluded = None
+    _dbg = ""
     try:
-        _body = await request.json()
+        _raw = await request.body()
+        _body = json.loads(_raw.decode("utf-8")) if _raw else {}
         exclude_ip = str((_body or {}).get("exclude_ip") or "").strip()
-    except Exception:
+        _dbg = "rawlen=%d ip=%r" % (len(_raw), exclude_ip)
+    except Exception as e:
         exclude_ip = ""
+        _dbg = "err=%r" % (e,)
     if exclude_ip:
         ehost = _hk_resolve_host_by_ip(exclude_ip)
         if ehost:
@@ -4224,6 +4228,7 @@ async def council_hackeo(request: Request, _rate=Depends(check_rate_limit), _aut
         "summary": summary,
         "machines": results,
         "excluded": excluded,
+        "_dbg": _dbg,
     }
 
 

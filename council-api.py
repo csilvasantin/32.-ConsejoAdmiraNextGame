@@ -3634,9 +3634,12 @@ def _hk_ssh_stop(user: str, host: str) -> tuple:
     # Primero matamos el proceso del simulacro (un `python3 -` en bucle): si no,
     # `Terminal to quit` se queda colgado en el diálogo "hay un proceso en
     # ejecución". Ya sin proceso vivo, el quit cierra las ventanas sin diálogo.
+    # El `[ ]` evita que pkill -f se mate a sí mismo: el patrón casa el simulacro
+    # real ("ADMIRA HACK SIMULATION" / "python3 -", con espacios) pero NO la propia
+    # línea del stop (que contiene los corchetes literales, no un espacio).
     remote_cmd = (
-        "pkill -f 'ADMIRA HACK SIMULATION' 2>/dev/null; "
-        "pkill -f 'base64 -D' 2>/dev/null; "
+        "pkill -f 'ADMIRA[ ]HACK[ ]SIMULATION' 2>/dev/null; "
+        "pkill -f 'python3[ ]-' 2>/dev/null; "
         "sleep 0.4; "
         "osascript -e 'tell application \"Terminal\" to quit' >/dev/null 2>&1; true"
     )

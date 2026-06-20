@@ -3889,12 +3889,17 @@ def _hk_ssh_launch(user: str, host: str) -> tuple:
     # está bloqueada, Terminal.app no puede recibir AppleEvents.
     import base64 as _b64
     payload = _b64.b64encode(_HK_REMOTE_PY.encode("utf-8")).decode("ascii")
+    # Escribimos el simulacro a un fichero con NOMBRE y lo lanzamos con `exec`:
+    # así el proceso del Terminal es `python3 …/hacksim.py`, que el stop puede
+    # matar de forma fiable con `pkill -f hacksim.py` ANTES de cerrar → sin el
+    # diálogo "¿terminar el proceso en ejecución?".
     remote_cmd = (
-        "caffeinate -u -t 2 && sleep 1 && "
+        "caffeinate -u -t 2 && sleep 1 && mkdir -p \"$HOME/.fleet\" && "
+        f"echo {payload} | base64 -D > \"$HOME/.fleet/hacksim.py\" && "
         "osascript -e 'tell application \"Terminal\" to activate' "
         "-e 'tell application \"Terminal\" to do script "
-        f"\"clear; echo \\\"== ADMIRA HACK SIMULATION ==\\\"; "
-        f"echo {payload} | base64 -D | python3 -\"'"
+        "\"clear; echo \\\"== ADMIRA HACK SIMULATION ==\\\"; "
+        "exec python3 $HOME/.fleet/hacksim.py\"'"
     )
     ssh_cmd = [
         "ssh",
@@ -3927,8 +3932,9 @@ def _hk_ssh_stop(user: str, host: str) -> tuple:
     # real ("ADMIRA HACK SIMULATION" / "python3 -", con espacios) pero NO la propia
     # línea del stop (que contiene los corchetes literales, no un espacio).
     remote_cmd = (
-        "pkill -f 'ADMIRA[ ]HACK[ ]SIMULATION' 2>/dev/null; "
-        "pkill -f 'python3 -$' 2>/dev/null; "   # solo el `python3 -` que TERMINA en guion (el simulacro), no -c/-m
+        "pkill -f 'hacksim[.]py' 2>/dev/null; "                 # simulacro nuevo (fichero con nombre)
+        "pkill -f 'ADMIRA[ ]HACK[ ]SIMULATION' 2>/dev/null; "   # shell del simulacro viejo
+        "pkill -f 'python3[ ]-$' 2>/dev/null; "                 # best-effort para el python del simulacro viejo
         "sleep 0.4; "
         "osascript -e 'tell application \"Terminal\" to quit' >/dev/null 2>&1; true"
     )

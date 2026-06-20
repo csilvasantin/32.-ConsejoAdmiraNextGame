@@ -3639,7 +3639,7 @@ def _hk_ssh_stop(user: str, host: str) -> tuple:
     # línea del stop (que contiene los corchetes literales, no un espacio).
     remote_cmd = (
         "pkill -f 'ADMIRA[ ]HACK[ ]SIMULATION' 2>/dev/null; "
-        "pkill -f 'python3[ ]-' 2>/dev/null; "
+        "pkill -f 'python3 -$' 2>/dev/null; "   # solo el `python3 -` que TERMINA en guion (el simulacro), no -c/-m
         "sleep 0.4; "
         "osascript -e 'tell application \"Terminal\" to quit' >/dev/null 2>&1; true"
     )

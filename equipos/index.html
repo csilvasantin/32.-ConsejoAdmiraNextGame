@@ -51,6 +51,15 @@
   button.primary{font-family:inherit;background:var(--acc);color:#06231e;border:1px solid var(--acc);border-radius:10px;padding:10px 18px;font-size:14px;font-weight:700;cursor:pointer}
   button.primary:disabled{opacity:.45;cursor:progress}
   button.ghost{font-family:inherit;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:10px 14px;font-size:13px;cursor:pointer}
+  .caprow{display:flex;align-items:center;gap:8px;margin-top:2px}
+  .capbtn{font-family:inherit;background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:9px;padding:7px 10px;font-size:12px;cursor:pointer;white-space:nowrap}
+  .capbtn:hover{border-color:var(--acc)} .capbtn:disabled{opacity:.5;cursor:progress}
+  .capst{font-size:11px;color:var(--mut);font-family:var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .capst.ok{color:var(--ok)} .capst.err{color:var(--warn)}
+  .shot{margin-top:6px;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#000}
+  .shot img{width:100%;display:block;cursor:zoom-in}
+  #lb{position:fixed;inset:0;background:#000d;display:none;align-items:center;justify-content:center;z-index:99;cursor:zoom-out;padding:20px}
+  #lb img{max-width:100%;max-height:100%;border-radius:10px;box-shadow:0 10px 50px #000}
   .empty{color:var(--mut);font-size:13px;text-align:center;padding:30px}
   .note{color:var(--mut);font-size:11px;margin-top:10px}
   a.back{color:var(--acc2);text-decoration:none;font-size:12px}
@@ -74,6 +83,8 @@
 
   <div class="note">Cada personaje = 1 <b>equipo</b> (la máquina donde corre, de la flota) + 1 <b>LLM</b> (Codex/Claude/OpenCode·DeepSeek, hospedado en esa máquina) + 1 <b>categoría</b>. Por ahora guarda la asignación; el enrutado real de prompts es la fase siguiente.</div>
 </div>
+
+<div id="lb"><img id="lbImg" alt=""></div>
 
 <div class="savebar">
   <span class="status" id="status"></span>
@@ -163,18 +174,43 @@ function render(){
         <div><div class="nm">${ag.role} · ${ag.name||""}</div><div class="role">${ag.title||ag.id.toUpperCase()}</div></div>
         <span class="sidebadge">${ag.side}</span></div>
       <div class="field full"><label>Equipo (máquina)</label><select data-a="${ag.id}" data-k="machine">${mOpts}</select></div>
+      <div class="field full" data-cap="${ag.id}" style="${asg.machine?'':'display:none'}">
+        <div class="caprow"><button class="capbtn" data-capbtn="${ag.id}">📸 confirmar match</button><span class="capst" data-capst="${ag.id}"></span></div>
+        <div class="shot" data-shot="${ag.id}" style="display:none"></div>
+      </div>
       <div class="grid3">
         <div class="field"><label>LLM / runtime</label><select data-a="${ag.id}" data-k="runtime">${rOpts}</select></div>
         <div class="field"><label>Categoría</label><select data-a="${ag.id}" data-k="categoria">${cOpts}</select></div>
       </div>`;
     card.querySelectorAll("select").forEach(sel=>{
-      sel.onchange=e=>{ DATA.assignments[e.target.dataset.a][e.target.dataset.k]=e.target.value;
-        if(e.target.dataset.k==="categoria"){ card.style.setProperty("--c",catColor(e.target.value)); renderCounts(); } };
+      sel.onchange=e=>{ const aid=e.target.dataset.a, k=e.target.dataset.k; DATA.assignments[aid][k]=e.target.value;
+        if(k==="categoria"){ card.style.setProperty("--c",catColor(e.target.value)); renderCounts(); }
+        if(k==="machine"){ const cap=card.querySelector("[data-cap]"); cap.style.display=e.target.value?"":"none";
+          if(e.target.value){ captureFor(aid); } else { card.querySelector('[data-shot="'+aid+'"]').style.display="none"; setCapSt(aid,"",""); } }
+      };
     });
+    card.querySelector("[data-capbtn]").onclick=()=>captureFor(ag.id);
     ae.appendChild(card);
   });
 }
 function renderCounts(){ document.querySelectorAll(".cat-chip").forEach((chip,i)=>{ const c=DATA.categorias[i]; if(!c)return; const n=Object.values(DATA.assignments).filter(a=>a.categoria===c.id).length; const el=chip.querySelector(".count"); if(el) el.textContent=n; }); }
+
+function setCapSt(aid,cls,txt){ const el=document.querySelector('[data-capst="'+aid+'"]'); if(el){ el.className="capst"+(cls?(" "+cls):""); el.textContent=txt; } }
+async function captureFor(aid){
+  const mid=(DATA.assignments[aid]||{}).machine; if(!mid) return;
+  const btn=document.querySelector('[data-capbtn="'+aid+'"]'); const shot=document.querySelector('[data-shot="'+aid+'"]');
+  if(btn) btn.disabled=true; setCapSt(aid,"","capturando…");
+  try{
+    const r=await apiCall("/api/council/capture","POST",{machine:mid});
+    if(r.ok && r.image){
+      shot.innerHTML='<img alt="captura">'; shot.querySelector("img").src=r.image; shot.style.display="block";
+      shot.querySelector("img").onclick=()=>{ $("#lbImg").src=r.image; $("#lb").style.display="flex"; };
+      setCapSt(aid,"ok","✅ match confirmado");
+    } else { shot.style.display="none"; setCapSt(aid,"err","⚠ "+(r.error||"sin captura")); }
+  }catch(e){ if(e.code) onAuthFail(); else setCapSt(aid,"err","⚠ "+(e.message||"error")); }
+  if(btn) btn.disabled=false;
+}
+$("#lb").onclick=()=>{ $("#lb").style.display="none"; };
 
 $("#save").onclick=async()=>{
   const btn=$("#save"); btn.disabled=true; $("#status").textContent="guardando…";

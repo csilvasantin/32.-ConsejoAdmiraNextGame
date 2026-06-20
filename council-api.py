@@ -1482,6 +1482,59 @@ async def save_teams(req: TeamsSaveRequest, _auth=Depends(verify_hack_token)):
     return {"ok": True, **doc}
 
 
+# Captura de pantalla de una máquina (confirmar el "match" al asignarla).
+# Reutiliza el mini-agente AgoraCapture (handshake por ficheros ~/.fleet),
+# el mismo de FleetControl. Requiere que la máquina tenga ese agente.
+_CAPTURE_SH = (
+    'D="$HOME/.fleet"; mkdir -p "$D"; O="$D/capture.out"; '
+    'N="cap-$(date +%s)-$$-$RANDOM"; printf "%s" "$N" > "$D/capture.req"; '
+    'for i in $(seq 1 40); do [ "$(head -1 "$O" 2>/dev/null)" = "$N" ] && break; sleep 0.3; done; '
+    'if [ "$(head -1 "$O" 2>/dev/null)" = "$N" ]; then tail -n +2 "$O"; else echo ERR_NO_CAPTURE; fi'
+)
+
+
+def _machine_by_id(mid: str):
+    try:
+        raw = json.loads(_MACHINES_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return None
+    ms = raw if isinstance(raw, list) else raw.get("machines", [])
+    for m in ms:
+        if str(m.get("id")) == mid:
+            return m
+    return None
+
+
+class CaptureRequest(BaseModel):
+    machine: str
+
+
+@app.post("/api/council/capture")
+async def council_capture(req: CaptureRequest, _rate=Depends(check_rate_limit), _auth=Depends(verify_hack_token)):
+    m = _machine_by_id(req.machine)
+    if not m:
+        raise HTTPException(status_code=404, detail="máquina desconocida")
+    ssh = m.get("ssh") or {}
+    user = ssh.get("user") or "csilvasantin"
+    host = ssh.get("host")
+    if not ssh.get("enabled") or not host:
+        return {"ok": False, "machine": req.machine, "error": "máquina sin SSH configurado"}
+    ssh_cmd = ["ssh", "-o", "StrictHostKeyChecking=no", "-o", "BatchMode=yes",
+               "-o", "ConnectTimeout=8", f"{user}@{host}", _CAPTURE_SH]
+    try:
+        r = subprocess.run(ssh_cmd, capture_output=True, timeout=22)
+    except subprocess.TimeoutExpired:
+        return {"ok": False, "machine": req.machine, "error": "timeout (¿máquina apagada?)"}
+    except Exception as e:
+        return {"ok": False, "machine": req.machine, "error": str(e)[:180]}
+    out = (r.stdout or b"").decode("utf-8", "ignore").strip()
+    err = (r.stderr or b"").decode("utf-8", "ignore").strip()
+    if r.returncode != 0 or not out or "ERR_NO_CAPTURE" in out:
+        detail = err[:180] or "sin captura (¿AgoraCapture instalado en esa máquina?)"
+        return {"ok": False, "machine": req.machine, "error": detail}
+    return {"ok": True, "machine": req.machine, "image": "data:image/jpeg;base64," + out}
+
+
 @app.get("/api/council/yar-context")
 async def get_yar_context(_auth=Depends(verify_token)):
     with _yar_lock:

@@ -1329,10 +1329,10 @@ DEFAULT_RUNTIMES = [
     {"id": "claude", "label": "Claude", "engine": "Claude Code", "model": ""},
     {"id": "opencode", "label": "OpenCode·DeepSeek", "engine": "OpenCode", "model": "DeepSeek"},
 ]
-DEFAULT_CATEGORIAS = [
-    {"id": "creativo", "name": "Creativo"},
-    {"id": "tecnologico", "name": "Tecnológico"},
-    {"id": "business", "name": "Business"},
+# Usuarios con los que los LLM de terceros hacen login (editable).
+DEFAULT_USUARIOS = [
+    {"id": "csilva", "name": "csilva@admira.com"},
+    {"id": "csilvasantin", "name": "csilvasantin@gmail.com"},
 ]
 
 
@@ -1397,9 +1397,8 @@ def _council_agents() -> list:
 def _default_teams_doc() -> dict:
     assignments = {}
     for a in _council_agents():
-        cat = "creativo" if a["side"] == "creativo" else "tecnologico"
-        assignments[a["id"]] = {"machine": "", "categoria": cat, "runtime": "claude"}
-    return {"categorias": [dict(c) for c in DEFAULT_CATEGORIAS],
+        assignments[a["id"]] = {"machine": "", "runtime": "claude", "usuario": "csilva", "tarea": ""}
+    return {"usuarios": [dict(u) for u in DEFAULT_USUARIOS],
             "runtimes": [dict(r) for r in DEFAULT_RUNTIMES],
             "assignments": assignments}
 
@@ -1410,7 +1409,7 @@ def _load_teams() -> dict:
         assert isinstance(doc, dict)
     except Exception:
         doc = _default_teams_doc()
-    doc.setdefault("categorias", [dict(c) for c in DEFAULT_CATEGORIAS])
+    doc.setdefault("usuarios", [dict(u) for u in DEFAULT_USUARIOS])
     doc.setdefault("runtimes", [dict(r) for r in DEFAULT_RUNTIMES])
     doc.setdefault("assignments", {})
     return doc
@@ -1425,7 +1424,7 @@ def _save_teams(doc: dict):
 
 
 class TeamsSaveRequest(BaseModel):
-    categorias: list = []
+    usuarios: list = []
     assignments: dict = {}
     runtimes: Optional[list] = None
 
@@ -1436,7 +1435,7 @@ async def get_teams(_auth=Depends(verify_hack_token)):
     return {
         "agents": _council_agents(),
         "machines": _assign_machines(),
-        "categorias": doc["categorias"],
+        "usuarios": doc["usuarios"],
         "runtimes": doc["runtimes"],
         "assignments": doc["assignments"],
     }
@@ -1448,21 +1447,21 @@ async def save_teams(req: TeamsSaveRequest, _auth=Depends(verify_hack_token)):
     machine_ids = {m["id"] for m in _assign_machines()}
     runtimes = req.runtimes if req.runtimes else _load_teams()["runtimes"]
     runtime_ids = {str(r.get("id")) for r in runtimes if r.get("id")}
-    # Saneado de categorías (editables)
-    categorias, cat_ids = [], set()
-    for c in (req.categorias or []):
-        cid = str(c.get("id") or "").strip()
-        name = str(c.get("name") or "").strip()
-        if not cid or not name or cid in cat_ids:
+    # Saneado de usuarios (editables)
+    usuarios, user_ids = [], set()
+    for u in (req.usuarios or []):
+        uid = str(u.get("id") or "").strip()
+        name = str(u.get("name") or "").strip()
+        if not uid or not name or uid in user_ids:
             continue
-        cat_ids.add(cid)
-        categorias.append({"id": cid, "name": name})
-    if not categorias:
-        categorias = [dict(c) for c in DEFAULT_CATEGORIAS]
-        cat_ids = {c["id"] for c in categorias}
+        user_ids.add(uid)
+        usuarios.append({"id": uid, "name": name})
+    if not usuarios:
+        usuarios = [dict(u) for u in DEFAULT_USUARIOS]
+        user_ids = {u["id"] for u in usuarios}
     fallback_rt = "claude" if "claude" in runtime_ids else (next(iter(runtime_ids)) if runtime_ids else "claude")
-    fallback_cat = next(iter(cat_ids))
-    # Saneado de asignaciones (máquina puede ir vacía = sin asignar)
+    fallback_user = next(iter(user_ids))
+    # Saneado de asignaciones (máquina vacía = sin asignar)
     assignments = {}
     for aid, asg in (req.assignments or {}).items():
         if aid not in agent_ids or not isinstance(asg, dict):
@@ -1470,14 +1469,15 @@ async def save_teams(req: TeamsSaveRequest, _auth=Depends(verify_hack_token)):
         machine = str(asg.get("machine") or "")
         if machine and machine not in machine_ids:
             machine = ""
-        cat = str(asg.get("categoria") or "")
-        if cat not in cat_ids:
-            cat = fallback_cat
         rt = str(asg.get("runtime") or "")
         if rt not in runtime_ids:
             rt = fallback_rt
-        assignments[aid] = {"machine": machine, "categoria": cat, "runtime": rt}
-    doc = {"categorias": categorias, "runtimes": runtimes, "assignments": assignments}
+        usuario = str(asg.get("usuario") or "")
+        if usuario not in user_ids:
+            usuario = fallback_user
+        tarea = str(asg.get("tarea") or "")[:500]
+        assignments[aid] = {"machine": machine, "runtime": rt, "usuario": usuario, "tarea": tarea}
+    doc = {"usuarios": usuarios, "runtimes": runtimes, "assignments": assignments}
     _save_teams(doc)
     return {"ok": True, **doc}
 

@@ -3090,33 +3090,32 @@ async def council_talk(req: TalkRequest, _auth=Depends(verify_hack_token)):
 
 @app.get("/api/council/talk-thread")
 async def council_talk_thread(role: str = "", persona: str = "", since: float = 0, _auth=Depends(verify_hack_token)):
-    from datetime import datetime as _dt
+    import urllib.request, urllib.parse, ssl, os as _os
     tag = ("[" + role + "]") if role else ""
     out = []
     try:
-        with open(_AGORA_LOG, encoding="utf-8") as f:
-            for line in f:
-                line = line.strip()
-                if not line:
-                    continue
-                try:
-                    d = json.loads(line)
-                except Exception:
-                    continue
-                txt = str(d.get("text") or "")
-                frm = str(d.get("from") or "")
-                if tag and tag not in txt:
-                    continue
-                if frm.startswith("Carlos·"):
-                    continue
-                ts_raw = str(d.get("ts") or "")
-                try:
-                    ep = int(_dt.fromisoformat(ts_raw).timestamp())
-                except Exception:
-                    ep = 0
-                if since and ep <= since:
-                    continue
-                out.append({"ts": ep, "from": frm, "text": txt})
+        kp = _os.path.expanduser("~/.agents-comms/.synckey")
+        key = open(kp).read().strip() if _os.path.exists(kp) else _os.environ.get("AGORA_SYNC_KEY", "")
+        u = "https://api.admira.store/agora/feed?key=" + urllib.parse.quote(key) + "&limit=200"
+        rq = urllib.request.Request(u, headers={"User-Agent": "council-api/1.0"})
+        with urllib.request.urlopen(rq, timeout=12, context=ssl.create_default_context()) as rr:
+            data = json.loads(rr.read().decode())
+        for d in data.get("items", []):
+            txt = str(d.get("text") or "")
+            frm = str(d.get("from") or "")
+            if tag and tag not in txt:
+                continue
+            if frm.startswith("Carlos·"):
+                continue
+            try:
+                ep = int(float(d.get("ts") or 0))
+            except Exception:
+                ep = 0
+            if ep > 10000000000:
+                ep = ep // 1000
+            if since and ep <= since:
+                continue
+            out.append({"ts": ep, "from": frm, "text": txt})
     except Exception:
         pass
     return {"messages": out[-60:]}

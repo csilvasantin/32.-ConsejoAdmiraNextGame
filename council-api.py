@@ -1315,17 +1315,49 @@ async def list_models():
     return {"models": models}
 
 
-# ── Equipos + asignación de LLM por agente ───────────────────
-# Modelo: equipos DINÁMICOS (creables) + por cada agente del consejo un
-# runtime/LLM (Codex / Claude / OpenCode·DeepSeek). Solo datos+asignación;
-# el enrutado real de prompts al runtime es una fase posterior.
+# ── Asignación: personaje × equipo(máquina) × categoría × LLM ─
+# Cada agente del consejo (personaje) se asigna a UNA combinación:
+#   - equipo  = la máquina/ordenador donde corre (de la flota, data/machines.json)
+#   - runtime = LLM hospedado en esa máquina (Codex / Claude / OpenCode·DeepSeek)
+#   - categoría = creativo / tecnológico / business (editables)
+# Solo datos+asignación; el enrutado real de prompts al runtime es fase 2.
 _TEAMS_PATH = Path(__file__).parent / "data" / "teams.json"
+_MACHINES_PATH = Path(__file__).parent / "data" / "machines.json"
 
 DEFAULT_RUNTIMES = [
     {"id": "codex", "label": "Codex", "engine": "Codex", "model": ""},
     {"id": "claude", "label": "Claude", "engine": "Claude Code", "model": ""},
     {"id": "opencode", "label": "OpenCode·DeepSeek", "engine": "OpenCode", "model": "DeepSeek"},
 ]
+DEFAULT_CATEGORIAS = [
+    {"id": "creativo", "name": "Creativo"},
+    {"id": "tecnologico", "name": "Tecnológico"},
+    {"id": "business", "name": "Business"},
+]
+
+
+def _machine_emoji(s: str) -> str:
+    s = s.lower()
+    if any(k in s for k in ("mini", "pc", "runner", "ocr", "bot", "sitges", "twin")):
+        return "🖥️"
+    return "💻"
+
+
+def _assign_machines() -> list:
+    """Máquinas de la flota para el selector de 'equipo' (data/machines.json)."""
+    try:
+        raw = json.loads(_MACHINES_PATH.read_text(encoding="utf-8"))
+    except Exception:
+        return []
+    ms = raw if isinstance(raw, list) else raw.get("machines", [])
+    out = []
+    for m in ms:
+        mid = str(m.get("id") or "").strip()
+        if not mid:
+            continue
+        name = m.get("name") or mid
+        out.append({"id": mid, "name": name, "emoji": _machine_emoji(mid + " " + name)})
+    return out
 
 
 # El paquete no trae emoji; mapeamos por código de rol (como los consejeros).
@@ -1363,15 +1395,13 @@ def _council_agents() -> list:
 
 
 def _default_teams_doc() -> dict:
-    teams = [
-        {"id": "creativo", "name": "Creativo", "color": "#7aa2ff"},
-        {"id": "tecnologico", "name": "Tecnológico", "color": "#5bd6c0"},
-    ]
     assignments = {}
     for a in _council_agents():
-        team = "creativo" if a["side"] == "creativo" else "tecnologico"
-        assignments[a["id"]] = {"team": team, "runtime": "claude"}
-    return {"teams": teams, "runtimes": DEFAULT_RUNTIMES, "assignments": assignments}
+        cat = "creativo" if a["side"] == "creativo" else "tecnologico"
+        assignments[a["id"]] = {"machine": "", "categoria": cat, "runtime": "claude"}
+    return {"categorias": [dict(c) for c in DEFAULT_CATEGORIAS],
+            "runtimes": [dict(r) for r in DEFAULT_RUNTIMES],
+            "assignments": assignments}
 
 
 def _load_teams() -> dict:
@@ -1380,8 +1410,8 @@ def _load_teams() -> dict:
         assert isinstance(doc, dict)
     except Exception:
         doc = _default_teams_doc()
-    doc.setdefault("teams", [])
-    doc.setdefault("runtimes", DEFAULT_RUNTIMES)
+    doc.setdefault("categorias", [dict(c) for c in DEFAULT_CATEGORIAS])
+    doc.setdefault("runtimes", [dict(r) for r in DEFAULT_RUNTIMES])
     doc.setdefault("assignments", {})
     return doc
 
@@ -1395,7 +1425,7 @@ def _save_teams(doc: dict):
 
 
 class TeamsSaveRequest(BaseModel):
-    teams: list = []
+    categorias: list = []
     assignments: dict = {}
     runtimes: Optional[list] = None
 
@@ -1405,7 +1435,8 @@ async def get_teams(_auth=Depends(verify_hack_token)):
     doc = _load_teams()
     return {
         "agents": _council_agents(),
-        "teams": doc["teams"],
+        "machines": _assign_machines(),
+        "categorias": doc["categorias"],
         "runtimes": doc["runtimes"],
         "assignments": doc["assignments"],
     }
@@ -1414,33 +1445,39 @@ async def get_teams(_auth=Depends(verify_hack_token)):
 @app.post("/api/council/teams")
 async def save_teams(req: TeamsSaveRequest, _auth=Depends(verify_hack_token)):
     agent_ids = {a["id"] for a in _council_agents()}
+    machine_ids = {m["id"] for m in _assign_machines()}
     runtimes = req.runtimes if req.runtimes else _load_teams()["runtimes"]
     runtime_ids = {str(r.get("id")) for r in runtimes if r.get("id")}
-    # Saneado de equipos
-    teams, team_ids = [], set()
-    for t in (req.teams or []):
-        tid = str(t.get("id") or "").strip()
-        name = str(t.get("name") or "").strip()
-        if not tid or not name or tid in team_ids:
+    # Saneado de categorías (editables)
+    categorias, cat_ids = [], set()
+    for c in (req.categorias or []):
+        cid = str(c.get("id") or "").strip()
+        name = str(c.get("name") or "").strip()
+        if not cid or not name or cid in cat_ids:
             continue
-        team_ids.add(tid)
-        teams.append({"id": tid, "name": name, "color": str(t.get("color") or "#7aa2ff")})
-    if not teams:
-        raise HTTPException(status_code=400, detail="Hace falta al menos un equipo")
+        cat_ids.add(cid)
+        categorias.append({"id": cid, "name": name})
+    if not categorias:
+        categorias = [dict(c) for c in DEFAULT_CATEGORIAS]
+        cat_ids = {c["id"] for c in categorias}
     fallback_rt = "claude" if "claude" in runtime_ids else (next(iter(runtime_ids)) if runtime_ids else "claude")
-    # Saneado de asignaciones (solo agentes/equipos/runtimes válidos)
+    fallback_cat = next(iter(cat_ids))
+    # Saneado de asignaciones (máquina puede ir vacía = sin asignar)
     assignments = {}
     for aid, asg in (req.assignments or {}).items():
         if aid not in agent_ids or not isinstance(asg, dict):
             continue
-        team = str(asg.get("team") or "")
-        runtime = str(asg.get("runtime") or "")
-        if team not in team_ids:
-            team = teams[0]["id"]
-        if runtime not in runtime_ids:
-            runtime = fallback_rt
-        assignments[aid] = {"team": team, "runtime": runtime}
-    doc = {"teams": teams, "runtimes": runtimes, "assignments": assignments}
+        machine = str(asg.get("machine") or "")
+        if machine and machine not in machine_ids:
+            machine = ""
+        cat = str(asg.get("categoria") or "")
+        if cat not in cat_ids:
+            cat = fallback_cat
+        rt = str(asg.get("runtime") or "")
+        if rt not in runtime_ids:
+            rt = fallback_rt
+        assignments[aid] = {"machine": machine, "categoria": cat, "runtime": rt}
+    doc = {"categorias": categorias, "runtimes": runtimes, "assignments": assignments}
     _save_teams(doc)
     return {"ok": True, **doc}
 

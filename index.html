@@ -4732,6 +4732,39 @@
         }
     }
 
+    // ── Autocompletado predictivo de la CLI ──────────────────────────────
+    // Al escribir un prefijo que solo casa UN comando, lo completa y deja el
+    // sufijo seleccionado (como la barra de direcciones). Tab/→/Enter acepta.
+    const CLI_COMMANDS = [
+        '/help', '/sites', '/admira.live', '/admira.studio', '/admiranext.com',
+        '/admira.app', '/clearchannel.tv', '/pixeria.com', '/equipos', '/control',
+        '/scumm', '/top', '/bocas', '/menu', '/agoramatrix', '/tareas', '/google',
+        '/importar', '/nombres', '/tarea', '/diario'
+    ];
+    (function setupCliAutocomplete() {
+        const inp = document.getElementById('action-input');
+        if (!inp) return;
+        inp.addEventListener('input', function (e) {
+            if (e && e.inputType && !e.inputType.startsWith('insert')) return; // no completar al borrar
+            const v = inp.value;
+            if (!v.startsWith('/') || v.length < 2) return;
+            const lc = v.toLowerCase();
+            const matches = CLI_COMMANDS.filter(c => c.toLowerCase().startsWith(lc) && c.toLowerCase() !== lc);
+            if (matches.length === 1) {
+                const full = matches[0];
+                inp.value = v + full.slice(v.length);
+                inp.setSelectionRange(v.length, full.length); // sufijo seleccionado
+            }
+        });
+        inp.addEventListener('keydown', function (e) {
+            if ((e.key === 'Tab' || e.key === 'ArrowRight' || e.key === 'End') &&
+                inp.selectionStart !== inp.selectionEnd) {
+                e.preventDefault();
+                inp.setSelectionRange(inp.value.length, inp.value.length); // aceptar sugerencia
+            }
+        });
+    })();
+
     function handleCliCommand(raw) {
         const text = String(raw || '').trim();
         if (!text) return false;

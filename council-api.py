@@ -188,10 +188,6 @@ ALLOWED_ORIGINS = [
     "https://admira.live",
     "https://www.admira.studio",
     "https://admira.studio",
-    "https://www.pixeria.com",
-    "https://pixeria.com",
-    "https://www.admira.tv",
-    "https://admira.tv",
     "http://localhost:8080",
     "http://localhost:3000",
     "http://localhost:3030",
@@ -3061,24 +3057,69 @@ async def tube_import_to_stock(req: TubeImportRequest):
 async def council_import_to_stock(req: TubeImportRequest):
     return await _tube_route(req)
 
-# ── Passthrough al worker pixer-eleven (los ISP ES bloquean *.workers.dev; el
-#    navegador llega al Mac Mini por Funnel y este reenvia servidor->servidor) ──
-PIXER_WORKER_BASE = "https://pixer-eleven.csilvasantin.workers.dev"
-from fastapi.responses import Response as _PTResponse
-@app.api_route("/w/{path:path}", methods=["GET", "POST", "DELETE", "PUT", "PATCH"])
-async def pixer_worker_passthrough(path: str, request: Request):
-    target = f"{PIXER_WORKER_BASE}/{path}"
-    if request.url.query:
-        target += "?" + request.url.query
-    body = await request.body()
-    ct = request.headers.get("content-type", "application/json")
-    def _do():
-        return http_requests.request(request.method, target, data=body, headers={"Content-Type": ct}, timeout=180)
+
+# ── Chat con un consejero (FASE 2): enruta por AgoraMatrix al agente de su
+#    maquina; responde EN PERSONA y se refleja en Telegram. consejero.html
+#    postea aqui y sondea /talk-thread. (Montado por Neo, coord. con Codex.) ──
+class TalkRequest(BaseModel):
+    role: str = ""
+    persona: str = ""
+    identity: str = ""
+    runtime: str = ""
+    machine: str = ""
+    message: str = ""
+
+@app.post("/api/council/talk")
+async def council_talk(req: TalkRequest, _auth=Depends(verify_hack_token)):
+    import subprocess, os as _os
+    msg = (req.message or "").strip()
+    if not msg:
+        raise HTTPException(status_code=400, detail="mensaje vacio")
+    persona = (req.persona or "Consejero").strip()
+    role = (req.role or "").strip()
+    target = (req.identity or persona).strip()
+    text = ("\U0001f4ac [" + role + "] Carlos -> " + persona + " [" + target + "]: " + msg
+            + " | Responde EN PERSONA como " + persona + " (" + role
+            + " del Consejo AdmiraNeXT), breve, empezando con \"[" + role + "]\". Publica la respuesta aqui.")
+    agora = _os.path.expanduser("~/.local/bin/agora")
     try:
-        resp = await asyncio.to_thread(_do)
+        subprocess.run([agora, "send", "--from", "Carlos·" + persona, text], timeout=25, check=False)
     except Exception as e:
-        return _PTResponse(content=b'{"ok":false,"error":"passthrough"}', status_code=502, media_type="application/json")
-    return _PTResponse(content=resp.content, status_code=resp.status_code, media_type=resp.headers.get("content-type", "application/json"))
+        raise HTTPException(status_code=502, detail="agora: " + str(e)[:160])
+    return {"ok": True, "persona": persona, "target": target}
+
+@app.get("/api/council/talk-thread")
+async def council_talk_thread(role: str = "", persona: str = "", since: float = 0, _auth=Depends(verify_hack_token)):
+    from datetime import datetime as _dt
+    tag = ("[" + role + "]") if role else ""
+    out = []
+    try:
+        with open(_AGORA_LOG, encoding="utf-8") as f:
+            for line in f:
+                line = line.strip()
+                if not line:
+                    continue
+                try:
+                    d = json.loads(line)
+                except Exception:
+                    continue
+                txt = str(d.get("text") or "")
+                frm = str(d.get("from") or "")
+                if tag and tag not in txt:
+                    continue
+                if frm.startswith("Carlos·"):
+                    continue
+                ts_raw = str(d.get("ts") or "")
+                try:
+                    ep = int(_dt.fromisoformat(ts_raw).timestamp())
+                except Exception:
+                    ep = 0
+                if since and ep <= since:
+                    continue
+                out.append({"ts": ep, "from": frm, "text": txt})
+    except Exception:
+        pass
+    return {"messages": out[-60:]}
 
 
 @app.get("/api/council/health")
@@ -4205,26 +4246,21 @@ async def council_hackeo(request: Request, _rate=Depends(check_rate_limit), _aut
         return {"ok": False, "error": "no council machines", "machines": []}
 
     excluded = None
-    _dbg = ""
     try:
         _raw = await request.body()
         _body = json.loads(_raw.decode("utf-8")) if _raw else {}
         exclude_ip = str((_body or {}).get("exclude_ip") or "").strip()
-        _dbg = "rawlen=%d ip=%r" % (len(_raw), exclude_ip)
-    except Exception as e:
+    except Exception:
         exclude_ip = ""
-        _dbg = "err=%r" % (e,)
     if exclude_ip:
-        ehost = _hk_resolve_host_by_ip(exclude_ip)
-        if ehost:
-            kept = []
-            for m in machines:
-                mhost = (m.get("ssh") or {}).get("host", "").split(".")[0]
-                if mhost and mhost == ehost:
-                    excluded = m.get("id")
-                else:
-                    kept.append(m)
-            machines = kept
+        # Match directo contra ssh.ip_tailscale (robusto, sin subprocess).
+        kept = []
+        for m in machines:
+            if (m.get("ssh") or {}).get("ip_tailscale") == exclude_ip:
+                excluded = m.get("id")
+            else:
+                kept.append(m)
+        machines = kept
 
     results: list = []
     with _HkPool(max_workers=min(8, len(machines))) as pool:
@@ -4251,7 +4287,6 @@ async def council_hackeo(request: Request, _rate=Depends(check_rate_limit), _aut
         "summary": summary,
         "machines": results,
         "excluded": excluded,
-        "_dbg": _dbg,
     }
 
 

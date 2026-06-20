@@ -3631,7 +3631,15 @@ def _hk_ssh_stop(user: str, host: str) -> tuple:
     """Cierra el Terminal en el Mac remoto."""
     if not user or not host:
         return False, "missing ssh user/host"
-    remote_cmd = "osascript -e 'tell application \"Terminal\" to quit' >/dev/null 2>&1; true"
+    # Primero matamos el proceso del simulacro (un `python3 -` en bucle): si no,
+    # `Terminal to quit` se queda colgado en el diálogo "hay un proceso en
+    # ejecución". Ya sin proceso vivo, el quit cierra las ventanas sin diálogo.
+    remote_cmd = (
+        "pkill -f 'ADMIRA HACK SIMULATION' 2>/dev/null; "
+        "pkill -f 'base64 -D' 2>/dev/null; "
+        "sleep 0.4; "
+        "osascript -e 'tell application \"Terminal\" to quit' >/dev/null 2>&1; true"
+    )
     ssh_cmd = [
         "ssh",
         "-o", "StrictHostKeyChecking=no",

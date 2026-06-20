@@ -4170,7 +4170,7 @@ class HackeoRequest(BaseModel):
 
 
 @app.post("/api/council/hackeo")
-async def council_hackeo(req: Optional[HackeoRequest] = None, _rate=Depends(check_rate_limit), _auth=Depends(verify_hack_token)):
+async def council_hackeo(request: Request, _rate=Depends(check_rate_limit), _auth=Depends(verify_hack_token)):
     """Lanza la simulación de hackeo en cada máquina del consejo.
 
     Para cada consejero: ping → si vive, SSH; si no, Wake-on-LAN.
@@ -4182,7 +4182,11 @@ async def council_hackeo(req: Optional[HackeoRequest] = None, _rate=Depends(chec
         return {"ok": False, "error": "no council machines", "machines": []}
 
     excluded = None
-    exclude_ip = (req.exclude_ip if req else "") or ""
+    try:
+        _body = await request.json()
+        exclude_ip = str((_body or {}).get("exclude_ip") or "").strip()
+    except Exception:
+        exclude_ip = ""
     if exclude_ip:
         ehost = _hk_resolve_host_by_ip(exclude_ip)
         if ehost:

@@ -169,19 +169,19 @@ function render(){
     const count=Object.values(DATA.assignments).filter(a=>a.usuario===u.id).length;
     const chip=document.createElement("div"); chip.className="user-chip"; chip.style.setProperty("--c",userColor(u.id));
     chip.innerHTML=`<input class="uname" value="${esc(u.name)}"><span class="count">${count}</span><span class="x" title="borrar">✕</span>`;
-    chip.querySelector(".uname").onchange=e=>{ u.name=e.target.value.trim()||u.name; };
+    chip.querySelector(".uname").onchange=e=>{ u.name=e.target.value.trim()||u.name; autoSave(); };
     chip.querySelector(".x").onclick=()=>{
       if(DATA.usuarios.length<=1){ alert("Tiene que quedar al menos un usuario."); return; }
       if(!confirm(`Borrar el usuario "${u.name}"? Sus agentes pasan al primero.`)) return;
       DATA.usuarios=DATA.usuarios.filter(x=>x.id!==u.id);
       const fb=DATA.usuarios[0].id;
       Object.values(DATA.assignments).forEach(a=>{ if(a.usuario===u.id) a.usuario=fb; });
-      render();
+      render(); autoSave();
     };
     ue.appendChild(chip);
   });
   const add=document.createElement("button"); add.className="adduser"; add.textContent="+ nuevo usuario";
-  add.onclick=()=>{ const n=prompt("Email / usuario del LLM:"); if(!n||!n.trim())return; let id=slug(n); if(DATA.usuarios.some(u=>u.id===id)) id=id+"-"+Math.abs(hash(n)%97); DATA.usuarios.push({id,name:n.trim()}); render(); };
+  add.onclick=()=>{ const n=prompt("Email / usuario del LLM:"); if(!n||!n.trim())return; let id=slug(n); if(DATA.usuarios.some(u=>u.id===id)) id=id+"-"+Math.abs(hash(n)%97); DATA.usuarios.push({id,name:n.trim()}); render(); autoSave(); };
   ue.appendChild(add);
 
   // agentes
@@ -213,6 +213,7 @@ function render(){
         if(k==="machine"){ const cap=card.querySelector("[data-cap]"); cap.style.display=e.target.value?"":"none";
           if(e.target.value){ captureFor(aid); } else { card.querySelector('[data-shot="'+aid+'"]').style.display="none"; setCapSt(aid,"",""); } }
         if(k==="runtime"||k==="usuario"){ fillTask(aid); }
+        autoSave();
       };
     });
     card.querySelector("[data-capbtn]").onclick=()=>captureFor(ag.id);
@@ -239,15 +240,20 @@ async function captureFor(aid){
 }
 $("#lb").onclick=()=>{ $("#lb").style.display="none"; };
 
-$("#save").onclick=async()=>{
-  const btn=$("#save"); btn.disabled=true; $("#status").textContent="guardando…";
+let _saveTimer=null, _saving=false;
+async function doSave(rerender){
+  if(_saving){ return; }
+  _saving=true; $("#status").textContent="guardando…";
   try{
     const res=await apiCall("/api/council/teams","POST",{usuarios:DATA.usuarios,assignments:DATA.assignments,runtimes:DATA.runtimes});
-    DATA={agents:DATA.agents,machines:DATA.machines,usuarios:res.usuarios,runtimes:res.runtimes,assignments:res.assignments};
-    render(); $("#status").textContent="✅ guardado "+new Date().toLocaleTimeString("es-ES");
+    if(rerender){ DATA.usuarios=res.usuarios; DATA.runtimes=res.runtimes; DATA.assignments=res.assignments; render(); }
+    $("#status").textContent="✅ guardado "+new Date().toLocaleTimeString("es-ES");
   }catch(e){ if(e.code) onAuthFail(); else $("#status").textContent="⚠️ "+(e.message||"error al guardar"); }
-  btn.disabled=false;
-};
+  _saving=false;
+}
+// Auto-guardado: al cambiar cualquier asignación se guarda solo (debounce).
+function autoSave(){ $("#status").textContent="guardando…"; clearTimeout(_saveTimer); _saveTimer=setTimeout(()=>doSave(false), 500); }
+$("#save").onclick=()=>doSave(true);
 $("#reload").onclick=load;
 $("#reftasks").onclick=refreshTasks;
 $("#connPill").onclick=()=>{ if($("#connPill").classList.contains("bad")) setToken(); };

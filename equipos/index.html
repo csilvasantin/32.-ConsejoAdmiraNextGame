@@ -122,8 +122,17 @@ function fillTask(aid){
   else { box.innerHTML='<span class="tmut">— '+who+' · sin reportes en AgoraMatrix —</span>'; }
 }
 async function refreshTasks(){
-  try{ const r=await apiCall("/api/council/agora-tasks","GET"); DATA.identities=r.identities||{}; DATA.agents.forEach(a=>fillTask(a.id)); $("#status").textContent="↻ tareas "+new Date().toLocaleTimeString("es-ES"); }
-  catch(e){ if(e.code) onAuthFail(); }
+  const btn=$("#reftasks"); if(btn) btn.disabled=true;
+  // 1) pedir a los agentes que reporten su estado/tarea actual (origin-gated, sin token)
+  $("#status").textContent="📡 pidiendo estado a los agentes…";
+  try{ await fetch("https://macmini.tail48b61c.ts.net/api/agora/request-status",{method:"POST",headers:{"Content-Type":"application/json"},body:"{}",signal:AbortSignal.timeout(15000)}); }catch(e){}
+  // 2) dar unos segundos a que respondan
+  $("#status").textContent="⏳ esperando respuesta de los agentes…";
+  await new Promise(r=>setTimeout(r,6000));
+  // 3) refrescar las tareas con lo más reciente
+  try{ const r=await apiCall("/api/council/agora-tasks","GET"); DATA.identities=r.identities||{}; DATA.agents.forEach(a=>fillTask(a.id)); $("#status").textContent="↻ tareas actualizadas "+new Date().toLocaleTimeString("es-ES"); }
+  catch(e){ if(e.code) onAuthFail(); else $("#status").textContent="⚠️ "+(e.message||"error"); }
+  if(btn) btn.disabled=false;
 }
 
 function hash(s){ let h=0; for(const c of String(s)) h=(h*31+c.charCodeAt(0))|0; return h; }

@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>La Mesa de los Dos · AdmiraNext Council</title>
-  <meta name="admiranext-version" content="v.26.06.21.r1">
+  <meta name="admiranext-version" content="v.26.06.21.r2">
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     :root{
@@ -44,6 +44,11 @@
     .btn:disabled{opacity:.4;cursor:not-allowed}
     .btn.go{background:#1c5e34;border-color:#5fd08a}
     .btn.stop{background:#5e1c20;border-color:#e0623c}
+    .turns-lbl{font-size:.44rem;color:var(--muted);display:flex;align-items:center;gap:6px}
+    .turns-lbl select{background:#080a18;border:2px solid var(--wood-line);color:var(--ink);font:inherit;font-size:.46rem;padding:.4rem}
+    .acta{align-self:stretch;border:2px solid var(--amber-soft);background:#16120a;box-shadow:3px 3px 0 #000;padding:14px 16px;margin-top:6px}
+    .acta .at{font-size:.5rem;color:var(--amber);margin-bottom:8px;letter-spacing:1px}
+    .acta .ab{font-size:.5rem;line-height:1.95;color:#f0e6c8;white-space:pre-wrap}
 
     /* roster picker */
     .roster{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-bottom:18px}
@@ -81,7 +86,7 @@
       <a class="pill" href="index.html">◀ Consejo</a>
       <a class="pill" href="https://www.admiranext.com" target="_blank" rel="noopener">🏠 AdmiraNeXT</a>
       <span class="bar-spacer"></span>
-      <span class="pill flat" id="ver">v.26.06.21.r1</span>
+      <span class="pill flat" id="ver">v.26.06.21.r2</span>
     </div>
 
     <h1>🤝 La Mesa de los Dos</h1>
@@ -97,9 +102,14 @@
       <input id="tema" type="text" placeholder="Tema de la reunión (p.ej. ¿IA o artesanía en el producto Admira?)">
     </div>
     <div class="controls">
+      <label class="turns-lbl">Turnos
+        <select id="turns"><option>4</option><option selected>6</option><option>8</option><option>10</option></select>
+      </label>
       <button class="btn go" id="start" disabled>▶ Iniciar reunión</button>
       <button class="btn" id="next" disabled>⏭ Siguiente turno</button>
       <button class="btn stop" id="stop" disabled>⏹ Parar</button>
+      <button class="btn" id="acta" disabled>📋 Cerrar con acta</button>
+      <button class="btn" id="save" disabled>⬇ Guardar</button>
       <button class="btn" id="reset">↺ Reset</button>
       <span class="pill flat" id="status" style="font-size:.44rem">listo</span>
     </div>
@@ -150,7 +160,7 @@
 
     // ── Estado de la reunión ──
     const API="https://macmini.tail48b61c.ts.net/council", TOKEN="admira2026";
-    let A=null, B=null, M={history:[],turn:0,running:false,max:6};
+    let A=null, B=null, M={history:[],turn:0,running:false,max:6,acta:null,actaBusy:false};
     const $=id=>document.getElementById(id);
 
     function renderRoster(){
@@ -186,6 +196,8 @@
       $("start").disabled=!ready;
       $("next").disabled=!(A&&B&&M.history.length>0&&!M.running);
       $("stop").disabled=!M.running;
+      $("acta").disabled=!(A&&B&&M.history.length>=2&&!M.running&&!M.actaBusy);
+      $("save").disabled=!(M.history.length>=2);
     }
     function setStatus(s){ $("status").textContent=s; }
 
@@ -232,16 +244,50 @@
         const ok=await oneTurn(); if(!ok) break;
         await new Promise(r=>setTimeout(r,500));
       }
-      M.running=false; setStatus(M.turn>=M.max?"reunión completa":"detenida"); refreshControls();
+      const completed = M.turn>=M.max;
+      M.running=false; setStatus(completed?"reunión completa":"detenida"); refreshControls();
+      if(completed) generateActa();
+    }
+
+    // ── Acta de cierre (moderación + síntesis) y transcripción ──
+    async function generateActa(){
+      if(M.actaBusy || M.history.length<2 || M.acta) return;
+      M.actaBusy=true; refreshControls(); setStatus("redactando acta…");
+      const convo=M.history.map(h=>`${h.persona}: ${h.text}`).join("\n");
+      const prompt=`Acabas de participar en esta reunión del Consejo de Admira entre ${A.persona} y ${B.persona} sobre "${$("tema").value.trim()}":\n\n${convo}\n\nRedacta el ACTA de la reunión, breve y en tercera persona NEUTRAL (no en tu personaje): (1) en qué coinciden, (2) en qué discrepan, (3) la conclusión o siguiente paso acordado. Máximo 4 frases, claro y sin dramatismo.`;
+      try{ const text=await askConsejero(A, prompt); renderActa(text); }
+      catch(e){ renderActa("⚠ no se pudo redactar el acta: "+e.message); }
+      M.actaBusy=false; setStatus("acta lista"); refreshControls();
+    }
+    function renderActa(text){
+      const t=$("table"); if(t.querySelector(".empty")) t.innerHTML=""; M.acta=text;
+      const d=document.createElement("div"); d.className="acta";
+      d.innerHTML=`<div class="at">📋 Acta de la reunión</div><div class="ab">${esc(text)}</div>`;
+      t.appendChild(d); d.scrollIntoView({behavior:"smooth",block:"end"});
+    }
+    function buildTranscript(){
+      let s=`Reunión del Consejo de Admira\n${A.persona} (${A.role}) ⇄ ${B.persona} (${B.role})\nTema: ${$("tema").value.trim()}\n\n`;
+      M.history.forEach(h=>{ s+=`${h.persona}:\n${h.text}\n\n`; });
+      if(M.acta) s+=`📋 ACTA DE LA REUNIÓN\n${M.acta}\n`;
+      return s;
+    }
+    function saveTranscript(){
+      const s=buildTranscript();
+      const a=document.createElement("a");
+      a.href=URL.createObjectURL(new Blob([s],{type:"text/plain;charset=utf-8"}));
+      a.download=`reunion-${A.slug}-${B.slug}.txt`; document.body.appendChild(a); a.click(); a.remove();
+      try{ navigator.clipboard.writeText(s); setStatus("acta descargada + copiada"); }catch{ setStatus("acta descargada"); }
     }
 
     // ── eventos ──
     $("roster").addEventListener("click",e=>{ const c=e.target.closest(".rcard"); if(c) pick(COUNCIL[+c.dataset.i]); });
     $("tema").addEventListener("input",refreshControls);
-    $("start").addEventListener("click",()=>{ M={history:[],turn:0,running:false,max:6}; $("table").innerHTML=""; runMeeting(); });
+    $("start").addEventListener("click",()=>{ M={history:[],turn:0,running:false,max:parseInt($("turns").value)||6,acta:null,actaBusy:false}; $("table").innerHTML=""; runMeeting(); });
     $("next").addEventListener("click",async()=>{ if(M.running)return; M.running=true; refreshControls(); await oneTurn(); M.running=false; setStatus("turno listo"); refreshControls(); });
     $("stop").addEventListener("click",()=>{ M.running=false; setStatus("deteniendo…"); });
-    $("reset").addEventListener("click",()=>{ A=null;B=null;M={history:[],turn:0,running:false,max:6};
+    $("acta").addEventListener("click",generateActa);
+    $("save").addEventListener("click",saveTranscript);
+    $("reset").addEventListener("click",()=>{ A=null;B=null;M={history:[],turn:0,running:false,max:parseInt($("turns").value)||6,acta:null,actaBusy:false};
       renderRoster();renderSlot("slotA",null,"A");renderSlot("slotB",null,"B");
       $("table").innerHTML='<div class="empty">Aún no hay reunión. Elige A y B, escribe un tema y pulsa ▶ Iniciar.</div>';
       $("tema").value="";refreshControls();setStatus("listo"); });

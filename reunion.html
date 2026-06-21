@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>La Mesa del Consejo · AdmiraNext Council</title>
-  <meta name="admiranext-version" content="v.26.06.21.r6">
+  <meta name="admiranext-version" content="v.26.06.21.r7">
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     :root{
@@ -70,6 +70,12 @@
     .bub .nm{display:block;font-size:.4rem;margin-bottom:5px}
     .bub .nm small{color:var(--muted)}
     .think{opacity:.6}
+    .turn.mod .av{outline-color:var(--amber)}
+    .turn.mod .bub{background:#19130a;border-left-color:var(--amber);border-color:#5a4a1f}
+    .turn.mod .bub .nm{color:var(--amber)}
+    .pchip.modr{box-shadow:0 0 0 2px var(--amber) inset}
+    .pchip .gavel{position:absolute;top:-11px;right:-8px;font-size:.55rem}
+    #mod.on{background:#5a4a1f;border-color:var(--amber);color:#fff}
     .foot{text-align:center;color:var(--muted);font-size:.42rem;line-height:2;margin:22px 0 6px}
   </style>
 </head>
@@ -80,7 +86,7 @@
       <a class="pill" href="sala.html">🏛️ Sala del Consejo</a>
       <a class="pill" href="https://www.admiranext.com" target="_blank" rel="noopener">🏠 AdmiraNeXT</a>
       <span class="bar-spacer"></span>
-      <span class="pill flat" id="ver">v.26.06.21.r6</span>
+      <span class="pill flat" id="ver">v.26.06.21.r7</span>
     </div>
 
     <h1>🤝 La Mesa del Consejo</h1>
@@ -95,6 +101,7 @@
       <label class="turns-lbl">Turnos
         <select id="turns"><option>4</option><option>6</option><option selected>8</option><option>10</option><option>12</option></select>
       </label>
+      <button class="btn" id="mod">🎙️ Moderador: off</button>
       <button class="btn go" id="start" disabled>▶ Iniciar reunión</button>
       <button class="btn" id="next" disabled>⏭ Siguiente turno</button>
       <button class="btn stop" id="stop" disabled>⏹ Parar</button>
@@ -151,7 +158,7 @@
 
     // ── Estado ──
     const API="https://macmini.tail48b61c.ts.net/council", TOKEN="admira2026";
-    let parts=[], M={history:[],turn:0,running:false,max:8,acta:null,actaBusy:false,tgSent:false};
+    let parts=[], moderated=false, M={history:[],turn:0,running:false,max:8,acta:null,actaBusy:false,tgSent:false};
     const $=id=>document.getElementById(id);
     const colorOf=c=>{ const i=parts.findIndex(p=>p.slug===c.slug); return PALETTE[(i<0?0:i)%PALETTE.length]; };
 
@@ -172,11 +179,12 @@
       const box=$("parts");
       if(!parts.length){ box.innerHTML='<div class="ph">Elige 2–5 consejeros abajo para sentarlos a la mesa…</div>'; return; }
       box.innerHTML = parts.map((c,i)=>{
-        const col=PALETTE[i%PALETTE.length];
-        return `<div class="pchip" style="border-color:${col}">
-          <div class="num" style="background:${col}">${i+1}</div>
+        const isMod = moderated && i===0;
+        const col = isMod ? "#ffdd66" : PALETTE[i%PALETTE.length];
+        return `<div class="pchip ${isMod?"modr":""}" style="border-color:${col}">
+          <div class="num" style="background:${col}">${i+1}</div>${isMod?'<div class="gavel">🎙️</div>':''}
           <div class="face" style="${cropStyle(c)};outline-color:${col}"></div>
-          <div class="who"><div class="nm">${esc(c.persona)}</div><div class="rl">${c.icon} ${c.role} · ${c.gen==="leyendas"?"Ley":"Coet"}</div></div>
+          <div class="who"><div class="nm">${esc(c.persona)}</div><div class="rl">${isMod?"🎙️ Moderador":(c.icon+" "+c.role+" · "+(c.gen==="leyendas"?"Ley":"Coet"))}</div></div>
           <div class="x" data-slug="${c.slug}">✕</div>
         </div>`;
       }).join("");
@@ -188,21 +196,22 @@
       renderRoster(); renderParts(); refreshControls();
     }
     function refreshControls(){
-      const ready = parts.length>=2 && $("tema").value.trim().length>0 && !M.running;
+      const minP = moderated ? 3 : 2;   // moderado: 1 moderador + ≥2 debatientes
+      const ready = parts.length>=minP && $("tema").value.trim().length>0 && !M.running;
       $("start").disabled=!ready;
-      $("next").disabled=!(parts.length>=2 && M.history.length>0 && !M.running);
+      $("next").disabled=!(parts.length>=minP && M.history.length>0 && !M.running);
       $("stop").disabled=!M.running;
       $("acta").disabled=!(parts.length>=2 && M.history.length>=2 && !M.running && !M.actaBusy);
       $("save").disabled=!(M.history.length>=2);
     }
     function setStatus(s){ $("status").textContent=s; }
 
-    function addTurn(c,text,thinking){
+    function addTurn(c,text,thinking,mod){
       const t=$("table"); if(t.querySelector(".empty")) t.innerHTML="";
-      const col=colorOf(c);
-      const d=document.createElement("div"); d.className="turn";
+      const col= mod ? "#ffdd66" : colorOf(c);
+      const d=document.createElement("div"); d.className="turn"+(mod?" mod":"");
       d.innerHTML=`<div class="av" style="${cropStyle(c)};outline-color:${col}"></div>
-        <div class="bub" style="border-left-color:${col}"><span class="nm" style="color:${col}">${esc(c.persona)} <small>· ${c.icon} ${c.role}</small></span>
+        <div class="bub" style="border-left-color:${col}"><span class="nm" style="color:${col}">${mod?"🎙️ ":""}${esc(c.persona)} <small>· ${mod?"Moderador":(c.icon+" "+c.role)}</small></span>
         <span class="txt ${thinking?"think":""}">${thinking?"pensando…":esc(text)}</span></div>`;
       t.appendChild(d); d.scrollIntoView({behavior:"smooth",block:"end"}); return d;
     }
@@ -219,20 +228,21 @@
       }
       throw new Error("límite de ritmo (429) tras reintentos");
     }
-    function turnPrompt(speaker,tema){
-      const others=parts.filter(p=>p.slug!==speaker.slug).map(p=>`${p.persona} (${p.role})`).join(", ");
-      if(M.history.length===0)
-        return `Estás en una reunión del Consejo de Admira con: ${others}. Tema: "${tema}". Abre tú la conversación, en 1-2 frases, en tu estilo característico. No te presentes ni saludes con formalidad: ve al grano con tu punto de vista para arrancar el debate.`;
-      const recent=M.history.slice(-3).map(h=>`${h.persona}: ${h.text}`).join("\n");
+    function turnPrompt(speaker,pool,tema){
+      const others=pool.filter(p=>p.slug!==speaker.slug).map(p=>`${p.persona} (${p.role})`).join(", ");
+      if(M.turn===0)
+        return `Estás en una reunión del Consejo de Admira con: ${others}${moderated?" (modera "+parts[0].persona+")":""}. Tema: "${tema}". Arranca TÚ el debate en 1-2 frases, en tu estilo característico, con tu punto de vista. No te presentes ni saludes con formalidad: ve al grano.`;
+      const recent=M.history.slice(-3).map(h=>`${h.mod?"🎙️ "+h.persona+" (moderador)":h.persona}: ${h.text}`).join("\n");
       const last=M.history[M.history.length-1];
       return `Sigues en la reunión del Consejo (con ${others}) sobre "${tema}". Lo último dicho:\n${recent}\n\nResponde TÚ ahora en 1-2 frases, en tu estilo, aportando tu visión: puedes coincidir, matizar o rebatir, y dirigirte a quien quieras del grupo (sobre todo a ${last.persona}). Habla en primera persona, sin acotaciones.`;
     }
-    async function oneTurn(){
-      const speaker = parts[M.turn % parts.length];
+    async function oneTurn(pool){
+      pool = pool || parts;
+      const speaker = pool[M.turn % pool.length];
       const bubble = addTurn(speaker,"",true);
       setStatus(`${speaker.persona} pensando…`);
       try{
-        const text = await askConsejero(speaker, turnPrompt(speaker,$("tema").value.trim()));
+        const text = await askConsejero(speaker, turnPrompt(speaker,pool,$("tema").value.trim()));
         const tx=bubble.querySelector(".txt"); tx.classList.remove("think"); tx.textContent=text||"(sin respuesta)";
         M.history.push({slug:speaker.slug,persona:speaker.persona,role:speaker.role,text}); M.turn++;
         return true;
@@ -243,13 +253,37 @@
     }
     async function runMeeting(){
       M.running=true; refreshControls(); setStatus("reunión en curso…");
+      const pool = moderated ? parts.slice(1) : parts;
+      if(moderated && !M.openDone){ M.openDone=true; const ok=await moderatorOpen(); if(!ok){ M.running=false; refreshControls(); return; } }
       while(M.running && M.turn < M.max){
-        const ok=await oneTurn(); if(!ok) break;
+        const ok=await oneTurn(pool); if(!ok) break;
         await new Promise(r=>setTimeout(r,1500));
       }
       const completed = M.turn>=M.max;
       M.running=false; setStatus(completed?"reunión completa":"detenida"); refreshControls();
-      if(completed) generateActa();
+      if(completed){ if(moderated) moderatorClose(); else generateActa(); }
+    }
+    // ── Moderador: abre el debate y lo cierra con veredicto (asiento 1) ──
+    async function moderatorOpen(){
+      const mod=parts[0], deb=parts.slice(1).map(p=>p.persona+" ("+p.role+")").join(", ");
+      const b=addTurn(mod,"",true,true); setStatus(`${mod.persona} (moderador) abriendo…`);
+      try{
+        const text=await askConsejero(mod, `Eres el MODERADOR de esta sesión del Consejo de Admira. A debate: ${deb}. Abre la sesión sobre "${$("tema").value.trim()}" en 1-2 frases (enmarca el tema con criterio) y cede la palabra a ${parts[1].persona} para empezar. No debatas tú, solo modera. Sin acotaciones.`);
+        const tx=b.querySelector(".txt"); tx.classList.remove("think"); tx.textContent=text||"(apertura)";
+        M.history.push({slug:mod.slug,persona:mod.persona,role:mod.role,text,mod:true});
+        return true;
+      }catch(e){ const tx=b.querySelector(".txt"); tx.classList.remove("think"); tx.textContent="⚠ "+e.message; return false; }
+    }
+    async function moderatorClose(){
+      if(M.acta || M.actaBusy) return; const mod=parts[0];
+      M.actaBusy=true; refreshControls(); setStatus(`${mod.persona} cerrando el debate…`);
+      const convo=M.history.filter(h=>!h.mod).map(h=>`${h.persona}: ${h.text}`).join("\n");
+      try{
+        let text=await askConsejero(mod, `Eres el MODERADOR de esta sesión del Consejo. Cierra el debate sobre "${$("tema").value.trim()}". En 3-4 frases: el acuerdo principal, la discrepancia clave y tu VEREDICTO como moderador (decisión o siguiente paso). Directo, sin acotaciones ni primera persona de personaje.\n\nDebate:\n${convo}`);
+        text=text.replace(/\*[^*\n]*\*/g,"").replace(/\*/g,"").trim();
+        renderActa(text, "🎙️ Cierre del moderador · "+mod.persona);
+      }catch(e){ renderActa("⚠ no se pudo cerrar: "+e.message); }
+      M.actaBusy=false; setStatus("debate cerrado"); refreshControls(); postMeetingToTelegram();
     }
 
     // ── Acta + transcripción ──
@@ -265,10 +299,10 @@
       M.actaBusy=false; setStatus("acta lista"); refreshControls();
       postMeetingToTelegram();
     }
-    function renderActa(text){
+    function renderActa(text, title){
       const t=$("table"); if(t.querySelector(".empty")) t.innerHTML=""; M.acta=text;
       const d=document.createElement("div"); d.className="acta";
-      d.innerHTML=`<div class="at">📋 Acta de la reunión</div><div class="ab">${esc(text)}</div>`;
+      d.innerHTML=`<div class="at">${esc(title||"📋 Acta de la reunión")}</div><div class="ab">${esc(text)}</div>`;
       t.appendChild(d); d.scrollIntoView({behavior:"smooth",block:"end"});
     }
     async function postMeetingToTelegram(){
@@ -277,7 +311,7 @@
         const names=parts.map(p=>p.persona).join(" · ");
         await fetch(API+"/api/council/meeting-telegram",{method:"POST",
           headers:{"Content-Type":"application/json","X-Council-Token":TOKEN},
-          body:JSON.stringify({title:`🤝 Mesa del Consejo · ${names}`,
+          body:JSON.stringify({title:`🤝 Mesa del Consejo${moderated?" 🎙️":""} · ${names}`,
             tema:$("tema").value.trim(),
             lines:M.history.map(h=>({persona:h.persona,role:h.role||"",text:h.text})),
             acta:M.acta||""})});
@@ -299,16 +333,23 @@
       postMeetingToTelegram();
     }
 
-    function newMeeting(){ M={history:[],turn:0,running:false,max:parseInt($("turns").value)||8,acta:null,actaBusy:false,tgSent:false}; }
+    function newMeeting(){ M={history:[],turn:0,running:false,max:parseInt($("turns").value)||8,acta:null,actaBusy:false,tgSent:false,openDone:false}; }
 
     // ── eventos ──
     $("roster").addEventListener("click",e=>{ const c=e.target.closest(".rcard"); if(c) pick(COUNCIL[+c.dataset.i]); });
     $("parts").addEventListener("click",e=>{ const x=e.target.closest(".x"); if(x){ const c=COUNCIL.find(o=>o.slug===x.dataset.slug); if(c) pick(c); } });
     $("tema").addEventListener("input",refreshControls);
     $("start").addEventListener("click",()=>{ newMeeting(); $("table").innerHTML=""; runMeeting(); });
-    $("next").addEventListener("click",async()=>{ if(M.running)return; M.running=true; refreshControls(); await oneTurn(); M.running=false; setStatus("turno listo"); refreshControls(); });
+    $("next").addEventListener("click",async()=>{ if(M.running)return; M.running=true; refreshControls();
+      const pool = moderated ? parts.slice(1) : parts;
+      if(moderated && !M.openDone){ M.openDone=true; await moderatorOpen(); }
+      else await oneTurn(pool);
+      M.running=false; setStatus("turno listo"); refreshControls(); });
     $("stop").addEventListener("click",()=>{ M.running=false; setStatus("deteniendo…"); });
-    $("acta").addEventListener("click",generateActa);
+    $("acta").addEventListener("click",()=>{ moderated ? moderatorClose() : generateActa(); });
+    $("mod").addEventListener("click",()=>{ moderated=!moderated; const b=$("mod");
+      b.textContent="🎙️ Moderador: "+(moderated?"on":"off"); b.classList.toggle("on",moderated);
+      renderParts(); renderRoster(); refreshControls(); });
     $("save").addEventListener("click",saveTranscript);
     $("reset").addEventListener("click",()=>{ parts=[]; newMeeting();
       renderRoster(); renderParts();

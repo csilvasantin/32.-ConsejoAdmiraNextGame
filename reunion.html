@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>La Mesa de los Dos · AdmiraNext Council</title>
-  <meta name="admiranext-version" content="v.26.06.21.r2">
+  <meta name="admiranext-version" content="v.26.06.21.r3">
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     :root{
@@ -86,7 +86,7 @@
       <a class="pill" href="index.html">◀ Consejo</a>
       <a class="pill" href="https://www.admiranext.com" target="_blank" rel="noopener">🏠 AdmiraNeXT</a>
       <span class="bar-spacer"></span>
-      <span class="pill flat" id="ver">v.26.06.21.r2</span>
+      <span class="pill flat" id="ver">v.26.06.21.r3</span>
     </div>
 
     <h1>🤝 La Mesa de los Dos</h1>
@@ -254,8 +254,8 @@
       if(M.actaBusy || M.history.length<2 || M.acta) return;
       M.actaBusy=true; refreshControls(); setStatus("redactando acta…");
       const convo=M.history.map(h=>`${h.persona}: ${h.text}`).join("\n");
-      const prompt=`Acabas de participar en esta reunión del Consejo de Admira entre ${A.persona} y ${B.persona} sobre "${$("tema").value.trim()}":\n\n${convo}\n\nRedacta el ACTA de la reunión, breve y en tercera persona NEUTRAL (no en tu personaje): (1) en qué coinciden, (2) en qué discrepan, (3) la conclusión o siguiente paso acordado. Máximo 4 frases, claro y sin dramatismo.`;
-      try{ const text=await askConsejero(A, prompt); renderActa(text); }
+      const prompt=`Eres el secretario del Consejo de Admira y redactas el ACTA de esta reunión entre ${A.persona} y ${B.persona} sobre "${$("tema").value.trim()}":\n\n${convo}\n\nReglas ESTRICTAS: NO uses acotaciones escénicas, gestos, emojis ni asteriscos; NO escribas en primera persona ni en personaje; redáctala directa y profesional, en tercera persona. Estructura EXACTA, cada punto en su línea y una sola frase:\nAcuerdo: ...\nDiscrepancia: ...\nConclusión: ...`;
+      try{ let text=await askConsejero(A, prompt); text=text.replace(/\*[^*\n]*\*/g,"").replace(/\*/g,"").trim(); renderActa(text); }
       catch(e){ renderActa("⚠ no se pudo redactar el acta: "+e.message); }
       M.actaBusy=false; setStatus("acta lista"); refreshControls();
     }

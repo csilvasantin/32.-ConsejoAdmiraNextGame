@@ -1,0 +1,125 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Archivo del Consejo · AdmiraNext Council</title>
+  <meta name="admiranext-version" content="v.26.06.21.r1">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    :root{ --bg:#0a0a14; --ink:#e7e7ef; --muted:#9aa0b4; --wood:#2a1a08; --wood-line:#8b5a14; --amber:#ffdd66; --amber-soft:#f0c040; }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Press Start 2P',monospace;
+      background:radial-gradient(1200px 600px at 50% -10%, #181d3a 0%, transparent 60%),linear-gradient(180deg,#0a0a14,#0a0a14 60%,#070710);
+      color:var(--ink);min-height:100vh;padding:14px;image-rendering:pixelated;-webkit-font-smoothing:none}
+    a{color:inherit;text-decoration:none}
+    .wrap{max-width:1040px;margin:0 auto}
+    .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+    .pill{background:var(--wood);border:2px solid var(--wood-line);color:var(--amber);font-size:.46rem;line-height:1.5;padding:.55rem .7rem;box-shadow:2px 2px 0 #000;cursor:pointer;transition:.12s}
+    .pill:hover{background:var(--wood-line);border-color:var(--amber-soft);color:#fff}
+    .pill.flat{cursor:default}.bar-spacer{flex:1 1 auto}
+    h1{font-size:.9rem;color:#fff;text-shadow:3px 3px 0 #000;margin:6px 0 4px}
+    .sub{font-size:.5rem;color:var(--amber-soft);line-height:1.8;margin-bottom:16px}
+
+    .list{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:10px}
+    .mcard{border:2px solid var(--wood-line);background:#0c0f22;box-shadow:3px 3px 0 #000;padding:12px;cursor:pointer;transition:.1s}
+    .mcard:hover{border-color:var(--amber-soft);transform:translate(-1px,-1px)}
+    .mcard .mt{font-size:.52rem;color:#fff;line-height:1.4;word-break:break-word}
+    .mcard .mm{font-size:.42rem;color:var(--amber-soft);margin-top:8px;line-height:1.7}
+    .mcard .md{font-size:.4rem;color:var(--muted);margin-top:7px;display:flex;gap:10px;flex-wrap:wrap}
+    .empty{font-size:.5rem;color:var(--muted);text-align:center;padding:30px 10px;line-height:2}
+
+    .head{border:2px solid var(--wood-line);background:#0c0f22;box-shadow:4px 4px 0 #000;padding:14px;margin-bottom:12px}
+    .head .ht{font-size:.62rem;color:#fff;line-height:1.4}
+    .head .htema{font-size:.5rem;color:var(--amber);margin-top:8px;line-height:1.7}
+    .head .hd{font-size:.42rem;color:var(--muted);margin-top:8px}
+    .table{border:2px solid var(--wood-line);background:#0b0e1f;box-shadow:4px 4px 0 #000;padding:14px;display:flex;flex-direction:column;gap:12px}
+    .turn{display:flex;gap:10px;align-items:flex-start}
+    .turn .av{width:36px;height:36px;flex:0 0 36px;border:2px solid #000;outline:2px solid;outline-offset:-3px;background:#05060d;image-rendering:pixelated}
+    .bub{flex:1;border:1px solid #2a3057;border-left-width:4px;padding:9px 11px;font-size:.5rem;line-height:1.8;background:#0c0f22}
+    .bub .nm{display:block;font-size:.4rem;margin-bottom:5px}
+    .bub .nm small{color:var(--muted)}
+    .acta{border:2px solid var(--amber-soft);background:#16120a;box-shadow:3px 3px 0 #000;padding:14px 16px;margin-top:12px}
+    .acta .at{font-size:.5rem;color:var(--amber);margin-bottom:8px;letter-spacing:1px}
+    .acta .ab{font-size:.5rem;line-height:1.95;color:#f0e6c8;white-space:pre-wrap}
+    .foot{text-align:center;color:var(--muted);font-size:.42rem;line-height:2;margin:22px 0 6px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="bar">
+      <a class="pill" href="index.html">◀ Consejo</a>
+      <a class="pill" href="reunion.html">🤝 Mesa del Consejo</a>
+      <a class="pill" href="sala.html">🏛️ Sala</a>
+      <span class="bar-spacer"></span>
+      <button class="pill" id="back" style="display:none">◀ Volver al archivo</button>
+      <span class="pill flat" id="ver">v.26.06.21.r1</span>
+    </div>
+    <h1>🗂️ Archivo del Consejo</h1>
+    <div class="sub" id="sub">Reuniones pasadas del Consejo: debates, actas y veredictos. Clica una para releerla; cada una tiene enlace compartible.</div>
+    <div id="app"><div class="empty">Cargando reuniones…</div></div>
+    <div class="foot">AdmiraNeXT · Consejo de Silicio · admira.live · Archivo del Consejo</div>
+  </div>
+
+  <script>
+    const slugify = s => (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+    const IMG = { leyendas:"assets/council-leyendas.jpg", coetaneos:"assets/council-coetaneos.jpg" };
+    const CROP = { CEO:{l:7,t:44,w:7,h:17},CTO:{l:18,t:36,w:8,h:21},COO:{l:31,t:30,w:8,h:24},CFO:{l:43,t:27,w:8,h:26},CCO:{l:55,t:27,w:8,h:26},CDO:{l:66,t:31,w:7,h:23},CXO:{l:77,t:34,w:8,h:21},CSO:{l:88,t:41,w:9,h:17} };
+    const R=[["CEO","Steve Jobs","leyendas"],["CTO","Steve Wozniak","leyendas"],["COO","Tim Cook","leyendas"],["CFO","Warren Buffett","leyendas"],["CCO","Walt Disney","leyendas"],["CDO","Dieter Rams","leyendas"],["CXO","Howard Schultz","leyendas"],["CSO","George Lucas","leyendas"],["CEO","Elon Musk","coetaneos"],["CTO","Jensen Huang","coetaneos"],["COO","Gwynne Shotwell","coetaneos"],["CFO","Ruth Porat","coetaneos"],["CCO","John Lasseter","coetaneos"],["CDO","Jony Ive","coetaneos"],["CXO","Carlos Ratti","coetaneos"],["CSO","Ryan Reynolds","coetaneos"]];
+    const ICON={CEO:"🏛️",CTO:"⚙️",COO:"📋",CFO:"💰",CCO:"💡",CDO:"🎨",CXO:"🧭",CSO:"📖"};
+    const BYPERS={}; R.forEach(x=>BYPERS[x[1]]={role:x[0],persona:x[1],gen:x[2],icon:ICON[x[0]],crop:CROP[x[0]]});
+    const PALETTE=["#3498db","#e0a92c","#9b59b6","#2ecc71","#e74c3c","#1abc9c"];
+    function cropStyle(c){ if(!c) return "background:#222"; const {l,t,w,h}=c.crop,sx=(10000/w).toFixed(1),sy=(10000/h).toFixed(1),px=(l/(100-w)*100).toFixed(2),py=(t/(100-h)*100).toFixed(2);
+      return `background-image:url('${IMG[c.gen]}');background-size:${sx}% ${sy}%;background-position:${px}% ${py}%;`; }
+    const esc=s=>String(s==null?"":s).replace(/[<>&]/g,x=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[x]));
+    function fdate(ts){ try{ return new Date(ts*1000).toLocaleString("es-ES",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}); }catch(e){ return ""; } }
+
+    const API="https://macmini.tail48b61c.ts.net/council", TOKEN="admira2026";
+    const $=id=>document.getElementById(id);
+    async function api(path){ const r=await fetch(API+path,{headers:{"X-Council-Token":TOKEN},signal:AbortSignal.timeout(12000)}); if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); }
+
+    async function loadList(){
+      $("back").style.display="none"; $("sub").style.display="";
+      try{
+        const d=await api("/api/council/meetings");
+        const ms=d.meetings||[];
+        if(!ms.length){ $("app").innerHTML='<div class="empty">Aún no hay reuniones archivadas.<br>Haz un debate en la <a style="color:var(--amber)" href="reunion.html">Mesa del Consejo</a> y aparecerá aquí.</div>'; return; }
+        $("app").innerHTML='<div class="list">'+ms.map(m=>`<div class="mcard" data-id="${esc(m.id)}">
+          <div class="mt">${esc(m.title||"Reunión del Consejo")}</div>
+          ${m.tema?`<div class="mm">${esc(m.tema)}</div>`:""}
+          <div class="md"><span>🗓️ ${fdate(m.ts)}</span><span>💬 ${m.n} turnos</span>${m.acta?"<span>📋 con acta</span>":""}</div>
+        </div>`).join("")+'</div>';
+      }catch(e){ $("app").innerHTML='<div class="empty">No se pudo cargar el archivo (¿token de Consejo?).<br>'+esc(e.message)+'</div>'; }
+    }
+
+    async function loadOne(id){
+      $("back").style.display=""; $("sub").style.display="none";
+      $("app").innerHTML='<div class="empty">Cargando reunión…</div>';
+      try{
+        const m=await api("/api/council/meeting?id="+encodeURIComponent(id));
+        const colors={}; let ci=0;
+        const colorFor=p=>{ if(!(p in colors)){ colors[p]=PALETTE[ci%PALETTE.length]; ci++; } return colors[p]; };
+        const turns=(m.lines||[]).map(ln=>{
+          const c=BYPERS[ln.persona]; const col=colorFor(ln.persona);
+          return `<div class="turn"><div class="av" style="${cropStyle(c)};outline-color:${col}"></div>
+            <div class="bub" style="border-left-color:${col}"><span class="nm" style="color:${col}">${esc(ln.persona)} ${ln.role?`<small>· ${(c?c.icon+" ":"")}${esc(ln.role)}</small>`:""}</span>${esc(ln.text)}</div></div>`;
+        }).join("");
+        $("app").innerHTML=`<div class="head">
+            <div class="ht">${esc(m.title||"Reunión del Consejo")}</div>
+            ${m.tema?`<div class="htema">“${esc(m.tema)}”</div>`:""}
+            <div class="hd">🗓️ ${fdate(m.ts)} · 💬 ${(m.lines||[]).length} intervenciones · 🔗 enlace: admira.live/archivo.html?id=${esc(m.id)}</div>
+          </div>
+          <div class="table">${turns||'<div class="empty">sin intervenciones</div>'}</div>
+          ${m.acta?`<div class="acta"><div class="at">📋 Acta / Veredicto</div><div class="ab">${esc(m.acta)}</div></div>`:""}`;
+        window.scrollTo(0,0);
+      }catch(e){ $("app").innerHTML='<div class="empty">No se encontró la reunión.<br>'+esc(e.message)+'</div>'; }
+    }
+
+    $("app").addEventListener("click",e=>{ const c=e.target.closest(".mcard"); if(c){ history.pushState({},"","?id="+c.dataset.id); loadOne(c.dataset.id); } });
+    $("back").addEventListener("click",()=>{ history.pushState({},"","archivo.html"); loadList(); });
+    window.addEventListener("popstate",route);
+    function route(){ const id=new URLSearchParams(location.search).get("id"); if(id) loadOne(id); else loadList(); }
+    route();
+  </script>
+</body>
+</html>

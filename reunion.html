@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>La Mesa del Consejo · AdmiraNext Council</title>
-  <meta name="admiranext-version" content="v.26.06.21.r8">
+  <meta name="admiranext-version" content="v.26.06.21.r9">
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     :root{
@@ -86,7 +86,7 @@
       <a class="pill" href="sala.html">🏛️ Sala del Consejo</a>
       <a class="pill" href="https://www.admiranext.com" target="_blank" rel="noopener">🏠 AdmiraNeXT</a>
       <span class="bar-spacer"></span>
-      <span class="pill flat" id="ver">v.26.06.21.r8</span>
+      <span class="pill flat" id="ver">v.26.06.21.r9</span>
     </div>
 
     <h1>🤝 La Mesa del Consejo</h1>
@@ -357,6 +357,7 @@
       $("tema").value=""; refreshControls(); setStatus("listo"); });
 
     renderRoster(); renderParts();
+    (function(){ const sl=new URLSearchParams(location.search).get("seat"); if(sl){ const c=COUNCIL.find(o=>o.slug===slugify(sl)); if(c){ pick(c); $("tema").focus(); } } })();
   </script>
 </body>
 </html>

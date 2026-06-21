@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>La Sala del Consejo · AdmiraNext Council</title>
-  <meta name="admiranext-version" content="v.26.06.21.r4">
+  <meta name="admiranext-version" content="v.26.06.21.r5">
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     :root{
@@ -33,6 +33,12 @@
     .vp.on{background:var(--wood-line);color:#fff;border-color:var(--amber-soft)}
     .ghead{grid-column:1/-1;font-size:.5rem;color:var(--amber);padding:9px 2px 2px;border-bottom:1px dashed #2a3057;margin-top:4px;display:flex;gap:8px;align-items:baseline}
     .ghead span{font-size:.4rem;color:var(--muted)}
+    .qmenu{position:fixed;z-index:60;background:#0c0f22;border:2px solid var(--amber-soft);box-shadow:4px 4px 0 #000;display:none;flex-direction:column;min-width:180px}
+    .qmenu.on{display:flex}
+    .qmenu .qh{font-size:.42rem;color:var(--muted);padding:.5rem .8rem;background:#080a18;border-bottom:1px solid #2a3057}
+    .qmenu a{font-size:.46rem;color:var(--amber);padding:.7rem .8rem;cursor:pointer;border-bottom:1px dashed #2a3057}
+    .qmenu a:last-child{border-bottom:0}
+    .qmenu a:hover{background:var(--wood-line);color:#fff}
 
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(265px,1fr));gap:10px}
     .cc{border:2px solid var(--wood-line);background:#0c0f22;box-shadow:3px 3px 0 #000;padding:11px;display:flex;flex-direction:column;gap:9px;cursor:pointer;transition:.1s}
@@ -74,7 +80,7 @@
       <span class="bar-spacer"></span>
       <button class="pill" id="sound">🔔 Avisos</button>
       <button class="pill" id="refresh">⟳ Refrescar</button>
-      <span class="pill flat" id="ver">v.26.06.21.r4</span>
+      <span class="pill flat" id="ver">v.26.06.21.r5</span>
     </div>
     <div class="toasts" id="toasts"></div>
 
@@ -92,6 +98,10 @@
       <button class="vp" data-v="estado">Estado</button>
       <button class="vp" data-v="lado">Lado</button>
       <button class="vp" data-v="gen">Generación</button>
+      <span style="margin-left:10px">Ver:</span>
+      <button class="vp" data-f="todos">Todos</button>
+      <button class="vp" data-f="asignados">Asignados</button>
+      <button class="vp" data-f="activos">Activos</button>
     </div>
 
     <div class="grid" id="grid"></div>
@@ -99,6 +109,7 @@
     <div class="note" id="note"></div>
     <div class="foot">AdmiraNeXT · Consejo de Silicio · admira.live · La Sala del Consejo</div>
   </div>
+  <div class="qmenu" id="qmenu"></div>
 
   <script>
     const slugify = s => (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"")
@@ -200,11 +211,19 @@
         ${agentLine}${taskLine}</div>`;
     }
 
-    let lastD=null, viewMode=localStorage.getItem("sala_view")||"rol";
+    let lastD=null, viewMode=localStorage.getItem("sala_view")||"rol", filterMode=localStorage.getItem("sala_filter")||"todos";
     const STATE_RANK={on:0,idle:1,off:2};
     function setView(v){ viewMode=v; localStorage.setItem("sala_view",v);
-      document.querySelectorAll(".vp").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
+      document.querySelectorAll(".vp[data-v]").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
       renderBoard(lastD); }
+    function setFilter(f){ filterMode=f; localStorage.setItem("sala_filter",f);
+      document.querySelectorAll(".vp[data-f]").forEach(b=>b.classList.toggle("on",b.dataset.f===f));
+      renderBoard(lastD); }
+    function applyFilter(rows){
+      if(filterMode==="asignados") return rows.filter(x=>x.r.assigned);
+      if(filterMode==="activos") return rows.filter(x=>x.r.state==="on");
+      return rows;
+    }
     function groupHTML(rows, groups, keyFn){
       return groups.map(([key,label])=>{
         const items=rows.filter(x=>keyFn(x)===key);
@@ -224,7 +243,8 @@
     function renderBoard(d){
       lastD=d;
       const rows=COUNCIL.map(c=>({c,r:resolve(c,d)}));
-      document.getElementById("grid").innerHTML=buildGridHTML(rows);
+      const shown=applyFilter(rows);
+      document.getElementById("grid").innerHTML = shown.length ? buildGridHTML(shown) : '<div class="ghead">— nada que mostrar con este filtro —</div>';
       const asg=rows.filter(x=>x.r.assigned).length;
       const on=rows.filter(x=>x.r.state==="on").length;
       const idle=rows.filter(x=>x.r.state==="idle").length;
@@ -260,9 +280,20 @@
       }catch(e){ renderBoard(null); }
     }
 
-    document.getElementById("grid").addEventListener("click",e=>{ const cc=e.target.closest(".cc"); if(cc) location.href="consejero.html?p="+cc.dataset.slug; });
+    function showQMenu(slug, x, y){
+      const c=COUNCIL.find(o=>o.slug===slug); if(!c) return;
+      const first=esc(c.persona.split(" ")[0]); const m=document.getElementById("qmenu");
+      m.innerHTML='<div class="qh">'+esc(c.persona)+' · '+c.icon+' '+c.role+'</div>'
+        +'<a href="consejero.html?p='+slug+'#chat">💬 Chat con '+first+'</a>'
+        +'<a href="reunion.html?seat='+slug+'">🤝 Llevar a una reunión</a>'
+        +'<a href="consejero.html?p='+slug+'">👤 Ver ficha</a>';
+      m.style.left=Math.min(x, window.innerWidth-196)+"px"; m.style.top=Math.min(y, window.innerHeight-160)+"px"; m.classList.add("on");
+    }
+    document.getElementById("grid").addEventListener("click",e=>{ const cc=e.target.closest(".cc"); if(cc){ e.stopPropagation(); showQMenu(cc.dataset.slug, e.clientX, e.clientY); } });
+    document.addEventListener("click",e=>{ if(!e.target.closest("#qmenu") && !e.target.closest(".cc")) document.getElementById("qmenu").classList.remove("on"); });
     document.getElementById("refresh").addEventListener("click",loadSala);
-    document.querySelectorAll(".vp").forEach(b=>{ b.classList.toggle("on",b.dataset.v===viewMode); b.addEventListener("click",()=>setView(b.dataset.v)); });
+    document.querySelectorAll(".vp[data-v]").forEach(b=>{ b.classList.toggle("on",b.dataset.v===viewMode); b.addEventListener("click",()=>setView(b.dataset.v)); });
+    document.querySelectorAll(".vp[data-f]").forEach(b=>{ b.classList.toggle("on",b.dataset.f===filterMode); b.addEventListener("click",()=>setFilter(b.dataset.f)); });
     const soundBtn=document.getElementById("sound");
     soundBtn.textContent = soundOn ? "🔔 Avisos" : "🔕 Avisos";
     soundBtn.addEventListener("click",()=>{ soundOn=!soundOn; localStorage.setItem("sala_sound",soundOn?"1":"0");

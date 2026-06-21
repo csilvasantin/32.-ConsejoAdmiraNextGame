@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>La Mesa del Consejo · AdmiraNext Council</title>
-  <meta name="admiranext-version" content="v.26.06.21.r9">
+  <meta name="admiranext-version" content="v.26.06.21.r10">
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     :root{
@@ -86,7 +86,7 @@
       <a class="pill" href="sala.html">🏛️ Sala del Consejo</a>
       <a class="pill" href="https://www.admiranext.com" target="_blank" rel="noopener">🏠 AdmiraNeXT</a>
       <span class="bar-spacer"></span>
-      <span class="pill flat" id="ver">v.26.06.21.r9</span>
+      <span class="pill flat" id="ver">v.26.06.21.r10</span>
     </div>
 
     <h1>🤝 La Mesa del Consejo</h1>
@@ -251,13 +251,38 @@
         return false;
       }
     }
+    // Moderador ACTIVO: elige a quién da la palabra + provoca, luego responde el elegido.
+    async function moderatorTurn(debaters){
+      const mod=M.moderator, tema=$("tema").value.trim();
+      const recent=M.history.slice(-3).map(h=>(h.mod?"🎙️ "+h.persona+" (moderador)":h.persona)+": "+h.text).join("\n");
+      const names=debaters.map(d=>d.persona).join(", ");
+      const cuePrompt=`Eres el MODERADOR del Consejo de Admira en el debate sobre "${tema}". A debate: ${names}. Lo último:\n${recent||"(aún nada)"}\n\nDecide a QUIÉN das la palabra ahora (de: ${names}) y lánzale UNA pregunta o provocación breve y afilada para que avance el debate. Empieza EXACTAMENTE con el nombre elegido entre corchetes y luego tu frase, ej: "[${debaters[0].persona}] ...". Una sola frase, sin acotaciones, sin debatir tú.`;
+      const b=addTurn(mod,"",true,true); setStatus(`${mod.persona} da la palabra…`);
+      let next=null, cue="";
+      try{
+        cue=await askConsejero(mod, cuePrompt);
+        const mt=cue.match(/^\s*\[([^\]]+)\]/);
+        if(mt){ const nm=mt[1].trim().toLowerCase(); next=debaters.find(d=>d.persona.toLowerCase().includes(nm)||nm.includes(d.persona.toLowerCase().split(" ")[0])); cue=cue.replace(/^\s*\[[^\]]+\]\s*/,""); }
+      }catch(e){ cue="⚠ "+e.message; }
+      const tx=b.querySelector(".txt"); tx.classList.remove("think"); tx.textContent=cue||"(da la palabra)";
+      M.history.push({slug:mod.slug,persona:mod.persona,role:mod.role,text:cue,mod:true});
+      if(!next) next=debaters[M.turn % debaters.length];
+      const sb=addTurn(next,"",true); setStatus(`${next.persona} pensando…`);
+      try{
+        const resp=await askConsejero(next, turnPrompt(next, debaters, tema));
+        const stx=sb.querySelector(".txt"); stx.classList.remove("think"); stx.textContent=resp||"(sin respuesta)";
+        M.history.push({slug:next.slug,persona:next.persona,role:next.role,text:resp}); M.turn++;
+        return true;
+      }catch(e){ const stx=sb.querySelector(".txt"); stx.classList.remove("think"); stx.textContent="⚠ "+e.message; return false; }
+    }
     async function runMeeting(){
       M.running=true; refreshControls(); setStatus("reunión en curso…");
-      const pool = moderated ? parts.slice(1) : parts;
       if(moderated && !M.openDone){ M.openDone=true; M.moderator=parts[0]; const ok=await moderatorOpen(); if(!ok){ M.running=false; refreshControls(); return; } }
+      const pool = moderated ? parts.filter(p=>p.slug!==M.moderator.slug) : parts;
       while(M.running && M.turn < M.max){
-        const ok=await oneTurn(pool); if(!ok) break;
-        await new Promise(r=>setTimeout(r,1500));
+        const ok = moderated ? await moderatorTurn(pool) : await oneTurn(pool);
+        if(!ok) break;
+        await new Promise(r=>setTimeout(r,1200));
       }
       const completed = M.turn>=M.max;
       M.running=false; setStatus(completed?"reunión completa":"detenida"); refreshControls();
@@ -343,7 +368,8 @@
     $("next").addEventListener("click",async()=>{ if(M.running)return; M.running=true; refreshControls();
       const pool = moderated ? parts.slice(1) : parts;
       if(moderated && !M.openDone){ M.openDone=true; M.moderator=parts[0]; await moderatorOpen(); }
-      else await oneTurn(pool);
+      else if(moderated){ await moderatorTurn(parts.filter(p=>p.slug!==M.moderator.slug)); }
+      else await oneTurn(parts);
       M.running=false; setStatus("turno listo"); refreshControls(); });
     $("stop").addEventListener("click",()=>{ M.running=false; setStatus("deteniendo…"); });
     $("acta").addEventListener("click",()=>{ moderated ? moderatorClose() : generateActa(); });

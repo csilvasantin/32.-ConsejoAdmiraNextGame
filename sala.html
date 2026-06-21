@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>La Sala del Consejo · AdmiraNext Council</title>
-  <meta name="admiranext-version" content="v.26.06.21.r2">
+  <meta name="admiranext-version" content="v.26.06.21.r4">
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     :root{
@@ -28,6 +28,11 @@
     .summary{display:flex;gap:14px;flex-wrap:wrap;font-size:.46rem;color:var(--muted);margin-bottom:16px}
     .summary b{color:var(--ink)}
     .summary .live{color:var(--on)}
+    .viewctl{display:flex;gap:6px;flex-wrap:wrap;align-items:center;font-size:.44rem;color:var(--muted);margin-bottom:14px}
+    .vp{background:var(--wood);border:2px solid var(--wood-line);color:var(--amber);font:inherit;font-size:.42rem;padding:.4rem .6rem;cursor:pointer}
+    .vp.on{background:var(--wood-line);color:#fff;border-color:var(--amber-soft)}
+    .ghead{grid-column:1/-1;font-size:.5rem;color:var(--amber);padding:9px 2px 2px;border-bottom:1px dashed #2a3057;margin-top:4px;display:flex;gap:8px;align-items:baseline}
+    .ghead span{font-size:.4rem;color:var(--muted)}
 
     .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(265px,1fr));gap:10px}
     .cc{border:2px solid var(--wood-line);background:#0c0f22;box-shadow:3px 3px 0 #000;padding:11px;display:flex;flex-direction:column;gap:9px;cursor:pointer;transition:.1s}
@@ -69,7 +74,7 @@
       <span class="bar-spacer"></span>
       <button class="pill" id="sound">🔔 Avisos</button>
       <button class="pill" id="refresh">⟳ Refrescar</button>
-      <span class="pill flat" id="ver">v.26.06.21.r3</span>
+      <span class="pill flat" id="ver">v.26.06.21.r4</span>
     </div>
     <div class="toasts" id="toasts"></div>
 
@@ -80,6 +85,13 @@
       <span class="live">🟢 <b id="cOn">—</b> activos</span>
       <span>🟡 <b id="cIdle">—</b> en reposo</span>
       <span id="cUpd">actualizando…</span>
+    </div>
+    <div class="viewctl">
+      <span>Ordenar:</span>
+      <button class="vp" data-v="rol">Rol</button>
+      <button class="vp" data-v="estado">Estado</button>
+      <button class="vp" data-v="lado">Lado</button>
+      <button class="vp" data-v="gen">Generación</button>
     </div>
 
     <div class="grid" id="grid"></div>
@@ -188,9 +200,31 @@
         ${agentLine}${taskLine}</div>`;
     }
 
+    let lastD=null, viewMode=localStorage.getItem("sala_view")||"rol";
+    const STATE_RANK={on:0,idle:1,off:2};
+    function setView(v){ viewMode=v; localStorage.setItem("sala_view",v);
+      document.querySelectorAll(".vp").forEach(b=>b.classList.toggle("on",b.dataset.v===v));
+      renderBoard(lastD); }
+    function groupHTML(rows, groups, keyFn){
+      return groups.map(([key,label])=>{
+        const items=rows.filter(x=>keyFn(x)===key);
+        if(!items.length) return "";
+        return `<div class="ghead">${label} <span>${items.length}</span></div>`+items.map(x=>card(x.c,x.r)).join("");
+      }).join("");
+    }
+    function buildGridHTML(rows){
+      if(viewMode==="estado"){
+        const s=rows.slice().sort((a,b)=>(STATE_RANK[a.r.state]-STATE_RANK[b.r.state]) || COUNCIL.indexOf(a.c)-COUNCIL.indexOf(b.c));
+        return s.map(x=>card(x.c,x.r)).join("");
+      }
+      if(viewMode==="lado") return groupHTML(rows,[["racional","🧠 Racionales"],["creativo","🎨 Creativos"]],x=>x.c.side);
+      if(viewMode==="gen")  return groupHTML(rows,[["leyendas","🏛️ Leyendas"],["coetaneos","🚀 Coetáneos"]],x=>x.c.gen);
+      return rows.map(x=>card(x.c,x.r)).join("");
+    }
     function renderBoard(d){
+      lastD=d;
       const rows=COUNCIL.map(c=>({c,r:resolve(c,d)}));
-      document.getElementById("grid").innerHTML=rows.map(x=>card(x.c,x.r)).join("");
+      document.getElementById("grid").innerHTML=buildGridHTML(rows);
       const asg=rows.filter(x=>x.r.assigned).length;
       const on=rows.filter(x=>x.r.state==="on").length;
       const idle=rows.filter(x=>x.r.state==="idle").length;
@@ -228,6 +262,7 @@
 
     document.getElementById("grid").addEventListener("click",e=>{ const cc=e.target.closest(".cc"); if(cc) location.href="consejero.html?p="+cc.dataset.slug; });
     document.getElementById("refresh").addEventListener("click",loadSala);
+    document.querySelectorAll(".vp").forEach(b=>{ b.classList.toggle("on",b.dataset.v===viewMode); b.addEventListener("click",()=>setView(b.dataset.v)); });
     const soundBtn=document.getElementById("sound");
     soundBtn.textContent = soundOn ? "🔔 Avisos" : "🔕 Avisos";
     soundBtn.addEventListener("click",()=>{ soundOn=!soundOn; localStorage.setItem("sala_sound",soundOn?"1":"0");

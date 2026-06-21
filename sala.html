@@ -48,6 +48,13 @@
     .cc .agent .persona{color:#7fc4f0}
     .cc .task{font-size:.42rem;line-height:1.65;color:#d7dcf0;background:#080a18;border:1px solid #1c2142;padding:7px 8px;min-height:34px}
     .cc .task.none{color:var(--muted)}
+    @keyframes flashpulse{0%{box-shadow:0 0 0 0 rgba(95,208,138,.85)}100%{box-shadow:0 0 0 16px rgba(95,208,138,0)}}
+    .cc.flash{animation:flashpulse 1.4s ease-out 2}
+    .toasts{position:fixed;top:12px;right:12px;display:flex;flex-direction:column;gap:8px;z-index:50;max-width:300px}
+    @keyframes slidein{from{transform:translateX(44px);opacity:0}to{transform:none;opacity:1}}
+    .toast{display:flex;gap:9px;align-items:center;background:#0c1a12;border:2px solid var(--on);box-shadow:3px 3px 0 #000;padding:9px 10px;font-size:.42rem;line-height:1.65;color:#dfffe9;animation:slidein .25s ease-out}
+    .toast .tf{width:34px;height:34px;flex:0 0 34px;border:2px solid #000;background:#05060d;image-rendering:pixelated}
+    .toast b{color:#fff}
 
     .note{font-size:.42rem;color:var(--muted);line-height:1.8;margin-top:16px;text-align:center}
     .foot{text-align:center;color:var(--muted);font-size:.42rem;line-height:2;margin:18px 0 6px}
@@ -60,9 +67,11 @@
       <a class="pill" href="index.html">◀ Consejo</a>
       <a class="pill" href="reunion.html">🤝 Mesa de los Dos</a>
       <span class="bar-spacer"></span>
+      <button class="pill" id="sound">🔔 Avisos</button>
       <button class="pill" id="refresh">⟳ Refrescar</button>
-      <span class="pill flat" id="ver">v.26.06.21.r2</span>
+      <span class="pill flat" id="ver">v.26.06.21.r3</span>
     </div>
+    <div class="toasts" id="toasts"></div>
 
     <h1>🏛️ La Sala del Consejo</h1>
     <div class="sub">Quién es quién y qué hace en cada momento: cada consejero, su agente (LLM) en su máquina, si está activo y su última tarea. En vivo.</div>
@@ -123,6 +132,23 @@
       try{ const r=await fetch("https://macmini.tail48b61c.ts.net:8443/optoken/token",{signal:AbortSignal.timeout(2500)}); if(!r.ok)return null; const d=await r.json(); return d&&d.token?d.token:null; }catch(e){ return null; }
     }
 
+    // ── Avisos de activación: tarjeta parpadea + toast + pitido cuando un consejero reporta algo nuevo ──
+    let seen={}, primed=false, soundOn=(localStorage.getItem("sala_sound")!=="0");
+    function beep(){ if(!soundOn) return; try{ const a=new (window.AudioContext||window.webkitAudioContext)(),o=a.createOscillator(),g=a.createGain();
+      o.connect(g);g.connect(a.destination);o.type="triangle";
+      o.frequency.setValueAtTime(880,a.currentTime);o.frequency.setValueAtTime(1175,a.currentTime+0.09);
+      g.gain.setValueAtTime(0.09,a.currentTime);g.gain.exponentialRampToValueAtTime(0.0001,a.currentTime+0.24);
+      o.start();o.stop(a.currentTime+0.24);}catch(e){} }
+    function fireAlert(c,r){
+      const card=document.querySelector('.cc[data-slug="'+c.slug+'"]'); if(card){ card.classList.remove("flash"); void card.offsetWidth; card.classList.add("flash"); }
+      const box=document.getElementById("toasts");
+      const d=document.createElement("div"); d.className="toast";
+      d.innerHTML='<div class="tf" style="'+cropStyle(c)+'"></div><div>🟢 <b>'+esc(c.persona)+'</b> · '+esc(r.persona||r.runtime||"")+' se ha activado'+(r.task?'<br>'+esc(r.task.slice(0,72)):'')+'</div>';
+      box.appendChild(d); beep();
+      setTimeout(()=>{ d.style.transition="opacity .4s"; d.style.opacity="0"; setTimeout(()=>d.remove(),420); }, 9000);
+      while(box.children.length>4) box.firstChild.remove();
+    }
+
     // Resuelve para un consejero su agente/identidad/estado a partir de teams.
     function resolve(c, d){
       const out={assigned:false};
@@ -175,6 +201,18 @@
       document.getElementById("note").innerHTML = d
         ? "Las asignaciones se editan en <b>teamwork.html</b>. Esta página ya lee <b>por-consejero</b> (slug) con fallback a rol: en cuanto el council-api pase de 8 roles a 16 consejeros, cada uno tendrá su propio equipo. Hoy, los del mismo rol (p.ej. Jobs y Musk = CEO) comparten asignación."
         : "Sin datos en vivo (necesita el token de operador en la tailnet). Mostrando solo el roster.";
+      // Avisos: dispara cuando un consejero tiene un reporte MÁS reciente que el visto antes.
+      if(d){
+        const fresh=[];
+        for(const x of rows){
+          const ts=x.r.ts; if(!ts) continue;
+          const prev=seen[x.c.slug];
+          if(primed && prev && ts>prev) fresh.push(x);
+          if(!prev || ts>prev) seen[x.c.slug]=ts;
+        }
+        primed=true;
+        fresh.forEach(x=>fireAlert(x.c,x.r));
+      }
     }
 
     async function loadSala(){
@@ -190,6 +228,10 @@
 
     document.getElementById("grid").addEventListener("click",e=>{ const cc=e.target.closest(".cc"); if(cc) location.href="consejero.html?p="+cc.dataset.slug; });
     document.getElementById("refresh").addEventListener("click",loadSala);
+    const soundBtn=document.getElementById("sound");
+    soundBtn.textContent = soundOn ? "🔔 Avisos" : "🔕 Avisos";
+    soundBtn.addEventListener("click",()=>{ soundOn=!soundOn; localStorage.setItem("sala_sound",soundOn?"1":"0");
+      soundBtn.textContent = soundOn ? "🔔 Avisos" : "🔕 Avisos"; if(soundOn) beep(); });
     renderBoard(null);   // pinta el roster al instante
     loadSala();
     setInterval(loadSala, 15000);

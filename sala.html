@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>La Sala del Consejo · AdmiraNext Council</title>
-  <meta name="admiranext-version" content="v.26.06.21.r1">
+  <meta name="admiranext-version" content="v.26.06.21.r2">
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     :root{
@@ -61,7 +61,7 @@
       <a class="pill" href="reunion.html">🤝 Mesa de los Dos</a>
       <span class="bar-spacer"></span>
       <button class="pill" id="refresh">⟳ Refrescar</button>
-      <span class="pill flat" id="ver">v.26.06.21.r1</span>
+      <span class="pill flat" id="ver">v.26.06.21.r2</span>
     </div>
 
     <h1>🏛️ La Sala del Consejo</h1>
@@ -127,7 +127,7 @@
     function resolve(c, d){
       const out={assigned:false};
       if(!d) return out;
-      const asg=(d.assignments||{})[(c.role||"").toLowerCase()]; if(!asg) return out;
+      const asgs=d.assignments||{}; const asg=asgs[c.slug]||asgs[(c.role||"").toLowerCase()]; if(!asg) return out;
       const mach=(d.machines||[]).find(m=>m.id===asg.machine);
       const user=(d.usuarios||[]).find(u=>u.id===asg.usuario);
       out.assigned=!!asg.machine;
@@ -173,7 +173,7 @@
       document.getElementById("cIdle").textContent=idle;
       const now=new Date(); document.getElementById("cUpd").textContent="actualizado "+now.toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
       document.getElementById("note").innerHTML = d
-        ? "Las asignaciones se editan en <b>teamwork.html</b>. Nota: hoy la asignación es por ROL — los dos de un mismo rol (p.ej. Jobs y Musk = CEO) comparten equipo; pasarlo a por-consejero es el siguiente paso."
+        ? "Las asignaciones se editan en <b>teamwork.html</b>. Esta página ya lee <b>por-consejero</b> (slug) con fallback a rol: en cuanto el council-api pase de 8 roles a 16 consejeros, cada uno tendrá su propio equipo. Hoy, los del mismo rol (p.ej. Jobs y Musk = CEO) comparten asignación."
         : "Sin datos en vivo (necesita el token de operador en la tailnet). Mostrando solo el roster.";
     }
 

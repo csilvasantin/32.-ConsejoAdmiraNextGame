@@ -404,8 +404,8 @@
         const r=await fetch("https://macmini.tail48b61c.ts.net/council/api/council/teams",{headers:{"X-Council-Hack-Token":token},signal:AbortSignal.timeout(9000)});
         if(!r.ok) return;
         const d=await r.json();
-        const aid=(c.role||"").toLowerCase();
-        const asg=(d.assignments||{})[aid]; if(!asg) return;
+        const asgs=d.assignments||{};
+        const asg=asgs[c.slug]||asgs[(c.role||"").toLowerCase()]; if(!asg) return;
         const mach=(d.machines||[]).find(m=>m.id===asg.machine);
         const user=(d.usuarios||[]).find(u=>u.id===asg.usuario);
         const RL={codex:"Codex",claude:"Claude",opencode:"OpenCode"};

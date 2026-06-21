@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>La Mesa de los Dos · AdmiraNext Council</title>
-  <meta name="admiranext-version" content="v.26.06.21.r4">
+  <meta name="admiranext-version" content="v.26.06.21.r5">
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     :root{
@@ -87,7 +87,7 @@
       <a class="pill" href="sala.html">🏛️ Sala del Consejo</a>
       <a class="pill" href="https://www.admiranext.com" target="_blank" rel="noopener">🏠 AdmiraNeXT</a>
       <span class="bar-spacer"></span>
-      <span class="pill flat" id="ver">v.26.06.21.r4</span>
+      <span class="pill flat" id="ver">v.26.06.21.r5</span>
     </div>
 
     <h1>🤝 La Mesa de los Dos</h1>
@@ -215,7 +215,7 @@
       for(let i=0;i<3;i++){
         const r=await fetch(API+"/api/council/ask-one",{method:"POST",
           headers:{"Content-Type":"application/json","X-Council-Token":TOKEN},
-          body:JSON.stringify({message,agent_name:c.role,generation:c.gen,llm:"claude-sonnet"})});
+          body:JSON.stringify({message,agent_name:c.role,generation:c.gen,llm:"claude-sonnet",report:false})});
         if(r.status===429){ setStatus("límite de ritmo, reintentando…"); await new Promise(res=>setTimeout(res,6000)); continue; }
         if(!r.ok) throw new Error("HTTP "+r.status);
         const d=await r.json();
@@ -236,7 +236,7 @@
       try{
         const text = await askConsejero(speaker, turnPrompt(speaker,other,$("tema").value.trim()));
         const tx=bubble.querySelector(".txt"); tx.classList.remove("think"); tx.textContent=text||"(sin respuesta)";
-        M.history.push({slug:speaker.slug,persona:speaker.persona,text}); M.turn++;
+        M.history.push({slug:speaker.slug,persona:speaker.persona,role:speaker.role,text}); M.turn++;
         return true;
       }catch(e){
         const tx=bubble.querySelector(".txt"); tx.classList.remove("think"); tx.textContent="⚠ error: "+e.message;
@@ -263,6 +263,20 @@
       try{ let text=await askConsejero(A, prompt); text=text.replace(/\*[^*\n]*\*/g,"").replace(/\*/g,"").trim(); renderActa(text); }
       catch(e){ renderActa("⚠ no se pudo redactar el acta: "+e.message); }
       M.actaBusy=false; setStatus("acta lista"); refreshControls();
+      postMeetingToTelegram();
+    }
+    // Postea la conversación COMPLETA y limpia al chat del Consejo en Telegram.
+    async function postMeetingToTelegram(){
+      if(M.tgSent || M.history.length<2 || !A || !B) return; M.tgSent=true;
+      try{
+        await fetch(API+"/api/council/meeting-telegram",{method:"POST",
+          headers:{"Content-Type":"application/json","X-Council-Token":TOKEN},
+          body:JSON.stringify({title:`🤝 Mesa de los Dos · ${A.persona} ⇄ ${B.persona}`,
+            tema:$("tema").value.trim(),
+            lines:M.history.map(h=>({persona:h.persona,role:h.role||"",text:h.text})),
+            acta:M.acta||""})});
+        setStatus("acta lista · enviada a Telegram 📨");
+      }catch(e){ M.tgSent=false; }
     }
     function renderActa(text){
       const t=$("table"); if(t.querySelector(".empty")) t.innerHTML=""; M.acta=text;
@@ -281,7 +295,8 @@
       const a=document.createElement("a");
       a.href=URL.createObjectURL(new Blob([s],{type:"text/plain;charset=utf-8"}));
       a.download=`reunion-${A.slug}-${B.slug}.txt`; document.body.appendChild(a); a.click(); a.remove();
-      try{ navigator.clipboard.writeText(s); setStatus("acta descargada + copiada"); }catch{ setStatus("acta descargada"); }
+      try{ navigator.clipboard.writeText(s); setStatus("descargada + copiada"); }catch{ setStatus("descargada"); }
+      postMeetingToTelegram();
     }
 
     // ── eventos ──

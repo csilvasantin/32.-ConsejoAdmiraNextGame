@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>La Mesa del Consejo · AdmiraNext Council</title>
-  <meta name="admiranext-version" content="v.26.06.21.r7">
+  <meta name="admiranext-version" content="v.26.06.21.r8">
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     :root{
@@ -86,7 +86,7 @@
       <a class="pill" href="sala.html">🏛️ Sala del Consejo</a>
       <a class="pill" href="https://www.admiranext.com" target="_blank" rel="noopener">🏠 AdmiraNeXT</a>
       <span class="bar-spacer"></span>
-      <span class="pill flat" id="ver">v.26.06.21.r7</span>
+      <span class="pill flat" id="ver">v.26.06.21.r8</span>
     </div>
 
     <h1>🤝 La Mesa del Consejo</h1>
@@ -254,7 +254,7 @@
     async function runMeeting(){
       M.running=true; refreshControls(); setStatus("reunión en curso…");
       const pool = moderated ? parts.slice(1) : parts;
-      if(moderated && !M.openDone){ M.openDone=true; const ok=await moderatorOpen(); if(!ok){ M.running=false; refreshControls(); return; } }
+      if(moderated && !M.openDone){ M.openDone=true; M.moderator=parts[0]; const ok=await moderatorOpen(); if(!ok){ M.running=false; refreshControls(); return; } }
       while(M.running && M.turn < M.max){
         const ok=await oneTurn(pool); if(!ok) break;
         await new Promise(r=>setTimeout(r,1500));
@@ -265,7 +265,7 @@
     }
     // ── Moderador: abre el debate y lo cierra con veredicto (asiento 1) ──
     async function moderatorOpen(){
-      const mod=parts[0], deb=parts.slice(1).map(p=>p.persona+" ("+p.role+")").join(", ");
+      const mod=M.moderator||parts[0], deb=parts.filter(p=>p.slug!==mod.slug).map(p=>p.persona+" ("+p.role+")").join(", ");
       const b=addTurn(mod,"",true,true); setStatus(`${mod.persona} (moderador) abriendo…`);
       try{
         const text=await askConsejero(mod, `Eres el MODERADOR de esta sesión del Consejo de Admira. A debate: ${deb}. Abre la sesión sobre "${$("tema").value.trim()}" en 1-2 frases (enmarca el tema con criterio) y cede la palabra a ${parts[1].persona} para empezar. No debatas tú, solo modera. Sin acotaciones.`);
@@ -275,7 +275,7 @@
       }catch(e){ const tx=b.querySelector(".txt"); tx.classList.remove("think"); tx.textContent="⚠ "+e.message; return false; }
     }
     async function moderatorClose(){
-      if(M.acta || M.actaBusy) return; const mod=parts[0];
+      if(M.acta || M.actaBusy) return; const mod=M.moderator||parts[0];
       M.actaBusy=true; refreshControls(); setStatus(`${mod.persona} cerrando el debate…`);
       const convo=M.history.filter(h=>!h.mod).map(h=>`${h.persona}: ${h.text}`).join("\n");
       try{
@@ -333,7 +333,7 @@
       postMeetingToTelegram();
     }
 
-    function newMeeting(){ M={history:[],turn:0,running:false,max:parseInt($("turns").value)||8,acta:null,actaBusy:false,tgSent:false,openDone:false}; }
+    function newMeeting(){ M={history:[],turn:0,running:false,max:parseInt($("turns").value)||8,acta:null,actaBusy:false,tgSent:false,openDone:false,moderator:null}; }
 
     // ── eventos ──
     $("roster").addEventListener("click",e=>{ const c=e.target.closest(".rcard"); if(c) pick(COUNCIL[+c.dataset.i]); });
@@ -342,7 +342,7 @@
     $("start").addEventListener("click",()=>{ newMeeting(); $("table").innerHTML=""; runMeeting(); });
     $("next").addEventListener("click",async()=>{ if(M.running)return; M.running=true; refreshControls();
       const pool = moderated ? parts.slice(1) : parts;
-      if(moderated && !M.openDone){ M.openDone=true; await moderatorOpen(); }
+      if(moderated && !M.openDone){ M.openDone=true; M.moderator=parts[0]; await moderatorOpen(); }
       else await oneTurn(pool);
       M.running=false; setStatus("turno listo"); refreshControls(); });
     $("stop").addEventListener("click",()=>{ M.running=false; setStatus("deteniendo…"); });

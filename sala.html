@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>La Sala del Consejo · AdmiraNext Council</title>
+  <meta name="admiranext-version" content="v.26.06.21.r1">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0a0a14; --ink:#e7e7ef; --muted:#9aa0b4;
+      --wood:#2a1a08; --wood-line:#8b5a14; --amber:#ffdd66; --amber-soft:#f0c040;
+      --on:#5fd08a; --idle:#e0a92c; --off:#5a6072;
+    }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Press Start 2P',monospace;
+      background:radial-gradient(1200px 600px at 50% -10%, #181d3a 0%, transparent 60%),linear-gradient(180deg,#0a0a14,#0a0a14 60%,#070710);
+      color:var(--ink);min-height:100vh;padding:14px;image-rendering:pixelated;-webkit-font-smoothing:none}
+    a{color:inherit;text-decoration:none}
+    .wrap{max-width:1180px;margin:0 auto}
+    .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+    .pill{background:var(--wood);border:2px solid var(--wood-line);color:var(--amber);
+      font-size:.46rem;line-height:1.5;padding:.55rem .7rem;box-shadow:2px 2px 0 #000;cursor:pointer;transition:.12s}
+    .pill:hover{background:var(--wood-line);border-color:var(--amber-soft);color:#fff}
+    .pill.flat{cursor:default}.bar-spacer{flex:1 1 auto}
+    h1{font-size:.9rem;color:#fff;text-shadow:3px 3px 0 #000;margin:6px 0 6px}
+    .sub{font-size:.5rem;color:var(--amber-soft);line-height:1.8;margin-bottom:8px}
+    .summary{display:flex;gap:14px;flex-wrap:wrap;font-size:.46rem;color:var(--muted);margin-bottom:16px}
+    .summary b{color:var(--ink)}
+    .summary .live{color:var(--on)}
+
+    .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(265px,1fr));gap:10px}
+    .cc{border:2px solid var(--wood-line);background:#0c0f22;box-shadow:3px 3px 0 #000;padding:11px;display:flex;flex-direction:column;gap:9px;cursor:pointer;transition:.1s}
+    .cc:hover{border-color:var(--amber-soft);transform:translate(-1px,-1px)}
+    .cc.on{border-left:5px solid var(--on)}
+    .cc.idle{border-left:5px solid var(--idle)}
+    .cc.off{border-left:5px solid var(--off);opacity:.82}
+    .cc .top{display:flex;gap:10px;align-items:center}
+    .cc .face{width:52px;height:52px;flex:0 0 52px;border:2px solid #000;outline:2px solid var(--wood-line);outline-offset:-4px;background:#05060d;image-rendering:pixelated}
+    .cc .id{min-width:0;flex:1}
+    .cc .id .nm{font-size:.56rem;color:#fff;line-height:1.3;word-break:break-word}
+    .cc .id .rl{font-size:.4rem;color:var(--muted);margin-top:5px;line-height:1.4}
+    .cc .dot{font-size:.5rem;white-space:nowrap}
+    .cc .dot.on{color:var(--on)}.cc .dot.idle{color:var(--idle)}.cc .dot.off{color:var(--off)}
+    .cc .agent{font-size:.42rem;line-height:1.7;border-top:1px dashed #2a3057;padding-top:8px}
+    .cc .agent .k{color:var(--muted)}
+    .cc .agent .v{color:var(--ink)}
+    .cc .agent .persona{color:#7fc4f0}
+    .cc .task{font-size:.42rem;line-height:1.65;color:#d7dcf0;background:#080a18;border:1px solid #1c2142;padding:7px 8px;min-height:34px}
+    .cc .task.none{color:var(--muted)}
+
+    .note{font-size:.42rem;color:var(--muted);line-height:1.8;margin-top:16px;text-align:center}
+    .foot{text-align:center;color:var(--muted);font-size:.42rem;line-height:2;margin:18px 0 6px}
+    @media(max-width:560px){.grid{grid-template-columns:1fr}}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="bar">
+      <a class="pill" href="index.html">◀ Consejo</a>
+      <a class="pill" href="reunion.html">🤝 Mesa de los Dos</a>
+      <span class="bar-spacer"></span>
+      <button class="pill" id="refresh">⟳ Refrescar</button>
+      <span class="pill flat" id="ver">v.26.06.21.r1</span>
+    </div>
+
+    <h1>🏛️ La Sala del Consejo</h1>
+    <div class="sub">Quién es quién y qué hace en cada momento: cada consejero, su agente (LLM) en su máquina, si está activo y su última tarea. En vivo.</div>
+    <div class="summary" id="summary">
+      <span><b id="cAsg">—</b> asignados / 16</span>
+      <span class="live">🟢 <b id="cOn">—</b> activos</span>
+      <span>🟡 <b id="cIdle">—</b> en reposo</span>
+      <span id="cUpd">actualizando…</span>
+    </div>
+
+    <div class="grid" id="grid"></div>
+
+    <div class="note" id="note"></div>
+    <div class="foot">AdmiraNeXT · Consejo de Silicio · admira.live · La Sala del Consejo</div>
+  </div>
+
+  <script>
+    const slugify = s => (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"")
+      .replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+    const IMG = { leyendas:"assets/council-leyendas.jpg", coetaneos:"assets/council-coetaneos.jpg" };
+    const CROP = {
+      CEO:{l:7,t:44,w:7,h:17}, CTO:{l:18,t:36,w:8,h:21}, COO:{l:31,t:30,w:8,h:24}, CFO:{l:43,t:27,w:8,h:26},
+      CCO:{l:55,t:27,w:8,h:26}, CDO:{l:66,t:31,w:7,h:23}, CXO:{l:77,t:34,w:8,h:21}, CSO:{l:88,t:41,w:9,h:17}
+    };
+    const R = [
+      ["CEO","Chief Executive Officer","Steve Jobs","racional","leyendas"],
+      ["CTO","Chief Technology Officer","Steve Wozniak","racional","leyendas"],
+      ["COO","Chief Operations Officer","Tim Cook","racional","leyendas"],
+      ["CFO","Chief Financial Officer","Warren Buffett","racional","leyendas"],
+      ["CCO","Chief Creative Officer","Walt Disney","creativo","leyendas"],
+      ["CDO","Chief Design Officer","Dieter Rams","creativo","leyendas"],
+      ["CXO","Chief Experience Officer","Howard Schultz","creativo","leyendas"],
+      ["CSO","Chief Storytelling Officer","George Lucas","creativo","leyendas"],
+      ["CEO","Chief Executive Officer","Elon Musk","racional","coetaneos"],
+      ["CTO","Chief Technology Officer","Jensen Huang","racional","coetaneos"],
+      ["COO","Chief Operations Officer","Gwynne Shotwell","racional","coetaneos"],
+      ["CFO","Chief Financial Officer","Ruth Porat","racional","coetaneos"],
+      ["CCO","Chief Creative Officer","John Lasseter","creativo","coetaneos"],
+      ["CDO","Chief Design Officer","Jony Ive","creativo","coetaneos"],
+      ["CXO","Chief Experience Officer","Carlos Ratti","creativo","coetaneos"],
+      ["CSO","Chief Storytelling Officer","Ryan Reynolds","creativo","coetaneos"],
+    ];
+    const ICON = {CEO:"🏛️",CTO:"⚙️",COO:"📋",CFO:"💰",CCO:"💡",CDO:"🎨",CXO:"🧭",CSO:"📖"};
+    const RL = {codex:"Codex",claude:"Claude",opencode:"OpenCode"};
+    const COUNCIL = R.map(x=>({role:x[0],roleFull:x[1],persona:x[2],side:x[3],gen:x[4],icon:ICON[x[0]],slug:slugify(x[2]),crop:CROP[x[0]]}));
+
+    function cropStyle(c){
+      const {l,t,w,h}=c.crop, sx=(10000/w).toFixed(1), sy=(10000/h).toFixed(1),
+        px=(l/(100-w)*100).toFixed(2), py=(t/(100-h)*100).toFixed(2);
+      return `background-image:url('${IMG[c.gen]}');background-size:${sx}% ${sy}%;background-position:${px}% ${py}%;`;
+    }
+    const esc=s=>String(s==null?"":s).replace(/[<>&]/g,x=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[x]));
+    function ageMin(ts){ if(!ts) return Infinity; const t=Date.parse(ts); if(isNaN(t)) return Infinity; return (Date.now()-t)/60000; }
+    function agoLabel(m){ if(m===Infinity) return ""; if(m<1) return "ahora"; if(m<60) return Math.round(m)+"m"; if(m<1440) return Math.round(m/60)+"h"; return Math.round(m/1440)+"d"; }
+
+    const API="https://macmini.tail48b61c.ts.net/council";
+    async function fetchOperatorToken(){
+      try{ const r=await fetch("https://macmini.tail48b61c.ts.net:8443/optoken/token",{signal:AbortSignal.timeout(2500)}); if(!r.ok)return null; const d=await r.json(); return d&&d.token?d.token:null; }catch(e){ return null; }
+    }
+
+    // Resuelve para un consejero su agente/identidad/estado a partir de teams.
+    function resolve(c, d){
+      const out={assigned:false};
+      if(!d) return out;
+      const asg=(d.assignments||{})[(c.role||"").toLowerCase()]; if(!asg) return out;
+      const mach=(d.machines||[]).find(m=>m.id===asg.machine);
+      const user=(d.usuarios||[]).find(u=>u.id===asg.usuario);
+      out.assigned=!!asg.machine;
+      out.machine=mach?mach.name:(asg.machine||"");
+      out.runtime=RL[asg.runtime]||asg.runtime||"";
+      const acc=(user&&user.account)||"";
+      out.ident=(RL[asg.runtime]&&acc)?(RL[asg.runtime]+"·"+acc):"";
+      const info=out.ident?((d.identities||{})[out.ident]):null;
+      out.persona=(info&&info.persona)||"";
+      out.task=(info&&info.text)||"";
+      out.ts=(info&&info.ts)||"";
+      out.age=ageMin(out.ts);
+      out.state = !out.assigned ? "off" : (out.age<=15 ? "on" : (out.task?"idle":"off"));
+      return out;
+    }
+
+    function card(c, r){
+      const dotTxt = r.state==="on" ? ("🟢 activo"+(r.age<Infinity?" · "+agoLabel(r.age):"")) : (r.state==="idle" ? "🟡 reposo"+(r.age<Infinity?" · "+agoLabel(r.age):"") : (r.assigned?"⚫ inactivo":"⚪ sin asignar"));
+      const agentLine = r.assigned
+        ? `<div class="agent"><span class="k">Agente </span><span class="persona">${esc(r.persona||r.runtime||"—")}</span> <span class="k">· ${esc(r.runtime)}</span><br><span class="k">🖥️ </span><span class="v">${esc(r.machine||"—")}</span>${r.ident?` <span class="k">· ${esc(r.ident)}</span>`:""}</div>`
+        : `<div class="agent"><span class="k">Sin equipo asignado</span></div>`;
+      const taskLine = r.task
+        ? `<div class="task">${esc(r.task)}</div>`
+        : `<div class="task none">— sin actividad reciente —</div>`;
+      return `<div class="cc ${r.state}" data-slug="${c.slug}">
+        <div class="top">
+          <div class="face" style="${cropStyle(c)}"></div>
+          <div class="id"><div class="nm">${esc(c.persona)}</div>
+            <div class="rl">${c.icon} ${c.role} · ${c.gen==="leyendas"?"Leyenda":"Coetáneo"}</div></div>
+          <div class="dot ${r.state}">${dotTxt}</div>
+        </div>
+        ${agentLine}${taskLine}</div>`;
+    }
+
+    function renderBoard(d){
+      const rows=COUNCIL.map(c=>({c,r:resolve(c,d)}));
+      document.getElementById("grid").innerHTML=rows.map(x=>card(x.c,x.r)).join("");
+      const asg=rows.filter(x=>x.r.assigned).length;
+      const on=rows.filter(x=>x.r.state==="on").length;
+      const idle=rows.filter(x=>x.r.state==="idle").length;
+      document.getElementById("cAsg").textContent=asg;
+      document.getElementById("cOn").textContent=on;
+      document.getElementById("cIdle").textContent=idle;
+      const now=new Date(); document.getElementById("cUpd").textContent="actualizado "+now.toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+      document.getElementById("note").innerHTML = d
+        ? "Las asignaciones se editan en <b>teamwork.html</b>. Nota: hoy la asignación es por ROL — los dos de un mismo rol (p.ej. Jobs y Musk = CEO) comparten equipo; pasarlo a por-consejero es el siguiente paso."
+        : "Sin datos en vivo (necesita el token de operador en la tailnet). Mostrando solo el roster.";
+    }
+
+    async function loadSala(){
+      let token=localStorage.getItem("council_hack_token")||"";
+      if(!token){ token=await fetchOperatorToken()||""; if(token) localStorage.setItem("council_hack_token",token); }
+      if(!token){ renderBoard(null); return; }
+      try{
+        const r=await fetch(API+"/api/council/teams",{headers:{"X-Council-Hack-Token":token},signal:AbortSignal.timeout(9000)});
+        if(!r.ok){ if(r.status===401||r.status===403) localStorage.removeItem("council_hack_token"); renderBoard(null); return; }
+        renderBoard(await r.json());
+      }catch(e){ renderBoard(null); }
+    }
+
+    document.getElementById("grid").addEventListener("click",e=>{ const cc=e.target.closest(".cc"); if(cc) location.href="consejero.html?p="+cc.dataset.slug; });
+    document.getElementById("refresh").addEventListener("click",loadSala);
+    renderBoard(null);   // pinta el roster al instante
+    loadSala();
+    setInterval(loadSala, 15000);
+  </script>
+</body>
+</html>

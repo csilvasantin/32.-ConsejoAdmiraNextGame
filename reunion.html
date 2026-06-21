@@ -1,0 +1,252 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>La Mesa de los Dos · AdmiraNext Council</title>
+  <meta name="admiranext-version" content="v.26.06.21.r1">
+  <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --bg:#0a0a14; --ink:#e7e7ef; --muted:#9aa0b4;
+      --wood:#2a1a08; --wood-line:#8b5a14; --amber:#ffdd66; --amber-soft:#f0c040;
+      --a:#3498db; --b:#e0a92c;
+    }
+    *{margin:0;padding:0;box-sizing:border-box}
+    body{font-family:'Press Start 2P',monospace;
+      background:radial-gradient(1200px 600px at 50% -10%, #181d3a 0%, transparent 60%),linear-gradient(180deg,#0a0a14,#0a0a14 60%,#070710);
+      color:var(--ink);min-height:100vh;padding:14px;image-rendering:pixelated;-webkit-font-smoothing:none}
+    a{color:inherit;text-decoration:none}
+    .wrap{max-width:1040px;margin:0 auto}
+    .bar{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:16px}
+    .pill{background:var(--wood);border:2px solid var(--wood-line);color:var(--amber);
+      font-size:.46rem;line-height:1.5;padding:.55rem .7rem;box-shadow:2px 2px 0 #000;cursor:pointer;transition:.12s}
+    .pill:hover{background:var(--wood-line);border-color:var(--amber-soft);color:#fff}
+    .pill.flat{cursor:default}.bar-spacer{flex:1 1 auto}
+    h1{font-size:.9rem;color:#fff;text-shadow:3px 3px 0 #000;margin:6px 0 4px}
+    .sub{font-size:.5rem;color:var(--amber-soft);line-height:1.8;margin-bottom:16px}
+
+    /* slots A vs B */
+    .slots{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:stretch;margin-bottom:14px}
+    .slot{border:2px solid var(--wood-line);background:#0c0f22;box-shadow:4px 4px 0 #000;padding:12px;display:flex;gap:12px;align-items:center;min-height:92px}
+    .slot.a{border-color:var(--a)}.slot.b{border-color:var(--b)}
+    .slot .face{width:60px;height:60px;border:2px solid #000;outline:2px solid var(--wood-line);outline-offset:-4px;background:#05060d;flex:0 0 60px;image-rendering:pixelated}
+    .slot .who{min-width:0}
+    .slot .who .nm{font-size:.62rem;color:#fff;line-height:1.3;word-break:break-word}
+    .slot .who .rl{font-size:.44rem;color:var(--muted);margin-top:6px;line-height:1.5}
+    .slot .ph{font-size:.5rem;color:var(--muted);line-height:1.7}
+    .vs{display:flex;align-items:center;justify-content:center;font-size:.7rem;color:var(--amber)}
+
+    .tema{display:flex;gap:8px;margin-bottom:14px}
+    .tema input{flex:1;background:#080a18;border:2px solid var(--wood-line);color:var(--ink);font:inherit;font-size:.5rem;padding:.7rem .8rem}
+    .controls{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+    .btn{background:var(--wood-line);color:#fff;border:2px solid var(--amber-soft);font:inherit;font-size:.5rem;padding:.7rem 1rem;cursor:pointer}
+    .btn:disabled{opacity:.4;cursor:not-allowed}
+    .btn.go{background:#1c5e34;border-color:#5fd08a}
+    .btn.stop{background:#5e1c20;border-color:#e0623c}
+
+    /* roster picker */
+    .roster{display:grid;grid-template-columns:repeat(8,1fr);gap:6px;margin-bottom:18px}
+    @media(max-width:720px){.roster{grid-template-columns:repeat(4,1fr)}.slots{grid-template-columns:1fr}.vs{padding:6px 0}}
+    .rcard{border:2px solid #2a3057;background:#0c0f22;padding:5px;cursor:pointer;text-align:center;transition:.1s}
+    .rcard:hover{border-color:var(--amber-soft)}
+    .rcard.selA{border-color:var(--a);box-shadow:0 0 0 2px var(--a) inset}
+    .rcard.selB{border-color:var(--b);box-shadow:0 0 0 2px var(--b) inset}
+    .rcard .rface{width:100%;aspect-ratio:1;border:1px solid #000;background:#05060d;image-rendering:pixelated}
+    .rcard .rn{font-size:.36rem;color:#cdd2e6;margin-top:4px;line-height:1.3;height:2.6em;overflow:hidden}
+    .rcard .rr{font-size:.34rem;color:var(--muted);margin-top:2px}
+    .rcard .rg{font-size:.32rem;color:var(--amber-soft);opacity:.8}
+
+    /* dialogue */
+    .table{border:2px solid var(--wood-line);background:#0b0e1f;box-shadow:4px 4px 0 #000;padding:14px;min-height:120px;display:flex;flex-direction:column;gap:12px}
+    .empty{font-size:.5rem;color:var(--muted);text-align:center;padding:26px 10px;line-height:1.9}
+    .turn{display:flex;gap:10px;max-width:90%}
+    .turn.right{align-self:flex-end;flex-direction:row-reverse}
+    .turn .av{width:38px;height:38px;flex:0 0 38px;border:2px solid #000;background:#05060d;image-rendering:pixelated}
+    .turn.A .av{outline:2px solid var(--a);outline-offset:-3px}
+    .turn.B .av{outline:2px solid var(--b);outline-offset:-3px}
+    .bub{border:1px solid #2a3057;padding:9px 11px;font-size:.5rem;line-height:1.8}
+    .turn.A .bub{background:#0e1a2c;border-color:#1f4a6b}
+    .turn.B .bub{background:#241c0a;border-color:#6b561f}
+    .bub .nm{display:block;font-size:.4rem;margin-bottom:5px}
+    .turn.A .bub .nm{color:#7fc4f0}.turn.B .bub .nm{color:var(--amber)}
+    .bub .nm small{color:var(--muted)}
+    .think{opacity:.6;font-style:normal}
+    .foot{text-align:center;color:var(--muted);font-size:.42rem;line-height:2;margin:22px 0 6px}
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <div class="bar">
+      <a class="pill" href="index.html">◀ Consejo</a>
+      <a class="pill" href="https://www.admiranext.com" target="_blank" rel="noopener">🏠 AdmiraNeXT</a>
+      <span class="bar-spacer"></span>
+      <span class="pill flat" id="ver">v.26.06.21.r1</span>
+    </div>
+
+    <h1>🤝 La Mesa de los Dos</h1>
+    <div class="sub">Elige dos consejeros y dales un tema: hablarán entre ellos, cada uno con su LLM y en su personaje. La conversación se refleja en AgoraMatrix / Telegram.</div>
+
+    <div class="slots">
+      <div class="slot a" id="slotA"><div class="ph">Consejero A — elige abajo</div></div>
+      <div class="vs">vs</div>
+      <div class="slot b" id="slotB"><div class="ph">Consejero B — elige abajo</div></div>
+    </div>
+
+    <div class="tema">
+      <input id="tema" type="text" placeholder="Tema de la reunión (p.ej. ¿IA o artesanía en el producto Admira?)">
+    </div>
+    <div class="controls">
+      <button class="btn go" id="start" disabled>▶ Iniciar reunión</button>
+      <button class="btn" id="next" disabled>⏭ Siguiente turno</button>
+      <button class="btn stop" id="stop" disabled>⏹ Parar</button>
+      <button class="btn" id="reset">↺ Reset</button>
+      <span class="pill flat" id="status" style="font-size:.44rem">listo</span>
+    </div>
+
+    <div class="roster" id="roster"></div>
+
+    <div class="table" id="table"><div class="empty">Aún no hay reunión. Elige A y B, escribe un tema y pulsa ▶ Iniciar.</div></div>
+
+    <div class="foot">AdmiraNeXT · Consejo de Silicio · admira.live · La Mesa de los Dos</div>
+  </div>
+
+  <script>
+    const slugify = s => (s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"")
+      .replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");
+    const IMG = { leyendas:"assets/council-leyendas.jpg", coetaneos:"assets/council-coetaneos.jpg" };
+    const CROP = {
+      CEO:{l:7,t:44,w:7,h:17}, CTO:{l:18,t:36,w:8,h:21}, COO:{l:31,t:30,w:8,h:24}, CFO:{l:43,t:27,w:8,h:26},
+      CCO:{l:55,t:27,w:8,h:26}, CDO:{l:66,t:31,w:7,h:23}, CXO:{l:77,t:34,w:8,h:21}, CSO:{l:88,t:41,w:9,h:17}
+    };
+    // Roster compacto (refleja COUNCIL de consejero.html)
+    const R = [
+      ["CEO","Chief Executive Officer","Steve Jobs","racional","leyendas"],
+      ["CTO","Chief Technology Officer","Steve Wozniak","racional","leyendas"],
+      ["COO","Chief Operations Officer","Tim Cook","racional","leyendas"],
+      ["CFO","Chief Financial Officer","Warren Buffett","racional","leyendas"],
+      ["CCO","Chief Creative Officer","Walt Disney","creativo","leyendas"],
+      ["CDO","Chief Design Officer","Dieter Rams","creativo","leyendas"],
+      ["CXO","Chief Experience Officer","Howard Schultz","creativo","leyendas"],
+      ["CSO","Chief Storytelling Officer","George Lucas","creativo","leyendas"],
+      ["CEO","Chief Executive Officer","Elon Musk","racional","coetaneos"],
+      ["CTO","Chief Technology Officer","Jensen Huang","racional","coetaneos"],
+      ["COO","Chief Operations Officer","Gwynne Shotwell","racional","coetaneos"],
+      ["CFO","Chief Financial Officer","Ruth Porat","racional","coetaneos"],
+      ["CCO","Chief Creative Officer","John Lasseter","creativo","coetaneos"],
+      ["CDO","Chief Design Officer","Jony Ive","creativo","coetaneos"],
+      ["CXO","Chief Experience Officer","Carlos Ratti","creativo","coetaneos"],
+      ["CSO","Chief Storytelling Officer","Ryan Reynolds","creativo","coetaneos"],
+    ];
+    const ICON = {CEO:"🏛️",CTO:"⚙️",COO:"📋",CFO:"💰",CCO:"💡",CDO:"🎨",CXO:"🧭",CSO:"📖"};
+    const COUNCIL = R.map(x=>({role:x[0],roleFull:x[1],persona:x[2],side:x[3],gen:x[4],icon:ICON[x[0]],slug:slugify(x[2]),crop:CROP[x[0]]}));
+
+    function cropStyle(c){
+      const {l,t,w,h}=c.crop, sx=(10000/w).toFixed(1), sy=(10000/h).toFixed(1),
+        px=(l/(100-w)*100).toFixed(2), py=(t/(100-h)*100).toFixed(2);
+      return `background-image:url('${IMG[c.gen]}');background-size:${sx}% ${sy}%;background-position:${px}% ${py}%;`;
+    }
+    const esc=s=>String(s==null?"":s).replace(/[<>&]/g,x=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[x]));
+
+    // ── Estado de la reunión ──
+    const API="https://macmini.tail48b61c.ts.net/council", TOKEN="admira2026";
+    let A=null, B=null, M={history:[],turn:0,running:false,max:6};
+    const $=id=>document.getElementById(id);
+
+    function renderRoster(){
+      $("roster").innerHTML = COUNCIL.map((c,i)=>{
+        const sel = A&&A.slug===c.slug ? "selA" : (B&&B.slug===c.slug ? "selB" : "");
+        return `<div class="rcard ${sel}" data-i="${i}">
+          <div class="rface" style="${cropStyle(c)}"></div>
+          <div class="rn">${esc(c.persona)}</div>
+          <div class="rr">${c.icon} ${c.role}</div>
+          <div class="rg">${c.gen==="leyendas"?"Leyenda":"Coetáneo"}</div>
+        </div>`;
+      }).join("");
+    }
+    function renderSlot(slot,c,cls){
+      if(!c){ $(slot).innerHTML=`<div class="ph">Consejero ${cls} — elige abajo</div>`; return; }
+      $(slot).innerHTML=`<div class="face" style="${cropStyle(c)}"></div>
+        <div class="who"><div class="nm">${esc(c.persona)}</div>
+        <div class="rl">${c.icon} ${c.role} · ${c.gen==="leyendas"?"Leyenda":"Coetáneo"}<br>${esc(c.roleFull)}</div></div>`;
+    }
+    function pick(c){
+      // colisión de rol+gen no permitida (mismo consejero); si A=B limpia
+      if(A&&A.slug===c.slug){ A=null; }
+      else if(B&&B.slug===c.slug){ B=null; }
+      else if(!A){ A=c; }
+      else if(!B){ B=c; }
+      else { A=c; } // ambos llenos -> reemplaza A
+      // evita A y B idénticos
+      if(A&&B&&A.slug===B.slug) B=null;
+      renderRoster(); renderSlot("slotA",A,"A"); renderSlot("slotB",B,"B"); refreshControls();
+    }
+    function refreshControls(){
+      const ready = A&&B&&$("tema").value.trim().length>0 && !M.running;
+      $("start").disabled=!ready;
+      $("next").disabled=!(A&&B&&M.history.length>0&&!M.running);
+      $("stop").disabled=!M.running;
+    }
+    function setStatus(s){ $("status").textContent=s; }
+
+    function addTurn(c,cls,text,thinking){
+      const t=$("table"); if(t.querySelector(".empty")) t.innerHTML="";
+      const d=document.createElement("div"); d.className=`turn ${cls} ${cls==="A"?"":"right"}`;
+      d.innerHTML=`<div class="av" style="${cropStyle(c)}"></div>
+        <div class="bub"><span class="nm">${esc(c.persona)} <small>· ${c.icon} ${c.role}</small></span>
+        <span class="txt ${thinking?"think":""}">${thinking?"pensando…":esc(text)}</span></div>`;
+      t.appendChild(d); d.scrollIntoView({behavior:"smooth",block:"end"}); return d;
+    }
+
+    async function askConsejero(c, message){
+      const r=await fetch(API+"/api/council/ask-one",{method:"POST",
+        headers:{"Content-Type":"application/json","X-Council-Token":TOKEN},
+        body:JSON.stringify({message,agent_name:c.role,generation:c.gen,llm:"claude-sonnet"})});
+      if(!r.ok) throw new Error("HTTP "+r.status);
+      const d=await r.json();
+      return (d.content||d.text||"").replace(/\*\*/g,"").replace(/^#+\s*/gm,"").replace(/\n{2,}/g,"\n").trim();
+    }
+    function turnPrompt(speaker,other,tema){
+      if(M.history.length===0)
+        return `Estás en una reunión privada del Consejo de Admira con ${other.persona} (${other.roleFull}). Tema: "${tema}". Abre tú la conversación dirigiéndote directamente a ${other.persona}, en 1-2 frases, en tu estilo característico. No te presentes ni saludes con formalidad: ve al grano con tu punto de vista.`;
+      const last=M.history[M.history.length-1];
+      return `Sigues en la reunión del Consejo con ${other.persona} (${other.roleFull}) sobre "${tema}". ${other.persona} acaba de decirte: "${last.text}". Respóndele en 1-2 frases, en tu estilo, aportando tu visión (puedes coincidir, matizar o rebatir con criterio). Habla en primera persona, dirígete a ${other.persona}.`;
+    }
+    async function oneTurn(){
+      const speaker = M.turn%2===0 ? A : B, cls = M.turn%2===0 ? "A":"B", other = speaker===A?B:A;
+      const bubble = addTurn(speaker,cls,"",true);
+      setStatus(`${speaker.persona} pensando…`);
+      try{
+        const text = await askConsejero(speaker, turnPrompt(speaker,other,$("tema").value.trim()));
+        const tx=bubble.querySelector(".txt"); tx.classList.remove("think"); tx.textContent=text||"(sin respuesta)";
+        M.history.push({slug:speaker.slug,persona:speaker.persona,text}); M.turn++;
+        return true;
+      }catch(e){
+        const tx=bubble.querySelector(".txt"); tx.classList.remove("think"); tx.textContent="⚠ error: "+e.message;
+        return false;
+      }
+    }
+    async function runMeeting(){
+      M.running=true; refreshControls(); setStatus("reunión en curso…");
+      while(M.running && M.turn < M.max){
+        const ok=await oneTurn(); if(!ok) break;
+        await new Promise(r=>setTimeout(r,500));
+      }
+      M.running=false; setStatus(M.turn>=M.max?"reunión completa":"detenida"); refreshControls();
+    }
+
+    // ── eventos ──
+    $("roster").addEventListener("click",e=>{ const c=e.target.closest(".rcard"); if(c) pick(COUNCIL[+c.dataset.i]); });
+    $("tema").addEventListener("input",refreshControls);
+    $("start").addEventListener("click",()=>{ M={history:[],turn:0,running:false,max:6}; $("table").innerHTML=""; runMeeting(); });
+    $("next").addEventListener("click",async()=>{ if(M.running)return; M.running=true; refreshControls(); await oneTurn(); M.running=false; setStatus("turno listo"); refreshControls(); });
+    $("stop").addEventListener("click",()=>{ M.running=false; setStatus("deteniendo…"); });
+    $("reset").addEventListener("click",()=>{ A=null;B=null;M={history:[],turn:0,running:false,max:6};
+      renderRoster();renderSlot("slotA",null,"A");renderSlot("slotB",null,"B");
+      $("table").innerHTML='<div class="empty">Aún no hay reunión. Elige A y B, escribe un tema y pulsa ▶ Iniciar.</div>';
+      $("tema").value="";refreshControls();setStatus("listo"); });
+
+    renderRoster();
+  </script>
+</body>
+</html>

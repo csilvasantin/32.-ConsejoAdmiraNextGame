@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>Consejero · AdmiraNext Council</title>
-  <meta name="admiranext-version" content="v.26.06.20.r1">
+  <meta name="admiranext-version" content="v.26.06.21.r1">
   <link rel="icon" href="/council-icon.ico?v=20260522-r1" sizes="any">
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
@@ -307,7 +307,7 @@
           <div class="bar">
             <a class="pill" href="index.html">◀ Volver al Consejo</a>
             <span class="bar-spacer"></span>
-            <span class="pill flat">v.26.06.20.r1</span>
+            <span class="pill flat">v.26.06.21.r1</span>
           </div>
           <div class="notfound">No encuentro al consejero «${(params.get("p")||"").replace(/[<>]/g,"")}».<br><br>
             Consejeros disponibles: ${Object.keys(BY_SLUG).join(" · ")}</div>`;
@@ -325,7 +325,7 @@
           <a class="pill" href="https://www.admiranext.com" target="_blank" rel="noopener">🏠 AdmiraNeXT</a>
           <span class="bar-spacer"></span>
           <span class="pill flat">${c.icon} ${c.role}</span>
-          <span class="pill flat">v.26.06.20.r1</span>
+          <span class="pill flat">v.26.06.21.r1</span>
         </div>
 
         <div class="hero">
@@ -378,12 +378,13 @@
 
         <div class="cta">
           <a class="pill go" href="index.html#${c.slug}">💬 Preguntarle en el Consejo</a>
+          <a class="pill" href="reunion.html">🤝 Llevarle a una reunión</a>
           <a class="pill" href="index.html">◀ Volver a la mesa</a>
         </div>
 
         <div class="foot">
           AdmiraNeXT · Consejo de Silicio · admira.live<br>
-          Ficha de consejero · v.26.06.20.r1
+          Ficha de consejero · v.26.06.21.r1
         </div>`;
 
       loadLive(c);

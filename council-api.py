@@ -884,6 +884,7 @@ class AskRequest(BaseModel):
     context: Optional[list] = None
     llm: str = "claude-sonnet"  # LLM model key from LLM_MODELS
     confirm_expensive_video: bool = False
+    report: bool = True  # si False, no manda el reporte ruidoso por Telegram (reuniones)
 
 
 class AskOneRequest(BaseModel):
@@ -1287,9 +1288,41 @@ async def council_ask_one(
     # Report to Telegram
     cost_after = _load_budget()["total_cost_eur"]
     query_cost = cost_after - cost_before
-    _send_query_report(req.message, [reply], query_cost, gen, llm_key)
+    if getattr(req, "report", True):
+        _send_query_report(req.message, [reply], query_cost, gen, llm_key)
 
     return reply
+
+
+class MeetingTelegramRequest(BaseModel):
+    title: str = ""
+    tema: str = ""
+    lines: list = []
+    acta: str = ""
+
+
+@app.post("/api/council/meeting-telegram")
+async def council_meeting_telegram(req: MeetingTelegramRequest, _auth=Depends(verify_token)):
+    """Postea la conversacion COMPLETA de una reunion (limpia) al chat del Consejo."""
+    parts = []
+    head = req.title or "\U0001f91d La Mesa de los Dos"
+    if req.tema:
+        head += "\n_" + str(req.tema)[:200] + "_"
+    parts.append(head)
+    for ln in (req.lines or [])[:40]:
+        p = str((ln or {}).get("persona") or "?")
+        rl = str((ln or {}).get("role") or "")
+        tx = str((ln or {}).get("text") or "").strip()
+        if not tx:
+            continue
+        parts.append("*" + p + "*" + ((" (" + rl + ")") if rl else "") + ":\n" + tx)
+    if req.acta:
+        parts.append("\U0001f4cb *Acta*\n" + str(req.acta).strip())
+    msg = "\n\n".join(parts)
+    if len(msg) > 3900:
+        msg = msg[:3900] + "\n\u2026"
+    threading.Thread(target=_send_telegram, args=(msg,), daemon=True).start()
+    return {"ok": True, "chars": len(msg)}
 
 
 @app.get("/api/council/models")

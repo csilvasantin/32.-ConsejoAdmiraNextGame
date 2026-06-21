@@ -93,7 +93,7 @@ LLM_MODELS = {
     "claude-sonnet": {
         "name": "Claude Sonnet 4",
         "provider": "anthropic",
-        "model_id": "claude-sonnet-4-20250514",
+        "model_id": "claude-sonnet-4-6",
         "free": False,
         "icon": "💎",
     },

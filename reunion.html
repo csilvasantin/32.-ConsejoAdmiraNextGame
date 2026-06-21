@@ -4,7 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <title>La Mesa de los Dos · AdmiraNext Council</title>
-  <meta name="admiranext-version" content="v.26.06.21.r3">
+  <meta name="admiranext-version" content="v.26.06.21.r4">
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
     :root{
@@ -86,7 +86,7 @@
       <a class="pill" href="index.html">◀ Consejo</a>
       <a class="pill" href="https://www.admiranext.com" target="_blank" rel="noopener">🏠 AdmiraNeXT</a>
       <span class="bar-spacer"></span>
-      <span class="pill flat" id="ver">v.26.06.21.r3</span>
+      <span class="pill flat" id="ver">v.26.06.21.r4</span>
     </div>
 
     <h1>🤝 La Mesa de los Dos</h1>
@@ -211,12 +211,16 @@
     }
 
     async function askConsejero(c, message){
-      const r=await fetch(API+"/api/council/ask-one",{method:"POST",
-        headers:{"Content-Type":"application/json","X-Council-Token":TOKEN},
-        body:JSON.stringify({message,agent_name:c.role,generation:c.gen,llm:"claude-sonnet"})});
-      if(!r.ok) throw new Error("HTTP "+r.status);
-      const d=await r.json();
-      return (d.content||d.text||"").replace(/\*\*/g,"").replace(/^#+\s*/gm,"").replace(/\n{2,}/g,"\n").trim();
+      for(let i=0;i<3;i++){
+        const r=await fetch(API+"/api/council/ask-one",{method:"POST",
+          headers:{"Content-Type":"application/json","X-Council-Token":TOKEN},
+          body:JSON.stringify({message,agent_name:c.role,generation:c.gen,llm:"claude-sonnet"})});
+        if(r.status===429){ setStatus("límite de ritmo, reintentando…"); await new Promise(res=>setTimeout(res,6000)); continue; }
+        if(!r.ok) throw new Error("HTTP "+r.status);
+        const d=await r.json();
+        return (d.content||d.text||"").replace(/\*\*/g,"").replace(/^#+\s*/gm,"").replace(/\n{2,}/g,"\n").trim();
+      }
+      throw new Error("límite de ritmo (429) tras reintentos");
     }
     function turnPrompt(speaker,other,tema){
       if(M.history.length===0)
@@ -242,7 +246,7 @@
       M.running=true; refreshControls(); setStatus("reunión en curso…");
       while(M.running && M.turn < M.max){
         const ok=await oneTurn(); if(!ok) break;
-        await new Promise(r=>setTimeout(r,500));
+        await new Promise(r=>setTimeout(r,1500));
       }
       const completed = M.turn>=M.max;
       M.running=false; setStatus(completed?"reunión completa":"detenida"); refreshControls();

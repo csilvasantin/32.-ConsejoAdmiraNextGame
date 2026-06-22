@@ -219,7 +219,7 @@
       }).filter(p=>p.text && p.text.trim() && !/^⚠/.test(p.text));
       if(M.acta) panels.push({persona:"Acta", role:"Secretario", text:M.acta, color:"#ffd54a", avatarStyle:""});
       AdmiraComic.open({panels, tema:$("tema").value.trim()||"Reunión del Consejo",
-        names:parts.map(p=>p.persona).join(", "), engine:engine||"svg"});
+        names:parts.map(p=>p.persona).join(", "), engine:engine});
     }
     function setStatus(s){ $("status").textContent=s; }
 
@@ -325,7 +325,7 @@
         text=text.replace(/\*[^*\n]*\*/g,"").replace(/\*/g,"").trim();
         renderActa(text, "🎙️ Cierre del moderador · "+mod.persona);
       }catch(e){ renderActa("⚠ no se pudo cerrar: "+e.message); }
-      M.actaBusy=false; setStatus("debate cerrado"); refreshControls(); postMeetingToTelegram(); setTimeout(()=>openComic("svg"),500);
+      M.actaBusy=false; setStatus("debate cerrado"); refreshControls(); postMeetingToTelegram(); setTimeout(()=>openComic(),500);
     }
 
     // ── Acta + transcripción ──
@@ -339,7 +339,7 @@
       try{ let text=await askConsejero(host, prompt); text=text.replace(/\*[^*\n]*\*/g,"").replace(/\*/g,"").trim(); renderActa(text); }
       catch(e){ renderActa("⚠ no se pudo redactar el acta: "+e.message); }
       M.actaBusy=false; setStatus("acta lista"); refreshControls();
-      postMeetingToTelegram(); setTimeout(()=>openComic("svg"),500);
+      postMeetingToTelegram(); setTimeout(()=>openComic(),500);
     }
     function renderActa(text, title){
       const t=$("table"); if(t.querySelector(".empty")) t.innerHTML=""; M.acta=text;
@@ -394,7 +394,7 @@
       b.textContent="🎙️ Moderador: "+(moderated?"on":"off"); b.classList.toggle("on",moderated);
       renderParts(); renderRoster(); refreshControls(); });
     $("save").addEventListener("click",saveTranscript);
-    $("comic").addEventListener("click",()=>openComic("svg"));
+    $("comic").addEventListener("click",()=>openComic());
     $("reset").addEventListener("click",()=>{ parts=[]; newMeeting();
       renderRoster(); renderParts();
       $("table").innerHTML='<div class="empty">Aún no hay reunión. Sienta 2–5 consejeros, escribe un tema y pulsa ▶ Iniciar.</div>';

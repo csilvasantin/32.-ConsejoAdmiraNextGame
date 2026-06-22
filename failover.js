@@ -24,7 +24,8 @@
   // Respaldos por puerto del primario. El gateway de este Mac expone el mismo
   // árbol de rutas (/api, /fleet, /council) en :10000; optoken sigue en :8443.
   var BACKUPS = {
-    '': ['https://macbook-pro-16.tail48b61c.ts.net:10000'],      // primario :443 → respaldo :10000
+    // primario :443 → 1º respaldo local (este Mac :10000) → 2º Cloudflare degradado
+    '': ['https://macbook-pro-16.tail48b61c.ts.net:10000', 'https://fallback.admira.store'],
     '8443': ['https://macbook-pro-16.tail48b61c.ts.net:8443'],   // optoken :8443 → respaldo :8443
   };
 

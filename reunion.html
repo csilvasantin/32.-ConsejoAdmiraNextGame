@@ -4,6 +4,7 @@
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="/failover.js"></script>
+  <script src="/comic.js" defer></script>
   <title>La Mesa del Consejo · AdmiraNext Council</title>
   <meta name="admiranext-version" content="v.26.06.21.r11">
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
@@ -109,6 +110,7 @@
       <button class="btn stop" id="stop" disabled>⏹ Parar</button>
       <button class="btn" id="acta" disabled>📋 Cerrar con acta</button>
       <button class="btn" id="save" disabled>⬇ Guardar</button>
+      <button class="btn" id="comic" disabled>🎨 Cómic</button>
       <button class="btn" id="reset">↺ Reset</button>
       <span class="pill flat" id="status" style="font-size:.44rem">listo</span>
     </div>
@@ -205,6 +207,19 @@
       $("stop").disabled=!M.running;
       $("acta").disabled=!(parts.length>=2 && M.history.length>=2 && !M.running && !M.actaBusy);
       $("save").disabled=!(M.history.length>=2);
+      $("comic").disabled=!(M.history.length>=2);
+    }
+    // ── Cómic de la reunión (motores: gpt-image / navegador / svg) ──
+    function openComic(engine){
+      if(!window.AdmiraComic || M.history.length<1) return;
+      const panels=M.history.map(h=>{
+        const c=COUNCIL.find(o=>o.slug===h.slug)||{};
+        return {persona:h.persona, role:h.role||c.role||"", text:h.text, mod:!!h.mod,
+                avatarStyle:c.slug?cropStyle(c):"", color:c.slug?colorOf(c):"#5bd6c0"};
+      }).filter(p=>p.text && p.text.trim() && !/^⚠/.test(p.text));
+      if(M.acta) panels.push({persona:"Acta", role:"Secretario", text:M.acta, color:"#ffd54a", avatarStyle:""});
+      AdmiraComic.open({panels, tema:$("tema").value.trim()||"Reunión del Consejo",
+        names:parts.map(p=>p.persona).join(", "), engine:engine||"svg"});
     }
     function setStatus(s){ $("status").textContent=s; }
 
@@ -310,7 +325,7 @@
         text=text.replace(/\*[^*\n]*\*/g,"").replace(/\*/g,"").trim();
         renderActa(text, "🎙️ Cierre del moderador · "+mod.persona);
       }catch(e){ renderActa("⚠ no se pudo cerrar: "+e.message); }
-      M.actaBusy=false; setStatus("debate cerrado"); refreshControls(); postMeetingToTelegram();
+      M.actaBusy=false; setStatus("debate cerrado"); refreshControls(); postMeetingToTelegram(); setTimeout(()=>openComic("svg"),500);
     }
 
     // ── Acta + transcripción ──
@@ -324,7 +339,7 @@
       try{ let text=await askConsejero(host, prompt); text=text.replace(/\*[^*\n]*\*/g,"").replace(/\*/g,"").trim(); renderActa(text); }
       catch(e){ renderActa("⚠ no se pudo redactar el acta: "+e.message); }
       M.actaBusy=false; setStatus("acta lista"); refreshControls();
-      postMeetingToTelegram();
+      postMeetingToTelegram(); setTimeout(()=>openComic("svg"),500);
     }
     function renderActa(text, title){
       const t=$("table"); if(t.querySelector(".empty")) t.innerHTML=""; M.acta=text;
@@ -379,6 +394,7 @@
       b.textContent="🎙️ Moderador: "+(moderated?"on":"off"); b.classList.toggle("on",moderated);
       renderParts(); renderRoster(); refreshControls(); });
     $("save").addEventListener("click",saveTranscript);
+    $("comic").addEventListener("click",()=>openComic("svg"));
     $("reset").addEventListener("click",()=>{ parts=[]; newMeeting();
       renderRoster(); renderParts();
       $("table").innerHTML='<div class="empty">Aún no hay reunión. Sienta 2–5 consejeros, escribe un tema y pulsa ▶ Iniciar.</div>';

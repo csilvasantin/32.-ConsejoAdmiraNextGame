@@ -63,67 +63,124 @@ async function isLoggedIn() {
     if (!page) return false;
     const composer = await page.$(SEL.composerAny);
     if (!composer) return false;
-    // chatgpt.com deslogueado muestra el composer PERO también botones de login/signup.
-    const loggedOut = await page.$('a[href*="/auth/login"], button[data-testid="login-button"], [data-testid="signup-button"], a[href*="auth0"]');
-    return !loggedOut;
+    // marcador POSITIVO de sesión (perfil/menú de cuenta o historial en el nav)
+    const acct = await page.$('[data-testid="profile-button"], button[aria-haspopup="menu"], nav a[href^="/c/"]');
+    if (acct) return true;
+    // si NO hay marcador, mira si hay CTA de login claramente visible
+    const loginCta = await page.$('button[data-testid="login-button"], a[data-testid="login-button"]');
+    return !loginCta;
   } catch (_) { return false; }
+}
+
+// Algunas cuentas (con varias áreas de trabajo) muestran un selector "Iniciar un área
+// de trabajo" antes del chat. Lo saltamos entrando al área PERSONAL (la suscripción).
+async function selectWorkspaceIfNeeded() {
+  // el selector "Iniciar un área de trabajo" puede renderizarse tarde → reintenta
+  for (let i = 0; i < 8; i++) {
+    let state;
+    try {
+      state = await page.evaluate(() => {
+        const composer = document.querySelector('#prompt-textarea');
+        const txt = document.body.innerText || '';
+        const onPicker = /(Iniciar un área de trabajo|área de trabajo personal|tiene acceso a \d+ áreas|access to \d+ workspaces)/i.test(txt);
+        return { hasComposer: !!composer, onPicker };
+      });
+    } catch (_) { state = { hasComposer: false, onPicker: false }; }
+    if (state.hasComposer) return;          // ya estamos en el chat
+    if (!state.onPicker) { await page.waitForTimeout(1000); continue; }  // aún cargando
+    // estamos en el picker → clic en "Abrir" de la fila PERSONAL (la suscripción)
+    await page.evaluate(() => {
+      const btns = [...document.querySelectorAll('button, a, [role="button"]')].filter(b => /\b(abrir|open)\b/i.test(b.innerText || b.textContent || ''));
+      if (!btns.length) return;
+      const personal = btns.find(b => { let n = b, h = 0; while (n && h < 8) { if (/personal/i.test(n.innerText || n.textContent || '')) return true; n = n.parentElement; h++; } return false; });
+      (personal || btns[btns.length - 1]).click();
+    }).catch(() => {});
+    await page.waitForSelector('#prompt-textarea', { timeout: 12000 }).catch(() => {});
+  }
 }
 
 async function newChat() {
   try { await page.goto(CHATGPT_URL, { waitUntil: 'domcontentloaded', timeout: 30000 }); } catch (_) {}
-  await page.waitForTimeout(1200);
+  await page.waitForTimeout(1500);
+  await selectWorkspaceIfNeeded();
+}
+
+// Diagnóstico: captura + estado del DOM (para depurar cuando algo falla).
+async function snap() {
+  try { await page.screenshot({ path: '/tmp/comic-debug.png' }); } catch (_) {}
+  try {
+    return await page.evaluate(() => {
+      const asg = [...document.querySelectorAll('div[data-message-author-role="assistant"]')];
+      const last = asg[asg.length - 1];
+      const imgs = [...document.querySelectorAll('img')].map(i => ({ src: (i.currentSrc || i.src || '').slice(0, 90), w: i.naturalWidth, alt: (i.alt || '').slice(0, 30) }));
+      return { url: location.href, assistants: asg.length, lastText: last ? (last.innerText || '').slice(0, 240) : '', imgs: imgs.slice(-14) };
+    });
+  } catch (_) { return {}; }
 }
 
 async function generateImage(prompt) {
   await ensureBrowser();
-  await newChat();
-
-  if (await page.$(SEL.challenge)) return { ok: false, reason: 'needsHuman' };  // captcha/verificación
-  if (!(await isLoggedIn())) return { ok: false, reason: 'needLogin' };
-
-  // asegura que le pedimos una IMAGEN
-  const ask = /\bimagen|\bimage|c[oó]mic|comic|dibuj|draw|ilustra|viñeta/i.test(prompt) ? prompt : ('Genera una sola imagen. ' + prompt);
-
-  const composer = await page.waitForSelector(SEL.composerAny, { timeout: 20000 });
-  await composer.click();
-  try { await page.keyboard.insertText(ask); } catch (_) { await page.keyboard.type(ask); }
-  await page.waitForTimeout(400);
-
-  const before = await page.$$eval(SEL.assistantImg, els => els.length).catch(() => 0);
-
-  const sendBtn = await page.$(SEL.send);
-  if (sendBtn) { try { await sendBtn.click(); } catch (_) { await page.keyboard.press('Enter'); } }
-  else { await page.keyboard.press('Enter'); }
-
-  // espera una imagen NUEVA, ya renderizada (src http y tamaño real, no placeholder)
-  let src = null;
   try {
-    const handle = await page.waitForFunction(
-      (args) => {
-        const imgs = [...document.querySelectorAll(args.sel)];
-        const fresh = imgs.slice(args.before);
-        const ok = fresh.find(im => im.src && /^https?:/.test(im.src) && im.naturalWidth > 256 && !/spinner|loading/i.test(im.src));
-        return ok ? ok.src : null;
-      },
-      { sel: SEL.assistantImg, before },
-      { timeout: 180000, polling: 1500 }
-    );
-    src = await handle.jsonValue();
-  } catch (_) { src = null; }
+    await newChat();
+    if (await page.$(SEL.challenge)) return { ok: false, reason: 'needsHuman', diag: await snap() };
 
-  if (!src) return { ok: false, reason: 'timeout: ChatGPT no devolvió imagen (¿el prompt no pedía imagen, o tardó demasiado?)' };
+    const ask = /\bimagen|\bimage|c[oó]mic|comic|dibuj|draw|ilustra|viñeta/i.test(prompt) ? prompt : ('Genera una sola imagen. ' + prompt);
 
-  // descarga la imagen DENTRO de la sesión (cookies) → base64
-  const b64 = await page.evaluate(async (u) => {
+    const composer = await page.waitForSelector('#prompt-textarea', { timeout: 25000 }).catch(() => null);
+    if (!composer) return { ok: false, reason: 'no llegué al chat (¿selector de área de trabajo o login?)', diag: await snap() };
+    await composer.click({ timeout: 8000 }).catch(() => {});
+    await composer.focus().catch(() => {});
+    try { await page.keyboard.insertText(ask); } catch (_) { try { await page.keyboard.type(ask); } catch (_) {} }
+    await page.waitForTimeout(600);
+
+    // cuenta las imágenes GENERADAS que ya hubiera, para esperar una NUEVA
+    const genCount = () => page.evaluate(() => {
+      const re = /estuary\/content|oaiusercontent|sdmnt|\/backend-api\/[^"']*content|\/files\//i;
+      return [...document.querySelectorAll('img')].filter(im => im.naturalWidth > 256 && (re.test(im.currentSrc || im.src || '') || /imagen generada|generated image/i.test(im.alt || ''))).length;
+    }).catch(() => 0);
+    const before = await genCount();
+
+    // enviar: Enter es lo más fiable; si el texto sigue en el composer, prueba el botón
+    await page.keyboard.press('Enter').catch(() => {});
+    await page.waitForTimeout(900);
+    const stillText = await page.evaluate(() => {
+      const el = document.querySelector('#prompt-textarea, div.ProseMirror, div[contenteditable="true"]');
+      return el ? (el.innerText || el.value || '').trim().length : 0;
+    }).catch(() => 0);
+    if (stillText > 0) { const b = await page.$(SEL.send); if (b) await b.click({ timeout: 8000 }).catch(() => {}); }
+
+    // espera una imagen NUEVA renderizada (src http y tamaño real, no placeholder)
+    let src = null;
     try {
-      const r = await fetch(u); if (!r.ok) return null;
-      const blob = await r.blob();
-      return await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = () => res(null); fr.readAsDataURL(blob); });
-    } catch (e) { return null; }
-  }, src).catch(() => null);
+      const handle = await page.waitForFunction(
+        (beforeN) => {
+          const re = /estuary\/content|oaiusercontent|sdmnt|\/backend-api\/[^"']*content|\/files\//i;
+          const gen = [...document.querySelectorAll('img')].filter(im => im.naturalWidth > 256 && (re.test(im.currentSrc || im.src || '') || /imagen generada|generated image/i.test(im.alt || '')));
+          if (gen.length > beforeN) { const im = gen[gen.length - 1]; return im.currentSrc || im.src; }
+          return null;
+        },
+        before,
+        { timeout: parseInt(process.env.CHATGPT_BRIDGE_WAIT_MS || '180000', 10), polling: 1500 }
+      );
+      src = await handle.jsonValue();
+    } catch (_) { src = null; }
 
-  if (!b64) return { ok: false, reason: 'no se pudo descargar la imagen generada', src };
-  return { ok: true, b64, src };
+    if (!src) return { ok: false, reason: 'timeout: ChatGPT no devolvió imagen', diag: await snap() };
+
+    // descarga la imagen DENTRO de la sesión (cookies) → base64
+    const b64 = await page.evaluate(async (u) => {
+      try {
+        const r = await fetch(u); if (!r.ok) return null;
+        const blob = await r.blob();
+        return await new Promise(res => { const fr = new FileReader(); fr.onload = () => res(fr.result); fr.onerror = () => res(null); fr.readAsDataURL(blob); });
+      } catch (e) { return null; }
+    }, src).catch(() => null);
+
+    if (!b64) return { ok: false, reason: 'no se pudo descargar la imagen generada', src };
+    return { ok: true, b64, src };
+  } catch (e) {
+    return { ok: false, reason: String((e && e.message) || e).slice(0, 140), diag: await snap() };
+  }
 }
 
 // ── HTTP ──

@@ -396,8 +396,36 @@
     function renderActa(text, title){
       const t=$("table"); if(t.querySelector(".empty")) t.innerHTML=""; M.acta=text;
       const d=document.createElement("div"); d.className="acta";
-      d.innerHTML=`<div class="at">${esc(title||"📋 Acta de la reunión")}</div><div class="ab">${esc(text)}</div>`;
+      const isErr=/^⚠/.test(text||"");
+      d.innerHTML=`<div class="at">${esc(title||"📋 Acta de la reunión")}</div><div class="ab">${esc(text)}</div>`+
+        (isErr?"":`<div style="display:flex;gap:8px;align-items:center;margin-top:8px;flex-wrap:wrap">
+          <button class="btn go" id="mk-task">✅ Crear tarea de la decisión</button>
+          <span class="pill flat" id="mk-task-st" style="font-size:.44rem"></span></div>`);
       t.appendChild(d); d.scrollIntoView({behavior:"smooth",block:"end"});
+      const mk=d.querySelector("#mk-task"); if(mk) mk.addEventListener("click",()=>createTaskFromActa(mk, d.querySelector("#mk-task-st")));
+    }
+    // Cierre accionable: convierte el veredicto/acta en una tarea de Admira (Yarig) — failover + best-effort.
+    async function createTaskFromActa(btn, st){
+      const text=(M.acta||"").trim(); if(!text) return;
+      const tema=$("tema").value.trim();
+      const desc=("Consejo"+(tema?(" · "+tema):"")+": "+text).replace(/\s+/g," ").trim().slice(0,400);
+      btn.disabled=true; btn.textContent="⏳ creando…"; if(st) st.textContent="";
+      const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u=>u!==activeApiUrl)) : COUNCIL_API_URLS.slice();
+      let lastErr=null;
+      for(const base of urls){
+        try{
+          const r=await fetch(base+"/api/council/yar-create-task",{method:"POST",
+            headers:{"Content-Type":"application/json","X-Council-Token":TOKEN},
+            body:JSON.stringify({description:desc, estimateHours:2, project:"Admira"}),
+            signal:(window.AbortSignal&&AbortSignal.timeout)?AbortSignal.timeout(60000):undefined});
+          if(!r.ok){ let dd=""; try{ dd=(await r.json()).detail||""; }catch(_){} lastErr=new Error(dd||("HTTP "+r.status)); if(r.status===501||r.status===401) break; continue; }
+          const d=await r.json().catch(()=>({}));
+          btn.textContent="✅ tarea creada"; if(st) st.textContent=(d&&(d.url||d.id))?("· "+(d.url||("#"+d.id))):"· en Yarig";
+          return;
+        }catch(e){ lastErr=e; }
+      }
+      btn.disabled=false; btn.textContent="✅ Crear tarea de la decisión";
+      if(st) st.textContent="⚠ "+((lastErr&&lastErr.message)||"no se pudo (¿backend sin Yarig?)");
     }
     async function postMeetingToTelegram(){
       if(M.tgSent || M.history.length<2 || parts.length<2) return; M.tgSent=true;

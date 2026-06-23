@@ -17,6 +17,7 @@
   const COMIC_API = 'https://fallback.admira.store/comic';            // gpt-image-1
   const TG_API = 'https://fallback.admira.store/comic-telegram';      // envío al grupo
   const BRIDGE = 'http://127.0.0.1:9189';                             // puente local ChatGPT (suscripción, sin API key)
+  const STOCK_API = 'https://api.admira.store/stock/publish';         // sube el cómic al Stock de Pixeria (emitible en DOOH)
   const MAX_PANELS = 6;
   const LABELS = { good: 'good · SVG', better: 'better · ChatGPT (auto)', best: 'best · gpt-image-1' };
   const defEngine = () => localStorage.getItem('comicEngine') || 'better';
@@ -56,14 +57,42 @@
       <select id="ac-engine" title="calidad" style="margin-left:auto;background:#1a2030;color:#e8eef7;border:1px solid #2a2f45;border-radius:8px;padding:6px 8px;font:inherit;font-size:12px">${opt('good')}${opt('better')}${opt('best')}</select>
       <label style="color:#8a97ab;font-size:11px;display:flex;align-items:center;gap:4px"><input type="checkbox" id="ac-def"> por defecto</label>
       <button id="ac-regen" style="background:#1a2030;color:#e8eef7;border:1px solid #2a2f45;border-radius:8px;padding:6px 10px;cursor:pointer;font:inherit;font-size:12px">↻</button>
+      <button id="ac-stock" disabled style="background:#7a5cff;color:#fff;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font:inherit;font-size:12px;font-weight:700;opacity:.5" title="Sube el cómic al Stock de Pixeria (emitible en DOOH)">📦 Stock</button>
       <button id="ac-send" disabled style="background:#2a8;color:#04231e;border:none;border-radius:8px;padding:6px 12px;cursor:pointer;font:inherit;font-size:12px;font-weight:700;opacity:.5">📤 Enviar al grupo</button>
       <button id="ac-close" style="background:#1a2030;color:#e8eef7;border:1px solid #2a2f45;border-radius:8px;padding:6px 10px;cursor:pointer;font:inherit;font-size:12px">✕</button>
     </div>`;
   }
   function setSendable(card, on) {
-    const b = card.querySelector('#ac-send'); if (!b) return;
-    b.disabled = !on; b.style.opacity = on ? '1' : '.5'; b.style.cursor = on ? 'pointer' : 'default';
+    ['#ac-send', '#ac-stock'].forEach(sel => {
+      const b = card.querySelector(sel); if (!b) return;
+      b.disabled = !on; b.style.opacity = on ? '1' : '.5'; b.style.cursor = on ? 'pointer' : 'default';
+    });
   }
+  // ── Subir el cómic al Stock de Pixeria (queda emitible en la DOOH) ──
+  let STOCK_DONE = false;   // evita re-subir la misma imagen (auto)
+  async function uploadToStock(card, data, auto) {
+    if (!CUR.b64) return;
+    const b = card.querySelector('#ac-stock'); if (!b) return;
+    if (auto && STOCK_DONE) return;
+    const old = b.textContent; b.textContent = '⏳ subiendo…'; b.disabled = true;
+    try {
+      const b64 = CUR.b64.split(',').pop();
+      const mime = (CUR.b64.match(/^data:([^;]+)/) || [, 'image/png'])[1];
+      const r = await fetch(STOCK_API, {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'image', motor: 'consejo-comic', mime, base64: b64, quality: 'best',
+          title: 'Cómic del Consejo — ' + trim(data.tema || 'reunión', 70),
+          tags: ['consejo', 'comic'],
+          prompt: buildPrompt(data.panels, data.tema, data.names).slice(0, 500),
+        }),
+      });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok && d.ok) { STOCK_DONE = true; CUR.stockUrl = d.url; b.textContent = '✅ en el Stock'; }
+      else { b.textContent = '⚠️ ' + (d.error || ('HTTP ' + r.status)); b.disabled = false; }
+    } catch (e) { b.textContent = '⚠️ ' + e.message; b.disabled = false; }
+  }
+  function maybeAutoStock(card, data) { try { uploadToStock(card, data, true); } catch (_) {} }
 
   // ── good: SVG/HTML ──
   function renderSVG(panels, tema, names) {
@@ -155,7 +184,7 @@
   }
 
   async function run(card, data, engine) {
-    CUR = { b64: null, data }; setSendable(card, false);
+    CUR = { b64: null, data }; STOCK_DONE = false; setSendable(card, false);
     const body = card.querySelector('#ac-body');
     const prompt = buildPrompt(data.panels, data.tema, data.names);
 
@@ -163,14 +192,14 @@
       // 1) intenta el puente local (tu suscripción de ChatGPT, sin API key)
       body.innerHTML = '<div style="padding:28px;text-align:center;color:#8a97ab">🎨 generando con tu ChatGPT (puente local)…<div style="font-size:11px;margin-top:6px;color:#5a6479">si no hay puente, pasamos al modo manual</div></div>';
       const br = await tryBridge(prompt);
-      if (br && br.b64) { CUR.b64 = br.b64; body.innerHTML = imgPreview(br.b64); setSendable(card, true); return; }
+      if (br && br.b64) { CUR.b64 = br.b64; body.innerHTML = imgPreview(br.b64); setSendable(card, true); maybeAutoStock(card, data); return; }
       // 2) fallback manual (copia prompt + abre ChatGPT + pega la imagen de vuelta)
       body.innerHTML = bridgeNote(br) + dropZone(prompt);
       const copy = () => { navigator.clipboard.writeText(prompt).catch(() => {}); };
       card.querySelector('#ac-copy').onclick = () => { copy(); card.querySelector('#ac-copy').textContent = '✅ copiado'; };
       card.querySelector('#ac-open').onclick = () => { copy(); window.open('https://chatgpt.com/', '_blank'); };
       const drop = card.querySelector('#ac-drop'), prev = card.querySelector('#ac-prev');
-      const take = file => { if (!file || !/image/.test(file.type)) return; const fr = new FileReader(); fr.onload = () => { CUR.b64 = fr.result; prev.innerHTML = imgPreview(fr.result); setSendable(card, true); }; fr.readAsDataURL(file); };
+      const take = file => { if (!file || !/image/.test(file.type)) return; const fr = new FileReader(); fr.onload = () => { CUR.b64 = fr.result; prev.innerHTML = imgPreview(fr.result); setSendable(card, true); maybeAutoStock(card, data); }; fr.readAsDataURL(file); };
       drop.onclick = () => { const i = document.createElement('input'); i.type = 'file'; i.accept = 'image/*'; i.onchange = () => take(i.files[0]); i.click(); };
       drop.ondragover = e => { e.preventDefault(); drop.style.borderColor = '#5bd6c0'; };
       drop.ondragleave = () => { drop.style.borderColor = '#3a4565'; };
@@ -186,7 +215,7 @@
       try {
         const r = await fetch(COMIC_API, { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }) });
         const d = await r.json().catch(() => ({}));
-        if (r.ok && d.b64) { const url = 'data:image/png;base64,' + d.b64; CUR.b64 = url; body.innerHTML = imgPreview(url); setSendable(card, true); return; }
+        if (r.ok && d.b64) { const url = 'data:image/png;base64,' + d.b64; CUR.b64 = url; body.innerHTML = imgPreview(url); setSendable(card, true); maybeAutoStock(card, data); return; }
         body.innerHTML = `<div style="padding:18px;color:#ffb454">gpt-image no disponible (${esc(d.error || ('HTTP ' + r.status))}).${d.needKey ? ' Falta la API key de OpenAI en el worker. Cambia a «better» o «good».' : ''}</div>`;
       } catch (e) { body.innerHTML = '<div style="padding:18px;color:#ffb454">gpt-image error: ' + esc(e.message) + '</div>'; }
       return;
@@ -209,6 +238,7 @@
     sel.onchange = e => { if (def.checked) setDef(e.target.value); go(e.target.value); };
     def.onchange = () => { if (def.checked) setDef(sel.value); };
     card.querySelector('#ac-regen').onclick = () => go(sel.value);
+    card.querySelector('#ac-stock').onclick = () => uploadToStock(card, data, false);
     card.querySelector('#ac-send').onclick = () => sendGroup(card, data);
     go(engine);
   }

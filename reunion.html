@@ -67,7 +67,11 @@
     .table{border:2px solid var(--wood-line);background:#0b0e1f;box-shadow:4px 4px 0 #000;padding:14px;min-height:120px;display:flex;flex-direction:column;gap:12px}
     .empty{font-size:.5rem;color:var(--muted);text-align:center;padding:26px 10px;line-height:1.9}
     .turn{display:flex;gap:10px;align-items:flex-start}
-    .turn .av{width:38px;height:38px;flex:0 0 38px;border:2px solid #000;outline:2px solid;outline-offset:-3px;background:#05060d;image-rendering:pixelated}
+    .turn .av{width:38px;height:38px;flex:0 0 38px;border:2px solid #000;outline:2px solid;outline-offset:-3px;background:#05060d;image-rendering:pixelated;transition:box-shadow .15s}
+    /* boca/mandíbula moviéndose mientras el consejero habla (TTS) */
+    .turn .av.talking{animation:talk .26s ease-in-out infinite alternate}
+    @keyframes talk{from{transform:scaleY(1);box-shadow:0 0 0 0 rgba(120,243,255,0)}to{transform:scaleY(.9) translateY(1px);box-shadow:0 0 10px 2px rgba(120,243,255,.45)}}
+    #voice.on{background:#1f5e44;color:#cffbe9;border-color:#2a8}
     .bub{flex:1;border:1px solid #2a3057;border-left-width:4px;padding:9px 11px;font-size:.5rem;line-height:1.8;background:#0c0f22}
     .bub .nm{display:block;font-size:.4rem;margin-bottom:5px}
     .bub .nm small{color:var(--muted)}
@@ -105,6 +109,7 @@
         <select id="turns"><option>4</option><option>6</option><option selected>8</option><option>10</option><option>12</option></select>
       </label>
       <button class="btn" id="mod">🎙️ Moderador: off</button>
+      <button class="btn" id="voice">🔊 Voz: on</button>
       <button class="btn go" id="start" disabled>▶ Iniciar reunión</button>
       <button class="btn" id="next" disabled>⏭ Siguiente turno</button>
       <button class="btn stop" id="stop" disabled>⏹ Parar</button>
@@ -161,7 +166,15 @@
     const esc=s=>String(s==null?"":s).replace(/[<>&]/g,x=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[x]));
 
     // ── Estado ──
-    const API="https://macmini.tail48b61c.ts.net/council", TOKEN="admira2026";
+    const TOKEN="admira2026";
+    // Failover de backend (como en index.html): si la página es HTTPS no se puede llamar a http://
+    // (mixed-content) → solo HTTPS. Se prueba el primario y, si falla, los respaldos; se recuerda el que va.
+    const _secure = location.protocol === 'https:';
+    const COUNCIL_API_URLS = _secure
+      ? ['https://macmini.tail48b61c.ts.net/council','https://three2-consejoadmiranextgame.onrender.com']
+      : ['http://localhost:8420','http://macmini.tail48b61c.ts.net:8420','https://macmini.tail48b61c.ts.net/council','https://three2-consejoadmiranextgame.onrender.com'];
+    let activeApiUrl = null;
+    const API = COUNCIL_API_URLS[0];   // compat para llamadas sueltas (telegram); ask-one usa el failover
     let parts=[], moderated=false, M={history:[],turn:0,running:false,max:8,acta:null,actaBusy:false,tgSent:false};
     const $=id=>document.getElementById(id);
     const colorOf=c=>{ const i=parts.findIndex(p=>p.slug===c.slug); return PALETTE[(i<0?0:i)%PALETTE.length]; };
@@ -223,6 +236,32 @@
     }
     function setStatus(s){ $("status").textContent=s; }
 
+    // ── Voz (TTS del navegador, sin API key) + boca animada, voz estable por consejero ──
+    let VOICE_ON = (localStorage.getItem('reunionVoice')!=='0');
+    let _voices = [];
+    function _loadVoices(){ try{ _voices = window.speechSynthesis ? (speechSynthesis.getVoices()||[]) : []; }catch(_){ _voices=[]; } }
+    if(window.speechSynthesis){ _loadVoices(); try{ speechSynthesis.onvoiceschanged=_loadVoices; }catch(_){} }
+    function _hash(s){ let h=0; for(const ch of String(s||"")) h=(h*31+ch.charCodeAt(0))>>>0; return h; }
+    function pickVoice(c){
+      if(!_voices.length) _loadVoices();
+      const es=_voices.filter(v=>/^es/i.test(v.lang||"")); const pool=es.length?es:_voices;
+      return pool.length ? pool[_hash(c.slug||c.persona)%pool.length] : null;   // misma voz siempre para cada uno
+    }
+    function stopSpeech(){ try{ if(window.speechSynthesis) speechSynthesis.cancel(); }catch(_){}
+      document.querySelectorAll(".av.talking").forEach(a=>a.classList.remove("talking")); }
+    function speakTurn(c, text, avEl){
+      if(!VOICE_ON || !window.speechSynthesis || !text) return;
+      try{
+        const u=new SpeechSynthesisUtterance(String(text).slice(0,600));
+        const v=pickVoice(c); if(v){ u.voice=v; u.lang=v.lang; } else u.lang="es-ES";
+        const base=(c.side==="racional")?0.9:1.08, jit=((_hash(c.slug)%7)-3)*0.04;
+        u.pitch=Math.max(0.5,Math.min(1.6, base+jit));
+        u.rate =(c.side==="racional")?0.97:1.06;
+        if(avEl){ avEl.classList.add("talking"); const off=()=>avEl.classList.remove("talking"); u.onend=off; u.onerror=off; }
+        speechSynthesis.cancel(); speechSynthesis.speak(u);
+      }catch(_){}
+    }
+
     function addTurn(c,text,thinking,mod){
       const t=$("table"); if(t.querySelector(".empty")) t.innerHTML="";
       const col= mod ? "#ffdd66" : colorOf(c);
@@ -234,16 +273,25 @@
     }
 
     async function askConsejero(c, message){
-      for(let i=0;i<3;i++){
-        const r=await fetch(API+"/api/council/ask-one",{method:"POST",
-          headers:{"Content-Type":"application/json","X-Council-Token":TOKEN},
-          body:JSON.stringify({message,agent_name:c.role,generation:c.gen,llm:"claude-sonnet",report:false})});
-        if(r.status===429){ setStatus("límite de ritmo, reintentando…"); await new Promise(res=>setTimeout(res,6000)); continue; }
-        if(!r.ok) throw new Error("HTTP "+r.status);
-        const d=await r.json();
-        return (d.content||d.text||"").replace(/\*\*/g,"").replace(/^#+\s*/gm,"").replace(/\n{2,}/g,"\n").trim();
+      // prueba el backend que ya funcionó primero, luego el resto (respaldo)
+      const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u=>u!==activeApiUrl)) : COUNCIL_API_URLS.slice();
+      let lastErr=null;
+      for(const base of urls){
+        for(let i=0;i<3;i++){   // reintentos por 429 en el MISMO backend
+          try{
+            const r=await fetch(base+"/api/council/ask-one",{method:"POST",
+              headers:{"Content-Type":"application/json","X-Council-Token":TOKEN},
+              body:JSON.stringify({message,agent_name:c.role,generation:c.gen,llm:"claude-sonnet",report:false}),
+              signal:(window.AbortSignal&&AbortSignal.timeout)?AbortSignal.timeout(55000):undefined});
+            if(r.status===429){ setStatus("límite de ritmo, reintentando…"); await new Promise(res=>setTimeout(res,6000)); continue; }
+            if(!r.ok){ lastErr=new Error("HTTP "+r.status); break; }   // este backend falla → siguiente
+            const d=await r.json();
+            if(activeApiUrl!==base){ activeApiUrl=base; if(base!==COUNCIL_API_URLS[0]) setStatus("backend de respaldo en uso"); }
+            return (d.content||d.text||"").replace(/\*\*/g,"").replace(/^#+\s*/gm,"").replace(/\n{2,}/g,"\n").trim();
+          }catch(e){ lastErr=e; break; }   // red/timeout → siguiente backend
+        }
       }
-      throw new Error("límite de ritmo (429) tras reintentos");
+      throw lastErr || new Error("sin backend del Consejo disponible");
     }
     function turnPrompt(speaker,pool,tema){
       const others=pool.filter(p=>p.slug!==speaker.slug).map(p=>`${p.persona} (${p.role})`).join(", ");
@@ -261,6 +309,7 @@
       try{
         const text = await askConsejero(speaker, turnPrompt(speaker,pool,$("tema").value.trim()));
         const tx=bubble.querySelector(".txt"); tx.classList.remove("think"); tx.textContent=text||"(sin respuesta)";
+        speakTurn(speaker, text, bubble.querySelector(".av"));
         M.history.push({slug:speaker.slug,persona:speaker.persona,role:speaker.role,text}); M.turn++;
         return true;
       }catch(e){
@@ -282,12 +331,14 @@
         if(mt){ const nm=mt[1].trim().toLowerCase(); next=debaters.find(d=>d.persona.toLowerCase().includes(nm)||nm.includes(d.persona.toLowerCase().split(" ")[0])); cue=cue.replace(/^\s*\[[^\]]+\]\s*/,""); }
       }catch(e){ cue="⚠ "+e.message; }
       const tx=b.querySelector(".txt"); tx.classList.remove("think"); tx.textContent=cue||"(da la palabra)";
+      speakTurn(mod, cue, b.querySelector(".av"));
       M.history.push({slug:mod.slug,persona:mod.persona,role:mod.role,text:cue,mod:true});
       if(!next) next=debaters[M.turn % debaters.length];
       const sb=addTurn(next,"",true); setStatus(`${next.persona} pensando…`);
       try{
         const resp=await askConsejero(next, turnPrompt(next, debaters, tema));
         const stx=sb.querySelector(".txt"); stx.classList.remove("think"); stx.textContent=resp||"(sin respuesta)";
+        speakTurn(next, resp, sb.querySelector(".av"));
         M.history.push({slug:next.slug,persona:next.persona,role:next.role,text:resp}); M.turn++;
         return true;
       }catch(e){ const stx=sb.querySelector(".txt"); stx.classList.remove("think"); stx.textContent="⚠ "+e.message; return false; }
@@ -312,6 +363,7 @@
       try{
         const text=await askConsejero(mod, `Eres el MODERADOR de esta sesión del Consejo de Admira. A debate: ${deb}. Abre la sesión sobre "${$("tema").value.trim()}" en 1-2 frases (enmarca el tema con criterio) y cede la palabra a ${parts[1].persona} para empezar. No debatas tú, solo modera. Sin acotaciones.`);
         const tx=b.querySelector(".txt"); tx.classList.remove("think"); tx.textContent=text||"(apertura)";
+        speakTurn(mod, text, b.querySelector(".av"));
         M.history.push({slug:mod.slug,persona:mod.persona,role:mod.role,text,mod:true});
         return true;
       }catch(e){ const tx=b.querySelector(".txt"); tx.classList.remove("think"); tx.textContent="⚠ "+e.message; return false; }
@@ -351,7 +403,7 @@
       if(M.tgSent || M.history.length<2 || parts.length<2) return; M.tgSent=true;
       try{
         const names=parts.map(p=>p.persona).join(" · ");
-        await fetch(API+"/api/council/meeting-telegram",{method:"POST",
+        await fetch((activeApiUrl||API)+"/api/council/meeting-telegram",{method:"POST",
           headers:{"Content-Type":"application/json","X-Council-Token":TOKEN},
           body:JSON.stringify({title:`🤝 Mesa del Consejo${moderated?" 🎙️":""} · ${names}`,
             tema:$("tema").value.trim(),
@@ -388,14 +440,17 @@
       else if(moderated){ await moderatorTurn(parts.filter(p=>p.slug!==M.moderator.slug)); }
       else await oneTurn(parts);
       M.running=false; setStatus("turno listo"); refreshControls(); });
-    $("stop").addEventListener("click",()=>{ M.running=false; setStatus("deteniendo…"); });
+    $("stop").addEventListener("click",()=>{ M.running=false; stopSpeech(); setStatus("deteniendo…"); });
+    // Voz on/off (TTS del navegador)
+    (function(){ const b=$("voice"); function paint(){ b.textContent="🔊 Voz: "+(VOICE_ON?"on":"off"); b.classList.toggle("on",VOICE_ON); }
+      paint(); b.addEventListener("click",()=>{ VOICE_ON=!VOICE_ON; localStorage.setItem("reunionVoice",VOICE_ON?"1":"0"); if(!VOICE_ON) stopSpeech(); paint(); }); })();
     $("acta").addEventListener("click",()=>{ moderated ? moderatorClose() : generateActa(); });
     $("mod").addEventListener("click",()=>{ moderated=!moderated; const b=$("mod");
       b.textContent="🎙️ Moderador: "+(moderated?"on":"off"); b.classList.toggle("on",moderated);
       renderParts(); renderRoster(); refreshControls(); });
     $("save").addEventListener("click",saveTranscript);
     $("comic").addEventListener("click",()=>openComic());
-    $("reset").addEventListener("click",()=>{ parts=[]; newMeeting();
+    $("reset").addEventListener("click",()=>{ parts=[]; stopSpeech(); newMeeting();
       renderRoster(); renderParts();
       $("table").innerHTML='<div class="empty">Aún no hay reunión. Sienta 2–5 consejeros, escribe un tema y pulsa ▶ Iniciar.</div>';
       $("tema").value=""; refreshControls(); setStatus("listo"); });

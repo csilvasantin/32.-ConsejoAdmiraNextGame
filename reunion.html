@@ -401,7 +401,17 @@
       $("tema").value=""; refreshControls(); setStatus("listo"); });
 
     renderRoster(); renderParts();
-    (function(){ const sl=new URLSearchParams(location.search).get("seat"); if(sl){ const c=COUNCIL.find(o=>o.slug===slugify(sl)); if(c){ pick(c); $("tema").focus(); } } })();
+    // Convocatoria desde la Mesa SCUMM (index.html): ?seats=persona1,persona2[,…] pre-sienta
+    // varios (legacy ?seat= = uno); ?tema= prerellena el tema; ?go=1 arranca si hay ≥2 y tema.
+    (function(){
+      const q=new URLSearchParams(location.search);
+      const list=(q.get("seats")||q.get("seat")||"").split(",").map(s=>s.trim()).filter(Boolean);
+      let seated=0;
+      for(const s of list){ const c=COUNCIL.find(o=>o.slug===slugify(s)); if(c && parts.length<MAXP){ pick(c); seated++; } }
+      const tm=q.get("tema"); if(tm){ $("tema").value=tm; refreshControls(); }
+      if(seated) $("tema").focus();
+      if(q.get("go")==="1" && seated>=2 && $("tema").value.trim()){ setTimeout(()=>{ if(!$("start").disabled) $("start").click(); }, 500); }
+    })();
   </script>
 </body>
 </html>

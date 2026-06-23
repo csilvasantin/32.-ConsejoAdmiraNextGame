@@ -2646,7 +2646,7 @@
 <body>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.23.r2</a>
+            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.23.r3</a>
             <a href="https://www.admira.live/equipos" target="_blank" rel="noopener" class="version-badge" title="Equipos · asignación de agentes">🏠 AdmiraNeXT</a>
             <a href="https://www.admira.live/control" target="_blank" rel="noopener" class="version-badge" title="FleetControl · control de la flota">🎛️ AgoraMatrix</a>
             <button class="version-badge" onclick="window.agmSetVisible&&window.agmSetVisible(null)" title="Abrir el puesto de mando AgoraMatrix">📡 Agentes</button>
@@ -5009,9 +5009,13 @@
         const invPanel = document.querySelector('.inv-panel[data-panel="llm"]');
         if (invPanel) {
             invPanel.innerHTML = `
-                <div class="inventory-title">Selecciona Consejero</div>
+                <div class="inventory-title">Convocar la Mesa o reunión privada</div>
                 <div class="inventory-list" id="reunion-advisor-list">
-                    ${COUNCIL.filter(m => m.gen === currentGen).map(m => 
+                    <div class="inv-item" style="background:#241a4a;border-color:#5a3c8a;font-weight:700" onclick="convocarMesa()">
+                        🏛️ Convocar la Mesa — debate del Consejo (varios)
+                    </div>
+                    <div style="font-size:11px;color:#8a97ab;margin:6px 2px 2px">— o reunión privada 1-a-1 —</div>
+                    ${COUNCIL.filter(m => m.gen === currentGen).map(m =>
                         `<div class="inv-item" data-persona="${m.persona}" onclick="selectAdvisorForMeeting('${m.persona}')">
                             ${m.icon} ${m.persona} (${m.name}) — ${m.side === 'racional' ? '🧠 Racional' : '🎨 Creativo'}
                         </div>`
@@ -5022,7 +5026,15 @@
         // Switch to LLM panel to show advisor list
         document.querySelectorAll('.inv-panel').forEach(p => p.classList.remove('active'));
         document.querySelector('.inv-panel[data-panel="llm"]').classList.add('active');
-        setActionLine("👆 Selecciona un consejero para la reunión privada...");
+        setActionLine("👆 Convoca la Mesa (debate) o elige un consejero para reunión privada...");
+    }
+
+    // Convoca la MESA: abre el debate de varios consejeros (reunion.html) presentando
+    // a la generación actual del Consejo. La reunión en vivo se vive dentro del consejo.
+    function convocarMesa() {
+        const seats = COUNCIL.filter(m => m.gen === currentGen).slice(0, 5).map(m => m.persona).join(',');
+        setActionLine("🏛️ Convocando la Mesa del Consejo...");
+        window.location.href = 'reunion.html?seats=' + encodeURIComponent(seats) + '&from=mesa';
     }
 
     function selectAdvisorForMeeting(persona) {

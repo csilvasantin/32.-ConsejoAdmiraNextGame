@@ -1,0 +1,14 @@
+{
+  "name": "admira-chatgpt-bridge",
+  "private": true,
+  "type": "commonjs",
+  "version": "1.0.0",
+  "description": "Puente local: genera imágenes con tu suscripción de ChatGPT (sin API key) dirigiendo tu Chrome logueado vía Playwright. Lo consume comic.js del Consejo (motor 'navegador'/'better'). El package.json raíz es ESM; éste lo aísla como CommonJS.",
+  "scripts": {
+    "start": "node bridge.js",
+    "login": "node bridge.js --login"
+  },
+  "dependencies": {
+    "playwright-core": "^1.59.1"
+  }
+}

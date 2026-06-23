@@ -3,7 +3,8 @@
  * ----------------------------------------------------------------------------
  * Al cerrar la Mesa, convierte la conversación en una tira de cómic. 3 calidades:
  *   • good   = SVG en la web (viñetas con avatares — SIEMPRE funciona)
- *   • better = tu ChatGPT por navegador (pega el prompt, pega la imagen de vuelta) ← DEFECTO
+ *   • better = tu ChatGPT (suscripción, sin API key): AUTO vía puente local (chatgpt-bridge);
+ *              si no hay puente, cae al manual (copia prompt, abre ChatGPT, pega imagen) ← DEFECTO
  *   • best   = gpt-image-1 (OpenAI, automático vía worker — cuando haya API key)
  * Default elegible y persistido (localStorage 'comicEngine', init 'better').
  * Al terminar, se puede ENVIAR AL GRUPO de Telegram (AdmiraXP) vía el worker.
@@ -15,8 +16,9 @@
   'use strict';
   const COMIC_API = 'https://fallback.admira.store/comic';            // gpt-image-1
   const TG_API = 'https://fallback.admira.store/comic-telegram';      // envío al grupo
+  const BRIDGE = 'http://127.0.0.1:9189';                             // puente local ChatGPT (suscripción, sin API key)
   const MAX_PANELS = 6;
-  const LABELS = { good: 'good · SVG', better: 'better · ChatGPT', best: 'best · gpt-image-1' };
+  const LABELS = { good: 'good · SVG', better: 'better · ChatGPT (auto)', best: 'best · gpt-image-1' };
   const defEngine = () => localStorage.getItem('comicEngine') || 'better';
   const setDef = e => { try { localStorage.setItem('comicEngine', e); } catch (x) {} };
 
@@ -128,13 +130,42 @@
     } catch (e) { b.textContent = '⚠️ ' + e.message; b.disabled = false; }
   }
 
+  // ── Puente local de ChatGPT: genera la imagen con la suscripción (sin API key) ──
+  // Devuelve {b64} si lo logró, {reason} si el puente está pero no pudo, o null si el
+  // puente está apagado (→ se cae al flujo manual de toda la vida).
+  async function tryBridge(prompt) {
+    const T = ms => (window.AbortSignal && AbortSignal.timeout) ? AbortSignal.timeout(ms) : undefined;
+    try {
+      const h = await fetch(BRIDGE + '/health', { signal: T(1500) }).then(r => r.json()).catch(() => null);
+      if (!h || !h.ok) return null;                  // puente no detectado → fallback manual
+      if (!h.loggedIn) return { reason: 'needLogin' };
+      const r = await fetch(BRIDGE + '/comic', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ prompt }), signal: T(190000) });
+      const d = await r.json().catch(() => ({}));
+      if (r.ok && d.ok && d.b64) return { b64: d.b64.indexOf('data:') === 0 ? d.b64 : ('data:image/png;base64,' + d.b64) };
+      return { reason: d.reason || ('HTTP ' + r.status) };
+    } catch (e) { return null; }
+  }
+  function bridgeNote(br) {
+    let msg;
+    if (!br) msg = '🔌 Puente local no detectado — arranca <code>chatgpt-bridge</code> (<code>npm start</code>) para que salga sola. Por ahora, manual:';
+    else if (br.reason === 'needLogin') msg = '🔑 El puente está activo pero falta loguear ChatGPT: <code>npm run login</code>. Mientras, manual:';
+    else if (br.reason === 'needsHuman') msg = '🧩 ChatGPT pidió verificación/captcha en la ventana del puente — resuélvelo y dale a ↻, o sigue manual:';
+    else msg = '⚠️ El puente no pudo generar (' + esc(br.reason || 'error') + '). Modo manual:';
+    return '<div style="padding:12px 16px 0;color:#cdd6e6;font-size:12px;line-height:1.5">' + msg + '</div>';
+  }
+
   async function run(card, data, engine) {
     CUR = { b64: null, data }; setSendable(card, false);
     const body = card.querySelector('#ac-body');
     const prompt = buildPrompt(data.panels, data.tema, data.names);
 
     if (engine === 'better') {
-      body.innerHTML = dropZone(prompt);
+      // 1) intenta el puente local (tu suscripción de ChatGPT, sin API key)
+      body.innerHTML = '<div style="padding:28px;text-align:center;color:#8a97ab">🎨 generando con tu ChatGPT (puente local)…<div style="font-size:11px;margin-top:6px;color:#5a6479">si no hay puente, pasamos al modo manual</div></div>';
+      const br = await tryBridge(prompt);
+      if (br && br.b64) { CUR.b64 = br.b64; body.innerHTML = imgPreview(br.b64); setSendable(card, true); return; }
+      // 2) fallback manual (copia prompt + abre ChatGPT + pega la imagen de vuelta)
+      body.innerHTML = bridgeNote(br) + dropZone(prompt);
       const copy = () => { navigator.clipboard.writeText(prompt).catch(() => {}); };
       card.querySelector('#ac-copy').onclick = () => { copy(); card.querySelector('#ac-copy').textContent = '✅ copiado'; };
       card.querySelector('#ac-open').onclick = () => { copy(); window.open('https://chatgpt.com/', '_blank'); };

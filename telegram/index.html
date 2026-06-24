@@ -105,7 +105,9 @@
 <script>
   // === Configuración ===
   // URL del Worker (rellénala tras desplegar): https://admira-telegram.<subdominio>.workers.dev
-  const WORKER_BASE = localStorage.getItem("tg_worker_base") || "";
+  let WORKER_BASE = localStorage.getItem("tg_worker_base") || "";
+  // Auto-conexión inmune a deploys: en admira.live, si falta la URL, fijarla Y persistirla en el navegador.
+  if(!WORKER_BASE && location.hostname.endsWith("admira.live")){ WORKER_BASE="https://admira-telegram.csilvasantin.workers.dev"; try{localStorage.setItem("tg_worker_base",WORKER_BASE);}catch(e){} }
   const POLL_MS = 4000;
 
   const feed = document.getElementById("feed");

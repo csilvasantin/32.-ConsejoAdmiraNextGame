@@ -4416,6 +4416,7 @@
             '<ol class="analizar-list">' +
             '<li><strong>/help</strong> — muestra u oculta esta ayuda</li>' +
             '<li><strong>/leyendas</strong> · <strong>/coetaneos</strong> — cambia la generación del Consejo</li>' +
+            '<li><strong>/agentes</strong> — muestra u oculta el panel de Agentes (AgoraMatrix)</li>' +
             '<li><strong>/importar &lt;url&gt;</strong> — descarga vídeo y lo sube a Drive</li>' +
             '<li><strong>/nombres on|off|toggle</strong> — enseña u oculta los consejeros</li>' +
             '<li><strong>/google</strong> — abre la hoja Drive de enlaces Entrenar</li>' +
@@ -4746,7 +4747,7 @@
         '/help', '/sites', '/admira.live', '/admira.studio', '/admiranext.com',
         '/admira.app', '/clearchannel.tv', '/pixeria.com', '/equipos', '/control',
         '/scumm', '/top', '/bocas', '/menu', '/agoramatrix', '/tareas', '/google',
-        '/importar', '/nombres', '/tarea', '/diario', '/leyendas', '/coetaneos'
+        '/importar', '/nombres', '/tarea', '/diario', '/leyendas', '/coetaneos', '/agentes'
     ];
     (function setupCliAutocomplete() {
         const inp = document.getElementById('action-input');
@@ -4869,6 +4870,14 @@
             try { localStorage.setItem('councilMenuHidden', nv ? '1' : '0'); } catch (e) {}
             addUserEntry(text);
             setActionLine('🗂 Menús ' + (nv ? 'ocultos (más espacio) — /menu on para verlos' : 'visibles') + ' · /menu on · off · toggle');
+            return true;
+        }
+        const agentesMatch = text.match(/^\/agentes\s*(on|off|toggle)?$/i);
+        if (agentesMatch && window.agmSetVisible) {
+            const action = (agentesMatch[1] || "toggle").toLowerCase();
+            const vis = window.agmSetVisible(action === "on" ? true : action === "off" ? false : null);
+            addUserEntry(text);
+            setActionLine("\ud83d\udce1 Agentes (AgoraMatrix) " + (vis ? "visibles" : "ocultos") + " \u2014 /agentes on \u00b7 off \u00b7 toggle");
             return true;
         }
         const agmPanelMatch = text.match(/^\/agoramatrix\s*(on|off|toggle)$/i);
@@ -8424,8 +8433,8 @@
   function agmApplyVis(v){ panel.style.display = v ? 'flex' : 'none'; }
   window.agmSetVisible=function(v){ var cur=panel.style.display!=='none'; var nv=(v===null||v===undefined)?!cur:!!v; agmApplyVis(nv); try{localStorage.setItem(VIS_KEY,nv?'1':'0');}catch(e){} if(nv) tick(); return nv; };
   window.agmIsVisible=function(){ return panel.style.display!=='none'; };
-  // Por defecto OCULTA: solo aparece si se invocó con /agoramatrix on (VIS_KEY==='1').
-  try{ agmApplyVis(localStorage.getItem(VIS_KEY)==='1'); }catch(e){ agmApplyVis(false); }
+  // Por defecto VISIBLE; se oculta con /agentes off (o /agoramatrix off) -> VIS_KEY==='0'.
+  try{ agmApplyVis(localStorage.getItem(VIS_KEY)!=='0'); }catch(e){ agmApplyVis(true); }
   // Chat bidireccional: escribir al canal AgoraMatrix (como "Consejo"); las respuestas
   // entran por el feed que ya se pollea. Sin clave (endpoint origin-gated /api/agora/say).
   var input=document.getElementById('agm-input'), sendBtn=document.getElementById('agm-send');

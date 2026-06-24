@@ -4415,6 +4415,7 @@
             '<div class="window-overlay-title">CLI · GENERAL</div>' +
             '<ol class="analizar-list">' +
             '<li><strong>/help</strong> — muestra u oculta esta ayuda</li>' +
+            '<li><strong>/comandos</strong> — abre la p\u00e1gina con todos los comandos</li>' +
             '<li><strong>/leyendas</strong> · <strong>/coetaneos</strong> — cambia la generación del Consejo</li>' +
             '<li><strong>/agentes</strong> — muestra u oculta el panel de Agentes (AgoraMatrix)</li>' +
             '<li><strong>/importar &lt;url&gt;</strong> — descarga vídeo y lo sube a Drive</li>' +
@@ -4747,7 +4748,7 @@
         '/help', '/sites', '/admira.live', '/admira.studio', '/admiranext.com',
         '/admira.app', '/clearchannel.tv', '/pixeria.com', '/equipos', '/control',
         '/scumm', '/top', '/bocas', '/menu', '/agoramatrix', '/tareas', '/google',
-        '/importar', '/nombres', '/tarea', '/diario', '/leyendas', '/coetaneos', '/agentes'
+        '/importar', '/nombres', '/tarea', '/diario', '/leyendas', '/coetaneos', '/agentes', '/comandos'
     ];
     (function setupCliAutocomplete() {
         const inp = document.getElementById('action-input');
@@ -4785,6 +4786,13 @@
                 return true;
             }
             showCliHelp();
+            return true;
+        }
+        const comandosMatch = text.match(/^\/comandos$/i);
+        if (comandosMatch) {
+            addUserEntry(text);
+            window.open("https://www.admira.live/comandos", "_blank");
+            setActionLine("\u2328\ufe0f Abriendo la p\u00e1gina de comandos\u2026");
             return true;
         }
         // ── Generación del Consejo: /leyendas y /coetaneos ──

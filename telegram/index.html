@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <script src="/auth-gate.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Telegram · Consejo AdmiraNext</title>
+<script src="/auth-gate.js"></script>
 <style>
   :root{
     --bg:#0a0a14; --panel:#0d0b1a; --border:#1a1428;
@@ -39,25 +39,18 @@
   .msg .body{font-size:14px; white-space:pre-wrap; word-break:break-word; line-height:1.4}
   .msg .time{font-size:10px; color:var(--dim); margin-top:4px; text-align:right}
   @keyframes in{from{opacity:0; transform:translateY(6px)}to{opacity:1}}
-  .typing{max-width:80%; padding:8px 12px; border-radius:10px; background:var(--in);
-    border:1px dashed #3a3358; align-self:flex-start; animation:in .2s ease}
-  .typing .who{font-size:11px; color:var(--gold); margin-bottom:3px}
-  .typing .body{font-size:13px; color:var(--cyan); display:flex; align-items:center; gap:7px}
-  .typing .dots{display:inline-flex; gap:3px}
-  .typing .dots i{width:5px; height:5px; border-radius:50%; background:var(--cyan); opacity:.3; animation:blink 1.2s infinite}
-  .typing .dots i:nth-child(2){animation-delay:.2s}
-  .typing .dots i:nth-child(3){animation-delay:.4s}
-  @keyframes blink{0%,60%,100%{opacity:.3}30%{opacity:1}}
   .empty{color:var(--dim); text-align:center; margin:auto; font-size:13px}
   footer{
     border-top:1px solid var(--border); padding:12px; background:var(--panel);
     display:flex; flex-direction:column; gap:8px;
   }
   .row{display:flex; gap:8px}
-  input,textarea,button{
+  input,textarea,select,button{
     font-family:inherit; font-size:14px; background:#000; color:var(--text);
     border:1px solid var(--border); border-radius:8px; padding:10px;
   }
+  #consejero{flex:1}
+  .selrow label{font-size:11px; color:var(--gold); white-space:nowrap}
   #text{flex:1; resize:none; min-height:42px; max-height:120px}
   #send{background:var(--gold); color:#000; font-weight:bold; cursor:pointer; border:none; padding:0 18px}
   #send:disabled{opacity:.4; cursor:not-allowed}
@@ -87,18 +80,30 @@
       <input id="key" type="password" placeholder="necesaria para enviar" autocomplete="off">
       <button id="saveKey" style="padding:0 12px;cursor:pointer">Guardar</button>
     </div>
+    <div class="row selrow" style="align-items:center">
+      <label>🎯 Consejero</label>
+      <select id="consejero">
+        <option value="White Rabbit" selected>White Rabbit (por defecto)</option>
+        <option value="Morfeo">Morfeo</option>
+        <option value="Neo">Neo</option>
+        <option value="Trinity">Trinity</option>
+        <option value="Oráculo">Oráculo</option>
+        <option value="Cypher">Cypher</option>
+        <option value="Smith">Smith</option>
+      </select>
+    </div>
     <div class="row">
       <textarea id="text" placeholder="Escribe al consejo…" disabled></textarea>
       <button id="send" disabled>Enviar</button>
     </div>
-    <div class="hint">Los mensajes enviados desde aquí aparecen en el grupo prefijados con 🌐.</div>
+    <div class="hint">Se añade el consejero al final del mensaje. Los enviados desde aquí aparecen prefijados con 🌐.</div>
   </footer>
 </div>
 
 <script>
   // === Configuración ===
   // URL del Worker (rellénala tras desplegar): https://admira-telegram.<subdominio>.workers.dev
-  const WORKER_BASE = localStorage.getItem("tg_worker_base") || "https://admira-telegram.csilvasantin.workers.dev";
+  const WORKER_BASE = localStorage.getItem("tg_worker_base") || "";
   const POLL_MS = 4000;
 
   const feed = document.getElementById("feed");
@@ -125,7 +130,6 @@
     return d.toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"});
   }
   function render(msgs){
-    const ty=document.getElementById("typing"); if(ty) ty.remove();
     if(lastId===0 && msgs.length) feed.innerHTML = "";
     for(const m of msgs){
       const el = document.createElement("div");
@@ -157,35 +161,17 @@
     }catch(e){ setStatus(false,"sin conexión"); }
   }
 
-  function renderTyping(state){
-    let el = document.getElementById("typing");
-    if(!state){ if(el) el.remove(); return; }
-    if(!el){ el = document.createElement("div"); el.id="typing"; el.className="typing"; }
-    el.innerHTML =
-      `<div class="who">White Rabbit 🐇</div>`+
-      `<div class="body">${escapeHtml(state)} <span class="dots"><i></i><i></i><i></i></span></div>`;
-    feed.appendChild(el);            // siempre al final
-    feed.scrollTop = feed.scrollHeight;
-  }
-  async function checkStatus(){
-    if(!WORKER_BASE) return;
-    try{
-      const r = await fetch(`${WORKER_BASE}/api/status`);
-      const d = await r.json();
-      const fresh = d.ok && d.state && (Date.now()/1000 - (d.updated||0) < 30);
-      renderTyping(fresh ? d.state : "");
-    }catch(e){}
-  }
-
   async function send(){
     const text = textInput.value.trim();
     if(!text || !panelKey) return;
+    const consejero = (document.getElementById("consejero").value || "White Rabbit");
+    const outText = `${text} → ${consejero}`;
     enableSend(false);
     try{
       const r = await fetch(`${WORKER_BASE}/api/send`,{
         method:"POST",
         headers:{"content-type":"application/json","Authorization":`Bearer ${panelKey}`},
-        body: JSON.stringify({ text, author: localStorage.getItem("tg_author")||"Web" })
+        body: JSON.stringify({ text: outText, author: localStorage.getItem("tg_author")||"Web" })
       });
       const data = await r.json();
       if(data.ok){ textInput.value=""; poll(); }
@@ -208,8 +194,6 @@
   enableSend(!!panelKey);
   poll();
   setInterval(poll, POLL_MS);
-  checkStatus();
-  setInterval(checkStatus, 2000);
 </script>
 </body>
 </html>

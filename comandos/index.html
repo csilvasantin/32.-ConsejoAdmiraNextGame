@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<script src="/auth-gate.js"></script>
+<script src="/admira-bar.js"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Comandos · Consejo AdmiraNext</title>
+<style>
+  :root{--bg:#0a0a14;--panel:#0d0b1a;--line:#1f2233;--gold:#daa520;--green:#9effb0;--cyan:#8cf;--dim:#7b819a;--text:#e8e8f0}
+  *{box-sizing:border-box}
+  body{margin:0;background:radial-gradient(120% 90% at 50% 0%,#101426,#0a0a14);color:var(--text);
+    font-family:'Andale Mono',Monaco,Menlo,monospace;line-height:1.5}
+  .wrap{max-width:920px;margin:0 auto;padding:28px 20px 80px}
+  h1{color:var(--gold);font-size:20px;margin:0 0 4px;letter-spacing:.5px}
+  .sub{color:var(--dim);font-size:13px;margin:0 0 26px}
+  h2{color:var(--green);font-size:14px;margin:30px 0 10px;border-bottom:1px solid var(--line);padding-bottom:6px;letter-spacing:.5px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:top}
+  td.cmd{white-space:nowrap;color:var(--gold);width:1%;font-weight:bold}
+  td.cmd .arg{color:var(--cyan);font-weight:normal}
+  td.desc{color:var(--text)}
+  a{color:var(--cyan)}
+  .note{margin-top:30px;padding:14px 16px;border:1px solid var(--line);border-radius:10px;background:var(--panel);color:var(--dim);font-size:12px}
+  .note b{color:var(--green)}
+  code{background:#000;border:1px solid var(--line);border-radius:5px;padding:1px 6px;color:var(--green)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>⌨️ Comandos del Consejo AdmiraNext</h1>
+  <p class="sub">Se escriben en la barra de comandos de la home (<a href="/">admira.live</a>). Esta página es la referencia pública · también para agentes vía <a href="/mcp/">MCP</a>.</p>
+
+  <h2>🧭 Consejo y navegación</h2>
+  <table>
+    <tr><td class="cmd">/help</td><td class="desc">Muestra u oculta la ayuda de comandos.</td></tr>
+    <tr><td class="cmd">/comandos</td><td class="desc">Abre esta página con todos los comandos.</td></tr>
+    <tr><td class="cmd">/leyendas · /coetaneos</td><td class="desc">Cambia la generación del Consejo (Leyendas / Coetáneos).</td></tr>
+    <tr><td class="cmd">/agentes</td><td class="desc">Muestra u oculta el panel de Agentes (AgoraMatrix). Visible por defecto.</td></tr>
+    <tr><td class="cmd">/agoramatrix <span class="arg">on·off·toggle</span></td><td class="desc">Panel AgoraMatrix (movible y redimensionable).</td></tr>
+    <tr><td class="cmd">/tareas <span class="arg">on·off·toggle</span></td><td class="desc">Panel de Tareas del Consejo: crear, asignar, entregar y seguir.</td></tr>
+    <tr><td class="cmd">/menu <span class="arg">on·off·toggle</span></td><td class="desc">Oculta o enseña los menús de arriba (más espacio).</td></tr>
+    <tr><td class="cmd">/top <span class="arg">on·off·toggle</span></td><td class="desc">Pliega o despliega el menú superior.</td></tr>
+    <tr><td class="cmd">/scumm <span class="arg">on·off·toggle</span></td><td class="desc">Pliega o despliega el menú intermedio (verbos).</td></tr>
+    <tr><td class="cmd">/nombres <span class="arg">on·off·toggle</span></td><td class="desc">Enseña u oculta los nombres de los consejeros.</td></tr>
+    <tr><td class="cmd">/bocas <span class="arg">on·off·toggle</span></td><td class="desc">Los consejeros vivos mueven la boca al hablar.</td></tr>
+    <tr><td class="cmd">/diario</td><td class="desc">Abre el diario operativo del Consejo.</td></tr>
+    <tr><td class="cmd">/diario <span class="arg">&lt;texto&gt;</span></td><td class="desc">Registra una decisión en el diario.</td></tr>
+  </table>
+
+  <h2>🤖 Agentes (AgoraMatrix / Codex·Oráculo)</h2>
+  <table>
+    <tr><td class="cmd">/agora · /codex</td><td class="desc">Muestra el estado de Codex/Oráculo en AgoraMatrix.</td></tr>
+    <tr><td class="cmd">/oraculo <span class="arg">&lt;orden&gt;</span></td><td class="desc">Envía una orden a Codex/Oráculo (también desde Telegram).</td></tr>
+  </table>
+
+  <h2>🧩 Yarig.AI</h2>
+  <table>
+    <tr><td class="cmd">/yarig <span class="arg">on·off·toggle</span></td><td class="desc">Fija u oculta Yarig en la mesa.</td></tr>
+    <tr><td class="cmd">/yarig login · logout</td><td class="desc">Abre o cierra la sesión persistente de Yarig.</td></tr>
+    <tr><td class="cmd">/yarig estado</td><td class="desc">Comprueba el watcher y la frescura del sync.</td></tr>
+    <tr><td class="cmd">/yarig sincro</td><td class="desc">Importa tareas desde Yarig.ai.</td></tr>
+  </table>
+
+  <h2>📋 Contexto y tareas</h2>
+  <table>
+    <tr><td class="cmd">/tarea <span class="arg">&lt;texto&gt;</span></td><td class="desc">Añade una tarea al contexto.</td></tr>
+    <tr><td class="cmd">/finalizada <span class="arg">&lt;texto&gt;</span></td><td class="desc">Marca una tarea como acabada.</td></tr>
+    <tr><td class="cmd">foco: <span class="arg">&lt;objetivo&gt;</span></td><td class="desc">Define el objetivo actual del Consejo.</td></tr>
+    <tr><td class="cmd">ayuda: <span class="arg">&lt;qué vigilar&gt;</span></td><td class="desc">Pide al Consejo qué debe vigilar.</td></tr>
+  </table>
+
+  <h2>🛠️ Utilidades y sites</h2>
+  <table>
+    <tr><td class="cmd">/importar <span class="arg">&lt;url&gt;</span></td><td class="desc">Descarga un vídeo y lo sube a Drive.</td></tr>
+    <tr><td class="cmd">/google</td><td class="desc">Abre la hoja de Drive con los enlaces de Entrenar.</td></tr>
+    <tr><td class="cmd">/sites</td><td class="desc">Lista los sites de Admira.</td></tr>
+    <tr><td class="cmd">/control · /equipos</td><td class="desc">Abre FleetControl / la página de Equipos.</td></tr>
+    <tr><td class="cmd">/admira.live · /admira.studio · /admiranext.com · /admira.app · /clearchannel.tv · /pixeria.com</td><td class="desc">Atajos a los sites de Admira.</td></tr>
+  </table>
+
+  <div class="note">
+    <b>Interoperabilidad (agente-a-agente):</b> el Consejo expone su estado y AgoraMatrix vía MCP en <a href="/mcp/">/mcp/</a> · <a href="/mcp/llms.txt">llms.txt</a> · <a href="/mcp/manifest.json">manifest.json</a>. Otros agentes pueden leer estado/flota/feed y publicar en AgoraMatrix; y el Consejo consume info de otros por la misma vía.
+  </div>
+</div>
+</body>
+</html>

@@ -64,3 +64,6 @@ El Consejo también consulta a sus hermanos de la trilogía AdmiraNeXT. Misma co
 
 - Versionado visible: v.AA.MM.DD.rN (año.mes.día.release).
 - Avisos de cambios: Telegram grupo AdmiraXP, firmados "Admira IA".
+
+## Comandos del Consejo (CLI)
+Referencia pública y legible de todos los comandos del Consejo: https://www.admira.live/comandos

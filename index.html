@@ -8344,11 +8344,11 @@
      sin claves en el sitio). Muestra la conversación de los agentes Matrix
      (Neo/Morfeo/Trinity/Oráculo/Cypher…) ligados a los coetáneos del Consejo. -->
 <style>
-  #agm-panel{position:fixed;right:14px;bottom:14px;z-index:90;width:340px;height:430px;
+  #agm-panel{position:fixed;left:0;right:0;margin:0 auto;bottom:14px;z-index:90;width:min(1180px,96vw);height:430px;
     min-width:250px;min-height:140px;max-width:96vw;max-height:90vh;resize:both;display:none;flex-direction:column;
     font-family:"Courier New",monospace;color:#7dff9e;background:rgba(2,10,4,.94);border:1px solid #1f8a3e;
     border-radius:10px;box-shadow:0 0 28px rgba(0,255,65,.18);overflow:hidden;font-size:12px}
-  #agm-panel.agm-min{width:auto!important;height:auto!important;min-height:0;resize:none}
+  #agm-panel.agm-min{height:auto!important;min-height:0;resize:none}
   #agm-head{display:flex;align-items:center;gap:8px;padding:8px 11px;background:rgba(0,255,65,.07);
     border-bottom:1px solid #1f8a3e;cursor:grab;user-select:none;touch-action:none}
   #agm-head:active{cursor:grabbing}
@@ -8420,7 +8420,7 @@
   head.addEventListener('pointerdown',function(e){ if(e.target.closest('.agm-toggle'))return; _drag=true;_agmMoved=false; var r=panel.getBoundingClientRect(); _ox=r.left;_oy=r.top;_sx=e.clientX;_sy=e.clientY; panel.style.left=_ox+'px';panel.style.top=_oy+'px';panel.style.right='auto';panel.style.bottom='auto'; try{head.setPointerCapture(e.pointerId);}catch(_){} });
   head.addEventListener('pointermove',function(e){ if(!_drag)return; var dx=e.clientX-_sx,dy=e.clientY-_sy; if(Math.abs(dx)+Math.abs(dy)>3)_agmMoved=true; panel.style.left=Math.max(0,Math.min(window.innerWidth-60,_ox+dx))+'px'; panel.style.top=Math.max(0,Math.min(window.innerHeight-40,_oy+dy))+'px'; });
   head.addEventListener('pointerup',function(e){ if(!_drag)return; _drag=false; try{head.releasePointerCapture(e.pointerId);}catch(_){} if(_agmMoved)agmSaveGeom(); });
-  if(window.ResizeObserver){ var _ro=new ResizeObserver(function(){ if(!_drag)agmSaveGeom(); }); _ro.observe(panel); }
+  if(window.ResizeObserver){ var _ro=new ResizeObserver(function(){ if(!_drag && !panel.classList.contains('agm-min'))agmSaveGeom(); }); _ro.observe(panel); }
   function agmApplyVis(v){ panel.style.display = v ? 'flex' : 'none'; }
   window.agmSetVisible=function(v){ var cur=panel.style.display!=='none'; var nv=(v===null||v===undefined)?!cur:!!v; agmApplyVis(nv); try{localStorage.setItem(VIS_KEY,nv?'1':'0');}catch(e){} if(nv) tick(); return nv; };
   window.agmIsVisible=function(){ return panel.style.display!=='none'; };

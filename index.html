@@ -2643,6 +2643,11 @@
             }
         }
     </style>
+<style id="home-cluster-css">
+#home-bottom-cluster{position:fixed;left:50%;bottom:1rem;transform:translateX(-50%);z-index:9999;display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:96vw}
+#home-bottom-cluster .hack-toggle,#home-bottom-cluster .control-toggle,#home-bottom-cluster .demo-toggle,#home-bottom-cluster .diario-toggle{position:static!important;left:auto!important;right:auto!important;top:auto!important;bottom:auto!important;transform:none!important}
+#home-bottom-cluster .hack-toggle{order:1}#home-bottom-cluster .control-toggle{order:2}#home-bottom-cluster .demo-toggle{order:3}#home-bottom-cluster .diario-toggle{order:4}
+</style>
 </head>
 <body>
     <div class="container">
@@ -3004,6 +3009,7 @@
         <div class="screen-overlay-label" id="screen-overlay-label"></div>
     </div>
 
+    <div id="home-bottom-cluster">
     <button class="hack-toggle" id="hack-btn" onclick="toggleHack()">
         <span class="hack-dot"></span> HACKEO
     </button>
@@ -3021,6 +3027,7 @@
     <a class="demo-toggle" id="demo-btn" href="https://www.admira.studio/" target="_blank" rel="noopener" title="Abrir ADmiraNeXT Studio">
         <span class="demo-dot"></span> DEMO
     </a>
+    </div>
 
     <button class="design-toggle" id="design-btn" onclick="toggleDesign()" style="display:none">
         <span class="design-dot"></span> DISEÑO

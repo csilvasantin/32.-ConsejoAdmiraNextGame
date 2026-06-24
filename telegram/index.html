@@ -38,6 +38,15 @@
   .msg .body{font-size:14px; white-space:pre-wrap; word-break:break-word; line-height:1.4}
   .msg .time{font-size:10px; color:var(--dim); margin-top:4px; text-align:right}
   @keyframes in{from{opacity:0; transform:translateY(6px)}to{opacity:1}}
+  .typing{max-width:80%; padding:8px 12px; border-radius:10px; background:var(--in);
+    border:1px dashed #3a3358; align-self:flex-start; animation:in .2s ease}
+  .typing .who{font-size:11px; color:var(--gold); margin-bottom:3px}
+  .typing .body{font-size:13px; color:var(--cyan); display:flex; align-items:center; gap:7px}
+  .typing .dots{display:inline-flex; gap:3px}
+  .typing .dots i{width:5px; height:5px; border-radius:50%; background:var(--cyan); opacity:.3; animation:blink 1.2s infinite}
+  .typing .dots i:nth-child(2){animation-delay:.2s}
+  .typing .dots i:nth-child(3){animation-delay:.4s}
+  @keyframes blink{0%,60%,100%{opacity:.3}30%{opacity:1}}
   .empty{color:var(--dim); text-align:center; margin:auto; font-size:13px}
   footer{
     border-top:1px solid var(--border); padding:12px; background:var(--panel);
@@ -115,6 +124,7 @@
     return d.toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"});
   }
   function render(msgs){
+    const ty=document.getElementById("typing"); if(ty) ty.remove();
     if(lastId===0 && msgs.length) feed.innerHTML = "";
     for(const m of msgs){
       const el = document.createElement("div");
@@ -144,6 +154,26 @@
       if(data.ok){ render(data.messages); setStatus(true,"en directo"); }
       else setStatus(false,"error");
     }catch(e){ setStatus(false,"sin conexión"); }
+  }
+
+  function renderTyping(state){
+    let el = document.getElementById("typing");
+    if(!state){ if(el) el.remove(); return; }
+    if(!el){ el = document.createElement("div"); el.id="typing"; el.className="typing"; }
+    el.innerHTML =
+      `<div class="who">White Rabbit 🐇</div>`+
+      `<div class="body">${escapeHtml(state)} <span class="dots"><i></i><i></i><i></i></span></div>`;
+    feed.appendChild(el);            // siempre al final
+    feed.scrollTop = feed.scrollHeight;
+  }
+  async function checkStatus(){
+    if(!WORKER_BASE) return;
+    try{
+      const r = await fetch(`${WORKER_BASE}/api/status`);
+      const d = await r.json();
+      const fresh = d.ok && d.state && (Date.now()/1000 - (d.updated||0) < 30);
+      renderTyping(fresh ? d.state : "");
+    }catch(e){}
   }
 
   async function send(){
@@ -177,6 +207,8 @@
   enableSend(!!panelKey);
   poll();
   setInterval(poll, POLL_MS);
+  checkStatus();
+  setInterval(checkStatus, 2000);
 </script>
 </body>
 </html>

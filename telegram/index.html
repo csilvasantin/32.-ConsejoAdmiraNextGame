@@ -36,6 +36,7 @@
   .msg.out{align-self:flex-end; background:var(--out); border-color:#155}
   .msg .who{font-size:11px; color:var(--gold); margin-bottom:3px}
   .msg.out .who{color:var(--green)}
+  .msg .who .rig{font-size:9px; color:var(--cyan); background:rgba(140,200,255,.14); padding:1px 6px; border-radius:7px; margin-left:6px; letter-spacing:.3px; vertical-align:middle}
   .msg .body{font-size:14px; white-space:pre-wrap; word-break:break-word; line-height:1.4}
   .msg .time{font-size:10px; color:var(--dim); margin-top:4px; text-align:right}
   @keyframes in{from{opacity:0; transform:translateY(6px)}to{opacity:1}}
@@ -135,13 +136,18 @@
       const el = document.createElement("div");
       el.className = "msg" + (m.direction==="out" ? " out" : "");
       el.innerHTML =
-        `<div class="who">${escapeHtml(m.from_name||"Anónimo")}</div>`+
+        `<div class="who">${whoHtml(m.from_name)}</div>`+
         `<div class="body">${escapeHtml(m.text||"")}</div>`+
         `<div class="time">${fmtTime(m.date)}</div>`;
       feed.appendChild(el);
       lastId = Math.max(lastId, m.id);
     }
     if(msgs.length) feed.scrollTop = feed.scrollHeight;
+  }
+  function whoHtml(from){
+    const m=/^White Rabbit en (.+?)\s*\ud83d\udc07?\s*$/.exec(from||"");
+    if(m) return `\ud83d\udc07 White Rabbit <span class="rig">en ${escapeHtml(m[1])}</span>`;
+    return escapeHtml(from||"An\u00f3nimo");
   }
   function escapeHtml(s){
     return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));

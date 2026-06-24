@@ -2656,9 +2656,6 @@
             <a href="https://www.admira.live/equipos" target="_blank" rel="noopener" class="version-badge" title="Equipos · asignación de agentes">🏠 AdmiraNeXT</a>
             <a href="https://www.admira.live/telegram" target="_blank" rel="noopener" class="version-badge" title="Telegram · espejo en directo del grupo AdmiraNext">💬 Telegram</a>
             <button class="version-badge" onclick="window.agmSetVisible&&window.agmSetVisible(null)" title="Abrir el puesto de mando AgoraMatrix">📡 Agentes</button>
-            <div class="gen-toggle">
-                <button class="gen-btn active-leyendas" id="btn-gen" onclick="toggleGen()" title="Cambiar entre Leyendas y Coetáneos">⭐ Leyendas</button>
-            </div>
             <button class="yar-btn" id="yar-btn" onclick="openYarOverlay()">🧭 Yarig.AI<span class="yar-chip" id="yar-chip">sin contexto</span></button>
             <button class="version-badge" id="tk-toolbtn" onclick="window.tkSetVisible&&window.tkSetVisible()" title="Tareas del Consejo — muestra/oculta el panel (/tareas toggle)">🗂️ Tareas<span class="tk-toolchip" id="tk-badge">0</span></button>
             <div class="summary" id="summary"></div>
@@ -4418,6 +4415,7 @@
             '<div class="window-overlay-title">CLI · GENERAL</div>' +
             '<ol class="analizar-list">' +
             '<li><strong>/help</strong> — muestra u oculta esta ayuda</li>' +
+            '<li><strong>/leyendas</strong> · <strong>/coetaneos</strong> — cambia la generación del Consejo</li>' +
             '<li><strong>/importar &lt;url&gt;</strong> — descarga vídeo y lo sube a Drive</li>' +
             '<li><strong>/nombres on|off|toggle</strong> — enseña u oculta los consejeros</li>' +
             '<li><strong>/google</strong> — abre la hoja Drive de enlaces Entrenar</li>' +
@@ -4748,7 +4746,7 @@
         '/help', '/sites', '/admira.live', '/admira.studio', '/admiranext.com',
         '/admira.app', '/clearchannel.tv', '/pixeria.com', '/equipos', '/control',
         '/scumm', '/top', '/bocas', '/menu', '/agoramatrix', '/tareas', '/google',
-        '/importar', '/nombres', '/tarea', '/diario'
+        '/importar', '/nombres', '/tarea', '/diario', '/leyendas', '/coetaneos'
     ];
     (function setupCliAutocomplete() {
         const inp = document.getElementById('action-input');
@@ -4788,7 +4786,16 @@
             showCliHelp();
             return true;
         }
-        // ── Sites de Admira: /admira.studio abre, /admira.live recarga, etc.
+        // ── Generación del Consejo: /leyendas y /coetaneos ──
+        const genMatch = text.match(/^\/(leyendas|coet[a\u00e1]neos)$/i);
+        if (genMatch) {
+            const g = /coet/i.test(genMatch[1]) ? "coetaneos" : "leyendas";
+            setGen(g);
+            addUserEntry(text.toLowerCase());
+            setActionLine(g === "leyendas" ? "\u2b50 Mostrando Leyendas" : "\ud83d\ude80 Mostrando Coet\u00e1neos");
+            return true;
+        }
+        // \u2500\u2500 Sites de Admira: /admira.studio abre, /admira.live recarga, etc.
         const SITES = {
             'admira.live':     { reload: true,                                  label: 'admira.live (recarga)' },
             'admira.studio':   { url: 'https://www.admira.studio/',             label: 'Admira Studio' },

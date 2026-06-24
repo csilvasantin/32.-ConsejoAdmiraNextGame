@@ -123,8 +123,16 @@
     dot.classList.toggle("live", live);
     statusText.textContent = txt;
   }
-  function enableSend(on){
-    textInput.disabled = !on; sendBtn.disabled = !on;
+  function refreshSendState(){
+    const ready = !!WORKER_BASE;        // hay Worker configurado
+    const can = ready && !!panelKey;    // además, clave operador
+    textInput.disabled = !can;
+    sendBtn.disabled = !can;
+    const sel = document.getElementById("consejero");
+    if(sel) sel.disabled = !ready;
+    textInput.placeholder = !ready
+      ? "Conexión en preparación — envío deshabilitado"
+      : (!panelKey ? "Introduce la clave operador (🔑) para enviar" : "Escribe al consejo…");
   }
   function fmtTime(epoch){
     if(!epoch) return "";
@@ -164,11 +172,12 @@
   }
 
   async function send(){
+    if(!WORKER_BASE){ setStatus(false,"en preparación"); return; }   // a prueba de bombas: nunca enviar sin Worker
     const text = textInput.value.trim();
     if(!text || !panelKey) return;
     const consejero = (document.getElementById("consejero").value || "White Rabbit");
     const outText = `${text} → ${consejero}`;
-    enableSend(false);
+    textInput.disabled = true; sendBtn.disabled = true;
     try{
       const r = await fetch(`${WORKER_BASE}/api/send`,{
         method:"POST",
@@ -177,15 +186,15 @@
       });
       const data = await r.json();
       if(data.ok){ textInput.value=""; poll(); }
-      else alert("No se pudo enviar: "+(data.error||"error"));
-    }catch(e){ alert("Sin conexión con el Worker"); }
-    enableSend(!!panelKey);
+      else setStatus(false, "no se pudo enviar");
+    }catch(e){ setStatus(false,"sin conexión"); }
+    refreshSendState();
   }
 
   document.getElementById("saveKey").onclick = ()=>{
     panelKey = keyInput.value.trim();
     localStorage.setItem("tg_panel_key", panelKey);
-    enableSend(!!panelKey);
+    refreshSendState();
     keyInput.blur();
   };
   sendBtn.onclick = send;
@@ -193,7 +202,7 @@
     if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); send(); }
   });
 
-  enableSend(!!panelKey);
+  refreshSendState();
   poll();
   setInterval(poll, POLL_MS);
 </script>

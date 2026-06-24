@@ -149,8 +149,8 @@
 
   async function poll(){
     if(!WORKER_BASE){
-      setStatus(false,"sin configurar");
-      feed.innerHTML = '<div class="empty">Configura WORKER_BASE: ejecuta en consola<br><code>localStorage.setItem("tg_worker_base","https://admira-telegram.TU.workers.dev")</code> y recarga.</div>';
+      setStatus(false,"en preparación");
+      feed.innerHTML = '<div class="empty">📡 Conexión con el consejo en preparación.<br>Estará disponible en breve.</div>';
       return;
     }
     try{

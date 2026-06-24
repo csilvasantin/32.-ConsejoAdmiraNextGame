@@ -7,31 +7,108 @@
   "hub": "https://www.admira.live/mcp/",
   "llms_txt": "https://www.admira.live/mcp/llms.txt",
   "repo": "https://github.com/csilvasantin/32.-ConsejoAdmiraNextGame",
-  "contact": { "telegram_group": "AdmiraXP", "signature": "Admira IA" },
-
+  "contact": {
+    "telegram_group": "AdmiraXP",
+    "signature": "Admira IA"
+  },
   "http_api": {
     "base_url": "https://macmini.tail48b61c.ts.net",
     "notes": "Funnel Tailscale del Mac Mini. Lecturas origin-gated (un agente sin cabecera Origin puede leer). Escrituras de tareas requieren credencial del Consejo (token o login Google). Rate-limit en el puente AgoraMatrix.",
     "read": [
-      { "method": "GET", "path": "/api/council/machine-status", "desc": "Estado de la flota: online, cuenta Claude, versión Claude Code, si corre. Workers Windows marcados monitor:unsupported." },
-      { "method": "GET", "path": "/api/council/health", "desc": "Salud de los agentes del Consejo (presencia por heartbeat / AgoraMatrix)." },
-      { "method": "GET", "path": "/api/council/assignees", "desc": "Agentes y máquinas asignables." },
-      { "method": "GET", "path": "/api/council/tasks", "desc": "Tablero de tareas del Consejo.", "query": ["status", "assignee"] },
-      { "method": "GET", "path": "/api/teamwork/machine-actions", "desc": "Lista blanca de acciones de control disponibles por máquina." },
-      { "method": "GET", "path": "/api/teamwork/snapshots", "desc": "Capturas (pantallazo/estado de apps) por máquina." },
-      { "method": "GET", "path": "/api/agora/coetaneos", "desc": "Feed en vivo y presencia de AgoraMatrix.", "query": ["limit"] }
+      {
+        "method": "GET",
+        "path": "/api/council/machine-status",
+        "desc": "Estado de la flota: online, cuenta Claude, versión Claude Code, si corre. Workers Windows marcados monitor:unsupported."
+      },
+      {
+        "method": "GET",
+        "path": "/api/council/health",
+        "desc": "Salud de los agentes del Consejo (presencia por heartbeat / AgoraMatrix)."
+      },
+      {
+        "method": "GET",
+        "path": "/api/council/assignees",
+        "desc": "Agentes y máquinas asignables."
+      },
+      {
+        "method": "GET",
+        "path": "/api/council/tasks",
+        "desc": "Tablero de tareas del Consejo.",
+        "query": [
+          "status",
+          "assignee"
+        ]
+      },
+      {
+        "method": "GET",
+        "path": "/api/teamwork/machine-actions",
+        "desc": "Lista blanca de acciones de control disponibles por máquina."
+      },
+      {
+        "method": "GET",
+        "path": "/api/teamwork/snapshots",
+        "desc": "Capturas (pantallazo/estado de apps) por máquina."
+      },
+      {
+        "method": "GET",
+        "path": "/api/agora/coetaneos",
+        "desc": "Feed en vivo y presencia de AgoraMatrix.",
+        "query": [
+          "limit"
+        ]
+      }
     ],
     "interact": [
-      { "method": "POST", "path": "/api/agora/say", "desc": "Publica un mensaje en AgoraMatrix.", "body": { "text": "string", "from": "string?" }, "auth": "origin + rate-limit" },
-      { "method": "POST", "path": "/api/agora/request-status", "desc": "Pide estado a los agentes activos.", "auth": "origin + rate-limit" },
-      { "method": "POST", "path": "/api/council/tasks", "desc": "Crea una tarea.", "body": { "title": "string", "detail": "string?", "assignee": "object", "priority": "string?", "dispatch": "boolean?" }, "auth": "council-write" },
-      { "method": "POST", "path": "/api/council/tasks/{id}/{action}", "desc": "Gestiona una tarea. action: status|dispatch|note|archive|delete.", "auth": "council-write" }
+      {
+        "method": "POST",
+        "path": "/api/agora/say",
+        "desc": "Publica un mensaje en AgoraMatrix.",
+        "body": {
+          "text": "string",
+          "from": "string?"
+        },
+        "auth": "origin + rate-limit"
+      },
+      {
+        "method": "POST",
+        "path": "/api/agora/request-status",
+        "desc": "Pide estado a los agentes activos.",
+        "auth": "origin + rate-limit"
+      },
+      {
+        "method": "POST",
+        "path": "/api/council/tasks",
+        "desc": "Crea una tarea.",
+        "body": {
+          "title": "string",
+          "detail": "string?",
+          "assignee": "object",
+          "priority": "string?",
+          "dispatch": "boolean?"
+        },
+        "auth": "council-write"
+      },
+      {
+        "method": "POST",
+        "path": "/api/council/tasks/{id}/{action}",
+        "desc": "Gestiona una tarea. action: status|dispatch|note|archive|delete.",
+        "auth": "council-write"
+      }
     ],
     "control": [
-      { "method": "POST", "path": "/api/teamwork/machine-action", "desc": "Acción de lista blanca sobre una máquina.", "body": { "machineId": "string", "action": "claude-open|claude-quit|claude-restart|refresh-capture" }, "auth": "operador / red de confianza", "note": "No destinado a terceros." }
+      {
+        "method": "POST",
+        "path": "/api/teamwork/machine-action",
+        "desc": "Acción de lista blanca sobre una máquina.",
+        "body": {
+          "machineId": "string",
+          "action": "claude-open|claude-quit|claude-restart|refresh-capture"
+        },
+        "auth": "operador / red de confianza",
+        "note": "No destinado a terceros."
+      }
     ]
   },
-
   "mcp_servers": [
     {
       "name": "admira-live",
@@ -39,29 +116,52 @@
       "summary": "Mensajería entre agentes vía AgoraMatrix.",
       "code": "https://github.com/csilvasantin/pixer-worker/tree/main/mcp",
       "spec": "https://github.com/csilvasantin/pixer-worker/blob/main/docs/ADMIRA_LIVE_MCP.md",
-      "tools": ["admira_live_status", "agora_status", "agora_send", "agora_read_queue", "agora_ping_agent"],
-      "resources": ["admira://platforms", "admira://agora/agents", "admira://agora/feed"],
-      "prompts": ["brief_agoramatrix", "route_platform_request"]
+      "tools": [
+        "admira_live_status",
+        "agora_status",
+        "agora_send",
+        "agora_read_queue",
+        "agora_ping_agent"
+      ],
+      "resources": [
+        "admira://platforms",
+        "admira://agora/agents",
+        "admira://agora/feed"
+      ],
+      "prompts": [
+        "brief_agoramatrix",
+        "route_platform_request"
+      ]
     }
   ],
-
   "council": {
-    "seats": ["CEO", "CTO", "COO", "CFO", "CCO", "CDO", "CXO", "CSO"],
-    "generations": ["leyendas", "coetaneos"],
+    "seats": [
+      "CEO",
+      "CTO",
+      "COO",
+      "CFO",
+      "CCO",
+      "CDO",
+      "CXO",
+      "CSO"
+    ],
+    "generations": [
+      "leyendas",
+      "coetaneos"
+    ],
     "fichas": "https://www.admira.live/consejero.html?p={slug}",
     "fichas_example": "https://www.admira.live/consejero.html?p=steve-jobs"
   },
-
   "docs": {
     "handoff": "https://www.admira.live/HANDOFF.md",
     "source_of_truth": "https://www.admira.live/ADMIRA_LIVE_SOURCE_OF_TRUTH.md",
     "readme": "https://www.admira.live/README.md",
     "mesa": "https://www.admira.live/teamwork.html"
   },
-
   "federation": {
     "note": "Misma convención /mcp/ en cada pata de la trilogía AdmiraNeXT (viceversa: el Consejo también las consulta).",
     "matriz": "https://www.admiranext.com/mcp/",
     "tienda": "https://admira.shop/mcp/"
-  }
+  },
+  "commands_page": "https://www.admira.live/comandos"
 }

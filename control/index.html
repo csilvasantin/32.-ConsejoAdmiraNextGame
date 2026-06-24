@@ -57,6 +57,35 @@
   .note{color:var(--mut);font-size:11px;margin-top:8px}
   #lb{position:fixed;inset:0;background:#000d;display:none;align-items:center;justify-content:center;z-index:99;cursor:zoom-out;padding:20px}
   #lb img{max-width:100%;max-height:100%;border-radius:10px;box-shadow:0 10px 50px #000}
+
+  /* ── Sillas del Consejo (movido de la home) ── */
+  .council-seats{margin-bottom:20px}
+  .cseat-head{display:flex;align-items:center;gap:12px;margin-bottom:10px;flex-wrap:wrap}
+  .cseat-title{font-weight:800;font-size:15px}
+  .cseat-gen{display:flex;gap:6px;margin-left:auto}
+  .cgen{font-size:11px;padding:5px 11px;border:1px solid var(--line);border-radius:999px;background:var(--panel2);color:var(--mut);cursor:pointer}
+  .cgen.active{color:#fff;border-color:var(--acc)}
+  .cseat-grid{display:grid;grid-template-columns:1fr 1fr;gap:14px}
+  @media(max-width:760px){.cseat-grid{grid-template-columns:1fr}}
+  .cpanel{background:var(--panel);border:1px solid var(--line);border-radius:14px;overflow:hidden}
+  .cpanel.racional{border-top:3px solid #e74c3c}
+  .cpanel.creativo{border-top:3px solid #3498db}
+  .cpanel-title{display:flex;align-items:center;gap:10px;padding:12px 14px;cursor:pointer;font-weight:700;font-size:13px;user-select:none}
+  .cpanel-title .ctcount{margin-left:auto;color:var(--mut);font-size:11px;font-family:var(--mono)}
+  .cpanel-title .carrow{color:var(--mut);font-size:10px;transition:.15s}
+  .cpanel.collapsed .cpanel-body{display:none}
+  .cpanel.collapsed .carrow{transform:rotate(-90deg)}
+  .cpanel-body{padding:6px 10px 12px;display:flex;flex-direction:column;gap:6px}
+  .cmember{display:flex;align-items:center;gap:10px;padding:8px 10px;border:1px solid var(--line);border-radius:10px;background:var(--panel2)}
+  .cmember .cdot{width:9px;height:9px;border-radius:50%;background:#5a6678;flex:none}
+  .cmember .cdot.on{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+  .cmember .cic{font-size:20px;line-height:1}
+  .cmember .cinfo{flex:1;min-width:0}
+  .cmember .cname{font-weight:700;font-size:13px}
+  .cmember .crole{color:var(--mut);font-size:11px}
+  .cmember .cmach{font-family:var(--mono);font-size:10.5px;color:var(--mut);text-align:right;white-space:nowrap;line-height:1.4}
+  .cmember a.cficha{color:var(--acc2);font-size:11px;text-decoration:none;white-space:nowrap;border:1px solid var(--line);border-radius:7px;padding:4px 7px}
+  .cmember a.cficha:hover{border-color:var(--acc2)}
 </style>
 </head>
 <body>
@@ -69,6 +98,26 @@
 </header>
 
 <div class="wrap">
+  <div class="council-seats">
+    <div class="cseat-head">
+      <span class="cseat-title">🪑 Sillas del Consejo</span>
+      <div class="cseat-gen">
+        <button class="cgen active" data-gen="leyendas">⭐ Leyendas</button>
+        <button class="cgen" data-gen="coetaneos">🚀 Coetáneos</button>
+      </div>
+    </div>
+    <div class="cseat-grid">
+      <div class="cpanel racional" id="cpanel-racional">
+        <div class="cpanel-title" data-toggle="cpanel-racional">🧠 Racional <span class="ctcount">🔴 Sillas rojas · <span id="ccount-racional">0/4</span></span> <span class="carrow">▼</span></div>
+        <div class="cpanel-body" id="cmembers-racional"></div>
+      </div>
+      <div class="cpanel creativo" id="cpanel-creativo">
+        <div class="cpanel-title" data-toggle="cpanel-creativo">🎨 Creativo <span class="ctcount">🔵 Sillas azules · <span id="ccount-creativo">0/4</span></span> <span class="carrow">▼</span></div>
+        <div class="cpanel-body" id="cmembers-creativo"></div>
+      </div>
+    </div>
+  </div>
+
   <div class="cards" id="cards"></div>
 
   <div class="console">
@@ -220,6 +269,62 @@ async function fetchOperatorToken(){
   if(!TOKEN) setTimeout(setToken, 300);
   refresh();
   setInterval(refresh, 8000);
+})();
+</script>
+<script>
+/* ── Sillas del Consejo · movido de la home. Estado desde /machines.json (same-origin). ── */
+(function(){
+  const COUNCIL=[
+    {name:"CEO",role:"Chief Executive Officer",persona:"Steve Jobs",side:"racional",gen:"leyendas",icon:"🏛️",machineId:"admira-macbookair16",machine:"MacBook Air 16"},
+    {name:"CTO",role:"Chief Technology Officer",persona:"Steve Wozniak",side:"racional",gen:"leyendas",icon:"⚙️",machineId:"admira-macbookpronegro14",machine:"MacBook Pro Negro 14"},
+    {name:"COO",role:"Chief Operations Officer",persona:"Tim Cook",side:"racional",gen:"leyendas",icon:"📋",machineId:"admira-macbookairplata",machine:"MacBook Air Plata"},
+    {name:"CFO",role:"Chief Financial Officer",persona:"Warren Buffett",side:"racional",gen:"leyendas",icon:"💰",machineId:"admira-macmini",machine:"Mac Mini"},
+    {name:"CCO",role:"Chief Creative Officer",persona:"Walt Disney",side:"creativo",gen:"leyendas",icon:"💡",machineId:"admira-macbookairblanco",machine:"MacBook Air Blanco"},
+    {name:"CDO",role:"Chief Design Officer",persona:"Dieter Rams",side:"creativo",gen:"leyendas",icon:"🎨",machineId:"admira-macbookairazul",machine:"MacBook Air Azul"},
+    {name:"CXO",role:"Chief Experience Officer",persona:"Howard Schultz",side:"creativo",gen:"leyendas",icon:"🧭",machineId:"admira-pctwin",machine:"AdmiraTwin (PC)"},
+    {name:"CSO",role:"Chief Storytelling Officer",persona:"George Lucas",side:"creativo",gen:"leyendas",icon:"📖",machineId:"admira-macbookaircrema",machine:"MacBook Air Crema"},
+    {name:"CEO",role:"Chief Executive Officer",persona:"Elon Musk",side:"racional",gen:"coetaneos",icon:"🏛️",machineId:"admira-macbookair16",machine:"MacBook Air 16"},
+    {name:"CTO",role:"Chief Technology Officer",persona:"Jensen Huang",side:"racional",gen:"coetaneos",icon:"⚙️",machineId:"admira-macbookpronegro14",machine:"MacBook Pro Negro 14"},
+    {name:"COO",role:"Chief Operations Officer",persona:"Gwynne Shotwell",side:"racional",gen:"coetaneos",icon:"📋",machineId:"admira-macbookairplata",machine:"MacBook Air Plata"},
+    {name:"CFO",role:"Chief Financial Officer",persona:"Ruth Porat",side:"racional",gen:"coetaneos",icon:"💰",machineId:"admira-macmini",machine:"Mac Mini"},
+    {name:"CCO",role:"Chief Creative Officer",persona:"John Lasseter",side:"creativo",gen:"coetaneos",icon:"💡",machineId:"admira-macbookairblanco",machine:"MacBook Air Blanco"},
+    {name:"CDO",role:"Chief Design Officer",persona:"Jony Ive",side:"creativo",gen:"coetaneos",icon:"🎨",machineId:"admira-macbookairazul",machine:"MacBook Air Azul"},
+    {name:"CXO",role:"Chief Experience Officer",persona:"Carlos Ratti",side:"creativo",gen:"coetaneos",icon:"🧭",machineId:"admira-pctwin",machine:"AdmiraTwin (PC)"},
+    {name:"CSO",role:"Chief Storytelling Officer",persona:"Ryan Reynolds",side:"creativo",gen:"coetaneos",icon:"📖",machineId:"admira-macbookaircrema",machine:"MacBook Air Crema"},
+  ];
+  const SEATS=4, SRC="/machines.json";
+  let gen="leyendas", online={};
+  const $=id=>document.getElementById(id);
+  function cslug(s){return (s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"");}
+  async function loadStatus(){
+    try{
+      const r=await fetch(SRC+"?t="+Date.now(),{signal:AbortSignal.timeout(5000)});
+      const d=await r.json(); online={};
+      (d.machines||[]).forEach(m=>{ online[m.id]=["online","idle","busy"].includes(m.status); });
+    }catch(e){}
+  }
+  function render(){
+    const box={racional:$("cmembers-racional"),creativo:$("cmembers-creativo")};
+    box.racional.innerHTML=""; box.creativo.innerHTML="";
+    const c={racional:0,creativo:0};
+    COUNCIL.filter(m=>m.gen===gen).forEach(m=>{
+      const on=!!(m.machineId&&online[m.machineId]); if(on)c[m.side]++;
+      const el=document.createElement("div"); el.className="cmember";
+      el.innerHTML='<span class="cdot '+(on?'on':'')+'"></span><span class="cic">'+m.icon+'</span>'+
+        '<div class="cinfo"><div class="cname">'+m.name+' — '+m.persona+'</div><div class="crole">'+m.role+'</div></div>'+
+        '<div class="cmach">'+m.machine+'<br>'+(on?'online':'offline')+'</div>'+
+        '<a class="cficha" href="/consejero.html?p='+cslug(m.persona)+'" target="_blank" rel="noopener">ficha →</a>';
+      box[m.side].appendChild(el);
+    });
+    $("ccount-racional").textContent=c.racional+"/"+SEATS;
+    $("ccount-creativo").textContent=c.creativo+"/"+SEATS;
+  }
+  document.querySelectorAll(".cpanel-title").forEach(t=>t.addEventListener("click",()=>$(t.dataset.toggle).classList.toggle("collapsed")));
+  document.querySelectorAll(".cgen").forEach(b=>b.addEventListener("click",()=>{
+    document.querySelectorAll(".cgen").forEach(x=>x.classList.remove("active"));
+    b.classList.add("active"); gen=b.dataset.gen; render();
+  }));
+  (async()=>{ await loadStatus(); render(); setInterval(async()=>{await loadStatus();render();},30000); })();
 })();
 </script>
 </body>

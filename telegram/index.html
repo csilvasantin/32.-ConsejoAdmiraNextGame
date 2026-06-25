@@ -100,7 +100,7 @@
       <button id="send" disabled>Enviar</button>
     </div>
     <input id="fileInput" type="file" style="display:none">
-    <div class="hint">Se añade el consejero al final del mensaje. Adjunta con 📎 (lo que escribas va como pie de foto). Lo enviado desde aquí aparece prefijado con 🌐.</div>
+    <div class="hint">Se añade el consejero al final del mensaje. Para imágenes: <strong>pega con Cmd/Ctrl+V</strong>, arrástralas, o usa 📎 (lo que escribas va como pie de foto). Lo enviado desde aquí aparece prefijado con 🌐.</div>
   </footer>
 </div>
 
@@ -207,16 +207,20 @@
     if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); send(); }
   });
 
-  // Adjuntar imagen/archivo y enviarlo al consejo (vía /api/send-media del worker).
+  // Adjuntar / PEGAR (Cmd-Ctrl+V) / arrastrar imagen o archivo → al consejo (/api/send-media).
   const fileInput = document.getElementById("fileInput");
   const attachBtn = document.getElementById("attach");
   attachBtn.onclick = ()=>{ if(panelKey && WORKER_BASE) fileInput.click(); };
-  fileInput.onchange = ()=>{
-    const f = fileInput.files && fileInput.files[0]; if(!f) return;
-    if(f.size > 20*1024*1024){ setStatus(false,"archivo > 20MB"); fileInput.value=""; return; }
+
+  async function sendMediaFile(f){
+    if(!f) return;
+    if(!WORKER_BASE){ setStatus(false,"en preparación"); return; }
+    if(!panelKey){ setStatus(false,"introduce la clave operador (🔑)"); return; }
+    if(f.size > 20*1024*1024){ setStatus(false,"archivo > 20MB"); return; }
     const consejero = document.getElementById("consejero").value || "White Rabbit";
     const cap = (textInput.value.trim() ? textInput.value.trim()+" " : "") + "→ "+consejero;
     attachBtn.disabled = true; sendBtn.disabled = true;
+    setStatus(true, "enviando adjunto…");
     const reader = new FileReader();
     reader.onload = async ()=>{
       const b64 = String(reader.result).split(",")[1] || "";
@@ -224,15 +228,34 @@
         const r = await fetch(`${WORKER_BASE}/api/send-media`,{
           method:"POST",
           headers:{"content-type":"application/json","Authorization":`Bearer ${panelKey}`},
-          body: JSON.stringify({ dataB64:b64, mime:f.type||"application/octet-stream", filename:f.name, caption:cap, author: localStorage.getItem("tg_author")||"Web" })
+          body: JSON.stringify({ dataB64:b64, mime:f.type||"application/octet-stream", filename:f.name||"pegado.png", caption:cap, author: localStorage.getItem("tg_author")||"Web" })
         });
         const d = await r.json();
         if(d.ok){ textInput.value=""; poll(); } else setStatus(false,"no se pudo adjuntar");
       }catch(e){ setStatus(false,"sin conexión"); }
-      fileInput.value=""; refreshSendState();
+      refreshSendState();
     };
     reader.readAsDataURL(f);
-  };
+  }
+
+  fileInput.onchange = ()=>{ const f = fileInput.files && fileInput.files[0]; sendMediaFile(f); fileInput.value=""; };
+
+  // PEGAR imagen del portapapeles → se envía directamente (sin abrir selector de fichero).
+  function handlePaste(e){
+    const items = (e.clipboardData && e.clipboardData.items) || [];
+    for(const it of items){
+      if(it.kind==="file" && it.type && it.type.indexOf("image/")===0){
+        const f = it.getAsFile();
+        if(f){ e.preventDefault(); sendMediaFile(f); return; }
+      }
+    }
+  }
+  textInput.addEventListener("paste", handlePaste);
+  document.addEventListener("paste", (e)=>{ if(document.activeElement !== textInput) handlePaste(e); });
+
+  // Arrastrar y soltar un archivo sobre el cuadro de texto.
+  textInput.addEventListener("dragover", e=>{ e.preventDefault(); });
+  textInput.addEventListener("drop", e=>{ const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]; if(f){ e.preventDefault(); sendMediaFile(f); } });
 
   refreshSendState();
   poll();

@@ -35,11 +35,12 @@
     "#admira-topbar a{color:#daa520;text-decoration:none;font-size:11px;border:1px solid #3a3550;border-radius:999px;" +
     "padding:4px 10px;white-space:nowrap;background:#12101e}" +
     "#admira-topbar a:hover{border-color:#daa520;color:#ffdd66}" +
-    "#admira-botbar{position:fixed;bottom:12px;left:50%;transform:translateX(-50%);z-index:99990;display:flex;gap:6px}" +
-    "#admira-botbar a{font-family:'Andale Mono',Monaco,Menlo,monospace;color:#9effb0;text-decoration:none;font-size:11px;" +
-    "border:1px solid #2a4a35;border-radius:999px;padding:6px 12px;white-space:nowrap;font-weight:bold;" +
-    "background:rgba(10,20,14,.94);backdrop-filter:blur(6px)}" +
-    "#admira-botbar a:hover{border-color:#9effb0;color:#fff}" +
+    "#admira-botbar{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:99990;display:flex;gap:8px}" +
+    /* estilo SCUMM (madera/ámbar/sombra pixel 3D), como la barra de la home */
+    "#admira-botbar a{font-family:'Andale Mono',Monaco,Menlo,monospace;color:#ffdd66;text-decoration:none;font-size:11px;" +
+    "font-weight:bold;letter-spacing:1px;text-transform:uppercase;border:2px solid #6b5524;border-radius:4px;" +
+    "padding:7px 13px;white-space:nowrap;background:#15110a;box-shadow:3px 3px 0 #000}" +
+    "#admira-botbar a:hover{background:#2a2110;border-color:#ffdd66;color:#fff;transform:translate(1px,1px);box-shadow:2px 2px 0 #000}" +
     "html.admira-bar-on body{padding-top:40px !important;padding-bottom:54px !important}";
 
   function mount() {

@@ -96,9 +96,11 @@
     </div>
     <div class="row">
       <textarea id="text" placeholder="Escribe al consejo…" disabled></textarea>
+      <button id="attach" disabled title="Adjuntar imagen/archivo y enviarlo al consejo">📎</button>
       <button id="send" disabled>Enviar</button>
     </div>
-    <div class="hint">Se añade el consejero al final del mensaje. Los enviados desde aquí aparecen prefijados con 🌐.</div>
+    <input id="fileInput" type="file" style="display:none">
+    <div class="hint">Se añade el consejero al final del mensaje. Adjunta con 📎 (lo que escribas va como pie de foto). Lo enviado desde aquí aparece prefijado con 🌐.</div>
   </footer>
 </div>
 
@@ -130,6 +132,7 @@
     const can = ready && !!panelKey;    // además, clave operador
     textInput.disabled = !can;
     sendBtn.disabled = !can;
+    const ab = document.getElementById("attach"); if(ab) ab.disabled = !can;
     const sel = document.getElementById("consejero");
     if(sel) sel.disabled = !ready;
     textInput.placeholder = !ready
@@ -203,6 +206,33 @@
   textInput.addEventListener("keydown", e=>{
     if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); send(); }
   });
+
+  // Adjuntar imagen/archivo y enviarlo al consejo (vía /api/send-media del worker).
+  const fileInput = document.getElementById("fileInput");
+  const attachBtn = document.getElementById("attach");
+  attachBtn.onclick = ()=>{ if(panelKey && WORKER_BASE) fileInput.click(); };
+  fileInput.onchange = ()=>{
+    const f = fileInput.files && fileInput.files[0]; if(!f) return;
+    if(f.size > 20*1024*1024){ setStatus(false,"archivo > 20MB"); fileInput.value=""; return; }
+    const consejero = document.getElementById("consejero").value || "White Rabbit";
+    const cap = (textInput.value.trim() ? textInput.value.trim()+" " : "") + "→ "+consejero;
+    attachBtn.disabled = true; sendBtn.disabled = true;
+    const reader = new FileReader();
+    reader.onload = async ()=>{
+      const b64 = String(reader.result).split(",")[1] || "";
+      try{
+        const r = await fetch(`${WORKER_BASE}/api/send-media`,{
+          method:"POST",
+          headers:{"content-type":"application/json","Authorization":`Bearer ${panelKey}`},
+          body: JSON.stringify({ dataB64:b64, mime:f.type||"application/octet-stream", filename:f.name, caption:cap, author: localStorage.getItem("tg_author")||"Web" })
+        });
+        const d = await r.json();
+        if(d.ok){ textInput.value=""; poll(); } else setStatus(false,"no se pudo adjuntar");
+      }catch(e){ setStatus(false,"sin conexión"); }
+      fileInput.value=""; refreshSendState();
+    };
+    reader.readAsDataURL(f);
+  };
 
   refreshSendState();
   poll();

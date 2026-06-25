@@ -14,6 +14,6 @@
     "agent:uninstall": "bash ./ops/macos/uninstall-launchagent.sh"
   },
   "dependencies": {
-    "playwright-core": "^1.59.1"
+    "playwright-core": "^1.61.1"
   }
 }

@@ -3915,10 +3915,16 @@ def _hk_ssh_launch(user: str, host: str) -> tuple:
     remote_cmd = (
         "caffeinate -u -t 2 && sleep 1 && mkdir -p \"$HOME/.fleet\" && "
         f"echo {payload} | base64 -D > \"$HOME/.fleet/hacksim.py\" && "
-        "osascript -e 'tell application \"Terminal\" to activate' "
+        # do script PRIMERO (una sola ventana con el simulacro); luego activate.
+        # Hacer `activate` antes de `do script` abría una ventana vacía extra → se
+        # veía "dos veces". Y Ctrl+Cmd+F pone el Terminal a pantalla completa.
+        "osascript "
         "-e 'tell application \"Terminal\" to do script "
         "\"clear; echo \\\"== ADMIRA HACK SIMULATION ==\\\"; "
-        "exec python3 $HOME/.fleet/hacksim.py\"'"
+        "exec python3 $HOME/.fleet/hacksim.py\"' "
+        "-e 'tell application \"Terminal\" to activate' "
+        "-e 'delay 0.5' "
+        "-e 'tell application \"System Events\" to keystroke \"f\" using {control down, command down}'"
     )
     ssh_cmd = [
         "ssh",

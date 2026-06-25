@@ -24,6 +24,14 @@
       "role": "Desarrollo y pruebas",
       "host": "macbookpronegro14.tail48b61c.ts.net",
       "user": "csilvasantin"
+    },
+    {
+      "id": "mbair16plata",
+      "name": "MacBook Air 16 Plata",
+      "emoji": "💻",
+      "role": "Equipo · Trinity/Codex",
+      "host": "macbookair16.tail48b61c.ts.net",
+      "user": "csilvasantin"
     }
   ]
 }

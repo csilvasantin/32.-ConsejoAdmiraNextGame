@@ -253,6 +253,15 @@ $('#cards').addEventListener('click', async e=>{
     catch(_){ prompt('Copia este comando para conectar por SSH:', cmd); }
     return;
   }
+  // cerrar app: vía /api/run (no requiere acción nueva en el backend del Mini).
+  if(action==='closeapp'){
+    const app=prompt(NEEDS_ARG.closeapp,''); if(app===null||!app.trim()) return;
+    const esc=app.replace(/"/g,'');
+    b.disabled=true; const lbl0=b.textContent; b.textContent='❌ …';
+    try{ const d=await api('/run',{method:'POST',body:JSON.stringify({machine,cmd:'osascript -e \'quit app "'+esc+'"\' && echo "cerrada: '+esc+'"'})}); pushResult(machine,'❌ cerrar '+esc,d); }
+    catch(err){ pushResult(machine,'❌ cerrar app',{rc:-1,stdout:'',stderr:err.msg||'error'}); }
+    b.disabled=false; b.textContent=lbl0; return;
+  }
   let arg='';
   if(NEEDS_ARG[action]){ arg=prompt(NEEDS_ARG[action], action==='volume'?'50':''); if(arg===null) return; }
   b.disabled=true; const lbl=b.textContent; if(action==='screenshot') b.textContent='📸 …';

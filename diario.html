@@ -52,6 +52,9 @@
   .card .kind{font-size:.64rem;text-transform:uppercase;letter-spacing:1px;border:1px solid var(--line);border-radius:4px;padding:1px 6px}
   .card .txt{font-size:.9rem;line-height:1.5;white-space:pre-wrap;word-break:break-word}
   .card .ref{font-size:.72rem;margin-top:6px}
+  .card.resumen{border-color:var(--morfeo);border-left-width:3px;background:linear-gradient(180deg,rgba(255,207,107,.08),rgba(8,19,11,.6))}
+  .card.resumen .who{color:var(--morfeo);font-size:.86rem;letter-spacing:.5px}
+  .card.resumen .txt{font-size:.92rem}
   .empty{color:var(--dim);text-align:center;padding:30px;border:1px dashed var(--line);border-radius:8px}
   footer{margin-top:30px;border-top:1px solid var(--line);padding-top:12px;font-size:.72rem;color:var(--dim);text-align:center}
 </style>
@@ -197,6 +200,12 @@ function renderFeed(){
   const feed = document.getElementById("feed");
   if(!list.length){ feed.innerHTML = '<div class="empty">sin entradas para este filtro</div>'; return; }
   feed.innerHTML = list.map(e=>{
+    if(e.kind==='resumen'){
+      return '<div class="card resumen">'+
+        '<div class="meta"><span class="who">🕐 Resumen de la hora</span>'+
+        '<span style="margin-left:auto">'+ago(e.date)+'</span></div>'+
+        '<div class="txt">'+esc(e.text)+'</div></div>';
+    }
     const col = colorOf(e.persona);
     const ref = e.ref ? '<div class="ref muted">↳ '+(/^https?:\/\//.test(e.ref)?'<a href="'+esc(e.ref)+'" target="_blank" rel="noopener">'+esc(e.ref)+'</a>':esc(e.ref))+'</div>' : "";
     return '<div class="card" style="border-left-color:'+col+'">'+

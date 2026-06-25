@@ -148,7 +148,11 @@ async function loadPresence(){
     const r = await fetch(API+"/api/presence", {cache:"no-store"});
     const d = await r.json();
     const now = d.now || Math.floor(Date.now()/1000);
-    const rows = (d.presence||[]).slice().sort((a,b)=>b.updated-a.updated);
+    // Una sola fila por MÁQUINA: la persona más reciente (las anteriores caducan solas).
+    const _seenM = new Set();
+    const rows = (d.presence||[]).slice()
+      .sort((a,b)=>b.updated-a.updated)
+      .filter(p=>{ const k=norm(p.machine); if(!k||_seenM.has(k)) return false; _seenM.add(k); return true; });
     onlineKeys.clear();
     rows.forEach(p => { if(p.machine){ const k=noteMachine(p.machine); seenKeys.add(k); if((now-(p.updated||0))<300) onlineKeys.add(k); } });
     const box = document.getElementById("presence");

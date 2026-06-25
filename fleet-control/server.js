@@ -94,6 +94,7 @@ const ACTIONS = {
   say: (arg) => 'say ' + sh(arg) + '; echo "dicho"',
   notify: (arg) => 'osascript -e ' + sh('display notification "' + String(arg).replace(/"/g, "'") + '" with title "FleetControl"') + '; echo "notificado"',
   open: (arg) => 'open -a ' + sh(arg) + ' && echo "abierto: ' + String(arg).replace(/"/g, '') + '"',
+  closeapp: (arg) => 'osascript -e ' + sh('quit app "' + String(arg).replace(/"/g, '') + '"') + ' && echo "cerrada: ' + String(arg).replace(/"/g, '') + '"',
   // Captura vía el mini-agente de captura (LaunchAgent en la sesión del usuario,
   // que SÍ tiene TCC). Handshake por ficheros: tocamos capture.req → el agente
   // (WatchPaths) captura y deja base64 en capture.out (más nuevo que la petición).
@@ -179,7 +180,7 @@ const server = http.createServer(async (req, res) => {
     const results = await Promise.all(FLEET.machines.map(async (m) => {
       const r = await run(m, probe, 9000);
       const online = r.rc === 0 && /ONLINE/.test(r.stdout);
-      return { id: m.id, name: m.name, emoji: m.emoji, role: m.role, local: !!m.local, online, host: m.host, info: online ? r.stdout.replace(/ONLINE\s*/, '').trim() : (r.stderr || 'sin respuesta').slice(0, 120) };
+      return { id: m.id, name: m.name, emoji: m.emoji, role: m.role, local: !!m.local, online, host: m.host, user: m.user || 'csilvasantin', info: online ? r.stdout.replace(/ONLINE\s*/, '').trim() : (r.stderr || 'sin respuesta').slice(0, 120) };
     }));
     return json(res, 200, { machines: results, ts: Date.now() });
   }

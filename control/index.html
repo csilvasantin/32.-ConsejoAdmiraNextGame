@@ -213,6 +213,8 @@ function renderCards(ms){
         <button data-a="say" data-m="${m.id}">🗣️ decir</button>
         <button data-a="notify" data-m="${m.id}">🔔 avisar</button>
         <button data-a="open" data-m="${m.id}">📂 abrir app</button>
+        <button data-a="closeapp" data-m="${m.id}">❌ cerrar app</button>
+        <button data-a="ssh" data-m="${m.id}">🔌 ssh</button>
       </div>
     </div>`).join('');
   // restaura miniaturas
@@ -239,10 +241,18 @@ function setDefaultShot(machineId, src){
 $('#lb').onclick=()=>{ $('#lb').style.display='none'; };
 
 /* ---------- acciones rápidas ---------- */
-const NEEDS_ARG={ volume:'Volumen 0-100:', say:'¿Qué digo?', notify:'Texto del aviso:', open:'¿Qué app abrir? (p.ej. Safari)' };
+const NEEDS_ARG={ volume:'Volumen 0-100:', say:'¿Qué digo?', notify:'Texto del aviso:', open:'¿Qué app abrir? (p.ej. Safari)', closeapp:'¿Qué app cerrar? (p.ej. Safari)' };
 $('#cards').addEventListener('click', async e=>{
   const b=e.target.closest('button[data-a]'); if(!b) return;
   const action=b.dataset.a, machine=b.dataset.m;
+  // ssh: acción de cliente — copia el comando para conectar de verdad desde tu terminal.
+  if(action==='ssh'){
+    const m=MACHINES.find(x=>x.id===machine)||{};
+    const cmd = m.local ? 'ssh '+(m.user||'csilvasantin')+'@'+(m.host||'localhost') : 'ssh '+(m.user||'csilvasantin')+'@'+(m.host||'');
+    try{ await navigator.clipboard.writeText(cmd); pushResult(machine,'🔌 ssh',{rc:0,stdout:'Comando copiado al portapapeles:\n  '+cmd+'\nPégalo en tu Terminal para una sesión real.',ms:0}); }
+    catch(_){ prompt('Copia este comando para conectar por SSH:', cmd); }
+    return;
+  }
   let arg='';
   if(NEEDS_ARG[action]){ arg=prompt(NEEDS_ARG[action], action==='volume'?'50':''); if(arg===null) return; }
   b.disabled=true; const lbl=b.textContent; if(action==='screenshot') b.textContent='📸 …';

@@ -34,8 +34,9 @@
   .dot{width:10px;height:10px;border-radius:50%;background:#5a6678;flex:none;display:inline-block}
   .dot.on{background:var(--ok);box-shadow:0 0 9px var(--ok)}
   .info{font-family:var(--mono);font-size:11.5px;color:var(--mut);white-space:pre-wrap;line-height:1.6;min-height:18px}
-  .shot{border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#000;cursor:zoom-in;display:none}
+  .shot{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#000;cursor:zoom-in;display:none}
   .shot img{width:100%;display:block}
+  .shot.isWall::after{content:'🖥️ fondo actual · pulsa 📸 captura para foto real';position:absolute;left:0;right:0;bottom:0;font-size:10px;padding:3px 7px;background:rgba(0,0,0,.55);color:#9fe6c0;letter-spacing:.2px}
   .acts{display:flex;flex-wrap:wrap;gap:6px}
   button{font-family:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:9px;padding:6px 10px;font-size:12px;transition:.12s}
   button:hover{border-color:var(--acc);color:#fff}
@@ -142,6 +143,28 @@ const $=s=>document.querySelector(s);
 let TOKEN=localStorage.getItem('fleet_token')||'';
 let MACHINES=[];
 
+/* ---------- fondo de pantalla (persona) por máquina ----------
+   Mientras no haya captura real, cada equipo muestra el fondo de la persona que tiene
+   activa en ese momento (Neo/Morfeo/Trinity/Oráculo/Cypher), leído del worker del diario. */
+const DIARY_API='https://admira-telegram.csilvasantin.workers.dev';
+const _norm=s=>(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+const _personaFile={Neo:'Neo',Morfeo:'Morfeo',Trinity:'Trinity','Oráculo':'Oraculo',Oraculo:'Oraculo',Cypher:'Cypher'};
+let PERSONA_BY_MACHINE={};
+async function loadPersonas(){
+  try{
+    const r=await fetch(DIARY_API+'/api/presence',{cache:'no-store'});
+    const d=await r.json(); const map={};
+    (d.presence||[]).slice().sort((a,b)=>b.updated-a.updated).forEach(p=>{
+      const k=_norm(p.machine); if(k && !map[k]) map[k]=p.persona; // la persona más reciente por máquina
+    });
+    PERSONA_BY_MACHINE=map;
+  }catch(e){ /* sin presencia: las tarjetas quedan sin fondo, sin icono roto */ }
+}
+function personaWallpaper(name){
+  const f=_personaFile[PERSONA_BY_MACHINE[_norm(name)]];
+  return f ? '/wallpapers/'+f+'.png' : '';
+}
+
 function setToken(){
   const t=prompt('Token de FleetControl:', TOKEN||'');
   if(t!==null){ TOKEN=t.trim(); localStorage.setItem('fleet_token',TOKEN); refresh(); }
@@ -161,6 +184,7 @@ async function refresh(){
     const d=await api('/status'); MACHINES=d.machines;
     const up=MACHINES.filter(m=>m.online).length;
     $('#connPill').textContent='🟢 '+up+'/'+MACHINES.length+' online'; $('#connPill').className='pill ok';
+    await loadPersonas();
     renderCards(MACHINES); fillSelect();
   }catch(e){
     $('#connPill').textContent = e.code===401 ? '🔑 token inválido' : '🔴 sin conexión';
@@ -193,11 +217,23 @@ function renderCards(ms){
     </div>`).join('');
   // restaura miniaturas
   Object.keys(shots).forEach(id=>showShot(id, shots[id]));
+  // por defecto: el fondo (persona) de cada máquina hasta que se pida captura real
+  ms.forEach(m=>{ if(!shots[m.id]){ const w=personaWallpaper(m.name); if(w) setDefaultShot(m.id, w); } });
 }
 
 function showShot(machineId, src){
   const box=document.querySelector('.shot[data-m="'+machineId+'"]'); if(!box) return;
+  box.classList.remove('isWall');
   box.querySelector('img').src=src; box.style.display='block';
+  box.onclick=()=>{ $('#lbImg').src=src; $('#lb').style.display='flex'; };
+}
+
+// Fondo de pantalla de la persona como miniatura por defecto (hasta una captura real).
+function setDefaultShot(machineId, src){
+  const box=document.querySelector('.shot[data-m="'+machineId+'"]'); if(!box) return;
+  const img=box.querySelector('img');
+  img.onerror=()=>{ box.style.display='none'; };  // si falla, nada de icono roto
+  img.src=src; box.style.display='block'; box.classList.add('isWall');
   box.onclick=()=>{ $('#lbImg').src=src; $('#lb').style.display='flex'; };
 }
 $('#lb').onclick=()=>{ $('#lb').style.display='none'; };

@@ -9,6 +9,11 @@
     <meta http-equiv="Expires" content="0">
     <script src="/failover.js"></script>
     <script>
+        window.dataLayer = window.dataLayer || [];
+        window.dataLayer.push({ 'gtm.start': new Date().getTime(), event: 'gtm.js' });
+    </script>
+    <script async src="https://www.googletagmanager.com/gtm.js?id=GTM-KD696XW"></script>
+    <script>
         // URL limpia: si llega ?_v (de versiones antiguas) lo quitamos SIN recargar.
         // La frescura ya la cubren los meta no-cache de arriba. Conserva otros
         // parámetros (p.ej. ?train=<url> de los magic-links de Telegram).
@@ -2650,6 +2655,8 @@
 </style>
 </head>
 <body>
+    <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KD696XW"
+    height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="container">
         <div class="top-bar">
             <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.23.r5</a>
@@ -9064,6 +9071,85 @@
   });
 
   loadAssignees(); tick(); setInterval(tick, 15000);
+})();
+</script>
+<script>
+(function(){
+  window.dataLayer = window.dataLayer || [];
+  var pageTitle = document.title;
+  var trackedScrollDepths = {};
+
+  function currentPath(){
+    return window.location.pathname + window.location.search + window.location.hash;
+  }
+
+  function trackEvent(eventName, params){
+    window.dataLayer.push(Object.assign({
+      event: eventName,
+      page_title: pageTitle,
+      page_location: window.location.href,
+      page_path: currentPath()
+    }, params || {}));
+  }
+
+  function trackPageView(path, title){
+    var pagePath = path || currentPath();
+    trackEvent('page_view', {
+      page_title: title || pageTitle,
+      page_path: pagePath,
+      page_location: window.location.origin + pagePath
+    });
+  }
+
+  trackPageView();
+
+  window.addEventListener('scroll', function(){
+    var maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+    var depth = maxScroll <= 0 ? 100 : Math.round((window.scrollY / maxScroll) * 100);
+    [25, 50, 75, 90, 100].forEach(function(threshold){
+      if(depth >= threshold && !trackedScrollDepths[threshold]){
+        trackedScrollDepths[threshold] = true;
+        trackEvent('scroll_depth', { percent_scrolled: threshold });
+      }
+    });
+  }, { passive: true });
+
+  document.addEventListener('click', function(event){
+    var target = event.target.closest('a,button,[role="button"],[data-act],input,select,textarea');
+    if(!target) return;
+    var label = (
+      target.getAttribute('aria-label') ||
+      target.getAttribute('title') ||
+      target.textContent ||
+      target.value ||
+      target.id ||
+      target.name ||
+      ''
+    ).trim().replace(/\s+/g, ' ').substring(0, 100);
+    trackEvent('ui_click', {
+      click_text: label,
+      click_url: target.href || '',
+      element_type: target.tagName.toLowerCase(),
+      element_id: target.id || '',
+      element_action: target.getAttribute('data-act') || ''
+    });
+  });
+
+  window.addEventListener('hashchange', function(){
+    trackPageView(currentPath(), pageTitle);
+  });
+
+  var originalPushState = history.pushState;
+  var originalReplaceState = history.replaceState;
+  function wrapHistory(fn){
+    return function(){
+      var result = fn.apply(this, arguments);
+      setTimeout(function(){ trackPageView(currentPath(), pageTitle); }, 0);
+      return result;
+    };
+  }
+  history.pushState = wrapHistory(originalPushState);
+  history.replaceState = wrapHistory(originalReplaceState);
 })();
 </script>
 </body>

@@ -72,6 +72,32 @@
       }
     },
     {
+      "id": "admira-macbookpro16",
+      "unitType": "council",
+      "color": "gris espacial",
+      "member": "Carlos",
+      "role": "Agente operativo y desarrollo",
+      "name": "MacBook Pro 16",
+      "machineRole": "Agente operativo y desarrollo",
+      "location": "Madrid",
+      "platform": "macOS",
+      "status": "online",
+      "lastSeen": "2026-06-17T15:51:14.854Z",
+      "currentFocus": "Agentes activos via AgoraMatrix y Tailscale",
+      "note": "Tailscale: macbook-pro-16.tail48b61c.ts.net",
+      "ssh": {
+        "enabled": true,
+        "user": "csilvasantin",
+        "host": "macbook-pro-16.tail48b61c.ts.net",
+        "host_local": "MacBook-Pro-16.local",
+        "ip_tailscale": "100.114.181.54",
+        "connect_lan": "ssh csilvasantin@MacBook-Pro-16.local",
+        "connect_tailscale": "ssh csilvasantin@100.114.181.54",
+        "hostAlias": "macbook-pro-16"
+      },
+      "mac_address": ""
+    },
+    {
       "id": "admira-macbookair16",
       "unitType": "council",
       "color": "plata",

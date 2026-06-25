@@ -40,6 +40,9 @@
   .chip{cursor:pointer;border:1px solid var(--line);background:var(--panel);color:var(--ink);
         border-radius:999px;padding:4px 11px;font-size:.78rem;font-family:inherit}
   .chip.active{background:#0f2417;border-color:var(--neo);color:#fff}
+  .chip.idle{opacity:.45}
+  .mdot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#2c4d36;margin-right:6px;vertical-align:middle}
+  .mdot.on{background:var(--neo);box-shadow:0 0 6px var(--neo)}
   .chip[data-bot] .swatch{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:6px;vertical-align:middle}
   /* feed */
   .feed{display:flex;flex-direction:column;gap:10px}
@@ -97,8 +100,13 @@ const colorOf = p => COLOR[p] || "var(--dim)";
 
 let entries = [];        // todas las cargadas (desc por id)
 let maxId = 0;
-let fBot = "", fMachine = "";
-const machinesSeen = new Set();
+let fBot = "", fMachine = "";          // fMachine = clave normalizada de máquina
+const fleet = new Map();               // key -> {display, member, status}  (de machines.json)
+const seenKeys = new Set();            // máquinas con entradas o presencia
+const onlineKeys = new Set();          // máquinas con presencia reciente
+const keyDisplay = new Map();          // key -> nombre legible
+const norm = s => (s||"").toLowerCase().replace(/[^a-z0-9]/g,"");
+function noteMachine(name, display){ const k = norm(name); if(!k) return k; if(!keyDisplay.has(k) || display) keyDisplay.set(k, display || keyDisplay.get(k) || name); return k; }
 
 const esc = s => (s||"").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
 function ago(epoch){
@@ -109,13 +117,25 @@ function ago(epoch){
   return "hace "+Math.floor(s/86400)+" d";
 }
 
+async function loadMachines(){
+  try{
+    const r = await fetch("/machines.json", {cache:"no-store"});
+    const m = await r.json();
+    (m.machines||[]).forEach(x=>{
+      const k = noteMachine(x.name || x.id, x.name || x.id);
+      if(k) fleet.set(k, {display:x.name||x.id, member:x.member||"", status:x.status||""});
+    });
+    renderFilters();
+  }catch(e){ /* sin roster: la web sigue con las máquinas vistas en el feed */ }
+}
+
 async function loadDiary(){
   try{
     const r = await fetch(API+"/api/diary?limit=200", {cache:"no-store"});
     const d = await r.json();
     entries = d.entries || [];
     maxId = entries.reduce((m,e)=>Math.max(m,e.id), 0);
-    entries.forEach(e => e.machine && machinesSeen.add(e.machine));
+    entries.forEach(e => { if(e.machine){ seenKeys.add(noteMachine(e.machine)); } });
     renderFilters(); renderFeed();
   }catch(e){ document.getElementById("feed").innerHTML = '<div class="empty">No pude cargar el diario.<br>'+esc(e.message)+'</div>'; }
 }
@@ -126,7 +146,8 @@ async function loadPresence(){
     const d = await r.json();
     const now = d.now || Math.floor(Date.now()/1000);
     const rows = (d.presence||[]).slice().sort((a,b)=>b.updated-a.updated);
-    rows.forEach(p => p.machine && machinesSeen.add(p.machine));
+    onlineKeys.clear();
+    rows.forEach(p => { if(p.machine){ const k=noteMachine(p.machine); seenKeys.add(k); if((now-(p.updated||0))<300) onlineKeys.add(k); } });
     const box = document.getElementById("presence");
     if(!rows.length){ box.innerHTML = '<span class="muted">nadie ha reportado presencia todavía</span>'; return; }
     box.innerHTML = rows.map(p=>{
@@ -155,19 +176,23 @@ function renderFilters(){
 
   const mf = document.getElementById("machineFilters");
   mf.querySelectorAll(".chip").forEach(c=>c.remove());
-  const mkMac = (name)=>{
+  const keys = [...new Set([...fleet.keys(), ...seenKeys])]
+    .sort((a,b)=>(keyDisplay.get(a)||a).localeCompare(keyDisplay.get(b)||b));
+  const mkMac = (key)=>{
     const c = document.createElement("button");
-    c.className = "chip"+(fMachine===name?" active":""); c.dataset.machine = name||"*";
-    c.textContent = name || "Todas";
-    c.onclick = ()=>{ fMachine = (fMachine===name?"":name); renderFilters(); renderFeed(); };
+    const isAll = key === "";
+    c.className = "chip"+(fMachine===key?" active":"")+(!isAll && !seenKeys.has(key)?" idle":"");
+    if(isAll){ c.textContent = "Todas"; }
+    else { c.innerHTML = '<span class="mdot'+(onlineKeys.has(key)?' on':'')+'"></span>'+esc(keyDisplay.get(key)||key); }
+    c.onclick = ()=>{ fMachine = (fMachine===key?"":key); renderFilters(); renderFeed(); };
     mf.appendChild(c);
   };
-  mkMac(""); [...machinesSeen].sort().forEach(mkMac);
+  mkMac(""); keys.forEach(mkMac);
 }
 
 function renderFeed(){
   const list = entries.filter(e =>
-    (!fBot || e.persona===fBot) && (!fMachine || e.machine===fMachine));
+    (!fBot || e.persona===fBot) && (!fMachine || norm(e.machine)===fMachine));
   document.getElementById("count").textContent = list.length;
   const feed = document.getElementById("feed");
   if(!list.length){ feed.innerHTML = '<div class="empty">sin entradas para este filtro</div>'; return; }
@@ -204,7 +229,7 @@ function renderFeed(){
   }, 70);
 })();
 
-loadDiary(); loadPresence();
+loadMachines(); loadDiary(); loadPresence();
 setInterval(loadDiary, 30000);
 setInterval(loadPresence, 30000);
 </script>

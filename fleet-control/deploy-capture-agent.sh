@@ -65,8 +65,11 @@ if [ "${1:-}" = "local" ]; then install_local; exit 0; fi
 # 1) local (MacMini)
 install_local
 
-# 2) remotos (16 y 14): re-ejecuta este mismo script allí en modo local
-for H in macbook-pro-16 macbookpronegro14; do
+# 2) remotos: re-ejecuta este mismo script allí en modo local.
+# NOTA: el modo local instala el watcher + LaunchAgent, pero NO copia AgoraCapture.app
+# (~/Applications/AgoraCapture.app) ni concede el permiso de Grabación de pantalla (TCC):
+# la app hay que copiarla aparte y el permiso lo concede el humano una vez por máquina.
+for H in macbook-pro-16 macbookpronegro14 macbookair16; do
   echo "=== $H ==="
   ssh -o ConnectTimeout=8 -o BatchMode=yes "csilvasantin@$H.tail48b61c.ts.net" 'bash -s -- local' < "$0" 2>&1 | tail -2 || echo "⚠️ ssh $H falló"
 done

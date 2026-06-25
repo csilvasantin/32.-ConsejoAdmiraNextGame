@@ -3917,14 +3917,17 @@ def _hk_ssh_launch(user: str, host: str) -> tuple:
         f"echo {payload} | base64 -D > \"$HOME/.fleet/hacksim.py\" && "
         # do script PRIMERO (una sola ventana con el simulacro); luego activate.
         # Hacer `activate` antes de `do script` abría una ventana vacía extra → se
-        # veía "dos veces". Y Ctrl+Cmd+F pone el Terminal a pantalla completa.
+        # veía "dos veces". Maximizamos la ventana fijando sus bounds a más que la
+        # pantalla (Terminal lo recorta al tamaño real): así LLENA la pantalla en TODAS
+        # las máquinas SIN permiso de Accesibilidad (a diferencia de Ctrl+Cmd+F, que
+        # requiere TCC y solo funcionaba donde estaba concedido).
         "osascript "
         "-e 'tell application \"Terminal\" to do script "
         "\"clear; echo \\\"== ADMIRA HACK SIMULATION ==\\\"; "
         "exec python3 $HOME/.fleet/hacksim.py\"' "
         "-e 'tell application \"Terminal\" to activate' "
         "-e 'delay 0.5' "
-        "-e 'tell application \"System Events\" to keystroke \"f\" using {control down, command down}'"
+        "-e 'tell application \"Terminal\" to set bounds of front window to {0, 0, 4000, 3000}'"
     )
     ssh_cmd = [
         "ssh",

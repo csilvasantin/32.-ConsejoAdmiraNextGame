@@ -4,7 +4,7 @@
  * Se inyecta en todas las páginas EXCEPTO la home (la home tiene su propia barra
  * funcional con HACKEO/Agentes/Tareas/Yarig).
  *   - Barra superior: enlaces de navegación.
- *   - Botones inferiores agrupados: CONTROL · DEMO · DIARIO.
+ *   - Botones inferiores agrupados (4, como la home): HACKEO · CONTROL · DIARIO · DEMO.
  * Uso: <script src="/admira-bar.js"></script> en el <head> de cada página.
  */
 (function () {
@@ -18,10 +18,13 @@
     { t: "🏠 AdmiraNeXT", h: "https://www.admira.live/equipos" },
     { t: "💬 Telegram",   h: "https://www.admira.live/telegram" },
   ];
+  // 4 opciones, como la barra inferior de la home: HACKEO · CONTROL · DIARIO · DEMO.
+  // El lanzador del HACKEO vive en la home, así que el botón lleva ahí.
   var BOT = [
+    { t: "🕵️ HACKEO",  h: "https://www.admira.live/" },
     { t: "🎛️ CONTROL", h: "https://www.admira.live/control/" },
+    { t: "📓 DIARIO",  h: "https://www.admira.live/diario.html" },
     { t: "🎬 DEMO",    h: "https://www.admira.studio/" },
-    { t: "📓 DIARIO",  h: "https://csilvasantin.github.io/diario/" },
   ];
 
   var css =

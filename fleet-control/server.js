@@ -210,6 +210,36 @@ const server = http.createServer(async (req, res) => {
     return json(res, 200, { machine: m.id, action: body.action, ...r });
   }
 
+  // ── ONBOARDING: alta/auto-registro de una máquina nueva en la flota ──────────
+  // La máquina nueva (p.ej. una MacBook Air) se da de alta sola: POST con su
+  // identidad + el token de flota. Upsert por id/host → persiste en fleet.json.
+  // Aparece en admira.live/control en cuanto el MacMini pueda hacerle SSH.
+  if (url === '/api/register' && req.method === 'POST') {
+    if (!(await gate(req, res, ip))) return;
+    const body = await readBody(req);
+    const host = String(body.host || '').trim();
+    const name = String(body.name || '').trim();
+    if (!host || !name) return json(res, 400, { error: 'host y name son obligatorios' });
+    const slug = String(body.id || name).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    const id = slug || ('mac-' + Date.now());
+    const machine = {
+      id,
+      name,
+      emoji: String(body.emoji || '💻'),
+      role: String(body.role || 'Equipo nuevo'),
+      host,
+      user: String(body.user || 'csilvasantin')
+    };
+    const idx = FLEET.machines.findIndex(m => m.id === id || (m.host && m.host === host));
+    let created;
+    if (idx >= 0) { FLEET.machines[idx] = { ...FLEET.machines[idx], ...machine }; created = false; }
+    else { FLEET.machines.push(machine); created = true; }
+    try { fs.writeFileSync(path.join(DIR, 'fleet.json'), JSON.stringify(FLEET, null, 1) + '\n'); }
+    catch (e) { return json(res, 500, { error: 'no se pudo persistir fleet.json: ' + (e.message || e) }); }
+    audit({ ip, ev: 'register', machine: id, host, created });
+    return json(res, created ? 201 : 200, { ok: true, created, machine, total: FLEET.machines.length });
+  }
+
   json(res, 404, { error: 'no encontrado' });
 });
 

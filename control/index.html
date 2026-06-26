@@ -112,7 +112,7 @@
   <span class="sub">control de la flota · AdmiraNext</span>
   <span class="spacer"></span>
   <span class="pill" id="connPill" title="estado de conexión">conectando…</span>
-  <span class="pill" id="tokenPill" title="cambiar token">🔑 token</span>
+  <span class="pill" id="tokenPill" title="sesión">🔒</span>
 </header>
 
 <div class="wrap">
@@ -156,11 +156,9 @@
 <script>
 const API='https://macmini.tail48b61c.ts.net/fleet/api';
 const $=s=>document.querySelector(s);
-let TOKEN=localStorage.getItem('fleet_token')||'';
 let MACHINES=[];
-// Sesión Google SSO (opción B): se obtiene intercambiando el credential del gate
-// (admira_gate.cred) por una sesión de backend (12h). Es el método PRIMARIO; el
-// X-Fleet-Token (optoken/manual) queda de fallback.
+// Acceso ÚNICO por login de Google (opción B): se obtiene una sesión de backend
+// (12h) intercambiando el credential del gate (admira_gate.cred). Sin tokens.
 let SESSION='';
 try{ const s=JSON.parse(localStorage.getItem('fleet_session')||'null'); if(s&&s.token&&s.exp&&Date.now()<s.exp) SESSION=s.token; }catch(e){}
 async function ensureSession(){
@@ -198,12 +196,12 @@ function personaWallpaper(name){
   return f ? '/wallpapers/'+f+'.png' : '';
 }
 
-function setToken(){
-  const t=prompt('Token de FleetControl:', TOKEN||'');
-  if(t!==null){ TOKEN=t.trim(); localStorage.setItem('fleet_token',TOKEN); refresh(); }
-}
-$('#tokenPill').onclick=setToken;
-function hdrs(){ const h={'Content-Type':'application/json'}; if(SESSION) h['Authorization']='Bearer '+SESSION; if(TOKEN) h['X-Fleet-Token']=TOKEN; return h; }
+// El acceso es por login de Google (gate). El botón muestra tu identidad y permite
+// cerrar sesión (limpia la sesión del backend y la del gate → vuelve a pedir login).
+function whoami(){ try{ const g=JSON.parse(localStorage.getItem('admira_gate')||'null'); return g&&g.email||''; }catch(e){ return ''; } }
+function logout(){ if(!confirm('¿Cerrar sesión de FleetControl?')) return; localStorage.removeItem('fleet_session'); localStorage.removeItem('admira_gate'); location.reload(); }
+$('#tokenPill').onclick=logout;
+function hdrs(){ const h={'Content-Type':'application/json'}; if(SESSION) h['Authorization']='Bearer '+SESSION; return h; }
 async function api(path, opts){
   const r=await fetch(API+path,{...opts,headers:{...hdrs(),...(opts&&opts.headers||{})}});
   if(r.status===401){ throw {code:401,msg:'token inválido o ausente'}; }
@@ -211,22 +209,20 @@ async function api(path, opts){
 }
 
 /* ---------- estado de la flota ---------- */
+let _reauthTried=false;
 async function refresh(){
-  if(!SESSION && !TOKEN){ $('#connPill').textContent='🔑 falta acceso'; $('#connPill').className='pill bad'; renderCards([]); return; }
+  if(!SESSION){ $('#connPill').textContent='🔒 inicia sesión Google'; $('#connPill').className='pill bad'; renderCards([]); return; }
   try{
-    const d=await api('/status'); MACHINES=d.machines;
+    const d=await api('/status'); MACHINES=d.machines; _reauthTried=false;
     const up=MACHINES.filter(m=>m.online).length;
     $('#connPill').textContent='🟢 '+up+'/'+MACHINES.length+' online'; $('#connPill').className='pill ok';
     await loadPersonas();
     renderCards(MACHINES); fillSelect();
   }catch(e){
-    if(e.code===401 && !_autoTried){
-      _autoTried=true;
-      // 1º: sesión de Google (opción B) — re-intercambia el credential del gate.
-      SESSION=''; localStorage.removeItem('fleet_session');
+    if(e.code===401 && !_reauthTried){
+      // Sesión caducada → re-intercambia el credential del gate UNA vez.
+      _reauthTried=true; SESSION=''; localStorage.removeItem('fleet_session');
       if(await ensureSession()) return refresh();
-      // 2º (fallback): token del optoken (auto-login en la tailnet).
-      if(await autoLogin(true)) return refresh();
     }
     $('#connPill').textContent = e.code===401 ? '🔒 sin acceso (inicia sesión Google)' : '🔴 sin conexión';
     $('#connPill').className='pill bad'; if(e.code===401) renderCards([]);
@@ -403,35 +399,12 @@ function pushResult(machine, label, d){
   out.insertBefore(div, out.firstChild);
 }
 
-/* ---------- auto-login en máquinas de AgoraMatrix (tailnet) ---------- */
-// El Mini sirve el TOKEN_OPERADOR sólo a nodos de la tailnet identificados
-// (puerto 8443, NO funnel). En tus Macs entra solo; desde fuera, pide token.
-async function fetchOperatorToken(){
-  try{
-    const r = await fetch('https://macmini.tail48b61c.ts.net:8443/optoken/token', { signal: AbortSignal.timeout(2500) });
-    if(!r.ok) return null;
-    const d = await r.json();
-    return d && d.token ? d.token : null;
-  }catch(e){ return null; }
-}
-// Auto-login: coge el token del optoken (tailnet) y lo guarda. force=true lo
-// re-pide aunque ya haya uno (para reemplazar uno caducado/descuadrado).
-let _autoTried=false;
-async function autoLogin(force){
-  if(TOKEN && !force) return false;
-  const a = await fetchOperatorToken();
-  if(a && a!==TOKEN){ TOKEN=a; localStorage.setItem('fleet_token', TOKEN); return true; }
-  return false;
-}
-
 /* ---------- arranque ---------- */
+// Acceso ÚNICO por login de Google: intercambia el credential del gate por una
+// sesión de backend. Sin tokens, sin optoken, sin prompt.
 (async () => {
-  // 1º (opción B): sesión Google SSO — intercambia el credential del gate.
   await ensureSession();
-  // 2º (fallback): token del optoken (tailnet), para no romper nada.
-  if(!SESSION) await autoLogin(true);
-  // 3º (último recurso): prompt manual, solo si no hay ni sesión ni token.
-  if(!SESSION && !TOKEN) setTimeout(setToken, 300);
+  if(SESSION){ const e=whoami(); const tp=$('#tokenPill'); if(tp&&e){ tp.textContent='🔒 '+e; tp.title='Cerrar sesión'; } }
   refresh();
   setInterval(refresh, 8000);
 })();

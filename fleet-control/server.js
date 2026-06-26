@@ -200,9 +200,11 @@ function tarpitMs() {
   return Math.min(TARPIT_MAX_MS, 250 * _recentFails.length);
 }
 // Exige token; si falla, audita + tarpit creciente. Devuelve true si autorizado.
-async function gate(req, res, ip) {
-  if (authed(req)) return true;                          // X-Fleet-Token (fallback)
-  if (verifySession(sessionFromReq(req))) return true;   // sesión Google SSO (opción B)
+// Acceso por sesión Google SSO (único método humano). `allowToken` solo lo activa
+// /api/register para el alta HEADLESS de máquinas nuevas (onboard.sh, sin navegador).
+async function gate(req, res, ip, allowToken) {
+  if (verifySession(sessionFromReq(req))) return true;          // sesión Google SSO
+  if (allowToken && authed(req)) return true;                   // X-Fleet-Token (solo onboarding headless)
   _recentFails.push(Date.now());
   const wait = tarpitMs();
   audit({ ip, ev: 'auth_fail', url: req.url, wait });
@@ -285,7 +287,7 @@ const server = http.createServer(async (req, res) => {
   // identidad + el token de flota. Upsert por id/host → persiste en fleet.json.
   // Aparece en admira.live/control en cuanto el MacMini pueda hacerle SSH.
   if (url === '/api/register' && req.method === 'POST') {
-    if (!(await gate(req, res, ip))) return;
+    if (!(await gate(req, res, ip, true))) return;   // sesión O X-Fleet-Token (onboarding headless)
     const body = await readBody(req);
     const host = String(body.host || '').trim();
     const name = String(body.name || '').trim();

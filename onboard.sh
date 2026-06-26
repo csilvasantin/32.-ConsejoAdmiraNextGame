@@ -24,7 +24,9 @@ TOKEN="${1:-}"
 ROLE="${2:-Equipo nuevo}"; EMOJI="${3:-💻}"
 
 # 2) identidad de esta máquina
-NAME="$(scutil --get ComputerName 2>/dev/null || hostname -s)"
+#    Nombre visible: 4º arg o $FLEET_NAME fuerzan el que quieras (ej. MacBookAirRosa);
+#    si no, se usa el nombre del equipo (ComputerName).
+NAME="${4:-${FLEET_NAME:-$(scutil --get ComputerName 2>/dev/null || hostname -s)}}"
 WHO="$(whoami)"
 TS="$(command -v tailscale || echo /Applications/Tailscale.app/Contents/MacOS/Tailscale)"
 HOST="$("$TS" status --json 2>/dev/null | python3 -c 'import sys,json;print(json.load(sys.stdin)["Self"]["DNSName"].rstrip("."))' 2>/dev/null || true)"

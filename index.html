@@ -3819,7 +3819,8 @@
         { id: "admira-macbookair16",      role: "Dirección",            persona: "MacBook Air 16",     ip: "macbookair16",         host: "macbookair16",        user: "csilvasantin" },
         { id: "admira-macbookairluna",    role: "Coordinación",         persona: "MacBook Air Luna",   ip: "macbookairluna",       host: "macbookairluna",      user: "csilvasantin" },
         { id: "admira-macbook-carla",     role: "Desarrollo",           persona: "MacBook Air Carla",  ip: "macbook-air-de-carla", host: "macbook-air-de-carla",user: "csilvasantin" },
-        { id: "admira-macbookairblanco",  role: "CEO",                  persona: "MacBook Air Blanco", ip: "macbookairblanco",     host: "macbookairblanco",    user: "csilvasantin" },
+        { id: "admira-macbookairrosa",    role: "Equipo nuevo",         persona: "MacBook Air Rosa",   ip: "macbookairrosa",       host: "macbookairrosa",      user: "csilvasantin" },
+        { id: "admira-macbookairazul",    role: "Equipo nuevo",         persona: "MacBook Air Azul",   ip: "macbookairazul",       host: "macbookairazul",      user: "csilvasantin" },
     ];
 
     function fillHackLine(line, machine) {
@@ -3868,7 +3869,7 @@
 
             // Build 8 terminal panels — each with a unique visual style
             overlay.innerHTML = '<div class="hack-grid">' + HACK_MACHINES.map((m, i) =>
-                `<div class="hack-terminal hack-style-${i}" id="hack-term-${m.id}">
+                `<div class="hack-terminal hack-style-${i % 8}" id="hack-term-${m.id}">
                     <div class="hack-terminal-header">
                         <span>${m.persona} — ${m.host}</span>
                         <span class="hack-role">${m.role}</span>
@@ -3878,9 +3879,9 @@
             ).join('') + '</div>';
 
             // Typing speeds per terminal (ms per char) — from fast hacker to slow methodical
-            const HACK_SPEEDS = [15, 35, 8, 50, 22, 12, 45, 28];
+            const HACK_SPEEDS = [15, 35, 8, 50, 22, 12, 45, 28, 18];
             // Each terminal starts at a different line offset for varied content
-            const HACK_OFFSETS = [0, 7, 14, 3, 21, 10, 5, 18];
+            const HACK_OFFSETS = [0, 7, 14, 3, 21, 10, 5, 18, 12];
 
             // Start local terminal animation — each with unique speed & content offset
             HACK_MACHINES.forEach((m, idx) => {

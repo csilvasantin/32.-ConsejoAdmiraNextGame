@@ -338,7 +338,15 @@ $('#cards').addEventListener('click', async e=>{
     b.disabled=false; b.textContent=lbl0; return;
   }
   let arg='';
-  if(NEEDS_ARG[action]){ arg=prompt(NEEDS_ARG[action], action==='volume'?'50':''); if(arg===null) return; }
+  // Lanzar signage: pregunta pantalla y circuito (opcionales) → arg "screen|circuit".
+  if(action==='signage_on'){
+    const screen=prompt('Pantalla (screen id) — vacío = la última configurada:','');
+    if(screen===null) return;
+    const circuit=prompt('Circuito (circuit id) — vacío = el último configurado:','');
+    if(circuit===null) return;
+    arg=screen.trim()+'|'+circuit.trim();
+  }
+  else if(NEEDS_ARG[action]){ arg=prompt(NEEDS_ARG[action], action==='volume'?'50':''); if(arg===null) return; }
   b.disabled=true; const lbl=b.textContent; if(action==='screenshot') b.textContent='📸 …';
   try{
     const d=await api('/action',{method:'POST',body:JSON.stringify({machine,action,arg})});

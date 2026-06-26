@@ -154,12 +154,27 @@ const ACTIONS = {
   // Digital Signage — player nativo AdmiraSignageMac (kiosko WKWebView de admira.tv).
   // Lanzar = abrir la app. Matar = quit limpio (= Escape/⌘Q: el KeepAlive NO relanza
   // un quit voluntario, solo un crash). Si no está instalada, lo dice.
-  signage_on: () =>
-    'open -a AdmiraSignageMac 2>/dev/null || open -b tv.admira.signage.mac 2>/dev/null; sleep 1; ' +
-    'pgrep -x AdmiraSignageMac >/dev/null && echo "📺 signage lanzado" || echo "AdmiraSignageMac no instalado en esta máquina"',
+  // Lanzar: opcionalmente fija screen/circuit (arg = "screen|circuit"), carga el
+  // LaunchAgent (KeepAlive lo mantiene vivo) y abre la app.
+  signage_on: (arg) => {
+    const parts = String(arg || '').split('|');
+    const screen = (parts[0] || '').trim(), circuit = (parts[1] || '').trim();
+    let pre = '';
+    if (screen) pre += 'defaults write tv.admira.signage.mac screen ' + sh(screen) + '; ';
+    if (circuit) pre += 'defaults write tv.admira.signage.mac circuit ' + sh(circuit) + '; ';
+    return pre +
+      'launchctl bootstrap gui/$(id -u) "$HOME/Library/LaunchAgents/tv.admira.signage.mac.plist" 2>/dev/null; ' +
+      'launchctl kickstart -k gui/$(id -u)/tv.admira.signage.mac 2>/dev/null; ' +
+      'open -a AdmiraSignageMac 2>/dev/null || open -b tv.admira.signage.mac 2>/dev/null; sleep 1; ' +
+      'pgrep -x AdmiraSignageMac >/dev/null && echo "📺 signage lanzado" || echo "AdmiraSignageMac no instalado en esta máquina"';
+  },
+  // Parar DE VERDAD: descarga el LaunchAgent (si no, el KeepAlive lo relanza),
+  // luego quit limpio + kill. Vuelve solo en el próximo login (el plist sigue).
   signage_off: () =>
-    'osascript -e \'tell application "AdmiraSignageMac" to quit\' 2>/dev/null; sleep 1; ' +
-    'pgrep -x AdmiraSignageMac >/dev/null && echo "sigue activo (¿colgado? prueba Escape en la máquina)" || echo "⏹️ signage parado"',
+    'launchctl bootout gui/$(id -u)/tv.admira.signage.mac 2>/dev/null; ' +
+    'osascript -e \'tell application "AdmiraSignageMac" to quit\' 2>/dev/null; ' +
+    'pkill -x AdmiraSignageMac 2>/dev/null; sleep 1.5; ' +
+    'pgrep -x AdmiraSignageMac >/dev/null && echo "sigue activo (reintenta)" || echo "⏹️ signage parado"',
   // Captura vía el mini-agente de captura (LaunchAgent en la sesión del usuario,
   // que SÍ tiene TCC). Handshake por ficheros: tocamos capture.req → el agente
   // (WatchPaths) captura y deja base64 en capture.out (más nuevo que la petición).

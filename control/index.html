@@ -405,7 +405,10 @@ async function autoLogin(force){
 
 /* ---------- arranque ---------- */
 (async () => {
-  if(!TOKEN) await autoLogin();
+  // SIEMPRE refresca el token desde el optoken al cargar (en la tailnet): así un
+  // token rancio guardado se reemplaza por el bueno sin que el usuario haga nada.
+  // Si el optoken no responde (fuera de la tailnet), conserva el guardado.
+  await autoLogin(true);
   if(!TOKEN) setTimeout(setToken, 300);
   refresh();
   setInterval(refresh, 8000);

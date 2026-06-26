@@ -29,6 +29,10 @@
   .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px}
   .card .top{display:flex;align-items:center;gap:11px}
   .card .em{font-size:30px;line-height:1}
+  .card .em.em-click{cursor:pointer;border-radius:10px;transition:.12s;padding:2px}
+  .card .em.em-click:hover{background:rgba(91,214,192,.16);transform:scale(1.08)}
+  .card .em.em-busy{opacity:.5;animation:empulse 1s infinite}
+  @keyframes empulse{50%{opacity:.85}}
   .card .nm{font-weight:700;font-size:15px}
   .card .role{color:var(--mut);font-size:12px}
   .dot{width:10px;height:10px;border-radius:50%;background:#5a6678;flex:none;display:inline-block}
@@ -199,7 +203,7 @@ function renderCards(ms){
   el.innerHTML=ms.map(m=>`
     <div class="card">
       <div class="top">
-        <span class="em">${m.emoji||'💻'}</span>
+        <span class="em${m.online?' em-click':''}" ${m.online?`data-icon="${m.id}"`:''} title="${m.online?'Limpiar el escritorio (oculta apps) y ver el fondo':''}">${m.emoji||'💻'}</span>
         <div><div class="nm">${m.name} <span class="dot ${m.online?'on':''}"></span></div>
         <div class="role">${m.role||''}${m.local?' · local':' · ssh'}</div></div>
       </div>
@@ -242,7 +246,27 @@ $('#lb').onclick=()=>{ $('#lb').style.display='none'; };
 
 /* ---------- acciones rápidas ---------- */
 const NEEDS_ARG={ volume:'Volumen 0-100:', say:'¿Qué digo?', notify:'Texto del aviso:', open:'¿Qué app abrir? (p.ej. Safari)', closeapp:'¿Qué app cerrar? (p.ej. Safari)' };
+// Comando que oculta TODAS las apps en primer plano → deja el escritorio limpio
+// (se ve el fondo). Verificado en las Air: no requiere permiso extra de Automatización.
+const CLEAN_DESKTOP_CMD="osascript -e 'tell application \"System Events\" to set visible of (every process whose background only is false) to false'";
 $('#cards').addEventListener('click', async e=>{
+  // Clic en el ICONO del ordenador: limpia el escritorio y muestra el fondo.
+  const icon=e.target.closest('.em[data-icon]');
+  if(icon){
+    const machine=icon.dataset.icon, m=MACHINES.find(x=>x.id===machine);
+    if(!m||!m.online) return;
+    icon.classList.add('em-busy');
+    try{
+      await api('/run',{method:'POST',body:JSON.stringify({machine,cmd:CLEAN_DESKTOP_CMD})});
+      pushResult(machine,'🧹 escritorio limpio',{rc:0,stdout:'apps ocultadas — fondo visible',ms:0});
+      await new Promise(r=>setTimeout(r,700));   // deja que se oculten antes de capturar
+      const d=await api('/action',{method:'POST',body:JSON.stringify({machine,action:'screenshot'})});
+      if(d.rc===0 && d.stdout && !/ERR_NO_CAPTURE/.test(d.stdout)) showShot(machine,'data:image/jpeg;base64,'+d.stdout);
+      else pushResult(machine,'📸 fondo',{rc:d.rc||1,stdout:'',stderr:d.stderr||'escritorio limpio, pero no pude capturar (¿permiso de Grabación de pantalla?)'});
+    }catch(err){ pushResult(machine,'🧹 escritorio',{rc:-1,stdout:'',stderr:err.msg||'error'}); }
+    icon.classList.remove('em-busy');
+    return;
+  }
   const b=e.target.closest('button[data-a]'); if(!b) return;
   const action=b.dataset.a, machine=b.dataset.m;
   // ssh: acción de cliente — copia el comando para conectar de verdad desde tu terminal.

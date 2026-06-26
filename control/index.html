@@ -383,5 +383,27 @@ async function fetchOperatorToken(){
   (async()=>{ await loadStatus(); render(); setInterval(async()=>{await loadStatus();render();},30000); })();
 })();
 </script>
+<script>
+/* Fusiona el <header> de FleetControl (marca + estado online + token) dentro de
+ * la barra superior de navegación (#admira-topbar, la de admira-bar.js) → una sola
+ * fila, ganando el alto que ocupaba la segunda barra. Mueve los nodos reales
+ * (#connPill/#tokenPill conservan sus IDs, listeners y actualizaciones de refresh). */
+(function mergeBars(){
+  var top=document.getElementById('admira-topbar');
+  var header=document.querySelector('header');
+  if(!top||!header){ return setTimeout(mergeBars,60); }
+  if(top.dataset.merged) return; top.dataset.merged='1';
+  var sp=document.createElement('span'); sp.style.cssText='flex:1 1 auto';
+  top.appendChild(sp);
+  var brand=document.createElement('span');
+  brand.style.cssText="font-weight:800;font-size:13px;letter-spacing:.3px;color:#e8eef7;white-space:nowrap;margin-right:2px";
+  brand.innerHTML="Fleet<span style=\"color:#5bd6c0;font-family:'SF Mono',ui-monospace,Menlo,monospace\">Control</span>";
+  top.appendChild(brand);
+  var cp=document.getElementById('connPill'), tp=document.getElementById('tokenPill');
+  if(cp) top.appendChild(cp);
+  if(tp) top.appendChild(tp);
+  header.remove();
+})();
+</script>
 </body>
 </html>

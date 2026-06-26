@@ -203,6 +203,10 @@ async function refresh(){
     await loadPersonas();
     renderCards(MACHINES); fillSelect();
   }catch(e){
+    // Auto-cura: si el token guardado caducó/descuadró (401), pídelo de nuevo al
+    // optoken (auto-login) UNA vez y reintenta. Así el panel no se queda "inválido"
+    // si el token cambia — y tú nunca tecleas nada (estás en la tailnet).
+    if(e.code===401 && !_autoTried){ _autoTried=true; const ok=await autoLogin(true); if(ok) return refresh(); }
     $('#connPill').textContent = e.code===401 ? '🔑 token inválido' : '🔴 sin conexión';
     $('#connPill').className='pill bad'; if(e.code===401) renderCards([]);
   }
@@ -389,13 +393,19 @@ async function fetchOperatorToken(){
     return d && d.token ? d.token : null;
   }catch(e){ return null; }
 }
+// Auto-login: coge el token del optoken (tailnet) y lo guarda. force=true lo
+// re-pide aunque ya haya uno (para reemplazar uno caducado/descuadrado).
+let _autoTried=false;
+async function autoLogin(force){
+  if(TOKEN && !force) return false;
+  const a = await fetchOperatorToken();
+  if(a && a!==TOKEN){ TOKEN=a; localStorage.setItem('fleet_token', TOKEN); return true; }
+  return false;
+}
 
 /* ---------- arranque ---------- */
 (async () => {
-  if(!TOKEN){
-    const auto = await fetchOperatorToken();
-    if(auto){ TOKEN = auto; localStorage.setItem('fleet_token', TOKEN); }
-  }
+  if(!TOKEN) await autoLogin();
   if(!TOKEN) setTimeout(setToken, 300);
   refresh();
   setInterval(refresh, 8000);

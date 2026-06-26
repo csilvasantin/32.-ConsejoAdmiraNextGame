@@ -158,6 +158,23 @@ const API='https://macmini.tail48b61c.ts.net/fleet/api';
 const $=s=>document.querySelector(s);
 let TOKEN=localStorage.getItem('fleet_token')||'';
 let MACHINES=[];
+// Sesión Google SSO (opción B): se obtiene intercambiando el credential del gate
+// (admira_gate.cred) por una sesión de backend (12h). Es el método PRIMARIO; el
+// X-Fleet-Token (optoken/manual) queda de fallback.
+let SESSION='';
+try{ const s=JSON.parse(localStorage.getItem('fleet_session')||'null'); if(s&&s.token&&s.exp&&Date.now()<s.exp) SESSION=s.token; }catch(e){}
+async function ensureSession(){
+  if(SESSION) return true;
+  let g; try{ g=JSON.parse(localStorage.getItem('admira_gate')||'null'); }catch(e){}
+  if(!g||!g.cred) return false;                 // sin credential del gate → no se puede
+  try{
+    const r=await fetch(API+'/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({credential:g.cred})});
+    if(!r.ok) return false;
+    const d=await r.json();
+    if(d&&d.session){ SESSION=d.session; localStorage.setItem('fleet_session',JSON.stringify({token:d.session,exp:d.exp||(Date.now()+12*3600*1000)})); return true; }
+  }catch(e){}
+  return false;
+}
 
 /* ---------- fondo de pantalla (persona) por máquina ----------
    Mientras no haya captura real, cada equipo muestra el fondo de la persona que tiene
@@ -186,7 +203,7 @@ function setToken(){
   if(t!==null){ TOKEN=t.trim(); localStorage.setItem('fleet_token',TOKEN); refresh(); }
 }
 $('#tokenPill').onclick=setToken;
-function hdrs(){ return {'Content-Type':'application/json','X-Fleet-Token':TOKEN}; }
+function hdrs(){ const h={'Content-Type':'application/json'}; if(SESSION) h['Authorization']='Bearer '+SESSION; if(TOKEN) h['X-Fleet-Token']=TOKEN; return h; }
 async function api(path, opts){
   const r=await fetch(API+path,{...opts,headers:{...hdrs(),...(opts&&opts.headers||{})}});
   if(r.status===401){ throw {code:401,msg:'token inválido o ausente'}; }
@@ -195,7 +212,7 @@ async function api(path, opts){
 
 /* ---------- estado de la flota ---------- */
 async function refresh(){
-  if(!TOKEN){ $('#connPill').textContent='🔑 falta token'; $('#connPill').className='pill bad'; renderCards([]); return; }
+  if(!SESSION && !TOKEN){ $('#connPill').textContent='🔑 falta acceso'; $('#connPill').className='pill bad'; renderCards([]); return; }
   try{
     const d=await api('/status'); MACHINES=d.machines;
     const up=MACHINES.filter(m=>m.online).length;
@@ -203,11 +220,15 @@ async function refresh(){
     await loadPersonas();
     renderCards(MACHINES); fillSelect();
   }catch(e){
-    // Auto-cura: si el token guardado caducó/descuadró (401), pídelo de nuevo al
-    // optoken (auto-login) UNA vez y reintenta. Así el panel no se queda "inválido"
-    // si el token cambia — y tú nunca tecleas nada (estás en la tailnet).
-    if(e.code===401 && !_autoTried){ _autoTried=true; const ok=await autoLogin(true); if(ok) return refresh(); }
-    $('#connPill').textContent = e.code===401 ? '🔑 token inválido' : '🔴 sin conexión';
+    if(e.code===401 && !_autoTried){
+      _autoTried=true;
+      // 1º: sesión de Google (opción B) — re-intercambia el credential del gate.
+      SESSION=''; localStorage.removeItem('fleet_session');
+      if(await ensureSession()) return refresh();
+      // 2º (fallback): token del optoken (auto-login en la tailnet).
+      if(await autoLogin(true)) return refresh();
+    }
+    $('#connPill').textContent = e.code===401 ? '🔒 sin acceso (inicia sesión Google)' : '🔴 sin conexión';
     $('#connPill').className='pill bad'; if(e.code===401) renderCards([]);
   }
 }
@@ -405,11 +426,12 @@ async function autoLogin(force){
 
 /* ---------- arranque ---------- */
 (async () => {
-  // SIEMPRE refresca el token desde el optoken al cargar (en la tailnet): así un
-  // token rancio guardado se reemplaza por el bueno sin que el usuario haga nada.
-  // Si el optoken no responde (fuera de la tailnet), conserva el guardado.
-  await autoLogin(true);
-  if(!TOKEN) setTimeout(setToken, 300);
+  // 1º (opción B): sesión Google SSO — intercambia el credential del gate.
+  await ensureSession();
+  // 2º (fallback): token del optoken (tailnet), para no romper nada.
+  if(!SESSION) await autoLogin(true);
+  // 3º (último recurso): prompt manual, solo si no hay ni sesión ni token.
+  if(!SESSION && !TOKEN) setTimeout(setToken, 300);
   refresh();
   setInterval(refresh, 8000);
 })();

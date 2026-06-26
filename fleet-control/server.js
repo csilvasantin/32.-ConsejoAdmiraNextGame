@@ -53,6 +53,59 @@ function currentToken() {
 }
 const TOKEN = currentToken();
 
+/* ----- Auth por Google SSO (opción B) -------------------------------------- *
+ * El backend confía en la identidad de Google del usuario (misma allowlist que
+ * auth-gate.js). Intercambia el ID token de Google (verificado por el propio
+ * Google vía tokeninfo) por una SESIÓN propia firmada con HMAC (12h), para no
+ * re-verificar con Google en cada llamada ni depender del optoken/X-Fleet-Token. */
+const GOOGLE_CLIENT_ID = '861856772040-e1ri6kpu6maagtb6crdfbb923hsaalgb.apps.googleusercontent.com';
+const ALLOWLIST = new Set(['csilva@admira.com', 'csilvasantin@gmail.com']);
+const SESSION_TTL_MS = 12 * 3600 * 1000;
+const SESSION_SECRET = (function () {
+  const f = path.join(DIR, '.session-secret');
+  try { const s = fs.readFileSync(f, 'utf8').trim(); if (s) return s; } catch (e) {}
+  const s = crypto.randomBytes(32).toString('hex');
+  try { fs.writeFileSync(f, s, { mode: 0o600 }); } catch (e) {}
+  return s;
+})();
+const b64url = b => Buffer.from(b).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+const hmac = p => crypto.createHmac('sha256', SESSION_SECRET).update(p).digest('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+// Verifica un ID token de Google con el endpoint tokeninfo (Google valida la
+// firma). Devuelve el email allowlisted o null.
+async function verifyGoogleCredential(cred) {
+  if (!cred || typeof cred !== 'string') return null;
+  try {
+    const r = await fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(cred), { signal: AbortSignal.timeout(8000) });
+    if (!r.ok) return null;
+    const d = await r.json();
+    if (d.aud !== GOOGLE_CLIENT_ID) return null;            // token de OTRA app → no
+    if (String(d.email_verified) !== 'true') return null;
+    const email = String(d.email || '').toLowerCase();
+    if (!ALLOWLIST.has(email)) return null;                 // no allowlisted → no
+    return email;
+  } catch (e) { return null; }
+}
+function mintSession(email) {
+  const payload = b64url(JSON.stringify({ email, exp: Date.now() + SESSION_TTL_MS }));
+  return payload + '.' + hmac(payload);
+}
+function verifySession(token) {
+  if (!token || typeof token !== 'string') return null;
+  const i = token.lastIndexOf('.'); if (i < 1) return null;
+  const payload = token.slice(0, i), sig = token.slice(i + 1);
+  if (!safeEqual(sig, hmac(payload))) return null;
+  let d; try { d = JSON.parse(Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString()); } catch (e) { return null; }
+  if (!d || !d.exp || Date.now() > d.exp) return null;
+  const email = String(d.email || '').toLowerCase();
+  if (!ALLOWLIST.has(email)) return null;
+  return email;
+}
+function sessionFromReq(req) {
+  const h = String(req.headers['authorization'] || '');
+  return (h.startsWith('Bearer ') ? h.slice(7).trim() : '') || String(req.headers['x-fleet-session'] || '');
+}
+
 /* ----- ejecutar en una máquina (local o ssh) -------------------------------- */
 function machineById(id) { return FLEET.machines.find(m => m.id === id); }
 
@@ -111,7 +164,7 @@ function cors(req, res) {
   if (o && ALLOW_ORIGINS.includes(o)) res.setHeader('Access-Control-Allow-Origin', o);
   res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Fleet-Token');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Fleet-Token, X-Fleet-Session, Authorization');
   res.setHeader('Access-Control-Max-Age', '600');
 }
 function json(res, code, obj) { res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(obj)); }
@@ -148,7 +201,8 @@ function tarpitMs() {
 }
 // Exige token; si falla, audita + tarpit creciente. Devuelve true si autorizado.
 async function gate(req, res, ip) {
-  if (authed(req)) return true;
+  if (authed(req)) return true;                          // X-Fleet-Token (fallback)
+  if (verifySession(sessionFromReq(req))) return true;   // sesión Google SSO (opción B)
   _recentFails.push(Date.now());
   const wait = tarpitMs();
   audit({ ip, ev: 'auth_fail', url: req.url, wait });
@@ -172,6 +226,22 @@ const server = http.createServer(async (req, res) => {
 
   // salud (sin token)
   if (url === '/api/health' || url === '/health') return json(res, 200, { ok: true, service: 'fleet-control', machines: FLEET.machines.length, hasToken: !!currentToken() });
+
+  // AUTH (opción B): intercambia un ID token de Google (allowlisted) por una
+  // sesión propia del backend (12h). Sin token: es el bootstrap. Google verifica
+  // la firma del ID token; aquí solo aceptamos aud=nuestro client + email allowlisted.
+  if (url === '/api/auth' && req.method === 'POST') {
+    const body = await readBody(req);
+    const email = await verifyGoogleCredential(body && body.credential);
+    if (!email) {
+      _recentFails.push(Date.now()); const wait = tarpitMs();
+      audit({ ip, ev: 'auth_google_fail' });
+      if (wait) await new Promise(r => setTimeout(r, wait));
+      return json(res, 401, { error: 'google no autorizado' });
+    }
+    audit({ ip, ev: 'auth_google_ok', email });
+    return json(res, 200, { ok: true, session: mintSession(email), email, exp: Date.now() + SESSION_TTL_MS });
+  }
 
   // estado de la flota (lectura) — requiere token (el funnel es público)
   if (url === '/api/status') {

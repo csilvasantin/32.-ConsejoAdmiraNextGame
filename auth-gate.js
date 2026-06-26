@@ -91,7 +91,10 @@
       return;
     }
     if (WHITELIST.indexOf(email) >= 0) {
-      try { localStorage.setItem("admira_gate", JSON.stringify({ email: email, exp: Date.now() + REMEMBER_HOURS * 3600 * 1000 })); } catch (e) {}
+      // Guardamos también el credential (ID token de Google, fresco) para que las
+      // páginas que lo necesiten (p.ej. FleetControl) lo intercambien por una
+      // sesión de backend sin volver a pedir login. El JWT caduca en ~1h.
+      try { localStorage.setItem("admira_gate", JSON.stringify({ email: email, exp: Date.now() + REMEMBER_HOURS * 3600 * 1000, cred: resp.credential, credAt: Date.now() })); } catch (e) {}
       unlock();
     } else {
       setErr("Cuenta no autorizada: " + email);

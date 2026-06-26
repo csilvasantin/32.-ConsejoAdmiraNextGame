@@ -3913,6 +3913,13 @@ def _hk_ssh_launch(user: str, host: str) -> tuple:
     # matar de forma fiable con `pkill -f hacksim.py` ANTES de cerrar → sin el
     # diálogo "¿terminar el proceso en ejecución?".
     remote_cmd = (
+        # FIX screensaver: `caffeinate -u` solo despierta el display / evita que se
+        # duerma, pero NO descarta un screensaver YA ACTIVO (ScreenSaverEngine sigue
+        # corriendo por encima → el Terminal del hackeo salía por DEBAJO). Lo matamos
+        # explícitamente; tras eso el escritorio queda visible y el Terminal se ve encima.
+        # (Si la sesión está BLOQUEADA con contraseña, queda el login window y no se
+        #  puede tapar sin desbloquear — eso ya es macOS.)
+        "killall ScreenSaverEngine 2>/dev/null; "
         "caffeinate -u -t 2 && sleep 1 && mkdir -p \"$HOME/.fleet\" && "
         f"echo {payload} | base64 -D > \"$HOME/.fleet/hacksim.py\" && "
         # do script PRIMERO (una sola ventana con el simulacro); luego activate.

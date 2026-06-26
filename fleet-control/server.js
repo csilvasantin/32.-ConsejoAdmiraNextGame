@@ -151,6 +151,15 @@ const ACTIONS = {
   notify: (arg) => 'osascript -e ' + sh('display notification "' + String(arg).replace(/"/g, "'") + '" with title "FleetControl"') + '; echo "notificado"',
   open: (arg) => 'open -a ' + sh(arg) + ' && echo "abierto: ' + String(arg).replace(/"/g, '') + '"',
   closeapp: (arg) => 'osascript -e ' + sh('quit app "' + String(arg).replace(/"/g, '') + '"') + ' && echo "cerrada: ' + String(arg).replace(/"/g, '') + '"',
+  // Digital Signage — player nativo AdmiraSignageMac (kiosko WKWebView de admira.tv).
+  // Lanzar = abrir la app. Matar = quit limpio (= Escape/⌘Q: el KeepAlive NO relanza
+  // un quit voluntario, solo un crash). Si no está instalada, lo dice.
+  signage_on: () =>
+    'open -a AdmiraSignageMac 2>/dev/null || open -b tv.admira.signage.mac 2>/dev/null; sleep 1; ' +
+    'pgrep -x AdmiraSignageMac >/dev/null && echo "📺 signage lanzado" || echo "AdmiraSignageMac no instalado en esta máquina"',
+  signage_off: () =>
+    'osascript -e \'tell application "AdmiraSignageMac" to quit\' 2>/dev/null; sleep 1; ' +
+    'pgrep -x AdmiraSignageMac >/dev/null && echo "sigue activo (¿colgado? prueba Escape en la máquina)" || echo "⏹️ signage parado"',
   // Captura vía el mini-agente de captura (LaunchAgent en la sesión del usuario,
   // que SÍ tiene TCC). Handshake por ficheros: tocamos capture.req → el agente
   // (WatchPaths) captura y deja base64 en capture.out (más nuevo que la petición).

@@ -24,7 +24,19 @@
   .pill{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:5px 11px;color:var(--mut);cursor:pointer}
   .pill.ok{color:var(--ok);border-color:var(--ok)}
   .pill.bad{color:var(--bad);border-color:var(--bad)}
-  .wrap{max-width:1100px;margin:0 auto;padding:22px}
+  .wrap{max-width:1100px;margin:0 auto;padding:22px;display:flex;flex-direction:column}
+  /* orden: ordenadores → consola → Sillas del Consejo (abajo) */
+  #cards{order:1} .console{order:2} .council-seats{order:3;margin-top:8px}
+  /* tarjetas: comprimir + reordenar por arrastre */
+  .card .top{position:relative}
+  .card .cardmeta{flex:1;min-width:0}
+  .card .drag-handle{cursor:grab;color:var(--mut);font-size:17px;line-height:1;padding:2px 4px;user-select:none;flex:none}
+  .card .drag-handle:hover{color:var(--ink)} .card .drag-handle:active{cursor:grabbing}
+  .card .card-fold{cursor:pointer;color:var(--mut);font-size:12px;padding:2px 6px;flex:none;transition:transform .15s}
+  .card.collapsed .card-fold{transform:rotate(-90deg)}
+  .card.collapsed .info,.card.collapsed .shot,.card.collapsed .acts{display:none}
+  .card.dragging{opacity:.4}
+  .card.drop-target{box-shadow:0 0 0 2px var(--acc2) inset;border-color:var(--acc2)}
   .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px}
   .card .top{display:flex;align-items:center;gap:11px}
@@ -195,17 +207,31 @@ async function refresh(){
     $('#connPill').className='pill bad'; if(e.code===401) renderCards([]);
   }
 }
+/* ── orden + colapso de tarjetas (persistidos en localStorage) ── */
+function cardOrder(){ try{ return JSON.parse(localStorage.getItem('fleet_card_order')||'[]'); }catch(e){ return []; } }
+function sortByOrder(ms){ const o=cardOrder(); if(!o.length) return ms; return ms.slice().sort((a,b)=>{ let ia=o.indexOf(a.id), ib=o.indexOf(b.id); if(ia<0)ia=1e9; if(ib<0)ib=1e9; return ia-ib; }); }
+function moveCard(dragId, targetId){
+  let o=cardOrder(); MACHINES.forEach(m=>{ if(o.indexOf(m.id)<0) o.push(m.id); });
+  o=o.filter(id=>id!==dragId); let ti=o.indexOf(targetId); o.splice(ti<0?o.length:ti,0,dragId);
+  localStorage.setItem('fleet_card_order', JSON.stringify(o)); renderCards(MACHINES);
+}
+function collapsedMap(){ try{ return JSON.parse(localStorage.getItem('fleet_card_collapsed')||'{}'); }catch(e){ return {}; } }
+function toggleCollapse(id){ const c=collapsedMap(); c[id]=!c[id]; localStorage.setItem('fleet_card_collapsed', JSON.stringify(c)); const card=document.querySelector('.card[data-card="'+id+'"]'); if(card) card.classList.toggle('collapsed', !!c[id]); }
+
 function renderCards(ms){
   const el=$('#cards');
   if(!ms.length){ el.innerHTML='<div class="empty" style="grid-column:1/-1">Introduce el token (🔑) para ver la flota.</div>'; return; }
   // preserva miniaturas ya cargadas
   const shots={}; document.querySelectorAll('.shot').forEach(s=>{ if(s.dataset.m && s.style.display!=='none') shots[s.dataset.m]=s.querySelector('img').src; });
-  el.innerHTML=ms.map(m=>`
-    <div class="card">
+  const COL=collapsedMap();
+  el.innerHTML=sortByOrder(ms).map(m=>`
+    <div class="card${COL[m.id]?' collapsed':''}" data-card="${m.id}">
       <div class="top">
         <span class="em${m.online?' em-click':''}" ${m.online?`data-icon="${m.id}"`:''} title="${m.online?'Limpiar el escritorio (oculta apps) y ver el fondo':''}">${m.emoji||'💻'}</span>
-        <div><div class="nm">${m.name} <span class="dot ${m.online?'on':''}"></span></div>
+        <div class="cardmeta"><div class="nm">${m.name} <span class="dot ${m.online?'on':''}"></span></div>
         <div class="role">${m.role||''}${m.local?' · local':' · ssh'}</div></div>
+        <span class="card-fold" data-fold="${m.id}" title="Comprimir / expandir">▾</span>
+        <span class="drag-handle" draggable="true" data-drag="${m.id}" title="Arrastra para reordenar">⠿</span>
       </div>
       <div class="info">${m.online?(m.info||'').replace(/</g,'&lt;'):'— sin respuesta —'}</div>
       <div class="shot" data-m="${m.id}"><img alt="captura ${m.name}"></div>
@@ -250,6 +276,8 @@ const NEEDS_ARG={ volume:'Volumen 0-100:', say:'¿Qué digo?', notify:'Texto del
 // (se ve el fondo). Verificado en las Air: no requiere permiso extra de Automatización.
 const CLEAN_DESKTOP_CMD="osascript -e 'tell application \"System Events\" to set visible of (every process whose background only is false) to false'";
 $('#cards').addEventListener('click', async e=>{
+  // Comprimir / expandir la tarjeta (chevron).
+  const fold=e.target.closest('.card-fold'); if(fold){ toggleCollapse(fold.dataset.fold); return; }
   // Clic en el ICONO del ordenador: limpia el escritorio y muestra el fondo.
   const icon=e.target.closest('.em[data-icon]');
   if(icon){
@@ -298,6 +326,28 @@ $('#cards').addEventListener('click', async e=>{
   }catch(err){ pushResult(machine,'⚡ '+action,{rc:-1,stdout:'',stderr:err.msg||'error'}); }
   b.disabled=false; b.textContent=lbl;
 });
+
+/* ── reordenar tarjetas por arrastre (asa ⠿) ── */
+let _dragId=null;
+function _clearDrag(){ document.querySelectorAll('.card.drop-target,.card.dragging').forEach(c=>c.classList.remove('drop-target','dragging')); }
+$('#cards').addEventListener('dragstart', e=>{
+  const h=e.target.closest('.drag-handle'); if(!h){ if(e.target.closest('.card')) e.preventDefault(); return; }
+  _dragId=h.dataset.drag; const card=h.closest('.card'); if(card) card.classList.add('dragging');
+  e.dataTransfer.effectAllowed='move'; try{ e.dataTransfer.setData('text/plain', _dragId); }catch(_){}
+});
+$('#cards').addEventListener('dragover', e=>{
+  if(!_dragId) return; e.preventDefault(); e.dataTransfer.dropEffect='move';
+  const card=e.target.closest('.card[data-card]');
+  document.querySelectorAll('.card.drop-target').forEach(c=>{ if(c!==card) c.classList.remove('drop-target'); });
+  if(card && card.dataset.card!==_dragId) card.classList.add('drop-target');
+});
+$('#cards').addEventListener('drop', e=>{
+  if(!_dragId) return; e.preventDefault();
+  const card=e.target.closest('.card[data-card]'); const target=card?card.dataset.card:null; const drag=_dragId;
+  _dragId=null; _clearDrag();
+  if(target && target!==drag) moveCard(drag, target);
+});
+$('#cards').addEventListener('dragend', ()=>{ _dragId=null; _clearDrag(); });
 
 /* ---------- consola libre ---------- */
 function fillSelect(){

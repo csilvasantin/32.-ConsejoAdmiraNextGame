@@ -118,7 +118,10 @@ function run(machine, cmd, timeoutMs) {
     } else {
       const target = (machine.user || 'csilvasantin') + '@' + machine.host;
       bin = 'ssh';
-      args = ['-o', 'ConnectTimeout=8', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=accept-new', target, cmd];
+      // ConnectTimeout se ajusta al presupuesto (status usa un timeout corto para
+      // que el sondeo total quede rápido); por defecto 8s.
+      const ct = Math.max(2, Math.min(8, Math.floor((timeoutMs || 25000) / 1000) - 1));
+      args = ['-o', 'ConnectTimeout=' + ct, '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=accept-new', target, cmd];
     }
     const t0 = Date.now();
     let out = '', err = '', done = false;
@@ -250,7 +253,7 @@ const server = http.createServer(async (req, res) => {
     if (!(await gate(req, res, ip))) return;
     const probe = 'echo ONLINE; scutil --get ComputerName 2>/dev/null || hostname';
     const results = await Promise.all(FLEET.machines.map(async (m) => {
-      const r = await run(m, probe, 9000);
+      const r = await run(m, probe, 4500);   // sondeo corto: total < 5s (offline fallan rápido)
       const online = r.rc === 0 && /ONLINE/.test(r.stdout);
       return { id: m.id, name: m.name, emoji: m.emoji, role: m.role, local: !!m.local, online, host: m.host, user: m.user || 'csilvasantin', info: online ? r.stdout.replace(/ONLINE\s*/, '').trim() : (r.stderr || 'sin respuesta').slice(0, 120) };
     }));

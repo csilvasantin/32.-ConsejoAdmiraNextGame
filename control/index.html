@@ -393,12 +393,16 @@ async function fetchOperatorToken(){
   var header=document.querySelector('header');
   if(!top||!header){ return setTimeout(mergeBars,60); }
   if(top.dataset.merged) return; top.dataset.merged='1';
+  // pills (online/token) con el mismo look SCUMM ámbar de la barra
+  var st=document.createElement('style');
+  st.textContent="#admira-topbar .pill{font-family:'Press Start 2P',monospace;font-size:8px;line-height:1.5;"
+    +"border:2px solid #8b5a14;border-radius:0;background:#2a1a08;color:#ffdd66;box-shadow:2px 2px 0 #000;"
+    +"padding:6px 9px;align-self:center;letter-spacing:.5px}"
+    +"#admira-topbar .pill.ok{color:#7CFC00;border-color:#5a7a2e}"
+    +"#admira-topbar .pill.bad{color:#ff6b6b;border-color:#7a3030}";
+  document.head.appendChild(st);
   var sp=document.createElement('span'); sp.style.cssText='flex:1 1 auto';
   top.appendChild(sp);
-  var brand=document.createElement('span');
-  brand.style.cssText="font-weight:800;font-size:13px;letter-spacing:.3px;color:#e8eef7;white-space:nowrap;margin-right:2px";
-  brand.innerHTML="Fleet<span style=\"color:#5bd6c0;font-family:'SF Mono',ui-monospace,Menlo,monospace\">Control</span>";
-  top.appendChild(brand);
   var cp=document.getElementById('connPill'), tp=document.getElementById('tokenPill');
   if(cp) top.appendChild(cp);
   if(tp) top.appendChild(tp);

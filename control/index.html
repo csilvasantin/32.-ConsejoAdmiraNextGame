@@ -65,6 +65,22 @@
   .capwarn button:hover{background:var(--warn);color:#2a1a08}
   .card.capfail{border-color:var(--warn)}
   .card.capfail .dot{box-shadow:none}
+  /* salud de capturas (barra) */
+  .monitorbar .caphealth{font-family:var(--mono);font-size:11.5px;color:var(--mut)}
+  .monitorbar .caphealth b.bad{color:var(--warn)} .monitorbar .caphealth b.ok{color:var(--ok)}
+  .monitorbar #fixAll{border-color:var(--warn);color:var(--warn);font-weight:700}
+  .monitorbar #fixAll:hover{background:var(--warn);color:#2a1a08}
+  /* frescura de la miniatura */
+  .shotage{position:absolute;right:0;bottom:0;font-size:10px;padding:3px 7px;background:rgba(0,0,0,.55);color:#cbe6ff;letter-spacing:.2px;border-top-left-radius:8px;display:none}
+  .shot.stale img{opacity:.5;filter:grayscale(.3)}
+  .shot.stale .shotage{color:var(--warn)}
+  /* toasts de alerta (caída / fallo) */
+  #toasts{position:fixed;top:64px;right:14px;display:flex;flex-direction:column;gap:8px;z-index:120;max-width:300px}
+  .toast{border:1px solid var(--line);border-left-width:4px;border-radius:10px;background:var(--panel2);color:var(--ink);
+    padding:9px 12px;font-size:12.5px;box-shadow:0 6px 24px #0008;animation:toastin .18s ease;cursor:pointer;line-height:1.35}
+  .toast.down{border-left-color:var(--bad)} .toast.up{border-left-color:var(--ok)} .toast.warn{border-left-color:var(--warn)}
+  .toast small{color:var(--mut);display:block;font-size:10.5px;margin-top:1px}
+  @keyframes toastin{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
   button{font-family:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:9px;padding:6px 10px;font-size:12px;transition:.12s}
   button:hover{border-color:var(--acc);color:#fff}
   button:disabled{opacity:.45;cursor:progress}
@@ -151,6 +167,8 @@
     <label><input type="checkbox" id="acToggle"> 📸 Auto-captura</label>
     <span>cada <input type="number" id="acSec" min="3" max="600" value="15"> s</span>
     <button id="acNow" title="Capturar ahora todas las pantallas online">📸 Capturar todas</button>
+    <span class="caphealth" id="capHealth"></span>
+    <button id="fixAll" style="display:none" title="Enviar el arreglo de captura por SSH a todos los equipos que fallan">🛡️ arreglar todas</button>
     <span class="acstate" id="acState">— para monitorizar qué emite cada pantalla</span>
   </div>
 
@@ -170,6 +188,7 @@
 </div>
 
 <div id="lb"><img id="lbImg" alt=""></div>
+<div id="toasts"></div>
 
 <script>
 const API='https://macmini.tail48b61c.ts.net/fleet/api';
@@ -177,13 +196,45 @@ const $=s=>document.querySelector(s);
 let MACHINES=[];
 // Equipos cuya captura ha fallado (ERR_NO_CAPTURE / sin permiso). Persiste entre
 // re-renders para volver a pintar el aviso + botón de arreglo por SSH.
-let CAP_FAIL={};
+let CAP_FAIL={}, CAP_TS={}, PREV_ONLINE={}, _baselineDone=false;
+function machName(id){ const m=MACHINES.find(x=>x.id===id); return m?(m.name||id):id; }
 function setCapFail(id, failed){
-  CAP_FAIL[id]=!!failed;
+  const prev=CAP_FAIL[id]; CAP_FAIL[id]=!!failed;
   const w=document.querySelector('.capwarn[data-capwarn="'+id+'"]');
   const card=document.querySelector('.card[data-card="'+id+'"]');
   if(w) w.style.display=failed?'flex':'none';
   if(card) card.classList.toggle('capfail', !!failed);
+  // toast solo cuando algo que iba bien empieza a fallar (evita ráfaga en la 1ª detección)
+  if(failed && prev===false) toast('warn','⚠️ '+machName(id),'la captura ha empezado a fallar (¿permiso?)');
+  updateCapHealth();
+}
+// ---- frescura de la miniatura ("hace Xs", se atenúa si está vieja) ----
+function fmtAge(ms){ const s=Math.max(0,Math.round(ms/1000)); if(s<60) return 'hace '+s+'s'; const m=Math.round(s/60); if(m<60) return 'hace '+m+'m'; return 'hace '+Math.round(m/60)+'h'; }
+function paintAge(id){
+  const box=document.querySelector('.shot[data-m="'+id+'"]'); if(!box) return;
+  const lab=box.querySelector('.shotage'); const ts=CAP_TS[id]; if(!lab) return;
+  if(!ts || box.classList.contains('isWall')){ lab.style.display='none'; box.classList.remove('stale'); return; }
+  const age=Date.now()-ts; lab.textContent=fmtAge(age); lab.style.display='block';
+  const limit=Math.max(45000,(AUTOCAP.sec||15)*3000); // viejo si supera 3× el intervalo (mín 45s)
+  box.classList.toggle('stale', age>limit);
+}
+function paintAllAges(){ Object.keys(CAP_TS).forEach(paintAge); }
+function markCaptured(id){ CAP_TS[id]=Date.now(); paintAge(id); }
+// ---- salud de capturas (barra) + arreglar todas ----
+function failingIds(){ return MACHINES.filter(m=>m.online && CAP_FAIL[m.id]).map(m=>m.id); }
+function updateCapHealth(){
+  const el=$('#capHealth'), fa=$('#fixAll'); if(!el) return;
+  const online=MACHINES.filter(m=>m.online).length, bad=failingIds().length, okc=online-bad;
+  el.innerHTML=online? ('📸 <b class="ok">'+okc+'</b> capturando'+(bad?(' · <b class="bad">'+bad+'</b> sin captura'):'')) : '';
+  if(fa){ if(bad){ fa.style.display=''; fa.textContent='🛡️ arreglar todas ('+bad+')'; } else fa.style.display='none'; }
+}
+// ---- toasts (caída / vuelta / fallo de captura) ----
+function toast(kind, title, sub){
+  const c=$('#toasts'); if(!c) return;
+  const t=document.createElement('div'); t.className='toast '+(kind||'');
+  t.innerHTML='<div>'+String(title).replace(/</g,'&lt;')+'</div>'+(sub?'<small>'+String(sub).replace(/</g,'&lt;')+'</small>':'');
+  t.onclick=()=>t.remove(); c.appendChild(t);
+  setTimeout(()=>{ t.style.transition='opacity .3s'; t.style.opacity='0'; setTimeout(()=>t.remove(),300); }, 6000);
 }
 // Arreglo que se envía por SSH a la máquina: abre el panel de Grabación de
 // pantalla, avisa al usuario con una notificación, reactiva el agente de captura
@@ -260,8 +311,13 @@ async function refresh(){
     const d=await api('/status'); MACHINES=d.machines; _reauthTried=false;
     const up=MACHINES.filter(m=>m.online).length;
     $('#connPill').textContent='🟢 '+up+'/'+MACHINES.length+' online'; $('#connPill').className='pill ok';
+    // alerta de caída: avisa cuando un equipo cambia de estado (tras la 1ª foto base)
+    if(_baselineDone){ MACHINES.forEach(m=>{ const was=PREV_ONLINE[m.id];
+      if(was===true && !m.online) toast('down','💤 '+(m.name||m.id),'se ha desconectado');
+      else if(was===false && m.online) toast('up','🟢 '+(m.name||m.id),'de vuelta online'); }); }
+    MACHINES.forEach(m=>{ PREV_ONLINE[m.id]=m.online; }); _baselineDone=true;
     await loadPersonas();
-    renderCards(MACHINES); fillSelect();
+    renderCards(MACHINES); fillSelect(); updateCapHealth();
     if(!_firstCapDone && up>0){ _firstCapDone=true; firstCaptureAll(); }
   }catch(e){
     if(e.code===401 && !_reauthTried){
@@ -300,7 +356,7 @@ function renderCards(ms){
         <span class="drag-handle" draggable="true" data-drag="${m.id}" title="Arrastra para reordenar">⠿</span>
       </div>
       <div class="info">${m.online?(m.info||'').replace(/</g,'&lt;'):'— sin respuesta —'}</div>
-      <div class="shot" data-m="${m.id}"><img alt="captura ${m.name}"></div>
+      <div class="shot" data-m="${m.id}"><img alt="captura ${m.name}"><span class="shotage" data-age="${m.id}"></span></div>
       <div class="acts" ${m.online?'':'style="opacity:.4;pointer-events:none"'}>
         <button data-a="screenshot" data-m="${m.id}">📸 captura</button>
         <button data-a="sysinfo" data-m="${m.id}">🩺 info</button>
@@ -322,6 +378,7 @@ function renderCards(ms){
   ms.forEach(m=>{ if(!shots[m.id]){ const w=personaWallpaper(m.name); if(w) setDefaultShot(m.id, w); } });
   // re-pinta los avisos de captura fallida que ya conocíamos
   ms.forEach(m=>{ if(CAP_FAIL[m.id]) setCapFail(m.id, true); });
+  paintAllAges(); updateCapHealth();
 }
 
 function showShot(machineId, src){
@@ -360,7 +417,7 @@ $('#cards').addEventListener('click', async e=>{
       pushResult(machine,'🧹 escritorio limpio',{rc:0,stdout:'apps ocultadas — fondo visible',ms:0});
       await new Promise(r=>setTimeout(r,700));   // deja que se oculten antes de capturar
       const d=await api('/action',{method:'POST',body:JSON.stringify({machine,action:'screenshot'})});
-      if(d.rc===0 && d.stdout && !/ERR_NO_CAPTURE/.test(d.stdout)){ showShot(machine,'data:image/jpeg;base64,'+d.stdout); setCapFail(machine,false); }
+      if(d.rc===0 && d.stdout && !/ERR_NO_CAPTURE/.test(d.stdout)){ showShot(machine,'data:image/jpeg;base64,'+d.stdout); setCapFail(machine,false); markCaptured(machine); }
       else { setCapFail(machine,true); pushResult(machine,'📸 fondo',{rc:d.rc||1,stdout:'',stderr:d.stderr||'escritorio limpio, pero no pude capturar (¿permiso de Grabación de pantalla?)'}); }
     }catch(err){ pushResult(machine,'🧹 escritorio',{rc:-1,stdout:'',stderr:err.msg||'error'}); }
     icon.classList.remove('em-busy');
@@ -409,7 +466,7 @@ $('#cards').addEventListener('click', async e=>{
   try{
     const d=await api('/action',{method:'POST',body:JSON.stringify({machine,action,arg})});
     if(action==='screenshot'){
-      if(d.rc===0 && d.stdout && !/ERR_NO_CAPTURE/.test(d.stdout)){ showShot(machine,'data:image/jpeg;base64,'+d.stdout); setCapFail(machine,false); pushResult(machine,'📸 captura',{rc:0,stdout:'(imagen arriba)',ms:d.ms}); }
+      if(d.rc===0 && d.stdout && !/ERR_NO_CAPTURE/.test(d.stdout)){ showShot(machine,'data:image/jpeg;base64,'+d.stdout); setCapFail(machine,false); markCaptured(machine); pushResult(machine,'📸 captura',{rc:0,stdout:'(imagen arriba)',ms:d.ms}); }
       else { setCapFail(machine,true); pushResult(machine,'📸 captura',{rc:d.rc||1,stdout:'',stderr:d.stderr||'no se pudo capturar (¿permiso de Grabación de pantalla a AgoraCapture?)'}); }
     } else pushResult(machine, '⚡ '+action+(arg?(' '+arg):''), d);
   }catch(err){ pushResult(machine,'⚡ '+action,{rc:-1,stdout:'',stderr:err.msg||'error'}); }
@@ -503,7 +560,7 @@ let AUTOCAP=(()=>{ try{ return Object.assign({on:false,sec:15}, JSON.parse(local
 let _acTimer=null, _acBusy=false;
 function captureMachine(id){
   return api('/action',{method:'POST',body:JSON.stringify({machine:id,action:'screenshot'})})
-    .then(d=>{ if(d&&d.rc===0 && d.stdout && !/ERR_NO_CAPTURE/.test(d.stdout)){ showShot(id,'data:image/jpeg;base64,'+d.stdout); setCapFail(id,false); } else { setCapFail(id,true); } })
+    .then(d=>{ if(d&&d.rc===0 && d.stdout && !/ERR_NO_CAPTURE/.test(d.stdout)){ showShot(id,'data:image/jpeg;base64,'+d.stdout); setCapFail(id,false); markCaptured(id); } else { setCapFail(id,true); } })
     .catch(()=>{ setCapFail(id,true); });   // en auto: deja la miniatura anterior, pero marca el aviso
 }
 async function autoCapTick(){
@@ -524,6 +581,18 @@ function applyAutoCap(){
   // Disparo manual: captura ahora todas las online, sin activar el bucle periódico.
   if(now) now.onclick=async()=>{ if(_acBusy||!SESSION) return; const el=$('#acState'); if(el) el.textContent='· capturando todas…'; now.disabled=true; try{ await autoCapTick(); }finally{ now.disabled=false; if(el) el.textContent='· capturadas '+new Date().toLocaleTimeString('es-ES'); } };
 })();
+// Arreglar todas: manda el arreglo de captura por SSH a cada equipo que falla.
+(function(){ const fa=$('#fixAll'); if(!fa) return;
+  fa.onclick=async()=>{
+    const ids=failingIds(); if(!ids.length) return;
+    if(!confirm('Enviar el arreglo de captura por SSH a '+ids.length+' equipo(s):\n\n  '+ids.map(machName).join(', ')+'\n\nAbre el panel de Grabación de pantalla y avisa en cada uno. ¿Continuar?')) return;
+    fa.disabled=true; const l=fa.textContent;
+    for(let i=0;i<ids.length;i++){ fa.textContent='🛡️ '+(i+1)+'/'+ids.length; const id=ids[i];
+      try{ const d=await api('/run',{method:'POST',body:JSON.stringify({machine:id,cmd:CAP_FIX_CMD})}); pushResult(id,'🛡️ arreglo captura (SSH)',d); }
+      catch(err){ pushResult(id,'🛡️ arreglo captura',{rc:-1,stdout:'',stderr:err.msg||'error'}); } }
+    fa.disabled=false; fa.textContent=l; updateCapHealth();
+  };
+})();
 
 /* ---------- arranque ---------- */
 // Acceso ÚNICO por login de Google: intercambia el credential del gate por una
@@ -534,6 +603,7 @@ function applyAutoCap(){
   applyAutoCap();
   refresh();
   setInterval(refresh, 8000);
+  setInterval(paintAllAges, 5000);  // las edades "hace Xs" suben solas y atenúan lo viejo
 })();
 </script>
 <script>

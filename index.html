@@ -2668,7 +2668,7 @@
     height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.27.r18</a>
+            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.27.r19</a>
             <a href="https://www.admira.live/equipos" target="_blank" rel="noopener" class="version-badge" title="Equipos · asignación de agentes">🏠 AdmiraNeXT</a>
             <a href="https://www.admira.live/telegram" target="_blank" rel="noopener" class="version-badge" title="Telegram · espejo en directo del grupo AdmiraNext">💬 Telegram</a>
             <button class="version-badge" onclick="window.agmSetVisible&&window.agmSetVisible(null)" title="Abrir el puesto de mando AgoraMatrix">📡 Agentes</button>
@@ -4424,7 +4424,7 @@
     // (id_token del auth-gate) O la Clave operador. Probamos Google primero (cero
     // fricción) y solo pedimos la clave si tu login no sirve.
     function councilGateCred() { try { var g = JSON.parse(localStorage.getItem("admira_gate") || "null"); return (g && g.cred && String(g.cred).split(".").length === 3) ? g.cred : ""; } catch (e) { return ""; } }
-    function councilStoredKey() { try { return sessionStorage.getItem("admira:agora-key") || ""; } catch (e) { return ""; } }
+    function councilStoredKey() { try { return localStorage.getItem("admira:agora-key") || sessionStorage.getItem("admira:agora-key") || ""; } catch (e) { return ""; } }
     async function teamworkSend(base, body, cred) {
         const r = await fetch(base + "/api/teamwork/send", { method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": "Bearer " + cred, "X-Council-Token": cred },
@@ -4446,11 +4446,11 @@
             if (!res || res.status === 401 || res.status === 403) {    // 3) pedir la clave correcta
                 const k = (prompt("Clave operador del Consejo (la MISMA de la mesa de equipos /teamwork — NO la del panel de Telegram):") || "").trim();
                 if (!k) { setActionLine("Cancelado — falta la Clave operador del Consejo"); return; }
-                try { sessionStorage.setItem("admira:agora-key", k); } catch (e) {}
+                try { localStorage.setItem("admira:agora-key", k); } catch (e) {}   // se recuerda en ESTE navegador: la metes una vez y no vuelve a pedirla
                 res = await teamworkSend(base, body, k);
             }
             if (res && res.ok) setActionLine("✅ Enviado a " + (res.d.name || machineName) + " — lo está procesando su Claude Code");
-            else if (res && (res.status === 401 || res.status === 403)) { try { sessionStorage.removeItem("admira:agora-key"); } catch (e) {} setActionLine("🔑 Credencial no válida: ni tu login de Google ni esa clave sirven. Usa la Clave operador del Consejo (la de /teamwork)."); }
+            else if (res && (res.status === 401 || res.status === 403)) { try { localStorage.removeItem("admira:agora-key"); sessionStorage.removeItem("admira:agora-key"); } catch (e) {} setActionLine("🔑 Credencial no válida: ni tu login de Google ni esa clave sirven. Usa la Clave operador del Consejo (la de /teamwork)."); }
             else setActionLine("⚠️ No se pudo enviar a " + machineName + ": " + (res && res.d.error || ("HTTP " + (res && res.status))));
         } catch (e) {
             setActionLine("⚠️ Sin conexión con el Mini (¿Tailscale / servicio com.admiranext.control activo?)");

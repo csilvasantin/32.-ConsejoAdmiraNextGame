@@ -38,6 +38,9 @@
   .msg{max-width:80%; padding:8px 12px; border-radius:10px; background:var(--in);
     border:1px solid var(--border); align-self:flex-start; animation:in .2s ease}
   .msg.out{align-self:flex-end; background:var(--out); border-color:#155}
+  .msg.err{align-self:stretch; max-width:100%; background:#2a0f12; border-color:#7a3030}
+  .msg.err .who{color:#ff8a8a}
+  .msg.err .body{color:#ffd0d0; user-select:text; -webkit-user-select:text; font-family:'Andale Mono',monospace; font-size:12px}
   .msg .who{font-size:11px; color:var(--gold); margin-bottom:3px}
   .msg.out .who{color:var(--green)}
   .msg .body{font-size:14px; white-space:pre-wrap; word-break:break-word; line-height:1.4}
@@ -157,10 +160,10 @@
         res=await miniSend(body,councilStoredKey());
       }
       if(res&&res.ok){ setStatus(true,"✅ enviado a "+(res.d.name||machine)+" — su Claude Code lo procesa"); textInput.value=""; }
-      else if(!cred&&!councilStoredKey()){ setStatus(false,"login de Google caducado y sin refrescar — recarga la página para volver a entrar"); }
-      else if(res&&(res.status===401||res.status===403)){ setStatus(false,"tu cuenta de Google no está autorizada en el backend para esto"); }
-      else setStatus(false,"no se pudo enviar: "+(res&&res.d.error||("HTTP "+(res&&res.status))));
-    }catch(e){ setStatus(false,"sin conexión con el Mini (Tailscale/control)"); }
+      else if(!cred&&!councilStoredKey()){ setErr("login de Google caducado y sin refrescar — recarga la página para volver a entrar"); }
+      else if(res&&(res.status===401||res.status===403)){ setErr("tu cuenta de Google no está autorizada en el backend para esto"); }
+      else setErr("no se pudo enviar a "+machine+": "+(res&&res.d.error||("HTTP "+(res&&res.status))));
+    }catch(e){ setErr("sin conexión con el Mini (Tailscale/control): "+(e&&e.message||e)); }
   }
 
   const feed = document.getElementById("feed");
@@ -180,6 +183,18 @@
     dot.classList.toggle("live", live);
     statusText.textContent = txt;
   }
+  // Deja el error FIJO en el chat (seleccionable) para poder copiarlo — la barra de
+  // estado se borra en cada refresco; esto persiste.
+  function pushLocalError(text){
+    const el = document.createElement("div");
+    el.className = "msg err";
+    const t = new Date().toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit",second:"2-digit"});
+    el.innerHTML = `<div class="who">⚠️ Error</div><div class="body">${escapeHtml(text)}</div><div class="time">${t}</div>`;
+    const emp = feed.querySelector(".empty"); if(emp) emp.remove();
+    feed.appendChild(el);
+    feed.scrollTop = feed.scrollHeight;
+  }
+  function setErr(text){ setStatus(false, text); pushLocalError(text); }
   // Rellena el selector «Enviar a» con la flota (origin-gated, sin auth).
   async function loadMachines(){
     try{
@@ -205,9 +220,9 @@
         body: JSON.stringify({ text: text+" → "+bot, author: "Web" }) });
       const d = await r.json().catch(()=>({}));
       if(d.ok){ setStatus(true,"💬 enviado a "+bot+" — espera su respuesta"); poll(); }
-      else if(r.status===401){ setStatus(false,"login de Google no autorizado en el espejo"); }
-      else setStatus(false,"no se pudo enviar: "+(d.error||("HTTP "+r.status)));
-    }catch(e){ setStatus(false,"sin conexión con el espejo"); }
+      else if(r.status===401){ setErr("login de Google no autorizado en el espejo"); }
+      else setErr("no se pudo consultar a "+bot+": "+(d.error||("HTTP "+r.status)));
+    }catch(e){ setErr("sin conexión con el espejo: "+(e&&e.message||e)); }
   }
   function refreshSendState(){
     // Todo va con tu login de Google (sin clave): controles siempre activos.

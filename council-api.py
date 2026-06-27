@@ -3851,14 +3851,14 @@ def _hk_load_council() -> list:
         return []
     out = []
     for m in data.get("machines", []):
-        if m.get("unitType") != "council":
-            continue
         ssh = m.get("ssh") or {}
-        if not ssh.get("enabled"):
+        if not ssh.get("enabled") or not ssh.get("host"):
             continue
-        if not ssh.get("host"):
-            continue
-        out.append(m)
+        # Consejeros (Mac) como hasta ahora + los PC Windows de la flota. Ambos
+        # siguen gateados por ssh.enabled+host: los Windows solo entran cuando se
+        # les active OpenSSH y se rellene su host (hoy ssh.enabled:false → fuera).
+        if m.get("unitType") == "council" or _hk_is_windows(m):
+            out.append(m)
     return out
 
 
@@ -3988,6 +3988,108 @@ def _hk_ssh_stop(user: str, host: str) -> tuple:
         return r.returncode == 0, "ssh stop ok" if r.returncode == 0 else f"ssh rc={r.returncode}"
     except Exception as e:
         return False, f"ssh stop error: {e}"
+
+
+# ─────────────────────────────────────────────────────────────
+# HACKEO en Windows (PC de la flota) — PREPARADO, requiere OpenSSH Server
+# activado en cada PC (hoy ssh.enabled:false en todos) + la clave del Mini
+# autorizada. Sin eso, _hk_ping/_hk_*_launch fallan y la máquina sale offline.
+#
+# Estrategia: SSH (OpenSSH de Windows) → `powershell -EncodedCommand <b64 utf16le>`
+# (un único token, así no peleamos comillas a través de SSH, funcione el shell por
+# defecto que sea cmd o powershell). El PowerShell:
+#   1) escribe el simulacro a %TEMP%\admirahack.ps1,
+#   2) crea+lanza una TAREA PROGRAMADA interactiva (/IT) → la ventana del simulacro
+#      aparece en el ESCRITORIO del usuario logado (salva el aislamiento de la
+#      sesión 0 en la que corre OpenSSH). Título de ventana fijo para poder pararlo.
+# NOTA: no se ha podido probar en vivo (sin OpenSSH activo en la flota); puede
+# necesitar ajuste por-PC (DefaultShell de OpenSSH, política de tareas, UAC).
+_HK_WIN_LAUNCH_PS = r"""
+$ErrorActionPreference = 'SilentlyContinue'
+$sim = @'
+$host.UI.RawUI.WindowTitle = 'ADMIRA HACK SIMULATION'
+$lines = @(
+ 'C:\> ssh administrator@' + $env:COMPUTERNAME,
+ 'Connecting to ' + $env:COMPUTERNAME + ' ...',
+ 'Authenticating via pass-the-hash (NTLM)...',
+ 'ACCESS GRANTED -- ' + $env:COMPUTERNAME + ' [Windows]',
+ 'C:\> whoami /priv',
+ 'SeDebugPrivilege                Enabled',
+ 'C:\> net user',
+ 'Administrador  Invitado  DefaultAccount  ' + $env:USERNAME,
+ 'C:\> mimikatz # sekurlsa::logonpasswords',
+ '  NTLM : 8846f7eaee8fb117ad06bdd830b7586c',
+ 'C:\> reg query HKLM\SAM\SAM\Domains\Account\Users',
+ 'C:\> dir /s /b C:\Users\' + $env:USERNAME + '\*.kdbx',
+ 'C:\> schtasks /create /tn WinUpdate /tr payload.exe /sc onlogon',
+ 'EXITO: persistencia instalada.',
+ 'C:\> netsh advfirewall set allprofiles state off',
+ 'Firewall de Windows desactivado.',
+ 'C:\> wevtutil cl Security',
+ 'Registros de eventos borrados.'
+)
+$i = 0
+while ($true) {
+  $l = $lines[$i % $lines.Count]
+  foreach ($c in $l.ToCharArray()) { [Console]::Write($c); Start-Sleep -Milliseconds (Get-Random -Minimum 5 -Maximum 40) }
+  [Console]::Write([Environment]::NewLine)
+  $i++
+  Start-Sleep -Milliseconds (Get-Random -Minimum 150 -Maximum 500)
+}
+'@
+$p = Join-Path $env:TEMP 'admirahack.ps1'
+Set-Content -Path $p -Value $sim -Encoding UTF8
+$tr = 'powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Maximized -File "' + $p + '"'
+schtasks /Create /TN AdmiraHack /TR $tr /SC ONCE /ST 23:59 /RL HIGHEST /IT /F | Out-Null
+schtasks /Run /TN AdmiraHack | Out-Null
+"""
+
+_HK_WIN_STOP_PS = r"""
+$ErrorActionPreference = 'SilentlyContinue'
+schtasks /End /TN AdmiraHack 2>$null | Out-Null
+schtasks /Delete /TN AdmiraHack /F 2>$null | Out-Null
+taskkill /F /FI "WINDOWTITLE eq ADMIRA HACK SIMULATION*" 2>$null | Out-Null
+"""
+
+
+def _hk_win_ssh(user: str, host: str, ps_script: str, what: str) -> tuple:
+    """Ejecuta un PowerShell en el PC Windows remoto vía SSH usando -EncodedCommand
+    (base64 de UTF-16LE) para no pelearnos con el quoting a través de SSH."""
+    if not user or not host:
+        return False, "missing ssh user/host"
+    import base64 as _b64
+    enc = _b64.b64encode(ps_script.encode("utf-16-le")).decode("ascii")
+    remote_cmd = "powershell -NoProfile -ExecutionPolicy Bypass -EncodedCommand " + enc
+    ssh_cmd = [
+        "ssh",
+        "-o", "StrictHostKeyChecking=no",
+        "-o", "BatchMode=yes",
+        "-o", f"ConnectTimeout={_HK_SSH_TIMEOUT}",
+        f"{user}@{host}",
+        remote_cmd,
+    ]
+    try:
+        r = subprocess.run(ssh_cmd, capture_output=True, timeout=_HK_SSH_TIMEOUT + 4)
+        if r.returncode == 0:
+            return True, f"win {what} ok"
+        err = (r.stderr or b"").decode("utf-8", "ignore").strip()[:200]
+        return False, f"win {what} rc={r.returncode}: {err or 'no stderr'}"
+    except subprocess.TimeoutExpired:
+        return False, f"win {what} timeout"
+    except Exception as e:
+        return False, f"win {what} error: {e}"
+
+
+def _hk_win_launch(user: str, host: str) -> tuple:
+    return _hk_win_ssh(user, host, _HK_WIN_LAUNCH_PS, "launch")
+
+
+def _hk_win_stop(user: str, host: str) -> tuple:
+    return _hk_win_ssh(user, host, _HK_WIN_STOP_PS, "stop")
+
+
+def _hk_is_windows(machine: dict) -> bool:
+    return str(machine.get("platform") or "").lower().startswith("win")
 
 
 def _hk_normalize_mac(mac: str) -> str:
@@ -4139,11 +4241,13 @@ def _hk_process_one(machine: dict, action: str) -> dict:
     mac = machine.get("mac_address", "")
     name = machine.get("name") or machine.get("id")
 
+    is_win = _hk_is_windows(machine)
     alive = _hk_ping(host)
     result = {
         "id": machine.get("id"),
         "name": name,
         "host": host,
+        "os": "win" if is_win else "mac",
         "online": alive,
         "action": "none",
         "ok": False,
@@ -4152,7 +4256,7 @@ def _hk_process_one(machine: dict, action: str) -> dict:
 
     if action == "stop":
         if alive:
-            ok, detail = _hk_ssh_stop(user, host)
+            ok, detail = (_hk_win_stop if is_win else _hk_ssh_stop)(user, host)
             result["action"] = "ssh_stop"
             result["ok"] = ok
             result["detail"] = detail
@@ -4166,12 +4270,14 @@ def _hk_process_one(machine: dict, action: str) -> dict:
         # Si está encendida y aún no tenemos su MAC, la descubrimos ahora
         # (ARP local + SSH ifconfig) para poder hacerle WoL la próxima vez
         # aunque esté apagada. El endpoint la persistirá en machines.json.
-        if not mac:
+        # (En Windows el descubrimiento de MAC por SSH/ifconfig no aplica igual;
+        #  se omite y queda para WoL manual.)
+        if not mac and not is_win:
             disc_mac, disc_src = _hk_discover_mac(machine)
             if disc_mac:
                 result["discovered_mac"] = disc_mac
                 result["mac_source"] = disc_src
-        ok, detail = _hk_ssh_launch(user, host)
+        ok, detail = (_hk_win_launch if is_win else _hk_ssh_launch)(user, host)
         result["action"] = "ssh_launched"
         result["ok"] = ok
         result["detail"] = detail

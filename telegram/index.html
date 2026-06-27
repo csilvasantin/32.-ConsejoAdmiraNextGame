@@ -159,11 +159,27 @@
       if((!res||res.status===401||res.status===403)&&councilStoredKey()){    // 2) red de seguridad: clave ya guardada
         res=await miniSend(body,councilStoredKey());
       }
-      if(res&&res.ok){ setStatus(true,"✅ enviado a "+(res.d.name||machine)+" — su Claude Code lo procesa"); textInput.value=""; }
+      if(res&&res.ok){
+        const label = machineLabelOf(machine) || res.d.name || machine;
+        setStatus(true,"✅ enviado a "+label+" — su Claude Code lo procesa"); textInput.value="";
+        postConstancia(label, message, cred);   // deja constancia en Telegram (grupo + espejo)
+      }
       else if(!cred&&!councilStoredKey()){ setErr("login de Google caducado y sin refrescar — recarga la página para volver a entrar"); }
       else if(res&&(res.status===401||res.status===403)){ setErr("tu cuenta de Google no está autorizada en el backend para esto"); }
       else setErr("no se pudo enviar a "+machine+": "+(res&&res.d.error||("HTTP "+(res&&res.status))));
     }catch(e){ setErr("sin conexión con el Mini (Tailscale/control): "+(e&&e.message||e)); }
+  }
+  function machineLabelOf(id){ try{ const o=[...document.getElementById("machineSel").options].find(x=>x.value===id); return o?o.textContent:""; }catch(e){ return ""; } }
+  // Deja constancia del envío en el grupo de Telegram (y por tanto en el espejo).
+  // Solo si tenemos login de Google (JWT), que es lo que el worker /api/send acepta.
+  async function postConstancia(machineLabel, message, cred){
+    if(!WORKER_BASE || !cred || String(cred).split(".").length!==3) return;
+    try{
+      await fetch(WORKER_BASE+"/api/send",{ method:"POST",
+        headers:{"content-type":"application/json","Authorization":"Bearer "+cred},
+        body: JSON.stringify({ text:"📨 → "+machineLabel+": "+message, author:"Web" }) });
+      setTimeout(poll, 600);
+    }catch(e){}
   }
 
   const feed = document.getElementById("feed");

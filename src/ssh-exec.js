@@ -660,8 +660,13 @@ export async function sendPromptToMachine(machineId, prompt, target = "terminal"
 
     result = await tryExec(false);
     if (!result.ok && deriveLocalHostname(machine)) {
-      result = await tryExec(true);
-      usedLocal = true;
+      // Fallback por LAN (.local). Solo lo adoptamos si MEJORA: si también falla,
+      // conservamos el error del intento principal (tailscale), que es el real —
+      // el .local no resuelve desde el Mini y su error ("could not resolve") despista.
+      const primaryErr = result.error;
+      const localRes = await tryExec(true);
+      if (localRes.ok) { result = localRes; usedLocal = true; }
+      else { result = { ok: false, error: primaryErr || localRes.error }; }
     }
   }
 

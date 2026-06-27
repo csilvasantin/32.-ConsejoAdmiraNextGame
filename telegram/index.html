@@ -116,6 +116,24 @@
   // Auto-conexión inmune a deploys: en admira.live, si falta la URL, fijarla Y persistirla en el navegador.
   if(!WORKER_BASE && location.hostname.endsWith("admira.live")){ WORKER_BASE="https://admira-telegram.csilvasantin.workers.dev"; try{localStorage.setItem("tg_worker_base",WORKER_BASE);}catch(e){} }
   const POLL_MS = 4000;
+  // Servicio de control del Mini: /sendto enruta al Claude Code de una máquina
+  // (NO se postea al grupo ni a White Rabbit). Usa la "Clave operador" del Consejo.
+  const MINI_BASE = "https://macmini.tail48b61c.ts.net";
+  async function routeSendTo(machine, message, target){
+    let key=""; try{ key=sessionStorage.getItem("admira:agora-key")||""; }catch(e){}
+    if(!key){ key=(prompt("Clave operador del Consejo (distinta de la clave de este panel) para /sendto:")||"").trim();
+      if(!key){ setStatus(false,"falta la Clave operador del Consejo"); return; } try{ sessionStorage.setItem("admira:agora-key",key); }catch(e){} }
+    setStatus(true,"📨 enviando a "+machine+" ("+target+")…");
+    try{
+      const r=await fetch(MINI_BASE+"/api/teamwork/send",{method:"POST",
+        headers:{"content-type":"application/json","Authorization":"Bearer "+key,"X-Council-Token":key},
+        body:JSON.stringify({machineId:machine,prompt:message,target:target})});
+      const d=await r.json().catch(()=>({}));
+      if(r.ok&&d.ok){ setStatus(true,"✅ enviado a "+(d.name||machine)+" — su Claude Code lo procesa"); textInput.value=""; }
+      else if(r.status===401||r.status===403){ try{sessionStorage.removeItem("admira:agora-key");}catch(e){} setStatus(false,"Clave operador del Consejo inválida — reintenta"); }
+      else setStatus(false,"no se pudo enviar: "+(d.error||("HTTP "+r.status)));
+    }catch(e){ setStatus(false,"sin conexión con el Mini (Tailscale/control)"); }
+  }
 
   const feed = document.getElementById("feed");
   const dot = document.getElementById("dot");
@@ -191,8 +209,18 @@
   }
 
   async function send(){
+    const raw = textInput.value.trim();
+    // /sendto va dirigido a una MÁQUINA → se enruta a su Claude Code, NO al grupo/White Rabbit.
+    const st = raw.match(/^\/sendto(?:\s+(\S+)(?:\s+([\s\S]+))?)?$/i);
+    if(st){
+      const machine=(st[1]||"").trim(); let rest=(st[2]||"").trim(); let target="claude";
+      const tm=rest.match(/^(claude|terminal)\s*:\s*([\s\S]+)$/i); if(tm){ target=tm[1].toLowerCase(); rest=tm[2].trim(); }
+      if(!machine||!rest){ setStatus(false,"uso: /sendto <equipo> <mensaje>"); return; }
+      routeSendTo(machine, rest, target);
+      return;
+    }
     if(!WORKER_BASE){ setStatus(false,"en preparación"); return; }   // a prueba de bombas: nunca enviar sin Worker
-    const text = textInput.value.trim();
+    const text = raw;
     if(!text || !panelKey) return;
     const consejero = (document.getElementById("consejero").value || "White Rabbit");
     const outText = `${text} → ${consejero}`;

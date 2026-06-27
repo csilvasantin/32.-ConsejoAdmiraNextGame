@@ -2668,7 +2668,7 @@
     height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.27.r15</a>
+            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.27.r16</a>
             <a href="https://www.admira.live/equipos" target="_blank" rel="noopener" class="version-badge" title="Equipos · asignación de agentes">🏠 AdmiraNeXT</a>
             <a href="https://www.admira.live/telegram" target="_blank" rel="noopener" class="version-badge" title="Telegram · espejo en directo del grupo AdmiraNext">💬 Telegram</a>
             <button class="version-badge" onclick="window.agmSetVisible&&window.agmSetVisible(null)" title="Abrir el puesto de mando AgoraMatrix">📡 Agentes</button>
@@ -4450,6 +4450,7 @@
             setActionLine("⚠️ Sin conexión con el Mini (¿Tailscale / servicio com.admiranext.control activo?)");
         }
     }
+    window.sendToMachine = sendToMachine;   // para que el panel AgoraMatrix también enrute /sendto (no a White Rabbit)
     // Menú intermedio SCUMM plegable (persistente)
     function setScummCollapsed(collapsed) {
         const bar = document.querySelector('.scumm-bar'); if (!bar) return;
@@ -8605,10 +8606,16 @@
     return '';
   }
   var wrEl=document.getElementById('agm-wr'), wrText=document.getElementById('agm-wr-text'),
+      wrIcon=wrEl?wrEl.querySelector('.wr-rabbit'):null,
       _wrPending=false, _wrT1=null, _wrT2=null;
   function agmClearWaiting(){ _wrPending=false; if(_wrT1)clearTimeout(_wrT1); if(_wrT2)clearTimeout(_wrT2); _wrT1=_wrT2=null;
-    if(wrEl){ wrEl.style.display='none'; wrEl.classList.remove('waiting'); } }
+    if(wrEl){ wrEl.style.display='none'; wrEl.classList.remove('waiting'); } if(wrIcon) wrIcon.textContent='🐇'; }
+  // Feedback de envío dirigido (p.ej. /sendto a una máquina): icono propio, sin White Rabbit, auto-oculta.
+  function agmShowSent(msg, icon){ if(!wrEl) return; agmClearWaiting();
+    if(wrIcon) wrIcon.textContent=icon||'🖥️'; wrText.textContent=msg; wrEl.classList.remove('waiting'); wrEl.style.display='flex';
+    _wrT2=setTimeout(agmClearWaiting, 7000); }
   function agmShowWaiting(target){ if(!wrEl) return; agmClearWaiting(); _wrPending=true;
+    if(wrIcon) wrIcon.textContent='🐇';
     wrText.textContent=target+' lo está mirando…'; wrEl.style.display='flex';
     _wrT1=setTimeout(function(){ if(_wrPending){ wrEl.classList.add('waiting'); wrText.textContent='esperando respuesta de '+target+'…'; } }, 8000);
     _wrT2=setTimeout(function(){ if(_wrPending){ wrText.textContent='sin respuesta de '+target+' aún — quizá esté ocupado'; _wrT2=setTimeout(agmClearWaiting,8000); } }, 75000);
@@ -8620,7 +8627,19 @@
     catch(e){ if(restoreInput!==undefined) input.value=restoreInput; alert('Sin conexion con AgoraMatrix'); }
     return false;
   }
-  async function sendMsg(){ var t=(input.value||'').trim(); if(!t) return; sendBtn.disabled=true; var ov=input.value; input.value='';
+  async function sendMsg(){ var t=(input.value||'').trim(); if(!t) return;
+    // /sendto va dirigido a una MÁQUINA → se enruta a su Claude Code, NO a White Rabbit ni al canal.
+    var st=t.match(/^\/sendto(?:\s+(\S+)(?:\s+([\s\S]+))?)?$/i);
+    if(st){
+      var mac=(st[1]||'').trim(), rest=(st[2]||'').trim(), tgt='claude';
+      var tm=rest.match(/^(claude|terminal)\s*:\s*([\s\S]+)$/i); if(tm){ tgt=tm[1].toLowerCase(); rest=tm[2].trim(); }
+      if(!mac||!rest){ agmShowSent('Uso: /sendto <equipo> <mensaje>','⚠️'); return; }
+      input.value='';
+      if(window.sendToMachine){ agmShowSent('enviado a '+mac+' — su Claude Code lo procesa','🖥️'); window.sendToMachine(mac, rest, tgt); }
+      else { agmShowSent('puente /sendto no disponible aquí','⚠️'); }
+      input.focus(); return;
+    }
+    sendBtn.disabled=true; var ov=input.value; input.value='';
     var ok=false;
     try{ ok=await postAgora(t, ov); }
     catch(e){ input.value=ov; alert('Sin conexión con AgoraMatrix'); }

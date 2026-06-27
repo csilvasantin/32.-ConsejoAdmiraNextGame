@@ -162,6 +162,7 @@
       if(res&&res.ok){
         const label = machineLabelOf(machine) || res.d.name || machine;
         setStatus(true,"✅ enviado a "+label+" — su Claude Code lo procesa"); textInput.value="";
+        if(res.d && res.d.osaWarn){ pushLocalError("aviso osascript (no impide el envío, para diagnóstico): "+res.d.osaWarn); }
         postConstancia(label, message, cred);   // deja constancia en Telegram (grupo + espejo)
       }
       else if(!cred&&!councilStoredKey()){ setErr("login de Google caducado y sin refrescar — recarga la página para volver a entrar"); }

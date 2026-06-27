@@ -396,7 +396,9 @@ $('#cards').addEventListener('dragend', ()=>{ _dragId=null; _clearDrag(); });
 /* ---------- consola libre ---------- */
 function fillSelect(){
   const s=$('#csMachine'); const cur=s.value;
-  s.innerHTML=MACHINES.map(m=>`<option value="${m.id}">${m.emoji||''} ${m.name}${m.online?'':' (offline)'}</option>`).join('');
+  const online=MACHINES.filter(m=>m.online).length;
+  const allOpt=`<option value="__all__">🌐 Todas las online (${online})</option>`;
+  s.innerHTML=allOpt+MACHINES.map(m=>`<option value="${m.id}">${m.emoji||''} ${m.name}${m.online?'':' (offline)'}</option>`).join('');
   if(cur) s.value=cur;
 }
 // Historial de comandos (↑/↓ los recuperan), persistido por navegador.
@@ -406,6 +408,17 @@ function pushHist(cmd){ if(!cmd) return; if(CMD_HIST[CMD_HIST.length-1]===cmd){}
 async function runCmd(){
   const machine=$('#csMachine').value, cmd=$('#csCmd').value.trim(); if(!cmd) return;
   pushHist(cmd);
+  // Modo flota: ejecuta el mismo comando en TODAS las máquinas online (con confirmación).
+  if(machine==='__all__'){
+    const targets=MACHINES.filter(m=>m.online);
+    if(!targets.length){ pushResult('__all__','🌐 todas',{rc:1,stdout:'',stderr:'no hay máquinas online'}); return; }
+    if(!confirm('Ejecutar en las '+targets.length+' máquinas online:\n\n  '+cmd+'\n\n¿Continuar?')) return;
+    $('#csRun').disabled=true; const lbl=$('#csRun').textContent;
+    for(let i=0;i<targets.length;i++){ const m=targets[i]; $('#csRun').textContent='▶ '+(i+1)+'/'+targets.length;
+      try{ const d=await api('/run',{method:'POST',body:JSON.stringify({machine:m.id,cmd})}); pushResult(m.id,'$ '+cmd,d); }
+      catch(err){ pushResult(m.id,'$ '+cmd,{rc:-1,stdout:'',stderr:err.msg||'error'}); } }
+    $('#csRun').disabled=false; $('#csRun').textContent=lbl; return;
+  }
   $('#csRun').disabled=true;
   try{ const d=await api('/run',{method:'POST',body:JSON.stringify({machine,cmd})}); pushResult(machine,'$ '+cmd,d); }
   catch(err){ pushResult(machine,'$ '+cmd,{rc:-1,stdout:'',stderr:err.msg||'error'}); }

@@ -145,6 +145,7 @@
   <div class="monitorbar">
     <label><input type="checkbox" id="acToggle"> 📸 Auto-captura</label>
     <span>cada <input type="number" id="acSec" min="3" max="600" value="15"> s</span>
+    <button id="acNow" title="Capturar ahora todas las pantallas online">📸 Capturar todas</button>
     <span class="acstate" id="acState">— para monitorizar qué emite cada pantalla</span>
   </div>
 
@@ -253,7 +254,7 @@ function toggleCollapse(id){ const c=collapsedMap(); c[id]=!c[id]; localStorage.
 
 function renderCards(ms){
   const el=$('#cards');
-  if(!ms.length){ el.innerHTML='<div class="empty" style="grid-column:1/-1">Introduce el token (🔑) para ver la flota.</div>'; return; }
+  if(!ms.length){ el.innerHTML='<div class="empty" style="grid-column:1/-1">Inicia sesión con Google (arriba a la derecha) para ver la flota.</div>'; return; }
   // preserva miniaturas ya cargadas
   const shots={}; document.querySelectorAll('.shot').forEach(s=>{ if(s.dataset.m && s.style.display!=='none') shots[s.dataset.m]=s.querySelector('img').src; });
   const COL=collapsedMap();
@@ -398,15 +399,33 @@ function fillSelect(){
   s.innerHTML=MACHINES.map(m=>`<option value="${m.id}">${m.emoji||''} ${m.name}${m.online?'':' (offline)'}</option>`).join('');
   if(cur) s.value=cur;
 }
+// Historial de comandos (↑/↓ los recuperan), persistido por navegador.
+let CMD_HIST=(()=>{ try{ return JSON.parse(localStorage.getItem('fleet_cmd_hist')||'[]'); }catch(e){ return []; } })();
+let _histIdx=-1, _histDraft='';
+function pushHist(cmd){ if(!cmd) return; if(CMD_HIST[CMD_HIST.length-1]===cmd){} else { CMD_HIST.push(cmd); if(CMD_HIST.length>50) CMD_HIST=CMD_HIST.slice(-50); localStorage.setItem('fleet_cmd_hist',JSON.stringify(CMD_HIST)); } _histIdx=-1; }
 async function runCmd(){
   const machine=$('#csMachine').value, cmd=$('#csCmd').value.trim(); if(!cmd) return;
+  pushHist(cmd);
   $('#csRun').disabled=true;
   try{ const d=await api('/run',{method:'POST',body:JSON.stringify({machine,cmd})}); pushResult(machine,'$ '+cmd,d); }
   catch(err){ pushResult(machine,'$ '+cmd,{rc:-1,stdout:'',stderr:err.msg||'error'}); }
   $('#csRun').disabled=false;
 }
 $('#csRun').onclick=runCmd;
-$('#csCmd').addEventListener('keydown',e=>{ if(e.key==='Enter') runCmd(); });
+$('#csCmd').addEventListener('keydown',e=>{
+  const inp=e.target;
+  if(e.key==='Enter'){ runCmd(); return; }
+  if(e.key==='ArrowUp'){
+    if(!CMD_HIST.length) return; e.preventDefault();
+    if(_histIdx===-1){ _histDraft=inp.value; _histIdx=CMD_HIST.length; }
+    if(_histIdx>0){ _histIdx--; inp.value=CMD_HIST[_histIdx]; inp.setSelectionRange(inp.value.length,inp.value.length); }
+  } else if(e.key==='ArrowDown'){
+    if(_histIdx===-1) return; e.preventDefault();
+    if(_histIdx<CMD_HIST.length-1){ _histIdx++; inp.value=CMD_HIST[_histIdx]; }
+    else { _histIdx=-1; inp.value=_histDraft; }
+    inp.setSelectionRange(inp.value.length,inp.value.length);
+  }
+});
 $('#csClear').onclick=()=>{ $('#out').innerHTML='<div class="empty">Sin resultados todavía.</div>'; };
 
 function pushResult(machine, label, d){
@@ -441,9 +460,11 @@ function applyAutoCap(){
   if(AUTOCAP.on){ if(el) el.textContent='· activando…'; autoCapTick(); _acTimer=setInterval(autoCapTick, Math.max(3,AUTOCAP.sec)*1000); }
   else if(el) el.textContent='— para monitorizar qué emite cada pantalla';
 }
-(function(){ const t=$('#acToggle'), s=$('#acSec'); if(!t||!s) return;
+(function(){ const t=$('#acToggle'), s=$('#acSec'), now=$('#acNow'); if(!t||!s) return;
   t.onchange=e=>{ AUTOCAP.on=e.target.checked; localStorage.setItem('fleet_autocap',JSON.stringify(AUTOCAP)); applyAutoCap(); };
   s.onchange=e=>{ AUTOCAP.sec=Math.max(3,Math.min(600,parseInt(e.target.value)||15)); s.value=AUTOCAP.sec; localStorage.setItem('fleet_autocap',JSON.stringify(AUTOCAP)); applyAutoCap(); };
+  // Disparo manual: captura ahora todas las online, sin activar el bucle periódico.
+  if(now) now.onclick=async()=>{ if(_acBusy||!SESSION) return; const el=$('#acState'); if(el) el.textContent='· capturando todas…'; now.disabled=true; try{ await autoCapTick(); }finally{ now.disabled=false; if(el) el.textContent='· capturadas '+new Date().toLocaleTimeString('es-ES'); } };
 })();
 
 /* ---------- arranque ---------- */

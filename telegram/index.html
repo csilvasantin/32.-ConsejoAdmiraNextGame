@@ -84,30 +84,15 @@
   <div id="feed"><div class="empty">Cargando mensajes…</div></div>
 
   <footer>
-    <div class="keyrow">
-      <label>🔑 Clave operador</label>
-      <input id="key" type="password" placeholder="necesaria para enviar" autocomplete="off">
-      <button id="saveKey" style="padding:0 12px;cursor:pointer">Guardar</button>
-    </div>
     <div class="row selrow" style="align-items:center">
-      <label>🎯 Consejero</label>
-      <select id="consejero">
-        <option value="White Rabbit" selected>White Rabbit (por defecto)</option>
-        <option value="Morfeo">Morfeo</option>
-        <option value="Neo">Neo</option>
-        <option value="Trinity">Trinity</option>
-        <option value="Oráculo">Oráculo</option>
-        <option value="Cypher">Cypher</option>
-        <option value="Smith">Smith</option>
-      </select>
+      <label>📨 Enviar a</label>
+      <select id="machineSel"><option value="">cargando equipos…</option></select>
     </div>
     <div class="row">
-      <textarea id="text" placeholder="Escribe al consejo…" disabled></textarea>
-      <button id="attach" disabled title="Adjuntar imagen/archivo y enviarlo al consejo">📎</button>
-      <button id="send" disabled>Enviar</button>
+      <textarea id="text" placeholder="Escribe el mensaje para el equipo elegido…"></textarea>
+      <button id="send">Enviar</button>
     </div>
-    <input id="fileInput" type="file" style="display:none">
-    <div class="hint">Se añade el consejero al final del mensaje. Para imágenes: <strong>pega con Cmd/Ctrl+V</strong>, arrástralas, o usa 📎 (lo que escribas va como pie de foto). Lo enviado desde aquí aparece prefijado con 🌐.</div>
+    <div class="hint">Lo que escribas se entrega al <strong>Claude Code</strong> del equipo seleccionado (con tu login de Google, sin clave). También puedes escribir <strong>/sendto &lt;equipo&gt; &lt;mensaje&gt;</strong> a mano.</div>
   </footer>
 </div>
 <div id="lb"><img alt=""></div>
@@ -168,30 +153,35 @@
   const feed = document.getElementById("feed");
   const dot = document.getElementById("dot");
   const statusText = document.getElementById("statusText");
-  const keyInput = document.getElementById("key");
   const textInput = document.getElementById("text");
   const sendBtn = document.getElementById("send");
+  const machineSel = document.getElementById("machineSel");
 
   let lastId = 0;
   let CLEAR_BEFORE = parseInt(localStorage.getItem("tg_clear_before")||"0",10) || 0;   // oculta los mensajes con id <= este (limpieza local, persistente)
-  let panelKey = localStorage.getItem("tg_panel_key") || "";
-  keyInput.value = panelKey;
 
   function setStatus(live, txt){
     dot.classList.toggle("live", live);
     statusText.textContent = txt;
   }
+  // Carga los equipos en el selector «Enviar a» (origin-gated, sin auth).
+  async function loadMachines(){
+    try{
+      const r = await fetch(MINI_BASE + "/api/council/assignees");
+      const d = await r.json();
+      const ms = (d.assignees || d.machines || []).filter(m => (m.kind||"machine")==="machine" && m.id);
+      if(!ms.length) return;
+      const prev = localStorage.getItem("tg_machine") || "admira-macbookpronegro14";
+      machineSel.innerHTML = ms.map(m => `<option value="${m.id}">${escapeHtml(m.label||m.name||m.id)}</option>`).join("");
+      machineSel.value = ms.some(m=>m.id===prev) ? prev : ms[0].id;
+      machineSel.onchange = ()=>{ try{ localStorage.setItem("tg_machine", machineSel.value); }catch(e){} };
+    }catch(e){ machineSel.innerHTML = '<option value="">(no se pudo cargar la lista de equipos)</option>'; }
+  }
   function refreshSendState(){
-    const ready = !!WORKER_BASE;        // hay Worker configurado
-    const can = ready && !!panelKey;    // además, clave operador
-    textInput.disabled = !can;
-    sendBtn.disabled = !can;
-    const ab = document.getElementById("attach"); if(ab) ab.disabled = !can;
-    const sel = document.getElementById("consejero");
-    if(sel) sel.disabled = !ready;
-    textInput.placeholder = !ready
-      ? "Conexión en preparación — envío deshabilitado"
-      : (!panelKey ? "Introduce la clave operador (🔑) para enviar" : "Escribe al consejo…");
+    // El envío va al Claude Code del equipo elegido vía tu login de Google (sin clave).
+    textInput.disabled = false;
+    sendBtn.disabled = false;
+    textInput.placeholder = "Escribe el mensaje para el equipo elegido…";
   }
   function fmtTime(epoch){
     if(!epoch) return "";
@@ -241,47 +231,25 @@
     }catch(e){ setStatus(false,"sin conexión"); }
   }
 
-  let _tgSending = false;   // evita disparos múltiples (Enter/clic repetidos → mensaje triplicado)
+  let _tgSending = false;   // evita disparos múltiples (Enter/clic repetidos → mensaje duplicado)
   async function send(){
     if(_tgSending) return;
     const raw = textInput.value.trim();
-    // /sendto va dirigido a una MÁQUINA → se enruta a su Claude Code, NO al grupo/White Rabbit.
-    const st = raw.match(/^\/sendto(?:\s+(\S+)(?:\s+([\s\S]+))?)?$/i);
+    if(!raw) return;
+    // Destino: el equipo del selector «Enviar a». Si escribes /sendto a mano, manda.
+    let machine = machineSel.value, message = raw, target = "claude";
+    const st = raw.match(/^\/sendto\s+(\S+)\s+([\s\S]+)$/i);
     if(st){
-      const machine=(st[1]||"").trim(); let rest=(st[2]||"").trim(); let target="claude";
-      const tm=rest.match(/^(claude|terminal)\s*:\s*([\s\S]+)$/i); if(tm){ target=tm[1].toLowerCase(); rest=tm[2].trim(); }
-      if(!machine||!rest){ setStatus(false,"uso: /sendto <equipo> <mensaje>"); return; }
-      _tgSending = true; textInput.value = ""; sendBtn.disabled = true;   // limpia y bloquea YA → un solo envío
-      try{ await routeSendTo(machine, rest, target); }
-      finally{ _tgSending = false; refreshSendState(); }
-      return;
-    }
-    if(!WORKER_BASE){ setStatus(false,"en preparación"); return; }   // a prueba de bombas: nunca enviar sin Worker
-    const text = raw;
-    if(!text || !panelKey) return;
-    _tgSending = true;
-    const consejero = (document.getElementById("consejero").value || "White Rabbit");
-    const outText = `${text} → ${consejero}`;
-    textInput.disabled = true; sendBtn.disabled = true;
-    try{
-      const r = await fetch(`${WORKER_BASE}/api/send`,{
-        method:"POST",
-        headers:{"content-type":"application/json","Authorization":`Bearer ${panelKey}`},
-        body: JSON.stringify({ text: outText, author: localStorage.getItem("tg_author")||"Web" })
-      });
-      const data = await r.json();
-      if(data.ok){ textInput.value=""; poll(); }
-      else setStatus(false, "no se pudo enviar");
-    }catch(e){ setStatus(false,"sin conexión"); }
+      machine = st[1].trim(); message = st[2].trim();
+      const tm = message.match(/^(claude|terminal)\s*:\s*([\s\S]+)$/i); if(tm){ target = tm[1].toLowerCase(); message = tm[2].trim(); }
+    } else if(/^\/sendto\b/i.test(raw)){ setStatus(false,"uso: /sendto <equipo> <mensaje>"); return; }
+    if(!machine){ setStatus(false,"elige un equipo en «Enviar a»"); return; }
+    if(!message){ setStatus(false,"escribe un mensaje"); return; }
+    _tgSending = true; textInput.value = ""; sendBtn.disabled = true;   // limpia y bloquea YA → un solo envío
+    try{ await routeSendTo(machine, message, target); }
     finally{ _tgSending = false; refreshSendState(); }
   }
 
-  document.getElementById("saveKey").onclick = ()=>{
-    panelKey = keyInput.value.trim();
-    localStorage.setItem("tg_panel_key", panelKey);
-    refreshSendState();
-    keyInput.blur();
-  };
   sendBtn.onclick = send;
   textInput.addEventListener("keydown", e=>{
     if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); send(); }
@@ -294,60 +262,11 @@
     feed.innerHTML = '<div class="empty">🧹 Vista limpiada. Los mensajes nuevos aparecerán aquí.</div>';
   };
 
-  // Adjuntar / PEGAR (Cmd-Ctrl+V) / arrastrar imagen o archivo → al consejo (/api/send-media).
-  const fileInput = document.getElementById("fileInput");
-  const attachBtn = document.getElementById("attach");
-  attachBtn.onclick = ()=>{ if(panelKey && WORKER_BASE) fileInput.click(); };
-
-  async function sendMediaFile(f){
-    if(!f) return;
-    if(!WORKER_BASE){ setStatus(false,"en preparación"); return; }
-    if(!panelKey){ setStatus(false,"introduce la clave operador (🔑)"); return; }
-    if(f.size > 20*1024*1024){ setStatus(false,"archivo > 20MB"); return; }
-    const consejero = document.getElementById("consejero").value || "White Rabbit";
-    const cap = (textInput.value.trim() ? textInput.value.trim()+" " : "") + "→ "+consejero;
-    attachBtn.disabled = true; sendBtn.disabled = true;
-    setStatus(true, "enviando adjunto…");
-    const reader = new FileReader();
-    reader.onload = async ()=>{
-      const b64 = String(reader.result).split(",")[1] || "";
-      try{
-        const r = await fetch(`${WORKER_BASE}/api/send-media`,{
-          method:"POST",
-          headers:{"content-type":"application/json","Authorization":`Bearer ${panelKey}`},
-          body: JSON.stringify({ dataB64:b64, mime:f.type||"application/octet-stream", filename:f.name||"pegado.png", caption:cap, author: localStorage.getItem("tg_author")||"Web" })
-        });
-        const d = await r.json();
-        if(d.ok){ textInput.value=""; poll(); } else setStatus(false,"no se pudo adjuntar");
-      }catch(e){ setStatus(false,"sin conexión"); }
-      refreshSendState();
-    };
-    reader.readAsDataURL(f);
-  }
-
-  fileInput.onchange = ()=>{ const f = fileInput.files && fileInput.files[0]; sendMediaFile(f); fileInput.value=""; };
-
-  // PEGAR imagen del portapapeles → se envía directamente (sin abrir selector de fichero).
-  function handlePaste(e){
-    const items = (e.clipboardData && e.clipboardData.items) || [];
-    for(const it of items){
-      if(it.kind==="file" && it.type && it.type.indexOf("image/")===0){
-        const f = it.getAsFile();
-        if(f){ e.preventDefault(); sendMediaFile(f); return; }
-      }
-    }
-  }
-  textInput.addEventListener("paste", handlePaste);
-  document.addEventListener("paste", (e)=>{ if(document.activeElement !== textInput) handlePaste(e); });
-
-  // Arrastrar y soltar un archivo sobre el cuadro de texto.
-  textInput.addEventListener("dragover", e=>{ e.preventDefault(); });
-  textInput.addEventListener("drop", e=>{ const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0]; if(f){ e.preventDefault(); sendMediaFile(f); } });
-
   // Cerrar el visor ampliado (lightbox).
   document.getElementById("lb").addEventListener("click", function(){ this.style.display="none"; });
 
   refreshSendState();
+  loadMachines();
   poll();
   setInterval(poll, POLL_MS);
 </script>

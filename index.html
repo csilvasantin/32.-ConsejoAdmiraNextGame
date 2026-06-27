@@ -2668,7 +2668,7 @@
     height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.27.r19</a>
+            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.27.r20</a>
             <a href="https://www.admira.live/equipos" target="_blank" rel="noopener" class="version-badge" title="Equipos · asignación de agentes">🏠 AdmiraNeXT</a>
             <a href="https://www.admira.live/telegram" target="_blank" rel="noopener" class="version-badge" title="Telegram · espejo en directo del grupo AdmiraNext">💬 Telegram</a>
             <button class="version-badge" onclick="window.agmSetVisible&&window.agmSetVisible(null)" title="Abrir el puesto de mando AgoraMatrix">📡 Agentes</button>
@@ -4420,11 +4420,27 @@
     // /sendto <equipo> <mensaje> — entrega el mensaje al Claude Code (Terminal) de
     // esa máquina vía el servicio de control del Mini (teclea el prompt + Enter).
     // Reutiliza la "Clave operador" del Consejo (sessionStorage admira:agora-key).
-    // Credencial de escritura del Consejo: el backend acepta el LOGIN DE GOOGLE
-    // (id_token del auth-gate) O la Clave operador. Probamos Google primero (cero
-    // fricción) y solo pedimos la clave si tu login no sirve.
-    function councilGateCred() { try { var g = JSON.parse(localStorage.getItem("admira_gate") || "null"); return (g && g.cred && String(g.cred).split(".").length === 3) ? g.cred : ""; } catch (e) { return ""; } }
+    // Credencial de escritura del Consejo: el backend valida el LOGIN DE GOOGLE en
+    // servidor (firma + email permitido). Nos apoyamos en él y NO pedimos password:
+    // si el id_token caducó (duran ~1h), lo refrescamos solo (One Tap). Una clave ya
+    // guardada queda como red de seguridad SILENCIOSA (no se pide ninguna nueva).
+    const COUNCIL_GOOGLE_CLIENT_ID = "861856772040-e1ri6kpu6maagtb6crdfbb923hsaalgb.apps.googleusercontent.com";
+    function _jwtExpMs(t) { try { var p = JSON.parse(atob(String(t).split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))); return (p.exp || 0) * 1000; } catch (e) { return 0; } }
+    function councilGateCred() { try { var g = JSON.parse(localStorage.getItem("admira_gate") || "null"); if (!g || !g.cred || String(g.cred).split(".").length !== 3) return ""; return (_jwtExpMs(g.cred) > Date.now() + 30000) ? g.cred : ""; } catch (e) { return ""; } }
     function councilStoredKey() { try { return localStorage.getItem("admira:agora-key") || sessionStorage.getItem("admira:agora-key") || ""; } catch (e) { return ""; } }
+    function _ensureGIS() { return new Promise(function (res) { if (window.google && google.accounts && google.accounts.id) return res(true); var s = document.createElement("script"); s.src = "https://accounts.google.com/gsi/client"; s.async = true; s.defer = true; s.onload = function () { res(true); }; s.onerror = function () { res(false); }; (document.head || document.documentElement).appendChild(s); }); }
+    function refreshGoogleCred() { return new Promise(function (resolve) {
+        _ensureGIS().then(function (okGis) {
+            if (!okGis || !(window.google && google.accounts && google.accounts.id)) return resolve("");
+            var done = false; function fin(v) { if (done) return; done = true; resolve(v || ""); }
+            try {
+                google.accounts.id.initialize({ client_id: COUNCIL_GOOGLE_CLIENT_ID, auto_select: true, cancel_on_tap_outside: false,
+                    callback: function (resp) { try { var g = JSON.parse(localStorage.getItem("admira_gate") || "{}"); g.cred = resp.credential; g.credAt = Date.now(); localStorage.setItem("admira_gate", JSON.stringify(g)); } catch (e) {} fin(resp.credential); } });
+                google.accounts.id.prompt(function (n) { try { if ((n.isNotDisplayed && n.isNotDisplayed()) || (n.isSkippedMoment && n.isSkippedMoment())) fin(""); } catch (e) {} });
+            } catch (e) { fin(""); }
+            setTimeout(function () { fin(""); }, 5000);
+        });
+    }); }
     async function teamworkSend(base, body, cred) {
         const r = await fetch(base + "/api/teamwork/send", { method: "POST",
             headers: { "Content-Type": "application/json", "Authorization": "Bearer " + cred, "X-Council-Token": cred },
@@ -4438,19 +4454,15 @@
         const body = { machineId: machineName, prompt: message, target: target };
         setActionLine("📨 Enviando a " + machineName + " (" + target + ") — escribiéndolo en su Claude Code…");
         try {
-            const creds = [];
-            if (councilGateCred()) creds.push(councilGateCred());     // 1) login de Google
-            if (councilStoredKey()) creds.push(councilStoredKey());   // 2) Clave operador guardada
-            let res = null;
-            for (const c of creds) { res = await teamworkSend(base, body, c); if (res.ok || (res.status !== 401 && res.status !== 403)) break; }
-            if (!res || res.status === 401 || res.status === 403) {    // 3) pedir la clave correcta
-                const k = (prompt("Clave operador del Consejo (la MISMA de la mesa de equipos /teamwork — NO la del panel de Telegram):") || "").trim();
-                if (!k) { setActionLine("Cancelado — falta la Clave operador del Consejo"); return; }
-                try { localStorage.setItem("admira:agora-key", k); } catch (e) {}   // se recuerda en ESTE navegador: la metes una vez y no vuelve a pedirla
-                res = await teamworkSend(base, body, k);
+            let cred = councilGateCred();                                  // 1) login de Google vigente
+            if (!cred) { setActionLine("🔄 refrescando tu login de Google…"); cred = await refreshGoogleCred(); }
+            let res = cred ? await teamworkSend(base, body, cred) : null;
+            if ((!res || res.status === 401 || res.status === 403) && councilStoredKey()) {   // 2) red de seguridad: clave ya guardada (silenciosa)
+                res = await teamworkSend(base, body, councilStoredKey());
             }
             if (res && res.ok) setActionLine("✅ Enviado a " + (res.d.name || machineName) + " — lo está procesando su Claude Code");
-            else if (res && (res.status === 401 || res.status === 403)) { try { localStorage.removeItem("admira:agora-key"); sessionStorage.removeItem("admira:agora-key"); } catch (e) {} setActionLine("🔑 Credencial no válida: ni tu login de Google ni esa clave sirven. Usa la Clave operador del Consejo (la de /teamwork)."); }
+            else if (!cred && !councilStoredKey()) setActionLine("🔒 Tu login de Google caducó y no pudo refrescarse — recarga la página para volver a entrar con Google.");
+            else if (res && (res.status === 401 || res.status === 403)) setActionLine("🔒 Tu cuenta de Google no está autorizada en el backend para enviar a máquinas.");
             else setActionLine("⚠️ No se pudo enviar a " + machineName + ": " + (res && res.d.error || ("HTTP " + (res && res.status))));
         } catch (e) {
             setActionLine("⚠️ Sin conexión con el Mini (¿Tailscale / servicio com.admiranext.control activo?)");

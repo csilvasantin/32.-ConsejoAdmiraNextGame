@@ -27,7 +27,9 @@
   header .logo{font-size:22px}
   header h1{font-size:15px; margin:0; color:var(--gold); letter-spacing:.5px}
   header .sub{font-size:11px; color:var(--dim); margin-top:2px}
-  header .status{margin-left:auto; font-size:11px; color:var(--dim); display:flex; align-items:center; gap:6px}
+  header #clearBtn{margin-left:auto; background:#1a1428; color:var(--gold); border:1px solid var(--border); border-radius:8px; font-family:inherit; font-size:11px; padding:6px 10px; cursor:pointer}
+  header #clearBtn:hover{border-color:var(--gold)}
+  header .status{margin-left:12px; font-size:11px; color:var(--dim); display:flex; align-items:center; gap:6px}
   .dot{width:8px; height:8px; border-radius:50%; background:var(--dim)}
   .dot.live{background:var(--green); box-shadow:0 0 8px var(--green)}
   #feed{
@@ -75,6 +77,7 @@
       <h1>Telegram · Grupo AdmiraNext</h1>
       <div class="sub">Espejo en directo del consejo</div>
     </div>
+    <button id="clearBtn" title="Limpiar la vista del chat (oculta los mensajes actuales; los nuevos siguen llegando)">🧹 Limpiar</button>
     <div class="status"><span class="dot" id="dot"></span><span id="statusText">conectando…</span></div>
   </header>
 
@@ -170,6 +173,7 @@
   const sendBtn = document.getElementById("send");
 
   let lastId = 0;
+  let CLEAR_BEFORE = parseInt(localStorage.getItem("tg_clear_before")||"0",10) || 0;   // oculta los mensajes con id <= este (limpieza local, persistente)
   let panelKey = localStorage.getItem("tg_panel_key") || "";
   keyInput.value = panelKey;
 
@@ -197,6 +201,8 @@
   function render(msgs){
     if(lastId===0 && msgs.length) feed.innerHTML = "";
     for(const m of msgs){
+      if(CLEAR_BEFORE && m.id <= CLEAR_BEFORE){ lastId = Math.max(lastId, m.id); continue; }   // ocultados por «Limpiar»
+      const emp = feed.querySelector(".empty"); if(emp) emp.remove();   // quita el placeholder al llegar algo real
       const el = document.createElement("div");
       el.className = "msg" + (m.direction==="out" ? " out" : "");
       let media = "";
@@ -235,7 +241,9 @@
     }catch(e){ setStatus(false,"sin conexión"); }
   }
 
+  let _tgSending = false;   // evita disparos múltiples (Enter/clic repetidos → mensaje triplicado)
   async function send(){
+    if(_tgSending) return;
     const raw = textInput.value.trim();
     // /sendto va dirigido a una MÁQUINA → se enruta a su Claude Code, NO al grupo/White Rabbit.
     const st = raw.match(/^\/sendto(?:\s+(\S+)(?:\s+([\s\S]+))?)?$/i);
@@ -243,12 +251,15 @@
       const machine=(st[1]||"").trim(); let rest=(st[2]||"").trim(); let target="claude";
       const tm=rest.match(/^(claude|terminal)\s*:\s*([\s\S]+)$/i); if(tm){ target=tm[1].toLowerCase(); rest=tm[2].trim(); }
       if(!machine||!rest){ setStatus(false,"uso: /sendto <equipo> <mensaje>"); return; }
-      routeSendTo(machine, rest, target);
+      _tgSending = true; textInput.value = ""; sendBtn.disabled = true;   // limpia y bloquea YA → un solo envío
+      try{ await routeSendTo(machine, rest, target); }
+      finally{ _tgSending = false; refreshSendState(); }
       return;
     }
     if(!WORKER_BASE){ setStatus(false,"en preparación"); return; }   // a prueba de bombas: nunca enviar sin Worker
     const text = raw;
     if(!text || !panelKey) return;
+    _tgSending = true;
     const consejero = (document.getElementById("consejero").value || "White Rabbit");
     const outText = `${text} → ${consejero}`;
     textInput.disabled = true; sendBtn.disabled = true;
@@ -262,7 +273,7 @@
       if(data.ok){ textInput.value=""; poll(); }
       else setStatus(false, "no se pudo enviar");
     }catch(e){ setStatus(false,"sin conexión"); }
-    refreshSendState();
+    finally{ _tgSending = false; refreshSendState(); }
   }
 
   document.getElementById("saveKey").onclick = ()=>{
@@ -275,6 +286,13 @@
   textInput.addEventListener("keydown", e=>{
     if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); send(); }
   });
+  // 🧹 Limpiar: oculta los mensajes actuales en ESTA vista (no borra del grupo ni de D1);
+  // los nuevos siguen llegando. Persistente por navegador.
+  document.getElementById("clearBtn").onclick = ()=>{
+    CLEAR_BEFORE = lastId;
+    try{ localStorage.setItem("tg_clear_before", String(CLEAR_BEFORE)); }catch(e){}
+    feed.innerHTML = '<div class="empty">🧹 Vista limpiada. Los mensajes nuevos aparecerán aquí.</div>';
+  };
 
   // Adjuntar / PEGAR (Cmd-Ctrl+V) / arrastrar imagen o archivo → al consejo (/api/send-media).
   const fileInput = document.getElementById("fileInput");

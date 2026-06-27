@@ -2668,7 +2668,7 @@
     height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.27.r14</a>
+            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.27.r15</a>
             <a href="https://www.admira.live/equipos" target="_blank" rel="noopener" class="version-badge" title="Equipos · asignación de agentes">🏠 AdmiraNeXT</a>
             <a href="https://www.admira.live/telegram" target="_blank" rel="noopener" class="version-badge" title="Telegram · espejo en directo del grupo AdmiraNext">💬 Telegram</a>
             <button class="version-badge" onclick="window.agmSetVisible&&window.agmSetVisible(null)" title="Abrir el puesto de mando AgoraMatrix">📡 Agentes</button>
@@ -4420,7 +4420,8 @@
     // /sendto <equipo> <mensaje> — entrega el mensaje al Claude Code (Terminal) de
     // esa máquina vía el servicio de control del Mini (teclea el prompt + Enter).
     // Reutiliza la "Clave operador" del Consejo (sessionStorage admira:agora-key).
-    async function sendToMachine(machineName, message) {
+    async function sendToMachine(machineName, message, target) {
+        target = (target === "terminal" || target === "claude") ? target : "claude";  // por defecto la app Claude (Claude Code de escritorio)
         const base = "https://macmini.tail48b61c.ts.net";
         let key = "";
         try { key = sessionStorage.getItem("admira:agora-key") || ""; } catch (e) {}
@@ -4429,12 +4430,12 @@
             if (!key) { setActionLine("Cancelado — falta la Clave operador"); return; }
             try { sessionStorage.setItem("admira:agora-key", key); } catch (e) {}
         }
-        setActionLine("📨 Enviando a " + machineName + " — escribiéndolo en su Claude Code…");
+        setActionLine("📨 Enviando a " + machineName + " (" + target + ") — escribiéndolo en su Claude Code…");
         try {
             const r = await fetch(base + "/api/teamwork/send", {
                 method: "POST",
                 headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key, "X-Council-Token": key },
-                body: JSON.stringify({ machineId: machineName, prompt: message, target: "terminal" })
+                body: JSON.stringify({ machineId: machineName, prompt: message, target: target })
             });
             const d = await r.json().catch(() => ({}));
             if (r.ok && d.ok) {
@@ -5018,12 +5019,15 @@
         const sendtoMatch = text.match(/^\/sendto(?:\s+(\S+)(?:\s+([\s\S]+))?)?$/i);
         if (sendtoMatch) {
             const machine = (sendtoMatch[1] || "").trim();
-            const message = (sendtoMatch[2] || "").trim();
+            let rest = (sendtoMatch[2] || "").trim();
+            let target = "claude";   // por defecto la app Claude (Claude Code de escritorio)
+            const tm = rest.match(/^(claude|terminal)\s*:\s*([\s\S]+)$/i);
+            if (tm) { target = tm[1].toLowerCase(); rest = tm[2].trim(); }
             addUserEntry(text);
-            if (!machine || !message) {
-                setActionLine("Uso: /sendto <equipo> <mensaje> — p.ej. /sendto MacBookProNegro14 revisa el deploy");
+            if (!machine || !rest) {
+                setActionLine("Uso: /sendto <equipo> [terminal:] <mensaje> — p.ej. /sendto MacBookProNegro14 revisa el deploy (por defecto va a la app Claude)");
             } else {
-                sendToMachine(machine, message);
+                sendToMachine(machine, rest, target);
             }
             return true;
         }

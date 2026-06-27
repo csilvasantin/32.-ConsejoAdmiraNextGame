@@ -81,6 +81,24 @@
   .toast.down{border-left-color:var(--bad)} .toast.up{border-left-color:var(--ok)} .toast.warn{border-left-color:var(--warn)}
   .toast small{color:var(--mut);display:block;font-size:10.5px;margin-top:1px}
   @keyframes toastin{from{opacity:0;transform:translateX(16px)}to{opacity:1;transform:none}}
+  /* copiar salida de consola */
+  .res .h .rcopy{margin-left:8px;border:1px solid var(--line);background:transparent;color:var(--mut);border-radius:7px;padding:2px 7px;font-size:11px;cursor:pointer}
+  .res .h .rcopy:hover{border-color:var(--acc);color:var(--acc)}
+  /* mosaico / pared de pantallas */
+  #wall{position:fixed;inset:0;background:#06080d;z-index:130;display:none;flex-direction:column}
+  .wallbar{display:flex;align-items:center;gap:12px;padding:10px 16px;border-bottom:1px solid var(--line);font-weight:700;font-size:14px;color:var(--ink)}
+  .wallbar .spacer{flex:1}
+  .wallbar #wallcount{font-family:var(--mono);font-size:12px;color:var(--mut);font-weight:400}
+  .wallbar button{font-family:inherit;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:9px;padding:7px 12px;font-size:13px;cursor:pointer}
+  .wallbar button:hover{border-color:var(--acc)}
+  .wallgrid{flex:1;overflow:auto;padding:14px;display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:12px;align-content:start}
+  .wtile{position:relative;border:1px solid var(--line);border-radius:12px;overflow:hidden;background:#000;aspect-ratio:16/10}
+  .wtile.fail{border-color:var(--warn)}
+  .wtile img{width:100%;height:100%;object-fit:cover;display:block}
+  .wtile .wnocap,.wallgrid>.wnocap{display:flex;align-items:center;justify-content:center;height:100%;color:var(--mut);font-size:13px;text-align:center;padding:14px}
+  .wtile.fail .wnocap{color:var(--warn)}
+  .wtile .wlabel{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:space-between;gap:8px;font-size:12px;padding:6px 9px;background:linear-gradient(transparent,rgba(0,0,0,.8));color:#fff}
+  .wtile .wlabel span{font-family:var(--mono);font-size:10.5px;color:#bcd}
   button{font-family:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:9px;padding:6px 10px;font-size:12px;transition:.12s}
   button:hover{border-color:var(--acc);color:#fff}
   button:disabled{opacity:.45;cursor:progress}
@@ -167,6 +185,10 @@
     <label><input type="checkbox" id="acToggle"> 📸 Auto-captura</label>
     <span>cada <input type="number" id="acSec" min="3" max="600" value="15"> s</span>
     <button id="acNow" title="Capturar ahora todas las pantallas online">📸 Capturar todas</button>
+    <button id="wallOpen" title="Pared de pantallas: mosaico a pantalla completa de todas las capturas">🧱 Mosaico</button>
+    <label title="Beep cuando un equipo se cae o su captura empieza a fallar"><input type="checkbox" id="sndToggle"> 🔔 sonido</label>
+    <label title="No mostrar los equipos desconectados"><input type="checkbox" id="hideOff"> 🙈 ocultar offline</label>
+    <button id="collapseAll" title="Colapsar o expandir todas las tarjetas">⊟ colapsar todas</button>
     <span class="caphealth" id="capHealth"></span>
     <button id="fixAll" style="display:none" title="Enviar el arreglo de captura por SSH a todos los equipos que fallan">🛡️ arreglar todas</button>
     <span class="acstate" id="acState">— para monitorizar qué emite cada pantalla</span>
@@ -189,6 +211,10 @@
 
 <div id="lb"><img id="lbImg" alt=""></div>
 <div id="toasts"></div>
+<div id="wall">
+  <div class="wallbar">🧱 Pared de pantallas <span id="wallcount"></span><span class="spacer"></span><button id="wallClose">✕ cerrar (Esc)</button></div>
+  <div class="wallgrid" id="wallGrid"></div>
+</div>
 
 <script>
 const API='https://macmini.tail48b61c.ts.net/fleet/api';
@@ -197,6 +223,7 @@ let MACHINES=[];
 // Equipos cuya captura ha fallado (ERR_NO_CAPTURE / sin permiso). Persiste entre
 // re-renders para volver a pintar el aviso + botón de arreglo por SSH.
 let CAP_FAIL={}, CAP_TS={}, PREV_ONLINE={}, _baselineDone=false;
+let HIDE_OFF=(localStorage.getItem('fleet_hideoff')==='1');
 function machName(id){ const m=MACHINES.find(x=>x.id===id); return m?(m.name||id):id; }
 function setCapFail(id, failed){
   const prev=CAP_FAIL[id]; CAP_FAIL[id]=!!failed;
@@ -228,9 +255,21 @@ function updateCapHealth(){
   el.innerHTML=online? ('📸 <b class="ok">'+okc+'</b> capturando'+(bad?(' · <b class="bad">'+bad+'</b> sin captura'):'')) : '';
   if(fa){ if(bad){ fa.style.display=''; fa.textContent='🛡️ arreglar todas ('+bad+')'; } else fa.style.display='none'; }
 }
-// ---- toasts (caída / vuelta / fallo de captura) ----
+// ---- toasts (caída / vuelta / fallo de captura) + beep opcional ----
+let SOUND=(localStorage.getItem('fleet_sound')==='1');
+function beep(kind){
+  if(!SOUND) return;
+  try{ const AC=window.AudioContext||window.webkitAudioContext; if(!AC) return; const ac=new AC();
+    const o=ac.createOscillator(), g=ac.createGain(); o.connect(g); g.connect(ac.destination); o.type='sine';
+    o.frequency.value = kind==='up'?880:(kind==='warn'?440:330);
+    g.gain.setValueAtTime(0.0001,ac.currentTime); g.gain.exponentialRampToValueAtTime(0.18,ac.currentTime+0.02);
+    g.gain.exponentialRampToValueAtTime(0.0001,ac.currentTime+0.34);
+    o.start(); o.stop(ac.currentTime+0.35); o.onended=()=>{ try{ac.close();}catch(e){} };
+  }catch(e){}
+}
 function toast(kind, title, sub){
   const c=$('#toasts'); if(!c) return;
+  if(kind==='down'||kind==='warn') beep(kind);
   const t=document.createElement('div'); t.className='toast '+(kind||'');
   t.innerHTML='<div>'+String(title).replace(/</g,'&lt;')+'</div>'+(sub?'<small>'+String(sub).replace(/</g,'&lt;')+'</small>':'');
   t.onclick=()=>t.remove(); c.appendChild(t);
@@ -346,7 +385,12 @@ function renderCards(ms){
   // preserva miniaturas ya cargadas
   const shots={}; document.querySelectorAll('.shot').forEach(s=>{ if(s.dataset.m && s.style.display!=='none') shots[s.dataset.m]=s.querySelector('img').src; });
   const COL=collapsedMap();
-  el.innerHTML=sortByOrder(ms).map(m=>`
+  // despejar tablero: opcionalmente oculta offline y, en todo caso, los manda al final
+  let list=sortByOrder(ms);
+  if(HIDE_OFF) list=list.filter(m=>m.online);
+  list=list.slice().sort((a,b)=>(a.online?0:1)-(b.online?0:1));
+  if(!list.length){ el.innerHTML='<div class="empty" style="grid-column:1/-1">Sin equipos online (desmarca «ocultar offline» para verlos).</div>'; return; }
+  el.innerHTML=list.map(m=>`
     <div class="card${COL[m.id]?' collapsed':''}" data-card="${m.id}">
       <div class="top">
         <span class="em${m.online?' em-click':''}" ${m.online?`data-icon="${m.id}"`:''} title="${m.online?'Limpiar el escritorio (oculta apps) y ver el fondo':''}">${m.emoji||'💻'}</span>
@@ -550,8 +594,12 @@ function pushResult(machine, label, d){
   const ok=d.rc===0;
   const div=document.createElement('div'); div.className='res';
   div.innerHTML=`<div class="h"><span class="who">${m.emoji||''} ${m.name}</span><span style="color:var(--mut)">${label.replace(/</g,'&lt;').slice(0,80)}</span>
-    <span class="rc ${ok?'ok':'err'}">rc=${d.rc}${d.ms!=null?(' · '+d.ms+'ms'):''}</span></div>
+    <span class="rc ${ok?'ok':'err'}">rc=${d.rc}${d.ms!=null?(' · '+d.ms+'ms'):''}</span><button class="rcopy" title="Copiar comando y salida">⧉ copiar</button></div>
     <pre>${body.replace(/</g,'&lt;')}</pre>`;
+  const copyText=(m.name?(m.name+' · '):'')+label+'\n'+body;
+  div.querySelector('.rcopy').onclick=ev=>{ ev.stopPropagation(); const b=ev.currentTarget;
+    navigator.clipboard.writeText(copyText).then(()=>{ const t=b.textContent; b.textContent='✓ copiado'; setTimeout(()=>{b.textContent=t;},1200); })
+      .catch(()=>{ b.textContent='⚠'; }); };
   out.insertBefore(div, out.firstChild);
 }
 
@@ -592,6 +640,49 @@ function applyAutoCap(){
       catch(err){ pushResult(id,'🛡️ arreglo captura',{rc:-1,stdout:'',stderr:err.msg||'error'}); } }
     fa.disabled=false; fa.textContent=l; updateCapHealth();
   };
+})();
+
+/* ---------- mosaico / pared de pantallas ---------- */
+let _wallTimer=null;
+function wallTiles(){
+  return MACHINES.filter(m=>m.online).map(m=>{
+    const box=document.querySelector('.shot[data-m="'+m.id+'"]'); const img=box&&box.querySelector('img');
+    const real=box && !box.classList.contains('isWall') && img && img.src && /^data:/.test(img.src);
+    const age=CAP_TS[m.id]?fmtAge(Date.now()-CAP_TS[m.id]):'';
+    return {name:m.name,emoji:m.emoji||'💻',src:real?img.src:'',age,fail:!!CAP_FAIL[m.id]};
+  });
+}
+function renderWall(){
+  const g=$('#wallGrid'); if(!g) return;
+  const tiles=wallTiles();
+  $('#wallcount').textContent=tiles.length+' equipo(s) online';
+  g.innerHTML = tiles.length ? tiles.map(t=>`<div class="wtile${t.fail?' fail':''}">${
+    t.src?`<img src="${t.src}" alt="">`:`<div class="wnocap">${t.fail?'⚠️ sin permiso de captura':'— sin captura —'}</div>`
+  }<div class="wlabel"><span style="color:#fff">${t.emoji} ${String(t.name).replace(/</g,'&lt;')}</span><span>${t.age}</span></div></div>`).join('')
+    : '<div class="wnocap">No hay equipos online.</div>';
+}
+async function wallTick(){ if(!SESSION) return; for(const m of MACHINES){ if(m.online) await captureMachine(m.id); } renderWall(); }
+function openWall(){ const w=$('#wall'); if(!w) return; w.style.display='flex'; renderWall(); wallTick();
+  if(_wallTimer) clearInterval(_wallTimer); _wallTimer=setInterval(wallTick, Math.max(5,(AUTOCAP.sec||15))*1000); }
+function closeWall(){ const w=$('#wall'); if(w) w.style.display='none'; if(_wallTimer){ clearInterval(_wallTimer); _wallTimer=null; } }
+
+/* ---------- despejar tablero: colapsar/expandir todas ---------- */
+function collapseAllToggle(){
+  const ids=MACHINES.map(m=>m.id), c=collapsedMap();
+  const anyExpanded=ids.some(id=>!c[id]);   // si hay alguna expandida → colapsa todas; si no → expande
+  ids.forEach(id=>{ c[id]=anyExpanded; });
+  localStorage.setItem('fleet_card_collapsed', JSON.stringify(c)); renderCards(MACHINES);
+}
+
+/* ---------- wiring de los controles de la barra ---------- */
+(function(){
+  const wo=$('#wallOpen'), wc=$('#wallClose'), snd=$('#sndToggle'), ho=$('#hideOff'), ca=$('#collapseAll');
+  if(wo) wo.onclick=openWall;
+  if(wc) wc.onclick=closeWall;
+  document.addEventListener('keydown', e=>{ if(e.key==='Escape' && $('#wall') && $('#wall').style.display==='flex') closeWall(); });
+  if(snd){ snd.checked=SOUND; snd.onchange=e=>{ SOUND=e.target.checked; localStorage.setItem('fleet_sound', SOUND?'1':'0'); if(SOUND) beep('up'); }; }
+  if(ho){ ho.checked=HIDE_OFF; ho.onchange=e=>{ HIDE_OFF=e.target.checked; localStorage.setItem('fleet_hideoff', HIDE_OFF?'1':'0'); renderCards(MACHINES); }; }
+  if(ca) ca.onclick=collapseAllToggle;
 })();
 
 /* ---------- arranque ---------- */

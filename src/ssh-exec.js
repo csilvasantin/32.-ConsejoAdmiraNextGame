@@ -660,10 +660,15 @@ export async function sendPromptToMachine(machineId, prompt, target = "terminal"
           // que contiene "ConnectTimeout" y daba un falso positivo).
           const errOut = String(stderr || "");
           const sshConnFail = /Could not resolve|Connection refused|Permission denied|Operation timed out|No route to host|Connection closed|Host key verification|kex_exchange|Connection timed out/i.test(errOut);
-          if (sshConnFail) {
-            resolve({ ok: false, error: `ssh: ${errOut}`.slice(0, 400) });
+          // Si osascript no pudo TECLEAR (Accesibilidad), eso SÍ es un fallo real:
+          // el mensaje no aterriza aunque SSH conecte.
+          const keystrokeDenied = /not allowed to send keystrokes|-1719|-25211|assistive|accessibility/i.test(errOut);
+          if (sshConnFail || keystrokeDenied) {
+            resolve({ ok: false, error: `${sshConnFail ? "ssh" : "keystroke/accesibilidad"}: ${errOut}`.slice(0, 400) });
           } else {
-            resolve({ ok: true, machine: machineId, name: machine.name });
+            // Entregado (best-effort). Pasamos el stderr de osascript (si lo hay) como aviso
+            // para diagnóstico de por qué a veces no aterriza (foco/estado de la app).
+            resolve({ ok: true, machine: machineId, name: machine.name, osaWarn: errOut.slice(0, 300) });
           }
         });
       });

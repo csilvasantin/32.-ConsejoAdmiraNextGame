@@ -2668,7 +2668,7 @@
     height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.27.r13</a>
+            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.27.r14</a>
             <a href="https://www.admira.live/equipos" target="_blank" rel="noopener" class="version-badge" title="Equipos · asignación de agentes">🏠 AdmiraNeXT</a>
             <a href="https://www.admira.live/telegram" target="_blank" rel="noopener" class="version-badge" title="Telegram · espejo en directo del grupo AdmiraNext">💬 Telegram</a>
             <button class="version-badge" onclick="window.agmSetVisible&&window.agmSetVisible(null)" title="Abrir el puesto de mando AgoraMatrix">📡 Agentes</button>
@@ -4417,6 +4417,38 @@
     }
 
     function setActionLine(text) { document.getElementById("action-input").placeholder = text; }
+    // /sendto <equipo> <mensaje> — entrega el mensaje al Claude Code (Terminal) de
+    // esa máquina vía el servicio de control del Mini (teclea el prompt + Enter).
+    // Reutiliza la "Clave operador" del Consejo (sessionStorage admira:agora-key).
+    async function sendToMachine(machineName, message) {
+        const base = "https://macmini.tail48b61c.ts.net";
+        let key = "";
+        try { key = sessionStorage.getItem("admira:agora-key") || ""; } catch (e) {}
+        if (!key) {
+            key = (prompt("Clave operador del Consejo (para enviar a una máquina):") || "").trim();
+            if (!key) { setActionLine("Cancelado — falta la Clave operador"); return; }
+            try { sessionStorage.setItem("admira:agora-key", key); } catch (e) {}
+        }
+        setActionLine("📨 Enviando a " + machineName + " — escribiéndolo en su Claude Code…");
+        try {
+            const r = await fetch(base + "/api/teamwork/send", {
+                method: "POST",
+                headers: { "Content-Type": "application/json", "Authorization": "Bearer " + key, "X-Council-Token": key },
+                body: JSON.stringify({ machineId: machineName, prompt: message, target: "terminal" })
+            });
+            const d = await r.json().catch(() => ({}));
+            if (r.ok && d.ok) {
+                setActionLine("✅ Enviado a " + (d.name || machineName) + " — lo está procesando su Claude Code");
+            } else if (r.status === 401 || r.status === 403) {
+                try { sessionStorage.removeItem("admira:agora-key"); } catch (e) {}
+                setActionLine("🔑 Clave operador inválida o faltante — repite /sendto para reintroducirla");
+            } else {
+                setActionLine("⚠️ No se pudo enviar a " + machineName + ": " + (d.error || ("HTTP " + r.status)));
+            }
+        } catch (e) {
+            setActionLine("⚠️ Sin conexión con el Mini (¿Tailscale / servicio com.admiranext.control activo?)");
+        }
+    }
     // Menú intermedio SCUMM plegable (persistente)
     function setScummCollapsed(collapsed) {
         const bar = document.querySelector('.scumm-bar'); if (!bar) return;
@@ -4835,7 +4867,7 @@
         '/help', '/sites', '/admira.live', '/admira.studio', '/admiranext.com',
         '/admira.app', '/clearchannel.tv', '/pixeria.com', '/equipos', '/control',
         '/scumm', '/top', '/bocas', '/menu', '/agoramatrix', '/tareas', '/google',
-        '/importar', '/nombres', '/tarea', '/diario', '/leyendas', '/coetaneos', '/agentes', '/comandos'
+        '/importar', '/nombres', '/tarea', '/diario', '/leyendas', '/coetaneos', '/agentes', '/comandos', '/sendto'
     ];
     (function setupCliAutocomplete() {
         const inp = document.getElementById('action-input');
@@ -4981,6 +5013,18 @@
             const vis = window.agmSetVisible(action === 'on' ? true : action === 'off' ? false : null);
             addUserEntry(text);
             setActionLine('📡 Panel AgoraMatrix ' + (vis ? 'visible' : 'oculto') + ' — /agoramatrix on · off · toggle');
+            return true;
+        }
+        const sendtoMatch = text.match(/^\/sendto(?:\s+(\S+)(?:\s+([\s\S]+))?)?$/i);
+        if (sendtoMatch) {
+            const machine = (sendtoMatch[1] || "").trim();
+            const message = (sendtoMatch[2] || "").trim();
+            addUserEntry(text);
+            if (!machine || !message) {
+                setActionLine("Uso: /sendto <equipo> <mensaje> — p.ej. /sendto MacBookProNegro14 revisa el deploy");
+            } else {
+                sendToMachine(machine, message);
+            }
             return true;
         }
         const taskPanelMatch = text.match(/^\/(?:tareas|tasks)\s*(on|off|toggle)?$/i);

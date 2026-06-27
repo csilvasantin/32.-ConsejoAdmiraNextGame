@@ -60,6 +60,11 @@
   .shot img{width:100%;display:block}
   .shot.isWall::after{content:'🖥️ fondo actual · pulsa 📸 captura para foto real';position:absolute;left:0;right:0;bottom:0;font-size:10px;padding:3px 7px;background:rgba(0,0,0,.55);color:#9fe6c0;letter-spacing:.2px}
   .acts{display:flex;flex-wrap:wrap;gap:6px}
+  .capwarn{display:none;align-items:center;gap:8px;flex-wrap:wrap;font-size:11.5px;color:var(--warn);border:1px solid var(--warn);border-radius:9px;padding:7px 10px;background:rgba(255,180,84,.07)}
+  .capwarn button{border-color:var(--warn);color:var(--warn);font-weight:700}
+  .capwarn button:hover{background:var(--warn);color:#2a1a08}
+  .card.capfail{border-color:var(--warn)}
+  .card.capfail .dot{box-shadow:none}
   button{font-family:inherit;cursor:pointer;border:1px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:9px;padding:6px 10px;font-size:12px;transition:.12s}
   button:hover{border-color:var(--acc);color:#fff}
   button:disabled{opacity:.45;cursor:progress}
@@ -170,6 +175,25 @@
 const API='https://macmini.tail48b61c.ts.net/fleet/api';
 const $=s=>document.querySelector(s);
 let MACHINES=[];
+// Equipos cuya captura ha fallado (ERR_NO_CAPTURE / sin permiso). Persiste entre
+// re-renders para volver a pintar el aviso + botón de arreglo por SSH.
+let CAP_FAIL={};
+function setCapFail(id, failed){
+  CAP_FAIL[id]=!!failed;
+  const w=document.querySelector('.capwarn[data-capwarn="'+id+'"]');
+  const card=document.querySelector('.card[data-card="'+id+'"]');
+  if(w) w.style.display=failed?'flex':'none';
+  if(card) card.classList.toggle('capfail', !!failed);
+}
+// Arreglo que se envía por SSH a la máquina: abre el panel de Grabación de
+// pantalla, avisa al usuario con una notificación, reactiva el agente de captura
+// y reporta si falta AgoraCapture.app. El permiso lo concede el humano en ese Mac.
+const CAP_FIX_CMD=[
+  'open "x-apple.systempreferences:com.apple.preference.security?Privacy_ScreenCapture" >/dev/null 2>&1',
+  'osascript -e \'display notification "Activa AgoraCapture en Grabacion de pantalla y vuelve a capturar" with title "Admira - permiso de captura"\' >/dev/null 2>&1',
+  'launchctl kickstart -k "gui/$(id -u)/com.admiranext.fleet-capture" 2>/dev/null',
+  'test -d "$HOME/Applications/AgoraCapture.app" && echo "AgoraCapture.app: OK - concede Grabacion de pantalla en el panel que se ha abierto" || echo "AgoraCapture.app NO instalada en ~/Applications (falta copiar la app a ese Mac)"'
+].join('; ');
 // Acceso ÚNICO por login de Google (opción B): se obtiene una sesión de backend
 // (12h) intercambiando el credential del gate (admira_gate.cred). Sin tokens.
 let SESSION='';
@@ -290,11 +314,14 @@ function renderCards(ms){
         <button data-a="signage_on" data-m="${m.id}" title="Lanzar el player de digital signage (AdmiraSignageMac)">📺 signage</button>
         <button data-a="signage_off" data-m="${m.id}" title="Parar el player de digital signage">⏹️ parar</button>
       </div>
+      <div class="capwarn" data-capwarn="${m.id}">⚠️ sin permiso de captura <button data-fix="${m.id}" title="Abrir el panel de Grabación de pantalla en ese Mac, avisar al usuario y reactivar el agente">🛡️ enviar arreglo por SSH</button></div>
     </div>`).join('');
   // restaura miniaturas
   Object.keys(shots).forEach(id=>showShot(id, shots[id]));
   // por defecto: el fondo (persona) de cada máquina hasta que se pida captura real
   ms.forEach(m=>{ if(!shots[m.id]){ const w=personaWallpaper(m.name); if(w) setDefaultShot(m.id, w); } });
+  // re-pinta los avisos de captura fallida que ya conocíamos
+  ms.forEach(m=>{ if(CAP_FAIL[m.id]) setCapFail(m.id, true); });
 }
 
 function showShot(machineId, src){
@@ -333,11 +360,21 @@ $('#cards').addEventListener('click', async e=>{
       pushResult(machine,'🧹 escritorio limpio',{rc:0,stdout:'apps ocultadas — fondo visible',ms:0});
       await new Promise(r=>setTimeout(r,700));   // deja que se oculten antes de capturar
       const d=await api('/action',{method:'POST',body:JSON.stringify({machine,action:'screenshot'})});
-      if(d.rc===0 && d.stdout && !/ERR_NO_CAPTURE/.test(d.stdout)) showShot(machine,'data:image/jpeg;base64,'+d.stdout);
-      else pushResult(machine,'📸 fondo',{rc:d.rc||1,stdout:'',stderr:d.stderr||'escritorio limpio, pero no pude capturar (¿permiso de Grabación de pantalla?)'});
+      if(d.rc===0 && d.stdout && !/ERR_NO_CAPTURE/.test(d.stdout)){ showShot(machine,'data:image/jpeg;base64,'+d.stdout); setCapFail(machine,false); }
+      else { setCapFail(machine,true); pushResult(machine,'📸 fondo',{rc:d.rc||1,stdout:'',stderr:d.stderr||'escritorio limpio, pero no pude capturar (¿permiso de Grabación de pantalla?)'}); }
     }catch(err){ pushResult(machine,'🧹 escritorio',{rc:-1,stdout:'',stderr:err.msg||'error'}); }
     icon.classList.remove('em-busy');
     return;
+  }
+  // Enviar arreglo del permiso de captura por SSH a esa máquina.
+  const fix=e.target.closest('button[data-fix]');
+  if(fix){
+    const machine=fix.dataset.fix, m=MACHINES.find(x=>x.id===machine)||{};
+    if(!confirm('Enviar por SSH a «'+(m.name||machine)+'» el arreglo del permiso de captura?\n\nAbre el panel de Grabación de pantalla en ese Mac, avisa al usuario con una notificación y reactiva el agente de captura. El permiso final lo concede la persona que esté en ese equipo.')) return;
+    fix.disabled=true; const l=fix.textContent; fix.textContent='🛡️ enviando…';
+    try{ const d=await api('/run',{method:'POST',body:JSON.stringify({machine,cmd:CAP_FIX_CMD})}); pushResult(machine,'🛡️ arreglo captura (SSH)',d); }
+    catch(err){ pushResult(machine,'🛡️ arreglo captura',{rc:-1,stdout:'',stderr:err.msg||'error'}); }
+    fix.disabled=false; fix.textContent=l; return;
   }
   const b=e.target.closest('button[data-a]'); if(!b) return;
   const action=b.dataset.a, machine=b.dataset.m;
@@ -372,8 +409,8 @@ $('#cards').addEventListener('click', async e=>{
   try{
     const d=await api('/action',{method:'POST',body:JSON.stringify({machine,action,arg})});
     if(action==='screenshot'){
-      if(d.rc===0 && d.stdout && !/ERR_NO_CAPTURE/.test(d.stdout)){ showShot(machine,'data:image/jpeg;base64,'+d.stdout); pushResult(machine,'📸 captura',{rc:0,stdout:'(imagen arriba)',ms:d.ms}); }
-      else pushResult(machine,'📸 captura',{rc:d.rc||1,stdout:'',stderr:d.stderr||'no se pudo capturar (¿permiso de Grabación de pantalla a AgoraCapture?)'});
+      if(d.rc===0 && d.stdout && !/ERR_NO_CAPTURE/.test(d.stdout)){ showShot(machine,'data:image/jpeg;base64,'+d.stdout); setCapFail(machine,false); pushResult(machine,'📸 captura',{rc:0,stdout:'(imagen arriba)',ms:d.ms}); }
+      else { setCapFail(machine,true); pushResult(machine,'📸 captura',{rc:d.rc||1,stdout:'',stderr:d.stderr||'no se pudo capturar (¿permiso de Grabación de pantalla a AgoraCapture?)'}); }
     } else pushResult(machine, '⚡ '+action+(arg?(' '+arg):''), d);
   }catch(err){ pushResult(machine,'⚡ '+action,{rc:-1,stdout:'',stderr:err.msg||'error'}); }
   b.disabled=false; b.textContent=lbl;
@@ -466,8 +503,8 @@ let AUTOCAP=(()=>{ try{ return Object.assign({on:false,sec:15}, JSON.parse(local
 let _acTimer=null, _acBusy=false;
 function captureMachine(id){
   return api('/action',{method:'POST',body:JSON.stringify({machine:id,action:'screenshot'})})
-    .then(d=>{ if(d&&d.rc===0 && d.stdout && !/ERR_NO_CAPTURE/.test(d.stdout)) showShot(id,'data:image/jpeg;base64,'+d.stdout); })
-    .catch(()=>{});   // en auto: si una falla, se deja la miniatura anterior, sin ruido
+    .then(d=>{ if(d&&d.rc===0 && d.stdout && !/ERR_NO_CAPTURE/.test(d.stdout)){ showShot(id,'data:image/jpeg;base64,'+d.stdout); setCapFail(id,false); } else { setCapFail(id,true); } })
+    .catch(()=>{ setCapFail(id,true); });   // en auto: deja la miniatura anterior, pero marca el aviso
 }
 async function autoCapTick(){
   if(_acBusy || !SESSION) return; _acBusy=true;

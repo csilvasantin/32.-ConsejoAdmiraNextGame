@@ -648,9 +648,19 @@ export async function sendPromptToMachine(machineId, prompt, target = "terminal"
       const sshArgs = buildSshArgs(machine, useLocalNet);
       sshArgs.push(`osascript ${remoteCmd}`);
       return new Promise((resolve) => {
-        execFile("ssh", sshArgs, { timeout: TIMEOUT_MS }, (error) => {
-          if (error) {
-            resolve({ ok: false, error: error.message });
+        execFile("ssh", sshArgs, { timeout: TIMEOUT_MS }, (error, stdout, stderr) => {
+          if (!error) {
+            resolve({ ok: true, machine: machineId, name: machine.name });
+            return;
+          }
+          // El keystroke es best-effort: si SSH CONECTÓ y corrió osascript, el mensaje
+          // se entrega aunque osascript salga ≠0 por una incidencia benigna tras teclear
+          // (al enviarse, la app receptora se pone a procesar). Solo es fallo REAL si no
+          // se pudo establecer la conexión SSH.
+          const blob = `${error.message || ""} ${stderr || ""}`;
+          const sshConnFail = /Could not resolve|Connection refused|Permission denied|Operation timed out|No route to host|Connection closed|port 22|Host key verification|kex_exchange|Connection timed out|timeout/i.test(blob);
+          if (sshConnFail) {
+            resolve({ ok: false, error: `${error.message || "ssh error"}${stderr ? " | " + stderr : ""}`.slice(0, 400) });
           } else {
             resolve({ ok: true, machine: machineId, name: machine.name });
           }

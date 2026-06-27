@@ -401,7 +401,9 @@ function buildSshArgs(machine, useLocal) {
     if (conn.includes("ProxyCommand")) {
       const proxy = conn.match(/-o\s+'([^']+)'/)?.[1] || conn.match(/-o\s+"([^"]+)"/)?.[1];
       if (proxy) {
-        args.push("-o", proxy);
+        // 'tailscale' a secas no está en el PATH del servicio (launchd) → ruta absoluta,
+        // si no el ProxyCommand falla ("command not found: tailscale") y cae al .local.
+        args.push("-o", proxy.replace(/^tailscale\b/, "/opt/homebrew/bin/tailscale"));
       }
     }
   }
@@ -420,7 +422,7 @@ function buildScpArgs(machine, useLocal) {
     const conn = machine.ssh.connect_tailscale || "";
     if (conn.includes("ProxyCommand")) {
       const proxy = conn.match(/-o\s+'([^']+)'/)?.[1] || conn.match(/-o\s+"([^"]+)"/)?.[1];
-      if (proxy) args.push("-o", proxy);
+      if (proxy) args.push("-o", proxy.replace(/^tailscale\b/, "/opt/homebrew/bin/tailscale"));
     }
   }
 

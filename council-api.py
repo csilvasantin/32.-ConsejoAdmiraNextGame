@@ -186,6 +186,8 @@ ALLOWED_ORIGINS = [
     "https://csilvasantin.github.io",
     "https://www.admira.live",
     "https://admira.live",
+    "https://www.admiranext.com",
+    "https://admiranext.com",
     "https://www.admira.studio",
     "https://admira.studio",
     "http://localhost:8080",

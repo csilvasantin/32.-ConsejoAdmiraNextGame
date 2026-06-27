@@ -1038,15 +1038,24 @@
             background: rgba(0, 0, 0, 0.96);
             padding: 1rem;
             overflow: hidden;
+            box-sizing: border-box;
+            flex-direction: column;
         }
-        .hack-overlay.visible { display: block; }
+        /* flex (no 'block') para que el grid llene la altura de forma fiable también
+           en navegadores de Windows: la altura del overlay viene de inset:0, y un
+           height:100% no resuelve igual en todos; flex:1 sí. */
+        .hack-overlay.visible { display: flex; }
         .hack-grid {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
-            grid-template-rows: repeat(2, 1fr);
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            grid-auto-rows: 1fr;   /* todas las terminales con la misma altura, sea cual sea el nº */
             gap: 0.5rem;
-            height: 100%;
+            flex: 1 1 auto;
+            min-height: 0;
+            width: 100%;
+            box-sizing: border-box;
         }
+        .hack-grid > .hack-terminal { min-height: 0; min-width: 0; }
         .hack-terminal {
             border-radius: 6px;
             padding: 0.5rem;
@@ -1127,7 +1136,7 @@
         @media (max-width: 768px) {
             .status-grid { grid-template-columns: 1fr; }
             .gen-btn { padding: 0.5rem 1.2rem; font-size: 0.85rem; }
-            .hack-grid { grid-template-columns: repeat(2, 1fr); grid-template-rows: repeat(4, 1fr); }
+            .hack-grid { grid-template-columns: repeat(2, 1fr); }
         }
 
         /* SCUMM BAR */
@@ -2659,7 +2668,7 @@
     height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.27.r8</a>
+            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.27.r9</a>
             <a href="https://www.admira.live/equipos" target="_blank" rel="noopener" class="version-badge" title="Equipos · asignación de agentes">🏠 AdmiraNeXT</a>
             <a href="https://www.admira.live/telegram" target="_blank" rel="noopener" class="version-badge" title="Telegram · espejo en directo del grupo AdmiraNext">💬 Telegram</a>
             <button class="version-badge" onclick="window.agmSetVisible&&window.agmSetVisible(null)" title="Abrir el puesto de mando AgoraMatrix">📡 Agentes</button>
@@ -3013,12 +3022,15 @@
         <div class="screen-overlay-label" id="screen-overlay-label"></div>
     </div>
 
+    <!-- Overlay del HACKEO: a nivel de <body> (NO dentro de #home-bottom-cluster,
+         que tiene transform: translateX(-50%) y rompería el position:fixed → el
+         overlay quedaría confinado a la barra inferior en vez de cubrir la pantalla). -->
+    <div class="hack-overlay" id="hack-overlay"></div>
+
     <div id="home-bottom-cluster">
     <button class="hack-toggle" id="hack-btn" onclick="toggleHack()">
         <span class="hack-dot"></span> HACKEO
     </button>
-
-    <div class="hack-overlay" id="hack-overlay"></div>
 
     <a class="control-toggle" href="https://www.admira.live/control/" target="_blank" rel="noopener" title="FleetControl · control de la flota">
         <span class="control-dot"></span> CONTROL

@@ -2659,7 +2659,7 @@
     height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.27.r7</a>
+            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.27.r8</a>
             <a href="https://www.admira.live/equipos" target="_blank" rel="noopener" class="version-badge" title="Equipos · asignación de agentes">🏠 AdmiraNeXT</a>
             <a href="https://www.admira.live/telegram" target="_blank" rel="noopener" class="version-badge" title="Telegram · espejo en directo del grupo AdmiraNext">💬 Telegram</a>
             <button class="version-badge" onclick="window.agmSetVisible&&window.agmSetVisible(null)" title="Abrir el puesto de mando AgoraMatrix">📡 Agentes</button>
@@ -3759,6 +3759,31 @@
     let hackIntervals = [];
     const HACK_API = DEMO_API.replace("/status", "");  // https://macmini.../demo
 
+    // El HACKEO debe quedarse SOBRE la página actual (sin moverse ni dejar que
+    // otros paneles tapen) hasta que se desactive: subimos el overlay por encima
+    // de todo, mantenemos el botón HACKEO clicable y congelamos el scroll del fondo.
+    let _hackPrevHtmlOv = "", _hackPrevBodyOv = "", _hackScrollY = 0;
+    function lockHackView() {
+        const overlay = document.getElementById("hack-overlay");
+        const cluster = document.getElementById("home-bottom-cluster");
+        if (overlay) overlay.style.zIndex = "2147483646";          // por encima de AgoraMatrix y demás
+        if (cluster) cluster.style.zIndex = "2147483647";          // el botón HACKEO sigue por encima para poder desactivar
+        _hackScrollY = window.scrollY || window.pageYOffset || 0;
+        _hackPrevHtmlOv = document.documentElement.style.overflow;
+        _hackPrevBodyOv = document.body.style.overflow;
+        document.documentElement.style.overflow = "hidden";
+        document.body.style.overflow = "hidden";                   // el fondo no se mueve
+    }
+    function unlockHackView() {
+        const overlay = document.getElementById("hack-overlay");
+        const cluster = document.getElementById("home-bottom-cluster");
+        if (overlay) overlay.style.zIndex = "";
+        if (cluster) cluster.style.zIndex = "";
+        document.documentElement.style.overflow = _hackPrevHtmlOv;
+        document.body.style.overflow = _hackPrevBodyOv;
+        window.scrollTo(0, _hackScrollY);                          // volvemos exactamente donde estabas
+    }
+
     const HACK_LINES = [
         "$ ssh -o StrictHostKeyChecking=no root@{ip}",
         "Connecting to {ip}:22...",
@@ -3866,6 +3891,7 @@
             btn.classList.add("active");
             btn.querySelector(".hack-dot").style.background = "#000";
             overlay.classList.add("visible");
+            lockHackView();   // fija el HACKEO sobre la página actual hasta desactivarlo
 
             // Build 8 terminal panels — each with a unique visual style
             overlay.innerHTML = '<div class="hack-grid">' + HACK_MACHINES.map((m, i) =>
@@ -3940,6 +3966,7 @@
             hackMode = false;
             btn.classList.remove("active");
             overlay.classList.remove("visible");
+            unlockHackView();   // libera el scroll y restaura la vista donde estabas
             hackIntervals.forEach(i => clearInterval(i));
             hackIntervals = [];
 

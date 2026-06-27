@@ -656,11 +656,12 @@ export async function sendPromptToMachine(machineId, prompt, target = "terminal"
           // El keystroke es best-effort: si SSH CONECTÓ y corrió osascript, el mensaje
           // se entrega aunque osascript salga ≠0 por una incidencia benigna tras teclear
           // (al enviarse, la app receptora se pone a procesar). Solo es fallo REAL si no
-          // se pudo establecer la conexión SSH.
-          const blob = `${error.message || ""} ${stderr || ""}`;
-          const sshConnFail = /Could not resolve|Connection refused|Permission denied|Operation timed out|No route to host|Connection closed|port 22|Host key verification|kex_exchange|Connection timed out|timeout/i.test(blob);
+          // se pudo establecer la conexión SSH — eso se ve en STDERR (no en el comando,
+          // que contiene "ConnectTimeout" y daba un falso positivo).
+          const errOut = String(stderr || "");
+          const sshConnFail = /Could not resolve|Connection refused|Permission denied|Operation timed out|No route to host|Connection closed|Host key verification|kex_exchange|Connection timed out/i.test(errOut);
           if (sshConnFail) {
-            resolve({ ok: false, error: `${error.message || "ssh error"}${stderr ? " | " + stderr : ""}`.slice(0, 400) });
+            resolve({ ok: false, error: `ssh: ${errOut}`.slice(0, 400) });
           } else {
             resolve({ ok: true, machine: machineId, name: machine.name });
           }

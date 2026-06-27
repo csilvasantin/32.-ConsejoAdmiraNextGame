@@ -2668,7 +2668,7 @@
     height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.27.r9</a>
+            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.27.r10</a>
             <a href="https://www.admira.live/equipos" target="_blank" rel="noopener" class="version-badge" title="Equipos · asignación de agentes">🏠 AdmiraNeXT</a>
             <a href="https://www.admira.live/telegram" target="_blank" rel="noopener" class="version-badge" title="Telegram · espejo en directo del grupo AdmiraNext">💬 Telegram</a>
             <button class="version-badge" onclick="window.agmSetVisible&&window.agmSetVisible(null)" title="Abrir el puesto de mando AgoraMatrix">📡 Agentes</button>
@@ -3846,8 +3846,41 @@
         "Tracks cleared.",
     ];
 
-    // Alineado con data/machines.json (Macs con ssh.enabled). El backend abre
-    // Terminal en estas mismas máquinas; el overlay refleja la flota real.
+    // Guion de hackeo con sabor a Windows (cmd / PowerShell) para los PC de la flota.
+    const HACK_LINES_WIN = [
+        "C:\\> ssh {user}@{host}",
+        "Connecting to {host} ...",
+        "Authenticating via pass-the-hash (NTLM)...",
+        "ACCESS GRANTED — {host} [Windows]",
+        "C:\\> whoami /priv",
+        "SeDebugPrivilege                Enabled",
+        "SeTakeOwnershipPrivilege        Enabled",
+        "C:\\> net user",
+        "Administrador  Invitado  {user}  DefaultAccount",
+        "C:\\> reg query HKLM\\SAM\\SAM\\Domains\\Account\\Users",
+        "C:\\> mimikatz # sekurlsa::logonpasswords",
+        "  Usuario  : {user}",
+        "  NTLM     : 8846f7eaee8fb117ad06bdd830b7586c",
+        "C:\\> dir /s /b C:\\Users\\{user}\\*.kdbx",
+        "C:\\Users\\{user}\\Documentos\\Passwords_master.kdbx",
+        "C:\\> type C:\\Users\\{user}\\AppData\\Local\\.env.production",
+        "DB_PASSWORD=Adm1r4N3xt_S3cr3t!",
+        "STRIPE_SECRET=sk_live_REDACTED...",
+        "C:\\> powershell -enc SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoA...",
+        "C:\\> schtasks /create /tn \"WinUpdate\" /tr payload.exe /sc onlogon",
+        "EXITO: persistencia instalada.",
+        "C:\\> netsh advfirewall set allprofiles state off",
+        "Firewall de Windows desactivado.",
+        "C:\\> systeminfo | findstr /B \"Nombre del sistema\"",
+        "Nombre del sistema operativo:  Microsoft Windows 11 Pro",
+        "C:\\> wevtutil cl Security && wevtutil cl System",
+        "Registros de eventos borrados.",
+        "C:\\> exit",
+    ];
+
+    // Alineado con data/machines.json. El backend abre Terminal en las Macs con
+    // ssh.enabled; los PC Windows (platform:"win") salen en el overlay (la acción
+    // real por SSH requiere OpenSSH activado en cada PC — hoy off en la flota).
     const HACK_MACHINES = [
         { id: "admira-macmini",           role: "Coordinación central", persona: "Mac Mini",           ip: "100.74.101.14",        host: "macmini",             user: "csilvasantin" },
         { id: "admira-macbookairnines",   role: "Operaciones",          persona: "MacBook Air Nines",  ip: "macbookairnines",      host: "macbookairnines",     user: "csilvasantin" },
@@ -3858,6 +3891,11 @@
         { id: "admira-macbook-carla",     role: "Desarrollo",           persona: "MacBook Air Carla",  ip: "macbook-air-de-carla", host: "macbook-air-de-carla",user: "csilvasantin" },
         { id: "admira-macbookairrosa",    role: "Equipo nuevo",         persona: "MacBook Air Rosa",   ip: "macbookairrosa",       host: "macbookairrosa",      user: "csilvasantin" },
         { id: "admira-macbookairazul",    role: "Equipo nuevo",         persona: "MacBook Air Azul",   ip: "macbookairazul",       host: "macbookairazul",      user: "csilvasantin" },
+        // PC Windows de la flota (platform:"win" → guion cmd/PowerShell en el overlay)
+        { id: "admira-pcsitges3monitores", role: "Operación · Sitges",   persona: "PC Sitges 3 Mon.",   ip: "192.168.0.118",        host: "OmenGdG",             user: "csilvasantin", platform: "win" },
+        { id: "admira-pc-runner-01",       role: "QA y validación",      persona: "PC Runner 01",       ip: "pc-runner-01",         host: "PC-RUNNER-01",        user: "csilvasantin", platform: "win" },
+        { id: "admira-pc-ocr-01",          role: "Documental · OCR",     persona: "PC OCR 01",          ip: "pc-ocr-01",            host: "PC-OCR-01",           user: "csilvasantin", platform: "win" },
+        { id: "admira-pc-bot-01",          role: "Automatización web",   persona: "PC Bot 01",          ip: "pc-bot-01",            host: "PC-BOT-01",           user: "csilvasantin", platform: "win" },
     ];
 
     function fillHackLine(line, machine) {
@@ -3924,14 +3962,16 @@
             // Start local terminal animation — each with unique speed & content offset
             HACK_MACHINES.forEach((m, idx) => {
                 const body = document.getElementById(`hack-body-${m.id}`);
-                let lineIdx = HACK_OFFSETS[idx];
+                let lineIdx = HACK_OFFSETS[idx % HACK_OFFSETS.length];
                 let charIdx = 0;
                 let currentText = "";
-                const speed = HACK_SPEEDS[idx] + Math.random() * 10;
+                const speed = HACK_SPEEDS[idx % HACK_SPEEDS.length] + Math.random() * 10;
+                // Las máquinas Windows usan un guion de hackeo con sabor a cmd/PowerShell.
+                const LINES = (m.platform === "win") ? HACK_LINES_WIN : HACK_LINES;
 
                 const typeInterval = setInterval(() => {
                     if (!hackMode) return;
-                    const line = fillHackLine(HACK_LINES[lineIdx % HACK_LINES.length], m);
+                    const line = fillHackLine(LINES[lineIdx % LINES.length], m);
                     if (charIdx <= line.length) {
                         const partial = line.substring(0, charIdx);
                         const displayText = currentText + partial + (charIdx < line.length ? "\u2588" : "");

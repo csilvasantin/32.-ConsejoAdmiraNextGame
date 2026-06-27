@@ -122,6 +122,7 @@
     <div class="k" id="win-k">Adjudicado</div>
     <h2 id="win-name">—</h2>
     <div class="det">€<b id="win-amt">0.00</b> · <b id="win-space">espacio</b></div>
+    <div class="det" id="win-2nd" style="margin-top:-8px"></div>
     <div id="win-body">
       <div id="win-preview" class="preview hidden"></div>
       <button class="btn go" id="launch-btn" type="button">🪙 Lanzar creativo a la pantalla</button>
@@ -151,6 +152,7 @@ document.getElementById('space-screen').textContent=SCREEN||'(sin pantalla)';
 
 const ROUND=30;
 let secs=ROUND, topAmt=0, topWho='—', topIsYou=false, timer=null, bidTick=null, closed=false;
+let secondAmt=0, winPaid=0;   // RTB second-price (Vickrey): el ganador paga la 2ª puja más alta
 const $=id=>document.getElementById(id);
 
 function fmt(n){return n.toFixed(2);}
@@ -173,8 +175,15 @@ function esc(s){return String(s==null?'':s).replace(/[&<>"']/g,c=>({'&':'&amp;',
 
 function placeBid(adv,amt,you){
   if(closed) return;
+  const wasYou=topIsYou;
+  if(topAmt>0) secondAmt=topAmt;     // el líder saliente fija el precio de 2ª puja
   topAmt=amt; topWho=adv; topIsYou=!!you;
   renderTop(); addRow(adv,amt,you);
+  if(wasYou && !you) outbidAlert(amt);  // ibas en cabeza y te acaban de superar
+}
+function outbidAlert(byAmt){
+  const hint=$('hint'); hint.className='hint err';
+  hint.textContent='⚠ Te han superado con €'+fmt(byAmt)+' — puja de nuevo.';
 }
 
 // Arranque: precio base del hueco
@@ -208,8 +217,13 @@ function closeAuction(){
   win.classList.toggle('you',topIsYou);
   $('win-k').textContent=topIsYou?'¡Has ganado!':'Adjudicado';
   $('win-name').textContent=topWho;
-  $('win-amt').textContent=fmt(topAmt);
+  // RTB second-price: paga la 2ª puja más alta (si solo hubo una puja, paga la suya).
+  winPaid = secondAmt>0 ? secondAmt : topAmt;
+  $('win-amt').textContent=fmt(winPaid);
   $('win-space').textContent=spaceLabel();
+  $('win-2nd').textContent = secondAmt>0
+    ? ('RTB second-price · pujó €'+fmt(topAmt)+', paga la 2ª puja')
+    : ('puja única · paga su propia oferta');
   if(!SCREEN){
     const lb=$('launch-btn');
     lb.textContent='(sin pantalla asociada)'; lb.disabled=true;
@@ -274,7 +288,7 @@ $('launch-btn').addEventListener('click',async()=>{
   const cre=winningCreative;
   if(!cre){ b.classList.add('err'); b.textContent='Sin creativo que lanzar'; setTimeout(()=>{b.classList.remove('err');b.textContent='🪙 Lanzar creativo a la pantalla';},2200); return; }
   b.disabled=true; b.classList.remove('ok','err'); b.textContent='… enviando a la pantalla';
-  const title='🪙 '+topWho+' ganó '+spaceLabel()+' · €'+fmt(topAmt);
+  const title='🪙 '+topWho+' ganó '+spaceLabel()+' · €'+fmt(winPaid);
   try{
     const r=await fetch(PIXER+'/signage/push',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({kind:pushKind(cre.type),src:cre.url,mime:cre.mime||null,title})});

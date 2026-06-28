@@ -2120,6 +2120,22 @@
             border-radius: 0;
             box-shadow: 4px 4px 0 #000;
         }
+        /* Oleada 4 — scanlines CRT sutiles sobre la escena */
+        .council-image::after {
+            content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 1;
+            background: repeating-linear-gradient(rgba(0,0,0,0.13) 0 1px, transparent 1px 3px);
+            opacity: 0.45;
+        }
+        body.crt-off .council-image::after { display: none; }
+        /* Oleada 4 — toast de logros */
+        .ach-toast {
+            position: fixed; top: 14px; left: 50%; transform: translateX(-50%) translateY(-160%);
+            background: #1a0e05; border: 3px solid #daa520; border-top-color: #f0c040;
+            box-shadow: 4px 4px 0 #000; color: #ffee88; font-family: 'Press Start 2P', monospace;
+            font-size: 9px; line-height: 1.5; padding: 10px 14px; z-index: 10060; max-width: 90vw;
+            transition: transform 0.35s ease;
+        }
+        .ach-toast.show { transform: translateX(-50%) translateY(0); }
         /* SCUMM bar — classic Monkey Island brown */
         .scumm-bar {
             border-radius: 0;
@@ -2846,6 +2862,7 @@
             <div class="scumm-bottom">
                 <div class="verb-grid">
                     <button class="verb-btn verb-primary" data-verb="preguntar" title="Pregunta a un consejero: pulsa Preguntar y haz clic en él" onclick="selectVerb(this)">Preguntar</button>
+                    <button class="verb-btn" data-verb="examinar" title="Examina a un consejero para conocer su perfil y su lore (sin gastar IA)" onclick="selectVerb(this)">Examinar</button>
                     <button class="verb-btn verb-primary" data-verb="debatir" title="El Consejo debate un tema entre todos sus miembros" onclick="selectVerb(this)">Debatir</button>
                     <button class="verb-btn verb-primary" data-verb="entrenar" title="Alimenta a un consejero con URLs y material de referencia" onclick="selectVerb(this)">Entrenar</button>
                     <button class="verb-btn" data-verb="crear" title="Genera una imagen a partir de tu descripción" onclick="selectVerb(this)">Crear</button>
@@ -4338,6 +4355,9 @@
         document.querySelectorAll('.verb-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         currentVerb = btn.dataset.verb;
+        examinarMode = (currentVerb === 'examinar');
+        playSfx('verb');
+        markVerbUsed(currentVerb);
         updateInventoryPanel(currentVerb);
 
         // Exit modes that don't match the new verb
@@ -4367,6 +4387,10 @@
         if (currentVerb === 'preguntar') {
             enterPreguntarMode();
         }
+        if (currentVerb === 'examinar') {
+            enterPreguntarMode();
+            setActionLine("👁 Examinar — haz clic en un consejero para conocerlo");
+        }
         if (currentVerb === 'debatir') {
             if (!currentProject) {
                 const tema = (window.prompt("¿Sobre qué quieres que debata el Consejo?", "") || "").trim();
@@ -4375,6 +4399,7 @@
                 updateActionLine();
             }
             executeCouncilVerb(currentVerb);
+            unlock('debate');
         }
         if (currentVerb === 'entrenar') {
             enterEntrenarMode();
@@ -4394,7 +4419,7 @@
         }
         if (currentVerb === 'votar') triggerVotar();
         if (currentVerb === 'analizar') triggerAnalizar();
-        if (currentVerb === 'presentar') triggerPresentar();
+        if (currentVerb === 'presentar') { triggerPresentar(); unlock('present'); }
         if (currentVerb === 'previo') triggerPrevio();
         if (currentVerb === 'reunion') {
             enterReunionMode();
@@ -4474,6 +4499,13 @@
         if (npMatch) npMatch.classList.add('selected');
         if (bhMatch) bhMatch.classList.add('selected');
         selectedAgent = agent;
+        markCouncilConsulted(agent.persona);
+        if (examinarMode) {
+            setActionLine("👁 " + agent.persona + " · " + agent.role);
+            showSpeechBubble(agent.persona, agent.name, loreFor(agent));
+            playSfx("talk");
+            return;
+        }
 
         const llmEl = document.querySelector('.llm-option.selected');
         const llmShort = llmEl ? llmEl.textContent.trim().replace('FREE','').trim().split(' ').slice(1).join(' ') : 'Claude';
@@ -4483,7 +4515,7 @@
         showSpeechBubble(agent.persona, agent.name, councilGreeting(agent));
     }
 
-    const VERB_LABELS = { preguntar:"Preguntar", debatir:"Debatir", entrenar:"Entrenar", crear:"Crear", hablar:"Yarig.AI", leer:"Pensar", votar:"Votar", analizar:"Analizar", presentar:"Presentar", previo:"Ver Previo", reunion:"Reunión" };
+    const VERB_LABELS = { preguntar:"Preguntar", examinar:"Examinar", debatir:"Debatir", entrenar:"Entrenar", crear:"Crear", hablar:"Yarig.AI", leer:"Pensar", votar:"Votar", analizar:"Analizar", presentar:"Presentar", previo:"Ver Previo", reunion:"Reunión" };
     function _slEsc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c])); }
     function setSentenceHtml(html) { const el = document.getElementById("sentence-line"); if (el) el.innerHTML = html; }
 
@@ -7929,6 +7961,94 @@
         } else { b.style.left = "30%"; b.style.top = "10%"; }
     }
 
+    // ════════════ OLEADA 4: sonido · progresión · examinar · compartir · atajos ════════════
+    var examinarMode = false;
+
+    // 1) Sonido retro (WebAudio, sin assets). Mute persistente en localStorage.
+    let _audioCtx = null;
+    function _sfxOn() { try { return localStorage.getItem("sfxOff") !== "1"; } catch (e) { return true; } }
+    function playSfx(type) {
+        if (!_sfxOn()) return;
+        try {
+            _audioCtx = _audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+            const ctx = _audioCtx, o = ctx.createOscillator(), g = ctx.createGain();
+            const map = { verb: [440, 0.05], talk: [620, 0.06], vote: [330, 0.12], win: [880, 0.2], select: [520, 0.05] };
+            const conf = map[type] || map.verb;
+            o.type = "square"; o.frequency.value = conf[0]; g.gain.value = 0.04;
+            o.connect(g); g.connect(ctx.destination); o.start();
+            g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + conf[1]);
+            o.stop(ctx.currentTime + conf[1]);
+        } catch (e) {}
+    }
+    function toggleSfx() {
+        const wasOn = _sfxOn();
+        try { localStorage.setItem("sfxOff", wasOn ? "1" : "0"); } catch (e) {}
+        setActionLine(wasOn ? "🔇 Sonido desactivado (S para activar)" : "🔊 Sonido activado");
+        if (!wasOn) playSfx("select");
+    }
+
+    // 2) Progresión / logros (localStorage)
+    const ACHIEVEMENTS = {
+        allverbs: "Manejas todos los verbos",
+        council8: "Has consultado a todo el Consejo",
+        debate:   "Primer debate del Consejo",
+        present:  "Has usado Presentar",
+        vote:     "Primera votación cerrada",
+    };
+    function _getSet(key) { try { return new Set(JSON.parse(localStorage.getItem(key) || "[]")); } catch (e) { return new Set(); } }
+    function _saveSet(key, set) { try { localStorage.setItem(key, JSON.stringify([...set])); } catch (e) {} }
+    function unlock(id) {
+        if (!ACHIEVEMENTS[id]) return;
+        const got = _getSet("council_ach");
+        if (got.has(id)) return;
+        got.add(id); _saveSet("council_ach", got);
+        playSfx("win"); showAchToast(ACHIEVEMENTS[id]);
+    }
+    function showAchToast(text) {
+        let t = document.getElementById("ach-toast");
+        if (!t) { t = document.createElement("div"); t.id = "ach-toast"; t.className = "ach-toast"; document.body.appendChild(t); }
+        t.textContent = "🏆 " + text;
+        t.classList.add("show");
+        clearTimeout(t._timer); t._timer = setTimeout(() => t.classList.remove("show"), 3500);
+    }
+    function markVerbUsed(verb) {
+        if (!verb) return;
+        const used = _getSet("council_verbs"); used.add(verb); _saveSet("council_verbs", used);
+        const all = [...document.querySelectorAll(".verb-btn")].map(b => b.dataset.verb).filter(v => v && v !== "previo");
+        if (all.length && all.every(v => used.has(v))) unlock("allverbs");
+    }
+    function markCouncilConsulted(persona) {
+        if (!persona) return;
+        const seen = _getSet("council_seen"); seen.add(persona); _saveSet("council_seen", seen);
+        const gen = COUNCIL.filter(m => m.gen === currentGen);
+        if (gen.length && gen.every(m => seen.has(m.persona))) unlock("council8");
+    }
+
+    // 3) Examinar — leer el perfil/lore de un consejero (sin LLM)
+    function loreFor(agent) {
+        const g = (typeof councilGreeting === "function") ? councilGreeting(agent) : "";
+        return (agent.role + ". " + (agent.territory ? agent.territory + ". " : "") + g).trim();
+    }
+
+    // 5) Compartir resultado de votación (copia al portapapeles)
+    function shareVote(text) {
+        const full = "🗳️ Votación del Consejo AdmiraNext\n" + (text || "") + "\nhttps://www.admira.live/";
+        try { navigator.clipboard.writeText(full); setActionLine("📋 Resultado de la votación copiado — pégalo donde quieras"); }
+        catch (e) { setActionLine("No se pudo copiar al portapapeles"); }
+    }
+
+    // 6) Atajos de teclado: 1-9 = verbos visibles, S = sonido (ESC ya cierra overlays)
+    window.addEventListener("keydown", (e) => {
+        const tag = (document.activeElement && document.activeElement.tagName) || "";
+        if (tag === "INPUT" || tag === "TEXTAREA" || e.metaKey || e.ctrlKey || e.altKey) return;
+        if (/^[1-9]$/.test(e.key)) {
+            const btns = [...document.querySelectorAll(".verb-btn")].filter(b => b.offsetParent !== null);
+            const b = btns[parseInt(e.key, 10) - 1];
+            if (b) { b.click(); e.preventDefault(); }
+        } else if (e.key === "s" || e.key === "S") { toggleSfx(); }
+    });
+    // ════════════ fin Oleada 4 ════════════
+
     function hideSpeechBubble() { document.getElementById("speech-bubble").style.display = "none"; }
 
     function setSpeakerTurn(persona, turn) {
@@ -8067,6 +8187,8 @@
                             tally.contra > totalVotos / 2 ? "❌ RECHAZADO" : "🤝 SIN MAYORÍA";
         const resultColor = tally.favor > totalVotos / 2 ? "#44bb44" :
                             tally.contra > totalVotos / 2 ? "#e74c3c" : "#888";
+        window._lastVoteSummary = "📋 " + tema + "\n✅ " + tally.favor + "  ❌ " + tally.contra + "  🤝 " + tally.abstencion + "  🔄 " + tally.posponer + "\n" + resultLabel;
+        unlock('vote'); playSfx('vote');
 
         const ov = document.createElement("div");
         ov.id = "vote-overlay";
@@ -8085,6 +8207,7 @@
                 </div>
                 <p style="text-align:center;font-size:1rem;font-weight:700;color:${resultColor};margin-bottom:1.2rem">${resultLabel}</p>
                 <div style="text-align:center">
+                    <button onclick="shareVote(window._lastVoteSummary)" style="background:#2a1a08;color:#8ef06c;border:2px solid #44cc44;border-radius:0;box-shadow:2px 2px 0 #000;padding:0.55rem 1.2rem;cursor:pointer;font-family:'Press Start 2P',monospace;font-size:0.55rem;margin-right:8px">COMPARTIR</button>
                     <button onclick="document.getElementById('vote-overlay').remove()" style="background:#2a1a08;color:#ffee00;border:2px solid #ddcc00;border-radius:0;box-shadow:2px 2px 0 #000;padding:0.55rem 1.5rem;cursor:pointer;font-family:'Press Start 2P',monospace;font-size:0.55rem">CERRAR</button>
                 </div>
             </div>`;

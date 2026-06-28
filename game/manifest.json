@@ -1,6 +1,6 @@
 {
   "$schema": "./manifest.schema.note",
-  "version": "1.2.0",
+  "version": "1.3.0",
   "updated": "2026-06-28",
   "game": {
     "name": "AdmiraNext Council",
@@ -18,6 +18,7 @@
   ],
   "verbs": [
     { "id": "preguntar", "label": "Preguntar", "primary": true, "status": "stable", "desc": "Pregunta a un consejero concreto. Pulsa Preguntar y haz clic en él; escribe y pulsa Enviar. Usa el motor LLM activo del inventario." },
+    { "id": "examinar", "label": "Examinar", "primary": false, "status": "stable", "desc": "Examina a un consejero (clic) para leer su perfil, territorio y lema, sin gastar IA. Estilo «mirar» de aventura gráfica." },
     { "id": "debatir", "label": "Debatir", "primary": true, "status": "stable", "desc": "El Consejo debate un tema entre todos sus miembros, por turnos. Si no hay proyecto activo, te pide el tema." },
     { "id": "entrenar", "label": "Entrenar", "primary": true, "status": "stable", "desc": "Alimenta a un consejero con URLs y material de referencia que se guardan como su corpus." },
     { "id": "crear", "label": "Crear", "primary": false, "status": "stable", "desc": "Genera una imagen a partir de tu descripción (resolución cuadrada o HD)." },
@@ -28,6 +29,13 @@
     { "id": "presentar", "label": "Presentar", "primary": false, "status": "stable", "desc": "Genera una presentación a partir de un tema (con audio)." },
     { "id": "previo", "label": "Ver Previo", "primary": false, "status": "stable", "desc": "Reabre la última presentación generada. Oculto hasta que existe una.", "hidden_until_used": true },
     { "id": "reunion", "label": "Reunión", "primary": true, "status": "stable", "desc": "Reúnete a solas con un consejero en un chat 1 a 1." }
+  ],
+  "features": [
+    { "id": "sonido", "label": "Sonido retro", "desc": "Efectos 8-bit (WebAudio, sin archivos) al elegir verbo, examinar y votar. Tecla S para silenciar/activar." },
+    { "id": "logros", "label": "Progresión / logros", "desc": "Logros guardados en localStorage con aviso emergente: usar todos los verbos, consultar a todo el Consejo, primer debate, primera votación, usar Presentar." },
+    { "id": "scanlines", "label": "Scanlines CRT", "desc": "Capa sutil de líneas de barrido sobre la escena para reforzar el look retro." },
+    { "id": "compartir-voto", "label": "Compartir votación", "desc": "Botón COMPARTIR en el resultado de la votación: copia el recuento y el veredicto al portapapeles." },
+    { "id": "atajos", "label": "Atajos de teclado", "desc": "Teclas 1-9 disparan los verbos visibles; S alterna el sonido; ESC cierra overlays." }
   ],
   "council": {
     "leyendas": [

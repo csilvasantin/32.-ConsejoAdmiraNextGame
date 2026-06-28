@@ -125,6 +125,8 @@
   // Servicio de control del Mini: /sendto enruta al Claude Code de una máquina
   // (NO se postea al grupo ni a White Rabbit). Usa la "Clave operador" del Consejo.
   const MINI_BASE = "https://macmini.tail48b61c.ts.net";
+  // 2º RELAY (backup) — independencia: si el Mini cae, los envíos van por aquí (solo tailnet).
+  const RELAY_BASE = "https://macbookpronegro14.tail48b61c.ts.net";
   // El backend valida el LOGIN DE GOOGLE en servidor. Nos apoyamos en él y NO pedimos
   // password: si el id_token caducó (~1h) lo refrescamos solo (One Tap). Una clave ya
   // guardada queda como red de seguridad silenciosa.
@@ -145,11 +147,21 @@
       setTimeout(function(){ fin(""); }, 5000);
     });
   }); }
-  async function miniSend(body, cred){
-    const r=await fetch(MINI_BASE+"/api/teamwork/send",{method:"POST",
+  async function postSend(base, body, cred){
+    const r=await fetch(base+"/api/teamwork/send",{method:"POST",
       headers:{"content-type":"application/json","Authorization":"Bearer "+cred,"X-Council-Token":cred},
       body:JSON.stringify(body)});
-    const d=await r.json().catch(()=>({})); return {status:r.status, ok:r.ok&&d.ok, d};
+    const d=await r.json().catch(()=>({})); return {status:r.status, ok:r.ok&&d.ok, d, base};
+  }
+  // Intenta el Mini; si está caído o falla, reintenta por el 2º relay (backup). Así el
+  // envío sigue aunque el Mini muera (independencia de máquina).
+  async function miniSend(body, cred){
+    let primary;
+    try{ primary=await postSend(MINI_BASE, body, cred); if(primary.ok) return primary; }
+    catch(e){ primary={status:0, ok:false, d:{error:"mini: "+(e&&e.message||e)}}; }
+    try{ const relay=await postSend(RELAY_BASE, body, cred); if(relay.ok){ relay.viaRelay=true; return relay; } }
+    catch(e){}
+    return primary;
   }
   async function routeSendTo(machine, message, target){
     const body={machineId:machine,prompt:message,target:target};

@@ -105,10 +105,11 @@
       <select id="machineSel"><option value="" disabled>cargando equipos…</option></select>
       <button id="sendMachineBtn" title="Enviar el mensaje directamente al Claude Code de ese equipo">Enviar</button>
     </div>
+    <div id="imgPreview" hidden style="display:flex;align-items:center;gap:8px;padding:6px 0"></div>
     <div class="row">
-      <textarea id="text" placeholder="Escribe el mensaje…"></textarea>
+      <textarea id="text" placeholder="Escribe el mensaje… (o pega/suelta una imagen)"></textarea>
     </div>
-    <div class="hint"><strong>💬 Consultar</strong> → al bot (responde en el grupo). <strong>📨 Enviar</strong> → al Claude Code del equipo. Enter manda al último que usaste. Con tu login de Google, sin clave.</div>
+    <div class="hint"><strong>💬 Consultar</strong> → al bot (responde en el grupo). <strong>📨 Enviar</strong> → al Claude Code del equipo. <strong>🖼️ Pega o arrastra una imagen</strong> para mandarla al grupo. Enter manda al último que usaste. Con tu login de Google, sin clave.</div>
   </footer>
 </div>
 <div id="lb"><img alt=""></div>
@@ -297,10 +298,50 @@
 
   let _tgSending = false;   // evita disparos múltiples (Enter/clic repetidos → mensaje duplicado)
   // mode: "bot" (💬 consultar) | "machine" (📨 enviar al Claude Code del equipo).
+  // ── Pegar/soltar imágenes para mandarme info desde cualquier equipo ──
+  let _pendingImage = null;   // {dataB64, mime, filename}
+  const imgPreview = document.getElementById("imgPreview");
+  function showImgPreview(){
+    if(!_pendingImage){ imgPreview.hidden=true; imgPreview.innerHTML=""; return; }
+    imgPreview.hidden=false;
+    imgPreview.innerHTML = `<img src="data:${_pendingImage.mime};base64,${_pendingImage.dataB64}" alt="adjunto" style="max-height:72px;border-radius:8px;border:1px solid rgba(255,255,255,.2)"><button id="imgRemove" title="Quitar imagen" style="background:transparent;border:0;color:#f88;cursor:pointer;font-size:16px">✕ quitar</button>`;
+    document.getElementById("imgRemove").onclick = ()=>{ _pendingImage=null; showImgPreview(); };
+  }
+  function stageImageFile(file){
+    if(!file || !/^image\//.test(file.type||"")) return;
+    const reader = new FileReader();
+    reader.onload = ()=>{ const b64=String(reader.result).split(",")[1]||""; _pendingImage={dataB64:b64, mime:file.type, filename:(file.name||"imagen.png")}; showImgPreview(); setStatus(true,"🖼️ imagen lista — añade texto opcional y envía"); };
+    reader.readAsDataURL(file);
+  }
+  textInput.addEventListener("paste", e=>{ const items=(e.clipboardData||{}).items||[]; for(const it of items){ if(it.type && it.type.startsWith("image/")){ const f=it.getAsFile(); if(f){ e.preventDefault(); stageImageFile(f); return; } } } });
+  ["dragover","dragenter"].forEach(ev=>document.body.addEventListener(ev, e=>{ if(e.dataTransfer && [...(e.dataTransfer.types||[])].includes("Files")) e.preventDefault(); }));
+  document.body.addEventListener("drop", e=>{ const f=e.dataTransfer&&e.dataTransfer.files&&e.dataTransfer.files[0]; if(f && /^image\//.test(f.type||"")){ e.preventDefault(); stageImageFile(f); } });
+  async function sendImage(caption){
+    if(!WORKER_BASE){ setStatus(false,"espejo no configurado"); return false; }
+    let cred = councilGateCred(); if(!cred){ setStatus(true,"🔄 refrescando login de Google…"); cred = await refreshGoogleCred(); }
+    if(!cred){ setErr("login de Google caducado — recarga la página"); return false; }
+    setStatus(true,"📤 enviando imagen…");
+    try{
+      const r = await fetch(WORKER_BASE+"/api/send-media",{ method:"POST",
+        headers:{"content-type":"application/json","Authorization":"Bearer "+cred},
+        body: JSON.stringify({ dataB64:_pendingImage.dataB64, mime:_pendingImage.mime, filename:_pendingImage.filename, caption:caption||"", author:"Web" }) });
+      const d = await r.json().catch(()=>({}));
+      if(d.ok){ setStatus(true,"📤 imagen enviada al grupo"); _pendingImage=null; showImgPreview(); poll(); return true; }
+      if(r.status===401){ setErr("login de Google no autorizado en el espejo"); return false; }
+      setErr("no se pudo enviar la imagen: "+(d.error||("HTTP "+r.status))); return false;
+    }catch(e){ setErr("sin conexión con el espejo: "+(e&&e.message||e)); return false; }
+  }
+
   async function doSend(mode){
     if(_tgSending) return;
     const raw = textInput.value.trim();
-    if(!raw) return;
+    if(!raw && !_pendingImage) return;
+    // Si hay imagen pegada/soltada, va al grupo (texto como pie) — así me llega la info.
+    if(_pendingImage){
+      _tgSending = true; textInput.value=""; consultBtn.disabled=true; sendMachineBtn.disabled=true;
+      try{ await sendImage(raw); } finally{ _tgSending=false; refreshSendState(); }
+      return;
+    }
     // /sendto explícito → siempre a ese equipo, mande quien mande
     const st = raw.match(/^\/sendto\s+(\S+)\s+([\s\S]+)$/i);
     if(/^\/sendto\b/i.test(raw) && !st){ setStatus(false,"uso: /sendto <equipo> <mensaje>"); return; }

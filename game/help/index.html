@@ -116,6 +116,11 @@
     <div class="grid verbs" id="g-verbs"></div>
   </section>
 
+  <section id="s-features" style="display:none">
+    <h2>✨ Extras del juego</h2>
+    <div class="grid verbs" id="g-features"></div>
+  </section>
+
   <section id="s-play">
     <h2>● Cómo se juega</h2>
     <ol class="steps">
@@ -216,6 +221,15 @@
       ${v.notes ? `<div class="vnotes">⚠ ${esc(v.notes)}</div>` : ""}
     </div>`
   ).join("");
+
+  // Extras (features desde el manifest)
+  const feats = m.features || [];
+  if (feats.length) {
+    $("s-features").style.display = "";
+    $("g-features").innerHTML = feats.map(f =>
+      `<div class="verb"><div class="vh"><span class="vname">${esc(f.label)}</span></div><div class="vdesc">${esc(f.desc)}</div></div>`
+    ).join("");
+  }
 
   // Desarrolladores
   $("g-collab").textContent = (m.collaboration && m.collaboration.principle) || "";

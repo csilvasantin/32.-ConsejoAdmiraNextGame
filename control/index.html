@@ -71,6 +71,9 @@
   .monitorbar .caphealth b.bad{color:var(--warn)} .monitorbar .caphealth b.ok{color:var(--ok)}
   .monitorbar #fixAll{border-color:var(--warn);color:var(--warn);font-weight:700}
   .monitorbar #fixAll:hover{background:var(--warn);color:#2a1a08}
+  .monitorbar #fleetScreens{font-weight:700}
+  .monitorbar #fleetScreens.scr-on{border-color:var(--ok);color:var(--ok)}
+  .monitorbar #fleetScreens.scr-off{border-color:var(--bad);color:var(--bad)}
   /* frescura de la miniatura */
   .shotage{position:absolute;right:0;bottom:0;font-size:10px;padding:3px 7px;background:rgba(0,0,0,.55);color:#cbe6ff;letter-spacing:.2px;border-top-left-radius:8px;display:none}
   .shot.stale img{opacity:.5;filter:grayscale(.3)}
@@ -187,6 +190,7 @@
     <span>cada <input type="number" id="acSec" min="3" max="600" value="15"> s</span>
     <button id="acNow" title="Capturar ahora todas las pantallas online">📸 Capturar todas</button>
     <button id="wallOpen" title="Pared de pantallas: mosaico a pantalla completa de todas las capturas">🧱 Mosaico</button>
+    <button id="fleetScreens" title="Apagar o encender la pantalla de TODA la flota online (toggle)">🌙 Apagar todas</button>
     <label title="Beep cuando un equipo se cae o su captura empieza a fallar"><input type="checkbox" id="sndToggle"> 🔔 sonido</label>
     <label title="No mostrar los equipos desconectados"><input type="checkbox" id="hideOff"> 🙈 ocultar offline</label>
     <button id="collapseAll" title="Colapsar o expandir todas las tarjetas">⊟ colapsar todas</button>
@@ -651,6 +655,36 @@ function applyAutoCap(){
       try{ const d=await api('/run',{method:'POST',body:JSON.stringify({machine:id,cmd:CAP_FIX_CMD})}); pushResult(id,'🛡️ arreglo captura (SSH)',d); }
       catch(err){ pushResult(id,'🛡️ arreglo captura',{rc:-1,stdout:'',stderr:err.msg||'error'}); } }
     fa.disabled=false; fa.textContent=l; updateCapHealth();
+  };
+})();
+
+/* ---------- pantallas de la flota: toggle apagar/encender todas ----------
+   Apaga (pmset displaysleepnow) o enciende (caffeinate -u) la pantalla de TODA
+   la flota online, vía /run (sin acción nueva en el backend). El botón refleja
+   el estado COMANDADO: verde=ENCENDIDAS, rojo=APAGADAS (persistido por navegador). */
+let SCREENS_OFF = localStorage.getItem('fleet_screens_off')==='1';
+function renderFleetScreens(){
+  const b=$('#fleetScreens'); if(!b) return;
+  if(SCREENS_OFF){ b.textContent='☀️ Encender todas · APAGADAS'; b.classList.add('scr-off'); b.classList.remove('scr-on'); b.title='Las pantallas de la flota están APAGADAS — clic para encenderlas'; }
+  else { b.textContent='🌙 Apagar todas · ENCENDIDAS'; b.classList.add('scr-on'); b.classList.remove('scr-off'); b.title='Las pantallas de la flota están ENCENDIDAS — clic para apagarlas'; }
+}
+(function(){ const b=$('#fleetScreens'); if(!b) return; renderFleetScreens();
+  b.onclick=async()=>{
+    const targets=MACHINES.filter(m=>m.online);
+    if(!targets.length){ pushResult('__all__','🌐 pantallas',{rc:1,stdout:'',stderr:'no hay máquinas online'}); return; }
+    const turnOff=!SCREENS_OFF;   // si están encendidas → apagar; si apagadas → encender
+    const cmd = turnOff ? 'pmset displaysleepnow; echo "pantalla apagada"' : 'caffeinate -u -t 2; echo "pantalla encendida"';
+    const verb = turnOff ? 'APAGAR' : 'ENCENDER';
+    if(!confirm(verb+' la pantalla de las '+targets.length+' máquinas online?\n\n  '+targets.map(m=>m.name).join(', '))) return;
+    b.disabled=true; let okCount=0;
+    for(let i=0;i<targets.length;i++){ const m=targets[i]; b.textContent=(turnOff?'🌙 ':'☀️ ')+(i+1)+'/'+targets.length;
+      const label=(turnOff?'🌙 apagar':'☀️ encender')+' pantalla';
+      try{ const d=await api('/run',{method:'POST',body:JSON.stringify({machine:m.id,cmd})}); if(d.rc===0) okCount++; pushResult(m.id,label,d); }
+      catch(err){ pushResult(m.id,label,{rc:-1,stdout:'',stderr:err.msg||'error'}); } }
+    b.disabled=false;
+    // Refleja el estado comandado si al menos una máquina respondió OK.
+    if(okCount>0){ SCREENS_OFF=turnOff; localStorage.setItem('fleet_screens_off', SCREENS_OFF?'1':'0'); }
+    renderFleetScreens();
   };
 })();
 

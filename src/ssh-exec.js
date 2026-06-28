@@ -618,10 +618,18 @@ export async function sendPromptToMachine(machineId, prompt, target = "terminal"
 
   const safe = sanitizePrompt(prompt);
   const appName = TARGET_APPS[targetKey] || TARGET_APPS.terminal;
+  // El SUBMIT depende del destino: en la app Claude, Enter = salto de línea y se envía con
+  // Ctrl+Enter (igual que el script de aprobación). Si se usa Enter plano, el mensaje se
+  // queda escrito en la caja sin enviarse. Terminal/Codex envían con Enter.
+  const submitLines = targetKey === "claude"
+    ? ['delay 0.35', 'tell application "System Events" to key code 36 using control down']
+    : ['tell application "System Events" to keystroke return'];
   const osascriptLines = [
     `tell application "${appName}" to activate`,
+    'delay 0.35',
     `tell application "System Events" to keystroke "${safe}"`,
-    'tell application "System Events" to keystroke return'
+    'delay 0.2',
+    ...submitLines
   ];
 
   let result;

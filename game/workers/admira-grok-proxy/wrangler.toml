@@ -1,0 +1,12 @@
+name = "admira-grok-proxy"
+main = "src/index.js"
+compatibility_date = "2025-12-01"
+
+[vars]
+# Gemini (free tier — used by default when GEMINI_API_KEY secret is set)
+GEMINI_BASE_URL = "https://generativelanguage.googleapis.com/v1beta"
+GEMINI_MODEL = "gemini-2.5-flash"
+# xAI Grok (paid — used as fallback when GEMINI_API_KEY is absent)
+XAI_BASE_URL = "https://api.x.ai/v1"
+XAI_MODEL = "grok-4-latest"
+ALLOWED_ORIGINS = "https://csilvasantin.github.io,http://localhost:9124,http://127.0.0.1:9124,http://localhost:9126,http://127.0.0.1:9126,http://localhost:8085,http://127.0.0.1:8085"

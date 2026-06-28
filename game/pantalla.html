@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Admira XP · Pantalla externa</title>
+<style>
+  :root{ --cyan:#78f3ff; --gold:#f7c95d; }
+  *{ box-sizing:border-box; margin:0; padding:0; }
+  html,body{ width:100%; height:100%; background:#000; overflow:hidden; }
+  body{ font-family:monospace; color:#dff8ff; cursor:none; }
+  /* Contenedor de rotación: con ?rotate=90/270 rota TODO a horizontal y lo
+     escala a 1280x800 (vh/vw del viewport vertical). Al tener transform, pasa
+     a ser el bloque contenedor de sus hijos position:fixed. */
+  #rotor{ position:fixed; top:0; left:0; width:100%; height:100%; }
+  #rotor.land{ top:50%; left:50%; width:100vh; height:100vw;
+               transform:translate(-50%,-50%) rotate(90deg); transform-origin:center center; }
+  #rotor.land.ccw{ transform:translate(-50%,-50%) rotate(-90deg); }
+  #stage{ position:fixed; top:0; right:0; bottom:0; left:0; display:flex; align-items:center; justify-content:center; background:#000; }
+  #vid,#pic{ position:absolute; top:0; right:0; bottom:0; left:0; width:100%; height:100%; object-fit:cover; background:#000; display:none; }
+  #web{ position:absolute; top:0; right:0; bottom:0; left:0; width:100%; height:100%; border:0; background:#000; display:none; }
+  /* Idle / esperando */
+  #idle{ position:absolute; top:0; right:0; bottom:0; left:0; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:18px;
+         background:radial-gradient(circle at 50% 35%,rgba(120,243,255,.10),transparent 60%),#04101a; }
+  #idle .logo{ font-size:clamp(28px,7vw,84px); font-weight:bold; letter-spacing:.12em; color:var(--cyan);
+               text-shadow:0 0 24px rgba(120,243,255,.45); }
+  #idle .logo b{ color:var(--gold); }
+  #idle .clock{ font-size:clamp(20px,5vw,56px); color:#bfe9f2; opacity:.9; }
+  #idle .msg{ font-size:clamp(11px,2.2vw,18px); color:#5a8aa0; letter-spacing:.08em; text-transform:uppercase; }
+  #idle .caps{ margin-top:14px; font-size:clamp(9px,1.6vw,12px); color:#3f6478; letter-spacing:.06em; font-family:monospace; line-height:1.6; }
+  #idle .caps b{ color:#7fb8cc; }
+  /* Indicador de estado */
+  #dot{ position:fixed; bottom:10px; right:12px; width:12px; height:12px; border-radius:50%; background:#444;
+        box-shadow:0 0 8px rgba(0,0,0,.6); z-index:30; transition:background .3s; }
+  #dot.live{ background:#37e07a; box-shadow:0 0 10px #37e07a; }
+  #dot.warn{ background:#ffb347; }
+  #dot.err{ background:#ff5c5c; }
+  /* Tap para sonido */
+  #tap{ position:fixed; top:0; right:0; bottom:0; left:0; z-index:40; display:none; align-items:center; justify-content:center;
+        background:rgba(0,8,14,.55); cursor:pointer; }
+  #tap span{ padding:14px 26px; border:1px solid var(--cyan); border-radius:999px; color:var(--cyan);
+             font-size:clamp(13px,3vw,22px); letter-spacing:.06em; background:rgba(2,12,20,.8); }
+  #label{ position:fixed; left:0; right:0; bottom:0; z-index:20; padding:6px 14px; font-size:12px; color:#9fd9e6;
+          background:linear-gradient(180deg,transparent,rgba(0,10,16,.72)); text-align:center; opacity:0;
+          transition:opacity .4s; pointer-events:none; }
+  #label.show{ opacity:.85; }
+</style>
+</head>
+<body>
+  <div id="rotor">
+    <div id="stage">
+      <video id="vid" muted loop playsinline></video>
+      <img id="pic" alt="">
+      <iframe id="web" allow="microphone; autoplay; camera; fullscreen" referrerpolicy="no-referrer-when-downgrade"></iframe>
+      <div id="idle">
+        <div class="logo">ADMIRA <b>XP</b></div>
+        <div class="clock" id="clock">--:--</div>
+        <div class="msg" id="idlemsg">Esperando contenido del escaparate</div>
+        <div class="caps" id="caps"></div>
+      </div>
+    </div>
+    <div id="dot" title="estado de conexión"></div>
+    <div id="tap"><span>🔊 Toca para activar el sonido</span></div>
+    <div id="label"></div>
+  </div>
+
+<script>
+(() => {
+  'use strict';
+  const WORKER = 'https://pixer-eleven.csilvasantin.workers.dev';
+  const params = new URLSearchParams(location.search);
+  const SCREEN = (params.get('screen') || 'escaparate').toLowerCase().replace(/[^a-z0-9_-]/g, '').slice(0, 40) || 'escaparate';
+  const POLL_MS = 1500;   // poll del puntero /now (1.5s = menos latencia al cambiar contenido)
+  const HB_MS = 60000;    // heartbeat cada 60s (el worker deduplica; basta para el badge "online")
+  const screenId = 'xtore-' + SCREEN + '-' + Math.random().toString(36).slice(2, 6);
+
+  // ── Capacidades del dispositivo (calidad máxima que puede mover) ──
+  // Reportadas en el heartbeat y mostradas en la pantalla de espera, para
+  // controlar la calidad por aparato (p. ej. un MediaTek de gama baja).
+  const dpr = Math.round((window.devicePixelRatio || 1) * 100) / 100;
+  const scrW = Math.round((screen.width || 0) * dpr);
+  const scrH = Math.round((screen.height || 0) * dpr);
+  // Cap de calidad: ?maxh= manda; si no, la altura física de la pantalla.
+  const maxhParam = parseInt(params.get('maxh') || '', 10);
+  const MAXH = (maxhParam > 0) ? maxhParam : Math.max(scrW, scrH); // alto máx útil (landscape)
+  const DEVCAPS = { w: Math.max(scrW, scrH), h: Math.min(scrW, scrH), dpr: dpr, maxh: MAXH };
+  function tierLabel(h){ return h >= 2160 ? '4K' : h >= 1080 ? '1080p' : h >= 720 ? '720p' : h >= 480 ? '480p' : (h + 'p'); }
+
+  const vid = document.getElementById('vid');
+  const pic = document.getElementById('pic');
+  const idle = document.getElementById('idle');
+  const dot = document.getElementById('dot');
+  const tap = document.getElementById('tap');
+  const label = document.getElementById('label');
+  const idlemsg = document.getElementById('idlemsg');
+  const web = document.getElementById('web');
+
+  // Rotación forzada por software (paneles signage clavados en vertical):
+  // ?rotate=90 (horario) o ?rotate=270 (antihorario). El contenedor con
+  // transform pasa a ser el viewport "horizontal" de 1280x800.
+  const rotor = document.getElementById('rotor');
+  const ROT = (params.get('rotate') || '').toLowerCase();
+  if (ROT === '90' || ROT === 'cw' || ROT === 'l' || ROT === 'landscape') rotor.classList.add('land');
+  else if (ROT === '270' || ROT === 'ccw') rotor.classList.add('land', 'ccw');
+
+  let curSig = '';          // firma del item actual mostrado
+  let wantSound = false;    // el usuario pidió sonido
+  let lastShowingName = ''; // para heartbeat
+  let curObjUrl = null;     // blob: URL del vídeo en reproducción (para revocar)
+  const MEDIA_CACHE = 'xtore-media-v1'; // caché local de vídeos (como Admira)
+
+  // ── Reloj del idle ──
+  function tickClock() {
+    const d = new Date();
+    const el = document.getElementById('clock');
+    if (el) el.textContent = String(d.getHours()).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+  }
+  setInterval(tickClock, 1000); tickClock();
+
+  function setDot(cls) { dot.className = cls || ''; }
+  function showLabel(txt) {
+    if (!txt) { label.classList.remove('show'); return; }
+    label.textContent = txt; label.classList.add('show');
+    clearTimeout(showLabel._t); showLabel._t = setTimeout(() => label.classList.remove('show'), 4000);
+  }
+
+  function revokeObj() {
+    if (curObjUrl) { try { URL.revokeObjectURL(curObjUrl); } catch (e) {} curObjUrl = null; }
+  }
+
+  function showIdle(msg) {
+    idle.style.display = 'flex';
+    vid.style.display = 'none'; pic.style.display = 'none';
+    try { vid.pause(); vid.removeAttribute('src'); vid.load(); } catch (e) {}
+    revokeObj();
+    pic.removeAttribute('src');
+    web.style.display = 'none'; web.src = 'about:blank';   // descarga el avatar al quedar idle
+    lastShowingName = '';
+    if (msg) idlemsg.textContent = msg;
+  }
+
+  // Item tipo "web": el tótem renderiza una URL (p.ej. el avatar foto-real) en
+  // iframe a pantalla completa. Solo recarga si cambia la URL (no parpadea).
+  function showWeb(src) {
+    idle.style.display = 'none'; vid.style.display = 'none'; pic.style.display = 'none';
+    try { vid.pause(); } catch (e) {}
+    web.style.display = 'block';
+    if (web.getAttribute('data-src') !== src) { web.setAttribute('data-src', src); web.src = src; }
+  }
+
+  // Descarga el vídeo a caché local (Cache API) una vez y devuelve un blob: URL
+  // para reproducir desde disco/memoria, como el player de Admira. Si algo
+  // falla, cae a streaming directo (devuelve la URL original).
+  async function localBlobUrl(url) {
+    if (!('caches' in window) || !/^https?:/.test(url)) return url;
+    try {
+      const cache = await caches.open(MEDIA_CACHE);
+      let resp = await cache.match(url);
+      if (!resp) {
+        const net = await fetch(url, { mode: 'cors' });
+        if (!net || !net.ok) return url;
+        try { await cache.put(url, net.clone()); } catch (e) {}
+        resp = net;
+      }
+      const blob = await resp.blob();
+      return URL.createObjectURL(blob);
+    } catch (e) { return url; }
+  }
+
+  async function showVideo(src) {
+    idle.style.display = 'none'; pic.style.display = 'none'; web.style.display = 'none';
+    const playUrl = await localBlobUrl(src);
+    // Si el contenido cambió mientras descargaba, abortar (no pisar lo nuevo).
+    if (curSig !== 'video|' + src) {
+      if (playUrl.indexOf('blob:') === 0) { try { URL.revokeObjectURL(playUrl); } catch (e) {} }
+      return;
+    }
+    revokeObj();
+    if (playUrl.indexOf('blob:') === 0) curObjUrl = playUrl;
+    vid.style.display = 'block';
+    vid.src = playUrl;
+    vid.muted = !wantSound;
+    vid.play().catch(() => {});
+    if (!wantSound) tap.style.display = 'flex';
+  }
+
+  function showImage(src) {
+    idle.style.display = 'none'; vid.style.display = 'none'; web.style.display = 'none';
+    try { vid.pause(); } catch (e) {}
+    pic.style.display = 'block';
+    pic.src = src;
+  }
+
+  // Auto por pantalla: de las variantes (item.variants:[{h,src}]) elige la mayor
+  // altura que el dispositivo puede mover (≤ MAXH). Si no hay variantes, usa src.
+  function pickSrc(item) {
+    const vs = Array.isArray(item.variants) ? item.variants.filter(v => v && v.src && v.h) : [];
+    if (vs.length) {
+      const sorted = vs.slice().sort((a, b) => a.h - b.h);
+      let chosen = sorted[0];                 // por defecto la menor (por si el cap es bajísimo)
+      for (const v of sorted) { if (v.h <= MAXH) chosen = v; }
+      return chosen.src;
+    }
+    return item.src;
+  }
+
+  function applyItem(item) {
+    const hasVariants = item && Array.isArray(item.variants) && item.variants.length;
+    if (!item || item.kind === 'idle' || (!item.src && !item.local && !hasVariants)) {
+      if (curSig !== 'idle') { curSig = 'idle'; showIdle('Esperando contenido del escaparate'); }
+      return;
+    }
+    if (item.local && !item.src) {
+      // Import local del juego (blob:): no compartible a otro dispositivo todavía.
+      if (curSig !== 'local:' + (item.name || '')) {
+        curSig = 'local:' + (item.name || '');
+        showIdle('Contenido local del juego · no disponible en remoto');
+        showLabel('📌 ' + (item.name || ''));
+      }
+      return;
+    }
+    const src = pickSrc(item);
+    const sig = item.kind + '|' + src;
+    if (sig === curSig) { if (item.kind === 'video') vid.muted = !wantSound; return; }
+    curSig = sig;
+    lastShowingName = item.name || '';
+    if (item.kind === 'web') showWeb(src);
+    else if (item.kind === 'image') showImage(src);
+    else showVideo(src);
+    if (item.name) showLabel((item.kind === 'web' ? '🤖 ' : item.kind === 'image' ? '🖼 ' : '📺 ') + item.name);
+  }
+
+  // Canal limpio: /signage/now (puntero por pantalla). Devuelve el item, null si
+  // no hay nada, o undefined si el endpoint aún no está desplegado (404).
+  async function fetchNow() {
+    const r = await fetch(WORKER + '/signage/now?screen=' + encodeURIComponent(SCREEN), { cache: 'no-store' });
+    if (!r.ok) return undefined; // 404 = endpoint no desplegado todavía
+    const data = await r.json();
+    return (data && data.item) || null;
+  }
+
+  // Fallback al feed YA desplegado: el juego empuja con título "[scr:<screen>] <name>".
+  async function fetchFromFeed() {
+    const r = await fetch(WORKER + '/signage/feed?limit=25', { cache: 'no-store' });
+    if (!r.ok) throw new Error('feed http ' + r.status);
+    const data = await r.json();
+    const marker = '[scr:' + SCREEN + ']';
+    const it = (data.items || []).find(i => (i.title || '').startsWith(marker));
+    if (!it) return null;
+    if (it.kind === 'text' || /__idle__/.test(it.title || '')) return { kind: 'idle', name: '' };
+    return { kind: it.kind, src: it.url, name: (it.title || '').slice(marker.length).trim() };
+  }
+
+  async function poll() {
+    try {
+      let item = await fetchNow();           // canal limpio
+      if (item === undefined) item = await fetchFromFeed(); // fallback feed
+      setDot('live');
+      applyItem(item);
+    } catch (e) {
+      setDot(curSig && curSig !== 'idle' ? 'warn' : 'err');
+      // Mantener el último contenido en pantalla; solo marcamos el estado.
+    } finally {
+      setTimeout(poll, POLL_MS);
+    }
+  }
+
+  async function heartbeat() {
+    try {
+      await fetch(WORKER + '/signage/heartbeat', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' }, keepalive: true,
+        body: JSON.stringify({ screen: screenId, role: 'xtore-screen', version: 'pantalla-r2', showing_id: lastShowingName || null, caps: DEVCAPS }),
+      });
+    } catch (e) {}
+  }
+
+  // ── Pantalla completa real (oculta la UI del navegador) ──
+  // Requiere gesto del usuario: cualquier toque/clic la activa.
+  function goFullscreen() {
+    if (document.fullscreenElement || document.webkitFullscreenElement) return;
+    const el = document.documentElement;
+    const fn = el.requestFullscreen || el.webkitRequestFullscreen || el.webkitRequestFullScreen;
+    if (fn) { try { fn.call(el); } catch (e) {} }
+  }
+  // Cualquier gesto del usuario (no solo el banner) activa sonido + pantalla
+  // completa: el navegador exige un gesto real para quitar el mute, y un toque
+  // en cualquier parte del panel basta.
+  function activateSound() {
+    wantSound = true;
+    tap.style.display = 'none';
+    goFullscreen();
+    try { vid.muted = false; vid.volume = 1; vid.play().catch(() => {}); } catch (e) {}
+  }
+  document.addEventListener('click', activateSound);
+  document.addEventListener('touchend', activateSound, { passive: true });
+  tap.addEventListener('click', activateSound);
+
+  // ── Wake lock: mantener la pantalla encendida (signage) ──
+  let wakeLock = null;
+  async function requestWake() {
+    try { if ('wakeLock' in navigator) wakeLock = await navigator.wakeLock.request('screen'); } catch (e) {}
+  }
+  document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') requestWake(); });
+
+  // El vídeo en bucle no necesita re-arranque, pero por si el navegador lo pausa:
+  vid.addEventListener('pause', () => { if (vid.style.display === 'block' && !vid.ended) vid.play().catch(() => {}); });
+
+  // Muestra las capacidades del aparato (y el progreso de precarga) en la espera.
+  let pfTotal = 0, pfDone = 0; // contadores de precarga de la videoteca
+  function renderCaps() {
+    const capsEl = document.getElementById('caps');
+    if (!capsEl) return;
+    let html = 'Pantalla <b>' + DEVCAPS.w + '×' + DEVCAPS.h + '</b> · DPR <b>' + dpr + '</b>'
+      + '<br>Calidad máx · <b>' + tierLabel(MAXH) + '</b>' + (maxhParam > 0 ? ' (fijada)' : '')
+      + '<br>canal <b>' + SCREEN + '</b>';
+    if (pfTotal) html += '<br>caché escaparate · <b>' + pfDone + '/' + pfTotal + '</b>' + (pfDone >= pfTotal ? ' ✓' : ' …');
+    capsEl.innerHTML = html;
+  }
+  renderCaps();
+
+  // ── Precarga de la videoteca del escaparate (Cache API) ─────────────
+  // Baja TODOS los vídeos del canal una vez y los deja en caché local, para
+  // que al rotar el escaparate cada cambio arranque al instante desde disco
+  // en vez de descargarse al vuelo. Resuelve los paths del manifest contra el
+  // MISMO origen que carga esta página (= el que usa el gemelo al emitir con
+  // new URL(file,location.href)), así la clave de caché coincide con la que
+  // luego pide /signage/now. Para freedom90 (variantes HD) usa pickSrc → baja
+  // exactamente la calidad que este aparato reproducirá. Salta lo ya cacheado.
+  async function prefetchLibrary() {
+    if (!('caches' in window)) return;
+    let manifest;
+    try {
+      // Manifest por canal: escaparate-manifest.json, totem-manifest.json, …
+      // Si el canal no tiene manifest (404), no precarga (cachea al reproducir).
+      const r = await fetch(SCREEN + '-manifest.json', { cache: 'no-store' });
+      if (!r.ok) return;
+      manifest = await r.json();
+    } catch (e) { return; }
+    if (!Array.isArray(manifest) || !manifest.length) return;
+
+    // URL exacta que reproducirá este aparato para cada item (misma lógica que /now).
+    const urls = [];
+    for (const it of manifest) {
+      try {
+        const item = { kind: it.kind || 'video', variants: it.variants };
+        item.src = it.file ? new URL(it.file, location.href).href : it.src;
+        const u = pickSrc(item);
+        if (u && /^https?:/.test(u) && urls.indexOf(u) < 0) urls.push(u);
+      } catch (e) {}
+    }
+    if (!urls.length) return;
+
+    const cache = await caches.open(MEDIA_CACHE);
+    pfTotal = urls.length; pfDone = 0; renderCaps();
+    // Secuencial y de baja prioridad: no compite con el vídeo en reproducción.
+    for (const u of urls) {
+      try {
+        const hit = await cache.match(u);   // ya está → no re-descargar
+        if (!hit) {
+          const net = await fetch(u, { mode: 'cors' });
+          if (net && net.ok) await cache.put(u, net.clone());
+        }
+      } catch (e) {}
+      pfDone++; renderCaps();
+    }
+  }
+
+  showIdle('Conectando…');
+  requestWake();
+  poll();
+  heartbeat();
+  setInterval(heartbeat, HB_MS);
+  // Arranca la precarga unos segundos después, dejando que el contenido actual
+  // empiece primero (su descarga lo deja ya cacheado para cuando llegue su turno).
+  setTimeout(() => { prefetchLibrary().catch(() => {}); }, 5000);
+})();
+</script>
+</body>
+</html>

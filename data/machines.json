@@ -153,6 +153,28 @@
       "mac_address": ""
     },
     {
+      "id": "admira-macbookairazul",
+      "unitType": "council",
+      "color": "azul",
+      "member": "Consejero",
+      "role": "Equipo (Neo / Claude·admira)",
+      "name": "MacBookAirAzul",
+      "machineRole": "Equipo principal",
+      "location": "Madrid",
+      "platform": "macOS",
+      "status": "online",
+      "lastSeen": "2026-06-28T00:00:00Z",
+      "currentFocus": "",
+      "note": "Tailscale: macbookairazul.tail48b61c.ts.net",
+      "ssh": {
+        "enabled": true,
+        "user": "csilvasantin",
+        "host": "macbookairazul.tail48b61c.ts.net",
+        "connect_tailscale": "ssh csilvasantin@macbookairazul.tail48b61c.ts.net"
+      },
+      "mac_address": ""
+    },
+    {
       "id": "admira-macbook-carla",
       "unitType": "council",
       "color": "gris",

@@ -1,14 +1,52 @@
 <!DOCTYPE html>
-<html lang="es">
+<html>
 <head>
-  <meta charset="utf-8">
-  <meta http-equiv="refresh" content="0; url=/game.html">
-  <link rel="canonical" href="/game.html">
-  <title>AdmiraNext — Juego</title>
-  <script>location.replace('/game.html' + location.search + location.hash);</script>
+  <meta charset="UTF-8"/>
+  <meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate"/>
+  <meta http-equiv="Pragma" content="no-cache"/>
+  <meta http-equiv="Expires" content="0"/>
+  <title>Admira XP // The Xpace OS — Loading...</title>
+  <script src="xtanco-version.js"></script>
 </head>
-<body style="background:#050005;color:#ffee88;font-family:monospace">
-  Abriendo el juego… <a href="/game.html" style="color:#daa520">/game.html</a>
-  · <a href="/game/help" style="color:#daa520">Ayuda</a>
+<body style="background:#1a1420;color:#cc99dd;font-family:monospace;display:flex;align-items:center;justify-content:center;height:100vh;margin:0">
+<div style="text-align:center">
+  <p>♪ Cargando Admira XP // The Xpace OS...</p>
+  <p id="bootBuild" style="font-size:12px;opacity:0.75"></p>
+</div>
+<script>
+const APP=window.XTANCO_APP||{version:'dev',build:String(Date.now())};
+const bootBuild=document.getElementById('bootBuild');
+if(bootBuild) bootBuild.textContent=APP.version+' - build '+APP.build;
+
+const params=new URLSearchParams(window.location.search);
+params.set('v',APP.build);
+const target='game.html?'+params.toString()+(window.location.hash||'');
+
+async function clearOldRuntime(){
+  if(!params.has('fresh')) return;
+  try{
+    if('serviceWorker' in navigator){
+      const regs=await navigator.serviceWorker.getRegistrations();
+      await Promise.all(regs.map(reg=>reg.unregister()));
+    }
+    if(window.caches){
+      const keys=await caches.keys();
+      await Promise.all(keys.map(key=>caches.delete(key)));
+    }
+  }catch(e){}
+}
+
+function boot(){window.location.replace(target);}
+
+if('serviceWorker' in navigator){
+  clearOldRuntime()
+    .then(()=>navigator.serviceWorker.register('sw.js?v='+encodeURIComponent(APP.build),{updateViaCache:'none'}))
+    .then(reg=>reg.update().catch(()=>{}))
+    .then(boot)
+    .catch(boot);
+} else {
+  clearOldRuntime().then(boot).catch(boot);
+}
+</script>
 </body>
 </html>

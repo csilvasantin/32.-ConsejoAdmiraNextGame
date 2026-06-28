@@ -44,7 +44,8 @@
   .msg .who{font-size:11px; color:var(--gold); margin-bottom:3px}
   .msg.out .who{color:var(--green)}
   .msg .body{font-size:14px; white-space:pre-wrap; word-break:break-word; line-height:1.4}
-  .msg .media{display:block; max-width:240px; max-height:260px; border-radius:8px; margin:2px 0 4px; cursor:zoom-in; border:1px solid var(--border); background:#000}
+  .msg .media{display:block; width:auto; max-width:340px; max-height:360px; border-radius:8px; margin:2px 0 4px; cursor:zoom-in; border:1px solid var(--border); background:#000}
+  .msg .body a{color:#6cf}
   .msg .media.sticker{max-width:140px; max-height:140px; border:none; background:transparent}
   .msg .time{font-size:10px; color:var(--dim); margin-top:4px; text-align:right}
   #lb{position:fixed; inset:0; background:rgba(0,0,0,.92); display:none; align-items:center; justify-content:center; z-index:50; cursor:zoom-out; padding:20px}
@@ -163,7 +164,7 @@
       if(res&&res.ok){
         const label = machineLabelOf(machine) || res.d.name || machine;
         setStatus(true,"✅ enviado a "+label+" — su Claude Code lo procesa"); textInput.value="";
-        postConstancia(label, message, cred);   // deja constancia en Telegram (grupo + espejo)
+        postConstancia(label, machine, message, cred);   // deja constancia en Telegram (grupo + espejo)
       }
       else if(!cred&&!councilStoredKey()){ setErr("login de Google caducado y sin refrescar — recarga la página para volver a entrar"); }
       else if(res&&(res.status===401||res.status===403)){ setErr("tu cuenta de Google no está autorizada en el backend para esto"); }
@@ -173,12 +174,15 @@
   function machineLabelOf(id){ try{ const o=[...document.getElementById("machineSel").options].find(x=>x.value===id); return o?o.textContent:""; }catch(e){ return ""; } }
   // Deja constancia del envío en el grupo de Telegram (y por tanto en el espejo).
   // Solo si tenemos login de Google (JWT), que es lo que el worker /api/send acepta.
-  async function postConstancia(machineLabel, message, cred){
+  async function postConstancia(machineLabel, machineId, message, cred){
     if(!WORKER_BASE || !cred || String(cred).split(".").length!==3) return;
     try{
+      // El mensaje ACABA con «/sendto <máquina>» (id sin espacios, reutilizable como comando)
+      // para que quede claro y trazable el destinatario elegido.
+      const txt = `📨 ${message}\n\n/sendto ${machineId}  ·  ${machineLabel}`;
       await fetch(WORKER_BASE+"/api/send",{ method:"POST",
         headers:{"content-type":"application/json","Authorization":"Bearer "+cred},
-        body: JSON.stringify({ text:"📨 → "+machineLabel+": "+message, author:"Web" }) });
+        body: JSON.stringify({ text: txt, author:"Web" }) });
       setTimeout(poll, 600);
     }catch(e){}
   }
@@ -266,7 +270,7 @@
         const cls = m.media_type==="sticker" ? "media sticker" : "media";
         media = `<img class="${cls}" src="${src}" alt="imagen" loading="lazy" onerror="this.remove()">`;
       }
-      const body = m.text ? `<div class="body">${escapeHtml(m.text)}</div>` : "";
+      const body = m.text ? `<div class="body">${renderRich(m.text)}</div>` : "";
       el.innerHTML =
         `<div class="who">${escapeHtml(m.from_name||"Anónimo")}</div>`+
         media + body +
@@ -280,6 +284,13 @@
   }
   function escapeHtml(s){
     return String(s).replace(/[&<>"']/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]));
+  }
+  // Render básico como Telegram nativo: escapa, luego *negrita* y enlaces clicables.
+  function renderRich(s){
+    let h = escapeHtml(s);
+    h = h.replace(/\*([^*\n]+)\*/g, "<strong>$1</strong>");
+    h = h.replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+    return h;
   }
 
   async function poll(){

@@ -2656,6 +2656,41 @@
                 padding: 0.4rem 0.45rem;
             }
         }
+
+        /* ════ Port mejoras — cursor point&click · sentence line · responsive ════ */
+        body {
+            cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='22' height='22'%3E%3Cpath d='M2 1 L2 16 L6 12 L9 19 L12 18 L9 11 L15 11 Z' fill='%23ffee88' stroke='%23201000' stroke-width='1.4' stroke-linejoin='round'/%3E%3C/svg%3E") 2 1, auto;
+        }
+        .verb-btn, .inv-item, .action-send, .gen-btn, .power-btn, .member-icon,
+        .np.selectable, .body-hotspot, .meeting-door-hotspot, button, a, [onclick] {
+            cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cg fill='none' stroke='%23ffff33' stroke-width='2.2'%3E%3Ccircle cx='12' cy='12' r='6'/%3E%3Cpath d='M12 0 L12 5 M12 19 L12 24 M0 12 L5 12 M19 12 L24 12'/%3E%3C/g%3E%3C/svg%3E") 12 12, pointer;
+        }
+        .sentence-line {
+            font-family: 'Press Start 2P', monospace; font-size: 9px; color: #ffee88;
+            background: #2e1c0a; border-bottom: 2px solid #2a1a08; padding: 7px 10px;
+            min-height: 14px; line-height: 1.5; letter-spacing: 0.5px;
+            white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+        }
+        .sentence-line .sl-verb { color: #ffd24a; }
+        .sentence-line .sl-obj { color: #ffffff; }
+        .sentence-line:empty::before { content: "Pulsa un verbo y un consejero\2026"; color: #7a5a30; }
+        .inv-item.locked { opacity: 0.5; }
+        .inv-item.locked:hover { opacity: 0.7; }
+        html, body { overflow-x: hidden; }
+        .speech-bubble { max-width: min(300px, 92vw); }
+        @media (max-width: 600px) {
+            .scumm-bottom { flex-direction: column; }
+            .inventory { width: 100%; border-left: none; border-top: 2px solid #3a2410; }
+            .inventory-list { max-height: 160px; }
+            .verb-grid { grid-template-columns: repeat(2, 1fr); gap: 4px; padding: 6px; }
+            .verb-btn { min-height: 44px; font-size: clamp(8px, 3.2vw, 11px); display: flex; align-items: center; justify-content: center; }
+            .inv-item { min-height: 34px; display: flex; align-items: center; }
+            .action-line { flex-wrap: wrap; }
+            .action-input { font-size: 11px; min-height: 28px; }
+            .action-send { min-height: 40px; }
+            .sentence-line { font-size: 8px; white-space: normal; }
+        }
+        /* ════ fin port mejoras ════ */
     </style>
 <style id="home-cluster-css">
 #home-bottom-cluster{position:fixed;left:50%;bottom:1rem;transform:translateX(-50%);z-index:9999;display:flex;gap:8px;align-items:center;flex-wrap:wrap;justify-content:center;max-width:96vw}
@@ -2801,6 +2836,7 @@
         </div>
 
         <div class="scumm-bar scumm-collapsed">
+            <div class="sentence-line" id="sentence-line"></div>
             <div class="action-line">
                 <input class="action-input" id="action-input" type="text" placeholder="escribe aquí · /help para todos los comandos" autocomplete="off" onkeydown="if(event.key==='Enter')sendMessage()">
                 <button class="action-send" onclick="sendMessage()">Enviar</button>
@@ -2808,17 +2844,17 @@
             </div>
             <div class="scumm-bottom">
                 <div class="verb-grid">
-                    <button class="verb-btn verb-primary" data-verb="preguntar" onclick="selectVerb(this)">Preguntar</button>
-                    <button class="verb-btn verb-primary" data-verb="debatir" onclick="selectVerb(this)">Debatir</button>
-                    <button class="verb-btn verb-primary" data-verb="entrenar" onclick="selectVerb(this)">Entrenar</button>
-                    <button class="verb-btn" data-verb="crear" onclick="selectVerb(this)">Crear</button>
-                    <button class="verb-btn" data-verb="hablar" onclick="selectVerb(this)">Yarig.AI</button>
-                    <button class="verb-btn" data-verb="leer" onclick="selectVerb(this)">Pensar</button>
-                    <button class="verb-btn" data-verb="votar" onclick="selectVerb(this)">Votar</button>
-                    <button class="verb-btn" data-verb="analizar" onclick="selectVerb(this)">Analizar</button>
-                    <button class="verb-btn" data-verb="presentar" onclick="selectVerb(this)">Presentar</button>
-                    <button class="verb-btn verb-primary" data-verb="reunion" onclick="selectVerb(this)">🚪 Reunión</button>
-                    <button class="verb-btn" data-verb="previo" id="btn-previo" onclick="selectVerb(this)" style="display:none;border-left:2px solid #5a3a1e">▶ Previo</button>
+                    <button class="verb-btn verb-primary" data-verb="preguntar" title="Pregunta a un consejero: pulsa Preguntar y haz clic en él" onclick="selectVerb(this)">Preguntar</button>
+                    <button class="verb-btn verb-primary" data-verb="debatir" title="El Consejo debate un tema entre todos sus miembros" onclick="selectVerb(this)">Debatir</button>
+                    <button class="verb-btn verb-primary" data-verb="entrenar" title="Alimenta a un consejero con URLs y material de referencia" onclick="selectVerb(this)">Entrenar</button>
+                    <button class="verb-btn" data-verb="crear" title="Genera una imagen a partir de tu descripción" onclick="selectVerb(this)">Crear</button>
+                    <button class="verb-btn" data-verb="hablar" title="Conecta contexto con Yarig.AI (foco, tareas, estado)" onclick="selectVerb(this)">Yarig.AI</button>
+                    <button class="verb-btn" data-verb="leer" title="El Consejo te cuenta el libro/resumen del día (audio)" onclick="selectVerb(this)">Pensar</button>
+                    <button class="verb-btn" data-verb="votar" title="Somete una propuesta a votación del Consejo" onclick="selectVerb(this)">Votar</button>
+                    <button class="verb-btn" data-verb="analizar" title="Analiza una URL, texto o archivo con el Consejo" onclick="selectVerb(this)">Analizar</button>
+                    <button class="verb-btn" data-verb="presentar" title="Genera una presentación a partir de un tema" onclick="selectVerb(this)">Presentar</button>
+                    <button class="verb-btn verb-primary" data-verb="reunion" title="Reúnete a solas con un consejero (chat 1 a 1)" onclick="selectVerb(this)">Reunión</button>
+                    <button class="verb-btn" data-verb="previo" id="btn-previo" title="Reabre la última presentación generada" onclick="selectVerb(this)" style="display:none;border-left:2px solid #5a3a1e">Previo</button>
                 </div>
                 <div class="inventory">
                     <!-- Panel LLM: por defecto y para verbos que usan modelo (preguntar, debatir, hablar) -->
@@ -2840,10 +2876,10 @@
                     <div class="inv-panel" data-panel="leer">
                         <div class="inventory-title">Modo de lectura</div>
                         <div class="inventory-list">
-                            <div class="inv-item leer-option" data-leer="texto" onclick="selectSubOption('leer', this)">📄 Texto</div>
+                            <div class="inv-item leer-option locked" data-leer="texto" title="Próximamente — por ahora usa Audio" onclick="selectSubOption('leer', this)">📄 Texto 🔒</div>
                             <div class="inv-item leer-option selected" data-leer="audio" onclick="selectSubOption('leer', this)">🔊 Audio</div>
-                            <div class="inv-item leer-option" data-leer="video" onclick="selectSubOption('leer', this)">🎬 Vídeo</div>
-                            <div class="inv-item leer-option" data-leer="interactivo" onclick="selectSubOption('leer', this)">💭 Interactivo</div>
+                            <div class="inv-item leer-option locked" data-leer="video" title="Próximamente — por ahora usa Audio" onclick="selectSubOption('leer', this)">🎬 Vídeo 🔒</div>
+                            <div class="inv-item leer-option locked" data-leer="interactivo" title="Próximamente — por ahora usa Audio" onclick="selectSubOption('leer', this)">💭 Interactivo 🔒</div>
                         </div>
                     </div>
                     <!-- Panel CREAR: opciones de generación de imagen -->
@@ -3084,6 +3120,29 @@
         { name: "CSO", role: "Chief Storytelling Officer", persona: "Ryan Reynolds",   side: "creativo", gen: "coetaneos", icon: "📖", machineId: "admira-macbookaircrema",   machine: "MacBook Air Crema",    member: "Carla Rosa",     pair: "CEO", pairPersona: "Elon Musk",         territory: "Marketing viral y narrativa de marca" },
     ];
 
+    // Voz/lema de bienvenida por consejero — da personalidad antes de llamar al LLM
+    const GREETINGS = {
+        "Steve Jobs":      "La gente no sabe lo que quiere hasta que se lo enseñas. ¿Qué vamos a crear?",
+        "Steve Wozniak":   "Si es elegante por dentro, lo demás llega solo. ¿Qué construimos?",
+        "Tim Cook":        "La excelencia operativa no es glamour, es disciplina. Dime el reto.",
+        "Warren Buffett":  "El tiempo es amigo del buen negocio. ¿Dónde ponemos el capital?",
+        "Walt Disney":     "Si lo puedes soñar, lo puedes hacer. ¿Qué historia contamos?",
+        "Dieter Rams":     "Menos, pero mejor. ¿Qué quitamos para que esto brille?",
+        "Howard Schultz":  "No vendemos café, creamos un tercer lugar. ¿Qué experiencia damos?",
+        "George Lucas":    "Un buen relato sobrevive a todo. ¿Cuál es el mito que contamos?",
+        "Elon Musk":       "Pensemos desde los primeros principios. ¿Qué límite rompemos?",
+        "Jensen Huang":    "Cuanto más cómputo, más adelante vamos. ¿Qué escalamos?",
+        "Gwynne Shotwell": "Ejecutar a escala es un arte. Dame el plan y lo hago volar.",
+        "Ruth Porat":      "Crecer con cabeza. ¿Qué números sostienen esta idea?",
+        "John Lasseter":   "El arte humaniza la tecnología. ¿Qué vamos a emocionar?",
+        "Jony Ive":        "El cuidado se nota en lo que no se ve. ¿Qué hacemos inevitable?",
+        "Carlos Ratti":    "La ciudad es un organismo vivo. ¿Qué espacio activamos?",
+        "Ryan Reynolds":   "Si no es memorable, no existe. ¿Cómo lo hacemos viral?",
+    };
+    function councilGreeting(agent) {
+        return GREETINGS[agent.persona] || (agent.territory ? agent.persona + ": " + agent.territory + "." : agent.persona + " te escucha.");
+    }
+
     const MATRIX_LINKS = {
         coetaneos: {
             "Elon Musk":       { alias: "Neo",        channel: "Neo" },
@@ -3317,7 +3376,7 @@
             }
             machineStatus[m.id] = {
                 status: isOnline ? m.status : "offline",
-                name: m.name,
+                name: m.name || m.id || "Sin nombre",
                 online: isOnline,
                 currentFocus: m.currentFocus || "",
                 note: m.note || "",
@@ -3387,7 +3446,7 @@
                     const isOnline = m.status === "online" || m.status === "idle" || m.status === "busy";
                     machineStatus[m.id] = {
                         status: m.status,
-                        name: m.name,
+                        name: m.name || m.id || "Sin nombre",
                         online: isOnline,
                         currentFocus: m.currentFocus || "",
                         note: m.note || "",
@@ -3442,8 +3501,8 @@
             }
         });
 
-        creativoEl.innerHTML = "";
-        racionalEl.innerHTML = "";
+        const creativoHtml = [];
+        const racionalHtml = [];
 
         const liveEl = document.querySelector(".live");
         liveEl.textContent = apiOk ? "● LIVE" : "● OFFLINE";
@@ -3456,7 +3515,7 @@
         filtered.forEach(member => {
             const machine = member.machineId ? machineStatus[member.machineId] : null;
             const isOnline = machine ? machine.online : false;
-            const machineName = machine ? machine.name.split(" (")[0] : "Sin asignar";
+            const machineName = machine ? (machine.name || "Sin asignar").split(" (")[0] : "Sin asignar";
             const machineStatusText = machine ? machine.status : "";
             if (isOnline) onlineCount++; else offlineCount++;
 
@@ -3521,9 +3580,13 @@
                 </div>
             `;
 
-            if (member.side === "creativo") creativoEl.innerHTML += html;
-            else racionalEl.innerHTML += html;
+            if (member.side === "creativo") creativoHtml.push(html);
+            else racionalHtml.push(html);
         });
+
+        // Una sola escritura DOM por panel (evita O(n²) y recrear miniaturas cada ciclo)
+        creativoEl.innerHTML = creativoHtml.join("");
+        racionalEl.innerHTML = racionalHtml.join("");
 
         // Render nameplates on image
         const npEl = document.getElementById("nameplates");
@@ -3687,6 +3750,11 @@
         if (isOnline) lastThumbTime[machineId] = new Date();
 
         overlay.classList.add("visible");
+        // Limpiar intervalo previo (p. ej. abrir otra máquina sin cerrar antes)
+        if (overlay._refreshInterval) {
+            clearInterval(overlay._refreshInterval);
+            overlay._refreshInterval = null;
+        }
         // Auto-refresh fullscreen image every 5s (only if online)
         if (isOnline) {
             overlay._refreshInterval = setInterval(() => {
@@ -4299,7 +4367,12 @@
             enterPreguntarMode();
         }
         if (currentVerb === 'debatir') {
-            if (!currentProject) { setActionLine("Selecciona un proyecto del inventario"); return; }
+            if (!currentProject) {
+                const tema = (window.prompt("¿Sobre qué quieres que debata el Consejo?", "") || "").trim();
+                if (!tema) { setActionLine("Debate cancelado — escribe un tema para que el Consejo debata"); return; }
+                currentProject = tema;
+                updateActionLine();
+            }
             executeCouncilVerb(currentVerb);
         }
         if (currentVerb === 'entrenar') {
@@ -4406,17 +4479,49 @@
         const matrixLink = getMatrixLink(agent);
         const matrixLabel = matrixLink ? " · Matrix: " + matrixLink.alias : "";
         setActionLine("❓ Pregunta a " + agent.icon + " " + agent.persona + " (" + agent.name + matrixLabel + ") via " + llmShort + " — escribe y pulsa Enviar");
-        showSpeechBubble(agent.persona, agent.name, agent.persona + (matrixLink ? " / " + matrixLink.alias : "") + " espera tu pregunta...");
+        showSpeechBubble(agent.persona, agent.name, councilGreeting(agent));
     }
+
+    const VERB_LABELS = { preguntar:"Preguntar", debatir:"Debatir", entrenar:"Entrenar", crear:"Crear", hablar:"Yarig.AI", leer:"Pensar", votar:"Votar", analizar:"Analizar", presentar:"Presentar", previo:"Ver Previo", reunion:"Reunión" };
+    function _slEsc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c])); }
+    function setSentenceHtml(html) { const el = document.getElementById("sentence-line"); if (el) el.innerHTML = html; }
 
     function updateActionLine() {
-        const names = { preguntar:"Preguntar", debatir:"Debatir", entrenar:"Entrenar", crear:"Crear", hablar:"Yarig.AI", leer:"Pensar", votar:"Votar", analizar:"Analizar", presentar:"Presentar", previo:"▶ Ver Previo" };
-        const v = names[currentVerb] || "";
-        const p = currentProject ? ' "' + currentProject + '"' : "";
-        if (v && !preguntarMode) document.getElementById("action-input").placeholder = v + p + "...";
+        const v = VERB_LABELS[currentVerb] || "";
+        if (v && !preguntarMode) {
+            const p = currentProject ? ' <span class="sl-obj">"' + _slEsc(currentProject) + '"</span>' : "";
+            setSentenceHtml('<span class="sl-verb">' + v + '</span>' + p + " …");
+        }
     }
 
-    function setActionLine(text) { document.getElementById("action-input").placeholder = text; }
+    // Mensaje plano de estado/feedback en la sentence line (seguro ante HTML)
+    function setActionLine(text) { const el = document.getElementById("sentence-line"); if (el) el.textContent = text; }
+
+    // Al pasar el ratón sobre un consejero: "Verbo a <persona>" (feel SCUMM)
+    function wireSentenceHover() {
+        ["nameplates", "body-hotspots"].forEach(id => {
+            const c = document.getElementById(id);
+            if (!c || c._slWired) return;
+            c._slWired = true;
+            c.addEventListener("mouseover", e => {
+                const el = e.target.closest("[data-persona]");
+                if (!el) return;
+                const v = VERB_LABELS[currentVerb] || "Mirar";
+                setSentenceHtml('<span class="sl-verb">' + v + '</span> a <span class="sl-obj">' + _slEsc(el.getAttribute("data-persona")) + "</span>");
+            });
+            c.addEventListener("mouseout", e => { if (e.target.closest("[data-persona]")) updateActionLine(); });
+        });
+    }
+
+    // Onboarding ligero: primera visita, el CEO da la bienvenida y guía el primer paso
+    function maybeOnboard() {
+        try { if (new URLSearchParams(location.search).get("train")) return; } catch (e) {}
+        try { if (localStorage.getItem("council_onboarded")) return; } catch (e) {}
+        const ceo = COUNCIL.find(m => m.gen === currentGen && m.name === "CEO") || COUNCIL[0];
+        if (ceo && typeof showSpeechBubble === "function") showSpeechBubble(ceo.persona, ceo.name, "Bienvenido al Consejo. Pulsa un VERBO abajo y luego haz clic en un consejero para actuar. Empieza por PREGUNTAR.");
+        setSentenceHtml('<span class="sl-verb">Bienvenido</span> — pulsa un verbo y luego un consejero');
+        try { localStorage.setItem("council_onboarded", "1"); } catch (e) {}
+    }
     // /sendto <equipo> <mensaje> — entrega el mensaje al Claude Code (Terminal) de
     // esa máquina vía el servicio de control del Mini (teclea el prompt + Enter).
     // Reutiliza la "Clave operador" del Consejo (sessionStorage admira:agora-key).
@@ -5254,7 +5359,7 @@
         document.getElementById("meeting-chat").innerHTML = "";
         
         // Add welcome message
-        addMeetingMsg(agent, "Bienvenido a la reunión privada. ¿En qué puedo ayudarte?");
+        addMeetingMsg(agent, councilGreeting(agent));
         
         // Focus input
         setTimeout(() => document.getElementById("meeting-input").focus(), 300);
@@ -7379,6 +7484,8 @@
         try { if (localStorage.getItem('topCollapsed') === '1') setTopCollapsed(true); } catch (e) {}
         try { if (localStorage.getItem('mouthsOff') === '1') setMouthsEnabled(false); } catch (e) {}
         refreshLLMAvailability();
+        wireSentenceHover();
+        setTimeout(maybeOnboard, 1200);
         // Magic link Telegram: ?train=<url> auto-activa Entrenar y procesa la URL
         const params = new URLSearchParams(location.search);
         const trainUrl = params.get('train');
@@ -7681,7 +7788,7 @@
             for (const reply of apiResponse.racional) {
                 const member = members.find(m => m.name === reply.name);
                 if (member) {
-                    showSpeechBubble(member.persona, reply.name, reply.content.substring(0, 60) + "...");
+                    showSpeechBubble(member.persona, reply.name, (reply.content.length > 160 ? reply.content.substring(0, 160) + "…" : reply.content));
                     highlightNameplate(member.persona, turnNumber);
                 }
                 addConvEntry("conv-racional", reply.icon, reply.name, reply.persona, "racional", reply.content);
@@ -7693,7 +7800,7 @@
             for (const reply of apiResponse.creativo) {
                 const member = members.find(m => m.name === reply.name);
                 if (member) {
-                    showSpeechBubble(member.persona, reply.name, reply.content.substring(0, 60) + "...");
+                    showSpeechBubble(member.persona, reply.name, (reply.content.length > 160 ? reply.content.substring(0, 160) + "…" : reply.content));
                     highlightNameplate(member.persona, turnNumber);
                 }
                 addConvEntry("conv-creativo", reply.icon, reply.name, reply.persona, "creativo", reply.content);
@@ -7766,7 +7873,7 @@
             for (const reply of apiResponse.racional) {
                 const member = members.find(m => m.name === reply.name);
                 if (member) {
-                    showSpeechBubble(member.persona, reply.name, reply.content.substring(0, 60) + "...");
+                    showSpeechBubble(member.persona, reply.name, (reply.content.length > 160 ? reply.content.substring(0, 160) + "…" : reply.content));
                     highlightNameplate(member.persona, turnNumber);
                 }
                 addConvEntry("conv-racional", reply.icon, reply.name, reply.persona, "racional", reply.content);
@@ -7778,7 +7885,7 @@
             for (const reply of apiResponse.creativo) {
                 const member = members.find(m => m.name === reply.name);
                 if (member) {
-                    showSpeechBubble(member.persona, reply.name, reply.content.substring(0, 60) + "...");
+                    showSpeechBubble(member.persona, reply.name, (reply.content.length > 160 ? reply.content.substring(0, 160) + "…" : reply.content));
                     highlightNameplate(member.persona, turnNumber);
                 }
                 addConvEntry("conv-creativo", reply.icon, reply.name, reply.persona, "creativo", reply.content);
@@ -7926,16 +8033,24 @@
 
         const members = COUNCIL.filter(m => m.gen === currentGen);
 
-        // Voto determinista por persona + tema + sentido (sin aleatoriedad real, reproducible)
-        function memberVote(persona) {
-            const h = (persona + tema).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
-            const outcomes = ["favor", "favor", "favor", "contra", "abstencion", "posponer"];
-            return outcomes[h % outcomes.length];
+        // Voto con sentido: depende del BANDO (creativo entusiasta, racional cauto)
+        // y se deja INFLUIR por tu posición. Determinista/reproducible.
+        function memberVote(m) {
+            const seed = (m.persona + tema).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+            if (seed % 5 < 2) return selectedVotar; // ~40% se alinea con tu voto
+            const pools = {
+                creativo: ["favor", "favor", "favor", "abstencion", "contra", "posponer"],
+                racional: ["favor", "contra", "contra", "posponer", "abstencion", "favor"],
+            };
+            const pool = pools[m.side] || pools.creativo;
+            return pool[seed % pool.length];
         }
 
-        const results = members.map(m => ({ ...m, vote: memberVote(m.persona) }));
+        const results = members.map(m => ({ ...m, vote: memberVote(m) }));
         const tally = { favor: 0, contra: 0, abstencion: 0, posponer: 0 };
         results.forEach(m => { if (tally[m.vote] !== undefined) tally[m.vote]++; });
+        if (tally[selectedVotar] !== undefined) tally[selectedVotar]++; // tu voto cuenta
+        const totalVotos = members.length + 1;
 
         const vIcon = { favor: "✅", contra: "❌", abstencion: "🤝", posponer: "🔄" };
         const rows = results.map(m =>
@@ -7947,17 +8062,17 @@
             </tr>`
         ).join('');
 
-        const resultLabel = tally.favor > members.length / 2 ? "✅ APROBADO" :
-                            tally.contra > members.length / 2 ? "❌ RECHAZADO" : "🤝 SIN MAYORÍA";
-        const resultColor = tally.favor > members.length / 2 ? "#44bb44" :
-                            tally.contra > members.length / 2 ? "#e74c3c" : "#888";
+        const resultLabel = tally.favor > totalVotos / 2 ? "✅ APROBADO" :
+                            tally.contra > totalVotos / 2 ? "❌ RECHAZADO" : "🤝 SIN MAYORÍA";
+        const resultColor = tally.favor > totalVotos / 2 ? "#44bb44" :
+                            tally.contra > totalVotos / 2 ? "#e74c3c" : "#888";
 
         const ov = document.createElement("div");
         ov.id = "vote-overlay";
         ov.style.cssText = "position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.82);z-index:9999;font-family:inherit;";
         ov.innerHTML = `
-            <div style="background:#1a1a2e;border:1px solid #333;border-radius:12px;padding:2rem;max-width:480px;width:90%;max-height:80vh;overflow-y:auto;">
-                <h3 style="color:#daa520;font-family:'Press Start 2P',monospace;font-size:0.75rem;margin-bottom:1rem;text-align:center">VOTACIÓN DEL CONSEJO</h3>
+            <div style="background:#1a0e05;border:3px solid #8b5a14;border-top-color:#a07828;border-radius:0;box-shadow:4px 4px 0 #000;padding:1.6rem;max-width:480px;width:90%;max-height:80vh;overflow-y:auto;font-family:'Press Start 2P',monospace;">
+                <h3 style="color:#daa520;font-family:'Press Start 2P',monospace;font-size:0.75rem;margin-bottom:1rem;text-align:center;letter-spacing:1px">VOTACIÓN DEL CONSEJO</h3>
                 <p style="color:#aaa;text-align:center;margin-bottom:0.4rem;font-size:0.85rem">📋 ${tema}</p>
                 <p style="color:#88ccff;text-align:center;margin-bottom:1.5rem;font-size:0.8rem">Tu posición: ${votoLabel}</p>
                 <table style="width:100%;margin-bottom:1.2rem;font-size:0.82rem;border-collapse:collapse">${rows}</table>
@@ -7969,7 +8084,7 @@
                 </div>
                 <p style="text-align:center;font-size:1rem;font-weight:700;color:${resultColor};margin-bottom:1.2rem">${resultLabel}</p>
                 <div style="text-align:center">
-                    <button onclick="document.getElementById('vote-overlay').remove()" style="background:#333;color:#ccc;border:1px solid #555;border-radius:6px;padding:0.5rem 1.5rem;cursor:pointer;font-family:inherit;font-size:0.85rem">Cerrar</button>
+                    <button onclick="document.getElementById('vote-overlay').remove()" style="background:#2a1a08;color:#ffee00;border:2px solid #ddcc00;border-radius:0;box-shadow:2px 2px 0 #000;padding:0.55rem 1.5rem;cursor:pointer;font-family:'Press Start 2P',monospace;font-size:0.55rem">CERRAR</button>
                 </div>
             </div>`;
         document.body.appendChild(ov);

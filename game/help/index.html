@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta http-equiv="Cache-Control" content="no-cache, no-store, must-revalidate">
+<title>Ayuda · AdmiraNext Council</title>
+<meta name="description" content="Qué es el juego AdmiraNext Council, cómo se juega y cómo contribuir sin pisarse. Página viva generada desde el manifest.">
+<link rel="icon" href="/council-icon.ico?v=20260522-r1" sizes="any">
+<link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+<style>
+  :root {
+    --bg:#0d0818; --panel:#1a0e05; --brown:#5a3a1e; --brown-line:#8b5a14;
+    --gold:#daa520; --cream:#ffee88; --ink:#e6dcc8; --muted:#a98c63; --green:#44cc44; --amber:#e6a020;
+  }
+  * { box-sizing:border-box; }
+  body {
+    margin:0; background:
+      radial-gradient(1200px 500px at 50% -10%, rgba(218,165,32,0.10), transparent 60%),
+      var(--bg);
+    color:var(--ink); font-family:ui-monospace, "SF Mono", Menlo, Consolas, monospace;
+    line-height:1.7; font-size:15px;
+  }
+  .wrap { max-width:980px; margin:0 auto; padding:28px clamp(14px,4vw,40px) 80px; }
+  .pix { font-family:'Press Start 2P', monospace; }
+  a { color:var(--gold); }
+  .topbar { display:flex; flex-wrap:wrap; gap:10px; align-items:center; justify-content:space-between; margin-bottom:26px; }
+  .brand { font-size:11px; color:var(--cream); }
+  .nav a { text-decoration:none; font-size:9px; border:2px solid var(--brown-line); background:var(--panel); color:var(--gold); padding:9px 11px; box-shadow:3px 3px 0 #000; display:inline-block; }
+  .nav a:hover { background:var(--gold); color:#000; }
+  h1 { font-size:clamp(15px,4vw,24px); color:var(--cream); line-height:1.4; margin:8px 0 6px; }
+  .tagline { color:var(--muted); margin:0 0 22px; font-size:14px; }
+  section { border:3px solid var(--brown-line); border-top-color:#a07828; background:var(--panel); box-shadow:5px 5px 0 #000; padding:18px 18px 20px; margin:0 0 22px; }
+  h2 { font-size:12px; color:var(--gold); margin:2px 0 16px; letter-spacing:1px; }
+  h3 { font-size:10px; color:var(--cream); margin:18px 0 8px; letter-spacing:1px; }
+  p { margin:0 0 12px; }
+  .grid { display:grid; gap:12px; }
+  .gens { grid-template-columns:repeat(auto-fit,minmax(260px,1fr)); }
+  .verbs { grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); }
+  .council-tabs { display:flex; gap:8px; margin-bottom:14px; flex-wrap:wrap; }
+  .tab { font-family:'Press Start 2P',monospace; font-size:9px; padding:8px 12px; border:2px solid var(--brown); background:#2a1a08; color:var(--muted); cursor:pointer; }
+  .tab.active { border-color:var(--gold); color:var(--gold); background:#3a2510; }
+  .card { border:2px solid var(--brown); background:#150a02; padding:12px 13px; }
+  .card .name { font-family:'Press Start 2P',monospace; font-size:9px; color:var(--cream); }
+  .card .meta { color:var(--muted); font-size:12.5px; margin:6px 0; }
+  .card .quote { color:var(--gold); font-style:italic; border-left:3px solid var(--brown-line); padding-left:9px; margin-top:8px; font-size:13px; }
+  .side { font-family:'Press Start 2P',monospace; font-size:7px; padding:2px 5px; vertical-align:middle; margin-left:6px; }
+  .side.racional { background:#5a1414; color:#ffb3b3; }
+  .side.creativo { background:#14225a; color:#b3c6ff; }
+  .verb { border:2px solid var(--brown); background:#150a02; padding:12px 13px; }
+  .verb .vh { display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .verb .vname { font-family:'Press Start 2P',monospace; font-size:10px; color:var(--cream); }
+  .badge { font-family:'Press Start 2P',monospace; font-size:6px; padding:3px 5px; }
+  .badge.stable { background:#0d3d0d; color:#7dff7d; }
+  .badge.partial { background:#4a3500; color:#ffd24a; }
+  .badge.primary { background:#3a1410; color:#ff9a8a; }
+  .verb .vdesc { color:var(--ink); font-size:13px; margin-top:8px; }
+  .verb .vnotes { color:var(--amber); font-size:12.5px; margin-top:6px; }
+  ol.steps { padding-left:20px; }
+  ol.steps li { margin-bottom:8px; }
+  .ext { border:2px solid var(--brown); background:#150a02; padding:12px 13px; margin-bottom:10px; }
+  .ext .et { font-family:'Press Start 2P',monospace; font-size:9px; color:var(--cream); }
+  .ext code, code { background:#000; color:#7dff7d; padding:1px 5px; font-size:12px; }
+  .ext .files { color:var(--muted); font-size:12px; margin:6px 0; }
+  .anchors { margin:6px 0; }
+  .anchors span { display:inline-block; background:#2a1a08; border:1px solid var(--brown); color:var(--gold); font-size:11px; padding:2px 7px; margin:2px 3px 2px 0; }
+  .reservations table { width:100%; border-collapse:collapse; font-size:12.5px; }
+  .reservations th, .reservations td { border:1px solid var(--brown); padding:6px 8px; text-align:left; }
+  .reservations th { color:var(--gold); font-family:'Press Start 2P',monospace; font-size:7px; }
+  .shots { display:grid; grid-template-columns:2fr 1fr; gap:14px; align-items:start; }
+  @media (max-width:680px){ .shots { grid-template-columns:1fr; } }
+  .shot { border:2px solid var(--brown); background:#0a0500; padding:8px; }
+  .shot img { display:block; width:100%; height:auto; image-rendering:auto; border:1px solid #000; }
+  .shot .cap { color:var(--muted); font-size:12px; margin-top:8px; line-height:1.5; }
+  .shot .tag { font-family:'Press Start 2P',monospace; font-size:6px; color:var(--gold); padding:2px 5px; border:1px solid var(--brown-line); }
+  .foot { color:var(--muted); font-size:12px; text-align:center; margin-top:26px; }
+  .pill { display:inline-block; border:1px solid var(--brown-line); padding:2px 8px; color:var(--gold); font-size:11px; }
+  #err { color:#ff8a8a; }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <div class="topbar">
+    <div class="brand pix">AdmiraNext Council</div>
+    <div class="nav">
+      <a href="/council-scumm.html">▶ Jugar</a>
+      <a href="/game/manifest.json">{ } Manifest</a>
+      <a href="https://www.admira.live">admira.live</a>
+    </div>
+  </div>
+
+  <h1 id="g-title" class="pix">Cargando…</h1>
+  <p class="tagline" id="g-tagline"></p>
+  <p id="err"></p>
+
+  <section id="s-what">
+    <h2>▣ ¿En qué consiste?</h2>
+    <p id="g-desc"></p>
+    <h3>Las dos generaciones</h3>
+    <div class="grid gens" id="g-gens"></div>
+  </section>
+
+  <section id="s-shots" style="display:none">
+    <h2>▦ Cómo se ve</h2>
+    <div class="shots" id="g-shots"></div>
+  </section>
+
+  <section id="s-council">
+    <h2>♟ El Consejo</h2>
+    <div class="council-tabs" id="g-tabs"></div>
+    <div class="grid gens" id="g-council"></div>
+  </section>
+
+  <section id="s-verbs">
+    <h2>⌨ Los verbos (qué puedes hacer)</h2>
+    <div class="grid verbs" id="g-verbs"></div>
+  </section>
+
+  <section id="s-play">
+    <h2>● Cómo se juega</h2>
+    <ol class="steps">
+      <li>Elige una <b>generación</b> arriba (Leyendas o Coetáneos).</li>
+      <li>Pulsa un <b>verbo</b> en la barra inferior (estilo SCUMM). La línea de acción muestra "<i>Verbo a Consejero</i>".</li>
+      <li>Haz <b>clic en un consejero</b> de la mesa para actuar sobre él (p. ej. Preguntar a Tim Cook).</li>
+      <li>Escribe en la línea de acción y pulsa <b>Enviar</b>. Cada consejero responde con su voz.</li>
+      <li>El <b>inventario</b> (derecha) cambia según el verbo: motor LLM, formato, sentido del voto…</li>
+    </ol>
+    <p>En móvil la barra de verbos se reorganiza en columna y los botones son táctiles. El cursor es de aventura gráfica (flecha / cruz sobre lo clicable).</p>
+  </section>
+
+  <section id="s-dev">
+    <h2>⚒ Para desarrolladores — extender sin pisarse</h2>
+    <p id="g-collab"></p>
+    <div id="g-mcp"></div>
+    <h3>Puntos de extensión</h3>
+    <div id="g-ext"></div>
+    <h3>Reservas activas (registro "no pisarnos")</h3>
+    <div class="reservations" id="g-res"></div>
+    <p style="margin-top:14px">Contrato completo y guía: <a href="/game/CONTRIBUTING.md">CONTRIBUTING.md</a> · Fuente única de verdad: <a href="/game/manifest.json">manifest.json</a>.</p>
+  </section>
+
+  <div class="foot">
+    Página viva — generada desde <code>game/manifest.json</code>.
+    <span class="pill" id="g-version">v?</span> <span class="pill" id="g-updated"></span>
+  </div>
+</div>
+
+<script>
+(async function () {
+  const $ = id => document.getElementById(id);
+  const esc = s => String(s == null ? "" : s).replace(/[&<>"]/g, c => ({ "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;" }[c]));
+  let m;
+  try {
+    const res = await fetch("../manifest.json?_v=" + Date.now(), { cache: "no-store" });
+    if (!res.ok) throw new Error("HTTP " + res.status);
+    m = await res.json();
+  } catch (e) {
+    $("err").textContent = "No se pudo cargar el manifest (" + e.message + "). Comprueba game/manifest.json.";
+    $("g-title").textContent = "Ayuda · AdmiraNext Council";
+    return;
+  }
+
+  // Cabecera
+  $("g-title").textContent = m.game.name + " — Ayuda";
+  $("g-tagline").textContent = m.game.tagline || "";
+  $("g-desc").textContent = m.game.description || "";
+  $("g-version").textContent = "v" + (m.version || "?");
+  $("g-updated").textContent = "actualizado " + (m.updated || "?");
+
+  // Generaciones
+  $("g-gens").innerHTML = (m.generations || []).map(g =>
+    `<div class="card"><div class="name">${esc(g.label)}</div><div class="meta">${esc(g.note || "")}</div></div>`
+  ).join("");
+
+  // Galería (screenshots desde el manifest)
+  const shots = (m.media && m.media.screenshots) || [];
+  if (shots.length) {
+    $("s-shots").style.display = "";
+    $("g-shots").innerHTML = shots.map(s =>
+      `<div class="shot">
+        <img src="${esc(s.src)}" alt="${esc(s.caption || "")}" loading="lazy">
+        <div class="cap"><span class="tag">${esc((s.kind || "vista").toUpperCase())}</span> ${esc(s.caption || "")}</div>
+      </div>`
+    ).join("");
+  }
+
+  // Consejo con pestañas por generación
+  const gens = m.generations || [];
+  const tabsEl = $("g-tabs"), councilEl = $("g-council");
+  function renderCouncil(genId) {
+    const list = (m.council && m.council[genId]) || [];
+    councilEl.innerHTML = list.map(c =>
+      `<div class="card">
+        <div class="name">${esc(c.icon || "")} ${esc(c.persona)}<span class="side ${esc(c.side)}">${c.side === "racional" ? "RACIONAL" : "CREATIVO"}</span></div>
+        <div class="meta"><b>${esc(c.name)}</b> · ${esc(c.role)}<br>${esc(c.territory || "")}${c.machine ? " · 🖥 " + esc(c.machine) : ""}</div>
+        ${c.greeting ? `<div class="quote">“${esc(c.greeting)}”</div>` : ""}
+      </div>`
+    ).join("");
+    [...tabsEl.children].forEach(t => t.classList.toggle("active", t.dataset.gen === genId));
+  }
+  tabsEl.innerHTML = gens.map((g, i) =>
+    `<div class="tab${i === 0 ? " active" : ""}" data-gen="${esc(g.id)}">${esc(g.label)}</div>`
+  ).join("");
+  [...tabsEl.children].forEach(t => t.addEventListener("click", () => renderCouncil(t.dataset.gen)));
+  if (gens[0]) renderCouncil(gens[0].id);
+
+  // Verbos
+  $("g-verbs").innerHTML = (m.verbs || []).map(v =>
+    `<div class="verb">
+      <div class="vh">
+        <span class="vname">${esc(v.label)}</span>
+        <span class="badge ${v.status === "partial" ? "partial" : "stable"}">${v.status === "partial" ? "PARCIAL" : "ESTABLE"}</span>
+        ${v.primary ? `<span class="badge primary">CLAVE</span>` : ""}
+      </div>
+      <div class="vdesc">${esc(v.desc)}</div>
+      ${v.notes ? `<div class="vnotes">⚠ ${esc(v.notes)}</div>` : ""}
+    </div>`
+  ).join("");
+
+  // Desarrolladores
+  $("g-collab").textContent = (m.collaboration && m.collaboration.principle) || "";
+  const mcp = m.collaboration && m.collaboration.mcp;
+  if (mcp) {
+    $("g-mcp").innerHTML =
+      `<div class="ext"><div class="et">🔌 MCP del juego — disponible</div>
+        <div class="files">Servidor: <code>${esc(mcp.path)}</code> · ${esc(mcp.transport || "")}</div>
+        <div class="anchors">${(mcp.tools || []).map(t => `<span>${esc(t)}</span>`).join("")}</div>
+        <div>Conéctalo (Codex, Claude Desktop…) y usa <code>claim_area</code> / <code>release_area</code> para reservar sin pisar. Guía: <a href="/game/mcp/README.md">${esc(mcp.readme || "README")}</a>.</div>
+      </div>`;
+  }
+  $("g-ext").innerHTML = (m.extension_points || []).map(e =>
+    `<div class="ext">
+      <div class="et">${esc(e.title)}</div>
+      <div class="files">Archivos: ${(e.files || []).map(f => `<code>${esc(f)}</code>`).join(" ")}</div>
+      <div class="anchors">${(e.anchors || []).map(a => `<span>${esc(a)}</span>`).join("")}</div>
+      <div>${esc(e.how || "")}</div>
+    </div>`
+  ).join("");
+
+  const res = (m.collaboration && m.collaboration.reservations || []).filter(r => r.active !== false);
+  if (!res.length) {
+    $("g-res").innerHTML = `<p style="color:var(--muted)">Ninguna reserva activa ahora mismo. Para reservar un área, añade una entrada en <code>collaboration.reservations</code> del manifest vía Pull Request.</p>`;
+  } else {
+    $("g-res").innerHTML = `<table><tr><th>Área</th><th>Quién</th><th>Rama</th><th>Desde</th><th>Nota</th></tr>` +
+      res.map(r => `<tr><td>${esc(r.area)}</td><td>${esc(r.owner)}</td><td><code>${esc(r.branch || "")}</code></td><td>${esc(r.since || "")}</td><td>${esc(r.note || "")}</td></tr>`).join("") +
+      `</table>`;
+  }
+})();
+</script>
+</body>
+</html>

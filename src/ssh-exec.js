@@ -1849,6 +1849,8 @@ return r`;
 // Check Claude, Codex and OpenCode status on a machine (not just frontmost app)
 async function captureAllAppsState(machine) {
   const script = `set r to ""
+try
+with timeout of 3 seconds
 tell application "System Events"
   if exists process "Claude" then
     set claudeTitle to "no-window"
@@ -1895,6 +1897,8 @@ tell application "System Events"
     set r to r & "OPENCODE:OFF"
   end if
 end tell
+end timeout
+end try
 return r`;
 
   if (isLocalWindowsMachine(machine)) {

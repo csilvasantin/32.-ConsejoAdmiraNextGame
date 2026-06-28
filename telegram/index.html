@@ -101,14 +101,14 @@
       </select>
       <button id="consultBtn" title="Consultar al bot: el mensaje va al grupo y te responde">Consultar</button>
     </div>
+    <div id="imgPreview" hidden style="display:flex;align-items:center;gap:8px;padding:6px 0"></div>
+    <div class="row">
+      <textarea id="text" placeholder="Escribe el mensaje… (o pega/suelta una imagen)"></textarea>
+    </div>
     <div class="row selrow" style="align-items:center">
       <label>📨 Enviar a</label>
       <select id="machineSel"><option value="" disabled>cargando equipos…</option></select>
       <button id="sendMachineBtn" title="Enviar el mensaje directamente al Claude Code de ese equipo">Enviar</button>
-    </div>
-    <div id="imgPreview" hidden style="display:flex;align-items:center;gap:8px;padding:6px 0"></div>
-    <div class="row">
-      <textarea id="text" placeholder="Escribe el mensaje… (o pega/suelta una imagen)"></textarea>
     </div>
     <div class="hint"><strong>💬 Consultar</strong> → al bot (responde en el grupo). <strong>📨 Enviar</strong> → al Claude Code del equipo. <strong>🖼️ Pega o arrastra una imagen</strong> para mandarla al grupo. Enter manda al último que usaste. Con tu login de Google, sin clave.</div>
   </footer>

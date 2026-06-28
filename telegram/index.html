@@ -216,17 +216,29 @@
     feed.scrollTop = feed.scrollHeight;
   }
   function setErr(text){ setStatus(false, text); pushLocalError(text); }
-  // Rellena el selector «Enviar a» con la flota (origin-gated, sin auth).
+  // Rellena el selector «Enviar a» con la flota. INDEPENDENCIA DE MÁQUINA: lee primero
+  // del registro durable (worker Cloudflare admira-fleet, siempre online) y solo cae al
+  // Mini como fallback → el selector funciona aunque el Mini esté caído.
+  const FLEET_API = "https://admira-fleet.csilvasantin.workers.dev/machines";
   async function loadMachines(){
-    try{
-      const r = await fetch(MINI_BASE + "/api/council/assignees");
+    let ms = [];
+    try{   // 1) registro durable (fuente de verdad, no depende del Mini)
+      const r = await fetch(FLEET_API, {cache:"no-store"});
       const d = await r.json();
-      const ms = (d.assignees || d.machines || []).filter(m => (m.kind||"machine")==="machine" && m.id);
-      if(!ms.length) return;
-      machineSel.innerHTML = ms.map(m => `<option value="${m.id}">${escapeHtml(m.label||m.name||m.id)}</option>`).join("");
-      const prev = localStorage.getItem("tg_machine") || "admira-macbookpronegro14";
-      machineSel.value = ms.some(m=>m.id===prev) ? prev : ms[0].id;
-    }catch(e){ machineSel.innerHTML = '<option value="" disabled>(no se pudo cargar la flota)</option>'; }
+      ms = (d.machines||[]).map(m=>({id:m.id, label:m.name||m.id}));
+    }catch(e){}
+    if(!ms.length){   // 2) fallback al Mini
+      try{
+        const r = await fetch(MINI_BASE + "/api/council/assignees");
+        const d = await r.json();
+        ms = (d.assignees || d.machines || []).filter(m => (m.kind||"machine")==="machine" && m.id)
+              .map(m=>({id:m.id, label:m.label||m.name||m.id}));
+      }catch(e){}
+    }
+    if(!ms.length){ machineSel.innerHTML = '<option value="" disabled>(no se pudo cargar la flota)</option>'; return; }
+    machineSel.innerHTML = ms.map(m => `<option value="${m.id}">${escapeHtml(m.label)}</option>`).join("");
+    const prev = localStorage.getItem("tg_machine") || "admira-macbookpronegro14";
+    machineSel.value = ms.some(m=>m.id===prev) ? prev : ms[0].id;
   }
   // Consultar con un bot: el mensaje va al grupo (worker /api/send) con «→ <bot>».
   // Auth con tu login de Google (el worker lo valida); sin clave.

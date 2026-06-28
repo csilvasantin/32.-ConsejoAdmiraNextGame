@@ -88,29 +88,29 @@
   <div id="feed"><div class="empty">Cargando mensajes…</div></div>
 
   <footer>
-    <div class="row selrow" style="align-items:center">
-      <label>💬 Para</label>
-      <select id="botSel">
-        <option value="White Rabbit" selected>White Rabbit (por defecto)</option>
-        <option value="Morfeo">Morfeo</option>
-        <option value="Neo">Neo</option>
-        <option value="Trinity">Trinity</option>
-        <option value="Oráculo">Oráculo</option>
-        <option value="Cypher">Cypher</option>
-        <option value="Smith">Smith</option>
-      </select>
-      <button id="consultBtn" title="Consultar al bot: el mensaje va al grupo y te responde">Consultar</button>
-    </div>
     <div id="imgPreview" hidden style="display:flex;align-items:center;gap:8px;padding:6px 0"></div>
     <div class="row">
       <textarea id="text" placeholder="Escribe el mensaje… (o pega/suelta una imagen)"></textarea>
     </div>
     <div class="row selrow" style="align-items:center">
-      <label>📨 Enviar a</label>
-      <select id="machineSel"><option value="" disabled>cargando equipos…</option></select>
-      <button id="sendMachineBtn" title="Enviar el mensaje directamente al Claude Code de ese equipo">Enviar</button>
+      <label>Destino</label>
+      <select id="destSel">
+        <optgroup label="💬 Bots — responden en el grupo">
+          <option value="bot:White Rabbit" selected>White Rabbit (por defecto)</option>
+          <option value="bot:Morfeo">Morfeo</option>
+          <option value="bot:Neo">Neo</option>
+          <option value="bot:Trinity">Trinity</option>
+          <option value="bot:Oráculo">Oráculo</option>
+          <option value="bot:Cypher">Cypher</option>
+          <option value="bot:Smith">Smith</option>
+        </optgroup>
+        <optgroup label="📨 Equipos — a su Claude Code" id="machineGroup">
+          <option value="" disabled>cargando equipos…</option>
+        </optgroup>
+      </select>
+      <button id="sendBtn" title="Enviar al destino elegido (bot → responde en el grupo · equipo → a su Claude Code)">Enviar</button>
     </div>
-    <div class="hint"><strong>💬 Consultar</strong> → al bot (responde en el grupo). <strong>📨 Enviar</strong> → al Claude Code del equipo. <strong>🖼️ Pega o arrastra una imagen</strong> para mandarla al grupo. Enter manda al último que usaste. Con tu login de Google, sin clave.</div>
+    <div class="hint"><strong>Elige destino</strong>: un <strong>💬 bot</strong> (responde en el grupo) o un <strong>📨 equipo</strong> (va a su Claude Code). <strong>🖼️ Pega o arrastra una imagen</strong> para mandarla al grupo. Enter envía. Con tu login de Google, sin clave.</div>
   </footer>
 </div>
 <div id="lb"><img alt=""></div>
@@ -183,7 +183,7 @@
       else setErr("no se pudo enviar a "+machine+": "+(res&&res.d.error||("HTTP "+(res&&res.status))));
     }catch(e){ setErr("sin conexión con el Mini (Tailscale/control): "+(e&&e.message||e)); }
   }
-  function machineLabelOf(id){ try{ const o=[...document.getElementById("machineSel").options].find(x=>x.value===id); return o?o.textContent:""; }catch(e){ return ""; } }
+  function machineLabelOf(id){ try{ const o=[...document.getElementById("destSel").options].find(x=>x.value===("machine:"+id)); return o?o.textContent:""; }catch(e){ return ""; } }
   // Deja constancia del envío en el grupo de Telegram (y por tanto en el espejo).
   // Solo si tenemos login de Google (JWT), que es lo que el worker /api/send acepta.
   async function postConstancia(machineLabel, machineId, message, cred){
@@ -203,11 +203,8 @@
   const dot = document.getElementById("dot");
   const statusText = document.getElementById("statusText");
   const textInput = document.getElementById("text");
-  const botSel = document.getElementById("botSel");
-  const machineSel = document.getElementById("machineSel");
-  const consultBtn = document.getElementById("consultBtn");
-  const sendMachineBtn = document.getElementById("sendMachineBtn");
-  let _lastMode = "bot";   // qué hace Enter: el último selector que tocaste (bot por defecto)
+  const destSel = document.getElementById("destSel");
+  const sendBtn = document.getElementById("sendBtn");
 
   let lastId = 0;
   let CLEAR_BEFORE = parseInt(localStorage.getItem("tg_clear_before")||"0",10) || 0;   // oculta los mensajes con id <= este (limpieza local, persistente)
@@ -247,10 +244,12 @@
               .map(m=>({id:m.id, label:m.label||m.name||m.id}));
       }catch(e){}
     }
-    if(!ms.length){ machineSel.innerHTML = '<option value="" disabled>(no se pudo cargar la flota)</option>'; return; }
-    machineSel.innerHTML = ms.map(m => `<option value="${m.id}">${escapeHtml(m.label)}</option>`).join("");
-    const prev = localStorage.getItem("tg_machine") || "admira-macbookpronegro14";
-    machineSel.value = ms.some(m=>m.id===prev) ? prev : ms[0].id;
+    const mg = document.getElementById("machineGroup");
+    if(!ms.length){ mg.innerHTML = '<option value="" disabled>(no se pudo cargar la flota)</option>'; return; }
+    mg.innerHTML = ms.map(m => `<option value="machine:${m.id}">${escapeHtml(m.label)}</option>`).join("");
+    // restaura el último destino elegido (bot o equipo), si sigue existiendo
+    const prev = localStorage.getItem("tg_dest");
+    if(prev && [...destSel.options].some(o=>o.value===prev)) destSel.value = prev;
   }
   // Consultar con un bot: el mensaje va al grupo (worker /api/send) con «→ <bot>».
   // Auth con tu login de Google (el worker lo valida); sin clave.
@@ -272,8 +271,7 @@
   function refreshSendState(){
     // Todo va con tu login de Google (sin clave): controles siempre activos.
     textInput.disabled = false;
-    consultBtn.disabled = false;
-    sendMachineBtn.disabled = false;
+    sendBtn.disabled = false;
     textInput.placeholder = "Escribe el mensaje…";
   }
   function fmtTime(epoch){
@@ -367,40 +365,41 @@
     }catch(e){ setErr("sin conexión con el espejo: "+(e&&e.message||e)); return false; }
   }
 
-  async function doSend(mode){
+  async function doSend(){
     if(_tgSending) return;
     const raw = textInput.value.trim();
     if(!raw && !_pendingImage) return;
     // Si hay imagen pegada/soltada, va al grupo (texto como pie) — así me llega la info.
     if(_pendingImage){
-      _tgSending = true; textInput.value=""; consultBtn.disabled=true; sendMachineBtn.disabled=true;
+      _tgSending = true; textInput.value=""; sendBtn.disabled=true;
       try{ await sendImage(raw); } finally{ _tgSending=false; refreshSendState(); }
       return;
     }
     // /sendto explícito → siempre a ese equipo, mande quien mande
     const st = raw.match(/^\/sendto\s+(\S+)\s+([\s\S]+)$/i);
     if(/^\/sendto\b/i.test(raw) && !st){ setStatus(false,"uso: /sendto <equipo> <mensaje>"); return; }
-    if(mode==="machine" && !st && !machineSel.value){ setStatus(false,"elige un ordenador en «Enviar a»"); return; }
-    _tgSending = true; textInput.value = ""; consultBtn.disabled = true; sendMachineBtn.disabled = true;   // limpia y bloquea YA
+    // Destino unificado: "bot:<nombre>" o "machine:<id>"
+    const dest = destSel.value || "bot:White Rabbit";
+    const i = dest.indexOf(":"); const kind = dest.slice(0,i), val = dest.slice(i+1);
+    if(!st && kind==="machine" && !val){ setStatus(false,"elige un destino"); return; }
+    _tgSending = true; textInput.value = ""; sendBtn.disabled = true;   // limpia y bloquea YA
     try{
       if(st){
         let machine = st[1].trim(), message = st[2].trim(), target = "claude";
         const tm = message.match(/^(claude|terminal)\s*:\s*([\s\S]+)$/i); if(tm){ target = tm[1].toLowerCase(); message = tm[2].trim(); }
         await routeSendTo(machine, message, target);
-      } else if(mode==="machine"){
-        await routeSendTo(machineSel.value, raw, "claude");                 // 📨 al equipo
+      } else if(kind==="machine"){
+        await routeSendTo(val, raw, "claude");                 // 📨 al equipo
       } else {
-        await consultBot(botSel.value || "White Rabbit", raw);              // 💬 al bot
+        await consultBot(val || "White Rabbit", raw);          // 💬 al bot
       }
     } finally{ _tgSending = false; refreshSendState(); }
   }
 
-  consultBtn.onclick = ()=>{ _lastMode="bot"; doSend("bot"); };
-  sendMachineBtn.onclick = ()=>{ _lastMode="machine"; doSend("machine"); };
-  botSel.addEventListener("change", ()=>{ _lastMode="bot"; });
-  machineSel.addEventListener("change", ()=>{ _lastMode="machine"; try{ localStorage.setItem("tg_machine", machineSel.value); }catch(e){} });
+  sendBtn.onclick = ()=> doSend();
+  destSel.addEventListener("change", ()=>{ try{ localStorage.setItem("tg_dest", destSel.value); }catch(e){} });
   textInput.addEventListener("keydown", e=>{
-    if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); doSend(_lastMode); }
+    if(e.key==="Enter" && !e.shiftKey){ e.preventDefault(); doSend(); }
   });
   // 🧹 Limpiar: oculta los mensajes actuales en ESTA vista (no borra del grupo ni de D1);
   // los nuevos siguen llegando. Persistente por navegador.

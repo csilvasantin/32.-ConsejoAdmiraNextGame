@@ -1,0 +1,68 @@
+{
+  "$schema": "./manifest.schema.note",
+  "version": "1.2.0",
+  "updated": "2026-06-28",
+  "game": {
+    "name": "AdmiraNext Council",
+    "title": "XpaceOS powered by ADmira | AdmiraNext Council",
+    "play_url": "https://www.admira.live/",
+    "help_url": "https://www.admira.live/game/help",
+    "source_file": "index.html",
+    "style": "Aventura gráfica point-and-click estilo SCUMM (LucasArts)",
+    "tagline": "Un Consejo de Dirección jugable: consulta, debate y decide con un consejo de leyendas y coetáneos encarnados por IA.",
+    "description": "AdmiraNext Council es la sala de dirección de Admira convertida en aventura gráfica. El jugador interactúa con un consejo de 8 consejeros (cada uno una leyenda o un coetáneo del mundo tech/negocio, encarnado por un modelo de IA y mapeado a una máquina real del equipo) usando verbos al estilo SCUMM. Cada consejero tiene su voz, su territorio de especialidad y su máquina. Es a la vez juego y consola operativa: detrás conecta con Yarig.AI, generación de imágenes/presentaciones y el panel de máquinas del equipo."
+  },
+  "generations": [
+    { "id": "leyendas", "label": "Leyendas", "image": "assets/council-leyendas.jpg", "note": "Figuras históricas del mundo tech, diseño y negocio." },
+    { "id": "coetaneos", "label": "Coetáneos", "image": "assets/council-coetaneos.jpg", "note": "Referentes actuales en activo." }
+  ],
+  "verbs": [
+    { "id": "preguntar", "label": "Preguntar", "primary": true, "status": "stable", "desc": "Pregunta a un consejero concreto. Pulsa Preguntar y haz clic en él; escribe y pulsa Enviar. Usa el motor LLM activo del inventario." },
+    { "id": "debatir", "label": "Debatir", "primary": true, "status": "stable", "desc": "El Consejo debate un tema entre todos sus miembros, por turnos. Si no hay proyecto activo, te pide el tema." },
+    { "id": "entrenar", "label": "Entrenar", "primary": true, "status": "stable", "desc": "Alimenta a un consejero con URLs y material de referencia que se guardan como su corpus." },
+    { "id": "crear", "label": "Crear", "primary": false, "status": "stable", "desc": "Genera una imagen a partir de tu descripción (resolución cuadrada o HD)." },
+    { "id": "hablar", "label": "Yarig.AI", "primary": false, "status": "stable", "desc": "Conecta contexto con Yarig.AI: foco, ayuda, tareas y estado del trabajo en curso." },
+    { "id": "leer", "label": "Pensar", "primary": false, "status": "partial", "desc": "El Consejo te cuenta el libro/resumen del día.", "notes": "Solo el modo Audio está implementado. Texto, Vídeo e Interactivo están marcados 🔒 (próximamente)." },
+    { "id": "votar", "label": "Votar", "primary": false, "status": "stable", "desc": "Somete una propuesta a votación. Cada consejero vota según su bando (creativo entusiasta / racional cauto) y tu posición arrastra al consejo; tu voto cuenta en el recuento." },
+    { "id": "analizar", "label": "Analizar", "primary": false, "status": "stable", "desc": "Analiza una URL, texto o archivo con el Consejo." },
+    { "id": "presentar", "label": "Presentar", "primary": false, "status": "stable", "desc": "Genera una presentación a partir de un tema (con audio)." },
+    { "id": "previo", "label": "Ver Previo", "primary": false, "status": "stable", "desc": "Reabre la última presentación generada. Oculto hasta que existe una.", "hidden_until_used": true },
+    { "id": "reunion", "label": "Reunión", "primary": true, "status": "stable", "desc": "Reúnete a solas con un consejero en un chat 1 a 1." }
+  ],
+  "council": {
+    "leyendas": [
+      { "name": "CEO", "role": "Chief Executive Officer", "persona": "Steve Jobs", "side": "racional", "machine": "MacBook Air 16", "territory": "Producto, criterio y foco extremo", "greeting": "La gente no sabe lo que quiere hasta que se lo enseñas. ¿Qué vamos a crear?" },
+      { "name": "CTO", "role": "Chief Technology Officer", "persona": "Steve Wozniak", "side": "racional", "machine": "MacBook Pro Negro 14", "territory": "Ingenio técnico y elegancia al construir", "greeting": "Si es elegante por dentro, lo demás llega solo. ¿Qué construimos?" },
+      { "name": "COO", "role": "Chief Operations Officer", "persona": "Tim Cook", "side": "racional", "machine": "MacBook Air Plata", "territory": "Escala, disciplina y excelencia operativa", "greeting": "La excelencia operativa no es glamour, es disciplina. Dime el reto." },
+      { "name": "CFO", "role": "Chief Financial Officer", "persona": "Warren Buffett", "side": "racional", "machine": "Mac Mini", "territory": "Capital, paciencia y sostenibilidad", "greeting": "El tiempo es amigo del buen negocio. ¿Dónde ponemos el capital?" },
+      { "name": "CCO", "role": "Chief Creative Officer", "persona": "Walt Disney", "side": "creativo", "machine": "MacBook Air Blanco", "territory": "Mundo de marca y experiencia memorable", "greeting": "Si lo puedes soñar, lo puedes hacer. ¿Qué historia contamos?" },
+      { "name": "CDO", "role": "Chief Design Officer", "persona": "Dieter Rams", "side": "creativo", "machine": "MacBook Air Azul", "territory": "Orden, función y claridad radical", "greeting": "Menos, pero mejor. ¿Qué quitamos para que esto brille?" },
+      { "name": "CXO", "role": "Chief Experience Officer", "persona": "Howard Schultz", "side": "creativo", "machine": "AdmiraTwin (PC)", "territory": "Escenografía, inmersión y cohesión sensorial", "greeting": "No vendemos café, creamos un tercer lugar. ¿Qué experiencia damos?" },
+      { "name": "CSO", "role": "Chief Storytelling Officer", "persona": "George Lucas", "side": "creativo", "machine": "MacBook Air Crema", "territory": "Storyworld, expansión y coherencia narrativa", "greeting": "Un buen relato sobrevive a todo. ¿Cuál es el mito que contamos?" }
+    ],
+    "coetaneos": [
+      { "name": "CEO", "role": "Chief Executive Officer", "persona": "Elon Musk", "side": "racional", "machine": "MacBook Air 16", "territory": "Innovación radical y visión de futuro", "greeting": "Pensemos desde los primeros principios. ¿Qué límite rompemos?" },
+      { "name": "CTO", "role": "Chief Technology Officer", "persona": "Jensen Huang", "side": "racional", "machine": "MacBook Pro Negro 14", "territory": "IA, GPUs y plataformas de cómputo", "greeting": "Cuanto más cómputo, más adelante vamos. ¿Qué escalamos?" },
+      { "name": "COO", "role": "Chief Operations Officer", "persona": "Gwynne Shotwell", "side": "racional", "machine": "MacBook Air Plata", "territory": "Ejecución a escala y logística", "greeting": "Ejecutar a escala es un arte. Dame el plan y lo hago volar." },
+      { "name": "CFO", "role": "Chief Financial Officer", "persona": "Ruth Porat", "side": "racional", "machine": "Mac Mini", "territory": "Gestión financiera y crecimiento sostenible", "greeting": "Crecer con cabeza. ¿Qué números sostienen esta idea?" },
+      { "name": "CCO", "role": "Chief Creative Officer", "persona": "John Lasseter", "side": "creativo", "machine": "MacBook Air Blanco", "territory": "Animación, storytelling y creatividad", "greeting": "El arte humaniza la tecnología. ¿Qué vamos a emocionar?" },
+      { "name": "CDO", "role": "Chief Design Officer", "persona": "Jony Ive", "side": "creativo", "machine": "MacBook Air Azul", "territory": "Diseño industrial y simplicidad", "greeting": "El cuidado se nota en lo que no se ve. ¿Qué hacemos inevitable?" },
+      { "name": "CXO", "role": "Chief Experience Officer", "persona": "Carlos Ratti", "side": "creativo", "machine": "AdmiraTwin (PC)", "territory": "Ciudades inteligentes y experiencia urbana", "greeting": "La ciudad es un organismo vivo. ¿Qué espacio activamos?" },
+      { "name": "CSO", "role": "Chief Storytelling Officer", "persona": "Ryan Reynolds", "side": "creativo", "machine": "MacBook Air Crema", "territory": "Marketing viral y narrativa de marca", "greeting": "Si no es memorable, no existe. ¿Cómo lo hacemos viral?" }
+    ]
+  },
+  "extension_points": [
+    { "id": "verbs", "title": "Añadir un verbo nuevo", "files": ["index.html"], "anchors": ["verb-grid (HTML, botones .verb-btn data-verb)", "selectVerb() (router de verbos)", "VERB_LABELS (mapa de etiquetas)", "updateInventoryPanel() (panel de inventario del verbo)"], "how": "Añade un botón .verb-btn con data-verb e title; registra el caso en selectVerb(); añade su trigger/handler; declara el verbo en este manifest." },
+    { "id": "council", "title": "Editar consejeros / personas", "files": ["index.html"], "anchors": ["const COUNCIL (datos de consejeros)", "NAMEPLATE_POS (posiciones sobre la imagen)", "GREETINGS (saludos/voz)"], "how": "Edita COUNCIL (ambas generaciones), ajusta NAMEPLATE_POS si cambia la imagen, añade el saludo en GREETINGS y refleja el cambio en council[].leyendas/coetaneos de este manifest." },
+    { "id": "llm-engines", "title": "Motores LLM del inventario", "files": ["index.html"], "anchors": ["panel de inventario 'MOTOR LLM' (.llm-option)", "selectLLM()", "refreshLLMAvailability()"], "how": "Añade la opción en el inventario y su disponibilidad; el backend debe aceptar el modelo." },
+    { "id": "backend", "title": "API del Consejo (council-api)", "files": ["repo externo: ConsejoAdmiraNextGame (Render)"], "anchors": ["COUNCIL_API_URLS", "X-Council-Token", "endpoints /council, análisis, presentaciones, imágenes"], "how": "La lógica de IA vive en el backend. Cambios de modelo/prompt/endpoints se hacen allí y se despliegan por separado." },
+    { "id": "manifest-help", "title": "Manifest y ayuda", "files": ["game/manifest.json", "game/help/index.html"], "anchors": ["este manifest es la fuente única de verdad", "el help se genera leyendo este JSON"], "how": "Cualquier cambio del juego DEBE reflejarse aquí. El help se actualiza solo al leer este archivo. Ejecuta game/check-manifest.js para detectar desincronización." }
+  ],
+  "collaboration": {
+    "principle": "Para no pisarnos en index.html (un único archivo grande), reservamos el área antes de tocarla. Hazlo con el MCP del juego (game/mcp · tools claim_area/release_area/list_reservations) o, a mano, añadiendo una entrada en 'reservations' vía Pull Request. Las reservas activas se ven aquí y en el help.",
+    "mcp": { "path": "game/mcp/council-mcp.cjs", "readme": "game/mcp/README.md", "transport": "stdio (JSON-RPC 2.0, sin dependencias)", "tools": ["get_overview", "list_verbs", "list_council", "list_extension_points", "get_manifest", "list_reservations", "claim_area", "release_area", "check_sync"] },
+    "reservations": [
+      { "area": "ejemplo: verbs", "owner": "nombre", "branch": "feature/mi-verbo", "since": "2026-06-28", "note": "Ejemplo de reserva — bórrame", "active": false }
+    ]
+  }
+}

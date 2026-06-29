@@ -20,7 +20,8 @@
   var WHITELIST = [
     "csilva@admira.com",
     "csilvasantin@gmail.com",
-    "mzavaleta@admira.com"
+    "mzavaleta@admira.com",
+    "agonzalez@admira.com"
   ];
   var REMEMBER_HOURS = 12; // recordar una sesión validada para no pedir login cada vez
 

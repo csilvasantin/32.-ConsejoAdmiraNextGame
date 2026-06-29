@@ -2727,8 +2727,6 @@
             <a href="https://www.admira.live/telegram" target="_blank" rel="noopener" class="version-badge" title="Telegram · espejo en directo del grupo AdmiraNext">💬 Telegram</a>
             <a href="/game/help" class="version-badge" title="Cómo se juega y cómo contribuir (manifest + MCP)">❔ Ayuda</a>
             <button class="version-badge" onclick="window.agmSetVisible&&window.agmSetVisible(null)" title="Abrir el puesto de mando AgoraMatrix">📡 Agentes</button>
-            <button class="yar-btn" id="yar-btn" onclick="openYarOverlay()">🧭 Yarig.AI<span class="yar-chip" id="yar-chip">sin contexto</span></button>
-            <button class="version-badge" id="tk-toolbtn" onclick="window.tkSetVisible&&window.tkSetVisible()" title="Tareas del Consejo — muestra/oculta el panel (/tareas toggle)">🗂️ Tareas<span class="tk-toolchip" id="tk-badge">0</span></button>
             <div class="summary" id="summary"></div>
             <button class="top-fold" id="top-fold" onclick="toggleTopMenu()" title="Plegar / desplegar el menú superior" aria-label="Plegar menú superior">▾</button>
         </div>
@@ -8807,8 +8805,8 @@
   #agm-wr.waiting{color:#caa46a;background:rgba(218,165,32,.05)}
   @keyframes agmThink{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-2px)}}
 </style>
-<div id="agm-panel" aria-label="AgoraMatrix Consejo">
-  <div id="agm-head"><span class="agm-dot"></span><b>📡 AgoraMatrix · Consejo</b><span class="agm-toggle">▾</span></div>
+<div id="agm-panel" class="agm-min" aria-label="AgoraMatrix Consejo">
+  <div id="agm-head"><span class="agm-dot"></span><b>📡 AgoraMatrix · Consejo</b><span class="agm-toggle">▸</span></div>
   <div id="agm-body">
     <div id="agm-presence"></div>
     <div id="agm-brief"><div class="agm-agent empty">Pide estado para ver aqui que hace cada agente.</div></div>

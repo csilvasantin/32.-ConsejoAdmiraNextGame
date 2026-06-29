@@ -13,12 +13,22 @@
  *
  * Instalación: en el <head> de cada página a proteger, lo más arriba posible:
  *   <script src="/auth-gate.js"></script>
- * Whitelist: edita el array WHITELIST (emails en minúscula).
+ * Whitelist: se gestiona en caliente desde admira.live/usuarios.html (worker
+ *   admira-whitelist + KV). El array WHITELIST_FALLBACK de abajo es solo la red
+ *   de seguridad por si el worker no responde.
  */
 (function () {
-  // ===== CONFIG (sin cambios) =====
+  // ===== CONFIG =====
   var CLIENT_ID = "861856772040-e1ri6kpu6maagtb6crdfbb923hsaalgb.apps.googleusercontent.com";
-  var WHITELIST = [
+
+  // Backend de la whitelist (alta/baja desde admira.live/usuarios.html).
+  // La lista se lee de aquí en caliente; si el worker no responde, se usa la
+  // lista FALLBACK embebida para no dejar fuera a nadie.
+  var WL_API = "https://admira-whitelist.csilvasantin.workers.dev";
+  var WL_CACHE_KEY = "admira_wl";
+  var WL_CACHE_MS = 10 * 60 * 1000; // 10 min de caché local de la lista
+
+  var WHITELIST_FALLBACK = [
     "csilva@admira.com",
     "csilvasantin@gmail.com",
     "mzavaleta@admira.com",
@@ -29,13 +39,47 @@
   var CONNECT_SECONDS = 1.6;     // duración de la "conexión" antes de mostrar el login
   var SCANLINES = true;          // overlay CRT
 
-  WHITELIST = WHITELIST.map(function (e) { return String(e).toLowerCase().trim(); });
+  function norm(e) { return String(e).toLowerCase().trim(); }
+  function uniqLower(arr) { var seen = {}, out = []; arr.forEach(function (e) { e = norm(e); if (e && !seen[e]) { seen[e] = 1; out.push(e); } }); return out; }
 
-  // Si ya hay una validación reciente y vigente, no molestar.
+  // WHITELIST inicial: caché reciente del worker si la hay, si no el fallback.
+  var WHITELIST = (function () {
+    try {
+      var c = JSON.parse(localStorage.getItem(WL_CACHE_KEY) || "null");
+      if (c && Array.isArray(c.emails) && (Date.now() - (c.at || 0) < WL_CACHE_MS)) return uniqLower(c.emails);
+    } catch (e) {}
+    return uniqLower(WHITELIST_FALLBACK);
+  })();
+
+  // Trae la lista fresca del worker; actualiza WHITELIST + caché. Promise<array>.
+  function loadWhitelist() {
+    return fetch(WL_API + "/list", { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (d && Array.isArray(d.emails) && d.emails.length) {
+          WHITELIST = uniqLower(d.emails);
+          try { localStorage.setItem(WL_CACHE_KEY, JSON.stringify({ emails: WHITELIST, at: Date.now() })); } catch (e) {}
+        }
+        return WHITELIST;
+      })
+      .catch(function () { return WHITELIST; });
+  }
+
+  // Si ya hay una validación reciente y vigente, no molestar — pero revalida en
+  // segundo plano: si al usuario lo han dado de baja, se le caduca la sesión local
+  // y el siguiente acceso le pedirá login (y será rechazado).
   try {
     var saved = JSON.parse(localStorage.getItem("admira_gate") || "null");
-    if (saved && saved.email && WHITELIST.indexOf(saved.email) >= 0 && Date.now() < saved.exp) return;
+    if (saved && saved.email && Date.now() < saved.exp && WHITELIST.indexOf(saved.email) >= 0) {
+      loadWhitelist().then(function (list) {
+        if (list.indexOf(saved.email) < 0) { try { localStorage.removeItem("admira_gate"); } catch (e) {} }
+      });
+      return;
+    }
   } catch (e) {}
+
+  // Aún no validado: empieza a cargar la lista fresca ya, para el login que viene.
+  loadWhitelist();
 
   // ===== estado =====
   var phase = "connecting"; // connecting | ready | auth | welcome | error
@@ -275,16 +319,19 @@
     } catch (e) {
       clearInterval(anim); failBack("No se pudo validar la cuenta.".toUpperCase()); return;
     }
-    if (WHITELIST.indexOf(email) >= 0) {
+    function accept() {
       try { localStorage.setItem("admira_gate", JSON.stringify({ email: email, exp: Date.now() + REMEMBER_HOURS * 3600 * 1000, cred: resp.credential, credAt: Date.now() })); } catch (e) {}
       clearInterval(anim);
       phase = "welcome"; renderFoot();
       setTimeout(unlock, 900);
-    } else {
+    }
+    function reject() {
       clearInterval(anim);
       try { google.accounts.id.disableAutoSelect(); } catch (e) {}
       failBack("CUENTA NO AUTORIZADA: " + email);
     }
+    if (WHITELIST.indexOf(email) >= 0) { accept(); }
+    else { loadWhitelist().then(function (list) { if (list.indexOf(email) >= 0) accept(); else reject(); }); }
   }
 
   function animateDots() {

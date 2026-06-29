@@ -344,15 +344,11 @@ function personaWallpaper(name){
   return f ? '/wallpapers/'+f+'.png' : '';
 }
 // WALLPAPER REAL de cada equipo en el icono pequeño (no el screenshot): cada máquina
-// sube su fondo a /wallpapers/machines/<id>.jpg (thumbnail). Aquí van las que ya lo
-// tienen subido; el resto cae al fondo de la persona activa hasta que suban el suyo.
-const MACHINE_WALLPAPER=new Set([
-  'macbookairazul'   // Steve Jobs
-]);
+// sube su fondo a /wallpapers/machines/<id>.jpg con upload-wallpaper.sh. Si esa máquina
+// aún no lo subió (404), loadImg() cae automáticamente al fondo de la persona activa.
 function consultorWallpaper(machine){
   const m = (typeof machine==='object'&&machine) ? machine : (MACHINES.find(x=>x.id===machine)||{id:machine,name:machine});
-  if(MACHINE_WALLPAPER.has(m.id)) return '/wallpapers/machines/'+m.id+'.jpg';
-  return personaWallpaper(m.name);   // fallback hasta que esa máquina suba su wallpaper real
+  return '/wallpapers/machines/'+m.id+'.jpg';
 }
 
 // El acceso es por login de Google (gate). El botón muestra tu identidad y permite
@@ -454,19 +450,28 @@ function renderCards(ms){
     </div>`).join('');
   // restaura miniaturas
   Object.keys(shots).forEach(id=>showShot(id, shots[id]));
-  // por defecto: el fondo del consultor de cada máquina hasta que se pida captura real
-  ms.forEach(m=>{ if(!shots[m.id]){ const w=consultorWallpaper(m); if(w) setDefaultShot(m.id, w); } });
+  // por defecto: el wallpaper real de cada máquina hasta que se pida captura real
+  ms.forEach(m=>{ if(!shots[m.id]){ setDefaultShot(m.id); } });
   // re-pinta los avisos de captura fallida que ya conocíamos
   ms.forEach(m=>{ if(CAP_FAIL[m.id]) setCapFail(m.id, true); });
   paintAllAges(); updateCapHealth();
 }
 
-// Vuelca la última captura (o el fondo) miniaturizada DENTRO de la pantalla del icono-ordenador.
-function setIconScreen(machineId, src){
+// Carga img.src con fallback: si la 1ª URL falla (404), prueba la 2ª; si también
+// falla, ejecuta onfail. Evita iconos rotos cuando una máquina aún no subió su wallpaper.
+function loadImg(img, src, fb, onfail){
+  img.onerror=function(){ if(fb){ var f=fb; fb=null; img.onerror=function(){ onfail&&onfail(); }; img.src=f; } else { onfail&&onfail(); } };
+  img.src=src;
+}
+function _mname(machineId){ return (MACHINES.find(x=>x.id===machineId)||{}).name; }
+
+// Pinta DENTRO de la pantalla del icono-ordenador el wallpaper real del equipo;
+// si esa máquina aún no lo subió, cae al fondo de la persona activa.
+function setIconScreen(machineId){
   const ic=document.querySelector('.em.devicon[data-icon="'+machineId+'"]'); if(!ic) return;
   const scr=ic.querySelector('.dscr'), img=scr&&scr.querySelector('img'); if(!img) return;
-  img.onerror=()=>{ scr.classList.add('empty-scr'); };
-  img.src=src; scr.classList.remove('empty-scr');
+  scr.classList.remove('empty-scr');
+  loadImg(img, consultorWallpaper(machineId), personaWallpaper(_mname(machineId)), ()=>scr.classList.add('empty-scr'));
 }
 
 function showShot(machineId, src){
@@ -474,18 +479,18 @@ function showShot(machineId, src){
   box.classList.remove('isWall');
   box.querySelector('img').src=src; box.style.display='block';
   box.onclick=()=>{ $('#lbImg').src=src; $('#lb').style.display='flex'; };
-  // El icono pequeño muestra SIEMPRE el fondo del consultor, no el screenshot real.
-  const w=consultorWallpaper(machineId); if(w) setIconScreen(machineId, w);
+  // El icono pequeño muestra SIEMPRE el wallpaper real del equipo, no el screenshot.
+  setIconScreen(machineId);
 }
 
-// Fondo de pantalla de la persona como miniatura por defecto (hasta una captura real).
-function setDefaultShot(machineId, src){
+// Miniatura grande por defecto = wallpaper real del equipo (fallback a persona),
+// hasta que haya una captura real.
+function setDefaultShot(machineId){
   const box=document.querySelector('.shot[data-m="'+machineId+'"]'); if(!box) return;
-  const img=box.querySelector('img');
-  img.onerror=()=>{ box.style.display='none'; };  // si falla, nada de icono roto
-  img.src=src; box.style.display='block'; box.classList.add('isWall');
-  box.onclick=()=>{ $('#lbImg').src=src; $('#lb').style.display='flex'; };
-  setIconScreen(machineId, src);
+  const img=box.querySelector('img'); box.style.display='block'; box.classList.add('isWall');
+  loadImg(img, consultorWallpaper(machineId), personaWallpaper(_mname(machineId)), ()=>{ box.style.display='none'; });
+  box.onclick=()=>{ $('#lbImg').src=img.src; $('#lb').style.display='flex'; };
+  setIconScreen(machineId);
 }
 $('#lb').onclick=()=>{ $('#lb').style.display='none'; };
 

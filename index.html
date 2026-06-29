@@ -143,7 +143,7 @@
         .council-image {
             position: relative;
             width: 100%;
-            max-width: 1000px;
+            max-width: none; /* hace caja con el menú superior (ancho del contenedor) */
             margin: 0 auto 0;
             border-radius: 12px 12px 0 0;
             overflow: hidden;
@@ -8804,6 +8804,47 @@
   #agm-wr .wr-dots i:nth-child(2){animation-delay:.18s} #agm-wr .wr-dots i:nth-child(3){animation-delay:.36s}
   #agm-wr.waiting{color:#caa46a;background:rgba(218,165,32,.05)}
   @keyframes agmThink{0%,100%{opacity:.25;transform:translateY(0)}50%{opacity:1;transform:translateY(-2px)}}
+</style>
+<style id="agm-skin">
+  /* AgoraMatrix re-skin: meta-estilo SCUMM dorado del site (como el menú superior)
+     y docked en el flujo, justo debajo del CLI. El !important vence a la geometría
+     inline (left/top/width) que el JS restaura de localStorage, dejándolo fijo. */
+  #agm-panel{
+    position:static!important; left:auto!important; right:auto!important; top:auto!important; bottom:auto!important;
+    width:calc(100% - 3rem)!important; max-width:calc(1200px - 3rem)!important;
+    height:420px!important; min-width:0!important; min-height:0!important; max-height:80vh!important;
+    margin:6px auto 30px!important; resize:none!important;
+    font-family:'Courier New',monospace; color:#e8d3a0;
+    background:#140d05; border:2px solid #aa7722; border-radius:0; box-shadow:4px 4px 0 #000;
+  }
+  #agm-head{ background:#1c1206; border-bottom:2px solid #aa7722; cursor:default; }
+  #agm-head b{ font-family:'Press Start 2P',monospace; font-size:9px; color:#ffdd88; text-shadow:2px 2px 0 #000; letter-spacing:.04em; }
+  #agm-head .agm-dot{ background:#daa520; box-shadow:0 0 6px #daa520; }
+  #agm-head .agm-toggle{ color:#daa520; }
+  #agm-presence{ border-bottom:1px solid #5a3a1e; }
+  .agm-who{ border:1px solid #5a3a1e; color:#ccaa66; border-radius:0; font-family:'Press Start 2P',monospace; font-size:7px; line-height:1.4; padding:4px 7px; }
+  .agm-who.on{ background:rgba(218,165,32,.12); color:#ffee88; border-color:#aa7722; }
+  .agm-who .d{ background:#5a3a1e; }
+  .agm-who.on .d{ background:#daa520; box-shadow:0 0 5px #daa520; }
+  #agm-brief{ border-bottom:1px solid #5a3a1e; background:rgba(218,165,32,.04); }
+  .agm-agent{ border:1px solid #5a3a1e; border-radius:0; background:rgba(40,28,8,.3); }
+  .agm-agent b{ color:#ffdd88; }
+  .agm-agent small{ color:#bb9a55; }
+  .agm-agent span{ color:#dcc89a; }
+  .agm-agent.empty{ color:#9a7a45; }
+  .agm-msg{ border-bottom:1px solid #2a1d0a; }
+  .agm-msg .who{ color:#ffdd88; }
+  .agm-msg .t{ color:#9a7a45; }
+  .agm-msg .tx{ color:#dcc89a; }
+  #agm-foot{ border-top:1px solid #5a3a1e; color:#9a7a45; font-family:'Press Start 2P',monospace; font-size:7px; }
+  #agm-chat{ border-top:2px solid #5a3a1e; }
+  #agm-chat input{ background:#0d0800; border:2px solid #5a3a1e; color:#ffee88; border-radius:0; font-family:'Courier New',monospace; }
+  #agm-chat input:focus{ border-color:#daa520; }
+  #agm-chat button{ background:linear-gradient(135deg,#b8860b,#daa520); color:#1a1206; border-radius:0; font-family:'Press Start 2P',monospace; font-size:9px; }
+  #agm-actions{ border-top:1px solid #5a3a1e; }
+  #agm-actions button{ background:#0d0800; border:1px solid #5a3a1e; color:#ffee88; border-radius:0; font-family:'Press Start 2P',monospace; font-size:7px; padding:7px; }
+  #agm-actions button:hover{ border-color:#daa520; background:#180f02; }
+  #agm-wr{ border-top:1px solid #5a3a1e; }
 </style>
 <div id="agm-panel" class="agm-min" aria-label="AgoraMatrix Consejo">
   <div id="agm-head"><span class="agm-dot"></span><b>📡 AgoraMatrix · Consejo</b><span class="agm-toggle">▸</span></div>

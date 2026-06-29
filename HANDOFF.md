@@ -1,14 +1,15 @@
 # HANDOFF — Consejo AdmiraNext
 
-Actualizado: 2026-06-19  
+Actualizado: 2026-06-29  
 Proyecto: `32.-ConsejoAdmiraNextGame`
 
 ## Punto de entrada
 
 - URL pública: [https://www.admira.live](https://www.admira.live) · Mesa: [https://www.admira.live/teamwork.html](https://www.admira.live/teamwork.html) · Fichas: [https://www.admira.live/consejero.html?p=steve-jobs](https://www.admira.live/consejero.html?p=steve-jobs)
-- Versión visible: `Admira v.26.06.19.r7`
+- Este HANDOFF: [github.com/csilvasantin/32.-ConsejoAdmiraNextGame/blob/main/HANDOFF.md](https://github.com/csilvasantin/32.-ConsejoAdmiraNextGame/blob/main/HANDOFF.md)
+- Versión visible: `Admira v.26.06.28.r2` (badge no bumpeado para los cambios de UI del 29; gestionarlo en el flujo de release)
 - Rama: `main`
-- Commit actual: `30f29d1` (último en `main`)
+- Commit actual: `44b8e28` (último en `main`)
 
 ## Qué comprobar al retomar
 
@@ -56,6 +57,15 @@ El hash debe coincidir con el commit publicado indicado arriba o ser posterior.
   - `Cancelar`
 
 ## Últimos cambios relevantes
+
+### 2026-06-29 — Prehome pixel-art (login) + coherencia visual del Consejo
+
+- **Nueva prehome / login pixel-art** (estética Indiana Jones / Fate of Atlantis, VGA) en `auth-gate.js`, recreada desde el design handoff. **La lógica de acceso es idéntica** a la anterior: mismo `CLIENT_ID` de Google (`861856772040-…`), whitelist (ahora en caliente vía worker `admira-whitelist` + KV con `WHITELIST_FALLBACK`), recordar 12 h, decodificado del ID token y `localStorage.admira_gate.cred` intactos. El botón oficial de Google va **superpuesto invisible** sobre el botón dorado custom, así que el click dispara el flujo GIS real y conserva el credential JWT. Afecta a las 34 páginas que incluyen `/auth-gate.js`.
+- **CLI ensanchado y AgoraMatrix anclado debajo** (`index.html`): `.scumm-bar max-width:none` (hace caja con el menú superior y el consejo) y `#agm-panel` reubicado por JS justo después del CLI con el mismo ancho.
+- **Popup del consejero con botón ✕** (`hideSpeechBubble`) para descartar el bocadillo.
+- **Botonera inferior oculta** (`#home-bottom-cluster`: HACKEO/CONTROL/DEMO/DIARIO) y **enlaces reubicados a las stats superiores** con tooltip del destino real: *Consejeros activos → Hackeo* (`toggleHack`), *Sin conexión → Control* (`/control/`), *Máquinas online → Diario* (`/diario.html`).
+- **Espacio vertical recuperado**: `.container` padding `1.5rem → 0.5rem/0.6rem`, `.top-bar` margin-bottom `1rem → 0.3rem`, `.subtitle` `1rem → 0.3rem`. El stack sube ~27 px; en modo plegado el CLI + AgoraMatrix quedan a la vista.
+- Verificado en preview (0 errores de consola) y desplegado en GitHub Pages. **Nota:** el badge de versión no se bumpeó (sigue `v.26.06.28.r2`, con trabajo en paralelo en `main`).
 
 ### `Admira v.26.06.19.r7` — Control de energía (Dormir/Despertar) + diagnóstico SSH/MAC
 

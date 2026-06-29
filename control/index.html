@@ -343,27 +343,16 @@ function personaWallpaper(name){
   const f=_personaFile[PERSONA_BY_MACHINE[_norm(name)]];
   return f ? '/wallpapers/'+f+'.png' : '';
 }
-// CONSULTOR FIJO por máquina: el icono pequeño muestra SIEMPRE este fondo (no el
-// screenshot real), para asociar cada equipo con su personaje. Imágenes en /wallpapers.
-// Clave = id de máquina (fleet). PROPUESTA inicial — ajustable a gusto.
-const CONSULTOR_BY_MACHINE={
-  'macbookairazul':'Neo',          // CDO · Diseño
-  'macmini':'Morfeo',              // CFO · Hub central
-  'macbookpronegro14':'Cypher',    // CTO · Ingeniería
-  'mbair16plata':'Trinity',        // Equipo · Trinity/Codex
-  'macbookaircrema':'Oraculo',     // CSO · Storytelling
-  'macbookairplata':'Morfeo',      // COO · Operaciones
-  'macbookairrosa':'Trinity',      // Equipo AdmiraNeXT
-  'macbook-pro-16':'Neo',          // Equipo AdmiraNeXT
-  'thinkstationpgx-e82e':'Cypher'  // Equipo AdmiraNeXT
-};
-// Devuelve el fondo del consultor fijo de la máquina; si no está mapeada, cae al
-// fondo de la persona activa (presencia). machine = objeto de MACHINES o id/nombre.
+// WALLPAPER REAL de cada equipo en el icono pequeño (no el screenshot): cada máquina
+// sube su fondo a /wallpapers/machines/<id>.jpg (thumbnail). Aquí van las que ya lo
+// tienen subido; el resto cae al fondo de la persona activa hasta que suban el suyo.
+const MACHINE_WALLPAPER=new Set([
+  'macbookairazul'   // Steve Jobs
+]);
 function consultorWallpaper(machine){
   const m = (typeof machine==='object'&&machine) ? machine : (MACHINES.find(x=>x.id===machine)||{id:machine,name:machine});
-  const f = CONSULTOR_BY_MACHINE[m.id] || CONSULTOR_BY_MACHINE[_norm(m.name)];
-  if(f) return '/wallpapers/'+f+'.png';
-  return personaWallpaper(m.name);
+  if(MACHINE_WALLPAPER.has(m.id)) return '/wallpapers/machines/'+m.id+'.jpg';
+  return personaWallpaper(m.name);   // fallback hasta que esa máquina suba su wallpaper real
 }
 
 // El acceso es por login de Google (gate). El botón muestra tu identidad y permite
@@ -420,21 +409,22 @@ function moveCard(dragId, targetId){
   localStorage.setItem('fleet_card_order', JSON.stringify(o)); renderCards(MACHINES);
 }
 function collapsedMap(){ try{ return JSON.parse(localStorage.getItem('fleet_card_collapsed')||'{}'); }catch(e){ return {}; } }
-function toggleCollapse(id){ const c=collapsedMap(); c[id]=!c[id]; localStorage.setItem('fleet_card_collapsed', JSON.stringify(c)); const card=document.querySelector('.card[data-card="'+id+'"]'); if(card) card.classList.toggle('collapsed', !!c[id]); }
+// Colapsado POR DEFECTO: si no hay preferencia guardada para esa tarjeta, va colapsada.
+function isCollapsed(id){ const c=collapsedMap(); return (id in c)?!!c[id]:true; }
+function toggleCollapse(id){ const c=collapsedMap(); c[id]=!isCollapsed(id); localStorage.setItem('fleet_card_collapsed', JSON.stringify(c)); const card=document.querySelector('.card[data-card="'+id+'"]'); if(card) card.classList.toggle('collapsed', !!c[id]); }
 
 function renderCards(ms){
   const el=$('#cards');
   if(!ms.length){ el.innerHTML='<div class="empty" style="grid-column:1/-1">Inicia sesión con Google (arriba a la derecha) para ver la flota.</div>'; return; }
   // preserva miniaturas ya cargadas
   const shots={}; document.querySelectorAll('.shot').forEach(s=>{ if(s.dataset.m && s.style.display!=='none') shots[s.dataset.m]=s.querySelector('img').src; });
-  const COL=collapsedMap();
   // despejar tablero: opcionalmente oculta offline y, en todo caso, los manda al final
   let list=sortByOrder(ms);
   if(HIDE_OFF) list=list.filter(m=>m.online);
   list=list.slice().sort((a,b)=>(a.online?0:1)-(b.online?0:1));
   if(!list.length){ el.innerHTML='<div class="empty" style="grid-column:1/-1">Sin equipos online (desmarca «ocultar offline» para verlos).</div>'; return; }
   el.innerHTML=list.map(m=>`
-    <div class="card${COL[m.id]?' collapsed':''}" data-card="${m.id}">
+    <div class="card${isCollapsed(m.id)?' collapsed':''}" data-card="${m.id}">
       <div class="top">
         <span class="em devicon${/mini|twin|imac|studio|mac\s*pro/i.test(m.name||'')?' desk':''}${m.online?' em-click':''}" data-icon="${m.id}" title="${m.online?'Limpiar el escritorio (oculta apps) y ver el fondo':(m.name||'')+' (offline)'}"><span class="dscr empty-scr"><img alt=""></span><span class="dbase"></span></span>
         <div class="cardmeta"><div class="nm">${m.name} <span class="dot ${m.online?'on':''}"></span></div>

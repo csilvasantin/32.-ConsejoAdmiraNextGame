@@ -1,10 +1,8 @@
 /*
- * admira-bar.js — barra superior + botones inferiores consistentes en admira.live
+ * admira-bar.js — barra superior de navegación consistente en admira.live
  *
- * Se inyecta en todas las páginas EXCEPTO la home (la home tiene su propia barra
- * funcional con HACKEO/Agentes/Tareas/Yarig).
- *   - Barra superior: enlaces de navegación.
- *   - Botones inferiores agrupados (4, como la home): HACKEO · CONTROL · DIARIO · DEMO.
+ * Se inyecta en todas las páginas EXCEPTO la home (la home tiene su propia barra).
+ *   - Barra superior: enlaces de navegación (+ «Usuarios» solo para superusers).
  * Uso: <script src="/admira-bar.js"></script> en el <head> de cada página.
  */
 (function () {
@@ -17,14 +15,6 @@
     { t: "📊 Dashboard",  h: "https://www.admira.live/dashboard.html" },
     { t: "🏠 AdmiraNeXT", h: "https://www.admira.live/equipos" },
     { t: "💬 Telegram",   h: "https://www.admira.live/telegram" },
-  ];
-  // 4 opciones, como la barra inferior de la home: HACKEO · CONTROL · DIARIO · DEMO.
-  // El lanzador del HACKEO vive en la home, así que el botón lleva ahí.
-  var BOT = [
-    { t: "🕵️ HACKEO",  h: "https://www.admira.live/" },
-    { t: "🎛️ CONTROL", h: "https://www.admira.live/control/" },
-    { t: "📓 DIARIO",  h: "https://www.admira.live/diario.html" },
-    { t: "🎬 DEMO",    h: "https://www.admira.studio/" },
   ];
 
   var css =
@@ -40,13 +30,7 @@
     "font-family:'Press Start 2P',monospace;font-size:8px;line-height:1.5;letter-spacing:.5px;" +
     "border:2px solid #8b5a14;border-radius:0;padding:6px 9px;white-space:nowrap;background:#2a1a08;box-shadow:2px 2px 0 #000}" +
     "#admira-topbar a:hover{background:#8b5a14;border-color:#f0c040;color:#fff}" +
-    "#admira-botbar{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);z-index:99990;display:flex;gap:8px}" +
-    /* estilo SCUMM (madera/ámbar/sombra pixel 3D), como la barra de la home */
-    "#admira-botbar a{font-family:'Andale Mono',Monaco,Menlo,monospace;color:#ffdd66;text-decoration:none;font-size:11px;" +
-    "font-weight:bold;letter-spacing:1px;text-transform:uppercase;border:2px solid #6b5524;border-radius:4px;" +
-    "padding:7px 13px;white-space:nowrap;background:#15110a;box-shadow:3px 3px 0 #000}" +
-    "#admira-botbar a:hover{background:#2a2110;border-color:#ffdd66;color:#fff;transform:translate(1px,1px);box-shadow:2px 2px 0 #000}" +
-    "html.admira-bar-on body{padding-top:46px !important;padding-bottom:54px !important}";
+    "html.admira-bar-on body{padding-top:46px !important}";
 
   function mount() {
     // fuente pixel de la home (Press Start 2P) para que la barra case con el SCUMM
@@ -67,12 +51,7 @@
     // Se añade async tras consultar la lista del worker de whitelist.
     maybeAddUsuarios(top);
 
-    var bot = document.createElement("div");
-    bot.id = "admira-botbar";
-    bot.innerHTML = BOT.map(function (i) { return '<a href="' + i.h + '" target="_blank" rel="noopener">' + i.t + "</a>"; }).join("");
-
     document.body.appendChild(top);
-    document.body.appendChild(bot);
   }
 
   // Inserta el enlace "👥 Usuarios" en la barra superior si el usuario logueado

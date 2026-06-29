@@ -12,39 +12,40 @@
   <style>
     :root{
       --gold:#e8c25a; --gold2:#d89a3a; --bronze:#b5651d; --ink:#0c0702;
-      --panel:#1c1308; --panel2:#241a0c; --line:#3a2a14; --txt:#f4e2b0; --mut:#8f6a2a; --bad:#e0563a; --ok:#7bd88f;
+      --panel:#1c1308; --line:#3a2a14; --txt:#f4e2b0; --mut:#8f6a2a; --bad:#e0563a; --ok:#7bd88f; --sup:#7CFC00;
     }
     *{box-sizing:border-box}
     body{margin:0;min-height:100vh;background:radial-gradient(circle at 50% 0%,#160f06,#070401);
-      color:var(--txt);font-family:'VT323',monospace;font-size:20px;padding:32px 18px;display:flex;justify-content:center}
-    .wrap{width:min(680px,100%)}
-    h1{font-family:'Press Start 2P',monospace;font-size:20px;color:var(--gold);letter-spacing:1px;
+      color:var(--txt);font-family:'VT323',monospace;font-size:20px;padding:24px 18px;display:flex;justify-content:center}
+    .wrap{width:min(720px,100%)}
+    h1{font-family:'Press Start 2P',monospace;font-size:18px;color:var(--gold);letter-spacing:1px;
       text-shadow:2px 2px 0 #7a3f12;margin:0 0 6px}
-    .sub{color:var(--gold2);letter-spacing:2px;margin:0 0 22px}
-    .card{background:linear-gradient(var(--panel),#140d05);border:none;
+    .sub{color:var(--gold2);letter-spacing:2px;margin:0 0 20px}
+    .card{background:linear-gradient(var(--panel),#140d05);
       box-shadow:inset 0 0 0 2px var(--line),0 0 0 3px var(--bronze),0 10px 30px rgba(0,0,0,.6);
       padding:20px;margin-bottom:20px}
     .who{display:flex;justify-content:space-between;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:18px}
     .who .me{color:var(--gold)}
     .badge{font-family:'Press Start 2P',monospace;font-size:9px;letter-spacing:1px;padding:6px 9px;
       box-shadow:inset 0 0 0 2px var(--line),0 0 0 2px var(--bronze)}
-    .badge.admin{color:var(--gold);}
-    .badge.ro{color:var(--mut)}
+    .badge.super{color:var(--sup)} .badge.ro{color:var(--mut)}
     .logout{cursor:pointer;color:var(--gold2);text-decoration:underline;font-size:18px}
     ul{list-style:none;margin:0;padding:0}
-    li{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:11px 12px;
-      box-shadow:inset 0 0 0 2px var(--line);margin-bottom:8px;background:#140d05}
-    li .em{word-break:break-all}
-    li.is-admin .em{color:var(--gold)}
-    .tag{font-family:'Press Start 2P',monospace;font-size:8px;color:var(--mut);letter-spacing:1px;margin-left:8px}
-    button{font-family:'Press Start 2P',monospace;letter-spacing:1px;cursor:pointer;color:var(--txt);
-      background:linear-gradient(#281a06,#160d03);border:none;
+    li{display:flex;align-items:center;gap:10px;padding:11px 12px;
+      box-shadow:inset 0 0 0 2px var(--line);margin-bottom:8px;background:#140d05;flex-wrap:wrap}
+    li .em{word-break:break-all;flex:1;min-width:160px}
+    li.is-super .em{color:var(--sup)}
+    li.is-owner .em{color:var(--gold)}
+    .tag{font-family:'Press Start 2P',monospace;font-size:8px;letter-spacing:1px;padding:4px 7px;box-shadow:inset 0 0 0 2px var(--line)}
+    .tag.own{color:var(--gold)} .tag.sup{color:var(--sup)}
+    button{font-family:'Press Start 2P',monospace;font-size:9px;letter-spacing:1px;cursor:pointer;color:var(--txt);
+      background:linear-gradient(#281a06,#160d03);border:none;padding:8px 10px;
       box-shadow:inset 0 0 0 2px var(--line),0 0 0 2px var(--bronze),0 4px 0 var(--ink);
       transition:transform .07s,box-shadow .07s}
     button:hover{box-shadow:inset 0 0 0 2px #5a3d18,0 0 0 2px var(--gold),0 4px 0 var(--ink);transform:translateY(-1px)}
     button:active{transform:translateY(3px);box-shadow:inset 0 0 0 2px var(--line),0 0 0 2px var(--bronze),0 1px 0 var(--ink)}
     button[disabled]{opacity:.4;cursor:not-allowed;transform:none}
-    .rm{font-size:9px;padding:8px 10px;color:#f0b3a4}
+    .pro{color:var(--sup)} .down{color:#bfe0a0} .rm{color:#f0b3a4}
     .add{display:flex;gap:10px;margin-top:14px}
     .add input{flex:1;font-family:'VT323',monospace;font-size:20px;color:var(--txt);background:#0d0902;
       border:none;box-shadow:inset 0 0 0 2px var(--line);padding:11px 12px;outline:none}
@@ -53,13 +54,14 @@
     .msg{min-height:24px;margin-top:12px;letter-spacing:1px}
     .msg.err{color:var(--bad)} .msg.ok{color:var(--ok)} .msg.mut{color:var(--mut)}
     .note{color:var(--mut);font-size:17px;line-height:1.5;margin-top:18px}
-    a{color:var(--gold2)}
+    .legend{color:var(--mut);font-size:16px;margin:4px 0 14px}
+    .legend b{color:var(--sup)}
   </style>
 </head>
 <body>
   <div class="wrap">
     <h1>◆ USUARIOS · ADMIRA.LIVE</h1>
-    <p class="sub">Quién puede acceder al sitio (verja de login con Google)</p>
+    <p class="sub">Quién accede al sitio · quién es superuser (equipos /control)</p>
 
     <div class="card">
       <div class="who">
@@ -69,6 +71,7 @@
           <span class="logout" id="logout">cerrar sesión</span>
         </span>
       </div>
+      <p class="legend"><b>SUPERUSER</b> = entra a /control (equipos) y gestiona usuarios. Los <b style="color:#e8c25a">OWNER</b> no se pueden quitar ni degradar.</p>
 
       <ul id="list"><li><span class="em">cargando…</span></li></ul>
 
@@ -80,59 +83,88 @@
     </div>
 
     <p class="note">
-      La lista la sirve el worker <code>admira-whitelist</code> (Cloudflare + KV). Los cambios son
-      inmediatos: el login lee esta lista en caliente. ⚠️ La verja es un bloqueo <b>blando</b>
-      (sitio estático) — disuade, no es seguridad fuerte. Solo los <b>admins</b> pueden dar de alta/baja.
+      La lista la sirve el worker <code>admira-whitelist</code> (Cloudflare + KV) y la usan tanto la verja
+      (auth-gate.js) como FleetControl (/control). Cambios inmediatos. ⚠️ La verja es un bloqueo
+      <b>blando</b> (sitio estático) — disuade, no es seguridad fuerte. Solo los <b>superusers</b> gestionan.
     </p>
   </div>
 
   <script>
     var API = "https://admira-whitelist.csilvasantin.workers.dev";
-    var ADMINS = ["csilva@admira.com", "csilvasantin@gmail.com"];
+    var OWNERS = ["csilva@admira.com", "csilvasantin@gmail.com"]; // solo para la UI; el worker es quien protege
 
     function gate() { try { return JSON.parse(localStorage.getItem("admira_gate") || "null"); } catch (e) { return null; } }
     function myEmail() { var g = gate(); return g && g.email ? String(g.email).toLowerCase() : ""; }
     function myCred() { var g = gate(); return g && g.cred ? g.cred : ""; }
-    function isAdmin(e) { return ADMINS.indexOf(e) >= 0; }
     function $(id) { return document.getElementById(id); }
     function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]; }); }
     function setMsg(t, kind) { var m = $("msg"); m.textContent = t || ""; m.className = "msg " + (kind || "mut"); }
+    function isOwner(e) { return OWNERS.indexOf(e) >= 0; }
 
-    var ADMIN = false;
+    var ME = myEmail();
+    var IAM_SUPER = false;
 
-    function render(emails) {
+    function render(emails, supers) {
       var ul = $("list");
       if (!emails.length) { ul.innerHTML = '<li><span class="em">(lista vacía)</span></li>'; return; }
       ul.innerHTML = emails.map(function (e) {
-        var adm = isAdmin(e);
-        var rm = (ADMIN && !adm)
-          ? '<button class="rm" data-rm="' + esc(e) + '">QUITAR</button>'
-          : (adm ? '<span class="tag">ADMIN</span>' : '');
-        return '<li class="' + (adm ? "is-admin" : "") + '"><span class="em">' + esc(e) + '</span>' + rm + '</li>';
+        var sup = supers.indexOf(e) >= 0, own = isOwner(e);
+        var cls = own ? "is-owner" : (sup ? "is-super" : "");
+        var tag = own ? '<span class="tag own">OWNER</span>' : (sup ? '<span class="tag sup">SUPERUSER</span>' : '');
+        var act = "";
+        if (IAM_SUPER && !own) {
+          act += sup
+            ? '<button class="down" data-demote="' + esc(e) + '">QUITAR SUPER</button>'
+            : '<button class="pro" data-promote="' + esc(e) + '">⬆ SUPERUSER</button>';
+          act += '<button class="rm" data-rm="' + esc(e) + '">QUITAR</button>';
+        }
+        return '<li class="' + cls + '"><span class="em">' + esc(e) + '</span>' + tag + act + '</li>';
       }).join("");
-      Array.prototype.forEach.call(ul.querySelectorAll("[data-rm]"), function (b) {
-        b.addEventListener("click", function () { remove(b.getAttribute("data-rm")); });
+      bind(ul, "data-promote", function (e) { write("promote", e); });
+      bind(ul, "data-demote", function (e) { if (confirm("¿Quitar superuser a " + e + "? Perderá acceso a /control.")) write("demote", e); });
+      bind(ul, "data-rm", function (e) { if (confirm("¿Quitar TODO el acceso a " + e + "?")) write("remove", e); });
+    }
+    function bind(ul, attr, fn) {
+      Array.prototype.forEach.call(ul.querySelectorAll("[" + attr + "]"), function (b) {
+        b.addEventListener("click", function () { fn(b.getAttribute(attr)); });
       });
+    }
+
+    function applyRole() {
+      $("me").textContent = ME || "(sin sesión)";
+      var role = $("role");
+      role.textContent = IAM_SUPER ? "SUPERUSER" : "USUARIO";
+      role.className = "badge " + (IAM_SUPER ? "super" : "ro");
+      $("addRow").style.display = IAM_SUPER ? "flex" : "none";
+      if (!IAM_SUPER) setMsg("Solo los superusers pueden gestionar. Tú puedes ver la lista.", "mut");
     }
 
     function load() {
       return fetch(API + "/list", { cache: "no-store" })
         .then(function (r) { return r.json(); })
-        .then(function (d) { render(d.emails || []); return d.emails || []; })
-        .catch(function () { setMsg("✖ no se pudo cargar la lista", "err"); return []; });
+        .then(function (d) {
+          var emails = d.emails || [], supers = d.superusers || [];
+          IAM_SUPER = supers.indexOf(ME) >= 0;
+          applyRole();
+          render(emails, supers);
+          return d;
+        })
+        .catch(function () { setMsg("✖ no se pudo cargar la lista", "err"); });
     }
 
     function write(action, email) {
       setMsg("…", "mut");
       return fetch(API + "/" + action, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
+        method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email, credential: myCred() })
       }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
         .then(function (res) {
           if (!res.ok) { setMsg("✖ " + (res.d.error || "error"), "err"); return; }
-          render(res.d.emails || []);
-          setMsg("✔ " + (action === "add" ? "añadido " : "quitado ") + email, "ok");
+          IAM_SUPER = (res.d.superusers || []).indexOf(ME) >= 0;
+          applyRole();
+          render(res.d.emails || [], res.d.superusers || []);
+          var verb = { add: "añadido", remove: "quitado", promote: "elevado a superuser", demote: "degradado" }[action];
+          setMsg("✔ " + verb + " " + email, "ok");
         })
         .catch(function () { setMsg("✖ error de red", "err"); });
     }
@@ -142,31 +174,14 @@
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { setMsg("✖ email no válido", "err"); return; }
       write("add", v).then(function () { $("email").value = ""; });
     }
-    function remove(email) {
-      if (!confirm("¿Quitar acceso a " + email + "?")) return;
-      write("remove", email);
-    }
 
     // arranque
-    (function () {
-      var me = myEmail();
-      $("me").textContent = me || "(sin sesión)";
-      ADMIN = isAdmin(me);
-      var role = $("role");
-      role.textContent = ADMIN ? "ADMIN" : "SOLO LECTURA";
-      role.className = "badge " + (ADMIN ? "admin" : "ro");
-      if (ADMIN) {
-        $("addRow").style.display = "flex";
-        $("addBtn").addEventListener("click", add);
-        $("email").addEventListener("keydown", function (e) { if (e.key === "Enter") add(); });
-      } else {
-        setMsg("Solo los admins pueden dar de alta/baja. Tú puedes ver la lista.", "mut");
-      }
-      $("logout").addEventListener("click", function () {
-        localStorage.removeItem("admira_gate"); localStorage.removeItem("admira_wl"); location.reload();
-      });
-      load();
-    })();
+    $("addBtn").addEventListener("click", add);
+    $("email").addEventListener("keydown", function (e) { if (e.key === "Enter") add(); });
+    $("logout").addEventListener("click", function () {
+      localStorage.removeItem("admira_gate"); localStorage.removeItem("admira_wl"); location.reload();
+    });
+    load();
   </script>
 </body>
 </html>

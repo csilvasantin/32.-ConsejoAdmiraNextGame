@@ -63,12 +63,39 @@
     top.id = "admira-topbar";
     top.innerHTML = TOP.map(function (i) { return '<a href="' + i.h + '">' + i.t + "</a>"; }).join("");
 
+    // Enlace "Usuarios" SOLO para superusers (los que acceden a los equipos).
+    // Se añade async tras consultar la lista del worker de whitelist.
+    maybeAddUsuarios(top);
+
     var bot = document.createElement("div");
     bot.id = "admira-botbar";
     bot.innerHTML = BOT.map(function (i) { return '<a href="' + i.h + '" target="_blank" rel="noopener">' + i.t + "</a>"; }).join("");
 
     document.body.appendChild(top);
     document.body.appendChild(bot);
+  }
+
+  // Inserta el enlace "👥 Usuarios" en la barra superior si el usuario logueado
+  // es superuser (según el worker de whitelist). Silencioso si no lo es / falla.
+  function maybeAddUsuarios(top) {
+    var email = "";
+    try {
+      var g = JSON.parse(localStorage.getItem("admira_gate") || "null");
+      email = g && g.email ? String(g.email).toLowerCase() : "";
+    } catch (e) {}
+    if (!email) return;
+    fetch("https://admira-whitelist.csilvasantin.workers.dev/list", { cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d || (d.superusers || []).indexOf(email) < 0) return;
+        if (document.getElementById("admira-link-usuarios")) return;
+        var a = document.createElement("a");
+        a.id = "admira-link-usuarios";
+        a.href = "https://www.admira.live/usuarios.html";
+        a.innerHTML = "👥 Usuarios";
+        top.appendChild(a);
+      })
+      .catch(function () {});
   }
 
   if (document.body) mount();

@@ -22,7 +22,8 @@
     "csilva@admira.com",
     "csilvasantin@gmail.com",
     "mzavaleta@admira.com",
-    "agonzalez@admira.com"
+    "agonzalez@admira.com",
+    "jsedano@admira.com"
   ];
   var REMEMBER_HOURS = 12;       // recordar una sesión validada
   var CONNECT_SECONDS = 1.6;     // duración de la "conexión" antes de mostrar el login

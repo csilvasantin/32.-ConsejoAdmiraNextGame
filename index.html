@@ -1260,6 +1260,9 @@
         .speech-bubble { pointer-events: auto; }
         .speech-ficha { display: inline-block; margin-top: 8px; padding-top: 7px; border-top: 1px solid rgba(218,165,32,0.35); color: #ffdd66; text-decoration: none; font-size: 0.62rem; }
         .speech-ficha:hover { color: #fff; text-decoration: underline; }
+        .speech-bubble .speaker { padding-right: 22px; }
+        .speech-close { position: absolute; top: 5px; right: 6px; width: 19px; height: 19px; line-height: 16px; text-align: center; padding: 0; background: transparent; border: 1px solid rgba(218,165,32,0.55); border-radius: 4px; color: #daa520; font-size: 14px; font-family: inherit; cursor: pointer; }
+        .speech-close:hover { background: #daa520; color: #0a0a14; }
         .yar-overlay {
             position: fixed;
             inset: 0;
@@ -2794,6 +2797,7 @@
             <div class="nameplates hidden" id="nameplates"></div>
             <div class="speech-overlay" id="speech-overlay">
                 <div class="speech-bubble" id="speech-bubble">
+                    <button class="speech-close" type="button" aria-label="Cerrar" onclick="hideSpeechBubble()">×</button>
                     <div class="speaker"></div>
                     <div class="speech-text"></div>
                     <a class="speech-ficha" target="_blank" rel="noopener">📋 Ver ficha completa →</a>
@@ -3082,7 +3086,7 @@
          overlay quedaría confinado a la barra inferior en vez de cubrir la pantalla). -->
     <div class="hack-overlay" id="hack-overlay"></div>
 
-    <div id="home-bottom-cluster">
+    <div id="home-bottom-cluster" style="display:none">
     <button class="hack-toggle" id="hack-btn" onclick="toggleHack()">
         <span class="hack-dot"></span> HACKEO
     </button>
@@ -3648,15 +3652,15 @@
         }
 
         document.getElementById("summary").innerHTML = `
-            <div class="summary-item">
+            <div class="summary-item" title="Hackeo" onclick="toggleHack()" style="cursor:pointer">
                 <div class="summary-number green">${onlineCount}</div>
                 <div class="summary-label">Consejeros activos</div>
             </div>
-            <div class="summary-item">
+            <div class="summary-item" title="Control · FleetControl" onclick="window.open('https://www.admira.live/control/','_blank','noopener')" style="cursor:pointer">
                 <div class="summary-number red">${offlineCount}</div>
                 <div class="summary-label">Sin conexión</div>
             </div>
-            <div class="summary-item">
+            <div class="summary-item" title="Diario de Silicio" onclick="location.href='/diario.html'" style="cursor:pointer">
                 <div class="summary-number blue">${totalMachinesOnline}</div>
                 <div class="summary-label">Máquinas online</div>
             </div>

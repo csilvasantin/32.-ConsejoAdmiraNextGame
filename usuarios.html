@@ -8,6 +8,8 @@
   <script src="/auth-gate.js"></script>
   <!-- Barra superior + botones inferiores de navegación (consistente en admira.live) -->
   <script src="/admira-bar.js?v=scumm2"></script>
+  <!-- Google Identity Services: para renovar el credential al gestionar (caduca ~1h) -->
+  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" />
   <style>
     :root{
@@ -80,6 +82,7 @@
         <button id="addBtn">AÑADIR</button>
       </div>
       <div class="msg mut" id="msg"></div>
+      <div id="renew" style="display:none;margin-top:14px"></div>
     </div>
 
     <p class="note">
@@ -91,6 +94,7 @@
 
   <script>
     var API = "https://admira-whitelist.csilvasantin.workers.dev";
+    var CLIENT_ID = "861856772040-e1ri6kpu6maagtb6crdfbb923hsaalgb.apps.googleusercontent.com";
     var OWNERS = ["csilva@admira.com", "csilvasantin@gmail.com"]; // solo para la UI; el worker es quien protege
 
     function gate() { try { return JSON.parse(localStorage.getItem("admira_gate") || "null"); } catch (e) { return null; } }
@@ -152,17 +156,60 @@
         .catch(function () { setMsg("✖ no se pudo cargar la lista", "err"); });
     }
 
+    // ── Renovación del credential de Google ──────────────────────────────────
+    // El ID token de Google caduca a la ~1h, pero la sesión de la verja dura 12h.
+    // Para escribir hace falta un credential fresco; si no lo es, se renueva con GIS
+    // y se reintenta la acción pendiente.
+    var GIS_READY = false, pending = null;
+
+    function credFresh() { var g = gate(); return !!(g && g.cred && g.credAt && (Date.now() - g.credAt < 55 * 60 * 1000)); }
+    function saveCred(cred) {
+      try { var g = gate() || {}; g.cred = cred; g.credAt = Date.now(); if (!g.email) g.email = ME; if (!g.exp) g.exp = Date.now() + 12 * 3600 * 1000; localStorage.setItem("admira_gate", JSON.stringify(g)); } catch (e) {}
+    }
+    function initGIS() {
+      if (GIS_READY) return true;
+      if (!(window.google && google.accounts && google.accounts.id)) return false;
+      google.accounts.id.initialize({ client_id: CLIENT_ID, callback: onFreshCred, auto_select: true });
+      GIS_READY = true; return true;
+    }
+    function waitGIS(cb) {
+      if (initGIS()) { cb(); return; }
+      var n = 0, t = setInterval(function () { if (initGIS() || ++n > 50) { clearInterval(t); cb(); } }, 150);
+    }
+    function showRenew(msg) {
+      setMsg(msg || "Tu sesión de Google caducó (~1h). Renueva para continuar.", "err");
+      var box = $("renew"); box.style.display = "block"; box.innerHTML = '<div id="gbtn2"></div>';
+      waitGIS(function () {
+        try { google.accounts.id.renderButton($("gbtn2"), { theme: "filled_black", size: "large", text: "continue_with", shape: "pill" }); } catch (e) {}
+        try { google.accounts.id.prompt(); } catch (e) {}  // intenta One Tap silencioso
+      });
+    }
+    function hideRenew() { var box = $("renew"); if (box) { box.style.display = "none"; box.innerHTML = ""; } }
+    function onFreshCred(resp) {
+      if (!resp || !resp.credential) return;
+      saveCred(resp.credential);
+      hideRenew();
+      setMsg("✔ sesión de Google renovada", "ok");
+      if (pending) { var p = pending; pending = null; doWrite(p.action, p.email); }
+    }
+
     function write(action, email) {
+      if (!credFresh()) { pending = { action: action, email: email }; showRenew(); return; }
+      doWrite(action, email);
+    }
+    function doWrite(action, email) {
       setMsg("…", "mut");
       return fetch(API + "/" + action, {
         method: "POST", headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ email: email, credential: myCred() })
-      }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, d: d }; }); })
+      }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, status: r.status, d: d }; }); })
         .then(function (res) {
+          if (res.status === 401) { pending = { action: action, email: email }; showRenew("Tu sesión de Google caducó. Renueva para continuar."); return; }
           if (!res.ok) { setMsg("✖ " + (res.d.error || "error"), "err"); return; }
           IAM_SUPER = (res.d.superusers || []).indexOf(ME) >= 0;
           applyRole();
           render(res.d.emails || [], res.d.superusers || []);
+          if (action === "add") $("email").value = "";
           var verb = { add: "añadido", remove: "quitado", promote: "elevado a superuser", demote: "degradado" }[action];
           setMsg("✔ " + verb + " " + email, "ok");
         })
@@ -172,7 +219,7 @@
     function add() {
       var v = ($("email").value || "").toLowerCase().trim();
       if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(v)) { setMsg("✖ email no válido", "err"); return; }
-      write("add", v).then(function () { $("email").value = ""; });
+      write("add", v);
     }
 
     // arranque

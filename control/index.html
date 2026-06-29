@@ -343,6 +343,28 @@ function personaWallpaper(name){
   const f=_personaFile[PERSONA_BY_MACHINE[_norm(name)]];
   return f ? '/wallpapers/'+f+'.png' : '';
 }
+// CONSULTOR FIJO por máquina: el icono pequeño muestra SIEMPRE este fondo (no el
+// screenshot real), para asociar cada equipo con su personaje. Imágenes en /wallpapers.
+// Clave = id de máquina (fleet). PROPUESTA inicial — ajustable a gusto.
+const CONSULTOR_BY_MACHINE={
+  'macbookairazul':'Neo',          // CDO · Diseño
+  'macmini':'Morfeo',              // CFO · Hub central
+  'macbookpronegro14':'Cypher',    // CTO · Ingeniería
+  'mbair16plata':'Trinity',        // Equipo · Trinity/Codex
+  'macbookaircrema':'Oraculo',     // CSO · Storytelling
+  'macbookairplata':'Morfeo',      // COO · Operaciones
+  'macbookairrosa':'Trinity',      // Equipo AdmiraNeXT
+  'macbook-pro-16':'Neo',          // Equipo AdmiraNeXT
+  'thinkstationpgx-e82e':'Cypher'  // Equipo AdmiraNeXT
+};
+// Devuelve el fondo del consultor fijo de la máquina; si no está mapeada, cae al
+// fondo de la persona activa (presencia). machine = objeto de MACHINES o id/nombre.
+function consultorWallpaper(machine){
+  const m = (typeof machine==='object'&&machine) ? machine : (MACHINES.find(x=>x.id===machine)||{id:machine,name:machine});
+  const f = CONSULTOR_BY_MACHINE[m.id] || CONSULTOR_BY_MACHINE[_norm(m.name)];
+  if(f) return '/wallpapers/'+f+'.png';
+  return personaWallpaper(m.name);
+}
 
 // El acceso es por login de Google (gate). El botón muestra tu identidad y permite
 // cerrar sesión (limpia la sesión del backend y la del gate → vuelve a pedir login).
@@ -442,8 +464,8 @@ function renderCards(ms){
     </div>`).join('');
   // restaura miniaturas
   Object.keys(shots).forEach(id=>showShot(id, shots[id]));
-  // por defecto: el fondo (persona) de cada máquina hasta que se pida captura real
-  ms.forEach(m=>{ if(!shots[m.id]){ const w=personaWallpaper(m.name); if(w) setDefaultShot(m.id, w); } });
+  // por defecto: el fondo del consultor de cada máquina hasta que se pida captura real
+  ms.forEach(m=>{ if(!shots[m.id]){ const w=consultorWallpaper(m); if(w) setDefaultShot(m.id, w); } });
   // re-pinta los avisos de captura fallida que ya conocíamos
   ms.forEach(m=>{ if(CAP_FAIL[m.id]) setCapFail(m.id, true); });
   paintAllAges(); updateCapHealth();
@@ -462,7 +484,8 @@ function showShot(machineId, src){
   box.classList.remove('isWall');
   box.querySelector('img').src=src; box.style.display='block';
   box.onclick=()=>{ $('#lbImg').src=src; $('#lb').style.display='flex'; };
-  setIconScreen(machineId, src);
+  // El icono pequeño muestra SIEMPRE el fondo del consultor, no el screenshot real.
+  const w=consultorWallpaper(machineId); if(w) setIconScreen(machineId, w);
 }
 
 // Fondo de pantalla de la persona como miniatura por defecto (hasta una captura real).

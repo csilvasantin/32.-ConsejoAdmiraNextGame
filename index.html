@@ -1144,7 +1144,7 @@
 
         /* SCUMM BAR */
         .scumm-bar {
-            max-width: 1000px;
+            max-width: none; /* CLI a todo el ancho del contenedor (hace caja con el consejo) */
             margin: 0 auto;
             background: #0d0818;
             border: 2px solid #1a1a2e;
@@ -8811,9 +8811,9 @@
      inline (left/top/width) que el JS restaura de localStorage, dejándolo fijo. */
   #agm-panel{
     position:static!important; left:auto!important; right:auto!important; top:auto!important; bottom:auto!important;
-    width:calc(100% - 3rem)!important; max-width:calc(1200px - 3rem)!important;
+    width:100%!important; max-width:none!important;
     height:420px!important; min-width:0!important; min-height:0!important; max-height:80vh!important;
-    margin:6px auto 30px!important; resize:none!important;
+    margin:10px 0 16px!important; resize:none!important;
     font-family:'Courier New',monospace; color:#e8d3a0;
     background:#140d05; border:2px solid #aa7722; border-radius:0; box-shadow:4px 4px 0 #000;
   }
@@ -8846,6 +8846,18 @@
   #agm-actions button:hover{ border-color:#daa520; background:#180f02; }
   #agm-wr{ border-top:1px solid #5a3a1e; }
 </style>
+<script>
+  /* Coloca el menú AgoraMatrix justo debajo del CLI (.scumm-bar), dentro del
+     contenedor, para que comparta su ancho exacto. */
+  (function(){
+    function mv(){
+      var sb=document.querySelector('.scumm-bar'), ap=document.getElementById('agm-panel');
+      if(sb&&ap&&sb.nextElementSibling!==ap){ sb.insertAdjacentElement('afterend', ap); }
+    }
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', mv); else mv();
+    window.addEventListener('load', mv);
+  })();
+</script>
 <div id="agm-panel" class="agm-min" aria-label="AgoraMatrix Consejo">
   <div id="agm-head"><span class="agm-dot"></span><b>📡 AgoraMatrix · Consejo</b><span class="agm-toggle">▸</span></div>
   <div id="agm-body">

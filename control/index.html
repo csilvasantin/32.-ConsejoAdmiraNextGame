@@ -627,7 +627,7 @@ $('#csCmd').addEventListener('keydown',e=>{
     inp.setSelectionRange(inp.value.length,inp.value.length);
   }
 });
-$('#csClear').onclick=()=>{ $('#out').innerHTML='<div class="empty">Sin resultados todavía.</div>'; };
+$('#csClear').onclick=()=>{ $('#csCmd').value=''; _histIdx=-1; _histDraft=''; $('#out').innerHTML='<div class="empty">Sin resultados todavía.</div>'; $('#csCmd').focus(); };
 
 function pushResult(machine, label, d){
   const m=MACHINES.find(x=>x.id===machine)||{name:machine,emoji:''};

@@ -19,7 +19,8 @@
   var CLIENT_ID = "861856772040-e1ri6kpu6maagtb6crdfbb923hsaalgb.apps.googleusercontent.com";
   var WHITELIST = [
     "csilva@admira.com",
-    "csilvasantin@gmail.com"
+    "csilvasantin@gmail.com",
+    "mzavaleta@admira.com"
   ];
   var REMEMBER_HOURS = 12; // recordar una sesión validada para no pedir login cada vez
 

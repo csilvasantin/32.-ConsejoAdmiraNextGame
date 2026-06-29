@@ -59,7 +59,28 @@ const TOKEN = currentToken();
  * Google vía tokeninfo) por una SESIÓN propia firmada con HMAC (12h), para no
  * re-verificar con Google en cada llamada ni depender del optoken/X-Fleet-Token. */
 const GOOGLE_CLIENT_ID = '861856772040-e1ri6kpu6maagtb6crdfbb923hsaalgb.apps.googleusercontent.com';
-const ALLOWLIST = new Set(['csilva@admira.com', 'csilvasantin@gmail.com']);
+
+// Quién accede a los EQUIPOS (/control) = los "superusers" gestionados en
+// admira.live/usuarios.html. La fuente de verdad es el worker admira-whitelist;
+// aquí se cachea (60s) con fallback a los owners por si el worker no responde.
+const WL_API = 'https://admira-whitelist.csilvasantin.workers.dev';
+const FALLBACK_ALLOW = ['csilva@admira.com', 'csilvasantin@gmail.com'];
+let SUPERS = new Set(FALLBACK_ALLOW);
+let _superTs = 0;
+async function refreshSupers() {
+  try {
+    const r = await fetch(WL_API + '/list', { signal: AbortSignal.timeout(8000) });
+    if (!r.ok) return;
+    const d = await r.json();
+    if (Array.isArray(d.superusers) && d.superusers.length) {
+      SUPERS = new Set(d.superusers.map(e => String(e).toLowerCase()));
+      _superTs = Date.now();
+    }
+  } catch (e) { /* mantiene la última lista conocida / fallback */ }
+}
+refreshSupers();
+setInterval(refreshSupers, 60 * 1000).unref?.();
+
 const SESSION_TTL_MS = 12 * 3600 * 1000;
 const SESSION_SECRET = (function () {
   const f = path.join(DIR, '.session-secret');
@@ -82,7 +103,8 @@ async function verifyGoogleCredential(cred) {
     if (d.aud !== GOOGLE_CLIENT_ID) return null;            // token de OTRA app → no
     if (String(d.email_verified) !== 'true') return null;
     const email = String(d.email || '').toLowerCase();
-    if (!ALLOWLIST.has(email)) return null;                 // no allowlisted → no
+    if (Date.now() - _superTs > 60000) await refreshSupers();  // lista fresca al emitir sesión
+    if (!SUPERS.has(email)) return null;                    // no superuser → no
     return email;
   } catch (e) { return null; }
 }
@@ -98,7 +120,7 @@ function verifySession(token) {
   let d; try { d = JSON.parse(Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString()); } catch (e) { return null; }
   if (!d || !d.exp || Date.now() > d.exp) return null;
   const email = String(d.email || '').toLowerCase();
-  if (!ALLOWLIST.has(email)) return null;
+  if (!SUPERS.has(email)) return null;   // degradar a alguien le corta /control en ≤60s
   return email;
 }
 function sessionFromReq(req) {

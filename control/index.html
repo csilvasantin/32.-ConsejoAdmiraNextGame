@@ -50,6 +50,22 @@
   .card .em.em-click{cursor:pointer;border-radius:10px;transition:.12s;padding:2px}
   .card .em.em-click:hover{background:rgba(91,214,192,.16);transform:scale(1.08)}
   .card .em.em-busy{opacity:.5;animation:empulse 1s infinite}
+  /* Icono = ORDENADOR dibujado, con la última captura miniaturizada en su pantalla */
+  .card .em.devicon{position:relative;width:48px;height:36px;padding:0;font-size:0;flex:none;display:inline-block}
+  .card .em.devicon .dscr{position:absolute;left:4px;top:1px;right:4px;height:27px;border:2px solid #39507a;border-radius:3px;background:#070b14;overflow:hidden;box-shadow:inset 0 0 6px rgba(0,0,0,.6)}
+  .card .em.devicon .dscr img{width:100%;height:100%;object-fit:cover;display:block}
+  .card .em.devicon .dscr.empty-scr{background:linear-gradient(135deg,#0c1426,#0a0f1a)}
+  .card .em.devicon .dscr.empty-scr img{display:none}
+  .card .em.devicon .dbase{position:absolute;left:0;right:0;bottom:0;height:6px;background:linear-gradient(#c8cfdd,#99a2b5);border-radius:1px 1px 5px 5px}
+  .card .em.devicon .dbase::after{content:'';position:absolute;left:50%;top:0;transform:translateX(-50%);width:16px;height:2px;background:#7c8499;border-radius:0 0 3px 3px}
+  /* variante sobremesa (Mac Mini / Twin): monitor con peana */
+  .card .em.devicon.desk{height:40px}
+  .card .em.devicon.desk .dscr{height:31px;left:2px;right:2px;border-radius:4px}
+  .card .em.devicon.desk .dbase{left:50%;transform:translateX(-50%);width:14px;height:8px;background:#99a2b5;border-radius:0 0 2px 2px}
+  .card .em.devicon.desk .dbase::after{display:none}
+  .card .em.devicon.em-click{cursor:pointer;border-radius:0;transition:transform .12s}
+  .card .em.devicon.em-click:hover{background:none;transform:scale(1.09)}
+  .card .em.devicon.em-busy{opacity:.55;animation:empulse 1s infinite}
   @keyframes empulse{50%{opacity:.85}}
   .card .nm{font-weight:700;font-size:15px}
   .card .role{color:var(--mut);font-size:12px}
@@ -398,7 +414,7 @@ function renderCards(ms){
   el.innerHTML=list.map(m=>`
     <div class="card${COL[m.id]?' collapsed':''}" data-card="${m.id}">
       <div class="top">
-        <span class="em${m.online?' em-click':''}" ${m.online?`data-icon="${m.id}"`:''} title="${m.online?'Limpiar el escritorio (oculta apps) y ver el fondo':''}">${m.emoji||'💻'}</span>
+        <span class="em devicon${/mini|twin|imac|studio|mac\s*pro/i.test(m.name||'')?' desk':''}${m.online?' em-click':''}" data-icon="${m.id}" title="${m.online?'Limpiar el escritorio (oculta apps) y ver el fondo':(m.name||'')+' (offline)'}"><span class="dscr empty-scr"><img alt=""></span><span class="dbase"></span></span>
         <div class="cardmeta"><div class="nm">${m.name} <span class="dot ${m.online?'on':''}"></span></div>
         <div class="role">${m.role||''}${m.local?' · local':' · ssh'}</div></div>
         <span class="card-fold" data-fold="${m.id}" title="Comprimir / expandir">▾</span>
@@ -433,11 +449,20 @@ function renderCards(ms){
   paintAllAges(); updateCapHealth();
 }
 
+// Vuelca la última captura (o el fondo) miniaturizada DENTRO de la pantalla del icono-ordenador.
+function setIconScreen(machineId, src){
+  const ic=document.querySelector('.em.devicon[data-icon="'+machineId+'"]'); if(!ic) return;
+  const scr=ic.querySelector('.dscr'), img=scr&&scr.querySelector('img'); if(!img) return;
+  img.onerror=()=>{ scr.classList.add('empty-scr'); };
+  img.src=src; scr.classList.remove('empty-scr');
+}
+
 function showShot(machineId, src){
   const box=document.querySelector('.shot[data-m="'+machineId+'"]'); if(!box) return;
   box.classList.remove('isWall');
   box.querySelector('img').src=src; box.style.display='block';
   box.onclick=()=>{ $('#lbImg').src=src; $('#lb').style.display='flex'; };
+  setIconScreen(machineId, src);
 }
 
 // Fondo de pantalla de la persona como miniatura por defecto (hasta una captura real).
@@ -447,6 +472,7 @@ function setDefaultShot(machineId, src){
   img.onerror=()=>{ box.style.display='none'; };  // si falla, nada de icono roto
   img.src=src; box.style.display='block'; box.classList.add('isWall');
   box.onclick=()=>{ $('#lbImg').src=src; $('#lb').style.display='flex'; };
+  setIconScreen(machineId, src);
 }
 $('#lb').onclick=()=>{ $('#lb').style.display='none'; };
 

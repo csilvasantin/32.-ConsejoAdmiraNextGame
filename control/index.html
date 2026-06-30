@@ -364,14 +364,9 @@ async function api(path, opts){
 }
 
 /* ---------- estado de la flota ---------- */
-let _reauthTried=false, _firstCapDone=false;
-// Al conectar por primera vez: una captura real de todas las pantallas online,
-// para que el tablero arranque mostrando lo que emite cada equipo (no solo el fondo).
-async function firstCaptureAll(){
-  const el=$('#acState'); if(el) el.textContent='· captura inicial de la flota…';
-  await autoCapTick();
-  if(el && !AUTOCAP.on) el.textContent='· captura inicial '+new Date().toLocaleTimeString('es-ES');
-}
+let _reauthTried=false;
+// NO se captura al inicio: el tablero arranca SIEMPRE con el wallpaper de cada equipo.
+// Las capturas de pantalla son bajo demanda (botón 📸 por máquina o «capturar todas»).
 async function refresh(){
   if(!SESSION){ $('#connPill').textContent='🔒 inicia sesión Google'; $('#connPill').className='pill bad'; renderCards([]); return; }
   try{
@@ -385,7 +380,6 @@ async function refresh(){
     MACHINES.forEach(m=>{ PREV_ONLINE[m.id]=m.online; }); _baselineDone=true;
     await loadPersonas();
     renderCards(MACHINES); fillSelect(); updateCapHealth();
-    if(!_firstCapDone && up>0){ _firstCapDone=true; firstCaptureAll(); }
   }catch(e){
     if(e.code===401 && !_reauthTried){
       // Sesión caducada → re-intercambia el credential del gate UNA vez.

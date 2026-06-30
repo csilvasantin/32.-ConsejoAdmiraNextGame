@@ -3857,7 +3857,7 @@ def _hk_load_council() -> list:
         # Consejeros (Mac) como hasta ahora + los PC Windows de la flota. Ambos
         # siguen gateados por ssh.enabled+host: los Windows solo entran cuando se
         # les active OpenSSH y se rellene su host (hoy ssh.enabled:false → fuera).
-        if m.get("unitType") == "council" or _hk_is_windows(m):
+        if m.get("unitType") == "council" or _hk_is_windows(m) or _hk_is_linux(m):
             out.append(m)
     return out
 
@@ -4092,6 +4092,64 @@ def _hk_is_windows(machine: dict) -> bool:
     return str(machine.get("platform") or "").lower().startswith("win")
 
 
+def _hk_is_linux(machine: dict) -> bool:
+    return str(machine.get("platform") or "").lower().startswith("linux")
+
+
+def _hk_linux_launch(user: str, host: str) -> tuple:
+    """Lanza la simulación de hackeo en un terminal a pantalla completa del
+    equipo Linux remoto. Usa gnome-terminal vía ~/.fleet/fleet-sesh (que inyecta
+    DISPLAY/DBUS de la sesión gráfica, igual que para la captura). Devuelve
+    (ok, detail)."""
+    if not user or not host:
+        return False, "missing ssh user/host"
+    import base64 as _b64
+    payload = _b64.b64encode(_HK_REMOTE_PY.encode("utf-8")).decode("ascii")
+    # Escribimos el simulacro con nombre (hacksim.py) para que el stop lo pueda
+    # matar de forma fiable con `pkill -f hacksim.py`. Al morir el python, el
+    # terminal cierra la ventana solo.
+    remote_cmd = (
+        'mkdir -p "$HOME/.fleet" && '
+        f'echo {payload} | base64 -d > "$HOME/.fleet/hacksim.py" && '
+        '"$HOME/.fleet/fleet-sesh" gnome-terminal --full-screen -- '
+        'python3 "$HOME/.fleet/hacksim.py"'
+    )
+    ssh_cmd = [
+        "ssh", "-o", "StrictHostKeyChecking=no", "-o", "BatchMode=yes",
+        "-o", f"ConnectTimeout={_HK_SSH_TIMEOUT}", f"{user}@{host}", remote_cmd,
+    ]
+    try:
+        r = subprocess.run(ssh_cmd, capture_output=True, timeout=_HK_SSH_TIMEOUT + 3)
+        if r.returncode == 0:
+            return True, "ssh launched (linux)"
+        err = (r.stderr or b"").decode("utf-8", "ignore").strip()[:200]
+        return False, f"ssh rc={r.returncode}: {err or 'no stderr'}"
+    except subprocess.TimeoutExpired:
+        return False, "ssh timeout"
+    except Exception as e:
+        return False, f"ssh error: {e}"
+
+
+def _hk_linux_stop(user: str, host: str) -> tuple:
+    """Cierra el terminal de hackeo en el equipo Linux remoto matando el
+    simulacro (gnome-terminal cierra la ventana al terminar su proceso). El
+    patrón con corchete evita que pkill -f se mate a sí mismo."""
+    if not user or not host:
+        return False, "missing ssh user/host"
+    remote_cmd = 'pkill -f "[h]acksim.py"; true'
+    ssh_cmd = [
+        "ssh", "-o", "StrictHostKeyChecking=no", "-o", "BatchMode=yes",
+        "-o", f"ConnectTimeout={_HK_SSH_TIMEOUT}", f"{user}@{host}", remote_cmd,
+    ]
+    try:
+        subprocess.run(ssh_cmd, capture_output=True, timeout=_HK_SSH_TIMEOUT + 2)
+        return True, "stopped (linux)"
+    except subprocess.TimeoutExpired:
+        return False, "ssh timeout"
+    except Exception as e:
+        return False, f"ssh error: {e}"
+
+
 def _hk_normalize_mac(mac: str) -> str:
     """Normaliza una MAC a `aa:bb:cc:dd:ee:ff` (lowercase). '' si inválida."""
     raw = re.sub(r"[^0-9a-fA-F]", "", mac or "").lower()
@@ -4242,12 +4300,13 @@ def _hk_process_one(machine: dict, action: str) -> dict:
     name = machine.get("name") or machine.get("id")
 
     is_win = _hk_is_windows(machine)
+    is_linux = _hk_is_linux(machine)
     alive = _hk_ping(host)
     result = {
         "id": machine.get("id"),
         "name": name,
         "host": host,
-        "os": "win" if is_win else "mac",
+        "os": "linux" if is_linux else ("win" if is_win else "mac"),
         "online": alive,
         "action": "none",
         "ok": False,
@@ -4256,7 +4315,8 @@ def _hk_process_one(machine: dict, action: str) -> dict:
 
     if action == "stop":
         if alive:
-            ok, detail = (_hk_win_stop if is_win else _hk_ssh_stop)(user, host)
+            stop_fn = _hk_linux_stop if is_linux else (_hk_win_stop if is_win else _hk_ssh_stop)
+            ok, detail = stop_fn(user, host)
             result["action"] = "ssh_stop"
             result["ok"] = ok
             result["detail"] = detail
@@ -4272,12 +4332,13 @@ def _hk_process_one(machine: dict, action: str) -> dict:
         # aunque esté apagada. El endpoint la persistirá en machines.json.
         # (En Windows el descubrimiento de MAC por SSH/ifconfig no aplica igual;
         #  se omite y queda para WoL manual.)
-        if not mac and not is_win:
+        if not mac and not is_win and not is_linux:
             disc_mac, disc_src = _hk_discover_mac(machine)
             if disc_mac:
                 result["discovered_mac"] = disc_mac
                 result["mac_source"] = disc_src
-        ok, detail = (_hk_win_launch if is_win else _hk_ssh_launch)(user, host)
+        launch_fn = _hk_linux_launch if is_linux else (_hk_win_launch if is_win else _hk_ssh_launch)
+        ok, detail = launch_fn(user, host)
         result["action"] = "ssh_launched"
         result["ok"] = ok
         result["detail"] = detail

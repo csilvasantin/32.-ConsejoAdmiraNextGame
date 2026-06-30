@@ -1025,6 +1025,8 @@ function collapseAllToggle(){
         { id: "admira-pc-runner-01",       role: "QA y validación",      persona: "PC Runner 01",       ip: "pc-runner-01",         host: "PC-RUNNER-01",        user: "csilvasantin", platform: "win" },
         { id: "admira-pc-ocr-01",          role: "Documental · OCR",     persona: "PC OCR 01",          ip: "pc-ocr-01",            host: "PC-OCR-01",           user: "csilvasantin", platform: "win" },
         { id: "admira-pc-bot-01",          role: "Automatización web",   persona: "PC Bot 01",          ip: "pc-bot-01",            host: "PC-BOT-01",           user: "csilvasantin", platform: "win" },
+        // ThinkStation Linux (Ubuntu) — usa el guion unix (HACK_LINES); el backend le abre gnome-terminal a pantalla completa.
+        { id: "admira-thinkstation",       role: "Sobremesa · Linux",    persona: "ThinkStation PGX",   ip: "100.75.211.23",        host: "thinkstationpgx-e82e", user: "test", platform: "linux" },
     ];
 
     function fillHackLine(line, machine) {

@@ -250,6 +250,8 @@
     <button id="wallOpen" title="Pared de pantallas: mosaico a pantalla completa de todas las capturas">🧱 Mosaico</button>
     <button id="hackOpen" title="HACKEO · secuencia de intrusión sobre toda la flota (cinemática + acción real)">🕶️ HACKEO</button>
     <button id="fleetScreens" title="Apagar o encender la pantalla de TODA la flota online (toggle)">🌙 Apagar todas</button>
+    <button id="ssOn" title="Activar el salvapantallas en TODA la flota online">🖼️ Salva ON</button>
+    <button id="ssOff" title="Quitar el salvapantallas en TODA la flota online">🖼️ Salva OFF</button>
     <label title="Beep cuando un equipo se cae o su captura empieza a fallar"><input type="checkbox" id="sndToggle"> 🔔 sonido</label>
     <label title="No mostrar los equipos desconectados"><input type="checkbox" id="hideOff"> 🙈 ocultar offline</label>
     <button id="collapseAll" title="Colapsar o expandir todas las tarjetas">⊟ colapsar todas</button>
@@ -777,6 +779,25 @@ function renderFleetScreens(){
     if(okCount>0){ SCREENS_OFF=turnOff; localStorage.setItem('fleet_screens_off', SCREENS_OFF?'1':'0'); }
     renderFleetScreens();
   };
+})();
+
+/* ---------- salvapantallas ON/OFF en toda la flota online ----------
+   Manda la acción screensaver_on/off (backend OS-aware: ScreenSaverEngine en
+   macOS, GNOME ScreenSaver vía dbus en Linux) a cada máquina online. */
+(function(){
+  async function sweep(action, btn, label){
+    const targets = MACHINES.filter(m=>m.online);
+    if(!targets.length){ pushResult('__all__','🖼️ salvapantallas',{rc:1,stdout:'',stderr:'no hay máquinas online'}); return; }
+    const txt = btn.textContent;
+    btn.disabled = true; let okCount = 0;
+    for(let i=0;i<targets.length;i++){ const m=targets[i]; btn.textContent='🖼️ '+(i+1)+'/'+targets.length;
+      try{ const d=await api('/action',{method:'POST',body:JSON.stringify({machine:m.id,action})}); if(d.rc===0) okCount++; pushResult(m.id,label,d); }
+      catch(err){ pushResult(m.id,label,{rc:-1,stdout:'',stderr:err.msg||'error'}); } }
+    btn.disabled = false; btn.textContent = txt;
+  }
+  const on=$('#ssOn'), off=$('#ssOff');
+  if(on) on.onclick = ()=>sweep('screensaver_on', on, '🖼️ salva ON');
+  if(off) off.onclick = ()=>sweep('screensaver_off', off, '🖼️ salva OFF');
 })();
 
 /* ---------- mosaico / pared de pantallas ---------- */

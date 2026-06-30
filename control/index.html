@@ -491,6 +491,7 @@ function renderCards(ms){
         <button data-a="ssh" data-m="${m.id}">🔌 ssh</button>
         <button data-a="signage_on" data-m="${m.id}" title="Lanzar el player de digital signage (AdmiraSignageMac)">📺 signage</button>
         <button data-a="signage_off" data-m="${m.id}" title="Parar el player de digital signage">⏹️ parar</button>
+        ${m.online?`<button data-rc="${m.id}" data-rcname="${(m.name||'').replace(/"/g,'')}" title="Control remoto en vivo (ver + ratón + teclado, estilo AnyDesk). Requiere AdmiraRemoteAgent + permisos en la máquina destino." style="border-color:var(--acc);color:var(--acc);font-weight:700">🖥️ control remoto</button>`:''}
       </div>
       <div class="capwarn" data-capwarn="${m.id}">⚠️ sin permiso de captura <button data-fix="${m.id}" title="Abrir el panel de Grabación de pantalla en ese Mac, avisar al usuario y reactivar el agente">🛡️ enviar arreglo por SSH</button></div>
     </div>`).join('');
@@ -1114,5 +1115,41 @@ function collapseAllToggle(){
 })();
 </script>
 
+<!-- ===== Control remoto en vivo (AnyDesk-style) ============================ -->
+<script>
+(function () {
+  if (window.__admiraRemoteViewer) return;
+  window.__admiraRemoteViewer = true;
+  const RC_API = (typeof API !== 'undefined') ? API : 'https://macmini.tail48b61c.ts.net/fleet/api';
+  function rcSession(){ if(typeof SESSION!=='undefined'&&SESSION)return SESSION; try{const s=JSON.parse(localStorage.getItem('fleet_session')||'null');if(s&&s.token)return s.token;}catch(e){} return ''; }
+  function rcAuthHeaders(extra){ const h=Object.assign({},extra||{}); const t=rcSession(); if(t)h['Authorization']='Bearer '+t; return h; }
+  const KMAP={KeyA:0,KeyS:1,KeyD:2,KeyF:3,KeyH:4,KeyG:5,KeyZ:6,KeyX:7,KeyC:8,KeyV:9,KeyB:11,KeyQ:12,KeyW:13,KeyE:14,KeyR:15,KeyY:16,KeyT:17,KeyO:31,KeyU:32,KeyI:34,KeyP:35,KeyL:37,KeyJ:38,KeyK:40,KeyN:45,KeyM:46,Digit1:18,Digit2:19,Digit3:20,Digit4:21,Digit6:22,Digit5:23,Equal:24,Digit9:25,Digit7:26,Minus:27,Digit8:28,Digit0:29,BracketRight:30,BracketLeft:33,Quote:39,Semicolon:41,Backslash:42,Comma:43,Slash:44,Period:47,Backquote:50,Enter:36,Return:36,NumpadEnter:76,Tab:48,Space:49,Backspace:51,Delete:117,Escape:53,ArrowLeft:123,ArrowRight:124,ArrowDown:125,ArrowUp:126,Home:115,End:119,PageUp:116,PageDown:121,F1:122,F2:120,F3:99,F4:118,F5:96,F6:97,F7:98,F8:100,F9:101,F10:109,F11:103,F12:111};
+  function modsOf(e){const m=[];if(e.metaKey)m.push('cmd');if(e.shiftKey)m.push('shift');if(e.altKey)m.push('alt');if(e.ctrlKey)m.push('ctrl');return m;}
+  let cur=null;
+  function styleOnce(){ if(document.getElementById('rc-style'))return; const s=document.createElement('style');s.id='rc-style';s.textContent='#rc-ov{position:fixed;inset:0;z-index:9999;background:#05070c;display:flex;flex-direction:column;font-family:-apple-system,sans-serif}#rc-bar{display:flex;align-items:center;gap:12px;padding:8px 14px;background:#0e1320;border-bottom:1px solid #26303f;color:#e8eef7;font-size:13px;flex:none}#rc-bar .sp{flex:1}#rc-bar button{background:#1a2230;color:#e8eef7;border:1px solid #2d3a4d;border-radius:8px;padding:6px 11px;font-size:12px;cursor:pointer}#rc-bar button.on{border-color:#5bd6c0;color:#5bd6c0}#rc-bar .stat{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8a97ab}#rc-bar input[type=range]{width:90px;accent-color:#5bd6c0}#rc-stage{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;background:#05070c}#rc-img{max-width:100%;max-height:100%;object-fit:contain;cursor:crosshair;display:block;user-select:none}#rc-msg{position:absolute;color:#8a97ab;font-size:14px;text-align:center;padding:18px;max-width:560px;line-height:1.5}#rc-msg b{color:#ffb454}';document.head.appendChild(s); }
+  async function sendInput(p){ if(!cur)return; p.machine=cur.machine; try{ await fetch(RC_API+'/input',{method:'POST',headers:rcAuthHeaders({'Content-Type':'application/json'}),body:JSON.stringify(p)});}catch(e){} }
+  function normCoords(e){ const img=cur.img;const r=img.getBoundingClientRect();const nr=(img.naturalWidth||16)/(img.naturalHeight||9);let dw=r.width,dh=r.width/nr;if(dh>r.height){dh=r.height;dw=r.height*nr;}const ox=r.left+(r.width-dw)/2,oy=r.top+(r.height-dh)/2;const nx=(e.clientX-ox)/dw,ny=(e.clientY-oy)/dh;return{x:Math.min(1,Math.max(0,nx)),y:Math.min(1,Math.max(0,ny))};}
+  function frameLoop(){ if(!cur||cur.closed)return; const t0=performance.now(); const url=RC_API+'/live/frame?machine='+encodeURIComponent(cur.machine)+'&scale='+cur.scale+'&q='+cur.q+'&_='+t0; fetch(url,{headers:rcAuthHeaders(),cache:'no-store'}).then(r=>{if(!r.ok)return r.text().then(t=>{throw new Error('HTTP '+r.status+' '+t.slice(0,140));});return r.blob();}).then(blob=>{ if(!cur||cur.closed)return; const u=URL.createObjectURL(blob);const old=cur.img.src;cur.img.onload=()=>{if(old&&old.startsWith('blob:'))URL.revokeObjectURL(old);};cur.img.src=u;cur.msg.style.display='none';const dt=performance.now()-t0;cur.fpsArr.push(dt);if(cur.fpsArr.length>10)cur.fpsArr.shift();const avg=cur.fpsArr.reduce((a,b)=>a+b,0)/cur.fpsArr.length;cur.stat.textContent=Math.round(1000/Math.max(1,avg))+' fps · '+Math.round(avg)+' ms · '+Math.round(blob.size/1024)+' KB';const wait=Math.max(0,(1000/cur.targetFps)-dt);cur.timer=setTimeout(frameLoop,wait);}).catch(err=>{ if(!cur||cur.closed)return; cur.msg.style.display='block'; cur.msg.innerHTML='Esperando al agente…<br><b>'+String(err.message||err).replace(/</g,'&lt;')+'</b><br><br>Si dice <i>capture_failed_or_no_permission</i>, falta conceder <b>Grabación de pantalla</b> al agente en esa máquina.'; cur.timer=setTimeout(frameLoop,1200); }); }
+  window.openRemoteControl=function(machineId,machineName){ styleOnce(); if(document.getElementById('rc-ov'))document.getElementById('rc-ov').remove(); const ov=document.createElement('div');ov.id='rc-ov'; ov.innerHTML='<div id="rc-bar"><b>🖥️ Control remoto · '+(machineName||machineId)+'</b><span class="stat" id="rc-stat">conectando…</span><span class="sp"></span><label class="stat">fps <input type="range" id="rc-fps" min="1" max="15" value="6"></label><label class="stat">calidad <input type="range" id="rc-q" min="2" max="9" value="5"></label><button id="rc-ctl" class="on">🎮 control: ON</button><button id="rc-full">⛶</button><button id="rc-close">✕ cerrar</button></div><div id="rc-stage"><img id="rc-img" draggable="false"><div id="rc-msg">Conectando…</div></div>'; document.body.appendChild(ov);
+    cur={machine:machineId,name:machineName,closed:false,img:ov.querySelector('#rc-img'),msg:ov.querySelector('#rc-msg'),stat:ov.querySelector('#rc-stat'),scale:0.5,q:0.5,targetFps:6,control:true,fpsArr:[],timer:null,lastUp:0,lastPos:{x:-9,y:-9},clicks:0,dragging:false,lastMove:0};
+    const img=cur.img;
+    img.addEventListener('mousemove',e=>{if(!cur.control)return;const now=performance.now();if(!cur.dragging&&now-cur.lastMove<45)return;cur.lastMove=now;const c=normCoords(e);sendInput({type:'move',x:c.x,y:c.y});});
+    img.addEventListener('mousedown',e=>{if(!cur.control)return;e.preventDefault();const c=normCoords(e);const now=performance.now();const near=Math.abs(c.x-cur.lastPos.x)<0.01&&Math.abs(c.y-cur.lastPos.y)<0.01;cur.clicks=(now-cur.lastUp<400&&near)?cur.clicks+1:1;cur.dragging=true;sendInput({type:'down',x:c.x,y:c.y,button:e.button===2?'right':'left',clicks:cur.clicks});});
+    img.addEventListener('mouseup',e=>{if(!cur.control)return;e.preventDefault();const c=normCoords(e);sendInput({type:'up',x:c.x,y:c.y,button:e.button===2?'right':'left',clicks:cur.clicks});cur.lastUp=performance.now();cur.lastPos={x:c.x,y:c.y};cur.dragging=false;});
+    img.addEventListener('contextmenu',e=>e.preventDefault());
+    img.addEventListener('wheel',e=>{if(!cur.control)return;e.preventDefault();sendInput({type:'scroll',dx:-Math.round(e.deltaX),dy:-Math.round(e.deltaY)});},{passive:false});
+    cur.keyHandler=e=>{if(!cur||cur.closed||!cur.control)return;e.preventDefault();const mods=modsOf(e);const pr=e.key.length===1&&!e.metaKey&&!e.ctrlKey&&!e.altKey;if(pr){sendInput({type:'text',text:e.key});return;}const code=KMAP[e.code];if(code!=null)sendInput({type:'key',code:code,mods:mods});};
+    document.addEventListener('keydown',cur.keyHandler,true);
+    ov.querySelector('#rc-fps').addEventListener('input',e=>cur.targetFps=+e.target.value);
+    ov.querySelector('#rc-q').addEventListener('input',e=>cur.q=(+e.target.value)/10);
+    const ctlBtn=ov.querySelector('#rc-ctl');ctlBtn.addEventListener('click',()=>{cur.control=!cur.control;ctlBtn.classList.toggle('on',cur.control);ctlBtn.textContent=cur.control?'🎮 control: ON':'👁️ solo ver';img.style.cursor=cur.control?'crosshair':'default';});
+    ov.querySelector('#rc-full').addEventListener('click',()=>{if(!document.fullscreenElement)ov.requestFullscreen&&ov.requestFullscreen();else document.exitFullscreen&&document.exitFullscreen();});
+    ov.querySelector('#rc-close').addEventListener('click',()=>{cur.closed=true;clearTimeout(cur.timer);document.removeEventListener('keydown',cur.keyHandler,true);if(document.fullscreenElement)document.exitFullscreen&&document.exitFullscreen();ov.remove();cur=null;});
+    frameLoop();
+  };
+  // Botón "🖥️ control remoto" de cada tarjeta (delegación).
+  document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-rc]'); if(!b)return; e.preventDefault(); window.openRemoteControl(b.getAttribute('data-rc'), b.getAttribute('data-rcname')||b.getAttribute('data-rc')); });
+})();
+</script>
 </body>
 </html>

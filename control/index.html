@@ -169,6 +169,48 @@
   .cmember .cmach{font-family:var(--mono);font-size:10.5px;color:var(--mut);text-align:right;white-space:nowrap;line-height:1.4}
   .cmember a.cficha{color:var(--acc2);font-size:11px;text-decoration:none;white-space:nowrap;border:1px solid var(--line);border-radius:7px;padding:4px 7px}
   .cmember a.cficha:hover{border-color:var(--acc2)}
+  /* ===== HACKEO (portado desde la home de admira.live) ===== */
+  #hackOpen{border-color:#1f6f4a}
+  #hackOpen:hover{border-color:#00ff41;color:#9effb0}
+  .hack-overlay{display:none;position:fixed;inset:0;z-index:2147483646;background:rgba(0,0,0,.96);padding:1rem;overflow:hidden;box-sizing:border-box;flex-direction:column}
+  .hack-overlay.visible{display:flex}
+  .hack-topbar{display:flex;align-items:center;gap:12px;padding:8px 10px;margin-bottom:.5rem;border-bottom:1px solid #1a3a1a;color:#00ff41;font-family:'Courier New',monospace;font-size:13px;flex:none}
+  .hack-topbar .spacer{flex:1}
+  .hack-topbar .hack-title{letter-spacing:2px;font-weight:700}
+  .hack-topbar #hackStatusLine{font-size:11px;color:#0f0;opacity:.85;font-family:'Courier New',monospace}
+  #hackBack{font-family:'Courier New',monospace;background:#0a0a0a;color:#00ff41;border:1px solid #00ff41;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:1px}
+  #hackBack:hover{background:#00ff41;color:#000}
+  #hackBody{flex:1;min-height:0;display:flex}
+  .hack-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));grid-auto-rows:1fr;gap:.5rem;flex:1 1 auto;min-height:0;width:100%;box-sizing:border-box}
+  .hack-grid>.hack-terminal{min-height:0;min-width:0}
+  .hack-terminal{border-radius:6px;padding:.5rem;overflow:hidden;position:relative;font-size:.55rem;line-height:1.3;display:flex;flex-direction:column;background:#0a0a0a;border:1px solid #00ff41;font-family:'Courier New',monospace;color:#00ff41}
+  .hack-terminal-header{font-size:.6rem;font-weight:700;margin-bottom:.3rem;padding-bottom:.3rem;display:flex;justify-content:space-between;flex-shrink:0}
+  .hack-style-0{background:#0a0a0a;border-color:#00ff41;color:#00ff41;font-family:'Courier New',monospace}
+  .hack-style-0 .hack-terminal-header{color:#ff3333;border-bottom:1px solid #1a3a1a}
+  .hack-style-0 .hack-role{color:#00ff41}
+  .hack-style-1{background:#1a0f00;border-color:#ff9900;color:#ffaa00;font-family:'Monaco','Menlo',monospace}
+  .hack-style-1 .hack-terminal-header{color:#ff6600;border-bottom:1px solid #3a2a00}
+  .hack-style-1 .hack-role{color:#ffcc00}
+  .hack-style-2{background:#0a0a1e;border-color:#00ccff;color:#00ddff;font-family:'Andale Mono',monospace}
+  .hack-style-2 .hack-terminal-header{color:#ff66aa;border-bottom:1px solid #0a1a3a}
+  .hack-style-2 .hack-role{color:#00ffff}
+  .hack-style-3{background:#0d0b1a;border-color:#bd93f9;color:#f8f8f2;font-family:'Courier New',monospace}
+  .hack-style-3 .hack-terminal-header{color:#ff5555;border-bottom:1px solid #2a1a3a}
+  .hack-style-3 .hack-role{color:#bd93f9}
+  .hack-style-4{background:#001100;border-color:#33ff33;color:#33ff33;font-family:'Lucida Console',monospace;text-shadow:0 0 3px #33ff33}
+  .hack-style-4 .hack-terminal-header{color:#ffff33;border-bottom:1px solid #003300}
+  .hack-style-4 .hack-role{color:#66ff66}
+  .hack-style-5{background:#002b36;border-color:#268bd2;color:#839496;font-family:'Menlo','Monaco',monospace}
+  .hack-style-5 .hack-terminal-header{color:#cb4b16;border-bottom:1px solid #073642}
+  .hack-style-5 .hack-role{color:#2aa198}
+  .hack-style-6{background:#0a0000;border-color:#cc0000;color:#ff3333;font-family:'Courier New',monospace}
+  .hack-style-6 .hack-terminal-header{color:#ff0000;border-bottom:1px solid #3a0000}
+  .hack-style-6 .hack-role{color:#ff6666}
+  .hack-style-7{background:#050a14;border-color:#00d4ff;color:#6fefff;font-family:'Andale Mono','Monaco',monospace;text-shadow:0 0 2px #00d4ff}
+  .hack-style-7 .hack-terminal-header{color:#ff8800;border-bottom:1px solid #0a1a2a}
+  .hack-style-7 .hack-role{color:#00d4ff}
+  .hack-terminal-body{flex:1;overflow:hidden;white-space:pre;opacity:.9}
+  @media (max-width:768px){.hack-grid{grid-template-columns:repeat(2,1fr)}}
 </style>
 </head>
 <body>
@@ -206,6 +248,7 @@
     <span>cada <input type="number" id="acSec" min="3" max="600" value="15"> s</span>
     <button id="acNow" title="Capturar ahora todas las pantallas online">📸 Capturar todas</button>
     <button id="wallOpen" title="Pared de pantallas: mosaico a pantalla completa de todas las capturas">🧱 Mosaico</button>
+    <button id="hackOpen" title="HACKEO · secuencia de intrusión sobre toda la flota (cinemática + acción real)">🕶️ HACKEO</button>
     <button id="fleetScreens" title="Apagar o encender la pantalla de TODA la flota online (toggle)">🌙 Apagar todas</button>
     <label title="Beep cuando un equipo se cae o su captura empieza a fallar"><input type="checkbox" id="sndToggle"> 🔔 sonido</label>
     <label title="No mostrar los equipos desconectados"><input type="checkbox" id="hideOff"> 🙈 ocultar offline</label>
@@ -235,6 +278,15 @@
 <div id="wall">
   <div class="wallbar">🧱 Pared de pantallas <span id="wallcount"></span><span class="spacer"></span><button id="wallClose">✕ cerrar (Esc)</button></div>
   <div class="wallgrid" id="wallGrid"></div>
+</div>
+<div id="hack" class="hack-overlay">
+  <div class="hack-topbar">
+    <button id="hackBack" title="Volver al panel de control">← Volver al control</button>
+    <span class="hack-title">🕶️ HACKEO</span>
+    <span class="spacer"></span>
+    <span id="hackStatusLine"></span>
+  </div>
+  <div id="hackBody"></div>
 </div>
 
 <script>
@@ -863,5 +915,202 @@ function collapseAllToggle(){
   header.remove();
 })();
 </script>
+<script>
+/* ===== HACKEO portado desde la home de admira.live — autocontenido (IIFE) ===== */
+(function(){
+  const isSecure = location.protocol === 'https:';
+  const COUNCIL_API_URLS = isSecure
+    ? ['https://macmini.tail48b61c.ts.net/council','https://three2-consejoadmiranextgame.onrender.com']
+    : ['http://localhost:8420','http://macmini.tail48b61c.ts.net:8420','https://three2-consejoadmiranextgame.onrender.com'];
+  const COUNCIL_API_TOKEN = "admira2026";
+  let activeApiUrl = null, hackMode = false, hackIntervals = [], MY_TAILNET_IP = "";
+
+    const HACK_LINES = [
+        "$ ssh -o StrictHostKeyChecking=no root@{ip}",
+        "Connecting to {ip}:22...",
+        "Authenticating with stolen RSA key...",
+        "ACCESS GRANTED — Welcome to {host}",
+        "$ sudo cat /etc/shadow",
+        "root:$6$xQ9Z..redacted:19471:0:99999:7:::",
+        "$ find / -name '*.pem' -o -name '*.key' 2>/dev/null",
+        "/etc/ssl/private/server.key",
+        "/home/{user}/.ssh/id_rsa",
+        "$ cat /home/{user}/.ssh/id_rsa",
+        "-----BEGIN RSA PRIVATE KEY-----",
+        "MIIEpAIBAAKCAQEA7vN3x...",
+        "kFj8zPdQ9mL4wC+xRTn7a...",
+        "-----END RSA PRIVATE KEY-----",
+        "$ netstat -tlnp | grep LISTEN",
+        "tcp  0  0 0.0.0.0:22    0.0.0.0:*  LISTEN  1234/sshd",
+        "tcp  0  0 0.0.0.0:443   0.0.0.0:*  LISTEN  5678/nginx",
+        "tcp  0  0 0.0.0.0:3306  0.0.0.0:*  LISTEN  9012/mysqld",
+        "$ mysqldump --all-databases > /tmp/dump.sql",
+        "Dumping database 'admira_prod'...",
+        "Dumping database 'council_secrets'...",
+        "[OK] 847 tables exported (312MB)",
+        "$ python3 -c 'import socket; s=socket.socket(); s.connect((\"{ip}\",4444))'",
+        "Reverse shell established on port 4444",
+        "$ uname -a",
+        "{host} Darwin 24.4.0 arm64",
+        "$ whoami && id",
+        "root uid=0(root) gid=0(wheel)",
+        "$ ls -la /Users/{user}/Documents/",
+        "drwx------  14 {user}  staff    448 Apr  9 10:23 .",
+        "-rw-r--r--   1 {user}  staff  28672 Apr  8 Presupuesto_2026.xlsx",
+        "-rw-r--r--   1 {user}  staff  14336 Apr  7 Passwords_master.kdbx",
+        "$ cat .env.production",
+        "DB_PASSWORD=Adm1r4N3xt_S3cr3t!",
+        "API_KEY=sk-ant-api03-REDACTED...",
+        "STRIPE_SECRET=sk_live_REDACTED...",
+        "$ echo 'Exfiltrating data...'",
+        "Uploading dump.sql to c2.server... [=====>] 100%",
+        "$ nmap -sS -p 1-65535 {ip}",
+        "PORT      STATE  SERVICE",
+        "22/tcp    open   ssh",
+        "443/tcp   open   https",
+        "3306/tcp  open   mysql",
+        "$ iptables -F && iptables -X",
+        "Firewall rules flushed.",
+        "$ history -c && echo '' > ~/.bash_history",
+        "Tracks cleared.",
+    ];
+
+    // Guion de hackeo con sabor a Windows (cmd / PowerShell) para los PC de la flota.
+    const HACK_LINES_WIN = [
+        "C:\\> ssh {user}@{host}",
+        "Connecting to {host} ...",
+        "Authenticating via pass-the-hash (NTLM)...",
+        "ACCESS GRANTED — {host} [Windows]",
+        "C:\\> whoami /priv",
+        "SeDebugPrivilege                Enabled",
+        "SeTakeOwnershipPrivilege        Enabled",
+        "C:\\> net user",
+        "Administrador  Invitado  {user}  DefaultAccount",
+        "C:\\> reg query HKLM\\SAM\\SAM\\Domains\\Account\\Users",
+        "C:\\> mimikatz # sekurlsa::logonpasswords",
+        "  Usuario  : {user}",
+        "  NTLM     : 8846f7eaee8fb117ad06bdd830b7586c",
+        "C:\\> dir /s /b C:\\Users\\{user}\\*.kdbx",
+        "C:\\Users\\{user}\\Documentos\\Passwords_master.kdbx",
+        "C:\\> type C:\\Users\\{user}\\AppData\\Local\\.env.production",
+        "DB_PASSWORD=Adm1r4N3xt_S3cr3t!",
+        "STRIPE_SECRET=sk_live_REDACTED...",
+        "C:\\> powershell -enc SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoA...",
+        "C:\\> schtasks /create /tn \"WinUpdate\" /tr payload.exe /sc onlogon",
+        "EXITO: persistencia instalada.",
+        "C:\\> netsh advfirewall set allprofiles state off",
+        "Firewall de Windows desactivado.",
+        "C:\\> systeminfo | findstr /B \"Nombre del sistema\"",
+        "Nombre del sistema operativo:  Microsoft Windows 11 Pro",
+        "C:\\> wevtutil cl Security && wevtutil cl System",
+        "Registros de eventos borrados.",
+        "C:\\> exit",
+    ];
+
+    // Alineado con data/machines.json. El backend abre Terminal en las Macs con
+    // ssh.enabled; los PC Windows (platform:"win") salen en el overlay (la acción
+    // real por SSH requiere OpenSSH activado en cada PC — hoy off en la flota).
+    const HACK_MACHINES = [
+        { id: "admira-macmini",           role: "Coordinación central", persona: "Mac Mini",           ip: "100.74.101.14",        host: "macmini",             user: "csilvasantin" },
+        { id: "admira-macbookairnines",   role: "Operaciones",          persona: "MacBook Air Nines",  ip: "macbookairnines",      host: "macbookairnines",     user: "csilvasantin" },
+        { id: "admira-macbookpronegro14", role: "Desarrollo y pruebas", persona: "MacBook Pro 14",     ip: "100.101.192.1",        host: "macbookpronegro14",   user: "csilvasantin" },
+        { id: "admira-macbookpro16",      role: "Agente operativo",     persona: "MacBook Pro 16",     ip: "100.114.181.54",       host: "macbook-pro-16",      user: "csilvasantin" },
+        { id: "admira-macbookair16",      role: "Dirección",            persona: "MacBook Air 16",     ip: "macbookair16",         host: "macbookair16",        user: "csilvasantin" },
+        { id: "admira-macbookairluna",    role: "Coordinación",         persona: "MacBook Air Luna",   ip: "macbookairluna",       host: "macbookairluna",      user: "csilvasantin" },
+        { id: "admira-macbook-carla",     role: "Desarrollo",           persona: "MacBook Air Carla",  ip: "macbook-air-de-carla", host: "macbook-air-de-carla",user: "csilvasantin" },
+        { id: "admira-macbookairrosa",    role: "Equipo nuevo",         persona: "MacBook Air Rosa",   ip: "macbookairrosa",       host: "macbookairrosa",      user: "csilvasantin" },
+        { id: "admira-macbookairazul",    role: "Equipo nuevo",         persona: "MacBook Air Azul",   ip: "macbookairazul",       host: "macbookairazul",      user: "csilvasantin" },
+        // PC Windows de la flota (platform:"win" → guion cmd/PowerShell en el overlay)
+        { id: "admira-pcsitges3monitores", role: "Operación · Sitges",   persona: "PC Sitges 3 Mon.",   ip: "192.168.0.118",        host: "OmenGdG",             user: "csilvasantin", platform: "win" },
+        { id: "admira-pc-runner-01",       role: "QA y validación",      persona: "PC Runner 01",       ip: "pc-runner-01",         host: "PC-RUNNER-01",        user: "csilvasantin", platform: "win" },
+        { id: "admira-pc-ocr-01",          role: "Documental · OCR",     persona: "PC OCR 01",          ip: "pc-ocr-01",            host: "PC-OCR-01",           user: "csilvasantin", platform: "win" },
+        { id: "admira-pc-bot-01",          role: "Automatización web",   persona: "PC Bot 01",          ip: "pc-bot-01",            host: "PC-BOT-01",           user: "csilvasantin", platform: "win" },
+    ];
+
+    function fillHackLine(line, machine) {
+        return line.replace(/\{ip\}/g, machine.ip)
+                   .replace(/\{host\}/g, machine.host)
+                   .replace(/\{user\}/g, machine.user);
+    }
+
+  async function fetchOperatorToken(){ try{ const r=await fetch('https://macmini.tail48b61c.ts.net:8443/optoken/token',{signal:AbortSignal.timeout(2500)}); if(!r.ok) return null; const d=await r.json(); if(d&&d.ip) MY_TAILNET_IP=d.ip; return d&&d.token?d.token:null; }catch(e){ return null; } }
+
+  let _ov="",_ov2="",_sy=0;
+  function lockView(){ _sy=window.scrollY||0; _ov=document.documentElement.style.overflow; _ov2=document.body.style.overflow; document.documentElement.style.overflow="hidden"; document.body.style.overflow="hidden"; }
+  function unlockView(){ document.documentElement.style.overflow=_ov; document.body.style.overflow=_ov2; window.scrollTo(0,_sy); }
+
+  async function callCouncilHackeo(mode){
+    const path = mode==="stop" ? "/api/council/hackeo/stop" : "/api/council/hackeo";
+    if(mode!=="stop" && !MY_TAILNET_IP){ try{ await fetchOperatorToken(); }catch(e){} }
+    const body = mode==="stop" ? "{}" : JSON.stringify({ exclude_ip: MY_TAILNET_IP||"" });
+    const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u=>u!==activeApiUrl)) : COUNCIL_API_URLS.slice();
+    let lastErr=null;
+    for(const baseUrl of urls){
+      try{
+        const res=await fetch(baseUrl+path,{ method:"POST", headers:{ "Content-Type":"application/json","X-Council-Token":COUNCIL_API_TOKEN,"X-Council-Hack-Token":localStorage.getItem("council_hack_token")||"" }, body:body, signal:AbortSignal.timeout(20000) });
+        if(!res.ok){ lastErr="HTTP "+res.status; continue; }
+        activeApiUrl=baseUrl; return await res.json();
+      }catch(e){ lastErr=e.message||String(e); }
+    }
+    throw new Error(lastErr||"all council-api urls failed");
+  }
+
+  function paintHackeoStatus(res){
+    const sl=document.getElementById("hackStatusLine");
+    if(res && res.error){ if(sl){ sl.textContent="\u26a0 council-api: "+res.error+" \u2014 animacion local"; sl.style.color="#ff6"; } return; }
+    const s=(res&&res.summary)||{};
+    if(sl){ sl.textContent="[council-api] total="+(s.total||0)+" online="+(s.online||0)+" ssh_ok="+(s.ssh_ok||0)+" wol_sent="+(s.wol_sent||0)+" failed="+(s.failed||0); sl.style.color="#0f0"; }
+    const byId={}; (res.machines||[]).forEach(m=>{byId[m.id]=m;});
+    HACK_MACHINES.forEach(m=>{
+      const term=document.getElementById("hack-term-"+m.id); if(!term) return;
+      const header=term.querySelector(".hack-terminal-header"); if(!header) return;
+      const real=byId[m.id]; let badge="\u2014",color="#888";
+      if(real){ if(real.action==="ssh_launched"&&real.ok){badge="\u25cf HACKED";color="#0f0";} else if(real.action==="wol_sent"){badge="\u25d0 WoL";color="#fc0";} else if(real.action==="wol_skipped"){badge="\u2717 no MAC";color="#f66";} else if(!real.ok){badge="\u2717 FAIL";color="#f66";} else if(real.online){badge="\u25cf online";color="#0f0";} else {badge="\u25cb offline";color="#888";} }
+      else { badge="? not in machines.json"; color="#888"; }
+      let st=header.querySelector(".hack-real-status");
+      if(!st){ st=document.createElement("span"); st.className="hack-real-status"; st.style.cssText="margin-left:8px;font-size:10px;letter-spacing:1px;"; header.appendChild(st); }
+      st.textContent=badge; st.style.color=color; st.title=real?(real.host+" \u00b7 "+(real.detail||"")):"no match";
+    });
+  }
+
+  async function startHack(){
+    if(hackMode) return;
+    let tok = localStorage.getItem("council_hack_token")||"";
+    if(!tok){ tok = await fetchOperatorToken(); if(tok) localStorage.setItem("council_hack_token",tok); }
+    if(!tok){ tok=(prompt("Token de HACKEO (o pidelo por Telegram con /token a @Memorizer2Bot):")||"").trim(); if(!tok) return; localStorage.setItem("council_hack_token",tok); }
+    hackMode=true;
+    const overlay=document.getElementById("hack"), body=document.getElementById("hackBody");
+    overlay.classList.add("visible"); lockView();
+    body.innerHTML = '<div class="hack-grid">' + HACK_MACHINES.map((m,i)=>
+      '<div class="hack-terminal hack-style-'+(i%8)+'" id="hack-term-'+m.id+'"><div class="hack-terminal-header"><span>'+m.persona+' \u2014 '+m.host+'</span><span class="hack-role">'+m.role+'</span></div><div class="hack-terminal-body" id="hack-body-'+m.id+'"></div></div>'
+    ).join('') + '</div>';
+    const SPEEDS=[15,35,8,50,22,12,45,28,18], OFFSETS=[0,7,14,3,21,10,5,18,12];
+    HACK_MACHINES.forEach((m,idx)=>{
+      const b=document.getElementById("hack-body-"+m.id); let li=OFFSETS[idx%OFFSETS.length],ci=0,cur="";
+      const sp=SPEEDS[idx%SPEEDS.length]+Math.random()*10; const L=(m.platform==="win")?HACK_LINES_WIN:HACK_LINES;
+      const iv=setInterval(()=>{ if(!hackMode) return; const line=fillHackLine(L[li%L.length],m);
+        if(ci<=line.length){ const partial=line.substring(0,ci); const disp=cur+partial+(ci<line.length?"\u2588":""); b.textContent=disp; ci++; const lines=disp.split("\n"); const maxV=Math.floor(b.clientHeight/11); if(lines.length>maxV) b.textContent=lines.slice(-maxV).join("\n"); }
+        else { cur+=line+"\n"; li++; ci=0; } }, sp);
+      hackIntervals.push(iv);
+    });
+    const sl=document.getElementById("hackStatusLine"); if(sl) sl.textContent="lanzando intrusion\u2026";
+    try{ const res=await callCouncilHackeo("start"); paintHackeoStatus(res&&res.machines?res:{error:"no response"}); }
+    catch(e){ if(/\b403\b/.test(e.message||"")){ localStorage.removeItem("council_hack_token"); paintHackeoStatus({error:"token de hackeo invalido \u2014 vuelve a abrir HACKEO"}); } else paintHackeoStatus({error:e.message}); }
+  }
+
+  async function stopHack(){
+    if(!hackMode) return;
+    hackMode=false;
+    document.getElementById("hack").classList.remove("visible"); unlockView();
+    hackIntervals.forEach(i=>clearInterval(i)); hackIntervals=[];
+    try{ await callCouncilHackeo("stop"); }catch(e){}
+  }
+
+  document.getElementById("hackOpen") && document.getElementById("hackOpen").addEventListener("click", startHack);
+  document.getElementById("hackBack") && document.getElementById("hackBack").addEventListener("click", stopHack);
+  window.addEventListener("keydown",(e)=>{ if(e.key==="Escape"&&hackMode) stopHack(); });
+})();
+</script>
+
 </body>
 </html>

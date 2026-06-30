@@ -32,6 +32,14 @@
       "role": "Equipo · Trinity/Codex",
       "host": "macbookair16.tail48b61c.ts.net",
       "user": "csilvasantin"
+    },
+    {
+      "id": "dgx-spark",
+      "name": "DGX Spark",
+      "emoji": "🧠",
+      "role": "Inferencia LLM (GPU)",
+      "host": "dgx-spark.tail48b61c.ts.net",
+      "user": "bitsatoms"
     }
   ]
 }

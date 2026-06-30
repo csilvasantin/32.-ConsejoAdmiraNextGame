@@ -1,6 +1,6 @@
 {
  "team": "AdmiraNext Team",
- "updatedAt": "2026-05-07T09:31:23Z",
+ "updatedAt": "2026-06-30T12:07:23Z",
  "tailnet": "tail48b61c.ts.net",
  "machines": [
   {
@@ -402,6 +402,36 @@
     "ip_tailscale": "100.114.113.88",
     "connect_tailscale": "ssh csilvasantin@100.114.113.88"
    }
+  },
+  {
+   "id": "admira-dgx-spark",
+   "unitType": "worker",
+   "agentProfile": "llm-inference",
+   "capabilities": [
+    "llm",
+    "gpu",
+    "ollama",
+    "inference"
+   ],
+   "color": "verde",
+   "member": "DGX Spark",
+   "role": "Inferencia LLM local (GPU)",
+   "name": "DGX Spark",
+   "machineRole": "Nodo de cómputo GPU · LLM local",
+   "location": "Barcelona",
+   "platform": "linux",
+   "status": "online",
+   "lastSeen": "2026-06-30T12:07:23Z",
+   "currentFocus": "Servir LLM local (Ollama) a la flota AdmiraNeXT",
+   "note": "NVIDIA DGX Spark (GB10, ARM64). Tailscale: dgx-spark.tail48b61c.ts.net",
+   "ssh": {
+    "enabled": true,
+    "user": "bitsatoms",
+    "host": "dgx-spark.tail48b61c.ts.net",
+    "ip_tailscale": "100.119.58.65",
+    "connect_tailscale": "ssh bitsatoms@100.119.58.65"
+   },
+   "mac_address": ""
   }
  ]
 }

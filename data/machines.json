@@ -422,8 +422,8 @@
    "platform": "linux",
    "status": "online",
    "lastSeen": "2026-06-30T12:07:23Z",
-   "currentFocus": "Servir LLM local (Ollama) a la flota AdmiraNeXT",
-   "note": "NVIDIA DGX Spark (GB10, ARM64). Tailscale: dgx-spark.tail48b61c.ts.net",
+   "currentFocus": "LLM local Ollama (llama3.1:8b) en GPU GB10 — http://100.119.58.65:11434",
+   "note": "NVIDIA DGX Spark (GB10, ARM64, Ubuntu 24.04). Ollama systemd en 0.0.0.0:11434 (Tailscale). Tailscale: dgx-spark.tail48b61c.ts.net",
    "ssh": {
     "enabled": true,
     "user": "bitsatoms",
@@ -431,7 +431,15 @@
     "ip_tailscale": "100.119.58.65",
     "connect_tailscale": "ssh bitsatoms@100.119.58.65"
    },
-   "mac_address": ""
+   "mac_address": "",
+   "llm": {
+    "provider": "ollama",
+    "endpoint": "http://100.119.58.65:11434",
+    "endpoint_host": "http://dgx-spark.tail48b61c.ts.net:11434",
+    "models": [
+     "llama3.1:8b"
+    ]
+   }
   }
  ]
 }

@@ -25,6 +25,222 @@
         box-shadow: 0 16px 40px rgba(23, 49, 39, 0.06);
       }
 
+      .galleon-panel {
+        margin-top: 18px;
+        padding: 24px;
+        border-radius: 28px;
+        border: 1px solid rgba(255, 209, 102, 0.22);
+        background:
+          radial-gradient(circle at top left, rgba(255, 211, 110, 0.14), transparent 24%),
+          linear-gradient(145deg, rgba(7, 10, 16, 0.96), rgba(17, 24, 34, 0.98));
+        box-shadow:
+          inset 0 1px 0 rgba(255, 255, 255, 0.06),
+          0 24px 60px rgba(3, 8, 16, 0.36);
+        color: #edf6ff;
+      }
+
+      .galleon-head {
+        display: grid;
+        grid-template-columns: minmax(0, 1.15fr) minmax(280px, 0.85fr);
+        gap: 18px;
+        align-items: start;
+      }
+
+      .galleon-kicker {
+        margin: 0 0 8px;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.18em;
+        text-transform: uppercase;
+        color: #f6c768;
+      }
+
+      .galleon-title {
+        margin: 0;
+        font-size: clamp(28px, 4vw, 44px);
+        line-height: 0.96;
+      }
+
+      .galleon-copy {
+        margin: 12px 0 0;
+        max-width: 64ch;
+        color: rgba(228, 239, 250, 0.82);
+        font-size: 15px;
+      }
+
+      .galleon-meta {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 10px;
+      }
+
+      .galleon-meta-card {
+        padding: 14px 16px;
+        border-radius: 18px;
+        border: 1px solid rgba(255, 209, 102, 0.14);
+        background: rgba(255, 255, 255, 0.04);
+      }
+
+      .galleon-meta-card strong {
+        display: block;
+        margin-bottom: 6px;
+        font-size: 12px;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+        color: #f6c768;
+      }
+
+      .galleon-meta-card span {
+        display: block;
+        color: rgba(228, 239, 250, 0.82);
+        font-size: 14px;
+        line-height: 1.45;
+      }
+
+      .galleon-grid {
+        display: grid;
+        grid-template-columns: repeat(4, minmax(0, 1fr));
+        gap: 14px;
+        margin-top: 20px;
+      }
+
+      .galleon-key {
+        position: relative;
+        min-height: 132px;
+        padding: 14px 14px 16px;
+        border-radius: 22px;
+        border: 1px solid rgba(255, 209, 102, 0.18);
+        background:
+          linear-gradient(180deg, rgba(255,255,255,0.05), rgba(255,255,255,0.01)),
+          linear-gradient(180deg, rgba(11,17,24,0.98), rgba(20,30,43,0.98));
+        color: inherit;
+        text-align: left;
+        cursor: pointer;
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+        transition: transform 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, filter 0.16s ease;
+        box-shadow:
+          inset 0 1px 0 rgba(255,255,255,0.06),
+          0 14px 28px rgba(0,0,0,0.22);
+      }
+
+      .galleon-key:hover,
+      .galleon-key:focus-visible {
+        transform: translateY(-2px);
+        border-color: rgba(255, 209, 102, 0.38);
+        box-shadow:
+          inset 0 1px 0 rgba(255,255,255,0.08),
+          0 18px 32px rgba(0,0,0,0.26),
+          0 0 0 1px rgba(255, 209, 102, 0.18);
+        filter: brightness(1.04);
+        outline: none;
+      }
+
+      .galleon-key.is-active {
+        transform: translateY(2px) scale(0.985);
+        border-color: rgba(255, 209, 102, 0.52);
+        box-shadow:
+          inset 0 1px 0 rgba(255,255,255,0.08),
+          0 0 0 2px rgba(246, 199, 104, 0.28);
+      }
+
+      .galleon-key.is-success {
+        border-color: rgba(0, 216, 122, 0.42);
+        box-shadow:
+          inset 0 1px 0 rgba(255,255,255,0.08),
+          0 0 0 2px rgba(0, 216, 122, 0.18);
+      }
+
+      .galleon-key.is-error {
+        border-color: rgba(255, 99, 113, 0.52);
+        box-shadow:
+          inset 0 1px 0 rgba(255,255,255,0.08),
+          0 0 0 2px rgba(255, 99, 113, 0.18);
+      }
+
+      .galleon-topline {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 10px;
+      }
+
+      .galleon-shortcut {
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        min-width: 58px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        background: rgba(255, 209, 102, 0.12);
+        border: 1px solid rgba(255, 209, 102, 0.18);
+        color: #ffe5a8;
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.08em;
+        text-transform: uppercase;
+      }
+
+      .galleon-tag {
+        font-size: 10px;
+        font-weight: 800;
+        letter-spacing: 0.12em;
+        text-transform: uppercase;
+        color: rgba(166, 193, 222, 0.88);
+      }
+
+      .galleon-label {
+        margin: 0;
+        font-size: 21px;
+        font-weight: 800;
+        line-height: 1;
+      }
+
+      .galleon-desc {
+        margin: 0;
+        color: rgba(228, 239, 250, 0.72);
+        font-size: 13px;
+        line-height: 1.4;
+      }
+
+      .galleon-path {
+        margin-top: auto;
+        color: #88c9ff;
+        font-size: 12px;
+        letter-spacing: 0.03em;
+      }
+
+      .galleon-foot {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 12px;
+        margin-top: 16px;
+        padding-top: 14px;
+        border-top: 1px solid rgba(255, 209, 102, 0.12);
+      }
+
+      .galleon-help {
+        margin: 0;
+        color: rgba(228, 239, 250, 0.68);
+        font-size: 12px;
+      }
+
+      .galleon-status {
+        min-height: 22px;
+        display: inline-flex;
+        align-items: center;
+        justify-content: flex-end;
+        text-align: right;
+        color: #9fd3ff;
+        font-size: 12px;
+        font-weight: 700;
+      }
+
+      .galleon-status.ok { color: #7ef7bc; }
+      .galleon-status.err { color: #ff9aa5; }
+
       .tw-command {
         display: grid;
         grid-template-columns: 1fr;
@@ -1012,6 +1228,30 @@
       @media (max-width: 600px) {
         .hero-pills { display: none; }
       }
+      @media (max-width: 980px) {
+        .galleon-head {
+          grid-template-columns: 1fr;
+        }
+        .galleon-grid {
+          grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+      }
+      @media (max-width: 640px) {
+        .galleon-grid {
+          grid-template-columns: 1fr;
+        }
+        .galleon-foot {
+          flex-direction: column;
+          align-items: flex-start;
+        }
+        .galleon-status {
+          justify-content: flex-start;
+          text-align: left;
+        }
+        .tw-command-bar {
+          grid-template-columns: 1fr;
+        }
+      }
     </style>
   </head>
   <body>
@@ -1032,6 +1272,106 @@
           </div>
         </div>
       </header>
+
+      <section class="galleon-panel" aria-labelledby="galleonTitle">
+        <div class="galleon-head">
+          <div>
+            <p class="galleon-kicker">Corsair Galleon 100 SD</p>
+            <h2 class="galleon-title" id="galleonTitle">12 teclas para pilotar lo importante de admira.live</h2>
+            <p class="galleon-copy">El panel concentra navegación, coordinación y ejecución. Las primeras seis teclas mueven por las vistas clave; las otras seis aceleran AgoraMatrix, el prompt global y las aprobaciones que más se repiten.</p>
+          </div>
+          <div class="galleon-meta">
+            <div class="galleon-meta-card">
+              <strong>Atajo físico</strong>
+              <span>Programa el Galleon con `⌥ + 1…0`, `⌥ + -` y `⌥ + =` para reflejar esta rejilla 4×3 sin colisiones raras del navegador.</span>
+            </div>
+            <div class="galleon-meta-card">
+              <strong>Modo espejo</strong>
+              <span>La misma interfaz sirve para probar desde el teclado normal del Mac antes de volcarla al hardware Corsair.</span>
+            </div>
+          </div>
+        </div>
+
+        <div class="galleon-grid" id="galleonDeck">
+          <button class="galleon-key" type="button" data-galleon-action="go-consejo" aria-keyshortcuts="Alt+1">
+            <div class="galleon-topline"><span class="galleon-shortcut">⌥1</span><span class="galleon-tag">Vista</span></div>
+            <p class="galleon-label">Consejo</p>
+            <p class="galleon-desc">Abre el puesto de mando principal del Consejo de Silicio.</p>
+            <span class="galleon-path">`/council-scumm.html`</span>
+          </button>
+          <button class="galleon-key" type="button" data-galleon-action="go-control" aria-keyshortcuts="Alt+2">
+            <div class="galleon-topline"><span class="galleon-shortcut">⌥2</span><span class="galleon-tag">Vista</span></div>
+            <p class="galleon-label">Control</p>
+            <p class="galleon-desc">Vuelve al panel operativo de Consejo + Equipo.</p>
+            <span class="galleon-path">`/teamwork.html`</span>
+          </button>
+          <button class="galleon-key" type="button" data-galleon-action="go-dashboard" aria-keyshortcuts="Alt+3">
+            <div class="galleon-topline"><span class="galleon-shortcut">⌥3</span><span class="galleon-tag">Vista</span></div>
+            <p class="galleon-label">KPIs</p>
+            <p class="galleon-desc">Abre el dashboard vivo de puntuación, muro y tareas.</p>
+            <span class="galleon-path">`/dashboard.html`</span>
+          </button>
+          <button class="galleon-key" type="button" data-galleon-action="go-alta" aria-keyshortcuts="Alt+4">
+            <div class="galleon-topline"><span class="galleon-shortcut">⌥4</span><span class="galleon-tag">Vista</span></div>
+            <p class="galleon-label">Alta</p>
+            <p class="galleon-desc">Lanza el onboarding guiado para una máquina nueva.</p>
+            <span class="galleon-path">`/new-member.html`</span>
+          </button>
+          <button class="galleon-key" type="button" data-galleon-action="go-red" aria-keyshortcuts="Alt+5">
+            <div class="galleon-topline"><span class="galleon-shortcut">⌥5</span><span class="galleon-tag">Vista</span></div>
+            <p class="galleon-label">Red</p>
+            <p class="galleon-desc">Muestra el mapa de red, equipos y enlaces críticos.</p>
+            <span class="galleon-path">`/network.html`</span>
+          </button>
+          <button class="galleon-key" type="button" data-galleon-action="go-equipo" aria-keyshortcuts="Alt+6">
+            <div class="galleon-topline"><span class="galleon-shortcut">⌥6</span><span class="galleon-tag">Vista</span></div>
+            <p class="galleon-label">Equipo</p>
+            <p class="galleon-desc">Abre el dashboard de inventario y estado por máquina.</p>
+            <span class="galleon-path">`/index.html`</span>
+          </button>
+          <button class="galleon-key" type="button" data-galleon-action="refresh-agora" aria-keyshortcuts="Alt+7">
+            <div class="galleon-topline"><span class="galleon-shortcut">⌥7</span><span class="galleon-tag">Agora</span></div>
+            <p class="galleon-label">Agora</p>
+            <p class="galleon-desc">Refresca presencia, feed, tareas e inbox sin tocar el ratón.</p>
+            <span class="galleon-path">`/api/agora/status`</span>
+          </button>
+          <button class="galleon-key" type="button" data-galleon-action="focus-prompt" aria-keyshortcuts="Alt+8">
+            <div class="galleon-topline"><span class="galleon-shortcut">⌥8</span><span class="galleon-tag">Prompt</span></div>
+            <p class="galleon-label">Prompt</p>
+            <p class="galleon-desc">Salta al prompt global para dictar la siguiente orden.</p>
+            <span class="galleon-path">`#quickInput`</span>
+          </button>
+          <button class="galleon-key" type="button" data-galleon-action="send-all" aria-keyshortcuts="Alt+9">
+            <div class="galleon-topline"><span class="galleon-shortcut">⌥9</span><span class="galleon-tag">Acción</span></div>
+            <p class="galleon-label">Enviar</p>
+            <p class="galleon-desc">Dispara el prompt actual a Consejo y Equipo.</p>
+            <span class="galleon-path">`Enviar a todos`</span>
+          </button>
+          <button class="galleon-key" type="button" data-galleon-action="onboarding-all" aria-keyshortcuts="Alt+0">
+            <div class="galleon-topline"><span class="galleon-shortcut">⌥0</span><span class="galleon-tag">Acción</span></div>
+            <p class="galleon-label">Onboard</p>
+            <p class="galleon-desc">Refresca el contexto base en todas las máquinas alcanzables.</p>
+            <span class="galleon-path">`Onboarding all`</span>
+          </button>
+          <button class="galleon-key" type="button" data-galleon-action="approve-codex" aria-keyshortcuts="Alt+-">
+            <div class="galleon-topline"><span class="galleon-shortcut">⌥-</span><span class="galleon-tag">Aprobación</span></div>
+            <p class="galleon-label">Codex</p>
+            <p class="galleon-desc">Aprueba de golpe los escritorios de Codex pendientes.</p>
+            <span class="galleon-path">`Aprobar Codex`</span>
+          </button>
+          <button class="galleon-key" type="button" data-galleon-action="approve-claude" aria-keyshortcuts="Alt+=">
+            <div class="galleon-topline"><span class="galleon-shortcut">⌥=</span><span class="galleon-tag">Aprobación</span></div>
+            <p class="galleon-label">Claude</p>
+            <p class="galleon-desc">Aprueba de golpe los escritorios de Claude pendientes.</p>
+            <span class="galleon-path">`Aprobar Claude`</span>
+          </button>
+        </div>
+
+        <div class="galleon-foot">
+          <p class="galleon-help">Consejo práctico: deja esta página fija en el Galleon y usa el teclado normal para validar primero los atajos antes de grabarlos en el perfil Corsair.</p>
+          <div class="galleon-status" id="galleonStatus">Listo para capturar 12 funciones clave.</div>
+        </div>
+      </section>
 
       <section class="tw-panel">
         <div class="tw-command">
@@ -1122,7 +1462,138 @@
           Admira v.26.06.19.r8 · Control AgoraMatrix
       </footer>
 
-      <script src="./teamwork.js?v=20260619-2" type="module"></script>
+      <script src="./teamwork.js?v=20260630-galleon-1" type="module"></script>
+    <script>
+      (() => {
+        const shortcuts = [
+          { id: "go-consejo", key: "1", shortcut: "⌥1", label: "Consejo", kind: "nav" },
+          { id: "go-control", key: "2", shortcut: "⌥2", label: "Control", kind: "nav" },
+          { id: "go-dashboard", key: "3", shortcut: "⌥3", label: "KPIs", kind: "nav" },
+          { id: "go-alta", key: "4", shortcut: "⌥4", label: "Alta", kind: "nav" },
+          { id: "go-red", key: "5", shortcut: "⌥5", label: "Red", kind: "nav" },
+          { id: "go-equipo", key: "6", shortcut: "⌥6", label: "Equipo", kind: "nav" },
+          { id: "refresh-agora", key: "7", shortcut: "⌥7", label: "Agora", kind: "action" },
+          { id: "focus-prompt", key: "8", shortcut: "⌥8", label: "Prompt", kind: "action" },
+          { id: "send-all", key: "9", shortcut: "⌥9", label: "Enviar", kind: "action" },
+          { id: "onboarding-all", key: "0", shortcut: "⌥0", label: "Onboard", kind: "action" },
+          { id: "approve-codex", key: "-", shortcut: "⌥-", label: "Codex", kind: "action" },
+          { id: "approve-claude", key: "=", shortcut: "⌥=", label: "Claude", kind: "action" }
+        ];
+        const byKey = new Map(shortcuts.map((entry) => [entry.key, entry]));
+        const byId = new Map(shortcuts.map((entry) => [entry.id, entry]));
+        const status = document.getElementById("galleonStatus");
+        const deck = document.getElementById("galleonDeck");
+
+        const setStatus = (text, tone = "") => {
+          if (!status) return;
+          status.textContent = text;
+          status.className = "galleon-status" + (tone ? ` ${tone}` : "");
+        };
+
+        const pulse = (actionId, tone = "") => {
+          const key = deck?.querySelector(`[data-galleon-action="${actionId}"]`);
+          if (!key) return;
+          key.classList.remove("is-active", "is-success", "is-error");
+          key.classList.add("is-active");
+          requestAnimationFrame(() => key.classList.add(tone === "err" ? "is-error" : "is-success"));
+          setTimeout(() => key.classList.remove("is-active", "is-success", "is-error"), 600);
+        };
+
+        const isTypingTarget = (node) => Boolean(node?.closest?.("input, textarea, select, [contenteditable='true']"));
+        const focusPrompt = () => {
+          const input = document.getElementById("quickInput");
+          if (!input) return false;
+          input.focus();
+          input.select?.();
+          return true;
+        };
+
+        const clickIfPresent = (id) => {
+          const el = document.getElementById(id);
+          if (!el || el.disabled) return false;
+          el.click();
+          return true;
+        };
+
+        const run = async (actionId) => {
+          switch (actionId) {
+            case "go-consejo": location.href = "./council-scumm.html"; return "Abriendo consejo";
+            case "go-control": location.href = "./teamwork.html?v=20260630-galleon-1"; return "Abriendo control";
+            case "go-dashboard": location.href = "./dashboard.html"; return "Abriendo dashboard";
+            case "go-alta": location.href = "./new-member.html"; return "Abriendo alta nueva";
+            case "go-red": location.href = "./network.html"; return "Abriendo mapa de red";
+            case "go-equipo": location.href = "./index.html"; return "Abriendo panel de equipo";
+            case "refresh-agora":
+              if (!clickIfPresent("agoraRefreshBtn")) throw new Error("Agora no disponible");
+              return "AgoraMatrix actualizado";
+            case "focus-prompt":
+              if (!focusPrompt()) throw new Error("Prompt global no disponible");
+              return "Prompt global enfocado";
+            case "send-all": {
+              const input = document.getElementById("quickInput");
+              if (!input?.value.trim()) {
+                focusPrompt();
+                throw new Error("Escribe un prompt antes de enviar");
+              }
+              if (!clickIfPresent("sendAllBtn")) throw new Error("Botón Enviar a todos no disponible");
+              return "Prompt enviado";
+            }
+            case "onboarding-all":
+              if (!clickIfPresent("onboardingAllBtn")) throw new Error("Onboarding all no disponible");
+              return "Onboarding lanzado";
+            case "approve-codex":
+              if (!clickIfPresent("approveCodexBtn")) throw new Error("Aprobar Codex no disponible");
+              return "Aprobación Codex lanzada";
+            case "approve-claude":
+              if (!clickIfPresent("approveClaudeBtn")) throw new Error("Aprobar Claude no disponible");
+              return "Aprobación Claude lanzada";
+            default:
+              throw new Error(`Acción desconocida: ${actionId}`);
+          }
+        };
+
+        const trigger = async (actionId) => {
+          const meta = byId.get(actionId);
+          if (!meta) return { ok: false, error: `Acción desconocida: ${actionId}` };
+          try {
+            const result = await run(actionId);
+            pulse(actionId, "ok");
+            setStatus(`${meta.shortcut} · ${meta.label} · ${result}`, "ok");
+            return { ok: true, result };
+          } catch (error) {
+            const message = error?.message || String(error);
+            pulse(actionId, "err");
+            setStatus(`${meta.shortcut} · ${meta.label} · ${message}`, "err");
+            return { ok: false, error: message };
+          }
+        };
+
+        deck?.querySelectorAll("[data-galleon-action]").forEach((button) => {
+          button.addEventListener("click", () => trigger(button.dataset.galleonAction));
+        });
+
+        document.addEventListener("keydown", (event) => {
+          if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+          const meta = byKey.get(event.key);
+          if (!meta) return;
+          if (isTypingTarget(event.target) && meta.id !== "focus-prompt" && meta.id !== "send-all") return;
+          event.preventDefault();
+          trigger(meta.id);
+        });
+
+        window.AdmiraLive_Galleon = {
+          manifest() {
+            return {
+              name: "Admira Live Galleon 100 SD",
+              shortcuts: shortcuts.map(({ id, key, shortcut, label, kind }) => ({ id, key, shortcut, label, kind }))
+            };
+          },
+          press(id) {
+            return trigger(id);
+          }
+        };
+      })();
+    </script>
     <script>
       (function() {
         const c = document.getElementById("matrixCanvas");

@@ -14,6 +14,8 @@ const agoraKey = document.querySelector("#agoraKey");
 const agoraRefreshBtn = document.querySelector("#agoraRefreshBtn");
 const agoraMessage = document.querySelector("#agoraMessage");
 const agoraSendBtn = document.querySelector("#agoraSendBtn");
+const galleonDeck = document.querySelector("#galleonDeck");
+const galleonStatus = document.querySelector("#galleonStatus");
 
 let machines = [];
 let isStaticMode = false;
@@ -45,6 +47,22 @@ const MACHINE_STATUS_META = {
   offline: { label: "offline", tone: "off" },
   maintenance: { label: "mantenimiento", tone: "warn" }
 };
+const GALLEON_SHORTCUTS = [
+  { id: "go-consejo", key: "1", shortcut: "⌥1", label: "Consejo", kind: "nav" },
+  { id: "go-control", key: "2", shortcut: "⌥2", label: "Control", kind: "nav" },
+  { id: "go-dashboard", key: "3", shortcut: "⌥3", label: "KPIs", kind: "nav" },
+  { id: "go-alta", key: "4", shortcut: "⌥4", label: "Alta", kind: "nav" },
+  { id: "go-red", key: "5", shortcut: "⌥5", label: "Red", kind: "nav" },
+  { id: "go-equipo", key: "6", shortcut: "⌥6", label: "Equipo", kind: "nav" },
+  { id: "refresh-agora", key: "7", shortcut: "⌥7", label: "Agora", kind: "action" },
+  { id: "focus-prompt", key: "8", shortcut: "⌥8", label: "Prompt", kind: "action" },
+  { id: "send-all", key: "9", shortcut: "⌥9", label: "Enviar", kind: "action" },
+  { id: "onboarding-all", key: "0", shortcut: "⌥0", label: "Onboard", kind: "action" },
+  { id: "approve-codex", key: "-", shortcut: "⌥-", label: "Codex", kind: "action" },
+  { id: "approve-claude", key: "=", shortcut: "⌥=", label: "Claude", kind: "action" }
+];
+const GALLEON_BY_KEY = new Map(GALLEON_SHORTCUTS.map((entry) => [entry.key, entry]));
+const GALLEON_BY_ID = new Map(GALLEON_SHORTCUTS.map((entry) => [entry.id, entry]));
 
 function apiUrl(path) {
   // Public Pages/custom-domain hosts need the live Funnel backend for API calls.
@@ -59,6 +77,139 @@ function showFeedback(text, ok) {
   feedback.textContent = text;
   feedback.className = "tw-feedback " + (ok ? "ok" : "err");
   setTimeout(() => { feedback.className = "tw-feedback"; }, 4000);
+}
+
+function setGalleonStatus(text, tone = "") {
+  if (!galleonStatus) return;
+  galleonStatus.textContent = text;
+  galleonStatus.className = "galleon-status" + (tone ? ` ${tone}` : "");
+}
+
+function isTypingTarget(target) {
+  if (!target || !(target instanceof HTMLElement)) return false;
+  return Boolean(
+    target.closest("input, textarea, select, [contenteditable='true']")
+  );
+}
+
+function pulseGalleonButton(actionId, tone = "") {
+  if (!galleonDeck) return;
+  const button = galleonDeck.querySelector(`[data-galleon-action="${actionId}"]`);
+  if (!button) return;
+  button.classList.remove("is-active", "is-success", "is-error");
+  button.classList.add("is-active");
+  requestAnimationFrame(() => {
+    button.classList.add(tone === "err" ? "is-error" : "is-success");
+  });
+  setTimeout(() => {
+    button.classList.remove("is-active", "is-success", "is-error");
+  }, 600);
+}
+
+function focusGlobalPrompt() {
+  if (!quickInput) return false;
+  quickInput.focus({ preventScroll: false });
+  quickInput.select();
+  return true;
+}
+
+function openGalleonPath(path) {
+  window.location.href = path;
+  return `Abriendo ${path}`;
+}
+
+async function runGalleonAction(actionId) {
+  switch (actionId) {
+    case "go-consejo":
+      return openGalleonPath("./council-scumm.html");
+    case "go-control":
+      return openGalleonPath("./teamwork.html");
+    case "go-dashboard":
+      return openGalleonPath("./dashboard.html");
+    case "go-alta":
+      return openGalleonPath("./new-member.html");
+    case "go-red":
+      return openGalleonPath("./network.html");
+    case "go-equipo":
+      return openGalleonPath("./index.html");
+    case "refresh-agora":
+      await loadAgoraStatus();
+      return "AgoraMatrix actualizado";
+    case "focus-prompt":
+      if (!focusGlobalPrompt()) {
+        throw new Error("Prompt global no disponible");
+      }
+      return "Prompt global enfocado";
+    case "send-all": {
+      const prompt = quickInput?.value.trim() || "";
+      if (!prompt) {
+        focusGlobalPrompt();
+        throw new Error("Escribe un prompt antes de enviar");
+      }
+      const handled = await handleQuickCommand(prompt);
+      if (!handled) await sendToAll(prompt);
+      return handled ? "Comando global lanzado" : "Prompt enviado a todos";
+    }
+    case "onboarding-all":
+      await sendOnboardingAll();
+      return "Onboarding all lanzado";
+    case "approve-codex":
+      await approveAll("codex", approveCodexBtn, approveCodexResult);
+      return "Aprobación global de Codex ejecutada";
+    case "approve-claude":
+      await approveAll("claude", approveClaudeBtn, approveClaudeResult);
+      return "Aprobación global de Claude ejecutada";
+    default:
+      throw new Error(`Acción desconocida: ${actionId}`);
+  }
+}
+
+async function triggerGalleon(actionId) {
+  const action = GALLEON_BY_ID.get(actionId);
+  if (!action) return { ok: false, error: `Acción desconocida: ${actionId}` };
+  try {
+    const result = await runGalleonAction(actionId);
+    pulseGalleonButton(actionId, "ok");
+    setGalleonStatus(`${action.shortcut} · ${action.label} · ${result}`, "ok");
+    return { ok: true, result };
+  } catch (err) {
+    pulseGalleonButton(actionId, "err");
+    const message = err?.message || String(err);
+    setGalleonStatus(`${action.shortcut} · ${action.label} · ${message}`, "err");
+    if (message) showFeedback(message, false);
+    return { ok: false, error: message };
+  }
+}
+
+function bindGalleonDeck() {
+  if (!galleonDeck) return;
+  galleonDeck.querySelectorAll("[data-galleon-action]").forEach((button) => {
+    button.addEventListener("click", () => {
+      triggerGalleon(button.dataset.galleonAction);
+    });
+  });
+
+  document.addEventListener("keydown", (event) => {
+    if (!event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) return;
+    const action = GALLEON_BY_KEY.get(event.key);
+    if (!action) return;
+    if (isTypingTarget(event.target) && action.id !== "focus-prompt" && action.id !== "send-all") return;
+    event.preventDefault();
+    triggerGalleon(action.id);
+  });
+
+  window.AdmiraLive_Galleon = {
+    manifest() {
+      return {
+        name: "Admira Live Galleon 100 SD",
+        shortcuts: GALLEON_SHORTCUTS.map(({ id, key, shortcut, label, kind }) => ({ id, key, shortcut, label, kind }))
+      };
+    },
+    async press(id) {
+      const result = await triggerGalleon(id);
+      return { id, ...result };
+    }
+  };
 }
 
 function syncTopActionVisibility() {
@@ -1350,6 +1501,8 @@ function resortMachineRows() {
     if (orderChanged) sorted.forEach((row) => panel.appendChild(row));
   }
 }
+
+bindGalleonDeck();
 
 function updateWatchdogBadges() {
   document.querySelectorAll(".tw-auto-badge").forEach((badge) => {

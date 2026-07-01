@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- control · v2026.07.01o · CRT: zoom (Ajustar→Zoom) + ✋ Mover (arrastrar para panear el zoom) + Capturar pantalla -->
+<!-- control · v2026.07.01p · CRT: +fps (frames ligeros) + teclado en cola serial (no salta letras) + ✋ Mover + zoom -->
 <html lang="es">
 <head>
     <script src="/admira-bar.js?v=porteria3"></script>
@@ -1425,17 +1425,27 @@ function collapseAllToggle(){
   let cur=null;
   function styleOnce(){ if(document.getElementById('rc-style'))return; const s=document.createElement('style');s.id='rc-style';s.textContent='#rc-ov{position:fixed;inset:0;z-index:9999;background:#05070c;display:flex;flex-direction:column;font-family:-apple-system,sans-serif}#rc-bar{display:flex;align-items:center;gap:12px;padding:8px 14px;background:#0e1320;border-bottom:1px solid #26303f;color:#e8eef7;font-size:13px;flex:none}#rc-bar .sp{flex:1}#rc-bar button{background:#1a2230;color:#e8eef7;border:1px solid #2d3a4d;border-radius:8px;padding:6px 11px;font-size:12px;cursor:pointer}#rc-bar button.on{border-color:#5bd6c0;color:#5bd6c0}#rc-bar .stat{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8a97ab}#rc-bar input[type=range]{width:90px;accent-color:#5bd6c0}#rc-stage{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;background:#05070c}#rc-img{max-width:100%;max-height:100%;object-fit:contain;cursor:crosshair;display:block;user-select:none}#rc-msg{position:absolute;color:#8a97ab;font-size:14px;text-align:center;padding:18px;max-width:560px;line-height:1.5}#rc-msg b{color:#ffb454}';document.head.appendChild(s); }
   async function sendInput(p){ if(!cur)return; p.machine=cur.machine; try{ await fetch(RC_API+'/input',{method:'POST',headers:rcAuthHeaders({'Content-Type':'application/json'}),body:JSON.stringify(p)});}catch(e){} }
+  // Teclado: cola SERIAL + coalescing de texto. Evita que al teclear rápido las pulsaciones
+  // (fetch fire-and-forget concurrentes) se pisen/pierdan → antes se saltaban letras.
+  function enqueueInput(p){ if(!cur)return; const q=cur.iq||(cur.iq=[]);
+    if(p.type==='text' && q.length && q[q.length-1].type==='text'){ q[q.length-1].text+=p.text; }  // fusiona texto pendiente
+    else q.push(p);
+    drainInput(); }
+  async function drainInput(){ if(!cur||cur.sending)return; cur.sending=true;
+    try{ while(cur && cur.iq && cur.iq.length){ const p=cur.iq.shift(); p.machine=cur.machine;
+      try{ await fetch(RC_API+'/input',{method:'POST',headers:rcAuthHeaders({'Content-Type':'application/json'}),body:JSON.stringify(p)});}catch(e){} } }
+    finally{ if(cur) cur.sending=false; } }
   function normCoords(e){ const img=cur.img;const r=img.getBoundingClientRect();const nr=(img.naturalWidth||16)/(img.naturalHeight||9);let dw=r.width,dh=r.width/nr;if(dh>r.height){dh=r.height;dw=r.height*nr;}const ox=r.left+(r.width-dw)/2,oy=r.top+(r.height-dh)/2;const nx=(e.clientX-ox)/dw,ny=(e.clientY-oy)/dh;return{x:Math.min(1,Math.max(0,nx)),y:Math.min(1,Math.max(0,ny))};}
   function frameLoop(){ if(!cur||cur.closed)return; const t0=performance.now(); const url=RC_API+'/live/frame?machine='+encodeURIComponent(cur.machine)+'&scale='+cur.scale+'&q='+cur.q+'&_='+t0; fetch(url,{headers:rcAuthHeaders(),cache:'no-store'}).then(r=>{if(!r.ok)return r.text().then(t=>{throw new Error('HTTP '+r.status+' '+t.slice(0,140));});return r.blob();}).then(blob=>{ if(!cur||cur.closed)return; const u=URL.createObjectURL(blob);const old=cur.img.src;cur.img.onload=()=>{if(old&&old.startsWith('blob:'))URL.revokeObjectURL(old);};cur.img.src=u;cur.msg.style.display='none';const dt=performance.now()-t0;cur.fpsArr.push(dt);if(cur.fpsArr.length>10)cur.fpsArr.shift();const avg=cur.fpsArr.reduce((a,b)=>a+b,0)/cur.fpsArr.length;cur.stat.textContent=Math.round(1000/Math.max(1,avg))+' fps · '+Math.round(avg)+' ms · '+Math.round(blob.size/1024)+' KB';const wait=Math.max(0,(1000/cur.targetFps)-dt);cur.timer=setTimeout(frameLoop,wait);}).catch(err=>{ if(!cur||cur.closed)return; cur.msg.style.display='block'; cur.msg.innerHTML='Esperando al agente…<br><b>'+String(err.message||err).replace(/</g,'&lt;')+'</b><br><br>Si dice <i>capture_failed_or_no_permission</i>, falta conceder <b>Grabación de pantalla</b> al agente en esa máquina.'; cur.timer=setTimeout(frameLoop,1200); }); }
   window.openRemoteControl=function(machineId,machineName){ styleOnce(); if(document.getElementById('rc-ov'))document.getElementById('rc-ov').remove(); const ov=document.createElement('div');ov.id='rc-ov'; ov.innerHTML='<div id="rc-bar"><b>🖥️ Control remoto · '+(machineName||machineId)+'</b><span class="stat" id="rc-stat">conectando…</span><span class="sp"></span><label class="stat">fps <input type="range" id="rc-fps" min="1" max="15" value="6"></label><label class="stat">calidad <input type="range" id="rc-q" min="2" max="9" value="5"></label><button id="rc-ctl" class="on">🎮 control: ON</button><button id="rc-full">⛶</button><button id="rc-close">✕ cerrar</button></div><div id="rc-stage"><img id="rc-img" draggable="false"><div id="rc-msg">Conectando…</div></div>'; document.body.appendChild(ov);
-    cur={machine:machineId,name:machineName,closed:false,img:ov.querySelector('#rc-img'),msg:ov.querySelector('#rc-msg'),stat:ov.querySelector('#rc-stat'),scale:0.5,q:0.5,targetFps:6,control:true,fpsArr:[],timer:null,lastUp:0,lastPos:{x:-9,y:-9},clicks:0,dragging:false,lastMove:0};
+    cur={machine:machineId,name:machineName,closed:false,img:ov.querySelector('#rc-img'),msg:ov.querySelector('#rc-msg'),stat:ov.querySelector('#rc-stat'),scale:0.5,q:0.5,targetFps:6,control:true,fpsArr:[],timer:null,lastUp:0,lastPos:{x:-9,y:-9},clicks:0,dragging:false,lastMove:0,iq:[],sending:false};
     const img=cur.img;
     img.addEventListener('mousemove',e=>{if(!cur.control)return;const now=performance.now();if(!cur.dragging&&now-cur.lastMove<45)return;cur.lastMove=now;const c=normCoords(e);sendInput({type:'move',x:c.x,y:c.y});});
     img.addEventListener('mousedown',e=>{if(!cur.control)return;e.preventDefault();const c=normCoords(e);const now=performance.now();const near=Math.abs(c.x-cur.lastPos.x)<0.01&&Math.abs(c.y-cur.lastPos.y)<0.01;cur.clicks=(now-cur.lastUp<400&&near)?cur.clicks+1:1;cur.dragging=true;sendInput({type:'down',x:c.x,y:c.y,button:e.button===2?'right':'left',clicks:cur.clicks});});
     img.addEventListener('mouseup',e=>{if(!cur.control)return;e.preventDefault();const c=normCoords(e);sendInput({type:'up',x:c.x,y:c.y,button:e.button===2?'right':'left',clicks:cur.clicks});cur.lastUp=performance.now();cur.lastPos={x:c.x,y:c.y};cur.dragging=false;});
     img.addEventListener('contextmenu',e=>e.preventDefault());
     img.addEventListener('wheel',e=>{if(!cur.control)return;e.preventDefault();sendInput({type:'scroll',dx:-Math.round(e.deltaX),dy:-Math.round(e.deltaY)});},{passive:false});
-    cur.keyHandler=e=>{if(!cur||cur.closed||!cur.control)return;e.preventDefault();const mods=modsOf(e);const pr=e.key.length===1&&!e.metaKey&&!e.ctrlKey&&!e.altKey;if(pr){sendInput({type:'text',text:e.key});return;}const code=KMAP[e.code];if(code!=null)sendInput({type:'key',code:code,mods:mods});};
+    cur.keyHandler=e=>{if(!cur||cur.closed||!cur.control)return;e.preventDefault();const mods=modsOf(e);const pr=e.key.length===1&&!e.metaKey&&!e.ctrlKey&&!e.altKey;if(pr){enqueueInput({type:'text',text:e.key});return;}const code=KMAP[e.code];if(code!=null)enqueueInput({type:'key',code:code,mods:mods});};
     document.addEventListener('keydown',cur.keyHandler,true);
     ov.querySelector('#rc-fps').addEventListener('input',e=>cur.targetFps=+e.target.value);
     ov.querySelector('#rc-q').addEventListener('input',e=>cur.q=(+e.target.value)/10);
@@ -1459,7 +1469,7 @@ function collapseAllToggle(){
     img.addEventListener('mousemove',h.move); img.addEventListener('mousedown',h.down); img.addEventListener('mouseup',h.up);
     img.addEventListener('contextmenu',h.ctx); img.addEventListener('wheel',h.wheel,{passive:false});
     cur._imgH=h; cur._imgEl=img;
-    cur.keyHandler=e=>{if(!cur||cur.closed||!cur.control)return;e.preventDefault();const mods=modsOf(e);const pr=e.key.length===1&&!e.metaKey&&!e.ctrlKey&&!e.altKey;if(pr){sendInput({type:'text',text:e.key});return;}const code=KMAP[e.code];if(code!=null)sendInput({type:'key',code:code,mods:mods});};
+    cur.keyHandler=e=>{if(!cur||cur.closed||!cur.control)return;e.preventDefault();const mods=modsOf(e);const pr=e.key.length===1&&!e.metaKey&&!e.ctrlKey&&!e.altKey;if(pr){enqueueInput({type:'text',text:e.key});return;}const code=KMAP[e.code];if(code!=null)enqueueInput({type:'key',code:code,mods:mods});};
     document.addEventListener('keydown',cur.keyHandler,true);
   }
   window.rcAttachTo=function(img, machineId, machineName, opts){
@@ -1467,7 +1477,7 @@ function collapseAllToggle(){
     if(cur) return null; // ya hay una sesión activa
     cur={machine:machineId,name:machineName,closed:false,img:img,
          msg:opts.msg||{style:{}}, stat:opts.stat||{},
-         scale:opts.scale||0.6,q:opts.q||0.5,targetFps:opts.fps||8,control:true,fpsArr:[],timer:null,lastUp:0,lastPos:{x:-9,y:-9},clicks:0,dragging:false,lastMove:0};
+         scale:opts.scale||0.6,q:opts.q||0.5,targetFps:opts.fps||8,control:true,fpsArr:[],timer:null,lastUp:0,lastPos:{x:-9,y:-9},clicks:0,dragging:false,lastMove:0,iq:[],sending:false};
     wireInput(img);
     frameLoop();
     return {
@@ -1556,7 +1566,8 @@ function collapseAllToggle(){
     if(!current){ setStatus('— ELIGE UN EQUIPO','#e6a06f'); return; }
     if(typeof window.rcAttachTo!=='function'){ setStatus('— CONTROL NO DISPONIBLE','#ff6b6b'); return; }
     clearInterval(timer); timer=null; noise.classList.add('hide');
-    ctl=window.rcAttachTo(img, current, nameOf(current), {stat:statusEl, msg:noise, scale:1.0, q:0.72, fps:8});
+    // scale/q bajos = frames ligeros = MÁS fps (antes scale:1.0 a 4K → ~1 fps). fps alto = sin espera artificial entre frames.
+    ctl=window.rcAttachTo(img, current, nameOf(current), {stat:statusEl, msg:noise, scale:0.6, q:0.5, fps:14});
     if(!ctl){ setStatus('— OCUPADO (cierra el otro control)','#e6a06f'); return; }
     screen.classList.add('control'); ctlBtn.classList.add('on'); ctlBtn.textContent='🎮 Control: ON';
     applyPan();   // en Control Total el ratón controla; desactiva el paneo

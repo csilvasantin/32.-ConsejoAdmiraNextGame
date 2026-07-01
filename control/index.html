@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- control · v2026.07.01l · CRT: pantalla completa + Control Total nitido (scale 1.0 q0.72, sin barrido/filtro) -->
+<!-- control · v2026.07.01m · CRT: botones Copiar pantalla (a portapapeles) y Pegar (portapapeles local al remoto) -->
 <html lang="es">
 <head>
     <script src="/admira-bar.js?v=porteria3"></script>
@@ -319,9 +319,10 @@
   #crtMonitor[hidden]{display:none}
   .crt-head{display:flex;align-items:center;gap:10px;font-family:'Press Start 2P',monospace;font-size:8px;color:#ffdd66}
   .crt-head select{font-family:var(--mono);font-size:11px;background:#2a1a08;color:#ffdd66;border:2px solid #8b5a14;border-radius:0;padding:4px 6px}
-  .crt-head #crtCtl{margin-left:auto;border:2px solid #8b5a14;background:#2a1a08;color:#ffdd66;box-shadow:2px 2px 0 #000;
-    border-radius:0;padding:5px 8px;cursor:pointer;font-family:inherit;font-size:8px;white-space:nowrap}
-  .crt-head #crtCtl:hover{border-color:#f0c040;color:#fff}
+  .crt-head #crtCopy,.crt-head #crtPaste,.crt-head #crtCtl{border:2px solid #8b5a14;background:#2a1a08;color:#ffdd66;
+    box-shadow:2px 2px 0 #000;border-radius:0;padding:5px 8px;cursor:pointer;font-family:inherit;font-size:8px;white-space:nowrap}
+  .crt-head #crtCopy:hover,.crt-head #crtPaste:hover,.crt-head #crtCtl:hover{border-color:#f0c040;color:#fff}
+  .crt-head #crtCopy{margin-left:auto}   /* empuja el clúster derecho: copiar · pegar · control · estado */
   .crt-head #crtCtl.on{background:#a07828;color:#2a1a08;border-color:#f0c040}
   .crt-head .crt-status{color:#8fe6a0;letter-spacing:.5px}
   .crt-screen.control img{cursor:crosshair}
@@ -396,6 +397,8 @@
       <div class="crt-head">
         <span class="crt-title">📺 MONITOR REMOTO</span>
         <select id="crtMachine"></select>
+        <button id="crtCopy" type="button" title="Copiar toda la pantalla remota al portapapeles local">📋 Copiar pantalla</button>
+        <button id="crtPaste" type="button" title="Pegar el portapapeles local en el equipo remoto (lo teclea el agente)">📥 Pegar</button>
         <button id="crtCtl" type="button" title="Control Total — teclado y ratón en vivo sobre el equipo, como si estuvieras delante (requiere AdmiraRemoteAgent)">🎮 Control Total</button>
         <span class="crt-status" id="crtStatus">— sin señal</span>
         <button id="crtFull" type="button" title="Pantalla completa">⛶</button>
@@ -1464,6 +1467,13 @@ function collapseAllToggle(){
       setControl(on){ if(cur) cur.control=on; }
     };
   };
+  // Enviar texto (p.ej. el portapapeles local) al equipo remoto — lo teclea el agente.
+  // No requiere sesión activa: postea directamente al endpoint de input con la máquina.
+  window.rcSendText=function(machineId, text){
+    if(!machineId || !text) return Promise.resolve(false);
+    return fetch(RC_API+'/input',{method:'POST',headers:rcAuthHeaders({'Content-Type':'application/json'}),
+      body:JSON.stringify({type:'text',text:String(text),machine:machineId})}).then(r=>!!(r&&r.ok)).catch(()=>false);
+  };
 })();
 </script>
 <script>
@@ -1474,7 +1484,8 @@ function collapseAllToggle(){
   const stage=$('.stage'), mon=$('#crtMonitor'), btn=$('#crtToggle');
   if(!btn||!mon||!stage) return;
   const sel=$('#crtMachine'), img=$('#crtImg'), noise=$('#crtNoise'),
-        statusEl=$('#crtStatus'), closeBtn=$('#crtClose'), screen=$('#crtScreen'), ctlBtn=$('#crtCtl'), fullBtn=$('#crtFull');
+        statusEl=$('#crtStatus'), closeBtn=$('#crtClose'), screen=$('#crtScreen'), ctlBtn=$('#crtCtl'), fullBtn=$('#crtFull'),
+        copyBtn=$('#crtCopy'), pasteBtn=$('#crtPaste');
   let timer=null, current='', busy=false, ctl=null;   // ctl = sesión de Control Total activa
   const onlineReal=()=> (typeof MACHINES!=='undefined'?MACHINES:[]).filter(m=>m.online);
   const nameOf=id=>{ const m=onlineReal().find(x=>x.id===id); return m?m.name:id; };
@@ -1524,6 +1535,28 @@ function collapseAllToggle(){
   btn.onclick=()=>{ mon.hidden ? open() : close(); };
   closeBtn.onclick=close;
   fullBtn.onclick=()=>{ if(!document.fullscreenElement && !document.webkitFullscreenElement){ (mon.requestFullscreen||mon.webkitRequestFullscreen||function(){}).call(mon); } else { (document.exitFullscreen||document.webkitExitFullscreen||function(){}).call(document); } };
+  function pulse(btn,txt){ const o=btn.dataset.o||btn.textContent; btn.dataset.o=o; btn.textContent=txt; setTimeout(()=>{btn.textContent=btn.dataset.o;},1300); }
+  // 📋 Copiar pantalla: copia la imagen actual del CRT (la pantalla remota) al portapapeles local (PNG).
+  copyBtn.onclick=async()=>{
+    if(!img.getAttribute('src')){ setStatus('— SIN IMAGEN QUE COPIAR','#e6a06f'); return; }
+    try{
+      const w=img.naturalWidth||img.width||0, h=img.naturalHeight||img.height||0;
+      if(!w||!h){ setStatus('— IMAGEN NO LISTA','#e6a06f'); return; }
+      const cv=document.createElement('canvas'); cv.width=w; cv.height=h;
+      cv.getContext('2d').drawImage(img,0,0,w,h);
+      const blob=await new Promise(res=>cv.toBlob(res,'image/png'));
+      await navigator.clipboard.write([new ClipboardItem({'image/png':blob})]);
+      pulse(copyBtn,'✓ copiada');
+    }catch(e){ setStatus('— NO SE PUDO COPIAR ('+(e.name||'error')+')','#ff6b6b'); }
+  };
+  // 📥 Pegar: lee el portapapeles local (texto) y lo envía al remoto (lo teclea el agente).
+  pasteBtn.onclick=async()=>{
+    if(!current){ setStatus('— ELIGE UN EQUIPO','#e6a06f'); return; }
+    let t=''; try{ t=await navigator.clipboard.readText(); }catch(e){ setStatus('— SIN PERMISO DE PORTAPAPELES','#ff6b6b'); return; }
+    if(!t){ setStatus('— PORTAPAPELES VACÍO','#e6a06f'); return; }
+    const ok = (typeof window.rcSendText==='function') ? await window.rcSendText(current,t) : false;
+    pulse(pasteBtn, ok?'✓ pegado':'✗ ¿agente?');
+  };
   ctlBtn.onclick=()=>{ ctl ? stopControl(true) : startControl(); };
   sel.onchange=()=>{ const wasCtl=!!ctl; stopControl(false); current=sel.value; img.removeAttribute('src'); noise.classList.remove('hide');
     if(wasCtl && current) startControl(); else { setStatus('… CONECTANDO','#ffdd66'); startPolling(); } };

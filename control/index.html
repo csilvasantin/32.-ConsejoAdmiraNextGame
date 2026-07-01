@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- control · v2026.07.01i · modo experto: monitor remoto CRT retro en la zona central -->
+<!-- control · v2026.07.01j · consola: Claude por SSH usa PATH del DGX ($HOME/.local/bin/claude) + monitor CRT -->
 <html lang="es">
 <head>
     <script src="/admira-bar.js?v=porteria3"></script>
@@ -876,7 +876,7 @@ async function runCmd(){
     let proxyCmd, who, isJson;
     if(backend==='claude'){
       const b64=btoa(unescape(encodeURIComponent(cmd)));
-      proxyCmd="printf %s '"+b64+"' | openssl base64 -d -A | \"$(command -v tailscale || echo /Applications/Tailscale.app/Contents/MacOS/Tailscale)\" ssh bitsatoms@dgx-spark 'claude -p'";
+      proxyCmd="printf %s '"+b64+"' | openssl base64 -d -A | \"$(command -v tailscale || echo /Applications/Tailscale.app/Contents/MacOS/Tailscale)\" ssh bitsatoms@dgx-spark '$HOME/.local/bin/claude -p'";
       who='🤖 Claude'; isJson=false;
     } else {
       const b64=btoa(unescape(encodeURIComponent(JSON.stringify({model,prompt:cmd,stream:false}))));

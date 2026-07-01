@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- control · v2026.07.01m · CRT: botones Copiar pantalla (a portapapeles) y Pegar (portapapeles local al remoto) -->
+<!-- control · v2026.07.01n · CRT: zoom (4K en pantalla completa) + Capturar pantalla (antes Copiar) -->
 <html lang="es">
 <head>
     <script src="/admira-bar.js?v=porteria3"></script>
@@ -319,10 +319,15 @@
   #crtMonitor[hidden]{display:none}
   .crt-head{display:flex;align-items:center;gap:10px;font-family:'Press Start 2P',monospace;font-size:8px;color:#ffdd66}
   .crt-head select{font-family:var(--mono);font-size:11px;background:#2a1a08;color:#ffdd66;border:2px solid #8b5a14;border-radius:0;padding:4px 6px}
-  .crt-head #crtCopy,.crt-head #crtPaste,.crt-head #crtCtl{border:2px solid #8b5a14;background:#2a1a08;color:#ffdd66;
+  .crt-head #crtZoom,.crt-head #crtCopy,.crt-head #crtPaste,.crt-head #crtCtl{border:2px solid #8b5a14;background:#2a1a08;color:#ffdd66;
     box-shadow:2px 2px 0 #000;border-radius:0;padding:5px 8px;cursor:pointer;font-family:inherit;font-size:8px;white-space:nowrap}
-  .crt-head #crtCopy:hover,.crt-head #crtPaste:hover,.crt-head #crtCtl:hover{border-color:#f0c040;color:#fff}
-  .crt-head #crtCopy{margin-left:auto}   /* empuja el clúster derecho: copiar · pegar · control · estado */
+  .crt-head #crtZoom:hover,.crt-head #crtCopy:hover,.crt-head #crtPaste:hover,.crt-head #crtCtl:hover{border-color:#f0c040;color:#fff}
+  .crt-head #crtZoom.on{background:#a07828;color:#2a1a08;border-color:#f0c040}
+  .crt-head #crtZoom{margin-left:auto}   /* empuja el clúster derecho: zoom · capturar · pegar · control · estado */
+  .crt-screen.zoom{overflow:auto}
+  .crt-screen.zoom img{cursor:grab;filter:none;animation:none}
+  .crt-screen.zoom .crt-scan{opacity:.08}
+  .crt-screen.zoom .crt-vignette{background:none;box-shadow:none}
   .crt-head #crtCtl.on{background:#a07828;color:#2a1a08;border-color:#f0c040}
   .crt-head .crt-status{color:#8fe6a0;letter-spacing:.5px}
   .crt-screen.control img{cursor:crosshair}
@@ -397,7 +402,8 @@
       <div class="crt-head">
         <span class="crt-title">📺 MONITOR REMOTO</span>
         <select id="crtMachine"></select>
-        <button id="crtCopy" type="button" title="Copiar toda la pantalla remota al portapapeles local">📋 Copiar pantalla</button>
+        <button id="crtZoom" type="button" title="Zoom del monitor (útil en pantalla completa con equipos 4K)">🔍 Ajustar</button>
+        <button id="crtCopy" type="button" title="Captura toda la pantalla remota y la copia al portapapeles">📸 Capturar pantalla</button>
         <button id="crtPaste" type="button" title="Pegar el portapapeles local en el equipo remoto (lo teclea el agente)">📥 Pegar</button>
         <button id="crtCtl" type="button" title="Control Total — teclado y ratón en vivo sobre el equipo, como si estuvieras delante (requiere AdmiraRemoteAgent)">🎮 Control Total</button>
         <span class="crt-status" id="crtStatus">— sin señal</span>
@@ -1485,8 +1491,17 @@ function collapseAllToggle(){
   if(!btn||!mon||!stage) return;
   const sel=$('#crtMachine'), img=$('#crtImg'), noise=$('#crtNoise'),
         statusEl=$('#crtStatus'), closeBtn=$('#crtClose'), screen=$('#crtScreen'), ctlBtn=$('#crtCtl'), fullBtn=$('#crtFull'),
-        copyBtn=$('#crtCopy'), pasteBtn=$('#crtPaste');
+        copyBtn=$('#crtCopy'), pasteBtn=$('#crtPaste'), zoomBtn=$('#crtZoom');
   let timer=null, current='', busy=false, ctl=null;   // ctl = sesión de Control Total activa
+  // Zoom del monitor (para leer equipos 4K, sobre todo en pantalla completa).
+  const ZOOM=[{l:'Ajustar',z:1},{l:'1.5×',z:1.5},{l:'2×',z:2},{l:'3×',z:3},{l:'4×',z:4}]; let zi=0;
+  function applyZoom(){
+    const {l,z}=ZOOM[zi]; zoomBtn.textContent='🔍 '+l; zoomBtn.classList.toggle('on', z>1);
+    if(z<=1){ img.style.width=''; img.style.height=''; img.style.maxWidth=''; screen.classList.remove('zoom'); }
+    else{ img.style.width=(z*100)+'%'; img.style.height='auto'; img.style.maxWidth='none'; screen.classList.add('zoom');
+      requestAnimationFrame(()=>{ try{ screen.scrollTo((screen.scrollWidth-screen.clientWidth)/2,(screen.scrollHeight-screen.clientHeight)/2); }catch(_){} }); }
+  }
+  function resetZoom(){ zi=0; applyZoom(); }
   const onlineReal=()=> (typeof MACHINES!=='undefined'?MACHINES:[]).filter(m=>m.online);
   const nameOf=id=>{ const m=onlineReal().find(x=>x.id===id); return m?m.name:id; };
   function fill(){
@@ -1525,7 +1540,7 @@ function collapseAllToggle(){
     if(resume && !mon.hidden){ img.removeAttribute('src'); noise.classList.remove('hide'); setStatus('… CONECTANDO','#ffdd66'); startPolling(); }
   }
   function open(){
-    fill();
+    fill(); resetZoom();
     stage.classList.add('mon'); mon.hidden=false; btn.classList.add('on');
     screen.classList.remove('pwr'); void screen.offsetWidth; screen.classList.add('pwr'); // encendido CRT
     noise.classList.remove('hide'); setStatus('… CONECTANDO','#ffdd66');
@@ -1558,7 +1573,8 @@ function collapseAllToggle(){
     pulse(pasteBtn, ok?'✓ pegado':'✗ ¿agente?');
   };
   ctlBtn.onclick=()=>{ ctl ? stopControl(true) : startControl(); };
-  sel.onchange=()=>{ const wasCtl=!!ctl; stopControl(false); current=sel.value; img.removeAttribute('src'); noise.classList.remove('hide');
+  zoomBtn.onclick=()=>{ zi=(zi+1)%ZOOM.length; applyZoom(); };
+  sel.onchange=()=>{ const wasCtl=!!ctl; stopControl(false); current=sel.value; img.removeAttribute('src'); noise.classList.remove('hide'); resetZoom();
     if(wasCtl && current) startControl(); else { setStatus('… CONECTANDO','#ffdd66'); startPolling(); } };
 })();
 </script>

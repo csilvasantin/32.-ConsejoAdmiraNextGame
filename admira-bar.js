@@ -10,6 +10,10 @@
   var path = location.pathname.replace(/index\.html$/, "");
   if (path === "/" || path === "") return;
 
+  // Nombre del proyecto + versión (v.año.mes.día.release) — a la izquierda del todo.
+  var PROJECT = "Admira Consejo";
+  var VERSION = "v.2026.07.01.r1";
+
   var TOP = [
     { t: "🏛️ Consejo",   h: "https://www.admira.live/" },
     { t: "📊 Dashboard",  h: "https://www.admira.live/dashboard.html" },
@@ -32,8 +36,16 @@
     "#admira-topbar a:hover{background:#8b5a14;border-color:#f0c040;color:#fff}" +
     /* Iconos de panel (portería, estilo Codex/VS Code): avanzado (der) + experto (abajo).
      * Se colocan a la derecha de «Usuarios» y sólo aparecen si la página tiene ese panel. */
-    "#pf-toggles{display:flex;gap:5px;align-items:center;align-self:center;margin-left:2px}" +
-    "#pf-toggle-left{display:flex;align-items:center;align-self:center;margin-right:6px}" +
+    /* Marca del proyecto (izquierda del todo) */
+    "#pf-brand{order:-2;display:flex;align-items:center;gap:6px;white-space:nowrap;text-decoration:none;" +
+    "font-family:'Press Start 2P',monospace;font-size:8px;letter-spacing:.5px;color:#ffdd66;" +
+    "border:2px solid #a07828;border-radius:0;background:#3a2410;box-shadow:2px 2px 0 #000;padding:6px 10px;margin-right:6px}" +
+    "#pf-brand:hover{border-color:#f0c040;color:#fff}" +
+    "#pf-brand .pf-ver{color:#c9a86a;font-size:7px}" +
+    /* icono de contraer OPCIONES: a la izquierda (tras la marca) */
+    "#pf-toggle-left{order:-1;display:flex;align-items:center;align-self:center;margin-right:6px}" +
+    /* iconos AVANZADO + EXPERTO: a la derecha del todo, tras el usuario */
+    "#pf-toggles{order:100;display:flex;gap:5px;align-items:center;align-self:center;margin-left:auto}" +
     ".pf-ico{width:27px;height:25px;display:flex;align-items:center;justify-content:center;cursor:pointer;" +
     "border:2px solid #8b5a14;border-radius:0;background:#2a1a08;box-shadow:2px 2px 0 #000;padding:0}" +
     ".pf-ico svg{width:15px;height:14px;display:block}" +
@@ -58,6 +70,13 @@
     var top = document.createElement("div");
     top.id = "admira-topbar";
     top.innerHTML = TOP.map(function (i) { return '<a href="' + i.h + '">' + i.t + "</a>"; }).join("");
+
+    // Marca del proyecto + versión, a la izquierda del todo (CSS order:-2).
+    var brand = document.createElement("a");
+    brand.id = "pf-brand";
+    brand.href = "https://www.admira.live/";
+    brand.innerHTML = "🏛️ " + PROJECT + ' <span class="pf-ver">' + VERSION + "</span>";
+    top.appendChild(brand);
 
     document.body.appendChild(top);
 

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- control · v2026.07.01j · consola: Claude por SSH usa PATH del DGX ($HOME/.local/bin/claude) + monitor CRT -->
+<!-- control · v2026.07.01k · CRT: boton Control Total (raton+teclado en vivo) reusando el motor de control remoto -->
 <html lang="es">
 <head>
     <script src="/admira-bar.js?v=porteria3"></script>
@@ -319,7 +319,13 @@
   #crtMonitor[hidden]{display:none}
   .crt-head{display:flex;align-items:center;gap:10px;font-family:'Press Start 2P',monospace;font-size:8px;color:#ffdd66}
   .crt-head select{font-family:var(--mono);font-size:11px;background:#2a1a08;color:#ffdd66;border:2px solid #8b5a14;border-radius:0;padding:4px 6px}
-  .crt-head .crt-status{margin-left:auto;color:#8fe6a0;letter-spacing:.5px}
+  .crt-head #crtCtl{margin-left:auto;border:2px solid #8b5a14;background:#2a1a08;color:#ffdd66;box-shadow:2px 2px 0 #000;
+    border-radius:0;padding:5px 8px;cursor:pointer;font-family:inherit;font-size:8px;white-space:nowrap}
+  .crt-head #crtCtl:hover{border-color:#f0c040;color:#fff}
+  .crt-head #crtCtl.on{background:#a07828;color:#2a1a08;border-color:#f0c040}
+  .crt-head .crt-status{color:#8fe6a0;letter-spacing:.5px}
+  .crt-screen.control img{cursor:crosshair}
+  .crt-screen.control{box-shadow:inset 0 0 70px rgba(0,0,0,.92), inset 0 0 140px rgba(60,255,140,.05), 0 0 0 2px #f0c040}
   .crt-head #crtClose{border:2px solid #8b5a14;background:#2a1a08;color:#ffdd66;box-shadow:2px 2px 0 #000;
     border-radius:0;padding:5px 8px;cursor:pointer;font-family:inherit;font-size:8px}
   .crt-head #crtClose:hover{border-color:#f0c040;color:#fff}
@@ -379,6 +385,7 @@
       <div class="crt-head">
         <span class="crt-title">📺 MONITOR REMOTO</span>
         <select id="crtMachine"></select>
+        <button id="crtCtl" type="button" title="Control Total — teclado y ratón en vivo sobre el equipo, como si estuvieras delante (requiere AdmiraRemoteAgent)">🎮 Control Total</button>
         <span class="crt-status" id="crtStatus">— sin señal</span>
         <button id="crtClose" type="button" title="Cerrar el monitor y volver a las zonas">✕ cerrar</button>
       </div>
@@ -1415,6 +1422,36 @@ function collapseAllToggle(){
   };
   // Botón "🖥️ control remoto" de cada tarjeta (delegación).
   document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-rc]'); if(!b)return; e.preventDefault(); window.openRemoteControl(b.getAttribute('data-rc'), b.getAttribute('data-rcname')||b.getAttribute('data-rc')); });
+
+  /* Reutilizable: engancha el MISMO motor (vídeo en vivo + ratón/teclado) a un <img>
+     externo, p.ej. el del monitor CRT. Devuelve {stop, setControl}. No toca el overlay. */
+  function wireInput(img){
+    const h={};
+    h.move=e=>{if(!cur||!cur.control)return;const now=performance.now();if(!cur.dragging&&now-cur.lastMove<45)return;cur.lastMove=now;const c=normCoords(e);sendInput({type:'move',x:c.x,y:c.y});};
+    h.down=e=>{if(!cur||!cur.control)return;e.preventDefault();const c=normCoords(e);const now=performance.now();const near=Math.abs(c.x-cur.lastPos.x)<0.01&&Math.abs(c.y-cur.lastPos.y)<0.01;cur.clicks=(now-cur.lastUp<400&&near)?cur.clicks+1:1;cur.dragging=true;sendInput({type:'down',x:c.x,y:c.y,button:e.button===2?'right':'left',clicks:cur.clicks});};
+    h.up=e=>{if(!cur||!cur.control)return;e.preventDefault();const c=normCoords(e);sendInput({type:'up',x:c.x,y:c.y,button:e.button===2?'right':'left',clicks:cur.clicks});cur.lastUp=performance.now();cur.lastPos={x:c.x,y:c.y};cur.dragging=false;};
+    h.ctx=e=>e.preventDefault();
+    h.wheel=e=>{if(!cur||!cur.control)return;e.preventDefault();sendInput({type:'scroll',dx:-Math.round(e.deltaX),dy:-Math.round(e.deltaY)});};
+    img.addEventListener('mousemove',h.move); img.addEventListener('mousedown',h.down); img.addEventListener('mouseup',h.up);
+    img.addEventListener('contextmenu',h.ctx); img.addEventListener('wheel',h.wheel,{passive:false});
+    cur._imgH=h; cur._imgEl=img;
+    cur.keyHandler=e=>{if(!cur||cur.closed||!cur.control)return;e.preventDefault();const mods=modsOf(e);const pr=e.key.length===1&&!e.metaKey&&!e.ctrlKey&&!e.altKey;if(pr){sendInput({type:'text',text:e.key});return;}const code=KMAP[e.code];if(code!=null)sendInput({type:'key',code:code,mods:mods});};
+    document.addEventListener('keydown',cur.keyHandler,true);
+  }
+  window.rcAttachTo=function(img, machineId, machineName, opts){
+    opts=opts||{};
+    if(cur) return null; // ya hay una sesión activa
+    cur={machine:machineId,name:machineName,closed:false,img:img,
+         msg:opts.msg||{style:{}}, stat:opts.stat||{},
+         scale:0.6,q:0.5,targetFps:8,control:true,fpsArr:[],timer:null,lastUp:0,lastPos:{x:-9,y:-9},clicks:0,dragging:false,lastMove:0};
+    wireInput(img);
+    frameLoop();
+    return {
+      stop(){ if(!cur)return; cur.closed=true; clearTimeout(cur.timer); document.removeEventListener('keydown',cur.keyHandler,true);
+        const img=cur._imgEl,h=cur._imgH; if(img&&h){img.removeEventListener('mousemove',h.move);img.removeEventListener('mousedown',h.down);img.removeEventListener('mouseup',h.up);img.removeEventListener('contextmenu',h.ctx);img.removeEventListener('wheel',h.wheel);} cur=null; },
+      setControl(on){ if(cur) cur.control=on; }
+    };
+  };
 })();
 </script>
 <script>
@@ -1425,9 +1462,10 @@ function collapseAllToggle(){
   const stage=$('.stage'), mon=$('#crtMonitor'), btn=$('#crtToggle');
   if(!btn||!mon||!stage) return;
   const sel=$('#crtMachine'), img=$('#crtImg'), noise=$('#crtNoise'),
-        statusEl=$('#crtStatus'), closeBtn=$('#crtClose'), screen=$('#crtScreen');
-  let timer=null, current='', busy=false;
+        statusEl=$('#crtStatus'), closeBtn=$('#crtClose'), screen=$('#crtScreen'), ctlBtn=$('#crtCtl');
+  let timer=null, current='', busy=false, ctl=null;   // ctl = sesión de Control Total activa
   const onlineReal=()=> (typeof MACHINES!=='undefined'?MACHINES:[]).filter(m=>m.online);
+  const nameOf=id=>{ const m=onlineReal().find(x=>x.id===id); return m?m.name:id; };
   function fill(){
     const ms=onlineReal(), cur=sel.value;
     sel.innerHTML = ms.length ? ms.map(m=>`<option value="${m.id}">${m.emoji||''} ${m.name}</option>`).join('')
@@ -1436,8 +1474,9 @@ function collapseAllToggle(){
     current=sel.value;
   }
   function setStatus(t,c){ statusEl.textContent=t; statusEl.style.color=c; }
+  function startPolling(){ clearInterval(timer); if(current) tick(); timer=setInterval(tick,1600); }
   async function tick(){
-    if(busy||!current) return; busy=true;
+    if(ctl||busy||!current) return; busy=true;   // en Control Total manda el feed en vivo, no el polling
     try{
       const d=await api('/action',{method:'POST',body:JSON.stringify({machine:current,action:'screenshot'})});
       if(d && d.rc===0 && d.stdout && !/ERR_NO_CAPTURE/.test(d.stdout)){
@@ -1447,17 +1486,34 @@ function collapseAllToggle(){
     }catch(e){ noise.classList.remove('hide'); setStatus('— SIN CONEXIÓN','#ff6b6b'); }
     busy=false;
   }
+  // Control Total: engancha el motor de control remoto (vídeo en vivo + ratón/teclado) al CRT.
+  function startControl(){
+    if(!current){ setStatus('— ELIGE UN EQUIPO','#e6a06f'); return; }
+    if(typeof window.rcAttachTo!=='function'){ setStatus('— CONTROL NO DISPONIBLE','#ff6b6b'); return; }
+    clearInterval(timer); timer=null; noise.classList.add('hide');
+    ctl=window.rcAttachTo(img, current, nameOf(current), {stat:statusEl, msg:noise});
+    if(!ctl){ setStatus('— OCUPADO (cierra el otro control)','#e6a06f'); return; }
+    screen.classList.add('control'); ctlBtn.classList.add('on'); ctlBtn.textContent='🎮 Control: ON';
+    setStatus('🎮 CONTROL TOTAL','#f0c040');
+  }
+  function stopControl(resume){
+    if(ctl){ ctl.stop(); ctl=null; }
+    screen.classList.remove('control'); ctlBtn.classList.remove('on'); ctlBtn.textContent='🎮 Control Total';
+    if(resume && !mon.hidden){ img.removeAttribute('src'); noise.classList.remove('hide'); setStatus('… CONECTANDO','#ffdd66'); startPolling(); }
+  }
   function open(){
     fill();
     stage.classList.add('mon'); mon.hidden=false; btn.classList.add('on');
     screen.classList.remove('pwr'); void screen.offsetWidth; screen.classList.add('pwr'); // encendido CRT
     noise.classList.remove('hide'); setStatus('… CONECTANDO','#ffdd66');
-    clearInterval(timer); if(current) tick(); timer=setInterval(tick, 1600);
+    startPolling();
   }
-  function close(){ clearInterval(timer); timer=null; stage.classList.remove('mon'); mon.hidden=true; btn.classList.remove('on'); }
+  function close(){ stopControl(false); clearInterval(timer); timer=null; stage.classList.remove('mon'); mon.hidden=true; btn.classList.remove('on'); }
   btn.onclick=()=>{ mon.hidden ? open() : close(); };
   closeBtn.onclick=close;
-  sel.onchange=()=>{ current=sel.value; img.removeAttribute('src'); noise.classList.remove('hide'); if(current) tick(); };
+  ctlBtn.onclick=()=>{ ctl ? stopControl(true) : startControl(); };
+  sel.onchange=()=>{ const wasCtl=!!ctl; stopControl(false); current=sel.value; img.removeAttribute('src'); noise.classList.remove('hide');
+    if(wasCtl && current) startControl(); else { setStatus('… CONECTANDO','#ffdd66'); startPolling(); } };
 })();
 </script>
 </body>

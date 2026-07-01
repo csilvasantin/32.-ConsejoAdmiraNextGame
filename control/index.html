@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- control · v2026.07.01f · consola experto: objetivo LLM DGX Spark (Ollama vía MacMini) -->
+<!-- control · v2026.07.01h · consola: elegir LLM DGX (Ollama 8b/70b o Claude por SSH seguro) -->
 <html lang="es">
 <head>
     <script src="/admira-bar.js?v=porteria3"></script>
@@ -789,8 +789,12 @@ $('#cards').addEventListener('dragend', ()=>{ _dragId=null; _clearDrag(); });
 function fillSelect(){
   const s=$('#csMachine'); const cur=s.value;
   const online=MACHINES.filter(m=>m.online).length;
-  // Objetivo especial: hablar con el LLM del DGX Spark (Ollama) — enrutado por el MacMini.
-  const dgxOpts=`<optgroup label="🧠 LLM del Consejo"><option value="__dgx_llm__|llama3.1:8b">🧠 DGX Spark · llama3.1:8b</option><option value="__dgx_llm__|llama3.1:70b">🧠 DGX Spark · llama3.1:70b (lento)</option></optgroup>`;
+  // Objetivos especiales: elige con qué LLM del DGX Spark hablar — enrutado por el MacMini.
+  const dgxOpts=`<optgroup label="🧠 LLM del Consejo · DGX Spark">`
+    +`<option value="__dgx_llm__|ollama|llama3.1:8b">🧠 llama3.1:8b (Ollama · rápido)</option>`
+    +`<option value="__dgx_llm__|ollama|llama3.1:70b">🧠 llama3.1:70b (Ollama · lento)</option>`
+    +`<option value="__dgx_llm__|claude|">🤖 Claude (CLI del DGX)</option>`
+    +`</optgroup>`;
   const allOpt=`<option value="__all__">🌐 Todas las online (${online})</option>`;
   s.innerHTML=dgxOpts+allOpt+MACHINES.map(m=>`<option value="${m.id}">${m.emoji||''} ${m.name}${m.online?'':' (offline)'}</option>`).join('');
   if(cur) s.value=cur;
@@ -809,24 +813,37 @@ function pushHist(cmd){ if(!cmd) return; if(CMD_HIST[CMD_HIST.length-1]===cmd){}
 async function runCmd(){
   const machine=$('#csMachine').value, cmd=$('#csCmd').value.trim(); if(!cmd) return;
   pushHist(cmd);
-  // Petición al LLM del DGX Spark (Ollama). admira.live es https y Ollama http, así que
-  // se enruta por el MacMini (nodo tailnet): el prompt viaja en base64 → curl a Ollama.
+  // Petición a un LLM del DGX Spark, enrutada por el MacMini (nodo tailnet); prompt en base64.
+  //   ollama → curl http://dgx-spark:11434/api/generate  (devuelve {"response"})
+  //   claude → SSH AUTENTICADO (identidad tailnet + ACL): `claude -p` con el prompt por stdin.
+  //            Requiere Tailscale SSH en 'accept'; si está en 'check' avisa cómo arreglarlo.
   if(machine.startsWith('__dgx_llm__')){
-    const model=machine.split('|')[1]||'llama3.1:8b';
+    const parts=machine.split('|'), backend=parts[1]||'ollama', model=parts[2]||'llama3.1:8b';
     const mini=MACHINES.find(m=>m.local)||MACHINES.find(m=>/mini/i.test(m.name||''));
     if(!mini){ pushResult('__dgx__','🧠 dgx',{rc:1,stdout:'',stderr:'no encuentro el MacMini (proxy) en la flota'}); return; }
-    const payload=JSON.stringify({model,prompt:cmd,stream:false});
-    const b64=btoa(unescape(encodeURIComponent(payload)));
-    const proxyCmd="printf %s '"+b64+"' | openssl base64 -d -A | curl -s --max-time 150 http://dgx-spark:11434/api/generate --data-binary @-";
+    let proxyCmd, who, isJson;
+    if(backend==='claude'){
+      const b64=btoa(unescape(encodeURIComponent(cmd)));
+      proxyCmd="printf %s '"+b64+"' | openssl base64 -d -A | \"$(command -v tailscale || echo /Applications/Tailscale.app/Contents/MacOS/Tailscale)\" ssh bitsatoms@dgx-spark 'claude -p'";
+      who='🤖 Claude'; isJson=false;
+    } else {
+      const b64=btoa(unescape(encodeURIComponent(JSON.stringify({model,prompt:cmd,stream:false}))));
+      proxyCmd="printf %s '"+b64+"' | openssl base64 -d -A | curl -s --max-time 240 http://dgx-spark:11434/api/generate --data-binary @-";
+      who='🧠 '+model; isJson=true;
+    }
     $('#csCmd').value=''; _histIdx=-1;
     $('#csRun').disabled=true; const lbl=$('#csRun').textContent; $('#csRun').textContent='🧠 …';
     try{
       const d=await api('/run',{method:'POST',body:JSON.stringify({machine:mini.id,cmd:proxyCmd})});
       let ans='';
-      try{ ans=(JSON.parse(d.stdout||'{}').response||'').trim(); }catch(_){}
-      if(ans) pushResult('__dgx__','🧠 '+model+' ← '+cmd.slice(0,48), {rc:0,stdout:ans,ms:d.ms});
-      else pushResult('__dgx__','🧠 '+model, {rc:d.rc!=null?d.rc:1,stdout:d.stdout||'',stderr:d.stderr||'sin respuesta del LLM (¿MacMini online y con acceso al DGX?)'});
-    }catch(err){ pushResult('__dgx__','🧠 '+model, {rc:-1,stdout:'',stderr:err.msg||'error'}); }
+      if(isJson){ try{ ans=(JSON.parse(d.stdout||'{}').response||'').trim(); }catch(_){} }
+      else ans=(d.stdout||'').trim();
+      const blob=(d.stdout||'')+' '+(d.stderr||'');
+      if(backend==='claude' && /additional check|failed to look up local user|Permission denied/i.test(blob)){
+        pushResult('__dgx__', who, {rc:1,stdout:'',stderr:'Claude por SSH bloqueado: pon Tailscale SSH en «accept» para dgx-spark/bitsatoms y avísame para verificarlo.'});
+      } else if(ans){ pushResult('__dgx__', who+' ← '+cmd.slice(0,48), {rc:0,stdout:ans,ms:d.ms}); }
+      else pushResult('__dgx__', who, {rc:d.rc!=null?d.rc:1,stdout:d.stdout||'',stderr:d.stderr||'sin respuesta del LLM'});
+    }catch(err){ pushResult('__dgx__', who, {rc:-1,stdout:'',stderr:err.msg||'error'}); }
     $('#csRun').disabled=false; $('#csRun').textContent=lbl; return;
   }
   // Modo flota: ejecuta el mismo comando en TODAS las máquinas online (con confirmación).

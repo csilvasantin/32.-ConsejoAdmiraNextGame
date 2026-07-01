@@ -12,7 +12,7 @@
 
   // Nombre del proyecto + versión (v.año.mes.día.release) — a la izquierda del todo.
   var PROJECT = "Admira Consejo";
-  var VERSION = "v.2026.07.01.r4";
+  var VERSION = "v.2026.07.01.r5";
 
   var TOP = [
     { t: "🏛️ Consejo",   h: "https://www.admira.live/" },

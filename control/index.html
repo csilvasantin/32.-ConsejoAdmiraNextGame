@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- control · v2026.07.01q · rail: Acciones de Equipos (Capturar todas arriba + repetir cada Ns) · online al rail · usuario al pie · contraer a la izq -->
+<!-- control · v2026.07.01r · versión al pie del rail (bajo el usuario) + consola inferior con scroll vertical -->
 <html lang="es">
 <head>
     <script src="/admira-bar.js?v=porteria3"></script>
@@ -75,6 +75,7 @@
   /* pie del rail: detalles del usuario (sesión), pegado abajo a la izquierda */
   .rail-foot{margin-top:auto;padding-top:12px;display:flex;flex-direction:column;align-items:stretch;gap:6px}
   .rail-foot #tokenPill{width:100%;text-align:center;box-sizing:border-box;word-break:break-all}
+  .rail-foot .pf-ver{display:block;text-align:center;color:#c9a86a;font-size:10px;opacity:.85;letter-spacing:.3px}
   /* Sillas del Consejo dentro del rail derecho (avanzado) */
   .rail-right .council-seats{margin:0}
   .rail-right .cseat-grid{grid-template-columns:1fr}
@@ -82,7 +83,10 @@
   /* consola dentro de la barra inferior (modo experto), a lo ancho y con salida flexible */
   .rail-bottom .console{margin:0;background:none;border:none;padding:0;height:100%;display:flex;flex-direction:column}
   .rail-bottom .console h3{margin:0 0 8px}
-  .rail-bottom .out{flex:1;max-height:none;margin-top:8px}
+  /* la consola tiene alto fijo → el área de resultados scrollea en vertical cuando hay
+     mucho texto (min-height:0 es imprescindible para que un hijo flex pueda scrollear). */
+  .rail-bottom .out{flex:1 1 0;min-height:0;max-height:none;margin-top:8px;overflow-y:auto}
+  .rail-bottom .res pre{max-height:none}
   /* responsive: las 4 barras se apilan como bloques */
   @media(max-width:1080px){
     .rail-left,.rail-right,.rail-bottom{position:static;top:auto;bottom:auto;left:auto;right:auto;
@@ -1212,6 +1216,8 @@ function collapseAllToggle(){
   // detalles del usuario (sesión) → PIE del rail, abajo a la izquierda
   var foot=document.createElement('div'); foot.className='rail-foot';
   if(tp) foot.appendChild(tp);
+  // versión → lo más abajo del todo, justo debajo del usuario (sale del brand de la barra)
+  var ver=document.querySelector('#pf-brand .pf-ver'); if(ver) foot.appendChild(ver);
   rail.appendChild(foot);
   // «contraer opciones» → a la IZQUIERDA de la marca (antes quedaba a su derecha)
   var lt=document.getElementById('pf-toggle-left'); if(lt) lt.style.order='-3';

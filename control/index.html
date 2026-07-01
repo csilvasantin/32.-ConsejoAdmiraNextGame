@@ -1,4 +1,5 @@
 <!DOCTYPE html>
+<!-- control · v2026.07.01 · portería (barra superior + 2 railes) + toggles binarios fusionados -->
 <html lang="es">
 <head>
     <script src="/admira-bar.js?v=scumm2"></script>
@@ -24,9 +25,46 @@
   .pill{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:5px 11px;color:var(--mut);cursor:pointer}
   .pill.ok{color:var(--ok);border-color:var(--ok)}
   .pill.bad{color:var(--bad);border-color:var(--bad)}
-  .wrap{max-width:1100px;margin:0 auto;padding:22px;display:flex;flex-direction:column}
-  /* orden: ordenadores → consola → Sillas del Consejo (abajo) */
-  .monitorbar{order:0} #cards{order:1} .console{order:2} .council-seats{order:3;margin-top:8px}
+  /* ── Portería (patrón por defecto de AdmiraNeXT, estilo Claude Code / Codex) ──
+     Barra horizontal principal (#admira-topbar, 46px, de admira-bar.js) +
+     rail izquierdo (acciones de flota) + centro scrollable (equipos) +
+     rail derecho (consola + Sillas del Consejo). */
+  :root{ --topbar-h:46px; --rail-l:240px; --rail-r:348px; }
+  .porteria{position:relative}
+  .rail{position:fixed;top:var(--topbar-h);bottom:0;overflow-y:auto;overflow-x:hidden;
+    background:var(--panel);z-index:40;padding:14px 12px 48px;display:flex;flex-direction:column;gap:9px;
+    scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+  .rail::-webkit-scrollbar{width:8px}
+  .rail::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px}
+  .rail-left{left:0;width:var(--rail-l);border-right:1px solid var(--line)}
+  .rail-right{right:0;width:var(--rail-r);border-left:1px solid var(--line)}
+  .rail-hd{font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--mut);font-weight:800;
+    padding:8px 4px 6px;border-bottom:1px solid var(--line);margin-top:6px}
+  .rail-hd:first-child{margin-top:0}
+  .stage{margin-left:var(--rail-l);margin-right:var(--rail-r);padding:18px;min-height:calc(100vh - var(--topbar-h))}
+  /* monitorbar verticalizado dentro del rail izquierdo */
+  .rail-left .monitorbar{display:flex;flex-direction:column;align-items:stretch;gap:8px;flex-wrap:nowrap;
+    margin:0;padding:0;background:none;border:none}
+  .rail-left .monitorbar button{width:100%;text-align:left}
+  .rail-left .monitorbar label{width:100%}
+  .rail-left .monitorbar .acstate{margin-left:0;color:var(--mut)}
+  .rail-left .monitorbar>span{font-size:12px;color:var(--mut)}
+  /* consola + sillas dentro del rail derecho: a lo ancho del rail */
+  .rail-right .console{margin:0;background:none;border:none;padding:0}
+  .rail-right .council-seats{margin:0}
+  .rail-right .cseat-grid{grid-template-columns:1fr}
+  .rail-right .cseat-gen{margin-left:0}
+  .rail-right .crow{flex-direction:column;align-items:stretch}
+  .rail-right .crow select,.rail-right .crow input[type=text],.rail-right .crow button{width:100%;min-width:0}
+  /* responsive: los railes se apilan como bloques */
+  @media(max-width:1080px){
+    .rail{position:static;top:auto;bottom:auto;width:auto;border:1px solid var(--line);border-radius:14px;margin:12px}
+    .stage{margin:0;padding:12px}
+    .rail-left .monitorbar{flex-direction:row;flex-wrap:wrap;align-items:center}
+    .rail-left .monitorbar button,.rail-left .monitorbar label{width:auto}
+    .rail-right .cseat-grid{grid-template-columns:1fr 1fr}
+    .rail-right .crow{flex-direction:row;flex-wrap:wrap}
+  }
   .monitorbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px;padding:9px 14px;
     background:var(--panel);border:1px solid var(--line);border-radius:12px;font-size:13px;color:var(--mut)}
   .monitorbar label{display:flex;align-items:center;gap:7px;cursor:pointer;color:var(--ink);font-weight:600}
@@ -90,6 +128,12 @@
   .monitorbar #fleetScreens{font-weight:700}
   .monitorbar #fleetScreens.scr-on{border-color:var(--ok);color:var(--ok)}
   .monitorbar #fleetScreens.scr-off{border-color:var(--bad);color:var(--bad)}
+  /* salvapantallas: toggle único (activo = ámbar) */
+  .monitorbar #ssToggle{font-weight:700}
+  .monitorbar #ssToggle.ss-on{border-color:var(--warn);color:var(--warn)}
+  /* toggles binarios por máquina (pantalla, signage): estado on=verde / off=rojo */
+  .acts button.tgl.on{border-color:var(--ok);color:var(--ok)}
+  .acts button.tgl.off{border-color:var(--bad);color:var(--bad)}
   /* frescura de la miniatura */
   .shotage{position:absolute;right:0;bottom:0;font-size:10px;padding:3px 7px;background:rgba(0,0,0,.55);color:#cbe6ff;letter-spacing:.2px;border-top-left-radius:8px;display:none}
   .shot.stale img{opacity:.5;filter:grayscale(.3)}
@@ -222,57 +266,63 @@
   <span class="pill" id="tokenPill" title="sesión">🔒</span>
 </header>
 
-<div class="wrap">
-  <div class="council-seats">
-    <div class="cseat-head">
-      <span class="cseat-title">🪑 Sillas del Consejo</span>
-      <div class="cseat-gen">
-        <button class="cgen active" data-gen="leyendas">⭐ Leyendas</button>
-        <button class="cgen" data-gen="coetaneos">🚀 Coetáneos</button>
+<div class="porteria">
+  <aside class="rail rail-left">
+    <div class="rail-hd">⚡ Acciones de flota</div>
+    <div class="monitorbar">
+      <label><input type="checkbox" id="acToggle"> 📸 Auto-captura</label>
+      <span>cada <input type="number" id="acSec" min="3" max="600" value="15"> s</span>
+      <button id="acNow" title="Capturar ahora todas las pantallas online">📸 Capturar todas</button>
+      <button id="wallOpen" title="Pared de pantallas: mosaico a pantalla completa de todas las capturas">🧱 Mosaico</button>
+      <button id="hackOpen" title="HACKEO · secuencia de intrusión sobre toda la flota (cinemática + acción real)">🕶️ HACKEO</button>
+      <button id="fleetScreens" title="Apagar o encender la pantalla de TODA la flota online (toggle)">🌙 Apagar todas</button>
+      <button id="ssToggle" title="Activar o quitar el salvapantallas en TODA la flota online (toggle)">🖼️ Salva ON</button>
+      <label title="Beep cuando un equipo se cae o su captura empieza a fallar"><input type="checkbox" id="sndToggle"> 🔔 sonido</label>
+      <label title="No mostrar los equipos desconectados"><input type="checkbox" id="hideOff"> 🙈 ocultar offline</label>
+      <button id="collapseAll" title="Colapsar o expandir todas las tarjetas">⊟ colapsar todas</button>
+      <span class="caphealth" id="capHealth"></span>
+      <button id="fixAll" style="display:none" title="Enviar el arreglo de captura por SSH a todos los equipos que fallan">🛡️ arreglar todas</button>
+      <span class="acstate" id="acState">— para monitorizar qué emite cada pantalla</span>
+    </div>
+  </aside>
+
+  <main class="stage">
+    <div class="cards" id="cards"></div>
+  </main>
+
+  <aside class="rail rail-right">
+    <div class="console">
+      <h3>⌘ Consola</h3>
+      <div class="crow">
+        <select id="csMachine"></select>
+        <input type="text" id="csCmd" placeholder="comando shell… (p.ej. uptime; df -h /)" autocomplete="off">
+        <button class="primary" id="csRun">▶ ejecutar</button>
+        <button id="csClear">limpiar</button>
+      </div>
+      <div class="note">El comando se ejecuta de verdad en la máquina elegida (MacMini local · resto por SSH). Acceso por tu login de Google.</div>
+      <div class="out" id="out"><div class="empty">Sin resultados todavía.</div></div>
+    </div>
+
+    <div class="council-seats">
+      <div class="cseat-head">
+        <span class="cseat-title">🪑 Sillas del Consejo</span>
+        <div class="cseat-gen">
+          <button class="cgen active" data-gen="leyendas">⭐ Leyendas</button>
+          <button class="cgen" data-gen="coetaneos">🚀 Coetáneos</button>
+        </div>
+      </div>
+      <div class="cseat-grid">
+        <div class="cpanel racional" id="cpanel-racional">
+          <div class="cpanel-title" data-toggle="cpanel-racional">🧠 Racional <span class="ctcount">🔴 Sillas rojas · <span id="ccount-racional">0/4</span></span> <span class="carrow">▼</span></div>
+          <div class="cpanel-body" id="cmembers-racional"></div>
+        </div>
+        <div class="cpanel creativo" id="cpanel-creativo">
+          <div class="cpanel-title" data-toggle="cpanel-creativo">🎨 Creativo <span class="ctcount">🔵 Sillas azules · <span id="ccount-creativo">0/4</span></span> <span class="carrow">▼</span></div>
+          <div class="cpanel-body" id="cmembers-creativo"></div>
+        </div>
       </div>
     </div>
-    <div class="cseat-grid">
-      <div class="cpanel racional" id="cpanel-racional">
-        <div class="cpanel-title" data-toggle="cpanel-racional">🧠 Racional <span class="ctcount">🔴 Sillas rojas · <span id="ccount-racional">0/4</span></span> <span class="carrow">▼</span></div>
-        <div class="cpanel-body" id="cmembers-racional"></div>
-      </div>
-      <div class="cpanel creativo" id="cpanel-creativo">
-        <div class="cpanel-title" data-toggle="cpanel-creativo">🎨 Creativo <span class="ctcount">🔵 Sillas azules · <span id="ccount-creativo">0/4</span></span> <span class="carrow">▼</span></div>
-        <div class="cpanel-body" id="cmembers-creativo"></div>
-      </div>
-    </div>
-  </div>
-
-  <div class="monitorbar">
-    <label><input type="checkbox" id="acToggle"> 📸 Auto-captura</label>
-    <span>cada <input type="number" id="acSec" min="3" max="600" value="15"> s</span>
-    <button id="acNow" title="Capturar ahora todas las pantallas online">📸 Capturar todas</button>
-    <button id="wallOpen" title="Pared de pantallas: mosaico a pantalla completa de todas las capturas">🧱 Mosaico</button>
-    <button id="hackOpen" title="HACKEO · secuencia de intrusión sobre toda la flota (cinemática + acción real)">🕶️ HACKEO</button>
-    <button id="fleetScreens" title="Apagar o encender la pantalla de TODA la flota online (toggle)">🌙 Apagar todas</button>
-    <button id="ssOn" title="Activar el salvapantallas en TODA la flota online">🖼️ Salva ON</button>
-    <button id="ssOff" title="Quitar el salvapantallas en TODA la flota online">🖼️ Salva OFF</button>
-    <label title="Beep cuando un equipo se cae o su captura empieza a fallar"><input type="checkbox" id="sndToggle"> 🔔 sonido</label>
-    <label title="No mostrar los equipos desconectados"><input type="checkbox" id="hideOff"> 🙈 ocultar offline</label>
-    <button id="collapseAll" title="Colapsar o expandir todas las tarjetas">⊟ colapsar todas</button>
-    <span class="caphealth" id="capHealth"></span>
-    <button id="fixAll" style="display:none" title="Enviar el arreglo de captura por SSH a todos los equipos que fallan">🛡️ arreglar todas</button>
-    <span class="acstate" id="acState">— para monitorizar qué emite cada pantalla</span>
-  </div>
-
-  <div class="cards" id="cards"></div>
-
-  <div class="console">
-    <h3>⌘ Consola</h3>
-    <div class="crow">
-      <select id="csMachine"></select>
-      <input type="text" id="csCmd" placeholder="comando shell… (p.ej. uptime; df -h /)" autocomplete="off">
-      <button class="primary" id="csRun">▶ ejecutar</button>
-      <button id="csClear">limpiar</button>
-    </div>
-    <div class="note">El comando se ejecuta de verdad en la máquina elegida (MacMini local · resto por SSH). Acceso por tu login de Google.</div>
-    <div class="out" id="out"><div class="empty">Sin resultados todavía.</div></div>
-  </div>
+  </aside>
 </div>
 
 <div id="lb"><img id="lbImg" alt=""></div>
@@ -452,6 +502,19 @@ function moveCard(dragId, targetId){
   o=o.filter(id=>id!==dragId); let ti=o.indexOf(targetId); o.splice(ti<0?o.length:ti,0,dragId);
   localStorage.setItem('fleet_card_order', JSON.stringify(o)); renderCards(MACHINES);
 }
+/* ---------- estado binario por máquina (toggles optimistas, persistido) ----------
+   No hay lectura de estado real del display/signage por máquina, así que el botón
+   refleja lo COMANDADO: al pulsarlo ejecuta la acción y revela la contraria. */
+function _stateMap(k){ try{ return JSON.parse(localStorage.getItem(k)||'{}'); }catch(e){ return {}; } }
+function _setState(k,id,v){ const m=_stateMap(k); if(v) m[id]=1; else delete m[id]; localStorage.setItem(k, JSON.stringify(m)); }
+function screenIsOff(id){ return !!_stateMap('fleet_screen_off_by_machine')[id]; }   // pantalla dormida
+function signageIsOn(id){ return !!_stateMap('fleet_signage_on_by_machine')[id]; }    // player emitiendo
+// Refleja el nuevo estado en el botón sin reconstruir toda la tarjeta.
+function paintToggle(id, action, state){
+  const b=document.querySelector('.acts button[data-a="'+action+'"][data-m="'+id+'"]'); if(!b) return;
+  if(action==='displaytoggle'){ b.textContent=state?'☀️ encender':'😴 apagar'; b.title=state?'Encender la pantalla (despierta el display dormido)':'Apagar la pantalla (duerme el display)'; b.classList.toggle('off',state); b.classList.toggle('on',!state); }
+  else if(action==='signagetoggle'){ b.textContent=state?'⏹️ parar':'📺 signage'; b.title=state?'Parar el player de digital signage':'Lanzar el player de digital signage (AdmiraSignageMac)'; b.classList.toggle('on',state); b.classList.toggle('off',!state); }
+}
 function collapsedMap(){ try{ return JSON.parse(localStorage.getItem('fleet_card_collapsed')||'{}'); }catch(e){ return {}; } }
 // Colapsado POR DEFECTO: si no hay preferencia guardada para esa tarjeta, va colapsada.
 function isCollapsed(id){ const c=collapsedMap(); return (id in c)?!!c[id]:true; }
@@ -484,15 +547,13 @@ function renderCards(ms){
         <button data-a="screenshot" data-m="${m.id}">📸 captura</button>
         <button data-a="sysinfo" data-m="${m.id}">🩺 info</button>
         <button data-a="volume" data-m="${m.id}">🔊 volumen</button>
-        <button data-a="displaysleep" data-m="${m.id}" title="Apagar la pantalla (duerme el display)">😴 apagar</button>
-        <button data-a="displaywake" data-m="${m.id}" title="Encender la pantalla (despierta el display dormido)">☀️ encender</button>
+        <button data-a="displaytoggle" data-m="${m.id}" class="tgl ${screenIsOff(m.id)?'off':'on'}" title="${screenIsOff(m.id)?'Encender la pantalla (despierta el display dormido)':'Apagar la pantalla (duerme el display)'}">${screenIsOff(m.id)?'☀️ encender':'😴 apagar'}</button>
         <button data-a="say" data-m="${m.id}">🗣️ decir</button>
         <button data-a="notify" data-m="${m.id}">🔔 avisar</button>
         <button data-a="open" data-m="${m.id}">📂 abrir app</button>
         <button data-a="closeapp" data-m="${m.id}">❌ cerrar app</button>
         <button data-a="ssh" data-m="${m.id}">🔌 ssh</button>
-        <button data-a="signage_on" data-m="${m.id}" title="Lanzar el player de digital signage (AdmiraSignageMac)">📺 signage</button>
-        <button data-a="signage_off" data-m="${m.id}" title="Parar el player de digital signage">⏹️ parar</button>
+        <button data-a="signagetoggle" data-m="${m.id}" class="tgl ${signageIsOn(m.id)?'on':'off'}" title="${signageIsOn(m.id)?'Parar el player de digital signage':'Lanzar el player de digital signage (AdmiraSignageMac)'}">${signageIsOn(m.id)?'⏹️ parar':'📺 signage'}</button>
         ${m.online?`<button data-rc="${m.id}" data-rcname="${(m.name||'').replace(/"/g,'')}" title="Control remoto en vivo (ver + ratón + teclado, estilo AnyDesk). Requiere AdmiraRemoteAgent + permisos en la máquina destino." style="border-color:var(--acc);color:var(--acc);font-weight:700">🖥️ control remoto</button>`:''}
       </div>
       <div class="capwarn" data-capwarn="${m.id}">⚠️ sin permiso de captura <button data-fix="${m.id}" title="Abrir el panel de Grabación de pantalla en ese Mac, avisar al usuario y reactivar el agente">🛡️ enviar arreglo por SSH</button></div>
@@ -588,13 +649,41 @@ $('#cards').addEventListener('click', async e=>{
     catch(_){ prompt('Copia este comando para conectar por SSH:', cmd); }
     return;
   }
-  // encender pantalla: vía /api/run (no requiere acción nueva en el backend del Mini).
-  // `caffeinate -u` declara actividad de usuario → despierta el display dormido por 😴 apagar.
-  if(action==='displaywake'){
-    b.disabled=true; const lbl0=b.textContent; b.textContent='☀️ …';
-    try{ const d=await api('/run',{method:'POST',body:JSON.stringify({machine,cmd:'caffeinate -u -t 2; echo "pantalla encendida"'})}); pushResult(machine,'☀️ encender',d); }
-    catch(err){ pushResult(machine,'☀️ encender',{rc:-1,stdout:'',stderr:err.msg||'error'}); }
-    b.disabled=false; b.textContent=lbl0; return;
+  // pantalla: toggle apagar/encender por máquina, vía /api/run (sin acción nueva en el backend).
+  //   apagar  → `pmset displaysleepnow` duerme el display
+  //   encender→ `caffeinate -u` declara actividad de usuario y lo despierta
+  if(action==='displaytoggle'){
+    const turnOff=!screenIsOff(machine);   // encendida → apagar; apagada → encender
+    const cmd = turnOff ? 'pmset displaysleepnow; echo "pantalla apagada"' : 'caffeinate -u -t 2; echo "pantalla encendida"';
+    const label = turnOff ? '😴 apagar' : '☀️ encender';
+    b.disabled=true; const lbl0=b.textContent; b.textContent=(turnOff?'😴':'☀️')+' …';
+    let ok=false;
+    try{ const d=await api('/run',{method:'POST',body:JSON.stringify({machine,cmd})}); ok=d.rc===0; pushResult(machine,label,d); }
+    catch(err){ pushResult(machine,label,{rc:-1,stdout:'',stderr:err.msg||'error'}); }
+    b.disabled=false;
+    if(ok){ _setState('fleet_screen_off_by_machine',machine,turnOff); paintToggle(machine,'displaytoggle',turnOff); }
+    else b.textContent=lbl0;
+    return;
+  }
+  // signage: toggle lanzar/parar el player por máquina.
+  if(action==='signagetoggle'){
+    const turnOn=!signageIsOn(machine);   // parado → lanzar; emitiendo → parar
+    let arg='';
+    if(turnOn){
+      const screen=prompt('Pantalla (screen id) — vacío = la última configurada:',''); if(screen===null) return;
+      const circuit=prompt('Circuito (circuit id) — vacío = el último configurado:',''); if(circuit===null) return;
+      arg=screen.trim()+'|'+circuit.trim();
+    }
+    const act = turnOn ? 'signage_on' : 'signage_off';
+    const label = turnOn ? '📺 signage' : '⏹️ parar';
+    b.disabled=true; const lbl0=b.textContent; b.textContent=(turnOn?'📺':'⏹️')+' …';
+    let ok=false;
+    try{ const d=await api('/action',{method:'POST',body:JSON.stringify({machine,action:act,arg})}); ok=d.rc===0; pushResult(machine,label,d); }
+    catch(err){ pushResult(machine,label,{rc:-1,stdout:'',stderr:err.msg||'error'}); }
+    b.disabled=false;
+    if(ok){ _setState('fleet_signage_on_by_machine',machine,turnOn); paintToggle(machine,'signagetoggle',turnOn); }
+    else b.textContent=lbl0;
+    return;
   }
   // cerrar app: vía /api/run (no requiere acción nueva en el backend del Mini).
   if(action==='closeapp'){
@@ -606,15 +695,7 @@ $('#cards').addEventListener('click', async e=>{
     b.disabled=false; b.textContent=lbl0; return;
   }
   let arg='';
-  // Lanzar signage: pregunta pantalla y circuito (opcionales) → arg "screen|circuit".
-  if(action==='signage_on'){
-    const screen=prompt('Pantalla (screen id) — vacío = la última configurada:','');
-    if(screen===null) return;
-    const circuit=prompt('Circuito (circuit id) — vacío = el último configurado:','');
-    if(circuit===null) return;
-    arg=screen.trim()+'|'+circuit.trim();
-  }
-  else if(NEEDS_ARG[action]){ arg=prompt(NEEDS_ARG[action], action==='volume'?'50':''); if(arg===null) return; }
+  if(NEEDS_ARG[action]){ arg=prompt(NEEDS_ARG[action], action==='volume'?'50':''); if(arg===null) return; }
   b.disabled=true; const lbl=b.textContent; if(action==='screenshot') b.textContent='📸 …';
   try{
     const d=await api('/action',{method:'POST',body:JSON.stringify({machine,action,arg})});
@@ -781,23 +862,31 @@ function renderFleetScreens(){
   };
 })();
 
-/* ---------- salvapantallas ON/OFF en toda la flota online ----------
+/* ---------- salvapantallas: toggle único ON/OFF en toda la flota online ----------
    Manda la acción screensaver_on/off (backend OS-aware: ScreenSaverEngine en
-   macOS, GNOME ScreenSaver vía dbus en Linux) a cada máquina online. */
-(function(){
-  async function sweep(action, btn, label){
+   macOS, GNOME ScreenSaver vía dbus en Linux) a cada máquina online. Un solo botón
+   que revela el estado contrario tras pulsarse (estado COMANDADO, persistido). */
+let SS_ON = localStorage.getItem('fleet_screensaver_on')==='1';
+function renderSsToggle(){
+  const b=$('#ssToggle'); if(!b) return;
+  if(SS_ON){ b.textContent='🖼️ Salva OFF · ACTIVO'; b.classList.add('ss-on'); b.title='El salvapantallas está ACTIVO en la flota — clic para quitarlo'; }
+  else { b.textContent='🖼️ Salva ON'; b.classList.remove('ss-on'); b.title='Activar el salvapantallas en TODA la flota online'; }
+}
+(function(){ const b=$('#ssToggle'); if(!b) return; renderSsToggle();
+  b.onclick=async()=>{
     const targets = MACHINES.filter(m=>m.online);
     if(!targets.length){ pushResult('__all__','🖼️ salvapantallas',{rc:1,stdout:'',stderr:'no hay máquinas online'}); return; }
-    const txt = btn.textContent;
-    btn.disabled = true; let okCount = 0;
-    for(let i=0;i<targets.length;i++){ const m=targets[i]; btn.textContent='🖼️ '+(i+1)+'/'+targets.length;
+    const turnOn=!SS_ON;   // si está inactivo → activar; si activo → quitar
+    const action=turnOn?'screensaver_on':'screensaver_off';
+    const label=turnOn?'🖼️ salva ON':'🖼️ salva OFF';
+    b.disabled=true; let okCount=0;
+    for(let i=0;i<targets.length;i++){ const m=targets[i]; b.textContent='🖼️ '+(i+1)+'/'+targets.length;
       try{ const d=await api('/action',{method:'POST',body:JSON.stringify({machine:m.id,action})}); if(d.rc===0) okCount++; pushResult(m.id,label,d); }
       catch(err){ pushResult(m.id,label,{rc:-1,stdout:'',stderr:err.msg||'error'}); } }
-    btn.disabled = false; btn.textContent = txt;
-  }
-  const on=$('#ssOn'), off=$('#ssOff');
-  if(on) on.onclick = ()=>sweep('screensaver_on', on, '🖼️ salva ON');
-  if(off) off.onclick = ()=>sweep('screensaver_off', off, '🖼️ salva OFF');
+    b.disabled=false;
+    if(okCount>0){ SS_ON=turnOn; localStorage.setItem('fleet_screensaver_on', SS_ON?'1':'0'); }
+    renderSsToggle();
+  };
 })();
 
 /* ---------- mosaico / pared de pantallas ---------- */

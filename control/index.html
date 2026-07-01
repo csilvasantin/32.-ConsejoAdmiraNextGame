@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- control · v2026.07.01e · marca Admira Consejo+version (izq) + iconos avanzado/experto a la derecha del usuario -->
+<!-- control · v2026.07.01f · consola experto: objetivo LLM DGX Spark (Ollama vía MacMini) -->
 <html lang="es">
 <head>
     <script src="/admira-bar.js?v=porteria3"></script>
@@ -789,9 +789,18 @@ $('#cards').addEventListener('dragend', ()=>{ _dragId=null; _clearDrag(); });
 function fillSelect(){
   const s=$('#csMachine'); const cur=s.value;
   const online=MACHINES.filter(m=>m.online).length;
+  // Objetivo especial: hablar con el LLM del DGX Spark (Ollama) — enrutado por el MacMini.
+  const dgxOpts=`<optgroup label="🧠 LLM del Consejo"><option value="__dgx_llm__|llama3.1:8b">🧠 DGX Spark · llama3.1:8b</option><option value="__dgx_llm__|llama3.1:70b">🧠 DGX Spark · llama3.1:70b (lento)</option></optgroup>`;
   const allOpt=`<option value="__all__">🌐 Todas las online (${online})</option>`;
-  s.innerHTML=allOpt+MACHINES.map(m=>`<option value="${m.id}">${m.emoji||''} ${m.name}${m.online?'':' (offline)'}</option>`).join('');
+  s.innerHTML=dgxOpts+allOpt+MACHINES.map(m=>`<option value="${m.id}">${m.emoji||''} ${m.name}${m.online?'':' (offline)'}</option>`).join('');
   if(cur) s.value=cur;
+  updateCsHint();
+}
+// Ajusta el placeholder de la consola según el objetivo (LLM vs shell).
+function updateCsHint(){
+  const v=($('#csMachine')||{}).value||'', inp=$('#csCmd'); if(!inp) return;
+  inp.placeholder = v.startsWith('__dgx_llm__')
+    ? 'escribe tu petición al LLM del DGX…' : 'comando shell… (p.ej. uptime; df -h /)';
 }
 // Historial de comandos (↑/↓ los recuperan), persistido por navegador.
 let CMD_HIST=(()=>{ try{ return JSON.parse(localStorage.getItem('fleet_cmd_hist')||'[]'); }catch(e){ return []; } })();
@@ -800,6 +809,26 @@ function pushHist(cmd){ if(!cmd) return; if(CMD_HIST[CMD_HIST.length-1]===cmd){}
 async function runCmd(){
   const machine=$('#csMachine').value, cmd=$('#csCmd').value.trim(); if(!cmd) return;
   pushHist(cmd);
+  // Petición al LLM del DGX Spark (Ollama). admira.live es https y Ollama http, así que
+  // se enruta por el MacMini (nodo tailnet): el prompt viaja en base64 → curl a Ollama.
+  if(machine.startsWith('__dgx_llm__')){
+    const model=machine.split('|')[1]||'llama3.1:8b';
+    const mini=MACHINES.find(m=>m.local)||MACHINES.find(m=>/mini/i.test(m.name||''));
+    if(!mini){ pushResult('__dgx__','🧠 dgx',{rc:1,stdout:'',stderr:'no encuentro el MacMini (proxy) en la flota'}); return; }
+    const payload=JSON.stringify({model,prompt:cmd,stream:false});
+    const b64=btoa(unescape(encodeURIComponent(payload)));
+    const proxyCmd="printf %s '"+b64+"' | openssl base64 -d -A | curl -s --max-time 150 http://dgx-spark:11434/api/generate --data-binary @-";
+    $('#csCmd').value=''; _histIdx=-1;
+    $('#csRun').disabled=true; const lbl=$('#csRun').textContent; $('#csRun').textContent='🧠 …';
+    try{
+      const d=await api('/run',{method:'POST',body:JSON.stringify({machine:mini.id,cmd:proxyCmd})});
+      let ans='';
+      try{ ans=(JSON.parse(d.stdout||'{}').response||'').trim(); }catch(_){}
+      if(ans) pushResult('__dgx__','🧠 '+model+' ← '+cmd.slice(0,48), {rc:0,stdout:ans,ms:d.ms});
+      else pushResult('__dgx__','🧠 '+model, {rc:d.rc!=null?d.rc:1,stdout:d.stdout||'',stderr:d.stderr||'sin respuesta del LLM (¿MacMini online y con acceso al DGX?)'});
+    }catch(err){ pushResult('__dgx__','🧠 '+model, {rc:-1,stdout:'',stderr:err.msg||'error'}); }
+    $('#csRun').disabled=false; $('#csRun').textContent=lbl; return;
+  }
   // Modo flota: ejecuta el mismo comando en TODAS las máquinas online (con confirmación).
   if(machine==='__all__'){
     const targets=MACHINES.filter(m=>m.online);
@@ -817,6 +846,7 @@ async function runCmd(){
   $('#csRun').disabled=false;
 }
 $('#csRun').onclick=runCmd;
+$('#csMachine').addEventListener('change',updateCsHint);
 $('#csCmd').addEventListener('keydown',e=>{
   const inp=e.target;
   if(e.key==='Enter'){ runCmd(); return; }
@@ -834,7 +864,7 @@ $('#csCmd').addEventListener('keydown',e=>{
 $('#csClear').onclick=()=>{ $('#csCmd').value=''; _histIdx=-1; _histDraft=''; $('#out').innerHTML='<div class="empty">Sin resultados todavía.</div>'; $('#csCmd').focus(); };
 
 function pushResult(machine, label, d){
-  const m=MACHINES.find(x=>x.id===machine)||{name:machine,emoji:''};
+  const m=MACHINES.find(x=>x.id===machine)||(machine==='__dgx__'?{name:'DGX Spark',emoji:'🧠'}:{name:machine,emoji:''});
   const out=$('#out'); if(out.querySelector('.empty')) out.innerHTML='';
   const body=((d.stdout||'')+(d.stderr?('\n⚠️ '+d.stderr):'')).trim()||'(sin salida)';
   const ok=d.rc===0;

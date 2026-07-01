@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- control · v2026.07.01k · CRT: boton Control Total (raton+teclado en vivo) reusando el motor de control remoto -->
+<!-- control · v2026.07.01l · CRT: pantalla completa + Control Total nitido (scale 1.0 q0.72, sin barrido/filtro) -->
 <html lang="es">
 <head>
     <script src="/admira-bar.js?v=porteria3"></script>
@@ -325,7 +325,18 @@
   .crt-head #crtCtl.on{background:#a07828;color:#2a1a08;border-color:#f0c040}
   .crt-head .crt-status{color:#8fe6a0;letter-spacing:.5px}
   .crt-screen.control img{cursor:crosshair}
-  .crt-screen.control{box-shadow:inset 0 0 70px rgba(0,0,0,.92), inset 0 0 140px rgba(60,255,140,.05), 0 0 0 2px #f0c040}
+  .crt-screen.control{box-shadow:inset 0 0 40px rgba(0,0,0,.7), 0 0 0 2px #f0c040}
+  .crt-head #crtFull{border:2px solid #8b5a14;background:#2a1a08;color:#ffdd66;box-shadow:2px 2px 0 #000;border-radius:0;
+    padding:5px 8px;cursor:pointer;font-family:inherit;font-size:11px;line-height:1}
+  .crt-head #crtFull:hover{border-color:#f0c040;color:#fff}
+  /* Control Total: prioriza LEGIBILIDAD — imagen nítida, sin barrido/viñeta/filtro pesados */
+  .crt-screen.control img{filter:none;animation:none}
+  .crt-screen.control .crt-scan{opacity:.08}
+  .crt-screen.control .crt-vignette{background:none;box-shadow:none}
+  /* pantalla completa del monitor CRT */
+  #crtMonitor:fullscreen{background:#0a0806;padding:14px;height:100vh;box-sizing:border-box}
+  #crtMonitor:-webkit-full-screen{background:#0a0806;padding:14px;height:100vh;box-sizing:border-box}
+  #crtMonitor:fullscreen .crt-bezel,#crtMonitor:-webkit-full-screen .crt-bezel{flex:1}
   .crt-head #crtClose{border:2px solid #8b5a14;background:#2a1a08;color:#ffdd66;box-shadow:2px 2px 0 #000;
     border-radius:0;padding:5px 8px;cursor:pointer;font-family:inherit;font-size:8px}
   .crt-head #crtClose:hover{border-color:#f0c040;color:#fff}
@@ -387,6 +398,7 @@
         <select id="crtMachine"></select>
         <button id="crtCtl" type="button" title="Control Total — teclado y ratón en vivo sobre el equipo, como si estuvieras delante (requiere AdmiraRemoteAgent)">🎮 Control Total</button>
         <span class="crt-status" id="crtStatus">— sin señal</span>
+        <button id="crtFull" type="button" title="Pantalla completa">⛶</button>
         <button id="crtClose" type="button" title="Cerrar el monitor y volver a las zonas">✕ cerrar</button>
       </div>
       <div class="crt-bezel">
@@ -1443,7 +1455,7 @@ function collapseAllToggle(){
     if(cur) return null; // ya hay una sesión activa
     cur={machine:machineId,name:machineName,closed:false,img:img,
          msg:opts.msg||{style:{}}, stat:opts.stat||{},
-         scale:0.6,q:0.5,targetFps:8,control:true,fpsArr:[],timer:null,lastUp:0,lastPos:{x:-9,y:-9},clicks:0,dragging:false,lastMove:0};
+         scale:opts.scale||0.6,q:opts.q||0.5,targetFps:opts.fps||8,control:true,fpsArr:[],timer:null,lastUp:0,lastPos:{x:-9,y:-9},clicks:0,dragging:false,lastMove:0};
     wireInput(img);
     frameLoop();
     return {
@@ -1462,7 +1474,7 @@ function collapseAllToggle(){
   const stage=$('.stage'), mon=$('#crtMonitor'), btn=$('#crtToggle');
   if(!btn||!mon||!stage) return;
   const sel=$('#crtMachine'), img=$('#crtImg'), noise=$('#crtNoise'),
-        statusEl=$('#crtStatus'), closeBtn=$('#crtClose'), screen=$('#crtScreen'), ctlBtn=$('#crtCtl');
+        statusEl=$('#crtStatus'), closeBtn=$('#crtClose'), screen=$('#crtScreen'), ctlBtn=$('#crtCtl'), fullBtn=$('#crtFull');
   let timer=null, current='', busy=false, ctl=null;   // ctl = sesión de Control Total activa
   const onlineReal=()=> (typeof MACHINES!=='undefined'?MACHINES:[]).filter(m=>m.online);
   const nameOf=id=>{ const m=onlineReal().find(x=>x.id===id); return m?m.name:id; };
@@ -1491,7 +1503,7 @@ function collapseAllToggle(){
     if(!current){ setStatus('— ELIGE UN EQUIPO','#e6a06f'); return; }
     if(typeof window.rcAttachTo!=='function'){ setStatus('— CONTROL NO DISPONIBLE','#ff6b6b'); return; }
     clearInterval(timer); timer=null; noise.classList.add('hide');
-    ctl=window.rcAttachTo(img, current, nameOf(current), {stat:statusEl, msg:noise});
+    ctl=window.rcAttachTo(img, current, nameOf(current), {stat:statusEl, msg:noise, scale:1.0, q:0.72, fps:8});
     if(!ctl){ setStatus('— OCUPADO (cierra el otro control)','#e6a06f'); return; }
     screen.classList.add('control'); ctlBtn.classList.add('on'); ctlBtn.textContent='🎮 Control: ON';
     setStatus('🎮 CONTROL TOTAL','#f0c040');
@@ -1511,6 +1523,7 @@ function collapseAllToggle(){
   function close(){ stopControl(false); clearInterval(timer); timer=null; stage.classList.remove('mon'); mon.hidden=true; btn.classList.remove('on'); }
   btn.onclick=()=>{ mon.hidden ? open() : close(); };
   closeBtn.onclick=close;
+  fullBtn.onclick=()=>{ if(!document.fullscreenElement && !document.webkitFullscreenElement){ (mon.requestFullscreen||mon.webkitRequestFullscreen||function(){}).call(mon); } else { (document.exitFullscreen||document.webkitExitFullscreen||function(){}).call(document); } };
   ctlBtn.onclick=()=>{ ctl ? stopControl(true) : startControl(); };
   sel.onchange=()=>{ const wasCtl=!!ctl; stopControl(false); current=sel.value; img.removeAttribute('src'); noise.classList.remove('hide');
     if(wasCtl && current) startControl(); else { setStatus('… CONECTANDO','#ffdd66'); startPolling(); } };

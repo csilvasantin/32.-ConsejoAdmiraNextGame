@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- control · v2026.07.01 · portería (barra superior + 2 railes) + toggles binarios fusionados -->
+<!-- control · v2026.07.01b · portería cuadro 4 barras (principal/opciones/avanzado/experto) + iconos toggle Codex + toggles binarios -->
 <html lang="es">
 <head>
     <script src="/admira-bar.js?v=scumm2"></script>
@@ -26,22 +26,48 @@
   .pill.ok{color:var(--ok);border-color:var(--ok)}
   .pill.bad{color:var(--bad);border-color:var(--bad)}
   /* ── Portería (patrón por defecto de AdmiraNeXT, estilo Claude Code / Codex) ──
-     Barra horizontal principal (#admira-topbar, 46px, de admira-bar.js) +
-     rail izquierdo (acciones de flota) + centro scrollable (equipos) +
-     rail derecho (consola + Sillas del Consejo). */
-  :root{ --topbar-h:46px; --rail-l:240px; --rail-r:348px; }
+     CUADRO de 4 barras alrededor del centro:
+       · superior  → barra PRINCIPAL (#admira-topbar, 46px, de admira-bar.js)
+       · izquierda → OPCIONES (acciones de flota)
+       · derecha   → opciones AVANZADAS (Sillas del Consejo)
+       · inferior  → modo EXPERTO (consola de comandos)
+     Los paneles derecho (avanzado) e inferior (experto) — y el izquierdo — se
+     muestran/ocultan con iconos tipo Codex en la barra superior (estado persistido). */
+  :root{ --topbar-h:46px; --rail-l:240px; --rail-r:348px; --bottom-h:232px; }
   .porteria{position:relative}
-  .rail{position:fixed;top:var(--topbar-h);bottom:0;overflow-y:auto;overflow-x:hidden;
-    background:var(--panel);z-index:40;padding:14px 12px 48px;display:flex;flex-direction:column;gap:9px;
-    scrollbar-width:thin;scrollbar-color:var(--line) transparent}
-  .rail::-webkit-scrollbar{width:8px}
+  .rail{position:fixed;background:var(--panel);z-index:40;overflow:auto;
+    display:flex;flex-direction:column;gap:9px;scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+  .rail::-webkit-scrollbar{width:8px;height:8px}
   .rail::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px}
+  .rail-left,.rail-right{top:var(--topbar-h);bottom:0;overflow-x:hidden;padding:14px 12px 48px}
   .rail-left{left:0;width:var(--rail-l);border-right:1px solid var(--line)}
   .rail-right{right:0;width:var(--rail-r);border-left:1px solid var(--line)}
+  .rail-bottom{left:var(--rail-l);right:var(--rail-r);bottom:0;height:var(--bottom-h);
+    border-top:1px solid var(--line);padding:12px 16px}
   .rail-hd{font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--mut);font-weight:800;
     padding:8px 4px 6px;border-bottom:1px solid var(--line);margin-top:6px}
   .rail-hd:first-child{margin-top:0}
-  .stage{margin-left:var(--rail-l);margin-right:var(--rail-r);padding:18px;min-height:calc(100vh - var(--topbar-h))}
+  .stage{margin-left:var(--rail-l);margin-right:var(--rail-r);padding:18px;
+    padding-bottom:calc(var(--bottom-h) + 18px);min-height:calc(100vh - var(--topbar-h))}
+  /* toggles de panel: ocultar/mostrar cada barra y recolocar el resto */
+  body.pf-left-off   .rail-left{display:none}
+  body.pf-left-off   .stage{margin-left:0}
+  body.pf-left-off   .rail-bottom{left:0}
+  body.pf-right-off  .rail-right{display:none}
+  body.pf-right-off  .stage{margin-right:0}
+  body.pf-right-off  .rail-bottom{right:0}
+  body.pf-bottom-off .rail-bottom{display:none}
+  body.pf-bottom-off .stage{padding-bottom:18px}
+  /* iconos de panel (estilo Codex/VS Code) dentro de la barra superior */
+  #pf-toggles{display:flex;gap:5px;align-items:center;align-self:center}
+  .pf-ico{width:27px;height:25px;display:flex;align-items:center;justify-content:center;cursor:pointer;
+    border:2px solid #8b5a14;border-radius:0;background:#2a1a08;box-shadow:2px 2px 0 #000;padding:0}
+  .pf-ico svg{width:15px;height:14px;display:block}
+  .pf-ico .frame{fill:none;stroke:#a07828;stroke-width:1.4}
+  .pf-ico .panel{fill:#5a4020}
+  .pf-ico.on .frame{stroke:#ffdd66}
+  .pf-ico.on .panel{fill:#ffdd66}
+  .pf-ico:hover{border-color:#f0c040}
   /* monitorbar verticalizado dentro del rail izquierdo */
   .rail-left .monitorbar{display:flex;flex-direction:column;align-items:stretch;gap:8px;flex-wrap:nowrap;
     margin:0;padding:0;background:none;border:none}
@@ -49,21 +75,23 @@
   .rail-left .monitorbar label{width:100%}
   .rail-left .monitorbar .acstate{margin-left:0;color:var(--mut)}
   .rail-left .monitorbar>span{font-size:12px;color:var(--mut)}
-  /* consola + sillas dentro del rail derecho: a lo ancho del rail */
-  .rail-right .console{margin:0;background:none;border:none;padding:0}
+  /* Sillas del Consejo dentro del rail derecho (avanzado) */
   .rail-right .council-seats{margin:0}
   .rail-right .cseat-grid{grid-template-columns:1fr}
   .rail-right .cseat-gen{margin-left:0}
-  .rail-right .crow{flex-direction:column;align-items:stretch}
-  .rail-right .crow select,.rail-right .crow input[type=text],.rail-right .crow button{width:100%;min-width:0}
-  /* responsive: los railes se apilan como bloques */
+  /* consola dentro de la barra inferior (modo experto), a lo ancho y con salida flexible */
+  .rail-bottom .console{margin:0;background:none;border:none;padding:0;height:100%;display:flex;flex-direction:column}
+  .rail-bottom .console h3{margin:0 0 8px}
+  .rail-bottom .out{flex:1;max-height:none;margin-top:8px}
+  /* responsive: las 4 barras se apilan como bloques */
   @media(max-width:1080px){
-    .rail{position:static;top:auto;bottom:auto;width:auto;border:1px solid var(--line);border-radius:14px;margin:12px}
-    .stage{margin:0;padding:12px}
+    .rail-left,.rail-right,.rail-bottom{position:static;top:auto;bottom:auto;left:auto;right:auto;
+      width:auto;height:auto;border:1px solid var(--line);border-radius:14px;margin:12px}
+    .stage{margin:0;padding:12px;padding-bottom:12px}
     .rail-left .monitorbar{flex-direction:row;flex-wrap:wrap;align-items:center}
     .rail-left .monitorbar button,.rail-left .monitorbar label{width:auto}
     .rail-right .cseat-grid{grid-template-columns:1fr 1fr}
-    .rail-right .crow{flex-direction:row;flex-wrap:wrap}
+    .rail-bottom .out{max-height:240px}
   }
   .monitorbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px;padding:9px 14px;
     background:var(--panel);border:1px solid var(--line);border-radius:12px;font-size:13px;color:var(--mut)}
@@ -291,18 +319,7 @@
   </main>
 
   <aside class="rail rail-right">
-    <div class="console">
-      <h3>⌘ Consola</h3>
-      <div class="crow">
-        <select id="csMachine"></select>
-        <input type="text" id="csCmd" placeholder="comando shell… (p.ej. uptime; df -h /)" autocomplete="off">
-        <button class="primary" id="csRun">▶ ejecutar</button>
-        <button id="csClear">limpiar</button>
-      </div>
-      <div class="note">El comando se ejecuta de verdad en la máquina elegida (MacMini local · resto por SSH). Acceso por tu login de Google.</div>
-      <div class="out" id="out"><div class="empty">Sin resultados todavía.</div></div>
-    </div>
-
+    <div class="rail-hd">🎛️ Avanzado</div>
     <div class="council-seats">
       <div class="cseat-head">
         <span class="cseat-title">🪑 Sillas del Consejo</span>
@@ -323,6 +340,20 @@
       </div>
     </div>
   </aside>
+
+  <footer class="rail rail-bottom">
+    <div class="console">
+      <h3>⌘ Consola · modo experto</h3>
+      <div class="crow">
+        <select id="csMachine"></select>
+        <input type="text" id="csCmd" placeholder="comando shell… (p.ej. uptime; df -h /)" autocomplete="off">
+        <button class="primary" id="csRun">▶ ejecutar</button>
+        <button id="csClear">limpiar</button>
+      </div>
+      <div class="note">El comando se ejecuta de verdad en la máquina elegida (MacMini local · resto por SSH). Acceso por tu login de Google.</div>
+      <div class="out" id="out"><div class="empty">Sin resultados todavía.</div></div>
+    </div>
+  </footer>
 </div>
 
 <div id="lb"><img id="lbImg" alt=""></div>
@@ -1024,6 +1055,43 @@ function collapseAllToggle(){
   if(cp) top.appendChild(cp);
   if(tp) top.appendChild(tp);
   header.remove();
+})();
+</script>
+<script>
+/* ── Portería · iconos de panel (estilo Codex/VS Code): muestran/ocultan las barras
+ *    OPCIONES (izquierda), AVANZADO (derecha) y EXPERTO (inferior). Se inyectan en la
+ *    barra superior; el estado de cada panel se persiste por navegador. ── */
+(function(){
+  var PANELS=[
+    {cls:'pf-left-off',   ls:'pf_left',   title:'Opciones · panel izquierdo',
+     svg:'<rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="1.6" y="1.6" width="4.4" height="10.8" rx="1"/>'},
+    {cls:'pf-bottom-off', ls:'pf_bottom', title:'Modo experto · panel inferior',
+     svg:'<rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="1.6" y="8.4" width="12.8" height="4" rx="1"/>'},
+    {cls:'pf-right-off',  ls:'pf_right',  title:'Avanzado · panel derecho',
+     svg:'<rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="10" y="1.6" width="4.4" height="10.8" rx="1"/>'}
+  ];
+  // 1) aplicar estado guardado cuanto antes (evita saltos de layout)
+  PANELS.forEach(function(p){ if(localStorage.getItem(p.ls)==='0') document.body.classList.add(p.cls); });
+  // 2) montar los iconos en la barra superior en cuanto exista
+  function mount(){
+    var top=document.getElementById('admira-topbar');
+    if(!top){ return setTimeout(mount,60); }
+    if(document.getElementById('pf-toggles')) return;
+    var box=document.createElement('div'); box.id='pf-toggles';
+    PANELS.forEach(function(p){
+      var on=!document.body.classList.contains(p.cls);
+      var b=document.createElement('button'); b.className='pf-ico'+(on?' on':''); b.title=p.title; b.type='button';
+      b.innerHTML='<svg viewBox="0 0 16 14">'+p.svg+'</svg>';
+      b.onclick=function(){
+        var nowOff=document.body.classList.toggle(p.cls);
+        localStorage.setItem(p.ls, nowOff?'0':'1');
+        b.classList.toggle('on', !nowOff);
+      };
+      box.appendChild(b);
+    });
+    top.appendChild(box);
+  }
+  if(document.body) mount(); else document.addEventListener('DOMContentLoaded',mount);
 })();
 </script>
 <script>

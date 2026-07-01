@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<!-- control · v2026.07.01c · portería 4 barras · iconos avanzado/experto a la derecha de Usuarios (vía admira-bar.js, compartido) + toggles binarios -->
+<!-- control · v2026.07.01d · portería 4 barras · SCUMM metastyle + icono contraer opciones (izq) + avanzado/experto (der Usuarios) -->
 <html lang="es">
 <head>
-    <script src="/admira-bar.js?v=porteria"></script>
+    <script src="/admira-bar.js?v=porteria2"></script>
     <script src="/auth-gate.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -50,7 +50,10 @@
   .stage{margin-left:var(--rail-l);margin-right:var(--rail-r);padding:18px;
     padding-bottom:calc(var(--bottom-h) + 18px);min-height:calc(100vh - var(--topbar-h))}
   /* toggles de panel (iconos en la barra superior, vía admira-bar.js): ocultan/
-     muestran el panel AVANZADO (der) y EXPERTO (abajo) y recolocan el resto */
+     muestran OPCIONES (izq), AVANZADO (der) y EXPERTO (abajo) y recolocan el resto */
+  body.pf-left-off   .rail-left{display:none}
+  body.pf-left-off   .stage{margin-left:0}
+  body.pf-left-off   .rail-bottom{left:0}
   body.pf-right-off  .rail-right{display:none}
   body.pf-right-off  .stage{margin-right:0}
   body.pf-right-off  .rail-bottom{right:0}
@@ -81,6 +84,40 @@
     .rail-right .cseat-grid{grid-template-columns:1fr 1fr}
     .rail-bottom .out{max-height:240px}
   }
+  /* ══ Metaestilo SCUMM (LucasArts 90s) para el CHROME de la portería: madera +
+     ámbar, esquinas cuadradas, sombra pixel y Press Start 2P en cabeceras. Las
+     tarjetas y toggles conservan sus colores de estado, enmarcados en madera. ══ */
+  .rail{background:#1b130a}
+  .rail-left{border-right:3px solid #8b5a14;box-shadow:3px 0 0 #000}
+  .rail-right{border-left:3px solid #8b5a14;box-shadow:-3px 0 0 #000}
+  .rail-bottom{background:#1b130a;border-top:3px solid #8b5a14;box-shadow:0 -3px 0 #000}
+  .rail-hd{font-family:'Press Start 2P',monospace;font-size:8px;line-height:1.7;color:#ffdd66;
+    letter-spacing:.5px;text-transform:none;border-bottom:2px solid #8b5a14;padding:10px 4px 9px}
+  /* botones/campos de las barras: cuadrados, madera, ámbar, sombra pixel */
+  .rail-left .monitorbar button,.rail-bottom .console button,
+  .rail-bottom .console select,.rail-bottom .console input[type=text]{
+    border-radius:0;border:2px solid #8b5a14;background:#2a1a08;color:#ffdd66;box-shadow:2px 2px 0 #000}
+  .rail-left .monitorbar button:hover,.rail-bottom .console button:hover{
+    border-color:#f0c040;background:#3a2410;color:#fff}
+  .rail-bottom .console button.primary{background:#a07828;color:#2a1a08;border-color:#f0c040;font-weight:700}
+  .rail-bottom .console button.primary:hover{background:#f0c040;color:#2a1a08}
+  .rail-left .monitorbar input[type=number]{border-radius:0;border:2px solid #8b5a14;background:#2a1a08;color:#ffdd66}
+  .console h3{font-family:'Press Start 2P',monospace;font-size:8px;line-height:1.7;color:#ffdd66;letter-spacing:.5px}
+  .console .note{color:#c9a86a}
+  .console .out{border:2px solid #8b5a14;background:#150e06;border-radius:0}
+  /* Sillas del Consejo (avanzado): marcos de madera cuadrados, top color = bando */
+  .rail-right .cseat-title{font-family:'Press Start 2P',monospace;font-size:8px;line-height:1.7;color:#ffdd66}
+  .rail-right .cgen{border-radius:0;border:2px solid #8b5a14;background:#2a1a08;color:#ffdd66;box-shadow:2px 2px 0 #000}
+  .rail-right .cgen.active{border-color:#f0c040;color:#fff}
+  .rail-right .cpanel{border-radius:0;border:2px solid #8b5a14;border-top-width:3px;background:#150e06;box-shadow:2px 2px 0 #000}
+  .rail-right .cpanel.racional{border-top-color:#e74c3c}
+  .rail-right .cpanel.creativo{border-top-color:#3498db}
+  .rail-right .cmember{border-radius:0;border:1px solid #5a3a1e;background:#1b130a}
+  .rail-right .cmember a.cficha{border-radius:0;border:1px solid #8b5a14;color:#ffdd66}
+  /* tarjetas de equipos (centro): enmarcado SCUMM; estados internos intactos */
+  .stage .card{border-radius:0;border:2px solid #8b5a14;background:#1b130a;box-shadow:3px 3px 0 #000}
+  .stage .acts button{border-radius:0;box-shadow:1px 1px 0 #000}
+  .stage .card .shot,.stage .card .info{border-radius:0}
   .monitorbar{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:14px;padding:9px 14px;
     background:var(--panel);border:1px solid var(--line);border-radius:12px;font-size:13px;color:var(--mut)}
   .monitorbar label{display:flex;align-items:center;gap:7px;cursor:pointer;color:var(--ink);font-weight:600}

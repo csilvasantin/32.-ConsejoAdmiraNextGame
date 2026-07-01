@@ -33,6 +33,7 @@
     /* Iconos de panel (portería, estilo Codex/VS Code): avanzado (der) + experto (abajo).
      * Se colocan a la derecha de «Usuarios» y sólo aparecen si la página tiene ese panel. */
     "#pf-toggles{display:flex;gap:5px;align-items:center;align-self:center;margin-left:2px}" +
+    "#pf-toggle-left{display:flex;align-items:center;align-self:center;margin-right:6px}" +
     ".pf-ico{width:27px;height:25px;display:flex;align-items:center;justify-content:center;cursor:pointer;" +
     "border:2px solid #8b5a14;border-radius:0;background:#2a1a08;box-shadow:2px 2px 0 #000;padding:0}" +
     ".pf-ico svg{width:15px;height:14px;display:block}" +
@@ -69,35 +70,49 @@
     maybeAddUsuarios(top);
   }
 
-  // Iconos toggle (estilo Codex): AVANZADO (panel derecho) y EXPERTO (panel
-  // inferior). Sólo se muestra el icono si la página tiene ese panel. Alternan
-  // las clases body.pf-*-off (cada página define qué ocultan) y persisten.
+  // Crea un icono toggle SCUMM para un panel; null si el panel no existe en la página.
+  function makeToggle(p) {
+    if (!document.querySelector(p.sel)) return null;
+    if (localStorage.getItem(p.ls) === "0") document.body.classList.add(p.cls);
+    var on = !document.body.classList.contains(p.cls);
+    var b = document.createElement("button");
+    b.type = "button";
+    b.className = "pf-ico" + (on ? " on" : "");
+    b.title = p.title;
+    b.innerHTML = '<svg viewBox="0 0 16 14">' + p.svg + "</svg>";
+    b.onclick = function () {
+      var off = document.body.classList.toggle(p.cls);
+      localStorage.setItem(p.ls, off ? "0" : "1");
+      b.classList.toggle("on", !off);
+    };
+    return b;
+  }
+
+  // Iconos toggle (estilo Codex, look SCUMM). Sólo aparece el icono si la página
+  // tiene ese panel. Alternan clases body.pf-*-off (cada página define qué ocultan).
+  //   · OPCIONES (panel izquierdo) → icono a la IZQUIERDA DEL TODO.
+  //   · AVANZADO (panel derecho) + EXPERTO (panel inferior) → a la DERECHA de «Usuarios».
   function buildToggles(top) {
-    var PANELS = [
+    var left = makeToggle({ sel: ".rail-left", cls: "pf-left-off", ls: "pf_left",
+      title: "Contraer opciones · panel izquierdo",
+      svg: '<rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="1.6" y="1.6" width="4.4" height="10.8" rx="1"/>' });
+    if (left) {
+      var lw = document.createElement("div");
+      lw.id = "pf-toggle-left";
+      lw.appendChild(left);
+      top.insertBefore(lw, top.firstChild);
+    }
+    var box = document.createElement("div");
+    box.id = "pf-toggles";
+    var any = false;
+    [
       { sel: ".rail-right", cls: "pf-right-off", ls: "pf_right", title: "Avanzado · panel derecho",
         svg: '<rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="10" y="1.6" width="4.4" height="10.8" rx="1"/>' },
       { sel: ".rail-bottom", cls: "pf-bottom-off", ls: "pf_bottom", title: "Modo experto · panel inferior",
         svg: '<rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="1.6" y="8.4" width="12.8" height="4" rx="1"/>' }
-    ];
-    var box = document.createElement("div");
-    box.id = "pf-toggles";
-    var any = false;
-    PANELS.forEach(function (p) {
-      if (!document.querySelector(p.sel)) return; // sólo si el panel existe en esta página
-      any = true;
-      if (localStorage.getItem(p.ls) === "0") document.body.classList.add(p.cls);
-      var on = !document.body.classList.contains(p.cls);
-      var b = document.createElement("button");
-      b.type = "button";
-      b.className = "pf-ico" + (on ? " on" : "");
-      b.title = p.title;
-      b.innerHTML = '<svg viewBox="0 0 16 14">' + p.svg + "</svg>";
-      b.onclick = function () {
-        var off = document.body.classList.toggle(p.cls);
-        localStorage.setItem(p.ls, off ? "0" : "1");
-        b.classList.toggle("on", !off);
-      };
-      box.appendChild(b);
+    ].forEach(function (p) {
+      var b = makeToggle(p);
+      if (b) { any = true; box.appendChild(b); }
     });
     if (any) top.appendChild(box);
   }

@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- control · v2026.07.01n · CRT: zoom (4K en pantalla completa) + Capturar pantalla (antes Copiar) -->
+<!-- control · v2026.07.01o · CRT: zoom (Ajustar→Zoom) + ✋ Mover (arrastrar para panear el zoom) + Capturar pantalla -->
 <html lang="es">
 <head>
     <script src="/admira-bar.js?v=porteria3"></script>
@@ -319,13 +319,15 @@
   #crtMonitor[hidden]{display:none}
   .crt-head{display:flex;align-items:center;gap:10px;font-family:'Press Start 2P',monospace;font-size:8px;color:#ffdd66}
   .crt-head select{font-family:var(--mono);font-size:11px;background:#2a1a08;color:#ffdd66;border:2px solid #8b5a14;border-radius:0;padding:4px 6px}
-  .crt-head #crtZoom,.crt-head #crtCopy,.crt-head #crtPaste,.crt-head #crtCtl{border:2px solid #8b5a14;background:#2a1a08;color:#ffdd66;
+  .crt-head #crtZoom,.crt-head #crtPan,.crt-head #crtCopy,.crt-head #crtPaste,.crt-head #crtCtl{border:2px solid #8b5a14;background:#2a1a08;color:#ffdd66;
     box-shadow:2px 2px 0 #000;border-radius:0;padding:5px 8px;cursor:pointer;font-family:inherit;font-size:8px;white-space:nowrap}
-  .crt-head #crtZoom:hover,.crt-head #crtCopy:hover,.crt-head #crtPaste:hover,.crt-head #crtCtl:hover{border-color:#f0c040;color:#fff}
-  .crt-head #crtZoom.on{background:#a07828;color:#2a1a08;border-color:#f0c040}
-  .crt-head #crtZoom{margin-left:auto}   /* empuja el clúster derecho: zoom · capturar · pegar · control · estado */
+  .crt-head #crtZoom:hover,.crt-head #crtPan:hover,.crt-head #crtCopy:hover,.crt-head #crtPaste:hover,.crt-head #crtCtl:hover{border-color:#f0c040;color:#fff}
+  .crt-head #crtZoom.on,.crt-head #crtPan.on{background:#a07828;color:#2a1a08;border-color:#f0c040}
+  .crt-head #crtZoom{margin-left:auto}   /* empuja el clúster derecho: zoom · mover · capturar · pegar · control · estado */
   .crt-screen.zoom{overflow:auto}
-  .crt-screen.zoom img{cursor:grab;filter:none;animation:none}
+  .crt-screen.zoom img{filter:none;animation:none}
+  .crt-screen.zoom.canpan img{cursor:grab}
+  .crt-screen.zoom.canpan.panning img{cursor:grabbing}
   .crt-screen.zoom .crt-scan{opacity:.08}
   .crt-screen.zoom .crt-vignette{background:none;box-shadow:none}
   .crt-head #crtCtl.on{background:#a07828;color:#2a1a08;border-color:#f0c040}
@@ -402,7 +404,8 @@
       <div class="crt-head">
         <span class="crt-title">📺 MONITOR REMOTO</span>
         <select id="crtMachine"></select>
-        <button id="crtZoom" type="button" title="Zoom del monitor (útil en pantalla completa con equipos 4K)">🔍 Ajustar</button>
+        <button id="crtZoom" type="button" title="Zoom del monitor (útil en pantalla completa con equipos 4K)">🔍 Zoom</button>
+        <button id="crtPan" type="button" title="Mover — arrastra para desplazar lo que se ve del monitor (solo cuando hay zoom)">✋ Mover</button>
         <button id="crtCopy" type="button" title="Captura toda la pantalla remota y la copia al portapapeles">📸 Capturar pantalla</button>
         <button id="crtPaste" type="button" title="Pegar el portapapeles local en el equipo remoto (lo teclea el agente)">📥 Pegar</button>
         <button id="crtCtl" type="button" title="Control Total — teclado y ratón en vivo sobre el equipo, como si estuvieras delante (requiere AdmiraRemoteAgent)">🎮 Control Total</button>
@@ -1491,17 +1494,41 @@ function collapseAllToggle(){
   if(!btn||!mon||!stage) return;
   const sel=$('#crtMachine'), img=$('#crtImg'), noise=$('#crtNoise'),
         statusEl=$('#crtStatus'), closeBtn=$('#crtClose'), screen=$('#crtScreen'), ctlBtn=$('#crtCtl'), fullBtn=$('#crtFull'),
-        copyBtn=$('#crtCopy'), pasteBtn=$('#crtPaste'), zoomBtn=$('#crtZoom');
+        copyBtn=$('#crtCopy'), pasteBtn=$('#crtPaste'), zoomBtn=$('#crtZoom'), panBtn=$('#crtPan');
   let timer=null, current='', busy=false, ctl=null;   // ctl = sesión de Control Total activa
   // Zoom del monitor (para leer equipos 4K, sobre todo en pantalla completa).
-  const ZOOM=[{l:'Ajustar',z:1},{l:'1.5×',z:1.5},{l:'2×',z:2},{l:'3×',z:3},{l:'4×',z:4}]; let zi=0;
+  const ZOOM=[{l:'Zoom',z:1},{l:'1.5×',z:1.5},{l:'2×',z:2},{l:'3×',z:3},{l:'4×',z:4}]; let zi=0;
   function applyZoom(){
     const {l,z}=ZOOM[zi]; zoomBtn.textContent='🔍 '+l; zoomBtn.classList.toggle('on', z>1);
     if(z<=1){ img.style.width=''; img.style.height=''; img.style.maxWidth=''; screen.classList.remove('zoom'); }
     else{ img.style.width=(z*100)+'%'; img.style.height='auto'; img.style.maxWidth='none'; screen.classList.add('zoom');
       requestAnimationFrame(()=>{ try{ screen.scrollTo((screen.scrollWidth-screen.clientWidth)/2,(screen.scrollHeight-screen.clientHeight)/2); }catch(_){} }); }
+    applyPan();
   }
   function resetZoom(){ zi=0; applyZoom(); }
+  // ✋ Mover: arrastrar la imagen para desplazar (panear) lo que se ve cuando hay zoom.
+  //    NO actúa en Control Total (ahí el ratón controla el equipo remoto).
+  let panOn=true, panning=false, pSX=0, pSY=0, pL=0, pT=0;
+  function applyPan(){
+    const canPan = panOn && screen.classList.contains('zoom') && !ctl;
+    panBtn.classList.toggle('on', panOn);
+    screen.classList.toggle('canpan', canPan);
+  }
+  panBtn.onclick=()=>{ panOn=!panOn; applyPan(); };
+  screen.addEventListener('pointerdown', e=>{
+    if(ctl || !panOn || !screen.classList.contains('zoom')) return;   // en Control Total manda el ratón; panear solo con zoom + Mover ON
+    panning=true; pSX=e.clientX; pSY=e.clientY; pL=screen.scrollLeft; pT=screen.scrollTop;
+    try{ screen.setPointerCapture(e.pointerId); }catch(_){}
+    screen.classList.add('panning'); e.preventDefault();
+  });
+  screen.addEventListener('pointermove', e=>{
+    if(!panning) return;
+    screen.scrollLeft = pL - (e.clientX - pSX);
+    screen.scrollTop  = pT - (e.clientY - pSY);
+  });
+  function endPan(e){ if(!panning) return; panning=false; screen.classList.remove('panning'); try{ screen.releasePointerCapture(e.pointerId); }catch(_){} }
+  screen.addEventListener('pointerup', endPan);
+  screen.addEventListener('pointercancel', endPan);
   const onlineReal=()=> (typeof MACHINES!=='undefined'?MACHINES:[]).filter(m=>m.online);
   const nameOf=id=>{ const m=onlineReal().find(x=>x.id===id); return m?m.name:id; };
   function fill(){
@@ -1532,11 +1559,13 @@ function collapseAllToggle(){
     ctl=window.rcAttachTo(img, current, nameOf(current), {stat:statusEl, msg:noise, scale:1.0, q:0.72, fps:8});
     if(!ctl){ setStatus('— OCUPADO (cierra el otro control)','#e6a06f'); return; }
     screen.classList.add('control'); ctlBtn.classList.add('on'); ctlBtn.textContent='🎮 Control: ON';
+    applyPan();   // en Control Total el ratón controla; desactiva el paneo
     setStatus('🎮 CONTROL TOTAL','#f0c040');
   }
   function stopControl(resume){
     if(ctl){ ctl.stop(); ctl=null; }
     screen.classList.remove('control'); ctlBtn.classList.remove('on'); ctlBtn.textContent='🎮 Control Total';
+    applyPan();
     if(resume && !mon.hidden){ img.removeAttribute('src'); noise.classList.remove('hide'); setStatus('… CONECTANDO','#ffdd66'); startPolling(); }
   }
   function open(){

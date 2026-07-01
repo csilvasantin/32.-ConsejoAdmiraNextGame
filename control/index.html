@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- control · v2026.07.01p · CRT: +fps (frames ligeros) + teclado en cola serial (no salta letras) + ✋ Mover + zoom -->
+<!-- control · v2026.07.01q · rail: Acciones de Equipos (Capturar todas arriba + repetir cada Ns) · online al rail · usuario al pie · contraer a la izq -->
 <html lang="es">
 <head>
     <script src="/admira-bar.js?v=porteria3"></script>
@@ -66,6 +66,15 @@
   .rail-left .monitorbar label{width:100%}
   .rail-left .monitorbar .acstate{margin-left:0;color:var(--mut)}
   .rail-left .monitorbar>span{font-size:12px;color:var(--mut)}
+  /* fila "☐ repetir cada [N] s" — el toggle a la izquierda del intervalo */
+  .rail-left .monitorbar label.ac-rep{display:flex;align-items:center;gap:6px;font-weight:600;color:var(--mut);font-size:12px}
+  .rail-left .monitorbar label.ac-rep input[type=number]{width:52px;margin:0 2px}
+  /* contador de equipos online — badge ancho encima de la cabecera del rail */
+  .rail-left #connPill{order:-2;display:block;width:100%;text-align:center;margin:0 0 8px;box-sizing:border-box}
+  .rail-left .rail-hd{order:-1}
+  /* pie del rail: detalles del usuario (sesión), pegado abajo a la izquierda */
+  .rail-foot{margin-top:auto;padding-top:12px;display:flex;flex-direction:column;align-items:stretch;gap:6px}
+  .rail-foot #tokenPill{width:100%;text-align:center;box-sizing:border-box;word-break:break-all}
   /* Sillas del Consejo dentro del rail derecho (avanzado) */
   .rail-right .council-seats{margin:0}
   .rail-right .cseat-grid{grid-template-columns:1fr}
@@ -380,11 +389,10 @@
 
 <div class="porteria">
   <aside class="rail rail-left">
-    <div class="rail-hd">⚡ Acciones de flota</div>
+    <div class="rail-hd">⚡ Acciones de Equipos</div>
     <div class="monitorbar">
-      <label><input type="checkbox" id="acToggle"> 📸 Auto-captura</label>
-      <span>cada <input type="number" id="acSec" min="3" max="600" value="15"> s</span>
       <button id="acNow" title="Capturar ahora todas las pantallas online">📸 Capturar todas</button>
+      <label class="ac-rep" title="Repetir la captura automáticamente cada X segundos"><input type="checkbox" id="acToggle"> repetir cada <input type="number" id="acSec" min="3" max="600" value="15"> s</label>
       <button id="wallOpen" title="Pared de pantallas: mosaico a pantalla completa de todas las capturas">🧱 Mosaico</button>
       <button id="hackOpen" title="HACKEO · secuencia de intrusión sobre toda la flota (cinemática + acción real)">🕶️ HACKEO</button>
       <button id="fleetScreens" title="Apagar o encender la pantalla de TODA la flota online (toggle)">🌙 Apagar todas</button>
@@ -1194,21 +1202,19 @@ function collapseAllToggle(){
 (function mergeBars(){
   var top=document.getElementById('admira-topbar');
   var header=document.querySelector('header');
-  if(!top||!header){ return setTimeout(mergeBars,60); }
+  var rail=document.querySelector('.rail-left');
+  if(!top||!header||!rail){ return setTimeout(mergeBars,60); }
   if(top.dataset.merged) return; top.dataset.merged='1';
-  // pills (online/token) con el mismo look SCUMM ámbar de la barra
-  var st=document.createElement('style');
-  st.textContent="#admira-topbar .pill{font-family:'Press Start 2P',monospace;font-size:8px;line-height:1.5;"
-    +"border:2px solid #8b5a14;border-radius:0;background:#2a1a08;color:#ffdd66;box-shadow:2px 2px 0 #000;"
-    +"padding:6px 9px;align-self:center;letter-spacing:.5px}"
-    +"#admira-topbar .pill.ok{color:#7CFC00;border-color:#5a7a2e}"
-    +"#admira-topbar .pill.bad{color:#ff6b6b;border-color:#7a3030}";
-  document.head.appendChild(st);
-  var sp=document.createElement('span'); sp.style.cssText='flex:1 1 auto';
-  top.appendChild(sp);
   var cp=document.getElementById('connPill'), tp=document.getElementById('tokenPill');
-  if(cp) top.appendChild(cp);
-  if(tp) top.appendChild(tp);
+  var railHd=rail.querySelector('.rail-hd');
+  // contador de equipos online → ENCIMA de «Acciones de Equipos» (fuera de la barra superior)
+  if(cp && railHd) rail.insertBefore(cp, railHd);
+  // detalles del usuario (sesión) → PIE del rail, abajo a la izquierda
+  var foot=document.createElement('div'); foot.className='rail-foot';
+  if(tp) foot.appendChild(tp);
+  rail.appendChild(foot);
+  // «contraer opciones» → a la IZQUIERDA de la marca (antes quedaba a su derecha)
+  var lt=document.getElementById('pf-toggle-left'); if(lt) lt.style.order='-3';
   header.remove();
 })();
 </script>

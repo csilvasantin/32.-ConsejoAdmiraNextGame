@@ -1,8 +1,8 @@
 <!DOCTYPE html>
-<!-- control · v2026.07.01b · portería cuadro 4 barras (principal/opciones/avanzado/experto) + iconos toggle Codex + toggles binarios -->
+<!-- control · v2026.07.01c · portería 4 barras · iconos avanzado/experto a la derecha de Usuarios (vía admira-bar.js, compartido) + toggles binarios -->
 <html lang="es">
 <head>
-    <script src="/admira-bar.js?v=scumm2"></script>
+    <script src="/admira-bar.js?v=porteria"></script>
     <script src="/auth-gate.js"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -49,25 +49,13 @@
   .rail-hd:first-child{margin-top:0}
   .stage{margin-left:var(--rail-l);margin-right:var(--rail-r);padding:18px;
     padding-bottom:calc(var(--bottom-h) + 18px);min-height:calc(100vh - var(--topbar-h))}
-  /* toggles de panel: ocultar/mostrar cada barra y recolocar el resto */
-  body.pf-left-off   .rail-left{display:none}
-  body.pf-left-off   .stage{margin-left:0}
-  body.pf-left-off   .rail-bottom{left:0}
+  /* toggles de panel (iconos en la barra superior, vía admira-bar.js): ocultan/
+     muestran el panel AVANZADO (der) y EXPERTO (abajo) y recolocan el resto */
   body.pf-right-off  .rail-right{display:none}
   body.pf-right-off  .stage{margin-right:0}
   body.pf-right-off  .rail-bottom{right:0}
   body.pf-bottom-off .rail-bottom{display:none}
   body.pf-bottom-off .stage{padding-bottom:18px}
-  /* iconos de panel (estilo Codex/VS Code) dentro de la barra superior */
-  #pf-toggles{display:flex;gap:5px;align-items:center;align-self:center}
-  .pf-ico{width:27px;height:25px;display:flex;align-items:center;justify-content:center;cursor:pointer;
-    border:2px solid #8b5a14;border-radius:0;background:#2a1a08;box-shadow:2px 2px 0 #000;padding:0}
-  .pf-ico svg{width:15px;height:14px;display:block}
-  .pf-ico .frame{fill:none;stroke:#a07828;stroke-width:1.4}
-  .pf-ico .panel{fill:#5a4020}
-  .pf-ico.on .frame{stroke:#ffdd66}
-  .pf-ico.on .panel{fill:#ffdd66}
-  .pf-ico:hover{border-color:#f0c040}
   /* monitorbar verticalizado dentro del rail izquierdo */
   .rail-left .monitorbar{display:flex;flex-direction:column;align-items:stretch;gap:8px;flex-wrap:nowrap;
     margin:0;padding:0;background:none;border:none}
@@ -1055,43 +1043,6 @@ function collapseAllToggle(){
   if(cp) top.appendChild(cp);
   if(tp) top.appendChild(tp);
   header.remove();
-})();
-</script>
-<script>
-/* ── Portería · iconos de panel (estilo Codex/VS Code): muestran/ocultan las barras
- *    OPCIONES (izquierda), AVANZADO (derecha) y EXPERTO (inferior). Se inyectan en la
- *    barra superior; el estado de cada panel se persiste por navegador. ── */
-(function(){
-  var PANELS=[
-    {cls:'pf-left-off',   ls:'pf_left',   title:'Opciones · panel izquierdo',
-     svg:'<rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="1.6" y="1.6" width="4.4" height="10.8" rx="1"/>'},
-    {cls:'pf-bottom-off', ls:'pf_bottom', title:'Modo experto · panel inferior',
-     svg:'<rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="1.6" y="8.4" width="12.8" height="4" rx="1"/>'},
-    {cls:'pf-right-off',  ls:'pf_right',  title:'Avanzado · panel derecho',
-     svg:'<rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="10" y="1.6" width="4.4" height="10.8" rx="1"/>'}
-  ];
-  // 1) aplicar estado guardado cuanto antes (evita saltos de layout)
-  PANELS.forEach(function(p){ if(localStorage.getItem(p.ls)==='0') document.body.classList.add(p.cls); });
-  // 2) montar los iconos en la barra superior en cuanto exista
-  function mount(){
-    var top=document.getElementById('admira-topbar');
-    if(!top){ return setTimeout(mount,60); }
-    if(document.getElementById('pf-toggles')) return;
-    var box=document.createElement('div'); box.id='pf-toggles';
-    PANELS.forEach(function(p){
-      var on=!document.body.classList.contains(p.cls);
-      var b=document.createElement('button'); b.className='pf-ico'+(on?' on':''); b.title=p.title; b.type='button';
-      b.innerHTML='<svg viewBox="0 0 16 14">'+p.svg+'</svg>';
-      b.onclick=function(){
-        var nowOff=document.body.classList.toggle(p.cls);
-        localStorage.setItem(p.ls, nowOff?'0':'1');
-        b.classList.toggle('on', !nowOff);
-      };
-      box.appendChild(b);
-    });
-    top.appendChild(box);
-  }
-  if(document.body) mount(); else document.addEventListener('DOMContentLoaded',mount);
 })();
 </script>
 <script>

@@ -30,6 +30,17 @@
     "font-family:'Press Start 2P',monospace;font-size:8px;line-height:1.5;letter-spacing:.5px;" +
     "border:2px solid #8b5a14;border-radius:0;padding:6px 9px;white-space:nowrap;background:#2a1a08;box-shadow:2px 2px 0 #000}" +
     "#admira-topbar a:hover{background:#8b5a14;border-color:#f0c040;color:#fff}" +
+    /* Iconos de panel (portería, estilo Codex/VS Code): avanzado (der) + experto (abajo).
+     * Se colocan a la derecha de «Usuarios» y sólo aparecen si la página tiene ese panel. */
+    "#pf-toggles{display:flex;gap:5px;align-items:center;align-self:center;margin-left:2px}" +
+    ".pf-ico{width:27px;height:25px;display:flex;align-items:center;justify-content:center;cursor:pointer;" +
+    "border:2px solid #8b5a14;border-radius:0;background:#2a1a08;box-shadow:2px 2px 0 #000;padding:0}" +
+    ".pf-ico svg{width:15px;height:14px;display:block}" +
+    ".pf-ico .frame{fill:none;stroke:#a07828;stroke-width:1.4}" +
+    ".pf-ico .panel{fill:#5a4020}" +
+    ".pf-ico.on .frame{stroke:#ffdd66}" +
+    ".pf-ico.on .panel{fill:#ffdd66}" +
+    ".pf-ico:hover{border-color:#f0c040}" +
     "html.admira-bar-on body{padding-top:46px !important}";
 
   function mount() {
@@ -47,11 +58,48 @@
     top.id = "admira-topbar";
     top.innerHTML = TOP.map(function (i) { return '<a href="' + i.h + '">' + i.t + "</a>"; }).join("");
 
+    document.body.appendChild(top);
+
+    // Iconos de panel de la portería (a la derecha). Se colocan antes de que
+    // maybeAddUsuarios inserte «Usuarios» delante de ellos → quedan a su derecha.
+    buildToggles(top);
+
     // Enlace "Usuarios" SOLO para superusers (los que acceden a los equipos).
     // Se añade async tras consultar la lista del worker de whitelist.
     maybeAddUsuarios(top);
+  }
 
-    document.body.appendChild(top);
+  // Iconos toggle (estilo Codex): AVANZADO (panel derecho) y EXPERTO (panel
+  // inferior). Sólo se muestra el icono si la página tiene ese panel. Alternan
+  // las clases body.pf-*-off (cada página define qué ocultan) y persisten.
+  function buildToggles(top) {
+    var PANELS = [
+      { sel: ".rail-right", cls: "pf-right-off", ls: "pf_right", title: "Avanzado · panel derecho",
+        svg: '<rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="10" y="1.6" width="4.4" height="10.8" rx="1"/>' },
+      { sel: ".rail-bottom", cls: "pf-bottom-off", ls: "pf_bottom", title: "Modo experto · panel inferior",
+        svg: '<rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="1.6" y="8.4" width="12.8" height="4" rx="1"/>' }
+    ];
+    var box = document.createElement("div");
+    box.id = "pf-toggles";
+    var any = false;
+    PANELS.forEach(function (p) {
+      if (!document.querySelector(p.sel)) return; // sólo si el panel existe en esta página
+      any = true;
+      if (localStorage.getItem(p.ls) === "0") document.body.classList.add(p.cls);
+      var on = !document.body.classList.contains(p.cls);
+      var b = document.createElement("button");
+      b.type = "button";
+      b.className = "pf-ico" + (on ? " on" : "");
+      b.title = p.title;
+      b.innerHTML = '<svg viewBox="0 0 16 14">' + p.svg + "</svg>";
+      b.onclick = function () {
+        var off = document.body.classList.toggle(p.cls);
+        localStorage.setItem(p.ls, off ? "0" : "1");
+        b.classList.toggle("on", !off);
+      };
+      box.appendChild(b);
+    });
+    if (any) top.appendChild(box);
   }
 
   // Inserta el enlace "👥 Usuarios" en la barra superior si el usuario logueado
@@ -72,7 +120,8 @@
         a.id = "admira-link-usuarios";
         a.href = "https://www.admira.live/usuarios.html";
         a.innerHTML = "👥 Usuarios";
-        top.appendChild(a);
+        // Insertar «Usuarios» ANTES de los iconos de panel → los iconos quedan a su derecha.
+        top.insertBefore(a, document.getElementById("pf-toggles"));
       })
       .catch(function () {});
   }

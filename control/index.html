@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- control · v2026.07.02a · preview del escritorio en el icono de cada ficha + estado online como halo fino alrededor del icono -->
+<!-- control · v2026.07.02b · icono = fondo (personaje) del equipo SIEMPRE, nunca el screenshot en vivo · wallpapers reales subidos por máquina -->
 <html lang="es">
 <head>
     <script src="/admira-bar.js?v=porteria3"></script>
@@ -728,23 +728,34 @@ function loadImg(img, src, fb, onfail){
   img.src=src;
 }
 function _mname(machineId){ return (MACHINES.find(x=>x.id===machineId)||{}).name; }
+// slug estándar (misma regla que upload-wallpaper.sh: minúsculas, no-alfanum→'-').
+function _slug(s){ return (s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').replace(/^-+|-+$/g,''); }
+// URLs candidatas del fondo (personaje) de un equipo, EN ORDEN de preferencia:
+//   1) /wallpapers/machines/<id-del-hub>.jpg   2) /wallpapers/machines/<slug-del-nombre>.jpg
+//      (por si el id del hub y el slug del ComputerName no coinciden, p.ej. mbair16plata)
+//   3) el wallpaper de la persona activa (Neo/Morfeo/Trinity/Oráculo/Cypher).
+// NUNCA incluye el screenshot en vivo: el fondo que representa al equipo ≠ su captura.
+function machineWallpapers(machineId){
+  const out=[consultorWallpaper(machineId)];
+  const sl=_slug(_mname(machineId)); if(sl && sl!==machineId) out.push('/wallpapers/machines/'+sl+'.jpg');
+  const p=personaWallpaper(_mname(machineId)); if(p) out.push(p);
+  return out;
+}
+// Prueba una lista de URLs en orden: la 1ª que cargue se queda; si todas fallan (404), onfail.
+function loadImgChain(img, urls, onfail){
+  urls=(urls||[]).filter(Boolean); let i=0;
+  (function next(){ if(i>=urls.length){ onfail&&onfail(); return; } img.onerror=next; img.src=urls[i++]; })();
+}
 
-// Pinta DENTRO de la pantalla del icono-ordenador el wallpaper real del equipo;
-// si esa máquina aún no lo subió, cae al fondo de la persona activa.
+// Pinta DENTRO de la pantalla del icono-ordenador el FONDO (personaje) del equipo.
+// SIEMPRE el wallpaper que lo representa, NUNCA el screenshot en vivo: un escritorio
+// con apps abiertas jamás debe contaminar el icono. Si el equipo no tiene fondo propio
+// ni persona activa, el icono queda vacío (genérico), no con una captura.
 function setIconScreen(machineId){
   const ic=document.querySelector('.em.devicon[data-icon="'+machineId+'"]'); if(!ic) return;
   const scr=ic.querySelector('.dscr'), img=scr&&scr.querySelector('img'); if(!img) return;
   scr.classList.remove('empty-scr');
-  // Preferencia: wallpaper real de la máquina → wallpaper de la persona → captura actual → icono vacío.
-  // El fallback a la captura hace que TODA máquina con imagen (aunque no haya subido su wallpaper)
-  // muestre un preview de su escritorio en el icono, como MacBookAirAzul.
-  const box=document.querySelector('.shot[data-m="'+machineId+'"]');
-  const shotImg=box&&box.style.display!=='none'?box.querySelector('img'):null;
-  const shotSrc=shotImg&&shotImg.getAttribute('src')?shotImg.src:'';
-  loadImg(img, consultorWallpaper(machineId), personaWallpaper(_mname(machineId)), ()=>{
-    if(shotSrc && shotSrc!==img.src){ img.onerror=()=>scr.classList.add('empty-scr'); img.src=shotSrc; }
-    else scr.classList.add('empty-scr');
-  });
+  loadImgChain(img, machineWallpapers(machineId), ()=>scr.classList.add('empty-scr'));
 }
 
 function showShot(machineId, src){
@@ -761,7 +772,7 @@ function showShot(machineId, src){
 function setDefaultShot(machineId){
   const box=document.querySelector('.shot[data-m="'+machineId+'"]'); if(!box) return;
   const img=box.querySelector('img'); box.style.display='block'; box.classList.add('isWall');
-  loadImg(img, consultorWallpaper(machineId), personaWallpaper(_mname(machineId)), ()=>{ box.style.display='none'; });
+  loadImgChain(img, machineWallpapers(machineId), ()=>{ box.style.display='none'; });
   box.onclick=()=>{ $('#lbImg').src=img.src; $('#lb').style.display='flex'; };
   setIconScreen(machineId);
 }

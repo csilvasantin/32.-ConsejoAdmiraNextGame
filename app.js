@@ -1441,7 +1441,7 @@
         document.getElementById("nameplates").classList.add("preguntar-active");
         document.getElementById("body-hotspots").classList.add("preguntar-active");
         _applyPreguntarStyles();
-        setActionLine("escribe aquí · /help para todos los comandos");
+        setActionLine("Preguntar · haz clic en un consejero de la mesa");
     }
 
     function exitPreguntarMode() {

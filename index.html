@@ -2220,9 +2220,14 @@
         .presentar-done-flash { animation:pdone-flash .6s ease-out; }
         @keyframes pdone-flash { 0%{background:#daa520} 100%{background:#1a0e05} }
         /* ── end PRESENTAR overlay ── */
-        .verb-btn { border-radius: 0; color: #ffffff; text-shadow: none; }
-        .verb-btn:hover { color: #ffff00; text-shadow: none; background: #7a5a2e; }
+        .verb-btn { border-radius: 0; color: #ffffff; text-shadow: none; transition: color .14s ease, background .14s ease, transform .1s ease; }
+        .verb-btn:hover { color: #ffff00; text-shadow: none; background: #7a5a2e; transform: translateY(-1px); }
+        .verb-btn:active { transform: translateY(1px); }
         .verb-btn.active { color: #000000; text-shadow: none; background: #daa520; font-weight: bold; }
+        /* Micro-interacciones: rieles, pastillas del top-bar e iconos de panel más vivos */
+        .rail-btn, .top-bar .version-badge, .top-bar .yar-btn, .top-bar .pf-ico { transition: color .14s ease, background .14s ease, border-color .14s ease, transform .1s ease; }
+        .top-bar .version-badge:hover, .top-bar .yar-btn:hover, .top-bar .pf-ico:hover { transform: translateY(-1px); }
+        .rail-btn:active, .top-bar .pf-ico:active { transform: translateY(1px); }
         .verb-btn.verb-primary { color: #ffaaaa; text-shadow: none; }
         .verb-btn.verb-primary:hover { color: #ffff00; background: #7a5a2e; text-shadow: none; }
         .verb-btn.verb-primary.active { color: #000000; text-shadow: none; background: #e74c3c; font-weight: bold; }
@@ -2752,6 +2757,17 @@
    Se usa flex order para reordenar sin mover el bloque de la imagen en el DOM. */
 .stage-row{display:flex;align-items:flex-start;gap:0;box-shadow:4px 4px 0 #000}
 .stage-row>.council-image{flex:1 1 0;min-width:0;order:0;box-shadow:none}
+/* Placeholder mientras carga el JPG del Consejo (310KB): fondo escena + shimmer suave,
+   así no hay flash blanco/transparente. El <img> tapa esto al cargar. */
+.council-image{background:linear-gradient(135deg,#160f06,#0a0a14 60%);position:relative}
+#council-img{background:linear-gradient(135deg,#1c1308,#0a0a14);transition:opacity .4s ease}
+#council-img:not([src]),#council-img[src=""]{opacity:0}
+@keyframes council-shimmer{0%{background-position:-200% 0}100%{background-position:200% 0}}
+.council-image::before{content:"";position:absolute;inset:0;z-index:0;
+  background:linear-gradient(100deg,transparent 40%,rgba(216,154,58,.06) 50%,transparent 60%);
+  background-size:200% 100%;animation:council-shimmer 1.8s linear infinite;pointer-events:none}
+.council-image.loaded::before{display:none}
+.council-image>#council-img{position:relative;z-index:1}
 /* La altura de la caja la marca la imagen; los rieles se fijan a esa altura por JS
    (sizeRails) y su cuerpo hace scroll interno si el contenido es más alto. */
 .side-rail{position:relative;z-index:5;flex:0 0 auto;width:158px;display:flex;flex-direction:column;font-family:'Press Start 2P',monospace;background:#5a3a1e;border:3px solid #8b5a14;border-top:3px solid #a07828}
@@ -2869,7 +2885,7 @@ body.rail-open{overflow:hidden}
 
         <div class="stage-row">
         <div class="council-image">
-            <img id="council-img" src="assets/council-leyendas.jpg?v=20260613-r2" alt="Consejo AdmiraNext">
+            <img id="council-img" src="assets/council-leyendas.jpg?v=20260613-r2" alt="Consejo AdmiraNext" onload="this.closest('.council-image')&&this.closest('.council-image').classList.add('loaded')">
             <!-- Conversation overlays on background windows -->
             <div class="window-overlay racional" id="win-racional">
                 <div class="window-overlay-title">🧠 Racional</div>

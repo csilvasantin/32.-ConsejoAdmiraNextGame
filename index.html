@@ -2741,9 +2741,8 @@
 .rail-btn:hover{color:#ffff00;background:#7a5a2e}
 .rail-btn.primary{color:#ffaaaa}
 .rail-btn.primary:hover{color:#ffff00;background:#7a5a2e}
-.side-rail.collapsed{width:auto}
-.side-rail.collapsed .rail-body{display:none}
-.side-rail.collapsed .rail-head{writing-mode:vertical-rl;text-orientation:mixed;border-bottom:none;padding:0.7rem 0.4rem}
+/* Colapsar = ocultar el panel (se re-abre desde el icono del top-bar), como en Control. */
+.side-rail.collapsed{display:none}
 @media (max-width:760px){.side-rail{display:none}}
 </style>
 <style id="home-panel-icons-css">
@@ -2766,10 +2765,10 @@
     height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge" title="Admira Consejo · panel de estado">🏛️ Admira Consejo <span class="pf-ver">v.2026.07.02.r2</span></a>
             <button type="button" id="pf-ic-opcion" class="pf-ico" onclick="pfToggle('opcion')" title="Opciones · panel izquierdo" aria-label="Opciones · panel izquierdo">
                 <svg viewBox="0 0 16 14"><rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="1.6" y="1.6" width="4.4" height="10.8" rx="1"/></svg>
             </button>
+            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge" title="Admira Consejo · v.2026.07.02.r3 · panel de estado">🏛️ Admira Consejo</a>
             <a href="https://www.admira.live/equipos" target="_blank" rel="noopener" class="version-badge" title="Equipos · asignación de agentes">🏠 AdmiraNeXT</a>
             <a href="https://www.admira.live/telegram" target="_blank" rel="noopener" class="version-badge" title="Telegram · espejo en directo del grupo AdmiraNext">💬 Telegram</a>
             <a href="/game/help" class="version-badge" title="Cómo se juega y cómo contribuir (manifest + MCP)">❔ Ayuda</a>
@@ -2912,7 +2911,6 @@
 
         <!-- ════ Barras verticales laterales ════ -->
         <div class="side-rail left" id="rail-opcion">
-            <button class="rail-head" onclick="toggleRail('rail-opcion')" title="Plegar / desplegar">◧ OPCIÓN</button>
             <div class="rail-body">
                 <div class="rail-group">Navega</div>
                 <a class="rail-btn" href="https://www.admira.live/equipos" target="_blank" rel="noopener" title="Equipos · asignación de agentes">🏠 AdmiraNeXT</a>
@@ -2929,7 +2927,6 @@
         </div>
 
         <div class="side-rail right" id="rail-avanzado">
-            <button class="rail-head" onclick="toggleRail('rail-avanzado')" title="Plegar / desplegar">AVANZADO ◨</button>
             <div class="rail-body">
                 <div class="rail-group">Crea</div>
                 <button class="rail-btn primary" onclick="railVerb('entrenar')" title="Alimenta a un consejero con URLs y material">Entrenar</button>

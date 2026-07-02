@@ -2,10 +2,10 @@
   "proyecto": "AdmiraNeXT · admira.live",
   "titulo": "Vista Previa universal + flota completa en /control",
   "resumen": "«¿En qué andamos?» accesible desde cualquier equipo del grupo, y los 16 equipos del tailnet dados de alta en FleetControl.",
-  "foco": "Vista Previa en la nube (admira.live/vista-previa) + fleet.json con toda la flota",
-  "progreso": 95,
+  "foco": "Worker admira-estado listo (estado privado y live) — pendiente de desplegar",
+  "progreso": 97,
   "estado_general": "en curso",
-  "actualizado": "2026-07-02T14:05:00Z",
+  "actualizado": "2026-07-02T14:30:00Z",
   "por": "silicio",
   "pasos": {
     "hecho": [
@@ -19,14 +19,14 @@
       "A la espera de pasos de carbono para activar el hub y cerrar Linux"
     ],
     "siguiente": [
+      "Desplegar el worker admira-estado (wrangler login + kv create + deploy)",
       "Reiniciar el hub fleet-control en el Mac Mini (git pull + kickstart)",
-      "Enchufar el comando real del player Linux en fleet.json (signage.start/stop)",
-      "Decidir: estado compartido por git (público) vs worker admira-estado (privado y live)"
+      "Enchufar el comando real del player Linux en fleet.json (signage.start/stop)"
     ]
   },
   "necesita_carbono": [
+    "Desplegar el worker admira-estado (necesita wrangler login en Cloudflare — solo tú puedes)",
     "Reiniciar el servicio fleet-control en el Mac Mini para activar fleet.json y las acciones",
-    "Confirmar SSH del Mac Mini a los equipos nuevos (crema, azul, luna, plata…) para verlos online",
     "Pasar el comando de arranque/parada de vuestro player Linux"
   ],
   "riesgos": [

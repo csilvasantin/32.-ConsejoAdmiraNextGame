@@ -184,18 +184,35 @@ function render(d){
   $('#agePill').textContent=fmtAge(d.actualizado);
   $('#links').innerHTML=(d.enlaces||[]).map(l=>'<a href="'+l.url+'" target="_blank">'+String(l.label).replace(/</g,'&lt;')+'</a>').join('');
 }
+/* Fuente del estado: si hay sesión del gate (admira_gate.cred), lee del worker
+   privado admira-estado (live y compartido entre máquinas); si no, cae al
+   estado.json local. Así el panel local funciona sin auth y la nube es privada. */
+const ESTADO_API='https://admira-estado.csilvasantin.workers.dev';
+let FUENTE_ESTADO='local';
+function gateCred(){ try{ const g=JSON.parse(localStorage.getItem('admira_gate')||'null'); return (g&&g.cred&&g.exp&&Date.now()<g.exp)?g.cred:''; }catch(e){ return ''; } }
+async function cargarEstado(){
+  const cred=ESTADO_API?gateCred():'';
+  if(cred){
+    try{
+      const r=await fetch(ESTADO_API+'/estado',{cache:'no-store',headers:{Authorization:'Bearer '+cred}});
+      if(r.ok){ FUENTE_ESTADO='nube'; return await r.json(); }
+    }catch(e){ /* worker no disponible → cae al fichero local */ }
+  }
+  const r=await fetch('./estado.json?_='+Date.now(),{cache:'no-store'});
+  if(!r.ok) throw 0;
+  FUENTE_ESTADO='local';
+  return await r.json();
+}
 async function tick(){
   try{
-    const r=await fetch('./estado.json?_='+Date.now(),{cache:'no-store'});
-    if(!r.ok) throw 0;
-    const d=await r.json();
+    const d=await cargarEstado();
     const h=JSON.stringify(d);
     if(h!==LAST){
       render(d);
       if(LAST){ document.body.classList.remove('flash'); void document.body.offsetWidth; document.body.classList.add('flash'); }
       LAST=h;
     } else { $('#agePill').textContent=fmtAge(d.actualizado); }
-    $('#livePill').className='pill live';
+    const lp=$('#livePill'); lp.className='pill live'; lp.title='fuente: '+(FUENTE_ESTADO==='nube'?'worker admira-estado (privado)':'estado.json local');
   }catch(e){
     $('#err').style.display='block';
     $('#livePill').className='pill';

@@ -1,42 +1,42 @@
 {
   "proyecto": "AdmiraNeXT · admira.live",
-  "titulo": "Gestión remota multiplataforma de la flota DS",
-  "resumen": "Hacer que admira.live/control gobierne también los equipos Linux (Ubuntu), no solo Mac.",
-  "foco": "FleetControl platform-aware: acciones macOS/Linux y player de signage en Linux",
-  "progreso": 90,
+  "titulo": "Vista Previa universal + flota completa en /control",
+  "resumen": "«¿En qué andamos?» accesible desde cualquier equipo del grupo, y los 16 equipos del tailnet dados de alta en FleetControl.",
+  "foco": "Vista Previa en la nube (admira.live/vista-previa) + fleet.json con toda la flota",
+  "progreso": 95,
   "estado_general": "en curso",
-  "actualizado": "2026-07-02T13:22:00Z",
+  "actualizado": "2026-07-02T14:05:00Z",
   "por": "silicio",
   "pasos": {
     "hecho": [
-      "Backend fleet-control platform-aware (ACTIONS macOS/Linux + resolveAction)",
-      "Acciones Linux: sysinfo, volumen, pantalla, screenshot, signage, salvapantallas",
-      "Alta de ThinkStation PGX (Linux) en fleet.json con hook de signage",
-      "UI /control enruta pantalla/cerrar-app/salva por /api/action (arreglado botón «Salva»)",
-      "Commit b81ba51 empujado a main (Pages despliega la UI)",
-      "Vista Previa: tablero gráfico en el panel de Preview (auto-refresco cada 3s)"
+      "FleetControl platform-aware macOS/Linux (acciones + player signage Linux)",
+      "Vista Previa en el repo + skill /en-que-estamos (auto-refresco 3s)",
+      "Vista Previa publicada en la nube: https://www.admira.live/vista-previa (cero setup, cualquier OS)",
+      "fleet.json con los 16 equipos del tailnet (macOS/Linux/Windows), MagicDNS reales"
     ],
     "encurso": [
-      "Esperando pasos de carbono para cerrar el despliegue Linux"
+      "A la espera de pasos de carbono para activar el hub y cerrar Linux"
     ],
     "siguiente": [
       "Reiniciar el hub fleet-control en el Mac Mini (git pull + kickstart)",
       "Enchufar el comando real del player Linux en fleet.json (signage.start/stop)",
-      "Probar acciones contra la ThinkStation por SSH"
+      "Decidir: estado compartido por git (público) vs worker admira-estado (privado y live)"
     ]
   },
   "necesita_carbono": [
-    "Reiniciar el servicio fleet-control en el Mac Mini para activar los cambios",
+    "Reiniciar el servicio fleet-control en el Mac Mini para activar fleet.json y las acciones",
+    "Confirmar SSH del Mac Mini a los equipos nuevos (crema, azul, luna, plata…) para verlos online",
     "Pasar el comando de arranque/parada de vuestro player Linux"
   ],
   "riesgos": [
-    "Screenshot en Linux depende de la sesión gráfica (Wayland/X11) del equipo",
-    "El Mac Mini necesita SSH sin contraseña a cada equipo Linux para verlo online"
+    "estado.json es público en Pages (cualquiera con la URL lo ve) — usar worker si el estado es sensible",
+    "Windows: en fleet.json pero las acciones remotas son macOS/Linux por ahora",
+    "Screenshot Linux depende de la sesión gráfica (Wayland/X11)"
   ],
   "enlaces": [
-    { "label": "admira.live/control", "url": "https://www.admira.live/control" },
-    { "label": "commit b81ba51", "url": "https://github.com/csilvasantin/32.-ConsejoAdmiraNextGame/commit/b81ba51" }
+    { "label": "Vista Previa (nube)", "url": "https://www.admira.live/vista-previa/" },
+    { "label": "admira.live/control", "url": "https://www.admira.live/control" }
   ],
-  "commit": "b81ba51",
-  "version": "vista-previa v.2026.07.02.r1"
+  "commit": "pendiente",
+  "version": "vista-previa v.2026.07.02.r2"
 }

@@ -1,64 +1,22 @@
 {
   "team": "AdmiraNext Fleet",
+  "note": "Flota completa del tailnet tail48b61c. platform: macos|linux|windows. host = MagicDNS <nombre>.tail48b61c.ts.net. El hub (Mac Mini) necesita SSH sin contraseña a cada equipo para verlo online y operarlo.",
   "machines": [
-    {
-      "id": "macmini",
-      "name": "Mac Mini",
-      "emoji": "🖥️",
-      "role": "Hub central",
-      "local": true,
-      "platform": "macos",
-      "host": "macmini.tail48b61c.ts.net"
-    },
-    {
-      "id": "mbp16",
-      "name": "MacBook Pro 16",
-      "emoji": "💻",
-      "role": "Equipo de trabajo",
-      "platform": "macos",
-      "host": "macbook-pro-16.tail48b61c.ts.net",
-      "user": "csilvasantin"
-    },
-    {
-      "id": "mbp14",
-      "name": "MacBook Pro 14",
-      "emoji": "💻",
-      "role": "Desarrollo y pruebas",
-      "platform": "macos",
-      "host": "macbookpronegro14.tail48b61c.ts.net",
-      "user": "csilvasantin"
-    },
-    {
-      "id": "mbair16plata",
-      "name": "MacBook Air 16 Plata",
-      "emoji": "💻",
-      "role": "Equipo · Trinity/Codex",
-      "platform": "macos",
-      "host": "macbookair16.tail48b61c.ts.net",
-      "user": "csilvasantin"
-    },
-    {
-      "id": "dgx-spark",
-      "name": "DGX Spark",
-      "emoji": "🧠",
-      "role": "Inferencia LLM (GPU)",
-      "platform": "linux",
-      "host": "dgx-spark.tail48b61c.ts.net",
-      "user": "bitsatoms"
-    },
-    {
-      "id": "thinkstation",
-      "name": "ThinkStation PGX",
-      "emoji": "🐧",
-      "role": "Player DS · Linux (Ubuntu)",
-      "platform": "linux",
-      "host": "thinkstationpgx-e82e.tail48b61c.ts.net",
-      "user": "test",
-      "signage": {
-        "url": "https://www.admira.tv/player",
-        "start": "",
-        "stop": ""
-      }
-    }
+    { "id": "macmini", "name": "Mac Mini", "emoji": "🖥️", "role": "Hub central", "platform": "macos", "local": true, "host": "macmini.tail48b61c.ts.net", "user": "csilvasantin" },
+    { "id": "macbookpro16", "name": "MacBook Pro 16", "emoji": "💻", "role": "Equipo de trabajo", "platform": "macos", "host": "macbook-pro-16.tail48b61c.ts.net", "user": "csilvasantin" },
+    { "id": "macbookpronegro14", "name": "MacBook Pro Negro 14", "emoji": "💻", "role": "Desarrollo y pruebas", "platform": "macos", "host": "macbookpronegro14.tail48b61c.ts.net", "user": "csilvasantin" },
+    { "id": "macbookair16", "name": "MacBook Air 16", "emoji": "💻", "role": "Equipo · Trinity/Codex", "platform": "macos", "host": "macbookair16.tail48b61c.ts.net", "user": "csilvasantin" },
+    { "id": "macbookairplata", "name": "MacBook Air Plata", "emoji": "💻", "role": "COO · Operaciones", "platform": "macos", "host": "macbookairplata.tail48b61c.ts.net", "user": "csilvasantin" },
+    { "id": "macbookairrosa", "name": "MacBook Air Rosa", "emoji": "💻", "role": "Equipo", "platform": "macos", "host": "macbookairrosa.tail48b61c.ts.net", "user": "csilvasantin" },
+    { "id": "macbookaircrema", "name": "MacBook Air Crema", "emoji": "💻", "role": "Equipo", "platform": "macos", "host": "macbookaircrema.tail48b61c.ts.net", "user": "csilvasantin" },
+    { "id": "macbookairazul", "name": "MacBook Air Luna (Cesar)", "emoji": "💻", "role": "Equipo", "platform": "macos", "host": "macbookairazul.tail48b61c.ts.net", "user": "csilvasantin" },
+    { "id": "macbookairluna", "name": "MacBook Air Luna", "emoji": "💻", "role": "Equipo", "platform": "macos", "host": "macbookairluna.tail48b61c.ts.net", "user": "csilvasantin" },
+    { "id": "macbookairluna1", "name": "MacBook Air Luna (2)", "emoji": "💻", "role": "Equipo", "platform": "macos", "host": "macbookairluna-1.tail48b61c.ts.net", "user": "csilvasantin" },
+    { "id": "dgx-spark", "name": "DGX Spark", "emoji": "🧠", "role": "Inferencia LLM (GPU)", "platform": "linux", "host": "dgx-spark.tail48b61c.ts.net", "user": "bitsatoms" },
+    { "id": "thinkstation", "name": "ThinkStation PGX", "emoji": "🐧", "role": "Player DS · Linux (Ubuntu)", "platform": "linux", "host": "lenovo-thinkstation.tail48b61c.ts.net", "user": "test", "signage": { "url": "https://www.admira.tv/player", "start": "", "stop": "" } },
+    { "id": "asuszenbook", "name": "ASUS Zenbook", "emoji": "🪟", "role": "Equipo · Windows", "platform": "windows", "host": "asuszenbook.tail48b61c.ts.net", "user": "csilvasantin" },
+    { "id": "admiratwin", "name": "Admira Twin", "emoji": "🪟", "role": "Equipo · Windows", "platform": "windows", "host": "admiratwin.tail48b61c.ts.net", "user": "csilvasantin" },
+    { "id": "metahuman", "name": "MetaHuman PC", "emoji": "🪟", "role": "Render · Windows", "platform": "windows", "host": "metahuman.tail48b61c.ts.net", "user": "csilvasantin" },
+    { "id": "pc-gdg", "name": "PC GdG (Sitges)", "emoji": "🪟", "role": "Player DS · Windows", "platform": "windows", "host": "pc-gdg.tail48b61c.ts.net", "user": "csilvasantin" }
   ]
 }

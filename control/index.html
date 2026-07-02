@@ -66,6 +66,9 @@
   .card .em.devicon.em-click{cursor:pointer;border-radius:0;transition:transform .12s}
   .card .em.devicon.em-click:hover{background:none;transform:scale(1.09)}
   .card .em.devicon.em-busy{opacity:.55;animation:empulse 1s infinite}
+  /* Online = halo fino alrededor del icono del ordenador (sustituye al punto verde) */
+  .card .em.devicon.on::after{content:'';position:absolute;left:-3px;top:-3px;right:-3px;bottom:-3px;border:1.5px solid var(--ok);border-radius:7px;box-shadow:0 0 7px var(--ok);pointer-events:none;animation:haloPulse 2.4s ease-in-out infinite}
+  @keyframes haloPulse{0%,100%{opacity:.5}50%{opacity:1}}
   @keyframes empulse{50%{opacity:.85}}
   .card .nm{font-weight:700;font-size:15px}
   .card .role{color:var(--mut);font-size:12px}
@@ -468,8 +471,8 @@ function renderCards(ms){
   el.innerHTML=list.map(m=>`
     <div class="card${isCollapsed(m.id)?' collapsed':''}" data-card="${m.id}">
       <div class="top">
-        <span class="em devicon${/mini|twin|imac|studio|mac\s*pro/i.test(m.name||'')?' desk':''}${m.online?' em-click':''}" data-icon="${m.id}" title="${m.online?'Limpiar el escritorio (oculta apps) y ver el fondo':(m.name||'')+' (offline)'}"><span class="dscr empty-scr"><img alt=""></span><span class="dbase"></span></span>
-        <div class="cardmeta"><div class="nm">${m.name} <span class="dot ${m.online?'on':''}"></span></div>
+        <span class="em devicon${/mini|twin|imac|studio|mac\s*pro/i.test(m.name||'')?' desk':''}${m.online?' em-click on':''}" data-icon="${m.id}" title="${m.online?'Limpiar el escritorio (oculta apps) y ver el fondo':(m.name||'')+' (offline)'}"><span class="dscr empty-scr"><img alt=""></span><span class="dbase"></span></span>
+        <div class="cardmeta"><div class="nm">${m.name}</div>
         <div class="role">${m.role||''}${m.local?' · local':' · ssh'}</div></div>
         <span class="card-fold" data-fold="${m.id}" title="Comprimir / expandir">▾</span>
         <span class="drag-handle" draggable="true" data-drag="${m.id}" title="Arrastra para reordenar">⠿</span>
@@ -518,7 +521,16 @@ function setIconScreen(machineId){
   const ic=document.querySelector('.em.devicon[data-icon="'+machineId+'"]'); if(!ic) return;
   const scr=ic.querySelector('.dscr'), img=scr&&scr.querySelector('img'); if(!img) return;
   scr.classList.remove('empty-scr');
-  loadImg(img, consultorWallpaper(machineId), personaWallpaper(_mname(machineId)), ()=>scr.classList.add('empty-scr'));
+  // Preferencia: wallpaper real de la máquina → wallpaper de la persona → captura actual → icono vacío.
+  // El fallback a la captura hace que TODA máquina con imagen (aunque no haya subido su wallpaper)
+  // muestre un preview de su escritorio en el icono, como MacBookAirAzul.
+  const box=document.querySelector('.shot[data-m="'+machineId+'"]');
+  const shotImg=box&&box.style.display!=='none'?box.querySelector('img'):null;
+  const shotSrc=shotImg&&shotImg.getAttribute('src')?shotImg.src:'';
+  loadImg(img, consultorWallpaper(machineId), personaWallpaper(_mname(machineId)), ()=>{
+    if(shotSrc && shotSrc!==img.src){ img.onerror=()=>scr.classList.add('empty-scr'); img.src=shotSrc; }
+    else scr.classList.add('empty-scr');
+  });
 }
 
 function showShot(machineId, src){

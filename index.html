@@ -2724,9 +2724,15 @@
    Mismo panel de madera que la barra de verbos (.scumm-bar): fondo #5a3a1e,
    bisel superior #a07828, barra de título #3a2410, verbos blanco→amarillo
    sobre madera #7a5a2e, primarios en salmón. */
-.side-rail{position:fixed;top:52%;transform:translateY(-50%);z-index:350;width:158px;font-family:'Press Start 2P',monospace;background:#5a3a1e;border:3px solid #8b5a14;border-top:3px solid #a07828;box-shadow:4px 4px 0 #000}
-.side-rail.left{left:10px}
-.side-rail.right{right:10px}
+/* En caja: la imagen y los dos rieles van en una fila flex (.stage-row) que
+   hace caja con el top-bar y la barra SCUMM. Los rieles son columnas en flujo
+   que flanquean la imagen a toda su altura (align-self:stretch) y la envuelven.
+   Se usa flex order para reordenar sin mover el bloque de la imagen en el DOM. */
+.stage-row{display:flex;align-items:stretch;gap:0;box-shadow:4px 4px 0 #000}
+.stage-row>.council-image{flex:1 1 0;min-width:0;order:0;box-shadow:none}
+.side-rail{position:relative;z-index:5;flex:0 0 auto;align-self:stretch;width:158px;display:flex;flex-direction:column;font-family:'Press Start 2P',monospace;background:#5a3a1e;border:3px solid #8b5a14;border-top:3px solid #a07828}
+.side-rail.left{order:-1;border-right-width:2px}
+.side-rail.right{order:1;border-left-width:2px}
 .rail-head{display:block;width:100%;box-sizing:border-box;font-family:inherit;font-size:0.5rem;color:#daa520;background:#3a2410;border:none;border-bottom:2px solid #2a1a08;padding:0.55rem 0.5rem;letter-spacing:1px;cursor:pointer;text-align:center;text-transform:uppercase}
 .rail-head:hover{color:#ffee00;background:#4a2f14}
 .rail-body{display:flex;flex-direction:column;padding:6px 6px 8px}
@@ -2806,6 +2812,7 @@
             <div class="legend-grid" id="legend-grid"></div>
         </div>
 
+        <div class="stage-row">
         <div class="council-image">
             <img id="council-img" src="assets/council-leyendas.jpg?v=20260613-r2" alt="Consejo AdmiraNext">
             <!-- Conversation overlays on background windows -->
@@ -2937,6 +2944,7 @@
                 <a class="rail-btn" href="https://www.admira.studio/" target="_blank" rel="noopener" title="Abrir ADmiraNeXT Studio">🎬 Demo</a>
                 <button class="rail-btn" onclick="window.toggleDesign&&toggleDesign()" title="Modo diseño (rejilla/reglas)">📐 Diseño</button>
             </div>
+        </div>
         </div>
 
         <script>

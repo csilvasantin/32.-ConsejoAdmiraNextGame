@@ -2728,9 +2728,11 @@
    hace caja con el top-bar y la barra SCUMM. Los rieles son columnas en flujo
    que flanquean la imagen a toda su altura (align-self:stretch) y la envuelven.
    Se usa flex order para reordenar sin mover el bloque de la imagen en el DOM. */
-.stage-row{display:flex;align-items:stretch;gap:0;box-shadow:4px 4px 0 #000}
+.stage-row{display:flex;align-items:flex-start;gap:0;box-shadow:4px 4px 0 #000}
 .stage-row>.council-image{flex:1 1 0;min-width:0;order:0;box-shadow:none}
-.side-rail{position:relative;z-index:5;flex:0 0 auto;align-self:stretch;width:158px;display:flex;flex-direction:column;font-family:'Press Start 2P',monospace;background:#5a3a1e;border:3px solid #8b5a14;border-top:3px solid #a07828}
+/* La altura de la caja la marca la imagen; los rieles se fijan a esa altura por JS
+   (sizeRails) y su cuerpo hace scroll interno si el contenido es más alto. */
+.side-rail{position:relative;z-index:5;flex:0 0 auto;width:158px;display:flex;flex-direction:column;font-family:'Press Start 2P',monospace;background:#5a3a1e;border:3px solid #8b5a14;border-top:3px solid #a07828}
 .side-rail.left{order:-1;border-right-width:2px}
 .side-rail.right{order:1;border-left-width:2px}
 .rail-head{display:block;width:100%;box-sizing:border-box;font-family:inherit;font-size:0.5rem;color:#daa520;background:#3a2410;border:none;border-bottom:2px solid #2a1a08;padding:0.55rem 0.5rem;letter-spacing:1px;cursor:pointer;text-align:center;text-transform:uppercase}
@@ -2741,6 +2743,17 @@
 .rail-btn:hover{color:#ffff00;background:#7a5a2e}
 .rail-btn.primary{color:#ffaaaa}
 .rail-btn.primary:hover{color:#ffff00;background:#7a5a2e}
+/* Tira de leyendas integrada dentro del rail AVANZADO (como las Sillas del Consejo en Control):
+   layout de 1 columna, sin marco propio (hereda la madera del rail) y siempre visible. */
+.side-rail .rail-body{flex:1 1 auto;min-height:0;overflow-y:auto;overflow-x:hidden}
+.side-rail .rail-body>.legend-strip{display:block!important;margin:0;padding:0 0 4px;border:none;background:none;box-shadow:none}
+.side-rail .legend-head{gap:2px;margin-bottom:4px}
+.side-rail .legend-kicker{font-size:0.34rem;color:#886633;letter-spacing:1px;text-transform:uppercase;line-height:1.6}
+.side-rail .legend-active{font-size:0.44rem;line-height:1.5;white-space:normal}
+.side-rail .legend-focus{font-size:0.34rem;line-height:1.5}
+.side-rail .legend-grid{grid-template-columns:1fr;gap:4px}
+.side-rail .legend-chip{min-height:0;font-size:0.4rem;padding:5px}
+.side-rail .legend-chip span{font-size:0.32rem}
 /* Colapsar = ocultar el panel (se re-abre desde el icono del top-bar), como en Control. */
 .side-rail.collapsed{display:none}
 @media (max-width:760px){.side-rail{display:none}}
@@ -2782,7 +2795,6 @@
                     <svg viewBox="0 0 16 14"><rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="1.6" y="8.4" width="12.8" height="4" rx="1"/></svg>
                 </button>
             </div>
-            <button class="top-fold" id="top-fold" onclick="toggleTopMenu()" title="Plegar / desplegar el menú superior" aria-label="Plegar menú superior">▾</button>
         </div>
 
         <div class="status-grid" id="status-grid" style="display:none">
@@ -2800,15 +2812,6 @@
                     <div class="board-content" id="board-creativo"></div>
                 </div>
             </div>
-        </div>
-
-        <div class="legend-strip" id="legend-strip">
-            <div class="legend-head">
-                <div class="legend-kicker">⭐ LEYENDAS · CONSEJO BASE</div>
-                <div class="legend-active" id="legend-active">Selecciona una leyenda</div>
-                <div class="legend-focus" id="legend-focus">Criterio, memoria larga y oficio fundador.</div>
-            </div>
-            <div class="legend-grid" id="legend-grid"></div>
         </div>
 
         <div class="stage-row">
@@ -2928,6 +2931,14 @@
 
         <div class="side-rail right" id="rail-avanzado">
             <div class="rail-body">
+                <div class="legend-strip" id="legend-strip">
+                    <div class="legend-head">
+                        <div class="legend-kicker">⭐ LEYENDAS · CONSEJO BASE</div>
+                        <div class="legend-active" id="legend-active">Selecciona una leyenda</div>
+                        <div class="legend-focus" id="legend-focus">Criterio, memoria larga y oficio fundador.</div>
+                    </div>
+                    <div class="legend-grid" id="legend-grid"></div>
+                </div>
                 <div class="rail-group">Crea</div>
                 <button class="rail-btn primary" onclick="railVerb('entrenar')" title="Alimenta a un consejero con URLs y material">Entrenar</button>
                 <button class="rail-btn" onclick="railVerb('analizar')" title="Analiza una URL, texto o archivo">Analizar</button>
@@ -2948,6 +2959,19 @@
         (function(){
             var railAuto = true;
             function railCollapsed(id){ var r=document.getElementById(id); return !r || r.classList.contains('collapsed'); }
+            // La caja la marca la imagen: fija la altura de los rieles = altura de la
+            // imagen para que su cuerpo haga scroll y no dejen hueco bajo el consejo.
+            function sizeRails(){
+                var img = document.querySelector('.stage-row>.council-image');
+                if (!img) return;
+                var h = Math.round(img.getBoundingClientRect().height);
+                if (h < 40) return;
+                ['rail-opcion','rail-avanzado'].forEach(function(id){
+                    var r = document.getElementById(id);
+                    if (r && !r.classList.contains('collapsed')) r.style.height = h + 'px';
+                });
+            }
+            window.sizeRails = sizeRails;
             // Refleja en los iconos del top-bar (portería) qué panel está visible.
             window.pfSyncIcons = function(){
                 var oi=document.getElementById('pf-ic-opcion');   if(oi) oi.classList.toggle('on', !railCollapsed('rail-opcion'));
@@ -2960,6 +2984,7 @@
                 var r = document.getElementById(id);
                 if (r) r.classList.toggle('collapsed');
                 window.pfSyncIcons();
+                sizeRails();
             };
             // Toggles desde los iconos de panel del top-bar (mismos que admira-bar.js).
             window.pfToggle = function(kind){
@@ -2987,6 +3012,7 @@
                     });
                 }
                 window.pfSyncIcons();
+                sizeRails();
             }
             fit();
             window.addEventListener('resize', fit);
@@ -2997,6 +3023,12 @@
                     window.toggleScumm = function(){ var r = _ts.apply(this, arguments); window.pfSyncIcons(); return r; };
                 }
                 window.pfSyncIcons();
+                sizeRails();
+                // Mantener la altura de los rieles pegada a la de la imagen (carga, resize, colapsos).
+                var img = document.querySelector('.stage-row>.council-image');
+                if (img && window.ResizeObserver) { new ResizeObserver(sizeRails).observe(img); }
+                var cimg = document.getElementById('council-img');
+                if (cimg) cimg.addEventListener('load', sizeRails);
             });
         })();
         </script>

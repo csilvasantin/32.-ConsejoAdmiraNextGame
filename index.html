@@ -2740,18 +2740,43 @@
 .side-rail.collapsed .rail-head{writing-mode:vertical-rl;text-orientation:mixed;border-bottom:none;padding:0.7rem 0.4rem}
 @media (max-width:760px){.side-rail{display:none}}
 </style>
+<style id="home-panel-icons-css">
+/* ════ Iconos de panel (portería SCUMM, idénticos a admira-bar.js) en el top-bar
+   de la home: opciones (izq) · avanzado (der) · experto (abajo) ════ */
+.top-bar .pf-ico{flex:0 0 auto;align-self:stretch;display:flex;align-items:center;justify-content:center;width:30px;padding:0;cursor:pointer;border:2px solid #8b5a14;border-radius:0;background:#2a1a08;box-shadow:2px 2px 0 #000}
+.top-bar .pf-ico svg{width:16px;height:15px;display:block}
+.top-bar .pf-ico .frame{fill:none;stroke:#a07828;stroke-width:1.4}
+.top-bar .pf-ico .panel{fill:#5a4020}
+.top-bar .pf-ico.on .frame{stroke:#ffdd66}
+.top-bar .pf-ico.on .panel{fill:#ffdd66}
+.top-bar .pf-ico:hover{border-color:#f0c040}
+.top-bar .pf-toggles{display:flex;gap:5px;align-items:stretch;flex:0 0 auto;margin-left:auto}
+.top-bar #pf-ic-opcion{margin-left:2px}
+.top-bar .version-badge .pf-ver{color:#c9a86a;font-size:0.4rem;margin-top:3px;letter-spacing:0}
+</style>
 </head>
 <body>
     <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KD696XW"
     height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.07.02.r1</a>
+            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge" title="Admira Consejo · panel de estado">🏛️ Admira Consejo <span class="pf-ver">v.2026.07.02.r2</span></a>
+            <button type="button" id="pf-ic-opcion" class="pf-ico" onclick="pfToggle('opcion')" title="Opciones · panel izquierdo" aria-label="Opciones · panel izquierdo">
+                <svg viewBox="0 0 16 14"><rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="1.6" y="1.6" width="4.4" height="10.8" rx="1"/></svg>
+            </button>
             <a href="https://www.admira.live/equipos" target="_blank" rel="noopener" class="version-badge" title="Equipos · asignación de agentes">🏠 AdmiraNeXT</a>
             <a href="https://www.admira.live/telegram" target="_blank" rel="noopener" class="version-badge" title="Telegram · espejo en directo del grupo AdmiraNext">💬 Telegram</a>
             <a href="/game/help" class="version-badge" title="Cómo se juega y cómo contribuir (manifest + MCP)">❔ Ayuda</a>
             <button class="version-badge" onclick="window.agmSetVisible&&window.agmSetVisible(null)" title="Abrir el puesto de mando AgoraMatrix">📡 Agentes</button>
             <div class="summary" id="summary"></div>
+            <div class="pf-toggles">
+                <button type="button" id="pf-ic-avanzado" class="pf-ico" onclick="pfToggle('avanzado')" title="Avanzado · panel derecho" aria-label="Avanzado · panel derecho">
+                    <svg viewBox="0 0 16 14"><rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="10" y="1.6" width="4.4" height="10.8" rx="1"/></svg>
+                </button>
+                <button type="button" id="pf-ic-experto" class="pf-ico" onclick="pfToggle('experto')" title="Modo experto · panel inferior" aria-label="Modo experto · panel inferior">
+                    <svg viewBox="0 0 16 14"><rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="1.6" y="8.4" width="12.8" height="4" rx="1"/></svg>
+                </button>
+            </div>
             <button class="top-fold" id="top-fold" onclick="toggleTopMenu()" title="Plegar / desplegar el menú superior" aria-label="Plegar menú superior">▾</button>
         </div>
 
@@ -2917,26 +2942,57 @@
         <script>
         (function(){
             var railAuto = true;
+            function railCollapsed(id){ var r=document.getElementById(id); return !r || r.classList.contains('collapsed'); }
+            // Refleja en los iconos del top-bar (portería) qué panel está visible.
+            window.pfSyncIcons = function(){
+                var oi=document.getElementById('pf-ic-opcion');   if(oi) oi.classList.toggle('on', !railCollapsed('rail-opcion'));
+                var ai=document.getElementById('pf-ic-avanzado'); if(ai) ai.classList.toggle('on', !railCollapsed('rail-avanzado'));
+                var ei=document.getElementById('pf-ic-experto');  var bar=document.querySelector('.scumm-bar');
+                if(ei && bar) ei.classList.toggle('on', !bar.classList.contains('scumm-collapsed'));
+            };
             window.toggleRail = function(id){
                 railAuto = false;
                 var r = document.getElementById(id);
                 if (r) r.classList.toggle('collapsed');
+                window.pfSyncIcons();
+            };
+            // Toggles desde los iconos de panel del top-bar (mismos que admira-bar.js).
+            window.pfToggle = function(kind){
+                if (kind === 'opcion')   { window.toggleRail('rail-opcion');   return; }
+                if (kind === 'avanzado') { window.toggleRail('rail-avanzado'); return; }
+                if (kind === 'experto') {
+                    var b = document.querySelector('.scumm-bar');
+                    if (typeof setScummCollapsed === 'function') setScummCollapsed(!(b && b.classList.contains('scumm-collapsed')));
+                    else if (b) b.classList.toggle('scumm-collapsed');
+                    window.pfSyncIcons();
+                }
             };
             window.railVerb = function(v){
                 try { if (typeof setScummCollapsed === 'function') setScummCollapsed(false); } catch(e){}
                 var b = document.querySelector('.verb-btn[data-verb="' + v + '"]');
                 if (b) b.click();
+                window.pfSyncIcons();
             };
             function fit(){
-                if (!railAuto) return;
-                var narrow = window.innerWidth < 1480;
-                ['rail-opcion','rail-avanzado'].forEach(function(id){
-                    var r = document.getElementById(id);
-                    if (r) r.classList.toggle('collapsed', narrow);
-                });
+                if (railAuto) {
+                    var narrow = window.innerWidth < 1480;
+                    ['rail-opcion','rail-avanzado'].forEach(function(id){
+                        var r = document.getElementById(id);
+                        if (r) r.classList.toggle('collapsed', narrow);
+                    });
+                }
+                window.pfSyncIcons();
             }
             fit();
             window.addEventListener('resize', fit);
+            // Mantener el icono «experto» en sync cuando se pliega la barra por su propio botón (scumm-fold).
+            window.addEventListener('load', function(){
+                var _ts = window.toggleScumm;
+                if (typeof _ts === 'function') {
+                    window.toggleScumm = function(){ var r = _ts.apply(this, arguments); window.pfSyncIcons(); return r; };
+                }
+                window.pfSyncIcons();
+            });
         })();
         </script>
 

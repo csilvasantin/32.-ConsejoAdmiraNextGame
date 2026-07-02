@@ -7,4 +7,4 @@ account_id = "5b14266aa29050f8e5acd442c61b9783"
 #   npx wrangler kv namespace create ESTADO
 [[kv_namespaces]]
 binding = "ESTADO"
-id = "RELLENAR_TRAS_wrangler_kv_namespace_create"
+id = "a45bdafc532b46b4b34050017e393e98"

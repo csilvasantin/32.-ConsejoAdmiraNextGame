@@ -11,14 +11,17 @@
   if (path === "/" || path === "") return;
 
   // Nombre del proyecto + versión (v.año.mes.día.release) — a la izquierda del todo.
-  var PROJECT = "Admira Consejo";
-  var VERSION = "v.2026.07.02.r2";
+  // La MARCA enlaza a la home (regla: el nombre del site siempre vuelve a la home).
+  var PROJECT = "Consejo AdmiraNeXT";
+  var VERSION = "v.2026.07.02.r12";
 
+  // Nav idéntico al top-bar de la home (mismos badges, mismos destinos) → coherencia.
   var TOP = [
-    { t: "🏛️ Consejo",   h: "https://www.admira.live/" },
-    { t: "📊 Dashboard",  h: "https://www.admira.live/dashboard.html" },
-    { t: "🏠 AdmiraNeXT", h: "https://www.admira.live/equipos" },
-    { t: "💬 Telegram",   h: "https://www.admira.live/telegram" },
+    { t: "📊 Dashboard", h: "https://www.admira.live/dashboard.html" },
+    { t: "🖥️ Control",   h: "https://www.admira.live/control/" },
+    { t: "💬 Telegram",  h: "https://www.admira.live/telegram" },
+    { t: "🎯 Misiones",  h: "https://www.admira.live/vista-previa" },
+    { t: "📓 Diario",    h: "https://www.admira.live/diario.html" },
   ];
 
   var css =
@@ -34,6 +37,7 @@
     "font-family:'Press Start 2P',monospace;font-size:8px;line-height:1.5;letter-spacing:.5px;" +
     "border:2px solid #8b5a14;border-radius:0;padding:6px 9px;white-space:nowrap;background:#2a1a08;box-shadow:2px 2px 0 #000}" +
     "#admira-topbar a:hover{background:#8b5a14;border-color:#f0c040;color:#fff}" +
+    "#admira-topbar a.active{background:#8b5a14;border-color:#f0c040;color:#fff}" +
     /* Iconos de panel (portería, estilo Codex/VS Code): avanzado (der) + experto (abajo).
      * Se colocan a la derecha de «Usuarios» y sólo aparecen si la página tiene ese panel. */
     /* Marca del proyecto (izquierda del todo) */
@@ -69,7 +73,13 @@
 
     var top = document.createElement("div");
     top.id = "admira-topbar";
-    top.innerHTML = TOP.map(function (i) { return '<a href="' + i.h + '">' + i.t + "</a>"; }).join("");
+    // Resalta el badge de la página actual (orientación) comparando el path.
+    var here = location.pathname.replace(/index\.html$/, "").replace(/\/$/, "");
+    top.innerHTML = TOP.map(function (i) {
+      var ph = i.h.replace(/^https?:\/\/[^/]+/, "").replace(/index\.html$/, "").replace(/\/$/, "");
+      var cur = ph !== "" && here === ph;
+      return '<a href="' + i.h + '"' + (cur ? ' class="active" aria-current="page"' : "") + ">" + i.t + "</a>";
+    }).join("");
 
     // Marca del proyecto + versión, a la izquierda del todo (CSS order:-2).
     var brand = document.createElement("a");

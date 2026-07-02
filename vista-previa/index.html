@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>¿En qué estamos? · AdmiraNeXT</title>
+<script src="/admira-bar.js"></script>
 <style>
   :root{
     --bg:#0b0e14;--panel:#131822;--panel2:#1a212e;--line:#26303f;--ink:#e8eef7;--mut:#8a97ab;
@@ -20,9 +21,10 @@
   .flash{animation:flash .8s ease}
   @keyframes flash{0%{background:rgba(91,214,192,.18)}100%{background:transparent}}
 
-  /* Barra superior FIJA (cuadrática, como home/control): se queda arriba al scrollear. */
+  /* Barra superior FIJA (cuadrática, como home/control): se queda arriba al scrollear.
+     top:46px = deja hueco a la barra global de navegación (admira-bar.js). */
   header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;
-    position:sticky;top:0;z-index:30;
+    position:sticky;top:46px;z-index:30;
     margin:-20px -20px 18px;padding:14px 20px;
     background:rgba(11,14,20,.92);backdrop-filter:saturate(140%) blur(10px);
     border-bottom:1px solid var(--line)}

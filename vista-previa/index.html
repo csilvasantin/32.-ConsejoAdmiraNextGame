@@ -97,6 +97,16 @@
   #pick .list{display:flex;flex-wrap:wrap;gap:8px;max-height:300px;overflow:auto}
   #pick .list button{background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:8px 11px;font-size:12.5px;cursor:pointer}
   #pick .list button:hover{border-color:var(--acc2);color:var(--acc2)}
+  /* Chips de la barra: muestran/ocultan secciones (layout cuadrático) */
+  .vp-chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
+  .vp-chip{font-family:var(--mono);font-size:11px;color:var(--mut);background:var(--panel);
+    border:1px solid var(--line);border-radius:999px;padding:5px 11px;cursor:pointer;
+    transition:color .12s ease,border-color .12s ease,background .12s ease}
+  .vp-chip:hover{color:var(--ink);border-color:var(--acc2)}
+  .vp-chip.on{color:var(--ink);border-color:var(--acc);background:rgba(91,214,192,.10)}
+  body.hide-estado #hero, body.hide-estado .grid{display:none}
+  body.hide-agentes .agentes-sec{display:none}
+  body.hide-riesgos .rows{display:none}
 </style>
 </head>
 <body>
@@ -106,6 +116,11 @@
     <h1>¿EN QUÉ ESTAMOS?</h1>
     <div class="sub">Vista Previa · AdmiraNeXT · silicio ↔ carbono</div>
   </div>
+  <span class="vp-chips" title="Muestra/oculta secciones">
+    <button type="button" class="vp-chip on" data-sec="estado">📊 Estado</button>
+    <button type="button" class="vp-chip on" data-sec="agentes">👥 Agentes</button>
+    <button type="button" class="vp-chip on" data-sec="riesgos">⚠️ Riesgos</button>
+  </span>
   <span class="spacer"></span>
   <span class="yo" id="yoChip" title="Quién eres (clic para cambiar)" style="display:none"><img class="av" id="yoAv" alt="" style="display:none"><span id="yoLab">—</span> <small id="yoOs"></small><span class="chg">cambiar</span></span>
   <span class="pill live" id="livePill"><span class="dot"></span>en vivo</span>
@@ -343,6 +358,27 @@ resolveYo();
 
 tick();
 setInterval(tick, 3000);
+
+/* ── Chips de la barra: pliegan/despliegan secciones, estado recordado ── */
+(function(){
+  const KEY='vp_panels_off', SECS=['estado','agentes','riesgos'];
+  let off=[]; try{ off=JSON.parse(localStorage.getItem(KEY)||'[]'); }catch(e){}
+  function apply(){
+    SECS.forEach(s=>{
+      document.body.classList.toggle('hide-'+s, off.includes(s));
+      const c=document.querySelector('.vp-chip[data-sec="'+s+'"]');
+      if(c) c.classList.toggle('on', !off.includes(s));
+    });
+  }
+  document.addEventListener('click', e=>{
+    const c=e.target.closest('.vp-chip'); if(!c) return;
+    const s=c.dataset.sec; if(!SECS.includes(s)) return;
+    off = off.includes(s) ? off.filter(x=>x!==s) : off.concat(s);
+    try{ localStorage.setItem(KEY, JSON.stringify(off)); }catch(e){}
+    apply();
+  });
+  apply();
+})();
 </script>
 </body>
 </html>

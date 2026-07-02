@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<!-- control · v2026.07.02b · icono = fondo (personaje) del equipo SIEMPRE, nunca el screenshot en vivo · wallpapers reales subidos por máquina -->
+<!-- control · v2026.07.02c · icono = fondo (personaje) del equipo SIEMPRE, nunca el screenshot en vivo · wallpapers reales subidos por máquina -->
 <html lang="es">
 <head>
     <script src="/admira-bar.js?v=porteria3"></script>
@@ -404,6 +404,7 @@
       <button id="hackOpen" title="HACKEO · secuencia de intrusión sobre toda la flota (cinemática + acción real)">🕶️ HACKEO</button>
       <button id="fleetScreens" title="Apagar o encender la pantalla de TODA la flota online (toggle)">🌙 Apagar todas</button>
       <button id="ssToggle" title="Activar o quitar el salvapantallas en TODA la flota online (toggle)">🖼️ Salva ON</button>
+      <button id="playersStandby" title="Standby/Reactivar los PLAYERS de toda la flota (mac/win/linux/ios/android) por canal de comandos — pone el canal en negro sin cerrar la app">⏻ Standby players</button>
       <label title="Beep cuando un equipo se cae o su captura empieza a fallar"><input type="checkbox" id="sndToggle"> 🔔 sonido</label>
       <label title="No mostrar los equipos desconectados"><input type="checkbox" id="hideOff"> 🙈 ocultar offline</label>
       <button id="collapseAll" title="Colapsar o expandir todas las tarjetas">⊟ colapsar todas</button>
@@ -1133,6 +1134,45 @@ function renderSsToggle(){
     b.disabled=false;
     if(okCount>0){ SS_ON=turnOn; localStorage.setItem('fleet_screensaver_on', SS_ON?'1':'0'); }
     renderSsToggle();
+  };
+})();
+
+/* ---------- players (canal): STANDBY/REACTIVAR toda la flota vía /locations/cmd ----------
+   Distinto de "Apagar todas" (que duerme el DISPLAY por SSH → solo Macs/Linux): esto encola
+   el comando 'standby'/'resume' a cada CIRCUITO por /locations/cmd, así llega a TODOS los
+   players (mac/win/linux/ios/android) que sondean ese canal. Pone el canal del player en
+   negro sin cerrar la app y persiste tras reinicio. Estado COMANDADO, persistido. */
+const CMD_API_PLAYERS='https://omnipublicity-api.csilvasantin.workers.dev/locations/cmd';
+let PLAYERS_STANDBY = localStorage.getItem('fleet_players_standby')==='1';
+function renderPlayersStandby(){
+  const b=$('#playersStandby'); if(!b) return;
+  if(PLAYERS_STANDBY){ b.textContent='▶ Reactivar players · STANDBY'; b.classList.add('scr-off'); b.classList.remove('scr-on'); b.title='Los players están en STANDBY (negro) — clic para reactivarlos'; }
+  else { b.textContent='⏻ Standby players · EMITIENDO'; b.classList.add('scr-on'); b.classList.remove('scr-off'); b.title='Poner en STANDBY (negro) todos los players de la flota, en cualquier SO'; }
+}
+async function fleetCircuits(){
+  try{ const r=await fetch('https://api.admira.store/grid/screens',{cache:'no-store'}); const d=await r.json();
+    let items=d&&d.screens; if(items&&!Array.isArray(items)) items=Object.values(items); if(!Array.isArray(items)) items=Array.isArray(d)?d:[];
+    const set=new Set(); for(const s of items){ if(!s) continue; const c=s.circuit||(String(s.screen||s.id||'').split('-')[0]); if(c) set.add(c); }
+    return [...set];
+  }catch(_){ return []; }
+}
+async function sendPlayerCmd(circuit,cmd){
+  try{ const r=await fetch(CMD_API_PLAYERS,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({id:circuit,cmd})}); const d=await r.json().catch(()=>null); return !!(d&&d.ok); }catch(_){ return false; }
+}
+(function(){ const b=$('#playersStandby'); if(!b) return; renderPlayersStandby();
+  b.onclick=async()=>{
+    const circuits=await fleetCircuits();
+    if(!circuits.length){ pushResult('__all__','⏻ players',{rc:1,stdout:'',stderr:'no hay circuitos/pantallas vivas'}); return; }
+    const turnOff=!PLAYERS_STANDBY;
+    const cmd=turnOff?'standby':'resume', verb=turnOff?'STANDBY (negro)':'REACTIVAR';
+    if(!confirm(verb+' los players de '+circuits.length+' circuito(s)?\n\n  '+circuits.join(', ')+'\n\nLlega a TODOS los players (mac/win/linux/ios/android).')) return;
+    b.disabled=true; let ok=0;
+    for(let i=0;i<circuits.length;i++){ b.textContent=(turnOff?'⏻ ':'▶ ')+(i+1)+'/'+circuits.length;
+      const good=await sendPlayerCmd(circuits[i],cmd); if(good) ok++;
+      pushResult('__all__',(turnOff?'⏻ standby':'▶ resume')+' · '+circuits[i],{rc:good?0:1,stdout:good?'comando encolado':'',stderr:good?'':'fallo al encolar'}); }
+    b.disabled=false;
+    if(ok>0){ PLAYERS_STANDBY=turnOff; localStorage.setItem('fleet_players_standby', PLAYERS_STANDBY?'1':'0'); }
+    renderPlayersStandby();
   };
 })();
 

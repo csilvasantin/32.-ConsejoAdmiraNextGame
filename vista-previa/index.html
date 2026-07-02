@@ -141,6 +141,9 @@
   .ag-meta{font-family:var(--mono);font-size:10.5px;color:var(--mut);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .ag-focus{font-size:12.5px;color:var(--ink);margin-top:6px;line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
   .ag-focus.none{color:var(--mut);font-style:italic}
+  /* Resalta cuál eres TÚ (matchea la identidad del tablero) */
+  .agente.mine{border-color:var(--acc);background:linear-gradient(180deg,rgba(91,214,192,.10),var(--panel));box-shadow:0 0 0 1px var(--acc) inset}
+  .ag-you{font-family:var(--mono);font-size:9px;font-weight:800;letter-spacing:.5px;color:#06231f;background:var(--acc);border-radius:5px;padding:1px 5px;margin-left:2px}
 </style>
 <section class="agentes-sec">
   <h2 class="agentes-h">👥 En qué anda cada agente <span class="ag-count" id="agCount"></span></h2>
@@ -247,14 +250,20 @@ async function renderAgentes(){
       .sort((a,b)=>(b.updated||0)-(a.updated||0));
     if(!list.length){ el.innerHTML='<div class="empty">Sin agentes activos ahora mismo.</div>'; return; }
     let on=0;
+    // ¿cuál de estos agentes eres TÚ? (matchea la identidad YO por persona o máquina)
+    const _yoN = s => String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+    const yo = (typeof YO!=='undefined') ? YO : null;
     el.innerHTML=list.map(p=>{
       const age=now-(p.updated||0), online=age<ONLINE; if(online) on++;
       const pf=_AGPF[p.persona], av=pf?('/wallpapers/'+pf+'.png'):'';
       const foco=p.focus?_agEsc(p.focus):'sin reportar foco';
-      return '<div class="agente'+(online?'':' off')+'">'
+      const mine = !!yo && ((yo.persona && p.persona===yo.persona)
+        || (yo.maquina && _yoN(p.machine)===_yoN(yo.maquina))
+        || (yo.nombre && _yoN(p.machine)===_yoN(yo.nombre)));
+      return '<div class="agente'+(online?'':' off')+(mine?' mine':'')+'">'
         +(av?('<img class="ag-av" src="'+av+'" alt="" onerror="this.style.visibility=\'hidden\'">'):'<div class="ag-av"></div>')
         +'<div class="ag-body"><div class="ag-top"><span class="ag-dot '+(online?'on':'off')+'"></span>'
-        +'<span class="ag-name">'+_agEsc(p.persona||'?')+'</span></div>'
+        +'<span class="ag-name">'+_agEsc(p.persona||'?')+'</span>'+(mine?'<span class="ag-you">TÚ</span>':'')+'</div>'
         +'<div class="ag-meta">'+_agEsc(p.runtime||'')+' · '+_agEsc(p.machine||'')+' · '+fmtAge2(age)+'</div>'
         +'<div class="ag-focus'+(p.focus?'':' none')+'">'+foco+'</div></div></div>';
     }).join('');

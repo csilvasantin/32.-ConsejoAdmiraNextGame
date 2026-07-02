@@ -7,6 +7,7 @@
       "emoji": "🖥️",
       "role": "Hub central",
       "local": true,
+      "platform": "macos",
       "host": "macmini.tail48b61c.ts.net"
     },
     {
@@ -14,6 +15,7 @@
       "name": "MacBook Pro 16",
       "emoji": "💻",
       "role": "Equipo de trabajo",
+      "platform": "macos",
       "host": "macbook-pro-16.tail48b61c.ts.net",
       "user": "csilvasantin"
     },
@@ -22,6 +24,7 @@
       "name": "MacBook Pro 14",
       "emoji": "💻",
       "role": "Desarrollo y pruebas",
+      "platform": "macos",
       "host": "macbookpronegro14.tail48b61c.ts.net",
       "user": "csilvasantin"
     },
@@ -30,6 +33,7 @@
       "name": "MacBook Air 16 Plata",
       "emoji": "💻",
       "role": "Equipo · Trinity/Codex",
+      "platform": "macos",
       "host": "macbookair16.tail48b61c.ts.net",
       "user": "csilvasantin"
     },
@@ -38,8 +42,23 @@
       "name": "DGX Spark",
       "emoji": "🧠",
       "role": "Inferencia LLM (GPU)",
+      "platform": "linux",
       "host": "dgx-spark.tail48b61c.ts.net",
       "user": "bitsatoms"
+    },
+    {
+      "id": "thinkstation",
+      "name": "ThinkStation PGX",
+      "emoji": "🐧",
+      "role": "Player DS · Linux (Ubuntu)",
+      "platform": "linux",
+      "host": "thinkstationpgx-e82e.tail48b61c.ts.net",
+      "user": "test",
+      "signage": {
+        "url": "https://www.admira.tv/player",
+        "start": "",
+        "stop": ""
+      }
     }
   ]
 }

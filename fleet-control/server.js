@@ -156,56 +156,168 @@ function run(machine, cmd, timeoutMs) {
   });
 }
 
-/* ----- acciones predefinidas (seguras, mapeadas a comandos) ------------------ */
+/* ----- acciones predefinidas (seguras, mapeadas a comandos) ------------------ *
+ * Cada acción es {macos, linux}: el despachador elige por platform de la máquina
+ * (platOf). Las funciones reciben (arg, m) — las variantes Linux usan m.signage
+ * para enchufar el player propio. Digital Signage y control remoto de la flota
+ * funcionan en ambos SO (macOS y Linux/Ubuntu de escritorio). */
 function sh(s) { return "'" + String(s).replace(/'/g, "'\\''") + "'"; } // single-quote safe
+function platOf(m) { return String((m && m.platform) || 'macos').toLowerCase().startsWith('lin') ? 'linux' : 'macos'; }
+
+// Prefijo para comandos gráficos por SSH en Linux: una sesión SSH no-interactiva
+// no hereda DISPLAY / XDG_RUNTIME_DIR, así que los reconstruimos (X11 :0 y el
+// runtime del usuario) para que pactl / xset / grim / notify-send encuentren la
+// sesión gráfica activa. Best-effort: si la caja no tiene GUI, la acción lo dirá.
+const LGUI = 'export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"; export DISPLAY="${DISPLAY:-:0}"; ';
+
 const ACTIONS = {
-  sysinfo: () =>
-    'echo "🖥️ $(scutil --get ComputerName 2>/dev/null || hostname)"; ' +
-    'echo "⏱️ $(uptime | sed "s/.*up //;s/, [0-9]* user.*//")"; ' +
-    'echo "🔋 $(pmset -g batt 2>/dev/null | grep -o "[0-9]*%" | head -1 || echo n/a)"; ' +
-    'echo "💾 $(df -h / | awk "NR==2{print \\$4\\" libre de \\"\\$2}")"; ' +
-    'echo "🔊 $(osascript -e "output volume of (get volume settings)" 2>/dev/null)%"; ' +
-    'echo "📊 $(ps -A -o %cpu | awk "{s+=\\$1} END{printf \\"%.0f%% CPU\\", s}")"',
-  volume: (arg) => 'osascript -e "set volume output volume ' + (parseInt(arg, 10) || 0) + '"; echo "volumen → ' + (parseInt(arg, 10) || 0) + '%"',
-  displaysleep: () => 'pmset displaysleepnow; echo "pantalla dormida"',
-  lock: () => 'pmset displaysleepnow; echo "bloqueado"',
-  say: (arg) => 'say ' + sh(arg) + '; echo "dicho"',
-  notify: (arg) => 'osascript -e ' + sh('display notification "' + String(arg).replace(/"/g, "'") + '" with title "FleetControl"') + '; echo "notificado"',
-  open: (arg) => 'open -a ' + sh(arg) + ' && echo "abierto: ' + String(arg).replace(/"/g, '') + '"',
-  closeapp: (arg) => 'osascript -e ' + sh('quit app "' + String(arg).replace(/"/g, '') + '"') + ' && echo "cerrada: ' + String(arg).replace(/"/g, '') + '"',
-  // Digital Signage — player nativo AdmiraSignageMac (kiosko WKWebView de admira.tv).
-  // Lanzar = abrir la app. Matar = quit limpio (= Escape/⌘Q: el KeepAlive NO relanza
-  // un quit voluntario, solo un crash). Si no está instalada, lo dice.
-  // Lanzar: opcionalmente fija screen/circuit (arg = "screen|circuit"), carga el
-  // LaunchAgent (KeepAlive lo mantiene vivo) y abre la app.
-  signage_on: (arg) => {
-    const parts = String(arg || '').split('|');
-    const screen = (parts[0] || '').trim(), circuit = (parts[1] || '').trim();
-    let pre = '';
-    if (screen) pre += 'defaults write tv.admira.signage.mac screen ' + sh(screen) + '; ';
-    if (circuit) pre += 'defaults write tv.admira.signage.mac circuit ' + sh(circuit) + '; ';
-    return pre +
-      'launchctl bootstrap gui/$(id -u) "$HOME/Library/LaunchAgents/tv.admira.signage.mac.plist" 2>/dev/null; ' +
-      'launchctl kickstart -k gui/$(id -u)/tv.admira.signage.mac 2>/dev/null; ' +
-      'open -a AdmiraSignageMac 2>/dev/null || open -b tv.admira.signage.mac 2>/dev/null; sleep 1; ' +
-      'pgrep -x AdmiraSignageMac >/dev/null && echo "📺 signage lanzado" || echo "AdmiraSignageMac no instalado en esta máquina"';
+  sysinfo: {
+    macos: () =>
+      'echo "🖥️ $(scutil --get ComputerName 2>/dev/null || hostname)"; ' +
+      'echo "⏱️ $(uptime | sed "s/.*up //;s/, [0-9]* user.*//")"; ' +
+      'echo "🔋 $(pmset -g batt 2>/dev/null | grep -o "[0-9]*%" | head -1 || echo n/a)"; ' +
+      'echo "💾 $(df -h / | awk "NR==2{print \\$4\\" libre de \\"\\$2}")"; ' +
+      'echo "🔊 $(osascript -e "output volume of (get volume settings)" 2>/dev/null)%"; ' +
+      'echo "📊 $(ps -A -o %cpu | awk "{s+=\\$1} END{printf \\"%.0f%% CPU\\", s}")"',
+    linux: () =>
+      'echo "🖥️ $(hostname)"; ' +
+      'echo "⏱️ $(uptime -p 2>/dev/null | sed "s/^up //" || echo n/a)"; ' +
+      'echo "🔋 $( (cat /sys/class/power_supply/BAT*/capacity 2>/dev/null | head -1 | sed "s/$/%/") || echo n/a)"; ' +
+      'echo "💾 $(df -h / | awk "NR==2{print \\$4\\" libre de \\"\\$2}")"; ' +
+      'echo "🧠 $(free -h 2>/dev/null | awk "/Mem:/{print \\$3\\"/\\"\\$2}")"; ' +
+      'echo "📊 $(top -bn1 2>/dev/null | awk "/Cpu\\(s\\)/{printf \\"%.0f%% CPU\\",100-\\$8}")"'
   },
-  // Parar DE VERDAD: descarga el LaunchAgent (si no, el KeepAlive lo relanza),
-  // luego quit limpio + kill. Vuelve solo en el próximo login (el plist sigue).
-  signage_off: () =>
-    'launchctl bootout gui/$(id -u)/tv.admira.signage.mac 2>/dev/null; ' +
-    'osascript -e \'tell application "AdmiraSignageMac" to quit\' 2>/dev/null; ' +
-    'pkill -x AdmiraSignageMac 2>/dev/null; sleep 1.5; ' +
-    'pgrep -x AdmiraSignageMac >/dev/null && echo "sigue activo (reintenta)" || echo "⏹️ signage parado"',
-  // Captura vía el mini-agente de captura (LaunchAgent en la sesión del usuario,
-  // que SÍ tiene TCC). Handshake por ficheros: tocamos capture.req → el agente
-  // (WatchPaths) captura y deja base64 en capture.out (más nuevo que la petición).
-  screenshot: () =>
-    'D="$HOME/.fleet"; mkdir -p "$D"; O="$D/capture.out"; N="fc-$(date +%s)-$$-$RANDOM"; ' +
-    'printf "%s" "$N" > "$D/capture.req"; ' +
-    'for i in $(seq 1 30); do [ "$(head -1 "$O" 2>/dev/null)" = "$N" ] && break; sleep 0.3; done; ' +
-    'if [ "$(head -1 "$O" 2>/dev/null)" = "$N" ]; then tail -n +2 "$O"; else echo ERR_NO_CAPTURE; fi'
+  volume: {
+    macos: (arg) => 'osascript -e "set volume output volume ' + (parseInt(arg, 10) || 0) + '"; echo "volumen → ' + (parseInt(arg, 10) || 0) + '%"',
+    linux: (arg) => { const v = parseInt(arg, 10) || 0; return LGUI + 'pactl set-sink-volume @DEFAULT_SINK@ ' + v + '% 2>/dev/null && echo "volumen → ' + v + '%" || (amixer -q sset Master ' + v + '% 2>/dev/null && echo "volumen → ' + v + '%") || echo "sin control de audio (pactl/amixer)"'; }
+  },
+  displaysleep: {
+    macos: () => 'pmset displaysleepnow; echo "pantalla dormida"',
+    linux: () => LGUI + '(xset dpms force off 2>/dev/null && echo "pantalla dormida") || (swaymsg "output * dpms off" 2>/dev/null && echo "pantalla dormida (sway)") || echo "no se pudo (sin X11/sway)"'
+  },
+  displaywake: {
+    macos: () => 'caffeinate -u -t 2; echo "pantalla encendida"',
+    linux: () => LGUI + '(xset dpms force on 2>/dev/null; xset s reset 2>/dev/null; echo "pantalla encendida") || (swaymsg "output * dpms on" 2>/dev/null && echo "pantalla encendida (sway)") || echo "no se pudo (sin X11/sway)"'
+  },
+  lock: {
+    macos: () => 'pmset displaysleepnow; echo "bloqueado"',
+    linux: () => LGUI + '(loginctl lock-session 2>/dev/null || xdg-screensaver lock 2>/dev/null || xset s activate 2>/dev/null) && echo "bloqueado" || echo "no se pudo bloquear"'
+  },
+  say: {
+    macos: (arg) => 'say ' + sh(arg) + '; echo "dicho"',
+    linux: (arg) => LGUI + '(spd-say ' + sh(arg) + ' 2>/dev/null || espeak ' + sh(arg) + ' 2>/dev/null); echo "dicho"'
+  },
+  notify: {
+    macos: (arg) => 'osascript -e ' + sh('display notification "' + String(arg).replace(/"/g, "'") + '" with title "FleetControl"') + '; echo "notificado"',
+    linux: (arg) => LGUI + 'notify-send "FleetControl" ' + sh(arg) + ' 2>/dev/null && echo "notificado" || echo "sin notify-send"'
+  },
+  open: {
+    macos: (arg) => 'open -a ' + sh(arg) + ' && echo "abierto: ' + String(arg).replace(/"/g, '') + '"',
+    linux: (arg) => LGUI + '(setsid ' + sh(arg) + ' >/dev/null 2>&1 & ) ; sleep 0.3; echo "abierto: ' + String(arg).replace(/"/g, '') + '"'
+  },
+  closeapp: {
+    macos: (arg) => 'osascript -e ' + sh('quit app "' + String(arg).replace(/"/g, '') + '"') + ' && echo "cerrada: ' + String(arg).replace(/"/g, '') + '"',
+    linux: (arg) => 'pkill -f ' + sh(arg) + ' && echo "cerrada: ' + String(arg).replace(/"/g, '') + '" || echo "no estaba abierta: ' + String(arg).replace(/"/g, '') + '"'
+  },
+  // ── Digital Signage ──────────────────────────────────────────────────────
+  // macOS: player nativo AdmiraSignageMac (kiosko WKWebView de admira.tv). Lanzar
+  //   = abrir la app; parar = quit limpio (el KeepAlive NO relanza un quit
+  //   voluntario, solo un crash). arg = "screen|circuit".
+  // Linux: player PROPIO configurable por máquina en fleet.json → m.signage:
+  //   { "start": "<cmd de arranque>", "stop": "<cmd de parada>", "url": "<url>" }.
+  //   El start/stop reciben las variables de entorno SIGN_SCREEN, SIGN_CIRCUIT y
+  //   SIGN_URL. Si no hay m.signage.start, cae a un kiosko Chromium por defecto
+  //   (systemd --user) apuntando a la url del player.
+  signage_on: {
+    macos: (arg) => {
+      const parts = String(arg || '').split('|');
+      const screen = (parts[0] || '').trim(), circuit = (parts[1] || '').trim();
+      let pre = '';
+      if (screen) pre += 'defaults write tv.admira.signage.mac screen ' + sh(screen) + '; ';
+      if (circuit) pre += 'defaults write tv.admira.signage.mac circuit ' + sh(circuit) + '; ';
+      return pre +
+        'launchctl bootstrap gui/$(id -u) "$HOME/Library/LaunchAgents/tv.admira.signage.mac.plist" 2>/dev/null; ' +
+        'launchctl kickstart -k gui/$(id -u)/tv.admira.signage.mac 2>/dev/null; ' +
+        'open -a AdmiraSignageMac 2>/dev/null || open -b tv.admira.signage.mac 2>/dev/null; sleep 1; ' +
+        'pgrep -x AdmiraSignageMac >/dev/null && echo "📺 signage lanzado" || echo "AdmiraSignageMac no instalado en esta máquina"';
+    },
+    linux: (arg, m) => {
+      const parts = String(arg || '').split('|');
+      const screen = (parts[0] || '').trim(), circuit = (parts[1] || '').trim();
+      const sig = (m && m.signage) || {};
+      const baseUrl = sig.url || 'https://www.admira.tv/player';
+      const q = [screen && ('screen=' + encodeURIComponent(screen)), circuit && ('circuit=' + encodeURIComponent(circuit))].filter(Boolean).join('&');
+      const url = q ? (baseUrl + (baseUrl.includes('?') ? '&' : '?') + q) : baseUrl;
+      const envp = LGUI + 'export SIGN_SCREEN=' + sh(screen) + '; export SIGN_CIRCUIT=' + sh(circuit) + '; export SIGN_URL=' + sh(url) + '; ';
+      // Player propio: usa el comando de arranque de la máquina.
+      if (sig.start) return envp + sig.start + '; echo "📺 signage lanzado"';
+      // Fallback: kiosko Chromium como servicio systemd --user (auto-relanza).
+      const bin = 'command -v chromium >/dev/null 2>&1 && CH=chromium || CH=chromium-browser';
+      return envp + bin + '; ' +
+        'command -v "$CH" >/dev/null 2>&1 || { echo "no hay chromium; define m.signage.start en fleet.json"; exit 0; }; ' +
+        'systemctl --user stop admira-signage 2>/dev/null; ' +
+        '"$CH" --kiosk --noerrdialogs --disable-infobars --incognito --no-first-run "$SIGN_URL" >/dev/null 2>&1 & ' +
+        'echo "📺 signage lanzado (chromium kiosk → $SIGN_URL)"';
+    }
+  },
+  signage_off: {
+    macos: () =>
+      'launchctl bootout gui/$(id -u)/tv.admira.signage.mac 2>/dev/null; ' +
+      'osascript -e \'tell application "AdmiraSignageMac" to quit\' 2>/dev/null; ' +
+      'pkill -x AdmiraSignageMac 2>/dev/null; sleep 1.5; ' +
+      'pgrep -x AdmiraSignageMac >/dev/null && echo "sigue activo (reintenta)" || echo "⏹️ signage parado"',
+    linux: (arg, m) => {
+      const sig = (m && m.signage) || {};
+      if (sig.stop) return LGUI + sig.stop + '; echo "⏹️ signage parado"';
+      return 'systemctl --user stop admira-signage 2>/dev/null; ' +
+        'pkill -f -- "--kiosk" 2>/dev/null; pkill -x chromium 2>/dev/null; pkill -x chromium-browser 2>/dev/null; sleep 1; ' +
+        'echo "⏹️ signage parado"';
+    }
+  },
+  reboot: {
+    macos: () => 'sudo -n shutdown -r now 2>/dev/null && echo "reiniciando…" || echo "reinicio requiere sudo sin contraseña"',
+    linux: () => '(systemctl reboot 2>/dev/null || sudo -n reboot 2>/dev/null) && echo "reiniciando…" || echo "reinicio requiere permisos (systemd/sudo)"'
+  },
+  // Salvapantallas de la flota: macOS = ScreenSaverEngine · Linux = GNOME ScreenSaver (dbus) con fallback a xset.
+  screensaver_on: {
+    macos: () => 'open -a ScreenSaverEngine 2>/dev/null && echo "🖼️ salvapantallas activo" || echo "no se pudo activar"',
+    linux: () => LGUI + '(dbus-send --session --dest=org.gnome.ScreenSaver --type=method_call /org/gnome/ScreenSaver org.gnome.ScreenSaver.SetActive boolean:true 2>/dev/null || xdg-screensaver activate 2>/dev/null || xset s activate 2>/dev/null) && echo "🖼️ salvapantallas activo" || echo "no se pudo activar"'
+  },
+  screensaver_off: {
+    macos: () => 'killall ScreenSaverEngine 2>/dev/null; echo "🖼️ salvapantallas quitado"',
+    linux: () => LGUI + '(dbus-send --session --dest=org.gnome.ScreenSaver --type=method_call /org/gnome/ScreenSaver org.gnome.ScreenSaver.SetActive boolean:false 2>/dev/null || xdg-screensaver reset 2>/dev/null || xset s reset 2>/dev/null); echo "🖼️ salvapantallas quitado"'
+  },
+  // Captura de pantalla.
+  //   macOS: vía el mini-agente AgoraCapture (LaunchAgent con TCC). Handshake por
+  //     ficheros: tocamos capture.req → el agente deja base64 en capture.out.
+  //   Linux: captura directa por SSH (grim en Wayland, scrot/import/gnome en X11)
+  //     a JPEG y devuelve base64 (mismo formato que el UI espera).
+  screenshot: {
+    macos: () =>
+      'D="$HOME/.fleet"; mkdir -p "$D"; O="$D/capture.out"; N="fc-$(date +%s)-$$-$RANDOM"; ' +
+      'printf "%s" "$N" > "$D/capture.req"; ' +
+      'for i in $(seq 1 30); do [ "$(head -1 "$O" 2>/dev/null)" = "$N" ] && break; sleep 0.3; done; ' +
+      'if [ "$(head -1 "$O" 2>/dev/null)" = "$N" ]; then tail -n +2 "$O"; else echo ERR_NO_CAPTURE; fi',
+    linux: () =>
+      LGUI +
+      'T="$(mktemp).jpg"; ' +
+      'if command -v grim >/dev/null 2>&1; then grim -t jpeg -q 80 "$T" 2>/dev/null; ' +
+      'elif command -v scrot >/dev/null 2>&1; then scrot -q 80 -o "$T" 2>/dev/null; ' +
+      'elif command -v gnome-screenshot >/dev/null 2>&1; then gnome-screenshot -f "$T" 2>/dev/null; ' +
+      'elif command -v import >/dev/null 2>&1; then import -window root "$T" 2>/dev/null; fi; ' +
+      'if [ -s "$T" ]; then command -v convert >/dev/null 2>&1 && convert "$T" -resize 1100x\\> -quality 80 "$T" 2>/dev/null; base64 "$T" | tr -d "\\n"; else echo ERR_NO_CAPTURE; fi; ' +
+      'rm -f "$T"'
+  }
 };
+
+// Resuelve la función de comando para (acción, máquina) según su plataforma.
+// Acepta tanto el formato nuevo {macos,linux} como una función suelta (compat).
+function resolveAction(action, m) {
+  const spec = ACTIONS[action];
+  if (!spec) return null;
+  if (typeof spec === 'function') return spec;
+  return spec[platOf(m)] || spec.macos || spec.linux || null;
+}
 
 /* ----- helpers HTTP --------------------------------------------------------- */
 function cors(req, res) {
@@ -301,7 +413,7 @@ const server = http.createServer(async (req, res) => {
     const results = await Promise.all(FLEET.machines.map(async (m) => {
       const r = await run(m, probe, 4500);   // sondeo corto: total < 5s (offline fallan rápido)
       const online = r.rc === 0 && /ONLINE/.test(r.stdout);
-      return { id: m.id, name: m.name, emoji: m.emoji, role: m.role, local: !!m.local, online, host: m.host, user: m.user || 'csilvasantin', info: online ? r.stdout.replace(/ONLINE\s*/, '').trim() : (r.stderr || 'sin respuesta').slice(0, 120) };
+      return { id: m.id, name: m.name, emoji: m.emoji, role: m.role, local: !!m.local, online, host: m.host, user: m.user || 'csilvasantin', platform: platOf(m), info: online ? r.stdout.replace(/ONLINE\s*/, '').trim() : (r.stderr || 'sin respuesta').slice(0, 120) };
     }));
     return json(res, 200, { machines: results, ts: Date.now() });
   }
@@ -324,9 +436,9 @@ const server = http.createServer(async (req, res) => {
     const body = await readBody(req);
     const m = machineById(body.machine);
     if (!m) return json(res, 400, { error: 'máquina desconocida' });
-    const fn = ACTIONS[body.action];
+    const fn = resolveAction(body.action, m);
     if (!fn) return json(res, 400, { error: 'acción desconocida', acciones: Object.keys(ACTIONS) });
-    const r = await run(m, fn(body.arg), 25000);
+    const r = await run(m, fn(body.arg, m), 25000);
     audit({ ip, ev: 'action', machine: m.id, action: body.action, arg: body.arg != null ? String(body.arg).slice(0, 200) : undefined, rc: r.rc, ms: r.ms });
     return json(res, 200, { machine: m.id, action: body.action, ...r });
   }
@@ -343,14 +455,24 @@ const server = http.createServer(async (req, res) => {
     if (!host || !name) return json(res, 400, { error: 'host y name son obligatorios' });
     const slug = String(body.id || name).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
     const id = slug || ('mac-' + Date.now());
+    const plat = String(body.platform || 'macos').toLowerCase().startsWith('lin') ? 'linux' : 'macos';
     const machine = {
       id,
       name,
-      emoji: String(body.emoji || '💻'),
+      emoji: String(body.emoji || (plat === 'linux' ? '🐧' : '💻')),
       role: String(body.role || 'Equipo nuevo'),
       host,
-      user: String(body.user || 'csilvasantin')
+      user: String(body.user || 'csilvasantin'),
+      platform: plat
     };
+    // player de signage propio (Linux): { url, start, stop } — opcional en el alta.
+    if (body.signage && typeof body.signage === 'object') {
+      machine.signage = {
+        url: String(body.signage.url || ''),
+        start: String(body.signage.start || ''),
+        stop: String(body.signage.stop || '')
+      };
+    }
     const idx = FLEET.machines.findIndex(m => m.id === id || (m.host && m.host === host));
     let created;
     if (idx >= 0) { FLEET.machines[idx] = { ...FLEET.machines[idx], ...machine }; created = false; }

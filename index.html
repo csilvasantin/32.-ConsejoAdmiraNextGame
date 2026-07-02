@@ -2695,6 +2695,11 @@
                 padding: 0.4rem 0.45rem;
             }
         }
+        /* Anchos medios (≤1080px): el top-bar ENVUELVE en vez de clipar la marca por
+           los lados (nowrap+justify-center cortaba «Consejo» y «Máquinas»). */
+        @media (max-width: 1080px) {
+            .top-bar { flex-wrap: wrap; justify-content: center; overflow-x: hidden; }
+        }
 
         /* ════ Port mejoras — cursor point&click · sentence line · responsive ════ */
         body {

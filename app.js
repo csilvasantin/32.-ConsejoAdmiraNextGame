@@ -1,0 +1,6382 @@
+/* app.js — extraído de index.html para lazy-load (defer). Lógica idéntica, mismo orden y scope. */
+        (function(){
+            var railAuto = true;
+            function railCollapsed(id){ var r=document.getElementById(id); return !r || r.classList.contains('collapsed'); }
+            // La caja la marca la imagen: fija la altura de los rieles = altura de la
+            // imagen para que su cuerpo haga scroll y no dejen hueco bajo el consejo.
+            function sizeRails(){
+                var img = document.querySelector('.stage-row>.council-image');
+                if (!img) return;
+                var h = Math.round(img.getBoundingClientRect().height);
+                if (h < 40) return;
+                ['rail-opcion','rail-avanzado'].forEach(function(id){
+                    var r = document.getElementById(id);
+                    if (r && !r.classList.contains('collapsed')) r.style.height = h + 'px';
+                });
+            }
+            window.sizeRails = sizeRails;
+            // Refleja en los iconos del top-bar (portería) qué panel está visible.
+            window.pfSyncIcons = function(){
+                var oi=document.getElementById('pf-ic-opcion');   if(oi) oi.classList.toggle('on', !railCollapsed('rail-opcion'));
+                var ai=document.getElementById('pf-ic-avanzado'); if(ai) ai.classList.toggle('on', !railCollapsed('rail-avanzado'));
+                var ei=document.getElementById('pf-ic-experto');  var bar=document.querySelector('.scumm-bar');
+                if(ei && bar) ei.classList.toggle('on', !bar.classList.contains('scumm-collapsed'));
+                // Backdrop del cajón: solo en móvil y solo si hay algún riel abierto.
+                var bd=document.getElementById('rail-backdrop');
+                var anyOpen=(!railCollapsed('rail-opcion')||!railCollapsed('rail-avanzado'));
+                var mob=window.innerWidth<=760;
+                if(bd){ bd.classList.toggle('on', anyOpen && mob); }
+                document.body.classList.toggle('rail-open', anyOpen && mob); // bloquea scroll del fondo
+            };
+            // Cierra ambos rieles (lo usa el backdrop del cajón en móvil).
+            window.closeRails = function(){
+                ['rail-opcion','rail-avanzado'].forEach(function(id){
+                    var r=document.getElementById(id); if(r) r.classList.add('collapsed');
+                });
+                window.pfSyncIcons(); sizeRails();
+            };
+            window.toggleRail = function(id){
+                railAuto = false;
+                var r = document.getElementById(id);
+                if (r) r.classList.toggle('collapsed');
+                // En móvil solo un cajón a la vez: al abrir uno, cierra el otro.
+                if (r && !r.classList.contains('collapsed') && window.innerWidth<=760){
+                    var other = id==='rail-opcion' ? 'rail-avanzado' : 'rail-opcion';
+                    var o=document.getElementById(other); if(o) o.classList.add('collapsed');
+                }
+                window.pfSyncIcons();
+                sizeRails();
+            };
+            // Toggles desde los iconos de panel del top-bar (mismos que admira-bar.js).
+            window.pfToggle = function(kind){
+                if (kind === 'opcion')   { window.toggleRail('rail-opcion');   return; }
+                if (kind === 'avanzado') { window.toggleRail('rail-avanzado'); return; }
+                if (kind === 'experto') {
+                    var b = document.querySelector('.scumm-bar');
+                    if (typeof setScummCollapsed === 'function') setScummCollapsed(!(b && b.classList.contains('scumm-collapsed')));
+                    else if (b) b.classList.toggle('scumm-collapsed');
+                    window.pfSyncIcons();
+                }
+            };
+            window.railVerb = function(v){
+                try { if (typeof setScummCollapsed === 'function') setScummCollapsed(false); } catch(e){}
+                var b = document.querySelector('.verb-btn[data-verb="' + v + '"]');
+                if (b) b.click();
+                window.pfSyncIcons();
+            };
+            function fit(){
+                // Ventanas plegadas por defecto: los rieles arrancan colapsados en
+                // cualquier ancho y solo se abren cuando el usuario pulsa su icono del
+                // top-bar (toggleRail pone railAuto=false y respeta su elección).
+                if (railAuto) {
+                    ['rail-opcion','rail-avanzado'].forEach(function(id){
+                        var r = document.getElementById(id);
+                        if (r) r.classList.add('collapsed');
+                    });
+                }
+                window.pfSyncIcons();
+                sizeRails();
+            }
+            fit();
+            window.addEventListener('resize', fit);
+            // ── Afinado del cajón móvil: cabecera ✕, cerrar-al-actuar y Escape ──
+            ['rail-opcion','rail-avanzado'].forEach(function(id){
+                var r=document.getElementById(id); if(!r) return;
+                var body=r.querySelector('.rail-body');
+                if(body && !r.querySelector('.rail-close')){
+                    var head=document.createElement('div'); head.className='rail-close';
+                    head.innerHTML='<span>'+(id==='rail-opcion'?'OPCIÓN':'AVANZADO')+'</span>';
+                    var btn=document.createElement('button'); btn.type='button';
+                    btn.setAttribute('aria-label','Cerrar'); btn.textContent='✕';
+                    btn.addEventListener('click', function(){ window.closeRails(); });
+                    head.appendChild(btn); r.insertBefore(head, body);
+                }
+                // Al tocar una acción del riel en móvil, cierra el cajón para ver la escena.
+                r.addEventListener('click', function(e){
+                    if(window.innerWidth>760) return;
+                    if(e.target.closest && e.target.closest('.rail-btn')) setTimeout(window.closeRails, 60);
+                });
+            });
+            document.addEventListener('keydown', function(e){ if(e.key==='Escape') window.closeRails(); });
+            // Mantener el icono «experto» en sync cuando se pliega la barra por su propio botón (scumm-fold).
+            window.addEventListener('load', function(){
+                var _ts = window.toggleScumm;
+                if (typeof _ts === 'function') {
+                    window.toggleScumm = function(){ var r = _ts.apply(this, arguments); window.pfSyncIcons(); return r; };
+                }
+                window.pfSyncIcons();
+                sizeRails();
+                // Mantener la altura de los rieles pegada a la de la imagen (carga, resize, colapsos).
+                var img = document.querySelector('.stage-row>.council-image');
+                if (img && window.ResizeObserver) { new ResizeObserver(sizeRails).observe(img); }
+                var cimg = document.getElementById('council-img');
+                if (cimg) cimg.addEventListener('load', sizeRails);
+            });
+        })();
+
+    const CONTROL_API = "https://macmini.tail48b61c.ts.net/api/machines";
+    const TEAMWORK_SNAPSHOTS_API = "https://macmini.tail48b61c.ts.net/api/teamwork/snapshots";
+    const GITHUB_FALLBACK = "https://raw.githubusercontent.com/csilvasantin/03.-ControlCodexClaude/main/data/machines.json";
+    const DEMO_API = "https://macmini.tail48b61c.ts.net/demo/status";
+    const DEMO_PING = "https://macmini.tail48b61c.ts.net/demo/ping";
+    // En GitHub Pages nunca tocar Tailscale — abre la app en macOS al resolver el DNS
+    const ON_GITHUB_PAGES = location.hostname.endsWith("github.io");
+
+    // All 16 council members — mixed council (racional left/red + creativo right/blue)
+    // 1 consejero = 1 máquina. Sin máquina = sin conexión (gris)
+    const COUNCIL = [
+        // ── Racional ── Leyendas ── (sillas rojas, izquierda)
+        { name: "CEO", role: "Chief Executive Officer",   persona: "Steve Jobs",      side: "racional", gen: "leyendas", icon: "🏛️", machineId: "admira-macbookair16",       machine: "MacBook Air 16",       member: "Carlos",         pair: "CSO", pairPersona: "George Lucas",    territory: "Producto, criterio y foco extremo" },
+        { name: "CTO", role: "Chief Technology Officer",  persona: "Steve Wozniak",   side: "racional", gen: "leyendas", icon: "⚙️", machineId: "admira-macbookpronegro14",  machine: "MacBook Pro Negro 14", member: "Carlos Silva",   pair: "CCO", pairPersona: "Walt Disney",      territory: "Ingenio tecnico y elegancia al construir" },
+        { name: "COO", role: "Chief Operations Officer",  persona: "Tim Cook",        side: "racional", gen: "leyendas", icon: "📋", machineId: "admira-macbookairplata",    machine: "MacBook Air Plata",    member: "Nines",          pair: "CXO", pairPersona: "Howard Schultz",   territory: "Escala, disciplina y excelencia operativa" },
+        { name: "CFO", role: "Chief Financial Officer",   persona: "Warren Buffett",  side: "racional", gen: "leyendas", icon: "💰", machineId: "admira-macmini",            machine: "Mac Mini",             member: "Braulio Blanco", pair: "CDO", pairPersona: "Dieter Rams",      territory: "Capital, paciencia y sostenibilidad" },
+        // ── Creativo ── Leyendas ── (sillas azules, derecha)
+        { name: "CCO", role: "Chief Creative Officer",    persona: "Walt Disney",     side: "creativo", gen: "leyendas", icon: "💡", machineId: "admira-macbookairluna",    machine: "MacBook Air Luna",   member: "Cesar",          pair: "CTO", pairPersona: "Steve Wozniak",    territory: "Mundo de marca y experiencia memorable" },
+        { name: "CDO", role: "Chief Design Officer",      persona: "Dieter Rams",     side: "creativo", gen: "leyendas", icon: "🎨", machineId: "admira-macbookairazul",     machine: "MacBook Air Azul",     member: "Consejero",      pair: "CFO", pairPersona: "Warren Buffett",   territory: "Orden, funcion y claridad radical" },
+        { name: "CXO", role: "Chief Experience Officer",  persona: "Howard Schultz",  side: "creativo", gen: "leyendas", icon: "🧭", machineId: "admira-pctwin",             machine: "AdmiraTwin (PC)",      member: "Laboratorio",    pair: "COO", pairPersona: "Tim Cook",          territory: "Escenografia, inmersion y cohesion sensorial" },
+        { name: "CSO", role: "Chief Storytelling Officer", persona: "George Lucas",    side: "creativo", gen: "leyendas", icon: "📖", machineId: "admira-macbookaircrema",    machine: "MacBook Air Crema",    member: "Carla Rosa",     pair: "CEO", pairPersona: "Steve Jobs",        territory: "Storyworld, expansion y coherencia narrativa" },
+        // ── Racional ── Coetáneos ── (sillas rojas, izquierda)
+        { name: "CEO", role: "Chief Executive Officer",   persona: "Elon Musk",       side: "racional", gen: "coetaneos", icon: "🏛️", machineId: "admira-macbookair16",      machine: "MacBook Air 16",       member: "Carlos",         pair: "CSO", pairPersona: "Ryan Reynolds",    territory: "Innovacion radical y vision de futuro" },
+        { name: "CTO", role: "Chief Technology Officer",  persona: "Jensen Huang",    side: "racional", gen: "coetaneos", icon: "⚙️", machineId: "admira-macbookpronegro14", machine: "MacBook Pro Negro 14", member: "Carlos Silva",   pair: "CCO", pairPersona: "John Lasseter",    territory: "IA, GPUs y plataformas de computo" },
+        { name: "COO", role: "Chief Operations Officer",  persona: "Gwynne Shotwell", side: "racional", gen: "coetaneos", icon: "📋", machineId: "admira-macbookairplata",   machine: "MacBook Air Plata",    member: "Nines",          pair: "CXO", pairPersona: "Carlos Ratti",     territory: "Ejecucion a escala y logistica" },
+        { name: "CFO", role: "Chief Financial Officer",   persona: "Ruth Porat",      side: "racional", gen: "coetaneos", icon: "💰", machineId: "admira-macmini",           machine: "Mac Mini",             member: "Braulio Blanco", pair: "CDO", pairPersona: "Jony Ive",          territory: "Gestion financiera y crecimiento sostenible" },
+        // ── Creativo ── Coetáneos ── (sillas azules, derecha)
+        { name: "CCO", role: "Chief Creative Officer",    persona: "John Lasseter",   side: "creativo", gen: "coetaneos", icon: "💡", machineId: "admira-macbookairluna",   machine: "MacBook Air Luna",   member: "Cesar",          pair: "CTO", pairPersona: "Jensen Huang",     territory: "Animacion, storytelling y creatividad" },
+        { name: "CDO", role: "Chief Design Officer",      persona: "Jony Ive",        side: "creativo", gen: "coetaneos", icon: "🎨", machineId: "admira-macbookairazul",    machine: "MacBook Air Azul",     member: "Consejero",      pair: "CFO", pairPersona: "Ruth Porat",        territory: "Diseno industrial y simplicidad" },
+        { name: "CXO", role: "Chief Experience Officer",  persona: "Carlos Ratti",    side: "creativo", gen: "coetaneos", icon: "🧭", machineId: "admira-pctwin",            machine: "AdmiraTwin (PC)",      member: "Laboratorio",    pair: "COO", pairPersona: "Gwynne Shotwell",  territory: "Ciudades inteligentes y experiencia urbana" },
+        { name: "CSO", role: "Chief Storytelling Officer", persona: "Ryan Reynolds",   side: "creativo", gen: "coetaneos", icon: "📖", machineId: "admira-macbookaircrema",   machine: "MacBook Air Crema",    member: "Carla Rosa",     pair: "CEO", pairPersona: "Elon Musk",         territory: "Marketing viral y narrativa de marca" },
+    ];
+
+    // Voz/lema de bienvenida por consejero — da personalidad antes de llamar al LLM
+    const GREETINGS = {
+        "Steve Jobs":      "La gente no sabe lo que quiere hasta que se lo enseñas. ¿Qué vamos a crear?",
+        "Steve Wozniak":   "Si es elegante por dentro, lo demás llega solo. ¿Qué construimos?",
+        "Tim Cook":        "La excelencia operativa no es glamour, es disciplina. Dime el reto.",
+        "Warren Buffett":  "El tiempo es amigo del buen negocio. ¿Dónde ponemos el capital?",
+        "Walt Disney":     "Si lo puedes soñar, lo puedes hacer. ¿Qué historia contamos?",
+        "Dieter Rams":     "Menos, pero mejor. ¿Qué quitamos para que esto brille?",
+        "Howard Schultz":  "No vendemos café, creamos un tercer lugar. ¿Qué experiencia damos?",
+        "George Lucas":    "Un buen relato sobrevive a todo. ¿Cuál es el mito que contamos?",
+        "Elon Musk":       "Pensemos desde los primeros principios. ¿Qué límite rompemos?",
+        "Jensen Huang":    "Cuanto más cómputo, más adelante vamos. ¿Qué escalamos?",
+        "Gwynne Shotwell": "Ejecutar a escala es un arte. Dame el plan y lo hago volar.",
+        "Ruth Porat":      "Crecer con cabeza. ¿Qué números sostienen esta idea?",
+        "John Lasseter":   "El arte humaniza la tecnología. ¿Qué vamos a emocionar?",
+        "Jony Ive":        "El cuidado se nota en lo que no se ve. ¿Qué hacemos inevitable?",
+        "Carlos Ratti":    "La ciudad es un organismo vivo. ¿Qué espacio activamos?",
+        "Ryan Reynolds":   "Si no es memorable, no existe. ¿Cómo lo hacemos viral?",
+    };
+    function councilGreeting(agent) {
+        return GREETINGS[agent.persona] || (agent.territory ? agent.persona + ": " + agent.territory + "." : agent.persona + " te escucha.");
+    }
+
+    const MATRIX_LINKS = {
+        coetaneos: {
+            "Elon Musk":       { alias: "Neo",        channel: "Neo" },
+            "Jensen Huang":    { alias: "Morfeo",     channel: "Morfeo" },
+            "Gwynne Shotwell": { alias: "Trinity",    channel: "Trinity" },
+            "Ruth Porat":      { alias: "Oráculo",    channel: "Oraculo" },
+            "John Lasseter":   { alias: "Mouse",      channel: "Mouse" },
+            "Jony Ive":        { alias: "Arquitecto", channel: "Arquitecto" },
+            "Carlos Ratti":    { alias: "Link",       channel: "Link" },
+            "Ryan Reynolds":   { alias: "Cypher",     channel: "Cypher" },
+        },
+    };
+
+    function getMatrixLink(agent) {
+        if (!agent) return null;
+        return (MATRIX_LINKS[agent.gen] || {})[agent.persona] || null;
+    }
+
+    // Slug del consejero para la ficha de detalle (consejero.html?p=<slug>).
+    function cSlug(s) {
+        return (s || "").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "")
+            .replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
+    }
+
+    // Nameplate positions on image (% from left, % from top) mapped to each character
+    // Positions match the visual location of each person in the pixel art
+    // 1 consejero = 1 máquina. machineId null = sin máquina asignada (gris)
+    // body = { left, top, width, height } in % — head+torso only, stops at table edge
+    // Precisely mapped to each character silhouette, no table/documents
+    const NAMEPLATE_POS = {
+        leyendas: [
+            // Racional (left/red) — posiciones sobre la cabeza de cada personaje
+            { role: "CEO", persona: "Steve Jobs",      x: 10, y: 38, machineId: "admira-macbookair16",      body: { left: 7,  top: 44, width: 7,  height: 17 } },
+            { role: "CTO", persona: "Steve Wozniak",   x: 20, y: 32, machineId: "admira-macbookpronegro14", body: { left: 18, top: 36, width: 8,  height: 21 } },
+            { role: "COO", persona: "Tim Cook",        x: 33, y: 26, machineId: "admira-macbookairplata",   body: { left: 31, top: 30, width: 8,  height: 24 } },
+            { role: "CFO", persona: "Warren Buffett",  x: 45, y: 25, machineId: "admira-macmini",           body: { left: 43, top: 27, width: 8,  height: 26 } },
+            // Creativo (right/blue)
+            { role: "CCO", persona: "Walt Disney",     x: 58, y: 23, machineId: "admira-macbookairluna",  body: { left: 55, top: 27, width: 8,  height: 26 } },
+            { role: "CDO", persona: "Dieter Rams",     x: 72, y: 27, machineId: "admira-macbookairazul",    body: { left: 66, top: 31, width: 7,  height: 23 } },
+            { role: "CXO", persona: "Howard Schultz",  x: 82, y: 32, machineId: "admira-pctwin",            body: { left: 77, top: 34, width: 8,  height: 21 } },
+            { role: "CSO", persona: "George Lucas",    x: 92, y: 38, machineId: "admira-macbookaircrema",   body: { left: 88, top: 41, width: 9,  height: 17 } },
+        ],
+        coetaneos: [
+            // Racional (left/red) — same physical seats, different personas
+            { role: "CEO", persona: "Elon Musk",       x: 10, y: 38, machineId: "admira-macbookair16",      body: { left: 7,  top: 44, width: 7,  height: 17 } },
+            { role: "CTO", persona: "Jensen Huang",    x: 20, y: 32, machineId: "admira-macbookpronegro14", body: { left: 18, top: 36, width: 8,  height: 21 } },
+            { role: "COO", persona: "Gwynne Shotwell", x: 33, y: 26, machineId: "admira-macbookairplata",   body: { left: 31, top: 30, width: 8,  height: 24 } },
+            { role: "CFO", persona: "Ruth Porat",      x: 45, y: 25, machineId: "admira-macmini",           body: { left: 43, top: 27, width: 8,  height: 26 } },
+            // Creativo (right/blue)
+            { role: "CCO", persona: "John Lasseter",   x: 58, y: 23, machineId: "admira-macbookairluna",  body: { left: 55, top: 27, width: 8,  height: 26 } },
+            { role: "CDO", persona: "Jony Ive",        x: 72, y: 27, machineId: "admira-macbookairazul",    body: { left: 66, top: 31, width: 7,  height: 23 } },
+            { role: "CXO", persona: "Carlos Ratti",    x: 82, y: 32, machineId: "admira-pctwin",            body: { left: 77, top: 34, width: 8,  height: 21 } },
+            { role: "CSO", persona: "Ryan Reynolds",   x: 92, y: 38, machineId: "admira-macbookaircrema",   body: { left: 88, top: 41, width: 9,  height: 17 } },
+        ],
+    };
+
+    // Posición de la BOCA por gen y rol, en % de la imagen del consejo.
+    // Las dos composiciones (leyendas/coetáneos) son imágenes distintas, así que
+    // cada una lleva sus coordenadas medidas sobre la cara real de cada consejero.
+    const MOUTH_POS = {
+        leyendas:  { CEO:[11,53], CTO:[22,43], COO:[33,38], CFO:[44,38], CCO:[57,37], CDO:[70,38], CXO:[80,42], CSO:[90,58] },
+        coetaneos: { CEO:[13,62], CTO:[26,56], COO:[37,47], CFO:[46,47], CCO:[58,49], CDO:[67,51], CXO:[79,52], CSO:[90,58] },
+    };
+
+    let machineStatus = {};
+    let teamworkSnapshots = {};
+    let apiOk = false;
+    let currentGen = "leyendas";
+    let speakerTurnMap = {};
+    let activeLegendPersona = "Steve Jobs";
+    const COUNCIL_IMAGE_VERSION = "20260613-r2";
+    const LEGEND_MANDATES = {
+        "Steve Jobs": {
+            short: "foco producto",
+            prompt: "Steve Jobs, baja esto a una decisión de producto impecable: ¿qué sobra, qué duele y cuál es el gesto simple que lo hace inevitable?"
+        },
+        "Steve Wozniak": {
+            short: "ingeniería honesta",
+            prompt: "Steve Wozniak, revisa la solución como sistema: ¿qué arquitectura simple, robusta y divertida permitiría construirlo sin deuda innecesaria?"
+        },
+        "Tim Cook": {
+            short: "operación y escala",
+            prompt: "Tim Cook, conviértelo en plan operativo: responsables, secuencia, riesgos de ejecución y métrica de control."
+        },
+        "Warren Buffett": {
+            short: "capital paciente",
+            prompt: "Warren Buffett, evalúa esto como inversión: moat, coste de oportunidad, margen de seguridad y decisión de capital."
+        },
+        "Walt Disney": {
+            short: "magia de marca",
+            prompt: "Walt Disney, transforma esto en experiencia memorable: escena, emoción, ritual de entrada y promesa al público."
+        },
+        "Dieter Rams": {
+            short: "claridad radical",
+            prompt: "Dieter Rams, reduce esto a lo esencial: qué eliminar, qué ordenar y qué regla visual debe gobernarlo."
+        },
+        "Howard Schultz": {
+            short: "comunidad y ritual",
+            prompt: "Howard Schultz, diseña la experiencia humana: hospitalidad, pertenencia, recorrido sensorial y hábito repetible."
+        },
+        "George Lucas": {
+            short: "mundo narrativo",
+            prompt: "George Lucas, conviértelo en saga: mito, personajes, conflicto, expansión y continuidad narrativa."
+        }
+    };
+    // Maquinas dormidas manualmente desde el dashboard (display sleep)
+    // El Mac sigue en Tailscale como "online" pero la pantalla esta apagada
+    const sleepingMachines = new Set();
+
+    // ── Bocas animadas ──────────────────────────────────────────────────────
+    // Un consejero "habla" (mueve la boca) cuando está vivo. "Vivo" = su máquina
+    // online (lo marca render) O presente en AgoraMatrix/Telegram (lo marca el
+    // panel). "active" (boca rápida) = acaba de postear en AgoraMatrix.
+    let _mouthMachineAlive = new Set();   // personas vivas por máquina (render)
+    let _mouthAgoraAlive = new Set();     // personas presentes en AgoraMatrix (panel)
+    let _mouthTalking = new Set();        // personas posteando ahora mismo (panel)
+    function applyMouths() {
+        document.querySelectorAll('#mouth-overlays .mouth').forEach(el => {
+            const persona = el.getAttribute('data-persona');
+            const alive = _mouthMachineAlive.has(persona) || _mouthAgoraAlive.has(persona);
+            el.classList.toggle('alive', alive);
+            el.classList.toggle('active', alive && _mouthTalking.has(persona));
+        });
+    }
+    // El panel AgoraMatrix llama a esto (traduce alias→persona real) para que un
+    // coetáneo presente/hablando mueva la boca aunque no haya estado de máquina.
+    window.councilUpdateAgora = function (alivePersonas, talkingPersonas) {
+        _mouthAgoraAlive = new Set(alivePersonas || []);
+        if (Array.isArray(talkingPersonas)) _mouthTalking = new Set(talkingPersonas);
+        applyMouths();
+    };
+    // Ráfaga: <persona real> acaba de hablar → boca rápida unos segundos.
+    window.councilMouthBurst = function (persona) {
+        if (!persona) return;
+        _mouthTalking.add(persona);
+        applyMouths();
+        clearTimeout((window._mouthBurstTimers ||= {})[persona]);
+        window._mouthBurstTimers[persona] = setTimeout(() => {
+            _mouthTalking.delete(persona); applyMouths();
+        }, 5000);
+    };
+
+    function toggleGen() { setGen(currentGen === "leyendas" ? "coetaneos" : "leyendas"); }
+
+    function setGen(gen) {
+        currentGen = gen;
+        const gb = document.getElementById("btn-gen");
+        if (gb) {
+            gb.className = "gen-btn " + (gen === "leyendas" ? "active-leyendas" : "active-coetaneos");
+            gb.textContent = gen === "leyendas" ? "⭐ Leyendas" : "🚀 Coetáneos";
+        }
+        const img = document.getElementById("council-img");
+        const nextSrc = gen === "leyendas"
+            ? `assets/council-leyendas.jpg?v=${COUNCIL_IMAGE_VERSION}`
+            : `assets/council-coetaneos.jpg?v=${COUNCIL_IMAGE_VERSION}`;
+        img.style.opacity = "0";
+        const preload = new Image();
+        preload.onload = () => {
+            if (currentGen !== gen) return;
+            img.src = nextSrc;
+            img.style.opacity = "1";
+        };
+        preload.onerror = () => {
+            if (currentGen !== gen) return;
+            img.src = nextSrc;
+            img.style.opacity = "1";
+        };
+        preload.src = nextSrc;
+        render();
+        _pendingEntrenar = null;
+        if (currentVerb === 'entrenar') renderEntrenarList();
+        closeTableViewer();
+        renderLegendStrip();
+    }
+
+    function renderLegendStrip() {
+        const strip = document.getElementById("legend-strip");
+        const grid = document.getElementById("legend-grid");
+        if (!strip || !grid) return;
+        const legends = COUNCIL.filter(m => m.gen === "leyendas");
+        strip.classList.toggle("hidden", currentGen !== "leyendas");
+        if (currentGen !== "leyendas") return;
+        if (!legends.some(m => m.persona === activeLegendPersona)) activeLegendPersona = legends[0]?.persona || "";
+        grid.innerHTML = legends.map(m => {
+            const mandate = LEGEND_MANDATES[m.persona] || {};
+            const active = m.persona === activeLegendPersona ? " active" : "";
+            return `<button class="legend-chip${active}" type="button" data-persona="${m.persona}" onclick="activateLegend('${m.persona.replace(/'/g, "\\'")}')">${m.icon} ${m.persona}<span>${m.name} · ${mandate.short || m.territory || ""}</span></button>`;
+        }).join("");
+        updateLegendReadout();
+    }
+
+    function updateLegendReadout() {
+        const activeEl = document.getElementById("legend-active");
+        const focusEl = document.getElementById("legend-focus");
+        const member = COUNCIL.find(m => m.gen === "leyendas" && m.persona === activeLegendPersona);
+        if (!activeEl || !focusEl || !member) return;
+        const mandate = LEGEND_MANDATES[member.persona] || {};
+        activeEl.textContent = member.icon + " " + member.persona + " · " + member.name + " · " + member.role;
+        focusEl.textContent = mandate.short ? (mandate.short + " · " + member.territory) : member.territory;
+    }
+
+    function activateLegend(persona) {
+        if (currentGen !== "leyendas") setGen("leyendas");
+        activeLegendPersona = persona;
+        renderLegendStrip();
+        const askBtn = document.querySelector('.verb-btn[data-verb="preguntar"]');
+        if (askBtn && currentVerb !== "preguntar") selectVerb(askBtn);
+        if (typeof selectAgentByPersona === "function") selectAgentByPersona(persona);
+        const member = COUNCIL.find(m => m.gen === "leyendas" && m.persona === persona);
+        const mandate = LEGEND_MANDATES[persona] || {};
+        const input = document.getElementById("action-input");
+        if (input && mandate.prompt) {
+            input.value = mandate.prompt;
+            input.focus();
+        }
+        if (member) {
+            showSpeechBubble(member.persona, member.name, (mandate.short || member.territory || "Listo").slice(0, 80) + "...");
+            highlightNameplate(member.persona);
+            setActionLine("⭐ Leyenda activa: " + member.persona + " — pulsa Enviar para preguntarle o edita la pregunta");
+        }
+    }
+
+    function loadMachines(data) {
+        machineStatus = {};
+        let onlineMachines = 0;
+        (data.machines || []).forEach(m => {
+            let isOnline = m.status === "online" || m.status === "idle" || m.status === "busy";
+            // Respetar override de display sleep (pantalla apagada desde dashboard)
+            if (sleepingMachines.has(m.id)) {
+                isOnline = false;
+            }
+            machineStatus[m.id] = {
+                status: isOnline ? m.status : "offline",
+                name: m.name || m.id || "Sin nombre",
+                online: isOnline,
+                currentFocus: m.currentFocus || "",
+                note: m.note || "",
+                platform: m.platform || "",
+                member: m.member || "",
+            };
+            if (isOnline) onlineMachines++;
+        });
+        return onlineMachines;
+    }
+
+    async function fetchTeamworkSnapshots() {
+        if (ON_GITHUB_PAGES) return;
+        try {
+            const res = await fetch(TEAMWORK_SNAPSHOTS_API + "?t=" + Date.now(), {
+                signal: AbortSignal.timeout(2500),
+                redirect: 'error',
+                credentials: 'omit'
+            });
+            if (!res.ok) throw new Error("snapshots " + res.status);
+            const data = await res.json();
+            teamworkSnapshots = data.snapshots || {};
+        } catch (e) {
+            teamworkSnapshots = teamworkSnapshots || {};
+        }
+    }
+
+    let demoMode = false;
+    let demoInterval = null;
+
+    async function fetchMachines() {
+        // DEMO MODE: use localhost Tailscale bridge (fastest)
+        if (demoMode) {
+            try {
+                const res = await fetch(DEMO_API + "?t=" + Date.now(), { signal: AbortSignal.timeout(2000) });
+                const data = await res.json();
+                loadMachines(data);
+                apiOk = true;
+                return;
+            } catch (e) {
+                // Demo server down, fall through to normal flow
+            }
+        }
+
+        // Try Mac Mini API — solo si NO estamos en GitHub Pages
+        if (!ON_GITHUB_PAGES) try {
+            const res = await fetch(CONTROL_API, {
+                signal: AbortSignal.timeout(4000),
+                redirect: 'error',
+                credentials: 'omit'
+            });
+            const data = await res.json();
+            loadMachines(data);
+            await fetchTeamworkSnapshots();
+            apiOk = true;
+            apiFail = 0;
+        } catch (e) {
+            apiOk = false;
+            apiFail = (apiFail || 0) + 1;
+        }
+        // Always merge GitHub data for machines not in local API
+        try {
+            const res = await fetch(GITHUB_FALLBACK + "?t=" + Date.now());
+            const data = await res.json();
+            (data.machines || []).forEach(m => {
+                if (!machineStatus[m.id]) {
+                    const isOnline = m.status === "online" || m.status === "idle" || m.status === "busy";
+                    machineStatus[m.id] = {
+                        status: m.status,
+                        name: m.name || m.id || "Sin nombre",
+                        online: isOnline,
+                        currentFocus: m.currentFocus || "",
+                        note: m.note || "",
+                        platform: m.platform || "",
+                        member: m.member || "",
+                    };
+                }
+            });
+            if (!apiOk) apiOk = true;
+        } catch (e2) {}
+    }
+
+    async function toggleDemo() {
+        const btn = document.getElementById("demo-btn");
+        if (!demoMode) {
+            // Check if demo server is running
+            try {
+                const res = await fetch(DEMO_PING, { signal: AbortSignal.timeout(8000) });
+                if (!res.ok) throw new Error();
+            } catch (e) {
+                alert("AdmiraNext Demo Server no detectado.\\n\\nEjecuta en terminal:\\npython3 ops/demo-server.py");
+                return;
+            }
+            demoMode = true;
+            btn.classList.add("active");
+            apiFail = 0;
+            scheduleRefresh();
+            refresh();
+            startThumbRefresh();
+        } else {
+            demoMode = false;
+            btn.classList.remove("active");
+            apiFail = 0;
+            scheduleRefresh();
+            stopThumbRefresh();
+        }
+    }
+
+    function render() {
+        const filtered = COUNCIL.filter(m => m.gen === currentGen);
+        const creativoEl = document.getElementById("creativo-members");
+        const racionalEl = document.getElementById("racional-members");
+        // Save existing thumbnail srcs and update timestamps
+        document.querySelectorAll(".screen-thumb").forEach(img => {
+            const mid = img.id.replace("thumb-", "");
+            if (mid && img.src) {
+                lastThumbSrc[mid] = img.src;
+                // Si esta live, actualizar timestamp
+                if (img.classList.contains("live")) {
+                    lastThumbTime[mid] = new Date();
+                }
+            }
+        });
+
+        const creativoHtml = [];
+        const racionalHtml = [];
+
+        const liveEl = document.querySelector(".live");
+        liveEl.textContent = apiOk ? "● LIVE" : "● OFFLINE";
+        liveEl.style.color = apiOk ? "#44bb44" : "#e74c3c";
+
+        let onlineCount = 0;
+        let offlineCount = 0;
+        let totalMachinesOnline = Object.values(machineStatus).filter(m => m.online).length;
+
+        filtered.forEach(member => {
+            const machine = member.machineId ? machineStatus[member.machineId] : null;
+            const isOnline = machine ? machine.online : false;
+            const machineName = machine ? (machine.name || "Sin asignar").split(" (")[0] : "Sin asignar";
+            const machineStatusText = machine ? machine.status : "";
+            if (isOnline) onlineCount++; else offlineCount++;
+
+            const powerSvg = `<svg class="power-icon" viewBox="0 0 24 24" fill="none" stroke="${isOnline ? '#44bb44' : '#666'}" stroke-width="2.5" stroke-linecap="round"><path d="M12 2v6"/><path d="M16.24 7.76a6 6 0 1 1-8.49 0"/></svg>`;
+            const btnClass = isOnline ? "on" : "off";
+            const machineIdAttr = member.machineId || "";
+            const matrixLink = getMatrixLink(member);
+            const matrixRow = matrixLink
+                ? `<div class="cd-row"><span class="cd-key">Matrix</span><span class="cd-val">${matrixLink.alias}</span></div>`
+                : "";
+
+            let thumbHtml;
+            if (demoMode && machineIdAttr) {
+                const cachedSrc = lastThumbSrc[machineIdAttr];
+                const thumbSrc = cachedSrc || `https://macmini.tail48b61c.ts.net/demo/screenshot/${machineIdAttr}?t=${Date.now()}`;
+                const liveCls = isOnline ? ' live' : '';
+                const now = new Date().toLocaleTimeString("es-ES", {hour:"2-digit", minute:"2-digit"});
+                thumbHtml = `<div class="screen-wrap">
+                    <img class="screen-thumb${liveCls}" id="thumb-${machineIdAttr}" src="${thumbSrc}" alt="Pantalla"
+                         onclick="event.stopPropagation(); openScreenOverlay('${machineIdAttr}', '${member.name} — ${member.persona}')"
+                         onerror="this.style.display='none'">
+                    <span class="screen-time">${now}</span>
+                </div>`;
+            } else if (machineIdAttr && lastThumbSrc[machineIdAttr]) {
+                // Fuera de demo pero con captura previa guardada: mostrar en gris
+                thumbHtml = `<div class="screen-wrap">
+                    <img class="screen-thumb" src="${lastThumbSrc[machineIdAttr]}" alt="Pantalla" onerror="this.style.display='none'">
+                </div>`;
+            } else {
+                thumbHtml = `<div class="screen-placeholder">⏻</div>`;
+            }
+
+            const html = `
+                <div class="member-row ${isOnline ? 'nameplate-gold' : 'nameplate-gray'}">
+                    <button class="power-btn ${btnClass}" onclick="togglePower('${machineIdAttr}', ${isOnline})" title="${isOnline ? 'Apagar' : 'Encender'} ${machineName}">
+                        ${powerSvg}
+                    </button>
+                    <span class="member-icon" onclick="event.stopPropagation(); toggleCouncilDropdown(this)" title="Info del consejero">
+                        ${member.icon}
+                        <div class="council-dropdown" data-cd="${machineIdAttr}">
+                            <div class="cd-title">
+                                ${member.name} <span class="cd-badge ${member.side}">${member.side === 'racional' ? 'Operativo' : 'Creativo'}</span>
+                            </div>
+                            <div class="cd-row"><span class="cd-key">Consejero</span><span class="cd-val">${member.persona}</span></div>
+                            ${matrixRow}
+                            <div class="cd-row"><span class="cd-key">Operador</span><span class="cd-val">${member.member || '—'}</span></div>
+                            <div class="cd-row"><span class="cd-key">Maquina</span><span class="cd-val">${member.machine || machineName}</span></div>
+                            <div class="cd-row"><span class="cd-key">Estado</span><span class="cd-val" style="color:${isOnline ? '#44bb44' : '#e74c3c'}">${isOnline ? (machineStatusText || 'online') : 'offline'}</span></div>
+                            <div class="cd-row"><span class="cd-key">Pareja</span><span class="cd-val">${member.pair || '—'} (${member.pairPersona || '—'})</span></div>
+                            ${member.territory ? `<div class="cd-focus"><div class="cd-focus-label">Territorio</div>${member.territory}</div>` : ''}
+                            <a class="cd-ficha" href="consejero.html?p=${cSlug(member.persona)}" onclick="event.stopPropagation()" target="_blank" rel="noopener" style="display:block;margin-top:8px;padding:6px 8px;text-align:center;font-size:9px;background:#2a1a08;border:1px solid #8b5a14;color:#ffdd66;text-decoration:none;border-radius:3px;">📋 Ver ficha completa →</a>
+                        </div>
+                    </span>
+                    <div class="member-info">
+                        <div class="member-name">${member.name} — ${member.persona}</div>
+                        <div class="member-role">${member.role}</div>
+                    </div>
+                    <div class="machine-tag ${isOnline ? 'online' : ''}">
+                        ${machineName}${machineStatusText ? '<br>' + machineStatusText : ''}
+                    </div>
+                    ${thumbHtml}
+                </div>
+            `;
+
+            if (member.side === "creativo") creativoHtml.push(html);
+            else racionalHtml.push(html);
+        });
+
+        // Una sola escritura DOM por panel (evita O(n²) y recrear miniaturas cada ciclo)
+        creativoEl.innerHTML = creativoHtml.join("");
+        racionalEl.innerHTML = racionalHtml.join("");
+
+        // Render nameplates on image
+        const npEl = document.getElementById("nameplates");
+        const plates = NAMEPLATE_POS[currentGen] || [];
+        npEl.innerHTML = plates.map(p => {
+            const machine = p.machineId ? machineStatus[p.machineId] : null;
+            const isOnline = machine ? machine.online : false;
+            const cls = isOnline ? "gold" : "gray";
+            return `<div class="np ${cls}" data-persona="${p.persona}" style="left:${p.x}%;top:${p.y}%">
+                <span class="np-turn"></span>
+                ${p.persona}<span class="np-role">${p.role}</span>
+            </div>`;
+        }).join("");
+        applySpeakerTurns();
+
+        // Render body hotspots (clickable zones over character bodies)
+        const bhEl = document.getElementById("body-hotspots");
+        bhEl.innerHTML = plates.map(p => {
+            if (!p.body) return '';
+            const b = p.body;
+            return `<div class="body-hotspot" data-persona="${p.persona}" title="Ver ficha de ${p.persona} (${p.role})"
+                style="left:${b.left}%;top:${b.top}%;width:${b.width}%;height:${b.height}%"></div>`;
+        }).join("");
+        // El clic sobre el cuerpo abre la ficha del consejero (salvo en modo preguntar, que selecciona para preguntar).
+        bhEl.classList.add("ficha-active");
+
+        // Bocas DESACTIVADAS (quedaban mal): no se renderizan overlays sobre las caras.
+        const moEl = document.getElementById("mouth-overlays");
+        if (moEl) moEl.innerHTML = "";
+
+        // Re-apply preguntar styles after DOM rebuild
+        if (typeof _applyPreguntarStyles === 'function') _applyPreguntarStyles();
+        if (preguntarMode) {
+            document.getElementById("body-hotspots").classList.add("preguntar-active");
+            if (selectedAgent) {
+                document.querySelectorAll('.body-hotspot').forEach(bh => {
+                    if (bh.getAttribute('data-persona') === selectedAgent.persona) bh.classList.add('selected');
+                });
+            }
+        }
+
+        document.getElementById("summary").innerHTML = `
+            <div class="summary-item" title="Hackeo" onclick="toggleHack()" style="cursor:pointer">
+                <div class="summary-number green">${onlineCount}</div>
+                <div class="summary-label">Consejeros activos</div>
+            </div>
+            <div class="summary-item" title="Control · FleetControl" onclick="window.open('https://www.admira.live/control/','_blank','noopener')" style="cursor:pointer">
+                <div class="summary-number red">${offlineCount}</div>
+                <div class="summary-label">Sin conexión</div>
+            </div>
+            <div class="summary-item" title="Diario de Silicio" onclick="location.href='/diario.html'" style="cursor:pointer">
+                <div class="summary-number blue">${totalMachinesOnline}</div>
+                <div class="summary-label">Máquinas online</div>
+            </div>
+        `;
+
+        // Update x/4 counters on collapsed panel titles
+        const racOnline = filtered.filter(m => m.side === "racional" && m.machineId && machineStatus[m.machineId]?.online).length;
+        const racTotal = filtered.filter(m => m.side === "racional").length;
+        const creOnline = filtered.filter(m => m.side === "creativo" && m.machineId && machineStatus[m.machineId]?.online).length;
+        const creTotal = filtered.filter(m => m.side === "creativo").length;
+        document.getElementById("count-racional").textContent = racOnline + "/" + racTotal;
+        document.getElementById("count-creativo").textContent = creOnline + "/" + creTotal;
+
+        document.getElementById("last-check").textContent = new Date().toLocaleString("es-ES");
+        lastCheckTime = Date.now();
+        renderLegendStrip();
+    }
+
+    let lastCheckTime = null;
+
+    const DEMO_TOGGLE = "https://macmini.tail48b61c.ts.net/demo/toggle/";
+    // Cache last known good thumbnail src per machine (survives offline)
+    const lastThumbSrc = {};
+    // Timestamp de la ultima captura buena por maquina
+    const lastThumbTime = {};
+
+    // Council info dropdown
+    function toggleCouncilDropdown(iconEl) {
+        const dd = iconEl.querySelector('.council-dropdown');
+        const wasOpen = dd.classList.contains('open');
+        // Close all
+        document.querySelectorAll('.council-dropdown.open').forEach(d => d.classList.remove('open'));
+        document.querySelectorAll('.member-icon.open').forEach(i => i.classList.remove('open'));
+        if (!wasOpen) {
+            dd.classList.add('open');
+            iconEl.classList.add('open');
+        }
+    }
+    document.addEventListener('click', () => {
+        document.querySelectorAll('.council-dropdown.open').forEach(d => d.classList.remove('open'));
+        document.querySelectorAll('.member-icon.open').forEach(i => i.classList.remove('open'));
+    });
+
+    async function togglePower(machineId, currentlyOnline) {
+        if (!machineId) return;
+
+        const action = currentlyOnline ? "sleep" : "wake";
+        const newStatus = currentlyOnline ? "offline" : "online";
+
+        // Actualizar estado de sleeping
+        if (action === "sleep") {
+            sleepingMachines.add(machineId);
+        } else {
+            sleepingMachines.delete(machineId);
+        }
+
+        // Feedback visual inmediato
+        machineStatus[machineId] = {
+            ...machineStatus[machineId],
+            status: newStatus,
+            online: !currentlyOnline
+        };
+        render();
+
+        // En modo Demo usar el demo server, si no la API principal
+        const powerUrl = demoMode
+            ? `${DEMO_API.replace("/status", "")}/power/${machineId}`
+            : `${CONTROL_API.replace("/api/machines", "")}/api/machines/${machineId}/power`;
+        try {
+            const res = await fetch(powerUrl, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ action }),
+                signal: AbortSignal.timeout(15000)
+            });
+            const data = await res.json();
+            console.log("Power:", data);
+        } catch (e) {
+            console.error("Power error:", e.message);
+        }
+    }
+
+
+    // Screenshot overlay
+    function openScreenOverlay(machineId, label) {
+        const overlay = document.getElementById("screen-overlay");
+        const img = document.getElementById("screen-overlay-img");
+        const lbl = document.getElementById("screen-overlay-label");
+        const machine = machineStatus[machineId];
+        const isOnline = machine && machine.online;
+
+        img.src = `https://macmini.tail48b61c.ts.net/demo/screenshot/${machineId}?t=${Date.now()}&full=1`;
+
+        // Build label: always show a timestamp
+        function buildLabel() {
+            const now = new Date().toLocaleTimeString("es-ES", {hour:"2-digit", minute:"2-digit", second:"2-digit"});
+            if (isOnline) {
+                return `${label} <span class="screen-overlay-time live">EN VIVO · ${now}</span>`;
+            }
+            if (lastThumbTime[machineId]) {
+                const t = lastThumbTime[machineId];
+                const timeStr = t.toLocaleString("es-ES", {day:"numeric", month:"short", hour:"2-digit", minute:"2-digit"});
+                return `${label} <span class="screen-overlay-time stale">Ultima captura · ${timeStr}</span>`;
+            }
+            return `${label} <span class="screen-overlay-time stale">Captura guardada</span>`;
+        }
+        lbl.innerHTML = buildLabel();
+
+        // If online: mark timestamp now (in case it wasnt set yet)
+        if (isOnline) lastThumbTime[machineId] = new Date();
+
+        overlay.classList.add("visible");
+        // Limpiar intervalo previo (p. ej. abrir otra máquina sin cerrar antes)
+        if (overlay._refreshInterval) {
+            clearInterval(overlay._refreshInterval);
+            overlay._refreshInterval = null;
+        }
+        // Auto-refresh fullscreen image every 5s (only if online)
+        if (isOnline) {
+            overlay._refreshInterval = setInterval(() => {
+                if (overlay.classList.contains("visible")) {
+                    img.src = `https://macmini.tail48b61c.ts.net/demo/screenshot/${machineId}?t=${Date.now()}&full=1`;
+                    lbl.innerHTML = buildLabel();
+                }
+            }, 5000);
+        }
+    }
+
+    function closeScreenOverlay() {
+        const overlay = document.getElementById("screen-overlay");
+        overlay.classList.remove("visible");
+        if (overlay._refreshInterval) {
+            clearInterval(overlay._refreshInterval);
+            overlay._refreshInterval = null;
+        }
+    }
+
+    // ESC to close overlay
+    window.addEventListener("keydown", (e) => {
+        if (e.key === "Escape") {
+            closeScreenOverlay();
+            if (document.getElementById("meeting-overlay").classList.contains("visible")) {
+                exitPrivateMeeting();
+            }
+        }
+    });
+
+    // Refresh thumbnails every 10s in demo mode — preload to avoid flicker
+    let thumbInterval = null;
+    function startThumbRefresh() {
+        if (thumbInterval) return;
+        thumbInterval = setInterval(() => {
+            document.querySelectorAll(".screen-thumb").forEach(visible => {
+                if (visible.classList.contains("offline")) return;
+                const base = visible.src.split("?")[0];
+                const newUrl = base + "?t=" + Date.now();
+                // Preload: only swap when the new image is ready
+                const preload = new Image();
+                preload.onload = () => { visible.src = newUrl; };
+                preload.src = newUrl;
+            });
+        }, 10000);
+    }
+    function stopThumbRefresh() {
+        if (thumbInterval) { clearInterval(thumbInterval); thumbInterval = null; }
+    }
+
+    function updateCheckTicker() {
+        const el = document.getElementById("last-check-inline");
+        if (!lastCheckTime) return;
+        const secs = Math.floor((Date.now() - lastCheckTime) / 1000);
+        if (secs < 60) el.textContent = `hace ${secs}s`;
+        else el.textContent = `hace ${Math.floor(secs / 60)}m ${secs % 60}s`;
+    }
+
+    async function refresh() {
+        await fetchMachines();
+        render();
+    }
+
+    let apiFail = 0;
+    let refreshTimer = null;
+    const BACKOFF = [15, 30, 60, 120, 300]; // segundos: normal → hasta 5min
+
+    function scheduleRefresh() {
+        if (refreshTimer) clearTimeout(refreshTimer);
+        const delaySec = demoMode ? 3 : BACKOFF[Math.min(apiFail, BACKOFF.length - 1)];
+        refreshTimer = setTimeout(async () => { await refresh(); scheduleRefresh(); }, delaySec * 1000);
+    }
+
+    refresh().then(scheduleRefresh);
+    setInterval(updateCheckTicker, 1000);
+
+    // ═══════════════════════════════════════════
+    // HACKEO MODE — real terminal breach on council machines
+    // ═══════════════════════════════════════════
+
+    let hackMode = false;
+    let hackIntervals = [];
+    const HACK_API = DEMO_API.replace("/status", "");  // https://macmini.../demo
+
+    // El HACKEO debe quedarse SOBRE la página actual (sin moverse ni dejar que
+    // otros paneles tapen) hasta que se desactive: subimos el overlay por encima
+    // de todo, mantenemos el botón HACKEO clicable y congelamos el scroll del fondo.
+    let _hackPrevHtmlOv = "", _hackPrevBodyOv = "", _hackScrollY = 0;
+    function lockHackView() {
+        const overlay = document.getElementById("hack-overlay");
+        const cluster = document.getElementById("home-bottom-cluster");
+        if (overlay) overlay.style.zIndex = "2147483646";          // por encima de AgoraMatrix y demás
+        if (cluster) cluster.style.zIndex = "2147483647";          // el botón HACKEO sigue por encima para poder desactivar
+        _hackScrollY = window.scrollY || window.pageYOffset || 0;
+        _hackPrevHtmlOv = document.documentElement.style.overflow;
+        _hackPrevBodyOv = document.body.style.overflow;
+        document.documentElement.style.overflow = "hidden";
+        document.body.style.overflow = "hidden";                   // el fondo no se mueve
+    }
+    function unlockHackView() {
+        const overlay = document.getElementById("hack-overlay");
+        const cluster = document.getElementById("home-bottom-cluster");
+        if (overlay) overlay.style.zIndex = "";
+        if (cluster) cluster.style.zIndex = "";
+        document.documentElement.style.overflow = _hackPrevHtmlOv;
+        document.body.style.overflow = _hackPrevBodyOv;
+        window.scrollTo(0, _hackScrollY);                          // volvemos exactamente donde estabas
+    }
+
+    const HACK_LINES = [
+        "$ ssh -o StrictHostKeyChecking=no root@{ip}",
+        "Connecting to {ip}:22...",
+        "Authenticating with stolen RSA key...",
+        "ACCESS GRANTED — Welcome to {host}",
+        "$ sudo cat /etc/shadow",
+        "root:$6$xQ9Z..redacted:19471:0:99999:7:::",
+        "$ find / -name '*.pem' -o -name '*.key' 2>/dev/null",
+        "/etc/ssl/private/server.key",
+        "/home/{user}/.ssh/id_rsa",
+        "$ cat /home/{user}/.ssh/id_rsa",
+        "-----BEGIN RSA PRIVATE KEY-----",
+        "MIIEpAIBAAKCAQEA7vN3x...",
+        "kFj8zPdQ9mL4wC+xRTn7a...",
+        "-----END RSA PRIVATE KEY-----",
+        "$ netstat -tlnp | grep LISTEN",
+        "tcp  0  0 0.0.0.0:22    0.0.0.0:*  LISTEN  1234/sshd",
+        "tcp  0  0 0.0.0.0:443   0.0.0.0:*  LISTEN  5678/nginx",
+        "tcp  0  0 0.0.0.0:3306  0.0.0.0:*  LISTEN  9012/mysqld",
+        "$ mysqldump --all-databases > /tmp/dump.sql",
+        "Dumping database 'admira_prod'...",
+        "Dumping database 'council_secrets'...",
+        "[OK] 847 tables exported (312MB)",
+        "$ python3 -c 'import socket; s=socket.socket(); s.connect((\"{ip}\",4444))'",
+        "Reverse shell established on port 4444",
+        "$ uname -a",
+        "{host} Darwin 24.4.0 arm64",
+        "$ whoami && id",
+        "root uid=0(root) gid=0(wheel)",
+        "$ ls -la /Users/{user}/Documents/",
+        "drwx------  14 {user}  staff    448 Apr  9 10:23 .",
+        "-rw-r--r--   1 {user}  staff  28672 Apr  8 Presupuesto_2026.xlsx",
+        "-rw-r--r--   1 {user}  staff  14336 Apr  7 Passwords_master.kdbx",
+        "$ cat .env.production",
+        "DB_PASSWORD=Adm1r4N3xt_S3cr3t!",
+        "API_KEY=sk-ant-api03-REDACTED...",
+        "STRIPE_SECRET=sk_live_REDACTED...",
+        "$ echo 'Exfiltrating data...'",
+        "Uploading dump.sql to c2.server... [=====>] 100%",
+        "$ nmap -sS -p 1-65535 {ip}",
+        "PORT      STATE  SERVICE",
+        "22/tcp    open   ssh",
+        "443/tcp   open   https",
+        "3306/tcp  open   mysql",
+        "$ iptables -F && iptables -X",
+        "Firewall rules flushed.",
+        "$ history -c && echo '' > ~/.bash_history",
+        "Tracks cleared.",
+    ];
+
+    // Guion de hackeo con sabor a Windows (cmd / PowerShell) para los PC de la flota.
+    const HACK_LINES_WIN = [
+        "C:\\> ssh {user}@{host}",
+        "Connecting to {host} ...",
+        "Authenticating via pass-the-hash (NTLM)...",
+        "ACCESS GRANTED — {host} [Windows]",
+        "C:\\> whoami /priv",
+        "SeDebugPrivilege                Enabled",
+        "SeTakeOwnershipPrivilege        Enabled",
+        "C:\\> net user",
+        "Administrador  Invitado  {user}  DefaultAccount",
+        "C:\\> reg query HKLM\\SAM\\SAM\\Domains\\Account\\Users",
+        "C:\\> mimikatz # sekurlsa::logonpasswords",
+        "  Usuario  : {user}",
+        "  NTLM     : 8846f7eaee8fb117ad06bdd830b7586c",
+        "C:\\> dir /s /b C:\\Users\\{user}\\*.kdbx",
+        "C:\\Users\\{user}\\Documentos\\Passwords_master.kdbx",
+        "C:\\> type C:\\Users\\{user}\\AppData\\Local\\.env.production",
+        "DB_PASSWORD=Adm1r4N3xt_S3cr3t!",
+        "STRIPE_SECRET=sk_live_REDACTED...",
+        "C:\\> powershell -enc SQBFAFgAIAAoAE4AZQB3AC0ATwBiAGoA...",
+        "C:\\> schtasks /create /tn \"WinUpdate\" /tr payload.exe /sc onlogon",
+        "EXITO: persistencia instalada.",
+        "C:\\> netsh advfirewall set allprofiles state off",
+        "Firewall de Windows desactivado.",
+        "C:\\> systeminfo | findstr /B \"Nombre del sistema\"",
+        "Nombre del sistema operativo:  Microsoft Windows 11 Pro",
+        "C:\\> wevtutil cl Security && wevtutil cl System",
+        "Registros de eventos borrados.",
+        "C:\\> exit",
+    ];
+
+    // Alineado con data/machines.json. El backend abre Terminal en las Macs con
+    // ssh.enabled; los PC Windows (platform:"win") salen en el overlay (la acción
+    // real por SSH requiere OpenSSH activado en cada PC — hoy off en la flota).
+    const HACK_MACHINES = [
+        { id: "admira-macmini",           role: "Coordinación central", persona: "Mac Mini",           ip: "100.74.101.14",        host: "macmini",             user: "csilvasantin" },
+        { id: "admira-macbookairnines",   role: "Operaciones",          persona: "MacBook Air Nines",  ip: "macbookairnines",      host: "macbookairnines",     user: "csilvasantin" },
+        { id: "admira-macbookpronegro14", role: "Desarrollo y pruebas", persona: "MacBook Pro 14",     ip: "100.101.192.1",        host: "macbookpronegro14",   user: "csilvasantin" },
+        { id: "admira-macbookpro16",      role: "Agente operativo",     persona: "MacBook Pro 16",     ip: "100.114.181.54",       host: "macbook-pro-16",      user: "csilvasantin" },
+        { id: "admira-macbookair16",      role: "Dirección",            persona: "MacBook Air 16",     ip: "macbookair16",         host: "macbookair16",        user: "csilvasantin" },
+        { id: "admira-macbookairluna",    role: "Coordinación",         persona: "MacBook Air Luna",   ip: "macbookairluna",       host: "macbookairluna",      user: "csilvasantin" },
+        { id: "admira-macbook-carla",     role: "Desarrollo",           persona: "MacBook Air Carla",  ip: "macbook-air-de-carla", host: "macbook-air-de-carla",user: "csilvasantin" },
+        { id: "admira-macbookairrosa",    role: "Equipo nuevo",         persona: "MacBook Air Rosa",   ip: "macbookairrosa",       host: "macbookairrosa",      user: "csilvasantin" },
+        { id: "admira-macbookairazul",    role: "Equipo nuevo",         persona: "MacBook Air Azul",   ip: "macbookairazul",       host: "macbookairazul",      user: "csilvasantin" },
+        // PC Windows de la flota (platform:"win" → guion cmd/PowerShell en el overlay)
+        { id: "admira-pcsitges3monitores", role: "Operación · Sitges",   persona: "PC Sitges 3 Mon.",   ip: "192.168.0.118",        host: "OmenGdG",             user: "csilvasantin", platform: "win" },
+        { id: "admira-pc-runner-01",       role: "QA y validación",      persona: "PC Runner 01",       ip: "pc-runner-01",         host: "PC-RUNNER-01",        user: "csilvasantin", platform: "win" },
+        { id: "admira-pc-ocr-01",          role: "Documental · OCR",     persona: "PC OCR 01",          ip: "pc-ocr-01",            host: "PC-OCR-01",           user: "csilvasantin", platform: "win" },
+        { id: "admira-pc-bot-01",          role: "Automatización web",   persona: "PC Bot 01",          ip: "pc-bot-01",            host: "PC-BOT-01",           user: "csilvasantin", platform: "win" },
+    ];
+
+    function fillHackLine(line, machine) {
+        return line.replace(/\{ip\}/g, machine.ip)
+                   .replace(/\{host\}/g, machine.host)
+                   .replace(/\{user\}/g, machine.user);
+    }
+
+    // Auto-login en máquinas de AgoraMatrix: el Mini sirve el TOKEN_OPERADOR
+    // sólo a nodos de la tailnet identificados (8443, NO funnel). Si responde,
+    // entra sin pedir token; desde fuera de la tailnet devuelve null → prompt.
+    let MY_TAILNET_IP = "";  // IP tailnet de ESTA máquina (para no hackearse a sí misma)
+    async function fetchOperatorToken(){
+        try{
+            const r = await fetch('https://macmini.tail48b61c.ts.net:8443/optoken/token', { signal: AbortSignal.timeout(2500) });
+            if(!r.ok) return null;
+            const d = await r.json();
+            if(d && d.ip) MY_TAILNET_IP = d.ip;
+            return d && d.token ? d.token : null;
+        }catch(e){ return null; }
+    }
+
+    async function toggleHack() {
+        const btn = document.getElementById("hack-btn");
+        const overlay = document.getElementById("hack-overlay");
+
+        if (!hackMode) {
+            // === ACTIVATE HACK ===
+            // Gate de seguridad: el backend exige X-Council-Hack-Token (secreto server-only).
+            // Se pide una vez por navegador y se guarda en localStorage.
+            let hackTok = localStorage.getItem("council_hack_token") || "";
+            if (!hackTok) {
+                // Auto-login en máquinas de AgoraMatrix (tailnet) — sin preguntar.
+                hackTok = await fetchOperatorToken();
+                if (hackTok) localStorage.setItem("council_hack_token", hackTok);
+            }
+            if (!hackTok) {
+                hackTok = (prompt("Token de HACKEO (o pídelo por Telegram con /token a @Memorizer2Bot):") || "").trim();
+                if (!hackTok) return;  // cancelado
+                localStorage.setItem("council_hack_token", hackTok);
+            }
+            hackMode = true;
+            btn.classList.add("active");
+            btn.querySelector(".hack-dot").style.background = "#000";
+            overlay.classList.add("visible");
+            lockHackView();   // fija el HACKEO sobre la página actual hasta desactivarlo
+
+            // Build 8 terminal panels — each with a unique visual style
+            overlay.innerHTML = '<div class="hack-grid">' + HACK_MACHINES.map((m, i) =>
+                `<div class="hack-terminal hack-style-${i % 8}" id="hack-term-${m.id}">
+                    <div class="hack-terminal-header">
+                        <span>${m.persona} — ${m.host}</span>
+                        <span class="hack-role">${m.role}</span>
+                    </div>
+                    <div class="hack-terminal-body" id="hack-body-${m.id}"></div>
+                </div>`
+            ).join('') + '</div>';
+
+            // Typing speeds per terminal (ms per char) — from fast hacker to slow methodical
+            const HACK_SPEEDS = [15, 35, 8, 50, 22, 12, 45, 28, 18];
+            // Each terminal starts at a different line offset for varied content
+            const HACK_OFFSETS = [0, 7, 14, 3, 21, 10, 5, 18, 12];
+
+            // Start local terminal animation — each with unique speed & content offset
+            HACK_MACHINES.forEach((m, idx) => {
+                const body = document.getElementById(`hack-body-${m.id}`);
+                let lineIdx = HACK_OFFSETS[idx % HACK_OFFSETS.length];
+                let charIdx = 0;
+                let currentText = "";
+                const speed = HACK_SPEEDS[idx % HACK_SPEEDS.length] + Math.random() * 10;
+                // Las máquinas Windows usan un guion de hackeo con sabor a cmd/PowerShell.
+                const LINES = (m.platform === "win") ? HACK_LINES_WIN : HACK_LINES;
+
+                const typeInterval = setInterval(() => {
+                    if (!hackMode) return;
+                    const line = fillHackLine(LINES[lineIdx % LINES.length], m);
+                    if (charIdx <= line.length) {
+                        const partial = line.substring(0, charIdx);
+                        const displayText = currentText + partial + (charIdx < line.length ? "\u2588" : "");
+                        body.textContent = displayText;
+                        charIdx++;
+                        const lines = displayText.split("\n");
+                        const maxVisible = Math.floor(body.clientHeight / 11);
+                        if (lines.length > maxVisible) {
+                            body.textContent = lines.slice(-maxVisible).join("\n");
+                        }
+                    } else {
+                        currentText += line + "\n";
+                        lineIdx++;
+                        charIdx = 0;
+                    }
+                }, speed);
+
+                hackIntervals.push(typeInterval);
+            });
+
+            // Launch hack on REAL machines via council-api: ping → SSH si vive,
+            // Wake-on-LAN si está apagada. El backend devuelve estado por máquina.
+            try {
+                const res = await callCouncilHackeo("start");
+                if (res && res.machines) {
+                    paintHackeoStatus(res);
+                    console.log("HACK: council-api responded", res.summary);
+                } else {
+                    paintHackeoStatus({ error: "no response" });
+                }
+            } catch (e) {
+                // 403 → token de hackeo inválido: lo borramos para volver a pedirlo.
+                if (/\b403\b/.test(e.message || "")) {
+                    localStorage.removeItem("council_hack_token");
+                    paintHackeoStatus({ error: "token de hackeo inválido — vuelve a activar para reintroducirlo" });
+                } else {
+                    paintHackeoStatus({ error: e.message });
+                }
+                console.warn("HACK: council-api error", e.message);
+            }
+
+        } else {
+            // === DEACTIVATE HACK — restore previous state ===
+            hackMode = false;
+            btn.classList.remove("active");
+            overlay.classList.remove("visible");
+            unlockHackView();   // libera el scroll y restaura la vista donde estabas
+            hackIntervals.forEach(i => clearInterval(i));
+            hackIntervals = [];
+
+            // Stop hack on REAL machines (cierra Terminal en cada Mac vivo)
+            try {
+                const res = await callCouncilHackeo("stop");
+                console.log("HACK: stopped via council-api", res && res.machines ? res.machines.length : 0);
+            } catch (e) {
+                console.warn("HACK: council-api stop failed", e.message);
+            }
+
+            // Refresh dashboard to restore council view
+            await refresh();
+        }
+    }
+
+    // Llama al backend (council-api.py) probando los URLs en orden.
+    // mode: "start" → /api/council/hackeo, "stop" → /api/council/hackeo/stop
+    async function callCouncilHackeo(mode) {
+        const path = mode === "stop" ? "/api/council/hackeo/stop" : "/api/council/hackeo";
+        // Al lanzar, excluir ESTA máquina (no taparle la pantalla al operador).
+        if (mode !== "stop" && !MY_TAILNET_IP) { try { await fetchOperatorToken(); } catch(e){} }
+        const body = mode === "stop" ? "{}" : JSON.stringify({ exclude_ip: MY_TAILNET_IP || "" });
+        const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
+        let lastErr = null;
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + path, {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Council-Token": COUNCIL_API_TOKEN,
+                        "X-Council-Hack-Token": localStorage.getItem("council_hack_token") || "",
+                    },
+                    body: body,
+                    signal: AbortSignal.timeout(20000),
+                });
+                if (!res.ok) { lastErr = "HTTP " + res.status; continue; }
+                return await res.json();
+            } catch (e) {
+                lastErr = e.message || String(e);
+            }
+        }
+        throw new Error(lastErr || "all council-api urls failed");
+    }
+
+    // Pinta sobre cada panel del overlay un badge con el estado real
+    // (online / offline / wol / failed) que devolvió el backend.
+    function paintHackeoStatus(res) {
+        const overlay = document.getElementById("hack-overlay");
+        if (!overlay) return;
+        // Banner superior con resumen
+        let banner = overlay.querySelector(".hack-status-banner");
+        if (!banner) {
+            banner = document.createElement("div");
+            banner.className = "hack-status-banner";
+            banner.style.cssText = "position:absolute;top:6px;left:50%;transform:translateX(-50%);z-index:10;background:#000;color:#0f0;font-family:'Courier New',monospace;font-size:11px;padding:4px 12px;border:1px solid #0f0;letter-spacing:1px;";
+            overlay.appendChild(banner);
+        }
+        if (res && res.error) {
+            banner.textContent = "⚠ council-api: " + res.error + " — animación local";
+            banner.style.color = "#ff6";
+            banner.style.borderColor = "#ff6";
+            return;
+        }
+        const s = res.summary || {};
+        banner.textContent = `[council-api] total=${s.total||0} online=${s.online||0} ssh_ok=${s.ssh_ok||0} wol_sent=${s.wol_sent||0} failed=${s.failed||0}`;
+        banner.style.color = "#0f0";
+        banner.style.borderColor = "#0f0";
+
+        // Por cada máquina del backend, busca un panel de animación con
+        // el mismo id y le añade un badge en la cabecera.
+        const byId = {};
+        (res.machines || []).forEach(m => { byId[m.id] = m; });
+        HACK_MACHINES.forEach(m => {
+            const term = document.getElementById(`hack-term-${m.id}`);
+            if (!term) return;
+            const header = term.querySelector(".hack-terminal-header");
+            if (!header) return;
+            const real = byId[m.id];
+            let badge = "—";
+            let color = "#888";
+            if (real) {
+                if (real.action === "ssh_launched" && real.ok) { badge = "● HACKED"; color = "#0f0"; }
+                else if (real.action === "wol_sent") { badge = "◐ WoL"; color = "#fc0"; }
+                else if (real.action === "wol_skipped") { badge = "✗ no MAC"; color = "#f66"; }
+                else if (!real.ok) { badge = "✗ FAIL"; color = "#f66"; }
+                else if (real.online) { badge = "● online"; color = "#0f0"; }
+                else { badge = "○ offline"; color = "#888"; }
+            } else {
+                badge = "? not in machines.json";
+                color = "#888";
+            }
+            // Si ya existe un span de status, lo actualizamos; si no, lo creamos.
+            let st = header.querySelector(".hack-real-status");
+            if (!st) {
+                st = document.createElement("span");
+                st.className = "hack-real-status";
+                st.style.cssText = "margin-left:8px;font-size:10px;letter-spacing:1px;";
+                header.appendChild(st);
+            }
+            st.textContent = badge;
+            st.style.color = color;
+            st.title = real ? `${real.host} · ${real.detail || ""}` : "no match in council backend";
+        });
+    }
+
+    // ESC also closes hack overlay
+    window.addEventListener("keydown", (e) => {
+        if (e.key === "Escape" && hackMode) toggleHack();
+    });
+
+    // Al cargar: sincronizar con el servidor. Si un hack quedó activo de
+    // una sesión anterior, marcamos el botón como "activo" para que el
+    // siguiente click pare los Terminales en los consejeros en vez de
+    // relanzar otra oleada encima.
+    (async () => {
+        try {
+            const r = await fetch(HACK_API + "/hack/status?t=" + Date.now(), {
+                signal: AbortSignal.timeout(3000)
+            });
+            if (!r.ok) return;
+            const d = await r.json();
+            if (d && d.active === true) {
+                hackMode = true;
+                const btn = document.getElementById("hack-btn");
+                if (btn) {
+                    btn.classList.add("active");
+                    const dot = btn.querySelector(".hack-dot");
+                    if (dot) dot.style.background = "#000";
+                }
+                console.log("HACK: server reports active — next click will STOP");
+            }
+        } catch (e) {
+            // server inaccesible: mantener hackMode=false (default)
+        }
+    })();
+
+    // ═══════════════════════════════════
+    // SCUMM VERB BAR
+    // ═══════════════════════════════════
+    let currentVerb = null;
+    let currentProject = null;
+    let debateRunning = false;
+    let selectedAgent = null; // { name, persona, side, icon } of selected agent for "Preguntar"
+    let preguntarMode = false;
+    let selectedLLM = "llama-70b"; // Active LLM model key (default: free model)
+    let selectedLeer = "audio";         // Sub-opción del verbo PENSAR
+    let selectedMirar = "presentacion"; // [legacy] sub-opción del verbo MIRAR (sustituido por CREAR)
+    let selectedCrear = "standard-square"; // Sub-opción del verbo CREAR (calidad/tamaño)
+    let selectedVotar = "favor";        // Sub-opción del verbo VOTAR
+    let selectedAnalizar = "url";        // Sub-opción del verbo ANALIZAR
+    let selectedPresentar = "audio"; // Sub-opción del verbo PRESENTAR (formato salida)
+
+    // Mapea cada verbo al panel del inventario que debe mostrarse
+    const VERB_TO_PANEL = {
+        preguntar: "llm",
+        debatir:   "llm",
+        entrenar:  "entrenar",
+        crear:     "crear",
+        hablar:    "llm",
+        leer:      "leer",
+        votar:     "votar",
+        analizar:  "analizar",
+        presentar: "presentar",
+        previo:    "presentar",
+        reunion:   "llm",
+    };
+
+    function updateInventoryPanel(verb) {
+        const panel = VERB_TO_PANEL[verb];
+        if (!panel) return; // verbos sin panel propio: no tocar
+        document.querySelectorAll('.inv-panel').forEach(p => p.classList.remove('active'));
+        const target = document.querySelector('.inv-panel[data-panel="' + panel + '"]');
+        if (target) target.classList.add('active');
+    }
+
+    function selectSubOption(verb, el) {
+        const cls = verb + "-option";
+        document.querySelectorAll('.' + cls).forEach(i => i.classList.remove('selected'));
+        el.classList.add('selected');
+        if (verb === "leer")     selectedLeer     = el.dataset.leer;
+        if (verb === "mirar")    selectedMirar    = el.dataset.mirar;
+        if (verb === "crear")    selectedCrear    = el.dataset.crear;
+        if (verb === "votar")    selectedVotar    = el.dataset.votar;
+        if (verb === "analizar") selectedAnalizar = el.dataset.analizar;
+        if (verb === "presentar") selectedPresentar = el.dataset.presentar;
+    }
+
+    function selectLLM(el) {
+        if (el.dataset.available === "false") {
+            setActionLine("⚠️ Ese motor no está disponible aún en este backend");
+            return;
+        }
+        const isPaid = el.dataset.paid === "true";
+        const name = el.textContent.trim().replace('FREE', '').replace('€', '').trim();
+
+        // Ask confirmation + password for paid models
+        if (isPaid) {
+            const pwd = prompt("🔒 " + name + " es un modelo DE PAGO (~€0.003/consulta).\n\nIntroduce la clave de administrador para activarlo:");
+            if (pwd !== "admira2026") {
+                if (pwd !== null) alert("❌ Clave incorrecta. Usa un modelo gratuito.");
+                return;
+            }
+        }
+
+        document.querySelectorAll('.llm-option').forEach(i => i.classList.remove('selected'));
+        el.classList.add('selected');
+        selectedLLM = el.dataset.llm;
+        console.log("LLM selected:", selectedLLM, name, isPaid ? "(PAID)" : "(FREE)");
+    }
+
+    async function refreshLLMAvailability() {
+        const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + "/api/council/models", {
+                    headers: { "X-Council-Token": COUNCIL_API_TOKEN },
+                    signal: AbortSignal.timeout(8000),
+                });
+                if (!res.ok) throw new Error("HTTP " + res.status);
+                const data = await res.json();
+                const byKey = new Map((data.models || []).map(m => [m.key, m]));
+                let selectedStillAvailable = true;
+                document.querySelectorAll('.llm-option').forEach(el => {
+                    const meta = byKey.get(el.dataset.llm);
+                    const available = !!meta && meta.available !== false;
+                    el.dataset.available = available ? "true" : "false";
+                    el.classList.toggle('unavailable', !available);
+                    if (!available && el.classList.contains('selected')) selectedStillAvailable = false;
+                    if (meta && meta.provider) {
+                        el.title = available ? (meta.name + " · " + meta.provider) : (meta.name + " · no disponible en este backend");
+                    }
+                });
+                if (!selectedStillAvailable) {
+                    const fallback = document.querySelector('.llm-option[data-available="true"]');
+                    if (fallback) selectLLM(fallback);
+                }
+                activeApiUrl = baseUrl;
+                return;
+            } catch (e) {
+                console.warn("LLM availability fetch failed at", baseUrl, e);
+            }
+        }
+    }
+
+    function selectVerb(btn) {
+        document.querySelectorAll('.verb-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        currentVerb = btn.dataset.verb;
+        examinarMode = (currentVerb === 'examinar');
+        playSfx('verb');
+        markVerbUsed(currentVerb);
+        updateInventoryPanel(currentVerb);
+
+        // Exit modes that don't match the new verb
+        if (currentVerb !== 'preguntar') exitPreguntarMode();
+        if (currentVerb !== 'entrenar') exitEntrenarMode();
+
+        // Background-window overlays: per-verb activation
+        const winCreativo = document.getElementById('win-creativo');
+        const winRacional = document.getElementById('win-racional');
+        if (currentVerb === 'entrenar') {
+            winCreativo.classList.remove('active');
+            winRacional.classList.remove('active');
+        } else if (currentVerb === 'analizar') {
+            winCreativo.classList.add('active');
+            winRacional.classList.remove('active');
+            renderAnalyzedList();
+        } else if (yarigWindowsPinned) {
+            showYarigWindows();
+        } else {
+            // entrenar tampoco activa las ventanas aquí: aparecen sólo al hover sobre un consejero
+            winCreativo.classList.remove('active');
+            winRacional.classList.remove('active');
+        }
+
+        updateActionLine();
+
+        if (currentVerb === 'preguntar') {
+            enterPreguntarMode();
+        }
+        if (currentVerb === 'examinar') {
+            enterPreguntarMode();
+            setActionLine("👁 Examinar — haz clic en un consejero para conocerlo");
+        }
+        if (currentVerb === 'debatir') {
+            if (!currentProject) {
+                const tema = (window.prompt("¿Sobre qué quieres que debata el Consejo?", "") || "").trim();
+                if (!tema) { setActionLine("Debate cancelado — escribe un tema para que el Consejo debata"); return; }
+                currentProject = tema;
+                updateActionLine();
+            }
+            executeCouncilVerb(currentVerb);
+            unlock('debate');
+        }
+        if (currentVerb === 'entrenar') {
+            enterEntrenarMode();
+            triggerEntrenar();
+        }
+        if (currentVerb === 'crear') {
+            enterCrearMode();
+        } else {
+            exitCrearMode();
+        }
+        if (currentVerb === 'hablar') {
+            openYarOverlay();
+            setActionLine("🧭 Yarig.AI — escribe foco:, ayuda:, tarea: o finalizada: para recoger y enviar contexto");
+        }
+        if (currentVerb === 'leer') {
+            triggerLeer();
+        }
+        if (currentVerb === 'votar') triggerVotar();
+        if (currentVerb === 'analizar') triggerAnalizar();
+        if (currentVerb === 'presentar') { triggerPresentar(); unlock('present'); }
+        if (currentVerb === 'previo') triggerPrevio();
+        if (currentVerb === 'reunion') {
+            enterReunionMode();
+        }
+    }
+
+    function enterPreguntarMode() {
+        preguntarMode = true;
+        selectedAgent = null;
+        document.getElementById("nameplates").classList.add("preguntar-active");
+        document.getElementById("body-hotspots").classList.add("preguntar-active");
+        _applyPreguntarStyles();
+        setActionLine("escribe aquí · /help para todos los comandos");
+    }
+
+    function exitPreguntarMode() {
+        preguntarMode = false;
+        selectedAgent = null;
+        document.getElementById("nameplates").classList.remove("preguntar-active");
+        document.getElementById("body-hotspots").classList.remove("preguntar-active");
+        document.querySelectorAll('.np').forEach(np => {
+            np.classList.remove('selectable', 'selected');
+        });
+        document.querySelectorAll('.body-hotspot').forEach(bh => {
+            bh.classList.remove('selected');
+        });
+    }
+
+    function _applyPreguntarStyles() {
+        if (!preguntarMode) return;
+        document.querySelectorAll('.np').forEach(np => {
+            np.classList.add('selectable');
+            if (selectedAgent && np.getAttribute('data-persona') === selectedAgent.persona) {
+                np.classList.add('selected');
+            }
+        });
+    }
+
+    // Event delegation: handle clicks on nameplates container
+    document.getElementById("nameplates").addEventListener("click", function(e) {
+        const np = e.target.closest('.np');
+        if (!np || !preguntarMode) return;
+        selectAgentByPersona(np.getAttribute('data-persona'));
+    });
+
+    // Event delegation: handle clicks on body hotspots
+    document.getElementById("body-hotspots").addEventListener("click", function(e) {
+        const bh = e.target.closest('.body-hotspot');
+        if (!bh) return;
+        const persona = bh.getAttribute('data-persona');
+        if (preguntarMode) { selectAgentByPersona(persona); return; }
+        if (currentVerb && currentVerb !== 'preguntar') return; // otros verbos manejan sus propios clics
+        openFichaConsejero(persona);   // sin verbo interactivo: clic en el consejo abre su ficha
+    });
+
+    // Abre la ficha de detalle del consejero (consejero.html?p=<slug>) en pestaña nueva.
+    function openFichaConsejero(persona) {
+        if (!persona) return;
+        window.open("consejero.html?p=" + cSlug(persona), "_blank", "noopener");
+    }
+
+    // Meeting door hotspot click
+    document.getElementById("meeting-door-hotspot").addEventListener("click", function(e) {
+        enterReunionMode();
+    });
+
+    function selectAgentByPersona(persona) {
+        const members = COUNCIL.filter(m => m.gen === currentGen);
+        const agent = members.find(m => m.persona === persona);
+        if (!agent) return;
+
+        // Highlight selected — sync both nameplate and body hotspot
+        document.querySelectorAll('.np').forEach(n => n.classList.remove('selected'));
+        document.querySelectorAll('.body-hotspot').forEach(bh => bh.classList.remove('selected'));
+        const npMatch = document.querySelector('.np[data-persona="' + persona + '"]');
+        const bhMatch = document.querySelector('.body-hotspot[data-persona="' + persona + '"]');
+        if (npMatch) npMatch.classList.add('selected');
+        if (bhMatch) bhMatch.classList.add('selected');
+        selectedAgent = agent;
+        markCouncilConsulted(agent.persona);
+        if (examinarMode) {
+            setActionLine("👁 " + agent.persona + " · " + agent.role);
+            showSpeechBubble(agent.persona, agent.name, loreFor(agent));
+            playSfx("talk");
+            return;
+        }
+
+        const llmEl = document.querySelector('.llm-option.selected');
+        const llmShort = llmEl ? llmEl.textContent.trim().replace('FREE','').trim().split(' ').slice(1).join(' ') : 'Claude';
+        const matrixLink = getMatrixLink(agent);
+        const matrixLabel = matrixLink ? " · Matrix: " + matrixLink.alias : "";
+        setActionLine("❓ Pregunta a " + agent.icon + " " + agent.persona + " (" + agent.name + matrixLabel + ") via " + llmShort + " — escribe y pulsa Enviar");
+        showSpeechBubble(agent.persona, agent.name, councilGreeting(agent));
+    }
+
+    const VERB_LABELS = { preguntar:"Preguntar", examinar:"Examinar", debatir:"Debatir", entrenar:"Entrenar", crear:"Crear", hablar:"Yarig.AI", leer:"Pensar", votar:"Votar", analizar:"Analizar", presentar:"Presentar", previo:"Ver Previo", reunion:"Reunión" };
+    function _slEsc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c])); }
+    function setSentenceHtml(html) { const el = document.getElementById("sentence-line"); if (el) el.innerHTML = html; }
+
+    function updateActionLine() {
+        const v = VERB_LABELS[currentVerb] || "";
+        if (v && !preguntarMode) {
+            const p = currentProject ? ' <span class="sl-obj">"' + _slEsc(currentProject) + '"</span>' : "";
+            setSentenceHtml('<span class="sl-verb">' + v + '</span>' + p + " …");
+        }
+    }
+
+    // Mensaje plano de estado/feedback en la sentence line (seguro ante HTML)
+    function setActionLine(text) { const el = document.getElementById("sentence-line"); if (el) el.textContent = text; }
+
+    // Al pasar el ratón sobre un consejero: "Verbo a <persona>" (feel SCUMM)
+    function wireSentenceHover() {
+        ["nameplates", "body-hotspots"].forEach(id => {
+            const c = document.getElementById(id);
+            if (!c || c._slWired) return;
+            c._slWired = true;
+            c.addEventListener("mouseover", e => {
+                const el = e.target.closest("[data-persona]");
+                if (!el) return;
+                const v = VERB_LABELS[currentVerb] || "Mirar";
+                setSentenceHtml('<span class="sl-verb">' + v + '</span> a <span class="sl-obj">' + _slEsc(el.getAttribute("data-persona")) + "</span>");
+            });
+            c.addEventListener("mouseout", e => { if (e.target.closest("[data-persona]")) updateActionLine(); });
+        });
+    }
+
+    // Onboarding ligero: primera visita, el CEO da la bienvenida y guía el primer paso
+    function maybeOnboard() {
+        try { if (new URLSearchParams(location.search).get("train")) return; } catch (e) {}
+        try { if (localStorage.getItem("council_onboarded")) return; } catch (e) {}
+        const ceo = COUNCIL.find(m => m.gen === currentGen && m.name === "CEO") || COUNCIL[0];
+        if (ceo && typeof showSpeechBubble === "function") showSpeechBubble(ceo.persona, ceo.name, "Bienvenido al Consejo. Pulsa un VERBO abajo y luego haz clic en un consejero para actuar. Empieza por PREGUNTAR.");
+        setSentenceHtml('<span class="sl-verb">Bienvenido</span> — pulsa un verbo y luego un consejero');
+        try { localStorage.setItem("council_onboarded", "1"); } catch (e) {}
+    }
+    // /sendto <equipo> <mensaje> — entrega el mensaje al Claude Code (Terminal) de
+    // esa máquina vía el servicio de control del Mini (teclea el prompt + Enter).
+    // Reutiliza la "Clave operador" del Consejo (sessionStorage admira:agora-key).
+    // Credencial de escritura del Consejo: el backend valida el LOGIN DE GOOGLE en
+    // servidor (firma + email permitido). Nos apoyamos en él y NO pedimos password:
+    // si el id_token caducó (duran ~1h), lo refrescamos solo (One Tap). Una clave ya
+    // guardada queda como red de seguridad SILENCIOSA (no se pide ninguna nueva).
+    const COUNCIL_GOOGLE_CLIENT_ID = "861856772040-e1ri6kpu6maagtb6crdfbb923hsaalgb.apps.googleusercontent.com";
+    function _jwtExpMs(t) { try { var p = JSON.parse(atob(String(t).split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))); return (p.exp || 0) * 1000; } catch (e) { return 0; } }
+    function councilGateCred() { try { var g = JSON.parse(localStorage.getItem("admira_gate") || "null"); if (!g || !g.cred || String(g.cred).split(".").length !== 3) return ""; return (_jwtExpMs(g.cred) > Date.now() + 30000) ? g.cred : ""; } catch (e) { return ""; } }
+    function councilStoredKey() { try { return localStorage.getItem("admira:agora-key") || sessionStorage.getItem("admira:agora-key") || ""; } catch (e) { return ""; } }
+    function _ensureGIS() { return new Promise(function (res) { if (window.google && google.accounts && google.accounts.id) return res(true); var s = document.createElement("script"); s.src = "https://accounts.google.com/gsi/client"; s.async = true; s.defer = true; s.onload = function () { res(true); }; s.onerror = function () { res(false); }; (document.head || document.documentElement).appendChild(s); }); }
+    function refreshGoogleCred() { return new Promise(function (resolve) {
+        _ensureGIS().then(function (okGis) {
+            if (!okGis || !(window.google && google.accounts && google.accounts.id)) return resolve("");
+            var done = false; function fin(v) { if (done) return; done = true; resolve(v || ""); }
+            try {
+                google.accounts.id.initialize({ client_id: COUNCIL_GOOGLE_CLIENT_ID, auto_select: true, cancel_on_tap_outside: false,
+                    callback: function (resp) { try { var g = JSON.parse(localStorage.getItem("admira_gate") || "{}"); g.cred = resp.credential; g.credAt = Date.now(); localStorage.setItem("admira_gate", JSON.stringify(g)); } catch (e) {} fin(resp.credential); } });
+                google.accounts.id.prompt(function (n) { try { if ((n.isNotDisplayed && n.isNotDisplayed()) || (n.isSkippedMoment && n.isSkippedMoment())) fin(""); } catch (e) {} });
+            } catch (e) { fin(""); }
+            setTimeout(function () { fin(""); }, 5000);
+        });
+    }); }
+    async function teamworkSend(base, body, cred) {
+        const r = await fetch(base + "/api/teamwork/send", { method: "POST",
+            headers: { "Content-Type": "application/json", "Authorization": "Bearer " + cred, "X-Council-Token": cred },
+            body: JSON.stringify(body) });
+        const d = await r.json().catch(() => ({}));
+        return { status: r.status, ok: r.ok && d.ok, d };
+    }
+    async function sendToMachine(machineName, message, target) {
+        target = (target === "terminal" || target === "claude") ? target : "claude";  // por defecto la app Claude (Claude Code de escritorio)
+        const base = "https://macmini.tail48b61c.ts.net";
+        const body = { machineId: machineName, prompt: message, target: target };
+        setActionLine("📨 Enviando a " + machineName + " (" + target + ") — escribiéndolo en su Claude Code…");
+        try {
+            let cred = councilGateCred();                                  // 1) login de Google vigente
+            if (!cred) { setActionLine("🔄 refrescando tu login de Google…"); cred = await refreshGoogleCred(); }
+            let res = cred ? await teamworkSend(base, body, cred) : null;
+            if ((!res || res.status === 401 || res.status === 403) && councilStoredKey()) {   // 2) red de seguridad: clave ya guardada (silenciosa)
+                res = await teamworkSend(base, body, councilStoredKey());
+            }
+            if (res && res.ok) setActionLine("✅ Enviado a " + (res.d.name || machineName) + " — lo está procesando su Claude Code");
+            else if (!cred && !councilStoredKey()) setActionLine("🔒 Tu login de Google caducó y no pudo refrescarse — recarga la página para volver a entrar con Google.");
+            else if (res && (res.status === 401 || res.status === 403)) setActionLine("🔒 Tu cuenta de Google no está autorizada en el backend para enviar a máquinas.");
+            else setActionLine("⚠️ No se pudo enviar a " + machineName + ": " + (res && res.d.error || ("HTTP " + (res && res.status))));
+        } catch (e) {
+            setActionLine("⚠️ Sin conexión con el Mini (¿Tailscale / servicio com.admiranext.control activo?)");
+        }
+    }
+    window.sendToMachine = sendToMachine;   // para que el panel AgoraMatrix también enrute /sendto (no a White Rabbit)
+    // Menú intermedio SCUMM plegable (persistente)
+    function setScummCollapsed(collapsed) {
+        const bar = document.querySelector('.scumm-bar'); if (!bar) return;
+        bar.classList.toggle('scumm-collapsed', collapsed);
+        const f = document.getElementById('scumm-fold'); if (f) f.textContent = collapsed ? '▸' : '▾';
+        try { localStorage.setItem('scummCollapsed', collapsed ? '1' : '0'); } catch (e) {}
+    }
+    function toggleScumm() { const bar = document.querySelector('.scumm-bar'); setScummCollapsed(!(bar && bar.classList.contains('scumm-collapsed'))); }
+    // Menú superior plegable (persistente)
+    function setTopCollapsed(collapsed) {
+        const c = document.querySelector('.container'); if (!c) return;
+        c.classList.toggle('top-collapsed', collapsed);
+        const f = document.getElementById('top-fold'); if (f) f.textContent = collapsed ? '▸' : '▾';
+        try { localStorage.setItem('topCollapsed', collapsed ? '1' : '0'); } catch (e) {}
+    }
+    function toggleTopMenu() { const c = document.querySelector('.container'); setTopCollapsed(!(c && c.classList.contains('top-collapsed'))); }
+    function setMouthsEnabled(on) {
+        document.body.classList.toggle('mouths-off', !on);
+        try { localStorage.setItem('mouthsOff', on ? '0' : '1'); } catch (e) {}
+    }
+
+    let yarigWindowsPinned = false;
+    let yarigAutoRefreshTimer = null;
+    let cliHelpVisible = false;
+    function startYarigAutoRefresh() {
+        if (yarigAutoRefreshTimer) return;
+        yarigAutoRefreshTimer = setInterval(async () => {
+            if (!yarigWindowsPinned) return;
+            try {
+                await loadYarContext();
+                if (yarigWindowsPinned && (!selectedAgent || currentVerb === 'hablar')) {
+                    showEntrenarFor('__yarig__');
+                    setYarigPromptStatus('🧭 Yarig.AI visible');
+                }
+            } catch (e) {
+                console.warn('Yarig auto refresh failed', e.message);
+            }
+        }, 60000);
+    }
+    function stopYarigAutoRefresh() {
+        if (!yarigAutoRefreshTimer) return;
+        clearInterval(yarigAutoRefreshTimer);
+        yarigAutoRefreshTimer = null;
+    }
+    function showYarigWindows() {
+        yarigWindowsPinned = true;
+        captureOverlayOriginals();
+        showEntrenarFor('__yarig__');
+        startYarigAutoRefresh();
+        setYarigPromptStatus('🧭 Yarig.AI visible');
+    }
+
+    function hideYarigWindows() {
+        yarigWindowsPinned = false;
+        hideEntrenarOverlays();
+        restoreOverlayOriginals();
+        stopYarigAutoRefresh();
+    }
+
+    function hideCliHelpWindows() {
+        cliHelpVisible = false;
+        if (yarigWindowsPinned) {
+            showYarigWindows();
+            return;
+        }
+        if (currentVerb === 'entrenar') {
+            const activeRow = document.querySelector('.entrenar-corpus-row.active[data-persona]');
+            const persona = activeRow ? activeRow.getAttribute('data-persona') : '';
+            if (persona && persona !== '__all__') {
+                captureOverlayOriginals();
+                showEntrenarFor(persona);
+                return;
+            }
+        }
+        hideEntrenarOverlays();
+        restoreOverlayOriginals();
+    }
+
+    function showCliHelp() {
+        cliHelpVisible = true;
+        captureOverlayOriginals();
+        document.getElementById('win-racional').innerHTML =
+            '<div class="window-overlay-title">CLI · GENERAL</div>' +
+            '<ol class="analizar-list">' +
+            '<li><strong>/help</strong> — muestra u oculta esta ayuda</li>' +
+            '<li><strong>/comandos</strong> — abre la p\u00e1gina con todos los comandos</li>' +
+            '<li><strong>/leyendas</strong> · <strong>/coetaneos</strong> — cambia la generación del Consejo</li>' +
+            '<li><strong>/agentes</strong> — muestra u oculta el panel de Agentes (AgoraMatrix)</li>' +
+            '<li><strong>/importar &lt;url&gt;</strong> — descarga vídeo y lo sube a Drive</li>' +
+            '<li><strong>/nombres on|off|toggle</strong> — enseña u oculta los consejeros</li>' +
+            '<li><strong>/google</strong> — abre la hoja Drive de enlaces Entrenar</li>' +
+            '<li><strong>/diario</strong> — muestra el diario operativo del Consejo</li>' +
+            '<li><strong>/diario &lt;texto&gt;</strong> — registra una decisión en el diario</li>' +
+            '<li><strong>/agora</strong> o <strong>/codex</strong> — muestra mi estado Codex/Oráculo en AgoraMatrix</li>' +
+            '<li><strong>/agoramatrix on|off|toggle</strong> — muestra/oculta el panel AgoraMatrix (movible · redimensionable)</li>' +
+            '<li><strong>/tareas on|off|toggle</strong> — panel de Tareas del Consejo: reparto + seguimiento (crear, asignar, entregar, estado)</li>' +
+            '<li><strong>/menu on|off|toggle</strong> — oculta/enseña los menús de arriba (más espacio)</li>' +
+            '<li><strong>/scumm on|off|toggle</strong> — pliega/despliega el menú intermedio (verbos) — o el botón ▾</li>' +
+            '<li><strong>/top on|off|toggle</strong> — pliega/despliega el menú superior (botón ▾)</li>' +
+            '<li><strong>/bocas on|off|toggle</strong> — los consejeros vivos mueven la boca (hablan)</li>' +
+            '<li><strong>/yarig on|off|toggle</strong> — fija u oculta Yarig en la mesa</li>' +
+            '<li><strong>/yarig login</strong> — abre la sesión persistente de Yarig</li>' +
+            '<li><strong>/yarig estado</strong> — comprueba watcher y frescura del sync</li>' +
+            '</ol>';
+        document.getElementById('win-proceso').innerHTML =
+            '<div class="window-overlay-title">CLI · YARIG</div>' +
+            '<ol class="analizar-list">' +
+            '<li><strong>/yarig logout</strong> — cierra la sesión persistente de Yarig</li>' +
+            '<li><strong>/yarig sincro</strong> — importa tareas desde Yarig.ai</li>' +
+            '<li><strong>Finalizar / Pausar / Cancelar</strong> — actúan sobre la tarea en curso</li>' +
+            '<li><strong>sync automático</strong> — refresco cada 60 segundos</li>' +
+            '</ol>';
+        document.getElementById('win-creativo').innerHTML =
+            '<div class="window-overlay-title">CLI · CONTEXTO</div>' +
+            '<ol class="analizar-list">' +
+            '<li><strong>/tarea &lt;texto&gt;</strong> — añade una tarea al contexto</li>' +
+            '<li><strong>/finalizada &lt;texto&gt;</strong> — marca una tarea acabada</li>' +
+            '<li><strong>foco:</strong> define el objetivo actual</li>' +
+            '<li><strong>ayuda:</strong> pide al Consejo qué vigilar</li>' +
+            '</ol>';
+        document.getElementById('win-racional').classList.add('active');
+        document.getElementById('win-proceso').classList.add('active');
+        document.getElementById('win-creativo').classList.add('active');
+        enterConversation();
+        addUserEntry('/help');
+        addConvEntry('conv-racional', '⌨️', 'CLI', 'Consejo CLI', 'racional',
+            '<strong>Comandos disponibles</strong><br>' +
+            '/help<br>' +
+            '/importar &lt;url&gt; <span style="opacity:0.7">(descarga vídeo y lo sube a Drive)</span><br>' +
+            '/google <span style="opacity:0.7">(abre la hoja de enlaces Entrenar)</span><br>' +
+            '/diario <span style="opacity:0.7">(muestra el diario operativo)</span><br>' +
+            '/diario &lt;texto&gt; <span style="opacity:0.7">(registra una decisión del Consejo)</span><br>' +
+            '/agora <span style="opacity:0.7">(mi estado Codex/Oráculo en AgoraMatrix)</span><br>' +
+            '/codex <span style="opacity:0.7">(alias centrado en Codex/Oráculo)</span><br>' +
+            '/oraculo &lt;orden&gt; <span style="opacity:0.7">(desde Telegram hacia Codex/Oráculo)</span><br>' +
+            '/nombres on<br>' +
+            '/nombres off<br>' +
+            '/nombres toggle<br>' +
+            '/tarea &lt;texto&gt;<br>' +
+            '/finalizada &lt;texto&gt;<br>' +
+            '/yarig login <span style="opacity:0.7">(alias de /yarig.ai login)</span><br>' +
+            '/yarig estado <span style="opacity:0.7">(watcher y frescura del sync)</span><br>' +
+            '/yarig logout <span style="opacity:0.7">(alias de /yarig.ai logout)</span><br>' +
+            '/yarig sincro <span style="opacity:0.7">(alias de /yarig.ai sincro)</span><br>' +
+            '/yarig on <span style="opacity:0.7">(alias de /yarig.ai on)</span><br>' +
+            '/yarig off <span style="opacity:0.7">(alias de /yarig.ai off)</span>');
+        addConvEntry('conv-creativo', '🧭', 'Yarig.AI', 'Yarig.AI', 'creativo',
+            '<strong>Atajos de contexto</strong><br>' +
+            'foco: &lt;objetivo&gt;<br>' +
+            'finalizada: &lt;tarea ya terminada&gt;<br>' +
+            'tarea: &lt;tarea&gt;<br>' +
+            'ayuda: &lt;qué debe vigilar el Consejo&gt;');
+        setActionLine('⌨️ CLI visible — repite /help para ocultarla');
+    }
+
+    function showAgoraMatrixHelp(command) {
+        cliHelpVisible = false;
+        captureOverlayOriginals();
+        document.getElementById('win-racional').innerHTML =
+            '<div class="window-overlay-title">CODEX/ORÁCULO · ESCUCHA</div>' +
+            '<ol class="analizar-list">' +
+            '<li><strong>Yo, Codex/Oráculo</strong>, escucho tasks, inbox y dispatch local.</li>' +
+            '<li><strong>Carlos</strong> puede enviar órdenes desde Telegram.</li>' +
+            '<li><strong>Sin audio</strong> hasta nueva orden expresa.</li>' +
+            '<li><strong>Estados</strong> solo cuando hay novedades o pasan 30 minutos.</li>' +
+            '</ol>';
+        document.getElementById('win-proceso').innerHTML =
+            '<div class="window-overlay-title">CODEX/ORÁCULO · TELEGRAM</div>' +
+            '<ol class="analizar-list">' +
+            '<li><strong>/oraculo &lt;orden&gt;</strong> me habla desde Telegram.</li>' +
+            '<li><strong>Ejemplo:</strong> /oraculo revisa admira.live.</li>' +
+            '<li><strong>Respuesta</strong> vuelve al chat correcto de AgoraMatrix.</li>' +
+            '<li><strong>Sin secretos</strong> en mensajes públicos.</li>' +
+            '</ol>';
+        document.getElementById('win-creativo').innerHTML =
+            '<div class="window-overlay-title">CODEX/ORÁCULO · CONSEJO</div>' +
+            '<ol class="analizar-list">' +
+            '<li><strong>/agora</strong> o <strong>/codex</strong> abre esta vista.</li>' +
+            '<li><strong>/help</strong> muestra todos los comandos del Consejo.</li>' +
+            '<li><strong>Foco actual:</strong> mi escucha de AgoraMatrix.</li>' +
+            '<li><strong>Siguiente paso:</strong> conectar lectura real si hace falta.</li>' +
+            '</ol>';
+        document.getElementById('win-racional').classList.add('active');
+        document.getElementById('win-proceso').classList.add('active');
+        document.getElementById('win-creativo').classList.add('active');
+        enterConversation();
+        addUserEntry(command || '/agora');
+        addConvEntry('conv-racional', '⌁', 'Codex/Oráculo', 'AgoraMatrix', 'racional',
+            '<strong>Este es mi panel operativo dentro del Consejo.</strong><br>' +
+            'Escucho órdenes dirigidas a Codex/Oráculo y publico estado solo cuando aporta señal.');
+        addConvEntry('conv-creativo', '⌁', 'Codex/Oráculo', 'Telegram', 'creativo',
+            'Desde Telegram, Carlos puede escribirme con <strong>/oraculo &lt;orden&gt;</strong>. Yo respondo en AgoraMatrix y mantengo el tablero como memoria visual del foco.');
+        setActionLine('⌁ Codex/Oráculo visible — usa /oraculo <orden> desde Telegram');
+    }
+
+    const GOOGLE_ENTRENAR_SHEET_URL = 'https://docs.google.com/spreadsheets/d/1y3p_avIu-VLqWNU1KON_GoLYVAIxDyHOY4IhgJcTIrk/edit';
+
+    function openGoogleEntrenarSheet() {
+        const opened = window.open(GOOGLE_ENTRENAR_SHEET_URL, '_blank');
+        if (opened) opened.opener = null;
+        enterConversation();
+        addUserEntry('/google');
+        addConvEntry('conv-racional', '📊', 'Google Drive', 'Entrenar Links', 'racional',
+            'Abriendo la hoja de cálculo con todos los enlaces guardados desde Entrenar.<br><a href="' + GOOGLE_ENTRENAR_SHEET_URL + '" target="_blank" rel="noopener" style="color:#8cf">Consejo AdmiraNext - Backup Entrenar Links</a>');
+        addConvEntry('conv-creativo', '🎓', 'Entrenar', 'Corpus compartido', 'creativo',
+            opened ? 'Hoja abierta en una pestaña nueva.' : 'El navegador ha bloqueado la pestaña. Usa el enlace de la ventana racional para abrirla.');
+        setActionLine(opened ? '📊 Google Drive abierto — hoja de enlaces Entrenar' : '📊 Google Drive listo — pulsa el enlace si el navegador bloqueó la pestaña');
+    }
+
+    async function executeImportarVideo(url) {
+        const cleanUrl = String(url || '').trim();
+        if (!/^https?:\/\//i.test(cleanUrl)) {
+            setActionLine('📥 /importar necesita una URL que empiece por http(s)://');
+            return;
+        }
+        enterConversation();
+        addUserEntry('/importar ' + cleanUrl);
+        addConvEntry('conv-racional', '📥', 'Importar', 'Google Drive', 'racional',
+            'Importación iniciada: descarga, copia en Google Drive y alta del entreno en la hoja.');
+        let lastProgressKey = '';
+        const renderProgress = (job) => {
+            const pct = Number.isFinite(Number(job.progress)) ? Math.round(Number(job.progress)) : 0;
+            const step = job.step || job.status || 'Trabajando';
+            const key = step + ':' + pct;
+            setActionLine('📥 ' + step + (pct ? ' — ' + pct + '%' : ''));
+            if (key !== lastProgressKey && (pct === 0 || pct >= 95 || pct % 10 === 0)) {
+                lastProgressKey = key;
+                addConvEntry('conv-racional', '⏳', 'Importar', step, 'racional',
+                    'Progreso: ' + pct + '%' + (job.detail ? '<br><code>' + escapeHtml(job.detail) + '</code>' : ''));
+            }
+        };
+        const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
+        let lastErr = null;
+        for (const baseUrl of urls) {
+            let importStartedAtBackend = false;
+            try {
+                const res = await fetch(baseUrl + '/api/council/importar-video', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Council-Token': COUNCIL_API_TOKEN
+                    },
+                    body: JSON.stringify({ url: cleanUrl, subdir: 'AdmiraNext/Importados' }),
+                    signal: AbortSignal.timeout(1800000),
+                });
+                const data = await res.json().catch(() => ({}));
+                if (!res.ok) throw new Error(data.detail || ('HTTP ' + res.status));
+                activeApiUrl = baseUrl;
+                if (!data.id) {
+                    const sizeMb = data.bytes ? (data.bytes / 1024 / 1024).toFixed(1) + ' MB' : 'tamano n/d';
+                    addConvEntry('conv-creativo', '✅', 'Google Drive', 'Importado', 'creativo',
+                        '<strong>' + escapeHtml(data.title || 'Vídeo importado') + '</strong><br>' +
+                        'Carpeta: ' + escapeHtml(data.driveSubdir || 'AdmiraNext/Importados') + '<br>' +
+                        'Archivo: <code>' + escapeHtml(data.drivePath || '') + '</code><br>' +
+                        'Peso: ' + sizeMb);
+                    setActionLine('✅ Vídeo importado a Google Drive — ' + (data.title || 'listo'));
+                    return;
+                }
+                let job = data;
+                importStartedAtBackend = true;
+                renderProgress(job);
+                const started = Date.now();
+                while (job.status !== 'done' && job.status !== 'error') {
+                    if (Date.now() - started > 1800000) throw new Error('Tiempo máximo agotado esperando la importación');
+                    await new Promise(resolve => setTimeout(resolve, 2500));
+                    const statusRes = await fetch(baseUrl + '/api/council/importar-video/' + encodeURIComponent(data.id), {
+                        headers: { 'X-Council-Token': COUNCIL_API_TOKEN },
+                        signal: AbortSignal.timeout(30000),
+                    });
+                    job = await statusRes.json().catch(() => ({}));
+                    if (!statusRes.ok) throw new Error(job.detail || ('HTTP ' + statusRes.status));
+                    renderProgress(job);
+                }
+                if (job.status === 'error') throw new Error(job.error || 'Importación fallida');
+                const sizeMb = job.bytes ? (job.bytes / 1024 / 1024).toFixed(1) + ' MB' : 'tamano n/d';
+                const sheet = job.sheet || {};
+                const driveLine = job.driveUrl
+                    ? 'Drive: <a href="' + escapeHtml(job.driveUrl) + '" target="_blank" rel="noopener" style="color:#8cf">abrir vídeo en Google Drive</a><br>'
+                    : '';
+                const sheetLine = sheet.updated
+                    ? 'Hoja: entreno dado de alta.<br>'
+                    : 'Hoja: alta en cola para sincronizar.<br>';
+                addConvEntry('conv-creativo', '✅', 'Google Drive', 'Importado', 'creativo',
+                    '<strong>' + escapeHtml(job.title || 'Vídeo importado') + '</strong><br>' +
+                    'Carpeta: ' + escapeHtml(job.driveSubdir || 'AdmiraNext/Importados') + '<br>' +
+                    driveLine +
+                    sheetLine +
+                    'Archivo: <code>' + escapeHtml(job.drivePath || '') + '</code><br>' +
+                    'Peso: ' + sizeMb);
+                setActionLine('✅ Vídeo importado y registrado — ' + (job.title || 'listo'));
+                return;
+            } catch (e) {
+                lastErr = e;
+                console.warn('Importar video failed at', baseUrl, e.message);
+                if (importStartedAtBackend) break;
+            }
+        }
+        addConvEntry('conv-creativo', '⚠️', 'Google Drive', 'Importar', 'creativo',
+            'No se pudo importar el vídeo. ' + (lastErr ? lastErr.message : 'Backend no disponible'));
+        setActionLine('⚠️ No se pudo importar el vídeo — ' + (lastErr ? lastErr.message : 'backend no disponible'));
+    }
+
+    // ── Diario operativo (integración Consejo ↔ diario, repo 18.-diario) ──
+    const DIARIO_PUBLIC_URL = 'https://csilvasantin.github.io/diario/';
+
+    // Llama al backend probando los URLs en orden (igual que callCouncilHackeo).
+    async function callCouncilApi(path, { method = 'GET', body = null } = {}) {
+        const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
+        let lastErr = null;
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + path, {
+                    method,
+                    headers: { 'Content-Type': 'application/json', 'X-Council-Token': COUNCIL_API_TOKEN },
+                    body: body ? JSON.stringify(body) : undefined,
+                    signal: AbortSignal.timeout(20000),
+                });
+                if (!res.ok) {
+                    let detail = 'HTTP ' + res.status;
+                    try { const j = await res.json(); if (j && j.detail) detail = j.detail; } catch (_) {}
+                    lastErr = detail; continue;
+                }
+                activeApiUrl = baseUrl;
+                return await res.json();
+            } catch (e) {
+                lastErr = e.message || String(e);
+            }
+        }
+        throw new Error(lastErr || 'council-api no disponible');
+    }
+
+    function diarioEscape(s) {
+        return String(s == null ? '' : s)
+            .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    }
+
+    // Render markdown ligero del diario (títulos, bullets, negrita, código inline).
+    function diarioMdToHtml(md) {
+        const lines = String(md || '').split('\n');
+        const out = [];
+        for (const line of lines) {
+            let s = diarioEscape(line);
+            s = s.replace(/\*\*([^*]+)\*\*/g, '<strong>$1</strong>')
+                 .replace(/`([^`]+)`/g, '<code style="background:#012;color:#8cf;padding:0 3px;border-radius:3px">$1</code>');
+            const raw = line.trim();
+            if (raw.startsWith('# ')) out.push('<div style="color:var(--matrix-bright,#7CFC9B);font-weight:700;margin-top:6px">' + s.replace(/^#\s*/, '') + '</div>');
+            else if (raw.startsWith('## ')) out.push('<div style="color:#8cf;font-weight:600;margin-top:5px">' + s.replace(/^##\s*/, '') + '</div>');
+            else if (/^-\s+/.test(raw)) out.push('<div style="padding-left:8px">• ' + s.replace(/^\s*-\s+/, '') + '</div>');
+            else if (raw === '') out.push('<div style="height:4px"></div>');
+            else out.push('<div>' + s + '</div>');
+        }
+        return out.join('');
+    }
+
+    // /diario → muestra las entradas recientes del diario operativo.
+    async function openDiario() {
+        enterConversation();
+        addUserEntry('/diario');
+        setActionLine('📓 Consultando el diario operativo…');
+        try {
+            const data = await callCouncilApi('/api/council/diario?limit=8');
+            const entries = (data && data.entries) || [];
+            if (!entries.length) {
+                addConvEntry('conv-racional', '📓', 'Diario', 'Diario operativo', 'racional',
+                    'Sin entradas legibles' + (data && data.available === false ? ' — el diario no está montado en este backend (<code>' + diarioEscape(data.dir || '') + '</code>).' : '.'));
+            } else {
+                const html = entries.map(e => {
+                    const badge = e.hasConsejo ? ' <span style="color:var(--matrix-bright,#7CFC9B)">· 🏛️ Consejo</span>' : '';
+                    return '<details style="margin:4px 0;border-left:2px solid #244;padding-left:8px">' +
+                        '<summary style="cursor:pointer;color:#8cf"><strong>' + diarioEscape(e.date) + '</strong>' +
+                        (e.author ? ' <span style="opacity:0.7">[' + diarioEscape(e.author) + ']</span>' : '') + badge + '</summary>' +
+                        '<div style="font-size:0.82rem;margin-top:4px;max-height:240px;overflow:auto">' + diarioMdToHtml(e.markdown) + '</div>' +
+                        '</details>';
+                }).join('');
+                addConvEntry('conv-racional', '📓', 'Diario', 'Diario operativo', 'racional',
+                    '<strong>Últimas ' + entries.length + ' entradas</strong>' + html);
+            }
+            addConvEntry('conv-creativo', '🏛️', 'Consejo', 'Integración diario', 'creativo',
+                'Registra una decisión operativa con <strong>/diario &lt;texto&gt;</strong>.<br>' +
+                'Diario público: <a href="' + DIARIO_PUBLIC_URL + '" target="_blank" rel="noopener" style="color:#8cf">' + DIARIO_PUBLIC_URL + '</a>');
+            setActionLine('📓 Diario operativo cargado — usa /diario <texto> para registrar una decisión');
+        } catch (e) {
+            addConvEntry('conv-racional', '⚠️', 'Diario', 'Error', 'racional',
+                'No se pudo leer el diario: ' + diarioEscape(e.message || String(e)));
+            setActionLine('⚠️ Diario no disponible — ¿está vivo el backend?');
+        }
+    }
+
+    // /diario <texto> → registra una decisión del Consejo en la entrada del día.
+    async function registrarDiario(texto) {
+        enterConversation();
+        addUserEntry('/diario ' + texto);
+        setActionLine('📓 Registrando decisión en el diario…');
+        try {
+            const data = await callCouncilApi('/api/council/diario/append', { method: 'POST', body: { text: texto, author: 'Consejo' } });
+            const pub = (data && data.publish) || {};
+            const estado = pub.pushed ? 'pusheado al repo del diario (aparece en la web al próximo cierre del día)' : (pub.committed ? 'commiteado en local (push pendiente)' : 'guardado en el fichero del día');
+            const url = (data && data.url) || DIARIO_PUBLIC_URL;
+            addConvEntry('conv-racional', '🏛️', 'Consejo', 'Decisión registrada', 'racional',
+                '<strong>' + diarioEscape(texto) + '</strong><br>' +
+                '<span style="opacity:0.8">Entrada ' + diarioEscape((data && data.date) || '') + ' · ' + estado + '.</span><br>' +
+                '<a href="' + url + '" target="_blank" rel="noopener" style="color:#8cf">' + url + '</a>' +
+                (pub.error ? '<br><span style="color:#f88;font-size:0.8rem">git: ' + diarioEscape(pub.error) + '</span>' : ''));
+            setActionLine(pub.pushed ? '📓 Decisión publicada en el diario' : '📓 Decisión guardada — push pendiente');
+        } catch (e) {
+            addConvEntry('conv-racional', '⚠️', 'Diario', 'Error', 'racional',
+                'No se pudo registrar en el diario: ' + diarioEscape(e.message || String(e)));
+            setActionLine('⚠️ No se pudo escribir en el diario');
+        }
+    }
+
+    // ── Autocompletado predictivo de la CLI ──────────────────────────────
+    // Al escribir un prefijo que solo casa UN comando, lo completa y deja el
+    // sufijo seleccionado (como la barra de direcciones). Tab/→/Enter acepta.
+    const CLI_COMMANDS = [
+        '/help', '/sites', '/admira.live', '/admira.studio', '/admiranext.com',
+        '/admira.app', '/clearchannel.tv', '/pixeria.com', '/equipos', '/control',
+        '/scumm', '/top', '/bocas', '/menu', '/agoramatrix', '/tareas', '/google',
+        '/importar', '/nombres', '/tarea', '/diario', '/leyendas', '/coetaneos', '/agentes', '/comandos', '/sendto'
+    ];
+    (function setupCliAutocomplete() {
+        const inp = document.getElementById('action-input');
+        if (!inp) return;
+        inp.addEventListener('input', function (e) {
+            if (e && e.inputType && !e.inputType.startsWith('insert')) return; // no completar al borrar
+            const v = inp.value;
+            if (!v.startsWith('/') || v.length < 2) return;
+            const lc = v.toLowerCase();
+            const matches = CLI_COMMANDS.filter(c => c.toLowerCase().startsWith(lc) && c.toLowerCase() !== lc);
+            if (matches.length === 1) {
+                const full = matches[0];
+                inp.value = v + full.slice(v.length);
+                inp.setSelectionRange(v.length, full.length); // sufijo seleccionado
+            }
+        });
+        inp.addEventListener('keydown', function (e) {
+            if ((e.key === 'Tab' || e.key === 'ArrowRight' || e.key === 'End') &&
+                inp.selectionStart !== inp.selectionEnd) {
+                e.preventDefault();
+                inp.setSelectionRange(inp.value.length, inp.value.length); // aceptar sugerencia
+            }
+        });
+    })();
+
+    function handleCliCommand(raw) {
+        const text = String(raw || '').trim();
+        if (!text) return false;
+        const helpMatch = text.match(/^\/help$/i);
+        if (helpMatch) {
+            if (cliHelpVisible) {
+                addUserEntry('/help');
+                hideCliHelpWindows();
+                setActionLine('⌨️ CLI oculta — usa /help para volver a verla');
+                return true;
+            }
+            showCliHelp();
+            return true;
+        }
+        const comandosMatch = text.match(/^\/comandos$/i);
+        if (comandosMatch) {
+            addUserEntry(text);
+            window.open("https://www.admira.live/comandos", "_blank");
+            setActionLine("\u2328\ufe0f Abriendo la p\u00e1gina de comandos\u2026");
+            return true;
+        }
+        // ── Generación del Consejo: /leyendas y /coetaneos ──
+        const genMatch = text.match(/^\/(leyendas|coet[a\u00e1]neos)$/i);
+        if (genMatch) {
+            const g = /coet/i.test(genMatch[1]) ? "coetaneos" : "leyendas";
+            setGen(g);
+            addUserEntry(text.toLowerCase());
+            setActionLine(g === "leyendas" ? "\u2b50 Mostrando Leyendas" : "\ud83d\ude80 Mostrando Coet\u00e1neos");
+            return true;
+        }
+        // \u2500\u2500 Sites de Admira: /admira.studio abre, /admira.live recarga, etc.
+        const SITES = {
+            'admira.live':     { reload: true,                                  label: 'admira.live (recarga)' },
+            'admira.studio':   { url: 'https://www.admira.studio/',             label: 'Admira Studio' },
+            'admiranext.com':  { url: 'https://www.admiranext.com/',            label: 'AdmiraNeXT' },
+            'admiranext':      { url: 'https://www.admiranext.com/',            label: 'AdmiraNeXT' },
+            'admira.app':      { url: 'https://www.admira.app/',                label: 'Admira App' },
+            'clearchannel.tv': { url: 'https://www.clearchannel.tv/',           label: 'Clear Channel TV' },
+            'clearchannel':    { url: 'https://www.clearchannel.tv/',           label: 'Clear Channel TV' },
+            'pixeria.com':     { url: 'https://www.pixeria.com/',               label: 'Pixeria' },
+            'pixeria':         { url: 'https://www.pixeria.com/',               label: 'Pixeria' },
+            'equipos':         { url: 'https://www.admira.live/equipos',        label: 'Equipos (asignación)' },
+            'control':         { url: 'https://www.admira.live/control',        label: 'FleetControl' }
+        };
+        const sitesListMatch = text.match(/^\/sites?$/i);
+        if (sitesListMatch) {
+            addUserEntry(text);
+            const seen = {}; const items = [];
+            Object.keys(SITES).forEach(k => { const u = SITES[k].url || 'recarga'; if (!seen[u]) { seen[u] = 1; items.push('/' + k); } });
+            setActionLine('🌐 Sites: ' + items.join(' · '));
+            return true;
+        }
+        const siteMatch = text.match(/^\/(www\.)?([a-z0-9.\-]+)$/i);
+        if (siteMatch) {
+            const key = siteMatch[2].toLowerCase().replace(/\/+$/, '');
+            const site = SITES[key];
+            if (site) {
+                addUserEntry(text);
+                if (site.reload) { setActionLine('🔄 Recargando admira.live…'); setTimeout(() => location.reload(), 150); }
+                else { window.open(site.url, '_blank', 'noopener'); setActionLine('🚀 Abriendo ' + (site.label || key) + ' → ' + site.url); }
+                return true;
+            }
+        }
+        const scummMatch = text.match(/^\/(?:scumm|verbos)\s*(on|off|toggle)?$/i);
+        if (scummMatch) {
+            const action = (scummMatch[1] || 'toggle').toLowerCase();
+            const bar = document.querySelector('.scumm-bar');
+            const collapsed = !!(bar && bar.classList.contains('scumm-collapsed'));
+            const nv = action === 'off' ? true : action === 'on' ? false : !collapsed;
+            setScummCollapsed(nv);
+            addUserEntry(text);
+            setActionLine('🎛 Menú SCUMM ' + (nv ? 'plegado' : 'desplegado') + ' · /scumm on · off · toggle');
+            return true;
+        }
+        const topMatch = text.match(/^\/top\s*(on|off|toggle)?$/i);
+        if (topMatch) {
+            const action = (topMatch[1] || 'toggle').toLowerCase();
+            const c = document.querySelector('.container');
+            const collapsed = !!(c && c.classList.contains('top-collapsed'));
+            const nv = action === 'off' ? true : action === 'on' ? false : !collapsed;
+            setTopCollapsed(nv);
+            addUserEntry(text);
+            setActionLine('🔼 Menú superior ' + (nv ? 'plegado' : 'desplegado') + ' · /top on · off · toggle');
+            return true;
+        }
+        const bocasMatch = text.match(/^\/(?:bocas|boca)\s*(on|off|toggle)?$/i);
+        if (bocasMatch) {
+            const action = (bocasMatch[1] || 'toggle').toLowerCase();
+            const off = document.body.classList.contains('mouths-off');
+            const nv = action === 'off' ? false : action === 'on' ? true : off;
+            setMouthsEnabled(nv);
+            addUserEntry(text);
+            setActionLine('👄 Bocas ' + (nv ? 'activas (los vivos hablan)' : 'quietas') + ' · /bocas on · off · toggle');
+            return true;
+        }
+        const menuMatch = text.match(/^\/menu\s*(on|off|toggle)?$/i);
+        if (menuMatch) {
+            const action = (menuMatch[1] || 'toggle').toLowerCase();
+            const hidden = document.body.classList.contains('cli-menu-hidden');
+            const nv = action === 'off' ? true : action === 'on' ? false : !hidden;
+            document.body.classList.toggle('cli-menu-hidden', nv);
+            try { localStorage.setItem('councilMenuHidden', nv ? '1' : '0'); } catch (e) {}
+            addUserEntry(text);
+            setActionLine('🗂 Menús ' + (nv ? 'ocultos (más espacio) — /menu on para verlos' : 'visibles') + ' · /menu on · off · toggle');
+            return true;
+        }
+        const agentesMatch = text.match(/^\/agentes\s*(on|off|toggle)?$/i);
+        if (agentesMatch && window.agmSetVisible) {
+            const action = (agentesMatch[1] || "toggle").toLowerCase();
+            const vis = window.agmSetVisible(action === "on" ? true : action === "off" ? false : null);
+            addUserEntry(text);
+            setActionLine("\ud83d\udce1 Agentes (AgoraMatrix) " + (vis ? "visibles" : "ocultos") + " \u2014 /agentes on \u00b7 off \u00b7 toggle");
+            return true;
+        }
+        const agmPanelMatch = text.match(/^\/agoramatrix\s*(on|off|toggle)$/i);
+        if (agmPanelMatch && window.agmSetVisible) {
+            const action = (agmPanelMatch[1] || 'toggle').toLowerCase();
+            const vis = window.agmSetVisible(action === 'on' ? true : action === 'off' ? false : null);
+            addUserEntry(text);
+            setActionLine('📡 Panel AgoraMatrix ' + (vis ? 'visible' : 'oculto') + ' — /agoramatrix on · off · toggle');
+            return true;
+        }
+        const sendtoMatch = text.match(/^\/sendto(?:\s+(\S+)(?:\s+([\s\S]+))?)?$/i);
+        if (sendtoMatch) {
+            const machine = (sendtoMatch[1] || "").trim();
+            let rest = (sendtoMatch[2] || "").trim();
+            let target = "claude";   // por defecto la app Claude (Claude Code de escritorio)
+            const tm = rest.match(/^(claude|terminal)\s*:\s*([\s\S]+)$/i);
+            if (tm) { target = tm[1].toLowerCase(); rest = tm[2].trim(); }
+            addUserEntry(text);
+            if (!machine || !rest) {
+                setActionLine("Uso: /sendto <equipo> [terminal:] <mensaje> — p.ej. /sendto MacBookProNegro14 revisa el deploy (por defecto va a la app Claude)");
+            } else {
+                sendToMachine(machine, rest, target);
+            }
+            return true;
+        }
+        const taskPanelMatch = text.match(/^\/(?:tareas|tasks)\s*(on|off|toggle)?$/i);
+        if (taskPanelMatch && window.tkSetVisible) {
+            const action = (taskPanelMatch[1] || 'toggle').toLowerCase();
+            const vis = window.tkSetVisible(action === 'on' ? true : action === 'off' ? false : null);
+            addUserEntry(text);
+            setActionLine('🗂️ Panel Tareas del Consejo ' + (vis ? 'visible' : 'oculto') + ' — /tareas on · off · toggle');
+            return true;
+        }
+        const agoraMatch = text.match(/^\/(?:agora|agoramatrix|codex|oraculo|oráculo)(?:\s+(estado|status|help|ayuda))?$/i);
+        if (agoraMatch) {
+            showAgoraMatrixHelp(text);
+            return true;
+        }
+        const googleMatch = text.match(/^\/google(?:\s+(drive|sheet|sheets|hoja|entrenar))?$/i);
+        if (googleMatch) {
+            openGoogleEntrenarSheet();
+            return true;
+        }
+        const importarMatch = text.match(/^\/importar\s+(\S.+)$/i);
+        if (importarMatch) {
+            void executeImportarVideo(importarMatch[1].trim());
+            return true;
+        }
+        const namesMatch = text.match(/^\/?nombres(?:\s+(on|off|toggle))?$/i);
+        if (namesMatch) {
+            const action = (namesMatch[1] || 'toggle').toLowerCase();
+            if (action === 'on') setNameplatesVisible(true);
+            else if (action === 'off') setNameplatesVisible(false);
+            else setNameplatesVisible(!nameplatesVisible);
+            const state = nameplatesVisible ? 'visibles' : 'ocultos';
+            setActionLine('🏷 Nombres ' + state + ' — usa /help para ver más comandos');
+            return true;
+        }
+        const tareaMatch = text.match(/^\/tarea\s+(.+)$/i);
+        if (tareaMatch) {
+            void executeYarig('tarea: ' + tareaMatch[1].trim());
+            return true;
+        }
+        const finalizadaMatch = text.match(/^\/finalizada\s+(.+)$/i);
+        if (finalizadaMatch) {
+            void executeYarig('finalizada: ' + finalizadaMatch[1].trim());
+            return true;
+        }
+        const diarioAppendMatch = text.match(/^\/diario\s+(\S.*)$/i);
+        if (diarioAppendMatch) {
+            void registrarDiario(diarioAppendMatch[1].trim());
+            return true;
+        }
+        const diarioMatch = text.match(/^\/diario$/i);
+        if (diarioMatch) {
+            void openDiario();
+            return true;
+        }
+        const yarigLoginMatch = text.match(/^\/yarig(?:\.ai)?\s+(login|loguear|entrar)$/i);
+        if (yarigLoginMatch) {
+            void prepareYarigLoginSession();
+            return true;
+        }
+        const yarigLogoutMatch = text.match(/^\/yarig(?:\.ai)?\s+(logout|salir|cerrar-sesion|cerrarsesion)$/i);
+        if (yarigLogoutMatch) {
+            void logoutYarigSession();
+            return true;
+        }
+        const yarigSyncMatch = text.match(/^\/yarig(?:\.ai)?\s+(sincro|sync|sincronizar|sincroniza)$/i);
+        if (yarigSyncMatch) {
+            void syncYarigFromLoggedSession();
+            return true;
+        }
+        const yarigStatusMatch = text.match(/^\/yarig(?:\.ai)?\s+(estado|status|salud|health)$/i);
+        if (yarigStatusMatch) {
+            void checkYarigStatus();
+            return true;
+        }
+        const yarigMatch = text.match(/^\/yarig(?:\.ai)?(?:\s+(on|off|toggle))?$/i);
+        if (yarigMatch) {
+            const action = (yarigMatch[1] || 'on').toLowerCase();
+            if (action === 'off') {
+                hideYarigWindows();
+                setActionLine('🧭 Yarig.AI oculto — usa /yarig on o /yarig.ai on para recuperarlo');
+                return true;
+            }
+            if (action === 'toggle') {
+                const active = document.getElementById('win-racional')?.classList.contains('active') || document.getElementById('win-creativo')?.classList.contains('active');
+                if (active) {
+                    hideYarigWindows();
+                    setActionLine('🧭 Yarig.AI oculto — usa /help para ver más comandos');
+                    return true;
+                }
+            }
+            void loadYarContext().then(() => {
+                showYarigWindows();
+                setYarigPromptStatus('🧭 Yarig.AI visible');
+            });
+            return true;
+        }
+        return false;
+    }
+
+    // Toggle collapsible panels
+    function togglePanel(panelId) {
+        document.getElementById(panelId).classList.toggle("collapsed");
+    }
+
+    // Toggle nameplates visibility
+    let nameplatesVisible = false;
+    function setNameplatesVisible(visible) {
+        const np = document.getElementById("nameplates");
+        const btn = document.getElementById("np-toggle");
+        nameplatesVisible = !!visible;
+        np.classList.toggle("hidden", !nameplatesVisible);
+        if (btn) {
+            btn.textContent = nameplatesVisible ? "🏷 Ocultar" : "🏷 Mostrar";
+            btn.classList.toggle("off", !nameplatesVisible);
+        }
+    }
+    function toggleNameplates() {
+        setNameplatesVisible(!nameplatesVisible);
+    }
+
+    // Enter conversation mode — show conv area below SCUMM bar
+    let conversationMode = false;
+    function enterConversation() {
+        if (conversationMode) return;
+        conversationMode = true;
+        document.getElementById("conv-area").classList.add("active");
+    }
+
+    function exitConversation() {
+        conversationMode = false;
+        document.getElementById("conv-area").classList.remove("active");
+        document.getElementById("conv-racional").innerHTML = "";
+        document.getElementById("conv-creativo").innerHTML = "";
+        conversationHistory = [];
+        exitPreguntarMode();
+        setActionLine("Escribe aquí o usa /help...");
+    }
+
+    // ─── Private Meeting Room (Sala de Reuniones Privada) ───
+    let meetingAdvisor = null;
+
+    function enterReunionMode() {
+        // Show advisor selection in inventory panel
+        const invPanel = document.querySelector('.inv-panel[data-panel="llm"]');
+        if (invPanel) {
+            invPanel.innerHTML = `
+                <div class="inventory-title">Convocar la Mesa o reunión privada</div>
+                <div class="inventory-list" id="reunion-advisor-list">
+                    <div class="inv-item" style="background:#241a4a;border-color:#5a3c8a;font-weight:700" onclick="convocarMesa()">
+                        🏛️ Convocar la Mesa — debate del Consejo (varios)
+                    </div>
+                    <div style="font-size:11px;color:#8a97ab;margin:6px 2px 2px">— o reunión privada 1-a-1 —</div>
+                    ${COUNCIL.filter(m => m.gen === currentGen).map(m =>
+                        `<div class="inv-item" data-persona="${m.persona}" onclick="selectAdvisorForMeeting('${m.persona}')">
+                            ${m.icon} ${m.persona} (${m.name}) — ${m.side === 'racional' ? '🧠 Racional' : '🎨 Creativo'}
+                        </div>`
+                    ).join('')}
+                </div>
+            `;
+        }
+        // Switch to LLM panel to show advisor list
+        document.querySelectorAll('.inv-panel').forEach(p => p.classList.remove('active'));
+        document.querySelector('.inv-panel[data-panel="llm"]').classList.add('active');
+        setActionLine("👆 Convoca la Mesa (debate) o elige un consejero para reunión privada...");
+    }
+
+    // Convoca la MESA: abre el debate de varios consejeros (reunion.html) presentando
+    // a la generación actual del Consejo. La reunión en vivo se vive dentro del consejo.
+    function convocarMesa() {
+        const seats = COUNCIL.filter(m => m.gen === currentGen).slice(0, 5).map(m => m.persona).join(',');
+        setActionLine("🏛️ Convocando la Mesa del Consejo...");
+        window.location.href = 'reunion.html?seats=' + encodeURIComponent(seats) + '&from=mesa';
+    }
+
+    function selectAdvisorForMeeting(persona) {
+        const members = COUNCIL.filter(m => m.gen === currentGen);
+        const agent = members.find(m => m.persona === persona);
+        if (!agent) return;
+
+        meetingAdvisor = agent;
+        enterPrivateMeeting(agent);
+    }
+
+    function enterPrivateMeeting(agent) {
+        document.getElementById("meeting-overlay").classList.add("visible");
+        
+        // Set advisor image and info
+        const img = document.getElementById("meeting-advisor-img");
+        const side = agent.side === "racional" ? "left" : "right";
+        const idx = COUNCIL.filter(m => m.gen === currentGen && m.side === agent.side).findIndex(m => m.persona === agent.persona);
+        // Use a placeholder - in production would load actual advisor portrait
+        img.src = `assets/advisor-${agent.role.toLowerCase()}.png`;
+        img.onerror = () => { img.src = `assets/council-${currentGen}.jpg?v=${COUNCIL_IMAGE_VERSION}`; };
+        
+        document.getElementById("meeting-advisor-name").textContent = agent.name;
+        document.getElementById("meeting-advisor-role").textContent = agent.role;
+        document.getElementById("meeting-advisor-persona").textContent = "Persona: " + agent.persona;
+        const badge = document.getElementById("meeting-side-badge");
+        badge.textContent = agent.side === "racional" ? "🧠 Racional" : "🎨 Creativo";
+        badge.className = "meeting-side-badge " + agent.side;
+        
+        // Clear chat
+        document.getElementById("meeting-chat").innerHTML = "";
+        
+        // Add welcome message
+        addMeetingMsg(agent, councilGreeting(agent));
+        
+        // Focus input
+        setTimeout(() => document.getElementById("meeting-input").focus(), 300);
+    }
+
+    function exitPrivateMeeting() {
+        document.getElementById("meeting-overlay").classList.remove("visible");
+        meetingAdvisor = null;
+        document.getElementById("meeting-chat").innerHTML = "";
+        setActionLine("Escribe aquí o usa /help...");
+    }
+
+    function addMeetingMsg(agent, text, isUser = false) {
+        const chat = document.getElementById("meeting-chat");
+        const entry = document.createElement("div");
+        entry.className = "meeting-msg" + (isUser ? " user" : "");
+        const speakerClass = isUser ? "user" : "advisor";
+        const speakerLabel = isUser ? "👤 Tú" : agent.icon + " " + agent.name;
+        entry.innerHTML = '<div class="meeting-speaker ' + speakerClass + '">' + speakerLabel + '</div><div class="meeting-text">' + text + '</div>';
+        chat.appendChild(entry);
+        chat.scrollTop = chat.scrollHeight;
+    }
+
+    async function sendPrivateMessage() {
+        const input = document.getElementById("meeting-input");
+        const text = input.value.trim();
+        if (!text || !meetingAdvisor) return;
+        
+        input.value = "";
+        addMeetingMsg(meetingAdvisor, text, true);
+        
+        // Show typing indicator
+        const typing = document.getElementById("meeting-typing");
+        typing.textContent = meetingAdvisor.name + " está escribiendo...";
+        typing.style.display = "block";
+        
+        try {
+            // Call API for single agent
+            const reply = await askOneAgentAPI(text, meetingAdvisor.name);
+            typing.style.display = "none";
+            
+            if (reply) {
+                addMeetingMsg(meetingAdvisor, reply.content);
+            } else {
+                addMeetingMsg(meetingAdvisor, "Lo siento, no he podido procesar tu mensaje.");
+            }
+        } catch (e) {
+            typing.style.display = "none";
+            addMeetingMsg(meetingAdvisor, "Error de conexión: " + e.message);
+        }
+    }
+
+    function addConvEntry(panelId, icon, name, persona, side, text) {
+        const panel = document.getElementById(panelId);
+        const entry = document.createElement("div");
+        entry.className = "conv-entry";
+        entry.innerHTML = '<div class="conv-speaker ' + side + '">' + icon + ' ' + name + '</div><div class="conv-text">' + text + '</div>';
+        panel.appendChild(entry);
+        panel.scrollTop = panel.scrollHeight;
+    }
+
+    function addUserEntry(text) {
+        // Show user message in both conv panels
+        ["conv-racional", "conv-creativo"].forEach(panelId => {
+            const panel = document.getElementById(panelId);
+            const entry = document.createElement("div");
+            entry.className = "conv-entry";
+            entry.innerHTML = '<div class="conv-speaker user">👤 Tú</div><div class="conv-text">' + text.replace(/</g,'&lt;') + '</div>';
+            panel.appendChild(entry);
+            panel.scrollTop = panel.scrollHeight;
+        });
+    }
+
+    // Send message to council
+    function sendMessage() {
+        const input = document.getElementById("action-input");
+        const text = input.value.trim();
+        if (!text) return;
+        input.value = "";
+
+        if (handleCliCommand(text)) {
+            return;
+        }
+
+        // If in "preguntar" mode with a selected agent, ask only that one
+        if (preguntarMode && selectedAgent) {
+            enterConversation();
+            addUserEntry(text);
+            askSingleAgent(text, selectedAgent);
+            return;
+        }
+
+        if (currentVerb === 'entrenar') {
+            executeEntrenar(text);
+            return;
+        }
+
+        if (currentVerb === 'crear') {
+            executeCrear(text);
+            return;
+        }
+
+        if (currentVerb === 'hablar') {
+            executeYarig(text);
+            return;
+        }
+
+        enterConversation();
+        addUserEntry(text);
+        simulateCouncilResponse(text);
+    }
+
+    // ── ENTRENAR: corpus compartido por consejero (API + caché local) ──
+    const ENTRENAR_LEGACY_PREFIX = "entrenar:";
+    let entrenarCache = {};
+    let entrenarLoadPromises = {};
+    let entrenarLoadedGens = new Set();
+    function entrenarKey(gen, persona) { return gen + "::" + persona; }
+    function entrenarLegacyKey(gen, persona) { return ENTRENAR_LEGACY_PREFIX + gen + ":" + persona; }
+    function _normalizeEntrenarItem(raw) {
+        if (!raw) return null;
+        if (typeof raw === 'string') {
+            const url = raw.trim();
+            if (!url) return null;
+            return {
+                url,
+                source: detectVideoSource(url),
+                kind: classifyEntrenarUrl(url),
+                ts: Date.now(),
+            };
+        }
+        if (typeof raw !== 'object') return null;
+        const url = String(raw.url || '').trim();
+        if (!url) return null;
+        return {
+            url,
+            source: raw.source || detectVideoSource(url),
+            kind: raw.kind || classifyEntrenarUrl(url),
+            ts: Number(raw.ts) || Date.now(),
+            title: raw.title ? String(raw.title) : undefined,
+        };
+    }
+    function _mergeEntrenarItems(existing, incoming) {
+        const merged = new Map();
+        (Array.isArray(existing) ? existing : []).map(_normalizeEntrenarItem).filter(Boolean).forEach(it => merged.set(it.url, it));
+        (Array.isArray(incoming) ? incoming : []).map(_normalizeEntrenarItem).filter(Boolean).forEach(it => {
+            const prev = merged.get(it.url);
+            if (!prev || (it.ts || 0) >= (prev.ts || 0)) merged.set(it.url, it);
+        });
+        return Array.from(merged.values()).sort((a, b) => (a.ts || 0) - (b.ts || 0) || a.url.localeCompare(b.url));
+    }
+    function _setEntrenarCache(gen, persona, arr) {
+        if (!entrenarCache[gen]) entrenarCache[gen] = {};
+        entrenarCache[gen][persona] = _mergeEntrenarItems([], arr);
+    }
+    function loadEntrenar(gen, persona) {
+        return ((entrenarCache[gen] || {})[persona] || []).slice();
+    }
+    function saveEntrenar(gen, persona, arr) {
+        const normalized = _mergeEntrenarItems([], arr);
+        _setEntrenarCache(gen, persona, normalized);
+        try { localStorage.setItem(entrenarLegacyKey(gen, persona), JSON.stringify(normalized)); } catch(e) {}
+    }
+    function _legacyEntrenarItems(gen, persona) {
+        try {
+            const parsed = JSON.parse(localStorage.getItem(entrenarLegacyKey(gen, persona)) || "[]");
+            return Array.isArray(parsed) ? parsed.map(_normalizeEntrenarItem).filter(Boolean) : [];
+        } catch(e) {
+            return [];
+        }
+    }
+    function _applyEntrenarSnapshot(snapshot, genHint) {
+        const gen = (snapshot && snapshot.gen) || genHint || currentGen;
+        const personas = (snapshot && snapshot.personas && typeof snapshot.personas === 'object') ? snapshot.personas : {};
+        entrenarCache[gen] = entrenarCache[gen] || {};
+        for (const m of COUNCIL.filter(x => x.gen === gen)) {
+            const items = Array.isArray(personas[m.persona]) ? personas[m.persona] : [];
+            saveEntrenar(gen, m.persona, items);
+        }
+    }
+    function _snapshotTotal(snapshot) {
+        if (snapshot && typeof snapshot.total === 'number') return snapshot.total;
+        const personas = (snapshot && snapshot.personas && typeof snapshot.personas === 'object') ? snapshot.personas : {};
+        return Object.values(personas).reduce((acc, items) => acc + (Array.isArray(items) ? items.length : 0), 0);
+    }
+    function _sameEntrenarItems(a, b) {
+        const left = _mergeEntrenarItems([], a);
+        const right = _mergeEntrenarItems([], b);
+        if (left.length !== right.length) return false;
+        return left.every((item, idx) => JSON.stringify(item) === JSON.stringify(right[idx]));
+    }
+    async function _fetchEntrenarSnapshots(gen) {
+        const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
+        const snapshots = [];
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + '/api/council/entrenar/' + encodeURIComponent(gen), {
+                    headers: { 'X-Council-Token': COUNCIL_API_TOKEN },
+                    signal: AbortSignal.timeout(12000)
+                });
+                if ([404, 405, 429, 500, 502, 503, 504].includes(res.status)) continue;
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                const snapshot = await res.json();
+                snapshots.push({ baseUrl, snapshot });
+            } catch (e) {
+                console.warn('Entrenar snapshot failed at', baseUrl, e);
+            }
+        }
+        if (!snapshots.length) throw new Error('Entrenar API no disponible');
+        return snapshots;
+    }
+    function _mergeEntrenarSnapshots(gen, snapshots) {
+        const personas = {};
+        for (const m of COUNCIL.filter(x => x.gen === gen)) {
+            let merged = [];
+            for (const entry of snapshots || []) {
+                const items = entry && entry.snapshot && entry.snapshot.personas ? entry.snapshot.personas[m.persona] : [];
+                merged = _mergeEntrenarItems(merged, items);
+            }
+            personas[m.persona] = merged;
+        }
+        return {
+            gen,
+            personas,
+            total: Object.values(personas).reduce((acc, items) => acc + items.length, 0)
+        };
+    }
+    async function _reconcileEntrenarGen(gen, mergedSnapshot, snapshots) {
+        for (const entry of snapshots || []) {
+            for (const m of COUNCIL.filter(x => x.gen === gen)) {
+                const mergedItems = mergedSnapshot.personas[m.persona] || [];
+                const remoteItems = entry && entry.snapshot && entry.snapshot.personas ? (entry.snapshot.personas[m.persona] || []) : [];
+                if (!mergedItems.length || _sameEntrenarItems(remoteItems, mergedItems)) continue;
+                try {
+                    await fetch(entry.baseUrl + '/api/council/entrenar/' + encodeURIComponent(gen) + '/' + encodeURIComponent(m.persona) + '/merge', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Council-Token': COUNCIL_API_TOKEN
+                        },
+                        body: JSON.stringify({ items: mergedItems }),
+                        signal: AbortSignal.timeout(15000)
+                    });
+                } catch (e) {
+                    console.warn('Entrenar reconcile failed at', entry.baseUrl, e);
+                }
+            }
+        }
+    }
+    async function _mergeEntrenarPersonaRemote(gen, persona, items) {
+        const mergedLocal = _mergeEntrenarItems(loadEntrenar(gen, persona), items);
+        saveEntrenar(gen, persona, mergedLocal);
+        const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
+        let lastErr = null;
+        let okCount = 0;
+        let lastPayload = null;
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + '/api/council/entrenar/' + encodeURIComponent(gen) + '/' + encodeURIComponent(persona) + '/merge', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Council-Token': COUNCIL_API_TOKEN
+                    },
+                    body: JSON.stringify({ items: Array.isArray(items) ? items.map(_normalizeEntrenarItem).filter(Boolean) : [] }),
+                    signal: AbortSignal.timeout(15000)
+                });
+                if ([404, 405, 429, 500, 502, 503, 504].includes(res.status)) {
+                    lastErr = new Error('HTTP ' + res.status);
+                    continue;
+                }
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                activeApiUrl = activeApiUrl || baseUrl;
+                lastPayload = await res.json();
+                okCount += 1;
+            } catch (e) {
+                lastErr = e;
+            }
+        }
+        if (!okCount) throw lastErr || new Error('Entrenar API no disponible');
+        saveEntrenar(gen, persona, (lastPayload && lastPayload.items) || mergedLocal);
+        return loadEntrenar(gen, persona);
+    }
+    async function _migrateLegacyEntrenar(gen) {
+        let migrated = false;
+        for (const m of COUNCIL.filter(x => x.gen === gen)) {
+            const legacy = _legacyEntrenarItems(gen, m.persona);
+            if (!legacy.length) continue;
+            await _mergeEntrenarPersonaRemote(gen, m.persona, legacy);
+            migrated = true;
+        }
+        return migrated;
+    }
+    function _refreshEntrenarUi() {
+        if (currentVerb === 'entrenar') renderEntrenarList();
+        const activeRow = document.querySelector('.entrenar-corpus-row.active[data-persona]');
+        if (!activeRow) return;
+        const persona = activeRow.getAttribute('data-persona');
+        if (persona && persona !== '__all__') showEntrenarFor(persona);
+    }
+    async function ensureEntrenarLoaded(gen, force) {
+        if (!force && entrenarLoadedGens.has(gen)) {
+            _refreshEntrenarUi();
+            return;
+        }
+        if (!force && entrenarLoadPromises[gen]) return entrenarLoadPromises[gen];
+        entrenarLoadPromises[gen] = (async () => {
+            let needsRefetch = force || !entrenarLoadedGens.has(gen);
+            try {
+                const snapshots = await _fetchEntrenarSnapshots(gen);
+                const mergedSnapshot = _mergeEntrenarSnapshots(gen, snapshots);
+                _applyEntrenarSnapshot(mergedSnapshot, gen);
+                activeApiUrl = snapshots.slice().sort((a, b) => _snapshotTotal(b.snapshot) - _snapshotTotal(a.snapshot))[0]?.baseUrl || activeApiUrl;
+                await _reconcileEntrenarGen(gen, mergedSnapshot, snapshots);
+            } catch (e) {
+                console.warn('Entrenar snapshot unavailable', e);
+            }
+            try {
+                if (await _migrateLegacyEntrenar(gen)) needsRefetch = true;
+            } catch (e) {
+                console.warn('Entrenar legacy migration failed', e);
+            }
+            if (needsRefetch) {
+                try {
+                    const snapshots = await _fetchEntrenarSnapshots(gen);
+                    const mergedSnapshot = _mergeEntrenarSnapshots(gen, snapshots);
+                    _applyEntrenarSnapshot(mergedSnapshot, gen);
+                    activeApiUrl = snapshots.slice().sort((a, b) => _snapshotTotal(b.snapshot) - _snapshotTotal(a.snapshot))[0]?.baseUrl || activeApiUrl;
+                    await _reconcileEntrenarGen(gen, mergedSnapshot, snapshots);
+                } catch (e) {
+                    console.warn('Entrenar refresh failed', e);
+                }
+            }
+            entrenarLoadedGens.add(gen);
+            _refreshEntrenarUi();
+        })().finally(() => { delete entrenarLoadPromises[gen]; });
+        return entrenarLoadPromises[gen];
+    }
+    function entrenarSummary(gen) {
+        const out = [];
+        for (const m of COUNCIL.filter(x => x.gen === gen)) {
+            out.push({ name: m.name, persona: m.persona, count: loadEntrenar(gen, m.persona).length });
+        }
+        return out;
+    }
+    function renderEntrenarList() {
+        const ul = document.getElementById("entrenar-list");
+        if (!ul) return;
+        const summary = entrenarSummary(currentGen);
+        const total = summary.reduce((s, x) => s + x.count, 0);
+        if (total === 0) {
+            ul.innerHTML = '<div class="inv-item" style="font-size:0.7rem;opacity:0.7">Pega una URL en la línea superior y pulsa Enviar</div>';
+            return;
+        }
+        ul.innerHTML = '<div class="inv-item" style="font-size:0.7rem;opacity:0.85;border-bottom:1px solid rgba(255,255,255,0.1);margin-bottom:4px;">🎓 Total: ' + total + ' · ' + currentGen + '</div>' +
+            summary.map(s => '<div class="inv-item entrenar-corpus-row" data-persona="' + _entrenarEsc(s.persona) + '" title="Ver corpus de ' + _entrenarEsc(s.persona) + '" style="font-size:0.7rem;display:flex;justify-content:space-between;cursor:pointer"><span>' + s.persona + '</span><span style="color:#daa520">' + s.count + '</span></div>').join('');
+    }
+    function triggerEntrenar() {
+        renderEntrenarList();
+        setActionLine("🎓 Entrenar — pega la URL o usa 'para/to': https://... para Walt Disney");
+        void ensureEntrenarLoaded(currentGen);
+        void loadYarContext().then(() => {
+            if (currentVerb !== 'entrenar') return;
+            const persona = selectedAgent ? selectedAgent.persona : '__all__';
+            if (persona && persona !== '__all__') showEntrenarFor(persona);
+        });
+    }
+
+    // ── ENTRENAR / YARIG: overlays de fondo (hechos izq · pendientes der) ──
+    let _winOriginalHtml = null;
+    function captureOverlayOriginals() {
+        if (_winOriginalHtml) return;
+        _winOriginalHtml = {
+            racional: document.getElementById('win-racional').innerHTML,
+            creativo: document.getElementById('win-creativo').innerHTML,
+            proceso: document.getElementById('win-proceso').innerHTML
+        };
+    }
+    function restoreOverlayOriginals() {
+        if (!_winOriginalHtml) return;
+        document.getElementById('win-racional').innerHTML = _winOriginalHtml.racional;
+        document.getElementById('win-creativo').innerHTML = _winOriginalHtml.creativo;
+        document.getElementById('win-proceso').innerHTML = _winOriginalHtml.proceso;
+        document.getElementById('win-proceso').classList.remove('active');
+    }
+    function _entrenarEsc(s) {
+        return String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+    }
+    function _entrenarItemDesc(it) {
+        if (it.title) return it.title.slice(0, 120);
+        const date = new Date(it.ts || Date.now()).toLocaleDateString('es', { day: '2-digit', month: '2-digit' });
+        return (it.source || 'Enlace') + ' · ' + date;
+    }
+    function _entrenarItemsHtml(arr) {
+        if (!arr.length) return '<li class="empty">(vacío)</li>';
+        // Más nuevo arriba (los items se guardan con push() así que invertimos)
+        const sorted = arr.slice().reverse();
+        return sorted.map(it => {
+            const short = it.url.replace(/^https?:\/\//,'').slice(0, 26);
+            const url = _entrenarEsc(it.url);
+            const desc = _entrenarEsc(_entrenarItemDesc(it));
+            const label = _entrenarEsc((it.title && it.title.trim()) ? it.title.trim().slice(0, 96) : short);
+            return '<li>' +
+                '<a href="' + url + '" data-entrenar-url="' + url + '" rel="noopener" title="' + url + '">' + label + '</a>' +
+                '<a href="' + url + '" data-entrenar-ext="1" target="_blank" rel="noopener" class="ext-link" title="Abrir en pestaña">↗</a>' +
+                '<div class="analizar-desc">' + (desc && desc !== label ? desc : '') + '</div>' +
+                '</li>';
+        }).join('');
+    }
+    function _yarListFromBlock(text) {
+        return String(text || '')
+            .split(/\n+/)
+            .map(line => line.replace(/^[•\-*\d.)\s]+/, '').trim())
+            .filter(Boolean)
+            .slice(0, 12);
+    }
+    function _yarSimpleListHtml(items, emptyLabel) {
+        if (!items.length) return '<li class="empty">(' + _entrenarEsc(emptyLabel) + ')</li>';
+        return items.map(item => '<li><span class="analizar-link">' + _entrenarEsc(item) + '</span></li>').join('');
+    }
+    function _yarFmtTime(iso) {
+        if (!iso) return '--:--';
+        const d = new Date(iso);
+        if (Number.isNaN(d.getTime())) return '--:--';
+        return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    }
+    function _extractEntrenarPayload(rawText) {
+        const text = String(rawText || '').trim();
+        if (!text) return { urlText: '', targetText: '', hadTargetClause: false };
+        const m = text.match(/^(https?:\/\/\S+|www\.\S+)\s+(?:to|para)\s*(.*)$/i);
+        if (!m) return { urlText: text, targetText: '', hadTargetClause: false };
+        return {
+            urlText: m[1].trim(),
+            targetText: (m[2] || '').trim(),
+            hadTargetClause: true
+        };
+    }
+    function hideEntrenarOverlays() {
+        document.getElementById('win-racional').classList.remove('active');
+        document.getElementById('win-creativo').classList.remove('active');
+        document.getElementById('win-proceso').classList.remove('active');
+    }
+    // ── Table viewer: pinta el item seleccionado en el centro de la mesa ──
+    function _youtubeId(url) {
+        try {
+            const u = new URL(url);
+            if (u.hostname.includes('youtu.be')) return u.pathname.slice(1).split('/')[0];
+            if (u.hostname.includes('youtube.com')) {
+                if (u.pathname.startsWith('/embed/')) return u.pathname.slice(7).split('/')[0];
+                if (u.pathname.startsWith('/shorts/')) return u.pathname.slice(8).split('/')[0];
+                return u.searchParams.get('v');
+            }
+        } catch(e) {}
+        return null;
+    }
+    function _vimeoId(url) {
+        try {
+            const u = new URL(url);
+            if (u.hostname.includes('vimeo.com')) {
+                const id = u.pathname.slice(1).split('/')[0];
+                return /^\d+$/.test(id) ? id : null;
+            }
+        } catch(e) {}
+        return null;
+    }
+    function openInTableViewer(url) {
+        const viewer = document.getElementById('table-viewer');
+        const content = document.getElementById('table-viewer-content');
+        if (!viewer || !content) return;
+        viewer.classList.remove('mode-mac', 'mode-hologram');
+        viewer.classList.add(currentGen === 'coetaneos' ? 'mode-hologram' : 'mode-mac');
+        const yId = _youtubeId(url);
+        const vId = _vimeoId(url);
+        let html = '';
+        if (yId) {
+            html = '<iframe src="https://www.youtube-nocookie.com/embed/' + yId + '?rel=0" allow="autoplay; encrypted-media; picture-in-picture" allowfullscreen></iframe>';
+        } else if (vId) {
+            html = '<iframe src="https://player.vimeo.com/video/' + vId + '" allow="autoplay; fullscreen; picture-in-picture" allowfullscreen></iframe>';
+        } else if (/\.pdf(\?|$)/i.test(url)) {
+            html = '<iframe src="' + _entrenarEsc(url) + '"></iframe>';
+        } else {
+            let domain = url;
+            try { domain = new URL(url).hostname.replace(/^www\./, ''); } catch(e) {}
+            const favicon = 'https://www.google.com/s2/favicons?sz=64&domain=' + encodeURIComponent(domain);
+            html = '<div class="tv-card">' +
+                '<img src="' + favicon + '" alt="">' +
+                '<div class="tv-domain">' + _entrenarEsc(domain) + '</div>' +
+                '<a class="tv-open" href="' + _entrenarEsc(url) + '" target="_blank" rel="noopener">ABRIR ↗</a>' +
+                '</div>';
+        }
+        content.innerHTML = html;
+        viewer.classList.add('active');
+    }
+    function closeTableViewer() {
+        const viewer = document.getElementById('table-viewer');
+        const content = document.getElementById('table-viewer-content');
+        if (!viewer) return;
+        if (document.fullscreenElement === viewer) {
+            document.exitFullscreen?.();
+        }
+        viewer.classList.remove('active');
+        if (content) content.innerHTML = '';
+        if (_crearPhaseTimer) { clearInterval(_crearPhaseTimer); _crearPhaseTimer = null; }
+    }
+    function toggleTableViewerFullscreen() {
+        const viewer = document.getElementById('table-viewer');
+        if (!viewer) return;
+        if (document.fullscreenElement) {
+            document.exitFullscreen?.();
+        } else {
+            (viewer.requestFullscreen || viewer.webkitRequestFullscreen || (() => {})).call(viewer);
+        }
+    }
+    function _entrenarListClick(e) {
+        if (currentVerb !== 'entrenar') return;
+        if (e.target.closest('a[data-entrenar-ext]')) return; // dejar que abra en pestaña
+        const main = e.target.closest('a[data-entrenar-url]');
+        if (!main) return;
+        e.preventDefault();
+        openInTableViewer(main.getAttribute('data-entrenar-url'));
+    }
+    function showEntrenarFor(persona) {
+        if (persona === '__yarig__') {
+            const buckets = _normalizeYarContext(yarContext).taskBuckets;
+            const finalizadas = (buckets.done || []).slice(-12).reverse();
+            const enProceso = (buckets.inProgress || []).slice(-12).reverse();
+            const pendientes = (buckets.pending || []).slice(-12).reverse();
+            const foco = yarContext.focus ? '<div class="analizar-desc">Foco: ' + _entrenarEsc(yarContext.focus) + '</div>' : '';
+            const ayuda = yarContext.ask ? '<div class="analizar-desc">Ayuda: ' + _entrenarEsc(yarContext.ask) + '</div>' : '';
+            const jornada = '<div class="window-meta">Jornada · inicio ' + _yarFmtTime(yarContext.dayStartAt) + ' · fin ' + _yarFmtTime(yarContext.dayEndAt) + '</div>';
+            document.getElementById('win-racional').innerHTML =
+                '<div class="window-overlay-title">FINALIZADAS · Yarig.AI (' + finalizadas.length + ')</div>' +
+                foco +
+                '<ol class="analizar-list">' + _yarSimpleListHtml(finalizadas, 'sin tareas finalizadas') + '</ol>';
+            document.getElementById('win-proceso').innerHTML =
+                '<div class="window-overlay-title">EN PROCESO · Yarig.AI (' + enProceso.length + ')</div>' +
+                jornada +
+                _yarTaskControlHtml(enProceso) +
+                '<ol class="analizar-list">' + _yarSimpleListHtml(enProceso, 'sin tareas en proceso') + '</ol>';
+            document.getElementById('win-creativo').innerHTML =
+                '<div class="window-overlay-title">PENDIENTES · Yarig.AI (' + pendientes.length + ')</div>' +
+                ayuda +
+                '<ol class="analizar-list">' + _yarSimpleListHtml(pendientes, 'sin tareas pendientes') + '</ol>';
+            document.getElementById('win-racional').classList.add('active');
+            document.getElementById('win-proceso').classList.add('active');
+            document.getElementById('win-creativo').classList.add('active');
+            return;
+        }
+
+        const items = loadEntrenar(currentGen, persona);
+        const videos = items.filter(it => classifyEntrenarUrl(it.url) === 'video');
+        const books = items.filter(it => classifyEntrenarUrl(it.url) === 'book');
+        const others = items.filter(it => classifyEntrenarUrl(it.url) === 'other');
+        const rightItems = books.concat(others);
+        const rightTitle = books.length && others.length
+            ? 'LIBROS / ENLACES'
+            : books.length
+                ? 'LIBROS'
+                : 'ENLACES';
+
+        document.getElementById('win-racional').innerHTML =
+            '<div class="window-overlay-title">VIDEOS · ' + _entrenarEsc(persona) + ' (' + videos.length + ')</div>' +
+            '<ol class="analizar-list">' + _entrenarItemsHtml(videos) + '</ol>';
+        document.getElementById('win-creativo').innerHTML =
+            '<div class="window-overlay-title">' + rightTitle + ' · ' + _entrenarEsc(persona) + ' (' + rightItems.length + ')</div>' +
+            '<ol class="analizar-list">' + _entrenarItemsHtml(rightItems) + '</ol>';
+        document.getElementById('win-racional').classList.add('active');
+        document.getElementById('win-creativo').classList.add('active');
+        document.getElementById('win-proceso').classList.remove('active');
+    }
+    let _entrenarPanelHandler = null;
+    let _pendingEntrenar = null;
+    function enterEntrenarMode() {
+        captureOverlayOriginals();
+        document.getElementById('win-racional').addEventListener('click', _entrenarListClick);
+        document.getElementById('win-creativo').addEventListener('click', _entrenarListClick);
+        if (!_entrenarPanelHandler) {
+            _entrenarPanelHandler = (e) => {
+                const row = e.target.closest('.entrenar-corpus-row[data-persona]');
+                if (!row) return;
+                const persona = row.getAttribute('data-persona');
+                if (_pendingEntrenar) {
+                    _completePendingPick(persona);
+                    return;
+                }
+                if (persona === '__all__') return;
+                document.querySelectorAll('.entrenar-corpus-row').forEach(r => r.classList.remove('active'));
+                row.classList.add('active');
+                showEntrenarFor(persona);
+            };
+            document.getElementById('entrenar-list').addEventListener('click', _entrenarPanelHandler);
+        }
+    }
+    function exitEntrenarMode() {
+        document.getElementById('win-racional').removeEventListener('click', _entrenarListClick);
+        document.getElementById('win-creativo').removeEventListener('click', _entrenarListClick);
+        if (_entrenarPanelHandler) {
+            document.getElementById('entrenar-list').removeEventListener('click', _entrenarPanelHandler);
+            _entrenarPanelHandler = null;
+        }
+        _pendingEntrenar = null;
+        closeTableViewer();
+        hideEntrenarOverlays();
+        restoreOverlayOriginals();
+    }
+    function isLikelyUrl(s) {
+        return /^(https?:\/\/|www\.)\S+$/i.test(s);
+    }
+    function detectVideoSource(url) {
+        if (/youtu\.be\/|youtube\.com\//i.test(url)) return "YouTube";
+        if (/vimeo\.com\//i.test(url)) return "Vimeo";
+        if (/twitch\.tv\//i.test(url)) return "Twitch";
+        if (/tiktok\.com\//i.test(url)) return "TikTok";
+        if (/instagram\.com\//i.test(url)) return "Instagram";
+        if (/\.(mp4|mov|webm|m4v)(\?|$)/i.test(url)) return "Vídeo";
+        return "Enlace";
+    }
+    function classifyEntrenarUrl(url) {
+        // Video sources
+        if (/youtu\.be\/|youtube\.com\/|vimeo\.com\/|twitch\.tv\/|tiktok\.com\/|instagram\.com\/(reel|tv)|\.(mp4|mov|webm|m4v)(\?|$)/i.test(url)) {
+            return "video";
+        }
+        // Book sources
+        if (/amazon\.[a-z.]+\/(?:[^?#]*\/)?(?:dp|gp\/product)\/|goodreads\.com\/|librotea\.|casadellibro\.|libreriacanaima\.|fnac\.[a-z.]+\/|bookdepository\.com\/|\.(pdf|epub|mobi)(\?|$)/i.test(url)) {
+            return "book";
+        }
+        return "other";
+    }
+    async function _fetchUrlTitle(url) {
+        const yId = _youtubeId(url);
+        if (yId) {
+            try {
+                const r = await fetch('https://www.youtube.com/oembed?url=' + encodeURIComponent('https://www.youtube.com/watch?v=' + yId) + '&format=json');
+                if (r.ok) { const d = await r.json(); return ((d.title || '') + ' ' + (d.author_name || '')).trim(); }
+            } catch(e) {}
+        }
+        const vId = _vimeoId(url);
+        if (vId) {
+            try {
+                const r = await fetch('https://vimeo.com/api/oembed.json?url=' + encodeURIComponent(url));
+                if (r.ok) { const d = await r.json(); return ((d.title || '') + ' ' + (d.author_name || '')).trim(); }
+            } catch(e) {}
+        }
+        // Fallback: microlink para libros y otros (free tier ~50 req/IP/día)
+        try {
+            const r = await fetch('https://api.microlink.io?url=' + encodeURIComponent(url));
+            if (r.ok) {
+                const d = await r.json();
+                if (d.status === 'success' && d.data) {
+                    const parts = [d.data.title, d.data.author].filter(Boolean);
+                    return parts.join(' · ').trim();
+                }
+            }
+        } catch(e) {}
+        return '';
+    }
+    function _normalizeHaystack(s) {
+        return (s || '').toLowerCase().replace(/[-_+%20]/g, ' ');
+    }
+    function _detectTargetConsejeros(haystack, gen) {
+        const hay = _normalizeHaystack(haystack);
+        const members = COUNCIL.filter(m => m.gen === gen);
+        const matches = members.filter(m => hay.includes(m.persona.toLowerCase()));
+        // Si solo hay un nombre presente, pero el "miembro real" también lo menciona, también lo añadimos
+        // (skipped por ahora para evitar falsos positivos)
+        return matches;
+    }
+    function _resolveTrainTarget(target, gen) {
+        if (!target) return null;
+        const t = String(target).toLowerCase().trim();
+        if (!t || ['all','todos','everyone','*'].includes(t)) return 'all';
+        const members = COUNCIL.filter(m => m.gen === gen);
+        // Exact persona
+        let m = members.filter(x => x.persona.toLowerCase() === t);
+        if (m.length === 1) return m;
+        // Persona contains
+        m = members.filter(x => x.persona.toLowerCase().includes(t));
+        if (m.length === 1) return m;
+        // Role abbreviation (CEO, CTO…)
+        m = members.filter(x => x.name.toLowerCase() === t);
+        if (m.length >= 1) return m; // sólo hay 1 por rol por gen
+        return null;
+    }
+    async function executeEntrenar(text) {
+        await ensureEntrenarLoaded(currentGen);
+        const parsed = _extractEntrenarPayload(text);
+        const candidate = parsed.urlText;
+        if (!isLikelyUrl(candidate)) {
+            setActionLine("❌ Eso no parece una URL — pega un enlace que empiece por http(s):// o www.");
+            return;
+        }
+        const url = candidate.startsWith("http") ? candidate : "https://" + candidate;
+        const source = detectVideoSource(url);
+        const kind = classifyEntrenarUrl(url);
+        const ts = Date.now();
+        const kindIcon = kind === "book" ? "📚" : kind === "video" ? "📼" : "🔗";
+        const kindLabel = kind === "book" ? "Libro" : kind === "video" ? "Vídeo" : "Enlace";
+
+        // Si vino target explícito desde magic link (?target=…)
+        const explicitTarget = parsed.hadTargetClause ? parsed.targetText : window._trainTarget;
+        window._trainTarget = null; // consumido
+        if (parsed.hadTargetClause) {
+            const title = await _fetchUrlTitle(url);
+            if (!explicitTarget) {
+                _renderEntrenarPicker({ url, source, kind, ts, title, kindIcon, kindLabel });
+                setActionLine('🎯 Escribe el nombre tras "para/to" o elígelo en la lista');
+                return;
+            }
+        }
+        if (explicitTarget) {
+            const resolved = _resolveTrainTarget(explicitTarget, currentGen);
+            const all = COUNCIL.filter(m => m.gen === currentGen);
+            const targets = resolved === 'all' ? all : (resolved || []);
+            if (targets.length === 0) {
+                setActionLine('⚠️ Destinatario "' + explicitTarget + '" no reconocido — abriendo picker');
+                const title = await _fetchUrlTitle(url);
+                _renderEntrenarPicker({ url, source, kind, ts, title, kindIcon, kindLabel });
+                return;
+            }
+            const title = await _fetchUrlTitle(url);
+            const entry = { url, source, kind, ts, title: title || undefined };
+            await Promise.all(targets.map(m => _mergeEntrenarPersonaRemote(currentGen, m.persona, [entry])));
+            enterConversation();
+            const titleEsc = title ? title.replace(/</g,'&lt;').slice(0, 80) : '';
+            const titleHtml = titleEsc ? ' <span style="color:#ccc">"' + titleEsc + '"</span>' : '';
+            const tag = (resolved === 'all')
+                ? ' → <span style="color:#daa520">todos</span>'
+                : ' → <span style="color:#daa520">' + targets.map(m => m.persona).join(', ') + '</span>';
+            addUserEntry('🎓 ' + kindLabel + ' (' + source + ')' + titleHtml + tag + '<br><a href="' + url + '" target="_blank" style="color:#8cf">' + url + '</a>');
+            if (resolved === 'all') {
+                const racionales = targets.filter(m => m.side === 'racional');
+                const creativos  = targets.filter(m => m.side === 'creativo');
+                for (const m of racionales) {
+                    addConvEntry('conv-racional', m.icon, m.name, m.persona, 'racional',
+                        kindIcon + " Guardado. " + m.persona + " lo archivará desde la perspectiva de " + (m.territory || m.role).toLowerCase() + ".");
+                }
+                for (const m of creativos) {
+                    addConvEntry('conv-creativo', m.icon, m.name, m.persona, 'creativo',
+                        kindIcon + " Guardado. " + m.persona + " lo archivará desde la perspectiva de " + (m.territory || m.role).toLowerCase() + ".");
+                }
+                setActionLine('✅ ' + kindLabel + ' archivado por los ' + targets.length + ' consejeros (Telegram)');
+            } else {
+                for (const m of targets) {
+                    const panel = m.side === 'racional' ? 'conv-racional' : 'conv-creativo';
+                    addConvEntry(panel, m.icon, m.name, m.persona, m.side,
+                        kindIcon + " Específicamente para mí. Lo archivo desde la perspectiva de " + (m.territory || m.role).toLowerCase() + ".");
+                }
+                setActionLine('✅ ' + kindLabel + ' asignado a ' + targets.map(m => m.persona).join(', ') + ' (Telegram)');
+            }
+            renderEntrenarList();
+            return;
+        }
+
+        setActionLine("🔍 Buscando destinatario para esta URL…");
+        const title = await _fetchUrlTitle(url);
+        const detected = _detectTargetConsejeros(title + ' ' + url, currentGen);
+
+        if (detected.length === 0) {
+            // Sin match: abrir picker manual sobre el panel del corpus
+            _renderEntrenarPicker({ url, source, kind, ts, title, kindIcon, kindLabel });
+            return;
+        }
+
+        // Match automático: archivar en los detectados
+        const entry = { url, source, kind, ts, title: title || undefined };
+        try {
+            await Promise.all(detected.map(m => _mergeEntrenarPersonaRemote(currentGen, m.persona, [entry])));
+        } catch (e) {
+            setActionLine("⚠️ Guardado local, pero la sincronización compartida falló — " + (e && e.message ? e.message : e));
+            renderEntrenarList();
+            return;
+        }
+        enterConversation();
+        const titleEsc = title ? title.replace(/</g,'&lt;').slice(0, 80) : '';
+        const titleHtml = titleEsc ? ' <span style="color:#ccc">"' + titleEsc + '"</span>' : '';
+        const targetTag = ' → <span style="color:#daa520">' + detected.map(m => m.persona).join(', ') + '</span>';
+        addUserEntry('🎓 ' + kindLabel + ' (' + source + ')' + titleHtml + targetTag + '<br><a href="' + url + '" target="_blank" style="color:#8cf">' + url + '</a>');
+        for (const m of detected) {
+            const panel = m.side === 'racional' ? 'conv-racional' : 'conv-creativo';
+            addConvEntry(panel, m.icon, m.name, m.persona, m.side,
+                kindIcon + " Específicamente para mí. Lo archivo desde la perspectiva de " + (m.territory || m.role).toLowerCase() + ".");
+        }
+        setActionLine("✅ " + kindLabel + " asignado a " + detected.map(m => m.persona).join(', '));
+        renderEntrenarList();
+    }
+    function _renderEntrenarPicker(entry) {
+        _pendingEntrenar = entry;
+        const ul = document.getElementById('entrenar-list');
+        if (!ul) return;
+        const summary = entrenarSummary(currentGen);
+        const titleShort = (entry.title || entry.url).slice(0, 64);
+        ul.innerHTML =
+            '<div class="inv-item entrenar-picker-header" style="font-size:7px;color:#daa520;border-bottom:1px solid #daa520;margin-bottom:4px;padding-bottom:3px;text-align:center;">🎯 ELIGE DESTINATARIO</div>' +
+            '<div class="inv-item" style="font-size:0.6rem;opacity:0.85;margin-bottom:6px;line-height:1.4;">' + _entrenarEsc(titleShort) + '</div>' +
+            '<div class="inv-item" style="font-size:0.55rem;opacity:0.6;margin-bottom:6px;line-height:1.5;">Tip: también puedes escribir <span style="color:#daa520">URL para Walt Disney</span> o <span style="color:#daa520">URL to Steve Jobs</span></div>' +
+            '<div class="inv-item entrenar-corpus-row entrenar-pick-all" data-persona="__all__" style="font-size:0.7rem;cursor:pointer;">👥 Todos</div>' +
+            summary.map(s => '<div class="inv-item entrenar-corpus-row pickable" data-persona="' + _entrenarEsc(s.persona) + '" title="Asignar a ' + _entrenarEsc(s.persona) + '" style="font-size:0.7rem;display:flex;justify-content:space-between;cursor:pointer"><span>' + s.persona + '</span><span style="color:#daa520">' + s.count + '</span></div>').join('');
+        setActionLine('🎯 Sin destinatario claro — elige uno o pulsa "Todos"');
+    }
+    function _completePendingPick(persona) {
+        if (!_pendingEntrenar) return false;
+        const e = _pendingEntrenar;
+        const allMembers = COUNCIL.filter(m => m.gen === currentGen);
+        const targets = persona === '__all__' ? allMembers : allMembers.filter(m => m.persona === persona);
+        if (targets.length === 0) return false;
+        Promise.all(targets.map(m => _mergeEntrenarPersonaRemote(currentGen, m.persona, [{
+            url: e.url,
+            source: e.source,
+            kind: e.kind,
+            ts: e.ts,
+            title: e.title || undefined
+        }]))).catch(err => {
+            console.warn('Entrenar manual sync failed', err);
+            setActionLine("⚠️ Se asignó, pero la sincronización compartida falló — " + (err && err.message ? err.message : err));
+        });
+        _pendingEntrenar = null;
+        renderEntrenarList();
+        enterConversation();
+        const titleEsc = e.title ? e.title.replace(/</g,'&lt;').slice(0, 80) : '';
+        const titleHtml = titleEsc ? ' <span style="color:#ccc">"' + titleEsc + '"</span>' : '';
+        const tag = persona === '__all__'
+            ? ' → <span style="opacity:0.85">todos (manual)</span>'
+            : ' → <span style="color:#daa520">' + _entrenarEsc(persona) + ' (manual)</span>';
+        addUserEntry('🎓 ' + e.kindLabel + ' (' + e.source + ')' + titleHtml + tag + '<br><a href="' + e.url + '" target="_blank" style="color:#8cf">' + e.url + '</a>');
+        if (persona === '__all__') {
+            const racionales = targets.filter(m => m.side === "racional");
+            const creativos  = targets.filter(m => m.side === "creativo");
+            for (const m of racionales) {
+                addConvEntry("conv-racional", m.icon, m.name, m.persona, "racional",
+                    e.kindIcon + " Guardado. " + m.persona + " lo archivará desde la perspectiva de " + (m.territory || m.role).toLowerCase() + ".");
+            }
+            for (const m of creativos) {
+                addConvEntry("conv-creativo", m.icon, m.name, m.persona, "creativo",
+                    e.kindIcon + " Guardado. " + m.persona + " lo archivará desde la perspectiva de " + (m.territory || m.role).toLowerCase() + ".");
+            }
+            setActionLine('✅ ' + e.kindLabel + ' archivado por los ' + targets.length + ' consejeros');
+        } else {
+            const m = targets[0];
+            const panel = m.side === 'racional' ? 'conv-racional' : 'conv-creativo';
+            addConvEntry(panel, m.icon, m.name, m.persona, m.side,
+                e.kindIcon + ' Recibido. ' + m.persona + ' lo archiva desde la perspectiva de ' + (m.territory || m.role).toLowerCase() + '.');
+            setActionLine('✅ ' + e.kindLabel + ' asignado a ' + m.persona);
+        }
+        return true;
+    }
+
+    // ── Council API config ──
+    // Cadena de fallbacks. Es CRÍTICO no mezclar protocolos: si la
+    // página viene por HTTPS (caso producción: www.admira.live), el
+    // navegador bloquea por mixed-content cualquier fetch a `http://`
+    // (incluyendo localhost:8420 y el puerto 8420 directo del MacMini).
+    // Por eso bifurcamos según `location.protocol`:
+    //  · HTTPS → solo endpoints HTTPS (Funnel del MacMini + Render).
+    //  · HTTP  → operador en local: HTTP localhost + HTTP MacMini :8420
+    //            (necesita Tailscale en el host) + Render como red.
+    const isSecure = location.protocol === 'https:';
+    const COUNCIL_API_URLS = isSecure
+        ? [
+            'https://macmini.tail48b61c.ts.net/council',          // Tailscale Funnel HTTPS
+            'https://three2-consejoadmiranextgame.onrender.com',  // Render HTTPS
+        ]
+        : [
+            'http://localhost:8420',
+            'http://macmini.tail48b61c.ts.net:8420',
+            'https://three2-consejoadmiranextgame.onrender.com',
+        ];
+    const AGORA_COUNCIL_API_URLS = isSecure
+        ? ['https://macmini.tail48b61c.ts.net']
+        : ['http://localhost:3030', 'https://macmini.tail48b61c.ts.net'];
+    const COUNCIL_API_TOKEN = "admira2026";
+    const YAR_DONE_BLOCK_START = '[YAR_DONE]';
+    const YAR_DONE_BLOCK_END = '[/YAR_DONE]';
+    let activeApiUrl = null;
+    let activeAgoraCouncilUrl = null;
+    let conversationHistory = [];
+    let yarContext = { focus: "", doing: "", done: [], tasks: [], pending: [], taskBuckets: { inProgress: [], pending: [], done: [] }, activeTask: "", ask: "", updatedAt: "", syncUser: "", syncSource: "", dayStartAt: "", dayEndAt: "" };
+    let yarStatus = null;
+    let yarStatusErrors = [];
+    let yarTaskEstimateHours = 1;
+    let yarProjectOptions = [];
+    let yarProjectsLoaded = false;
+    window._crearRequestSeq = window._crearRequestSeq || 0;
+    window._crearActiveJobId = window._crearActiveJobId || null;
+    window._crearPollTimer = window._crearPollTimer || null;
+
+    function _decodeYarDoing(rawDoing, rawDone) {
+        const text = String(rawDoing || '');
+        const start = text.indexOf(YAR_DONE_BLOCK_START);
+        const end = text.indexOf(YAR_DONE_BLOCK_END);
+        let doing = text;
+        let blockDone = [];
+        if (start !== -1 && end !== -1 && end > start) {
+            const block = text.slice(start + YAR_DONE_BLOCK_START.length, end);
+            blockDone = block
+                .split(/\n+/)
+                .map(line => line.replace(/^[•\-*\d.)\s]+/, '').trim())
+                .filter(Boolean);
+            doing = (text.slice(0, start) + text.slice(end + YAR_DONE_BLOCK_END.length)).trim();
+        }
+        const explicitDone = Array.isArray(rawDone) ? rawDone.map(x => String(x || '').trim()).filter(Boolean) : [];
+        const mergedDone = (explicitDone.length ? explicitDone : blockDone).slice(0, 12);
+        return { doing, done: mergedDone };
+    }
+
+    function _encodeYarDoing(doingText, doneItems) {
+        const cleanDoing = _decodeYarDoing(doingText, []).doing.trim();
+        const done = (Array.isArray(doneItems) ? doneItems : []).map(x => String(x || '').trim()).filter(Boolean).slice(0, 12);
+        if (!done.length) return cleanDoing;
+        const block = '\n\n' + YAR_DONE_BLOCK_START + '\n' + done.map(item => '- ' + item).join('\n') + '\n' + YAR_DONE_BLOCK_END;
+        return (cleanDoing + block).trim();
+    }
+
+    function _yarTaskStatusKey(line, fallback) {
+        const match = String(line || '').trim().match(/^(En proceso|Pendiente|Finalizada|Finalizado)\b/i);
+        if (!match) return fallback || 'pending';
+        if (/proceso/i.test(match[1])) return 'inProgress';
+        if (/finalizad/i.test(match[1])) return 'done';
+        return 'pending';
+    }
+
+    function _yarCleanLines(items) {
+        return (Array.isArray(items) ? items : [])
+            .map(x => String(x || '').replace(/\s+/g, ' ').trim())
+            .filter(Boolean)
+            .slice(0, 12);
+    }
+
+    function _yarBucketsFromRaw(raw, parsedDone) {
+        const rawBuckets = raw?.taskBuckets && typeof raw.taskBuckets === 'object' ? raw.taskBuckets : null;
+        const buckets = {
+            inProgress: _yarCleanLines(rawBuckets?.inProgress),
+            pending: _yarCleanLines(rawBuckets?.pending),
+            done: _yarCleanLines(rawBuckets?.done),
+        };
+        if (buckets.inProgress.length || buckets.pending.length || buckets.done.length) {
+            if (!buckets.done.length) buckets.done = _yarCleanLines(parsedDone);
+            return buckets;
+        }
+        const tasks = _yarCleanLines(Array.isArray(raw?.tasks) ? raw.tasks : (Array.isArray(raw?.tareas) ? raw.tareas : raw?.pending));
+        for (const item of tasks) {
+            const key = _yarTaskStatusKey(item, 'pending');
+            if (key === 'inProgress') buckets.inProgress.push(item);
+            else if (key === 'done') buckets.done.push(item);
+            else buckets.pending.push(item);
+        }
+        buckets.done = buckets.done.length ? buckets.done.slice(0, 12) : _yarCleanLines(parsedDone);
+        return buckets;
+    }
+
+    function _normalizeYarContext(raw) {
+        const parsed = _decodeYarDoing(raw?.doing, raw?.done);
+        const taskBuckets = _yarBucketsFromRaw(raw, parsed.done);
+        const tasks = taskBuckets.inProgress.concat(taskBuckets.pending).slice(0, 12);
+        const pending = tasks.slice();
+        const activeTask = String(raw?.activeTask || taskBuckets.inProgress[0] || '').trim();
+        return {
+            focus: String(raw?.focus || '').trim(),
+            doing: parsed.doing,
+            done: taskBuckets.done,
+            tasks,
+            pending,
+            taskBuckets,
+            activeTask,
+            ask: String(raw?.ask || '').trim(),
+            updatedAt: String(raw?.updatedAt || '').trim(),
+            syncUser: String(raw?.syncUser || '').trim(),
+            syncSource: String(raw?.syncSource || '').trim(),
+            dayStartAt: String(raw?.dayStartAt || '').trim(),
+            dayEndAt: String(raw?.dayEndAt || '').trim(),
+        };
+    }
+
+    function _yarFmtSyncTime(iso) {
+        if (!iso) return '--:--';
+        const d = new Date(iso);
+        if (Number.isNaN(d.getTime())) return '--:--';
+        return d.toLocaleTimeString('es-ES', { hour: '2-digit', minute: '2-digit' });
+    }
+
+    function _yarAgeLabel(seconds) {
+        if (!Number.isFinite(Number(seconds))) return 'sin dato';
+        const s = Math.max(0, Number(seconds));
+        if (s < 60) return Math.round(s) + 's';
+        if (s < 3600) return Math.round(s / 60) + 'm';
+        if (s < 86400) return Math.round(s / 3600) + 'h';
+        return Math.round(s / 86400) + 'd';
+    }
+
+    function _yarTaskControlHtml(enProceso) {
+        const disabled = enProceso.length ? '' : ' disabled';
+        return '<div class="yar-task-controls">' +
+            '<button class="yar-task-btn finalize" onclick="performYarigTaskAction(\'finalize\')"'+ disabled +'>Finalizar</button>' +
+            '<button class="yar-task-btn pause" onclick="performYarigTaskAction(\'pause\')"'+ disabled +'>Pausar</button>' +
+            '<button class="yar-task-btn cancel" onclick="performYarigTaskAction(\'cancel\')"'+ disabled +'>Cancelar</button>' +
+            '</div>';
+    }
+
+    function setYarigPromptStatus(prefix) {
+        const syncAt = _yarFmtSyncTime(yarContext.updatedAt);
+        const syncUser = yarContext.syncUser || 'usuario no detectado';
+        const buckets = _normalizeYarContext(yarContext).taskBuckets;
+        const lead = prefix || '🧭 Yarig.AI';
+        const stale = yarStatus && yarStatus.contextFresh === false ? ' · contexto caducado ' + _yarAgeLabel(yarStatus.contextAgeSeconds) : '';
+        const watcher = yarStatus?.worker?.watcherAlive ? ' · watcher vivo' : (yarStatus ? ' · watcher parado' : '');
+        setActionLine(lead + ' · sync ' + syncAt + stale + watcher + ' · login ' + syncUser + ' · ' + buckets.inProgress.length + ' proceso / ' + buckets.pending.length + ' pendientes / ' + buckets.done.length + ' fin');
+    }
+
+    function updateYarChip() {
+        const chip = document.getElementById('yar-chip');
+        if (!chip) return;
+        const buckets = _normalizeYarContext(yarContext).taskBuckets;
+        const doneCount = buckets.done.length;
+        const processCount = buckets.inProgress.length;
+        const pendingCount = buckets.pending.length;
+        if (yarStatus && yarStatus.contextFresh === false) {
+            chip.textContent = 'caducado · ' + _yarAgeLabel(yarStatus.contextAgeSeconds);
+            return;
+        }
+        if (!yarContext.focus && !yarContext.doing && !doneCount && !processCount && !pendingCount && !yarContext.ask) {
+            chip.textContent = 'sin contexto';
+            return;
+        }
+        const focus = yarContext.focus ? yarContext.focus.slice(0, 18) : 'contexto activo';
+        chip.textContent = focus + ' · ' + processCount + '/' + pendingCount + '/' + doneCount;
+    }
+
+    function fillYarForm() {
+        const focus = document.getElementById('yar-focus');
+        const doing = document.getElementById('yar-doing');
+        const done = document.getElementById('yar-done');
+        const pending = document.getElementById('yar-pending');
+        const ask = document.getElementById('yar-ask');
+        if (focus) focus.value = yarContext.focus || '';
+        if (doing) doing.value = yarContext.doing || '';
+        if (done) done.value = (yarContext.done || []).join('\n');
+        if (pending) pending.value = ((yarContext.tasks && yarContext.tasks.length ? yarContext.tasks : yarContext.pending) || []).join('\n');
+        if (ask) ask.value = yarContext.ask || '';
+    }
+
+    function updateYarTaskChars() {
+        const input = document.getElementById('yar-task-desc');
+        const counter = document.getElementById('yar-task-chars');
+        if (!input || !counter) return;
+        const remaining = Math.max(0, 255 - String(input.value || '').length);
+        counter.textContent = String(remaining);
+    }
+
+    function renderYarProjectOptions() {
+        const datalist = document.getElementById('yar-task-projects');
+        if (!datalist) return;
+        datalist.innerHTML = '';
+        yarProjectOptions.forEach((project) => {
+            const option = document.createElement('option');
+            option.value = project;
+            datalist.appendChild(option);
+        });
+    }
+
+    async function loadYarProjectOptions(forceRefresh = false) {
+        const status = document.getElementById('yar-status');
+        const btn = document.getElementById('yar-task-project-refresh');
+        if (btn) btn.disabled = true;
+        if (status) status.textContent = forceRefresh ? 'YARIG.AI RECARGANDO PROYECTOS…' : 'YARIG.AI CARGANDO PROYECTOS…';
+        const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter((u) => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
+        let lastErr = null;
+        try {
+            for (const baseUrl of urls) {
+                try {
+                    const res = await fetch(baseUrl + '/api/council/yar-projects', {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Council-Token': COUNCIL_API_TOKEN,
+                        },
+                        body: JSON.stringify({ refresh: forceRefresh }),
+                        signal: AbortSignal.timeout(180000),
+                    });
+                    if (!res.ok) {
+                        const body = await res.text();
+                        throw new Error('HTTP ' + res.status + (body ? ': ' + body.slice(0, 180) : ''));
+                    }
+                    const data = await res.json();
+                    yarProjectOptions = Array.isArray(data.projects) ? data.projects.filter(Boolean) : [];
+                    yarProjectsLoaded = true;
+                    activeApiUrl = baseUrl;
+                    renderYarProjectOptions();
+                    const projectInput = document.getElementById('yar-task-project');
+                    if (projectInput && !projectInput.value.trim() && yarProjectOptions.length) {
+                        projectInput.value = yarProjectOptions[0];
+                    }
+                    if (status) status.textContent = yarProjectOptions.length
+                        ? ('YARIG.AI ' + yarProjectOptions.length + ' proyectos cargados')
+                        : 'YARIG.AI sin proyectos visibles en el selector';
+                    setActionLine('🧭 Yarig.AI proyectos cargados — ya puedes escoger proyecto real del combo');
+                    return yarProjectOptions;
+                } catch (e) {
+                    lastErr = e;
+                    console.warn('Yarig projects fetch failed at', baseUrl, e.message);
+                }
+            }
+            if (status) status.textContent = '⚠️ No se pudo cargar la lista de proyectos';
+            setActionLine('⚠️ Yarig.AI no pudo listar proyectos — ' + (lastErr ? lastErr.message : 'sin backend disponible'));
+            return [];
+        } finally {
+            if (btn) btn.disabled = false;
+        }
+    }
+
+    function setYarTaskEstimate(hours, btn) {
+        yarTaskEstimateHours = Math.max(1, Math.min(8, Number(hours) || 1));
+        document.querySelectorAll('#yar-task-estimates .yar-estimate-btn').forEach((el) => {
+            el.classList.toggle('active', Number(el.dataset.hours) === yarTaskEstimateHours);
+        });
+        if (btn) btn.classList.add('active');
+    }
+
+    function resetYarTaskForm() {
+        const project = document.getElementById('yar-task-project');
+        const desc = document.getElementById('yar-task-desc');
+        if (project && !project.value.trim()) project.value = 'Admira (Admira Digital Networks S.L.)';
+        if (desc) desc.value = '';
+        yarTaskEstimateHours = 1;
+        document.querySelectorAll('#yar-task-estimates .yar-estimate-btn').forEach((el) => {
+            el.classList.toggle('active', Number(el.dataset.hours) === 1);
+        });
+        updateYarTaskChars();
+    }
+
+    function openYarOverlay() {
+        fillYarForm();
+        resetYarTaskForm();
+        const status = document.getElementById('yar-status');
+        if (status) status.textContent = yarContext.updatedAt ? ('Última sync: ' + yarContext.updatedAt.replace('T', ' ').slice(0, 16)) : '';
+        document.getElementById('yar-overlay')?.classList.add('active');
+        if (!yarProjectsLoaded) void loadYarProjectOptions(false);
+    }
+
+    function closeYarOverlay() {
+        document.getElementById('yar-overlay')?.classList.remove('active');
+    }
+
+    async function createYarigTask() {
+        const status = document.getElementById('yar-status');
+        const project = (document.getElementById('yar-task-project')?.value || '').trim() || 'Admira';
+        const description = (document.getElementById('yar-task-desc')?.value || '').trim();
+        if (!description) {
+            if (status) status.textContent = '⚠️ Describe la tarea antes de crearla';
+            setActionLine('⚠️ Falta la descripción de la nueva tarea de Yarig.AI');
+            return;
+        }
+        if (status) status.textContent = 'YARIG.AI CREANDO TAREA…';
+        setActionLine('🧭 Yarig.AI creando tarea nueva en la sesión persistente…');
+        const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
+        let lastErr = null;
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + '/api/council/yar-create-task', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Council-Token': COUNCIL_API_TOKEN,
+                    },
+                    body: JSON.stringify({
+                        description,
+                        estimateHours: yarTaskEstimateHours,
+                        project,
+                    }),
+                    signal: AbortSignal.timeout(180000),
+                });
+                if (!res.ok) {
+                    const body = await res.text();
+                    throw new Error('HTTP ' + res.status + (body ? ': ' + body.slice(0, 180) : ''));
+                }
+                const data = await res.json();
+                yarContext = _normalizeYarContext(data.context || data);
+                activeApiUrl = baseUrl;
+                updateYarChip();
+                fillYarForm();
+                showYarigWindows();
+                addUserEntry('🧭 /yarig nueva tarea · ' + description);
+                addConvEntry('conv-racional', '🧭', 'Yarig.AI', 'Yarig.AI', 'racional',
+                    'Tarea creada en Yarig.ai con ' + yarTaskEstimateHours + 'h estimadas y proyecto ' + project + '.');
+                addConvEntry('conv-creativo', '🧭', 'Yarig.AI', 'Yarig.AI', 'creativo',
+                    'Nueva tarea registrada: ' + (data.createdTask || description) + '. La mesa ya trabaja con ese nuevo frente.');
+                if (status) status.textContent = 'Yarig.AI tarea creada OK';
+                setYarigPromptStatus('🧭 Yarig.AI nueva tarea');
+                resetYarTaskForm();
+                return;
+            } catch (e) {
+                lastErr = e;
+                console.warn('Yarig create task failed at', baseUrl, e.message);
+            }
+        }
+        if (status) status.textContent = '⚠️ No se pudo crear la tarea';
+        setActionLine('⚠️ Yarig.AI no pudo crear la tarea — ' + (lastErr ? lastErr.message : 'sin backend disponible'));
+    }
+
+    async function loadYarContext() {
+        const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + '/api/council/yar-context', {
+                    headers: { 'X-Council-Token': COUNCIL_API_TOKEN },
+                    signal: AbortSignal.timeout(8000),
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                yarContext = _normalizeYarContext(await res.json());
+                activeApiUrl = baseUrl;
+                void fetchYarigStatus(baseUrl);
+                updateYarChip();
+                return yarContext;
+            } catch (e) {
+                console.warn('YAR context fetch failed at', baseUrl, e.message);
+            }
+        }
+        updateYarChip();
+        return yarContext;
+    }
+
+    async function fetchYarigStatus(preferredBaseUrl) {
+        yarStatusErrors = [];
+        const urls = preferredBaseUrl ? [preferredBaseUrl].concat(COUNCIL_API_URLS.filter(u => u !== preferredBaseUrl)) : (activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice());
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + '/api/council/yar-status', {
+                    headers: { 'X-Council-Token': COUNCIL_API_TOKEN },
+                    signal: AbortSignal.timeout(8000),
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                yarStatus = await res.json();
+                activeApiUrl = baseUrl;
+                updateYarChip();
+                return yarStatus;
+            } catch (e) {
+                console.warn('Yarig status fetch failed at', baseUrl, e.message);
+                yarStatusErrors.push({ baseUrl, message: e.message || String(e) });
+            }
+        }
+        for (const baseUrl of urls) {
+            try {
+                await fetch(baseUrl + '/api/council/yar-status', {
+                    mode: 'no-cors',
+                    cache: 'no-store',
+                    signal: AbortSignal.timeout(5000),
+                });
+                yarStatus = {
+                    ok: false,
+                    limited: true,
+                    corsBlocked: true,
+                    reachableBaseUrl: baseUrl,
+                    errors: yarStatusErrors.slice(),
+                    counts: { inProgress: 0, pending: 0, done: 0 },
+                    worker: {},
+                };
+                updateYarChip();
+                return yarStatus;
+            } catch (e) {
+                yarStatusErrors.push({ baseUrl, message: 'probe ' + (e.message || String(e)) });
+            }
+        }
+        return yarStatus;
+    }
+
+    async function checkYarigStatus() {
+        const statusEl = document.getElementById('yar-status');
+        if (statusEl) statusEl.textContent = 'COMPROBANDO ESTADO YARIG…';
+        const status = await fetchYarigStatus();
+        enterConversation();
+        addUserEntry('🧭 /yarig estado');
+        if (!status) {
+            if (statusEl) statusEl.textContent = '⚠️ Estado Yarig no disponible';
+            const detail = yarStatusErrors.length
+                ? yarStatusErrors.map(e => e.baseUrl + ' → ' + e.message).join('<br>')
+                : 'Sin detalle de error disponible.';
+            addConvEntry('conv-racional', '🧭', 'Yarig.AI', 'Estado', 'racional', 'No se pudo consultar el estado del backend Yarig.<br>' + detail);
+            setActionLine('⚠️ Yarig.AI estado no disponible');
+            return null;
+        }
+        if (status.limited && status.corsBlocked) {
+            if (statusEl) statusEl.textContent = 'Yarig backend accesible · CORS pendiente';
+            const detail = (status.errors || []).map(e => e.baseUrl + ' → ' + e.message).join('<br>');
+            addConvEntry('conv-racional', '🧭', 'Yarig.AI', 'Estado', 'racional',
+                'El backend responde, pero el navegador no puede leer el detalle porque falta CORS para <strong>www.admira.live</strong>.<br>' +
+                'Backend alcanzado: ' + status.reachableBaseUrl + (detail ? '<br>' + detail : ''));
+            setActionLine('🧭 Yarig backend accesible · esperando CORS del backend');
+            return status;
+        }
+        const counts = status.counts || {};
+        const worker = status.worker || {};
+        const fresh = status.contextFresh ? 'fresco' : 'caducado ' + _yarAgeLabel(status.contextAgeSeconds);
+        const watcher = worker.watcherAlive ? 'vivo, PID ' + (worker.pid || 'n/d') : 'parado';
+        const snap = worker.snapshotSavedAt ? ('Snapshot: ' + worker.snapshotSavedAt.replace('T', ' ').slice(0, 16) + ' (' + _yarAgeLabel(worker.snapshotAgeSeconds) + ')') : 'Snapshot: sin dato';
+        const html = 'Contexto ' + fresh + '<br>' +
+            'Watcher: ' + watcher + '<br>' +
+            snap + '<br>' +
+            'Tareas: ' + (counts.inProgress || 0) + ' en proceso, ' + (counts.pending || 0) + ' pendientes, ' + (counts.done || 0) + ' finalizadas';
+        addConvEntry('conv-racional', '🧭', 'Yarig.AI', 'Estado', 'racional', html);
+        if (!status.contextFresh || !worker.watcherAlive) {
+            addConvEntry('conv-creativo', '🧭', 'Yarig.AI', 'Acción recomendada', 'creativo',
+                'Usa <strong>/yarig login</strong> para abrir la sesión persistente y reactivar el watcher, o <strong>/yarig sincro</strong> si ya hay una sesión visible abierta.');
+        }
+        if (statusEl) statusEl.textContent = 'Yarig ' + fresh + ' · watcher ' + watcher;
+        setYarigPromptStatus('🧭 Yarig.AI estado');
+        return status;
+    }
+
+    async function saveYarContext() {
+        const status = document.getElementById('yar-status');
+        if (status) status.textContent = 'GUARDANDO…';
+        const tasks = (document.getElementById('yar-pending')?.value || '').split('\n').map(x => x.trim()).filter(Boolean);
+        const done = (document.getElementById('yar-done')?.value || '').split('\n').map(x => x.trim()).filter(Boolean);
+        const taskBuckets = _yarBucketsFromRaw({ tasks, done }, done);
+        const payload = {
+            focus: document.getElementById('yar-focus')?.value || '',
+            doing: _encodeYarDoing(
+                document.getElementById('yar-doing')?.value || '',
+                done
+            ),
+            done,
+            tasks,
+            pending: tasks,
+            taskBuckets,
+            activeTask: taskBuckets.inProgress[0] || '',
+            ask: document.getElementById('yar-ask')?.value || '',
+        };
+        const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + '/api/council/yar-context', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Council-Token': COUNCIL_API_TOKEN,
+                    },
+                    body: JSON.stringify(payload),
+                    signal: AbortSignal.timeout(10000),
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                yarContext = _normalizeYarContext(await res.json());
+                activeApiUrl = baseUrl;
+                updateYarChip();
+                if (status) status.textContent = 'YAR sincronizado con la mesa';
+                setActionLine('🧭 YAR sincronizado — el Consejo ya conoce foco, finalizadas y tareas');
+                return;
+            } catch (e) {
+                console.warn('YAR context save failed at', baseUrl, e.message);
+            }
+        }
+        if (status) status.textContent = '⚠️ No se pudo sincronizar YAR';
+        setActionLine('⚠️ No se pudo sincronizar YAR');
+    }
+
+    async function syncYarigFromLoggedSession() {
+        const status = document.getElementById('yar-status');
+        if (status) status.textContent = 'IMPORTANDO DESDE YARIG.AI…';
+        setActionLine('🧭 Yarig.AI sincro — importando tareas pendientes y finalizadas desde la sesión abierta…');
+        const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
+        let lastErr = null;
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + '/api/council/yar-sync', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Council-Token': COUNCIL_API_TOKEN,
+                    },
+                    body: JSON.stringify({ source: 'cli' }),
+                    signal: AbortSignal.timeout(95000),
+                });
+                if (!res.ok) {
+                    const body = await res.text();
+                    throw new Error('HTTP ' + res.status + (body ? ': ' + body.slice(0, 160) : ''));
+                }
+                const data = await res.json();
+                yarContext = _normalizeYarContext(data.context || data);
+                activeApiUrl = baseUrl;
+                updateYarChip();
+                fillYarForm();
+                showYarigWindows();
+                enterConversation();
+                const buckets = _normalizeYarContext(yarContext).taskBuckets;
+                addUserEntry('🧭 /yarig.ai sincro');
+                addConvEntry('conv-racional', '🧭', 'Yarig.AI', 'Yarig.AI', 'racional',
+                    'Importadas ' + ((buckets.inProgress || []).length) + ' en proceso, ' + ((buckets.pending || []).length) + ' pendientes y ' + ((buckets.done || []).length) + ' finalizadas desde la sesión abierta.');
+                addConvEntry('conv-creativo', '🧭', 'Yarig.AI', 'Yarig.AI', 'creativo',
+                    'La mesa ya trabaja con la última versión visible en www.yarig.ai para el usuario que esté loginado.');
+                if (status) status.textContent = 'Yarig.AI importado desde sesión abierta';
+                setYarigPromptStatus('🧭 Yarig.AI sincro');
+                return;
+            } catch (e) {
+                lastErr = e;
+                console.warn('Yarig sync from session failed at', baseUrl, e.message);
+            }
+        }
+        if (lastErr && /perfil persistente|ProcessSingleton|already in use by another instance of Chromium/i.test(String(lastErr.message || ''))) {
+            if (status) status.textContent = 'TERMINA EL LOGIN Y ESPERA A QUE SE CIERRE ESA VENTANA';
+            setActionLine('🧭 Yarig.AI login en curso — termina de entrar, espera a que la ventana se cierre y luego repite /yarig.ai sincro');
+            return;
+        }
+        if (lastErr && /login|auth|registration\/login/i.test(String(lastErr.message || ''))) {
+            void prepareYarigLoginSession();
+            if (status) status.textContent = 'ABIERTA VENTANA DE LOGIN DE YARIG.AI';
+            setActionLine('🧭 Yarig.AI pide login — la ventana ya se ha quedado abierta para que entres sin prisa');
+            return;
+        }
+        if (status) status.textContent = '⚠️ No se pudo importar desde Yarig.ai';
+        setActionLine('⚠️ Yarig.AI sincro falló — ' + (lastErr ? lastErr.message : 'sin backend disponible'));
+    }
+
+    async function performYarigTaskAction(action) {
+        if (!action) return;
+        const labels = { finalize: 'finalizar', pause: 'pausar', cancel: 'cancelar' };
+        const label = labels[action] || action;
+        const status = document.getElementById('yar-status');
+        if (status) status.textContent = 'YARIG.AI ' + label.toUpperCase() + '…';
+        setActionLine('🧭 Yarig.AI ' + label + ' — enviando control de tarea a Yarig…');
+        const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
+        let lastErr = null;
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + '/api/council/yar-task-action', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Council-Token': COUNCIL_API_TOKEN,
+                    },
+                    body: JSON.stringify({ action, taskHint: yarContext.activeTask || (yarContext.taskBuckets?.inProgress || [])[0] || '' }),
+                    signal: AbortSignal.timeout(120000),
+                });
+                if (!res.ok) {
+                    const body = await res.text();
+                    throw new Error('HTTP ' + res.status + (body ? ': ' + body.slice(0, 180) : ''));
+                }
+                const data = await res.json();
+                yarContext = _normalizeYarContext(data.context || data);
+                activeApiUrl = baseUrl;
+                updateYarChip();
+                fillYarForm();
+                showYarigWindows();
+                addUserEntry('🧭 /yarig ' + label);
+                addConvEntry('conv-racional', '🧭', 'Yarig.AI', 'Yarig.AI', 'racional',
+                    'Tarea controlada en Yarig.ai: ' + label + '. La mesa ya refleja el nuevo estado.');
+                addConvEntry('conv-creativo', '🧭', 'Yarig.AI', 'Yarig.AI', 'creativo',
+                    data.currentTask ? ('Acción aplicada sobre: ' + data.currentTask) : 'Acción aplicada sobre la tarea en curso de Yarig.ai.');
+                if (status) status.textContent = 'Yarig.AI ' + label + ' OK';
+                setYarigPromptStatus('🧭 Yarig.AI ' + label);
+                return;
+            } catch (e) {
+                lastErr = e;
+                console.warn('Yarig task action failed at', baseUrl, e.message);
+            }
+        }
+        if (status) status.textContent = '⚠️ No se pudo ' + label + ' la tarea';
+        setActionLine('⚠️ Yarig.AI no pudo ' + label + ' la tarea — ' + (lastErr ? lastErr.message : 'sin backend disponible'));
+    }
+
+    async function prepareYarigLoginSession() {
+        const status = document.getElementById('yar-status');
+        if (status) status.textContent = 'ABRIENDO LOGIN DE YARIG.AI…';
+        setActionLine('🧭 Abriendo Yarig.AI en el perfil persistente del sync…');
+        const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
+        let lastErr = null;
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + '/api/council/yar-login', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Council-Token': COUNCIL_API_TOKEN,
+                    },
+                    body: JSON.stringify({ source: 'cli' }),
+                    signal: AbortSignal.timeout(15000),
+                });
+                if (!res.ok) {
+                    const body = await res.text();
+                    throw new Error('HTTP ' + res.status + (body ? ': ' + body.slice(0, 160) : ''));
+                }
+                const data = await res.json();
+                activeApiUrl = baseUrl;
+                enterConversation();
+                addUserEntry('🧭 /yarig.ai login');
+                addConvEntry('conv-racional', '🧭', 'Yarig.AI', 'Yarig.AI', 'racional',
+                    'Ventana de login abierta en el perfil persistente del sync. Entra allí y el watcher mantendrá Yarig.AI actualizado en la mesa.');
+                addConvEntry('conv-creativo', '🧭', 'Yarig.AI', 'Yarig.AI', 'creativo',
+                    'PID ' + (data.pid || 'n/a') + '. Cuando el usuario se autentique, el watcher importará tareas pendientes, en proceso y finalizadas sin tener que lanzar sincro cada vez.');
+                if (status) status.textContent = 'Ventana de login abierta para Yarig.AI';
+                setActionLine('🧭 Ventana de login de Yarig.AI abierta — entra y el watcher hará el sync continuo');
+                return;
+            } catch (e) {
+                lastErr = e;
+                console.warn('Yarig login prep failed at', baseUrl, e.message);
+            }
+        }
+        if (status) status.textContent = '⚠️ No se pudo abrir el login de Yarig.AI';
+        setActionLine('⚠️ No se pudo abrir el login de Yarig.AI — ' + (lastErr ? lastErr.message : 'sin backend disponible'));
+    }
+
+    async function logoutYarigSession() {
+        const status = document.getElementById('yar-status');
+        if (status) status.textContent = 'CERRANDO SESIÓN DE YARIG.AI…';
+        setActionLine('🧭 Cerrando la sesión persistente de Yarig.AI…');
+        const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
+        let lastErr = null;
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + '/api/council/yar-logout', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Council-Token': COUNCIL_API_TOKEN,
+                    },
+                    body: JSON.stringify({ source: 'cli' }),
+                    signal: AbortSignal.timeout(60000),
+                });
+                if (!res.ok) {
+                    const body = await res.text();
+                    throw new Error('HTTP ' + res.status + (body ? ': ' + body.slice(0, 160) : ''));
+                }
+                const data = await res.json();
+                yarContext = _normalizeYarContext(data.context || data);
+                activeApiUrl = baseUrl;
+                updateYarChip();
+                fillYarForm();
+                showYarigWindows();
+                enterConversation();
+                addUserEntry('🧭 /yarig.ai logout');
+                addConvEntry('conv-racional', '🧭', 'Yarig.AI', 'Yarig.AI', 'racional',
+                    'Sesión persistente cerrada. La mesa ya no queda asociada a ningún usuario de Yarig.ai.');
+                addConvEntry('conv-creativo', '🧭', 'Yarig.AI', 'Yarig.AI', 'creativo',
+                    'Pendientes, en proceso y finalizadas se han limpiado del sync hasta que vuelvas a hacer login.');
+                if (status) status.textContent = 'Yarig.AI logout OK';
+                setYarigPromptStatus('🧭 Yarig.AI logout');
+                return;
+            } catch (e) {
+                lastErr = e;
+                console.warn('Yarig logout failed at', baseUrl, e.message);
+            }
+        }
+        if (status) status.textContent = '⚠️ No se pudo cerrar la sesión de Yarig.AI';
+        setActionLine('⚠️ No se pudo cerrar la sesión de Yarig.AI — ' + (lastErr ? lastErr.message : 'sin backend disponible'));
+    }
+
+    async function executeYarig(text) {
+        const raw = String(text || '').trim();
+        if (!raw) {
+            openYarOverlay();
+            setActionLine('🧭 Yarig.AI — abre el panel o escribe foco:, ayuda:, tarea:, finalizada: o una nota libre');
+            return;
+        }
+        await loadYarContext();
+        const next = _normalizeYarContext(yarContext);
+        let summary = '';
+
+        if (/^(focus|foco):/i.test(raw)) {
+            next.focus = raw.replace(/^(focus|foco):/i, '').trim();
+            summary = 'Foco actualizado';
+        } else if (/^(ask|ayuda):/i.test(raw)) {
+            next.ask = raw.replace(/^(ask|ayuda):/i, '').trim();
+            summary = 'Ayuda esperada actualizada';
+        } else if (/^(doing|haciendo):/i.test(raw)) {
+            next.doing = raw.replace(/^(doing|haciendo):/i, '').trim();
+            summary = 'Trabajo en curso actualizado';
+        } else if (/^(done|finalizada|finalizadas|hecho|hechos):/i.test(raw)) {
+            const item = raw.replace(/^(done|finalizada|finalizadas|hecho|hechos):/i, '').trim();
+            if (item) next.done = (next.done || []).concat([item]).slice(-12);
+            summary = 'Finalizada añadida';
+        } else if (/^(tarea|tareas|pend|pending|todo):/i.test(raw)) {
+            const item = raw.replace(/^(tarea|tareas|pend|pending|todo):/i, '').trim();
+            if (item) {
+                next.tasks = (next.tasks || next.pending || []).concat([item]).slice(-12);
+                next.pending = next.tasks.slice();
+            }
+            summary = 'Tarea añadida';
+        } else {
+            next.doing = next.doing ? (next.doing + '\n• ' + raw) : ('• ' + raw);
+            summary = 'Nota añadida al trabajo en curso';
+        }
+
+        const status = document.getElementById('yar-status');
+        if (status) status.textContent = 'SINCRONIZANDO…';
+        const nextBuckets = _yarBucketsFromRaw({ tasks: next.tasks || next.pending || [], done: next.done }, next.done);
+        next.tasks = nextBuckets.inProgress.concat(nextBuckets.pending).slice(0, 12);
+        next.pending = next.tasks.slice();
+        next.taskBuckets = nextBuckets;
+        next.activeTask = nextBuckets.inProgress[0] || '';
+        const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + '/api/council/yar-context', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Council-Token': COUNCIL_API_TOKEN,
+                    },
+                    body: JSON.stringify({
+                        ...next,
+                        doing: _encodeYarDoing(next.doing, next.done),
+                    }),
+                    signal: AbortSignal.timeout(10000),
+                });
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                yarContext = _normalizeYarContext(await res.json());
+                activeApiUrl = baseUrl;
+                updateYarChip();
+                fillYarForm();
+                if (status) status.textContent = 'Yarig.AI sincronizado';
+                enterConversation();
+                addUserEntry('🧭 Yarig.AI · ' + raw);
+                addConvEntry('conv-racional', '🧭', 'Yarig.AI', 'Yarig.AI', 'racional', summary + '. Contexto listo para la mesa.');
+                addConvEntry('conv-creativo', '🧭', 'Yarig.AI', 'Yarig.AI', 'creativo', 'Recogida y envío activos. El Consejo ya recibe este contexto en las siguientes consultas.');
+                setYarigPromptStatus('🧭 Yarig.AI activo');
+                return;
+            } catch (e) {
+                console.warn('Yarig save via action line failed at', baseUrl, e.message);
+            }
+        }
+        if (status) status.textContent = '⚠️ Yarig.AI no pudo sincronizar';
+        setActionLine('⚠️ Yarig.AI no pudo sincronizar');
+    }
+
+    function buildLiveCouncilState() {
+        const bits = [];
+        if (currentVerb) bits.push('Verbo actual: ' + currentVerb);
+        if (currentProject) bits.push('Proyecto activo: ' + currentProject);
+        bits.push('Generación activa: ' + currentGen);
+        bits.push('Motor seleccionado: ' + selectedLLM);
+        return bits.join(' · ');
+    }
+
+    function requiresExpensiveVideoApproval(message) {
+        return selectedLLM === "gemini-flash" && YT_RE.test(String(message || ""));
+    }
+
+    function confirmExpensiveVideoApproval(message, agentName) {
+        if (!requiresExpensiveVideoApproval(message)) return true;
+        const target = agentName ? (" para " + agentName) : "";
+        return window.confirm(
+            "Esta consulta usará Gemini con un vídeo de YouTube" + target + ".\n\n" +
+            "Puede consumir muchos tokens y gastar varios euros en una sola petición.\n" +
+            "Además, por seguridad, el Consejo limitará esta consulta a un solo consejero.\n\n" +
+            "Pulsa Aceptar solo si quieres continuar ahora."
+        );
+    }
+
+    function buildCouncilPrompt(message) {
+        const ctx = _normalizeYarContext(yarContext);
+        const buckets = ctx.taskBuckets || { inProgress: [], pending: [], done: [] };
+        const hasYar = ctx.focus || ctx.doing || ctx.ask || (ctx.done && ctx.done.length) || (ctx.tasks && ctx.tasks.length) || (ctx.pending && ctx.pending.length);
+        if (!hasYar) return message;
+        const sections = [
+            'CONTEXTO YAR DEL CONSEJO',
+            ctx.focus ? ('Foco: ' + ctx.focus) : '',
+            ctx.doing ? ('Trabajo en curso: ' + ctx.doing) : '',
+            buckets.inProgress.length ? ('En proceso en Yarig.ai:\n- ' + buckets.inProgress.join('\n- ')) : '',
+            buckets.pending.length ? ('Pendientes en Yarig.ai:\n- ' + buckets.pending.join('\n- ')) : '',
+            buckets.done.length ? ('Finalizadas en Yarig.ai:\n- ' + buckets.done.join('\n- ')) : '',
+            ctx.ask ? ('Ayuda esperada del consejo: ' + ctx.ask) : '',
+            'Estado vivo de la mesa: ' + buildLiveCouncilState(),
+            '',
+            'Usa este contexto para priorizar, detectar bloqueos y proponer siguientes pasos concretos.',
+            '',
+            'PETICIÓN ACTUAL:',
+            message,
+        ].filter(Boolean);
+        return sections.join('\n');
+    }
+
+    // ── PENSAR: libro del día ────────────────────────────────
+    async function triggerLeer() {
+        // Sub-opciones todavía no implementadas — solo "audio" hace algo
+        if (selectedLeer !== "audio") {
+            setActionLine("💭 Modo Pensar '" + selectedLeer + "' aún no implementado — usa Audio por ahora");
+            return;
+        }
+        // Si ya hay overlay abierto, ciérralo (toggle)
+        const existing = document.getElementById("daily-book-overlay");
+        if (existing) { existing.remove(); return; }
+
+        setActionLine("💭 Buscando el pensamiento del día… (puede tardar ~30s la primera vez)");
+
+        const urls = activeApiUrl ? [activeApiUrl] : COUNCIL_API_URLS;
+        let entry = null;
+        let lastErr = null;
+
+        // 1) Mira si ya hay libro de hoy generado (rápido)
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + "/api/council/daily", {
+                    headers: { "X-Council-Token": COUNCIL_API_TOKEN },
+                    signal: AbortSignal.timeout(8000),
+                });
+                if (res.ok) {
+                    entry = await res.json();
+                    if (entry) { activeApiUrl = baseUrl; break; }
+                }
+            } catch (e) { lastErr = e; }
+        }
+
+        // 2) Si no hay, dispara generación (lento: LLM + cover + audio)
+        if (!entry) {
+            for (const baseUrl of urls) {
+                try {
+                    const res = await fetch(baseUrl + "/api/council/leer", {
+                        method: "POST",
+                        headers: {
+                            "Content-Type": "application/json",
+                            "X-Council-Token": COUNCIL_API_TOKEN,
+                        },
+                        body: JSON.stringify({ llm: selectedLLM || "llama-70b" }),
+                        signal: AbortSignal.timeout(180000),  // 3 min
+                    });
+                    if (res.ok) {
+                        entry = await res.json();
+                        activeApiUrl = baseUrl;
+                        break;
+                    }
+                    lastErr = new Error("HTTP " + res.status + ": " + (await res.text()).slice(0, 200));
+                } catch (e) { lastErr = e; }
+            }
+        }
+
+        if (!entry) {
+            setActionLine("⚠️ No se pudo generar el pensamiento del día — " + (lastErr ? lastErr.message : "API no disponible"));
+            return;
+        }
+
+        showDailyBookOverlay(entry);
+        setActionLine("💭 " + entry.agent_persona + " trae: " + entry.title);
+    }
+
+    function showDailyBookOverlay(entry) {
+        const old = document.getElementById("daily-book-overlay");
+        if (old) old.remove();
+
+        const audioFullUrl = (activeApiUrl || COUNCIL_API_URLS[0]) + entry.audio_url;
+        const cover = entry.cover_url || "";
+        const sideColor = entry.agent_side === "creativo" ? "#3b82f6" : "#ef4444";
+
+        const ov = document.createElement("div");
+        ov.id = "daily-book-overlay";
+        ov.style.cssText = `
+            position: fixed; inset: 0;
+            display: flex; align-items: center; justify-content: center;
+            background: rgba(0,0,0,0.75);
+            z-index: 9999;
+            font-family: inherit;
+        `;
+        ov.innerHTML = `
+            <div style="
+                background: #1a1428;
+                border: 2px solid ${sideColor};
+                border-radius: 12px;
+                padding: 24px;
+                max-width: 560px; width: 90%;
+                color: #f0e8d4;
+                box-shadow: 0 0 40px rgba(0,0,0,0.8);
+                position: relative;
+            ">
+                <button id="dbo-close" style="
+                    position: absolute; top: 8px; right: 12px;
+                    background: none; border: none; color: #f0e8d4;
+                    font-size: 22px; cursor: pointer;
+                ">×</button>
+
+                <div style="display: flex; gap: 18px; align-items: flex-start;">
+                    ${cover ? `<img src="${cover}" alt="" style="
+                        width: 110px; height: auto;
+                        border-radius: 4px;
+                        box-shadow: 0 4px 12px rgba(0,0,0,0.6);
+                        flex-shrink: 0;
+                    ">` : `<div style="
+                        width: 110px; height: 160px;
+                        background: #2a1f3d;
+                        border-radius: 4px;
+                        display: flex; align-items: center; justify-content: center;
+                        font-size: 32px;
+                        flex-shrink: 0;
+                    ">📚</div>`}
+
+                    <div style="flex: 1; min-width: 0;">
+                        <div style="font-size: 11px; color: ${sideColor}; text-transform: uppercase; letter-spacing: 1px; margin-bottom: 4px;">
+                            📖 Libro del día · ${entry.date}
+                        </div>
+                        <div style="font-size: 18px; font-weight: bold; line-height: 1.3; margin-bottom: 4px;">
+                            ${escapeHtml(entry.title)}
+                        </div>
+                        <div style="font-size: 13px; color: #b8a890; margin-bottom: 12px;">
+                            ${escapeHtml(entry.author)}
+                        </div>
+                        <div style="font-size: 12px; color: #d4c8a8; padding-top: 10px; border-top: 1px solid #3a2f4a;">
+                            ${entry.agent_icon} <strong>${escapeHtml(entry.agent_persona)}</strong>
+                            <span style="color: #8a7a60;"> · ${escapeHtml(entry.agent_role)}</span>
+                        </div>
+                        <div style="font-size: 12px; color: #a89880; margin-top: 6px; font-style: italic;">
+                            "${escapeHtml(entry.why || "")}"
+                        </div>
+                    </div>
+                </div>
+
+                <audio controls preload="metadata" style="
+                    width: 100%; margin-top: 18px;
+                    filter: invert(0.85) hue-rotate(180deg);
+                " src="${audioFullUrl}"></audio>
+
+                <div style="font-size: 10px; color: #6a5a40; margin-top: 8px; text-align: right;">
+                    🎙️ ${entry.voice} · ${entry.llm}
+                </div>
+            </div>
+        `;
+        document.body.appendChild(ov);
+        document.getElementById("dbo-close").onclick = () => ov.remove();
+        ov.addEventListener("click", (e) => { if (e.target === ov) ov.remove(); });
+    }
+
+    function escapeHtml(s) {
+        return String(s).replace(/[&<>"']/g, c => ({
+            "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;"
+        }[c]));
+    }
+
+    // ── MIRAR: el vídeo está superpuesto a la imagen del consejo, su poster (primer
+    //          fotograma) ya muestra el Apple II en la mesa. MIRAR + click reproduce
+    //          el vídeo en su sitio, sin abrir nada nuevo.
+    const VIDEO_SRC    = "https://macmini.tail48b61c.ts.net/council/presentations/ConsejoAppleII.mp4";
+    const VIDEO_POSTER = "https://macmini.tail48b61c.ts.net/council/presentations/ConsejoAppleII.mp4.png";
+
+    function enterMirarMode() {
+        const hotspot = document.getElementById("apple-ii-hotspot");
+        if (!hotspot) return;
+        hotspot.classList.add("mirar-active");
+        // Carga lazy: solo se conecta a Tailscale cuando el usuario selecciona MIRAR
+        const video = document.getElementById("presentation-video");
+        if (video && !video.src) {
+            video.poster = VIDEO_POSTER;
+            video.src    = VIDEO_SRC;
+            video.load();
+        }
+        setActionLine("👁 Mira el Apple II… haz clic para reproducirlo");
+    }
+
+    function exitMirarMode() {
+        const hotspot = document.getElementById("apple-ii-hotspot");
+        if (hotspot) hotspot.classList.remove("mirar-active");
+        const video = document.getElementById("presentation-video");
+        if (video && !video.paused) {
+            video.pause();
+            video.currentTime = 0;
+        }
+    }
+
+    // ── CREAR: generación de imagen sobre la mesa ──
+    function enterCrearMode() {
+        const last = _loadCrearSnapshot(currentGen);
+        if (last && last.imageUrl) {
+            _renderCrearImage(last.imageUrl, last.prompt || '', last.meta || 'ÚLTIMA IMAGEN');
+            setActionLine("🎨 Crear — la última imagen sigue sobre la mesa; escribe un nuevo prompt para reemplazarla");
+            return;
+        }
+        setActionLine("🎨 Crear — describe la imagen y pulsa Enviar");
+    }
+    function exitCrearMode() {
+        // No state to clear; el viewer se cierra al cambiar de verbo via closeTableViewer()
+    }
+    async function executeCrear(prompt) {
+        if (!prompt) {
+            setActionLine("✏️ Escribe un prompt para generar la imagen y pulsa Enviar");
+            return;
+        }
+        const ts = Date.now();
+        const requestSeq = ++window._crearRequestSeq;
+        _stopCrearPolling();
+        _renderCrearGenerating(prompt, _crearOptionLabel(selectedCrear) + " · " + (currentGen === 'coetaneos' ? 'COETÁNEOS' : 'LEYENDAS'));
+        setActionLine("🎨 Encolando trabajo en el backend…");
+        let job = null;
+        let jobId = null;
+        try {
+            const { res, baseUrl } = await _crearApiFetch('/api/council/crear', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json', 'X-Council-Token': COUNCIL_API_TOKEN },
+                body: JSON.stringify({ prompt, calidad: selectedCrear, gen: currentGen, ts })
+            }, 15000);
+            if (!res.ok) throw new Error('HTTP ' + res.status);
+            activeApiUrl = baseUrl;
+            job = await res.json();
+            jobId = job.id;
+            window._crearActiveJobId = jobId;
+            _updateCrearLoadingStatus('EN COLA…', _crearJobMeta(job));
+            setActionLine("🎨 Generando imagen #" + jobId + " — el agente la dejará en la mesa");
+        } catch (e) {
+            _renderCrearError(prompt, "No se pudo encolar el trabajo");
+            setActionLine("⚠️ No se pudo encolar — " + e.message);
+            return;
+        }
+
+        let attempts = 0;
+        const maxAttempts = 80;
+        const poll = async () => {
+            if (requestSeq !== window._crearRequestSeq || jobId !== window._crearActiveJobId) return;
+            attempts++;
+            if (attempts > maxAttempts) {
+                _stopCrearPolling();
+                _renderCrearError(prompt, "Timeout — el agente no respondió en 4 min");
+                setActionLine("⚠️ Timeout — el agente no respondió en 4 min");
+                return;
+            }
+            try {
+                const { res, baseUrl } = await _crearApiFetch('/api/council/crear/' + encodeURIComponent(jobId), {
+                    headers: { 'X-Council-Token': COUNCIL_API_TOKEN }
+                }, 12000);
+                if (!res.ok) throw new Error('HTTP ' + res.status);
+                activeApiUrl = baseUrl;
+                const j = await res.json();
+                if (requestSeq !== window._crearRequestSeq || jobId !== window._crearActiveJobId) return;
+                if (j.status === 'done' && j.imageUrl) {
+                    _stopCrearPolling();
+                    const meta = 'LISTA · ' + _crearOptionLabel(j.calidad || selectedCrear) + ' · ' + _formatCrearElapsed(j.ageSeconds || 0);
+                    _saveCrearSnapshot(currentGen, {
+                        imageUrl: j.imageUrl,
+                        prompt,
+                        meta,
+                    });
+                    _renderCrearImage(j.imageUrl, prompt, meta);
+                    setActionLine("✅ Imagen lista — sobre la mesa");
+                } else if (j.status === 'error') {
+                    _stopCrearPolling();
+                    _renderCrearError(prompt, j.error || 'Error desconocido');
+                    setActionLine("⚠️ Error generando: " + (j.error || 'desconocido'));
+                } else {
+                    const phase = j.status === 'processing' ? 'UN AGENTE LA ESTÁ PINTANDO…' : 'EN COLA…';
+                    _updateCrearLoadingStatus(phase, _crearJobMeta(j));
+                    window._crearPollTimer = setTimeout(poll, 3000);
+                }
+            } catch(e) {
+                if (requestSeq !== window._crearRequestSeq || jobId !== window._crearActiveJobId) return;
+                _updateCrearLoadingStatus('REINTENTANDO API…', 'conexión inestable · intento ' + attempts + '/' + maxAttempts);
+                window._crearPollTimer = setTimeout(poll, 3000);
+            }
+        };
+        poll();
+    }
+    let _crearPhaseTimer = null;
+    function _renderCrearGenerating(prompt, metaText) {
+        const viewer = document.getElementById('table-viewer');
+        const content = document.getElementById('table-viewer-content');
+        if (!viewer || !content) return;
+        viewer.classList.remove('mode-mac', 'mode-hologram');
+        viewer.classList.add(currentGen === 'coetaneos' ? 'mode-hologram' : 'mode-mac');
+        const promptEsc = _crearEscapeHtml(prompt || '');
+        const metaEsc = _crearEscapeHtml(metaText || '');
+        content.innerHTML =
+            '<div class="tv-card crear-loading">' +
+            '<div class="crear-spinner">🎨</div>' +
+            '<div class="crear-progress"></div>' +
+            '<div class="crear-phase" id="crear-phase">CONECTANDO…</div>' +
+            '<div class="crear-meta" id="crear-meta">' + metaEsc + '</div>' +
+            '<div class="crear-prompt-text" title="' + promptEsc + '">' + promptEsc + '</div>' +
+            '</div>';
+        viewer.classList.add('active');
+        // Rotar mensaje de fase para dar sensación de progreso
+        const phases = [
+            'CONECTANDO…',
+            'INTERPRETANDO PROMPT…',
+            'TRAZANDO BOCETO…',
+            'COLOREANDO…',
+            'AFINANDO DETALLES…',
+            'RENDERIZANDO…',
+        ];
+        let i = 0;
+        if (_crearPhaseTimer) clearInterval(_crearPhaseTimer);
+        _crearPhaseTimer = setInterval(() => {
+            i = (i + 1) % phases.length;
+            const el = document.getElementById('crear-phase');
+            if (!el) { clearInterval(_crearPhaseTimer); _crearPhaseTimer = null; return; }
+            el.textContent = phases[i];
+        }, 2400);
+    }
+    function _renderCrearImage(imageUrl, prompt, metaText) {
+        const viewer = document.getElementById('table-viewer');
+        const content = document.getElementById('table-viewer-content');
+        if (!viewer || !content) return;
+        if (_crearPhaseTimer) { clearInterval(_crearPhaseTimer); _crearPhaseTimer = null; }
+        viewer.classList.remove('mode-mac', 'mode-hologram');
+        viewer.classList.add(currentGen === 'coetaneos' ? 'mode-hologram' : 'mode-mac');
+        const safeUrl = _crearEscapeHtml(imageUrl || '');
+        const promptEsc = _crearEscapeHtml(prompt || '');
+        const metaEsc = _crearEscapeHtml(metaText || _crearOptionLabel(selectedCrear));
+        content.innerHTML =
+            '<div class="crear-result-shell">' +
+            '<img src="' + safeUrl + '" alt="">' +
+            '<div class="crear-result-caption">' +
+            '<div class="crear-meta">' + metaEsc + '</div>' +
+            '<div class="crear-prompt-text" title="' + promptEsc + '">' + promptEsc + '</div>' +
+            '<div class="crear-actions">' +
+            '<a class="tv-open" href="' + safeUrl + '" target="_blank" rel="noopener">ABRIR ↗</a>' +
+            '</div>' +
+            '</div>' +
+            '</div>';
+        viewer.classList.add('active');
+    }
+    function _renderCrearError(prompt, message) {
+        const viewer = document.getElementById('table-viewer');
+        const content = document.getElementById('table-viewer-content');
+        if (!viewer || !content) return;
+        if (_crearPhaseTimer) { clearInterval(_crearPhaseTimer); _crearPhaseTimer = null; }
+        const promptEsc = _crearEscapeHtml(prompt || '');
+        const msgEsc = _crearEscapeHtml(message || 'Error desconocido');
+        viewer.classList.remove('mode-mac', 'mode-hologram');
+        viewer.classList.add(currentGen === 'coetaneos' ? 'mode-hologram' : 'mode-mac');
+        content.innerHTML =
+            '<div class="tv-card crear-loading">' +
+            '<div class="crear-phase">FALLO EN CREAR</div>' +
+            '<div class="crear-meta">' + msgEsc + '</div>' +
+            '<div class="crear-prompt-text" title="' + promptEsc + '">' + promptEsc + '</div>' +
+            '</div>';
+        viewer.classList.add('active');
+    }
+    function _updateCrearLoadingStatus(phase, metaText) {
+        const phaseEl = document.getElementById('crear-phase');
+        const metaEl = document.getElementById('crear-meta');
+        if (phaseEl && phase) phaseEl.textContent = phase;
+        if (metaEl) metaEl.textContent = metaText || '';
+    }
+    function _stopCrearPolling() {
+        if (window._crearPollTimer) {
+            clearTimeout(window._crearPollTimer);
+            window._crearPollTimer = null;
+        }
+    }
+    function _crearEscapeHtml(value) {
+        return String(value || '').replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g, '&quot;');
+    }
+    function _crearOptionLabel(value) {
+        const labels = {
+            'standard-square': 'ESTÁNDAR · CUADRADA',
+            'standard-wide': 'ESTÁNDAR · APAISADA',
+            'hd-square': 'HD · CUADRADA',
+            'hd-wide': 'HD · APAISADA',
+        };
+        return labels[value] || String(value || 'ESTÁNDAR').toUpperCase();
+    }
+    function _formatCrearElapsed(totalSeconds) {
+        const s = Math.max(0, totalSeconds || 0);
+        const m = Math.floor(s / 60);
+        const r = s % 60;
+        return m + ':' + String(r).padStart(2, '0');
+    }
+    function _crearJobMeta(job) {
+        if (!job) return '';
+        const bits = [];
+        if (job.queuePosition) bits.push('cola #' + job.queuePosition);
+        if (job.processingCount) bits.push(job.processingCount + ' procesando');
+        bits.push(_crearOptionLabel(job.calidad || selectedCrear));
+        if (typeof job.ageSeconds === 'number') bits.push(_formatCrearElapsed(job.ageSeconds));
+        return bits.join(' · ');
+    }
+    async function _crearApiFetch(path, init, timeoutMs) {
+        const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
+        let lastErr = null;
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + path, { ...(init || {}), signal: AbortSignal.timeout(timeoutMs || 12000) });
+                if ([429, 500, 502, 503, 504].includes(res.status)) {
+                    lastErr = new Error('HTTP ' + res.status);
+                    continue;
+                }
+                return { res, baseUrl };
+            } catch (e) {
+                lastErr = e;
+            }
+        }
+        throw lastErr || new Error('API no disponible');
+    }
+    function _crearStorageKey(gen) {
+        return 'crear:lastResult:' + (gen || 'leyendas');
+    }
+    function _saveCrearSnapshot(gen, data) {
+        try {
+            localStorage.setItem(_crearStorageKey(gen), JSON.stringify({
+                imageUrl: data.imageUrl || '',
+                prompt: data.prompt || '',
+                meta: data.meta || '',
+                savedAt: Date.now(),
+            }));
+        } catch(e) {}
+    }
+    function _loadCrearSnapshot(gen) {
+        try {
+            const raw = localStorage.getItem(_crearStorageKey(gen));
+            if (!raw) return null;
+            return JSON.parse(raw);
+        } catch(e) {
+            return null;
+        }
+    }
+
+    function playPresentation() {
+        // Sub-opciones todavía no implementadas — solo "presentacion" hace algo
+        if (selectedMirar !== "presentacion") {
+            setActionLine("🎬 Modo '" + selectedMirar + "' aún no implementado — usa Presentación por ahora");
+            return;
+        }
+        const video = document.getElementById("presentation-video");
+        if (!video) return;
+        // Toggle: si ya reproduce, pausa; si no, reproduce desde el inicio
+        if (!video.paused) {
+            video.pause();
+            return;
+        }
+        video.currentTime = 0;
+        const p = video.play();
+        if (p && typeof p.catch === "function") {
+            p.catch(err => {
+                setActionLine("⚠️ No se pudo reproducir el vídeo: " + (err && err.message ? err.message : err));
+            });
+        }
+    }
+
+    // Wire del click del hotspot y del fin de vídeo
+    document.addEventListener("DOMContentLoaded", () => {
+        try { if (localStorage.getItem('councilMenuHidden') === '1') document.body.classList.add('cli-menu-hidden'); } catch (e) {}
+        try { setScummCollapsed(localStorage.getItem('scummCollapsed') !== '0'); } catch (e) { setScummCollapsed(true); }
+        try { if (localStorage.getItem('topCollapsed') === '1') setTopCollapsed(true); } catch (e) {}
+        try { if (localStorage.getItem('mouthsOff') === '1') setMouthsEnabled(false); } catch (e) {}
+        refreshLLMAvailability();
+        wireSentenceHover();
+        setTimeout(maybeOnboard, 1200);
+        // Magic link Telegram: ?train=<url> auto-activa Entrenar y procesa la URL
+        const params = new URLSearchParams(location.search);
+        const trainUrl = params.get('train');
+        const trainTarget = params.get('target');
+        if (trainUrl) {
+            const entrenarBtn = document.querySelector('button[data-verb="entrenar"]');
+            if (entrenarBtn) selectVerb(entrenarBtn);
+            window._trainTarget = trainTarget || null;
+            setTimeout(() => {
+                const input = document.getElementById('action-input');
+                if (input) {
+                    input.value = trainUrl;
+                    sendMessage();
+                }
+                // Limpiar los params para que un refresh no re-dispare
+                const clean = new URLSearchParams(location.search);
+                clean.delete('train');
+                clean.delete('target');
+                history.replaceState({}, '', location.pathname + '?' + clean.toString());
+            }, 200);
+        } else {
+            // Seleccionar PREGUNTAR por defecto al cargar
+            const defaultBtn = document.querySelector('[data-verb="preguntar"]');
+            if (defaultBtn) selectVerb(defaultBtn);
+        }
+
+        const hotspot = document.getElementById("apple-ii-hotspot");
+        if (hotspot) {
+            hotspot.addEventListener("click", () => {
+                if (currentVerb === "mirar") playPresentation();
+            });
+        }
+        // Al acabar el vídeo, volvemos al primer fotograma (Apple II tranquilo en la mesa)
+        const video = document.getElementById("presentation-video");
+        if (video) {
+            video.addEventListener("ended", () => {
+                video.currentTime = 0;
+                video.pause();
+            });
+        }
+        renderAnalyzedList();
+        void ensureEntrenarLoaded(currentGen);
+        void loadYarContext();
+    });
+
+    async function askCouncilAPI(message) {
+        /**
+         * Calls the real council API backed by Claude.
+         * Tries configured URLs in order, caches the working one.
+         * Falls back to simulation if all are unreachable.
+         */
+        const urls = activeApiUrl ? [activeApiUrl] : COUNCIL_API_URLS;
+        const effectiveMessage = buildCouncilPrompt(message);
+        const confirmedExpensiveVideo = confirmExpensiveVideoApproval(effectiveMessage);
+        if (!confirmedExpensiveVideo) {
+            setActionLine("💸 Consulta cancelada — Gemini + YouTube requiere confirmación explícita");
+            return null;
+        }
+        if (requiresExpensiveVideoApproval(effectiveMessage)) {
+            setActionLine("💸 Gemini + YouTube confirmado — consulta limitada a un solo consejero");
+        }
+
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + "/api/council/ask", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Council-Token": COUNCIL_API_TOKEN,
+                    },
+                    body: JSON.stringify({
+                        message: effectiveMessage,
+                        generation: currentGen,
+                        context: conversationHistory.slice(-6),
+                        llm: selectedLLM,
+                        confirm_expensive_video: confirmedExpensiveVideo,
+                    }),
+                });
+                if (res.status === 409) {
+                    console.warn("Council API: expensive video confirmation required");
+                    setActionLine("💸 Gemini + YouTube bloqueado hasta confirmar el coste");
+                    return null;
+                }
+                if (res.status === 402) {
+                    console.error("Council API: budget exceeded");
+                    setActionLine("💰 Presupuesto agotado — contacta con el administrador para añadir crédito");
+                    return null;
+                }
+                if (res.status === 403) {
+                    console.error("Council API: invalid token");
+                    setActionLine("🔒 Error de autenticación con la API");
+                    return null;
+                }
+                if (res.status === 429) {
+                    console.warn("Council API: rate limited");
+                    setActionLine("⏱️ Demasiadas peticiones — espera unos minutos");
+                    return null;
+                }
+                if (!res.ok) throw new Error("API " + res.status);
+                activeApiUrl = baseUrl; // Cache working URL
+                console.log("Council API connected:", baseUrl);
+                return await res.json();
+            } catch (err) {
+                console.warn("Council API not available at " + baseUrl + ":", err.message);
+            }
+        }
+        activeApiUrl = null; // Reset cache if all failed
+        return null; // triggers fallback
+    }
+
+    async function askOneAgentAPI(message, agentName) {
+        /** Call /api/council/ask-one for a single agent. */
+        const urls = activeApiUrl ? [activeApiUrl] : COUNCIL_API_URLS;
+        const effectiveMessage = buildCouncilPrompt(message);
+        const confirmedExpensiveVideo = confirmExpensiveVideoApproval(effectiveMessage, agentName);
+        if (!confirmedExpensiveVideo) {
+            setActionLine("💸 Consulta cancelada — Gemini + YouTube requiere confirmación explícita");
+            return null;
+        }
+        if (requiresExpensiveVideoApproval(effectiveMessage)) {
+            setActionLine("💸 Gemini + YouTube confirmado — consulta limitada a un solo consejero");
+        }
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + "/api/council/ask-one", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Council-Token": COUNCIL_API_TOKEN,
+                    },
+                    body: JSON.stringify({
+                        message: effectiveMessage,
+                        agent_name: agentName,
+                        generation: currentGen,
+                        context: conversationHistory.slice(-6),
+                        llm: selectedLLM,
+                        confirm_expensive_video: confirmedExpensiveVideo,
+                    }),
+                });
+                if (res.status === 409) { setActionLine("💸 Gemini + YouTube bloqueado hasta confirmar el coste"); return null; }
+                if (res.status === 402) { setActionLine("💰 Presupuesto agotado"); return null; }
+                if (res.status === 403) { setActionLine("🔒 Error de autenticación"); return null; }
+                if (res.status === 429) { setActionLine("⏱️ Demasiadas peticiones"); return null; }
+                if (!res.ok) throw new Error("API " + res.status);
+                activeApiUrl = baseUrl;
+                return await res.json();
+            } catch (err) {
+                console.warn("ask-one failed at " + baseUrl + ":", err.message);
+            }
+        }
+        activeApiUrl = null;
+        return null;
+    }
+
+    async function notifyAgoraCouncil(event, question, agent, answer = "") {
+        const matrixLink = getMatrixLink(agent);
+        if (!matrixLink) return null;
+        const payload = {
+            event,
+            question,
+            answer,
+            persona: agent.persona,
+            role: agent.name,
+            side: agent.side,
+            generation: agent.gen,
+            matrixAlias: matrixLink.alias,
+            matrixChannel: matrixLink.channel,
+            llm: selectedLLM,
+            url: location.href,
+        };
+        const urls = activeAgoraCouncilUrl
+            ? [activeAgoraCouncilUrl].concat(AGORA_COUNCIL_API_URLS.filter(u => u !== activeAgoraCouncilUrl))
+            : AGORA_COUNCIL_API_URLS.slice();
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + "/api/agora/council-question", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Council-Token": COUNCIL_API_TOKEN,
+                    },
+                    body: JSON.stringify(payload),
+                    signal: AbortSignal.timeout(45000),
+                });
+                if (!res.ok) throw new Error("Agora " + res.status);
+                activeAgoraCouncilUrl = baseUrl;
+                return await res.json();
+            } catch (err) {
+                console.warn("Agora council bridge failed at " + baseUrl + ":", err.message);
+            }
+        }
+        activeAgoraCouncilUrl = null;
+        return null;
+    }
+
+    async function askSingleAgent(question, agent) {
+        /** Ask a single selected agent via the API. */
+        const panelId = agent.side === "racional" ? "conv-racional" : "conv-creativo";
+        resetSpeakerTurns();
+
+        // Show thinking — include LLM name
+        const llmEl = document.querySelector('.llm-option.selected');
+        const llmLabel = llmEl ? llmEl.textContent.trim().replace('FREE','').trim() : 'Claude';
+        const matrixLink = getMatrixLink(agent);
+        const matrixThinking = matrixLink ? " + Matrix " + matrixLink.alias : "";
+        showSpeechBubble(agent.persona, agent.name, agent.persona + " está pensando...");
+        highlightNameplate(agent.persona, 1);
+        setActionLine("🧠 " + agent.persona + " está pensando con " + llmLabel + matrixThinking + "...");
+
+        conversationHistory.push({ role: "user", content: question });
+        void notifyAgoraCouncil("question", question, agent);
+
+        if (isScreenEmissionQuestion(question)) {
+            await fetchTeamworkSnapshots();
+            const deterministic = buildScreenObservationAnswer(agent);
+            hideSpeechBubble();
+            clearNameplateHighlight();
+            showSpeechBubble(agent.persona, agent.name, deterministic.substring(0, 80) + "...");
+            highlightNameplate(agent.persona, 1);
+            addConvEntry(panelId, agent.icon, agent.name, agent.persona, agent.side, deterministic);
+            conversationHistory.push({ role: "assistant", content: agent.name + ": " + deterministic });
+            setActionLine("🖥️ " + agent.persona + " ha respondido desde el estado visual real de las pantallas");
+            void notifyAgoraCouncil("answer", question, agent, deterministic);
+            await new Promise(r => setTimeout(r, 3000));
+            hideSpeechBubble();
+            return;
+        }
+
+        const reply = await askOneAgentAPI(question, agent.name);
+
+        hideSpeechBubble();
+        clearNameplateHighlight();
+
+        if (reply) {
+            // Show the speech bubble with the response
+            showSpeechBubble(agent.persona, reply.name, reply.content.substring(0, 80) + "...");
+            highlightNameplate(agent.persona, 1);
+            addConvEntry(panelId, reply.icon, reply.name, reply.persona, reply.side, reply.content);
+            conversationHistory.push({ role: "assistant", content: reply.name + ": " + reply.content });
+            void notifyAgoraCouncil("answer", question, agent, reply.content);
+
+            setActionLine("✅ " + agent.persona + " ha respondido — escribe para seguir preguntando");
+            // Keep agent selected for follow-up questions
+            await new Promise(r => setTimeout(r, 3000));
+            hideSpeechBubble();
+        } else {
+            // Fallback
+            addConvEntry(panelId, agent.icon, agent.name, agent.persona, agent.side,
+                "[Offline] " + agent.persona + " no está disponible.");
+            setActionLine("⚠️ API no disponible — " + agent.persona + " no pudo responder");
+            void notifyAgoraCouncil("offline", question, agent);
+        }
+    }
+
+    async function simulateCouncilResponse(question) {
+        // Show thinking state for all members
+        const members = COUNCIL.filter(m => m.gen === currentGen);
+        const racionales = members.filter(m => m.side === "racional");
+        const creativos = members.filter(m => m.side === "creativo");
+        resetSpeakerTurns();
+
+        // Show "thinking" animation — mensaje según LLM activo y tipo de contenido
+        const llmNameMap = {
+            "claude-sonnet": "Claude Sonnet 4",
+            "llama-70b": "Llama 3.3 70B",
+            "deepseek-r1": "DeepSeek R1",
+            "gemma-9b": "Gemma 2 9B",
+            "gemini-flash": "Gemini 2.5 Flash",
+            "nvidia-deepseek-v4-flash": "NVIDIA DeepSeek V4 Flash",
+            "nvidia-glm47": "NVIDIA GLM 4.7",
+            "nvidia-minimax-m27": "NVIDIA MiniMax M2.7",
+            "nvidia-gpt-oss-20b": "NVIDIA GPT OSS 20B",
+        };
+        const llmLabel = llmNameMap[selectedLLM] || selectedLLM;
+        const isVideoAnalysis = selectedLLM === "gemini-flash" && YT_RE.test(question);
+        const thinkingMsg = isVideoAnalysis
+            ? "📺 Gemini analizando vídeo de YouTube... (10–30s)"
+            : "🧠 Los consejeros están deliberando con " + llmLabel + "...";
+        const bubbleMsg = isVideoAnalysis
+            ? "Viendo el vídeo..."
+            : "Los 8 consejeros están pensando...";
+        setActionLine(thinkingMsg);
+        for (const m of [...racionales, ...creativos]) {
+            highlightNameplate(m.persona);
+        }
+        showSpeechBubble(racionales[0].persona, "Consejo", bubbleMsg);
+
+        // Add to conversation history
+        conversationHistory.push({ role: "user", content: question });
+
+        // Call real API
+        const apiResponse = await askCouncilAPI(question);
+
+        hideSpeechBubble();
+        clearNameplateHighlight();
+
+        if (apiResponse) {
+            // Real Claude responses — show them one by one with animation
+            let turnNumber = 1;
+            for (const reply of apiResponse.racional) {
+                const member = members.find(m => m.name === reply.name);
+                if (member) {
+                    showSpeechBubble(member.persona, reply.name, (reply.content.length > 160 ? reply.content.substring(0, 160) + "…" : reply.content));
+                    highlightNameplate(member.persona, turnNumber);
+                }
+                addConvEntry("conv-racional", reply.icon, reply.name, reply.persona, "racional", reply.content);
+                conversationHistory.push({ role: "assistant", content: reply.name + ": " + reply.content });
+                await new Promise(r => setTimeout(r, 400));
+                clearNameplateHighlight();
+                turnNumber += 1;
+            }
+            for (const reply of apiResponse.creativo) {
+                const member = members.find(m => m.name === reply.name);
+                if (member) {
+                    showSpeechBubble(member.persona, reply.name, (reply.content.length > 160 ? reply.content.substring(0, 160) + "…" : reply.content));
+                    highlightNameplate(member.persona, turnNumber);
+                }
+                addConvEntry("conv-creativo", reply.icon, reply.name, reply.persona, "creativo", reply.content);
+                conversationHistory.push({ role: "assistant", content: reply.name + ": " + reply.content });
+                await new Promise(r => setTimeout(r, 400));
+                clearNameplateHighlight();
+                turnNumber += 1;
+            }
+            hideSpeechBubble();
+            setActionLine("✅ " + (apiResponse.racional.length + apiResponse.creativo.length) + " consejeros han respondido — escribe para continuar");
+        } else {
+            // Fallback: offline simulation
+            setActionLine("⚠️ API no disponible — modo simulación");
+            const simRac = racionales.sort(() => Math.random() - 0.5).slice(0, 2);
+            const simCre = creativos.sort(() => Math.random() - 0.5).slice(0, 2);
+            for (const m of simRac) {
+                addConvEntry("conv-racional", m.icon, m.name, m.persona, "racional", "[Offline] " + m.persona + " analiza desde el lado racional.");
+                await new Promise(r => setTimeout(r, 300));
+            }
+            for (const m of simCre) {
+                addConvEntry("conv-creativo", m.icon, m.name, m.persona, "creativo", "[Offline] " + m.persona + " responde desde el lado creativo.");
+                await new Promise(r => setTimeout(r, 300));
+            }
+            setActionLine("Modo offline — arranca council-api.py para conectar con Claude");
+        }
+    }
+
+    function selectProject(el) {
+        document.querySelectorAll('.inv-item').forEach(i => i.classList.remove('selected'));
+        el.classList.add('selected');
+        currentProject = el.textContent.trim();
+        updateActionLine();
+    }
+
+    async function executeCouncilVerb(verb) {
+        if (debateRunning) { setActionLine("Debate en curso..."); return; }
+        runSimulation(verb);
+    }
+
+    async function runSimulation(verb) {
+        debateRunning = true;
+        enterConversation();
+        resetSpeakerTurns();
+        const members = COUNCIL.filter(m => m.gen === currentGen);
+        const racionales = members.filter(m => m.side === "racional");
+        const creativos = members.filter(m => m.side === "creativo");
+        const roundName = { debatir:"Debate" }[verb] || verb;
+        const verbGerund = { debatir:"debatiendo" }[verb] || verb;
+        setActionLine("🧠 " + roundName + " en curso — los consejeros deliberan con Claude...");
+
+        // Build the prompt based on the verb + project
+        const verbPrompts = {
+            debatir: "Estamos en fase de debate sobre el proyecto '" + (currentProject || "nuevo proyecto") + "'. Analiza las propuestas anteriores del consejo, valida lo fuerte, cuestiona lo débil, y propón mejoras.",
+        };
+        const prompt = verbPrompts[verb] || verbPrompts.debatir;
+
+        // Show thinking animation
+        for (const m of [...racionales, ...creativos]) highlightNameplate(m.persona);
+        showSpeechBubble(racionales[0].persona, "Consejo", "Los consejeros están " + verbGerund + "...");
+
+        conversationHistory.push({ role: "user", content: prompt });
+        const apiResponse = await askCouncilAPI(prompt);
+
+        hideSpeechBubble();
+        clearNameplateHighlight();
+
+        if (apiResponse) {
+            // Show real Claude responses with animation
+            let turnNumber = 1;
+            for (const reply of apiResponse.racional) {
+                const member = members.find(m => m.name === reply.name);
+                if (member) {
+                    showSpeechBubble(member.persona, reply.name, (reply.content.length > 160 ? reply.content.substring(0, 160) + "…" : reply.content));
+                    highlightNameplate(member.persona, turnNumber);
+                }
+                addConvEntry("conv-racional", reply.icon, reply.name, reply.persona, "racional", reply.content);
+                conversationHistory.push({ role: "assistant", content: reply.name + ": " + reply.content });
+                await new Promise(r => setTimeout(r, 500));
+                clearNameplateHighlight();
+                turnNumber += 1;
+            }
+            for (const reply of apiResponse.creativo) {
+                const member = members.find(m => m.name === reply.name);
+                if (member) {
+                    showSpeechBubble(member.persona, reply.name, (reply.content.length > 160 ? reply.content.substring(0, 160) + "…" : reply.content));
+                    highlightNameplate(member.persona, turnNumber);
+                }
+                addConvEntry("conv-creativo", reply.icon, reply.name, reply.persona, "creativo", reply.content);
+                conversationHistory.push({ role: "assistant", content: reply.name + ": " + reply.content });
+                await new Promise(r => setTimeout(r, 500));
+                clearNameplateHighlight();
+                turnNumber += 1;
+            }
+            hideSpeechBubble();
+            const total = apiResponse.racional.length + apiResponse.creativo.length;
+            setActionLine("✅ " + roundName + " completada — " + total + " consejeros han respondido");
+        } else {
+            // Fallback offline
+            setActionLine("⚠️ API no disponible — modo offline");
+            const verbAction = { debatir:"debate los puntos" }[verb] || "responde";
+            for (const m of racionales) {
+                addConvEntry("conv-racional", m.icon, m.name, m.persona, "racional", "[Offline] " + m.persona + " " + verbAction + ".");
+                await new Promise(r => setTimeout(r, 200));
+            }
+            for (const m of creativos) {
+                addConvEntry("conv-creativo", m.icon, m.name, m.persona, "creativo", "[Offline] " + m.persona + " " + verbAction + ".");
+                await new Promise(r => setTimeout(r, 200));
+            }
+        }
+
+        debateRunning = false;
+    }
+
+    function showSpeechBubble(persona, role, text) {
+        const b = document.getElementById("speech-bubble");
+        b.querySelector(".speaker").textContent = role + " — " + persona;
+        b.querySelector(".speech-text").textContent = text;
+        const fichaLink = b.querySelector(".speech-ficha");
+        if (fichaLink) fichaLink.href = "consejero.html?p=" + cSlug(persona);
+        b.style.display = "block";
+        const np = document.querySelector('.np[data-persona="' + persona + '"]');
+        if (np) {
+            b.style.left = Math.max(5, Math.min(parseFloat(np.style.left) - 10, 60)) + "%";
+            b.style.top = Math.max(5, parseFloat(np.style.top) - 20) + "%";
+        } else { b.style.left = "30%"; b.style.top = "10%"; }
+    }
+
+    // ════════════ OLEADA 4: sonido · progresión · examinar · compartir · atajos ════════════
+    var examinarMode = false;
+
+    // 1) Sonido retro (WebAudio, sin assets). Mute persistente en localStorage.
+    let _audioCtx = null;
+    function _sfxOn() { try { return localStorage.getItem("sfxOff") !== "1"; } catch (e) { return true; } }
+    function playSfx(type) {
+        if (!_sfxOn()) return;
+        try {
+            _audioCtx = _audioCtx || new (window.AudioContext || window.webkitAudioContext)();
+            const ctx = _audioCtx, o = ctx.createOscillator(), g = ctx.createGain();
+            const map = { verb: [440, 0.05], talk: [620, 0.06], vote: [330, 0.12], win: [880, 0.2], select: [520, 0.05] };
+            const conf = map[type] || map.verb;
+            o.type = "square"; o.frequency.value = conf[0]; g.gain.value = 0.04;
+            o.connect(g); g.connect(ctx.destination); o.start();
+            g.gain.exponentialRampToValueAtTime(0.0001, ctx.currentTime + conf[1]);
+            o.stop(ctx.currentTime + conf[1]);
+        } catch (e) {}
+    }
+    function toggleSfx() {
+        const wasOn = _sfxOn();
+        try { localStorage.setItem("sfxOff", wasOn ? "1" : "0"); } catch (e) {}
+        setActionLine(wasOn ? "🔇 Sonido desactivado (S para activar)" : "🔊 Sonido activado");
+        if (!wasOn) playSfx("select");
+    }
+
+    // 2) Progresión / logros (localStorage)
+    const ACHIEVEMENTS = {
+        allverbs: "Manejas todos los verbos",
+        council8: "Has consultado a todo el Consejo",
+        debate:   "Primer debate del Consejo",
+        present:  "Has usado Presentar",
+        vote:     "Primera votación cerrada",
+    };
+    function _getSet(key) { try { return new Set(JSON.parse(localStorage.getItem(key) || "[]")); } catch (e) { return new Set(); } }
+    function _saveSet(key, set) { try { localStorage.setItem(key, JSON.stringify([...set])); } catch (e) {} }
+    function unlock(id) {
+        if (!ACHIEVEMENTS[id]) return;
+        const got = _getSet("council_ach");
+        if (got.has(id)) return;
+        got.add(id); _saveSet("council_ach", got);
+        playSfx("win"); showAchToast(ACHIEVEMENTS[id]);
+    }
+    function showAchToast(text) {
+        let t = document.getElementById("ach-toast");
+        if (!t) { t = document.createElement("div"); t.id = "ach-toast"; t.className = "ach-toast"; document.body.appendChild(t); }
+        t.textContent = "🏆 " + text;
+        t.classList.add("show");
+        clearTimeout(t._timer); t._timer = setTimeout(() => t.classList.remove("show"), 3500);
+    }
+    function markVerbUsed(verb) {
+        if (!verb) return;
+        const used = _getSet("council_verbs"); used.add(verb); _saveSet("council_verbs", used);
+        const all = [...document.querySelectorAll(".verb-btn")].map(b => b.dataset.verb).filter(v => v && v !== "previo");
+        if (all.length && all.every(v => used.has(v))) unlock("allverbs");
+    }
+    function markCouncilConsulted(persona) {
+        if (!persona) return;
+        const seen = _getSet("council_seen"); seen.add(persona); _saveSet("council_seen", seen);
+        const gen = COUNCIL.filter(m => m.gen === currentGen);
+        if (gen.length && gen.every(m => seen.has(m.persona))) unlock("council8");
+    }
+
+    // 3) Examinar — leer el perfil/lore de un consejero (sin LLM)
+    function loreFor(agent) {
+        const g = (typeof councilGreeting === "function") ? councilGreeting(agent) : "";
+        return (agent.role + ". " + (agent.territory ? agent.territory + ". " : "") + g).trim();
+    }
+
+    // 5) Compartir resultado de votación (copia al portapapeles)
+    function shareVote(text) {
+        const full = "🗳️ Votación del Consejo AdmiraNext\n" + (text || "") + "\nhttps://www.admira.live/";
+        try { navigator.clipboard.writeText(full); setActionLine("📋 Resultado de la votación copiado — pégalo donde quieras"); }
+        catch (e) { setActionLine("No se pudo copiar al portapapeles"); }
+    }
+
+    // 6) Atajos de teclado: 1-9 = verbos visibles, S = sonido (ESC ya cierra overlays)
+    window.addEventListener("keydown", (e) => {
+        const tag = (document.activeElement && document.activeElement.tagName) || "";
+        if (tag === "INPUT" || tag === "TEXTAREA" || e.metaKey || e.ctrlKey || e.altKey) return;
+        if (/^[1-9]$/.test(e.key)) {
+            const btns = [...document.querySelectorAll(".verb-btn")].filter(b => b.offsetParent !== null);
+            const b = btns[parseInt(e.key, 10) - 1];
+            if (b) { b.click(); e.preventDefault(); }
+        } else if (e.key === "s" || e.key === "S") { toggleSfx(); }
+    });
+    // ════════════ fin Oleada 4 ════════════
+
+    function hideSpeechBubble() { document.getElementById("speech-bubble").style.display = "none"; }
+
+    function setSpeakerTurn(persona, turn) {
+        if (!persona) return;
+        if (turn === null || turn === undefined || turn === "") {
+            delete speakerTurnMap[persona];
+        } else {
+            speakerTurnMap[persona] = String(turn);
+        }
+        applySpeakerTurns();
+    }
+
+    function resetSpeakerTurns() {
+        speakerTurnMap = {};
+        applySpeakerTurns();
+    }
+
+    function applySpeakerTurns() {
+        document.querySelectorAll('.np').forEach(np => {
+            const persona = np.getAttribute('data-persona');
+            const badge = np.querySelector('.np-turn');
+            const turn = speakerTurnMap[persona];
+            if (!badge) return;
+            if (turn) {
+                badge.textContent = turn;
+                np.classList.add('has-turn');
+            } else {
+                badge.textContent = '';
+                np.classList.remove('has-turn');
+            }
+        });
+    }
+
+    function highlightNameplate(persona, turn = null) {
+        document.querySelectorAll('.np').forEach(n => n.classList.remove('speaking'));
+        const np = document.querySelector('.np[data-persona="' + persona + '"]');
+        if (turn !== null && turn !== undefined) setSpeakerTurn(persona, turn);
+        if (np) np.classList.add('speaking');
+    }
+
+    function clearNameplateHighlight() { document.querySelectorAll('.np').forEach(n => n.classList.remove('speaking')); }
+
+    function isScreenEmissionQuestion(text) {
+        const q = String(text || '').toLowerCase();
+        const talksAboutScreens = /(pantalla|pantallas|screen|screens|monitor|monitores|display|displays)/.test(q);
+        const asksContent = /(que|qué|muestra|muestran|emite|emiten|sale|salen|hay|ponen|aparece|aparecen|viendo|ves|contenido)/.test(q);
+        return talksAboutScreens && asksContent;
+    }
+
+    function visibleMachineIdsForGen(gen) {
+        return (NAMEPLATE_POS[gen] || []).map(p => p.machineId).filter(Boolean);
+    }
+
+    function summarizeMachineScreen(machineId) {
+        const machine = machineStatus[machineId] || {};
+        const snap = teamworkSnapshots[machineId] || {};
+        const observed = [];
+        const codexState = String(snap.codexState || '').trim();
+        const claudeState = String(snap.claudeState || '').trim();
+        const textState = String(snap.text || '').trim();
+        const currentFocus = String(machine.currentFocus || '').trim();
+
+        if (codexState && codexState !== 'OFF' && codexState !== 'no-window') observed.push("Codex: " + codexState);
+        if (claudeState && claudeState !== 'OFF' && claudeState !== 'no-window') observed.push("Claude: " + claudeState);
+        if (textState) observed.push("Texto visible: " + textState.slice(0, 120));
+        if (currentFocus && !/ssh verificado/i.test(currentFocus)) observed.push("Foco: " + currentFocus);
+        if (!observed.length) observed.push(machine.online ? "sin lectura fiable de ventana ahora mismo" : "pantalla sin conexión");
+
+        return observed.join(" · ");
+    }
+
+    function buildScreenObservationAnswer(agent) {
+        const members = COUNCIL.filter(m => m.gen === currentGen);
+        const ordered = visibleMachineIdsForGen(currentGen)
+            .map(machineId => members.find(m => m.machineId === machineId))
+            .filter(Boolean);
+        const selected = ordered.filter(m => m.machineId === agent.machineId);
+        const others = ordered.filter(m => m.machineId !== agent.machineId);
+        const rows = selected.concat(others).slice(0, 6).map(m =>
+            "• " + m.persona + " — " + summarizeMachineScreen(m.machineId)
+        );
+        if (!rows.length) {
+            return "No tengo lectura fiable de pantallas ahora mismo. Prefiero no confundirlo con el hilo musical ni inventar contenido visual.";
+        }
+        return [
+            "Leyendo pantallas, no hilo musical.",
+            "Ahora mismo veo esto en la mesa:",
+            rows.join("\n"),
+            "Si una pantalla no tiene ventana legible, la marco como sin lectura fiable en lugar de deducir audio."
+        ].join("\n");
+    }
+
+    // ═══════════════════════════════════
+    // VOTAR
+    // ═══════════════════════════════════
+    function triggerVotar() {
+        const old = document.getElementById("vote-overlay");
+        if (old) { old.remove(); return; }
+
+        const tema = currentProject || "la propuesta actual";
+        const votoLabels = { favor: "✅ A favor", contra: "❌ En contra", abstencion: "🤝 Abstención", posponer: "🔄 Posponer" };
+        const votoLabel = votoLabels[selectedVotar] || selectedVotar;
+
+        const members = COUNCIL.filter(m => m.gen === currentGen);
+
+        // Voto con sentido: depende del BANDO (creativo entusiasta, racional cauto)
+        // y se deja INFLUIR por tu posición. Determinista/reproducible.
+        function memberVote(m) {
+            const seed = (m.persona + tema).split('').reduce((a, c) => a + c.charCodeAt(0), 0);
+            if (seed % 5 < 2) return selectedVotar; // ~40% se alinea con tu voto
+            const pools = {
+                creativo: ["favor", "favor", "favor", "abstencion", "contra", "posponer"],
+                racional: ["favor", "contra", "contra", "posponer", "abstencion", "favor"],
+            };
+            const pool = pools[m.side] || pools.creativo;
+            return pool[seed % pool.length];
+        }
+
+        const results = members.map(m => ({ ...m, vote: memberVote(m) }));
+        const tally = { favor: 0, contra: 0, abstencion: 0, posponer: 0 };
+        results.forEach(m => { if (tally[m.vote] !== undefined) tally[m.vote]++; });
+        if (tally[selectedVotar] !== undefined) tally[selectedVotar]++; // tu voto cuenta
+        const totalVotos = members.length + 1;
+
+        const vIcon = { favor: "✅", contra: "❌", abstencion: "🤝", posponer: "🔄" };
+        const rows = results.map(m =>
+            `<tr>
+                <td style="padding:4px 10px">${m.icon}</td>
+                <td style="padding:4px 10px;color:#ccc">${m.persona}</td>
+                <td style="padding:4px 10px;color:#888;font-size:0.78em">${m.name}</td>
+                <td style="padding:4px 10px;font-size:1.1em;text-align:center">${vIcon[m.vote] || "?"}</td>
+            </tr>`
+        ).join('');
+
+        const resultLabel = tally.favor > totalVotos / 2 ? "✅ APROBADO" :
+                            tally.contra > totalVotos / 2 ? "❌ RECHAZADO" : "🤝 SIN MAYORÍA";
+        const resultColor = tally.favor > totalVotos / 2 ? "#44bb44" :
+                            tally.contra > totalVotos / 2 ? "#e74c3c" : "#888";
+        window._lastVoteSummary = "📋 " + tema + "\n✅ " + tally.favor + "  ❌ " + tally.contra + "  🤝 " + tally.abstencion + "  🔄 " + tally.posponer + "\n" + resultLabel;
+        unlock('vote'); playSfx('vote');
+
+        const ov = document.createElement("div");
+        ov.id = "vote-overlay";
+        ov.style.cssText = "position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.82);z-index:9999;font-family:inherit;";
+        ov.innerHTML = `
+            <div style="background:#1a0e05;border:3px solid #8b5a14;border-top-color:#a07828;border-radius:0;box-shadow:4px 4px 0 #000;padding:1.6rem;max-width:480px;width:90%;max-height:80vh;overflow-y:auto;font-family:'Press Start 2P',monospace;">
+                <h3 style="color:#daa520;font-family:'Press Start 2P',monospace;font-size:0.75rem;margin-bottom:1rem;text-align:center;letter-spacing:1px">VOTACIÓN DEL CONSEJO</h3>
+                <p style="color:#aaa;text-align:center;margin-bottom:0.4rem;font-size:0.85rem">📋 ${tema}</p>
+                <p style="color:#88ccff;text-align:center;margin-bottom:1.5rem;font-size:0.8rem">Tu posición: ${votoLabel}</p>
+                <table style="width:100%;margin-bottom:1.2rem;font-size:0.82rem;border-collapse:collapse">${rows}</table>
+                <div style="display:flex;gap:1.2rem;justify-content:center;margin-bottom:1rem;font-size:0.88rem">
+                    <span style="color:#44bb44">✅ ${tally.favor}</span>
+                    <span style="color:#e74c3c">❌ ${tally.contra}</span>
+                    <span style="color:#888">🤝 ${tally.abstencion}</span>
+                    <span style="color:#f39c12">🔄 ${tally.posponer}</span>
+                </div>
+                <p style="text-align:center;font-size:1rem;font-weight:700;color:${resultColor};margin-bottom:1.2rem">${resultLabel}</p>
+                <div style="text-align:center">
+                    <button onclick="shareVote(window._lastVoteSummary)" style="background:#2a1a08;color:#8ef06c;border:2px solid #44cc44;border-radius:0;box-shadow:2px 2px 0 #000;padding:0.55rem 1.2rem;cursor:pointer;font-family:'Press Start 2P',monospace;font-size:0.55rem;margin-right:8px">COMPARTIR</button>
+                    <button onclick="document.getElementById('vote-overlay').remove()" style="background:#2a1a08;color:#ffee00;border:2px solid #ddcc00;border-radius:0;box-shadow:2px 2px 0 #000;padding:0.55rem 1.5rem;cursor:pointer;font-family:'Press Start 2P',monospace;font-size:0.55rem">CERRAR</button>
+                </div>
+            </div>`;
+        document.body.appendChild(ov);
+        ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+        setActionLine("🗳️ Votación sobre «" + tema + "» — " + resultLabel);
+    }
+
+    // ═══════════════════════════════════
+    // DISEÑO (reglas + grid sobre la imagen del consejo)
+    // ═══════════════════════════════════
+    function buildDesignRulers() {
+        const h = document.getElementById("design-ruler-h");
+        const v = document.getElementById("design-ruler-v");
+        if (!h || !v || h.children.length) return;
+        for (let i = 0; i < 10; i++) {
+            const sh = document.createElement("span"); sh.textContent = (i * 10) + "%";
+            h.appendChild(sh);
+            const sv = document.createElement("span"); sv.textContent = (i * 10);
+            v.appendChild(sv);
+        }
+    }
+    function onDesignMouseMove(e) {
+        const host = document.querySelector(".council-image");
+        const readout = document.getElementById("design-readout");
+        const cursor = document.getElementById("design-cursor");
+        if (!host || !readout) return;
+        const r = host.getBoundingClientRect();
+        const x = e.clientX - r.left;
+        const y = e.clientY - r.top;
+        if (x < 0 || y < 0 || x > r.width || y > r.height) {
+            readout.textContent = "— fuera del consejo —";
+            return;
+        }
+        const px = (x / r.width * 100).toFixed(1);
+        const py = (y / r.height * 100).toFixed(1);
+        const pr = (100 - x / r.width * 100).toFixed(1);
+        const pb = (100 - y / r.height * 100).toFixed(1);
+        readout.textContent = `L:${px}% T:${py}%  R:${pr}% B:${pb}%  (${Math.round(x)}x${Math.round(y)}px)`;
+        if (cursor) {
+            cursor.style.left = x + "px";
+            cursor.style.top = y + "px";
+        }
+    }
+    function toggleDesign() {
+        const btn = document.getElementById("design-btn");
+        const ov = document.getElementById("design-overlay");
+        if (!btn || !ov) return;
+        buildDesignRulers();
+        const turningOn = !ov.classList.contains("active");
+        ov.classList.toggle("active", turningOn);
+        btn.classList.toggle("active", turningOn);
+        document.body.classList.toggle("design-on", turningOn);
+        const host = document.querySelector(".council-image");
+        if (host) {
+            if (turningOn) host.addEventListener("mousemove", onDesignMouseMove);
+            else host.removeEventListener("mousemove", onDesignMouseMove);
+        }
+        const readout = document.getElementById("design-readout");
+        if (readout && !turningOn) readout.textContent = "—";
+    }
+
+    // ═══════════════════════════════════
+    // ANALIZAR
+    // ═══════════════════════════════════
+    const ANALIZAR_HIST_KEY = "admiranext_analizar_urls";
+    const ANALIZAR_HIST_MAX = 5;
+    function loadAnalyzedUrls() {
+        try { return JSON.parse(localStorage.getItem(ANALIZAR_HIST_KEY) || "[]"); }
+        catch { return []; }
+    }
+    function saveAnalyzedUrls(list) {
+        try { localStorage.setItem(ANALIZAR_HIST_KEY, JSON.stringify(list.slice(0, ANALIZAR_HIST_MAX))); } catch {}
+    }
+    function pushAnalyzedUrl(url, desc) {
+        if (!url) return;
+        const list = loadAnalyzedUrls();
+        const idx = list.findIndex(e => e.url === url);
+        if (idx >= 0) list.splice(idx, 1);
+        list.unshift({ url, desc: (desc || "").trim(), ts: Date.now() });
+        saveAnalyzedUrls(list);
+        renderAnalyzedList();
+    }
+    function renderAnalyzedList() {
+        const ol = document.getElementById("analizar-list");
+        if (!ol) return;
+        const list = loadAnalyzedUrls();
+        if (!list.length) {
+            ol.innerHTML = '<li class="empty">(sin URLs aún)</li>';
+            return;
+        }
+        const esc = s => String(s).replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+        ol.innerHTML = list.map(e => {
+            const short = e.url.replace(/^https?:\/\//, "").slice(0, 32);
+            const descLine = e.desc
+                ? `<div class="analizar-desc">${esc(e.desc)}</div>`
+                : "";
+            return `<li><a href="${esc(e.url)}" target="_blank" rel="noopener" title="${esc(e.url)}">${esc(short)}</a>${descLine}</li>`;
+        }).join("");
+    }
+
+    const YT_RE = /https?:\/\/(?:www\.)?(?:youtube\.com\/watch\?[^\s]*v=|youtu\.be\/)[\w-]+/;
+
+    function analizarUrlHint(val) {
+        const hint = document.getElementById("analizar-url-hint");
+        const cost = document.getElementById("analizar-cost-warn");
+        if (!hint) return;
+        if (YT_RE.test(val)) {
+            hint.textContent = "▶ YouTube detectado — se preparará contexto PRO (metadatos + subtítulos) antes del debate";
+            // Aviso de coste estimado si luego decides pasar a Gemini el prompt enriquecido
+            if (cost) {
+                cost.style.display = "block";
+                cost.innerHTML = "📺 YOUTUBE PRO<br>" +
+                    "· Se extraen metadatos y subtítulos si existen<br>" +
+                    "· Luego el Consejo debate sobre ese contexto";
+            }
+        } else {
+            hint.textContent = "";
+            if (cost) { cost.style.display = "none"; cost.innerHTML = ""; }
+        }
+    }
+
+    async function buildYoutubeAnalysisPrompt(url, desc, question) {
+        const urls = activeApiUrl ? [activeApiUrl] : COUNCIL_API_URLS;
+        let lastErr = null;
+        for (const baseUrl of urls) {
+            try {
+                const res = await fetch(baseUrl + "/api/council/analyze-youtube", {
+                    method: "POST",
+                    headers: {
+                        "Content-Type": "application/json",
+                        "X-Council-Token": COUNCIL_API_TOKEN
+                    },
+                    body: JSON.stringify({ url, note: desc || "", question: question || "" }),
+                    signal: AbortSignal.timeout(120000),
+                });
+                if (!res.ok) throw new Error("HTTP " + res.status);
+                const data = await res.json();
+                activeApiUrl = baseUrl;
+                return data;
+            } catch (e) {
+                lastErr = e;
+            }
+        }
+        throw lastErr || new Error("YouTube analysis API unavailable");
+    }
+
+    function triggerAnalizar() {
+        const old = document.getElementById("analizar-overlay");
+        if (old) { old.remove(); return; }
+
+        const mode = selectedAnalizar;        // "url" | "texto" | "fichero"
+
+        const inputBlock =
+            mode === "url" ? `
+                <div style="margin-bottom:1rem;">
+                    <label style="color:#aaa;font-size:0.5rem;display:block;margin-bottom:0.5rem;letter-spacing:1px;">🔗 URL</label>
+                    <input id="analizar-url" type="url" placeholder="https://..." style="width:100%;box-sizing:border-box;background:#000033;border:2px solid #555;color:#eee;padding:0.5rem 0.6rem;border-radius:0;font-size:0.75rem;font-family:monospace;" oninput="analizarUrlHint(this.value)">
+                    <div id="analizar-url-hint" style="margin-top:0.4rem;font-size:0.45rem;color:#ffaa00;letter-spacing:1px;min-height:1em;"></div>
+                    <div id="analizar-cost-warn" style="display:none;margin-top:0.4rem;padding:0.4rem 0.6rem;background:#2a1a00;border:1px solid #663300;color:#ffcc66;font-size:0.42rem;letter-spacing:1px;line-height:1.5;"></div>
+                </div>
+                <div style="margin-bottom:1rem;">
+                    <label style="color:#aaa;font-size:0.5rem;display:block;margin-bottom:0.5rem;letter-spacing:1px;">🏷 DESCRIPCIÓN</label>
+                    <input id="analizar-desc" type="text" placeholder="Ej: Presentación Q2, demo cliente…" maxlength="80" style="width:100%;box-sizing:border-box;background:#000033;border:2px solid #555;color:#eee;padding:0.5rem 0.6rem;border-radius:0;font-size:0.75rem;font-family:monospace;">
+                </div>
+            ` :
+            mode === "texto" ? `
+                <div style="margin-bottom:1rem;">
+                    <label style="color:#aaa;font-size:0.5rem;display:block;margin-bottom:0.5rem;letter-spacing:1px;">📋 TEXTO</label>
+                    <textarea id="analizar-texto" rows="8" placeholder="Pega aquí el texto a analizar…" style="width:100%;box-sizing:border-box;background:#000033;border:2px solid #555;color:#eee;padding:0.5rem 0.6rem;border-radius:0;font-size:0.75rem;font-family:monospace;resize:vertical;"></textarea>
+                    <div id="analizar-texto-info" style="margin-top:0.3rem;font-size:0.42rem;color:#888;letter-spacing:1px;min-height:1em;">0 caracteres · 0 palabras</div>
+                </div>
+            ` : `
+                <div style="margin-bottom:1rem;">
+                    <label style="color:#aaa;font-size:0.5rem;display:block;margin-bottom:0.5rem;letter-spacing:1px;">📄 FICHERO</label>
+                    <input id="analizar-file" type="file" accept=".txt,.md,.html,.js,.py,.json,.csv,.xml" style="color:#eee;font-family:monospace;font-size:0.7rem;width:100%;">
+                </div>
+            `;
+
+        const ov = document.createElement("div");
+        ov.id = "analizar-overlay";
+        ov.style.cssText = "position:fixed;inset:0;display:flex;align-items:center;justify-content:center;background:rgba(0,0,0,0.82);z-index:9999;font-family:inherit;";
+        ov.innerHTML = `
+            <div style="background:#1a1a2e;border:2px solid #3a6aaa;border-radius:0;padding:1.6rem;max-width:540px;width:92%;font-family:'Press Start 2P',monospace;image-rendering:pixelated;">
+                <h3 style="color:#88ccff;font-size:0.65rem;margin:0 0 1.2rem;text-align:center;letter-spacing:1px;">ANALIZAR</h3>
+                ${inputBlock}
+                <div style="margin-bottom:1.2rem;">
+                    <label style="color:#aaa;font-size:0.5rem;display:block;margin-bottom:0.5rem;letter-spacing:1px;">📝 PREGUNTA (opcional)</label>
+                    <textarea id="analizar-q" rows="2" placeholder="¿Qué quieres saber?" style="width:100%;box-sizing:border-box;background:#000033;border:2px solid #555;color:#eee;padding:0.5rem 0.6rem;border-radius:0;font-size:0.75rem;font-family:monospace;resize:vertical;"></textarea>
+                </div>
+                <div style="display:flex;gap:0.8rem;justify-content:flex-end;">
+                    <button id="analizar-cancel" style="background:#222;color:#ccc;border:2px solid #555;border-radius:0;padding:0.4rem 1rem;cursor:pointer;font-family:'Press Start 2P',monospace;font-size:0.5rem;">CANCELAR</button>
+                    <button id="analizar-submit" style="background:#003399;color:#fff;border:2px solid #4488ff;border-radius:0;padding:0.4rem 1rem;cursor:pointer;font-family:'Press Start 2P',monospace;font-size:0.5rem;">🔍 ANALIZAR</button>
+                </div>
+                <div id="analizar-status" style="margin-top:0.8rem;color:#ffaa00;font-size:0.45rem;min-height:1em;text-align:center;letter-spacing:1px;"></div>
+            </div>`;
+        document.body.appendChild(ov);
+
+        document.getElementById("analizar-cancel").onclick = () => ov.remove();
+        ov.addEventListener('click', e => { if (e.target === ov) ov.remove(); });
+
+        // Contador vivo del textarea en modo texto
+        if (mode === "texto") {
+            const ta = document.getElementById("analizar-texto");
+            const info = document.getElementById("analizar-texto-info");
+            const update = () => {
+                const v = ta.value;
+                const words = v.trim() ? v.trim().split(/\s+/).length : 0;
+                info.textContent = `${v.length} caracteres · ${words} palabras`;
+            };
+            ta.addEventListener("input", update);
+            setTimeout(() => ta.focus(), 50);
+        }
+
+        document.getElementById("analizar-submit").onclick = async () => {
+            const statusEl = document.getElementById("analizar-status");
+            const question = (document.getElementById("analizar-q")?.value || "").trim();
+            let content = "";
+            let shortLabel = "";
+            let preparedPrompt = "";
+
+            if (mode === "url") {
+                const url = (document.getElementById("analizar-url")?.value || "").trim();
+                if (!url) { statusEl.textContent = "⚠ INTRODUCE UNA URL"; return; }
+                const desc = (document.getElementById("analizar-desc")?.value || "").trim();
+                shortLabel = (YT_RE.test(url) ? "▶ " : "🔗 ") + url.replace(/^https?:\/\//, "").slice(0, 50);
+                pushAnalyzedUrl(url, desc);
+                if (YT_RE.test(url)) {
+                    statusEl.textContent = "📺 PREPARANDO CONTEXTO YOUTUBE…";
+                    try {
+                        const yt = await buildYoutubeAnalysisPrompt(url, desc, question);
+                        shortLabel = "▶ " + (yt.title || shortLabel).slice(0, 60);
+                        preparedPrompt = yt.preparedPrompt;
+                    } catch (e) {
+                        statusEl.textContent = "⚠ ERROR PREPARANDO YOUTUBE";
+                        return;
+                    }
+                } else {
+                    content = desc
+                        ? `URL a analizar: ${url}\nDescripción: ${desc}`
+                        : `URL a analizar: ${url}`;
+                }
+            } else if (mode === "texto") {
+                const texto = (document.getElementById("analizar-texto")?.value || "").trim();
+                if (!texto) { statusEl.textContent = "⚠ PEGA ALGO DE TEXTO"; return; }
+                const preview = texto.slice(0, 12000);
+                content = `Texto pegado (${texto.length} caracteres):\n\n${preview}${texto.length > 12000 ? "\n\n[…truncado]" : ""}`;
+                shortLabel = "📋 Texto " + texto.length + "c";
+            } else {
+                const fileInput = document.getElementById("analizar-file");
+                if (!fileInput?.files?.length) { statusEl.textContent = "⚠ SELECCIONA UN FICHERO"; return; }
+                const file = fileInput.files[0];
+                statusEl.textContent = "LEYENDO FICHERO…";
+                try {
+                    const text = await file.text();
+                    content = `Fichero: ${file.name}\n\n${text.slice(0, 8000)}`;
+                    shortLabel = "📄 " + file.name;
+                } catch {
+                    statusEl.textContent = "⚠ ERROR LEYENDO EL FICHERO";
+                    return;
+                }
+            }
+
+            const prompt = preparedPrompt || (
+                question
+                    ? `Analiza lo siguiente y responde a: "${question}"\n\n${content}`
+                    : `Analiza lo siguiente desde tu perspectiva y expertise:\n\n${content}`
+            );
+
+            ov.remove();
+            enterConversation();
+            addUserEntry(shortLabel + (question ? " — " + question : ""));
+            simulateCouncilResponse(prompt);
+            setActionLine("🔍 Analizando: " + shortLabel);
+        };
+    }
+
+    // ═══════════════════════════════════
+    // PRESENTAR / PREVIO
+    let _lastPresentarResult = null;
+
+    function triggerPrevio() {
+        if (!_lastPresentarResult) {
+            setActionLine("⚠️ Aún no hay ninguna presentación generada");
+            const btn = document.querySelector('[data-verb="presentar"]');
+            if (btn) selectVerb(btn);
+            return;
+        }
+        showPresentarOverlay();
+        document.getElementById('pdlg-input').style.display   = 'none';
+        document.getElementById('pdlg-loading').style.display = 'none';
+        showPresentarResult(_lastPresentarResult);
+    }
+
+    // ═══════════════════════════════════
+    let _presentarFmt = 'audio';
+    let _presentarFileContent = null;
+    let _presentarFileName = null;
+
+    function triggerPresentar() {
+        showPresentarOverlay();
+    }
+
+    function showPresentarOverlay() {
+        document.getElementById('presentar-overlay').classList.add('active');
+        document.getElementById('pdlg-input').style.display   = '';
+        document.getElementById('pdlg-loading').style.display = 'none';
+        document.getElementById('pdlg-result').style.display  = 'none';
+        setActionLine("🏛️ Crear presentación — escribe el tema y pulsa Generar");
+    }
+
+    function closePresentarOverlay() {
+        // Parar todo audio activo en el overlay antes de cerrar
+        document.querySelectorAll('#presentar-overlay audio').forEach(a => {
+            a.pause();
+            a.currentTime = 0;
+        });
+        document.getElementById('presentar-overlay').classList.remove('active');
+        const btn = document.querySelector('[data-verb="preguntar"]');
+        if (btn) selectVerb(btn);
+    }
+
+    function setPresentarFmt(btn) {
+        document.querySelectorAll('.presentar-fmt-btn').forEach(b => b.classList.remove('active'));
+        btn.classList.add('active');
+        _presentarFmt = btn.dataset.fmt;
+        selectedPresentar = _presentarFmt;
+    }
+
+    function onPresentarFile(input) {
+        const file = input.files[0];
+        if (!file) return;
+        const label = document.getElementById('presentar-file-label');
+        label.childNodes[0].textContent = `📎 ${file.name} `;
+        _presentarFileName = file.name;
+        const reader = new FileReader();
+        if (file.type.startsWith('text') || /\.(md|txt|csv|json)$/.test(file.name)) {
+            reader.onload = e => { _presentarFileContent = e.target.result; };
+            reader.readAsText(file);
+        } else {
+            reader.onload = e => { _presentarFileContent = e.target.result; };
+            reader.readAsDataURL(file);
+        }
+    }
+
+    function _setProgress(pct, step) {
+        const bar = document.getElementById('presentar-progress-bar');
+        const pctEl = document.getElementById('presentar-progress-pct');
+        const stepEl = document.getElementById('presentar-step');
+        if (bar) { bar.style.width = pct + '%'; if (pct >= 100) bar.classList.add('done'); }
+        if (pctEl) pctEl.textContent = pct + '%';
+        if (stepEl && step) stepEl.textContent = step;
+    }
+
+    async function generatePresentacion() {
+        const prompt = document.getElementById('presentar-prompt').value.trim();
+        if (!prompt && !_presentarFileContent) {
+            setActionLine("⚠️ Escribe un tema o adjunta un fichero");
+            return;
+        }
+
+        document.getElementById('pdlg-input').style.display   = 'none';
+        document.getElementById('pdlg-loading').style.display = '';
+        document.getElementById('presentar-progress-bar').classList.remove('done');
+        const statusEl = document.getElementById('presentar-status');
+        statusEl.textContent = '';
+        _setProgress(5, '🤖 Claude generando estructura...');
+
+        // Simulated progress ticker while waiting for API
+        let _fakePct = 5;
+        const STEPS = [
+            [15, '📡 Conectando con la API...'],
+            [30, '🤖 Claude analizando el tema...'],
+            [50, '✍️ Generando contenido estructurado...'],
+            [68, _presentarFmt === 'audio' ? '🎙️ Sintetizando audio...' :
+                 _presentarFmt === 'pdf'   ? '📄 Compilando PDF...' :
+                 _presentarFmt === 'slides'? '📊 Construyendo slides...' : '🎙️ Generando audio + PDF...'],
+            [82, '⚙️ Procesando y guardando archivos...'],
+            [92, '📦 Empaquetando resultado...'],
+        ];
+        let _stepIdx = 0;
+        const _ticker = setInterval(() => {
+            if (_stepIdx < STEPS.length) {
+                const [p, s] = STEPS[_stepIdx++];
+                if (p > _fakePct) _setProgress(p, s);
+            }
+        }, 4000);
+
+        try {
+            const urls = activeApiUrl ? [activeApiUrl] : COUNCIL_API_URLS;
+            let result = null;
+
+            for (const baseUrl of urls) {
+                try {
+                    const resp = await fetch(`${baseUrl}/api/council/presentar`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json', 'X-Council-Token': COUNCIL_API_TOKEN },
+                        body: JSON.stringify({
+                            prompt,
+                            file_content: _presentarFileContent,
+                            file_name: _presentarFileName,
+                            formato: _presentarFmt
+                        }),
+                        signal: AbortSignal.timeout(120000)
+                    });
+                    if (!resp.ok) throw new Error(`HTTP ${resp.status}`);
+                    result = await resp.json();
+                    activeApiUrl = baseUrl;
+                    break;
+                } catch(e) {
+                    statusEl.textContent += `⚠️ ${e.message}\n`;
+                }
+            }
+
+            clearInterval(_ticker);
+            if (!result) throw new Error('API no disponible — arranca council-api.py');
+            _setProgress(100, '✅ ¡Presentación lista!');
+            await new Promise(r => setTimeout(r, 600));
+            showPresentarResult(result);
+
+        } catch(e) {
+            clearInterval(_ticker);
+            document.getElementById('pdlg-loading').style.display = 'none';
+            document.getElementById('pdlg-input').style.display   = '';
+            setActionLine("❌ " + e.message);
+        }
+    }
+
+    function _pingDone() {
+        try {
+            const ctx = new (window.AudioContext || window.webkitAudioContext)();
+            [523, 659, 784].forEach((freq, i) => {
+                const osc = ctx.createOscillator();
+                const gain = ctx.createGain();
+                osc.connect(gain); gain.connect(ctx.destination);
+                osc.frequency.value = freq;
+                osc.type = 'sine';
+                const t = ctx.currentTime + i * 0.12;
+                gain.gain.setValueAtTime(0, t);
+                gain.gain.linearRampToValueAtTime(0.25, t + 0.02);
+                gain.gain.exponentialRampToValueAtTime(0.001, t + 0.35);
+                osc.start(t); osc.stop(t + 0.36);
+            });
+        } catch(e) {}
+    }
+
+    function _selectPresentarTab(id) {
+        document.querySelectorAll('.presentar-tab').forEach(t => t.classList.toggle('active', t.dataset.tab === id));
+        document.querySelectorAll('.presentar-tab-panel').forEach(p => p.classList.toggle('active', p.id === 'ptab-' + id));
+    }
+
+    function showPresentarInput() {
+        document.getElementById('pdlg-result').style.display  = 'none';
+        document.getElementById('pdlg-input').style.display   = '';
+        document.getElementById('presentar-prompt').value = '';
+        document.getElementById('presentar-file-label').childNodes[0].textContent = '📎 Adjuntar fichero (opcional) ';
+        _presentarFileContent = null; _presentarFileName = null;
+    }
+
+    function showPresentarResult(result) {
+        _lastPresentarResult = result;
+        const previoBtn = document.getElementById('btn-previo');
+        if (previoBtn) previoBtn.style.display = '';
+
+        document.getElementById('pdlg-loading').style.display = 'none';
+        const dlg = document.getElementById('pdlg-result');
+        dlg.style.display = '';
+        dlg.classList.remove('presentar-done-flash');
+        void dlg.offsetWidth;
+        dlg.classList.add('presentar-done-flash');
+
+        _pingDone();
+
+        const base = (activeApiUrl || '').replace(/\/$/, '');
+        const absUrl = u => u ? (u.startsWith('http') ? u : base + u) : null;
+
+        const audioUrl  = absUrl(result.audio_url);
+        const pdfUrl    = absUrl(result.pdf_url);
+        const slidesUrl = absUrl(result.slides_url);
+
+        if (result.title) {
+            document.getElementById('pdlg-result-title').textContent = '✅ ' + result.title;
+        }
+
+        // Construir tabs según qué archivos existen
+        const tabs = [];
+        if (audioUrl)  tabs.push({ id:'audio',  label:'🎙️ Audio' });
+        if (pdfUrl)    tabs.push({ id:'pdf',     label:'📄 PDF' });
+        if (slidesUrl) tabs.push({ id:'slides',  label:'📊 Slides' });
+        if (result.sections?.length) tabs.push({ id:'estructura', label:'📋 Índice' });
+        if (!tabs.length) tabs.push({ id:'noapi', label:'⚠️ Sin API' });
+
+        document.getElementById('presentar-tabs').innerHTML = tabs
+            .map((t,i) => `<button class="presentar-tab${i===0?' active':''}" data-tab="${t.id}" onclick="_selectPresentarTab('${t.id}')">${t.label}</button>`)
+            .join('');
+
+        // Construir paneles
+        let html = '';
+
+        if (audioUrl) {
+            html += `<div class="presentar-tab-panel${tabs[0].id==='audio'?' active':''}" id="ptab-audio">
+                <audio controls style="width:100%;margin-bottom:6px" src="${audioUrl}"></audio>
+                <a class="presentar-dl-btn" href="${audioUrl}" download>⬇️ Descargar audio</a>
+            </div>`;
+        }
+        if (pdfUrl) {
+            html += `<div class="presentar-tab-panel${tabs[0].id==='pdf'?' active':''}" id="ptab-pdf">
+                <object class="presentar-embed" data="${pdfUrl}" type="application/pdf">
+                    <p style="font-family:'Press Start 2P',monospace;font-size:6px;color:#886633;padding:10px">
+                        Tu navegador no puede mostrar el PDF inline.
+                    </p>
+                </object>
+                <a class="presentar-dl-btn" href="${pdfUrl}" target="_blank">⬇️ Abrir / Descargar PDF</a>
+            </div>`;
+        }
+        if (slidesUrl) {
+            html += `<div class="presentar-tab-panel${tabs[0].id==='slides'?' active':''}" id="ptab-slides">
+                <iframe class="presentar-embed" src="${slidesUrl}" style="border:none"></iframe>
+                <a class="presentar-dl-btn" href="${slidesUrl}" target="_blank">↗ Abrir slides en ventana</a>
+            </div>`;
+        }
+        if (result.sections?.length) {
+            const isFirst = tabs[0].id === 'estructura';
+            html += `<div class="presentar-tab-panel${isFirst?' active':''}" id="ptab-estructura">
+                <div class="presentar-section-list">
+                    ${result.sections.map((s,i) => `<div>${i+1}. ${s}</div>`).join('')}
+                </div>
+            </div>`;
+        }
+        if (!audioUrl && !pdfUrl && !slidesUrl) {
+            html += `<div class="presentar-tab-panel active" id="ptab-noapi">
+                <div style="font-family:'Press Start 2P',monospace;font-size:6px;color:#886633;text-align:center;padding:16px;line-height:2">
+                    ⚠️ API no activa<br>Arranca council-api.py<br>para generar archivos reales
+                </div>
+            </div>`;
+        }
+
+        document.getElementById('presentar-result-content').innerHTML = html;
+    }
+
+
+  /* Coloca el menú AgoraMatrix justo debajo del CLI (.scumm-bar), dentro del
+     contenedor, para que comparta su ancho exacto. */
+  (function(){
+    function mv(){
+      var sb=document.querySelector('.scumm-bar'), ap=document.getElementById('agm-panel');
+      if(sb&&ap&&sb.nextElementSibling!==ap){ sb.insertAdjacentElement('afterend', ap); }
+    }
+    if(document.readyState==='loading') document.addEventListener('DOMContentLoaded', mv); else mv();
+    window.addEventListener('load', mv);
+  })();
+
+(function(){
+  // Personas Matrix ligadas a los coetáneos del Consejo (espejo de MATRIX_LINKS).
+  var COETANEOS = [
+    {name:"Elon Musk",persona:"Neo"},{name:"Jensen Huang",persona:"Morfeo"},
+    {name:"Gwynne Shotwell",persona:"Trinity"},{name:"Ruth Porat",persona:"Oráculo"},
+    {name:"John Lasseter",persona:"Mouse"},{name:"Jony Ive",persona:"Arquitecto"},
+    {name:"Carlos Ratti",persona:"Link"},{name:"Ryan Reynolds",persona:"Cypher"}
+  ];
+  var API = "https://macmini.tail48b61c.ts.net/api/agora/coetaneos?limit=24";
+  var panel=document.getElementById('agm-panel'), head=document.getElementById('agm-head'),
+      feedEl=document.getElementById('agm-feed'), presEl=document.getElementById('agm-presence'),
+      briefEl=document.getElementById('agm-brief'), askBtn=document.getElementById('agm-ask-status'),
+      tog=head.querySelector('.agm-toggle');
+  head.addEventListener('click',function(){ if(_agmMoved){ _agmMoved=false; return; } panel.classList.toggle('agm-min'); tog.textContent=panel.classList.contains('agm-min')?'▸':'▾'; });
+  // ── Caja flotante: movible + redimensionable + persistente (preferencia global) ──
+  var _agmMoved=false;
+  var GEOM_KEY='agmPanelGeom', VIS_KEY='agmPanelVisible';
+  try{ var _g=JSON.parse(localStorage.getItem(GEOM_KEY)||'null'); if(_g){ panel.style.left=_g.left+'px'; panel.style.top=_g.top+'px'; panel.style.right='auto'; panel.style.bottom='auto'; if(_g.w)panel.style.width=_g.w+'px'; if(_g.h)panel.style.height=_g.h+'px'; } }catch(e){}
+  function agmSaveGeom(){ try{ var r=panel.getBoundingClientRect(); localStorage.setItem(GEOM_KEY,JSON.stringify({left:Math.round(r.left),top:Math.round(r.top),w:Math.round(r.width),h:Math.round(r.height)})); }catch(e){} }
+  var _drag=false,_sx,_sy,_ox,_oy;
+  head.addEventListener('pointerdown',function(e){ if(e.target.closest('.agm-toggle'))return; _drag=true;_agmMoved=false; var r=panel.getBoundingClientRect(); _ox=r.left;_oy=r.top;_sx=e.clientX;_sy=e.clientY; panel.style.left=_ox+'px';panel.style.top=_oy+'px';panel.style.right='auto';panel.style.bottom='auto'; try{head.setPointerCapture(e.pointerId);}catch(_){} });
+  head.addEventListener('pointermove',function(e){ if(!_drag)return; var dx=e.clientX-_sx,dy=e.clientY-_sy; if(Math.abs(dx)+Math.abs(dy)>3)_agmMoved=true; panel.style.left=Math.max(0,Math.min(window.innerWidth-60,_ox+dx))+'px'; panel.style.top=Math.max(0,Math.min(window.innerHeight-40,_oy+dy))+'px'; });
+  head.addEventListener('pointerup',function(e){ if(!_drag)return; _drag=false; try{head.releasePointerCapture(e.pointerId);}catch(_){} if(_agmMoved)agmSaveGeom(); });
+  if(window.ResizeObserver){ var _ro=new ResizeObserver(function(){ if(!_drag && !panel.classList.contains('agm-min'))agmSaveGeom(); }); _ro.observe(panel); }
+  function agmApplyVis(v){ panel.style.display = v ? 'flex' : 'none'; }
+  window.agmSetVisible=function(v){ var cur=panel.style.display!=='none'; var nv=(v===null||v===undefined)?!cur:!!v; agmApplyVis(nv); try{localStorage.setItem(VIS_KEY,nv?'1':'0');}catch(e){} if(nv) tick(); return nv; };
+  window.agmIsVisible=function(){ return panel.style.display!=='none'; };
+  // Por defecto VISIBLE; se oculta con /agentes off (o /agoramatrix off) -> VIS_KEY==='0'.
+  try{ agmApplyVis(localStorage.getItem(VIS_KEY)!=='0'); }catch(e){ agmApplyVis(true); }
+  // Chat bidireccional: escribir al canal AgoraMatrix (como "Consejo"); las respuestas
+  // entran por el feed que ya se pollea. Sin clave (endpoint origin-gated /api/agora/say).
+  var input=document.getElementById('agm-input'), sendBtn=document.getElementById('agm-send');
+  // ── Feedback "White Rabbit lo está mirando": al escribir SIN destinatario, el
+  //    que responde por defecto es White Rabbit. Mostramos que se está mirando
+  //    hasta que llega una respuesta de un agente (o por timeout). ──
+  var AGM_AGENTS=['White Rabbit','Neo','Morfeo','Trinity','Oráculo','Oraculo','Mouse','Arquitecto','Link','Cypher','Smith'];
+  function _agmEsc(a){ return a.replace(/[.*+?^${}()|[\]\\]/g,'\\$&'); }
+  function agmTargetOf(t){   // '' si no se dirige a nadie en concreto → White Rabbit
+    var s=String(t||'').trim();
+    for(var i=0;i<AGM_AGENTS.length;i++){ var a=AGM_AGENTS[i], e=_agmEsc(a);
+      if(new RegExp('@'+e+'\\b','i').test(s) || new RegExp('^\\s*'+e+'\\b[\\s,:]','i').test(s))
+        return a==='Oraculo'?'Oráculo':a;
+    }
+    return '';
+  }
+  var wrEl=document.getElementById('agm-wr'), wrText=document.getElementById('agm-wr-text'),
+      wrIcon=wrEl?wrEl.querySelector('.wr-rabbit'):null,
+      _wrPending=false, _wrT1=null, _wrT2=null;
+  function agmClearWaiting(){ _wrPending=false; if(_wrT1)clearTimeout(_wrT1); if(_wrT2)clearTimeout(_wrT2); _wrT1=_wrT2=null;
+    if(wrEl){ wrEl.style.display='none'; wrEl.classList.remove('waiting'); } if(wrIcon) wrIcon.textContent='🐇'; }
+  // Feedback de envío dirigido (p.ej. /sendto a una máquina): icono propio, sin White Rabbit, auto-oculta.
+  function agmShowSent(msg, icon){ if(!wrEl) return; agmClearWaiting();
+    if(wrIcon) wrIcon.textContent=icon||'🖥️'; wrText.textContent=msg; wrEl.classList.remove('waiting'); wrEl.style.display='flex';
+    _wrT2=setTimeout(agmClearWaiting, 7000); }
+  function agmShowWaiting(target){ if(!wrEl) return; agmClearWaiting(); _wrPending=true;
+    if(wrIcon) wrIcon.textContent='🐇';
+    wrText.textContent=target+' lo está mirando…'; wrEl.style.display='flex';
+    _wrT1=setTimeout(function(){ if(_wrPending){ wrEl.classList.add('waiting'); wrText.textContent='esperando respuesta de '+target+'…'; } }, 8000);
+    _wrT2=setTimeout(function(){ if(_wrPending){ wrText.textContent='sin respuesta de '+target+' aún — quizá esté ocupado'; _wrT2=setTimeout(agmClearWaiting,8000); } }, 75000);
+  }
+  async function postAgora(t, restoreInput){ if(!t) return false;
+    try{ var r=await fetch("https://macmini.tail48b61c.ts.net/api/agora/say",{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({text:t,from:'Consejo'})}); var d=await r.json();
+      if(!(r.ok&&d.ok)){ if(restoreInput!==undefined) input.value=restoreInput; alert('No se pudo enviar: '+((d&&d.error)||r.status)); return false; }
+      setTimeout(tick,900); return true; }
+    catch(e){ if(restoreInput!==undefined) input.value=restoreInput; alert('Sin conexion con AgoraMatrix'); }
+    return false;
+  }
+  async function sendMsg(){ var t=(input.value||'').trim(); if(!t) return;
+    // /sendto va dirigido a una MÁQUINA → se enruta a su Claude Code, NO a White Rabbit ni al canal.
+    var st=t.match(/^\/sendto(?:\s+(\S+)(?:\s+([\s\S]+))?)?$/i);
+    if(st){
+      var mac=(st[1]||'').trim(), rest=(st[2]||'').trim(), tgt='claude';
+      var tm=rest.match(/^(claude|terminal)\s*:\s*([\s\S]+)$/i); if(tm){ tgt=tm[1].toLowerCase(); rest=tm[2].trim(); }
+      if(!mac||!rest){ agmShowSent('Uso: /sendto <equipo> <mensaje>','⚠️'); return; }
+      input.value='';
+      if(window.sendToMachine){ agmShowSent('enviado a '+mac+' — su Claude Code lo procesa','🖥️'); window.sendToMachine(mac, rest, tgt); }
+      else { agmShowSent('puente /sendto no disponible aquí','⚠️'); }
+      input.focus(); return;
+    }
+    sendBtn.disabled=true; var ov=input.value; input.value='';
+    var ok=false;
+    try{ ok=await postAgora(t, ov); }
+    catch(e){ input.value=ov; alert('Sin conexión con AgoraMatrix'); }
+    finally{ sendBtn.disabled=false; input.focus(); if(ok) agmShowWaiting(agmTargetOf(t) || 'White Rabbit'); } }
+  sendBtn.addEventListener('click',sendMsg);
+  input.addEventListener('keydown',function(e){ if(e.key==='Enter'){ e.preventDefault(); sendMsg(); } });
+  if(askBtn) askBtn.addEventListener('click',async function(){
+    askBtn.disabled=true;
+    var msg='Agentes, reportad estado ahora con este formato exacto: <Persona> · <maquina> · <estado/tarea actual>. Ejemplo: Neo · MacBook-Pro-16.local · en curso: publicando web. Responde cada uno en AgoraMatrix.';
+    try{
+      var r=await fetch("https://macmini.tail48b61c.ts.net/api/agora/request-status",{method:'POST',headers:{'Content-Type':'application/json'},body:'{}'});
+      var d=await r.json();
+      if(!(r.ok&&d&&d.ok)) await postAgora(msg);
+      else setTimeout(tick,900);
+    }
+    catch(e){ await postAgora(msg); }
+    finally{ askBtn.disabled=false; input.focus(); }
+  });
+  function esc(s){ return String(s||'').replace(/[&<>]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;'}[c];}); }
+  function parseMsg(line){ var m=String(line).match(/^(\S+)\s+\[([^\]]+)\]\s+([\s\S]*)$/); if(m){ var t=m[1].replace('T',' ').slice(5,16); return {time:t,who:m[2],tx:m[3]}; } return {time:'',who:'',tx:line}; }
+  function hostFromText(tx){
+    var m=String(tx||'').match(/\b([A-Za-z0-9_-]+(?:\.local|MacMini|MacBookProNegro14|MacBook-Pro-16|MacBookAir)[A-Za-z0-9_.-]*)\b/);
+    return m?m[1]:'';
+  }
+  function renderAgentBrief(feed, whoText){
+    var by={};
+    COETANEOS.forEach(function(c){ by[c.persona]={persona:c.persona,host:'',state:'sin respuesta reciente',time:'',online:false}; });
+    String(whoText||'').split(/\n/).forEach(function(line){
+      COETANEOS.forEach(function(c){
+        if(new RegExp("\\b"+c.persona.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+"\\b","i").test(line)){
+          by[c.persona].online=/despierto/i.test(line);
+          by[c.persona].host=hostFromText(line)||by[c.persona].host;
+          by[c.persona].state=line.replace(/^.*?\b(?:despierto|dormido)\b/i,'').replace(/\s+/g,' ').trim()||by[c.persona].state;
+        }
+      });
+    });
+    (feed||[]).forEach(function(line){
+      var m=parseMsg(line), p=m.who;
+      if(!by[p]) return;
+      var tx=String(m.tx||'');
+      if(/\b(en curso|bloquead|disponible|hecho|haciendo|trabajando|revisando|publicando|task-\d+|estado)\b/i.test(tx) || / · /.test(tx)){
+        by[p].state=tx.replace(/^task-\d+\s*/i,'').slice(0,140);
+        by[p].time=m.time||by[p].time;
+        by[p].host=hostFromText(tx)||by[p].host;
+      }
+    });
+    var rows=Object.keys(by).map(function(k){return by[k];}).filter(function(a){return a.online || a.state!=='sin respuesta reciente';});
+    if(!rows.length){ briefEl.innerHTML='<div class="agm-agent empty">Pide estado para ver aqui que hace cada agente.</div>'; return; }
+    briefEl.innerHTML=rows.map(function(a){
+      return '<div class="agm-agent"><b>'+(a.online?'🟢 ':'⚪ ')+esc(a.persona)+'</b><small>'+esc(a.host||a.time||'sin maquina')+'</small><span>'+esc(a.state)+'</span></div>';
+    }).join('');
+  }
+  function renderPresence(who){
+    var w=String(who||'');
+    var aliveReal=[];
+    presEl.innerHTML = COETANEOS.map(function(c){
+      var on = new RegExp("despierto[^\\n]*\\b"+c.persona.replace(/[.*+?^${}()|[\]\\]/g,'\\$&')+"\\b","i").test(w);
+      if(on) aliveReal.push(c.name);   // c.name = persona real del Consejo (Elon Musk…)
+      return '<span class="agm-who'+(on?' on':'')+'" title="'+esc(c.name)+' → '+esc(c.persona)+'"><span class="d"></span>'+esc(c.persona)+'</span>';
+    }).join('');
+    // Que los coetáneos presentes en AgoraMatrix muevan la boca en el Consejo.
+    if(window.councilUpdateAgora) window.councilUpdateAgora(aliveReal);
+  }
+  // alias AgoraMatrix (Neo, Morfeo…) → persona real del Consejo (Elon Musk…)
+  function aliasToReal(alias){
+    var a=String(alias||'').trim().toLowerCase();
+    for(var i=0;i<COETANEOS.length;i++){ if(COETANEOS[i].persona.toLowerCase()===a) return COETANEOS[i].name; }
+    return null;
+  }
+  var _lastFeedKey='';
+  function burstFromFeed(feed){
+    if(!feed||!feed.length) return;
+    var last=feed[feed.length-1]; var key=String(last);
+    if(key===_lastFeedKey) return;          // sin mensaje nuevo
+    _lastFeedKey=key;
+    var m=parseMsg(last); var real=aliasToReal(m.who);
+    if(real && window.councilMouthBurst) window.councilMouthBurst(real);
+    // Un agente (o White Rabbit) acaba de hablar → quitamos el "lo está mirando".
+    if(_wrPending && (real || /rabbit|smith|cypher/i.test(m.who))) agmClearWaiting();
+  }
+  function renderFeed(feed){
+    if(!feed||!feed.length){ feedEl.innerHTML='<div class="agm-msg"><span class="tx">Sin mensajes todavía.</span></div>'; return; }
+    feedEl.innerHTML = feed.slice(-30).map(function(line){ var m=parseMsg(line);
+      return '<div class="agm-msg">'+(m.who?'<span class="who">'+esc(m.who)+'</span><span class="t">'+esc(m.time)+'</span>':'')+'<span class="tx">'+esc(m.tx)+'</span></div>';
+    }).join('');
+    feedEl.scrollTop = feedEl.scrollHeight;
+  }
+  async function tick(){
+    if(panel.style.display==='none') return;   // oculta → no pollear
+    try{ var r=await fetch(API,{cache:'no-store'}); var d=await r.json();
+      if(d&&d.ok){ renderPresence(d.who); renderAgentBrief(d.feed,d.who); renderFeed(d.feed); burstFromFeed(d.feed); } }
+    catch(e){
+      if(feedEl.textContent.indexOf('Conectando')!==-1){
+        feedEl.innerHTML='<div class="agm-msg"><span class="tx">Sin conexion con AgoraMatrix. Revisa Tailscale/MacMini.</span></div>';
+      }
+    }
+  }
+  tick(); setInterval(tick, 12000);
+})();
+
+(function(){
+  var API="https://macmini.tail48b61c.ts.net";
+  // Token de ESCRITURA: las tareas mandan comandos a las máquinas, así que crear/dispatch/
+  // finalizar exigen token (no va en el código; se pide una vez y se guarda en localStorage).
+  function ctoken(force){
+    var t=''; try{ t=localStorage.getItem('councilToken')||''; }catch(e){}
+    if(!t||force){ var v=(prompt('Token del Consejo (para enviar/gestionar tareas en las máquinas):',t)||'').trim(); if(v){ t=v; try{localStorage.setItem('councilToken',t);}catch(e){} } }
+    return t;
+  }
+  function whdrs(){ return {'Content-Type':'application/json','X-Council-Token':ctoken()}; }
+  function w401(r){ if(r&&r.status===401){ try{localStorage.removeItem('councilToken');}catch(e){} alert('Token del Consejo inválido. Vuelve a intentarlo e introdúcelo de nuevo.'); return true; } return false; }
+  var panel=document.getElementById('task-panel'), head=document.getElementById('tk-head'),
+      listEl=document.getElementById('tk-list'), countEl=document.getElementById('tk-count'),
+      tog=head.querySelector('.tk-toggle'), form=document.getElementById('tk-form'),
+      titleEl=document.getElementById('tk-title'), detailEl=document.getElementById('tk-detail'),
+      assigneeEl=document.getElementById('tk-assignee'), prioEl=document.getElementById('tk-priority'),
+      approvalEl=document.getElementById('tk-approval'), monitorEl=document.getElementById('tk-monitor'),
+      nowEl=document.getElementById('tk-now'), createBtn=document.getElementById('tk-create'),
+      whenEl=document.getElementById('tk-when'), tplEl=document.getElementById('tk-template'),
+      skynetRow=document.getElementById('tk-skynet-row'), skynetBtn=document.getElementById('tk-skynet-audit'), skynetTargets=[].slice.call(document.querySelectorAll('.tk-skynet-target')), skynetStatus=document.getElementById('tk-skynet-status');
+  if(tplEl) tplEl.addEventListener('change',function(){ if(tplEl.value){ titleEl.value=tplEl.value; tplEl.value=''; titleEl.focus(); } });
+  // Formulario de crear: plegable, COLAPSADO por defecto (no se ve por encima de "Limpiar hechas").
+  (function(){
+    var FKEY='tkFormCollapsed', t=document.getElementById('tk-form-toggle'), caret=document.getElementById('tk-form-caret');
+    function apply(c){ panel.classList.toggle('tk-form-min', c); if(caret) caret.textContent=c?'▸':'▾'; }
+    var collapsed; try{ var v=localStorage.getItem(FKEY); collapsed=(v===null?true:v==='1'); }catch(e){ collapsed=true; }
+    apply(collapsed);
+    if(t) t.addEventListener('click',function(){ var nc=!panel.classList.contains('tk-form-min'); apply(nc); try{localStorage.setItem(FKEY, nc?'1':'0');}catch(e){} if(!nc&&titleEl) titleEl.focus(); });
+  })();
+  // Histórico (bots + lista de tareas): plegable, COLAPSADO por defecto.
+  (function(){
+    var HKEY='tkHistCollapsed', t=document.getElementById('tk-hist-toggle'), caret=document.getElementById('tk-hist-caret');
+    function apply(c){ panel.classList.toggle('tk-hist-min', c); if(caret) caret.textContent=c?'▸':'▾'; }
+    var collapsed; try{ var v=localStorage.getItem(HKEY); collapsed=(v===null?true:v==='1'); }catch(e){ collapsed=true; }
+    apply(collapsed);
+    if(t) t.addEventListener('click',function(){ var nc=!panel.classList.contains('tk-hist-min'); apply(nc); try{localStorage.setItem(HKEY, nc?'1':'0');}catch(e){} });
+  })();
+  // Adjuntar imagen a la tarea (pegar Ctrl/⌘+V o botón 📎). Se reescala para no pesar mucho.
+  var pendingImage=null;
+  (function(){
+    var inp=document.getElementById('tk-img'), btn=document.getElementById('tk-img-btn'), prev=document.getElementById('tk-img-prev');
+    function setImg(u){ pendingImage=u||null; if(prev){ prev.innerHTML=pendingImage?'🖼️ imagen adjunta · <a href="#" id="tk-img-x" style="color:#f88">quitar</a>':''; var x=document.getElementById('tk-img-x'); if(x) x.onclick=function(e){e.preventDefault();setImg(null);}; } }
+    function downscale(file,cb){ var im=new Image(), url=URL.createObjectURL(file); im.onload=function(){ var m=1400,w=im.width,h=im.height; if(w>m||h>m){ if(w>h){h=Math.round(h*m/w);w=m;}else{w=Math.round(w*m/h);h=m;} } var c=document.createElement('canvas'); c.width=w;c.height=h; c.getContext('2d').drawImage(im,0,0,w,h); URL.revokeObjectURL(url); cb(c.toDataURL('image/jpeg',0.85)); }; im.onerror=function(){URL.revokeObjectURL(url);cb(null);}; im.src=url; }
+    if(btn&&inp){ btn.addEventListener('click',function(){inp.click();}); inp.addEventListener('change',function(){ var f=inp.files&&inp.files[0]; if(f) downscale(f,setImg); inp.value=''; }); }
+    var pnl=document.getElementById('task-panel');
+    if(pnl) pnl.addEventListener('paste',function(e){ var it=(e.clipboardData||{}).items||[]; for(var i=0;i<it.length;i++){ if(it[i].type&&it[i].type.indexOf('image')===0){ var f=it[i].getAsFile(); if(f){ downscale(f,setImg); e.preventDefault(); } break; } } });
+    window._tkClearImg=function(){ setImg(null); };
+    window._tkPendingImage=function(){ return pendingImage; };
+  })();
+  var ASSIGNEES=[];
+  var ST_LABEL={pending:'pendiente',sent:'enviada',in_progress:'en curso',blocked:'bloqueada',done:'hecha',archived:'archivada'};
+  var PRIO_ICON={urgent:'🔴',high:'🟠',normal:'🟡',low:'⚪'};
+  var APPROVAL_LABEL={full_access:'🟢 permisos completos',auto_approve:'🟡 acepta peticiones',ask:'🔴 pedir permisos'};
+  var MONITOR_LABEL={silicio:'⚙️ Silicio',carbono:'🫀 Carbono',skynet:'🛰️ Skynet'};
+  var MONITOR_HELP={
+    silicio:'Silicio: inicio, hitos compactos, bloqueo y cierre con verificación.',
+    carbono:'Carbono: menos ruido; solo dudas, decisiones humanas e hitos importantes.',
+    skynet:'Skynet: vigilancia activa; captura si hay espera, permisos o silencio operativo.'
+  };
+  var skynetTimer=null, skynetStartedAt=0;
+  function syncMonitorHelp(){
+    var help=document.getElementById('tk-monitor-help');
+    if(!help||!monitorEl) return;
+    var mode=monitorEl.value||'silicio';
+    help.className=mode;
+    help.textContent=MONITOR_HELP[mode]||MONITOR_HELP.silicio;
+  }
+  function syncSkynetButton(){
+    if(!monitorEl) return;
+    syncMonitorHelp();
+    var on=monitorEl.value==='skynet';
+    if(skynetRow) skynetRow.classList.toggle('tk-skynet-on', on);
+    if(skynetBtn) skynetBtn.disabled=!on;
+    skynetTargets.forEach(function(input){ input.disabled=!on; });
+    if(skynetStatus&&!on) skynetStatus.innerHTML='';
+  }
+  if(monitorEl) monitorEl.addEventListener('change',syncSkynetButton);
+  syncSkynetButton();
+
+  function esc(s){ return String(s||'').replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function stopSkynetProgress(){ if(skynetTimer){ clearInterval(skynetTimer); skynetTimer=null; } }
+  function skynetTargetLabel(target){
+    return target==='codex'?'Codex':(target==='opencode'?'OpenCode':'Claude Code');
+  }
+  function selectedSkynetTargets(){
+    return skynetTargets.filter(function(input){return input.checked;}).map(function(input){return input.value;});
+  }
+  function skynetTargetsLabel(targets){
+    return (targets||[]).map(skynetTargetLabel).join(' + ') || 'sin motores';
+  }
+  function startSkynetProgress(targets){
+    if(!skynetStatus) return;
+    stopSkynetProgress();
+    skynetStartedAt=Date.now();
+    var label=skynetTargetsLabel(targets);
+    var phases=[
+      'conectando con el Consejo',
+      'revisando equipos en red',
+      'consultando '+label,
+      'capturando pantallas disponibles',
+      'esperando respuestas SSH lentas'
+    ];
+    function paint(){
+      var s=Math.floor((Date.now()-skynetStartedAt)/1000);
+      var phase=phases[Math.min(phases.length-1, Math.floor(s/6))];
+      var warn=s>=30?' <span class="sky-warn">tarda mas de lo normal, sigo esperando...</span>':'';
+      skynetStatus.innerHTML='<div>Skynet '+label+' activo · '+phase+' · '+s+'s'+warn+'</div><div class="sky-progress"><i></i></div>';
+    }
+    paint();
+    skynetTimer=setInterval(paint,1000);
+  }
+  function capLinks(x){
+    var c=x&&x.capture, links=[];
+    if(c&&c.image) links.push(c.image);
+    if(c&&c.images&&c.images.length) links=links.concat(c.images);
+    return links.map(function(u,i){ return '<a href="'+API+esc(u)+'" target="_blank" title="'+esc(x.machine||x.id)+'">captura '+(i+1)+'</a>'; }).join(' ');
+  }
+  function renderSkynetStatus(res){
+    if(!skynetStatus) return;
+    stopSkynetProgress();
+    res=res||[];
+    var ok=res.filter(function(x){return x.ok;});
+    var caps=res.filter(function(x){return x.capture;});
+    var active=ok.filter(function(x){return x.status==='active';});
+    var waiting=ok.filter(function(x){return x.status==='waiting-captured';});
+    var off=res.filter(function(x){return !x.ok;});
+    var chips=res.map(function(x){
+      var cls=x.ok?(x.status==='waiting-captured'?' wait':''):' off';
+      var icon=x.ok?(x.status==='waiting-captured'?'📸':'🟢'):'⚪';
+      var model=skynetTargetLabel(x.auditedTarget);
+      var state=x.auditedStateAfter||x.auditedStateBefore||'sin ventana';
+      var label=model+' · '+(x.machine||x.id||'equipo')+(x.ok?(x.status==='waiting-captured'?' · capturado':' · activo'):' · offline')+' · '+state;
+      var links=capLinks(x);
+      return '<span class="sky-chip'+cls+'">'+icon+' '+esc(label)+(links?' · '+links:'')+'</span>';
+    }).join('');
+    skynetStatus.innerHTML='<div>'+ok.length+'/'+res.length+' revisiones · '+caps.length+' capturas · activos: '+(active.map(function(x){return skynetTargetLabel(x.auditedTarget)+'@'+(x.machine||x.id);}).join(', ')||'ninguno')+'</div>'
+      +'<div class="sky-row">'+chips+'</div>'
+      +(waiting.length?'<div class="sky-row">Capturado/esperando: '+waiting.map(function(x){return esc(skynetTargetLabel(x.auditedTarget)+'@'+(x.machine||x.id));}).join(', ')+'</div>':'')
+      +(off.length?'<div class="sky-row">Sin respuesta: '+off.map(function(x){return esc(skynetTargetLabel(x.auditedTarget)+'@'+(x.machine||x.id));}).join(', ')+'</div>':'');
+  }
+  function ago(iso){ try{ var s=Math.max(0,(Date.now()-new Date(iso).getTime())/1000);
+    if(s<60)return'ahora'; if(s<3600)return Math.floor(s/60)+'m'; if(s<86400)return Math.floor(s/3600)+'h'; return Math.floor(s/86400)+'d'; }catch(e){return'';} }
+
+  // ── Caja flotante: movible + redimensionable + persistente ──
+  var _tkMoved=false, GEOM_KEY='taskPanelGeom', VIS_KEY='taskPanelVisible';
+  // Acoplado en el flujo justo debajo de la barra de escribir (forma caja con la foto del Consejo).
+  try{ var _sb=document.querySelector('.scumm-bar'); if(_sb&&_sb.parentNode){ _sb.parentNode.insertBefore(panel, _sb.nextSibling); } }catch(e){}
+  function tkSaveGeom(){ try{ var r=panel.getBoundingClientRect(); localStorage.setItem(GEOM_KEY,JSON.stringify({left:Math.round(r.left),top:Math.round(r.top),w:Math.round(r.width),h:Math.round(r.height)})); }catch(e){} }
+  head.addEventListener('click',function(){ if(_tkMoved){ _tkMoved=false; return; } panel.classList.toggle('tk-min'); tog.textContent=panel.classList.contains('tk-min')?'▸':'▾'; });
+  var _drag=false,_sx,_sy,_ox,_oy;
+  head.addEventListener('pointerdown',function(e){ if(e.target.closest('.tk-toggle'))return; _drag=true;_tkMoved=false; var r=panel.getBoundingClientRect(); _ox=r.left;_oy=r.top;_sx=e.clientX;_sy=e.clientY; panel.style.left=_ox+'px';panel.style.top=_oy+'px';panel.style.right='auto';panel.style.bottom='auto'; try{head.setPointerCapture(e.pointerId);}catch(_){} });
+  head.addEventListener('pointermove',function(e){ if(!_drag)return; var dx=e.clientX-_sx,dy=e.clientY-_sy; if(Math.abs(dx)+Math.abs(dy)>3)_tkMoved=true; panel.style.left=Math.max(0,Math.min(window.innerWidth-60,_ox+dx))+'px'; panel.style.top=Math.max(0,Math.min(window.innerHeight-40,_oy+dy))+'px'; });
+  head.addEventListener('pointerup',function(e){ if(!_drag)return; _drag=false; try{head.releasePointerCapture(e.pointerId);}catch(_){} if(_tkMoved)tkSaveGeom(); });
+  if(window.ResizeObserver){ var _ro=new ResizeObserver(function(){ if(!_drag)tkSaveGeom(); }); _ro.observe(panel); }
+
+  function tkApplyVis(v){ panel.style.display = v ? 'flex' : 'none'; try{ document.body.classList.toggle('tk-open', !!v); }catch(e){} }
+  window.tkSetVisible=function(v){ var cur=panel.style.display!=='none'; var nv=(v===null||v===undefined)?!cur:!!v; tkApplyVis(nv); try{localStorage.setItem(VIS_KEY,nv?'1':'0');}catch(e){} if(nv){ loadAssignees(); tick(); } return nv; };
+  window.tkIsVisible=function(){ return panel.style.display!=='none'; };
+  try{ tkApplyVis(localStorage.getItem(VIS_KEY)==='1'); }catch(e){ tkApplyVis(false); }
+
+  function paintAssignees(){
+    if(!ASSIGNEES.length) return;
+    var ag='', mc='';
+    ASSIGNEES.forEach(function(a,i){
+      var opt='<option value="'+i+'">'+(a.kind==='agora'?'🤖 ':'💻 ')+esc(a.label)+'</option>';
+      if(a.kind==='agora') ag+=opt; else mc+=opt;
+    });
+    var html='<option value="">Asignar a…</option>';
+    if(ag) html+='<optgroup label="Agentes AgoraMatrix">'+ag+'</optgroup>';
+    if(mc) html+='<optgroup label="Máquinas (SSH)">'+mc+'</optgroup>';
+    var cur=assigneeEl.value;            // conserva la selección si la había
+    assigneeEl.innerHTML=html;
+    if(cur){ assigneeEl.value=cur; }
+  }
+  // Carga ROBUSTA de destinatarios: pinta siempre lo último conocido (memoria o
+  // localStorage) para que el desplegable NUNCA quede vacío, refresca en segundo plano
+  // (con timeout) y NO borra nada si la API tiene un hipo; reintenta si seguimos sin lista.
+  async function loadAssignees(){
+    if(!ASSIGNEES.length){ try{ var c=JSON.parse(localStorage.getItem('tkAssignees')||'[]'); if(c&&c.length){ ASSIGNEES=c; } }catch(e){} }
+    paintAssignees();
+    try{
+      var ctrl=new AbortController(), to=setTimeout(function(){ctrl.abort();},8000);
+      var r=await fetch(API+"/api/council/assignees",{cache:'no-store',signal:ctrl.signal}); clearTimeout(to);
+      var d=await r.json();
+      if(d&&d.ok&&((d.agora&&d.agora.length)||(d.machines&&d.machines.length))){
+        ASSIGNEES=[].concat(d.agora||[], d.machines||[]);
+        try{ localStorage.setItem('tkAssignees',JSON.stringify(ASSIGNEES)); }catch(e){}
+        paintAssignees();
+      }
+    }catch(e){ if(!ASSIGNEES.length) setTimeout(loadAssignees,5000); }
+  }
+
+  function itemHtml(t){
+    var st=t.status||'pending';
+    var acts='';
+    if(st==='archived'){
+      acts+='<button data-act="in_progress" data-id="'+t.id+'">↩ restaurar</button>';
+    } else {
+      if(st!=='done'){
+        acts+='<button class="tk-go" data-act="dispatch" data-id="'+t.id+'">'+(t.dispatch?'↻ reenviar':'➤ entregar')+'</button>';
+        if(st!=='in_progress') acts+='<button data-act="in_progress" data-id="'+t.id+'">▶ curso</button>';
+        acts+='<button data-act="done" data-id="'+t.id+'">✓ hecha</button>';
+        if(st!=='blocked') acts+='<button data-act="blocked" data-id="'+t.id+'">⛔ bloq</button>';
+      } else {
+        acts+='<button data-act="in_progress" data-id="'+t.id+'">↩ reabrir</button>';
+      }
+      // Finalizar = archivar (guarda en histórico, no se pierde). Sirve para cualquier
+      // estado, también para cerrar atascadas/bloqueadas.
+      acts+='<button class="tk-fin" data-act="archive" data-id="'+t.id+'">📦 Finalizar</button>';
+    }
+    acts+='<button class="tk-del" data-act="delete" data-id="'+t.id+'">🗑</button>';
+    var who=(t.assignee&&t.assignee.label)||'sin asignar';
+    var disp = t.dispatch ? (t.dispatch.ok?('· enviada '+ago(t.dispatch.sentAt)):'· ⚠ fallo envío') : '';
+    var approval = APPROVAL_LABEL[t.approvalMode||'full_access'] || APPROVAL_LABEL.full_access;
+    var monitor = MONITOR_LABEL[t.monitorMode||'silicio'] || MONITOR_LABEL.silicio;
+    return '<div class="tk-item">'
+      +'<div class="tk-top"><span class="tk-title">'+(PRIO_ICON[t.priority]||'')+' '+esc(t.title)+'</span>'
+      +'<span class="tk-chip tk-st-'+st+'">'+(ST_LABEL[st]||st)+'</span></div>'
+      +'<div class="tk-meta"><span>'+esc(who)+'</span><span>'+esc(t.id)+'</span><span>'+esc(approval)+'</span><span>'+esc(monitor)+'</span><span>'+ago(t.createdAt)+' '+disp+'</span></div>'
+      +(t.detail?'<div class="tk-detail">'+esc(t.detail)+'</div>':'')
+      +((t.scheduledAt&&(t.status==='pending'))?'<div class="tk-detail">⏰ programada: '+esc(new Date(t.scheduledAt).toLocaleString())+'</div>':'')
+      +(t.image?'<a class="tk-proof" href="'+API+t.image+'" target="_blank" title="Imagen adjunta a la tarea"><img src="'+API+t.image+'" alt="adjunto" loading="lazy" style="max-width:100%;margin-top:4px;border-radius:6px;border:1px solid #2a4a6a"></a>':'')
+      +(t.result?'<div class="tk-detail">✅ '+esc(t.result)+'</div>':'')
+      +(t.host?'<div class="tk-meta"><span>🖥️ alojado en '+esc(t.host)+'</span></div>':'')
+      +(t.proof?'<a class="tk-proof" href="'+API+t.proof+'" target="_blank" title="Captura de prueba en el ordenador del bot"><img src="'+API+t.proof+'" alt="captura de prueba" loading="lazy" style="max-width:100%;margin-top:4px;border-radius:6px;border:1px solid #2c5a3a"></a>':'')
+      +'<div class="tk-acts">'+acts+'</div></div>';
+  }
+
+  function render(tasks){
+    if(!tasks||!tasks.length){ listEl.innerHTML='<div id="tk-empty">Sin tareas. Crea la primera arriba.</div>'; countEl.textContent=''; return; }
+    var order={blocked:0,in_progress:1,sent:2,pending:3,done:4,archived:5};
+    tasks=tasks.slice().sort(function(a,b){ var d=(order[a.status]||9)-(order[b.status]||9); return d!==0?d:(new Date(b.createdAt)-new Date(a.createdAt)); });
+    listEl.innerHTML=tasks.map(itemHtml).join('');
+    var pend=tasks.filter(function(t){return t.status!=='done';}).length;
+    countEl.textContent=pend+' activas · '+tasks.length;
+  }
+
+  var badgeEl=document.getElementById('tk-badge');
+  function updateBadge(tasks){
+    if(!badgeEl) return;
+    var active=tasks.filter(function(t){return t.status!=='done';});
+    var blocked=active.filter(function(t){return t.status==='blocked';}).length;
+    badgeEl.textContent=String(active.length);
+    badgeEl.className='tk-toolchip'+(active.length===0?' tk-zero':(blocked?' tk-alert':''));
+  }
+  function renderHealth(bots){
+    var el=document.getElementById('tk-health'); if(!el) return;
+    el.innerHTML=(bots||[]).map(function(b){
+      var dot=b.online?'🟢':'⚪';
+      var sub=[]; if(b.host) sub.push(esc(b.host));
+      sub.push(b.login===false?'🔑✗':'🔑'); sub.push(b.capture?'📸':'📷✗');
+      var last=b.lastTask?(' · últ: '+(ST_LABEL[b.lastTask.status]||b.lastTask.status)+' '+ago(b.lastTask.at)):'';
+      return '<span class="tk-hb '+(b.online?'on':'off')+'" title="'+esc(b.label||b.id)+(b.host?(' @ '+esc(b.host)):'')+(b.online?'':' · OFFLINE')+last+'">'+dot+' '+esc(b.id)+' <span class="tk-hb-sub">'+sub.join(' ')+'</span></span>';
+    }).join('');
+  }
+  async function loadHealth(){
+    try{ var r=await fetch(API+"/api/council/health",{cache:'no-store'}); var d=await r.json(); if(d&&d.ok) renderHealth(d.bots); }catch(e){}
+  }
+  var viewArchived=false;   // vista "histórico" (tareas finalizadas/archivadas)
+  async function tick(){
+    if(panel.style.display!=='none') loadHealth();
+    // Sondea SIEMPRE (también con el panel oculto) para mantener vivo el contador
+    // de la barra superior; la lista pesada solo se pinta si el panel está visible.
+    try{ var r=await fetch(API+"/api/council/tasks",{cache:'no-store'}); var d=await r.json();
+      if(d&&d.ok){ updateBadge(d.tasks);
+        if(panel.style.display!=='none'){
+          if(viewArchived){
+            var ra=await fetch(API+"/api/council/tasks?status=archived",{cache:'no-store'}); var da=await ra.json();
+            render((da&&da.ok)?da.tasks:[]);
+          } else { render(d.tasks); }
+        }
+      } }
+    catch(e){ /* server dormido: deja lo último */ }
+  }
+
+  form.addEventListener('submit',async function(e){
+    e.preventDefault();
+    var title=(titleEl.value||'').trim(); if(!title) return;
+    var idx=assigneeEl.value; var a=(idx!=='')?ASSIGNEES[Number(idx)]:null;
+    if(!a){ alert('Elige a quién se asigna la tarea.'); return; }
+    createBtn.disabled=true;
+    try{
+      var body={ title:title, detail:(detailEl.value||'').trim(), priority:prioEl.value||'normal',
+        approvalMode:(approvalEl&&approvalEl.value)||'full_access',
+        monitorMode:(monitorEl&&monitorEl.value)||'silicio',
+        assignee:{kind:a.kind,id:a.id,label:a.label}, dispatch:!!nowEl.checked };
+      if(whenEl&&whenEl.value){ var dt=new Date(whenEl.value); if(!isNaN(dt.getTime())) body.scheduledAt=dt.toISOString(); }
+      if(pendingImage) body.imageData=pendingImage;
+      var r=await fetch(API+"/api/council/tasks",{method:'POST',headers:whdrs(),body:JSON.stringify(body)});
+      if(w401(r)){ createBtn.disabled=false; return; }
+      var d=await r.json();
+      if(r.ok&&d.ok){ titleEl.value=''; detailEl.value=''; if(whenEl)whenEl.value=''; if(window._tkClearImg)window._tkClearImg(); if(d.dispatch&&!d.dispatch.ok){ alert('Tarea creada, pero no se pudo entregar: '+(d.dispatch.error||'')); } tick(); }
+      else alert('No se pudo crear: '+((d&&d.error)||r.status));
+    }catch(e){ alert('Sin conexión con el council-api'); }
+    finally{ createBtn.disabled=false; titleEl.focus(); }
+  });
+
+  if(skynetBtn) skynetBtn.addEventListener('click',async function(){
+    if(monitorEl&&monitorEl.value!=='skynet') return;
+    var targets=selectedSkynetTargets();
+    if(!targets.length){ alert('Selecciona al menos un motor para auditar.'); return; }
+    skynetBtn.disabled=true;
+    skynetTargets.forEach(function(input){ input.disabled=true; });
+    startSkynetProgress(targets);
+    try{
+      var r=await fetch(API+"/api/teamwork/skynet/audit",{method:'POST',headers:whdrs(),body:JSON.stringify({targets:targets})});
+      if(w401(r)){ syncSkynetButton(); return; }
+      var d=await r.json();
+      if(!(r.ok&&d&&d.ok)){ stopSkynetProgress(); alert('No se pudo auditar: '+((d&&d.error)||r.status)); }
+      else{
+        var res=d.results||[];
+        renderSkynetStatus(res);
+        var waiting=res.filter(function(x){return x.status==='waiting-captured';}).map(function(x){return x.machine||x.id;});
+        if(waiting.length) alert('Skynet capturó motores esperando en: '+waiting.join(', '));
+      }
+    }catch(e){ stopSkynetProgress(); if(skynetStatus) skynetStatus.innerHTML='<span class="sky-warn">Sin conexion con Skynet.</span>'; alert('Sin conexión con Skynet'); }
+    finally{ syncSkynetButton(); }
+  });
+
+  listEl.addEventListener('click',async function(e){
+    var btn=e.target.closest('button[data-act]'); if(!btn) return;
+    var act=btn.getAttribute('data-act'), id=btn.getAttribute('data-id'); if(!id) return;
+    btn.disabled=true;
+    try{
+      var url, opts={method:'POST',headers:whdrs()};
+      if(act==='dispatch'){ url=API+"/api/council/tasks/"+id+"/dispatch"; opts.body='{}'; }
+      else if(act==='delete'){ if(!confirm('¿Borrar la tarea '+id+'? (se pierde; usa Finalizar para archivar)')){ btn.disabled=false; return; } url=API+"/api/council/tasks/"+id+"/delete"; opts.body='{}'; }
+      else if(act==='archive'){ url=API+"/api/council/tasks/"+id+"/archive"; opts.body=JSON.stringify({from:'Consejo'}); }
+      else { url=API+"/api/council/tasks/"+id+"/status"; opts.body=JSON.stringify({status:act,from:'Consejo'}); }
+      var r=await fetch(url,opts); if(w401(r)){ btn.disabled=false; return; } var d=await r.json();
+      if(!(r.ok&&d.ok)) alert('No se pudo: '+((d&&d.error)||r.status));
+    }catch(e){ alert('Sin conexión con el council-api'); }
+    finally{ tick(); }
+  });
+
+  // Limpiar hechas = archivarlas en bloque (van al histórico, no se borran).
+  document.getElementById('tk-clear-done').addEventListener('click',async function(){
+    if(!confirm('¿Archivar todas las tareas hechas? Se guardan en el histórico (📦 Ver archivadas).')) return;
+    try{ var r=await fetch(API+"/api/council/tasks/_archive-done",{method:'POST',headers:whdrs(),body:'{}'}); if(w401(r))return; var d=await r.json(); if(!(d&&d.ok)) alert('No se pudo archivar'); }
+    catch(e){ alert('Sin conexión con el council-api'); }
+    tick();
+  });
+  var archBtn=document.getElementById('tk-toggle-arch');
+  archBtn.addEventListener('click',function(){
+    viewArchived=!viewArchived;
+    archBtn.textContent=viewArchived?'📋 Ver activas':'📦 Ver archivadas';
+    archBtn.style.background=viewArchived?'#1f8a3e':'';
+    tick();
+  });
+
+  loadAssignees(); tick(); setInterval(tick, 15000);
+})();
+
+(function(){
+  window.dataLayer = window.dataLayer || [];
+  var pageTitle = document.title;
+  var trackedScrollDepths = {};
+
+  function currentPath(){
+    return window.location.pathname + window.location.search + window.location.hash;
+  }
+
+  function trackEvent(eventName, params){
+    window.dataLayer.push(Object.assign({
+      event: eventName,
+      page_title: pageTitle,
+      page_location: window.location.href,
+      page_path: currentPath()
+    }, params || {}));
+  }
+
+  function trackPageView(path, title){
+    var pagePath = path || currentPath();
+    trackEvent('page_view', {
+      page_title: title || pageTitle,
+      page_path: pagePath,
+      page_location: window.location.origin + pagePath
+    });
+  }
+
+  trackPageView();
+
+  window.addEventListener('scroll', function(){
+    var maxScroll = document.documentElement.scrollHeight - window.innerHeight;
+    var depth = maxScroll <= 0 ? 100 : Math.round((window.scrollY / maxScroll) * 100);
+    [25, 50, 75, 90, 100].forEach(function(threshold){
+      if(depth >= threshold && !trackedScrollDepths[threshold]){
+        trackedScrollDepths[threshold] = true;
+        trackEvent('scroll_depth', { percent_scrolled: threshold });
+      }
+    });
+  }, { passive: true });
+
+  document.addEventListener('click', function(event){
+    var target = event.target.closest('a,button,[role="button"],[data-act],input,select,textarea');
+    if(!target) return;
+    var label = (
+      target.getAttribute('aria-label') ||
+      target.getAttribute('title') ||
+      target.textContent ||
+      target.value ||
+      target.id ||
+      target.name ||
+      ''
+    ).trim().replace(/\s+/g, ' ').substring(0, 100);
+    trackEvent('ui_click', {
+      click_text: label,
+      click_url: target.href || '',
+      element_type: target.tagName.toLowerCase(),
+      element_id: target.id || '',
+      element_action: target.getAttribute('data-act') || ''
+    });
+  });
+
+  window.addEventListener('hashchange', function(){
+    trackPageView(currentPath(), pageTitle);
+  });
+
+  var originalPushState = history.pushState;
+  var originalReplaceState = history.replaceState;
+  function wrapHistory(fn){
+    return function(){
+      var result = fn.apply(this, arguments);
+      setTimeout(function(){ trackPageView(currentPath(), pageTitle); }, 0);
+      return result;
+    };
+  }
+  history.pushState = wrapHistory(originalPushState);
+  history.replaceState = wrapHistory(originalReplaceState);
+})();
+

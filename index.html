@@ -33,9 +33,26 @@
     <link rel="icon" href="/council-icon.ico?v=20260522-r1" sizes="any">
     <link rel="icon" type="image/png" href="/council-icon.png?v=20260522-r1" sizes="64x64">
     <link rel="shortcut icon" href="/council-icon.ico?v=20260522-r1">
+    <link rel="apple-touch-icon" href="/council-icon.png?v=20260522-r1">
+    <meta name="description" content="El Consejo de Silicio de AdmiraNext: consejeros IA que asesoran al equipo en vivo, en una aventura point&click estilo SCUMM.">
+    <meta name="theme-color" content="#0a0a14">
+    <meta name="apple-mobile-web-app-capable" content="yes">
+    <meta name="mobile-web-app-capable" content="yes">
+    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+    <meta name="apple-mobile-web-app-title" content="Consejo Admira">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
+        /* Accesibilidad: respeta la preferencia de menos movimiento (las animaciones SCUMM se calman) */
+        @media (prefers-reduced-motion: reduce) {
+            *, *::before, *::after { animation-duration: .001ms !important; animation-iteration-count: 1 !important; transition-duration: .001ms !important; scroll-behavior: auto !important; }
+        }
+        /* Foco visible por teclado (no afecta al ratón) */
+        a:focus-visible, button:focus-visible, [role="button"]:focus-visible, input:focus-visible, [tabindex]:focus-visible {
+            outline: 2px solid #ffee88; outline-offset: 2px; border-radius: 4px;
+        }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
             background: #0a0a14;

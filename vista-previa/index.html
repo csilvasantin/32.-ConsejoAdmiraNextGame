@@ -124,6 +124,29 @@
   <div class="col siguiente"><h2>⏭️ Siguiente</h2><ul id="siguiente"></ul></div>
 </section>
 
+<style id="agentes-css">
+  .agentes-sec{margin-bottom:16px}
+  .agentes-h{font-size:12px;letter-spacing:.4px;text-transform:uppercase;color:var(--mut);margin:0 0 10px;display:flex;align-items:center;gap:8px}
+  .ag-count{color:var(--acc);font-family:var(--mono);font-size:11px}
+  .agentes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+  .agente{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 13px;display:flex;gap:11px;align-items:flex-start}
+  .agente.off{opacity:.5}
+  .ag-av{width:38px;height:38px;border-radius:9px;object-fit:cover;flex:0 0 auto;background:var(--panel2)}
+  .ag-body{min-width:0;flex:1}
+  .ag-top{display:flex;align-items:center;gap:6px}
+  .ag-name{font-weight:700;font-size:14px}
+  .ag-dot{width:7px;height:7px;border-radius:50%;flex:0 0 auto}
+  .ag-dot.on{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+  .ag-dot.off{background:var(--mut)}
+  .ag-meta{font-family:var(--mono);font-size:10.5px;color:var(--mut);margin-top:1px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .ag-focus{font-size:12.5px;color:var(--ink);margin-top:6px;line-height:1.35;overflow:hidden;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical}
+  .ag-focus.none{color:var(--mut);font-style:italic}
+</style>
+<section class="agentes-sec">
+  <h2 class="agentes-h">👥 En qué anda cada agente <span class="ag-count" id="agCount"></span></h2>
+  <div class="agentes-grid" id="agentes"><div class="empty">Cargando agentes…</div></div>
+</section>
+
 <section class="rows">
   <div class="box carbono"><h2>🙋 Necesita carbono</h2><ul id="carbono"></ul></div>
   <div class="box riesgos"><h2>⚠️ Riesgos abiertos</h2><ul id="riesgos"></ul></div>
@@ -203,7 +226,35 @@ async function cargarEstado(){
   FUENTE_ESTADO='local';
   return await r.json();
 }
+// ── En qué anda cada agente (presencia pública + campo focus) ──
+function fmtAge2(s){ s=Math.max(0,s|0); if(s<60)return 'hace '+s+'s'; if(s<3600)return 'hace '+((s/60)|0)+'min'; if(s<86400)return 'hace '+((s/3600)|0)+'h'; return 'hace '+((s/86400)|0)+'d'; }
+const _AGPF={Neo:'Neo',Morfeo:'Morfeo',Trinity:'Trinity','Oráculo':'Oraculo',Oraculo:'Oraculo',Cypher:'Cypher'};
+const _agEsc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+async function renderAgentes(){
+  const el=document.getElementById('agentes'); if(!el) return;
+  try{
+    const r=await fetch('https://admira-telegram.csilvasantin.workers.dev/api/presence',{cache:'no-store'});
+    const d=await r.json(); const now=(d.now||(Date.now()/1000))|0;
+    const byP={}; (d.presence||[]).forEach(p=>{ const k=(p.persona||p.machine||'?'); if(!byP[k]||(p.updated||0)>(byP[k].updated||0)) byP[k]=p; });
+    const list=Object.values(byP).sort((a,b)=>(b.updated||0)-(a.updated||0));
+    if(!list.length){ el.innerHTML='<div class="empty">Sin agentes reportando.</div>'; return; }
+    const ONLINE=8*60; let on=0;
+    el.innerHTML=list.map(p=>{
+      const age=now-(p.updated||0), online=age<ONLINE; if(online) on++;
+      const pf=_AGPF[p.persona], av=pf?('/wallpapers/'+pf+'.png'):'';
+      const foco=p.focus?_agEsc(p.focus):'sin reportar foco';
+      return '<div class="agente'+(online?'':' off')+'">'
+        +(av?('<img class="ag-av" src="'+av+'" alt="" onerror="this.style.visibility=\'hidden\'">'):'<div class="ag-av"></div>')
+        +'<div class="ag-body"><div class="ag-top"><span class="ag-dot '+(online?'on':'off')+'"></span>'
+        +'<span class="ag-name">'+_agEsc(p.persona||'?')+'</span></div>'
+        +'<div class="ag-meta">'+_agEsc(p.runtime||'')+' · '+_agEsc(p.machine||'')+' · '+fmtAge2(age)+'</div>'
+        +'<div class="ag-focus'+(p.focus?'':' none')+'">'+foco+'</div></div></div>';
+    }).join('');
+    const c=document.getElementById('agCount'); if(c) c.textContent=on+' online';
+  }catch(e){ if(!el.querySelector('.agente')) el.innerHTML='<div class="empty">No se pudo leer la presencia.</div>'; }
+}
 async function tick(){
+  renderAgentes();
   try{
     const d=await cargarEstado();
     const h=JSON.stringify(d);

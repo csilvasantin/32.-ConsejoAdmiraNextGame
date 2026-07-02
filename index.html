@@ -2719,13 +2719,34 @@
 #home-bottom-cluster .hack-toggle,#home-bottom-cluster .control-toggle,#home-bottom-cluster .demo-toggle,#home-bottom-cluster .diario-toggle{position:static!important;left:auto!important;right:auto!important;top:auto!important;bottom:auto!important;transform:none!important}
 #home-bottom-cluster .hack-toggle{order:1}#home-bottom-cluster .control-toggle{order:2}#home-bottom-cluster .demo-toggle{order:3}#home-bottom-cluster .diario-toggle{order:4}
 </style>
+<style id="side-rails-css">
+/* ════ Barras verticales laterales SCUMM: OPCIÓN (izq) / AVANZADO (der) ════
+   Mismo panel de madera que la barra de verbos (.scumm-bar): fondo #5a3a1e,
+   bisel superior #a07828, barra de título #3a2410, verbos blanco→amarillo
+   sobre madera #7a5a2e, primarios en salmón. */
+.side-rail{position:fixed;top:52%;transform:translateY(-50%);z-index:350;width:158px;font-family:'Press Start 2P',monospace;background:#5a3a1e;border:3px solid #8b5a14;border-top:3px solid #a07828;box-shadow:4px 4px 0 #000}
+.side-rail.left{left:10px}
+.side-rail.right{right:10px}
+.rail-head{display:block;width:100%;box-sizing:border-box;font-family:inherit;font-size:0.5rem;color:#daa520;background:#3a2410;border:none;border-bottom:2px solid #2a1a08;padding:0.55rem 0.5rem;letter-spacing:1px;cursor:pointer;text-align:center;text-transform:uppercase}
+.rail-head:hover{color:#ffee00;background:#4a2f14}
+.rail-body{display:flex;flex-direction:column;padding:6px 6px 8px}
+.rail-group{font-size:0.34rem;color:#886633;letter-spacing:1px;padding:0.5rem 0.3rem 0.25rem;text-transform:uppercase}
+.rail-btn{font-family:inherit;font-size:0.46rem;color:#ffffff;background:transparent;border:none;border-radius:0;padding:0.5rem 0.45rem;letter-spacing:0.5px;text-transform:uppercase;text-decoration:none;text-align:left;cursor:pointer;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;transition:background .12s,color .12s;display:block}
+.rail-btn:hover{color:#ffff00;background:#7a5a2e}
+.rail-btn.primary{color:#ffaaaa}
+.rail-btn.primary:hover{color:#ffff00;background:#7a5a2e}
+.side-rail.collapsed{width:auto}
+.side-rail.collapsed .rail-body{display:none}
+.side-rail.collapsed .rail-head{writing-mode:vertical-rl;text-orientation:mixed;border-bottom:none;padding:0.7rem 0.4rem}
+@media (max-width:760px){.side-rail{display:none}}
+</style>
 </head>
 <body>
     <noscript><iframe src="https://www.googletagmanager.com/ns.html?id=GTM-KD696XW"
     height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="container">
         <div class="top-bar">
-            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.06.30.r1</a>
+            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge">Admira v.26.07.02.r1</a>
             <a href="https://www.admira.live/equipos" target="_blank" rel="noopener" class="version-badge" title="Equipos · asignación de agentes">🏠 AdmiraNeXT</a>
             <a href="https://www.admira.live/telegram" target="_blank" rel="noopener" class="version-badge" title="Telegram · espejo en directo del grupo AdmiraNext">💬 Telegram</a>
             <a href="/game/help" class="version-badge" title="Cómo se juega y cómo contribuir (manifest + MCP)">❔ Ayuda</a>
@@ -2856,6 +2877,68 @@
             </div>
             <!-- ── end PRESENTAR overlay ───────────────────────── -->
         </div>
+
+        <!-- ════ Barras verticales laterales ════ -->
+        <div class="side-rail left" id="rail-opcion">
+            <button class="rail-head" onclick="toggleRail('rail-opcion')" title="Plegar / desplegar">◧ OPCIÓN</button>
+            <div class="rail-body">
+                <div class="rail-group">Navega</div>
+                <a class="rail-btn" href="https://www.admira.live/equipos" target="_blank" rel="noopener" title="Equipos · asignación de agentes">🏠 AdmiraNeXT</a>
+                <a class="rail-btn" href="https://www.admira.live/telegram" target="_blank" rel="noopener" title="Espejo en directo del grupo AdmiraNext">💬 Telegram</a>
+                <a class="rail-btn" href="https://www.admira.live/dashboard.html" target="_blank" rel="noopener" title="Panel de estado">📊 Panel</a>
+                <a class="rail-btn" href="/game/help" title="Cómo se juega y cómo contribuir">❔ Ayuda</a>
+                <button class="rail-btn" onclick="window.agmSetVisible&&window.agmSetVisible(null)" title="Puesto de mando AgoraMatrix">📡 Agentes</button>
+                <div class="rail-group">Consulta</div>
+                <button class="rail-btn primary" onclick="railVerb('preguntar')" title="Pregunta a un consejero">Preguntar</button>
+                <button class="rail-btn" onclick="railVerb('examinar')" title="Examina el perfil de un consejero">Examinar</button>
+                <button class="rail-btn primary" onclick="railVerb('debatir')" title="El Consejo debate un tema">Debatir</button>
+                <button class="rail-btn primary" onclick="railVerb('reunion')" title="Reúnete a solas con un consejero">Reunión</button>
+            </div>
+        </div>
+
+        <div class="side-rail right" id="rail-avanzado">
+            <button class="rail-head" onclick="toggleRail('rail-avanzado')" title="Plegar / desplegar">AVANZADO ◨</button>
+            <div class="rail-body">
+                <div class="rail-group">Crea</div>
+                <button class="rail-btn primary" onclick="railVerb('entrenar')" title="Alimenta a un consejero con URLs y material">Entrenar</button>
+                <button class="rail-btn" onclick="railVerb('analizar')" title="Analiza una URL, texto o archivo">Analizar</button>
+                <button class="rail-btn" onclick="railVerb('presentar')" title="Genera una presentación">Presentar</button>
+                <button class="rail-btn" onclick="railVerb('votar')" title="Somete una propuesta a votación">Votar</button>
+                <button class="rail-btn" onclick="railVerb('crear')" title="Genera una imagen">Crear</button>
+                <button class="rail-btn" onclick="railVerb('leer')" title="El Consejo te cuenta el libro del día">Pensar</button>
+                <div class="rail-group">Sistema</div>
+                <a class="rail-btn" href="https://www.admira.live/control/" target="_blank" rel="noopener" title="FleetControl · control de la flota">🖥️ Control</a>
+                <a class="rail-btn" href="/diario.html" title="Diario de Silicio en vivo">📓 Diario</a>
+                <a class="rail-btn" href="https://www.admira.studio/" target="_blank" rel="noopener" title="Abrir ADmiraNeXT Studio">🎬 Demo</a>
+                <button class="rail-btn" onclick="window.toggleDesign&&toggleDesign()" title="Modo diseño (rejilla/reglas)">📐 Diseño</button>
+            </div>
+        </div>
+
+        <script>
+        (function(){
+            var railAuto = true;
+            window.toggleRail = function(id){
+                railAuto = false;
+                var r = document.getElementById(id);
+                if (r) r.classList.toggle('collapsed');
+            };
+            window.railVerb = function(v){
+                try { if (typeof setScummCollapsed === 'function') setScummCollapsed(false); } catch(e){}
+                var b = document.querySelector('.verb-btn[data-verb="' + v + '"]');
+                if (b) b.click();
+            };
+            function fit(){
+                if (!railAuto) return;
+                var narrow = window.innerWidth < 1480;
+                ['rail-opcion','rail-avanzado'].forEach(function(id){
+                    var r = document.getElementById(id);
+                    if (r) r.classList.toggle('collapsed', narrow);
+                });
+            }
+            fit();
+            window.addEventListener('resize', fit);
+        })();
+        </script>
 
         <div class="scumm-bar scumm-collapsed">
             <div class="sentence-line" id="sentence-line"></div>

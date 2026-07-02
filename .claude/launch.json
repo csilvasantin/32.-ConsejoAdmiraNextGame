@@ -1,1 +1,8 @@
-{"version":"0.0.1","configurations":[{"name":"admiranext","runtimeExecutable":"node","runtimeArgs":["src/server.js"],"port":3030},{"name":"static","runtimeExecutable":"python3","runtimeArgs":["-m","http.server","4173"],"port":4173}]}
+{
+  "version": "0.0.1",
+  "configurations": [
+    { "name": "admiranext", "runtimeExecutable": "node", "runtimeArgs": ["src/server.js"], "port": 3030 },
+    { "name": "static", "runtimeExecutable": "python3", "runtimeArgs": ["-m", "http.server", "4173"], "port": 4173 },
+    { "name": "en-que-estamos", "runtimeExecutable": "python3", "runtimeArgs": ["-m", "http.server", "4788", "--directory", "vista-previa"], "port": 4788 }
+  ]
+}

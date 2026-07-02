@@ -667,12 +667,39 @@ function signageIsOn(id){ return !!_stateMap('fleet_signage_on_by_machine')[id];
 function paintToggle(id, action, state){
   const b=document.querySelector('.acts button[data-a="'+action+'"][data-m="'+id+'"]'); if(!b) return;
   if(action==='displaytoggle'){ b.textContent=state?'☀️ encender':'😴 apagar'; b.title=state?'Encender la pantalla (despierta el display dormido)':'Apagar la pantalla (duerme el display)'; b.classList.toggle('off',state); b.classList.toggle('on',!state); }
-  else if(action==='signagetoggle'){ b.textContent=state?'⏹️ parar':'📺 signage'; b.title=state?'Parar el player de digital signage':'Lanzar el player de digital signage (AdmiraSignageMac)'; b.classList.toggle('on',state); b.classList.toggle('off',!state); }
+  else if(action==='signagetoggle'){ b.textContent=state?'⏹️ parar':'📺 signage'; b.title=state?'Parar el player de digital signage':'Lanzar el player de digital signage (AdmiraSignageMac)'; b.classList.toggle('on',state); b.classList.toggle('off',!state); applySignageTitles(); }
 }
 function collapsedMap(){ try{ return JSON.parse(localStorage.getItem('fleet_card_collapsed')||'{}'); }catch(e){ return {}; } }
 // Colapsado POR DEFECTO: si no hay preferencia guardada para esa tarjeta, va colapsada.
 function isCollapsed(id){ const c=collapsedMap(); return (id in c)?!!c[id]:true; }
 function toggleCollapse(id){ const c=collapsedMap(); c[id]=!isCollapsed(id); localStorage.setItem('fleet_card_collapsed', JSON.stringify(c)); const card=document.querySelector('.card[data-card="'+id+'"]'); if(card) card.classList.toggle('collapsed', !!c[id]); }
+
+/* --- tooltip: ultimas versiones del player en admira.tv (lectura en vivo, CORS) --- */
+let PLAYER_VER_TITLE='';
+function applySignageTitles(){
+  if(!PLAYER_VER_TITLE) return;
+  document.querySelectorAll('button[data-a="signagetoggle"]').forEach(function(b){
+    var base=(b.getAttribute('title')||'').split('  ·  admira.tv')[0];
+    b.setAttribute('title', base+'  ·  admira.tv — '+PLAYER_VER_TITLE);
+  });
+}
+async function loadPlayerVersions(){
+  try{
+    var t=await fetch('https://admira.tv/player/',{cache:'no-store'}).then(function(r){return r.text();});
+    function pv(re){ var m=t.match(re); return m?('v.'+m[1]):null; }
+    var win=pv(/win-x64[^'"]*?-v\.([0-9][^'"]*?)\.exe/);
+    var mac=pv(/AdmiraSignageMac[^'"]*?-v\.([0-9][^'"]*?)\.zip/);
+    var lin=pv(/linux-x86_64[^'"]*?-v\.([0-9][^'"]*?)\.AppImage/);
+    var andr=pv(/android[^'"]*?-v\.([0-9][^'"]*?)\.apk/);
+    var parts=[];
+    if(win)parts.push('🪟 Windows '+win);
+    if(mac)parts.push('🍎 macOS '+mac);
+    if(lin)parts.push('🐧 Linux '+lin);
+    if(andr)parts.push('🤖 Android '+andr);
+    if(parts.length){ PLAYER_VER_TITLE='ultimas versiones en admira.tv — '+parts.join('  ·  '); applySignageTitles(); }
+  }catch(e){/* sin conexion a admira.tv: sin tooltip de versiones */}
+}
+try{ loadPlayerVersions(); setInterval(loadPlayerVersions, 1800000); }catch(e){}
 
 function renderCards(ms){
   const el=$('#cards');
@@ -718,6 +745,7 @@ function renderCards(ms){
   ms.forEach(m=>{ if(!shots[m.id]){ setDefaultShot(m.id); } });
   // re-pinta los avisos de captura fallida que ya conocíamos
   ms.forEach(m=>{ if(CAP_FAIL[m.id]) setCapFail(m.id, true); });
+  applySignageTitles();
   paintAllAges(); updateCapHealth();
 }
 

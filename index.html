@@ -2756,7 +2756,21 @@
 .side-rail .legend-chip span{font-size:0.32rem}
 /* Colapsar = ocultar el panel (se re-abre desde el icono del top-bar), como en Control. */
 .side-rail.collapsed{display:none}
-@media (max-width:760px){.side-rail{display:none}}
+/* Backdrop del cajón (solo móvil) */
+.rail-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1190;display:none}
+.rail-backdrop.on{display:block}
+/* En móvil los rieles NO desaparecen: se abren como cajón deslizante sobre la imagen,
+   a toda la altura, desde el icono del top-bar. Colapsados siguen ocultos. */
+@media (max-width:760px){
+  .side-rail{position:fixed;top:0;bottom:0;height:auto!important;width:min(82vw,320px);
+    z-index:1200;overflow-y:auto;box-shadow:0 0 28px rgba(0,0,0,.7);
+    animation:railSlide .18s ease-out}
+  .side-rail.left{left:0;right:auto;order:0}
+  .side-rail.right{right:0;left:auto;order:0}
+  .side-rail.collapsed{display:none}
+  @keyframes railSlide{from{transform:translateX(var(--rail-from,-8%));opacity:.4}to{transform:none;opacity:1}}
+  .side-rail.right{--rail-from:8%}
+}
 </style>
 <style id="home-panel-icons-css">
 /* ════ Iconos de panel (portería SCUMM, idénticos a admira-bar.js) en el top-bar
@@ -2913,7 +2927,8 @@
         </div>
 
         <!-- ════ Barras verticales laterales ════ -->
-        <div class="side-rail left" id="rail-opcion">
+        <div class="rail-backdrop" id="rail-backdrop" onclick="window.closeRails&&window.closeRails()" aria-hidden="true"></div>
+        <div class="side-rail left collapsed" id="rail-opcion">
             <div class="rail-body">
                 <div class="rail-group">Navega</div>
                 <a class="rail-btn" href="https://www.admira.live/equipos" target="_blank" rel="noopener" title="Equipos · asignación de agentes">🏠 AdmiraNeXT</a>
@@ -2929,7 +2944,7 @@
             </div>
         </div>
 
-        <div class="side-rail right" id="rail-avanzado">
+        <div class="side-rail right collapsed" id="rail-avanzado">
             <div class="rail-body">
                 <div class="legend-strip" id="legend-strip">
                     <div class="legend-head">
@@ -2978,11 +2993,27 @@
                 var ai=document.getElementById('pf-ic-avanzado'); if(ai) ai.classList.toggle('on', !railCollapsed('rail-avanzado'));
                 var ei=document.getElementById('pf-ic-experto');  var bar=document.querySelector('.scumm-bar');
                 if(ei && bar) ei.classList.toggle('on', !bar.classList.contains('scumm-collapsed'));
+                // Backdrop del cajón: solo en móvil y solo si hay algún riel abierto.
+                var bd=document.getElementById('rail-backdrop');
+                if(bd){ var anyOpen=(!railCollapsed('rail-opcion')||!railCollapsed('rail-avanzado'));
+                        bd.classList.toggle('on', anyOpen && window.innerWidth<=760); }
+            };
+            // Cierra ambos rieles (lo usa el backdrop del cajón en móvil).
+            window.closeRails = function(){
+                ['rail-opcion','rail-avanzado'].forEach(function(id){
+                    var r=document.getElementById(id); if(r) r.classList.add('collapsed');
+                });
+                window.pfSyncIcons(); sizeRails();
             };
             window.toggleRail = function(id){
                 railAuto = false;
                 var r = document.getElementById(id);
                 if (r) r.classList.toggle('collapsed');
+                // En móvil solo un cajón a la vez: al abrir uno, cierra el otro.
+                if (r && !r.classList.contains('collapsed') && window.innerWidth<=760){
+                    var other = id==='rail-opcion' ? 'rail-avanzado' : 'rail-opcion';
+                    var o=document.getElementById(other); if(o) o.classList.add('collapsed');
+                }
                 window.pfSyncIcons();
                 sizeRails();
             };
@@ -3004,11 +3035,13 @@
                 window.pfSyncIcons();
             };
             function fit(){
+                // Ventanas plegadas por defecto: los rieles arrancan colapsados en
+                // cualquier ancho y solo se abren cuando el usuario pulsa su icono del
+                // top-bar (toggleRail pone railAuto=false y respeta su elección).
                 if (railAuto) {
-                    var narrow = window.innerWidth < 1480;
                     ['rail-opcion','rail-avanzado'].forEach(function(id){
                         var r = document.getElementById(id);
-                        if (r) r.classList.toggle('collapsed', narrow);
+                        if (r) r.classList.add('collapsed');
                     });
                 }
                 window.pfSyncIcons();

@@ -235,10 +235,18 @@ async function renderAgentes(){
   try{
     const r=await fetch('https://admira-telegram.csilvasantin.workers.dev/api/presence',{cache:'no-store'});
     const d=await r.json(); const now=(d.now||(Date.now()/1000))|0;
+    const ONLINE=8*60, STALE=12*3600;
     const byP={}; (d.presence||[]).forEach(p=>{ const k=(p.persona||p.machine||'?'); if(!byP[k]||(p.updated||0)>(byP[k].updated||0)) byP[k]=p; });
-    const list=Object.values(byP).sort((a,b)=>(b.updated||0)-(a.updated||0));
-    if(!list.length){ el.innerHTML='<div class="empty">Sin agentes reportando.</div>'; return; }
-    const ONLINE=8*60; let on=0;
+    // Filtra rancias: fuera los muertos (>12h) y los offline SIN foco (fantasmas de
+    // sesiones viejas). Así el tablero muestra solo agentes activos/recientes con algo que decir.
+    const list=Object.values(byP)
+      .filter(p=>{ const age=now-(p.updated||0);
+        if(age>=STALE) return false;               // rancio/muerto: fuera
+        if(!p.focus && age>=ONLINE) return false;  // offline y sin foco = fantasma: fuera
+        return true; })
+      .sort((a,b)=>(b.updated||0)-(a.updated||0));
+    if(!list.length){ el.innerHTML='<div class="empty">Sin agentes activos ahora mismo.</div>'; return; }
+    let on=0;
     el.innerHTML=list.map(p=>{
       const age=now-(p.updated||0), online=age<ONLINE; if(online) on++;
       const pf=_AGPF[p.persona], av=pf?('/wallpapers/'+pf+'.png'):'';

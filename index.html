@@ -2759,18 +2759,35 @@
 /* Backdrop del cajón (solo móvil) */
 .rail-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1190;display:none}
 .rail-backdrop.on{display:block}
+/* Botón de cierre del cajón (solo visible en móvil, inyectado por JS) */
+.rail-close{display:none}
 /* En móvil los rieles NO desaparecen: se abren como cajón deslizante sobre la imagen,
    a toda la altura, desde el icono del top-bar. Colapsados siguen ocultos. */
 @media (max-width:760px){
-  .side-rail{position:fixed;top:0;bottom:0;height:auto!important;width:min(82vw,320px);
+  .side-rail{position:fixed;top:0;bottom:0;height:auto!important;width:min(86vw,340px);
     z-index:1200;overflow-y:auto;box-shadow:0 0 28px rgba(0,0,0,.7);
-    animation:railSlide .18s ease-out}
+    animation:railSlide .16s ease-out}
   .side-rail.left{left:0;right:auto;order:0}
   .side-rail.right{right:0;left:auto;order:0}
   .side-rail.collapsed{display:none}
   @keyframes railSlide{from{transform:translateX(var(--rail-from,-8%));opacity:.4}to{transform:none;opacity:1}}
   .side-rail.right{--rail-from:8%}
+  /* Texto y targets táctiles legibles dentro del cajón */
+  .side-rail .rail-btn{font-size:0.7rem;padding:0.75rem 0.7rem;min-height:44px;display:flex;align-items:center}
+  .side-rail .rail-group{font-size:0.5rem;padding-top:0.7rem}
+  .side-rail .legend-active{font-size:0.62rem}
+  .side-rail .legend-kicker,.side-rail .legend-focus{font-size:0.5rem}
+  .side-rail .legend-chip{font-size:0.56rem}
+  /* Cabecera del cajón con botón ✕ (pegajosa arriba) */
+  .rail-close{display:flex;align-items:center;justify-content:space-between;position:sticky;top:0;z-index:2;
+    font-family:'Press Start 2P',monospace;font-size:0.5rem;color:#daa520;background:#3a2410;
+    border-bottom:2px solid #2a1a08;padding:0.7rem 0.6rem;letter-spacing:1px;text-transform:uppercase}
+  .rail-close button{appearance:none;border:2px solid #8b5a14;background:#2a1a08;color:#ffdd66;
+    font-family:inherit;font-size:0.7rem;line-height:1;padding:0.35rem 0.55rem;cursor:pointer;box-shadow:2px 2px 0 #000}
+  .rail-close button:hover{border-color:#f0c040;color:#fff}
 }
+/* Bloquea el scroll del fondo mientras el cajón está abierto */
+body.rail-open{overflow:hidden}
 </style>
 <style id="home-panel-icons-css">
 /* ════ Iconos de panel (portería SCUMM, idénticos a admira-bar.js) en el top-bar
@@ -2995,8 +3012,10 @@
                 if(ei && bar) ei.classList.toggle('on', !bar.classList.contains('scumm-collapsed'));
                 // Backdrop del cajón: solo en móvil y solo si hay algún riel abierto.
                 var bd=document.getElementById('rail-backdrop');
-                if(bd){ var anyOpen=(!railCollapsed('rail-opcion')||!railCollapsed('rail-avanzado'));
-                        bd.classList.toggle('on', anyOpen && window.innerWidth<=760); }
+                var anyOpen=(!railCollapsed('rail-opcion')||!railCollapsed('rail-avanzado'));
+                var mob=window.innerWidth<=760;
+                if(bd){ bd.classList.toggle('on', anyOpen && mob); }
+                document.body.classList.toggle('rail-open', anyOpen && mob); // bloquea scroll del fondo
             };
             // Cierra ambos rieles (lo usa el backdrop del cajón en móvil).
             window.closeRails = function(){
@@ -3049,6 +3068,25 @@
             }
             fit();
             window.addEventListener('resize', fit);
+            // ── Afinado del cajón móvil: cabecera ✕, cerrar-al-actuar y Escape ──
+            ['rail-opcion','rail-avanzado'].forEach(function(id){
+                var r=document.getElementById(id); if(!r) return;
+                var body=r.querySelector('.rail-body');
+                if(body && !r.querySelector('.rail-close')){
+                    var head=document.createElement('div'); head.className='rail-close';
+                    head.innerHTML='<span>'+(id==='rail-opcion'?'OPCIÓN':'AVANZADO')+'</span>';
+                    var btn=document.createElement('button'); btn.type='button';
+                    btn.setAttribute('aria-label','Cerrar'); btn.textContent='✕';
+                    btn.addEventListener('click', function(){ window.closeRails(); });
+                    head.appendChild(btn); r.insertBefore(head, body);
+                }
+                // Al tocar una acción del riel en móvil, cierra el cajón para ver la escena.
+                r.addEventListener('click', function(e){
+                    if(window.innerWidth>760) return;
+                    if(e.target.closest && e.target.closest('.rail-btn')) setTimeout(window.closeRails, 60);
+                });
+            });
+            document.addEventListener('keydown', function(e){ if(e.key==='Escape') window.closeRails(); });
             // Mantener el icono «experto» en sync cuando se pliega la barra por su propio botón (scumm-fold).
             window.addEventListener('load', function(){
                 var _ts = window.toggleScumm;

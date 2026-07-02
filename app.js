@@ -656,15 +656,15 @@
         }
 
         document.getElementById("summary").innerHTML = `
-            <div class="summary-item" title="Hackeo" onclick="toggleHack()" style="cursor:pointer">
+            <div class="summary-item">
                 <div class="summary-number green">${onlineCount}</div>
                 <div class="summary-label">Consejeros activos</div>
             </div>
-            <div class="summary-item" title="Control · FleetControl" onclick="window.open('https://www.admira.live/control/','_blank','noopener')" style="cursor:pointer">
+            <div class="summary-item">
                 <div class="summary-number red">${offlineCount}</div>
                 <div class="summary-label">Sin conexión</div>
             </div>
-            <div class="summary-item" title="Diario de Silicio" onclick="location.href='/diario.html'" style="cursor:pointer">
+            <div class="summary-item">
                 <div class="summary-number blue">${totalMachinesOnline}</div>
                 <div class="summary-label">Máquinas online</div>
             </div>

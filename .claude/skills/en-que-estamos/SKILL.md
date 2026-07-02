@@ -18,12 +18,15 @@ gráfico de "en qué estamos"**: el **silicio** (tú, los agentes) lo mantiene a
 
 ## Al invocar `/en-que-estamos`
 
-1. Arranca el preview con la config **`en-que-estamos`** (`preview_start "en-que-estamos"`).
+1. **Identifica la máquina**: ejecuta `sh vista-previa/quien.sh` (escribe `vista-previa/quien.json`
+   con el nombre/OS de ESTE equipo). Así el tablero muestra «Tú: <máquina>» en la cabecera.
+   `quien.json` está en `.gitignore` (es local por-máquina, no se comparte).
+2. Arranca el preview con la config **`en-que-estamos`** (`preview_start "en-que-estamos"`).
    Si `.claude/launch.json` no tuviera la config, créala:
    `{ "name": "en-que-estamos", "runtimeExecutable": "python3", "runtimeArgs": ["-m","http.server","4788","--directory","vista-previa"], "port": 4788 }`.
-2. Si `vista-previa/estado.json` está desactualizado respecto al trabajo real de la sesión,
+3. Si `vista-previa/estado.json` está desactualizado respecto al trabajo real de la sesión,
    **actualízalo** (ver esquema abajo) antes de enseñar el tablero.
-3. Confirma con un `preview_snapshot` que carga y resume al usuario el foco + qué necesita carbono.
+4. Confirma con un `preview_snapshot` que carga y resume al usuario el foco + qué necesita carbono.
 
 ## Mantenerlo vivo (importante)
 

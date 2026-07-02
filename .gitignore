@@ -13,3 +13,6 @@ fleet-control/audit.log
 
 # council-api: log de auditoría del hackeo (runtime)
 hackeo-audit.log
+
+# identidad local por-máquina del tablero Vista Previa (no compartir)
+vista-previa/quien.json

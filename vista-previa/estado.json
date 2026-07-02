@@ -12,7 +12,8 @@
       "FleetControl platform-aware macOS/Linux (acciones + player signage Linux)",
       "Vista Previa en el repo + skill /en-que-estamos (auto-refresco 3s)",
       "Vista Previa publicada en la nube: https://www.admira.live/vista-previa (cero setup, cualquier OS)",
-      "fleet.json con los 16 equipos del tailnet (macOS/Linux/Windows), MagicDNS reales"
+      "fleet.json con los 16 equipos del tailnet (macOS/Linux/Windows), MagicDNS reales",
+      "El tablero identifica al equipo que lo abre («Tú: …») — auto en local (quien.json) o selector en la nube"
     ],
     "encurso": [
       "A la espera de pasos de carbono para activar el hub y cerrar Linux"

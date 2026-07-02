@@ -76,6 +76,22 @@
   .links{display:flex;gap:10px;flex-wrap:wrap}
   #err{display:none;background:rgba(255,107,107,.1);border:1px solid var(--bad);color:#ffd0d0;
     padding:12px 15px;border-radius:12px;font-size:13px;margin-bottom:16px}
+  /* identidad: quién eres (máquina/persona) */
+  .yo{display:flex;align-items:center;gap:7px;font-size:12px;border:1px solid var(--acc2);border-radius:999px;
+    padding:3px 6px 3px 10px;color:var(--ink);background:rgba(122,162,255,.09);cursor:pointer}
+  .yo:hover{background:rgba(122,162,255,.16)}
+  .yo .av{width:20px;height:20px;border-radius:50%;object-fit:cover;border:1px solid var(--line)}
+  .yo b{color:var(--acc2)}
+  .yo small{color:var(--mut);font-family:var(--mono);font-size:10px}
+  .yo .chg{color:var(--mut);font-size:10.5px;border-left:1px solid var(--line);padding-left:7px}
+  #pick{position:fixed;inset:0;background:rgba(5,8,14,.82);display:none;align-items:center;justify-content:center;z-index:50;backdrop-filter:blur(3px)}
+  #pick.on{display:flex}
+  #pick .card2{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:20px 22px;max-width:470px;width:92%}
+  #pick h3{margin:0 0 4px;font-size:17px}
+  #pick p{margin:0 0 14px;color:var(--mut);font-size:12.5px}
+  #pick .list{display:flex;flex-wrap:wrap;gap:8px;max-height:300px;overflow:auto}
+  #pick .list button{background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:8px 11px;font-size:12.5px;cursor:pointer}
+  #pick .list button:hover{border-color:var(--acc2);color:var(--acc2)}
 </style>
 </head>
 <body>
@@ -86,6 +102,7 @@
     <div class="sub">Vista Previa · AdmiraNeXT · silicio ↔ carbono</div>
   </div>
   <span class="spacer"></span>
+  <span class="yo" id="yoChip" title="Quién eres (clic para cambiar)" style="display:none"><img class="av" id="yoAv" alt="" style="display:none"><span id="yoLab">—</span> <small id="yoOs"></small><span class="chg">cambiar</span></span>
   <span class="pill live" id="livePill"><span class="dot"></span>en vivo</span>
   <span class="pill" id="agePill">—</span>
 </header>
@@ -119,6 +136,15 @@
   <span class="spacer"></span>
   <span class="links" id="links"></span>
 </footer>
+
+<div id="pick">
+  <div class="card2">
+    <h3>¿Quién eres?</h3>
+    <p>Elige este equipo para personalizar el tablero. Se recuerda en este navegador. (En el panel local de Claude Code se detecta solo.)</p>
+    <div class="list" id="pickList"></div>
+    <div style="text-align:right;margin-top:12px"><button id="pickClose" style="background:none;border:1px solid var(--line);color:var(--mut);border-radius:9px;padding:6px 12px;cursor:pointer">cerrar</button></div>
+  </div>
+</div>
 
 <script>
 const $=s=>document.querySelector(s);
@@ -175,6 +201,56 @@ async function tick(){
     $('#livePill').className='pill';
   }
 }
+/* ---------- identidad: quién eres (se muestra en la cabecera) ----------
+   Orden de resolución: quien.json (lo escribe el launcher/skill en la máquina
+   local) → ?yo= en la URL → elección guardada en el navegador → selector. */
+const FLOTA=[
+  {id:'macmini',n:'Mac Mini'},{id:'macbookpro16',n:'MacBook Pro 16'},{id:'macbookpronegro14',n:'MacBook Pro Negro 14'},
+  {id:'macbookair16',n:'MacBook Air 16'},{id:'macbookairplata',n:'MacBook Air Plata'},{id:'macbookairrosa',n:'MacBook Air Rosa'},
+  {id:'macbookaircrema',n:'MacBook Air Crema'},{id:'macbookairazul',n:'MacBook Air Luna (Cesar)'},{id:'macbookairluna',n:'MacBook Air Luna'},
+  {id:'macbookairluna1',n:'MacBook Air Luna (2)'},{id:'dgx-spark',n:'DGX Spark'},{id:'thinkstation',n:'ThinkStation PGX'},
+  {id:'asuszenbook',n:'ASUS Zenbook'},{id:'admiratwin',n:'Admira Twin'},{id:'metahuman',n:'MetaHuman PC'},{id:'pc-gdg',n:'PC GdG (Sitges)'}
+];
+let YO=null;
+const _norm=s=>(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
+const _pf={Neo:'Neo',Morfeo:'Morfeo',Trinity:'Trinity','Oráculo':'Oraculo',Oraculo:'Oraculo',Cypher:'Cypher'};
+async function personaDe(nombre){
+  try{
+    const r=await fetch('https://admira-telegram.csilvasantin.workers.dev/api/presence',{cache:'no-store'});
+    const d=await r.json(); const k=_norm(nombre);
+    const hit=(d.presence||[]).slice().sort((a,b)=>b.updated-a.updated).find(p=>_norm(p.machine)===k);
+    return hit?hit.persona:'';
+  }catch(e){ return ''; }
+}
+function paintYo(){
+  const chip=$('#yoChip'); if(!YO){ chip.style.display='none'; return; }
+  chip.style.display='flex';
+  $('#yoLab').innerHTML='Tú: <b>'+String(YO.nombre||YO.maquina||'?').replace(/</g,'&lt;')+'</b>'+(YO.persona?(' · '+YO.persona):'');
+  $('#yoOs').textContent=YO.fuente==='local'?'· auto':'';
+  const av=$('#yoAv'), pf=_pf[YO.persona];
+  if(pf){ av.onerror=()=>{av.style.display='none';}; av.src='/wallpapers/'+pf+'.png'; av.style.display='block'; } else av.style.display='none';
+}
+async function setYo(o, save){
+  YO=o; if(save) localStorage.setItem('vp_yo', JSON.stringify({maquina:o.maquina,nombre:o.nombre,id:o.id}));
+  paintYo();
+  if(!YO.persona && (YO.nombre||YO.maquina)){ const p=await personaDe(YO.nombre||YO.maquina); if(p){ YO.persona=p; paintYo(); } }
+}
+function openPick(){
+  $('#pickList').innerHTML=FLOTA.map(m=>'<button data-id="'+m.id+'" data-n="'+m.n.replace(/"/g,'')+'">'+m.n+'</button>').join('');
+  $('#pick').classList.add('on');
+}
+async function resolveYo(){
+  try{ const r=await fetch('./quien.json?_='+Date.now(),{cache:'no-store'}); if(r.ok){ const q=await r.json(); if(q&&(q.maquina||q.nombre)) return setYo({...q,nombre:q.nombre||q.maquina,fuente:'local'},false); } }catch(e){}
+  const u=new URLSearchParams(location.search).get('yo');
+  if(u){ const m=FLOTA.find(x=>x.id===u||_norm(x.n)===_norm(u)); return setYo({maquina:u,id:m&&m.id,nombre:m?m.n:u,fuente:'url'},true); }
+  try{ const s=JSON.parse(localStorage.getItem('vp_yo')||'null'); if(s&&(s.maquina||s.nombre)) return setYo({...s,nombre:s.nombre||s.maquina,fuente:'guardado'},false); }catch(e){}
+  openPick();
+}
+$('#yoChip').onclick=openPick;
+$('#pickList').onclick=e=>{ const b=e.target.closest('button[data-id]'); if(!b) return; $('#pick').classList.remove('on'); setYo({maquina:b.dataset.id,id:b.dataset.id,nombre:b.dataset.n,fuente:'elegido'},true); };
+$('#pickClose').onclick=()=>$('#pick').classList.remove('on');
+resolveYo();
+
 tick();
 setInterval(tick, 3000);
 </script>

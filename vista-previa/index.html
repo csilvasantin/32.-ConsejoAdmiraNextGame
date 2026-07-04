@@ -166,6 +166,14 @@
   .tl-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px}
   .tl-title{font-family:var(--mono);font-size:11px;letter-spacing:.5px;color:var(--mut);font-weight:800}
   .tl-who{font-family:var(--sans);font-size:13px;font-weight:800;color:var(--ink)}
+  .tl-select{font-family:var(--sans);font-size:13px;font-weight:800;color:var(--ink);background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:8px;padding:3px 26px 3px 9px;cursor:pointer;
+    appearance:none;-webkit-appearance:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M1 3l4 4 4-4' stroke='%238a97ab' stroke-width='1.6' fill='none' stroke-linecap='round'/></svg>");
+    background-repeat:no-repeat;background-position:right 8px center}
+  .tl-select:hover{border-color:var(--acc2)}
+  .tl-select:focus{outline:none;border-color:var(--acc)}
+  .tl-select option{background:#0b1020;color:var(--ink)}
+  .tl-select.tl-hour{font-size:11px;font-weight:600;color:var(--mut)}
   .tl-count{font-family:var(--mono);font-size:10px;color:var(--mut)}
   .tl-dots{margin-left:auto;display:flex;gap:6px;align-items:center}
   .tl-pip{width:7px;height:7px;border-radius:50%;background:var(--line);cursor:pointer;transition:background .2s}
@@ -183,7 +191,9 @@
 <section class="timeline-sec" id="timelineSec" style="display:none">
   <div class="tl-head">
     <span class="tl-title">🕐 LÍNEA DE TIEMPO · HOY</span>
-    <span class="tl-who" id="tlWho">—</span><span class="tl-count" id="tlCount"></span>
+    <select class="tl-select" id="tlAgent" title="Elegir agente"></select>
+    <span class="tl-count" id="tlCount"></span>
+    <select class="tl-select tl-hour" id="tlHour" title="Ir a una hora con actividad"></select>
     <span class="tl-dots" id="tlDots"></span>
   </div>
   <div class="tl-track" id="tlTrack"></div>
@@ -615,17 +625,21 @@ setInterval(tick, 3000);
 })();
 </script>
 <script>
-/* Línea de tiempo de HOY por agente (Diario de Silicio /api/diary). Resume 1 hito
-   significativo por hora; tooltip (title) con el detalle al pasar; rota de agente cada 10s. */
+/* Línea de tiempo de HOY por agente (Diario /api/diary): desplegable de agente + selector de
+   horas con actividad (zoom a la hora elegida). Rota sola cada 10s hasta que el usuario elige algo. */
 (function(){
   var API='https://admira-telegram.csilvasantin.workers.dev/api/diary';
   var RANK={decision:5,avance:4,problema:4,siguiente:3,log:2,resumen:1};
   var COLOR={decision:'#c792ea',avance:'#5bd6c0',problema:'#ff5c5c',siguiente:'#7aa2ff',log:'#8a97ab',resumen:'#ffb454'};
-  var agents=[], idx=0;
+  var agents=[], idx=0, curHour=null, manual=false;
   function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
   function pad(n){ return (n<10?'0':'')+n; }
   function todayStart(){ var d=new Date(); d.setHours(0,0,0,0); return d.getTime()/1000; }
+  function hourOf(e){ return new Date(e.date*1000).getHours(); }
   var sec=document.getElementById('timelineSec');
+  var selA=document.getElementById('tlAgent'), selH=document.getElementById('tlHour');
+  selA.addEventListener('change',function(){ idx=+selA.value; curHour=null; manual=true; fillHours(); render(); });
+  selH.addEventListener('change',function(){ curHour=selH.value===''?null:+selH.value; manual=true; render(); });
   async function load(){
     var entries=[];
     try{ var r=await fetch(API,{cache:'no-store'}); var d=await r.json(); entries=d.entries||[]; }catch(e){ return; }
@@ -633,34 +647,59 @@ setInterval(tick, 3000);
     entries=entries.filter(function(e){ return e.date>=t0 && e.persona && e.persona!=='Diario'; });
     var byp={};
     entries.forEach(function(e){ (byp[e.persona]=byp[e.persona]||[]).push(e); });
+    var prev=agents[idx]?agents[idx].persona:null;
     agents=Object.keys(byp).map(function(p){
       var list=byp[p].sort(function(a,b){return a.date-b.date;});
-      var byh={};
-      list.forEach(function(e){ var h=new Date(e.date*1000).getHours(); var c=byh[h];
+      var byh={}, hset={};
+      list.forEach(function(e){ var h=hourOf(e); hset[h]=1; var c=byh[h];
         if(!c || (RANK[e.kind]||0)>=(RANK[c.kind]||0)) byh[h]=e; });
       var tasks=Object.keys(byh).map(function(k){return byh[k];}).sort(function(a,b){return a.date-b.date;});
-      return {persona:p, tasks:tasks, total:list.length};
+      var hours=Object.keys(hset).map(Number).sort(function(a,b){return a-b;});
+      return {persona:p, tasks:tasks, all:list, hours:hours, total:list.length};
     }).filter(function(a){ return a.tasks.length; })
       .sort(function(a,b){ return b.total-a.total; });
     if(!agents.length){ sec.style.display='none'; return; }
     sec.style.display='';
+    if(prev){ var pi=agents.map(function(a){return a.persona;}).indexOf(prev); if(pi>=0) idx=pi; }
     if(idx>=agents.length) idx=0;
-    render();
+    if(curHour!=null && agents[idx].hours.indexOf(curHour)<0) curHour=null;   // la hora ya no existe
+    fillAgents(); fillHours(); render();
+  }
+  function fillAgents(){
+    selA.innerHTML=agents.map(function(a,i){ return '<option value="'+i+'"'+(i===idx?' selected':'')+'>'+esc(a.persona)+'</option>'; }).join('');
+  }
+  function fillHours(){
+    var a=agents[idx]; if(!a){ selH.innerHTML=''; return; }
+    var opts='<option value="">Todo el día</option>';
+    a.hours.forEach(function(h){
+      var n=a.all.filter(function(e){return hourOf(e)===h;}).length;
+      opts+='<option value="'+h+'"'+(curHour===h?' selected':'')+'>'+pad(h)+':00 ('+n+')</option>';
+    });
+    selH.innerHTML=opts;
   }
   function render(){
-    var a=agents[idx];
-    var mins=a.tasks.map(function(t){ var d=new Date(t.date*1000); return d.getHours()+d.getMinutes()/60; });
-    var now=new Date(); var nh=now.getHours()+now.getMinutes()/60;
-    var hmin=Math.floor(Math.min.apply(null,mins))-0.4;
-    var hmax=Math.ceil(Math.max.apply(null,mins.concat([nh])))+0.4;
-    if(hmax-hmin<3){ hmax=hmin+3; }
+    var a=agents[idx]; if(!a) return;
+    var items, hmin, hmax, zoom=(curHour!=null);
+    if(!zoom){
+      items=a.tasks;                                          // resumen: 1 significativo por hora
+      var mins=items.map(function(t){ var d=new Date(t.date*1000); return d.getHours()+d.getMinutes()/60; });
+      var now=new Date(); var nh=now.getHours()+now.getMinutes()/60;
+      hmin=Math.floor(Math.min.apply(null,mins))-0.4;
+      hmax=Math.ceil(Math.max.apply(null,mins.concat([nh])))+0.4;
+      if(hmax-hmin<3){ hmax=hmin+3; }
+    } else {
+      items=a.all.filter(function(e){ return hourOf(e)===curHour; });   // TODO lo de esa hora
+      hmin=curHour; hmax=curHour+1;
+    }
     var span=hmax-hmin;
     var pos=function(h){ return (h-hmin)/span*100; };
     var html='';
-    for(var h=Math.ceil(hmin); h<=Math.floor(hmax); h++){
-      html+='<div class="tl-tick" style="left:'+pos(h)+'%"><span>'+h+'h</span></div>';
+    if(!zoom){
+      for(var h=Math.ceil(hmin); h<=Math.floor(hmax); h++){ html+='<div class="tl-tick" style="left:'+pos(h)+'%"><span>'+h+'h</span></div>'; }
+    } else {
+      for(var mm=0; mm<=60; mm+=15){ var tot=curHour*60+mm, H=Math.floor(tot/60), M=tot%60; html+='<div class="tl-tick" style="left:'+pos(curHour+mm/60)+'%"><span>'+pad(H)+':'+pad(M)+'</span></div>'; }
     }
-    a.tasks.forEach(function(t,i){
+    items.forEach(function(t){
       var d=new Date(t.date*1000); var hh=pad(d.getHours())+':'+pad(d.getMinutes());
       var hf=d.getHours()+d.getMinutes()/60;
       var txt=t.text.replace(/\s+/g,' ').trim();
@@ -672,27 +711,19 @@ setInterval(tick, 3000);
     });
     var track=document.getElementById('tlTrack');
     track.innerHTML=html;
-    // reparto en carriles verticales: cada marca al primer carril libre (sin solapes)
-    var ms=[].slice.call(track.querySelectorAll('.tl-mark')).sort(function(x,y){
-      return x.getBoundingClientRect().left-y.getBoundingClientRect().left; });
+    var ms=[].slice.call(track.querySelectorAll('.tl-mark')).sort(function(x,y){ return x.getBoundingClientRect().left-y.getBoundingClientRect().left; });
     var tiers=[];
-    ms.forEach(function(m){
-      var r=m.getBoundingClientRect(), ti=0;
-      while(ti<tiers.length && r.left<=tiers[ti]+8) ti++;
-      m.style.top=(5+ti*30)+'px';
-      tiers[ti]=r.right;
-    });
+    ms.forEach(function(mk){ var r=mk.getBoundingClientRect(), ti=0; while(ti<tiers.length && r.left<=tiers[ti]+8) ti++; mk.style.top=(5+ti*30)+'px'; tiers[ti]=r.right; });
     track.style.height=(5+Math.max(1,tiers.length)*30+12)+'px';
-    document.getElementById('tlWho').textContent=a.persona;
     document.getElementById('tlCount').textContent='· '+a.total+(a.total===1?' hito':' hitos')+' hoy';
-    document.getElementById('tlDots').innerHTML=agents.map(function(_,i){
-      return '<span class="tl-pip'+(i===idx?' on':'')+'" data-i="'+i+'"></span>'; }).join('');
+    document.getElementById('tlDots').innerHTML=agents.map(function(_,i){ return '<span class="tl-pip'+(i===idx?' on':'')+'" data-i="'+i+'"></span>'; }).join('');
     Array.prototype.forEach.call(document.querySelectorAll('#tlDots .tl-pip'),function(p){
-      p.addEventListener('click',function(){ idx=+p.dataset.i; render(); }); });
+      p.addEventListener('click',function(){ idx=+p.dataset.i; curHour=null; manual=true; fillAgents(); fillHours(); render(); }); });
+    if(selA.value!==String(idx)) selA.value=String(idx);
   }
   load();
-  setInterval(load, 60000);        // refresca datos cada minuto
-  setInterval(function(){ if(agents.length){ idx=(idx+1)%agents.length; render(); } }, 10000); // rota agente cada 10s
+  setInterval(load, 60000);        // refresca datos cada minuto (respeta la selección manual)
+  setInterval(function(){ if(!manual && agents.length){ idx=(idx+1)%agents.length; fillAgents(); fillHours(); render(); } }, 10000);
 })();
 </script>
 </body>

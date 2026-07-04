@@ -338,7 +338,7 @@ function _tickCD(){
   const now=Date.now()/1000;
   document.querySelectorAll('.ag-mode.pend[data-da]').forEach(el=>{
     const cd=el.querySelector('.ag-cd'); if(!cd) return;
-    const s=Math.round((+el.getAttribute('data-da'))-now);
+    const s=Math.max(0,Math.ceil((+el.getAttribute('data-da'))-now));
     if(s<=0){ el.classList.add('go'); cd.textContent='🟢 decidiendo…'; }
     else { const m=Math.floor(s/60), ss=String(s%60).padStart(2,'0'); cd.textContent='⏱ decido en '+m+':'+ss; }
   });

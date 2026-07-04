@@ -203,6 +203,18 @@
   .ag-count b{color:var(--ink)}
   /* Proyecto en el que anda el agente */
   .ag-project{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--acc2);margin-top:4px}
+  /* Botón "diario del día" + modal */
+  .ag-actions{margin-top:8px}
+  .ag-diary-btn{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--acc);background:transparent;border:1px solid var(--line);border-radius:6px;padding:4px 9px;cursor:pointer}
+  .ag-diary-btn:hover{background:var(--panel2);border-color:var(--acc)}
+  .diary-ov{position:fixed;inset:0;background:rgba(6,9,14,.72);display:none;align-items:center;justify-content:center;z-index:9999;padding:20px}
+  .diary-box{background:var(--panel);border:1px solid var(--line);border-radius:14px;max-width:560px;width:100%;max-height:80vh;display:flex;flex-direction:column;overflow:hidden}
+  .diary-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line);font-size:14px}
+  .diary-x{background:transparent;border:0;color:var(--mut);font-size:18px;cursor:pointer;line-height:1}
+  .diary-body{overflow:auto;padding:8px 16px 14px}
+  .diary-ent{padding:9px 0;border-bottom:1px solid rgba(38,48,63,.5);font-size:13px;line-height:1.4}
+  .diary-kind{font-family:var(--mono);font-size:9px;font-weight:800;text-transform:uppercase;padding:1px 5px;border-radius:4px;background:var(--panel2);color:var(--acc2);margin-right:6px}
+  .diary-empty{color:var(--mut);padding:24px;text-align:center}
 </style>
 <section class="agentes-sec">
   <h2 class="agentes-h">👥 En qué anda cada agente <span class="ag-count" id="agCount"></span></h2>
@@ -334,6 +346,8 @@ async function renderAgentes(){
       const contador='<div class="ag-count">'+(_auto?'🟢':'⚪')+' <b>'+_dec+'</b> por su cuenta'+(_auto?'':' · modo pasivo')+'</div>';
       // Proyecto en el que anda el agente (p.ej. "www.admira.live").
       const proyecto=p.project?'<div class="ag-project">📁 '+_agEsc(p.project)+'</div>':'';
+      // Botón "diario del día" → abre lo que ha hecho el agente hoy (entre handon y handoff).
+      const botones='<div class="ag-actions"><button type="button" class="ag-diary-btn" data-p="'+_agEsc(p.persona||'')+'" data-m="'+_agEsc(p.machine||'')+'">📓 diario del día</button></div>';
       const mine = !!yo && ((yo.persona && p.persona===yo.persona)
         || (yo.maquina && _yoN(p.machine)===_yoN(yo.maquina))
         || (yo.nombre && _yoN(p.machine)===_yoN(yo.nombre)));
@@ -343,7 +357,7 @@ async function renderAgentes(){
         +'<span class="ag-name">'+_agEsc(p.persona||'?')+'</span>'+estado+(mine?'<span class="ag-you">TÚ</span>':'')+'</div>'
         +'<div class="ag-meta">'+_agEsc(p.runtime||'')+' · '+_agEsc(p.machine||'')+' · '+fmtAge2(age)+'</div>'
         +proyecto
-        +'<div class="ag-focus'+(p.focus?'':' none')+'">'+foco+'</div>'+contador+'</div></div>';
+        +'<div class="ag-focus'+(p.focus?'':' none')+'">'+foco+'</div>'+contador+botones+'</div></div>';
     }).join('');
     _tickCD();  // pinta el countdown ya (y cada segundo vía el interval de abajo)
     const c=document.getElementById('agCount'); if(c) c.textContent=on+' online';
@@ -360,6 +374,34 @@ function _tickCD(){
   });
 }
 if(!window._cdTimer) window._cdTimer=setInterval(_tickCD,1000);
+
+// ── Diario del día por agente (botón 📓 en cada ficha) ──────────────────
+async function showDiary(persona, machine){
+  let ov=document.getElementById('diary-ov');
+  if(!ov){ ov=document.createElement('div'); ov.id='diary-ov'; ov.className='diary-ov'; document.body.appendChild(ov);
+    ov.addEventListener('click',e=>{ if(e.target===ov||e.target.classList.contains('diary-x')) ov.style.display='none'; }); }
+  ov.innerHTML='<div class="diary-box"><div class="diary-head"><b>📓 '+_agEsc(persona)+' · '+_agEsc(machine)+' · hoy</b><button class="diary-x" title="cerrar">✕</button></div><div class="diary-body">Cargando…</div></div>';
+  ov.style.display='flex';
+  const body=ov.querySelector('.diary-body');
+  try{
+    const API='https://admira-telegram.csilvasantin.workers.dev';
+    const r=await fetch(API+'/api/diary?persona='+encodeURIComponent(persona)+'&machine='+encodeURIComponent(machine)+'&limit=150',{cache:'no-store'});
+    const d=await r.json();
+    const ents=d.entries||[];
+    const today=new Date().toISOString().slice(0,10).replace(/-/g,'');
+    // Filtra a HOY por el campo date (acepta YYYYMMDD o YYYY-MM-DD); si no casa, muestra las recientes.
+    const norm=s=>String(s||'').replace(/-/g,'').slice(0,8);
+    let use=ents.filter(e=>norm(e.date)===today);
+    if(!use.length) use=ents.slice(0,40);
+    if(!use.length){ body.innerHTML='<div class="diary-empty">Sin entradas de diario todavía.</div>'; return; }
+    body.innerHTML=use.map(e=>'<div class="diary-ent"><span class="diary-kind">'+_agEsc(e.kind||'log')+'</span>'+_agEsc(e.text||'')+'</div>').join('');
+  }catch(err){ body.innerHTML='<div class="diary-empty">No se pudo leer el diario.</div>'; }
+}
+document.addEventListener('click',function(e){
+  const b=e.target.closest && e.target.closest('.ag-diary-btn'); if(!b) return;
+  e.preventDefault();
+  showDiary(b.getAttribute('data-p')||'', b.getAttribute('data-m')||'');
+});
 async function tick(){
   renderAgentes();
   try{

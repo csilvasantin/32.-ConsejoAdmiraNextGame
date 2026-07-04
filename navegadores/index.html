@@ -1,0 +1,149 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <script src="/admira-bar.js?v=scumm2"></script>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Navegadores · AdmiraNext Fleet</title>
+  <style>
+    :root{
+      --bg:#0b0e14;--panel:#131822;--panel2:#1a212e;--line:#26303f;--ink:#e8eef7;--mut:#8a97ab;
+      --acc:#5bd6c0;--acc2:#7aa2ff;--warn:#ffb454;--bad:#ff6b6b;--ok:#5bd6c0;
+      --mono:'SF Mono',ui-monospace,Menlo,Consolas,monospace;--sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+    }
+    *{box-sizing:border-box}
+    html,body{margin:0;min-height:100%}
+    body{background:radial-gradient(120% 90% at 50% 0%,#101622,#0b0e14);color:var(--ink);font-family:var(--sans)}
+    header{display:flex;align-items:center;gap:14px;padding:14px 22px;border-bottom:1px solid var(--line);flex-wrap:wrap}
+    header h1{font-size:17px;margin:0;font-weight:800;letter-spacing:.3px}
+    header h1 .tag{color:var(--acc);font-family:var(--mono)}
+    header .sub{color:var(--mut);font-size:12px}
+    .spacer{flex:1}
+    .clave{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mut)}
+    .clave input{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:6px 9px;font-family:var(--mono);font-size:12px;width:150px}
+    .pill{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:5px 11px;color:var(--mut)}
+    .pill.ok{color:var(--ok);border-color:var(--ok)}
+    .wrap{max-width:1100px;margin:0 auto;padding:22px}
+    .intro{color:var(--mut);font-size:13px;line-height:1.6;margin:0 0 18px;border:1px solid var(--line);border-radius:12px;padding:12px 15px;background:var(--panel)}
+    .intro b{color:var(--ink)}
+    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+    .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:11px}
+    .card .top{display:flex;align-items:center;gap:11px}
+    .card .em{font-size:28px;line-height:1;flex:none}
+    .card .nm{font-weight:700;font-size:15px}
+    .card .os{color:var(--mut);font-size:12px;font-family:var(--mono)}
+    .dot{width:10px;height:10px;border-radius:50%;background:#5a6678;flex:none}
+    .dot.on{background:var(--ok);box-shadow:0 0 9px var(--ok)}
+    .machine-row{display:flex;align-items:center;gap:8px}
+    .machine-row select{flex:1;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:12.5px}
+    .machine-badge{font-weight:700;color:var(--acc2)}
+    .machine-badge.unset{color:var(--warn)}
+    .tab{font-family:var(--mono);font-size:11.5px;color:var(--mut);line-height:1.5;word-break:break-word;border-top:1px solid var(--line);padding-top:9px}
+    .tab a{color:var(--acc);text-decoration:none}
+    .tab .ttl{color:var(--ink);display:block;margin-bottom:2px}
+    .reporter{font-size:10.5px;color:var(--mut);font-family:var(--mono)}
+    .acts{display:flex;flex-wrap:wrap;gap:6px}
+    .acts input{flex:1;min-width:120px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:6px 8px;font-size:12px;font-family:var(--mono)}
+    button{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 11px;font-size:12px;font-weight:600;cursor:pointer}
+    button:hover{border-color:var(--acc)}
+    button.go{border-color:var(--acc2);color:var(--acc2)}
+    .empty{color:var(--mut);text-align:center;padding:40px;border:1px dashed var(--line);border-radius:12px}
+    .foot{color:var(--mut);font-size:11px;text-align:center;margin-top:22px;font-family:var(--mono)}
+    .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--acc);color:var(--ink);padding:9px 15px;border-radius:9px;font-size:12.5px;opacity:0;transition:.25s;pointer-events:none}
+    .toast.show{opacity:1}
+  </style>
+</head>
+<body>
+  <header>
+    <h1>🌐 Navegadores <span class="tag">/fleet</span></h1>
+    <span class="sub">Flota de navegadores Claude-in-Chrome · silicio ↔ carbono</span>
+    <span class="spacer"></span>
+    <span class="pill" id="count">…</span>
+    <span class="clave">🔑 <input id="clave" type="password" placeholder="clave (para actuar)"></span>
+  </header>
+
+  <div class="wrap">
+    <p class="intro">
+      La extensión de Claude se empareja <b>por cuenta</b>: con varias máquinas, todos los
+      navegadores se ven como "locales" y <code>isLocal</code> no distingue de qué equipo físico
+      es cada uno. Aquí cada <b>deviceId</b> (estable) se etiqueta con su máquina real, se ve su
+      pestaña actual y su estado. Etiquetar y actuar requieren la 🔑 clave.
+    </p>
+    <div class="cards" id="cards"><div class="empty">Cargando navegadores…</div></div>
+    <div class="foot" id="foot"></div>
+  </div>
+  <div class="toast" id="toast"></div>
+
+  <script>
+    const WORKER = 'https://admira-navegadores.csilvasantin.workers.dev';
+    const MACHINES = ["Mac Mini","MacBook Pro 16","MacBook Pro Negro 14","MacBook Air 16",
+      "MacBook Air Plata","MacBook Air Rosa","MacBook Air Crema","MacBook Air Luna (Cesar)",
+      "MacBook Air Luna","MacBook Air Luna (2)","DGX Spark","ThinkStation PGX","ASUS Zenbook",
+      "Admira Twin","MetaHuman PC","PC GdG (Sitges)"];
+    const $ = s => document.querySelector(s);
+    const clave = $('#clave');
+    clave.value = localStorage.getItem('nav_clave') || '';
+    clave.onchange = () => localStorage.setItem('nav_clave', clave.value);
+    const toast = (m) => { const t=$('#toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2200); };
+
+    function osEmoji(os){ os=(os||'').toLowerCase(); if(os.includes('mac'))return '💻'; if(os.includes('win'))return '🪟'; if(os.includes('linux'))return '🐧'; return '🖥️'; }
+
+    async function post(path, body){
+      const r = await fetch(WORKER+path,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+clave.value},body:JSON.stringify(body)});
+      if(r.status===401){ toast('🔑 clave incorrecta o vacía'); return null; }
+      return r.json();
+    }
+    async function label(deviceId, machine){ const r=await post('/api/label',{deviceId,machine}); if(r&&r.ok){ toast('✅ etiquetado: '+(machine||'—')); load(); } }
+    async function cmd(deviceId, action, url){ const r=await post('/api/cmd',{deviceId,action,url}); if(r&&r.ok) toast('📤 encolado: '+action+(url?' → '+url:'')+' (lo ejecuta el agente de esa máquina)'); }
+
+    function card(b){
+      const el = document.createElement('div'); el.className='card';
+      const opts = ['<option value="">— sin etiquetar —</option>'].concat(
+        MACHINES.map(m=>`<option ${b.machine===m?'selected':''}>${m}</option>`)).join('');
+      const badge = b.machine ? `<span class="machine-badge">${b.machine}</span>` : `<span class="machine-badge unset">sin etiquetar</span>`;
+      el.innerHTML = `
+        <div class="top">
+          <span class="em">${osEmoji(b.os)}</span>
+          <div style="flex:1;min-width:0">
+            <div class="nm">${b.name||'Browser'} · ${badge}</div>
+            <div class="os">${b.os||'?'} · ${b.deviceId.slice(0,8)}…</div>
+          </div>
+          <span class="dot ${b.online?'on':''}" title="${b.online?'online':'offline'}"></span>
+        </div>
+        <div class="machine-row">
+          <select>${opts}</select>
+        </div>
+        <div class="tab">
+          ${b.tabUrl ? `<span class="ttl">${b.tabTitle||''}</span><a href="${b.tabUrl}" target="_blank">${b.tabUrl}</a>` : '<i>sin pestaña reportada</i>'}
+          <div class="reporter">visto por ${b.reporter?.persona||'?'} @ ${b.reporter?.machine||'?'}</div>
+        </div>
+        <div class="acts">
+          <input placeholder="https://… abrir aquí">
+          <button class="go">Abrir</button>
+          <button data-a="reposo">🛰️ Reposo</button>
+          <button data-a="refrescar">↻</button>
+        </div>`;
+      el.querySelector('select').onchange = e => label(b.deviceId, e.target.value);
+      const urlInput = el.querySelector('.acts input');
+      el.querySelector('button.go').onclick = () => { const u=urlInput.value.trim(); if(u) cmd(b.deviceId,'navigate',u); };
+      el.querySelector('[data-a="reposo"]').onclick = () => cmd(b.deviceId,'navigate','https://www.admira.live/vista-previa/');
+      el.querySelector('[data-a="refrescar"]').onclick = () => cmd(b.deviceId,'reload','');
+      return el;
+    }
+
+    async function load(){
+      try{
+        const d = await (await fetch(WORKER+'/api/browsers')).json();
+        const cards = $('#cards'); cards.innerHTML='';
+        const on = d.browsers.filter(b=>b.online).length;
+        $('#count').textContent = `${on}/${d.browsers.length} online`;
+        $('#count').className = 'pill'+(on?' ok':'');
+        if(!d.browsers.length){ cards.innerHTML='<div class="empty">Ningún navegador reportado todavía.<br>Un agente con la extensión debe reportar (Fase 2: automático).</div>'; }
+        else d.browsers.forEach(b=>cards.appendChild(card(b)));
+        $('#foot').textContent = 'admira-navegadores · actualizado '+new Date(d.ts).toLocaleTimeString('es-ES')+' · auto-refresco 5s';
+      }catch(e){ $('#foot').textContent='error de carga: '+e; }
+    }
+    load(); setInterval(load, 5000);
+  </script>
+</body>
+</html>

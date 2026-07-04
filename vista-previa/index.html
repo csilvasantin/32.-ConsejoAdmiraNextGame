@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>¿En qué estamos? · AdmiraNeXT</title>
 <script src="/admira-bar.js"></script>
+<script src="https://accounts.google.com/gsi/client" async></script>
 <style>
   :root{
     --bg:#0b0e14;--panel:#131822;--panel2:#1a212e;--line:#26303f;--ink:#e8eef7;--mut:#8a97ab;
@@ -33,6 +34,17 @@
   header .sub{color:var(--mut);font-size:12px;font-family:var(--mono)}
   .spacer{flex:1}
   .pill{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:5px 11px;color:var(--mut);font-family:var(--mono)}
+  /* selector de MODO de equipo */
+  #modo-bar{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin:14px 0 0;padding:11px 15px;
+    background:linear-gradient(135deg,rgba(122,162,255,.10),var(--panel));border:1px solid var(--line);border-radius:14px}
+  .modo-lab{font-family:var(--mono);font-size:11px;letter-spacing:.6px;color:var(--mut);font-weight:800}
+  .modo-opt{font-family:var(--sans);font-size:12.5px;font-weight:600;cursor:pointer;color:var(--mut);
+    background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:7px 14px;transition:.12s}
+  .modo-opt:hover{border-color:var(--acc2);color:var(--ink)}
+  .modo-opt.active{background:var(--acc2);border-color:var(--acc2);color:#0b1020;box-shadow:0 0 14px rgba(122,162,255,.4)}
+  .modo-opt.active[data-mode="tu-por-tu-cuenta"]{background:var(--acc);border-color:var(--acc);box-shadow:0 0 14px rgba(91,214,192,.4)}
+  .modo-opt.active[data-mode="trabajando"]{background:var(--warn);border-color:var(--warn);box-shadow:0 0 14px rgba(255,180,84,.4)}
+  .modo-by{margin-left:auto;font-family:var(--mono);font-size:10.5px;color:var(--mut)}
   .pill.live{color:var(--ok);border-color:var(--ok)}
   .pill .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:var(--ok);margin-right:5px;box-shadow:0 0 8px var(--ok);animation:pulse 1.6s infinite}
   @keyframes pulse{50%{opacity:.35}}
@@ -128,6 +140,14 @@
   <span class="pill live" id="livePill"><span class="dot"></span>en vivo</span>
   <span class="pill" id="agePill">—</span>
 </header>
+
+<div id="modo-bar">
+  <span class="modo-lab">🎛️ MODO DE EQUIPO</span>
+  <button type="button" class="modo-opt" data-mode="en-que-andamos">👀 En qué andamos</button>
+  <button type="button" class="modo-opt" data-mode="tu-por-tu-cuenta">🤖 Tú por tu cuenta</button>
+  <button type="button" class="modo-opt" data-mode="trabajando">⚙️ Trabajando</button>
+  <span class="modo-by" id="modoBy" title="quién y cuándo lo fijó"></span>
+</div>
 
 <div id="err">⚠️ No se pudo leer <code>estado.json</code>. ¿Está el servidor sirviendo la carpeta <code>vista-previa/</code>?</div>
 
@@ -380,6 +400,46 @@ setInterval(tick, 3000);
     apply();
   });
   apply();
+})();
+</script>
+<script>
+/* ===== MODO de equipo (estado compartido, worker admira-navegadores) ===== */
+(function(){
+  const MW='https://admira-navegadores.csilvasantin.workers.dev';
+  const CLIENT_ID='861856772040-e1ri6kpu6maagtb6crdfbb923hsaalgb.apps.googleusercontent.com';
+  const LABELS={'en-que-andamos':'👀 En qué andamos','tu-por-tu-cuenta':'🤖 Tú por tu cuenta','trabajando':'⚙️ Trabajando'};
+  const $=s=>document.querySelector(s);
+  function navSession(){ try{ const s=JSON.parse(localStorage.getItem('nav_session')||'null'); return s&&s.exp>Date.now()?s:null; }catch{ return null; } }
+
+  let gisReady=false, pending=null;
+  function initGIS(){
+    if(gisReady) return true;
+    if(!(window.google&&google.accounts&&google.accounts.id)) return false;
+    google.accounts.id.initialize({client_id:CLIENT_ID,auto_select:true,callback:async r=>{
+      try{ const res=await fetch(MW+'/api/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cred:r.credential})});
+        const d=await res.json();
+        if(d.ok){ localStorage.setItem('nav_session',JSON.stringify({token:d.session,email:d.email,exp:d.exp})); if(pending){const f=pending;pending=null;f();} }
+      }catch(e){}
+    }});
+    gisReady=true; return true;
+  }
+  function withSession(fn){ if(navSession()) fn(); else { if(!initGIS()){alert('Google cargando, reintenta');return;} pending=fn; google.accounts.id.prompt(); } }
+
+  async function setMode(mode){
+    withSession(async()=>{
+      const s=navSession();
+      const r=await fetch(MW+'/api/mode',{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+s.token},body:JSON.stringify({mode})});
+      if(r.status===401){ localStorage.removeItem('nav_session'); alert('sesión caducada, reintenta'); return; }
+      paint(await r.json());
+    });
+  }
+  function paint(m){
+    document.querySelectorAll('.modo-opt').forEach(b=>b.classList.toggle('active',b.dataset.mode===m.mode));
+    const by=$('#modoBy'); if(by) by.textContent = m.by&&m.by!=='default' ? ('fijado por '+m.by) : 'por defecto';
+  }
+  async function load(){ try{ paint(await (await fetch(MW+'/api/mode')).json()); }catch(e){} }
+  document.querySelectorAll('.modo-opt').forEach(b=> b.onclick=()=>setMode(b.dataset.mode));
+  load(); setInterval(load, 5000);
 })();
 </script>
 </body>

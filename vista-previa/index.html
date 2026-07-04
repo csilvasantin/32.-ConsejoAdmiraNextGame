@@ -160,13 +160,24 @@
   <div class="bar-lab"><span id="progreso">0</span>% · <span id="estadoGen"></span></div>
 </section>
 
+<section class="agentes-sec">
+  <h2 class="agentes-h">👥 En qué anda cada agente <span class="ag-count" id="agCount"></span></h2>
+  <div class="agentes-grid" id="agentes"><div class="empty">Cargando agentes…</div></div>
+</section>
+
 <section class="grid">
-  <div class="col hecho"><h2>✅ Hecho</h2><ul id="hecho"></ul></div>
-  <div class="col encurso"><h2>🔄 En curso</h2><ul id="encurso"></ul></div>
-  <div class="col siguiente"><h2>⏭️ Siguiente</h2><ul id="siguiente"></ul></div>
+  <div class="col hecho"><h2><span>✅ Hecho</span><span class="col-arrow">▾</span></h2><ul id="hecho"></ul></div>
+  <div class="col encurso"><h2><span>🔄 En curso</span><span class="col-arrow">▾</span></h2><ul id="encurso"></ul></div>
+  <div class="col siguiente"><h2><span>⏭️ Siguiente</span><span class="col-arrow">▾</span></h2><ul id="siguiente"></ul></div>
 </section>
 
 <style id="agentes-css">
+  /* columnas Hecho/En curso/Siguiente plegables con flecha en la esquina */
+  .col>h2{cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .col .col-arrow{font-size:.72em;opacity:.55;transition:transform .2s ease;flex:none}
+  .col>h2:hover .col-arrow{opacity:.9}
+  .col.collapsed .col-arrow{transform:rotate(-90deg)}
+  .col.collapsed>ul{display:none}
   .agentes-sec{margin-bottom:16px}
   .agentes-h{font-size:12px;letter-spacing:.4px;text-transform:uppercase;color:var(--mut);margin:0 0 10px;display:flex;align-items:center;gap:8px}
   .ag-count{color:var(--acc);font-family:var(--mono);font-size:11px}
@@ -221,11 +232,6 @@
   .diary-kind{font-family:var(--mono);font-size:9px;font-weight:800;text-transform:uppercase;padding:1px 5px;border-radius:4px;background:var(--panel2);color:var(--acc2);margin-right:6px}
   .diary-empty{color:var(--mut);padding:24px;text-align:center}
 </style>
-<section class="agentes-sec">
-  <h2 class="agentes-h">👥 En qué anda cada agente <span class="ag-count" id="agCount"></span></h2>
-  <div class="agentes-grid" id="agentes"><div class="empty">Cargando agentes…</div></div>
-</section>
-
 <section class="rows">
   <div class="box carbono"><h2>🙋 Necesita carbono</h2><ul id="carbono"></ul></div>
   <div class="box riesgos"><h2>⚠️ Riesgos abiertos</h2><ul id="riesgos"></ul></div>
@@ -560,6 +566,23 @@ setInterval(tick, 3000);
   async function load(){ try{ paint(await (await fetch(MW+'/api/mode')).json()); }catch(e){} }
   document.querySelectorAll('.modo-opt').forEach(b=> b.onclick=()=>setMode(b.dataset.mode));
   load(); setInterval(load, 5000);
+})();
+</script>
+<script>
+/* Columnas Hecho/En curso/Siguiente: plegables con la flecha de la esquina (persistente) */
+(function(){
+  var KEY='vp_cols_collapsed', saved={};
+  try{ saved=JSON.parse(localStorage.getItem(KEY)||'{}'); }catch(e){}
+  document.querySelectorAll('section.grid .col').forEach(function(col){
+    var m=col.className.match(/\b(hecho|encurso|siguiente)\b/), id=m?m[1]:'';
+    if(saved[id]) col.classList.add('collapsed');
+    var h=col.querySelector('h2');
+    if(h) h.addEventListener('click',function(){
+      col.classList.toggle('collapsed');
+      saved[id]=col.classList.contains('collapsed');
+      try{ localStorage.setItem(KEY,JSON.stringify(saved)); }catch(e){}
+    });
+  });
 })();
 </script>
 </body>

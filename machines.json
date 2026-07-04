@@ -1,6 +1,6 @@
 {
   "team": "AdmiraNext Team",
-  "updatedAt": "2026-06-30T11:37:02.522027Z",
+  "updatedAt": "2026-07-04T18:47:21Z",
   "tailnet": "tail48b61c.ts.net",
   "machines": [
     {
@@ -347,17 +347,33 @@
     {
       "id": "admira-asuszenbook",
       "unitType": "worker",
+      "agentProfile": "agent-node",
+      "capabilities": [
+        "claude-code",
+        "grok-cli",
+        "fleet-presence",
+        "cloudflare-deploy"
+      ],
       "color": "grafito",
       "member": "AsusZenbook",
-      "role": "PC auxiliar Windows",
+      "role": "Nodo de agentes IA (Claude Code + Grok)",
       "name": "ASUS Zenbook",
-      "machineRole": "PC Windows en la tailnet",
+      "machineRole": "PC Windows con agentes de la flota",
       "location": "Barcelona",
       "platform": "Windows",
       "status": "online",
-      "lastSeen": "2026-06-27T14:10:41Z",
-      "currentFocus": "PC Windows operativo en Tailscale (asuszenbook)",
-      "note": "Tailscale: asuszenbook / 100.75.98.87. Windows: el panel lo lista pero no sondea cuenta por SSH (requiere agente).",
+      "lastSeen": "2026-07-04T18:47:21Z",
+      "currentFocus": "Agentes activos: Claude Code (Opus) y Grok CLI = «Agente Smith». Presencia + buzon de la flota via admira-telegram; despliega www.admira.live con wrangler.",
+      "note": "Tailscale: asuszenbook / 100.75.98.87. Sin SSH entrante (sshd no instalado): participa por agentes que salen (heartbeat de presencia + worker de buzon). Node 24 + wrangler instalados: puede desplegar Cloudflare Pages/Workers.",
+      "agents": [
+        { "runtime": "Claude", "product": "Claude Code", "model": "Opus 4.8" },
+        { "runtime": "Grok", "persona": "Smith", "product": "Grok CLI", "avatar": "/wallpapers/Smith.png" }
+      ],
+      "automation": {
+        "enabled": true,
+        "channel": "agents",
+        "mode": "claude-code + grok-worker"
+      },
       "ssh": {
         "enabled": false,
         "user": "csilvasantin",

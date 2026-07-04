@@ -2855,12 +2855,15 @@ body.rail-open{overflow:hidden}
             <button type="button" id="pf-ic-opcion" class="pf-ico" onclick="pfToggle('opcion')" title="Opciones · panel izquierdo" aria-label="Opciones · panel izquierdo">
                 <svg viewBox="0 0 16 14"><rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="1.6" y="1.6" width="4.4" height="10.8" rx="1"/></svg>
             </button>
-            <a href="https://www.admira.live/dashboard.html" target="_blank" class="version-badge" title="Consejo AdmiraNeXT · panel de estado">🏛️ Consejo AdmiraNeXT</a>
+            <!-- Barra idéntica a admira-bar.js (subpáginas) para consistencia — mantener en sync con var TOP -->
+            <a href="https://www.admira.live/" class="version-badge" title="Consejo AdmiraNeXT">🏛️ Consejo AdmiraNeXT <span class="pf-ver">v.2026.07.02.r12</span></a>
+            <a href="https://www.admira.live/dashboard.html" target="_blank" rel="noopener" class="version-badge" title="Dashboard · panel de estado">📊 Dashboard</a>
             <a href="https://www.admira.live/control/" target="_blank" rel="noopener" class="version-badge" title="Control · FleetControl">🖥️ Control</a>
             <a href="https://www.admira.live/navegadores/" class="version-badge" title="Navegadores · flota de navegadores Claude-in-Chrome">🌐 Navegadores</a>
             <a href="https://www.admira.live/telegram" target="_blank" rel="noopener" class="version-badge" title="Telegram · espejo en directo del grupo AdmiraNext">💬 Telegram</a>
             <a href="https://www.admira.live/vista-previa" class="version-badge" title="Misiones · ¿En qué estamos?">🎯 Misiones</a>
             <a href="/diario.html" class="version-badge" title="Diario de Silicio">📓 Diario</a>
+            <a id="home-usuarios" href="https://www.admira.live/usuarios.html" class="version-badge" style="display:none" title="Usuarios · whitelist (solo superusers)">👥 Usuarios</a>
             <div class="summary" id="summary"></div>
             <div class="pf-toggles">
                 <button type="button" id="pf-ic-avanzado" class="pf-ico" onclick="pfToggle('avanzado')" title="Avanzado · panel derecho" aria-label="Avanzado · panel derecho">
@@ -2871,6 +2874,10 @@ body.rail-open{overflow:hidden}
                 </button>
             </div>
         </div>
+        <script>
+        /* «Usuarios» solo para superusers (mismo criterio que admira-bar.js) */
+        (function(){try{var g=JSON.parse(localStorage.getItem('admira_gate')||'null');var e=g&&g.email?String(g.email).toLowerCase():'';if(!e)return;fetch('https://admira-whitelist.csilvasantin.workers.dev/list',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){if(d&&(d.superusers||[]).indexOf(e)>=0){var u=document.getElementById('home-usuarios');if(u)u.style.display='';}}).catch(function(){});}catch(_){}})();
+        </script>
 
         <div class="status-grid" id="status-grid" style="display:none">
             <div class="side-panel racional collapsed" id="panel-racional">

@@ -186,6 +186,12 @@
   /* Resalta cuál eres TÚ (matchea la identidad del tablero) */
   .agente.mine{border-color:var(--acc);background:linear-gradient(180deg,rgba(91,214,192,.10),var(--panel));box-shadow:0 0 0 1px var(--acc) inset}
   .ag-you{font-family:var(--mono);font-size:9px;font-weight:800;letter-spacing:.5px;color:#06231f;background:var(--acc);border-radius:5px;padding:1px 5px;margin-left:2px}
+  .ag-mode{font-family:var(--mono);font-size:9px;font-weight:800;letter-spacing:.4px;border-radius:5px;padding:1px 6px;margin-left:4px;white-space:nowrap}
+  .ag-mode.auto{color:#06231f;background:#39d98a}
+  .ag-mode.pasivo{color:#8a97ab;background:transparent;border:1px solid var(--line)}
+  .ag-mode.pend{color:#3a2a00;background:#ffcf5c;animation:cdpulse 1.4s ease-in-out infinite}
+  .ag-mode.pend.go{background:#39d98a;color:#06231f;animation:none}
+  @keyframes cdpulse{0%,100%{opacity:1}50%{opacity:.55}}
 </style>
 <section class="agentes-sec">
   <h2 class="agentes-h">👥 En qué anda cada agente <span class="ag-count" id="agCount"></span></h2>
@@ -299,19 +305,45 @@ async function renderAgentes(){
       const age=now-(p.updated||0), online=age<ONLINE; if(online) on++;
       const pf=_AGPF[p.persona], av=pf?('/wallpapers/'+pf+'.png'):'';
       const foco=p.focus?_agEsc(p.focus):'sin reportar foco';
+      // Badge de modo per-agente (junto al nombre). Default: Modo pasivo.
+      // autonomo + decisión pendiente (decide_at>ahora) → countdown 5→0 (decidiré al llegar a 0);
+      // autonomo sin pendiente → «🟢 Tú por tu cuenta · N» (N=decisiones tomadas).
+      const _dec=(typeof p.decisions==='number')?p.decisions:0;
+      const _da=(typeof p.decide_at==='number')?p.decide_at:0;
+      const _auto=p.mode==='autonomo';
+      let badge;
+      if(_auto && _da>0){
+        badge='<span class="ag-mode auto pend" data-da="'+_da+'" title="Decidiré solo cuando el contador llegue a 0"><span class="ag-cd">⏱ …</span></span>';
+      } else if(_auto){
+        badge='<span class="ag-mode auto" title="Autonomía activada (Tú por tu cuenta)">🟢 Tú por tu cuenta · '+_dec+'</span>';
+      } else {
+        badge='<span class="ag-mode pasivo" title="Modo pasivo (por defecto)">Modo pasivo</span>';
+      }
       const mine = !!yo && ((yo.persona && p.persona===yo.persona)
         || (yo.maquina && _yoN(p.machine)===_yoN(yo.maquina))
         || (yo.nombre && _yoN(p.machine)===_yoN(yo.nombre)));
       return '<div class="agente'+(online?'':' off')+(mine?' mine':'')+'">'
         +(av?('<img class="ag-av" src="'+av+'" alt="" onerror="this.style.visibility=\'hidden\'">'):'<div class="ag-av"></div>')
         +'<div class="ag-body"><div class="ag-top"><span class="ag-dot '+(online?'on':'off')+'"></span>'
-        +'<span class="ag-name">'+_agEsc(p.persona||'?')+'</span>'+(mine?'<span class="ag-you">TÚ</span>':'')+'</div>'
+        +'<span class="ag-name">'+_agEsc(p.persona||'?')+'</span>'+badge+(mine?'<span class="ag-you">TÚ</span>':'')+'</div>'
         +'<div class="ag-meta">'+_agEsc(p.runtime||'')+' · '+_agEsc(p.machine||'')+' · '+fmtAge2(age)+'</div>'
         +'<div class="ag-focus'+(p.focus?'':' none')+'">'+foco+'</div></div></div>';
     }).join('');
+    _tickCD();  // pinta el countdown ya (y cada segundo vía el interval de abajo)
     const c=document.getElementById('agCount'); if(c) c.textContent=on+' online';
   }catch(e){ if(!el.querySelector('.agente')) el.innerHTML='<div class="empty">No se pudo leer la presencia.</div>'; }
 }
+// Countdown «decido en M:SS» → 0: actualiza cada segundo los badges con decisión pendiente.
+function _tickCD(){
+  const now=Date.now()/1000;
+  document.querySelectorAll('.ag-mode.pend[data-da]').forEach(el=>{
+    const cd=el.querySelector('.ag-cd'); if(!cd) return;
+    const s=Math.round((+el.getAttribute('data-da'))-now);
+    if(s<=0){ el.classList.add('go'); cd.textContent='🟢 decidiendo…'; }
+    else { const m=Math.floor(s/60), ss=String(s%60).padStart(2,'0'); cd.textContent='⏱ decido en '+m+':'+ss; }
+  });
+}
+if(!window._cdTimer) window._cdTimer=setInterval(_tickCD,1000);
 async function tick(){
   renderAgentes();
   try{

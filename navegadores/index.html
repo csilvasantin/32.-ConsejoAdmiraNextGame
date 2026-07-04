@@ -1,8 +1,10 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
+  <script src="/auth-gate.js"></script>
   <script src="/admira-bar.js?v=scumm2"></script>
   <meta charset="UTF-8">
+  <meta name="robots" content="noindex,nofollow">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Navegadores · AdmiraNext Fleet</title>
   <style>
@@ -59,7 +61,7 @@
     <span class="sub">Flota de navegadores Claude-in-Chrome · silicio ↔ carbono</span>
     <span class="spacer"></span>
     <span class="pill" id="count">…</span>
-    <span class="clave">🔑 <input id="clave" type="password" placeholder="clave (para actuar)"></span>
+    <span class="clave" id="whoami" title="sesión Google (auth-gate)">👤 …</span>
   </header>
 
   <div class="wrap">
@@ -67,7 +69,8 @@
       La extensión de Claude se empareja <b>por cuenta</b>: con varias máquinas, todos los
       navegadores se ven como "locales" y <code>isLocal</code> no distingue de qué equipo físico
       es cada uno. Aquí cada <b>deviceId</b> (estable) se etiqueta con su máquina real, se ve su
-      pestaña actual y su estado. Etiquetar y actuar requieren la 🔑 clave.
+      pestaña actual y su estado. Etiquetar y actuar se autorizan con tu <b>usuario de
+      Google</b> (auth-gate) — solo owners.
     </p>
     <div class="cards" id="cards"><div class="empty">Cargando navegadores…</div></div>
     <div class="foot" id="foot"></div>
@@ -81,16 +84,20 @@
       "MacBook Air Luna","MacBook Air Luna (2)","DGX Spark","ThinkStation PGX","ASUS Zenbook",
       "Admira Twin","MetaHuman PC","PC GdG (Sitges)"];
     const $ = s => document.querySelector(s);
-    const clave = $('#clave');
-    clave.value = localStorage.getItem('nav_clave') || '';
-    clave.onchange = () => localStorage.setItem('nav_clave', clave.value);
     const toast = (m) => { const t=$('#toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2200); };
+
+    // sesión Google que deja auth-gate.js en localStorage.admira_gate {email, cred}
+    function gate(){ try{ return JSON.parse(localStorage.getItem('admira_gate')||'null'); }catch{ return null; } }
+    function refreshWho(){ const g=gate(); $('#whoami').textContent = g&&g.email ? '👤 '+g.email : '👤 sin sesión'; }
+    refreshWho();
 
     function osEmoji(os){ os=(os||'').toLowerCase(); if(os.includes('mac'))return '💻'; if(os.includes('win'))return '🪟'; if(os.includes('linux'))return '🐧'; return '🖥️'; }
 
     async function post(path, body){
-      const r = await fetch(WORKER+path,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+clave.value},body:JSON.stringify(body)});
-      if(r.status===401){ toast('🔑 clave incorrecta o vacía'); return null; }
+      const g = gate();
+      if(!g || !g.cred){ toast('👤 inicia sesión con Google (owner) para actuar'); return null; }
+      const r = await fetch(WORKER+path,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+g.cred},body:JSON.stringify(body)});
+      if(r.status===401){ toast('⛔ tu usuario no está autorizado (solo owners)'); return null; }
       return r.json();
     }
     async function label(deviceId, machine){ const r=await post('/api/label',{deviceId,machine}); if(r&&r.ok){ toast('✅ etiquetado: '+(machine||'—')); load(); } }
@@ -132,6 +139,7 @@
     }
 
     async function load(){
+      refreshWho();
       try{
         const d = await (await fetch(WORKER+'/api/browsers')).json();
         const cards = $('#cards'); cards.innerHTML='';

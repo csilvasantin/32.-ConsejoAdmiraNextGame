@@ -194,7 +194,12 @@
   @keyframes cdpulse{0%,100%{opacity:1}50%{opacity:.55}}
   /* Estado del agente (junto al nombre): deciding/busy/idle/offline */
   .ag-state{font-family:var(--mono);font-size:9px;font-weight:800;letter-spacing:.4px;border-radius:5px;padding:1px 6px;margin-left:4px;white-space:nowrap}
-  .ag-state.deciding{color:#3a2a00;background:#ffcf5c;animation:cdpulse 1.4s ease-in-out infinite}
+  .ag-state.deciding{color:#3a2a00;background:#ffcf5c;animation:cdpulse 1.4s ease-in-out infinite;display:inline-flex;align-items:center;gap:3px}
+  /* Botones −/+ para acelerar o retrasar el countdown "Tú por tu cuenta" */
+  .cd-adj{font-family:var(--mono);font-size:11px;font-weight:900;line-height:1;color:#3a2a00;background:rgba(58,42,0,.14);border:0;border-radius:4px;width:15px;height:15px;padding:0;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+  .cd-adj:hover{background:rgba(58,42,0,.3)}
+  .cd-adj:active{transform:scale(.9)}
+  .cd-adj[disabled]{opacity:.4;cursor:progress}
   .ag-state.busy{color:#06231f;background:var(--acc)}
   .ag-state.idle{color:#8a97ab;background:transparent;border:1px solid var(--line)}
   .ag-state.off{color:#6b7688;background:transparent;border:1px solid var(--line)}
@@ -334,7 +339,11 @@ async function renderAgentes(){
       const _auto=p.mode==='autonomo';
       let estado;
       if(_da>now){
-        estado='<span class="ag-state deciding" data-da="'+_da+'" title="Decidiendo — countdown a 0"><span class="ag-cd">⏱ …</span></span>';
+        estado='<span class="ag-state deciding" data-da="'+_da+'" data-p="'+_agEsc(p.persona||'')+'" data-m="'+_agEsc(p.machine||'')+'" title="Decidiendo — countdown a 0">'
+          +'<button type="button" class="cd-adj" data-adj="-60" title="acelerar 1 min">−</button>'
+          +'<span class="ag-cd">⏱ …</span>'
+          +'<button type="button" class="cd-adj" data-adj="60" title="retrasar 1 min">+</button>'
+          +'</span>';
       } else if(!online){
         estado='<span class="ag-state off" title="Desconectado">offline</span>';
       } else if(p.focus){
@@ -374,6 +383,27 @@ function _tickCD(){
   });
 }
 if(!window._cdTimer) window._cdTimer=setInterval(_tickCD,1000);
+
+// Botones −/+ del countdown: acelerar o retrasar la decisión "Tú por tu cuenta" de un
+// agente. Reutiliza el login Google del gate (gateCred) como Bearer del worker admira-telegram.
+async function adjustCD(btn){
+  const badge=btn.closest('.ag-state.deciding'); if(!badge) return;
+  const persona=badge.getAttribute('data-p'), machine=badge.getAttribute('data-m');
+  const delta=parseInt(btn.getAttribute('data-adj'),10)||0;
+  const cred=(typeof gateCred==='function')?gateCred():'';
+  if(!cred){ alert('Inicia sesión con Google en admira.live para ajustar el reloj.'); return; }
+  const twins=badge.querySelectorAll('.cd-adj'); twins.forEach(b=>b.disabled=true);
+  try{
+    const r=await fetch('https://admira-telegram.csilvasantin.workers.dev/api/decide-at',{
+      method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+cred},
+      body:JSON.stringify({persona,machine,delta})});
+    const d=await r.json().catch(()=>({}));
+    if(r.status===401){ alert('Sesión no autorizada para ajustar el reloj.'); return; }
+    if(d&&d.ok&&typeof d.decide_at==='number'){ badge.setAttribute('data-da',d.decide_at); badge.classList.remove('go'); _tickCD(); }
+  }catch(e){ /* red caída: el próximo refresco lo corrige */ }
+  finally{ twins.forEach(b=>b.disabled=false); }
+}
+document.addEventListener('click',e=>{ const b=e.target.closest('.cd-adj'); if(b){ e.preventDefault(); e.stopPropagation(); adjustCD(b); } });
 
 // ── Diario del día por agente (botón 📓 en cada ficha) ──────────────────
 async function showDiary(persona, machine){

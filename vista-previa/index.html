@@ -201,6 +201,8 @@
   /* Contador de decisiones por su cuenta, abajo del todo de la tarjeta */
   .ag-count{font-family:var(--mono);font-size:10px;color:var(--mut);margin-top:8px;padding-top:7px;border-top:1px solid var(--line)}
   .ag-count b{color:var(--ink)}
+  /* Proyecto en el que anda el agente */
+  .ag-project{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--acc2);margin-top:4px}
 </style>
 <section class="agentes-sec">
   <h2 class="agentes-h">👥 En qué anda cada agente <span class="ag-count" id="agCount"></span></h2>
@@ -330,6 +332,8 @@ async function renderAgentes(){
       }
       // Contador de cosas hechas POR SU CUENTA → ABAJO DEL TODO de la tarjeta.
       const contador='<div class="ag-count">'+(_auto?'🟢':'⚪')+' <b>'+_dec+'</b> por su cuenta'+(_auto?'':' · modo pasivo')+'</div>';
+      // Proyecto en el que anda el agente (p.ej. "www.admira.live").
+      const proyecto=p.project?'<div class="ag-project">📁 '+_agEsc(p.project)+'</div>':'';
       const mine = !!yo && ((yo.persona && p.persona===yo.persona)
         || (yo.maquina && _yoN(p.machine)===_yoN(yo.maquina))
         || (yo.nombre && _yoN(p.machine)===_yoN(yo.nombre)));
@@ -338,6 +342,7 @@ async function renderAgentes(){
         +'<div class="ag-body"><div class="ag-top"><span class="ag-dot '+(online?'on':'off')+'"></span>'
         +'<span class="ag-name">'+_agEsc(p.persona||'?')+'</span>'+estado+(mine?'<span class="ag-you">TÚ</span>':'')+'</div>'
         +'<div class="ag-meta">'+_agEsc(p.runtime||'')+' · '+_agEsc(p.machine||'')+' · '+fmtAge2(age)+'</div>'
+        +proyecto
         +'<div class="ag-focus'+(p.focus?'':' none')+'">'+foco+'</div>'+contador+'</div></div>';
     }).join('');
     _tickCD();  // pinta el countdown ya (y cada segundo vía el interval de abajo)

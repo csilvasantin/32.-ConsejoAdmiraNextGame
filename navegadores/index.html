@@ -3,6 +3,7 @@
 <head>
   <script src="/auth-gate.js"></script>
   <script src="/admira-bar.js?v=nav1"></script>
+  <script src="https://accounts.google.com/gsi/client" async></script>
   <meta charset="UTF-8">
   <meta name="robots" content="noindex,nofollow">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -156,21 +157,46 @@
     function expLog(m, cls){ const c=$('#expconsole'); const t=new Date().toLocaleTimeString('es-ES');
       c.innerHTML += `<span class="dim">${t}</span> <span class="${cls||''}">${m}</span>\n`; c.scrollTop=c.scrollHeight; }
 
-    function gate(){ try{ return JSON.parse(localStorage.getItem('admira_gate')||'null'); }catch{ return null; } }
-    function refreshWho(){ const g=gate(); $('#whoami').textContent = g&&g.email ? '👤 '+g.email : '👤 sin sesión'; }
+    // Sesión de backend (24h) canjeada de un token FRESCO de Google — no claves.
+    const CLIENT_ID = "861856772040-e1ri6kpu6maagtb6crdfbb923hsaalgb.apps.googleusercontent.com";
+    function navSession(){ try{ const s=JSON.parse(localStorage.getItem('nav_session')||'null'); return s&&s.exp>Date.now()?s:null; }catch{ return null; } }
+    function refreshWho(){
+      const s=navSession();
+      const w=$('#whoami');
+      if(s){ w.textContent='👤 '+s.email+' ✓'; w.style.cursor='default'; w.title='acciones habilitadas (24h)'; }
+      else { w.textContent='🔓 habilitar acciones'; w.style.cursor='pointer'; w.title='canjea un login Google fresco por sesión de 24h'; }
+    }
+    let gisReady=false;
+    function initGIS(){
+      if(gisReady) return true;
+      if(!(window.google&&google.accounts&&google.accounts.id)) return false;
+      google.accounts.id.initialize({ client_id: CLIENT_ID, auto_select:true, callback: async (resp)=>{
+        try{
+          const r=await fetch(WORKER+'/api/session',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({cred:resp.credential})});
+          const d=await r.json();
+          if(d.ok){ localStorage.setItem('nav_session',JSON.stringify({token:d.session,email:d.email,exp:d.exp})); toast('✅ acciones habilitadas: '+d.email); expLog('sesión habilitada ('+d.email+')','ok'); refreshWho(); if(pendingAct){ const f=pendingAct; pendingAct=null; f(); } }
+          else { toast('⛔ '+(d.error||'no autorizado')); expLog('sesión rechazada','warn'); }
+        }catch(e){ toast('error de sesión'); }
+      }});
+      gisReady=true; return true;
+    }
+    let pendingAct=null;
+    function enableActions(){ if(!initGIS()){ toast('Google aún cargando, reintenta'); return; } google.accounts.id.prompt(); }
     refreshWho();
+    $('#whoami').onclick = () => { if(!navSession()) enableActions(); };
 
     function osEmoji(os){ os=(os||'').toLowerCase(); if(os.includes('mac'))return '💻'; if(os.includes('win'))return '🪟'; if(os.includes('linux'))return '🐧'; return '🖥️'; }
 
+    // Ejecuta `fn` solo si hay sesión; si no, la encola y dispara el login Google fresco.
+    function withSession(fn){ if(navSession()){ fn(); } else { toast('🔓 habilita acciones con Google'); pendingAct=fn; enableActions(); } }
     async function post(path, body){
-      const g = gate();
-      if(!g || !g.cred){ toast('👤 inicia sesión con Google (owner) para actuar'); expLog('acción sin sesión Google','warn'); return null; }
-      const r = await fetch(WORKER+path,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+g.cred},body:JSON.stringify(body)});
-      if(r.status===401){ toast('⛔ tu usuario no está autorizado (solo owners)'); expLog('401 no autorizado','warn'); return null; }
+      const s = navSession(); if(!s) return null;
+      const r = await fetch(WORKER+path,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+s.token},body:JSON.stringify(body)});
+      if(r.status===401){ localStorage.removeItem('nav_session'); refreshWho(); toast('sesión caducada, re-habilita'); expLog('401 sesión caducada','warn'); return null; }
       return r.json();
     }
-    async function label(deviceId, machine){ const r=await post('/api/label',{deviceId,machine}); if(r&&r.ok){ toast('✅ etiquetado: '+(machine||'—')); expLog(`label ${deviceId.slice(0,8)}… → ${machine||'—'}`,'ok'); load(); } }
-    async function cmd(deviceId, action, url){ const r=await post('/api/cmd',{deviceId,action,url}); if(r&&r.ok){ toast('📤 encolado: '+action); expLog(`cmd ${action} ${deviceId.slice(0,8)}… ${url||''} → id ${r.id} (Fase 2: lo ejecuta el agente)`,'ok'); } }
+    function label(deviceId, machine){ withSession(async()=>{ const r=await post('/api/label',{deviceId,machine}); if(r&&r.ok){ toast('✅ etiquetado: '+(machine||'—')); expLog(`label ${deviceId.slice(0,8)}… → ${machine||'—'}`,'ok'); load(); } }); }
+    function cmd(deviceId, action, url){ withSession(async()=>{ const r=await post('/api/cmd',{deviceId,action,url}); if(r&&r.ok){ toast('📤 encolado: '+action); expLog(`cmd ${action} ${deviceId.slice(0,8)}… ${url||''} → id ${r.id} (lo ejecuta el agente executor)`,'ok'); } }); }
 
     let ALL = [];
     function passes(b){

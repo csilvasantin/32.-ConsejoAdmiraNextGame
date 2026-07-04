@@ -307,7 +307,7 @@ async function cargarEstado(){
 }
 // ── En qué anda cada agente (presencia pública + campo focus) ──
 function fmtAge2(s){ s=Math.max(0,s|0); if(s<60)return 'hace '+s+'s'; if(s<3600)return 'hace '+((s/60)|0)+'min'; if(s<86400)return 'hace '+((s/3600)|0)+'h'; return 'hace '+((s/86400)|0)+'d'; }
-const _AGPF={Neo:'Neo',Morfeo:'Morfeo',Trinity:'Trinity','Oráculo':'Oraculo',Oraculo:'Oraculo',Cypher:'Cypher'};
+const _AGPF={Neo:'Neo',Morfeo:'Morfeo',Trinity:'Trinity','Oráculo':'Oraculo',Oraculo:'Oraculo',Cypher:'Cypher',Smith:'Smith'};
 const _agEsc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 async function renderAgentes(){
   const el=document.getElementById('agentes'); if(!el) return;
@@ -460,7 +460,7 @@ const FLOTA=[
 ];
 let YO=null;
 const _norm=s=>(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
-const _pf={Neo:'Neo',Morfeo:'Morfeo',Trinity:'Trinity','Oráculo':'Oraculo',Oraculo:'Oraculo',Cypher:'Cypher'};
+const _pf={Neo:'Neo',Morfeo:'Morfeo',Trinity:'Trinity','Oráculo':'Oraculo',Oraculo:'Oraculo',Cypher:'Cypher',Smith:'Smith'};
 async function personaDe(nombre){
   try{
     const r=await fetch('https://admira-telegram.csilvasantin.workers.dev/api/presence',{cache:'no-store'});

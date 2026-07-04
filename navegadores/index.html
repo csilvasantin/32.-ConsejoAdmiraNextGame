@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
   <script src="/auth-gate.js"></script>
-  <script src="/admira-bar.js?v=scumm2"></script>
+  <script src="/admira-bar.js?v=nav1"></script>
   <meta charset="UTF-8">
   <meta name="robots" content="noindex,nofollow">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -12,23 +12,58 @@
       --bg:#0b0e14;--panel:#131822;--panel2:#1a212e;--line:#26303f;--ink:#e8eef7;--mut:#8a97ab;
       --acc:#5bd6c0;--acc2:#7aa2ff;--warn:#ffb454;--bad:#ff6b6b;--ok:#5bd6c0;
       --mono:'SF Mono',ui-monospace,Menlo,Consolas,monospace;--sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+      --topbar-h:46px; --rail-l:224px; --rail-r:312px; --bottom-h:158px;
     }
     *{box-sizing:border-box}
     html,body{margin:0;min-height:100%}
     body{background:radial-gradient(120% 90% at 50% 0%,#101622,#0b0e14);color:var(--ink);font-family:var(--sans)}
-    header{display:flex;align-items:center;gap:14px;padding:14px 22px;border-bottom:1px solid var(--line);flex-wrap:wrap}
-    header h1{font-size:17px;margin:0;font-weight:800;letter-spacing:.3px}
-    header h1 .tag{color:var(--acc);font-family:var(--mono)}
-    header .sub{color:var(--mut);font-size:12px}
+
+    /* ===== metaestilo cuadrícula (portería): 4 barras + centro scrollable ===== */
+    .porteria{position:relative}
+    .rail{position:fixed;background:var(--panel);z-index:40;overflow:auto;display:flex;flex-direction:column;gap:10px;
+      scrollbar-width:thin;scrollbar-color:var(--line) transparent}
+    .rail::-webkit-scrollbar{width:8px;height:8px}
+    .rail::-webkit-scrollbar-thumb{background:var(--line);border-radius:8px}
+    .rail-left,.rail-right{top:var(--topbar-h);bottom:0;overflow-x:hidden;padding:14px 12px 40px}
+    .rail-left{left:0;width:var(--rail-l);border-right:1px solid var(--line)}
+    .rail-right{right:0;width:var(--rail-r);border-left:1px solid var(--line)}
+    .rail-bottom{left:var(--rail-l);right:var(--rail-r);bottom:0;height:var(--bottom-h);border-top:1px solid var(--line);padding:12px 16px}
+    .rail-hd{font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:var(--mut);font-weight:800;padding:6px 2px 6px;border-bottom:1px solid var(--line)}
+    .stage{margin-left:var(--rail-l);margin-right:var(--rail-r);padding:18px;
+      padding-bottom:calc(var(--bottom-h) + 18px);min-height:calc(100vh - var(--topbar-h))}
+    body.pf-left-off   .rail-left{display:none}
+    body.pf-left-off   .stage{margin-left:0}
+    body.pf-left-off   .rail-bottom{left:0}
+    body.pf-right-off  .rail-right{display:none}
+    body.pf-right-off  .stage{margin-right:0}
+    body.pf-right-off  .rail-bottom{right:0}
+    body.pf-bottom-off .rail-bottom{display:none}
+    body.pf-bottom-off .stage{padding-bottom:18px}
+    @media(max-width:860px){
+      .rail-left,.rail-right,.rail-bottom{position:static;top:auto;bottom:auto;left:auto;right:auto;width:auto;height:auto;border:none;border-bottom:1px solid var(--line)}
+      .stage{margin:0;padding-bottom:18px;min-height:0}
+    }
+
+    /* rail: controles */
+    .rail label{display:flex;align-items:center;gap:8px;font-size:12.5px;color:var(--ink);cursor:pointer}
+    .rail input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc)}
+    .rail input[type=text]{width:100%;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:12.5px}
+    .rail .note{font-size:12px;color:var(--mut);line-height:1.6}
+    .rail .note b{color:var(--ink)}
+    .rail .legend{display:flex;flex-direction:column;gap:6px;font-size:12px;color:var(--mut)}
+    .rail .legend span{display:flex;align-items:center;gap:8px}
+
+    /* stage header */
+    .stage-hd{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:16px}
+    .stage-hd h1{font-size:18px;margin:0;font-weight:800;letter-spacing:.3px}
+    .stage-hd h1 .tag{color:var(--acc);font-family:var(--mono)}
+    .stage-hd .sub{color:var(--mut);font-size:12px}
     .spacer{flex:1}
-    .clave{display:flex;align-items:center;gap:6px;font-size:12px;color:var(--mut)}
-    .clave input{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:6px 9px;font-family:var(--mono);font-size:12px;width:150px}
     .pill{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:5px 11px;color:var(--mut)}
     .pill.ok{color:var(--ok);border-color:var(--ok)}
-    .wrap{max-width:1100px;margin:0 auto;padding:22px}
-    .intro{color:var(--mut);font-size:13px;line-height:1.6;margin:0 0 18px;border:1px solid var(--line);border-radius:12px;padding:12px 15px;background:var(--panel)}
-    .intro b{color:var(--ink)}
-    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(320px,1fr));gap:16px}
+    #whoami{font-size:12px;color:var(--mut);font-family:var(--mono)}
+
+    .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
     .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:11px}
     .card .top{display:flex;align-items:center;gap:11px}
     .card .em{font-size:28px;line-height:1;flex:none}
@@ -49,31 +84,64 @@
     button{background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 11px;font-size:12px;font-weight:600;cursor:pointer}
     button:hover{border-color:var(--acc)}
     button.go{border-color:var(--acc2);color:var(--acc2)}
+    button.wide{width:100%;text-align:center}
     .empty{color:var(--mut);text-align:center;padding:40px;border:1px dashed var(--line);border-radius:12px}
-    .foot{color:var(--mut);font-size:11px;text-align:center;margin-top:22px;font-family:var(--mono)}
-    .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--acc);color:var(--ink);padding:9px 15px;border-radius:9px;font-size:12.5px;opacity:0;transition:.25s;pointer-events:none}
+
+    /* experto: consola */
+    #expconsole{flex:1;min-height:0;overflow-y:auto;font-family:var(--mono);font-size:11px;line-height:1.7;color:var(--mut);
+      background:#0a0d13;border:1px solid var(--line);border-radius:8px;padding:8px 10px;white-space:pre-wrap}
+    #expconsole .ok{color:var(--ok)} #expconsole .warn{color:var(--warn)} #expconsole .dim{color:#5a6678}
+
+    .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--acc);color:var(--ink);padding:9px 15px;border-radius:9px;font-size:12.5px;opacity:0;transition:.25s;pointer-events:none;z-index:99}
     .toast.show{opacity:1}
   </style>
 </head>
 <body>
-  <header>
-    <h1>🌐 Navegadores <span class="tag">/fleet</span></h1>
-    <span class="sub">Flota de navegadores Claude-in-Chrome · silicio ↔ carbono</span>
-    <span class="spacer"></span>
-    <span class="pill" id="count">…</span>
-    <span class="clave" id="whoami" title="sesión Google (auth-gate)">👤 …</span>
-  </header>
+  <div class="porteria">
+    <!-- IZQUIERDA · OPCIONES -->
+    <aside class="rail rail-left">
+      <div class="rail-hd">🔍 Opciones</div>
+      <input type="text" id="fSearch" placeholder="filtrar (máquina, url, id)…">
+      <label><input type="checkbox" id="fOnline"> Solo online</label>
+      <button class="wide" id="btnRefresh">↻ Refrescar ahora</button>
+      <div class="note" id="summary">…</div>
+    </aside>
 
-  <div class="wrap">
-    <p class="intro">
-      La extensión de Claude se empareja <b>por cuenta</b>: con varias máquinas, todos los
-      navegadores se ven como "locales" y <code>isLocal</code> no distingue de qué equipo físico
-      es cada uno. Aquí cada <b>deviceId</b> (estable) se etiqueta con su máquina real, se ve su
-      pestaña actual y su estado. Etiquetar y actuar se autorizan con tu <b>usuario de
-      Google</b> (auth-gate) — solo owners.
-    </p>
-    <div class="cards" id="cards"><div class="empty">Cargando navegadores…</div></div>
-    <div class="foot" id="foot"></div>
+    <!-- DERECHA · AVANZADO -->
+    <aside class="rail rail-right">
+      <div class="rail-hd">🎛️ Avanzado</div>
+      <p class="note">
+        La extensión de Claude se empareja <b>por cuenta</b>: con varias máquinas, todos los
+        navegadores se ven "locales" y <code>isLocal</code> no dice de qué equipo físico es cada
+        uno. Aquí cada <b>deviceId</b> (estable) se etiqueta con su máquina real.
+        Etiquetar/actuar se autorizan con tu <b>usuario de Google</b> (auth-gate, solo owners).
+      </p>
+      <div class="rail-hd">Leyenda</div>
+      <div class="legend">
+        <span><span class="dot on"></span> reportado hace &lt;90s (online)</span>
+        <span><span class="dot"></span> sin reporte reciente</span>
+        <span><span class="machine-badge unset">sin etiquetar</span> falta asignar máquina</span>
+      </div>
+      <button class="wide" id="btnRaw">ver JSON crudo</button>
+    </aside>
+
+    <!-- ABAJO · EXPERTO -->
+    <footer class="rail rail-bottom">
+      <div class="rail-hd">⌨️ Experto · registro de acciones</div>
+      <div id="expconsole"></div>
+    </footer>
+
+    <!-- CENTRO · STAGE -->
+    <main class="stage">
+      <div class="stage-hd">
+        <h1>🌐 Navegadores <span class="tag">/fleet</span></h1>
+        <span class="sub">Flota de navegadores Claude-in-Chrome · silicio ↔ carbono</span>
+        <span class="spacer"></span>
+        <span class="pill" id="count">…</span>
+        <span id="whoami" title="sesión Google (auth-gate)">👤 …</span>
+      </div>
+      <div class="cards" id="cards"><div class="empty">Cargando navegadores…</div></div>
+    </main>
   </div>
   <div class="toast" id="toast"></div>
 
@@ -85,8 +153,9 @@
       "Admira Twin","MetaHuman PC","PC GdG (Sitges)"];
     const $ = s => document.querySelector(s);
     const toast = (m) => { const t=$('#toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2200); };
+    function expLog(m, cls){ const c=$('#expconsole'); const t=new Date().toLocaleTimeString('es-ES');
+      c.innerHTML += `<span class="dim">${t}</span> <span class="${cls||''}">${m}</span>\n`; c.scrollTop=c.scrollHeight; }
 
-    // sesión Google que deja auth-gate.js en localStorage.admira_gate {email, cred}
     function gate(){ try{ return JSON.parse(localStorage.getItem('admira_gate')||'null'); }catch{ return null; } }
     function refreshWho(){ const g=gate(); $('#whoami').textContent = g&&g.email ? '👤 '+g.email : '👤 sin sesión'; }
     refreshWho();
@@ -95,13 +164,21 @@
 
     async function post(path, body){
       const g = gate();
-      if(!g || !g.cred){ toast('👤 inicia sesión con Google (owner) para actuar'); return null; }
+      if(!g || !g.cred){ toast('👤 inicia sesión con Google (owner) para actuar'); expLog('acción sin sesión Google','warn'); return null; }
       const r = await fetch(WORKER+path,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+g.cred},body:JSON.stringify(body)});
-      if(r.status===401){ toast('⛔ tu usuario no está autorizado (solo owners)'); return null; }
+      if(r.status===401){ toast('⛔ tu usuario no está autorizado (solo owners)'); expLog('401 no autorizado','warn'); return null; }
       return r.json();
     }
-    async function label(deviceId, machine){ const r=await post('/api/label',{deviceId,machine}); if(r&&r.ok){ toast('✅ etiquetado: '+(machine||'—')); load(); } }
-    async function cmd(deviceId, action, url){ const r=await post('/api/cmd',{deviceId,action,url}); if(r&&r.ok) toast('📤 encolado: '+action+(url?' → '+url:'')+' (lo ejecuta el agente de esa máquina)'); }
+    async function label(deviceId, machine){ const r=await post('/api/label',{deviceId,machine}); if(r&&r.ok){ toast('✅ etiquetado: '+(machine||'—')); expLog(`label ${deviceId.slice(0,8)}… → ${machine||'—'}`,'ok'); load(); } }
+    async function cmd(deviceId, action, url){ const r=await post('/api/cmd',{deviceId,action,url}); if(r&&r.ok){ toast('📤 encolado: '+action); expLog(`cmd ${action} ${deviceId.slice(0,8)}… ${url||''} → id ${r.id} (Fase 2: lo ejecuta el agente)`,'ok'); } }
+
+    let ALL = [];
+    function passes(b){
+      if($('#fOnline').checked && !b.online) return false;
+      const q = $('#fSearch').value.trim().toLowerCase();
+      if(!q) return true;
+      return [b.machine,b.name,b.os,b.deviceId,b.tabUrl,b.tabTitle].filter(Boolean).join(' ').toLowerCase().includes(q);
+    }
 
     function card(b){
       const el = document.createElement('div'); el.className='card';
@@ -117,9 +194,7 @@
           </div>
           <span class="dot ${b.online?'on':''}" title="${b.online?'online':'offline'}"></span>
         </div>
-        <div class="machine-row">
-          <select>${opts}</select>
-        </div>
+        <div class="machine-row"><select>${opts}</select></div>
         <div class="tab">
           ${b.tabUrl ? `<span class="ttl">${b.tabTitle||''}</span><a href="${b.tabUrl}" target="_blank">${b.tabUrl}</a>` : '<i>sin pestaña reportada</i>'}
           <div class="reporter">visto por ${b.reporter?.persona||'?'} @ ${b.reporter?.machine||'?'}</div>
@@ -138,19 +213,31 @@
       return el;
     }
 
+    function render(){
+      const cards = $('#cards'); cards.innerHTML='';
+      const shown = ALL.filter(passes);
+      const on = ALL.filter(b=>b.online).length;
+      const unlabeled = ALL.filter(b=>!b.machine).length;
+      $('#count').textContent = `${on}/${ALL.length} online`;
+      $('#count').className = 'pill'+(on?' ok':'');
+      $('#summary').innerHTML = `<b>${ALL.length}</b> navegadores · <b>${on}</b> online · <b>${unlabeled}</b> sin etiquetar${shown.length!==ALL.length?` · <b>${shown.length}</b> mostrados`:''}`;
+      if(!ALL.length){ cards.innerHTML='<div class="empty">Ningún navegador reportado todavía.<br>Un agente con la extensión debe reportar (Fase 2: automático).</div>'; return; }
+      if(!shown.length){ cards.innerHTML='<div class="empty">Nada coincide con el filtro.</div>'; return; }
+      shown.forEach(b=>cards.appendChild(card(b)));
+    }
+
     async function load(){
       refreshWho();
       try{
         const d = await (await fetch(WORKER+'/api/browsers')).json();
-        const cards = $('#cards'); cards.innerHTML='';
-        const on = d.browsers.filter(b=>b.online).length;
-        $('#count').textContent = `${on}/${d.browsers.length} online`;
-        $('#count').className = 'pill'+(on?' ok':'');
-        if(!d.browsers.length){ cards.innerHTML='<div class="empty">Ningún navegador reportado todavía.<br>Un agente con la extensión debe reportar (Fase 2: automático).</div>'; }
-        else d.browsers.forEach(b=>cards.appendChild(card(b)));
-        $('#foot').textContent = 'admira-navegadores · actualizado '+new Date(d.ts).toLocaleTimeString('es-ES')+' · auto-refresco 5s';
-      }catch(e){ $('#foot').textContent='error de carga: '+e; }
+        ALL = d.browsers; render();
+      }catch(e){ expLog('error de carga: '+e,'warn'); }
     }
+    $('#fSearch').oninput = render;
+    $('#fOnline').onchange = render;
+    $('#btnRefresh').onclick = () => { expLog('refresco manual','dim'); load(); };
+    $('#btnRaw').onclick = () => window.open(WORKER+'/api/browsers','_blank');
+    expLog('panel listo','dim');
     load(); setInterval(load, 5000);
   </script>
 </body>

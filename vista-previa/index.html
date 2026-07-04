@@ -160,6 +160,35 @@
   <div class="bar-lab"><span id="progreso">0</span>% · <span id="estadoGen"></span></div>
 </section>
 
+<style id="timeline-css">
+  .timeline-sec{margin:0 0 16px;padding:12px 16px 8px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.02);animation:tlfade .45s ease}
+  @keyframes tlfade{from{opacity:.25}to{opacity:1}}
+  .tl-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+  .tl-title{font-family:var(--mono);font-size:11px;letter-spacing:.5px;color:var(--mut);font-weight:800}
+  .tl-who{font-family:var(--sans);font-size:13px;font-weight:800;color:var(--ink)}
+  .tl-count{font-family:var(--mono);font-size:10px;color:var(--mut)}
+  .tl-dots{margin-left:auto;display:flex;gap:6px;align-items:center}
+  .tl-pip{width:7px;height:7px;border-radius:50%;background:var(--line);cursor:pointer;transition:background .2s}
+  .tl-pip.on{background:var(--acc);box-shadow:0 0 8px var(--acc)}
+  .tl-track{position:relative;height:78px;border-top:1px solid var(--line)}
+  .tl-tick{position:absolute;top:0;height:100%;border-left:1px dashed rgba(255,255,255,.055)}
+  .tl-tick span{position:absolute;top:-15px;left:-7px;font-family:var(--mono);font-size:9px;color:var(--mut)}
+  .tl-mark{position:absolute;top:5px;width:130px;transform:translateX(-5px)}
+  .tl-dot{display:block;width:10px;height:10px;border-radius:50%;box-shadow:0 0 8px currentColor;cursor:default}
+  .tl-lab{display:block;font-size:9.5px;line-height:1.2;color:var(--mut);margin-top:3px;max-height:32px;overflow:hidden}
+  .tl-lab b{color:var(--ink);font-weight:700}
+  .tl-mark:hover{z-index:5}
+  .tl-mark:hover .tl-lab{color:var(--ink);max-height:none;background:var(--bg,#0b1020);position:relative;border-radius:6px}
+</style>
+<section class="timeline-sec" id="timelineSec" style="display:none">
+  <div class="tl-head">
+    <span class="tl-title">🕐 LÍNEA DE TIEMPO · HOY</span>
+    <span class="tl-who" id="tlWho">—</span><span class="tl-count" id="tlCount"></span>
+    <span class="tl-dots" id="tlDots"></span>
+  </div>
+  <div class="tl-track" id="tlTrack"></div>
+</section>
+
 <section class="agentes-sec">
   <h2 class="agentes-h">👥 En qué anda cada agente <span class="ag-count" id="agCount"></span></h2>
   <div class="agentes-grid" id="agentes"><div class="empty">Cargando agentes…</div></div>
@@ -583,6 +612,87 @@ setInterval(tick, 3000);
       try{ localStorage.setItem(KEY,JSON.stringify(saved)); }catch(e){}
     });
   });
+})();
+</script>
+<script>
+/* Línea de tiempo de HOY por agente (Diario de Silicio /api/diary). Resume 1 hito
+   significativo por hora; tooltip (title) con el detalle al pasar; rota de agente cada 10s. */
+(function(){
+  var API='https://admira-telegram.csilvasantin.workers.dev/api/diary';
+  var RANK={decision:5,avance:4,problema:4,siguiente:3,log:2,resumen:1};
+  var COLOR={decision:'#c792ea',avance:'#5bd6c0',problema:'#ff5c5c',siguiente:'#7aa2ff',log:'#8a97ab',resumen:'#ffb454'};
+  var agents=[], idx=0;
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function pad(n){ return (n<10?'0':'')+n; }
+  function todayStart(){ var d=new Date(); d.setHours(0,0,0,0); return d.getTime()/1000; }
+  var sec=document.getElementById('timelineSec');
+  async function load(){
+    var entries=[];
+    try{ var r=await fetch(API,{cache:'no-store'}); var d=await r.json(); entries=d.entries||[]; }catch(e){ return; }
+    var t0=todayStart();
+    entries=entries.filter(function(e){ return e.date>=t0 && e.persona && e.persona!=='Diario'; });
+    var byp={};
+    entries.forEach(function(e){ (byp[e.persona]=byp[e.persona]||[]).push(e); });
+    agents=Object.keys(byp).map(function(p){
+      var list=byp[p].sort(function(a,b){return a.date-b.date;});
+      var byh={};
+      list.forEach(function(e){ var h=new Date(e.date*1000).getHours(); var c=byh[h];
+        if(!c || (RANK[e.kind]||0)>=(RANK[c.kind]||0)) byh[h]=e; });
+      var tasks=Object.keys(byh).map(function(k){return byh[k];}).sort(function(a,b){return a.date-b.date;});
+      return {persona:p, tasks:tasks, total:list.length};
+    }).filter(function(a){ return a.tasks.length; })
+      .sort(function(a,b){ return b.total-a.total; });
+    if(!agents.length){ sec.style.display='none'; return; }
+    sec.style.display='';
+    if(idx>=agents.length) idx=0;
+    render();
+  }
+  function render(){
+    var a=agents[idx];
+    var mins=a.tasks.map(function(t){ var d=new Date(t.date*1000); return d.getHours()+d.getMinutes()/60; });
+    var now=new Date(); var nh=now.getHours()+now.getMinutes()/60;
+    var hmin=Math.floor(Math.min.apply(null,mins))-0.4;
+    var hmax=Math.ceil(Math.max.apply(null,mins.concat([nh])))+0.4;
+    if(hmax-hmin<3){ hmax=hmin+3; }
+    var span=hmax-hmin;
+    var pos=function(h){ return (h-hmin)/span*100; };
+    var html='';
+    for(var h=Math.ceil(hmin); h<=Math.floor(hmax); h++){
+      html+='<div class="tl-tick" style="left:'+pos(h)+'%"><span>'+h+'h</span></div>';
+    }
+    a.tasks.forEach(function(t,i){
+      var d=new Date(t.date*1000); var hh=pad(d.getHours())+':'+pad(d.getMinutes());
+      var hf=d.getHours()+d.getMinutes()/60;
+      var txt=t.text.replace(/\s+/g,' ').trim();
+      var short=txt.length>60?txt.slice(0,58)+'…':txt;
+      var title=hh+' · '+t.kind+' · '+txt;
+      html+='<div class="tl-mark" style="left:'+pos(hf)+'%" title="'+esc(title)+'">'
+          + '<span class="tl-dot" style="color:'+(COLOR[t.kind]||'#888')+';background:'+(COLOR[t.kind]||'#888')+'"></span>'
+          + '<span class="tl-lab"><b>'+esc(hh)+'</b> '+esc(short)+'</span></div>';
+    });
+    var track=document.getElementById('tlTrack');
+    track.innerHTML=html;
+    // reparto en carriles verticales: cada marca al primer carril libre (sin solapes)
+    var ms=[].slice.call(track.querySelectorAll('.tl-mark')).sort(function(x,y){
+      return x.getBoundingClientRect().left-y.getBoundingClientRect().left; });
+    var tiers=[];
+    ms.forEach(function(m){
+      var r=m.getBoundingClientRect(), ti=0;
+      while(ti<tiers.length && r.left<=tiers[ti]+8) ti++;
+      m.style.top=(5+ti*30)+'px';
+      tiers[ti]=r.right;
+    });
+    track.style.height=(5+Math.max(1,tiers.length)*30+12)+'px';
+    document.getElementById('tlWho').textContent=a.persona;
+    document.getElementById('tlCount').textContent='· '+a.total+(a.total===1?' hito':' hitos')+' hoy';
+    document.getElementById('tlDots').innerHTML=agents.map(function(_,i){
+      return '<span class="tl-pip'+(i===idx?' on':'')+'" data-i="'+i+'"></span>'; }).join('');
+    Array.prototype.forEach.call(document.querySelectorAll('#tlDots .tl-pip'),function(p){
+      p.addEventListener('click',function(){ idx=+p.dataset.i; render(); }); });
+  }
+  load();
+  setInterval(load, 60000);        // refresca datos cada minuto
+  setInterval(function(){ if(agents.length){ idx=(idx+1)%agents.length; render(); } }, 10000); // rota agente cada 10s
 })();
 </script>
 </body>

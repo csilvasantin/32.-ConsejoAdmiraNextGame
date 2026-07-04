@@ -192,6 +192,15 @@
   .ag-mode.pend{color:#3a2a00;background:#ffcf5c;animation:cdpulse 1.4s ease-in-out infinite}
   .ag-mode.pend.go{background:#39d98a;color:#06231f;animation:none}
   @keyframes cdpulse{0%,100%{opacity:1}50%{opacity:.55}}
+  /* Estado del agente (junto al nombre): deciding/busy/idle/offline */
+  .ag-state{font-family:var(--mono);font-size:9px;font-weight:800;letter-spacing:.4px;border-radius:5px;padding:1px 6px;margin-left:4px;white-space:nowrap}
+  .ag-state.deciding{color:#3a2a00;background:#ffcf5c;animation:cdpulse 1.4s ease-in-out infinite}
+  .ag-state.busy{color:#06231f;background:var(--acc)}
+  .ag-state.idle{color:#8a97ab;background:transparent;border:1px solid var(--line)}
+  .ag-state.off{color:#6b7688;background:transparent;border:1px solid var(--line)}
+  /* Contador de decisiones por su cuenta, abajo del todo de la tarjeta */
+  .ag-count{font-family:var(--mono);font-size:10px;color:var(--mut);margin-top:8px;padding-top:7px;border-top:1px solid var(--line)}
+  .ag-count b{color:var(--ink)}
 </style>
 <section class="agentes-sec">
   <h2 class="agentes-h">👥 En qué anda cada agente <span class="ag-count" id="agCount"></span></h2>
@@ -305,29 +314,31 @@ async function renderAgentes(){
       const age=now-(p.updated||0), online=age<ONLINE; if(online) on++;
       const pf=_AGPF[p.persona], av=pf?('/wallpapers/'+pf+'.png'):'';
       const foco=p.focus?_agEsc(p.focus):'sin reportar foco';
-      // Badge de modo per-agente (junto al nombre). Default: Modo pasivo.
-      // autonomo + decisión pendiente (decide_at>ahora) → countdown 5→0 (decidiré al llegar a 0);
-      // autonomo sin pendiente → «🟢 Tú por tu cuenta · N» (N=decisiones tomadas).
+      // ESTADO actual del agente, JUNTO AL NOMBRE: deciding > offline > busy > idle.
       const _dec=(typeof p.decisions==='number')?p.decisions:0;
       const _da=(typeof p.decide_at==='number')?p.decide_at:0;
       const _auto=p.mode==='autonomo';
-      let badge;
-      if(_auto && _da>0){
-        badge='<span class="ag-mode auto pend" data-da="'+_da+'" title="Decidiré solo cuando el contador llegue a 0"><span class="ag-cd">⏱ …</span></span>';
-      } else if(_auto){
-        badge='<span class="ag-mode auto" title="Autonomía activada (Tú por tu cuenta)">🟢 Tú por tu cuenta · '+_dec+'</span>';
+      let estado;
+      if(_da>now){
+        estado='<span class="ag-state deciding" data-da="'+_da+'" title="Decidiendo — countdown a 0"><span class="ag-cd">⏱ …</span></span>';
+      } else if(!online){
+        estado='<span class="ag-state off" title="Desconectado">offline</span>';
+      } else if(p.focus){
+        estado='<span class="ag-state busy" title="Trabajando en algo">busy</span>';
       } else {
-        badge='<span class="ag-mode pasivo" title="Modo pasivo (por defecto)">Modo pasivo</span>';
+        estado='<span class="ag-state idle" title="Conectado, sin tarea activa">idle</span>';
       }
+      // Contador de cosas hechas POR SU CUENTA → ABAJO DEL TODO de la tarjeta.
+      const contador='<div class="ag-count">'+(_auto?'🟢':'⚪')+' <b>'+_dec+'</b> por su cuenta'+(_auto?'':' · modo pasivo')+'</div>';
       const mine = !!yo && ((yo.persona && p.persona===yo.persona)
         || (yo.maquina && _yoN(p.machine)===_yoN(yo.maquina))
         || (yo.nombre && _yoN(p.machine)===_yoN(yo.nombre)));
       return '<div class="agente'+(online?'':' off')+(mine?' mine':'')+'">'
         +(av?('<img class="ag-av" src="'+av+'" alt="" onerror="this.style.visibility=\'hidden\'">'):'<div class="ag-av"></div>')
         +'<div class="ag-body"><div class="ag-top"><span class="ag-dot '+(online?'on':'off')+'"></span>'
-        +'<span class="ag-name">'+_agEsc(p.persona||'?')+'</span>'+badge+(mine?'<span class="ag-you">TÚ</span>':'')+'</div>'
+        +'<span class="ag-name">'+_agEsc(p.persona||'?')+'</span>'+estado+(mine?'<span class="ag-you">TÚ</span>':'')+'</div>'
         +'<div class="ag-meta">'+_agEsc(p.runtime||'')+' · '+_agEsc(p.machine||'')+' · '+fmtAge2(age)+'</div>'
-        +'<div class="ag-focus'+(p.focus?'':' none')+'">'+foco+'</div></div></div>';
+        +'<div class="ag-focus'+(p.focus?'':' none')+'">'+foco+'</div>'+contador+'</div></div>';
     }).join('');
     _tickCD();  // pinta el countdown ya (y cada segundo vía el interval de abajo)
     const c=document.getElementById('agCount'); if(c) c.textContent=on+' online';
@@ -336,7 +347,7 @@ async function renderAgentes(){
 // Countdown «decido en M:SS» → 0: actualiza cada segundo los badges con decisión pendiente.
 function _tickCD(){
   const now=Date.now()/1000;
-  document.querySelectorAll('.ag-mode.pend[data-da]').forEach(el=>{
+  document.querySelectorAll('.ag-state.deciding[data-da]').forEach(el=>{
     const cd=el.querySelector('.ag-cd'); if(!cd) return;
     const s=Math.max(0,Math.ceil((+el.getAttribute('data-da'))-now));
     if(s<=0){ el.classList.add('go'); cd.textContent='🟢 decidiendo…'; }

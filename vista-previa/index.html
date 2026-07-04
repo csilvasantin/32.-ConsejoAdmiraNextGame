@@ -160,6 +160,24 @@
   <div class="bar-lab"><span id="progreso">0</span>% · <span id="estadoGen"></span></div>
 </section>
 
+<style id="dormias-css">
+  .dormias{margin:0 0 16px;padding:13px 16px;border:1px solid var(--acc2);border-radius:14px;
+    background:linear-gradient(135deg,rgba(122,162,255,.12),rgba(255,255,255,.02));animation:tlfade .5s ease}
+  .dormias-h{display:flex;align-items:center;gap:9px;flex-wrap:wrap;font-family:var(--sans);font-size:14px;font-weight:800;color:var(--ink)}
+  .dormias-h .lapso{font-family:var(--mono);font-size:11px;font-weight:600;color:var(--mut)}
+  .dormias-h .cerrar{margin-left:auto;cursor:pointer;color:var(--mut);border:1px solid var(--line);border-radius:8px;padding:2px 8px;font-size:12px}
+  .dormias-h .cerrar:hover{color:var(--ink);border-color:var(--acc2)}
+  .dormias-list{margin:10px 0 0;padding:0;list-style:none;display:flex;flex-direction:column;gap:6px}
+  .dormias-list li{font-size:12.5px;line-height:1.35;color:var(--mut);padding-left:18px;position:relative}
+  .dormias-list li b{color:var(--ink);font-weight:700}
+  .dormias-list li::before{content:'·';position:absolute;left:5px;color:var(--acc)}
+</style>
+<section class="dormias" id="dormias" style="display:none">
+  <div class="dormias-h">🌙 <span>Mientras no estabas</span><span class="lapso" id="dormiasLapso"></span>
+    <span class="cerrar" id="dormiasCerrar">✕</span></div>
+  <ul class="dormias-list" id="dormiasList"></ul>
+</section>
+
 <style id="timeline-css">
   .timeline-sec{margin:0 0 16px;padding:12px 16px 8px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.02);animation:tlfade .45s ease}
   @keyframes tlfade{from{opacity:.25}to{opacity:1}}
@@ -733,6 +751,38 @@ setInterval(tick, 3000);
   load();
   setInterval(load, 60000);        // refresca datos cada minuto (respeta la selección manual)
   setInterval(function(){ if(!manual && agents.length){ idx=(idx+1)%agents.length; fillAgents(); fillHours(); render(); } }, 10000);
+})();
+</script>
+<script>
+/* "Mientras no estabas" — al volver tras un rato fuera, resume lo que la flota hizo desde tu
+   último acceso (Diario /api/diary). Guarda el último acceso en localStorage. Se cierra con la ✕. */
+(function(){
+  var API='https://admira-telegram.csilvasantin.workers.dev/api/diary';
+  var KEY='vp_last_visit';
+  var AGENTS_KIND={decision:1,avance:1,problema:1,siguiente:1};   // hitos con sustancia
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function pad(n){ return (n<10?'0':'')+n; }
+  var sec=document.getElementById('dormias');
+  document.getElementById('dormiasCerrar').addEventListener('click',function(){ sec.style.display='none'; });
+  async function run(){
+    var now=Math.floor(Date.now()/1000);
+    var last=parseInt(localStorage.getItem(KEY)||'0',10)||0;
+    localStorage.setItem(KEY, String(now));                       // marca este acceso
+    if(!last || (now-last)<1800) return;                          // primera vez o <30min fuera → nada
+    var entries=[];
+    try{ var r=await fetch(API,{cache:'no-store'}); entries=(await r.json()).entries||[]; }catch(e){ return; }
+    var since=entries.filter(function(e){ return e.date>last && e.date<=now && e.persona && e.persona!=='Diario' && AGENTS_KIND[e.kind]; });
+    if(!since.length) return;
+    since.sort(function(a,b){return b.date-a.date;});
+    var d=new Date(last*1000);
+    document.getElementById('dormiasLapso').textContent='· '+since.length+' hitos desde las '+pad(d.getHours())+':'+pad(d.getMinutes());
+    document.getElementById('dormiasList').innerHTML=since.slice(0,6).map(function(e){
+      var t=e.text.replace(/\s+/g,' ').trim(); if(t.length>110) t=t.slice(0,108)+'…';
+      return '<li><b>'+esc(e.persona)+'</b> · '+esc(t)+'</li>';
+    }).join('');
+    sec.style.display='';
+  }
+  run();
 })();
 </script>
 </body>

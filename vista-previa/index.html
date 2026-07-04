@@ -245,6 +245,11 @@
   /* Estado del agente (junto al nombre): deciding/busy/idle/offline */
   .ag-state{font-family:var(--mono);font-size:9px;font-weight:800;letter-spacing:.4px;border-radius:5px;padding:1px 6px;margin-left:4px;white-space:nowrap}
   .ag-state.deciding{color:#3a2a00;background:#ffcf5c;animation:cdpulse 1.4s ease-in-out infinite;display:inline-flex;align-items:center;gap:3px}
+  /* Color del countdown según se acerca la decisión: >2min rojo · 1-2min ámbar · <1min verde */
+  .ag-state.deciding.cd-red{background:#ff5c5c;color:#2b0000}
+  .ag-state.deciding.cd-amber{background:#ffcf5c;color:#3a2a00}
+  .ag-state.deciding.cd-green{background:#39d98a;color:#06231f}
+  .ag-state.deciding.go{background:#39d98a;color:#06231f}
   /* Botones −/+ para acelerar o retrasar el countdown "Tú por tu cuenta" */
   .cd-adj{font-family:var(--mono);font-size:11px;font-weight:900;line-height:1;color:#3a2a00;background:rgba(58,42,0,.14);border:0;border-radius:4px;width:15px;height:15px;padding:0;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
   .cd-adj:hover{background:rgba(58,42,0,.3)}
@@ -423,8 +428,12 @@ function _tickCD(){
   document.querySelectorAll('.ag-state.deciding[data-da]').forEach(el=>{
     const cd=el.querySelector('.ag-cd'); if(!cd) return;
     const s=Math.max(0,Math.ceil((+el.getAttribute('data-da'))-now));
+    el.classList.remove('cd-red','cd-amber','cd-green');
     if(s<=0){ el.classList.add('go'); cd.textContent='🟢 decidiendo…'; }
-    else { const m=Math.floor(s/60), ss=String(s%60).padStart(2,'0'); cd.textContent='⏱ decido en '+m+':'+ss; }
+    else {
+      const m=Math.floor(s/60), ss=String(s%60).padStart(2,'0'); cd.textContent='⏱ decido en '+m+':'+ss;
+      el.classList.add(s>120?'cd-red':(s>60?'cd-amber':'cd-green'));  // >2min rojo · 1-2min ámbar · <1min verde
+    }
   });
 }
 if(!window._cdTimer) window._cdTimer=setInterval(_tickCD,1000);

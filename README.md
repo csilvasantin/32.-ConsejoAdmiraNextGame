@@ -101,6 +101,14 @@ ConsejoAdmiraNextGame/
 
 ---
 
+## Nodos
+
+Flota AdmiraNext en Tailscale (`tail48b61c`). Estado operativo en [`machines.json`](machines.json) y panel [admira.live/control](https://www.admira.live/control/).
+
+- **AsusZenbook** — corre **Claude Code** + **Grok CLI** (Agente Smith).
+
+---
+
 ## Ecosistema AdmiraNext
 
 | Proyecto | Descripción |

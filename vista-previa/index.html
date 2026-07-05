@@ -300,13 +300,14 @@
       box.innerHTML=html||'<div class="empty">Sin tareas en el tablero.</div>';
     }).catch(function(){});
   }
+  function note(msg){ var s=document.getElementById('tabCount'); if(s) s.textContent='· '+msg; console.log('[tablero]', msg); }
   function update(id, patch){
-    var c=cred(); if(!c){ alert('Entra con Google (arriba a la derecha) para editar el tablero.'); return; }
+    var c=cred(); if(!c){ note('entra con Google para editar'); return; }
     var body=Object.assign({id:+id}, patch);
     fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+c},body:JSON.stringify(body)})
-      .then(function(r){return r.json().catch(function(){return{};});})
-      .then(function(d){ if(d&&d.ok){ load(); } else { alert('No se pudo actualizar: '+((d&&d.error)||'error')); } })
-      .catch(function(){ alert('Error de red al actualizar la tarea.'); });
+      .then(function(r){return r.json().catch(function(){return{};}).then(function(d){return {s:r.status,d:d};});})
+      .then(function(o){ if(o.d&&o.d.ok){ note('#'+id+' actualizada ✓'); load(); } else { note('error '+o.s+': '+((o.d&&o.d.error)||'?')); } })
+      .catch(function(){ note('error de red'); });
   }
   var tl=document.getElementById('tabList');
   if(tl) tl.addEventListener('click',function(e){

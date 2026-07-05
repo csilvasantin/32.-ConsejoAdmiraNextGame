@@ -1,4 +1,4 @@
-import importlib, sys, os
+import importlib.util, sys, os  # importlib.util NO se carga con 'import importlib' a secas → AttributeError en Render
 
 # Render entry point — council-api.py has a hyphen so can't be imported directly
 sys.path.insert(0, os.path.dirname(__file__))

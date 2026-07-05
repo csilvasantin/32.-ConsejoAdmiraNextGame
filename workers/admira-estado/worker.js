@@ -112,6 +112,31 @@ export default {
       }
       return json({ error: 'método no permitido' }, 405, origin);
     }
+    // ── Proxy de escritura al TABLERO DE TAREAS de la flota (worker admira-telegram
+    //    /api/tasks de Neo). Mantiene la PANEL_KEY SERVER-SIDE: el panel (Misiones) y el
+    //    helpdesk llaman aquí con la gate cred del superuser, y este worker reenvía a
+    //    admira-telegram con la key. Así los botones take/doing/done y "abrir incidencia"
+    //    funcionan sin exponer ningún secreto en el JS de cliente. ──
+    if (url.pathname === '/task-update' || url.pathname === '/task-create') {
+      const who = await authed(req, env);
+      if (!who) return json({ error: 'no autorizado (inicia sesión Google)' }, 401, origin);
+      if (req.method !== 'POST') return json({ error: 'método no permitido' }, 405, origin);
+      if (!env.TASKS_PANEL_KEY) return json({ error: 'proxy sin TASKS_PANEL_KEY' }, 500, origin);
+      let body;
+      try { body = await req.json(); } catch (e) { return json({ error: 'JSON inválido' }, 400, origin); }
+      const target = url.pathname === '/task-create' ? '/api/tasks' : '/api/tasks/update';
+      try {
+        const r = await fetch('https://admira-telegram.csilvasantin.workers.dev' + target, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + env.TASKS_PANEL_KEY },
+          body: JSON.stringify(body || {}),
+          signal: AbortSignal.timeout(8000)
+        });
+        const d = await r.json().catch(() => ({}));
+        return json({ ...d, by: who }, r.status, origin);
+      } catch (e) { return json({ error: 'fallo al reenviar al backend de tareas' }, 502, origin); }
+    }
+
     return json({ error: 'no encontrado' }, 404, origin);
   }
 };

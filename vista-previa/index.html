@@ -247,36 +247,50 @@
   .tab-st.doing{color:#06231f;background:var(--acc)}
   .tab-st.blocked{color:#2b0000;background:#ff5c5c}
   .tab-st.done{color:#06231f;background:#39d98a}
+  .tab-acts{display:flex;gap:4px;flex:0 0 auto;margin-left:2px}
+  .tab-b{background:#0a0f18;border:1px solid var(--line);color:var(--mut);border-radius:6px;width:24px;height:22px;font-size:12px;line-height:1;cursor:pointer;padding:0;display:flex;align-items:center;justify-content:center}
+  .tab-b:hover{color:var(--acc);border-color:var(--acc)}
+  .tab-b.take:hover{color:var(--carbono);border-color:var(--carbono)}
 </style>
 <section class="tablero" id="tablero">
   <h2 class="tablero-h">📋 Tablero de tareas de la flota <span class="tab-count" id="tabCount"></span></h2>
   <div class="tab-list" id="tabList"><div class="empty">Cargando tareas…</div></div>
 </section>
 <script>
-/* Tablero de tareas de la flota (fuente única: worker admira-telegram /api/tasks, montado por
-   Neo). Lectura: pinta quién hace qué, resalta las mías. La escritura (take/doing/done) se
-   añadirá cuando Neo pase los endpoints. */
+/* Tablero de tareas de la flota. LECTURA: /api/tasks (fuente única de Neo). ESCRITURA:
+   botones take/doing/done → proxy admira-estado /task-update (verifica el gate de Google y
+   reenvía al backend con la key SERVER-SIDE). Sin exponer secretos en el JS de cliente. */
 (function(){
   var API='https://admira-telegram.csilvasantin.workers.dev/api/tasks';
+  var PROXY='https://admira-estado.csilvasantin.workers.dev/task-update';
   var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});};
   function yoName(){ try{ return (typeof YO!=='undefined'&&YO&&YO.persona)?YO.persona:''; }catch(e){ return ''; } }
+  function cred(){ try{ return (typeof gateCred==='function')?gateCred():''; }catch(e){ return ''; } }
   function load(){
     fetch(API,{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){
       var box=document.getElementById('tabList'); if(!box) return;
       var ts=(d&&d.tasks)||[];
       var order={doing:0,blocked:1,todo:2,done:3};
       ts.sort(function(a,b){ var oa=order[a.status]==null?9:order[a.status], ob=order[b.status]==null?9:order[b.status]; return oa-ob || (a.id-b.id); });
-      var yo=yoName();
+      var yo=yoName(), canW=!!cred();
       var open=ts.filter(function(t){return t.status!=='done';});
-      var c=document.getElementById('tabCount'); if(c) c.textContent='· '+open.length+' abiertas';
+      var c=document.getElementById('tabCount'); if(c) c.textContent='· '+open.length+' abiertas'+(canW?'':' · entra con Google para editar');
       if(!ts.length){ box.innerHTML='<div class="empty">Sin tareas en el tablero.</div>'; return; }
+      var acts=function(t){
+        if(!canW) return '';
+        var b='<div class="tab-acts">';
+        if(t.status!=='doing') b+='<button class="tab-b" data-id="'+t.id+'" data-st="doing" title="Marcar en curso">▶</button>';
+        if(t.status!=='done') b+='<button class="tab-b" data-id="'+t.id+'" data-st="done" title="Marcar hecha">✓</button>';
+        b+='<button class="tab-b take" data-id="'+t.id+'" data-take="1" title="Asignármela y ponerla en curso">🙋</button>';
+        return b+'</div>';
+      };
       var row=function(t){
         var mine=yo&&t.assignee===yo, st=(t.status||'todo');
         return '<div class="tab-row'+(mine?' mine':'')+'" title="'+esc(t.detail||'')+'">'
           +'<span class="tab-id">#'+esc(t.id)+'</span>'
           +'<div class="tab-main"><div class="tab-title">'+esc(t.title)+'</div>'
           +'<div class="tab-meta"><b>'+esc(t.assignee||'—')+'</b> · '+esc(t.project||'—')+(t.needs?(' · ⛔ '+esc(t.needs)):'')+'</div></div>'
-          +'<span class="tab-st '+esc(st)+'">'+esc(st)+'</span></div>';
+          +'<span class="tab-st '+esc(st)+'">'+esc(st)+'</span>'+acts(t)+'</div>';
       };
       var STG=[['doing','🔵 En curso'],['blocked','🔴 Bloqueadas'],['todo','⚪ Por hacer'],['done','✅ Hechas']];
       var byS={}; ts.forEach(function(t){ (byS[t.status||'todo']=byS[t.status||'todo']||[]).push(t); });
@@ -286,6 +300,21 @@
       box.innerHTML=html||'<div class="empty">Sin tareas en el tablero.</div>';
     }).catch(function(){});
   }
+  function update(id, patch){
+    var c=cred(); if(!c){ alert('Entra con Google (arriba a la derecha) para editar el tablero.'); return; }
+    var body=Object.assign({id:+id}, patch);
+    fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+c},body:JSON.stringify(body)})
+      .then(function(r){return r.json().catch(function(){return{};});})
+      .then(function(d){ if(d&&d.ok){ load(); } else { alert('No se pudo actualizar: '+((d&&d.error)||'error')); } })
+      .catch(function(){ alert('Error de red al actualizar la tarea.'); });
+  }
+  var tl=document.getElementById('tabList');
+  if(tl) tl.addEventListener('click',function(e){
+    var b=e.target.closest('.tab-b'); if(!b) return;
+    var id=b.getAttribute('data-id');
+    if(b.getAttribute('data-take')){ var y=yoName(); update(id, y?{assignee:y,status:'doing'}:{status:'doing'}); }
+    else { update(id,{status:b.getAttribute('data-st')}); }
+  });
   load(); setInterval(load, 60000);
 })();
 </script>

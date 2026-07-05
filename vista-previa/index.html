@@ -111,16 +111,22 @@
   #pick .list{display:flex;flex-wrap:wrap;gap:8px;max-height:300px;overflow:auto}
   #pick .list button{background:var(--panel2);border:1px solid var(--line);color:var(--ink);border-radius:10px;padding:8px 11px;font-size:12.5px;cursor:pointer}
   #pick .list button:hover{border-color:var(--acc2);color:var(--acc2)}
-  /* Chips de la barra: muestran/ocultan secciones (layout cuadrático) */
-  .vp-chips{display:flex;gap:6px;flex-wrap:wrap;align-items:center}
-  .vp-chip{font-family:var(--mono);font-size:11px;color:var(--mut);background:var(--panel);
-    border:1px solid var(--line);border-radius:999px;padding:5px 11px;cursor:pointer;
-    transition:color .12s ease,border-color .12s ease,background .12s ease}
-  .vp-chip:hover{color:var(--ink);border-color:var(--acc2)}
-  .vp-chip.on{color:var(--ink);border-color:var(--acc);background:rgba(91,214,192,.10)}
-  body.hide-estado #hero, body.hide-estado .grid{display:none}
-  body.hide-agentes .agentes-sec{display:none}
-  body.hide-riesgos .rows{display:none}
+  /* ── Cuadratura AdmiraNeXT: opciones(izq · Estado) · centro(Agentes) · avanzado(der · desglose) · experto(abajo · carbono+riesgos) ── */
+  .cuad{display:grid;grid-template-columns:290px minmax(0,1fr) 330px;gap:14px;align-items:start;margin:4px 0 16px}
+  .cuad .rail{position:sticky;top:8px;max-height:calc(100vh - 74px);overflow:auto}
+  .cuad-center{min-width:0}
+  .rail-right .grid{grid-template-columns:1fr}          /* las 3 columnas se apilan en el raíl estrecho */
+  /* los iconos toggle de admira-bar.js (pf-*-off) ocultan cada raíl y re-cuadran el grid */
+  body.pf-left-off   .rail-left   {display:none}
+  body.pf-right-off  .rail-right  {display:none}
+  body.pf-bottom-off .rows.rail-bottom{display:none}
+  body.pf-left-off   .cuad{grid-template-columns:minmax(0,1fr) 330px}
+  body.pf-right-off  .cuad{grid-template-columns:290px minmax(0,1fr)}
+  body.pf-left-off.pf-right-off .cuad{grid-template-columns:minmax(0,1fr)}
+  @media(max-width:980px){
+    .cuad,body.pf-left-off .cuad,body.pf-right-off .cuad{grid-template-columns:1fr}
+    .cuad .rail{position:static;max-height:none}
+  }
 </style>
 </head>
 <body>
@@ -130,11 +136,6 @@
     <h1>¿EN QUÉ ESTAMOS?</h1>
     <div class="sub">Vista Previa · AdmiraNeXT · silicio ↔ carbono</div>
   </div>
-  <span class="vp-chips" title="Muestra/oculta secciones">
-    <button type="button" class="vp-chip on" data-sec="estado">📊 Estado</button>
-    <button type="button" class="vp-chip on" data-sec="agentes">👥 Agentes</button>
-    <button type="button" class="vp-chip on" data-sec="riesgos">⚠️ Riesgos</button>
-  </span>
   <span class="spacer"></span>
   <span class="yo" id="yoChip" title="Quién eres (clic para cambiar)" style="display:none"><img class="av" id="yoAv" alt="" style="display:none"><span id="yoLab">—</span> <small id="yoOs"></small><span class="chg">cambiar</span></span>
   <span class="pill live" id="livePill"><span class="dot"></span>en vivo</span>
@@ -151,6 +152,8 @@
 
 <div id="err">⚠️ No se pudo leer <code>estado.json</code>. ¿Está el servidor sirviendo la carpeta <code>vista-previa/</code>?</div>
 
+<div class="cuad">
+<aside class="rail rail-left" aria-label="Opciones · Estado">
 <section class="hero" id="hero">
   <div class="proj" id="proj">—</div>
   <div class="titulo" id="titulo">Cargando…</div>
@@ -159,6 +162,8 @@
   <div class="bar"><i id="barfill" style="width:0%"></i></div>
   <div class="bar-lab"><span id="progreso">0</span>% · <span id="estadoGen"></span></div>
 </section>
+</aside>
+<main class="cuad-center" aria-label="En qué anda cada agente">
 
 <style id="dormias-css">
   .dormias{margin:0 0 16px;padding:13px 16px;border:1px solid var(--acc2);border-radius:14px;
@@ -221,12 +226,15 @@
   <h2 class="agentes-h">👥 En qué anda cada agente <span class="ag-count" id="agCount"></span></h2>
   <div class="agentes-grid" id="agentes"><div class="empty">Cargando agentes…</div></div>
 </section>
-
+</main>
+<aside class="rail rail-right" aria-label="Avanzado · desglose de tareas">
 <section class="grid">
   <div class="col hecho"><h2><span>✅ Hecho</span><span class="col-arrow">▾</span></h2><ul id="hecho"></ul></div>
   <div class="col encurso"><h2><span>🔄 En curso</span><span class="col-arrow">▾</span></h2><ul id="encurso"></ul></div>
   <div class="col siguiente"><h2><span>⏭️ Siguiente</span><span class="col-arrow">▾</span></h2><ul id="siguiente"></ul></div>
 </section>
+</aside>
+</div>
 
 <style id="agentes-css">
   /* columnas Hecho/En curso/Siguiente plegables con flecha en la esquina */
@@ -298,7 +306,7 @@
   .diary-kind{font-family:var(--mono);font-size:9px;font-weight:800;text-transform:uppercase;padding:1px 5px;border-radius:4px;background:var(--panel2);color:var(--acc2);margin-right:6px}
   .diary-empty{color:var(--mut);padding:24px;text-align:center}
 </style>
-<section class="rows">
+<section class="rows rail-bottom" aria-label="Experto · carbono y riesgos">
   <div class="box carbono"><h2>🙋 Necesita carbono <span class="carb-meta" id="carbMeta"></span></h2><ul id="carbono"></ul>
     <div class="carb-cli" id="carbCli" style="display:none">
       <span class="carb-cli-tgt" id="carbCliTgt">›</span>
@@ -608,26 +616,9 @@ resolveYo();
 tick();
 setInterval(tick, 3000);
 
-/* ── Chips de la barra: pliegan/despliegan secciones, estado recordado ── */
-(function(){
-  const KEY='vp_panels_off', SECS=['estado','agentes','riesgos'];
-  let off=[]; try{ off=JSON.parse(localStorage.getItem(KEY)||'[]'); }catch(e){}
-  function apply(){
-    SECS.forEach(s=>{
-      document.body.classList.toggle('hide-'+s, off.includes(s));
-      const c=document.querySelector('.vp-chip[data-sec="'+s+'"]');
-      if(c) c.classList.toggle('on', !off.includes(s));
-    });
-  }
-  document.addEventListener('click', e=>{
-    const c=e.target.closest('.vp-chip'); if(!c) return;
-    const s=c.dataset.sec; if(!SECS.includes(s)) return;
-    off = off.includes(s) ? off.filter(x=>x!==s) : off.concat(s);
-    try{ localStorage.setItem(KEY, JSON.stringify(off)); }catch(e){}
-    apply();
-  });
-  apply();
-})();
+/* Los antiguos chips Estado/Agentes/Riesgos se sustituyeron por la CUADRATURA:
+   admira-bar.js añade solos los iconos toggle (opciones/avanzado/experto) al detectar
+   .rail-left/.rail-right/.rail-bottom, y el CSS body.pf-*-off oculta cada raíl. */
 </script>
 <script>
 /* ===== MODO de equipo (estado compartido, worker admira-navegadores) ===== */

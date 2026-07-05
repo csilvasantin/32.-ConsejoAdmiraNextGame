@@ -103,7 +103,10 @@
   // Crea un icono toggle SCUMM para un panel; null si el panel no existe en la página.
   function makeToggle(p) {
     if (!document.querySelector(p.sel)) return null;
-    if (localStorage.getItem(p.ls) === "0") document.body.classList.add(p.cls);
+    // Cuadratura como la home: los raíles (opciones/avanzado/experto) están OCULTOS por
+    // defecto y se revelan al pulsar su icono. Solo se muestran si el usuario los abrió antes
+    // (localStorage === "1"). Cualquier otro estado (nuevo o "0") → colapsado.
+    if (localStorage.getItem(p.ls) !== "1") document.body.classList.add(p.cls);
     var on = !document.body.classList.contains(p.cls);
     var b = document.createElement("button");
     b.type = "button";

@@ -57,6 +57,8 @@
   // ═══ SOURCE — 'admira' en admira.live/helpdesk (Yokup usa 'yokup'). Mismo backend + agentes;
   //     cada helpdesk ve SOLO su carbono. ═══
   var SOURCE='admira';
+  var PROXY='https://admira-estado.csilvasantin.workers.dev/task-create';  // crea incidencia con gate → key server-side
+  function cred(){ try{ var g=JSON.parse(localStorage.getItem('admira_gate')||'null'); return (g&&g.cred&&g.exp&&Date.now()<g.exp)?g.cred:''; }catch(e){ return ''; } }
   var COL={Neo:'#5b8cff',Morfeo:'#c792ea',Smith:'#39d98a',Cypher:'#39d98a',Trinity:'#ffb454',Oráculo:'#5bd6c0',Bot:'#8a90a3'};
   function esc(s){return String(s==null?'':s).replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}
   async function loadIncs(){
@@ -81,12 +83,22 @@
       }).join('') || '<p class="sub">sin mensajes</p>';
     }catch(e){}
   }
-  async function addInc(){
-    var v=document.getElementById('ni').value.trim(); if(!v) return;
-    // Crear requiere auth (PANEL_KEY, secreto de servidor) → NO va en cliente. Se conecta cuando
-    // el update/create del tablero tenga auth por gate de Google (pedido a Neo: push a origin).
-    var b=document.getElementById('niBtn'); var o=b.textContent; b.textContent='…';
-    setTimeout(function(){ b.textContent=o; alert('Abrir incidencias desde la web se activa en cuanto el backend acepte auth por gate (en curso). Mientras, un agente la abre por CLI. Tu texto: '+v); },250);
+  // Abrir incidencia: crea una tarea (source=admira) vía el proxy admira-estado, que verifica el
+  // gate de Google y llama al backend con la key SERVER-SIDE. Sin secretos en cliente, sin alert.
+  function addInc(){
+    var inp=document.getElementById('ni'), v=(inp.value||'').trim(); if(!v) return;
+    var b=document.getElementById('niBtn'), o=b.textContent;
+    var c=cred();
+    if(!c){ b.textContent='entra con Google'; setTimeout(function(){ b.textContent=o; },1800); return; }
+    b.disabled=true; b.textContent='…';
+    fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+c},
+      body:JSON.stringify({title:v, source:'admira', project:'admira.live', assignee:'', status:'todo'})})
+      .then(function(r){ return r.json().catch(function(){return{};}).then(function(d){ return {s:r.status,d:d}; }); })
+      .then(function(x){ b.disabled=false; b.textContent=o;
+        if(x.d&&x.d.ok){ inp.value=''; loadIncs(); }
+        else if(x.s===401){ b.textContent='sesión caducada'; setTimeout(function(){ b.textContent=o; },2000); }
+        else { b.textContent='error'; console.warn('crear incidencia', x); setTimeout(function(){ b.textContent=o; },2000); } })
+      .catch(function(){ b.disabled=false; b.textContent='error red'; setTimeout(function(){ b.textContent=o; },2000); });
   }
   loadIncs(); loadFeed(); setInterval(loadIncs,10000); setInterval(loadFeed,8000);
 </script>

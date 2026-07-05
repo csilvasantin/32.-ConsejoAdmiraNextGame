@@ -48,7 +48,7 @@
     "#pf-brand:hover{border-color:#f0c040;color:#fff}" +
     "#pf-brand .pf-ver{color:#c9a86a;font-size:7px}" +
     /* icono de contraer OPCIONES: a la izquierda (tras la marca) */
-    "#pf-toggle-left{order:-1;display:flex;align-items:center;align-self:center;margin-right:6px}" +
+    "#pf-toggle-left{order:-3;display:flex;align-items:center;align-self:center;margin-right:6px}" +
     /* iconos AVANZADO + EXPERTO: a la derecha del todo, tras el usuario */
     "#pf-toggles{order:100;display:flex;gap:5px;align-items:center;align-self:center;margin-left:auto}" +
     ".pf-ico{width:27px;height:25px;display:flex;align-items:center;justify-content:center;cursor:pointer;" +

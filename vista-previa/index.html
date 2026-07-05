@@ -232,6 +232,9 @@
   .tablero-h{font-size:12px;letter-spacing:.4px;text-transform:uppercase;color:var(--mut);margin:0 0 10px;display:flex;align-items:center;gap:8px}
   .tab-count{color:var(--acc);font-family:var(--mono);font-size:11px}
   .tab-list{display:flex;flex-direction:column;gap:6px}
+  .tab-group{font-family:var(--mono);font-size:10px;font-weight:800;letter-spacing:.5px;color:var(--mut);text-transform:uppercase;margin:8px 0 2px;display:flex;align-items:center;gap:6px}
+  .tab-group:first-child{margin-top:0}
+  .tab-gn{color:var(--acc);font-weight:700}
   .tab-row{display:flex;align-items:flex-start;gap:9px;padding:9px 11px;background:var(--panel);border:1px solid var(--line);border-radius:10px;font-size:12.5px}
   .tab-row.mine{border-color:var(--acc);box-shadow:inset 2px 0 0 var(--acc)}
   .tab-id{font-family:var(--mono);font-size:10px;color:var(--mut);flex:0 0 auto;padding-top:1px}
@@ -267,14 +270,20 @@
       var open=ts.filter(function(t){return t.status!=='done';});
       var c=document.getElementById('tabCount'); if(c) c.textContent='· '+open.length+' abiertas';
       if(!ts.length){ box.innerHTML='<div class="empty">Sin tareas en el tablero.</div>'; return; }
-      box.innerHTML=ts.map(function(t){
+      var row=function(t){
         var mine=yo&&t.assignee===yo, st=(t.status||'todo');
         return '<div class="tab-row'+(mine?' mine':'')+'" title="'+esc(t.detail||'')+'">'
           +'<span class="tab-id">#'+esc(t.id)+'</span>'
           +'<div class="tab-main"><div class="tab-title">'+esc(t.title)+'</div>'
           +'<div class="tab-meta"><b>'+esc(t.assignee||'—')+'</b> · '+esc(t.project||'—')+(t.needs?(' · ⛔ '+esc(t.needs)):'')+'</div></div>'
           +'<span class="tab-st '+esc(st)+'">'+esc(st)+'</span></div>';
-      }).join('');
+      };
+      var STG=[['doing','🔵 En curso'],['blocked','🔴 Bloqueadas'],['todo','⚪ Por hacer'],['done','✅ Hechas']];
+      var byS={}; ts.forEach(function(t){ (byS[t.status||'todo']=byS[t.status||'todo']||[]).push(t); });
+      var html='';
+      STG.forEach(function(g){ var arr=byS[g[0]]||[]; if(!arr.length) return;
+        html+='<div class="tab-group">'+g[1]+' <span class="tab-gn">'+arr.length+'</span></div>'+arr.map(row).join(''); });
+      box.innerHTML=html||'<div class="empty">Sin tareas en el tablero.</div>';
     }).catch(function(){});
   }
   load(); setInterval(load, 60000);

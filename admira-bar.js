@@ -65,6 +65,16 @@
     ".admira-summary .as-num{font-size:12px;color:#ffdd66}" +
     ".admira-summary .as-num.as-green{color:#44bb44}.admira-summary .as-num.as-red{color:#e74c3c}.admira-summary .as-num.as-blue{color:#3498db}" +
     ".admira-summary small{font-size:6px;color:#b89060;margin-top:3px;white-space:nowrap;letter-spacing:.3px}" +
+    /* ── MARCO CONSISTENTE de los raíles (opciones/avanzado/experto) en TODAS las páginas ──
+     * Solo el CHROME (frame + cabecera), mismo look que la barra y la home (SCUMM madera).
+     * El CONTENIDO de cada raíl es propio de cada página. Fuente única = aquí. */
+    ".rail-left,.rail-right,.rail-bottom{background:#5a3a1e !important;border:3px solid #8b5a14 !important}" +
+    ".rail-left{border-top:3px solid #a07828 !important;border-right-width:2px !important}" +
+    ".rail-right{border-top:3px solid #a07828 !important;border-left-width:2px !important}" +
+    ".rail-bottom{border-top:3px solid #a07828 !important}" +
+    ".rail-left .rail-hd,.rail-right .rail-hd,.rail-bottom .rail-hd,.rail-left .rail-group,.rail-right .rail-group,.rail-bottom .rail-group{" +
+      "font-family:'Press Start 2P',monospace !important;font-size:8px !important;color:#c9a86a !important;letter-spacing:1px !important;" +
+      "text-transform:uppercase !important;padding:8px 8px 5px !important;border:0 !important;background:none !important}" +
     "html.admira-bar-on body{padding-top:46px !important}";
 
   function mount() {

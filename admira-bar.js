@@ -42,11 +42,11 @@
     /* Iconos de panel (portería, estilo Codex/VS Code): avanzado (der) + experto (abajo).
      * Se colocan a la derecha de «Usuarios» y sólo aparecen si la página tiene ese panel. */
     /* Marca del proyecto (izquierda del todo) */
-    "#pf-brand{order:-2;display:flex;align-items:center;gap:6px;white-space:nowrap;text-decoration:none;" +
+    "#pf-brand{order:-2;display:flex;flex-direction:column;align-items:center;gap:0;white-space:nowrap;text-decoration:none;" +
     "font-family:'Press Start 2P',monospace;font-size:8px;letter-spacing:.5px;color:#ffdd66;" +
     "border:2px solid #a07828;border-radius:0;background:#3a2410;box-shadow:2px 2px 0 #000;padding:6px 10px;margin-right:6px}" +
     "#pf-brand:hover{border-color:#f0c040;color:#fff}" +
-    "#pf-brand .pf-ver{color:#c9a86a;font-size:7px}" +
+    "#pf-brand .pf-ver{color:#c9a86a;font-size:0.4rem;margin-top:3px;letter-spacing:0}" +
     /* icono de contraer OPCIONES: a la izquierda (tras la marca) */
     "#pf-toggle-left{order:-3;display:flex;align-items:center;align-self:center;margin-right:6px}" +
     /* iconos AVANZADO + EXPERTO: a la derecha del todo, tras el usuario */

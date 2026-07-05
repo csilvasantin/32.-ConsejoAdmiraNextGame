@@ -1,43 +1,49 @@
 {
-  "proyecto": "AdmiraNeXT · admira.live",
-  "titulo": "Vista Previa universal + flota completa en /control",
-  "resumen": "«¿En qué andamos?» accesible desde cualquier equipo del grupo, y los 16 equipos del tailnet dados de alta en FleetControl.",
-  "foco": "Worker admira-estado listo (estado privado y live) — pendiente de desplegar",
-  "progreso": 97,
+  "proyecto": "AInimation Studio · www.ainimation.studio",
+  "titulo": "Editor de vídeo zero-key: un brief → vídeo 1080p real",
+  "resumen": "El editor «Direct the movie» produce vídeo con voz multiidioma, música, fondos e imágenes CC0, temas y escenas (cita/imagen/gráfico), sin claves de API. Falta solo el HTTPS.",
+  "foco": "Migrar el HTTPS a Cloudflare (única pega); editor completo, pulido y verificado",
+  "progreso": 95,
   "estado_general": "en curso",
-  "actualizado": "2026-07-02T14:30:00Z",
-  "por": "silicio",
+  "actualizado": "2026-07-05T05:25:00Z",
+  "por": "Morfeo · MacBookProNegro14",
   "pasos": {
     "hecho": [
-      "FleetControl platform-aware macOS/Linux (acciones + player signage Linux)",
-      "Vista Previa en el repo + skill /en-que-estamos (auto-refresco 3s)",
-      "Vista Previa publicada en la nube: https://www.admira.live/vista-previa (cero setup, cualquier OS)",
-      "fleet.json con los 16 equipos del tailnet (macOS/Linux/Windows), MagicDNS reales",
-      "El tablero identifica al equipo que lo abre («Tú: …») — auto en local (quien.json) o selector en la nube"
+      "Voz en off multiidioma (Piper es/en) con voz, velocidad, volumen y preview del guion",
+      "Música de fondo (3 camas zero-key), fondos con imágenes reales CC0 (Openverse) y auto-ajuste de duración a la voz",
+      "4 temas visuales + 3 tipos de escena (cita destacada, imagen a pantalla completa, gráfico de barras)",
+      "Galería de producciones + compartir nativo, guardar/compartir el brief, plantillas de 1 clic y meta Open Graph",
+      "Pipeline público verificado end-to-end (worker Cloudflare + poller → R2)"
     ],
     "encurso": [
-      "A la espera de pasos de carbono para activar el hub y cerrar Linux"
+      "Puente Emitir → admira.tv (autónomo) — enviar la producción al canal DOOH"
     ],
     "siguiente": [
-      "Desplegar el worker admira-estado (wrangler login + kv create + deploy)",
-      "Reiniciar el hub fleet-control en el Mac Mini (git pull + kickstart)",
-      "Enchufar el comando real del player Linux en fleet.json (signage.start/stop)"
+      "Activar el HTTPS por Cloudflare en cuanto Carlos haga el cambio de DNS",
+      "Puente Emitir a admira.tv (canal)",
+      "Persistencia de las producciones del usuario (más allá de la galería efímera)"
     ]
   },
   "necesita_carbono": [
-    "Desplegar el worker admira-estado (necesita wrangler login en Cloudflare — solo tú puedes)",
-    "Reiniciar el servicio fleet-control en el Mac Mini para activar fleet.json y las acciones",
-    "Pasar el comando de arranque/parada de vuestro player Linux"
+    "HTTPS de ainimation.studio: dar de alta el dominio en Cloudflare y cambiar los nameservers en GoDaddy (solo tú tienes las cuentas). El cert de GitHub Pages lleva >12h muerto; Cloudflare lo arregla al instante + CDN. El site funciona por http entretanto.",
+    "Guardar en la bóveda un token de Cloudflare con permisos de Zona/DNS — así el HTTPS y futuros cambios de DNS los automatizo yo (cumple la máxima #11: reducir el carbono recurrente).",
+    "Tu OK para el puente Emitir → admira.tv (conectar el editor al canal DOOH) — o dime otra prioridad de producto."
   ],
   "riesgos": [
-    "estado.json es público en Pages (cualquiera con la URL lo ve) — usar worker si el estado es sensible",
-    "Windows: en fleet.json pero las acciones remotas son macOS/Linux por ahora",
-    "Screenshot Linux depende de la sesión gráfica (Wayland/X11)"
+    "Sin HTTPS el navegador marca «No es seguro» al abrir por https (el sitio funciona por http)",
+    "La galería lee metadatos de KV que caducan a 7 días; las producciones antiguas dejan de listarse (el mp4 en R2 sigue)",
+    "Los fondos CC0 dependen de Openverse (best-effort: si falla, la escena sale plana)"
   ],
   "enlaces": [
-    { "label": "Vista Previa (nube)", "url": "https://www.admira.live/vista-previa/" },
-    { "label": "admira.live/control", "url": "https://www.admira.live/control" }
+    {
+      "label": "AInimation Studio",
+      "url": "http://www.ainimation.studio/"
+    },
+    {
+      "label": "Editor (Studio Live)",
+      "url": "http://www.ainimation.studio/studio-live.html"
+    }
   ],
   "commit": "pendiente",
-  "version": "vista-previa v.2026.07.02.r2"
+  "version": "estado ainimation v.2026.07.05.r1 (Morfeo)"
 }

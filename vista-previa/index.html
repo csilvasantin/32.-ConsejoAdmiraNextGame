@@ -281,6 +281,10 @@
   .ag-count b{color:var(--ink)}
   /* Proyecto en el que anda el agente */
   .ag-project{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--acc2);margin-top:4px}
+  /* Responsable (agente) junto al proyecto — independiente de la máquina */
+  .ag-project .ag-owner{color:var(--mut);font-weight:600}
+  /* Peticiones del arquitecto (Carlos) al lado del contador "por su cuenta" */
+  .ag-pet{color:var(--carbono);font-weight:700;cursor:help}
   /* Botón "diario del día" + modal */
   .ag-actions{margin-top:8px}
   .ag-diary-btn{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--acc);background:transparent;border:1px solid var(--line);border-radius:6px;padding:4px 9px;cursor:pointer}
@@ -404,6 +408,19 @@ async function renderAgentes(){
     // ¿cuál de estos agentes eres TÚ? (matchea la identidad YO por persona o máquina)
     const _yoN = s => String(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
     const yo = (typeof YO!=='undefined') ? YO : null;
+    // Cuántas máquinas ONLINE (a la vez) tiene cada persona → sufijo "(2)" si hay más de una.
+    const onlineMachines={};
+    (d.presence||[]).forEach(p=>{ if((now-(p.updated||0))<ONLINE){ const k=p.persona||p.machine||'?'; (onlineMachines[k]=onlineMachines[k]||new Set()).add(p.machine||'?'); } });
+    // Peticiones del ARQUITECTO (Carlos) pendientes por persona (bot-inbox, de Carlos, sin done).
+    const peticiones={};
+    await Promise.all([...new Set(list.map(p=>p.persona).filter(Boolean))].map(async persona=>{
+      try{
+        const rr=await fetch('https://admira-telegram.csilvasantin.workers.dev/api/bot-inbox?persona='+encodeURIComponent(persona),{cache:'no-store'});
+        const dd=await rr.json();
+        const its=(dd.items||[]).filter(it=>/carlos/i.test(it.from_name||'') && it.status!=='done');
+        peticiones[persona]={n:its.length, txt:its.map(it=>(it.text||'').replace(/\s+/g,' ').trim()).join(' · ').slice(0,240)};
+      }catch(e){ peticiones[persona]={n:0,txt:''}; }
+    }));
     el.innerHTML=list.map(p=>{
       const age=now-(p.updated||0), online=age<ONLINE; if(online) on++;
       const pf=_AGPF[p.persona], av=pf?('/wallpapers/'+pf+'.png'):'';
@@ -426,19 +443,25 @@ async function renderAgentes(){
       } else {
         estado='<span class="ag-state idle" title="Conectado, sin tarea activa">idle</span>';
       }
-      // Contador de cosas hechas POR SU CUENTA → ABAJO DEL TODO de la tarjeta.
-      const contador='<div class="ag-count">'+(_auto?'🟢':'⚪')+' <b>'+_dec+'</b> por su cuenta'+(_auto?'':' · modo pasivo')+'</div>';
-      // Proyecto en el que anda el agente (p.ej. "www.admira.live").
-      const proyecto=p.project?'<div class="ag-project">📁 '+_agEsc(p.project)+'</div>':'';
-      // Botón "diario del día" → abre lo que ha hecho el agente hoy (entre handon y handoff).
-      const botones='<div class="ag-actions"><button type="button" class="ag-diary-btn" data-p="'+_agEsc(p.persona||'')+'" data-m="'+_agEsc(p.machine||'')+'">📓 diario del día</button></div>';
+      // Nº de instancias ONLINE de esta persona a la vez → "Morfeo (2)"; nada si solo hay una.
+      const _nInst=(onlineMachines[p.persona]||{size:1}).size||1;
+      const _nameSfx=_nInst>1?(' ('+_nInst+')'):'';
+      // Peticiones del ARQUITECTO (Carlos) pendientes para esta persona.
+      const _pet=peticiones[p.persona]||{n:0,txt:''};
+      const _petHtml=_pet.n>0?(' · <span class="ag-pet" title="'+_agEsc(_pet.txt)+'">📩 '+_pet.n+' petici'+(_pet.n>1?'ones':'ón')+'</span>'):'';
+      // Contador POR SU CUENTA + peticiones del arquitecto AL LADO → ABAJO DEL TODO.
+      const contador='<div class="ag-count">'+(_auto?'🟢':'⚪')+' <b>'+_dec+'</b> por su cuenta'+(_auto?'':' · modo pasivo')+_petHtml+'</div>';
+      // Proyecto + RESPONSABLE (agente), independiente de la máquina: "📁 www.admira.live // Morfeo".
+      const proyecto=p.project?'<div class="ag-project">📁 '+_agEsc(p.project)+' <span class="ag-owner">// '+_agEsc(p.persona||'?')+'</span></div>':'';
+      // (Retirado el botón "diario del día" para ganar una línea a la descripción de la tarea.)
+      const botones='';
       const mine = !!yo && ((yo.persona && p.persona===yo.persona)
         || (yo.maquina && _yoN(p.machine)===_yoN(yo.maquina))
         || (yo.nombre && _yoN(p.machine)===_yoN(yo.nombre)));
       return '<div class="agente'+(online?'':' off')+(mine?' mine':'')+'">'
         +(av?('<img class="ag-av" src="'+av+'" alt="" onerror="this.style.visibility=\'hidden\'">'):'<div class="ag-av"></div>')
         +'<div class="ag-body"><div class="ag-top"><span class="ag-dot '+(online?'on':'off')+'"></span>'
-        +'<span class="ag-name">'+_agEsc(p.persona||'?')+'</span>'+estado+(mine?'<span class="ag-you">TÚ</span>':'')+'</div>'
+        +'<span class="ag-name">'+_agEsc(p.persona||'?')+_nameSfx+'</span>'+estado+(mine?'<span class="ag-you">TÚ</span>':'')+'</div>'
         +'<div class="ag-meta">'+_agEsc(p.runtime||'')+' · '+_agEsc(p.machine||'')+' · '+fmtAge2(age)+'</div>'
         +proyecto
         +'<div class="ag-focus'+(p.focus?'':' none')+'">'+foco+'</div>'+contador+botones+'</div></div>';

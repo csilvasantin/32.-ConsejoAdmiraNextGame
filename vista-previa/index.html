@@ -142,7 +142,7 @@
   <span class="pill" id="agePill">—</span>
 </header>
 
-<div id="modo-bar">
+<div id="modo-bar" role="group" aria-label="Modo de equipo de la flota">
   <span class="modo-lab">🎛️ MODO DE EQUIPO</span>
   <button type="button" class="modo-opt" data-mode="en-que-andamos">👀 En qué andamos</button>
   <button type="button" class="modo-opt" data-mode="tu-por-tu-cuenta">🤖 Tú por tu cuenta</button>
@@ -179,7 +179,7 @@
 </style>
 <section class="dormias" id="dormias" style="display:none">
   <div class="dormias-h">🌙 <span>Mientras no estabas</span><span class="lapso" id="dormiasLapso"></span>
-    <span class="cerrar" id="dormiasCerrar">✕</span></div>
+    <span class="cerrar" id="dormiasCerrar" role="button" tabindex="0" aria-label="Cerrar aviso «Mientras no estabas»">✕</span></div>
   <ul class="dormias-list" id="dormiasList"></ul>
 </section>
 
@@ -312,7 +312,7 @@
       <span class="carb-cli-tgt" id="carbCliTgt">›</span>
       <input id="carbCliInput" type="text" autocomplete="off" spellcheck="false"
         placeholder="pulsa una necesidad y responde aquí (Enter envía al LLM)…">
-      <button type="button" id="carbCliSend" title="Enviar la respuesta al LLM">➤</button>
+      <button type="button" id="carbCliSend" title="Enviar la respuesta al LLM" aria-label="Enviar la respuesta al LLM">➤</button>
     </div>
   </div>
   <div class="box riesgos"><h2>⚠️ Riesgos abiertos</h2><ul id="riesgos"></ul></div>
@@ -444,9 +444,9 @@ async function renderAgentes(){
       let estado;
       if(_da>now){
         estado='<span class="ag-state deciding" data-da="'+_da+'" data-p="'+_agEsc(p.persona||'')+'" data-m="'+_agEsc(p.machine||'')+'" title="Decidiendo — countdown a 0">'
-          +'<button type="button" class="cd-adj" data-adj="-60" title="acelerar 1 min">−</button>'
+          +'<button type="button" class="cd-adj" data-adj="-60" title="acelerar 1 min" aria-label="Acelerar la decisión 1 minuto">−</button>'
           +'<span class="ag-cd">⏱ …</span>'
-          +'<button type="button" class="cd-adj" data-adj="60" title="retrasar 1 min">+</button>'
+          +'<button type="button" class="cd-adj" data-adj="60" title="retrasar 1 min" aria-label="Retrasar la decisión 1 minuto">+</button>'
           +'</span>';
       } else if(!online){
         estado='<span class="ag-state off" title="Desconectado">offline</span>';
@@ -789,7 +789,9 @@ setInterval(tick, 3000);
   function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
   function pad(n){ return (n<10?'0':'')+n; }
   var sec=document.getElementById('dormias');
-  document.getElementById('dormiasCerrar').addEventListener('click',function(){ sec.style.display='none'; });
+  var _dc=document.getElementById('dormiasCerrar');
+  _dc.addEventListener('click',function(){ sec.style.display='none'; });
+  _dc.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); sec.style.display='none'; } });
   async function run(){
     var now=Math.floor(Date.now()/1000);
     var last=parseInt(localStorage.getItem(KEY)||'0',10)||0;

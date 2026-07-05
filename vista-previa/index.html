@@ -395,6 +395,10 @@ async function renderAgentes(){
     const d=await r.json(); const now=(d.now||(Date.now()/1000))|0;
     const ONLINE=8*60, STALE=12*3600;
     const byP={}; (d.presence||[]).forEach(p=>{ const k=(p.persona||p.machine||'?'); if(!byP[k]||(p.updated||0)>(byP[k].updated||0)) byP[k]=p; });
+    // FIX A: último `project` NO vacío por persona → fallback, para que un beat vacío de otra
+    // máquina/sub NO borre la tarea principal (con varias instancias el proyecto parpadeaba).
+    const projByP={}; (d.presence||[]).forEach(p=>{ const k=(p.persona||p.machine||'?');
+      if(p.project && (now-(p.updated||0))<STALE && (!projByP[k]||(p.updated||0)>(projByP[k].u||0))) projByP[k]={v:p.project,u:p.updated||0}; });
     // Filtra rancias: fuera los muertos (>12h) y los offline SIN foco (fantasmas de
     // sesiones viejas). Así el tablero muestra solo agentes activos/recientes con algo que decir.
     const list=Object.values(byP)
@@ -452,7 +456,8 @@ async function renderAgentes(){
       // Contador POR SU CUENTA + peticiones del arquitecto AL LADO → ABAJO DEL TODO.
       const contador='<div class="ag-count">'+(_auto?'🟢':'⚪')+' <b>'+_dec+'</b> por su cuenta'+(_auto?'':' · modo pasivo')+_petHtml+'</div>';
       // Proyecto + RESPONSABLE (agente), independiente de la máquina: "📁 www.admira.live // Morfeo".
-      const proyecto=p.project?'<div class="ag-project">📁 '+_agEsc(p.project)+' <span class="ag-owner">// '+_agEsc(p.persona||'?')+'</span></div>':'';
+      const _proj = p.project || ((projByP[p.persona]||{}).v) || '';
+      const proyecto=_proj?'<div class="ag-project">📁 '+_agEsc(_proj)+' <span class="ag-owner">// '+_agEsc(p.persona||'?')+'</span></div>':'';
       // (Retirado el botón "diario del día" para ganar una línea a la descripción de la tarea.)
       const botones='';
       const mine = !!yo && ((yo.persona && p.persona===yo.persona)

@@ -588,16 +588,31 @@ const DIARY_API='https://admira-telegram.csilvasantin.workers.dev';
 const _norm=s=>(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
 const _personaFile={Neo:'Neo',Morfeo:'Morfeo',Trinity:'Trinity','Oráculo':'Oraculo',Oraculo:'Oraculo',Cypher:'Cypher'};
 let PERSONA_BY_MACHINE={};
+let AGENT_ONLINE=new Set(); // máquinas con un agente (Claude/Codex/Grok) con beat de presencia <8min
 async function loadPersonas(){
   try{
     const r=await fetch(DIARY_API+'/api/presence',{cache:'no-store'});
-    const d=await r.json(); const map={};
+    const d=await r.json(); const map={}; const on=new Set(); const now=(d.now||Date.now()/1000);
     (d.presence||[]).slice().sort((a,b)=>b.updated-a.updated).forEach(p=>{
-      const k=_norm(p.machine); if(k && !map[k]) map[k]=p.persona; // la persona más reciente por máquina
+      const k=_norm(p.machine); if(!k) return;
+      if(!map[k]) map[k]=p.persona;                 // la persona más reciente por máquina
+      if((now-(p.updated||0))<8*60) on.add(k);       // agente ACTIVO (<8min) en esa máquina
     });
-    PERSONA_BY_MACHINE=map;
+    PERSONA_BY_MACHINE=map; AGENT_ONLINE=on;
   }catch(e){ /* sin presencia: las tarjetas quedan sin fondo, sin icono roto */ }
 }
+// Claves de una máquina del hub para casar con los nombres de presencia (p.ej. hub fqdn
+// 'macbookair16' ~ presencia 'MacBookAir16plata'; id 'admira-asuszenbook' ~ 'AsusZenbook').
+function _machKeys(m){ const ks=[];
+  if(m.fqdn) ks.push(_norm(String(m.fqdn).split('.')[0]));
+  if(m.endpoint) ks.push(_norm(String(m.endpoint).split('.')[0]));
+  if(m.id) ks.push(_norm(String(m.id).replace(/^admira-?/,'')));
+  if(m.name) ks.push(_norm(m.name));
+  return ks.filter(k=>k.length>=4); }
+// ¿Esta máquina tiene un agente activo? (prefijo en cualquier dirección para tolerar sufijos)
+function agentOnline(m){ const ks=_machKeys(m);
+  for(const p of AGENT_ONLINE){ for(const k of ks){ if(k===p||k.indexOf(p)===0||p.indexOf(k)===0) return true; } }
+  return false; }
 function personaWallpaper(name){
   const f=_personaFile[PERSONA_BY_MACHINE[_norm(name)]];
   return f ? '/wallpapers/'+f+'.png' : '';
@@ -630,6 +645,11 @@ async function refresh(){
   if(!SESSION){ $('#connPill').textContent='🔒 inicia sesión Google'; $('#connPill').className='pill bad'; renderCards([]); return; }
   try{
     const d=await api('/status'); MACHINES=d.machines; _reauthTried=false;
+    await loadPersonas();
+    // Un equipo con un agente ACTIVO (Claude/Codex/Grok, beat de presencia <8min) cuenta como
+    // ONLINE aunque el hub lo dé offline: el hub solo ve el agente de flota/SSH, no los agentes
+    // que trabajan en la máquina (por eso AsusZenbook/MacBookAir16 salían desconectados).
+    MACHINES.forEach(m=>{ if(!m.online && agentOnline(m)){ m.online=true; m.viaAgent=true; } });
     const up=MACHINES.filter(m=>m.online).length;
     $('#connPill').textContent='🟢 '+up+'/'+MACHINES.length+' online'; $('#connPill').className='pill ok';
     // alerta de caída: avisa cuando un equipo cambia de estado (tras la 1ª foto base)
@@ -637,7 +657,6 @@ async function refresh(){
       if(was===true && !m.online) toast('down','💤 '+(m.name||m.id),'se ha desconectado');
       else if(was===false && m.online) toast('up','🟢 '+(m.name||m.id),'de vuelta online'); }); }
     MACHINES.forEach(m=>{ PREV_ONLINE[m.id]=m.online; }); _baselineDone=true;
-    await loadPersonas();
     renderCards(MACHINES); fillSelect(); updateCapHealth();
   }catch(e){
     if(e.code===401 && !_reauthTried){

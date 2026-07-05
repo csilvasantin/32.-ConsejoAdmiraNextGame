@@ -306,7 +306,7 @@
     var body=Object.assign({id:+id}, patch);
     fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+c},body:JSON.stringify(body)})
       .then(function(r){return r.json().catch(function(){return{};}).then(function(d){return {s:r.status,d:d};});})
-      .then(function(o){ if(o.d&&o.d.ok){ note('#'+id+' actualizada ✓'); load(); } else { note('error '+o.s+': '+((o.d&&o.d.error)||'?')); } })
+      .then(function(o){ if(o.d&&o.d.ok){ note('#'+id+' actualizada ✓'); load(); } else if(o.s===401){ note('sesión de Google caducada — recarga la página y vuelve a entrar'); } else { note('error '+o.s+': '+((o.d&&o.d.error)||'?')); } })
       .catch(function(){ note('error de red'); });
   }
   var tl=document.getElementById('tabList');

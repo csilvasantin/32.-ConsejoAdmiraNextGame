@@ -160,13 +160,63 @@
   <div class="bar-lab"><span id="progreso">0</span>% · <span id="estadoGen"></span></div>
 </section>
 
+<style id="timeline-css">
+  .timeline-sec{margin:0 0 16px;padding:12px 16px 8px;border:1px solid var(--line);border-radius:14px;background:rgba(255,255,255,.02);animation:tlfade .45s ease}
+  @keyframes tlfade{from{opacity:.25}to{opacity:1}}
+  .tl-head{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:20px}
+  .tl-title{font-family:var(--mono);font-size:11px;letter-spacing:.5px;color:var(--mut);font-weight:800}
+  .tl-who{font-family:var(--sans);font-size:13px;font-weight:800;color:var(--ink)}
+  .tl-select{font-family:var(--sans);font-size:13px;font-weight:800;color:var(--ink);background:rgba(255,255,255,.06);border:1px solid var(--line);border-radius:8px;padding:3px 26px 3px 9px;cursor:pointer;
+    appearance:none;-webkit-appearance:none;
+    background-image:url("data:image/svg+xml;utf8,<svg xmlns='http://www.w3.org/2000/svg' width='10' height='10' viewBox='0 0 10 10'><path d='M1 3l4 4 4-4' stroke='%238a97ab' stroke-width='1.6' fill='none' stroke-linecap='round'/></svg>");
+    background-repeat:no-repeat;background-position:right 8px center}
+  .tl-select:hover{border-color:var(--acc2)}
+  .tl-select:focus{outline:none;border-color:var(--acc)}
+  .tl-select option{background:#0b1020;color:var(--ink)}
+  .tl-select.tl-hour{font-size:11px;font-weight:600;color:var(--mut)}
+  .tl-count{font-family:var(--mono);font-size:10px;color:var(--mut)}
+  .tl-dots{margin-left:auto;display:flex;gap:6px;align-items:center}
+  .tl-pip{width:7px;height:7px;border-radius:50%;background:var(--line);cursor:pointer;transition:background .2s}
+  .tl-pip.on{background:var(--acc);box-shadow:0 0 8px var(--acc)}
+  .tl-track{position:relative;height:78px;border-top:1px solid var(--line)}
+  .tl-tick{position:absolute;top:0;height:100%;border-left:1px dashed rgba(255,255,255,.055)}
+  .tl-tick span{position:absolute;top:-15px;left:-7px;font-family:var(--mono);font-size:9px;color:var(--mut)}
+  .tl-mark{position:absolute;top:5px;width:130px;transform:translateX(-5px)}
+  .tl-dot{display:block;width:10px;height:10px;border-radius:50%;box-shadow:0 0 8px currentColor;cursor:default}
+  .tl-lab{display:block;font-size:9.5px;line-height:1.2;color:var(--mut);margin-top:3px;max-height:32px;overflow:hidden}
+  .tl-lab b{color:var(--ink);font-weight:700}
+  .tl-mark:hover{z-index:5}
+  .tl-mark:hover .tl-lab{color:var(--ink);max-height:none;background:var(--bg,#0b1020);position:relative;border-radius:6px}
+</style>
+<section class="timeline-sec" id="timelineSec" style="display:none">
+  <div class="tl-head">
+    <span class="tl-title">🕐 LÍNEA DE TIEMPO · HOY</span>
+    <select class="tl-select" id="tlAgent" title="Elegir agente"></select>
+    <span class="tl-count" id="tlCount"></span>
+    <select class="tl-select tl-hour" id="tlHour" title="Ir a una hora con actividad"></select>
+    <span class="tl-dots" id="tlDots"></span>
+  </div>
+  <div class="tl-track" id="tlTrack"></div>
+</section>
+
+<section class="agentes-sec">
+  <h2 class="agentes-h">👥 En qué anda cada agente <span class="ag-count" id="agCount"></span></h2>
+  <div class="agentes-grid" id="agentes"><div class="empty">Cargando agentes…</div></div>
+</section>
+
 <section class="grid">
-  <div class="col hecho"><h2>✅ Hecho</h2><ul id="hecho"></ul></div>
-  <div class="col encurso"><h2>🔄 En curso</h2><ul id="encurso"></ul></div>
-  <div class="col siguiente"><h2>⏭️ Siguiente</h2><ul id="siguiente"></ul></div>
+  <div class="col hecho"><h2><span>✅ Hecho</span><span class="col-arrow">▾</span></h2><ul id="hecho"></ul></div>
+  <div class="col encurso"><h2><span>🔄 En curso</span><span class="col-arrow">▾</span></h2><ul id="encurso"></ul></div>
+  <div class="col siguiente"><h2><span>⏭️ Siguiente</span><span class="col-arrow">▾</span></h2><ul id="siguiente"></ul></div>
 </section>
 
 <style id="agentes-css">
+  /* columnas Hecho/En curso/Siguiente plegables con flecha en la esquina */
+  .col>h2{cursor:pointer;user-select:none;display:flex;align-items:center;justify-content:space-between;gap:8px}
+  .col .col-arrow{font-size:.72em;opacity:.55;transition:transform .2s ease;flex:none}
+  .col>h2:hover .col-arrow{opacity:.9}
+  .col.collapsed .col-arrow{transform:rotate(-90deg)}
+  .col.collapsed>ul{display:none}
   .agentes-sec{margin-bottom:16px}
   .agentes-h{font-size:12px;letter-spacing:.4px;text-transform:uppercase;color:var(--mut);margin:0 0 10px;display:flex;align-items:center;gap:8px}
   .ag-count{color:var(--acc);font-family:var(--mono);font-size:11px}
@@ -186,12 +236,46 @@
   /* Resalta cuál eres TÚ (matchea la identidad del tablero) */
   .agente.mine{border-color:var(--acc);background:linear-gradient(180deg,rgba(91,214,192,.10),var(--panel));box-shadow:0 0 0 1px var(--acc) inset}
   .ag-you{font-family:var(--mono);font-size:9px;font-weight:800;letter-spacing:.5px;color:#06231f;background:var(--acc);border-radius:5px;padding:1px 5px;margin-left:2px}
+  .ag-mode{font-family:var(--mono);font-size:9px;font-weight:800;letter-spacing:.4px;border-radius:5px;padding:1px 6px;margin-left:4px;white-space:nowrap}
+  .ag-mode.auto{color:#06231f;background:#39d98a}
+  .ag-mode.pasivo{color:#8a97ab;background:transparent;border:1px solid var(--line)}
+  .ag-mode.pend{color:#3a2a00;background:#ffcf5c;animation:cdpulse 1.4s ease-in-out infinite}
+  .ag-mode.pend.go{background:#39d98a;color:#06231f;animation:none}
+  @keyframes cdpulse{0%,100%{opacity:1}50%{opacity:.55}}
+  /* Estado del agente (junto al nombre): deciding/busy/idle/offline */
+  .ag-state{font-family:var(--mono);font-size:9px;font-weight:800;letter-spacing:.4px;border-radius:5px;padding:1px 6px;margin-left:4px;white-space:nowrap}
+  .ag-state.deciding{color:#3a2a00;background:#ffcf5c;animation:cdpulse 1.4s ease-in-out infinite;display:inline-flex;align-items:center;gap:3px}
+  /* Color del countdown según se acerca la decisión: >2min rojo · 1-2min ámbar · <1min verde */
+  .ag-state.deciding.cd-red{background:#ff5c5c;color:#2b0000}
+  .ag-state.deciding.cd-amber{background:#ffcf5c;color:#3a2a00}
+  .ag-state.deciding.cd-green{background:#39d98a;color:#06231f}
+  .ag-state.deciding.go{background:#39d98a;color:#06231f}
+  /* Botones −/+ para acelerar o retrasar el countdown "Tú por tu cuenta" */
+  .cd-adj{font-family:var(--mono);font-size:11px;font-weight:900;line-height:1;color:#3a2a00;background:rgba(58,42,0,.14);border:0;border-radius:4px;width:15px;height:15px;padding:0;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+  .cd-adj:hover{background:rgba(58,42,0,.3)}
+  .cd-adj:active{transform:scale(.9)}
+  .cd-adj[disabled]{opacity:.4;cursor:progress}
+  .ag-state.busy{color:#06231f;background:var(--acc)}
+  .ag-state.idle{color:#8a97ab;background:transparent;border:1px solid var(--line)}
+  .ag-state.off{color:#6b7688;background:transparent;border:1px solid var(--line)}
+  /* Contador de decisiones por su cuenta, abajo del todo de la tarjeta */
+  .ag-count{font-family:var(--mono);font-size:10px;color:var(--mut);margin-top:8px;padding-top:7px;border-top:1px solid var(--line)}
+  .ag-count b{color:var(--ink)}
+  /* Proyecto en el que anda el agente */
+  .ag-project{font-family:var(--mono);font-size:11px;font-weight:700;color:var(--acc2);margin-top:4px}
+  /* Botón "diario del día" + modal */
+  .ag-actions{margin-top:8px}
+  .ag-diary-btn{font-family:var(--mono);font-size:10px;font-weight:700;color:var(--acc);background:transparent;border:1px solid var(--line);border-radius:6px;padding:4px 9px;cursor:pointer}
+  .ag-diary-btn:hover{background:var(--panel2);border-color:var(--acc)}
+  .diary-ov{position:fixed;inset:0;background:rgba(6,9,14,.72);display:none;align-items:center;justify-content:center;z-index:9999;padding:20px}
+  .diary-box{background:var(--panel);border:1px solid var(--line);border-radius:14px;max-width:560px;width:100%;max-height:80vh;display:flex;flex-direction:column;overflow:hidden}
+  .diary-head{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--line);font-size:14px}
+  .diary-x{background:transparent;border:0;color:var(--mut);font-size:18px;cursor:pointer;line-height:1}
+  .diary-body{overflow:auto;padding:8px 16px 14px}
+  .diary-ent{padding:9px 0;border-bottom:1px solid rgba(38,48,63,.5);font-size:13px;line-height:1.4}
+  .diary-kind{font-family:var(--mono);font-size:9px;font-weight:800;text-transform:uppercase;padding:1px 5px;border-radius:4px;background:var(--panel2);color:var(--acc2);margin-right:6px}
+  .diary-empty{color:var(--mut);padding:24px;text-align:center}
 </style>
-<section class="agentes-sec">
-  <h2 class="agentes-h">👥 En qué anda cada agente <span class="ag-count" id="agCount"></span></h2>
-  <div class="agentes-grid" id="agentes"><div class="empty">Cargando agentes…</div></div>
-</section>
-
 <section class="rows">
   <div class="box carbono"><h2>🙋 Necesita carbono</h2><ul id="carbono"></ul></div>
   <div class="box riesgos"><h2>⚠️ Riesgos abiertos</h2><ul id="riesgos"></ul></div>
@@ -273,7 +357,7 @@ async function cargarEstado(){
 }
 // ── En qué anda cada agente (presencia pública + campo focus) ──
 function fmtAge2(s){ s=Math.max(0,s|0); if(s<60)return 'hace '+s+'s'; if(s<3600)return 'hace '+((s/60)|0)+'min'; if(s<86400)return 'hace '+((s/3600)|0)+'h'; return 'hace '+((s/86400)|0)+'d'; }
-const _AGPF={Neo:'Neo',Morfeo:'Morfeo',Trinity:'Trinity','Oráculo':'Oraculo',Oraculo:'Oraculo',Cypher:'Cypher'};
+const _AGPF={Neo:'Neo',Morfeo:'Morfeo',Trinity:'Trinity','Oráculo':'Oraculo',Oraculo:'Oraculo',Cypher:'Cypher',Smith:'Smith'};
 const _agEsc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
 async function renderAgentes(){
   const el=document.getElementById('agentes'); if(!el) return;
@@ -299,19 +383,109 @@ async function renderAgentes(){
       const age=now-(p.updated||0), online=age<ONLINE; if(online) on++;
       const pf=_AGPF[p.persona], av=pf?('/wallpapers/'+pf+'.png'):'';
       const foco=p.focus?_agEsc(p.focus):'sin reportar foco';
+      // ESTADO actual del agente, JUNTO AL NOMBRE: deciding > offline > busy > idle.
+      const _dec=(typeof p.decisions==='number')?p.decisions:0;
+      const _da=(typeof p.decide_at==='number')?p.decide_at:0;
+      const _auto=p.mode==='autonomo';
+      let estado;
+      if(_da>now){
+        estado='<span class="ag-state deciding" data-da="'+_da+'" data-p="'+_agEsc(p.persona||'')+'" data-m="'+_agEsc(p.machine||'')+'" title="Decidiendo — countdown a 0">'
+          +'<button type="button" class="cd-adj" data-adj="-60" title="acelerar 1 min">−</button>'
+          +'<span class="ag-cd">⏱ …</span>'
+          +'<button type="button" class="cd-adj" data-adj="60" title="retrasar 1 min">+</button>'
+          +'</span>';
+      } else if(!online){
+        estado='<span class="ag-state off" title="Desconectado">offline</span>';
+      } else if(p.focus){
+        estado='<span class="ag-state busy" title="Trabajando en algo">busy</span>';
+      } else {
+        estado='<span class="ag-state idle" title="Conectado, sin tarea activa">idle</span>';
+      }
+      // Contador de cosas hechas POR SU CUENTA → ABAJO DEL TODO de la tarjeta.
+      const contador='<div class="ag-count">'+(_auto?'🟢':'⚪')+' <b>'+_dec+'</b> por su cuenta'+(_auto?'':' · modo pasivo')+'</div>';
+      // Proyecto en el que anda el agente (p.ej. "www.admira.live").
+      const proyecto=p.project?'<div class="ag-project">📁 '+_agEsc(p.project)+'</div>':'';
+      // Botón "diario del día" → abre lo que ha hecho el agente hoy (entre handon y handoff).
+      const botones='<div class="ag-actions"><button type="button" class="ag-diary-btn" data-p="'+_agEsc(p.persona||'')+'" data-m="'+_agEsc(p.machine||'')+'">📓 diario del día</button></div>';
       const mine = !!yo && ((yo.persona && p.persona===yo.persona)
         || (yo.maquina && _yoN(p.machine)===_yoN(yo.maquina))
         || (yo.nombre && _yoN(p.machine)===_yoN(yo.nombre)));
       return '<div class="agente'+(online?'':' off')+(mine?' mine':'')+'">'
         +(av?('<img class="ag-av" src="'+av+'" alt="" onerror="this.style.visibility=\'hidden\'">'):'<div class="ag-av"></div>')
         +'<div class="ag-body"><div class="ag-top"><span class="ag-dot '+(online?'on':'off')+'"></span>'
-        +'<span class="ag-name">'+_agEsc(p.persona||'?')+'</span>'+(mine?'<span class="ag-you">TÚ</span>':'')+'</div>'
+        +'<span class="ag-name">'+_agEsc(p.persona||'?')+'</span>'+estado+(mine?'<span class="ag-you">TÚ</span>':'')+'</div>'
         +'<div class="ag-meta">'+_agEsc(p.runtime||'')+' · '+_agEsc(p.machine||'')+' · '+fmtAge2(age)+'</div>'
-        +'<div class="ag-focus'+(p.focus?'':' none')+'">'+foco+'</div></div></div>';
+        +proyecto
+        +'<div class="ag-focus'+(p.focus?'':' none')+'">'+foco+'</div>'+contador+botones+'</div></div>';
     }).join('');
+    _tickCD();  // pinta el countdown ya (y cada segundo vía el interval de abajo)
     const c=document.getElementById('agCount'); if(c) c.textContent=on+' online';
   }catch(e){ if(!el.querySelector('.agente')) el.innerHTML='<div class="empty">No se pudo leer la presencia.</div>'; }
 }
+// Countdown «decido en M:SS» → 0: actualiza cada segundo los badges con decisión pendiente.
+function _tickCD(){
+  const now=Date.now()/1000;
+  document.querySelectorAll('.ag-state.deciding[data-da]').forEach(el=>{
+    const cd=el.querySelector('.ag-cd'); if(!cd) return;
+    const s=Math.max(0,Math.ceil((+el.getAttribute('data-da'))-now));
+    el.classList.remove('cd-red','cd-amber','cd-green');
+    if(s<=0){ el.classList.add('go'); cd.textContent='🟢 decidiendo…'; }
+    else {
+      const m=Math.floor(s/60), ss=String(s%60).padStart(2,'0'); cd.textContent='⏱ decido en '+m+':'+ss;
+      el.classList.add(s>120?'cd-red':(s>60?'cd-amber':'cd-green'));  // >2min rojo · 1-2min ámbar · <1min verde
+    }
+  });
+}
+if(!window._cdTimer) window._cdTimer=setInterval(_tickCD,1000);
+
+// Botones −/+ del countdown: acelerar o retrasar la decisión "Tú por tu cuenta" de un
+// agente. Reutiliza el login Google del gate (gateCred) como Bearer del worker admira-telegram.
+async function adjustCD(btn){
+  const badge=btn.closest('.ag-state.deciding'); if(!badge) return;
+  const persona=badge.getAttribute('data-p'), machine=badge.getAttribute('data-m');
+  const delta=parseInt(btn.getAttribute('data-adj'),10)||0;
+  const cred=(typeof gateCred==='function')?gateCred():'';
+  if(!cred){ alert('Inicia sesión con Google en admira.live para ajustar el reloj.'); return; }
+  const twins=badge.querySelectorAll('.cd-adj'); twins.forEach(b=>b.disabled=true);
+  try{
+    const r=await fetch('https://admira-telegram.csilvasantin.workers.dev/api/decide-at',{
+      method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+cred},
+      body:JSON.stringify({persona,machine,delta})});
+    const d=await r.json().catch(()=>({}));
+    if(r.status===401){ alert('Sesión no autorizada para ajustar el reloj.'); return; }
+    if(d&&d.ok&&typeof d.decide_at==='number'){ badge.setAttribute('data-da',d.decide_at); badge.classList.remove('go'); _tickCD(); }
+  }catch(e){ /* red caída: el próximo refresco lo corrige */ }
+  finally{ twins.forEach(b=>b.disabled=false); }
+}
+document.addEventListener('click',e=>{ const b=e.target.closest('.cd-adj'); if(b){ e.preventDefault(); e.stopPropagation(); adjustCD(b); } });
+
+// ── Diario del día por agente (botón 📓 en cada ficha) ──────────────────
+async function showDiary(persona, machine){
+  let ov=document.getElementById('diary-ov');
+  if(!ov){ ov=document.createElement('div'); ov.id='diary-ov'; ov.className='diary-ov'; document.body.appendChild(ov);
+    ov.addEventListener('click',e=>{ if(e.target===ov||e.target.classList.contains('diary-x')) ov.style.display='none'; }); }
+  ov.innerHTML='<div class="diary-box"><div class="diary-head"><b>📓 '+_agEsc(persona)+' · '+_agEsc(machine)+' · hoy</b><button class="diary-x" title="cerrar">✕</button></div><div class="diary-body">Cargando…</div></div>';
+  ov.style.display='flex';
+  const body=ov.querySelector('.diary-body');
+  try{
+    const API='https://admira-telegram.csilvasantin.workers.dev';
+    const r=await fetch(API+'/api/diary?persona='+encodeURIComponent(persona)+'&machine='+encodeURIComponent(machine)+'&limit=150',{cache:'no-store'});
+    const d=await r.json();
+    const ents=d.entries||[];
+    const today=new Date().toISOString().slice(0,10).replace(/-/g,'');
+    // Filtra a HOY por el campo date (acepta YYYYMMDD o YYYY-MM-DD); si no casa, muestra las recientes.
+    const norm=s=>String(s||'').replace(/-/g,'').slice(0,8);
+    let use=ents.filter(e=>norm(e.date)===today);
+    if(!use.length) use=ents.slice(0,40);
+    if(!use.length){ body.innerHTML='<div class="diary-empty">Sin entradas de diario todavía.</div>'; return; }
+    body.innerHTML=use.map(e=>'<div class="diary-ent"><span class="diary-kind">'+_agEsc(e.kind||'log')+'</span>'+_agEsc(e.text||'')+'</div>').join('');
+  }catch(err){ body.innerHTML='<div class="diary-empty">No se pudo leer el diario.</div>'; }
+}
+document.addEventListener('click',function(e){
+  const b=e.target.closest && e.target.closest('.ag-diary-btn'); if(!b) return;
+  e.preventDefault();
+  showDiary(b.getAttribute('data-p')||'', b.getAttribute('data-m')||'');
+});
 async function tick(){
   renderAgentes();
   try{
@@ -340,7 +514,7 @@ const FLOTA=[
 ];
 let YO=null;
 const _norm=s=>(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
-const _pf={Neo:'Neo',Morfeo:'Morfeo',Trinity:'Trinity','Oráculo':'Oraculo',Oraculo:'Oraculo',Cypher:'Cypher'};
+const _pf={Neo:'Neo',Morfeo:'Morfeo',Trinity:'Trinity','Oráculo':'Oraculo',Oraculo:'Oraculo',Cypher:'Cypher',Smith:'Smith'};
 async function personaDe(nombre){
   try{
     const r=await fetch('https://admira-telegram.csilvasantin.workers.dev/api/presence',{cache:'no-store'});
@@ -440,6 +614,125 @@ setInterval(tick, 3000);
   async function load(){ try{ paint(await (await fetch(MW+'/api/mode')).json()); }catch(e){} }
   document.querySelectorAll('.modo-opt').forEach(b=> b.onclick=()=>setMode(b.dataset.mode));
   load(); setInterval(load, 5000);
+})();
+</script>
+<script>
+/* Columnas Hecho/En curso/Siguiente: plegables con la flecha de la esquina (persistente) */
+(function(){
+  var KEY='vp_cols_collapsed', saved={};
+  try{ saved=JSON.parse(localStorage.getItem(KEY)||'{}'); }catch(e){}
+  document.querySelectorAll('section.grid .col').forEach(function(col){
+    var m=col.className.match(/\b(hecho|encurso|siguiente)\b/), id=m?m[1]:'';
+    if(saved[id]) col.classList.add('collapsed');
+    var h=col.querySelector('h2');
+    if(h) h.addEventListener('click',function(){
+      col.classList.toggle('collapsed');
+      saved[id]=col.classList.contains('collapsed');
+      try{ localStorage.setItem(KEY,JSON.stringify(saved)); }catch(e){}
+    });
+  });
+})();
+</script>
+<script>
+/* Línea de tiempo de HOY por agente (Diario /api/diary): desplegable de agente + selector de
+   horas con actividad (zoom a la hora elegida). Rota sola cada 10s hasta que el usuario elige algo. */
+(function(){
+  var API='https://admira-telegram.csilvasantin.workers.dev/api/diary';
+  var RANK={decision:5,avance:4,problema:4,siguiente:3,log:2,resumen:1};
+  var COLOR={decision:'#c792ea',avance:'#5bd6c0',problema:'#ff5c5c',siguiente:'#7aa2ff',log:'#8a97ab',resumen:'#ffb454'};
+  var agents=[], idx=0, curHour=null, manual=false;
+  function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
+  function pad(n){ return (n<10?'0':'')+n; }
+  function todayStart(){ var d=new Date(); d.setHours(0,0,0,0); return d.getTime()/1000; }
+  function hourOf(e){ return new Date(e.date*1000).getHours(); }
+  var sec=document.getElementById('timelineSec');
+  var selA=document.getElementById('tlAgent'), selH=document.getElementById('tlHour');
+  selA.addEventListener('change',function(){ idx=+selA.value; curHour=null; manual=true; fillHours(); render(); });
+  selH.addEventListener('change',function(){ curHour=selH.value===''?null:+selH.value; manual=true; render(); });
+  async function load(){
+    var entries=[];
+    try{ var r=await fetch(API,{cache:'no-store'}); var d=await r.json(); entries=d.entries||[]; }catch(e){ return; }
+    var t0=todayStart();
+    entries=entries.filter(function(e){ return e.date>=t0 && e.persona && e.persona!=='Diario'; });
+    var byp={};
+    entries.forEach(function(e){ (byp[e.persona]=byp[e.persona]||[]).push(e); });
+    var prev=agents[idx]?agents[idx].persona:null;
+    agents=Object.keys(byp).map(function(p){
+      var list=byp[p].sort(function(a,b){return a.date-b.date;});
+      var byh={}, hset={};
+      list.forEach(function(e){ var h=hourOf(e); hset[h]=1; var c=byh[h];
+        if(!c || (RANK[e.kind]||0)>=(RANK[c.kind]||0)) byh[h]=e; });
+      var tasks=Object.keys(byh).map(function(k){return byh[k];}).sort(function(a,b){return a.date-b.date;});
+      var hours=Object.keys(hset).map(Number).sort(function(a,b){return a-b;});
+      return {persona:p, tasks:tasks, all:list, hours:hours, total:list.length};
+    }).filter(function(a){ return a.tasks.length; })
+      .sort(function(a,b){ return b.total-a.total; });
+    if(!agents.length){ sec.style.display='none'; return; }
+    sec.style.display='';
+    if(prev){ var pi=agents.map(function(a){return a.persona;}).indexOf(prev); if(pi>=0) idx=pi; }
+    if(idx>=agents.length) idx=0;
+    if(curHour!=null && agents[idx].hours.indexOf(curHour)<0) curHour=null;   // la hora ya no existe
+    fillAgents(); fillHours(); render();
+  }
+  function fillAgents(){
+    selA.innerHTML=agents.map(function(a,i){ return '<option value="'+i+'"'+(i===idx?' selected':'')+'>'+esc(a.persona)+'</option>'; }).join('');
+  }
+  function fillHours(){
+    var a=agents[idx]; if(!a){ selH.innerHTML=''; return; }
+    var opts='<option value="">Todo el día</option>';
+    a.hours.forEach(function(h){
+      var n=a.all.filter(function(e){return hourOf(e)===h;}).length;
+      opts+='<option value="'+h+'"'+(curHour===h?' selected':'')+'>'+pad(h)+':00 ('+n+')</option>';
+    });
+    selH.innerHTML=opts;
+  }
+  function render(){
+    var a=agents[idx]; if(!a) return;
+    var items, hmin, hmax, zoom=(curHour!=null);
+    if(!zoom){
+      items=a.tasks;                                          // resumen: 1 significativo por hora
+      var mins=items.map(function(t){ var d=new Date(t.date*1000); return d.getHours()+d.getMinutes()/60; });
+      var now=new Date(); var nh=now.getHours()+now.getMinutes()/60;
+      hmin=Math.floor(Math.min.apply(null,mins))-0.4;
+      hmax=Math.ceil(Math.max.apply(null,mins.concat([nh])))+0.4;
+      if(hmax-hmin<3){ hmax=hmin+3; }
+    } else {
+      items=a.all.filter(function(e){ return hourOf(e)===curHour; });   // TODO lo de esa hora
+      hmin=curHour; hmax=curHour+1;
+    }
+    var span=hmax-hmin;
+    var pos=function(h){ return (h-hmin)/span*100; };
+    var html='';
+    if(!zoom){
+      for(var h=Math.ceil(hmin); h<=Math.floor(hmax); h++){ html+='<div class="tl-tick" style="left:'+pos(h)+'%"><span>'+h+'h</span></div>'; }
+    } else {
+      for(var mm=0; mm<=60; mm+=15){ var tot=curHour*60+mm, H=Math.floor(tot/60), M=tot%60; html+='<div class="tl-tick" style="left:'+pos(curHour+mm/60)+'%"><span>'+pad(H)+':'+pad(M)+'</span></div>'; }
+    }
+    items.forEach(function(t){
+      var d=new Date(t.date*1000); var hh=pad(d.getHours())+':'+pad(d.getMinutes());
+      var hf=d.getHours()+d.getMinutes()/60;
+      var txt=t.text.replace(/\s+/g,' ').trim();
+      var short=txt.length>60?txt.slice(0,58)+'…':txt;
+      var title=hh+' · '+t.kind+' · '+txt;
+      html+='<div class="tl-mark" style="left:'+pos(hf)+'%" title="'+esc(title)+'">'
+          + '<span class="tl-dot" style="color:'+(COLOR[t.kind]||'#888')+';background:'+(COLOR[t.kind]||'#888')+'"></span>'
+          + '<span class="tl-lab"><b>'+esc(hh)+'</b> '+esc(short)+'</span></div>';
+    });
+    var track=document.getElementById('tlTrack');
+    track.innerHTML=html;
+    var ms=[].slice.call(track.querySelectorAll('.tl-mark')).sort(function(x,y){ return x.getBoundingClientRect().left-y.getBoundingClientRect().left; });
+    var tiers=[];
+    ms.forEach(function(mk){ var r=mk.getBoundingClientRect(), ti=0; while(ti<tiers.length && r.left<=tiers[ti]+8) ti++; mk.style.top=(5+ti*30)+'px'; tiers[ti]=r.right; });
+    track.style.height=(5+Math.max(1,tiers.length)*30+12)+'px';
+    document.getElementById('tlCount').textContent='· '+a.total+(a.total===1?' hito':' hitos')+' hoy';
+    document.getElementById('tlDots').innerHTML=agents.map(function(_,i){ return '<span class="tl-pip'+(i===idx?' on':'')+'" data-i="'+i+'"></span>'; }).join('');
+    Array.prototype.forEach.call(document.querySelectorAll('#tlDots .tl-pip'),function(p){
+      p.addEventListener('click',function(){ idx=+p.dataset.i; curHour=null; manual=true; fillAgents(); fillHours(); render(); }); });
+    if(selA.value!==String(idx)) selA.value=String(idx);
+  }
+  load();
+  setInterval(load, 60000);        // refresca datos cada minuto (respeta la selección manual)
+  setInterval(function(){ if(!manual && agents.length){ idx=(idx+1)%agents.length; fillAgents(); fillHours(); render(); } }, 10000);
 })();
 </script>
 </body>

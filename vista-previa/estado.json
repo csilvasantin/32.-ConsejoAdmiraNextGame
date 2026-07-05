@@ -2,10 +2,10 @@
   "proyecto": "AInimation Studio · www.ainimation.studio",
   "titulo": "Editor de vídeo zero-key: un brief → vídeo 1080p real",
   "resumen": "El editor «Direct the movie» produce vídeo con voz multiidioma, música, fondos e imágenes CC0, temas y escenas (cita/imagen/gráfico), sin claves de API. Falta solo el HTTPS.",
-  "foco": "Migrar el HTTPS a Cloudflare (única pega); editor completo, pulido y verificado",
-  "progreso": 95,
+  "foco": "ainimation.studio con HTTPS vivo; editor Studio Live en cuadratura AdmiraNeXT (nav home + raíles opciones/avanzado/experto)",
+  "progreso": 100,
   "estado_general": "en curso",
-  "actualizado": "2026-07-05T05:25:00Z",
+  "actualizado": "2026-07-05T06:53:36Z",
   "por": "Morfeo · MacBookProNegro14",
   "pasos": {
     "hecho": [
@@ -13,7 +13,8 @@
       "Música de fondo (3 camas zero-key), fondos con imágenes reales CC0 (Openverse) y auto-ajuste de duración a la voz",
       "4 temas visuales + 3 tipos de escena (cita destacada, imagen a pantalla completa, gráfico de barras)",
       "Galería de producciones + compartir nativo, guardar/compartir el brief, plantillas de 1 clic y meta Open Graph",
-      "Pipeline público verificado end-to-end (worker Cloudflare + poller → R2)"
+      "Pipeline público verificado end-to-end (worker Cloudflare + poller → R2)",
+      "HTTPS de ainimation.studio ACTIVO (migrado el DNS a Cloudflare; cert válido, carga 200) — se resolvió el cert de Pages atascado >12h"
     ],
     "encurso": [
       "Puente Emitir → admira.tv (autónomo) — enviar la producción al canal DOOH"
@@ -25,7 +26,6 @@
     ]
   },
   "necesita_carbono": [
-    "HTTPS de ainimation.studio: dar de alta el dominio en Cloudflare y cambiar los nameservers en GoDaddy (solo tú tienes las cuentas). El cert de GitHub Pages lleva >12h muerto; Cloudflare lo arregla al instante + CDN. El site funciona por http entretanto.",
     "Guardar en la bóveda un token de Cloudflare con permisos de Zona/DNS — así el HTTPS y futuros cambios de DNS los automatizo yo (cumple la máxima #11: reducir el carbono recurrente).",
     "Tu OK para el puente Emitir → admira.tv (conectar el editor al canal DOOH) — o dime otra prioridad de producto."
   ],
@@ -45,5 +45,5 @@
     }
   ],
   "commit": "pendiente",
-  "version": "estado ainimation v.2026.07.05.r1 (Morfeo)"
+  "version": "estado ainimation v.2026.07.05.r2 (Morfeo)"
 }

@@ -59,6 +59,12 @@
     ".pf-ico.on .frame{stroke:#ffdd66}" +
     ".pf-ico.on .panel{fill:#ffdd66}" +
     ".pf-ico:hover{border-color:#f0c040}" +
+    /* Stats de flota en la barra (barra unificada: mismos que la home en TODAS las páginas) */
+    ".admira-summary{order:50;display:flex;gap:9px;align-items:center;margin-left:auto;flex:0 0 auto;align-self:center}" +
+    ".admira-summary .as-item{display:flex;flex-direction:column;align-items:center;line-height:1;font-family:'Press Start 2P',monospace}" +
+    ".admira-summary .as-num{font-size:12px;color:#ffdd66}" +
+    ".admira-summary .as-num.as-green{color:#44bb44}.admira-summary .as-num.as-red{color:#e74c3c}.admira-summary .as-num.as-blue{color:#3498db}" +
+    ".admira-summary small{font-size:6px;color:#b89060;margin-top:3px;white-space:nowrap;letter-spacing:.3px}" +
     "html.admira-bar-on body{padding-top:46px !important}";
 
   function mount() {
@@ -89,6 +95,14 @@
     brand.innerHTML = "🏛️ " + PROJECT + ' <span class="pf-ver">' + VERSION + "</span>";
     top.appendChild(brand);
 
+    // Stats de flota (consejeros activos · sin conexión · máquinas) — la barra unificada
+    // lleva los mismos stats que la home en TODAS las páginas.
+    var summary = document.createElement("div");
+    summary.id = "admira-summary";
+    summary.className = "admira-summary";
+    top.appendChild(summary);
+    fetchSummary(summary);
+
     document.body.appendChild(top);
 
     // Iconos de panel de la portería (a la derecha). Se colocan antes de que
@@ -98,6 +112,36 @@
     // Enlace "Usuarios" SOLO para superusers (los que acceden a los equipos).
     // Se añade async tras consultar la lista del worker de whitelist.
     maybeAddUsuarios(top);
+  }
+
+  // Stats de flota para la barra: consejeros activos (personas online) · sin conexión
+  // (máquinas de la flota sin latido) · máquinas online (total de la flota registrada).
+  // Fuentes públicas: worker admira-fleet (máquinas) + presencia (agentes/beats). Best-effort.
+  function fetchSummary(el) {
+    var FLEET = "https://admira-fleet.csilvasantin.workers.dev/machines";
+    var PRES = "https://admira-telegram.csilvasantin.workers.dev/api/presence";
+    Promise.all([
+      fetch(FLEET, { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }),
+      fetch(PRES, { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; })
+    ]).then(function (res) {
+      var fleet = res[0], pres = res[1];
+      var machines = (fleet && fleet.machines) ? fleet.machines : [];
+      var total = machines.length;
+      var now = (pres && pres.now) ? pres.now : Math.floor(Date.now() / 1000);
+      var onlineMachines = {}, personas = {};
+      ((pres && pres.presence) || []).forEach(function (p) {
+        if ((now - (p.updated || 0)) < 8 * 60) {
+          if (p.machine) onlineMachines[p.machine] = 1;
+          if (p.persona) personas[p.persona] = 1;
+        }
+      });
+      var activos = Object.keys(personas).length;
+      var sinConn = Math.max(0, total - Object.keys(onlineMachines).length);
+      el.innerHTML =
+        '<span class="as-item"><b class="as-num as-green">' + activos + '</b><small>Consejeros activos</small></span>' +
+        '<span class="as-item"><b class="as-num as-red">' + sinConn + '</b><small>Sin conexión</small></span>' +
+        '<span class="as-item"><b class="as-num as-blue">' + total + '</b><small>Máquinas online</small></span>';
+    }).catch(function () { });
   }
 
   // Crea un icono toggle SCUMM para un panel; null si el panel no existe en la página.

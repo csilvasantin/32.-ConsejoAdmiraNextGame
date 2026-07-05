@@ -503,6 +503,9 @@ async function renderAgentes(){
     // máquina/sub NO borre la tarea principal (con varias instancias el proyecto parpadeaba).
     const projByP={}; (d.presence||[]).forEach(p=>{ const k=(p.persona||p.machine||'?');
       if(p.project && (now-(p.updated||0))<STALE && (!projByP[k]||(p.updated||0)>(projByP[k].u||0))) projByP[k]={v:p.project,u:p.updated||0}; });
+    // Fix B — proyecto por defecto por persona (último fallback si presence/projByP vienen vacíos),
+    // para que ninguna tarjeta quede sin "📁 proyecto". Refleja el reparto de carriles del equipo.
+    const DEFPROJ={Neo:'www.admira.live',Morfeo:'www.admira.live',Trinity:'pixeria.com',Oráculo:'yarig.ai',Smith:'ainimation.studio',Cypher:'ainimation.studio'};
     // Filtra rancias: fuera los muertos (>12h) y los offline SIN foco (fantasmas de
     // sesiones viejas). Así el tablero muestra solo agentes activos/recientes con algo que decir.
     const list=Object.values(byP)
@@ -560,7 +563,7 @@ async function renderAgentes(){
       // Contador POR SU CUENTA + peticiones del arquitecto AL LADO → ABAJO DEL TODO.
       const contador='<div class="ag-count">'+(_auto?'🟢':'⚪')+' <b>'+_dec+'</b> por su cuenta'+(_auto?'':' · modo pasivo')+_petHtml+'</div>';
       // Proyecto + RESPONSABLE (agente), independiente de la máquina: "📁 www.admira.live // Morfeo".
-      const _proj = p.project || ((projByP[p.persona]||{}).v) || '';
+      const _proj = p.project || ((projByP[p.persona]||{}).v) || DEFPROJ[p.persona] || '';
       const proyecto=_proj?'<div class="ag-project">📁 '+_agEsc(_proj)+' <span class="ag-owner">// '+_agEsc(p.persona||'?')+'</span></div>':'';
       // (Retirado el botón "diario del día" para ganar una línea a la descripción de la tarea.)
       const botones='';

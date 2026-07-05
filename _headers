@@ -1,0 +1,6 @@
+# Cloudflare Pages — cabeceras de www.admira.live
+# El bar de navegación compartido (admira-bar.js) y sus assets iteran a menudo. Con la caché
+# por defecto (4h) las mejoras (p.ej. la cuadratura) tardaban en verse. Caché corta + revalidar
+# para que propaguen en minutos, no en horas.
+/admira-bar.js
+  Cache-Control: public, max-age=300, must-revalidate

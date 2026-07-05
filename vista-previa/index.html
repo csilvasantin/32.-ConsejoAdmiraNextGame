@@ -307,7 +307,14 @@
     var body=Object.assign({id:+id}, patch);
     fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+c},body:JSON.stringify(body)})
       .then(function(r){return r.json().catch(function(){return{};}).then(function(d){return {s:r.status,d:d};});})
-      .then(function(o){ if(o.d&&o.d.ok){ note('#'+id+' actualizada ✓'); load(); } else if(o.s===401){ note('sesión de Google caducada — recarga la página y vuelve a entrar'); } else { note('error '+o.s+': '+((o.d&&o.d.error)||'?')); } })
+      .then(function(o){
+        if(o.d&&o.d.ok){ note('#'+id+' actualizada ✓'); load(); }
+        else if(o.s===401){ note('🔒 sesión de Google caducada — recarga la página y vuelve a entrar'); }
+        else if(o.s===403){ note('⛔ tu cuenta no está autorizada para editar el tablero'); }
+        else if(o.s===404){ note('❓ no se pudo actualizar: la tarea #'+id+' no existe o el servicio del tablero no responde — recarga; si sigue, avísanos'); }
+        else if(o.s===0||o.s>=500){ note('🛠️ el servicio del tablero no responde ('+o.s+') — reintenta en un momento'); }
+        else { note('error '+o.s+((o.d&&o.d.error)?': '+o.d.error:'')+' — reintenta'); }
+      })
       .catch(function(){ note('error de red'); });
   }
   var tl=document.getElementById('tabList');

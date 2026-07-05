@@ -295,7 +295,7 @@
   .diary-empty{color:var(--mut);padding:24px;text-align:center}
 </style>
 <section class="rows">
-  <div class="box carbono"><h2>🙋 Necesita carbono</h2><ul id="carbono"></ul>
+  <div class="box carbono"><h2>🙋 Necesita carbono <span class="carb-meta" id="carbMeta"></span></h2><ul id="carbono"></ul>
     <div class="carb-cli" id="carbCli" style="display:none">
       <span class="carb-cli-tgt" id="carbCliTgt">›</span>
       <input id="carbCliInput" type="text" autocomplete="off" spellcheck="false"
@@ -352,7 +352,7 @@ function render(d){
   $('#hecho').innerHTML=li(s.hecho,'—');
   $('#encurso').innerHTML=li(s.encurso,'en pausa');
   $('#siguiente').innerHTML=li(s.siguiente,'sin planear');
-  renderCarbono(d.necesita_carbono, d.por);
+  renderCarbono(d.necesita_carbono, d.por, d.actualizado);
   $('#riesgos').innerHTML=li(d.riesgos,'sin riesgos anotados');
   $('#commit').textContent=d.commit?('commit '+d.commit):'—';
   $('#version').textContent=d.version||'—';
@@ -807,6 +807,9 @@ setInterval(tick, 3000);
   .carb-cli input::placeholder{color:var(--mut)}
   .carb-cli button{background:var(--carbono);color:#0b0e14;border:0;border-radius:7px;width:28px;height:24px;cursor:pointer;font-size:13px;flex:none}
   .carb-cli button:disabled{opacity:.4;cursor:default}
+  /* Cabecera de "Necesita carbono": hora de última actualización + contador x/n pendientes */
+  .carb-meta{font-family:var(--mono);font-size:10px;font-weight:600;color:var(--mut);letter-spacing:.3px;white-space:nowrap}
+  .carb-meta b{color:var(--carbono);font-weight:800}
 </style>
 <script>
 /* "Necesita carbono" interactivo: necesidades numeradas + CLI para responder a cada una.
@@ -814,9 +817,18 @@ setInterval(tick, 3000);
    la resuelve y la quita de necesita_carbono. */
 (function(){
   var MW='https://admira-telegram.csilvasantin.workers.dev';
-  var sel=-1, items=[], persona='Neo';
+  var sel=-1, items=[], persona='Neo', lastUpd='';
   var cli=document.getElementById('carbCli'), input=document.getElementById('carbCliInput'),
       send=document.getElementById('carbCliSend'), tgt=document.getElementById('carbCliTgt');
+  // Cabecera: hora de última actualización + cuántas necesidades quedan pendientes (x/n).
+  function updateCarbMeta(){
+    var meta=document.getElementById('carbMeta'); if(!meta) return;
+    var total=items.length;
+    if(!total){ meta.textContent=''; return; }
+    var pend=document.querySelectorAll('#carbono .carb-item:not(.answered)').length;
+    var age=(typeof fmtAge==='function'&&lastUpd)?fmtAge(lastUpd):'';
+    meta.innerHTML=(age?('⏱ '+age+' · '):'')+'<b>'+pend+'/'+total+'</b> pendientes';
+  }
   function paintSel(){
     Array.prototype.forEach.call(document.querySelectorAll('#carbono .carb-item'),function(el){
       el.classList.toggle('sel', +el.dataset.i===sel); });
@@ -824,11 +836,12 @@ setInterval(tick, 3000);
     else{ tgt.textContent='#'+(sel+1)+' → '+persona; input.placeholder='responde a la necesidad #'+(sel+1)+' — Enter envía a '+persona+'…'; }
   }
   function select(i){ sel=i; paintSel(); input.focus(); }
-  window.renderCarbono=function(list, por){
+  window.renderCarbono=function(list, por, upd){
     var box=document.getElementById('carbono');
     persona=((por||'').split('·')[0]||'').trim()||'Neo';
     items=list||[];
-    if(!items.length){ box.innerHTML='<li class="empty">nada — el silicio va solo 🤖</li>'; cli.style.display='none'; sel=-1; return; }
+    if(upd) lastUpd=upd;
+    if(!items.length){ box.innerHTML='<li class="empty">nada — el silicio va solo 🤖</li>'; cli.style.display='none'; sel=-1; updateCarbMeta(); return; }
     box.innerHTML=items.map(function(t,i){
       return '<li class="carb-item" data-i="'+i+'"><span class="carb-num">'+(i+1)+'</span><span class="carb-txt">'+String(t).replace(/</g,'&lt;')+'</span></li>';
     }).join('');
@@ -837,6 +850,7 @@ setInterval(tick, 3000);
       el.addEventListener('click',function(){ select(+el.dataset.i); }); });
     if(sel>=items.length) sel=-1;
     paintSel();
+    updateCarbMeta();
   };
   async function submit(){
     if(sel<0){ input.focus(); return; }
@@ -851,6 +865,7 @@ setInterval(tick, 3000);
       if(d && d.ok){
         var el=document.querySelector('#carbono .carb-item[data-i="'+sel+'"]');
         if(el) el.classList.add('answered');
+        updateCarbMeta();
         input.value=''; tgt.textContent='✓ enviado a '+persona;
         setTimeout(function(){ sel=-1; paintSel(); },1600);
       } else { tgt.textContent=prev; alert('No se pudo enviar: '+((d&&d.error)||'error')); }

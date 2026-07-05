@@ -809,8 +809,10 @@ setInterval(tick, 3000);
     var d=new Date(last*1000);
     document.getElementById('dormiasLapso').textContent='· '+since.length+' hitos desde las '+pad(d.getHours())+':'+pad(d.getMinutes());
     document.getElementById('dormiasList').innerHTML=since.slice(0,6).map(function(e){
-      var t=e.text.replace(/\s+/g,' ').trim(); if(t.length>110) t=t.slice(0,108)+'…';
-      return '<li><b>'+esc(e.persona)+'</b> · '+esc(t)+'</li>';
+      var t=e.text.replace(/\s+/g,' ').trim();                          // texto COMPLETO, sin cortar (llega hasta el final)
+      var hd=new Date((e.date||0)*1000);
+      var hh=pad(hd.getHours())+':'+pad(hd.getMinutes());
+      return '<li><b>'+esc(hh)+'</b> '+esc(e.persona)+' · '+esc(t)+'</li>';   // empieza por la HORA
     }).join('');
     sec.style.display='';
   }

@@ -226,6 +226,60 @@
   <h2 class="agentes-h">👥 En qué anda cada agente <span class="ag-count" id="agCount"></span></h2>
   <div class="agentes-grid" id="agentes"><div class="empty">Cargando agentes…</div></div>
 </section>
+
+<style id="tablero-css">
+  .tablero{margin:18px 0 0}
+  .tablero-h{font-size:12px;letter-spacing:.4px;text-transform:uppercase;color:var(--mut);margin:0 0 10px;display:flex;align-items:center;gap:8px}
+  .tab-count{color:var(--acc);font-family:var(--mono);font-size:11px}
+  .tab-list{display:flex;flex-direction:column;gap:6px}
+  .tab-row{display:flex;align-items:flex-start;gap:9px;padding:9px 11px;background:var(--panel);border:1px solid var(--line);border-radius:10px;font-size:12.5px}
+  .tab-row.mine{border-color:var(--acc);box-shadow:inset 2px 0 0 var(--acc)}
+  .tab-id{font-family:var(--mono);font-size:10px;color:var(--mut);flex:0 0 auto;padding-top:1px}
+  .tab-main{flex:1;min-width:0}
+  .tab-title{color:var(--ink);line-height:1.35}
+  .tab-meta{font-family:var(--mono);font-size:10px;color:var(--mut);margin-top:3px}
+  .tab-meta b{color:var(--acc2)}
+  .tab-st{font-family:var(--mono);font-size:9px;font-weight:800;letter-spacing:.4px;border-radius:5px;padding:2px 7px;flex:0 0 auto;text-transform:uppercase;white-space:nowrap}
+  .tab-st.todo{color:#8a97ab;background:transparent;border:1px solid var(--line)}
+  .tab-st.doing{color:#06231f;background:var(--acc)}
+  .tab-st.blocked{color:#2b0000;background:#ff5c5c}
+  .tab-st.done{color:#06231f;background:#39d98a}
+</style>
+<section class="tablero" id="tablero">
+  <h2 class="tablero-h">📋 Tablero de tareas de la flota <span class="tab-count" id="tabCount"></span></h2>
+  <div class="tab-list" id="tabList"><div class="empty">Cargando tareas…</div></div>
+</section>
+<script>
+/* Tablero de tareas de la flota (fuente única: worker admira-telegram /api/tasks, montado por
+   Neo). Lectura: pinta quién hace qué, resalta las mías. La escritura (take/doing/done) se
+   añadirá cuando Neo pase los endpoints. */
+(function(){
+  var API='https://admira-telegram.csilvasantin.workers.dev/api/tasks';
+  var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});};
+  function yoName(){ try{ return (typeof YO!=='undefined'&&YO&&YO.persona)?YO.persona:''; }catch(e){ return ''; } }
+  function load(){
+    fetch(API,{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){
+      var box=document.getElementById('tabList'); if(!box) return;
+      var ts=(d&&d.tasks)||[];
+      var order={doing:0,blocked:1,todo:2,done:3};
+      ts.sort(function(a,b){ var oa=order[a.status]==null?9:order[a.status], ob=order[b.status]==null?9:order[b.status]; return oa-ob || (a.id-b.id); });
+      var yo=yoName();
+      var open=ts.filter(function(t){return t.status!=='done';});
+      var c=document.getElementById('tabCount'); if(c) c.textContent='· '+open.length+' abiertas';
+      if(!ts.length){ box.innerHTML='<div class="empty">Sin tareas en el tablero.</div>'; return; }
+      box.innerHTML=ts.map(function(t){
+        var mine=yo&&t.assignee===yo, st=(t.status||'todo');
+        return '<div class="tab-row'+(mine?' mine':'')+'" title="'+esc(t.detail||'')+'">'
+          +'<span class="tab-id">#'+esc(t.id)+'</span>'
+          +'<div class="tab-main"><div class="tab-title">'+esc(t.title)+'</div>'
+          +'<div class="tab-meta"><b>'+esc(t.assignee||'—')+'</b> · '+esc(t.project||'—')+(t.needs?(' · ⛔ '+esc(t.needs)):'')+'</div></div>'
+          +'<span class="tab-st '+esc(st)+'">'+esc(st)+'</span></div>';
+      }).join('');
+    }).catch(function(){});
+  }
+  load(); setInterval(load, 60000);
+})();
+</script>
 </main>
 <aside class="rail rail-right" aria-label="Avanzado · desglose de tareas">
 <section class="grid">

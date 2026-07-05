@@ -364,7 +364,7 @@
       "status": "online",
       "lastSeen": "2026-07-04T18:47:21Z",
       "currentFocus": "Agentes activos: Claude Code (Opus) y Grok CLI = «Agente Smith». Presencia + buzon de la flota via admira-telegram; despliega www.admira.live con wrangler.",
-      "note": "Tailscale: asuszenbook / 100.75.98.87. Sin SSH entrante (sshd no instalado): participa por agentes que salen (heartbeat de presencia + worker de buzon). Node 24 + wrangler instalados: puede desplegar Cloudflare Pages/Workers.",
+      "note": "Tailscale: asuszenbook / 100.75.98.87. SSH entrante ACTIVO (OpenSSH Server, sshd Automatic escuchando en :22) — controlable por el Mac Mini via SSH sobre Tailscale, usuario Windows 'carlos silva'. Agentes salientes activos: presencia Smith + worker de buzon (tarea AdmiraSmithPresence al inicio). Node 24 + wrangler instalados: puede desplegar Cloudflare Pages/Workers.",
       "agents": [
         { "runtime": "Claude", "product": "Claude Code", "model": "Opus 4.8" },
         { "runtime": "Grok", "persona": "Smith", "product": "Grok CLI", "avatar": "/wallpapers/Smith.png" }
@@ -375,12 +375,12 @@
         "mode": "claude-code + grok-worker"
       },
       "ssh": {
-        "enabled": false,
-        "user": "csilvasantin",
+        "enabled": true,
+        "user": "carlos silva",
         "host": "asuszenbook.tail48b61c.ts.net",
         "ip_tailscale": "100.75.98.87",
         "ip_lan": "",
-        "connect_tailscale": "ssh csilvasantin@100.75.98.87"
+        "connect_tailscale": "ssh \"carlos silva\"@100.75.98.87"
       },
       "mac_address": ""
     },

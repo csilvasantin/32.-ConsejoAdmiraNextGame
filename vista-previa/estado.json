@@ -4,9 +4,12 @@
   "resumen": "El editor «Direct the movie» produce vídeo con voz multiidioma, música, fondos e imágenes CC0, temas y escenas (cita/imagen/gráfico), sin claves de API. Falta solo el HTTPS.",
   "foco": "ainimation.studio con HTTPS vivo; editor Studio Live en cuadratura AdmiraNeXT (nav home + raíles opciones/avanzado/experto)",
   "progreso": 100,
-  "estado_general": "en curso",
+  "estado_general": "convergido (queda solo el puente Emitir → admira.tv)",
   "actualizado": "2026-07-05T06:53:36Z",
+  "ultima_actualizacion_real": "2026-07-05T06:53:36Z",
+  "caduca": "2026-07-08T06:53:36Z",
   "por": "Morfeo · MacBookProNegro14",
+  "_planos": "Este fichero es el ESTADO DE PROYECTO (global, versionado en git). La PRESENCIA VIVA per-agente (quién está online y en qué foco) NO va aquí: la sirve el worker en /api/presence y la pinta la vista-previa aparte. Si 'caduca' < ahora, considérese posiblemente desfasado.",
   "pasos": {
     "hecho": [
       "Voz en off multiidioma (Piper es/en) con voz, velocidad, volumen y preview del guion",

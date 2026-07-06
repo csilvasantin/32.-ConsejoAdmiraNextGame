@@ -371,6 +371,10 @@ function render(d){
   const por=$('#por'); por.textContent=d.por||'silicio';
   por.className='chip '+((d.por==='carbono')?'carbono':'silicio');
   $('#agePill').textContent=fmtAge(d.actualizado);
+  // Frescura: si 'caduca' (ISO) < ahora, marca el estado como posiblemente desfasado.
+  const ap=$('#agePill'), cad=d.caduca?new Date(d.caduca).getTime():NaN;
+  if(!isNaN(cad)&&cad<Date.now()){ ap.textContent+=' · ⚠️ posiblemente desfasado'; ap.title='caduca '+d.caduca+' (estado de proyecto, no presencia viva)'; }
+  else if(!isNaN(cad)){ ap.title='fresco hasta '+d.caduca; }
   $('#links').innerHTML=(d.enlaces||[]).map(l=>'<a href="'+l.url+'" target="_blank">'+String(l.label).replace(/</g,'&lt;')+'</a>').join('');
 }
 /* Fuente del estado: si hay sesión del gate (admira_gate.cred), lee del worker

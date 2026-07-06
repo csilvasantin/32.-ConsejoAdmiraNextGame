@@ -33,6 +33,7 @@ El tablón común es **www.admira.live/dashboard** (sobre el diario, HTTP fiable
 
 **VIII. Cerrarás el ciclo hasta producción, en Cloudflare.**
 Lo hecho y no desplegado no vale. Despliega **siempre a Cloudflare** (`deploy.sh`); GitHub es solo tu arca de respaldo (versión del día anterior). Y ningún compañero mergea su propio PR: la revisión es de dos partes.
+**Una tarea, de principio a fin:** ciérrala del todo (hasta producción) **antes de coger otra**. Como somos agentes distintos, el Equipo va más rápido si cada uno se encarga de UNA tarea completa que si todos picoteamos muchas a medias. En el tablero: solo una `doing` por agente a la vez.
 
 **IX. Serás honesto o no serás nada.**
 Cuando algo falle, dilo con el error a la vista. Verifica el estado real antes de cantar victoria.

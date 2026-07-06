@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Inventario · ADcelerate by Admira</title>
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="stylesheet" href="assets/tokens.css">
+<link rel="stylesheet" href="assets/app.css">
+<!-- Contrato de temas (3 vistas): NEON · STUDIO · OPS. El loader inyecta la
+     capa de tema activa antes del primer paint (evita flash de tema). -->
+<script src="assets/theme-loader.js"></script>
+<meta name="view-transition" content="same-origin">
+</head>
+<body data-page="circuito">
+<main class="wrap">
+
+  <section class="hero" style="padding-bottom:24px">
+    <div class="eyebrow">Inventario del circuito</div>
+    <h1 style="max-width:24ch">El soporte propio donde aterriza la campaña</h1>
+    <p class="lead">Vista demo del estado de las pantallas propias del circuito. Las campañas activadas en
+      Activación se despliegan aquí — este es el soporte que Admira controla de punta a punta.
+      <span class="muted">(datos mock)</span></p>
+  </section>
+
+  <section class="section" style="margin-top:8px">
+    <div class="kpis" id="circuit-kpis"></div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <div class="eyebrow">Pantallas</div>
+      <h2>Estado en vivo</h2>
+    </div>
+    <div class="screens-grid" id="screens-grid"></div>
+  </section>
+
+</main>
+<script src="assets/data.js"></script>
+<script>
+  (function () {
+    var s = AC.screens;
+    var ok = s.filter(function (x){return x.status==='ok';}).length;
+    var warn = s.filter(function (x){return x.status==='warn';}).length;
+    var off = s.filter(function (x){return x.status==='off';}).length;
+    document.getElementById('circuit-kpis').innerHTML =
+      '<div class="kpi"><div class="n">' + s.length + '</div><div class="l">pantallas (muestra)</div></div>' +
+      '<div class="kpi"><div class="n" style="color:var(--admira-green)">' + ok + '</div><div class="l">activas</div></div>' +
+      '<div class="kpi"><div class="n" style="color:var(--admira-amber)">' + warn + '</div><div class="l">sincronizando</div></div>' +
+      '<div class="kpi"><div class="n" style="color:var(--admira-text-dim)">' + off + '</div><div class="l">offline</div></div>';
+
+    var label = { ok:'Emitiendo', warn:'Sincronizando', off:'Offline' };
+    document.getElementById('screens-grid').innerHTML = s.map(function (x) {
+      return '<article class="screen-tile">' +
+        '<div class="row"><span class="name">' + x.name + '</span>' +
+          '<span class="pill ' + (x.status==='ok'?'ok':x.status==='warn'?'warn':'off') + '">' +
+          '<span class="dot ' + x.status + '"></span> ' + label[x.status] + '</span></div>' +
+        '<div class="loc">' + x.loc + '</div>' +
+        '<div class="thumb">' + (x.status==='off' ? '— sin señal —' : x.app) + '</div>' +
+      '</article>';
+    }).join('');
+  })();
+</script>
+<script src="assets/retro.js"></script>
+<script src="assets/nav.js"></script>
+</body>
+</html>

@@ -1,0 +1,99 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Audiencias · ADcelerate by Admira</title>
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="stylesheet" href="assets/tokens.css">
+<link rel="stylesheet" href="assets/app.css">
+<!-- Contrato de temas (3 vistas): NEON · STUDIO · OPS. El loader inyecta la
+     capa de tema activa antes del primer paint (evita flash de tema). -->
+<script src="assets/theme-loader.js"></script>
+<meta name="view-transition" content="same-origin">
+</head>
+<body data-page="audiencias">
+<main class="wrap">
+
+  <section class="hero" style="padding-bottom:24px">
+    <div class="eyebrow">Explorador de geoaudiencias</div>
+    <h1 style="max-width:24ch">Audiencia <span class="g">first-party</span> en cada punto</h1>
+    <p class="lead">Cada pantalla del circuito es un sensor de audiencia. Explora los perfiles agregados por
+      zona y tipo de punto — estanco, kiosco, centro comercial. <span class="muted">(datos mock, sin cookies)</span></p>
+  </section>
+
+  <section class="section" style="margin-top:8px">
+    <div class="audi-shell">
+      <div>
+        <div class="map-frame" id="map">
+          <div class="grid-lines"></div>
+          <div class="rf-radar-rings" aria-hidden="true"></div>
+          <div class="rf-radar-sweep" aria-hidden="true"></div>
+          <div class="rf-norad" aria-hidden="true">CIRCUITO ADMIRA · OPS<br>FIRST-PARTY GRID · LIVE<br>SIN COOKIES · GDPR</div>
+          <div class="map-legend">circuito Admira · pulsa un punto</div>
+        </div>
+      </div>
+      <div class="zone-detail" id="zone">
+        <div class="zd-empty">Selecciona una zona en el mapa para ver su geoaudiencia.</div>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <div class="eyebrow">Perfiles agregados</div>
+      <h2>Por tipología de punto</h2>
+      <p>Cada tipo de punto de venta concentra una audiencia distinta. Estos perfiles salen de la propia
+        pantalla, no de un data lake alquilado.</p>
+    </div>
+    <div class="grid grid-3" id="perfiles"></div>
+  </section>
+
+  <section class="section center">
+    <a class="btn btn-p" href="activacion.html">Activar una campaña sobre estas audiencias →</a>
+  </section>
+
+</main>
+<script src="assets/data.js"></script>
+<script>
+(function () {
+  var map = document.getElementById('map');
+  var zone = document.getElementById('zone');
+  var franjaLabel = { 'mañana':'Mañana', 'mediodía':'Mediodía', 'tarde':'Tarde' };
+
+  AC.zonas.forEach(function (z) {
+    var pin = document.createElement('button');
+    pin.className = 'map-pin';
+    pin.style.left = z.x + '%';
+    pin.style.top = z.y + '%';
+    pin.title = z.nombre;
+    pin.setAttribute('aria-label', z.nombre);
+    pin.onclick = function () {
+      map.querySelectorAll('.map-pin').forEach(function (p) { p.classList.remove('sel'); });
+      pin.classList.add('sel');
+      zone.innerHTML =
+        '<div class="zd-tipo">' + z.tipo + ' · franja ' + (franjaLabel[z.franja] || z.franja) + '</div>' +
+        '<h3>' + z.nombre + '</h3>' +
+        '<div class="zd-metrics">' +
+          '<div class="zd-m"><div class="n">' + z.dispositivos.toLocaleString('es-ES') + '</div><div class="l">dispositivos únicos / día</div></div>' +
+          '<div class="zd-m"><div class="n">' + z.uplift + '</div><div class="l">uplift drive-to-store medio</div></div>' +
+        '</div>' +
+        '<div class="zd-perfil"><b>Perfil:</b> ' + z.perfil + '</div>';
+    };
+    map.appendChild(pin);
+  });
+
+  document.getElementById('perfiles').innerHTML = AC.perfiles.map(function (p) {
+    return '<article class="card">' +
+      '<h3><span class="icon">' + p.icon + '</span> ' + p.tipo + '</h3>' +
+      '<p class="meta">Edad ' + p.edad + ' · ' + p.genero + '</p>' +
+      '<div class="accel"><b>Top consumo:</b> ' + p.top + '<br><b>Franja fuerte:</b> ' + p.franja + '</div>' +
+    '</article>';
+  }).join('');
+})();
+</script>
+<script src="assets/retro.js"></script>
+<script src="assets/nav.js"></script>
+</body>
+</html>

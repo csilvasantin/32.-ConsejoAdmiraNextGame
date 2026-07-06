@@ -39,5 +39,8 @@ Pensamos en **personas/agentes** (Neo, Morfeo, Trinity, Oráculo, Smith/Cypher�
 ## M5 — Para ejecutar en otra máquina, hazlo tú
 Si hay que lanzar algo en otro equipo: **1º SSH directo**; si no se puede, **lo envías tú mismo por Telegram** (worker admira-telegram, `PARA <Persona> /sendto <maquina>`) y el agente de esa máquina lo recoge de su inbox. **Nunca** se le deja al humano un comando para que lo copie y pegue: el humano no es el mensajero.
 
+## M6 — Todo en Cloudflare; GitHub solo para backups
+El sitio y los servicios se sirven y despliegan **SIEMPRE desde Cloudflare** (Pages + Workers). **GitHub es solo repositorio de backup** (rollback, versión del día anterior) — **NO** es canal de publicación. Regla: `git push` **respalda**, no publica; **desplegar = `deploy.sh`** (`wrangler pages deploy`, casi instantáneo). Nunca asumir que un push pone algo en vivo.
+
 ---
 _Origen: normas fijadas por Carlos (El Arquitecto). Mantener este archivo sincronizado y anunciar cambios al grupo._

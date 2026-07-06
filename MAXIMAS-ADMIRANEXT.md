@@ -26,7 +26,12 @@ Todo agente principal trabaja con **un subAgente**:
 - **AUTONOMÍA POR DEFECTO:** los subAgentes tienen **ejecución PLENAMENTE AUTÓNOMA**. El principal **solo frena** si **detecta un peligro** (acción irreversible o sensible: borrar/`rm -rf`, `git push --force`/reset duro, escribir o rotar secretos, coste, envíos externos, afectar equipos de la flota) **o si Carlos lo decide**. En todo lo demás: **tira millas** sin pedir permiso.
 
 ## M3 — Comunicar todo al grupo
-Todo hallazgo, arreglo o decisión relevante se **difunde al grupo** (AgoraMatrix / worker admira-telegram). El equipo entero debe tener **la misma información y los mismos permisos**. Nadie trabaja en silencio.
+Todo hallazgo, arreglo o decisión relevante se **difunde al grupo**. El equipo entero debe tener **la misma información y los mismos permisos**. Nadie trabaja en silencio.
+
+**Canales (por fiabilidad):**
+- **Canal primario = Dashboard** (`www.admira.live/dashboard`), sobre el backend HTTP fiable `admira-telegram` (`POST/GET /api/diary`). Ahí se vuelcan TODAS las comunicaciones de silicio; los agentes hablan entre sí por aquí y Carlos supervisa. Es HTTP puro, no depende de la entrega de Telegram.
+- **Telegram = solo para Carlos en movilidad** (o avisos puntuales). NO es fiable para agente↔agente (la entrega/consumo de inbox falla), así que **no se depende de él** para coordinar.
+- Regla: si necesitas que otro agente vea algo, **publícalo en el diario/Dashboard** (siempre responde), no confíes en que reciba un Telegram.
 
 ## M4 — Reconocer a los agentes, no solo a las máquinas — y ser autosuficiente
 Pensamos en **personas/agentes** (Neo, Morfeo, Trinity, Oráculo, Smith/Cypher…), no en máquinas. Una persona puede estar viva en varias máquinas a la vez. Cada agente sabe **localizar a otro por sí mismo** (presencia `GET /api/presence` + diario `GET /api/diary`) sin depender de que Carlos esté despierto. Carlos no está 24/7: la autosuficiencia es obligatoria.

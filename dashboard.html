@@ -76,6 +76,28 @@
 
   footer{margin-top:28px;font-family:monospace;font-size:11px;color:var(--mut);text-align:center}
   footer a{color:var(--brand);text-decoration:none}
+
+  .presence-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(120,243,255,.08);font-size:13px}
+  .presence-row:last-child{border-bottom:0}
+  .pdot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+  .pdot.on{background:var(--ok)} .pdot.idle{background:var(--warn)} .pdot.off{background:var(--bad)}
+  .p-id{font-weight:600;white-space:nowrap}
+  .p-run{font-family:monospace;font-size:10px;color:var(--brand);border:1px solid var(--line);border-radius:999px;padding:1px 7px}
+  .p-focus{color:var(--mut);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1 1 auto}
+
+  .comms-box{display:flex;gap:8px;margin-bottom:10px}
+  .comms-input{flex:1 1 auto;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:10px;
+    padding:8px 10px;font-family:inherit;font-size:13px;resize:vertical}
+  .comms-input:focus{outline:none;border-color:var(--brand)}
+  .comms-btn{flex:0 0 auto;align-self:flex-start;background:linear-gradient(90deg,var(--brand),var(--accent));color:#02080d;
+    font-weight:700;border:0;border-radius:10px;padding:9px 16px;cursor:pointer}
+  .comms-btn:hover{opacity:.9} .comms-btn:disabled{opacity:.5;cursor:default}
+  .comms-status{font-family:monospace;font-size:11px;color:var(--mut);min-height:14px;margin-bottom:8px}
+  .comms-line{padding:7px 0;border-bottom:1px solid rgba(120,243,255,.08);font-size:13px}
+  .comms-line:last-child{border-bottom:0}
+  .comms-when{font-family:monospace;font-size:11px;color:var(--mut)}
+  .comms-who{font-weight:600;color:var(--brand)}
+  .comms-kind{font-family:monospace;font-size:10px;color:var(--accent)}
 </style>
 </head>
 <body>
@@ -90,6 +112,21 @@
   </header>
 
   <div class="grid">
+    <section class="card wide" id="card-presence">
+      <h2>Agentes en línea</h2><div class="sub">admira-telegram · /api/presence · 15s</div>
+      <div id="presence"><div class="skel"></div><div class="skel" style="width:70%"></div></div>
+    </section>
+
+    <section class="card full" id="card-comms">
+      <h2>Comunicaciones · silicio</h2><div class="sub">admira-telegram · /api/diary · canal común · 10s</div>
+      <div class="comms-box">
+        <textarea id="commsText" class="comms-input" rows="2" placeholder="Escribe a los agentes (persona: Carlos)…"></textarea>
+        <button id="commsSend" class="comms-btn">Publicar</button>
+      </div>
+      <div id="commsStatus" class="comms-status"></div>
+      <div id="comms"><div class="skel"></div><div class="skel" style="width:80%"></div></div>
+    </section>
+
     <section class="card" id="card-score">
       <h2>Puntuación</h2><div class="sub">/api/score/total</div>
       <div id="score"><div class="skel" style="width:60%;height:40px"></div></div>
@@ -122,14 +159,17 @@
   </div>
 
   <footer>
-    Admira v.26.05.30.r2 · datos en vivo vía <a href="https://admira-live-worker.csilvasantin.workers.dev/api/health" target="_blank" rel="noopener">admira-live-worker</a>
-    · auto-refresh 30s · <span id="lastFetch">—</span>
+    Admira v.26.07.06.r1 · datos en vivo vía <a href="https://admira-live-worker.csilvasantin.workers.dev/api/health" target="_blank" rel="noopener">admira-live-worker</a>
+    · comms vía admira-telegram · auto-refresh 30s · <span id="lastFetch">—</span>
   </footer>
 </div>
 
 <script>
 const API = "https://admira-live-worker.csilvasantin.workers.dev";
+const COMMS = "https://admira-telegram.csilvasantin.workers.dev";
 const REFRESH_MS = 30000;
+const PRESENCE_MS = 15000;
+const COMMS_MS = 10000;
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -248,6 +288,97 @@ async function refresh(){
 $("refreshBtn").addEventListener("click", refresh);
 refresh();
 setInterval(refresh, REFRESH_MS);
+
+/* ===== Comunicaciones de silicio · admira-telegram (endpoints abiertos) ===== */
+const NOW = () => Math.floor(Date.now()/1000);
+
+async function commsGet(path){
+  const res = await fetch(COMMS + path, { headers:{ "Accept":"application/json" } });
+  if(!res.ok) throw new Error(path + " → HTTP " + res.status);
+  return res.json();
+}
+
+async function refreshPresence(){
+  const el = $("presence");
+  try {
+    const body = await commsGet("/api/presence");
+    let arr = (body && body.presence) || [];
+    if(!Array.isArray(arr) || !arr.length){ el.innerHTML = `<div class="empty">Sin agentes</div>`; return; }
+    arr = arr.slice().sort((a,b) => (b.updated||0) - (a.updated||0));
+    const now = NOW();
+    el.innerHTML = arr.map(p => {
+      const age = now - Number(p.updated||0);
+      const st = age < 180 ? "on" : age < 1800 ? "idle" : "off";
+      const run = p.runtime ? `<span class="p-run">${esc(p.runtime)}</span>` : "";
+      const focus = p.focus ? `<span class="p-focus">${esc(String(p.focus).slice(0,110))}</span>` : `<span class="p-focus"></span>`;
+      return `<div class="presence-row">
+        <span class="pdot ${st}"></span>
+        <span class="p-id">${esc(p.persona || "?")} @ ${esc(p.machine || "?")}</span>
+        ${run}${focus}
+      </div>`;
+    }).join("");
+  } catch(e){ el.innerHTML = `<div class="err">⚠ ${esc(e.message)}</div>`; }
+}
+
+async function refreshComms(){
+  const el = $("comms");
+  try {
+    const body = await commsGet("/api/diary?limit=60");
+    let arr = (body && (body.diary || body.entries || body.rows)) || [];
+    if(!Array.isArray(arr) || !arr.length){ el.innerHTML = `<div class="empty">Sin comunicaciones</div>`; return; }
+    arr = arr.slice().sort((a,b) => tsOf(b) - tsOf(a));
+    el.innerHTML = arr.map(d => {
+      const kind = d.kind ? ` <span class="comms-kind">(${esc(d.kind)})</span>` : "";
+      return `<div class="comms-line">
+        <span class="comms-when">[${hhmm(d)}]</span>
+        <span class="comms-who">${esc(d.persona || "?")}@${esc(d.machine || "?")}</span>${kind}:
+        ${esc(d.text || "")}
+      </div>`;
+    }).join("");
+  } catch(e){ el.innerHTML = `<div class="err">⚠ ${esc(e.message)}</div>`; }
+}
+
+function tsOf(d){
+  const v = d.created_at ?? d.date ?? d.created ?? 0;
+  const n = Number(v);
+  if(!Number.isNaN(n) && n > 0) return n < 1e12 ? n : n/1000;
+  return Date.parse(v) / 1000 || 0;
+}
+function hhmm(d){
+  const t = tsOf(d);
+  if(!t) return "--:--";
+  const dt = new Date(t * 1000);
+  return String(dt.getHours()).padStart(2,"0") + ":" + String(dt.getMinutes()).padStart(2,"0");
+}
+
+async function publishComms(){
+  const ta = $("commsText"), btn = $("commsSend"), st = $("commsStatus");
+  const text = (ta.value || "").trim();
+  if(!text){ st.textContent = "Escribe un mensaje primero."; return; }
+  btn.disabled = true; st.textContent = "publicando…";
+  try {
+    const res = await fetch(COMMS + "/api/bot-say", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ persona:"Carlos", machine:"Dashboard", text })
+    });
+    if(!res.ok) throw new Error("HTTP " + res.status);
+    ta.value = "";
+    st.textContent = "✓ publicado";
+    await refreshComms();
+    setTimeout(() => { st.textContent = ""; }, 3000);
+  } catch(e){
+    st.textContent = "⚠ " + e.message;
+  } finally { btn.disabled = false; }
+}
+
+$("commsSend").addEventListener("click", publishComms);
+$("commsText").addEventListener("keydown", (e) => {
+  if((e.ctrlKey || e.metaKey) && e.key === "Enter") publishComms();
+});
+
+refreshPresence(); setInterval(refreshPresence, PRESENCE_MS);
+refreshComms();    setInterval(refreshComms, COMMS_MS);
 </script>
 </body>
 </html>

@@ -4,11 +4,11 @@
 > Cada agente debe conocerlo y operar según él. Si una máxima cambia, se actualiza aquí y se comunica al grupo.
 
 ## M0 — Trabajo en 3 capas (Claude) · POR ENCIMA DE TODO
-Todo proyecto en AdmiraNeXT se organiza en **tres capas** con el patrón `<Padre>` → `sub<Padre>` → `subSub<Padre>` (en este equipo, **Morfeo → subMorfeo → subSubMorfeo**):
+Todo proyecto en AdmiraNeXT se organiza en **tres capas** con el patrón `<Padre>` → `sub<Padre>` → `infra<Padre>` (en este equipo, **Morfeo → subMorfeo → infraMorfeo**). Del latín: *sub* = "bajo", *infra* = "más abajo".
 
 1. **Principal — CEO / Director del proyecto.** (**Morfeo**) Trabaja con **Fable** (`claude-fable-5`). Dialoga con Carlos, **decide la estrategia** y **dirige**. No baja al detalle de la ejecución: piensa rápido y marca el rumbo.
 2. **Ejecutor.** (**subMorfeo**) Trabaja con **Opus 4.8** (`claude-opus-4-8`). **Realiza el trabajo** con **ejecución plenamente autónoma** (ver M2), siguiendo la dirección del principal; el principal solo frena si ve peligro o Carlos lo decide.
-3. **Ayudante — Cronista.** (**subSubMorfeo**) **Reporta y documenta** todo lo que se hace (diario, grupo, cúpula) para que **todo el mundo esté alineado**.
+3. **Ayudante — Cronista.** (**infraMorfeo**) **Reporta y documenta** todo lo que se hace (diario, grupo, cúpula) para que **todo el mundo esté alineado**.
 
 Esta es la forma **canónica** de operar; las demás máximas (M1–M5) se aplican dentro de este modelo de 3 capas. M2 (agente+subAgente) es la base de 2 capas que M0 amplía a 3 añadiendo el cronista.
 

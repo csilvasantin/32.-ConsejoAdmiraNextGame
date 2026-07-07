@@ -589,17 +589,43 @@ const _norm=s=>(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
 const _personaFile={Neo:'Neo',Morfeo:'Morfeo',Trinity:'Trinity','Oráculo':'Oraculo',Oraculo:'Oraculo',Cypher:'Cypher'};
 let PERSONA_BY_MACHINE={};
 let AGENT_ONLINE=new Set(); // máquinas con un agente (Claude/Codex/Grok) con beat de presencia <8min
+// Señales DISTRIBUIDAS de "visto reciente" (no dependen del probe SSH del Mini):
+//  · PRESENCE_SEEN → latido fresco en /api/presence (<3min). Señal PRINCIPAL: `updated` sí es fresco.
+//  · FLEET_SEEN    → registro fresco en admira-fleet (<5min). Señal SECUNDARIA: casi todos los
+//                    `lastSeen` de admira-fleet están estáticos/viejos, así que sólo cuenta si es fresco.
+let PRESENCE_SEEN=new Set();
+let FLEET_SEEN=new Set();
+const PRESENCE_FRESH=180;   // s — latido de presencia considerado "online"
+const FLEET_FRESH=300;      // s — registro de admira-fleet considerado "online"
 async function loadPersonas(){
   try{
     const r=await fetch(DIARY_API+'/api/presence',{cache:'no-store'});
-    const d=await r.json(); const map={}; const on=new Set(); const now=(d.now||Date.now()/1000);
+    const d=await r.json(); const map={}; const on=new Set(); const seen=new Set(); const now=(d.now||Date.now()/1000);
     (d.presence||[]).slice().sort((a,b)=>b.updated-a.updated).forEach(p=>{
       const k=_norm(p.machine); if(!k) return;
       if(!map[k]) map[k]=p.persona;                 // la persona más reciente por máquina
-      if((now-(p.updated||0))<8*60) on.add(k);       // agente ACTIVO (<8min) en esa máquina
+      const age=now-(p.updated||0);
+      if(age<8*60) on.add(k);                        // agente ACTIVO (<8min) en esa máquina
+      if(age<PRESENCE_FRESH) seen.add(k);            // latido fresco (<3min) → online por presencia
     });
-    PERSONA_BY_MACHINE=map; AGENT_ONLINE=on;
+    PERSONA_BY_MACHINE=map; AGENT_ONLINE=on; PRESENCE_SEEN=seen;
   }catch(e){ /* sin presencia: las tarjetas quedan sin fondo, sin icono roto */ }
+}
+// admira-fleet: registro durable de la flota. `lastSeen` suele estar estático para casi todas
+// las máquinas, así que SÓLO marca online las que tienen un `lastSeen` realmente fresco (<5min).
+async function loadFleet(){
+  try{
+    const r=await fetch('https://admira-fleet.csilvasantin.workers.dev/machines',{cache:'no-store'});
+    const d=await r.json(); const seen=new Set(); const now=Date.now()/1000;
+    (d.machines||[]).forEach(m=>{
+      let ls=m.lastSeen; if(!ls) return;
+      const sec = ls>1e12 ? ls/1000 : ls;           // epoch en ms o s → s
+      if((now-sec)>=FLEET_FRESH) return;            // registro viejo/estático → no cuenta como online
+      [m.id, m.name, m.fqdn].forEach(v=>{ if(!v) return;
+        const k=_norm(String(v).split('.')[0].replace(/^admira-?/,'')); if(k.length>=4) seen.add(k); });
+    });
+    FLEET_SEEN=seen;
+  }catch(e){ /* sin admira-fleet: sólo se usa presencia + probe SSH */ }
 }
 // Claves de una máquina del hub para casar con los nombres de presencia (p.ej. hub fqdn
 // 'macbookair16' ~ presencia 'MacBookAir16plata'; id 'admira-asuszenbook' ~ 'AsusZenbook').
@@ -613,6 +639,12 @@ function _machKeys(m){ const ks=[];
 function agentOnline(m){ const ks=_machKeys(m);
   for(const p of AGENT_ONLINE){ for(const k of ks){ if(k===p||k.indexOf(p)===0||p.indexOf(k)===0) return true; } }
   return false; }
+// ¿Vista reciente por una señal DISTRIBUIDA? (mismo casado de claves que agentOnline)
+function _seenIn(set,m){ const ks=_machKeys(m);
+  for(const p of set){ for(const k of ks){ if(k===p||k.indexOf(p)===0||p.indexOf(k)===0) return true; } }
+  return false; }
+function presenceOnline(m){ return _seenIn(PRESENCE_SEEN,m); }
+function fleetOnline(m){ return _seenIn(FLEET_SEEN,m); }
 function personaWallpaper(name){
   const f=_personaFile[PERSONA_BY_MACHINE[_norm(name)]];
   return f ? '/wallpapers/'+f+'.png' : '';
@@ -645,11 +677,19 @@ async function refresh(){
   if(!SESSION){ $('#connPill').textContent='🔒 inicia sesión Google'; $('#connPill').className='pill bad'; renderCards([]); return; }
   try{
     const d=await api('/status'); MACHINES=d.machines; _reauthTried=false;
-    await loadPersonas();
+    await Promise.all([loadPersonas(), loadFleet()]);
     // Un equipo con un agente ACTIVO (Claude/Codex/Grok, beat de presencia <8min) cuenta como
     // ONLINE aunque el hub lo dé offline: el hub solo ve el agente de flota/SSH, no los agentes
     // que trabajan en la máquina (por eso AsusZenbook/MacBookAir16 salían desconectados).
-    MACHINES.forEach(m=>{ if(!m.online && agentOnline(m)){ m.online=true; m.viaAgent=true; } });
+    // Además marcamos online por SEÑALES DISTRIBUIDAS (menos dependencia del probe SSH del Mini):
+    // latido fresco en /api/presence (viaPresence, señal principal) o registro fresco en
+    // admira-fleet (viaFleet). Así Crema/Rosa (ya registradas) aparecen sin depender del Mini.
+    MACHINES.forEach(m=>{
+      if(m.online) return;
+      if(agentOnline(m)){ m.online=true; m.viaAgent=true; }
+      else if(presenceOnline(m)){ m.online=true; m.viaPresence=true; }
+      else if(fleetOnline(m)){ m.online=true; m.viaFleet=true; }
+    });
     const up=MACHINES.filter(m=>m.online).length;
     $('#connPill').textContent='🟢 '+up+'/'+MACHINES.length+' online'; $('#connPill').className='pill ok';
     // alerta de caída: avisa cuando un equipo cambia de estado (tras la 1ª foto base)

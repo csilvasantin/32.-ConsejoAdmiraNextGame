@@ -1,0 +1,320 @@
+/* ============================================================
+   ADcelerate · theme-studio.css
+   ============================================================
+   VISTA 2 de 3 · «STUDIO» — limpia, clara, corporate (enterprise).
+   Capa TEMA conmutable sobre tokens.css + app.css. Se activa con
+   html[data-theme="studio"] (lo pone theme-loader.js). Mismos
+   componentes que NEON/OPS, en versión sobria: fondos claros,
+   tipografía serena, aire, sombras suaves, mapa plano, log como
+   stepper, ticker como fila de KPIs. Ver docs/01-diseno.md §9.
+
+   REGLAS DURAS (comunes a las 3 vistas):
+   · Contraste AA en texto funcional · targets ≥44px · foco visible.
+   · prefers-reduced-motion: sin animación.
+   ============================================================ */
+
+html[data-theme="studio"] {
+  color-scheme: light;
+
+  /* ── Superficies claras ─────────────────────────────────── */
+  --st-bg:        #f5f7fb;
+  --st-bg-2:      #eef1f7;
+  --st-surface:   #ffffff;
+  --st-surface-2: #f8fafc;
+
+  /* ── Texto corporativo (gris pizarra) ───────────────────── */
+  --st-text:      #1e2635;
+  --st-muted:     #55617a;
+  --st-dim:       #8a94a8;
+
+  /* ── Acento: azul corporativo sereno + verde de éxito ──── */
+  --st-accent:    #2563eb;
+  --st-accent-2:  #6d5efc;
+  --st-accent-sf: #eaf0ff;   /* superficie tintada del acento */
+  --st-green:     #0f9d63;
+  --st-amber:     #b7791f;
+  --st-magenta:   #d6336c;
+
+  /* ── Bordes y sombras suaves ────────────────────────────── */
+  --st-line:      #e2e7f0;
+  --st-line-str:  #cbd4e3;
+  --st-shadow:    0 1px 2px rgba(20,30,50,.05), 0 8px 24px -12px rgba(20,30,50,.18);
+  --st-shadow-hover: 0 2px 4px rgba(20,30,50,.06), 0 16px 40px -16px rgba(37,99,235,.30);
+
+  /* Reasignación de tokens del sistema para que app.css herede solo */
+  --acc:        var(--st-accent);
+  --acc-2:      var(--st-accent-2);
+  --line:       var(--st-line);
+  --line-str:   var(--st-line-str);
+  --card:       var(--st-surface);
+  --card-2:     var(--st-surface-2);
+  --mut:        var(--st-muted);
+  --dim:        var(--st-dim);
+  --gradient:      linear-gradient(96deg, var(--st-accent), var(--st-accent-2));
+  --gradient-soft: linear-gradient(96deg, rgba(37,99,235,.10), rgba(109,94,252,.06));
+  --admira-text:       var(--st-text);
+  --admira-text-muted: var(--st-muted);
+  --admira-text-dim:   var(--st-dim);
+  --admira-green:      var(--st-green);
+  --admira-amber:      var(--st-amber);
+  --admira-magenta:    var(--st-magenta);
+  --admira-shadow-card: var(--st-shadow-hover);
+  --admira-shadow-glow-cyan: var(--st-shadow);
+}
+
+/* ── Base + fondo claro; anula la neblina/horizonte de NEON ── */
+html[data-theme="studio"] body {
+  background: var(--st-bg);
+  color: var(--st-text);
+}
+html[data-theme="studio"] body::before,
+html[data-theme="studio"] body::after { display: none; content: none; }
+/* efectos NEON (scanlines, grid canvas) fuera en STUDIO */
+html[data-theme="studio"] .rf-scanlines,
+html[data-theme="studio"] .rf-canvas,
+html[data-theme="studio"] .rf-radar-sweep,
+html[data-theme="studio"] .rf-radar-rings,
+html[data-theme="studio"] .rf-norad { display: none !important; }
+
+/* ── Tipografía: sin display retro, todo sereno ─────────────── */
+html[data-theme="studio"] .hero h1,
+html[data-theme="studio"] .section-head h2,
+html[data-theme="studio"] .rf-display,
+html[data-theme="studio"] .ac-brand {
+  font-family: var(--admira-font-sans);
+  text-transform: none;
+  letter-spacing: -0.02em;
+  font-weight: 700;
+  text-shadow: none;
+}
+html[data-theme="studio"] .hero h1 .g {
+  background: linear-gradient(96deg, var(--st-accent), var(--st-accent-2));
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent;
+  text-shadow: none;
+}
+html[data-theme="studio"] .eyebrow,
+html[data-theme="studio"] .hero .eyebrow {
+  color: var(--st-accent); text-shadow: none; font-weight: 600;
+}
+
+/* ── Nav clara ──────────────────────────────────────────────── */
+html[data-theme="studio"] .ac-nav {
+  background: rgba(255,255,255,.86);
+  backdrop-filter: saturate(1.2) blur(12px);
+  border-bottom: 1px solid var(--st-line);
+  box-shadow: 0 1px 0 rgba(20,30,50,.04);
+}
+html[data-theme="studio"] .ac-brand { letter-spacing: .02em; }
+html[data-theme="studio"] .ac-brand .mark {
+  background: linear-gradient(135deg, var(--st-accent), var(--st-accent-2));
+  border: 0; color: #fff; box-shadow: 0 4px 12px -3px rgba(37,99,235,.5);
+  text-shadow: none;
+}
+html[data-theme="studio"] .ac-brand .name {
+  background: linear-gradient(96deg, var(--st-accent), var(--st-accent-2));
+  -webkit-background-clip: text; background-clip: text;
+  -webkit-text-fill-color: transparent; color: transparent; text-shadow: none;
+}
+html[data-theme="studio"] .ac-links a {
+  font-family: var(--admira-font-sans); text-transform: none; letter-spacing: 0;
+  font-size: 13px; font-weight: 600; color: var(--st-muted);
+}
+html[data-theme="studio"] .ac-links a:hover { color: var(--st-text); }
+html[data-theme="studio"] .ac-links a.active {
+  color: var(--st-accent); text-shadow: none;
+}
+html[data-theme="studio"] .ac-links a.active::after {
+  background: var(--st-accent); box-shadow: none;
+}
+html[data-theme="studio"] .ac-tail { color: var(--st-dim); }
+
+/* ── Paneles/tarjetas: cristal claro con sombra suave ───────── */
+html[data-theme="studio"] .card,
+html[data-theme="studio"] .tesis-col,
+html[data-theme="studio"] .accel-panel,
+html[data-theme="studio"] .zone-detail,
+html[data-theme="studio"] .funnel-step,
+html[data-theme="studio"] .uplift-card,
+html[data-theme="studio"] .kpi,
+html[data-theme="studio"] .screen-tile,
+html[data-theme="studio"] .vs-col {
+  background: var(--st-surface);
+  border: 1px solid var(--st-line);
+  border-radius: var(--admira-radius-lg);
+  backdrop-filter: none;
+  box-shadow: var(--st-shadow);
+}
+html[data-theme="studio"] .card:hover,
+html[data-theme="studio"] .tesis-col.in,
+html[data-theme="studio"] .vs-col.accel,
+html[data-theme="studio"] .uplift-card {
+  border-color: var(--st-accent);
+  box-shadow: var(--st-shadow-hover);
+}
+html[data-theme="studio"] .tesis-col.in::before,
+html[data-theme="studio"] .accel-panel::before,
+html[data-theme="studio"] .uplift-card::before { content: none; display: none; }
+html[data-theme="studio"] .kpi { background: var(--st-surface); }
+html[data-theme="studio"] .kpi .n,
+html[data-theme="studio"] .zone-detail .zd-m .n,
+html[data-theme="studio"] .funnel-step .fn {
+  color: var(--st-accent); text-shadow: none;
+}
+html[data-theme="studio"] .funnel-step .fbar {
+  background: var(--gradient-soft);
+}
+html[data-theme="studio"] .flow-step h4 { color: var(--st-accent); }
+
+/* ── Botones corporativos ───────────────────────────────────── */
+html[data-theme="studio"] .btn {
+  font-family: var(--admira-font-sans); text-transform: none; letter-spacing: 0;
+  border: 1px solid var(--st-line-str); color: var(--st-text); background: var(--st-surface);
+  min-height: 44px; box-shadow: 0 1px 2px rgba(20,30,50,.04);
+}
+html[data-theme="studio"] .btn:hover {
+  border-color: var(--st-accent); color: var(--st-accent);
+  box-shadow: 0 2px 8px -2px rgba(37,99,235,.25);
+}
+html[data-theme="studio"] .btn:active { transform: translateY(1px); }
+html[data-theme="studio"] .btn-p {
+  background: linear-gradient(180deg, var(--st-accent), #1f57d6);
+  color: #fff; border: 0; text-shadow: none;
+  box-shadow: 0 6px 18px -6px rgba(37,99,235,.55);
+}
+html[data-theme="studio"] .btn-p:hover {
+  color: #fff;
+  box-shadow: 0 8px 24px -6px rgba(37,99,235,.65);
+}
+
+/* Foco de teclado (usabilidad innegociable, común a las 3 vistas) */
+html[data-theme="studio"] a:focus-visible,
+html[data-theme="studio"] .btn:focus-visible,
+html[data-theme="studio"] button:focus-visible,
+html[data-theme="studio"] .map-pin:focus-visible,
+html[data-theme="studio"] .chip:focus-visible,
+html[data-theme="studio"] textarea:focus-visible {
+  outline: 2px solid var(--st-accent);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 4px rgba(37,99,235,.20);
+}
+
+/* ── Terminal → tarjeta-stepper elegante (log de activación) ── */
+html[data-theme="studio"] .rf-term {
+  background: var(--st-surface-2);
+  border: 1px solid var(--st-line);
+  border-radius: var(--admira-radius-md);
+  box-shadow: none; color: var(--st-text);
+  font-family: var(--admira-font-sans);
+}
+html[data-theme="studio"] .rf-term::after { content: none; display: none; }
+html[data-theme="studio"] .rf-term .rf-line { text-shadow: none; color: var(--st-muted); }
+html[data-theme="studio"] .gen-log { font-family: var(--admira-font-sans); }
+html[data-theme="studio"] .gen-log li { color: var(--st-dim); }
+html[data-theme="studio"] .gen-log li.on { color: var(--st-text); text-shadow: none; }
+html[data-theme="studio"] .gen-log li.on::before { content: "✓ "; color: var(--st-green); }
+html[data-theme="studio"] .gen-log li.pending::before { content: "○ "; color: var(--st-dim); }
+
+/* ── Mapa plano minimal (audiencias) ────────────────────────── */
+html[data-theme="studio"] .map-frame {
+  border: 1px solid var(--st-line-str);
+  background:
+    radial-gradient(circle at 50% 45%, rgba(37,99,235,.05), transparent 60%),
+    var(--st-surface);
+  box-shadow: var(--st-shadow);
+}
+html[data-theme="studio"] .map-frame .grid-lines {
+  background-image:
+    linear-gradient(rgba(37,99,235,.08) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(37,99,235,.08) 1px, transparent 1px);
+  background-size: 44px 44px;
+}
+html[data-theme="studio"] .map-pin {
+  background: var(--st-accent);
+  box-shadow: 0 0 0 4px rgba(37,99,235,.14), 0 2px 6px -1px rgba(37,99,235,.5);
+}
+html[data-theme="studio"] .map-pin::after { border-color: rgba(37,99,235,.35); }
+html[data-theme="studio"] .map-pin:hover,
+html[data-theme="studio"] .map-pin.sel {
+  background: var(--st-magenta);
+  box-shadow: 0 0 0 4px rgba(214,51,108,.16), 0 2px 8px -1px rgba(214,51,108,.5);
+}
+html[data-theme="studio"] .map-legend { color: var(--st-dim); }
+
+/* ── Ticker → tabla de KPIs sobria (medición) ───────────────── */
+html[data-theme="studio"] .rf-ticker {
+  border: 1px solid var(--st-line);
+  border-radius: var(--admira-radius-md);
+  background: var(--st-surface);
+  box-shadow: var(--st-shadow);
+}
+html[data-theme="studio"] .rf-ticker::after { content: none; display: none; }
+html[data-theme="studio"] .rf-ticker .q { color: var(--st-muted); text-shadow: none; }
+html[data-theme="studio"] .rf-ticker .q b { color: var(--st-text); text-shadow: none; }
+html[data-theme="studio"] .rf-ticker .q .dn { color: var(--st-magenta); text-shadow: none; }
+
+/* ── Rack de pantallas: tarjeta limpia (circuito) ──────────── */
+html[data-theme="studio"] .screen-tile {
+  background: var(--st-surface);
+  border: 1px solid var(--st-line);
+  box-shadow: var(--st-shadow);
+}
+html[data-theme="studio"] .screen-tile .thumb {
+  background: linear-gradient(135deg, var(--st-bg-2), #e3e9f4);
+  border: 1px solid var(--st-line);
+  box-shadow: none; color: var(--st-accent); text-shadow: none;
+  border-radius: 8px;
+}
+html[data-theme="studio"] .screen-tile .thumb::after { content: none; display: none; }
+html[data-theme="studio"] .dot.ok { background: var(--st-green); box-shadow: none; }
+html[data-theme="studio"] .dot.warn { background: var(--st-amber); box-shadow: none; }
+html[data-theme="studio"] .dot.off { background: var(--st-dim); }
+html[data-theme="studio"] .pill.ok { color: var(--st-green); border-color: rgba(15,157,99,.4); }
+html[data-theme="studio"] .pill.warn { color: var(--st-amber); border-color: rgba(183,121,31,.4); }
+
+/* ── Preview de pantalla del punto ──────────────────────────── */
+html[data-theme="studio"] .screen-frame {
+  background: #0d1220; border: 1px solid var(--st-line-str);
+  box-shadow: var(--st-shadow);
+}
+html[data-theme="studio"] .screen-app .sa-top,
+html[data-theme="studio"] .screen-app .sa-bot { color: #9fc0ff; }
+
+/* ── Medición: uplift + funnel en clave clara ───────────────── */
+html[data-theme="studio"] .uplift-card .big { color: var(--st-green); text-shadow: none; }
+html[data-theme="studio"] .uplift-card .bar.exp {
+  background: linear-gradient(180deg, var(--st-accent), #1f57d6); color: #fff;
+}
+html[data-theme="studio"] .uplift-card .bar.ctrl {
+  background: linear-gradient(180deg, #e6ebf4, #d7deec);
+  border: 1px solid var(--st-line-str); color: var(--st-muted);
+}
+
+/* ── Textarea / chips claros ────────────────────────────────── */
+html[data-theme="studio"] .accel-input {
+  background: var(--st-surface-2); border: 1px solid var(--st-line-str); color: var(--st-text);
+}
+html[data-theme="studio"] .accel-input:focus { border-color: var(--st-accent); }
+html[data-theme="studio"] .chip {
+  background: var(--st-surface); border: 1px solid var(--st-line-str); color: var(--st-muted);
+}
+html[data-theme="studio"] .chip:hover { border-color: var(--st-accent); color: var(--st-accent); }
+
+/* ── Footer ─────────────────────────────────────────────────── */
+html[data-theme="studio"] .ac-foot { border-top: 1px solid var(--st-line); color: var(--st-dim); }
+
+/* ── Gráfica drive-to-store recoloreada (sin glow fósforo) ──── */
+html[data-theme="studio"] .d2s-chart .d2s-exp { stroke: var(--st-accent); filter: none; }
+html[data-theme="studio"] .d2s-chart .d2s-exp-dots { fill: var(--st-accent); filter: none; }
+html[data-theme="studio"] .d2s-chart .d2s-exp-swatch { fill: var(--st-accent); }
+html[data-theme="studio"] .d2s-chart .d2s-ctrl { stroke: var(--st-dim); }
+html[data-theme="studio"] .d2s-chart .d2s-grid { stroke: rgba(37,99,235,.10); }
+html[data-theme="studio"] .d2s-chart .d2s-axis { stroke: var(--st-line-str); }
+html[data-theme="studio"] .d2s-chart .d2s-lbl { fill: var(--st-dim); }
+html[data-theme="studio"] .d2s-chart .d2s-leg { fill: var(--st-text); }
+html[data-theme="studio"] .d2s-chart .d2s-leg-mut { fill: var(--st-muted); }
+
+/* ── Movimiento reducido ────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="studio"] .map-pin::after { animation: none !important; }
+}

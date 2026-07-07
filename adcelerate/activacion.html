@@ -1,0 +1,198 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<script src="/auth-gate.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+<meta name="googlebot" content="noindex,nofollow">
+<title>Activación · ADcelerate by Admira</title>
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="stylesheet" href="assets/tokens.css">
+<link rel="stylesheet" href="assets/app.css">
+<!-- Contrato de temas (3 vistas): NEON · STUDIO · OPS. El loader inyecta la
+     capa de tema activa antes del primer paint (evita flash de tema). -->
+<script src="assets/theme-loader.js"></script>
+<meta name="view-transition" content="same-origin">
+</head>
+<body data-page="activacion">
+<main class="wrap">
+
+  <section class="hero" style="padding-bottom:20px">
+    <div class="eyebrow">Activación de campaña</div>
+    <h1 style="max-width:24ch">Describe el objetivo. Nosotros <span class="g">activamos el circuito</span>.</h1>
+    <p class="lead">Define a quién quieres impactar y dónde, en lenguaje natural. ADcelerate propone el paquete
+      de pantallas del propio circuito, la creatividad y las franjas, lo previsualiza y lo activa.
+      <span class="muted">(demo con datos mock)</span></p>
+  </section>
+
+  <section class="section" style="margin-top:8px">
+    <div class="accel-shell">
+
+      <!-- Brief -->
+      <div class="accel-panel">
+        <h3>1 · Define el brief</h3>
+        <p class="hint">A quién, dónde y con qué objetivo. Ejemplo: fumadores en trayecto de trabajo, centro de Madrid, mañanas.</p>
+        <textarea class="accel-input" id="prompt" placeholder="Ej.: Quiero impactar a adultos fumadores en trayecto de trabajo en el centro de Madrid por las mañanas para lanzar una marca de tabaco calentado."></textarea>
+        <div class="chips" id="chips"></div>
+        <button class="btn btn-p" id="gen-btn" style="width:100%;justify-content:center">▶ Proponer y activar</button>
+        <div class="rf-term" id="gen-term" style="display:none;margin-top:16px">
+          <div class="rf-line" style="opacity:.7;margin-bottom:6px">ADCELERATE // secuencia de activación</div>
+          <ul class="gen-log rf-line" id="gen-log" style="margin:0"></ul>
+        </div>
+
+        <!-- Paquete propuesto -->
+        <div class="pack" id="pack">
+          <h4>Paquete propuesto</h4>
+          <div class="pack-row"><span class="k">Audiencia detectada</span><span class="v" id="p-aud">—</span></div>
+          <div class="pack-row"><span class="k">Zona / puntos</span><span class="v" id="p-zona">—</span></div>
+          <div class="pack-row"><span class="k">Pantallas del circuito</span><span class="v" id="p-scr">—</span></div>
+          <div class="pack-row"><span class="k">Creatividad</span><span class="v" id="p-crea">—</span></div>
+          <div class="pack-row"><span class="k">Franja</span><span class="v" id="p-franja">—</span></div>
+          <div class="pack-row"><span class="k">Impresiones estimadas / día</span><span class="v" id="p-impr">—</span></div>
+        </div>
+      </div>
+
+      <!-- Preview -->
+      <div class="accel-panel">
+        <h3>2 · Preview en pantalla del circuito</h3>
+        <p class="hint">Así se vería la creatividad en la pantalla del punto antes de activar.</p>
+        <div class="screen-frame">
+          <div class="placeholder" id="screen-ph">La previsualización aparecerá aquí tras proponer.</div>
+          <div class="screen-app" id="screen-app">
+            <div class="sa-top"><span id="sa-brand">ADMIRA · DOOH</span><span id="sa-live">● LIVE</span></div>
+            <div class="sa-mid">
+              <h4 id="sa-title">—</h4>
+              <p id="sa-sub">—</p>
+              <span class="sa-cta" id="sa-cta">—</span>
+            </div>
+            <div class="sa-bot"><span id="sa-loc">—</span><span id="sa-tpl">creatividad —</span></div>
+          </div>
+        </div>
+        <div id="push-box" style="display:none" class="mt-2">
+          <div class="card" style="border-color:var(--line-str)">
+            <div class="row" style="display:flex;justify-content:space-between;align-items:center;gap:10px">
+              <div><b style="color:var(--acc)">Campaña activada ✓</b><div class="meta" id="push-msg" style="margin:4px 0 0"></div></div>
+              <a class="btn btn-sm" href="medicion.html">Ver medición →</a>
+            </div>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </section>
+
+</main>
+<script src="assets/data.js"></script>
+<script>
+(function () {
+  var chips = document.getElementById('chips');
+  var ta = document.getElementById('prompt');
+  AC.prompts.forEach(function (p) {
+    var c = document.createElement('button');
+    c.className = 'chip';
+    c.textContent = p.length > 48 ? p.slice(0, 46) + '…' : p;
+    c.title = p;
+    c.onclick = function () { ta.value = p; ta.focus(); };
+    chips.appendChild(c);
+  });
+
+  // Heurística mock: deriva audiencia, zona, creatividad y paquete del brief.
+  function derive(text) {
+    var t = (text || '').toLowerCase();
+    var res = {
+      brand: 'ADMIRA · DOOH', title: 'Tu campaña', sub: 'Activada en el circuito', cta: 'Descúbrelo',
+      aud: 'Audiencia general del punto', tipo: null, crea: AC.creatividades[0], franja: 'Todo el día',
+      loc: 'Circuito Admira'
+    };
+    // ciudad / zona
+    var ciudad = (t.match(/(barcelona|madrid|valencia|sevilla|mallorca)/) || [])[1];
+    // tipo de punto por audiencia
+    if (/fumador|tabaco|estanco/.test(t)) { res.tipo = 'Estanco'; res.aud = 'Adulto 35-64 · fumador'; res.title = 'Nueva era del tabaco calentado'; res.sub = 'Menos humo, misma experiencia'; res.cta = 'Descúbrelo en tu estanco'; }
+    else if (/joven|energétic|energetic|ocio|noche|bebida/.test(t)) { res.tipo = 'Kiosco'; res.aud = 'Joven urbano 25-40 · ocio'; res.title = 'Energía para tu noche'; res.sub = 'Nueva lata. Nuevo subidón.'; res.cta = 'Pruébala ya'; }
+    else if (/famili|moda|centro comercial|c\.c|poder adquisitiv/.test(t)) { res.tipo = 'Centro comercial'; res.aud = 'Familias 25-49 · medio-alto'; res.title = 'Nueva colección'; res.sub = 'Ya en tu centro comercial'; res.cta = 'Ver colección'; }
+    else if (/farmacia|mayor|50|salud/.test(t)) { res.tipo = 'Estanco'; res.aud = 'Mayores de 50 · barrio'; res.title = 'Tu farmacia, más cerca'; res.sub = 'A pocos metros de aquí'; res.cta = 'Cómo llegar'; }
+
+    // objetivo → creatividad
+    if (/drive|store|tienda|farmacia|cerca|a \d+ ?m/.test(t)) res.crea = AC.creatividades[2];
+    else if (/lanza|lanzamiento|nueva marca|nuevo/.test(t)) res.crea = AC.creatividades[3];
+    else if (/oferta|promo|descuent|2x1/.test(t)) res.crea = AC.creatividades[1];
+    else res.crea = AC.creatividades[0];
+
+    // franja
+    if (/mañana/.test(t)) res.franja = 'Mañana (07-12h)';
+    else if (/tarde|noche/.test(t)) res.franja = 'Tarde-noche (17-23h)';
+    else if (/mediodía|mediodia/.test(t)) res.franja = 'Mediodía (12-16h)';
+
+    // seleccionar zonas del circuito que casan con el tipo
+    var zonas = AC.zonas.filter(function (z) { return res.tipo ? z.tipo === res.tipo : true; });
+    if (ciudad) {
+      var byCity = zonas.filter(function (z) { return z.nombre.toLowerCase().indexOf(ciudad) >= 0; });
+      if (byCity.length) zonas = byCity;
+    }
+    if (!zonas.length) zonas = AC.zonas.slice(0, 3);
+    res.zonas = zonas;
+    res.loc = zonas[0].nombre;
+    res.impr = zonas.reduce(function (a, z) { return a + z.dispositivos; }, 0);
+    return res;
+  }
+
+  var steps = [
+    'Interpretando el objetivo y la audiencia…',
+    'Detectando geoaudiencia first-party en el circuito…',
+    'Seleccionando el paquete de pantallas propias…',
+    'Eligiendo creatividad y franjas óptimas…',
+    'Renderizando la preview del punto…',
+    'Activando la campaña en el circuito…'
+  ];
+
+  var btn = document.getElementById('gen-btn');
+  var log = document.getElementById('gen-log');
+
+  btn.onclick = function () {
+    var text = ta.value.trim();
+    if (!text) { ta.focus(); ta.style.borderColor = 'var(--admira-magenta)'; setTimeout(function(){ta.style.borderColor='';}, 900); return; }
+    btn.disabled = true; btn.style.opacity = '.6'; btn.textContent = '▷ Proponiendo…';
+    document.getElementById('gen-term').style.display = 'block';
+    document.getElementById('screen-app').classList.remove('show');
+    document.getElementById('screen-ph').style.display = 'block';
+    document.getElementById('push-box').style.display = 'none';
+    document.getElementById('pack').classList.remove('show');
+
+    log.innerHTML = steps.map(function (s) { return '<li class="pending">' + s + '</li>'; }).join('');
+    var items = log.querySelectorAll('li');
+    var res = derive(text);
+    var i = 0;
+    (function tick() {
+      if (i > 0) { items[i-1].classList.remove('pending'); items[i-1].classList.add('on'); }
+      if (i < items.length) { i++; setTimeout(tick, 560); return; }
+
+      // Paquete propuesto
+      document.getElementById('p-aud').textContent = res.aud;
+      document.getElementById('p-zona').textContent = res.tipo ? (res.tipo + ' · ' + res.zonas.length + ' punto(s)') : (res.zonas.length + ' punto(s)');
+      document.getElementById('p-scr').textContent = res.zonas.length + ' pantallas';
+      document.getElementById('p-crea').textContent = res.crea.label + ' — ' + res.crea.copy;
+      document.getElementById('p-franja').textContent = res.franja;
+      document.getElementById('p-impr').textContent = res.impr.toLocaleString('es-ES');
+      document.getElementById('pack').classList.add('show');
+
+      // Preview
+      document.getElementById('screen-ph').style.display = 'none';
+      var app = document.getElementById('screen-app'); app.classList.add('show');
+      document.getElementById('sa-title').textContent = res.title;
+      document.getElementById('sa-sub').textContent = res.sub;
+      document.getElementById('sa-cta').textContent = res.cta;
+      document.getElementById('sa-loc').textContent = res.loc;
+      document.getElementById('sa-tpl').textContent = 'creatividad ' + res.crea.key;
+
+      var pb = document.getElementById('push-box'); pb.style.display = 'block';
+      document.getElementById('push-msg').textContent = 'Campaña activa en ' + res.zonas.length + ' pantallas · ~' + res.impr.toLocaleString('es-ES') + ' impresiones/día estimadas.';
+      btn.disabled = false; btn.style.opacity = ''; btn.textContent = '▶ Proponer y activar';
+    })();
+  };
+})();
+</script>
+<script src="assets/retro.js"></script>
+<script src="assets/nav.js"></script>
+</body>
+</html>

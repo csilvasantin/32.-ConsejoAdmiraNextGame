@@ -1,0 +1,102 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<script src="/auth-gate.js"></script>
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="robots" content="noindex,nofollow,noarchive,nosnippet">
+<meta name="googlebot" content="noindex,nofollow">
+<title>ADcelerate by Admira · geo-contextual, desde dentro</title>
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<link rel="stylesheet" href="assets/tokens.css">
+<link rel="stylesheet" href="assets/app.css">
+<!-- Contrato de temas (3 vistas): NEON · STUDIO · OPS. El loader inyecta la
+     capa de tema activa antes del primer paint (evita flash de tema). -->
+<script src="assets/theme-loader.js"></script>
+<meta name="view-transition" content="same-origin">
+</head>
+<body data-page="home">
+<canvas class="rf-canvas" data-effect="synthgrid" aria-hidden="true"></canvas>
+<main class="wrap">
+
+  <section class="hero">
+    <div class="eyebrow">ADcelerate · by Admira · la ciudad ya está cubierta de pantallas</div>
+    <h1>La publicidad geo-contextual, <span class="g">desde dentro</span> del circuito</h1>
+    <p class="lead">Los grandes players hacen publicidad programática geo-contextual <b>desde fuera</b>
+      del soporte, con datos alquilados. Admira <b>ES el soporte</b>: más de 40.000 pantallas, player
+      propio y analítica de audiencia en el punto. Cerramos el círculo con <b>first-party data</b>,
+      sin cookies y sin intermediarios.</p>
+    <div class="cta-row">
+      <a class="btn btn-p" href="activacion.html">Activar una campaña →</a>
+      <a class="btn" href="audiencias.html">Explorar audiencias</a>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="kpis">
+      <div class="kpi"><div class="n" id="k-pant">—</div><div class="l">pantallas propias en circuito</div></div>
+      <div class="kpi"><div class="n" id="k-pts">—</div><div class="l">puntos de venta medidos</div></div>
+      <div class="kpi"><div class="n" id="k-proy">—</div><div class="l">proyectos activos</div></div>
+      <div class="kpi"><div class="n">0</div><div class="l">cookies · 0 data lakes alquilados</div></div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <div class="eyebrow">La tesis</div>
+      <h2>Outside-in vs. inside-out</h2>
+      <p>Comparativa honesta. El referente geo-contextual del mercado infiere la audiencia desde el móvil, fuera de la pantalla.
+        ADcelerate by Admira la detecta en la propia pantalla y activa en el propio circuito.</p>
+    </div>
+    <div class="tesis">
+      <div class="tesis-col out">
+        <div class="tag" id="out-tag">—</div>
+        <h3 id="out-title">—</h3>
+        <ul id="out-rows"></ul>
+      </div>
+      <div class="tesis-col in">
+        <div class="tag" id="in-tag">—</div>
+        <h3 id="in-title">—</h3>
+        <ul id="in-rows"></ul>
+      </div>
+    </div>
+  </section>
+
+  <section class="section">
+    <div class="section-head">
+      <div class="eyebrow">El círculo que cerramos</div>
+      <h2>Detectar → activar → medir, todo en el propio punto</h2>
+    </div>
+    <div class="flow">
+      <div class="flow-step"><span class="fs-n">01</span><div class="fs-icon">📡</div>
+        <h4>Detectar</h4><p>La audiencia se identifica en la propia pantalla con Analytics de Admira. First-party, sin cookies.</p></div>
+      <div class="flow-step"><span class="fs-n">02</span><div class="fs-icon">🎯</div>
+        <h4>Activar</h4><p>La campaña se lanza en el propio circuito DOOH — 40.000+ pantallas, middleware programático propio.</p></div>
+      <div class="flow-step"><span class="fs-n">03</span><div class="fs-icon">📈</div>
+        <h4>Medir</h4><p>El drive-to-store se mide en el propio punto de venta, validado como Deloitte, no en paneles externos.</p></div>
+    </div>
+    <div class="center mt-3">
+      <a class="btn btn-p" href="activacion.html">Ir a Activación →</a>
+    </div>
+  </section>
+
+</main>
+<script src="assets/data.js"></script>
+<script>
+  (function () {
+    document.getElementById('k-pant').textContent = AC.base.pantallas;
+    document.getElementById('k-pts').textContent  = AC.base.puntos;
+    document.getElementById('k-proy').textContent = AC.base.proyectos;
+    function fill(col, data) {
+      document.getElementById(col + '-tag').textContent = data.tag;
+      document.getElementById(col + '-title').textContent = data.title;
+      document.getElementById(col + '-rows').innerHTML = data.rows.map(function (r) { return '<li>' + r + '</li>'; }).join('');
+    }
+    fill('out', AC.tesis.outside);
+    fill('in', AC.tesis.inside);
+  })();
+</script>
+<script src="assets/retro.js"></script>
+<script src="assets/nav.js"></script>
+</body>
+</html>

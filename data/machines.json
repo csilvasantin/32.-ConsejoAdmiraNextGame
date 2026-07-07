@@ -130,29 +130,6 @@
    "mac_source": "ssh:ifconfig (via macmini)"
   },
   {
-   "id": "admira-macbookairluna",
-   "unitType": "council",
-   "color": "plata",
-   "member": "Cesar",
-   "role": "Coordinacion y automatizacion",
-   "name": "MacBook Air Luna (Cesar)",
-   "machineRole": "Equipo principal",
-   "location": "Madrid",
-   "platform": "macOS",
-   "status": "offline",
-   "lastSeen": "2026-03-23T20:50:00Z",
-   "currentFocus": "Offline — ultima conexion hace minutos",
-   "note": "Tailscale: macbookairluna.tail48b61c.ts.net",
-   "ssh": {
-    "enabled": true,
-    "user": "csilvasantin",
-    "host": "macbookairluna.tail48b61c.ts.net",
-    "ip_tailscale": "100.98.68.63",
-    "connect_tailscale": "ssh csilvasantin@100.98.68.63"
-   },
-   "mac_address": ""
-  },
-  {
    "id": "admira-macbookairazul",
    "unitType": "council",
    "color": "azul",

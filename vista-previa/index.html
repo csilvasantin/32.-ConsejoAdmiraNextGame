@@ -258,11 +258,12 @@
   <div class="tab-list" id="tabList"><div class="empty">Cargando tareas…</div></div>
 </section>
 <script>
-/* Tablero de tareas de la flota. LECTURA: /api/tasks (fuente única de Neo). ESCRITURA:
+/* Tablero de tareas de la flota. LECTURA: /api/public/tasks (feed público, sin auth — el
+   /api/tasks gateado devolvía 401 al navegador sin sesión → el tablero salía VACÍO). ESCRITURA:
    botones take/doing/done → proxy admira-estado /task-update (verifica el gate de Google y
    reenvía al backend con la key SERVER-SIDE). Sin exponer secretos en el JS de cliente. */
 (function(){
-  var API='https://admira-telegram.csilvasantin.workers.dev/api/tasks';
+  var API='https://admira-telegram.csilvasantin.workers.dev/api/public/tasks';
   var PROXY='https://admira-estado.csilvasantin.workers.dev/task-update';
   var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});};
   function yoName(){ try{ return (typeof YO!=='undefined'&&YO&&YO.persona)?YO.persona:''; }catch(e){ return ''; } }

@@ -2593,7 +2593,11 @@
 
         /* ════ Menú superior: UNA sola línea, estética SCUMM Monkey Island ════ */
         .top-bar {
-            flex-wrap: nowrap;            /* todo en una línea */
+            /* wrap de base: en una sola línea mientras quepa (look ≥1360px intacto),
+               pero ENVUELVE a 2ª línea si el contenido no cabe en vez de sacar una
+               barra de scroll horizontal de madera (banda 1081–1330px: fallaba en
+               1200/1280, los anchos de portátil más comunes). Cero scroll horizontal. */
+            flex-wrap: wrap;
             justify-content: center;
             align-items: stretch;
             gap: 0.4rem;
@@ -2603,7 +2607,7 @@
             width: 100vw;
             max-width: 100vw;
             padding: 0.5rem 1.2rem;
-            overflow-x: auto;             /* salvavidas en pantallas estrechas */
+            overflow-x: clip;             /* jamás una barra horizontal en la barra (era auto → desbordaba) */
             background: #5a3a1e;          /* madera Monkey Island */
             border: 3px solid #8b5a14;
             border-top-color: #a07828;
@@ -2862,7 +2866,7 @@ body.rail-open{overflow:hidden}
                 <svg viewBox="0 0 16 14"><rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="1.6" y="1.6" width="4.4" height="10.8" rx="1"/></svg>
             </button>
             <!-- Barra idéntica a admira-bar.js (subpáginas) para consistencia — mantener en sync con var TOP -->
-            <a href="https://www.admira.live/" class="version-badge" title="Consejo AdmiraNeXT">🏛️ Consejo AdmiraNeXT <span class="pf-ver">v.2026.07.07.r1</span></a>
+            <a href="https://www.admira.live/" class="version-badge" title="Consejo AdmiraNeXT">🏛️ Consejo AdmiraNeXT <span class="pf-ver">v.2026.07.07.r2</span></a>
             <a href="https://www.admira.live/dashboard.html" target="_blank" rel="noopener" class="version-badge" title="Dashboard · panel de estado">📊 Dashboard</a>
             <a href="https://www.admira.live/control/" target="_blank" rel="noopener" class="version-badge" title="Control · FleetControl">🖥️ Control</a>
             <a href="https://www.admira.live/navegadores/" class="version-badge" title="Navegadores · flota de navegadores Claude-in-Chrome">🌐 Navegadores</a>

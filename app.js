@@ -6092,22 +6092,21 @@
   function ago(iso){ try{ var s=Math.max(0,(Date.now()-new Date(iso).getTime())/1000);
     if(s<60)return'ahora'; if(s<3600)return Math.floor(s/60)+'m'; if(s<86400)return Math.floor(s/3600)+'h'; return Math.floor(s/86400)+'d'; }catch(e){return'';} }
 
-  // ── Caja flotante: movible + redimensionable + persistente ──
-  var _tkMoved=false, GEOM_KEY='taskPanelGeom', VIS_KEY='taskPanelVisible';
-  // Acoplado en el flujo justo debajo de la barra de escribir (forma caja con la foto del Consejo).
-  try{ var _sb=document.querySelector('.scumm-bar'); if(_sb&&_sb.parentNode){ _sb.parentNode.insertBefore(panel, _sb.nextSibling); } }catch(e){}
-  function tkSaveGeom(){ try{ var r=panel.getBoundingClientRect(); localStorage.setItem(GEOM_KEY,JSON.stringify({left:Math.round(r.left),top:Math.round(r.top),w:Math.round(r.width),h:Math.round(r.height)})); }catch(e){} }
-  head.addEventListener('click',function(){ if(_tkMoved){ _tkMoved=false; return; } panel.classList.toggle('tk-min'); tog.textContent=panel.classList.contains('tk-min')?'▸':'▾'; });
-  var _drag=false,_sx,_sy,_ox,_oy;
-  head.addEventListener('pointerdown',function(e){ if(e.target.closest('.tk-toggle'))return; _drag=true;_tkMoved=false; var r=panel.getBoundingClientRect(); _ox=r.left;_oy=r.top;_sx=e.clientX;_sy=e.clientY; panel.style.left=_ox+'px';panel.style.top=_oy+'px';panel.style.right='auto';panel.style.bottom='auto'; try{head.setPointerCapture(e.pointerId);}catch(_){} });
-  head.addEventListener('pointermove',function(e){ if(!_drag)return; var dx=e.clientX-_sx,dy=e.clientY-_sy; if(Math.abs(dx)+Math.abs(dy)>3)_tkMoved=true; panel.style.left=Math.max(0,Math.min(window.innerWidth-60,_ox+dx))+'px'; panel.style.top=Math.max(0,Math.min(window.innerHeight-40,_oy+dy))+'px'; });
-  head.addEventListener('pointerup',function(e){ if(!_drag)return; _drag=false; try{head.releasePointerCapture(e.pointerId);}catch(_){} if(_tkMoved)tkSaveGeom(); });
-  if(window.ResizeObserver){ var _ro=new ResizeObserver(function(){ if(!_drag)tkSaveGeom(); }); _ro.observe(panel); }
+  // ── Sección del riel AVANZADO (ya no es caja flotante: ni drag ni resize) ──
+  // El panel vive dentro de #rail-avanzado con el metaestilo SCUMM de la home.
+  // La cabecera colapsa/expande la sección; /tareas on|off|toggle sigue mandando.
+  var VIS_KEY='taskPanelVisible';
+  head.addEventListener('click',function(){ panel.classList.toggle('tk-min'); tog.textContent=panel.classList.contains('tk-min')?'▸':'▾'; });
 
   function tkApplyVis(v){ panel.style.display = v ? 'flex' : 'none'; try{ document.body.classList.toggle('tk-open', !!v); }catch(e){} }
-  window.tkSetVisible=function(v){ var cur=panel.style.display!=='none'; var nv=(v===null||v===undefined)?!cur:!!v; tkApplyVis(nv); try{localStorage.setItem(VIS_KEY,nv?'1':'0');}catch(e){} if(nv){ loadAssignees(); tick(); } return nv; };
+  window.tkSetVisible=function(v){ var cur=panel.style.display!=='none'; var nv=(v===null||v===undefined)?!cur:!!v; tkApplyVis(nv); try{localStorage.setItem(VIS_KEY,nv?'1':'0');}catch(e){}
+    if(nv){ loadAssignees(); tick();
+      // La sección vive en el riel AVANZADO: al encenderla, abre el riel si estaba plegado.
+      try{ var r=document.getElementById('rail-avanzado'); if(r&&r.classList.contains('collapsed')&&window.toggleRail) window.toggleRail('rail-avanzado'); }catch(e){} }
+    return nv; };
   window.tkIsVisible=function(){ return panel.style.display!=='none'; };
-  try{ tkApplyVis(localStorage.getItem(VIS_KEY)==='1'); }catch(e){ tkApplyVis(false); }
+  // Visible por defecto dentro del riel (antes: oculta salvo opt-in); '0' = apagada por el usuario.
+  try{ tkApplyVis(localStorage.getItem(VIS_KEY)!=='0'); }catch(e){ tkApplyVis(true); }
 
   function paintAssignees(){
     if(!ASSIGNEES.length) return;

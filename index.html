@@ -2666,17 +2666,22 @@
         .top-bar .yar-btn:hover { background: #1b321e; color: #d9ffe0; }
         .top-bar .yar-chip { margin-top: 3px; font-size: 0.38rem; }
 
-        /* contadores en línea, mismas pastillas de madera */
-        .top-bar .summary { flex-wrap: nowrap; gap: 0.4rem; flex: 0 0 auto; }
-        .top-bar .summary-item {
-            display: flex; flex-direction: column; justify-content: center;
-            padding: 0.3rem 0.55rem;
+        /* Contadores de flota: viven en el riel AVANZADO (grupo «Flota»), pastillas de
+           madera SCUMM apiladas — fuera del top-bar para que quepa en UNA fila. */
+        .side-rail .summary { display: flex; flex-direction: column; gap: 4px; flex: 0 0 auto; padding: 0 2px; }
+        .side-rail .summary-item {
+            display: flex; flex-direction: row; align-items: baseline; gap: 6px;
+            padding: 4px 6px;
             border: 2px solid #5a3a1e;
             background: #2a1a08;
             box-shadow: 2px 2px 0 #000;
         }
-        .top-bar .summary-number { font-size: 0.8rem; }
-        .top-bar .summary-label { font-size: 0.34rem; color: #b89060; }
+        .side-rail .summary-number { font-size: 0.62rem; font-weight: normal; }
+        .side-rail .summary-label { font-size: 0.34rem; color: #b89060; margin-top: 0; line-height: 1.5; }
+        @media (max-width:760px){
+            .side-rail .summary-number { font-size: 0.8rem; }
+            .side-rail .summary-label { font-size: 0.5rem; }
+        }
 
         /* botón plegar al mismo estilo madera */
         .top-bar .top-fold {
@@ -2849,7 +2854,7 @@ body.rail-open{overflow:hidden}
                 <svg viewBox="0 0 16 14"><rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="1.6" y="1.6" width="4.4" height="10.8" rx="1"/></svg>
             </button>
             <!-- Barra idéntica a admira-bar.js (subpáginas) para consistencia — mantener en sync con var TOP -->
-            <a href="https://www.admira.live/" class="version-badge" title="Consejo AdmiraNeXT">🏛️ Consejo AdmiraNeXT <span class="pf-ver">v.2026.07.07.r3</span></a>
+            <a href="https://www.admira.live/" class="version-badge" title="Consejo AdmiraNeXT">🏛️ Consejo AdmiraNeXT <span class="pf-ver">v.2026.07.07.r4</span></a>
             <a href="https://www.admira.live/dashboard.html" target="_blank" rel="noopener" class="version-badge" title="Dashboard · panel de estado">📊 Dashboard</a>
             <a href="https://www.admira.live/control/" target="_blank" rel="noopener" class="version-badge" title="Control · FleetControl">🖥️ Control</a>
             <a href="https://www.admira.live/navegadores/" class="version-badge" title="Navegadores · flota de navegadores Claude-in-Chrome">🌐 Navegadores</a>
@@ -2857,7 +2862,8 @@ body.rail-open{overflow:hidden}
             <a href="https://www.admira.live/vista-previa" class="version-badge" title="Misiones · ¿En qué estamos?">🎯 Misiones</a>
             <a href="/diario.html" class="version-badge" title="Diario de Silicio">📓 Diario</a>
             <a id="home-usuarios" href="https://www.admira.live/usuarios.html" class="version-badge" style="display:none" title="Usuarios · whitelist (solo superusers)">👥 Usuarios</a>
-            <div class="summary" id="summary"></div>
+            <!-- Los contadores de flota (#summary) viven en el riel AVANZADO (grupo «Flota»)
+                 para que el top-bar quepa en UNA fila; los iconos van arriba a la derecha. -->
             <div class="pf-toggles">
                 <button type="button" id="pf-ic-avanzado" class="pf-ico" onclick="pfToggle('avanzado')" title="Avanzado · panel derecho" aria-label="Avanzado · panel derecho">
                     <svg viewBox="0 0 16 14"><rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="10" y="1.6" width="4.4" height="10.8" rx="1"/></svg>
@@ -3027,6 +3033,8 @@ body.rail-open{overflow:hidden}
                 <a class="rail-btn" href="/diario.html" title="Diario de Silicio en vivo">📓 Diario</a>
                 <a class="rail-btn" href="https://www.admira.studio/" target="_blank" rel="noopener" title="Abrir ADmiraNeXT Studio">🎬 Demo</a>
                 <button class="rail-btn" onclick="window.toggleDesign&&toggleDesign()" title="Modo diseño (rejilla/reglas)">📐 Diseño</button>
+                <div class="rail-group">Flota</div>
+                <div class="summary" id="summary"></div>
                 <div class="rail-group">Tareas</div>
                 <div id="task-panel" aria-label="Tareas del Consejo">
                   <div id="tk-head"><span class="tk-dot"></span><b>🗂️ Tareas del Consejo</b><span class="tk-count" id="tk-count"></span><span class="tk-toggle">▾</span></div>

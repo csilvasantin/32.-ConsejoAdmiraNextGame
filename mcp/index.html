@@ -543,6 +543,21 @@ AGORA_SYNC_KEY=&lt;sync key privada&gt;</code></pre>
       </div>
     </section>
 
+    <section id="lanzadera-tv" class="band">
+      <div class="shell section-head">
+        <div>
+          <p class="eyebrow">admira.tv/apps</p>
+          <h2>Producción de preproducción: Catálogo y Soporte.</h2>
+        </div>
+        <p>La lanzadera de 18 apps enciende por tandas (fuente única: <code>window.AdmiraApps</code> en <code>admira-nav.js</code> del repo <code>admira-tv</code>). Dos apps live no tienen código propio: embeben en vivo el producto de otro repo. Regla para cualquier agente: mejorar la app = tocar el repo fuente, nunca duplicar en <code>admira-tv</code>.</p>
+      </div>
+      <div class="shell grid-3">
+        <article class="card"><span class="tag">iframe directo</span><h3>Catálogo → PixerIA</h3><p><code>admira.tv/contentcatalogue/</code> embebe <code>www.pixeria.com</code>. Repo fuente: <code>csilvasantin/pixeria</code> (GitHub Pages). Pixeria no envía <code>X-Frame-Options</code>/CSP, por eso no hace falta proxy. Mejoras → repo <code>pixeria</code>, aparecen solas en admira.tv.</p></article>
+        <article class="card"><span class="tag">iframe sandbox</span><h3>Soporte → Yokup</h3><p><code>admira.tv/support/</code> embebe <code>yokup.com/tool/</code> con <code>sandbox="allow-scripts allow-forms allow-same-origin allow-popups"</code> (sin top-navigation). Repo fuente: <code>csilvasantin/tool</code> (GitHub Pages + Supabase prod, RLS demo). La app habla con Supabase desde el navegador: por eso es iframe y no proxy, un proxy rompería CORS. Mejoras → repo <code>tool</code>.</p></article>
+        <article class="card"><span class="tag resource">plan B</span><h3>Fuente única y proxy de reserva</h3><p>Encender/apagar una app = cambiar solo <code>st</code> en <code>AdmiraApps</code> + bumpear <code>?v=</code>. Los subsites del marco (<code>contentcatalogue/</code>, <code>support/</code> en <code>admira-tv</code>) son landing + iframe, sin lógica de producto. Si pixeria o yokup añadieran algún día <code>X-Frame-Options</code>/CSP, el embed se rompería → edge-proxy con Cloudflare Pages Functions en <code>admira-tv/functions/</code>.</p></article>
+      </div>
+    </section>
+
     <section id="federacion" class="band">
       <div class="shell callout">
         <div>

@@ -60,6 +60,38 @@ El Consejo también consulta a sus hermanos de la trilogía AdmiraNeXT. Misma co
 - Matriz: https://www.admiranext.com/mcp/
 - Tienda de robots: https://admira.shop/mcp/
 
+## Lanzadera admira.tv — patrón "producción de preproducción"
+
+`admira.tv/apps` es la lanzadera de 18 apps del ecosistema Admira (fuente única de
+estado: `window.AdmiraApps` en `admira-nav.js` del repo `admira-tv`, campo `st:'wip'|'live'`).
+Dos de las apps encendidas NO tienen código propio: son un marco que embebe en vivo el
+producto real de otro repo. Regla para cualquier agente: para mejorar la app se toca el
+repo fuente, nunca se duplica dentro de `admira-tv`.
+
+- Catálogo (`https://admira.tv/contentcatalogue/`) embebe por `<iframe>` en vivo
+  `https://www.pixeria.com/`. Repo fuente: `csilvasantin/pixeria` (GitHub Pages).
+  Pixeria no envía `X-Frame-Options` ni CSP `frame-ancestors`, por eso el iframe
+  funciona directo, sin proxy. Mejoras de Catálogo → repo `pixeria`; el cambio
+  aparece solo en admira.tv, sin tocar nada allí.
+- Soporte (`https://admira.tv/support/`) embebe por `<iframe sandbox="allow-scripts
+  allow-forms allow-same-origin allow-popups allow-popups-to-escape-sandbox">` en vivo
+  `https://yokup.com/tool/`. Repo fuente: `csilvasantin/tool` (GitHub Pages + Supabase
+  prod con RLS demo). El sandbox impide top-navigation. La app habla con Supabase
+  directo desde el navegador del visitante, así que es iframe y NO proxy: un proxy
+  cambiaría el origin y rompería CORS con Supabase. Mejoras de Soporte → repo `tool`.
+- Los subsites del marco (`contentcatalogue/index.html`, `support/index.html` en
+  `admira-tv`) son solo landing + iframe + modo `?app=1`; no llevan lógica de producto,
+  no se les añade funcionalidad — eso vive en pixeria/tool.
+- Encender una app en la lanzadera = cambiar SOLO el `st` en `AdmiraApps`
+  (`admira-nav.js`) + bumpear el cache-buster `?v=` en todas las páginas de `admira-tv`.
+- Plan B si algún día pixeria o yokup añaden `X-Frame-Options`/CSP `frame-ancestors`:
+  el embed se rompería → edge-proxy con Cloudflare Pages Functions en `admira-tv`
+  (`functions/`), reescribiendo rutas para servir el producto same-origin.
+- El repo `admira-tv` lo trabaja otro equipo de agentes; este repo (Consejo/admira.live)
+  solo documenta el patrón para que cualquier agente sepa dónde tocar qué.
+- Estado a 2026-07-08: tanda 1 (Dashboard, Audiobranding, Salas) live en
+  `v.08.07.2026.r13`; tanda 2 (Catálogo, Soporte) live en `v.08.07.2026.r14`.
+
 ## Convenciones
 
 - Versionado visible: v.AA.MM.DD.rN (año.mes.día.release).

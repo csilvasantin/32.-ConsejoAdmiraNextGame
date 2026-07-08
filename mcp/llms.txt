@@ -90,7 +90,30 @@ repo fuente, nunca se duplica dentro de `admira-tv`.
 - El repo `admira-tv` lo trabaja otro equipo de agentes; este repo (Consejo/admira.live)
   solo documenta el patrón para que cualquier agente sepa dónde tocar qué.
 - Estado a 2026-07-08: tanda 1 (Dashboard, Audiobranding, Salas) live en
-  `v.08.07.2026.r13`; tanda 2 (Catálogo, Soporte) live en `v.08.07.2026.r14`.
+  `v.08.07.2026.r13`; tanda 2 (Catálogo, Soporte) live en `v.08.07.2026.r14`;
+  Acceso live en `v.08.07.2026.r15`.
+- Acceso (`https://admira.tv/accesscontrol/`) es distinto a Catálogo/Soporte: no es
+  un iframe embebiendo otro repo, es código propio dentro de `admira-tv`. Arquitectura:
+  consola (`accesscontrol/index.html`) + backend same-origin como Cloudflare Pages
+  Functions (`functions/accesscontrol/api/[[path]].js`) + KV binding `ACCESS`, todo en
+  el repo `admira-tv`. Same-origin (no `*.workers.dev`) por la misma razón que el resto
+  del ecosistema: los ISP españoles bloquean 188.114.96.0/22.
+  - Contrato de la API: `GET /accesscontrol/api/state` (doc ACL completo, pública,
+    verja blanda) · `GET /accesscontrol/api/audit` (últimos 200 eventos, pública) ·
+    `POST /accesscontrol/api/write` con body `{credential, action, ...}` donde
+    `credential` es un Google ID token y `action` es una de: `user.add`, `user.remove`,
+    `role.set`, `role.clear`, `solution.add`, `solution.remove`. Roles por solución:
+    `owner > admin > editor > viewer`, más el rol global `*`.
+  - Owners intocables: `csilva@admira.com` y `csilvasantin@gmail.com`. Anti-lockout:
+    un admin no puede auto-degradarse ni auto-eliminarse (`role.set`/`role.clear`/
+    `user.remove` sobre el propio actor devuelven `self_lockout` si no es owner).
+  - Regla v1 vs v2 — NO confundir ni tocar el worker v1: `admira-whitelist` sigue
+    siendo la única autoridad de la verja de `admira.live` (`auth-gate.js`); Acceso v2
+    nació SEMBRADO leyendo el `/list` de v1 una vez (los emails existentes, superusers
+    → owners), pero desde entonces son independientes. Para cambios de permisos del
+    GRUPO (multi-solución) → Acceso v2 (`admira.tv/accesscontrol`); para la whitelist
+    de acceso a `admira.live` en sí → sigue gestionándose donde siempre
+    (`admira.live/usuarios`), hasta que esa verja se migre a v2.
 
 ## Convenciones
 

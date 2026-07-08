@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <!-- control · v2026.07.02c · icono = fondo (personaje) del equipo SIEMPRE, nunca el screenshot en vivo · wallpapers reales subidos por máquina -->
-<!-- control-mensajeria · v.2026.07.07.r1 · 💬 mensaje por equipo + 📣 a todos → router de encargos AdmiraNeXT (ACK + traza Telegram) · auth = gate Google -->
+<!-- control-mensajeria · v.2026.07.08.r1 · 💬 mensaje por equipo + 📣 a todos → router de encargos AdmiraNeXT (ACK + traza Telegram) · auth = gate Google · fix: refresco silencioso de cred + re-login (control remoto) -->
 <html lang="es">
 <head>
     <script src="/admira-bar.js?v=20260705-rails"></script>
-    <script src="/auth-gate.js"></script>
+    <script src="/auth-gate.js?v=20260708-authfix"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="/failover.js"></script>
@@ -516,7 +516,7 @@
         <button class="primary" id="csRun">▶ ejecutar</button>
         <button id="csClear">limpiar</button>
       </div>
-      <div class="note">El comando se ejecuta de verdad en la máquina elegida (MacMini local · resto por SSH). Acceso por tu login de Google. <span style="opacity:.55">· 💬 mensajería a equipos v.2026.07.07.r1</span></div>
+      <div class="note">El comando se ejecuta de verdad en la máquina elegida (MacMini local · resto por SSH). Acceso por tu login de Google. <span style="opacity:.55">· 💬 mensajería a equipos v.2026.07.08.r1</span></div>
       <div class="out" id="out"><div class="empty">Sin resultados todavía.</div></div>
     </div>
   </footer>
@@ -628,17 +628,41 @@ const CAP_FIX_CMD=[
 // (12h) intercambiando el credential del gate (admira_gate.cred). Sin tokens.
 let SESSION='';
 try{ const s=JSON.parse(localStorage.getItem('fleet_session')||'null'); if(s&&s.token&&s.exp&&Date.now()<s.exp) SESSION=s.token; }catch(e){}
+async function _mintSession(cred){
+  const r=await fetch(API+'/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({credential:cred})});
+  if(!r.ok) return false;
+  const d=await r.json().catch(()=>({}));
+  if(d&&d.session){ SESSION=d.session; localStorage.setItem('fleet_session',JSON.stringify({token:d.session,exp:d.exp||(Date.now()+12*3600*1000)})); return true; }
+  return false;
+}
 async function ensureSession(){
   if(SESSION) return true;
   let g; try{ g=JSON.parse(localStorage.getItem('admira_gate')||'null'); }catch(e){}
+  // El cred del gate (id_token de Google) sólo vale ~1h. Si está rancio (>50min),
+  // pide al gate un refresco SILENCIOSO antes de intentar el intercambio, para no
+  // mandar un token caducado (que provoca el "🔒 sin acceso" en toda la flota).
+  const stale = !g || !g.credAt || (Date.now()-g.credAt) > 50*60*1000;
+  if(stale && typeof window.admiraGateRefresh==='function'){
+    try{ await window.admiraGateRefresh(); }catch(e){}
+    try{ g=JSON.parse(localStorage.getItem('admira_gate')||'null'); }catch(e){}
+  }
   if(!g||!g.cred) return false;                 // sin credential del gate → no se puede
   try{
-    const r=await fetch(API+'/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({credential:g.cred})});
-    if(!r.ok) return false;
-    const d=await r.json();
-    if(d&&d.session){ SESSION=d.session; localStorage.setItem('fleet_session',JSON.stringify({token:d.session,exp:d.exp||(Date.now()+12*3600*1000)})); return true; }
+    if(await _mintSession(g.cred)) return true;
+    // Rechazado (cred caducado): un intento de refresco silencioso + reintento.
+    if(typeof window.admiraGateRefresh==='function'){
+      const fresh=await window.admiraGateRefresh();
+      if(fresh && await _mintSession(fresh)) return true;
+    }
   }catch(e){}
   return false;
+}
+// Recuperación garantizada: limpia sesión+gate y recarga → el gate vuelve a pedir
+// login de Google (cred fresco). Es la red de seguridad si el refresco silencioso
+// no es posible (One Tap suprimido, varias cuentas, etc.).
+function forceRelogin(){
+  try{ localStorage.removeItem('fleet_session'); localStorage.removeItem('admira_gate'); }catch(e){}
+  location.reload();
 }
 
 /* ---------- fondo de pantalla (persona) por máquina ----------
@@ -764,8 +788,13 @@ async function refresh(){
       _reauthTried=true; SESSION=''; localStorage.removeItem('fleet_session');
       if(await ensureSession()) return refresh();
     }
-    $('#connPill').textContent = e.code===401 ? '🔒 sin acceso (inicia sesión Google)' : '🔴 sin conexión';
-    $('#connPill').className='pill bad'; if(e.code===401) renderCards([]);
+    if(e.code===401){
+      $('#connPill').textContent='🔒 sesión caducada — toca para re-entrar';
+      $('#connPill').className='pill bad'; $('#connPill').style.cursor='pointer'; $('#connPill').onclick=forceRelogin;
+      renderCards([]);
+    } else {
+      $('#connPill').textContent='🔴 sin conexión'; $('#connPill').className='pill bad';
+    }
   }
 }
 /* ── orden + colapso de tarjetas (persistidos en localStorage) ── */
@@ -1130,10 +1159,16 @@ async function pollThread(){
 }
 
 // Envía el mensaje del compositor por el router de encargos.
+let _msgReauthTried=false;
 async function sendCurrentMsg(){
   if(!MSG_CUR) return;
   const ta=$('#msgText'); const text=(ta.value||'').trim(); if(!text) return;
-  const cred=gateCred();
+  // Cred rancio (>50min) → refréscalo en silencio antes de enviar (mismo id_token de 1h).
+  let g; try{ g=JSON.parse(localStorage.getItem('admira_gate')||'null'); }catch(e){}
+  if((!g||!g.credAt||(Date.now()-g.credAt)>50*60*1000) && typeof window.admiraGateRefresh==='function'){
+    try{ await window.admiraGateRefresh(); }catch(e){}
+  }
+  let cred=gateCred();
   if(!cred){ toast('warn','🔒 sin login de Google','inicia sesión (arriba a la derecha) para enviar mensajes'); return; }
   const btn=$('#msgSend'); btn.disabled=true; const lbl=btn.textContent; btn.textContent='➤ enviando…';
   const task=newTaskId();
@@ -1149,7 +1184,14 @@ async function sendCurrentMsg(){
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+cred},
       body:JSON.stringify({ text:body, author:'Carlos' })
     });
-    if(r.status===401){ toast('warn','🔒 sesión de Google caducada','recarga la página para renovar el acceso y reenvía'); btn.disabled=false; btn.textContent=lbl; return; }
+    if(r.status===401){
+      // cred caducado → un ÚNICO refresco silencioso + reintento; si no, avisa a re-entrar.
+      const fresh = (!_msgReauthTried && typeof window.admiraGateRefresh==='function') ? await window.admiraGateRefresh() : null;
+      if(fresh){ _msgReauthTried=true; btn.disabled=false; btn.textContent=lbl; return sendCurrentMsg(); }
+      _msgReauthTried=false;
+      toast('warn','🔒 sesión de Google caducada','toca el candado 🔒 de arriba para re-entrar y reenvía'); btn.disabled=false; btn.textContent=lbl; return;
+    }
+    _msgReauthTried=false;
     const d=await r.json().catch(()=>({}));
     if(!r.ok||!d.ok){ toast('warn','⚠️ no se pudo enviar', (d&&d.error)||('HTTP '+r.status)); btn.disabled=false; btn.textContent=lbl; return; }
     msgPush(MSG_CUR.key, { task, text, ts:Date.now(), targets, recipients:{} });

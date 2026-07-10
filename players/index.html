@@ -31,31 +31,37 @@
        lo aplica admira-bar.js con !important → coherente con el resto de admira.live.
        Aquí sólo posicionamos, plegamos y ponemos el CONTENIDO propio de players. */
     .porteria{position:relative}
-    .rail{position:fixed;z-index:40;overflow:auto;display:flex;flex-direction:column;gap:11px;
+    /* Raíles = OVERLAY sobre el contenido (no lo encogen; clave en pantalla partida ~790px).
+       Plegados por defecto; se deslizan al abrir con su pestaña de borde. */
+    .rail{position:fixed;z-index:60;overflow:auto;display:flex;flex-direction:column;gap:11px;
+      box-shadow:4px 4px 0 rgba(0,0,0,.55);transition:transform .18s ease;
       scrollbar-width:thin;scrollbar-color:#8b5a14 transparent}
     .rail::-webkit-scrollbar{width:8px;height:8px}
     .rail::-webkit-scrollbar-thumb{background:#8b5a14;border-radius:0}
     .rail-left,.rail-right{top:var(--topbar-h);bottom:0;overflow-x:hidden;padding:14px 12px 40px}
-    .rail-left{left:0;width:var(--rail-l)}
-    .rail-right{right:0;width:var(--rail-r)}
-    .rail-bottom{left:var(--rail-l);right:var(--rail-r);bottom:0;height:var(--bottom-h);padding:12px 16px}
+    .rail-left{left:0;width:min(var(--rail-l),82vw)}
+    .rail-right{right:0;width:min(var(--rail-r),82vw)}
+    .rail-bottom{left:0;right:0;bottom:0;height:var(--bottom-h);max-height:52vh;padding:12px 16px}
     .rail-hd{font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:#c9a86a;font-weight:800;
       padding:7px 2px 6px;border-bottom:1px solid #4a3410;margin-top:2px}
-    .stage{margin-left:var(--rail-l);margin-right:var(--rail-r);padding:22px 22px;
-      padding-bottom:calc(var(--bottom-h) + 20px);min-height:calc(100vh - var(--topbar-h))}
-    body.pf-left-off   .rail-left{display:none}
-    body.pf-left-off   .stage{margin-left:0}
-    body.pf-left-off   .rail-bottom{left:0}
-    body.pf-right-off  .rail-right{display:none}
-    body.pf-right-off  .stage{margin-right:0}
-    body.pf-right-off  .rail-bottom{right:0}
-    body.pf-bottom-off .rail-bottom{display:none}
-    body.pf-bottom-off .stage{padding-bottom:22px}
-    @media(max-width:860px){
-      .rail-left,.rail-right,.rail-bottom{position:static;top:auto;bottom:auto;left:auto;right:auto;
-        width:auto;height:auto;border-bottom:2px solid #8b5a14}
-      .stage{margin:0;padding-bottom:22px;min-height:0}
-    }
+    /* El contenido ocupa TODO el ancho; los raíles flotan encima. */
+    .stage{padding:20px 18px 40px;min-height:calc(100vh - var(--topbar-h))}
+    /* Plegado por defecto = raíl fuera de pantalla */
+    body.pf-left-off   .rail-left{transform:translateX(-103%)}
+    body.pf-right-off  .rail-right{transform:translateX(103%)}
+    body.pf-bottom-off .rail-bottom{transform:translateY(103%)}
+    /* Pestañas de apertura SIEMPRE visibles en los 3 bordes (izq · dcha · inferior) */
+    .railtab{position:fixed;z-index:58;background:#2a1a08;color:#ffdd66;border:2px solid #8b5a14;
+      box-shadow:2px 2px 0 #000;cursor:pointer;font-family:var(--sans);font-weight:700;font-size:10.5px;
+      letter-spacing:.6px;padding:11px 7px;display:flex;align-items:center;justify-content:center;gap:6px;user-select:none}
+    .railtab:hover{border-color:#f0c040;background:#3a2410;color:#fff}
+    .railtab-l{left:0;top:calc(var(--topbar-h) + 54px);writing-mode:vertical-rl;text-orientation:mixed;border-left:0}
+    .railtab-r{right:0;top:calc(var(--topbar-h) + 54px);writing-mode:vertical-rl;text-orientation:mixed;border-right:0}
+    .railtab-b{left:50%;bottom:0;transform:translateX(-50%);border-bottom:0}
+    body:not(.pf-left-off)   .railtab-l{border-color:#f0c040;color:#fff;background:#5a3a1e}
+    body:not(.pf-right-off)  .railtab-r{border-color:#f0c040;color:#fff;background:#5a3a1e}
+    body:not(.pf-bottom-off) .railtab-b{border-color:#f0c040;color:#fff;background:#5a3a1e}
+    @media(max-width:520px){ .rail-left,.rail-right{width:88vw} }
 
     /* ── Controles de los raíles (SCUMM ámbar) ── */
     .rail label{display:flex;align-items:center;gap:9px;font-size:12.5px;color:#ffe08a;cursor:pointer}
@@ -174,6 +180,11 @@
 </head>
 <body>
   <div class="porteria">
+
+    <!-- Pestañas de apertura de los raíles, siempre visibles en los bordes -->
+    <button class="railtab railtab-l" id="tabLeft" title="Opciones (izquierda)">⚙ OPCIONES</button>
+    <button class="railtab railtab-r" id="tabRight" title="Avanzado (derecha)">🎛 AVANZADO</button>
+    <button class="railtab railtab-b" id="tabBottom" title="Modo experto (inferior)">⌨ EXPERTO</button>
 
     <!-- ══ IZQUIERDA · OPCIONES (filtros de la lista) ══ -->
     <aside class="rail rail-left">
@@ -680,6 +691,20 @@
   wireControls();
   refresh();
   refreshTimer=setInterval(refresh, REFRESH_MS);
+})();
+</script>
+<script>
+/* Pestañas de los raíles: plegado por defecto; alternan y persisten (mismos keys que admira-bar). */
+(function(){
+  var map=[['tabLeft','pf-left-off','pf_left'],['tabRight','pf-right-off','pf_right'],['tabBottom','pf-bottom-off','pf_bottom']];
+  map.forEach(function(m){
+    if(localStorage.getItem(m[2])!=="1") document.body.classList.add(m[1]);
+    var btn=document.getElementById(m[0]);
+    if(btn) btn.addEventListener('click',function(){
+      var off=document.body.classList.toggle(m[1]);
+      try{ localStorage.setItem(m[2], off?"0":"1"); }catch(e){}
+    });
+  });
 })();
 </script>
 </body>

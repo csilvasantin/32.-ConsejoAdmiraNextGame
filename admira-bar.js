@@ -19,6 +19,7 @@
   var TOP = [
     { t: "📊 Dashboard", h: "https://www.admira.live/dashboard.html" },
     { t: "🖥️ Control",   h: "https://www.admira.live/control/" },
+    { t: "📺 Players",   h: "https://www.admira.live/players/" },
     { t: "🌐 Navegadores", h: "https://www.admira.live/navegadores/" },
     { t: "💬 Telegram",  h: "https://www.admira.live/telegram" },
     { t: "🎯 Misiones",  h: "https://www.admira.live/vista-previa" },

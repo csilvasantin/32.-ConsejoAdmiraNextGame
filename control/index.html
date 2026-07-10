@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <!-- control · v2026.07.02c · icono = fondo (personaje) del equipo SIEMPRE, nunca el screenshot en vivo · wallpapers reales subidos por máquina -->
 <!-- control-mensajeria · v.2026.07.08.r1 · 💬 mensaje por equipo + 📣 a todos → router de encargos AdmiraNeXT (ACK + traza Telegram) · auth = gate Google · fix: refresco silencioso de cred + re-login (control remoto) -->
-<!-- control-pantallas · v.2026.07.10.r1 (M9) · sección «Pantallas · Players» (plano de CONTENIDO, distinto del de máquinas): tarjetas de /signage/screens + emitiendo ahora (/signage/now) + mando embebido por pantalla (cola M8, POST /control/cmd). Tótem ipad-totem controlable desde /control. -->
+<!-- control-pantallas · v.2026.07.10.r2 · MUDANZA: la sección «Pantallas · Players» (plano de CONTENIDO: /signage/screens + /signage/now + mando M8 /control/cmd + doble tick) se movió a su PÁGINA PROPIA → /players/. /control queda solo para el plano de MÁQUINAS. -->
 <html lang="es">
 <head>
     <script src="/admira-bar.js?v=20260705-rails"></script>
@@ -425,57 +425,6 @@
   .msgbox .mcrow .msend:disabled{opacity:.5;cursor:default}
   .msgfoot{font-size:10px;color:var(--mut);padding:0 14px 11px}
   .msgfoot a{color:var(--acc2)}
-  /* ══ PANTALLAS · PLAYERS (plano de CONTENIDO, distinto del plano de MÁQUINAS) ══
-     Sección nueva: cada pantalla viva de /signage/screens con su mando embebido
-     (cola de comandos M8, POST /control/cmd). No toca la lógica de máquinas. ══ */
-  .screens-sec{margin-top:26px}
-  .screens-hd{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 14px;padding-bottom:9px;border-bottom:1px solid var(--line)}
-  .screens-hd .st{font-weight:800;font-size:15px;letter-spacing:.3px}
-  .screens-hd .st .em{margin-right:7px}
-  .screens-hd .sc-count{font-family:var(--mono);font-size:11.5px;color:var(--mut)}
-  .screens-hd .sc-note{flex:1;min-width:180px;text-align:right;font-size:11px;color:var(--mut)}
-  .screens-hd .sc-count b.on{color:var(--ok)}
-  .scards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
-  .scard{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:15px;display:flex;flex-direction:column;gap:11px}
-  .stage .scard{border-radius:0;border:2px solid #8b5a14;background:#1b130a;box-shadow:3px 3px 0 #000}
-  .scard.off{opacity:.62}
-  .scard-hd{display:flex;align-items:center;gap:10px}
-  .scard-hd .plat{font-size:22px;line-height:1;flex:0 0 auto}
-  .scard-hd .who{display:flex;flex-direction:column;gap:2px;min-width:0;flex:1}
-  .scard-hd .who .name{font-weight:700;font-size:14px;font-family:var(--mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .scard-hd .who .loc{font-size:11px;color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
-  .scard-hd .sdot{width:9px;height:9px;border-radius:50%;background:var(--bad);flex:0 0 auto}
-  .scard-hd .sdot.on{background:var(--ok);box-shadow:0 0 8px var(--ok)}
-  .scard-hd .sdot.on.stale{background:var(--warn);box-shadow:0 0 8px var(--warn)}
-  .scard-hd .sage{font-family:var(--mono);font-size:10.5px;color:var(--mut);flex:0 0 auto}
-  .scard .now{font-size:11.5px;color:#cbe6ff;background:#0d1420;border:1px solid var(--line);border-radius:9px;padding:7px 9px;line-height:1.4;min-height:2.6em;display:flex;align-items:center;gap:7px}
-  .stage .scard .now{border-radius:0;border:1px solid #4a3410;background:#120c04;color:#ffe08a}
-  .scard .now .ntype{font-size:14px;flex:0 0 auto}
-  .scard .now .ntitle{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
-  .scard .now.empty{color:var(--mut)}
-  /* mando embebido: D-pad compacto + fila de acciones */
-  .scmd{display:flex;flex-direction:column;gap:7px}
-  .scmd .dpad{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
-  .scmd .row2{display:grid;grid-template-columns:repeat(5,1fr);gap:6px}
-  .scmd button.mb{border:1px solid var(--line);background:var(--panel2);color:var(--ink);border-radius:9px;
-    padding:9px 4px;font-size:16px;line-height:1;cursor:pointer;transition:transform .07s,background .12s,border-color .12s;
-    display:flex;align-items:center;justify-content:center}
-  .stage .scmd button.mb{border-radius:0;border:1px solid #8b5a14;background:#2a1a08;color:#ffdd66;box-shadow:1px 1px 0 #000}
-  .scmd button.mb:hover{border-color:var(--acc);color:#fff}
-  .stage .scmd button.mb:hover{border-color:#f0c040;background:#3a2410;color:#fff}
-  .scmd button.mb:active{transform:scale(.92)}
-  .scmd button.mb.mid{color:var(--acc2)}
-  .stage .scmd button.mb.mid{color:#7ad0ff}
-  .scmd button.mb.flash{background:linear-gradient(160deg,rgba(91,214,192,.32),rgba(122,162,255,.16));
-    border-color:var(--acc);box-shadow:0 0 0 1px var(--acc),0 0 16px -4px var(--acc)}
-  .scmd button.mb.flash.err{background:rgba(255,107,107,.22);border-color:var(--bad);box-shadow:0 0 0 1px var(--bad)}
-  .scard .slast{font-family:var(--mono);font-size:10.5px;color:var(--mut);min-height:1.3em;text-align:center}
-  .scard .slast b{color:var(--acc)}
-  .scard .slast .tx{color:var(--warn);font-weight:800}                                          /* 1 tick: enviado */
-  .scard .slast .rx{color:var(--ok);font-weight:800;text-shadow:0 0 8px rgba(91,214,192,.5)}    /* 2 ticks: recibido */
-  .scard .slast .warn{color:var(--bad);font-weight:800}                                          /* enviado sin confirmar */
-  .scards .sc-empty{grid-column:1/-1;color:var(--mut);font-size:13px;text-align:center;padding:26px;border:1px dashed var(--line);border-radius:12px}
-  .stage .scards .sc-empty{border-radius:0;border:2px dashed #8b5a14}
 </style>
 </head>
 <body>
@@ -510,20 +459,6 @@
 
   <main class="stage">
     <div class="cards" id="cards"></div>
-
-    <!-- ══ PANTALLAS · PLAYERS (plano de CONTENIDO — canal.html emitiendo) ══
-         Separado del plano de MÁQUINAS de arriba. Fuente: /signage/screens.
-         Mando embebido por pantalla → cola de comandos M8 (/control/cmd). -->
-    <section class="screens-sec" id="screensSection">
-      <div class="screens-hd">
-        <span class="st"><span class="em">📺</span>Pantallas · Players</span>
-        <span class="sc-count" id="scCount">—</span>
-        <span class="sc-note">plano de contenido · mando en vivo (M8) · refresco 10 s</span>
-      </div>
-      <div class="scards" id="screensCards">
-        <div class="sc-empty">Cargando pantallas vivas…</div>
-      </div>
-    </section>
 
     <div id="crtMonitor" hidden>
       <div class="crt-head">
@@ -2110,166 +2045,5 @@ function collapseAllToggle(){
 })();
 </script>
 
-<script>
-/* ══════════════════════════════════════════════════════════════════════════
-   PANTALLAS · PLAYERS — plano de CONTENIDO (canal.html emitiendo).
-   Distinto del plano de MÁQUINAS (arriba). Fuentes ya en producción:
-     · GET  api.admira.store/signage/screens        → lista de pantallas vivas
-     · GET  api.admira.store/signage/now?screen=X    → qué emite cada una
-     · POST omnipublicity-api…/control/cmd {screen,cmd} → cola de mando (M8)
-   Self-contained (IIFE, helpers locales) para no colisionar con el resto.
-   ══════════════════════════════════════════════════════════════════════════ */
-(function(){
-  const SCREENS_API='https://api.admira.store/signage/screens';
-  const NOW_API='https://api.admira.store/signage/now?screen=';
-  const CMD_API='https://omnipublicity-api.csilvasantin.workers.dev/control/cmd';
-  const SEEN_API='https://omnipublicity-api.csilvasantin.workers.dev/control/seen?screen=';
-  const REFRESH_MS=10000, NOW_MS=10000, ONLINE_MAX_AGE=90; // s → verde
-  const box=document.getElementById('screensCards');
-  const countEl=document.getElementById('scCount');
-  if(!box) return;
-  const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-  const nowTimers={}; // screen → interval id de /signage/now
-
-  // Icono de plataforma a partir del user_agent
-  function platIcon(ua){
-    ua=String(ua||'');
-    if(/AdmiraIOSPlayer|iPad|iPhone|iOS/i.test(ua)) return '📱';
-    if(/Android/i.test(ua)) return '🤖';
-    if(/Electron|AdmiraNext.*Player/i.test(ua)) return '🖥️';
-    if(/Macintosh|Mac OS X/i.test(ua)) return '🍎';
-    if(/Windows|Win64|Win32/i.test(ua)) return '🪟';
-    if(/Linux/i.test(ua)) return '🐧';
-    return '📺';
-  }
-  function ageTxt(s){ if(s==null) return ''; s=Math.round(s); if(s<90) return 'ahora'; if(s<3600) return Math.round(s/60)+'m'; return Math.round(s/3600)+'h'; }
-
-  // Botones del mando (mismo contrato que adcelerate/mando)
-  const DPAD=[
-    {cmd:'first',ico:'⏮',t:'Primera'},
-    {cmd:'prev', ico:'⏪',t:'Anterior'},
-    {cmd:'toggle-pause',ico:'⏯',t:'Pausa/Play',mid:1},
-    {cmd:'next', ico:'⏩',t:'Siguiente'},
-    {cmd:'last', ico:'⏭',t:'Última'},
-  ];
-  const ROW2=[
-    {cmd:'toggle-mute',ico:'🔇',t:'Silencio'},
-    {cmd:'vol-down',ico:'🔉',t:'Volumen −'},
-    {cmd:'vol-up', ico:'🔊',t:'Volumen +'},
-    {cmd:'ontop-toggle',ico:'📌',t:'Siempre encima'},
-    {cmd:'hud',    ico:'🅗',t:'HUD / diagnóstico'},
-  ];
-
-  // Espera el ACUSE de la pantalla: poll /control/seen hasta ver el id (2º tick).
-  function waitReceipt(screen,cmd,id,t0,lastEl){
-    const timeout=8000, every=600, deadline=Date.now()+timeout;
-    const tick=async()=>{
-      let seen=[];
-      try{ const r=await fetch(SEEN_API+encodeURIComponent(screen),{cache:'no-store'});
-        const j=await r.json().catch(()=>null); seen=(j&&Array.isArray(j.seen))?j.seen:[];
-      }catch(_){ /* red intermitente: seguimos hasta el deadline */ }
-      if(seen.some(s=>s&&s.id===id)){
-        if(lastEl) lastEl.innerHTML='<span class="rx">✓✓ recibido</span> · <b>'+esc(cmd)+'</b> · '+(Date.now()-t0)+'ms';
-        return;
-      }
-      if(Date.now()>=deadline){
-        if(lastEl) lastEl.innerHTML='<span class="warn">⚠ enviado · sin confirmación</span> — ¿pantalla offline?';
-        return;
-      }
-      setTimeout(tick,every);
-    };
-    setTimeout(tick,every);
-  }
-
-  async function sendCmd(screen,cmd,btn,lastEl){
-    if(btn){ btn.classList.remove('err'); btn.classList.add('flash'); setTimeout(()=>btn.classList.remove('flash'),260); }
-    const t0=Date.now();
-    if(lastEl) lastEl.innerHTML='→ enviando <b>'+esc(cmd)+'</b>…';
-    try{
-      const r=await fetch(CMD_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({screen,cmd})});
-      const j=await r.json().catch(()=>null);
-      if(r.ok&&j&&j.ok){
-        if(lastEl) lastEl.innerHTML='<span class="tx">✓ enviado</span> · <b>'+esc(cmd)+'</b> · esperando pantalla…';
-        waitReceipt(screen,cmd,j.id,t0,lastEl);   // 2º tick
-      }
-      else { if(btn){ btn.classList.add('flash','err'); } if(lastEl) lastEl.textContent='✗ '+((j&&j.error)||('HTTP '+r.status)); }
-    }catch(_){ if(btn){ btn.classList.add('flash','err'); } if(lastEl) lastEl.textContent='✗ sin red'; }  // sólo error REAL: el POST falló
-  }
-
-  function padHTML(list){ return list.map(b=>'<button class="mb'+(b.mid?' mid':'')+'" data-cmd="'+b.cmd+'" title="'+esc(b.t)+'">'+b.ico+'</button>').join(''); }
-
-  function renderNow(el,item){
-    if(!item){ el.className='now empty'; el.innerHTML='<span class="ntype">▪</span><span class="ntitle">— sin datos de emisión —</span>'; return; }
-    el.className='now';
-    const ic=item.type==='video'?'🎬':(item.type==='image'?'🖼️':(item.type==='web'?'🌐':'▶'));
-    const dur=item.dur?(' · '+Math.round(item.dur)+'s'):'';
-    el.innerHTML='<span class="ntype">'+ic+'</span><span class="ntitle" title="'+esc(item.title||item.id||'')+'">'+esc(item.title||item.id||'(sin título)')+dur+'</span>';
-  }
-
-  async function pollNow(screen,el){
-    try{ const r=await fetch(NOW_API+encodeURIComponent(screen),{cache:'no-store'});
-      const d=await r.json().catch(()=>null); renderNow(el, d&&d.item?d.item:null);
-    }catch(_){ /* deja el último valor */ }
-  }
-
-  function cardHTML(s){
-    // Online = veredicto del backend (ya pondera su propio umbral por plataforma;
-    // los players iOS laten cada ~2 min, así que age_seconds solo colorea "reciente/rezagado").
-    const stale=s.online && s.age_seconds!=null && s.age_seconds>ONLINE_MAX_AGE;
-    const name=esc(s.screen);
-    const loc=esc(s.locName||s.loc||s.role||'—');
-    return ''+
-      '<div class="scard'+(s.online?'':' off')+'" data-screen="'+name+'">'+
-        '<div class="scard-hd">'+
-          '<span class="plat" title="'+esc(s.user_agent||'')+'">'+platIcon(s.user_agent)+'</span>'+
-          '<span class="who"><span class="name">'+name+'</span><span class="loc">'+loc+'</span></span>'+
-          '<span class="sdot'+(s.online?' on':'')+(stale?' stale':'')+'" title="'+(s.online?('online'+(stale?' · latido rezagado':'')):'offline')+'"></span>'+
-          '<span class="sage">'+esc(ageTxt(s.age_seconds))+'</span>'+
-        '</div>'+
-        '<div class="now empty" data-now><span class="ntype">…</span><span class="ntitle">cargando emisión…</span></div>'+
-        '<div class="scmd">'+
-          '<div class="dpad">'+padHTML(DPAD)+'</div>'+
-          '<div class="row2">'+padHTML(ROW2)+'</div>'+
-        '</div>'+
-        '<div class="slast" data-last>&nbsp;</div>'+
-      '</div>';
-  }
-
-  function wireCard(card){
-    const screen=card.getAttribute('data-screen');
-    const lastEl=card.querySelector('[data-last]');
-    card.querySelectorAll('button.mb').forEach(b=>{
-      b.addEventListener('click',()=>sendCmd(screen,b.getAttribute('data-cmd'),b,lastEl));
-    });
-    const nowEl=card.querySelector('[data-now]');
-    pollNow(screen,nowEl);
-    if(nowTimers[screen]) clearInterval(nowTimers[screen]);
-    nowTimers[screen]=setInterval(()=>pollNow(screen,nowEl),NOW_MS);
-  }
-
-  async function refresh(){
-    let d=null;
-    try{ const r=await fetch(SCREENS_API,{cache:'no-store'}); d=await r.json(); }
-    catch(_){ d=null; }
-    if(!d || !Array.isArray(d.screens)){
-      // degradación honesta: no inventamos pantallas
-      box.innerHTML='<div class="sc-empty">⚠ Sin datos de <b>/signage/screens</b> — reintentando…</div>';
-      if(countEl) countEl.textContent='sin conexión';
-      return;
-    }
-    const arr=d.screens.slice().sort((a,b)=>(b.online-a.online)||((b.last_seen||0)-(a.last_seen||0)));
-    // limpia timers de pantallas que ya no están
-    const alive=new Set(arr.map(s=>s.screen));
-    Object.keys(nowTimers).forEach(sc=>{ if(!alive.has(sc)){ clearInterval(nowTimers[sc]); delete nowTimers[sc]; } });
-    if(countEl){ const onc=arr.filter(s=>s.online).length; countEl.innerHTML='<b class="on">'+onc+'</b> online / '+arr.length; }
-    if(!arr.length){ box.innerHTML='<div class="sc-empty">No hay pantallas vivas ahora mismo.</div>'; return; }
-    box.innerHTML=arr.map(cardHTML).join('');
-    box.querySelectorAll('.scard').forEach(wireCard);
-  }
-
-  refresh();
-  setInterval(refresh, REFRESH_MS);
-})();
-</script>
 </body>
 </html>

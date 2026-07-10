@@ -1,5 +1,7 @@
 <!DOCTYPE html>
-<!-- players · v.2026.07.10.r3 · página PROPIA de admira.tv: pantallas emitiendo (plano de CONTENIDO) + mando remoto en vivo.
+<!-- players · v.2026.07.10.r4 · página PROPIA de admira.tv: pantallas emitiendo (plano de CONTENIDO) + mando remoto en vivo.
+     r4: 2ª vista «📷 captura real» del cristal por tarjeta (GET /signage/shot?screen=X, cache-bust por ts + antigüedad; placeholder honesto si 404).
+         Modo del previo en Opciones: ▶ Contenido en antena / 📷 Captura real / Off; el refresco (Off/5/10/30 s) aplica a ambos. Persistido en localStorage.
      r3: PREVIO VISUAL del creativo en antena por tarjeta (miniatura de /signage/now) + control «Previo» en Opciones (Off/5/10/30 s + toggle vídeo).
      MARCO CUADRÁTICO (portería AdmiraNeXT): centro a pantalla completa (rejilla + mando doble tick),
      3 raíles PLEGABLES vía admira-bar.js (opciones izq · avanzado der · experto abajo), todo plegado por defecto.
@@ -118,6 +120,7 @@
     .scard .preview .pv-badge{position:absolute;top:6px;left:6px;font-size:10px;font-family:var(--mono);
       color:#ffe08a;background:rgba(18,12,4,.82);border:1px solid #8b5a14;padding:2px 7px;letter-spacing:.4px;
       pointer-events:none;z-index:2;box-shadow:1px 1px 0 #000}
+    .scard .preview .pv-badge.shot{color:#7ad0ff;border-color:#2f6d8f}   /* 📷 captura real (cristal) → cian, distinto de ▶ en antena (ámbar) */
     .scard .preview .pv-ph{font-size:11.5px;color:var(--mut);font-family:var(--mono);text-align:center;padding:14px 12px}
     .scard .preview .pv-ph .ico{font-size:26px;display:block;margin-bottom:5px;opacity:.55}
     /* campos técnicos (se muestran/ocultan desde AVANZADO) */
@@ -209,15 +212,21 @@
         </select>
       </div>
       <div class="field">
-        <span class="lb">Previo del contenido</span>
+        <span class="lb">Previo por tarjeta · modo</span>
+        <select id="fPrevioMode">
+          <option value="content" selected>▶ Contenido en antena</option>
+          <option value="shot">📷 Captura real (cristal)</option>
+          <option value="off">Off (sólo texto)</option>
+        </select>
+        <span class="lb" style="margin-top:7px">Refresco del previo</span>
         <select id="fPrevio">
-          <option value="0">Off (sólo texto)</option>
-          <option value="5000">Miniatura · cada 5 s</option>
-          <option value="10000" selected>Miniatura · cada 10 s</option>
-          <option value="30000">Miniatura · cada 30 s</option>
+          <option value="0">Off</option>
+          <option value="5000">Cada 5 s</option>
+          <option value="10000" selected>Cada 10 s</option>
+          <option value="30000">Cada 30 s</option>
         </select>
         <label style="margin-top:2px"><input type="checkbox" id="fPrevioVid"> ▶ Reproducir vídeo (si no, póster)</label>
-        <div class="note">Miniatura del creativo <b>en antena</b> que reporta cada player. Vídeo por defecto = póster estático (ahorra datos).</div>
+        <div class="note"><b>▶ Contenido</b>: miniatura del creativo que reporta el player. <b>📷 Captura real</b>: foto del cristal que sube el propio player (fase 2). El refresco aplica a ambos. Vídeo por defecto = póster estático.</div>
       </div>
       <div class="note" id="filtInfo">—</div>
     </aside>
@@ -307,15 +316,21 @@
 (function(){
   const SCREENS_API='https://api.admira.store/signage/screens';
   const NOW_API='https://api.admira.store/signage/now?screen=';
+  const SHOT_API='https://api.admira.store/signage/shot?screen=';   // fase 2: captura REAL del cristal (image/jpeg o 404; &meta=1 → {ok,ts,ageSeconds,bytes})
   const CMD_API='https://omnipublicity-api.csilvasantin.workers.dev/control/cmd';
   const SEEN_API='https://omnipublicity-api.csilvasantin.workers.dev/control/seen?screen=';
   const NOW_MS=10000;
   let REFRESH_MS=10000, ONLINE_MAX_AGE=90;   // ajustables desde los raíles
-  /* ── PREVIO del contenido en antena (persistido en localStorage) ──
-     Por defecto: previo ON a 10 s, vídeo OFF (póster estático). Off = 0 = sólo texto, sin cargar assets. */
-  const LS_PMS='players.previo.ms', LS_PVID='players.previo.video';
+  /* ── PREVIO por tarjeta (persistido en localStorage) ──
+     Modo: 'content' (miniatura del creativo en antena · /signage/now) · 'shot' (captura real del cristal · /signage/shot) · 'off'.
+     Refresco: 0=Off / 5000 / 10000 / 30000 — aplica a ambos modos. Vídeo OFF = póster estático.
+     Por defecto: modo 'content' a 10 s (NO cambiar). Off / refresco Off = sólo texto, sin cargar assets. */
+  const LS_PMS='players.previo.ms', LS_PVID='players.previo.video', LS_PMODE='players.previo.mode';
   let PREVIO_MS=(()=>{ const v=parseInt(localStorage.getItem(LS_PMS),10); return isNaN(v)?10000:v; })();
   let PREVIO_VIDEO=localStorage.getItem(LS_PVID)==='1';
+  let PREVIO_MODE=(()=>{ const v=localStorage.getItem(LS_PMODE); return (v==='shot'||v==='off')?v:'content'; })();
+  const previoActive=()=>PREVIO_MODE!=='off' && PREVIO_MS>0;
+  const syncPrevioBody=()=>document.body.classList.toggle('previo-off', !previoActive());
   const lastItems={};   // screen → último item de /signage/now (re-render sin refetch al cambiar el control)
   const box=document.getElementById('screensCards');
   const countEl=document.getElementById('scCount');
@@ -453,6 +468,38 @@
     if(m) m.addEventListener('error',()=>{ el.innerHTML=ph('⚠','no se pudo cargar'); },{once:true});
   }
 
+  // antigüedad de la captura en texto corto
+  function shotAge(s){ if(s==null) return ''; s=Math.round(s); if(s<1) return 'ahora'; if(s<90) return s+'s'; if(s<3600) return Math.round(s/60)+'m'; return Math.round(s/3600)+'h'; }
+  // Recuadro de CAPTURA REAL: foto del cristal que sube el player (fase 2, mismo contrato que admira.tv/remotecontrol).
+  // GET /signage/shot?screen=X&meta=1 → {ok,ts,ageSeconds,bytes}; imagen = misma URL con cache-bust por ts.
+  // 404 / sin captura → placeholder honesto (player aún sin fase 2). Nunca bloquea el mando ni rompe la tarjeta.
+  async function renderShot(el,screen){
+    if(!el) return;
+    if(!previoActive() || PREVIO_MODE!=='shot') return;
+    const ph=(txt)=>'<span class="pv-badge shot">📷 captura real</span><div class="pv-ph"><span class="ico">📷</span>'+esc(txt)+'</div>';
+    el.style.aspectRatio='16/9';
+    let meta=null, was404=false;
+    try{ const r=await fetch(SHOT_API+encodeURIComponent(screen)+'&meta=1',{cache:'no-store'});
+      if(r.status===404) was404=true; else if(r.ok) meta=await r.json().catch(()=>null);
+    }catch(_){ /* red intermitente: deja lo que hubiera */ return; }
+    if(PREVIO_MODE!=='shot') return;                                  // el modo cambió mientras esperábamos
+    if(was404 || !meta || !meta.ok){ el.innerHTML=ph('sin captura (player sin fase 2)'); return; }
+    const ts=meta.ts||Date.now();
+    const age='captura hace '+shotAge(meta.ageSeconds);
+    el.innerHTML='<span class="pv-badge shot">📷 '+esc(age)+'</span>'+
+      '<img class="pv-media" loading="lazy" src="'+SHOT_API+encodeURIComponent(screen)+'&ts='+encodeURIComponent(ts)+'" alt="captura de '+esc(screen)+'">';
+    const m=el.querySelector('.pv-media');
+    if(m) m.addEventListener('error',()=>{ el.innerHTML=ph('sin captura (player sin fase 2)'); },{once:true});
+  }
+
+  // Dispatcher del previo por modo: off = sin asset; shot = captura real; content = miniatura de /signage/now.
+  function updatePreview(el,screen,item){
+    if(!el) return;
+    if(!previoActive()){ el.innerHTML=''; return; }
+    if(PREVIO_MODE==='shot') renderShot(el,screen);
+    else renderPreview(el,item);
+  }
+
   function renderNow(el,item){
     if(!item){ el.className='now empty'; el.innerHTML='<span class="ntype">▪</span><span class="ntitle">— sin datos de emisión —</span>'; return; }
     el.className='now';
@@ -465,7 +512,7 @@
     try{ const r=await fetch(NOW_API+encodeURIComponent(screen),{cache:'no-store'});
       const d=await r.json().catch(()=>null); const item=d&&d.item?d.item:null;
       lastItems[screen]=item; renderNow(el,item);
-      if(prevEl) renderPreview(prevEl,item);
+      if(prevEl) updatePreview(prevEl,screen,item);
     }catch(_){ /* deja el último valor */ }
   }
 
@@ -515,7 +562,7 @@
     box.querySelectorAll('.scard').forEach(card=>{
       const screen=card.getAttribute('data-screen');
       const prevEl=card.querySelector('[data-preview]');
-      if(prevEl) renderPreview(prevEl, screen in lastItems?lastItems[screen]:null);
+      if(prevEl) updatePreview(prevEl, screen, screen in lastItems?lastItems[screen]:null);
     });
   }
   // Reprograma los timers de /signage/now a la nueva cadencia del Previo
@@ -608,16 +655,19 @@
     ['#fOnline','#fPlat','#fLoc','#fSort'].forEach(sel=>{ const el=$(sel); if(el) el.addEventListener('change',render); });
     const iv=$('#fInterval'); if(iv) iv.addEventListener('change',()=>{ REFRESH_MS=parseInt(iv.value,10)||10000;
       if(refreshTimer) clearInterval(refreshTimer); refreshTimer=setInterval(refresh,REFRESH_MS); toast('Refresco cada '+(REFRESH_MS/1000)+' s'); });
-    // Previo del contenido: cadencia (0=Off) + toggle vídeo (opt-in), persistidos en localStorage
+    // Previo por tarjeta: MODO (content/shot/off) + refresco (0=Off / 5/10/30 s) + toggle vídeo (opt-in), persistidos en localStorage
+    const pm=$('#fPrevioMode'); if(pm){ pm.value=PREVIO_MODE;
+      pm.addEventListener('change',()=>{ PREVIO_MODE=pm.value; localStorage.setItem(LS_PMODE,PREVIO_MODE);
+        syncPrevioBody(); reRenderPreviews();
+        toast(PREVIO_MODE==='shot'?'Previo: captura real del cristal':(PREVIO_MODE==='off'?'Previo desactivado (sólo texto)':'Previo: contenido en antena')); }); }
     const pv=$('#fPrevio'); if(pv){ pv.value=String(PREVIO_MS);
       pv.addEventListener('change',()=>{ PREVIO_MS=parseInt(pv.value,10)||0; localStorage.setItem(LS_PMS,String(PREVIO_MS));
-        document.body.classList.toggle('previo-off', !(PREVIO_MS>0));
-        reRenderPreviews(); restartNowTimers();
-        toast(PREVIO_MS>0?('Previo cada '+(PREVIO_MS/1000)+' s'):'Previo desactivado'); }); }
+        syncPrevioBody(); reRenderPreviews(); restartNowTimers();
+        toast(PREVIO_MS>0?('Refresco del previo cada '+(PREVIO_MS/1000)+' s'):'Refresco del previo: Off'); }); }
     const pvv=$('#fPrevioVid'); if(pvv){ pvv.checked=PREVIO_VIDEO;
       pvv.addEventListener('change',()=>{ PREVIO_VIDEO=pvv.checked; localStorage.setItem(LS_PVID,PREVIO_VIDEO?'1':'0');
         reRenderPreviews(); toast(PREVIO_VIDEO?'Previo de vídeo: reproducir':'Previo de vídeo: póster estático'); }); }
-    document.body.classList.toggle('previo-off', !(PREVIO_MS>0));
+    syncPrevioBody();
     const age=$('#advAge'); if(age) age.addEventListener('change',()=>{ ONLINE_MAX_AGE=Math.max(15,parseInt(age.value,10)||90); render(); });
     const tech=$('#advTech'); if(tech) tech.addEventListener('change',()=>document.body.classList.toggle('tech-on',tech.checked));
     const bs=$('#batchSend'); if(bs) bs.addEventListener('click',batchSend);

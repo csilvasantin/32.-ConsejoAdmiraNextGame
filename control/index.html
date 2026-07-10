@@ -471,6 +471,9 @@
   .scmd button.mb.flash.err{background:rgba(255,107,107,.22);border-color:var(--bad);box-shadow:0 0 0 1px var(--bad)}
   .scard .slast{font-family:var(--mono);font-size:10.5px;color:var(--mut);min-height:1.3em;text-align:center}
   .scard .slast b{color:var(--acc)}
+  .scard .slast .tx{color:var(--warn);font-weight:800}                                          /* 1 tick: enviado */
+  .scard .slast .rx{color:var(--ok);font-weight:800;text-shadow:0 0 8px rgba(91,214,192,.5)}    /* 2 ticks: recibido */
+  .scard .slast .warn{color:var(--bad);font-weight:800}                                          /* enviado sin confirmar */
   .scards .sc-empty{grid-column:1/-1;color:var(--mut);font-size:13px;text-align:center;padding:26px;border:1px dashed var(--line);border-radius:12px}
   .stage .scards .sc-empty{border-radius:0;border:2px dashed #8b5a14}
 </style>
@@ -2120,6 +2123,7 @@ function collapseAllToggle(){
   const SCREENS_API='https://api.admira.store/signage/screens';
   const NOW_API='https://api.admira.store/signage/now?screen=';
   const CMD_API='https://omnipublicity-api.csilvasantin.workers.dev/control/cmd';
+  const SEEN_API='https://omnipublicity-api.csilvasantin.workers.dev/control/seen?screen=';
   const REFRESH_MS=10000, NOW_MS=10000, ONLINE_MAX_AGE=90; // s → verde
   const box=document.getElementById('screensCards');
   const countEl=document.getElementById('scCount');
@@ -2156,15 +2160,40 @@ function collapseAllToggle(){
     {cmd:'hud',    ico:'🅗',t:'HUD / diagnóstico'},
   ];
 
+  // Espera el ACUSE de la pantalla: poll /control/seen hasta ver el id (2º tick).
+  function waitReceipt(screen,cmd,id,t0,lastEl){
+    const timeout=8000, every=600, deadline=Date.now()+timeout;
+    const tick=async()=>{
+      let seen=[];
+      try{ const r=await fetch(SEEN_API+encodeURIComponent(screen),{cache:'no-store'});
+        const j=await r.json().catch(()=>null); seen=(j&&Array.isArray(j.seen))?j.seen:[];
+      }catch(_){ /* red intermitente: seguimos hasta el deadline */ }
+      if(seen.some(s=>s&&s.id===id)){
+        if(lastEl) lastEl.innerHTML='<span class="rx">✓✓ recibido</span> · <b>'+esc(cmd)+'</b> · '+(Date.now()-t0)+'ms';
+        return;
+      }
+      if(Date.now()>=deadline){
+        if(lastEl) lastEl.innerHTML='<span class="warn">⚠ enviado · sin confirmación</span> — ¿pantalla offline?';
+        return;
+      }
+      setTimeout(tick,every);
+    };
+    setTimeout(tick,every);
+  }
+
   async function sendCmd(screen,cmd,btn,lastEl){
     if(btn){ btn.classList.remove('err'); btn.classList.add('flash'); setTimeout(()=>btn.classList.remove('flash'),260); }
     const t0=Date.now();
+    if(lastEl) lastEl.innerHTML='→ enviando <b>'+esc(cmd)+'</b>…';
     try{
       const r=await fetch(CMD_API,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({screen,cmd})});
       const j=await r.json().catch(()=>null);
-      if(r.ok&&j&&j.ok){ if(lastEl) lastEl.innerHTML='→ <b>'+esc(cmd)+'</b> · '+(Date.now()-t0)+'ms'; }
+      if(r.ok&&j&&j.ok){
+        if(lastEl) lastEl.innerHTML='<span class="tx">✓ enviado</span> · <b>'+esc(cmd)+'</b> · esperando pantalla…';
+        waitReceipt(screen,cmd,j.id,t0,lastEl);   // 2º tick
+      }
       else { if(btn){ btn.classList.add('flash','err'); } if(lastEl) lastEl.textContent='✗ '+((j&&j.error)||('HTTP '+r.status)); }
-    }catch(_){ if(btn){ btn.classList.add('flash','err'); } if(lastEl) lastEl.textContent='✗ sin red'; }
+    }catch(_){ if(btn){ btn.classList.add('flash','err'); } if(lastEl) lastEl.textContent='✗ sin red'; }  // sólo error REAL: el POST falló
   }
 
   function padHTML(list){ return list.map(b=>'<button class="mb'+(b.mid?' mid':'')+'" data-cmd="'+b.cmd+'" title="'+esc(b.t)+'">'+b.ico+'</button>').join(''); }

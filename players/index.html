@@ -1,6 +1,7 @@
 <!DOCTYPE html>
-<!-- players · v.2026.07.10.r1 · página PROPIA de admira.tv: pantallas emitiendo (plano de CONTENIDO) + mando remoto en vivo.
-     MUDANZA desde /control (sección «Pantallas · Players»): tarjetas grandes + D-pad visible + doble tick (1 enviado / 2 recibido).
+<!-- players · v.2026.07.10.r2 · página PROPIA de admira.tv: pantallas emitiendo (plano de CONTENIDO) + mando remoto en vivo.
+     MARCO CUADRÁTICO (portería AdmiraNeXT): centro a pantalla completa (rejilla + mando doble tick),
+     3 raíles PLEGABLES vía admira-bar.js (opciones izq · avanzado der · experto abajo), todo plegado por defecto.
      Fuentes en producción: GET api.admira.store/signage/screens · GET /signage/now · POST omnipublicity-api…/control/cmd + /control/seen. -->
 <html lang="es">
 <head>
@@ -16,33 +17,81 @@
       --bg:#0b0e14;--panel:#131822;--panel2:#1a212e;--line:#26303f;--ink:#e8eef7;--mut:#8a97ab;
       --acc:#5bd6c0;--acc2:#7aa2ff;--warn:#ffb454;--bad:#ff6b6b;--ok:#5bd6c0;
       --mono:'SF Mono',ui-monospace,Menlo,Consolas,monospace;--sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+      --topbar-h:46px; --rail-l:236px; --rail-r:312px; --bottom-h:172px;
     }
     *{box-sizing:border-box}
     html,body{margin:0;min-height:100%}
     body{background:radial-gradient(120% 90% at 50% 0%,#141007,#0b0e14);color:var(--ink);font-family:var(--sans)}
 
-    /* ── Cabecera (madera + ámbar SCUMM) ── */
-    header{display:flex;align-items:center;gap:14px;flex-wrap:wrap;padding:16px 24px;
-      border-bottom:2px solid #8b5a14;background:linear-gradient(180deg,#1b130a,#120c04)}
-    header h1{font-size:19px;margin:0;font-weight:800;letter-spacing:.4px;color:#ffe08a}
-    header h1 .tag{color:var(--acc2);font-family:var(--mono);font-size:15px}
-    header .sub{color:#c9a86a;font-size:12.5px}
+    /* ═══ MARCO CUADRÁTICO (portería SCUMM): 4 barras + centro scrollable ═══
+       El CHROME de los raíles (fondo madera + borde ámbar + tipografía pixel de la cabecera)
+       lo aplica admira-bar.js con !important → coherente con el resto de admira.live.
+       Aquí sólo posicionamos, plegamos y ponemos el CONTENIDO propio de players. */
+    .porteria{position:relative}
+    .rail{position:fixed;z-index:40;overflow:auto;display:flex;flex-direction:column;gap:11px;
+      scrollbar-width:thin;scrollbar-color:#8b5a14 transparent}
+    .rail::-webkit-scrollbar{width:8px;height:8px}
+    .rail::-webkit-scrollbar-thumb{background:#8b5a14;border-radius:0}
+    .rail-left,.rail-right{top:var(--topbar-h);bottom:0;overflow-x:hidden;padding:14px 12px 40px}
+    .rail-left{left:0;width:var(--rail-l)}
+    .rail-right{right:0;width:var(--rail-r)}
+    .rail-bottom{left:var(--rail-l);right:var(--rail-r);bottom:0;height:var(--bottom-h);padding:12px 16px}
+    .rail-hd{font-size:10.5px;text-transform:uppercase;letter-spacing:.7px;color:#c9a86a;font-weight:800;
+      padding:7px 2px 6px;border-bottom:1px solid #4a3410;margin-top:2px}
+    .stage{margin-left:var(--rail-l);margin-right:var(--rail-r);padding:22px 22px;
+      padding-bottom:calc(var(--bottom-h) + 20px);min-height:calc(100vh - var(--topbar-h))}
+    body.pf-left-off   .rail-left{display:none}
+    body.pf-left-off   .stage{margin-left:0}
+    body.pf-left-off   .rail-bottom{left:0}
+    body.pf-right-off  .rail-right{display:none}
+    body.pf-right-off  .stage{margin-right:0}
+    body.pf-right-off  .rail-bottom{right:0}
+    body.pf-bottom-off .rail-bottom{display:none}
+    body.pf-bottom-off .stage{padding-bottom:22px}
+    @media(max-width:860px){
+      .rail-left,.rail-right,.rail-bottom{position:static;top:auto;bottom:auto;left:auto;right:auto;
+        width:auto;height:auto;border-bottom:2px solid #8b5a14}
+      .stage{margin:0;padding-bottom:22px;min-height:0}
+    }
+
+    /* ── Controles de los raíles (SCUMM ámbar) ── */
+    .rail label{display:flex;align-items:center;gap:9px;font-size:12.5px;color:#ffe08a;cursor:pointer}
+    .rail select,.rail input[type=text],.rail input[type=number]{
+      width:100%;background:#120c04;color:#ffe08a;border:1px solid #8b5a14;border-radius:0;
+      padding:8px 9px;font-size:12.5px;font-family:var(--mono)}
+    .rail select:focus,.rail input:focus{outline:none;border-color:#f0c040}
+    .rail input[type=checkbox]{width:16px;height:16px;accent-color:#ffb454;flex:0 0 auto}
+    .rail .field{display:flex;flex-direction:column;gap:5px}
+    .rail .field .lb{font-size:10.5px;color:#c9a86a;letter-spacing:.4px;text-transform:uppercase}
+    .rail .note{font-size:11.5px;color:var(--mut);line-height:1.6}
+    .rail .note b{color:#ffe08a}
+    .rail button{background:#2a1a08;color:#ffdd66;border:1px solid #8b5a14;border-radius:0;
+      box-shadow:1px 1px 0 #000;padding:9px 11px;font-size:12px;font-weight:700;cursor:pointer;
+      font-family:var(--sans);transition:border-color .12s,background .12s}
+    .rail button:hover{border-color:#f0c040;background:#3a2410;color:#fff}
+    .rail button.wide{width:100%;text-align:center}
+    .rail button.go{border-color:var(--acc2);color:#7ad0ff}
+    .rail button.go:hover{border-color:var(--acc);color:#fff}
+    .rail .legend{display:flex;flex-direction:column;gap:6px;font-size:11.5px;color:var(--mut)}
+    .rail .legend span{display:flex;align-items:center;gap:8px}
+    .rail .legend .dot{width:10px;height:10px;border-radius:50%;background:var(--bad);flex:0 0 auto}
+    .rail .legend .dot.on{background:var(--ok);box-shadow:0 0 8px var(--ok)}
+    .rail .legend .dot.stale{background:var(--warn);box-shadow:0 0 8px var(--warn)}
+    .rail .batchbar{display:flex;gap:7px}
+    .rail .batchbar select{flex:1}
+
+    /* ── Cabecera del escenario (madera + ámbar) ── */
+    .stage-hd{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 20px;
+      padding-bottom:11px;border-bottom:1px solid #4a3410}
+    .stage-hd h1{font-size:18px;margin:0;font-weight:800;letter-spacing:.3px;color:#ffe08a}
+    .stage-hd h1 .tag{color:var(--acc2);font-family:var(--mono);font-size:14px}
+    .stage-hd .sub{color:#c9a86a;font-size:12px}
     .spacer{flex:1}
     .pill{font-size:12px;border:1px solid #8b5a14;border-radius:999px;padding:6px 13px;color:#ffdd66;
       font-family:var(--mono);background:#2a1a08;box-shadow:1px 1px 0 #000}
     .pill b.on{color:var(--ok)}
 
-    /* ── Escenario: donde viven las tarjetas (contexto .stage = look SCUMM) ── */
-    .stage{max-width:1260px;margin:0 auto;padding:26px 22px 70px;min-height:calc(100vh - 130px)}
-
-    /* ══ PANTALLAS · PLAYERS (plano de CONTENIDO) — heredado de /control, con más aire ══ */
-    .screens-sec{margin-top:4px}
-    .screens-hd{display:flex;align-items:center;gap:12px;flex-wrap:wrap;margin:0 0 20px;padding-bottom:11px;border-bottom:1px solid #4a3410}
-    .screens-hd .st{font-weight:800;font-size:16px;letter-spacing:.3px;color:#ffe08a}
-    .screens-hd .st .em{margin-right:7px}
-    .screens-hd .sc-count{font-family:var(--mono);font-size:12px;color:var(--mut)}
-    .screens-hd .sc-note{flex:1;min-width:180px;text-align:right;font-size:11.5px;color:var(--mut)}
-    .screens-hd .sc-count b.on{color:var(--ok)}
+    /* ══ REJILLA de PLAYERS (plano de CONTENIDO) — mando embebido + doble tick (INTACTO) ══ */
     .scards{display:grid;grid-template-columns:repeat(auto-fit,minmax(340px,1fr));gap:20px}
     .scard{border-radius:0;border:2px solid #8b5a14;background:#1b130a;box-shadow:3px 3px 0 #000;
       padding:18px;display:flex;flex-direction:column;gap:14px}
@@ -60,6 +109,11 @@
     .scard .now .ntype{font-size:15px;flex:0 0 auto}
     .scard .now .ntitle{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:1}
     .scard .now.empty{color:var(--mut)}
+    /* campos técnicos (se muestran/ocultan desde AVANZADO) */
+    .scard .tech{font-family:var(--mono);font-size:10.5px;color:var(--mut);line-height:1.55;
+      background:#0d0a04;border:1px dashed #4a3410;padding:7px 9px;word-break:break-word}
+    .scard .tech b{color:#c9a86a}
+    body:not(.tech-on) .scard .tech{display:none}
     /* mando embebido: D-pad grande + fila de acciones */
     .scmd{display:flex;flex-direction:column;gap:9px}
     .scmd .dpad{display:grid;grid-template-columns:repeat(5,1fr);gap:8px}
@@ -80,54 +134,176 @@
     .scard .slast .warn{color:var(--bad);font-weight:800}                                          /* enviado sin confirmar */
     .scards .sc-empty{grid-column:1/-1;color:var(--mut);font-size:13.5px;text-align:center;padding:34px;border:2px dashed #8b5a14}
 
-    @media(max-width:560px){
-      header{padding:13px 15px}
-      .stage{padding:18px 13px 50px}
-      .scards{grid-template-columns:1fr}
-    }
+    /* ── EXPERTO: consola + colas + JSON crudo (panel inferior) ── */
+    .exp-wrap{display:flex;gap:14px;height:100%;min-height:0}
+    .exp-col{display:flex;flex-direction:column;gap:7px;min-height:0}
+    .exp-col.console{flex:1 1 auto}
+    .exp-col.raw{flex:0 0 clamp(260px,34%,460px)}
+    .exp-col .exp-hd{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:#c9a86a;font-weight:800;
+      display:flex;align-items:center;gap:9px}
+    .exp-col .exp-hd .qstat{font-family:var(--mono);font-size:10.5px;color:var(--mut);font-weight:400}
+    .exp-col .exp-hd .qstat b{color:#ffe08a}
+    .exp-col .exp-hd button{margin-left:auto;background:#2a1a08;color:#ffdd66;border:1px solid #8b5a14;border-radius:0;
+      box-shadow:1px 1px 0 #000;padding:5px 9px;font-size:10.5px;cursor:pointer}
+    .exp-col .exp-hd button:hover{border-color:#f0c040;color:#fff}
+    #expconsole,#expraw{flex:1 1 auto;min-height:0;overflow:auto;font-family:var(--mono);font-size:11px;line-height:1.65;
+      background:#0a0704;border:1px solid #4a3410;border-radius:0;padding:8px 10px;white-space:pre-wrap;color:var(--mut)}
+    #expconsole .ok{color:var(--ok)} #expconsole .tx{color:var(--warn)} #expconsole .warn{color:var(--bad)}
+    #expconsole .dim{color:#6b5836} #expconsole .id{color:#7ad0ff}
+    #expraw{color:#c9a86a;word-break:break-word}
+    @media(max-width:860px){ .exp-wrap{flex-direction:column;height:auto} .exp-col.raw{flex:none} #expconsole,#expraw{max-height:200px} }
+
+    .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:#2a1a08;border:1px solid var(--acc);
+      color:#ffe08a;padding:9px 15px;border-radius:0;box-shadow:2px 2px 0 #000;font-size:12.5px;opacity:0;transition:.25s;pointer-events:none;z-index:99}
+    .toast.show{opacity:1}
   </style>
 </head>
 <body>
-  <header>
-    <h1>📺 Players<span class="tag"> /admira.tv</span></h1>
-    <span class="sub">Equipos emitiendo admira.tv · control remoto</span>
-    <span class="spacer"></span>
-    <span class="pill" id="scCount">—</span>
-  </header>
+  <div class="porteria">
 
-  <main class="stage">
-    <section class="screens-sec" id="screensSection">
-      <div class="screens-hd">
-        <span class="st"><span class="em">🕹️</span>Pantallas en emisión</span>
-        <span class="sc-note">plano de contenido · mando en vivo (M8) · doble tick · refresco 10 s</span>
+    <!-- ══ IZQUIERDA · OPCIONES (filtros de la lista) ══ -->
+    <aside class="rail rail-left">
+      <div class="rail-hd">🔍 Opciones</div>
+      <label><input type="checkbox" id="fOnline"> Mostrar solo online</label>
+      <div class="field">
+        <span class="lb">Plataforma</span>
+        <select id="fPlat">
+          <option value="all">Todas las plataformas</option>
+          <option value="ios">📱 iPad / iOS</option>
+          <option value="mac">🍎 Mac</option>
+          <option value="win">🪟 Windows</option>
+          <option value="android">🤖 Android</option>
+          <option value="electron">🖥️ Electron</option>
+          <option value="linux">🐧 Linux</option>
+          <option value="other">📺 Otras</option>
+        </select>
+      </div>
+      <div class="field">
+        <span class="lb">Circuito / localización</span>
+        <select id="fLoc"><option value="all">Todos los circuitos</option></select>
+      </div>
+      <div class="field">
+        <span class="lb">Ordenar por</span>
+        <select id="fSort">
+          <option value="estado">Estado (online primero)</option>
+          <option value="nombre">Nombre (A→Z)</option>
+        </select>
+      </div>
+      <div class="field">
+        <span class="lb">Intervalo de refresco</span>
+        <select id="fInterval">
+          <option value="5000">5 s</option>
+          <option value="10000" selected>10 s</option>
+          <option value="30000">30 s</option>
+        </select>
+      </div>
+      <div class="note" id="filtInfo">—</div>
+    </aside>
+
+    <!-- ══ DERECHA · AVANZADO (acciones en lote + umbrales) ══ -->
+    <aside class="rail rail-right">
+      <div class="rail-hd">🎛️ Avanzado</div>
+      <div class="field">
+        <span class="lb">Acción en lote → pantallas visibles</span>
+        <div class="batchbar">
+          <select id="batchCmd">
+            <option value="first">⏮ Primera</option>
+            <option value="prev">⏪ Anterior</option>
+            <option value="toggle-pause">⏯ Pausa / Play</option>
+            <option value="next">⏩ Siguiente</option>
+            <option value="last">⏭ Última</option>
+            <option value="toggle-mute">🔇 Silencio</option>
+            <option value="vol-down">🔉 Volumen −</option>
+            <option value="vol-up">🔊 Volumen +</option>
+            <option value="ontop-toggle">📌 Siempre encima</option>
+            <option value="hud">🅗 HUD</option>
+          </select>
+          <button class="go" id="batchSend" title="Envía el comando a TODAS las pantallas del filtro actual">Enviar</button>
+        </div>
+        <div class="note" id="batchInfo">Respeta el filtro (circuito/plataforma/online). Enviará a <b id="batchN">0</b> pantalla(s).</div>
+      </div>
+      <div class="field">
+        <span class="lb">Umbral «online» (age_seconds)</span>
+        <input type="number" id="advAge" min="15" max="1800" step="5" value="90">
+        <div class="note">Por encima de este latido la pantalla se marca <b>rezagada</b> (punto ámbar).</div>
+      </div>
+      <label><input type="checkbox" id="advTech"> Mostrar campos técnicos en las tarjetas</label>
+      <div class="rail-hd">Leyenda</div>
+      <div class="legend">
+        <span><span class="dot on"></span> online (latido reciente)</span>
+        <span><span class="dot on stale"></span> online pero rezagada</span>
+        <span><span class="dot"></span> offline</span>
+      </div>
+    </aside>
+
+    <!-- ══ ABAJO · MODO EXPERTO (consola + colas + JSON crudo) ══ -->
+    <footer class="rail rail-bottom">
+      <div class="exp-wrap">
+        <div class="exp-col console">
+          <div class="exp-hd">⌨️ Consola de mando · doble tick + latencia
+            <span class="qstat" id="qstat">colas: <b id="qScreens">—</b> pantallas · último /signage/screens <b id="qAge">—</b></span>
+            <button id="expClear">limpiar</button>
+          </div>
+          <div id="expconsole"></div>
+        </div>
+        <div class="exp-col raw">
+          <div class="exp-hd">🧾 /signage/screens (crudo)
+            <button id="rawRefresh">↻</button>
+          </div>
+          <div id="expraw">—</div>
+        </div>
+      </div>
+    </footer>
+
+    <!-- ══ CENTRO · ESCENARIO (rejilla a pantalla completa) ══ -->
+    <main class="stage">
+      <div class="stage-hd">
+        <h1>📺 Players<span class="tag"> /admira.tv</span></h1>
+        <span class="sub">Equipos emitiendo · mando en vivo · doble tick</span>
+        <span class="spacer"></span>
+        <span class="pill" id="scCount">—</span>
       </div>
       <div class="scards" id="screensCards">
         <div class="sc-empty">Cargando pantallas vivas…</div>
       </div>
-    </section>
-  </main>
+    </main>
+
+  </div>
+  <div class="toast" id="toast"></div>
 
 <script>
 /* ══════════════════════════════════════════════════════════════════════════
    PANTALLAS · PLAYERS — plano de CONTENIDO (canal.html emitiendo).
-   Página propia de admira.tv (mudanza desde /control). Fuentes en producción:
+   Página propia de admira.tv. Marco cuadrático (portería) alrededor de la rejilla.
+   Fuentes en producción:
      · GET  api.admira.store/signage/screens        → lista de pantallas vivas
      · GET  api.admira.store/signage/now?screen=X    → qué emite cada una
      · POST omnipublicity-api…/control/cmd {screen,cmd} → cola de mando (M8)
      · GET  omnipublicity-api…/control/seen?screen=X → acuse (2º tick)
-   Self-contained (IIFE, helpers locales).
+   Self-contained (IIFE, helpers locales). El mando y el doble tick NO se tocan.
    ══════════════════════════════════════════════════════════════════════════ */
 (function(){
   const SCREENS_API='https://api.admira.store/signage/screens';
   const NOW_API='https://api.admira.store/signage/now?screen=';
   const CMD_API='https://omnipublicity-api.csilvasantin.workers.dev/control/cmd';
   const SEEN_API='https://omnipublicity-api.csilvasantin.workers.dev/control/seen?screen=';
-  const REFRESH_MS=10000, NOW_MS=10000, ONLINE_MAX_AGE=90; // s → verde
+  const NOW_MS=10000;
+  let REFRESH_MS=10000, ONLINE_MAX_AGE=90;   // ajustables desde los raíles
   const box=document.getElementById('screensCards');
   const countEl=document.getElementById('scCount');
   if(!box) return;
+  const $=s=>document.querySelector(s);
   const esc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
-  const nowTimers={}; // screen → interval id de /signage/now
+  const nowTimers={};                 // screen → interval id de /signage/now
+  let lastScreens=null, visibleScreens=[], lastFetchAt=0, refreshTimer=null;
+  const toastEl=$('#toast');
+  const toast=m=>{ if(!toastEl) return; toastEl.textContent=m; toastEl.classList.add('show'); setTimeout(()=>toastEl.classList.remove('show'),2200); };
+
+  /* ── consola del modo experto ── */
+  function expLog(m,cls){ const c=$('#expconsole'); if(!c) return;
+    const t=new Date().toLocaleTimeString('es-ES');
+    c.innerHTML += '<span class="dim">'+t+'</span> <span class="'+(cls||'')+'">'+m+'</span>\n';
+    c.scrollTop=c.scrollHeight; }
 
   // Icono de plataforma a partir del user_agent
   function platIcon(ua){
@@ -140,9 +316,21 @@
     if(/Linux/i.test(ua)) return '🐧';
     return '📺';
   }
+  // Categoría de plataforma (para el filtro) — mismo orden de prioridad que el icono
+  function platCat(ua){
+    ua=String(ua||'');
+    if(/AdmiraIOSPlayer|iPad|iPhone|iOS/i.test(ua)) return 'ios';
+    if(/Android/i.test(ua)) return 'android';
+    if(/Electron|AdmiraNext.*Player/i.test(ua)) return 'electron';
+    if(/Macintosh|Mac OS X/i.test(ua)) return 'mac';
+    if(/Windows|Win64|Win32/i.test(ua)) return 'win';
+    if(/Linux/i.test(ua)) return 'linux';
+    return 'other';
+  }
+  const locKey=s=>String(s.locName||s.loc||s.role||'—');
   function ageTxt(s){ if(s==null) return ''; s=Math.round(s); if(s<90) return 'ahora'; if(s<3600) return Math.round(s/60)+'m'; return Math.round(s/3600)+'h'; }
 
-  // Botones del mando (mismo contrato que adcelerate/mando)
+  // Botones del mando (mismo contrato que adcelerate/mando) — INTACTO
   const DPAD=[
     {cmd:'first',ico:'⏮',t:'Primera'},
     {cmd:'prev', ico:'⏪',t:'Anterior'},
@@ -158,7 +346,7 @@
     {cmd:'hud',    ico:'🅗',t:'HUD / diagnóstico'},
   ];
 
-  // Espera el ACUSE de la pantalla: poll /control/seen hasta ver el id (2º tick).
+  // Espera el ACUSE de la pantalla: poll /control/seen hasta ver el id (2º tick). INTACTO.
   function waitReceipt(screen,cmd,id,t0,lastEl){
     const timeout=8000, every=600, deadline=Date.now()+timeout;
     const tick=async()=>{
@@ -167,11 +355,14 @@
         const j=await r.json().catch(()=>null); seen=(j&&Array.isArray(j.seen))?j.seen:[];
       }catch(_){ /* red intermitente: seguimos hasta el deadline */ }
       if(seen.some(s=>s&&s.id===id)){
-        if(lastEl) lastEl.innerHTML='<span class="rx">✓✓ recibido</span> · <b>'+esc(cmd)+'</b> · '+(Date.now()-t0)+'ms';
+        const ms=Date.now()-t0;
+        if(lastEl) lastEl.innerHTML='<span class="rx">✓✓ recibido</span> · <b>'+esc(cmd)+'</b> · '+ms+'ms';
+        expLog('✓✓ recibido '+esc(screen)+' · <b>'+esc(cmd)+'</b> · '+ms+'ms','ok');
         return;
       }
       if(Date.now()>=deadline){
         if(lastEl) lastEl.innerHTML='<span class="warn">⚠ enviado · sin confirmación</span> — ¿pantalla offline?';
+        expLog('⚠ sin acuse '+esc(screen)+' · '+esc(cmd)+' — ¿offline?','warn');
         return;
       }
       setTimeout(tick,every);
@@ -188,10 +379,13 @@
       const j=await r.json().catch(()=>null);
       if(r.ok&&j&&j.ok){
         if(lastEl) lastEl.innerHTML='<span class="tx">✓ enviado</span> · <b>'+esc(cmd)+'</b> · esperando pantalla…';
+        expLog('✓ enviado '+esc(screen)+' · <b>'+esc(cmd)+'</b> · id <span class="id">'+esc(j.id)+'</span>','tx');
         waitReceipt(screen,cmd,j.id,t0,lastEl);   // 2º tick
       }
-      else { if(btn){ btn.classList.add('flash','err'); } if(lastEl) lastEl.textContent='✗ '+((j&&j.error)||('HTTP '+r.status)); }
-    }catch(_){ if(btn){ btn.classList.add('flash','err'); } if(lastEl) lastEl.textContent='✗ sin red'; }  // sólo error REAL: el POST falló
+      else { if(btn){ btn.classList.add('flash','err'); } const err=(j&&j.error)||('HTTP '+r.status);
+        if(lastEl) lastEl.textContent='✗ '+err; expLog('✗ '+esc(screen)+' · '+esc(cmd)+' · '+esc(err),'warn'); }
+    }catch(_){ if(btn){ btn.classList.add('flash','err'); }
+      if(lastEl) lastEl.textContent='✗ sin red'; expLog('✗ sin red '+esc(screen)+' · '+esc(cmd),'warn'); }  // sólo error REAL: el POST falló
   }
 
   function padHTML(list){ return list.map(b=>'<button class="mb'+(b.mid?' mid':'')+'" data-cmd="'+b.cmd+'" title="'+esc(b.t)+'">'+b.ico+'</button>').join(''); }
@@ -211,11 +405,12 @@
   }
 
   function cardHTML(s){
-    // Online = veredicto del backend (ya pondera su propio umbral por plataforma;
-    // los players iOS laten cada ~2 min, así que age_seconds solo colorea "reciente/rezagado").
+    // Online = veredicto del backend; el umbral sólo colorea "reciente/rezagado".
     const stale=s.online && s.age_seconds!=null && s.age_seconds>ONLINE_MAX_AGE;
     const name=esc(s.screen);
-    const loc=esc(s.locName||s.loc||s.role||'—');
+    const loc=esc(locKey(s));
+    const tech='<div class="tech"><b>UA:</b> '+esc(s.user_agent||'—')+'<br><b>age:</b> '+esc(s.age_seconds!=null?Math.round(s.age_seconds)+'s':'—')+
+      ' · <b>last_seen:</b> '+esc(s.last_seen||'—')+' · <b>online:</b> '+(s.online?'sí':'no')+'</div>';
     return ''+
       '<div class="scard'+(s.online?'':' off')+'" data-screen="'+name+'">'+
         '<div class="scard-hd">'+
@@ -225,6 +420,7 @@
           '<span class="sage">'+esc(ageTxt(s.age_seconds))+'</span>'+
         '</div>'+
         '<div class="now empty" data-now><span class="ntype">…</span><span class="ntitle">cargando emisión…</span></div>'+
+        tech+
         '<div class="scmd">'+
           '<div class="dpad">'+padHTML(DPAD)+'</div>'+
           '<div class="row2">'+padHTML(ROW2)+'</div>'+
@@ -245,28 +441,96 @@
     nowTimers[screen]=setInterval(()=>pollNow(screen,nowEl),NOW_MS);
   }
 
-  async function refresh(){
-    let d=null;
-    try{ const r=await fetch(SCREENS_API,{cache:'no-store'}); d=await r.json(); }
-    catch(_){ d=null; }
-    if(!d || !Array.isArray(d.screens)){
-      // degradación honesta: no inventamos pantallas
-      box.innerHTML='<div class="sc-empty">⚠ Sin datos de <b>/signage/screens</b> — reintentando…</div>';
-      if(countEl) countEl.textContent='sin conexión';
-      return;
-    }
-    const arr=d.screens.slice().sort((a,b)=>(b.online-a.online)||((b.last_seen||0)-(a.last_seen||0)));
-    // limpia timers de pantallas que ya no están
+  /* ── FILTROS + ORDEN + PINTADO (centro) ── */
+  function applyFilter(arr){
+    const fOn=$('#fOnline').checked;
+    const fp=$('#fPlat').value;
+    const fl=$('#fLoc').value;
+    return arr.filter(s=>{
+      if(fOn && !s.online) return false;
+      if(fp!=='all' && platCat(s.user_agent)!==fp) return false;
+      if(fl!=='all' && locKey(s)!==fl) return false;
+      return true;
+    });
+  }
+  function sortScreens(arr){
+    if($('#fSort').value==='nombre') return arr.sort((a,b)=>String(a.screen).localeCompare(String(b.screen),'es'));
+    return arr.sort((a,b)=>(b.online-a.online)||((b.last_seen||0)-(a.last_seen||0)));
+  }
+  function refreshLocOptions(arr){
+    const sel=$('#fLoc'); const cur=sel.value;
+    const locs=Array.from(new Set(arr.map(locKey))).filter(l=>l&&l!=='—').sort((a,b)=>a.localeCompare(b,'es'));
+    sel.innerHTML='<option value="all">Todos los circuitos</option>'+locs.map(l=>'<option value="'+esc(l)+'">'+esc(l)+'</option>').join('');
+    if(cur && (cur==='all' || locs.indexOf(cur)>=0)) sel.value=cur;
+  }
+  function render(){
+    if(!lastScreens){ return; }
+    const arr=sortScreens(applyFilter(lastScreens.slice()));
+    visibleScreens=arr;
+    const totOn=lastScreens.filter(s=>s.online).length;
+    if(countEl) countEl.innerHTML='<b class="on">'+arr.length+'</b> visibles / '+lastScreens.length+' · '+totOn+' online';
+    const bn=$('#batchN'); if(bn) bn.textContent=arr.length;
+    const fi=$('#filtInfo'); if(fi) fi.innerHTML='<b>'+arr.length+'</b> de '+lastScreens.length+' pantallas · '+totOn+' online';
+    // limpia timers de pantallas que ya no se pintan
     const alive=new Set(arr.map(s=>s.screen));
     Object.keys(nowTimers).forEach(sc=>{ if(!alive.has(sc)){ clearInterval(nowTimers[sc]); delete nowTimers[sc]; } });
-    if(countEl){ const onc=arr.filter(s=>s.online).length; countEl.innerHTML='<b class="on">'+onc+'</b> online / '+arr.length; }
-    if(!arr.length){ box.innerHTML='<div class="sc-empty">No hay pantallas vivas ahora mismo.</div>'; return; }
+    if(!arr.length){ box.innerHTML='<div class="sc-empty">'+(lastScreens.length?'Ninguna pantalla coincide con el filtro.':'No hay pantallas vivas ahora mismo.')+'</div>'; return; }
     box.innerHTML=arr.map(cardHTML).join('');
     box.querySelectorAll('.scard').forEach(wireCard);
   }
 
+  async function refresh(){
+    let d=null, raw='';
+    try{ const r=await fetch(SCREENS_API,{cache:'no-store'}); raw=await r.text(); d=JSON.parse(raw); }
+    catch(_){ d=null; }
+    lastFetchAt=Date.now();
+    if(!d || !Array.isArray(d.screens)){
+      box.innerHTML='<div class="sc-empty">⚠ Sin datos de <b>/signage/screens</b> — reintentando…</div>';
+      if(countEl) countEl.textContent='sin conexión';
+      const qs=$('#qScreens'); if(qs) qs.textContent='sin conexión';
+      return;
+    }
+    lastScreens=d.screens.slice();
+    refreshLocOptions(lastScreens);
+    // estado de colas (modo experto)
+    const qs=$('#qScreens'); if(qs) qs.textContent=lastScreens.length;
+    const rawEl=$('#expraw'); if(rawEl){ try{ rawEl.textContent=JSON.stringify(d,null,1); }catch(_){ rawEl.textContent=raw; } }
+    render();
+  }
+
+  /* ── acción en lote (AVANZADO): a todas las pantallas VISIBLES (respeta el filtro) ── */
+  async function batchSend(){
+    const cmd=$('#batchCmd').value;
+    const targets=visibleScreens.slice();
+    if(!targets.length){ toast('No hay pantallas visibles.'); return; }
+    toast('Enviando '+cmd+' a '+targets.length+' pantalla(s)…');
+    expLog('▶ LOTE «'+esc(cmd)+'» → '+targets.length+' pantalla(s) visibles','id');
+    targets.forEach((s,i)=>{
+      setTimeout(()=>{
+        const card=box.querySelector('.scard[data-screen="'+CSS.escape(s.screen)+'"]');
+        const lastEl=card?card.querySelector('[data-last]'):null;
+        sendCmd(s.screen,cmd,null,lastEl);
+      }, i*120);   // escalonado suave para no saturar la cola
+    });
+  }
+
+  /* ── cableado de los controles de los raíles ── */
+  function wireControls(){
+    ['#fOnline','#fPlat','#fLoc','#fSort'].forEach(sel=>{ const el=$(sel); if(el) el.addEventListener('change',render); });
+    const iv=$('#fInterval'); if(iv) iv.addEventListener('change',()=>{ REFRESH_MS=parseInt(iv.value,10)||10000;
+      if(refreshTimer) clearInterval(refreshTimer); refreshTimer=setInterval(refresh,REFRESH_MS); toast('Refresco cada '+(REFRESH_MS/1000)+' s'); });
+    const age=$('#advAge'); if(age) age.addEventListener('change',()=>{ ONLINE_MAX_AGE=Math.max(15,parseInt(age.value,10)||90); render(); });
+    const tech=$('#advTech'); if(tech) tech.addEventListener('change',()=>document.body.classList.toggle('tech-on',tech.checked));
+    const bs=$('#batchSend'); if(bs) bs.addEventListener('click',batchSend);
+    const clr=$('#expClear'); if(clr) clr.addEventListener('click',()=>{ const c=$('#expconsole'); if(c) c.innerHTML=''; });
+    const rr=$('#rawRefresh'); if(rr) rr.addEventListener('click',refresh);
+    // estado de colas: antigüedad del último /signage/screens
+    setInterval(()=>{ const qa=$('#qAge'); if(qa) qa.textContent=lastFetchAt?(Math.round((Date.now()-lastFetchAt)/1000)+'s'):'—'; },1000);
+  }
+
+  wireControls();
   refresh();
-  setInterval(refresh, REFRESH_MS);
+  refreshTimer=setInterval(refresh, REFRESH_MS);
 })();
 </script>
 </body>

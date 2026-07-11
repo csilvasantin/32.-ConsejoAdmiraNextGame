@@ -897,6 +897,8 @@ function renderCards(ms){
         <button data-a="closeapp" data-m="${m.id}">❌ cerrar app</button>
         <button data-a="ssh" data-m="${m.id}">🔌 ssh</button>
         <button data-a="signagetoggle" data-m="${m.id}" class="tgl ${signageIsOn(m.id)?'on':'off'}" title="${signageIsOn(m.id)?'Parar el player de digital signage':'Lanzar el player de digital signage (AdmiraSignageMac)'}">${signageIsOn(m.id)?'⏹️ parar':'📺 signage'}</button>
+        <button data-a="openchannel" data-m="${m.id}" data-mname="${(m.name||'').replace(/"/g,'')}" title="Abrir el CANAL de Digital Signage en el Chrome de esta máquina (ventana nueva, screen ds-${_norm(m.name||m.id)}). Aparece en Players con su mando remoto. Requiere el executor navegadores corriendo en ese equipo.">📺 abrir canal DS</button>
+        <button data-a="closechannel" data-m="${m.id}" data-mname="${(m.name||'').replace(/"/g,'')}" title="Cerrar la ventana del canal DS en el Chrome de esta máquina.">⏹ cerrar canal</button>
         ${m.online?`<button data-rc="${m.id}" data-rcname="${(m.name||'').replace(/"/g,'')}" title="Control remoto en vivo (ver + ratón + teclado, estilo AnyDesk). Requiere AdmiraRemoteAgent + permisos en la máquina destino." style="border-color:var(--acc);color:var(--acc);font-weight:700">🖥️ control remoto</button>`:''}
       </div>
       <div class="capwarn" data-capwarn="${m.id}">⚠️ sin permiso de captura <button data-fix="${m.id}" title="Abrir el panel de Grabación de pantalla en ese Mac, avisar al usuario y reactivar el agente">🛡️ enviar arreglo por SSH</button></div>
@@ -974,6 +976,32 @@ const NEEDS_ARG={ volume:'Volumen 0-100:', say:'¿Qué digo?', notify:'Texto del
 // Comando que oculta TODAS las apps en primer plano → deja el escritorio limpio
 // (se ve el fondo). Verificado en las Air: no requiere permiso extra de Automatización.
 const CLEAN_DESKTOP_CMD="osascript -e 'tell application \"System Events\" to set visible of (every process whose background only is false) to false'";
+/* ── Canal de Digital Signage: abrir/cerrar en el Chrome de una máquina de la flota ──
+   Encola un comando en el worker admira-navegadores; el executor local de esa máquina
+   (navegadores.executor) lo ejecuta y abre el canal en VENTANA NUEVA con screen ds-<maquina>.
+   Auth: credential Google del gate (mismo login que /control), aceptado por el worker. */
+const NAV_API='https://admira-navegadores.csilvasantin.workers.dev';
+function navDeviceId(name){ return 'local-'+String(name||'').toLowerCase().replace(/[^a-z0-9]/g,''); }
+async function _gateCred(){
+  let g; try{ g=JSON.parse(localStorage.getItem('admira_gate')||'null'); }catch(e){}
+  const stale = !g || !g.credAt || (Date.now()-g.credAt) > 50*60*1000;
+  if(stale && typeof window.admiraGateRefresh==='function'){
+    try{ const fresh=await window.admiraGateRefresh(); if(fresh) return fresh; }catch(e){}
+    try{ g=JSON.parse(localStorage.getItem('admira_gate')||'null'); }catch(e){}
+  }
+  return g&&g.cred ? g.cred : '';
+}
+async function navCmd(deviceId, action){
+  const cred=await _gateCred();
+  if(!cred) return {ok:false,error:'sin login Google (pulsa 🔒 arriba a la derecha)'};
+  try{
+    const r=await fetch(NAV_API+'/api/cmd',{method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+cred},
+      body:JSON.stringify({deviceId,action})});
+    const d=await r.json().catch(()=>({}));
+    return r.ok&&d.ok ? {ok:true,id:d.id} : {ok:false,error:(d&&d.error)||('http '+r.status)};
+  }catch(err){ return {ok:false,error:err.message||'error de red'}; }
+}
 $('#cards').addEventListener('click', async e=>{
   // Comprimir / expandir la tarjeta (chevron).
   const fold=e.target.closest('.card-fold'); if(fold){ toggleCollapse(fold.dataset.fold); return; }
@@ -1051,6 +1079,21 @@ $('#cards').addEventListener('click', async e=>{
     b.disabled=false;
     if(ok){ _setState('fleet_signage_on_by_machine',machine,turnOn); paintToggle(machine,'signagetoggle',turnOn); }
     else b.textContent=lbl0;
+    return;
+  }
+  // canal DS: abrir/cerrar el canal en el Chrome de esa máquina (vía executor navegadores).
+  if(action==='openchannel' || action==='closechannel'){
+    const m=MACHINES.find(x=>x.id===machine)||{};
+    const name=b.dataset.mname || m.name || machine;
+    const deviceId=navDeviceId(name);
+    const opening=action==='openchannel';
+    const screen='ds-'+name.toLowerCase().replace(/[^a-z0-9]/g,'');
+    const label=opening?'📺 abrir canal DS':'⏹ cerrar canal';
+    b.disabled=true; const lbl0=b.textContent; b.textContent=(opening?'📺':'⏹')+' …';
+    const res=await navCmd(deviceId, opening?'open-channel':'close-channel');
+    b.disabled=false; b.textContent=lbl0;
+    if(res.ok) pushResult(machine,label,{rc:0,stdout:(opening?'canal encolado → '+screen+' (aparecerá en Players en ~20s)':'cierre encolado')+'\ndevice '+deviceId+' · cmd '+res.id,ms:0});
+    else pushResult(machine,label,{rc:1,stdout:'',stderr:res.error+' · device '+deviceId});
     return;
   }
   // cerrar app: vía /api/action (platform-aware: macOS osascript quit · Linux pkill).

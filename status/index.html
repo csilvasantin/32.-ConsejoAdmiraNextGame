@@ -6,7 +6,7 @@
   <title>ADmiraNeXT | Status — Constelación de la flota</title>
   <meta name="description" content="Admira no tiene centro — es un universo que se expande. Estado en vivo de la flota AdmiraNeXT: cada ordenador es una estrella con su proyecto y su foco.">
   <meta name="admiranext-version" content="AdmiraNext v26.07.07.12">
-  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.11.r7 (compositor ✎ sin CLI duplicado + la interfaz entera refluye con el cajón)">
+  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.11.r8 (AVANZADO: toggles Subagentes/Infraagentes para centrarse en los principales)">
   <meta name="admiranext-status-build" content="oraculo-triad-1">
   <!-- Orbitron: tipografía tecnológica para la versión del pie del riel (Carlos, 2026-07-11) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -541,7 +541,7 @@
         <span class="pf-uchev" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
       </button>
     </div>
-    <div class="pf-ver" id="verRail"><span id="verText">v.2026.07.11.r7</span></div>
+    <div class="pf-ver" id="verRail"><span id="verText">v.2026.07.11.r8</span></div>
   </aside>
   <!-- r15: asa de redimensionado del riel izquierdo (doble clic = restaurar) -->
   <div class="pf-rz" id="rzLeft" title="Arrastra para redimensionar · doble clic restaura" aria-hidden="true"></div>
@@ -578,6 +578,12 @@
     </div>
     <div class="pf-field">
       <label class="pf-check"><input type="checkbox" id="advLabels" checked> Mostrar etiquetas</label>
+    </div>
+    <div class="pf-field">
+      <label>Capas de agentes</label>
+      <label class="pf-check"><input type="checkbox" id="advSubs" checked> Subagentes</label>
+      <label class="pf-check"><input type="checkbox" id="advInfra" checked> Infraagentes</label>
+      <div class="hint" style="font-size:8.5px;color:var(--text-dim);letter-spacing:.05em;margin-top:6px;line-height:1.5">Oculta las capas sub/infra para centrarte en la tarea del miembro que te interese.</div>
     </div>
     <div class="pf-field">
       <label>Ambiente</label>
@@ -776,6 +782,11 @@
   let ROTATE_MS_DYN  = ROTATE_MS;
   let ONLY_LIVE = false;
   let SHOW_LABELS = true;
+  // Capas de agentes (AVANZADO): ocultar sub/infra para centrarse en los principales.
+  // Persisten en localStorage ('0' = oculto); por defecto se muestran.
+  let SHOW_SUBS  = true, SHOW_INFRA = true;
+  try{ SHOW_SUBS  = localStorage.getItem('admira_show_subs')  !== '0'; }catch(e){}
+  try{ SHOW_INFRA = localStorage.getItem('admira_show_infra') !== '0'; }catch(e){}
   let FLEET_BPM = 60;   // BPM medio de la flota viva (lo actualiza el render; guía el audio)
   let FOCUS_MACHINE = null;  // norm(nombre) del ordenador con foco en la vista TODO, o null
   let VIEWER_MACHINE = null; // norm(nombre) del ordenador desde el que se está viendo esta página (pasado por ?viewer= o ?focus)
@@ -2038,7 +2049,15 @@
     // fallback: si por lo que sea no hay datos, usa el reloj local.
     SERVER_NOW = maxTs || Math.floor(Date.now()/1000);
     const isFresh = ts => (SERVER_NOW - (ts||0)) < ONLINE_SEC_DYN;
-    const presence = withOraculoTriadPresence(pres && pres.presence ? pres.presence : [], SERVER_NOW, isFresh);
+    // Capas de agentes (AVANZADO): filtrar sub*/infra* en la INGESTA → todas las
+    // vistas (agente, ordenador, misión, todo) y contadores quedan coherentes.
+    const presence = withOraculoTriadPresence(pres && pres.presence ? pres.presence : [], SERVER_NOW, isFresh)
+      .filter(p=>{
+        const per=String(p.persona||'');
+        if(!SHOW_SUBS  && /^sub/i.test(per))   return false;
+        if(!SHOW_INFRA && /^infra/i.test(per)) return false;
+        return true;
+      });
 
     // ---- construir el mundo por máquina ----
     const byMachine = {}; // normMachine -> {machine, personas[], updated, online, foco, mode, platform}
@@ -2161,7 +2180,7 @@
   function updateVersionInfo(){
     const verEl = document.getElementById('verRail');
     const selloEl = document.getElementById('sello');
-    const baseVer = 'v.2026.07.11.r7';
+    const baseVer = 'v.2026.07.11.r8';
     let focusLabel = FOCUS_MACHINE ? FOCUS_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
     let viewerLabel = VIEWER_MACHINE ? VIEWER_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
 
@@ -3514,6 +3533,13 @@
   document.getElementById('advAutoRotate').addEventListener('change',e=>{ setAutoRotate(e.target.checked); });
   document.getElementById('advOnlyLive').addEventListener('change',e=>{ ONLY_LIVE=e.target.checked; applyView(); });
   document.getElementById('advLabels').addEventListener('change',e=>{ SHOW_LABELS=e.target.checked; });
+  // Capas de agentes: estado inicial desde localStorage + rebuild al cambiar
+  const advSubs=document.getElementById('advSubs'), advInfra=document.getElementById('advInfra');
+  advSubs.checked=SHOW_SUBS; advInfra.checked=SHOW_INFRA;
+  advSubs.addEventListener('change',e=>{ SHOW_SUBS=e.target.checked;
+    try{ localStorage.setItem('admira_show_subs', SHOW_SUBS?'1':'0'); }catch(err){} load(); });
+  advInfra.addEventListener('change',e=>{ SHOW_INFRA=e.target.checked;
+    try{ localStorage.setItem('admira_show_infra', SHOW_INFRA?'1':'0'); }catch(err){} load(); });
 
   // --- MODO MANDO (asignaciones): activar/desactivar con token, persistido en localStorage ---
   const mandoTokEl=document.getElementById('mandoTok');

@@ -6,7 +6,7 @@
   <title>ADmiraNeXT | Status — Constelación de la flota</title>
   <meta name="description" content="Admira no tiene centro — es un universo que se expande. Estado en vivo de la flota AdmiraNeXT: cada ordenador es una estrella con su proyecto y su foco.">
   <meta name="admiranext-version" content="AdmiraNext v26.07.07.12">
-  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.10.r5 (botón PROMPT también en vista TODO)">
+  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.11.r1 (pie del riel: usuario+sesión estilo Claude Code, versión sola al pie)">
   <meta name="admiranext-status-build" content="oraculo-triad-1">
 
   <!-- VERJA DE ACCESO (auth-gate de admira.live, misma whitelist de usuarios).
@@ -304,6 +304,30 @@
     #panelLeft .hint{font-size:9px;color:var(--text-dim);letter-spacing:.06em;margin-top:10px;line-height:1.5}
     /* pie del riel — versión (patrón admira.tv: monospace pequeño, dim, pegado abajo) */
     .pf-ver{margin-top:auto;padding-top:12px;border-top:1px solid rgba(34,230,255,.12);font-family:inherit;font-size:9px;letter-spacing:.14em;color:var(--cyan-dim);white-space:nowrap}
+    /* pie del riel — bloque USUARIO (patrón menú de cuenta de Claude Code): fila
+       avatar+nombre+engranaje+chevron que despliega el submenú de sesión hacia arriba;
+       debajo de ella queda SOLO la versión. */
+    .pf-user{margin-top:auto;position:relative;padding-top:10px;border-top:1px solid rgba(34,230,255,.12)}
+    .pf-user + .pf-ver{margin-top:0;border-top:0;padding-top:8px}
+    .pf-urow{display:flex;align-items:center;gap:9px;width:100%;text-align:left;font-family:inherit;
+      font-size:10.5px;letter-spacing:.08em;color:var(--text-dim);background:transparent;
+      border:1px solid transparent;border-radius:8px;padding:8px 10px;cursor:pointer;
+      transition:color .2s,background .2s,border-color .2s}
+    .pf-urow:hover,.pf-urow:focus-visible,.pf-urow[aria-expanded="true"]{color:var(--text);background:rgba(34,230,255,.06);border-color:rgba(34,230,255,.18);outline:none}
+    .pf-uava{flex:0 0 auto;width:20px;height:20px;border-radius:50%;display:flex;align-items:center;justify-content:center;
+      font-size:10px;font-weight:bold;color:#04121d;background:var(--cyan)}
+    .pf-uname{flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .pf-ugear{color:var(--cyan-dim);font-size:12px}
+    .pf-uchev{color:var(--cyan-dim);font-size:9px;transition:transform .2s}
+    .pf-urow[aria-expanded="true"] .pf-uchev{transform:rotate(180deg)}
+    .pf-umenu{position:absolute;left:0;right:0;bottom:calc(100% + 6px);background:#06121f;
+      border:1px solid rgba(34,230,255,.25);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.6);padding:6px;z-index:5}
+    .pf-umenu[hidden]{display:none}
+    .pf-umail{font-size:9px;color:var(--text-dim);letter-spacing:.06em;padding:7px 9px;border-bottom:1px solid rgba(34,230,255,.12);margin-bottom:4px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .pf-uitem{display:flex;align-items:center;gap:8px;width:100%;text-align:left;font-family:inherit;font-size:10px;
+      letter-spacing:.06em;color:var(--text-dim);background:transparent;border:0;border-radius:7px;padding:8px 9px;cursor:pointer}
+    .pf-uitem:hover,.pf-uitem:focus-visible{color:var(--text);background:rgba(34,230,255,.08);outline:none}
+    .pf-uitem.out:hover{color:#ff8a8a;background:rgba(255,80,80,.08)}
     .pf-sec{margin-top:12px;padding-top:10px;border-top:1px solid rgba(34,230,255,.12)}
     .pf-seclabel{font-size:9px;letter-spacing:.16em;text-transform:uppercase;color:var(--cyan-dim);margin-bottom:7px}
     .pf-fbtn{
@@ -476,8 +500,21 @@
       <div id="focusList"><!-- se rellena con los ordenadores online --></div>
     </div>
     <div class="hint">La vista rota sola cada 20s. Elige una a mano para fijar el foco; en ⚙ AVANZADO pausas la rotación automática.</div>
-    <!-- pie del riel: versión dinámica + máquina actual -->
-    <div class="pf-ver" id="verRail"><span id="verText">v.2026.07.10.r2</span></div>
+    <!-- pie del riel (patrón menú de cuenta de Claude Code): usuario+sesión y, debajo, SOLO la versión -->
+    <div class="pf-user" id="userBlock">
+      <div class="pf-umenu" id="userMenu" hidden>
+        <div class="pf-umail" id="userMail">sin sesión iniciada</div>
+        <button class="pf-uitem" id="umAjustes" type="button">⚙ Ajustes</button>
+        <button class="pf-uitem out" id="umLogout" type="button">⎋ Cerrar sesión</button>
+      </div>
+      <button class="pf-urow" id="userRow" type="button" aria-expanded="false" aria-controls="userMenu" title="Sesión">
+        <span class="pf-uava" id="userAva" aria-hidden="true">?</span>
+        <span class="pf-uname" id="userName">invitado</span>
+        <span class="pf-ugear" aria-hidden="true">⚙</span>
+        <span class="pf-uchev" aria-hidden="true">▾</span>
+      </button>
+    </div>
+    <div class="pf-ver" id="verRail"><span id="verText">v.2026.07.11.r1</span></div>
   </aside>
   <!-- r15: asa de redimensionado del riel izquierdo (doble clic = restaurar) -->
   <div class="pf-rz" id="rzLeft" title="Arrastra para redimensionar · doble clic restaura" aria-hidden="true"></div>
@@ -2092,7 +2129,7 @@
   function updateVersionInfo(){
     const verEl = document.getElementById('verRail');
     const selloEl = document.getElementById('sello');
-    const baseVer = 'v.2026.07.10.r2';
+    const baseVer = 'v.2026.07.11.r1';
     let focusLabel = FOCUS_MACHINE ? FOCUS_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
     let viewerLabel = VIEWER_MACHINE ? VIEWER_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
 
@@ -2104,6 +2141,31 @@
     if(verEl) verEl.innerHTML = `<span id="verText">${text}</span>`;
     if(selloEl) selloEl.textContent = text;
   }
+
+  /* ── Pie del riel: usuario + submenú de sesión (patrón menú de cuenta de Claude Code).
+        Lee la sesión de la verja (localStorage.admira_gate); «Ajustes» abre el panel
+        AVANZADO existente; «Cerrar sesión» borra la verja y vuelve a la home (login). ── */
+  (function(){
+    const row=document.getElementById('userRow'), menu=document.getElementById('userMenu');
+    if(!row||!menu) return;
+    let email='';
+    try{ const g=JSON.parse(localStorage.getItem('admira_gate')||'null'); email=(g&&g.email)?String(g.email):''; }catch(e){}
+    const name=email?email.split('@')[0]:'invitado';
+    document.getElementById('userName').textContent=name;
+    document.getElementById('userAva').textContent=(name[0]||'?').toUpperCase();
+    document.getElementById('userMail').textContent=email||'sin sesión iniciada';
+    function close(){ menu.setAttribute('hidden',''); row.setAttribute('aria-expanded','false'); }
+    row.addEventListener('click',function(ev){ ev.stopPropagation();
+      const open=menu.hasAttribute('hidden');
+      if(open){ menu.removeAttribute('hidden'); row.setAttribute('aria-expanded','true'); } else close(); });
+    document.addEventListener('click',function(ev){ if(!menu.hasAttribute('hidden') && !ev.target.closest('#userBlock')) close(); });
+    document.addEventListener('keydown',function(ev){ if(ev.key==='Escape' && !menu.hasAttribute('hidden')) close(); });
+    document.getElementById('umAjustes').addEventListener('click',function(){ close();
+      const b=document.getElementById('tgRight'); if(b) b.click(); });
+    document.getElementById('umLogout').addEventListener('click',function(){
+      try{ localStorage.removeItem('admira_gate'); }catch(e){}
+      location.href='/'; });
+  })();
 
   // Vista POR AGENTE: agrupa por persona+runtime (Morfeo·Claude ≠ Trinity·Codex)
   function buildAgents(presence, isFresh){

@@ -70,6 +70,8 @@
     .card .em{font-size:28px;line-height:1;flex:none}
     .card .nm{font-weight:700;font-size:15px}
     .card .os{color:var(--mut);font-size:12px;font-family:var(--mono)}
+    .card .os .did{cursor:pointer;border-bottom:1px dotted var(--line)}
+    .card .os .did:hover{color:var(--acc)}
     .dot{width:10px;height:10px;border-radius:50%;background:#5a6678;flex:none}
     .dot.on{background:var(--ok);box-shadow:0 0 9px var(--ok)}
     .machine-row{display:flex;align-items:center;gap:8px}
@@ -186,6 +188,10 @@
     $('#whoami').onclick = () => { if(!navSession()) enableActions(); };
 
     function osEmoji(os){ os=(os||'').toLowerCase(); if(os.includes('mac'))return '💻'; if(os.includes('win'))return '🪟'; if(os.includes('linux'))return '🐧'; return '🖥️'; }
+    // "última vez visto" relativo a partir del ts (ms) del último reporte.
+    function seenAgo(ts){ if(!ts) return 'nunca'; const s=Math.max(0,Math.round((Date.now()-ts)/1000));
+      if(s<90) return 'hace '+s+'s (online)'; if(s<3600) return 'hace '+Math.round(s/60)+' min';
+      if(s<86400) return 'hace '+Math.round(s/3600)+' h'; return 'hace '+Math.round(s/86400)+' días'; }
 
     // Ejecuta `fn` solo si hay sesión; si no, la encola y dispara el login Google fresco.
     function withSession(fn){ if(navSession()){ fn(); } else { toast('🔓 habilita acciones con Google'); pendingAct=fn; enableActions(); } }
@@ -197,6 +203,32 @@
     }
     function label(deviceId, machine){ withSession(async()=>{ const r=await post('/api/label',{deviceId,machine}); if(r&&r.ok){ toast('✅ etiquetado: '+(machine||'—')); expLog(`label ${deviceId.slice(0,8)}… → ${machine||'—'}`,'ok'); load(); } }); }
     function cmd(deviceId, action, url){ withSession(async()=>{ const r=await post('/api/cmd',{deviceId,action,url}); if(r&&r.ok){ toast('📤 encolado: '+action); expLog(`cmd ${action} ${deviceId.slice(0,8)}… ${url||''} → id ${r.id} (lo ejecuta el agente executor)`,'ok'); } }); }
+
+    // ── Identificar "¿este navegador es de esta máquina?" (sonar localhost) ──────────────
+    // Limitación honesta: el JS del panel NO puede levantar un server; solo puede COMPROBAR si
+    // ESTE navegador (el que abre el panel) alcanza un sonar local. Por eso el botón solo tiene
+    // sentido si abres el panel EN la máquina candidata. Para el mapeo automático fiable de
+    // CUALQUIER deviceId, un agente usa ~/Claude/admira-vault/identify-browser.sh (levanta el
+    // server efímero él mismo). Aquí probamos contra el puerto del sonar/executor local.
+    const SONAR_PORT = 8799;
+    async function identify(b){
+      const token='panel-'+Date.now();
+      expLog(`identificando ${b.deviceId.slice(0,8)}… → probando http://127.0.0.1:${SONAR_PORT}/ (solo válido si abres el panel EN esa máquina)`,'dim');
+      toast('🔎 sondeando 127.0.0.1…');
+      let hit=false;
+      try{
+        const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(),1500);
+        await fetch(`http://127.0.0.1:${SONAR_PORT}/soy?t=${token}`,{signal:ctrl.signal,mode:'no-cors'});
+        clearTimeout(to); hit=true; // no-cors: si no lanza, el puerto respondió → hay sonar/executor local
+      }catch(e){ hit=false; }
+      if(hit){
+        expLog(`✅ HIT: hay un sonar/executor en 127.0.0.1:${SONAR_PORT} de ESTA máquina. Si abriste el panel aquí, este navegador es local.`,'ok');
+        toast('✅ sonar local respondió');
+      } else {
+        expLog(`✖ MISS: nada en 127.0.0.1:${SONAR_PORT}. Levanta el sonar (identify-browser.sh listen) o el executor, y reintenta EN la máquina candidata.`,'warn');
+        toast('✖ sin sonar local');
+      }
+    }
 
     let ALL = [];
     function passes(b){
@@ -216,26 +248,29 @@
           <span class="em">${osEmoji(b.os)}</span>
           <div style="flex:1;min-width:0">
             <div class="nm">${b.name||'Browser'} · ${badge}</div>
-            <div class="os">${b.os||'?'} · ${b.deviceId.slice(0,8)}…</div>
+            <div class="os">${b.os||'?'} · <span class="did" title="click para copiar el deviceId">${b.deviceId}</span></div>
           </div>
           <span class="dot ${b.online?'on':''}" title="${b.online?'online':'offline'}"></span>
         </div>
         <div class="machine-row"><select>${opts}</select></div>
         <div class="tab">
           ${b.tabUrl ? `<span class="ttl">${b.tabTitle||''}</span><a href="${b.tabUrl}" target="_blank">${b.tabUrl}</a>` : '<i>sin pestaña reportada</i>'}
-          <div class="reporter">visto por ${b.reporter?.persona||'?'} @ ${b.reporter?.machine||'?'}</div>
+          <div class="reporter">visto por ${b.reporter?.persona||'?'} @ ${b.reporter?.machine||'?'} · <b>${seenAgo(b.ts)}</b></div>
         </div>
         <div class="acts">
           <input placeholder="https://… abrir aquí">
           <button class="go">Abrir</button>
           <button data-a="reposo">🛰️ Reposo</button>
           <button data-a="refrescar">↻</button>
+          <button data-a="ident" title="Solo funciona si abres este panel EN la máquina candidata: comprueba si hay un sonar/executor local en 127.0.0.1, señal de que este navegador es de esta máquina.">🔎 ¿Es esta máquina?</button>
         </div>`;
+      el.querySelector('.did').onclick = () => { navigator.clipboard?.writeText(b.deviceId); toast('deviceId copiado'); };
       el.querySelector('select').onchange = e => label(b.deviceId, e.target.value);
       const urlInput = el.querySelector('.acts input');
       el.querySelector('button.go').onclick = () => { const u=urlInput.value.trim(); if(u) cmd(b.deviceId,'navigate',u); };
       el.querySelector('[data-a="reposo"]').onclick = () => cmd(b.deviceId,'navigate','https://www.admira.live/vista-previa/');
       el.querySelector('[data-a="refrescar"]').onclick = () => cmd(b.deviceId,'reload','');
+      el.querySelector('[data-a="ident"]').onclick = () => identify(b);
       return el;
     }
 

@@ -1,0 +1,340 @@
+/* ============================================================
+   ADcelerate · theme-ops.css
+   ============================================================
+   VISTA 3 de 3 · «OPS» — oscura, densa, data-first (operador 8h/día).
+   Capa TEMA conmutable sobre tokens.css + app.css. Se activa con
+   html[data-theme="ops"] (lo pone theme-loader.js). Mismos
+   componentes que NEON/STUDIO, en versión faena: máxima densidad de
+   información, mono para datos, cero decoración, glow apagado. NO es
+   NEON (show): aquí manda la lectura rápida y compacta.
+   Ver docs/01-diseno.md §9.
+
+   REGLAS DURAS (comunes a las 3 vistas):
+   · Contraste AA en texto funcional · targets ≥44px · foco visible.
+   · prefers-reduced-motion: sin animación.
+   ============================================================ */
+
+html[data-theme="ops"] {
+  color-scheme: dark;
+
+  /* ── Superficies grafito, sin translucidez ──────────────── */
+  --op-bg:       #0b0e13;
+  --op-bg-2:     #10141c;
+  --op-surface:  #141922;
+  --op-surface-2:#1a212c;
+  --op-inset:    #0d1116;
+
+  /* ── Texto de consola de alto contraste ─────────────────── */
+  --op-text:     #dfe6ef;
+  --op-muted:    #9aa6b6;
+  --op-dim:      #667283;
+
+  /* ── Acento data-first: verde/cian de terminal + estados ── */
+  --op-accent:   #00e58f;   /* verde data (primario) */
+  --op-accent-2: #37c0ff;   /* cian secundario */
+  --op-amber:    #ffc043;
+  --op-red:      #ff5470;
+  --op-magenta:  #ff5c9e;
+
+  /* ── Líneas duras de rejilla ────────────────────────────── */
+  --op-line:     #232c38;
+  --op-line-str: #33404f;
+  --op-shadow:   none;
+
+  /* Reasignación de tokens del sistema */
+  --acc:        var(--op-accent);
+  --acc-2:      var(--op-accent-2);
+  --line:       var(--op-line);
+  --line-str:   var(--op-line-str);
+  --card:       var(--op-surface);
+  --card-2:     var(--op-inset);
+  --mut:        var(--op-muted);
+  --dim:        var(--op-dim);
+  --gradient:      linear-gradient(96deg, var(--op-accent), var(--op-accent-2));
+  --gradient-soft: linear-gradient(96deg, rgba(0,229,143,.14), rgba(55,192,255,.08));
+  --admira-text:       var(--op-text);
+  --admira-text-muted: var(--op-muted);
+  --admira-text-dim:   var(--op-dim);
+  --admira-green:      var(--op-accent);
+  --admira-amber:      var(--op-amber);
+  --admira-magenta:    var(--op-magenta);
+  --admira-shadow-card: 0 0 0 1px var(--op-line-str);
+  --admira-shadow-glow-cyan: none;
+
+  /* Densidad: radios pequeños, tipografía compacta */
+  --admira-radius-sm:  3px;
+  --admira-radius-md:  4px;
+  --admira-radius-lg:  5px;
+  font-size: 14px;
+}
+
+/* ── Base grafito; anula neblina/horizonte NEON ─────────────── */
+html[data-theme="ops"] body {
+  background:
+    linear-gradient(var(--op-line) 1px, transparent 1px) 0 0 / 100% 28px,
+    var(--op-bg);
+  background-attachment: fixed;
+  color: var(--op-text);
+}
+html[data-theme="ops"] body::before,
+html[data-theme="ops"] body::after { display: none; content: none; }
+html[data-theme="ops"] .rf-scanlines,
+html[data-theme="ops"] .rf-canvas,
+html[data-theme="ops"] .rf-radar-sweep { display: none !important; }
+
+/* Layout más ancho y compacto: aprovecha el ancho para densidad */
+html[data-theme="ops"] .wrap { max-width: 1320px; padding: 70px 20px 48px; }
+html[data-theme="ops"] .section { margin: 34px 0; }
+html[data-theme="ops"] .section-head { margin-bottom: 16px; }
+html[data-theme="ops"] .hero { padding: 14px 0 20px; text-align: left; }
+html[data-theme="ops"] .hero h1 { margin-left: 0; margin-right: 0; }
+html[data-theme="ops"] .hero p.lead,
+html[data-theme="ops"] .section-head p { margin-left: 0; margin-right: 0; }
+
+/* ── Tipografía: titulares mono compactos, datos mono ───────── */
+html[data-theme="ops"] .hero h1,
+html[data-theme="ops"] .section-head h2,
+html[data-theme="ops"] .rf-display,
+html[data-theme="ops"] .ac-brand {
+  font-family: var(--admira-font-mono);
+  text-transform: uppercase;
+  letter-spacing: .02em;
+  font-weight: 700;
+  text-shadow: none;
+}
+html[data-theme="ops"] .hero h1 { font-size: clamp(22px, 3.4vw, 30px); line-height: 1.15; }
+html[data-theme="ops"] .section-head h2 { font-size: clamp(16px, 2.6vw, 20px); }
+html[data-theme="ops"] .hero h1 .g {
+  background: none; -webkit-text-fill-color: currentColor;
+  color: var(--op-accent); text-shadow: none;
+}
+html[data-theme="ops"] .eyebrow,
+html[data-theme="ops"] .hero .eyebrow {
+  color: var(--op-accent-2); text-shadow: none; font-size: 10px;
+}
+
+/* ── Nav: barra de operaciones compacta ─────────────────────── */
+html[data-theme="ops"] .ac-nav {
+  background: var(--op-bg-2);
+  backdrop-filter: none;
+  border-bottom: 1px solid var(--op-line-str);
+  box-shadow: none;
+}
+html[data-theme="ops"] .ac-nav-inner { padding: 8px 20px; }
+html[data-theme="ops"] .ac-brand { letter-spacing: .08em; font-size: 14px; }
+html[data-theme="ops"] .ac-brand .mark {
+  background: var(--op-inset); border: 1px solid var(--op-accent);
+  color: var(--op-accent); box-shadow: none; text-shadow: none;
+  border-radius: 3px;
+}
+html[data-theme="ops"] .ac-brand .name {
+  background: none; -webkit-text-fill-color: currentColor;
+  color: var(--op-accent); text-shadow: none;
+}
+html[data-theme="ops"] .ac-links a {
+  font-family: var(--admira-font-mono); text-transform: uppercase; letter-spacing: .06em;
+  font-size: 11px; color: var(--op-muted);
+}
+html[data-theme="ops"] .ac-links a:hover { color: var(--op-text); }
+html[data-theme="ops"] .ac-links a.active { color: var(--op-accent); text-shadow: none; }
+html[data-theme="ops"] .ac-links a.active::after { background: var(--op-accent); box-shadow: none; }
+html[data-theme="ops"] .ac-tail { color: var(--op-dim); }
+
+/* ── Paneles: cajas de datos compactas, borde duro, sin blur ── */
+html[data-theme="ops"] .card,
+html[data-theme="ops"] .tesis-col,
+html[data-theme="ops"] .accel-panel,
+html[data-theme="ops"] .zone-detail,
+html[data-theme="ops"] .funnel-step,
+html[data-theme="ops"] .uplift-card,
+html[data-theme="ops"] .kpi,
+html[data-theme="ops"] .screen-tile,
+html[data-theme="ops"] .vs-col {
+  background: var(--op-surface);
+  border: 1px solid var(--op-line);
+  border-radius: var(--admira-radius-md);
+  backdrop-filter: none;
+  box-shadow: none;
+}
+html[data-theme="ops"] .card { padding: 14px; }
+html[data-theme="ops"] .tesis-col,
+html[data-theme="ops"] .accel-panel,
+html[data-theme="ops"] .zone-detail,
+html[data-theme="ops"] .uplift-card { padding: 16px; }
+html[data-theme="ops"] .funnel-step { padding: 10px 14px; }
+html[data-theme="ops"] .card:hover,
+html[data-theme="ops"] .tesis-col.in,
+html[data-theme="ops"] .vs-col.accel,
+html[data-theme="ops"] .uplift-card {
+  border-color: var(--op-accent);
+  box-shadow: inset 0 0 0 1px rgba(0,229,143,.25);
+  transform: none;
+}
+html[data-theme="ops"] .card:hover { transform: none; }
+html[data-theme="ops"] .tesis-col.in::before,
+html[data-theme="ops"] .accel-panel::before,
+html[data-theme="ops"] .uplift-card::before { content: none; display: none; }
+
+/* KPIs: lectura de instrumento mono compacta, grid apretada */
+html[data-theme="ops"] .kpis { gap: 8px; }
+html[data-theme="ops"] .kpi { padding: 10px 12px; background: var(--op-inset); }
+html[data-theme="ops"] .kpi .n { font-size: 24px; color: var(--op-accent); text-shadow: none; }
+html[data-theme="ops"] .kpi .l { font-size: 11px; }
+html[data-theme="ops"] .zone-detail .zd-m .n,
+html[data-theme="ops"] .funnel-step .fn { color: var(--op-accent); text-shadow: none; }
+html[data-theme="ops"] .funnel-step .fbar { background: var(--gradient-soft); }
+html[data-theme="ops"] .flow-step h4 { color: var(--op-accent); }
+html[data-theme="ops"] .flow { gap: 8px; }
+html[data-theme="ops"] .grid { gap: 8px; }
+
+/* Todo dato numérico en mono */
+html[data-theme="ops"] .zd-m .n, html[data-theme="ops"] .kpi .n,
+html[data-theme="ops"] .fn, html[data-theme="ops"] .big,
+html[data-theme="ops"] .pill { font-family: var(--admira-font-mono); }
+
+/* ── Botones: compactos, mono, borde duro ───────────────────── */
+html[data-theme="ops"] .btn {
+  font-family: var(--admira-font-mono); text-transform: uppercase; letter-spacing: .05em;
+  border: 1px solid var(--op-line-str); color: var(--op-text); background: var(--op-surface-2);
+  min-height: 44px; padding: 10px 18px; font-size: 13px; border-radius: var(--admira-radius-sm);
+}
+html[data-theme="ops"] .btn:hover {
+  border-color: var(--op-accent); color: var(--op-accent);
+  box-shadow: none; transform: none;
+}
+html[data-theme="ops"] .btn:active { transform: translateY(1px); }
+html[data-theme="ops"] .btn-p {
+  background: var(--op-accent); color: #04160e; border: 0; text-shadow: none;
+  box-shadow: none; font-weight: 700;
+}
+html[data-theme="ops"] .btn-p:hover { background: #12f29c; color: #04160e; box-shadow: none; }
+
+/* Foco de teclado (usabilidad innegociable, común a las 3 vistas) */
+html[data-theme="ops"] a:focus-visible,
+html[data-theme="ops"] .btn:focus-visible,
+html[data-theme="ops"] button:focus-visible,
+html[data-theme="ops"] .map-pin:focus-visible,
+html[data-theme="ops"] .chip:focus-visible,
+html[data-theme="ops"] textarea:focus-visible {
+  outline: 2px solid var(--op-accent);
+  outline-offset: 2px;
+  box-shadow: 0 0 0 3px rgba(0,229,143,.25);
+}
+
+/* ── Terminal fósforo → consola de datos densa ──────────────── */
+html[data-theme="ops"] .rf-term {
+  background: var(--op-inset);
+  border: 1px solid var(--op-line-str);
+  border-radius: var(--admira-radius-sm);
+  box-shadow: none; color: var(--op-accent);
+  font-family: var(--admira-font-mono); padding: 12px 14px;
+}
+html[data-theme="ops"] .rf-term::after { content: none; display: none; }
+html[data-theme="ops"] .rf-term .rf-line { text-shadow: none; }
+html[data-theme="ops"] .gen-log { font-family: var(--admira-font-mono); font-size: 12px; }
+html[data-theme="ops"] .gen-log li { color: var(--op-dim); padding: 3px 0; }
+html[data-theme="ops"] .gen-log li.on { color: var(--op-accent); text-shadow: none; }
+html[data-theme="ops"] .gen-log li.on::before { content: "> "; color: var(--op-accent); }
+html[data-theme="ops"] .gen-log li.pending::before { content: ". "; color: var(--op-dim); }
+
+/* ── Mapa: rejilla táctica densa, sin barrido decorativo ────── */
+html[data-theme="ops"] .map-frame {
+  border: 1px solid var(--op-line-str);
+  background:
+    radial-gradient(circle at 50% 50%, rgba(0,229,143,.04), transparent 65%),
+    var(--op-inset);
+  box-shadow: none;
+}
+html[data-theme="ops"] .map-frame .grid-lines {
+  background-image:
+    linear-gradient(rgba(0,229,143,.10) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(0,229,143,.10) 1px, transparent 1px);
+  background-size: 28px 28px;
+}
+html[data-theme="ops"] .rf-radar-rings::before,
+html[data-theme="ops"] .rf-radar-rings::after { border-color: rgba(0,229,143,.14); }
+html[data-theme="ops"] .rf-norad { color: var(--op-accent); opacity: .7; text-shadow: none; }
+html[data-theme="ops"] .map-pin {
+  background: var(--op-accent);
+  box-shadow: 0 0 0 2px rgba(0,229,143,.18);
+}
+html[data-theme="ops"] .map-pin::after { border-color: rgba(0,229,143,.4); }
+html[data-theme="ops"] .map-pin:hover,
+html[data-theme="ops"] .map-pin.sel {
+  background: var(--op-amber);
+  box-shadow: 0 0 0 2px rgba(255,192,67,.25);
+}
+html[data-theme="ops"] .map-pin.sel::after { border-color: rgba(255,192,67,.5); }
+html[data-theme="ops"] .map-legend { color: var(--op-dim); }
+
+/* ── Ticker: cinta de datos mono compacta ───────────────────── */
+html[data-theme="ops"] .rf-ticker {
+  border: 1px solid var(--op-line-str);
+  border-radius: var(--admira-radius-sm);
+  background: var(--op-inset);
+  box-shadow: none; padding: 6px 0; margin-bottom: 14px;
+}
+html[data-theme="ops"] .rf-ticker::after { content: none; display: none; }
+html[data-theme="ops"] .rf-ticker .q { color: var(--op-muted); text-shadow: none; }
+html[data-theme="ops"] .rf-ticker .q b { color: var(--op-accent); text-shadow: none; }
+html[data-theme="ops"] .rf-ticker .q .dn { color: var(--op-red); text-shadow: none; }
+
+/* ── Rack de pantallas: celdas de estado densas ─────────────── */
+html[data-theme="ops"] .screens-grid { gap: 8px; grid-template-columns: repeat(auto-fill, minmax(180px, 1fr)); }
+html[data-theme="ops"] .screen-tile { background: var(--op-surface); border: 1px solid var(--op-line); padding: 10px; }
+html[data-theme="ops"] .screen-tile .thumb {
+  background: var(--op-inset);
+  border: 1px solid var(--op-line);
+  box-shadow: none; color: var(--op-accent-2); text-shadow: none;
+  border-radius: 3px;
+}
+html[data-theme="ops"] .screen-tile .thumb::after { content: none; display: none; }
+html[data-theme="ops"] .screen-tile .name { font-family: var(--admira-font-mono); font-size: 13px; }
+html[data-theme="ops"] .dot.ok { background: var(--op-accent); box-shadow: none; }
+html[data-theme="ops"] .dot.warn { background: var(--op-amber); box-shadow: none; }
+html[data-theme="ops"] .dot.off { background: var(--op-dim); }
+html[data-theme="ops"] .pill { font-size: 9px; }
+html[data-theme="ops"] .pill.ok { color: var(--op-accent); border-color: rgba(0,229,143,.4); }
+html[data-theme="ops"] .pill.warn { color: var(--op-amber); border-color: rgba(255,192,67,.4); }
+
+/* ── Preview de pantalla del punto ──────────────────────────── */
+html[data-theme="ops"] .screen-frame { background: #05070a; border: 1px solid var(--op-line-str); box-shadow: none; }
+html[data-theme="ops"] .screen-app .sa-top,
+html[data-theme="ops"] .screen-app .sa-bot { color: var(--op-accent-2); }
+html[data-theme="ops"] .screen-app .sa-cta { background: var(--op-accent); color: #04160e; }
+
+/* ── Medición: uplift/funnel data-first ─────────────────────── */
+html[data-theme="ops"] .uplift-card .big { color: var(--op-accent); text-shadow: none; font-size: 38px; }
+html[data-theme="ops"] .uplift-card .bar.exp { background: var(--op-accent); color: #04160e; }
+html[data-theme="ops"] .uplift-card .bar.ctrl { background: var(--op-surface-2); border: 1px solid var(--op-line-str); color: var(--op-muted); }
+
+/* ── Textarea / chips de consola ────────────────────────────── */
+html[data-theme="ops"] .accel-input {
+  background: var(--op-inset); border: 1px solid var(--op-line-str); color: var(--op-text);
+  font-family: var(--admira-font-mono); font-size: 13px;
+}
+html[data-theme="ops"] .accel-input:focus { border-color: var(--op-accent); }
+html[data-theme="ops"] .chip {
+  background: var(--op-surface-2); border: 1px solid var(--op-line-str); color: var(--op-muted);
+  font-family: var(--admira-font-mono); font-size: 12px;
+}
+html[data-theme="ops"] .chip:hover { border-color: var(--op-accent); color: var(--op-accent); }
+
+/* ── Gráfica drive-to-store: verde data, sin glow ──────────── */
+html[data-theme="ops"] .d2s-chart .d2s-exp { stroke: var(--op-accent); filter: none; }
+html[data-theme="ops"] .d2s-chart .d2s-exp-dots { fill: var(--op-accent); filter: none; }
+html[data-theme="ops"] .d2s-chart .d2s-exp-swatch { fill: var(--op-accent); }
+html[data-theme="ops"] .d2s-chart .d2s-ctrl { stroke: var(--op-dim); }
+html[data-theme="ops"] .d2s-chart .d2s-grid { stroke: rgba(0,229,143,.10); }
+html[data-theme="ops"] .d2s-chart .d2s-axis { stroke: var(--op-line-str); }
+html[data-theme="ops"] .d2s-chart .d2s-lbl { fill: var(--op-dim); }
+html[data-theme="ops"] .d2s-chart .d2s-leg { fill: var(--op-text); }
+html[data-theme="ops"] .d2s-chart .d2s-leg-mut { fill: var(--op-muted); }
+
+/* ── Footer ─────────────────────────────────────────────────── */
+html[data-theme="ops"] .ac-foot { border-top: 1px solid var(--op-line); color: var(--op-dim); font-family: var(--admira-font-mono); }
+
+/* ── Movimiento reducido ────────────────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  html[data-theme="ops"] .map-pin::after { animation: none !important; }
+}

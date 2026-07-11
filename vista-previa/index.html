@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>¿En qué estamos? · AdmiraNeXT</title>
+<title>Misiones · AdmiraNeXT</title>
 <script src="/admira-bar.js?v=20260705-rails"></script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <style>
@@ -133,8 +133,8 @@
 <header>
   <span class="logo">🛰️</span>
   <div>
-    <h1>¿EN QUÉ ESTAMOS?</h1>
-    <div class="sub">Vista Previa · AdmiraNeXT · silicio ↔ carbono</div>
+    <h1>MISIONES</h1>
+    <div class="sub">¿En qué estamos? · AdmiraNeXT · silicio ↔ carbono</div>
   </div>
   <span class="spacer"></span>
   <span class="yo" id="yoChip" title="Quién eres (clic para cambiar)" style="display:none"><img class="av" id="yoAv" alt="" style="display:none"><span id="yoLab">—</span> <small id="yoOs"></small><span class="chg">cambiar</span></span>
@@ -258,11 +258,12 @@
   <div class="tab-list" id="tabList"><div class="empty">Cargando tareas…</div></div>
 </section>
 <script>
-/* Tablero de tareas de la flota. LECTURA: /api/tasks (fuente única de Neo). ESCRITURA:
+/* Tablero de tareas de la flota. LECTURA: /api/public/tasks (feed público, sin auth — el
+   /api/tasks gateado devolvía 401 al navegador sin sesión → el tablero salía VACÍO). ESCRITURA:
    botones take/doing/done → proxy admira-estado /task-update (verifica el gate de Google y
    reenvía al backend con la key SERVER-SIDE). Sin exponer secretos en el JS de cliente. */
 (function(){
-  var API='https://admira-telegram.csilvasantin.workers.dev/api/tasks';
+  var API='https://admira-telegram.csilvasantin.workers.dev/api/public/tasks';
   var PROXY='https://admira-estado.csilvasantin.workers.dev/task-update';
   var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});};
   function yoName(){ try{ return (typeof YO!=='undefined'&&YO&&YO.persona)?YO.persona:''; }catch(e){ return ''; } }
@@ -307,7 +308,14 @@
     var body=Object.assign({id:+id}, patch);
     fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+c},body:JSON.stringify(body)})
       .then(function(r){return r.json().catch(function(){return{};}).then(function(d){return {s:r.status,d:d};});})
-      .then(function(o){ if(o.d&&o.d.ok){ note('#'+id+' actualizada ✓'); load(); } else if(o.s===401){ note('sesión de Google caducada — recarga la página y vuelve a entrar'); } else { note('error '+o.s+': '+((o.d&&o.d.error)||'?')); } })
+      .then(function(o){
+        if(o.d&&o.d.ok){ note('#'+id+' actualizada ✓'); load(); }
+        else if(o.s===401){ note('🔒 sesión de Google caducada — recarga la página y vuelve a entrar'); }
+        else if(o.s===403){ note('⛔ tu cuenta no está autorizada para editar el tablero'); }
+        else if(o.s===404){ note('❓ no se pudo actualizar: la tarea #'+id+' no existe o el servicio del tablero no responde — recarga; si sigue, avísanos'); }
+        else if(o.s===0||o.s>=500){ note('🛠️ el servicio del tablero no responde ('+o.s+') — reintenta en un momento'); }
+        else { note('error '+o.s+((o.d&&o.d.error)?': '+o.d.error:'')+' — reintenta'); }
+      })
       .catch(function(){ note('error de red'); });
   }
   var tl=document.getElementById('tabList');
@@ -507,6 +515,9 @@ async function renderAgentes(){
     // máquina/sub NO borre la tarea principal (con varias instancias el proyecto parpadeaba).
     const projByP={}; (d.presence||[]).forEach(p=>{ const k=(p.persona||p.machine||'?');
       if(p.project && (now-(p.updated||0))<STALE && (!projByP[k]||(p.updated||0)>(projByP[k].u||0))) projByP[k]={v:p.project,u:p.updated||0}; });
+    // Fix B — proyecto por defecto por persona (último fallback si presence/projByP vienen vacíos),
+    // para que ninguna tarjeta quede sin "📁 proyecto". Refleja el reparto de carriles del equipo.
+    const DEFPROJ={Neo:'www.admira.live',Morfeo:'www.admira.live',Trinity:'pixeria.com',Oráculo:'yarig.ai',Smith:'ainimation.studio',Cypher:'ainimation.studio'};
     // Filtra rancias: fuera los muertos (>12h) y los offline SIN foco (fantasmas de
     // sesiones viejas). Así el tablero muestra solo agentes activos/recientes con algo que decir.
     const list=Object.values(byP)
@@ -564,7 +575,7 @@ async function renderAgentes(){
       // Contador POR SU CUENTA + peticiones del arquitecto AL LADO → ABAJO DEL TODO.
       const contador='<div class="ag-count">'+(_auto?'🟢':'⚪')+' <b>'+_dec+'</b> por su cuenta'+(_auto?'':' · modo pasivo')+_petHtml+'</div>';
       // Proyecto + RESPONSABLE (agente), independiente de la máquina: "📁 www.admira.live // Morfeo".
-      const _proj = p.project || ((projByP[p.persona]||{}).v) || '';
+      const _proj = p.project || ((projByP[p.persona]||{}).v) || DEFPROJ[p.persona] || '';
       const proyecto=_proj?'<div class="ag-project">📁 '+_agEsc(_proj)+' <span class="ag-owner">// '+_agEsc(p.persona||'?')+'</span></div>':'';
       // (Retirado el botón "diario del día" para ganar una línea a la descripción de la tarea.)
       const botones='';

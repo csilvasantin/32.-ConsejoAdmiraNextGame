@@ -1,7 +1,7 @@
 <!doctype html>
 <html lang="es">
 <head>
-    <script src="/admira-bar.js?v=nav1"></script>
+    <script src="/admira-bar.js?v=20260705-rails"></script>
     <script src="/auth-gate.js"></script>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -540,6 +540,24 @@ AGORA_SYNC_KEY=&lt;sync key privada&gt;</code></pre>
         <article class="card"><span class="tag prompt">mesa</span><h3><a href="https://www.admira.live/teamwork.html">Mesa de control</a></h3><p>Panel operativo de la flota: estado, órdenes y acciones acotadas por máquina.</p></article>
         <article class="card"><span class="tag prompt">fichas</span><h3><a href="https://www.admira.live/consejero.html?p=steve-jobs">Fichas de consejero</a></h3><p>Ficha de detalle por consejero (<code>?p=&lt;slug&gt;</code>) para los 16 perfiles.</p></article>
         <article class="card"><span class="tag">máquina</span><h3><a href="manifest.json">manifest.json</a> · <a href="llms.txt">llms.txt</a></h3><p>Descriptor estructurado e índice legible por agentes de toda esta sección.</p></article>
+      </div>
+    </section>
+
+    <section id="lanzadera-tv" class="band">
+      <div class="shell section-head">
+        <div>
+          <p class="eyebrow">admira.tv/apps</p>
+          <h2>Producción de preproducción: Catálogo y Soporte.</h2>
+        </div>
+        <p>La lanzadera de 18 apps enciende por tandas (fuente única: <code>window.AdmiraApps</code> en <code>admira-nav.js</code> del repo <code>admira-tv</code>). Dos apps live no tienen código propio: embeben en vivo el producto de otro repo. Regla para cualquier agente: mejorar la app = tocar el repo fuente, nunca duplicar en <code>admira-tv</code>.</p>
+      </div>
+      <div class="shell grid-3">
+        <article class="card"><span class="tag">iframe directo</span><h3>Catálogo → PixerIA</h3><p><code>admira.tv/contentcatalogue/</code> embebe <code>www.pixeria.com</code>. Repo fuente: <code>csilvasantin/pixeria</code> (GitHub Pages). Pixeria no envía <code>X-Frame-Options</code>/CSP, por eso no hace falta proxy. Mejoras → repo <code>pixeria</code>, aparecen solas en admira.tv.</p></article>
+        <article class="card"><span class="tag">iframe sandbox</span><h3>Soporte → Yokup</h3><p><code>admira.tv/support/</code> embebe <code>yokup.com/tool/</code> con <code>sandbox="allow-scripts allow-forms allow-same-origin allow-popups"</code> (sin top-navigation). Repo fuente: <code>csilvasantin/tool</code> (GitHub Pages + Supabase prod, RLS demo). La app habla con Supabase desde el navegador: por eso es iframe y no proxy, un proxy rompería CORS. Mejoras → repo <code>tool</code>.</p></article>
+        <article class="card"><span class="tag resource">plan B</span><h3>Fuente única y proxy de reserva</h3><p>Encender/apagar una app = cambiar solo <code>st</code> en <code>AdmiraApps</code> + bumpear <code>?v=</code>. Los subsites del marco (<code>contentcatalogue/</code>, <code>support/</code> en <code>admira-tv</code>) son landing + iframe, sin lógica de producto. Si pixeria o yokup añadieran algún día <code>X-Frame-Options</code>/CSP, el embed se rompería → edge-proxy con Cloudflare Pages Functions en <code>admira-tv/functions/</code>.</p></article>
+        <article class="card"><span class="tag">código propio</span><h3>Acceso — permisos v2 del grupo</h3><p><code>admira.tv/accesscontrol/</code> NO es iframe: consola + backend propios dentro de <code>admira-tv</code> (Cloudflare Pages Functions <code>functions/accesscontrol/api/[[path]].js</code> + KV binding <code>ACCESS</code>). Matriz Usuario × Solución con roles <code>owner &gt; admin &gt; editor &gt; viewer</code> (+ rol global <code>*</code>) y auditoría de cada cambio.</p></article>
+        <article class="card"><span class="tag">contrato API</span><h3>Endpoints de Acceso</h3><p><code>GET /accesscontrol/api/state</code> y <code>/audit</code> (públicos, verja blanda) · <code>POST /accesscontrol/api/write</code> con <code>{credential, action, ...}</code> — <code>credential</code> es un Google ID token, <code>action</code> ∈ <code>user.add</code>, <code>user.remove</code>, <code>role.set</code>, <code>role.clear</code>, <code>solution.add</code>, <code>solution.remove</code>. Owners intocables: <code>csilva@admira.com</code>, <code>csilvasantin@gmail.com</code>; anti-lockout: un admin no puede auto-degradarse ni auto-eliminarse.</p></article>
+        <article class="card"><span class="tag resource">v1 vs v2</span><h3>La verja de admira.live NO se toca</h3><p>El worker v1 <code>admira-whitelist</code> sigue siendo la única autoridad de la verja de <code>admira.live</code> (<code>auth-gate.js</code>). Acceso v2 nació sembrado leyendo el <code>/list</code> de v1 una vez (emails existentes, superusers → owners), pero desde entonces son independientes. Cambios de permisos del grupo → Acceso v2; la whitelist de <code>admira.live</code> sigue en <code>admira.live/usuarios</code> hasta que se migre.</p></article>
       </div>
     </section>
 

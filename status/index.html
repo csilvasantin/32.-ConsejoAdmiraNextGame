@@ -6,7 +6,7 @@
   <title>ADmiraNeXT | Status — Constelación de la flota</title>
   <meta name="description" content="Admira no tiene centro — es un universo que se expande. Estado en vivo de la flota AdmiraNeXT: cada ordenador es una estrella con su proyecto y su foco.">
   <meta name="admiranext-version" content="AdmiraNext v26.07.07.12">
-  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.11.r3 (versión en Orbitron 700 + iconos de línea estilo Codex en el menú de sesión)">
+  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.11.r4 (rieles verticales se encogen al abrir el cajón EXPERTO: no pisa usuario/versión)">
   <meta name="admiranext-status-build" content="oraculo-triad-1">
   <!-- Orbitron: tipografía tecnológica para la versión del pie del riel (Carlos, 2026-07-11) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -362,6 +362,11 @@
     /* INFERIOR — EXPERTO + CLI */
     #panelBottom{bottom:0;left:0;right:0;transform:translateY(100%);max-height:42vh;padding:14px 18px 16px;border-bottom:0;border-radius:12px 12px 0 0}
     #panelBottom.open{transform:translateY(0)}
+    /* Con el cajón EXPERTO abierto, los rieles verticales se ENCOGEN por abajo
+       (reservan su altura viva vía --pf-bottom-inset) para no pisarles el pie
+       (usuario+sesión+versión). Sigue el asa de redimensionado en vivo. */
+    #panelLeft,#panelRight{transition:padding-bottom .28s ease}
+    body.pf-bottom-open #panelLeft,body.pf-bottom-open #panelRight{padding-bottom:calc(var(--pf-bottom-inset,240px) + 16px)}
     #panelBottom h4{margin-bottom:9px}
     .cli-wrap{display:flex;align-items:center;gap:9px;border:1px solid var(--cyan-dim);border-radius:9px;background:rgba(1,4,10,.6);padding:0 12px}
     .cli-wrap .ps1{color:var(--cyan);font-size:12px;flex:0 0 auto;text-shadow:0 0 8px rgba(34,230,255,.5)}
@@ -526,7 +531,7 @@
         <span class="pf-uchev" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
       </button>
     </div>
-    <div class="pf-ver" id="verRail"><span id="verText">v.2026.07.11.r3</span></div>
+    <div class="pf-ver" id="verRail"><span id="verText">v.2026.07.11.r4</span></div>
   </aside>
   <!-- r15: asa de redimensionado del riel izquierdo (doble clic = restaurar) -->
   <div class="pf-rz" id="rzLeft" title="Arrastra para redimensionar · doble clic restaura" aria-hidden="true"></div>
@@ -2141,7 +2146,7 @@
   function updateVersionInfo(){
     const verEl = document.getElementById('verRail');
     const selloEl = document.getElementById('sello');
-    const baseVer = 'v.2026.07.11.r3';
+    const baseVer = 'v.2026.07.11.r4';
     let focusLabel = FOCUS_MACHINE ? FOCUS_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
     let viewerLabel = VIEWER_MACHINE ? VIEWER_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
 
@@ -3304,8 +3309,17 @@
     const {panel,tg}=panels[key];
     panel.classList.toggle('open', open);
     tg.setAttribute('aria-expanded', open?'true':'false');
+    if(key==='bottom'){ document.body.classList.toggle('pf-bottom-open', open); if(open) syncBottomInset(); }
     if(open){ const f=panel.querySelector('input,button:not(.pf-close),[tabindex]'); if(f) setTimeout(()=>f.focus(),60); }
   }
+  // --pf-bottom-inset = altura viva del cajón EXPERTO → los rieles verticales la
+  // reservan por abajo (CSS body.pf-bottom-open) y su pie no queda pisado.
+  function syncBottomInset(){
+    const h = panels.bottom.panel.getBoundingClientRect().height;
+    if(h>0) document.documentElement.style.setProperty('--pf-bottom-inset', Math.round(h)+'px');
+  }
+  new ResizeObserver(()=>{ if(panels.bottom.panel.classList.contains('open')) syncBottomInset(); })
+    .observe(panels.bottom.panel);
   function togglePanel(key){ setPanel(key, !panels[key].panel.classList.contains('open')); }
   Object.keys(panels).forEach(k=>{
     panels[k].tg.addEventListener('click',()=>{ togglePanel(k); if(k==='right' && typeof renderGestion==='function') renderGestion(); });

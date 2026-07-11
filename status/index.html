@@ -6,7 +6,7 @@
   <title>ADmiraNeXT | Status — Constelación de la flota</title>
   <meta name="description" content="Admira no tiene centro — es un universo que se expande. Estado en vivo de la flota AdmiraNeXT: cada ordenador es una estrella con su proyecto y su foco.">
   <meta name="admiranext-version" content="AdmiraNext v26.07.07.12">
-  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.11.r1 (pie del riel: usuario+sesión estilo Claude Code, versión sola al pie)">
+  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.11.r2 (pie del riel: usuario+sesión estilo Claude Code + fix marca→home clicable)">
   <meta name="admiranext-status-build" content="oraculo-triad-1">
 
   <!-- VERJA DE ACCESO (auth-gate de admira.live, misma whitelist de usuarios).
@@ -121,7 +121,9 @@
       overflow-wrap:anywhere;
     }
     .hdr-line{display:flex;align-items:baseline;gap:14px;flex-wrap:wrap}
-    .hdr .brand{font-size:13px;letter-spacing:.32em;color:var(--cyan);text-shadow:0 0 12px rgba(34,230,255,.6);font-weight:700;white-space:nowrap;text-decoration:none}
+    /* pointer-events:auto — el header deja pasar los clics al lienzo (none en .hdr), pero
+       la MARCA es un enlace real a la home y debe recuperarlos (si no, pulsarla no hacía nada). */
+    .hdr .brand{font-size:13px;letter-spacing:.32em;color:var(--cyan);text-shadow:0 0 12px rgba(34,230,255,.6);font-weight:700;white-space:nowrap;text-decoration:none;pointer-events:auto;cursor:pointer}
     .hdr .brand b{color:#fff}
     .hdr a.brand:hover,.hdr a.brand:focus-visible{text-shadow:0 0 18px rgba(34,230,255,.9)}
     .hdr .ver{font-size:11px;letter-spacing:.18em;color:var(--cyan-dim);white-space:nowrap}
@@ -514,7 +516,7 @@
         <span class="pf-uchev" aria-hidden="true">▾</span>
       </button>
     </div>
-    <div class="pf-ver" id="verRail"><span id="verText">v.2026.07.11.r1</span></div>
+    <div class="pf-ver" id="verRail"><span id="verText">v.2026.07.11.r2</span></div>
   </aside>
   <!-- r15: asa de redimensionado del riel izquierdo (doble clic = restaurar) -->
   <div class="pf-rz" id="rzLeft" title="Arrastra para redimensionar · doble clic restaura" aria-hidden="true"></div>
@@ -2129,7 +2131,7 @@
   function updateVersionInfo(){
     const verEl = document.getElementById('verRail');
     const selloEl = document.getElementById('sello');
-    const baseVer = 'v.2026.07.11.r1';
+    const baseVer = 'v.2026.07.11.r2';
     let focusLabel = FOCUS_MACHINE ? FOCUS_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
     let viewerLabel = VIEWER_MACHINE ? VIEWER_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
 

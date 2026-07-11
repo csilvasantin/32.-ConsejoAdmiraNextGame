@@ -13,7 +13,7 @@
   // Nombre del proyecto + versión (v.año.mes.día.release) — a la izquierda del todo.
   // La MARCA enlaza a la home (regla: el nombre del site siempre vuelve a la home).
   var PROJECT = "Consejo AdmiraNeXT";
-  var VERSION = "v.2026.07.02.r12";
+  var VERSION = "v.2026.07.11.r1";
 
   // Nav idéntico al top-bar de la home (mismos badges, mismos destinos) → coherencia.
   var TOP = [
@@ -29,30 +29,43 @@
 
   var css =
     /* Barra superior con el look SCUMM de la home (madera Monkey Island + badges
-     * ámbar cuadrados + sombra pixel + Press Start 2P) → integración consistente. */
+     * ámbar cuadrados + sombra pixel + Press Start 2P) → integración consistente.
+     * RESPONSIVE: en ancho suficiente todo va en una fila; al estrecharse, los enlaces
+     * de navegación se colapsan tras un botón ☰ (hamburguesa) y se abren en un panel
+     * desplegable, mientras la marca, los 3 contadores y los iconos de panel siguen
+     * visibles. Nunca hay scroll horizontal de página ni elementos cortados. */
     "#admira-topbar{position:fixed;top:0;left:0;right:0;z-index:99990;display:flex;gap:6px;align-items:stretch;" +
     "padding:5px 10px;background:#5a3a1e;border-bottom:3px solid #8b5a14;border-top:2px solid #a07828;box-shadow:0 3px 0 #000;" +
-    "font-family:'Press Start 2P',monospace;overflow-x:auto;scrollbar-width:thin;scrollbar-color:#a07828 #3a2410}" +
-    "#admira-topbar::-webkit-scrollbar{height:7px}" +
-    "#admira-topbar::-webkit-scrollbar-track{background:#3a2410}" +
-    "#admira-topbar::-webkit-scrollbar-thumb{background:#a07828;border:1px solid #5a3a1e}" +
+    "font-family:'Press Start 2P',monospace;box-sizing:border-box;max-width:100vw;flex-wrap:nowrap}" +
+    "#admira-topbar *{box-sizing:border-box}" +
     "#admira-topbar a{display:flex;align-items:center;color:#ffdd66;text-decoration:none;" +
     "font-family:'Press Start 2P',monospace;font-size:8px;line-height:1.5;letter-spacing:.5px;" +
     "border:2px solid #8b5a14;border-radius:0;padding:6px 9px;white-space:nowrap;background:#2a1a08;box-shadow:2px 2px 0 #000}" +
     "#admira-topbar a:hover{background:#8b5a14;border-color:#f0c040;color:#fff}" +
     "#admira-topbar a.active{background:#8b5a14;border-color:#f0c040;color:#fff}" +
+    /* Contenedor de los enlaces de navegación (para poder colapsarlos en móvil) */
+    "#admira-nav{order:0;display:flex;gap:6px;align-items:stretch;flex:1 1 auto;min-width:0;overflow-x:auto;" +
+    "scrollbar-width:thin;scrollbar-color:#a07828 #3a2410}" +
+    "#admira-nav::-webkit-scrollbar{height:7px}" +
+    "#admira-nav::-webkit-scrollbar-track{background:#3a2410}" +
+    "#admira-nav::-webkit-scrollbar-thumb{background:#a07828;border:1px solid #5a3a1e}" +
+    /* Botón hamburguesa (oculto por defecto; solo aparece en móvil vía media query) */
+    "#admira-burger{order:-1;display:none;align-items:center;justify-content:center;cursor:pointer;" +
+    "min-width:44px;min-height:38px;align-self:center;font-size:16px;color:#ffdd66;" +
+    "border:2px solid #8b5a14;border-radius:0;background:#2a1a08;box-shadow:2px 2px 0 #000;padding:0 10px}" +
+    "#admira-burger:hover{background:#8b5a14;border-color:#f0c040;color:#fff}" +
     /* Iconos de panel (portería, estilo Codex/VS Code): avanzado (der) + experto (abajo).
      * Se colocan a la derecha de «Usuarios» y sólo aparecen si la página tiene ese panel. */
     /* Marca del proyecto (izquierda del todo) */
-    "#pf-brand{order:-2;display:flex;flex-direction:column;align-items:center;gap:0;white-space:nowrap;text-decoration:none;" +
+    "#pf-brand{order:-2;display:flex;flex-direction:column;align-items:center;gap:0;white-space:nowrap;text-decoration:none;flex:0 0 auto;" +
     "font-family:'Press Start 2P',monospace;font-size:8px;letter-spacing:.5px;color:#ffdd66;" +
     "border:2px solid #a07828;border-radius:0;background:#3a2410;box-shadow:2px 2px 0 #000;padding:6px 10px;margin-right:6px}" +
     "#pf-brand:hover{border-color:#f0c040;color:#fff}" +
     "#pf-brand .pf-ver{color:#c9a86a;font-size:0.4rem;margin-top:3px;letter-spacing:0}" +
     /* icono de contraer OPCIONES: a la izquierda (tras la marca) */
-    "#pf-toggle-left{order:-3;display:flex;align-items:center;align-self:center;margin-right:6px}" +
+    "#pf-toggle-left{order:-3;display:flex;align-items:center;align-self:center;margin-right:6px;flex:0 0 auto}" +
     /* iconos AVANZADO + EXPERTO: a la derecha del todo, tras el usuario */
-    "#pf-toggles{order:100;display:flex;gap:5px;align-items:center;align-self:center;margin-left:auto}" +
+    "#pf-toggles{order:100;display:flex;gap:5px;align-items:center;align-self:center;flex:0 0 auto}" +
     ".pf-ico{width:27px;height:25px;display:flex;align-items:center;justify-content:center;cursor:pointer;" +
     "border:2px solid #8b5a14;border-radius:0;background:#2a1a08;box-shadow:2px 2px 0 #000;padding:0}" +
     ".pf-ico svg{width:15px;height:14px;display:block}" +
@@ -67,6 +80,31 @@
     ".admira-summary .as-num{font-size:12px;color:#ffdd66}" +
     ".admira-summary .as-num.as-green{color:#44bb44}.admira-summary .as-num.as-red{color:#e74c3c}.admira-summary .as-num.as-blue{color:#3498db}" +
     ".admira-summary small{font-size:6px;color:#b89060;margin-top:3px;white-space:nowrap;letter-spacing:.3px}" +
+    /* ── RESPONSIVE ─────────────────────────────────────────────────────────────
+     * ≤820px: los enlaces de navegación se esconden tras el botón ☰. Al abrirlo,
+     * caen como panel desplegable bajo la barra (look SCUMM). La marca, los 3
+     * contadores (compactados a número + etiqueta corta) y los iconos de panel
+     * siguen SIEMPRE visibles. Sin overflow horizontal de página. */
+    "@media (max-width:820px){" +
+      "#admira-burger{display:flex}" +
+      "#admira-nav{order:99;position:absolute;top:100%;left:0;right:0;flex-direction:column;flex:1 1 100%;" +
+        "gap:0;overflow-x:visible;background:#5a3a1e;border-bottom:3px solid #8b5a14;box-shadow:0 4px 0 #000;" +
+        "padding:6px;max-height:calc(100vh - 46px);overflow-y:auto}" +
+      "#admira-nav[hidden]{display:none}" +
+      "#admira-nav a{min-height:44px;font-size:9px;padding:10px 12px;box-shadow:none;margin:0 0 5px}" +
+      "#admira-nav a:last-child{margin-bottom:0}" +
+      /* contadores compactos: solo número + inicial, para que quepan siempre */
+      ".admira-summary{gap:6px}" +
+      ".admira-summary small{font-size:5px;max-width:52px;text-align:center;white-space:normal;line-height:1.1}" +
+    "}" +
+    "@media (max-width:400px){" +
+      /* móvil muy estrecho: los contadores muestran solo el número (etiqueta oculta) */
+      ".admira-summary small{display:none}" +
+      ".admira-summary{gap:8px}" +
+      "#pf-brand{font-size:7px;padding:6px 7px}" +
+    "}" +
+    /* Respeta prefers-reduced-motion: sin transición en el desplegable */
+    "@media (prefers-reduced-motion:reduce){#admira-nav,#admira-burger{transition:none !important}}" +
     /* ── MARCO CONSISTENTE de los raíles (opciones/avanzado/experto) en TODAS las páginas ──
      * Solo el CHROME (frame + cabecera), mismo look que la barra y la home (SCUMM madera).
      * El CONTENIDO de cada raíl es propio de cada página. Fuente única = aquí. */
@@ -92,13 +130,55 @@
 
     var top = document.createElement("div");
     top.id = "admira-topbar";
+
+    // Contenedor de los enlaces de navegación → se puede colapsar tras ☰ en móvil.
+    var nav = document.createElement("nav");
+    nav.id = "admira-nav";
+    nav.setAttribute("aria-label", "Navegación AdmiraNeXT");
     // Resalta el badge de la página actual (orientación) comparando el path.
     var here = location.pathname.replace(/index\.html$/, "").replace(/\/$/, "");
-    top.innerHTML = TOP.map(function (i) {
+    nav.innerHTML = TOP.map(function (i) {
       var ph = i.h.replace(/^https?:\/\/[^/]+/, "").replace(/index\.html$/, "").replace(/\/$/, "");
       var cur = ph !== "" && here === ph;
       return '<a href="' + i.h + '"' + (cur ? ' class="active" aria-current="page"' : "") + ">" + i.t + "</a>";
     }).join("");
+    top.appendChild(nav);
+
+    // Botón hamburguesa (☰): oculto en desktop vía CSS; en móvil abre/cierra el nav.
+    // Empieza cerrado (hidden) para que en móvil el panel no tape el contenido.
+    var burger = document.createElement("button");
+    burger.id = "admira-burger";
+    burger.type = "button";
+    burger.setAttribute("aria-label", "Abrir menú de navegación");
+    burger.setAttribute("aria-expanded", "false");
+    burger.setAttribute("aria-controls", "admira-nav");
+    burger.innerHTML = "☰"; // ☰
+    burger.onclick = function () {
+      var open = nav.hasAttribute("hidden");
+      if (open) { nav.removeAttribute("hidden"); }
+      else { nav.setAttribute("hidden", ""); }
+      burger.setAttribute("aria-expanded", open ? "true" : "false");
+      burger.setAttribute("aria-label", open ? "Cerrar menú de navegación" : "Abrir menú de navegación");
+    };
+    top.appendChild(burger);
+
+    // El nav arranca colapsado sólo en móvil. En desktop CSS lo muestra siempre
+    // (el atributo hidden no afecta porque #admira-nav en desktop no está en media query
+    // — usamos [hidden] únicamente dentro del @media ≤820px). Para que en desktop se vea
+    // aunque tenga hidden, lo quitamos si el viewport es ancho; y lo re-evaluamos al resize.
+    function syncNav() {
+      var narrow = window.matchMedia("(max-width:820px)").matches;
+      if (!narrow) {
+        nav.removeAttribute("hidden");
+        burger.setAttribute("aria-expanded", "false");
+        burger.setAttribute("aria-label", "Abrir menú de navegación");
+      } else if (!nav.dataset.userToggled) {
+        nav.setAttribute("hidden", "");
+      }
+    }
+    burger.addEventListener("click", function () { nav.dataset.userToggled = "1"; });
+    syncNav();
+    window.addEventListener("resize", syncNav);
 
     // Marca del proyecto + versión, a la izquierda del todo (CSS order:-2).
     var brand = document.createElement("a");
@@ -224,8 +304,10 @@
         a.id = "admira-link-usuarios";
         a.href = "https://www.admira.live/usuarios.html";
         a.innerHTML = "👥 Usuarios";
-        // Insertar «Usuarios» ANTES de los iconos de panel → los iconos quedan a su derecha.
-        top.insertBefore(a, document.getElementById("pf-toggles"));
+        // «Usuarios» va DENTRO del nav → se colapsa con los demás enlaces en móvil (☰).
+        var nav = document.getElementById("admira-nav");
+        if (nav) nav.appendChild(a);
+        else top.insertBefore(a, document.getElementById("pf-toggles"));
       })
       .catch(function () {});
   }

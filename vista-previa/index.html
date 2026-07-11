@@ -4,7 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Misiones · AdmiraNeXT</title>
-<script src="/admira-bar.js?v=20260705-rails"></script>
+<script src="/admira-bar.js?v=20260711-r1"></script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <style>
   :root{
@@ -142,7 +142,7 @@
   <span class="pill" id="agePill">—</span>
 </header>
 
-<div id="modo-bar">
+<div id="modo-bar" role="group" aria-label="Modo de equipo de la flota">
   <span class="modo-lab">🎛️ MODO DE EQUIPO</span>
   <button type="button" class="modo-opt" data-mode="en-que-andamos">👀 En qué andamos</button>
   <button type="button" class="modo-opt" data-mode="tu-por-tu-cuenta">🤖 Tú por tu cuenta</button>
@@ -180,7 +180,7 @@
 </style>
 <section class="dormias" id="dormias" style="display:none">
   <div class="dormias-h">🌙 <span>Mientras no estabas</span><span class="lapso" id="dormiasLapso"></span>
-    <span class="cerrar" id="dormiasCerrar">✕</span></div>
+    <span class="cerrar" id="dormiasCerrar" role="button" tabindex="0" aria-label="Cerrar aviso «Mientras no estabas»">✕</span></div>
   <ul class="dormias-list" id="dormiasList"></ul>
 </section>
 
@@ -224,7 +224,12 @@
 </section>
 
 <section class="agentes-sec">
-  <h2 class="agentes-h">👥 En qué anda cada agente <span class="ag-count" id="agCount"></span></h2>
+  <h2 class="agentes-h">👥 En qué anda cada agente <span class="ag-count" id="agCount"></span>
+    <span class="vp-view-toggle" role="group" aria-label="Vista de agentes">
+      <button type="button" class="vp-view-btn" id="vpViewCards" data-view="cards" aria-pressed="true" title="Vista de tarjetas">▦ Tarjetas</button>
+      <button type="button" class="vp-view-btn" id="vpViewList" data-view="list" aria-pressed="false" title="Vista de listado">☰ Listado</button>
+    </span>
+  </h2>
   <div class="agentes-grid" id="agentes"><div class="empty">Cargando agentes…</div></div>
 </section>
 
@@ -258,11 +263,12 @@
   <div class="tab-list" id="tabList"><div class="empty">Cargando tareas…</div></div>
 </section>
 <script>
-/* Tablero de tareas de la flota. LECTURA: /api/tasks (fuente única de Neo). ESCRITURA:
+/* Tablero de tareas de la flota. LECTURA: /api/public/tasks (feed público, sin auth — el
+   /api/tasks gateado devolvía 401 al navegador sin sesión → el tablero salía VACÍO). ESCRITURA:
    botones take/doing/done → proxy admira-estado /task-update (verifica el gate de Google y
    reenvía al backend con la key SERVER-SIDE). Sin exponer secretos en el JS de cliente. */
 (function(){
-  var API='https://admira-telegram.csilvasantin.workers.dev/api/tasks';
+  var API='https://admira-telegram.csilvasantin.workers.dev/api/public/tasks';
   var PROXY='https://admira-estado.csilvasantin.workers.dev/task-update';
   var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});};
   function yoName(){ try{ return (typeof YO!=='undefined'&&YO&&YO.persona)?YO.persona:''; }catch(e){ return ''; } }
@@ -307,7 +313,14 @@
     var body=Object.assign({id:+id}, patch);
     fetch(PROXY,{method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+c},body:JSON.stringify(body)})
       .then(function(r){return r.json().catch(function(){return{};}).then(function(d){return {s:r.status,d:d};});})
-      .then(function(o){ if(o.d&&o.d.ok){ note('#'+id+' actualizada ✓'); load(); } else if(o.s===401){ note('sesión de Google caducada — recarga la página y vuelve a entrar'); } else { note('error '+o.s+': '+((o.d&&o.d.error)||'?')); } })
+      .then(function(o){
+        if(o.d&&o.d.ok){ note('#'+id+' actualizada ✓'); load(); }
+        else if(o.s===401){ note('🔒 sesión de Google caducada — recarga la página y vuelve a entrar'); }
+        else if(o.s===403){ note('⛔ tu cuenta no está autorizada para editar el tablero'); }
+        else if(o.s===404){ note('❓ no se pudo actualizar: la tarea #'+id+' no existe o el servicio del tablero no responde — recarga; si sigue, avísanos'); }
+        else if(o.s===0||o.s>=500){ note('🛠️ el servicio del tablero no responde ('+o.s+') — reintenta en un momento'); }
+        else { note('error '+o.s+((o.d&&o.d.error)?': '+o.d.error:'')+' — reintenta'); }
+      })
       .catch(function(){ note('error de red'); });
   }
   var tl=document.getElementById('tabList');
@@ -341,7 +354,56 @@
   .agentes-sec{margin-bottom:16px}
   .agentes-h{font-size:12px;letter-spacing:.4px;text-transform:uppercase;color:var(--mut);margin:0 0 10px;display:flex;align-items:center;gap:8px}
   .ag-count{color:var(--acc);font-family:var(--mono);font-size:11px}
+  /* Toggle Tarjetas ⇄ Listado (a la derecha del título) */
+  .vp-view-toggle{margin-left:auto;display:inline-flex;gap:0;border:1px solid var(--line);border-radius:9px;overflow:hidden;flex:none}
+  .vp-view-btn{font-family:var(--sans);font-size:11px;font-weight:700;letter-spacing:.3px;text-transform:none;
+    color:var(--mut);background:var(--panel2);border:0;padding:5px 11px;cursor:pointer;transition:.12s;line-height:1}
+  .vp-view-btn+.vp-view-btn{border-left:1px solid var(--line)}
+  .vp-view-btn:hover{color:var(--ink)}
+  .vp-view-btn[aria-pressed="true"]{background:var(--acc2);color:#0b1020}
   .agentes-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:12px}
+  /* ── Modo LISTADO: una fila compacta por agente, escaneable con 10-15 agentes ── */
+  .agentes-grid.as-list{display:block;overflow-x:auto}   /* si la tabla no cabe, scrollea dentro de su caja, no rompe la página */
+  .ag-table{width:100%;border-collapse:collapse;font-size:12.5px;border:1px solid var(--line);border-radius:12px;overflow:hidden;table-layout:fixed}
+  .ag-table thead th{font-family:var(--mono);font-size:9.5px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;
+    color:var(--mut);text-align:left;padding:8px 10px;background:var(--panel2);border-bottom:1px solid var(--line);white-space:nowrap}
+  .ag-table td{padding:8px 10px;border-bottom:1px solid rgba(38,48,63,.55);vertical-align:middle;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .ag-table tr:last-child td{border-bottom:0}
+  .ag-table tbody tr{background:var(--panel)}
+  .ag-table tbody tr.off{opacity:.5}
+  .ag-table tbody tr.mine{background:linear-gradient(90deg,rgba(91,214,192,.12),var(--panel));box-shadow:inset 2px 0 0 var(--acc)}
+  /* anchos de columna: la columna EN QUÉ ANDA se lleva el espacio */
+  .agc-st{width:56px;text-align:center}
+  .agc-name{width:150px}
+  .agc-machine{width:120px}
+  .agc-project{width:150px}
+  .agc-mode{width:78px;text-align:center}
+  .agc-focus{width:auto}
+  .agc-age{width:74px;text-align:right;font-family:var(--mono);font-size:10.5px;color:var(--mut)}
+  .agl-dot{display:inline-block;width:8px;height:8px;border-radius:50%;vertical-align:middle}
+  .agl-dot.on{background:var(--ok);box-shadow:0 0 7px var(--ok)}
+  .agl-dot.off{background:var(--mut)}
+  .agl-name{font-weight:700;color:var(--ink)}
+  .agl-name .agl-sub{color:var(--acc2);font-weight:800}          /* prefijo jerárquico sub*/infra* */
+  .agl-inst{font-family:var(--mono);font-size:10px;color:var(--mut);font-weight:600}
+  .agl-you{font-family:var(--mono);font-size:8.5px;font-weight:800;letter-spacing:.5px;color:#06231f;background:var(--acc);border-radius:4px;padding:1px 4px;margin-left:4px}
+  .agl-pet{color:var(--carbono);font-weight:700;cursor:help;font-size:11px}
+  .agl-project{color:var(--acc2);font-weight:700;font-family:var(--mono);font-size:11px}
+  .agl-project.none{color:var(--mut);font-weight:400}
+  .agl-mode{font-family:var(--mono);font-size:8.5px;font-weight:800;letter-spacing:.4px;border-radius:5px;padding:2px 6px;white-space:nowrap}
+  .agl-mode.auto{color:#06231f;background:#39d98a}
+  .agl-mode.pasivo{color:#8a97ab;background:transparent;border:1px solid var(--line)}
+  .agl-focus{color:var(--ink)}
+  .agl-focus.none{color:var(--mut);font-style:italic}
+  @media(max-width:760px){
+    .agc-machine,.agc-project,.agc-mode{display:none}   /* en móvil: estado · agente · en qué anda · hace cuánto */
+    .agc-st{width:48px}
+    .agc-name{width:96px;white-space:normal}
+    .agc-age{width:52px}
+    .agc-focus{white-space:normal}                       /* la tarea envuelve en móvil para caber sin scroll */
+    .ag-table td{white-space:normal}
+    .ag-table .agl-name{word-break:break-word}
+  }
   .agente{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px 13px;display:flex;gap:11px;align-items:flex-start}
   .agente.off{opacity:.5}
   .ag-av{width:38px;height:38px;border-radius:9px;object-fit:cover;flex:0 0 auto;background:var(--panel2)}
@@ -408,7 +470,7 @@
       <span class="carb-cli-tgt" id="carbCliTgt">›</span>
       <input id="carbCliInput" type="text" autocomplete="off" spellcheck="false"
         placeholder="pulsa una necesidad y responde aquí (Enter envía al LLM)…">
-      <button type="button" id="carbCliSend" title="Enviar la respuesta al LLM">➤</button>
+      <button type="button" id="carbCliSend" title="Enviar la respuesta al LLM" aria-label="Enviar la respuesta al LLM">➤</button>
     </div>
   </div>
   <div class="box riesgos"><h2>⚠️ Riesgos abiertos</h2><ul id="riesgos"></ul></div>
@@ -467,6 +529,10 @@ function render(d){
   const por=$('#por'); por.textContent=d.por||'silicio';
   por.className='chip '+((d.por==='carbono')?'carbono':'silicio');
   $('#agePill').textContent=fmtAge(d.actualizado);
+  // Frescura: si 'caduca' (ISO) < ahora, marca el estado como posiblemente desfasado.
+  const ap=$('#agePill'), cad=d.caduca?new Date(d.caduca).getTime():NaN;
+  if(!isNaN(cad)&&cad<Date.now()){ ap.textContent+=' · ⚠️ posiblemente desfasado'; ap.title='caduca '+d.caduca+' (estado de proyecto, no presencia viva)'; }
+  else if(!isNaN(cad)){ ap.title='fresco hasta '+d.caduca; }
   $('#links').innerHTML=(d.enlaces||[]).map(l=>'<a href="'+l.url+'" target="_blank">'+String(l.label).replace(/</g,'&lt;')+'</a>').join('');
 }
 /* Fuente del estado: si hay sesión del gate (admira_gate.cred), lee del worker
@@ -492,6 +558,77 @@ async function cargarEstado(){
 function fmtAge2(s){ s=Math.max(0,s|0); if(s<60)return 'hace '+s+'s'; if(s<3600)return 'hace '+((s/60)|0)+'min'; if(s<86400)return 'hace '+((s/3600)|0)+'h'; return 'hace '+((s/86400)|0)+'d'; }
 const _AGPF={Neo:'Neo',Morfeo:'Morfeo',Trinity:'Trinity','Oráculo':'Oraculo',Oraculo:'Oraculo',Cypher:'Cypher',Smith:'Smith'};
 const _agEsc=s=>String(s==null?'':s).replace(/[&<>"]/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+// Badge de estado (deciding/offline/busy/idle) reutilizado por tarjeta y listado.
+function _agEstadoBadge(r, now){
+  const p=r.p;
+  if(r._da>now){
+    return '<span class="ag-state deciding" data-da="'+r._da+'" data-p="'+_agEsc(p.persona||'')+'" data-m="'+_agEsc(p.machine||'')+'" title="Decidiendo — countdown a 0">'
+      +'<button type="button" class="cd-adj" data-adj="-60" title="acelerar 1 min" aria-label="Acelerar la decisión 1 minuto">−</button>'
+      +'<span class="ag-cd">⏱ …</span>'
+      +'<button type="button" class="cd-adj" data-adj="60" title="retrasar 1 min" aria-label="Retrasar la decisión 1 minuto">+</button>'
+      +'</span>';
+  }
+  if(!r.online) return '<span class="ag-state off" title="Desconectado">offline</span>';
+  if(p.focus)   return '<span class="ag-state busy" title="Trabajando en algo">busy</span>';
+  return '<span class="ag-state idle" title="Conectado, sin tarea activa">idle</span>';
+}
+// TARJETA (vista por defecto) — markup idéntico al original.
+function renderAgentCard(r, now){
+  const p=r.p, online=r.online;
+  const estado=_agEstadoBadge(r, now);
+  const _nameSfx=r._nInst>1?(' ('+r._nInst+')'):'';
+  const _petHtml=r._pet.n>0?(' · <span class="ag-pet" title="'+_agEsc(r._pet.txt)+'">📩 '+r._pet.n+' petici'+(r._pet.n>1?'ones':'ón')+'</span>'):'';
+  const contador='<div class="ag-count">'+(r._auto?'🟢':'⚪')+' <b>'+r._dec+'</b> por su cuenta'+(r._auto?'':' · modo pasivo')+_petHtml+'</div>';
+  const proyecto=r._proj?'<div class="ag-project">📁 '+_agEsc(r._proj)+' <span class="ag-owner">// '+_agEsc(p.persona||'?')+'</span></div>':'';
+  return '<div class="agente'+(online?'':' off')+(r.mine?' mine':'')+'">'
+    +(r.av?('<img class="ag-av" src="'+r.av+'" alt="" onerror="this.style.visibility=\'hidden\'">'):'<div class="ag-av"></div>')
+    +'<div class="ag-body"><div class="ag-top"><span class="ag-dot '+(online?'on':'off')+'"></span>'
+    +'<span class="ag-name">'+_agEsc(p.persona||'?')+_nameSfx+'</span>'+estado+(r.mine?'<span class="ag-you">TÚ</span>':'')+'</div>'
+    +'<div class="ag-meta">'+_agEsc(p.runtime||'')+' · '+_agEsc(p.machine||'')+' · '+fmtAge2(r.age)+'</div>'
+    +proyecto
+    +'<div class="ag-focus'+(p.focus?'':' none')+'">'+r.foco+'</div>'+contador+'</div></div>';
+}
+// LISTADO — una fila compacta por agente, ordenada activos→muertos, la columna «en qué anda» se lleva el espacio.
+function renderAgentList(recs, now){
+  // Activos (por frescura de beat) arriba; muertos/offline al final, atenuados.
+  const ord=recs.slice().sort((a,b)=>{
+    if(a.online!==b.online) return a.online?-1:1;
+    return (b.p.updated||0)-(a.p.updated||0);
+  });
+  const rows=ord.map(r=>{
+    const p=r.p;
+    // Jerarquía visible: sub*/infra* llevan prefijo tenue coloreado.
+    const nm=String(p.persona||'?');
+    const mSub=nm.match(/^(sub|infra)(.*)$/i);
+    const nameHtml=mSub
+      ? '<span class="agl-sub">'+_agEsc(mSub[1].toLowerCase())+'</span>'+_agEsc(mSub[2])
+      : _agEsc(nm);
+    const inst=r._nInst>1?(' <span class="agl-inst">×'+r._nInst+'</span>'):'';
+    const pet=r._pet.n>0?(' <span class="agl-pet" title="'+_agEsc(r._pet.txt)+'">📩'+r._pet.n+'</span>'):'';
+    const you=r.mine?'<span class="agl-you">TÚ</span>':'';
+    const modeHtml='<span class="agl-mode '+(r._auto?'auto':'pasivo')+'" title="'+(r._auto?'autónomo':'pasivo')+'">'+(r._auto?'auto':'pasivo')+'</span>';
+    const projHtml=r._proj
+      ? '<span class="agl-project" title="'+_agEsc(r._proj)+'">'+_agEsc(r._proj)+'</span>'
+      : '<span class="agl-project none">—</span>';
+    const focoTxt=p.focus?_agEsc(p.focus):'sin reportar foco';
+    const focoHtml='<span class="agl-focus'+(p.focus?'':' none')+'" title="'+focoTxt+'">'+focoTxt+'</span>';
+    return '<tr class="'+(r.online?'':'off')+(r.mine?' mine':'')+'">'
+      +'<td class="agc-st">'+_agEstadoBadge(r, now)+'</td>'
+      +'<td class="agc-name"><span class="agl-dot '+(r.online?'on':'off')+'"></span> '
+        +'<span class="agl-name">'+nameHtml+'</span>'+inst+pet+you+'</td>'
+      +'<td class="agc-machine" title="'+_agEsc(p.machine||'')+'">'+_agEsc(p.machine||'—')+'</td>'
+      +'<td class="agc-project">'+projHtml+'</td>'
+      +'<td class="agc-mode">'+modeHtml+'</td>'
+      +'<td class="agc-focus">'+focoHtml+'</td>'
+      +'<td class="agc-age" title="'+_agEsc((p.updated?new Date(p.updated*1000).toLocaleString():''))+'">'+fmtAge2(r.age).replace(/^hace /,'')+'</td>'
+      +'</tr>';
+  }).join('');
+  return '<table class="ag-table"><thead><tr>'
+    +'<th class="agc-st">Estado</th><th class="agc-name">Agente</th><th class="agc-machine">Máquina</th>'
+    +'<th class="agc-project">Proyecto</th><th class="agc-mode">Modo</th>'
+    +'<th class="agc-focus">En qué anda</th><th class="agc-age">Hace</th>'
+    +'</tr></thead><tbody>'+rows+'</tbody></table>';
+}
 async function renderAgentes(){
   const el=document.getElementById('agentes'); if(!el) return;
   try{
@@ -532,52 +669,28 @@ async function renderAgentes(){
         peticiones[persona]={n:its.length, txt:its.map(it=>(it.text||'').replace(/\s+/g,' ').trim()).join(' · ').slice(0,240)};
       }catch(e){ peticiones[persona]={n:0,txt:''}; }
     }));
-    el.innerHTML=list.map(p=>{
-      const age=now-(p.updated||0), online=age<ONLINE; if(online) on++;
+    // Normaliza cada agente a un registro con todo lo calculado; luego se pinta como
+    // TARJETA o como FILA de LISTADO según el modo elegido (mismos datos, dos vistas).
+    const recs=list.map(p=>{
+      const age=now-(p.updated||0), online=age<ONLINE;
       const pf=_AGPF[p.persona], av=pf?('/wallpapers/'+pf+'.png'):'';
       const foco=p.focus?_agEsc(p.focus):'sin reportar foco';
-      // ESTADO actual del agente, JUNTO AL NOMBRE: deciding > offline > busy > idle.
       const _dec=(typeof p.decisions==='number')?p.decisions:0;
       const _da=(typeof p.decide_at==='number')?p.decide_at:0;
       const _auto=p.mode==='autonomo';
-      let estado;
-      if(_da>now){
-        estado='<span class="ag-state deciding" data-da="'+_da+'" data-p="'+_agEsc(p.persona||'')+'" data-m="'+_agEsc(p.machine||'')+'" title="Decidiendo — countdown a 0">'
-          +'<button type="button" class="cd-adj" data-adj="-60" title="acelerar 1 min">−</button>'
-          +'<span class="ag-cd">⏱ …</span>'
-          +'<button type="button" class="cd-adj" data-adj="60" title="retrasar 1 min">+</button>'
-          +'</span>';
-      } else if(!online){
-        estado='<span class="ag-state off" title="Desconectado">offline</span>';
-      } else if(p.focus){
-        estado='<span class="ag-state busy" title="Trabajando en algo">busy</span>';
-      } else {
-        estado='<span class="ag-state idle" title="Conectado, sin tarea activa">idle</span>';
-      }
-      // Nº de instancias ONLINE de esta persona a la vez → "Morfeo (2)"; nada si solo hay una.
       const _nInst=(onlineMachines[p.persona]||{size:1}).size||1;
-      const _nameSfx=_nInst>1?(' ('+_nInst+')'):'';
-      // Peticiones del ARQUITECTO (Carlos) pendientes para esta persona.
       const _pet=peticiones[p.persona]||{n:0,txt:''};
-      const _petHtml=_pet.n>0?(' · <span class="ag-pet" title="'+_agEsc(_pet.txt)+'">📩 '+_pet.n+' petici'+(_pet.n>1?'ones':'ón')+'</span>'):'';
-      // Contador POR SU CUENTA + peticiones del arquitecto AL LADO → ABAJO DEL TODO.
-      const contador='<div class="ag-count">'+(_auto?'🟢':'⚪')+' <b>'+_dec+'</b> por su cuenta'+(_auto?'':' · modo pasivo')+_petHtml+'</div>';
-      // Proyecto + RESPONSABLE (agente), independiente de la máquina: "📁 www.admira.live // Morfeo".
       const _proj = p.project || ((projByP[p.persona]||{}).v) || DEFPROJ[p.persona] || '';
-      const proyecto=_proj?'<div class="ag-project">📁 '+_agEsc(_proj)+' <span class="ag-owner">// '+_agEsc(p.persona||'?')+'</span></div>':'';
-      // (Retirado el botón "diario del día" para ganar una línea a la descripción de la tarea.)
-      const botones='';
       const mine = !!yo && ((yo.persona && p.persona===yo.persona)
         || (yo.maquina && _yoN(p.machine)===_yoN(yo.maquina))
         || (yo.nombre && _yoN(p.machine)===_yoN(yo.nombre)));
-      return '<div class="agente'+(online?'':' off')+(mine?' mine':'')+'">'
-        +(av?('<img class="ag-av" src="'+av+'" alt="" onerror="this.style.visibility=\'hidden\'">'):'<div class="ag-av"></div>')
-        +'<div class="ag-body"><div class="ag-top"><span class="ag-dot '+(online?'on':'off')+'"></span>'
-        +'<span class="ag-name">'+_agEsc(p.persona||'?')+_nameSfx+'</span>'+estado+(mine?'<span class="ag-you">TÚ</span>':'')+'</div>'
-        +'<div class="ag-meta">'+_agEsc(p.runtime||'')+' · '+_agEsc(p.machine||'')+' · '+fmtAge2(age)+'</div>'
-        +proyecto
-        +'<div class="ag-focus'+(p.focus?'':' none')+'">'+foco+'</div>'+contador+botones+'</div></div>';
-    }).join('');
+      return {p,age,online,pf,av,foco,_dec,_da,_auto,_nInst,_pet,_proj,mine};
+    });
+    on=recs.filter(r=>r.online).length;
+    const isList=(localStorage.getItem('vp-view')==='list');
+    el.classList.toggle('as-list', isList);
+    if(isList) el.innerHTML=renderAgentList(recs, now);
+    else el.innerHTML=recs.map(r=>renderAgentCard(r, now)).join('');
     _tickCD();  // pinta el countdown ya (y cada segundo vía el interval de abajo)
     const c=document.getElementById('agCount'); if(c) c.textContent=on+' online';
   }catch(e){ if(!el.querySelector('.agente')) el.innerHTML='<div class="empty">No se pudo leer la presencia.</div>'; }
@@ -711,6 +824,22 @@ $('#yoChip').onclick=openPick;
 $('#pickList').onclick=e=>{ const b=e.target.closest('button[data-id]'); if(!b) return; $('#pick').classList.remove('on'); setYo({maquina:b.dataset.id,id:b.dataset.id,nombre:b.dataset.n,fuente:'elegido'},true); };
 $('#pickClose').onclick=()=>$('#pick').classList.remove('on');
 resolveYo();
+
+/* Toggle Tarjetas ⇄ Listado (persistente en localStorage 'vp-view'; accesible con aria-pressed).
+   Al cambiar, re-pinta los agentes al instante sin esperar al refresco de 3s. */
+(function(){
+  function paintToggle(){
+    var v=localStorage.getItem('vp-view')==='list'?'list':'cards';
+    var bc=document.getElementById('vpViewCards'), bl=document.getElementById('vpViewList');
+    if(bc) bc.setAttribute('aria-pressed', v==='cards'?'true':'false');
+    if(bl) bl.setAttribute('aria-pressed', v==='list'?'true':'false');
+  }
+  function setView(v){ localStorage.setItem('vp-view', v==='list'?'list':'cards'); paintToggle(); if(typeof renderAgentes==='function') renderAgentes(); }
+  var bc=document.getElementById('vpViewCards'), bl=document.getElementById('vpViewList');
+  if(bc) bc.addEventListener('click',function(){ setView('cards'); });
+  if(bl) bl.addEventListener('click',function(){ setView('list'); });
+  paintToggle();
+})();
 
 tick();
 setInterval(tick, 3000);
@@ -888,7 +1017,9 @@ setInterval(tick, 3000);
   function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
   function pad(n){ return (n<10?'0':'')+n; }
   var sec=document.getElementById('dormias');
-  document.getElementById('dormiasCerrar').addEventListener('click',function(){ sec.style.display='none'; });
+  var _dc=document.getElementById('dormiasCerrar');
+  _dc.addEventListener('click',function(){ sec.style.display='none'; });
+  _dc.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); sec.style.display='none'; } });
   async function run(){
     var now=Math.floor(Date.now()/1000);
     var last=parseInt(localStorage.getItem(KEY)||'0',10)||0;

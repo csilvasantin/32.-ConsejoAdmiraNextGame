@@ -6,7 +6,7 @@
   <title>ADmiraNeXT | Status — Constelación de la flota</title>
   <meta name="description" content="Admira no tiene centro — es un universo que se expande. Estado en vivo de la flota AdmiraNeXT: cada ordenador es una estrella con su proyecto y su foco.">
   <meta name="admiranext-version" content="AdmiraNext v26.07.07.12">
-  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.11.r9 (fix: los toggles de capas también frenan los satélites SINTÉTICOS de la vista TODO)">
+  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.11.r10 (anti-pisado de etiquetas: fases/velocidades orbitales únicas por satélite + omisión de rótulos que chocan)">
   <meta name="admiranext-status-build" content="oraculo-triad-1">
   <!-- Orbitron: tipografía tecnológica para la versión del pie del riel (Carlos, 2026-07-11) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -541,7 +541,7 @@
         <span class="pf-uchev" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
       </button>
     </div>
-    <div class="pf-ver" id="verRail"><span id="verText">v.2026.07.11.r9</span></div>
+    <div class="pf-ver" id="verRail"><span id="verText">v.2026.07.11.r10</span></div>
   </aside>
   <!-- r15: asa de redimensionado del riel izquierdo (doble clic = restaurar) -->
   <div class="pf-rz" id="rzLeft" title="Arrastra para redimensionar · doble clic restaura" aria-hidden="true"></div>
@@ -796,6 +796,8 @@
   // («a veces va muy rápido» — Carlos). Persistido en localStorage.
   const ORBIT_LS_KEY='admiranext-status-orbit-speed';
   let ORBIT_SPEED=(()=>{ try{ const v=parseFloat(localStorage.getItem(ORBIT_LS_KEY)); return (isNaN(v)||v<0||v>2)?0.5:v; }catch(e){ return 0.5; } })();
+  // Anti-pisado de etiquetas: cajas ya pintadas en el frame actual (se vacía en cada render)
+  const LBL_BOXES=[];
   // Zoom de RUEDA: multiplica al zoom de foco. ZSM = zoom suavizado (render),
   // evita saltos y hace de histéresis natural para el nivel de detalle.
   let WHEEL_ZOOM=1, ZSM=1;
@@ -1141,7 +1143,15 @@
         // r11: × ORBIT_SPEED (slider AVANZADO) y congelado si está en pausa
         // por click (el subárbol orbita congelado: sigue amarrado a su punto,
         // que solo se mueve si se mueve el padre).
-        const spd  = (a.tier==='infra' ? 0.00110 : a.tier==='sub' ? 0.00085 : 0.00060) * ORBIT_SPEED;
+        // Fase inicial y velocidad ÚNICAS por satélite (hash del id): los hermanos
+        // no arrancan apilados en el mismo ángulo ni orbitan en fase, así sus
+        // textos no viajan pegados (ajuste anti-pisado, Carlos 2026-07-11).
+        if(a._spdJit===undefined){
+          let h=0; const s=String(a.id); for(let q=0;q<s.length;q++) h=(h*31+s.charCodeAt(q))>>>0;
+          if(a._orb===undefined) a._orb=(h%6283)/1000;   // 0..2π determinista por id
+          a._spdJit=0.78+((h>>>8)%45)/100;               // ×0,78..1,22 por id
+        }
+        const spd  = (a.tier==='infra' ? 0.00110 : a.tier==='sub' ? 0.00085 : 0.00060) * ORBIT_SPEED * a._spdJit;
         if(!FROZEN.has(a.id)) a._orb = (a._orb||0) + dt*spd;
         const rF   = a.tier==='infra' ? 0.034 : a.tier==='sub' ? 0.058 : 0.115;
         const rSat = Math.min(W,H) * rF * ZSM;
@@ -1405,6 +1415,7 @@
     lodUpdate(ZSM);
     const fz = Math.max(0.9, Math.min(1.7, ZSM));
     let bpmSum=0, bpmN=0;   // para el audio ambiente (BPM medio de la flota viva)
+    LBL_BOXES.length=0;     // anti-pisado: cajas de etiquetas pintadas este frame
     for(const n of nodes){
       // en modo draw, los nodos sobrantes quedan tenues (orbitando)
       const dimNode = DRAW_ACTIVE && n._inShape===false;
@@ -1469,6 +1480,18 @@
       const isSat = !!n.parentId;
       const lblPx = Math.round((isSat ? 9 : 11)*fz);
       ctx.font = (isHover?'700 ':'')+lblPx+'px JetBrains Mono, monospace';
+      // ANTI-PISADO: si la etiqueta cae sobre otra ya pintada este frame, se omite
+      // (el nodo queda visible; su detalle sale al pasar el ratón). El hover SIEMPRE
+      // se pinta. Prioridad natural = orden de pintado (máquina → principales → capas).
+      const _bw = Math.max(ctx.measureText(n.label).width + 10, 80*fz);
+      const _bh = (lvl>=2 ? (n.online&&n.since ? 46 : 34) : 16)*fz;
+      const _bx = n.x - _bw/2, _by = n.y + r + 4;
+      if(!isHover){
+        let _clash=false;
+        for(const b of LBL_BOXES){ if(_bx<b.x+b.w && _bx+_bw>b.x && _by<b.y+b.h && _by+_bh>b.y){ _clash=true; break; } }
+        if(_clash){ continue; }
+      }
+      LBL_BOXES.push({x:_bx, y:_by, w:_bw, h:_bh});
       ctx.textAlign='center';
       ctx.fillStyle = n.online ? (isHover?'#eafcff':'#bfe9f2') : '#6f8090';
       ctx.shadowColor=n.online?'rgba(34,230,255,.5)':'transparent'; ctx.shadowBlur=n.online?6:0;
@@ -2180,7 +2203,7 @@
   function updateVersionInfo(){
     const verEl = document.getElementById('verRail');
     const selloEl = document.getElementById('sello');
-    const baseVer = 'v.2026.07.11.r9';
+    const baseVer = 'v.2026.07.11.r10';
     let focusLabel = FOCUS_MACHINE ? FOCUS_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
     let viewerLabel = VIEWER_MACHINE ? VIEWER_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
 

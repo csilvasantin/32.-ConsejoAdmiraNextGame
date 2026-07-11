@@ -6,7 +6,7 @@
   <title>ADmiraNeXT | Status — Constelación de la flota</title>
   <meta name="description" content="Admira no tiene centro — es un universo que se expande. Estado en vivo de la flota AdmiraNeXT: cada ordenador es una estrella con su proyecto y su foco.">
   <meta name="admiranext-version" content="AdmiraNext v26.07.07.12">
-  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.11.r8 (AVANZADO: toggles Subagentes/Infraagentes para centrarse en los principales)">
+  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.11.r9 (fix: los toggles de capas también frenan los satélites SINTÉTICOS de la vista TODO)">
   <meta name="admiranext-status-build" content="oraculo-triad-1">
   <!-- Orbitron: tipografía tecnológica para la versión del pie del riel (Carlos, 2026-07-11) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -541,7 +541,7 @@
         <span class="pf-uchev" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
       </button>
     </div>
-    <div class="pf-ver" id="verRail"><span id="verText">v.2026.07.11.r8</span></div>
+    <div class="pf-ver" id="verRail"><span id="verText">v.2026.07.11.r9</span></div>
   </aside>
   <!-- r15: asa de redimensionado del riel izquierdo (doble clic = restaurar) -->
   <div class="pf-rz" id="rzLeft" title="Arrastra para redimensionar · doble clic restaura" aria-hidden="true"></div>
@@ -2180,7 +2180,7 @@
   function updateVersionInfo(){
     const verEl = document.getElementById('verRail');
     const selloEl = document.getElementById('sello');
-    const baseVer = 'v.2026.07.11.r8';
+    const baseVer = 'v.2026.07.11.r9';
     let focusLabel = FOCUS_MACHINE ? FOCUS_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
     let viewerLabel = VIEWER_MACHINE ? VIEWER_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
 
@@ -2407,7 +2407,8 @@
         const mainId = idOf[mainNn];
         const hasSub = ags.some(a => norm(a.persona).startsWith('sub') && agentKin(a.persona).parents.includes(mainNn));
         const hasInfra = ags.some(a => norm(a.persona).startsWith('infra') && (agentKin(a.persona).parents.includes('sub'+mainNn) || agentKin(a.persona).parents.includes(mainNn)));
-        if(!hasSub){
+        // Capas de agentes (AVANZADO): si el usuario oculta subs/infras, tampoco se sintetizan
+        if(!hasSub && SHOW_SUBS){
           const subNn = 'sub' + mainNn;
           const subId = mid + '|' + subNn + '|' + norm(mainA.runtime||'');
           list.push({
@@ -2420,7 +2421,7 @@
             _synthetic:true
           });
         }
-        if(!hasInfra){
+        if(!hasInfra && SHOW_INFRA){
           const infraNn = 'infra' + mainNn;
           // parent should be the sub if we just added it, or main
           const subIdForParent = mid + '|' + 'sub' + mainNn + '|' + norm(mainA.runtime||'');
@@ -2447,7 +2448,8 @@
           const subExists = list.some(n => n.id && n.id.includes('subsmith'));
           if (!subExists) {
             const subId = 'all:macbookpro16|subsmith|grok';
-            list.push({
+            // Capas de agentes (AVANZADO): cada capa forzada respeta su toggle
+            if(SHOW_SUBS) list.push({
               id: subId, label: 'subSmith', sub: 'Grok', kindFor:'all-agent',
               parentId: mainId, tier:'sub',
               online: true, updated: Math.floor(Date.now()/1000), foco:'Ejecuta las tareas dirigidas por el agente principal', mode:'autonomo',
@@ -2457,9 +2459,9 @@
               _synthetic:true
             });
             const infraId = 'all:macbookpro16|infrasmith|grok';
-            list.push({
+            if(SHOW_INFRA) list.push({
               id: infraId, label: 'infraSmith', sub: 'Grok', kindFor:'all-agent',
-              parentId: subId, tier:'infra',
+              parentId: SHOW_SUBS ? subId : mainId, tier:'infra',
               online: true, updated: Math.floor(Date.now()/1000), foco:'Reporta y documenta lo realizado por el equipo', mode:'pasivo',
               proj: '', missionLine:'Infraagente (reportero y documentador)', decisions:0, tokens:0, reqs:0, count:1,
               since:0, sinceExact:false, cpu:0,

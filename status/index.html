@@ -6,7 +6,7 @@
   <title>ADmiraNeXT | Status — Constelación de la flota</title>
   <meta name="description" content="Admira no tiene centro — es un universo que se expande. Estado en vivo de la flota AdmiraNeXT: cada ordenador es una estrella con su proyecto y su foco.">
   <meta name="admiranext-version" content="AdmiraNext v26.07.07.12">
-  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.11.r12 (Orbitron global + etiquetas 3 niveles + versión apilada bajo el nombre en la pestaña de usuario)">
+  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.11.r13 (pestaña usuario sticky con cajón abierto + 🐣 draw pollita)">
   <meta name="admiranext-status-build" content="oraculo-triad-1">
   <!-- Orbitron: tipografía tecnológica para la versión del pie del riel (Carlos, 2026-07-11) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -313,7 +313,12 @@
     /* pie del riel — bloque USUARIO (patrón menú de cuenta de Claude Code): fila
        avatar+nombre+engranaje+chevron que despliega el submenú de sesión hacia arriba;
        debajo de ella queda SOLO la versión. */
-    .pf-user{margin-top:auto;position:relative;padding-top:10px;border-top:1px solid rgba(34,230,255,.12)}
+    /* sticky: si el riel se encoge (cajón EXPERTO abierto) y su contenido desborda,
+       la pestaña usuario+versión queda SIEMPRE visible pegada al borde inferior
+       (antes caía al pliegue del scroll y el cajón la tapaba). Fondo opaco para
+       que el contenido scrolleado pase por detrás sin transparentarse. */
+    .pf-user{margin-top:auto;position:sticky;bottom:-18px;z-index:3;padding-top:10px;padding-bottom:14px;
+      border-top:1px solid rgba(34,230,255,.12);background:rgba(3,8,16,.96)}
     .pf-user + .pf-ver{margin-top:0;border-top:0;padding-top:8px}
     .pf-urow{display:flex;align-items:center;gap:9px;width:100%;text-align:left;font-family:inherit;
       font-size:10.5px;letter-spacing:.08em;color:var(--text-dim);background:transparent;
@@ -540,7 +545,7 @@
       </div>
       <button class="pf-urow" id="userRow" type="button" aria-expanded="false" aria-controls="userMenu" title="Sesión">
         <span class="pf-uava" id="userAva" aria-hidden="true">?</span>
-        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.11.r12</span></span>
+        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.11.r13</span></span>
         <span class="pf-ugear" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg></span>
         <span class="pf-uchev" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
       </button>
@@ -2226,7 +2231,7 @@
     // el texto completo con viewer/focus vive en el sello de la esquina inferior.
     const verEl = document.getElementById('verText');
     const selloEl = document.getElementById('sello');
-    const baseVer = 'v.2026.07.11.r12';
+    const baseVer = 'v.2026.07.11.r13';
     let focusLabel = FOCUS_MACHINE ? FOCUS_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
     let viewerLabel = VIEWER_MACHINE ? VIEWER_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
 
@@ -2724,6 +2729,34 @@
       ],
       // línea del cazo: cuadrilátero + mango
       edges:[[0,1],[1,2],[2,3],[3,0],[3,4],[4,5],[5,6]],
+    },
+    // ── 🐣 huevo de pascua de Carlos (2026-07-11): pollita saliendo del huevo ──
+    pollita: {
+      title:'POLLITA · HUEVO DE PASCUA',
+      pts:[
+        [0.30,0.34],[0.26,0.22],[0.34,0.10],[0.50,0.05],[0.66,0.10],[0.74,0.22],[0.70,0.34], // 0-6 cáscara superior (cúpula)
+        [0.64,0.28],[0.58,0.36],[0.52,0.28],[0.46,0.36],[0.40,0.28],[0.34,0.36],             // 7-12 zigzag de la cáscara rota
+        [0.24,0.44],[0.24,0.54],                                                             // 13-14 mejilla izquierda
+        [0.76,0.44],[0.76,0.52],                                                             // 15-16 mejilla derecha
+        [0.87,0.52],[0.83,0.58],[0.88,0.62],                                                 // 17-19 alita derecha
+        [0.28,0.62],[0.34,0.56],[0.40,0.64],[0.46,0.56],[0.52,0.64],[0.58,0.56],[0.64,0.64],[0.74,0.62], // 20-27 borde zigzag del cuenco
+        [0.24,0.74],[0.30,0.88],[0.50,0.95],[0.70,0.88],[0.76,0.74],                         // 28-32 cuenco del huevo
+        [0.41,0.385],[0.449,0.407],[0.449,0.452],[0.41,0.475],[0.371,0.452],[0.371,0.407],   // 33-38 ojo izquierdo
+        [0.59,0.385],[0.629,0.407],[0.629,0.452],[0.59,0.475],[0.551,0.452],[0.551,0.407],   // 39-44 ojo derecho
+        [0.50,0.49],[0.535,0.515],[0.50,0.54],[0.465,0.515]                                  // 45-48 pico (rombo)
+      ],
+      edges:[
+        [0,1],[1,2],[2,3],[3,4],[4,5],[5,6],                                  // cúpula
+        [6,7],[7,8],[8,9],[9,10],[10,11],[11,12],[12,0],                      // zigzag cáscara
+        [0,13],[13,14],[14,20],                                               // mejilla izq → cuenco
+        [6,15],[15,16],                                                       // mejilla der
+        [16,17],[17,18],[18,19],[19,27],                                      // alita
+        [20,21],[21,22],[22,23],[23,24],[24,25],[25,26],[26,27],              // borde del cuenco
+        [20,28],[28,29],[29,30],[30,31],[31,32],[32,27],                      // cuenco
+        [33,34],[34,35],[35,36],[36,37],[37,38],[38,33],                      // ojo izq
+        [39,40],[40,41],[41,42],[42,43],[43,44],[44,39],                      // ojo der
+        [45,46],[46,47],[47,48],[48,45]                                       // pico
+      ],
     },
     unicornio: {
       title:'UNICORNIO · CONSTELACIÓN',
@@ -3799,6 +3832,7 @@
         break;
       }
       case 'clear': cliOut.innerHTML=''; break;
+      case 'dibujar':   // alias en español («dibujar pollita» — huevo de pascua de Carlos)
       case 'draw': {
         // `draw free` → dibujo libre con el ratón.
         if(a0==='free'){

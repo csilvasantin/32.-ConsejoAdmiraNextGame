@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>¿En qué estamos? · AdmiraNeXT</title>
+<title>Misiones · AdmiraNeXT</title>
 <script src="/admira-bar.js?v=20260705-rails"></script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <style>
@@ -133,8 +133,8 @@
 <header>
   <span class="logo">🛰️</span>
   <div>
-    <h1>¿EN QUÉ ESTAMOS?</h1>
-    <div class="sub">Vista Previa · AdmiraNeXT · silicio ↔ carbono</div>
+    <h1>MISIONES</h1>
+    <div class="sub">¿En qué estamos? · AdmiraNeXT · silicio ↔ carbono</div>
   </div>
   <span class="spacer"></span>
   <span class="yo" id="yoChip" title="Quién eres (clic para cambiar)" style="display:none"><img class="av" id="yoAv" alt="" style="display:none"><span id="yoLab">—</span> <small id="yoOs"></small><span class="chg">cambiar</span></span>
@@ -142,7 +142,7 @@
   <span class="pill" id="agePill">—</span>
 </header>
 
-<div id="modo-bar">
+<div id="modo-bar" role="group" aria-label="Modo de equipo de la flota">
   <span class="modo-lab">🎛️ MODO DE EQUIPO</span>
   <button type="button" class="modo-opt" data-mode="en-que-andamos">👀 En qué andamos</button>
   <button type="button" class="modo-opt" data-mode="tu-por-tu-cuenta">🤖 Tú por tu cuenta</button>
@@ -180,7 +180,7 @@
 </style>
 <section class="dormias" id="dormias" style="display:none">
   <div class="dormias-h">🌙 <span>Mientras no estabas</span><span class="lapso" id="dormiasLapso"></span>
-    <span class="cerrar" id="dormiasCerrar">✕</span></div>
+    <span class="cerrar" id="dormiasCerrar" role="button" tabindex="0" aria-label="Cerrar aviso «Mientras no estabas»">✕</span></div>
   <ul class="dormias-list" id="dormiasList"></ul>
 </section>
 
@@ -263,11 +263,12 @@
   <div class="tab-list" id="tabList"><div class="empty">Cargando tareas…</div></div>
 </section>
 <script>
-/* Tablero de tareas de la flota. LECTURA: /api/tasks (fuente única de Neo). ESCRITURA:
+/* Tablero de tareas de la flota. LECTURA: /api/public/tasks (feed público, sin auth — el
+   /api/tasks gateado devolvía 401 al navegador sin sesión → el tablero salía VACÍO). ESCRITURA:
    botones take/doing/done → proxy admira-estado /task-update (verifica el gate de Google y
    reenvía al backend con la key SERVER-SIDE). Sin exponer secretos en el JS de cliente. */
 (function(){
-  var API='https://admira-telegram.csilvasantin.workers.dev/api/tasks';
+  var API='https://admira-telegram.csilvasantin.workers.dev/api/public/tasks';
   var PROXY='https://admira-estado.csilvasantin.workers.dev/task-update';
   var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});};
   function yoName(){ try{ return (typeof YO!=='undefined'&&YO&&YO.persona)?YO.persona:''; }catch(e){ return ''; } }
@@ -469,7 +470,7 @@
       <span class="carb-cli-tgt" id="carbCliTgt">›</span>
       <input id="carbCliInput" type="text" autocomplete="off" spellcheck="false"
         placeholder="pulsa una necesidad y responde aquí (Enter envía al LLM)…">
-      <button type="button" id="carbCliSend" title="Enviar la respuesta al LLM">➤</button>
+      <button type="button" id="carbCliSend" title="Enviar la respuesta al LLM" aria-label="Enviar la respuesta al LLM">➤</button>
     </div>
   </div>
   <div class="box riesgos"><h2>⚠️ Riesgos abiertos</h2><ul id="riesgos"></ul></div>
@@ -528,6 +529,10 @@ function render(d){
   const por=$('#por'); por.textContent=d.por||'silicio';
   por.className='chip '+((d.por==='carbono')?'carbono':'silicio');
   $('#agePill').textContent=fmtAge(d.actualizado);
+  // Frescura: si 'caduca' (ISO) < ahora, marca el estado como posiblemente desfasado.
+  const ap=$('#agePill'), cad=d.caduca?new Date(d.caduca).getTime():NaN;
+  if(!isNaN(cad)&&cad<Date.now()){ ap.textContent+=' · ⚠️ posiblemente desfasado'; ap.title='caduca '+d.caduca+' (estado de proyecto, no presencia viva)'; }
+  else if(!isNaN(cad)){ ap.title='fresco hasta '+d.caduca; }
   $('#links').innerHTML=(d.enlaces||[]).map(l=>'<a href="'+l.url+'" target="_blank">'+String(l.label).replace(/</g,'&lt;')+'</a>').join('');
 }
 /* Fuente del estado: si hay sesión del gate (admira_gate.cred), lee del worker
@@ -558,9 +563,9 @@ function _agEstadoBadge(r, now){
   const p=r.p;
   if(r._da>now){
     return '<span class="ag-state deciding" data-da="'+r._da+'" data-p="'+_agEsc(p.persona||'')+'" data-m="'+_agEsc(p.machine||'')+'" title="Decidiendo — countdown a 0">'
-      +'<button type="button" class="cd-adj" data-adj="-60" title="acelerar 1 min">−</button>'
+      +'<button type="button" class="cd-adj" data-adj="-60" title="acelerar 1 min" aria-label="Acelerar la decisión 1 minuto">−</button>'
       +'<span class="ag-cd">⏱ …</span>'
-      +'<button type="button" class="cd-adj" data-adj="60" title="retrasar 1 min">+</button>'
+      +'<button type="button" class="cd-adj" data-adj="60" title="retrasar 1 min" aria-label="Retrasar la decisión 1 minuto">+</button>'
       +'</span>';
   }
   if(!r.online) return '<span class="ag-state off" title="Desconectado">offline</span>';
@@ -635,6 +640,9 @@ async function renderAgentes(){
     // máquina/sub NO borre la tarea principal (con varias instancias el proyecto parpadeaba).
     const projByP={}; (d.presence||[]).forEach(p=>{ const k=(p.persona||p.machine||'?');
       if(p.project && (now-(p.updated||0))<STALE && (!projByP[k]||(p.updated||0)>(projByP[k].u||0))) projByP[k]={v:p.project,u:p.updated||0}; });
+    // Fix B — proyecto por defecto por persona (último fallback si presence/projByP vienen vacíos),
+    // para que ninguna tarjeta quede sin "📁 proyecto". Refleja el reparto de carriles del equipo.
+    const DEFPROJ={Neo:'www.admira.live',Morfeo:'www.admira.live',Trinity:'pixeria.com',Oráculo:'yarig.ai',Smith:'ainimation.studio',Cypher:'ainimation.studio'};
     // Filtra rancias: fuera los muertos (>12h) y los offline SIN foco (fantasmas de
     // sesiones viejas). Así el tablero muestra solo agentes activos/recientes con algo que decir.
     const list=Object.values(byP)
@@ -672,7 +680,7 @@ async function renderAgentes(){
       const _auto=p.mode==='autonomo';
       const _nInst=(onlineMachines[p.persona]||{size:1}).size||1;
       const _pet=peticiones[p.persona]||{n:0,txt:''};
-      const _proj = p.project || ((projByP[p.persona]||{}).v) || '';
+      const _proj = p.project || ((projByP[p.persona]||{}).v) || DEFPROJ[p.persona] || '';
       const mine = !!yo && ((yo.persona && p.persona===yo.persona)
         || (yo.maquina && _yoN(p.machine)===_yoN(yo.maquina))
         || (yo.nombre && _yoN(p.machine)===_yoN(yo.nombre)));
@@ -1009,7 +1017,9 @@ setInterval(tick, 3000);
   function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
   function pad(n){ return (n<10?'0':'')+n; }
   var sec=document.getElementById('dormias');
-  document.getElementById('dormiasCerrar').addEventListener('click',function(){ sec.style.display='none'; });
+  var _dc=document.getElementById('dormiasCerrar');
+  _dc.addEventListener('click',function(){ sec.style.display='none'; });
+  _dc.addEventListener('keydown',function(e){ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); sec.style.display='none'; } });
   async function run(){
     var now=Math.floor(Date.now()/1000);
     var last=parseInt(localStorage.getItem(KEY)||'0',10)||0;

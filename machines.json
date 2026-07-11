@@ -117,43 +117,19 @@
       "status": "online",
       "lastSeen": "2026-03-23T21:00:00Z",
       "currentFocus": "SSH verificado — accesible desde Mac Mini (user: Carlos)",
-      "note": "Tailscale: macbookair16.tail48b61c.ts.net",
+      "note": "Tailscale: macbookair16plata.tail48b61c.ts.net",
       "ssh": {
         "enabled": true,
         "user": "csilvasantin",
-        "host": "macbookair16.tail48b61c.ts.net",
-        "host_local": "MacBookAir16.local",
+        "host": "macbookair16plata.tail48b61c.ts.net",
+        "host_local": "MacBookAir16plata.local",
         "ip_tailscale": "100.99.176.126",
-        "connect_lan": "ssh csilvasantin@MacBookAir16.local",
+        "connect_lan": "ssh csilvasantin@MacBookAir16plata.local",
         "connect_tailscale": "ssh csilvasantin@100.99.176.126"
       },
       "mac_address": "fe:e3:3e:4d:b6:70",
       "mac_discovered_at": "2026-05-07T09:31:23Z",
       "mac_source": "ssh:ifconfig (via macmini)"
-    },
-    {
-      "id": "admira-macbookairluna",
-      "unitType": "council",
-      "color": "azul",
-      "member": "Cesar",
-      "role": "Coordinacion y automatizacion",
-      "name": "MacBook Air Luna (Cesar)",
-      "machineRole": "Equipo principal",
-      "location": "Madrid",
-      "platform": "macOS",
-      "status": "offline",
-      "lastSeen": "2026-03-23T20:50:00Z",
-      "currentFocus": "Offline — ultima conexion hace minutos",
-      "note": "Tailscale: macbookairazul.tail48b61c.ts.net",
-      "ssh": {
-        "enabled": true,
-        "user": "csilvasantin",
-        "host": "macbookairazul.tail48b61c.ts.net",
-        "ip_tailscale": "100.84.81.45",
-        "connect_tailscale": "ssh csilvasantin@100.84.81.45"
-      },
-      "mac_address": "b2:d4:31:43:3d:5d",
-      "mac_discovered_at": "2026-06-28T16:49:38.553170Z"
     },
     {
       "id": "admira-macbook-carla",

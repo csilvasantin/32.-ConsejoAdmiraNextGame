@@ -162,7 +162,7 @@ function run(machine, cmd, timeoutMs) {
  * para enchufar el player propio. Digital Signage y control remoto de la flota
  * funcionan en ambos SO (macOS y Linux/Ubuntu de escritorio). */
 function sh(s) { return "'" + String(s).replace(/'/g, "'\\''") + "'"; } // single-quote safe
-function platOf(m) { return String((m && m.platform) || 'macos').toLowerCase().startsWith('lin') ? 'linux' : 'macos'; }
+function platOf(m) { const p = String((m && m.platform) || 'macos').toLowerCase(); return p.startsWith('win') ? 'windows' : (p.startsWith('lin') ? 'linux' : 'macos'); }
 
 // Prefijo para comandos gráficos por SSH en Linux: una sesión SSH no-interactiva
 // no hereda DISPLAY / XDG_RUNTIME_DIR, así que los reconstruimos (X11 :0 y el
@@ -298,6 +298,10 @@ const ACTIONS = {
       'printf "%s" "$N" > "$D/capture.req"; ' +
       'for i in $(seq 1 30); do [ "$(head -1 "$O" 2>/dev/null)" = "$N" ] && break; sleep 0.3; done; ' +
       'if [ "$(head -1 "$O" 2>/dev/null)" = "$N" ]; then tail -n +2 "$O"; else echo ERR_NO_CAPTURE; fi',
+    // Windows: el demonio FleetCapture.exe (sesión interactiva) captura; el hub
+    // dispara el handshake ejecutando FleetTrigger.exe, que imprime el base64 por
+    // stdout (mismo formato que macOS/linux). DefaultShell del Zenbook = PowerShell.
+    windows: () => '& "$env:USERPROFILE\\.fleet\\FleetTrigger.exe"',
     linux: () =>
       LGUI +
       'T="$(mktemp).jpg"; ' +

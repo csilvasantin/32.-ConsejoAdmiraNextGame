@@ -1,0 +1,10 @@
+/* ============================================================
+   ADcelerate · theme-retro.css  →  COMPAT / REDIRECT
+   ============================================================
+   El tema retro se renombró a «NEON» (vista 1 de 3 del contrato de
+   temas). Este fichero se mantiene por compatibilidad con enlaces
+   antiguos y re-exporta la capa NEON íntegra.
+   Nuevo: usa assets/theme-neon.css (o el conmutador de temas).
+   Ver docs/01-diseno.md §9.
+   ============================================================ */
+@import "theme-neon.css";

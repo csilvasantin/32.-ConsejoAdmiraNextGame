@@ -1,9 +1,11 @@
 <!DOCTYPE html>
 <!-- control · v2026.07.02c · icono = fondo (personaje) del equipo SIEMPRE, nunca el screenshot en vivo · wallpapers reales subidos por máquina -->
+<!-- control-mensajeria · v.2026.07.08.r1 · 💬 mensaje por equipo + 📣 a todos → router de encargos AdmiraNeXT (ACK + traza Telegram) · auth = gate Google · fix: refresco silencioso de cred + re-login (control remoto) -->
+<!-- control-pantallas · v.2026.07.10.r2 · MUDANZA: la sección «Pantallas · Players» (plano de CONTENIDO: /signage/screens + /signage/now + mando M8 /control/cmd + doble tick) se movió a su PÁGINA PROPIA → /players/. /control queda solo para el plano de MÁQUINAS. -->
 <html lang="es">
 <head>
     <script src="/admira-bar.js?v=20260705-rails"></script>
-    <script src="/auth-gate.js"></script>
+    <script src="/auth-gate.js?v=20260708-authfix"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="/failover.js"></script>
@@ -383,6 +385,46 @@
   @keyframes crtflick{0%,95%,100%{opacity:1}96%{opacity:.9}98%{opacity:.97}}
   @keyframes crtpwr{0%{transform:scale(1,.003);filter:brightness(3)}60%{transform:scale(1,.02)}100%{transform:scale(1,1);filter:brightness(1)}}
   .crt-screen.pwr{animation:crtpwr .4s ease-out}
+  /* ── mensajería a equipos (💬 / 📣) ── */
+  .card .acts button[data-a="msg"]{border-color:var(--acc2);color:var(--acc2);font-weight:700}
+  .card .msgbadge{display:none;align-items:center;gap:6px;font-size:11px;margin-top:2px;padding:3px 8px;border:1px solid var(--line);border-radius:8px;background:rgba(91,214,192,.06);cursor:pointer}
+  .card .msgbadge.show{display:inline-flex}
+  .card .msgbadge:hover{border-color:var(--acc2)}
+  .card .msgbadge .mb-dot{width:7px;height:7px;border-radius:50%;background:var(--mut);flex:none}
+  .card .msgbadge.st-pending .mb-dot{background:var(--warn);box-shadow:0 0 6px var(--warn)}
+  .card .msgbadge.st-ack .mb-dot{background:var(--acc2);box-shadow:0 0 6px var(--acc2)}
+  .card .msgbadge.st-done .mb-dot{background:var(--ok);box-shadow:0 0 6px var(--ok)}
+  #msgModal{position:fixed;inset:0;background:rgba(3,6,12,.72);backdrop-filter:blur(3px);z-index:120;display:none;align-items:center;justify-content:center;padding:18px}
+  #msgModal.show{display:flex}
+  .msgbox{width:min(560px,96vw);max-height:88vh;display:flex;flex-direction:column;background:var(--panel);border:1px solid var(--line);border-radius:16px;box-shadow:0 20px 60px rgba(0,0,0,.5);overflow:hidden}
+  .msgbox .mh{display:flex;align-items:center;gap:10px;padding:14px 16px;border-bottom:1px solid var(--line)}
+  .msgbox .mh .mh-em{font-size:24px;line-height:1}
+  .msgbox .mh .mh-t{flex:1;min-width:0}
+  .msgbox .mh .mh-t b{display:block;font-size:15px}
+  .msgbox .mh .mh-t small{color:var(--mut);font-size:12px}
+  .msgbox .mh .mh-x{cursor:pointer;color:var(--mut);font-size:18px;padding:2px 8px;border-radius:8px}
+  .msgbox .mh .mh-x:hover{background:rgba(255,255,255,.06);color:var(--ink)}
+  .msgbox .mthread{flex:1;overflow-y:auto;padding:12px 16px;display:flex;flex-direction:column;gap:10px;min-height:120px}
+  .msgbox .mthread .empty{color:var(--mut);font-size:13px;text-align:center;padding:20px 0}
+  .mmsg{border:1px solid var(--line);border-radius:10px;padding:9px 11px;background:rgba(255,255,255,.02)}
+  .mmsg .mm-top{display:flex;justify-content:space-between;gap:8px;align-items:center;margin-bottom:5px}
+  .mmsg .mm-txt{font-size:13px;white-space:pre-wrap;word-break:break-word}
+  .mmsg .mm-time{color:var(--mut);font-size:10px;flex:none}
+  .mmsg .mm-st{font-size:11px;margin-top:6px;display:flex;flex-wrap:wrap;gap:6px}
+  .mmsg .mm-st .chip{border:1px solid var(--line);border-radius:20px;padding:1px 8px;color:var(--mut)}
+  .mmsg .mm-st .chip.pending{color:var(--warn);border-color:var(--warn)}
+  .mmsg .mm-st .chip.ack{color:var(--acc2);border-color:var(--acc2)}
+  .mmsg .mm-st .chip.done{color:var(--ok);border-color:var(--ok)}
+  .mmsg .mm-note{font-size:11px;color:var(--mut);margin-top:5px;border-left:2px solid var(--acc2);padding-left:7px}
+  .msgbox .mcomp{border-top:1px solid var(--line);padding:11px 14px;display:flex;flex-direction:column;gap:8px}
+  .msgbox .mcomp textarea{width:100%;box-sizing:border-box;resize:vertical;min-height:60px;font:inherit;font-size:13px;color:var(--ink);background:#0d1420;border:1px solid var(--line);border-radius:9px;padding:9px}
+  .msgbox .mcrow{display:flex;align-items:center;gap:8px}
+  .msgbox .mcrow .grow{flex:1;font-size:11px;color:var(--mut)}
+  .msgbox .mcrow button{font:inherit}
+  .msgbox .mcrow .msend{background:var(--acc2);color:#04120e;border-color:var(--acc2);font-weight:700}
+  .msgbox .mcrow .msend:disabled{opacity:.5;cursor:default}
+  .msgfoot{font-size:10px;color:var(--mut);padding:0 14px 11px}
+  .msgfoot a{color:var(--acc2)}
 </style>
 </head>
 <body>
@@ -405,6 +447,7 @@
       <button id="fleetScreens" title="Apagar o encender la pantalla de TODA la flota online (toggle)">🌙 Apagar todas</button>
       <button id="ssToggle" title="Activar o quitar el salvapantallas en TODA la flota online (toggle)">🖼️ Salva ON</button>
       <button id="playersStandby" title="Standby/Reactivar los PLAYERS de toda la flota (mac/win/linux/ios/android) por canal de comandos — pone el canal en negro sin cerrar la app">⏻ Standby players</button>
+      <button id="msgAll" title="Enviar un mensaje/encargo a TODOS los equipos vivos (broadcast por el router de encargos AdmiraNeXT — con ACK y traza en Telegram)">📣 Mensaje a todos</button>
       <label title="Beep cuando un equipo se cae o su captura empieza a fallar"><input type="checkbox" id="sndToggle"> 🔔 sonido</label>
       <label title="No mostrar los equipos desconectados"><input type="checkbox" id="hideOff"> 🙈 ocultar offline</label>
       <button id="collapseAll" title="Colapsar o expandir todas las tarjetas">⊟ colapsar todas</button>
@@ -416,6 +459,7 @@
 
   <main class="stage">
     <div class="cards" id="cards"></div>
+
     <div id="crtMonitor" hidden>
       <div class="crt-head">
         <span class="crt-title">📺 MONITOR REMOTO</span>
@@ -474,7 +518,7 @@
         <button class="primary" id="csRun">▶ ejecutar</button>
         <button id="csClear">limpiar</button>
       </div>
-      <div class="note">El comando se ejecuta de verdad en la máquina elegida (MacMini local · resto por SSH). Acceso por tu login de Google.</div>
+      <div class="note">El comando se ejecuta de verdad en la máquina elegida (MacMini local · resto por SSH). Acceso por tu login de Google. <span style="opacity:.55">· 💬 mensajería a equipos v.2026.07.08.r1</span></div>
       <div class="out" id="out"><div class="empty">Sin resultados todavía.</div></div>
     </div>
   </footer>
@@ -482,6 +526,24 @@
 
 <div id="lb"><img id="lbImg" alt=""></div>
 <div id="toasts"></div>
+<div id="msgModal">
+  <div class="msgbox">
+    <div class="mh">
+      <span class="mh-em" id="msgEm">💬</span>
+      <div class="mh-t"><b id="msgTitle">Mensaje</b><small id="msgSub"></small></div>
+      <span class="mh-x" id="msgClose" title="Cerrar (Esc)">✕</span>
+    </div>
+    <div class="mthread" id="msgThread"></div>
+    <div class="mcomp">
+      <textarea id="msgText" placeholder="Escribe el encargo… (llegará al agente con ACK obligatorio y quedará en la traza de Telegram)"></textarea>
+      <div class="mcrow">
+        <span class="grow" id="msgHint"></span>
+        <button class="msend" id="msgSend">➤ Enviar</button>
+      </div>
+    </div>
+    <div class="msgfoot">Canal: router de encargos AdmiraNeXT · traza viva en <a href="/telegram" target="_blank">admira.live/telegram</a></div>
+  </div>
+</div>
 <div id="wall">
   <div class="wallbar">🧱 Pared de pantallas <span id="wallcount"></span><span class="spacer"></span><button id="wallClose">✕ cerrar (Esc)</button></div>
   <div class="wallgrid" id="wallGrid"></div>
@@ -568,17 +630,41 @@ const CAP_FIX_CMD=[
 // (12h) intercambiando el credential del gate (admira_gate.cred). Sin tokens.
 let SESSION='';
 try{ const s=JSON.parse(localStorage.getItem('fleet_session')||'null'); if(s&&s.token&&s.exp&&Date.now()<s.exp) SESSION=s.token; }catch(e){}
+async function _mintSession(cred){
+  const r=await fetch(API+'/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({credential:cred})});
+  if(!r.ok) return false;
+  const d=await r.json().catch(()=>({}));
+  if(d&&d.session){ SESSION=d.session; localStorage.setItem('fleet_session',JSON.stringify({token:d.session,exp:d.exp||(Date.now()+12*3600*1000)})); return true; }
+  return false;
+}
 async function ensureSession(){
   if(SESSION) return true;
   let g; try{ g=JSON.parse(localStorage.getItem('admira_gate')||'null'); }catch(e){}
+  // El cred del gate (id_token de Google) sólo vale ~1h. Si está rancio (>50min),
+  // pide al gate un refresco SILENCIOSO antes de intentar el intercambio, para no
+  // mandar un token caducado (que provoca el "🔒 sin acceso" en toda la flota).
+  const stale = !g || !g.credAt || (Date.now()-g.credAt) > 50*60*1000;
+  if(stale && typeof window.admiraGateRefresh==='function'){
+    try{ await window.admiraGateRefresh(); }catch(e){}
+    try{ g=JSON.parse(localStorage.getItem('admira_gate')||'null'); }catch(e){}
+  }
   if(!g||!g.cred) return false;                 // sin credential del gate → no se puede
   try{
-    const r=await fetch(API+'/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({credential:g.cred})});
-    if(!r.ok) return false;
-    const d=await r.json();
-    if(d&&d.session){ SESSION=d.session; localStorage.setItem('fleet_session',JSON.stringify({token:d.session,exp:d.exp||(Date.now()+12*3600*1000)})); return true; }
+    if(await _mintSession(g.cred)) return true;
+    // Rechazado (cred caducado): un intento de refresco silencioso + reintento.
+    if(typeof window.admiraGateRefresh==='function'){
+      const fresh=await window.admiraGateRefresh();
+      if(fresh && await _mintSession(fresh)) return true;
+    }
   }catch(e){}
   return false;
+}
+// Recuperación garantizada: limpia sesión+gate y recarga → el gate vuelve a pedir
+// login de Google (cred fresco). Es la red de seguridad si el refresco silencioso
+// no es posible (One Tap suprimido, varias cuentas, etc.).
+function forceRelogin(){
+  try{ localStorage.removeItem('fleet_session'); localStorage.removeItem('admira_gate'); }catch(e){}
+  location.reload();
 }
 
 /* ---------- fondo de pantalla (persona) por máquina ----------
@@ -589,17 +675,43 @@ const _norm=s=>(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
 const _personaFile={Neo:'Neo',Morfeo:'Morfeo',Trinity:'Trinity','Oráculo':'Oraculo',Oraculo:'Oraculo',Cypher:'Cypher'};
 let PERSONA_BY_MACHINE={};
 let AGENT_ONLINE=new Set(); // máquinas con un agente (Claude/Codex/Grok) con beat de presencia <8min
+// Señales DISTRIBUIDAS de "visto reciente" (no dependen del probe SSH del Mini):
+//  · PRESENCE_SEEN → latido fresco en /api/presence (<3min). Señal PRINCIPAL: `updated` sí es fresco.
+//  · FLEET_SEEN    → registro fresco en admira-fleet (<5min). Señal SECUNDARIA: casi todos los
+//                    `lastSeen` de admira-fleet están estáticos/viejos, así que sólo cuenta si es fresco.
+let PRESENCE_SEEN=new Set();
+let FLEET_SEEN=new Set();
+const PRESENCE_FRESH=180;   // s — latido de presencia considerado "online"
+const FLEET_FRESH=300;      // s — registro de admira-fleet considerado "online"
 async function loadPersonas(){
   try{
     const r=await fetch(DIARY_API+'/api/presence',{cache:'no-store'});
-    const d=await r.json(); const map={}; const on=new Set(); const now=(d.now||Date.now()/1000);
+    const d=await r.json(); const map={}; const on=new Set(); const seen=new Set(); const now=(d.now||Date.now()/1000);
     (d.presence||[]).slice().sort((a,b)=>b.updated-a.updated).forEach(p=>{
       const k=_norm(p.machine); if(!k) return;
       if(!map[k]) map[k]=p.persona;                 // la persona más reciente por máquina
-      if((now-(p.updated||0))<8*60) on.add(k);       // agente ACTIVO (<8min) en esa máquina
+      const age=now-(p.updated||0);
+      if(age<8*60) on.add(k);                        // agente ACTIVO (<8min) en esa máquina
+      if(age<PRESENCE_FRESH) seen.add(k);            // latido fresco (<3min) → online por presencia
     });
-    PERSONA_BY_MACHINE=map; AGENT_ONLINE=on;
+    PERSONA_BY_MACHINE=map; AGENT_ONLINE=on; PRESENCE_SEEN=seen;
   }catch(e){ /* sin presencia: las tarjetas quedan sin fondo, sin icono roto */ }
+}
+// admira-fleet: registro durable de la flota. `lastSeen` suele estar estático para casi todas
+// las máquinas, así que SÓLO marca online las que tienen un `lastSeen` realmente fresco (<5min).
+async function loadFleet(){
+  try{
+    const r=await fetch('https://admira-fleet.csilvasantin.workers.dev/machines',{cache:'no-store'});
+    const d=await r.json(); const seen=new Set(); const now=Date.now()/1000;
+    (d.machines||[]).forEach(m=>{
+      let ls=m.lastSeen; if(!ls) return;
+      const sec = ls>1e12 ? ls/1000 : ls;           // epoch en ms o s → s
+      if((now-sec)>=FLEET_FRESH) return;            // registro viejo/estático → no cuenta como online
+      [m.id, m.name, m.fqdn].forEach(v=>{ if(!v) return;
+        const k=_norm(String(v).split('.')[0].replace(/^admira-?/,'')); if(k.length>=4) seen.add(k); });
+    });
+    FLEET_SEEN=seen;
+  }catch(e){ /* sin admira-fleet: sólo se usa presencia + probe SSH */ }
 }
 // Claves de una máquina del hub para casar con los nombres de presencia (p.ej. hub fqdn
 // 'macbookair16' ~ presencia 'MacBookAir16plata'; id 'admira-asuszenbook' ~ 'AsusZenbook').
@@ -613,6 +725,12 @@ function _machKeys(m){ const ks=[];
 function agentOnline(m){ const ks=_machKeys(m);
   for(const p of AGENT_ONLINE){ for(const k of ks){ if(k===p||k.indexOf(p)===0||p.indexOf(k)===0) return true; } }
   return false; }
+// ¿Vista reciente por una señal DISTRIBUIDA? (mismo casado de claves que agentOnline)
+function _seenIn(set,m){ const ks=_machKeys(m);
+  for(const p of set){ for(const k of ks){ if(k===p||k.indexOf(p)===0||p.indexOf(k)===0) return true; } }
+  return false; }
+function presenceOnline(m){ return _seenIn(PRESENCE_SEEN,m); }
+function fleetOnline(m){ return _seenIn(FLEET_SEEN,m); }
 function personaWallpaper(name){
   const f=_personaFile[PERSONA_BY_MACHINE[_norm(name)]];
   return f ? '/wallpapers/'+f+'.png' : '';
@@ -645,11 +763,19 @@ async function refresh(){
   if(!SESSION){ $('#connPill').textContent='🔒 inicia sesión Google'; $('#connPill').className='pill bad'; renderCards([]); return; }
   try{
     const d=await api('/status'); MACHINES=d.machines; _reauthTried=false;
-    await loadPersonas();
+    await Promise.all([loadPersonas(), loadFleet()]);
     // Un equipo con un agente ACTIVO (Claude/Codex/Grok, beat de presencia <8min) cuenta como
     // ONLINE aunque el hub lo dé offline: el hub solo ve el agente de flota/SSH, no los agentes
     // que trabajan en la máquina (por eso AsusZenbook/MacBookAir16 salían desconectados).
-    MACHINES.forEach(m=>{ if(!m.online && agentOnline(m)){ m.online=true; m.viaAgent=true; } });
+    // Además marcamos online por SEÑALES DISTRIBUIDAS (menos dependencia del probe SSH del Mini):
+    // latido fresco en /api/presence (viaPresence, señal principal) o registro fresco en
+    // admira-fleet (viaFleet). Así Crema/Rosa (ya registradas) aparecen sin depender del Mini.
+    MACHINES.forEach(m=>{
+      if(m.online) return;
+      if(agentOnline(m)){ m.online=true; m.viaAgent=true; }
+      else if(presenceOnline(m)){ m.online=true; m.viaPresence=true; }
+      else if(fleetOnline(m)){ m.online=true; m.viaFleet=true; }
+    });
     const up=MACHINES.filter(m=>m.online).length;
     $('#connPill').textContent='🟢 '+up+'/'+MACHINES.length+' online'; $('#connPill').className='pill ok';
     // alerta de caída: avisa cuando un equipo cambia de estado (tras la 1ª foto base)
@@ -664,8 +790,13 @@ async function refresh(){
       _reauthTried=true; SESSION=''; localStorage.removeItem('fleet_session');
       if(await ensureSession()) return refresh();
     }
-    $('#connPill').textContent = e.code===401 ? '🔒 sin acceso (inicia sesión Google)' : '🔴 sin conexión';
-    $('#connPill').className='pill bad'; if(e.code===401) renderCards([]);
+    if(e.code===401){
+      $('#connPill').textContent='🔒 sesión caducada — toca para re-entrar';
+      $('#connPill').className='pill bad'; $('#connPill').style.cursor='pointer'; $('#connPill').onclick=forceRelogin;
+      renderCards([]);
+    } else {
+      $('#connPill').textContent='🔴 sin conexión'; $('#connPill').className='pill bad';
+    }
   }
 }
 /* ── orden + colapso de tarjetas (persistidos en localStorage) ── */
@@ -736,7 +867,8 @@ function renderCards(ms){
       <div class="top">
         <span class="em devicon${/mini|twin|imac|studio|mac\s*pro/i.test(m.name||'')?' desk':''}${m.online?' em-click on':''}" data-icon="${m.id}" title="${m.online?'Limpiar el escritorio (oculta apps) y ver el fondo':(m.name||'')+' (offline)'}"><span class="dscr empty-scr"><img alt=""></span><span class="dbase"></span></span>
         <div class="cardmeta"><div class="nm">${m.name}</div>
-        <div class="role">${m.role||''}${m.local?' · local':' · ssh'}</div></div>
+        <div class="role">${m.role||''}${m.local?' · local':' · ssh'}</div>
+        <span class="msgbadge" data-msgbadge="${m.id}" title="Último mensaje enviado desde Control — pulsa para ver el hilo"><span class="mb-dot"></span><span class="mb-txt"></span></span></div>
         <span class="card-fold" data-fold="${m.id}" title="Comprimir / expandir">▾</span>
         <span class="drag-handle" draggable="true" data-drag="${m.id}" title="Arrastra para reordenar">⠿</span>
       </div>
@@ -751,6 +883,7 @@ function renderCards(ms){
         <button data-a="displaytoggle" data-m="${m.id}" class="tgl ${screenIsOff(m.id)?'off':'on'}" title="${screenIsOff(m.id)?'Encender la pantalla (despierta el display dormido)':'Apagar la pantalla (duerme el display)'}">${screenIsOff(m.id)?'☀️ encender':'😴 apagar'}</button>
         <button data-a="say" data-m="${m.id}">🗣️ decir</button>
         <button data-a="notify" data-m="${m.id}">🔔 avisar</button>
+        <button data-a="msg" data-m="${m.id}" title="Enviar un mensaje/encargo al agente de este equipo (por el router de encargos AdmiraNeXT — con ACK y traza en Telegram)">💬 mensaje</button>
         <button data-a="open" data-m="${m.id}">📂 abrir app</button>
         <button data-a="closeapp" data-m="${m.id}">❌ cerrar app</button>
         <button data-a="ssh" data-m="${m.id}">🔌 ssh</button>
@@ -767,6 +900,7 @@ function renderCards(ms){
   ms.forEach(m=>{ if(CAP_FAIL[m.id]) setCapFail(m.id, true); });
   applySignageTitles();
   paintAllAges(); updateCapHealth();
+  try{ paintAllMsgBadges(); }catch(e){}
 }
 
 // Carga img.src con fallback: si la 1ª URL falla (404), prueba la 2ª; si también
@@ -861,8 +995,12 @@ $('#cards').addEventListener('click', async e=>{
     catch(err){ pushResult(machine,'🛡️ arreglo captura',{rc:-1,stdout:'',stderr:err.msg||'error'}); }
     fix.disabled=false; fix.textContent=l; return;
   }
+  // Clic en la insignia de estado del último mensaje → abre el hilo de ese equipo.
+  const mbg=e.target.closest('.msgbadge[data-msgbadge]'); if(mbg){ openMsgModal(mbg.dataset.msgbadge); return; }
   const b=e.target.closest('button[data-a]'); if(!b) return;
   const action=b.dataset.a, machine=b.dataset.m;
+  // msg: abre el compositor de mensaje/encargo para el agente de este equipo.
+  if(action==='msg'){ openMsgModal(machine); return; }
   // ssh: acción de cliente — copia el comando para conectar de verdad desde tu terminal.
   if(action==='ssh'){
     const m=MACHINES.find(x=>x.id===machine)||{};
@@ -926,6 +1064,174 @@ $('#cards').addEventListener('click', async e=>{
   }catch(err){ pushResult(machine,'⚡ '+action,{rc:-1,stdout:'',stderr:err.msg||'error'}); }
   b.disabled=false; b.textContent=lbl;
 });
+
+/* ============================================================
+   MENSAJERÍA A EQUIPOS — 💬 por equipo + 📣 a todos.
+   Canal: router de encargos AdmiraNeXT (worker admira-telegram).
+   Envío: POST /api/send (auth = credential del gate Google, admira_gate.cred).
+     El worker publica en el grupo Telegram (traza en admira.live/telegram) Y
+     enruta el texto como ENCARGO por persona (tabla telegram_inbox).
+   Estado: GET /api/task-status?task_id=…  → por destinatario: pending|ack|done.
+   Sin secretos en la página: reutiliza el mismo login de Google que /control.
+   ============================================================ */
+const MSG_API=DIARY_API;                         // mismo worker (admira-telegram)
+const MSG_PERSONAS={Neo:'neo',Morfeo:'morfeo',Trinity:'trinity','Oráculo':'oraculo',Switch:'switch',Cypher:'cypher'};
+// Credencial del gate (id_token de Google). El worker lo valida contra su lista de emails.
+function gateCred(){ try{ const g=JSON.parse(localStorage.getItem('admira_gate')||'null'); return g&&g.cred||''; }catch(e){ return ''; } }
+// Persona (agente) activa en una máquina, casando por las mismas claves que la presencia.
+function msgPersonaOf(m){
+  if(!m) return '';
+  const ks=_machKeys(m);
+  for(const k in PERSONA_BY_MACHINE){ for(const mk of ks){ if(k===mk||k.indexOf(mk)===0||mk.indexOf(k)===0) return PERSONA_BY_MACHINE[k]; } }
+  return '';
+}
+// Almacén local de mensajes enviados (hilo por equipo + task para poll de estado).
+function msgStore(){ try{ return JSON.parse(localStorage.getItem('fleet_msgs')||'{}'); }catch(e){ return {}; } }
+function msgSaveStore(s){ try{ localStorage.setItem('fleet_msgs', JSON.stringify(s)); }catch(e){} }
+function msgLog(key){ const s=msgStore(); return s[key]||[]; }
+function msgPush(key, rec){ const s=msgStore(); (s[key]=s[key]||[]).push(rec); if(s[key].length>40) s[key]=s[key].slice(-40); msgSaveStore(s); }
+function newTaskId(){ return 'task-'+Date.now().toString(36)+'-'+Math.random().toString(36).slice(2,6); }
+
+// Estado del modal abierto: {key, machine, broadcast}
+let MSG_CUR=null;
+function openMsgModal(machineId){
+  const m=MACHINES.find(x=>x.id===machineId)||{id:machineId,name:machineId};
+  const persona=msgPersonaOf(m);
+  MSG_CUR={ key:machineId, machine:m, persona, broadcast:false };
+  $('#msgEm').textContent='💬';
+  $('#msgTitle').textContent='Mensaje · '+(m.name||machineId);
+  $('#msgSub').textContent = persona ? ('agente activo: '+persona+(m.online?'':' · equipo offline')) : ('agente sin detectar — se enviará como encargo mencionando la máquina'+(m.online?'':' · equipo offline'));
+  $('#msgHint').textContent = persona ? ('→ PARA '+persona) : '→ encargo general (/sendto '+(m.name||machineId)+')';
+  _openMsgCommon();
+}
+function openBroadcastModal(){
+  const vivos=MACHINES.filter(m=>m.online);
+  MSG_CUR={ key:'__all__', machine:null, persona:'', broadcast:true, count:vivos.length };
+  $('#msgEm').textContent='📣';
+  $('#msgTitle').textContent='Mensaje a todos';
+  $('#msgSub').textContent = vivos.length+' equipos vivos · llega a todas las personas (Neo/Morfeo/Trinity/Oráculo/Switch/Cypher)';
+  $('#msgHint').textContent='→ PARA TODOS';
+  _openMsgCommon();
+}
+function _openMsgCommon(){
+  renderThread();
+  $('#msgModal').classList.add('show');
+  const ta=$('#msgText'); ta.value=''; setTimeout(()=>ta.focus(),30);
+  pollThread();
+}
+function closeMsgModal(){ $('#msgModal').classList.remove('show'); MSG_CUR=null; }
+
+function fmtClock(ts){ try{ return new Date(ts).toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit'}); }catch(e){ return ''; } }
+function renderThread(){
+  const box=$('#msgThread'); if(!box||!MSG_CUR) return;
+  const log=msgLog(MSG_CUR.key);
+  if(!log.length){ box.innerHTML='<div class="empty">Sin mensajes todavía. Escribe abajo y pulsa Enviar.</div>'; return; }
+  box.innerHTML=log.slice().reverse().map(r=>{
+    const recs=r.recipients||{};
+    const keys=Object.keys(recs);
+    let chips;
+    if(keys.length){
+      chips=keys.map(p=>{ const st=(recs[p].status||'pending'); const lbl=st==='done'?'✔️ hecho':(st==='ack'?'✅ ACK':'⏳ pendiente');
+        return '<span class="chip '+st+'">'+p+': '+lbl+'</span>'; }).join('');
+    } else {
+      chips='<span class="chip pending">⏳ enviado</span>';
+    }
+    const notes=keys.filter(p=>recs[p].note).map(p=>'<div class="mm-note">'+p+': '+String(recs[p].note).replace(/</g,'&lt;')+'</div>').join('');
+    return '<div class="mmsg"><div class="mm-top"><span class="mm-time">'+fmtClock(r.ts)+' · '+(r.task||'')+'</span></div>'
+      +'<div class="mm-txt">'+String(r.text).replace(/</g,'&lt;')+'</div>'
+      +'<div class="mm-st">'+chips+'</div>'+notes+'</div>';
+  }).join('');
+}
+
+// Consulta el estado (pending/ack/done) de cada task del hilo abierto y lo pinta.
+async function pollThread(){
+  if(!MSG_CUR) return;
+  const log=msgLog(MSG_CUR.key); if(!log.length) return;
+  const s=msgStore(); const arr=s[MSG_CUR.key]||[];
+  await Promise.all(arr.filter(r=>r.task).slice(-12).map(async r=>{
+    try{
+      const d=await fetch(MSG_API+'/api/task-status?task_id='+encodeURIComponent(r.task),{cache:'no-store'}).then(x=>x.json());
+      if(d&&d.ok&&d.recipients) r.recipients=d.recipients;
+    }catch(e){}
+  }));
+  msgSaveStore(s);
+  renderThread();
+  if(MSG_CUR&&!MSG_CUR.broadcast) paintMsgBadge(MSG_CUR.key);
+  else paintAllMsgBadges();
+}
+
+// Envía el mensaje del compositor por el router de encargos.
+let _msgReauthTried=false;
+async function sendCurrentMsg(){
+  if(!MSG_CUR) return;
+  const ta=$('#msgText'); const text=(ta.value||'').trim(); if(!text) return;
+  // Cred rancio (>50min) → refréscalo en silencio antes de enviar (mismo id_token de 1h).
+  let g; try{ g=JSON.parse(localStorage.getItem('admira_gate')||'null'); }catch(e){}
+  if((!g||!g.credAt||(Date.now()-g.credAt)>50*60*1000) && typeof window.admiraGateRefresh==='function'){
+    try{ await window.admiraGateRefresh(); }catch(e){}
+  }
+  let cred=gateCred();
+  if(!cred){ toast('warn','🔒 sin login de Google','inicia sesión (arriba a la derecha) para enviar mensajes'); return; }
+  const btn=$('#msgSend'); btn.disabled=true; const lbl=btn.textContent; btn.textContent='➤ enviando…';
+  const task=newTaskId();
+  // Construye el texto de encargo que el router sabe enrutar.
+  let head, targets;
+  if(MSG_CUR.broadcast){ head='PARA TODOS'; targets=Object.keys(MSG_PERSONAS); }
+  else if(MSG_CUR.persona){ head='PARA '+MSG_CUR.persona; targets=[MSG_CUR.persona]; }
+  else { head='ENCARGO (equipo '+(MSG_CUR.machine&&MSG_CUR.machine.name||MSG_CUR.key)+') /sendto '+(MSG_CUR.machine&&MSG_CUR.machine.name||MSG_CUR.key); targets=[]; }
+  const body=head+' — '+text+'  ['+task+'] · ACK obligatorio · desde Control';
+  try{
+    const r=await fetch(MSG_API+'/api/send',{
+      method:'POST',
+      headers:{'Content-Type':'application/json','Authorization':'Bearer '+cred},
+      body:JSON.stringify({ text:body, author:'Carlos' })
+    });
+    if(r.status===401){
+      // cred caducado → un ÚNICO refresco silencioso + reintento; si no, avisa a re-entrar.
+      const fresh = (!_msgReauthTried && typeof window.admiraGateRefresh==='function') ? await window.admiraGateRefresh() : null;
+      if(fresh){ _msgReauthTried=true; btn.disabled=false; btn.textContent=lbl; return sendCurrentMsg(); }
+      _msgReauthTried=false;
+      toast('warn','🔒 sesión de Google caducada','toca el candado 🔒 de arriba para re-entrar y reenvía'); btn.disabled=false; btn.textContent=lbl; return;
+    }
+    _msgReauthTried=false;
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok||!d.ok){ toast('warn','⚠️ no se pudo enviar', (d&&d.error)||('HTTP '+r.status)); btn.disabled=false; btn.textContent=lbl; return; }
+    msgPush(MSG_CUR.key, { task, text, ts:Date.now(), targets, recipients:{} });
+    ta.value='';
+    toast('up','💬 enviado', MSG_CUR.broadcast?('a todos ('+((MSG_CUR.count)||'')+' equipos)') : ('a '+(MSG_CUR.persona||(MSG_CUR.machine&&MSG_CUR.machine.name)||MSG_CUR.key)));
+    renderThread(); paintAllMsgBadges();
+    setTimeout(pollThread, 2500);   // primer refresco de ACK
+  }catch(err){ toast('warn','⚠️ error de red', err&&err.message||'sin conexión'); }
+  btn.disabled=false; btn.textContent=lbl;
+}
+
+// Insignia de estado del último mensaje en la tarjeta (enviado→pendiente→ACK→hecho).
+function _aggStatus(rec){
+  const recs=rec.recipients||{}; const ks=Object.keys(recs);
+  if(!ks.length) return {st:'pending', lbl:'enviado'};
+  const sts=ks.map(k=>recs[k].status||'pending');
+  if(sts.every(s=>s==='done')) return {st:'done', lbl:'hecho'};
+  if(sts.some(s=>s==='ack'||s==='done')) return {st:'ack', lbl:'ACK'};
+  return {st:'pending', lbl:'pendiente'};
+}
+function paintMsgBadge(machineId){
+  const el=document.querySelector('.msgbadge[data-msgbadge="'+machineId+'"]'); if(!el) return;
+  const log=msgLog(machineId); if(!log.length){ el.classList.remove('show'); return; }
+  const last=log[log.length-1]; const a=_aggStatus(last);
+  el.classList.add('show'); el.classList.remove('st-pending','st-ack','st-done'); el.classList.add('st-'+a.st);
+  el.querySelector('.mb-txt').textContent='💬 '+a.lbl;
+}
+function paintAllMsgBadges(){ MACHINES.forEach(m=>paintMsgBadge(m.id)); }
+
+// Wiring del modal + botón global.
+$('#msgClose').onclick=closeMsgModal;
+$('#msgModal').addEventListener('click',e=>{ if(e.target.id==='msgModal') closeMsgModal(); });
+$('#msgSend').onclick=sendCurrentMsg;
+$('#msgText').addEventListener('keydown',e=>{ if((e.metaKey||e.ctrlKey)&&e.key==='Enter'){ e.preventDefault(); sendCurrentMsg(); } });
+document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&$('#msgModal').classList.contains('show')) closeMsgModal(); });
+(function(){ const mb=$('#msgAll'); if(mb) mb.onclick=openBroadcastModal; })();
+// Poll de estados en segundo plano: refresca insignias y el hilo abierto.
+setInterval(()=>{ try{ paintAllMsgBadges(); if($('#msgModal').classList.contains('show')) pollThread(); }catch(e){} }, 20000);
 
 /* ── reordenar tarjetas por arrastre (asa ⠿) ── */
 let _dragId=null;
@@ -1738,5 +2044,6 @@ function collapseAllToggle(){
     if(wasCtl && current) startControl(); else { setStatus('… CONECTANDO','#ffdd66'); startPolling(); } };
 })();
 </script>
+
 </body>
 </html>

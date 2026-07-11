@@ -1,0 +1,410 @@
+/* ============================================================
+   ADcelerate · theme-neon.css   (antes theme-retro.css)
+   ============================================================
+   VISTA 1 de 3 · «NEON» — la retro-pop 80s/90s (show).
+   Capa TEMA conmutable sobre tokens.css + app.css. Contrato de
+   temas: theme-<nombre>.css (+ theme-<nombre>.js opcional), cargado
+   por theme-loader.js. Ver docs/01-diseno.md §9 «Las 3 vistas».
+   Concepto: «Blade Runner ya lo predijo» — retro-futurismo 80s/90s
+   con oficio. Cool + SUPERUSABLE. Cian = espina Admira (color-guía),
+   magenta = acento. Este es el patrón del programa de diseño de la
+   suite (tarea #20); ver docs/01-diseno.md.
+
+   Compat: assets/theme-retro.css sigue existiendo y re-exporta esta
+   capa vía @import para no romper enlaces antiguos.
+
+   REGLAS DURAS de usabilidad (aplicadas aquí):
+   · Display retro SOLO en titulares/branding. Datos/UI: sans limpia.
+   · Scanlines/CRT sutilísimos, NUNCA sobre texto de trabajo/tablas.
+   · Contraste AA en texto funcional · targets ≥44px · foco visible.
+   · prefers-reduced-motion: todo se desactiva más abajo.
+   ============================================================ */
+
+:root {
+  /* ── Paleta retro derivada de los tokens (cian espina + magenta) ── */
+  --rf-cyan:      var(--admira-cyan);      /* #50c8ff · espina/guía */
+  --rf-cyan-hot:  #7fe0ff;
+  --rf-magenta:   var(--admira-magenta);   /* #ff4488 · acento */
+  --rf-magenta-hot:#ff6ba6;
+  --rf-amber:     var(--admira-amber);     /* #ffd866 · alertas/ámbar terminal */
+  --rf-green:     #39ff9e;                 /* fósforo terminal */
+  --rf-green-deep:#00c46a;
+  --rf-violet:    var(--admira-violet);
+
+  /* Superficies profundas para el look nocturno de ciudad */
+  --rf-void:      #04060c;                 /* cielo/base más negra que el token */
+  --rf-deep:      #070a14;
+  --rf-panel:     rgba(11, 16, 30, .72);   /* panel-neón translúcido */
+  --rf-panel-solid:#0a0e1a;
+  --rf-grid-line: rgba(80, 200, 255, .12);
+
+  /* Neón: sombras de texto/borde reutilizables */
+  --rf-neon-cyan:    0 0 4px rgba(80,200,255,.9), 0 0 12px rgba(80,200,255,.55), 0 0 30px rgba(80,200,255,.30);
+  --rf-neon-magenta: 0 0 4px rgba(255,68,136,.9), 0 0 12px rgba(255,68,136,.55), 0 0 30px rgba(255,68,136,.30);
+  --rf-neon-green:   0 0 4px rgba(57,255,158,.85), 0 0 14px rgba(57,255,158,.5);
+  --rf-neon-amber:   0 0 4px rgba(255,216,102,.85), 0 0 14px rgba(255,216,102,.5);
+
+  /* Tipografías: display retro = mono ancha con tracking; UI = sans token */
+  --rf-display: "Eurostile", "Bank Gothic", var(--admira-font-mono);
+  --rf-mono:    var(--admira-font-mono);
+
+  --rf-scan-opacity: .05;   /* intensidad base de scanlines de fondo */
+}
+
+/* ============================================================
+   1 · FONDO DE CIUDAD NOCTURNA (todas las páginas)
+   Capa fija tras el contenido: void + vignette + neblina neón.
+   El grid synthwave animado lo pinta un <canvas> por página (home)
+   o queda como halo estático (resto).
+   ============================================================ */
+body {
+  background: var(--rf-void);
+  position: relative;
+}
+body::before {
+  /* neblina de neón: halos cian y magenta muy difusos, como la ciudad */
+  content: "";
+  position: fixed; inset: 0; z-index: -3; pointer-events: none;
+  background:
+    radial-gradient(120% 80% at 18% 8%,  rgba(80,200,255,.10), transparent 55%),
+    radial-gradient(120% 90% at 88% 4%,  rgba(255,68,136,.09), transparent 52%),
+    radial-gradient(140% 120% at 50% 120%, rgba(170,136,255,.10), transparent 60%),
+    linear-gradient(180deg, var(--rf-void) 0%, var(--rf-deep) 60%, #05070f 100%);
+}
+/* horizonte synthwave estático de respaldo (bajo el canvas del home) */
+body::after {
+  content: "";
+  position: fixed; left: 0; right: 0; bottom: 0; height: 42vh; z-index: -2;
+  pointer-events: none;
+  background:
+    linear-gradient(180deg, transparent 0%, rgba(80,200,255,.05) 70%, rgba(80,200,255,.10) 100%);
+  -webkit-mask-image: linear-gradient(180deg, transparent, #000 60%);
+          mask-image: linear-gradient(180deg, transparent, #000 60%);
+}
+
+/* Canvas de efectos por página (grid en perspectiva, etc.) */
+.rf-canvas {
+  position: fixed; inset: 0; z-index: -2; pointer-events: none;
+  width: 100%; height: 100%;
+}
+
+/* Scanline global sutilísima — NUNCA sobre texto (usa multiply muy bajo) */
+.rf-scanlines {
+  position: fixed; inset: 0; z-index: 40; pointer-events: none;
+  background: repeating-linear-gradient(
+    180deg, rgba(0,0,0,var(--rf-scan-opacity)) 0 1px, transparent 1px 3px);
+  mix-blend-mode: multiply;
+  opacity: .6;
+}
+
+/* ============================================================
+   2 · TIPOGRAFÍA DISPLAY (solo titulares/branding)
+   ============================================================ */
+.hero h1,
+.section-head h2,
+.rf-display {
+  font-family: var(--rf-display);
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  font-weight: 800;
+}
+.hero h1 { letter-spacing: .01em; }
+
+/* Titular con neón cian (la .g del gradiente pasa a glow) */
+.hero h1 .g {
+  background: none; -webkit-text-fill-color: currentColor; color: var(--rf-cyan);
+  text-shadow: var(--rf-neon-cyan);
+}
+.eyebrow {
+  color: var(--rf-cyan);
+  text-shadow: 0 0 8px rgba(80,200,255,.45);
+}
+
+/* ============================================================
+   3 · NAV — barra de mando con neón espina
+   ============================================================ */
+.ac-nav {
+  background: linear-gradient(180deg, rgba(5,7,14,.92), rgba(5,7,14,.72));
+  border-bottom: 1px solid rgba(80,200,255,.28);
+  box-shadow: 0 1px 0 rgba(80,200,255,.15), 0 8px 30px -12px rgba(0,0,0,.9);
+}
+.ac-brand { font-family: var(--rf-display); letter-spacing: .16em; }
+.ac-brand .mark {
+  background: var(--rf-void);
+  border: 1px solid var(--rf-cyan);
+  color: var(--rf-cyan);
+  box-shadow: var(--rf-neon-cyan), inset 0 0 10px rgba(80,200,255,.25);
+  text-shadow: 0 0 8px rgba(80,200,255,.8);
+}
+.ac-brand .name {
+  background: none; -webkit-text-fill-color: currentColor; color: var(--rf-cyan);
+  text-shadow: 0 0 10px rgba(80,200,255,.55);
+}
+.ac-links a {
+  font-family: var(--rf-mono); text-transform: uppercase; letter-spacing: .1em; font-size: 12px;
+  padding: 6px 2px; position: relative;
+}
+.ac-links a.active { color: var(--rf-cyan); text-shadow: 0 0 8px rgba(80,200,255,.5); }
+.ac-links a.active::after {
+  content: ""; position: absolute; left: 0; right: 0; bottom: -2px; height: 2px;
+  background: var(--rf-cyan); box-shadow: var(--rf-neon-cyan);
+}
+.ac-tail { color: var(--rf-cyan); opacity: .55; }
+
+/* ============================================================
+   4 · PANEL-NEÓN (componente base: tarjetas, columnas, cajas)
+   Bordes con glow + esquina de "corte" tecnológico + barrido superior.
+   ============================================================ */
+.card, .tesis-col, .accel-panel, .zone-detail, .funnel-step,
+.uplift-card, .kpi, .screen-tile, .vs-col {
+  background: var(--rf-panel);
+  border-color: rgba(80,200,255,.22);
+  backdrop-filter: blur(3px);
+  position: relative;
+}
+.card:hover, .vs-col.accel, .tesis-col.in, .uplift-card {
+  border-color: rgba(80,200,255,.5);
+  box-shadow: 0 0 0 1px rgba(80,200,255,.15), 0 0 26px -6px rgba(80,200,255,.45), var(--admira-shadow-card);
+}
+/* barrido de brillo superior de los paneles principales */
+.tesis-col.in::before, .accel-panel::before, .uplift-card::before {
+  content: ""; position: absolute; left: 0; right: 0; top: 0; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--rf-cyan), transparent);
+  opacity: .8;
+}
+
+/* KPIs como lectura de instrumento neón */
+.kpi .n {
+  color: var(--rf-cyan);
+  text-shadow: var(--rf-neon-cyan);
+  font-family: var(--rf-mono);
+}
+
+/* ============================================================
+   5 · BOTONES — recreativa / arcade con press-state gustoso
+   ============================================================ */
+.btn {
+  font-family: var(--rf-mono); text-transform: uppercase; letter-spacing: .08em;
+  border-color: rgba(80,200,255,.4);
+  min-height: 44px;                    /* target táctil */
+}
+.btn:hover { border-color: var(--rf-cyan); box-shadow: 0 0 18px -4px rgba(80,200,255,.6); }
+.btn:active { transform: translateY(1px) scale(.99); }
+.btn-p {
+  background: linear-gradient(180deg, var(--rf-cyan-hot), var(--rf-cyan));
+  color: #041018; border: 0;
+  box-shadow: 0 0 22px -4px rgba(80,200,255,.7), inset 0 -3px 0 rgba(0,40,70,.35), inset 0 2px 0 rgba(255,255,255,.35);
+  text-shadow: none;
+}
+.btn-p:hover { box-shadow: 0 0 36px -2px rgba(80,200,255,.9), inset 0 -3px 0 rgba(0,40,70,.35), inset 0 2px 0 rgba(255,255,255,.4); }
+.btn-p:active { box-shadow: 0 0 16px -4px rgba(80,200,255,.7), inset 0 3px 6px rgba(0,30,60,.5); transform: translateY(2px); }
+
+/* Foco de teclado SIEMPRE visible (usabilidad innegociable) */
+a:focus-visible, .btn:focus-visible, button:focus-visible,
+.map-pin:focus-visible, .chip:focus-visible, textarea:focus-visible {
+  outline: 2px solid var(--rf-cyan);
+  outline-offset: 3px;
+  box-shadow: 0 0 0 4px rgba(80,200,255,.25);
+}
+
+/* ============================================================
+   6 · TERMINAL FÓSFORO (log de activación, medición Bloomberg)
+   Reutilizable: .rf-term = caja terminal, .rf-term-amber variante ámbar.
+   ============================================================ */
+.rf-term {
+  background:
+    linear-gradient(180deg, rgba(3,10,7,.9), rgba(2,7,5,.95));
+  border: 1px solid rgba(57,255,158,.35);
+  border-radius: var(--admira-radius-md);
+  box-shadow: inset 0 0 40px rgba(0,60,30,.25), 0 0 24px -8px rgba(57,255,158,.4);
+  font-family: var(--rf-mono);
+  color: var(--rf-green);
+  padding: 16px 18px;
+  position: relative; overflow: hidden;
+}
+.rf-term::after {           /* scanlines internas del CRT terminal */
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(180deg, rgba(0,0,0,.18) 0 1px, transparent 1px 3px);
+}
+.rf-term .rf-line { position: relative; z-index: 1; text-shadow: var(--rf-neon-green); }
+.rf-term-amber { border-color: rgba(255,216,102,.4); color: var(--rf-amber); box-shadow: inset 0 0 40px rgba(80,60,0,.25), 0 0 24px -8px rgba(255,216,102,.4); }
+.rf-term-amber .rf-line { text-shadow: var(--rf-neon-amber); }
+
+/* Log de generación reestilizado como terminal */
+.gen-log { font-family: var(--rf-mono); }
+.gen-log li { color: rgba(57,255,158,.35); }
+.gen-log li.on { color: var(--rf-green); text-shadow: var(--rf-neon-green); }
+.gen-log li.on::before { content: "> "; color: var(--rf-green); }
+.gen-log li.pending::before { content: "· "; }
+
+/* ============================================================
+   7 · MAPA WAR-ROOM (audiencias) — NORAD/WarGames
+   ============================================================ */
+.map-frame {
+  border-color: rgba(80,200,255,.4);
+  background:
+    radial-gradient(circle at 50% 55%, rgba(80,200,255,.06), transparent 60%),
+    var(--rf-void);
+  box-shadow: inset 0 0 60px rgba(0,0,0,.7), 0 0 30px -10px rgba(80,200,255,.4);
+}
+.map-frame .grid-lines {
+  background-image:
+    linear-gradient(var(--rf-grid-line) 1px, transparent 1px),
+    linear-gradient(90deg, var(--rf-grid-line) 1px, transparent 1px);
+  background-size: 38px 38px;
+}
+/* Anillos de radar concéntricos + barrido */
+.map-frame .rf-radar-rings {
+  position: absolute; inset: 0; pointer-events: none;
+}
+.map-frame .rf-radar-rings::before,
+.map-frame .rf-radar-rings::after {
+  content: ""; position: absolute; left: 50%; top: 55%; transform: translate(-50%,-50%);
+  border: 1px solid rgba(80,200,255,.18); border-radius: 50%;
+}
+.map-frame .rf-radar-rings::before { width: 46%; height: 61%; }
+.map-frame .rf-radar-rings::after  { width: 82%; height: 108%; }
+/* barrido de radar */
+.rf-radar-sweep {
+  position: absolute; left: 50%; top: 55%; width: 60%; height: 80%;
+  transform-origin: left top; pointer-events: none;
+  background: conic-gradient(from 0deg, rgba(80,200,255,.28), transparent 30%);
+  -webkit-mask-image: radial-gradient(circle at left top, #000 0 70%, transparent 71%);
+          mask-image: radial-gradient(circle at left top, #000 0 70%, transparent 71%);
+  animation: rf-sweep 5s linear infinite;
+  opacity: .5;
+}
+@keyframes rf-sweep { to { transform: rotate(360deg); } }
+
+/* Blips del circuito: puntos que laten como radar */
+.map-pin {
+  width: 14px; height: 14px;
+  background: var(--rf-cyan);
+  box-shadow: 0 0 0 3px rgba(80,200,255,.16), var(--rf-neon-cyan);
+}
+.map-pin::after { border-color: rgba(80,200,255,.55); animation: rf-blip 2.6s ease-out infinite; }
+@keyframes rf-blip { 0% { transform: scale(.5); opacity: .9; } 100% { transform: scale(2.6); opacity: 0; } }
+.map-pin:hover, .map-pin.sel {
+  background: var(--rf-magenta);
+  box-shadow: 0 0 0 3px rgba(255,68,136,.22), var(--rf-neon-magenta);
+}
+.map-pin.sel::after { border-color: rgba(255,68,136,.6); }
+.map-legend { color: var(--rf-cyan); opacity: .6; }
+
+/* Etiqueta esquina NORAD del war-room */
+.rf-norad {
+  position: absolute; top: 10px; right: 12px; z-index: 2;
+  font-family: var(--rf-mono); font-size: 9px; letter-spacing: .18em; text-transform: uppercase;
+  color: var(--rf-cyan); opacity: .65; text-align: right; line-height: 1.7;
+  text-shadow: 0 0 8px rgba(80,200,255,.5);
+}
+
+/* ============================================================
+   8 · PREVIEW / DISPLAY DE PANTALLA — chasis de monitor
+   ============================================================ */
+.screen-frame {
+  border-color: rgba(80,200,255,.4);
+  box-shadow: inset 0 0 50px rgba(0,0,0,.7), 0 0 30px -12px rgba(80,200,255,.5);
+}
+.screen-app .sa-top, .screen-app .sa-bot { color: var(--rf-cyan); }
+.screen-app .sa-cta { background: linear-gradient(180deg, var(--rf-cyan-hot), var(--rf-cyan)); color: #041018; }
+
+/* ============================================================
+   9 · RACK DE MONITORES CRT (circuito)
+   Cada tile es un mini-CRT con bisel y curvatura sugerida.
+   ============================================================ */
+.screen-tile {
+  background: linear-gradient(180deg, #0c1120, #070a13);
+  border: 1px solid rgba(80,200,255,.28);
+  box-shadow: inset 0 0 20px rgba(0,0,0,.6), 0 6px 20px -10px rgba(0,0,0,.8);
+}
+.screen-tile .thumb {
+  background:
+    radial-gradient(120% 120% at 50% 40%, rgba(80,200,255,.12), transparent 70%),
+    linear-gradient(135deg, #0a1020, #0c1424);
+  border-color: rgba(80,200,255,.3);
+  box-shadow: inset 0 0 22px rgba(0,0,0,.75), inset 0 0 3px rgba(80,200,255,.4);
+  position: relative; overflow: hidden;
+  color: var(--rf-cyan); text-shadow: var(--rf-neon-cyan);
+  border-radius: 10px / 14px;   /* leve curvatura CRT */
+}
+.screen-tile .thumb::after {    /* scanlines del mini-CRT */
+  content: ""; position: absolute; inset: 0; pointer-events: none;
+  background: repeating-linear-gradient(180deg, rgba(0,0,0,.22) 0 1px, transparent 1px 3px);
+}
+.screen-tile .name { font-family: var(--rf-mono); letter-spacing: .06em; }
+.dot.ok { background: var(--rf-green); box-shadow: var(--rf-neon-green); }
+.dot.warn { background: var(--rf-amber); box-shadow: var(--rf-neon-amber); }
+
+/* ============================================================
+   10 · GRÁFICAS / MEDICIÓN — glow neón sobre fondo profundo
+   ============================================================ */
+.funnel-step .fbar { background: linear-gradient(90deg, rgba(80,200,255,.25), rgba(170,136,255,.12)); }
+.funnel-step .fn { color: var(--rf-cyan); text-shadow: 0 0 10px rgba(80,200,255,.5); }
+.uplift-card .big { color: var(--rf-green); text-shadow: var(--rf-neon-green); }
+.uplift-card .bar.exp { background: linear-gradient(180deg, var(--rf-cyan-hot), var(--rf-cyan)); color: #041018; }
+
+/* Ticker de uplift (Bloomberg) */
+.rf-ticker {
+  display: flex; align-items: center; gap: 26px; overflow: hidden;
+  border: 1px solid rgba(57,255,158,.3);
+  border-radius: var(--admira-radius-md);
+  background: linear-gradient(180deg, rgba(3,10,7,.85), rgba(2,7,5,.92));
+  box-shadow: inset 0 0 30px rgba(0,60,30,.2);
+  padding: 10px 0; margin-bottom: 22px; position: relative;
+}
+.rf-ticker::after { content:""; position:absolute; inset:0; pointer-events:none;
+  background: repeating-linear-gradient(180deg, rgba(0,0,0,.15) 0 1px, transparent 1px 3px); }
+.rf-ticker-track {
+  display: inline-flex; gap: 34px; white-space: nowrap; padding-left: 100%;
+  animation: rf-marquee 28s linear infinite; font-family: var(--rf-mono); font-size: 13px;
+}
+.rf-ticker .q { color: var(--rf-green); text-shadow: var(--rf-neon-green); position: relative; z-index: 1; }
+.rf-ticker .q b { color: var(--rf-amber); text-shadow: var(--rf-neon-amber); }
+.rf-ticker .q .dn { color: var(--rf-magenta); text-shadow: var(--rf-neon-magenta); }
+@keyframes rf-marquee { to { transform: translateX(-50%); } }
+
+/* ============================================================
+   11 · MODO CRT TOTAL (easter egg Konami) — body.rf-crt
+   Curvatura + scanlines fuertes + aberración. Toggle en localStorage.
+   ============================================================ */
+body.rf-crt .wrap { animation: rf-flicker 6s infinite steps(60); }
+body.rf-crt::after { /* scanlines fuertes */
+  content: ""; position: fixed; inset: 0; z-index: 50; pointer-events: none;
+  background: repeating-linear-gradient(180deg, rgba(0,0,0,.28) 0 1px, transparent 1px 3px);
+}
+body.rf-crt .rf-crt-veil {
+  position: fixed; inset: 0; z-index: 51; pointer-events: none;
+  background: radial-gradient(120% 120% at 50% 50%, transparent 60%, rgba(0,0,0,.55) 100%);
+  box-shadow: inset 0 0 120px rgba(0,0,0,.6);
+}
+@keyframes rf-flicker { 0%,97%,100% { opacity: 1; } 98% { opacity: .93; } 99% { opacity: .97; } }
+/* aviso momentáneo al activar */
+.rf-crt-toast {
+  position: fixed; left: 50%; bottom: 26px; transform: translateX(-50%);
+  z-index: 60; font-family: var(--rf-mono); font-size: 12px; letter-spacing: .1em; text-transform: uppercase;
+  padding: 10px 18px; border: 1px solid var(--rf-cyan); border-radius: var(--admira-radius-pill);
+  background: rgba(4,6,12,.9); color: var(--rf-cyan); text-shadow: var(--rf-neon-cyan);
+  box-shadow: var(--rf-neon-cyan); opacity: 0; transition: opacity .3s;
+}
+.rf-crt-toast.show { opacity: 1; }
+
+/* ============================================================
+   12 · MOVIMIENTO REDUCIDO — desactiva TODO lo animado
+   ============================================================ */
+@media (prefers-reduced-motion: reduce) {
+  .rf-radar-sweep, .map-pin::after, .rf-ticker-track,
+  body.rf-crt .wrap { animation: none !important; }
+  .rf-canvas { display: none !important; }   /* el JS también lo respeta */
+  .rf-scanlines { display: none; }
+  * { transition-duration: .001ms !important; }
+}
+
+/* ============================================================
+   13 · Ajustes responsivos del tema
+   ============================================================ */
+@media (max-width: 640px) {
+  :root { --rf-scan-opacity: .035; }
+  .hero h1 { letter-spacing: 0; }
+  .rf-norad { display: none; }
+}

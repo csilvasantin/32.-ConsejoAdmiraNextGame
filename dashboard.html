@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
     <script src="/admira-bar.js?v=20260705-rails"></script>
-    <script src="/auth-gate.js"></script>
+    <script src="/auth-gate.js?v=20260708-authfix"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>admira.live — Dashboard</title>
@@ -76,6 +76,49 @@
 
   footer{margin-top:28px;font-family:monospace;font-size:11px;color:var(--mut);text-align:center}
   footer a{color:var(--brand);text-decoration:none}
+
+  .presence-row{display:flex;align-items:center;gap:8px;padding:7px 0;border-bottom:1px solid rgba(120,243,255,.08);font-size:13px}
+  .presence-row:last-child{border-bottom:0}
+  .pdot{width:9px;height:9px;border-radius:50%;flex:0 0 auto}
+  .pdot.on{background:var(--ok)} .pdot.idle{background:var(--warn)} .pdot.off{background:var(--bad)}
+  .p-id{font-weight:600;white-space:nowrap}
+  .p-run{font-family:monospace;font-size:10px;color:var(--brand);border:1px solid var(--line);border-radius:999px;padding:1px 7px}
+  .p-focus{color:var(--mut);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;flex:1 1 auto}
+
+  .comms-box{display:flex;gap:8px;margin-bottom:10px}
+  .comms-input{flex:1 1 auto;background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:10px;
+    padding:8px 10px;font-family:inherit;font-size:13px;resize:vertical}
+  .comms-input:focus{outline:none;border-color:var(--brand)}
+  .comms-btn{flex:0 0 auto;align-self:flex-start;background:linear-gradient(90deg,var(--brand),var(--accent));color:#02080d;
+    font-weight:700;border:0;border-radius:10px;padding:9px 16px;cursor:pointer}
+  .comms-btn:hover{opacity:.9} .comms-btn:disabled{opacity:.5;cursor:default}
+  .comms-status{font-family:monospace;font-size:11px;color:var(--mut);min-height:14px;margin-bottom:8px}
+  .comms-line{padding:7px 0;border-bottom:1px solid rgba(120,243,255,.08);font-size:13px}
+  .comms-line:last-child{border-bottom:0}
+  .comms-when{font-family:monospace;font-size:11px;color:var(--mut)}
+  .comms-who{font-weight:600;color:var(--brand)}
+  .comms-kind{font-family:monospace;font-size:10px;color:var(--accent)}
+  .comms-layer{font-family:monospace;font-size:11px;margin:0 4px}
+  .comms-machine{font-family:monospace;font-size:11px;color:var(--mut)}
+  .comms-proj{font-family:monospace;font-size:10px;color:var(--accent);opacity:.85}
+
+  .filters{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-bottom:12px}
+  .filters select{background:var(--bg);color:var(--ink);border:1px solid var(--line);border-radius:8px;
+    padding:5px 8px;font-family:monospace;font-size:11px}
+  .filters select:focus{outline:none;border-color:var(--brand)}
+  .filters .flabel{font-family:monospace;font-size:10px;color:var(--mut);text-transform:uppercase;letter-spacing:.08em}
+  .filters .clr{background:transparent;border:1px solid var(--line);color:var(--brand);border-radius:999px;
+    padding:5px 12px;font-family:monospace;font-size:11px;cursor:pointer}
+  .filters .clr:hover{background:rgba(120,243,255,.08)}
+
+  .board-col{margin-bottom:14px}
+  .board-col:last-child{margin-bottom:0}
+  .board-head{font-family:monospace;font-size:11px;font-weight:700;letter-spacing:.06em;margin-bottom:6px}
+  .board-head.doing{color:var(--ok)} .board-head.blocked{color:var(--bad)} .board-head.todo{color:var(--mut)}
+  .board-item{padding:5px 0;border-bottom:1px solid rgba(120,243,255,.06);font-size:13px}
+  .board-item:last-child{border-bottom:0}
+  .board-id{font-family:monospace;font-size:11px;color:var(--brand)}
+  .board-assignee{font-family:monospace;font-size:11px;color:var(--accent)}
 </style>
 </head>
 <body>
@@ -90,6 +133,46 @@
   </header>
 
   <div class="grid">
+    <section class="card wide" id="card-presence">
+      <h2>Agentes en línea</h2><div class="sub">admira-telegram · /api/presence · 15s</div>
+      <div id="presence"><div class="skel"></div><div class="skel" style="width:70%"></div></div>
+    </section>
+
+    <section class="card full" id="card-comms">
+      <h2>Comunicaciones · silicio</h2><div class="sub">admira-telegram · /api/diary · canal común · 10s</div>
+      <div class="comms-box">
+        <textarea id="commsText" class="comms-input" rows="2" placeholder="Escribe a los agentes (persona: Carlos)…"></textarea>
+        <button id="commsSend" class="comms-btn">Publicar</button>
+      </div>
+      <div id="commsStatus" class="comms-status"></div>
+      <div class="filters">
+        <span class="flabel">agente</span>
+        <select id="fAgent"><option value="">todos</option></select>
+        <span class="flabel">capa</span>
+        <select id="fLayer">
+          <option value="">todas</option>
+          <option value="principal">⭐ principal</option>
+          <option value="hijo">🔵 hijo</option>
+          <option value="nieto">🟢 nieto</option>
+        </select>
+        <span class="flabel">proyecto</span>
+        <select id="fProject"><option value="">todos</option></select>
+        <span class="flabel">tiempo</span>
+        <select id="fTime">
+          <option value="today">hoy</option>
+          <option value="24h">24h</option>
+          <option value="all" selected>todo</option>
+        </select>
+        <button id="fClear" class="clr">limpiar</button>
+      </div>
+      <div id="comms"><div class="skel"></div><div class="skel" style="width:80%"></div></div>
+    </section>
+
+    <section class="card wide" id="card-board">
+      <h2>Tareas del tablero</h2><div class="sub">admira-telegram · /api/tasks · 30s</div>
+      <div id="board"><div class="skel"></div><div class="skel" style="width:70%"></div></div>
+    </section>
+
     <section class="card" id="card-score">
       <h2>Puntuación</h2><div class="sub">/api/score/total</div>
       <div id="score"><div class="skel" style="width:60%;height:40px"></div></div>
@@ -122,14 +205,17 @@
   </div>
 
   <footer>
-    Admira v.26.05.30.r2 · datos en vivo vía <a href="https://admira-live-worker.csilvasantin.workers.dev/api/health" target="_blank" rel="noopener">admira-live-worker</a>
+    Admira v.26.07.06.r2 · comms vía admira-telegram · datos en vivo vía <a href="https://admira-live-worker.csilvasantin.workers.dev/api/health" target="_blank" rel="noopener">admira-live-worker</a>
     · auto-refresh 30s · <span id="lastFetch">—</span>
   </footer>
 </div>
 
 <script>
 const API = "https://admira-live-worker.csilvasantin.workers.dev";
+const COMMS = "https://admira-telegram.csilvasantin.workers.dev";
 const REFRESH_MS = 30000;
+const PRESENCE_MS = 15000;
+const COMMS_MS = 10000;
 
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s ?? "").replace(/[&<>"]/g, c => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
@@ -248,6 +334,210 @@ async function refresh(){
 $("refreshBtn").addEventListener("click", refresh);
 refresh();
 setInterval(refresh, REFRESH_MS);
+
+/* ===== Comunicaciones de silicio · admira-telegram (endpoints abiertos) ===== */
+const NOW = () => Math.floor(Date.now()/1000);
+
+async function commsGet(path){
+  const res = await fetch(COMMS + path, { headers:{ "Accept":"application/json" } });
+  if(!res.ok) throw new Error(path + " → HTTP " + res.status);
+  return res.json();
+}
+
+async function refreshPresence(){
+  const el = $("presence");
+  try {
+    const body = await commsGet("/api/presence");
+    let arr = (body && body.presence) || [];
+    if(!Array.isArray(arr) || !arr.length){ el.innerHTML = `<div class="empty">Sin agentes</div>`; return; }
+    arr = arr.slice().sort((a,b) => (b.updated||0) - (a.updated||0));
+    const now = NOW();
+    el.innerHTML = arr.map(p => {
+      const age = now - Number(p.updated||0);
+      const st = age < 180 ? "on" : age < 1800 ? "idle" : "off";
+      const run = p.runtime ? `<span class="p-run">${esc(p.runtime)}</span>` : "";
+      const focus = p.focus ? `<span class="p-focus">${esc(String(p.focus).slice(0,110))}</span>` : `<span class="p-focus"></span>`;
+      return `<div class="presence-row">
+        <span class="pdot ${st}"></span>
+        <span class="p-id">${esc(p.persona || "?")} @ ${esc(p.machine || "?")}</span>
+        ${run}${focus}
+      </div>`;
+    }).join("");
+  } catch(e){ el.innerHTML = `<div class="err">⚠ ${esc(e.message)}</div>`; }
+}
+
+/* Deriva la CAPA del nombre de persona:
+   "subsub"/"infra" → 🟢 NIETO · "sub" → 🔵 HIJO · resto → ⭐ PRINCIPAL */
+function layerOf(persona){
+  const p = String(persona || "").toLowerCase();
+  if(p.startsWith("subsub") || p.startsWith("infra")) return "nieto";
+  if(p.startsWith("sub")) return "hijo";
+  return "principal";
+}
+const LAYER_ICON = { principal:"⭐", hijo:"🔵", nieto:"🟢" };
+const LAYER_NAME = { principal:"PRINCIPAL", hijo:"HIJO", nieto:"NIETO" };
+function projectOf(d){ return d.project ? String(d.project) : String(d.machine || ""); }
+
+/* Cache del diario cargado + mensajes optimistas de Carlos.
+   LIMITACIÓN: la caja postea a /api/bot-say (abierto) pero el feed lee /api/diary.
+   No podemos escribir en /api/diary desde el navegador sin key, así que tras
+   publicar añadimos el mensaje al feed en cliente (optimista) para que Carlos lo
+   vea al instante. En el próximo ciclo del worker suele aparecer ya en /api/diary. */
+let COMMS_DATA = [];      // últimas entradas cargadas de /api/diary
+let COMMS_OPTIMISTIC = []; // mensajes locales de Carlos aún no reflejados por el diario
+
+function mergedComms(){
+  const seen = new Set(COMMS_DATA.map(d => (d.persona||"") + "|" + (d.text||"")));
+  const extra = COMMS_OPTIMISTIC.filter(o => !seen.has((o.persona||"") + "|" + (o.text||"")));
+  return COMMS_DATA.concat(extra).slice().sort((a,b) => tsOf(b) - tsOf(a));
+}
+
+function populateFilters(arr){
+  const agents = [...new Set(arr.map(d => d.persona).filter(Boolean))].sort();
+  const projs  = [...new Set(arr.map(d => projectOf(d)).filter(Boolean))].sort();
+  syncSelect($("fAgent"), agents, "todos");
+  syncSelect($("fProject"), projs, "todos");
+}
+function syncSelect(sel, values, allLabel){
+  const cur = sel.value;
+  sel.innerHTML = `<option value="">${allLabel}</option>` +
+    values.map(v => `<option value="${esc(v)}">${esc(v)}</option>`).join("");
+  if(values.includes(cur)) sel.value = cur;
+}
+
+function applyFilters(arr){
+  const fa = $("fAgent").value, fl = $("fLayer").value, fp = $("fProject").value, ft = $("fTime").value;
+  const now = NOW();
+  return arr.filter(d => {
+    if(fa && d.persona !== fa) return false;
+    if(fl && layerOf(d.persona) !== fl) return false;
+    if(fp && projectOf(d) !== fp) return false;
+    if(ft !== "all"){
+      const t = tsOf(d);
+      if(ft === "24h" && (now - t) > 86400) return false;
+      if(ft === "today"){
+        const dt = new Date(t * 1000), n = new Date();
+        if(dt.getFullYear()!==n.getFullYear() || dt.getMonth()!==n.getMonth() || dt.getDate()!==n.getDate()) return false;
+      }
+    }
+    return true;
+  });
+}
+
+function renderComms(){
+  const el = $("comms");
+  const all = mergedComms();
+  populateFilters(all);
+  const arr = applyFilters(all);
+  if(!arr.length){ el.innerHTML = `<div class="empty">Sin comunicaciones</div>`; return; }
+  el.innerHTML = arr.map(d => {
+    const layer = layerOf(d.persona);
+    const kind = d.kind ? ` <span class="comms-kind">(${esc(d.kind)})</span>` : "";
+    return `<div class="comms-line">
+      <span class="comms-when">[${hhmm(d)}]</span>
+      <span class="comms-who">${esc(d.persona || "?")}</span>
+      <span class="comms-layer">${LAYER_ICON[layer]} ${LAYER_NAME[layer]}</span>·
+      <span class="comms-machine">${esc(d.machine || "?")}</span>·
+      <span class="comms-proj">${esc(projectOf(d) || "—")}</span>${kind}:
+      ${esc(d.text || "")}
+    </div>`;
+  }).join("");
+}
+
+async function refreshComms(){
+  const el = $("comms");
+  try {
+    const body = await commsGet("/api/diary?limit=120");
+    let arr = (body && (body.diary || body.entries || body.rows)) || [];
+    if(!Array.isArray(arr)) arr = [];
+    COMMS_DATA = arr;
+    renderComms();
+  } catch(e){ el.innerHTML = `<div class="err">⚠ ${esc(e.message)}</div>`; }
+}
+
+["fAgent","fLayer","fProject","fTime"].forEach(id => $(id).addEventListener("change", renderComms));
+$("fClear").addEventListener("click", () => {
+  $("fAgent").value = ""; $("fLayer").value = ""; $("fProject").value = ""; $("fTime").value = "all";
+  renderComms();
+});
+
+/* ===== Tablero de tareas · /api/tasks ===== */
+async function refreshBoard(){
+  const el = $("board");
+  try {
+    const body = await commsGet("/api/tasks");
+    let arr = (body && (body.tasks || body.rows)) || [];
+    if(!Array.isArray(arr) || !arr.length){ el.innerHTML = `<div class="empty">Sin tareas</div>`; return; }
+    const cols = [
+      ["doing", "🔵 doing"],
+      ["blocked", "🔴 blocked"],
+      ["todo", "⚪ todo"],
+    ];
+    let html = "";
+    for(const [status, label] of cols){
+      const items = arr.filter(t => String(t.status) === status);
+      if(!items.length) continue;
+      html += `<div class="board-col">
+        <div class="board-head ${status}">${label} · ${items.length}</div>` +
+        items.map(t => `<div class="board-item">
+          <span class="board-id">#${esc(t.id)}</span>
+          <span class="board-assignee">${esc(t.assignee || "?")}</span>:
+          ${esc(t.title || "(sin título)")}
+        </div>`).join("") +
+      `</div>`;
+    }
+    el.innerHTML = html || `<div class="empty">Sin tareas activas</div>`;
+  } catch(e){ el.innerHTML = `<div class="err">⚠ ${esc(e.message)}</div>`; }
+}
+
+function tsOf(d){
+  const v = d.created_at ?? d.date ?? d.created ?? 0;
+  const n = Number(v);
+  if(!Number.isNaN(n) && n > 0) return n < 1e12 ? n : n/1000;
+  return Date.parse(v) / 1000 || 0;
+}
+function hhmm(d){
+  const t = tsOf(d);
+  if(!t) return "--:--";
+  const dt = new Date(t * 1000);
+  return String(dt.getHours()).padStart(2,"0") + ":" + String(dt.getMinutes()).padStart(2,"0");
+}
+
+async function publishComms(){
+  const ta = $("commsText"), btn = $("commsSend"), st = $("commsStatus");
+  const text = (ta.value || "").trim();
+  if(!text){ st.textContent = "Escribe un mensaje primero."; return; }
+  btn.disabled = true; st.textContent = "publicando…";
+  try {
+    const res = await fetch(COMMS + "/api/bot-say", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ persona:"Carlos", machine:"Dashboard", text })
+    });
+    if(!res.ok) throw new Error("HTTP " + res.status);
+    // Optimista: /api/bot-say no escribe en /api/diary de forma inmediata (y no
+    // podemos escribir en /api/diary sin key desde el navegador), así que añadimos
+    // el mensaje al feed en cliente para que Carlos lo vea al instante.
+    COMMS_OPTIMISTIC.push({ persona:"Carlos", machine:"Dashboard", project:"Dashboard",
+      kind:"say", text, date: NOW() });
+    ta.value = "";
+    st.textContent = "✓ publicado";
+    renderComms();
+    await refreshComms();
+    setTimeout(() => { st.textContent = ""; }, 3000);
+  } catch(e){
+    st.textContent = "⚠ " + e.message;
+  } finally { btn.disabled = false; }
+}
+
+$("commsSend").addEventListener("click", publishComms);
+$("commsText").addEventListener("keydown", (e) => {
+  if((e.ctrlKey || e.metaKey) && e.key === "Enter") publishComms();
+});
+
+refreshPresence(); setInterval(refreshPresence, PRESENCE_MS);
+refreshComms();    setInterval(refreshComms, COMMS_MS);
+refreshBoard();    setInterval(refreshBoard, REFRESH_MS);
 </script>
 </body>
 </html>

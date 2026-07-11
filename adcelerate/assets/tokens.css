@@ -1,0 +1,89 @@
+/* ============================================================
+   Admira · Xperience · Design Tokens v0.1.0
+   ============================================================
+   Una sola fuente de verdad para la identidad visual del grupo:
+   admira.studio (Pixer.IA) · xpaceos.com (XpaceOS) ·
+   admira.app (Xbusiness) · admira.live · admira.tv · admira.store
+   ============================================================ */
+
+:root {
+  /* ── Paleta · superficies ─────────────────────────────────── */
+  --admira-bg:         #0a0c12;
+  --admira-bg-elev:    #141826;
+  --admira-bg-overlay: rgba(170, 136, 255, 0.05);
+
+  /* ── Paleta · texto ────────────────────────────────────────── */
+  --admira-text:       #f0e6ff;
+  --admira-text-muted: rgba(216, 200, 255, 0.65);
+  --admira-text-dim:   rgba(216, 200, 255, 0.40);
+
+  /* ── Paleta · marcas del grupo ─────────────────────────────── */
+  --admira-amber:   #ffd866;  /* Admira (paraguas) */
+  --admira-violet:  #aa88ff;  /* Pixer.IA */
+  --admira-cyan:    #50c8ff;  /* XpaceOS / digital twin */
+  --admira-green:   #76b900;  /* Nvidia / XpaceOS retail */
+  --admira-magenta: #ff4488;  /* CTA / hover acento */
+  --admira-red:     #e2231a;  /* Lenovo */
+
+  /* ── Bordes ────────────────────────────────────────────────── */
+  --admira-border:        rgba(170, 136, 255, 0.25);
+  --admira-border-strong: rgba(170, 136, 255, 0.45);
+  --admira-border-amber:  rgba(255, 216, 102, 0.35);
+
+  /* ── Tipografía ────────────────────────────────────────────── */
+  --admira-font-sans: -apple-system, BlinkMacSystemFont, "Inter", "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+  --admira-font-mono: ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, Consolas, monospace;
+
+  /* ── Espaciados ────────────────────────────────────────────── */
+  --admira-space-1:  4px;
+  --admira-space-2:  8px;
+  --admira-space-3: 14px;
+  --admira-space-4: 22px;
+  --admira-space-5: 36px;
+  --admira-space-6: 56px;
+
+  /* ── Radios ────────────────────────────────────────────────── */
+  --admira-radius-sm:   6px;
+  --admira-radius-md:  10px;
+  --admira-radius-lg:  14px;
+  --admira-radius-pill: 999px;
+
+  /* ── Sombras / glows ──────────────────────────────────────── */
+  --admira-shadow-glow-violet: 0 0 24px rgba(170, 136, 255, .40);
+  --admira-shadow-glow-amber:  0 0 24px rgba(255, 216, 102, .40);
+  --admira-shadow-glow-cyan:   0 0 24px rgba( 80, 200, 255, .40);
+  --admira-shadow-card:        0 12px 32px rgba(0, 0, 0, .55);
+
+  /* ── Transiciones ──────────────────────────────────────────── */
+  --admira-tx-fast:    .12s;
+  --admira-tx-normal:  .25s;
+  --admira-tx-slow:    .45s;
+}
+
+/* ── Base ──────────────────────────────────────────────────── */
+html, body {
+  margin: 0;
+  padding: 0;
+  background: var(--admira-bg);
+  color: var(--admira-text);
+  font-family: var(--admira-font-sans);
+  font-size: 15px;
+  line-height: 1.55;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+* { box-sizing: border-box; }
+
+/* ── Tipografía utilitaria ─────────────────────────────────── */
+.admira-mono { font-family: var(--admira-font-mono); }
+.admira-eyebrow {
+  font-family: var(--admira-font-mono);
+  font-size: 10px;
+  letter-spacing: .22em;
+  text-transform: uppercase;
+  color: var(--admira-text-muted);
+}
+.admira-h1 { font-size: 32px; font-weight: 700; line-height: 1.15; letter-spacing: -0.01em; margin: 0; }
+.admira-h2 { font-size: 22px; font-weight: 600; line-height: 1.25; margin: 0; }
+.admira-h3 { font-size: 16px; font-weight: 600; line-height: 1.3;  margin: 0; }

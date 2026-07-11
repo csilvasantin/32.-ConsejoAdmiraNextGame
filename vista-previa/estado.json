@@ -1,12 +1,15 @@
 {
   "proyecto": "AInimation Studio · www.ainimation.studio",
   "titulo": "Editor de vídeo zero-key: un brief → vídeo 1080p real",
-  "resumen": "El editor «Direct the movie» produce vídeo con voz multiidioma, música, fondos e imágenes CC0, temas y escenas (cita/imagen/gráfico), sin claves de API. Falta solo el HTTPS.",
-  "foco": "ainimation.studio con HTTPS vivo; editor Studio Live en cuadratura AdmiraNeXT (nav home + raíles opciones/avanzado/experto)",
+  "resumen": "El editor «Direct the movie» produce vídeo con voz multiidioma, música, fondos e imágenes CC0, temas y escenas (cita/imagen/gráfico), sin claves de API. HTTPS ya activo; quedan el puente Emitir → admira.tv y la persistencia.",
+  "foco": "Editor Studio Live en cuadratura AdmiraNeXT (nav home + raíles opciones/avanzado/experto); siguiente hito real: puente Emitir → admira.tv",
   "progreso": 100,
-  "estado_general": "en curso",
-  "actualizado": "2026-07-05T06:53:36Z",
-  "por": "Morfeo · MacBookProNegro14",
+  "estado_general": "convergido (queda solo el puente Emitir → admira.tv y la persistencia)",
+  "actualizado": "2026-07-06T18:30:00Z",
+  "ultima_actualizacion_real": "2026-07-06T18:30:00Z",
+  "caduca": "2026-07-09T18:30:00Z",
+  "por": "subNeo · protocolo agentes",
+  "_planos": "Este fichero es el ESTADO DE PROYECTO (global, versionado en git). La PRESENCIA VIVA per-agente (quién está online y en qué foco) NO va aquí: la sirve el worker en /api/presence y la pinta la vista-previa aparte. Si 'caduca' < ahora, considérese posiblemente desfasado.",
   "pasos": {
     "hecho": [
       "Voz en off multiidioma (Piper es/en) con voz, velocidad, volumen y preview del guion",
@@ -14,36 +17,33 @@
       "4 temas visuales + 3 tipos de escena (cita destacada, imagen a pantalla completa, gráfico de barras)",
       "Galería de producciones + compartir nativo, guardar/compartir el brief, plantillas de 1 clic y meta Open Graph",
       "Pipeline público verificado end-to-end (worker Cloudflare + poller → R2)",
-      "HTTPS de ainimation.studio ACTIVO (migrado el DNS a Cloudflare; cert válido, carga 200) — se resolvió el cert de Pages atascado >12h"
+      "HTTPS de ainimation.studio ACTIVO (DNS migrado a Cloudflare; cert válido, carga 200) — se resolvió el cert de Pages atascado >12h"
     ],
     "encurso": [
       "Puente Emitir → admira.tv (autónomo) — enviar la producción al canal DOOH"
     ],
     "siguiente": [
-      "Activar el HTTPS por Cloudflare en cuanto Carlos haga el cambio de DNS",
       "Puente Emitir a admira.tv (canal)",
       "Persistencia de las producciones del usuario (más allá de la galería efímera)"
     ]
   },
   "necesita_carbono": [
-    "Guardar en la bóveda un token de Cloudflare con permisos de Zona/DNS — así el HTTPS y futuros cambios de DNS los automatizo yo (cumple la máxima #11: reducir el carbono recurrente).",
     "Tu OK para el puente Emitir → admira.tv (conectar el editor al canal DOOH) — o dime otra prioridad de producto."
   ],
   "riesgos": [
-    "Sin HTTPS el navegador marca «No es seguro» al abrir por https (el sitio funciona por http)",
     "La galería lee metadatos de KV que caducan a 7 días; las producciones antiguas dejan de listarse (el mp4 en R2 sigue)",
     "Los fondos CC0 dependen de Openverse (best-effort: si falla, la escena sale plana)"
   ],
   "enlaces": [
     {
       "label": "AInimation Studio",
-      "url": "http://www.ainimation.studio/"
+      "url": "https://www.ainimation.studio/"
     },
     {
       "label": "Editor (Studio Live)",
-      "url": "http://www.ainimation.studio/studio-live.html"
+      "url": "https://www.ainimation.studio/studio-live.html"
     }
   ],
   "commit": "pendiente",
-  "version": "estado ainimation v.2026.07.05.r2 (Morfeo)"
+  "version": "estado ainimation v.2026.07.06.r1 (subNeo)"
 }

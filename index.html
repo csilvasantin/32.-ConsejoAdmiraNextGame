@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-    <script src="/auth-gate.js"></script>
+    <script src="/auth-gate.js?v=20260708-authfix"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- Herramienta interna: NO indexar -->
@@ -52,6 +52,12 @@
         /* Foco visible por teclado (no afecta al ratón) */
         a:focus-visible, button:focus-visible, [role="button"]:focus-visible, input:focus-visible, [tabindex]:focus-visible {
             outline: 2px solid #ffee88; outline-offset: 2px; border-radius: 4px;
+        }
+        html {
+            /* 100vw incluye el scrollbar vertical: los full-bleed (.top-bar) sobresalen
+               ~15px del viewport y sacan una barra horizontal en toda la página. Nunca. */
+            overflow-x: hidden;
+            overflow-x: clip;
         }
         body {
             font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
@@ -2336,25 +2342,8 @@
         .diario-toggle:hover { background: #8b5a14; border-color: #f0c040; color: #fff; }
         .diario-dot { width: 8px; height: 8px; background: #ffdd66; }
 
-        /* ── Panel Tareas: acoplado bajo la foto, formando caja con el Consejo (ya NO flotante) ── */
-        #task-panel{
-            position: static !important;
-            left:auto !important; top:auto !important; right:auto !important; bottom:auto !important;
-            width:100% !important; max-width:1000px !important;
-            height:auto !important; max-height:none !important;
-            margin:0 auto !important;
-            resize:none !important;
-            border-radius:0 !important;
-            border:3px solid #1f8a3e !important;
-            border-top:none !important;            /* se pega a la barra de escribir de arriba */
-            box-shadow:4px 4px 0 #000 !important;
-        }
-        #task-panel #tk-head{ cursor:default !important; }   /* ya no se arrastra */
-        #task-panel.tk-min{ width:100% !important; max-width:1000px !important; height:auto !important; }
-        /* Con el panel abierto: abajo solo HACKEO (izq) + DIARIO (en el hueco de Demo, dcha) */
-        body.tk-open .control-toggle{ display:none !important; }
-        body.tk-open .demo-toggle{ display:none !important; }
-        body.tk-open .diario-toggle{ left:auto !important; right:1rem !important; transform:none !important; }
+        /* Panel Tareas: vive DENTRO del riel AVANZADO con estilo SCUMM (metaestilo único).
+           Su CSS está junto al markup del panel, al final del documento. */
         .hack-toggle.active {
             background: #006600;
             border-color: #00ff41;
@@ -2587,7 +2576,11 @@
 
         /* ════ Menú superior: UNA sola línea, estética SCUMM Monkey Island ════ */
         .top-bar {
-            flex-wrap: nowrap;            /* todo en una línea */
+            /* wrap de base: en una sola línea mientras quepa (look ≥1360px intacto),
+               pero ENVUELVE a 2ª línea si el contenido no cabe en vez de sacar una
+               barra de scroll horizontal de madera (banda 1081–1330px: fallaba en
+               1200/1280, los anchos de portátil más comunes). Cero scroll horizontal. */
+            flex-wrap: wrap;
             justify-content: center;
             align-items: stretch;
             gap: 0.4rem;
@@ -2597,7 +2590,7 @@
             width: 100vw;
             max-width: 100vw;
             padding: 0.5rem 1.2rem;
-            overflow-x: auto;             /* salvavidas en pantallas estrechas */
+            overflow-x: clip;             /* jamás una barra horizontal en la barra (era auto → desbordaba) */
             background: #5a3a1e;          /* madera Monkey Island */
             border: 3px solid #8b5a14;
             border-top-color: #a07828;
@@ -2673,17 +2666,22 @@
         .top-bar .yar-btn:hover { background: #1b321e; color: #d9ffe0; }
         .top-bar .yar-chip { margin-top: 3px; font-size: 0.38rem; }
 
-        /* contadores en línea, mismas pastillas de madera */
-        .top-bar .summary { flex-wrap: nowrap; gap: 0.4rem; flex: 0 0 auto; }
-        .top-bar .summary-item {
-            display: flex; flex-direction: column; justify-content: center;
-            padding: 0.3rem 0.55rem;
+        /* Contadores de flota: viven en el riel AVANZADO (grupo «Flota»), pastillas de
+           madera SCUMM apiladas — fuera del top-bar para que quepa en UNA fila. */
+        .side-rail .summary { display: flex; flex-direction: column; gap: 4px; flex: 0 0 auto; padding: 0 2px; }
+        .side-rail .summary-item {
+            display: flex; flex-direction: row; align-items: baseline; gap: 6px;
+            padding: 4px 6px;
             border: 2px solid #5a3a1e;
             background: #2a1a08;
             box-shadow: 2px 2px 0 #000;
         }
-        .top-bar .summary-number { font-size: 0.8rem; }
-        .top-bar .summary-label { font-size: 0.34rem; color: #b89060; }
+        .side-rail .summary-number { font-size: 0.62rem; font-weight: normal; }
+        .side-rail .summary-label { font-size: 0.34rem; color: #b89060; margin-top: 0; line-height: 1.5; }
+        @media (max-width:760px){
+            .side-rail .summary-number { font-size: 0.8rem; }
+            .side-rail .summary-label { font-size: 0.5rem; }
+        }
 
         /* botón plegar al mismo estilo madera */
         .top-bar .top-fold {
@@ -2856,7 +2854,7 @@ body.rail-open{overflow:hidden}
                 <svg viewBox="0 0 16 14"><rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="1.6" y="1.6" width="4.4" height="10.8" rx="1"/></svg>
             </button>
             <!-- Barra idéntica a admira-bar.js (subpáginas) para consistencia — mantener en sync con var TOP -->
-            <a href="https://www.admira.live/" class="version-badge" title="Consejo AdmiraNeXT">🏛️ Consejo AdmiraNeXT <span class="pf-ver">v.2026.07.02.r12</span></a>
+            <a href="https://www.admira.live/" class="version-badge" title="Consejo AdmiraNeXT">🏛️ Consejo AdmiraNeXT <span class="pf-ver">v.2026.07.07.r4</span></a>
             <a href="https://www.admira.live/dashboard.html" target="_blank" rel="noopener" class="version-badge" title="Dashboard · panel de estado">📊 Dashboard</a>
             <a href="https://www.admira.live/control/" target="_blank" rel="noopener" class="version-badge" title="Control · FleetControl">🖥️ Control</a>
             <a href="https://www.admira.live/navegadores/" class="version-badge" title="Navegadores · flota de navegadores Claude-in-Chrome">🌐 Navegadores</a>
@@ -2864,7 +2862,8 @@ body.rail-open{overflow:hidden}
             <a href="https://www.admira.live/vista-previa" class="version-badge" title="Misiones · ¿En qué estamos?">🎯 Misiones</a>
             <a href="/diario.html" class="version-badge" title="Diario de Silicio">📓 Diario</a>
             <a id="home-usuarios" href="https://www.admira.live/usuarios.html" class="version-badge" style="display:none" title="Usuarios · whitelist (solo superusers)">👥 Usuarios</a>
-            <div class="summary" id="summary"></div>
+            <!-- Los contadores de flota (#summary) viven en el riel AVANZADO (grupo «Flota»)
+                 para que el top-bar quepa en UNA fila; los iconos van arriba a la derecha. -->
             <div class="pf-toggles">
                 <button type="button" id="pf-ic-avanzado" class="pf-ico" onclick="pfToggle('avanzado')" title="Avanzado · panel derecho" aria-label="Avanzado · panel derecho">
                     <svg viewBox="0 0 16 14"><rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="10" y="1.6" width="4.4" height="10.8" rx="1"/></svg>
@@ -3034,6 +3033,78 @@ body.rail-open{overflow:hidden}
                 <a class="rail-btn" href="/diario.html" title="Diario de Silicio en vivo">📓 Diario</a>
                 <a class="rail-btn" href="https://www.admira.studio/" target="_blank" rel="noopener" title="Abrir ADmiraNeXT Studio">🎬 Demo</a>
                 <button class="rail-btn" onclick="window.toggleDesign&&toggleDesign()" title="Modo diseño (rejilla/reglas)">📐 Diseño</button>
+                <div class="rail-group">Flota</div>
+                <div class="summary" id="summary"></div>
+                <div class="rail-group">Tareas</div>
+                <div id="task-panel" aria-label="Tareas del Consejo">
+                  <div id="tk-head"><span class="tk-dot"></span><b>🗂️ Tareas del Consejo</b><span class="tk-count" id="tk-count"></span><span class="tk-toggle">▾</span></div>
+                  <div id="tk-body">
+                    <button type="button" id="tk-form-toggle" class="tk-form-toggle" title="Mostrar / ocultar el formulario de crear tarea">➕ Nueva tarea<span class="tk-fc" id="tk-form-caret">▸</span></button>
+                    <form id="tk-form" autocomplete="off">
+                      <input id="tk-title" placeholder="Nueva tarea… (qué hay que hacer)" maxlength="280" required>
+                      <div class="tk-row">
+                        <select id="tk-assignee" title="Asignar a"><option value="">Asignar a…</option></select>
+                        <select id="tk-priority" title="Prioridad">
+                          <option value="normal">🟡 normal</option>
+                          <option value="high">🟠 alta</option>
+                          <option value="urgent">🔴 urgente</option>
+                          <option value="low">⚪ baja</option>
+                        </select>
+                      </div>
+                      <div class="tk-row">
+                        <select id="tk-approval" title="Cómo gestionan permisos Codex, Claude Code y OpenCode">
+                          <option value="full_access">🟢 Omitir permisos / acceso completo</option>
+                          <option value="auto_approve">🟡 Aceptar peticiones del agente</option>
+                          <option value="ask">🔴 Solicitar permisos al Consejo</option>
+                        </select>
+                        <select id="tk-monitor" title="Cómo se monitoriza el feedback y pantallazos del agente">
+                          <option value="silicio">⚙️ Silicio · ritmo técnico</option>
+                          <option value="carbono">🫀 Carbono · criterio humano</option>
+                          <option value="skynet">🛰️ Skynet · vigilancia estricta</option>
+                        </select>
+                      </div>
+                      <span id="tk-monitor-help">Silicio: inicio, hitos compactos, bloqueo y cierre con verificación.</span>
+                      <div class="tk-row" id="tk-skynet-row">
+                        <label class="tk-skynet-choice"><input type="checkbox" class="tk-skynet-target" value="claude" checked>Claude</label>
+                        <label class="tk-skynet-choice"><input type="checkbox" class="tk-skynet-target" value="codex" checked>Codex</label>
+                        <label class="tk-skynet-choice"><input type="checkbox" class="tk-skynet-target" value="opencode">OpenCode</label>
+                        <button type="button" id="tk-skynet-audit" class="tk-skynet-audit" title="Auditar los motores seleccionados en todos los equipos automatizables">🛰️ Auditar selección</button>
+                        <span id="tk-skynet-status"></span>
+                      </div>
+                      <div class="tk-row">
+                        <select id="tk-template" title="Plantillas rápidas">
+                          <option value="">⚡ Plantilla…</option>
+                          <option>Apagar monitor</option>
+                          <option>Encender monitor</option>
+                          <option>Abrir YouTube</option>
+                          <option>Cerrar Google Chrome</option>
+                          <option>Conéctate por SSH al Mac Mini</option>
+                          <option>Haz una captura de pantalla</option>
+                        </select>
+                        <input id="tk-when" type="datetime-local" title="Programar (opcional)">
+                      </div>
+                      <textarea id="tk-detail" placeholder="Detalle / contexto (opcional) — puedes pegar una imagen con Ctrl/⌘+V" maxlength="700"></textarea>
+                      <div class="tk-row" style="align-items:center;gap:6px">
+                        <input id="tk-img" type="file" accept="image/*" style="display:none">
+                        <button type="button" id="tk-img-btn" class="tk-skynet-audit" style="width:auto">📎 Imagen</button>
+                        <span id="tk-img-prev" style="font-size:0.4rem;color:#ffdd66"></span>
+                      </div>
+                      <div class="tk-row">
+                        <label class="tk-send-now"><input type="checkbox" id="tk-now" checked> entregar ya</label>
+                        <button type="submit" class="tk-create" id="tk-create">+ Crear</button>
+                      </div>
+                    </form>
+                    <button type="button" id="tk-hist-toggle" class="tk-form-toggle" title="Mostrar / ocultar bots y el histórico de tareas">🗂️ Histórico (bots y tareas)<span class="tk-fc" id="tk-hist-caret">▸</span></button>
+                    <div class="tk-row" id="tk-bulk" style="flex-direction:row;gap:5px;justify-content:flex-start;flex-wrap:wrap;margin:2px 0 4px">
+                      <button type="button" id="tk-clear-done" class="tk-skynet-audit" style="width:auto">🧹 Limpiar hechas</button>
+                      <button type="button" id="tk-toggle-arch" class="tk-skynet-audit" style="width:auto">📦 Ver archivadas</button>
+                    </div>
+                    <div id="tk-health" title="Salud de los bots"></div>
+                    <div id="tk-list"><div id="tk-empty">Cargando tareas…</div></div>
+                    <div id="tk-foot">reparto + seguimiento · persistente</div>
+                  </div>
+                </div>
+                <div id="rail-estado">Estado en tiempo real del Consejo de Dirección · <span class="live">● LIVE</span> · <span id="last-check-inline">comprobando...</span> · Última comprobación: <span id="last-check">—</span></div>
             </div>
         </div>
         </div>
@@ -3252,9 +3323,8 @@ body.rail-open{overflow:hidden}
             </div>
         </div>
 
-        <div class="subtitle" style="margin-top:1rem;">
-            Estado en tiempo real del Consejo de Dirección · <span class="live">● LIVE</span> · <span id="last-check-inline" style="color:#555;">comprobando...</span> · <span style="color:#555;">Última comprobación: <span id="last-check">—</span></span>
-        </div>
+        <!-- La línea "Estado en tiempo real · LIVE" vive ahora dentro del riel AVANZADO
+             (#rail-estado), junto al panel de Tareas — la home queda limpia por abajo. -->
     </div>
 
     <div class="screen-overlay" id="screen-overlay" onclick="closeScreenOverlay()">
@@ -3403,161 +3473,131 @@ body.rail-open{overflow:hidden}
      máquina por SSH, las entrega (dispatch) y sigue su estado. Fuente de verdad:
      council-api (data/tasks.json, persistente). Endpoints origin-gated → sin clave. -->
 <style>
-  #task-panel{position:fixed;left:14px;bottom:14px;z-index:91;width:360px;height:480px;
-    min-width:270px;min-height:160px;max-width:96vw;max-height:90vh;resize:both;display:none;flex-direction:column;
-    font-family:"Courier New",monospace;color:#7dff9e;background:rgba(2,10,4,.95);border:1px solid #1f8a3e;
-    border-radius:10px;box-shadow:0 0 28px rgba(0,255,65,.18);overflow:hidden;font-size:12px}
-  #task-panel.tk-min{width:auto!important;height:auto!important;min-height:0;resize:none}
-  #tk-head{display:flex;align-items:center;gap:8px;padding:8px 11px;background:rgba(0,255,65,.07);
-    border-bottom:1px solid #1f8a3e;cursor:grab;user-select:none;touch-action:none}
-  #tk-head:active{cursor:grabbing}
-  #tk-head b{color:#9effb0;letter-spacing:.06em;font-size:12px;text-shadow:0 0 6px rgba(0,255,65,.5)}
-  #tk-head .tk-dot{width:8px;height:8px;border-radius:50%;background:#00ff41;box-shadow:0 0 6px #00ff41;animation:agmPulse 1.6s infinite}
-  #tk-head .tk-count{margin-left:auto;font-size:10px;color:#3f7a4f}
-  #tk-head .tk-toggle{color:#7dff9e;opacity:.8;margin-left:6px}
-  #tk-body{display:flex;flex-direction:column;flex:1;min-height:0}
+  /* ── Sección SCUMM dentro del riel AVANZADO: madera, pixel, paleta cálida ──
+     Mismo lenguaje que .rail-head/.rail-btn y el top-bar (metaestilo único de la
+     página; cero verde fósforo sobre negro). Cabecera = toggle de colapso. */
+  #task-panel{display:none;flex-direction:column;flex:0 0 auto;width:100%;margin:6px 0 0;box-sizing:border-box;
+    font-family:'Press Start 2P',monospace;font-size:0.45rem;color:#ffdd66;
+    background:#4a2f14;border:2px solid #8b5a14;box-shadow:2px 2px 0 #000;overflow:hidden}
+  #tk-body,#tk-head{flex:0 0 auto}
+  #tk-head{display:flex;align-items:center;gap:5px;padding:0.5rem 0.45rem;background:#3a2410;
+    border-bottom:2px solid #2a1a08;cursor:pointer;user-select:none}
+  #tk-head:hover b{color:#ffee00}
+  #tk-head b{color:#daa520;letter-spacing:1px;font-size:0.42rem;font-weight:normal;text-transform:uppercase}
+  #tk-head .tk-dot{width:7px;height:7px;flex:0 0 auto;background:#44bb44;box-shadow:1px 1px 0 #000}
+  #tk-head .tk-count{margin-left:auto;font-size:0.36rem;color:#b89060;white-space:nowrap}
+  #tk-head .tk-toggle{color:#ffdd66;opacity:.85;margin-left:4px}
+  #tk-body{display:flex;flex-direction:column;min-height:0;padding:5px}
   .tk-min #tk-body{display:none}
-  #tk-form{display:flex;flex-direction:column;gap:5px;padding:8px 10px;border-bottom:1px solid #143b1d}
-  #tk-form input,#tk-form select,#tk-form textarea{background:#03140a;border:1px solid #1f8a3e;color:#bdebc8;
-    border-radius:6px;padding:5px 8px;font-family:inherit;font-size:11px;outline:none;width:100%}
+  #tk-form{display:flex;flex-direction:column;gap:4px;padding:2px 0 6px;border-bottom:2px solid #3a2410}
+  #tk-form input,#tk-form select,#tk-form textarea{background:#2a1a08;border:2px solid #8b5a14;color:#ffdd66;
+    border-radius:0;padding:4px 5px;font-family:inherit;font-size:0.42rem;outline:none;width:100%;box-sizing:border-box}
+  #tk-form input:focus,#tk-form select:focus,#tk-form textarea:focus{border-color:#f0c040}
   #tk-form textarea{resize:vertical;min-height:30px;max-height:90px}
-  .tk-row{display:flex;gap:5px}
-  .tk-row > *{flex:1;min-width:0}
-  #tk-form .tk-create{background:#0c3;border:0;color:#02140a;border-radius:6px;padding:6px;font-weight:700;cursor:pointer;flex:none}
+  .tk-row{display:flex;flex-direction:column;gap:4px}
+  .tk-row > *{min-width:0}
+  #tk-form .tk-create{background:#8b5a14;border:2px solid #a07828;color:#fff;border-radius:0;padding:6px;
+    font-family:inherit;font-size:0.46rem;cursor:pointer;box-shadow:2px 2px 0 #000;text-transform:uppercase}
+  #tk-form .tk-create:hover{border-color:#f0c040;color:#ffee00}
   #tk-form .tk-create:disabled{opacity:.5;cursor:default}
   #tk-skynet-row{display:none}
   #tk-skynet-row.tk-skynet-on{display:flex}
-  .tk-skynet-choice{display:flex;align-items:center;gap:4px;flex:0 0 auto;border:1px solid #24506f;border-radius:6px;
-    padding:4px 6px;background:#04131b;color:#9dc5ff;font-size:10px;white-space:nowrap}
+  .tk-skynet-choice{display:flex;align-items:center;gap:4px;border:2px solid #8b5a14;
+    padding:3px 5px;background:#2a1a08;color:#ffdd66;font-size:0.4rem;white-space:nowrap}
   .tk-skynet-choice input{width:auto!important;margin:0}
-  .tk-skynet-audit{background:#06200f;border:1px solid #2d7cff;color:#9dc5ff;border-radius:6px;padding:5px 8px;
-    font-family:inherit;font-size:10px;cursor:pointer}
-  .tk-skynet-audit:disabled{opacity:.45;cursor:default;border-color:#24506f;color:#6c899e}
-  #tk-skynet-status{flex:1.8;color:#6faad4;font-size:10px;align-self:center;min-width:120px;line-height:1.35}
-  #tk-skynet-status .sky-row{display:flex;flex-wrap:wrap;gap:4px;margin-top:2px}
-  #tk-skynet-status .sky-chip{display:inline-flex;align-items:center;gap:3px;border:1px solid #24506f;border-radius:5px;
-    padding:1px 5px;background:#04131b;color:#9dc5ff;max-width:100%;white-space:nowrap}
-  #tk-skynet-status .sky-chip.wait{border-color:#caa400;color:#ffe27a;background:#1d1803}
-  #tk-skynet-status .sky-chip.off{border-color:#553;color:#aaa;background:#171711}
-  #tk-skynet-status a{color:#7dff9e;text-decoration:none;border-bottom:1px dotted #7dff9e}
-  #tk-skynet-status .sky-progress{height:5px;border:1px solid #24506f;border-radius:5px;overflow:hidden;background:#031018;margin-top:3px}
-  #tk-skynet-status .sky-progress i{display:block;height:100%;width:42%;border-radius:5px;
-    background:linear-gradient(90deg,#2d7cff,#7dff9e,#2d7cff);animation:skyScan 1.15s linear infinite}
+  .tk-skynet-audit{background:#2a1a08;border:2px solid #8b5a14;color:#ffdd66;padding:4px 6px;
+    font-family:inherit;font-size:0.4rem;cursor:pointer}
+  .tk-skynet-audit:hover{border-color:#f0c040;color:#fff}
+  .tk-skynet-audit:disabled{opacity:.45;cursor:default}
+  #tk-skynet-status{color:#c9a86a;font-size:0.4rem;line-height:1.5;min-width:0}
+  #tk-skynet-status .sky-row{display:flex;flex-wrap:wrap;gap:3px;margin-top:2px}
+  #tk-skynet-status .sky-chip{display:inline-flex;align-items:center;gap:3px;border:1px solid #8b5a14;
+    padding:1px 4px;background:#2a1a08;color:#ffdd66;max-width:100%;white-space:normal;word-break:break-word}
+  #tk-skynet-status .sky-chip.wait{border-color:#caa400;color:#ffe27a}
+  #tk-skynet-status .sky-chip.off{border-color:#554433;color:#998877}
+  #tk-skynet-status a{color:#ffdd66;text-decoration:none;border-bottom:1px dotted #ffdd66}
+  #tk-skynet-status .sky-progress{height:5px;border:1px solid #8b5a14;overflow:hidden;background:#2a1a08;margin-top:3px}
+  #tk-skynet-status .sky-progress i{display:block;height:100%;width:42%;
+    background:linear-gradient(90deg,#8b5a14,#ffdd66,#8b5a14);animation:skyScan 1.15s linear infinite}
   #tk-skynet-status .sky-warn{color:#ffe27a}
   @keyframes skyScan{0%{transform:translateX(-110%)}100%{transform:translateX(250%)}}
-  #tk-monitor-help{display:block;margin-top:-2px;color:#6faad4;font-size:10px;line-height:1.35;min-height:14px}
-  #tk-monitor-help.silicio{color:#8fe8a2}
-  #tk-monitor-help.carbono{color:#ffb8c9}
-  #tk-monitor-help.skynet{color:#9dc5ff}
-  .tk-send-now{display:flex;align-items:center;gap:6px;font-size:10px;color:#9effb0;flex:1.4}
+  #tk-monitor-help{display:block;color:#c9a86a;font-size:0.38rem;line-height:1.6;min-height:12px}
+  #tk-monitor-help.silicio{color:#c9a86a}
+  #tk-monitor-help.carbono{color:#e0a8b8}
+  #tk-monitor-help.skynet{color:#a8c0e0}
+  .tk-send-now{display:flex;align-items:center;gap:5px;font-size:0.4rem;color:#ffdd66}
   .tk-send-now input{width:auto!important}
-  #tk-list{flex:1;min-height:0;overflow-y:auto;padding:6px 8px}
-  .tk-item{padding:7px 8px;border:1px solid #143b1d;border-radius:7px;margin-bottom:6px;background:rgba(0,40,12,.25)}
-  .tk-item .tk-top{display:flex;align-items:center;gap:6px;margin-bottom:3px}
-  .tk-item .tk-title{color:#e9ffe9;font-weight:700;flex:1;word-break:break-word;line-height:1.3}
-  .tk-chip{font-size:9px;padding:1px 6px;border-radius:10px;border:1px solid;white-space:nowrap}
-  .tk-st-pending{color:#9aa;border-color:#556}
-  .tk-st-sent{color:#5cf;border-color:#39c}
-  .tk-st-in_progress{color:#fc3;border-color:#a82}
-  .tk-st-blocked{color:#f66;border-color:#a33;background:rgba(120,20,20,.2)}
-  .tk-st-done{color:#0f6;border-color:#0a4;background:rgba(0,80,30,.2)}
-  .tk-meta{font-size:9px;color:#5b9c6c;margin:2px 0 4px;display:flex;flex-wrap:wrap;gap:6px}
-  .tk-detail{font-size:10px;color:#a7d8b4;margin:0 0 4px;word-break:break-word;line-height:1.35}
-  .tk-acts{display:flex;flex-wrap:wrap;gap:4px}
-  .tk-acts button{background:#06200f;border:1px solid #1f8a3e;color:#9effb0;border-radius:5px;
-    padding:2px 7px;font-size:10px;cursor:pointer;font-family:inherit}
-  .tk-acts button:hover{background:#0a3318}
-  .tk-acts button.tk-del{border-color:#a33;color:#f88}
-  .tk-acts button.tk-go{border-color:#0c3;color:#0f6}
+  #tk-list{min-height:0;max-height:300px;overflow-y:auto;padding:4px 0;
+    scrollbar-width:thin;scrollbar-color:#a07828 #3a2410}
+  #tk-list::-webkit-scrollbar{width:7px}
+  #tk-list::-webkit-scrollbar-track{background:#3a2410}
+  #tk-list::-webkit-scrollbar-thumb{background:#a07828;border:1px solid #5a3a1e}
+  .tk-item{padding:5px;border:2px solid #3a2410;margin-bottom:5px;background:#2a1a08}
+  .tk-item .tk-top{display:flex;align-items:center;gap:4px;margin-bottom:3px;flex-wrap:wrap}
+  .tk-item .tk-title{color:#fff;flex:1 1 100%;word-break:break-word;line-height:1.6;font-size:0.42rem}
+  .tk-chip{font-size:0.34rem;padding:1px 4px;border:1px solid;white-space:nowrap}
+  .tk-st-pending{color:#b89060;border-color:#8b5a14}
+  .tk-st-sent{color:#88bbdd;border-color:#4a7a9a}
+  .tk-st-in_progress{color:#ffcc33;border-color:#a07828}
+  .tk-st-blocked{color:#ff8866;border-color:#a04828}
+  .tk-st-done{color:#88cc66;border-color:#4a7a2a}
+  .tk-meta{font-size:0.34rem;color:#b89060;margin:2px 0 3px;display:flex;flex-wrap:wrap;gap:5px}
+  .tk-detail{font-size:0.38rem;color:#e8d8b8;margin:0 0 3px;word-break:break-word;line-height:1.5}
+  .tk-acts{display:flex;flex-wrap:wrap;gap:3px}
+  .tk-acts button{background:#3a2410;border:1px solid #8b5a14;color:#ffdd66;
+    padding:2px 5px;font-size:0.36rem;cursor:pointer;font-family:inherit}
+  .tk-acts button:hover{background:#7a5a2e;color:#ffee00}
+  .tk-acts button.tk-del{border-color:#a04828;color:#ff9977}
+  .tk-acts button.tk-go{border-color:#4a7a2a;color:#88cc66}
   .tk-acts button.tk-fin{border-color:#caa400;color:#ffe27a}
-  #tk-health{display:flex;flex-wrap:wrap;gap:4px;margin:0 0 5px}
-  .tk-hb{font-size:0.58rem;border:1px solid #1f5a30;border-radius:5px;padding:1px 5px;background:#06200f;color:#9effb0;white-space:nowrap}
-  .tk-hb.off{border-color:#553;color:#998;background:#1a1a12}
+  #tk-health{display:flex;flex-wrap:wrap;gap:3px;margin:4px 0}
+  .tk-hb{font-size:0.36rem;border:1px solid #8b5a14;padding:1px 4px;background:#2a1a08;color:#ffdd66;white-space:normal}
+  .tk-hb.off{border-color:#554433;color:#998877}
   .tk-hb .tk-hb-sub{opacity:.7}
-  #tk-empty{color:#3f7a4f;text-align:center;padding:18px 8px;font-size:11px}
-  #tk-foot{padding:6px 10px;border-top:1px solid #143b1d;color:#3f7a4f;font-size:10px;text-align:center}
-  .tk-form-toggle{width:100%;text-align:left;background:#06200f;border:1px solid #1f8a3e;color:#9effb0;
-    border-radius:6px;padding:6px 9px;font-family:inherit;font-size:0.66rem;cursor:pointer;margin:0 0 6px;
-    display:flex;align-items:center;gap:6px}
-  .tk-form-toggle:hover{background:#0a3318}
+  #tk-empty{color:#b89060;text-align:center;padding:12px 5px;font-size:0.4rem}
+  #tk-foot{padding:5px 0 1px;border-top:2px solid #3a2410;color:#886633;font-size:0.34rem;text-align:center;
+    letter-spacing:1px;text-transform:uppercase}
+  .tk-form-toggle{width:100%;text-align:left;background:transparent;border:none;color:#fff;
+    padding:0.5rem 0.45rem;font-family:inherit;font-size:0.46rem;cursor:pointer;margin:2px 0;
+    display:flex;align-items:center;gap:5px;text-transform:uppercase;letter-spacing:.5px}
+  .tk-form-toggle:hover{color:#ffff00;background:#7a5a2e}
   .tk-form-toggle .tk-fc{margin-left:auto;opacity:.85}
   #task-panel.tk-form-min #tk-form{display:none}
   #task-panel.tk-hist-min #tk-bulk,
   #task-panel.tk-hist-min #tk-health,
   #task-panel.tk-hist-min #tk-list{display:none}
-  .tk-toolchip{display:inline-block;margin-left:6px;min-width:16px;padding:0 5px;border-radius:9px;font-size:.68rem;
-    line-height:1.5;text-align:center;background:#1f8a3e;color:#02140a;font-weight:700}
-  .tk-toolchip.tk-zero{background:#2a4a3a;color:#7dff9e;opacity:.7}
-  .tk-toolchip.tk-alert{background:#c33;color:#fff;animation:agmPulse 1.6s infinite}
+  .tk-toolchip{display:inline-block;margin-left:6px;min-width:16px;padding:0 5px;font-size:.68rem;
+    line-height:1.5;text-align:center;background:#8b5a14;color:#2a1a08;font-weight:700}
+  .tk-toolchip.tk-zero{background:#5a3a1e;color:#c9a86a;opacity:.8}
+  .tk-toolchip.tk-alert{background:#cc3333;color:#fff}
+  /* Estado LIVE del Consejo — línea compacta al pie de la sección de tareas */
+  #rail-estado{flex:0 0 auto;margin:6px 0 0;padding:6px 4px 2px;border-top:2px solid #3a2410;
+    font-family:'Press Start 2P',monospace;font-size:0.36rem;color:#886633;
+    line-height:1.8;letter-spacing:.5px;text-align:center}
+  #rail-estado .live{color:#44bb44}
+  #rail-estado #last-check-inline,#rail-estado #last-check{color:#b89060}
+  /* Cajón móvil (el riel es drawer ≤760px): textos y targets táctiles legibles */
+  @media (max-width:760px){
+    #task-panel{font-size:0.6rem}
+    #tk-head{padding:0.7rem 0.6rem}
+    #tk-head b{font-size:0.56rem}
+    #tk-head .tk-count{font-size:0.46rem}
+    #tk-form input,#tk-form select,#tk-form textarea{font-size:0.6rem;padding:8px 7px;min-height:40px}
+    #tk-form textarea{min-height:56px}
+    .tk-form-toggle{font-size:0.62rem;min-height:44px}
+    #tk-form .tk-create{font-size:0.62rem;min-height:44px}
+    .tk-item .tk-title{font-size:0.58rem}
+    .tk-detail{font-size:0.52rem}
+    .tk-meta,.tk-chip{font-size:0.46rem}
+    .tk-acts button{font-size:0.5rem;padding:6px 8px;min-height:36px}
+    #tk-empty{font-size:0.56rem}
+    #tk-foot{font-size:0.46rem}
+    #tk-list{max-height:none}
+    #rail-estado{font-size:0.5rem}
+  }
 </style>
-<div id="task-panel" aria-label="Tareas del Consejo">
-  <div id="tk-head"><span class="tk-dot"></span><b>🗂️ Tareas del Consejo</b><span class="tk-count" id="tk-count"></span><span class="tk-toggle">▾</span></div>
-  <div id="tk-body">
-    <button type="button" id="tk-form-toggle" class="tk-form-toggle" title="Mostrar / ocultar el formulario de crear tarea">➕ Nueva tarea<span class="tk-fc" id="tk-form-caret">▸</span></button>
-    <form id="tk-form" autocomplete="off">
-      <input id="tk-title" placeholder="Nueva tarea… (qué hay que hacer)" maxlength="280" required>
-      <div class="tk-row">
-        <select id="tk-assignee" title="Asignar a"><option value="">Asignar a…</option></select>
-        <select id="tk-priority" title="Prioridad">
-          <option value="normal">🟡 normal</option>
-          <option value="high">🟠 alta</option>
-          <option value="urgent">🔴 urgente</option>
-          <option value="low">⚪ baja</option>
-        </select>
-      </div>
-      <div class="tk-row">
-        <select id="tk-approval" title="Cómo gestionan permisos Codex, Claude Code y OpenCode">
-          <option value="full_access">🟢 Omitir permisos / acceso completo</option>
-          <option value="auto_approve">🟡 Aceptar peticiones del agente</option>
-          <option value="ask">🔴 Solicitar permisos al Consejo</option>
-        </select>
-        <select id="tk-monitor" title="Cómo se monitoriza el feedback y pantallazos del agente">
-          <option value="silicio">⚙️ Silicio · ritmo técnico</option>
-          <option value="carbono">🫀 Carbono · criterio humano</option>
-          <option value="skynet">🛰️ Skynet · vigilancia estricta</option>
-        </select>
-      </div>
-      <span id="tk-monitor-help">Silicio: inicio, hitos compactos, bloqueo y cierre con verificación.</span>
-      <div class="tk-row" id="tk-skynet-row">
-        <label class="tk-skynet-choice"><input type="checkbox" class="tk-skynet-target" value="claude" checked>Claude</label>
-        <label class="tk-skynet-choice"><input type="checkbox" class="tk-skynet-target" value="codex" checked>Codex</label>
-        <label class="tk-skynet-choice"><input type="checkbox" class="tk-skynet-target" value="opencode">OpenCode</label>
-        <button type="button" id="tk-skynet-audit" class="tk-skynet-audit" title="Auditar los motores seleccionados en todos los equipos automatizables">🛰️ Auditar selección</button>
-        <span id="tk-skynet-status"></span>
-      </div>
-      <div class="tk-row">
-        <select id="tk-template" title="Plantillas rápidas">
-          <option value="">⚡ Plantilla…</option>
-          <option>Apagar monitor</option>
-          <option>Encender monitor</option>
-          <option>Abrir YouTube</option>
-          <option>Cerrar Google Chrome</option>
-          <option>Conéctate por SSH al Mac Mini</option>
-          <option>Haz una captura de pantalla</option>
-        </select>
-        <input id="tk-when" type="datetime-local" title="Programar (opcional)" style="flex:1;font-size:10px">
-      </div>
-      <textarea id="tk-detail" placeholder="Detalle / contexto (opcional) — puedes pegar una imagen con Ctrl/⌘+V" maxlength="700"></textarea>
-      <div class="tk-row" style="align-items:center;gap:6px">
-        <input id="tk-img" type="file" accept="image/*" style="display:none">
-        <button type="button" id="tk-img-btn" style="font-size:0.62rem;padding:2px 7px;cursor:pointer">📎 Imagen</button>
-        <span id="tk-img-prev" style="font-size:10px;color:#9effb0"></span>
-      </div>
-      <div class="tk-row">
-        <label class="tk-send-now"><input type="checkbox" id="tk-now" checked> entregar ya</label>
-        <button type="submit" class="tk-create" id="tk-create">+ Crear</button>
-      </div>
-    </form>
-    <button type="button" id="tk-hist-toggle" class="tk-form-toggle" title="Mostrar / ocultar bots y el histórico de tareas">🗂️ Histórico (bots y tareas)<span class="tk-fc" id="tk-hist-caret">▸</span></button>
-    <div class="tk-row" id="tk-bulk" style="gap:6px;justify-content:flex-start;flex-wrap:wrap;margin:2px 0 4px">
-      <button type="button" id="tk-clear-done" style="font-size:0.62rem;padding:2px 7px;cursor:pointer">🧹 Limpiar hechas</button>
-      <button type="button" id="tk-toggle-arch" style="font-size:0.62rem;padding:2px 7px;cursor:pointer">📦 Ver archivadas</button>
-    </div>
-    <div id="tk-health" title="Salud de los bots"></div>
-    <div id="tk-list"><div id="tk-empty">Cargando tareas…</div></div>
-    <div id="tk-foot">reparto + seguimiento · persistente</div>
-  </div>
-</div>
-<script defer src="app.js?v=lazy-20260702"></script>
+<!-- El markup del panel vive DENTRO del riel AVANZADO (#rail-avanzado), sección
+     «Tareas» — reubicado ahí para respetar el metaestilo SCUMM de la home. -->
+<script defer src="app.js?v=tareas-scumm-20260707"></script>
 </body>
 </html>

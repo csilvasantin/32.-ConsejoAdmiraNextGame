@@ -37,6 +37,10 @@
   foot.className = 'ac-foot';
   foot.innerHTML =
     '<span>ADcelerate <span class="muted">by Admira · la publicidad geo-contextual, desde dentro del circuito</span></span>' +
+<<<<<<< HEAD
+=======
+    '<a class="mono" href="https://admira.tv/adcelerate/" target="_blank" rel="noopener" style="text-decoration:none">versión pública →</a>' +
+>>>>>>> origin/main
     '<span class="mono">AdmiraNeXT · prototipo v2 · datos mock · privado</span>';
   var wrap = document.querySelector('.wrap');
   if (wrap) wrap.appendChild(foot);

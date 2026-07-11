@@ -1011,13 +1011,31 @@ async function _gateCred(){
   }
   return g&&g.cred ? g.cred : '';
 }
-async function navCmd(deviceId, action){
+// Feedback de ESTADO del canal DS (Carlos 2026-07-11: «con pulsar abrir canal solo no llega»):
+// tras encolar, se vigila la señal REAL del player (api.admira.store/signage/now) hasta 90s.
+// lastSeen fresco (<30s) = el canal EMITE de verdad; sin señal = executor caído/sin arrancar.
+async function watchCanal(machine, name, screen){
+  const NOW='https://api.admira.store/signage/now?screen=';
+  for(let i=0;i<18;i++){
+    await new Promise(r=>setTimeout(r,5000));
+    try{
+      const d=await (await fetch(NOW+encodeURIComponent(screen)+'&_t='+Date.now(),{cache:'no-store'})).json();
+      if(d && d.lastSeen && (Date.now()-d.lastSeen)<30000){
+        pushResult(machine,'📺 canal DS',{rc:0,stdout:'EMITIENDO ✓ — pantalla «'+screen+'» viva (señal hace '+Math.round((Date.now()-d.lastSeen)/1000)+'s). Mando en admira.live/players',ms:0});
+        return;
+      }
+    }catch(e){}
+  }
+  pushResult(machine,'📺 canal DS',{rc:1,stdout:'',stderr:'sin señal de «'+screen+'» en 90s — el executor navegadores de '+name+' no lo ha abierto. En esa máquina: git -C ~/Claude/admira-vault pull && launchctl kickstart -k gui/$UID/navegadores.executor'});
+}
+
+async function navCmd(deviceId, action, url){
   const cred=await _gateCred();
   if(!cred) return {ok:false,error:'sin login Google (pulsa 🔒 arriba a la derecha)'};
   try{
     const r=await fetch(NAV_API+'/api/cmd',{method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+cred},
-      body:JSON.stringify({deviceId,action})});
+      body:JSON.stringify(url?{deviceId,action,url}:{deviceId,action})});
     const d=await r.json().catch(()=>({}));
     return r.ok&&d.ok ? {ok:true,id:d.id} : {ok:false,error:(d&&d.error)||('http '+r.status)};
   }catch(err){ return {ok:false,error:err.message||'error de red'}; }
@@ -1110,9 +1128,14 @@ $('#cards').addEventListener('click', async e=>{
     const screen='ds-'+name.toLowerCase().replace(/[^a-z0-9]/g,'');
     const label=opening?'📺 abrir canal DS':'⏹ cerrar canal';
     b.disabled=true; const lbl0=b.textContent; b.textContent=(opening?'📺':'⏹')+' …';
-    const res=await navCmd(deviceId, opening?'open-channel':'close-channel');
+    // La URL del canal viaja EN el comando (fuente única del nombre de pantalla)
+    const res=await navCmd(deviceId, opening?'open-channel':'close-channel',
+      opening?('https://www.admira.tv/canal.html?screen='+encodeURIComponent(screen)):undefined);
     b.disabled=false; b.textContent=lbl0;
-    if(res.ok) pushResult(machine,label,{rc:0,stdout:(opening?'canal encolado → '+screen+' (aparecerá en Players en ~20s)':'cierre encolado')+'\ndevice '+deviceId+' · cmd '+res.id,ms:0});
+    if(res.ok){
+      pushResult(machine,label,{rc:0,stdout:'✉ encolado (cmd '+res.id+' · device '+deviceId+')'+(opening?'\n⏳ esperando al executor de '+name+'… (verificando emisión real)':''),ms:0});
+      if(opening) watchCanal(machine, name, screen);   // feedback de ESTADO de punta a punta
+    }
     else pushResult(machine,label,{rc:1,stdout:'',stderr:res.error+' · device '+deviceId});
     return;
   }

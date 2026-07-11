@@ -6,7 +6,7 @@
   <title>ADmiraNeXT | Status — Constelación de la flota</title>
   <meta name="description" content="Admira no tiene centro — es un universo que se expande. Estado en vivo de la flota AdmiraNeXT: cada ordenador es una estrella con su proyecto y su foco.">
   <meta name="admiranext-version" content="AdmiraNext v26.07.07.12">
-  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.11.r13 (pestaña usuario sticky con cajón abierto + 🐣 draw pollita)">
+  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.11.r14 (ficha de ordenador con botón 🖥 CONTROL → deep-link a /control?equipo=)">
   <meta name="admiranext-status-build" content="oraculo-triad-1">
   <!-- Orbitron: tipografía tecnológica para la versión del pie del riel (Carlos, 2026-07-11) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -212,6 +212,7 @@
       background:rgba(34,230,255,.10);border:1px solid var(--cyan);color:var(--cyan);cursor:pointer;
       text-shadow:0 0 6px rgba(34,230,255,.4)}
     #card .promptbtn:hover,#card .promptbtn:focus-visible{background:rgba(34,230,255,.22);outline:none}
+    #card a.ctrlbtn{text-decoration:none;display:inline-block;margin-left:6px}
     /* Compositor de PROMPT a un agente (panel EXPERTO) */
     .prompt-composer{margin:2px 0 12px;padding:11px 12px;border:1px solid var(--cyan);border-radius:10px;background:rgba(34,230,255,.05)}
     .prompt-composer .pc-head{font-size:10px;letter-spacing:.14em;color:var(--cyan);margin-bottom:7px;text-transform:uppercase}
@@ -545,7 +546,7 @@
       </div>
       <button class="pf-urow" id="userRow" type="button" aria-expanded="false" aria-controls="userMenu" title="Sesión">
         <span class="pf-uava" id="userAva" aria-hidden="true">?</span>
-        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.11.r13</span></span>
+        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.11.r14</span></span>
         <span class="pf-ugear" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg></span>
         <span class="pf-uchev" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
       </button>
@@ -1706,6 +1707,12 @@
     const promptCell = canPrompt
         ? `<button class="promptbtn" id="cardPrompt" type="button">✎ PROMPT</button>`
         : (canPromptBase ? `<span class="prompt-hint">clic para escribir ✎</span>` : '');
+    // CONTROL (Carlos 2026-07-11): la ficha fijada de un ORDENADOR salta al panel
+    // /control con ese equipo ya seleccionado (deep-link ?equipo=).
+    const isMachineNode = (currentView==='machine' && !n.parentId) || n.kindFor==='all-machine';
+    const controlCell = (isPinned && isMachineNode)
+        ? `<a class="promptbtn ctrlbtn" href="https://www.admira.live/control/?equipo=${encodeURIComponent(n.label)}" title="Abrir este equipo en el panel de Control">🖥 CONTROL</a>`
+        : '';
     const asgBlock = canAssign ? (()=>{
       const cur = n.assignment ? n.assignment.project : '';
       return `<div class="asg-block">`+
@@ -1756,7 +1763,7 @@
       tokensRow+
       vidaRows+
       foco+
-      `<div class="statrow"><span class="stat ${n.online?'on':'off'}">${n.online?'● VIVO':'○ EN REPOSO'}</span>${railBadge}${modeBadge}${promptCell}</div>`+
+      `<div class="statrow"><span class="stat ${n.online?'on':'off'}">${n.online?'● VIVO':'○ EN REPOSO'}</span>${railBadge}${modeBadge}${promptCell}${controlCell}</div>`+
       asgBlock+
       histBlock;
     // ámbar en el marco = estás viendo HISTÓRICO, no el estado en vivo
@@ -2231,7 +2238,7 @@
     // el texto completo con viewer/focus vive en el sello de la esquina inferior.
     const verEl = document.getElementById('verText');
     const selloEl = document.getElementById('sello');
-    const baseVer = 'v.2026.07.11.r13';
+    const baseVer = 'v.2026.07.11.r14';
     let focusLabel = FOCUS_MACHINE ? FOCUS_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
     let viewerLabel = VIEWER_MACHINE ? VIEWER_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
 

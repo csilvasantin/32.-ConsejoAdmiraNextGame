@@ -155,6 +155,8 @@
   .card.collapsed .info,.card.collapsed .shot,.card.collapsed .acts{display:none}
   .card.dragging{opacity:.4}
   .card.drop-target{box-shadow:0 0 0 2px var(--acc2) inset;border-color:var(--acc2)}
+  /* deep-link desde /status (?equipo=): tarjeta seleccionada, resaltada unos segundos */
+  .card.deeplinked{box-shadow:0 0 0 3px var(--acc2),0 0 26px rgba(240,192,64,.45);border-color:var(--acc2)}
   .cards{display:grid;grid-template-columns:repeat(auto-fit,minmax(300px,1fr));gap:16px}
   .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:16px;display:flex;flex-direction:column;gap:10px}
   .card .top{display:flex;align-items:center;gap:11px}
@@ -793,6 +795,7 @@ async function refresh(){
       else if(was===false && m.online) toast('up','🟢 '+(m.name||m.id),'de vuelta online'); }); }
     MACHINES.forEach(m=>{ PREV_ONLINE[m.id]=m.online; }); _baselineDone=true;
     renderCards(MACHINES); fillSelect(); updateCapHealth();
+    deepLinkEquipo();   // ?equipo= desde /status → selecciona la tarjeta
   }catch(e){
     if(e.code===401 && !_reauthTried){
       // Sesión caducada → re-intercambia el credential del gate UNA vez.
@@ -833,6 +836,23 @@ function collapsedMap(){ try{ return JSON.parse(localStorage.getItem('fleet_card
 // Colapsado POR DEFECTO: si no hay preferencia guardada para esa tarjeta, va colapsada.
 function isCollapsed(id){ const c=collapsedMap(); return (id in c)?!!c[id]:true; }
 function toggleCollapse(id){ const c=collapsedMap(); c[id]=!isCollapsed(id); localStorage.setItem('fleet_card_collapsed', JSON.stringify(c)); const card=document.querySelector('.card[data-card="'+id+'"]'); if(card) card.classList.toggle('collapsed', !!c[id]); }
+
+// Deep-link desde /status (Carlos 2026-07-11): /control/?equipo=<nombre> localiza la
+// tarjeta de ese equipo (mismas claves tolerantes que la presencia), la expande,
+// la centra y la resalta unos segundos. Solo actúa una vez por carga.
+let _equipoDeepDone=false;
+function deepLinkEquipo(){
+  if(_equipoDeepDone) return;
+  const q=new URLSearchParams(location.search).get('equipo'); if(!q) return;
+  const nq=_norm(String(q).split('.')[0].replace(/^admira-?/,'')); if(!nq) return;
+  const m=MACHINES.find(x=>_machKeys(x).some(k=>k===nq||k.indexOf(nq)===0||nq.indexOf(k)===0));
+  if(!m) return;
+  _equipoDeepDone=true;
+  if(isCollapsed(m.id)) toggleCollapse(m.id);
+  const card=document.querySelector('.card[data-card="'+m.id+'"]');
+  if(card){ card.scrollIntoView({behavior:'smooth',block:'center'});
+    card.classList.add('deeplinked'); setTimeout(()=>{ card.classList.remove('deeplinked'); }, 7000); }
+}
 
 /* --- tooltip: ultimas versiones del player en admira.tv (lectura en vivo, CORS) --- */
 let PLAYER_VER_TITLE='';

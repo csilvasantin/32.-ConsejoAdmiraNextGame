@@ -13,7 +13,7 @@
   // Nombre del proyecto + versión (v.año.mes.día.release) — a la izquierda del todo.
   // La MARCA enlaza a la home (regla: el nombre del site siempre vuelve a la home).
   var PROJECT = "Consejo AdmiraNeXT";
-  var VERSION = "v.2026.07.11.r1";
+  var VERSION = "v.2026.07.11.r2";
 
   // Nav idéntico al top-bar de la home (mismos badges, mismos destinos) → coherencia.
   var TOP = [

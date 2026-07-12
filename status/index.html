@@ -6,7 +6,7 @@
   <title>ADmiraNeXT | Status — Constelación de la flota</title>
   <meta name="description" content="Admira no tiene centro — es un universo que se expande. Estado en vivo de la flota AdmiraNeXT: cada ordenador es una estrella con su proyecto y su foco.">
   <meta name="admiranext-version" content="AdmiraNext v26.07.07.12">
-  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.11.r14 (ficha de ordenador con botón 🖥 CONTROL → deep-link a /control?equipo=)">
+  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r15 (fix verja: auth-gate con ruta absoluta — /status quedaba público y sin sesión compartida con la home)">
   <meta name="admiranext-status-build" content="oraculo-triad-1">
   <!-- Orbitron: tipografía tecnológica para la versión del pie del riel (Carlos, 2026-07-11) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -29,7 +29,7 @@
       if(q==='on'||q==='off') on = q;         // escape puntual, solo esta carga
     }catch(e){}
     if(on!=='on') return;                     // visor sin gate SOLO con ?gate=off explícito
-    var s=document.createElement('script'); s.src='auth-gate.js';
+    var s=document.createElement('script'); s.src='/auth-gate.js';   // ABSOLUTA: la relativa resolvía a /status/auth-gate.js (HTML, no script) y la verja moría en silencio dejando /status público; con la raíz se comparte la sesión admira_gate con la home (login 1 vez por dominio)
     (document.head||document.documentElement).appendChild(s);
     // Si a los 10s el gate sigue bloqueando y no hay sesión, lo más probable es
     // que el origen aún no esté autorizado en Google → mensaje claro en pantalla.

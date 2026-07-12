@@ -6,7 +6,7 @@
   <title>ADmiraNeXT | Status — Constelación de la flota</title>
   <meta name="description" content="Admira no tiene centro — es un universo que se expande. Estado en vivo de la flota AdmiraNeXT: cada ordenador es una estrella con su proyecto y su foco.">
   <meta name="admiranext-version" content="AdmiraNext v26.07.07.12">
-  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r16 (casa única admira.live: og:url y textos apuntan aquí; espejo admiranext.com/status retirado)">
+  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r17 (naves-duda: preguntas abiertas de los agentes como invaders sobre la galaxia; versión de fuente única desde esta meta)">
   <meta name="admiranext-status-build" content="oraculo-triad-1">
   <!-- Orbitron: tipografía tecnológica para la versión del pie del riel (Carlos, 2026-07-11) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -144,6 +144,73 @@
     /* auto-rotation progress bar (hilo fino bajo la barra superior) */
     #rotProg{position:fixed;top:0;left:0;height:2px;z-index:23;background:rgba(34,230,255,.7);box-shadow:0 0 6px var(--cyan);width:0;transition:opacity .3s}
     #rotProg.paused{opacity:.2}
+
+    /* ============================================================
+       NAVES-DUDA (r17) — cuando un agente pregunta en AgoraMatrix
+       (agora-ask.sh publica «❓ …» y espera respuesta), su duda
+       aparece arriba de la galaxia como una nave estilo invader:
+       sprite pixel-art ORIGINAL de 2 frames + marcha lateral suave.
+       Sin dudas → la franja no existe (hidden, cero hueco).
+       ============================================================ */
+    :root{--duda:#57ffa8;--duda-dim:rgba(87,255,168,.45)}
+    #dudaStrip{
+      position:fixed;left:0;right:0;top:66px;z-index:38;
+      display:flex;justify-content:center;align-items:flex-start;
+      gap:38px;padding:2px 18px;pointer-events:none;flex-wrap:wrap;
+    }
+    #dudaStrip[hidden]{display:none}
+    .duda-ship{
+      pointer-events:auto;display:flex;flex-direction:column;align-items:center;gap:4px;
+      width:200px;max-width:44vw;background:none;border:none;padding:0;cursor:pointer;
+      font-family:inherit;color:var(--text);
+      animation:dudaMarch 7s steps(14) infinite alternate;
+    }
+    .duda-ship:nth-child(2n){animation-direction:alternate-reverse}
+    @keyframes dudaMarch{from{transform:translateX(-16px)}to{transform:translateX(16px)}}
+    .duda-ship .inv{width:34px;height:25px;fill:var(--duda);filter:drop-shadow(0 0 7px var(--duda-dim))}
+    /* 2 frames clásicos alternando (steps → sin fundido, pixel puro) */
+    .duda-ship .inv .f1{animation:invF1 .9s steps(1) infinite}
+    .duda-ship .inv .f2{animation:invF2 .9s steps(1) infinite}
+    @keyframes invF1{0%,49%{opacity:1}50%,100%{opacity:0}}
+    @keyframes invF2{0%,49%{opacity:0}50%,100%{opacity:1}}
+    .duda-ship .duda-who{font-size:8.5px;letter-spacing:.14em;color:var(--duda);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+    .duda-ship .duda-txt{
+      font-size:9.5px;line-height:1.45;color:var(--text);text-align:center;max-width:100%;
+      display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;
+      text-shadow:0 1px 3px rgba(0,0,0,.8);
+    }
+    .duda-ship:hover .inv,.duda-ship:focus-visible .inv{filter:drop-shadow(0 0 12px var(--duda))}
+    .duda-ship:focus-visible{outline:1px dashed var(--duda-dim);outline-offset:4px}
+    /* panel de duda expandida — misma familia visual que #card */
+    #dudaPop{
+      position:fixed;z-index:45;top:150px;left:50%;transform:translateX(-50%);
+      min-width:260px;max-width:min(420px,88vw);max-height:60vh;overflow-y:auto;
+      background:var(--card);border:1px solid var(--duda-dim);border-radius:12px;
+      padding:14px 16px;backdrop-filter:blur(8px);
+      box-shadow:0 8px 40px rgba(0,0,0,.6),0 0 24px rgba(87,255,168,.14);
+    }
+    #dudaPop[hidden]{display:none}
+    #dudaPop .dp-close{position:absolute;top:6px;right:8px;background:none;border:none;color:var(--duda-dim);font-size:14px;cursor:pointer;line-height:1;padding:2px 4px}
+    #dudaPop .dp-close:hover{color:var(--duda)}
+    #dudaPop .dp-who{font-size:12px;color:var(--duda);letter-spacing:.08em;font-weight:700;margin-bottom:2px;text-shadow:0 0 8px rgba(87,255,168,.4)}
+    #dudaPop .dp-when{font-size:9px;letter-spacing:.12em;color:var(--text-dim);margin-bottom:9px}
+    #dudaPop .dp-text{font-size:11px;color:var(--text);line-height:1.55;word-break:break-word;white-space:pre-wrap}
+    #dudaPop .dp-opts{margin:9px 0 0;padding:0;list-style:none}
+    #dudaPop .dp-opts li{font-size:11px;color:var(--text);line-height:1.5;padding:4px 8px;margin:4px 0;border:1px solid rgba(87,255,168,.25);border-radius:7px;background:rgba(87,255,168,.05)}
+    #dudaPop .dp-opts li b{color:var(--duda)}
+    #dudaPop .dp-actions{margin-top:11px;padding-top:9px;border-top:1px solid rgba(87,255,168,.18)}
+    #dudaPop .dp-answer{display:inline-block;text-decoration:none;font-size:9.5px;letter-spacing:.14em;padding:5px 12px;border-radius:10px;background:rgba(87,255,168,.10);border:1px solid var(--duda);color:var(--duda);cursor:pointer;text-shadow:0 0 6px rgba(87,255,168,.4)}
+    #dudaPop .dp-answer:hover{background:rgba(87,255,168,.22)}
+    #dudaPop .dp-hint{font-size:8.5px;color:var(--text-dim);letter-spacing:.05em;margin-top:7px;line-height:1.5}
+    /* badge «dudas» en la cabecera, junto a nodos vivos (solo si hay dudas) */
+    .hdr .live.duda{color:var(--duda);border-color:var(--duda-dim);background:rgba(87,255,168,.05);cursor:pointer;pointer-events:auto}
+    .hdr .live.duda .dot{background:var(--duda);box-shadow:0 0 8px var(--duda)}
+    .hdr .live.duda[hidden]{display:none}
+    @media (max-width:640px){
+      /* el top lo fija placeDudaStrip() midiendo el header real */
+      #dudaStrip{gap:18px}
+      .duda-ship{width:150px}
+    }
 
     /* Footer legend — vive DENTRO del centro: acompaña al canvas cuando se estrecha */
     .legend{
@@ -546,7 +613,7 @@
       </div>
       <button class="pf-urow" id="userRow" type="button" aria-expanded="false" aria-controls="userMenu" title="Sesión">
         <span class="pf-uava" id="userAva" aria-hidden="true">?</span>
-        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.11.r14</span></span>
+        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.12.r17</span></span>
         <span class="pf-ugear" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg></span>
         <span class="pf-uchev" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
       </button>
@@ -656,6 +723,8 @@
         <a class="brand" href="/" title="ADmiraNeXT — inicio">ADmira<b>NeXT</b></a>
         <span class="tag">Admira no tiene centro — <em>es un universo que se expande.</em></span>
         <span class="live"><span class="dot"></span><span id="liveCount">—</span></span>
+        <!-- r17: contador de DUDAS abiertas de los agentes (naves-duda); clic → abre la primera -->
+        <span class="live duda" id="dudaBadge" hidden role="button" tabindex="0" title="Dudas abiertas de los agentes en AgoraMatrix"><span class="dot"></span><span id="dudaCount">0</span>&nbsp;dudas</span>
       </div>
     </div>
 
@@ -666,6 +735,12 @@
               title="Experto — consola CLI">&gt;_</button>
     </div>
   </header>
+
+  <!-- NAVES-DUDA (r17): franja superior con una nave invader por duda abierta
+       de un agente (❓ de agora-ask.sh en AgoraMatrix, aún sin respuesta).
+       Oculta del todo cuando no hay dudas. Se rellena desde renderDudas(). -->
+  <div id="dudaStrip" hidden aria-live="polite" aria-label="Dudas abiertas de los agentes"></div>
+  <div id="dudaPop" hidden role="dialog" aria-label="Duda de un agente"></div>
 
   <span id="rotProg"></span>
 
@@ -768,6 +843,12 @@
   // Se sondea cada 3s y solo se recarga TODO (load) si su firma cambió → baja la
   // latencia encargo→pantalla de 20s a ~3s sin machacar los feeds pesados.
   const HEADS_URL        = 'https://admira-telegram.csilvasantin.workers.dev/api/heads';
+  // NAVES-DUDA (r17): espejo público del grupo AgoraMatrix (mismo worker, GET
+  // abierto con CORS, sin secretos). agora-ask.sh publica las preguntas de los
+  // agentes como «❓ …» (direction out) y considera respondida la duda con el
+  // PRIMER mensaje entrante (direction in) posterior — aquí se replica esa
+  // misma semántica para saber qué dudas siguen ABIERTAS.
+  const MESSAGES_URL     = 'https://admira-telegram.csilvasantin.workers.dev/api/messages?tail=120';
   // MODO MANDO — dos vías (la sesión Google manda):
   //  1) SESIÓN GOOGLE del auth-gate (localStorage.admira_gate, el mismo de
   //     admira.live): si hay sesión vigente de un usuario de la whitelist, el
@@ -2069,10 +2150,15 @@
     // 3 vivos (fleet+self) hasta que llegaba `presence` → parpadeo «3 nodos».
     let pres=null, fleet=null, asg=null;
     const presWithFallback=async()=>{ try{ return await jget(PRESENCE_URL); }catch(e){ return await jget(PRESENCE_URL_ALT); } };
-    const [rp,rf,ra,rj]=await Promise.allSettled([ presWithFallback(), jget(FLEET_URL), jget(ASSIGN_URL), jget(PROJECTS_URL) ]);
+    const [rp,rf,ra,rj,rm]=await Promise.allSettled([ presWithFallback(), jget(FLEET_URL), jget(ASSIGN_URL), jget(PROJECTS_URL), jget(MESSAGES_URL) ]);
     if(rp.status==='fulfilled') pres=rp.value; else console.warn('presence',rp.reason);
     if(rf.status==='fulfilled') fleet=rf.value; else console.warn('fleet',rf.reason);
     if(ra.status==='fulfilled') asg=ra.value; else console.warn('assign',ra.reason);
+    // NAVES-DUDA (r17): dudas abiertas de los agentes desde el espejo del grupo.
+    // Si el feed falla, la franja mantiene su último estado (no parpadea a vacío).
+    if(rm.status==='fulfilled' && rm.value && Array.isArray(rm.value.messages)){
+      try{ renderDudas(parseDudas(rm.value.messages)); }catch(e){ console.warn('dudas',e); }
+    } else if(rm.status==='rejected') console.warn('dudas feed',rm.reason);
     // cartera VIVA de proyectos (D1 del worker); si falla, queda el fallback
     if(rj.status==='fulfilled' && rj.value && Array.isArray(rj.value.projects) && rj.value.projects.length){
       CANON_PROJECTS = rj.value.projects;
@@ -2238,7 +2324,16 @@
     // el texto completo con viewer/focus vive en el sello de la esquina inferior.
     const verEl = document.getElementById('verText');
     const selloEl = document.getElementById('sello');
-    const baseVer = 'v.2026.07.11.r14';
+    // r17: versión de FUENTE ÚNICA — se lee de la meta admiranext-status-version
+    // (el hardcode anterior se quedó en r14 mientras la meta iba por r16: deriva).
+    const baseVer = (()=>{
+      try{
+        const c=(document.querySelector('meta[name="admiranext-status-version"]')||{}).content||'';
+        const m=c.match(/v\.[\d.]+r\d+|v\.[\d.]+\.r\d+/);
+        if(m) return m[0];
+      }catch(e){}
+      return 'v.2026.07.12.r17';
+    })();
     let focusLabel = FOCUS_MACHINE ? FOCUS_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
     let viewerLabel = VIEWER_MACHINE ? VIEWER_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
 
@@ -2249,6 +2344,185 @@
     if(verEl) verEl.textContent = baseVer;
     if(selloEl) selloEl.textContent = parts.join(' · ');
   }
+
+  /* ============================================================
+     NAVES-DUDA (r17) — «cuando algún agente tenga una duda (lo típico
+     de a b o c) que aparezca arriba en la galaxia como una nave del
+     Space Invaders con la duda debajo» (Carlos, 2026-07-12).
+
+     FUENTE: /api/messages del worker admira-telegram (espejo público del
+     grupo AgoraMatrix, GET sin auth + CORS). Los agentes preguntan con
+     agora-ask.sh, que publica «❓ pregunta» (direction:'out') y da la duda
+     por respondida con el PRIMER mensaje entrante (direction:'in')
+     posterior. Aquí se replica esa semántica. LIMITACIÓN honesta: es la
+     misma heurística gruesa del script — cualquier mensaje de Carlos
+     posterior "cierra" todas las dudas anteriores, y una pregunta hecha
+     fuera de agora-ask solo se detecta si trae pinta de pregunta con
+     opciones a)/b). No hay endpoint público para RESPONDER desde aquí
+     (el /api/send exige Bearer y la respuesta debe entrar como mensaje
+     'in' de Telegram para que agora-ask la vea), así que el botón lleva
+     al espejo /telegram y a que Carlos conteste en el grupo.
+     ?demo-dudas=1 → inyecta 2 dudas de EJEMPLO (solo demo, no red).
+     ============================================================ */
+  const DUDA_MAX_AGE  = 12*3600;  // seg: una ❓ sin respuesta en 12 h se considera caducada
+  const DUDA_MAX_SHIPS= 4;        // máximo de naves simultáneas (las más recientes)
+  const DUDA_DEMO = (()=>{ try{ return new URLSearchParams(location.search).get('demo-dudas')==='1'; }catch(e){ return false; } })();
+
+  // sprite pixel-art ORIGINAL (11×8, 2 frames) — evocador del arcade clásico
+  // pero dibujado a mano aquí (antenas en V, ojo central, patas alternantes).
+  const INV_F1 = [
+    '...X...X...',
+    '....X.X....',
+    '...XXXXX...',
+    '..XX.X.XX..',
+    '.XXXXXXXXX.',
+    'X.XXXXXXX.X',
+    'X.X.....X.X',
+    '..XX...XX..'];
+  const INV_F2 = [
+    '...X...X...',
+    '....X.X....',
+    '...XXXXX...',
+    '..XX.X.XX..',
+    '.XXXXXXXXX.',
+    '..XXXXXXX..',
+    '.X.X...X.X.',
+    'X.........X'];
+  function invaderSVG(){
+    const px=rows=>rows.map((row,y)=>[...row].map((c,x)=>c==='X'?`<rect x="${x}" y="${y}" width="1" height="1"/>`:'').join('')).join('');
+    return `<svg class="inv" viewBox="0 0 11 8" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g class="f1">${px(INV_F1)}</g><g class="f2">${px(INV_F2)}</g></svg>`;
+  }
+
+  // mensajes del espejo → dudas ABIERTAS [{id,who,text,date}] (recientes primero)
+  function parseDudas(msgs){
+    if(DUDA_DEMO){
+      const now=Math.floor(Date.now()/1000);
+      return [
+        {id:-1, who:'subMorfeo (demo)', date:now-180, text:'¿Con qué paleta pinto las naves-duda?\na) cian espina dorsal\nb) verde fosforescente arcade\nc) ámbar de alerta'},
+        {id:-2, who:'Trinity (demo)',   date:now-540, text:'El deploy de pixeria pide confirmación: ¿lanzo a producción o espero al merge del vault?'},
+      ];
+    }
+    let lastIn=0;
+    for(const m of msgs){ if(m.direction==='in' && m.id>lastIn) lastIn=m.id; }
+    const now=Math.floor(Date.now()/1000);
+    const out=[];
+    for(const m of msgs){
+      if(m.direction!=='out') continue;
+      const t=String(m.text||'').trim();
+      let q='';
+      if(t.startsWith('❓')) q=t.replace(/^❓\s*/,'');                   // formato agora-ask.sh
+      else if(/(^|\n)\s*a\)\s?\S/i.test(t) && /(^|\n)\s*b\)\s?\S/i.test(t) && t.includes('?')) q=t; // heurística a)/b)
+      if(!q) continue;
+      if(m.id<=lastIn) continue;                        // ya hubo mensaje de Carlos después → cerrada
+      if(m.date && (now-m.date)>DUDA_MAX_AGE) continue; // caducada
+      out.push({id:m.id, who:m.from_name||'agente', text:q, date:m.date||0});
+    }
+    return out.slice(-DUDA_MAX_SHIPS).reverse();        // las más recientes, primera la última
+  }
+
+  let DUDAS=[];               // dudas abiertas actualmente pintadas
+  let DUDA_OPEN=null;         // id de la duda expandida en el panel (persiste entre refrescos)
+  // La cabecera es flexible (en pantallas estrechas la fila central se parte):
+  // la franja de naves se coloca SIEMPRE justo bajo el borde real del header,
+  // medido en vivo — nunca pisa la marca ni los contadores.
+  function placeDudaStrip(){
+    const strip=document.getElementById('dudaStrip');
+    const hdr=document.querySelector('.hdr');
+    if(!strip||!hdr) return;
+    try{ strip.style.top=Math.round(hdr.getBoundingClientRect().bottom+2)+'px'; }catch(e){}
+  }
+  window.addEventListener('resize',placeDudaStrip);
+  function fmtAgo(ts){
+    if(!ts) return '';
+    const s=Math.max(0,Math.floor(Date.now()/1000)-ts);
+    if(s<90) return 'hace '+s+'s';
+    if(s<5400) return 'hace '+Math.round(s/60)+' min';
+    return 'hace '+(s/3600).toFixed(1).replace('.',',')+' h';
+  }
+  function dudaOpts(text){
+    // extrae opciones tipo «a) …» por línea; resto = enunciado
+    const lines=String(text).split('\n');
+    const opts=[], body=[];
+    for(const ln of lines){
+      const m=ln.match(/^\s*([a-h])\)\s*(.+)$/i);
+      if(m) opts.push({k:m[1].toLowerCase(),t:m[2].trim()});
+      else body.push(ln);
+    }
+    return {body:body.join('\n').trim(), opts};
+  }
+  function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
+
+  function renderDudas(dudas){
+    DUDAS=dudas||[];
+    const strip=document.getElementById('dudaStrip');
+    const badge=document.getElementById('dudaBadge');
+    const count=document.getElementById('dudaCount');
+    if(!strip||!badge) return;
+    // título de pestaña: aviso discreto de dudas pendientes
+    try{
+      const base=document.title.replace(/^\(\d+❓\)\s*/,'');
+      document.title=(DUDAS.length? '('+DUDAS.length+'❓) ' : '')+base;
+    }catch(e){}
+    if(!DUDAS.length){
+      strip.hidden=true; strip.innerHTML='';
+      badge.hidden=true;
+      if(DUDA_OPEN!==null) closeDudaPop();
+      return;
+    }
+    if(count) count.textContent=DUDAS.length;
+    badge.hidden=false;
+    placeDudaStrip();
+    strip.innerHTML=DUDAS.map(d=>{
+      const {body}=dudaOpts(d.text);
+      const one=(body||d.text).split('\n')[0];
+      return `<button class="duda-ship" type="button" data-duda="${d.id}" title="${esc(d.who)} pregunta — clic para leerla entera">
+        ${invaderSVG()}
+        <span class="duda-who">❓ ${esc(d.who)}</span>
+        <span class="duda-txt">${esc(one)}</span>
+      </button>`;
+    }).join('');
+    strip.hidden=false;
+    // si la duda expandida sigue viva, re-pinta el panel; si se respondió, ciérralo
+    if(DUDA_OPEN!==null){
+      const d=DUDAS.find(x=>x.id===DUDA_OPEN);
+      if(d) openDudaPop(d); else closeDudaPop();
+    }
+  }
+  function openDudaPop(d){
+    const pop=document.getElementById('dudaPop'); if(!pop) return;
+    DUDA_OPEN=d.id;
+    const {body,opts}=dudaOpts(d.text);
+    pop.innerHTML=`
+      <button class="dp-close" type="button" aria-label="Cerrar">×</button>
+      <div class="dp-who">❓ ${esc(d.who)}</div>
+      <div class="dp-when">${esc(fmtAgo(d.date))} · AgoraMatrix</div>
+      <div class="dp-text">${esc(body||d.text)}</div>
+      ${opts.length?`<ul class="dp-opts">${opts.map(o=>`<li><b>${esc(o.k)})</b> ${esc(o.t)}</li>`).join('')}</ul>`:''}
+      <div class="dp-actions">
+        <a class="dp-answer" href="/telegram" target="_blank" rel="noopener">Responder en AgoraMatrix ▸</a>
+        <div class="dp-hint">La respuesta debe entrar por el grupo de Telegram (mensaje de Carlos): así la recoge el agente que espera con agora-ask. Desde este visor no hay ruta pública de respuesta.</div>
+      </div>`;
+    pop.hidden=false;
+    pop.querySelector('.dp-close').addEventListener('click',closeDudaPop);
+  }
+  function closeDudaPop(){
+    const pop=document.getElementById('dudaPop'); if(!pop) return;
+    DUDA_OPEN=null; pop.hidden=true; pop.innerHTML='';
+  }
+  // clic en nave → panel; clic en el badge de cabecera → abre la primera duda
+  document.getElementById('dudaStrip').addEventListener('click',e=>{
+    const b=e.target.closest('.duda-ship'); if(!b) return;
+    const id=+b.dataset.duda;
+    const d=DUDAS.find(x=>x.id===id); if(!d) return;
+    if(DUDA_OPEN===id) closeDudaPop(); else openDudaPop(d);
+  });
+  (function(){
+    const badge=document.getElementById('dudaBadge'); if(!badge) return;
+    const go=()=>{ if(DUDAS.length) (DUDA_OPEN===DUDAS[0].id? closeDudaPop() : openDudaPop(DUDAS[0])); };
+    badge.addEventListener('click',go);
+    badge.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); go(); } });
+  })();
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape' && DUDA_OPEN!==null) closeDudaPop(); });
 
   /* ── Pie del riel: usuario + submenú de sesión (patrón menú de cuenta de Claude Code).
         Lee la sesión de la verja (localStorage.admira_gate); «Ajustes» abre el panel
@@ -3961,6 +4235,9 @@
       const t = window.__lastDataAt; if(!t){ ageEl.textContent=''; return; }
       const s = Math.max(0, Math.round((Date.now()-t)/1000));
       ageEl.textContent = 'datos hace '+s+'s';
+      // r17: si el dato envejece más de 60s (dos ciclos perdidos), el ticker
+      // avisa en ámbar — se ve de reojo sin leer el número.
+      ageEl.style.color = s>60 ? 'var(--amber)' : 'var(--cyan-dim)';
     }, 1000);
   })();
 

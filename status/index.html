@@ -6,7 +6,7 @@
   <title>ADmiraNeXT | Status — Constelación de la flota</title>
   <meta name="description" content="Admira no tiene centro — es un universo que se expande. Estado en vivo de la flota AdmiraNeXT: cada ordenador es una estrella con su proyecto y su foco.">
   <meta name="admiranext-version" content="AdmiraNext v26.07.07.12">
-  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r25 (trio-ufos: la aparición de actividad pasa de 1 a HASTA 3 naves a la vez — una por equipo en marcha (máquina viva), prioridad task limpio > focus limpio > resto y rotación entre ciclos para que con >3 vivas pasen todas; 3 sprites invader originales (calamar 8×8, cangrejo 11×8, pulpo 12×8) con 3 tintes de la paleta del sitio (cian --cyan, verde dudas --duda suavizado, hielo --text), asignación ESTABLE por hash de máquina; mousemove/tecla/clic retira las tres; dudas siguen mandando y la marcha sigue siendo solo de dudas; contador «próximo UFO» con gap claro texto/tiempo y TIEMPO CLICABLE: lanza el pase al instante y rearma el ciclo — con dudas visibles avisa «dudas mandan» en el propio número)">
+  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r26 (fix-trio + rótulo + marcha: guarda dura antiduplicados en el pase de actividad — selección concat(niveles barajados) DEDUPLICADA por máquina y dedup final antes de pintar, jamás dos naves de la misma máquina; rótulo reordenado en actividad Y dudas (MÁQUINA protagonista arriba, agente debajo con su vida); la formación entera marcha a TODO lo ancho estilo arcade — ping-pong a saltitos steps() hasta el borde derecho y vuelta, amplitud medida en vivo (llega al borde sin cruzarlo, sin scroll-x, clic operativo en movimiento), prefers-reduced-motion = deriva mínima de antes)">
   <meta name="admiranext-status-build" content="oraculo-triad-1">
   <!-- Orbitron: tipografía tecnológica para la versión del pie del riel (Carlos, 2026-07-11) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -174,10 +174,25 @@
       pointer-events:auto;display:flex;flex-direction:column;align-items:center;gap:4px;
       width:200px;max-width:44vw;background:none;border:none;padding:0;cursor:pointer;
       font-family:inherit;color:var(--text);
-      animation:dudaMarch 7s steps(14) infinite alternate;
     }
-    .duda-ship:nth-child(2n){animation-direction:alternate-reverse}
+    /* r26: MARCHA A TODO LO ANCHO, como en el juego — la FORMACIÓN entera
+       (el strip) se desplaza en bloque hasta el borde derecho y vuelve al
+       izquierdo, ping-pong continuo a saltitos steps() estilo arcade. La
+       amplitud (--march-max) y el nº de saltos los calcula marchStrip() en
+       vivo según el ancho real del viewport y del bloque: el bloque LLEGA al
+       borde pero no lo cruza (textos siempre visibles, sin scroll-x — el
+       strip es fixed y el transform no genera overflow). Los botones siguen
+       clicables en movimiento (el hit-test sigue al transform). */
+    @keyframes stripMarch{from{transform:translateX(calc(var(--march-max,0px)*-1))}to{transform:translateX(var(--march-max,0px))}}
     @keyframes dudaMarch{from{transform:translateX(-16px)}to{transform:translateX(16px)}}
+    /* prefers-reduced-motion: sin marcha de bloque; deriva mínima como antes */
+    @media (prefers-reduced-motion: reduce){
+      #dudaStrip{animation:none !important}
+      .duda-ship{animation:dudaMarch 7s steps(14) infinite alternate}
+      .duda-ship:nth-child(2n){animation-direction:alternate-reverse}
+    }
+    /* r26: agente en línea propia BAJO la máquina (protagonista) — discreto */
+    .duda-ship .duda-agent{font-size:7.5px;letter-spacing:.12em;color:var(--text-dim);text-transform:uppercase;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%;margin-top:-2px}
     .duda-ship .inv{width:34px;height:25px;fill:var(--duda);filter:drop-shadow(0 0 7px var(--duda-dim))}
     /* 2 frames clásicos alternando (steps → sin fundido, pixel puro) */
     .duda-ship .inv .f1{animation:invF1 .9s steps(1) infinite}
@@ -653,7 +668,7 @@
       </div>
       <button class="pf-urow" id="userRow" type="button" aria-expanded="false" aria-controls="userMenu" title="Sesión">
         <span class="pf-uava" id="userAva" aria-hidden="true">?</span>
-        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.12.r25</span></span>
+        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.12.r26</span></span>
         <span class="pf-ugear" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg></span>
         <span class="pf-uchev" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
       </button>
@@ -2475,7 +2490,7 @@
         const m=c.match(/v\.[\d.]+r\d+|v\.[\d.]+\.r\d+/);
         if(m) return m[0];
       }catch(e){}
-      return 'v.2026.07.12.r25';
+      return 'v.2026.07.12.r26';
     })();
     let focusLabel = FOCUS_MACHINE ? FOCUS_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
     let viewerLabel = VIEWER_MACHINE ? VIEWER_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
@@ -2639,6 +2654,31 @@
     try{ strip.style.top=Math.round(hdr.getBoundingClientRect().bottom+2)+'px'; }catch(e){}
   }
   window.addEventListener('resize',placeDudaStrip);
+  // r26: MARCHA DEL BLOQUE — mide el hueco libre a los lados de la formación
+  // (offsetLeft/offsetWidth: layout puro, NO les afecta el transform en curso)
+  // y programa el ping-pong steps() del strip entero: llega al borde derecho
+  // y vuelve al izquierdo, salto ≈26px a paso constante (la duración crece
+  // con la distancia). Solo se reprograma si cambia la amplitud — el repintado
+  // de cada ciclo de datos NO reinicia la marcha. Con el hueco justo (<24px)
+  // no hay marcha. reduced-motion la anula por CSS (deriva mínima de antes).
+  function marchStrip(){
+    const strip=document.getElementById('dudaStrip');
+    if(!strip||strip.hidden) return;
+    const ships=strip.querySelectorAll('.duda-ship');
+    if(!ships.length){ strip.style.animation='none'; delete strip.dataset.march; return; }
+    let minL=Infinity, maxR=-Infinity;
+    ships.forEach(s=>{ minL=Math.min(minL,s.offsetLeft); maxR=Math.max(maxR,s.offsetLeft+s.offsetWidth); });
+    const free=Math.min(minL, strip.clientWidth-maxR);      // centrado: el menor de los dos huecos
+    const max=Math.max(0, Math.floor(free)-12);             // margen: el bloque LLEGA al borde, no lo cruza
+    if(max<24){ strip.style.animation='none'; strip.style.removeProperty('--march-max'); delete strip.dataset.march; return; }
+    const hop=26, n=Math.max(4, Math.round((max*2)/hop));
+    const key=max+'/'+n;
+    if(strip.dataset.march===key) return;                   // misma amplitud → que siga su marcha
+    strip.dataset.march=key;
+    strip.style.setProperty('--march-max', max+'px');
+    strip.style.animation='stripMarch '+(n*0.42).toFixed(1)+'s steps('+n+') infinite alternate';
+  }
+  window.addEventListener('resize',marchStrip);
   function fmtAgo(ts){
     if(!ts) return '';
     const s=Math.max(0,Math.floor(Date.now()/1000)-ts);
@@ -2692,9 +2732,13 @@
       +(a.focoOk?' — encargo: '+esc(a.foco):'')
       +' · se retira al mover el ratón (o con /demoOFF)';
     const v=(a.variante!=null)?a.variante:actVariant(a.mkey);   // asignada por trío (sin repetirse) o global
+    // r26: la MÁQUINA es la protagonista (línea principal, entera si cabe) y
+    // el AGENTE va debajo con su puntito de vida — mismo orden que en las
+    // naves-duda para que toda la franja se lea igual.
     return `<button class="duda-ship act v${v}" type="button" title="${tip}">
       ${invaderSVG(v)}
-      <span class="duda-who">${dudaDot(a.agente)}⚡ ${esc(a.agente)} · ${esc(a.maquina)}</span>
+      <span class="duda-who">⚡ ${esc(a.maquina)}</span>
+      <span class="duda-agent">${dudaDot(a.agente)}${esc(a.agente)}</span>
       <span class="duda-proj">ACTIVIDAD${a.proyecto?` · ${esc(a.proyecto)}`:''}</span>
       <span class="duda-txt">${main}</span>
       ${sub}
@@ -2722,7 +2766,7 @@
       // naves, una por equipo en marcha). No toca badge/título/marcha — no
       // son dudas.
       const acts=window.ACT_SHIPS && window.ACT_SHIPS.current();
-      if(acts && acts.length){ placeDudaStrip(); strip.innerHTML=acts.map(actShipHTML).join(''); strip.hidden=false; }
+      if(acts && acts.length){ placeDudaStrip(); strip.innerHTML=acts.map(actShipHTML).join(''); strip.hidden=false; marchStrip(); }
       else { strip.hidden=true; strip.innerHTML=''; }
       return;
     }
@@ -2736,17 +2780,21 @@
       // r20: api y emu traen las opciones aparte (d.opts) — la 1ª línea del
       // texto ES el enunciado, sin nada que extraer.
       const one=String(d.text||'').split('\n')[0];
-      // r18: bajo el platillo — puntito de vida + agente · máquina, y proyecto
-      // en línea aparte discreta (estilo etiquetas de estrellas) si lo trae.
-      const who=esc(d.who)+(d.maquina?` · ${esc(d.maquina)}`:'');
+      // r26: MISMO orden que las naves de actividad — la MÁQUINA protagonista
+      // en la línea principal y el agente debajo con su puntito de vida (si
+      // la duda no trae máquina, el agente sube a la principal, como antes).
+      const l1=d.maquina?esc(d.maquina):esc(d.who);
+      const l2=d.maquina?`<span class="duda-agent">${dudaDot(d.who)}${esc(d.who)}</span>`:'';
       return `<button class="duda-ship" type="button" data-duda="${esc(d.id)}" title="${esc(d.who)} pregunta — clic para leerla entera">
         ${invaderSVG()}
-        <span class="duda-who">${dudaDot(d.who)}❓ ${who}</span>
+        <span class="duda-who">${d.maquina?'':dudaDot(d.who)}❓ ${l1}</span>
+        ${l2}
         ${d.proyecto?`<span class="duda-proj">${esc(d.proyecto)}</span>`:''}
         <span class="duda-txt">${esc(one)}</span>
       </button>`;
     }).join('');
     strip.hidden=false;
+    marchStrip();                                 // r26: la formación de dudas también marcha a lo ancho
     // si la duda expandida sigue viva, re-pinta el panel; si se respondió, ciérralo
     if(DUDA_OPEN!==null){
       const d=DUDAS.find(x=>x.id===DUDA_OPEN);
@@ -4533,14 +4581,24 @@
       // que NO salieron en el trío anterior — con >3 vivas van pasando todas
       // y el mismo trío exacto no se repite mientras haya más candidatas.
       const mix=arr=>{ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+      // r26: SELECCIÓN = concat(nivel1 barajado, nivel2, nivel3) DEDUPLICADA
+      // por máquina — jamás dos naves del mismo pase con la misma máquina.
+      // La rotación anti-repetición entre ciclos se aplica DESPUÉS, sobre la
+      // lista ya única, así que no puede reintroducir duplicados.
       const ordered=[
         ...mix(ACT_POOL.filter(a=>a.tareaOk)),
         ...mix(ACT_POOL.filter(a=>!a.tareaOk&&a.focoOk)),
         ...mix(ACT_POOL.filter(a=>!a.tareaOk&&!a.focoOk)),
       ];
-      const nuevas=ordered.filter(a=>!lastSet.has(a.mkey));
-      const picks=nuevas.slice(0,3);
-      for(const a of ordered){ if(picks.length>=3) break; if(!picks.includes(a)) picks.push(a); }
+      const vistos=new Set(), porMaquina=[];
+      for(const a of ordered){ if(vistos.has(a.mkey)) continue; vistos.add(a.mkey); porMaquina.push(a); }
+      const nuevas=porMaquina.filter(a=>!lastSet.has(a.mkey));   // rotación: primero las que no salieron
+      const resto =porMaquina.filter(a=> lastSet.has(a.mkey));
+      let picks=[...nuevas,...resto].slice(0,3);
+      // r26: GUARDA DURA final — por si cualquier cambio futuro colara una
+      // máquina repetida, se dedupa aquí mismo antes de pintar.
+      { const g=new Set(); picks=picks.filter(a=>{ if(g.has(a.mkey)) return false; g.add(a.mkey); return true; }); }
+      if(!picks.length) return false;
       current=actAssignVariants(picks);                   // r25: 3 sprites/tintes SIEMPRE distintos en el trío
       lastSet=new Set(picks.map(a=>a.mkey));
       shownAt=Date.now(); anchor=null;

@@ -6,7 +6,7 @@
   <title>ADmiraNeXT | Status — Constelación de la flota</title>
   <meta name="description" content="Admira no tiene centro — es un universo que se expande. Estado en vivo de la flota AdmiraNeXT: cada ordenador es una estrella con su proyecto y su foco.">
   <meta name="admiranext-version" content="AdmiraNext v26.07.07.12">
-  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r30 (banda de naves TRANSPARENTE — encargo de Carlos: el rectángulo oscuro que se percibía tras la franja al desplazarse desaparece del todo. Se retiran el fondo opaco --bg (r28) y las estrellas/twinkle propios de la banda (#dudaStrip::before/::after de r29, con su @keyframes bandTwinkle), además de la box-shadow y el border-bottom que delataban el rectángulo. La franja queda con background:transparent y se ve el MISMO cielo estrellado que la rodea. ÚNICA regla que se mantiene: los nodos de la constelación NO pasan por detrás de las naves — el reflow del escenario por debajo de la franja (body.duda-band-open + --duda-inset + syncDudaBand()) se conserva intacto, así que ningún nodo/arista entra en la zona de la banda. Sin tocar la marcha de las naves, la pausa con la ficha abierta, prefers-reduced-motion ni el CLI de la ficha.)">
+  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r31 (sobre r30 banda transparente; ficha rica + CLI cross-máquina + Yokup: 1) la ficha del UFO muestra la COLA de encargos de ese agente (bot-inbox público, con su estado pendiente/ack/en curso/bloqueada/hecha) y su ACTIVIDAD reciente del diario, con «visto hace Xs» en VIVO (ticker 1s); 2) el CLI de la ficha resuelve la máquina por PRESENCIA FRESCA (si el agente cambió de sitio, reencamina a donde late), guarda HISTORIAL persistido en localStorage y REFRESCA el estado del encargo tras enviarlo; 3) enlace pulsable al seguimiento en Yokup (www.yokup.com/admira-live filtrado por persona+máquina); el helpdesk suma incidencias automáticas (latido viejo / sin foco) calculadas en vivo desde presence, sin duplicar tickets)">
   <meta name="admiranext-status-build" content="oraculo-triad-1">
   <!-- Orbitron: tipografía tecnológica para la versión del pie del riel (Carlos, 2026-07-11) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -308,6 +308,47 @@
     #actFicha .af-cli-msg.ok{color:var(--duda)}
     #actFicha .af-cli-msg.err{color:var(--amber)}
     #actFicha .af-hint{margin-top:16px;font-size:8.5px;letter-spacing:.1em;color:var(--text-dim)}
+    /* r30: FICHA RICA — cola de encargos del agente (bot-inbox), su actividad
+       reciente (diario), historial del CLI y enlace a su helpdesk en Yokup.
+       Dos paneles en ancho, uno debajo del otro en estrecho (sin scroll-x). */
+    #actFicha .af-panels{
+      display:grid;grid-template-columns:1fr 1fr;gap:14px;margin:24px auto 0;max-width:720px;text-align:left;
+    }
+    @media(max-width:620px){ #actFicha .af-panels{grid-template-columns:1fr} }
+    #actFicha .af-panel{
+      border:1px solid var(--duda-dim);border-radius:11px;background:rgba(1,4,10,.55);
+      padding:12px 13px;min-width:0;
+    }
+    #actFicha .af-ph{
+      font-size:9px;letter-spacing:.22em;text-transform:uppercase;color:var(--duda);
+      margin-bottom:9px;display:flex;align-items:center;justify-content:space-between;gap:8px;
+    }
+    #actFicha .af-ph .af-ph-n{color:var(--text-dim);letter-spacing:.1em}
+    #actFicha .af-plist{display:flex;flex-direction:column;gap:8px;max-height:190px;overflow-y:auto}
+    #actFicha .af-row{font-size:11px;line-height:1.5;color:var(--text);overflow-wrap:anywhere}
+    #actFicha .af-row .af-rt{color:var(--text-dim)}
+    #actFicha .af-row .af-when{font-size:8.5px;letter-spacing:.08em;color:var(--text-dim);text-transform:uppercase;margin-top:2px}
+    #actFicha .af-st{
+      display:inline-block;font-size:8px;letter-spacing:.08em;text-transform:uppercase;
+      padding:2px 6px;border-radius:999px;margin-right:6px;vertical-align:middle;white-space:nowrap;
+    }
+    #actFicha .af-st.st-pending{color:#ffb545;border:1px solid rgba(255,181,69,.5)}
+    #actFicha .af-st.st-ack{color:#57ffa8;border:1px solid rgba(87,255,168,.4)}
+    #actFicha .af-st.st-in_progress{color:#ffd866;border:1px solid rgba(255,216,102,.45)}
+    #actFicha .af-st.st-blocked{color:#ff5566;border:1px solid rgba(255,85,102,.5)}
+    #actFicha .af-st.st-done{color:#88ffaa;border:1px solid rgba(136,255,170,.35)}
+    #actFicha .af-empty{font-size:10px;font-style:italic;color:var(--text-dim)}
+    #actFicha .af-yokup{
+      display:inline-flex;align-items:center;gap:7px;margin:18px auto 0;
+      font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--duda);
+      text-decoration:none;border:1px solid var(--duda-dim);border-radius:9px;padding:9px 15px;transition:.15s;
+    }
+    #actFicha .af-yokup:hover{background:var(--duda-dim);color:var(--text)}
+    /* r30: historial del CLI con este agente (persistido en localStorage) */
+    #actFicha .af-history{margin:16px auto 0;max-width:640px;text-align:left;display:flex;flex-direction:column;gap:6px}
+    #actFicha .af-history:empty{display:none}
+    #actFicha .af-hitem{font-size:10px;line-height:1.5;color:var(--text-dim);overflow-wrap:anywhere;padding-left:12px;border-left:2px solid var(--duda-dim)}
+    #actFicha .af-hitem .af-htxt{color:var(--text)}
     /* r27: TODO lo animado de la página, en pausa mientras la ficha esté abierta */
     .ficha-open #dudaStrip, .ficha-open #dudaStrip *, .ficha-open #rotProg{animation-play-state:paused !important}
     /* r23: con TAREA viva de principal, el focus (encargo) baja a una línea
@@ -750,7 +791,7 @@
       </div>
       <button class="pf-urow" id="userRow" type="button" aria-expanded="false" aria-controls="userMenu" title="Sesión">
         <span class="pf-uava" id="userAva" aria-hidden="true">?</span>
-        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.12.r30</span></span>
+        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.12.r31</span></span>
         <span class="pf-ugear" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg></span>
         <span class="pf-uchev" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
       </button>
@@ -2241,7 +2282,7 @@
     try{
       const r=await fetch(TG_INBOX_POST,{method:'POST',headers,body:JSON.stringify({target_persona:persona,target_machine:machine,text,from:'status-web'})});
       const d=await r.json().catch(()=>({}));
-      if(r.ok && d.ok) return {ok:true, id:String(d.task_id||d.id||''), verified:!!d.owner_verified};
+      if(r.ok && d.ok) return {ok:true, id:String(d.task_id||d.id||''), taskId:String(d.task_id||''), numId:(d.id!=null?+d.id:null), verified:!!d.owner_verified};
       if(r.status===429) return {ok:false, error:'demasiados envíos seguidos — espera un minuto'};
       if(r.status===401) return {ok:false, error:'necesita sesión de Google del perímetro (entra por admira.live)'};
       return {ok:false, error:(d.error||('HTTP '+r.status))};
@@ -2598,7 +2639,7 @@
         const m=c.match(/v\.[\d.]+r\d+|v\.[\d.]+\.r\d+/);
         if(m) return m[0];
       }catch(e){}
-      return 'v.2026.07.12.r30';
+      return 'v.2026.07.12.r31';
     })();
     let focusLabel = FOCUS_MACHINE ? FOCUS_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
     let viewerLabel = VIEWER_MACHINE ? VIEWER_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
@@ -3001,6 +3042,84 @@
      exactamente donde estaba y ningún pase auto dispara por debajo). Al
      cerrar (✕ / Escape / clic fuera) se retira también el pase (dismissHard)
      y, si llegaron datos durante la pausa, se recarga una vez (FICHA_DIRTY). */
+  // ── r30: DATOS RICOS de la ficha — cola de encargos del agente (bot-inbox),
+  // su actividad reciente (diario) e historial del CLI. Fuentes PÚBLICAS (sin
+  // auth) del worker admira-telegram; se leen una vez al abrir la ficha (no
+  // tocan el bucle congelado). El helpdesk de Yokup ingiere la MISMA cola, así
+  // que cada encargo del CLI ya es un ticket allí — no se duplica nada.
+  const AF_PUB_INBOX='https://admira-telegram.csilvasantin.workers.dev/api/public/inbox';
+  const AF_PUB_DIARY='https://admira-telegram.csilvasantin.workers.dev/api/public/diary';
+  const AF_YOKUP='https://www.yokup.com/admira-live';
+  const AF_ST_LABEL={pending:'pendiente',ack:'ack',in_progress:'en curso',blocked:'bloqueada',done:'hecha'};
+  let AF_META_TIMER=null;                              // ticker de «visto hace Xs» en vivo
+  function afHistKey(agente){ return 'admiranext-status-cli-hist:'+norm(agente); }
+  function afLoadHist(agente){ try{ return JSON.parse(localStorage.getItem(afHistKey(agente))||'[]')||[]; }catch(e){ return []; } }
+  function afSaveHist(agente,arr){ try{ localStorage.setItem(afHistKey(agente),JSON.stringify(arr.slice(-30))); }catch(e){} }
+  function afStBadge(st){ const s=String(st||'pending'); return `<span class="af-st st-${esc(s)}">${esc(AF_ST_LABEL[s]||s)}</span>`; }
+  // Refresca el estado de un encargo recién enviado consultando la cola pública
+  // (task_id preferente; id numérico de reserva). Reintenta unas pocas veces.
+  async function afPollStatus(taskId,numId,onStatus){
+    for(let i=0;i<4;i++){
+      await new Promise(r=>setTimeout(r,1600));
+      try{
+        const rr=await fetch(AF_PUB_INBOX,{cache:'no-store'}); const dd=await rr.json();
+        const it=(dd.items||[]).find(x=>(taskId&&String(x.task_id)===taskId)||(numId!=null&&+x.id===+numId));
+        if(it){ onStatus(it.status||'pending'); if(it.status&&it.status!=='pending') return; }
+      }catch(e){}
+    }
+  }
+  // Pinta la cola de encargos de ESTE agente y su actividad reciente del diario.
+  async function afFillPanels(a){
+    const qEl=document.getElementById('afQueue'), dEl=document.getElementById('afDiary');
+    const nq=document.getElementById('afQueueN'), nd=document.getElementById('afDiaryN');
+    const per=norm(a.agente);
+    try{
+      const r=await fetch(AF_PUB_INBOX,{cache:'no-store'}); const d=await r.json();
+      const mine=(d.items||[]).filter(x=>norm(x.target_persona)===per)
+                 .sort((x,y)=>(tsMsAF(y.ts))-(tsMsAF(x.ts))).slice(0,8);
+      if(nq) nq.textContent=mine.length?('· '+mine.length):'';
+      if(qEl) qEl.innerHTML = mine.length ? mine.map(x=>`
+        <div class="af-row">${afStBadge(x.status)}<span class="af-rt">#${esc(x.id)}</span> ${esc((x.text||'').slice(0,90))}
+          <div class="af-when">${esc(fmtAgo(Math.floor(tsMsAF(x.ts)/1000)))} · de ${esc(x.from_name||'—')}</div></div>`).join('')
+        : '<div class="af-empty">sin encargos en su buzón</div>';
+    }catch(e){ if(qEl) qEl.innerHTML='<div class="af-empty">buzón no disponible ahora</div>'; }
+    try{
+      const r=await fetch(AF_PUB_DIARY+'?limit=200',{cache:'no-store'}); const d=await r.json();
+      const mine=(d.entries||[]).filter(x=>norm(x.persona)===per).slice(0,6);
+      if(nd) nd.textContent=mine.length?('· '+mine.length):'';
+      if(dEl) dEl.innerHTML = mine.length ? mine.map(x=>`
+        <div class="af-row">${esc(x.kind?('['+x.kind+'] '):'')}${esc((x.text||'').slice(0,110))}
+          <div class="af-when">${esc(fmtAgo(x.date))}</div></div>`).join('')
+        : '<div class="af-empty">sin actividad en el diario</div>';
+    }catch(e){ if(dEl) dEl.innerHTML='<div class="af-empty">diario no disponible ahora</div>'; }
+  }
+  // ts del inbox público: unas veces en ms, otras en segundos → normaliza a ms
+  function tsMsAF(ts){ ts=Number(ts)||0; return ts<1e12 ? ts*1000 : ts; }
+  function afRenderHist(agente){
+    const h=document.getElementById('afHist'); if(!h) return;
+    const arr=afLoadHist(agente);
+    h.innerHTML=arr.slice(-6).reverse().map(x=>`
+      <div class="af-hitem">${afStBadge(x.status)}<span class="af-htxt">${esc((x.text||'').slice(0,120))}</span>
+        <span class="af-when"> · ${esc(fmtAgo(Math.floor((x.ts||Date.now())/1000)))}${x.id?(' · '+esc(x.id)):''}</span></div>`).join('');
+  }
+  // r30: CROSS-MÁQUINA — el envío va a la máquina que muestra la ficha, PERO si
+  // ese agente ya no late ahí y late FRESCO en otra máquina (cambió de sitio),
+  // se reencamina a la más fresca (bot-inbox entrega por persona; target_machine
+  // es la desambiguación). Honesto: solo reencamina con latido fresco real.
+  async function afResolveMachine(persona,preferred){
+    try{
+      const r=await fetch(PRESENCE_URL_ALT,{cache:'no-store'}); const d=await r.json();
+      const list=(d.presence||[]).filter(p=>norm(p.persona)===norm(persona));
+      if(!list.length) return {machine:preferred,moved:false};
+      const now=Math.floor(Date.now()/1000), fresh=p=>p&&(now-(+p.updated||0))<300;
+      const onPref=list.find(p=>norm(stripOwner(p.machine))===norm(preferred));
+      if(fresh(onPref)) return {machine:preferred,moved:false};
+      const best=list.slice().sort((x,y)=>(+y.updated||0)-(+x.updated||0))[0];
+      const bm=stripOwner(best.machine);
+      if(fresh(best) && norm(bm)!==norm(preferred)) return {machine:bm,moved:true,from:preferred};
+      return {machine:preferred,moved:false};
+    }catch(e){ return {machine:preferred,moved:false}; }
+  }
   function openActFicha(a){
     const f=document.getElementById('actFicha'); if(!f||!a) return;
     const v=(a.variante!=null)?a.variante:actVariant(a.mkey);
@@ -3015,13 +3134,25 @@
         ${a.tareaOk?`<div class="af-ahora"><span>ahora</span>${esc(a.tarea)}</div>`:''}
         ${a.focoOk?`<div class="af-encargo"><span>encargo</span>${esc(a.foco)}</div>`:''}
         ${(!a.tareaOk&&!a.focoOk)?'<div class="af-encargo af-nada">(sin foco publicado — actualizar bóveda en esa máquina)</div>':''}
-        <div class="af-meta">${a.updated?('visto '+esc(fmtAgo(a.updated))):''}</div>
+        <div class="af-meta" id="afMeta">${a.updated?('visto '+esc(fmtAgo(a.updated))):''}</div>
+        <div class="af-panels">
+          <div class="af-panel">
+            <div class="af-ph">Cola de encargos <span class="af-ph-n" id="afQueueN"></span></div>
+            <div class="af-plist" id="afQueue"><div class="af-empty">cargando buzón…</div></div>
+          </div>
+          <div class="af-panel">
+            <div class="af-ph">Actividad reciente <span class="af-ph-n" id="afDiaryN"></span></div>
+            <div class="af-plist" id="afDiary"><div class="af-empty">cargando diario…</div></div>
+          </div>
+        </div>
+        <a class="af-yokup" href="${AF_YOKUP}?persona=${encodeURIComponent(a.agente)}&machine=${encodeURIComponent(a.maquina)}" target="_blank" rel="noopener">Seguimiento en Yokup ▸</a>
         <div class="af-cli">
           <span class="ps1">${esc(String(a.agente).toLowerCase())}@${esc(a.mkey)}$</span>
           <textarea id="afCliIn" rows="1" autocomplete="off" spellcheck="false"
                  placeholder="escríbele a ${esc(a.agente)} — Enter envía a su buzón · Shift+Enter salta de línea"></textarea>
         </div>
         <div class="af-cli-msg" id="afCliMsg"></div>
+        <div class="af-history" id="afHist"></div>
         <div class="af-hint">✕, Escape o clic fuera para cerrar — la interfaz está en pausa</div>
       </div>`;
     f.hidden=false;
@@ -3029,6 +3160,15 @@
     document.documentElement.classList.add('ficha-open');
     if(window.ACT_SHIPS&&window.ACT_SHIPS.pauseTimer) window.ACT_SHIPS.pauseTimer();
     f.querySelector('.af-close').addEventListener('click',closeActFicha);
+    // r30: datos ricos — cola de encargos del agente + su diario + historial CLI
+    afFillPanels(a);
+    afRenderHist(a.agente);
+    // «visto hace Xs» EN VIVO: se recalcula cada segundo mientras la ficha viva
+    if(AF_META_TIMER){ clearInterval(AF_META_TIMER); AF_META_TIMER=null; }
+    if(a.updated){
+      const meta=f.querySelector('#afMeta');
+      AF_META_TIMER=setInterval(()=>{ if(meta) meta.textContent='visto '+fmtAgo(a.updated); },1000);
+    }
     // r28: CLI de la ficha — escribe A ESTE agente por el MISMO canal real que
     // el compositor ✎ (inboxSend → POST /api/bot-inbox con su misma auth por
     // sesión Google del gate). Escribir NO cierra la ficha (la interfaz sigue
@@ -3048,15 +3188,30 @@
         e.preventDefault();                                // Enter solo = ENVIAR (sin salto fantasma)
         const text=(cliIn.value||'').trim();
         if(!text){ cliMsg.textContent='escribe un mensaje primero'; cliMsg.className='af-cli-msg err'; return; }
-        cliMsg.textContent='enviando a '+a.agente+'@'+a.maquina+'…'; cliMsg.className='af-cli-msg';
         cliIn.disabled=true;
-        const res=await inboxSend(a.agente, a.maquina, text);
+        cliMsg.textContent='resolviendo destino…'; cliMsg.className='af-cli-msg';
+        const dest=await afResolveMachine(a.agente, a.maquina);   // r30: cross-máquina
+        const machine=dest.machine;
+        cliMsg.textContent=dest.moved
+          ? (a.agente+' late ahora en '+machine+' — enviando allí…')
+          : ('enviando a '+a.agente+'@'+machine+'…');
+        const res=await inboxSend(a.agente, machine, text);
         cliIn.disabled=false;
         if(res.ok){
-          cliMsg.textContent='✉ encolado'+(res.id?' #'+res.id:'')+' para '+a.agente+'@'+a.maquina+(res.verified?'':' (sin verificar)');
+          const hid=res.id||'';
+          cliMsg.textContent='✉ encolado'+(hid?' #'+hid:'')+' para '+a.agente+'@'+machine+(dest.moved?' (reencaminado)':'')+(res.verified?'':' (sin verificar)');
           cliMsg.className='af-cli-msg ok';
+          // r30: historial persistido (localStorage) + refresco de estado del encargo
+          const hist=afLoadHist(a.agente); hist.push({text,ts:Date.now(),id:hid,machine,status:'pending'});
+          afSaveHist(a.agente,hist); afRenderHist(a.agente);
           cliIn.value=''; autogrow(); cliIn.focus();       // r29: la caja vuelve a 1 línea
-          if(typeof cliPrint==='function') cliPrint('PROMPT(ficha) → '+a.agente+' · '+a.maquina+'  (encargo '+res.id+')');
+          if(typeof cliPrint==='function') cliPrint('PROMPT(ficha) → '+a.agente+' · '+machine+'  (encargo '+hid+')');
+          afPollStatus(res.taskId, res.numId, st=>{
+            const arr=afLoadHist(a.agente); const e=arr.find(x=>x.id===hid);
+            if(e){ e.status=st; afSaveHist(a.agente,arr); afRenderHist(a.agente); }
+            if(FICHA_OPEN&&cliMsg){ cliMsg.textContent='✉ #'+hid+' → '+(AF_ST_LABEL[st]||st); }
+            try{ afFillPanels(a); }catch(_){}
+          });
         } else {
           cliMsg.textContent='✗ '+res.error; cliMsg.className='af-cli-msg err';
         }
@@ -3066,6 +3221,7 @@
   }
   function closeActFicha(){
     const f=document.getElementById('actFicha'); if(!f||f.hidden) return;
+    if(AF_META_TIMER){ clearInterval(AF_META_TIMER); AF_META_TIMER=null; }   // r30: para el ticker en vivo
     f.hidden=true; f.innerHTML=''; f.className='';
     FICHA_OPEN=false;
     document.documentElement.classList.remove('ficha-open');

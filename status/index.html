@@ -6,7 +6,7 @@
   <title>ADmiraNeXT | Status — Constelación de la flota</title>
   <meta name="description" content="Admira no tiene centro — es un universo que se expande. Estado en vivo de la flota AdmiraNeXT: cada ordenador es una estrella con su proyecto y su foco.">
   <meta name="admiranext-version" content="AdmiraNext v26.07.07.12">
-  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r26 (fix-trio + rótulo + marcha: guarda dura antiduplicados en el pase de actividad — selección concat(niveles barajados) DEDUPLICADA por máquina y dedup final antes de pintar, jamás dos naves de la misma máquina; rótulo reordenado en actividad Y dudas (MÁQUINA protagonista arriba, agente debajo con su vida); la formación entera marcha a TODO lo ancho estilo arcade — ping-pong a saltitos steps() hasta el borde derecho y vuelta, amplitud medida en vivo (llega al borde sin cruzarlo, sin scroll-x, clic operativo en movimiento), prefers-reduced-motion = deriva mínima de antes)">
+  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r27 (ufo-ficha: pases MANUALES fijados 📌 — el trío del reloj o de /agenteTarea NO se retira con ratón/tecla (solo Escape, el siguiente ciclo auto o el cierre de la ficha); los auto siguen retirándose con el ratón; clic en una nave de actividad → FICHA a pantalla completa con el alien grande animado, MÁQUINA enorme, agente+vida, ACTIVIDAD·proyecto·modo, tarea y encargo completos y visto hace Xs; con la ficha abierta la interfaz entera SE PARA (constelación, rotación, countdown congelado desplazando nextAt lo pausado, marcha del strip, gestos) y el polling se pospone hasta cerrar (una recarga al salir); las naves-duda conservan su panel)">
   <meta name="admiranext-status-build" content="oraculo-triad-1">
   <!-- Orbitron: tipografía tecnológica para la versión del pie del riel (Carlos, 2026-07-11) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -228,6 +228,52 @@
     .duda-ship.act.v2 .inv{width:37px}   /* pulpo 12×8 */
     /* r22: máquina sin foco LIMPIO publicado — aviso honesto y discreto */
     .duda-ship.act .act-nofoco{color:var(--text-dim);font-style:italic}
+    /* ============================================================
+       r27: FICHA DE ACTIVIDAD A PANTALLA COMPLETA — el alien grande y
+       animado con su tinte, la MÁQUINA enorme y toda la info del equipo.
+       Mientras está abierta, la clase .ficha-open en <html> PARA todas las
+       animaciones visibles (marcha del strip, frames de los sprites de la
+       franja, barra de rotación); frame()/rotación/contadores se congelan
+       por JS con FICHA_OPEN. ============================================ */
+    #actFicha{
+      position:fixed;inset:0;z-index:60;
+      background:rgba(1,4,10,.95);backdrop-filter:blur(12px);
+      display:flex;align-items:center;justify-content:center;padding:4vh 6vw;
+      --duda:#22e6ff;--duda-dim:rgba(34,230,255,.45);
+    }
+    #actFicha[hidden]{display:none}
+    #actFicha.v1{--duda:#57ffa8;--duda-dim:rgba(87,255,168,.30)}
+    #actFicha.v2{--duda:#dfeef3;--duda-dim:rgba(223,238,243,.35)}
+    #actFicha .af-box{max-width:860px;width:100%;max-height:92vh;overflow-y:auto;text-align:center;position:relative;padding:12px}
+    #actFicha .af-close{
+      position:absolute;top:0;right:0;background:none;border:1px solid var(--duda-dim);border-radius:8px;
+      color:var(--duda);font:inherit;font-size:20px;line-height:1;padding:6px 12px;cursor:pointer;
+    }
+    #actFicha .af-close:hover{background:rgba(34,230,255,.08)}
+    #actFicha .inv{width:min(190px,32vw);height:auto;fill:var(--duda);filter:drop-shadow(0 0 28px var(--duda-dim))}
+    #actFicha .inv .f1{animation:invF1 .9s steps(1) infinite}
+    #actFicha .inv .f2{animation:invF2 .9s steps(1) infinite}
+    #actFicha .af-maquina{
+      margin-top:18px;font-size:clamp(24px,4.6vw,46px);font-weight:700;color:var(--duda);
+      letter-spacing:.07em;text-transform:uppercase;text-shadow:0 0 24px var(--duda-dim);line-height:1.15;
+      overflow-wrap:break-word;
+    }
+    #actFicha .af-agente{margin-top:8px;font-size:15px;letter-spacing:.18em;color:var(--text);text-transform:uppercase}
+    #actFicha .af-agente .duda-vivo{width:8px;height:8px;margin-right:7px}
+    #actFicha .af-tag{margin-top:6px;font-size:11px;letter-spacing:.2em;color:var(--text-dim);text-transform:uppercase}
+    #actFicha .af-ahora,#actFicha .af-encargo{
+      margin:22px auto 0;max-width:640px;font-size:17px;line-height:1.6;color:var(--text);
+      overflow-wrap:anywhere;white-space:pre-wrap;
+    }
+    #actFicha .af-encargo{font-size:13px;color:var(--text-dim);margin-top:14px}
+    #actFicha .af-ahora span,#actFicha .af-encargo span{
+      display:block;font-size:9.5px;letter-spacing:.24em;color:var(--duda);text-transform:uppercase;margin-bottom:4px;
+    }
+    #actFicha .af-nada{font-style:italic;color:var(--text-dim)}
+    #actFicha .af-meta{margin-top:22px;font-size:10.5px;letter-spacing:.14em;color:var(--text-dim);text-transform:uppercase}
+    #actFicha .af-hint{margin-top:16px;font-size:8.5px;letter-spacing:.1em;color:var(--text-dim)}
+    /* r27: TODO lo animado de la página, en pausa mientras la ficha esté abierta */
+    .ficha-open #dudaStrip, .ficha-open #dudaStrip *, .ficha-open #rotProg{animation-play-state:paused !important}
     /* r23: con TAREA viva de principal, el focus (encargo) baja a una línea
        secundaria discreta de 1 renglón — entero en el tooltip de la nave */
     .duda-ship.act .act-foco{
@@ -668,7 +714,7 @@
       </div>
       <button class="pf-urow" id="userRow" type="button" aria-expanded="false" aria-controls="userMenu" title="Sesión">
         <span class="pf-uava" id="userAva" aria-hidden="true">?</span>
-        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.12.r26</span></span>
+        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.12.r27</span></span>
         <span class="pf-ugear" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg></span>
         <span class="pf-uchev" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
       </button>
@@ -821,6 +867,10 @@
        Oculta del todo cuando no hay dudas. Se rellena desde renderDudas(). -->
   <div id="dudaStrip" hidden aria-live="polite" aria-label="Dudas abiertas de los agentes"></div>
   <div id="dudaPop" hidden role="dialog" aria-label="Duda de un agente"></div>
+  <!-- r27: FICHA de actividad a PANTALLA COMPLETA — clic en una nave del pase:
+       el alien grande y animado + toda la info del equipo; el resto de la
+       interfaz se PARA mientras esté abierta. Cierre: ✕, Escape o clic fuera. -->
+  <div id="actFicha" hidden role="dialog" aria-modal="true" aria-label="Ficha de actividad de un equipo"></div>
 
   <span id="rotProg"></span>
 
@@ -1494,6 +1544,10 @@
 
   function frame(now){
     if(paused) return;
+    // r27: ficha de actividad abierta → la constelación se CONGELA tal cual
+    // (se mantiene el bucle RAF para reanudar en seco al cerrar; last no
+    // avanza y el dt del primer frame posterior queda capado a 50ms).
+    if(FICHA_OPEN){ requestAnimationFrame(frame); return; }
     const dt=Math.min(50, now-last); last=now;
     cam.vx*=0.92; cam.vy*=0.92; cam.x+=cam.vx; cam.y+=cam.vy;
 
@@ -2250,7 +2304,14 @@
     return r.json();
   }
 
+  // r27: FICHA de actividad a pantalla completa — mientras está abierta TODA
+  // la interfaz se para. FICHA_OPEN congela frame/rotación/contadores y
+  // POSPONE load() (FICHA_DIRTY recuerda que hay datos pendientes: al cerrar
+  // se recarga una vez y todo vuelve sincronizado).
+  let FICHA_OPEN=false, FICHA_DIRTY=false;
+
   async function load(){
+    if(FICHA_OPEN){ FICHA_DIRTY=true; return; }   // r27: nada se repinta con la ficha abierta
     // Ambos feeds EN PARALELO y se espera a los dos antes de pintar: si se
     // hicieran en serie, un primer render con sólo `fleet` resuelto mostraba
     // 3 vivos (fleet+self) hasta que llegaba `presence` → parpadeo «3 nodos».
@@ -2338,6 +2399,8 @@
           agente:String(p.persona), maquina:stripOwner(p.machine), mkey:norm(stripOwner(p.machine)),
           foco:f.slice(0,160), focoOk:!!f, tarea:t.slice(0,160), tareaOk:!!t,
           proyecto:String(p.project||''),
+          // r27: para la ficha a pantalla completa — «visto hace Xs» y modo
+          updated:+p.updated||0, modo:String(p.mode||''),
         };
       });
     }
@@ -2490,7 +2553,7 @@
         const m=c.match(/v\.[\d.]+r\d+|v\.[\d.]+\.r\d+/);
         if(m) return m[0];
       }catch(e){}
-      return 'v.2026.07.12.r26';
+      return 'v.2026.07.12.r27';
     })();
     let focusLabel = FOCUS_MACHINE ? FOCUS_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
     let viewerLabel = VIEWER_MACHINE ? VIEWER_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
@@ -2730,12 +2793,12 @@
     const tip='Actividad de '+esc(a.agente)+' en '+esc(a.maquina)
       +(a.tareaOk?' — ahora: '+esc(a.tarea):'')
       +(a.focoOk?' — encargo: '+esc(a.foco):'')
-      +' · se retira al mover el ratón (o con /demoOFF)';
+      +' · CLIC: ficha a pantalla completa (r27)';
     const v=(a.variante!=null)?a.variante:actVariant(a.mkey);   // asignada por trío (sin repetirse) o global
     // r26: la MÁQUINA es la protagonista (línea principal, entera si cabe) y
     // el AGENTE va debajo con su puntito de vida — mismo orden que en las
     // naves-duda para que toda la franja se lea igual.
-    return `<button class="duda-ship act v${v}" type="button" title="${tip}">
+    return `<button class="duda-ship act v${v}" type="button" data-act="${esc(a.mkey)}" title="${tip}">
       ${invaderSVG(v)}
       <span class="duda-who">⚡ ${esc(a.maquina)}</span>
       <span class="duda-agent">${dudaDot(a.agente)}${esc(a.agente)}</span>
@@ -2830,12 +2893,69 @@
     DUDA_OPEN=null; pop.hidden=true; pop.innerHTML='';
   }
   // clic en nave → panel; clic en el badge de cabecera → abre la primera duda
+  // r27: clic en una nave de ACTIVIDAD → su FICHA a pantalla completa
   document.getElementById('dudaStrip').addEventListener('click',e=>{
+    const act=e.target.closest('.duda-ship.act');
+    if(act){
+      const a=((window.ACT_SHIPS&&window.ACT_SHIPS.current())||[]).find(x=>x.mkey===act.dataset.act);
+      if(a) openActFicha(a);
+      return;
+    }
     const b=e.target.closest('.duda-ship'); if(!b) return;
     const id=b.dataset.duda;              // ids con prefijo de fuente (api:/emu:)
     const d=DUDAS.find(x=>String(x.id)===id); if(!d) return;
     if(DUDA_OPEN===id) closeDudaPop(); else openDudaPop(d);
   });
+
+  /* ── r27: FICHA DE ACTIVIDAD a pantalla completa ─────────────────────────
+     El alien GRANDE animado (sus 2 frames, su tinte), MÁQUINA enorme, agente
+     con puntito de vida, ACTIVIDAD · proyecto · modo, «ahora:» completo, el
+     encargo completo y «visto hace Xs». Mientras esté abierta, la interfaz
+     entera se PARA (FICHA_OPEN + clase .ficha-open + pauseTimer del módulo:
+     el tiempo del ciclo se DESPLAZA lo pausado, así el countdown reanuda
+     exactamente donde estaba y ningún pase auto dispara por debajo). Al
+     cerrar (✕ / Escape / clic fuera) se retira también el pase (dismissHard)
+     y, si llegaron datos durante la pausa, se recarga una vez (FICHA_DIRTY). */
+  function openActFicha(a){
+    const f=document.getElementById('actFicha'); if(!f||!a) return;
+    const v=(a.variante!=null)?a.variante:actVariant(a.mkey);
+    f.className='v'+v;
+    f.innerHTML=`
+      <div class="af-box">
+        <button class="af-close" type="button" aria-label="Cerrar ficha">×</button>
+        ${invaderSVG(v)}
+        <div class="af-maquina">${esc(a.maquina)}</div>
+        <div class="af-agente">${dudaDot(a.agente)}${esc(a.agente)}</div>
+        <div class="af-tag">ACTIVIDAD${a.proyecto?` · ${esc(a.proyecto)}`:''}${a.modo?` · ${esc(a.modo)}`:''}</div>
+        ${a.tareaOk?`<div class="af-ahora"><span>ahora</span>${esc(a.tarea)}</div>`:''}
+        ${a.focoOk?`<div class="af-encargo"><span>encargo</span>${esc(a.foco)}</div>`:''}
+        ${(!a.tareaOk&&!a.focoOk)?'<div class="af-encargo af-nada">(sin foco publicado — actualizar bóveda en esa máquina)</div>':''}
+        <div class="af-meta">${a.updated?('visto '+esc(fmtAgo(a.updated))):''}</div>
+        <div class="af-hint">✕, Escape o clic fuera para cerrar — la interfaz está en pausa</div>
+      </div>`;
+    f.hidden=false;
+    FICHA_OPEN=true; FICHA_DIRTY=false;
+    document.documentElement.classList.add('ficha-open');
+    if(window.ACT_SHIPS&&window.ACT_SHIPS.pauseTimer) window.ACT_SHIPS.pauseTimer();
+    f.querySelector('.af-close').addEventListener('click',closeActFicha);
+  }
+  function closeActFicha(){
+    const f=document.getElementById('actFicha'); if(!f||f.hidden) return;
+    f.hidden=true; f.innerHTML=''; f.className='';
+    FICHA_OPEN=false;
+    document.documentElement.classList.remove('ficha-open');
+    if(window.ACT_SHIPS){
+      if(window.ACT_SHIPS.resumeTimer) window.ACT_SHIPS.resumeTimer();   // reanuda desplazado lo pausado
+      if(window.ACT_SHIPS.dismissHard) window.ACT_SHIPS.dismissHard();   // cerrar la ficha retira el pase
+    }
+    try{ ufoCountTick(); }catch(e){}                       // countdown re-sincronizado con nextAt real
+    if(FICHA_DIRTY){ FICHA_DIRTY=false; try{ load(); }catch(e){} }       // datos pospuestos → una recarga
+  }
+  // clic FUERA del contenido → cierra; Escape (en captura, antes que nadie) → cierra
+  document.getElementById('actFicha').addEventListener('click',e=>{ if(e.target===e.currentTarget) closeActFicha(); });
+  document.addEventListener('keydown',e=>{
+    if(e.key==='Escape' && FICHA_OPEN){ e.stopPropagation(); e.preventDefault(); closeActFicha(); }
+  },{capture:true});
   (function(){
     const badge=document.getElementById('dudaBadge'); if(!badge) return;
     const go=()=>{ if(DUDAS.length) (DUDA_OPEN===DUDAS[0].id? closeDudaPop() : openDudaPop(DUDAS[0])); };
@@ -4077,7 +4197,7 @@
   function tickRotation(now){
     // mientras el ratón siga sobre un nodo/ficha (o haya ficha FIJADA), renueva el congelado
     if(hover || PINNED) bumpReadFreeze();
-    const frozen = performance.now() < readFreezeUntil;
+    const frozen = performance.now() < readFreezeUntil || FICHA_OPEN;   // r27: ficha abierta = rotación parada
     if(rotRead) rotRead.style.display = frozen ? '' : 'none';
     // draw activo, pausado por el usuario o CONGELADO por lectura de ficha:
     // la rotación de vistas no avanza (la barra de progreso queda a 0).
@@ -4564,14 +4684,16 @@
     let on=(()=>{ try{ return localStorage.getItem(LS_KEY)!=='0'; }catch(e){ return true; } })();
     let timer=null, current=[], lastSet=new Set(), shownAt=0, anchor=null;   // r25: current = TRÍO (0-3 naves)
     let nextTickAt=0;                                     // r24: instante EXACTO del próximo disparo (la cuenta atrás lee esto)
+    let pinned=false;                                     // r27: pase MANUAL (reloj o /agenteTarea) → FIJADO: no lo retira el ratón
+    let pausedRemaining=null;                             // r27: ms restantes al abrir la ficha (el tiempo se PARA con ella)
     const delay=()=>150000+Math.random()*60000;           // 150–210 s
     function schedule(ms){
       if(timer) clearTimeout(timer);
       const d=(typeof ms==='number'&&ms>0)?ms:delay();
       nextTickAt=Date.now()+d;                            // fuente única: nada de contadores paralelos
-      timer=setTimeout(()=>{ if(on) show(); schedule(); }, d);
+      timer=setTimeout(()=>{ if(on) show('auto'); schedule(); }, d);   // r27: el ciclo natural es 'auto'
     }
-    function show(){
+    function show(origen){
       if(DUDAS.length) return false;                      // dudas mandan: ciclo saltado
       if(!ACT_POOL.length) return false;                  // sin máquinas vivas
       // r25: TRÍO — hasta 3 naves, una por MÁQUINA VIVA distinta (con 1-2
@@ -4600,25 +4722,48 @@
       { const g=new Set(); picks=picks.filter(a=>{ if(g.has(a.mkey)) return false; g.add(a.mkey); return true; }); }
       if(!picks.length) return false;
       current=actAssignVariants(picks);                   // r25: 3 sprites/tintes SIEMPRE distintos en el trío
+      // r27: origen del pase — 'manual' (reloj / /agenteTarea / /demoON) queda
+      // FIJADO: no lo retiran ratón/teclas/clics; se va con Escape, cuando el
+      // siguiente ciclo 'auto' lo sustituye, o al cerrar la ficha fullscreen.
+      pinned=(origen==='manual');
       lastSet=new Set(picks.map(a=>a.mkey));
       shownAt=Date.now(); anchor=null;
-      repaint(); return true;
+      repaint(); try{ ufoCountTick(); }catch(e){}         // r27: el contador refleja el 📌 al instante
+      return true;
     }
     function dismiss(){
+      if(FICHA_OPEN) return;                              // r27: con la ficha abierta nada se retira
+      if(pinned) return;                                  // r27: los pases manuales no se retiran por gesto
       if(!current.length) return;
       if(Date.now()-shownAt<400) return;                  // no las mata su propio gesto
       current=[]; anchor=null; repaint();                 // r25: las TRES a la vez
     }
+    // r27: retirada DURA — la usan Escape (pase fijado) y el cierre de la ficha
+    function dismissHard(){
+      if(!current.length){ pinned=false; return; }
+      current=[]; pinned=false; anchor=null; repaint();
+      try{ ufoCountTick(); }catch(e){}
+    }
     function repaint(){ try{ renderDudas(DUDAS); }catch(e){ console.warn('actividad render',e); } }
-    // gestos que la retiran: ratón >10 px desde el primer movimiento, tecla, clic
+    // gestos que la retiran (solo pases 'auto'): ratón >10 px, tecla, clic
     window.addEventListener('mousemove',e=>{
+      if(FICHA_OPEN||pinned) return;                      // r27
       if(!current.length) return;
       if(!anchor){ anchor=[e.clientX,e.clientY]; return; }
       const dx=e.clientX-anchor[0], dy=e.clientY-anchor[1];
       if(dx*dx+dy*dy>100) dismiss();
     },{passive:true});
-    window.addEventListener('keydown',dismiss,{capture:true});
-    window.addEventListener('pointerdown',dismiss,{capture:true});
+    window.addEventListener('keydown',e=>{
+      if(FICHA_OPEN) return;                              // r27: Escape ahí cierra la ficha (listener propio)
+      if(pinned){ if(e.key==='Escape') dismissHard(); return; }   // r27: fijado → SOLO Escape
+      dismiss();
+    },{capture:true});
+    window.addEventListener('pointerdown',e=>{
+      if(FICHA_OPEN) return;
+      if(e.target && e.target.closest && e.target.closest('.duda-ship.act')) return;   // r27: clic EN una nave → abre su ficha, no retira
+      if(pinned) return;
+      dismiss();
+    },{capture:true});
     schedule();                                           // el temporizador SIEMPRE corre (tick decide)
     return {
       current(){ return current; },
@@ -4630,23 +4775,33 @@
       // (para verificar la cuenta atrás sin esperar 3 min); después vuelve
       // al ciclo normal de 150–210 s.
       debugNext(ms){ schedule(ms); return nextTickAt; },
-      clearQuiet(){ current=[]; anchor=null; },           // las sustituyen las dudas
+      clearQuiet(){ current=[]; pinned=false; anchor=null; },   // las sustituyen las dudas (también a las fijadas)
       isOn(){ return on; },
+      isPinned(){ return pinned && current.length>0; },   // r27: ¿hay un pase manual fijado en pantalla?
+      dismissHard,                                        // r27: lo usa el cierre de la ficha fullscreen
+      // r27: la FICHA para el tiempo — al abrir se congela lo que queda hasta
+      // el próximo disparo y al cerrar se reprograma con ESE resto (elegido:
+      // desplazar nextAt lo pausado; así el countdown reanuda exactamente
+      // donde estaba y ningún pase 'auto' dispara por debajo de la ficha).
+      pauseTimer(){ if(pausedRemaining!=null) return; pausedRemaining=Math.max(1000, nextTickAt-Date.now()); if(timer){ clearTimeout(timer); timer=null; } },
+      resumeTimer(){ if(pausedRemaining==null) return; const d=pausedRemaining; pausedRemaining=null; schedule(d); },
       setOn(v,force){
         on=!!v; try{ localStorage.setItem(LS_KEY,on?'1':'0'); }catch(e){}
         const cb=document.getElementById('advActShips'); if(cb) cb.checked=on;
-        if(!on && current.length){ current=[]; anchor=null; repaint(); }
+        if(!on && current.length){ current=[]; pinned=false; anchor=null; repaint(); }
         try{ ufoCountTick(); }catch(e){}                  // r24: la cuenta atrás aparece/desaparece al instante
-        return (on && force) ? show() : true;             // /demoON fuerza una YA
+        return (on && force) ? show('manual') : true;     // /demoON fuerza una YA (manual → fijada)
       },
       // r23: /agenteTarea — fuerza UNA aparición YA, incluso con el modo demo
       // en OFF (es bajo petición explícita; no toca la persistencia).
-      force(){ return show(); },
+      // r27: es un pase MANUAL → queda fijado (no lo retira el ratón).
+      force(){ return show('manual'); },
       // r25: clic en el TIEMPO del contador — lanza el pase YA y, a diferencia
       // de /agenteTarea, REARMA el ciclo normal (150–210 s). El clic no mata
       // al trío recién nacido: show() fija shownAt y la guarda de 400 ms del
       // dismiss lo protege del propio gesto. Con dudas visibles → false.
-      launchNow(){ const ok=show(); if(ok) schedule(); return ok; },
+      // r27: manual → pase FIJADO hasta Escape / siguiente ciclo / cierre de ficha.
+      launchNow(){ const ok=show('manual'); if(ok) schedule(); return ok; },
       // r22: SOLO PRUEBAS/DEPURACIÓN — sustituye el pool con entradas crudas
       // {persona,machine,focus,task,project} pasándolas por el MISMO saneo de
       // la ingesta real (focoLimpio). El siguiente load() lo repone con lo vivo.
@@ -4654,7 +4809,8 @@
         ACT_POOL=(list||[]).map(p=>{
           const f=focoLimpio(p.focus), t=focoLimpio(p.task);
           return {agente:String(p.persona||'?'), maquina:String(p.machine||'?'), mkey:norm(String(p.machine||'?')),
-                  foco:f.slice(0,160), focoOk:!!f, tarea:t.slice(0,160), tareaOk:!!t, proyecto:String(p.project||'')};
+                  foco:f.slice(0,160), focoOk:!!f, tarea:t.slice(0,160), tareaOk:!!t, proyecto:String(p.project||''),
+                  updated:+p.updated||Math.floor(Date.now()/1000)-45, modo:String(p.mode||'')};
         });
         return ACT_POOL;
       },
@@ -4674,13 +4830,16 @@
   // siguiente intento (nextAt ya viene rearmado por schedule).
   let UFO_MSG_UNTIL=0;                 // r25: mientras dure, el número enseña un aviso breve (0:00 / dudas mandan)
   function ufoCountTick(){
+    if(FICHA_OPEN) return;                                // r27: con la ficha abierta el contador se CONGELA donde esté
     const el=document.getElementById('ufoCount'), t=document.getElementById('ufoCountT');
     if(!el||!t) return;
     if(!actividad.isOn()){ el.hidden=true; return; }
     el.hidden=false;
     if(Date.now()<UFO_MSG_UNTIL) return;                  // aviso del clic en curso
     const s=Math.max(0,Math.round((actividad.nextAt()-Date.now())/1000));
-    t.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+    // r27: con un pase manual FIJADO el número lleva 📌 delante — aviso sutil
+    // de que las naves no se irán con el ratón (Escape o el próximo ciclo).
+    t.textContent=(actividad.isPinned()?'📌 ':'')+Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
   }
   setInterval(ufoCountTick,1000);
   ufoCountTick();
@@ -4778,14 +4937,14 @@
         } else {
           cliPrint('ahora mismo no sale: '+(DUDAS.length?'hay naves-duda visibles (mandan ellas)':'ninguna máquina viva en la presencia'));
         }
-        cliPrint('  se retiran al mover el ratón · el modo demo sigue '+(actividad.isOn()?'ON':'OFF'));
+        cliPrint('  pase FIJADO 📌 (manual): el ratón no lo retira — Escape sí, o el próximo ciclo · clic en una nave = ficha grande · modo demo sigue '+(actividad.isOn()?'ON':'OFF'));
         break;
       }
       case '/demoon': case 'demoon': {   // r21: modo actividad ON + aparición forzada YA (r25: trío)
         const shown=actividad.setOn(true,true);   // devuelve si el trío forzado salió
         cliPrint('modo ACTIVIDAD → ON (persistido) · próximas naves cada ~3 min (150–210 s)');
         cliPrint(shown
-          ? '  ⚡ trío forzado ('+(actividad.current()||[]).map(a=>a.agente+' · '+a.maquina).join(' / ')+') — se retira al mover el ratón'
+          ? '  ⚡ trío forzado ('+(actividad.current()||[]).map(a=>a.agente+' · '+a.maquina).join(' / ')+') — FIJADO 📌: Escape lo quita, el ratón no'
           : '  ahora mismo no sale: '+(DUDAS.length?'hay naves-duda visibles (mandan ellas)':'ninguna máquina viva en la presencia'));
         break;
       }
@@ -4928,6 +5087,7 @@
     // Ticker de frescura: «datos hace Xs», actualizado cada segundo (discreto).
     const ageEl = document.getElementById('dataAge');
     if(ageEl) setInterval(()=>{
+      if(FICHA_OPEN) return;                       // r27: congelado con la ficha abierta
       const t = window.__lastDataAt; if(!t){ ageEl.textContent=''; return; }
       const s = Math.max(0, Math.round((Date.now()-t)/1000));
       ageEl.textContent = 'datos hace '+s+'s';

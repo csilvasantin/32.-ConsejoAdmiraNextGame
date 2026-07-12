@@ -6,7 +6,7 @@
   <title>ADmiraNeXT | Status — Constelación de la flota</title>
   <meta name="description" content="Admira no tiene centro — es un universo que se expande. Estado en vivo de la flota AdmiraNeXT: cada ordenador es una estrella con su proyecto y su foco.">
   <meta name="admiranext-version" content="AdmiraNext v26.07.07.12">
-  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r23 (tarea-viva: LO QUE ESTÁN HACIENDO manda — la nave de actividad pinta de línea principal «ahora: <task>» (campo task de /api/presence, la tarea viva derivada de la actividad real; mismo saneo antibasura que el focus) y el encargo baja a línea secundaria discreta; rotación prioriza máquinas con task limpio > focus limpio > resto; comando /agenteTarea fuerza una aparición YA incluso con el modo demo OFF)">
+  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r24 (countdown-ufo: cuenta atrás «· 👾 próximo UFO m:ss» tras el lema de la barra, leyendo el instante REAL del próximo disparo del módulo de actividad (nextAt, ciclo 150-210 s) con tic de 1 s; se rearma sola al aparecer el UFO o al saltarse el ciclo por dudas; /agenteTarea no la toca; desaparece con /demoOFF y vuelve con /demoON o el checkbox del AVANZADO; en estrecho hace ellipsis y bajo 900px se oculta antes de romper la barra)">
   <meta name="admiranext-status-build" content="oraculo-triad-1">
   <!-- Orbitron: tipografía tecnológica para la versión del pie del riel (Carlos, 2026-07-11) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -133,6 +133,13 @@
     .hdr .ver{font-size:11px;letter-spacing:.18em;color:var(--cyan-dim);white-space:nowrap}
     .hdr .tag{font-size:12px;color:var(--text-dim);letter-spacing:.02em}
     .hdr .tag em{color:var(--text);font-style:normal}
+    /* r24: cuenta atrás del próximo UFO de actividad — discreta, tras el lema.
+       En estrecho hace ellipsis y por debajo de 900px desaparece ANTES de
+       romper la barra (la hdr-line ya refluye; esto evita el salto de línea). */
+    .hdr .ufo-count{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;flex:0 1 auto}
+    .hdr .ufo-count b{color:var(--cyan);font-weight:700;font-variant-numeric:tabular-nums}
+    .hdr .ufo-count[hidden]{display:none}
+    @media (max-width:900px){ .hdr .ufo-count{display:none} }
     .hdr .live{
       font-size:11px;letter-spacing:.14em;color:var(--cyan);
       border:1px solid var(--cyan-dim);border-radius:20px;padding:5px 12px;
@@ -633,7 +640,7 @@
       </div>
       <button class="pf-urow" id="userRow" type="button" aria-expanded="false" aria-controls="userMenu" title="Sesión">
         <span class="pf-uava" id="userAva" aria-hidden="true">?</span>
-        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.12.r23</span></span>
+        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.12.r24</span></span>
         <span class="pf-ugear" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg></span>
         <span class="pf-uchev" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
       </button>
@@ -763,6 +770,9 @@
       <div class="hdr-line">
         <a class="brand" href="/" title="ADmiraNeXT — inicio">ADmira<b>NeXT</b></a>
         <span class="tag">Admira no tiene centro — <em>es un universo que se expande.</em></span>
+        <!-- r24: cuenta atrás del próximo UFO de actividad (temporizador REAL del
+             módulo, no un contador paralelo). Oculto con el modo demo OFF. -->
+        <span class="tag ufo-count" id="ufoCount" hidden title="Cuenta atrás del próximo alien con la labor de un agente (modo actividad) — /demoOFF lo apaga">· 👾 próximo UFO <b id="ufoCountT">–:––</b></span>
         <span class="live"><span class="dot"></span><span id="liveCount">—</span></span>
         <!-- r17: contador de DUDAS abiertas de los agentes (naves-duda); clic → abre la primera -->
         <span class="live duda" id="dudaBadge" hidden role="button" tabindex="0" title="Dudas abiertas de los agentes (diálogo a/b/c de Claude Code)"><span class="dot"></span><span id="dudaCount">0</span>&nbsp;dudas</span>
@@ -2452,7 +2462,7 @@
         const m=c.match(/v\.[\d.]+r\d+|v\.[\d.]+\.r\d+/);
         if(m) return m[0];
       }catch(e){}
-      return 'v.2026.07.12.r23';
+      return 'v.2026.07.12.r24';
     })();
     let focusLabel = FOCUS_MACHINE ? FOCUS_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
     let viewerLabel = VIEWER_MACHINE ? VIEWER_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
@@ -4429,8 +4439,14 @@
     const LS_KEY='admiranext-status-actividad';
     let on=(()=>{ try{ return localStorage.getItem(LS_KEY)!=='0'; }catch(e){ return true; } })();
     let timer=null, current=null, lastMkey='', shownAt=0, anchor=null;
+    let nextTickAt=0;                                     // r24: instante EXACTO del próximo disparo (la cuenta atrás lee esto)
     const delay=()=>150000+Math.random()*60000;           // 150–210 s
-    function schedule(){ if(timer) clearTimeout(timer); timer=setTimeout(()=>{ if(on) show(); schedule(); }, delay()); }
+    function schedule(ms){
+      if(timer) clearTimeout(timer);
+      const d=(typeof ms==='number'&&ms>0)?ms:delay();
+      nextTickAt=Date.now()+d;                            // fuente única: nada de contadores paralelos
+      timer=setTimeout(()=>{ if(on) show(); schedule(); }, d);
+    }
     function show(){
       if(DUDAS.length) return false;                      // dudas mandan: ciclo saltado
       if(!ACT_POOL.length) return false;                  // sin máquinas vivas
@@ -4464,12 +4480,21 @@
     schedule();                                           // el temporizador SIEMPRE corre (tick decide)
     return {
       current(){ return current; },
+      // r24: instante del próximo disparo programado — el contador «👾 próximo
+      // UFO» de la barra lee ESTE valor (se rearma solo en cada schedule,
+      // también cuando el ciclo se salta por dudas). /agenteTarea no lo toca.
+      nextAt(){ return nextTickAt; },
+      // r24: SOLO PRUEBAS — reprograma el próximo disparo a `ms` de ahora
+      // (para verificar la cuenta atrás sin esperar 3 min); después vuelve
+      // al ciclo normal de 150–210 s.
+      debugNext(ms){ schedule(ms); return nextTickAt; },
       clearQuiet(){ current=null; anchor=null; },         // la sustituyen las dudas
       isOn(){ return on; },
       setOn(v,force){
         on=!!v; try{ localStorage.setItem(LS_KEY,on?'1':'0'); }catch(e){}
         const cb=document.getElementById('advActShips'); if(cb) cb.checked=on;
         if(!on && current){ current=null; anchor=null; repaint(); }
+        try{ ufoCountTick(); }catch(e){}                  // r24: la cuenta atrás aparece/desaparece al instante
         return (on && force) ? show() : true;             // /demoON fuerza una YA
       },
       // r23: /agenteTarea — fuerza UNA aparición YA, incluso con el modo demo
@@ -4494,6 +4519,22 @@
     advActShips.checked=actividad.isOn();                 // estado persistido
     advActShips.addEventListener('change',e=>actividad.setOn(e.target.checked));
   }
+
+  // --- 👾 CUENTA ATRÁS «próximo UFO» (r24): tras el lema de la barra ---------
+  // Lee el temporizador REAL del módulo de actividad (actividad.nextAt(); nada
+  // de contadores paralelos que se desvíen): mm:ss, tic de 1 s. Con el modo
+  // demo OFF desaparece; si el ciclo se salta por dudas, sigue hacia el
+  // siguiente intento (nextAt ya viene rearmado por schedule).
+  function ufoCountTick(){
+    const el=document.getElementById('ufoCount'), t=document.getElementById('ufoCountT');
+    if(!el||!t) return;
+    if(!actividad.isOn()){ el.hidden=true; return; }
+    el.hidden=false;
+    const s=Math.max(0,Math.round((actividad.nextAt()-Date.now())/1000));
+    t.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
+  }
+  setInterval(ufoCountTick,1000);
+  ufoCountTick();
 
   // --- EXPERTO: consola CLI (local, no ejecuta acciones de flota) ---
   const cliInput=document.getElementById('cliInput'), cliOut=document.getElementById('cliOut');

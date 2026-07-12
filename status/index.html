@@ -6,7 +6,7 @@
   <title>ADmiraNeXT | Status — Constelación de la flota</title>
   <meta name="description" content="Admira no tiene centro — es un universo que se expande. Estado en vivo de la flota AdmiraNeXT: cada ordenador es una estrella con su proyecto y su foco.">
   <meta name="admiranext-version" content="AdmiraNext v26.07.07.12">
-  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r19 (emulador-dudas: 👾 emulador de /dudaAgente en el cajón AVANZADO — botón que inyecta 3 dudas aleatorias client-side para ver cómo quedan las naves, comando /dudaAgente [N] en la consola EXPERTO, pool de agentes/máquinas/proyectos/preguntas reales; marcadas (emulada), id emu:, no tocan el worker y desaparecen al recargar)">
+  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r20 (solo-dudas-reales: las naves-duda salen SOLO de /api/dudas (AskUserQuestion real de la flota) o del 👾 emulador (botón AVANZADO / comando /dudaAgente) — eliminadas la fuente heurística ❓ de /api/messages y el parámetro ?demo-dudas=1; + 🔊 marcha invader sintetizada con WebAudio mientras haya naves-duda, acelerando con el número de dudas, toggle en AVANZADO)">
   <meta name="admiranext-status-build" content="oraculo-triad-1">
   <!-- Orbitron: tipografía tecnológica para la versión del pie del riel (Carlos, 2026-07-11) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -146,8 +146,8 @@
     #rotProg.paused{opacity:.2}
 
     /* ============================================================
-       NAVES-DUDA (r17) — cuando un agente pregunta en AgoraMatrix
-       (agora-ask.sh publica «❓ …» y espera respuesta), su duda
+       NAVES-DUDA — cuando un agente tiene una duda real (AskUserQuestion
+       publicada en /api/dudas) o se emula desde el 👾 emulador, su duda
        aparece arriba de la galaxia como una nave estilo invader:
        sprite pixel-art ORIGINAL de 2 frames + marcha lateral suave.
        Sin dudas → la franja no existe (hidden, cero hueco).
@@ -621,7 +621,7 @@
       </div>
       <button class="pf-urow" id="userRow" type="button" aria-expanded="false" aria-controls="userMenu" title="Sesión">
         <span class="pf-uava" id="userAva" aria-hidden="true">?</span>
-        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.12.r19</span></span>
+        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.12.r20</span></span>
         <span class="pf-ugear" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg></span>
         <span class="pf-uchev" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
       </button>
@@ -683,11 +683,16 @@
     <div class="pf-field">
       <label>Ambiente</label>
       <label class="pf-check"><input type="checkbox" id="advHeartAudio"> Latido ambiente (sonar)</label>
-      <div class="hint" style="font-size:8.5px;color:var(--text-dim);letter-spacing:.05em;margin-top:6px;line-height:1.5">Thump-thump grave que sigue el BPM medio de la flota. Requiere un clic (política de audio del navegador).</div>
+      <!-- r20: marcha del invader — suena EN BUCLE mientras haya naves-duda
+           (reales o emuladas) y se acelera con el número de dudas. ON por
+           defecto (persistido); arranca tras el primer clic (autoplay). -->
+      <label class="pf-check"><input type="checkbox" id="advInvaderAudio" checked> 🔊 Marcha invader (dudas)</label>
+      <div class="hint" style="font-size:8.5px;color:var(--text-dim);letter-spacing:.05em;margin-top:6px;line-height:1.5">Thump-thump grave que sigue el BPM medio de la flota. La marcha invader (4 notas graves, sintetizada) suena mientras haya naves-duda y se acelera con más dudas. Ambos requieren un clic en la página (política de audio del navegador).</div>
     </div>
     <!-- EMULADOR DE DUDAS (r19): inyección CLIENT-SIDE de dudas aleatorias para
-         previsualizar las naves 👾 de /dudaAgente sin tocar el worker (mismo
-         espíritu que ?demo-dudas=1). Marcadas «(emulada)», id emu:, se van al recargar. -->
+         previsualizar las naves 👾 de /dudaAgente sin tocar el worker. Desde r20
+         es la ÚNICA vía de prueba (adiós ?demo-dudas=1 y heurísticas del espejo).
+         Marcadas «(emulada)», id emu:, se van al recargar. -->
     <div class="pf-field">
       <label>👾 Emulador de dudas</label>
       <div class="rowval" style="gap:7px">
@@ -745,7 +750,7 @@
         <span class="tag">Admira no tiene centro — <em>es un universo que se expande.</em></span>
         <span class="live"><span class="dot"></span><span id="liveCount">—</span></span>
         <!-- r17: contador de DUDAS abiertas de los agentes (naves-duda); clic → abre la primera -->
-        <span class="live duda" id="dudaBadge" hidden role="button" tabindex="0" title="Dudas abiertas de los agentes en AgoraMatrix"><span class="dot"></span><span id="dudaCount">0</span>&nbsp;dudas</span>
+        <span class="live duda" id="dudaBadge" hidden role="button" tabindex="0" title="Dudas abiertas de los agentes (diálogo a/b/c de Claude Code)"><span class="dot"></span><span id="dudaCount">0</span>&nbsp;dudas</span>
       </div>
     </div>
 
@@ -757,8 +762,9 @@
     </div>
   </header>
 
-  <!-- NAVES-DUDA (r17): franja superior con una nave invader por duda abierta
-       de un agente (❓ de agora-ask.sh en AgoraMatrix, aún sin respuesta).
+  <!-- NAVES-DUDA (r20): franja superior con una nave invader por duda abierta —
+       SOLO dudas reales de /api/dudas (AskUserQuestion de la flota) o emuladas
+       con el 👾 emulador (AVANZADO / comando /dudaAgente).
        Oculta del todo cuando no hay dudas. Se rellena desde renderDudas(). -->
   <div id="dudaStrip" hidden aria-live="polite" aria-label="Dudas abiertas de los agentes"></div>
   <div id="dudaPop" hidden role="dialog" aria-label="Duda de un agente"></div>
@@ -864,17 +870,12 @@
   // Se sondea cada 3s y solo se recarga TODO (load) si su firma cambió → baja la
   // latencia encargo→pantalla de 20s a ~3s sin machacar los feeds pesados.
   const HEADS_URL        = 'https://admira-telegram.csilvasantin.workers.dev/api/heads';
-  // NAVES-DUDA (r17): espejo público del grupo AgoraMatrix (mismo worker, GET
-  // abierto con CORS, sin secretos). agora-ask.sh publica las preguntas de los
-  // agentes como «❓ …» (direction out) y considera respondida la duda con el
-  // PRIMER mensaje entrante (direction in) posterior — aquí se replica esa
-  // misma semántica para saber qué dudas siguen ABIERTAS.
-  const MESSAGES_URL     = 'https://admira-telegram.csilvasantin.workers.dev/api/messages?tail=120';
-  // NAVES-DUDA (r18): fuente PRIMARIA estructurada — el diálogo a/b/c de Claude
-  // Code (AskUserQuestion) que un hook de la flota publica en el worker. GET
+  // NAVES-DUDA (r20): ÚNICA fuente real — el diálogo a/b/c de Claude Code
+  // (AskUserQuestion) que un hook de la flota publica en el worker. GET
   // público con CORS; el servidor solo devuelve dudas ABIERTAS (<24 h, máx 8)
-  // con agente · máquina · proyecto + opciones {label, descripcion}. Las ❓
-  // heurísticas de /api/messages quedan como RESPALDO (dedup por texto similar).
+  // con agente · máquina · proyecto + opciones {label, descripcion}. La fuente
+  // heurística ❓ de /api/messages (r17/r18) se eliminó en r20: las naves solo
+  // salen de aquí o del 👾 emulador (AVANZADO / comando /dudaAgente).
   const DUDAS_URL        = 'https://admira-telegram.csilvasantin.workers.dev/api/dudas';
   // MODO MANDO — dos vías (la sesión Google manda):
   //  1) SESIÓN GOOGLE del auth-gate (localStorage.admira_gate, el mismo de
@@ -2177,23 +2178,18 @@
     // 3 vivos (fleet+self) hasta que llegaba `presence` → parpadeo «3 nodos».
     let pres=null, fleet=null, asg=null;
     const presWithFallback=async()=>{ try{ return await jget(PRESENCE_URL); }catch(e){ return await jget(PRESENCE_URL_ALT); } };
-    const [rp,rf,ra,rj,rm,rd]=await Promise.allSettled([ presWithFallback(), jget(FLEET_URL), jget(ASSIGN_URL), jget(PROJECTS_URL), jget(MESSAGES_URL), jget(DUDAS_URL) ]);
+    const [rp,rf,ra,rj,rd]=await Promise.allSettled([ presWithFallback(), jget(FLEET_URL), jget(ASSIGN_URL), jget(PROJECTS_URL), jget(DUDAS_URL) ]);
     if(rp.status==='fulfilled') pres=rp.value; else console.warn('presence',rp.reason);
     if(rf.status==='fulfilled') fleet=rf.value; else console.warn('fleet',rf.reason);
     if(ra.status==='fulfilled') asg=ra.value; else console.warn('assign',ra.reason);
-    // NAVES-DUDA (r18): FUSIÓN de fuentes — primero las dudas ESTRUCTURADAS de
-    // /api/dudas (diálogo a/b/c de Claude Code, con agente·máquina·proyecto),
-    // después las heurísticas ❓ del espejo /api/messages, con dedup por texto
-    // similar (si hablan de lo mismo, GANA la estructurada). Se pinta más abajo,
-    // tras procesar la presencia, para poder encender el puntito de vida.
-    // Si ambos feeds fallan, la franja mantiene su último estado (no parpadea).
-    let dudaEstructuradas=null, dudaHeuristicas=null;
+    // NAVES-DUDA (r20): ÚNICA fuente real — las dudas ESTRUCTURADAS de
+    // /api/dudas (diálogo a/b/c de Claude Code, con agente·máquina·proyecto).
+    // Se pinta más abajo, tras procesar la presencia, para poder encender el
+    // puntito de vida. Si el feed falla, la franja mantiene su último estado.
+    let dudaEstructuradas=null;
     if(rd.status==='fulfilled' && rd.value && Array.isArray(rd.value.dudas)){
       try{ dudaEstructuradas=parseDudasApi(rd.value.dudas); }catch(e){ console.warn('dudas api',e); }
     } else if(rd.status==='rejected') console.warn('dudas api feed',rd.reason);
-    if(rm.status==='fulfilled' && rm.value && Array.isArray(rm.value.messages)){
-      try{ dudaHeuristicas=parseDudas(rm.value.messages); }catch(e){ console.warn('dudas',e); }
-    } else if(rm.status==='rejected') console.warn('dudas feed',rm.reason);
     // cartera VIVA de proyectos (D1 del worker); si falla, queda el fallback
     if(rj.status==='fulfilled' && rj.value && Array.isArray(rj.value.projects) && rj.value.projects.length){
       CANON_PROJECTS = rj.value.projects;
@@ -2238,13 +2234,12 @@
       if(isFresh(p.updated)) DUDA_LIVE[k]=true;
       else if(!(k in DUDA_LIVE)) DUDA_LIVE[k]=false;
     }
-    // Si UNA fuente falló en este ciclo se reutiliza su último resultado bueno
-    // (no se borran naves por un fallo transitorio); si fallaron LAS DOS, la
-    // franja mantiene su estado anterior sin repintar.
-    if(dudaEstructuradas!==null) DUDA_LAST_EST=dudaEstructuradas;
-    if(dudaHeuristicas!==null)   DUDA_LAST_HEU=dudaHeuristicas;
-    if(dudaEstructuradas!==null || dudaHeuristicas!==null){
-      try{ renderDudas(mergeDudas(DUDA_LAST_EST||[], DUDA_LAST_HEU||[])); }catch(e){ console.warn('dudas render',e); }
+    // Si el feed falló en este ciclo se reutiliza su último resultado bueno
+    // (no se borran naves por un fallo transitorio): la franja mantiene su
+    // estado anterior sin repintar.
+    if(dudaEstructuradas!==null){
+      DUDA_LAST_EST=dudaEstructuradas;
+      try{ renderDudas(mergeDudas(DUDA_LAST_EST||[])); }catch(e){ console.warn('dudas render',e); }
     }
     const presence = withOraculoTriadPresence(pres && pres.presence ? pres.presence : [], SERVER_NOW, isFresh)
       .filter(p=>{
@@ -2385,7 +2380,7 @@
         const m=c.match(/v\.[\d.]+r\d+|v\.[\d.]+\.r\d+/);
         if(m) return m[0];
       }catch(e){}
-      return 'v.2026.07.12.r19';
+      return 'v.2026.07.12.r20';
     })();
     let focusLabel = FOCUS_MACHINE ? FOCUS_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
     let viewerLabel = VIEWER_MACHINE ? VIEWER_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
@@ -2399,36 +2394,25 @@
   }
 
   /* ============================================================
-     NAVES-DUDA (r17) — «cuando algún agente tenga una duda (lo típico
+     NAVES-DUDA — «cuando algún agente tenga una duda (lo típico
      de a b o c) que aparezca arriba en la galaxia como una nave del
      Space Invaders con la duda debajo» (Carlos, 2026-07-12).
 
-     FUENTE: /api/messages del worker admira-telegram (espejo público del
-     grupo AgoraMatrix, GET sin auth + CORS). Los agentes preguntan con
-     agora-ask.sh, que publica «❓ pregunta» (direction:'out') y da la duda
-     por respondida con el PRIMER mensaje entrante (direction:'in')
-     posterior. Aquí se replica esa semántica. LIMITACIÓN honesta: es la
-     misma heurística gruesa del script — cualquier mensaje de Carlos
-     posterior "cierra" todas las dudas anteriores, y una pregunta hecha
-     fuera de agora-ask solo se detecta si trae pinta de pregunta con
-     opciones a)/b). No hay endpoint público para RESPONDER desde aquí
-     (el /api/send exige Bearer y la respuesta debe entrar como mensaje
-     'in' de Telegram para que agora-ask la vea), así que el botón lleva
-     al espejo /telegram y a que Carlos conteste en el grupo.
-
-     r18 — FUENTE PRIMARIA estructurada: GET /api/dudas del mismo worker
-     (el diálogo a/b/c de AskUserQuestion que un hook de la flota publica).
-     El servidor ya filtra: solo abiertas <24 h, máx 8. Cada duda trae
-     agente · máquina · proyecto + opciones {label, descripcion}. Las ❓
-     heurísticas de arriba quedan de RESPALDO y se FUSIONAN con dedup por
-     texto similar: si una estructurada y una ❓ hablan de lo mismo, gana
-     la estructurada. El puntito junto al agente dice si su presencia late
-     (verde) o no (gris) — «en qué estado se encuentra» sin infra nueva.
-     ?demo-dudas=1 → inyecta 2 dudas de EJEMPLO ADEMÁS de las reales.
+     r20 — SOLO DOS FUENTES (Carlos: «solo tiene que aparecer cuando un
+     agente tiene duda o cuando lo invocamos desde el cli del modo
+     avanzado»):
+       1) REALES: GET /api/dudas del worker admira-telegram (el diálogo
+          a/b/c de AskUserQuestion que un hook de la flota publica). El
+          servidor ya filtra: solo abiertas <24 h, máx 8. Cada duda trae
+          agente · máquina · proyecto + opciones {label, descripcion}.
+       2) EMULADAS: el 👾 emulador (botón del cajón AVANZADO o comando
+          /dudaAgente de la consola EXPERTO), client-side puro.
+     La fuente heurística ❓ de /api/messages (r17/r18) y el parámetro
+     ?demo-dudas=1 se ELIMINARON en r20: el emulador es la vía explícita.
+     El puntito junto al agente dice si su presencia late (verde) o no
+     (gris) — «en qué estado se encuentra» sin infra nueva.
      ============================================================ */
-  const DUDA_MAX_AGE  = 12*3600;  // seg: una ❓ heurística sin respuesta en 12 h se considera caducada
-  const DUDA_MAX_SHIPS= 4;        // máximo de naves simultáneas (estructuradas primero, luego ❓ recientes)
-  const DUDA_DEMO = (()=>{ try{ return new URLSearchParams(location.search).get('demo-dudas')==='1'; }catch(e){ return false; } })();
+  const DUDA_MAX_SHIPS= 4;        // máximo de naves simultáneas (las reales de /api/dudas primero)
 
   // sprite pixel-art ORIGINAL (11×8, 2 frames) — evocador del arcade clásico
   // pero dibujado a mano aquí (antenas en V, ojo central, patas alternantes).
@@ -2455,28 +2439,6 @@
     return `<svg class="inv" viewBox="0 0 11 8" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g class="f1">${px(INV_F1)}</g><g class="f2">${px(INV_F2)}</g></svg>`;
   }
 
-  // mensajes del espejo → dudas ❓ heurísticas ABIERTAS [{id,who,text,date}]
-  // (recientes primero). Fuente de RESPALDO desde r18: la fusión con las
-  // estructuradas y el recorte a DUDA_MAX_SHIPS los hace mergeDudas().
-  function parseDudas(msgs){
-    let lastIn=0;
-    for(const m of msgs){ if(m.direction==='in' && m.id>lastIn) lastIn=m.id; }
-    const now=Math.floor(Date.now()/1000);
-    const out=[];
-    for(const m of msgs){
-      if(m.direction!=='out') continue;
-      const t=String(m.text||'').trim();
-      let q='';
-      if(t.startsWith('❓')) q=t.replace(/^❓\s*/,'');                   // formato agora-ask.sh
-      else if(/(^|\n)\s*a\)\s?\S/i.test(t) && /(^|\n)\s*b\)\s?\S/i.test(t) && t.includes('?')) q=t; // heurística a)/b)
-      if(!q) continue;
-      if(m.id<=lastIn) continue;                        // ya hubo mensaje de Carlos después → cerrada
-      if(m.date && (now-m.date)>DUDA_MAX_AGE) continue; // caducada
-      out.push({id:'msg:'+m.id, who:m.from_name||'agente', text:q, date:m.date||0, src:'heu', origen:'AgoraMatrix'});
-    }
-    return out.reverse();                               // las más recientes primero
-  }
-
   // r18: /api/dudas → dudas ESTRUCTURADAS del diálogo a/b/c de Claude Code.
   // El servidor ya devuelve solo abiertas (<24 h, máx 8); aquí solo se normaliza
   // al formato común de las naves. Las opciones llegan como {label, descripcion}.
@@ -2497,47 +2459,12 @@
     return out;
   }
 
-  // r18: FUSIÓN de fuentes — estructuradas PRIMERO, después las ❓ heurísticas
-  // que no dupliquen a ninguna estructurada (dedup por texto similar: si una
-  // duda de /api/dudas y una ❓ del espejo hablan de lo mismo, gana la
-  // estructurada). ?demo-dudas=1 añade las 2 de ejemplo ADEMÁS de las reales.
-  function dudaNormTxt(s){
-    return String(s||'').toLowerCase()
-      .normalize('NFD').replace(/[\u0300-\u036f]/g,'')   // sin acentos
-      .replace(/[^a-z0-9ñ\s]/g,' ').replace(/\s+/g,' ').trim();
-  }
-  function dudaSimilar(a,b){
-    const na=dudaNormTxt(a), nb=dudaNormTxt(b);
-    if(!na||!nb) return false;
-    if(na.includes(nb)||nb.includes(na)) return true;    // una contiene a la otra
-    const ta=new Set(na.split(' ').filter(w=>w.length>2));
-    const tb=new Set(nb.split(' ').filter(w=>w.length>2));
-    if(!ta.size||!tb.size) return false;
-    let inter=0; for(const w of ta) if(tb.has(w)) inter++;
-    return inter/Math.min(ta.size,tb.size)>=0.6;         // solape de palabras
-  }
-  function mergeDudas(estructuradas, heuristicas){
+  // r20: SOLO api + emu — las REALES de /api/dudas primero y después las
+  // EMULADAS (👾 emulador del AVANZADO / comando /dudaAgente), client-side
+  // puro, id emu:, marcadas «(emulada)»; desaparecen al recargar la página
+  // porque solo viven en memoria. Todo recortado al tope de naves.
+  function mergeDudas(estructuradas){
     const out=[...(estructuradas||[])];
-    for(const h of (heuristicas||[])){
-      // dedup: misma pregunta (texto similar) o mismo agente con duda estructurada
-      // muy parecida → ya está representada por la versión estructurada.
-      if(out.some(e=>e.src==='api' && dudaSimilar(e.text,h.text))) continue;
-      out.push(h);
-    }
-    if(DUDA_DEMO){
-      const now=Math.floor(Date.now()/1000);
-      out.push(
-        {id:'demo:1', who:'subMorfeo (demo)', date:now-180, src:'demo', origen:'demo',
-         maquina:'MacBookAir16plata', proyecto:'admira.live/status',
-         text:'¿Con qué paleta pinto las naves-duda?\na) cian espina dorsal\nb) verde fosforescente arcade\nc) ámbar de alerta'},
-        {id:'demo:2', who:'Trinity (demo)', date:now-540, src:'demo', origen:'demo',
-         text:'El deploy de pixeria pide confirmación: ¿lanzo a producción o espero al merge del vault?'},
-      );
-    }
-    // r19: dudas EMULADAS (👾 emulador del AVANZADO / comando /dudaAgente) —
-    // client-side puro, id emu:, marcadas «(emulada)». Se SUMAN a las reales
-    // (las reales van primero) respetando el tope de naves, y desaparecen al
-    // recargar la página porque solo viven en memoria.
     if(DUDAS_EMU.length) out.push(...DUDAS_EMU);
     return out.slice(0,DUDA_MAX_SHIPS);
   }
@@ -2547,14 +2474,13 @@
   let DUDA_OPEN=null;         // id de la duda expandida en el panel (persiste entre refrescos)
   let DUDA_LIVE={};           // r18: norm(agente) → ¿su presencia late? (lo llena load())
   let DUDA_LAST_EST=null;     // r18: último parse bueno de /api/dudas (para fallos transitorios)
-  let DUDA_LAST_HEU=null;     // r18: último parse bueno de las ❓ de /api/messages
   // r18: ¿late la presencia del agente de esta duda? true/false/null (sin dato).
   // Cruce con /api/presence que la página ya carga — «en qué estado se encuentra»
   // sin infraestructura nueva. Match exacto y, si no, ignorando el ordinal final
   // (subMorfeo2 ↔ subMorfeo); NUNCA por substring suelto, para que la vida de
   // Morfeo no responda por subMorfeo ni viceversa.
   function dudaAlive(who){
-    const k=norm(String(who||'').replace(/\s*\((demo|emulada)\)\s*$/i,''));
+    const k=norm(String(who||'').replace(/\s*\(emulada\)\s*$/i,''));
     if(!k) return null;
     if(k in DUDA_LIVE) return DUDA_LIVE[k];
     const base=k.replace(/[0-9]+$/,'');
@@ -2584,21 +2510,13 @@
     if(s<5400) return 'hace '+Math.round(s/60)+' min';
     return 'hace '+(s/3600).toFixed(1).replace('.',',')+' h';
   }
-  function dudaOpts(text){
-    // extrae opciones tipo «a) …» por línea; resto = enunciado
-    const lines=String(text).split('\n');
-    const opts=[], body=[];
-    for(const ln of lines){
-      const m=ln.match(/^\s*([a-h])\)\s*(.+)$/i);
-      if(m) opts.push({k:m[1].toLowerCase(),t:m[2].trim()});
-      else body.push(ln);
-    }
-    return {body:body.join('\n').trim(), opts};
-  }
   function esc(s){ return String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c])); }
 
   function renderDudas(dudas){
     DUDAS=dudas||[];
+    // r20: 🔊 marcha invader — suena en bucle mientras haya naves (y calla a 0);
+    // el módulo vive junto al resto del audio (sección AUDIO AMBIENTE).
+    if(window.INVADER_MARCH) window.INVADER_MARCH.setShips(DUDAS.length);
     const strip=document.getElementById('dudaStrip');
     const badge=document.getElementById('dudaBadge');
     const count=document.getElementById('dudaCount');
@@ -2618,8 +2536,9 @@
     badge.hidden=false;
     placeDudaStrip();
     strip.innerHTML=DUDAS.map(d=>{
-      const {body}=dudaOpts(d.text);
-      const one=(body||d.text).split('\n')[0];
+      // r20: api y emu traen las opciones aparte (d.opts) — la 1ª línea del
+      // texto ES el enunciado, sin nada que extraer.
+      const one=String(d.text||'').split('\n')[0];
       // r18: bajo el platillo — puntito de vida + agente · máquina, y proyecto
       // en línea aparte discreta (estilo etiquetas de estrellas) si lo trae.
       const who=esc(d.who)+(d.maquina?` · ${esc(d.maquina)}`:'');
@@ -2640,19 +2559,14 @@
   function openDudaPop(d){
     const pop=document.getElementById('dudaPop'); if(!pop) return;
     DUDA_OPEN=d.id;
-    // r18: las estructuradas traen las opciones YA separadas (label+descripcion);
-    // en las heurísticas se extraen del texto con dudaOpts, como en r17.
-    // r19: las EMULADAS vienen con el mismo formato estructurado (opts aparte).
-    let body, opts;
-    if(d.src==='api'||d.src==='emu'){ body=d.text; opts=d.opts||[]; }
-    else { const p=dudaOpts(d.text); body=p.body; opts=p.opts; }
-    // procedencia: hace cuánto · máquina · proyecto · origen (Claude Code / AgoraMatrix)
+    // r20: ambas fuentes (api y emu) traen las opciones YA separadas
+    // (label+descripcion) — no queda ninguna fuente que parsee texto.
+    const body=d.text, opts=d.opts||[];
+    // procedencia: hace cuánto · máquina · proyecto · origen (Claude Code / emulador)
     const meta=[fmtAgo(d.date), d.maquina||'', d.proyecto||'', d.origen||''].filter(Boolean).map(esc).join(' · ');
     const hint = d.src==='emu'
       ? 'Duda EMULADA por el 👾 emulador (⚙ AVANZADO o comando /dudaAgente): NO es real, nadie espera respuesta. Solo existe en este navegador y desaparece al recargar o con «Limpiar emuladas».'
-      : d.src==='api'
-      ? `Duda del diálogo a/b/c de Claude Code en ${esc(d.maquina||'su máquina')}: se responde en esa sesión (o por el grupo de Telegram si el agente escucha con agora-ask). Desde este visor no hay ruta pública de respuesta.`
-      : 'La respuesta debe entrar por el grupo de Telegram (mensaje de Carlos): así la recoge el agente que espera con agora-ask. Desde este visor no hay ruta pública de respuesta.';
+      : `Duda del diálogo a/b/c de Claude Code en ${esc(d.maquina||'su máquina')}: se responde en esa sesión (o por el grupo de Telegram si el agente escucha con agora-ask). Desde este visor no hay ruta pública de respuesta.`;
     pop.innerHTML=`
       <button class="dp-close" type="button" aria-label="Cerrar">×</button>
       <div class="dp-who">${dudaDot(d.who)}❓ ${esc(d.who)}</div>
@@ -2673,7 +2587,7 @@
   // clic en nave → panel; clic en el badge de cabecera → abre la primera duda
   document.getElementById('dudaStrip').addEventListener('click',e=>{
     const b=e.target.closest('.duda-ship'); if(!b) return;
-    const id=b.dataset.duda;              // r18: ids con prefijo de fuente (api:/msg:/demo:)
+    const id=b.dataset.duda;              // ids con prefijo de fuente (api:/emu:)
     const d=DUDAS.find(x=>String(x.id)===id); if(!d) return;
     if(DUDA_OPEN===id) closeDudaPop(); else openDudaPop(d);
   });
@@ -2688,7 +2602,7 @@
   /* ── 👾 EMULADOR DE DUDAS (r19) — «en el modo avanzado tenemos que tener un
         emulador de pregunta por parte de un agente para ver cómo queda
         /dudaAgente y sale la nave con 3 dudas random» (Carlos, 2026-07-12).
-        CLIENT-SIDE puro, como ?demo-dudas=1: combina agente+máquina+proyecto+
+        CLIENT-SIDE puro (desde r20, la ÚNICA vía de prueba): combina agente+máquina+proyecto+
         pregunta de pools REALES de la flota, marca todo «(emulada)» con id emu:,
         NO toca el worker ni el fetch de /api/dudas, y muere al recargar. ── */
   const EMU_AGENTES  = ['Neo','Morfeo','Trinity','Oráculo','Switch','Cypher','subNeo','subMorfeo'];
@@ -2735,7 +2649,7 @@
   let EMU_SEQ=0;                                       // ids emu:1, emu:2… únicos en la sesión
   function emuPick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
   function emuShuffle(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
-  function emuRenderNow(){ try{ renderDudas(mergeDudas(DUDA_LAST_EST||[], DUDA_LAST_HEU||[])); }catch(e){ console.warn('dudas emu render',e); } }
+  function emuRenderNow(){ try{ renderDudas(mergeDudas(DUDA_LAST_EST||[])); }catch(e){ console.warn('dudas emu render',e); } }
   // Inyecta n dudas emuladas (1-8) y repinta al instante. Devuelve las creadas.
   // Sin repetir agente NI pregunta dentro de la misma tanda mientras dé el pool.
   function emularDudas(n){
@@ -4309,6 +4223,85 @@
     else heartAudio.disable();
   });
 
+  // --- 🔊 MARCHA INVADER (r20): «coge el audio de ese vídeo [Space Invaders
+  // 1978, t=23s] y aplícalo siempre que aparezca un alien» (Carlos). NO se
+  // descarga nada (ToS de YouTube + copyright Taito): se SINTETIZA con
+  // WebAudio, como el sonar de arriba — la marcha clásica son 4 notas graves
+  // descendentes en bucle (≈E2→D2→C2→B1, onda cuadrada percusiva) que se
+  // ACELERAN; en el arcade al quedar menos invaders, aquí con MÁS dudas.
+  // Suena mientras haya ≥1 nave-duda (real de /api/dudas o emulada del
+  // /dudaAgente) y para en seco al llegar a 0. ON por defecto, persistido;
+  // autoplay: se ARMA con el primer gesto del usuario (clic/tecla).
+  const invaderMarch=(()=>{
+    const LS_KEY='admiranext-status-invader-march';
+    const NOTES=[82.41,73.42,65.41,61.74];  // E2 · D2 · C2 · B1 (Hz)
+    const BASE_STEP=0.55;                    // s por nota con 1 duda (tempo base)
+    let ac=null, timer=null, nextT=0, idx=0, ships=0, armed=false;
+    let on=(()=>{ try{ return localStorage.getItem(LS_KEY)!=='0'; }catch(e){ return true; } })();
+    function ctx(){
+      if(!ac){ try{ ac=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; } }
+      if(ac.state==='suspended') ac.resume();
+      return ac;
+    }
+    function note(at,hz,gain,dur){
+      // onda cuadrada grave + lowpass, envolvente corta percusiva (marcha sorda)
+      const o=ac.createOscillator(), g=ac.createGain(), f=ac.createBiquadFilter();
+      f.type='lowpass'; f.frequency.value=320;
+      o.type='square'; o.frequency.setValueAtTime(hz,at);
+      g.gain.setValueAtTime(0.0001,at);
+      g.gain.exponentialRampToValueAtTime(gain,at+0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001,at+dur);
+      o.connect(f); f.connect(g); g.connect(ac.destination);
+      o.start(at); o.stop(at+dur+0.05);
+    }
+    function step(){
+      // aceleración sutil: cada duda extra acorta el intervalo un 15%
+      // (tope 7 extras → nunca más rápido que ~0,17 s/nota)
+      const extra=Math.max(0,Math.min(7,ships-1));
+      return BASE_STEP*Math.pow(0.85,extra);
+    }
+    function schedule(){
+      if(!(on&&armed&&ships>0)||!ac){ timer=null; return; }
+      const look=ac.currentTime+0.3;
+      while(nextT<look){ note(nextT,NOTES[idx],0.09,0.22); idx=(idx+1)%NOTES.length; nextT+=step(); }
+      timer=setTimeout(schedule,120);
+    }
+    function sync(){
+      const want=on&&armed&&ships>0;
+      if(want&&!timer){ if(!ctx()) return; nextT=Math.max(nextT,ac.currentTime+0.05); schedule(); }
+      else if(!want&&timer){ clearTimeout(timer); timer=null; } // para en seco (solo queda el lookahead de 0,3s)
+    }
+    function blip(){
+      // aviso corto de DUDA NUEVA (opcional pero majo): dos toques agudos
+      if(!(on&&armed)||!ctx()) return;
+      const t=ac.currentTime+0.02;
+      note(t,440,0.06,0.07); note(t+0.09,330,0.05,0.07);
+    }
+    // ARMADO por gesto (política de autoplay): primer clic/tecla en la página.
+    function arm(){ if(armed) return; armed=true; sync(); }
+    window.addEventListener('pointerdown',arm,{capture:true});
+    window.addEventListener('keydown',arm,{capture:true});
+    return {
+      setShips(n){
+        n=Math.max(0,n|0);
+        const prev=ships; ships=n;
+        if(n>prev && prev>=0 && armed && on && n>0) blip();  // entra duda nueva
+        sync();
+      },
+      setOn(v){ on=!!v; try{ localStorage.setItem(LS_KEY,on?'1':'0'); }catch(e){} sync(); },
+      isOn(){ return on; },
+      playing(){ return !!timer; },
+      // estado completo para inspección/depuración (consola del navegador)
+      state(){ return {on, armed, ships, playing:!!timer, acState:ac?ac.state:'(sin contexto)', stepMs:Math.round(step()*1000)}; },
+    };
+  })();
+  window.INVADER_MARCH=invaderMarch;   // lo usa renderDudas (definida más arriba)
+  const advInvaderAudio=document.getElementById('advInvaderAudio');
+  if(advInvaderAudio){
+    advInvaderAudio.checked=invaderMarch.isOn();               // estado persistido
+    advInvaderAudio.addEventListener('change',e=>invaderMarch.setOn(e.target.checked));
+  }
+
   // --- EXPERTO: consola CLI (local, no ejecuta acciones de flota) ---
   const cliInput=document.getElementById('cliInput'), cliOut=document.getElementById('cliOut');
   function cliPrint(txt, cls){ const d=document.createElement('div'); d.className='line'; if(cls) d.innerHTML=`<span class="${cls}">${txt}</span>`; else d.textContent=txt; cliOut.appendChild(d); cliOut.scrollTop=cliOut.scrollHeight; }
@@ -4323,6 +4316,7 @@
     '  clear                  limpia la consola',
     '  /dudaAgente [N]        emula N dudas de agentes (1-8, def. 3) → naves 👾',
     '                         (alias: dudaAgente, duda · «/dudaAgente limpiar» las quita)',
+    '                         (con naves suena la 🔊 marcha invader — toggle en ⚙ AVANZADO)',
     '',
     '  · FUNCIONES AVANZADAS ·',
     '  draw                   DECAEDRO 3D girando (default · reposo del modo draw)',

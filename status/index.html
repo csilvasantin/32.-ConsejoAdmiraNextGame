@@ -6,7 +6,7 @@
   <title>ADmiraNeXT | Status — Constelación de la flota</title>
   <meta name="description" content="Admira no tiene centro — es un universo que se expande. Estado en vivo de la flota AdmiraNeXT: cada ordenador es una estrella con su proyecto y su foco.">
   <meta name="admiranext-version" content="AdmiraNext v26.07.07.12">
-  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r29 (banda-estrellas + caja adaptable — encargo llegado por el propio CLI de la ficha, bot-inbox #676: 1) la banda de naves deja de ser mate — campo de estrellas SUTIL propio (puntitos #bfe9f2 en 3 tamaños, tiles de radial-gradients a distinto período + twinkle muy suave compositable, pausado con la ficha y fuera con reduced-motion) manteniendo la banda OPACA (los nodos reales siguen sin verse) y naves/textos por encima; 2) el CLI de la ficha pasa a textarea de altura automática: 1 línea de base, crece hasta ~6 y luego scroll interno, Enter envía y Shift+Enter salta de línea, el feedback no se descoloca)">
+  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r30 (banda de naves TRANSPARENTE — encargo de Carlos: el rectángulo oscuro que se percibía tras la franja al desplazarse desaparece del todo. Se retiran el fondo opaco --bg (r28) y las estrellas/twinkle propios de la banda (#dudaStrip::before/::after de r29, con su @keyframes bandTwinkle), además de la box-shadow y el border-bottom que delataban el rectángulo. La franja queda con background:transparent y se ve el MISMO cielo estrellado que la rodea. ÚNICA regla que se mantiene: los nodos de la constelación NO pasan por detrás de las naves — el reflow del escenario por debajo de la franja (body.duda-band-open + --duda-inset + syncDudaBand()) se conserva intacto, así que ningún nodo/arista entra en la zona de la banda. Sin tocar la marcha de las naves, la pausa con la ficha abierta, prefers-reduced-motion ni el CLI de la ficha.)">
   <meta name="admiranext-status-build" content="oraculo-triad-1">
   <!-- Orbitron: tipografía tecnológica para la versión del pie del riel (Carlos, 2026-07-11) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -168,42 +168,15 @@
       position:fixed;left:0;right:0;top:66px;z-index:38;
       display:flex;justify-content:center;align-items:flex-start;
       gap:38px;padding:4px 18px 9px;pointer-events:none;flex-wrap:wrap;
-      /* r28: BANDA OPACA — los nodos de la constelación no comparten píxeles
-         con los aliens: la franja tapa con el fondo de la página y el
-         escenario refluye por debajo (body.duda-band-open + --duda-inset). */
-      background:var(--bg);
-      border-bottom:1px solid rgba(34,230,255,.14);
-      box-shadow:0 6px 18px rgba(1,4,10,.55);
+      /* r30: BANDA TRANSPARENTE (encargo de Carlos) — la franja NO debe
+         percibirse en absoluto: sin fondo opaco, sin sombra y sin estrellas
+         propias (se retiran el fondo --bg de r28 y los pseudo-elementos de
+         estrellas/twinkle de r29). Se ve el mismo cielo que rodea a la banda.
+         ÚNICA regla que se mantiene: los nodos de la constelación NO pasan por
+         detrás de las naves — lo garantiza el reflow del escenario por debajo
+         (body.duda-band-open + --duda-inset + syncDudaBand()), que se conserva. */
+      background:transparent;
     }
-    /* r29: ESTRELLAS SUTILES en la banda — mismo cielo que la constelación
-       (puntitos #bfe9f2 tenues en 3 tamaños, tiles de gradientes radiales a
-       distinto período para que no se note patrón). La banda SIGUE opaca:
-       las estrellas van pintadas ENCIMA de su fondo, los nodos reales de la
-       constelación siguen sin verse a través. Coste cero-JS. */
-    #dudaStrip::before{
-      content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
-      background-image:
-        radial-gradient(1px 1px at 13px 17px,  rgba(191,233,242,.34) 50%, transparent 51%),
-        radial-gradient(1.4px 1.4px at 47px 5px, rgba(191,233,242,.18) 50%, transparent 51%),
-        radial-gradient(1px 1px at 83px 29px,  rgba(191,233,242,.26) 50%, transparent 51%),
-        radial-gradient(1.8px 1.8px at 29px 47px, rgba(191,233,242,.12) 50%, transparent 51%),
-        radial-gradient(1px 1px at 67px 59px,  rgba(191,233,242,.22) 50%, transparent 51%),
-        radial-gradient(1.2px 1.2px at 101px 39px, rgba(191,233,242,.16) 50%, transparent 51%);
-      background-size:96px 67px, 129px 73px, 113px 83px, 147px 97px, 105px 89px, 139px 107px;
-    }
-    /* twinkle MUY suave: unas pocas estrellas extra respirando (solo opacidad,
-       compositable); en pausa con la ficha abierta y fuera con reduced-motion */
-    #dudaStrip::after{
-      content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
-      background-image:
-        radial-gradient(1.4px 1.4px at 59px 23px, rgba(191,233,242,.30) 50%, transparent 51%),
-        radial-gradient(1px 1px at 17px 53px,  rgba(191,233,242,.24) 50%, transparent 51%);
-      background-size:171px 91px, 203px 101px;
-      animation:bandTwinkle 6.5s ease-in-out infinite alternate;
-    }
-    @keyframes bandTwinkle{from{opacity:.25}to{opacity:1}}
-    .ficha-open #dudaStrip::after{animation-play-state:paused !important}
-    @media (prefers-reduced-motion: reduce){ #dudaStrip::after{animation:none} }
     #dudaStrip[hidden]{display:none}
     /* r28: reflow del escenario bajo la banda — mismo mecanismo que el cajón
        EXPERTO (inset vivo medido en JS). Transición corta, sin saltos. */
@@ -212,7 +185,7 @@
       pointer-events:auto;display:flex;flex-direction:column;align-items:center;gap:4px;
       width:200px;max-width:44vw;background:none;border:none;padding:0;cursor:pointer;
       font-family:inherit;color:var(--text);
-      position:relative;z-index:1;   /* r29: naves y textos SIEMPRE sobre las estrellas de la banda */
+      position:relative;z-index:1;   /* naves y textos SIEMPRE por encima del cielo de fondo */
     }
     /* r26: MARCHA A TODO LO ANCHO, como en el juego — la FORMACIÓN entera
        (el strip) se desplaza en bloque hasta el borde derecho y vuelve al
@@ -777,7 +750,7 @@
       </div>
       <button class="pf-urow" id="userRow" type="button" aria-expanded="false" aria-controls="userMenu" title="Sesión">
         <span class="pf-uava" id="userAva" aria-hidden="true">?</span>
-        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.12.r29</span></span>
+        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.12.r30</span></span>
         <span class="pf-ugear" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg></span>
         <span class="pf-uchev" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
       </button>
@@ -2625,7 +2598,7 @@
         const m=c.match(/v\.[\d.]+r\d+|v\.[\d.]+\.r\d+/);
         if(m) return m[0];
       }catch(e){}
-      return 'v.2026.07.12.r29';
+      return 'v.2026.07.12.r30';
     })();
     let focusLabel = FOCUS_MACHINE ? FOCUS_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
     let viewerLabel = VIEWER_MACHINE ? VIEWER_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';

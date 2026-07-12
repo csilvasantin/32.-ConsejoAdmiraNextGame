@@ -6,7 +6,7 @@
   <title>ADmiraNeXT | Status — Constelación de la flota</title>
   <meta name="description" content="Admira no tiene centro — es un universo que se expande. Estado en vivo de la flota AdmiraNeXT: cada ordenador es una estrella con su proyecto y su foco.">
   <meta name="admiranext-version" content="AdmiraNext v26.07.07.12">
-  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r31 (sobre r30 banda transparente; ficha rica + CLI cross-máquina + Yokup: 1) la ficha del UFO muestra la COLA de encargos de ese agente (bot-inbox público, con su estado pendiente/ack/en curso/bloqueada/hecha) y su ACTIVIDAD reciente del diario, con «visto hace Xs» en VIVO (ticker 1s); 2) el CLI de la ficha resuelve la máquina por PRESENCIA FRESCA (si el agente cambió de sitio, reencamina a donde late), guarda HISTORIAL persistido en localStorage y REFRESCA el estado del encargo tras enviarlo; 3) enlace pulsable al seguimiento en Yokup (www.yokup.com/admira-live filtrado por persona+máquina); el helpdesk suma incidencias automáticas (latido viejo / sin foco) calculadas en vivo desde presence, sin duplicar tickets)">
+  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r32 (CIELO FULL-BLEED — feedback de Carlos sobre r30 con captura: al refluir el escenario bajo la banda de naves y junto a los paneles laterales, esas zonas quedaban LISAS (el fondo plano de la página, sin estrellas, porque el cielo vivía dentro del canvas de nodos y se empujaba con él). Regla de Carlos: el fondo estrellado cubre TODO, con UFOs o sin ellos, con menús o sin ellos. Cambio de arquitectura: las estrellas se DESACOPLAN de los nodos — nuevo canvas #skyfield position:fixed inset:0 z-index:0 a viewport completo, detrás de banda, paneles y escenario; el twinkle y el parallax con la cámara se mantienen idénticos, y la densidad se calcula sobre el viewport entero. En #galaxy quedan solo nodos/aristas/figuras, que conservan sus zonas de exclusión: reflow bajo la banda (body.duda-band-open + --duda-inset + syncDudaBand()) y rieles en flujo que estrechan el centro (nada oculto tras un panel). Ya no se re-siembran estrellas al abrir/cerrar rieles (el cielo no depende del centro). Pausa con ficha abierta intacta (el frame congela también el cielo), marcha de naves intacta, prefers-reduced-motion respetado, cero scroll horizontal. ADEMÁS: emulador de TAREA ACABADA para previsualizar la celebración Pac-Man de la banda inferior — botón «Lanzar tarea finalizada» en ⚙ AVANZADO junto al 👾 de dudas y comando /tareaFinaliza <texto> en la consola (en el /help); reutiliza la función REAL de la celebración (pacmanTest de status-pacman.js, misma cola/animación/waka-waka que un done de verdad), client-side puro marcado (emulada), sin tocar el bot-inbox real, nada persiste al recargar.)">
   <meta name="admiranext-status-build" content="oraculo-triad-1">
   <!-- Orbitron: tipografía tecnológica para la versión del pie del riel (Carlos, 2026-07-11) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -81,6 +81,9 @@
        En escritorio los paneles son COLUMNAS EN FLUJO: al abrirse, el centro
        (y su canvas) se ESTRECHA de verdad — nada tapado, jamás. En móvil los
        paneles vuelven a ser cajón overlay (regla base .pf-panel). */
+    /* r32: cielo full-bleed — SIEMPRE cubre el viewport entero, detrás de todo
+       (el escenario, la banda de naves y los paneles van por encima). */
+    #skyfield{position:fixed;inset:0;width:100%;height:100%;z-index:0;pointer-events:none;display:block}
     #stage{position:fixed;inset:0;display:flex;align-items:stretch;overflow:hidden}
     #stageCenter{position:relative;flex:1 1 auto;min-width:0;height:100%;overflow:hidden}
     #galaxy{position:absolute;inset:0;width:100%;height:100%;display:block;touch-action:none;cursor:grab}
@@ -733,6 +736,11 @@
   </style>
 </head>
 <body>
+  <!-- r32: CIELO FULL-BLEED — capa de estrellas propia, fija y a viewport
+       completo, DETRÁS de todo (banda de naves, paneles laterales y escenario).
+       Regla de Carlos: el fondo estrellado cubre TODO, con UFOs o sin ellos,
+       con menús o sin ellos; solo los NODOS respetan sus zonas. -->
+  <canvas id="skyfield" aria-hidden="true"></canvas>
   <!-- ============================================================
        ESCENARIO r9 — fila flex a pantalla completa: riel izq | centro | riel dcha.
        El canvas vive en #stageCenter: al abrir un riel el centro se estrecha y
@@ -791,7 +799,7 @@
       </div>
       <button class="pf-urow" id="userRow" type="button" aria-expanded="false" aria-controls="userMenu" title="Sesión">
         <span class="pf-uava" id="userAva" aria-hidden="true">?</span>
-        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.12.r31</span></span>
+        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.12.r32</span></span>
         <span class="pf-ugear" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg></span>
         <span class="pf-uchev" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
       </button>
@@ -875,6 +883,18 @@
                 style="flex:0 0 auto;background:transparent;color:var(--text-dim);border:1px solid var(--cyan-dim);border-radius:6px;font:inherit;font-size:9px;letter-spacing:.08em;padding:6px 8px;cursor:pointer">Limpiar</button>
       </div>
       <div class="hint" id="emuDudasMsg" style="font-size:8.5px;color:var(--text-dim);letter-spacing:.05em;margin-top:6px;line-height:1.5">Previsualiza cómo queda /dudaAgente: 3 naves con dudas ALEATORIAS marcadas «(emulada)». Solo en este navegador — no toca el worker y desaparecen al recargar.</div>
+    </div>
+    <!-- EMULADOR DE TAREA ACABADA (r32): dispara la celebración Pac-Man REAL de la
+         banda inferior (status-pacman.js) con una tarea de ejemplo, para previsualizar
+         cómo queda. Mismo patrón que el 👾: client-side puro, marcado «(emulada)»,
+         NO toca el bot-inbox real y nada persiste al recargar. -->
+    <div class="pf-field">
+      <label>🟡 Emulador de tarea</label>
+      <div class="rowval" style="gap:7px">
+        <button id="emuPacBtn" title="Dispara la celebración Pac-Man de la banda inferior con una tarea de ejemplo (client-side, no toca el bot-inbox real)"
+                style="flex:1;min-width:0;background:rgba(255,207,63,.08);color:#ffcf3f;border:1px solid rgba(255,207,63,.4);border-radius:6px;font:inherit;font-size:9px;letter-spacing:.08em;padding:6px 8px;cursor:pointer">Lanzar tarea finalizada</button>
+      </div>
+      <div class="hint" id="emuPacMsg" style="font-size:8.5px;color:var(--text-dim);letter-spacing:.05em;margin-top:6px;line-height:1.5">Previsualiza la celebración Pac-Man de «encargo HECHO» (banda inferior + waka-waka; el sonido pide un clic previo en la página). También como comando: /tareaFinaliza &lt;texto&gt; en la consola. Solo en este navegador — no toca el bot-inbox real y nada persiste.</div>
     </div>
     <div class="pf-field" style="margin-bottom:0">
       <label for="mandoTok">Modo mando (asignar proyectos)</label>
@@ -1284,9 +1304,21 @@
   // ---------- canvas / galaxy ----------
   const cv = document.getElementById('galaxy');
   const ctx = cv.getContext('2d');
-  let W=0,H=0,DPR=1;
+  // r32: canvas del CIELO desacoplado del de los nodos — full-bleed fijo a
+  // viewport completo. Las estrellas se pintan aquí (detrás de banda, paneles
+  // y escenario); en #galaxy solo quedan nodos/aristas/figuras, que siguen
+  // constreñidos a su área segura (reflow bajo la banda + rieles en flujo).
+  const sky = document.getElementById('skyfield');
+  const skx = sky.getContext('2d');
+  let W=0,H=0,DPR=1,SW=0,SH=0;
+  function resizeSky(){
+    SW = window.innerWidth; SH = window.innerHeight;
+    sky.width = SW*DPR; sky.height = SH*DPR;
+    skx.setTransform(DPR,0,0,DPR,0,0);
+  }
   function resize(){
     DPR = Math.min(window.devicePixelRatio||1, 2);
+    resizeSky();
     const ow=W, oh=H;
     W = cv.clientWidth; H = cv.clientHeight;
     cv.width = W*DPR; cv.height = H*DPR;
@@ -1328,19 +1360,17 @@
   // o se cierra (la ventana no cambia, el contenedor sí). El loop RAF re-pinta
   // cada frame durante la transición; las estrellas se re-siembran al asentarse.
   if(window.ResizeObserver){
-    let _roT=null;
-    new ResizeObserver(()=>{
-      resize();
-      if(_roT) clearTimeout(_roT);
-      _roT=setTimeout(()=>{ try{ seedStars(); }catch(e){} }, 160);
-    }).observe(document.getElementById('stageCenter'));
+    // r32: ya no se re-siembran estrellas al abrir/cerrar rieles — el cielo es
+    // full-bleed en #skyfield y no depende del ancho del centro; solo re-encuadre.
+    new ResizeObserver(()=>{ resize(); }).observe(document.getElementById('stageCenter'));
   }
 
-  // starfield (deep background)
+  // starfield (deep background) — r32: densidad sobre el VIEWPORT entero
+  // (el cielo vive en #skyfield, no en el canvas de los nodos)
   const stars = [];
   function seedStars(){
     stars.length = 0;
-    const n = Math.floor((W*H)/9000);
+    const n = Math.floor((SW*SH)/9000);
     for (let i=0;i<n;i++){
       stars.push({x:Math.random(),y:Math.random(),r:Math.random()*1.1+.2,tw:Math.random()*Math.PI*2,sp:.4+Math.random()});
     }
@@ -1629,16 +1659,19 @@
     cam.vx*=0.92; cam.vy*=0.92; cam.x+=cam.vx; cam.y+=cam.vy;
 
     ctx.clearRect(0,0,W,H);
-    // fondo de estrellas
-    ctx.save();
+    // fondo de estrellas — r32: al canvas del CIELO (#skyfield, viewport
+    // entero, detrás de todo): mismo twinkle y mismo parallax con la cámara,
+    // pero visible también bajo la banda de naves y alrededor de los paneles.
+    skx.clearRect(0,0,SW,SH);
+    skx.save();
     for(const s of stars){
       s.tw += dt*0.002*s.sp;
       const a = 0.25+0.55*(0.5+0.5*Math.sin(s.tw));
-      const px = (s.x*W + cam.x*0.3)% W, py=(s.y*H + cam.y*0.3)%H;
-      ctx.globalAlpha=a; ctx.fillStyle='#bfe9f2';
-      ctx.beginPath(); ctx.arc((px+W)%W,(py+H)%H,s.r,0,7); ctx.fill();
+      const px = (s.x*SW + cam.x*0.3)%SW, py=(s.y*SH + cam.y*0.3)%SH;
+      skx.globalAlpha=a; skx.fillStyle='#bfe9f2';
+      skx.beginPath(); skx.arc((px+SW)%SW,(py+SH)%SH,s.r,0,7); skx.fill();
     }
-    ctx.restore();
+    skx.restore();
 
     physics(dt);
 
@@ -2639,7 +2672,7 @@
         const m=c.match(/v\.[\d.]+r\d+|v\.[\d.]+\.r\d+/);
         if(m) return m[0];
       }catch(e){}
-      return 'v.2026.07.12.r31';
+      return 'v.2026.07.12.r32';
     })();
     let focusLabel = FOCUS_MACHINE ? FOCUS_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
     let viewerLabel = VIEWER_MACHINE ? VIEWER_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
@@ -3334,6 +3367,31 @@
     clr.addEventListener('click',()=>{
       const n=limpiarDudasEmuladas();
       if(msg) msg.textContent=n? '✓ '+n+' dudas emuladas retiradas — quedan solo las reales.' : 'No había dudas emuladas.';
+    });
+  })();
+
+  /* ── 🟡 EMULADOR DE TAREA ACABADA (r32) — «poder forzar una tarea acabada para
+        previsualizar la celebración Pac-Man» (Carlos, 2026-07-12). Mismo patrón
+        que el 👾 de dudas: client-side puro, marcado «(emulada)», NO toca el
+        bot-inbox real y nada persiste al recargar. REUTILIZA la función real de
+        la celebración (window.pacmanTest de status-pacman.js encola en la MISMA
+        cola/animación que un done de verdad: así el emulador prueba el código
+        real, waka-waka y política de audio incluidos). ── */
+  const EMU_PAC_EJEMPLO='banda de naves transparente y cielo full-bleed desplegados';
+  function emularTareaAcabada(desc){
+    if(typeof window.pacmanTest!=='function') return null;      // status-pacman.js no cargado
+    const text=(desc||'').trim()||EMU_PAC_EJEMPLO;
+    window.pacmanTest({ id:'emu', target_persona:'emulada', text });
+    return text;
+  }
+  (function(){
+    const btn=document.getElementById('emuPacBtn'), msg=document.getElementById('emuPacMsg');
+    if(!btn) return;
+    btn.addEventListener('click',()=>{
+      const t=emularTareaAcabada();
+      if(msg) msg.textContent=t
+        ? '🟡 Celebración lanzada: «'+t+'» — mira la banda inferior (waka-waka activo tras este clic).'
+        : 'El módulo Pac-Man (status-pacman.js) no está cargado en esta página.';
     });
   })();
 
@@ -4561,7 +4619,8 @@
   // r15 — BARRAS REDIMENSIONABLES (asas de arrastre, patrón portería)
   // Laterales: cambian --pf-w-left/right → flex-basis de la columna → el
   // centro refluye y el ResizeObserver de #stageCenter recalcula el canvas
-  // (resize() en vivo + seedStars() debounced). Inferior: altura del cajón.
+  // (resize() en vivo; r32: el cielo ya no se re-siembra, es full-bleed).
+  // Inferior: altura del cajón.
   // Persistencia en localStorage; doble clic en el asa = restaurar.
   // Solo escritorio (>640px); en móvil los paneles siguen siendo overlay.
   // ============================================================
@@ -5164,6 +5223,10 @@
     '  /agenteTarea           fuerza YA el pase de naves (hasta 4) con LO QUE ESTÁN HACIENDO',
     '                         (tarea viva de la presencia; funciona aunque el modo',
     '                         demo esté OFF y no cambia su ajuste)',
+    '  /tareaFinaliza [texto] emula una TAREA ACABADA → celebración Pac-Man en la banda',
+    '                         inferior (waka-waka tras un clic en la página). El texto que',
+    '                         escribas es el de la pancarta; sin texto, uno de ejemplo.',
+    '                         Solo este navegador — no toca el bot-inbox real.',
     '',
     '  · FUNCIONES AVANZADAS ·',
     '  draw                   DECAEDRO 3D girando (default · reposo del modo draw)',
@@ -5247,6 +5310,15 @@
         cliPrint('👾 EMULADOR /dudaAgente · '+made.length+' dudas inyectadas (client-side, id emu:, marcadas «(emulada)»):');
         made.forEach(d=>cliPrint('  ❓ '+d.who+' · '+d.maquina+' · '+d.proyecto+' — '+d.text+' ['+d.opts.map(o=>o.k).join('/')+']'));
         cliPrint('  tope de naves: '+DUDA_MAX_SHIPS+' (las reales van primero) · «/dudaAgente limpiar» las quita · recargar también');
+        break;
+      }
+      case '/tareafinaliza':   // r32: emulador de la celebración Pac-Man — MISMA función real (pacmanTest)
+      case 'tareafinaliza': {
+        const t=emularTareaAcabada(args.join(' '));
+        if(!t){ cliPrint('el módulo Pac-Man (status-pacman.js) no está cargado en esta página','err'); break; }
+        cliPrint('🟡 TAREA FINALIZADA (emulada) → celebración Pac-Man encolada en la banda inferior:');
+        cliPrint('  ✔ '+t);
+        cliPrint('  waka-waka tras un clic en la página (política de audio) · no toca el bot-inbox real · nada persiste');
         break;
       }
       case 'dibujar':   // alias en español («dibujar pollita» — huevo de pascua de Carlos)

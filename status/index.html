@@ -6,7 +6,7 @@
   <title>ADmiraNeXT | Status — Constelación de la flota</title>
   <meta name="description" content="Admira no tiene centro — es un universo que se expande. Estado en vivo de la flota AdmiraNeXT: cada ordenador es una estrella con su proyecto y su foco.">
   <meta name="admiranext-version" content="AdmiraNext v26.07.07.12">
-  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r32 (CIELO FULL-BLEED — feedback de Carlos sobre r30 con captura: al refluir el escenario bajo la banda de naves y junto a los paneles laterales, esas zonas quedaban LISAS (el fondo plano de la página, sin estrellas, porque el cielo vivía dentro del canvas de nodos y se empujaba con él). Regla de Carlos: el fondo estrellado cubre TODO, con UFOs o sin ellos, con menús o sin ellos. Cambio de arquitectura: las estrellas se DESACOPLAN de los nodos — nuevo canvas #skyfield position:fixed inset:0 z-index:0 a viewport completo, detrás de banda, paneles y escenario; el twinkle y el parallax con la cámara se mantienen idénticos, y la densidad se calcula sobre el viewport entero. En #galaxy quedan solo nodos/aristas/figuras, que conservan sus zonas de exclusión: reflow bajo la banda (body.duda-band-open + --duda-inset + syncDudaBand()) y rieles en flujo que estrechan el centro (nada oculto tras un panel). Ya no se re-siembran estrellas al abrir/cerrar rieles (el cielo no depende del centro). Pausa con ficha abierta intacta (el frame congela también el cielo), marcha de naves intacta, prefers-reduced-motion respetado, cero scroll horizontal. ADEMÁS: emulador de TAREA ACABADA para previsualizar la celebración Pac-Man de la banda inferior — botón «Lanzar tarea finalizada» en ⚙ AVANZADO junto al 👾 de dudas y comando /tareaFinaliza <texto> en la consola (en el /help); reutiliza la función REAL de la celebración (pacmanTest de status-pacman.js, misma cola/animación/waka-waka que un done de verdad), client-side puro marcado (emulada), sin tocar el bot-inbox real, nada persiste al recargar.)">
+  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r33 (EMULADORES CON COMBOS REALES — a Carlos le confundía en producción que las dudas emuladas inventaran combos de máquina/agente/proyecto («subNeo en Mac Mini con pixeria.com») al lado de nodos con presencia real. Ahora /dudaAgente y el botón 👾 del AVANZADO muestrean COMBINACIONES REALES de /api/presence — persona+máquina+proyecto tal cual laten (WORLD.presenceRows, guardadas crudas en la carga), priorizando latido fresco (< umbral de vivo), deduplicadas por persona+máquina y barajadas; si presence aún no cargó, caen al aleatorio de antes. El texto de la duda sigue inventado y la marca «(emulada)» se mantiene SIEMPRE. El emulador de tarea acabada (/tareaFinaliza y su botón) firma la pancarta con un agente real de la flota manteniendo la marca «· emulada». Textos de hint/help actualizados para reflejarlo. — Sobre r32: CIELO FULL-BLEED — feedback de Carlos sobre r30 con captura: al refluir el escenario bajo la banda de naves y junto a los paneles laterales, esas zonas quedaban LISAS (el fondo plano de la página, sin estrellas, porque el cielo vivía dentro del canvas de nodos y se empujaba con él). Regla de Carlos: el fondo estrellado cubre TODO, con UFOs o sin ellos, con menús o sin ellos. Cambio de arquitectura: las estrellas se DESACOPLAN de los nodos — nuevo canvas #skyfield position:fixed inset:0 z-index:0 a viewport completo, detrás de banda, paneles y escenario; el twinkle y el parallax con la cámara se mantienen idénticos, y la densidad se calcula sobre el viewport entero. En #galaxy quedan solo nodos/aristas/figuras, que conservan sus zonas de exclusión: reflow bajo la banda (body.duda-band-open + --duda-inset + syncDudaBand()) y rieles en flujo que estrechan el centro (nada oculto tras un panel). Ya no se re-siembran estrellas al abrir/cerrar rieles (el cielo no depende del centro). Pausa con ficha abierta intacta (el frame congela también el cielo), marcha de naves intacta, prefers-reduced-motion respetado, cero scroll horizontal. ADEMÁS: emulador de TAREA ACABADA para previsualizar la celebración Pac-Man de la banda inferior — botón «Lanzar tarea finalizada» en ⚙ AVANZADO junto al 👾 de dudas y comando /tareaFinaliza <texto> en la consola (en el /help); reutiliza la función REAL de la celebración (pacmanTest de status-pacman.js, misma cola/animación/waka-waka que un done de verdad), client-side puro marcado (emulada), sin tocar el bot-inbox real, nada persiste al recargar.)">
   <meta name="admiranext-status-build" content="oraculo-triad-1">
   <!-- Orbitron: tipografía tecnológica para la versión del pie del riel (Carlos, 2026-07-11) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -799,7 +799,7 @@
       </div>
       <button class="pf-urow" id="userRow" type="button" aria-expanded="false" aria-controls="userMenu" title="Sesión">
         <span class="pf-uava" id="userAva" aria-hidden="true">?</span>
-        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.12.r32</span></span>
+        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.12.r33</span></span>
         <span class="pf-ugear" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg></span>
         <span class="pf-uchev" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
       </button>
@@ -877,12 +877,12 @@
     <div class="pf-field">
       <label>👾 Emulador de dudas</label>
       <div class="rowval" style="gap:7px">
-        <button id="emuDudasBtn" title="Inyecta 3 dudas aleatorias (client-side) para ver las naves de /dudaAgente"
+        <button id="emuDudasBtn" title="Inyecta 3 dudas (client-side) con persona+máquina+proyecto REALES de la presencia para ver las naves de /dudaAgente"
                 style="flex:1;min-width:0;background:rgba(34,230,255,.08);color:var(--cyan);border:1px solid var(--cyan-dim);border-radius:6px;font:inherit;font-size:9px;letter-spacing:.08em;padding:6px 8px;cursor:pointer">Lanzar /dudaAgente (3 random)</button>
         <button id="emuDudasClr" title="Quita las dudas emuladas (las reales no se tocan)"
                 style="flex:0 0 auto;background:transparent;color:var(--text-dim);border:1px solid var(--cyan-dim);border-radius:6px;font:inherit;font-size:9px;letter-spacing:.08em;padding:6px 8px;cursor:pointer">Limpiar</button>
       </div>
-      <div class="hint" id="emuDudasMsg" style="font-size:8.5px;color:var(--text-dim);letter-spacing:.05em;margin-top:6px;line-height:1.5">Previsualiza cómo queda /dudaAgente: 3 naves con dudas ALEATORIAS marcadas «(emulada)». Solo en este navegador — no toca el worker y desaparecen al recargar.</div>
+      <div class="hint" id="emuDudasMsg" style="font-size:8.5px;color:var(--text-dim);letter-spacing:.05em;margin-top:6px;line-height:1.5">Previsualiza cómo queda /dudaAgente: 3 naves con agente+máquina+proyecto REALES de la flota (presencia fresca primero) y pregunta inventada, marcadas «(emulada)». Solo en este navegador — no toca el worker y desaparecen al recargar.</div>
     </div>
     <!-- EMULADOR DE TAREA ACABADA (r32): dispara la celebración Pac-Man REAL de la
          banda inferior (status-pacman.js) con una tarea de ejemplo, para previsualizar
@@ -2636,6 +2636,10 @@
     for(const k of Object.keys(ACTIVE_SINCE)){ if(!_seenFresh.has(k)) delete ACTIVE_SINCE[k]; }
     try{ localStorage.setItem(ACTIVE_KEY, JSON.stringify(ACTIVE_SINCE)); }catch(e){}
     WORLD.activeSince = ACTIVE_SINCE; WORLD.serverNow = SERVER_NOW;
+    // r33: filas CRUDAS de presencia (persona+máquina+proyecto tal cual laten)
+    // a disposición de los emuladores — las dudas/tareas emuladas muestrean
+    // combinaciones REALES de la flota, no combos aleatorios que cantan.
+    WORLD.presenceRows = presence;
 
     WORLD.machines = machines;
     WORLD.agents   = buildAgents(presence, isFresh);
@@ -2672,7 +2676,7 @@
         const m=c.match(/v\.[\d.]+r\d+|v\.[\d.]+\.r\d+/);
         if(m) return m[0];
       }catch(e){}
-      return 'v.2026.07.12.r32';
+      return 'v.2026.07.12.r33';
     })();
     let focusLabel = FOCUS_MACHINE ? FOCUS_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
     let viewerLabel = VIEWER_MACHINE ? VIEWER_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
@@ -3328,18 +3332,49 @@
   let EMU_SEQ=0;                                       // ids emu:1, emu:2… únicos en la sesión
   function emuPick(arr){ return arr[Math.floor(Math.random()*arr.length)]; }
   function emuShuffle(arr){ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; }
+  // r33: COMBOS REALES de la flota para los emuladores — a Carlos le confundía
+  // en producción ver «subNeo en Mac Mini con pixeria.com» inventado al lado de
+  // nodos con presencia real. Muestrea persona+máquina+proyecto TAL CUAL laten
+  // en /api/presence (WORLD.presenceRows), priorizando latido fresco; deduplica
+  // por persona+máquina y devuelve null si presence aún no cargó (→ el llamador
+  // cae al aleatorio de siempre). El texto de la duda sigue siendo inventado y
+  // la marca «(emulada)» se mantiene SIEMPRE.
+  function emuCombosReales(){
+    const rows=(WORLD.presenceRows||[]).filter(p=>p&&p.persona&&p.machine);
+    if(!rows.length) return null;
+    const now=WORLD.serverNow||Math.floor(Date.now()/1000);
+    const seen=new Set(), out=[];
+    // frescos primero (latido < umbral de «vivo»), luego el resto; dentro de
+    // cada grupo baraja para que no salgan siempre los mismos
+    const fresh=[], stale=[];
+    for(const p of rows) ((now-(p.updated||0))<ONLINE_SEC_DYN ? fresh : stale).push(p);
+    for(const p of emuShuffle(fresh).concat(emuShuffle(stale))){
+      const maquina=stripOwner(p.machine);
+      const key=norm(p.persona)+'|'+norm(maquina);
+      if(seen.has(key)) continue;
+      seen.add(key);
+      out.push({ who:p.persona, maquina, proyecto:(p.project||'').trim()||'—' });
+    }
+    return out.length? out : null;
+  }
   function emuRenderNow(){ try{ renderDudas(mergeDudas(DUDA_LAST_EST||[])); }catch(e){ console.warn('dudas emu render',e); } }
   // Inyecta n dudas emuladas (1-8) y repinta al instante. Devuelve las creadas.
   // Sin repetir agente NI pregunta dentro de la misma tanda mientras dé el pool.
   function emularDudas(n){
     n=Math.max(1,Math.min(8,parseInt(n,10)||3));
+    // r33: combos REALES de la flota (persona+máquina+proyecto de presence,
+    // frescos primero); si presence aún no cargó, cae al aleatorio de siempre
+    const combos=emuCombosReales();
     const agentes=emuShuffle(EMU_AGENTES), preguntas=emuShuffle(EMU_PREGUNTAS);
     const now=Math.floor(Date.now()/1000), out=[];
     for(let i=0;i<n;i++){
-      const ag=agentes[i%agentes.length], pr=preguntas[i%preguntas.length];
+      const pr=preguntas[i%preguntas.length];
+      const combo=combos? combos[i%combos.length] : null;
       out.push({
         id:'emu:'+(++EMU_SEQ), src:'emu', origen:'emulador',
-        who:ag+' (emulada)', maquina:emuPick(EMU_MAQUINAS), proyecto:emuPick(EMU_PROYECTOS),
+        who:(combo?combo.who:agentes[i%agentes.length])+' (emulada)',
+        maquina:combo?combo.maquina:emuPick(EMU_MAQUINAS),
+        proyecto:combo?combo.proyecto:emuPick(EMU_PROYECTOS),
         date:now-Math.floor(30+Math.random()*900),      // «hace 30s…15min», creíble
         text:pr.q,
         opts:pr.o.map((o,k)=>({k:String.fromCharCode(97+k), t:o.label, d:o.descripcion})),
@@ -3381,7 +3416,11 @@
   function emularTareaAcabada(desc){
     if(typeof window.pacmanTest!=='function') return null;      // status-pacman.js no cargado
     const text=(desc||'').trim()||EMU_PAC_EJEMPLO;
-    window.pacmanTest({ id:'emu', target_persona:'emulada', text });
+    // r33: la pancarta firma con un agente REAL de la flota (combo fresco de
+    // presence) manteniendo SIEMPRE la marca «emulada»; sin presence, solo la marca
+    const combos=emuCombosReales();
+    const persona=combos? combos[0].who+' · emulada' : 'emulada';
+    window.pacmanTest({ id:'emu', target_persona:persona, text });
     return text;
   }
   (function(){
@@ -5214,6 +5253,8 @@
     '  rotate <s|on|off>      velocidad de rotación (o pausa)',
     '  clear                  limpia la consola',
     '  /dudaAgente [N]        emula N dudas de agentes (1-8, def. 3) → naves 👾',
+    '                         (combos REALES de la flota — persona+máquina+proyecto de la',
+    '                         presencia, frescos primero — con pregunta inventada «(emulada)»)',
     '                         (alias: dudaAgente, duda · «/dudaAgente limpiar» las quita)',
     '                         (con naves suena la 🔊 marcha invader — toggle en ⚙ AVANZADO)',
     '  /demoON | /demoOFF     naves de ACTIVIDAD (hasta 4, una por equipo en marcha,',

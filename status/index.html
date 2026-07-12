@@ -6,7 +6,7 @@
   <title>ADmiraNeXT | Status — Constelación de la flota</title>
   <meta name="description" content="Admira no tiene centro — es un universo que se expande. Estado en vivo de la flota AdmiraNeXT: cada ordenador es una estrella con su proyecto y su foco.">
   <meta name="admiranext-version" content="AdmiraNext v26.07.07.12">
-  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r24 (countdown-ufo: cuenta atrás «· 👾 próximo UFO m:ss» tras el lema de la barra, leyendo el instante REAL del próximo disparo del módulo de actividad (nextAt, ciclo 150-210 s) con tic de 1 s; se rearma sola al aparecer el UFO o al saltarse el ciclo por dudas; /agenteTarea no la toca; desaparece con /demoOFF y vuelve con /demoON o el checkbox del AVANZADO; en estrecho hace ellipsis y bajo 900px se oculta antes de romper la barra)">
+  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r25 (trio-ufos: la aparición de actividad pasa de 1 a HASTA 3 naves a la vez — una por equipo en marcha (máquina viva), prioridad task limpio > focus limpio > resto y rotación entre ciclos para que con >3 vivas pasen todas; 3 sprites invader originales (calamar 8×8, cangrejo 11×8, pulpo 12×8) con 3 tintes de la paleta del sitio (cian --cyan, verde dudas --duda suavizado, hielo --text), asignación ESTABLE por hash de máquina; mousemove/tecla/clic retira las tres; dudas siguen mandando y la marcha sigue siendo solo de dudas; contador «próximo UFO» con gap claro texto/tiempo y TIEMPO CLICABLE: lanza el pase al instante y rearma el ciclo — con dudas visibles avisa «dudas mandan» en el propio número)">
   <meta name="admiranext-status-build" content="oraculo-triad-1">
   <!-- Orbitron: tipografía tecnológica para la versión del pie del riel (Carlos, 2026-07-11) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -136,8 +136,12 @@
     /* r24: cuenta atrás del próximo UFO de actividad — discreta, tras el lema.
        En estrecho hace ellipsis y por debajo de 900px desaparece ANTES de
        romper la barra (la hdr-line ya refluye; esto evita el salto de línea). */
-    .hdr .ufo-count{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:180px;flex:0 1 auto}
-    .hdr .ufo-count b{color:var(--cyan);font-weight:700;font-variant-numeric:tabular-nums}
+    .hdr .ufo-count{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:190px;flex:0 1 auto}
+    /* r25: el TIEMPO va separado del texto (gap claro) y es CLICABLE — lanza
+       el pase de actividad YA (la barra tiene pointer-events:none: se reactivan
+       solo en el número, como hace el badge de dudas). */
+    .hdr .ufo-count b{color:var(--cyan);font-weight:700;font-variant-numeric:tabular-nums;margin-left:7px;pointer-events:auto;cursor:pointer}
+    .hdr .ufo-count b:hover,.hdr .ufo-count b:focus-visible{text-shadow:0 0 8px var(--cyan)}
     .hdr .ufo-count[hidden]{display:none}
     @media (max-width:900px){ .hdr .ufo-count{display:none} }
     .hdr .live{
@@ -194,10 +198,19 @@
     }
     .duda-ship:hover .inv,.duda-ship:focus-visible .inv{filter:drop-shadow(0 0 12px var(--duda))}
     .duda-ship:focus-visible{outline:1px dashed var(--duda-dim);outline-offset:4px}
-    /* r21: nave de ACTIVIDAD (modo attract) — misma silueta pero tinte CIAN y
-       sin ❓: enseña qué hace el agente principal de una máquina viva y JAMÁS
-       puede confundirse con una duda pendiente. Se retira al mover el ratón. */
+    /* r21: nave de ACTIVIDAD (modo attract) — sin ❓: enseña qué hace el agente
+       principal de una máquina viva y JAMÁS puede confundirse con una duda
+       pendiente. Se retira al mover el ratón.
+       r25: hasta TRES a la vez (una por equipo en marcha) con 3 variantes de
+       la MISMA paleta del sitio — v0 calamar·cian (--cyan), v1 cangrejo·verde
+       de las dudas suavizado (--duda con halo tenue), v2 pulpo·hielo (--text).
+       Asignación estable por hash de máquina: mismo equipo → mismo sprite/tinte. */
     .duda-ship.act{--duda:#22e6ff;--duda-dim:rgba(34,230,255,.45);cursor:default}
+    .duda-ship.act.v1{--duda:#57ffa8;--duda-dim:rgba(87,255,168,.30)}
+    .duda-ship.act.v2{--duda:#dfeef3;--duda-dim:rgba(223,238,243,.35)}
+    /* mismo alto para los 3 sprites; el ancho respeta la proporción de cada uno */
+    .duda-ship.act.v0 .inv{width:25px}   /* calamar 8×8 */
+    .duda-ship.act.v2 .inv{width:37px}   /* pulpo 12×8 */
     /* r22: máquina sin foco LIMPIO publicado — aviso honesto y discreto */
     .duda-ship.act .act-nofoco{color:var(--text-dim);font-style:italic}
     /* r23: con TAREA viva de principal, el focus (encargo) baja a una línea
@@ -640,7 +653,7 @@
       </div>
       <button class="pf-urow" id="userRow" type="button" aria-expanded="false" aria-controls="userMenu" title="Sesión">
         <span class="pf-uava" id="userAva" aria-hidden="true">?</span>
-        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.12.r24</span></span>
+        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.12.r25</span></span>
         <span class="pf-ugear" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg></span>
         <span class="pf-uchev" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
       </button>
@@ -709,7 +722,7 @@
       <!-- r21: modo attract — nave cian con la actividad del agente principal
            de una máquina viva, cada ~3 min, hasta mover el ratón. /demoON|/demoOFF -->
       <label class="pf-check"><input type="checkbox" id="advActShips" checked> Naves de actividad (cada ~3 min)</label>
-      <div class="hint" style="font-size:8.5px;color:var(--text-dim);letter-spacing:.05em;margin-top:6px;line-height:1.5">Thump-thump grave que sigue el BPM medio de la flota. La marcha invader (4 notas graves, sintetizada) suena mientras haya naves-duda y se acelera con más dudas. Ambos requieren un clic en la página (política de audio del navegador). Las naves de actividad (cian, sin ❓ y en silencio) enseñan qué hace el agente principal de cada máquina viva hasta que muevas el ratón — /demoON | /demoOFF en la consola.</div>
+      <div class="hint" style="font-size:8.5px;color:var(--text-dim);letter-spacing:.05em;margin-top:6px;line-height:1.5">Thump-thump grave que sigue el BPM medio de la flota. La marcha invader (4 notas graves, sintetizada) suena mientras haya naves-duda y se acelera con más dudas. Ambos requieren un clic en la página (política de audio del navegador). Las naves de actividad (hasta 3 a la vez — una por equipo en marcha, cada máquina con su sprite y tinte propios, sin ❓ y en silencio) enseñan qué hace el agente principal de cada máquina viva hasta que muevas el ratón — /demoON | /demoOFF en la consola.</div>
     </div>
     <!-- EMULADOR DE DUDAS (r19): inyección CLIENT-SIDE de dudas aleatorias para
          previsualizar las naves 👾 de /dudaAgente sin tocar el worker. Desde r20
@@ -772,7 +785,7 @@
         <span class="tag">Admira no tiene centro — <em>es un universo que se expande.</em></span>
         <!-- r24: cuenta atrás del próximo UFO de actividad (temporizador REAL del
              módulo, no un contador paralelo). Oculto con el modo demo OFF. -->
-        <span class="tag ufo-count" id="ufoCount" hidden title="Cuenta atrás del próximo alien con la labor de un agente (modo actividad) — /demoOFF lo apaga">· 👾 próximo UFO <b id="ufoCountT">–:––</b></span>
+        <span class="tag ufo-count" id="ufoCount" hidden title="Cuenta atrás del próximo alien con la labor de un agente (modo actividad) — /demoOFF lo apaga">· 👾 próximo UFO <b id="ufoCountT" role="button" tabindex="0" title="Lanzar ya el pase de actividad (el trío de aliens) — después el ciclo rearma solo">–:––</b></span>
         <span class="live"><span class="dot"></span><span id="liveCount">—</span></span>
         <!-- r17: contador de DUDAS abiertas de los agentes (naves-duda); clic → abre la primera -->
         <span class="live duda" id="dudaBadge" hidden role="button" tabindex="0" title="Dudas abiertas de los agentes (diálogo a/b/c de Claude Code)"><span class="dot"></span><span id="dudaCount">0</span>&nbsp;dudas</span>
@@ -2462,7 +2475,7 @@
         const m=c.match(/v\.[\d.]+r\d+|v\.[\d.]+\.r\d+/);
         if(m) return m[0];
       }catch(e){}
-      return 'v.2026.07.12.r24';
+      return 'v.2026.07.12.r25';
     })();
     let focusLabel = FOCUS_MACHINE ? FOCUS_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
     let viewerLabel = VIEWER_MACHINE ? VIEWER_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
@@ -2496,29 +2509,69 @@
      ============================================================ */
   const DUDA_MAX_SHIPS= 4;        // máximo de naves simultáneas (las reales de /api/dudas primero)
 
-  // sprite pixel-art ORIGINAL (11×8, 2 frames) — evocador del arcade clásico
-  // pero dibujado a mano aquí (antenas en V, ojo central, patas alternantes).
-  const INV_F1 = [
-    '...X...X...',
-    '....X.X....',
-    '...XXXXX...',
-    '..XX.X.XX..',
-    '.XXXXXXXXX.',
-    'X.XXXXXXX.X',
-    'X.X.....X.X',
-    '..XX...XX..'];
-  const INV_F2 = [
-    '...X...X...',
-    '....X.X....',
-    '...XXXXX...',
-    '..XX.X.XX..',
-    '.XXXXXXXXX.',
-    '..XXXXXXX..',
-    '.X.X...X.X.',
-    'X.........X'];
-  function invaderSVG(){
+  // sprites pixel-art ORIGINALES (2 frames cada uno) — evocadores de las 3
+  // filas del arcade clásico pero dibujados a mano aquí, sin copiar los de
+  // Taito. r25: TRES tipos, como las filas del arcade —
+  //   0 CALAMAR 8×8 (pequeño) · 1 CANGREJO 11×8 (el de siempre, antenas en V,
+  //   el de las naves-duda) · 2 PULPO 12×8 (ancho). Cada equipo en marcha
+  //   lleva SIEMPRE el mismo (hash por máquina) para reconocerlo de un vistazo.
+  const INV_SPRITES=[
+    { w:8, h:8, f1:[                    // 0 · CALAMAR (corona alta, patas en tijera)
+      '...XX...',
+      '..XXXX..',
+      '.XXXXXX.',
+      'XX.XX.XX',
+      'XXXXXXXX',
+      '..X..X..',
+      '.X.XX.X.',
+      'X.X..X.X'], f2:[
+      '...XX...',
+      '..XXXX..',
+      '.XXXXXX.',
+      'XX.XX.XX',
+      'XXXXXXXX',
+      '.X.XX.X.',
+      'X......X',
+      '.X....X.'] },
+    { w:11, h:8, f1:[                   // 1 · CANGREJO (antenas en V, ojo central)
+      '...X...X...',
+      '....X.X....',
+      '...XXXXX...',
+      '..XX.X.XX..',
+      '.XXXXXXXXX.',
+      'X.XXXXXXX.X',
+      'X.X.....X.X',
+      '..XX...XX..'], f2:[
+      '...X...X...',
+      '....X.X....',
+      '...XXXXX...',
+      '..XX.X.XX..',
+      '.XXXXXXXXX.',
+      '..XXXXXXX..',
+      '.X.X...X.X.',
+      'X.........X'] },
+    { w:12, h:8, f1:[                   // 2 · PULPO (cabezón ancho, tentáculos)
+      '....XXXX....',
+      '.XXXXXXXXXX.',
+      'XXXXXXXXXXXX',
+      'XXX..XX..XXX',
+      'XXXXXXXXXXXX',
+      '...XX..XX...',
+      '..XX.XX.XX..',
+      'XX........XX'], f2:[
+      '....XXXX....',
+      '.XXXXXXXXXX.',
+      'XXXXXXXXXXXX',
+      'XXX..XX..XXX',
+      'XXXXXXXXXXXX',
+      '..XXX..XXX..',
+      '.XX..XX..XX.',
+      '..XX....XX..'] },
+  ];
+  function invaderSVG(kind){
+    const s=INV_SPRITES[((kind==null?1:kind)%INV_SPRITES.length+INV_SPRITES.length)%INV_SPRITES.length];
     const px=rows=>rows.map((row,y)=>[...row].map((c,x)=>c==='X'?`<rect x="${x}" y="${y}" width="1" height="1"/>`:'').join('')).join('');
-    return `<svg class="inv" viewBox="0 0 11 8" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g class="f1">${px(INV_F1)}</g><g class="f2">${px(INV_F2)}</g></svg>`;
+    return `<svg class="inv" viewBox="0 0 ${s.w} ${s.h}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true"><g class="f1">${px(s.f1)}</g><g class="f2">${px(s.f2)}</g></svg>`;
   }
 
   // r18: /api/dudas → dudas ESTRUCTURADAS del diálogo a/b/c de Claude Code.
@@ -2603,6 +2656,27 @@
   // secundaria discreta de 1 renglón (entero en el tooltip). Sin task pero
   // con focus limpio → el focus de principal, como hasta r22. Sin nada →
   // «(sin foco publicado — actualizar bóveda en esa máquina)».
+  // r25: variante ESTABLE por máquina (hash FNV del mkey → 0/1/2): mismo
+  // equipo, mismo sprite y mismo tinte — se le reconoce de un vistazo.
+  function actVariant(mkey){
+    let h=0; const s=String(mkey||'');
+    for(let i=0;i<s.length;i++) h=Math.imul(h,16777619)+s.charCodeAt(i)>>>0;
+    h=(h^(h>>>7))>>>0;                  // >>>0: el XOR devuelve entero CON signo (v-1 pintaba clase inválida)
+    return h%3;
+  }
+  // r25: dentro de un trío las 3 variantes deben VERSE distintas — si dos
+  // máquinas colisionan en el hash, la segunda (orden alfabético, estable)
+  // salta al siguiente hueco libre. Mismo trío → misma asignación siempre;
+  // las máquinas sin colisión conservan su variante global de actVariant.
+  function actAssignVariants(trio){
+    const used=new Set();
+    for(const a of trio.slice().sort((x,y)=>x.mkey<y.mkey?-1:1)){
+      let v=actVariant(a.mkey);
+      while(used.has(v)&&used.size<3) v=(v+1)%3;
+      used.add(v); a.variante=v;
+    }
+    return trio;
+  }
   function actShipHTML(a){
     let main, sub='';
     if(a.tareaOk){
@@ -2617,8 +2691,9 @@
       +(a.tareaOk?' — ahora: '+esc(a.tarea):'')
       +(a.focoOk?' — encargo: '+esc(a.foco):'')
       +' · se retira al mover el ratón (o con /demoOFF)';
-    return `<button class="duda-ship act" type="button" title="${tip}">
-      ${invaderSVG()}
+    const v=(a.variante!=null)?a.variante:actVariant(a.mkey);   // asignada por trío (sin repetirse) o global
+    return `<button class="duda-ship act v${v}" type="button" title="${tip}">
+      ${invaderSVG(v)}
       <span class="duda-who">${dudaDot(a.agente)}⚡ ${esc(a.agente)} · ${esc(a.maquina)}</span>
       <span class="duda-proj">ACTIVIDAD${a.proyecto?` · ${esc(a.proyecto)}`:''}</span>
       <span class="duda-txt">${main}</span>
@@ -2643,10 +2718,11 @@
     if(!DUDAS.length){
       badge.hidden=true;
       if(DUDA_OPEN!==null) closeDudaPop();
-      // r21: sin dudas, el hueco lo puede ocupar UNA nave de ACTIVIDAD (modo
-      // attract). No toca badge, ni título, ni marcha — no es una duda.
-      const act=window.ACT_SHIPS && window.ACT_SHIPS.current();
-      if(act){ placeDudaStrip(); strip.innerHTML=actShipHTML(act); strip.hidden=false; }
+      // r21/r25: sin dudas, el hueco lo ocupa el TRÍO de ACTIVIDAD (hasta 3
+      // naves, una por equipo en marcha). No toca badge/título/marcha — no
+      // son dudas.
+      const acts=window.ACT_SHIPS && window.ACT_SHIPS.current();
+      if(acts && acts.length){ placeDudaStrip(); strip.innerHTML=acts.map(actShipHTML).join(''); strip.hidden=false; }
       else { strip.hidden=true; strip.innerHTML=''; }
       return;
     }
@@ -4438,7 +4514,7 @@
   const actividad=(()=>{
     const LS_KEY='admiranext-status-actividad';
     let on=(()=>{ try{ return localStorage.getItem(LS_KEY)!=='0'; }catch(e){ return true; } })();
-    let timer=null, current=null, lastMkey='', shownAt=0, anchor=null;
+    let timer=null, current=[], lastSet=new Set(), shownAt=0, anchor=null;   // r25: current = TRÍO (0-3 naves)
     let nextTickAt=0;                                     // r24: instante EXACTO del próximo disparo (la cuenta atrás lee esto)
     const delay=()=>150000+Math.random()*60000;           // 150–210 s
     function schedule(ms){
@@ -4450,27 +4526,35 @@
     function show(){
       if(DUDAS.length) return false;                      // dudas mandan: ciclo saltado
       if(!ACT_POOL.length) return false;                  // sin máquinas vivas
-      // r23: LO QUE ESTÁN HACIENDO manda — prioridad de rotación:
-      // máquinas con TAREA limpia > solo focus limpio > resto (que sale con
-      // «(sin foco publicado…)»; jamás texto sucio, r22).
-      let base=ACT_POOL.filter(a=>a.tareaOk);
-      if(!base.length) base=ACT_POOL.filter(a=>a.focoOk);
-      if(!base.length) base=ACT_POOL;
-      let pool=base.filter(a=>a.mkey!==lastMkey);         // sin repetir máquina seguida
-      if(!pool.length) pool=base;                         // (salvo que solo haya una)
-      current=pool[Math.floor(Math.random()*pool.length)];
-      lastMkey=current.mkey; shownAt=Date.now(); anchor=null;
+      // r25: TRÍO — hasta 3 naves, una por MÁQUINA VIVA distinta (con 1-2
+      // vivas salen 1-2; jamás se rellena con muertas). Orden de candidatas
+      // por prioridad r23 (task limpio > focus limpio > resto, barajado
+      // dentro de cada nivel) y ROTACIÓN entre ciclos: primero las máquinas
+      // que NO salieron en el trío anterior — con >3 vivas van pasando todas
+      // y el mismo trío exacto no se repite mientras haya más candidatas.
+      const mix=arr=>{ const a=arr.slice(); for(let i=a.length-1;i>0;i--){ const j=Math.floor(Math.random()*(i+1)); [a[i],a[j]]=[a[j],a[i]]; } return a; };
+      const ordered=[
+        ...mix(ACT_POOL.filter(a=>a.tareaOk)),
+        ...mix(ACT_POOL.filter(a=>!a.tareaOk&&a.focoOk)),
+        ...mix(ACT_POOL.filter(a=>!a.tareaOk&&!a.focoOk)),
+      ];
+      const nuevas=ordered.filter(a=>!lastSet.has(a.mkey));
+      const picks=nuevas.slice(0,3);
+      for(const a of ordered){ if(picks.length>=3) break; if(!picks.includes(a)) picks.push(a); }
+      current=actAssignVariants(picks);                   // r25: 3 sprites/tintes SIEMPRE distintos en el trío
+      lastSet=new Set(picks.map(a=>a.mkey));
+      shownAt=Date.now(); anchor=null;
       repaint(); return true;
     }
     function dismiss(){
-      if(!current) return;
-      if(Date.now()-shownAt<400) return;                  // no la mata su propio gesto
-      current=null; anchor=null; repaint();
+      if(!current.length) return;
+      if(Date.now()-shownAt<400) return;                  // no las mata su propio gesto
+      current=[]; anchor=null; repaint();                 // r25: las TRES a la vez
     }
     function repaint(){ try{ renderDudas(DUDAS); }catch(e){ console.warn('actividad render',e); } }
     // gestos que la retiran: ratón >10 px desde el primer movimiento, tecla, clic
     window.addEventListener('mousemove',e=>{
-      if(!current) return;
+      if(!current.length) return;
       if(!anchor){ anchor=[e.clientX,e.clientY]; return; }
       const dx=e.clientX-anchor[0], dy=e.clientY-anchor[1];
       if(dx*dx+dy*dy>100) dismiss();
@@ -4488,18 +4572,23 @@
       // (para verificar la cuenta atrás sin esperar 3 min); después vuelve
       // al ciclo normal de 150–210 s.
       debugNext(ms){ schedule(ms); return nextTickAt; },
-      clearQuiet(){ current=null; anchor=null; },         // la sustituyen las dudas
+      clearQuiet(){ current=[]; anchor=null; },           // las sustituyen las dudas
       isOn(){ return on; },
       setOn(v,force){
         on=!!v; try{ localStorage.setItem(LS_KEY,on?'1':'0'); }catch(e){}
         const cb=document.getElementById('advActShips'); if(cb) cb.checked=on;
-        if(!on && current){ current=null; anchor=null; repaint(); }
+        if(!on && current.length){ current=[]; anchor=null; repaint(); }
         try{ ufoCountTick(); }catch(e){}                  // r24: la cuenta atrás aparece/desaparece al instante
         return (on && force) ? show() : true;             // /demoON fuerza una YA
       },
       // r23: /agenteTarea — fuerza UNA aparición YA, incluso con el modo demo
       // en OFF (es bajo petición explícita; no toca la persistencia).
       force(){ return show(); },
+      // r25: clic en el TIEMPO del contador — lanza el pase YA y, a diferencia
+      // de /agenteTarea, REARMA el ciclo normal (150–210 s). El clic no mata
+      // al trío recién nacido: show() fija shownAt y la guarda de 400 ms del
+      // dismiss lo protege del propio gesto. Con dudas visibles → false.
+      launchNow(){ const ok=show(); if(ok) schedule(); return ok; },
       // r22: SOLO PRUEBAS/DEPURACIÓN — sustituye el pool con entradas crudas
       // {persona,machine,focus,task,project} pasándolas por el MISMO saneo de
       // la ingesta real (focoLimpio). El siguiente load() lo repone con lo vivo.
@@ -4525,16 +4614,35 @@
   // de contadores paralelos que se desvíen): mm:ss, tic de 1 s. Con el modo
   // demo OFF desaparece; si el ciclo se salta por dudas, sigue hacia el
   // siguiente intento (nextAt ya viene rearmado por schedule).
+  let UFO_MSG_UNTIL=0;                 // r25: mientras dure, el número enseña un aviso breve (0:00 / dudas mandan)
   function ufoCountTick(){
     const el=document.getElementById('ufoCount'), t=document.getElementById('ufoCountT');
     if(!el||!t) return;
     if(!actividad.isOn()){ el.hidden=true; return; }
     el.hidden=false;
+    if(Date.now()<UFO_MSG_UNTIL) return;                  // aviso del clic en curso
     const s=Math.max(0,Math.round((actividad.nextAt()-Date.now())/1000));
     t.textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0');
   }
   setInterval(ufoCountTick,1000);
   ufoCountTick();
+  // r25: el TIEMPO es CLICABLE — pone el contador a 0, saca el trío AL INSTANTE
+  // y el temporizador rearma solo (launchNow). Si hay naves-duda visibles no
+  // sale nada (mandan ellas) y el propio número lo dice un momento.
+  (function(){
+    const t=document.getElementById('ufoCountT'); if(!t) return;
+    function launch(){
+      if(!actividad.isOn()) return;                       // (oculto con /demoOFF, por si acaso)
+      if(actividad.launchNow()){
+        t.textContent='0:00'; UFO_MSG_UNTIL=Date.now()+900;   // el 0:00 se ve un latido y rearma
+      } else {
+        t.textContent=DUDAS.length?'dudas mandan':'sin equipos vivos';
+        UFO_MSG_UNTIL=Date.now()+1600;
+      }
+    }
+    t.addEventListener('click',e=>{ e.stopPropagation(); launch(); });
+    t.addEventListener('keydown',e=>{ if(e.key==='Enter'||e.key===' '){ e.preventDefault(); e.stopPropagation(); launch(); } });
+  })();
 
   // --- EXPERTO: consola CLI (local, no ejecuta acciones de flota) ---
   const cliInput=document.getElementById('cliInput'), cliOut=document.getElementById('cliOut');
@@ -4551,10 +4659,11 @@
     '  /dudaAgente [N]        emula N dudas de agentes (1-8, def. 3) → naves 👾',
     '                         (alias: dudaAgente, duda · «/dudaAgente limpiar» las quita)',
     '                         (con naves suena la 🔊 marcha invader — toggle en ⚙ AVANZADO)',
-    '  /demoON | /demoOFF     naves de ACTIVIDAD (cian): agente principal de una máquina',
+    '  /demoON | /demoOFF     naves de ACTIVIDAD (hasta 3, una por equipo en marcha,',
+    '                         cada máquina con su sprite/tinte): agente principal de una máquina',
     '                         viva + su foco, cada ~3 min hasta mover el ratón.',
     '                         /demoON además fuerza una aparición YA (persistido)',
-    '  /agenteTarea           fuerza YA una nave con LO QUE ESTÁ HACIENDO un agente',
+    '  /agenteTarea           fuerza YA el trío de naves con LO QUE ESTÁN HACIENDO',
     '                         (tarea viva de la presencia; funciona aunque el modo',
     '                         demo esté OFF y no cambia su ajuste)',
     '',
@@ -4602,19 +4711,23 @@
         break;
       }
       case 'clear': cliOut.innerHTML=''; break;
-      case '/agentetarea': case 'agentetarea': {   // r23: nave con la TAREA VIVA, bajo petición
+      case '/agentetarea': case 'agentetarea': {   // r23: naves con la TAREA VIVA, bajo petición (r25: trío)
         const shown=actividad.force();             // no toca el ajuste ON/OFF del modo demo
-        cliPrint(shown
-          ? '⚡ actividad forzada: '+(actividad.current()?actividad.current().agente+' · '+actividad.current().maquina+(actividad.current().tareaOk?' — ahora: '+actividad.current().tarea:' (sin tarea viva: enseña su encargo)'):'')
-          : 'ahora mismo no sale: '+(DUDAS.length?'hay naves-duda visibles (mandan ellas)':'ninguna máquina viva en la presencia'));
-        cliPrint('  se retira al mover el ratón · el modo demo sigue '+(actividad.isOn()?'ON':'OFF'));
+        if(shown){
+          const trio=actividad.current()||[];
+          cliPrint('⚡ actividad forzada · '+trio.length+' equipo'+(trio.length===1?'':'s')+' en marcha:');
+          trio.forEach(a=>cliPrint('  👾 '+a.agente+' · '+a.maquina+(a.tareaOk?' — ahora: '+a.tarea:(a.focoOk?' — encargo: '+a.foco:' — (sin foco publicado)'))));
+        } else {
+          cliPrint('ahora mismo no sale: '+(DUDAS.length?'hay naves-duda visibles (mandan ellas)':'ninguna máquina viva en la presencia'));
+        }
+        cliPrint('  se retiran al mover el ratón · el modo demo sigue '+(actividad.isOn()?'ON':'OFF'));
         break;
       }
-      case '/demoon': case 'demoon': {   // r21: modo actividad ON + aparición forzada YA
-        const shown=actividad.setOn(true,true);   // devuelve si la nave forzada salió
+      case '/demoon': case 'demoon': {   // r21: modo actividad ON + aparición forzada YA (r25: trío)
+        const shown=actividad.setOn(true,true);   // devuelve si el trío forzado salió
         cliPrint('modo ACTIVIDAD → ON (persistido) · próximas naves cada ~3 min (150–210 s)');
         cliPrint(shown
-          ? '  ⚡ nave de actividad forzada ('+(actividad.current()?actividad.current().agente+' · '+actividad.current().maquina:'')+') — se retira al mover el ratón'
+          ? '  ⚡ trío forzado ('+(actividad.current()||[]).map(a=>a.agente+' · '+a.maquina).join(' / ')+') — se retira al mover el ratón'
           : '  ahora mismo no sale: '+(DUDAS.length?'hay naves-duda visibles (mandan ellas)':'ninguna máquina viva en la presencia'));
         break;
       }

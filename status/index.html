@@ -6,7 +6,7 @@
   <title>ADmiraNeXT | Status — Constelación de la flota</title>
   <meta name="description" content="Admira no tiene centro — es un universo que se expande. Estado en vivo de la flota AdmiraNeXT: cada ordenador es una estrella con su proyecto y su foco.">
   <meta name="admiranext-version" content="AdmiraNext v26.07.07.12">
-  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r27 (ufo-ficha: pases MANUALES fijados 📌 — el trío del reloj o de /agenteTarea NO se retira con ratón/tecla (solo Escape, el siguiente ciclo auto o el cierre de la ficha); los auto siguen retirándose con el ratón; clic en una nave de actividad → FICHA a pantalla completa con el alien grande animado, MÁQUINA enorme, agente+vida, ACTIVIDAD·proyecto·modo, tarea y encargo completos y visto hace Xs; con la ficha abierta la interfaz entera SE PARA (constelación, rotación, countdown congelado desplazando nextAt lo pausado, marcha del strip, gestos) y el polling se pospone hasta cerrar (una recarga al salir); las naves-duda conservan su panel)">
+  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r28 (ficha-cli + cuarteto + banda: 1) CLI en la ficha fullscreen — input estilo consola EXPERTO con prompt agente@maquina$ que envía a ESE agente por el MISMO canal del compositor ✎ (inboxSend → POST /api/bot-inbox, auth por sesión Google del gate; feedback ✉ encolado #id o error honesto; Escape cierra, escribir no); 2) pases de 4 aliens (4º sprite original NAVE NODRIZA 16×7 con tinte ámbar --amber, asignación estable extendida a 4 variantes todas distintas por pase); 3) la constelación NO pasa por detrás de los aliens — banda opaca del color de la página con borde inferior y el escenario refluye por debajo (--duda-inset vivo, mismo mecanismo que el cajón EXPERTO, re-encuadre del lienzo tras la transición corta)">
   <meta name="admiranext-status-build" content="oraculo-triad-1">
   <!-- Orbitron: tipografía tecnológica para la versión del pie del riel (Carlos, 2026-07-11) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -167,9 +167,18 @@
     #dudaStrip{
       position:fixed;left:0;right:0;top:66px;z-index:38;
       display:flex;justify-content:center;align-items:flex-start;
-      gap:38px;padding:2px 18px;pointer-events:none;flex-wrap:wrap;
+      gap:38px;padding:4px 18px 9px;pointer-events:none;flex-wrap:wrap;
+      /* r28: BANDA OPACA — los nodos de la constelación no comparten píxeles
+         con los aliens: la franja tapa con el fondo de la página y el
+         escenario refluye por debajo (body.duda-band-open + --duda-inset). */
+      background:var(--bg);
+      border-bottom:1px solid rgba(34,230,255,.14);
+      box-shadow:0 6px 18px rgba(1,4,10,.55);
     }
     #dudaStrip[hidden]{display:none}
+    /* r28: reflow del escenario bajo la banda — mismo mecanismo que el cajón
+       EXPERTO (inset vivo medido en JS). Transición corta, sin saltos. */
+    body.duda-band-open #stage{top:var(--duda-inset,120px)}
     .duda-ship{
       pointer-events:auto;display:flex;flex-direction:column;align-items:center;gap:4px;
       width:200px;max-width:44vw;background:none;border:none;padding:0;cursor:pointer;
@@ -223,9 +232,12 @@
     .duda-ship.act{--duda:#22e6ff;--duda-dim:rgba(34,230,255,.45);cursor:default}
     .duda-ship.act.v1{--duda:#57ffa8;--duda-dim:rgba(87,255,168,.30)}
     .duda-ship.act.v2{--duda:#dfeef3;--duda-dim:rgba(223,238,243,.35)}
-    /* mismo alto para los 3 sprites; el ancho respeta la proporción de cada uno */
+    /* r28: 4ª variante — NAVE NODRIZA en el ámbar de los avisos del sitio */
+    .duda-ship.act.v3{--duda:#ffb545;--duda-dim:rgba(255,181,69,.35)}
+    /* mismo alto para los 4 sprites; el ancho respeta la proporción de cada uno */
     .duda-ship.act.v0 .inv{width:25px}   /* calamar 8×8 */
     .duda-ship.act.v2 .inv{width:37px}   /* pulpo 12×8 */
+    .duda-ship.act.v3 .inv{width:50px;height:22px}   /* nodriza 16×7 (platillo ancho) */
     /* r22: máquina sin foco LIMPIO publicado — aviso honesto y discreto */
     .duda-ship.act .act-nofoco{color:var(--text-dim);font-style:italic}
     /* ============================================================
@@ -244,6 +256,7 @@
     #actFicha[hidden]{display:none}
     #actFicha.v1{--duda:#57ffa8;--duda-dim:rgba(87,255,168,.30)}
     #actFicha.v2{--duda:#dfeef3;--duda-dim:rgba(223,238,243,.35)}
+    #actFicha.v3{--duda:#ffb545;--duda-dim:rgba(255,181,69,.35)}   /* r28: nodriza ámbar */
     #actFicha .af-box{max-width:860px;width:100%;max-height:92vh;overflow-y:auto;text-align:center;position:relative;padding:12px}
     #actFicha .af-close{
       position:absolute;top:0;right:0;background:none;border:1px solid var(--duda-dim);border-radius:8px;
@@ -271,6 +284,18 @@
     }
     #actFicha .af-nada{font-style:italic;color:var(--text-dim)}
     #actFicha .af-meta{margin-top:22px;font-size:10.5px;letter-spacing:.14em;color:var(--text-dim);text-transform:uppercase}
+    /* r28: CLI de la ficha — escribir AL AGENTE de la ficha, mismo look que la
+       consola EXPERTO (prompt agente@máquina$ + input transparente) */
+    #actFicha .af-cli{
+      display:flex;align-items:center;gap:9px;margin:22px auto 0;max-width:640px;
+      border:1px solid var(--duda-dim);border-radius:9px;background:rgba(1,4,10,.7);padding:0 12px;text-align:left;
+    }
+    #actFicha .af-cli .ps1{color:var(--duda);font-size:12px;flex:0 0 auto;text-shadow:0 0 8px var(--duda-dim);white-space:nowrap;max-width:45%;overflow:hidden;text-overflow:ellipsis}
+    #actFicha .af-cli input{flex:1;min-width:0;background:transparent;border:0;outline:none;color:var(--text);font-family:inherit;font-size:12px;padding:11px 0;letter-spacing:.03em}
+    #actFicha .af-cli input::placeholder{color:var(--text-dim)}
+    #actFicha .af-cli-msg{margin-top:8px;font-size:10.5px;letter-spacing:.06em;color:var(--text-dim);min-height:14px}
+    #actFicha .af-cli-msg.ok{color:var(--duda)}
+    #actFicha .af-cli-msg.err{color:var(--amber)}
     #actFicha .af-hint{margin-top:16px;font-size:8.5px;letter-spacing:.1em;color:var(--text-dim)}
     /* r27: TODO lo animado de la página, en pausa mientras la ficha esté abierta */
     .ficha-open #dudaStrip, .ficha-open #dudaStrip *, .ficha-open #rotProg{animation-play-state:paused !important}
@@ -544,7 +569,7 @@
        altura viva del cajón (--pf-bottom-inset) → rieles Y lienzo se redimensionan
        de verdad (el ResizeObserver de #stageCenter recalcula el canvas). El inset
        sigue en vivo el asa de redimensionado y el alto del compositor ✎. */
-    #stage{transition:bottom .28s ease}
+    #stage{transition:bottom .28s ease, top .22s ease}   /* r28: top = reflow bajo la banda de naves */
     body.pf-bottom-open #stage{bottom:var(--pf-bottom-inset,240px)}
     /* En móvil (≤640px) los rieles son overlay fijo, no columnas de #stage:
        reservan el hueco con padding para que su pie no quede pisado. */
@@ -714,7 +739,7 @@
       </div>
       <button class="pf-urow" id="userRow" type="button" aria-expanded="false" aria-controls="userMenu" title="Sesión">
         <span class="pf-uava" id="userAva" aria-hidden="true">?</span>
-        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.12.r27</span></span>
+        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.12.r28</span></span>
         <span class="pf-ugear" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg></span>
         <span class="pf-uchev" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
       </button>
@@ -783,7 +808,7 @@
       <!-- r21: modo attract — nave cian con la actividad del agente principal
            de una máquina viva, cada ~3 min, hasta mover el ratón. /demoON|/demoOFF -->
       <label class="pf-check"><input type="checkbox" id="advActShips" checked> Naves de actividad (cada ~3 min)</label>
-      <div class="hint" style="font-size:8.5px;color:var(--text-dim);letter-spacing:.05em;margin-top:6px;line-height:1.5">Thump-thump grave que sigue el BPM medio de la flota. La marcha invader (4 notas graves, sintetizada) suena mientras haya naves-duda y se acelera con más dudas. Ambos requieren un clic en la página (política de audio del navegador). Las naves de actividad (hasta 3 a la vez — una por equipo en marcha, cada máquina con su sprite y tinte propios, sin ❓ y en silencio) enseñan qué hace el agente principal de cada máquina viva hasta que muevas el ratón — /demoON | /demoOFF en la consola.</div>
+      <div class="hint" style="font-size:8.5px;color:var(--text-dim);letter-spacing:.05em;margin-top:6px;line-height:1.5">Thump-thump grave que sigue el BPM medio de la flota. La marcha invader (4 notas graves, sintetizada) suena mientras haya naves-duda y se acelera con más dudas. Ambos requieren un clic en la página (política de audio del navegador). Las naves de actividad (hasta 4 a la vez — una por equipo en marcha, cada máquina con su sprite y tinte propios, sin ❓ y en silencio) enseñan qué hace el agente principal de cada máquina viva hasta que muevas el ratón — /demoON | /demoOFF en la consola.</div>
     </div>
     <!-- EMULADOR DE DUDAS (r19): inyección CLIENT-SIDE de dudas aleatorias para
          previsualizar las naves 👾 de /dudaAgente sin tocar el worker. Desde r20
@@ -2187,20 +2212,29 @@
       }catch(e){ msg.textContent='✗ red: '+(e&&e.message||e); msg.className='pc-msg err'; }
       return;
     }
+    const res=await inboxSend(persona,machine,text);
+    if(res.ok){
+      msg.textContent='✓ enviado al inbox de '+persona+(machine?' en '+machine:'')+(res.verified?'':' (sin verificar)');
+      msg.className='pc-msg ok';
+      document.getElementById('pcText').value='';
+      if(typeof cliPrint==='function') cliPrint('PROMPT → '+persona+(machine?' · '+machine:'')+'  (encargo '+res.id+')');
+    } else { msg.textContent='✗ '+res.error; msg.className='pc-msg err'; }
+  }
+  // r28: núcleo REUTILIZABLE del envío por buzón — lo usan el compositor ✎ de
+  // arriba Y el CLI de la ficha fullscreen. MISMO canal real (POST /api/bot-inbox
+  // con target_persona/target_machine) y MISMA auth (Bearer de mandoBearer():
+  // sesión Google del gate o token de mando; sin ella, rate-limit del worker).
+  async function inboxSend(persona,machine,text){
+    const headers={'Content-Type':'application/json'};
+    try{ const b=(typeof mandoBearer==='function')?mandoBearer():''; if(b) headers['Authorization']='Bearer '+b; }catch(e){}
     try{
       const r=await fetch(TG_INBOX_POST,{method:'POST',headers,body:JSON.stringify({target_persona:persona,target_machine:machine,text,from:'status-web'})});
       const d=await r.json().catch(()=>({}));
-      if(r.ok && d.ok){
-        msg.textContent='✓ enviado al inbox de '+persona+(machine?' en '+machine:'')+(d.owner_verified?'':' (sin verificar)');
-        msg.className='pc-msg ok';
-        document.getElementById('pcText').value='';
-        if(typeof cliPrint==='function') cliPrint('PROMPT → '+persona+(machine?' · '+machine:'')+'  (encargo '+(d.task_id||d.id||'')+')');
-      } else if(r.status===429){
-        msg.textContent='✗ demasiados envíos seguidos — espera un minuto'; msg.className='pc-msg err';
-      } else {
-        msg.textContent='✗ '+(d.error||('HTTP '+r.status)); msg.className='pc-msg err';
-      }
-    }catch(e){ msg.textContent='✗ red: '+(e&&e.message||e); msg.className='pc-msg err'; }
+      if(r.ok && d.ok) return {ok:true, id:String(d.task_id||d.id||''), verified:!!d.owner_verified};
+      if(r.status===429) return {ok:false, error:'demasiados envíos seguidos — espera un minuto'};
+      if(r.status===401) return {ok:false, error:'necesita sesión de Google del perímetro (entra por admira.live)'};
+      return {ok:false, error:(d.error||('HTTP '+r.status))};
+    }catch(e){ return {ok:false, error:'red: '+(e&&e.message||e)}; }
   }
 
   let freeDrawing=false;
@@ -2553,7 +2587,7 @@
         const m=c.match(/v\.[\d.]+r\d+|v\.[\d.]+\.r\d+/);
         if(m) return m[0];
       }catch(e){}
-      return 'v.2026.07.12.r27';
+      return 'v.2026.07.12.r28';
     })();
     let focusLabel = FOCUS_MACHINE ? FOCUS_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
     let viewerLabel = VIEWER_MACHINE ? VIEWER_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
@@ -2645,6 +2679,21 @@
       '..XXX..XXX..',
       '.XX..XX..XX.',
       '..XX....XX..'] },
+    { w:16, h:7, f1:[                   // 3 · NAVE NODRIZA (r28: platillo con
+      '.....XXXXXX.....',                //     luces que giran — evocador del
+      '...XXXXXXXXXX...',                //     UFO rojo de arriba, dibujado a
+      '.XXXXXXXXXXXXXX.',                //     mano, sin copiar el de Taito)
+      'XXX.XX.XX.XX.XXX',
+      'XXXXXXXXXXXXXXXX',
+      '..XXX..XX..XXX..',
+      '....X......X....'], f2:[
+      '.....XXXXXX.....',
+      '...XXXXXXXXXX...',
+      '.XXXXXXXXXXXXXX.',
+      'XX.XX.XX.XX.XX.X',
+      'XXXXXXXXXXXXXXXX',
+      '.XXX...XX...XXX.',
+      '...X........X...'] },
   ];
   function invaderSVG(kind){
     const s=INV_SPRITES[((kind==null?1:kind)%INV_SPRITES.length+INV_SPRITES.length)%INV_SPRITES.length];
@@ -2742,6 +2791,29 @@
     strip.style.animation='stripMarch '+(n*0.42).toFixed(1)+'s steps('+n+') infinite alternate';
   }
   window.addEventListener('resize',marchStrip);
+  // r28: BANDA RESERVADA — con naves visibles, la franja es OPACA (CSS) y el
+  // escenario entero (#stage: rieles + lienzo) refluye por debajo de ella,
+  // igual que hace con el cajón EXPERTO (--duda-inset medido en vivo). Sin
+  // franja, el escenario recupera todo. El lienzo se re-encuadra (resize)
+  // al terminar la transición corta de top — sin saltos bruscos.
+  let DUDA_BAND_LAST='';
+  function syncDudaBand(){
+    const strip=document.getElementById('dudaStrip');
+    if(!strip) return;
+    const on=!strip.hidden;
+    let key='off';
+    if(on){
+      const b=Math.round(strip.getBoundingClientRect().bottom);   // translateX de la marcha no toca bottom
+      document.documentElement.style.setProperty('--duda-inset', b+'px');
+      key='on:'+b;
+    }
+    document.body.classList.toggle('duda-band-open', on);
+    if(key!==DUDA_BAND_LAST){
+      DUDA_BAND_LAST=key;
+      setTimeout(()=>{ try{ resize(); }catch(e){} }, 240);        // tras la transición (.22s)
+    }
+  }
+  window.addEventListener('resize',syncDudaBand);
   function fmtAgo(ts){
     if(!ts) return '';
     const s=Math.max(0,Math.floor(Date.now()/1000)-ts);
@@ -2765,7 +2837,7 @@
     let h=0; const s=String(mkey||'');
     for(let i=0;i<s.length;i++) h=Math.imul(h,16777619)+s.charCodeAt(i)>>>0;
     h=(h^(h>>>7))>>>0;                  // >>>0: el XOR devuelve entero CON signo (v-1 pintaba clase inválida)
-    return h%3;
+    return h%4;                         // r28: 4 variantes (calamar/cangrejo/pulpo/nodriza)
   }
   // r25: dentro de un trío las 3 variantes deben VERSE distintas — si dos
   // máquinas colisionan en el hash, la segunda (orden alfabético, estable)
@@ -2775,7 +2847,7 @@
     const used=new Set();
     for(const a of trio.slice().sort((x,y)=>x.mkey<y.mkey?-1:1)){
       let v=actVariant(a.mkey);
-      while(used.has(v)&&used.size<3) v=(v+1)%3;
+      while(used.has(v)&&used.size<4) v=(v+1)%4;   // r28: 4 huecos, todas distintas en el pase
       used.add(v); a.variante=v;
     }
     return trio;
@@ -2831,6 +2903,7 @@
       const acts=window.ACT_SHIPS && window.ACT_SHIPS.current();
       if(acts && acts.length){ placeDudaStrip(); strip.innerHTML=acts.map(actShipHTML).join(''); strip.hidden=false; marchStrip(); }
       else { strip.hidden=true; strip.innerHTML=''; }
+      syncDudaBand();                             // r28: reserva/libera la banda
       return;
     }
     // hay dudas: MANDAN — la nave de actividad se retira sin repintar (este
@@ -2858,6 +2931,7 @@
     }).join('');
     strip.hidden=false;
     marchStrip();                                 // r26: la formación de dudas también marcha a lo ancho
+    syncDudaBand();                               // r28: banda opaca reservada también para las dudas
     // si la duda expandida sigue viva, re-pinta el panel; si se respondió, ciérralo
     if(DUDA_OPEN!==null){
       const d=DUDAS.find(x=>x.id===DUDA_OPEN);
@@ -2931,6 +3005,12 @@
         ${a.focoOk?`<div class="af-encargo"><span>encargo</span>${esc(a.foco)}</div>`:''}
         ${(!a.tareaOk&&!a.focoOk)?'<div class="af-encargo af-nada">(sin foco publicado — actualizar bóveda en esa máquina)</div>':''}
         <div class="af-meta">${a.updated?('visto '+esc(fmtAgo(a.updated))):''}</div>
+        <div class="af-cli">
+          <span class="ps1">${esc(String(a.agente).toLowerCase())}@${esc(a.mkey)}$</span>
+          <input type="text" id="afCliIn" autocomplete="off" spellcheck="false"
+                 placeholder="escríbele a ${esc(a.agente)} — Enter envía a su buzón">
+        </div>
+        <div class="af-cli-msg" id="afCliMsg"></div>
         <div class="af-hint">✕, Escape o clic fuera para cerrar — la interfaz está en pausa</div>
       </div>`;
     f.hidden=false;
@@ -2938,6 +3018,33 @@
     document.documentElement.classList.add('ficha-open');
     if(window.ACT_SHIPS&&window.ACT_SHIPS.pauseTimer) window.ACT_SHIPS.pauseTimer();
     f.querySelector('.af-close').addEventListener('click',closeActFicha);
+    // r28: CLI de la ficha — escribe A ESTE agente por el MISMO canal real que
+    // el compositor ✎ (inboxSend → POST /api/bot-inbox con su misma auth por
+    // sesión Google del gate). Escribir NO cierra la ficha (la interfaz sigue
+    // en pausa): Escape cierra (listener global en captura), el resto escribe.
+    const cliIn=f.querySelector('#afCliIn'), cliMsg=f.querySelector('#afCliMsg');
+    if(cliIn){
+      cliIn.addEventListener('keydown',async e=>{
+        if(e.key==='Escape') return;                       // que suba y cierre la ficha
+        e.stopPropagation();                               // el resto de teclas: SOLO escribir
+        if(e.key!=='Enter') return;
+        const text=(cliIn.value||'').trim();
+        if(!text){ cliMsg.textContent='escribe un mensaje primero'; cliMsg.className='af-cli-msg err'; return; }
+        cliMsg.textContent='enviando a '+a.agente+'@'+a.maquina+'…'; cliMsg.className='af-cli-msg';
+        cliIn.disabled=true;
+        const res=await inboxSend(a.agente, a.maquina, text);
+        cliIn.disabled=false;
+        if(res.ok){
+          cliMsg.textContent='✉ encolado'+(res.id?' #'+res.id:'')+' para '+a.agente+'@'+a.maquina+(res.verified?'':' (sin verificar)');
+          cliMsg.className='af-cli-msg ok';
+          cliIn.value=''; cliIn.focus();
+          if(typeof cliPrint==='function') cliPrint('PROMPT(ficha) → '+a.agente+' · '+a.maquina+'  (encargo '+res.id+')');
+        } else {
+          cliMsg.textContent='✗ '+res.error; cliMsg.className='af-cli-msg err';
+        }
+      });
+      setTimeout(()=>cliIn.focus(),60);
+    }
   }
   function closeActFicha(){
     const f=document.getElementById('actFicha'); if(!f||f.hidden) return;
@@ -4696,8 +4803,8 @@
     function show(origen){
       if(DUDAS.length) return false;                      // dudas mandan: ciclo saltado
       if(!ACT_POOL.length) return false;                  // sin máquinas vivas
-      // r25: TRÍO — hasta 3 naves, una por MÁQUINA VIVA distinta (con 1-2
-      // vivas salen 1-2; jamás se rellena con muertas). Orden de candidatas
+      // r25/r28: PASE — hasta 4 naves, una por MÁQUINA VIVA distinta (con menos
+      // vivas salen las que haya; jamás se rellena con muertas). Orden de candidatas
       // por prioridad r23 (task limpio > focus limpio > resto, barajado
       // dentro de cada nivel) y ROTACIÓN entre ciclos: primero las máquinas
       // que NO salieron en el trío anterior — con >3 vivas van pasando todas
@@ -4716,7 +4823,7 @@
       for(const a of ordered){ if(vistos.has(a.mkey)) continue; vistos.add(a.mkey); porMaquina.push(a); }
       const nuevas=porMaquina.filter(a=>!lastSet.has(a.mkey));   // rotación: primero las que no salieron
       const resto =porMaquina.filter(a=> lastSet.has(a.mkey));
-      let picks=[...nuevas,...resto].slice(0,3);
+      let picks=[...nuevas,...resto].slice(0,4);   // r28: CUARTETO — hasta 4 equipos por pase
       // r26: GUARDA DURA final — por si cualquier cambio futuro colara una
       // máquina repetida, se dedupa aquí mismo antes de pintar.
       { const g=new Set(); picks=picks.filter(a=>{ if(g.has(a.mkey)) return false; g.add(a.mkey); return true; }); }
@@ -4876,11 +4983,11 @@
     '  /dudaAgente [N]        emula N dudas de agentes (1-8, def. 3) → naves 👾',
     '                         (alias: dudaAgente, duda · «/dudaAgente limpiar» las quita)',
     '                         (con naves suena la 🔊 marcha invader — toggle en ⚙ AVANZADO)',
-    '  /demoON | /demoOFF     naves de ACTIVIDAD (hasta 3, una por equipo en marcha,',
+    '  /demoON | /demoOFF     naves de ACTIVIDAD (hasta 4, una por equipo en marcha,',
     '                         cada máquina con su sprite/tinte): agente principal de una máquina',
     '                         viva + su foco, cada ~3 min hasta mover el ratón.',
     '                         /demoON además fuerza una aparición YA (persistido)',
-    '  /agenteTarea           fuerza YA el trío de naves con LO QUE ESTÁN HACIENDO',
+    '  /agenteTarea           fuerza YA el pase de naves (hasta 4) con LO QUE ESTÁN HACIENDO',
     '                         (tarea viva de la presencia; funciona aunque el modo',
     '                         demo esté OFF y no cambia su ajuste)',
     '',
@@ -4944,7 +5051,7 @@
         const shown=actividad.setOn(true,true);   // devuelve si el trío forzado salió
         cliPrint('modo ACTIVIDAD → ON (persistido) · próximas naves cada ~3 min (150–210 s)');
         cliPrint(shown
-          ? '  ⚡ trío forzado ('+(actividad.current()||[]).map(a=>a.agente+' · '+a.maquina).join(' / ')+') — FIJADO 📌: Escape lo quita, el ratón no'
+          ? '  ⚡ pase forzado ('+(actividad.current()||[]).map(a=>a.agente+' · '+a.maquina).join(' / ')+') — FIJADO 📌: Escape lo quita, el ratón no'
           : '  ahora mismo no sale: '+(DUDAS.length?'hay naves-duda visibles (mandan ellas)':'ninguna máquina viva en la presencia'));
         break;
       }

@@ -6,7 +6,7 @@
   <title>ADmiraNeXT | Status — Constelación de la flota</title>
   <meta name="description" content="Admira no tiene centro — es un universo que se expande. Estado en vivo de la flota AdmiraNeXT: cada ordenador es una estrella con su proyecto y su foco.">
   <meta name="admiranext-version" content="AdmiraNext v26.07.07.12">
-  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r22 (foco-limpio: el visor NUNCA pinta focos basura de la presencia — saneo en la ingesta (etiquetas XML/HTML fuera, espacios colapsados) + detección de prompts sintéticos (task-notification, system notification, system-reminder, JSON, marcado truncado); las máquinas con foco sucio no entran en la rotación de actividad si hay limpias y, si todas están sucias, la nave dice «(sin foco publicado — actualizar bóveda en esa máquina)»)">
+  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r23 (tarea-viva: LO QUE ESTÁN HACIENDO manda — la nave de actividad pinta de línea principal «ahora: <task>» (campo task de /api/presence, la tarea viva derivada de la actividad real; mismo saneo antibasura que el focus) y el encargo baja a línea secundaria discreta; rotación prioriza máquinas con task limpio > focus limpio > resto; comando /agenteTarea fuerza una aparición YA incluso con el modo demo OFF)">
   <meta name="admiranext-status-build" content="oraculo-triad-1">
   <!-- Orbitron: tipografía tecnológica para la versión del pie del riel (Carlos, 2026-07-11) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -193,6 +193,12 @@
     .duda-ship.act{--duda:#22e6ff;--duda-dim:rgba(34,230,255,.45);cursor:default}
     /* r22: máquina sin foco LIMPIO publicado — aviso honesto y discreto */
     .duda-ship.act .act-nofoco{color:var(--text-dim);font-style:italic}
+    /* r23: con TAREA viva de principal, el focus (encargo) baja a una línea
+       secundaria discreta de 1 renglón — entero en el tooltip de la nave */
+    .duda-ship.act .act-foco{
+      font-size:8px;line-height:1.4;color:var(--text-dim);letter-spacing:.03em;
+      max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+    }
     /* panel de duda expandida — misma familia visual que #card */
     #dudaPop{
       position:fixed;z-index:45;top:150px;left:50%;transform:translateX(-50%);
@@ -627,7 +633,7 @@
       </div>
       <button class="pf-urow" id="userRow" type="button" aria-expanded="false" aria-controls="userMenu" title="Sesión">
         <span class="pf-uava" id="userAva" aria-hidden="true">?</span>
-        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.12.r22</span></span>
+        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.12.r23</span></span>
         <span class="pf-ugear" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg></span>
         <span class="pf-uchev" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
       </button>
@@ -2284,11 +2290,16 @@
       // r22: foco SANEADO + flag focoOk — si el hook de esa máquina aún publica
       // prompts sintéticos como foco, la entrada queda marcada (la rotación la
       // evita si hay otras limpias y la nave nunca pinta el texto sucio).
+      // r23: TAREA VIVA — /api/presence trae `task` (lo que el agente está
+      // HACIENDO de verdad, derivado de su actividad; puede venir "" en
+      // máquinas sin actualizar). Mismo saneo/filtro que el focus: task sale
+      // de descripciones de herramientas y también puede traer restos.
       ACT_POOL=Object.values(best).map(p=>{
-        const f=focoLimpio(p.focus);
+        const f=focoLimpio(p.focus), t=focoLimpio(p.task);
         return {
           agente:String(p.persona), maquina:stripOwner(p.machine), mkey:norm(stripOwner(p.machine)),
-          foco:f.slice(0,160), focoOk:!!f, proyecto:String(p.project||''),
+          foco:f.slice(0,160), focoOk:!!f, tarea:t.slice(0,160), tareaOk:!!t,
+          proyecto:String(p.project||''),
         };
       });
     }
@@ -2441,7 +2452,7 @@
         const m=c.match(/v\.[\d.]+r\d+|v\.[\d.]+\.r\d+/);
         if(m) return m[0];
       }catch(e){}
-      return 'v.2026.07.12.r22';
+      return 'v.2026.07.12.r23';
     })();
     let focusLabel = FOCUS_MACHINE ? FOCUS_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
     let viewerLabel = VIEWER_MACHINE ? VIEWER_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
@@ -2576,13 +2587,32 @@
 
   // r21: nave de ACTIVIDAD — misma silueta invader pero SIN ❓, tinte cian
   // (.act) y marca ACTIVIDAD donde las emuladas dicen (emulada): nunca puede
-  // parecer una duda pendiente. Muestra AGENTE · MÁQUINA y debajo su focus.
+  // parecer una duda pendiente. Muestra AGENTE · MÁQUINA y debajo:
+  // r23: LO QUE ESTÁ HACIENDO manda — con task limpio, la línea principal es
+  // «ahora: <task>» y el focus («El Arquitecto me pide…») baja a una línea
+  // secundaria discreta de 1 renglón (entero en el tooltip). Sin task pero
+  // con focus limpio → el focus de principal, como hasta r22. Sin nada →
+  // «(sin foco publicado — actualizar bóveda en esa máquina)».
   function actShipHTML(a){
-    return `<button class="duda-ship act" type="button" title="Actividad de ${esc(a.agente)} en ${esc(a.maquina)} — se retira al mover el ratón (o con /demoOFF)">
+    let main, sub='';
+    if(a.tareaOk){
+      main='ahora: '+esc(a.tarea);
+      if(a.focoOk) sub=`<span class="act-foco">${esc(a.foco)}</span>`;
+    } else if(a.focoOk){
+      main=esc(a.foco);
+    } else {
+      main='<span class="act-nofoco">(sin foco publicado — actualizar bóveda en esa máquina)</span>';
+    }
+    const tip='Actividad de '+esc(a.agente)+' en '+esc(a.maquina)
+      +(a.tareaOk?' — ahora: '+esc(a.tarea):'')
+      +(a.focoOk?' — encargo: '+esc(a.foco):'')
+      +' · se retira al mover el ratón (o con /demoOFF)';
+    return `<button class="duda-ship act" type="button" title="${tip}">
       ${invaderSVG()}
       <span class="duda-who">${dudaDot(a.agente)}⚡ ${esc(a.agente)} · ${esc(a.maquina)}</span>
       <span class="duda-proj">ACTIVIDAD${a.proyecto?` · ${esc(a.proyecto)}`:''}</span>
-      <span class="duda-txt">${a.focoOk?esc(a.foco):'<span class="act-nofoco">(sin foco publicado — actualizar bóveda en esa máquina)</span>'}</span>
+      <span class="duda-txt">${main}</span>
+      ${sub}
     </button>`;
   }
 
@@ -4404,10 +4434,11 @@
     function show(){
       if(DUDAS.length) return false;                      // dudas mandan: ciclo saltado
       if(!ACT_POOL.length) return false;                  // sin máquinas vivas
-      // r22: las máquinas con foco BASURA no entran en la rotación si hay
-      // otras con foco limpio; si TODAS están sucias, la nave sale igual pero
-      // con «(sin foco publicado…)» — honesto, jamás el texto sucio.
-      let base=ACT_POOL.filter(a=>a.focoOk);
+      // r23: LO QUE ESTÁN HACIENDO manda — prioridad de rotación:
+      // máquinas con TAREA limpia > solo focus limpio > resto (que sale con
+      // «(sin foco publicado…)»; jamás texto sucio, r22).
+      let base=ACT_POOL.filter(a=>a.tareaOk);
+      if(!base.length) base=ACT_POOL.filter(a=>a.focoOk);
       if(!base.length) base=ACT_POOL;
       let pool=base.filter(a=>a.mkey!==lastMkey);         // sin repetir máquina seguida
       if(!pool.length) pool=base;                         // (salvo que solo haya una)
@@ -4441,14 +4472,17 @@
         if(!on && current){ current=null; anchor=null; repaint(); }
         return (on && force) ? show() : true;             // /demoON fuerza una YA
       },
+      // r23: /agenteTarea — fuerza UNA aparición YA, incluso con el modo demo
+      // en OFF (es bajo petición explícita; no toca la persistencia).
+      force(){ return show(); },
       // r22: SOLO PRUEBAS/DEPURACIÓN — sustituye el pool con entradas crudas
-      // {persona,machine,focus,project} pasándolas por el MISMO saneo de la
-      // ingesta real (focoLimpio). El siguiente load() lo repone con lo vivo.
+      // {persona,machine,focus,task,project} pasándolas por el MISMO saneo de
+      // la ingesta real (focoLimpio). El siguiente load() lo repone con lo vivo.
       debugPool(list){
         ACT_POOL=(list||[]).map(p=>{
-          const f=focoLimpio(p.focus);
+          const f=focoLimpio(p.focus), t=focoLimpio(p.task);
           return {agente:String(p.persona||'?'), maquina:String(p.machine||'?'), mkey:norm(String(p.machine||'?')),
-                  foco:f.slice(0,160), focoOk:!!f, proyecto:String(p.project||'')};
+                  foco:f.slice(0,160), focoOk:!!f, tarea:t.slice(0,160), tareaOk:!!t, proyecto:String(p.project||'')};
         });
         return ACT_POOL;
       },
@@ -4479,6 +4513,9 @@
     '  /demoON | /demoOFF     naves de ACTIVIDAD (cian): agente principal de una máquina',
     '                         viva + su foco, cada ~3 min hasta mover el ratón.',
     '                         /demoON además fuerza una aparición YA (persistido)',
+    '  /agenteTarea           fuerza YA una nave con LO QUE ESTÁ HACIENDO un agente',
+    '                         (tarea viva de la presencia; funciona aunque el modo',
+    '                         demo esté OFF y no cambia su ajuste)',
     '',
     '  · FUNCIONES AVANZADAS ·',
     '  draw                   DECAEDRO 3D girando (default · reposo del modo draw)',
@@ -4524,6 +4561,14 @@
         break;
       }
       case 'clear': cliOut.innerHTML=''; break;
+      case '/agentetarea': case 'agentetarea': {   // r23: nave con la TAREA VIVA, bajo petición
+        const shown=actividad.force();             // no toca el ajuste ON/OFF del modo demo
+        cliPrint(shown
+          ? '⚡ actividad forzada: '+(actividad.current()?actividad.current().agente+' · '+actividad.current().maquina+(actividad.current().tareaOk?' — ahora: '+actividad.current().tarea:' (sin tarea viva: enseña su encargo)'):'')
+          : 'ahora mismo no sale: '+(DUDAS.length?'hay naves-duda visibles (mandan ellas)':'ninguna máquina viva en la presencia'));
+        cliPrint('  se retira al mover el ratón · el modo demo sigue '+(actividad.isOn()?'ON':'OFF'));
+        break;
+      }
       case '/demoon': case 'demoon': {   // r21: modo actividad ON + aparición forzada YA
         const shown=actividad.setOn(true,true);   // devuelve si la nave forzada salió
         cliPrint('modo ACTIVIDAD → ON (persistido) · próximas naves cada ~3 min (150–210 s)');

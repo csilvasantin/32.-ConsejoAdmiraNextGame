@@ -6,7 +6,7 @@
   <title>ADmiraNeXT | Status — Constelación de la flota</title>
   <meta name="description" content="Admira no tiene centro — es un universo que se expande. Estado en vivo de la flota AdmiraNeXT: cada ordenador es una estrella con su proyecto y su foco.">
   <meta name="admiranext-version" content="AdmiraNext v26.07.07.12">
-  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r15 (fix verja: auth-gate con ruta absoluta — /status quedaba público y sin sesión compartida con la home)">
+  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r16 (casa única admira.live: og:url y textos apuntan aquí; espejo admiranext.com/status retirado)">
   <meta name="admiranext-status-build" content="oraculo-triad-1">
   <!-- Orbitron: tipografía tecnológica para la versión del pie del riel (Carlos, 2026-07-11) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -14,7 +14,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Orbitron:wght@400;500;700&display=swap" rel="stylesheet">
 
   <!-- VERJA DE ACCESO (auth-gate de admira.live, misma whitelist de usuarios).
-       Detrás de un FLAG mientras Carlos no autorice el origen www.admiranext.com
+       Casa canónica: www.admira.live/status (el espejo admiranext.com/status se retira, 12-jul-2026)
        en la consola de Google (Authorized JavaScript origins del OAuth client):
        verja ACTIVA por defecto (r7, orden de Carlos): solo usuarios de la lista
        de admira.live. ?gate=off es un escape SOLO para esa carga (no persiste),
@@ -36,7 +36,7 @@
     setTimeout(function(){
       if(!document.documentElement.classList.contains('gate-locked')) return;
       var el=document.getElementById('admira-err');
-      if(el && !el.textContent) el.textContent='✖ SI EL LOGIN NO ABRE: ORIGEN www.admiranext.com PENDIENTE DE AUTORIZAR EN GOOGLE CLOUD';
+      if(el && !el.textContent) el.textContent='✖ SI EL LOGIN NO ABRE: ORIGEN www.admira.live PENDIENTE DE AUTORIZAR EN GOOGLE CLOUD';
     }, 10000);
   })();
   </script>
@@ -46,7 +46,7 @@
   <link rel="apple-touch-icon" sizes="180x180" href="apple-touch-icon.png" />
   <meta name="apple-mobile-web-app-title" content="ADmiraNeXT" />
   <meta property="og:type" content="website" />
-  <meta property="og:url" content="https://www.admiranext.com/status" />
+  <meta property="og:url" content="https://www.admira.live/status" />
   <meta property="og:title" content="ADmiraNeXT | Status" />
   <meta property="og:description" content="Admira no tiene centro — es un universo que se expande." />
   <style>
@@ -692,7 +692,7 @@
       <div class="pc-hint">📮 <b>Buzón</b>: encargo en su bot-inbox (asíncrono, lo lee en su máquina). ⚡ <b>Directo</b>: inyecta el prompt en la sesión CLI viva del agente (inmediato; solo si corre en tmux «claude»). Con sesión de Google del perímetro, envío verificado.</div>
     </div>
     <div class="cli-wrap">
-      <span class="ps1">admiranext:/status$</span>
+      <span class="ps1">admira.live:/status$</span>
       <input type="text" id="cliInput" autocomplete="off" spellcheck="false"
              aria-label="Entrada de consola">
     </div>

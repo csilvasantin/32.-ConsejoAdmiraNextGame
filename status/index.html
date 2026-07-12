@@ -6,7 +6,7 @@
   <title>ADmiraNeXT | Status — Constelación de la flota</title>
   <meta name="description" content="Admira no tiene centro — es un universo que se expande. Estado en vivo de la flota AdmiraNeXT: cada ordenador es una estrella con su proyecto y su foco.">
   <meta name="admiranext-version" content="AdmiraNext v26.07.07.12">
-  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r28 (ficha-cli + cuarteto + banda: 1) CLI en la ficha fullscreen — input estilo consola EXPERTO con prompt agente@maquina$ que envía a ESE agente por el MISMO canal del compositor ✎ (inboxSend → POST /api/bot-inbox, auth por sesión Google del gate; feedback ✉ encolado #id o error honesto; Escape cierra, escribir no); 2) pases de 4 aliens (4º sprite original NAVE NODRIZA 16×7 con tinte ámbar --amber, asignación estable extendida a 4 variantes todas distintas por pase); 3) la constelación NO pasa por detrás de los aliens — banda opaca del color de la página con borde inferior y el escenario refluye por debajo (--duda-inset vivo, mismo mecanismo que el cajón EXPERTO, re-encuadre del lienzo tras la transición corta)">
+  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r29 (banda-estrellas + caja adaptable — encargo llegado por el propio CLI de la ficha, bot-inbox #676: 1) la banda de naves deja de ser mate — campo de estrellas SUTIL propio (puntitos #bfe9f2 en 3 tamaños, tiles de radial-gradients a distinto período + twinkle muy suave compositable, pausado con la ficha y fuera con reduced-motion) manteniendo la banda OPACA (los nodos reales siguen sin verse) y naves/textos por encima; 2) el CLI de la ficha pasa a textarea de altura automática: 1 línea de base, crece hasta ~6 y luego scroll interno, Enter envía y Shift+Enter salta de línea, el feedback no se descoloca)">
   <meta name="admiranext-status-build" content="oraculo-triad-1">
   <!-- Orbitron: tipografía tecnológica para la versión del pie del riel (Carlos, 2026-07-11) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -175,6 +175,35 @@
       border-bottom:1px solid rgba(34,230,255,.14);
       box-shadow:0 6px 18px rgba(1,4,10,.55);
     }
+    /* r29: ESTRELLAS SUTILES en la banda — mismo cielo que la constelación
+       (puntitos #bfe9f2 tenues en 3 tamaños, tiles de gradientes radiales a
+       distinto período para que no se note patrón). La banda SIGUE opaca:
+       las estrellas van pintadas ENCIMA de su fondo, los nodos reales de la
+       constelación siguen sin verse a través. Coste cero-JS. */
+    #dudaStrip::before{
+      content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
+      background-image:
+        radial-gradient(1px 1px at 13px 17px,  rgba(191,233,242,.34) 50%, transparent 51%),
+        radial-gradient(1.4px 1.4px at 47px 5px, rgba(191,233,242,.18) 50%, transparent 51%),
+        radial-gradient(1px 1px at 83px 29px,  rgba(191,233,242,.26) 50%, transparent 51%),
+        radial-gradient(1.8px 1.8px at 29px 47px, rgba(191,233,242,.12) 50%, transparent 51%),
+        radial-gradient(1px 1px at 67px 59px,  rgba(191,233,242,.22) 50%, transparent 51%),
+        radial-gradient(1.2px 1.2px at 101px 39px, rgba(191,233,242,.16) 50%, transparent 51%);
+      background-size:96px 67px, 129px 73px, 113px 83px, 147px 97px, 105px 89px, 139px 107px;
+    }
+    /* twinkle MUY suave: unas pocas estrellas extra respirando (solo opacidad,
+       compositable); en pausa con la ficha abierta y fuera con reduced-motion */
+    #dudaStrip::after{
+      content:"";position:absolute;inset:0;pointer-events:none;z-index:0;
+      background-image:
+        radial-gradient(1.4px 1.4px at 59px 23px, rgba(191,233,242,.30) 50%, transparent 51%),
+        radial-gradient(1px 1px at 17px 53px,  rgba(191,233,242,.24) 50%, transparent 51%);
+      background-size:171px 91px, 203px 101px;
+      animation:bandTwinkle 6.5s ease-in-out infinite alternate;
+    }
+    @keyframes bandTwinkle{from{opacity:.25}to{opacity:1}}
+    .ficha-open #dudaStrip::after{animation-play-state:paused !important}
+    @media (prefers-reduced-motion: reduce){ #dudaStrip::after{animation:none} }
     #dudaStrip[hidden]{display:none}
     /* r28: reflow del escenario bajo la banda — mismo mecanismo que el cajón
        EXPERTO (inset vivo medido en JS). Transición corta, sin saltos. */
@@ -183,6 +212,7 @@
       pointer-events:auto;display:flex;flex-direction:column;align-items:center;gap:4px;
       width:200px;max-width:44vw;background:none;border:none;padding:0;cursor:pointer;
       font-family:inherit;color:var(--text);
+      position:relative;z-index:1;   /* r29: naves y textos SIEMPRE sobre las estrellas de la banda */
     }
     /* r26: MARCHA A TODO LO ANCHO, como en el juego — la FORMACIÓN entera
        (el strip) se desplaza en bloque hasta el borde derecho y vuelve al
@@ -287,12 +317,20 @@
     /* r28: CLI de la ficha — escribir AL AGENTE de la ficha, mismo look que la
        consola EXPERTO (prompt agente@máquina$ + input transparente) */
     #actFicha .af-cli{
-      display:flex;align-items:center;gap:9px;margin:22px auto 0;max-width:640px;
+      /* r29: la caja CRECE con el texto → alineación arriba (el prompt queda
+         pegado a la primera línea, como en una consola de verdad) */
+      display:flex;align-items:flex-start;gap:9px;margin:22px auto 0;max-width:640px;
       border:1px solid var(--duda-dim);border-radius:9px;background:rgba(1,4,10,.7);padding:0 12px;text-align:left;
     }
-    #actFicha .af-cli .ps1{color:var(--duda);font-size:12px;flex:0 0 auto;text-shadow:0 0 8px var(--duda-dim);white-space:nowrap;max-width:45%;overflow:hidden;text-overflow:ellipsis}
-    #actFicha .af-cli input{flex:1;min-width:0;background:transparent;border:0;outline:none;color:var(--text);font-family:inherit;font-size:12px;padding:11px 0;letter-spacing:.03em}
-    #actFicha .af-cli input::placeholder{color:var(--text-dim)}
+    #actFicha .af-cli .ps1{color:var(--duda);font-size:12px;flex:0 0 auto;text-shadow:0 0 8px var(--duda-dim);white-space:nowrap;max-width:45%;overflow:hidden;text-overflow:ellipsis;padding-top:12px}
+    /* r29: textarea de altura automática — 1 línea de base, crece hasta ~6
+       líneas y a partir de ahí scroll interno. Enter envía · Shift+Enter salta */
+    #actFicha .af-cli textarea{
+      flex:1;min-width:0;background:transparent;border:0;outline:none;color:var(--text);
+      font-family:inherit;font-size:12px;padding:11px 0;letter-spacing:.03em;
+      resize:none;line-height:1.5;height:40px;max-height:130px;overflow-y:auto;display:block;
+    }
+    #actFicha .af-cli textarea::placeholder{color:var(--text-dim)}
     #actFicha .af-cli-msg{margin-top:8px;font-size:10.5px;letter-spacing:.06em;color:var(--text-dim);min-height:14px}
     #actFicha .af-cli-msg.ok{color:var(--duda)}
     #actFicha .af-cli-msg.err{color:var(--amber)}
@@ -739,7 +777,7 @@
       </div>
       <button class="pf-urow" id="userRow" type="button" aria-expanded="false" aria-controls="userMenu" title="Sesión">
         <span class="pf-uava" id="userAva" aria-hidden="true">?</span>
-        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.12.r28</span></span>
+        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.12.r29</span></span>
         <span class="pf-ugear" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg></span>
         <span class="pf-uchev" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
       </button>
@@ -2587,7 +2625,7 @@
         const m=c.match(/v\.[\d.]+r\d+|v\.[\d.]+\.r\d+/);
         if(m) return m[0];
       }catch(e){}
-      return 'v.2026.07.12.r28';
+      return 'v.2026.07.12.r29';
     })();
     let focusLabel = FOCUS_MACHINE ? FOCUS_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
     let viewerLabel = VIEWER_MACHINE ? VIEWER_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
@@ -3007,8 +3045,8 @@
         <div class="af-meta">${a.updated?('visto '+esc(fmtAgo(a.updated))):''}</div>
         <div class="af-cli">
           <span class="ps1">${esc(String(a.agente).toLowerCase())}@${esc(a.mkey)}$</span>
-          <input type="text" id="afCliIn" autocomplete="off" spellcheck="false"
-                 placeholder="escríbele a ${esc(a.agente)} — Enter envía a su buzón">
+          <textarea id="afCliIn" rows="1" autocomplete="off" spellcheck="false"
+                 placeholder="escríbele a ${esc(a.agente)} — Enter envía a su buzón · Shift+Enter salta de línea"></textarea>
         </div>
         <div class="af-cli-msg" id="afCliMsg"></div>
         <div class="af-hint">✕, Escape o clic fuera para cerrar — la interfaz está en pausa</div>
@@ -3024,10 +3062,17 @@
     // en pausa): Escape cierra (listener global en captura), el resto escribe.
     const cliIn=f.querySelector('#afCliIn'), cliMsg=f.querySelector('#afCliMsg');
     if(cliIn){
+      // r29: ALTURA AUTOMÁTICA — 1 línea de base; con texto largo (parrafones
+      // como el propio encargo #676) crece hasta ~6 líneas (max-height en CSS)
+      // y después scroll interno. El feedback vive en su div y no se descoloca.
+      const autogrow=()=>{ cliIn.style.height='auto'; cliIn.style.height=Math.min(cliIn.scrollHeight,130)+'px'; };
+      cliIn.addEventListener('input',autogrow);
       cliIn.addEventListener('keydown',async e=>{
         if(e.key==='Escape') return;                       // que suba y cierre la ficha
         e.stopPropagation();                               // el resto de teclas: SOLO escribir
         if(e.key!=='Enter') return;
+        if(e.shiftKey) return;                             // r29: Shift+Enter = salto de línea
+        e.preventDefault();                                // Enter solo = ENVIAR (sin salto fantasma)
         const text=(cliIn.value||'').trim();
         if(!text){ cliMsg.textContent='escribe un mensaje primero'; cliMsg.className='af-cli-msg err'; return; }
         cliMsg.textContent='enviando a '+a.agente+'@'+a.maquina+'…'; cliMsg.className='af-cli-msg';
@@ -3037,7 +3082,7 @@
         if(res.ok){
           cliMsg.textContent='✉ encolado'+(res.id?' #'+res.id:'')+' para '+a.agente+'@'+a.maquina+(res.verified?'':' (sin verificar)');
           cliMsg.className='af-cli-msg ok';
-          cliIn.value=''; cliIn.focus();
+          cliIn.value=''; autogrow(); cliIn.focus();       // r29: la caja vuelve a 1 línea
           if(typeof cliPrint==='function') cliPrint('PROMPT(ficha) → '+a.agente+' · '+a.maquina+'  (encargo '+res.id+')');
         } else {
           cliMsg.textContent='✗ '+res.error; cliMsg.className='af-cli-msg err';

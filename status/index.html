@@ -6,7 +6,7 @@
   <title>ADmiraNeXT | Status — Constelación de la flota</title>
   <meta name="description" content="Admira no tiene centro — es un universo que se expande. Estado en vivo de la flota AdmiraNeXT: cada ordenador es una estrella con su proyecto y su foco.">
   <meta name="admiranext-version" content="AdmiraNext v26.07.07.12">
-  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r21 (naves-actividad: modo attract — cada 150-210 s aparece UNA nave alien CIAN con lo que está haciendo el agente principal de una máquina viva (focus de /api/presence), hasta mover el ratón (>10 px), tecla o clic; /demoON fuerza una YA y /demoOFF lo apaga (persistido, checkbox en AVANZADO); con naves-duda visibles el ciclo se salta y la marcha invader no suena por estas)">
+  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r22 (foco-limpio: el visor NUNCA pinta focos basura de la presencia — saneo en la ingesta (etiquetas XML/HTML fuera, espacios colapsados) + detección de prompts sintéticos (task-notification, system notification, system-reminder, JSON, marcado truncado); las máquinas con foco sucio no entran en la rotación de actividad si hay limpias y, si todas están sucias, la nave dice «(sin foco publicado — actualizar bóveda en esa máquina)»)">
   <meta name="admiranext-status-build" content="oraculo-triad-1">
   <!-- Orbitron: tipografía tecnológica para la versión del pie del riel (Carlos, 2026-07-11) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -191,6 +191,8 @@
        sin ❓: enseña qué hace el agente principal de una máquina viva y JAMÁS
        puede confundirse con una duda pendiente. Se retira al mover el ratón. */
     .duda-ship.act{--duda:#22e6ff;--duda-dim:rgba(34,230,255,.45);cursor:default}
+    /* r22: máquina sin foco LIMPIO publicado — aviso honesto y discreto */
+    .duda-ship.act .act-nofoco{color:var(--text-dim);font-style:italic}
     /* panel de duda expandida — misma familia visual que #card */
     #dudaPop{
       position:fixed;z-index:45;top:150px;left:50%;transform:translateX(-50%);
@@ -625,7 +627,7 @@
       </div>
       <button class="pf-urow" id="userRow" type="button" aria-expanded="false" aria-controls="userMenu" title="Sesión">
         <span class="pf-uava" id="userAva" aria-hidden="true">?</span>
-        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.12.r21</span></span>
+        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.12.r22</span></span>
         <span class="pf-ugear" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg></span>
         <span class="pf-uchev" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
       </button>
@@ -2173,6 +2175,31 @@
   cv.addEventListener('touchend',()=>{cam.drag=false;});
 
   // ---------- data ----------
+  /* r22: SANEO DE FOCOS — el hook de presencia de alguna máquina puede publicar
+     como foco un prompt sintético («El Arquitecto me pide: <task-notification>…»,
+     JSON, marcado truncado) hasta que actualice su bóveda (fix 84ddca6 del
+     vault). El visor NO enseña morralla JAMÁS: se sanea en la INGESTA y todo
+     lo que se pinta después (naves de actividad, fichas, etiquetas) llega limpio. */
+  function sanearFoco(s){
+    return String(s||'')
+      .replace(/<[^<>]*>?/g,' ')          // etiquetas XML/HTML, también truncadas al final (<task-…)
+      .replace(/\s+/g,' ').trim();
+  }
+  function focoBasura(s){
+    const raw=String(s||'');
+    // señales de prompt sintético/sistema — se buscan en el RAW porque las
+    // etiquetas que las delatan desaparecerían al sanear
+    if(/task-notification|system[\s_-]*notification|system-reminder/i.test(raw)) return true;
+    const clean=sanearFoco(raw);
+    if(!clean) return true;                                        // vacío o puro marcado
+    if(clean.startsWith('{')||clean.startsWith('[')) return true;  // blob JSON
+    if(clean.replace(/[^0-9A-Za-zÁÉÍÓÚÑáéíóúñ]/g,'').length<4) return true; // restos truncados sin texto real
+    return false;
+  }
+  // foco listo para PINTAR: saneado, o '' si es basura (quien pinta decide qué
+  // mostrar en su lugar — nunca el texto sucio).
+  function focoLimpio(s){ return focoBasura(s) ? '' : sanearFoco(s); }
+
   async function jget(url){
     const r=await fetch(url,{cache:'no-store'});
     if(!r.ok) throw new Error(url+' '+r.status);
@@ -2254,10 +2281,16 @@
         const k=norm(stripOwner(p.machine));
         if(!best[k] || (p.updated||0)>(best[k].updated||0)) best[k]=p;
       }
-      ACT_POOL=Object.values(best).map(p=>({
-        agente:String(p.persona), maquina:stripOwner(p.machine), mkey:norm(stripOwner(p.machine)),
-        foco:String(p.focus||'').slice(0,160), proyecto:String(p.project||''),
-      }));
+      // r22: foco SANEADO + flag focoOk — si el hook de esa máquina aún publica
+      // prompts sintéticos como foco, la entrada queda marcada (la rotación la
+      // evita si hay otras limpias y la nave nunca pinta el texto sucio).
+      ACT_POOL=Object.values(best).map(p=>{
+        const f=focoLimpio(p.focus);
+        return {
+          agente:String(p.persona), maquina:stripOwner(p.machine), mkey:norm(stripOwner(p.machine)),
+          foco:f.slice(0,160), focoOk:!!f, proyecto:String(p.project||''),
+        };
+      });
     }
     // Si el feed falló en este ciclo se reutiliza su último resultado bueno
     // (no se borran naves por un fallo transitorio): la franja mantiene su
@@ -2316,14 +2349,17 @@
         if(!e){ e={machine:pclean,personas:[],updated:0,online:false,foco:'',mode:'',platform:'',decisions:0,tokens:0,reqs:0,cpu:0}; byMachine[key]=e; }
         const fresh=isFresh(p.updated);
         // since (arranque de sesión, EXACTO del feed) y cpu (de la máquina) por agente.
-        e.personas.push({persona:p.persona,runtime:p.runtime,updated:p.updated,fresh,focus:p.focus||'',mode:p.mode||'',tokens:+p.tokens||0,reqs:+p.reqs||0,project:p.project||'',since:+p.since||0,cpu:+p.cpu||0});
+        // r22: focus SANEADO en la ingesta ('' si es basura) — nada sucio río abajo
+        e.personas.push({persona:p.persona,runtime:p.runtime,updated:p.updated,fresh,focus:focoLimpio(p.focus),mode:p.mode||'',tokens:+p.tokens||0,reqs:+p.reqs||0,project:p.project||'',since:+p.since||0,cpu:+p.cpu||0});
         if((p.updated||0) > e.updated) e.updated=p.updated;
         e.decisions = (e.decisions||0) + (+p.decisions||0); // suma de decisiones de sus agentes (proxy de volumen)
         e.tokens = (e.tokens||0) + (+p.tokens||0);           // tokens consumidos por sus agentes (real, si el feed lo trae)
         e.reqs   = (e.reqs||0)   + (+p.reqs||0);
         if(fresh && +p.cpu>0) e.cpu = Math.max(e.cpu||0, +p.cpu||0);  // CPU del EQUIPO (misma para sus agentes)
         if(fresh) e.online=true;
-        if(p.focus && (!e._focoAt || (p.updated||0)>e._focoAt)){ e.foco=p.focus.slice(0,160); e._focoAt=p.updated||0; }
+        // r22: solo un foco LIMPIO puede ganar la etiqueta de la máquina
+        const pfoco=focoLimpio(p.focus);
+        if(pfoco && (!e._focoAt || (p.updated||0)>e._focoAt)){ e.foco=pfoco.slice(0,160); e._focoAt=p.updated||0; }
         if(fresh && p.mode) e.mode=p.mode;
         // proyecto REPORTADO en vivo por el latido (p.project): el más reciente gana
         if(p.project && (!e._projAt || (p.updated||0)>e._projAt)){ e.repProject=p.project; e._projAt=p.updated||0; }
@@ -2405,7 +2441,7 @@
         const m=c.match(/v\.[\d.]+r\d+|v\.[\d.]+\.r\d+/);
         if(m) return m[0];
       }catch(e){}
-      return 'v.2026.07.12.r21';
+      return 'v.2026.07.12.r22';
     })();
     let focusLabel = FOCUS_MACHINE ? FOCUS_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
     let viewerLabel = VIEWER_MACHINE ? VIEWER_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
@@ -2546,7 +2582,7 @@
       ${invaderSVG()}
       <span class="duda-who">${dudaDot(a.agente)}⚡ ${esc(a.agente)} · ${esc(a.maquina)}</span>
       <span class="duda-proj">ACTIVIDAD${a.proyecto?` · ${esc(a.proyecto)}`:''}</span>
-      <span class="duda-txt">${esc(a.foco||'sin foco reportado')}</span>
+      <span class="duda-txt">${a.focoOk?esc(a.foco):'<span class="act-nofoco">(sin foco publicado — actualizar bóveda en esa máquina)</span>'}</span>
     </button>`;
   }
 
@@ -2776,7 +2812,9 @@
       e.tokens=(e.tokens||0)+(+p.tokens||0);
       e.reqs=(e.reqs||0)+(+p.reqs||0);
       if(fresh) e.online=true;
-      if(p.focus && (!e._focoAt || (p.updated||0)>e._focoAt)){ e.foco=p.focus.slice(0,160); e._focoAt=p.updated||0; }
+      // r22: solo un foco LIMPIO puede ganar la etiqueta del agente
+      const pfoco=focoLimpio(p.focus);
+      if(pfoco && (!e._focoAt || (p.updated||0)>e._focoAt)){ e.foco=pfoco.slice(0,160); e._focoAt=p.updated||0; }
       if(fresh && p.mode) e.mode=p.mode;
       if(p.project && (!e._projAt || (p.updated||0)>e._projAt)){ e.repProject=p.project; e._projAt=p.updated||0; }
       if(+p.since>0) e.sinceFeed = e.sinceFeed ? Math.min(e.sinceFeed, +p.since) : +p.since;  // arranque más antiguo
@@ -4366,8 +4404,13 @@
     function show(){
       if(DUDAS.length) return false;                      // dudas mandan: ciclo saltado
       if(!ACT_POOL.length) return false;                  // sin máquinas vivas
-      let pool=ACT_POOL.filter(a=>a.mkey!==lastMkey);     // sin repetir máquina seguida
-      if(!pool.length) pool=ACT_POOL;                     // (salvo que solo haya una)
+      // r22: las máquinas con foco BASURA no entran en la rotación si hay
+      // otras con foco limpio; si TODAS están sucias, la nave sale igual pero
+      // con «(sin foco publicado…)» — honesto, jamás el texto sucio.
+      let base=ACT_POOL.filter(a=>a.focoOk);
+      if(!base.length) base=ACT_POOL;
+      let pool=base.filter(a=>a.mkey!==lastMkey);         // sin repetir máquina seguida
+      if(!pool.length) pool=base;                         // (salvo que solo haya una)
       current=pool[Math.floor(Math.random()*pool.length)];
       lastMkey=current.mkey; shownAt=Date.now(); anchor=null;
       repaint(); return true;
@@ -4397,6 +4440,17 @@
         const cb=document.getElementById('advActShips'); if(cb) cb.checked=on;
         if(!on && current){ current=null; anchor=null; repaint(); }
         return (on && force) ? show() : true;             // /demoON fuerza una YA
+      },
+      // r22: SOLO PRUEBAS/DEPURACIÓN — sustituye el pool con entradas crudas
+      // {persona,machine,focus,project} pasándolas por el MISMO saneo de la
+      // ingesta real (focoLimpio). El siguiente load() lo repone con lo vivo.
+      debugPool(list){
+        ACT_POOL=(list||[]).map(p=>{
+          const f=focoLimpio(p.focus);
+          return {agente:String(p.persona||'?'), maquina:String(p.machine||'?'), mkey:norm(String(p.machine||'?')),
+                  foco:f.slice(0,160), focoOk:!!f, proyecto:String(p.project||'')};
+        });
+        return ACT_POOL;
       },
     };
   })();

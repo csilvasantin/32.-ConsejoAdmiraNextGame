@@ -6,7 +6,7 @@
   <title>ADmiraNeXT | Status — Constelación de la flota</title>
   <meta name="description" content="Admira no tiene centro — es un universo que se expande. Estado en vivo de la flota AdmiraNeXT: cada ordenador es una estrella con su proyecto y su foco.">
   <meta name="admiranext-version" content="AdmiraNext v26.07.07.12">
-  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r20 (solo-dudas-reales: las naves-duda salen SOLO de /api/dudas (AskUserQuestion real de la flota) o del 👾 emulador (botón AVANZADO / comando /dudaAgente) — eliminadas la fuente heurística ❓ de /api/messages y el parámetro ?demo-dudas=1)">
+  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r20 (solo-dudas-reales: las naves-duda salen SOLO de /api/dudas (AskUserQuestion real de la flota) o del 👾 emulador (botón AVANZADO / comando /dudaAgente) — eliminadas la fuente heurística ❓ de /api/messages y el parámetro ?demo-dudas=1; + 🔊 marcha invader sintetizada con WebAudio mientras haya naves-duda, acelerando con el número de dudas, toggle en AVANZADO)">
   <meta name="admiranext-status-build" content="oraculo-triad-1">
   <!-- Orbitron: tipografía tecnológica para la versión del pie del riel (Carlos, 2026-07-11) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -683,7 +683,11 @@
     <div class="pf-field">
       <label>Ambiente</label>
       <label class="pf-check"><input type="checkbox" id="advHeartAudio"> Latido ambiente (sonar)</label>
-      <div class="hint" style="font-size:8.5px;color:var(--text-dim);letter-spacing:.05em;margin-top:6px;line-height:1.5">Thump-thump grave que sigue el BPM medio de la flota. Requiere un clic (política de audio del navegador).</div>
+      <!-- r20: marcha del invader — suena EN BUCLE mientras haya naves-duda
+           (reales o emuladas) y se acelera con el número de dudas. ON por
+           defecto (persistido); arranca tras el primer clic (autoplay). -->
+      <label class="pf-check"><input type="checkbox" id="advInvaderAudio" checked> 🔊 Marcha invader (dudas)</label>
+      <div class="hint" style="font-size:8.5px;color:var(--text-dim);letter-spacing:.05em;margin-top:6px;line-height:1.5">Thump-thump grave que sigue el BPM medio de la flota. La marcha invader (4 notas graves, sintetizada) suena mientras haya naves-duda y se acelera con más dudas. Ambos requieren un clic en la página (política de audio del navegador).</div>
     </div>
     <!-- EMULADOR DE DUDAS (r19): inyección CLIENT-SIDE de dudas aleatorias para
          previsualizar las naves 👾 de /dudaAgente sin tocar el worker. Desde r20
@@ -2510,6 +2514,9 @@
 
   function renderDudas(dudas){
     DUDAS=dudas||[];
+    // r20: 🔊 marcha invader — suena en bucle mientras haya naves (y calla a 0);
+    // el módulo vive junto al resto del audio (sección AUDIO AMBIENTE).
+    if(window.INVADER_MARCH) window.INVADER_MARCH.setShips(DUDAS.length);
     const strip=document.getElementById('dudaStrip');
     const badge=document.getElementById('dudaBadge');
     const count=document.getElementById('dudaCount');
@@ -4216,6 +4223,85 @@
     else heartAudio.disable();
   });
 
+  // --- 🔊 MARCHA INVADER (r20): «coge el audio de ese vídeo [Space Invaders
+  // 1978, t=23s] y aplícalo siempre que aparezca un alien» (Carlos). NO se
+  // descarga nada (ToS de YouTube + copyright Taito): se SINTETIZA con
+  // WebAudio, como el sonar de arriba — la marcha clásica son 4 notas graves
+  // descendentes en bucle (≈E2→D2→C2→B1, onda cuadrada percusiva) que se
+  // ACELERAN; en el arcade al quedar menos invaders, aquí con MÁS dudas.
+  // Suena mientras haya ≥1 nave-duda (real de /api/dudas o emulada del
+  // /dudaAgente) y para en seco al llegar a 0. ON por defecto, persistido;
+  // autoplay: se ARMA con el primer gesto del usuario (clic/tecla).
+  const invaderMarch=(()=>{
+    const LS_KEY='admiranext-status-invader-march';
+    const NOTES=[82.41,73.42,65.41,61.74];  // E2 · D2 · C2 · B1 (Hz)
+    const BASE_STEP=0.55;                    // s por nota con 1 duda (tempo base)
+    let ac=null, timer=null, nextT=0, idx=0, ships=0, armed=false;
+    let on=(()=>{ try{ return localStorage.getItem(LS_KEY)!=='0'; }catch(e){ return true; } })();
+    function ctx(){
+      if(!ac){ try{ ac=new (window.AudioContext||window.webkitAudioContext)(); }catch(e){ return null; } }
+      if(ac.state==='suspended') ac.resume();
+      return ac;
+    }
+    function note(at,hz,gain,dur){
+      // onda cuadrada grave + lowpass, envolvente corta percusiva (marcha sorda)
+      const o=ac.createOscillator(), g=ac.createGain(), f=ac.createBiquadFilter();
+      f.type='lowpass'; f.frequency.value=320;
+      o.type='square'; o.frequency.setValueAtTime(hz,at);
+      g.gain.setValueAtTime(0.0001,at);
+      g.gain.exponentialRampToValueAtTime(gain,at+0.012);
+      g.gain.exponentialRampToValueAtTime(0.0001,at+dur);
+      o.connect(f); f.connect(g); g.connect(ac.destination);
+      o.start(at); o.stop(at+dur+0.05);
+    }
+    function step(){
+      // aceleración sutil: cada duda extra acorta el intervalo un 15%
+      // (tope 7 extras → nunca más rápido que ~0,17 s/nota)
+      const extra=Math.max(0,Math.min(7,ships-1));
+      return BASE_STEP*Math.pow(0.85,extra);
+    }
+    function schedule(){
+      if(!(on&&armed&&ships>0)||!ac){ timer=null; return; }
+      const look=ac.currentTime+0.3;
+      while(nextT<look){ note(nextT,NOTES[idx],0.09,0.22); idx=(idx+1)%NOTES.length; nextT+=step(); }
+      timer=setTimeout(schedule,120);
+    }
+    function sync(){
+      const want=on&&armed&&ships>0;
+      if(want&&!timer){ if(!ctx()) return; nextT=Math.max(nextT,ac.currentTime+0.05); schedule(); }
+      else if(!want&&timer){ clearTimeout(timer); timer=null; } // para en seco (solo queda el lookahead de 0,3s)
+    }
+    function blip(){
+      // aviso corto de DUDA NUEVA (opcional pero majo): dos toques agudos
+      if(!(on&&armed)||!ctx()) return;
+      const t=ac.currentTime+0.02;
+      note(t,440,0.06,0.07); note(t+0.09,330,0.05,0.07);
+    }
+    // ARMADO por gesto (política de autoplay): primer clic/tecla en la página.
+    function arm(){ if(armed) return; armed=true; sync(); }
+    window.addEventListener('pointerdown',arm,{capture:true});
+    window.addEventListener('keydown',arm,{capture:true});
+    return {
+      setShips(n){
+        n=Math.max(0,n|0);
+        const prev=ships; ships=n;
+        if(n>prev && prev>=0 && armed && on && n>0) blip();  // entra duda nueva
+        sync();
+      },
+      setOn(v){ on=!!v; try{ localStorage.setItem(LS_KEY,on?'1':'0'); }catch(e){} sync(); },
+      isOn(){ return on; },
+      playing(){ return !!timer; },
+      // estado completo para inspección/depuración (consola del navegador)
+      state(){ return {on, armed, ships, playing:!!timer, acState:ac?ac.state:'(sin contexto)', stepMs:Math.round(step()*1000)}; },
+    };
+  })();
+  window.INVADER_MARCH=invaderMarch;   // lo usa renderDudas (definida más arriba)
+  const advInvaderAudio=document.getElementById('advInvaderAudio');
+  if(advInvaderAudio){
+    advInvaderAudio.checked=invaderMarch.isOn();               // estado persistido
+    advInvaderAudio.addEventListener('change',e=>invaderMarch.setOn(e.target.checked));
+  }
+
   // --- EXPERTO: consola CLI (local, no ejecuta acciones de flota) ---
   const cliInput=document.getElementById('cliInput'), cliOut=document.getElementById('cliOut');
   function cliPrint(txt, cls){ const d=document.createElement('div'); d.className='line'; if(cls) d.innerHTML=`<span class="${cls}">${txt}</span>`; else d.textContent=txt; cliOut.appendChild(d); cliOut.scrollTop=cliOut.scrollHeight; }
@@ -4230,6 +4316,7 @@
     '  clear                  limpia la consola',
     '  /dudaAgente [N]        emula N dudas de agentes (1-8, def. 3) → naves 👾',
     '                         (alias: dudaAgente, duda · «/dudaAgente limpiar» las quita)',
+    '                         (con naves suena la 🔊 marcha invader — toggle en ⚙ AVANZADO)',
     '',
     '  · FUNCIONES AVANZADAS ·',
     '  draw                   DECAEDRO 3D girando (default · reposo del modo draw)',

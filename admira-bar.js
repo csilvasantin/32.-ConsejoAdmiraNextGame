@@ -13,7 +13,8 @@
   // Nombre del proyecto + versión (v.año.mes.día.release) — a la izquierda del todo.
   // La MARCA enlaza a la home (regla: el nombre del site siempre vuelve a la home).
   var PROJECT = "Consejo AdmiraNeXT";
-  var VERSION = "v.2026.07.12.r1";
+  // Versión interna (solo console, ya no se pinta en el menú superior — Carlos 2026-07-13).
+  var VERSION = "v.2026.07.13.r35";
 
   // Nav idéntico al top-bar de la home (mismos badges, mismos destinos) → coherencia.
   var TOP = [
@@ -62,10 +63,7 @@
     "border:2px solid #a07828;border-radius:0;background:#3a2410;box-shadow:2px 2px 0 #000;padding:6px 10px;margin-right:6px}" +
     "#pf-brand:hover{border-color:#f0c040;color:#fff}" +
     "#pf-brand .pf-ver{color:#c9a86a;font-size:0.4rem;margin-top:3px;letter-spacing:0}" +
-    /* Sello de versión al final de la barra (order alto = extremo derecho), discreto */
-    "#pf-ver-foot{order:200;display:flex;align-items:center;align-self:center;flex:0 0 auto;" +
-    "color:#c9a86a;font-family:'Press Start 2P',monospace;font-size:6px;letter-spacing:.5px;white-space:nowrap;padding:0 4px 0 8px}" +
-    "@media (max-width:820px){#pf-ver-foot{display:none}}" +
+    /* Sello de versión (#pf-ver-foot) retirado del menú superior — Carlos 2026-07-13 */
     /* icono de contraer OPCIONES: a la izquierda (tras la marca) */
     "#pf-toggle-left{order:-3;display:flex;align-items:center;align-self:center;margin-right:6px;flex:0 0 auto}" +
     /* iconos AVANZADO + EXPERTO: a la derecha del todo, tras el usuario */
@@ -210,12 +208,10 @@
     // Se añade async tras consultar la lista del worker de whitelist.
     maybeAddUsuarios(top);
 
-    // Sello de versión al FINAL de la barra (Carlos: fuera del título, discreto).
-    var ver = document.createElement("div");
-    ver.id = "pf-ver-foot";
-    ver.title = "Versión de la release";
-    ver.textContent = VERSION;
-    top.appendChild(ver);
+    // Sello de versión RETIRADO del menú superior por orden de Carlos (2026-07-13):
+    // la versión ya no se muestra en la barra. Se conserva en código (console) para
+    // trazabilidad interna, sin ocupar el DOM visible.
+    try { console.log("[admira-bar] " + PROJECT + " " + VERSION); } catch (e) {}
   }
 
   // Stats de flota para la barra: consejeros activos (personas online) · sin conexión

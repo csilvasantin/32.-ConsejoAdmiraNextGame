@@ -5,7 +5,7 @@
 <!-- control-tareas · v.2026.07.13.r1 · TABLERO DE TAREAS por máquina para las 4 MacBook Air (Rosa·Azul·Crema·Plata): mini-cola «TAREAS» + botón «➕ encargo» en cada tarjeta (POST /api/send con campo `machine`) y vista kanban 4 columnas (#tareas-board) con presencia + encargos. Datos: GET /api/bot-inbox|/api/public/inbox?machine=<id>. Degrada a «—» hasta que el worker exponga target_machine. -->
 <html lang="es">
 <head>
-    <script src="/admira-bar.js?v=20260711-r2"></script>
+    <script src="/admira-bar.js?v=20260713-r35"></script>
     <script src="/auth-gate.js?v=20260708-authfix"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -59,17 +59,9 @@
   body.pf-left-off   .rail-left{transform:translateX(-103%)}
   body.pf-right-off  .rail-right{transform:translateX(103%)}
   body.pf-bottom-off .rail-bottom{transform:translateY(103%)}
-  /* Pestañas de apertura SIEMPRE visibles en los 3 bordes (izq · dcha · inferior) */
-  .railtab{position:fixed;z-index:62;background:#2a1a08;color:#ffdd66;border:2px solid #8b5a14;
-    box-shadow:2px 2px 0 #000;cursor:pointer;font-weight:700;font-size:10.5px;
-    letter-spacing:.6px;padding:11px 7px;display:flex;align-items:center;justify-content:center;gap:6px;user-select:none}
-  .railtab:hover{border-color:#f0c040;background:#3a2410;color:#fff}
-  .railtab-l{left:0;top:calc(var(--topbar-h) + 54px);writing-mode:vertical-rl;text-orientation:mixed;border-left:0}
-  .railtab-r{right:0;top:calc(var(--topbar-h) + 54px);writing-mode:vertical-rl;text-orientation:mixed;border-right:0}
-  .railtab-b{left:50%;bottom:0;transform:translateX(-50%);border-bottom:0}
-  body:not(.pf-left-off)   .railtab-l{left:min(var(--rail-l),82vw);border-color:#f0c040;color:#fff;background:#5a3a1e}
-  body:not(.pf-right-off)  .railtab-r{right:min(var(--rail-r),82vw);border-color:#f0c040;color:#fff;background:#5a3a1e}
-  body:not(.pf-bottom-off) .railtab-b{bottom:min(var(--bottom-h),52vh);border-color:#f0c040;color:#fff;background:#5a3a1e}
+  /* Lengüetas de borde (OPCIONES/AVANZADO/EXPERTO) retiradas por orden de Carlos
+     (2026-07-13): los 3 paneles se gobiernan SOLO con los iconos del menú superior
+     (#pf-toggles de admira-bar.js). Sin pestañas rotuladas en los bordes. */
   /* monitorbar verticalizado dentro del rail izquierdo */
   .rail-left .monitorbar{display:flex;flex-direction:column;align-items:stretch;gap:8px;flex-wrap:nowrap;
     margin:0;padding:0;background:none;border:none}
@@ -491,9 +483,8 @@
 </header>
 
 <div class="porteria">
-  <button class="railtab railtab-l" id="tabLeft" title="Opciones (izquierda)">⚙ OPCIONES</button>
-  <button class="railtab railtab-r" id="tabRight" title="Avanzado (derecha)">🎛 AVANZADO</button>
-  <button class="railtab railtab-b" id="tabBottom" title="Modo experto (inferior)">⌨ EXPERTO</button>
+  <!-- Lengüetas OPCIONES/AVANZADO/EXPERTO retiradas (Carlos 2026-07-13): los paneles
+       se abren/cierran SOLO con los iconos del menú superior (#pf-toggles). -->
   <aside class="rail rail-left">
     <div class="rail-hd">⚡ Acciones de Equipos</div>
     <div class="monitorbar">
@@ -2378,18 +2369,10 @@ function collapseAllToggle(){
 </script>
 
 <script>
-/* Pestañas de los raíles: plegado por defecto; alternan y persisten (mismos keys que admira-bar). */
-(function(){
-  var map=[['tabLeft','pf-left-off','pf_left'],['tabRight','pf-right-off','pf_right'],['tabBottom','pf-bottom-off','pf_bottom']];
-  map.forEach(function(m){
-    if(localStorage.getItem(m[2])!=="1") document.body.classList.add(m[1]);
-    var btn=document.getElementById(m[0]);
-    if(btn) btn.addEventListener('click',function(){
-      var off=document.body.classList.toggle(m[1]);
-      try{ localStorage.setItem(m[2], off?"0":"1"); }catch(e){}
-    });
-  });
-})();
+/* Plegado por defecto de los 3 raíles (opciones/avanzado/experto): lo aplica
+   admira-bar.js (makeToggle → body.pf-*-off si localStorage !== "1"), con los
+   iconos del menú superior como único disparador. Las lengüetas de borde se
+   retiraron el 2026-07-13 (Carlos), así que aquí ya no hay wiring propio. */
 </script>
 </body>
 </html>

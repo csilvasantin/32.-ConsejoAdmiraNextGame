@@ -9,7 +9,7 @@
     { "id": "macbookairplata", "name": "MacBook Air Plata", "emoji": "💻", "role": "COO · Operaciones", "platform": "macos", "host": "macbookairplata.tail48b61c.ts.net", "user": "csilvasantin" },
     { "id": "macbookairrosa", "name": "MacBook Air Rosa", "emoji": "💻", "role": "Equipo", "platform": "macos", "host": "macbookairrosa.tail48b61c.ts.net", "user": "csilvasantin" },
     { "id": "macbookaircrema", "name": "MacBook Air Crema", "emoji": "💻", "role": "Equipo", "platform": "macos", "host": "macbookaircrema.tail48b61c.ts.net", "user": "csilvasantin" },
-    { "id": "macbookairazul", "name": "MacBook Air Luna (Cesar)", "emoji": "💻", "role": "Equipo", "platform": "macos", "host": "macbookairazul.tail48b61c.ts.net", "user": "csilvasantin" },
+    { "id": "macbookairazul", "name": "MacBook Air Azul", "emoji": "💻", "role": "Equipo", "platform": "macos", "host": "macbookairazul.tail48b61c.ts.net", "user": "csilvasantin" },
     { "id": "macbookairluna", "name": "MacBook Air Luna", "emoji": "💻", "role": "Equipo", "platform": "macos", "host": "macbookairluna.tail48b61c.ts.net", "user": "csilvasantin" },
     { "id": "macbookairluna1", "name": "MacBook Air Luna (2)", "emoji": "💻", "role": "Equipo", "platform": "macos", "host": "macbookairluna-1.tail48b61c.ts.net", "user": "csilvasantin" },
     { "id": "dgx-spark", "name": "DGX Spark", "emoji": "🧠", "role": "Inferencia LLM (GPU)", "platform": "linux", "host": "dgx-spark.tail48b61c.ts.net", "user": "bitsatoms" },

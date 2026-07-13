@@ -18,7 +18,6 @@
 
   // Nav idéntico al top-bar de la home (mismos badges, mismos destinos) → coherencia.
   var TOP = [
-    { t: "📊 Dashboard", h: "https://www.admira.live/dashboard.html" },
     { t: "🖥️ Control",   h: "https://www.admira.live/control/" },
     { t: "📺 Players",   h: "https://www.admira.live/players/" },
     { t: "🌐 Navegadores", h: "https://www.admira.live/navegadores/" },

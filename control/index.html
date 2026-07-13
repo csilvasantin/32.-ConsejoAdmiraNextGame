@@ -2,6 +2,7 @@
 <!-- control · v2026.07.02c · icono = fondo (personaje) del equipo SIEMPRE, nunca el screenshot en vivo · wallpapers reales subidos por máquina -->
 <!-- control-mensajeria · v.2026.07.08.r1 · 💬 mensaje por equipo + 📣 a todos → router de encargos AdmiraNeXT (ACK + traza Telegram) · auth = gate Google · fix: refresco silencioso de cred + re-login (control remoto) -->
 <!-- control-pantallas · v.2026.07.10.r2 · MUDANZA: la sección «Pantallas · Players» (plano de CONTENIDO: /signage/screens + /signage/now + mando M8 /control/cmd + doble tick) se movió a su PÁGINA PROPIA → /players/. /control queda solo para el plano de MÁQUINAS. -->
+<!-- control-tareas · v.2026.07.13.r1 · TABLERO DE TAREAS por máquina para las 4 MacBook Air (Rosa·Azul·Crema·Plata): mini-cola «TAREAS» + botón «➕ encargo» en cada tarjeta (POST /api/send con campo `machine`) y vista kanban 4 columnas (#tareas-board) con presencia + encargos. Datos: GET /api/bot-inbox|/api/public/inbox?machine=<id>. Degrada a «—» hasta que el worker exponga target_machine. -->
 <html lang="es">
 <head>
     <script src="/admira-bar.js?v=20260711-r2"></script>
@@ -433,6 +434,51 @@
   .msgbox .mcrow .msend:disabled{opacity:.5;cursor:default}
   .msgfoot{font-size:10px;color:var(--mut);padding:0 14px 11px}
   .msgfoot a{color:var(--acc2)}
+  /* ── TAREAS por máquina (mini-cola en tarjeta + tablero kanban) ──
+     Colores de estado: pending ámbar · ack azul · in_progress cian · blocked rojo · done verde. */
+  .mqueue{border-top:1px dashed var(--line);padding-top:9px;display:flex;flex-direction:column;gap:7px}
+  .card.collapsed .mqueue{display:none}
+  .mqueue .mq-hd{display:flex;align-items:center;gap:8px;font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--mut);font-weight:800}
+  .mqueue .mq-hd .mq-count{font-family:var(--mono);color:var(--acc)}
+  .mqueue .mq-hd .spacer{flex:1}
+  .mqueue .mq-add{font:inherit;font-size:11px;border:1px solid var(--acc2);color:var(--acc2);background:transparent;border-radius:8px;padding:3px 9px;cursor:pointer;font-weight:700}
+  .mqueue .mq-add:hover{background:var(--acc2);color:#04120e}
+  .mqueue .mq-list{display:flex;flex-direction:column;gap:5px}
+  .mqueue .mq-empty{font-size:11px;color:var(--mut);font-style:italic}
+  .tq-chip{display:flex;align-items:center;gap:7px;font-size:11.5px;border:1px solid var(--line);border-left-width:3px;border-radius:7px;padding:5px 8px;background:rgba(255,255,255,.02)}
+  .tq-chip .tq-txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
+  .tq-chip .tq-st{flex:none;font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;opacity:.9}
+  .tq-chip.st-pending{border-left-color:var(--warn)} .tq-chip.st-pending .tq-st{color:var(--warn)}
+  .tq-chip.st-ack{border-left-color:var(--acc2)} .tq-chip.st-ack .tq-st{color:var(--acc2)}
+  .tq-chip.st-in_progress{border-left-color:var(--acc)} .tq-chip.st-in_progress .tq-st{color:var(--acc)}
+  .tq-chip.st-blocked{border-left-color:var(--bad)} .tq-chip.st-blocked .tq-st{color:var(--bad)}
+  .tq-chip.st-done{border-left-color:var(--ok);opacity:.72} .tq-chip.st-done .tq-st{color:var(--ok)}
+  /* Overlay del tablero TAREAS (kanban 4 columnas) */
+  #tareas{position:fixed;inset:0;z-index:120;background:rgba(6,9,15,.97);display:none;flex-direction:column}
+  #tareas.show{display:flex}
+  #tareas .tk-bar{display:flex;align-items:center;gap:12px;padding:12px 18px;border-bottom:2px solid #8b5a14;background:#1b130a}
+  #tareas .tk-bar .tk-title{font-weight:800;letter-spacing:.4px;color:#ffdd66}
+  #tareas .tk-bar .spacer{flex:1}
+  #tareas .tk-bar button{font:inherit;font-size:12px;border:2px solid #8b5a14;background:#2a1a08;color:#ffdd66;box-shadow:2px 2px 0 #000;border-radius:0;padding:6px 12px;cursor:pointer;font-weight:700}
+  #tareas .tk-bar button:hover{border-color:#f0c040;color:#fff}
+  #tareas .tk-note{font-size:11px;color:var(--mut)}
+  #tareas .tk-board{flex:1;min-height:0;display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:16px;overflow:auto}
+  @media(max-width:900px){ #tareas .tk-board{grid-template-columns:repeat(2,1fr)} }
+  @media(max-width:520px){ #tareas .tk-board{grid-template-columns:1fr} }
+  .tk-col{display:flex;flex-direction:column;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;min-height:0}
+  .tk-col .tk-colhd{display:flex;align-items:center;gap:9px;border-bottom:1px solid var(--line);padding-bottom:9px}
+  .tk-col .tk-colhd .tk-em{font-size:22px;line-height:1}
+  .tk-col .tk-colhd .tk-nm{font-weight:800;font-size:14px}
+  .tk-col .tk-presence{font-size:11px;color:var(--mut);display:flex;flex-direction:column;gap:2px;background:rgba(255,255,255,.02);border:1px solid var(--line);border-radius:9px;padding:8px 10px}
+  .tk-col .tk-presence .tk-agent{color:var(--ink);font-weight:700}
+  .tk-col .tk-presence .tk-agent .tk-dot{display:inline-block;width:8px;height:8px;border-radius:50%;background:#5a6678;margin-right:6px;vertical-align:middle}
+  .tk-col .tk-presence .tk-agent.on .tk-dot{background:var(--ok);box-shadow:0 0 7px var(--ok)}
+  .tk-col .tk-presence .tk-focus{color:var(--mut);line-height:1.5;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+  .tk-col .tk-presence .tk-mode{font-family:var(--mono);font-size:10px}
+  .tk-col .tk-tasks{flex:1;min-height:0;overflow:auto;display:flex;flex-direction:column;gap:6px;padding-right:2px}
+  .tk-col .tk-add{font:inherit;font-size:11px;border:1px solid var(--acc2);color:var(--acc2);background:transparent;border-radius:8px;padding:5px;cursor:pointer;font-weight:700}
+  .tk-col .tk-add:hover{background:var(--acc2);color:#04120e}
+  .tk-col .tk-empty{font-size:11px;color:var(--mut);font-style:italic;padding:6px 2px}
 </style>
 </head>
 <body>
@@ -459,6 +505,7 @@
       <button id="ssToggle" title="Activar o quitar el salvapantallas en TODA la flota online (toggle)">🖼️ Salva ON</button>
       <button id="playersStandby" title="Standby/Reactivar los PLAYERS de toda la flota (mac/win/linux/ios/android) por canal de comandos — pone el canal en negro sin cerrar la app">⏻ Standby players</button>
       <button id="msgAll" title="Enviar un mensaje/encargo a TODOS los equipos vivos (broadcast por el router de encargos AdmiraNeXT — con ACK y traza en Telegram)">📣 Mensaje a todos</button>
+      <button id="tareasOpen" title="Tablero TAREAS — kanban de las 4 MacBook Air (Rosa · Azul · Crema · Plata): presencia + encargos por máquina">📋 Tablero TAREAS</button>
       <label title="Beep cuando un equipo se cae o su captura empieza a fallar"><input type="checkbox" id="sndToggle"> 🔔 sonido</label>
       <label title="No mostrar los equipos desconectados"><input type="checkbox" id="hideOff"> 🙈 ocultar offline</label>
       <button id="collapseAll" title="Colapsar o expandir todas las tarjetas">⊟ colapsar todas</button>
@@ -529,7 +576,7 @@
         <button class="primary" id="csRun">▶ ejecutar</button>
         <button id="csClear">limpiar</button>
       </div>
-      <div class="note">El comando se ejecuta de verdad en la máquina elegida (MacMini local · resto por SSH). Acceso por tu login de Google. <span style="opacity:.55">· 💬 mensajería a equipos v.2026.07.08.r1</span></div>
+      <div class="note">El comando se ejecuta de verdad en la máquina elegida (MacMini local · resto por SSH). Acceso por tu login de Google. <span style="opacity:.55">· 💬 mensajería a equipos v.2026.07.08.r1 · 📋 tareas v.2026.07.13.r1</span></div>
       <div class="out" id="out"><div class="empty">Sin resultados todavía.</div></div>
     </div>
   </footer>
@@ -558,6 +605,16 @@
 <div id="wall">
   <div class="wallbar">🧱 Pared de pantallas <span id="wallcount"></span><span class="spacer"></span><button id="wallClose">✕ cerrar (Esc)</button></div>
   <div class="wallgrid" id="wallGrid"></div>
+</div>
+<div id="tareas">
+  <div class="tk-bar">
+    <span class="tk-title">📋 TAREAS · MacBook Air</span>
+    <span class="tk-note" id="tareasNote">Rosa · Azul · Crema · Plata — presencia + encargos por máquina</span>
+    <span class="spacer"></span>
+    <button id="tareasRefresh" title="Refrescar ahora (se auto-refresca cada 30s)">↻ refrescar</button>
+    <button id="tareasClose" title="Cerrar (Esc)">✕ cerrar</button>
+  </div>
+  <div class="tk-board" id="tareas-board"></div>
 </div>
 <div id="hack" class="hack-overlay">
   <div class="hack-topbar">
@@ -692,20 +749,22 @@ let AGENT_ONLINE=new Set(); // máquinas con un agente (Claude/Codex/Grok) con b
 //                    `lastSeen` de admira-fleet están estáticos/viejos, así que sólo cuenta si es fresco.
 let PRESENCE_SEEN=new Set();
 let FLEET_SEEN=new Set();
+let PRESENCE_FULL={}; // key(_norm máquina) → registro más reciente {persona,runtime,mode,focus,updated} (para el tablero TAREAS)
 const PRESENCE_FRESH=180;   // s — latido de presencia considerado "online"
 const FLEET_FRESH=300;      // s — registro de admira-fleet considerado "online"
 async function loadPersonas(){
   try{
     const r=await fetch(DIARY_API+'/api/presence',{cache:'no-store'});
-    const d=await r.json(); const map={}; const on=new Set(); const seen=new Set(); const now=(d.now||Date.now()/1000);
+    const d=await r.json(); const map={}; const on=new Set(); const seen=new Set(); const full={}; const now=(d.now||Date.now()/1000);
     (d.presence||[]).slice().sort((a,b)=>b.updated-a.updated).forEach(p=>{
       const k=_norm(p.machine); if(!k) return;
       if(!map[k]) map[k]=p.persona;                 // la persona más reciente por máquina
+      if(!full[k]) full[k]={persona:p.persona,runtime:p.runtime||'',mode:p.mode||'',focus:p.focus||'',updated:p.updated||0}; // registro completo más reciente
       const age=now-(p.updated||0);
       if(age<8*60) on.add(k);                        // agente ACTIVO (<8min) en esa máquina
       if(age<PRESENCE_FRESH) seen.add(k);            // latido fresco (<3min) → online por presencia
     });
-    PERSONA_BY_MACHINE=map; AGENT_ONLINE=on; PRESENCE_SEEN=seen;
+    PERSONA_BY_MACHINE=map; AGENT_ONLINE=on; PRESENCE_SEEN=seen; PRESENCE_FULL=full;
   }catch(e){ /* sin presencia: las tarjetas quedan sin fondo, sin icono roto */ }
 }
 // admira-fleet: registro durable de la flota. `lastSeen` suele estar estático para casi todas
@@ -921,6 +980,10 @@ function renderCards(ms){
         <button data-a="closechannel" data-m="${m.id}" data-mname="${(m.name||'').replace(/"/g,'')}" title="Cerrar la ventana del canal DS en el Chrome de esta máquina.">⏹ cerrar canal</button>
         ${m.online?`<button data-rc="${m.id}" data-rcname="${(m.name||'').replace(/"/g,'')}" title="Control remoto en vivo (ver + ratón + teclado, estilo AnyDesk). Requiere AdmiraRemoteAgent + permisos en la máquina destino." style="border-color:var(--acc);color:var(--acc);font-weight:700">🖥️ control remoto</button>`:''}
       </div>
+      ${isAirId(m.id)?`<div class="mqueue" data-mqueue="${m.id}">
+        <div class="mq-hd">📋 TAREAS <span class="mq-count" data-mqcount="${m.id}"></span><span class="spacer"></span><button class="mq-add" data-mqadd="${m.id}" title="Nuevo encargo dirigido a esta máquina (${m.name})">➕ encargo</button></div>
+        <div class="mq-list" data-mqlist="${m.id}"><div class="mq-empty">—</div></div>
+      </div>`:''}
       <div class="capwarn" data-capwarn="${m.id}">⚠️ sin permiso de captura <button data-fix="${m.id}" title="Abrir el panel de Grabación de pantalla en ese Mac, avisar al usuario y reactivar el agente">🛡️ enviar arreglo por SSH</button></div>
     </div>`).join('');
   // restaura miniaturas
@@ -932,6 +995,7 @@ function renderCards(ms){
   applySignageTitles();
   paintAllAges(); updateCapHealth();
   try{ paintAllMsgBadges(); }catch(e){}
+  try{ paintAllMiniQueues(); }catch(e){}   // TAREAS por máquina (desde caché; sin refetch en cada render)
 }
 
 // Carga img.src con fallback: si la 1ª URL falla (404), prueba la 2ª; si también
@@ -1275,11 +1339,16 @@ async function sendCurrentMsg(){
   else if(MSG_CUR.persona){ head='PARA '+MSG_CUR.persona; targets=[MSG_CUR.persona]; }
   else { head='ENCARGO (equipo '+(MSG_CUR.machine&&MSG_CUR.machine.name||MSG_CUR.key)+') /sendto '+(MSG_CUR.machine&&MSG_CUR.machine.name||MSG_CUR.key); targets=[]; }
   const body=head+' — '+text+'  ['+task+'] · ACK obligatorio · desde Control';
+  // Encargo DIRIGIDO a una máquina (contrato nuevo del worker): campo `machine` con el id
+  // normalizado de flota (p.ej. macbookairrosa). El worker antiguo lo ignora sin romper nada.
+  const machine = (!MSG_CUR.broadcast && MSG_CUR.machine && MSG_CUR.machine.id) ? _norm(MSG_CUR.machine.id) : '';
+  const payload = { text:body, author:'Carlos' };
+  if(machine) payload.machine = machine;
   try{
     const r=await fetch(MSG_API+'/api/send',{
       method:'POST',
       headers:{'Content-Type':'application/json','Authorization':'Bearer '+cred},
-      body:JSON.stringify({ text:body, author:'Carlos' })
+      body:JSON.stringify(payload)
     });
     if(r.status===401){
       // cred caducado → un ÚNICO refresco silencioso + reintento; si no, avisa a re-entrar.
@@ -1295,6 +1364,7 @@ async function sendCurrentMsg(){
     ta.value='';
     toast('up','💬 enviado', MSG_CUR.broadcast?('a todos ('+((MSG_CUR.count)||'')+' equipos)') : ('a '+(MSG_CUR.persona||(MSG_CUR.machine&&MSG_CUR.machine.name)||MSG_CUR.key)));
     renderThread(); paintAllMsgBadges();
+    if(machine && isAirId(machine)){ setTimeout(()=>{ try{ refreshAirQueues(); }catch(e){} }, 2500); } // reflejar el nuevo encargo en la cola
     setTimeout(pollThread, 2500);   // primer refresco de ACK
   }catch(err){ toast('warn','⚠️ error de red', err&&err.message||'sin conexión'); }
   btn.disabled=false; btn.textContent=lbl;
@@ -1327,6 +1397,172 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&$('#msgModal').cla
 (function(){ const mb=$('#msgAll'); if(mb) mb.onclick=openBroadcastModal; })();
 // Poll de estados en segundo plano: refresca insignias y el hilo abierto.
 setInterval(()=>{ try{ paintAllMsgBadges(); if($('#msgModal').classList.contains('show')) pollThread(); }catch(e){} }, 20000);
+
+/* ============================================================
+   TABLERO DE TAREAS por máquina — mini-cola en cada tarjeta Air +
+   vista kanban (Rosa · Azul · Crema · Plata).
+   Datos:
+     · Encargos → GET /api/bot-inbox?machine=<id> (auth = credential del gate,
+       la MISMA que usa la mensajería); si el worker la rechaza, se cae a
+       GET /api/public/inbox?machine=<id> (sin auth). El worker sub-agente está
+       desplegando este contrato AHORA; hasta que exponga `target_machine`, la UI
+       degrada con gracia a «—» (no atribuye encargos sueltos a ninguna máquina).
+     · Presencia → PRESENCE_FULL (mismo /api/presence, casado _norm tolerante).
+   Los 4 ids EXACTOS de flota (fleet.json). La presencia reporta variantes
+   («MacBookAirAzul», «MacBookAir16plata»…): se casan por token de color con _norm.
+   ============================================================ */
+const AIRS=[
+  {id:'macbookairrosa',  label:'Rosa',  em:'🩷', tokens:['macbookairrosa','rosa']},
+  {id:'macbookairazul',  label:'Azul',  em:'🔵', tokens:['macbookairazul','azul']},
+  {id:'macbookaircrema', label:'Crema', em:'🟡', tokens:['macbookaircrema','crema']},
+  {id:'macbookairplata', label:'Plata', em:'⚪', tokens:['macbookairplata','plata','macbookair16plata']},
+];
+const AIR_BY_ID={}; AIRS.forEach(a=>{ AIR_BY_ID[a.id]=a; });
+function isAirId(id){ return !!AIR_BY_ID[_norm(id||'')]; }
+function airOf(id){ return AIR_BY_ID[_norm(id||'')]; }
+// ¿Una clave normalizada (id de flota, target_machine del encargo o máquina de presencia)
+// pertenece a esta Air? Substring en ambas direcciones + tokens de color, con _norm.
+function airMatchKey(air, raw){
+  const k=_norm(raw); if(!k||!air) return false;
+  for(const t of air.tokens){ if(k===t||k.indexOf(t)>=0||t.indexOf(k)===0) return true; }
+  return false;
+}
+// Estados del contrato: pending|ack|in_progress|blocked|done. Orden = activos primero.
+const TASK_ST_ORDER={in_progress:0, blocked:1, ack:2, pending:3, done:4};
+const TASK_ST_LABEL={pending:'pendiente', ack:'ack', in_progress:'en curso', blocked:'bloqueado', done:'hecho'};
+function taskStatus(it){ const s=(it&&it.status||'pending').toLowerCase(); return TASK_ST_ORDER.hasOwnProperty(s)?s:'pending'; }
+function taskText(it){ return String((it&&(it.text||it.body||it.message))||'').replace(/\s+/g,' ').trim(); }
+function _truncate(s,n){ s=s||''; return s.length>n ? s.slice(0,n-1)+'…' : s; }
+
+// Caché del último inbox bueno por máquina (para re-pintar sin refetch en cada render de 8s).
+let AIR_INBOX={};    // id → array de encargos DIRIGIDOS a esa máquina
+let AIR_INBOX_TS={}; // id → epoch ms de la última lectura buena
+// Lee el inbox de una máquina. Intenta bot-inbox con el credential del gate; si no está
+// autorizado, cae al endpoint público. Devuelve SOLO los encargos con target_machine que
+// case con la máquina (así, mientras el worker no exponga target_machine, la cola queda vacía
+// en vez de mostrar 80 encargos ajenos → degradación con gracia).
+async function fetchMachineInbox(machineId){
+  const air=airOf(machineId); if(!air) return null;
+  const cred=gateCred();
+  const tries=[];
+  if(cred) tries.push({url:MSG_API+'/api/bot-inbox?machine='+encodeURIComponent(air.id), auth:true});
+  tries.push({url:MSG_API+'/api/public/inbox?machine='+encodeURIComponent(air.id), auth:false});
+  for(const t of tries){
+    try{
+      const opts={cache:'no-store'};
+      if(t.auth) opts.headers={'Authorization':'Bearer '+cred};
+      const r=await fetch(t.url+'&_t='+Date.now(), opts);
+      if(!r.ok) continue;
+      const d=await r.json().catch(()=>null);
+      if(!d||d.ok===false||!Array.isArray(d.items)) continue;
+      // Filtra a los encargos DIRIGIDOS a esta máquina (contrato: campo target_machine).
+      const mine=d.items.filter(it=>it && it.target_machine && airMatchKey(air, it.target_machine));
+      return mine;
+    }catch(e){ /* siguiente intento */ }
+  }
+  return null; // sin respuesta usable → degradar
+}
+// Pinta la mini-cola de una tarjeta desde la caché.
+function paintMiniQueue(machineId){
+  const air=airOf(machineId); if(!air) return;
+  const list=document.querySelector('.mq-list[data-mqlist="'+air.id+'"]');
+  const cnt=document.querySelector('.mq-count[data-mqcount="'+air.id+'"]');
+  if(!list) return;
+  const items=(AIR_INBOX[air.id]||[]).slice()
+    .filter(it=>taskStatus(it)!=='done')   // en la tarjeta solo los activos
+    .sort((a,b)=>TASK_ST_ORDER[taskStatus(a)]-TASK_ST_ORDER[taskStatus(b)]);
+  if(cnt) cnt.textContent=items.length?('· '+items.length):'';
+  if(!(air.id in AIR_INBOX)){ list.innerHTML='<div class="mq-empty">—</div>'; return; } // aún sin dato
+  if(!items.length){ list.innerHTML='<div class="mq-empty">sin encargos activos</div>'; return; }
+  list.innerHTML=items.slice(0,6).map(it=>{ const st=taskStatus(it);
+    return '<div class="tq-chip st-'+st+'"><span class="tq-txt">'+_truncate(taskText(it)||'(sin texto)',60).replace(/</g,'&lt;')
+      +'</span><span class="tq-st">'+(TASK_ST_LABEL[st]||st)+'</span></div>'; }).join('');
+}
+function paintAllMiniQueues(){ AIRS.forEach(a=>paintMiniQueue(a.id)); }
+// Refetch de las 4 colas + re-pintado (tarjetas y kanban si está abierto).
+let _airBusy=false;
+async function refreshAirQueues(){
+  if(_airBusy) return; _airBusy=true;
+  try{
+    await Promise.all(AIRS.map(async a=>{
+      const items=await fetchMachineInbox(a.id);
+      if(items!==null){ AIR_INBOX[a.id]=items; AIR_INBOX_TS[a.id]=Date.now(); }
+    }));
+  }catch(e){}
+  _airBusy=false;
+  try{ paintAllMiniQueues(); }catch(e){}
+  if($('#tareas').classList.contains('show')) renderTareas();
+}
+
+// Presencia (registro completo) de una Air, casada por token con _norm.
+function airPresence(air){
+  for(const k in PRESENCE_FULL){ if(airMatchKey(air,k)) return PRESENCE_FULL[k]; }
+  return null;
+}
+function _agoStr(updatedSec){
+  if(!updatedSec) return 'sin latido';
+  const s=Math.max(0, Math.round(Date.now()/1000 - updatedSec));
+  if(s<60) return 'hace '+s+'s'; const m=Math.round(s/60); if(m<60) return 'hace '+m+'m'; return 'hace '+Math.round(m/60)+'h';
+}
+// ---- Vista kanban (overlay #tareas) ----
+function renderTareas(){
+  const board=$('#tareas-board'); if(!board) return;
+  board.innerHTML=AIRS.map(air=>{
+    const pr=airPresence(air);
+    const fresh = pr && (Date.now()/1000 - (pr.updated||0) < 8*60);
+    let presHtml;
+    if(pr){
+      presHtml='<div class="tk-agent'+(fresh?' on':'')+'"><span class="tk-dot"></span>'
+        +(pr.persona||'—').replace(/</g,'&lt;')+(pr.runtime?(' · '+pr.runtime):'')+'</div>'
+        +'<div class="tk-mode">modo '+(pr.mode||'—').replace(/</g,'&lt;')+' · late '+_agoStr(pr.updated)+'</div>'
+        +'<div class="tk-focus">'+(pr.focus?_truncate(pr.focus,180):'sin foco reportado').replace(/</g,'&lt;')+'</div>';
+    } else {
+      presHtml='<div class="tk-agent"><span class="tk-dot"></span>sin agente detectado</div>';
+    }
+    const has=(air.id in AIR_INBOX);
+    const items=(AIR_INBOX[air.id]||[]).slice().sort((a,b)=>{
+      const d=TASK_ST_ORDER[taskStatus(a)]-TASK_ST_ORDER[taskStatus(b)]; if(d) return d;
+      return (b.ts||0)-(a.ts||0);
+    });
+    let tasksHtml;
+    if(!has){ tasksHtml='<div class="tk-empty">— (esperando el contrato del worker)</div>'; }
+    else if(!items.length){ tasksHtml='<div class="tk-empty">sin encargos dirigidos a esta máquina</div>'; }
+    else tasksHtml=items.map(it=>{ const st=taskStatus(it);
+      return '<div class="tq-chip st-'+st+'"><span class="tq-txt" title="'+taskText(it).replace(/"/g,'&quot;').replace(/</g,'&lt;')+'">'
+        +_truncate(taskText(it)||'(sin texto)',80).replace(/</g,'&lt;')+'</span><span class="tq-st">'+(TASK_ST_LABEL[st]||st)+'</span></div>'; }).join('');
+    return '<div class="tk-col"><div class="tk-colhd"><span class="tk-em">'+air.em+'</span><span class="tk-nm">'+air.label+'</span></div>'
+      +'<div class="tk-presence">'+presHtml+'</div>'
+      +'<button class="tk-add" data-tkadd="'+air.id+'">➕ encargo a '+air.label+'</button>'
+      +'<div class="tk-tasks">'+tasksHtml+'</div></div>';
+  }).join('');
+}
+let _tareasTimer=null;
+function openTareas(){
+  $('#tareas').classList.add('show');
+  renderTareas();
+  refreshAirQueues();
+  if(_tareasTimer) clearInterval(_tareasTimer);
+  _tareasTimer=setInterval(()=>{ try{ loadPersonas().then(()=>{ refreshAirQueues(); }); }catch(e){ refreshAirQueues(); } }, 30000);
+}
+function closeTareas(){ $('#tareas').classList.remove('show'); if(_tareasTimer){ clearInterval(_tareasTimer); _tareasTimer=null; } }
+// Wiring: botón de la barra, cierre, refresco, ➕ encargo (tarjeta y kanban) → modal existente.
+(function(){
+  const ob=$('#tareasOpen'); if(ob) ob.onclick=openTareas;
+  const cb=$('#tareasClose'); if(cb) cb.onclick=closeTareas;
+  const rb=$('#tareasRefresh'); if(rb) rb.onclick=()=>{ loadPersonas().then(refreshAirQueues).catch(()=>refreshAirQueues()); };
+  const ov=$('#tareas'); if(ov) ov.addEventListener('click',e=>{ if(e.target===ov) closeTareas(); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape' && $('#tareas').classList.contains('show')) closeTareas(); });
+  // ➕ encargo del kanban → abre el compositor con la máquina fijada.
+  const board=$('#tareas-board'); if(board) board.addEventListener('click',e=>{
+    const a=e.target.closest('button[data-tkadd]'); if(a) openMsgModal(a.dataset.tkadd);
+  });
+})();
+// ➕ encargo de la mini-cola en la tarjeta (delegado en #cards).
+$('#cards').addEventListener('click', e=>{
+  const a=e.target.closest('button[data-mqadd]'); if(a){ e.stopPropagation(); openMsgModal(a.dataset.mqadd); }
+});
+// Refresco de fondo de las colas (independiente del refresh de 8s de las tarjetas).
+setInterval(()=>{ try{ refreshAirQueues(); }catch(e){} }, 30000);
 
 /* ── reordenar tarjetas por arrastre (asa ⠿) ── */
 let _dragId=null;
@@ -1647,6 +1883,7 @@ function collapseAllToggle(){
   if(SESSION){ const e=whoami(); const tp=$('#tokenPill'); if(tp&&e){ tp.textContent='🔒 '+e; tp.title='Cerrar sesión'; } }
   applyAutoCap();
   refresh();
+  try{ refreshAirQueues(); }catch(e){}   // primera carga de las colas TAREAS (Airs)
   setInterval(refresh, 8000);
   setInterval(paintAllAges, 5000);  // las edades "hace Xs" suben solas y atenúan lo viejo
 })();

@@ -6,7 +6,7 @@
   <title>ADmiraNeXT | Status — Constelación de la flota</title>
   <meta name="description" content="Admira no tiene centro — es un universo que se expande. Estado en vivo de la flota AdmiraNeXT: cada ordenador es una estrella con su proyecto y su foco.">
   <meta name="admiranext-version" content="AdmiraNext v26.07.07.12">
-  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.12.r33 (EMULADORES CON COMBOS REALES — a Carlos le confundía en producción que las dudas emuladas inventaran combos de máquina/agente/proyecto («subNeo en Mac Mini con pixeria.com») al lado de nodos con presencia real. Ahora /dudaAgente y el botón 👾 del AVANZADO muestrean COMBINACIONES REALES de /api/presence — persona+máquina+proyecto tal cual laten (WORLD.presenceRows, guardadas crudas en la carga), priorizando latido fresco (< umbral de vivo), deduplicadas por persona+máquina y barajadas; si presence aún no cargó, caen al aleatorio de antes. El texto de la duda sigue inventado y la marca «(emulada)» se mantiene SIEMPRE. El emulador de tarea acabada (/tareaFinaliza y su botón) firma la pancarta con un agente real de la flota manteniendo la marca «· emulada». Textos de hint/help actualizados para reflejarlo. — Sobre r32: CIELO FULL-BLEED — feedback de Carlos sobre r30 con captura: al refluir el escenario bajo la banda de naves y junto a los paneles laterales, esas zonas quedaban LISAS (el fondo plano de la página, sin estrellas, porque el cielo vivía dentro del canvas de nodos y se empujaba con él). Regla de Carlos: el fondo estrellado cubre TODO, con UFOs o sin ellos, con menús o sin ellos. Cambio de arquitectura: las estrellas se DESACOPLAN de los nodos — nuevo canvas #skyfield position:fixed inset:0 z-index:0 a viewport completo, detrás de banda, paneles y escenario; el twinkle y el parallax con la cámara se mantienen idénticos, y la densidad se calcula sobre el viewport entero. En #galaxy quedan solo nodos/aristas/figuras, que conservan sus zonas de exclusión: reflow bajo la banda (body.duda-band-open + --duda-inset + syncDudaBand()) y rieles en flujo que estrechan el centro (nada oculto tras un panel). Ya no se re-siembran estrellas al abrir/cerrar rieles (el cielo no depende del centro). Pausa con ficha abierta intacta (el frame congela también el cielo), marcha de naves intacta, prefers-reduced-motion respetado, cero scroll horizontal. ADEMÁS: emulador de TAREA ACABADA para previsualizar la celebración Pac-Man de la banda inferior — botón «Lanzar tarea finalizada» en ⚙ AVANZADO junto al 👾 de dudas y comando /tareaFinaliza <texto> en la consola (en el /help); reutiliza la función REAL de la celebración (pacmanTest de status-pacman.js, misma cola/animación/waka-waka que un done de verdad), client-side puro marcado (emulada), sin tocar el bot-inbox real, nada persiste al recargar.)">
+  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.13.r34 (ESCUADRONES DE 4 EN LA VISTA TODO — Carlos con sus 4 MacBook Air (Azul, Plata, Rosa, Crema) delante, todas conectadas, sólo veía MacBookAirAzul como UFO: el foco de la vista TODO FILTRABA a un único ordenador (≤r33 dejaba en pantalla el equipo enfocado + sus agentes y escondía el resto). Ahora la vista TODO pinta TODAS las máquinas vivas A LA VEZ, agrupadas en formaciones de 4 (rombo): con 8 vivas = 2 escuadrones separados en el escenario. layoutAllSquadrons() reparte los anclajes (_anchorX/_anchorY) en rejilla de rombos; physics() lleva cada ordenador a su anclaje con un muelle y los agentes siguen orbitando su máquina. El FOCO (elegido a mano en el riel, o rotando cada 20s de UFO en UFO) ya no filtra: sólo AGRANDA un UFO — factor de escala por nodo _fzs (grande y con detalle el enfocado «como antes», reducidos pero CLARAMENTE presentes y etiquetados los demás), suavizado en physics y leído por volumeRadius/tipografía. Al elegir un ordenador a mano el foco queda fijo en él y el resto sigue visible. Las vistas ORDENADOR/PROYECTO/AGENTE/MISIÓN/SISTEMA OPERATIVO conservan su motor intacto (ALL_MULTI sólo se enciende en la vista TODO con ≥2 ordenadores). — Sobre r33: EMULADORES CON COMBOS REALES — a Carlos le confundía en producción que las dudas emuladas inventaran combos de máquina/agente/proyecto («subNeo en Mac Mini con pixeria.com») al lado de nodos con presencia real. Ahora /dudaAgente y el botón 👾 del AVANZADO muestrean COMBINACIONES REALES de /api/presence — persona+máquina+proyecto tal cual laten (WORLD.presenceRows, guardadas crudas en la carga), priorizando latido fresco (< umbral de vivo), deduplicadas por persona+máquina y barajadas; si presence aún no cargó, caen al aleatorio de antes. El texto de la duda sigue inventado y la marca «(emulada)» se mantiene SIEMPRE. El emulador de tarea acabada (/tareaFinaliza y su botón) firma la pancarta con un agente real de la flota manteniendo la marca «· emulada». Textos de hint/help actualizados para reflejarlo. — Sobre r32: CIELO FULL-BLEED — feedback de Carlos sobre r30 con captura: al refluir el escenario bajo la banda de naves y junto a los paneles laterales, esas zonas quedaban LISAS (el fondo plano de la página, sin estrellas, porque el cielo vivía dentro del canvas de nodos y se empujaba con él). Regla de Carlos: el fondo estrellado cubre TODO, con UFOs o sin ellos, con menús o sin ellos. Cambio de arquitectura: las estrellas se DESACOPLAN de los nodos — nuevo canvas #skyfield position:fixed inset:0 z-index:0 a viewport completo, detrás de banda, paneles y escenario; el twinkle y el parallax con la cámara se mantienen idénticos, y la densidad se calcula sobre el viewport entero. En #galaxy quedan solo nodos/aristas/figuras, que conservan sus zonas de exclusión: reflow bajo la banda (body.duda-band-open + --duda-inset + syncDudaBand()) y rieles en flujo que estrechan el centro (nada oculto tras un panel). Ya no se re-siembran estrellas al abrir/cerrar rieles (el cielo no depende del centro). Pausa con ficha abierta intacta (el frame congela también el cielo), marcha de naves intacta, prefers-reduced-motion respetado, cero scroll horizontal. ADEMÁS: emulador de TAREA ACABADA para previsualizar la celebración Pac-Man de la banda inferior — botón «Lanzar tarea finalizada» en ⚙ AVANZADO junto al 👾 de dudas y comando /tareaFinaliza <texto> en la consola (en el /help); reutiliza la función REAL de la celebración (pacmanTest de status-pacman.js, misma cola/animación/waka-waka que un done de verdad), client-side puro marcado (emulada), sin tocar el bot-inbox real, nada persiste al recargar.)">
   <meta name="admiranext-status-build" content="oraculo-triad-1">
   <!-- Orbitron: tipografía tecnológica para la versión del pie del riel (Carlos, 2026-07-11) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -785,7 +785,7 @@
       <div class="pf-seclabel">Foco · ordenador <button id="focusMyBtn" style="font-size:8px;padding:1px 4px;margin-left:4px;border:1px solid var(--cyan-dim);background:none;color:var(--cyan-dim);cursor:pointer">My machine</button></div>
       <div id="focusList"><!-- se rellena con los ordenadores online --></div>
     </div>
-    <div class="hint">La vista rota sola cada 20s. Elige una a mano para fijar el foco; en ⚙ AVANZADO pausas la rotación automática.</div>
+    <div class="hint">En la vista TODO se ven todos los ordenadores a la vez, en escuadrones de 4. El foco rota de UFO en UFO cada 20s (los demás siguen presentes). Elige uno a mano para fijar el foco en él; en ⚙ AVANZADO pausas la rotación automática.</div>
     <!-- pie del riel (patrón menú de cuenta de Claude Code): usuario+sesión con la versión DENTRO de la pestaña -->
     <div class="pf-user" id="userBlock">
       <div class="pf-umenu" id="userMenu" hidden>
@@ -799,7 +799,7 @@
       </div>
       <button class="pf-urow" id="userRow" type="button" aria-expanded="false" aria-controls="userMenu" title="Sesión">
         <span class="pf-uava" id="userAva" aria-hidden="true">?</span>
-        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.12.r33</span></span>
+        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.13.r34</span></span>
         <span class="pf-ugear" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg></span>
         <span class="pf-uchev" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
       </button>
@@ -1125,6 +1125,17 @@
   let FOCUS_MACHINE = null;  // norm(nombre) del ordenador con foco en la vista TODO, o null
   let VIEWER_MACHINE = null; // norm(nombre) del ordenador desde el que se está viendo esta página (pasado por ?viewer= o ?focus)
   let VIEW_ZOOM = 1;         // zoom efectivo (agranda nodos/órbitas al enfocar un ordenador)
+  // ── r34: ESCUADRONES DE 4 (vista TODO) ───────────────────────────────────
+  // Carlos con sus 4 MacBook Air delante: «tienen que aparecer TODAS como UFOs
+  // de 4 en 4». La vista TODO ya no filtra a un solo ordenador: pinta TODAS las
+  // máquinas vivas a la vez, agrupadas en formaciones de 4 (rombo). El foco
+  // (elegido a mano o rotando cada 20s) sólo AGRANDA un UFO — nunca esconde a
+  // los demás. ALL_MULTI se enciende en applyView() cuando la vista TODO pinta
+  // más de un ordenador; layoutAllSquadrons() reparte los anclajes.
+  const ALL_SQUADRON_SIZE = 4;      // UFOs por escuadrón (rombo)
+  let ALL_MULTI = false;            // vista TODO con varios ordenadores a la vez
+  let AUTO_FOCUS_KEY = null;        // norm() del ordenador con foco AUTOMÁTICO (rotación 20s)
+  let _autoFocusAt = 0;             // marca de tiempo del último salto de foco automático
   // ── r11: INTERACCIÓN DE ÓRBITAS ──────────────────────────────────────────
   // Velocidad orbital global (slider AVANZADO): ×0=paradas … ×2. Default ×0.5
   // («a veces va muy rápido» — Carlos). Persistido en localStorage.
@@ -1420,6 +1431,43 @@
     });
   }
 
+  // ── r34: ESCUADRONES DE 4 (vista TODO) ─────────────────────────────────────
+  // Reparte los ANCLAJES (_anchorX/_anchorY) de cada ordenador en formaciones de
+  // 4 (rombo). Los escuadrones se distribuyen en rejilla por el escenario; dentro
+  // de cada rombo, los 4 UFOs van arriba/derecha/abajo/izquierda de su centro.
+  // physics() lleva cada principal a su anclaje con un muelle; los agentes siguen
+  // orbitando a su ordenador. El foco sólo agranda un UFO, no reordena nada.
+  // Determinista y estable: no salta al recargar (orden por id).
+  function layoutAllSquadrons(){
+    const mach = nodes.filter(n=>n.kindFor==='all-machine' && !n.parentId)
+                      .sort((a,b)=> a.id<b.id?-1:a.id>b.id?1:0);
+    const nM = mach.length;
+    if(nM<=1){ mach.forEach(n=>{ n._anchorX=W/2; n._anchorY=H/2; n._squad=0; }); return; }
+    const squads = Math.ceil(nM/ALL_SQUADRON_SIZE);
+    const cols = Math.ceil(Math.sqrt(squads));
+    const rows = Math.ceil(squads/cols);
+    const pad = Math.min(W,H)*0.16;
+    const usableW = Math.max(1, W - 2*pad), usableH = Math.max(1, H - 2*pad);
+    const cellW = usableW/cols, cellH = usableH/rows;
+    // radio del rombo: cabe el UFO enfocado (×1.55) y sus órbitas sin pisar al vecino
+    const sr = Math.min(cellW, cellH) * 0.30;
+    // rombo: arriba, derecha, abajo, izquierda
+    const SLOTS = [ [0,-1], [1,0], [0,1], [-1,0] ];
+    for(let i=0;i<nM;i++){
+      const n = mach[i];
+      const s = Math.floor(i/ALL_SQUADRON_SIZE);   // índice de escuadrón
+      const slot = i%ALL_SQUADRON_SIZE;            // posición en el rombo
+      const col = s%cols, row = Math.floor(s/cols);
+      const scx = pad + cellW*(col+0.5), scy = pad + cellH*(row+0.5);
+      // último escuadrón incompleto con 1 → al centro del rombo
+      const inThisSquad = Math.min(ALL_SQUADRON_SIZE, nM - s*ALL_SQUADRON_SIZE);
+      let ax, ay;
+      if(inThisSquad===1){ ax=scx; ay=scy; }
+      else { const off=SLOTS[slot]; ax=scx+off[0]*sr; ay=scy+off[1]*sr; }
+      n._anchorX=ax; n._anchorY=ay; n._squad=s;
+    }
+  }
+
   function physics(dt){
     // r11: zoom suavizado hacia el objetivo (rueda × foco) + órbitas congeladas
     ZSM += (effZoom()-ZSM)*Math.min(1, dt*0.008);
@@ -1477,8 +1525,32 @@
       return;
     }
     const byId={}; nodes.forEach(n=>byId[n.id]=n);
+    // ── r34: vista TODO multi — rota el foco automático cada ROTATE_MS y fija el
+    // factor de escala objetivo por nodo (grande el enfocado, reducidos los demás).
+    if(ALL_MULTI){
+      const machKeys = nodes.filter(n=>n.kindFor==='all-machine' && !n.parentId).map(n=>n.id.slice(4));
+      if(machKeys.length){
+        if(!FOCUS_MACHINE && !rotPaused){
+          const rm = (typeof ROTATE_MS_DYN==='number')?ROTATE_MS_DYN:ROTATE_MS;
+          const nowMs = performance.now();
+          if(!machKeys.includes(AUTO_FOCUS_KEY)){ AUTO_FOCUS_KEY=machKeys[0]; _autoFocusAt=nowMs; }
+          else if(nowMs - _autoFocusAt >= rm){
+            AUTO_FOCUS_KEY = machKeys[(machKeys.indexOf(AUTO_FOCUS_KEY)+1)%machKeys.length];
+            _autoFocusAt = nowMs;
+          }
+        }
+        const effKey = FOCUS_MACHINE || (machKeys.includes(AUTO_FOCUS_KEY)?AUTO_FOCUS_KEY:machKeys[0]);
+        const fmid = 'all:'+effKey;
+        for(const n of nodes){
+          const inF = n.id===fmid || n.id.indexOf(fmid+'|')===0;
+          n._fzTarget = inF ? 1.55 : 0.72; n._focused = inF;
+        }
+      }
+    }
     for (let i=0;i<nodes.length;i++){
       const a=nodes[i];
+      // r34: escala por nodo suavizada (foco grande, resto reducido) — la lee volumeRadius
+      a._fzs = (a._fzs==null) ? (a._fzTarget||1) : a._fzs + ((a._fzTarget||1)-a._fzs)*Math.min(1, dt*0.006);
       // --- SATÉLITE: orbita a su agente principal, al margen de la física global.
       if(a.parentId && byId[a.parentId]){
         const par=byId[a.parentId];
@@ -1498,7 +1570,7 @@
         const spd  = (a.tier==='infra' ? 0.00110 : a.tier==='sub' ? 0.00085 : 0.00060) * ORBIT_SPEED * a._spdJit;
         if(!FROZEN.has(a.id)) a._orb = (a._orb||0) + dt*spd;
         const rF   = a.tier==='infra' ? 0.034 : a.tier==='sub' ? 0.058 : 0.115;
-        const rSat = Math.min(W,H) * rF * ZSM;
+        const rSat = Math.min(W,H) * rF * ZSM * (par._fzs||1);   // r34: órbita más amplia bajo el UFO enfocado
         const tx = par.x + Math.cos(a._orb)*rSat;
         const ty = par.y + Math.sin(a._orb)*rSat;
         // Si quedó lejos del padre (cambio de vista, arrastre), reengánchalo cerca
@@ -1508,9 +1580,21 @@
         a.vx*=0.80; a.vy*=0.80; a.x+=a.vx; a.y+=a.vy;
         continue;
       }
+      // --- r34: ESCUADRÓN — en la vista TODO multi, cada ordenador va a su anclaje
+      // de rombo (fijo); el foco no lo mueve, sólo lo agranda. Nada se pisa ni se
+      // esconde: todas las máquinas vivas quedan a la vez, de 4 en 4.
+      if(ALL_MULTI && a._anchorX!=null && !FROZEN.has(a.id)){
+        a.vx += (a._anchorX-a.x)*0.05; a.vy += (a._anchorY-a.y)*0.05;
+        // bobeo tenue para que respire sin desanclarse
+        a.phase += dt*0.0004;
+        a.vx += Math.cos(a.phase*1.1+i)*0.010; a.vy += Math.sin(a.phase+i)*0.010;
+        a.vx*=0.84; a.vy*=0.84; a.x+=a.vx; a.y+=a.vy;
+        continue;
+      }
       // --- FOCO: el ordenador enfocado se ancla al centro (los demás nodos ya
       // están filtrados fuera en applyView), para que quede centrado el zoom.
-      if(FOCUS_MACHINE && a.id==='all:'+FOCUS_MACHINE){
+      // Sólo en foco de UN ordenador (no multi): en multi manda el anclaje de escuadrón.
+      if(!ALL_MULTI && FOCUS_MACHINE && a.id==='all:'+FOCUS_MACHINE){
         a.vx += (cx-a.x)*0.06; a.vy += (cy-a.y)*0.06;
         a.vx*=0.80; a.vy*=0.80; a.x+=a.vx; a.y+=a.vy;
         continue;
@@ -1634,11 +1718,15 @@
     // es más pequeño que su principal.
     if(n.parentId) base *= (n.tier==='infra' ? 0.42 : n.tier==='sub' ? 0.56 : 0.72);
     base *= ZSM;   // zoom efectivo suavizado (foco × rueda) — el nodo CRECE al acercarse
+    // r34: vista TODO en escuadrones — escala por nodo (grande el UFO enfocado, el
+    // resto reducidos pero claramente presentes). Fuera de la vista TODO _fzs≈1.
+    const fz34 = (n._fzs!=null ? n._fzs : 1);
+    base *= fz34;
     // Synthetic layers (to always show the 3-layer structure) are treated as visible and boosted
     if (n._synthetic && n.parentId) {
       base *= 0.9; // less reduction for synthetic to make them more visible
     }
-    return (n.online || n._synthetic) ? base : Math.max((n.parentId?3:R_MIN-1)*ZSM, base*0.7);
+    return (n.online || n._synthetic) ? base : Math.max((n.parentId?3:R_MIN-1)*ZSM*fz34, base*0.7);
   }
 
   let last=performance.now();
@@ -1829,13 +1917,16 @@
       // Satélites: etiqueta más pequeña (jerarquía visible) y pegada al nodo.
       // La tipografía y el interlineado CRECEN suave con el zoom (factor fz).
       const isSat = !!n.parentId;
-      const lblPx = Math.round((isSat ? 9 : 11)*fz);
+      // r34: tipografía por nodo — el UFO enfocado luce etiquetas grandes («como
+      // hoy»); los reducidos las conservan legibles. Fuera de la vista TODO nfz≈fz.
+      const nfz = Math.max(0.82, Math.min(1.7, fz * (n._fzs!=null ? n._fzs : 1)));
+      const lblPx = Math.round((isSat ? 9 : 11)*nfz);
       ctx.font = (isHover?'700 ':'')+lblPx+'px Orbitron, monospace';
       // ANTI-PISADO: si la etiqueta cae sobre otra ya pintada este frame, se omite
       // (el nodo queda visible; su detalle sale al pasar el ratón). El hover SIEMPRE
       // se pinta. Prioridad natural = orden de pintado (máquina → principales → capas).
-      const _bw = Math.max(ctx.measureText(n.label).width + 10, 80*fz);
-      const _bh = (lvl>=2 ? (n.online&&n.since ? 46 : 34) : 16)*fz;
+      const _bw = Math.max(ctx.measureText(n.label).width + 10, 80*nfz);
+      const _bh = (lvl>=2 ? (n.online&&n.since ? 46 : 34) : 16)*nfz;
       const _bx = n.x - _bw/2, _by = n.y + r + 4;
       if(!isHover){
         let _clash=false;
@@ -1846,9 +1937,9 @@
       ctx.textAlign='center';
       ctx.fillStyle = n.online ? (isHover?'#eafcff':'#bfe9f2') : '#6f8090';
       ctx.shadowColor=n.online?'rgba(34,230,255,.5)':'transparent'; ctx.shadowBlur=n.online?6:0;
-      ctx.fillText(n.label, n.x, n.y+r+(isSat?11:15)*fz);
+      ctx.fillText(n.label, n.x, n.y+r+(isSat?11:15)*nfz);
       ctx.shadowBlur=0;
-      ctx.font=Math.round(9*fz)+'px Orbitron, monospace';
+      ctx.font=Math.round(9*nfz)+'px Orbitron, monospace';
       ctx.fillStyle = n.online? 'rgba(34,230,255,.75)':'rgba(140,160,175,.5)';
       // Vista TODO: junto al agente, su LÍNEA DE MISIÓN (r12, precedencia
       // estricta: focus fresco → asignación de mando → «Sin misión»; el
@@ -1860,10 +1951,10 @@
         const clean = mline.replace(/^www\./,'');
         const pj = clean.length>22 ? clean.slice(0,21)+'…' : clean;
         if(mline==='Sin misión') ctx.fillStyle = n.online? 'rgba(140,160,175,.55)':'rgba(140,160,175,.4)';  // neutro, no cian
-        ctx.fillText(pj, n.x, n.y+r+(isSat?21:27)*fz);
+        ctx.fillText(pj, n.x, n.y+r+(isSat?21:27)*nfz);
       } else if(lvl>=2 && n.sub && !dimNode && (!isSat || isHover) && (SHOW_PROJ || isHover)){
         // El runtime secundario de un satélite solo al pasar el ratón (menos ruido).
-        ctx.fillText(n.sub, n.x, n.y+r+(isSat?21:27)*fz);
+        ctx.fillText(n.sub, n.x, n.y+r+(isSat?21:27)*nfz);
       }
       // Bajo cada AGENTE (tiene `since`): ⏱ tiempo · APP gestora (nivel MEDIO);
       // acercándose (nivel CERCA) se despliega la CAPA DE TOKENS consumidos —
@@ -1873,22 +1964,22 @@
         const now=(WORLD.serverNow||Math.floor(Date.now()/1000));
         const parts=['⏱ '+fmtDur(now-n.since), runtimeApp(n.runtime||n.sub)];
         if(lvl>=3 && (META_MODE==='todo' || isHover)) parts.push((+n.tokens>0 ? fmtTokens(n.tokens) : '—')+' tok');
-        ctx.font=Math.round(8*fz)+'px Orbitron, monospace';
+        ctx.font=Math.round(8*nfz)+'px Orbitron, monospace';
         ctx.fillStyle='rgba(120,200,220,.6)';
-        ctx.fillText(parts.join(' · '), n.x, n.y+r+(isSat?31:37)*fz);
+        ctx.fillText(parts.join(' · '), n.x, n.y+r+(isSat?31:37)*nfz);
       }
       // Bajo cada ORDENADOR online (sin `since`, con cpu): uso de CPU del equipo.
       else if(lvl>=2 && !dimNode && n.online && !n.since && +n.cpu>0 && (META_MODE!=='nada' || isHover)){
-        ctx.font=Math.round(8*fz)+'px Orbitron, monospace';
+        ctx.font=Math.round(8*nfz)+'px Orbitron, monospace';
         ctx.fillStyle='rgba(120,200,220,.55)';
-        ctx.fillText('cpu '+Math.round(n.cpu)+'%', n.x, n.y+r+(isSat?31:37)*fz);
+        ctx.fillText('cpu '+Math.round(n.cpu)+'%', n.x, n.y+r+(isSat?31:37)*nfz);
       }
       // FUERA DE CARRIL (ámbar): asignación de Carlos ≠ misión reportada
       // (alerta: visible en TODOS los niveles de zoom)
       if(n.offRail && !dimNode){
         ctx.fillStyle='rgba(255,181,69,.9)';
         ctx.shadowColor='rgba(255,181,69,.5)'; ctx.shadowBlur=5;
-        ctx.fillText('⚠ FUERA DE CARRIL', n.x, n.y+r+(n.sub?39:27)*fz);
+        ctx.fillText('⚠ FUERA DE CARRIL', n.x, n.y+r+(n.sub?39:27)*nfz);
         ctx.shadowBlur=0;
       }
       ctx.globalAlpha=1;
@@ -2676,7 +2767,7 @@
         const m=c.match(/v\.[\d.]+r\d+|v\.[\d.]+\.r\d+/);
         if(m) return m[0];
       }catch(e){}
-      return 'v.2026.07.12.r33';
+      return 'v.2026.07.13.r34';
     })();
     let focusLabel = FOCUS_MACHINE ? FOCUS_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
     let viewerLabel = VIEWER_MACHINE ? VIEWER_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
@@ -3831,9 +3922,11 @@
   }
 
   // Traduce el WORLD a nodos genéricos para la vista activa y recoloca
+  let _pendingSquadronLayout = false;
   function applyView(){
     let list=[];
     VIEW_ZOOM = 1;   // por defecto sin zoom; la rama TODO con foco lo sube
+    ALL_MULTI = false; _pendingSquadronLayout = false;  // r34: sólo la vista TODO los activa
     if(currentView==='machine'){
       list = WORLD.machines.map(m=>({
         id:'m:'+norm(m.machine), label:m.machine, sub:m.project,
@@ -3870,17 +3963,32 @@
       }));
     } else if(currentView==='all'){
       // WORLD.all ya viene como nodos (ordenador principal + agentes-satélite).
+      // r34: ESCUADRONES — se pintan TODOS los ordenadores a la vez, en formaciones
+      // de 4. El foco (a mano o rotando) NO filtra: sólo AGRANDA un UFO. Antes
+      // (≤r33) el foco dejaba en pantalla un único ordenador, y Carlos con sus 4
+      // MacBook Air delante sólo veía uno. Ya no.
       list = (WORLD.all||[]).map(n=>({...n}));
-      // FOCO ordenador: si hay uno elegido, deja solo ese equipo + sus agentes,
-      // y amplía tamaños/órbitas (zoom efectivo) para centrar la atención.
-      if(FOCUS_MACHINE){
-        const mid='all:'+FOCUS_MACHINE;
-        // subárbol completo del ordenador enfocado (principal + sub + infra anidados)
-        list = list.filter(n=> n.id===mid || n.id.indexOf(mid+'|')===0);
-        if(list.length) VIEW_ZOOM = 1.9;
-        else if((WORLD.all||[]).length){ FOCUS_MACHINE=null; VIEW_ZOOM=1; list=(WORLD.all||[]).map(n=>({...n})); } // datos cargados pero el equipo ya no está: vuelve a todos
-        // si WORLD.all aún no cargó (arranque por deep-link), conserva el foco: load() reaplicará
+      // ids de ordenadores presentes (principales, kindFor 'all-machine')
+      const machineKeys = list.filter(n=>n.kindFor==='all-machine').map(n=>n.id.slice(4)); // quita 'all:'
+      // FOCO efectivo: el elegido a mano manda; si no, el que rota cada 20s
+      // (AUTO_FOCUS_KEY, avanzado en physics). Se valida contra los presentes.
+      if(FOCUS_MACHINE && !machineKeys.includes(FOCUS_MACHINE)){
+        if((WORLD.all||[]).length) FOCUS_MACHINE=null;   // el equipo enfocado ya no está → vuelve a rotar
+        // si WORLD.all aún no cargó (deep-link), conserva el foco: load() reaplicará
       }
+      const effFocus = FOCUS_MACHINE || (machineKeys.includes(AUTO_FOCUS_KEY) ? AUTO_FOCUS_KEY : machineKeys[0]||null);
+      const focusMid = effFocus ? 'all:'+effFocus : null;
+      // Marca el subárbol enfocado (principal + agentes) con su factor de escala
+      // objetivo: grande y con detalle; el resto, presentes pero reducidos.
+      list.forEach(n=>{
+        const inFocus = focusMid && (n.id===focusMid || n.id.indexOf(focusMid+'|')===0);
+        n._fzTarget = inFocus ? 1.55 : 0.72;   // per-nodo (physics suaviza a n._fzs)
+        n._focused  = !!inFocus;
+      });
+      ALL_MULTI = machineKeys.length > 1;   // ≥2 ordenadores → formación de escuadrones
+      VIEW_ZOOM = 1;                         // en TODO el énfasis lo da _fz por nodo, no el zoom global
+      // Los anclajes de escuadrón se calculan tras layoutNodes (necesita el set final)
+      _pendingSquadronLayout = ALL_MULTI;
     } else {
       list = WORLD.missions.map(mi=>({
         id:mi.id, label:mi.mission, sub:(mi.machines.length+' eq · '+mi.agentNames.length+' ag'),
@@ -3891,6 +3999,7 @@
     }
     if(typeof ONLY_LIVE!=='undefined' && ONLY_LIVE) list = list.filter(n=>n.online);
     layoutNodes(list);
+    if(_pendingSquadronLayout) layoutAllSquadrons();   // r34: reparte anclajes de escuadrón (rombos de 4)
     // si hay una figura activa, re-mapea targets al nuevo set de nodos
     if(DRAW_ACTIVE && drawShape){
       if(DRAW_MODE==='poly3d'){ /* el decaedro re-ancla nodos cada frame en physics; nada que remapear */ }

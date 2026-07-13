@@ -2,9 +2,9 @@
   "proyecto": "Clearchannel.tv · presentación plataforma agéntica",
   "titulo": "Clearchannel.tv — la primera plataforma agéntica de Retail Media y DOOH",
   "resumen": "Deck web (12 slides, estética CRT/HUD fósforo+cian) que presenta Clearchannel.tv como plataforma agéntica: de la programática a agentes que ven contexto (stock, hora, audiencia) y deciden qué emitir. Dos casos: Xtanco (Retail Media en estancos, RTB OmniPublicity, regla showContent→Stock) y CanalKiosk (DOOH en kioscos, canal multicanal admira.tv).",
-  "foco": "Deck publicado en su destino final www.clearchannel.tv/presentacion (orden explícita de Carlos); faltan datos reales (nº pantallas Xtanco/CanalKiosk) y la captura/iframe del panel de flota en la slide-demo",
-  "progreso": 75,
-  "estado_general": "v1 en producción en clearchannel.tv/presentacion; pendiente datos reales y slide-demo",
+  "foco": "Deck v26.13.7-r3 con DEMO VIVA: parrilla del Xpacio Xtanco embebida en la slide 09 (Xperiences, no powerpoints); falta solo meter datos reales en placeholders",
+  "progreso": 85,
+  "estado_general": "v26.13.7-r3 en producción con demo viva; pendiente datos reales de Xtanco/CanalKiosk",
   "actualizado": "2026-07-13T09:00:00Z",
   "ultima_actualizacion_real": "2026-07-13T09:00:00Z",
   "caduca": "2026-07-16T09:00:00Z",
@@ -15,22 +15,21 @@
       "Guion completo de 12 slides: tesis programática→agéntica, plataforma (admira.tv + XPL + auto-alta + panel flota + adcelerate), caso Xtanco, caso CanalKiosk, demo en vivo, métricas, roadmap Admira 3.0",
       "Deck HTML autocontenido con navegación teclado/click/botones, estética sci-fi CRT/HUD de la casa",
       "Publicado borrador v1 en admira.live/clearchannel-agentic/",
-      "Desplegado en www.clearchannel.tv/presentacion (CF Pages clearchannel-tv, cc-v.13.07.2026.r3, tag rollback retorno/pre-presentacion-agentica-20260713)"
+      "Desplegado en www.clearchannel.tv/presentacion (CF Pages clearchannel-tv, cc-v.13.07.2026.r3, tag rollback retorno/pre-presentacion-agentica-20260713)",
+      "Slide-demo con iframe VIVO de clearchannel.tv/parrilla/ (pública, mismo dominio; /cms y /signage requieren perímetro de seguridad)"
     ],
     "encurso": [
       "Revisión de Carlos del borrador v1"
     ],
     "siguiente": [
-      "Meter datos reales de Xtanco y CanalKiosk (nº pantallas, ubicaciones) en los placeholders",
-      "Captura/iframe real del panel de flota en la slide-demo"
+      "Meter datos reales de Xtanco y CanalKiosk (nº pantallas, ubicaciones) en los placeholders"
     ]
   },
   "necesita_carbono": [
-    "Datos reales de Xtanco y CanalKiosk (nº pantallas, ubicaciones) para sustituir los placeholders [N pantallas]",
-    "Decisión: audiencia exacta (cliente/partner vs inversor) y dónde vive la versión final (clearchannel.tv)"
+    "Datos reales de Xtanco y CanalKiosk (nº pantallas, ubicaciones) para sustituir los placeholders [N pantallas]"
   ],
   "riesgos": [
-    "La slide-demo tiene placeholder: sin captura real del panel de flota pierde fuerza en directo"
+    "La parrilla embebida muestra ocupación 0% e ingresos 0 € a primera hora: en una demo comercial conviene sembrar campañas antes de presentar"
   ],
   "enlaces": [
     {
@@ -47,5 +46,5 @@
     }
   ],
   "commit": "pendiente",
-  "version": "estado clearchannel-agentic v.2026.07.13.r2 (Morfeo)"
+  "version": "estado clearchannel-agentic v.2026.07.13.r3 (Morfeo)"
 }

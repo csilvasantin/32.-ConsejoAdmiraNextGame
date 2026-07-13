@@ -2,27 +2,27 @@
   "proyecto": "Clearchannel.tv · presentación plataforma agéntica",
   "titulo": "Clearchannel.tv — la primera plataforma agéntica de Retail Media y DOOH",
   "resumen": "Deck web (12 slides, estética CRT/HUD fósforo+cian) que presenta Clearchannel.tv como plataforma agéntica: de la programática a agentes que ven contexto (stock, hora, audiencia) y deciden qué emitir. Dos casos: Xtanco (Retail Media en estancos, RTB OmniPublicity, regla showContent→Stock) y CanalKiosk (DOOH en kioscos, canal multicanal admira.tv).",
-  "foco": "Borrador v1 publicado en /clearchannel-agentic/ para revisión de Carlos; faltan datos reales (nº pantallas Xtanco/CanalKiosk) y decidir deploy final en clearchannel.tv (proyecto ThinkStation)",
-  "progreso": 60,
-  "estado_general": "borrador v1 en producción, pendiente feedback de Carlos y datos reales",
+  "foco": "Deck publicado en su destino final www.clearchannel.tv/presentacion (orden explícita de Carlos); faltan datos reales (nº pantallas Xtanco/CanalKiosk) y la captura/iframe del panel de flota en la slide-demo",
+  "progreso": 75,
+  "estado_general": "v1 en producción en clearchannel.tv/presentacion; pendiente datos reales y slide-demo",
   "actualizado": "2026-07-13T09:00:00Z",
   "ultima_actualizacion_real": "2026-07-13T09:00:00Z",
   "caduca": "2026-07-16T09:00:00Z",
-  "por": "Neo · MacBookProNegro14",
+  "por": "Morfeo · MacBookProNegro14",
   "_planos": "Este fichero es el ESTADO DE PROYECTO (global, versionado en git). La PRESENCIA VIVA per-agente (quién está online y en qué foco) NO va aquí: la sirve el worker en /api/presence y la pinta la vista-previa aparte. Si 'caduca' < ahora, considérese posiblemente desfasado.",
   "pasos": {
     "hecho": [
       "Guion completo de 12 slides: tesis programática→agéntica, plataforma (admira.tv + XPL + auto-alta + panel flota + adcelerate), caso Xtanco, caso CanalKiosk, demo en vivo, métricas, roadmap Admira 3.0",
       "Deck HTML autocontenido con navegación teclado/click/botones, estética sci-fi CRT/HUD de la casa",
-      "Publicado borrador v1 en admira.live/clearchannel-agentic/"
+      "Publicado borrador v1 en admira.live/clearchannel-agentic/",
+      "Desplegado en www.clearchannel.tv/presentacion (CF Pages clearchannel-tv, cc-v.13.07.2026.r3, tag rollback retorno/pre-presentacion-agentica-20260713)"
     ],
     "encurso": [
       "Revisión de Carlos del borrador v1"
     ],
     "siguiente": [
       "Meter datos reales de Xtanco y CanalKiosk (nº pantallas, ubicaciones) en los placeholders",
-      "Captura/iframe real del panel de flota en la slide-demo",
-      "Deploy final en clearchannel.tv (rutear a ThinkStation o orden explícita de Carlos)"
+      "Captura/iframe real del panel de flota en la slide-demo"
     ]
   },
   "necesita_carbono": [
@@ -30,10 +30,13 @@
     "Decisión: audiencia exacta (cliente/partner vs inversor) y dónde vive la versión final (clearchannel.tv)"
   ],
   "riesgos": [
-    "clearchannel.tv es proyecto de ThinkStation: el deploy final se rutea, no se hace desde Negro14 sin orden explícita",
     "La slide-demo tiene placeholder: sin captura real del panel de flota pierde fuerza en directo"
   ],
   "enlaces": [
+    {
+      "label": "Presentación EN PRODUCCIÓN",
+      "url": "https://www.clearchannel.tv/presentacion/?v=26.13.7-r1"
+    },
     {
       "label": "Deck Clearchannel agéntico (borrador v1)",
       "url": "https://www.admira.live/clearchannel-agentic/?v=26.13.7-r1"
@@ -44,5 +47,5 @@
     }
   ],
   "commit": "pendiente",
-  "version": "estado clearchannel-agentic v.2026.07.13.r1 (Neo)"
+  "version": "estado clearchannel-agentic v.2026.07.13.r2 (Morfeo)"
 }

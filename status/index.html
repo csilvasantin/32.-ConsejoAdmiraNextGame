@@ -1411,6 +1411,26 @@
     // r9: el centro cambia de ancho al abrir/cerrar los rieles → RE-ENCUADRE
     // real para que la constelación quede centrada y completa en el nuevo marco.
     if(ow&&oh&&(ow!==W||oh!==H)) refitToViewport(ow,oh);
+    // r35: el lienzo puede medir 0×0 cuando el navegador aún no ha hecho layout
+    // (p.ej. la página cargada en una pestaña de fondo). Si se repartieron nodos
+    // en ese momento, nacieron todos sobre un centro (0,0) y quedaron amontonados
+    // fuera del encuadre; refitToViewport NO los rescata porque exige medidas
+    // previas (ow&&oh). En cuanto el lienzo TIENE medidas por primera vez, se
+    // recolocan los que quedaron fuera.
+    else if((!ow||!oh) && W>0 && H>0 && nodes.length) rescueOffscreen();
+  }
+  // Devuelve al anillo los nodos que quedaron fuera del lienzo (ver resize).
+  function rescueOffscreen(){
+    const cx=W/2, cy=H/2, R=Math.min(W,H)*0.34;
+    const fuera = nodes.filter(n=>!(isFinite(n.x)&&isFinite(n.y)) || n.x<0 || n.y<0 || n.x>W || n.y>H);
+    if(!fuera.length) return;
+    fuera.forEach((n,i)=>{
+      const ang=(i/fuera.length)*Math.PI*2 + (i*0.618);
+      const rr=R*(0.55+0.6*((i*0.31)%1));
+      n.x = cx + Math.cos(ang)*rr + (Math.random()-.5)*40;
+      n.y = cy + Math.sin(ang)*rr + (Math.random()-.5)*40;
+      n.vx = 0; n.vy = 0;
+    });
   }
   // Re-encuadre al cambiar el tamaño del marco (rieles en flujo, r9):
   //  · nodos: reescalado proporcional (ratios compuestos → idempotente en transición)
@@ -1476,12 +1496,23 @@
   const cam = {x:0,y:0,vx:0,vy:0,drag:false,px:0,py:0};
 
   function layoutNodes(list){
+    // W/H nacen a 0 y sólo los fija resize() (cv.clientWidth). Si se reparte antes
+    // de que el lienzo tenga medidas, el anillo se calcula sobre un centro (0,0) y
+    // TODOS los nodos nacen amontonados en la esquina superior izquierda — y como
+    // las posiciones se conservan por id, se quedaban ahí para siempre (sólo se
+    // recolocaban al cambiar de vista, que los crea de cero). Se veía entrando en
+    // la vista MISIÓN recién cargada la página.
+    if(W<1 || H<1) resize();
     // Preserva posiciones para ids ya colocados; coloca nuevos en un anillo amplio
     const prev = {}; nodes.forEach(n=>prev[n.id]=n);
     const cx=W/2, cy=H/2;
     const R = Math.min(W,H)*0.34;
+    // Una posición previa sólo vale si sigue DENTRO del lienzo: si quedó fuera (o
+    // es basura), el nodo se recoloca en el anillo en vez de arrastrar el error.
+    const usable = p => p && isFinite(p.x) && isFinite(p.y) &&
+                        p.x > -40 && p.y > -40 && p.x < W+40 && p.y < H+40;
     nodes = list.map((m,i)=>{
-      const p = prev[m.id];
+      const p = usable(prev[m.id]) ? prev[m.id] : null;
       const ang = (i/list.length)*Math.PI*2 + (i*0.618);
       const rr = R*(0.55+0.6*((i*0.31)%1));
       return {

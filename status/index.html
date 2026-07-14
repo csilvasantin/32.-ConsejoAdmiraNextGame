@@ -1423,9 +1423,12 @@
     else if((!ow||!oh) && W>0 && H>0 && nodes.length) rescueOffscreen();
   }
   // Devuelve al anillo los nodos que quedaron fuera del lienzo (ver resize).
+  // El margen no es cosmético: un nodo pegado al borde se pinta CORTADO (tiene
+  // radio y etiqueta), así que cuenta como fuera.
   function rescueOffscreen(){
     const cx=W/2, cy=H/2, R=Math.min(W,H)*0.34;
-    const fuera = nodes.filter(n=>!(isFinite(n.x)&&isFinite(n.y)) || n.x<0 || n.y<0 || n.x>W || n.y>H);
+    const M = Math.min(W,H)*0.08;
+    const fuera = nodes.filter(n=>!(isFinite(n.x)&&isFinite(n.y)) || n.x<M || n.y<M || n.x>W-M || n.y>H-M);
     if(!fuera.length) return;
     fuera.forEach((n,i)=>{
       const ang=(i/fuera.length)*Math.PI*2 + (i*0.618);

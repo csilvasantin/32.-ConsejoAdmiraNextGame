@@ -1243,7 +1243,10 @@
     const m = missionForAgent(persona);
     return m ? m.subject : MISSION_NONE;
   }
-  // «3/9» — tareas hechas sobre las definidas. Sin plan aún → null.
+  // Tareas HECHAS sobre el total del árbol (pasos + subtareas). Sin plan → null.
+  // OJO: no es el «n/9» de yokup, que cuenta cuántas SUBTAREAS se han definido
+  // (de un máximo de 9). Aquí se mide avance, allí tamaño del plan — por eso en
+  // pantalla siempre va acompañado de la palabra «hechas».
   function missionProgress(m){
     if(!m || !m.progress || !m.progress.total) return null;
     return m.progress.done + '/' + m.progress.total;
@@ -1263,7 +1266,7 @@
     if(!n.missionId)
       return `<div class="row"><span class="lab">misión</span><span class="val" style="color:var(--text-dim)">${MISSION_NONE} · sin encargo vivo</span></div>`;
     const st = n.missionStatus==='in_progress' ? 'en curso' : 'abierta';
-    const prog = n.missionProg ? ` · <b>${n.missionProg}</b> tareas` : ' · <i>sin plan de tareas</i>';
+    const prog = n.missionProg ? ` · <b>${n.missionProg}</b> tareas hechas` : ' · <i>sin plan de tareas</i>';
     return `<div class="row"><span class="lab">misión</span><span class="val">${esc(n.mission)}`+
            `<br><span style="font-size:9px;letter-spacing:.08em;color:var(--text-dim)">${n.missionId} · ${st}${prog} · `+
            `<a href="https://www.yokup.com/ticket?id=${encodeURIComponent(n.missionId)}" target="_blank" rel="noopener" style="color:var(--cyan)">abrir en yokup →</a>`+
@@ -4167,7 +4170,7 @@
         // sin recortar convertía el escenario en un muro de texto. El completo, en
         // la ficha.
         id:mi.id, label:shortMission(mi.mission),
-        sub:(mi.missionProg ? mi.missionProg+' tareas · ' : '') + mi.machines.length+' eq · '+mi.agentNames.length+' ag',
+        sub:(mi.missionProg ? mi.missionProg+' hechas · ' : '') + mi.machines.length+' eq · '+mi.agentNames.length+' ag',
         machines:mi.machines, agentNames:mi.agentNames, online:mi.online, updated:mi.updated,
         foco:mi.foco, count:mi.machines.length+mi.agentNames.length,
         decisions:mi.decisions||0, tokens:mi.tokens||0, reqs:mi.reqs||0,

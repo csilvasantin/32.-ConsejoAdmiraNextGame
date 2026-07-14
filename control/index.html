@@ -2106,7 +2106,10 @@ function collapseAllToggle(){
   async function callCouncilHackeo(mode){
     const path = mode==="stop" ? "/api/council/hackeo/stop" : "/api/council/hackeo";
     if(mode!=="stop" && !MY_TAILNET_IP){ try{ await fetchOperatorToken(); }catch(e){} }
-    const body = mode==="stop" ? "{}" : JSON.stringify({ exclude_ip: MY_TAILNET_IP||"" });
+    // Sin autoexclusión: el hackeo toma TODAS las pantallas, incluida la de la
+    // máquina desde la que se lanza (decisión del operador). Antes se enviaba
+    // exclude_ip = MY_TAILNET_IP para no tapar el panel del que lo lanzaba.
+    const body = mode==="stop" ? "{}" : JSON.stringify({ exclude_ip: "" });
     const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u=>u!==activeApiUrl)) : COUNCIL_API_URLS.slice();
     const headers = await hackAuthHeaders();
     let lastErr=null;

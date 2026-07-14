@@ -2088,15 +2088,30 @@ function collapseAllToggle(){
   function lockView(){ _sy=window.scrollY||0; _ov=document.documentElement.style.overflow; _ov2=document.body.style.overflow; document.documentElement.style.overflow="hidden"; document.body.style.overflow="hidden"; }
   function unlockView(){ document.documentElement.style.overflow=_ov; document.body.style.overflow=_ov2; window.scrollTo(0,_sy); }
 
+  // Cabeceras de auth para los endpoints de hackeo. El backend (verify_hack_token)
+  // acepta DOS vías: el hack-token dedicado del operador O la identidad de Google
+  // (id_token en la allowlist). Mandamos ambas: así el operador logueado (candado 🔒)
+  // autoriza el hackeo SIN pedir token a mano. Refresca el id_token si está rancio (>50min).
+  async function hackAuthHeaders(){
+    try{ const g=JSON.parse(localStorage.getItem('admira_gate')||'null');
+      if((!g||!g.credAt||(Date.now()-g.credAt)>50*60*1000) && typeof window.admiraGateRefresh==='function'){ await window.admiraGateRefresh(); }
+    }catch(e){}
+    const h={ "Content-Type":"application/json", "X-Council-Token":COUNCIL_API_TOKEN, "X-Council-Hack-Token":localStorage.getItem("council_hack_token")||"" };
+    const cred=(typeof gateCred==='function')?gateCred():'';
+    if(cred) h["Authorization"]="Bearer "+cred;
+    return h;
+  }
+
   async function callCouncilHackeo(mode){
     const path = mode==="stop" ? "/api/council/hackeo/stop" : "/api/council/hackeo";
     if(mode!=="stop" && !MY_TAILNET_IP){ try{ await fetchOperatorToken(); }catch(e){} }
     const body = mode==="stop" ? "{}" : JSON.stringify({ exclude_ip: MY_TAILNET_IP||"" });
     const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u=>u!==activeApiUrl)) : COUNCIL_API_URLS.slice();
+    const headers = await hackAuthHeaders();
     let lastErr=null;
     for(const baseUrl of urls){
       try{
-        const res=await fetch(baseUrl+path,{ method:"POST", headers:{ "Content-Type":"application/json","X-Council-Token":COUNCIL_API_TOKEN,"X-Council-Hack-Token":localStorage.getItem("council_hack_token")||"" }, body:body, signal:AbortSignal.timeout(20000) });
+        const res=await fetch(baseUrl+path,{ method:"POST", headers:headers, body:body, signal:AbortSignal.timeout(20000) });
         if(!res.ok){ lastErr="HTTP "+res.status; continue; }
         activeApiUrl=baseUrl; return await res.json();
       }catch(e){ lastErr=e.message||String(e); }
@@ -2124,9 +2139,12 @@ function collapseAllToggle(){
 
   async function startHack(){
     if(hackMode) return;
-    let tok = localStorage.getItem("council_hack_token")||"";
-    if(!tok){ tok = await fetchOperatorToken(); if(tok) localStorage.setItem("council_hack_token",tok); }
-    if(!tok){ tok=(prompt("Token de HACKEO (o pidelo por Telegram con /token a @Memorizer2Bot):")||"").trim(); if(!tok) return; localStorage.setItem("council_hack_token",tok); }
+    // Auth automática: intenta traer el operator-token del Mini en silencio. Si no hay,
+    // no pasa nada — el hackeo se autoriza con la identidad de Google del gate (candado 🔒)
+    // en callCouncilHackeo(). NUNCA pedimos token a mano por prompt().
+    if(!localStorage.getItem("council_hack_token")){
+      try{ const tok=await fetchOperatorToken(); if(tok) localStorage.setItem("council_hack_token",tok); }catch(e){}
+    }
     hackMode=true;
     const overlay=document.getElementById("hack"), body=document.getElementById("hackBody");
     overlay.classList.add("visible"); lockView();
@@ -2144,7 +2162,15 @@ function collapseAllToggle(){
     });
     const sl=document.getElementById("hackStatusLine"); if(sl) sl.textContent="lanzando intrusion\u2026";
     try{ const res=await callCouncilHackeo("start"); paintHackeoStatus(res&&res.machines?res:{error:"no response"}); }
-    catch(e){ if(/\b403\b/.test(e.message||"")){ localStorage.removeItem("council_hack_token"); paintHackeoStatus({error:"token de hackeo invalido \u2014 vuelve a abrir HACKEO"}); } else paintHackeoStatus({error:e.message}); }
+    catch(e){
+      if(/\b403\b/.test(e.message||"")){
+        localStorage.removeItem("council_hack_token");
+        // 403 = ni operator-token ni identidad v\u00e1lida. Refresca el login de Google una vez y reintenta.
+        let retried=null;
+        if(typeof window.admiraGateRefresh==='function'){ try{ await window.admiraGateRefresh(); retried=await callCouncilHackeo("start"); }catch(_){ retried=null; } }
+        if(retried&&retried.machines) paintHackeoStatus(retried);
+        else paintHackeoStatus({error:(typeof gateCred==='function'&&gateCred())?"sin permiso para hackeo (identidad no autorizada)":"inicia sesion con el candado \ud83d\udd12 para hackear"});
+      } else paintHackeoStatus({error:e.message}); }
   }
 
   async function stopHack(){

@@ -970,6 +970,7 @@ function renderCards(ms){
         <button data-a="openchannel" data-m="${m.id}" data-mname="${(m.name||'').replace(/"/g,'')}" title="Abrir el CANAL de Digital Signage en el Chrome de esta máquina (ventana nueva, screen ds-${_norm(m.name||m.id)}). Aparece en Players con su mando remoto. Requiere el executor navegadores corriendo en ese equipo.">📺 abrir canal DS</button>
         <button data-a="closechannel" data-m="${m.id}" data-mname="${(m.name||'').replace(/"/g,'')}" title="Cerrar la ventana del canal DS en el Chrome de esta máquina.">⏹ cerrar canal</button>
         ${m.online?`<button data-rc="${m.id}" data-rcname="${(m.name||'').replace(/"/g,'')}" title="Control remoto en vivo (ver + ratón + teclado, estilo AnyDesk). Requiere AdmiraRemoteAgent + permisos en la máquina destino." style="border-color:var(--acc);color:var(--acc);font-weight:700">🖥️ control remoto</button>`:''}
+        ${m.online?`<button data-term="${m.id}" data-termname="${(m.name||'').replace(/"/g,'')}" title="Terminal interactiva (consola SSH en vivo: cd, htop, vim, logs). Ideal para las máquinas Linux." style="border-color:#5bd6c0;color:#5bd6c0;font-weight:700">🖳 terminal</button>`:''}
       </div>
       ${isAirId(m.id)?`<div class="mqueue" data-mqueue="${m.id}">
         <div class="mq-hd">📋 TAREAS <span class="mq-count" data-mqcount="${m.id}"></span><span class="spacer"></span><button class="mq-add" data-mqadd="${m.id}" title="Nuevo encargo dirigido a esta máquina (${m.name})">➕ encargo</button></div>
@@ -2399,6 +2400,79 @@ function collapseAllToggle(){
    admira-bar.js (makeToggle → body.pf-*-off si localStorage !== "1"), con los
    iconos del menú superior como único disparador. Las lengüetas de borde se
    retiraron el 2026-07-13 (Carlos), así que aquí ya no hay wiring propio. */
+</script>
+
+<!-- ===== Terminal interactiva (xterm.js + SSE/POST contra el hub) ============ -->
+<script>
+(function(){
+  if (window.__admiraTermViewer) return; window.__admiraTermViewer = true;
+  const TAPI = (typeof API !== 'undefined') ? API : 'https://macmini.tail48b61c.ts.net/fleet/api';
+  const XT_CSS = 'https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css';
+  const XT_JS  = 'https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js';
+  const XT_FIT = 'https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js';
+  let _xtReady = null;
+  function loadXterm(){
+    if (window.Terminal) return Promise.resolve();
+    if (_xtReady) return _xtReady;
+    _xtReady = new Promise((resolve, reject) => {
+      const css = document.createElement('link'); css.rel = 'stylesheet'; css.href = XT_CSS; document.head.appendChild(css);
+      const s = document.createElement('script'); s.src = XT_JS;
+      s.onload = () => { const f = document.createElement('script'); f.src = XT_FIT; f.onload = () => resolve(); f.onerror = () => resolve(); document.head.appendChild(f); };
+      s.onerror = () => reject(new Error('no se pudo cargar xterm.js (¿sin conexión?)'));
+      document.head.appendChild(s);
+    });
+    return _xtReady;
+  }
+  function styleOnce(){
+    if (document.getElementById('tm-style')) return;
+    const s = document.createElement('style'); s.id = 'tm-style';
+    s.textContent = '#tm-ov{position:fixed;inset:0;z-index:10000;background:#05070c;display:flex;flex-direction:column;font-family:-apple-system,sans-serif}#tm-bar{display:flex;align-items:center;gap:12px;padding:8px 14px;background:#0e1320;border-bottom:1px solid #26303f;color:#e8eef7;font-size:13px;flex:none}#tm-bar .sp{flex:1}#tm-bar button{background:#1a2230;color:#e8eef7;border:1px solid #2d3a4d;border-radius:8px;padding:6px 11px;font-size:12px;cursor:pointer}#tm-bar button:hover{border-color:#5bd6c0;color:#5bd6c0}#tm-bar .stat{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8a97ab}#tm-stage{flex:1;min-height:0;padding:8px 10px;background:#000;overflow:hidden}#tm-term{width:100%;height:100%}';
+    document.head.appendChild(s);
+  }
+  window.openTerminal = async function(machineId, machineName){
+    styleOnce();
+    const prev = document.getElementById('tm-ov'); if (prev) prev.remove();
+    const ov = document.createElement('div'); ov.id = 'tm-ov';
+    ov.innerHTML = '<div id="tm-bar"><b>🖳 Terminal · ' + (machineName || machineId) + '</b><span class="stat" id="tm-stat">conectando…</span><span class="sp"></span><button id="tm-clr" title="Limpiar pantalla">🧹 limpiar</button><button id="tm-close">✕ cerrar</button></div><div id="tm-stage"><div id="tm-term"></div></div>';
+    document.body.appendChild(ov);
+    const stat = ov.querySelector('#tm-stat');
+    let es = null, session = null, term = null, closed = false;
+    function cleanup(){
+      if (closed) return; closed = true;
+      try { es && es.close(); } catch(e){}
+      if (session) { try { api('/term/close', {method:'POST', body: JSON.stringify({session})}); } catch(e){} }
+      try { term && term.dispose(); } catch(e){}
+      document.removeEventListener('keydown', escH, true);
+      ov.remove();
+    }
+    function escH(e){ if (e.key === 'Escape') cleanup(); }
+    ov.querySelector('#tm-close').addEventListener('click', cleanup);
+    ov.querySelector('#tm-clr').addEventListener('click', () => { term && term.clear(); term && term.focus(); });
+    document.addEventListener('keydown', escH, true);
+    try {
+      await loadXterm();
+      term = new window.Terminal({ cursorBlink:true, fontFamily:'ui-monospace,Menlo,Consolas,monospace', fontSize:13, scrollback:5000, theme:{ background:'#000000' } });
+      let fit = null; try { fit = new window.FitAddon.FitAddon(); term.loadAddon(fit); } catch(e){}
+      term.open(ov.querySelector('#tm-term'));
+      try { fit && fit.fit(); } catch(e){}
+      const cols = term.cols || 100, rows = term.rows || 30;
+      const d = await api('/term/open', {method:'POST', body: JSON.stringify({ machine: machineId, cols, rows })});
+      if (!d || !d.session) throw new Error((d && d.error) || 'no se pudo abrir la sesión');
+      session = d.session;
+      // salida en vivo por SSE (auth = ticket efímero en la URL)
+      es = new EventSource(TAPI + '/term/stream?ticket=' + encodeURIComponent(d.ticket));
+      es.onopen = () => { stat.textContent = 'conectado · ' + cols + '×' + rows; stat.style.color = '#5bd6c0'; term.focus(); };
+      es.onmessage = (ev) => { const bin = atob(ev.data); const u8 = new Uint8Array(bin.length); for (let i=0;i<bin.length;i++) u8[i] = bin.charCodeAt(i); term.write(u8); };
+      es.addEventListener('exit', () => { stat.textContent = 'sesión terminada'; stat.style.color = '#ffb454'; try { term.write('\r\n\x1b[33m[sesión cerrada]\x1b[0m\r\n'); } catch(e){} try { es.close(); } catch(e){} });
+      es.onerror = () => { if (!closed) { stat.textContent = 'reconectando…'; stat.style.color = '#ffb454'; } };
+      // entrada: teclas → POST en cola (preserva orden, coalesce)
+      let q = '', sending = false;
+      async function flush(){ if (sending || !q || closed) return; sending = true; const chunk = q; q = ''; try { await api('/term/input', {method:'POST', body: JSON.stringify({ session, data: btoa(chunk), b64: true })}); } catch(e){} sending = false; if (q && !closed) flush(); }
+      term.onData(data => { q += data; flush(); });
+    } catch(err){ stat.textContent = String((err && err.message) || err); stat.style.color = '#ff6b6b'; }
+  };
+  document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-term]'); if (!b) return; e.preventDefault(); window.openTerminal(b.getAttribute('data-term'), b.getAttribute('data-termname') || b.getAttribute('data-term')); });
+})();
 </script>
 </body>
 </html>

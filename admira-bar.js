@@ -14,7 +14,7 @@
   // La MARCA enlaza a la home (regla: el nombre del site siempre vuelve a la home).
   var PROJECT = "Consejo AdmiraNeXT";
   // Versión interna (solo console, ya no se pinta en el menú superior — Carlos 2026-07-13).
-  var VERSION = "v.2026.07.13.r35";
+  var VERSION = "v.2026.07.14.r36";
 
   // Nav idéntico al top-bar de la home (mismos badges, mismos destinos) → coherencia.
   var TOP = [
@@ -32,7 +32,7 @@
      * ámbar cuadrados + sombra pixel + Press Start 2P) → integración consistente.
      * RESPONSIVE: en ancho suficiente todo va en una fila; al estrecharse, los enlaces
      * de navegación se colapsan tras un botón ☰ (hamburguesa) y se abren en un panel
-     * desplegable, mientras la marca, los 3 contadores y los iconos de panel siguen
+     * desplegable, mientras la marca y los iconos de panel siguen
      * visibles. Nunca hay scroll horizontal de página ni elementos cortados. */
     "#admira-topbar{position:fixed;top:0;left:0;right:0;z-index:99990;display:flex;gap:6px;align-items:stretch;" +
     "padding:5px 10px;background:#5a3a1e;border-bottom:3px solid #8b5a14;border-top:2px solid #a07828;box-shadow:0 3px 0 #000;" +
@@ -75,17 +75,10 @@
     ".pf-ico.on .frame{stroke:#ffdd66}" +
     ".pf-ico.on .panel{fill:#ffdd66}" +
     ".pf-ico:hover{border-color:#f0c040}" +
-    /* Stats de flota en la barra (barra unificada: mismos que la home en TODAS las páginas) */
-    ".admira-summary{order:50;display:flex;gap:9px;align-items:center;margin-left:auto;flex:0 0 auto;align-self:center}" +
-    ".admira-summary .as-item{display:flex;flex-direction:column;align-items:center;line-height:1;font-family:'Press Start 2P',monospace}" +
-    ".admira-summary .as-num{font-size:12px;color:#ffdd66}" +
-    ".admira-summary .as-num.as-green{color:#44bb44}.admira-summary .as-num.as-red{color:#e74c3c}.admira-summary .as-num.as-blue{color:#3498db}" +
-    ".admira-summary small{font-size:6px;color:#b89060;margin-top:3px;white-space:nowrap;letter-spacing:.3px}" +
     /* ── RESPONSIVE ─────────────────────────────────────────────────────────────
      * ≤820px: los enlaces de navegación se esconden tras el botón ☰. Al abrirlo,
-     * caen como panel desplegable bajo la barra (look SCUMM). La marca, los 3
-     * contadores (compactados a número + etiqueta corta) y los iconos de panel
-     * siguen SIEMPRE visibles. Sin overflow horizontal de página. */
+     * caen como panel desplegable bajo la barra (look SCUMM). La marca y los
+     * iconos de panel siguen SIEMPRE visibles. Sin overflow horizontal de página. */
     "@media (max-width:820px){" +
       "#admira-burger{display:flex}" +
       "#admira-nav{order:99;position:absolute;top:100%;left:0;right:0;flex-direction:column;flex:1 1 100%;" +
@@ -94,14 +87,9 @@
       "#admira-nav[hidden]{display:none}" +
       "#admira-nav a{min-height:44px;font-size:9px;padding:10px 12px;box-shadow:none;margin:0 0 5px}" +
       "#admira-nav a:last-child{margin-bottom:0}" +
-      /* contadores compactos: solo número + inicial, para que quepan siempre */
-      ".admira-summary{gap:6px}" +
-      ".admira-summary small{font-size:5px;max-width:52px;text-align:center;white-space:normal;line-height:1.1}" +
     "}" +
     "@media (max-width:400px){" +
-      /* móvil muy estrecho: los contadores muestran solo el número (etiqueta oculta) */
-      ".admira-summary small{display:none}" +
-      ".admira-summary{gap:8px}" +
+      /* móvil muy estrecho: compacta la marca */
       "#pf-brand{font-size:7px;padding:6px 7px}" +
     "}" +
     /* Respeta prefers-reduced-motion: sin transición en el desplegable */
@@ -189,14 +177,6 @@
     brand.innerHTML = "🏛️ " + PROJECT;
     top.appendChild(brand);
 
-    // Stats de flota (consejeros activos · sin conexión · máquinas) — la barra unificada
-    // lleva los mismos stats que la home en TODAS las páginas.
-    var summary = document.createElement("div");
-    summary.id = "admira-summary";
-    summary.className = "admira-summary";
-    top.appendChild(summary);
-    fetchSummary(summary);
-
     document.body.appendChild(top);
 
     // Iconos de panel de la portería (a la derecha). Se colocan antes de que
@@ -211,36 +191,6 @@
     // la versión ya no se muestra en la barra. Se conserva en código (console) para
     // trazabilidad interna, sin ocupar el DOM visible.
     try { console.log("[admira-bar] " + PROJECT + " " + VERSION); } catch (e) {}
-  }
-
-  // Stats de flota para la barra: consejeros activos (personas online) · sin conexión
-  // (máquinas de la flota sin latido) · máquinas online (total de la flota registrada).
-  // Fuentes públicas: worker admira-fleet (máquinas) + presencia (agentes/beats). Best-effort.
-  function fetchSummary(el) {
-    var FLEET = "https://admira-fleet.csilvasantin.workers.dev/machines";
-    var PRES = "https://admira-telegram.csilvasantin.workers.dev/api/presence";
-    Promise.all([
-      fetch(FLEET, { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }),
-      fetch(PRES, { cache: "no-store" }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; })
-    ]).then(function (res) {
-      var fleet = res[0], pres = res[1];
-      var machines = (fleet && fleet.machines) ? fleet.machines : [];
-      var total = machines.length;
-      var now = (pres && pres.now) ? pres.now : Math.floor(Date.now() / 1000);
-      var onlineMachines = {}, personas = {};
-      ((pres && pres.presence) || []).forEach(function (p) {
-        if ((now - (p.updated || 0)) < 8 * 60) {
-          if (p.machine) onlineMachines[p.machine] = 1;
-          if (p.persona) personas[p.persona] = 1;
-        }
-      });
-      var activos = Object.keys(personas).length;
-      var sinConn = Math.max(0, total - Object.keys(onlineMachines).length);
-      el.innerHTML =
-        '<span class="as-item"><b class="as-num as-green">' + activos + '</b><small>Consejeros activos</small></span>' +
-        '<span class="as-item"><b class="as-num as-red">' + sinConn + '</b><small>Sin conexión</small></span>' +
-        '<span class="as-item"><b class="as-num as-blue">' + total + '</b><small>Máquinas online</small></span>';
-    }).catch(function () { });
   }
 
   // Crea un icono toggle SCUMM para un panel; null si el panel no existe en la página.

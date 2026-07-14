@@ -6,7 +6,7 @@
   <title>ADmiraNeXT | Status — Constelación de la flota</title>
   <meta name="description" content="Admira no tiene centro — es un universo que se expande. Estado en vivo de la flota AdmiraNeXT: cada ordenador es una estrella con su proyecto y su foco.">
   <meta name="admiranext-version" content="AdmiraNext v26.07.07.12">
-  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.13.r34 (ESCUADRONES DE 4 EN LA VISTA TODO — Carlos con sus 4 MacBook Air (Azul, Plata, Rosa, Crema) delante, todas conectadas, sólo veía MacBookAirAzul como UFO: el foco de la vista TODO FILTRABA a un único ordenador (≤r33 dejaba en pantalla el equipo enfocado + sus agentes y escondía el resto). Ahora la vista TODO pinta TODAS las máquinas vivas A LA VEZ, agrupadas en formaciones de 4 (rombo): con 8 vivas = 2 escuadrones separados en el escenario. layoutAllSquadrons() reparte los anclajes (_anchorX/_anchorY) en rejilla de rombos; physics() lleva cada ordenador a su anclaje con un muelle y los agentes siguen orbitando su máquina. El FOCO (elegido a mano en el riel, o rotando cada 20s de UFO en UFO) ya no filtra: sólo AGRANDA un UFO — factor de escala por nodo _fzs (grande y con detalle el enfocado «como antes», reducidos pero CLARAMENTE presentes y etiquetados los demás), suavizado en physics y leído por volumeRadius/tipografía. Al elegir un ordenador a mano el foco queda fijo en él y el resto sigue visible. Las vistas ORDENADOR/PROYECTO/AGENTE/MISIÓN/SISTEMA OPERATIVO conservan su motor intacto (ALL_MULTI sólo se enciende en la vista TODO con ≥2 ordenadores). — Sobre r33: EMULADORES CON COMBOS REALES — a Carlos le confundía en producción que las dudas emuladas inventaran combos de máquina/agente/proyecto («subNeo en Mac Mini con pixeria.com») al lado de nodos con presencia real. Ahora /dudaAgente y el botón 👾 del AVANZADO muestrean COMBINACIONES REALES de /api/presence — persona+máquina+proyecto tal cual laten (WORLD.presenceRows, guardadas crudas en la carga), priorizando latido fresco (< umbral de vivo), deduplicadas por persona+máquina y barajadas; si presence aún no cargó, caen al aleatorio de antes. El texto de la duda sigue inventado y la marca «(emulada)» se mantiene SIEMPRE. El emulador de tarea acabada (/tareaFinaliza y su botón) firma la pancarta con un agente real de la flota manteniendo la marca «· emulada». Textos de hint/help actualizados para reflejarlo. — Sobre r32: CIELO FULL-BLEED — feedback de Carlos sobre r30 con captura: al refluir el escenario bajo la banda de naves y junto a los paneles laterales, esas zonas quedaban LISAS (el fondo plano de la página, sin estrellas, porque el cielo vivía dentro del canvas de nodos y se empujaba con él). Regla de Carlos: el fondo estrellado cubre TODO, con UFOs o sin ellos, con menús o sin ellos. Cambio de arquitectura: las estrellas se DESACOPLAN de los nodos — nuevo canvas #skyfield position:fixed inset:0 z-index:0 a viewport completo, detrás de banda, paneles y escenario; el twinkle y el parallax con la cámara se mantienen idénticos, y la densidad se calcula sobre el viewport entero. En #galaxy quedan solo nodos/aristas/figuras, que conservan sus zonas de exclusión: reflow bajo la banda (body.duda-band-open + --duda-inset + syncDudaBand()) y rieles en flujo que estrechan el centro (nada oculto tras un panel). Ya no se re-siembran estrellas al abrir/cerrar rieles (el cielo no depende del centro). Pausa con ficha abierta intacta (el frame congela también el cielo), marcha de naves intacta, prefers-reduced-motion respetado, cero scroll horizontal. ADEMÁS: emulador de TAREA ACABADA para previsualizar la celebración Pac-Man de la banda inferior — botón «Lanzar tarea finalizada» en ⚙ AVANZADO junto al 👾 de dudas y comando /tareaFinaliza <texto> en la consola (en el /help); reutiliza la función REAL de la celebración (pacmanTest de status-pacman.js, misma cola/animación/waka-waka que un done de verdad), client-side puro marcado (emulada), sin tocar el bot-inbox real, nada persiste al recargar.)">
+  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.14.r35 (MISIONES REALES — YOKUP ES EL GESTOR ÚNICO DEL TRABAJO. Hasta r34 la vista MISIÓN era falsa: missionForAgent() no leía ninguna misión, devolvía el PROYECTO de referencia del agente (AGENT_MISSION), así que «misión» y «proyecto» eran la misma vista con dos nombres. Doctrina de Carlos (14-07-2026): el trabajo vive en yokup.com — cada encargo del bot-inbox es allí una MISIÓN con su árbol de tareas abc/123 (3 pasos × ≤3 subtareas, máx 9), y status pasa a ser el VISOR que las LEE, no quien se las inventa. Nuevo feed público GET /fleet/missions del worker yokup-rtc (misiones source=fleet + su árbol de tareas embebido, porque /mission/* vive tras el perímetro y status no pasa el gate); el worker ingiere el bot-inbox con POST /fleet/sync + cron cada 2 min (service binding a admira-telegram: un fetch normal hacía loopback contra el propio yokup-rtc y devolvía su 404). En status: la vista MISIÓN agrupa por misión REAL (los agentes orbitan la suya y arrastran sus ordenadores; las misiones encargadas y aún sin nadie latiendo también se pintan — ese hueco hay que verlo), la ficha muestra id · estado · «3/9 tareas» y enlaza a la misión en yokup, y la COLA DE ENCARGOS del agente marca cada uno con su misión 🎯 FLT-<id> y su avance. CLARIDAD: el escenario está calibrado para ~10 nodos y las 46 misiones vivas lo desbordaban (se apilaban fuera del encuadre), así que se pintan las 12 que importan —con agente vivo primero, luego las más recientes— y las que quedan fuera SE DICEN en el HUD («4 misiones vivas de 46 · 12 en pantalla»), nunca se recorta en silencio; las etiquetas de nodo se abrevian (shortMission) porque un encargo es una frase larga. OJO al separar los dos conceptos: el PROYECTO de referencia sigue vivo como projectRefForAgent() y es el que alimenta «reportado» y el carril (offRail) — si la misión entrara ahí, todo agente con encargo saldría «fuera de carril» porque el texto de un encargo nunca casa con un proyecto. En el worker, las misiones de flota comparten tabla con las incidencias DOOH de Clear Channel: /tickets y /stats se separan por ?scope=campo|fleet|todas (campo por defecto) para no inundar la bandeja de campo. — Sobre r34: ESCUADRONES DE 4 EN LA VISTA TODO — Carlos con sus 4 MacBook Air (Azul, Plata, Rosa, Crema) delante, todas conectadas, sólo veía MacBookAirAzul como UFO: el foco de la vista TODO FILTRABA a un único ordenador (≤r33 dejaba en pantalla el equipo enfocado + sus agentes y escondía el resto). Ahora la vista TODO pinta TODAS las máquinas vivas A LA VEZ, agrupadas en formaciones de 4 (rombo): con 8 vivas = 2 escuadrones separados en el escenario. layoutAllSquadrons() reparte los anclajes (_anchorX/_anchorY) en rejilla de rombos; physics() lleva cada ordenador a su anclaje con un muelle y los agentes siguen orbitando su máquina. El FOCO (elegido a mano en el riel, o rotando cada 20s de UFO en UFO) ya no filtra: sólo AGRANDA un UFO — factor de escala por nodo _fzs (grande y con detalle el enfocado «como antes», reducidos pero CLARAMENTE presentes y etiquetados los demás), suavizado en physics y leído por volumeRadius/tipografía. Al elegir un ordenador a mano el foco queda fijo en él y el resto sigue visible. Las vistas ORDENADOR/PROYECTO/AGENTE/MISIÓN/SISTEMA OPERATIVO conservan su motor intacto (ALL_MULTI sólo se enciende en la vista TODO con ≥2 ordenadores). — Sobre r33: EMULADORES CON COMBOS REALES — a Carlos le confundía en producción que las dudas emuladas inventaran combos de máquina/agente/proyecto («subNeo en Mac Mini con pixeria.com») al lado de nodos con presencia real. Ahora /dudaAgente y el botón 👾 del AVANZADO muestrean COMBINACIONES REALES de /api/presence — persona+máquina+proyecto tal cual laten (WORLD.presenceRows, guardadas crudas en la carga), priorizando latido fresco (< umbral de vivo), deduplicadas por persona+máquina y barajadas; si presence aún no cargó, caen al aleatorio de antes. El texto de la duda sigue inventado y la marca «(emulada)» se mantiene SIEMPRE. El emulador de tarea acabada (/tareaFinaliza y su botón) firma la pancarta con un agente real de la flota manteniendo la marca «· emulada». Textos de hint/help actualizados para reflejarlo. — Sobre r32: CIELO FULL-BLEED — feedback de Carlos sobre r30 con captura: al refluir el escenario bajo la banda de naves y junto a los paneles laterales, esas zonas quedaban LISAS (el fondo plano de la página, sin estrellas, porque el cielo vivía dentro del canvas de nodos y se empujaba con él). Regla de Carlos: el fondo estrellado cubre TODO, con UFOs o sin ellos, con menús o sin ellos. Cambio de arquitectura: las estrellas se DESACOPLAN de los nodos — nuevo canvas #skyfield position:fixed inset:0 z-index:0 a viewport completo, detrás de banda, paneles y escenario; el twinkle y el parallax con la cámara se mantienen idénticos, y la densidad se calcula sobre el viewport entero. En #galaxy quedan solo nodos/aristas/figuras, que conservan sus zonas de exclusión: reflow bajo la banda (body.duda-band-open + --duda-inset + syncDudaBand()) y rieles en flujo que estrechan el centro (nada oculto tras un panel). Ya no se re-siembran estrellas al abrir/cerrar rieles (el cielo no depende del centro). Pausa con ficha abierta intacta (el frame congela también el cielo), marcha de naves intacta, prefers-reduced-motion respetado, cero scroll horizontal. ADEMÁS: emulador de TAREA ACABADA para previsualizar la celebración Pac-Man de la banda inferior — botón «Lanzar tarea finalizada» en ⚙ AVANZADO junto al 👾 de dudas y comando /tareaFinaliza <texto> en la consola (en el /help); reutiliza la función REAL de la celebración (pacmanTest de status-pacman.js, misma cola/animación/waka-waka que un done de verdad), client-side puro marcado (emulada), sin tocar el bot-inbox real, nada persiste al recargar.)">
   <meta name="admiranext-status-build" content="oraculo-triad-1">
   <!-- Orbitron: tipografía tecnológica para la versión del pie del riel (Carlos, 2026-07-11) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -331,6 +331,11 @@
     #actFicha .af-row{font-size:11px;line-height:1.5;color:var(--text);overflow-wrap:anywhere}
     #actFicha .af-row .af-rt{color:var(--text-dim)}
     #actFicha .af-row .af-when{font-size:8.5px;letter-spacing:.08em;color:var(--text-dim);text-transform:uppercase;margin-top:2px}
+    /* r35: puente a la misión en yokup — cada encargo del buzón es allí una misión
+       con su árbol de tareas abc/123. yokup manda el trabajo; status lo enseña. */
+    #actFicha .af-row .af-mis{color:var(--cyan);text-decoration:none;border-bottom:1px dotted var(--cyan-dim);white-space:nowrap}
+    #actFicha .af-row .af-mis:hover{border-bottom-style:solid}
+    #actFicha .af-row .af-mis-off{color:var(--text-dim);border-bottom:none}
     #actFicha .af-st{
       display:inline-block;font-size:8px;letter-spacing:.08em;text-transform:uppercase;
       padding:2px 6px;border-radius:999px;margin-right:6px;vertical-align:middle;white-space:nowrap;
@@ -799,7 +804,7 @@
       </div>
       <button class="pf-urow" id="userRow" type="button" aria-expanded="false" aria-controls="userMenu" title="Sesión">
         <span class="pf-uava" id="userAva" aria-hidden="true">?</span>
-        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.13.r34</span></span>
+        <span class="pf-ucol"><span class="pf-uname" id="userName">invitado</span><span class="pf-uver" id="verText">v.2026.07.14.r35</span></span>
         <span class="pf-ugear" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><circle cx="12" cy="12" r="3"/><path d="M12.22 2h-.44a2 2 0 0 0-2 2v.18a2 2 0 0 1-1 1.73l-.43.25a2 2 0 0 1-2 0l-.15-.08a2 2 0 0 0-2.73.73l-.22.38a2 2 0 0 0 .73 2.73l.15.1a2 2 0 0 1 1 1.72v.51a2 2 0 0 1-1 1.74l-.15.09a2 2 0 0 0-.73 2.73l.22.38a2 2 0 0 0 2.73.73l.15-.08a2 2 0 0 1 2 0l.43.25a2 2 0 0 1 1 1.73V20a2 2 0 0 0 2 2h.44a2 2 0 0 0 2-2v-.18a2 2 0 0 1 1-1.73l.43-.25a2 2 0 0 1 2 0l.15.08a2 2 0 0 0 2.73-.73l.22-.39a2 2 0 0 0-.73-2.73l-.15-.08a2 2 0 0 1-1-1.74v-.5a2 2 0 0 1 1-1.74l.15-.09a2 2 0 0 0 .73-2.73l-.22-.38a2 2 0 0 0-2.73-.73l-.15.08a2 2 0 0 1-2 0l-.43-.25a2 2 0 0 1-1-1.73V4a2 2 0 0 0-2-2z"/></svg></span>
         <span class="pf-uchev" aria-hidden="true"><svg class="pf-uic" viewBox="0 0 24 24"><polyline points="6 9 12 15 18 9"/></svg></span>
       </button>
@@ -1189,11 +1194,80 @@
     for (const k in PROJECTS){ if (n.includes(k) || k.includes(n)) return PROJECTS[k]; }
     return '(sin asignar)';
   }
-  function missionForAgent(persona){
+  // OJO: esto NO es la misión — es el PROYECTO de referencia del agente (se usa
+  // como respaldo cuando la presencia no trae proyecto). Hasta r34 se llamaba
+  // missionForAgent() y por eso la vista MISIÓN era en realidad otra vista
+  // PROYECTO. La misión de verdad la manda yokup (missionForAgent, más abajo).
+  function projectRefForAgent(persona){
     const n = norm(persona);
     if (AGENT_MISSION[n]) return AGENT_MISSION[n];
     for (const k in AGENT_MISSION){ if (n.includes(k)) return AGENT_MISSION[k]; }
-    return 'Sin misión';
+    return '';
+  }
+
+  // ---------- MISIONES REALES (r35) — yokup.com es el gestor único ----------
+  // Doctrina de Carlos (14-07-2026): el trabajo vive en yokup. Cada encargo del
+  // bot-inbox es allí una MISIÓN con su árbol de tareas abc/123 (3 pasos × 3
+  // subtareas). status NO inventa misiones: las LEE y las pinta.
+  const MISSIONS_URL  = 'https://yokup-rtc.csilvasantin.workers.dev/fleet/missions';
+  const YOKUP_MISION  = 'https://www.yokup.com/misiones';
+  let FLEET_MISSIONS   = [];   // tal cual las publica yokup
+  let MISSION_BY_PERSONA = {}; // norm(persona) → misión VIVA más reciente
+  let MISSION_BY_ID    = {};   // 'FLT-704' → misión (la cola de encargos enlaza por aquí)
+  let MISSIONS_HIDDEN  = 0;    // misiones que no caben en el escenario (se dicen en el HUD)
+
+  function indexMissions(list){
+    FLEET_MISSIONS = Array.isArray(list) ? list : [];
+    MISSION_BY_PERSONA = {}; MISSION_BY_ID = {};
+    for(const m of FLEET_MISSIONS){
+      if(!m) continue;
+      MISSION_BY_ID[m.id] = m;                     // también las resueltas: la cola las muestra
+      if(m.status === 'resolved') continue;        // resuelta = ya no es su misión viva
+      const k = norm(m.persona||''); if(!k) continue;
+      const cur = MISSION_BY_PERSONA[k];
+      // la más reciente manda: es en la que anda ahora
+      if(!cur || (m.created_at||0) > (cur.created_at||0)) MISSION_BY_PERSONA[k] = m;
+    }
+  }
+  // El id de misión en yokup se deriva del encargo del bot-inbox: #704 → FLT-704.
+  function missionIdForEncargo(id){ return 'FLT-' + id; }
+  // Misión VIVA del agente (objeto de yokup) o null si no tiene ninguna.
+  function missionForAgent(persona){
+    const n = norm(persona);
+    if (MISSION_BY_PERSONA[n]) return MISSION_BY_PERSONA[n];
+    for (const k in MISSION_BY_PERSONA){ if (n === k) return MISSION_BY_PERSONA[k]; }
+    return null;
+  }
+  const MISSION_NONE = 'Sin misión';
+  function missionTitleFor(persona){
+    const m = missionForAgent(persona);
+    return m ? m.subject : MISSION_NONE;
+  }
+  // «3/9» — tareas hechas sobre las definidas. Sin plan aún → null.
+  function missionProgress(m){
+    if(!m || !m.progress || !m.progress.total) return null;
+    return m.progress.done + '/' + m.progress.total;
+  }
+  // Etiqueta de nodo: los encargos son frases largas («PARA TODOS — [LUNA2] MANDO
+  // A DISTANCIA DS — orden de Carlos: activar…»). En el escenario se corta por la
+  // primera frontera limpia; el texto íntegro vive en la ficha.
+  function shortMission(s){
+    let t = String(s||MISSION_NONE).replace(/\s+/g,' ').trim();
+    const cut = t.search(/\s[—·:]\s/);            // «PARA TODOS — …» → «PARA TODOS»
+    if(cut > 12) t = t.slice(0, cut);
+    return t.length > 46 ? t.slice(0,44).trim()+'…' : t;
+  }
+  // Fila «misión» de la ficha: la misión REAL, su avance de tareas y el enlace a
+  // yokup, que es donde se planifica y se cierra. Sin misión, se dice sin adornos.
+  function missionRow(n){
+    if(!n.missionId)
+      return `<div class="row"><span class="lab">misión</span><span class="val" style="color:var(--text-dim)">${MISSION_NONE} · sin encargo vivo</span></div>`;
+    const st = n.missionStatus==='in_progress' ? 'en curso' : 'abierta';
+    const prog = n.missionProg ? ` · <b>${n.missionProg}</b> tareas` : ' · <i>sin plan de tareas</i>';
+    return `<div class="row"><span class="lab">misión</span><span class="val">${esc(n.mission)}`+
+           `<br><span style="font-size:9px;letter-spacing:.08em;color:var(--text-dim)">${n.missionId} · ${st}${prog} · `+
+           `<a href="https://www.yokup.com/ticket?id=${encodeURIComponent(n.missionId)}" target="_blank" rel="noopener" style="color:var(--cyan)">abrir en yokup →</a>`+
+           `</span></span></div>`;
   }
 
   // Triada canonica de Oraculo (filosofia AdmiraNeXT: principal / hijo / infra).
@@ -2041,7 +2115,20 @@
         tierRow+
         asgRow+
         `<div class="row"><span class="lab">máquinas</span><span class="val">${(n.machines||[]).join(', ')||'—'}</span></div>`+
-        `<div class="row"><span class="lab">misión</span><span class="val">${n.mission||'—'}</span></div>`;
+        missionRow(n);
+    } else if(currentView==='mission'){
+      // r35: la misión es un encargo REAL de yokup, con su árbol de tareas.
+      const st = n.missionStatus==='in_progress' ? 'en curso' : n.missionStatus==='open' ? 'abierta' : '—';
+      const link = n.missionId
+        ? `<a href="https://www.yokup.com/ticket?id=${encodeURIComponent(n.missionId)}" target="_blank" rel="noopener" style="color:var(--cyan)">planificar en yokup →</a>`
+        : `<a href="${YOKUP_MISION}" target="_blank" rel="noopener" style="color:var(--cyan)">ver misiones →</a>`;
+      rows =
+        `<div class="cp">misión · <b>${esc(n.label)}</b></div>`+
+        `<div class="row"><span class="lab">encargo</span><span class="val">${esc(n.mission||'—')}</span></div>`+
+        (n.missionId ? `<div class="row"><span class="lab">estado</span><span class="val">${n.missionId} · ${st} · ${n.missionProg?`<b>${n.missionProg}</b> tareas hechas`:'<i>sin plan de tareas</i>'}</span></div>` : '')+
+        `<div class="row"><span class="lab">agentes</span><span class="val">${(n.agentNames||[]).join(', ')||'—'}</span></div>`+
+        `<div class="row"><span class="lab">equipos</span><span class="val">${(n.machines||[]).join(', ')||'— (nadie latiendo)'}</span></div>`+
+        `<div class="row"><span class="lab">gestión</span><span class="val">${link}</span></div>`;
     } else if(currentView==='project'){
       rows =
         `<div class="cp">proyecto · <b>${n.label}</b></div>`+
@@ -2527,10 +2614,14 @@
     // 3 vivos (fleet+self) hasta que llegaba `presence` → parpadeo «3 nodos».
     let pres=null, fleet=null, asg=null;
     const presWithFallback=async()=>{ try{ return await jget(PRESENCE_URL); }catch(e){ return await jget(PRESENCE_URL_ALT); } };
-    const [rp,rf,ra,rj,rd]=await Promise.allSettled([ presWithFallback(), jget(FLEET_URL), jget(ASSIGN_URL), jget(PROJECTS_URL), jget(DUDAS_URL) ]);
+    const [rp,rf,ra,rj,rd,rm]=await Promise.allSettled([ presWithFallback(), jget(FLEET_URL), jget(ASSIGN_URL), jget(PROJECTS_URL), jget(DUDAS_URL), jget(MISSIONS_URL) ]);
     if(rp.status==='fulfilled') pres=rp.value; else console.warn('presence',rp.reason);
     if(rf.status==='fulfilled') fleet=rf.value; else console.warn('fleet',rf.reason);
     if(ra.status==='fulfilled') asg=ra.value; else console.warn('assign',ra.reason);
+    // MISIONES REALES (r35): las manda yokup.com. Si el feed cae, se conserva el
+    // último índice bueno — mejor una misión de hace un minuto que «Sin misión».
+    if(rm.status==='fulfilled' && rm.value && Array.isArray(rm.value.missions)) indexMissions(rm.value.missions);
+    else if(rm.status==='rejected') console.warn('misiones yokup',rm.reason);
     // NAVES-DUDA (r20): ÚNICA fuente real — las dudas ESTRUCTURADAS de
     // /api/dudas (diálogo a/b/c de Claude Code, con agente·máquina·proyecto).
     // Se pinta más abajo, tras procesar la presencia, para poder encender el
@@ -2767,7 +2858,7 @@
         const m=c.match(/v\.[\d.]+r\d+|v\.[\d.]+\.r\d+/);
         if(m) return m[0];
       }catch(e){}
-      return 'v.2026.07.13.r34';
+      return 'v.2026.07.14.r35';
     })();
     let focusLabel = FOCUS_MACHINE ? FOCUS_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
     let viewerLabel = VIEWER_MACHINE ? VIEWER_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
@@ -3206,9 +3297,18 @@
       const mine=(d.items||[]).filter(x=>norm(x.target_persona)===per)
                  .sort((x,y)=>(tsMsAF(y.ts))-(tsMsAF(x.ts))).slice(0,8);
       if(nq) nq.textContent=mine.length?('· '+mine.length):'';
-      if(qEl) qEl.innerHTML = mine.length ? mine.map(x=>`
+      // r35: cada encargo ES una misión en yokup (FLT-<id>) — se enseña su avance
+      // de tareas y se enlaza allí, que es donde se planifica y se cierra.
+      if(qEl) qEl.innerHTML = mine.length ? mine.map(x=>{
+        const mid=missionIdForEncargo(x.id), mi=MISSION_BY_ID[mid];
+        const prog=missionProgress(mi);
+        const tag = mi
+          ? `<a class="af-mis" href="https://www.yokup.com/ticket?id=${encodeURIComponent(mid)}" target="_blank" rel="noopener" title="Misión ${esc(mid)} en yokup — planificar y cerrar aquí">🎯 ${esc(mid)}${prog?' · '+prog:' · sin plan'} →</a>`
+          : `<span class="af-mis af-mis-off" title="Aún no ingerida por yokup (el sync corre cada 2 min)">🎯 sin misión aún</span>`;
+        return `
         <div class="af-row">${afStBadge(x.status)}<span class="af-rt">#${esc(x.id)}</span> ${esc((x.text||'').slice(0,90))}
-          <div class="af-when">${esc(fmtAgo(Math.floor(tsMsAF(x.ts)/1000)))} · de ${esc(x.from_name||'—')}</div></div>`).join('')
+          <div class="af-when">${esc(fmtAgo(Math.floor(tsMsAF(x.ts)/1000)))} · de ${esc(x.from_name||'—')} · ${tag}</div></div>`;
+      }).join('')
         : '<div class="af-empty">sin encargos en su buzón</div>';
     }catch(e){ if(qEl) qEl.innerHTML='<div class="af-empty">buzón no disponible ahora</div>'; }
     try{
@@ -3556,8 +3656,18 @@
     for(const p of presence){
       const id = norm(p.persona)+'|'+norm(p.runtime||'');
       let e=by[id];
-      if(!e){ e={id:'agent:'+id, persona:p.persona, runtime:p.runtime||'', machinesSet:new Set(),
-                 updated:0, online:false, foco:'', mode:'', decisions:0, tokens:0, reqs:0, mission:missionForAgent(p.persona)}; by[id]=e; }
+      if(!e){
+        // r35: la misión sale de yokup (real), no del proyecto de referencia.
+        const mi = missionForAgent(p.persona);
+        e={id:'agent:'+id, persona:p.persona, runtime:p.runtime||'', machinesSet:new Set(),
+           updated:0, online:false, foco:'', mode:'', decisions:0, tokens:0, reqs:0,
+           mission: mi ? mi.subject : MISSION_NONE,
+           missionId: mi ? mi.id : '', missionStatus: mi ? mi.status : '',
+           missionProg: missionProgress(mi),
+           // proyecto de referencia — respaldo para «reportado»/carril, NO es la misión
+           projectRef: projectRefForAgent(p.persona)};
+        by[id]=e;
+      }
       const fresh=isFresh(p.updated);
       e.machinesSet.add(p.machine);
       if((p.updated||0)>e.updated) e.updated=p.updated;
@@ -3708,7 +3818,7 @@
         // proyecto principal del agente (sticky) — SOLO para la ficha de detalle:
         // el que reporta en vivo, si no su misión de referencia, y como último
         // recurso el proyecto del ordenador.
-        const proj = a.project || missionForAgent(a.persona) || m.project || '';
+        const proj = a.project || projectRefForAgent(a.persona) || m.project || '';
         // r12: LÍNEA DE MISIÓN de la órbita — precedencia ESTRICTA (Carlos):
         //   1) focus FRESCO → la misión real de ahora mismo
         //   2) si no, asignación de MANDO si existe
@@ -3809,26 +3919,44 @@
     return list;
   }
 
-  // Vista POR MISIÓN: nodos = proyectos; equipos/agentes orbitan su misión
+  // Vista POR MISIÓN (r35 — MISIONES REALES DE YOKUP).
+  // Hasta r34 esta vista agrupaba por PROYECTO (el de la máquina y el AGENT_MISSION
+  // del agente): era un clon de la vista PROYECTO con otro nombre. Ahora un nodo =
+  // una MISIÓN de yokup.com (un encargo con su árbol de tareas abc/123). Los
+  // agentes orbitan la misión que tienen VIVA y arrastran consigo sus ordenadores,
+  // así que las máquinas ya no fabrican nodos por su cuenta: una máquina sin nadie
+  // en misión no inventa una misión.
   function buildMissions(machines, agents){
     const by={};
-    const add=(name)=>{ const key=name||'Sin misión'; if(!by[key]) by[key]={id:'mission:'+norm(key), mission:key,
-       updated:0, online:false, machinesSet:new Set(), agentsSet:new Set(), foco:'', decisions:0, tokens:0, reqs:0}; return by[key]; };
-    for(const m of machines){
-      const e=add(m.project);
-      e.machinesSet.add(m.machine);
-      e.decisions=(e.decisions||0)+(+m.decisions||0);
-      e.tokens=(e.tokens||0)+(+m.tokens||0);   // tokens por misión = suma de sus equipos (evita doble conteo)
-      e.reqs=(e.reqs||0)+(+m.reqs||0);
-      if(m.online) e.online=true;
-      if((m.updated||0)>e.updated) e.updated=m.updated;
-      if(m.foco && !e.foco) e.foco=m.foco;
-    }
+    const add=(name)=>{ const key=name||MISSION_NONE; if(!by[key]) by[key]={id:'mission:'+norm(key), mission:key,
+       updated:0, online:false, machinesSet:new Set(), agentsSet:new Set(), foco:'', decisions:0, tokens:0, reqs:0,
+       missionId:'', missionStatus:'', missionProg:null}; return by[key]; };
+    const machineOf={}; for(const m of machines) machineOf[norm(m.machine)] = m;
     for(const a of agents){
       const e=add(a.mission);
       e.agentsSet.add(a.persona);
+      if(a.missionId && !e.missionId){ e.missionId=a.missionId; e.missionStatus=a.missionStatus; e.missionProg=a.missionProg; }
       if(a.online) e.online=true;
       if((a.updated||0)>e.updated) e.updated=a.updated;
+      if(a.foco && !e.foco) e.foco=a.foco;
+      e.tokens=(e.tokens||0)+(+a.tokens||0);
+      e.reqs=(e.reqs||0)+(+a.reqs||0);
+      // los ordenadores donde corre el agente cuelgan de SU misión
+      for(const mn of (a.machines||[])){
+        if(e.machinesSet.has(mn)) continue;
+        e.machinesSet.add(mn);
+        const m = machineOf[norm(mn)];
+        if(m){ e.decisions=(e.decisions||0)+(+m.decisions||0); if(m.online) e.online=true; }
+      }
+    }
+    // Las misiones VIVAS de yokup que aún no tienen a nadie latiendo también se
+    // pintan: son trabajo encargado y pendiente, y ese hueco hay que verlo.
+    for(const m of FLEET_MISSIONS){
+      if(!m || m.status==='resolved') continue;
+      const e=add(m.subject);
+      if(!e.missionId){ e.missionId=m.id; e.missionStatus=m.status; e.missionProg=missionProgress(m); }
+      if(m.persona) e.agentsSet.add(m.persona);
+      if((m.created_at||0)>e.updated && !e.online) e.updated=Math.round((m.created_at||0)/1000);
     }
     return Object.values(by).map(e=>({...e, machines:[...e.machinesSet], agentNames:[...e.agentsSet]}))
       .sort((a,b)=>(b.online-a.online)||(a.mission>b.mission?1:-1));
@@ -3877,7 +4005,7 @@
       if(m.foco && !e.foco) e.foco=m.foco;
     }
     for(const a of agents){
-      const e=add((a.assignment&&a.assignment.project) || canonProjectFor(a.repProject||a.mission) || UNASSIGNED_PROJECT);
+      const e=add((a.assignment&&a.assignment.project) || canonProjectFor(a.repProject||a.projectRef) || UNASSIGNED_PROJECT);
       e.agentsSet.add(a.persona);
       if(a.online) e.online=true;
       if((a.updated||0)>e.updated) e.updated=a.updated;
@@ -3906,6 +4034,7 @@
     } else if(currentView==='mission'){
       const n=on(MI);
       txt=`${n} ${n===1?'misión viva':'misiones vivas'} de ${MI.length}`;
+      if(MISSIONS_HIDDEN>0) txt+=` · ${MI.length-MISSIONS_HIDDEN} en pantalla`;
     } else if(currentView==='os'){
       const n=on(OS);
       txt=`${n} ${n===1?'sistema con vida':'sistemas con vida'} de ${OS.length}`;
@@ -3942,8 +4071,12 @@
         personas:[{persona:a.persona,runtime:a.runtime}], machines:a.machines, mission:a.mission,
         online:a.online, updated:a.updated, foco:a.foco, mode:a.mode, count:a.machines.length,
         decisions:a.decisions||0, tokens:a.tokens||0, reqs:a.reqs||0,
-        assignment:a.assignment||null, repProject:a.repProject||a.mission||'',
-        offRail: offRailFor(a.assignment, a.repProject||a.mission), kindFor:'agent',
+        // OJO: el carril compara PROYECTOS (asignado vs reportado). La misión de
+        // yokup no entra aquí — si entrara, todo agente con encargo saldría «fuera
+        // de carril» porque el texto del encargo nunca casa con un proyecto.
+        assignment:a.assignment||null, repProject:a.repProject||a.projectRef||'',
+        offRail: offRailFor(a.assignment, a.repProject||a.projectRef), kindFor:'agent',
+        missionId:a.missionId||'', missionStatus:a.missionStatus||'', missionProg:a.missionProg||null,
         parentId:a.parentId||null, tier:a.tier||'main',   // jerarquía satélite (sub/infra → principal)
       }));
     } else if(currentView==='project'){
@@ -3990,11 +4123,24 @@
       // Los anclajes de escuadrón se calculan tras layoutNodes (necesita el set final)
       _pendingSquadronLayout = ALL_MULTI;
     } else {
-      list = WORLD.missions.map(mi=>({
-        id:mi.id, label:mi.mission, sub:(mi.machines.length+' eq · '+mi.agentNames.length+' ag'),
+      // El escenario está calibrado para una decena de nodos: con las ~46 misiones
+      // vivas de la flota la física los expulsaba fuera del encuadre y quedaban
+      // apilados en una esquina, ilegibles. Se pintan las que IMPORTAN — con agente
+      // vivo primero, luego las más recientes — y las que se quedan fuera se DICEN
+      // en el HUD (MISSIONS_HIDDEN), nunca se recortan en silencio.
+      const MI_CAP = 12;
+      const ordered = WORLD.missions.slice().sort((a,b)=>(b.online-a.online)||((b.updated||0)-(a.updated||0)));
+      MISSIONS_HIDDEN = Math.max(0, ordered.length - MI_CAP);
+      list = ordered.slice(0, MI_CAP).map(mi=>({
+        // El nodo lleva el encargo ABREVIADO: el subject real es una frase larga y
+        // sin recortar convertía el escenario en un muro de texto. El completo, en
+        // la ficha.
+        id:mi.id, label:shortMission(mi.mission),
+        sub:(mi.missionProg ? mi.missionProg+' tareas · ' : '') + mi.machines.length+' eq · '+mi.agentNames.length+' ag',
         machines:mi.machines, agentNames:mi.agentNames, online:mi.online, updated:mi.updated,
         foco:mi.foco, count:mi.machines.length+mi.agentNames.length,
         decisions:mi.decisions||0, tokens:mi.tokens||0, reqs:mi.reqs||0,
+        mission:mi.mission, missionId:mi.missionId||'', missionStatus:mi.missionStatus||'', missionProg:mi.missionProg||null,
       }));
     }
     if(typeof ONLY_LIVE!=='undefined' && ONLY_LIVE) list = list.filter(n=>n.online);
@@ -5606,6 +5752,6 @@
 
   <!-- Celebración Pac-Man al completarse un encargo (banda inferior + waka-waka).
        Autónomo: sondea /api/public/inbox y detecta la transición a done. -->
-  <script defer src="status-pacman.js?v=2026.07.12"></script>
+  <script defer src="status-pacman.js?v=2026.07.14.r35"></script>
 </body>
 </html>

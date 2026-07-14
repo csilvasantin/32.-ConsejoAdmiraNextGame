@@ -155,6 +155,12 @@ LLM_MODELS = {
     },
 }
 
+LLM_MODELS.update({
+    "dgx-llama8b": {"name": "DGX Llama 3.1 8B (local)", "provider": "ollama", "model_id": "llama3.1:8b", "free": True, "icon": "🟢"},
+    "dgx-llama70b": {"name": "DGX Llama 3.1 70B (local)", "provider": "ollama", "model_id": "llama3.1:70b", "free": True, "icon": "🟢"},
+})
+OLLAMA_DGX_URL = os.environ.get("OLLAMA_DGX_URL", "http://100.119.58.65:11434")
+
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "")
@@ -186,6 +192,8 @@ ALLOWED_ORIGINS = [
     "https://csilvasantin.github.io",
     "https://www.admira.live",
     "https://admira.live",
+    "https://www.admiranext.com",
+    "https://admiranext.com",
     "https://www.admira.studio",
     "https://admira.studio",
     "http://localhost:8080",
@@ -1125,6 +1133,27 @@ def agent_ask_gemini(agent: CouncilAgent, message: str, context: Optional[list],
     return text, in_tok, out_tok
 
 
+def agent_ask_ollama(agent, message, context, model_id, max_tokens=300):
+    """Call Ollama on the DGX Spark (OpenAI-compatible). Returns (text, input_tokens, output_tokens)."""
+    conv_system, messages = _build_conversation(agent, message, context)
+    ollama_messages = [{"role": "system", "content": conv_system}] + messages
+    payload = {
+        "model": model_id,
+        "messages": ollama_messages,
+        "max_tokens": max_tokens,
+        "temperature": 0.7,
+        "stream": False,
+    }
+    timeout = 300 if max_tokens > 1000 else 120
+    resp = http_requests.post(OLLAMA_DGX_URL + "/v1/chat/completions", json=payload, timeout=timeout)
+    if resp.status_code != 200:
+        raise ValueError(f"Ollama DGX error {resp.status_code}: {resp.text[:200]}")
+    data = resp.json()
+    text = data["choices"][0]["message"]["content"]
+    usage = data.get("usage", {})
+    return text, usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0)
+
+
 def agent_ask(agent: CouncilAgent, message: str, context: Optional[list], llm_key: str = "claude-sonnet", max_tokens: int = 300) -> tuple:
     """Route to the correct LLM provider. Returns (text, input_tokens, output_tokens)."""
     model_cfg = LLM_MODELS.get(llm_key, LLM_MODELS["claude-sonnet"])
@@ -1137,6 +1166,8 @@ def agent_ask(agent: CouncilAgent, message: str, context: Optional[list], llm_ke
         return agent_ask_gemini(agent, message, context, model_cfg["model_id"], max_tokens)
     elif model_cfg["provider"] == "nvidia":
         return agent_ask_nvidia(agent, message, context, model_cfg["model_id"], max_tokens)
+    elif model_cfg["provider"] == "ollama":
+        return agent_ask_ollama(agent, message, context, model_cfg["model_id"], max_tokens)
     else:
         raise ValueError(f"Unknown provider: {model_cfg['provider']}")
 
@@ -1322,7 +1353,55 @@ async def council_meeting_telegram(req: MeetingTelegramRequest, _auth=Depends(ve
     if len(msg) > 3900:
         msg = msg[:3900] + "\n\u2026"
     threading.Thread(target=_send_telegram, args=(msg,), daemon=True).start()
-    return {"ok": True, "chars": len(msg)}
+    # Archivo de reuniones (~/council-meetings.json)
+    import time as _t, json as _j, os as _os, random as _r
+    mid = str(int(_t.time())) + "-" + str(_r.randint(100, 999))
+    rec = {"id": mid, "ts": int(_t.time()), "title": req.title or "Reunion del Consejo",
+           "tema": req.tema or "", "lines": (req.lines or [])[:40], "acta": req.acta or ""}
+    try:
+        path = _os.path.expanduser("~/council-meetings.json")
+        data = []
+        if _os.path.exists(path):
+            try:
+                data = _j.loads(open(path, encoding="utf-8").read()) or []
+            except Exception:
+                data = []
+        data.append(rec)
+        data = data[-200:]
+        open(path, "w", encoding="utf-8").write(_j.dumps(data, ensure_ascii=False))
+    except Exception:
+        pass
+    return {"ok": True, "chars": len(msg), "id": mid}
+
+
+@app.get("/api/council/meetings")
+async def council_meetings(_auth=Depends(verify_token)):
+    import json as _j, os as _os
+    path = _os.path.expanduser("~/council-meetings.json")
+    out = []
+    try:
+        data = _j.loads(open(path, encoding="utf-8").read()) or []
+        for r in data[-100:]:
+            out.append({"id": r.get("id"), "ts": r.get("ts"), "title": r.get("title"),
+                        "tema": r.get("tema"), "n": len(r.get("lines") or []), "acta": bool(r.get("acta"))})
+    except Exception:
+        pass
+    out.reverse()
+    return {"meetings": out}
+
+
+@app.get("/api/council/meeting")
+async def council_meeting_one(id: str = "", _auth=Depends(verify_token)):
+    import json as _j, os as _os
+    path = _os.path.expanduser("~/council-meetings.json")
+    try:
+        data = _j.loads(open(path, encoding="utf-8").read()) or []
+        for r in data:
+            if str(r.get("id")) == id:
+                return r
+    except Exception:
+        pass
+    raise HTTPException(status_code=404, detail="no encontrada")
 
 
 @app.get("/api/council/models")
@@ -3945,7 +4024,7 @@ def _hk_load_council() -> list:
         return []
     out = []
     for m in data.get("machines", []):
-        if m.get("unitType") != "council":
+        if m.get("unitType") != "council" and not _hk_is_linux(m):
             continue
         ssh = m.get("ssh") or {}
         if not ssh.get("enabled"):
@@ -3954,6 +4033,59 @@ def _hk_load_council() -> list:
             continue
         out.append(m)
     return out
+
+
+def _hk_is_linux(machine: dict) -> bool:
+    return str(machine.get("platform") or "").lower().startswith("linux")
+
+
+def _hk_linux_launch(user: str, host: str) -> tuple:
+    """Lanza el simulacro de hackeo en un terminal a pantalla completa del
+    equipo Linux remoto (gnome-terminal vía ~/.fleet/fleet-sesh, que inyecta
+    DISPLAY/DBUS de la sesion grafica)."""
+    if not user or not host:
+        return False, "missing ssh user/host"
+    import base64 as _b64
+    payload = _b64.b64encode(_HK_REMOTE_PY.encode("utf-8")).decode("ascii")
+    remote_cmd = (
+        'mkdir -p "$HOME/.fleet" && '
+        f'echo {payload} | base64 -d > "$HOME/.fleet/hacksim.py" && '
+        '"$HOME/.fleet/fleet-sesh" gnome-terminal --full-screen -- '
+        'python3 "$HOME/.fleet/hacksim.py"'
+    )
+    ssh_cmd = [
+        "ssh", "-o", "StrictHostKeyChecking=no", "-o", "BatchMode=yes",
+        "-o", f"ConnectTimeout={_HK_SSH_TIMEOUT}", f"{user}@{host}", remote_cmd,
+    ]
+    try:
+        r = subprocess.run(ssh_cmd, capture_output=True, timeout=_HK_SSH_TIMEOUT + 3)
+        if r.returncode == 0:
+            return True, "ssh launched (linux)"
+        err = (r.stderr or b"").decode("utf-8", "ignore").strip()[:200]
+        return False, f"ssh rc={r.returncode}: {err or 'no stderr'}"
+    except subprocess.TimeoutExpired:
+        return False, "ssh timeout"
+    except Exception as e:
+        return False, f"ssh error: {e}"
+
+
+def _hk_linux_stop(user: str, host: str) -> tuple:
+    """Cierra el terminal de hackeo en Linux matando el simulacro (gnome-terminal
+    cierra la ventana al terminar su proceso). El corchete evita auto-matarse."""
+    if not user or not host:
+        return False, "missing ssh user/host"
+    remote_cmd = 'pkill -f "[h]acksim.py"; true'
+    ssh_cmd = [
+        "ssh", "-o", "StrictHostKeyChecking=no", "-o", "BatchMode=yes",
+        "-o", f"ConnectTimeout={_HK_SSH_TIMEOUT}", f"{user}@{host}", remote_cmd,
+    ]
+    try:
+        subprocess.run(ssh_cmd, capture_output=True, timeout=_HK_SSH_TIMEOUT + 2)
+        return True, "stopped (linux)"
+    except subprocess.TimeoutExpired:
+        return False, "ssh timeout"
+    except Exception as e:
+        return False, f"ssh error: {e}"
 
 
 _TS_BIN = "/Applications/Tailscale.app/Contents/MacOS/Tailscale"
@@ -4009,12 +4141,19 @@ def _hk_ssh_launch(user: str, host: str) -> tuple:
     # matar de forma fiable con `pkill -f hacksim.py` ANTES de cerrar → sin el
     # diálogo "¿terminar el proceso en ejecución?".
     remote_cmd = (
+        "killall ScreenSaverEngine 2>/dev/null; "
         "caffeinate -u -t 2 && sleep 1 && mkdir -p \"$HOME/.fleet\" && "
         f"echo {payload} | base64 -D > \"$HOME/.fleet/hacksim.py\" && "
-        "osascript -e 'tell application \"Terminal\" to activate' "
+        # do script PRIMERO (una sola ventana con el simulacro); luego activate.
+        # Hacer `activate` antes de `do script` abría una ventana vacía extra → se
+        # veía "dos veces". Y Ctrl+Cmd+F pone el Terminal a pantalla completa.
+        "osascript "
         "-e 'tell application \"Terminal\" to do script "
         "\"clear; echo \\\"== ADMIRA HACK SIMULATION ==\\\"; "
-        "exec python3 $HOME/.fleet/hacksim.py\"'"
+        "exec python3 $HOME/.fleet/hacksim.py\"' "
+        "-e 'tell application \"Terminal\" to activate' "
+        "-e 'delay 0.5' "
+        "-e 'tell application \"Terminal\" to set bounds of front window to {0, 0, 4000, 3000}'"
     )
     ssh_cmd = [
         "ssh",
@@ -4210,14 +4349,29 @@ def _hk_send_wol(mac: str) -> tuple:
         return False, f"wol error: {e}"
 
 
+def _hk_resolve_target(ssh: dict) -> tuple:
+    """Devuelve (host_utilizable, alive) para el hackeo.
+
+    Prueba primero ssh.host (nombre MagicDNS) y, si NO resuelve/responde,
+    reintenta con ssh.ip_tailscale (la IP tailnet, estable ante renombrados).
+    Asi renombrar una maquina en Tailscale ya no la saca del hackeo.
+    """
+    host = ssh.get("host", "") or ""
+    ip = ssh.get("ip_tailscale", "") or ""
+    if host and _hk_ping(host):
+        return host, True
+    if ip and ip != host and _hk_ping(ip):
+        return ip, True
+    return (host or ip), False
+
+
 def _hk_process_one(machine: dict, action: str) -> dict:
     ssh = machine.get("ssh") or {}
-    host = ssh.get("host", "")
     user = ssh.get("user", "")
     mac = machine.get("mac_address", "")
     name = machine.get("name") or machine.get("id")
 
-    alive = _hk_ping(host)
+    host, alive = _hk_resolve_target(ssh)
     result = {
         "id": machine.get("id"),
         "name": name,
@@ -4230,7 +4384,7 @@ def _hk_process_one(machine: dict, action: str) -> dict:
 
     if action == "stop":
         if alive:
-            ok, detail = _hk_ssh_stop(user, host)
+            ok, detail = (_hk_linux_stop if _hk_is_linux(machine) else _hk_ssh_stop)(user, host)
             result["action"] = "ssh_stop"
             result["ok"] = ok
             result["detail"] = detail
@@ -4244,12 +4398,12 @@ def _hk_process_one(machine: dict, action: str) -> dict:
         # Si está encendida y aún no tenemos su MAC, la descubrimos ahora
         # (ARP local + SSH ifconfig) para poder hacerle WoL la próxima vez
         # aunque esté apagada. El endpoint la persistirá en machines.json.
-        if not mac:
+        if not mac and not _hk_is_linux(machine):
             disc_mac, disc_src = _hk_discover_mac(machine)
             if disc_mac:
                 result["discovered_mac"] = disc_mac
                 result["mac_source"] = disc_src
-        ok, detail = _hk_ssh_launch(user, host)
+        ok, detail = (_hk_linux_launch if _hk_is_linux(machine) else _hk_ssh_launch)(user, host)
         result["action"] = "ssh_launched"
         result["ok"] = ok
         result["detail"] = detail

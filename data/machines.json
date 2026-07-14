@@ -1,6 +1,6 @@
 {
   "team": "AdmiraNext Team",
-  "updatedAt": "2026-05-07T09:31:23Z",
+  "updatedAt": "2026-06-30T11:37:02.522027Z",
   "tailnet": "tail48b61c.ts.net",
   "machines": [
     {
@@ -74,39 +74,40 @@
         "connect_lan": "ssh csilvasantin@MacBookProNegro14.local",
         "connect_tailscale": "ssh -o ProxyCommand='tailscale nc %h %p' csilvasantin@macbookpronegro14"
       },
-      "mac_address": ""
+      "mac_address": "62:46:79:8d:79:86",
+      "mac_discovered_at": "2026-06-20T07:12:40.701496Z"
     },
     {
-      "id": "admira-macbookair16",
+      "id": "admira-macbookpro16",
       "unitType": "council",
-      "color": "plata",
-      "member": "Director General",
-      "role": "Direccion",
-      "name": "MacBook Air 16 (DG)",
-      "machineRole": "Direccion",
+      "color": "gris espacial",
+      "member": "Carlos",
+      "role": "Agente operativo y desarrollo",
+      "name": "MacBook Pro 16",
+      "machineRole": "Agente operativo y desarrollo",
       "location": "Madrid",
       "platform": "macOS",
       "status": "online",
-      "lastSeen": "2026-03-23T21:00:00Z",
-      "currentFocus": "SSH verificado — accesible desde Mac Mini (user: Carlos)",
-      "note": "Tailscale: macbookair16.tail48b61c.ts.net",
+      "lastSeen": "2026-06-26T09:36:43.626Z",
+      "currentFocus": "Agentes activos via AgoraMatrix y Tailscale",
+      "note": "heartbeat fleet-self-register",
       "ssh": {
         "enabled": true,
         "user": "csilvasantin",
-        "host": "macbookair16.tail48b61c.ts.net",
-        "host_local": "MacBookAir16.local",
-        "ip_tailscale": "100.99.176.126",
-        "connect_lan": "ssh csilvasantin@MacBookAir16.local",
-        "connect_tailscale": "ssh csilvasantin@100.99.176.126"
+        "host": "macbook-pro-16.tail48b61c.ts.net",
+        "host_local": "MacBook-Pro-16.local",
+        "ip_tailscale": "100.114.181.54",
+        "connect_lan": "ssh csilvasantin@MacBook-Pro-16.local",
+        "connect_tailscale": "ssh csilvasantin@100.114.181.54",
+        "hostAlias": "macbook-pro-16"
       },
-      "mac_address": "fe:e3:3e:4d:b6:70",
-      "mac_discovered_at": "2026-05-07T09:31:23Z",
-      "mac_source": "ssh:ifconfig (via macmini)"
+      "mac_address": "86:89:9e:16:14:51",
+      "mac_discovered_at": "2026-06-20T07:12:40.701496Z"
     },
     {
       "id": "admira-macbookairluna",
       "unitType": "council",
-      "color": "plata",
+      "color": "azul",
       "member": "Cesar",
       "role": "Coordinacion y automatizacion",
       "name": "MacBook Air Luna (Cesar)",
@@ -116,15 +117,16 @@
       "status": "offline",
       "lastSeen": "2026-03-23T20:50:00Z",
       "currentFocus": "Offline — ultima conexion hace minutos",
-      "note": "Tailscale: macbookairluna.tail48b61c.ts.net",
+      "note": "Tailscale: macbookairazul.tail48b61c.ts.net",
       "ssh": {
         "enabled": true,
         "user": "csilvasantin",
-        "host": "macbookairluna.tail48b61c.ts.net",
-        "ip_tailscale": "100.98.68.63",
-        "connect_tailscale": "ssh csilvasantin@100.98.68.63"
+        "host": "macbookairazul.tail48b61c.ts.net",
+        "ip_tailscale": "100.84.81.45",
+        "connect_tailscale": "ssh csilvasantin@100.84.81.45"
       },
-      "mac_address": ""
+      "mac_address": "b2:d4:31:43:3d:5d",
+      "mac_discovered_at": "2026-06-28T16:49:38.553170Z"
     },
     {
       "id": "admira-macbook-carla",
@@ -132,30 +134,30 @@
       "color": "gris",
       "member": "Carla",
       "role": "Desarrollo y operaciones",
-      "name": "MacBook Air de Carla",
+      "name": "MacBook Air Crema",
       "machineRole": "Equipo activo",
       "location": "Madrid",
       "platform": "macOS",
       "status": "idle",
       "lastSeen": "2026-03-23T21:00:00Z",
       "currentFocus": "Tailscale conectado — idle",
-      "note": "Tailscale: macbook-air-de-carla.tail48b61c.ts.net",
+      "note": "Tailscale: macbookaircrema.tail48b61c.ts.net (antes macbook-air-de-carla; renombrada en el tailnet)",
       "ssh": {
         "enabled": true,
         "user": "csilvasantin",
-        "host": "macbook-air-de-carla.tail48b61c.ts.net",
+        "host": "macbookaircrema.tail48b61c.ts.net",
         "ip_tailscale": "100.110.80.2",
-        "connect_tailscale": "ssh csilvasantin@100.110.80.2"
+        "connect_tailscale": "ssh csilvasantin@macbookaircrema.tail48b61c.ts.net"
       },
       "mac_address": ""
     },
     {
-      "id": "admira-macbookairblanco",
+      "id": "admira-macbookairrosa",
       "unitType": "council",
       "color": "plata",
-      "member": "Cesar",
-      "role": "CEO",
-      "name": "MacBook Air Blanco (Cesar)",
+      "member": "(por asignar)",
+      "role": "(por asignar - miembro nuevo)",
+      "name": "MacBook Air Rosa",
       "machineRole": "Direccion",
       "location": "Madrid",
       "platform": "macOS",
@@ -166,10 +168,10 @@
       "ssh": {
         "enabled": true,
         "user": "csilvasantin",
-        "host": "macbookairblanco.tail48b61c.ts.net",
-        "host_local": "MacBookAirBlanco.local",
+        "host": "macbookairrosa.tail48b61c.ts.net",
+        "host_local": "MacBookAirRosa.local",
         "ip_tailscale": "100.75.118.75",
-        "connect_lan": "ssh csilvasantin@MacBookAirBlanco.local",
+        "connect_lan": "ssh csilvasantin@MacBookAirRosa.local",
         "connect_tailscale": "ssh csilvasantin@100.75.118.75",
         "hostAlias": "macbook-air-de-csilvasantin"
       },
@@ -312,6 +314,109 @@
         "enabled": true,
         "channel": "windows-local",
         "mode": "desktop-sendkeys"
+      },
+      "mac_address": ""
+    },
+    {
+      "id": "admira-asuszenbook",
+      "unitType": "worker",
+      "color": "grafito",
+      "member": "AsusZenbook",
+      "role": "PC auxiliar Windows",
+      "name": "ASUS Zenbook",
+      "machineRole": "PC Windows en la tailnet",
+      "location": "Barcelona",
+      "platform": "Windows",
+      "status": "online",
+      "lastSeen": "2026-06-27T14:10:41Z",
+      "currentFocus": "PC Windows operativo en Tailscale (asuszenbook)",
+      "note": "Tailscale: asuszenbook / 100.75.98.87. Windows: el panel lo lista pero no sondea cuenta por SSH (requiere agente).",
+      "ssh": {
+        "enabled": false,
+        "user": "csilvasantin",
+        "host": "asuszenbook.tail48b61c.ts.net",
+        "ip_tailscale": "100.75.98.87",
+        "ip_lan": "",
+        "connect_tailscale": "ssh csilvasantin@100.75.98.87"
+      },
+      "mac_address": ""
+    },
+    {
+      "id": "admira-thinkstation",
+      "unitType": "worker",
+      "color": "negro",
+      "member": "",
+      "role": "Sobremesa Linux",
+      "name": "ThinkStation PGX",
+      "machineRole": "Estacion de trabajo Linux (Ubuntu)",
+      "location": "",
+      "platform": "linux",
+      "status": "online",
+      "note": "Tailscale: thinkstationpgx-e82e.tail48b61c.ts.net",
+      "ssh": {
+        "enabled": true,
+        "user": "test",
+        "host": "thinkstationpgx-e82e.tail48b61c.ts.net",
+        "ip_tailscale": "100.75.211.23",
+        "connect_tailscale": "ssh test@100.75.211.23"
+      }
+    },
+    {
+      "id": "admira-macbookairplata",
+      "unitType": "council",
+      "color": "plata",
+      "member": "",
+      "role": "COO Operaciones",
+      "name": "MacBook Air Plata",
+      "machineRole": "Operaciones",
+      "location": "",
+      "platform": "macOS",
+      "status": "online",
+      "note": "Tailscale: macbookair16plata.tail48b61c.ts.net (nodo real; fusiona antiguo admira-macbookair16). Fix 2026-07-04.",
+      "ssh": {
+        "enabled": true,
+        "user": "csilvasantin",
+        "host": "macbookair16plata.tail48b61c.ts.net",
+        "ip_tailscale": "100.99.176.126",
+        "connect_tailscale": "ssh csilvasantin@100.99.176.126"
+      },
+      "mac_address": "76:10:7d:3d:b6:ed",
+      "mac_discovered_at": "2026-06-30T11:37:02.522027Z"
+    },
+    {
+      "id": "admira-dgx-spark",
+      "unitType": "worker",
+      "agentProfile": "llm-inference",
+      "capabilities": [
+        "llm",
+        "gpu",
+        "ollama",
+        "inference"
+      ],
+      "color": "verde",
+      "member": "DGX Spark",
+      "role": "Inferencia LLM local (GPU)",
+      "name": "DGX Spark",
+      "machineRole": "Nodo de cómputo GPU · LLM local",
+      "location": "Barcelona",
+      "platform": "linux",
+      "status": "online",
+      "lastSeen": "2026-06-30T12:30:00Z",
+      "currentFocus": "LLM local Ollama (llama3.1:8b) en GPU GB10 — http://100.119.58.65:11434",
+      "note": "NVIDIA DGX Spark (GB10, ARM64, Ubuntu 24.04). Ollama systemd 0.0.0.0:11434. Tailscale: dgx-spark.tail48b61c.ts.net",
+      "llm": {
+        "provider": "ollama",
+        "endpoint": "http://100.119.58.65:11434",
+        "models": [
+          "llama3.1:8b"
+        ]
+      },
+      "ssh": {
+        "enabled": true,
+        "user": "bitsatoms",
+        "host": "dgx-spark.tail48b61c.ts.net",
+        "ip_tailscale": "100.119.58.65",
+        "connect_tailscale": "ssh bitsatoms@100.119.58.65"
       },
       "mac_address": ""
     }

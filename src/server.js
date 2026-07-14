@@ -1017,7 +1017,7 @@ const server = createServer(async (request, response) => {
       if (alias) {
         councilHeartbeats.set(alias, {
           alias, host: cleanStr(p.host), capture: !!p.capture, login: p.login !== false,
-          ver: cleanStr(p.ver), at: Date.now()
+          ver: cleanStr(p.ver), account: cleanStr(p.account), running: p.running !== false, at: Date.now()
         });
       }
       sendJson(response, 200, { ok: true });
@@ -1425,6 +1425,24 @@ const server = createServer(async (request, response) => {
   if (request.method === "GET" && (url.pathname === "/api/council/machine-status" || url.pathname === "/api/teamwork/machine-status")) {
     try {
       const machines = await getCouncilClaudeStatus();
+      // Fusión de heartbeats: máquinas sin sondeo SSH (Windows) que envían heartbeat
+      // (agente local, alias = id de máquina) se marcan online con su cuenta/versión.
+      const nowHb = Date.now();
+      for (const mm of machines) {
+        const hb = councilHeartbeats.get(mm.id);
+        if (hb && (nowHb - hb.at) < 120000) {
+          mm.online = true;
+          mm.monitor = "heartbeat";
+          mm.reason = null;
+          mm.reached_via = hb.host || mm.reached_via || null;
+          mm.claude = {
+            claude_running: hb.running !== false,
+            account: hb.login ? (hb.account || null) : null,
+            version: hb.ver || null,
+            source: "heartbeat"
+          };
+        }
+      }
       sendJson(response, 200, {
         ok: true,
         ts: new Date().toISOString(),

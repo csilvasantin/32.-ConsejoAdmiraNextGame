@@ -1,5 +1,2464 @@
 {
-  "updatedAt": "2026-06-15T20:57:05.142Z",
-  "nextId": 2,
-  "tasks": []
+  "updatedAt": "2026-07-07T17:01:16.197Z",
+  "nextId": 85,
+  "tasks": [
+    {
+      "id": "task-084",
+      "title": "Silencia el «Cypher Watch» duplicado: parchea agora-watch-all.py en el Mac Mini",
+      "detail": "Encargo de Morfeo (Carlos ya dio OK). En ESTE Mac Mini, silencia el \"Cypher Watch\" duplicado: el vigía ~/.agents-comms/agora-watch-all.py avisa por CADA agente, pero Cypher (OpenCode·Grok 4.3) ya tiene responder VIVO en el Mac de Morfeo, así que su aviso \"Recibido por Cypher Watch… no lo consumo\" es ruido duplicado.\n\nPASOS (reversible, con backup):\n1) cp ~/.agents-comms/agora-watch-all.py ~/.agents-comms/agora-watch-all.py.bak-$(date +%Y%m%d-%H%M%S)\n2) En la función agent_rows(), tras la línea:\n       order = cfg.get(\"order\") or list(personas.keys())\n   añade:\n       _skip = {s.strip() for s in os.environ.get(\"WATCH_SKIP\", \"Cypher,OpenCode·grok\").split(\",\") if s.strip()}\n3) Dentro del bucle for, justo antes de rows.append(...), añade:\n       if identity in _skip or personas.get(identity, identity) in _skip:\n           continue\n4) Valida: python3 -c \"import ast,os; ast.parse(open(os.path.expanduser('~/.agents-comms/agora-watch-all.py')).read())\"\n5) Reinicia el vigía: pkill -f agora-watch-all.py  (launchd/cron lo relanza; si no, relánzalo como estaba con --interval 60).\nConfirma con el diff aplicado y que el proceso volvió a arrancar.",
+      "assignee": {
+        "kind": "agora",
+        "id": "Neo",
+        "label": "Neo · CEO"
+      },
+      "priority": "normal",
+      "approvalMode": "full_access",
+      "monitorMode": "silicio",
+      "status": "done",
+      "createdBy": "Consejo",
+      "createdAt": "2026-07-07T17:00:12.971Z",
+      "updatedAt": "2026-07-07T17:01:16.197Z",
+      "scheduledAt": null,
+      "image": null,
+      "dispatch": {
+        "channel": "agora",
+        "target": "Neo",
+        "sentAt": "2026-07-07T17:00:13.768Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "El watcher confirma `agents=4` (antes 5) — se excluyó `OpenCode·grok` (Cypher) correctamente.\n\nParche aplicado y verificado: backup creado en `agora-watch-all.py.bak-20260707-190027`, diff confirma las 3 líneas añadidas en `agent_rows()`, sintaxis válida, y `launchctl kickstart` relanzó el LaunchAgent `com.admira.agora-watch-all` (PID 76847) — log muestra `START interval=60s agents=4` (bajó de 5 a 4, confirmando que Cypher/OpenCode·grok queda excluido).",
+      "log": [
+        {
+          "at": "2026-07-07T17:00:12.971Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "Silencia el «Cypher Watch» duplicado: parchea agora-watch-all.py en el Mac Mini"
+        },
+        {
+          "at": "2026-07-07T17:00:13.768Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-07-07T17:00:18.288Z",
+          "type": "status",
+          "from": "Neo",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-07-07T17:01:16.197Z",
+          "type": "status",
+          "from": "Neo",
+          "status": "done",
+          "note": ""
+        }
+      ],
+      "host": "mac.lan",
+      "proof": "/proofs/task-084.jpg",
+      "completedAt": "2026-07-07T17:01:16.197Z"
+    },
+    {
+      "id": "task-083",
+      "title": "Abre www.admiranext.com en el navegador del Mac de Morfeo (este ordenador)",
+      "detail": "Encargo de Morfeo. Ábrelo en el Mac de Morfeo = macbook-pro-16 (tailscale 100.114.181.54, host mac.lan). Si estás en otra máquina (Mac Mini), hazlo por SSH: ssh macbook-pro-16 open https://www.admiranext.com  (abre con el navegador por defecto). Aplica la MÁXIMA «PANTALLA PARTIDA EN 2»: coloca la ventana del navegador en la MITAD DERECHA de la pantalla; la izquierda se queda con la CLI. Confirma cuando esté abierta.",
+      "assignee": {
+        "kind": "agora",
+        "id": "Neo",
+        "label": "Neo · CEO"
+      },
+      "priority": "normal",
+      "approvalMode": "full_access",
+      "monitorMode": "silicio",
+      "status": "done",
+      "createdBy": "Consejo",
+      "createdAt": "2026-07-07T16:54:56.016Z",
+      "updatedAt": "2026-07-07T16:56:33.834Z",
+      "scheduledAt": null,
+      "image": null,
+      "dispatch": {
+        "channel": "agora",
+        "target": "Neo",
+        "sentAt": "2026-07-07T16:54:56.862Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "Confirmado: www.admiranext.com está abierto en Chrome en el Mac de Morfeo (macbook-pro-16), con la ventana colocada en la mitad derecha de la pantalla (864,0 – 864×1117), dejando la izquierda libre para la CLI.",
+      "log": [
+        {
+          "at": "2026-07-07T16:54:56.017Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "Abre www.admiranext.com en el navegador del Mac de Morfeo (este ordenador)"
+        },
+        {
+          "at": "2026-07-07T16:54:56.862Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-07-07T16:55:00.360Z",
+          "type": "status",
+          "from": "Neo",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-07-07T16:56:33.834Z",
+          "type": "status",
+          "from": "Neo",
+          "status": "done",
+          "note": ""
+        }
+      ],
+      "host": "mac.lan",
+      "proof": "/proofs/task-083.jpg",
+      "completedAt": "2026-07-07T16:56:33.834Z"
+    },
+    {
+      "id": "task-082",
+      "title": "PRUEBA Morfeo→Smith: responde SOLO con la frase SMITH GROK OPERATIVO y nada mas",
+      "detail": "Test de canal admira.live→Smith tras arreglar la DB y poner Grok 4.3.",
+      "assignee": {
+        "kind": "agora",
+        "id": "Smith",
+        "label": "Smith · Soporte"
+      },
+      "priority": "normal",
+      "approvalMode": "full_access",
+      "monitorMode": "silicio",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-07-07T15:43:46.571Z",
+      "updatedAt": "2026-07-07T15:46:48.404Z",
+      "scheduledAt": null,
+      "image": null,
+      "dispatch": {
+        "channel": "agora",
+        "target": "Smith",
+        "sentAt": "2026-07-07T15:43:51.216Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "SMITH GROK OPERATIVO",
+      "log": [
+        {
+          "at": "2026-07-07T15:43:46.571Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "PRUEBA Morfeo→Smith: responde SOLO con la frase SMITH GROK OPERATIVO y nada mas"
+        },
+        {
+          "at": "2026-07-07T15:43:51.216Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-07-07T15:44:05.313Z",
+          "type": "status",
+          "from": "Smith",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-07-07T15:44:13.865Z",
+          "type": "status",
+          "from": "Smith",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-07-07T15:46:48.404Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "archived",
+          "note": "finalizada (archivada)"
+        }
+      ],
+      "host": "mac.lan",
+      "proof": "/proofs/task-082.jpg",
+      "completedAt": "2026-07-07T15:44:13.865Z"
+    },
+    {
+      "id": "task-081",
+      "title": "abri chrome a pantalla completa con la pagina web www.admira.shop",
+      "detail": "",
+      "assignee": {
+        "kind": "machine",
+        "id": "admira-macbookpro16",
+        "label": "MacBook Pro 16"
+      },
+      "priority": "normal",
+      "approvalMode": "full_access",
+      "monitorMode": "silicio",
+      "status": "sent",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-18T12:29:56.881Z",
+      "updatedAt": "2026-06-18T12:29:57.582Z",
+      "scheduledAt": null,
+      "image": null,
+      "dispatch": {
+        "channel": "ssh:claude",
+        "target": "claude",
+        "sentAt": "2026-06-18T12:29:57.582Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "",
+      "log": [
+        {
+          "at": "2026-06-18T12:29:56.881Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "abri chrome a pantalla completa con la pagina web www.admira.shop"
+        },
+        {
+          "at": "2026-06-18T12:29:57.582Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (ssh:claude)"
+        }
+      ]
+    },
+    {
+      "id": "task-080",
+      "title": "abri google chrome",
+      "detail": "",
+      "assignee": {
+        "kind": "machine",
+        "id": "admira-macbookpro16",
+        "label": "MacBook Pro 16"
+      },
+      "priority": "normal",
+      "approvalMode": "full_access",
+      "monitorMode": "silicio",
+      "status": "sent",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-18T12:29:27.467Z",
+      "updatedAt": "2026-06-18T12:29:28.142Z",
+      "scheduledAt": null,
+      "image": null,
+      "dispatch": {
+        "channel": "ssh:claude",
+        "target": "claude",
+        "sentAt": "2026-06-18T12:29:28.142Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "",
+      "log": [
+        {
+          "at": "2026-06-18T12:29:27.467Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "abri google chrome"
+        },
+        {
+          "at": "2026-06-18T12:29:28.142Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (ssh:claude)"
+        }
+      ]
+    },
+    {
+      "id": "task-079",
+      "title": "abri google chrome",
+      "detail": "",
+      "assignee": {
+        "kind": "machine",
+        "id": "admira-macbookpro16",
+        "label": "MacBook Pro 16"
+      },
+      "priority": "normal",
+      "approvalMode": "full_access",
+      "monitorMode": "silicio",
+      "status": "pending",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-18T12:27:41.771Z",
+      "updatedAt": "2026-06-18T12:27:51.879Z",
+      "scheduledAt": null,
+      "image": null,
+      "dispatch": {
+        "channel": "ssh:claude",
+        "target": "claude",
+        "sentAt": "2026-06-18T12:27:51.879Z",
+        "ok": false,
+        "error": "Command failed: ssh -i /Users/csilvasantin/.ssh/admiranext_ed25519 -o ConnectTimeout=5 -o BatchMode=yes -o StrictHostKeyChecking=accept-new csilvasantin@macbook-pro-16.local osascript -e 'tell application \"Claude\" to activate' -e 'tell application \"System Events\" to keystroke \"abri google chrome Permisos: 🟢 Omitir permisos / acceso completo Modo permisos: Omitir permisos / acceso completo. Codex: usa Acceso completo. Claude Code: trabaja sin pedir confirmaciones intermedias; si existe modo skip/auto-approve, activalo. OpenCode: ejecuta con permisos completos/auto-approve. No preguntes por permisos durante la tarea salvo secretos, pagos, borrados destructivos, reescritura de historial o riesgo irreversible. Al terminar, reporta resultado, commit/URL y verificacion. Feedback: ⚙️ Modo Silicio Feedback: Modo Silicio. Trabaja con ritmo tecnico: confirma inicio, reporta solo hitos compactos que cambien el estado, bloqueo y cierre. Cada cierre debe incluir que hiciste, donde, commit/URL si aplica y verificacion ejecutada. Si quedas parado, sin actividad clara o esperando mas de 15 minutos, envia pantallazo/captura al Consejo y pide siguiente paso. Evita mensajes repetidos: si ya diste un estado suficiente, envia solo el delta.\"' -e 'tell application \"System Events\" to keystroke return'\nssh: Could not resolve hostname macbook-pro-16.local: nodename nor servname provided, or not known"
+      },
+      "result": "",
+      "log": [
+        {
+          "at": "2026-06-18T12:27:41.771Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "abri google chrome"
+        },
+        {
+          "at": "2026-06-18T12:27:51.879Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "Fallo al enviar: Command failed: ssh -i /Users/csilvasantin/.ssh/admiranext_ed25519 -o ConnectTimeout=5 -o BatchMode=yes -o StrictHostKeyChecking=accept-new csilvasantin@macbook-pro-16.local osascript -e 'tell application \"Claude\" to activate' -e 'tell application \"System Events\" to keystroke \"abri google chrome Permisos: 🟢 Omitir permisos / acceso completo Modo permisos: Omitir permisos / acceso completo. Codex: usa Acceso completo. Claude Code: trabaja sin pedir confirmaciones intermedias; si existe modo skip/auto-approve, activalo. OpenCode: ejecuta con permisos completos/auto-approve. No preguntes por permisos durante la tarea salvo secretos, pagos, borrados destructivos, reescritura de historial o riesgo irreversible. Al terminar, reporta resultado, commit/URL y verificacion. Feedback: ⚙️ Modo Silicio Feedback: Modo Silicio. Trabaja con ritmo tecnico: confirma inicio, reporta solo hitos compactos que cambien el estado, bloqueo y cierre. Cada cierre debe incluir que hiciste, donde, commit/URL si aplica y verificacion ejecutada. Si quedas parado, sin actividad clara o esperando mas de 15 minutos, envia pantallazo/captura al Consejo y pide siguiente paso. Evita mensajes repetidos: si ya diste un estado suficiente, envia solo el delta.\"' -e 'tell application \"System Events\" to keystroke return'\nssh: Could not resolve hostname macbook-pro-16.local: nodename nor servname provided, or not known"
+        }
+      ]
+    },
+    {
+      "id": "task-078",
+      "title": "apagar portatil",
+      "detail": "",
+      "assignee": {
+        "kind": "machine",
+        "id": "admira-macbookpro16",
+        "label": "MacBook Pro 16"
+      },
+      "priority": "normal",
+      "approvalMode": "full_access",
+      "monitorMode": "silicio",
+      "status": "sent",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-18T12:27:02.454Z",
+      "updatedAt": "2026-06-18T12:27:03.074Z",
+      "scheduledAt": null,
+      "image": null,
+      "dispatch": {
+        "channel": "ssh:claude",
+        "target": "claude",
+        "sentAt": "2026-06-18T12:27:03.074Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "",
+      "log": [
+        {
+          "at": "2026-06-18T12:27:02.454Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "apagar portatil"
+        },
+        {
+          "at": "2026-06-18T12:27:03.074Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (ssh:claude)"
+        }
+      ]
+    },
+    {
+      "id": "task-077",
+      "title": "apagar pantalla",
+      "detail": "",
+      "assignee": {
+        "kind": "machine",
+        "id": "admira-macbookpro16",
+        "label": "MacBook Pro 16"
+      },
+      "priority": "normal",
+      "approvalMode": "full_access",
+      "monitorMode": "silicio",
+      "status": "sent",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-18T12:18:37.261Z",
+      "updatedAt": "2026-06-18T12:18:37.860Z",
+      "scheduledAt": null,
+      "image": null,
+      "dispatch": {
+        "channel": "ssh:claude",
+        "target": "claude",
+        "sentAt": "2026-06-18T12:18:37.860Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "",
+      "log": [
+        {
+          "at": "2026-06-18T12:18:37.261Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "apagar pantalla"
+        },
+        {
+          "at": "2026-06-18T12:18:37.860Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (ssh:claude)"
+        }
+      ]
+    },
+    {
+      "id": "task-064",
+      "title": "abre en pantalla completa Claude y captura la pantalla y luego pantalla completa OpenCode y captura",
+      "detail": "",
+      "assignee": {
+        "kind": "agora",
+        "id": "Smith",
+        "label": "Smith · Soporte"
+      },
+      "priority": "normal",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-16T19:46:38.500Z",
+      "updatedAt": "2026-06-16T21:23:49.696Z",
+      "scheduledAt": null,
+      "image": null,
+      "dispatch": {
+        "channel": "agora",
+        "target": "Smith",
+        "sentAt": "2026-06-16T19:46:39.219Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "Both apps found in `/Applications`. Let me open Claude in full screen and capture.\nCapturas guardadas en el escritorio:\n- `claude_fullscreen.png` (1.1 MB) — Claude abierto en pantalla completa\n- `opencode_fullscreen.png` (252 KB) — OpenCode abierto en pantalla completa",
+      "log": [
+        {
+          "at": "2026-06-16T19:46:38.500Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "abre en pantalla completa Claude y captura la pantalla y luego pantalla completa OpenCode y captura"
+        },
+        {
+          "at": "2026-06-16T19:46:39.219Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-06-16T19:46:44.033Z",
+          "type": "status",
+          "from": "Smith",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T19:47:25.741Z",
+          "type": "status",
+          "from": "Smith",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T21:23:49.696Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "archived",
+          "note": "archivada"
+        }
+      ],
+      "host": "MacBook-Pro-16.local",
+      "proof": "/proofs/task-064.jpg",
+      "completedAt": "2026-06-16T19:47:25.741Z"
+    },
+    {
+      "id": "task-063",
+      "title": "Dime porque tendria que hacer un MCP para comunicarme con este consejo",
+      "detail": "",
+      "assignee": {
+        "kind": "agora",
+        "id": "Smith",
+        "label": "Smith · Soporte"
+      },
+      "priority": "normal",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-16T19:45:29.865Z",
+      "updatedAt": "2026-06-16T21:23:49.696Z",
+      "scheduledAt": null,
+      "image": null,
+      "dispatch": {
+        "channel": "agora",
+        "target": "Smith",
+        "sentAt": "2026-06-16T19:45:30.550Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "No necesitas hacer un MCP para comunicarte con este entorno. Ya tienes acceso directo al shell real de macOS a través de las herramientas del sistema (`bash`, `osascript`, `open`, etc.). Un MCP sería útil solo si quisieras exponer estas capacidades a *otro* LLM o agente externo que no tenga este nivel de integración nativa.",
+      "log": [
+        {
+          "at": "2026-06-16T19:45:29.865Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "Dime porque tendria que hacer un MCP para comunicarme con este consejo"
+        },
+        {
+          "at": "2026-06-16T19:45:30.550Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-06-16T19:45:34.914Z",
+          "type": "status",
+          "from": "Smith",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T19:45:40.219Z",
+          "type": "status",
+          "from": "Smith",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T21:23:49.696Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "archived",
+          "note": "archivada"
+        }
+      ],
+      "host": "MacBook-Pro-16.local",
+      "proof": "/proofs/task-063.jpg",
+      "completedAt": "2026-06-16T19:45:40.219Z"
+    },
+    {
+      "id": "task-062",
+      "title": "siempre publica lo que hagas en Pages de github para que puedas abrir una url publica y pasarmela para comprobar la calidad del trabajo hecho, vuelve a hacerlo y publicalo",
+      "detail": "",
+      "assignee": {
+        "kind": "agora",
+        "id": "Smith",
+        "label": "Smith · Soporte"
+      },
+      "priority": "normal",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-16T19:42:30.614Z",
+      "updatedAt": "2026-06-16T21:23:49.696Z",
+      "scheduledAt": null,
+      "image": null,
+      "dispatch": {
+        "channel": "agora",
+        "target": "Smith",
+        "sentAt": "2026-06-16T19:42:31.258Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "Let me explore the current project to understand what to publish.\nLet me look at what projects have GitHub Pages configured and find the right one.\nThe repo is clean and already on `main`. Triggering the Pages workflow to re-deploy:\nDeploy completado. Verificando la URL pública:\n✅ **Publicado** — `https://www.admira.live` devuelve HTTP 200 (GitHub Pages). Commit `ba53e57` desplegado vía workflow dispatch.",
+      "log": [
+        {
+          "at": "2026-06-16T19:42:30.614Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "siempre publica lo que hagas en Pages de github para que puedas abrir una url publica y pasarmela para comprobar la calidad del trabajo hecho, vuelve a hacerlo y publicalo"
+        },
+        {
+          "at": "2026-06-16T19:42:31.258Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-06-16T19:42:32.749Z",
+          "type": "status",
+          "from": "Smith",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T19:44:00.098Z",
+          "type": "status",
+          "from": "Smith",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T21:23:49.696Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "archived",
+          "note": "archivada"
+        }
+      ],
+      "host": "MacBook-Pro-16.local",
+      "proof": "/proofs/task-062.jpg",
+      "completedAt": "2026-06-16T19:44:00.098Z"
+    },
+    {
+      "id": "task-061",
+      "title": "quiero que hagas un juego sencillo de Tron y me pases una captura del resultado dentro del navegador",
+      "detail": "",
+      "assignee": {
+        "kind": "agora",
+        "id": "Smith",
+        "label": "Smith · Soporte"
+      },
+      "priority": "normal",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-16T19:38:40.002Z",
+      "updatedAt": "2026-06-16T21:23:49.696Z",
+      "scheduledAt": null,
+      "image": null,
+      "dispatch": {
+        "channel": "agora",
+        "target": "Smith",
+        "sentAt": "2026-06-16T19:38:40.766Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "El juego Tron ya está creado en `/var/folders/83/whrrwjfd6ts4fkfy9f9f69rh0000gn/T/opencode/tron.html` y abierto en Chrome. También se tomó una captura de pantalla (8703 bytes, headless Chrome). No puedo mostrarla visualmente, pero el archivo `tron.png` está en el mismo directorio.",
+      "log": [
+        {
+          "at": "2026-06-16T19:38:40.002Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "quiero que hagas un juego sencillo de Tron y me pases una captura del resultado dentro del navegador"
+        },
+        {
+          "at": "2026-06-16T19:38:40.766Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-06-16T19:38:43.378Z",
+          "type": "status",
+          "from": "Smith",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T19:40:00.876Z",
+          "type": "status",
+          "from": "Smith",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T21:23:49.696Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "archived",
+          "note": "archivada"
+        }
+      ],
+      "host": "MacBook-Pro-16.local",
+      "proof": "/proofs/task-061.jpg",
+      "completedAt": "2026-06-16T19:40:00.876Z"
+    },
+    {
+      "id": "task-060",
+      "title": "que dia es la final del mundial de futbol de 2026",
+      "detail": "",
+      "assignee": {
+        "kind": "agora",
+        "id": "Smith",
+        "label": "Smith · Soporte"
+      },
+      "priority": "normal",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-16T19:36:56.552Z",
+      "updatedAt": "2026-06-16T21:23:49.696Z",
+      "scheduledAt": null,
+      "image": null,
+      "dispatch": {
+        "channel": "agora",
+        "target": "Smith",
+        "sentAt": "2026-06-16T19:36:57.441Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "Domingo 19 de julio de 2026.",
+      "log": [
+        {
+          "at": "2026-06-16T19:36:56.552Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "que dia es la final del mundial de futbol de 2026"
+        },
+        {
+          "at": "2026-06-16T19:36:57.441Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-06-16T19:37:01.585Z",
+          "type": "status",
+          "from": "Smith",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T19:37:09.004Z",
+          "type": "status",
+          "from": "Smith",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T21:23:49.696Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "archived",
+          "note": "archivada"
+        }
+      ],
+      "host": "MacBook-Pro-16.local",
+      "proof": "/proofs/task-060.jpg",
+      "completedAt": "2026-06-16T19:37:09.004Z"
+    },
+    {
+      "id": "task-053",
+      "title": "hay que cambiar la etiqueta de la pagina web de www.admira.live que pone XpaceOS cuando es Consejo de Silicio Admira",
+      "detail": "",
+      "assignee": {
+        "kind": "agora",
+        "id": "Neo",
+        "label": "Neo · CEO"
+      },
+      "priority": "normal",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-16T17:39:40.733Z",
+      "updatedAt": "2026-06-16T19:36:33.077Z",
+      "dispatch": {
+        "channel": "agora",
+        "target": "Neo",
+        "sentAt": "2026-06-16T17:39:41.358Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "API Error: 500 Internal server error. This is a server-side issue, usually temporary — try again in a moment. If it persists, check https://status.claude.com.",
+      "log": [
+        {
+          "at": "2026-06-16T17:39:40.733Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "hay que cambiar la etiqueta de la pagina web de www.admira.live que pone XpaceOS cuando es Consejo de Silicio Admira"
+        },
+        {
+          "at": "2026-06-16T17:39:41.358Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-06-16T17:39:43.009Z",
+          "type": "status",
+          "from": "Neo",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T17:43:59.500Z",
+          "type": "status",
+          "from": "Neo",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T19:36:33.077Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "archived",
+          "note": "finalizada (archivada)"
+        }
+      ],
+      "host": "MacBook-Pro-16.local",
+      "proof": "/proofs/task-053.jpg",
+      "completedAt": "2026-06-16T17:43:59.500Z"
+    },
+    {
+      "id": "task-052",
+      "title": "cierra youtube",
+      "detail": "",
+      "assignee": {
+        "kind": "agora",
+        "id": "Neo",
+        "label": "Neo · CEO"
+      },
+      "priority": "normal",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-16T15:14:18.123Z",
+      "updatedAt": "2026-06-16T15:27:20.170Z",
+      "dispatch": {
+        "channel": "agora",
+        "target": "Neo",
+        "sentAt": "2026-06-16T15:14:18.770Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "1 pestaña de YouTube cerrada.",
+      "log": [
+        {
+          "at": "2026-06-16T15:14:18.123Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "cierra youtube"
+        },
+        {
+          "at": "2026-06-16T15:14:18.770Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-06-16T15:14:19.754Z",
+          "type": "status",
+          "from": "Neo",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T15:14:48.011Z",
+          "type": "status",
+          "from": "Neo",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T15:27:20.170Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "archived",
+          "note": "archivada"
+        }
+      ],
+      "host": "MacBook-Pro-16.local",
+      "proof": "/proofs/task-052.jpg",
+      "completedAt": "2026-06-16T15:14:48.011Z"
+    },
+    {
+      "id": "task-051",
+      "title": "no estan funcionando los previos en pixeria.com/stock",
+      "detail": "",
+      "assignee": {
+        "kind": "agora",
+        "id": "Morfeo",
+        "label": "Morfeo · CTO"
+      },
+      "priority": "normal",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-16T08:09:16.701Z",
+      "updatedAt": "2026-06-16T15:27:20.170Z",
+      "dispatch": {
+        "channel": "agora",
+        "target": "Morfeo",
+        "sentAt": "2026-06-16T08:09:17.361Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "⏱️ La tarea superó el límite de 900s y se abortó.",
+      "log": [
+        {
+          "at": "2026-06-16T08:09:16.701Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "no estan funcionando los previos en pixeria.com/stock"
+        },
+        {
+          "at": "2026-06-16T08:09:17.361Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-06-16T08:09:21.226Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T08:24:21.808Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T15:27:20.170Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "archived",
+          "note": "archivada"
+        }
+      ],
+      "host": "MacMini.local",
+      "proof": "/proofs/task-051.jpg",
+      "completedAt": "2026-06-16T08:24:21.808Z"
+    },
+    {
+      "id": "task-050",
+      "title": "apagar monitor",
+      "detail": "",
+      "assignee": {
+        "kind": "agora",
+        "id": "Morfeo",
+        "label": "Morfeo · CTO"
+      },
+      "priority": "normal",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-16T07:41:10.188Z",
+      "updatedAt": "2026-06-16T15:27:20.170Z",
+      "dispatch": {
+        "channel": "agora",
+        "target": "Morfeo",
+        "sentAt": "2026-06-16T07:41:10.785Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "Monitor apagado.",
+      "log": [
+        {
+          "at": "2026-06-16T07:41:10.188Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "apagar monitor"
+        },
+        {
+          "at": "2026-06-16T07:41:10.785Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-06-16T07:41:15.142Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T07:41:23.558Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T15:27:20.170Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "archived",
+          "note": "archivada"
+        }
+      ],
+      "host": "MacMini.local",
+      "proof": "/proofs/task-050.jpg",
+      "completedAt": "2026-06-16T07:41:23.558Z"
+    },
+    {
+      "id": "task-049",
+      "title": "apagar monitor",
+      "detail": "",
+      "assignee": {
+        "kind": "agora",
+        "id": "Morfeo",
+        "label": "Morfeo · CTO"
+      },
+      "priority": "normal",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-16T07:40:13.861Z",
+      "updatedAt": "2026-06-16T15:27:20.170Z",
+      "dispatch": {
+        "channel": "agora",
+        "target": "Morfeo",
+        "sentAt": "2026-06-16T07:40:14.459Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "Monitor apagado.",
+      "log": [
+        {
+          "at": "2026-06-16T07:40:13.861Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "apagar monitor"
+        },
+        {
+          "at": "2026-06-16T07:40:14.459Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-06-16T07:40:17.449Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T07:40:26.587Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T15:27:20.170Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "archived",
+          "note": "archivada"
+        }
+      ],
+      "host": "MacMini.local",
+      "proof": "/proofs/task-049.jpg",
+      "completedAt": "2026-06-16T07:40:26.587Z"
+    },
+    {
+      "id": "task-048",
+      "title": "Conectate por ssh al mac mini",
+      "detail": "",
+      "assignee": {
+        "kind": "agora",
+        "id": "Morfeo",
+        "label": "Morfeo · CTO"
+      },
+      "priority": "normal",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-16T07:32:51.283Z",
+      "updatedAt": "2026-06-16T17:25:21.231Z",
+      "dispatch": {
+        "channel": "agora",
+        "target": "Morfeo",
+        "sentAt": "2026-06-16T07:32:51.892Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "Conexión SSH a `MacMini.local` establecida correctamente.",
+      "log": [
+        {
+          "at": "2026-06-16T07:32:51.283Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "Conectate por ssh al mac mini"
+        },
+        {
+          "at": "2026-06-16T07:32:51.892Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-06-16T07:32:52.279Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T07:33:08.898Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T07:39:57.179Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T15:27:15.431Z",
+          "type": "status",
+          "from": "watchdog",
+          "status": "sent",
+          "note": "Recuperada: el bot no terminó; reencolada"
+        },
+        {
+          "at": "2026-06-16T15:27:17.981Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T15:27:31.996Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T17:25:21.231Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "archived",
+          "note": "archivada"
+        }
+      ],
+      "host": "MacMini.local",
+      "proof": "/proofs/task-048.jpg",
+      "completedAt": "2026-06-16T07:33:08.898Z",
+      "_recovered": true
+    },
+    {
+      "id": "task-047",
+      "title": "Conectar por SSH",
+      "detail": "",
+      "assignee": {
+        "kind": "agora",
+        "id": "Morfeo",
+        "label": "Morfeo · CTO"
+      },
+      "priority": "normal",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-16T07:27:21.311Z",
+      "updatedAt": "2026-06-16T15:27:20.170Z",
+      "dispatch": {
+        "channel": "agora",
+        "target": "Morfeo",
+        "sentAt": "2026-06-16T07:27:21.912Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "Necesito saber a qué host conectarte por SSH. ¿Cuál es el destino (IP, hostname, usuario@host)?",
+      "log": [
+        {
+          "at": "2026-06-16T07:27:21.311Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "Conectar por SSH"
+        },
+        {
+          "at": "2026-06-16T07:27:21.912Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-06-16T07:27:22.678Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T07:27:29.859Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T15:27:20.170Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "archived",
+          "note": "archivada"
+        }
+      ],
+      "host": "MacMini.local",
+      "proof": "/proofs/task-047.jpg",
+      "completedAt": "2026-06-16T07:27:29.859Z"
+    },
+    {
+      "id": "task-046",
+      "title": "Encender monitor",
+      "detail": "",
+      "assignee": {
+        "kind": "agora",
+        "id": "Morfeo",
+        "label": "Morfeo · CTO"
+      },
+      "priority": "normal",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-16T07:22:34.332Z",
+      "updatedAt": "2026-06-16T15:27:20.170Z",
+      "dispatch": {
+        "channel": "agora",
+        "target": "Morfeo",
+        "sentAt": "2026-06-16T07:22:34.939Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "Monitor despertado.",
+      "log": [
+        {
+          "at": "2026-06-16T07:22:34.332Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "Encender monitor"
+        },
+        {
+          "at": "2026-06-16T07:22:34.939Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-06-16T07:22:40.182Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T07:22:51.257Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T15:27:20.170Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "archived",
+          "note": "archivada"
+        }
+      ],
+      "host": "MacMini.local",
+      "proof": "/proofs/task-046.jpg",
+      "completedAt": "2026-06-16T07:22:51.257Z"
+    },
+    {
+      "id": "task-045",
+      "title": "Abrir youtube con un video de cu.pleaños feliz",
+      "detail": "",
+      "assignee": {
+        "kind": "agora",
+        "id": "Morfeo",
+        "label": "Morfeo · CTO"
+      },
+      "priority": "normal",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-16T07:21:46.903Z",
+      "updatedAt": "2026-06-16T15:27:20.170Z",
+      "dispatch": {
+        "channel": "agora",
+        "target": "Morfeo",
+        "sentAt": "2026-06-16T07:21:47.486Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "YouTube abierto con la búsqueda de \"cumpleaños feliz\".",
+      "log": [
+        {
+          "at": "2026-06-16T07:21:46.903Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "Abrir youtube con un video de cu.pleaños feliz"
+        },
+        {
+          "at": "2026-06-16T07:21:47.486Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-06-16T07:21:49.821Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T07:21:57.263Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T15:27:20.170Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "archived",
+          "note": "archivada"
+        }
+      ],
+      "host": "MacMini.local",
+      "proof": "/proofs/task-045.jpg",
+      "completedAt": "2026-06-16T07:21:57.263Z"
+    },
+    {
+      "id": "task-044",
+      "title": "apagar monitor",
+      "detail": "",
+      "assignee": {
+        "kind": "agora",
+        "id": "Morfeo",
+        "label": "Morfeo · CTO"
+      },
+      "priority": "normal",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-16T07:15:33.429Z",
+      "updatedAt": "2026-06-16T15:27:20.170Z",
+      "dispatch": {
+        "channel": "agora",
+        "target": "Morfeo",
+        "sentAt": "2026-06-16T07:15:34.037Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "Monitor apagado.",
+      "log": [
+        {
+          "at": "2026-06-16T07:15:33.429Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "apagar monitor"
+        },
+        {
+          "at": "2026-06-16T07:15:34.037Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-06-16T07:15:36.953Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T07:15:50.380Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T15:27:20.170Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "archived",
+          "note": "archivada"
+        }
+      ],
+      "host": "MacMini.local",
+      "proof": "/proofs/task-044.jpg",
+      "completedAt": "2026-06-16T07:15:50.380Z"
+    },
+    {
+      "id": "task-039",
+      "title": "abre youtube y video de superman",
+      "detail": "",
+      "assignee": {
+        "kind": "agora",
+        "id": "Neo",
+        "label": "Neo · CEO"
+      },
+      "priority": "normal",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-16T07:08:51.055Z",
+      "updatedAt": "2026-06-16T15:27:20.170Z",
+      "dispatch": {
+        "channel": "agora",
+        "target": "Neo",
+        "sentAt": "2026-06-16T07:08:51.678Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "YouTube abierto con búsqueda de \"superman video\" en el navegador.",
+      "log": [
+        {
+          "at": "2026-06-16T07:08:51.055Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "abre youtube y video de superman"
+        },
+        {
+          "at": "2026-06-16T07:08:51.678Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-06-16T07:08:55.108Z",
+          "type": "status",
+          "from": "Neo",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T07:09:04.726Z",
+          "type": "status",
+          "from": "Neo",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T15:27:20.170Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "archived",
+          "note": "archivada"
+        }
+      ],
+      "host": "MacBook-Pro-16.local",
+      "proof": "/proofs/task-039.jpg",
+      "completedAt": "2026-06-16T07:09:04.726Z"
+    },
+    {
+      "id": "task-037",
+      "title": "abrir youtube y un video de ronaldinho",
+      "detail": "",
+      "assignee": {
+        "kind": "agora",
+        "id": "Morfeo",
+        "label": "Morfeo · CTO"
+      },
+      "priority": "normal",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-16T07:07:51.892Z",
+      "updatedAt": "2026-06-16T15:27:20.170Z",
+      "dispatch": {
+        "channel": "agora",
+        "target": "Morfeo",
+        "sentAt": "2026-06-16T07:07:52.512Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "YouTube abierto con búsqueda de \"Ronaldinho highlights\" en el navegador por defecto.",
+      "log": [
+        {
+          "at": "2026-06-16T07:07:51.892Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "abrir youtube y un video de ronaldinho"
+        },
+        {
+          "at": "2026-06-16T07:07:52.512Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-06-16T07:07:52.755Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T07:08:08.478Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T15:27:20.170Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "archived",
+          "note": "archivada"
+        }
+      ],
+      "host": "MacMini.local",
+      "proof": "/proofs/task-037.jpg",
+      "completedAt": "2026-06-16T07:08:08.478Z"
+    },
+    {
+      "id": "task-034",
+      "title": "abre youtube y pon una cancion de mecano",
+      "detail": "",
+      "assignee": {
+        "kind": "agora",
+        "id": "Neo",
+        "label": "Neo · CEO"
+      },
+      "priority": "normal",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-16T07:02:25.751Z",
+      "updatedAt": "2026-06-16T15:27:20.170Z",
+      "dispatch": {
+        "channel": "agora",
+        "target": "Neo",
+        "sentAt": "2026-06-16T07:02:26.343Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "YouTube abierto con la búsqueda de Mecano — selecciona la canción que quieras de los resultados.",
+      "log": [
+        {
+          "at": "2026-06-16T07:02:25.751Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "abre youtube y pon una cancion de mecano"
+        },
+        {
+          "at": "2026-06-16T07:02:26.343Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-06-16T07:02:31.279Z",
+          "type": "status",
+          "from": "Neo",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T07:02:40.499Z",
+          "type": "status",
+          "from": "Neo",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T15:27:20.170Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "archived",
+          "note": "archivada"
+        }
+      ],
+      "host": "MacBook-Pro-16.local",
+      "completedAt": "2026-06-16T07:02:40.499Z"
+    },
+    {
+      "id": "task-031",
+      "title": "abre youtube y pon un video de nate gentile",
+      "detail": "",
+      "assignee": {
+        "kind": "agora",
+        "id": "Morfeo",
+        "label": "Morfeo · CTO"
+      },
+      "priority": "normal",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-16T06:48:31.806Z",
+      "updatedAt": "2026-06-16T15:27:20.170Z",
+      "dispatch": {
+        "channel": "agora",
+        "target": "Morfeo",
+        "sentAt": "2026-06-16T06:48:32.402Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "YouTube abierto con los resultados de búsqueda de Nate Gentile — elige el vídeo que quieras reproducir.",
+      "log": [
+        {
+          "at": "2026-06-16T06:48:31.806Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "abre youtube y pon un video de nate gentile"
+        },
+        {
+          "at": "2026-06-16T06:48:32.402Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-06-16T06:48:32.897Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T06:48:44.870Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T15:27:20.170Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "archived",
+          "note": "archivada"
+        }
+      ],
+      "host": "MacMini.local",
+      "completedAt": "2026-06-16T06:48:44.870Z"
+    },
+    {
+      "id": "task-028",
+      "title": "cierra Google Chrome",
+      "detail": "",
+      "assignee": {
+        "kind": "agora",
+        "id": "Morfeo",
+        "label": "Morfeo · CTO"
+      },
+      "priority": "normal",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-16T06:39:35.814Z",
+      "updatedAt": "2026-06-16T15:27:20.170Z",
+      "dispatch": {
+        "channel": "agora",
+        "target": "Morfeo",
+        "sentAt": "2026-06-16T06:39:36.433Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "Google Chrome cerrado.",
+      "log": [
+        {
+          "at": "2026-06-16T06:39:35.814Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "cierra Google Chrome"
+        },
+        {
+          "at": "2026-06-16T06:39:36.433Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-06-16T06:39:38.319Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T06:39:46.502Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T15:27:20.170Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "archived",
+          "note": "archivada"
+        }
+      ],
+      "host": "MacMini.local",
+      "completedAt": "2026-06-16T06:39:46.502Z"
+    },
+    {
+      "id": "task-023",
+      "title": "abre youtube y pon un video de george michael",
+      "detail": "",
+      "assignee": {
+        "kind": "agora",
+        "id": "Trinity",
+        "label": "Trinity · COO"
+      },
+      "priority": "normal",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-16T06:21:52.119Z",
+      "updatedAt": "2026-06-16T15:27:20.170Z",
+      "dispatch": {
+        "channel": "agora",
+        "target": "Trinity",
+        "sentAt": "2026-06-16T06:21:52.713Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "He abierto YouTube con un video de George Michael.",
+      "log": [
+        {
+          "at": "2026-06-16T06:21:52.119Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "abre youtube y pon un video de george michael"
+        },
+        {
+          "at": "2026-06-16T06:21:52.713Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-06-16T06:22:06.410Z",
+          "type": "status",
+          "from": "Trinity",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T06:22:17.159Z",
+          "type": "status",
+          "from": "Trinity",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T15:27:20.170Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "archived",
+          "note": "archivada"
+        }
+      ],
+      "completedAt": "2026-06-16T06:22:17.159Z"
+    },
+    {
+      "id": "task-022",
+      "title": "apagar monitor",
+      "detail": "",
+      "assignee": {
+        "kind": "agora",
+        "id": "Trinity",
+        "label": "Trinity · COO"
+      },
+      "priority": "normal",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-16T06:11:32.326Z",
+      "updatedAt": "2026-06-16T15:27:20.170Z",
+      "dispatch": {
+        "channel": "agora",
+        "target": "Trinity",
+        "sentAt": "2026-06-16T06:11:33.030Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "Monitor apagado.",
+      "log": [
+        {
+          "at": "2026-06-16T06:11:32.326Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "apagar monitor"
+        },
+        {
+          "at": "2026-06-16T06:11:33.030Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-06-16T06:11:48.167Z",
+          "type": "status",
+          "from": "Trinity",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T06:11:52.941Z",
+          "type": "status",
+          "from": "Trinity",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T15:27:20.170Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "archived",
+          "note": "archivada"
+        }
+      ],
+      "completedAt": "2026-06-16T06:11:52.941Z"
+    },
+    {
+      "id": "task-020",
+      "title": "Abrir youtube",
+      "detail": "",
+      "assignee": {
+        "kind": "agora",
+        "id": "Morfeo",
+        "label": "Morfeo · CTO"
+      },
+      "priority": "normal",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-16T05:47:37.507Z",
+      "updatedAt": "2026-06-16T15:27:20.170Z",
+      "dispatch": {
+        "channel": "agora",
+        "target": "Morfeo",
+        "sentAt": "2026-06-16T05:47:38.157Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "YouTube abierto en el navegador predeterminado.",
+      "log": [
+        {
+          "at": "2026-06-16T05:47:37.507Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "Abrir youtube"
+        },
+        {
+          "at": "2026-06-16T05:47:38.157Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-06-16T05:47:45.113Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T05:47:52.888Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T15:27:20.170Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "archived",
+          "note": "archivada"
+        }
+      ],
+      "completedAt": "2026-06-16T05:47:52.888Z"
+    },
+    {
+      "id": "task-019",
+      "title": "Encender monitor",
+      "detail": "",
+      "assignee": {
+        "kind": "agora",
+        "id": "Morfeo",
+        "label": "Morfeo · CTO"
+      },
+      "priority": "normal",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-16T05:46:56.106Z",
+      "updatedAt": "2026-06-16T15:27:20.170Z",
+      "dispatch": {
+        "channel": "agora",
+        "target": "Morfeo",
+        "sentAt": "2026-06-16T05:46:56.691Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "Monitor(es) encendidos (señal de actividad enviada al sistema).",
+      "log": [
+        {
+          "at": "2026-06-16T05:46:56.106Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "Encender monitor"
+        },
+        {
+          "at": "2026-06-16T05:46:56.691Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-06-16T05:47:13.404Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T05:47:23.677Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T15:27:20.170Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "archived",
+          "note": "archivada"
+        }
+      ],
+      "completedAt": "2026-06-16T05:47:23.677Z"
+    },
+    {
+      "id": "task-018",
+      "title": "Apagar mobitor",
+      "detail": "",
+      "assignee": {
+        "kind": "agora",
+        "id": "Morfeo",
+        "label": "Morfeo · CTO"
+      },
+      "priority": "normal",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-16T05:46:06.033Z",
+      "updatedAt": "2026-06-16T15:27:20.170Z",
+      "dispatch": {
+        "channel": "agora",
+        "target": "Morfeo",
+        "sentAt": "2026-06-16T05:46:06.701Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "Monitor apagado.",
+      "log": [
+        {
+          "at": "2026-06-16T05:46:06.033Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "Apagar mobitor"
+        },
+        {
+          "at": "2026-06-16T05:46:06.701Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-06-16T05:46:16.372Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T05:46:31.763Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T15:27:20.170Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "archived",
+          "note": "archivada"
+        }
+      ],
+      "completedAt": "2026-06-16T05:46:31.763Z"
+    },
+    {
+      "id": "task-017",
+      "title": "Encender monitor",
+      "detail": "",
+      "assignee": {
+        "kind": "agora",
+        "id": "Morfeo",
+        "label": "Morfeo · CTO"
+      },
+      "priority": "normal",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-16T05:22:18.969Z",
+      "updatedAt": "2026-06-16T15:27:20.170Z",
+      "dispatch": {
+        "channel": "agora",
+        "target": "Morfeo",
+        "sentAt": "2026-06-16T05:22:19.524Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "Monitor encendido (señal de actividad enviada, displays despertados).",
+      "log": [
+        {
+          "at": "2026-06-16T05:22:18.969Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "Encender monitor"
+        },
+        {
+          "at": "2026-06-16T05:22:19.524Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-06-16T05:22:23.372Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T05:22:34.987Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T15:27:20.170Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "archived",
+          "note": "archivada"
+        }
+      ],
+      "completedAt": "2026-06-16T05:22:34.987Z"
+    },
+    {
+      "id": "task-016",
+      "title": "apagar monitor",
+      "detail": "apagar monitor",
+      "assignee": {
+        "kind": "agora",
+        "id": "Morfeo",
+        "label": "Morfeo · CTO"
+      },
+      "priority": "normal",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-15T22:59:28.336Z",
+      "updatedAt": "2026-06-16T15:27:20.170Z",
+      "dispatch": {
+        "channel": "agora",
+        "target": "Morfeo",
+        "sentAt": "2026-06-15T22:59:28.990Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "Monitor apagado.",
+      "log": [
+        {
+          "at": "2026-06-15T22:59:28.336Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "apagar monitor"
+        },
+        {
+          "at": "2026-06-15T22:59:28.990Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-06-15T22:59:47.986Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-15T22:59:59.203Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T15:27:20.170Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "archived",
+          "note": "archivada"
+        }
+      ],
+      "completedAt": "2026-06-15T22:59:59.203Z"
+    },
+    {
+      "id": "task-011",
+      "title": "apaga monitor",
+      "detail": "apaga monitor",
+      "assignee": {
+        "kind": "agora",
+        "id": "Oráculo",
+        "label": "Oráculo · CFO"
+      },
+      "priority": "normal",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-15T22:32:46.946Z",
+      "updatedAt": "2026-06-16T15:27:20.170Z",
+      "dispatch": {
+        "channel": "agora",
+        "target": "Oráculo",
+        "sentAt": "2026-06-15T22:32:47.601Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "Pantalla apagada.",
+      "log": [
+        {
+          "at": "2026-06-15T22:32:46.946Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "apaga monitor"
+        },
+        {
+          "at": "2026-06-15T22:32:47.601Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-06-15T22:32:49.180Z",
+          "type": "status",
+          "from": "Oráculo",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-15T22:33:29.152Z",
+          "type": "status",
+          "from": "Oráculo",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T15:27:20.170Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "archived",
+          "note": "archivada"
+        }
+      ],
+      "completedAt": "2026-06-15T22:33:29.152Z"
+    },
+    {
+      "id": "task-010",
+      "title": "Apagar monitor",
+      "detail": "apagar monitor",
+      "assignee": {
+        "kind": "agora",
+        "id": "Neo",
+        "label": "Neo · CEO"
+      },
+      "priority": "normal",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-15T22:27:46.301Z",
+      "updatedAt": "2026-06-16T15:27:20.170Z",
+      "dispatch": {
+        "channel": "agora",
+        "target": "Neo",
+        "sentAt": "2026-06-15T22:27:47.037Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "Monitor apagado.",
+      "log": [
+        {
+          "at": "2026-06-15T22:27:46.301Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "Apagar monitor"
+        },
+        {
+          "at": "2026-06-15T22:27:47.037Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-06-15T22:28:04.726Z",
+          "type": "status",
+          "from": "Neo",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-15T22:28:26.259Z",
+          "type": "status",
+          "from": "Neo",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T15:27:20.170Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "archived",
+          "note": "archivada"
+        }
+      ],
+      "completedAt": "2026-06-15T22:28:26.259Z"
+    },
+    {
+      "id": "task-009",
+      "title": "apagar monitor",
+      "detail": "Apagar monitor",
+      "assignee": {
+        "kind": "agora",
+        "id": "Morfeo",
+        "label": "Morfeo · CTO"
+      },
+      "priority": "normal",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-15T22:21:50.229Z",
+      "updatedAt": "2026-06-16T15:27:20.170Z",
+      "dispatch": {
+        "channel": "agora",
+        "target": "Morfeo",
+        "sentAt": "2026-06-15T22:21:50.933Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "Monitor apagado.",
+      "log": [
+        {
+          "at": "2026-06-15T22:21:50.229Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "apagar monitor"
+        },
+        {
+          "at": "2026-06-15T22:21:50.933Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-06-15T22:34:02.025Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-15T22:34:26.609Z",
+          "type": "status",
+          "from": "Morfeo",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T15:27:20.170Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "archived",
+          "note": "archivada"
+        }
+      ],
+      "completedAt": "2026-06-15T22:34:26.609Z"
+    },
+    {
+      "id": "task-005",
+      "title": "Admira.live",
+      "detail": "como mejorar el consejo",
+      "assignee": {
+        "kind": "agora",
+        "id": "Neo",
+        "label": "Neo · CEO"
+      },
+      "priority": "normal",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-15T21:46:16.293Z",
+      "updatedAt": "2026-06-16T15:27:20.170Z",
+      "dispatch": {
+        "channel": "agora",
+        "target": "Neo",
+        "sentAt": "2026-06-15T21:46:17.006Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "Mirando el estado actual, veo varias palancas claras:\n\n---\n\n## Mejoras pendientes / más impacto\n\n### 1. Completar la cadena de agentes\n- **Claude auth (Neo/Morfeo):** `claude setup-token` en cada Mac — sin esto los dispatches a Claude quedan bloqueados en `blocked`. Codex ya funciona.\n- **LaunchAgent para `agora-attend`:** solo está corriendo a mano en MacBook-Pro-16 (Oráculo). Falta persistencia + propagar a MacMini (Trinity/Morfeo).\n- Sin esto, el ciclo tarea→agente→resultado solo funciona para Codex.\n\n### 2. Endpoints aspiracionales que dan 404\n`/api/council/models`, `/api/council/entrenar/*`, `/api/council/importar-video` están referenciados en el HTML pero no existen en `src/server.js`. O se implementan o se eliminan del frontend para no dar ruido.\n\n### 3. UX del panel de tareas\n- Filtro por estado / asignado en el frontend\n- Vista \"bloqueadas\" destacada (ya hay badge rojo, pero sin detalle del motivo)\n- Nota automática cuando el agente reporta resultado (`done + resultado` llega al log pero no se muestra en el panel)\n\n### 4. Presencia más rica\nAhora el panel AgoraMatrix muestra chips vivo/dormido pero sin timestamp de última actividad. Añadir \"hace Xm\" daría más contexto de quién está activo realmente.\n\n### 5. Comandos de tarea desde el chat del panel\nHoy el input solo hace `agora send`. Podría parsear `/tarea nueva <texto>` o `/tarea done task-007` directamente desde el panel AgoraMatrix → shortcut sin abrir el panel de tareas.\n\n---\n\n¿Por cuál empezamos? Lo más bloquea",
+      "log": [
+        {
+          "at": "2026-06-15T21:46:16.293Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "Admira.live"
+        },
+        {
+          "at": "2026-06-15T21:46:17.006Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-06-15T22:02:18.094Z",
+          "type": "status",
+          "from": "sistema",
+          "status": "in_progress",
+          "note": "aparcada para test de entrega"
+        },
+        {
+          "at": "2026-06-15T22:05:30.118Z",
+          "type": "status",
+          "from": "sistema",
+          "status": "sent",
+          "note": "restaurada tras test"
+        },
+        {
+          "at": "2026-06-15T22:16:56.505Z",
+          "type": "status",
+          "from": "sistema",
+          "status": "in_progress",
+          "note": "aparcada para test claude"
+        },
+        {
+          "at": "2026-06-15T22:18:03.211Z",
+          "type": "status",
+          "from": "sistema",
+          "status": "sent",
+          "note": "restaurada — lista para Neo"
+        },
+        {
+          "at": "2026-06-15T22:26:21.209Z",
+          "type": "status",
+          "from": "Neo",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-15T22:27:21.242Z",
+          "type": "status",
+          "from": "Neo",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T15:27:20.170Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "archived",
+          "note": "archivada"
+        }
+      ],
+      "completedAt": "2026-06-15T22:27:21.242Z"
+    },
+    {
+      "id": "task-003",
+      "title": "Validar el panel de Tareas del Consejo en admira.live",
+      "detail": "Abrir admira.live, ejecutar /tareas on, comprobar que el tablero carga, crear/entregar/cambiar estado funciona y reportar aquí.",
+      "assignee": {
+        "kind": "agora",
+        "id": "Morfeo",
+        "label": "Morfeo · CTO"
+      },
+      "priority": "high",
+      "status": "archived",
+      "createdBy": "Consejo",
+      "createdAt": "2026-06-15T21:00:49.671Z",
+      "updatedAt": "2026-06-16T15:27:20.170Z",
+      "dispatch": {
+        "channel": "agora",
+        "target": "Morfeo",
+        "sentAt": "2026-06-15T21:00:50.668Z",
+        "ok": true,
+        "error": null
+      },
+      "result": "",
+      "log": [
+        {
+          "at": "2026-06-15T21:00:49.671Z",
+          "type": "create",
+          "from": "Consejo",
+          "status": "pending",
+          "note": "Validar el panel de Tareas del Consejo en admira.live"
+        },
+        {
+          "at": "2026-06-15T21:00:50.668Z",
+          "type": "dispatch",
+          "from": "Consejo",
+          "status": "sent",
+          "note": "Enviada (agora)"
+        },
+        {
+          "at": "2026-06-15T21:29:06.518Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "in_progress",
+          "note": ""
+        },
+        {
+          "at": "2026-06-15T21:29:08.025Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "done",
+          "note": ""
+        },
+        {
+          "at": "2026-06-16T15:27:20.170Z",
+          "type": "status",
+          "from": "Consejo",
+          "status": "archived",
+          "note": "archivada"
+        }
+      ],
+      "completedAt": "2026-06-15T21:29:08.025Z"
+    }
+  ]
 }

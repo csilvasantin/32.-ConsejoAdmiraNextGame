@@ -401,7 +401,9 @@ function buildSshArgs(machine, useLocal) {
     if (conn.includes("ProxyCommand")) {
       const proxy = conn.match(/-o\s+'([^']+)'/)?.[1] || conn.match(/-o\s+"([^"]+)"/)?.[1];
       if (proxy) {
-        args.push("-o", proxy);
+        // 'tailscale' a secas no está en el PATH del servicio (launchd) → ruta absoluta,
+        // si no el ProxyCommand falla ("command not found: tailscale") y cae al .local.
+        args.push("-o", proxy.replace(/^tailscale\b/, "/opt/homebrew/bin/tailscale"));
       }
     }
   }
@@ -420,7 +422,7 @@ function buildScpArgs(machine, useLocal) {
     const conn = machine.ssh.connect_tailscale || "";
     if (conn.includes("ProxyCommand")) {
       const proxy = conn.match(/-o\s+'([^']+)'/)?.[1] || conn.match(/-o\s+"([^"]+)"/)?.[1];
-      if (proxy) args.push("-o", proxy);
+      if (proxy) args.push("-o", proxy.replace(/^tailscale\b/, "/opt/homebrew/bin/tailscale"));
     }
   }
 
@@ -616,10 +618,18 @@ export async function sendPromptToMachine(machineId, prompt, target = "terminal"
 
   const safe = sanitizePrompt(prompt);
   const appName = TARGET_APPS[targetKey] || TARGET_APPS.terminal;
+  // El SUBMIT depende del destino: en la app Claude, Enter = salto de linea y se envia con
+  // Ctrl+Enter (igual que el script de aprobacion). Si se usa Enter plano, el mensaje se
+  // queda escrito en la caja sin enviarse. Terminal/Codex envian con Enter.
+  const submitLines = targetKey === "claude"
+    ? ['delay 0.35', 'tell application "System Events" to key code 36 using control down']
+    : ['tell application "System Events" to keystroke return'];
   const osascriptLines = [
     `tell application "${appName}" to activate`,
+    'delay 0.35',
     `tell application "System Events" to keystroke "${safe}"`,
-    'tell application "System Events" to keystroke return'
+    'delay 0.2',
+    ...submitLines
   ];
 
   let result;
@@ -646,11 +656,27 @@ export async function sendPromptToMachine(machineId, prompt, target = "terminal"
       const sshArgs = buildSshArgs(machine, useLocalNet);
       sshArgs.push(`osascript ${remoteCmd}`);
       return new Promise((resolve) => {
-        execFile("ssh", sshArgs, { timeout: TIMEOUT_MS }, (error) => {
-          if (error) {
-            resolve({ ok: false, error: error.message });
-          } else {
+        execFile("ssh", sshArgs, { timeout: TIMEOUT_MS }, (error, stdout, stderr) => {
+          if (!error) {
             resolve({ ok: true, machine: machineId, name: machine.name });
+            return;
+          }
+          // El keystroke es best-effort: si SSH CONECTÓ y corrió osascript, el mensaje
+          // se entrega aunque osascript salga ≠0 por una incidencia benigna tras teclear
+          // (al enviarse, la app receptora se pone a procesar). Solo es fallo REAL si no
+          // se pudo establecer la conexión SSH — eso se ve en STDERR (no en el comando,
+          // que contiene "ConnectTimeout" y daba un falso positivo).
+          const errOut = String(stderr || "");
+          const sshConnFail = /Could not resolve|Connection refused|Permission denied|Operation timed out|No route to host|Connection closed|Host key verification|kex_exchange|Connection timed out/i.test(errOut);
+          // Si osascript no pudo TECLEAR (Accesibilidad), eso SÍ es un fallo real:
+          // el mensaje no aterriza aunque SSH conecte.
+          const keystrokeDenied = /not allowed to send keystrokes|-1719|-25211|assistive|accessibility/i.test(errOut);
+          if (sshConnFail || keystrokeDenied) {
+            resolve({ ok: false, error: `${sshConnFail ? "ssh" : "keystroke/accesibilidad"}: ${errOut}`.slice(0, 400) });
+          } else {
+            // Entregado (best-effort). Pasamos el stderr de osascript (si lo hay) como aviso
+            // para diagnóstico de por qué a veces no aterriza (foco/estado de la app).
+            resolve({ ok: true, machine: machineId, name: machine.name, osaWarn: errOut.slice(0, 300) });
           }
         });
       });
@@ -658,8 +684,13 @@ export async function sendPromptToMachine(machineId, prompt, target = "terminal"
 
     result = await tryExec(false);
     if (!result.ok && deriveLocalHostname(machine)) {
-      result = await tryExec(true);
-      usedLocal = true;
+      // Fallback por LAN (.local). Solo lo adoptamos si MEJORA: si también falla,
+      // conservamos el error del intento principal (tailscale), que es el real —
+      // el .local no resuelve desde el Mini y su error ("could not resolve") despista.
+      const primaryErr = result.error;
+      const localRes = await tryExec(true);
+      if (localRes.ok) { result = localRes; usedLocal = true; }
+      else { result = { ok: false, error: primaryErr || localRes.error }; }
     }
   }
 

@@ -302,13 +302,20 @@ const ACTIONS = {
     // dispara el handshake ejecutando FleetTrigger.exe, que imprime el base64 por
     // stdout (mismo formato que macOS/linux). DefaultShell del Zenbook = PowerShell.
     windows: () => '& "$env:USERPROFILE\\.fleet\\FleetTrigger.exe"',
+    // Robusto y sin recaídas: elige la herramienta según el tipo de sesión
+    // (Wayland → grim; X11 → scrot/import/gnome-screenshot) y PRUEBA cada una
+    // hasta que una deje un fichero NO vacío. No basta con que el binario exista
+    // (p.ej. grim compilado sin jpeg falla en X11 y dejaba $T vacío → antes daba
+    // ERR_NO_CAPTURE aunque scrot estuviera disponible). Ver PARIDAD-FLOTA.md.
     linux: () =>
       LGUI +
       'T="$(mktemp).jpg"; ' +
-      'if command -v grim >/dev/null 2>&1; then grim -t jpeg -q 80 "$T" 2>/dev/null; ' +
-      'elif command -v scrot >/dev/null 2>&1; then scrot -q 80 -o "$T" 2>/dev/null; ' +
-      'elif command -v gnome-screenshot >/dev/null 2>&1; then gnome-screenshot -f "$T" 2>/dev/null; ' +
-      'elif command -v import >/dev/null 2>&1; then import -window root "$T" 2>/dev/null; fi; ' +
+      'cap(){ [ -s "$T" ] && return 0; command -v "$1" >/dev/null 2>&1 || return 1; shift; "$@" >/dev/null 2>&1; [ -s "$T" ]; }; ' +
+      'if [ "${XDG_SESSION_TYPE:-}" = "wayland" ] || [ -n "${WAYLAND_DISPLAY:-}" ]; then ' +
+      '  cap grim grim -t jpeg -q 80 "$T" || cap scrot scrot -q 80 -o "$T" || cap gnome-screenshot gnome-screenshot -f "$T" || cap import import -window root "$T"; ' +
+      'else ' +
+      '  cap scrot scrot -q 80 -o "$T" || cap import import -window root "$T" || cap gnome-screenshot gnome-screenshot -f "$T" || cap grim grim -t jpeg -q 80 "$T"; ' +
+      'fi; ' +
       'if [ -s "$T" ]; then command -v convert >/dev/null 2>&1 && convert "$T" -resize 1100x\\> -quality 80 "$T" 2>/dev/null; base64 "$T" | tr -d "\\n"; else echo ERR_NO_CAPTURE; fi; ' +
       'rm -f "$T"'
   }

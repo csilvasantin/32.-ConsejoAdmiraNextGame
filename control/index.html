@@ -1167,9 +1167,13 @@ $('#cards').addEventListener('click', async e=>{
       const screen=prompt('Pantalla (screen id) — vacío = la última configurada:',''); if(screen===null) return;
       const circuit=prompt('Circuito (circuit id) — vacío = el último configurado:',''); if(circuit===null) return;
       // tag ≠ circuito: el circuito agrupa pantallas (imputación/mando); el tag
-      // FILTRA el contenido — con "musica" el canal solo emite lo etiquetado musica.
-      const tag=prompt('Tag de contenido (p.ej. musica) — solo emitirá lo etiquetado así · vacío = todo:',''); if(tag===null) return;
-      arg=screen.trim()+'|'+circuit.trim()+'|'+tag.trim();
+      // FILTRA el contenido. Anidable con comas: "musica,vertical" = solo clips
+      // que tengan TODAS las etiquetas (acentos válidos: música ≡ musica).
+      const tag=prompt('Tag(s) de contenido — uno o varios separados por comas (p.ej. musica,vertical) · vacío = todo:',''); if(tag===null) return;
+      // Los players van EN SILENCIO por defecto (doctrina signage): para una
+      // pantalla de música hay que encender el audio explícitamente.
+      const audio=confirm('¿Con AUDIO? · Aceptar = se oye · Cancelar = en silencio (por defecto)');
+      arg=screen.trim()+'|'+circuit.trim()+'|'+tag.trim()+'|'+(audio?'1':'0');
     }
     const act = turnOn ? 'signage_on' : 'signage_off';
     const label = turnOn ? '📺 signage' : '⏹️ parar';

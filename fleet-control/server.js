@@ -162,6 +162,9 @@ function run(machine, cmd, timeoutMs) {
  * para enchufar el player propio. Digital Signage y control remoto de la flota
  * funcionan en ambos SO (macOS y Linux/Ubuntu de escritorio). */
 function sh(s) { return "'" + String(s).replace(/'/g, "'\\''") + "'"; } // single-quote safe
+// tag(s) del operador: sin acentos (música→musica), minúsculas, anidable con
+// comas/+ ("musica,vertical" = AND en el canal). Solo slug chars (shell-safe).
+function cleanTag(v) { return String(v || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9_,+-]/g, ''); }
 function platOf(m) { const p = String((m && m.platform) || 'macos').toLowerCase(); return p.startsWith('win') ? 'windows' : (p.startsWith('lin') ? 'linux' : 'macos'); }
 
 // Prefijo para comandos gráficos por SSH en Linux: una sesión SSH no-interactiva
@@ -236,43 +239,47 @@ const ACTIONS = {
     macos: (arg, m) => {
       const parts = String(arg || '').split('|');
       const screen = (parts[0] || '').trim(), circuit = (parts[1] || '').trim();
-      const tag = (parts[2] || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+      const tag = cleanTag(parts[2]);
+      const audio = (parts[3] || '').trim() === '1';
       const machine = (m && m.id) || '';
       let pre = '';
       if (screen) pre += 'defaults write tv.admira.signage.mac screen ' + sh(screen) + '; ';
       if (circuit) pre += 'defaults write tv.admira.signage.mac circuit ' + sh(circuit) + '; ';
       // id del equipo → el player lo reporta a /signage/now para que el 🎛️ mando enganche exacto.
       if (machine) pre += 'defaults write tv.admira.signage.mac machine ' + sh(machine) + '; ';
-      // filtro por tag: se escribe/borra siempre — cada lanzamiento fija su filtro.
+      // filtro por tag y audio: se escriben siempre — cada lanzamiento fija su config.
       pre += tag ? ('defaults write tv.admira.signage.mac tag ' + sh(tag) + '; ')
                  : 'defaults delete tv.admira.signage.mac tag 2>/dev/null; ';
+      pre += 'defaults write tv.admira.signage.mac muted ' + (audio ? '0' : '1') + '; ';
       return pre +
         'launchctl bootstrap gui/$(id -u) "$HOME/Library/LaunchAgents/tv.admira.signage.mac.plist" 2>/dev/null; ' +
         'launchctl kickstart -k gui/$(id -u)/tv.admira.signage.mac 2>/dev/null; ' +
         'open -a AdmiraSignageMac 2>/dev/null || open -b tv.admira.signage.mac 2>/dev/null; sleep 1; ' +
-        'pgrep -x AdmiraSignageMac >/dev/null && echo "📺 signage lanzado' + (tag ? ' · tag ' + tag : '') + '" || echo "AdmiraSignageMac no instalado en esta máquina"';
+        'pgrep -x AdmiraSignageMac >/dev/null && echo "📺 signage lanzado' + (tag ? ' · tag ' + tag : '') + (audio ? ' · 🔊' : '') + '" || echo "AdmiraSignageMac no instalado en esta máquina"';
     },
     linux: (arg, m) => {
       const parts = String(arg || '').split('|');
       const screen = (parts[0] || '').trim(), circuit = (parts[1] || '').trim();
-      const tag = (parts[2] || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+      const tag = cleanTag(parts[2]);
+      const audio = (parts[3] || '').trim() === '1';
       const sig = (m && m.signage) || {};
       const machine = (m && m.id) || '';
       const baseUrl = sig.url || 'https://www.admira.tv/player';
-      const q = [screen && ('screen=' + encodeURIComponent(screen)), circuit && ('circuit=' + encodeURIComponent(circuit)), tag && ('tag=' + encodeURIComponent(tag)), machine && ('machine=' + encodeURIComponent(machine))].filter(Boolean).join('&');
+      const q = [screen && ('screen=' + encodeURIComponent(screen)), circuit && ('circuit=' + encodeURIComponent(circuit)), tag && ('tag=' + encodeURIComponent(tag)), audio && 'muted=0', machine && ('machine=' + encodeURIComponent(machine))].filter(Boolean).join('&');
       const url = q ? (baseUrl + (baseUrl.includes('?') ? '&' : '?') + q) : baseUrl;
-      const envp = LGUI + 'export SIGN_SCREEN=' + sh(screen) + '; export SIGN_CIRCUIT=' + sh(circuit) + '; export SIGN_TAG=' + sh(tag) + '; export SIGN_URL=' + sh(url) + '; ';
+      const envp = LGUI + 'export SIGN_SCREEN=' + sh(screen) + '; export SIGN_CIRCUIT=' + sh(circuit) + '; export SIGN_TAG=' + sh(tag) + '; export SIGN_MUTED=' + sh(audio ? '0' : '') + '; export SIGN_URL=' + sh(url) + '; ';
       // Upsert en ~/.config/admira-signage.env: screen/circuit vacíos = conservar
-      // los últimos; el TAG se fija siempre (vacío = quitar el filtro).
+      // los últimos; TAG y MUTED se fijan siempre (vacío = quitar filtro / silencio).
       const envfile =
         'F="$HOME/.config/admira-signage.env"; mkdir -p "$HOME/.config"; touch "$F"; ' +
         'up(){ grep -v "^$1=" "$F" > "$F.tmp" 2>/dev/null || true; [ -z "$2" ] || echo "$1=$2" >> "$F.tmp"; mv "$F.tmp" "$F"; }; ' +
         '[ -z "$SIGN_SCREEN" ] || up ADMIRA_SCREEN "$SIGN_SCREEN"; ' +
         '[ -z "$SIGN_CIRCUIT" ] || up ADMIRA_CIRCUIT "$SIGN_CIRCUIT"; ' +
-        'up ADMIRA_TAG "$SIGN_TAG"; ';
+        'up ADMIRA_TAG "$SIGN_TAG"; ' +
+        'up ADMIRA_MUTED "$SIGN_MUTED"; ';
       // Player propio: usa el comando de arranque de la máquina. El exit code se
       // propaga: si falla (p.ej. la unidad systemd no existe), el panel lo dice.
-      if (sig.start) return envp + envfile + '( ' + sig.start + ' ) && echo "📺 signage lanzado' + (tag ? ' · tag ' + tag : '') + '" || echo "⚠️ signage NO lanzado — falló m.signage.start en esta máquina"';
+      if (sig.start) return envp + envfile + '( ' + sig.start + ' ) && echo "📺 signage lanzado' + (tag ? ' · tag ' + tag : '') + (audio ? ' · 🔊' : '') + '" || echo "⚠️ signage NO lanzado — falló m.signage.start en esta máquina"';
       // Fallback: kiosko Chromium como servicio systemd --user (auto-relanza).
       const bin = 'command -v chromium >/dev/null 2>&1 && CH=chromium || CH=chromium-browser';
       return envp + envfile + bin + '; ' +

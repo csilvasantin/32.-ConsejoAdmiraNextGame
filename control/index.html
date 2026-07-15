@@ -1007,6 +1007,10 @@ function _slug(s){ return (s||'').toLowerCase().replace(/[^a-z0-9]+/g,'-').repla
 function machineWallpapers(machineId){
   const out=[consultorWallpaper(machineId)];
   const sl=_slug(_mname(machineId)); if(sl && sl!==machineId) out.push('/wallpapers/machines/'+sl+'.jpg');
+  // 2b) slug SIN guiones: upload-wallpaper.sh usa el ComputerName (p.ej. "MacBookAirRosa"→
+  //     macbookairrosa) mientras el hub registra el nombre con espacios ("MacBook Air Rosa"→
+  //     macbook-air-rosa). Sin esto, las máquinas "MacBook Air X" no encuentran su fondo.
+  const slc=(sl||'').replace(/-/g,''); if(slc && slc!==sl && slc!==machineId) out.push('/wallpapers/machines/'+slc+'.jpg');
   const p=personaWallpaper(_mname(machineId)); if(p) out.push(p);
   return out;
 }

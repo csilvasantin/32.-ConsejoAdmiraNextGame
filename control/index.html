@@ -967,10 +967,9 @@ function renderCards(ms){
         <button data-a="closeapp" data-m="${m.id}">❌ cerrar app</button>
         <button data-a="ssh" data-m="${m.id}">🔌 ssh</button>
         <button data-a="signagetoggle" data-m="${m.id}" class="tgl ${signageIsOn(m.id)?'on':'off'}" title="${signageIsOn(m.id)?'Parar el player de digital signage':'Lanzar el player de digital signage (AdmiraSignageMac)'}">${signageIsOn(m.id)?'⏹️ parar':'📺 signage'}</button>
-        <button data-a="openchannel" data-m="${m.id}" data-mname="${(m.name||'').replace(/"/g,'')}" title="Abrir el CANAL de Digital Signage en el Chrome de esta máquina (ventana nueva, screen ds-${_norm(m.name||m.id)}). Aparece en Players con su mando remoto. Requiere el executor navegadores corriendo en ese equipo.">📺 abrir canal DS</button>
+        <button data-mando="${m.id}" title="🎛 Mando de EMISIÓN (admira.tv/remotecontrol): volumen +/−, mute, siguiente/anterior, primera/última, playlist y tags en vivo de la pantalla de ESTE equipo — se abre enganchado a su screen." style="border-color:#c9a4ff;color:#c9a4ff;font-weight:700">🎛 mando</button>
         <button data-a="closechannel" data-m="${m.id}" data-mname="${(m.name||'').replace(/"/g,'')}" title="Cerrar la ventana del canal DS en el Chrome de esta máquina.">⏹ cerrar canal</button>
         ${m.online?`<button data-rc="${m.id}" data-rcname="${(m.name||'').replace(/"/g,'')}" title="Control remoto en vivo (ver + ratón + teclado, estilo AnyDesk). Requiere AdmiraRemoteAgent + permisos en la máquina destino." style="border-color:var(--acc);color:var(--acc);font-weight:700">🖥️ control remoto</button>`:''}
-        <button data-mando="${m.id}" title="🎛 Mando de EMISIÓN (admira.tv/remotecontrol): volumen +/−, mute, siguiente/anterior, primera/última y la playlist de la pantalla de ESTE equipo — se abre enganchado a su screen." style="border-color:#c9a4ff;color:#c9a4ff;font-weight:700">🎛 mando</button>
         ${m.online?`<button data-term="${m.id}" data-termname="${(m.name||'').replace(/"/g,'')}" title="Terminal interactiva (consola SSH en vivo: cd, htop, vim, logs). Ideal para las máquinas Linux." style="border-color:#5bd6c0;color:#5bd6c0;font-weight:700">🖳 terminal</button>`:''}
       </div>
       ${isAirId(m.id)?`<div class="mqueue" data-mqueue="${m.id}">
@@ -1163,19 +1162,10 @@ $('#cards').addEventListener('click', async e=>{
   // signage: toggle lanzar/parar el player por máquina.
   if(action==='signagetoggle'){
     const turnOn=!signageIsOn(machine);   // parado → lanzar; emitiendo → parar
-    let arg='';
-    if(turnOn){
-      const screen=prompt('Pantalla (screen id) — vacío = la última configurada:',''); if(screen===null) return;
-      const circuit=prompt('Circuito (circuit id) — vacío = el último configurado:',''); if(circuit===null) return;
-      // tag ≠ circuito: el circuito agrupa pantallas (imputación/mando); el tag
-      // FILTRA el contenido. Anidable con comas: "musica,vertical" = solo clips
-      // que tengan TODAS las etiquetas (acentos válidos: música ≡ musica).
-      const tag=prompt('Tag(s) de contenido — uno o varios separados por comas (p.ej. musica,vertical) · vacío = todo:',''); if(tag===null) return;
-      // Los players van EN SILENCIO por defecto (doctrina signage): para una
-      // pantalla de música hay que encender el audio explícitamente.
-      const audio=confirm('¿Con AUDIO? · Aceptar = se oye · Cancelar = en silencio (por defecto)');
-      arg=screen.trim()+'|'+circuit.trim()+'|'+tag.trim()+'|'+(audio?'1':'0');
-    }
+    // Lanzamiento DIRECTO, sin popups: screen/circuit se conservan de la última
+    // configuración de la máquina; el tag, el audio y el resto de ajustes se
+    // manejan EN VIVO desde el 🎛 mando (botón de al lado). arg vacío = defaults.
+    const arg='';
     const act = turnOn ? 'signage_on' : 'signage_off';
     const label = turnOn ? '📺 signage' : '⏹️ parar';
     b.disabled=true; const lbl0=b.textContent; b.textContent=(turnOn?'📺':'⏹️')+' …';

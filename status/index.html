@@ -6,7 +6,7 @@
   <title>ADmiraNeXT | Status — Constelación de la flota</title>
   <meta name="description" content="Admira no tiene centro — es un universo que se expande. Estado en vivo de la flota AdmiraNeXT: cada ordenador es una estrella con su proyecto y su foco.">
   <meta name="admiranext-version" content="AdmiraNext v26.07.07.12">
-  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.15.r36 (AVAILABLE — una máquina VIVA y DESATENDIDA >=10 min (sin teclado/ratón, idle>=600s) se rotula «✓ AVAILABLE» en verde Matrix bajo su nodo-ordenador y en su ficha de detalle («✓ desatendida ⏱»). El dato idle llega del reporter presence-beat.sh (machine-idle.sh, HIDIdleTime) en cada latido y lo sirve el worker admira-telegram en /api/presence; el idle de la MÁQUINA es el MÍNIMO de los idle de sus filas frescas (si CUALQUIER runtime tuvo input reciente, la máquina está en uso), y «available» exige que TODOS sus reporters frescos lleven idle>=600. Sin dato o idle<600 → estado normal (en uso). Aditivo, cero scroll horizontal. — r35: MISIONES REALES — YOKUP ES EL GESTOR ÚNICO DEL TRABAJO. Hasta r34 la vista MISIÓN era falsa: missionForAgent() no leía ninguna misión, devolvía el PROYECTO de referencia del agente (AGENT_MISSION), así que «misión» y «proyecto» eran la misma vista con dos nombres. Doctrina de Carlos (14-07-2026): el trabajo vive en yokup.com — cada encargo del bot-inbox es allí una MISIÓN con su árbol de tareas abc/123 (3 pasos × ≤3 subtareas, máx 9), y status pasa a ser el VISOR que las LEE, no quien se las inventa. Nuevo feed público GET /fleet/missions del worker yokup-rtc (misiones source=fleet + su árbol de tareas embebido, porque /mission/* vive tras el perímetro y status no pasa el gate); el worker ingiere el bot-inbox con POST /fleet/sync + cron cada 2 min (service binding a admira-telegram: un fetch normal hacía loopback contra el propio yokup-rtc y devolvía su 404). En status: la vista MISIÓN agrupa por misión REAL (los agentes orbitan la suya y arrastran sus ordenadores; las misiones encargadas y aún sin nadie latiendo también se pintan — ese hueco hay que verlo), la ficha muestra id · estado · «3/9 tareas» y enlaza a la misión en yokup, y la COLA DE ENCARGOS del agente marca cada uno con su misión 🎯 FLT-<id> y su avance. CLARIDAD: el escenario está calibrado para ~10 nodos y las 46 misiones vivas lo desbordaban (se apilaban fuera del encuadre), así que se pintan las 12 que importan —con agente vivo primero, luego las más recientes— y las que quedan fuera SE DICEN en el HUD («4 misiones vivas de 46 · 12 en pantalla»), nunca se recorta en silencio; las etiquetas de nodo se abrevian (shortMission) porque un encargo es una frase larga. OJO al separar los dos conceptos: el PROYECTO de referencia sigue vivo como projectRefForAgent() y es el que alimenta «reportado» y el carril (offRail) — si la misión entrara ahí, todo agente con encargo saldría «fuera de carril» porque el texto de un encargo nunca casa con un proyecto. En el worker, las misiones de flota comparten tabla con las incidencias DOOH de Clear Channel: /tickets y /stats se separan por ?scope=campo|fleet|todas (campo por defecto) para no inundar la bandeja de campo. — Sobre r34: ESCUADRONES DE 4 EN LA VISTA TODO — Carlos con sus 4 MacBook Air (Azul, Plata, Rosa, Crema) delante, todas conectadas, sólo veía MacBookAirAzul como UFO: el foco de la vista TODO FILTRABA a un único ordenador (≤r33 dejaba en pantalla el equipo enfocado + sus agentes y escondía el resto). Ahora la vista TODO pinta TODAS las máquinas vivas A LA VEZ, agrupadas en formaciones de 4 (rombo): con 8 vivas = 2 escuadrones separados en el escenario. layoutAllSquadrons() reparte los anclajes (_anchorX/_anchorY) en rejilla de rombos; physics() lleva cada ordenador a su anclaje con un muelle y los agentes siguen orbitando su máquina. El FOCO (elegido a mano en el riel, o rotando cada 20s de UFO en UFO) ya no filtra: sólo AGRANDA un UFO — factor de escala por nodo _fzs (grande y con detalle el enfocado «como antes», reducidos pero CLARAMENTE presentes y etiquetados los demás), suavizado en physics y leído por volumeRadius/tipografía. Al elegir un ordenador a mano el foco queda fijo en él y el resto sigue visible. Las vistas ORDENADOR/PROYECTO/AGENTE/MISIÓN/SISTEMA OPERATIVO conservan su motor intacto (ALL_MULTI sólo se enciende en la vista TODO con ≥2 ordenadores). — Sobre r33: EMULADORES CON COMBOS REALES — a Carlos le confundía en producción que las dudas emuladas inventaran combos de máquina/agente/proyecto («subNeo en Mac Mini con pixeria.com») al lado de nodos con presencia real. Ahora /dudaAgente y el botón 👾 del AVANZADO muestrean COMBINACIONES REALES de /api/presence — persona+máquina+proyecto tal cual laten (WORLD.presenceRows, guardadas crudas en la carga), priorizando latido fresco (< umbral de vivo), deduplicadas por persona+máquina y barajadas; si presence aún no cargó, caen al aleatorio de antes. El texto de la duda sigue inventado y la marca «(emulada)» se mantiene SIEMPRE. El emulador de tarea acabada (/tareaFinaliza y su botón) firma la pancarta con un agente real de la flota manteniendo la marca «· emulada». Textos de hint/help actualizados para reflejarlo. — Sobre r32: CIELO FULL-BLEED — feedback de Carlos sobre r30 con captura: al refluir el escenario bajo la banda de naves y junto a los paneles laterales, esas zonas quedaban LISAS (el fondo plano de la página, sin estrellas, porque el cielo vivía dentro del canvas de nodos y se empujaba con él). Regla de Carlos: el fondo estrellado cubre TODO, con UFOs o sin ellos, con menús o sin ellos. Cambio de arquitectura: las estrellas se DESACOPLAN de los nodos — nuevo canvas #skyfield position:fixed inset:0 z-index:0 a viewport completo, detrás de banda, paneles y escenario; el twinkle y el parallax con la cámara se mantienen idénticos, y la densidad se calcula sobre el viewport entero. En #galaxy quedan solo nodos/aristas/figuras, que conservan sus zonas de exclusión: reflow bajo la banda (body.duda-band-open + --duda-inset + syncDudaBand()) y rieles en flujo que estrechan el centro (nada oculto tras un panel). Ya no se re-siembran estrellas al abrir/cerrar rieles (el cielo no depende del centro). Pausa con ficha abierta intacta (el frame congela también el cielo), marcha de naves intacta, prefers-reduced-motion respetado, cero scroll horizontal. ADEMÁS: emulador de TAREA ACABADA para previsualizar la celebración Pac-Man de la banda inferior — botón «Lanzar tarea finalizada» en ⚙ AVANZADO junto al 👾 de dudas y comando /tareaFinaliza <texto> en la consola (en el /help); reutiliza la función REAL de la celebración (pacmanTest de status-pacman.js, misma cola/animación/waka-waka que un done de verdad), client-side puro marcado (emulada), sin tocar el bot-inbox real, nada persiste al recargar.)">
+  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.15.r37 (PROOF OF PLAY — la ficha de detalle de un ORDENADOR muestra ahora la MINIATURA de su proof-of-play (la última captura que el agente sube cuando la máquina está desatendida/trabajando) con «proof of play · hace <t>» y un badge: «✓ AVAILABLE» (idle real >=10 min) o «🔒 IA · prioridad absoluta» cuando la máquina está FORZADA (force-unattended). La imagen llega saneada de GET /api/proof?machine= del worker admira-telegram (Cache-Control no-store, se refresca cada ~55s), se carga perezosa SOLO al abrir la ficha, con max-width para no romper el layout ni provocar scroll horizontal. El reporter proof-of-play.sh sube la captura a POST /api/proof tras cada tick de máquina desatendida. — Sobre r36: AVAILABLE — una máquina VIVA y DESATENDIDA >=10 min (sin teclado/ratón, idle>=600s) se rotula «✓ AVAILABLE» en verde Matrix bajo su nodo-ordenador y en su ficha de detalle («✓ desatendida ⏱»). El dato idle llega del reporter presence-beat.sh (machine-idle.sh, HIDIdleTime) en cada latido y lo sirve el worker admira-telegram en /api/presence; el idle de la MÁQUINA es el MÍNIMO de los idle de sus filas frescas (si CUALQUIER runtime tuvo input reciente, la máquina está en uso), y «available» exige que TODOS sus reporters frescos lleven idle>=600. Sin dato o idle<600 → estado normal (en uso). Aditivo, cero scroll horizontal. — r35: MISIONES REALES — YOKUP ES EL GESTOR ÚNICO DEL TRABAJO. Hasta r34 la vista MISIÓN era falsa: missionForAgent() no leía ninguna misión, devolvía el PROYECTO de referencia del agente (AGENT_MISSION), así que «misión» y «proyecto» eran la misma vista con dos nombres. Doctrina de Carlos (14-07-2026): el trabajo vive en yokup.com — cada encargo del bot-inbox es allí una MISIÓN con su árbol de tareas abc/123 (3 pasos × ≤3 subtareas, máx 9), y status pasa a ser el VISOR que las LEE, no quien se las inventa. Nuevo feed público GET /fleet/missions del worker yokup-rtc (misiones source=fleet + su árbol de tareas embebido, porque /mission/* vive tras el perímetro y status no pasa el gate); el worker ingiere el bot-inbox con POST /fleet/sync + cron cada 2 min (service binding a admira-telegram: un fetch normal hacía loopback contra el propio yokup-rtc y devolvía su 404). En status: la vista MISIÓN agrupa por misión REAL (los agentes orbitan la suya y arrastran sus ordenadores; las misiones encargadas y aún sin nadie latiendo también se pintan — ese hueco hay que verlo), la ficha muestra id · estado · «3/9 tareas» y enlaza a la misión en yokup, y la COLA DE ENCARGOS del agente marca cada uno con su misión 🎯 FLT-<id> y su avance. CLARIDAD: el escenario está calibrado para ~10 nodos y las 46 misiones vivas lo desbordaban (se apilaban fuera del encuadre), así que se pintan las 12 que importan —con agente vivo primero, luego las más recientes— y las que quedan fuera SE DICEN en el HUD («4 misiones vivas de 46 · 12 en pantalla»), nunca se recorta en silencio; las etiquetas de nodo se abrevian (shortMission) porque un encargo es una frase larga. OJO al separar los dos conceptos: el PROYECTO de referencia sigue vivo como projectRefForAgent() y es el que alimenta «reportado» y el carril (offRail) — si la misión entrara ahí, todo agente con encargo saldría «fuera de carril» porque el texto de un encargo nunca casa con un proyecto. En el worker, las misiones de flota comparten tabla con las incidencias DOOH de Clear Channel: /tickets y /stats se separan por ?scope=campo|fleet|todas (campo por defecto) para no inundar la bandeja de campo. — Sobre r34: ESCUADRONES DE 4 EN LA VISTA TODO — Carlos con sus 4 MacBook Air (Azul, Plata, Rosa, Crema) delante, todas conectadas, sólo veía MacBookAirAzul como UFO: el foco de la vista TODO FILTRABA a un único ordenador (≤r33 dejaba en pantalla el equipo enfocado + sus agentes y escondía el resto). Ahora la vista TODO pinta TODAS las máquinas vivas A LA VEZ, agrupadas en formaciones de 4 (rombo): con 8 vivas = 2 escuadrones separados en el escenario. layoutAllSquadrons() reparte los anclajes (_anchorX/_anchorY) en rejilla de rombos; physics() lleva cada ordenador a su anclaje con un muelle y los agentes siguen orbitando su máquina. El FOCO (elegido a mano en el riel, o rotando cada 20s de UFO en UFO) ya no filtra: sólo AGRANDA un UFO — factor de escala por nodo _fzs (grande y con detalle el enfocado «como antes», reducidos pero CLARAMENTE presentes y etiquetados los demás), suavizado en physics y leído por volumeRadius/tipografía. Al elegir un ordenador a mano el foco queda fijo en él y el resto sigue visible. Las vistas ORDENADOR/PROYECTO/AGENTE/MISIÓN/SISTEMA OPERATIVO conservan su motor intacto (ALL_MULTI sólo se enciende en la vista TODO con ≥2 ordenadores). — Sobre r33: EMULADORES CON COMBOS REALES — a Carlos le confundía en producción que las dudas emuladas inventaran combos de máquina/agente/proyecto («subNeo en Mac Mini con pixeria.com») al lado de nodos con presencia real. Ahora /dudaAgente y el botón 👾 del AVANZADO muestrean COMBINACIONES REALES de /api/presence — persona+máquina+proyecto tal cual laten (WORLD.presenceRows, guardadas crudas en la carga), priorizando latido fresco (< umbral de vivo), deduplicadas por persona+máquina y barajadas; si presence aún no cargó, caen al aleatorio de antes. El texto de la duda sigue inventado y la marca «(emulada)» se mantiene SIEMPRE. El emulador de tarea acabada (/tareaFinaliza y su botón) firma la pancarta con un agente real de la flota manteniendo la marca «· emulada». Textos de hint/help actualizados para reflejarlo. — Sobre r32: CIELO FULL-BLEED — feedback de Carlos sobre r30 con captura: al refluir el escenario bajo la banda de naves y junto a los paneles laterales, esas zonas quedaban LISAS (el fondo plano de la página, sin estrellas, porque el cielo vivía dentro del canvas de nodos y se empujaba con él). Regla de Carlos: el fondo estrellado cubre TODO, con UFOs o sin ellos, con menús o sin ellos. Cambio de arquitectura: las estrellas se DESACOPLAN de los nodos — nuevo canvas #skyfield position:fixed inset:0 z-index:0 a viewport completo, detrás de banda, paneles y escenario; el twinkle y el parallax con la cámara se mantienen idénticos, y la densidad se calcula sobre el viewport entero. En #galaxy quedan solo nodos/aristas/figuras, que conservan sus zonas de exclusión: reflow bajo la banda (body.duda-band-open + --duda-inset + syncDudaBand()) y rieles en flujo que estrechan el centro (nada oculto tras un panel). Ya no se re-siembran estrellas al abrir/cerrar rieles (el cielo no depende del centro). Pausa con ficha abierta intacta (el frame congela también el cielo), marcha de naves intacta, prefers-reduced-motion respetado, cero scroll horizontal. ADEMÁS: emulador de TAREA ACABADA para previsualizar la celebración Pac-Man de la banda inferior — botón «Lanzar tarea finalizada» en ⚙ AVANZADO junto al 👾 de dudas y comando /tareaFinaliza <texto> en la consola (en el /help); reutiliza la función REAL de la celebración (pacmanTest de status-pacman.js, misma cola/animación/waka-waka que un done de verdad), client-side puro marcado (emulada), sin tocar el bot-inbox real, nada persiste al recargar.)">
   <meta name="admiranext-status-build" content="oraculo-triad-1">
   <!-- Orbitron: tipografía tecnológica para la versión del pie del riel (Carlos, 2026-07-11) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -451,6 +451,14 @@
     #card.hist-on{border-color:rgba(255,181,69,.7)}
     #card.hist-pulse{animation:histPulse .3s}
     @keyframes histPulse{0%{box-shadow:0 0 0 2px rgba(255,181,69,.8)}100%{box-shadow:0 8px 40px rgba(0,0,0,.6),0 0 24px rgba(34,230,255,.12)}}
+    /* PROOF OF PLAY: miniatura de la última captura + badge (verde Matrix / ámbar forzado).
+       max-width acota la imagen para que NUNCA rompa el layout ni cause scroll horizontal. */
+    #card .pop-block{margin-top:9px;padding-top:9px;border-top:1px solid rgba(61,240,138,.18)}
+    #card .pop-cap{font-size:9px;letter-spacing:.12em;color:#3df08a;margin-bottom:5px;display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+    #card .pop-img{display:block;width:100%;max-width:220px;height:auto;box-sizing:border-box;border:1px solid rgba(61,240,138,.35);border-radius:6px;box-shadow:0 0 10px rgba(61,240,138,.12)}
+    #card .pop-badge{display:inline-block;font-size:8px;letter-spacing:.14em;padding:2px 7px;border-radius:9px;white-space:nowrap}
+    #card .pop-avail{color:#3df08a;border:1px solid rgba(61,240,138,.5);background:rgba(61,240,138,.08)}
+    #card .pop-forced{color:#ffb545;border:1px solid rgba(255,181,69,.55);background:rgba(255,181,69,.09)}
     #card .asg-block{margin-top:10px;padding-top:9px;border-top:1px solid rgba(255,181,69,.3)}
     #card .asg-tit{font-size:9px;letter-spacing:.16em;color:#ffb545;margin-bottom:5px}
     #card #asgSel{width:100%;background:#06121f;color:var(--text);border:1px solid var(--cyan-dim);border-radius:6px;font:inherit;font-size:10.5px;padding:4px 6px;cursor:pointer}
@@ -2124,6 +2132,48 @@
 
   // ---------- interaction ----------
   const card=document.getElementById('card');
+  // ── PROOF OF PLAY ────────────────────────────────────────────────────────
+  // Miniatura de la ÚLTIMA captura de una máquina desatendida/forzada. El reporter
+  // proof-of-play.sh la sube a /api/proof; aquí la leemos por máquina (perezoso,
+  // TTL 55s) y la pintamos en la ficha con «proof of play · hace <t>» + badge.
+  const PROOF_URL='https://admira-telegram.csilvasantin.workers.dev/api/proof';
+  const PROOF={};          // norm(máquina) -> {ts,forced,img,persona,at} | {empty,at} | {loading}
+  let LASTCARD_N=null, LASTCARD_POS=null;   // última ficha pintada (para refrescar al llegar la imagen)
+  function proofFetch(label){
+    if(!label) return;
+    const key=norm(label), now=Date.now(), c=PROOF[key];
+    if(c && c.loading) return;
+    if(c && (now-(c.at||0))<55000) return;   // ya fresco
+    PROOF[key]=Object.assign({},c,{loading:true, at:(c&&c.at)||0});
+    fetch(PROOF_URL+'?machine='+encodeURIComponent(label)+'&cb='+now)
+      .then(r=>r.ok?r.json():null)
+      .then(d=>{
+        if(!d||!d.ok||d.empty||!d.img) PROOF[key]={empty:true,at:Date.now()};
+        else PROOF[key]={ts:d.ts,forced:!!d.forced,img:d.img,persona:d.persona||'',at:Date.now()};
+        refreshCardIfSame(key);
+      })
+      .catch(()=>{ PROOF[key]={empty:true,at:Date.now()}; });
+  }
+  // Si la ficha visible es de esta máquina, la repintamos para embeber la miniatura.
+  function refreshCardIfSame(key){
+    if(!LASTCARD_N || card.style.display==='none') return;
+    const lbl=LASTCARD_N.label, isMach=(LASTCARD_N.kindFor==='machine'||LASTCARD_N.kindFor==='all-machine'||(currentView==='machine'&&!LASTCARD_N.parentId));
+    if(isMach && norm(lbl)===key && LASTCARD_POS) showCard(LASTCARD_N, LASTCARD_POS[0], LASTCARD_POS[1]);
+  }
+  // Bloque HTML de la miniatura + badge (para la ficha de una máquina). Vacío si no hay proof.
+  function proofBlockFor(n){
+    if(!n) return '';
+    proofFetch(n.label);   // dispara carga/refresco perezoso
+    const pc=PROOF[norm(n.label)];
+    if(!pc || !pc.img) return '';
+    const badge = pc.forced
+      ? `<span class="pop-badge pop-forced">🔒 IA · prioridad absoluta</span>`
+      : (n.available ? `<span class="pop-badge pop-avail">✓ AVAILABLE</span>` : '');
+    return `<div class="pop-block">`+
+        `<div class="pop-cap">proof of play · hace ${ago(pc.ts)}${badge}</div>`+
+        `<img class="pop-img" loading="lazy" decoding="async" src="${pc.img}" alt="proof of play ${escH(n.label)}">`+
+      `</div>`;
+  }
   function pickNode(mx,my){
     let best=null,bd=1e9;
     for(const n of nodes){
@@ -2144,13 +2194,22 @@
       ? `<div class="row"><span class="lab">asignado</span><span class="val">${n.assignment?n.assignment.project:'— (libre)'}</span></div>`
       : '';
     if(currentView==='machine'){
+      // DISPONIBLE (idle real >=10 min) vs FORZADA (prioridad absoluta, del proof-of-play).
+      const pcMv=PROOF[norm(n.label)]; const forcedMv=!!(pcMv&&pcMv.img&&pcMv.forced);
+      const availRowMv = forcedMv
+        ? `<div class="row"><span class="lab">estado IA</span><span class="val" style="color:#ffb545">🔒 prioridad absoluta</span></div>`
+        : (n.available
+          ? `<div class="row"><span class="lab">disponible</span><span class="val" style="color:#3df08a">✓ desatendida ${n.idle!=null?fmtDur(n.idle):'>10 min'}</span></div>`
+          : '');
       rows =
         `<div class="cp">proyecto · <b>${n.sub||'(sin asignar)'}</b></div>`+
         asgRow+
         `<div class="row"><span class="lab">reportado</span><span class="val">${n.repProject||'—'}</span></div>`+
         `<div class="row"><span class="lab">quién</span><span class="val">${personas||'—'}</span></div>`+
         `<div class="row"><span class="lab">modo</span><span class="val">${n.mode||'—'}</span></div>`+
-        `<div class="row"><span class="lab">plataforma</span><span class="val">${n.platform||'—'}</span></div>`;
+        `<div class="row"><span class="lab">plataforma</span><span class="val">${n.platform||'—'}</span></div>`+
+        availRowMv+
+        proofBlockFor(n);
     } else if(currentView==='agent'){
       // Jerarquía: principal ↔ satélites (sub/infra). Aclara de un vistazo el rol.
       const kids = nodes.filter(x=>x.parentId===n.id);
@@ -2214,7 +2273,13 @@
           : `<div class="row"><span class="lab">agentes</span><span class="val">— (ninguno reportando)</span></div>`;
         // DISPONIBLE: máquina viva y desatendida >=10 min (idle>=600). Se rotula en verde
         // Matrix en la cabecera y se detalla el tiempo desatendido en una fila.
-        const availTag = n.available ? ` <span style="color:#3df08a">· ✓ disponible</span>` : '';
+        // PROOF OF PLAY: si la máquina está FORZADA (prioridad absoluta) lo sabemos por la
+        // captura subida; manda sobre «disponible» en la cabecera.
+        const pcM = PROOF[norm(n.label)];
+        const forcedM = !!(pcM && pcM.img && pcM.forced);
+        const availTag = forcedM
+          ? ` <span style="color:#3df08a">· 🔒 prioridad absoluta</span>`
+          : (n.available ? ` <span style="color:#3df08a">· ✓ disponible</span>` : '');
         const availRow = n.available
           ? `<div class="row"><span class="lab">disponible</span><span class="val" style="color:#3df08a">✓ desatendida ${n.idle!=null?fmtDur(n.idle):'>10 min'}</span></div>`
           : '';
@@ -2223,6 +2288,7 @@
           `<div class="row"><span class="lab">proyecto</span><span class="val">${n.sub||'—'}</span></div>`+
           `<div class="row"><span class="lab">SO</span><span class="val">${n.os||'—'}</span></div>`+
           availRow+
+          proofBlockFor(n)+
           roster;
       }
     } else {
@@ -2346,6 +2412,7 @@
     x=Math.max(8,x); y=Math.max(8,y);
     card.style.left=x+'px'; card.style.top=y+'px';
     if(isPinned){ PINNED_POS=[mx,my]; }
+    LASTCARD_N=n; LASTCARD_POS=[mx,my];   // para refrescar la ficha al llegar la miniatura proof-of-play
   }
 
   // ---------- MODO MANDO: fijar ficha + asignar proyecto ----------
@@ -2931,7 +2998,7 @@
         const m=c.match(/v\.[\d.]+r\d+|v\.[\d.]+\.r\d+/);
         if(m) return m[0];
       }catch(e){}
-      return 'v.2026.07.15.r36';
+      return 'v.2026.07.15.r37';
     })();
     let focusLabel = FOCUS_MACHINE ? FOCUS_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
     let viewerLabel = VIEWER_MACHINE ? VIEWER_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
@@ -5827,6 +5894,6 @@
 
   <!-- Celebración Pac-Man al completarse un encargo (banda inferior + waka-waka).
        Autónomo: sondea /api/public/inbox y detecta la transición a done. -->
-  <script defer src="status-pacman.js?v=2026.07.15.r36"></script>
+  <script defer src="status-pacman.js?v=2026.07.15.r37"></script>
 </body>
 </html>

@@ -267,16 +267,19 @@ const ACTIONS = {
       const baseUrl = sig.url || 'https://www.admira.tv/player';
       const q = [screen && ('screen=' + encodeURIComponent(screen)), circuit && ('circuit=' + encodeURIComponent(circuit)), tag && ('tag=' + encodeURIComponent(tag)), audio && 'muted=0', machine && ('machine=' + encodeURIComponent(machine))].filter(Boolean).join('&');
       const url = q ? (baseUrl + (baseUrl.includes('?') ? '&' : '?') + q) : baseUrl;
-      const envp = LGUI + 'export SIGN_SCREEN=' + sh(screen) + '; export SIGN_CIRCUIT=' + sh(circuit) + '; export SIGN_TAG=' + sh(tag) + '; export SIGN_MUTED=' + sh(audio ? '0' : '') + '; export SIGN_URL=' + sh(url) + '; ';
+      const envp = LGUI + 'export SIGN_SCREEN=' + sh(screen) + '; export SIGN_CIRCUIT=' + sh(circuit) + '; export SIGN_TAG=' + sh(tag) + '; export SIGN_MUTED=' + sh(audio ? '0' : '') + '; export SIGN_MACHINE=' + sh(machine) + '; export SIGN_URL=' + sh(url) + '; ';
       // Upsert en ~/.config/admira-signage.env: screen/circuit vacíos = conservar
       // los últimos; TAG y MUTED se fijan siempre (vacío = quitar filtro / silencio).
+      // MACHINE = id del equipo en la flota → el canal lo reporta a /signage/now
+      // y el 🎛 mando (remotecontrol?machine=) engancha la pantalla exacta.
       const envfile =
         'F="$HOME/.config/admira-signage.env"; mkdir -p "$HOME/.config"; touch "$F"; ' +
         'up(){ grep -v "^$1=" "$F" > "$F.tmp" 2>/dev/null || true; [ -z "$2" ] || echo "$1=$2" >> "$F.tmp"; mv "$F.tmp" "$F"; }; ' +
         '[ -z "$SIGN_SCREEN" ] || up ADMIRA_SCREEN "$SIGN_SCREEN"; ' +
         '[ -z "$SIGN_CIRCUIT" ] || up ADMIRA_CIRCUIT "$SIGN_CIRCUIT"; ' +
         'up ADMIRA_TAG "$SIGN_TAG"; ' +
-        'up ADMIRA_MUTED "$SIGN_MUTED"; ';
+        'up ADMIRA_MUTED "$SIGN_MUTED"; ' +
+        'up ADMIRA_MACHINE "$SIGN_MACHINE"; ';
       // Player propio: usa el comando de arranque de la máquina. El exit code se
       // propaga: si falla (p.ej. la unidad systemd no existe), el panel lo dice.
       if (sig.start) return envp + envfile + '( ' + sig.start + ' ) && echo "📺 signage lanzado' + (tag ? ' · tag ' + tag : '') + (audio ? ' · 🔊' : '') + '" || echo "⚠️ signage NO lanzado — falló m.signage.start en esta máquina"';

@@ -970,6 +970,7 @@ function renderCards(ms){
         <button data-a="openchannel" data-m="${m.id}" data-mname="${(m.name||'').replace(/"/g,'')}" title="Abrir el CANAL de Digital Signage en el Chrome de esta máquina (ventana nueva, screen ds-${_norm(m.name||m.id)}). Aparece en Players con su mando remoto. Requiere el executor navegadores corriendo en ese equipo.">📺 abrir canal DS</button>
         <button data-a="closechannel" data-m="${m.id}" data-mname="${(m.name||'').replace(/"/g,'')}" title="Cerrar la ventana del canal DS en el Chrome de esta máquina.">⏹ cerrar canal</button>
         ${m.online?`<button data-rc="${m.id}" data-rcname="${(m.name||'').replace(/"/g,'')}" title="Control remoto en vivo (ver + ratón + teclado, estilo AnyDesk). Requiere AdmiraRemoteAgent + permisos en la máquina destino." style="border-color:var(--acc);color:var(--acc);font-weight:700">🖥️ control remoto</button>`:''}
+        <button data-mando="${m.id}" title="🎛 Mando de EMISIÓN (admira.tv/remotecontrol): volumen +/−, mute, siguiente/anterior, primera/última y la playlist de la pantalla de ESTE equipo — se abre enganchado a su screen." style="border-color:#c9a4ff;color:#c9a4ff;font-weight:700">🎛 mando</button>
         ${m.online?`<button data-term="${m.id}" data-termname="${(m.name||'').replace(/"/g,'')}" title="Terminal interactiva (consola SSH en vivo: cd, htop, vim, logs). Ideal para las máquinas Linux." style="border-color:#5bd6c0;color:#5bd6c0;font-weight:700">🖳 terminal</button>`:''}
       </div>
       ${isAirId(m.id)?`<div class="mqueue" data-mqueue="${m.id}">
@@ -2246,6 +2247,12 @@ function collapseAllToggle(){
   };
   // Botón "🖥️ control remoto" de cada tarjeta (delegación).
   document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-rc]'); if(!b)return; e.preventDefault(); window.openRemoteControl(b.getAttribute('data-rc'), b.getAttribute('data-rcname')||b.getAttribute('data-rc')); });
+
+  // Botón "🎛 mando" — abre el mando de EMISIÓN de admira.tv enganchado a la
+  // pantalla de ese equipo (?machine= → el mando la localiza vía /signage/screens;
+  // si el player aún no reporta machine, cae a usar el id como screen manual).
+  document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-mando]'); if(!b)return; e.preventDefault();
+    window.open('https://admira.tv/remotecontrol/?machine='+encodeURIComponent(b.getAttribute('data-mando')),'_blank','noopener'); });
 
   /* Reutilizable: engancha el MISMO motor (vídeo en vivo + ratón/teclado) a un <img>
      externo, p.ej. el del monitor CRT. Devuelve {stop, setControl}. No toca el overlay. */

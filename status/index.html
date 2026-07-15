@@ -6,7 +6,7 @@
   <title>ADmiraNeXT | Status — Constelación de la flota</title>
   <meta name="description" content="Admira no tiene centro — es un universo que se expande. Estado en vivo de la flota AdmiraNeXT: cada ordenador es una estrella con su proyecto y su foco.">
   <meta name="admiranext-version" content="AdmiraNext v26.07.07.12">
-  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.14.r35 (MISIONES REALES — YOKUP ES EL GESTOR ÚNICO DEL TRABAJO. Hasta r34 la vista MISIÓN era falsa: missionForAgent() no leía ninguna misión, devolvía el PROYECTO de referencia del agente (AGENT_MISSION), así que «misión» y «proyecto» eran la misma vista con dos nombres. Doctrina de Carlos (14-07-2026): el trabajo vive en yokup.com — cada encargo del bot-inbox es allí una MISIÓN con su árbol de tareas abc/123 (3 pasos × ≤3 subtareas, máx 9), y status pasa a ser el VISOR que las LEE, no quien se las inventa. Nuevo feed público GET /fleet/missions del worker yokup-rtc (misiones source=fleet + su árbol de tareas embebido, porque /mission/* vive tras el perímetro y status no pasa el gate); el worker ingiere el bot-inbox con POST /fleet/sync + cron cada 2 min (service binding a admira-telegram: un fetch normal hacía loopback contra el propio yokup-rtc y devolvía su 404). En status: la vista MISIÓN agrupa por misión REAL (los agentes orbitan la suya y arrastran sus ordenadores; las misiones encargadas y aún sin nadie latiendo también se pintan — ese hueco hay que verlo), la ficha muestra id · estado · «3/9 tareas» y enlaza a la misión en yokup, y la COLA DE ENCARGOS del agente marca cada uno con su misión 🎯 FLT-<id> y su avance. CLARIDAD: el escenario está calibrado para ~10 nodos y las 46 misiones vivas lo desbordaban (se apilaban fuera del encuadre), así que se pintan las 12 que importan —con agente vivo primero, luego las más recientes— y las que quedan fuera SE DICEN en el HUD («4 misiones vivas de 46 · 12 en pantalla»), nunca se recorta en silencio; las etiquetas de nodo se abrevian (shortMission) porque un encargo es una frase larga. OJO al separar los dos conceptos: el PROYECTO de referencia sigue vivo como projectRefForAgent() y es el que alimenta «reportado» y el carril (offRail) — si la misión entrara ahí, todo agente con encargo saldría «fuera de carril» porque el texto de un encargo nunca casa con un proyecto. En el worker, las misiones de flota comparten tabla con las incidencias DOOH de Clear Channel: /tickets y /stats se separan por ?scope=campo|fleet|todas (campo por defecto) para no inundar la bandeja de campo. — Sobre r34: ESCUADRONES DE 4 EN LA VISTA TODO — Carlos con sus 4 MacBook Air (Azul, Plata, Rosa, Crema) delante, todas conectadas, sólo veía MacBookAirAzul como UFO: el foco de la vista TODO FILTRABA a un único ordenador (≤r33 dejaba en pantalla el equipo enfocado + sus agentes y escondía el resto). Ahora la vista TODO pinta TODAS las máquinas vivas A LA VEZ, agrupadas en formaciones de 4 (rombo): con 8 vivas = 2 escuadrones separados en el escenario. layoutAllSquadrons() reparte los anclajes (_anchorX/_anchorY) en rejilla de rombos; physics() lleva cada ordenador a su anclaje con un muelle y los agentes siguen orbitando su máquina. El FOCO (elegido a mano en el riel, o rotando cada 20s de UFO en UFO) ya no filtra: sólo AGRANDA un UFO — factor de escala por nodo _fzs (grande y con detalle el enfocado «como antes», reducidos pero CLARAMENTE presentes y etiquetados los demás), suavizado en physics y leído por volumeRadius/tipografía. Al elegir un ordenador a mano el foco queda fijo en él y el resto sigue visible. Las vistas ORDENADOR/PROYECTO/AGENTE/MISIÓN/SISTEMA OPERATIVO conservan su motor intacto (ALL_MULTI sólo se enciende en la vista TODO con ≥2 ordenadores). — Sobre r33: EMULADORES CON COMBOS REALES — a Carlos le confundía en producción que las dudas emuladas inventaran combos de máquina/agente/proyecto («subNeo en Mac Mini con pixeria.com») al lado de nodos con presencia real. Ahora /dudaAgente y el botón 👾 del AVANZADO muestrean COMBINACIONES REALES de /api/presence — persona+máquina+proyecto tal cual laten (WORLD.presenceRows, guardadas crudas en la carga), priorizando latido fresco (< umbral de vivo), deduplicadas por persona+máquina y barajadas; si presence aún no cargó, caen al aleatorio de antes. El texto de la duda sigue inventado y la marca «(emulada)» se mantiene SIEMPRE. El emulador de tarea acabada (/tareaFinaliza y su botón) firma la pancarta con un agente real de la flota manteniendo la marca «· emulada». Textos de hint/help actualizados para reflejarlo. — Sobre r32: CIELO FULL-BLEED — feedback de Carlos sobre r30 con captura: al refluir el escenario bajo la banda de naves y junto a los paneles laterales, esas zonas quedaban LISAS (el fondo plano de la página, sin estrellas, porque el cielo vivía dentro del canvas de nodos y se empujaba con él). Regla de Carlos: el fondo estrellado cubre TODO, con UFOs o sin ellos, con menús o sin ellos. Cambio de arquitectura: las estrellas se DESACOPLAN de los nodos — nuevo canvas #skyfield position:fixed inset:0 z-index:0 a viewport completo, detrás de banda, paneles y escenario; el twinkle y el parallax con la cámara se mantienen idénticos, y la densidad se calcula sobre el viewport entero. En #galaxy quedan solo nodos/aristas/figuras, que conservan sus zonas de exclusión: reflow bajo la banda (body.duda-band-open + --duda-inset + syncDudaBand()) y rieles en flujo que estrechan el centro (nada oculto tras un panel). Ya no se re-siembran estrellas al abrir/cerrar rieles (el cielo no depende del centro). Pausa con ficha abierta intacta (el frame congela también el cielo), marcha de naves intacta, prefers-reduced-motion respetado, cero scroll horizontal. ADEMÁS: emulador de TAREA ACABADA para previsualizar la celebración Pac-Man de la banda inferior — botón «Lanzar tarea finalizada» en ⚙ AVANZADO junto al 👾 de dudas y comando /tareaFinaliza <texto> en la consola (en el /help); reutiliza la función REAL de la celebración (pacmanTest de status-pacman.js, misma cola/animación/waka-waka que un done de verdad), client-side puro marcado (emulada), sin tocar el bot-inbox real, nada persiste al recargar.)">
+  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.15.r36 (AVAILABLE — una máquina VIVA y DESATENDIDA >=10 min (sin teclado/ratón, idle>=600s) se rotula «✓ AVAILABLE» en verde Matrix bajo su nodo-ordenador y en su ficha de detalle («✓ desatendida ⏱»). El dato idle llega del reporter presence-beat.sh (machine-idle.sh, HIDIdleTime) en cada latido y lo sirve el worker admira-telegram en /api/presence; el idle de la MÁQUINA es el MÍNIMO de los idle de sus filas frescas (si CUALQUIER runtime tuvo input reciente, la máquina está en uso), y «available» exige que TODOS sus reporters frescos lleven idle>=600. Sin dato o idle<600 → estado normal (en uso). Aditivo, cero scroll horizontal. — r35: MISIONES REALES — YOKUP ES EL GESTOR ÚNICO DEL TRABAJO. Hasta r34 la vista MISIÓN era falsa: missionForAgent() no leía ninguna misión, devolvía el PROYECTO de referencia del agente (AGENT_MISSION), así que «misión» y «proyecto» eran la misma vista con dos nombres. Doctrina de Carlos (14-07-2026): el trabajo vive en yokup.com — cada encargo del bot-inbox es allí una MISIÓN con su árbol de tareas abc/123 (3 pasos × ≤3 subtareas, máx 9), y status pasa a ser el VISOR que las LEE, no quien se las inventa. Nuevo feed público GET /fleet/missions del worker yokup-rtc (misiones source=fleet + su árbol de tareas embebido, porque /mission/* vive tras el perímetro y status no pasa el gate); el worker ingiere el bot-inbox con POST /fleet/sync + cron cada 2 min (service binding a admira-telegram: un fetch normal hacía loopback contra el propio yokup-rtc y devolvía su 404). En status: la vista MISIÓN agrupa por misión REAL (los agentes orbitan la suya y arrastran sus ordenadores; las misiones encargadas y aún sin nadie latiendo también se pintan — ese hueco hay que verlo), la ficha muestra id · estado · «3/9 tareas» y enlaza a la misión en yokup, y la COLA DE ENCARGOS del agente marca cada uno con su misión 🎯 FLT-<id> y su avance. CLARIDAD: el escenario está calibrado para ~10 nodos y las 46 misiones vivas lo desbordaban (se apilaban fuera del encuadre), así que se pintan las 12 que importan —con agente vivo primero, luego las más recientes— y las que quedan fuera SE DICEN en el HUD («4 misiones vivas de 46 · 12 en pantalla»), nunca se recorta en silencio; las etiquetas de nodo se abrevian (shortMission) porque un encargo es una frase larga. OJO al separar los dos conceptos: el PROYECTO de referencia sigue vivo como projectRefForAgent() y es el que alimenta «reportado» y el carril (offRail) — si la misión entrara ahí, todo agente con encargo saldría «fuera de carril» porque el texto de un encargo nunca casa con un proyecto. En el worker, las misiones de flota comparten tabla con las incidencias DOOH de Clear Channel: /tickets y /stats se separan por ?scope=campo|fleet|todas (campo por defecto) para no inundar la bandeja de campo. — Sobre r34: ESCUADRONES DE 4 EN LA VISTA TODO — Carlos con sus 4 MacBook Air (Azul, Plata, Rosa, Crema) delante, todas conectadas, sólo veía MacBookAirAzul como UFO: el foco de la vista TODO FILTRABA a un único ordenador (≤r33 dejaba en pantalla el equipo enfocado + sus agentes y escondía el resto). Ahora la vista TODO pinta TODAS las máquinas vivas A LA VEZ, agrupadas en formaciones de 4 (rombo): con 8 vivas = 2 escuadrones separados en el escenario. layoutAllSquadrons() reparte los anclajes (_anchorX/_anchorY) en rejilla de rombos; physics() lleva cada ordenador a su anclaje con un muelle y los agentes siguen orbitando su máquina. El FOCO (elegido a mano en el riel, o rotando cada 20s de UFO en UFO) ya no filtra: sólo AGRANDA un UFO — factor de escala por nodo _fzs (grande y con detalle el enfocado «como antes», reducidos pero CLARAMENTE presentes y etiquetados los demás), suavizado en physics y leído por volumeRadius/tipografía. Al elegir un ordenador a mano el foco queda fijo en él y el resto sigue visible. Las vistas ORDENADOR/PROYECTO/AGENTE/MISIÓN/SISTEMA OPERATIVO conservan su motor intacto (ALL_MULTI sólo se enciende en la vista TODO con ≥2 ordenadores). — Sobre r33: EMULADORES CON COMBOS REALES — a Carlos le confundía en producción que las dudas emuladas inventaran combos de máquina/agente/proyecto («subNeo en Mac Mini con pixeria.com») al lado de nodos con presencia real. Ahora /dudaAgente y el botón 👾 del AVANZADO muestrean COMBINACIONES REALES de /api/presence — persona+máquina+proyecto tal cual laten (WORLD.presenceRows, guardadas crudas en la carga), priorizando latido fresco (< umbral de vivo), deduplicadas por persona+máquina y barajadas; si presence aún no cargó, caen al aleatorio de antes. El texto de la duda sigue inventado y la marca «(emulada)» se mantiene SIEMPRE. El emulador de tarea acabada (/tareaFinaliza y su botón) firma la pancarta con un agente real de la flota manteniendo la marca «· emulada». Textos de hint/help actualizados para reflejarlo. — Sobre r32: CIELO FULL-BLEED — feedback de Carlos sobre r30 con captura: al refluir el escenario bajo la banda de naves y junto a los paneles laterales, esas zonas quedaban LISAS (el fondo plano de la página, sin estrellas, porque el cielo vivía dentro del canvas de nodos y se empujaba con él). Regla de Carlos: el fondo estrellado cubre TODO, con UFOs o sin ellos, con menús o sin ellos. Cambio de arquitectura: las estrellas se DESACOPLAN de los nodos — nuevo canvas #skyfield position:fixed inset:0 z-index:0 a viewport completo, detrás de banda, paneles y escenario; el twinkle y el parallax con la cámara se mantienen idénticos, y la densidad se calcula sobre el viewport entero. En #galaxy quedan solo nodos/aristas/figuras, que conservan sus zonas de exclusión: reflow bajo la banda (body.duda-band-open + --duda-inset + syncDudaBand()) y rieles en flujo que estrechan el centro (nada oculto tras un panel). Ya no se re-siembran estrellas al abrir/cerrar rieles (el cielo no depende del centro). Pausa con ficha abierta intacta (el frame congela también el cielo), marcha de naves intacta, prefers-reduced-motion respetado, cero scroll horizontal. ADEMÁS: emulador de TAREA ACABADA para previsualizar la celebración Pac-Man de la banda inferior — botón «Lanzar tarea finalizada» en ⚙ AVANZADO junto al 👾 de dudas y comando /tareaFinaliza <texto> en la consola (en el /help); reutiliza la función REAL de la celebración (pacmanTest de status-pacman.js, misma cola/animación/waka-waka que un done de verdad), client-side puro marcado (emulada), sin tocar el bot-inbox real, nada persiste al recargar.)">
   <meta name="admiranext-status-build" content="oraculo-triad-1">
   <!-- Orbitron: tipografía tecnológica para la versión del pie del riel (Carlos, 2026-07-11) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -2080,10 +2080,21 @@
         ctx.fillText(parts.join(' · '), n.x, n.y+r+(isSat?31:37)*nfz);
       }
       // Bajo cada ORDENADOR online (sin `since`, con cpu): uso de CPU del equipo.
-      else if(lvl>=2 && !dimNode && n.online && !n.since && +n.cpu>0 && (META_MODE!=='nada' || isHover)){
+      // Si está DISPONIBLE, cede el hueco al badge «Available» (se pinta abajo).
+      else if(lvl>=2 && !dimNode && n.online && !n.since && !n.available && +n.cpu>0 && (META_MODE!=='nada' || isHover)){
         ctx.font=Math.round(8*nfz)+'px Orbitron, monospace';
         ctx.fillStyle='rgba(120,200,220,.55)';
         ctx.fillText('cpu '+Math.round(n.cpu)+'%', n.x, n.y+r+(isSat?31:37)*nfz);
+      }
+      // DISPONIBLE (verde Matrix): máquina VIVA y desatendida >=10 min (idle>=600).
+      // Visible en TODOS los niveles de zoom, como el aviso de carril. Coherente con
+      // la estética del status. Solo en nodos-ORDENADOR (kindFor machine/all-machine).
+      if(n.available && (n.kindFor==='machine' || n.kindFor==='all-machine') && !dimNode){
+        ctx.font='700 '+Math.round(9*nfz)+'px Orbitron, monospace';
+        ctx.fillStyle='#3df08a';
+        ctx.shadowColor='rgba(61,240,138,.6)'; ctx.shadowBlur=8;
+        ctx.fillText('✓ AVAILABLE', n.x, n.y+r+(isSat?31:37)*nfz);
+        ctx.shadowBlur=0;
       }
       // FUERA DE CARRIL (ámbar): asignación de Carlos ≠ misión reportada
       // (alerta: visible en TODOS los niveles de zoom)
@@ -2201,10 +2212,17 @@
               return `<div class="row"><span class="lab">${a.fresh?'●':'○'} ${a.persona}</span><span class="val">${(a.focus||'—')}${m}</span></div>`;
             }).join('')
           : `<div class="row"><span class="lab">agentes</span><span class="val">— (ninguno reportando)</span></div>`;
+        // DISPONIBLE: máquina viva y desatendida >=10 min (idle>=600). Se rotula en verde
+        // Matrix en la cabecera y se detalla el tiempo desatendido en una fila.
+        const availTag = n.available ? ` <span style="color:#3df08a">· ✓ disponible</span>` : '';
+        const availRow = n.available
+          ? `<div class="row"><span class="lab">disponible</span><span class="val" style="color:#3df08a">✓ desatendida ${n.idle!=null?fmtDur(n.idle):'>10 min'}</span></div>`
+          : '';
         rows =
-          `<div class="cp">ordenador · <b>${n.label}</b> <span style="color:var(--cyan-dim)">· ${n.online?'online':'en reposo'}</span></div>`+
+          `<div class="cp">ordenador · <b>${n.label}</b> <span style="color:var(--cyan-dim)">· ${n.online?'online':'en reposo'}</span>${availTag}</div>`+
           `<div class="row"><span class="lab">proyecto</span><span class="val">${n.sub||'—'}</span></div>`+
           `<div class="row"><span class="lab">SO</span><span class="val">${n.os||'—'}</span></div>`+
+          availRow+
           roster;
       }
     } else {
@@ -2806,6 +2824,17 @@
         e.tokens = (e.tokens||0) + (+p.tokens||0);           // tokens consumidos por sus agentes (real, si el feed lo trae)
         e.reqs   = (e.reqs||0)   + (+p.reqs||0);
         if(fresh && +p.cpu>0) e.cpu = Math.max(e.cpu||0, +p.cpu||0);  // CPU del EQUIPO (misma para sus agentes)
+        // IDLE de la MÁQUINA (segundos sin teclado/ratón). Es del EQUIPO, lo reporta cada
+        // runtime en su latido. La máquina está EN USO si CUALQUIER reporter fresco tuvo
+        // input reciente → idle de la máquina = MÍNIMO de los idle de sus filas frescas.
+        // «Available» = TODOS los reporters frescos con idle>=600 (10 min). Solo cuentan
+        // filas FRESCAS con dato válido; si un reporter fresco no manda idle, se desconoce
+        // → la máquina NO se marca available (queda en uso).
+        if(fresh){
+          e._freshN=(e._freshN||0)+1;
+          const idl=(typeof p.idle==='number' && isFinite(p.idle)) ? Math.max(0,Math.floor(p.idle)) : null;
+          if(idl!==null){ e._idleN=(e._idleN||0)+1; e._idleMin=(e._idleMin===undefined?idl:Math.min(e._idleMin,idl)); }
+        }
         if(fresh) e.online=true;
         // r22: solo un foco LIMPIO puede ganar la etiqueta de la máquina
         const pfoco=focoLimpio(p.focus);
@@ -2829,13 +2858,20 @@
       byMachine['macbookpro16']._viewer = true;
     }
 
-    const machines = Object.values(byMachine).map(e=>({
+    const machines = Object.values(byMachine).map(e=>{
+      // idle de la máquina = MÍN de los idle de sus filas frescas (solo si TODAS lo traen).
+      const idleKnown = (e._freshN>0) && (e._idleN===e._freshN);
+      const mIdle = idleKnown ? e._idleMin : null;
+      return {
       ...e, project:projectFor(e.machine), os:osFor(e.machine, e.platform),
       assignment: asgFor('machine', e.machine),   // asignación de Carlos (FASE 1); null = libre
       personas:(e.personas.filter(x=>x.fresh).length ? e.personas.filter(x=>x.fresh) : e.personas.slice(-1)),
       allPersonas: e.personas,   // lista COMPLETA (con stale) — sólo para anclas de la galaxia (vista TODO)
       isViewer: !!e._viewer,
-    })).sort((a,b)=>(b.online-a.online)|| (a.machine>b.machine?1:-1));
+      idle: mIdle,                                 // seg. de inactividad de la máquina; null = sin dato
+      available: !!(e.online && idleKnown && mIdle>=600),  // VIVA y desatendida >=10 min
+      };
+    }).sort((a,b)=>(b.online-a.online)|| (a.machine>b.machine?1:-1));
 
     // ---- TIEMPO ACTIVO por agente (observado por el panel) ----
     // El feed NO trae inicio de tarea, así que medimos cuánto lleva cada agente
@@ -2895,7 +2931,7 @@
         const m=c.match(/v\.[\d.]+r\d+|v\.[\d.]+\.r\d+/);
         if(m) return m[0];
       }catch(e){}
-      return 'v.2026.07.14.r35';
+      return 'v.2026.07.15.r36';
     })();
     let focusLabel = FOCUS_MACHINE ? FOCUS_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
     let viewerLabel = VIEWER_MACHINE ? VIEWER_MACHINE.replace(/([a-z])([A-Z0-9])/g,'$1 $2') : '';
@@ -3821,6 +3857,7 @@
       const mid='all:'+norm(m.machine);
       list.push({
         id:mid, label:m.machine, sub:m.project||'', kindFor:'all-machine',
+        available:!!m.available, idle:(m.idle==null?null:m.idle),
         online:m.online, updated:m.updated, foco:m.foco||'', mode:m.mode||'',
         platform:m.platform||'', os:m.os, personas:ags, agentNames:ags.map(a=>a.persona),
         decisions:m.decisions||0, tokens:m.tokens||0, reqs:m.reqs||0, cpu:m.cpu||0,
@@ -4099,6 +4136,7 @@
         personas:m.personas, machines:[m.machine], online:m.online, updated:m.updated,
         foco:m.foco, mode:m.mode, platform:m.platform, os:m.os, count:m.personas.length,
         decisions:m.decisions||0, tokens:m.tokens||0, reqs:m.reqs||0, cpu:m.cpu||0,
+        available:!!m.available, idle:(m.idle==null?null:m.idle),
         assignment:m.assignment||null, repProject:m.repProject||m.project||'',
         offRail: offRailFor(m.assignment, m.repProject||m.project), kindFor:'machine',
       }));
@@ -5789,6 +5827,6 @@
 
   <!-- Celebración Pac-Man al completarse un encargo (banda inferior + waka-waka).
        Autónomo: sondea /api/public/inbox y detecta la transición a done. -->
-  <script defer src="status-pacman.js?v=2026.07.14.r35"></script>
+  <script defer src="status-pacman.js?v=2026.07.15.r36"></script>
 </body>
 </html>

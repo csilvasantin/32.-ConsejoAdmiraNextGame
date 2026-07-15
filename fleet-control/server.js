@@ -222,38 +222,60 @@ const ACTIONS = {
   // ── Digital Signage ──────────────────────────────────────────────────────
   // macOS: player nativo AdmiraSignageMac (kiosko WKWebView de admira.tv). Lanzar
   //   = abrir la app; parar = quit limpio (el KeepAlive NO relanza un quit
-  //   voluntario, solo un crash). arg = "screen|circuit".
+  //   voluntario, solo un crash). arg = "screen|circuit|tag".
   // Linux: player PROPIO configurable por máquina en fleet.json → m.signage:
   //   { "start": "<cmd de arranque>", "stop": "<cmd de parada>", "url": "<url>" }.
-  //   El start/stop reciben las variables de entorno SIGN_SCREEN, SIGN_CIRCUIT y
-  //   SIGN_URL. Si no hay m.signage.start, cae a un kiosko Chromium por defecto
-  //   (systemd --user) apuntando a la url del player.
+  //   El start/stop reciben las variables de entorno SIGN_SCREEN, SIGN_CIRCUIT,
+  //   SIGN_TAG y SIGN_URL, y ANTES del start se hace upsert de ADMIRA_SCREEN/
+  //   CIRCUIT/TAG en ~/.config/admira-signage.env (el player systemd no hereda
+  //   el entorno del SSH; sin esto screen/circuit/tag no le llegaban). Si no hay
+  //   m.signage.start, cae a un kiosko Chromium por defecto apuntando a la url.
+  // tag ≠ circuito: el circuito agrupa pantallas; el TAG filtra el contenido
+  //   (musica → el canal solo emite lo etiquetado musica). Vacío = sin filtro.
   signage_on: {
-    macos: (arg) => {
+    macos: (arg, m) => {
       const parts = String(arg || '').split('|');
       const screen = (parts[0] || '').trim(), circuit = (parts[1] || '').trim();
+      const tag = (parts[2] || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
+      const machine = (m && m.id) || '';
       let pre = '';
       if (screen) pre += 'defaults write tv.admira.signage.mac screen ' + sh(screen) + '; ';
       if (circuit) pre += 'defaults write tv.admira.signage.mac circuit ' + sh(circuit) + '; ';
+      // id del equipo → el player lo reporta a /signage/now para que el 🎛️ mando enganche exacto.
+      if (machine) pre += 'defaults write tv.admira.signage.mac machine ' + sh(machine) + '; ';
+      // filtro por tag: se escribe/borra siempre — cada lanzamiento fija su filtro.
+      pre += tag ? ('defaults write tv.admira.signage.mac tag ' + sh(tag) + '; ')
+                 : 'defaults delete tv.admira.signage.mac tag 2>/dev/null; ';
       return pre +
         'launchctl bootstrap gui/$(id -u) "$HOME/Library/LaunchAgents/tv.admira.signage.mac.plist" 2>/dev/null; ' +
         'launchctl kickstart -k gui/$(id -u)/tv.admira.signage.mac 2>/dev/null; ' +
         'open -a AdmiraSignageMac 2>/dev/null || open -b tv.admira.signage.mac 2>/dev/null; sleep 1; ' +
-        'pgrep -x AdmiraSignageMac >/dev/null && echo "📺 signage lanzado" || echo "AdmiraSignageMac no instalado en esta máquina"';
+        'pgrep -x AdmiraSignageMac >/dev/null && echo "📺 signage lanzado' + (tag ? ' · tag ' + tag : '') + '" || echo "AdmiraSignageMac no instalado en esta máquina"';
     },
     linux: (arg, m) => {
       const parts = String(arg || '').split('|');
       const screen = (parts[0] || '').trim(), circuit = (parts[1] || '').trim();
+      const tag = (parts[2] || '').trim().toLowerCase().replace(/[^a-z0-9_-]/g, '');
       const sig = (m && m.signage) || {};
+      const machine = (m && m.id) || '';
       const baseUrl = sig.url || 'https://www.admira.tv/player';
-      const q = [screen && ('screen=' + encodeURIComponent(screen)), circuit && ('circuit=' + encodeURIComponent(circuit))].filter(Boolean).join('&');
+      const q = [screen && ('screen=' + encodeURIComponent(screen)), circuit && ('circuit=' + encodeURIComponent(circuit)), tag && ('tag=' + encodeURIComponent(tag)), machine && ('machine=' + encodeURIComponent(machine))].filter(Boolean).join('&');
       const url = q ? (baseUrl + (baseUrl.includes('?') ? '&' : '?') + q) : baseUrl;
-      const envp = LGUI + 'export SIGN_SCREEN=' + sh(screen) + '; export SIGN_CIRCUIT=' + sh(circuit) + '; export SIGN_URL=' + sh(url) + '; ';
-      // Player propio: usa el comando de arranque de la máquina.
-      if (sig.start) return envp + sig.start + '; echo "📺 signage lanzado"';
+      const envp = LGUI + 'export SIGN_SCREEN=' + sh(screen) + '; export SIGN_CIRCUIT=' + sh(circuit) + '; export SIGN_TAG=' + sh(tag) + '; export SIGN_URL=' + sh(url) + '; ';
+      // Upsert en ~/.config/admira-signage.env: screen/circuit vacíos = conservar
+      // los últimos; el TAG se fija siempre (vacío = quitar el filtro).
+      const envfile =
+        'F="$HOME/.config/admira-signage.env"; mkdir -p "$HOME/.config"; touch "$F"; ' +
+        'up(){ grep -v "^$1=" "$F" > "$F.tmp" 2>/dev/null || true; [ -z "$2" ] || echo "$1=$2" >> "$F.tmp"; mv "$F.tmp" "$F"; }; ' +
+        '[ -z "$SIGN_SCREEN" ] || up ADMIRA_SCREEN "$SIGN_SCREEN"; ' +
+        '[ -z "$SIGN_CIRCUIT" ] || up ADMIRA_CIRCUIT "$SIGN_CIRCUIT"; ' +
+        'up ADMIRA_TAG "$SIGN_TAG"; ';
+      // Player propio: usa el comando de arranque de la máquina. El exit code se
+      // propaga: si falla (p.ej. la unidad systemd no existe), el panel lo dice.
+      if (sig.start) return envp + envfile + '( ' + sig.start + ' ) && echo "📺 signage lanzado' + (tag ? ' · tag ' + tag : '') + '" || echo "⚠️ signage NO lanzado — falló m.signage.start en esta máquina"';
       // Fallback: kiosko Chromium como servicio systemd --user (auto-relanza).
       const bin = 'command -v chromium >/dev/null 2>&1 && CH=chromium || CH=chromium-browser';
-      return envp + bin + '; ' +
+      return envp + envfile + bin + '; ' +
         'command -v "$CH" >/dev/null 2>&1 || { echo "no hay chromium; define m.signage.start en fleet.json"; exit 0; }; ' +
         'systemctl --user stop admira-signage 2>/dev/null; ' +
         '"$CH" --kiosk --noerrdialogs --disable-infobars --incognito --no-first-run "$SIGN_URL" >/dev/null 2>&1 & ' +
@@ -268,7 +290,7 @@ const ACTIONS = {
       'pgrep -x AdmiraSignageMac >/dev/null && echo "sigue activo (reintenta)" || echo "⏹️ signage parado"',
     linux: (arg, m) => {
       const sig = (m && m.signage) || {};
-      if (sig.stop) return LGUI + sig.stop + '; echo "⏹️ signage parado"';
+      if (sig.stop) return LGUI + '( ' + sig.stop + ' ) && echo "⏹️ signage parado" || echo "⚠️ fallo al parar — revisa m.signage.stop en esta máquina"';
       return 'systemctl --user stop admira-signage 2>/dev/null; ' +
         'pkill -f -- "--kiosk" 2>/dev/null; pkill -x chromium 2>/dev/null; pkill -x chromium-browser 2>/dev/null; sleep 1; ' +
         'echo "⏹️ signage parado"';
@@ -389,6 +411,57 @@ function readBody(req) {
 }
 
 /* ----- rutas ---------------------------------------------------------------- */
+/* ── TERMINAL INTERACTIVA (PTY real por `ssh -tt`) ───────────────────────────
+ * Consola interactiva de verdad para las maquinas (pensada para las Linux).
+ * Sin dependencias nuevas: `ssh -tt` asigna un PTY en el destino; la salida sale
+ * por SSE (EventSource no manda headers -> auth por TICKET efimero en el query)
+ * y las teclas entran por POST /api/term/input (gate Google normal). Mismo nivel
+ * de acceso que /api/run (shell): no anade privilegio, solo interactividad. */
+const TERMS = new Map();                 // sessionId -> sesion
+const TERM_MAX = 8;                      // sesiones vivas simultaneas
+const TERM_IDLE_MS = 15 * 60 * 1000;     // corta sesiones inactivas
+function termGC() {
+  const now = Date.now();
+  for (const [id, t] of TERMS) {
+    if (!t.alive || now - t.last > TERM_IDLE_MS) { try { t.proc.kill('SIGKILL'); } catch (e) {} TERMS.delete(id); }
+  }
+}
+const _termGcTimer = setInterval(termGC, 30 * 1000); if (_termGcTimer.unref) _termGcTimer.unref();
+
+function termCreate(m, cols, rows, ip) {
+  const user = m.user || 'csilvasantin';
+  const host = m.host || 'localhost';
+  const C = Math.max(20, Math.min(400, parseInt(cols, 10) || 100));
+  const R = Math.max(6, Math.min(200, parseInt(rows, 10) || 30));
+  // stty fija el tamano inicial del PTY remoto; luego shell de login interactivo.
+  const remote = 'stty rows ' + R + ' cols ' + C + ' 2>/dev/null; exec "${SHELL:-/bin/bash}" -il';
+  const args = ['-tt', '-o', 'StrictHostKeyChecking=no', '-o', 'BatchMode=yes',
+                '-o', 'ConnectTimeout=10', '-o', 'ServerAliveInterval=20', '-o', 'ServerAliveCountMax=3',
+                user + '@' + host, remote];
+  const proc = spawn('ssh', args, { env: process.env });
+  const id = crypto.randomBytes(9).toString('hex');
+  const ticket = crypto.randomBytes(18).toString('hex');
+  const t = { id, proc, machine: m.id, ticket, buf: [], sse: null, alive: true, last: Date.now(), graceTimer: null, cols: C, rows: R };
+  TERMS.set(id, t);
+  const onOut = (d) => {
+    t.last = Date.now();
+    if (t.sse) { try { t.sse.write('data: ' + d.toString('base64') + '\n\n'); } catch (e) {} }
+    else { t.buf.push(d); while (t.buf.length > 400) t.buf.shift(); }
+  };
+  proc.stdout.on('data', onOut);
+  proc.stderr.on('data', onOut);
+  proc.on('exit', (code) => {
+    t.alive = false;
+    if (t.sse) { try { t.sse.write('event: exit\ndata: ' + (code == null ? 0 : code) + '\n\n'); t.sse.end(); } catch (e) {} }
+    setTimeout(() => TERMS.delete(id), 3000);
+  });
+  proc.on('error', () => { t.alive = false; });
+  audit({ ip, ev: 'term_open', machine: m.id, cols: C, rows: R });
+  return t;
+}
+
+
+
 const server = http.createServer(async (req, res) => {
   cors(req, res);
   if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
@@ -441,6 +514,63 @@ const server = http.createServer(async (req, res) => {
     return json(res, 200, { machine: m.id, ...r });
   }
 
+  // ── TERMINAL INTERACTIVA: abrir sesion PTY (gate Google) -> {session, ticket}
+  if (url === '/api/term/open' && req.method === 'POST') {
+    if (!(await gate(req, res, ip))) return;
+    const body = await readBody(req);
+    const m = machineById(body.machine);
+    if (!m) return json(res, 400, { error: 'máquina desconocida' });
+    if (!m.host) return json(res, 400, { error: 'máquina sin host ssh' });
+    termGC();
+    let live = 0; for (const t of TERMS.values()) if (t.alive) live++;
+    if (live >= TERM_MAX) return json(res, 429, { error: 'demasiadas terminales abiertas' });
+    const t = termCreate(m, body.cols, body.rows, ip);
+    return json(res, 200, { session: t.id, ticket: t.ticket, machine: m.id });
+  }
+
+  // ── TERMINAL: salida en vivo (SSE). Auth = ticket efimero (reusable en la sesion).
+  if (url === '/api/term/stream' && req.method === 'GET') {
+    const tk = new URL(req.url, 'http://x').searchParams.get('ticket') || '';
+    let t = null; for (const s of TERMS.values()) if (s.ticket && s.ticket === tk) { t = s; break; }
+    if (!t) return json(res, 403, { error: 'ticket inválido' });
+    res.writeHead(200, { 'Content-Type': 'text/event-stream; charset=utf-8', 'Cache-Control': 'no-cache, no-transform', 'Connection': 'keep-alive', 'X-Accel-Buffering': 'no' });
+    res.write('retry: 3000\n\n');
+    if (t.graceTimer) { clearTimeout(t.graceTimer); t.graceTimer = null; }
+    t.sse = res; t.last = Date.now();
+    for (const d of t.buf.splice(0)) { try { res.write('data: ' + d.toString('base64') + '\n\n'); } catch (e) {} }
+    if (!t.alive) { try { res.write('event: exit\ndata: 0\n\n'); } catch (e) {} return res.end(); }
+    const hb = setInterval(() => { try { res.write(': hb\n\n'); } catch (e) {} }, 15000);
+    req.on('close', () => {
+      clearInterval(hb);
+      if (t.sse === res) t.sse = null;
+      if (t.graceTimer) clearTimeout(t.graceTimer);
+      t.graceTimer = setTimeout(() => { if (!t.sse && t.alive) { try { t.proc.kill('SIGKILL'); } catch (e) {} TERMS.delete(t.id); } }, 60000);
+    });
+    return;
+  }
+
+  // ── TERMINAL: entrada (teclas). Gate Google. data = base64 de los bytes.
+  if (url === '/api/term/input' && req.method === 'POST') {
+    if (!(await gate(req, res, ip))) return;
+    const body = await readBody(req);
+    const t = TERMS.get(String(body.session || ''));
+    if (!t || !t.alive) return json(res, 404, { error: 'sesión no activa' });
+    t.last = Date.now();
+    let buf; try { buf = Buffer.from(String(body.data || ''), body.b64 === false ? 'utf8' : 'base64'); } catch (e) { buf = Buffer.alloc(0); }
+    try { t.proc.stdin.write(buf); } catch (e) {}
+    return json(res, 200, { ok: true });
+  }
+
+  // ── TERMINAL: cerrar sesion. Gate Google.
+  if (url === '/api/term/close' && req.method === 'POST') {
+    if (!(await gate(req, res, ip))) return;
+    const body = await readBody(req);
+    const t = TERMS.get(String(body.session || ''));
+    if (t) { try { t.proc.kill('SIGKILL'); } catch (e) {} TERMS.delete(t.id); audit({ ip, ev: 'term_close', machine: t.machine }); }
+    return json(res, 200, { ok: true });
+  }
+
+
   // acción predefinida
   if (url === '/api/action' && req.method === 'POST') {
     if (!(await gate(req, res, ip))) return;
@@ -453,6 +583,30 @@ const server = http.createServer(async (req, res) => {
     audit({ ip, ev: 'action', machine: m.id, action: body.action, arg: body.arg != null ? String(body.arg).slice(0, 200) : undefined, rc: r.rc, ms: r.ms });
     return json(res, 200, { machine: m.id, action: body.action, ...r });
   }
+
+  // ── CONTROL REMOTO EN VIVO: /api/live/frame — devuelve un frame (screenshot fresco)
+  // de la máquina como JPEG. El panel (control/index.html openRemoteControl) lo sondea
+  // en bucle. Reutiliza la acción 'screenshot' (AgoraCapture/SSH) que ya funciona; si la
+  // captura falla, devuelve 'capture_failed_or_no_permission' (el panel avisa de conceder
+  // Grabación de pantalla). Antes esta ruta NO existía → 404 'no encontrado' en toda la flota.
+  if (url === '/api/live/frame') {
+    if (!(await gate(req, res, ip))) return;
+    const q = new URL(req.url, 'http://x').searchParams;
+    const m = machineById(q.get('machine'));
+    if (!m) return json(res, 400, { error: 'máquina desconocida' });
+    const fn = resolveAction('screenshot', m);
+    if (!fn) return json(res, 500, { error: 'sin acción screenshot' });
+    const r = await run(m, fn(null, m), 20000);
+    const b64 = String(r.stdout || '').trim();
+    if (r.rc !== 0 || !b64 || /ERR_NO_CAPTURE/.test(b64) || b64.length < 200) {
+      audit({ ip, ev: 'live_frame_fail', machine: m.id, rc: r.rc });
+      return json(res, 502, { error: 'capture_failed_or_no_permission', detail: String(r.stderr || b64 || '').slice(0, 140) });
+    }
+    let buf; try { buf = Buffer.from(b64, 'base64'); } catch (e) { return json(res, 502, { error: 'bad-capture' }); }
+    res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'no-store' });
+    return res.end(buf);
+  }
+
 
   // ── ONBOARDING: alta/auto-registro de una máquina nueva en la flota ──────────
   // La máquina nueva (p.ej. una MacBook Air) se da de alta sola: POST con su

@@ -1166,7 +1166,10 @@ $('#cards').addEventListener('click', async e=>{
     if(turnOn){
       const screen=prompt('Pantalla (screen id) — vacío = la última configurada:',''); if(screen===null) return;
       const circuit=prompt('Circuito (circuit id) — vacío = el último configurado:',''); if(circuit===null) return;
-      arg=screen.trim()+'|'+circuit.trim();
+      // tag ≠ circuito: el circuito agrupa pantallas (imputación/mando); el tag
+      // FILTRA el contenido — con "musica" el canal solo emite lo etiquetado musica.
+      const tag=prompt('Tag de contenido (p.ej. musica) — solo emitirá lo etiquetado así · vacío = todo:',''); if(tag===null) return;
+      arg=screen.trim()+'|'+circuit.trim()+'|'+tag.trim();
     }
     const act = turnOn ? 'signage_on' : 'signage_off';
     const label = turnOn ? '📺 signage' : '⏹️ parar';

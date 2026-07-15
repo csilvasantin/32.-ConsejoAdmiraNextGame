@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>🎛 Mando de emisión — AdmiraNext Fleet</title>
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#060a0f">
+<style>
+  html,body{margin:0;height:100%;background:#060a0f;color:#dff6ea;
+    font-family:ui-monospace,SFMono-Regular,Menlo,monospace;display:flex;align-items:center;justify-content:center}
+  .box{text-align:center;line-height:1.8;padding:24px}
+  .box b{color:#3df08a}
+  .box .sub{font-size:12px;color:#6f8faa;letter-spacing:.08em}
+  a{color:#38d6ff}
+</style>
+</head>
+<body>
+  <!-- admira.live/control/remote?machine=<id de flota> — mando de emisión de UN
+       equipo: reenvía al 🎛 mando de admira.tv (remotecontrol r11) en modo solo=1,
+       que fija y muestra únicamente la tarjeta de esa pantalla (volumen, siguiente/
+       anterior, primera/última, playlist y segmentación por tags en vivo).
+       Sin ?machine= (ni ?screen=) → mando completo de toda la flota. -->
+  <div class="box">
+    <div>🎛 Abriendo el <b>mando de emisión</b>…</div>
+    <div class="sub" id="who"></div>
+    <div class="sub">Si no salta, <a id="go" href="https://admira.tv/remotecontrol/">continúa aquí</a>.</div>
+  </div>
+  <script>
+    (function(){
+      var q=new URLSearchParams(location.search);
+      var machine=(q.get('machine')||'').trim(), screen=(q.get('screen')||'').trim();
+      var u='https://admira.tv/remotecontrol/';
+      if(machine) u+='?machine='+encodeURIComponent(machine)+'&solo=1';
+      else if(screen) u+='?screen='+encodeURIComponent(screen)+'&solo=1';
+      document.getElementById('who').textContent=machine||screen||'flota completa';
+      document.getElementById('go').href=u;
+      location.replace(u);
+    })();
+  </script>
+</body>
+</html>

@@ -2248,11 +2248,11 @@ function collapseAllToggle(){
   // Botón "🖥️ control remoto" de cada tarjeta (delegación).
   document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-rc]'); if(!b)return; e.preventDefault(); window.openRemoteControl(b.getAttribute('data-rc'), b.getAttribute('data-rcname')||b.getAttribute('data-rc')); });
 
-  // Botón "🎛 mando" — abre el mando de EMISIÓN de admira.tv enganchado a la
-  // pantalla de ese equipo (?machine= → el mando la localiza vía /signage/screens;
-  // si el player aún no reporta machine, cae a usar el id como screen manual).
+  // Botón "🎛 mando" — abre /control/remote (mando de emisión de UN solo equipo:
+  // reenvía a admira.tv/remotecontrol?machine=<id>&solo=1, que fija y muestra
+  // únicamente la tarjeta de esa pantalla, con playlist y tags en vivo).
   document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-mando]'); if(!b)return; e.preventDefault();
-    window.open('https://admira.tv/remotecontrol/?machine='+encodeURIComponent(b.getAttribute('data-mando')),'_blank','noopener'); });
+    window.open('/control/remote/?machine='+encodeURIComponent(b.getAttribute('data-mando')),'_blank','noopener'); });
 
   /* Reutilizable: engancha el MISMO motor (vídeo en vivo + ratón/teclado) a un <img>
      externo, p.ej. el del monitor CRT. Devuelve {stop, setControl}. No toca el overlay. */

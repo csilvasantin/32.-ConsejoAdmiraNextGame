@@ -1,5 +1,8 @@
 <!DOCTYPE html>
-<!-- players · v.2026.07.13.r36 · página PROPIA de admira.tv: pantallas emitiendo (plano de CONTENIDO) + mando remoto en vivo.
+<!-- players · v.2026.07.16.r37 · página PROPIA de admira.tv: pantallas emitiendo (plano de CONTENIDO) + mando remoto en vivo.
+     r37: IoT en «CANALES DS · FLOTA» — fila de ENERGÍA/SISTEMA (☀️ encender · 🌙 apagar pantalla · 🔅 brillo · 🔁 player · ⏻ reiniciar · 🚨 emergencia)
+          + CHIPS DE TELEMETRÍA por tarjeta (🌡 temp · 🧠 carga · ▦ RAM · 💾 disco · ⏱ uptime · ▶ player). Las acciones fluyen por la MISMA cola
+          /api/cmd (el worker las pasa tal cual al executor v2); la telemetría llega en b.telemetry de /api/browsers (requiere el patch aditivo del worker).
      r36: SECCIÓN «CANALES DS · FLOTA» (id=canales-ds) — mando remoto de la red AdmiraNeXT.
           Cumple la promesa del tooltip de /control («Aparece en Players con su mando remoto»).
           Fuente: admira-navegadores/api/browsers (executores local-<maquina>); estado de antena via signage/now;
@@ -206,6 +209,21 @@
     .dscmd button.open{color:#7ad0ff}
     .dscmd button.flash{background:linear-gradient(160deg,rgba(91,214,192,.32),rgba(122,162,255,.16));border-color:var(--acc);box-shadow:0 0 0 1px var(--acc),0 0 16px -4px var(--acc)}
     .dscmd button.flash.err{background:rgba(255,107,107,.22);border-color:var(--bad);box-shadow:0 0 0 1px var(--bad)}
+    /* ── IoT: energía / sistema (agente de dispositivo) — paleta fría para distinguir del mando ámbar ── */
+    .dscmd-iot{grid-template-columns:repeat(3,1fr);margin-top:8px}
+    .dscmd-iot button{border-color:#2f5a6d;background:#08161a;color:#8fe3ff;box-shadow:1px 1px 0 #000}
+    .dscmd-iot button:hover{border-color:#40c0f0;background:#10262e;color:#fff}
+    .dscmd-iot button.danger{border-color:#6d2f2f;background:#1a0808;color:#ff9a9a}
+    .dscmd-iot button.danger:hover{border-color:#ff6b6b;background:#2a1010;color:#fff}
+    .dscmd-iot button.emerg{border-color:#8b5a14;background:#241400;color:#ffcf66}
+    .dscmd-iot button.emerg:hover{border-color:#ffb454;background:#3a2410;color:#fff}
+    /* ── Chips de telemetría IoT ── */
+    .tele{display:flex;flex-wrap:wrap;gap:5px;margin-top:9px;min-height:1.6em}
+    .tele .tchip{font-family:var(--mono);font-size:10.5px;padding:2px 7px;border:1px solid var(--line);border-radius:999px;color:var(--mut);white-space:nowrap;background:rgba(255,255,255,.02)}
+    .tele .tchip.ok{color:var(--ok);border-color:#2f6d5a}
+    .tele .tchip.warn{color:var(--warn);border-color:#6d5a2f}
+    .tele .tchip.hot{color:var(--bad);border-color:#6d2f2f;box-shadow:0 0 8px -3px var(--bad)}
+    .tele .tchip.mut{opacity:.5;font-style:italic}
   </style>
 </head>
 <body>
@@ -754,6 +772,8 @@
      · GET  api.admira.store/signage/now?screen=ds-<m>  → señal REAL de antena (lastSeen fresco = EMITIENDO)
      · POST admira-navegadores…/api/cmd {deviceId,action,url} con Bearer (credencial Google del gate)
             actions: open-channel · close-channel · reload · navigate
+            IoT (executor v2): display-on · display-off · brightness(url=0.1–1.0) · restart-player · reboot · (emergency = navigate inmediato)
+     · Telemetría: b.telemetry de /api/browsers → {tempC,load1,cpus,memUsedPct,diskUsedPct,uptimeS,player}
    Self-contained (IIFE). Reutiliza el mismo login Google del gate que /control (admira_gate.cred).
    ══════════════════════════════════════════════════════════════════════════ */
 (function(){
@@ -774,6 +794,21 @@
 
   // deviceId local-<maquina> → screen ds-<maquina> (misma normalización que navDeviceId en /control)
   const screenOf=deviceId=>'ds-'+String(deviceId||'').replace(/^local-/,'');
+
+  // ── Telemetría IoT (latido de hardware que reporta el executor v2) ──
+  // Degrada a «— sin telemetría —» si el executor/worker aún no la propaga.
+  function fmtUptime(s){ s=+s||0; const d=Math.floor(s/86400),h=Math.floor(s%86400/3600),m=Math.floor(s%3600/60); return d?d+'d'+h+'h':(h?h+'h'+m+'m':m+'m'); }
+  function teleHTML(t){
+    if(!t || typeof t!=='object') return '<span class="tchip mut">— sin telemetría —</span>';
+    const c=[];
+    if(t.tempC!=null) c.push('<span class="tchip'+(t.tempC>=75?' hot':'')+'" title="temperatura">🌡 '+esc(t.tempC)+'°</span>');
+    if(t.load1!=null) c.push('<span class="tchip" title="carga 1 min / nº CPUs">🧠 '+esc(t.load1)+(t.cpus?' /'+esc(t.cpus):'')+'</span>');
+    if(t.memUsedPct!=null) c.push('<span class="tchip'+(t.memUsedPct>=90?' hot':'')+'" title="memoria usada'+(t.memTotalMB?' de '+Math.round(t.memTotalMB/1024)+' GB':'')+'">▦ '+esc(t.memUsedPct)+'%</span>');
+    if(t.diskUsedPct!=null) c.push('<span class="tchip'+(t.diskUsedPct>=90?' hot':'')+'" title="disco usado'+(t.diskTotalGB?' de '+esc(t.diskTotalGB)+' GB':'')+'">💾 '+esc(t.diskUsedPct)+'%</span>');
+    if(t.uptimeS!=null) c.push('<span class="tchip" title="uptime">⏱ '+esc(fmtUptime(t.uptimeS))+'</span>');
+    if(t.player) c.push('<span class="tchip'+(t.player==='active'?' ok':' warn')+'" title="servicio del player">▶ '+esc(t.player)+'</span>');
+    return c.length?c.join(''):'<span class="tchip mut">— sin telemetría —</span>';
+  }
 
   // Credencial del gate Google (mismo patrón que /control _gateCred): refresca si está rancia.
   async function gateCred(){
@@ -843,14 +878,24 @@
     const lastEl=card.querySelector('[data-dslast]');
     const btn=card.querySelector('button[data-dsa="'+action+'"]');
     if(btn){ btn.classList.remove('err'); btn.classList.add('flash'); setTimeout(()=>btn.classList.remove('flash'),260); }
+    const label={'open-channel':'📺 abrir','close-channel':'⏹ cerrar','reload':'🔄 recargar','navigate':'🌐 navegar',
+      'display-off':'🌙 apagar pantalla','display-on':'☀️ encender pantalla','brightness':'🔅 brillo',
+      'restart-player':'🔁 reiniciar player','reboot':'⏻ reiniciar máquina','emergency':'🚨 emergencia'}[action]||action;
     let url;
     if(action==='open-channel') url=CHANNEL_URL+encodeURIComponent(screen);
-    if(action==='navigate'){
-      url=prompt('Navegar el Chrome de «'+name+'» a qué URL?','https://www.admira.tv/canal.html?screen='+screen);
+    if(action==='navigate' || action==='emergency'){
+      const q = action==='emergency' ? '🚨 EMERGENCIA — forzar AHORA en «'+name+'» esta URL:' : 'Navegar el Chrome de «'+name+'» a qué URL?';
+      url=prompt(q,'https://www.admira.tv/canal.html?screen='+screen);
       if(url===null||!String(url).trim()){ if(btn) btn.classList.remove('flash'); return; }
       url=String(url).trim();
+      action='navigate';                         // emergencia = navigate inmediato (mismo contrato de cola)
     }
-    const label={'open-channel':'📺 abrir','close-channel':'⏹ cerrar','reload':'🔄 recargar','navigate':'🌐 navegar'}[action]||action;
+    if(action==='brightness'){
+      const lv=prompt('Brillo de «'+name+'» (0.1 tenue … 1.0 máximo):','0.4');
+      if(lv===null){ if(btn) btn.classList.remove('flash'); return; }
+      url=String(Math.max(0.1,Math.min(1,parseFloat(lv)||1)));
+    }
+    if(action==='reboot' && !confirm('¿Reiniciar la MÁQUINA «'+name+'»?\nCorta la emisión ~1-2 min mientras arranca.')){ if(btn) btn.classList.remove('flash'); return; }
     if(lastEl) lastEl.innerHTML='→ '+esc(label)+'…';
     const res=await navCmd(deviceId, action, url);
     if(res.ok){
@@ -883,6 +928,15 @@
           '<button data-dsa="reload" title="Recargar la pestaña activa del Chrome de esta máquina"><span class="ic">🔄</span>recargar</button>'+
           '<button data-dsa="navigate" title="Navegar el Chrome de esta máquina a una URL"><span class="ic">🌐</span>navegar</button>'+
         '</div>'+
+        '<div class="dscmd dscmd-iot" title="Control de energía y sistema (IoT) — agente de dispositivo">'+
+          '<button data-dsa="display-on" title="Encender la pantalla física (DPMS on)"><span class="ic">☀️</span>encender</button>'+
+          '<button data-dsa="display-off" title="Apagar la pantalla física (DPMS off) — reversible"><span class="ic">🌙</span>apagar</button>'+
+          '<button data-dsa="brightness" title="Ajustar el brillo (xrandr)"><span class="ic">🔅</span>brillo</button>'+
+          '<button data-dsa="restart-player" title="Reiniciar el kiosko del player (systemctl)"><span class="ic">🔁</span>player</button>'+
+          '<button class="danger" data-dsa="reboot" title="Reiniciar la MÁQUINA — corta la emisión ~1-2 min"><span class="ic">⏻</span>reiniciar</button>'+
+          '<button class="emerg" data-dsa="emergency" title="Forzar una URL AHORA en esta pantalla (takeover)"><span class="ic">🚨</span>emergencia</button>'+
+        '</div>'+
+        '<div class="tele" data-tele>'+teleHTML(b.telemetry)+'</div>'+
         '<div class="slast" data-dslast>&nbsp;</div>'+
       '</div>';
   }
@@ -917,7 +971,7 @@
 
   refresh();
   setInterval(refresh, REFRESH_MS);
-  console.log('%c[players] Canales DS · mando remoto de la flota — v.2026.07.13.r36','color:#5bd6c0;font-weight:700');
+  console.log('%c[players] Canales DS · mando remoto + IoT (energía/telemetría) — v.2026.07.16.r37','color:#5bd6c0;font-weight:700');
 })();
 </script>
 <script>

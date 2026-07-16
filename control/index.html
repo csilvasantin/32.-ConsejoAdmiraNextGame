@@ -445,6 +445,13 @@
   .tq-chip.st-in_progress{border-left-color:var(--acc)} .tq-chip.st-in_progress .tq-st{color:var(--acc)}
   .tq-chip.st-blocked{border-left-color:var(--bad)} .tq-chip.st-blocked .tq-st{color:var(--bad)}
   .tq-chip.st-done{border-left-color:var(--ok);opacity:.72} .tq-chip.st-done .tq-st{color:var(--ok)}
+  .tq-chip.st-sinasig{border-left-color:var(--mut)} .tq-chip.st-sinasig .tq-st{color:var(--mut)}
+  /* Tarjeta de misión FLT como ENLACE a yokup/ticket */
+  a.tq-chip{text-decoration:none;color:inherit;cursor:pointer;transition:.12s}
+  a.tq-chip:hover{background:rgba(255,255,255,.06);border-left-width:4px}
+  .tq-chip .tq-id{flex:none;font-family:var(--mono);font-size:9.5px;color:var(--acc);letter-spacing:.3px}
+  .tq-chip .tq-ag{flex:none;font-family:var(--mono);font-size:9px;color:var(--mut);white-space:nowrap}
+  a.tk-add{text-decoration:none;display:block;text-align:center}
   /* Overlay del tablero TAREAS (kanban 4 columnas) */
   #tareas{position:fixed;inset:0;z-index:120;background:rgba(6,9,15,.97);display:none;flex-direction:column}
   #tareas.show{display:flex}
@@ -454,7 +461,7 @@
   #tareas .tk-bar button{font:inherit;font-size:12px;border:2px solid #8b5a14;background:#2a1a08;color:#ffdd66;box-shadow:2px 2px 0 #000;border-radius:0;padding:6px 12px;cursor:pointer;font-weight:700}
   #tareas .tk-bar button:hover{border-color:#f0c040;color:#fff}
   #tareas .tk-note{font-size:11px;color:var(--mut)}
-  #tareas .tk-board{flex:1;min-height:0;display:grid;grid-template-columns:repeat(4,1fr);gap:14px;padding:16px;overflow:auto}
+  #tareas .tk-board{flex:1;min-height:0;display:grid;grid-template-columns:repeat(auto-fill,minmax(240px,1fr));gap:14px;padding:16px;overflow:auto;align-content:start}
   @media(max-width:900px){ #tareas .tk-board{grid-template-columns:repeat(2,1fr)} }
   @media(max-width:520px){ #tareas .tk-board{grid-template-columns:1fr} }
   .tk-col{display:flex;flex-direction:column;gap:10px;background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:12px;min-height:0}
@@ -496,7 +503,7 @@
       <button id="ssToggle" title="Activar o quitar el salvapantallas en TODA la flota online (toggle)">🖼️ Salva ON</button>
       <button id="playersStandby" title="Standby/Reactivar los PLAYERS de toda la flota (mac/win/linux/ios/android) por canal de comandos — pone el canal en negro sin cerrar la app">⏻ Standby players</button>
       <button id="msgAll" title="Enviar un mensaje/encargo a TODOS los equipos vivos (broadcast por el router de encargos AdmiraNeXT — con ACK y traza en Telegram)">📣 Mensaje a todos</button>
-      <button id="tareasOpen" title="Tablero TAREAS — kanban de las 4 MacBook Air (Rosa · Azul · Crema · Plata): presencia + encargos por máquina">📋 Tablero TAREAS</button>
+      <button id="tareasOpen" title="Tablero TAREAS — VISOR de las misiones FLT de yokup por máquina (toda la flota): presencia + misiones + enlace a yokup">📋 Tablero TAREAS</button>
       <label title="Beep cuando un equipo se cae o su captura empieza a fallar"><input type="checkbox" id="sndToggle"> 🔔 sonido</label>
       <label title="No mostrar los equipos desconectados"><input type="checkbox" id="hideOff"> 🙈 ocultar offline</label>
       <button id="collapseAll" title="Colapsar o expandir todas las tarjetas">⊟ colapsar todas</button>
@@ -567,7 +574,7 @@
         <button class="primary" id="csRun">▶ ejecutar</button>
         <button id="csClear">limpiar</button>
       </div>
-      <div class="note">El comando se ejecuta de verdad en la máquina elegida (MacMini local · resto por SSH). Acceso por tu login de Google. <span style="opacity:.55">· 💬 mensajería a equipos v.2026.07.08.r1 · 📋 tareas v.2026.07.13.r1</span></div>
+      <div class="note">El comando se ejecuta de verdad en la máquina elegida (MacMini local · resto por SSH). Acceso por tu login de Google. <span style="opacity:.55">· 💬 mensajería a equipos v.2026.07.08.r1 · 📋 tareas v.2026.07.16.r1 (visor yokup)</span></div>
       <div class="out" id="out"><div class="empty">Sin resultados todavía.</div></div>
     </div>
   </footer>
@@ -599,8 +606,8 @@
 </div>
 <div id="tareas">
   <div class="tk-bar">
-    <span class="tk-title">📋 TAREAS · MacBook Air</span>
-    <span class="tk-note" id="tareasNote">Rosa · Azul · Crema · Plata — presencia + encargos por máquina</span>
+    <span class="tk-title">📋 TAREAS · misiones de la flota</span>
+    <span class="tk-note" id="tareasNote">misiones FLT por máquina · fuente única: yokup · clic en una misión → abrir en yokup</span>
     <span class="spacer"></span>
     <button id="tareasRefresh" title="Refrescar ahora (se auto-refresca cada 30s)">↻ refrescar</button>
     <button id="tareasClose" title="Cerrar (Esc)">✕ cerrar</button>
@@ -1456,33 +1463,28 @@ async function fetchMachineInbox(machineId){
   }
   return null; // sin respuesta usable → degradar
 }
-// Pinta la mini-cola de una tarjeta desde la caché.
+// Pinta la mini-cola de una tarjeta Air desde las MISIONES FLT de yokup.
 function paintMiniQueue(machineId){
   const air=airOf(machineId); if(!air) return;
   const list=document.querySelector('.mq-list[data-mqlist="'+air.id+'"]');
   const cnt=document.querySelector('.mq-count[data-mqcount="'+air.id+'"]');
   if(!list) return;
-  const items=(AIR_INBOX[air.id]||[]).slice()
-    .filter(it=>taskStatus(it)!=='done')   // en la tarjeta solo los activos
-    .sort((a,b)=>TASK_ST_ORDER[taskStatus(a)]-TASK_ST_ORDER[taskStatus(b)]);
+  const items=(MISSIONS_BY_MACHINE[air.id]||[]).slice()
+    .filter(m=>m.status!=='resolved')
+    .sort((a,b)=>MST_ORDER[missionState(a).k]-MST_ORDER[missionState(b).k]);
   if(cnt) cnt.textContent=items.length?('· '+items.length):'';
-  if(!(air.id in AIR_INBOX)){ list.innerHTML='<div class="mq-empty">—</div>'; return; } // aún sin dato
-  if(!items.length){ list.innerHTML='<div class="mq-empty">sin encargos activos</div>'; return; }
-  list.innerHTML=items.slice(0,6).map(it=>{ const st=taskStatus(it);
-    return '<div class="tq-chip st-'+st+'"><span class="tq-txt">'+_truncate(taskText(it)||'(sin texto)',60).replace(/</g,'&lt;')
-      +'</span><span class="tq-st">'+(TASK_ST_LABEL[st]||st)+'</span></div>'; }).join('');
+  if(!MISSIONS_TS){ list.innerHTML='<div class="mq-empty">—</div>'; return; }
+  if(!items.length){ list.innerHTML='<div class="mq-empty">sin misiones activas</div>'; return; }
+  list.innerHTML=items.slice(0,6).map(m=>{ const st=missionState(m);
+    return '<a class="tq-chip st-'+st.k+'" href="'+YOKUP_TICKET+encodeURIComponent(m.id)+'" target="_blank" rel="noopener"><span class="tq-txt">'+_truncate(String(m.subject||'(sin título)'),56).replace(/</g,'&lt;')
+      +'</span><span class="tq-st">'+st.l+'</span></a>'; }).join('');
 }
 function paintAllMiniQueues(){ AIRS.forEach(a=>paintMiniQueue(a.id)); }
 // Refetch de las 4 colas + re-pintado (tarjetas y kanban si está abierto).
 let _airBusy=false;
 async function refreshAirQueues(){
   if(_airBusy) return; _airBusy=true;
-  try{
-    await Promise.all(AIRS.map(async a=>{
-      const items=await fetchMachineInbox(a.id);
-      if(items!==null){ AIR_INBOX[a.id]=items; AIR_INBOX_TS[a.id]=Date.now(); }
-    }));
-  }catch(e){}
+  try{ await loadFleetMissions(); }catch(e){}   // fuente única: misiones FLT de yokup
   _airBusy=false;
   try{ paintAllMiniQueues(); }catch(e){}
   if($('#tareas').classList.contains('show')) renderTareas();
@@ -1498,35 +1500,74 @@ function _agoStr(updatedSec){
   const s=Math.max(0, Math.round(Date.now()/1000 - updatedSec));
   if(s<60) return 'hace '+s+'s'; const m=Math.round(s/60); if(m<60) return 'hace '+m+'m'; return 'hace '+Math.round(m/60)+'h';
 }
+// ============================================================
+// El Tablero TAREAS es VISOR de las MISIONES FLT de yokup (gestor
+// único), agrupadas por MÁQUINA — toda la flota, estados canónicos,
+// enlace a yokup. NO crea encargos por su cuenta. (Carlos, 2026-07-16)
+// ============================================================
+const MISSIONS_URL='https://yokup-rtc.csilvasantin.workers.dev/fleet/missions';
+const YOKUP_TICKET='https://www.yokup.com/ticket?id=';
+const YOKUP_MISIONES='https://www.yokup.com/misiones';
+// Nombre canónico de máquina (mismo criterio que yk-misiones de yokup).
+const MQ_ALIAS={macbookair16:'macbookair16plata', macbookpronegro14:'macbookpro14'};
+const MQ_LABEL={macbookpro14:'MacBookPro14', macbookpro16:'MacBookPro16', macbookair16plata:'MacBookAir16plata', macbookairplata:'MacBookAirPlata', macbookairazul:'MacBookAirAzul', macbookaircrema:'MacBookAirCrema', macbookairrosa:'MacBookAirRosa', macmini:'MacMini', asuszenbook:'ASUS Zenbook', dgxspark:'DGX Spark', thinkstationpgx:'ThinkStation PGX'};
+const MQ_EM={macbookairrosa:'🩷',macbookairazul:'🔵',macbookaircrema:'🟡',macbookairplata:'⚪',macbookair16plata:'⚪',macbookpro14:'⬛',macbookpro16:'⬛',macmini:'🖥',dgxspark:'⚡',thinkstationpgx:'🖥',asuszenbook:'💻'};
+function mqCanon(raw){ let n=_norm(raw||''); return MQ_ALIAS[n]||n; }
+function mqLabel(c){ return MQ_LABEL[c]||c||'sin máquina'; }
+function mqEm(c){ return MQ_EM[c]||'🖥'; }
+function missionMachine(m){ return mqCanon(m.loc||m.machine||''); }
+// Estado CANÓNICO (mismo que yokup). k = clase css reutilizada.
+function missionState(m){
+  if(m.status==='resolved')    return {k:'done',       l:'Finalizada'};
+  if(m.status==='in_progress') return {k:'in_progress',l:'En curso'};
+  return (m.assignee||m.loc||m.machine) ? {k:'pending', l:'Asignada'} : {k:'sinasig', l:'Sin asignar'};
+}
+const MST_ORDER={in_progress:0, pending:1, sinasig:2, done:3};
+let MISSIONS_BY_MACHINE={};   // canon → [misiones]
+let MISSIONS_TS=0;
+async function loadFleetMissions(){
+  try{
+    const r=await fetch(MISSIONS_URL+'?_t='+Date.now(),{cache:'no-store'});
+    const d=await r.json().catch(()=>null);
+    const by={};
+    ((d&&d.missions)||[]).forEach(m=>{ const c=missionMachine(m)||'_sin'; (by[c]=by[c]||[]).push(m); });
+    MISSIONS_BY_MACHINE=by; MISSIONS_TS=Date.now(); return true;
+  }catch(e){ return false; }
+}
+// Columnas = las 4 Airs SIEMPRE + toda máquina con misiones (canon), en orden.
+function tareasCols(){
+  const airIds=AIRS.map(a=>a.id), set=new Set(airIds);
+  Object.keys(MISSIONS_BY_MACHINE).forEach(c=>{ if(c && c!=='_sin') set.add(c); });
+  return [...airIds, ...[...set].filter(c=>!airIds.includes(c)).sort()];
+}
+function presenceFor(canon){ for(const k in PRESENCE_FULL){ if(mqCanon(k)===canon) return PRESENCE_FULL[k]; } return null; }
+
 // ---- Vista kanban (overlay #tareas) ----
 function renderTareas(){
   const board=$('#tareas-board'); if(!board) return;
-  board.innerHTML=AIRS.map(air=>{
-    const pr=airPresence(air);
+  board.innerHTML=tareasCols().map(canon=>{
+    const pr=presenceFor(canon);
     const fresh = pr && (Date.now()/1000 - (pr.updated||0) < 8*60);
-    let presHtml;
-    if(pr){
-      presHtml='<div class="tk-agent'+(fresh?' on':'')+'"><span class="tk-dot"></span>'
-        +(pr.persona||'—').replace(/</g,'&lt;')+(pr.runtime?(' · '+pr.runtime):'')+'</div>'
+    let presHtml = pr
+      ? '<div class="tk-agent'+(fresh?' on':'')+'"><span class="tk-dot"></span>'+(pr.persona||'—').replace(/</g,'&lt;')+(pr.runtime?(' · '+pr.runtime):'')+'</div>'
         +'<div class="tk-mode">modo '+(pr.mode||'—').replace(/</g,'&lt;')+' · late '+_agoStr(pr.updated)+'</div>'
-        +'<div class="tk-focus">'+(pr.focus?_truncate(pr.focus,180):'sin foco reportado').replace(/</g,'&lt;')+'</div>';
-    } else {
-      presHtml='<div class="tk-agent"><span class="tk-dot"></span>sin agente detectado</div>';
-    }
-    const has=(air.id in AIR_INBOX);
-    const items=(AIR_INBOX[air.id]||[]).slice().sort((a,b)=>{
-      const d=TASK_ST_ORDER[taskStatus(a)]-TASK_ST_ORDER[taskStatus(b)]; if(d) return d;
-      return (b.ts||0)-(a.ts||0);
-    });
+        +'<div class="tk-focus">'+(pr.focus?_truncate(pr.focus,180):'sin foco reportado').replace(/</g,'&lt;')+'</div>'
+      : '<div class="tk-agent"><span class="tk-dot"></span>sin agente detectado</div>';
+    const missions=(MISSIONS_BY_MACHINE[canon]||[]).slice()
+      .filter(m=>m.status!=='resolved')     // el kanban muestra las ACTIVAS
+      .sort((a,b)=>{ const s=MST_ORDER[missionState(a).k]-MST_ORDER[missionState(b).k]; return s||((b.created_at||0)-(a.created_at||0)); });
     let tasksHtml;
-    if(!has){ tasksHtml='<div class="tk-empty">— (esperando el contrato del worker)</div>'; }
-    else if(!items.length){ tasksHtml='<div class="tk-empty">sin encargos dirigidos a esta máquina</div>'; }
-    else tasksHtml=items.map(it=>{ const st=taskStatus(it);
-      return '<div class="tq-chip st-'+st+'"><span class="tq-txt" title="'+taskText(it).replace(/"/g,'&quot;').replace(/</g,'&lt;')+'">'
-        +_truncate(taskText(it)||'(sin texto)',80).replace(/</g,'&lt;')+'</span><span class="tq-st">'+(TASK_ST_LABEL[st]||st)+'</span></div>'; }).join('');
-    return '<div class="tk-col"><div class="tk-colhd"><span class="tk-em">'+air.em+'</span><span class="tk-nm">'+air.label+'</span></div>'
+    if(!MISSIONS_TS) tasksHtml='<div class="tk-empty">— cargando misiones…</div>';
+    else if(!missions.length) tasksHtml='<div class="tk-empty">sin misiones activas</div>';
+    else tasksHtml=missions.map(m=>{ const st=missionState(m);
+      const ag=m.assignee?('<span class="tq-ag">👷 '+String(m.assignee).replace(/</g,'&lt;')+'</span>'):'';
+      return '<a class="tq-chip st-'+st.k+'" href="'+YOKUP_TICKET+encodeURIComponent(m.id)+'" target="_blank" rel="noopener" title="'+String(m.subject||'').replace(/"/g,'&quot;').replace(/</g,'&lt;')+'">'
+        +'<span class="tq-id">'+String(m.id).replace(/</g,'&lt;')+'</span>'
+        +'<span class="tq-txt">'+_truncate(String(m.subject||'(sin título)'),72).replace(/</g,'&lt;')+'</span>'
+        +'<span class="tq-st">'+st.l+'</span>'+ag+'</a>'; }).join('');
+    return '<div class="tk-col"><div class="tk-colhd"><span class="tk-em">'+mqEm(canon)+'</span><span class="tk-nm">'+mqLabel(canon).replace(/</g,'&lt;')+'</span></div>'
       +'<div class="tk-presence">'+presHtml+'</div>'
-      +'<button class="tk-add" data-tkadd="'+air.id+'">➕ encargo a '+air.label+'</button>'
+      +'<a class="tk-add" href="'+YOKUP_MISIONES+'" target="_blank" rel="noopener">➕ nueva misión en yokup</a>'
       +'<div class="tk-tasks">'+tasksHtml+'</div></div>';
   }).join('');
 }

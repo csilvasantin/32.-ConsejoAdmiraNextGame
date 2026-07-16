@@ -2,7 +2,7 @@
 <!-- control · v2026.07.02c · icono = fondo (personaje) del equipo SIEMPRE, nunca el screenshot en vivo · wallpapers reales subidos por máquina -->
 <!-- control-mensajeria · v.2026.07.08.r1 · 💬 mensaje por equipo + 📣 a todos → router de encargos AdmiraNeXT (ACK + traza Telegram) · auth = gate Google · fix: refresco silencioso de cred + re-login (control remoto) -->
 <!-- control-pantallas · v.2026.07.10.r2 · MUDANZA: la sección «Pantallas · Players» (plano de CONTENIDO: /signage/screens + /signage/now + mando M8 /control/cmd + doble tick) se movió a su PÁGINA PROPIA → /players/. /control queda solo para el plano de MÁQUINAS. -->
-<!-- control-tareas · v.2026.07.13.r1 · TABLERO DE TAREAS por máquina para las 4 MacBook Air (Rosa·Azul·Crema·Plata): mini-cola «TAREAS» + botón «➕ encargo» en cada tarjeta (POST /api/send con campo `machine`) y vista kanban 4 columnas (#tareas-board) con presencia + encargos. Datos: GET /api/bot-inbox|/api/public/inbox?machine=<id>. Degrada a «—» hasta que el worker exponga target_machine. -->
+<!-- control-tareas · v.2026.07.16.r2 · VISOR de misiones FLT de yokup por máquina (kanban #tareas-board + mini-cola por tarjeta); fuente /fleet/missions de yokup; ➕ y misiones enlazan a yokup (control NO crea encargos). -->
 <html lang="es">
 <head>
     <script src="/admira-bar.js?v=20260713-r36"></script>
@@ -435,6 +435,7 @@
   .mqueue .mq-hd .spacer{flex:1}
   .mqueue .mq-add{font:inherit;font-size:11px;border:1px solid var(--acc2);color:var(--acc2);background:transparent;border-radius:8px;padding:3px 9px;cursor:pointer;font-weight:700}
   .mqueue .mq-add:hover{background:var(--acc2);color:#04120e}
+  .mqueue a.mq-add{text-decoration:none;display:inline-block}
   .mqueue .mq-list{display:flex;flex-direction:column;gap:5px}
   .mqueue .mq-empty{font-size:11px;color:var(--mut);font-style:italic}
   .tq-chip{display:flex;align-items:center;gap:7px;font-size:11.5px;border:1px solid var(--line);border-left-width:3px;border-radius:7px;padding:5px 8px;background:rgba(255,255,255,.02)}
@@ -574,7 +575,7 @@
         <button class="primary" id="csRun">▶ ejecutar</button>
         <button id="csClear">limpiar</button>
       </div>
-      <div class="note">El comando se ejecuta de verdad en la máquina elegida (MacMini local · resto por SSH). Acceso por tu login de Google. <span style="opacity:.55">· 💬 mensajería a equipos v.2026.07.08.r1 · 📋 tareas v.2026.07.16.r1 (visor yokup)</span></div>
+      <div class="note">El comando se ejecuta de verdad en la máquina elegida (MacMini local · resto por SSH). Acceso por tu login de Google. <span style="opacity:.55">· 💬 mensajería a equipos v.2026.07.08.r1 · 📋 tareas v.2026.07.16.r2 (visor yokup)</span></div>
       <div class="out" id="out"><div class="empty">Sin resultados todavía.</div></div>
     </div>
   </footer>
@@ -980,7 +981,7 @@ function renderCards(ms){
         ${m.online?`<button data-term="${m.id}" data-termname="${(m.name||'').replace(/"/g,'')}" title="Terminal interactiva (consola SSH en vivo: cd, htop, vim, logs). Ideal para las máquinas Linux." style="border-color:#5bd6c0;color:#5bd6c0;font-weight:700">🖳 terminal</button>`:''}
       </div>
       ${isAirId(m.id)?`<div class="mqueue" data-mqueue="${m.id}">
-        <div class="mq-hd">📋 TAREAS <span class="mq-count" data-mqcount="${m.id}"></span><span class="spacer"></span><button class="mq-add" data-mqadd="${m.id}" title="Nuevo encargo dirigido a esta máquina (${m.name})">➕ encargo</button></div>
+        <div class="mq-hd">📋 MISIONES <span class="mq-count" data-mqcount="${m.id}"></span><span class="spacer"></span><a class="mq-add" href="https://www.yokup.com/misiones" target="_blank" rel="noopener" title="Dar de alta una misión en yokup (gestor único) — control ya no crea encargos por su cuenta">➕ misión (yokup)</a></div>
         <div class="mq-list" data-mqlist="${m.id}"><div class="mq-empty">—</div></div>
       </div>`:''}
       <div class="capwarn" data-capwarn="${m.id}">⚠️ sin permiso de captura <button data-fix="${m.id}" title="Abrir el panel de Grabación de pantalla en ese Mac, avisar al usuario y reactivar el agente">🛡️ enviar arreglo por SSH</button></div>
@@ -1587,15 +1588,9 @@ function closeTareas(){ $('#tareas').classList.remove('show'); if(_tareasTimer){
   const rb=$('#tareasRefresh'); if(rb) rb.onclick=()=>{ loadPersonas().then(refreshAirQueues).catch(()=>refreshAirQueues()); };
   const ov=$('#tareas'); if(ov) ov.addEventListener('click',e=>{ if(e.target===ov) closeTareas(); });
   document.addEventListener('keydown',e=>{ if(e.key==='Escape' && $('#tareas').classList.contains('show')) closeTareas(); });
-  // ➕ encargo del kanban → abre el compositor con la máquina fijada.
-  const board=$('#tareas-board'); if(board) board.addEventListener('click',e=>{
-    const a=e.target.closest('button[data-tkadd]'); if(a) openMsgModal(a.dataset.tkadd);
-  });
+  // Los ➕ del kanban y de las mini-colas ya NO crean encargos en control: son
+  // enlaces (<a>) a yokup.com/misiones (gestor único). No hay wiring a openMsgModal.
 })();
-// ➕ encargo de la mini-cola en la tarjeta (delegado en #cards).
-$('#cards').addEventListener('click', e=>{
-  const a=e.target.closest('button[data-mqadd]'); if(a){ e.stopPropagation(); openMsgModal(a.dataset.mqadd); }
-});
 // Refresco de fondo de las colas (independiente del refresh de 8s de las tarjetas).
 setInterval(()=>{ try{ refreshAirQueues(); }catch(e){} }, 30000);
 

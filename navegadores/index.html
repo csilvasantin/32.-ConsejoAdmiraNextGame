@@ -117,6 +117,19 @@
     .uso.mudo{color:var(--mut)}   .uso.mudo .pt{background:#5a6678}
     .uso .dom{font-family:var(--mono);font-weight:400;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
+    /* ── Telemetría: de un vistazo, si este ordenador tiene músculo libre ── */
+    .tele{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;font-family:var(--mono);color:var(--mut);
+      border-top:1px solid var(--line);padding-top:9px}
+    .tele b{font-weight:700;color:var(--ink)}
+    .tele .m{display:flex;align-items:center;gap:4px}
+    .tele .m.alto b{color:var(--warn)}
+    .tele .m.critico b{color:var(--bad)}
+    .tele .bar{width:26px;height:4px;border-radius:3px;background:var(--line);overflow:hidden;flex:none}
+    .tele .bar i{display:block;height:100%;background:var(--ok)}
+    .tele .m.alto .bar i{background:var(--warn)}
+    .tele .m.critico .bar i{background:var(--bad)}
+    .tele .specs{color:#5a6678}
+
     /* ── Contador honesto: disponibles arriba, desglose por SO ── */
     #count.pill{font-weight:700}
     #osbreak{font-size:11px;color:var(--mut);font-family:var(--mono);display:flex;gap:10px;flex-wrap:wrap}
@@ -179,7 +192,10 @@
         <span><span class="uso libre"><span class="pt"></span>libre</span> aparcado en reposo</span>
         <span><span class="uso ocupado"><span class="pt"></span>ocupado</span> con otra pestaña</span>
         <span><span class="machine-badge unset">sin etiquetar</span> falta asignar máquina</span>
+        <span><span class="tele" style="border:0;padding:0"><span class="m"><b>RAM 74%</b></span></span> ámbar ≥70%, rojo ≥90%</span>
       </div>
+      <p class="note"><b>Carga</b> = load1 ÷ núcleos, así el DGX y un Air se comparan de tú a tú.
+        La manda el executor; hasta el 17-jul el worker la <b>tiraba en silencio</b>.</p>
       <p class="note">El estado se <b>calcula del reloj</b>, no se escribe a mano: ya no hace falta
         poner «OBSOLETO» en el nombre. Y como los <b>deviceId rotan</b>, las fichas se funden
         <b>por ordenador</b>: los ids viejos salen como historial (↺), no como máquinas de más.</p>
@@ -205,7 +221,7 @@
       <div class="cards" id="cards"><div class="empty">Cargando navegadores…</div></div>
       <div style="margin-top:28px;padding-top:12px;border-top:1px solid var(--line);
         font-size:11px;color:var(--mut);font-family:var(--mono);text-align:center">
-        navegadores v3 · <b>navegadores-v.2026.07.17.r3</b> · estado del reloj · sonar /whoami (requiere permiso de red local) · Neo·MacMini
+        navegadores v4 · <b>navegadores-v.2026.07.17.r4</b> · estado del reloj · sonar /whoami · telemetría de flota · Neo·MacMini
       </div>
     </main>
   </div>
@@ -350,6 +366,35 @@
       return {cls:'ocupado', txt:'Ocupado', dom, ay:'Tiene una pestaña activa: alguien lo está usando.'};
     }
 
+    // ── Telemetría: «qué puedo utilizar» en números ─────────────────────────────────────
+    // El executor la manda desde el 16-jul, pero el worker la TIRABA (su /api/report arma el
+    // registro campo a campo y lo que no conoce se pierde sin avisar). Arreglado el 17-jul:
+    // ahora aterriza y por fin se puede ver qué máquina tiene músculo libre — que es la
+    // pregunta de verdad, más que si el navegador está abierto.
+    const pct = (v) => Math.max(0, Math.min(100, Math.round(v)));
+    const nivel = (p) => p>=90?'critico':(p>=70?'alto':'');
+    function medida(etq, p, titulo){
+      return `<span class="m ${nivel(p)}" title="${titulo}">${etq} <b>${p}%</b>`
+           + `<span class="bar"><i style="width:${p}%"></i></span></span>`;
+    }
+    function tele(b){
+      const t = b.telemetry; if(!t) return '';
+      const bits = [];
+      // load1 es carga absoluta: dividida entre núcleos ya es comparable entre un Air y el DGX.
+      if(typeof t.load1==='number' && t.cpus) bits.push(medida('carga', pct(t.load1/t.cpus*100),
+        `carga media ${t.load1} sobre ${t.cpus} núcleos`));
+      if(typeof t.memUsedPct==='number') bits.push(medida('RAM', pct(t.memUsedPct),
+        t.memTotalMB?`${Math.round(t.memTotalMB/1024)} GB en total`:''));
+      if(typeof t.diskUsedPct==='number') bits.push(medida('disco', pct(t.diskUsedPct),
+        t.diskTotalGB?`${t.diskTotalGB} GB en total`:''));
+      if(typeof t.tempC==='number') bits.push(`<span class="m" title="temperatura">🌡 <b>${Math.round(t.tempC)}°</b></span>`);
+      if(!bits.length) return '';
+      const specs = [t.cpus?`${t.cpus} núcleos`:'', t.memTotalMB?`${Math.round(t.memTotalMB/1024)} GB`:'',
+                     t.diskTotalGB?`${t.diskTotalGB>=1000?(t.diskTotalGB/1000).toFixed(1)+' TB':Math.round(t.diskTotalGB)+' GB'}`:'']
+                    .filter(Boolean).join(' · ');
+      return `<div class="tele">${bits.join('')}${specs?`<span class="specs">${specs}</span>`:''}</div>`;
+    }
+
     // ── 2 · ¿Cuál de todas es ESTA máquina? ─────────────────────────────────────────────
     // Se lo PREGUNTAMOS a la máquina, no lo adivinamos: el executor local levanta un http en
     // 127.0.0.1 que responde /whoami → {machine, deviceId} con Access-Control-Allow-Origin:*,
@@ -419,6 +464,7 @@
           <span class="estado t-${tr}" title="${TRAMOS[tr].d}">${TRAMOS[tr].t}</span>
         </div>
         ${u?`<div class="uso ${u.cls}" title="${(u.ay||'').replace(/"/g,'&quot;')}"><span class="pt"></span>${u.txt}${u.dom?` <span class="dom">· ${u.dom}</span>`:''}</div>`:''}
+        ${tele(b)}
         <div class="machine-row"><select>${opts}</select></div>
         <div class="tab">
           ${b.tabUrl ? `<span class="ttl">${b.tabTitle||''}</span><a href="${b.tabUrl}" target="_blank">${b.tabUrl}</a>` : '<i>sin pestaña reportada</i>'}

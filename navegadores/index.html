@@ -81,6 +81,45 @@
     .card .os .did:hover{color:var(--acc)}
     .dot{width:10px;height:10px;border-radius:50%;background:#5a6678;flex:none}
     .dot.on{background:var(--ok);box-shadow:0 0 9px var(--ok)}
+
+    /* ── Tramos de vida: el estado se CALCULA del ts, no se escribe en el nombre ── */
+    .grupo-hd{display:flex;align-items:center;gap:9px;margin:22px 0 12px;font-size:11px;
+      text-transform:uppercase;letter-spacing:.8px;font-weight:800;color:var(--mut)}
+    .grupo-hd:first-child{margin-top:0}
+    .grupo-hd .n{background:var(--panel2);border:1px solid var(--line);border-radius:999px;padding:2px 8px;font-family:var(--mono);letter-spacing:0}
+    .grupo-hd .ln{flex:1;height:1px;background:var(--line)}
+    .grupo-hd.t-online{color:var(--ok)}
+    .grupo-hd.t-inactivo{color:var(--acc2)}
+    .estado{font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:.5px;
+      border:1px solid var(--line);border-radius:999px;padding:2px 7px;color:var(--mut);flex:none}
+    .estado.t-online{color:var(--ok);border-color:var(--ok)}
+    .estado.t-inactivo{color:var(--acc2);border-color:var(--acc2)}
+    .estado.t-dormido{color:var(--warn);border-color:var(--warn)}
+    /* Fantasmas plegados: no ensucian, pero no se ocultan a quien los busque */
+    details.fantasmas{margin-top:26px;border:1px dashed var(--line);border-radius:12px;padding:0 14px}
+    details.fantasmas summary{cursor:pointer;color:var(--mut);font-size:12px;padding:12px 0;list-style:none}
+    details.fantasmas summary::-webkit-details-marker{display:none}
+    details.fantasmas summary:hover{color:var(--ink)}
+    details.fantasmas[open] summary{border-bottom:1px solid var(--line);margin-bottom:14px}
+    details.fantasmas .cards{padding-bottom:14px;opacity:.62}
+
+    /* ── Esta máquina: la tarjeta propia, arriba y marcada ── */
+    .card.yo{border-color:var(--acc);box-shadow:0 0 0 1px var(--acc),0 8px 26px rgba(91,214,192,.13)}
+    .yo-tag{font-size:10px;font-weight:800;letter-spacing:.5px;text-transform:uppercase;
+      background:var(--acc);color:#08221d;border-radius:999px;padding:3px 9px;flex:none}
+    .yo-tag.duda{background:var(--warn);color:#2a1a00}
+
+    /* ── Libre / Ocupado: "qué puedo utilizar" de un vistazo ── */
+    .uso{font-size:11.5px;display:flex;align-items:center;gap:7px;font-weight:600}
+    .uso .pt{width:7px;height:7px;border-radius:50%;flex:none}
+    .uso.libre{color:var(--ok)}   .uso.libre .pt{background:var(--ok)}
+    .uso.ocupado{color:var(--warn)} .uso.ocupado .pt{background:var(--warn)}
+    .uso.mudo{color:var(--mut)}   .uso.mudo .pt{background:#5a6678}
+    .uso .dom{font-family:var(--mono);font-weight:400;color:var(--mut);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+
+    /* ── Contador honesto: disponibles arriba, desglose por SO ── */
+    #count.pill{font-weight:700}
+    #osbreak{font-size:11px;color:var(--mut);font-family:var(--mono);display:flex;gap:10px;flex-wrap:wrap}
     .machine-row{display:flex;align-items:center;gap:8px}
     .machine-row select{flex:1;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:7px 9px;font-size:12.5px}
     .machine-badge{font-weight:700;color:var(--acc2)}
@@ -132,10 +171,18 @@
       </p>
       <div class="rail-hd">Leyenda</div>
       <div class="legend">
-        <span><span class="dot on"></span> reportado hace &lt;90s (online)</span>
-        <span><span class="dot"></span> sin reporte reciente</span>
+        <span><span class="estado t-online">En línea</span> reportó hace &lt;2 min</span>
+        <span><span class="estado t-inactivo">Inactivo</span> callado &lt;24 h</span>
+        <span><span class="estado t-dormido">Dormido</span> callado &lt;7 días</span>
+        <span><span class="estado">Fantasma</span> &gt;7 días: entrada muerta, plegada abajo</span>
+        <span><span class="yo-tag">✦ esta máquina</span> reporta este panel abierto</span>
+        <span><span class="uso libre"><span class="pt"></span>libre</span> aparcado en reposo</span>
+        <span><span class="uso ocupado"><span class="pt"></span>ocupado</span> con otra pestaña</span>
         <span><span class="machine-badge unset">sin etiquetar</span> falta asignar máquina</span>
       </div>
+      <p class="note">El estado se <b>calcula del reloj</b>, no se escribe a mano: ya no hace falta
+        poner «OBSOLETO» en el nombre. Y como los <b>deviceId rotan</b>, las fichas se funden
+        <b>por ordenador</b>: los ids viejos salen como historial (↺), no como máquinas de más.</p>
       <button class="wide" id="btnRaw">ver JSON crudo</button>
     </aside>
 
@@ -151,19 +198,27 @@
         <h1>🌐 Navegadores <span class="tag">/fleet</span></h1>
         <span class="sub">Flota de navegadores Claude-in-Chrome · silicio ↔ carbono</span>
         <span class="spacer"></span>
+        <span id="osbreak" title="desglose por sistema de los que están en línea"></span>
         <span class="pill" id="count">…</span>
         <span id="whoami" title="sesión Google (auth-gate)">👤 …</span>
       </div>
       <div class="cards" id="cards"><div class="empty">Cargando navegadores…</div></div>
+      <div style="margin-top:28px;padding-top:12px;border-top:1px solid var(--line);
+        font-size:11px;color:var(--mut);font-family:var(--mono);text-align:center">
+        navegadores v2 · <b>navegadores-v.2026.07.17.r1</b> · estado calculado del reloj · Neo·MacMini
+      </div>
     </main>
   </div>
   <div class="toast" id="toast"></div>
 
   <script>
     const WORKER = 'https://admira-navegadores.csilvasantin.workers.dev';
-    const MACHINES = ["Mac Mini","MacBook Pro 16","MacBook Pro Negro 14","MacBook Air 16",
-      "MacBook Air Plata","MacBook Air Rosa","MacBook Air Crema","MacBook Air Azul",
-      "MacBook Air Luna","MacBook Air Luna (2)","DGX Spark","ThinkStation PGX","ASUS Zenbook",
+    // Nombres tal y como los reporta la flota (antes esta lista llevaba espacios —"Mac Mini",
+    // "MacBook Pro Negro 14"— que NO casan con el dato real, así que ningún <select>
+    // preseleccionaba su propia máquina y todas parecían "sin etiquetar").
+    const MACHINES = ["MacMini","MacBook Pro 16","MacBookProNegro14","MacBookAir16plata",
+      "MacBookAirPlata","MacBookAirRosa","MacBookAirCrema","MacBookAirAzul",
+      "MacBookAirLuna","DGX Spark","DGX","ThinkStation PGX","ASUS Zenbook",
       "Admira Twin","MetaHuman PC","PC GdG (Sitges)"];
     const $ = s => document.querySelector(s);
     const toast = (m) => { const t=$('#toast'); t.textContent=m; t.classList.add('show'); setTimeout(()=>t.classList.remove('show'),2200); };
@@ -241,6 +296,77 @@
       }
     }
 
+    // ── 1 · Tramo de vida: CALCULADO del ts, nunca escrito a mano ───────────────────────
+    // Hasta ahora la caducidad se apuntaba dentro del nombre ("OBSOLETO", "usar 3801467e",
+    // "no usar") porque no existía campo de estado. El tramo lo deduce el reloj.
+    const TRAMOS = {
+      online:   {t:'En línea',  d:'reportó hace menos de 2 min'},
+      inactivo: {t:'Inactivo',  d:'sin reporte desde hace menos de 24 h'},
+      dormido:  {t:'Dormido',   d:'sin reporte desde hace menos de 7 días'},
+      fantasma: {t:'Fantasma',  d:'más de 7 días sin dar señal: entrada muerta'}
+    };
+    const edadSeg = b => b.ts ? Math.max(0,(Date.now()-b.ts)/1000) : Infinity;
+    function tramo(b){
+      const s = edadSeg(b);
+      if(b.online || s<120) return 'online';
+      if(s<86400) return 'inactivo';
+      if(s<604800) return 'dormido';
+      return 'fantasma';
+    }
+    // Nombre presentable: quita la prosa de caducidad que quedó incrustada en el campo.
+    // Cosmético — NO reescribe el registro del worker.
+    function limpio(txt){
+      const raw = (txt||'').trim();
+      const s = raw.replace(/\[?\s*OBSOLET[OA][^\]]*\]?/ig,'')
+        .replace(/·?\s*(sin daemon|deviceId rotad[oa]|entrada vieja|no usar|usar\s+[0-9a-f]{6,}|ver\s+[0-9a-f]{6,}|rotó a\s+[0-9a-f]{6,})/ig,'')
+        .replace(/\(\s*\)|^[\s·—–-]+|[\s·—–-]+$/g,'').trim();
+      // Si la ficha era SOLO prosa de caducidad ("OBSOLETO — ver 3801467e"), limpiarla la
+      // dejaría sin nombre: mejor enseñar el original que una tarjeta anónima. Vive plegada
+      // entre los fantasmas de todos modos.
+      return s || raw;
+    }
+
+    // ── 3 · Fusión por máquina: los deviceId ROTAN, el ordenador no ─────────────────────
+    // Se agrupa por máquina + tipo (Chrome y "Player OSX" del mismo Mac son cosas distintas
+    // y NO deben fundirse). Gana el reporte más reciente; los ids viejos quedan de historial.
+    const norm = s => (s||'').trim().toLowerCase().replace(/[\s_·-]+/g,'');
+    const tipoDe = b => /^player\b/i.test(b.name||'') ? 'player' : 'chrome';
+    function fusionar(list){
+      const g = new Map();
+      list.forEach(b=>{
+        const k = norm(limpio(b.machine)||b.deviceId)+'|'+tipoDe(b);
+        (g.get(k) || g.set(k,[]).get(k)).push(b);
+      });
+      return [...g.values()].map(grupo=>{
+        grupo.sort((a,b)=>(b.ts||0)-(a.ts||0));
+        const jefe = grupo[0];
+        return Object.assign({}, jefe, {_previos: grupo.slice(1)});
+      });
+    }
+
+    // ── 4 · Libre / Ocupado: "qué puedo utilizar" ───────────────────────────────────────
+    // "Reposo" aparca el navegador en /vista-previa/ → esa pestaña ES la señal de libre.
+    const REPOSO = '/vista-previa';
+    function uso(b){
+      if(tramo(b)!=='online') return null;
+      if(!b.tabUrl) return {cls:'mudo', txt:'no reporta pestaña', dom:''};
+      if(b.tabUrl.includes(REPOSO)) return {cls:'libre', txt:'En reposo · libre', dom:''};
+      let dom=''; try{ dom=new URL(b.tabUrl).hostname.replace(/^www\./,''); }catch{ dom=b.tabUrl.slice(0,30); }
+      return {cls:'ocupado', txt:'Ocupado', dom};
+    }
+
+    // ── 2 · ¿Cuál de todas es ESTA máquina? ─────────────────────────────────────────────
+    // Sin tocar el backend: el navegador donde abres el panel reporta su pestaña activa, que
+    // es justo esta página. Si solo un navegador en línea reporta /navegadores, ese eres tú.
+    // Si hay varios (dos personas mirando a la vez), se marcan como candidatos, no como
+    // certeza. Honesto por diseño: preferimos "quizá" a mentir.
+    let YO = {ids:new Set(), seguro:false};
+    function detectarYo(list){
+      const aqui = list.filter(b=>tramo(b)==='online' && (b.tabUrl||'').includes('/navegadores'));
+      YO = {ids:new Set(aqui.map(b=>b.deviceId)), seguro: aqui.length===1};
+      return YO;
+    }
+
     let ALL = [];
     function passes(b){
       if($('#fOnline').checked && !b.online) return false;
@@ -251,22 +377,33 @@
 
     function card(b){
       const el = document.createElement('div'); el.className='card';
+      const tr = tramo(b), esYo = YO.ids.has(b.deviceId);
+      if(esYo) el.classList.add('yo');
+      // La máquina real puede no estar en la lista fija: se añade para que SÍ preseleccione.
+      const maq = limpio(b.machine);
+      const lista = MACHINES.includes(maq) || !maq ? MACHINES : [maq].concat(MACHINES);
       const opts = ['<option value="">— sin etiquetar —</option>'].concat(
-        MACHINES.map(m=>`<option ${b.machine===m?'selected':''}>${m}</option>`)).join('');
-      const badge = b.machine ? `<span class="machine-badge">${b.machine}</span>` : `<span class="machine-badge unset">sin etiquetar</span>`;
+        lista.map(m=>`<option ${maq===m?'selected':''}>${m}</option>`)).join('');
+      const badge = maq ? `<span class="machine-badge">${maq}</span>` : `<span class="machine-badge unset">sin etiquetar</span>`;
+      const u = uso(b);
+      const previos = b._previos?.length
+        ? `<div class="reporter" title="mismo ordenador, deviceId anterior (rotó)">↺ ${b._previos.length} id${b._previos.length>1?'s':''} anterior${b._previos.length>1?'es':''}: ${b._previos.map(p=>p.deviceId.slice(0,8)+'…').join(' · ')}</div>` : '';
       el.innerHTML = `
         <div class="top">
           <span class="em">${osEmoji(b.os)}</span>
           <div style="flex:1;min-width:0">
-            <div class="nm">${b.name||'Browser'} · ${badge}</div>
+            <div class="nm">${limpio(b.name)||'Navegador'} · ${badge}</div>
             <div class="os">${b.os||'?'} · <span class="did" title="click para copiar el deviceId">${b.deviceId}</span></div>
           </div>
-          <span class="dot ${b.online?'on':''}" title="${b.online?'online':'offline'}"></span>
+          ${esYo?`<span class="yo-tag ${YO.seguro?'':'duda'}" title="${YO.seguro?'este navegador reporta que tiene ABIERTO este panel: es el tuyo':'hay más de un navegador con este panel abierto: candidato, no certeza'}">${YO.seguro?'✦ esta máquina':'✦ ¿esta?'}</span>`:''}
+          <span class="estado t-${tr}" title="${TRAMOS[tr].d}">${TRAMOS[tr].t}</span>
         </div>
+        ${u?`<div class="uso ${u.cls}"><span class="pt"></span>${u.txt}${u.dom?` <span class="dom">· ${u.dom}</span>`:''}</div>`:''}
         <div class="machine-row"><select>${opts}</select></div>
         <div class="tab">
           ${b.tabUrl ? `<span class="ttl">${b.tabTitle||''}</span><a href="${b.tabUrl}" target="_blank">${b.tabUrl}</a>` : '<i>sin pestaña reportada</i>'}
           <div class="reporter">visto por ${b.reporter?.persona||'?'} @ ${b.reporter?.machine||'?'} · <b>${seenAgo(b.ts)}</b></div>
+          ${previos}
         </div>
         <div class="acts">
           <input placeholder="https://… abrir aquí">
@@ -285,17 +422,49 @@
       return el;
     }
 
+    function grid(list){
+      const d=document.createElement('div'); d.className='cards';
+      list.forEach(b=>d.appendChild(card(b))); return d;
+    }
+    function cabecera(tr,n){
+      const h=document.createElement('div'); h.className='grupo-hd t-'+tr;
+      h.innerHTML=`${TRAMOS[tr].t}<span class="n">${n}</span><span class="ln"></span><span style="font-weight:400;text-transform:none;letter-spacing:0">${TRAMOS[tr].d}</span>`;
+      return h;
+    }
     function render(){
-      const cards = $('#cards'); cards.innerHTML='';
-      const shown = ALL.filter(passes);
-      const on = ALL.filter(b=>b.online).length;
-      const unlabeled = ALL.filter(b=>!b.machine).length;
-      $('#count').textContent = `${on}/${ALL.length} online`;
-      $('#count').className = 'pill'+(on?' ok':'');
-      $('#summary').innerHTML = `<b>${ALL.length}</b> navegadores · <b>${on}</b> online · <b>${unlabeled}</b> sin etiquetar${shown.length!==ALL.length?` · <b>${shown.length}</b> mostrados`:''}`;
-      if(!ALL.length){ cards.innerHTML='<div class="empty">Ningún navegador reportado todavía.<br>Un agente con la extensión debe reportar (Fase 2: automático).</div>'; return; }
-      if(!shown.length){ cards.innerHTML='<div class="empty">Nada coincide con el filtro.</div>'; return; }
-      shown.forEach(b=>cards.appendChild(card(b)));
+      const cont = $('#cards'); cont.innerHTML=''; cont.className='';
+      detectarYo(ALL);
+      const uno = fusionar(ALL);                 // un ordenador = una tarjeta
+      const shown = uno.filter(passes);
+      // "Disponibles" = en línea de verdad. Los fantasmas NO entran en el denominador:
+      // antes el contador decía 7/23 contando entradas muertas de hace 11 días.
+      const enLinea = uno.filter(b=>tramo(b)==='online');
+      const libres = enLinea.filter(b=>uso(b)?.cls==='libre').length;
+      $('#count').textContent = `${enLinea.length} ordenador${enLinea.length===1?'':'es'} disponible${enLinea.length===1?'':'s'}`;
+      $('#count').className = 'pill'+(enLinea.length?' ok':'');
+      const porSO = {};
+      enLinea.forEach(b=>{ const k=osEmoji(b.os)+' '+(b.os||'?'); porSO[k]=(porSO[k]||0)+1; });
+      $('#osbreak').innerHTML = Object.entries(porSO).map(([k,v])=>`${k} ×${v}`).join('  ');
+      const fant = uno.filter(b=>tramo(b)==='fantasma').length;
+      $('#summary').innerHTML = `<b>${enLinea.length}</b> disponibles · <b>${libres}</b> en reposo`
+        + ` · <b>${uno.length}</b> ordenadores · <b>${fant}</b> fantasma${fant===1?'':'s'}`
+        + (ALL.length!==uno.length?` · ${ALL.length-uno.length} id${ALL.length-uno.length>1?'s':''} fundido${ALL.length-uno.length>1?'s':''}`:'');
+      if(!ALL.length){ cont.innerHTML='<div class="empty">Ningún navegador reportado todavía.<br>Un agente con la extensión debe reportar (Fase 2: automático).</div>'; return; }
+      if(!shown.length){ cont.innerHTML='<div class="empty">Nada coincide con el filtro.</div>'; return; }
+      // Tu máquina primero; dentro de cada tramo, lo más reciente arriba.
+      const orden = b => (YO.ids.has(b.deviceId)?0:1);
+      ['online','inactivo','dormido'].forEach(tr=>{
+        const g = shown.filter(b=>tramo(b)===tr).sort((a,b)=>orden(a)-orden(b)||(b.ts||0)-(a.ts||0));
+        if(!g.length) return;
+        cont.appendChild(cabecera(tr,g.length)); cont.appendChild(grid(g));
+      });
+      // Fantasmas: plegados, pero nunca escondidos.
+      const g = shown.filter(b=>tramo(b)==='fantasma').sort((a,b)=>(b.ts||0)-(a.ts||0));
+      if(g.length){
+        const d=document.createElement('details'); d.className='fantasmas';
+        d.innerHTML=`<summary>👻 ${g.length} entrada${g.length>1?'s':''} fantasma — ${TRAMOS.fantasma.d}. Desplegar</summary>`;
+        d.appendChild(grid(g)); cont.appendChild(d);
+      }
     }
 
     async function load(){
@@ -310,6 +479,15 @@
     $('#btnRefresh').onclick = () => { expLog('refresco manual','dim'); load(); };
     $('#btnRaw').onclick = () => window.open(WORKER+'/api/browsers','_blank');
     expLog('panel listo','dim');
+    // Sonar automático al abrir: ¿esta máquina tiene executor local? Complementa a la
+    // detección por pestaña (que dice CUÁL eres); esto dice si además puedes ejecutar aquí.
+    (async()=>{
+      try{
+        const ctrl=new AbortController(); setTimeout(()=>ctrl.abort(),1500);
+        await fetch(`http://127.0.0.1:${SONAR_PORT}/soy?t=auto-${Date.now()}`,{signal:ctrl.signal,mode:'no-cors'});
+        expLog(`✅ sonar: hay executor local en 127.0.0.1:${SONAR_PORT} — esta máquina puede ejecutar`,'ok');
+      }catch(e){ expLog(`sonar: sin executor local en 127.0.0.1:${SONAR_PORT} (normal si abres el panel desde otro equipo)`,'dim'); }
+    })();
     load(); setInterval(load, 5000);
   </script>
 <script>

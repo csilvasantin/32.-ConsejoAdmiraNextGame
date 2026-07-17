@@ -175,7 +175,7 @@
         <span><span class="estado t-inactivo">Inactivo</span> callado &lt;24 h</span>
         <span><span class="estado t-dormido">Dormido</span> callado &lt;7 días</span>
         <span><span class="estado">Fantasma</span> &gt;7 días: entrada muerta, plegada abajo</span>
-        <span><span class="yo-tag">✦ esta máquina</span> reporta este panel abierto</span>
+        <span><span class="yo-tag">✦ esta máquina</span> lo dice su executor por 127.0.0.1</span>
         <span><span class="uso libre"><span class="pt"></span>libre</span> aparcado en reposo</span>
         <span><span class="uso ocupado"><span class="pt"></span>ocupado</span> con otra pestaña</span>
         <span><span class="machine-badge unset">sin etiquetar</span> falta asignar máquina</span>
@@ -205,7 +205,7 @@
       <div class="cards" id="cards"><div class="empty">Cargando navegadores…</div></div>
       <div style="margin-top:28px;padding-top:12px;border-top:1px solid var(--line);
         font-size:11px;color:var(--mut);font-family:var(--mono);text-align:center">
-        navegadores v2 · <b>navegadores-v.2026.07.17.r1</b> · estado calculado del reloj · Neo·MacMini
+        navegadores v3 · <b>navegadores-v.2026.07.17.r2</b> · estado del reloj · «esta máquina» por sonar /whoami · Neo·MacMini
       </div>
     </main>
   </div>
@@ -270,30 +270,13 @@
     function label(deviceId, machine){ withSession(async()=>{ const r=await post('/api/label',{deviceId,machine}); if(r&&r.ok){ toast('✅ etiquetado: '+(machine||'—')); expLog(`label ${deviceId.slice(0,8)}… → ${machine||'—'}`,'ok'); load(); } }); }
     function cmd(deviceId, action, url){ withSession(async()=>{ const r=await post('/api/cmd',{deviceId,action,url}); if(r&&r.ok){ toast('📤 encolado: '+action); expLog(`cmd ${action} ${deviceId.slice(0,8)}… ${url||''} → id ${r.id} (lo ejecuta el agente executor)`,'ok'); } }); }
 
-    // ── Identificar "¿este navegador es de esta máquina?" (sonar localhost) ──────────────
-    // Limitación honesta: el JS del panel NO puede levantar un server; solo puede COMPROBAR si
-    // ESTE navegador (el que abre el panel) alcanza un sonar local. Por eso el botón solo tiene
-    // sentido si abres el panel EN la máquina candidata. Para el mapeo automático fiable de
-    // CUALQUIER deviceId, un agente usa ~/Claude/admira-vault/identify-browser.sh (levanta el
-    // server efímero él mismo). Aquí probamos contra el puerto del sonar/executor local.
-    const SONAR_PORT = 8799;
+    // Reidentificar a mano (el sonar ya corre solo al abrir; esto es por si arrancas el
+    // daemon después y no quieres recargar).
     async function identify(b){
-      const token='panel-'+Date.now();
-      expLog(`identificando ${b.deviceId.slice(0,8)}… → probando http://127.0.0.1:${SONAR_PORT}/ (solo válido si abres el panel EN esa máquina)`,'dim');
-      toast('🔎 sondeando 127.0.0.1…');
-      let hit=false;
-      try{
-        const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(),1500);
-        await fetch(`http://127.0.0.1:${SONAR_PORT}/soy?t=${token}`,{signal:ctrl.signal,mode:'no-cors'});
-        clearTimeout(to); hit=true; // no-cors: si no lanza, el puerto respondió → hay sonar/executor local
-      }catch(e){ hit=false; }
-      if(hit){
-        expLog(`✅ HIT: hay un sonar/executor en 127.0.0.1:${SONAR_PORT} de ESTA máquina. Si abriste el panel aquí, este navegador es local.`,'ok');
-        toast('✅ sonar local respondió');
-      } else {
-        expLog(`✖ MISS: nada en 127.0.0.1:${SONAR_PORT}. Levanta el sonar (identify-browser.sh listen) o el executor, y reintenta EN la máquina candidata.`,'warn');
-        toast('✖ sin sonar local');
-      }
+      toast('🔎 preguntando al executor local…');
+      await sonarWhoami();
+      if(YO.machine) toast('✅ estás en '+YO.machine);
+      else toast('✖ sin executor en esta máquina');
     }
 
     // ── 1 · Tramo de vida: CALCULADO del ts, nunca escrito a mano ───────────────────────
@@ -347,24 +330,52 @@
     // ── 4 · Libre / Ocupado: "qué puedo utilizar" ───────────────────────────────────────
     // "Reposo" aparca el navegador en /vista-previa/ → esa pestaña ES la señal de libre.
     const REPOSO = '/vista-previa';
+    // `chromeState` lo manda el executor y dice POR QUÉ no hay pestaña. Antes todo esto era
+    // un "no reporta pestaña" indistinguible: un Chrome cerrado (abre uno y listo) se veía
+    // igual que un permiso de automatización denegado (hay que tocar Ajustes del sistema).
+    const ESTADO_CHROME = {
+      'cerrado':     {cls:'mudo', txt:'Chrome cerrado', ay:'La máquina está viva, pero Chrome no. «Abrir» lo arranca.'},
+      'sin-ventanas':{cls:'libre',txt:'Chrome sin ventanas · libre', ay:'Chrome corre sin ninguna ventana: disponible.'},
+      'sin-permiso': {cls:'mudo', txt:'sin permiso de automatización', ay:'Falta Ajustes › Privacidad y seguridad › Automatización: dale acceso a Chrome al daemon. Hasta entonces no puede leer ni conducir su navegador.'},
+      'error':       {cls:'mudo', txt:'Chrome no responde', ay:'El daemon vive pero AppleScript falla.'}
+    };
     function uso(b){
       if(tramo(b)!=='online') return null;
-      if(!b.tabUrl) return {cls:'mudo', txt:'no reporta pestaña', dom:''};
-      if(b.tabUrl.includes(REPOSO)) return {cls:'libre', txt:'En reposo · libre', dom:''};
+      const st = b.chromeState;
+      if(st && st!=='ok' && ESTADO_CHROME[st]) return Object.assign({dom:''}, ESTADO_CHROME[st]);
+      if(!b.tabUrl) return {cls:'mudo', txt:'no reporta pestaña', dom:'',
+        ay:'Este reporter no manda el estado de Chrome (versión antigua del executor).'};
+      if(b.tabUrl.includes(REPOSO)) return {cls:'libre', txt:'En reposo · libre', dom:'', ay:'Aparcado en la página de reposo: listo para usar.'};
       let dom=''; try{ dom=new URL(b.tabUrl).hostname.replace(/^www\./,''); }catch{ dom=b.tabUrl.slice(0,30); }
-      return {cls:'ocupado', txt:'Ocupado', dom};
+      return {cls:'ocupado', txt:'Ocupado', dom, ay:'Tiene una pestaña activa: alguien lo está usando.'};
     }
 
     // ── 2 · ¿Cuál de todas es ESTA máquina? ─────────────────────────────────────────────
-    // Sin tocar el backend: el navegador donde abres el panel reporta su pestaña activa, que
-    // es justo esta página. Si solo un navegador en línea reporta /navegadores, ese eres tú.
-    // Si hay varios (dos personas mirando a la vez), se marcan como candidatos, no como
-    // certeza. Honesto por diseño: preferimos "quizá" a mentir.
-    let YO = {ids:new Set(), seguro:false};
-    function detectarYo(list){
-      const aqui = list.filter(b=>tramo(b)==='online' && (b.tabUrl||'').includes('/navegadores'));
-      YO = {ids:new Set(aqui.map(b=>b.deviceId)), seguro: aqui.length===1};
-      return YO;
+    // Se lo PREGUNTAMOS a la máquina, no lo adivinamos: el executor local levanta un http en
+    // 127.0.0.1 que responde /whoami → {machine, deviceId} con Access-Control-Allow-Origin:*,
+    // así que el panel puede LEERLO. Respuesta exacta, sin heurística.
+    //
+    // (Antes esto miraba qué navegador reportaba tener /navegadores abierto. No funcionaba
+    //  nunca: el executor reporta la pestaña activa de la ventana de Chrome al frente, que
+    //  casi nunca es este panel. Y el puerto que se sondeaba, el 8799, no lo usa nadie.)
+    const SONAR_PORTS = [8766,8767,8768];   // 8766 puede estar pillado (gaze daemon) → fallback
+    let YO = {ids:new Set(), seguro:false, machine:null};
+    async function sonarWhoami(){
+      for(const p of SONAR_PORTS){
+        try{
+          const ctrl=new AbortController(); const to=setTimeout(()=>ctrl.abort(),1200);
+          const r=await fetch(`http://127.0.0.1:${p}/whoami`,{signal:ctrl.signal,cache:'no-store'});
+          clearTimeout(to);
+          const d=await r.json();
+          if(d && d.ok && d.deviceId){
+            YO={ids:new Set([d.deviceId]), seguro:true, machine:d.machine};
+            expLog(`✅ sonar 127.0.0.1:${p} → estás en <b>${d.machine}</b> (${d.deviceId})`,'ok');
+            render(); return;
+          }
+        }catch(e){ /* puerto sin sonar o sin executor: probamos el siguiente */ }
+      }
+      expLog(`sonar: ningún executor en 127.0.0.1:${SONAR_PORTS.join('/')} — no puedo saber en qué máquina estás`
+             + ` (instala el daemon aquí, o abre el panel en una máquina que lo corra)`,'dim');
     }
 
     let ALL = [];
@@ -398,7 +409,7 @@
           ${esYo?`<span class="yo-tag ${YO.seguro?'':'duda'}" title="${YO.seguro?'este navegador reporta que tiene ABIERTO este panel: es el tuyo':'hay más de un navegador con este panel abierto: candidato, no certeza'}">${YO.seguro?'✦ esta máquina':'✦ ¿esta?'}</span>`:''}
           <span class="estado t-${tr}" title="${TRAMOS[tr].d}">${TRAMOS[tr].t}</span>
         </div>
-        ${u?`<div class="uso ${u.cls}"><span class="pt"></span>${u.txt}${u.dom?` <span class="dom">· ${u.dom}</span>`:''}</div>`:''}
+        ${u?`<div class="uso ${u.cls}" title="${(u.ay||'').replace(/"/g,'&quot;')}"><span class="pt"></span>${u.txt}${u.dom?` <span class="dom">· ${u.dom}</span>`:''}</div>`:''}
         <div class="machine-row"><select>${opts}</select></div>
         <div class="tab">
           ${b.tabUrl ? `<span class="ttl">${b.tabTitle||''}</span><a href="${b.tabUrl}" target="_blank">${b.tabUrl}</a>` : '<i>sin pestaña reportada</i>'}
@@ -410,7 +421,7 @@
           <button class="go">Abrir</button>
           <button data-a="reposo">🛰️ Reposo</button>
           <button data-a="refrescar">↻</button>
-          <button data-a="ident" title="Solo funciona si abres este panel EN la máquina candidata: comprueba si hay un sonar/executor local en 127.0.0.1, señal de que este navegador es de esta máquina.">🔎 ¿Es esta máquina?</button>
+          <button data-a="ident" title="Vuelve a preguntar al executor de 127.0.0.1 en qué máquina estás. Se hace solo al abrir; esto es por si arrancas el daemon después.">🔎 ¿Dónde estoy?</button>
         </div>`;
       el.querySelector('.did').onclick = () => { navigator.clipboard?.writeText(b.deviceId); toast('deviceId copiado'); };
       el.querySelector('select').onchange = e => label(b.deviceId, e.target.value);
@@ -433,7 +444,6 @@
     }
     function render(){
       const cont = $('#cards'); cont.innerHTML=''; cont.className='';
-      detectarYo(ALL);
       const uno = fusionar(ALL);                 // un ordenador = una tarjeta
       const shown = uno.filter(passes);
       // "Disponibles" = en línea de verdad. Los fantasmas NO entran en el denominador:
@@ -479,15 +489,7 @@
     $('#btnRefresh').onclick = () => { expLog('refresco manual','dim'); load(); };
     $('#btnRaw').onclick = () => window.open(WORKER+'/api/browsers','_blank');
     expLog('panel listo','dim');
-    // Sonar automático al abrir: ¿esta máquina tiene executor local? Complementa a la
-    // detección por pestaña (que dice CUÁL eres); esto dice si además puedes ejecutar aquí.
-    (async()=>{
-      try{
-        const ctrl=new AbortController(); setTimeout(()=>ctrl.abort(),1500);
-        await fetch(`http://127.0.0.1:${SONAR_PORT}/soy?t=auto-${Date.now()}`,{signal:ctrl.signal,mode:'no-cors'});
-        expLog(`✅ sonar: hay executor local en 127.0.0.1:${SONAR_PORT} — esta máquina puede ejecutar`,'ok');
-      }catch(e){ expLog(`sonar: sin executor local en 127.0.0.1:${SONAR_PORT} (normal si abres el panel desde otro equipo)`,'dim'); }
-    })();
+    sonarWhoami();          // al abrir: preguntar a esta máquina quién es
     load(); setInterval(load, 5000);
   </script>
 <script>

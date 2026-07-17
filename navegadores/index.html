@@ -205,7 +205,7 @@
       <div class="cards" id="cards"><div class="empty">Cargando navegadores…</div></div>
       <div style="margin-top:28px;padding-top:12px;border-top:1px solid var(--line);
         font-size:11px;color:var(--mut);font-family:var(--mono);text-align:center">
-        navegadores v3 · <b>navegadores-v.2026.07.17.r2</b> · estado del reloj · «esta máquina» por sonar /whoami · Neo·MacMini
+        navegadores v3 · <b>navegadores-v.2026.07.17.r3</b> · estado del reloj · sonar /whoami (requiere permiso de red local) · Neo·MacMini
       </div>
     </main>
   </div>
@@ -372,10 +372,19 @@
             expLog(`✅ sonar 127.0.0.1:${p} → estás en <b>${d.machine}</b> (${d.deviceId})`,'ok');
             render(); return;
           }
-        }catch(e){ /* puerto sin sonar o sin executor: probamos el siguiente */ }
+        }catch(e){ /* puerto sin sonar, o Chrome bloqueando: probamos el siguiente */ }
       }
-      expLog(`sonar: ningún executor en 127.0.0.1:${SONAR_PORTS.join('/')} — no puedo saber en qué máquina estás`
-             + ` (instala el daemon aquí, o abre el panel en una máquina que lo corra)`,'dim');
+      // OJO al diagnóstico: "Failed to fetch" aquí casi NUNCA significa "no hay executor".
+      // Desde Chrome 138 una web pública que llama a 127.0.0.1 necesita el permiso de
+      // **acceso a la red local**, y sin él el fetch muere igual que si no hubiera nadie
+      // escuchando (medido en Chrome 150 el 17-jul-2026: falla incluso con mode:'no-cors',
+      // o sea que es bloqueo del navegador, no de CORS). Decirlo, en vez de culpar al daemon.
+      expLog(`sonar: no he podido hablar con 127.0.0.1:${SONAR_PORTS.join('/')}. Dos motivos posibles, `
+             + `y desde aquí NO puedo distinguirlos: (a) esta máquina no corre el executor, o `
+             + `(b) Chrome está bloqueando el acceso a la red local — mira si hay un aviso de permiso `
+             + `en la barra de direcciones y concédelo (Chrome 138+ lo exige).`,'warn');
+      expLog(`comprobación directa: <b>curl http://127.0.0.1:8766/whoami</b> (o 8767/8768) en esa máquina. `
+             + `Si curl responde y aquí falla, es el permiso del navegador, no el daemon.`,'dim');
     }
 
     let ALL = [];

@@ -17,6 +17,7 @@
     { "id": "asuszenbook", "name": "ASUS Zenbook", "emoji": "🪟", "role": "Equipo · Windows", "platform": "windows", "host": "asuszenbook.tail48b61c.ts.net", "user": "csilvasantin" },
     { "id": "admiratwin", "name": "Admira Twin", "emoji": "🪟", "role": "Equipo · Windows", "platform": "windows", "host": "admiratwin.tail48b61c.ts.net", "user": "csilvasantin" },
     { "id": "metahuman", "name": "MetaHuman PC", "emoji": "🪟", "role": "Render · Windows", "platform": "windows", "host": "metahuman.tail48b61c.ts.net", "user": "csilvasantin" },
-    { "id": "pc-gdg", "name": "PC GdG (Sitges)", "emoji": "🪟", "role": "Player DS · Windows", "platform": "windows", "host": "pc-gdg.tail48b61c.ts.net", "user": "csilvasantin" }
+    { "id": "pc-gdg", "name": "PC GdG (Sitges)", "emoji": "🪟", "role": "Player DS · Windows", "platform": "windows", "host": "pc-gdg.tail48b61c.ts.net", "user": "csilvasantin" },
+    { "id": "asusfold", "name": "asusfold", "emoji": "🪟", "role": "Equipo AdmiraNeXT", "platform": "windows", "host": "asusfold.tail48b61c.ts.net", "user": "csilv" }
   ]
 }

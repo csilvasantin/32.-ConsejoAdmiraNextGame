@@ -170,13 +170,21 @@ function platOf(m) { const p = String((m && m.platform) || 'macos').toLowerCase(
 
 // El estado del player se mide en el equipo, no se deduce del último botón
 // pulsado en el navegador. Reconoce tanto la app nativa como el kiosko dedicado.
+// Windows OpenSSH puede usar cmd.exe como shell: se manda PowerShell codificado
+// en UTF-16LE para no depender de quoting POSIX ni de rutas como /dev/null.
+const WINDOWS_SIGNAGE_PS = Buffer.from(
+  "$ProgressPreference='SilentlyContinue'; $p=Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object { ($_.Name -match 'Admira.*(Signage|Player)') -or ($_.CommandLine -match 'admira[.]tv/(canal|player)') }; if($p){'__FLEET_SIGNAGE__=1'}else{'__FLEET_SIGNAGE__=0'}",
+  'utf16le'
+).toString('base64');
 function statusProbe(m) {
+  const plat = platOf(m);
+  if (plat === 'windows') return 'echo ONLINE & hostname & powershell.exe -NoLogo -NoProfile -NonInteractive -EncodedCommand ' + WINDOWS_SIGNAGE_PS;
   const base = 'echo ONLINE; scutil --get ComputerName 2>/dev/null || hostname; ';
-  if (platOf(m) === 'macos') return base +
+  if (plat === 'macos') return base +
     "if pgrep -x AdmiraSignageMac >/dev/null 2>&1 || pgrep -f '[.]canal-kiosk' >/dev/null 2>&1; then echo __FLEET_SIGNAGE__=1; else echo __FLEET_SIGNAGE__=0; fi";
-  if (platOf(m) === 'linux') return base + LGUI +
+  if (plat === 'linux') return base + LGUI +
     "if systemctl --user is-active --quiet admira-signage.service 2>/dev/null || pgrep -f '[a]dmira-signage' >/dev/null 2>&1 || pgrep -f '[.]canal-kiosk' >/dev/null 2>&1; then echo __FLEET_SIGNAGE__=1; else echo __FLEET_SIGNAGE__=0; fi";
-  return base; // Windows conserva el sondeo existente; su player aún no se gobierna aquí.
+  return base;
 }
 
 // Prefijo para comandos gráficos por SSH en Linux: una sesión SSH no-interactiva

@@ -1755,7 +1755,7 @@ function pushResult(machine, label, d){
    alcanzables por SSH real; los latidos indirectos sirven para pintar online,
    pero no inflan el lote con máquinas que el hub no puede operar. */
 function dsFleetTargets(){
-  return MACHINES.filter(m=>m.sshOnline && m.signageBatch!==false && (m.platform==='macos'||m.platform==='linux'||m.platform==='windows'));
+  return MACHINES.filter(m=>m.signageBatch===true && (m.platform==='windows'||m.sshOnline) && (m.platform==='macos'||m.platform==='linux'||m.platform==='windows'));
 }
 function dsFleetSummary(ms){
   const n={macos:0,linux:0,windows:0}; ms.forEach(m=>{ if(m.platform in n)n[m.platform]++; });

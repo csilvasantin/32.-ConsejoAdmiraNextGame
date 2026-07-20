@@ -538,7 +538,7 @@ const server = http.createServer(async (req, res) => {
       const online = r.rc === 0 && /ONLINE/.test(r.stdout);
       const sm = r.stdout.match(/__FLEET_SIGNAGE__=([01])/);
       const info = r.stdout.replace(/ONLINE\s*/, '').replace(/^__FLEET_SIGNAGE__=[01]\s*$/gm, '').trim();
-      return { id: m.id, name: m.name, emoji: m.emoji, role: m.role, local: !!m.local, online, signageOn: sm ? sm[1] === '1' : null, signageBatch: m.signageBatch !== false, host: m.host, user: m.user || 'csilvasantin', platform: platOf(m), info: online ? info : (r.stderr || 'sin respuesta').slice(0, 120) };
+      return { id: m.id, name: m.name, emoji: m.emoji, role: m.role, local: !!m.local, online, signageOn: sm ? sm[1] === '1' : null, signageBatch: m.signageBatch === true, host: m.host, user: m.user || 'csilvasantin', platform: platOf(m), info: online ? info : (r.stderr || 'sin respuesta').slice(0, 120) };
     }));
     return json(res, 200, { machines: results, ts: Date.now() });
   }

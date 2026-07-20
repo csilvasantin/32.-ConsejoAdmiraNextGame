@@ -2,9 +2,9 @@
   "team": "AdmiraNext Fleet",
   "note": "Flota completa del tailnet tail48b61c. platform: macos|linux|windows. host = MagicDNS <nombre>.tail48b61c.ts.net. El hub (Mac Mini) necesita SSH sin contraseña a cada equipo para verlo online y operarlo.",
   "machines": [
-    { "id": "macmini", "name": "Mac Mini", "emoji": "🖥️", "role": "Hub central", "platform": "macos", "local": true, "host": "macmini.tail48b61c.ts.net", "user": "csilvasantin" },
+    { "id": "macmini", "name": "Mac Mini", "emoji": "🖥️", "role": "Hub central", "platform": "macos", "signageBatch": false, "local": true, "host": "macmini.tail48b61c.ts.net", "user": "csilvasantin" },
     { "id": "macbookpro16", "name": "MacBook Pro 16", "emoji": "💻", "role": "Equipo de trabajo", "platform": "macos", "host": "macbook-pro-16.tail48b61c.ts.net", "user": "csilvasantin" },
-    { "id": "macbookpronegro14", "name": "MacBook Pro Negro 14", "emoji": "💻", "role": "Desarrollo y pruebas", "platform": "macos", "host": "macbookpronegro14.tail48b61c.ts.net", "user": "csilvasantin" },
+    { "id": "macbookpronegro14", "name": "MacBook Pro Negro 14", "emoji": "💻", "role": "Desarrollo y pruebas", "platform": "macos", "signageBatch": false, "host": "macbookpronegro14.tail48b61c.ts.net", "user": "csilvasantin" },
     { "id": "macbookair16", "name": "MacBook Air 16", "emoji": "💻", "role": "Equipo · Trinity/Codex", "platform": "macos", "host": "macbookair16.tail48b61c.ts.net", "user": "csilvasantin" },
     { "id": "macbookairplata", "name": "MacBook Air Plata", "emoji": "💻", "role": "COO · Operaciones", "platform": "macos", "host": "macbookairplata.tail48b61c.ts.net", "user": "csilvasantin" },
     { "id": "macbookairrosa", "name": "MacBook Air Rosa", "emoji": "💻", "role": "Equipo", "platform": "macos", "host": "macbookairrosa.tail48b61c.ts.net", "user": "csilvasantin" },

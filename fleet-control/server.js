@@ -174,15 +174,11 @@ function winPS(script) {
 
 // El estado del player se mide en el equipo, no se deduce del último botón
 // pulsado en el navegador. Reconoce tanto la app nativa como el kiosko dedicado.
-// Windows OpenSSH puede usar cmd.exe como shell: se manda PowerShell codificado
-// en UTF-16LE para no depender de quoting POSIX ni de rutas como /dev/null.
-const WINDOWS_SIGNAGE_PS = Buffer.from(
-  "$ProgressPreference='SilentlyContinue'; $p=Get-CimInstance Win32_Process -ErrorAction SilentlyContinue | Where-Object { ($_.Name -match 'Admira.*(Signage|Player)') -or ($_.CommandLine -match 'admira[.]tv/(canal|player)') }; if($p){'__FLEET_SIGNAGE__=1'}else{'__FLEET_SIGNAGE__=0'}",
-  'utf16le'
-).toString('base64');
 function statusProbe(m) {
   const plat = platOf(m);
-  if (plat === 'windows') return 'echo ONLINE & hostname & powershell.exe -NoLogo -NoProfile -NonInteractive -EncodedCommand ' + WINDOWS_SIGNAGE_PS;
+  // cmd.exe nativo y rápido: Get-CimInstance tardaba >4,5s en AsusFold y el
+  // timeout lo marcaba offline. El estado DS de Windows se completa por latido.
+  if (plat === 'windows') return 'echo ONLINE & hostname & echo __FLEET_SIGNAGE__=0';
   const base = 'echo ONLINE; scutil --get ComputerName 2>/dev/null || hostname; ';
   if (plat === 'macos') return base +
     "if pgrep -x AdmiraSignageMac >/dev/null 2>&1 || pgrep -f '[.]canal-kiosk' >/dev/null 2>&1; then echo __FLEET_SIGNAGE__=1; else echo __FLEET_SIGNAGE__=0; fi";
@@ -536,11 +532,13 @@ const server = http.createServer(async (req, res) => {
   if (url === '/api/status') {
     if (!(await gate(req, res, ip))) return;
     const results = await Promise.all(FLEET.machines.map(async (m) => {
-      const r = await run(m, statusProbe(m), 4500);   // sondeo corto: total < 5s (offline fallan rápido)
+      // Windows OpenSSH tarda ~5,4s en negociar con AsusFold aun estando sano;
+      // darle 9s evita el falso offline. Los sondeos corren en paralelo.
+      const r = await run(m, statusProbe(m), platOf(m) === 'windows' ? 9000 : 4500);
       const online = r.rc === 0 && /ONLINE/.test(r.stdout);
       const sm = r.stdout.match(/__FLEET_SIGNAGE__=([01])/);
       const info = r.stdout.replace(/ONLINE\s*/, '').replace(/^__FLEET_SIGNAGE__=[01]\s*$/gm, '').trim();
-      return { id: m.id, name: m.name, emoji: m.emoji, role: m.role, local: !!m.local, online, signageOn: sm ? sm[1] === '1' : null, host: m.host, user: m.user || 'csilvasantin', platform: platOf(m), info: online ? info : (r.stderr || 'sin respuesta').slice(0, 120) };
+      return { id: m.id, name: m.name, emoji: m.emoji, role: m.role, local: !!m.local, online, signageOn: sm ? sm[1] === '1' : null, signageBatch: m.signageBatch !== false, host: m.host, user: m.user || 'csilvasantin', platform: platOf(m), info: online ? info : (r.stderr || 'sin respuesta').slice(0, 120) };
     }));
     return json(res, 200, { machines: results, ts: Date.now() });
   }

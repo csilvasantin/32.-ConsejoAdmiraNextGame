@@ -167,6 +167,10 @@ function sh(s) { return "'" + String(s).replace(/'/g, "'\\''") + "'"; } // singl
 // comas/+ ("musica,vertical" = AND en el canal). Solo slug chars (shell-safe).
 function cleanTag(v) { return String(v || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9_,+-]/g, ''); }
 function platOf(m) { const p = String((m && m.platform) || 'macos').toLowerCase(); return p.startsWith('win') ? 'windows' : (p.startsWith('lin') ? 'linux' : 'macos'); }
+function winPS(script) {
+  return 'powershell.exe -NoLogo -NoProfile -NonInteractive -EncodedCommand ' +
+    Buffer.from("$ProgressPreference='SilentlyContinue'; " + script, 'utf16le').toString('base64');
+}
 
 // El estado del player se mide en el equipo, no se deduce del último botón
 // pulsado en el navegador. Reconoce tanto la app nativa como el kiosko dedicado.
@@ -314,7 +318,10 @@ const ACTIONS = {
         'systemctl --user stop admira-signage 2>/dev/null; ' +
         '"$CH" --kiosk --noerrdialogs --disable-infobars --incognito --no-first-run "$SIGN_URL" >/dev/null 2>&1 & ' +
         'echo "📺 signage lanzado (chromium kiosk → $SIGN_URL)"';
-    }
+    },
+    // Windows OpenSSH encierra los hijos en su sesión y los mata al desconectar.
+    // El frontend usa el executor local navegadores (open-channel/close-channel).
+    windows: () => winPS("Write-Error 'Windows requiere el executor local navegadores'; exit 1")
   },
   signage_off: {
     macos: () =>
@@ -328,7 +335,8 @@ const ACTIONS = {
       return 'systemctl --user stop admira-signage 2>/dev/null; ' +
         "pkill -f '[a]dmira-signage' 2>/dev/null; pkill -f -- '--kiosk.*admira[.]tv' 2>/dev/null; pkill -f '[.]canal-kiosk' 2>/dev/null; sleep 1; " +
         'echo "⏹️ signage parado"';
-    }
+    },
+    windows: () => winPS("Write-Error 'Windows requiere el executor local navegadores'; exit 1")
   },
   reboot: {
     macos: () => 'sudo -n shutdown -r now 2>/dev/null && echo "reiniciando…" || echo "reinicio requiere sudo sin contraseña"',

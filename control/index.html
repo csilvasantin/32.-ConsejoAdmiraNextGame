@@ -4,6 +4,7 @@
 <!-- control-pantallas · v.2026.07.10.r2 · MUDANZA: la sección «Pantallas · Players» (plano de CONTENIDO: /signage/screens + /signage/now + mando M8 /control/cmd + doble tick) se movió a su PÁGINA PROPIA → /players/. /control queda solo para el plano de MÁQUINAS. -->
 <!-- control-tareas · v.2026.07.16.r2 · VISOR de misiones FLT de yokup por máquina (kanban #tareas-board + mini-cola por tarjeta); fuente /fleet/missions de yokup; ➕ y misiones enlazan a yokup (control NO crea encargos). -->
 <!-- control-open-app · v.2026.07.20.r1 · «abrir app» admite navegador + URL (Firefox www.marca.com); normaliza https y solicita pantalla completa en el equipo remoto. -->
+<!-- control-signage · v.2026.07.20.r2 · botón 📺 Digital Signage (como HACKEO): arranca el player del canal a PANTALLA COMPLETA en todos los Macs online, cada uno con su tag (?tag=<máquina>). Perfil dedicado ~/.canal-kiosk + anti-throttle; mata solo la instancia kiosco y las apps de demo (AdmiraSignageMac/hacksim), no el Chrome principal. -->
 <html lang="es">
 <head>
     <script src="/admira-bar.js?v=20260713-r36"></script>
@@ -501,6 +502,7 @@
       <label class="ac-rep" title="Repetir la captura automáticamente cada X segundos"><input type="checkbox" id="acToggle"> repetir cada <input type="number" id="acSec" min="3" max="600" value="15"> s</label>
       <button id="wallOpen" title="Pared de pantallas: mosaico a pantalla completa de todas las capturas">🧱 Mosaico</button>
       <button id="hackOpen" title="HACKEO · secuencia de intrusión sobre toda la flota (cinemática + acción real)">🕶️ HACKEO</button>
+      <button id="dsAll" title="Digital Signage · arranca el player del canal a PANTALLA COMPLETA (por encima de todo) en TODOS los Macs online, cada uno con su tag (?tag=&lt;máquina&gt;). Cierra las apps de demo que tapen (AdmiraSignageMac/hacksim) y no toca tu Chrome principal.">📺 Digital Signage</button>
       <button id="fleetScreens" title="Apagar o encender la pantalla de TODA la flota online (toggle)">🌙 Apagar todas</button>
       <button id="ssToggle" title="Activar o quitar el salvapantallas en TODA la flota online (toggle)">🖼️ Salva ON</button>
       <button id="playersStandby" title="Standby/Reactivar los PLAYERS de toda la flota (mac/win/linux/ios/android) por canal de comandos — pone el canal en negro sin cerrar la app">⏻ Standby players</button>
@@ -1737,6 +1739,41 @@ function pushResult(machine, label, d){
       .catch(()=>{ b.textContent='⚠'; }); };
   out.insertBefore(div, out.firstChild);
 }
+
+/* ---------- Digital Signage · arranca el player web a PANTALLA COMPLETA en toda la flota Mac ----------
+   Carlos, 2026-07-20: como el botón HACKEO, pero para el canal. Por cada Mac online lanza
+   admira.tv/canal?machine=<id>&screen=<id>&tag=<id> en Chrome app-mode --start-fullscreen con
+   perfil DEDICADO (~/.canal-kiosk, sin login = player limpio) y flags anti-throttle (o el beat
+   muere al perder foco). Mata SOLO la instancia kiosco previa y las apps de demo que tapan
+   (AdmiraSignageMac/hacksim) — NUNCA el Chrome principal (así no cierra este panel). El tag por
+   máquina activa el modelo reactivo: lo que etiquetes en pixeria con #<máquina> entra solo. */
+function dsLaunchCmd(id){
+  const url='https://admira.tv/canal?machine='+id+'&screen='+id+'&tag='+id+'&embed=mupi&chrome=0&ontop=1';
+  return "pkill -f AdmiraSignageMac 2>/dev/null; pkill -f hacksim 2>/dev/null; pkill -f canal-kiosk 2>/dev/null; sleep 2; "
+    + "open -na 'Google Chrome' --args --user-data-dir=\"$HOME/.canal-kiosk\" --app='"+url+"' --start-fullscreen "
+    + "--disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding "
+    + "--autoplay-policy=no-user-gesture-required; sleep 5; "
+    + "osascript -e 'tell application \"Google Chrome\" to activate' >/dev/null 2>&1; echo 'canal lanzado a pantalla completa'";
+}
+async function startSignage(){
+  const macs=MACHINES.filter(m=>m.online && m.platform!=='win' && m.platform!=='linux');
+  if(!macs.length){ alert('No hay Macs online.'); return; }
+  if(!confirm('📺 Digital Signage\n\nArrancar el player del canal a PANTALLA COMPLETA en '+macs.length+' Mac(s) online, cada uno con su tag (#máquina).\n\nCierra las apps de demo que tapen (AdmiraSignageMac/hacksim). No toca tu Chrome principal.\n\n¿Continuar?')) return;
+  const b=$('#dsAll'); const l0=b.textContent; b.disabled=true; b.textContent='📺 lanzando…';
+  await Promise.all(macs.map(async m=>{
+    try{
+      const d=await api('/run',{method:'POST',body:JSON.stringify({machine:m.id,cmd:dsLaunchCmd(m.id)})});
+      pushResult(m.id,'📺 Digital Signage (fullscreen · tag '+m.id+')',d);
+    }catch(err){ pushResult(m.id,'📺 Digital Signage',{rc:-1,stdout:'',stderr:err.msg||'error'}); }
+  }));
+  // verificación de emisión real (beat en api.admira.store) — best-effort, no bloquea
+  setTimeout(()=>{ macs.forEach(m=>{
+    fetch('https://api.admira.store/signage/now?screen='+encodeURIComponent(m.id)+'&_t='+Date.now(),{cache:'no-store'})
+      .then(r=>r.json()).then(d=>{ if(d&&d.lastSeen&&(Date.now()-d.lastSeen)<45000) pushResult(m.id,'📺 canal',{rc:0,stdout:'EMITIENDO ✓ a pantalla completa',ms:0}); }).catch(()=>{});
+  }); }, 40000);
+  b.disabled=false; b.textContent=l0;
+}
+(function(){ const db=$('#dsAll'); if(db) db.onclick=startSignage; })();
 
 /* ---------- auto-captura (monitor de pantallas) ---------- */
 let AUTOCAP=(()=>{ try{ return Object.assign({on:false,sec:15}, JSON.parse(localStorage.getItem('fleet_autocap')||'null')||{}); }catch(e){ return {on:false,sec:15}; } })();

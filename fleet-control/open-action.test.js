@@ -41,11 +41,16 @@ test('rechaza protocolos no web', () => {
   assert.throws(() => normalizeWebUrl('javascript:alert(1)'), /solo se admiten/);
 });
 
-test('genera macOS con URL escapada y AXFullScreen explícito', () => {
+test('genera macOS con URL escapada, AXFullScreen y fallback verificado', () => {
   const command = macOpenCommand('Firefox https://example.com/?q=a&x=1');
   assert.match(command, /open -a 'Firefox' 'https:\/\/example\.com\/\?q=a&x=1'/);
   assert.match(command, /AXFullScreen/);
-  assert.doesNotMatch(command, /control down|command down/);
+  assert.match(command, /if isFull is false then/);
+  assert.match(command, /control down, command down/);
+  assert.match(command, /fullscreen-requested/);
+  assert.match(command, /OPEN_OSA_I.*-lt 20/);
+  assert.equal((command.match(/open -a 'Firefox'/g) || []).length, 1);
+  assert.doesNotMatch(command, /set value of attribute/);
 });
 
 test('genera Linux en modo kiosco para Firefox y Chromium', () => {

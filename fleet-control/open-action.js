@@ -136,19 +136,37 @@ function macOpenCommand(input) {
 
   if (!request.fullscreen) return launch + ' && echo ' + sh('abierto: ' + label);
 
-  // AXFullScreen fija el estado explícitamente; no usamos el atajo Ctrl+Cmd+F,
-  // porque ese atajo es un toggle y podría sacar de fullscreen una ventana que ya lo esté.
-  const activate = app ? 'open -a ' + sh(app) + ' >/dev/null 2>&1 || true; ' : '';
+  // Firefox acepta a veces `AXFullScreen=true` sin aplicarlo. La ruta fiable es
+  // leer el estado y usar Ctrl+Cmd+F únicamente cuando vale false. Si la ventana
+  // desaparece de AX durante el cambio de Space, se considera una transición
+  // fullscreen y nunca se envía un segundo toggle.
   const osa = [
     'tell application "System Events"',
     'set frontProcess to first application process whose frontmost is true',
-    'set value of attribute "AXFullScreen" of front window of frontProcess to true',
+    'set frontmost of frontProcess to true',
+    'try',
+    'set isFull to value of attribute "AXFullScreen" of front window of frontProcess',
+    'on error',
+    'return "fullscreen-transition"',
+    'end try',
+    'if isFull is false then',
+    'keystroke "f" using {control down, command down}',
+    'return "fullscreen-requested"',
+    'end if',
+    'return "fullscreen"',
     'end tell'
   ].map(line => '-e ' + sh(line)).join(' ');
   const ok = 'abierto: ' + label + ' → ' + request.url + ' · pantalla completa';
   const warn = 'abierto: ' + label + ' → ' + request.url + ' · ⚠️ no se pudo confirmar pantalla completa';
-  return launch + ' || exit $?; sleep 2; ' + activate + 'sleep 0.4; ' +
-    'if osascript ' + osa + ' >/dev/null 2>&1; then echo ' + sh(ok) + '; else echo ' + sh(warn) + '; fi';
+  // El AX de Firefox puede bloquearse mientras macOS mueve la ventana a otro
+  // Space. El sondeo corre en background con techo de 10 s para no consumir el
+  // timeout completo de /api/action ni dejar una llamada colgada.
+  return launch + ' || exit $?; sleep 2; ' +
+    'OPEN_OSA_RC=124; osascript ' + osa + ' >/dev/null 2>&1 & OPEN_OSA_PID=$!; OPEN_OSA_I=0; ' +
+    'while kill -0 "$OPEN_OSA_PID" >/dev/null 2>&1 && [ "$OPEN_OSA_I" -lt 20 ]; do sleep 0.5; OPEN_OSA_I=$((OPEN_OSA_I+1)); done; ' +
+    'if kill -0 "$OPEN_OSA_PID" >/dev/null 2>&1; then kill "$OPEN_OSA_PID" >/dev/null 2>&1 || true; wait "$OPEN_OSA_PID" 2>/dev/null || true; ' +
+    'else wait "$OPEN_OSA_PID"; OPEN_OSA_RC=$?; fi; ' +
+    'if [ "$OPEN_OSA_RC" -eq 0 ]; then echo ' + sh(ok) + '; else echo ' + sh(warn) + '; fi';
 }
 
 function linuxOpenCommand(input, guiPrefix) {

@@ -4,7 +4,7 @@
 <!-- control-pantallas · v.2026.07.10.r2 · MUDANZA: la sección «Pantallas · Players» (plano de CONTENIDO: /signage/screens + /signage/now + mando M8 /control/cmd + doble tick) se movió a su PÁGINA PROPIA → /players/. /control queda solo para el plano de MÁQUINAS. -->
 <!-- control-tareas · v.2026.07.16.r2 · VISOR de misiones FLT de yokup por máquina (kanban #tareas-board + mini-cola por tarjeta); fuente /fleet/missions de yokup; ➕ y misiones enlazan a yokup (control NO crea encargos). -->
 <!-- control-open-app · v.2026.07.20.r1 · «abrir app» admite navegador + URL (Firefox www.marca.com); normaliza https y solicita pantalla completa en el equipo remoto. -->
-<!-- control-signage · v.2026.07.20.r2 · botón 📺 Digital Signage (como HACKEO): arranca el player del canal a PANTALLA COMPLETA en todos los Macs online, cada uno con su tag (?tag=<máquina>). Perfil dedicado ~/.canal-kiosk + anti-throttle; mata solo la instancia kiosco y las apps de demo (AdmiraSignageMac/hacksim), no el Chrome principal. -->
+<!-- control-signage · v.2026.07.20.r3 · estado REAL por equipo + toggle contrario: arrancar DS cuando está parado / apagar DS cuando está activo. El botón global hace lo mismo sobre la flota Mac. -->
 <html lang="es">
 <head>
     <script src="/admira-bar.js?v=20260713-r36"></script>
@@ -502,7 +502,7 @@
       <label class="ac-rep" title="Repetir la captura automáticamente cada X segundos"><input type="checkbox" id="acToggle"> repetir cada <input type="number" id="acSec" min="3" max="600" value="15"> s</label>
       <button id="wallOpen" title="Pared de pantallas: mosaico a pantalla completa de todas las capturas">🧱 Mosaico</button>
       <button id="hackOpen" title="HACKEO · secuencia de intrusión sobre toda la flota (cinemática + acción real)">🕶️ HACKEO</button>
-      <button id="dsAll" title="Digital Signage · arranca el player del canal a PANTALLA COMPLETA (por encima de todo) en TODOS los Macs online, cada uno con su tag (?tag=&lt;máquina&gt;). Cierra las apps de demo que tapen (AdmiraSignageMac/hacksim) y no toca tu Chrome principal.">📺 Digital Signage</button>
+      <button id="dsAll" class="tgl off" title="Arrancar Digital Signage a pantalla completa en todos los Macs online.">📺 Arrancar DS</button>
       <button id="fleetScreens" title="Apagar o encender la pantalla de TODA la flota online (toggle)">🌙 Apagar todas</button>
       <button id="ssToggle" title="Activar o quitar el salvapantallas en TODA la flota online (toggle)">🖼️ Salva ON</button>
       <button id="playersStandby" title="Standby/Reactivar los PLAYERS de toda la flota (mac/win/linux/ios/android) por canal de comandos — pone el canal en negro sin cerrar la app">⏻ Standby players</button>
@@ -880,18 +880,18 @@ function moveCard(dragId, targetId){
   o=o.filter(id=>id!==dragId); let ti=o.indexOf(targetId); o.splice(ti<0?o.length:ti,0,dragId);
   localStorage.setItem('fleet_card_order', JSON.stringify(o)); renderCards(MACHINES);
 }
-/* ---------- estado binario por máquina (toggles optimistas, persistido) ----------
-   No hay lectura de estado real del display/signage por máquina, así que el botón
-   refleja lo COMANDADO: al pulsarlo ejecuta la acción y revela la contraria. */
+/* ---------- estado binario por máquina ----------
+   Signage viene del sondeo REAL del hub; localStorage queda solo como fallback
+   durante un fallo de lectura o para los equipos que aún no lo reportan. */
 function _stateMap(k){ try{ return JSON.parse(localStorage.getItem(k)||'{}'); }catch(e){ return {}; } }
 function _setState(k,id,v){ const m=_stateMap(k); if(v) m[id]=1; else delete m[id]; localStorage.setItem(k, JSON.stringify(m)); }
 function screenIsOff(id){ return !!_stateMap('fleet_screen_off_by_machine')[id]; }   // pantalla dormida
-function signageIsOn(id){ return !!_stateMap('fleet_signage_on_by_machine')[id]; }    // player emitiendo
+function signageIsOn(id){ const m=MACHINES.find(x=>x.id===id); return m&&typeof m.signageOn==='boolean' ? m.signageOn : !!_stateMap('fleet_signage_on_by_machine')[id]; }
 // Refleja el nuevo estado en el botón sin reconstruir toda la tarjeta.
 function paintToggle(id, action, state){
   const b=document.querySelector('.acts button[data-a="'+action+'"][data-m="'+id+'"]'); if(!b) return;
   if(action==='displaytoggle'){ b.textContent=state?'☀️ encender':'😴 apagar'; b.title=state?'Encender la pantalla (despierta el display dormido)':'Apagar la pantalla (duerme el display)'; b.classList.toggle('off',state); b.classList.toggle('on',!state); }
-  else if(action==='signagetoggle'){ b.textContent=state?'⏹️ parar':'📺 signage'; b.title=state?'Parar el player de digital signage':'Lanzar el player de digital signage (AdmiraSignageMac)'; b.classList.toggle('on',state); b.classList.toggle('off',!state); applySignageTitles(); }
+  else if(action==='signagetoggle'){ b.textContent=state?'⏹️ apagar DS':'📺 arrancar DS'; b.title=state?'Apagar el player de Digital Signage':'Arrancar el player de Digital Signage'; b.classList.toggle('on',state); b.classList.toggle('off',!state); applySignageTitles(); }
 }
 function collapsedMap(){ try{ return JSON.parse(localStorage.getItem('fleet_card_collapsed')||'{}'); }catch(e){ return {}; } }
 // Colapsado POR DEFECTO: si no hay preferencia guardada para esa tarjeta, va colapsada.
@@ -977,7 +977,7 @@ function renderCards(ms){
         <button data-a="open" data-m="${m.id}">📂 abrir app</button>
         <button data-a="closeapp" data-m="${m.id}">❌ cerrar app</button>
         <button data-a="ssh" data-m="${m.id}">🔌 ssh</button>
-        <button data-a="signagetoggle" data-m="${m.id}" class="tgl ${signageIsOn(m.id)?'on':'off'}" title="${signageIsOn(m.id)?'Parar el player de digital signage':'Lanzar el player de digital signage (AdmiraSignageMac)'}">${signageIsOn(m.id)?'⏹️ parar':'📺 signage'}</button>
+        <button data-a="signagetoggle" data-m="${m.id}" class="tgl ${signageIsOn(m.id)?'on':'off'}" title="${signageIsOn(m.id)?'Apagar el player de Digital Signage':'Arrancar el player de Digital Signage'}">${signageIsOn(m.id)?'⏹️ apagar DS':'📺 arrancar DS'}</button>
         <button data-mando="${m.id}" title="🎛 Mando de EMISIÓN (admira.tv/remotecontrol): volumen +/−, mute, siguiente/anterior, primera/última, playlist y tags en vivo de la pantalla de ESTE equipo — se abre enganchado a su screen." style="border-color:#c9a4ff;color:#c9a4ff;font-weight:700">🎛 mando</button>
         <button data-a="closechannel" data-m="${m.id}" data-mname="${(m.name||'').replace(/"/g,'')}" title="Cerrar la ventana del canal DS en el Chrome de esta máquina.">⏹ cerrar canal</button>
         ${m.online?`<button data-rc="${m.id}" data-rcname="${(m.name||'').replace(/"/g,'')}" title="Control remoto en vivo (ver + ratón + teclado, estilo AnyDesk). Requiere AdmiraRemoteAgent + permisos en la máquina destino." style="border-color:var(--acc);color:var(--acc);font-weight:700">🖥️ control remoto</button>`:''}
@@ -996,6 +996,7 @@ function renderCards(ms){
   // re-pinta los avisos de captura fallida que ya conocíamos
   ms.forEach(m=>{ if(CAP_FAIL[m.id]) setCapFail(m.id, true); });
   applySignageTitles();
+  paintDsAll();
   paintAllAges(); updateCapHealth();
   try{ paintAllMsgBadges(); }catch(e){}
   try{ paintAllMiniQueues(); }catch(e){}   // TAREAS por máquina (desde caché; sin refetch en cada render)
@@ -1184,13 +1185,13 @@ $('#cards').addEventListener('click', async e=>{
     // manejan EN VIVO desde el 🎛 mando (botón de al lado). arg vacío = defaults.
     const arg='';
     const act = turnOn ? 'signage_on' : 'signage_off';
-    const label = turnOn ? '📺 signage' : '⏹️ parar';
+    const label = turnOn ? '📺 arrancar DS' : '⏹️ apagar DS';
     b.disabled=true; const lbl0=b.textContent; b.textContent=(turnOn?'📺':'⏹️')+' …';
     let ok=false;
     try{ const d=await api('/action',{method:'POST',body:JSON.stringify({machine,action:act,arg})}); ok=d.rc===0; pushResult(machine,label,d); }
     catch(err){ pushResult(machine,label,{rc:-1,stdout:'',stderr:err.msg||'error'}); }
     b.disabled=false;
-    if(ok){ _setState('fleet_signage_on_by_machine',machine,turnOn); paintToggle(machine,'signagetoggle',turnOn); }
+    if(ok){ const m=MACHINES.find(x=>x.id===machine); if(m) m.signageOn=turnOn; _setState('fleet_signage_on_by_machine',machine,turnOn); paintToggle(machine,'signagetoggle',turnOn); paintDsAll(); }
     else b.textContent=lbl0;
     return;
   }
@@ -1749,29 +1750,49 @@ function pushResult(machine, label, d){
    máquina activa el modelo reactivo: lo que etiquetes en pixeria con #<máquina> entra solo. */
 function dsLaunchCmd(id){
   const url='https://admira.tv/canal?machine='+id+'&screen='+id+'&tag='+id+'&embed=mupi&chrome=0&ontop=1';
-  return "pkill -f AdmiraSignageMac 2>/dev/null; pkill -f hacksim 2>/dev/null; pkill -f canal-kiosk 2>/dev/null; sleep 2; "
+  return "pkill -x AdmiraSignageMac 2>/dev/null; pkill -f '[h]acksim' 2>/dev/null; pkill -f '[.]canal-kiosk' 2>/dev/null; sleep 2; "
     + "open -na 'Google Chrome' --args --user-data-dir=\"$HOME/.canal-kiosk\" --app='"+url+"' --start-fullscreen "
     + "--disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding "
     + "--autoplay-policy=no-user-gesture-required; sleep 5; "
     + "osascript -e 'tell application \"Google Chrome\" to activate' >/dev/null 2>&1; echo 'canal lanzado a pantalla completa'";
 }
+function dsStopCmd(){
+  return "launchctl bootout gui/$(id -u)/tv.admira.signage.mac 2>/dev/null; "
+    + "osascript -e 'tell application \"AdmiraSignageMac\" to quit' 2>/dev/null; "
+    + "pkill -x AdmiraSignageMac 2>/dev/null; pkill -f '[.]canal-kiosk' 2>/dev/null; sleep 2; "
+    + "if pgrep -x AdmiraSignageMac >/dev/null 2>&1 || pgrep -f '[.]canal-kiosk' >/dev/null 2>&1; then echo 'player DS sigue activo' >&2; exit 1; else echo 'player DS apagado'; fi";
+}
+function paintDsAll(){
+  const b=$('#dsAll'); if(!b) return;
+  const macs=MACHINES.filter(m=>m.online && m.platform!=='win' && m.platform!=='linux');
+  const n=macs.filter(m=>signageIsOn(m.id)).length, on=n>0;
+  b.textContent=on?'⏹️ Apagar DS'+(n>1?' ('+n+')':''):'📺 Arrancar DS';
+  b.title=on?'Apagar los players de Digital Signage activos ('+n+')':'Arrancar Digital Signage a pantalla completa en todos los Macs online';
+  b.classList.toggle('on',on); b.classList.toggle('off',!on);
+}
 async function startSignage(){
   const macs=MACHINES.filter(m=>m.online && m.platform!=='win' && m.platform!=='linux');
   if(!macs.length){ alert('No hay Macs online.'); return; }
-  if(!confirm('📺 Digital Signage\n\nArrancar el player del canal a PANTALLA COMPLETA en '+macs.length+' Mac(s) online, cada uno con su tag (#máquina).\n\nCierra las apps de demo que tapen (AdmiraSignageMac/hacksim). No toca tu Chrome principal.\n\n¿Continuar?')) return;
-  const b=$('#dsAll'); const l0=b.textContent; b.disabled=true; b.textContent='📺 lanzando…';
-  await Promise.all(macs.map(async m=>{
+  const running=macs.filter(m=>signageIsOn(m.id)), stopping=running.length>0;
+  const targets=stopping?running:macs;
+  const question=stopping
+    ?('⏹️ Apagar Digital Signage\n\nApagar el player DS en '+targets.length+' Mac(s) donde está activo. No apaga los equipos ni toca el Chrome principal.\n\n¿Continuar?')
+    :('📺 Arrancar Digital Signage\n\nArrancar el player del canal a PANTALLA COMPLETA en '+targets.length+' Mac(s) online, cada uno con su tag (#máquina).\n\n¿Continuar?');
+  if(!confirm(question)) return;
+  const b=$('#dsAll'); const l0=b.textContent; b.disabled=true; b.textContent=stopping?'⏹️ apagando…':'📺 arrancando…';
+  await Promise.all(targets.map(async m=>{
     try{
-      const d=await api('/run',{method:'POST',body:JSON.stringify({machine:m.id,cmd:dsLaunchCmd(m.id)})});
-      pushResult(m.id,'📺 Digital Signage (fullscreen · tag '+m.id+')',d);
-    }catch(err){ pushResult(m.id,'📺 Digital Signage',{rc:-1,stdout:'',stderr:err.msg||'error'}); }
+      const d=await api('/run',{method:'POST',body:JSON.stringify({machine:m.id,cmd:stopping?dsStopCmd():dsLaunchCmd(m.id)})});
+      if(d.rc===0){ m.signageOn=!stopping; _setState('fleet_signage_on_by_machine',m.id,!stopping); }
+      pushResult(m.id,stopping?'⏹️ apagar DS':('📺 Digital Signage (fullscreen · tag '+m.id+')'),d);
+    }catch(err){ pushResult(m.id,stopping?'⏹️ apagar DS':'📺 Digital Signage',{rc:-1,stdout:'',stderr:err.msg||'error'}); }
   }));
   // verificación de emisión real (beat en api.admira.store) — best-effort, no bloquea
-  setTimeout(()=>{ macs.forEach(m=>{
+  if(!stopping) setTimeout(()=>{ targets.forEach(m=>{
     fetch('https://api.admira.store/signage/now?screen='+encodeURIComponent(m.id)+'&_t='+Date.now(),{cache:'no-store'})
       .then(r=>r.json()).then(d=>{ if(d&&d.lastSeen&&(Date.now()-d.lastSeen)<45000) pushResult(m.id,'📺 canal',{rc:0,stdout:'EMITIENDO ✓ a pantalla completa',ms:0}); }).catch(()=>{});
   }); }, 40000);
-  b.disabled=false; b.textContent=l0;
+  b.disabled=false; b.textContent=l0; paintDsAll();
 }
 (function(){ const db=$('#dsAll'); if(db) db.onclick=startSignage; })();
 

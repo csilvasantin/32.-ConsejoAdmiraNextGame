@@ -168,6 +168,17 @@ function sh(s) { return "'" + String(s).replace(/'/g, "'\\''") + "'"; } // singl
 function cleanTag(v) { return String(v || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9_,+-]/g, ''); }
 function platOf(m) { const p = String((m && m.platform) || 'macos').toLowerCase(); return p.startsWith('win') ? 'windows' : (p.startsWith('lin') ? 'linux' : 'macos'); }
 
+// El estado del player se mide en el equipo, no se deduce del último botón
+// pulsado en el navegador. Reconoce tanto la app nativa como el kiosko dedicado.
+function statusProbe(m) {
+  const base = 'echo ONLINE; scutil --get ComputerName 2>/dev/null || hostname; ';
+  if (platOf(m) === 'macos') return base +
+    "if pgrep -x AdmiraSignageMac >/dev/null 2>&1 || pgrep -f '[.]canal-kiosk' >/dev/null 2>&1; then echo __FLEET_SIGNAGE__=1; else echo __FLEET_SIGNAGE__=0; fi";
+  if (platOf(m) === 'linux') return base + LGUI +
+    "if systemctl --user is-active --quiet admira-signage.service 2>/dev/null || pgrep -f '[a]dmira-signage' >/dev/null 2>&1 || pgrep -f '[.]canal-kiosk' >/dev/null 2>&1; then echo __FLEET_SIGNAGE__=1; else echo __FLEET_SIGNAGE__=0; fi";
+  return base; // Windows conserva el sondeo existente; su player aún no se gobierna aquí.
+}
+
 // Prefijo para comandos gráficos por SSH en Linux: una sesión SSH no-interactiva
 // no hereda DISPLAY / XDG_RUNTIME_DIR, así que los reconstruimos (X11 :0 y el
 // runtime del usuario) para que pactl / xset / grim / notify-send encuentren la
@@ -260,7 +271,7 @@ const ACTIONS = {
         'launchctl bootstrap gui/$(id -u) "$HOME/Library/LaunchAgents/tv.admira.signage.mac.plist" 2>/dev/null; ' +
         'launchctl kickstart -k gui/$(id -u)/tv.admira.signage.mac 2>/dev/null; ' +
         'open -a AdmiraSignageMac 2>/dev/null || open -b tv.admira.signage.mac 2>/dev/null; sleep 1; ' +
-        'pgrep -x AdmiraSignageMac >/dev/null && echo "📺 signage lanzado' + (tag ? ' · tag ' + tag : '') + (audio ? ' · 🔊' : '') + '" || echo "AdmiraSignageMac no instalado en esta máquina"';
+        'if pgrep -x AdmiraSignageMac >/dev/null; then echo "📺 signage lanzado' + (tag ? ' · tag ' + tag : '') + (audio ? ' · 🔊' : '') + '"; else echo "AdmiraSignageMac no instalado en esta máquina" >&2; exit 1; fi';
     },
     linux: (arg, m) => {
       const parts = String(arg || '').split('|');
@@ -287,7 +298,7 @@ const ACTIONS = {
         'up ADMIRA_MACHINE "$SIGN_MACHINE"; ';
       // Player propio: usa el comando de arranque de la máquina. El exit code se
       // propaga: si falla (p.ej. la unidad systemd no existe), el panel lo dice.
-      if (sig.start) return envp + envfile + '( ' + sig.start + ' ) && echo "📺 signage lanzado' + (tag ? ' · tag ' + tag : '') + (audio ? ' · 🔊' : '') + '" || echo "⚠️ signage NO lanzado — falló m.signage.start en esta máquina"';
+      if (sig.start) return envp + envfile + '( ' + sig.start + ' ) && echo "📺 signage lanzado' + (tag ? ' · tag ' + tag : '') + (audio ? ' · 🔊' : '') + '" || { echo "⚠️ signage NO lanzado — falló m.signage.start en esta máquina" >&2; exit 1; }';
       // Fallback: kiosko Chromium como servicio systemd --user (auto-relanza).
       const bin = 'command -v chromium >/dev/null 2>&1 && CH=chromium || CH=chromium-browser';
       return envp + envfile + bin + '; ' +
@@ -302,12 +313,12 @@ const ACTIONS = {
       'launchctl bootout gui/$(id -u)/tv.admira.signage.mac 2>/dev/null; ' +
       'osascript -e \'tell application "AdmiraSignageMac" to quit\' 2>/dev/null; ' +
       'pkill -x AdmiraSignageMac 2>/dev/null; sleep 1.5; ' +
-      'pgrep -x AdmiraSignageMac >/dev/null && echo "sigue activo (reintenta)" || echo "⏹️ signage parado"',
+      'if pgrep -x AdmiraSignageMac >/dev/null; then echo "sigue activo (reintenta)" >&2; exit 1; else echo "⏹️ signage parado"; fi',
     linux: (arg, m) => {
       const sig = (m && m.signage) || {};
-      if (sig.stop) return LGUI + '( ' + sig.stop + ' ) && echo "⏹️ signage parado" || echo "⚠️ fallo al parar — revisa m.signage.stop en esta máquina"';
+      if (sig.stop) return LGUI + '( ' + sig.stop + ' ) && echo "⏹️ signage parado" || { echo "⚠️ fallo al parar — revisa m.signage.stop en esta máquina" >&2; exit 1; }';
       return 'systemctl --user stop admira-signage 2>/dev/null; ' +
-        'pkill -f -- "--kiosk" 2>/dev/null; pkill -x chromium 2>/dev/null; pkill -x chromium-browser 2>/dev/null; sleep 1; ' +
+        "pkill -f '[a]dmira-signage' 2>/dev/null; pkill -f -- '--kiosk.*admira[.]tv' 2>/dev/null; pkill -f '[.]canal-kiosk' 2>/dev/null; sleep 1; " +
         'echo "⏹️ signage parado"';
     }
   },
@@ -508,11 +519,12 @@ const server = http.createServer(async (req, res) => {
   // estado de la flota (lectura) — requiere token (el funnel es público)
   if (url === '/api/status') {
     if (!(await gate(req, res, ip))) return;
-    const probe = 'echo ONLINE; scutil --get ComputerName 2>/dev/null || hostname';
     const results = await Promise.all(FLEET.machines.map(async (m) => {
-      const r = await run(m, probe, 4500);   // sondeo corto: total < 5s (offline fallan rápido)
+      const r = await run(m, statusProbe(m), 4500);   // sondeo corto: total < 5s (offline fallan rápido)
       const online = r.rc === 0 && /ONLINE/.test(r.stdout);
-      return { id: m.id, name: m.name, emoji: m.emoji, role: m.role, local: !!m.local, online, host: m.host, user: m.user || 'csilvasantin', platform: platOf(m), info: online ? r.stdout.replace(/ONLINE\s*/, '').trim() : (r.stderr || 'sin respuesta').slice(0, 120) };
+      const sm = r.stdout.match(/__FLEET_SIGNAGE__=([01])/);
+      const info = r.stdout.replace(/ONLINE\s*/, '').replace(/^__FLEET_SIGNAGE__=[01]\s*$/gm, '').trim();
+      return { id: m.id, name: m.name, emoji: m.emoji, role: m.role, local: !!m.local, online, signageOn: sm ? sm[1] === '1' : null, host: m.host, user: m.user || 'csilvasantin', platform: platOf(m), info: online ? info : (r.stderr || 'sin respuesta').slice(0, 120) };
     }));
     return json(res, 200, { machines: results, ts: Date.now() });
   }

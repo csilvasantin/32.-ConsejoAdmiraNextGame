@@ -240,10 +240,13 @@ const ACTIONS = {
   signage_on: {
     macos: (arg, m) => {
       const parts = String(arg || '').split('|');
-      const screen = (parts[0] || '').trim(), circuit = (parts[1] || '').trim();
+      const machine = (m && m.id) || '';
+      // El botón «signage» no pregunta configuración. En un Mac nuevo, usar el id
+      // estable de flota como screen evita abrir el player sin identidad y dejar
+      // su 🎛 mando vacío. Un screen explícito sigue teniendo prioridad.
+      const screen = (parts[0] || machine).trim(), circuit = (parts[1] || '').trim();
       const tag = cleanTag(parts[2]);
       const audio = (parts[3] || '').trim() === '1';
-      const machine = (m && m.id) || '';
       let pre = '';
       if (screen) pre += 'defaults write tv.admira.signage.mac screen ' + sh(screen) + '; ';
       if (circuit) pre += 'defaults write tv.admira.signage.mac circuit ' + sh(circuit) + '; ';

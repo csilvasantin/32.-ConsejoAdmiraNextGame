@@ -20,6 +20,7 @@ const { spawn } = require('child_process');
 const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
+const { macOpenCommand, linuxOpenCommand, windowsOpenCommand } = require('./open-action');
 
 const DIR = __dirname;
 const PORT = parseInt(process.env.FLEET_PORT || '9140', 10);
@@ -215,8 +216,9 @@ const ACTIONS = {
     linux: (arg) => LGUI + 'notify-send "FleetControl" ' + sh(arg) + ' 2>/dev/null && echo "notificado" || echo "sin notify-send"'
   },
   open: {
-    macos: (arg) => 'open -a ' + sh(arg) + ' && echo "abierto: ' + String(arg).replace(/"/g, '') + '"',
-    linux: (arg) => LGUI + '(setsid ' + sh(arg) + ' >/dev/null 2>&1 & ) ; sleep 0.3; echo "abierto: ' + String(arg).replace(/"/g, '') + '"'
+    macos: (arg) => macOpenCommand(arg),
+    linux: (arg) => linuxOpenCommand(arg, LGUI),
+    windows: (arg) => windowsOpenCommand(arg)
   },
   closeapp: {
     macos: (arg) => 'osascript -e ' + sh('quit app "' + String(arg).replace(/"/g, '') + '"') + ' && echo "cerrada: ' + String(arg).replace(/"/g, '') + '"',
@@ -589,7 +591,10 @@ const server = http.createServer(async (req, res) => {
     if (!m) return json(res, 400, { error: 'máquina desconocida' });
     const fn = resolveAction(body.action, m);
     if (!fn) return json(res, 400, { error: 'acción desconocida', acciones: Object.keys(ACTIONS) });
-    const r = await run(m, fn(body.arg, m), 25000);
+    let cmd;
+    try { cmd = fn(body.arg, m); }
+    catch (e) { return json(res, 400, { error: String(e && e.message || e || 'parámetro no válido') }); }
+    const r = await run(m, cmd, 25000);
     audit({ ip, ev: 'action', machine: m.id, action: body.action, arg: body.arg != null ? String(body.arg).slice(0, 200) : undefined, rc: r.rc, ms: r.ms });
     return json(res, 200, { machine: m.id, action: body.action, ...r });
   }

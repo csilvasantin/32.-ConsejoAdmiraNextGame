@@ -3,6 +3,7 @@
 <!-- control-mensajeria · v.2026.07.08.r1 · 💬 mensaje por equipo + 📣 a todos → router de encargos AdmiraNeXT (ACK + traza Telegram) · auth = gate Google · fix: refresco silencioso de cred + re-login (control remoto) -->
 <!-- control-pantallas · v.2026.07.10.r2 · MUDANZA: la sección «Pantallas · Players» (plano de CONTENIDO: /signage/screens + /signage/now + mando M8 /control/cmd + doble tick) se movió a su PÁGINA PROPIA → /players/. /control queda solo para el plano de MÁQUINAS. -->
 <!-- control-tareas · v.2026.07.16.r2 · VISOR de misiones FLT de yokup por máquina (kanban #tareas-board + mini-cola por tarjeta); fuente /fleet/missions de yokup; ➕ y misiones enlazan a yokup (control NO crea encargos). -->
+<!-- control-open-app · v.2026.07.20.r1 · «abrir app» admite navegador + URL (Firefox www.marca.com); normaliza https y solicita pantalla completa en el equipo remoto. -->
 <html lang="es">
 <head>
     <script src="/admira-bar.js?v=20260713-r36"></script>
@@ -1060,7 +1061,13 @@ function setDefaultShot(machineId){
 $('#lb').onclick=()=>{ $('#lb').style.display='none'; };
 
 /* ---------- acciones rápidas ---------- */
-const NEEDS_ARG={ volume:'Volumen 0-100:', say:'¿Qué digo?', notify:'Texto del aviso:', open:'¿Qué app abrir? (p.ej. Safari)', closeapp:'¿Qué app cerrar? (p.ej. Safari)' };
+const NEEDS_ARG={
+  volume:'Volumen 0-100:',
+  say:'¿Qué digo?',
+  notify:'Texto del aviso:',
+  open:'Aplicación + URL opcional. Si hay URL, el navegador se abre a pantalla completa.\n\nEjemplos:\nFirefox www.marca.com\n"Google Chrome" https://www.admira.live\nSafari',
+  closeapp:'¿Qué app cerrar? (p.ej. Safari)'
+};
 // Comando que oculta TODAS las apps en primer plano → deja el escritorio limpio
 // (se ve el fondo). Verificado en las Air: no requiere permiso extra de Automatización.
 const CLEAN_DESKTOP_CMD="osascript -e 'tell application \"System Events\" to set visible of (every process whose background only is false) to false'";
@@ -1214,7 +1221,11 @@ $('#cards').addEventListener('click', async e=>{
     b.disabled=false; b.textContent=lbl0; return;
   }
   let arg='';
-  if(NEEDS_ARG[action]){ arg=prompt(NEEDS_ARG[action], action==='volume'?'50':''); if(arg===null) return; }
+  if(NEEDS_ARG[action]){
+    arg=prompt(NEEDS_ARG[action], action==='volume'?'50':'');
+    if(arg===null) return;
+    if(action==='open'&&!arg.trim()){ pushResult(machine,'📂 abrir app',{rc:1,stdout:'',stderr:'indica una aplicación; puedes añadir una URL, p.ej. Firefox www.marca.com'}); return; }
+  }
   b.disabled=true; const lbl=b.textContent; if(action==='screenshot') b.textContent='📸 …';
   try{
     const d=await api('/action',{method:'POST',body:JSON.stringify({machine,action,arg})});

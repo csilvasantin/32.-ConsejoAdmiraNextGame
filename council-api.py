@@ -3843,6 +3843,21 @@ except (KeyboardInterrupt, BrokenPipeError):
 '''
 
 
+def _hk_norm_id(x) -> str:
+    """Id comparable entre inventarios: minúsculas, sólo alfanuméricos y sin el
+    prefijo «admira». Así casan «macbookpro16» (fleet-control, que es lo que
+    manda el panel) y «admira-macbookpro16» (consejo)."""
+    s = re.sub(r"[^a-z0-9]", "", str(x or "").lower())
+    return s[6:] if s.startswith("admira") else s
+
+
+def _hk_ids_de(m: dict) -> set:
+    """Todos los nombres por los que se puede pedir una máquina: su id, su
+    nombre y su host SSH (sin dominio) — todos normalizados."""
+    host = ((m.get("ssh") or {}).get("host") or "").split(".")[0]
+    return {_hk_norm_id(v) for v in (m.get("id"), m.get("name"), host) if v}
+
+
 def _hk_load_council() -> list:
     """Devuelve solo las máquinas con unitType=='council' y SSH habilitado."""
     try:
@@ -4375,8 +4390,14 @@ async def council_hackeo(request: Request, _rate=Depends(check_rate_limit), _aut
         # actúa SOLO sobre esos equipos. Lista vacía o ausente = toda la flota.
         _only = (_body or {}).get("only_ids") or []
         if isinstance(_only, list) and _only:
-            _keep = {str(x) for x in _only}
-            machines = [m for m in machines if str(m.get("id")) in _keep]
+            # Los ids NO son los mismos a los dos lados: el panel manda los de
+            # fleet-control (macbookpro16) y el consejo usa los suyos
+            # (admira-macbookpro16). Comparar en crudo descartaba TODOS los
+            # equipos elegidos y el hackeo selectivo no hacía nada — el global
+            # sí, porque no filtra (cazado por Carlos con el MacBook Pro 16,
+            # 21-07-2026). Se comparan normalizados y contra id, nombre y host.
+            _keep = {_hk_norm_id(x) for x in _only}
+            machines = [m for m in machines if _hk_ids_de(m) & _keep]
             if not machines:
                 return {"ok": False, "error": "ninguno de los equipos elegidos está en el consejo", "machines": []}
     except Exception:
@@ -4420,9 +4441,23 @@ async def council_hackeo(request: Request, _rate=Depends(check_rate_limit), _aut
 
 
 @app.post("/api/council/hackeo/stop")
-async def council_hackeo_stop(_auth=Depends(verify_hack_token)):
-    """Detiene la simulación cerrando Terminal en cada máquina viva."""
+async def council_hackeo_stop(request: Request, _auth=Depends(verify_hack_token)):
+    """Detiene la simulación cerrando Terminal en cada máquina viva.
+
+    GRANULAR: el panel manda los mismos only_ids que al arrancar. Sin esto,
+    «parar» siempre paraba en TODA la flota aunque hubieras elegido un equipo.
+    """
     machines = _hk_load_council()
+    try:
+        _raw = await request.body()
+        _only = (json.loads(_raw.decode("utf-8")) if _raw else {}).get("only_ids") or []
+        if isinstance(_only, list) and _only:
+            _keep = {_hk_norm_id(x) for x in _only}
+            sel = [m for m in machines if _hk_ids_de(m) & _keep]
+            if sel:
+                machines = sel
+    except Exception:
+        pass
     results: list = []
     with _HkPool(max_workers=min(8, max(1, len(machines)))) as pool:
         for r in pool.map(lambda m: _hk_process_one(m, "stop"), machines):

@@ -573,11 +573,15 @@ const server = http.createServer(async (req, res) => {
     } catch (e) {}
 
     const results = await Promise.all(targets.map(async m => {
-      const probe = await run(m, preflightCommand(m), 9000);
+      // OpenSSH de Windows puede gastar 5–9s solo en negociar; el probe y la
+      // captura interactiva necesitan margen propio para no convertir lentitud
+      // en un falso "offline" (AsusFold es el canario más lento conocido).
+      const windows = platOf(m) === 'windows';
+      const probe = await run(m, preflightCommand(m), windows ? 18000 : 9000);
       let capture = { rc: 1, stdout: '', stderr: 'sin acceso' };
       if (probe.rc === 0) {
         const capFn = resolveAction('screenshot', m);
-        if (capFn) capture = await run(m, capFn(null, m), 12000);
+        if (capFn) capture = await run(m, capFn(null, m), windows ? 22000 : 12000);
       }
       const screen = canonicalScreenId(m);
       const live = liveByScreen.get(screen) || { screen, online: false, age_seconds: null };

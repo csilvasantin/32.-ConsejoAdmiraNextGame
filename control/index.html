@@ -4,7 +4,7 @@
 <!-- control-pantallas · v.2026.07.10.r2 · MUDANZA: la sección «Pantallas · Players» (plano de CONTENIDO: /signage/screens + /signage/now + mando M8 /control/cmd + doble tick) se movió a su PÁGINA PROPIA → /players/. /control queda solo para el plano de MÁQUINAS. -->
 <!-- control-tareas · v.2026.07.16.r2 · VISOR de misiones FLT de yokup por máquina (kanban #tareas-board + mini-cola por tarjeta); fuente /fleet/missions de yokup; ➕ y misiones enlazan a yokup (control NO crea encargos). -->
 <!-- control-open-app · v.2026.07.20.r1 · «abrir app» admite navegador + URL (Firefox www.marca.com); normaliza https y solicita pantalla completa en el equipo remoto. -->
-<!-- control-signage · v.2026.07.20.r4 · lote multiplataforma REAL: misma ruta que cada tarjeta (hub signage_on/off en macOS/Linux; executor local open/close-channel en Windows), solo equipos con SSH operativo y recuento separado. -->
+<!-- control-signage · v.2026.07.21.r4 · preflight real por equipo + lote multiplataforma: macOS/Linux por hub, Windows por executor local. Arranque bloqueado si no es elegible; estado DS nunca sale de localStorage. -->
 <html lang="es">
 <head>
     <script src="/admira-bar.js?v=20260713-r36"></script>
@@ -208,6 +208,13 @@
   /* toggles binarios por máquina (pantalla, signage): estado on=verde / off=rojo */
   .acts button.tgl.on{border-color:var(--ok);color:var(--ok)}
   .acts button.tgl.off{border-color:var(--bad);color:var(--bad)}
+  .dsflight{font-family:var(--mono);font-size:10.5px;line-height:1.45;border:1px solid var(--line);border-left-width:4px;border-radius:8px;padding:7px 9px;background:#0b111b;color:var(--mut)}
+  .dsflight.ok{border-left-color:var(--ok)} .dsflight.bad{border-left-color:var(--bad)} .dsflight.wait{border-left-color:var(--warn)}
+  .dsflight .dsf-title{font-weight:800;color:var(--ink);display:flex;align-items:center;gap:7px;flex-wrap:wrap}
+  .dsflight .dsf-chip{border:1px solid var(--line);padding:1px 5px;color:var(--mut)}
+  .dsflight .dsf-chip.ok{border-color:var(--ok);color:var(--ok)} .dsflight .dsf-chip.bad{border-color:var(--bad);color:var(--bad)}
+  .dsflight .dsf-reason{color:var(--bad);margin-top:4px}.dsflight .dsf-warn{color:var(--warn);margin-top:3px}
+  #dsPfSummary{font-family:var(--mono);font-size:10.5px;color:var(--mut)}
   /* frescura de la miniatura */
   .shotage{position:absolute;right:0;bottom:0;font-size:10px;padding:3px 7px;background:rgba(0,0,0,.55);color:#cbe6ff;letter-spacing:.2px;border-top-left-radius:8px;display:none}
   .shot.stale img{opacity:.5;filter:grayscale(.3)}
@@ -502,7 +509,9 @@
       <label class="ac-rep" title="Repetir la captura automáticamente cada X segundos"><input type="checkbox" id="acToggle"> repetir cada <input type="number" id="acSec" min="3" max="600" value="15"> s</label>
       <button id="wallOpen" title="Pared de pantallas: mosaico a pantalla completa de todas las capturas">🧱 Mosaico</button>
       <button id="hackOpen" title="HACKEO · secuencia de intrusión sobre toda la flota (cinemática + acción real)">🕶️ HACKEO</button>
-      <button id="dsAll" class="tgl off" title="Arrancar Digital Signage a pantalla completa en todos los Macs online.">📺 Arrancar DS</button>
+      <button id="dsPreflight" title="Comprueba acceso real, plataforma, player/executor, versión, captura, screen, circuito y heartbeat antes de arrancar">🧪 Preflight DS</button>
+      <button id="dsAll" disabled title="Arranca Digital Signage solo en equipos elegibles tras un preflight real">📺 Arrancar DS</button>
+      <span id="dsPfSummary">preflight pendiente</span>
       <button id="fleetScreens" title="Apagar o encender la pantalla de TODA la flota online (toggle)">🌙 Apagar todas</button>
       <button id="ssToggle" title="Activar o quitar el salvapantallas en TODA la flota online (toggle)">🖼️ Salva ON</button>
       <button id="playersStandby" title="Standby/Reactivar los PLAYERS de toda la flota (mac/win/linux/ios/android) por canal de comandos — pone el canal en negro sin cerrar la app">⏻ Standby players</button>
@@ -835,7 +844,7 @@ async function refresh(){
   if(!SESSION){ $('#connPill').textContent='🔒 inicia sesión Google'; $('#connPill').className='pill bad'; renderCards([]); return; }
   try{
     const d=await api('/status'); MACHINES=d.machines; MACHINES.forEach(m=>{ m.sshOnline=!!m.online; }); _reauthTried=false;
-    await Promise.all([loadPersonas(), loadFleet(), loadDsAirState()]);
+    await Promise.all([loadPersonas(), loadFleet()]);
     // Un equipo con un agente ACTIVO (Claude/Codex/Grok, beat de presencia <8min) cuenta como
     // ONLINE aunque el hub lo dé offline: el hub solo ve el agente de flota/SSH, no los agentes
     // que trabajan en la máquina (por eso AsusZenbook/MacBookAir16 salían desconectados).
@@ -880,27 +889,57 @@ function moveCard(dragId, targetId){
   o=o.filter(id=>id!==dragId); let ti=o.indexOf(targetId); o.splice(ti<0?o.length:ti,0,dragId);
   localStorage.setItem('fleet_card_order', JSON.stringify(o)); renderCards(MACHINES);
 }
-/* ---------- estado binario por máquina ----------
-   Signage viene del sondeo REAL del hub; localStorage queda solo como fallback
-   durante un fallo de lectura o para los equipos que aún no lo reportan. */
+/* ---------- estado por máquina ----------
+   El display conserva su toggle de intención. Digital Signage NO: su estado sale
+   solo del preflight del hub + heartbeat real de api.admira.store. */
 function _stateMap(k){ try{ return JSON.parse(localStorage.getItem(k)||'{}'); }catch(e){ return {}; } }
 function _setState(k,id,v){ const m=_stateMap(k); if(v) m[id]=1; else delete m[id]; localStorage.setItem(k, JSON.stringify(m)); }
 function screenIsOff(id){ return !!_stateMap('fleet_screen_off_by_machine')[id]; }   // pantalla dormida
-function signageIsOn(id){ const m=MACHINES.find(x=>x.id===id); return m&&typeof m.signageOn==='boolean' ? m.signageOn : !!_stateMap('fleet_signage_on_by_machine')[id]; }
-// El latido de antena complementa el proceso local: imprescindible en Windows,
-// donde el executor abre el canal dentro de la sesión interactiva del usuario.
-async function loadDsAirState(){
+let DS_PREFLIGHT={}, DS_PREFLIGHT_AT=0, DS_PREFLIGHT_BUSY=false;
+function dsPf(id){ return DS_PREFLIGHT[id]||null; }
+function signageIsOn(id){ const p=dsPf(id), l=p&&p.live; return !!(l&&l.online&&l.age_seconds!=null&&l.age_seconds<=60); }
+function signageEligible(id){ const p=dsPf(id); return !!(p&&p.eligible); }
+function dsEsc(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+function dsPreflightHtml(m){
+  const p=dsPf(m.id);
+  if(!p) return '<div class="dsflight wait" data-dsflight="'+m.id+'"><div class="dsf-title">🧪 preflight pendiente</div><div>Ejecuta la comprobación real antes de arrancar.</div></div>';
+  const live=signageIsOn(m.id), cls=p.eligible?'ok':'bad';
+  const chips=[
+    '<span class="dsf-chip '+(p.reachable?'ok':'bad')+'">'+(p.reachable?'acceso ✓':'sin acceso')+'</span>',
+    '<span class="dsf-chip">'+String(p.platform||'—')+'</span>',
+    '<span class="dsf-chip '+(p.player&&p.player.installed?'ok':'bad')+'">'+(p.player&&p.player.type||'sin player')+'</span>',
+    '<span class="dsf-chip '+(p.permissions&&p.permissions.capture?'ok':'bad')+'">captura '+(p.permissions&&p.permissions.capture?'✓':'✗')+'</span>',
+    '<span class="dsf-chip '+(live?'ok':'')+'">'+(live?'heartbeat '+p.live.age_seconds+'s':'sin heartbeat')+'</span>'
+  ].join('');
+  const version=p.player&&p.player.version?(' · '+dsEsc(p.player.version)):'';
+  const reason=(p.blockers||[]).map(x=>'<div class="dsf-reason">⛔ '+dsEsc(x)+'</div>').join('');
+  const warn=(p.warnings||[]).map(x=>'<div class="dsf-warn">⚠ '+dsEsc(x)+'</div>').join('');
+  return '<div class="dsflight '+cls+'" data-dsflight="'+dsEsc(m.id)+'"><div class="dsf-title">'+(p.eligible?'✅ ELEGIBLE':'⛔ BLOQUEADO')+' '+chips+'</div><div>screen <b>'+dsEsc(p.screen&&p.screen.id||m.id)+'</b> · circuito <b>'+dsEsc(p.circuit||'—')+'</b>'+version+'</div>'+reason+warn+'</div>';
+}
+function updateDsSummary(){
+  const all=Object.values(DS_PREFLIGHT), ok=all.filter(x=>x.eligible).length, blocked=all.filter(x=>!x.eligible).length;
+  const s=$('#dsPfSummary'), b=$('#dsAll');
+  if(s) s.textContent=DS_PREFLIGHT_BUSY?'comprobando…':(all.length?(ok+' elegibles · '+blocked+' bloqueados'):'preflight pendiente');
+  if(b){ b.disabled=DS_PREFLIGHT_BUSY||ok===0; b.title=ok?('Arrancar DS solo en '+ok+' equipo(s) elegible(s)'):'Ningún equipo elegible'; }
+}
+async function refreshDsPreflight(machine){
+  if(DS_PREFLIGHT_BUSY&&!machine) return;
+  DS_PREFLIGHT_BUSY=true; updateDsSummary();
   try{
-    const d=await fetch('https://api.admira.store/signage/screens?_t='+Date.now(),{cache:'no-store'}).then(r=>r.json());
-    const live=new Set((d.screens||[]).filter(s=>s.online && (+s.age_seconds||0)<90).flatMap(s=>[s.machine,s.screen]).filter(Boolean).map(String));
-    MACHINES.forEach(m=>{ if(live.has(String(m.id))) m.signageOn=true; });
-  }catch(e){/* el estado de proceso del hub sigue siendo válido */}
+    const q=machine?('?machine='+encodeURIComponent(machine)):'';
+    const d=await api('/preflight'+q);
+    (d.machines||[]).forEach(p=>{ DS_PREFLIGHT[p.id]=p; });
+    DS_PREFLIGHT_AT=Date.now();
+  }catch(e){
+    if(machine) DS_PREFLIGHT[machine]={id:machine,eligible:false,blockers:['No se pudo obtener el preflight del hub.'],warnings:[],live:{online:false},screen:{id:machine},player:{},permissions:{}};
+  }
+  DS_PREFLIGHT_BUSY=false; updateDsSummary(); renderCards(MACHINES);
 }
 // Refleja el nuevo estado en el botón sin reconstruir toda la tarjeta.
 function paintToggle(id, action, state){
   const b=document.querySelector('.acts button[data-a="'+action+'"][data-m="'+id+'"]'); if(!b) return;
   if(action==='displaytoggle'){ b.textContent=state?'☀️ encender':'😴 apagar'; b.title=state?'Encender la pantalla (despierta el display dormido)':'Apagar la pantalla (duerme el display)'; b.classList.toggle('off',state); b.classList.toggle('on',!state); }
-  else if(action==='signagetoggle'){ b.textContent=state?'⏹️ apagar DS':'📺 arrancar DS'; b.title=state?'Apagar el player de Digital Signage':'Arrancar el player de Digital Signage'; b.classList.toggle('on',state); b.classList.toggle('off',!state); applySignageTitles(); }
+  else if(action==='signagetoggle'){ b.textContent=state?'⏹️ parar':'📺 arrancar DS'; b.title=state?'Parar el player de digital signage':'Lanzar DS solo tras preflight elegible'; b.classList.toggle('on',state); b.classList.toggle('off',!state); b.disabled=!state&&!signageEligible(id); applySignageTitles(); }
 }
 function collapsedMap(){ try{ return JSON.parse(localStorage.getItem('fleet_card_collapsed')||'{}'); }catch(e){ return {}; } }
 // Colapsado POR DEFECTO: si no hay preferencia guardada para esa tarjeta, va colapsada.
@@ -974,6 +1013,7 @@ function renderCards(ms){
       <div class="info${m.online?'':' offinfo'}">${m.online
         ?(m.info||'').replace(/</g,'&lt;')
         :('💤 ssh '+((m.user||'csilvasantin')+'@'+(m.host||'?'))+'\n↳ '+((m.info||'sin respuesta').replace(/</g,'&lt;')))}</div>
+      ${dsPreflightHtml(m)}
       <div class="shot" data-m="${m.id}"><img alt="captura ${m.name}"><span class="shotage" data-age="${m.id}"></span></div>
       <div class="acts" ${m.online?'':'style="opacity:.4;pointer-events:none"'}>
         <button data-a="screenshot" data-m="${m.id}">📸 captura</button>
@@ -986,7 +1026,7 @@ function renderCards(ms){
         <button data-a="open" data-m="${m.id}">📂 abrir app</button>
         <button data-a="closeapp" data-m="${m.id}">❌ cerrar app</button>
         <button data-a="ssh" data-m="${m.id}">🔌 ssh</button>
-        <button data-a="signagetoggle" data-m="${m.id}" class="tgl ${signageIsOn(m.id)?'on':'off'}" title="${signageIsOn(m.id)?'Apagar el player de Digital Signage':'Arrancar el player de Digital Signage'}">${signageIsOn(m.id)?'⏹️ apagar DS':'📺 arrancar DS'}</button>
+        <button data-a="signagetoggle" data-m="${m.id}" ${(!signageIsOn(m.id)&&!signageEligible(m.id))?'disabled':''} class="tgl ${signageIsOn(m.id)?'on':'off'}" title="${signageIsOn(m.id)?'Parar el player de digital signage':'Requiere preflight elegible'}">${signageIsOn(m.id)?'⏹️ parar':'📺 arrancar DS'}</button>
         <button data-mando="${m.id}" title="🎛 Mando de EMISIÓN (admira.tv/remotecontrol): volumen +/−, mute, siguiente/anterior, primera/última, playlist y tags en vivo de la pantalla de ESTE equipo — se abre enganchado a su screen." style="border-color:#c9a4ff;color:#c9a4ff;font-weight:700">🎛 mando</button>
         <button data-a="closechannel" data-m="${m.id}" data-mname="${(m.name||'').replace(/"/g,'')}" title="Cerrar la ventana del canal DS en el Chrome de esta máquina.">⏹ cerrar canal</button>
         ${m.online?`<button data-rc="${m.id}" data-rcname="${(m.name||'').replace(/"/g,'')}" title="Control remoto en vivo (ver + ratón + teclado, estilo AnyDesk). Requiere AdmiraRemoteAgent + permisos en la máquina destino." style="border-color:var(--acc);color:var(--acc);font-weight:700">🖥️ control remoto</button>`:''}
@@ -1188,20 +1228,24 @@ $('#cards').addEventListener('click', async e=>{
   }
   // signage: toggle lanzar/parar el player por máquina.
   if(action==='signagetoggle'){
-    const turnOn=!signageIsOn(machine);   // parado → lanzar; emitiendo → parar
-    // Lanzamiento DIRECTO, sin popups: screen/circuit se conservan de la última
-    // configuración de la máquina; el tag, el audio y el resto de ajustes se
-    // manejan EN VIVO desde el 🎛 mando (botón de al lado). arg vacío = defaults.
-    const arg='';
+    const pf=dsPf(machine), turnOn=!signageIsOn(machine);
+    if(turnOn&&(!pf||!pf.eligible)){
+      pushResult(machine,'🧪 preflight DS',{rc:1,stdout:'',stderr:(pf&&pf.blockers||['Ejecuta el preflight antes de arrancar.']).join('\n')});
+      return;
+    }
+    // Fuente única: el screen y circuito salen del preflight del backend.
+    const arg=turnOn?[(pf.screen&&pf.screen.id)||machine,pf.circuit||'',machine,'0'].join('|'):'';
     const act = turnOn ? 'signage_on' : 'signage_off';
-    const label = turnOn ? '📺 arrancar DS' : '⏹️ apagar DS';
+    const label = turnOn ? '📺 arrancar DS' : '⏹️ parar';
     b.disabled=true; const lbl0=b.textContent; b.textContent=(turnOn?'📺':'⏹️')+' …';
     let ok=false;
     try{ const m=MACHINES.find(x=>x.id===machine)||{}; const d=await dsAction(m,turnOn); ok=d.rc===0; pushResult(machine,label,d); }
     catch(err){ pushResult(machine,label,{rc:-1,stdout:'',stderr:err.msg||'error'}); }
-    b.disabled=false;
-    if(ok){ const m=MACHINES.find(x=>x.id===machine); if(m) m.signageOn=turnOn; _setState('fleet_signage_on_by_machine',machine,turnOn); paintToggle(machine,'signagetoggle',turnOn); paintDsAll(); }
-    else b.textContent=lbl0;
+    b.textContent=lbl0;
+    // Nunca pintamos éxito por haber encolado/ejecutado: reconsultamos el estado
+    // real. El heartbeat decidirá si el botón cambia a «parar».
+    if(ok){ await new Promise(r=>setTimeout(r,turnOn?5000:1500)); await refreshDsPreflight(machine); }
+    else b.disabled=false;
     return;
   }
   // canal DS: abrir/cerrar el canal en el Chrome de esa máquina (vía executor navegadores).
@@ -1210,7 +1254,7 @@ $('#cards').addEventListener('click', async e=>{
     const name=b.dataset.mname || m.name || machine;
     const deviceId=navDeviceId(name);
     const opening=action==='openchannel';
-    const screen='ds-'+name.toLowerCase().replace(/[^a-z0-9]/g,'');
+    const screen=(dsPf(machine)&&dsPf(machine).screen&&dsPf(machine).screen.id)||machine;
     const label=opening?'📺 abrir canal DS':'⏹ cerrar canal';
     b.disabled=true; const lbl0=b.textContent; b.textContent=(opening?'📺':'⏹')+' …';
     // La URL del canal viaja EN el comando (fuente única del nombre de pantalla)
@@ -1750,61 +1794,65 @@ function pushResult(machine, label, d){
   out.insertBefore(div, out.firstChild);
 }
 
-/* ---------- Digital Signage · lote multiplataforma ----------
-   Misma action signage_on/off que funciona en cada tarjeta. Solo entran equipos
-   alcanzables por SSH real; los latidos indirectos sirven para pintar online,
-   pero no inflan el lote con máquinas que el hub no puede operar. */
+/* ---------- Digital Signage · lote multiplataforma condicionado por preflight real ---------- */
 function dsFleetTargets(){
-  return MACHINES.filter(m=>m.signageBatch===true && (m.platform==='windows'||m.sshOnline) && (m.platform==='macos'||m.platform==='linux'||m.platform==='windows'));
+  return MACHINES.filter(m=>m.signageBatch===true && signageEligible(m.id));
 }
 function dsFleetSummary(ms){
   const n={macos:0,linux:0,windows:0}; ms.forEach(m=>{ if(m.platform in n)n[m.platform]++; });
   return [n.macos&&(n.macos+' Mac'+(n.macos===1?'':'s')),n.linux&&(n.linux+' Linux'),n.windows&&(n.windows+' Windows')].filter(Boolean).join(' + ');
 }
 async function dsAction(m,turnOn){
+  const pf=dsPf(m.id);
+  if(turnOn&&(!pf||!pf.eligible)) return {rc:1,stdout:'',stderr:'Preflight no elegible; orden no enviada.',ms:0};
+  const screen=(pf&&pf.screen&&pf.screen.id)||m.id, circuit=(pf&&pf.circuit)||'';
   if(m.platform==='windows'){
     const name=m.name||m.id, deviceId=navDeviceId(name);
-    const url='https://www.admira.tv/canal?screen='+encodeURIComponent(m.id)+'&machine='+encodeURIComponent(m.id)+'&embed=mupi&chrome=0&ontop=1';
+    const url='https://www.admira.tv/canal?screen='+encodeURIComponent(screen)+'&circuit='+encodeURIComponent(circuit)+'&machine='+encodeURIComponent(m.id)+'&embed=mupi&chrome=0&ontop=1';
     const res=await navCmd(deviceId,turnOn?'open-channel':'close-channel',turnOn?url:undefined);
     if(!res.ok) return {rc:1,stdout:'',stderr:res.error+' · device '+deviceId,ms:0};
-    if(turnOn) watchCanal(m.id,name,m.id);
-    return {rc:0,stdout:'encolado en executor local (cmd '+res.id+' · device '+deviceId+')',stderr:'',ms:0};
+    if(turnOn) watchCanal(m.id,name,screen);
+    return {rc:0,stdout:'encolado en executor local (cmd '+res.id+' · device '+deviceId+' · screen '+screen+')',stderr:'',ms:0};
   }
-  return api('/action',{method:'POST',body:JSON.stringify({machine:m.id,action:turnOn?'signage_on':'signage_off',arg:''})});
+  const arg=turnOn?[screen,circuit,m.id,'0'].join('|'):'';
+  return api('/action',{method:'POST',body:JSON.stringify({machine:m.id,action:turnOn?'signage_on':'signage_off',arg})});
 }
 function paintDsAll(){
   const b=$('#dsAll'); if(!b) return;
-  const machines=dsFleetTargets();
-  const n=machines.filter(m=>signageIsOn(m.id)).length, on=n>0;
-  b.textContent=on?'⏹️ Apagar DS'+(n>1?' ('+n+')':''):'📺 Arrancar DS';
-  b.title=on?'Apagar los players de Digital Signage activos ('+n+')':'Arrancar Digital Signage en '+(dsFleetSummary(machines)||'los equipos operables');
-  b.classList.toggle('on',on); b.classList.toggle('off',!on);
+  const running=MACHINES.filter(m=>m.signageBatch===true&&signageIsOn(m.id));
+  const eligible=dsFleetTargets(), stopping=running.length>0;
+  b.textContent=stopping?'⏹️ Parar DS ('+running.length+')':'📺 Arrancar DS';
+  b.title=stopping?'Parar los players con heartbeat fresco':'Arrancar solo '+eligible.length+' equipo(s) elegible(s)';
+  b.disabled=DS_PREFLIGHT_BUSY||(!stopping&&!eligible.length);
+  b.classList.toggle('on',stopping); b.classList.toggle('off',!stopping);
 }
 async function startSignage(){
-  const machines=dsFleetTargets();
-  if(!machines.length){ alert('No hay equipos alcanzables por SSH para Digital Signage.'); return; }
-  const running=machines.filter(m=>signageIsOn(m.id)), stopping=running.length>0;
-  const targets=stopping?running:machines, summary=dsFleetSummary(targets);
-  const question=stopping
-    ?('⏹️ Apagar Digital Signage\n\nApagar el player DS en '+targets.length+' equipo(s): '+summary+'. No apaga los equipos ni toca el navegador personal.\n\n¿Continuar?')
-    :('📺 Arrancar Digital Signage\n\nArrancar el player del canal en '+targets.length+' equipo(s): '+summary+'.\n\n¿Continuar?');
-  if(!confirm(question)) return;
-  const b=$('#dsAll'); const l0=b.textContent; b.disabled=true; b.textContent=stopping?'⏹️ apagando…':'📺 arrancando…';
+  const running=MACHINES.filter(m=>m.signageBatch===true&&signageIsOn(m.id));
+  const stopping=running.length>0, targets=stopping?running:dsFleetTargets();
+  if(!targets.length){ alert('No hay equipos elegibles. Ejecuta 🧪 Preflight DS y resuelve los bloqueos.'); return; }
+  const detail=targets.map(m=>'• '+m.name+' → '+((dsPf(m.id)&&dsPf(m.id).screen.id)||m.id)).join('\n');
+  const verb=stopping?'Parar':'Arrancar';
+  if(!confirm((stopping?'⏹️ ':'📺 ')+verb+' DS\n\nAlcance: '+targets.length+' equipo(s), '+(dsFleetSummary(targets)||'multiplataforma')+'\n\n'+detail+(stopping?'':'\n\nLos bloqueados quedan fuera.')+'\n\n¿Continuar?')) return;
+  const b=$('#dsAll'); b.disabled=true; b.textContent=stopping?'⏹️ parando…':'📺 lanzando…';
   await Promise.all(targets.map(async m=>{
-    try{
-      const d=await dsAction(m,!stopping);
-      if(d.rc===0){ m.signageOn=!stopping; _setState('fleet_signage_on_by_machine',m.id,!stopping); }
-      pushResult(m.id,stopping?'⏹️ apagar DS':'📺 arrancar DS',d);
-    }catch(err){ pushResult(m.id,stopping?'⏹️ apagar DS':'📺 Digital Signage',{rc:-1,stdout:'',stderr:err.msg||'error'}); }
+    try{ const d=await dsAction(m,!stopping); pushResult(m.id,(stopping?'⏹️ parar DS':'📺 arrancar DS')+' · screen '+((dsPf(m.id)&&dsPf(m.id).screen.id)||m.id),d); }
+    catch(err){ pushResult(m.id,'Digital Signage',{rc:-1,stdout:'',stderr:err.msg||'error'}); }
   }));
-  // verificación de emisión real (beat en api.admira.store) — best-effort, no bloquea
-  if(!stopping) setTimeout(()=>{ targets.forEach(m=>{
-    fetch('https://api.admira.store/signage/now?screen='+encodeURIComponent(m.id)+'&_t='+Date.now(),{cache:'no-store'})
-      .then(r=>r.json()).then(d=>{ if(d&&d.lastSeen&&(Date.now()-d.lastSeen)<45000) pushResult(m.id,'📺 canal',{rc:0,stdout:'EMITIENDO ✓ a pantalla completa',ms:0}); }).catch(()=>{});
-  }); }, 40000);
-  b.disabled=false; b.textContent=l0; paintDsAll();
+  await new Promise(r=>setTimeout(r,stopping?2000:7000));
+  await refreshDsPreflight();
+  targets.forEach(m=>{ const p=dsPf(m.id), live=signageIsOn(m.id), verified=stopping?!live:live;
+    pushResult(m.id,'📡 verificación DS',verified
+      ?{rc:0,stdout:(stopping?'PARADO ✓':'EMITIENDO ✓')+' · screen '+((p&&p.screen.id)||m.id)+(live?' · heartbeat '+p.live.age_seconds+'s':''),ms:0}
+      :{rc:1,stdout:'',stderr:stopping?'El heartbeat sigue fresco; no se confirma la parada.':'No hay heartbeat fresco; encolar/ejecutar no equivale a emitir.'});
+  });
+  paintDsAll();
 }
-(function(){ const db=$('#dsAll'); if(db) db.onclick=startSignage; })();
+(function(){
+  const db=$('#dsAll'), pf=$('#dsPreflight');
+  if(db) db.onclick=startSignage;
+  if(pf) pf.onclick=()=>refreshDsPreflight();
+  updateDsSummary();
+})();
 
 /* ---------- auto-captura (monitor de pantallas) ---------- */
 let AUTOCAP=(()=>{ try{ return Object.assign({on:false,sec:15}, JSON.parse(localStorage.getItem('fleet_autocap')||'null')||{}); }catch(e){ return {on:false,sec:15}; } })();
@@ -1991,9 +2039,11 @@ function collapseAllToggle(){
   await ensureSession();
   if(SESSION){ const e=whoami(); const tp=$('#tokenPill'); if(tp&&e){ tp.textContent='🔒 '+e; tp.title='Cerrar sesión'; } }
   applyAutoCap();
-  refresh();
+  await refresh();
+  refreshDsPreflight();
   try{ refreshAirQueues(); }catch(e){}   // primera carga de las colas TAREAS (Airs)
   setInterval(refresh, 8000);
+  setInterval(()=>refreshDsPreflight(), 120000);
   setInterval(paintAllAges, 5000);  // las edades "hace Xs" suben solas y atenúan lo viejo
 })();
 </script>

@@ -21,6 +21,7 @@ const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { macOpenCommand, linuxOpenCommand, windowsOpenCommand } = require('./open-action');
+const { canonicalScreenId, preflightCommand, assessPreflight } = require('./signage-preflight');
 
 const DIR = __dirname;
 const PORT = parseInt(process.env.FLEET_PORT || '9140', 10);
@@ -163,6 +164,7 @@ function run(machine, cmd, timeoutMs) {
  * para enchufar el player propio. Digital Signage y control remoto de la flota
  * funcionan en ambos SO (macOS y Linux/Ubuntu de escritorio). */
 function sh(s) { return "'" + String(s).replace(/'/g, "'\\''") + "'"; } // single-quote safe
+function psCommand(script) { return 'powershell.exe -NoProfile -NonInteractive -EncodedCommand ' + Buffer.from(String(script), 'utf16le').toString('base64'); }
 // tag(s) del operador: sin acentos (música→musica), minúsculas, anidable con
 // comas/+ ("musica,vertical" = AND en el canal). Solo slug chars (shell-safe).
 function cleanTag(v) { return String(v || '').trim().toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9_,+-]/g, ''); }
@@ -275,11 +277,21 @@ const ACTIONS = {
       pre += tag ? ('defaults write tv.admira.signage.mac tag ' + sh(tag) + '; ')
                  : 'defaults delete tv.admira.signage.mac tag 2>/dev/null; ';
       pre += 'defaults write tv.admira.signage.mac muted ' + (audio ? '0' : '1') + '; ';
+      const q = [screen && ('screen=' + encodeURIComponent(screen)), circuit && ('circuit=' + encodeURIComponent(circuit)), tag && ('tag=' + encodeURIComponent(tag)), machine && ('machine=' + encodeURIComponent(machine)), 'embed=mupi', 'chrome=0', 'ontop=1'].filter(Boolean).join('&');
+      const url = 'https://www.admira.tv/canal?' + q;
       return pre +
+        'if [ -d "/Applications/AdmiraSignageMac.app" ]; then ' +
         'launchctl bootstrap gui/$(id -u) "$HOME/Library/LaunchAgents/tv.admira.signage.mac.plist" 2>/dev/null; ' +
         'launchctl kickstart -k gui/$(id -u)/tv.admira.signage.mac 2>/dev/null; ' +
-        'open -a AdmiraSignageMac 2>/dev/null || open -b tv.admira.signage.mac 2>/dev/null; sleep 1; ' +
-        'if pgrep -x AdmiraSignageMac >/dev/null; then echo "📺 signage lanzado' + (tag ? ' · tag ' + tag : '') + (audio ? ' · 🔊' : '') + '"; else echo "AdmiraSignageMac no instalado en esta máquina" >&2; exit 1; fi';
+        'open -a AdmiraSignageMac 2>/dev/null || open -b tv.admira.signage.mac 2>/dev/null; sleep 2; ' +
+        'pgrep -x AdmiraSignageMac >/dev/null || { echo "AdmiraSignageMac no arrancó" >&2; exit 1; }; ' +
+        'elif [ -x "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" ]; then ' +
+        'pkill -f "\.admira-signage-kiosk" 2>/dev/null || true; ' +
+        'open -na "Google Chrome" --args --user-data-dir="$HOME/.admira-signage-kiosk" --app=' + sh(url) + ' ' +
+        '--disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --autoplay-policy=no-user-gesture-required; sleep 3; ' +
+        'pgrep -f "\.admira-signage-kiosk" >/dev/null || { echo "Chrome signage no arrancó" >&2; exit 1; }; ' +
+        'else echo "sin AdmiraSignageMac ni Google Chrome" >&2; exit 127; fi; ' +
+        'echo "📺 signage lanzado · screen ' + screen + (tag ? ' · tag ' + tag : '') + (audio ? ' · 🔊' : '') + '"';
     },
     linux: (arg, m) => {
       const parts = String(arg || '').split('|');
@@ -310,10 +322,10 @@ const ACTIONS = {
       // Fallback: kiosko Chromium como servicio systemd --user (auto-relanza).
       const bin = 'command -v chromium >/dev/null 2>&1 && CH=chromium || CH=chromium-browser';
       return envp + envfile + bin + '; ' +
-        'command -v "$CH" >/dev/null 2>&1 || { echo "no hay chromium; define m.signage.start en fleet.json"; exit 0; }; ' +
+        'command -v "$CH" >/dev/null 2>&1 || { echo "no hay chromium; define m.signage.start en fleet.json"; exit 127; }; ' +
         'systemctl --user stop admira-signage 2>/dev/null; ' +
         '"$CH" --kiosk --noerrdialogs --disable-infobars --incognito --no-first-run "$SIGN_URL" >/dev/null 2>&1 & ' +
-        'echo "📺 signage lanzado (chromium kiosk → $SIGN_URL)"';
+        'pgrep -f -- "--kiosk" >/dev/null || { echo "chromium kiosk no arrancó" >&2; exit 1; }; echo "📺 signage lanzado (chromium kiosk → $SIGN_URL)"';
     },
     // Windows OpenSSH encierra los hijos en su sesión y los mata al desconectar.
     // El frontend usa el executor local navegadores (open-channel/close-channel).
@@ -323,8 +335,8 @@ const ACTIONS = {
     macos: () =>
       'launchctl bootout gui/$(id -u)/tv.admira.signage.mac 2>/dev/null; ' +
       'osascript -e \'tell application "AdmiraSignageMac" to quit\' 2>/dev/null; ' +
-      'pkill -x AdmiraSignageMac 2>/dev/null; sleep 1.5; ' +
-      'if pgrep -x AdmiraSignageMac >/dev/null; then echo "sigue activo (reintenta)" >&2; exit 1; else echo "⏹️ signage parado"; fi',
+      'pkill -x AdmiraSignageMac 2>/dev/null; pkill -f "\.admira-signage-kiosk" 2>/dev/null; sleep 1.5; ' +
+      'if pgrep -x AdmiraSignageMac >/dev/null || pgrep -f "\.admira-signage-kiosk" >/dev/null; then echo "sigue activo (reintenta)" >&2; exit 1; else echo "⏹️ signage parado"; fi',
     linux: (arg, m) => {
       const sig = (m && m.signage) || {};
       if (sig.stop) return LGUI + '( ' + sig.stop + ' ) && echo "⏹️ signage parado" || { echo "⚠️ fallo al parar — revisa m.signage.stop en esta máquina" >&2; exit 1; }';
@@ -541,6 +553,45 @@ const server = http.createServer(async (req, res) => {
       return { id: m.id, name: m.name, emoji: m.emoji, role: m.role, local: !!m.local, online, signageOn: sm ? sm[1] === '1' : null, signageBatch: m.signageBatch === true, host: m.host, user: m.user || 'csilvasantin', platform: platOf(m), info: online ? info : (r.stderr || 'sin respuesta').slice(0, 120) };
     }));
     return json(res, 200, { machines: results, ts: Date.now() });
+  }
+
+  // Preflight DS fiable: accesibilidad remota, player/executor, versión,
+  // permiso de captura, screen canónico, circuito y heartbeat real. No usa
+  // localStorage ni las señales blandas de presencia de la UI.
+  if (url === '/api/preflight' && req.method === 'GET') {
+    if (!(await gate(req, res, ip))) return;
+    const q = new URL(req.url, 'http://x').searchParams;
+    const only = String(q.get('machine') || '');
+    const targets = only ? FLEET.machines.filter(m => m.id === only) : FLEET.machines.slice();
+    if (only && !targets.length) return json(res, 404, { error: 'máquina desconocida' });
+
+    let liveByScreen = new Map();
+    try {
+      const sr = await fetch('https://api.admira.store/signage/screens?_t=' + Date.now(), { signal: AbortSignal.timeout(7000) });
+      const sd = sr.ok ? await sr.json() : {};
+      liveByScreen = new Map((Array.isArray(sd.screens) ? sd.screens : []).map(s => [String(s.screen || '').toLowerCase(), s]));
+    } catch (e) {}
+
+    const results = await Promise.all(targets.map(async m => {
+      const probe = await run(m, preflightCommand(m), 9000);
+      let capture = { rc: 1, stdout: '', stderr: 'sin acceso' };
+      if (probe.rc === 0) {
+        const capFn = resolveAction('screenshot', m);
+        if (capFn) capture = await run(m, capFn(null, m), 12000);
+      }
+      const screen = canonicalScreenId(m);
+      const live = liveByScreen.get(screen) || { screen, online: false, age_seconds: null };
+      const assessed = assessPreflight(m, probe, capture, live);
+      audit({ ip, ev: 'signage_preflight', machine: m.id, eligible: assessed.eligible, blockers: assessed.blockers.length });
+      return assessed;
+    }));
+    return json(res, 200, {
+      ok: true,
+      checkedAt: Date.now(),
+      eligible: results.filter(x => x.eligible).length,
+      blocked: results.filter(x => !x.eligible).length,
+      machines: results
+    });
   }
 
   // ejecutar comando libre

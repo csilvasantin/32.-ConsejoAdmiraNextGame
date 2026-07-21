@@ -70,7 +70,8 @@ function parseProbe(stdout) {
   return out;
 }
 
-function assessPreflight(machine, runResult, captureResult, live) {
+function assessPreflight(machine, runResult, captureResult, live, evidence) {
+  evidence = evidence || {};
   const probe = parseProbe(runResult && runResult.stdout);
   const reachable = !!(runResult && runResult.rc === 0 && probe.ready === '1');
   const captureReady = !!(captureResult && captureResult.rc === 0 &&
@@ -87,7 +88,27 @@ function assessPreflight(machine, runResult, captureResult, live) {
   if (reachable && !captureReady) blockers.push('Sin captura real: instala el agente y concede permiso de grabación de pantalla/sesión gráfica.');
   if (configuredScreen && configuredScreen !== screen) blockers.push('Screen configurado como «' + configuredScreen + '»; unifícalo con «' + screen + '».');
   if (!probe.circuit && !(live && live.circuit)) warnings.push('Sin circuito asignado; emitirá por screen/tag hasta definirlo.');
+  const age = live && Number.isFinite(Number(live.age_seconds)) ? Number(live.age_seconds) : null;
+  const heartbeatFresh = !!(live && live.online && age != null && age <= 60);
   if (live && live.online === false) warnings.push('Sin heartbeat fresco antes del arranque.');
+  else if (live && age != null && age > 60) warnings.push('Heartbeat stale (' + Math.round(age) + 's): el player no se considera online.');
+
+  const current = evidence.current || null;
+  const proofId = String(current && current.id || live && live.showing_id || '');
+  const ack = evidence.commandAck || null;
+  let deploymentState = 'ready';
+  if (!reachable) deploymentState = 'offline';
+  else if (blockers.length) deploymentState = 'blocked';
+  else if (live && age != null && age > 60) deploymentState = 'stale';
+  else if (heartbeatFresh && proofId && captureReady) deploymentState = 'live';
+  const successes = [];
+  const failures = [];
+  if (reachable) successes.push('acceso real'); else failures.push('sin acceso');
+  if (playerInstalled || executorInstalled) successes.push('player/executor'); else failures.push('sin player/executor');
+  if (captureReady) successes.push('captura real'); else failures.push('sin captura');
+  if (heartbeatFresh) successes.push('heartbeat fresco'); else failures.push('sin heartbeat fresco');
+  if (proofId) successes.push('proof-of-play'); else failures.push('sin proof-of-play');
+  if (ack) successes.push('acuse de comando'); else failures.push('sin acuse reciente');
 
   return {
     id: machine.id,
@@ -102,6 +123,17 @@ function assessPreflight(machine, runResult, captureResult, live) {
     // un circuito. Solo aceptamos el circuito configurado o uno explícito del beat.
     circuit: probe.circuit || (live && live.circuit) || '',
     live: live || { online: false, age_seconds: null },
+    deployment: {
+      state: deploymentState,
+      heartbeatFresh,
+      proofOfPlay: proofId ? { id: proofId, startedAt: current && current.startedAt || null } : null,
+      capture: captureReady,
+      playerVersion: probe.version || '',
+      currentContent: current ? { id: String(current.id || ''), title: String(current.title || '').slice(0, 180), type: String(current.type || '') } : null,
+      commandAck: ack,
+      successes,
+      failures
+    },
     eligible: blockers.length === 0,
     blockers,
     warnings,

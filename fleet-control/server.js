@@ -587,15 +587,34 @@ const server = http.createServer(async (req, res) => {
       }
       const screen = canonicalScreenId(m);
       const live = liveByScreen.get(screen) || { screen, online: false, age_seconds: null };
-      const assessed = assessPreflight(m, probe, capture, live);
+      let current = null, commandAck = null;
+      await Promise.all([
+        (async () => {
+          if (!live.online) return;
+          try {
+            const r = await fetch('https://api.admira.store/signage/now?screen=' + encodeURIComponent(screen) + '&_t=' + Date.now(), { signal: AbortSignal.timeout(5000) });
+            const d = r.ok ? await r.json() : null; current = d && d.item || null;
+          } catch (e) {}
+        })(),
+        (async () => {
+          try {
+            const r = await fetch('https://omnipublicity-api.csilvasantin.workers.dev/control/seen?screen=' + encodeURIComponent(screen), { signal: AbortSignal.timeout(5000) });
+            const d = r.ok ? await r.json() : null, seen = d && Array.isArray(d.seen) ? d.seen : [];
+            commandAck = seen.length ? seen[seen.length - 1] : null;
+          } catch (e) {}
+        })()
+      ]);
+      const assessed = assessPreflight(m, probe, capture, live, { current, commandAck });
       audit({ ip, ev: 'signage_preflight', machine: m.id, eligible: assessed.eligible, blockers: assessed.blockers.length });
       return assessed;
     }));
+    const states = results.reduce((acc, item) => { const state = item.deployment && item.deployment.state || 'unknown'; acc[state] = (acc[state] || 0) + 1; return acc; }, {});
     return json(res, 200, {
       ok: true,
       checkedAt: Date.now(),
       eligible: results.filter(x => x.eligible).length,
       blocked: results.filter(x => !x.eligible).length,
+      states,
       machines: results
     });
   }

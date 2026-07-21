@@ -4,7 +4,7 @@
 <!-- control-pantallas · v.2026.07.10.r2 · MUDANZA: la sección «Pantallas · Players» (plano de CONTENIDO: /signage/screens + /signage/now + mando M8 /control/cmd + doble tick) se movió a su PÁGINA PROPIA → /players/. /control queda solo para el plano de MÁQUINAS. -->
 <!-- control-tareas · v.2026.07.16.r2 · VISOR de misiones FLT de yokup por máquina (kanban #tareas-board + mini-cola por tarjeta); fuente /fleet/missions de yokup; ➕ y misiones enlazan a yokup (control NO crea encargos). -->
 <!-- control-open-app · v.2026.07.20.r1 · «abrir app» admite navegador + URL (Firefox www.marca.com); normaliza https y solicita pantalla completa en el equipo remoto. -->
-<!-- control-signage · v.2026.07.21.r4 · preflight real por equipo + lote multiplataforma: macOS/Linux por hub, Windows por executor local. Arranque bloqueado si no es elegible; estado DS nunca sale de localStorage. -->
+<!-- control-signage · v.2026.07.21.r5 · estado único live/ready/stale/offline/blocked con heartbeat, proof-of-play, captura, versión, contenido y doble acuse. Arranque bloqueado si no es elegible; estado DS nunca sale de localStorage. -->
 <html lang="es">
 <head>
     <script src="/admira-bar.js?v=20260713-r36"></script>
@@ -903,8 +903,10 @@ function dsEsc(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</
 function dsPreflightHtml(m){
   const p=dsPf(m.id);
   if(!p) return '<div class="dsflight wait" data-dsflight="'+m.id+'"><div class="dsf-title">🧪 preflight pendiente</div><div>Ejecuta la comprobación real antes de arrancar.</div></div>';
-  const live=signageIsOn(m.id), cls=p.eligible?'ok':'bad';
+  const live=signageIsOn(m.id), dep=p.deployment||{}, state=dep.state||(p.eligible?'ready':'blocked');
+  const cls=state==='live'?'ok':(/^(offline|blocked)$/.test(state)?'bad':'wait');
   const chips=[
+    '<span class="dsf-chip '+(state==='live'?'ok':(/^(offline|blocked|stale)$/.test(state)?'bad':''))+'">estado '+dsEsc(state)+'</span>',
     '<span class="dsf-chip '+(p.reachable?'ok':'bad')+'">'+(p.reachable?'acceso ✓':'sin acceso')+'</span>',
     '<span class="dsf-chip">'+String(p.platform||'—')+'</span>',
     '<span class="dsf-chip '+(p.player&&p.player.installed?'ok':'bad')+'">'+(p.player&&p.player.type||'sin player')+'</span>',
@@ -912,14 +914,18 @@ function dsPreflightHtml(m){
     '<span class="dsf-chip '+(live?'ok':'')+'">'+(live?'heartbeat '+p.live.age_seconds+'s':'sin heartbeat')+'</span>'
   ].join('');
   const version=p.player&&p.player.version?(' · '+dsEsc(p.player.version)):'';
+  const content=dep.currentContent?('<div>ahora <b>'+dsEsc(dep.currentContent.title||dep.currentContent.id||'—')+'</b> · '+dsEsc(dep.currentContent.type||'contenido')+' · proof '+dsEsc(dep.proofOfPlay&&dep.proofOfPlay.id||'—')+'</div>'):'<div class="dsf-warn">⚠ sin contenido actual / proof-of-play</div>';
+  const ack=dep.commandAck?('<div>comando <b>✓✓ acuse player</b> · '+dsEsc(dep.commandAck.latencyMs==null?'—':dep.commandAck.latencyMs+'ms')+'</div>'):'<div class="dsf-warn">⚠ sin acuse reciente de comando</div>';
+  const honest=dep.failures&&dep.failures.length?('<div class="dsf-warn">pendiente: '+dep.failures.map(dsEsc).join(' · ')+'</div>'):'';
   const reason=(p.blockers||[]).map(x=>'<div class="dsf-reason">⛔ '+dsEsc(x)+'</div>').join('');
   const warn=(p.warnings||[]).map(x=>'<div class="dsf-warn">⚠ '+dsEsc(x)+'</div>').join('');
-  return '<div class="dsflight '+cls+'" data-dsflight="'+dsEsc(m.id)+'"><div class="dsf-title">'+(p.eligible?'✅ ELEGIBLE':'⛔ BLOQUEADO')+' '+chips+'</div><div>screen <b>'+dsEsc(p.screen&&p.screen.id||m.id)+'</b> · circuito <b>'+dsEsc(p.circuit||'—')+'</b>'+version+'</div>'+reason+warn+'</div>';
+  return '<div class="dsflight '+cls+'" data-dsflight="'+dsEsc(m.id)+'"><div class="dsf-title">'+(state==='live'?'📡 LIVE':(p.eligible?'✅ ELEGIBLE':'⛔ BLOQUEADO'))+' '+chips+'</div><div>screen <b>'+dsEsc(p.screen&&p.screen.id||m.id)+'</b> · circuito <b>'+dsEsc(p.circuit||'—')+'</b>'+version+'</div>'+content+ack+honest+reason+warn+'</div>';
 }
 function updateDsSummary(){
   const all=Object.values(DS_PREFLIGHT), ok=all.filter(x=>x.eligible).length, blocked=all.filter(x=>!x.eligible).length;
+  const states=all.reduce((a,x)=>{const s=x.deployment&&x.deployment.state||'unknown';a[s]=(a[s]||0)+1;return a;},{});
   const s=$('#dsPfSummary'), b=$('#dsAll');
-  if(s) s.textContent=DS_PREFLIGHT_BUSY?'comprobando…':(all.length?(ok+' elegibles · '+blocked+' bloqueados'):'preflight pendiente');
+  if(s) s.textContent=DS_PREFLIGHT_BUSY?'comprobando…':(all.length?((states.live||0)+' live · '+ok+' elegibles · '+blocked+' bloqueados · '+((states.stale||0)+(states.offline||0))+' stale/offline'):'preflight pendiente');
   if(b){ b.disabled=DS_PREFLIGHT_BUSY||ok===0; b.title=ok?('Arrancar DS solo en '+ok+' equipo(s) elegible(s)'):'Ningún equipo elegible'; }
 }
 async function refreshDsPreflight(machine){

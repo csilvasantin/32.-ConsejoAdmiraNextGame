@@ -4,7 +4,7 @@
 <!-- control-pantallas · v.2026.07.10.r2 · MUDANZA: la sección «Pantallas · Players» (plano de CONTENIDO: /signage/screens + /signage/now + mando M8 /control/cmd + doble tick) se movió a su PÁGINA PROPIA → /players/. /control queda solo para el plano de MÁQUINAS. -->
 <!-- control-tareas · v.2026.07.16.r2 · VISOR de misiones FLT de yokup por máquina (kanban #tareas-board + mini-cola por tarjeta); fuente /fleet/missions de yokup; ➕ y misiones enlazan a yokup (control NO crea encargos). -->
 <!-- control-open-app · v.2026.07.20.r1 · «abrir app» admite navegador + URL (Firefox www.marca.com); normaliza https y solicita pantalla completa en el equipo remoto. -->
-<!-- control-lanzamiento-ds · v.2026.07.21.r7 · MISIÓN DEL DÍA (FLT-924): a) foto de arranque de todos los equipos conectados al iniciar sesión (una vez por sesión, de 3 en 3); b) el botón DS muestra x/y — cuántos equipos del grupo tienen el player OPERATIVO sobre los conectados; c) versión al pie del menú de opciones (canon cuadrático AdmiraNeXT). -->
+<!-- control-lanzamiento-ds · v.2026.07.21.r8 · MISIÓN DEL DÍA (FLT-924): a) foto de arranque de todos los equipos conectados al iniciar sesión (una vez por sesión, de 3 en 3); b) el botón DS muestra x/y — cuántos equipos del grupo tienen el player OPERATIVO sobre los conectados; c) versión al pie del menú de opciones (canon cuadrático AdmiraNeXT). -->
 <!-- control-signage · v.2026.07.21.r5 · estado único live/ready/stale/offline/blocked con heartbeat, proof-of-play, captura, versión, contenido y doble acuse. Arranque bloqueado si no es elegible; estado DS nunca sale de localStorage. -->
 <html lang="es">
 <head>
@@ -141,6 +141,27 @@
   .monitorbar input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc);cursor:pointer}
   .monitorbar input[type=number]{width:58px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:5px 7px;font-family:var(--mono);font-size:12px}
   .monitorbar .acstate{margin-left:auto;font-family:var(--mono);font-size:11px}
+  /* selector de equipos del botón DS */
+  .ds-pick-tgl{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;
+    opacity:.85}
+  .ds-picker{width:100%;max-height:260px;overflow:auto;border:1px solid var(--line,#3a2a12);
+    border-radius:8px;background:rgba(0,0,0,.28);padding:6px;display:flex;flex-direction:column;gap:3px}
+  .dsp-head{display:flex;gap:8px;align-items:center;padding:2px 4px 6px;border-bottom:1px solid var(--line,#3a2a12);margin-bottom:3px}
+  .dsp-head button{font-family:var(--mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;
+    padding:3px 7px;background:transparent;border:1px solid var(--line,#3a2a12);color:var(--mut);cursor:pointer;border-radius:5px}
+  .dsp-head button:hover{color:var(--acc,#f7c95d);border-color:var(--acc,#f7c95d)}
+  .dsp-head .dsp-c{margin-left:auto;font-family:var(--mono);font-size:9.5px;color:var(--mut)}
+  .dsp-row{display:flex;align-items:center;gap:7px;padding:4px 5px;border-radius:6px;cursor:pointer;
+    font-family:var(--mono);font-size:10.5px;color:var(--ink,#f4e7c8)}
+  .dsp-row:hover{background:rgba(247,201,93,.07)}
+  .dsp-row input{flex:none;accent-color:var(--acc,#f7c95d)}
+  .dsp-row.dis{opacity:.45;cursor:not-allowed}
+  .dsp-n{flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .dsp-st{flex:none;font-size:9px;letter-spacing:.05em;text-transform:uppercase;padding:2px 6px;border-radius:999px;border:1px solid}
+  .dsp-st.live{color:#7ef0a6;border-color:rgba(126,240,166,.45)}
+  .dsp-st.ready{color:#f7c95d;border-color:rgba(247,201,93,.45)}
+  .dsp-st.blk{color:#ff8f8f;border-color:rgba(255,143,143,.4)}
+  .dsp-st.off{color:var(--mut);border-color:var(--line,#3a2a12)}
   /* pie de versión del raíl: abajo del todo, discreto pero siempre visible */
   .rail-left .monitorbar .rail-ver{margin-top:auto;padding-top:11px;border-top:1px solid var(--line,#3a2a12);
     font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);width:100%}
@@ -516,6 +537,11 @@
       <button id="hackOpen" title="HACKEO · secuencia de intrusión sobre toda la flota (cinemática + acción real)">🕶️ HACKEO</button>
       <button id="dsPreflight" title="Comprueba acceso real, plataforma, player/executor, versión, captura, screen, circuito y heartbeat antes de arrancar">🧪 Preflight DS</button>
       <button id="dsAll" disabled title="Arranca Digital Signage solo en equipos elegibles tras un preflight real">📺 Arrancar DS</button>
+      <!-- Selector por equipo (Carlos, 2026-07-21): plegado por defecto. Lista
+           TODOS los equipos AdmiraNeXT con su estado de player y permite elegir
+           a cuáles afectar. Sin selección = el botón actúa sobre todos. -->
+      <button id="dsPickTgl" class="ds-pick-tgl" title="Elegir a qué equipos afecta el botón" aria-expanded="false">▸ elegir equipos</button>
+      <div id="dsPicker" class="ds-picker" hidden></div>
       <span id="dsPfSummary">preflight pendiente</span>
       <button id="fleetScreens" title="Apagar o encender la pantalla de TODA la flota online (toggle)">🌙 Apagar todas</button>
       <button id="ssToggle" title="Activar o quitar el salvapantallas en TODA la flota online (toggle)">🖼️ Salva ON</button>
@@ -531,7 +557,7 @@
       <!-- VERSIÓN al pie del raíl (Carlos, 2026-07-21): canon cuadrático de
            AdmiraNeXT — la versión SIEMPRE abajo del todo del menú de opciones,
            como en yokup y el resto de soluciones. -->
-      <div class="rail-ver">AdmiraNeXT · control · <b id="ctlVer">v.2026.07.21.r7</b></div>
+      <div class="rail-ver">AdmiraNeXT · control · <b id="ctlVer">v.2026.07.21.r8</b></div>
     </div>
   </aside>
 
@@ -1838,13 +1864,60 @@ async function dsAction(m,turnOn){
 // sólo cuando ya no queda nada por arrancar pasa a PARAR los que emiten. Antes
 // bastaba con que UNO estuviera vivo para que el botón se quedara en «Parar»,
 // dejando sin arrancar al resto (se veía «Parar DS · 4/7» con 3 pendientes).
+// Selección manual del desplegable. Vacía = el botón actúa sobre TODOS (lote).
+const DS_SEL=new Set();
+function dsSelActiva(){ return DS_SEL.size>0; }
 function dsPlan(){
-  const pendientes=dsFleetTargets().filter(m=>!signageIsOn(m.id));   // elegibles aún apagados
+  const enSel=m=>!dsSelActiva()||DS_SEL.has(m.id);
+  const pendientes=dsFleetTargets().filter(m=>!signageIsOn(m.id)&&enSel(m));   // elegibles apagados
   // parar SOLO dentro del grupo del lote (no tocamos players ajenos al grupo)
-  const vivos=MACHINES.filter(m=>m.signageBatch===true&&signageIsOn(m.id));
-  return pendientes.length ? {modo:'on', targets:pendientes, vivos:vivos}
-                           : {modo:'off', targets:vivos, vivos:vivos};
+  const vivos=MACHINES.filter(m=>m.signageBatch===true&&signageIsOn(m.id)&&enSel(m));
+  return pendientes.length ? {modo:'on', targets:pendientes, vivos:vivos, sel:dsSelActiva()}
+                           : {modo:'off', targets:vivos, vivos:vivos, sel:dsSelActiva()};
 }
+// ── Desplegable de equipos: estado real del player + casillas para elegir ──
+function dsEstadoDe(m){
+  if(signageIsOn(m.id)) return {c:'live', t:'emitiendo', ok:true};
+  if(!m.online)         return {c:'off',  t:'offline',   ok:false};
+  if(signageEligible(m.id)) return {c:'ready', t:'listo', ok:true};
+  return {c:'blk', t:'bloqueado', ok:false};
+}
+function renderDsPicker(){
+  const box=$('#dsPicker'); if(!box||box.hidden) return;
+  const ms=(MACHINES||[]).filter(m=>m.signageBatch===true);
+  if(!ms.length){ box.innerHTML='<div class="dsp-row dis">sin equipos en el grupo · ejecuta 🧪 Preflight DS</div>'; return; }
+  const filas=ms.map(m=>{
+    const e=dsEstadoDe(m), marcado=DS_SEL.has(m.id)?' checked':'', dis=e.ok?'':' disabled';
+    return '<label class="dsp-row'+(e.ok?'':' dis')+'" title="'+dsEsc(m.name||m.id)+' · '+e.t+'">'+
+      '<input type="checkbox" data-dsp="'+dsEsc(m.id)+'"'+marcado+dis+'>'+
+      '<span class="dsp-n">'+dsEsc(m.name||m.id)+'</span>'+
+      '<span class="dsp-st '+e.c+'">'+e.t+'</span></label>';
+  }).join('');
+  const live=ms.filter(m=>signageIsOn(m.id)).length;
+  box.innerHTML='<div class="dsp-head">'+
+      '<button type="button" data-dsp-all="1">todos</button>'+
+      '<button type="button" data-dsp-none="1">ninguno</button>'+
+      '<span class="dsp-c">'+live+'/'+ms.length+' con player'+(DS_SEL.size?(' · '+DS_SEL.size+' elegidos'):'')+'</span>'+
+    '</div>'+filas;
+}
+(function(){
+  const t=$('#dsPickTgl');
+  if(t) t.onclick=()=>{ const b=$('#dsPicker'); const abrir=b.hidden; b.hidden=!abrir;
+    t.textContent=(abrir?'▾':'▸')+' elegir equipos'; t.setAttribute('aria-expanded',String(abrir));
+    if(abrir) renderDsPicker(); };
+  document.addEventListener('change', e=>{
+    const c=e.target.closest('input[data-dsp]'); if(!c) return;
+    if(c.checked) DS_SEL.add(c.dataset.dsp); else DS_SEL.delete(c.dataset.dsp);
+    renderDsPicker(); paintDsAll();
+  });
+  document.addEventListener('click', e=>{
+    if(e.target.closest('[data-dsp-all]')){
+      (MACHINES||[]).filter(m=>m.signageBatch===true&&dsEstadoDe(m).ok).forEach(m=>DS_SEL.add(m.id));
+      renderDsPicker(); paintDsAll(); return;
+    }
+    if(e.target.closest('[data-dsp-none]')){ DS_SEL.clear(); renderDsPicker(); paintDsAll(); }
+  });
+})();
 function paintDsAll(){
   const b=$('#dsAll'); if(!b) return;
   const plan=dsPlan(), stopping=plan.modo==='off';
@@ -1854,7 +1927,8 @@ function paintDsAll(){
   const live=MACHINES.filter(m=>signageIsOn(m.id)).length;
   const total=MACHINES.filter(m=>m.online).length;
   const xy=' · '+live+'/'+total;
-  b.textContent=(stopping?'⏹️ Parar DS':'📺 Arrancar DS')+xy;
+  b.textContent=(stopping?'⏹️ Parar DS':'📺 Arrancar DS')+(plan.sel?(' · '+plan.targets.length+' elegidos'):xy);
+  renderDsPicker();
   b.title=(stopping?('Ya emiten todos los elegibles · parar los '+plan.targets.length+' players vivos')
                    :('Arrancar DS en '+plan.targets.length+' equipo(s) que aún no emiten'))
     +' — '+live+' de '+total+' equipos conectados tienen el player operativo';

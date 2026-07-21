@@ -4,7 +4,7 @@
 <!-- control-pantallas · v.2026.07.10.r2 · MUDANZA: la sección «Pantallas · Players» (plano de CONTENIDO: /signage/screens + /signage/now + mando M8 /control/cmd + doble tick) se movió a su PÁGINA PROPIA → /players/. /control queda solo para el plano de MÁQUINAS. -->
 <!-- control-tareas · v.2026.07.16.r2 · VISOR de misiones FLT de yokup por máquina (kanban #tareas-board + mini-cola por tarjeta); fuente /fleet/missions de yokup; ➕ y misiones enlazan a yokup (control NO crea encargos). -->
 <!-- control-open-app · v.2026.07.20.r1 · «abrir app» admite navegador + URL (Firefox www.marca.com); normaliza https y solicita pantalla completa en el equipo remoto. -->
-<!-- control-lanzamiento-ds · v.2026.07.21.r6 · MISIÓN DEL DÍA (FLT-924): a) foto de arranque de todos los equipos conectados al iniciar sesión (una vez por sesión, de 3 en 3); b) el botón DS muestra x/y — cuántos equipos del grupo tienen el player OPERATIVO sobre los conectados; c) versión al pie del menú de opciones (canon cuadrático AdmiraNeXT). -->
+<!-- control-lanzamiento-ds · v.2026.07.21.r7 · MISIÓN DEL DÍA (FLT-924): a) foto de arranque de todos los equipos conectados al iniciar sesión (una vez por sesión, de 3 en 3); b) el botón DS muestra x/y — cuántos equipos del grupo tienen el player OPERATIVO sobre los conectados; c) versión al pie del menú de opciones (canon cuadrático AdmiraNeXT). -->
 <!-- control-signage · v.2026.07.21.r5 · estado único live/ready/stale/offline/blocked con heartbeat, proof-of-play, captura, versión, contenido y doble acuse. Arranque bloqueado si no es elegible; estado DS nunca sale de localStorage. -->
 <html lang="es">
 <head>
@@ -531,7 +531,7 @@
       <!-- VERSIÓN al pie del raíl (Carlos, 2026-07-21): canon cuadrático de
            AdmiraNeXT — la versión SIEMPRE abajo del todo del menú de opciones,
            como en yokup y el resto de soluciones. -->
-      <div class="rail-ver">AdmiraNeXT · control · <b id="ctlVer">v.2026.07.21.r6</b></div>
+      <div class="rail-ver">AdmiraNeXT · control · <b id="ctlVer">v.2026.07.21.r7</b></div>
     </div>
   </aside>
 
@@ -1833,25 +1833,37 @@ async function dsAction(m,turnOn){
   const arg=turnOn?[screen,circuit,'','0'].join('|'):'';
   return api('/action',{method:'POST',body:JSON.stringify({machine:m.id,action:turnOn?'signage_on':'signage_off',arg})});
 }
+// Qué hará el botón AHORA (Carlos, 2026-07-21): un único botón para las dos
+// cosas. Mientras queden equipos elegibles SIN emitir, arranca los que faltan;
+// sólo cuando ya no queda nada por arrancar pasa a PARAR los que emiten. Antes
+// bastaba con que UNO estuviera vivo para que el botón se quedara en «Parar»,
+// dejando sin arrancar al resto (se veía «Parar DS · 4/7» con 3 pendientes).
+function dsPlan(){
+  const pendientes=dsFleetTargets().filter(m=>!signageIsOn(m.id));   // elegibles aún apagados
+  // parar SOLO dentro del grupo del lote (no tocamos players ajenos al grupo)
+  const vivos=MACHINES.filter(m=>m.signageBatch===true&&signageIsOn(m.id));
+  return pendientes.length ? {modo:'on', targets:pendientes, vivos:vivos}
+                           : {modo:'off', targets:vivos, vivos:vivos};
+}
 function paintDsAll(){
   const b=$('#dsAll'); if(!b) return;
-  const running=MACHINES.filter(m=>m.signageBatch===true&&signageIsOn(m.id));
-  const eligible=dsFleetTargets(), stopping=running.length>0;
+  const plan=dsPlan(), stopping=plan.modo==='off';
+  const running=plan.vivos, eligible=dsFleetTargets();
   // x/y (Carlos, 2026-07-21): de un vistazo, cuántos equipos del grupo AdmiraNeXT
   // tienen el player OPERATIVO (heartbeat fresco) sobre los que están conectados.
   const live=MACHINES.filter(m=>signageIsOn(m.id)).length;
   const total=MACHINES.filter(m=>m.online).length;
   const xy=' · '+live+'/'+total;
   b.textContent=(stopping?'⏹️ Parar DS':'📺 Arrancar DS')+xy;
-  b.title=(stopping?'Parar los players con heartbeat fresco':'Arrancar solo '+eligible.length+' equipo(s) elegible(s)')
+  b.title=(stopping?('Ya emiten todos los elegibles · parar los '+plan.targets.length+' players vivos')
+                   :('Arrancar DS en '+plan.targets.length+' equipo(s) que aún no emiten'))
     +' — '+live+' de '+total+' equipos conectados tienen el player operativo';
-  b.disabled=DS_PREFLIGHT_BUSY||(!stopping&&!eligible.length);
+  b.disabled=DS_PREFLIGHT_BUSY||!plan.targets.length;
   b.classList.toggle('on',stopping); b.classList.toggle('off',!stopping);
 }
 async function startSignage(){
-  const running=MACHINES.filter(m=>m.signageBatch===true&&signageIsOn(m.id));
-  const stopping=running.length>0, targets=stopping?running:dsFleetTargets();
-  if(!targets.length){ alert('No hay equipos elegibles. Ejecuta 🧪 Preflight DS y resuelve los bloqueos.'); return; }
+  const plan=dsPlan(), stopping=plan.modo==='off', targets=plan.targets;
+  if(!targets.length){ alert('No hay equipos elegibles ni emitiendo. Ejecuta 🧪 Preflight DS y resuelve los bloqueos.'); return; }
   const detail=targets.map(m=>'• '+m.name+' → '+((dsPf(m.id)&&dsPf(m.id).screen.id)||m.id)).join('\n');
   const verb=stopping?'Parar':'Arrancar';
   if(!confirm((stopping?'⏹️ ':'📺 ')+verb+' DS\n\nAlcance: '+targets.length+' equipo(s), '+(dsFleetSummary(targets)||'multiplataforma')+'\n\n'+detail+(stopping?'':'\n\nLos bloqueados quedan fuera.')+'\n\n¿Continuar?')) return;

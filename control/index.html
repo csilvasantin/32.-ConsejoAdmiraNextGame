@@ -1233,9 +1233,7 @@ $('#cards').addEventListener('click', async e=>{
       pushResult(machine,'🧪 preflight DS',{rc:1,stdout:'',stderr:(pf&&pf.blockers||['Ejecuta el preflight antes de arrancar.']).join('\n')});
       return;
     }
-    // Fuente única: el screen y circuito salen del preflight del backend.
-    const arg=turnOn?[(pf.screen&&pf.screen.id)||machine,pf.circuit||'',machine,'0'].join('|'):'';
-    const act = turnOn ? 'signage_on' : 'signage_off';
+    // Fuente única: screen/circuito salen del preflight dentro de dsAction.
     const label = turnOn ? '📺 arrancar DS' : '⏹️ parar';
     b.disabled=true; const lbl0=b.textContent; b.textContent=(turnOn?'📺':'⏹️')+' …';
     let ok=false;
@@ -1814,7 +1812,9 @@ async function dsAction(m,turnOn){
     if(turnOn) watchCanal(m.id,name,screen);
     return {rc:0,stdout:'encolado en executor local (cmd '+res.id+' · device '+deviceId+' · screen '+screen+')',stderr:'',ms:0};
   }
-  const arg=turnOn?[screen,circuit,m.id,'0'].join('|'):'';
+  // El tercer campo es TAG de contenido, no machine. El id de máquina lo añade
+  // el backend por separado; dejarlo vacío lanza un canal limpio, sin filtro.
+  const arg=turnOn?[screen,circuit,'','0'].join('|'):'';
   return api('/action',{method:'POST',body:JSON.stringify({machine:m.id,action:turnOn?'signage_on':'signage_off',arg})});
 }
 function paintDsAll(){

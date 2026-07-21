@@ -4371,6 +4371,14 @@ async def council_hackeo(request: Request, _rate=Depends(check_rate_limit), _aut
         _raw = await request.body()
         _body = json.loads(_raw.decode("utf-8")) if _raw else {}
         exclude_ip = str((_body or {}).get("exclude_ip") or "").strip()
+        # GRANULAR (Carlos, 2026-07-21): si el panel manda only_ids, el hackeo
+        # actúa SOLO sobre esos equipos. Lista vacía o ausente = toda la flota.
+        _only = (_body or {}).get("only_ids") or []
+        if isinstance(_only, list) and _only:
+            _keep = {str(x) for x in _only}
+            machines = [m for m in machines if str(m.get("id")) in _keep]
+            if not machines:
+                return {"ok": False, "error": "ninguno de los equipos elegidos está en el consejo", "machines": []}
     except Exception:
         exclude_ip = ""
     if exclude_ip:

@@ -4,7 +4,7 @@
 <!-- control-pantallas · v.2026.07.10.r2 · MUDANZA: la sección «Pantallas · Players» (plano de CONTENIDO: /signage/screens + /signage/now + mando M8 /control/cmd + doble tick) se movió a su PÁGINA PROPIA → /players/. /control queda solo para el plano de MÁQUINAS. -->
 <!-- control-tareas · v.2026.07.16.r2 · VISOR de misiones FLT de yokup por máquina (kanban #tareas-board + mini-cola por tarjeta); fuente /fleet/missions de yokup; ➕ y misiones enlazan a yokup (control NO crea encargos). -->
 <!-- control-open-app · v.2026.07.20.r1 · «abrir app» admite navegador + URL (Firefox www.marca.com); normaliza https y solicita pantalla completa en el equipo remoto. -->
-<!-- control-lanzamiento-ds · v.2026.07.21.r8 · MISIÓN DEL DÍA (FLT-924): a) foto de arranque de todos los equipos conectados al iniciar sesión (una vez por sesión, de 3 en 3); b) el botón DS muestra x/y — cuántos equipos del grupo tienen el player OPERATIVO sobre los conectados; c) versión al pie del menú de opciones (canon cuadrático AdmiraNeXT). -->
+<!-- control-lanzamiento-ds · v.2026.07.21.r9 · MISIÓN DEL DÍA (FLT-924): a) foto de arranque de todos los equipos conectados al iniciar sesión (una vez por sesión, de 3 en 3); b) el botón DS muestra x/y — cuántos equipos del grupo tienen el player OPERATIVO sobre los conectados; c) versión al pie del menú de opciones (canon cuadrático AdmiraNeXT). -->
 <!-- control-signage · v.2026.07.21.r5 · estado único live/ready/stale/offline/blocked con heartbeat, proof-of-play, captura, versión, contenido y doble acuse. Arranque bloqueado si no es elegible; estado DS nunca sale de localStorage. -->
 <html lang="es">
 <head>
@@ -535,6 +535,8 @@
       <label class="ac-rep" title="Repetir la captura automáticamente cada X segundos"><input type="checkbox" id="acToggle"> repetir cada <input type="number" id="acSec" min="3" max="600" value="15"> s</label>
       <button id="wallOpen" title="Pared de pantallas: mosaico a pantalla completa de todas las capturas">🧱 Mosaico</button>
       <button id="hackOpen" title="HACKEO · secuencia de intrusión sobre toda la flota (cinemática + acción real)">🕶️ HACKEO</button>
+      <button id="hkPickTgl" class="ds-pick-tgl" title="Elegir a qué equipos afecta el hackeo" aria-expanded="false">▸ elegir equipos</button>
+      <div id="hkPicker" class="ds-picker" hidden></div>
       <button id="dsPreflight" title="Comprueba acceso real, plataforma, player/executor, versión, captura, screen, circuito y heartbeat antes de arrancar">🧪 Preflight DS</button>
       <button id="dsAll" disabled title="Arranca Digital Signage solo en equipos elegibles tras un preflight real">📺 Arrancar DS</button>
       <!-- Selector por equipo (Carlos, 2026-07-21): plegado por defecto. Lista
@@ -545,6 +547,8 @@
       <span id="dsPfSummary">preflight pendiente</span>
       <button id="fleetScreens" title="Apagar o encender la pantalla de TODA la flota online (toggle)">🌙 Apagar todas</button>
       <button id="ssToggle" title="Activar o quitar el salvapantallas en TODA la flota online (toggle)">🖼️ Salva ON</button>
+      <button id="ssPickTgl" class="ds-pick-tgl" title="Elegir a qué equipos afecta el salvapantallas" aria-expanded="false">▸ elegir equipos</button>
+      <div id="ssPicker" class="ds-picker" hidden></div>
       <button id="playersStandby" title="Standby/Reactivar los PLAYERS de toda la flota (mac/win/linux/ios/android) por canal de comandos — pone el canal en negro sin cerrar la app">⏻ Standby players</button>
       <button id="msgAll" title="Enviar un mensaje/encargo a TODOS los equipos vivos (broadcast por el router de encargos AdmiraNeXT — con ACK y traza en Telegram)">📣 Mensaje a todos</button>
       <button id="tareasOpen" title="Tablero TAREAS — VISOR de las misiones FLT de yokup por máquina (toda la flota): presencia + misiones + enlace a yokup">📋 Tablero TAREAS</button>
@@ -557,7 +561,7 @@
       <!-- VERSIÓN al pie del raíl (Carlos, 2026-07-21): canon cuadrático de
            AdmiraNeXT — la versión SIEMPRE abajo del todo del menú de opciones,
            como en yokup y el resto de soluciones. -->
-      <div class="rail-ver">AdmiraNeXT · control · <b id="ctlVer">v.2026.07.21.r8</b></div>
+      <div class="rail-ver">AdmiraNeXT · control · <b id="ctlVer">v.2026.07.21.r9</b></div>
     </div>
   </aside>
 
@@ -2054,20 +2058,70 @@ function renderFleetScreens(){
   };
 })();
 
+
+/* ── Selector de equipos REUTILIZABLE (Carlos, 2026-07-21) ──────────────────
+   Mismo patrón que el del botón DS, para cualquier acción de flota: plegado por
+   defecto, lista los equipos con su estado y permite elegir a cuáles afectar.
+   Sin selección = la acción va a TODOS (comportamiento de siempre).
+   mkFleetPicker({tglId, boxId, sel, filter, estado, onchange}) */
+function mkFleetPicker(cfg){
+  const tgl=$('#'+cfg.tglId), box=$('#'+cfg.boxId);
+  if(!tgl||!box) return {render(){}};
+  function lista(){ return (MACHINES||[]).filter(cfg.filter||(m=>true)); }
+  function render(){
+    if(box.hidden) return;
+    const ms=lista();
+    if(!ms.length){ box.innerHTML='<div class="dsp-row dis">sin equipos disponibles</div>'; return; }
+    const filas=ms.map(m=>{
+      const e=cfg.estado(m), marcado=cfg.sel.has(m.id)?' checked':'', dis=e.ok?'':' disabled';
+      return '<label class="dsp-row'+(e.ok?'':' dis')+'" title="'+dsEsc(m.name||m.id)+' · '+e.t+'">'+
+        '<input type="checkbox" data-fp="'+cfg.boxId+'" data-fpm="'+dsEsc(m.id)+'"'+marcado+dis+'>'+
+        '<span class="dsp-n">'+dsEsc(m.name||m.id)+'</span>'+
+        '<span class="dsp-st '+e.c+'">'+e.t+'</span></label>';
+    }).join('');
+    const ok=ms.filter(m=>cfg.estado(m).ok).length;
+    box.innerHTML='<div class="dsp-head">'+
+        '<button type="button" data-fp-all="'+cfg.boxId+'">todos</button>'+
+        '<button type="button" data-fp-none="'+cfg.boxId+'">ninguno</button>'+
+        '<span class="dsp-c">'+ok+'/'+ms.length+' disponibles'+(cfg.sel.size?(' · '+cfg.sel.size+' elegidos'):'')+'</span>'+
+      '</div>'+filas;
+  }
+  tgl.onclick=()=>{ const abrir=box.hidden; box.hidden=!abrir;
+    tgl.textContent=(abrir?'▾':'▸')+' elegir equipos'; tgl.setAttribute('aria-expanded',String(abrir)); render(); };
+  document.addEventListener('change', e=>{
+    const c=e.target.closest('input[data-fp="'+cfg.boxId+'"]'); if(!c) return;
+    if(c.checked) cfg.sel.add(c.dataset.fpm); else cfg.sel.delete(c.dataset.fpm);
+    render(); if(cfg.onchange) cfg.onchange();
+  });
+  document.addEventListener('click', e=>{
+    if(e.target.closest('[data-fp-all="'+cfg.boxId+'"]')){
+      lista().filter(m=>cfg.estado(m).ok).forEach(m=>cfg.sel.add(m.id)); render(); if(cfg.onchange) cfg.onchange(); return; }
+    if(e.target.closest('[data-fp-none="'+cfg.boxId+'"]')){ cfg.sel.clear(); render(); if(cfg.onchange) cfg.onchange(); }
+  });
+  return {render};
+}
+// estado simple: sirve para salva y hackeo (dependen solo de conectividad)
+function estadoConect(m){ return m.online?{c:'ready',t:'online',ok:true}:{c:'off',t:'offline',ok:false}; }
+
 /* ---------- salvapantallas: toggle único ON/OFF en toda la flota online ----------
    Manda la acción screensaver_on/off (backend OS-aware: ScreenSaverEngine en
    macOS, GNOME ScreenSaver vía dbus en Linux) a cada máquina online. Un solo botón
    que revela el estado contrario tras pulsarse (estado COMANDADO, persistido). */
 let SS_ON = localStorage.getItem('fleet_screensaver_on')==='1';
+const SS_SEL=new Set();   // equipos elegidos para el salvapantallas (vacío = todos)
 function renderSsToggle(){
   const b=$('#ssToggle'); if(!b) return;
-  if(SS_ON){ b.textContent='🖼️ Salva OFF · ACTIVO'; b.classList.add('ss-on'); b.title='El salvapantallas está ACTIVO en la flota — clic para quitarlo'; }
-  else { b.textContent='🖼️ Salva ON'; b.classList.remove('ss-on'); b.title='Activar el salvapantallas en TODA la flota online'; }
+  const nsel=(typeof SS_SEL!=='undefined'&&SS_SEL.size)?(' · '+SS_SEL.size+' elegidos'):'';
+  if(SS_ON){ b.textContent='🖼️ Salva OFF · ACTIVO'+nsel; b.classList.add('ss-on'); b.title='El salvapantallas está ACTIVO en la flota — clic para quitarlo'; }
+  else { b.textContent='🖼️ Salva ON'+nsel; b.classList.remove('ss-on'); b.title='Activar el salvapantallas en TODA la flota online'; }
 }
 (function(){ const b=$('#ssToggle'); if(!b) return; renderSsToggle();
+  mkFleetPicker({tglId:'ssPickTgl', boxId:'ssPicker', sel:SS_SEL, estado:estadoConect,
+                 filter:m=>true, onchange:renderSsToggle});
   b.onclick=async()=>{
-    const targets = MACHINES.filter(m=>m.online);
-    if(!targets.length){ pushResult('__all__','🖼️ salvapantallas',{rc:1,stdout:'',stderr:'no hay máquinas online'}); return; }
+    // granular: si hay elegidos, sólo ellos; si no, toda la flota online
+    const targets = MACHINES.filter(m=>m.online && (!SS_SEL.size || SS_SEL.has(m.id)));
+    if(!targets.length){ pushResult('__all__','🖼️ salvapantallas',{rc:1,stdout:'',stderr:SS_SEL.size?'los equipos elegidos no están online':'no hay máquinas online'}); return; }
     const turnOn=!SS_ON;   // si está inactivo → activar; si activo → quitar
     const action=turnOn?'screensaver_on':'screensaver_off';
     const label=turnOn?'🖼️ salva ON':'🖼️ salva OFF';
@@ -2401,13 +2455,21 @@ function collapseAllToggle(){
     return h;
   }
 
+  // equipos elegidos para el hackeo (vacío = toda la flota, como siempre)
+  const HK_SEL=new Set();
+  window.__HK_SEL=HK_SEL;
   async function callCouncilHackeo(mode){
     const path = mode==="stop" ? "/api/council/hackeo/stop" : "/api/council/hackeo";
     if(mode!=="stop" && !MY_TAILNET_IP){ try{ await fetchOperatorToken(); }catch(e){} }
     // Sin autoexclusión: el hackeo toma TODAS las pantallas, incluida la de la
     // máquina desde la que se lanza (decisión del operador). Antes se enviaba
     // exclude_ip = MY_TAILNET_IP para no tapar el panel del que lo lanzaba.
-    const body = mode==="stop" ? "{}" : JSON.stringify({ exclude_ip: "" });
+    // GRANULAR (Carlos, 2026-07-21): si hay equipos elegidos, se mandan como
+    // only_ids y el backend actúa SOLO sobre ellos. Si el backend fuese antiguo
+    // e ignorase el campo, el hackeo sigue yendo a todos — nunca falla por esto.
+    const only = Array.from(HK_SEL);
+    const body = mode==="stop" ? JSON.stringify({ only_ids: only })
+                               : JSON.stringify({ exclude_ip: "", only_ids: only });
     const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u=>u!==activeApiUrl)) : COUNCIL_API_URLS.slice();
     const headers = await hackAuthHeaders();
     let lastErr=null;
@@ -2483,6 +2545,12 @@ function collapseAllToggle(){
     try{ await callCouncilHackeo("stop"); }catch(e){}
   }
 
+  // selector de equipos del hackeo (mismo componente que salva/DS)
+  if(typeof mkFleetPicker==='function'){
+    mkFleetPicker({tglId:'hkPickTgl', boxId:'hkPicker', sel:HK_SEL, estado:estadoConect, filter:m=>true,
+      onchange:function(){ const b=document.getElementById('hackOpen');
+        if(b) b.textContent='🕶️ HACKEO'+(HK_SEL.size?(' · '+HK_SEL.size+' elegidos'):''); }});
+  }
   document.getElementById("hackOpen") && document.getElementById("hackOpen").addEventListener("click", startHack);
   document.getElementById("hackBack") && document.getElementById("hackBack").addEventListener("click", stopHack);
   window.addEventListener("keydown",(e)=>{ if(e.key==="Escape"&&hackMode) stopHack(); });

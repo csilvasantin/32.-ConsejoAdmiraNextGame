@@ -270,7 +270,8 @@ const ACTIONS = {
       const audio = (parts[3] || '').trim() === '1';
       let pre = '';
       if (screen) pre += 'defaults write tv.admira.signage.mac screen ' + sh(screen) + '; ';
-      if (circuit) pre += 'defaults write tv.admira.signage.mac circuit ' + sh(circuit) + '; ';
+      pre += circuit ? ('defaults write tv.admira.signage.mac circuit ' + sh(circuit) + '; ')
+                     : 'defaults delete tv.admira.signage.mac circuit 2>/dev/null; ';
       // id del equipo → el player lo reporta a /signage/now para que el 🎛️ mando enganche exacto.
       if (machine) pre += 'defaults write tv.admira.signage.mac machine ' + sh(machine) + '; ';
       // filtro por tag y audio: se escriben siempre — cada lanzamiento fija su config.
@@ -305,15 +306,15 @@ const ACTIONS = {
       const q = [screen && ('screen=' + encodeURIComponent(screen)), circuit && ('circuit=' + encodeURIComponent(circuit)), tag && ('tag=' + encodeURIComponent(tag)), audio && 'muted=0', machine && ('machine=' + encodeURIComponent(machine))].filter(Boolean).join('&');
       const url = q ? (baseUrl + (baseUrl.includes('?') ? '&' : '?') + q) : baseUrl;
       const envp = LGUI + 'export SIGN_SCREEN=' + sh(screen) + '; export SIGN_CIRCUIT=' + sh(circuit) + '; export SIGN_TAG=' + sh(tag) + '; export SIGN_MUTED=' + sh(audio ? '0' : '') + '; export SIGN_MACHINE=' + sh(machine) + '; export SIGN_URL=' + sh(url) + '; ';
-      // Upsert en ~/.config/admira-signage.env: screen/circuit vacíos = conservar
-      // los últimos; TAG y MUTED se fijan siempre (vacío = quitar filtro / silencio).
+      // Upsert en ~/.config/admira-signage.env. Circuito y TAG vacíos borran
+      // cualquier filtro anterior: un "canal limpio" no hereda estado viejo.
       // MACHINE = id del equipo en la flota → el canal lo reporta a /signage/now
       // y el 🎛 mando (remotecontrol?machine=) engancha la pantalla exacta.
       const envfile =
         'F="$HOME/.config/admira-signage.env"; mkdir -p "$HOME/.config"; touch "$F"; ' +
         'up(){ grep -v "^$1=" "$F" > "$F.tmp" 2>/dev/null || true; [ -z "$2" ] || echo "$1=$2" >> "$F.tmp"; mv "$F.tmp" "$F"; }; ' +
         '[ -z "$SIGN_SCREEN" ] || up ADMIRA_SCREEN "$SIGN_SCREEN"; ' +
-        '[ -z "$SIGN_CIRCUIT" ] || up ADMIRA_CIRCUIT "$SIGN_CIRCUIT"; ' +
+        'up ADMIRA_CIRCUIT "$SIGN_CIRCUIT"; ' +
         'up ADMIRA_TAG "$SIGN_TAG"; ' +
         'up ADMIRA_MUTED "$SIGN_MUTED"; ' +
         'up ADMIRA_MACHINE "$SIGN_MACHINE"; ';

@@ -4,6 +4,7 @@
 <!-- control-pantallas · v.2026.07.10.r2 · MUDANZA: la sección «Pantallas · Players» (plano de CONTENIDO: /signage/screens + /signage/now + mando M8 /control/cmd + doble tick) se movió a su PÁGINA PROPIA → /players/. /control queda solo para el plano de MÁQUINAS. -->
 <!-- control-tareas · v.2026.07.16.r2 · VISOR de misiones FLT de yokup por máquina (kanban #tareas-board + mini-cola por tarjeta); fuente /fleet/missions de yokup; ➕ y misiones enlazan a yokup (control NO crea encargos). -->
 <!-- control-open-app · v.2026.07.20.r1 · «abrir app» admite navegador + URL (Firefox www.marca.com); normaliza https y solicita pantalla completa en el equipo remoto. -->
+<!-- control-lanzamiento-ds · v.2026.07.21.r6 · MISIÓN DEL DÍA (FLT-924): a) foto de arranque de todos los equipos conectados al iniciar sesión (una vez por sesión, de 3 en 3); b) el botón DS muestra x/y — cuántos equipos del grupo tienen el player OPERATIVO sobre los conectados; c) versión al pie del menú de opciones (canon cuadrático AdmiraNeXT). -->
 <!-- control-signage · v.2026.07.21.r5 · estado único live/ready/stale/offline/blocked con heartbeat, proof-of-play, captura, versión, contenido y doble acuse. Arranque bloqueado si no es elegible; estado DS nunca sale de localStorage. -->
 <html lang="es">
 <head>
@@ -140,6 +141,10 @@
   .monitorbar input[type=checkbox]{width:16px;height:16px;accent-color:var(--acc);cursor:pointer}
   .monitorbar input[type=number]{width:58px;background:var(--panel2);color:var(--ink);border:1px solid var(--line);border-radius:7px;padding:5px 7px;font-family:var(--mono);font-size:12px}
   .monitorbar .acstate{margin-left:auto;font-family:var(--mono);font-size:11px}
+  /* pie de versión del raíl: abajo del todo, discreto pero siempre visible */
+  .rail-left .monitorbar .rail-ver{margin-top:auto;padding-top:11px;border-top:1px solid var(--line,#3a2a12);
+    font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut);width:100%}
+  .rail-left .monitorbar .rail-ver b{color:var(--acc,#f7c95d)}
   /* tarjetas: comprimir + reordenar por arrastre */
   .card .top{position:relative}
   .card .cardmeta{flex:1;min-width:0}
@@ -523,6 +528,10 @@
       <span class="caphealth" id="capHealth"></span>
       <button id="fixAll" style="display:none" title="Enviar el arreglo de captura por SSH a todos los equipos que fallan">🛡️ arreglar todas</button>
       <span class="acstate" id="acState">— para monitorizar qué emite cada pantalla</span>
+      <!-- VERSIÓN al pie del raíl (Carlos, 2026-07-21): canon cuadrático de
+           AdmiraNeXT — la versión SIEMPRE abajo del todo del menú de opciones,
+           como en yokup y el resto de soluciones. -->
+      <div class="rail-ver">AdmiraNeXT · control · <b id="ctlVer">v.2026.07.21.r6</b></div>
     </div>
   </aside>
 
@@ -844,6 +853,7 @@ async function refresh(){
   if(!SESSION){ $('#connPill').textContent='🔒 inicia sesión Google'; $('#connPill').className='pill bad'; renderCards([]); return; }
   try{
     const d=await api('/status'); MACHINES=d.machines; MACHINES.forEach(m=>{ m.sshOnline=!!m.online; }); _reauthTried=false;
+    _capturaDeArranque();   // al INICIAR SESIÓN: foto de todos los conectados (una vez)
     await Promise.all([loadPersonas(), loadFleet()]);
     // Un equipo con un agente ACTIVO (Claude/Codex/Grok, beat de presencia <8min) cuenta como
     // ONLINE aunque el hub lo dé offline: el hub solo ve el agente de flota/SSH, no los agentes
@@ -1827,8 +1837,14 @@ function paintDsAll(){
   const b=$('#dsAll'); if(!b) return;
   const running=MACHINES.filter(m=>m.signageBatch===true&&signageIsOn(m.id));
   const eligible=dsFleetTargets(), stopping=running.length>0;
-  b.textContent=stopping?'⏹️ Parar DS ('+running.length+')':'📺 Arrancar DS';
-  b.title=stopping?'Parar los players con heartbeat fresco':'Arrancar solo '+eligible.length+' equipo(s) elegible(s)';
+  // x/y (Carlos, 2026-07-21): de un vistazo, cuántos equipos del grupo AdmiraNeXT
+  // tienen el player OPERATIVO (heartbeat fresco) sobre los que están conectados.
+  const live=MACHINES.filter(m=>signageIsOn(m.id)).length;
+  const total=MACHINES.filter(m=>m.online).length;
+  const xy=' · '+live+'/'+total;
+  b.textContent=(stopping?'⏹️ Parar DS':'📺 Arrancar DS')+xy;
+  b.title=(stopping?'Parar los players con heartbeat fresco':'Arrancar solo '+eligible.length+' equipo(s) elegible(s)')
+    +' — '+live+' de '+total+' equipos conectados tienen el player operativo';
   b.disabled=DS_PREFLIGHT_BUSY||(!stopping&&!eligible.length);
   b.classList.toggle('on',stopping); b.classList.toggle('off',!stopping);
 }
@@ -1859,6 +1875,29 @@ async function startSignage(){
   if(pf) pf.onclick=()=>refreshDsPreflight();
   updateDsSummary();
 })();
+
+/* ── CAPTURA DE ARRANQUE (Carlos, 2026-07-21) ────────────────────────────────
+   Al iniciar sesión, el tablero se toma UNA foto de todos los equipos
+   conectados: así entras y ves de verdad qué está emitiendo cada pantalla, sin
+   tener que pulsar «capturar todas». Una sola vez por sesión (marca en
+   sessionStorage) y en segundo plano — ni bloquea el arranque ni repite. */
+let _capArranqueHecho=false;
+function _capturaDeArranque(){
+  if(_capArranqueHecho) return;
+  try{ if(sessionStorage.getItem('fleet_cap_arranque')==='1'){ _capArranqueHecho=true; return; } }catch(e){}
+  const online=(MACHINES||[]).filter(m=>m.online);
+  if(!online.length) return;                 // aún sin flota: se reintenta en el siguiente refresh
+  _capArranqueHecho=true;
+  try{ sessionStorage.setItem('fleet_cap_arranque','1'); }catch(e){}
+  const st=$('#acState'); if(st) st.textContent='📸 foto de arranque · '+online.length+' equipo(s)…';
+  // de 3 en 3 para no saturar el hub ni las máquinas
+  (async()=>{
+    for(let i=0;i<online.length;i+=3){
+      await Promise.all(online.slice(i,i+3).map(m=>captureMachine(m.id).catch(()=>{})));
+    }
+    if(st) st.textContent='📸 foto de arranque lista · '+online.length+' equipo(s)';
+  })();
+}
 
 /* ---------- auto-captura (monitor de pantallas) ---------- */
 let AUTOCAP=(()=>{ try{ return Object.assign({on:false,sec:15}, JSON.parse(localStorage.getItem('fleet_autocap')||'null')||{}); }catch(e){ return {on:false,sec:15}; } })();

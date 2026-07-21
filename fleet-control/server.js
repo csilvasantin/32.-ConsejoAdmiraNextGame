@@ -288,6 +288,7 @@ const ACTIONS = {
         'elif [ -x "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" ]; then ' +
         'pkill -f "\.admira-signage-kiosk" 2>/dev/null || true; ' +
         'open -na "Google Chrome" --args --user-data-dir="$HOME/.admira-signage-kiosk" --app=' + sh(url) + ' ' +
+        '--no-first-run --no-default-browser-check --disable-first-run-ui ' +
         '--disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --autoplay-policy=no-user-gesture-required; sleep 3; ' +
         'pgrep -f "\.admira-signage-kiosk" >/dev/null || { echo "Chrome signage no arrancó" >&2; exit 1; }; ' +
         'else echo "sin AdmiraSignageMac ni Google Chrome" >&2; exit 127; fi; ' +

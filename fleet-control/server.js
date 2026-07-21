@@ -288,10 +288,25 @@ const ACTIONS = {
         'pgrep -x AdmiraSignageMac >/dev/null || { echo "AdmiraSignageMac no arrancó" >&2; exit 1; }; ' +
         'elif [ -x "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome" ]; then ' +
         'pkill -f "\.admira-signage-kiosk" 2>/dev/null || true; ' +
+        // --start-fullscreen: sin esto el canal arranca EN VENTANA, con barra de
+        // menús y tapable por cualquier cosa (cazado por Carlos en el MacBook Pro
+        // 16 el 21-07-2026 — «no se arranca a pantalla completa desde /control»).
+        // El --kiosk de Chrome/mac se ignora, el fullscreen bueno es éste.
+        // --use-mock-keychain: un perfil nuevo pinta si no la infobar «Reinicia el
+        // navegador para cargar los datos de tu perfil» ENCIMA del contenido.
         'open -na "Google Chrome" --args --user-data-dir="$HOME/.admira-signage-kiosk" --app=' + sh(url) + ' ' +
+        '--start-fullscreen --use-mock-keychain --password-store=basic ' +
         '--no-first-run --no-default-browser-check --disable-first-run-ui ' +
         '--disable-background-timer-throttling --disable-backgrounding-occluded-windows --disable-renderer-backgrounding --autoplay-policy=no-user-gesture-required; sleep 3; ' +
         'pgrep -f "\.admira-signage-kiosk" >/dev/null || { echo "Chrome signage no arrancó" >&2; exit 1; }; ' +
+        // El fullscreen nativo abre su propio Space: sin activar, el canal queda
+        // en un Space que nadie ve y la pantalla sigue enseñando el escritorio.
+        // Y hay que activar EL PROCESO DEL PLAYER, no «Google Chrome» a secas:
+        // con dos instancias, activate trae la ventana del Chrome normal y el
+        // canal se queda donde estaba (MacBook Pro 16, 21-07-2026). Best-effort:
+        // si TCC deniega el AppleScript, el player emite igual, sólo que tapable.
+        'DSPID=$(pgrep -f "\.admira-signage-kiosk" | head -1); ' +
+        '[ -n "$DSPID" ] && osascript -e "tell application \\"System Events\\" to set frontmost of (first process whose unix id is $DSPID) to true" >/dev/null 2>&1 || true; ' +
         'else echo "sin AdmiraSignageMac ni Google Chrome" >&2; exit 127; fi; ' +
         'echo "📺 signage lanzado · screen ' + screen + (tag ? ' · tag ' + tag : '') + (audio ? ' · 🔊' : '') + '"';
     },

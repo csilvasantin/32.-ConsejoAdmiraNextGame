@@ -86,7 +86,7 @@ function assessPreflight(machine, runResult, captureResult, live) {
   if (reachable && !playerInstalled && !executorInstalled) blockers.push('Sin player ni executor: instala AdmiraSignage o un navegador kiosk/executor compatible.');
   if (reachable && !captureReady) blockers.push('Sin captura real: instala el agente y concede permiso de grabación de pantalla/sesión gráfica.');
   if (configuredScreen && configuredScreen !== screen) blockers.push('Screen configurado como «' + configuredScreen + '»; unifícalo con «' + screen + '».');
-  if (!probe.circuit && !(live && live.loc)) warnings.push('Sin circuito asignado; emitirá por screen/tag hasta definirlo.');
+  if (!probe.circuit && !(live && live.circuit)) warnings.push('Sin circuito asignado; emitirá por screen/tag hasta definirlo.');
   if (live && live.online === false) warnings.push('Sin heartbeat fresco antes del arranque.');
 
   return {
@@ -98,7 +98,9 @@ function assessPreflight(machine, runResult, captureResult, live) {
     executor: { installed: executorInstalled, type: probe.executor || 'none' },
     permissions: { capture: captureReady },
     screen: { id: screen, configured: configuredScreen || screen, matches: !configuredScreen || configuredScreen === screen },
-    circuit: probe.circuit || (live && live.loc) || '',
+    // `loc`/`locName` describen la pieza o tag que se está mostrando; no son
+    // un circuito. Solo aceptamos el circuito configurado o uno explícito del beat.
+    circuit: probe.circuit || (live && live.circuit) || '',
     live: live || { online: false, age_seconds: null },
     eligible: blockers.length === 0,
     blockers,

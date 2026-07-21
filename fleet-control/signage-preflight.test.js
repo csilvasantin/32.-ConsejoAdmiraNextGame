@@ -46,3 +46,14 @@ test('bloquea un screen configurado distinto al id canónico', () => {
   assert.equal(r.eligible, false);
   assert.match(r.blockers.join(' '), /unifícalo/);
 });
+
+test('no confunde la pieza loc del heartbeat con el circuito', () => {
+  const r = assessPreflight(
+    { id: 'screen-a', name: 'A', platform: 'linux' },
+    { rc: 0, stdout: 'PF_READY=1\nPF_PLAYER=web-browser\nPF_EXECUTOR=systemd-user\nPF_SCREEN=screen-a\n' },
+    { rc: 0, stdout: 'x'.repeat(400) },
+    { screen: 'screen-a', online: true, age_seconds: 2, loc: '#tech' }
+  );
+  assert.equal(r.circuit, '');
+  assert.match(r.warnings.join(' '), /Sin circuito asignado/);
+});

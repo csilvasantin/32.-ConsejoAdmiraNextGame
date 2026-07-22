@@ -154,6 +154,32 @@
       background:#0a0d13;border:1px solid var(--line);border-radius:8px;padding:8px 10px;white-space:pre-wrap}
     #expconsole .ok{color:var(--ok)} #expconsole .warn{color:var(--warn)} #expconsole .dim{color:#5a6678}
 
+    /* ── Registro de uso: qué hizo alguien con este navegador (con captura) ── */
+    .lastuse{border-top:1px solid var(--line);padding-top:9px}
+    .lastuse .lu-hd{font-size:9.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--mut);font-weight:800;margin-bottom:5px}
+    .lu-body{display:flex;gap:9px;align-items:flex-start}
+    .lu-thumb{height:60px;width:auto;max-width:96px;object-fit:cover;border:1px solid var(--line);border-radius:6px;cursor:zoom-in;flex:none;background:#0a0d13}
+    .lu-thumb:hover{border-color:var(--acc)}
+    .lu-meta{font-size:11.5px;color:var(--mut);line-height:1.5;min-width:0}
+    .lu-meta b{color:var(--acc2)}
+    .lu-meta .purpose{color:var(--ink)}
+    .lu-when{display:block;font-family:var(--mono);font-size:10.5px;color:#5a6678;margin-top:2px}
+    /* Lista desplegable de los últimos usos (📜) */
+    .usos{border-top:1px solid var(--line);padding-top:9px;display:flex;flex-direction:column;gap:9px}
+    .usos .uso-row{display:flex;gap:8px;align-items:flex-start;font-size:11px;color:var(--mut)}
+    .usos .uso-thumb{height:44px;width:auto;max-width:72px;object-fit:cover;border:1px solid var(--line);border-radius:5px;cursor:zoom-in;flex:none;background:#0a0d13}
+    .usos .uso-thumb:hover{border-color:var(--acc)}
+    .usos .uso-txt{min-width:0;line-height:1.45}
+    .usos .uso-txt b{color:var(--acc2)}
+    .usos .uso-txt .purpose{color:var(--ink)}
+    .usos .uso-txt .when{font-family:var(--mono);font-size:10px;color:#5a6678}
+    .usos .uso-empty{color:#5a6678;font-family:var(--mono);font-size:11px}
+    /* Lightbox: la captura a tamaño completo */
+    .lightbox{position:fixed;inset:0;background:rgba(4,6,10,.9);display:none;align-items:center;justify-content:center;z-index:200;cursor:zoom-out;padding:24px}
+    .lightbox.show{display:flex}
+    .lightbox img{max-width:94vw;max-height:90vh;border:1px solid var(--acc);border-radius:10px;box-shadow:0 0 40px rgba(0,0,0,.7)}
+    .lightbox .lb-close{position:fixed;top:14px;right:18px;color:var(--ink);font-size:26px;font-weight:700;cursor:pointer;line-height:1;text-shadow:0 1px 3px #000}
+
     .toast{position:fixed;bottom:18px;left:50%;transform:translateX(-50%);background:var(--panel2);border:1px solid var(--acc);color:var(--ink);padding:9px 15px;border-radius:9px;font-size:12.5px;opacity:0;transition:.25s;pointer-events:none;z-index:99}
     .toast.show{opacity:1}
   </style>
@@ -221,11 +247,12 @@
       <div class="cards" id="cards"><div class="empty">Cargando navegadores…</div></div>
       <div style="margin-top:28px;padding-top:12px;border-top:1px solid var(--line);
         font-size:11px;color:var(--mut);font-family:var(--mono);text-align:center">
-        navegadores v4 · <b>navegadores-v.2026.07.17.r4</b> · estado del reloj · sonar /whoami · telemetría de flota · Neo·MacMini
+        navegadores v4 · <b>navegadores-v.2026.07.22.r1</b> · registro de uso con captura · estado del reloj · sonar /whoami · telemetría de flota · Neo·MacBookProNegro14
       </div>
     </main>
   </div>
   <div class="toast" id="toast"></div>
+  <div class="lightbox" id="lightbox"><span class="lb-close" title="cerrar (Esc)">✕</span><img alt="captura de uso"></div>
 
   <script>
     const WORKER = 'https://admira-navegadores.csilvasantin.workers.dev';
@@ -440,6 +467,54 @@
       return [b.machine,b.name,b.os,b.deviceId,b.tabUrl,b.tabTitle].filter(Boolean).join(' ').toLowerCase().includes(q);
     }
 
+    // ── Registro de uso: qué hizo alguien con este navegador, con captura ───────────────
+    // El worker guarda cada uso (persona · máquina · propósito · captura) 14 días y expone
+    // el último en /api/browsers (lastUse) y el histórico en /api/uses. La imagen sale por
+    // /api/useshot (binario). Aquí se pinta en la tarjeta y se abre a tamaño completo.
+    const esc = s => (s==null?'':String(s)).replace(/[&<>"]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c]));
+    function shotURL(deviceId, ts){ return `${WORKER}/api/useshot?deviceId=${encodeURIComponent(deviceId)}&ts=${ts}`; }
+
+    // Lightbox: cualquier <img class="lb-thumb"> abre su captura a tamaño completo.
+    const LB = $('#lightbox'), LBimg = LB.querySelector('img');
+    function openLightbox(src){ LBimg.src = src; LB.classList.add('show'); }
+    function closeLightbox(){ LB.classList.remove('show'); LBimg.src=''; }
+    LB.onclick = closeLightbox;
+    document.addEventListener('keydown', e => { if(e.key==='Escape' && LB.classList.contains('show')) closeLightbox(); });
+    document.addEventListener('click', e => {
+      const im = e.target && e.target.classList && e.target.classList.contains('lb-thumb') ? e.target : null;
+      if(im){ e.stopPropagation(); openLightbox(im.dataset.full || im.src); }
+    });
+
+    // Bloque "último uso" de una tarjeta (si el navegador tiene lastUse).
+    function lastUseBlock(b){
+      const lu = b.lastUse; if(!lu) return '';
+      const thumb = lu.hasShot
+        ? `<img class="lb-thumb lu-thumb" src="${shotURL(b.deviceId, lu.ts)}" alt="captura" title="clic para ampliar" loading="lazy">` : '';
+      return `<div class="lastuse">
+        <div class="lu-hd">📸 último uso</div>
+        <div class="lu-body">${thumb}
+          <div class="lu-meta"><b>${esc(lu.persona||'?')}</b>@${esc(lu.machine||'?')}`
+        + `<span class="lu-when">${esc(lu.purpose||'')}</span>`
+        + `<span class="lu-when">${seenAgo(lu.ts)}</span></div>
+        </div></div>`;
+    }
+
+    // Carga y pinta los últimos 20 usos en el contenedor de la tarjeta (📜).
+    async function loadUsos(cont, deviceId){
+      cont.innerHTML = `<span class="uso-empty">cargando usos…</span>`;
+      try{
+        const d = await (await fetch(`${WORKER}/api/uses?deviceId=${encodeURIComponent(deviceId)}&limit=20`)).json();
+        const list = d.uses || [];
+        if(!list.length){ cont.innerHTML = `<span class="uso-empty">sin usos registrados (últimos 14 días)</span>`; return; }
+        cont.innerHTML = list.map(u=>{
+          const th = u.hasShot ? `<img class="lb-thumb uso-thumb" src="${shotURL(deviceId,u.ts)}" alt="captura" title="ampliar" loading="lazy">` : '';
+          return `<div class="uso-row">${th}<div class="uso-txt">`
+            + `<b>${esc(u.persona||'?')}</b>@${esc(u.machine||'?')} · <span class="purpose">${esc(u.purpose||'')}</span><br>`
+            + `<span class="when">${seenAgo(u.ts)}</span></div></div>`;
+        }).join('');
+      }catch(e){ cont.innerHTML = `<span class="uso-empty">error cargando usos</span>`; expLog('error /api/uses: '+e,'warn'); }
+    }
+
     function card(b){
       const el = document.createElement('div'); el.className='card';
       const tr = tramo(b), esYo = YO.ids.has(b.deviceId);
@@ -471,13 +546,16 @@
           <div class="reporter">visto por ${b.reporter?.persona||'?'} @ ${b.reporter?.machine||'?'} · <b>${seenAgo(b.ts)}</b></div>
           ${previos}
         </div>
+        ${lastUseBlock(b)}
         <div class="acts">
           <input placeholder="https://… abrir aquí">
           <button class="go">Abrir</button>
           <button data-a="reposo">🛰️ Reposo</button>
           <button data-a="refrescar">↻</button>
+          <button data-a="usos" title="Últimos 20 usos registrados de este navegador (persona · propósito · captura).">📜 usos</button>
           <button data-a="ident" title="Vuelve a preguntar al executor de 127.0.0.1 en qué máquina estás. Se hace solo al abrir; esto es por si arrancas el daemon después.">🔎 ¿Dónde estoy?</button>
-        </div>`;
+        </div>
+        <div class="usos" hidden></div>`;
       el.querySelector('.did').onclick = () => { navigator.clipboard?.writeText(b.deviceId); toast('deviceId copiado'); };
       el.querySelector('select').onchange = e => label(b.deviceId, e.target.value);
       const urlInput = el.querySelector('.acts input');
@@ -485,6 +563,11 @@
       el.querySelector('[data-a="reposo"]').onclick = () => cmd(b.deviceId,'navigate','https://www.admira.live/vista-previa/');
       el.querySelector('[data-a="refrescar"]').onclick = () => cmd(b.deviceId,'reload','');
       el.querySelector('[data-a="ident"]').onclick = () => identify(b);
+      const usosBox = el.querySelector('.usos');
+      el.querySelector('[data-a="usos"]').onclick = () => {
+        if(usosBox.hidden){ usosBox.hidden=false; loadUsos(usosBox, b.deviceId); }
+        else { usosBox.hidden=true; }
+      };
       return el;
     }
 

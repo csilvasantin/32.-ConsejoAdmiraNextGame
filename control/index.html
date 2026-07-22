@@ -7,6 +7,7 @@
 <!-- control-lanzamiento-ds · v.2026.07.21.r9 · MISIÓN DEL DÍA (FLT-924): a) foto de arranque de todos los equipos conectados al iniciar sesión (una vez por sesión, de 3 en 3); b) el botón DS muestra x/y — cuántos equipos del grupo tienen el player OPERATIVO sobre los conectados; c) versión al pie del menú de opciones (canon cuadrático AdmiraNeXT). -->
 <!-- control-signage · v.2026.07.21.r5 · estado único live/ready/stale/offline/blocked con heartbeat, proof-of-play, captura, versión, contenido y doble acuse. Arranque bloqueado si no es elegible; estado DS nunca sale de localStorage. -->
 <!-- control-tarjetas-honestas · v.2026.07.22.r1 · tarjetas honestas y limpias: a) tarjeta offline/bloqueada COMPACTA (badge + causa raíz + «▸ detalle» plegado, sin ladrillos repetidos); b) FRANJA agregada cuando ≥3 equipos comparten diagnóstico (sin acceso remoto → Tailscale/SSH); c) badge de captura HONESTO (🔴 EN VIVO <2min / captura antigua / SIN CAPTURA · fondo de persona); d) preflight AUTOMÁTICO al cargar (solo lectura, solo si hay online); e) versión al pie r1. -->
+<!-- control-dos-botones-ds · v.2026.07.22.r2 · DOS botones DS explícitos en Acciones de Equipos: «📺 Arrancar DS» (arranca los elegibles pendientes) y «⏹️ Apagar DS» (para los players vivos), ambos siempre visibles y respetando el desplegable «elegir equipos». Sustituye al botón único auto-invertible. -->
 <html lang="es">
 <head>
     <script src="/admira-bar.js?v=20260713-r36"></script>
@@ -565,6 +566,7 @@
       <div id="hkPicker" class="ds-picker" hidden></div>
       <button id="dsPreflight" title="Comprueba acceso real, plataforma, player/executor, versión, captura, screen, circuito y heartbeat antes de arrancar">🧪 Preflight DS</button>
       <button id="dsAll" disabled title="Arranca Digital Signage solo en equipos elegibles tras un preflight real">📺 Arrancar DS</button>
+      <button id="dsStop" disabled title="Para el player de Digital Signage en los equipos que emiten ahora (respeta el desplegable «elegir equipos»)">⏹️ Apagar DS</button>
       <!-- Selector por equipo (Carlos, 2026-07-21): plegado por defecto. Lista
            TODOS los equipos AdmiraNeXT con su estado de player y permite elegir
            a cuáles afectar. Sin selección = el botón actúa sobre todos. -->
@@ -587,7 +589,7 @@
       <!-- VERSIÓN al pie del raíl (Carlos, 2026-07-21): canon cuadrático de
            AdmiraNeXT — la versión SIEMPRE abajo del todo del menú de opciones,
            como en yokup y el resto de soluciones. -->
-      <div class="rail-ver">AdmiraNeXT · control · <b id="ctlVer">v.2026.07.22.r1</b></div>
+      <div class="rail-ver">AdmiraNeXT · control · <b id="ctlVer">v.2026.07.22.r2</b></div>
     </div>
   </aside>
 
@@ -1043,9 +1045,9 @@ function dsPreflightHtml(m){
 function updateDsSummary(){
   const all=Object.values(DS_PREFLIGHT), ok=all.filter(x=>x.eligible).length, blocked=all.filter(x=>!x.eligible).length;
   const states=all.reduce((a,x)=>{const s=x.deployment&&x.deployment.state||'unknown';a[s]=(a[s]||0)+1;return a;},{});
-  const s=$('#dsPfSummary'), b=$('#dsAll');
+  const s=$('#dsPfSummary');
   if(s) s.textContent=DS_PREFLIGHT_BUSY?'comprobando…':(all.length?((states.live||0)+' live · '+ok+' elegibles · '+blocked+' bloqueados · '+((states.stale||0)+(states.offline||0))+' stale/offline'):'preflight pendiente');
-  if(b){ b.disabled=DS_PREFLIGHT_BUSY||ok===0; b.title=ok?('Arrancar DS solo en '+ok+' equipo(s) elegible(s)'):'Ningún equipo elegible'; }
+  paintDsAll();   // pinta AMBOS botones (Arrancar DS / Apagar DS) con su alcance real
 }
 async function refreshDsPreflight(machine){
   if(DS_PREFLIGHT_BUSY&&!machine) return;
@@ -1952,22 +1954,18 @@ async function dsAction(m,turnOn){
   const arg=turnOn?[screen,circuit,'','0'].join('|'):'';
   return api('/action',{method:'POST',body:JSON.stringify({machine:m.id,action:turnOn?'signage_on':'signage_off',arg})});
 }
-// Qué hará el botón AHORA (Carlos, 2026-07-21): un único botón para las dos
-// cosas. Mientras queden equipos elegibles SIN emitir, arranca los que faltan;
-// sólo cuando ya no queda nada por arrancar pasa a PARAR los que emiten. Antes
-// bastaba con que UNO estuviera vivo para que el botón se quedara en «Parar»,
-// dejando sin arrancar al resto (se veía «Parar DS · 4/7» con 3 pendientes).
-// Selección manual del desplegable. Vacía = el botón actúa sobre TODOS (lote).
+// DOS botones explícitos (Carlos, 2026-07-22): «📺 Arrancar DS» y «⏹️ Apagar DS»,
+// ambos siempre visibles. Antes era UN solo botón que se auto-invertía (arrancaba
+// lo que faltaba y sólo pasaba a «Parar» cuando ya no quedaba nada por arrancar);
+// ahora cada acción tiene su botón, para poder parar aunque queden pendientes por
+// arrancar y viceversa. Selección manual del desplegable. Vacía = actúa sobre TODOS.
 const DS_SEL=new Set();
 function dsSelActiva(){ return DS_SEL.size>0; }
-function dsPlan(){
-  const enSel=m=>!dsSelActiva()||DS_SEL.has(m.id);
-  const pendientes=dsFleetTargets().filter(m=>!signageIsOn(m.id)&&enSel(m));   // elegibles apagados
-  // parar SOLO dentro del grupo del lote (no tocamos players ajenos al grupo)
-  const vivos=MACHINES.filter(m=>m.signageBatch===true&&signageIsOn(m.id)&&enSel(m));
-  return pendientes.length ? {modo:'on', targets:pendientes, vivos:vivos, sel:dsSelActiva()}
-                           : {modo:'off', targets:vivos, vivos:vivos, sel:dsSelActiva()};
-}
+function dsEnSel(m){ return !dsSelActiva()||DS_SEL.has(m.id); }
+// Arrancar: elegibles del grupo que aún NO emiten (dentro de la selección).
+function dsStartTargets(){ return dsFleetTargets().filter(m=>!signageIsOn(m.id)&&dsEnSel(m)); }
+// Apagar: SOLO players vivos dentro del grupo del lote (no tocamos players ajenos).
+function dsStopTargets(){ return MACHINES.filter(m=>m.signageBatch===true&&signageIsOn(m.id)&&dsEnSel(m)); }
 // ── Desplegable de equipos: estado real del player + casillas para elegir ──
 function dsEstadoDe(m){
   if(signageIsOn(m.id)) return {c:'live', t:'emitiendo', ok:true};
@@ -2012,45 +2010,56 @@ function renderDsPicker(){
   });
 })();
 function paintDsAll(){
-  const b=$('#dsAll'); if(!b) return;
-  const plan=dsPlan(), stopping=plan.modo==='off';
-  const running=plan.vivos, eligible=dsFleetTargets();
+  const sel=dsSelActiva();
+  const start=dsStartTargets(), stop=dsStopTargets();
   // x/y (Carlos, 2026-07-21): de un vistazo, cuántos equipos del grupo AdmiraNeXT
   // tienen el player OPERATIVO (heartbeat fresco) sobre los que están conectados.
   const live=MACHINES.filter(m=>signageIsOn(m.id)).length;
   const total=MACHINES.filter(m=>m.online).length;
   const xy=' · '+live+'/'+total;
-  b.textContent=(stopping?'⏹️ Parar DS':'📺 Arrancar DS')+(plan.sel?(' · '+plan.targets.length+' elegidos'):xy);
+  const bA=$('#dsAll');
+  if(bA){
+    bA.textContent='📺 Arrancar DS'+(sel?(' · '+start.length+' elegidos'):xy);
+    bA.title='Arrancar DS en '+start.length+' equipo(s) que aún no emiten'
+      +' — '+live+' de '+total+' equipos conectados tienen el player operativo';
+    bA.disabled=DS_PREFLIGHT_BUSY||!start.length;
+    bA.classList.remove('on'); bA.classList.add('off');
+  }
+  const bS=$('#dsStop');
+  if(bS){
+    bS.textContent='⏹️ Apagar DS'+(sel?(' · '+stop.length+' elegidos'):xy);
+    bS.title='Parar el player en '+stop.length+' equipo(s) que emiten ahora'
+      +' — '+live+' de '+total+' equipos conectados tienen el player operativo';
+    bS.disabled=DS_PREFLIGHT_BUSY||!stop.length;
+    bS.classList.add('on'); bS.classList.remove('off');
+  }
   renderDsPicker();
-  b.title=(stopping?('Ya emiten todos los elegibles · parar los '+plan.targets.length+' players vivos')
-                   :('Arrancar DS en '+plan.targets.length+' equipo(s) que aún no emiten'))
-    +' — '+live+' de '+total+' equipos conectados tienen el player operativo';
-  b.disabled=DS_PREFLIGHT_BUSY||!plan.targets.length;
-  b.classList.toggle('on',stopping); b.classList.toggle('off',!stopping);
 }
-async function startSignage(){
-  const plan=dsPlan(), stopping=plan.modo==='off', targets=plan.targets;
-  if(!targets.length){ alert('No hay equipos elegibles ni emitiendo. Ejecuta 🧪 Preflight DS y resuelve los bloqueos.'); return; }
+async function runSignage(turnOn){
+  const targets=turnOn?dsStartTargets():dsStopTargets();
+  const b=turnOn?$('#dsAll'):$('#dsStop');
+  if(!targets.length){ alert(turnOn?'No hay equipos elegibles pendientes de arrancar. Ejecuta 🧪 Preflight DS y resuelve los bloqueos.':'No hay equipos emitiendo que apagar.'); return; }
   const detail=targets.map(m=>'• '+m.name+' → '+((dsPf(m.id)&&dsPf(m.id).screen.id)||m.id)).join('\n');
-  const verb=stopping?'Parar':'Arrancar';
-  if(!confirm((stopping?'⏹️ ':'📺 ')+verb+' DS\n\nAlcance: '+targets.length+' equipo(s), '+(dsFleetSummary(targets)||'multiplataforma')+'\n\n'+detail+(stopping?'':'\n\nLos bloqueados quedan fuera.')+'\n\n¿Continuar?')) return;
-  const b=$('#dsAll'); b.disabled=true; b.textContent=stopping?'⏹️ parando…':'📺 lanzando…';
+  const verb=turnOn?'Arrancar':'Apagar';
+  if(!confirm((turnOn?'📺 ':'⏹️ ')+verb+' DS\n\nAlcance: '+targets.length+' equipo(s), '+(dsFleetSummary(targets)||'multiplataforma')+'\n\n'+detail+(turnOn?'\n\nLos bloqueados quedan fuera.':'')+'\n\n¿Continuar?')) return;
+  if(b){ b.disabled=true; b.textContent=turnOn?'📺 lanzando…':'⏹️ apagando…'; }
   await Promise.all(targets.map(async m=>{
-    try{ const d=await dsAction(m,!stopping); pushResult(m.id,(stopping?'⏹️ parar DS':'📺 arrancar DS')+' · screen '+((dsPf(m.id)&&dsPf(m.id).screen.id)||m.id),d); }
+    try{ const d=await dsAction(m,turnOn); pushResult(m.id,(turnOn?'📺 arrancar DS':'⏹️ apagar DS')+' · screen '+((dsPf(m.id)&&dsPf(m.id).screen.id)||m.id),d); }
     catch(err){ pushResult(m.id,'Digital Signage',{rc:-1,stdout:'',stderr:err.msg||'error'}); }
   }));
-  await new Promise(r=>setTimeout(r,stopping?2000:7000));
+  await new Promise(r=>setTimeout(r,turnOn?7000:2000));
   await refreshDsPreflight();
-  targets.forEach(m=>{ const p=dsPf(m.id), live=signageIsOn(m.id), verified=stopping?!live:live;
+  targets.forEach(m=>{ const p=dsPf(m.id), live=signageIsOn(m.id), verified=turnOn?live:!live;
     pushResult(m.id,'📡 verificación DS',verified
-      ?{rc:0,stdout:(stopping?'PARADO ✓':'EMITIENDO ✓')+' · screen '+((p&&p.screen.id)||m.id)+(live?' · heartbeat '+p.live.age_seconds+'s':''),ms:0}
-      :{rc:1,stdout:'',stderr:stopping?'El heartbeat sigue fresco; no se confirma la parada.':'No hay heartbeat fresco; encolar/ejecutar no equivale a emitir.'});
+      ?{rc:0,stdout:(turnOn?'EMITIENDO ✓':'PARADO ✓')+' · screen '+((p&&p.screen.id)||m.id)+(live?' · heartbeat '+p.live.age_seconds+'s':''),ms:0}
+      :{rc:1,stdout:'',stderr:turnOn?'No hay heartbeat fresco; encolar/ejecutar no equivale a emitir.':'El heartbeat sigue fresco; no se confirma la parada.'});
   });
   paintDsAll();
 }
 (function(){
-  const db=$('#dsAll'), pf=$('#dsPreflight');
-  if(db) db.onclick=startSignage;
+  const db=$('#dsAll'), ds=$('#dsStop'), pf=$('#dsPreflight');
+  if(db) db.onclick=()=>runSignage(true);
+  if(ds) ds.onclick=()=>runSignage(false);
   if(pf) pf.onclick=()=>refreshDsPreflight();
   updateDsSummary();
 })();

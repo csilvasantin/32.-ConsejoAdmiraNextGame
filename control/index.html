@@ -6,6 +6,7 @@
 <!-- control-open-app · v.2026.07.20.r1 · «abrir app» admite navegador + URL (Firefox www.marca.com); normaliza https y solicita pantalla completa en el equipo remoto. -->
 <!-- control-lanzamiento-ds · v.2026.07.21.r9 · MISIÓN DEL DÍA (FLT-924): a) foto de arranque de todos los equipos conectados al iniciar sesión (una vez por sesión, de 3 en 3); b) el botón DS muestra x/y — cuántos equipos del grupo tienen el player OPERATIVO sobre los conectados; c) versión al pie del menú de opciones (canon cuadrático AdmiraNeXT). -->
 <!-- control-signage · v.2026.07.21.r5 · estado único live/ready/stale/offline/blocked con heartbeat, proof-of-play, captura, versión, contenido y doble acuse. Arranque bloqueado si no es elegible; estado DS nunca sale de localStorage. -->
+<!-- control-tarjetas-honestas · v.2026.07.22.r1 · tarjetas honestas y limpias: a) tarjeta offline/bloqueada COMPACTA (badge + causa raíz + «▸ detalle» plegado, sin ladrillos repetidos); b) FRANJA agregada cuando ≥3 equipos comparten diagnóstico (sin acceso remoto → Tailscale/SSH); c) badge de captura HONESTO (🔴 EN VIVO <2min / captura antigua / SIN CAPTURA · fondo de persona); d) preflight AUTOMÁTICO al cargar (solo lectura, solo si hay online); e) versión al pie r1. -->
 <html lang="es">
 <head>
     <script src="/admira-bar.js?v=20260713-r36"></script>
@@ -213,7 +214,9 @@
   .info.offinfo{color:var(--warn);font-size:11px;word-break:break-word}
   .shot{position:relative;border:1px solid var(--line);border-radius:10px;overflow:hidden;background:#000;cursor:zoom-in;display:none}
   .shot img{width:100%;display:block}
-  .shot.isWall::after{content:'🖥️ fondo actual · pulsa 📸 captura para foto real';position:absolute;left:0;right:0;bottom:0;font-size:10px;padding:3px 7px;background:rgba(0,0,0,.55);color:#9fe6c0;letter-spacing:.2px}
+  /* SIN CAPTURA: lo que se ve es el fondo de persona, NO la pantalla emitiendo. Badge honesto y bien visible en esquina + wallpaper atenuado. */
+  .shot.isWall::after{content:'⚠️ SIN CAPTURA · fondo de persona';position:absolute;left:8px;top:8px;font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:6px;background:rgba(255,180,84,.92);color:#2a1a08;letter-spacing:.2px;box-shadow:0 1px 6px rgba(0,0,0,.5)}
+  .shot.isWall img{opacity:.72;filter:grayscale(.18)}
   .acts{display:flex;flex-wrap:wrap;gap:6px}
   .capwarn{display:none;align-items:center;gap:8px;flex-wrap:wrap;font-size:11.5px;color:var(--warn);border:1px solid var(--warn);border-radius:9px;padding:7px 10px;background:rgba(255,180,84,.07)}
   .capwarn button{border-color:var(--warn);color:var(--warn);font-weight:700}
@@ -240,11 +243,34 @@
   .dsflight .dsf-chip{border:1px solid var(--line);padding:1px 5px;color:var(--mut)}
   .dsflight .dsf-chip.ok{border-color:var(--ok);color:var(--ok)} .dsflight .dsf-chip.bad{border-color:var(--bad);color:var(--bad)}
   .dsflight .dsf-reason{color:var(--bad);margin-top:4px}.dsflight .dsf-warn{color:var(--warn);margin-top:3px}
+  /* tarjeta OFFLINE/BLOQUEADA compacta: badge + UNA causa raíz + desplegable de detalle (plegado por defecto). Nada de ladrillos repetidos a la vista. */
+  .dsflight.compact{padding:6px 9px}
+  .dsflight .dsf-cause{color:var(--bad);font-weight:700;margin-top:2px}
+  .dsflight .dsf-more{margin-top:5px}
+  .dsflight .dsf-more>summary{cursor:pointer;color:var(--mut);list-style:none;user-select:none;font-weight:700;font-size:10px}
+  .dsflight .dsf-more>summary::-webkit-details-marker{display:none}
+  .dsflight .dsf-more>summary::before{content:'▸ ';color:var(--acc)}
+  .dsflight .dsf-more[open]>summary::before{content:'▾ ';color:var(--acc)}
+  .dsflight .dsf-more>summary:hover{color:var(--ink)}
+  .dsflight .dsf-body{margin-top:5px;padding-top:5px;border-top:1px dashed var(--line)}
+  /* franja agregada: ≥3 equipos con el MISMO diagnóstico → una sola franja encima de la parrilla */
+  .dsband{grid-column:1/-1;font-family:var(--mono);font-size:12px;color:var(--bad);border:1px solid var(--bad);border-left-width:4px;border-radius:9px;padding:9px 12px;background:rgba(255,90,90,.07);display:flex;align-items:baseline;gap:9px;flex-wrap:wrap}
+  .dsband b{font-size:15px}
+  .dsband .dsband-more{margin-left:auto}
+  .dsband .dsband-more>summary{cursor:pointer;color:var(--mut);list-style:none;user-select:none;font-weight:700;font-size:11px}
+  .dsband .dsband-more>summary::-webkit-details-marker{display:none}
+  .dsband .dsband-more>summary::before{content:'▸ equipos';color:var(--acc)}
+  .dsband .dsband-more[open]>summary{font-size:0}
+  .dsband .dsband-more[open]>summary::before{content:'▾ equipos';font-size:11px}
+  .dsband .dsband-names{margin-top:6px;color:var(--mut);font-weight:400;flex-basis:100%}
   #dsPfSummary{font-family:var(--mono);font-size:10.5px;color:var(--mut)}
   /* frescura de la miniatura */
   .shotage{position:absolute;right:0;bottom:0;font-size:10px;padding:3px 7px;background:rgba(0,0,0,.55);color:#cbe6ff;letter-spacing:.2px;border-top-left-radius:8px;display:none}
   .shot.stale img{opacity:.5;filter:grayscale(.3)}
   .shot.stale .shotage{color:var(--warn)}
+  /* badge de captura honesto: EN VIVO (roja) si <2min, «captura antigua» (ámbar) si es real pero vieja */
+  .shot.live .shotage{color:#ff6a6a;font-weight:800;background:rgba(0,0,0,.62)}
+  .shot.oldcap .shotage{color:var(--warn)}
   /* toasts de alerta (caída / fallo) */
   #toasts{position:fixed;top:64px;right:14px;display:flex;flex-direction:column;gap:8px;z-index:120;max-width:300px}
   .toast{border:1px solid var(--line);border-left-width:4px;border-radius:10px;background:var(--panel2);color:var(--ink);
@@ -561,7 +587,7 @@
       <!-- VERSIÓN al pie del raíl (Carlos, 2026-07-21): canon cuadrático de
            AdmiraNeXT — la versión SIEMPRE abajo del todo del menú de opciones,
            como en yokup y el resto de soluciones. -->
-      <div class="rail-ver">AdmiraNeXT · control · <b id="ctlVer">v.2026.07.21.r9</b></div>
+      <div class="rail-ver">AdmiraNeXT · control · <b id="ctlVer">v.2026.07.22.r1</b></div>
     </div>
   </aside>
 
@@ -700,8 +726,14 @@ function fmtAge(ms){ const s=Math.max(0,Math.round(ms/1000)); if(s<60) return 'h
 function paintAge(id){
   const box=document.querySelector('.shot[data-m="'+id+'"]'); if(!box) return;
   const lab=box.querySelector('.shotage'); const ts=CAP_TS[id]; if(!lab) return;
-  if(!ts || box.classList.contains('isWall')){ lab.style.display='none'; box.classList.remove('stale'); return; }
-  const age=Date.now()-ts; lab.textContent=fmtAge(age); lab.style.display='block';
+  // Sin captura real (wallpaper) → el badge honesto lo pone .shot.isWall::after; aquí nada.
+  if(!ts || box.classList.contains('isWall')){ lab.style.display='none'; box.classList.remove('stale','live','oldcap'); return; }
+  const age=Date.now()-ts;
+  const fresh=age<120000; // captura real y reciente (<2 min) = EN VIVO
+  lab.textContent=fresh?('🔴 EN VIVO · '+fmtAge(age)):('captura antigua · '+fmtAge(age));
+  lab.style.display='block';
+  box.classList.toggle('live', fresh);
+  box.classList.toggle('oldcap', !fresh);
   const limit=Math.max(45000,(AUTOCAP.sec||15)*3000); // viejo si supera 3× el intervalo (mín 45s)
   box.classList.toggle('stale', age>limit);
 }
@@ -940,9 +972,44 @@ function dsPf(id){ return DS_PREFLIGHT[id]||null; }
 function signageIsOn(id){ const p=dsPf(id), l=p&&p.live; return !!(l&&l.online&&l.age_seconds!=null&&l.age_seconds<=60); }
 function signageEligible(id){ const p=dsPf(id); return !!(p&&p.eligible); }
 function dsEsc(v){ return String(v==null?'':v).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;'); }
+// ¿el equipo está caído (offline o bloqueado)? → tarjeta compacta + candidato a franja.
+function dsDeployState(m){ const p=dsPf(m.id); if(!p) return null; const dep=p.deployment||{}; return dep.state||(p.eligible?'ready':'blocked'); }
+function dsIsDown(m){
+  if(!m.online) return true;
+  const st=dsDeployState(m); if(!st) return false; // online sin preflight aún → no forzar compacta
+  return /^(offline|blocked)$/.test(st);
+}
+// Causa RAÍZ de un equipo caído: una sola frase + una clave para agrupar la franja.
+function dsRootCause(m){
+  const p=dsPf(m.id);
+  if(!m.online || (p&&p.reachable===false)) return {key:'noaccess',label:'sin acceso remoto — Tailscale/SSH'};
+  if(p){
+    if(p.player&&p.player.installed===false) return {key:'noplayer',label:'sin player/executor instalado'};
+    if(p.permissions&&p.permissions.capture===false) return {key:'nocapture',label:'sin permiso de captura'};
+    if(p.blockers&&p.blockers.length) return {key:'blocker:'+String(p.blockers[0]).slice(0,40).toLowerCase(),label:p.blockers[0]};
+  }
+  return {key:'down',label:'no elegible — abre el detalle'};
+}
+// Franjas agregadas: agrupa los caídos por causa raíz; ≥3 con la misma → una sola franja.
+function dsBands(list){
+  const g={};
+  list.forEach(m=>{ if(dsIsDown(m)){ const rc=dsRootCause(m); (g[rc.key]=g[rc.key]||{label:rc.label,names:[]}).names.push(m.name||m.id); } });
+  const bands=Object.keys(g).map(k=>({key:k,label:g[k].label,names:g[k].names})).filter(b=>b.names.length>=3);
+  return bands.map(b=>{
+    const txt=b.key==='noaccess'?'sin acceso remoto — causa común: revisa Tailscale/SSH/clave del hub':b.label;
+    const names=b.names.map(dsEsc).join(' · ');
+    return '<div class="dsband" title="'+dsEsc(b.names.join(', '))+'">⛔ <b>'+b.names.length+'</b> equipos <span>'+dsEsc(txt)+'</span>'
+      +'<details class="dsband-more"><summary></summary><div class="dsband-names">'+names+'</div></details></div>';
+  }).join('');
+}
 function dsPreflightHtml(m){
   const p=dsPf(m.id);
-  if(!p) return '<div class="dsflight wait" data-dsflight="'+m.id+'"><div class="dsf-title">🧪 preflight pendiente</div><div>Ejecuta la comprobación real antes de arrancar.</div></div>';
+  if(!p){
+    // Sin preflight: si está claramente caído (offline), tarjeta compacta con la causa raíz;
+    // si está online, placeholder pendiente (se rellena solo con el preflight automático).
+    if(dsIsDown(m)){ const rc=dsRootCause(m); return '<div class="dsflight bad compact" data-dsflight="'+dsEsc(m.id)+'"><div class="dsf-title">⛔ SIN ACCESO</div><div class="dsf-cause">⛔ '+dsEsc(rc.label)+'</div></div>'; }
+    return '<div class="dsflight wait" data-dsflight="'+dsEsc(m.id)+'"><div class="dsf-title">🧪 preflight pendiente</div><div>Ejecuta la comprobación real antes de arrancar.</div></div>';
+  }
   const live=signageIsOn(m.id), dep=p.deployment||{}, state=dep.state||(p.eligible?'ready':'blocked');
   const cls=state==='live'?'ok':(/^(offline|blocked)$/.test(state)?'bad':'wait');
   const chips=[
@@ -959,7 +1026,19 @@ function dsPreflightHtml(m){
   const honest=dep.failures&&dep.failures.length?('<div class="dsf-warn">pendiente: '+dep.failures.map(dsEsc).join(' · ')+'</div>'):'';
   const reason=(p.blockers||[]).map(x=>'<div class="dsf-reason">⛔ '+dsEsc(x)+'</div>').join('');
   const warn=(p.warnings||[]).map(x=>'<div class="dsf-warn">⚠ '+dsEsc(x)+'</div>').join('');
-  return '<div class="dsflight '+cls+'" data-dsflight="'+dsEsc(m.id)+'"><div class="dsf-title">'+(state==='live'?'📡 LIVE':(p.eligible?'✅ ELEGIBLE':'⛔ BLOQUEADO'))+' '+chips+'</div><div>screen <b>'+dsEsc(p.screen&&p.screen.id||m.id)+'</b> · circuito <b>'+dsEsc(p.circuit||'—')+'</b>'+version+'</div>'+content+ack+honest+reason+warn+'</div>';
+  const titleTxt=state==='live'?'📡 LIVE':(p.eligible?'✅ ELEGIBLE':'⛔ BLOQUEADO');
+  const head='<div class="dsf-title">'+titleTxt+' '+chips+'</div>';
+  const body='<div>screen <b>'+dsEsc(p.screen&&p.screen.id||m.id)+'</b> · circuito <b>'+dsEsc(p.circuit||'—')+'</b>'+version+'</div>'+content+ack+honest+reason+warn;
+  // CAÍDO → compacta: badge + UNA causa raíz + «▸ detalle» (plegado) con el diagnóstico completo.
+  if(dsIsDown(m)){
+    const rc=dsRootCause(m), word=state==='offline'?'OFFLINE':'BLOQUEADO';
+    return '<div class="dsflight bad compact" data-dsflight="'+dsEsc(m.id)+'">'
+      +'<div class="dsf-title">⛔ '+word+' <span class="dsf-chip bad">estado '+dsEsc(state)+'</span></div>'
+      +'<div class="dsf-cause">⛔ '+dsEsc(rc.label)+'</div>'
+      +'<details class="dsf-more"><summary>detalle</summary><div class="dsf-body">'+head+body+'</div></details>'
+      +'</div>';
+  }
+  return '<div class="dsflight '+cls+'" data-dsflight="'+dsEsc(m.id)+'">'+head+body+'</div>';
 }
 function updateDsSummary(){
   const all=Object.values(DS_PREFLIGHT), ok=all.filter(x=>x.eligible).length, blocked=all.filter(x=>!x.eligible).length;
@@ -980,6 +1059,15 @@ async function refreshDsPreflight(machine){
     if(machine) DS_PREFLIGHT[machine]={id:machine,eligible:false,blockers:['No se pudo obtener el preflight del hub.'],warnings:[],live:{online:false},screen:{id:machine},player:{},permissions:{}};
   }
   DS_PREFLIGHT_BUSY=false; updateDsSummary(); renderCards(MACHINES);
+}
+// Preflight AUTOMÁTICO al cargar: misma lectura que el botón «🧪 Preflight DS», disparada
+// sola para que las tarjetas online no nazcan con «preflight pendiente». Solo se lanza si hay
+// equipos online (es solo lectura, no arranca nada). Si la red falla, refreshDsPreflight ya
+// degrada en silencio y las tarjetas quedan como hasta ahora.
+function autoPreflight(){
+  const online=(MACHINES||[]).filter(m=>m.online);
+  if(!online.length) return;
+  try{ refreshDsPreflight(); }catch(e){/* degradación silenciosa: se mantiene el comportamiento actual */}
 }
 // Refleja el nuevo estado en el botón sin reconstruir toda la tarjeta.
 function paintToggle(id, action, state){
@@ -1046,7 +1134,8 @@ function renderCards(ms){
   if(HIDE_OFF) list=list.filter(m=>m.online);
   list=list.slice().sort((a,b)=>(a.online?0:1)-(b.online?0:1));
   if(!list.length){ el.innerHTML='<div class="empty" style="grid-column:1/-1">Sin equipos online (desmarca «ocultar offline» para verlos).</div>'; return; }
-  el.innerHTML=list.map(m=>`
+  // Franja(s) agregada(s) encima de la parrilla: ≥3 equipos caídos con la misma causa raíz.
+  el.innerHTML=dsBands(list)+list.map(m=>`
     <div class="card${isCollapsed(m.id)?' collapsed':''}" data-card="${m.id}">
       <div class="top">
         <span class="em devicon${/mini|twin|imac|studio|mac\s*pro/i.test(m.name||'')?' desk':''}${m.online?' em-click on':''}" data-icon="${m.id}" title="${m.online?'Limpiar el escritorio (oculta apps) y ver el fondo':(m.name||'')+' (offline)'}"><span class="dscr empty-scr"><img alt=""></span><span class="dbase"></span></span>
@@ -2225,7 +2314,7 @@ function collapseAllToggle(){
   if(SESSION){ const e=whoami(); const tp=$('#tokenPill'); if(tp&&e){ tp.textContent='🔒 '+e; tp.title='Cerrar sesión'; } }
   applyAutoCap();
   await refresh();
-  refreshDsPreflight();
+  autoPreflight();  // preflight AUTOMÁTICO al cargar (solo lectura) para no nacer con «preflight pendiente»
   try{ refreshAirQueues(); }catch(e){}   // primera carga de las colas TAREAS (Airs)
   setInterval(refresh, 8000);
   setInterval(()=>refreshDsPreflight(), 120000);

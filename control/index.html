@@ -211,6 +211,7 @@
   @keyframes empulse{50%{opacity:.85}}
   .card .nm{font-weight:700;font-size:15px}
   .card .role{color:var(--mut);font-size:12px}
+  .card .agentnow{color:var(--acc,#f7c95d);font-size:11.5px;line-height:1.35;margin-top:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;opacity:.92}
   .dot{width:10px;height:10px;border-radius:50%;background:#5a6678;flex:none;display:inline-block}
   .dot.on{background:var(--ok);box-shadow:0 0 9px var(--ok)}
   .info{font-family:var(--mono);font-size:11.5px;color:var(--mut);white-space:pre-wrap;line-height:1.6;min-height:18px}
@@ -591,7 +592,7 @@
       <!-- VERSIÓN al pie del raíl (Carlos, 2026-07-21): canon cuadrático de
            AdmiraNeXT — la versión SIEMPRE abajo del todo del menú de opciones,
            como en yokup y el resto de soluciones. -->
-      <div class="rail-ver">AdmiraNeXT · control · <b id="ctlVer">v.2026.07.23.r2</b></div>
+      <div class="rail-ver">AdmiraNeXT · control · <b id="ctlVer">v.2026.07.23.r3</b></div>
     </div>
   </aside>
 
@@ -859,20 +860,34 @@ async function loadPersonas(){
 }
 // admira-fleet: registro durable de la flota. `lastSeen` suele estar estático para casi todas
 // las máquinas, así que SÓLO marca online las que tienen un `lastSeen` realmente fresco (<5min).
+// FLEET_INFO: «en qué está» cada agente por máquina (campo status/currentFocus de
+// admira-fleet, que escribe report-now.sh cada 5 min · Mandamiento 11 en el cockpit).
+let FLEET_INFO={};
 async function loadFleet(){
   try{
     const r=await fetch('https://admira-fleet.csilvasantin.workers.dev/machines',{cache:'no-store'});
-    const d=await r.json(); const seen=new Set(); const now=Date.now()/1000;
+    const d=await r.json(); const seen=new Set(); const info={}; const now=Date.now()/1000;
     (d.machines||[]).forEach(m=>{
+      // estado reportado (para pintar en la tarjeta) — de TODAS las máquinas, online o no
+      const st=(m.status||m.currentFocus||'').toString().trim();
+      if(st){ [m.id, m.name, m.fqdn].forEach(v=>{ if(!v) return;
+        const k=_norm(String(v).split('.')[0].replace(/^admira-?/,'')); if(k.length>=4) info[k]={status:st, at:(m.profileUpdatedAt||m.lastSeen||0)}; }); }
+      // frescura para marcar online (señal distribuida)
       let ls=m.lastSeen; if(!ls) return;
       const sec = ls>1e12 ? ls/1000 : ls;           // epoch en ms o s → s
       if((now-sec)>=FLEET_FRESH) return;            // registro viejo/estático → no cuenta como online
       [m.id, m.name, m.fqdn].forEach(v=>{ if(!v) return;
         const k=_norm(String(v).split('.')[0].replace(/^admira-?/,'')); if(k.length>=4) seen.add(k); });
     });
-    FLEET_SEEN=seen;
+    FLEET_SEEN=seen; FLEET_INFO=info;
   }catch(e){ /* sin admira-fleet: sólo se usa presencia + probe SSH */ }
 }
+// «En qué está» el agente de una máquina (mismo casado de claves que agentOnline).
+function agentStatus(m){ const ks=_machKeys(m);
+  for(const k of ks){ if(FLEET_INFO[k]) return FLEET_INFO[k].status; }
+  return ''; }
+function agentNowHtml(m){ const s=agentStatus(m); if(!s) return '';
+  return '<div class="agentnow" title="En qué está el agente ahora (Mandamiento 11 · report cada 5 min)">🔧 '+String(s).replace(/</g,'&lt;')+'</div>'; }
 /* ── MODO DEGRADADO — el Mini (backend de flota) no responde ───────────────
    No dejar el cockpit CIEGO: reconstruye el tablero desde admira-fleet (worker
    Cloudflare, siempre en pie) y avisa con un banner honesto. El control remoto
@@ -1197,6 +1212,7 @@ function renderCards(ms){
         <span class="em devicon${/mini|twin|imac|studio|mac\s*pro/i.test(m.name||'')?' desk':''}${m.online?' em-click on':''}" data-icon="${m.id}" title="${m.online?'Limpiar el escritorio (oculta apps) y ver el fondo':(m.name||'')+' (offline)'}"><span class="dscr empty-scr"><img alt=""></span><span class="dbase"></span></span>
         <div class="cardmeta"><div class="nm">${m.name}</div>
         <div class="role">${m.role||''}${m.local?' · local':' · ssh'}</div>
+        ${agentNowHtml(m)}
         <span class="msgbadge" data-msgbadge="${m.id}" title="Último mensaje enviado desde Control — pulsa para ver el hilo"><span class="mb-dot"></span><span class="mb-txt"></span></span></div>
         <span class="card-fold" data-fold="${m.id}" title="Comprimir / expandir">▾</span>
         <span class="drag-handle" draggable="true" data-drag="${m.id}" title="Arrastra para reordenar">⠿</span>

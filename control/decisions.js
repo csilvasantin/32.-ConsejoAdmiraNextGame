@@ -54,9 +54,13 @@
     }
   }
   function load() {
-    fetch(API, { cache: 'no-store' }).then(function (r) { return r.json(); }).then(function (j) {
-      DATA = (j && j.items) || []; render();
-    }).catch(function () { /* sin red: no molesta */ });
+    // /decisions es lento (~3-4s: expira lotes + D1). Timeout de 10s para no colgar
+    // si hay un pico; reintenta en el siguiente ciclo.
+    var ctl = new AbortController();
+    var to = setTimeout(function () { ctl.abort(); }, 10000);
+    fetch(API, { cache: 'no-store', signal: ctl.signal }).then(function (r) { return r.json(); }).then(function (j) {
+      clearTimeout(to); DATA = (j && j.items) || []; render();
+    }).catch(function () { clearTimeout(to); /* lento/sin red: no molesta, reintenta */ });
   }
   load();
   setInterval(load, 20000);

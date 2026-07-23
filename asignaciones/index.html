@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<script src="/admira-bar.js?v=20260723"></script>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Asignaciones · Consejo AdmiraNext</title>
+<style>
+  :root{
+    --bg:#0b0e14;--panel:#131822;--panel2:#1a212e;--line:#26303f;--ink:#e8eef7;--mut:#8a97ab;
+    --acc:#5bd6c0;--acc2:#7aa2ff;--warn:#ffb454;--bad:#ff6b6b;--ok:#5bd6c0;
+    --racional:#7aa2ff;--creativo:#5bd6c0;
+    --mono:'SF Mono',ui-monospace,Menlo,Consolas,monospace;--sans:-apple-system,BlinkMacSystemFont,'Segoe UI',Roboto,Arial,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;min-height:100%}
+  body{background:radial-gradient(120% 90% at 50% 0%,#101622,#0b0e14);color:var(--ink);font-family:var(--sans);padding-bottom:90px}
+  header{display:flex;align-items:center;gap:14px;padding:14px 22px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(11,14,20,.92);backdrop-filter:blur(10px);z-index:5}
+  header h1{font-size:17px;margin:0;font-weight:800;letter-spacing:.3px}
+  header h1 .tag{color:var(--acc);font-family:var(--mono)}
+  header .sub{color:var(--mut);font-size:12px}
+  .spacer{flex:1}
+  .pill{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:5px 11px;color:var(--mut)}
+  .pill.ok{color:var(--ok);border-color:var(--ok)} .pill.bad{color:var(--bad);border-color:var(--bad)}
+  .btn{background:var(--panel2);border:1px solid var(--line);border-radius:10px;padding:7px 13px;color:var(--ink);cursor:pointer;font:inherit;font-size:13px}
+  .btn:hover{border-color:var(--acc)}
+  .wrap{max-width:1120px;margin:0 auto;padding:22px}
+  h2.sec{font-size:12px;text-transform:uppercase;letter-spacing:.7px;color:var(--mut);margin:24px 2px 12px;display:flex;align-items:center;gap:8px}
+  h2.sec .hint{font-weight:400;text-transform:none;letter-spacing:0;color:var(--mut);font-size:11px}
+
+  /* miembros (leyenda) */
+  .members{display:flex;flex-wrap:wrap;gap:10px}
+  .mchip{display:flex;align-items:center;gap:9px;background:var(--panel);border:1px solid var(--line);border-radius:12px;padding:8px 12px;border-left:4px solid var(--c,var(--acc2))}
+  .mchip .em{font-size:18px}
+  .mchip .role{font-weight:800;font-size:13px;font-family:var(--mono)}
+  .mchip .who{color:var(--mut);font-size:12px}
+  .mchip .count{margin-left:2px;font-family:var(--mono);font-size:11px;color:var(--mut);border:1px solid var(--line);border-radius:999px;padding:1px 8px}
+  .mchip .count.dup{color:var(--warn);border-color:var(--warn)}
+  .mchip .count.zero{opacity:.5}
+
+  /* máquinas */
+  .machines{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:16px;padding:15px;display:flex;flex-direction:column;gap:12px;border-left:4px solid var(--c,var(--line))}
+  .card .top{display:flex;align-items:center;gap:11px}
+  .card .top .em{font-size:24px;line-height:1}
+  .card .mname{background:transparent;border:none;color:var(--ink);font:inherit;font-weight:700;font-size:15px;outline:none;flex:1;min-width:0;border-bottom:1px solid transparent;padding:2px 0}
+  .card .mname:focus{border-bottom-color:var(--acc2)}
+  .card .plat{font-size:10px;color:var(--mut);border:1px solid var(--line);border-radius:999px;padding:2px 8px;white-space:nowrap}
+  .card label{display:block;font-size:11px;color:var(--mut);margin:0 0 5px;text-transform:uppercase;letter-spacing:.5px}
+  .card select{width:100%;background:var(--panel2);border:1px solid var(--line);border-radius:10px;color:var(--ink);font:inherit;font-size:14px;padding:9px 10px;outline:none;cursor:pointer}
+  .card select:focus{border-color:var(--acc2)}
+  .card .assigned{font-size:12px;color:var(--mut);min-height:16px}
+  .card .assigned b{color:var(--ink);font-weight:700}
+  .empty{color:var(--mut);padding:20px;text-align:center}
+  footer{position:fixed;bottom:0;left:0;right:0;background:rgba(11,14,20,.94);border-top:1px solid var(--line);padding:10px 22px;display:flex;align-items:center;gap:12px;font-size:12px;color:var(--mut);backdrop-filter:blur(10px)}
+</style>
+</head>
+<body>
+<header>
+  <h1>Asignaciones <span class="tag">Consejo ↔ Equipos</span></h1>
+  <span class="sub" id="sub">cada máquina, un miembro del Consejo</span>
+  <span class="spacer"></span>
+  <span class="pill" id="conn">cargando…</span>
+  <button class="btn" id="reload">↻ recargar</button>
+</header>
+
+<div class="wrap">
+  <h2 class="sec">Miembros del Consejo <span class="hint">— color por lado · nº = equipos asignados</span></h2>
+  <div class="members" id="members"></div>
+
+  <h2 class="sec">Equipos (máquinas) <span class="hint">— elige el miembro asignado · se guarda solo</span></h2>
+  <div class="machines" id="machines"></div>
+</div>
+
+<footer>
+  <span id="status">—</span>
+  <span class="spacer" style="flex:1"></span>
+  <span id="lastup"></span>
+</footer>
+
+<script>
+const WORKER="https://admira-asignaciones.csilvasantin.workers.dev";
+const $=(s)=>document.querySelector(s);
+
+// Los 8 miembros del Consejo (roles C-suite · fuente: array COUNCIL de app.js, gen "leyendas").
+const MEMBERS=[
+  {id:"CEO",persona:"Steve Jobs",     member:"Carlos",        side:"racional",icon:"🏛️"},
+  {id:"CTO",persona:"Steve Wozniak",  member:"Carlos Silva",  side:"racional",icon:"⚙️"},
+  {id:"COO",persona:"Tim Cook",       member:"Nines",         side:"racional",icon:"📋"},
+  {id:"CFO",persona:"Warren Buffett", member:"Braulio Blanco",side:"racional",icon:"💰"},
+  {id:"CCO",persona:"Walt Disney",    member:"Cesar",         side:"creativo",icon:"💡"},
+  {id:"CDO",persona:"Dieter Rams",    member:"Consejero",     side:"creativo",icon:"🎨"},
+  {id:"CXO",persona:"Howard Schultz", member:"Laboratorio",   side:"creativo",icon:"🧭"},
+  {id:"CSO",persona:"George Lucas",   member:"Carla Rosa",    side:"creativo",icon:"📖"},
+];
+const MEM=Object.fromEntries(MEMBERS.map(m=>[m.id,m]));
+const sideColor=(s)=>s==="racional"?"var(--racional)":"var(--creativo)";
+
+// Set inicial de 8 máquinas (editables). Persisten en el worker si se cambian.
+const DEFAULT_MACHINES=[
+  {id:"macmini",          name:"Mac Mini",             emoji:"🖥️",platform:"macOS"},
+  {id:"macbookpro16",     name:"MacBook Pro 16",       emoji:"💻",platform:"macOS"},
+  {id:"macbookpronegro14",name:"MacBook Pro Negro 14", emoji:"💻",platform:"macOS"},
+  {id:"dgx-spark",        name:"DGX Spark",            emoji:"🧠",platform:"Linux"},
+  {id:"macbookairplata",  name:"MacBook Air Plata",    emoji:"💻",platform:"macOS"},
+  {id:"macbookairrosa",   name:"MacBook Air Rosa",     emoji:"💻",platform:"macOS"},
+  {id:"macbookaircrema",  name:"MacBook Air Crema",    emoji:"💻",platform:"macOS"},
+  {id:"macbookairazul",   name:"MacBook Air Azul",     emoji:"💻",platform:"macOS"},
+];
+
+let MACHINES=DEFAULT_MACHINES.map(m=>({...m}));
+let ASSIGN={};   // machineId -> memberId
+let saveTimer=null, saving=false;
+
+function esc(s){return String(s==null?"":s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));}
+function conn(state,text){const p=$("#conn");p.textContent=text;p.className="pill"+(state?(" "+state):"");}
+
+async function load(){
+  conn("","cargando…");
+  try{
+    const r=await fetch(WORKER+"/assignments",{signal:AbortSignal.timeout(15000)});
+    const d=await r.json();
+    ASSIGN=(d&&d.assignments)||{};
+    if(Array.isArray(d.machines)&&d.machines.length) MACHINES=d.machines.map(m=>({...m}));
+    conn("ok","🟢 conectado");
+    if(d.updatedAt) $("#lastup").textContent="últ. cambio: "+new Date(d.updatedAt).toLocaleString("es-ES")+(d.updatedBy?(" · "+d.updatedBy):"");
+    render();
+  }catch(e){ conn("bad","🔴 "+(e.message||"sin conexión")); render(); }
+}
+
+async function save(){
+  if(saving){ scheduleSave(); return; }
+  saving=true; $("#status").textContent="guardando…"; conn("","guardando…");
+  try{
+    const r=await fetch(WORKER+"/assignments",{method:"POST",headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({assignments:ASSIGN,machines:MACHINES,updatedBy:"panel"}),signal:AbortSignal.timeout(15000)});
+    const d=await r.json();
+    if(!d.ok) throw new Error(d.error||"error");
+    conn("ok","🟢 guardado");
+    $("#status").textContent="✅ guardado "+new Date().toLocaleTimeString("es-ES");
+    if(d.updatedAt) $("#lastup").textContent="últ. cambio: "+new Date(d.updatedAt).toLocaleString("es-ES")+" · panel";
+  }catch(e){ conn("bad","🔴 error"); $("#status").textContent="⚠️ "+(e.message||"error al guardar"); }
+  saving=false;
+}
+function scheduleSave(){ $("#status").textContent="guardando…"; clearTimeout(saveTimer); saveTimer=setTimeout(save,450); }
+
+function counts(){ const c={}; MEMBERS.forEach(m=>c[m.id]=0); Object.values(ASSIGN).forEach(v=>{ if(c[v]!=null)c[v]++; }); return c; }
+
+function renderMembers(){
+  const c=counts(); const el=$("#members"); el.innerHTML="";
+  MEMBERS.forEach(m=>{
+    const n=c[m.id]||0;
+    const chip=document.createElement("div"); chip.className="mchip"; chip.style.setProperty("--c",sideColor(m.side));
+    chip.innerHTML=`<span class="em">${m.icon}</span>
+      <div><div class="role">${esc(m.id)}</div><div class="who">${esc(m.member)} · ${esc(m.persona)}</div></div>
+      <span class="count ${n===0?'zero':''} ${n>1?'dup':''}" title="${n>1?'asignado a varias máquinas':'equipos asignados'}">${n}</span>`;
+    el.appendChild(chip);
+  });
+}
+
+function renderMachines(){
+  const el=$("#machines"); el.innerHTML="";
+  if(!MACHINES.length){ el.innerHTML='<div class="empty">Sin máquinas.</div>'; return; }
+  MACHINES.forEach(mac=>{
+    const cur=ASSIGN[mac.id]||"";
+    const m=MEM[cur];
+    const card=document.createElement("div"); card.className="card";
+    card.style.setProperty("--c", m?sideColor(m.side):"var(--line)");
+    const opts=`<option value="">— sin asignar —</option>`+MEMBERS.map(x=>
+      `<option value="${x.id}" ${x.id===cur?"selected":""}>${x.icon} ${x.id} · ${esc(x.member)}</option>`).join("");
+    card.innerHTML=`
+      <div class="top">
+        <span class="em">${mac.emoji||"💻"}</span>
+        <input class="mname" value="${esc(mac.name)}" data-id="${esc(mac.id)}" title="nombre del equipo (editable)">
+        <span class="plat">${esc(mac.platform||"")}</span>
+      </div>
+      <div>
+        <label>Miembro asignado</label>
+        <select data-id="${esc(mac.id)}">${opts}</select>
+      </div>
+      <div class="assigned">${m?`Asignado a <b>${esc(m.member)}</b> · ${m.icon} ${esc(m.id)} (${esc(m.persona)})`:"Sin asignar"}</div>`;
+    card.querySelector("select").onchange=(e)=>{
+      const id=e.target.dataset.id; const v=e.target.value;
+      if(v) ASSIGN[id]=v; else delete ASSIGN[id];
+      renderMembers(); renderMachines(); scheduleSave();
+    };
+    const inp=card.querySelector(".mname");
+    inp.onchange=(e)=>{ const id=e.target.dataset.id; const mm=MACHINES.find(x=>x.id===id); if(mm){ mm.name=e.target.value.trim()||mm.name; } scheduleSave(); };
+    el.appendChild(card);
+  });
+}
+
+function render(){ renderMembers(); renderMachines(); }
+
+$("#reload").onclick=load;
+load();
+</script>
+</body>
+</html>

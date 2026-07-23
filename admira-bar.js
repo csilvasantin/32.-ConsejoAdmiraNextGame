@@ -24,6 +24,7 @@
     { t: "📡 Status",    h: "https://www.admira.live/status/" },
     { t: "💬 Telegram",  h: "https://www.admira.live/telegram" },
     { t: "🎯 Misiones",  h: "https://www.admira.live/vista-previa" },
+    { t: "🧩 Asignaciones", h: "https://www.admira.live/asignaciones/" },
     { t: "📓 Diario",    h: "https://www.admira.live/diario.html" },
   ];
 

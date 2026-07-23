@@ -1,14 +1,14 @@
 /* control/ideas.js · Módulo «Ideas» del cockpit de flota (AdmiraNeXT · /control)
  * Captura ideas y muestra el norte del Consejo contra el worker de yokup.
- *   GET/POST  https://yokup-rtc.csilvasantin.workers.dev/ideas
- *   GET       https://yokup-rtc.csilvasantin.workers.dev/objetivos/progreso
+ *   GET/POST  https://api.yokup.com/ideas
+ *   GET       https://api.yokup.com/objetivos/progreso
  * CORS abierto, sin auth. Vista completa: https://www.yokup.com/objetivos
  * Autocontenido: inyecta su propio estilo (SCUMM/ámbar) y se monta en #ideasMount.
  * SubNeoMini · v.2026.07.23.r1
  */
 (function () {
   'use strict';
-  var API = 'https://yokup-rtc.csilvasantin.workers.dev';
+  var API = 'https://api.yokup.com';
   var SEATS = ['ceo', 'cto', 'coo', 'cfo', 'cco', 'cdo', 'cxo', 'cso'];
   var mount = document.getElementById('ideasMount');
   if (!mount) return;

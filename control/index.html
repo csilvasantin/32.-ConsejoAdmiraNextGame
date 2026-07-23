@@ -212,6 +212,8 @@
   .card .nm{font-weight:700;font-size:15px}
   .card .role{color:var(--mut);font-size:12px}
   .card .agentnow{color:var(--acc,#f7c95d);font-size:11.5px;line-height:1.35;margin-top:3px;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;opacity:.92}
+  .card .agentnow.stale{color:var(--mut,#75aab9);opacity:.55}
+  .card .agentnow .agentnow-age{opacity:.7;font-size:10.5px;font-variant-numeric:tabular-nums}
   .dot{width:10px;height:10px;border-radius:50%;background:#5a6678;flex:none;display:inline-block}
   .dot.on{background:var(--ok);box-shadow:0 0 9px var(--ok)}
   .info{font-family:var(--mono);font-size:11.5px;color:var(--mut);white-space:pre-wrap;line-height:1.6;min-height:18px}
@@ -592,7 +594,7 @@
       <!-- VERSIÓN al pie del raíl (Carlos, 2026-07-21): canon cuadrático de
            AdmiraNeXT — la versión SIEMPRE abajo del todo del menú de opciones,
            como en yokup y el resto de soluciones. -->
-      <div class="rail-ver">AdmiraNeXT · control · <b id="ctlVer">v.2026.07.23.r3</b></div>
+      <div class="rail-ver">AdmiraNeXT · control · <b id="ctlVer">v.2026.07.23.r4</b></div>
     </div>
   </aside>
 
@@ -883,11 +885,16 @@ async function loadFleet(){
   }catch(e){ /* sin admira-fleet: sólo se usa presencia + probe SSH */ }
 }
 // «En qué está» el agente de una máquina (mismo casado de claves que agentOnline).
-function agentStatus(m){ const ks=_machKeys(m);
-  for(const k of ks){ if(FLEET_INFO[k]) return FLEET_INFO[k].status; }
-  return ''; }
-function agentNowHtml(m){ const s=agentStatus(m); if(!s) return '';
-  return '<div class="agentnow" title="En qué está el agente ahora (Mandamiento 11 · report cada 5 min)">🔧 '+String(s).replace(/</g,'&lt;')+'</div>'; }
+function agentEntry(m){ const ks=_machKeys(m);
+  for(const k of ks){ if(FLEET_INFO[k]) return FLEET_INFO[k]; }
+  return null; }
+function agentStatus(m){ const e=agentEntry(m); return e?e.status:''; }
+function agentNowHtml(m){ const e=agentEntry(m); if(!e||!e.status) return '';
+  let at=+e.at||0; if(at && at<1e12) at*=1000;               // epoch s → ms
+  const age=at?(Date.now()-at):0, mins=Math.round(age/60000);
+  const stale=at && age>900000;                              // >15 min sin reportar → rancio
+  const ageTxt=at?(mins<1?'ahora':(mins<60?('hace '+mins+'m'):('hace '+Math.round(mins/60)+'h'))):'';
+  return '<div class="agentnow'+(stale?' stale':'')+'" title="En qué está el agente ahora (Mandamiento 11 · report cada 5 min)">🔧 '+String(e.status).replace(/</g,'&lt;')+(ageTxt?(' <span class="agentnow-age">· '+ageTxt+'</span>'):'')+'</div>'; }
 /* ── MODO DEGRADADO — el Mini (backend de flota) no responde ───────────────
    No dejar el cockpit CIEGO: reconstruye el tablero desde admira-fleet (worker
    Cloudflare, siempre en pie) y avisa con un banner honesto. El control remoto

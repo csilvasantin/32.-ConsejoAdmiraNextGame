@@ -8,6 +8,7 @@
 <!-- control-signage · v.2026.07.21.r5 · estado único live/ready/stale/offline/blocked con heartbeat, proof-of-play, captura, versión, contenido y doble acuse. Arranque bloqueado si no es elegible; estado DS nunca sale de localStorage. -->
 <!-- control-tarjetas-honestas · v.2026.07.22.r1 · tarjetas honestas y limpias: a) tarjeta offline/bloqueada COMPACTA (badge + causa raíz + «▸ detalle» plegado, sin ladrillos repetidos); b) FRANJA agregada cuando ≥3 equipos comparten diagnóstico (sin acceso remoto → Tailscale/SSH); c) badge de captura HONESTO (🔴 EN VIVO <2min / captura antigua / SIN CAPTURA · fondo de persona); d) preflight AUTOMÁTICO al cargar (solo lectura, solo si hay online); e) versión al pie r1. -->
 <!-- control-dos-botones-ds · v.2026.07.22.r2 · DOS botones DS explícitos en Acciones de Equipos: «📺 Arrancar DS» (arranca los elegibles pendientes) y «⏹️ Apagar DS» (para los players vivos), ambos siempre visibles y respetando el desplegable «elegir equipos». Sustituye al botón único auto-invertible. -->
+<!-- control-resiliencia · v.2026.07.23.r1 · MODO DEGRADADO sin Mini (Morfeo Negro): si el backend de flota (macmini/fleet/api) no responde, el tablero NO se queda ciego — reconstruye la flota desde el worker admira-fleet (Cloudflare) y muestra un banner honesto «MacMini offline · modo degradado». El control remoto real (SSH/capturas/comandos) sigue necesitando el Mini. -->
 <html lang="es">
 <head>
     <script src="/admira-bar.js?v=20260713-r36"></script>
@@ -33,6 +34,7 @@
   .pill{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:5px 11px;color:var(--mut);cursor:pointer}
   .pill.ok{color:var(--ok);border-color:var(--ok)}
   .pill.bad{color:var(--bad);border-color:var(--bad)}
+.pill.warn{color:#ffb454;border-color:#ffb454}
   /* ── Portería (patrón por defecto de AdmiraNeXT, estilo Claude Code / Codex) ──
      CUADRO de 4 barras alrededor del centro:
        · superior  → barra PRINCIPAL (#admira-topbar, 46px, de admira-bar.js)
@@ -589,7 +591,7 @@
       <!-- VERSIÓN al pie del raíl (Carlos, 2026-07-21): canon cuadrático de
            AdmiraNeXT — la versión SIEMPRE abajo del todo del menú de opciones,
            como en yokup y el resto de soluciones. -->
-      <div class="rail-ver">AdmiraNeXT · control · <b id="ctlVer">v.2026.07.22.r2</b></div>
+      <div class="rail-ver">AdmiraNeXT · control · <b id="ctlVer">v.2026.07.23.r1</b></div>
     </div>
   </aside>
 
@@ -869,6 +871,51 @@ async function loadFleet(){
     FLEET_SEEN=seen;
   }catch(e){ /* sin admira-fleet: sólo se usa presencia + probe SSH */ }
 }
+/* ── MODO DEGRADADO — el Mini (backend de flota) no responde ───────────────
+   No dejar el cockpit CIEGO: reconstruye el tablero desde admira-fleet (worker
+   Cloudflare, siempre en pie) y avisa con un banner honesto. El control remoto
+   real (SSH/capturas/comandos) sigue necesitando el Mini, pero al menos se ve
+   la flota. (Morfeo Negro · resiliencia sin Mini, 2026-07-23) */
+let FLEET_MACHINES=[];
+async function loadFleetMachines(){
+  try{
+    const r=await fetch('https://admira-fleet.csilvasantin.workers.dev/machines',{cache:'no-store'});
+    const d=await r.json();
+    FLEET_MACHINES=(d.machines||[]).map(m=>({
+      id:m.id||_norm(m.name||m.fqdn||''), name:m.name||m.id||m.fqdn||'?',
+      fqdn:m.fqdn||'', online:false, degraded:true
+    })).filter(m=>m.id);
+  }catch(e){ FLEET_MACHINES=[]; }
+  return FLEET_MACHINES;
+}
+function showMiniBanner(on){
+  let b=document.getElementById('miniOfflineBanner');
+  if(on){
+    if(!b){ b=document.createElement('div'); b.id='miniOfflineBanner';
+      b.style.cssText='position:fixed;top:0;left:0;right:0;z-index:2147483000;background:#5a3a00;'
+        +'color:#ffcf7a;font:600 12px/1.4 -apple-system,system-ui,sans-serif;padding:7px 14px;'
+        +'text-align:center;border-bottom:1px solid #ffb454;box-shadow:0 2px 10px rgba(0,0,0,.4)';
+      document.body.appendChild(b); }
+    b.innerHTML='⚠️ <b>MacMini offline</b> — modo degradado: la flota se lee de <b>admira-fleet</b> '
+      +'(Cloudflare). El control remoto por el Mini (SSH · capturas · comandos) está limitado hasta que vuelva.';
+    b.style.display='block';
+  } else if(b){ b.style.display='none'; }
+}
+async function degradedRefresh(){
+  await Promise.all([loadPersonas(), loadFleet(), loadFleetMachines()]);
+  MACHINES=FLEET_MACHINES.slice();
+  MACHINES.forEach(m=>{
+    if(agentOnline(m)){ m.online=true; m.viaAgent=true; }
+    else if(presenceOnline(m)){ m.online=true; m.viaPresence=true; }
+    else if(fleetOnline(m)){ m.online=true; m.viaFleet=true; }
+  });
+  MACHINES.forEach(m=>{ PREV_ONLINE[m.id]=m.online; }); _baselineDone=true;
+  const up=MACHINES.filter(m=>m.online).length;
+  $('#connPill').textContent='🟠 Mini offline · '+up+'/'+MACHINES.length+' (admira-fleet)';
+  $('#connPill').className='pill warn';
+  showMiniBanner(true);
+  renderCards(MACHINES); fillSelect(); updateCapHealth();
+}
 // Claves de una máquina del hub para casar con los nombres de presencia (p.ej. hub fqdn
 // 'macbookair16' ~ presencia 'MacBookAir16plata'; id 'admira-asuszenbook' ~ 'AsusZenbook').
 function _machKeys(m){ const ks=[];
@@ -940,6 +987,7 @@ async function refresh(){
       if(was===true && !m.online) toast('down','💤 '+(m.name||m.id),'se ha desconectado');
       else if(was===false && m.online) toast('up','🟢 '+(m.name||m.id),'de vuelta online'); }); }
     MACHINES.forEach(m=>{ PREV_ONLINE[m.id]=m.online; }); _baselineDone=true;
+    showMiniBanner(false);   // Mini responde → fuera el aviso de modo degradado
     renderCards(MACHINES); fillSelect(); updateCapHealth();
     deepLinkEquipo();   // ?equipo= desde /status → selecciona la tarjeta
   }catch(e){
@@ -953,7 +1001,9 @@ async function refresh(){
       $('#connPill').className='pill bad'; $('#connPill').style.cursor='pointer'; $('#connPill').onclick=forceRelogin;
       renderCards([]);
     } else {
-      $('#connPill').textContent='🔴 sin conexión'; $('#connPill').className='pill bad';
+      // Mini (backend de flota) inalcanzable → NO quedarse ciego: modo degradado desde admira-fleet.
+      try{ await degradedRefresh(); }
+      catch(_e){ $('#connPill').textContent='🔴 sin conexión'; $('#connPill').className='pill bad'; showMiniBanner(false); }
     }
   }
 }

@@ -37,6 +37,12 @@
   .mchip .count{margin-left:2px;font-family:var(--mono);font-size:11px;color:var(--mut);border:1px solid var(--line);border-radius:999px;padding:1px 8px}
   .mchip .count.dup{color:var(--warn);border-color:var(--warn)}
   .mchip .count.zero{opacity:.5}
+  .mchip .mcol{display:flex;flex-direction:column;gap:2px;min-width:0}
+  .mchip .mi{background:transparent;border:none;border-bottom:1px solid transparent;color:var(--ink);font:inherit;font-size:12.5px;outline:none;padding:1px 0;width:130px;max-width:36vw}
+  .mchip .mi::placeholder{color:var(--mut);opacity:.6}
+  .mchip .mi:hover{border-bottom-color:var(--line)}
+  .mchip .mi:focus{border-bottom-color:var(--acc2)}
+  .mchip .mi.alias{color:var(--mut);font-size:11.5px}
 
   /* máquinas */
   .machines{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:14px}
@@ -83,7 +89,7 @@ const WORKER="https://admira-asignaciones.csilvasantin.workers.dev";
 const $=(s)=>document.querySelector(s);
 
 // Los 8 miembros del Consejo (roles C-suite · fuente: array COUNCIL de app.js, gen "leyendas").
-const MEMBERS=[
+let MEMBERS=[
   {id:"CEO",persona:"Steve Jobs",     member:"Carlos",        side:"racional",icon:"🏛️"},
   {id:"CTO",persona:"Steve Wozniak",  member:"Carlos Silva",  side:"racional",icon:"⚙️"},
   {id:"COO",persona:"Tim Cook",       member:"Nines",         side:"racional",icon:"📋"},
@@ -93,8 +99,20 @@ const MEMBERS=[
   {id:"CXO",persona:"Howard Schultz", member:"Laboratorio",   side:"creativo",icon:"🧭"},
   {id:"CSO",persona:"George Lucas",   member:"Carla Rosa",    side:"creativo",icon:"📖"},
 ];
-const MEM=Object.fromEntries(MEMBERS.map(m=>[m.id,m]));
+const memById=(id)=>MEMBERS.find(m=>m.id===id)||null;
 const sideColor=(s)=>s==="racional"?"var(--racional)":"var(--creativo)";
+
+// Una asignación puede ser al NOMBRE o al ALIAS del miembro: se codifica "CEO#member"
+// o "CEO#persona". Compatibilidad: un valor pelado "CEO" = al nombre.
+function parseA(v){ if(!v||typeof v!=="string") return null; const i=v.indexOf("#");
+  const id=i<0?v:v.slice(0,i), face=(i<0?"member":v.slice(i+1)); return {id, face:face==="persona"?"persona":"member"}; }
+const faceLabel=(m,face)=>face==="persona"?m.persona:m.member;
+const faceOther=(m,face)=>face==="persona"?m.member:m.persona;
+// Las ediciones de nombre/alias se persisten SIN tocar el worker: viajan dentro del
+// propio objeto `assignments` bajo la clave reservada __members__ (que el worker ya guarda).
+function saveMemberOverrides(){ const mo={}; MEMBERS.forEach(m=>{ mo[m.id]={member:m.member,persona:m.persona}; }); ASSIGN.__members__=mo; }
+function applyMemberOverrides(){ const mo=ASSIGN&&ASSIGN.__members__; if(mo&&typeof mo==="object"){
+  MEMBERS.forEach(m=>{ const o=mo[m.id]; if(o){ if(o.member)m.member=o.member; if(o.persona)m.persona=o.persona; } }); } }
 
 // Set inicial de 8 máquinas (editables). Persisten en el worker si se cambian.
 const DEFAULT_MACHINES=[
@@ -121,6 +139,7 @@ async function load(){
     const r=await fetch(WORKER+"/assignments",{signal:AbortSignal.timeout(15000)});
     const d=await r.json();
     ASSIGN=(d&&d.assignments)||{};
+    applyMemberOverrides();
     if(Array.isArray(d.machines)&&d.machines.length) MACHINES=d.machines.map(m=>({...m}));
     conn("ok","🟢 conectado");
     if(d.updatedAt) $("#lastup").textContent="últ. cambio: "+new Date(d.updatedAt).toLocaleString("es-ES")+(d.updatedBy?(" · "+d.updatedBy):"");
@@ -144,7 +163,8 @@ async function save(){
 }
 function scheduleSave(){ $("#status").textContent="guardando…"; clearTimeout(saveTimer); saveTimer=setTimeout(save,450); }
 
-function counts(){ const c={}; MEMBERS.forEach(m=>c[m.id]=0); Object.values(ASSIGN).forEach(v=>{ if(c[v]!=null)c[v]++; }); return c; }
+function counts(){ const c={}; MEMBERS.forEach(m=>c[m.id]=0);
+  Object.entries(ASSIGN).forEach(([k,v])=>{ if(k==="__members__")return; const p=parseA(v); if(p&&c[p.id]!=null)c[p.id]++; }); return c; }
 
 function renderMembers(){
   const c=counts(); const el=$("#members"); el.innerHTML="";
@@ -152,8 +172,15 @@ function renderMembers(){
     const n=c[m.id]||0;
     const chip=document.createElement("div"); chip.className="mchip"; chip.style.setProperty("--c",sideColor(m.side));
     chip.innerHTML=`<span class="em">${m.icon}</span>
-      <div><div class="role">${esc(m.id)}</div><div class="who">${esc(m.member)} · ${esc(m.persona)}</div></div>
+      <div class="mcol">
+        <div class="role">${esc(m.id)}</div>
+        <input class="mi name" value="${esc(m.member)}" title="nombre real (editable)" placeholder="nombre">
+        <input class="mi alias" value="${esc(m.persona)}" title="alias (editable)" placeholder="alias">
+      </div>
       <span class="count ${n===0?'zero':''} ${n>1?'dup':''}" title="${n>1?'asignado a varias máquinas':'equipos asignados'}">${n}</span>`;
+    const inputs=chip.querySelectorAll(".mi");
+    inputs[0].onchange=(e)=>{ m.member=e.target.value.trim()||m.member; saveMemberOverrides(); render(); scheduleSave(); };
+    inputs[1].onchange=(e)=>{ m.persona=e.target.value.trim()||m.persona; saveMemberOverrides(); render(); scheduleSave(); };
     el.appendChild(chip);
   });
 }
@@ -162,12 +189,17 @@ function renderMachines(){
   const el=$("#machines"); el.innerHTML="";
   if(!MACHINES.length){ el.innerHTML='<div class="empty">Sin máquinas.</div>'; return; }
   MACHINES.forEach(mac=>{
-    const cur=ASSIGN[mac.id]||"";
-    const m=MEM[cur];
+    const p=parseA(ASSIGN[mac.id]||"");
+    const curNorm=p?(p.id+"#"+p.face):"";
+    const m=p?memById(p.id):null;
     const card=document.createElement("div"); card.className="card";
     card.style.setProperty("--c", m?sideColor(m.side):"var(--line)");
+    // Por cada miembro, DOS opciones: su nombre y su alias (elige a cuál asocias).
     const opts=`<option value="">— sin asignar —</option>`+MEMBERS.map(x=>
-      `<option value="${x.id}" ${x.id===cur?"selected":""}>${x.icon} ${x.id} · ${esc(x.member)}</option>`).join("");
+      `<optgroup label="${x.icon} ${x.id}">`+
+      `<option value="${x.id}#member" ${curNorm===x.id+"#member"?"selected":""}>${esc(x.member)}</option>`+
+      `<option value="${x.id}#persona" ${curNorm===x.id+"#persona"?"selected":""}>${esc(x.persona)} · alias</option>`+
+      `</optgroup>`).join("");
     card.innerHTML=`
       <div class="top">
         <span class="em">${mac.emoji||"💻"}</span>
@@ -178,7 +210,7 @@ function renderMachines(){
         <label>Miembro asignado</label>
         <select data-id="${esc(mac.id)}">${opts}</select>
       </div>
-      <div class="assigned">${m?`Asignado a <b>${esc(m.member)}</b> · ${m.icon} ${esc(m.id)} (${esc(m.persona)})`:"Sin asignar"}</div>`;
+      <div class="assigned">${m?`Asignado a <b>${esc(faceLabel(m,p.face))}</b> · ${m.icon} ${esc(m.id)} (${esc(faceOther(m,p.face))})`:"Sin asignar"}</div>`;
     card.querySelector("select").onchange=(e)=>{
       const id=e.target.dataset.id; const v=e.target.value;
       if(v) ASSIGN[id]=v; else delete ASSIGN[id];

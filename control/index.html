@@ -1022,6 +1022,7 @@ async function refresh(){
     showMiniBanner(false);   // Mini responde → fuera el aviso de modo degradado
     renderCards(MACHINES); fillSelect(); updateCapHealth();
     deepLinkEquipo();   // ?equipo= desde /status → selecciona la tarjeta
+    deepLinkRc();       // ?rc= desde yokup «operar» → abre su control remoto
   }catch(e){
     if(e.code===401 && !_reauthTried){
       // Sesión caducada → re-intercambia el credential del gate UNA vez.
@@ -1170,6 +1171,29 @@ function toggleCollapse(id){ const c=collapsedMap(); c[id]=!isCollapsed(id); loc
 // tarjeta de ese equipo (mismas claves tolerantes que la presencia), la expande,
 // la centra y la resalta unos segundos. Solo actúa una vez por carga.
 let _equipoDeepDone=false;
+/* ── ?rc=<máquina> → ABRE el control remoto de esa máquina ────────────────────
+   El botón «🖥 operar ↗» de yokup.com/misiones lleva desde 2026-07 a
+   /control?rc=admira-<máquina>&name=<máquina>, pero NADIE leía ese parámetro:
+   aterrizabas en el cockpit general y tenías que buscar la tarjeta a mano y
+   pulsar «control remoto». (Carlos, 24-jul-2026.) El id llega con mayúsculas
+   variables y a veces con el prefijo ya puesto, así que se normaliza igual que
+   ?equipo= y se casa contra la flota real. Sin coincidencia NO se calla: lo dice.
+   Necesita la flota cargada, así que se llama desde refresh(), no al arrancar. */
+let _rcDeepDone=false;
+function deepLinkRc(){
+  if(_rcDeepDone) return;
+  const q=new URLSearchParams(location.search);
+  const raw=(q.get('rc')||'').trim(); if(!raw) return;
+  if(!MACHINES.length) return;                       // aún sin flota: se reintenta al siguiente refresh
+  _rcDeepDone=true;
+  const nq=_norm(String(raw).split('.')[0].replace(/^admira-?/,''));
+  const m=nq && MACHINES.find(x=>_machKeys(x).some(k=>k===nq||k.indexOf(nq)===0||nq.indexOf(k)===0));
+  if(!m){ toast('warn','🖥️ '+raw,'no está en la flota — no se puede operar'); return; }
+  if(!m.online){ toast('warn','🖥️ '+(m.name||m.id),'está offline — el control remoto necesita la máquina despierta'); return; }
+  if(typeof window.openRemoteControl!=='function'){ toast('warn','🖥️ '+(m.name||m.id),'el control remoto no cargó'); return; }
+  window.openRemoteControl(m.id, m.name||q.get('name')||m.id);
+}
+
 function deepLinkEquipo(){
   if(_equipoDeepDone) return;
   const q=new URLSearchParams(location.search).get('equipo'); if(!q) return;
@@ -1212,7 +1236,20 @@ try{ loadPlayerVersions(); setInterval(loadPlayerVersions, 1800000); }catch(e){}
 
 function renderCards(ms){
   const el=$('#cards');
-  if(!ms.length){ el.innerHTML='<div class="empty" style="grid-column:1/-1">Inicia sesión con Google (arriba a la derecha) para ver la flota.</div>'; return; }
+  if(!ms.length){
+    // El mensaje tiene que decir la VERDAD (Carlos, 24-jul-2026): antes, cualquier
+    // lista vacía decía «inicia sesión con Google (arriba a la derecha)» — aunque
+    // acabaras de entrar y lo que hubiese fallado fuese la sesión de backend. Y el
+    // botón que citaba no existe: el login es la pantalla completa del gate.
+    let g=null; try{ g=JSON.parse(localStorage.getItem('admira_gate')||'null'); }catch(e){}
+    const dentro=!!(g&&g.email&&Date.now()<g.exp);
+    el.innerHTML='<div class="empty" style="grid-column:1/-1">'+(
+      !dentro ? 'Recarga la página para entrar con tu cuenta de Google.'
+      : !SESSION ? 'Sesión de FleetControl no establecida como <b>'+dsEsc(g.email)+'</b>. Toca la píldora de estado (arriba) para reintentar.'
+      : 'Sin equipos que mostrar. El backend de flota respondió vacío.'
+    )+'</div>';
+    return;
+  }
   // preserva miniaturas ya cargadas
   const shots={}; document.querySelectorAll('.shot').forEach(s=>{ if(s.dataset.m && s.style.display!=='none') shots[s.dataset.m]=s.querySelector('img').src; });
   // despejar tablero: opcionalmente oculta offline y, en todo caso, los manda al final

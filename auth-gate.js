@@ -442,12 +442,40 @@
     google.accounts.id.initialize({
       client_id: CLIENT_ID,
       callback: onCredential,
-      auto_select: false,
+      // ENTRADA SILENCIOSA (Carlos, 24-jul-2026): «si ya tengo acceso en yokup.com,
+      // en admira.live no tengo que poner el usuario dos veces». Son dominios
+      // distintos, así que la sesión NO se puede compartir — pero sí se puede evitar
+      // el clic: con auto_select, si el navegador ya tiene sesión de Google y la
+      // cuenta consintió antes, Google devuelve el credential sin preguntar nada.
+      // El mismo mecanismo que admiraGateRefresh() ya usaba para refrescar; sólo
+      // faltaba intentarlo TAMBIÉN en la primera visita.
+      auto_select: true,
       cancel_on_tap_outside: false
     });
     gisReady = true;
     // Si ya estábamos en ready (barra terminó antes que GIS), pinta el botón ahora.
     if (phase === "ready") renderGoogleButton();
+    trySilentSignIn();
+  }
+
+  // Intento de entrada sin clic. Si Google no lo muestra (varias cuentas, One Tap
+  // suprimido, sin consentimiento previo), NO pasa nada: el botón manual sigue ahí
+  // exactamente igual que antes. Es una mejora aditiva, nunca un bloqueo.
+  var _silentTried = false;
+  function trySilentSignIn() {
+    if (_silentTried) return;
+    _silentTried = true;
+    try {
+      google.accounts.id.prompt(function (n) {
+        try {
+          var no = n && ((n.isNotDisplayed && n.isNotDisplayed()) ||
+                         (n.isSkippedMoment && n.isSkippedMoment()) ||
+                         (n.isDismissedMoment && n.isDismissedMoment()));
+          // Sin entrada silenciosa: asegúrate de que el botón manual está pintado.
+          if (no && phase === "ready") renderGoogleButton();
+        } catch (e) {}
+      });
+    } catch (e) {}
   }
 
   ready(mount);

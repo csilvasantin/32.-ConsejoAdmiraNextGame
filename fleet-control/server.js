@@ -418,9 +418,12 @@ const ACTIONS = {
   //   Linux: captura directa por SSH (grim en Wayland, scrot/import/gnome en X11)
   //     a JPEG y devuelve base64 (mismo formato que el UI espera).
   screenshot: {
-    macos: () =>
+    // `arg` = índice de pantalla (FLT-1021). Viaja pegado al nonce como «N|2» para
+    // no cambiar el handshake: el demonio parte por «|» y los agentes viejos que
+    // manden sólo el nonce siguen funcionando igual (pantalla 0).
+    macos: (arg) =>
       'D="$HOME/.fleet"; mkdir -p "$D"; O="$D/capture.out"; N="fc-$(date +%s)-$$-$RANDOM"; ' +
-      'printf "%s" "$N" > "$D/capture.req"; ' +
+      'printf "%s" "$N|' + String(parseInt(arg, 10) || 0) + '" > "$D/capture.req"; ' +
       'for i in $(seq 1 30); do [ "$(head -1 "$O" 2>/dev/null)" = "$N" ] && break; sleep 0.3; done; ' +
       'if [ "$(head -1 "$O" 2>/dev/null)" = "$N" ]; then tail -n +2 "$O"; else echo ERR_NO_CAPTURE; fi',
     // Windows: el demonio FleetCapture.exe (sesión interactiva) captura; el hub
@@ -814,8 +817,13 @@ const server = http.createServer(async (req, res) => {
     if (!m) return json(res, 400, { error: 'máquina desconocida' });
     const fn = resolveAction('screenshot', m);
     if (!fn) return json(res, 500, { error: 'sin acción screenshot' });
-    const r = await run(m, fn(null, m), 20000);
+    // ?display=N → esa pantalla (FLT-1021). Sin parámetro, la de siempre.
+    const dsp = parseInt(q.get('display'), 10) || 0;
+    const r = await run(m, fn(dsp, m), 20000);
     const b64 = String(r.stdout || '').trim();
+    if (/ERR_NO_SUCH_DISPLAY/.test(b64)) {
+      return json(res, 404, { error: 'no_such_display', detail: 'la máquina no ha capturado la pantalla ' + dsp });
+    }
     if (r.rc !== 0 || !b64 || /ERR_NO_CAPTURE/.test(b64) || b64.length < 200) {
       audit({ ip, ev: 'live_frame_fail', machine: m.id, rc: r.rc });
       return json(res, 502, { error: 'capture_failed_or_no_permission', detail: String(r.stderr || b64 || '').slice(0, 140) });
@@ -825,6 +833,60 @@ const server = http.createServer(async (req, res) => {
     return res.end(buf);
   }
 
+
+  // ── CONTROL REMOTO: RATÓN Y TECLADO — /api/input (FLT-1021) ─────────────────
+  // Carlos, 24-jul-2026: «el control remoto ha perdido las funciones de
+  // interactividad». No se perdió: NUNCA EXISTIÓ esta ruta. Había /api/live/frame
+  // (ver) pero no /api/input (tocar), así que el panel POSTeaba a una URL que
+  // devolvía 404 y encima se lo tragaba en silencio. Los tooltips citaban un
+  // «AdmiraRemoteAgent» que no está en ningún repo: el ejecutor real es
+  // ~/.fleet/fleet-input.py, que postea CGEvents con Quartz en la máquina destino.
+  // Las coordenadas viajan NORMALIZADAS (0..1) junto al índice de pantalla, para
+  // que en un equipo de varios monitores el clic caiga en el que se está viendo.
+  if (url === '/api/input' && req.method === 'POST') {
+    if (!(await gate(req, res, ip))) return;
+    const body = await readBody(req);
+    const m = machineById(body.machine);
+    if (!m) return json(res, 400, { error: 'máquina desconocida' });
+    if (platOf(m) !== 'macos') return json(res, 501, { error: 'input_no_soportado_en_' + platOf(m) });
+    const accion = {
+      type: String(body.type || ''),
+      x: body.x, y: body.y, dx: body.dx, dy: body.dy,
+      button: body.button, clicks: body.clicks,
+      text: body.text, code: body.code, mods: body.mods,
+      display: body.display
+    };
+    // El JSON viaja en base64: así no hay que pelearse con el escapado de comillas,
+    // acentos ni emojis a través de ssh + shell (escribir « ñ » se rompía si no).
+    const b64 = Buffer.from(JSON.stringify(accion), 'utf8').toString('base64');
+    const cmd = 'echo ' + sh(b64) + ' | base64 -d | /usr/bin/python3 "$HOME/.fleet/fleet-input.py"';
+    const r = await run(m, cmd, 8000);
+    let out = null; try { out = JSON.parse(String(r.stdout || '').trim()); } catch (e) {}
+    if (!out || out.ok !== true) {
+      // Fallar en VOZ ALTA: el silencio de antes es justo lo que hizo que esto
+      // pasara meses sin que nadie supiera que el ratón no llegaba.
+      audit({ ip, ev: 'input_fail', machine: m.id, type: accion.type, rc: r.rc });
+      return json(res, 502, {
+        error: (out && out.error) || 'input_failed',
+        detalle: (out && out.detalle) || String(r.stderr || r.stdout || '').slice(0, 200)
+      });
+    }
+    return json(res, 200, out);
+  }
+
+  // Pantallas de una máquina, para el selector del panel (FLT-1021). El MacMini
+  // tiene 3 monitores: sin esto siempre se veía y se tocaba el principal.
+  if (url === '/api/displays') {
+    if (!(await gate(req, res, ip))) return;
+    const q = new URL(req.url, 'http://x').searchParams;
+    const m = machineById(q.get('machine'));
+    if (!m) return json(res, 400, { error: 'máquina desconocida' });
+    if (platOf(m) !== 'macos') return json(res, 200, { displays: [] });
+    const r = await run(m, '/usr/bin/python3 "$HOME/.fleet/fleet-input.py" --displays', 8000);
+    let out = null; try { out = JSON.parse(String(r.stdout || '').trim()); } catch (e) {}
+    if (!out || !out.ok) return json(res, 502, { error: 'sin_agente_de_entrada', detalle: String(r.stderr || r.stdout || '').slice(0, 200) });
+    return json(res, 200, { displays: out.displays || [] });
+  }
 
   // ── ONBOARDING: alta/auto-registro de una máquina nueva en la flota ──────────
   // La máquina nueva (p.ej. una MacBook Air) se da de alta sola: POST con su

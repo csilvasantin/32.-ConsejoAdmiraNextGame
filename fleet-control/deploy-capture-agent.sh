@@ -9,25 +9,53 @@
 
 read -r -d '' CAPTURE_SH <<'EOS'
 #!/bin/bash
-# Demonio de captura: lee un nonce en ~/.fleet/capture.req y deja
-# "<nonce>\n<base64>" en ~/.fleet/capture.out (handshake determinista).
+# Demonio de captura: lee "<nonce>" o "<nonce>|<pantalla>" en ~/.fleet/capture.req
+# y deja "<nonce>\n<base64>" en ~/.fleet/capture.out (handshake determinista).
+#
+# SELECTOR DE PANTALLA (FLT-1021, Carlos 24-jul-2026: «añadir selector de pantalla,
+# el MacMini tiene 3 pantallas»). AgoraCapture llama a `screencapture -x -t jpg`, que
+# en un Mac con varios monitores YA captura todos y escribe UN FICHERO POR PANTALLA
+# («agora-proof.jpg», «agora-proof 2.jpg», …). El demonio sólo leía el primero: por eso
+# se veía siempre la principal aunque hubiera tres. Ahora se eligen por índice.
+# No hace falta ningún permiso nuevo: las capturas ya se estaban haciendo.
 D="$HOME/.fleet"; mkdir -p "$D"
 P="$HOME/.agents-comms/agora-proof.jpg"
+PDIR="$(dirname "$P")"
 last=""
 while true; do
-  n=$(cat "$D/capture.req" 2>/dev/null)
-  if [ -n "$n" ] && [ "$n" != "$last" ]; then
-    last="$n"
-    rm -f "$P"
+  req=$(cat "$D/capture.req" 2>/dev/null)
+  if [ -n "$req" ] && [ "$req" != "$last" ]; then
+    last="$req"
+    n="${req%%|*}"                                   # nonce
+    dsp="${req#*|}"; [ "$dsp" = "$req" ] && dsp=0    # pantalla pedida (0 por defecto)
+    case "$dsp" in ''|*[!0-9]*) dsp=0;; esac
+    # Se limpian TODOS los ficheros de la tanda anterior, no sólo el primero: si no,
+    # una captura vieja de la pantalla 2 se colaría como si fuera de ahora.
+    rm -f "$PDIR"/agora-proof*.jpg
     # despertar la pantalla por si está apagada por inactividad (laptops ociosos)
     caffeinate -u -t 4 >/dev/null 2>&1 &
     /usr/bin/pmset touch >/dev/null 2>&1 || true
     sleep 1
     open -W -n -a "$HOME/Applications/AgoraCapture.app" >/dev/null 2>&1
     for i in 1 2 3 4 5 6; do [ -f "$P" ] && break; sleep 0.4; done
-    if [ -f "$P" ] && [ "$(wc -c < "$P" 2>/dev/null)" -gt 1000 ]; then
-      /usr/bin/sips -Z 1100 "$P" >/dev/null 2>&1
-      { printf '%s\n' "$n"; /usr/bin/base64 < "$P" | tr -d "\n"; } > "$D/capture.out.tmp" && mv "$D/capture.out.tmp" "$D/capture.out"
+    # Orden de pantallas = orden de ficheros de screencapture: la PRINCIPAL es el
+    # fichero sin sufijo y las demás llevan « 2», « 3»… OJO: ordenar por nombre a
+    # secas los coloca al revés (el espacio va antes que el punto, así que
+    # «agora-proof 2.jpg» saldría delante de «agora-proof.jpg») y la pantalla 0
+    # devolvería el monitor equivocado. Por eso el sin-sufijo se pone a mano primero.
+    shopt -s nullglob
+    SHOTS=()
+    [ -f "$P" ] && SHOTS+=("$P")
+    for f in "$PDIR"/agora-proof\ *.jpg; do [ -f "$f" ] && SHOTS+=("$f"); done
+    shopt -u nullglob
+    T="${SHOTS[$dsp]}"
+    if [ -z "$T" ] && [ "$dsp" -gt 0 ]; then
+      # Pidieron una pantalla que no se ha capturado. Decirlo, NO devolver la
+      # principal disfrazada: mostrar otra pantalla sin avisar es peor que fallar.
+      printf '%s\nERR_NO_SUCH_DISPLAY' "$n" > "$D/capture.out"
+    elif [ -n "$T" ] && [ "$(wc -c < "$T" 2>/dev/null)" -gt 1000 ]; then
+      /usr/bin/sips -Z 1100 "$T" >/dev/null 2>&1
+      { printf '%s\n' "$n"; /usr/bin/base64 < "$T" | tr -d "\n"; } > "$D/capture.out.tmp" && mv "$D/capture.out.tmp" "$D/capture.out"
     else
       printf '%s\nERR_NO_CAPTURE' "$n" > "$D/capture.out"
     fi

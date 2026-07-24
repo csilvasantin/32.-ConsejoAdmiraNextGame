@@ -1,13 +1,14 @@
-/* control/health.js · Morfeo Negro · v.2026.07.23.r2
-   Semáforo de SALUD de las dependencias de FleetControl: un vistazo = qué está
-   caído. Verde/rojo + latencia por dependencia, con resumen n/N. Reachabilidad
+/* control/health.js · Fleet Mesh · v.2026.07.24.r1
+   Semáforo de SALUD de las rutas y dependencias de FleetControl. Una ruta roja
+   NO significa que el equipo físico esté caído: solo que este navegador no
+   alcanza ese endpoint. Verde/rojo + latencia, con resumen n/N. Reachabilidad
    por fetch no-cors + timeout (no lee el body, solo si RESPONDE), así evita
    errores de CORS. Autocontenido, sin tocar el resto del panel.
-   Nota: el MacMini es tailnet-only → si sale «caído» desde tu equipo, es que
-   ESTE navegador no lo alcanza (y /control entrará en modo degradado). */
+   por ruta, sin inferir el estado del ordenador que la aloja. */
 (function () {
   var DEPS = [
-    { k: 'mini',  name: 'MacMini · fleet',    url: 'https://macmini.tail48b61c.ts.net/fleet/api',              note: 'backend de flota (SSH · capturas · comandos). Tailnet.' },
+    { k: 'mini',  name: 'Relay Mac Mini',      url: 'https://macmini.tail48b61c.ts.net/fleet/api/health',       note: 'Ruta primaria de control. «sin ruta» no equivale a Mac Mini apagado.', down: 'sin ruta' },
+    { k: 'mbp16', name: 'Relay MacBook Pro 16',url: 'https://macbook-pro-16.tail48b61c.ts.net:10000/fleet/api/health', note: 'Ruta alternativa de control de Fleet Mesh.', down: 'sin ruta' },
     { k: 'fleet', name: 'admira-fleet',        url: 'https://admira-fleet.csilvasantin.workers.dev/machines',   note: 'registro de flota (Cloudflare) — fuente del modo degradado' },
     { k: 'yokup', name: 'yokup-rtc',           url: 'https://api.yokup.com/fleet/missions', note: 'misiones y decisiones' },
     { k: 'tg',    name: 'admira-telegram',     url: 'https://admira-telegram.csilvasantin.workers.dev/',        note: 'AgoraMatrix / espejo Telegram' },
@@ -33,7 +34,7 @@
   document.head.appendChild(st);
 
   mount.innerHTML =
-    '<div class="hlth-hd" title="Salud de las dependencias de FleetControl">🩺 Dependencias <span class="hlth-sum" id="hlthSum">…</span></div>' +
+    '<div class="hlth-hd" title="Salud de rutas y dependencias; una ruta caída no implica un equipo apagado">🩺 Rutas y dependencias <span class="hlth-sum" id="hlthSum">…</span></div>' +
     '<div id="hlthRows"></div>';
   var rows = document.getElementById('hlthRows');
   DEPS.forEach(function (d) {
@@ -61,7 +62,7 @@
       dot.className = 'hlth-dot chk';
       return ping(d).then(function (r) {
         if (r.up) { up++; dot.className = 'hlth-dot up'; lat.textContent = r.ms + ' ms'; row.classList.remove('down'); }
-        else      { dot.className = 'hlth-dot down'; lat.textContent = 'caído'; row.classList.add('down'); }
+        else      { dot.className = 'hlth-dot down'; lat.textContent = d.down || 'sin respuesta'; row.classList.add('down'); }
       });
     })).then(function () {
       var sum = document.getElementById('hlthSum');

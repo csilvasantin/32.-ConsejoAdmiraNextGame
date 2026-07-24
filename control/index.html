@@ -8,7 +8,7 @@
 <!-- control-signage · v.2026.07.21.r5 · estado único live/ready/stale/offline/blocked con heartbeat, proof-of-play, captura, versión, contenido y doble acuse. Arranque bloqueado si no es elegible; estado DS nunca sale de localStorage. -->
 <!-- control-tarjetas-honestas · v.2026.07.22.r1 · tarjetas honestas y limpias: a) tarjeta offline/bloqueada COMPACTA (badge + causa raíz + «▸ detalle» plegado, sin ladrillos repetidos); b) FRANJA agregada cuando ≥3 equipos comparten diagnóstico (sin acceso remoto → Tailscale/SSH); c) badge de captura HONESTO (🔴 EN VIVO <2min / captura antigua / SIN CAPTURA · fondo de persona); d) preflight AUTOMÁTICO al cargar (solo lectura, solo si hay online); e) versión al pie r1. -->
 <!-- control-dos-botones-ds · v.2026.07.22.r2 · DOS botones DS explícitos en Acciones de Equipos: «📺 Arrancar DS» (arranca los elegibles pendientes) y «⏹️ Apagar DS» (para los players vivos), ambos siempre visibles y respetando el desplegable «elegir equipos». Sustituye al botón único auto-invertible. -->
-<!-- control-resiliencia · v.2026.07.23.r1 · MODO DEGRADADO sin Mini (Morfeo Negro): si el backend de flota (macmini/fleet/api) no responde, el tablero NO se queda ciego — reconstruye la flota desde el worker admira-fleet (Cloudflare) y muestra un banner honesto «MacMini offline · modo degradado». El control remoto real (SSH/capturas/comandos) sigue necesitando el Mini. -->
+<!-- control-fleet-mesh · v.2026.07.24.r1 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google independiente, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
     <script src="/admira-bar.js?v=20260713-r36"></script>
@@ -16,6 +16,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="/failover.js"></script>
+<script src="/control/fleet-mesh.js?v=20260724-r1"></script>
 <title>Control · AdmiraNext Fleet</title>
 <style>
   :root{
@@ -716,9 +717,10 @@
 </div>
 
 <script>
-const API='https://macmini.tail48b61c.ts.net/fleet/api';
+const API='https://macmini.tail48b61c.ts.net/fleet/api'; // compatibilidad; las llamadas reales pasan por Fleet Mesh
 const $=s=>document.querySelector(s);
 let MACHINES=[];
+let ACTIVE_ROUTE=null;
 // Equipos cuya captura ha fallado (ERR_NO_CAPTURE / sin permiso). Persiste entre
 // re-renders para volver a pintar el aviso + botón de arreglo por SSH.
 let CAP_FAIL={}, CAP_TS={}, PREV_ONLINE={}, PREV_STALE={}, _baselineDone=false;
@@ -789,44 +791,35 @@ const CAP_FIX_CMD=[
   'launchctl kickstart -k "gui/$(id -u)/com.admiranext.fleet-capture" 2>/dev/null',
   'test -d "$HOME/Applications/AgoraCapture.app" && echo "AgoraCapture.app: OK - concede Grabacion de pantalla en el panel que se ha abierto" || echo "AgoraCapture.app NO instalada en ~/Applications (falta copiar la app a ese Mac)"'
 ].join('; ');
-// Acceso ÚNICO por login de Google (opción B): se obtiene una sesión de backend
-// (12h) intercambiando el credential del gate (admira_gate.cred). Sin tokens.
+// Fleet Mesh mantiene una sesión Google INDEPENDIENTE por relay. Así una sesión
+// firmada por Mac Mini no bloquea el failover hacia MacBook Pro (cada backend
+// puede tener su propio secreto de sesión).
 let SESSION='';
-try{ const s=JSON.parse(localStorage.getItem('fleet_session')||'null'); if(s&&s.token&&s.exp&&Date.now()<s.exp) SESSION=s.token; }catch(e){}
-async function _mintSession(cred){
-  const r=await fetch(API+'/auth',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({credential:cred})});
-  if(!r.ok) return false;
-  const d=await r.json().catch(()=>({}));
-  if(d&&d.session){ SESSION=d.session; localStorage.setItem('fleet_session',JSON.stringify({token:d.session,exp:d.exp||(Date.now()+12*3600*1000)})); return true; }
-  return false;
-}
-async function ensureSession(){
-  if(SESSION) return true;
+async function fleetCredential(){
   let g; try{ g=JSON.parse(localStorage.getItem('admira_gate')||'null'); }catch(e){}
-  // El cred del gate (id_token de Google) sólo vale ~1h. Si está rancio (>50min),
-  // pide al gate un refresco SILENCIOSO antes de intentar el intercambio, para no
-  // mandar un token caducado (que provoca el "🔒 sin acceso" en toda la flota).
   const stale = !g || !g.credAt || (Date.now()-g.credAt) > 50*60*1000;
   if(stale && typeof window.admiraGateRefresh==='function'){
     try{ await window.admiraGateRefresh(); }catch(e){}
     try{ g=JSON.parse(localStorage.getItem('admira_gate')||'null'); }catch(e){}
   }
-  if(!g||!g.cred) return false;                 // sin credential del gate → no se puede
-  try{
-    if(await _mintSession(g.cred)) return true;
-    // Rechazado (cred caducado): un intento de refresco silencioso + reintento.
-    if(typeof window.admiraGateRefresh==='function'){
-      const fresh=await window.admiraGateRefresh();
-      if(fresh && await _mintSession(fresh)) return true;
-    }
-  }catch(e){}
+  return g&&g.cred||'';
+}
+const FLEET_MESH=window.AdmiraFleetMesh.create({
+  getCredential:fleetCredential,
+  timeoutMs:12000,
+  cooldownMs:15000
+});
+async function ensureSession(){
+  if(SESSION) return true;
+  try{ if(await FLEET_MESH.ensureAnySession()){ SESSION='mesh'; return true; } }catch(e){}
+  SESSION='';
   return false;
 }
 // Recuperación garantizada: limpia sesión+gate y recarga → el gate vuelve a pedir
 // login de Google (cred fresco). Es la red de seguridad si el refresco silencioso
 // no es posible (One Tap suprimido, varias cuentas, etc.).
 function forceRelogin(){
-  try{ localStorage.removeItem('fleet_session'); localStorage.removeItem('admira_gate'); }catch(e){}
+  try{ localStorage.removeItem('fleet_session'); sessionStorage.removeItem('admira_fleet_mesh_sessions'); localStorage.removeItem('admira_gate'); }catch(e){}
   location.reload();
 }
 
@@ -899,11 +892,10 @@ function agentNowHtml(m){ const e=agentEntry(m); if(!e||!e.status) return '';
   const stale=at && age>900000;                              // >15 min sin reportar → rancio
   const ageTxt=at?(mins<1?'ahora':(mins<60?('hace '+mins+'m'):('hace '+Math.round(mins/60)+'h'))):'';
   return '<div class="agentnow'+(stale?' stale':'')+'" title="En qué está el agente ahora (Mandamiento 11 · report cada 5 min)">🔧 '+String(e.status).replace(/</g,'&lt;')+(ageTxt?(' <span class="agentnow-age">· '+ageTxt+'</span>'):'')+'</div>'; }
-/* ── MODO DEGRADADO — el Mini (backend de flota) no responde ───────────────
-   No dejar el cockpit CIEGO: reconstruye el tablero desde admira-fleet (worker
-   Cloudflare, siempre en pie) y avisa con un banner honesto. El control remoto
-   real (SSH/capturas/comandos) sigue necesitando el Mini, pero al menos se ve
-   la flota. (Morfeo Negro · resiliencia sin Mini, 2026-07-23) */
+/* ── MODO DEGRADADO — ningún relay de control responde ─────────────────────
+   Fleet Mesh ya ha probado todas las rutas. Solo entonces reconstruye el
+   tablero desde admira-fleet (Cloudflare). Esto NO afirma que las máquinas
+   estén apagadas: únicamente falta una ruta confirmada para controlarlas. */
 let FLEET_MACHINES=[];
 async function loadFleetMachines(){
   try{
@@ -916,7 +908,7 @@ async function loadFleetMachines(){
   }catch(e){ FLEET_MACHINES=[]; }
   return FLEET_MACHINES;
 }
-function showMiniBanner(on){
+function showControlRouteBanner(on, route){
   let b=document.getElementById('miniOfflineBanner');
   if(on){
     if(!b){ b=document.createElement('div'); b.id='miniOfflineBanner';
@@ -924,8 +916,13 @@ function showMiniBanner(on){
         +'color:#ffcf7a;font:600 12px/1.4 -apple-system,system-ui,sans-serif;padding:7px 14px;'
         +'text-align:center;border-bottom:1px solid #ffb454;box-shadow:0 2px 10px rgba(0,0,0,.4)';
       document.body.appendChild(b); }
-    b.innerHTML='⚠️ <b>MacMini offline</b> — modo degradado: la flota se lee de <b>admira-fleet</b> '
-      +'(Cloudflare). El control remoto por el Mini (SSH · capturas · comandos) está limitado hasta que vuelva.';
+    if(route){
+      b.innerHTML='🕸️ La ruta primaria no responde desde este navegador. Control activo por <b>'+dsEsc(route.label||route.id)+'</b>. '
+        +'Esto describe la <b>ruta de control</b>, no el estado físico del Mac Mini.';
+    }else{
+      b.innerHTML='⚠️ <b>Sin relay de control disponible</b> — la flota se reconstruye desde <b>admira-fleet</b> '
+        +'(solo lectura). Los equipos pueden seguir encendidos; falta una ruta confirmada para SSH, capturas y comandos.';
+    }
     b.style.display='block';
   } else if(b){ b.style.display='none'; }
 }
@@ -939,9 +936,9 @@ async function degradedRefresh(){
   });
   MACHINES.forEach(m=>{ PREV_ONLINE[m.id]=m.online; }); _baselineDone=true;
   const up=MACHINES.filter(m=>m.online).length;
-  $('#connPill').textContent='🟠 Mini offline · '+up+'/'+MACHINES.length+' (admira-fleet)';
+  $('#connPill').textContent='🟠 sin relay · '+up+'/'+MACHINES.length+' visibles';
   $('#connPill').className='pill warn';
-  showMiniBanner(true);
+  showControlRouteBanner(true, null);
   renderCards(MACHINES); fillSelect(); updateCapHealth();
 }
 // Claves de una máquina del hub para casar con los nombres de presencia (p.ej. hub fqdn
@@ -977,13 +974,17 @@ function consultorWallpaper(machine){
 // El acceso es por login de Google (gate). El botón muestra tu identidad y permite
 // cerrar sesión (limpia la sesión del backend y la del gate → vuelve a pedir login).
 function whoami(){ try{ const g=JSON.parse(localStorage.getItem('admira_gate')||'null'); return g&&g.email||''; }catch(e){ return ''; } }
-function logout(){ if(!confirm('¿Cerrar sesión de FleetControl?')) return; localStorage.removeItem('fleet_session'); localStorage.removeItem('admira_gate'); location.reload(); }
+function logout(){ if(!confirm('¿Cerrar sesión de FleetControl?')) return; localStorage.removeItem('fleet_session'); sessionStorage.removeItem('admira_fleet_mesh_sessions'); localStorage.removeItem('admira_gate'); location.reload(); }
 $('#tokenPill').onclick=logout;
-function hdrs(){ const h={'Content-Type':'application/json'}; if(SESSION) h['Authorization']='Bearer '+SESSION; return h; }
 async function api(path, opts){
-  const r=await fetch(API+path,{...opts,headers:{...hdrs(),...(opts&&opts.headers||{})}});
-  if(r.status===401){ throw {code:401,msg:'token inválido o ausente'}; }
-  return r.json();
+  opts=opts||{};
+  const h={'Content-Type':'application/json',...(opts.headers||{})};
+  const out=await FLEET_MESH.json(path,{...opts,headers:h});
+  const r=out.response, d=out.data;
+  if(r.status===401){ throw {code:401,msg:'sesión inválida en los relays disponibles',mesh:d&&d._mesh}; }
+  if(!r.ok && r.status>=500){ throw {code:r.status,msg:(d&&d.error)||('HTTP '+r.status),mesh:d&&d._mesh}; }
+  ACTIVE_ROUTE=d&&d._mesh&&d._mesh.relay||ACTIVE_ROUTE;
+  return d;
 }
 
 /* ---------- estado de la flota ---------- */
@@ -994,6 +995,8 @@ async function refresh(){
   if(!SESSION){ $('#connPill').textContent='🔒 inicia sesión Google'; $('#connPill').className='pill bad'; renderCards([]); return; }
   try{
     const d=await api('/status'); MACHINES=d.machines; MACHINES.forEach(m=>{ m.sshOnline=!!m.online; }); _reauthTried=false;
+    const route=d._mesh&&d._mesh.relay||ACTIVE_ROUTE;
+    const failedOver=!!(d._mesh&&d._mesh.failover);
     _capturaDeArranque();   // al INICIAR SESIÓN: foto de todos los conectados (una vez)
     await Promise.all([loadPersonas(), loadFleet()]);
     // Un equipo con un agente ACTIVO (Claude/Codex/Grok, beat de presencia <8min) cuenta como
@@ -1009,7 +1012,8 @@ async function refresh(){
       else if(fleetOnline(m)){ m.online=true; m.viaFleet=true; }
     });
     const up=MACHINES.filter(m=>m.online).length;
-    $('#connPill').textContent='🟢 '+up+'/'+MACHINES.length+' online'; $('#connPill').className='pill ok';
+    $('#connPill').textContent=(failedOver?'🟠 ':'🟢 ')+up+'/'+MACHINES.length+' online · vía '+(route&&route.label||'relay');
+    $('#connPill').className='pill '+(failedOver?'warn':'ok');
     // alerta de caída: avisa cuando un equipo cambia de estado (tras la 1ª foto base)
     if(_baselineDone){ MACHINES.forEach(m=>{ const was=PREV_ONLINE[m.id];
       if(was===true && !m.online) toast('down','💤 '+(m.name||m.id),'se ha desconectado');
@@ -1019,14 +1023,14 @@ async function refresh(){
       if(stNow && PREV_STALE[m.id]===false) toast('warn','🔧 '+(m.name||m.id),'su agente lleva '+Math.round(agentAgeMs(m)/60000)+'m sin reportar');
     }); }
     MACHINES.forEach(m=>{ PREV_ONLINE[m.id]=m.online; PREV_STALE[m.id]=isAgentStale(m); }); _baselineDone=true;
-    showMiniBanner(false);   // Mini responde → fuera el aviso de modo degradado
+    showControlRouteBanner(failedOver, failedOver?route:null);
     renderCards(MACHINES); fillSelect(); updateCapHealth();
     deepLinkEquipo();   // ?equipo= desde /status → selecciona la tarjeta
     deepLinkRc();       // ?rc= desde yokup «operar» → abre su control remoto
   }catch(e){
     if(e.code===401 && !_reauthTried){
       // Sesión caducada → re-intercambia el credential del gate UNA vez.
-      _reauthTried=true; SESSION=''; localStorage.removeItem('fleet_session');
+      _reauthTried=true; SESSION=''; localStorage.removeItem('fleet_session'); sessionStorage.removeItem('admira_fleet_mesh_sessions');
       if(await ensureSession()) return refresh();
     }
     if(e.code===401){
@@ -1034,9 +1038,9 @@ async function refresh(){
       $('#connPill').className='pill bad'; $('#connPill').style.cursor='pointer'; $('#connPill').onclick=forceRelogin;
       renderCards([]);
     } else {
-      // Mini (backend de flota) inalcanzable → NO quedarse ciego: modo degradado desde admira-fleet.
+      // Ningún relay alcanzable → NO quedarse ciego: modo degradado desde admira-fleet.
       try{ await degradedRefresh(); }
-      catch(_e){ $('#connPill').textContent='🔴 sin conexión'; $('#connPill').className='pill bad'; showMiniBanner(false); }
+      catch(_e){ $('#connPill').textContent='🔴 sin ruta de control'; $('#connPill').className='pill bad'; showControlRouteBanner(true,null); }
     }
   }
 }
@@ -2782,14 +2786,12 @@ function collapseAllToggle(){
 (function () {
   if (window.__admiraRemoteViewer) return;
   window.__admiraRemoteViewer = true;
-  const RC_API = (typeof API !== 'undefined') ? API : 'https://macmini.tail48b61c.ts.net/fleet/api';
-  function rcSession(){ if(typeof SESSION!=='undefined'&&SESSION)return SESSION; try{const s=JSON.parse(localStorage.getItem('fleet_session')||'null');if(s&&s.token)return s.token;}catch(e){} return ''; }
-  function rcAuthHeaders(extra){ const h=Object.assign({},extra||{}); const t=rcSession(); if(t)h['Authorization']='Bearer '+t; return h; }
+  function meshFetch(path,opts){ return FLEET_MESH.request(path,opts||{}); }
   const KMAP={KeyA:0,KeyS:1,KeyD:2,KeyF:3,KeyH:4,KeyG:5,KeyZ:6,KeyX:7,KeyC:8,KeyV:9,KeyB:11,KeyQ:12,KeyW:13,KeyE:14,KeyR:15,KeyY:16,KeyT:17,KeyO:31,KeyU:32,KeyI:34,KeyP:35,KeyL:37,KeyJ:38,KeyK:40,KeyN:45,KeyM:46,Digit1:18,Digit2:19,Digit3:20,Digit4:21,Digit6:22,Digit5:23,Equal:24,Digit9:25,Digit7:26,Minus:27,Digit8:28,Digit0:29,BracketRight:30,BracketLeft:33,Quote:39,Semicolon:41,Backslash:42,Comma:43,Slash:44,Period:47,Backquote:50,Enter:36,Return:36,NumpadEnter:76,Tab:48,Space:49,Backspace:51,Delete:117,Escape:53,ArrowLeft:123,ArrowRight:124,ArrowDown:125,ArrowUp:126,Home:115,End:119,PageUp:116,PageDown:121,F1:122,F2:120,F3:99,F4:118,F5:96,F6:97,F7:98,F8:100,F9:101,F10:109,F11:103,F12:111};
   function modsOf(e){const m=[];if(e.metaKey)m.push('cmd');if(e.shiftKey)m.push('shift');if(e.altKey)m.push('alt');if(e.ctrlKey)m.push('ctrl');return m;}
   let cur=null;
   function styleOnce(){ if(document.getElementById('rc-style'))return; const s=document.createElement('style');s.id='rc-style';s.textContent='#rc-ov{position:fixed;inset:0;z-index:9999;background:#05070c;display:flex;flex-direction:column;font-family:-apple-system,sans-serif}#rc-bar{display:flex;align-items:center;gap:12px;padding:8px 14px;background:#0e1320;border-bottom:1px solid #26303f;color:#e8eef7;font-size:13px;flex:none}#rc-bar .sp{flex:1}#rc-bar button{background:#1a2230;color:#e8eef7;border:1px solid #2d3a4d;border-radius:8px;padding:6px 11px;font-size:12px;cursor:pointer}#rc-bar button.on{border-color:#5bd6c0;color:#5bd6c0}#rc-bar .stat{font-family:ui-monospace,Menlo,monospace;font-size:11px;color:#8a97ab}#rc-bar input[type=range]{width:90px;accent-color:#5bd6c0}#rc-stage{flex:1;display:flex;align-items:center;justify-content:center;overflow:hidden;position:relative;background:#05070c}#rc-img{max-width:100%;max-height:100%;object-fit:contain;cursor:crosshair;display:block;user-select:none}#rc-msg{position:absolute;color:#8a97ab;font-size:14px;text-align:center;padding:18px;max-width:560px;line-height:1.5}#rc-msg b{color:#ffb454}';document.head.appendChild(s); }
-  async function sendInput(p){ if(!cur)return; p.machine=cur.machine; try{ await fetch(RC_API+'/input',{method:'POST',headers:rcAuthHeaders({'Content-Type':'application/json'}),body:JSON.stringify(p)});}catch(e){} }
+  async function sendInput(p){ if(!cur)return; p.machine=cur.machine; try{ await meshFetch('/input',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});}catch(e){} }
   // Teclado: cola SERIAL + coalescing de texto. Evita que al teclear rápido las pulsaciones
   // (fetch fire-and-forget concurrentes) se pisen/pierdan → antes se saltaban letras.
   function enqueueInput(p){ if(!cur)return; const q=cur.iq||(cur.iq=[]);
@@ -2798,10 +2800,10 @@ function collapseAllToggle(){
     drainInput(); }
   async function drainInput(){ if(!cur||cur.sending)return; cur.sending=true;
     try{ while(cur && cur.iq && cur.iq.length){ const p=cur.iq.shift(); p.machine=cur.machine;
-      try{ await fetch(RC_API+'/input',{method:'POST',headers:rcAuthHeaders({'Content-Type':'application/json'}),body:JSON.stringify(p)});}catch(e){} } }
+      try{ await meshFetch('/input',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(p)});}catch(e){} } }
     finally{ if(cur) cur.sending=false; } }
   function normCoords(e){ const img=cur.img;const r=img.getBoundingClientRect();const nr=(img.naturalWidth||16)/(img.naturalHeight||9);let dw=r.width,dh=r.width/nr;if(dh>r.height){dh=r.height;dw=r.height*nr;}const ox=r.left+(r.width-dw)/2,oy=r.top+(r.height-dh)/2;const nx=(e.clientX-ox)/dw,ny=(e.clientY-oy)/dh;return{x:Math.min(1,Math.max(0,nx)),y:Math.min(1,Math.max(0,ny))};}
-  function frameLoop(){ if(!cur||cur.closed)return; const t0=performance.now(); const url=RC_API+'/live/frame?machine='+encodeURIComponent(cur.machine)+'&scale='+cur.scale+'&q='+cur.q+'&_='+t0; fetch(url,{headers:rcAuthHeaders(),cache:'no-store'}).then(r=>{if(!r.ok)return r.text().then(t=>{throw new Error('HTTP '+r.status+' '+t.slice(0,140));});return r.blob();}).then(blob=>{ if(!cur||cur.closed)return; const u=URL.createObjectURL(blob);const old=cur.img.src;cur.img.onload=()=>{if(old&&old.startsWith('blob:'))URL.revokeObjectURL(old);};cur.img.src=u;cur.msg.style.display='none';const dt=performance.now()-t0;cur.fpsArr.push(dt);if(cur.fpsArr.length>10)cur.fpsArr.shift();const avg=cur.fpsArr.reduce((a,b)=>a+b,0)/cur.fpsArr.length;cur.stat.textContent=Math.round(1000/Math.max(1,avg))+' fps · '+Math.round(avg)+' ms · '+Math.round(blob.size/1024)+' KB';const wait=Math.max(0,(1000/cur.targetFps)-dt);cur.timer=setTimeout(frameLoop,wait);}).catch(err=>{ if(!cur||cur.closed)return; cur.msg.style.display='block'; cur.msg.innerHTML='Esperando al agente…<br><b>'+String(err.message||err).replace(/</g,'&lt;')+'</b><br><br>Si dice <i>capture_failed_or_no_permission</i>, falta conceder <b>Grabación de pantalla</b> al agente en esa máquina.'; cur.timer=setTimeout(frameLoop,1200); }); }
+  function frameLoop(){ if(!cur||cur.closed)return; const t0=performance.now(); const path='/live/frame?machine='+encodeURIComponent(cur.machine)+'&scale='+cur.scale+'&q='+cur.q+'&_='+t0; meshFetch(path,{cache:'no-store'}).then(r=>{if(!r.ok)return r.text().then(t=>{throw new Error('HTTP '+r.status+' '+t.slice(0,140));});const meta=r.__admiraMesh;return r.blob().then(blob=>({blob,meta}));}).then(({blob,meta})=>{ if(!cur||cur.closed)return; const u=URL.createObjectURL(blob);const old=cur.img.src;cur.img.onload=()=>{if(old&&old.startsWith('blob:'))URL.revokeObjectURL(old);};cur.img.src=u;cur.msg.style.display='none';const dt=performance.now()-t0;cur.fpsArr.push(dt);if(cur.fpsArr.length>10)cur.fpsArr.shift();const avg=cur.fpsArr.reduce((a,b)=>a+b,0)/cur.fpsArr.length;cur.stat.textContent=Math.round(1000/Math.max(1,avg))+' fps · '+Math.round(avg)+' ms · '+Math.round(blob.size/1024)+' KB · '+(meta&&meta.relay&&meta.relay.label||'relay');const wait=Math.max(0,(1000/cur.targetFps)-dt);cur.timer=setTimeout(frameLoop,wait);}).catch(err=>{ if(!cur||cur.closed)return; cur.msg.style.display='block'; cur.msg.innerHTML='Esperando al agente…<br><b>'+String(err.message||err).replace(/</g,'&lt;')+'</b><br><br>Fleet Mesh probará otro relay. Si dice <i>capture_failed_or_no_permission</i>, falta conceder <b>Grabación de pantalla</b> al agente en esa máquina.'; cur.timer=setTimeout(frameLoop,1200); }); }
   window.openRemoteControl=function(machineId,machineName){ styleOnce(); if(document.getElementById('rc-ov'))document.getElementById('rc-ov').remove(); const ov=document.createElement('div');ov.id='rc-ov'; ov.innerHTML='<div id="rc-bar"><b>🖥️ Control remoto · '+(machineName||machineId)+'</b><span class="stat" id="rc-stat">conectando…</span><span class="sp"></span><label class="stat">fps <input type="range" id="rc-fps" min="1" max="15" value="6"></label><label class="stat">calidad <input type="range" id="rc-q" min="2" max="9" value="5"></label><button id="rc-ctl" class="on">🎮 control: ON</button><button id="rc-full">⛶</button><button id="rc-close">✕ cerrar</button></div><div id="rc-stage"><img id="rc-img" draggable="false"><div id="rc-msg">Conectando…</div></div>'; document.body.appendChild(ov);
     cur={machine:machineId,name:machineName,closed:false,img:ov.querySelector('#rc-img'),msg:ov.querySelector('#rc-msg'),stat:ov.querySelector('#rc-stat'),scale:0.5,q:0.5,targetFps:6,control:true,fpsArr:[],timer:null,lastUp:0,lastPos:{x:-9,y:-9},clicks:0,dragging:false,lastMove:0,iq:[],sending:false};
     const img=cur.img;
@@ -2861,7 +2863,7 @@ function collapseAllToggle(){
   // No requiere sesión activa: postea directamente al endpoint de input con la máquina.
   window.rcSendText=function(machineId, text){
     if(!machineId || !text) return Promise.resolve(false);
-    return fetch(RC_API+'/input',{method:'POST',headers:rcAuthHeaders({'Content-Type':'application/json'}),
+    return meshFetch('/input',{method:'POST',headers:{'Content-Type':'application/json'},
       body:JSON.stringify({type:'text',text:String(text),machine:machineId})}).then(r=>!!(r&&r.ok)).catch(()=>false);
   };
 })();
@@ -3001,7 +3003,6 @@ function collapseAllToggle(){
 <script>
 (function(){
   if (window.__admiraTermViewer) return; window.__admiraTermViewer = true;
-  const TAPI = (typeof API !== 'undefined') ? API : 'https://macmini.tail48b61c.ts.net/fleet/api';
   const XT_CSS = 'https://cdn.jsdelivr.net/npm/xterm@5.3.0/css/xterm.min.css';
   const XT_JS  = 'https://cdn.jsdelivr.net/npm/xterm@5.3.0/lib/xterm.min.js';
   const XT_FIT = 'https://cdn.jsdelivr.net/npm/xterm-addon-fit@0.8.0/lib/xterm-addon-fit.min.js';
@@ -3031,11 +3032,11 @@ function collapseAllToggle(){
     ov.innerHTML = '<div id="tm-bar"><b>🖳 Terminal · ' + (machineName || machineId) + '</b><span class="stat" id="tm-stat">conectando…</span><span class="sp"></span><button id="tm-clr" title="Limpiar pantalla">🧹 limpiar</button><button id="tm-close">✕ cerrar</button></div><div id="tm-stage"><div id="tm-term"></div></div>';
     document.body.appendChild(ov);
     const stat = ov.querySelector('#tm-stat');
-    let es = null, session = null, term = null, closed = false;
+    let es = null, session = null, term = null, closed = false, termRelay = '', termBase = '';
     function cleanup(){
       if (closed) return; closed = true;
       try { es && es.close(); } catch(e){}
-      if (session) { try { api('/term/close', {method:'POST', body: JSON.stringify({session})}); } catch(e){} }
+      if (session) { try { api('/term/close', {method:'POST', relayId:termRelay, body: JSON.stringify({session})}); } catch(e){} }
       try { term && term.dispose(); } catch(e){}
       document.removeEventListener('keydown', escH, true);
       ov.remove();
@@ -3054,15 +3055,17 @@ function collapseAllToggle(){
       const d = await api('/term/open', {method:'POST', body: JSON.stringify({ machine: machineId, cols, rows })});
       if (!d || !d.session) throw new Error((d && d.error) || 'no se pudo abrir la sesión');
       session = d.session;
+      termRelay = d._mesh && d._mesh.relay && d._mesh.relay.id || '';
+      termBase = d._mesh && d._mesh.relay && d._mesh.relay.base || FLEET_MESH.activeBase();
       // salida en vivo por SSE (auth = ticket efímero en la URL)
-      es = new EventSource(TAPI + '/term/stream?ticket=' + encodeURIComponent(d.ticket));
-      es.onopen = () => { stat.textContent = 'conectado · ' + cols + '×' + rows; stat.style.color = '#5bd6c0'; term.focus(); };
+      es = new EventSource(termBase + '/term/stream?ticket=' + encodeURIComponent(d.ticket));
+      es.onopen = () => { stat.textContent = 'conectado · ' + cols + '×' + rows + ' · ' + (d._mesh&&d._mesh.relay&&d._mesh.relay.label||'relay'); stat.style.color = '#5bd6c0'; term.focus(); };
       es.onmessage = (ev) => { const bin = atob(ev.data); const u8 = new Uint8Array(bin.length); for (let i=0;i<bin.length;i++) u8[i] = bin.charCodeAt(i); term.write(u8); };
       es.addEventListener('exit', () => { stat.textContent = 'sesión terminada'; stat.style.color = '#ffb454'; try { term.write('\r\n\x1b[33m[sesión cerrada]\x1b[0m\r\n'); } catch(e){} try { es.close(); } catch(e){} });
       es.onerror = () => { if (!closed) { stat.textContent = 'reconectando…'; stat.style.color = '#ffb454'; } };
       // entrada: teclas → POST en cola (preserva orden, coalesce)
       let q = '', sending = false;
-      async function flush(){ if (sending || !q || closed) return; sending = true; const chunk = q; q = ''; try { await api('/term/input', {method:'POST', body: JSON.stringify({ session, data: btoa(chunk), b64: true })}); } catch(e){} sending = false; if (q && !closed) flush(); }
+      async function flush(){ if (sending || !q || closed) return; sending = true; const chunk = q; q = ''; try { await api('/term/input', {method:'POST', relayId:termRelay, body: JSON.stringify({ session, data: btoa(chunk), b64: true })}); } catch(e){} sending = false; if (q && !closed) flush(); }
       term.onData(data => { q += data; flush(); });
     } catch(err){ stat.textContent = String((err && err.message) || err); stat.style.color = '#ff6b6b'; }
   };
@@ -3070,7 +3073,7 @@ function collapseAllToggle(){
 })();
 </script>
 <script src="/control/ideas.js?v=20260723-r1"></script>
-<script src="/control/health.js?v=20260723-r2"></script>
+<script src="/control/health.js?v=20260724-r1"></script>
 <script src="/control/decisions.js?v=20260723-r6b"></script>
 </body>
 </html>

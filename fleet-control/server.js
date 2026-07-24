@@ -19,6 +19,7 @@ const http = require('http');
 const { spawn } = require('child_process');
 const crypto = require('crypto');
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { macOpenCommand, linuxOpenCommand, windowsOpenCommand } = require('./open-action');
 const { canonicalScreenId, preflightCommand, assessPreflight } = require('./signage-preflight');
@@ -27,6 +28,8 @@ const DIR = __dirname;
 const PORT = parseInt(process.env.FLEET_PORT || '9140', 10);
 const BASE = '/fleet';                       // prefijo de ruta (lo pone el funnel)
 const ALLOW_ORIGINS = ['https://www.admira.live', 'https://admira.live', 'https://macmini.tail48b61c.ts.net'];
+const RELAY_ID = String(process.env.FLEET_RELAY_ID || os.hostname() || 'fleet-relay').toLowerCase().replace(/[^a-z0-9._-]+/g, '-');
+const RELAY_LABEL = String(process.env.FLEET_RELAY_LABEL || os.hostname() || RELAY_ID);
 
 // Endurecimiento (S1-B / S2 / S3). El funnel es público y oculta la IP real
 // del cliente (todo llega como 127.0.0.1), así que NO hacemos lockout por IP
@@ -132,12 +135,45 @@ function sessionFromReq(req) {
 
 /* ----- ejecutar en una máquina (local o ssh) -------------------------------- */
 function machineById(id) { return FLEET.machines.find(m => m.id === id); }
+function machineKey(v) { return String(v || '').toLowerCase().split('.')[0].replace(/[^a-z0-9]/g, ''); }
+function isRelayLocal(machine) {
+  const here = new Set([machineKey(RELAY_ID), machineKey(RELAY_LABEL), machineKey(os.hostname())]);
+  const there = [machine && machine.id, machine && machine.name, machine && machine.host].map(machineKey);
+  return there.some(k => k && here.has(k));
+}
+
+// Idempotencia distribuida anclada en el EQUIPO OBJETIVO. Dos relays distintos
+// pueden intentar la misma orden después de un timeout; el mkdir atómico y el
+// recibo .done viven en la máquina destino, no en el relay, por lo que impiden
+// ejecutar dos veces apagar/abrir/cerrar/arrancar aunque cambie la ruta.
+function commandIdFromReq(req) {
+  const raw = String(req.headers['x-fleet-command-id'] || '').trim();
+  return /^[a-zA-Z0-9._:-]{8,120}$/.test(raw) ? raw : '';
+}
+function idempotentCommand(machine, cmd, commandId) {
+  if (!commandId || platOf(machine) === 'windows') return cmd;
+  const id = commandId.replace(/[^a-zA-Z0-9._:-]/g, '-');
+  return [
+    'set +e',
+    '_admira_dir="$HOME/.admira-fleet/commands"',
+    'mkdir -p "$_admira_dir"',
+    '_admira_done="$_admira_dir/' + id + '.done"',
+    '_admira_lock="$_admira_dir/' + id + '.lock"',
+    'if [ -f "$_admira_done" ]; then _admira_rc=$(cat "$_admira_done" 2>/dev/null || echo 0); echo "__ADMIRA_DUPLICATE_COMPLETED__ ' + id + '"; exit "$_admira_rc"; fi',
+    'if ! mkdir "$_admira_lock" 2>/dev/null; then echo "__ADMIRA_DUPLICATE_PENDING__ ' + id + '"; exit 75; fi',
+    'trap \'rmdir "$_admira_lock" 2>/dev/null\' EXIT',
+    'bash -lc ' + sh(cmd),
+    '_admira_rc=$?',
+    'printf "%s\\n" "$_admira_rc" > "$_admira_done"',
+    'exit "$_admira_rc"'
+  ].join('; ');
+}
 
 function run(machine, cmd, timeoutMs) {
   return new Promise((resolve) => {
     timeoutMs = timeoutMs || 25000;
     let bin, args;
-    if (machine.local) {
+    if (isRelayLocal(machine)) {
       bin = 'bash'; args = ['-lc', cmd];
     } else {
       const target = (machine.user || 'csilvasantin') + '@' + machine.host;
@@ -425,7 +461,7 @@ function cors(req, res) {
   if (o && ALLOW_ORIGINS.includes(o)) res.setHeader('Access-Control-Allow-Origin', o);
   res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Fleet-Token, X-Fleet-Session, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Fleet-Token, X-Fleet-Session, X-Fleet-Command-Id, Authorization');
   res.setHeader('Access-Control-Max-Age', '600');
 }
 function json(res, code, obj) { res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(obj)); }
@@ -539,7 +575,24 @@ const server = http.createServer(async (req, res) => {
   if (rateLimited(ip)) { audit({ ip, ev: 'rate_limited', url }); return json(res, 429, { error: 'demasiadas peticiones' }); }
 
   // salud (sin token)
-  if (url === '/api/health' || url === '/health') return json(res, 200, { ok: true, service: 'fleet-control', machines: FLEET.machines.length, hasToken: !!currentToken() });
+  if (url === '/api/health' || url === '/health') return json(res, 200, {
+    ok: true,
+    service: 'fleet-control',
+    relay: {
+      id: RELAY_ID,
+      label: RELAY_LABEL,
+      checkedAt: Date.now(),
+      capabilities: {
+        status: true,
+        commands: true,
+        capture: true,
+        terminal: true,
+        targetIdempotency: ['macos', 'linux']
+      }
+    },
+    machines: FLEET.machines.length,
+    hasToken: !!currentToken()
+  });
 
   // AUTH (opción B): intercambia un ID token de Google (allowlisted) por una
   // sesión propia del backend (12h). Sin token: es el bootstrap. Google verifica
@@ -567,9 +620,35 @@ const server = http.createServer(async (req, res) => {
       const online = r.rc === 0 && /ONLINE/.test(r.stdout);
       const sm = r.stdout.match(/__FLEET_SIGNAGE__=([01])/);
       const info = r.stdout.replace(/ONLINE\s*/, '').replace(/^__FLEET_SIGNAGE__=[01]\s*$/gm, '').trim();
-      return { id: m.id, name: m.name, emoji: m.emoji, role: m.role, local: !!m.local, online, signageOn: sm ? sm[1] === '1' : null, signageBatch: m.signageBatch === true, host: m.host, user: m.user || 'csilvasantin', platform: platOf(m), info: online ? info : (r.stderr || 'sin respuesta').slice(0, 120) };
+      return {
+        id: m.id,
+        name: m.name,
+        emoji: m.emoji,
+        role: m.role,
+        local: isRelayLocal(m),
+        relayCapable: m.relayCapable === true,
+        online,
+        signageOn: sm ? sm[1] === '1' : null,
+        signageBatch: m.signageBatch === true,
+        host: m.host,
+        user: m.user || 'csilvasantin',
+        platform: platOf(m),
+        info: online ? info : (r.stderr || 'sin respuesta').slice(0, 120),
+        signals: {
+          controlProbe: {
+            reachable: online,
+            checkedAt: Date.now(),
+            relay: RELAY_ID,
+            latencyMs: r.ms
+          }
+        }
+      };
     }));
-    return json(res, 200, { machines: results, ts: Date.now() });
+    return json(res, 200, {
+      machines: results,
+      relay: { id: RELAY_ID, label: RELAY_LABEL },
+      ts: Date.now()
+    });
   }
 
   // Preflight DS fiable: accesibilidad remota, player/executor, versión,
@@ -641,9 +720,11 @@ const server = http.createServer(async (req, res) => {
     const m = machineById(body.machine);
     if (!m) return json(res, 400, { error: 'máquina desconocida' });
     if (!body.cmd || !String(body.cmd).trim()) return json(res, 400, { error: 'comando vacío' });
-    const r = await run(m, String(body.cmd), Math.min(body.timeoutMs || 25000, 60000));
-    audit({ ip, ev: 'run', machine: m.id, cmd: String(body.cmd).slice(0, 500), rc: r.rc, ms: r.ms });
-    return json(res, 200, { machine: m.id, ...r });
+    const commandId = commandIdFromReq(req);
+    const command = idempotentCommand(m, String(body.cmd), commandId);
+    const r = await run(m, command, Math.min(body.timeoutMs || 25000, 60000));
+    audit({ ip, ev: 'run', relay: RELAY_ID, commandId: commandId || undefined, machine: m.id, cmd: String(body.cmd).slice(0, 500), rc: r.rc, ms: r.ms });
+    return json(res, 200, { machine: m.id, relay: RELAY_ID, commandId: commandId || null, ...r });
   }
 
   // ── TERMINAL INTERACTIVA: abrir sesion PTY (gate Google) -> {session, ticket}
@@ -714,9 +795,11 @@ const server = http.createServer(async (req, res) => {
     let cmd;
     try { cmd = fn(body.arg, m); }
     catch (e) { return json(res, 400, { error: String(e && e.message || e || 'parámetro no válido') }); }
-    const r = await run(m, cmd, 25000);
-    audit({ ip, ev: 'action', machine: m.id, action: body.action, arg: body.arg != null ? String(body.arg).slice(0, 200) : undefined, rc: r.rc, ms: r.ms });
-    return json(res, 200, { machine: m.id, action: body.action, ...r });
+    const commandId = commandIdFromReq(req);
+    const command = idempotentCommand(m, cmd, commandId);
+    const r = await run(m, command, 25000);
+    audit({ ip, ev: 'action', relay: RELAY_ID, commandId: commandId || undefined, machine: m.id, action: body.action, arg: body.arg != null ? String(body.arg).slice(0, 200) : undefined, rc: r.rc, ms: r.ms });
+    return json(res, 200, { machine: m.id, action: body.action, relay: RELAY_ID, commandId: commandId || null, ...r });
   }
 
   // ── CONTROL REMOTO EN VIVO: /api/live/frame — devuelve un frame (screenshot fresco)
@@ -765,6 +848,7 @@ const server = http.createServer(async (req, res) => {
       user: String(body.user || 'csilvasantin'),
       platform: plat
     };
+    if (body.relayCapable === true) machine.relayCapable = true;
     // player de signage propio (Linux): { url, start, stop } — opcional en el alta.
     if (body.signage && typeof body.signage === 'object') {
       machine.signage = {
@@ -787,5 +871,5 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, '127.0.0.1', () => {
-  console.log('[fleet-control] escuchando en 127.0.0.1:' + PORT + ' · ' + FLEET.machines.length + ' máquinas · token ' + (TOKEN ? 'OK' : 'FALTA'));
+  console.log('[fleet-control] relay ' + RELAY_ID + ' · escuchando en 127.0.0.1:' + PORT + ' · ' + FLEET.machines.length + ' máquinas · token ' + (TOKEN ? 'OK' : 'FALTA'));
 });

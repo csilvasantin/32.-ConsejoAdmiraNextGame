@@ -65,9 +65,10 @@
   window.fetch = async function (input, init) {
     var urlStr = (typeof input === 'string') ? input : (input && input.url) || String(input);
     if (!isMini(urlStr)) return origFetch(input, init);
-    // FleetControl (/fleet) es LENTO por diseño (sondea las máquinas por SSH, las
-    // offline tardan varios segundos) y su "respaldo" sirve datos viejos sin SSH.
-    // Por eso NO le aplicamos el timeout de 6s ni el failover: va directo al Mini.
+    // FleetControl (/fleet) tiene su propia malla en /control/fleet-mesh.js:
+    // sesión por relay, timeout largo e idempotencia de comandos. No se debe
+    // mezclar con este failover genérico o una misma llamada cambiaría de ruta
+    // dos veces sin conservar su X-Fleet-Command-Id.
     var pf = parse(urlStr); if (pf && pf.pathname.indexOf('/fleet/') === 0) return origFetch(input, init);
 
     // Si ya sabemos que el Mini está caído, vamos directos al respaldo.

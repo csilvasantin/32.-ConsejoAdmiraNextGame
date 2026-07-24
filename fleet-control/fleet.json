@@ -1,9 +1,9 @@
 {
   "team": "AdmiraNext Fleet",
-  "note": "Flota completa del tailnet tail48b61c. platform: macos|linux|windows. host = MagicDNS <nombre>.tail48b61c.ts.net. El hub (Mac Mini) necesita SSH sin contraseña a cada equipo para verlo online y operarlo.",
+  "note": "Flota completa del tailnet tail48b61c. platform: macos|linux|windows. host = MagicDNS <nombre>.tail48b61c.ts.net. Los equipos relayCapable pueden servir FleetControl y operar al resto por SSH; Mac Mini es una ruta preferida, no un punto único de fallo.",
   "machines": [
-    { "id": "macmini", "name": "Mac Mini", "emoji": "🖥️", "role": "Hub central", "platform": "macos", "signageBatch": false, "local": true, "host": "macmini.tail48b61c.ts.net", "user": "csilvasantin" },
-    { "id": "macbookpro16", "name": "MacBook Pro 16", "emoji": "💻", "role": "Equipo de trabajo", "platform": "macos", "signageBatch": true, "host": "macbook-pro-16.tail48b61c.ts.net", "user": "csilvasantin" },
+    { "id": "macmini", "name": "Mac Mini", "emoji": "🖥️", "role": "Relay de control", "platform": "macos", "relayCapable": true, "signageBatch": false, "local": true, "host": "macmini.tail48b61c.ts.net", "user": "csilvasantin" },
+    { "id": "macbookpro16", "name": "MacBook Pro 16", "emoji": "💻", "role": "Relay alternativo", "platform": "macos", "relayCapable": true, "signageBatch": true, "host": "macbook-pro-16.tail48b61c.ts.net", "user": "csilvasantin" },
     { "id": "macbookpronegro14", "name": "MacBook Pro Negro 14", "emoji": "💻", "role": "Desarrollo y pruebas", "platform": "macos", "signageBatch": false, "host": "macbookpronegro14.tail48b61c.ts.net", "user": "csilvasantin" },
     { "id": "macbookair16", "name": "MacBook Air 16", "emoji": "💻", "role": "Equipo · Trinity/Codex", "platform": "macos", "host": "macbookair16plata.tail48b61c.ts.net", "user": "csilvasantin" },
     { "id": "macbookairplata", "name": "MacBook Air Plata", "emoji": "💻", "role": "COO · Operaciones", "platform": "macos", "signageBatch": true, "host": "macbookairplata.tail48b61c.ts.net", "user": "csilvasantin" },

@@ -1,20 +1,69 @@
-# Respaldo y failover del Consejo (Mac Mini → este Mac → Cloudflare)
+# Fleet Mesh: relays, failover y modo degradado
 
-El **Mac Mini** es el hub que sirve, por su Tailscale Funnel, el backend del Consejo y de
-FleetControl. Es un *single point of failure*: si su Tailscale cae (o el Mini se apaga), la web
-se queda sin backend. Este sistema da **3 niveles de failover automático**.
+FleetControl ya no interpreta el Mac Mini como centro ni como fuente única de
+verdad. Es el relay preferido, pero cualquier equipo que ejecute
+`fleet-control/server.js`, tenga acceso SSH a la flota y publique su gateway
+puede operar como relay alternativo.
 
-## Cascada (la web conmuta sola)
+La web separa tres dimensiones:
+
+1. **Equipo**: accesibilidad del ordenador objetivo.
+2. **Observabilidad**: heartbeat, captura, proof-of-play y acuses.
+3. **Ruta de control**: relay usado para SSH, capturas y comandos.
+
+Una ruta inaccesible nunca se presenta como «equipo caído».
+
+## Relays iniciales
 
 | # | Nivel | URL base | Sirve |
 |---|---|---|---|
-| 1 | **Mac Mini** (primario) | `https://macmini.tail48b61c.ts.net` (+`:8443` optoken) | todo |
-| 2 | **Respaldo local** (MacBook-Pro-16) | `https://macbook-pro-16.tail48b61c.ts.net:10000` | node Consejo + fleet (pasivos) |
+| 1 | **Mac Mini** (preferido) | `https://macmini.tail48b61c.ts.net/fleet/api` | lectura + comandos |
+| 2 | **MacBook Pro 16** | `https://macbook-pro-16.tail48b61c.ts.net:10000/fleet/api` | lectura + comandos |
 | 3 | **Cloudflare degradado** | `https://fallback.admira.store` | solo-lectura (roster + último estado conocido) |
 
-`failover.js` (raíz del repo, incluido en todas las páginas) envuelve `fetch`: si una llamada a
-`macmini.tail48b61c.ts.net` falla/timeout(6s)/5xx/530, reintenta en orden contra el nivel 2 y
-luego el 3, y recuerda el cambio. Reprueba el Mini cada 30s y vuelve a él al recuperarse.
+`control/fleet-mesh.js` gobierna específicamente `/fleet`:
+
+- conserva una sesión Google independiente para cada relay;
+- prueba el relay activo y conmuta al siguiente ante error de red o 5xx;
+- recuerda temporalmente las rutas que fallan;
+- indica en cada respuesta qué relay se utilizó;
+- adjunta `X-Fleet-Command-Id` a las órdenes.
+
+En macOS y Linux, el backend convierte ese identificador en un cerrojo y un
+recibo dentro de `~/.admira-fleet/commands` del **equipo objetivo**. Si la
+respuesta se pierde y otro relay reintenta la orden, el objetivo no la ejecuta
+dos veces.
+
+Los endpoints de estado, preflight, captura, acciones y control remoto usan la
+malla. Las sesiones interactivas de terminal quedan fijadas al relay que las
+abrió hasta que se cierran.
+
+## Añadir otro relay
+
+1. Instalar el mismo repositorio y `fleet-control/fleet.json`.
+2. Dar al equipo acceso SSH sin contraseña a los objetivos que deba operar.
+3. Arrancar el servicio indicando identidad propia:
+
+```bash
+FLEET_RELAY_ID=macbookpronegro14 \
+FLEET_RELAY_LABEL="MacBook Pro 14" \
+FLEET_PORT=9140 \
+node fleet-control/server.js
+```
+
+4. Publicar `/fleet` mediante Tailscale Funnel/gateway.
+5. Añadir su URL a `DEFAULT_RELAYS` en `control/fleet-mesh.js` o inyectar antes
+   de cargarlo:
+
+```js
+window.ADMIRA_FLEET_RELAYS = [
+  { id: "macmini", label: "Mac Mini", base: "https://macmini.tail48b61c.ts.net/fleet/api", priority: 10 },
+  { id: "macbookpro16", label: "MacBook Pro 16", base: "https://macbook-pro-16.tail48b61c.ts.net:10000/fleet/api", priority: 20 },
+  { id: "macbookpro14", label: "MacBook Pro 14", base: "https://HOST:PUERTO/fleet/api", priority: 30 }
+];
+```
+
+Marcar además el equipo con `"relayCapable": true` en `fleet.json`.
 
 ## Piezas en ESTE Mac (MacBook-Pro-16)
 
@@ -23,7 +72,7 @@ LaunchAgents (en `~/Library/LaunchAgents/com.admiranext.*`, KeepAlive/StartInter
 | Agente | Qué hace | Puerto/cadencia |
 |---|---|---|
 | `backup-node` | node del Consejo en modo PASIVO (sin pollers de despacho) | 3030 |
-| `backup-fleet` | fleet-control | 9140 |
+| `backup-fleet` | relay FleetControl | 9140 |
 | `backup-gateway` | multiplexa por prefijo (`/fleet`→9140, `/council`→8420, resto→3030) | 8088 |
 | `mini-monitor` | avisa por Telegram (DM Carlos 8663681) si el Mini cae/vuelve | /180s |
 | `snap-push` | empuja feed+tareas reales al KV del nivel 3 | /300s |
@@ -46,7 +95,7 @@ Funnel de este Mac: `tailscale funnel --bg --https=10000 http://127.0.0.1:8088` 
    `tailscale status` con `macmini ... active` (sin "offline").
 2. **Automático**: `mini-recover` (este Mac) detecta el Mini vivo y sincroniza `data/tasks.json`,
    `council-meetings.json`, y se trae `.env`/`council-api.py`/optoken a `~/.fleet/mini-sync/`; avisa por Telegram.
-3. La web vuelve sola al Mini (failover.js reprueba cada 30s). No hay que tocar la web.
+3. Fleet Mesh vuelve a preferir el Mini cuando su ruta se recupera. No hay que tocar la web.
 4. Si quieres el `/council` (chat/reunión) y optoken también en el respaldo: con el `.env` ya traído,
    `pip install fastapi uvicorn python-dotenv` y lanzar `council-api.py` (uvicorn :8420) + el optoken.
 
@@ -58,7 +107,7 @@ for L in backup-node backup-fleet backup-gateway mini-monitor snap-push mini-rec
   echo -n "$L: "; launchctl print gui/$(id -u)/com.admiranext.$L | grep -m1 'state ='; done
 # salud por nivel
 curl -s https://macmini.tail48b61c.ts.net/fleet/api/health           # nivel 1 (Mini)
-curl -s https://macbook-pro-16.tail48b61c.ts.net:10000/__gw/health   # nivel 2 (este Mac)
+curl -s https://macbook-pro-16.tail48b61c.ts.net:10000/fleet/api/health # nivel 2
 curl -s https://fallback.admira.store/__fallback/health              # nivel 3 (Cloudflare)
 # estado remoto del monitor
 curl -s https://fleet-monitor.csilvasantin.workers.dev/

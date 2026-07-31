@@ -1,0 +1,170 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Los Mandamientos · AdmiraNeXT · admira.live</title>
+<meta name="description" content="Filosofía del equipo de silicio de AdmiraNeXT: las Máximas y los Mandamientos, servidos EN VIVO desde la Cúpula. Sin copias a mano.">
+<link rel="canonical" href="https://www.admira.live/mandamientos.html">
+<script src="/admira-bar.js?v=20260711-r2"></script>
+<style>
+  :root{
+    --bg:#020602; --panel:#08130b; --line:#11331c; --ink:#cdeccd; --dim:#5f8f6a;
+    --neo:#7dff9b; --morfeo:#ffcf6b; --trinity:#76e6ff; --oraculo:#c79bff; --cypher:#e8eef0;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"SF Mono",Menlo,Consolas,monospace}
+  a{color:var(--neo);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:940px;margin:0 auto;padding:18px 16px 70px}
+  header.top{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px 16px;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:18px}
+  header.top h1{font-size:1.3rem;margin:0;letter-spacing:1px}
+  header.top h1 .blink{color:var(--neo);animation:bl 1.1s steps(2) infinite}
+  @keyframes bl{50%{opacity:0}}
+  .muted{color:var(--dim)}
+  .src{margin-left:auto;font-size:.72rem;color:var(--dim);text-align:right;line-height:1.5}
+  .label{font-size:.7rem;letter-spacing:2px;text-transform:uppercase;color:var(--dim);margin:26px 0 10px}
+  section{border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:14px 16px}
+  ol.mand{list-style:none;counter-reset:m;margin:0;padding:0}
+  ol.mand li{counter-increment:m;position:relative;padding:11px 0 11px 46px;border-bottom:1px dashed rgba(17,51,28,.9);font-size:.87rem;line-height:1.55}
+  ol.mand li:last-child{border-bottom:0}
+  ol.mand li::before{content:counter(m);position:absolute;left:0;top:11px;width:32px;text-align:center;color:var(--neo);border:1px solid var(--line);border-radius:6px;font-size:.72rem;padding:2px 0}
+  ol.mand li b{color:#eaffe9}
+  .maxima{font-size:.85rem;line-height:1.6;margin:0 0 10px;padding-left:14px;border-left:2px solid var(--line)}
+  .maxima:last-child{margin-bottom:0}
+  /* parejas */
+  .pairs{display:grid;grid-template-columns:repeat(auto-fit,minmax(270px,1fr));gap:12px;margin:0 0 14px}
+  .pair{border:1px solid var(--line);border-radius:10px;padding:12px 14px;background:rgba(0,0,0,.25)}
+  .pair .acct{font-size:.7rem;color:var(--dim);letter-spacing:1px;word-break:break-all}
+  .pair .duo{display:flex;align-items:center;gap:10px;margin:8px 0 2px;font-size:1.02rem;font-weight:600}
+  .pair .duo .lnk{color:var(--dim);font-weight:400}
+  .pair .rt{font-size:.68rem;color:var(--dim);letter-spacing:1px;text-transform:uppercase}
+  .m-morfeo{color:var(--morfeo)} .m-oraculo{color:var(--oraculo)}
+  .m-neo{color:var(--neo)} .m-trinity{color:var(--trinity)} .m-cypher{color:var(--cypher)}
+  .body{font-size:.84rem;line-height:1.6}
+  .body ol{padding-left:20px;margin:8px 0} .body li{margin:5px 0}
+  .body p{margin:8px 0}
+  code{background:rgba(125,255,155,.09);border:1px solid var(--line);border-radius:4px;padding:1px 5px;font-size:.9em}
+  .foot{margin-top:26px;font-size:.72rem;color:var(--dim);line-height:1.7;border-top:1px solid var(--line);padding-top:12px}
+  .err{color:#ff9b9b}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <h1>Los Mandamientos<span class="blink">_</span></h1>
+    <div class="src">
+      fuente en vivo: la Cúpula<br>
+      <span id="stamp" class="muted">cargando…</span>
+    </div>
+  </header>
+
+  <p class="muted" style="font-size:.8rem;line-height:1.6;margin:0">
+    Filosofía del equipo de silicio de AdmiraNeXT. Esta página <b>no guarda una copia</b>: lee
+    <code>s:CUPULA_PRINCIPIOS_SILICIO</code> en cada carga, así que nunca se queda vieja.
+    Todo agente los lee al arrancar y sabe recitarlos.
+  </p>
+
+  <h2 class="label">Parejas de máquina · Claude ↔ Codex</h2>
+  <section>
+    <div class="pairs">
+      <div class="pair">
+        <div class="acct">csilvasantin@gmail.com</div>
+        <div class="duo"><span class="m-morfeo">MORFEO</span><span class="lnk">↔</span><span class="m-oraculo">ORÁCULO</span></div>
+        <div class="rt">Claude · Codex</div>
+      </div>
+      <div class="pair">
+        <div class="acct">csilva@admira.com</div>
+        <div class="duo"><span class="m-neo">NEO</span><span class="lnk">↔</span><span class="m-trinity">TRINITY</span></div>
+        <div class="rt">Claude · Codex</div>
+      </div>
+      <div class="pair">
+        <div class="acct">cualquiera de las dos</div>
+        <div class="duo"><span class="m-cypher">CYPHER</span></div>
+        <div class="rt">Grok · White Rabbit</div>
+      </div>
+    </div>
+    <div id="parejas" class="body muted">cargando §17…</div>
+  </section>
+
+  <h2 class="label" id="lbl-mand">Los Mandamientos</h2>
+  <section><ol id="mand" class="mand"><li class="muted">cargando…</li></ol></section>
+
+  <h2 class="label">Máximas · comunes a carbono + silicio</h2>
+  <section id="maximas"><p class="muted">cargando…</p></section>
+
+  <div class="foot">
+    Fuente de verdad: <code>s:CUPULA_PRINCIPIOS_SILICIO</code> (KV de la Cúpula) ·
+    espejo operativo en <code>AGENTS.md</code> y en la caché de arranque de cada máquina ·
+    los §§ operativos NO se publican aquí.
+    <a href="/diario.html">Diario de Silicio</a> · <a href="/vista-previa">Vista previa</a>
+  </div>
+</div>
+
+<script>
+const API = 'https://admira-vault.csilvasantin.workers.dev/doctrina';
+
+// markdown mínimo: **negrita**, `código`, enlaces sueltos. Escapa siempre primero.
+function esc(s){ return s.replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c])); }
+function md(s){
+  return esc(s)
+    .replace(/`([^`]+)`/g, '<code>$1</code>')
+    .replace(/\*\*([^*]+)\*\*/g, '<b>$1</b>')
+    .replace(/(https?:\/\/[^\s<)]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+}
+
+function renderMandamientos(txt){
+  const ol = document.getElementById('mand');
+  // cada mandamiento empieza por "N. " (puede venir con sangría) y sigue hasta el próximo
+  const items = [];
+  for (const line of txt.split('\n')) {
+    const m = line.match(/^\s*(\d+)\.\s+(.*)$/);
+    if (m) items.push(m[2]);
+    else if (items.length && line.trim() && !line.startsWith('#') && !line.startsWith('---'))
+      items[items.length - 1] += ' ' + line.trim();
+  }
+  if (!items.length) { ol.innerHTML = '<li class="err">no se pudo leer el bloque</li>'; return; }
+  ol.innerHTML = items.map(t => '<li>' + md(t) + '</li>').join('');
+  document.getElementById('lbl-mand').textContent = 'Los ' + items.length + ' Mandamientos';
+}
+
+function renderBlock(el, txt, dropHeading){
+  // El doc de la Cúpula viene con las líneas partidas a ~100 columnas: una línea suelta
+  // NO es un párrafo nuevo, es la continuación del punto anterior. Se pegan.
+  const lines = txt.split('\n').filter(l => !(dropHeading && l.startsWith('## ')));
+  const blocks = [];                                 // {cls, text}
+  for (const line of lines) {
+    const t = line.trim();
+    if (!t) { blocks.push(null); continue; }          // línea en blanco = corta el párrafo
+    if (/^\|/.test(t)) continue;                      // la tabla ya está pintada arriba
+    const bullet = t.match(/^[-*]\s+(.*)$/);
+    const numbered = /^\d+\.\s/.test(t);
+    if (bullet)        blocks.push({cls: 'maxima', text: bullet[1]});
+    else if (numbered) blocks.push({cls: 'maxima', text: t});
+    else {
+      const last = blocks[blocks.length - 1];
+      if (last) last.text += ' ' + t;                 // continuación
+      else blocks.push({cls: '', text: t});
+    }
+  }
+  const html = blocks.filter(Boolean)
+    .map(b => '<p' + (b.cls ? ' class="' + b.cls + '"' : '') + '>' + md(b.text) + '</p>').join('');
+  el.innerHTML = html || '<p class="muted">(vacío)</p>';
+}
+
+fetch(API, {cache: 'no-store'})
+  .then(r => r.json())
+  .then(d => {
+    if (!d.ok) throw new Error(d.error || 'sin datos');
+    renderMandamientos(d.mandamientos || '');
+    renderBlock(document.getElementById('parejas'), d.parejas || '', true);
+    document.getElementById('parejas').classList.remove('muted');
+    renderBlock(document.getElementById('maximas'), d.maximas || d.maximas_comunes || '', true);
+    document.getElementById('stamp').textContent = 'leído ' + new Date(d.ts).toLocaleString('es-ES');
+  })
+  .catch(e => {
+    document.getElementById('stamp').innerHTML = '<span class="err">sin conexión con la Cúpula</span>';
+    document.getElementById('mand').innerHTML = '<li class="err">no se pudo cargar: ' + esc(String(e.message)) + '</li>';
+  });
+</script>
+</body>
+</html>

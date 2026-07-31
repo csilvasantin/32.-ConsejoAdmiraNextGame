@@ -121,7 +121,10 @@ const TAILSCALE_BINS = [
   "/Applications/Tailscale.app/Contents/MacOS/Tailscale",
 ];
 const CENSUS_TTL_MS = 15000;   // el sondeo es barato pero no gratis
+const PROBE_TTL_MS  = 60000;   // vigencia del veredicto SSH de cada máquina
 let _censusCache = { at: 0, value: null };
+const _probeCache = new Map();  // host -> {ok, at}
+let _probesRunning = false;
 
 function runTailscaleStatus() {
   return new Promise((resolveRun) => {
@@ -181,6 +184,25 @@ function probeSsh(host) {
   });
 }
 
+// Refresca por detrás el veredicto SSH de los nodos conectados. No se espera a
+// que termine: la próxima petición del censo ya recogerá el resultado.
+function refreshProbesInBackground(nodes) {
+  if (_probesRunning) return;
+  const pending = nodes.filter((n) => {
+    if (n.self || !n.online) return false;
+    const c = _probeCache.get(n.host);
+    return !c || Date.now() - c.at >= PROBE_TTL_MS;
+  });
+  if (!pending.length) return;
+  _probesRunning = true;
+  Promise.all(pending.map(async (n) => {
+    const host = n.sshHost || n.ip;
+    if (!host) return;
+    const ok = await probeSsh(host);
+    _probeCache.set(n.host, { ok, at: Date.now() });
+  })).catch(() => {}).finally(() => { _probesRunning = false; _censusCache = { at: 0, value: null }; });
+}
+
 async function getFleetCensus() {
   const now = Date.now();
   if (_censusCache.value && now - _censusCache.at < CENSUS_TTL_MS) return _censusCache.value;
@@ -225,14 +247,17 @@ async function getFleetCensus() {
   if (status.Self) push(status.Self, true);
   for (const peer of Object.values(status.Peer || {})) push(peer, false);
 
-  // Solo se sondean los que Tailscale da por conectados. `reachable` queda en
-  // null cuando no hay canal SSH: es «no lo sé», que no es lo mismo que «no».
-  await Promise.all(nodes.filter((n) => n.online && !n.self).map(async (n) => {
-    const host = n.sshHost || n.ip;
-    if (!host) return;
-    n.reachable = await probeSsh(host);
-  }));
-  for (const n of nodes) if (n.self) n.reachable = true;
+  // El sondeo SSH NUNCA bloquea la respuesta: la primera versión tardaba 7 s y
+  // colgaba a quien la pidiera (el panel se quedó en blanco esperándola). Se
+  // sirve el último veredicto conocido y se refresca por detrás. `reachable`
+  // queda en null mientras no haya veredicto: es «no lo sé», no «no».
+  for (const n of nodes) {
+    if (n.self) { n.reachable = true; continue; }
+    const cached = _probeCache.get(n.host);
+    if (cached && now - cached.at < PROBE_TTL_MS) n.reachable = cached.ok;
+    n.probedAt = cached ? Math.floor(cached.at / 1000) : 0;
+  }
+  refreshProbesInBackground(nodes);
   nodes.sort((a, b) => (b.online - a.online) || a.name.localeCompare(b.name));
 
   // Lo que está en machines.json y Tailscale no conoce: se dice, no se esconde.

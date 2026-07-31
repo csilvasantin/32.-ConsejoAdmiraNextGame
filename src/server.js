@@ -111,6 +111,109 @@ function isLocalRequest(request) {
   return rawHost === "localhost" || rawHost === "127.0.0.1" || rawHost === "::1" || rawHost === "0.0.0.0";
 }
 
+/* ============================================================
+   CENSO DE FLOTA — quién existe y quién está encendido, de verdad.
+   Fuente: `tailscale status --json`. Nadie se autodeclara vivo aquí.
+   ============================================================ */
+const TAILSCALE_BINS = [
+  "/opt/homebrew/bin/tailscale",
+  "/usr/local/bin/tailscale",
+  "/Applications/Tailscale.app/Contents/MacOS/Tailscale",
+];
+const CENSUS_TTL_MS = 15000;   // el sondeo es barato pero no gratis
+let _censusCache = { at: 0, value: null };
+
+function runTailscaleStatus() {
+  return new Promise((resolveRun) => {
+    const tryBin = (i) => {
+      if (i >= TAILSCALE_BINS.length) return resolveRun(null);
+      const child = spawn(TAILSCALE_BINS[i], ["status", "--json"], { env: process.env, stdio: ["ignore", "pipe", "pipe"] });
+      let out = "";
+      const timer = setTimeout(() => { try { child.kill("SIGKILL"); } catch {} }, 10000);
+      child.stdout.on("data", (c) => { out += c; });
+      child.on("error", () => { clearTimeout(timer); tryBin(i + 1); });
+      child.on("close", () => {
+        clearTimeout(timer);
+        try { resolveRun(JSON.parse(out)); } catch { tryBin(i + 1); }
+      });
+    };
+    tryBin(0);
+  });
+}
+
+// Nodos de infraestructura del propio Tailscale (ingress del Funnel, exit nodes
+// de Mullvad…). No son ordenadores de la flota y no deben salir en el censo.
+function isInfraNode(peer) {
+  if (!peer || !peer.HostName) return true;
+  if (peer.HostName === "funnel-ingress-node") return true;
+  return Array.isArray(peer.Tags) && peer.Tags.length > 0;
+}
+
+function tsSeconds(value) {
+  const t = Date.parse(value || "");
+  if (!Number.isFinite(t) || t <= 0) return 0;
+  return Math.floor(t / 1000);
+}
+
+async function getFleetCensus() {
+  const now = Date.now();
+  if (_censusCache.value && now - _censusCache.at < CENSUS_TTL_MS) return _censusCache.value;
+
+  const status = await runTailscaleStatus();
+  if (!status) {
+    // Sin Tailscale no hay verdad que dar. Antes que inventarla, se dice.
+    const value = { ok: false, error: "tailscale no disponible en el Mac Mini", ts: new Date().toISOString(), machines: [] };
+    _censusCache = { at: now, value };
+    return value;
+  }
+
+  // machines.json ya no decide quién existe: solo aporta nombre y canal SSH.
+  let roster = [];
+  try { roster = await readMachines(); } catch { roster = []; }
+  const byHost = new Map();
+  for (const m of (Array.isArray(roster) ? roster : (roster && roster.machines) || [])) {
+    const host = String((m.ssh && m.ssh.host) || "").split(".")[0].toLowerCase();
+    if (host) byHost.set(host, m);
+  }
+
+  const nodes = [];
+  const push = (peer, isSelf) => {
+    if (!isSelf && isInfraNode(peer)) return;
+    const host = String(peer.HostName || "");
+    const known = byHost.get(host.toLowerCase()) || null;
+    nodes.push({
+      host,
+      name: (known && known.name) || host,
+      id: (known && known.id) || null,
+      online: isSelf ? true : !!peer.Online,   // el Mini se ve a sí mismo
+      os: peer.OS || (known && known.platform) || "",
+      ip: (peer.TailscaleIPs || [])[0] || "",
+      lastSeen: isSelf ? Math.floor(now / 1000) : tsSeconds(peer.LastSeen),
+      ssh: !!(known && known.ssh && known.ssh.enabled),
+      inRoster: !!known,
+      self: !!isSelf,
+    });
+  };
+  if (status.Self) push(status.Self, true);
+  for (const peer of Object.values(status.Peer || {})) push(peer, false);
+  nodes.sort((a, b) => (b.online - a.online) || a.name.localeCompare(b.name));
+
+  // Lo que está en machines.json y Tailscale no conoce: se dice, no se esconde.
+  const seen = new Set(nodes.map((n) => n.host.toLowerCase()));
+  const orphans = [...byHost.entries()].filter(([h]) => !seen.has(h)).map(([, m]) => m.name);
+
+  const value = {
+    ok: true,
+    ts: new Date().toISOString(),
+    source: "tailscale",
+    summary: { total: nodes.length, online: nodes.filter((n) => n.online).length, rosterOnly: orphans.length },
+    rosterOnly: orphans,
+    machines: nodes,
+  };
+  _censusCache = { at: now, value };
+  return value;
+}
+
 function verifyAgoraAccess(request, url) {
   if (isLocalRequest(request) && !AGORA_PANEL_KEY) {
     return null;
@@ -1436,6 +1539,25 @@ const server = createServer(async (request, response) => {
         },
         machines
       });
+    } catch (err) {
+      sendJson(response, 500, { ok: false, error: String(err && err.message || err) });
+    }
+    return;
+  }
+
+  // CENSO DE FLOTA (31-07-2026) — la única fuente de verdad sobre QUÉ ordenadores
+  // existen y CUÁLES están encendidos. Nace de un problema real: yokup.com/status
+  // pintaba viva una máquina apagada (MacBook Air Crema) y en reposo una encendida
+  // (MacBookAir16plata), porque «vivo» significaba «su agente se autodeclaró vivo
+  // hace <10 min», nunca «la máquina responde». Y el censo que pintaba venía de una
+  // lista escrita a mano con lastSeen de hacía 33 días.
+  //
+  // Aquí manda Tailscale: él sabe qué nodos existen y cuáles están conectados AHORA.
+  // machines.json solo aporta el nombre bonito y si tiene canal SSH; ya no decide
+  // quién existe. Los latidos de los agentes decoran el nodo, no lo dan por vivo.
+  if (request.method === "GET" && url.pathname === "/api/council/fleet-census") {
+    try {
+      sendJson(response, 200, await getFleetCensus());
     } catch (err) {
       sendJson(response, 500, { ok: false, error: String(err && err.message || err) });
     }

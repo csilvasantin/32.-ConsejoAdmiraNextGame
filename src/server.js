@@ -155,6 +155,32 @@ function tsSeconds(value) {
   return Math.floor(t / 1000);
 }
 
+// Los tres censos escriben el mismo ordenador de tres maneras ("macbook-pro-16",
+// "MacBook Pro 16", "MacBookPro16"). Se comparan sin mayúsculas ni separadores,
+// que es lo único que casa las tres sin recurrir a coincidencias por substring.
+function normHost(value) {
+  return String(value || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+}
+
+// ¿ESTÁ USABLE? Tailscale dice si el nodo está en la red, no si la máquina
+// responde: MacBook Air Crema aparecía conectada mientras dormía y no aceptaba
+// una sola conexión. Esto lo comprueba de verdad, y solo en los nodos que
+// Tailscale da por conectados (son pocos, así que sale barato).
+function probeSsh(host) {
+  return new Promise((resolveProbe) => {
+    const child = spawn("ssh", [
+      "-i", `${process.env.HOME}/.ssh/admiranext_ed25519`,
+      "-o", "BatchMode=yes", "-o", "ConnectTimeout=4", "-o", "StrictHostKeyChecking=accept-new",
+      `csilvasantin@${host}`, "echo ok",
+    ], { env: process.env, stdio: ["ignore", "pipe", "ignore"] });
+    let out = "";
+    const timer = setTimeout(() => { try { child.kill("SIGKILL"); } catch {} }, 7000);
+    child.stdout.on("data", (c) => { out += c; });
+    child.on("error", () => { clearTimeout(timer); resolveProbe(false); });
+    child.on("close", () => { clearTimeout(timer); resolveProbe(out.trim() === "ok"); });
+  });
+}
+
 async function getFleetCensus() {
   const now = Date.now();
   if (_censusCache.value && now - _censusCache.at < CENSUS_TTL_MS) return _censusCache.value;
@@ -172,15 +198,15 @@ async function getFleetCensus() {
   try { roster = await readMachines(); } catch { roster = []; }
   const byHost = new Map();
   for (const m of (Array.isArray(roster) ? roster : (roster && roster.machines) || [])) {
-    const host = String((m.ssh && m.ssh.host) || "").split(".")[0].toLowerCase();
-    if (host) byHost.set(host, m);
+    const key = normHost(String((m.ssh && m.ssh.host) || "").split(".")[0]) || normHost(m.name);
+    if (key) byHost.set(key, m);
   }
 
   const nodes = [];
   const push = (peer, isSelf) => {
     if (!isSelf && isInfraNode(peer)) return;
     const host = String(peer.HostName || "");
-    const known = byHost.get(host.toLowerCase()) || null;
+    const known = byHost.get(normHost(host)) || null;
     nodes.push({
       host,
       name: (known && known.name) || host,
@@ -190,23 +216,39 @@ async function getFleetCensus() {
       ip: (peer.TailscaleIPs || [])[0] || "",
       lastSeen: isSelf ? Math.floor(now / 1000) : tsSeconds(peer.LastSeen),
       ssh: !!(known && known.ssh && known.ssh.enabled),
+      sshHost: (known && known.ssh && known.ssh.host) || "",
+      reachable: null,          // lo rellena el sondeo de abajo
       inRoster: !!known,
       self: !!isSelf,
     });
   };
   if (status.Self) push(status.Self, true);
   for (const peer of Object.values(status.Peer || {})) push(peer, false);
+
+  // Solo se sondean los que Tailscale da por conectados. `reachable` queda en
+  // null cuando no hay canal SSH: es «no lo sé», que no es lo mismo que «no».
+  await Promise.all(nodes.filter((n) => n.online && !n.self).map(async (n) => {
+    const host = n.sshHost || n.ip;
+    if (!host) return;
+    n.reachable = await probeSsh(host);
+  }));
+  for (const n of nodes) if (n.self) n.reachable = true;
   nodes.sort((a, b) => (b.online - a.online) || a.name.localeCompare(b.name));
 
   // Lo que está en machines.json y Tailscale no conoce: se dice, no se esconde.
-  const seen = new Set(nodes.map((n) => n.host.toLowerCase()));
+  const seen = new Set(nodes.map((n) => normHost(n.host)));
   const orphans = [...byHost.entries()].filter(([h]) => !seen.has(h)).map(([, m]) => m.name);
 
   const value = {
     ok: true,
     ts: new Date().toISOString(),
     source: "tailscale",
-    summary: { total: nodes.length, online: nodes.filter((n) => n.online).length, rosterOnly: orphans.length },
+    summary: {
+      total: nodes.length,
+      online: nodes.filter((n) => n.online).length,             // en la red de Tailscale
+      usable: nodes.filter((n) => n.reachable === true).length, // y además responde
+      rosterOnly: orphans.length,
+    },
     rosterOnly: orphans,
     machines: nodes,
   };

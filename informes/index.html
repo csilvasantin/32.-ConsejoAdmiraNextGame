@@ -1,0 +1,493 @@
+<!doctype html>
+<html lang="es">
+<head>
+<script src="/admira-bar.js?v=20260711-r2"></script>
+<script src="/auth-gate.js?v=20260708-authfix"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>admira.live — Generador de Informes</title>
+<meta name="description" content="Generador de informes de AdmiraNeXT: datos vivos, ficheros y contexto → informe con cifras calculadas y verificadas, PDF, resumen con audio y deck.">
+<meta name="robots" content="noindex,nofollow">
+<style>
+  :root{
+    --bg:#02080d; --panel:#06121a; --panel-2:#081a24; --panel-3:#0a2230;
+    --ink:#dff8ff; --mut:#75aab9; --brand:#78f3ff; --accent:#ffd866;
+    --ok:#4ade80; --warn:#fbbf24; --bad:#f87171;
+    --line:rgba(120,243,255,.18); --line-2:rgba(120,243,255,.34);
+    --mono:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0;background:var(--bg);color:var(--ink);min-height:100vh;
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;line-height:1.55}
+  body{background:radial-gradient(ellipse at 12% -10%,rgba(120,243,255,.10),transparent 55%),
+    radial-gradient(ellipse at 108% 108%,rgba(255,216,102,.06),transparent 55%),var(--bg)}
+  .wrap{max-width:1180px;margin:0 auto;padding:26px 20px 90px}
+  a{color:var(--brand)}
+
+  /* ── cabecera ── */
+  header.top{display:flex;align-items:flex-end;justify-content:space-between;gap:18px;flex-wrap:wrap;margin-bottom:8px}
+  .brand{font-size:30px;font-weight:800;letter-spacing:-.025em;margin:0}
+  .brand .grad{background:linear-gradient(90deg,var(--brand),var(--accent));-webkit-background-clip:text;background-clip:text;color:transparent}
+  .tagline{color:var(--mut);font-size:14px;max-width:64ch;margin:6px 0 0}
+  .tagline b{color:var(--ink);font-weight:600}
+  .ver{font:11px var(--mono);color:var(--mut)}
+
+  /* ── pasos ── */
+  .step{background:linear-gradient(180deg,var(--panel),var(--panel-2));border:1px solid var(--line);
+    border-radius:16px;padding:20px 22px;margin-top:20px}
+  .step > h2{margin:0 0 4px;font-size:12px;font-weight:700;letter-spacing:.16em;text-transform:uppercase;color:var(--brand)}
+  .step > .sub{font:11px var(--mono);color:var(--mut);margin-bottom:16px}
+
+  .srcgrid{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:14px}
+  .srcbox{background:var(--panel-2);border:1px solid var(--line);border-radius:13px;padding:15px 16px}
+  .srcbox h3{margin:0 0 3px;font-size:14px;font-weight:700}
+  .srcbox .h{font:10px var(--mono);color:var(--mut);margin-bottom:12px;letter-spacing:.05em}
+
+  label.chk{display:flex;align-items:flex-start;gap:10px;padding:8px 10px;border-radius:9px;cursor:pointer;
+    border:1px solid transparent;transition:background .14s,border-color .14s}
+  label.chk:hover{background:rgba(120,243,255,.06)}
+  label.chk input{margin-top:3px;accent-color:var(--brand);width:15px;height:15px;flex:none;cursor:pointer}
+  label.chk.on{background:rgba(120,243,255,.09);border-color:var(--line-2)}
+  label.chk .n{font-size:13.5px;font-weight:600;display:block}
+  label.chk .d{font:10px var(--mono);color:var(--mut);display:block;margin-top:1px}
+
+  .drop{border:2px dashed var(--line-2);border-radius:12px;padding:22px 14px;text-align:center;cursor:pointer;
+    color:var(--mut);font-size:13px;transition:background .15s,border-color .15s}
+  .drop:hover,.drop.over{background:rgba(120,243,255,.07);border-color:var(--brand);color:var(--ink)}
+  .drop b{color:var(--brand)}
+  .filelist{margin-top:10px;display:flex;flex-direction:column;gap:6px}
+  .fileitem{display:flex;align-items:center;gap:9px;font:11px var(--mono);background:var(--panel-3);
+    border:1px solid var(--line);border-radius:8px;padding:7px 10px}
+  .fileitem .nm{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .fileitem .rm{cursor:pointer;color:var(--bad);border:none;background:none;font-size:14px;padding:0 3px}
+
+  textarea,input[type=text],select{width:100%;background:var(--bg);border:1px solid var(--line);color:var(--ink);
+    border-radius:10px;padding:11px 12px;font-size:13.5px;font-family:inherit;line-height:1.6}
+  textarea{min-height:96px;resize:vertical}
+  textarea:focus,input:focus,select:focus{outline:none;border-color:var(--brand);box-shadow:0 0 0 3px rgba(120,243,255,.12)}
+  select{cursor:pointer}
+
+  .cfg{display:grid;grid-template-columns:repeat(auto-fit,minmax(210px,1fr));gap:14px}
+  .fld label{display:block;font:10px var(--mono);letter-spacing:.12em;text-transform:uppercase;color:var(--mut);margin-bottom:6px}
+
+  .pills{display:flex;flex-wrap:wrap;gap:8px;margin-top:4px}
+  .pill{border:1px solid var(--line);background:transparent;color:var(--mut);border-radius:999px;
+    padding:7px 14px;font-size:12.5px;cursor:pointer;transition:all .14s;font-family:inherit}
+  .pill:hover{border-color:var(--line-2);color:var(--ink)}
+  .pill.on{background:rgba(120,243,255,.14);border-color:var(--brand);color:var(--brand);font-weight:600}
+
+  .go{margin-top:20px;display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+  button.primary{background:linear-gradient(135deg,var(--brand),#3ec6d8);color:#02222a;border:none;border-radius:11px;
+    padding:14px 30px;font-size:15px;font-weight:800;cursor:pointer;letter-spacing:.01em;
+    box-shadow:0 6px 22px rgba(120,243,255,.22);transition:transform .12s,box-shadow .12s}
+  button.primary:hover:not(:disabled){transform:translateY(-1px);box-shadow:0 10px 30px rgba(120,243,255,.3)}
+  button.primary:disabled{opacity:.45;cursor:not-allowed;transform:none;box-shadow:none}
+  button.ghost{background:transparent;border:1px solid var(--line);color:var(--brand);border-radius:10px;
+    padding:10px 17px;font-size:12.5px;cursor:pointer;font-family:inherit;transition:background .14s}
+  button.ghost:hover{background:rgba(120,243,255,.09)}
+  button.ghost.warn{color:var(--accent);border-color:rgba(255,216,102,.34)}
+
+  /* ── consola de progreso: honesta, paso a paso real ── */
+  .console{display:none;margin-top:18px;background:#010508;border:1px solid var(--line);border-radius:12px;
+    padding:14px 16px;font:11.5px/1.85 var(--mono);color:var(--mut);max-height:230px;overflow:auto}
+  .console.on{display:block}
+  .console .l{white-space:pre-wrap}
+  .console .l.hi{color:var(--brand)}
+  .console .l.warn{color:var(--accent)}
+  .console .l.bad{color:var(--bad)}
+  .console .l.ok{color:var(--ok)}
+  .bar{height:4px;background:rgba(120,243,255,.12);border-radius:99px;overflow:hidden;margin-top:12px}
+  .bar > i{display:block;height:100%;width:0;background:linear-gradient(90deg,var(--brand),var(--accent));
+    transition:width .45s cubic-bezier(.16,1,.3,1)}
+
+  /* ── resultado ── */
+  #result{display:none;margin-top:26px}
+  #result.on{display:block}
+  .tabs{display:flex;gap:6px;flex-wrap:wrap;border-bottom:1px solid var(--line);padding-bottom:0;margin-bottom:0}
+  .tab{background:transparent;border:1px solid var(--line);border-bottom:none;color:var(--mut);
+    border-radius:10px 10px 0 0;padding:10px 18px;font-size:13px;cursor:pointer;font-family:inherit;position:relative;top:1px}
+  .tab.on{background:var(--panel);color:var(--brand);border-color:var(--line);font-weight:700}
+  .viewer{background:var(--panel);border:1px solid var(--line);border-top:none;border-radius:0 0 14px 14px;padding:12px}
+  iframe.doc{width:100%;height:74vh;min-height:520px;border:1px solid var(--line);border-radius:10px;background:#02080d}
+  .actions{display:flex;gap:9px;flex-wrap:wrap;margin:12px 2px 4px}
+
+  .verdict{display:flex;align-items:center;gap:11px;margin:14px 0 0;padding:12px 15px;border-radius:11px;font-size:13.5px}
+  .verdict.ok{background:rgba(74,222,128,.09);border:1px solid rgba(74,222,128,.3)}
+  .verdict.bad{background:rgba(248,113,113,.09);border:1px solid rgba(248,113,113,.32)}
+  .verdict .ic{font-size:20px}
+
+  .hint{font-size:12.5px;color:var(--mut);margin-top:10px}
+  .hint code{background:var(--panel-3);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:11px}
+  footer.pie{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);font:11px/1.9 var(--mono);color:var(--mut)}
+  @media (max-width:640px){.brand{font-size:24px}.wrap{padding:18px 14px 70px}iframe.doc{height:60vh}}
+</style>
+</head>
+<body>
+<div class="wrap">
+
+  <header class="top">
+    <div>
+      <h1 class="brand">Generador de <span class="grad">Informes</span></h1>
+      <p class="tagline">Un informe no es una presentación con datos: es <b>datos con narrativa</b>.
+        Aquí las cifras se calculan en tu navegador, cada una lleva su fórmula, y lo que escribe el
+        redactor automático <b>se verifica contra los datos</b> antes de enseñártelo.</p>
+    </div>
+    <div class="ver" id="ver">Admira v.2026.08.01.r1</div>
+  </header>
+
+  <!-- ══ PASO 1 · FUENTES ══ -->
+  <section class="step">
+    <h2>1 · De dónde salen los datos</h2>
+    <div class="sub">puedes combinar las tres · sin al menos una no hay informe</div>
+    <div class="srcgrid">
+
+      <div class="srcbox">
+        <h3>📡 Datos vivos</h3>
+        <div class="h">admira.live · lectura directa de D1</div>
+        <div id="live-list"></div>
+        <div class="hint" id="live-status"></div>
+      </div>
+
+      <div class="srcbox">
+        <h3>📎 Tus ficheros</h3>
+        <div class="h">CSV · TSV · JSON · MD · TXT</div>
+        <div class="drop" id="drop">
+          Arrastra aquí o <b>pulsa para elegir</b><br>
+          <span style="font-size:11px">las tablas se analizan · los textos entran como contexto</span>
+          <input type="file" id="file" multiple accept=".csv,.tsv,.json,.txt,.md,.log" style="display:none">
+        </div>
+        <div class="filelist" id="filelist"></div>
+      </div>
+
+      <div class="srcbox">
+        <h3>✍️ Contexto</h3>
+        <div class="h">qué quieres saber y para quién</div>
+        <textarea id="prompt" placeholder="Ej.: Estado real de la flota esta semana. Interesa saber si el tablero avanza o se acumula, y qué está bloqueado."></textarea>
+      </div>
+
+    </div>
+  </section>
+
+  <!-- ══ PASO 2 · CONFIGURA ══ -->
+  <section class="step">
+    <h2>2 · Cómo lo quieres</h2>
+    <div class="sub">el mismo análisis, empaquetado para quien lo va a leer</div>
+    <div class="cfg">
+      <div class="fld">
+        <label for="title">Título del informe</label>
+        <input type="text" id="title" placeholder="Se genera solo si lo dejas vacío">
+      </div>
+      <div class="fld">
+        <label for="audience">Audiencia</label>
+        <select id="audience">
+          <option value="Comité de dirección">Comité de dirección — decisiones, no detalles</option>
+          <option value="Equipo técnico">Equipo técnico — el porqué y el cómo</option>
+          <option value="Cliente">Cliente — resultados y valor</option>
+          <option value="Uso interno">Uso interno — sin filtro, todo</option>
+        </select>
+      </div>
+      <div class="fld">
+        <label for="lang">Idioma</label>
+        <select id="lang"><option value="es">Español</option><option value="en">English</option></select>
+      </div>
+    </div>
+
+    <div class="fld" style="margin-top:16px">
+      <label>Redacción automática</label>
+      <div class="pills">
+        <button class="pill on" id="narr-on"  onclick="setNarr(true)">Con narrativa · el redactor explica los números</button>
+        <button class="pill"    id="narr-off" onclick="setNarr(false)">Sólo datos · cero texto generado</button>
+      </div>
+      <div class="hint">Con narrativa, el redactor recibe <b>únicamente las métricas ya calculadas</b> — nunca los datos crudos para
+        que se invente medias. Después comprobamos una a una las cifras que escribe. Si el redactor no está disponible,
+        el informe se entrega igual, completo, sin texto.</div>
+    </div>
+
+    <div class="go">
+      <button class="primary" id="btn-go" onclick="generar()">Generar informe</button>
+      <button class="ghost" onclick="cargarEjemplo()">Probar con datos vivos de la flota</button>
+    </div>
+
+    <div class="console" id="console"></div>
+    <div class="bar" id="barwrap" style="display:none"><i id="bar"></i></div>
+  </section>
+
+  <!-- ══ RESULTADO ══ -->
+  <section id="result">
+    <div class="tabs" id="tabs"></div>
+    <div class="viewer">
+      <div class="actions" id="actions"></div>
+      <iframe class="doc" id="frame" title="Vista del informe"></iframe>
+    </div>
+    <div id="verdict"></div>
+  </section>
+
+  <footer class="pie">
+    admira.live/informes · Los datos vivos se leen de <code>admira-telegram</code> (D1) y la redacción del Consejo (<code>council-api</code>).<br>
+    Todo el cálculo ocurre en tu navegador: los ficheros que subes no salen de tu ordenador.
+  </footer>
+</div>
+
+<!-- Versión en la URL: sin esto el navegador se queda con el motor viejo tras un
+     despliegue y el informe se calcula con código caducado. Súbela en cada cambio. -->
+<script src="engine.js?v=20260801-r1"></script>
+<script src="render.js?v=20260801-r1"></script>
+<script>
+/* ══════════════════════════════════════════════════════════════════
+   APP · orquestación de la interfaz
+   ══════════════════════════════════════════════════════════════════ */
+
+const E = window.InformeEngine, R = window.InformeRender;
+
+const S = {
+  live: new Set(['tareas', 'diario', 'flota']),
+  files: [],
+  narrative: true,
+  model: null,
+  view: 'informe',
+  docs: {},
+};
+
+/* ── Paso 1a · fuentes vivas ─────────────────────────────────── */
+const liveList = document.getElementById('live-list');
+Object.entries(E.LIVE_SOURCES).forEach(([key, src]) => {
+  const on = S.live.has(key);
+  const el = document.createElement('label');
+  el.className = 'chk' + (on ? ' on' : '');
+  el.innerHTML = `<input type="checkbox" ${on ? 'checked' : ''}>
+    <span><span class="n">${src.label}</span><span class="d">${src.hint}</span></span>`;
+  el.querySelector('input').addEventListener('change', (e) => {
+    e.target.checked ? S.live.add(key) : S.live.delete(key);
+    el.classList.toggle('on', e.target.checked);
+  });
+  liveList.appendChild(el);
+});
+
+/* ── Paso 1b · ficheros ──────────────────────────────────────── */
+const drop = document.getElementById('drop'), fileIn = document.getElementById('file');
+drop.addEventListener('click', () => fileIn.click());
+drop.addEventListener('dragover', (e) => { e.preventDefault(); drop.classList.add('over'); });
+drop.addEventListener('dragleave', () => drop.classList.remove('over'));
+drop.addEventListener('drop', (e) => {
+  e.preventDefault(); drop.classList.remove('over');
+  addFiles(Array.from(e.dataTransfer.files));
+});
+fileIn.addEventListener('change', () => addFiles(Array.from(fileIn.files)));
+
+function addFiles(list) {
+  list.forEach((f) => {
+    if (f.size > 8 * 1024 * 1024) { alert(`«${f.name}» pesa más de 8 MB. Recórtalo antes de subirlo.`); return; }
+    const rd = new FileReader();
+    rd.onload = (e) => { S.files.push({ name: f.name, text: e.target.result, size: f.size }); paintFiles(); };
+    rd.readAsText(f);
+  });
+  fileIn.value = '';
+}
+function paintFiles() {
+  document.getElementById('filelist').innerHTML = S.files.map((f, i) =>
+    `<div class="fileitem"><span class="nm">${E.esc(f.name)}</span>
+     <span>${(f.size / 1024).toFixed(0)} KB</span>
+     <button class="rm" onclick="quitarFichero(${i})" title="Quitar">✕</button></div>`).join('');
+}
+function quitarFichero(i) { S.files.splice(i, 1); paintFiles(); }
+
+/* ── Paso 2 · narrativa ──────────────────────────────────────── */
+function setNarr(v) {
+  S.narrative = v;
+  document.getElementById('narr-on').classList.toggle('on', v);
+  document.getElementById('narr-off').classList.toggle('on', !v);
+}
+
+/* ── Consola de progreso: refleja lo que pasa de verdad ──────── */
+const con = document.getElementById('console'), barwrap = document.getElementById('barwrap'), bar = document.getElementById('bar');
+let steps = 0;
+function log(msg, cls) {
+  con.classList.add('on');
+  const d = document.createElement('div');
+  d.className = 'l' + (cls ? ' ' + cls : (/^[A-ZÍ]/.test(msg) ? ' hi' : ''));
+  d.textContent = msg;
+  con.appendChild(d);
+  con.scrollTop = con.scrollHeight;
+}
+function progress(pct) { barwrap.style.display = 'block'; bar.style.width = pct + '%'; }
+
+/* ── Generación ──────────────────────────────────────────────── */
+function cargarEjemplo() {
+  document.getElementById('prompt').value =
+    'Estado de la flota y del tablero de tareas. Quiero saber si avanzamos o se acumula trabajo, quién está saturado y qué está bloqueado.';
+  document.getElementById('title').value = 'Pulso de la flota AdmiraNeXT';
+  ['tareas', 'diario', 'flota', 'dudas'].forEach((k) => S.live.add(k));
+  liveList.querySelectorAll('input').forEach((i) => { i.checked = true; i.dispatchEvent(new Event('change')); });
+  generar();
+}
+
+async function generar() {
+  const btn = document.getElementById('btn-go');
+  btn.disabled = true; btn.textContent = 'Generando…';
+  con.innerHTML = ''; con.classList.add('on'); steps = 0; progress(4);
+  document.getElementById('result').classList.remove('on');
+
+  const cfg = {
+    title: document.getElementById('title').value.trim(),
+    audience: document.getElementById('audience').value,
+    lang: document.getElementById('lang').value,
+    prompt: document.getElementById('prompt').value.trim(),
+    live: Array.from(S.live),
+    files: S.files,
+    narrative: S.narrative,
+  };
+  if (!cfg.title) cfg.title = cfg.prompt ? cfg.prompt.split(/[.\n]/)[0].slice(0, 70) : 'Informe ' + new Date().toLocaleDateString('es-ES');
+
+  const marks = [12, 26, 44, 58, 72, 84];
+  try {
+    const model = await E.build(cfg, (m) => {
+      log(m, /⚠/.test(m) ? 'warn' : /✓/.test(m) ? 'ok' : '');
+      progress(marks[Math.min(steps++, marks.length - 1)]);
+    });
+    log('Render · construyendo documentos');
+    progress(92);
+
+    S.model = model;
+    S.docs = {
+      informe: R.reportHTML(model),
+      resumen: R.summaryHTML(model),
+      deck: R.deckHTML(model),
+    };
+    S.audio = R.audioScript(model);
+
+    progress(100);
+    log('✓ Informe listo · ' + model.totals.rows + ' filas · ' + model.totals.facts + ' métricas', 'ok');
+    pintarResultado();
+    document.getElementById('result').scrollIntoView({ behavior: 'smooth', block: 'start' });
+  } catch (e) {
+    log('✖ ' + e.message, 'bad');
+    progress(100);
+  } finally {
+    btn.disabled = false; btn.textContent = 'Generar informe';
+  }
+}
+
+/* ── Resultado ───────────────────────────────────────────────── */
+const TABS = [
+  { id: 'informe', label: '📄 Informe completo' },
+  { id: 'resumen', label: '⚡ Resumen ejecutivo' },
+  { id: 'deck', label: '📊 Deck' },
+];
+
+function pintarResultado() {
+  const m = S.model;
+  document.getElementById('result').classList.add('on');
+  document.getElementById('tabs').innerHTML = TABS.map((t) =>
+    `<button class="tab${t.id === S.view ? ' on' : ''}" onclick="verTab('${t.id}')">${t.label}</button>`).join('');
+
+  document.getElementById('actions').innerHTML = `
+    <button class="ghost" onclick="imprimir()">🖨️ Guardar como PDF</button>
+    <button class="ghost" onclick="hablar()" id="btn-audio">🔊 Escuchar el informe</button>
+    <button class="ghost" onclick="abrirVentana()">↗ Abrir en ventana</button>
+    <button class="ghost" onclick="descargarHTML()">⬇️ Descargar HTML</button>
+    <button class="ghost warn" onclick="descargarJSON()">⬇️ Datos en JSON</button>`;
+
+  const v = document.getElementById('verdict');
+  if (!m.narrative && !m.llmError) {
+    v.innerHTML = `<div class="verdict ok"><span class="ic">◇</span>
+      <span><b>Informe sólo de datos</b>, como pediste: ni una línea de texto generado.
+      Las ${m.totals.facts} métricas, los gráficos y los hallazgos salen del cálculo sobre ${m.totals.rows} filas.</span></div>`;
+  } else if (!m.narrative) {
+    v.innerHTML = `<div class="verdict bad"><span class="ic">⚠</span>
+      <span>Informe entregado <b>sin narrativa</b>: el redactor no respondió (${E.esc(m.llmError)}).
+      Las métricas, gráficos y hallazgos son íntegros — están calculados de los datos, no escritos por un modelo.</span></div>`;
+  } else if (m.unverified.length) {
+    v.innerHTML = `<div class="verdict bad"><span class="ic">⚠</span>
+      <span><b>${m.unverified.length} cifra(s) del texto no cuadran con los datos</b> (${m.unverified.map(E.esc).join(', ')}).
+      Van resaltadas en rojo dentro del informe. El resto está verificado.</span></div>`;
+  } else {
+    v.innerHTML = `<div class="verdict ok"><span class="ic">✓</span>
+      <span><b>Todas las cifras del texto cuadran</b> con las ${m.totals.facts} métricas calculadas de los datos.</span></div>`;
+  }
+  cargarFrame();
+}
+
+function verTab(id) {
+  S.view = id;
+  document.querySelectorAll('.tab').forEach((t) => t.classList.toggle('on', t.textContent.includes(TABS.find((x) => x.id === id).label.slice(2))));
+  cargarFrame();
+}
+function cargarFrame() {
+  document.getElementById('frame').srcdoc = S.docs[S.view];
+}
+
+function imprimir() {
+  const f = document.getElementById('frame');
+  f.contentWindow.focus();
+  f.contentWindow.print();
+}
+function abrirVentana() {
+  const w = window.open('', '_blank');
+  if (!w) { alert('El navegador ha bloqueado la ventana. Permite las ventanas emergentes para este sitio.'); return; }
+  w.document.write(S.docs[S.view]); w.document.close();
+}
+function descargarHTML() { bajar(S.docs[S.view], nombre() + '-' + S.view + '.html', 'text/html'); }
+function descargarJSON() {
+  const m = S.model;
+  bajar(JSON.stringify({
+    titulo: m.cfg.title,
+    generado: new Date(m.generatedAt * 1000).toISOString(),
+    totales: m.totals,
+    advertencias: m.warnings,
+    cifras_no_verificadas: m.unverified,
+    metricas: m.analyses.flatMap((a) => a.facts),
+    hallazgos: m.analyses.flatMap((a) => a.insights),
+    narrativa: m.narrative,
+    fuentes: m.analyses.map((a) => ({ tabla: a.table.name, filas: a.table.rows.length, procedencia: a.table.source })),
+    datos: m.analyses.map((a) => ({ tabla: a.table.name, filas: a.table.rows })),
+  }, null, 2), nombre() + '-datos.json', 'application/json');
+}
+function nombre() {
+  return (S.model.cfg.title || 'informe').toLowerCase().replace(/[^\w\sáéíóúñ-]/g, '').trim().replace(/\s+/g, '-').slice(0, 50);
+}
+function bajar(text, filename, mime) {
+  const a = document.createElement('a');
+  a.href = URL.createObjectURL(new Blob([text], { type: mime + ';charset=utf-8' }));
+  a.download = filename; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 4000);
+}
+
+/* ── Audio · locución en el propio navegador, sin backend ───── */
+let speaking = false;
+function hablar() {
+  const btn = document.getElementById('btn-audio');
+  if (!('speechSynthesis' in window)) { alert('Este navegador no sabe locutar texto.'); return; }
+  if (speaking) { speechSynthesis.cancel(); speaking = false; btn.textContent = '🔊 Escuchar el informe'; return; }
+  speechSynthesis.cancel();
+  // Trocear: los motores de voz cortan los textos largos de golpe.
+  const trozos = S.audio.split(/\n\n+/).filter(Boolean);
+  const voces = speechSynthesis.getVoices();
+  const voz = voces.find((v) => /es[-_]ES/i.test(v.lang)) || voces.find((v) => /^es/i.test(v.lang));
+  trozos.forEach((t, i) => {
+    const u = new SpeechSynthesisUtterance(t);
+    u.lang = S.model.cfg.lang === 'en' ? 'en-US' : 'es-ES';
+    if (voz && S.model.cfg.lang !== 'en') u.voice = voz;
+    u.rate = 1.02; u.pitch = 1;
+    if (i === trozos.length - 1) u.onend = () => { speaking = false; btn.textContent = '🔊 Escuchar el informe'; };
+    speechSynthesis.speak(u);
+  });
+  speaking = true; btn.textContent = '⏹ Parar la locución';
+}
+if ('speechSynthesis' in window) speechSynthesis.getVoices();
+
+/* ── Sonda de fuentes vivas: decir la verdad antes de generar ── */
+(async function sonda() {
+  const el = document.getElementById('live-status');
+  el.textContent = 'comprobando fuentes…';
+  try {
+    const r = await fetch('https://admira-telegram.csilvasantin.workers.dev/api/health', { cache: 'no-store', signal: AbortSignal.timeout(9000) });
+    el.innerHTML = r.ok
+      ? '<span style="color:var(--ok)">●</span> datos vivos accesibles'
+      : '<span style="color:var(--bad)">●</span> el origen de datos responde ' + r.status;
+  } catch (e) {
+    el.innerHTML = '<span style="color:var(--bad)">●</span> sin acceso a los datos vivos — usa ficheros o contexto';
+  }
+})();
+</script>
+</body>
+</html>

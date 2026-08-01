@@ -3353,6 +3353,126 @@ p{{font-size:9px;line-height:2.2;margin-bottom:16px}}
 
 
 # ╔══════════════════════════════════════════════════════════════╗
+# ║  INFORME — El redactor de admira.live/informes               ║
+# ╠══════════════════════════════════════════════════════════════╣
+# ║  Diferencia clave con PRESENTAR: aquí el modelo NO inventa   ║
+# ║  cifras. Recibe hechos YA CALCULADOS (por el motor del       ║
+# ║  navegador, de forma determinista y con su fórmula) y sólo   ║
+# ║  los REDACTA. El cliente verifica después, una a una, todas  ║
+# ║  las cifras del texto contra esos mismos hechos.             ║
+# ╚══════════════════════════════════════════════════════════════╝
+
+class InformeRequest(BaseModel):
+    titulo: str = ""
+    audiencia: str = "Uso interno"
+    idioma: str = "es"
+    contexto: str = ""
+    hechos: list = []        # [{hecho, valor, unidad, calculo, fuente}]
+    hallazgos: list = []     # [str] — insights deterministas del motor
+    tablas: list = []        # [{nombre, filas, campos}]
+    documentos: list = []    # [{nombre, extracto}] — ficheros no tabulares
+
+
+@app.post("/api/council/informe")
+async def council_informe(req: InformeRequest, request: Request):
+    """Redacta la narrativa de un informe SOBRE hechos ya calculados."""
+    check_rate_limit(request)
+
+    if not GROQ_API_KEY:
+        raise HTTPException(status_code=503, detail="GROQ_API_KEY no configurada")
+
+    idioma = "inglés" if (req.idioma or "es").lower().startswith("en") else "español"
+
+    system_prompt = (
+        "Eres analista de informes de AdmiraNeXT. Escribes en " + idioma + ".\n\n"
+        "REGLA INVIOLABLE: NO INVENTES NI UNA SOLA CIFRA. Todos los números que puedes usar "
+        "vienen en la lista HECHOS. Si un número no está en HECHOS, no lo escribas: ni "
+        "porcentajes derivados, ni sumas tuyas, ni estimaciones, ni ejemplos redondeados. "
+        "Cuando falte un dato, dilo con palabras ('no se ha medido', 'la fuente no lo cubre') "
+        "en lugar de rellenar el hueco.\n\n"
+        "Segunda regla: no adornes. Un informe se lee para decidir, no para admirarlo. "
+        "Frases cortas, sin superlativos, sin 'en el vertiginoso mundo de'. Si los datos son "
+        "malos, dilo claro. Si son insuficientes para concluir, dilo también — es la respuesta "
+        "más valiosa que puedes dar.\n\n"
+        "Responde SOLO con JSON válido, sin markdown ni texto alrededor:\n"
+        '{"titulo":"...",'
+        '"resumen_ejecutivo":"2-4 frases: qué dicen los datos y qué implica",'
+        '"secciones":[{"titulo":"...","texto":"2-3 párrafos interpretando los hechos de esa área"}],'
+        '"recomendaciones":["acción concreta y accionable, cada una anclada a un hecho"],'
+        '"conclusion":"cierre en 2-3 frases"}\n'
+        "Entre 3 y 5 secciones. Entre 2 y 4 recomendaciones."
+    )
+
+    hechos_txt = "\n".join(
+        f"- {h.get('hecho','')}: {h.get('valor','')} {h.get('unidad','')}"
+        f"  [cálculo: {h.get('calculo','')}] [fuente: {h.get('fuente','')}]"
+        for h in (req.hechos or [])[:120]
+    ) or "(sin hechos numéricos)"
+
+    hallazgos_txt = "\n".join(f"- {x}" for x in (req.hallazgos or [])[:15]) or "(ninguno)"
+    tablas_txt = "\n".join(
+        f"- {t.get('nombre','')}: {t.get('filas',0)} filas · campos: {', '.join(t.get('campos', [])[:14])}"
+        for t in (req.tablas or [])
+    ) or "(sin tablas)"
+
+    docs_txt = ""
+    for d in (req.documentos or [])[:3]:
+        docs_txt += f"\n### Documento adjunto «{d.get('nombre','')}»\n{(d.get('extracto') or '')[:4000]}\n"
+
+    user_content = (
+        f"TÍTULO PROPUESTO: {req.titulo or '(genera uno)'}\n"
+        f"AUDIENCIA: {req.audiencia} — ajusta profundidad y vocabulario a este lector.\n"
+        f"LO QUE PIDE EL LECTOR: {req.contexto or '(sin indicaciones; céntrate en lo que digan los datos)'}\n\n"
+        f"TABLAS ANALIZADAS:\n{tablas_txt}\n\n"
+        f"HECHOS (los ÚNICOS números que puedes escribir):\n{hechos_txt}\n\n"
+        f"HALLAZGOS ya calculados por reglas deterministas (puedes desarrollarlos, no contradecirlos):\n{hallazgos_txt}\n"
+        f"{docs_txt}"
+    )
+
+    groq_resp = http_requests.post(
+        GROQ_API_URL,
+        headers={"Authorization": f"Bearer {GROQ_API_KEY}", "Content-Type": "application/json"},
+        json={
+            "model": "llama-3.3-70b-versatile",
+            "messages": [
+                {"role": "system", "content": system_prompt},
+                {"role": "user", "content": user_content},
+            ],
+            "max_tokens": 4000,
+            "temperature": 0.2,   # baja: queremos fidelidad a los hechos, no creatividad
+            "response_format": {"type": "json_object"},
+        },
+        timeout=90,
+    )
+    groq_resp.raise_for_status()
+    raw = groq_resp.json()["choices"][0]["message"]["content"]
+
+    import re as _re
+    try:
+        m = _re.search(r"\{.*\}", raw, _re.DOTALL)
+        data = json.loads(m.group()) if m else {}
+    except Exception:
+        raise HTTPException(status_code=502, detail="El redactor no devolvió JSON utilizable")
+
+    # Normaliza: el cliente espera esta forma exacta y verifica sobre ella.
+    secciones = []
+    for s in data.get("secciones", []) or []:
+        if isinstance(s, dict):
+            secciones.append({"titulo": str(s.get("titulo", "")), "texto": str(s.get("texto", ""))})
+        elif isinstance(s, str):
+            secciones.append({"titulo": s, "texto": ""})
+
+    return {
+        "ok": True,
+        "titulo": str(data.get("titulo") or req.titulo or "Informe"),
+        "resumen_ejecutivo": str(data.get("resumen_ejecutivo", "")),
+        "secciones": secciones,
+        "recomendaciones": [str(r) for r in (data.get("recomendaciones") or [])],
+        "conclusion": str(data.get("conclusion", "")),
+    }
+
+
+# ╔══════════════════════════════════════════════════════════════╗
 # ║  DAILY BOOK — Un consejero pone un libro sobre la mesa       ║
 # ╚══════════════════════════════════════════════════════════════╝
 

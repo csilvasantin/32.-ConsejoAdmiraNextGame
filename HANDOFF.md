@@ -1,15 +1,15 @@
 # HANDOFF — Consejo AdmiraNext
 
-Actualizado: 2026-06-29  
+Actualizado: 2026-08-01  
 Proyecto: `32.-ConsejoAdmiraNextGame`
 
 ## Punto de entrada
 
-- URL pública: [https://www.admira.live](https://www.admira.live) · Mesa: [https://www.admira.live/teamwork.html](https://www.admira.live/teamwork.html) · Fichas: [https://www.admira.live/consejero.html?p=steve-jobs](https://www.admira.live/consejero.html?p=steve-jobs)
+- URL pública: [https://www.admira.live](https://www.admira.live) · **Informes: [https://www.admira.live/informes/](https://www.admira.live/informes/)** · Mesa: [https://www.admira.live/teamwork.html](https://www.admira.live/teamwork.html) · Fichas: [https://www.admira.live/consejero.html?p=steve-jobs](https://www.admira.live/consejero.html?p=steve-jobs)
 - Este HANDOFF: [github.com/csilvasantin/32.-ConsejoAdmiraNextGame/blob/main/HANDOFF.md](https://github.com/csilvasantin/32.-ConsejoAdmiraNextGame/blob/main/HANDOFF.md)
-- Versión visible: `Admira v.26.06.28.r2` (badge no bumpeado para los cambios de UI del 29; gestionarlo en el flujo de release)
+- Versión visible: `Admira v.2026.08.01.r1` (badge de `/informes`; la home sigue con su propio sello)
 - Rama: `main`
-- Commit actual: `44b8e28` (último en `main`)
+- Commit actual: `ee0be7e` (último en `main`) · retorno: tag `retorno/pre-informes-20260801` → `9a056f7`
 
 ## Qué comprobar al retomar
 
@@ -57,6 +57,50 @@ El hash debe coincidir con el commit publicado indicado arriba o ser posterior.
   - `Cancelar`
 
 ## Últimos cambios relevantes
+
+### 2026-08-01 — `Admira v.2026.08.01.r1` · Generador de Informes (`/informes`)
+
+Herramienta nueva en **https://www.admira.live/informes/**. Nace de estudiar el verbo
+**PRESENTAR** del Consejo (`index.html` overlay + `POST /api/council/presentar`) y de superarlo
+en lo que separa un informe de una presentación: **las cifras no las inventa el LLM**.
+
+- **`informes/engine.js`** — ingesta → perfilado de tipos → cálculo determinista → hallazgos por
+  reglas → narrativa verificada. Cada métrica guarda su **fórmula en texto** ("= 19 cerradas ÷ 42
+  totales"), así que el lector puede rehacer la cuenta. Al redactor se le pasan **sólo los hechos ya
+  calculados**, nunca los datos crudos.
+- **Verificación de cifras** — tras redactar se extrae cada número del texto y se contrasta con la
+  base de hechos; lo que no cuadra sale **resaltado en rojo** y con veredicto a la vista. Ojo al
+  tocarlo: la lista de cifras válidas incluye valores de métricas, operandos de las fórmulas, series
+  de los gráficos **y los textos de los hallazgos** (sin esto último daba falsos positivos en cuanto
+  el redactor citaba bien un hallazgo nuestro).
+- **Hallazgos por reglas, no por prosa** — concentración (Pareto), tendencia 7d vs 7d, estancamiento,
+  dispersión (p90 vs media) y riesgos de dominio. No se afirma una tendencia sin muestra suficiente
+  (≥8 registros), y un conjunto sin datos de las últimas 2 semanas se marca como **histórico cerrado**
+  en vez de "estancado".
+- **Honestidad de las fuentes** — avisa de fuentes vacías, caídas y **topes del origen**.
+  `GET /api/public/tasks` **excluye `done`** salvo que se pida el estado explícitamente, y topa en
+  **200 filas**: por eso se barre estado por estado. `/api/public/diary` topa en 200 por consulta y
+  sólo pagina hacia delante, así que se amplía cobertura pidiendo además por persona.
+- **`informes/render.js`** — un modelo → cuatro salidas: informe HTML, resumen ejecutivo, deck y guion
+  de audio (locución con `speechSynthesis`, sin backend). Gráficos **SVG escritos a mano**, sin CDN,
+  para que el documento descargado funcione sin red. El PDF sale del CSS de impresión: en
+  `@media print` se redefinen las **variables** de color, no cada regla — si no, el texto se queda
+  cian sobre papel blanco.
+- **Backend** — `POST /api/council/informe` en `council-api.py` (Groq `llama-3.3-70b`, temperatura
+  0.2, regla inviolable de no inventar cifras). **El council-api vivo del Mac Mini corre desde
+  `~/32.-ConsejoAdmiraNextGame/`, NO desde `~/Claude/repo32-live/`**; se reinicia con
+  `launchctl kickstart -k gui/$(id -u)/com.csilvasantin.council-api`.
+- **Degradado** — si el redactor no responde, el informe se entrega **completo igual**, sin narrativa,
+  y lo dice. Si se pide "sólo datos", lo dice de otra manera (no como fallo).
+- Verificado en producción: 627 filas y 49 métricas de tareas + diario + flota, informe con narrativa
+  y **todas las cifras cuadrando**.
+
+**⚠️ Aviso para quien retome este repo local (MacBookAir16plata):** el árbol de trabajo tiene el
+**merge sin resolver del 13-jul** (`UU status/index.html`, tarea #44 de Morfeo) y va **~100 commits
+por detrás de `origin/main`**. Por eso este trabajo se comprometió desde un **worktree aparte creado
+sobre `origin/main`**, sin tocar ese merge. **No despliegues el árbol local**: haría retroceder
+admira.live (lo vivo incluye trabajo que aquí no está, p. ej. `status/status-pacman.js`). Para
+desplegar, construye desde `origin/main`.
 
 ### 2026-06-29 — Prehome pixel-art (login) + coherencia visual del Consejo
 

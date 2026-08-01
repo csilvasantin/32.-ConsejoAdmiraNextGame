@@ -8,6 +8,7 @@
 <title>admira.live — Generador de Informes</title>
 <meta name="description" content="Generador de informes de AdmiraNeXT: datos vivos, ficheros y contexto → informe con cifras calculadas y verificadas, PDF, resumen con audio y deck.">
 <meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="quadratic.css?v=20260801-r1">
 <style>
   :root{
     --bg:#02080d; --panel:#06121a; --panel-2:#081a24; --panel-3:#0a2230;
@@ -116,13 +117,62 @@
   .verdict.bad{background:rgba(248,113,113,.09);border:1px solid rgba(248,113,113,.32)}
   .verdict .ic{font-size:20px}
 
+  /* ── Archivo de informes: cada informe guardado tiene URL fija ───────── */
+  .saved{margin:12px 2px 0;padding:12px 15px;border-radius:11px;display:none;
+    background:rgba(120,243,255,.07);border:1px solid var(--line-2);font-size:13.5px}
+  .saved.on{display:block}
+  .saved.bad{background:rgba(248,113,113,.09);border-color:rgba(248,113,113,.32)}
+  .saved .lnk{display:flex;gap:9px;align-items:center;margin-top:9px;flex-wrap:wrap}
+  .saved input{flex:1;min-width:220px;background:var(--bg);border:1px solid var(--line);border-radius:8px;
+    color:var(--brand);font:11.5px/1.6 var(--mono);padding:8px 10px}
+  .archlist{display:flex;flex-direction:column;gap:8px;margin-top:14px}
+  .archrow{display:flex;align-items:center;gap:12px;background:var(--panel-2);border:1px solid var(--line);
+    border-radius:10px;padding:10px 13px;font-size:13.5px}
+  .archrow .t{flex:1;min-width:0}
+  .archrow .t b{display:block;color:var(--ink);font-weight:600;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .archrow .t span{color:var(--mut);font:11px/1.8 var(--mono)}
+  .archrow a.open{color:var(--brand);text-decoration:none;border:1px solid var(--line);border-radius:8px;
+    padding:6px 11px;font-size:12.5px;white-space:nowrap}
+  .archrow a.open:hover{background:rgba(120,243,255,.09)}
+  .badge{font:10px/1 var(--mono);padding:4px 6px;border-radius:5px;border:1px solid var(--line);color:var(--mut);white-space:nowrap}
+  .badge.bad{color:var(--bad);border-color:rgba(248,113,113,.32)}
+  .badge.ok{color:var(--ok);border-color:rgba(74,222,128,.3)}
+  @media (max-width:640px){.archrow{flex-wrap:wrap}.archrow .badge{display:none}}
+
   .hint{font-size:12.5px;color:var(--mut);margin-top:10px}
   .hint code{background:var(--panel-3);border:1px solid var(--line);border-radius:5px;padding:1px 5px;font-size:11px}
   footer.pie{margin-top:44px;padding-top:18px;border-top:1px solid var(--line);font:11px/1.9 var(--mono);color:var(--mut)}
   @media (max-width:640px){.brand{font-size:24px}.wrap{padding:18px 14px 70px}iframe.doc{height:60vh}}
 </style>
 </head>
-<body>
+<body class="reports-quadratic">
+<header class="reports-shell-top">
+  <a class="reports-shell-brand" href="/informes/"><i aria-hidden="true"></i><span>ADmiraNeXT · Reports</span><small>datos verificados</small></a>
+  <nav class="reports-shell-actions" aria-label="Herramientas del generador">
+    <button type="button" class="reports-shell-button" data-reports-toggle="sources" aria-expanded="false" aria-controls="reportsSourcesRail" title="Fuentes">☷</button>
+    <button type="button" class="reports-shell-button" data-reports-toggle="settings" aria-expanded="false" aria-controls="reportsSettingsRail" title="Configuración">⚙</button>
+    <button type="button" class="reports-shell-button" data-reports-toggle="console" aria-expanded="false" aria-controls="reportsConsoleRail" title="Modo experto">›_</button>
+    <a class="reports-shell-back" href="/">Consejo</a>
+  </nav>
+</header>
+<aside class="reports-rail reports-rail-left" id="reportsSourcesRail" hidden>
+  <div class="reports-rail-head"><div><span>Nivel 01 · Fuentes</span><h2>Origen de los datos</h2></div><button type="button" data-reports-close="sources">×</button></div>
+  <button class="reports-jump" type="button" data-reports-target="sourcesStep">Datos vivos, ficheros y contexto <b>01</b></button>
+  <button class="reports-jump" type="button" data-reports-target="archivo">Archivo de informes <b>03</b></button>
+  <p>Las cifras se calculan en el navegador y cada fuente conserva su procedencia.</p>
+</aside>
+<aside class="reports-rail reports-rail-right" id="reportsSettingsRail" hidden>
+  <div class="reports-rail-head"><div><span>Nivel 02 · Ajustes</span><h2>Configuración</h2></div><button type="button" data-reports-close="settings">×</button></div>
+  <button class="reports-jump" type="button" data-reports-target="settingsStep">Audiencia, idioma y narrativa <b>02</b></button>
+  <div class="reports-diagnostic"><span>Fuentes activas</span><output id="reportsDiagSources">—</output></div>
+  <div class="reports-diagnostic"><span>Ficheros</span><output id="reportsDiagFiles">0</output></div>
+  <div class="reports-diagnostic"><span>Narrativa</span><output id="reportsDiagNarrative">Sí</output></div>
+</aside>
+<section class="reports-console-rail" id="reportsConsoleRail" hidden>
+  <div class="reports-rail-head"><div><span>Nivel 03 · Experto</span><h2>Motor de verificación</h2></div><button type="button" data-reports-close="console">×</button></div>
+  <pre id="reportsExpertConsole">ADMIRANEXT REPORT ENGINE\nestado: preparado\nprincipio: las cifras no las inventa el LLM</pre>
+</section>
+<main class="reports-shell-main">
 <div class="wrap">
 
   <header class="top">
@@ -132,11 +182,11 @@
         Aquí las cifras se calculan en tu navegador, cada una lleva su fórmula, y lo que escribe el
         redactor automático <b>se verifica contra los datos</b> antes de enseñártelo.</p>
     </div>
-    <div class="ver" id="ver">Admira v.2026.08.01.r1</div>
+    <div class="ver" id="ver">Admira v.2026.08.01.r2</div>
   </header>
 
   <!-- ══ PASO 1 · FUENTES ══ -->
-  <section class="step">
+  <section class="step" id="sourcesStep">
     <h2>1 · De dónde salen los datos</h2>
     <div class="sub">puedes combinar las tres · sin al menos una no hay informe</div>
     <div class="srcgrid">
@@ -169,7 +219,7 @@
   </section>
 
   <!-- ══ PASO 2 · CONFIGURA ══ -->
-  <section class="step">
+  <section class="step" id="settingsStep">
     <h2>2 · Cómo lo quieres</h2>
     <div class="sub">el mismo análisis, empaquetado para quien lo va a leer</div>
     <div class="cfg">
@@ -220,6 +270,16 @@
       <iframe class="doc" id="frame" title="Vista del informe"></iframe>
     </div>
     <div id="verdict"></div>
+    <div class="saved" id="saved"></div>
+  </section>
+
+  <!-- ══ ARCHIVO ══ Los informes guardados no caducan: URL fija e histórico. -->
+  <section class="step" id="archivo" style="margin-top:34px">
+    <h2>📁 Archivo de informes</h2>
+    <div class="sub">Cada informe que guardas queda con <b>URL fija</b>: el documento se conserva
+      tal cual se generó, con sus cifras verificadas, aunque el generador cambie después.</div>
+    <div class="archlist" id="archlist"></div>
+    <div class="hint" id="arch-status">Cargando el archivo…</div>
   </section>
 
   <footer class="pie">
@@ -227,11 +287,13 @@
     Todo el cálculo ocurre en tu navegador: los ficheros que subes no salen de tu ordenador.
   </footer>
 </div>
+</main>
 
 <!-- Versión en la URL: sin esto el navegador se queda con el motor viejo tras un
      despliegue y el informe se calcula con código caducado. Súbela en cada cambio. -->
 <script src="engine.js?v=20260801-r1"></script>
 <script src="render.js?v=20260801-r1"></script>
+<script src="quadratic.js?v=20260801-r1"></script>
 <script>
 /* ══════════════════════════════════════════════════════════════════
    APP · orquestación de la interfaz
@@ -380,7 +442,9 @@ function pintarResultado() {
   document.getElementById('tabs').innerHTML = TABS.map((t) =>
     `<button class="tab${t.id === S.view ? ' on' : ''}" onclick="verTab('${t.id}')">${t.label}</button>`).join('');
 
+  document.getElementById('saved').className = 'saved';
   document.getElementById('actions').innerHTML = `
+    <button class="ghost" onclick="guardarArchivo(this)">📁 Guardar en el archivo</button>
     <button class="ghost" onclick="imprimir()">🖨️ Guardar como PDF</button>
     <button class="ghost" onclick="hablar()" id="btn-audio">🔊 Escuchar el informe</button>
     <button class="ghost" onclick="abrirVentana()">↗ Abrir en ventana</button>
@@ -474,6 +538,112 @@ function hablar() {
   speaking = true; btn.textContent = '⏹ Parar la locución';
 }
 if ('speechSynthesis' in window) speechSynthesis.getVoices();
+
+/* ── Archivo · guardar el informe con URL fija y listar el histórico ─────────
+   El documento que se guarda es el MISMO HTML que estás viendo: autocontenido,
+   sin CDN y con los SVG en línea. Por eso la URL sigue sirviendo ese informe
+   aunque el generador cambie o se rompa después.
+   Identidad: el ID token de Google que dejó la verja (auth-gate.js) en
+   localStorage.admira_gate. El worker lo valida contra Google; aquí no hay clave. */
+const ARCH = 'https://admira-telegram.csilvasantin.workers.dev';
+
+function credencial() {
+  try {
+    const g = JSON.parse(localStorage.getItem('admira_gate') || 'null');
+    return g && g.cred ? { cred: g.cred, email: g.email || '' } : null;
+  } catch (e) { return null; }
+}
+
+function avisoArchivo(html, mal) {
+  const el = document.getElementById('saved');
+  el.className = 'saved on' + (mal ? ' bad' : '');
+  el.innerHTML = html;
+}
+
+async function guardarArchivo(btn) {
+  const g = credencial();
+  if (!g) {
+    avisoArchivo('⚠ No encuentro tu sesión de Google. Vuelve a entrar por la verja de admira.live y repite.', true);
+    return;
+  }
+  const m = S.model, txt = btn.textContent;
+  btn.disabled = true; btn.textContent = 'Guardando…';
+  try {
+    const r = await fetch(ARCH + '/api/informes', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json', authorization: 'Bearer ' + g.cred },
+      body: JSON.stringify({
+        titulo: m.cfg.title,
+        autor: g.email,
+        audiencia: m.cfg.audience,
+        idioma: m.cfg.lang,
+        narrativa: !!m.narrative,
+        filas: m.totals.rows,
+        metricas: m.totals.facts,
+        no_verificadas: m.unverified.length,
+        fuentes: m.analyses.map((a) => ({ tabla: a.table.name, filas: a.table.rows.length, procedencia: a.table.source })),
+        html: S.docs.informe,
+        resumen_html: S.docs.resumen,
+        deck_html: S.docs.deck,
+        // Sólo las cifras, no las filas crudas: el archivo guarda el informe, no la base de datos.
+        datos: JSON.stringify({ metricas: m.analyses.flatMap((a) => a.facts), hallazgos: m.analyses.flatMap((a) => a.insights) }),
+      }),
+      signal: AbortSignal.timeout(30000),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.ok) throw new Error(d.error || ('el archivo respondió ' + r.status));
+    const peso = d.bytes < 1024 ? d.bytes + ' B' : Math.round(d.bytes / 1024) + ' KB';
+    avisoArchivo(`✓ <b>Guardado en el archivo</b> · ${peso}. Este enlace sirve siempre este informe:
+      <div class="lnk">
+        <input id="permalink" readonly value="${E.esc(d.url)}" onclick="this.select()">
+        <button class="ghost" onclick="copiarEnlace()">📋 Copiar</button>
+        <a class="ghost" style="text-decoration:none;padding:8px 12px;border-radius:10px;border:1px solid var(--line);color:var(--brand)"
+           href="${E.esc(d.url)}" target="_blank" rel="noopener">↗ Abrir</a>
+      </div>`);
+    cargarArchivo();
+  } catch (e) {
+    avisoArchivo('✖ No se ha podido guardar: ' + E.esc(e.message), true);
+  } finally {
+    btn.disabled = false; btn.textContent = txt;
+  }
+}
+
+function copiarEnlace() {
+  const i = document.getElementById('permalink');
+  i.select();
+  navigator.clipboard.writeText(i.value).catch(() => document.execCommand('copy'));
+}
+
+async function cargarArchivo() {
+  const list = document.getElementById('archlist'), st = document.getElementById('arch-status');
+  const g = credencial();
+  if (!g) { list.innerHTML = ''; st.textContent = 'Entra por la verja de admira.live para ver el archivo.'; return; }
+  try {
+    const r = await fetch(ARCH + '/api/informes?limit=60', {
+      headers: { authorization: 'Bearer ' + g.cred }, cache: 'no-store', signal: AbortSignal.timeout(12000),
+    });
+    const d = await r.json().catch(() => ({}));
+    if (!r.ok || !d.ok) throw new Error(d.error || ('respondió ' + r.status));
+    const items = d.informes || [];
+    if (!items.length) { list.innerHTML = ''; st.textContent = 'Todavía no hay ningún informe guardado. Genera uno y pulsa «Guardar en el archivo».'; return; }
+    list.innerHTML = items.map((it) => {
+      const f = new Date(it.ts * 1000).toLocaleString('es-ES', { day: '2-digit', month: 'short', year: '2-digit', hour: '2-digit', minute: '2-digit' });
+      const cifras = it.no_verificadas
+        ? `<span class="badge bad">${it.no_verificadas} sin cuadrar</span>`
+        : `<span class="badge ok">cifras verificadas</span>`;
+      return `<div class="archrow">
+        <div class="t"><b>${E.esc(it.titulo || 'Informe')}</b>
+          <span>${f} · ${it.metricas} métricas sobre ${it.filas} filas · ${E.esc(it.autor || '—')}${it.narrativa ? '' : ' · sólo datos'}</span></div>
+        ${cifras}
+        <a class="open" href="${E.esc(it.url)}" target="_blank" rel="noopener">↗ Abrir</a>
+      </div>`;
+    }).join('');
+    st.textContent = items.length + ' informe(s) guardado(s). Los enlaces no caducan.';
+  } catch (e) {
+    list.innerHTML = ''; st.textContent = 'No he podido leer el archivo: ' + e.message;
+  }
+}
+cargarArchivo();
 
 /* ── Sonda de fuentes vivas: decir la verdad antes de generar ── */
 (async function sonda() {

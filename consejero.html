@@ -7,7 +7,7 @@
   <meta name="viewport" content="width=device-width, initial-scale=1">
   <script src="/failover.js"></script>
   <title>Consejero · AdmiraNext Council</title>
-  <meta name="admiranext-version" content="v.26.06.21.r1">
+  <meta name="admiranext-version" content="v.26.08.07.r1">
   <link rel="icon" href="/council-icon.ico?v=20260522-r1" sizes="any">
   <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
   <style>
@@ -68,6 +68,8 @@
     .b-creativo{background:linear-gradient(135deg,#2980b9,#3498db);color:#fff}
     .b-gen{background:#1a1f3d;color:var(--amber);border-color:var(--wood-line)}
     .b-alias{background:#0c2417;color:#7CFFb0;border-color:#1f6b44}
+    .b-tag{background:#1b1030;color:var(--amber-soft);border-color:var(--wood-line);cursor:pointer}
+    .b-tag:hover{background:var(--wood-line);color:#fff}
     .terr{font-size:.6rem;line-height:1.8;color:var(--amber-soft)}
 
     /* secciones */
@@ -113,6 +115,34 @@
     .chat-form input:disabled{opacity:.5}
     .chat-form button{background:var(--wood-line);color:#fff;border:2px solid var(--amber-soft);font:inherit;font-size:.5rem;padding:.7rem 1rem;cursor:pointer}
     .chat-form button:disabled{opacity:.45;cursor:not-allowed}
+
+    /* Vídeos del consejero: se leen del Stock de Pixeria por su hashtag */
+    .vids{margin-top:14px}
+    .vids h2 .tag{color:var(--amber-soft);font-size:.5rem;letter-spacing:0}
+    .vids-state{font-size:.5rem;line-height:1.9;color:var(--muted);padding:6px 2px}
+    .vids-state a{color:var(--amber-soft);text-decoration:underline}
+    .vids-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px}
+    .vid{border:2px solid #2a3057;background:#080a18;box-shadow:3px 3px 0 #000;cursor:pointer;
+      display:flex;flex-direction:column;transition:.12s;text-align:left;font:inherit;color:inherit;padding:0}
+    .vid:hover{border-color:var(--amber-soft);transform:translate(-1px,-1px);box-shadow:4px 4px 0 #000}
+    .vid-thumb{position:relative;aspect-ratio:16/9;background:#05060d center/cover no-repeat;image-rendering:auto}
+    .vid-thumb::after{content:"▶";position:absolute;inset:0;display:flex;align-items:center;justify-content:center;
+      font-size:1.1rem;color:#fff;text-shadow:2px 2px 0 #000;background:rgba(0,0,0,.28);opacity:.85}
+    .vid:hover .vid-thumb::after{opacity:1;color:var(--amber)}
+    .vid-body{padding:9px 10px;display:flex;flex-direction:column;gap:6px}
+    .vid-title{font-size:.44rem;line-height:1.75;color:#d7dcf0}
+    .vid-meta{font-size:.38rem;color:var(--muted);letter-spacing:0}
+
+    /* Reproductor a pantalla completa */
+    .vid-player{position:fixed;inset:0;z-index:60;background:rgba(4,5,12,.94);display:flex;
+      flex-direction:column;align-items:center;justify-content:center;gap:14px;padding:20px}
+    .vid-player[hidden]{display:none}
+    .vid-player video{max-width:min(1100px,94vw);max-height:74vh;border:3px solid var(--wood-line);
+      box-shadow:5px 5px 0 #000;background:#000;image-rendering:auto}
+    .vid-player-cap{font-size:.48rem;line-height:1.9;color:var(--amber);text-align:center;max-width:min(1100px,94vw)}
+    .vid-player-close{position:absolute;top:16px;right:18px;background:var(--wood);border:2px solid var(--wood-line);
+      color:var(--amber);font:inherit;font-size:.5rem;padding:.6rem .8rem;box-shadow:2px 2px 0 #000;cursor:pointer}
+    .vid-player-close:hover{background:var(--wood-line);color:#fff}
 
     .foot{text-align:center;color:var(--muted);font-size:.42rem;line-height:2;margin:22px 0 6px}
 
@@ -310,7 +340,7 @@
           <div class="bar">
             <a class="pill" href="index.html">◀ Volver al Consejo</a>
             <span class="bar-spacer"></span>
-            <span class="pill flat">v.26.06.21.r1</span>
+            <span class="pill flat">v.26.08.07.r1</span>
           </div>
           <div class="notfound">No encuentro al consejero «${(params.get("p")||"").replace(/[<>]/g,"")}».<br><br>
             Consejeros disponibles: ${Object.keys(BY_SLUG).join(" · ")}</div>`;
@@ -328,7 +358,7 @@
           <a class="pill" href="https://www.admiranext.com" target="_blank" rel="noopener">🏠 AdmiraNeXT</a>
           <span class="bar-spacer"></span>
           <span class="pill flat">${c.icon} ${c.role}</span>
-          <span class="pill flat">v.26.06.21.r1</span>
+          <span class="pill flat">v.26.08.07.r1</span>
         </div>
 
         <div class="hero">
@@ -341,6 +371,8 @@
             <div class="badges">
               <span class="badge b-${c.side}">${sideLabel}</span>
               <span class="badge b-gen">${genLabel}</span>
+              <a class="badge b-tag" href="https://www.pixeria.com/stock.html" target="_blank" rel="noopener"
+                 title="Hashtag del consejero en el Stock de Pixeria">#${stockTag(c)}</a>
               ${aliasBadge}
             </div>
             <div class="terr">“${c.territory}”</div>
@@ -370,6 +402,12 @@
           <div class="quote">“${c.quote}”<span class="who">— ${c.persona}, ${c.role} del Consejo</span></div>
         </div>
 
+        <div class="card vids" id="videos">
+          <h2>🎬 Vídeos <span class="tag">· #${stockTag(c)}</span></h2>
+          <div class="vids-state" id="vidsState">Buscando en el Stock de Pixeria…</div>
+          <div class="vids-grid" id="vidsGrid"></div>
+        </div>
+
         <div class="card chat" id="chat">
           <h2>💬 Conversación <span class="chat-status" id="chatStatus">· comprobando conexión…</span></h2>
           <div class="chat-thread" id="chatThread"><div class="chat-empty">Conecta a ${c.persona} a un equipo con su LLM (Asignación) para conversar. La charla se refleja en Telegram.</div></div>
@@ -388,10 +426,102 @@
 
         <div class="foot">
           AdmiraNeXT · Consejo de Silicio · admira.live<br>
-          Ficha de consejero · v.26.06.21.r1
+          Ficha de consejero · v.26.08.07.r1
         </div>`;
 
       loadLive(c);
+      loadVideos(c);
+    }
+
+    // ── Vídeos del consejero (Stock de Pixeria) ───────────────────────────
+    // Cada consejero tiene un hashtag canónico = su slug sin guiones
+    // (steve-jobs → #stevejobs). Los vídeos se suben al Stock etiquetados con
+    // él y esta galería los lee de ahí: el Stock es la única fuente.
+    // El listado sale del índice estático en r2.dev porque los ISP españoles
+    // bloquean *.workers.dev; el worker queda de respaldo (mismo criterio que
+    // pixeria.com/stock).
+    const STOCK_R2 = "https://pub-bf043a4daa3b43b7a0b769617729d074.r2.dev";
+    const STOCK_LIST_URLS = [
+      STOCK_R2 + "/stock/index.json",
+      "https://api.admira.store/stock/list?limit=200&type=video",
+    ];
+    const stockTag = c => c.slug.replace(/-/g, "");
+
+    async function fetchStockItems(){
+      for(const url of STOCK_LIST_URLS){
+        try{
+          const r = await fetch(url, { signal: AbortSignal.timeout(9000) });
+          if(!r.ok) continue;
+          const d = await r.json();
+          const items = Array.isArray(d) ? d : (d.items || []);
+          if(items.length) return items;
+        }catch(e){ /* siguiente fuente */ }
+      }
+      return null;
+    }
+
+    function esc(s){ return String(s==null?"":s).replace(/[<>&"]/g,x=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[x])); }
+    function pesoMB(n){ return n ? (n/1024/1024).toFixed(1) + " MB" : ""; }
+    function fecha(iso){
+      if(!iso) return "";
+      const d = new Date(iso);
+      return isNaN(d) ? "" : d.toLocaleDateString("es-ES", { day:"2-digit", month:"short", year:"numeric" });
+    }
+
+    async function loadVideos(c){
+      const state = document.getElementById("vidsState"), grid = document.getElementById("vidsGrid");
+      if(!state || !grid) return;
+      const tag = stockTag(c);
+      const items = await fetchStockItems();
+      if(!items){
+        state.innerHTML = `No he podido leer el Stock. Pruébalo en <a href="https://www.pixeria.com/stock.html" target="_blank" rel="noopener">pixeria.com/stock</a>.`;
+        return;
+      }
+      const suyos = items.filter(it =>
+        it && it.type === "video" && it.url &&
+        ((Array.isArray(it.tags) && it.tags.some(t => String(t).toLowerCase() === tag)) ||
+         String(it.comment||"").toLowerCase().includes("#" + tag))
+      ).sort((a,b) => String(b.createdAt||"").localeCompare(String(a.createdAt||"")));
+
+      if(!suyos.length){
+        state.innerHTML = `Aún no hay vídeos con <b>#${esc(tag)}</b> en el Stock. `
+          + `Súbelos a <a href="https://www.pixeria.com/stock.html" target="_blank" rel="noopener">pixeria.com/stock</a> con ese hashtag y aparecerán aquí.`;
+        return;
+      }
+      state.textContent = suyos.length === 1
+        ? "1 vídeo en el Stock de Pixeria."
+        : `${suyos.length} vídeos en el Stock de Pixeria.`;
+
+      grid.innerHTML = suyos.map((it,i) => {
+        const meta = [fecha(it.createdAt), pesoMB(it.size)].filter(Boolean).join(" · ");
+        const thumb = it.thumbnail ? `background-image:url('${esc(it.thumbnail)}')` : "";
+        return `<button type="button" class="vid" data-i="${i}">
+            <div class="vid-thumb" style="${thumb}"></div>
+            <div class="vid-body">
+              <div class="vid-title">${esc(it.title || "Sin título")}</div>
+              <div class="vid-meta">${esc(meta)}</div>
+            </div>
+          </button>`;
+      }).join("");
+
+      grid.addEventListener("click", e => {
+        const b = e.target.closest(".vid"); if(!b) return;
+        const it = suyos[+b.dataset.i]; if(it) abrirVideo(it, c);
+      });
+    }
+
+    function abrirVideo(it, c){
+      const box = document.createElement("div");
+      box.className = "vid-player";
+      box.innerHTML = `<button type="button" class="vid-player-close">✕ Cerrar</button>
+        <video controls autoplay playsinline src="${esc(it.url)}"${it.thumbnail?` poster="${esc(it.thumbnail)}"`:""}></video>
+        <div class="vid-player-cap">${esc(it.title || "")}<br>${esc(c.persona)} · ${esc(c.role)} · #${esc(stockTag(c))}</div>`;
+      const cerrar = () => { box.remove(); document.removeEventListener("keydown", onKey); };
+      const onKey = e => { if(e.key === "Escape") cerrar(); };
+      box.addEventListener("click", e => { if(e.target === box) cerrar(); });
+      box.querySelector(".vid-player-close").addEventListener("click", cerrar);
+      document.addEventListener("keydown", onKey);
+      document.body.appendChild(box);
     }
 
     // Asignación real desde /equipos (auto-login en máquinas de la tailnet).

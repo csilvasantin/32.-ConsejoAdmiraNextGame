@@ -1,0 +1,20 @@
+{
+  "version": "v.07.08.2026.r1.13:49",
+  "deployedAt": "2026-08-07T11:49:15Z",
+  "deployer": "NeoMBAPlata",
+  "agent": "NeoMBAPlata",
+  "machine": "MacBookAirPlata",
+  "signature": "NeoMBAPlata · MacBookAirPlata",
+  "git": "a765aea4d8ed70c39af13f420b59deea8df3b96f",
+  "gitShort": "a765aea",
+  "gitFull": "a765aea4d8ed70c39af13f420b59deea8df3b96f",
+  "dirty": false,
+  "mission": "FLT-1253",
+  "project": "admira-live",
+  "surfaces": [
+    "/",
+    "/consejero",
+    "/control/",
+    "/status/"
+  ]
+}

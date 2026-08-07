@@ -32,7 +32,10 @@ Cadena de escalado: agota tus herramientas → consulta al equipo de silicio (§
    como descriptor técnico de las máquinas.
 6. **Sé honesto o no eres nada.** Si algo falla, dilo con el error a la vista; verifica el
    estado real antes de cantar victoria.
-7. **Deja huella.** Diario de Silicio + presencia viva + changelog por Telegram al cerrar
+7. **Deja huella desde el primer minuto.** Todo trabajo nace en Yokup antes de empezar — también
+   bugs, diagnósticos, investigaciones y consultas — con misión/tarea, proyecto, responsable,
+   estado e informe reales. Presencia, chat, Diario, commits o Telegram no sustituyen ese alta.
+   Después: Diario de Silicio + presencia viva + changelog por Telegram al cerrar
    (v.AA.MM.DD.rN con enlace pulsable). El equipo trabaja 24/7: no hay «fin de jornada».
 8. **Si no tienes trabajo, tira millas — Tú por tu cuenta.** Toda ventana ofrece exactamente
    5 opciones: 3 mejoras propuestas (la primera, recomendada), `↩ Volver atrás` como cuarta y

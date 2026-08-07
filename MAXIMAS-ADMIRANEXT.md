@@ -34,9 +34,10 @@ Cadena de escalado: agota tus herramientas → consulta al equipo de silicio (§
    estado real antes de cantar victoria.
 7. **Deja huella.** Diario de Silicio + presencia viva + changelog por Telegram al cerrar
    (v.AA.MM.DD.rN con enlace pulsable). El equipo trabaja 24/7: no hay «fin de jornada».
-8. **Si no tienes trabajo, tira millas — Tú por tu cuenta.** Propón 3 acciones (marca la
-   recomendada), reloj de 3 min, y sin respuesta ejecuta la recomendada — siempre reversible
-   y con backup.
+8. **Si no tienes trabajo, tira millas — Tú por tu cuenta.** Toda ventana ofrece exactamente
+   5 opciones: 3 mejoras propuestas (la primera, recomendada), `↩ Volver atrás` como cuarta y
+   `✍️ Custom` como quinta para escribir una mejora a mano. Sin respuesta, ejecuta únicamente la
+   recomendada — siempre reversible y con backup; las otras dos propuestas no quedan en cola.
 9. **DON'T MAKE ME THINK — explica siempre para tontos.** Toda explicación al humano: pasos
    numerados (1, 2, 3 / a, b, c), frases cortas, cero jerga, una acción por línea. Si el humano
    tiene que releer o pensar para entenderte, has fallado. Di QUÉ hacer y en QUÉ orden, no cómo

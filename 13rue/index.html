@@ -1,0 +1,572 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>La Incubadora v1.0 · 13 Rue del Percebe tecnológico — admira.live, camino de ieu.ai</title>
+<meta name="description" content="Un edificio en sección donde cada vivienda aloja a un agente autónomo de IA: el vecindario de 13 Rue del Percebe traducido a roles tech, hablándose por un bus de estado JSON. Camino de ieu.ai.">
+<meta name="robots" content="noindex">
+<meta name="theme-color" content="#efe7d3">
+<link rel="canonical" href="https://www.admira.live/13rue/">
+<style>
+  :root{
+    --papel:#efe7d3; --papel2:#e7dcc2; --tinta:#16305c; --tinta2:#2c477a;
+    --dim:#6a789a; --linea:rgba(22,48,92,.22); --linea2:rgba(22,48,92,.4);
+    --ambar:#e08a2e; --ambar-bg:rgba(224,138,46,.14);
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--papel);color:var(--tinta);font-family:var(--sans);line-height:1.55;
+    -webkit-font-smoothing:antialiased;overflow-x:hidden;
+    background-image:
+      linear-gradient(rgba(22,48,92,.035) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(22,48,92,.035) 1px,transparent 1px);
+    background-size:26px 26px;
+  }
+  .wrap{max-width:1120px;margin:0 auto;padding:0 20px}
+
+  /* ── cabecera tipo carátula del plano ── */
+  header{padding:46px 0 20px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:end}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--tinta2);margin:0 0 10px}
+  h1{font-size:clamp(2.4rem,7vw,4.4rem);line-height:.95;margin:0 0 8px;font-weight:800;letter-spacing:-.035em}
+  h1 small{display:block;font-size:clamp(1rem,2.4vw,1.4rem);font-weight:600;color:var(--tinta2);letter-spacing:-.01em;margin-top:8px}
+  .sello{border:1.5px solid var(--tinta);border-radius:4px;padding:10px 14px;font:600 11px/1.5 var(--mono);
+    text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;background:rgba(255,255,255,.25)}
+  .sello b{color:var(--ambar)}
+  .lede{max-width:720px;color:var(--tinta2);font-size:1.04rem;margin:8px 0 0}
+  .lede b{color:var(--tinta)}
+
+  /* ── el edificio ── */
+  .zona-titulo{font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--tinta2);
+    margin:36px 0 12px;display:flex;align-items:center;gap:12px}
+  .zona-titulo::after{content:"";flex:1;height:1px;background:var(--linea)}
+
+  .edificio{position:relative;margin:6px auto 0;max-width:760px}
+  .tejado{height:64px;background:
+    repeating-linear-gradient(90deg,transparent 0 14px,rgba(22,48,92,.10) 14px 15px),
+    linear-gradient(135deg,rgba(22,48,92,.06),rgba(22,48,92,.02));
+    border:1.5px solid var(--tinta);border-bottom:none;
+    clip-path:polygon(50% 0,100% 100%,0 100%)}
+  .planta{display:grid;grid-template-columns:1fr 62px 1fr;border:1.5px solid var(--tinta);border-top:none}
+  .planta.sotano{grid-template-columns:1fr;background:var(--papel2)}
+  .hueco{position:relative;padding:14px 15px;min-height:118px;border:none;background:transparent;
+    text-align:left;font-family:inherit;color:inherit;cursor:pointer;transition:background .18s}
+  .hueco+.hueco{border-left:1.5px solid var(--tinta)}
+  .hueco:hover{background:rgba(22,48,92,.06)}
+  .hueco:focus-visible{outline:2px solid var(--ambar);outline-offset:-4px}
+  .hueco .ref{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.06em;color:var(--tinta2)}
+  .hueco .rol{font-size:1.06rem;font-weight:700;letter-spacing:-.01em;margin:2px 0 4px;display:flex;align-items:center;gap:8px}
+  .hueco .rol .em{font-size:1.15rem;filter:saturate(.2) brightness(.7)}
+  .hueco .tech{font-family:var(--mono);font-size:11px;color:var(--dim)}
+  .hueco .par{font-size:.82rem;color:var(--tinta2);margin-top:8px;font-style:italic;opacity:.85}
+  .hueco .abrir{position:absolute;right:12px;bottom:10px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;
+    color:var(--ambar);opacity:0;transition:opacity .18s}
+  .hueco:hover .abrir,.hueco:focus-visible .abrir{opacity:1}
+
+  /* el hueco de la planta baja rotulado PB, como en el plano */
+  .shaft{border-left:1.5px solid var(--tinta);border-right:1.5px solid var(--tinta);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+    background:repeating-linear-gradient(45deg,transparent 0 6px,rgba(22,48,92,.05) 6px 7px);cursor:pointer;transition:background .18s}
+  .shaft:hover{background:rgba(22,48,92,.09)}
+  .shaft .em{font-size:1.3rem;filter:saturate(.2) brightness(.7)}
+  .shaft .lbl{font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;color:var(--tinta2);writing-mode:vertical-rl;transform:rotate(180deg)}
+  .base{height:12px;background:var(--tinta);margin:0 -2px}
+  .suelo{height:1px;background:var(--tinta);margin:2px 0 0;position:relative}
+  .suelo::before{content:"NIVEL DE CALLE";position:absolute;right:0;top:4px;font-family:var(--mono);font-size:8px;letter-spacing:.14em;color:var(--dim)}
+
+  /* ── ficha (panel lateral) ── */
+  .backdrop{position:fixed;inset:0;background:rgba(10,20,40,.42);backdrop-filter:blur(2px);opacity:0;pointer-events:none;transition:opacity .2s;z-index:40}
+  .backdrop.on{opacity:1;pointer-events:auto}
+  .ficha{position:fixed;top:0;right:0;height:100%;width:min(440px,92vw);background:var(--papel);
+    border-left:2px solid var(--tinta);transform:translateX(100%);transition:transform .24s cubic-bezier(.3,.7,.3,1);
+    z-index:41;overflow-y:auto;padding:26px 24px 40px;box-shadow:-20px 0 60px -30px rgba(10,20,40,.6)}
+  .ficha.on{transform:none}
+  .ficha .cerrar{position:absolute;top:16px;right:16px;border:1px solid var(--tinta);background:transparent;color:var(--tinta);
+    width:32px;height:32px;border-radius:6px;font-size:16px;cursor:pointer;line-height:1}
+  .ficha .cerrar:hover{background:var(--tinta);color:var(--papel)}
+  .ficha .fref{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--tinta2)}
+  .ficha h2{font-size:1.5rem;margin:4px 0 2px;letter-spacing:-.02em}
+  .ficha .frol{font-family:var(--mono);font-size:12.5px;color:var(--ambar);margin:0 0 18px}
+  .campo{border-top:1px solid var(--linea);padding:14px 0 4px}
+  .campo .k{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin:0 0 5px}
+  .campo .v{margin:0;font-size:.98rem}
+  .campo .v.grande{font-size:1.02rem;color:var(--tinta)}
+  .ejechip{display:inline-flex;gap:6px;margin-top:14px;font-family:var(--mono);font-size:10.5px}
+  .ejechip span{border:1px solid var(--linea2);border-radius:999px;padding:5px 10px;color:var(--tinta2)}
+  .campo .v.prompt{font-size:.94rem;line-height:1.55;background:rgba(22,48,92,.05);border-left:3px solid var(--ambar);border-radius:0 6px 6px 0;padding:11px 13px}
+  .chips{display:flex;flex-wrap:wrap;gap:6px}
+  .chips .chip{font-family:var(--mono);font-size:11px;padding:5px 9px;border-radius:6px;border:1px solid var(--linea2);color:var(--tinta2);background:rgba(255,255,255,.3)}
+  .chips .chip.veta{border-color:rgba(200,60,50,.4);color:#a83a2f;text-decoration:line-through;text-decoration-color:rgba(168,58,47,.5)}
+
+  /* ── bus JSON ── */
+  .duo{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:22px;margin-top:14px}
+  .card{border:1.5px solid var(--tinta);border-radius:6px;background:rgba(255,255,255,.28);padding:18px 20px}
+  .card h3{margin:0 0 10px;font-size:1.1rem}
+  .card p{color:var(--tinta2);margin:0 0 12px;font-size:.95rem}
+  .cadena{list-style:none;margin:0;padding:0;counter-reset:c}
+  .cadena li{position:relative;padding:8px 0 8px 34px;font-size:.92rem;color:var(--tinta);border-top:1px dashed var(--linea)}
+  .cadena li::before{counter-increment:c;content:counter(c);position:absolute;left:0;top:8px;width:22px;height:22px;
+    border:1.5px solid var(--tinta);border-radius:50%;font:700 11px/22px var(--mono);text-align:center;color:var(--tinta)}
+  pre.json{margin:0;font-family:var(--mono);font-size:12px;line-height:1.6;color:var(--tinta);overflow-x:auto;
+    background:rgba(22,48,92,.05);border-left:3px solid var(--ambar);border-radius:0 6px 6px 0;padding:12px 14px}
+  .k-json{color:var(--tinta2)} .s-json{color:var(--ambar)} .b-json{color:#2f8a4e}
+
+  /* ── matriz ── */
+  .matriz-box{border:1.5px solid var(--tinta);border-radius:6px;background:rgba(255,255,255,.28);padding:18px 20px;margin-top:14px}
+  .matriz-box svg{display:block;width:100%;height:auto;max-width:640px;margin:0 auto}
+  .diag{border:1.5px solid var(--tinta);border-radius:6px;padding:12px 16px;margin:14px auto 0;max-width:640px;
+    font-size:.92rem;color:var(--tinta);text-align:center;background:rgba(224,138,46,.08)}
+  .diag b{color:var(--ambar)}
+
+  /* ── fases ── */
+  .fases{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;margin-top:14px}
+  .fase{border:1.5px solid var(--tinta);border-radius:6px;padding:16px 16px 14px;background:rgba(255,255,255,.28);position:relative}
+  .fase .n{font-family:var(--mono);font-size:11px;letter-spacing:.12em;color:var(--tinta2)}
+  .fase h4{margin:4px 0 8px;font-size:1.02rem}
+  .fase p{margin:0;font-size:.88rem;color:var(--tinta2)}
+  .fase .badge{position:absolute;top:12px;right:12px;font:700 9px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;
+    padding:5px 8px;border-radius:999px}
+  .fase .badge.curso{background:var(--ambar-bg);color:var(--ambar);border:1px solid rgba(224,138,46,.4)}
+  .fase .badge.pend{background:rgba(22,48,92,.06);color:var(--dim);border:1px solid var(--linea)}
+
+  /* ── motor de estado ── */
+  .motor{border:1.5px solid var(--tinta);border-radius:6px;background:rgba(255,255,255,.28);padding:18px 20px}
+  .controles{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-bottom:16px}
+  .btn{font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.03em;border:1.5px solid var(--tinta);
+    background:var(--tinta);color:var(--papel);border-radius:6px;padding:9px 14px;cursor:pointer;transition:opacity .15s}
+  .btn:hover{opacity:.85}
+  .btn.ghost{background:transparent;color:var(--tinta)}
+  .btn.ghost:hover{background:rgba(22,48,92,.08);opacity:1}
+  .tick-lbl{font-family:var(--mono);font-size:11px;color:var(--dim);margin-left:auto}
+  .motor-grid{display:grid;grid-template-columns:minmax(0,260px) minmax(0,1fr);gap:20px}
+  .mini-k{font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);margin:0 0 10px}
+  .gauge{margin-bottom:12px}
+  .gauge .gk{display:flex;justify-content:space-between;font-family:var(--mono);font-size:11.5px;color:var(--tinta);margin-bottom:4px}
+  .gauge .gk b{color:var(--tinta)}
+  .gauge .gbar{height:7px;border-radius:4px;background:rgba(22,48,92,.08);overflow:hidden}
+  .gauge .gbar i{display:block;height:100%;border-radius:4px;transition:width .5s ease,background .5s}
+  .log{height:322px;overflow-y:auto;border:1px solid var(--linea);border-radius:6px;background:rgba(22,48,92,.04);padding:6px 8px;
+    display:flex;flex-direction:column-reverse}
+  .log .ev{font-family:var(--mono);font-size:12px;line-height:1.5;padding:5px 6px;border-bottom:1px dashed var(--linea);opacity:0;animation:aparece .3s forwards}
+  @keyframes aparece{to{opacity:1}}
+  .log .ev .who{font-weight:700}
+  .log .ev.anomaly .who{color:#a83a2f} .log .ev.gossip .who{color:#7a4fb0}
+  .log .ev.market .who{color:var(--ambar)} .log .ev.comic .who{color:var(--tinta2)}
+  .log .ev.calm .who{color:#2f8a4e} .log .ev.physical .who{color:#b06a1e}
+  .log .ev .st{color:var(--dim)}
+  .motor-nota{margin:16px 0 0;color:var(--tinta2);font-size:.9rem}
+  .motor-nota b{color:var(--tinta)}
+  .motor-nota .honesto{display:block;margin-top:6px;color:var(--dim);font-style:italic}
+  .hueco.act,.shaft.act{animation:parpadeo 1s ease}
+  @keyframes parpadeo{0%,100%{background:transparent}30%{background:rgba(224,138,46,.28)}}
+  .shaft.act{animation:parpadeoS 1s ease}
+  @keyframes parpadeoS{0%,100%{background:repeating-linear-gradient(45deg,transparent 0 6px,rgba(22,48,92,.05) 6px 7px)}30%{background:rgba(224,138,46,.35)}}
+  @media (max-width:720px){.motor-grid{grid-template-columns:1fr}.log{height:260px}}
+
+  .nota{border:1.5px solid var(--tinta);border-radius:6px;background:rgba(255,255,255,.24);padding:18px 20px;margin:36px 0 0;color:var(--tinta2);font-size:.92rem}
+  .nota b{color:var(--tinta)}
+  footer{padding:30px 0 70px;text-align:center;color:var(--tinta2);font-size:.9rem;margin-top:34px;border-top:1px solid var(--linea)}
+  footer a{color:var(--tinta);text-decoration:none;border-bottom:1px solid var(--linea2)}
+  .titleblock{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;color:var(--dim);margin-top:10px}
+
+  @media (max-width:720px){
+    header{grid-template-columns:1fr}
+    .duo,.fases{grid-template-columns:1fr}
+    .hueco{min-height:104px}
+    .planta{grid-template-columns:1fr 44px 1fr}
+  }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header>
+    <div>
+      <p class="eyebrow">admira.live · en obra · camino de ieu.ai</p>
+      <h1>La Incubadora <span style="color:var(--ambar)">v1.0</span>
+        <small>El vecindario de 13 Rue del Percebe, traducido a agentes de IA.</small></h1>
+    </div>
+    <div class="sello">Estado: <b>confidencial</b><br>AdmiraNeXT Core Team</div>
+  </header>
+  <p class="lede">Aquella portería funcionaba porque <b>no había que elegir a quién mirar</b>: doce
+    vecinos, doce manías, todo pasando a la vez en el mismo plano. Aquí cada vivienda aloja a un
+    <b>agente autónomo de IA</b> con su rol, su vicio y su vocabulario — y ninguno actúa solo: lo que
+    hace uno cambia a los demás por un <b>bus de estado común</b>. Su nombre será <b>ieu.ai</b>;
+    admira.live es la obra.</p>
+
+  <p class="zona-titulo">Plano transversal · pulsa una vivienda para abrir su ficha</p>
+  <div class="edificio" id="edificio" aria-label="Edificio en sección con doce viviendas">
+    <div class="tejado" aria-hidden="true"></div>
+    <div id="plantas"></div>
+    <div class="base" aria-hidden="true"></div>
+  </div>
+  <div class="suelo" aria-hidden="true"></div>
+
+  <p class="zona-titulo">Arquitectura técnica · intercambio de estado global (JSON)</p>
+  <div class="duo">
+    <div class="card">
+      <h3 id="bus-tit">El chismorreo es el protocolo</h3>
+      <p id="bus-desc"></p>
+      <ol class="cadena" id="bus-cadena"></ol>
+    </div>
+    <div class="card">
+      <h3>El evento que viaja</h3>
+      <p>El comportamiento de un agente se altera con las variables del sistema común en cada petición.</p>
+      <pre class="json" id="bus-json"></pre>
+    </div>
+  </div>
+
+  <p class="zona-titulo">Motor de estado · el bus en marcha · Fase 2 (MVP)</p>
+  <div class="motor">
+    <div class="controles">
+      <button class="btn" id="m-play">▶ Iniciar el edificio</button>
+      <button class="btn" id="m-stress">💥 Inyectar anomalía</button>
+      <button class="btn ghost" id="m-reset">↺ Reset</button>
+      <span class="tick-lbl" id="m-tick">en reposo</span>
+    </div>
+    <div class="motor-grid">
+      <div class="estado-panel">
+        <p class="mini-k">global_slack_state</p>
+        <div id="gauges"></div>
+      </div>
+      <div class="log-panel">
+        <p class="mini-k">flujo de eventos · lo último arriba</p>
+        <div class="log" id="m-log"></div>
+      </div>
+    </div>
+    <p class="motor-nota">Los doce agentes leen y escriben el mismo estado en cada tick, con la voz de su
+      Fase 1. La <b>cadena canónica del plano</b> emerge sola: el <b>Hacker</b> toca la nevera IoT, la
+      <b>Portería</b> lo chismorrea al estado global y el <b>Cripto-Café</b> sube el gas. Cuando un
+      agente actúa, <b>su vivienda parpadea arriba</b>. <span class="honesto">El estado vive en un <b>Durable Object</b> —un solo edificio para todos— y <b>el edificio empuja</b>: tickea con su propio reloj y difunde por <b>WebSocket</b>, así que la reacción llega al instante y sin sondear. El rótulo dice cuánta gente lo está mirando a la vez. Tres escalones por si algo falla: socket → sondeo → motor local.</span></p>
+  </div>
+
+  <p class="zona-titulo">Matriz del ecosistema · dónde vive cada agente</p>
+  <div class="matriz-box"><svg id="matriz" viewBox="0 0 640 420" role="img" aria-label="Dispersión de los agentes en dos ejes"></svg></div>
+  <p class="diag" id="diag"></p>
+
+  <p class="zona-titulo">Despliegue · próximos pasos</p>
+  <div class="fases" id="fases"></div>
+
+  <div class="nota">
+    <p><b>Sobre el homenaje.</b> La idea nace de <b>13 Rue del Percebe</b>, de Francisco Ibáñez, y su
+      obra es suya. Aquí se toma <b>la forma de mirar</b> —el corte vertical, lo simultáneo, el
+      vecindario— y se traducen sus arquetipos a roles del mundo startup; no se reproducen sus
+      dibujos ni sus personajes, y el edificio de esta página está construido desde cero. Si algún
+      día lleva ilustración, se encarga original o se pide permiso.</p>
+  </div>
+
+  <footer>
+    <div><b>La Incubadora v1.0</b> · el edificio en sección, camino de <b>ieu.ai</b></div>
+    <p class="titleblock">ADMIRA NEXT CORP. · admira.live/13rue · en obra · 9-ago-2026 · NeoMBP14 · MacBookPro14</p>
+    <div style="margin-top:10px"><a href="/">Volver a admira.live</a></div>
+  </footer>
+</div>
+
+<div class="backdrop" id="backdrop"></div>
+<aside class="ficha" id="ficha" role="dialog" aria-modal="true" aria-labelledby="ficha-nombre">
+  <button class="cerrar" id="cerrar" aria-label="Cerrar ficha">✕</button>
+  <p class="fref" id="ficha-ref"></p>
+  <h2 id="ficha-nombre"></h2>
+  <p class="frol" id="ficha-rol"></p>
+  <div class="campo"><p class="k">Paralelismo en la Rue</p><p class="v grande" id="ficha-par"></p></div>
+  <div class="campo"><p class="k">Rol tech</p><p class="v grande" id="ficha-tech"></p></div>
+  <div class="campo"><p class="k">Comportamiento de IA</p><p class="v" id="ficha-comp"></p></div>
+  <div id="ficha-prompt"></div>
+  <div class="ejechip" id="ficha-eje"></div>
+</aside>
+
+<script>
+(function(){
+  "use strict";
+  var DATA = null;
+
+  function esc(v){ return String(v==null?"":v).replace(/[&<>"]/g,function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+
+  var backdrop = document.getElementById("backdrop"), ficha = document.getElementById("ficha");
+  function abre(n){
+    document.getElementById("ficha-ref").textContent = n.piso + " · " + n.espacio;
+    document.getElementById("ficha-nombre").textContent = n.rol;
+    document.getElementById("ficha-rol").textContent = n.rol_tech;
+    document.getElementById("ficha-par").textContent = n.paralelismo;
+    document.getElementById("ficha-tech").textContent = n.rol_tech;
+    document.getElementById("ficha-comp").textContent = n.comportamiento;
+    // Fase 1: el system prompt que da voz al agente, su léxico y lo que le bloquea.
+    var extra = document.getElementById("ficha-prompt");
+    if(n.system_prompt){
+      var lex = (n.lexico||[]).map(function(t){return '<span class="chip">'+esc(t)+'</span>';}).join("");
+      var veta = (n.veta||[]).map(function(t){return '<span class="chip veta">'+esc(t)+'</span>';}).join("");
+      extra.innerHTML =
+        '<div class="campo"><p class="k">System prompt · Fase 1</p><p class="v prompt">'+esc(n.system_prompt)+'</p></div>' +
+        (lex?'<div class="campo"><p class="k">Léxico · así habla</p><div class="chips">'+lex+'</div></div>':'') +
+        (veta?'<div class="campo"><p class="k">Vocabulario vetado · no lo dice</p><div class="chips">'+veta+'</div></div>':'');
+    } else {
+      extra.innerHTML = '<div class="campo"><p class="k">System prompt · Fase 1</p><p class="v" style="color:var(--dim)">Aún sin voz: pendiente de Fase 1.</p></div>';
+    }
+    var ex = n.eje.x, ey = n.eje.y;
+    document.getElementById("ficha-eje").innerHTML =
+      '<span>' + (ex>=0?"Caos":"Orden") + '</span><span>' + (ey>=0?"Software · humo":"Hardware · físico") + '</span>';
+    backdrop.classList.add("on"); ficha.classList.add("on");
+  }
+  function cierra(){ backdrop.classList.remove("on"); ficha.classList.remove("on"); }
+  backdrop.addEventListener("click", cierra);
+  document.getElementById("cerrar").addEventListener("click", cierra);
+  document.addEventListener("keydown", function(e){ if(e.key==="Escape") cierra(); });
+
+  // Un botón-vivienda. El ascensor y el sótano no llevan «ref A/B».
+  function huecoHtml(n){
+    var ref = n.lado==="izq" ? n.espacio : n.lado==="der" ? n.espacio : n.espacio;
+    return '<button class="hueco" data-id="'+esc(n.id)+'">' +
+      '<div class="ref">'+esc(n.espacio)+'</div>' +
+      '<div class="rol"><span class="em">'+esc(n.icono)+'</span>'+esc(n.rol)+'</div>' +
+      '<div class="tech">'+esc(n.rol_tech)+'</div>' +
+      '<div class="par">↔ '+esc(n.paralelismo)+'</div>' +
+      '<span class="abrir">ABRIR ▸</span></button>';
+  }
+
+  function render(data){
+    var byPiso = {};
+    data.nodos.forEach(function(n){ (byPiso[n.piso]=byPiso[n.piso]||[]).push(n); });
+    var ascensor = data.nodos.filter(function(n){return n.id==="ascensor";})[0];
+    var orden = ["Ático","Planta 3","Planta 2","Planta 1","Nivel 0"];
+    var host = document.getElementById("plantas"), html = "";
+
+    orden.forEach(function(piso){
+      var par = (byPiso[piso]||[]).filter(function(n){return n.lado!=="centro";})
+                .sort(function(a,b){return (a.lado==="izq"?0:1)-(b.lado==="izq"?0:1);});
+      var izq = par[0], der = par[1];
+      var lbl = piso==="Nivel 0" ? "PB · ASCENSOR" : "ASCENSOR";
+      html += '<div class="planta">' +
+        (izq?huecoHtml(izq):'<div class="hueco"></div>') +
+        '<div class="shaft" data-id="ascensor" title="'+esc(ascensor.rol)+'"><span class="em">🛗</span><span class="lbl">'+esc(lbl)+'</span></div>' +
+        (der?huecoHtml(der):'<div class="hueco"></div>') +
+      '</div>';
+    });
+    // sótano, a todo el ancho como en el plano
+    var sot = (byPiso["Sótano"]||[])[0];
+    if(sot){ html += '<div class="planta sotano">'+huecoHtml(sot)+'</div>'; }
+    host.innerHTML = html;
+
+    host.addEventListener("click", function(e){
+      var b = e.target.closest("[data-id]"); if(!b) return;
+      var id = b.getAttribute("data-id");
+      var n = data.nodos.filter(function(x){return x.id===id;})[0];
+      if(n) abre(n);
+    });
+
+    // bus
+    document.getElementById("bus-tit").textContent = data.bus.titulo;
+    document.getElementById("bus-desc").textContent = data.bus.descripcion;
+    document.getElementById("bus-cadena").innerHTML = data.bus.cadena_ejemplo.map(function(s){
+      return '<li>'+esc(s)+'</li>'; }).join("");
+    var ev = data.bus.evento, lines = ["{"];
+    Object.keys(ev).forEach(function(k,i,arr){
+      var val = ev[k], vs = typeof val==="boolean"
+        ? '<span class="b-json">'+val+'</span>'
+        : "'"+'<span class="s-json">'+esc(val)+'</span>'+"'";
+      lines.push('  <span class="k-json">'+esc(k)+'</span>: '+vs+(i<arr.length-1?",":""));
+    });
+    lines.push("}");
+    document.getElementById("bus-json").innerHTML = lines.join("\n");
+
+    // matriz
+    var svg = document.getElementById("matriz"), W=640,H=420, cx=W/2, cy=H/2, R=138;
+    var m="", ejes = '<line x1="'+cx+'" y1="40" x2="'+cx+'" y2="'+(H-40)+'" stroke="'+"#16305c"+'" stroke-width="1.5" marker-end="url(#ar)"/>'
+      + '<line x1="40" y1="'+cy+'" x2="'+(W-40)+'" y2="'+cy+'" stroke="#16305c" stroke-width="1.5" marker-end="url(#ar)"/>';
+    var defs = '<defs><marker id="ar" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto"><path d="M0,0 L6,3 L0,6 Z" fill="#16305c"/></marker></defs>';
+    var etq = '<text x="'+cx+'" y="30" text-anchor="middle" font-family="'+"ui-monospace,monospace"+'" font-size="11" font-weight="700" fill="#16305c">'+esc(data.matriz.eje_y[1])+'</text>'
+      + '<text x="'+cx+'" y="'+(H-16)+'" text-anchor="middle" font-family="ui-monospace,monospace" font-size="11" font-weight="700" fill="#16305c">'+esc(data.matriz.eje_y[0])+'</text>'
+      + '<text x="30" y="'+(cy-8)+'" font-family="ui-monospace,monospace" font-size="11" font-weight="700" fill="#16305c">'+esc(data.matriz.eje_x[0])+'</text>'
+      + '<text x="'+(W-30)+'" y="'+(cy-8)+'" text-anchor="end" font-family="ui-monospace,monospace" font-size="11" font-weight="700" fill="#16305c">'+esc(data.matriz.eje_x[1])+'</text>';
+    // cuadrante caliente inferior-derecha
+    var hot = '<rect x="'+cx+'" y="'+cy+'" width="'+(R+30)+'" height="'+(R+20)+'" fill="none" stroke="#e08a2e" stroke-width="1.5" stroke-dasharray="6 5" opacity=".8"/>';
+    // Reparto anti-solape: si dos puntos caen cerca en Y, se separan las etiquetas
+    // en vertical. Los rótulos de la derecha se anclan a la izquierda del punto para
+    // no salirse del lienzo (Puerto Deliveries y Caos absoluto se pisaban).
+    var puntos = data.nodos.map(function(n){ return { n:n, x:cx+n.eje.x*R, y:cy-n.eje.y*R }; });
+    puntos.sort(function(a,b){ return a.y-b.y; });
+    for(var i=1;i<puntos.length;i++){ var prevLy=puntos[i-1].ly||puntos[i-1].y; if((puntos[i].ly||puntos[i].y)-prevLy<17) puntos[i].ly=prevLy+17; }
+    var pts = puntos.map(function(p){
+      var n=p.n, x=p.x, y=p.y, ly=p.ly||y;
+      // etiqueta hacia el lado con más sitio; si el punto está muy a la derecha, texto a la izquierda
+      var haciaIzq = n.eje.x>0.15;
+      var dx = haciaIzq ? -12 : 12, anchor = haciaIzq ? "end" : "start";
+      var tx = x+dx, w = n.rol.length*6.3 + 8, rx = anchor==="end" ? tx-w+4 : tx-4;
+      // Fondo de papel bajo cada rótulo: en el racimo denso los textos se rozan, y
+      // sin esto uno tapa a otro y no se lee ninguno. Con el halo, siempre legible.
+      return '<g><rect x="'+rx.toFixed(0)+'" y="'+(ly-8).toFixed(0)+'" width="'+w.toFixed(0)+'" height="15" fill="#efe7d3" opacity=".88" rx="2"/>'
+        + '<circle cx="'+x.toFixed(0)+'" cy="'+y.toFixed(0)+'" r="6" fill="#efe7d3" stroke="#16305c" stroke-width="2"/>'
+        + '<text x="'+tx.toFixed(0)+'" y="'+(ly+4).toFixed(0)+'" text-anchor="'+anchor+'" font-family="ui-monospace,monospace" font-size="11" fill="#16305c">'+esc(n.rol)+'</text></g>';
+    }).join("");
+    svg.innerHTML = defs + hot + ejes + etq + pts;
+    document.getElementById("diag").innerHTML = '<b>Diagnóstico:</b> ' + esc(data.matriz.diagnostico);
+
+    // Fase 1 (los 12 con voz), Fase 2 (el motor de abajo corre) y Fase 3 (esta página): las tres con MVP en pie.
+    document.getElementById("fases").innerHTML = data.fases.map(function(f){
+      return '<div class="fase"><span class="badge curso">hecha · MVP</span>' +
+        '<div class="n">Fase '+f.n+'</div><h4>'+esc(f.titulo)+'</h4><p>'+esc(f.detalle)+'</p></div>';
+    }).join("");
+
+    motor(data);
+  }
+
+  // ── MOTOR DE ESTADO (Fase 2, MVP en el navegador) ────────────────────────
+  // Los 12 agentes leen y escriben el MISMO objeto de estado en cada tick, con la
+  // voz de su Fase 1. La cadena del plano —Hacker → Portería → Cripto-Café— no está
+  // guionizada: emerge de que cada uno reacciona al estado que dejó el anterior.
+  function motor(data){
+    var byId = {}; data.nodos.forEach(function(n){ byId[n.id]=n; });
+    var log = document.getElementById("m-log"), tickLbl = document.getElementById("m-tick"),
+        gaugesEl = document.getElementById("gauges");
+    var timer = null, t = 0, S;
+    var GDEF = [
+      {k:"fridge", lbl:"fridge_temp", u:"°C", max:28, warn:function(v){return v>10;}},
+      {k:"panic",  lbl:"panic_level", u:"",   max:100, warn:function(v){return v>45;}},
+      {k:"gas",    lbl:"gas_fees",    u:"gwei",max:120, warn:function(v){return v>60;}},
+      {k:"banda",  lbl:"bandwidth_free", u:"%", max:100, inv:true, warn:function(v){return v<40;}},
+      {k:"azufre", lbl:"biohazard",   u:"",   max:100, warn:function(v){return v>40;}}
+    ];
+    function reset(){ S={fridge:4,panic:0,gas:18,banda:100,azufre:0,tostadora:false,factura:false}; t=0; log.innerHTML=""; tickLbl.textContent="en reposo"; pintaGauges(); }
+    function pintaGauges(){
+      gaugesEl.innerHTML = GDEF.map(function(g){
+        var v=S[g.k], pct=g.inv?v:Math.max(0,Math.min(100,v/g.max*100));
+        var col=g.warn(v)?"#a83a2f":"#2f8a4e";
+        return '<div class="gauge"><div class="gk"><span>'+g.lbl+'</span><b>'+(Math.round(v*10)/10)+' '+g.u+'</b></div>'+
+          '<div class="gbar"><i style="width:'+pct.toFixed(0)+'%;background:'+col+'"></i></div></div>';
+      }).join("");
+    }
+    function pulso(id){ var el=document.querySelector('[data-id="'+id+'"]'); if(!el)return; el.classList.remove("act"); void el.offsetWidth; el.classList.add("act"); }
+    function ev(id,kind,txt){
+      var n=byId[id]; pulso(id);
+      var d=document.createElement("div"); d.className="ev "+kind;
+      d.innerHTML='<span class="who">'+esc(n?n.rol:id)+'</span> <span class="st">· '+esc(txt)+'</span>';
+      log.appendChild(d); while(log.children.length>60) log.removeChild(log.firstChild);
+    }
+    var R=function(p){return Math.random()<p;};
+    function tick(){
+      t++; tickLbl.textContent="tick "+t+" · en marcha"; var anom=false;
+      if(R(S.panic<20?0.4:0.22)){ S.fridge+=6+Math.random()*8; S.tostadora=true; ev("hacker-gris","anomaly","toca fridge_temp="+S.fridge.toFixed(0)+"°C y la tostadora envía spam. «por probar»"); anom=true; }
+      if(R(0.2)){ S.azufre+=12+Math.random()*14; ev("deeptech-biotech","anomaly","el cultivo suelta azufre en el sistema. «margen aceptable»"); anom=true; }
+      if(R(0.2)){ S.banda-=14+Math.random()*16; ev("coliving-nomadas","anomaly","roba banda ancha del pasillo para una videollamada gritando"); anom=true; }
+      if(R(0.15)){ S.panic+=6; ev("pet-tech","physical","unidad fugada: un gato-robot corre por el pasillo"); }
+      if(anom || S.panic>30){ S.panic=Math.min(100,S.panic+(anom?18:4)); ev("porteria","gossip","publica en global_slack_state: anomaly_detected · panic="+S.panic.toFixed(0)); }
+      var tgt=18+S.panic*0.9; if(Math.abs(tgt-S.gas)>3){ S.gas+=(tgt-S.gas)*0.6; ev("cripto-cafe","market","lee el pánico y sube gas_fees a "+S.gas.toFixed(0)+" gwei"); }
+      if(S.panic>55 && R(0.5)) ev("imperio-nocode","comic","pánico: «que nadie toque ese campo o se cae el Zap»");
+      if((S.gas>50||S.factura) && R(0.4)){ S.factura=false; ev("guru-ia","comic","llega la factura de la API → desvía a un webinar de pago"); }
+      if(S.panic>60 && R(0.45)){ S.panic=Math.max(0,S.panic-8); ev("sotano-foss","calm","«esto lo arregla un script de bash sin dependencias»"); }
+      if(R(0.13)) ev("ascensor","comic","rechaza un pitch: «humo detectado: sinergia»");
+      if(S.azufre>40 && R(0.4)) ev("estudio-uxui","comic","más preocupado por si el color de la alerta respeta el sistema de diseño");
+      if(S.panic>50 && R(0.3)) ev("puerto-deliveries","physical","reporta retrasos de entrega por la anomalía");
+      S.panic*=0.90; S.fridge+=(4-S.fridge)*0.15; S.banda+=(100-S.banda)*0.10; S.azufre*=0.88; if(S.panic<8)S.tostadora=false;
+      pintaGauges();
+    }
+    function pintaGaugesDe(st){ S=st; pintaGauges(); }
+
+    // ── MODO COMPARTIDO ──────────────────────────────────────────────────────
+    // El estado de verdad vive en un Durable Object (incubadora-bus): un solo
+    // edificio para todos los visitantes. La página deja de simular y se vuelve un
+    // ESPEJO: sondea el estado y pinta lo que el edificio real está haciendo. Si el
+    // worker no responde, cae al motor local para no quedarse en blanco.
+    var BUS = "https://incubadora-bus.csilvasantin.workers.dev";
+    var WSU = BUS.replace(/^http/, "ws") + "/ws";
+    var vistoSeq = -1, modo = "conectando", ws = null, aforo = 1;
+    function badge(txt){ tickLbl.textContent = txt; }
+    function pintaEventosRemotos(logArr){
+      // Por seq monotónico, no por tick: en un mismo tick pasan varios eventos, y
+      // filtrar por tick se comía los del tick en curso (la anomalía inyectada).
+      logArr.forEach(function(e){ if(e.seq>vistoSeq){ ev(e.id, e.kind, e.txt); vistoSeq=e.seq; } });
+    }
+    function rotulo(tick){
+      return "en vivo · tick "+tick+" · "+aforo+(aforo===1?" mirando":" mirando a la vez");
+    }
+
+    // ── EL EDIFICIO EMPUJA (WebSocket) ───────────────────────────────────────
+    // El DO tickea con su propio alarm y difunde el delta. La página ya no pregunta:
+    // escucha. Si el socket no se puede abrir o se cae, se vuelve al sondeo, y si
+    // tampoco hay worker, al motor local: tres escalones, nunca una pantalla muerta.
+    function conecta(){
+      return new Promise(function(res, rej){
+        var s;
+        try { s = new WebSocket(WSU); } catch(e){ return rej(e); }
+        var abierto = false;
+        var guarda = setTimeout(function(){ if(!abierto){ try{s.close();}catch(_){ } rej(new Error("timeout")); } }, 6000);
+        s.onopen = function(){ abierto = true; clearTimeout(guarda); ws = s; modo = "vivo"; res(true); };
+        s.onerror = function(){ clearTimeout(guarda); if(!abierto) rej(new Error("ws error")); };
+        s.onclose = function(){
+          if(modo === "vivo"){ modo = "sondeo"; badge("conexión perdida · volviendo al sondeo");
+            if(timer){ clearInterval(timer); timer = setInterval(function(){ sondea().catch(function(){}); }, 1500); } }
+        };
+        s.onmessage = function(m){
+          var d; try { d = JSON.parse(m.data); } catch(_) { return; }
+          if(d.t === "aforo"){ aforo = d.vecinos || 1; return; }
+          if(d.vecinos) aforo = d.vecinos;
+          if(d.t === "hola"){ log.innerHTML=""; var min=(d.log[0]&&d.log[0].seq)||0; vistoSeq=min-1; pintaEventosRemotos(d.log); }
+          else if(d.t === "tick"){ pintaEventosRemotos(d.eventos||[]); }
+          pintaGaugesDe(d.state);
+          badge(rotulo(d.tick));
+        };
+      });
+    }
+    function sondea(){
+      return fetch(BUS+"/state", {cache:"no-store"}).then(function(r){
+        if(!r.ok) throw new Error("HTTP "+r.status); return r.json();
+      }).then(function(d){
+        if(modo!=="sondeo"){ modo="sondeo"; log.innerHTML=""; var min=(d.log[0]&&d.log[0].seq)||0; vistoSeq=min-1; }
+        pintaEventosRemotos(d.log);
+        pintaGaugesDe(d.state);
+        badge("estado compartido · tick "+d.tick+" · sondeo (respaldo)");
+        return true;
+      });
+    }
+    function play(){
+      if(ws || timer) return;
+      document.getElementById("m-play").textContent="⏸ Pausar";
+      badge("conectando al edificio…");
+      // Tres escalones: WebSocket (el edificio empuja) → sondeo → motor local.
+      conecta().catch(function(){
+        return sondea().then(function(){
+          timer=setInterval(function(){ sondea().catch(function(){}); }, 1500);
+        });
+      }).catch(function(){
+        modo="local"; badge("worker no disponible · motor local (respaldo)");
+        timer=setInterval(tick,1400); tick();
+      });
+    }
+    function pause(){
+      if(ws){ try{ ws.close(); }catch(_){ } ws=null; }
+      clearInterval(timer); timer=null; modo="pausa";
+      document.getElementById("m-play").textContent="▶ Conectar al edificio";
+      badge("desconectado · el edificio sigue sin ti");
+    }
+    function stress(){
+      if(modo==="local"){ S.fridge=26; S.tostadora=true; S.azufre=70; S.banda=25; S.panic=40; ev("hacker-gris","anomaly","💥 anomalía masiva inyectada (local)"); pintaGauges(); if(!timer) play(); return; }
+      // UNA sola vía: el POST también difunde por los sockets abiertos, así que
+      // llega a todos igual. Tener dos caminos solo añadía un sitio donde fallar.
+      fetch(BUS+"/stress", {method:"POST"}).then(function(){
+        if(!ws) sondea().catch(function(){});
+      }).catch(function(){});
+      if(!ws && !timer) play();
+    }
+    document.getElementById("m-play").textContent="▶ Conectar al edificio";
+    document.getElementById("m-play").addEventListener("click",function(){ timer?pause():play(); });
+    document.getElementById("m-stress").addEventListener("click",stress);
+    document.getElementById("m-reset").addEventListener("click",function(){ pause(); reset(); vistoSeq=-1; modo="conectando"; badge("en reposo · pulsa Conectar al edificio"); });
+    reset(); badge("en reposo · pulsa Conectar al edificio");
+    // /13rue/?play conecta solo (demo + captura del estado compartido en marcha).
+    if(/(^|[?&])play\b/.test(location.search)){ play(); }
+  }
+
+  fetch("/13rue/incubadora.json", {cache:"no-store"}).then(function(r){
+    if(!r.ok) throw new Error("HTTP "+r.status); return r.json();
+  }).then(function(d){ DATA=d; render(d); })
+    .catch(function(e){
+      document.getElementById("plantas").innerHTML =
+        '<div class="planta"><div class="hueco"><div class="rol">No se pudo leer el plano</div>' +
+        '<div class="tech">'+esc(e.message)+' — mejor decirlo que enseñar un edificio inventado.</div></div></div>';
+    });
+})();
+</script>
+</body>
+</html>

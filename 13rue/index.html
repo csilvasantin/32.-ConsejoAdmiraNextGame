@@ -65,6 +65,18 @@
   .hueco .abrir{position:absolute;right:12px;bottom:10px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;
     color:var(--ambar);opacity:0;transition:opacity .18s}
   .hueco:hover .abrir,.hueco:focus-visible .abrir{opacity:1}
+  /* La escena vive AL FONDO de la vivienda: el texto manda, el dibujo acompaña.
+     Al pasar por encima sube de intensidad, como si te asomaras a esa ventana. */
+  .hueco .esc{position:absolute;right:8px;bottom:6px;width:84px;height:80px;opacity:.34;
+    pointer-events:none;transition:opacity .25s,transform .25s}
+  .hueco:hover .esc{opacity:.62;transform:scale(1.04)}
+  .hueco .esc .viva{transform-origin:center;transition:opacity .3s}
+  /* Cuando el agente actúa en el bus, su escena se enciende y lo vivo se mueve. */
+  .hueco.act .esc{opacity:.95}
+  .hueco.act .esc .viva{animation:latido 1s ease}
+  @keyframes latido{0%,100%{opacity:1;transform:translateY(0)}35%{opacity:.35;transform:translateY(-2px)}70%{opacity:1;transform:translateY(1px)}}
+  @media (prefers-reduced-motion:reduce){.hueco.act .esc .viva{animation:none}}
+  @media (max-width:720px){.hueco .esc{width:62px;height:60px;opacity:.26}}
 
   /* el hueco de la planta baja rotulado PB, como en el plano */
   .shaft{border-left:1.5px solid var(--tinta);border-right:1.5px solid var(--tinta);
@@ -315,10 +327,90 @@
   document.getElementById("cerrar").addEventListener("click", cierra);
   document.addEventListener("keydown", function(e){ if(e.key==="Escape") cierra(); });
 
+
+  // ── LAS ESCENAS ──────────────────────────────────────────────────────────
+  // Doce viviendas dibujadas desde cero. No se copia a Ibáñez: se toma su forma
+  // de mirar —el corte, el desorden simultáneo, el detalle que cuenta un chiste—
+  // y se dibuja original, en el trazo del plano (tinta marino sobre papel).
+  // Cada escena tiene piezas con clase .viva que se mueven cuando ese agente
+  // actúa en el bus; el resto es mobiliario quieto.
+  function escena(id){
+    var T='stroke="#16305c" fill="none" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"';
+    var F='fill="rgba(22,48,92,.14)" stroke="#16305c" stroke-width="1.4"';
+    var A='fill="#e08a2e" stroke="#16305c" stroke-width="1.2"';
+    var E={
+      // Buhardilla: el gurú y su cartel de curso, con la pila de facturas creciendo
+      "guru-ia":'<path d="M6 62 L34 22 L62 62" '+T+'/><rect x="14" y="40" width="34" height="22" '+F+'/>'+
+        '<circle cx="26" cy="34" r="5" '+T+'/><path d="M26 39 v10 M21 44 h10" '+T+'/>'+
+        '<rect class="viva" x="34" y="30" width="26" height="14" rx="2" '+A+'/><text x="37" y="40" font-size="7" fill="#16305c" font-family="ui-monospace,monospace">10x</text>'+
+        '<path class="viva" d="M52 62 h10 M52 58 h10 M52 54 h10" '+T+' opacity=".8"/>',
+      // Tejado: drones esquivando palomas
+      "puerto-deliveries":'<path d="M4 58 h64" '+T+'/><path d="M14 58 v-8 h8 v8" '+T+'/>'+
+        '<g class="viva"><path d="M30 26 h14 M37 26 v6" '+T+'/><rect x="32" y="32" width="10" height="7" '+A+'/></g>'+
+        '<circle class="viva" cx="56" cy="20" r="3" '+F+'/><path d="M52 20 q4 -4 8 0" '+T+'/>'+
+        '<path d="M8 44 q6 -6 12 0" '+T+' opacity=".7"/>',
+      // Estudio UX/UI: pared de post-its y una silla vacía
+      "estudio-uxui":'<rect x="8" y="16" width="52" height="30" '+T+'/>'+
+        '<rect class="viva" x="13" y="21" width="9" height="9" '+A+'/><rect x="26" y="21" width="9" height="9" '+F+'/>'+
+        '<rect x="39" y="21" width="9" height="9" '+F+'/><rect class="viva" x="13" y="33" width="9" height="9" '+F+'/>'+
+        '<rect x="26" y="33" width="9" height="9" '+A+' opacity=".6"/>'+
+        '<path d="M20 62 v-8 h10 v8 M25 54 v-6" '+T+'/>',
+      // Imperio No-Code: castillo de naipes con hilos
+      "imperio-nocode":'<path class="viva" d="M12 58 L20 38 L28 58 M24 58 L32 38 L40 58 M36 58 L44 38 L52 58" '+T+'/>'+
+        '<path d="M16 48 h16 M28 48 h16" '+T+' opacity=".7"/>'+
+        '<path class="viva" d="M56 20 q-8 8 -4 18" '+T+' stroke-dasharray="3 3"/><circle cx="56" cy="18" r="3" '+A+'/>',
+      // Hacker: a oscuras, pantalla encendida y cables a la nevera del vecino
+      "hacker-gris":'<rect x="6" y="6" width="60" height="56" fill="rgba(22,48,92,.30)" stroke="none"/>'+
+        '<rect class="viva" x="16" y="26" width="24" height="16" rx="2" fill="#e08a2e" stroke="#16305c" stroke-width="1.4"/>'+
+        '<path d="M22 42 v6 h12 v-6" '+T+'/><circle cx="28" cy="20" r="4" '+T+'/>'+
+        '<path class="viva" d="M40 34 q14 2 18 -12" '+T+' stroke-dasharray="2 3"/>'+
+        '<rect x="54" y="14" width="10" height="14" '+F+'/>',
+      // Pet-Tech: prototipos por el suelo y uno fugándose
+      "pet-tech":'<rect x="10" y="44" width="14" height="10" rx="2" '+F+'/><circle cx="13" cy="56" r="2.5" '+T+'/><circle cx="21" cy="56" r="2.5" '+T+'/>'+
+        '<g class="viva"><path d="M40 52 h10 l3 -6 h4" '+T+'/><circle cx="42" cy="56" r="2.5" '+T+'/><circle cx="50" cy="56" r="2.5" '+T+'/><path d="M57 46 v-5" '+T+'/></g>'+
+        '<path d="M6 62 h60" '+T+'/><circle class="viva" cx="30" cy="24" r="4" '+A+'/><path d="M30 28 v6" '+T+'/>',
+      // DeepTech: la bañera burbujeante y el matraz
+      "deeptech-biotech":'<path d="M10 40 h34 v14 a6 6 0 0 1 -6 6 h-22 a6 6 0 0 1 -6 -6 z" '+T+'/>'+
+        '<circle class="viva" cx="20" cy="36" r="3" '+F+'/><circle class="viva" cx="30" cy="31" r="2.4" '+F+'/><circle class="viva" cx="37" cy="35" r="2" '+F+'/>'+
+        '<path d="M52 20 v10 l-6 14 h14 l-6 -14 v-10 z" '+T+'/><path class="viva" d="M48 40 h14" stroke="#e08a2e" stroke-width="3" stroke-linecap="round"/>'+
+        '<path d="M48 18 h10" '+T+'/>',
+      // Coliving: literas llenas y una videollamada a gritos
+      "coliving-nomadas":'<path d="M12 18 v42 M40 18 v42 M12 34 h28 M12 52 h28" '+T+'/>'+
+        '<circle cx="20" cy="28" r="3.5" '+T+'/><circle cx="20" cy="46" r="3.5" '+T+'/>'+
+        '<rect class="viva" x="46" y="24" width="16" height="12" rx="2" '+A+'/>'+
+        '<path class="viva" d="M64 26 q4 4 0 8" '+T+'/><path class="viva" d="M67 23 q7 7 0 14" '+T+' opacity=".6"/>'+
+        '<path d="M6 62 h62" '+T+'/>',
+      // Portería: mostrador, la portera y el tablón de avisos
+      "porteria":'<rect x="10" y="38" width="34" height="20" '+F+'/><circle cx="20" cy="28" r="5" '+T+'/>'+
+        '<path d="M20 33 v6" '+T+'/><rect x="50" y="16" width="16" height="20" '+T+'/>'+
+        '<path class="viva" d="M53 22 h10 M53 26 h10 M53 30 h7" '+T+'/>'+
+        '<path class="viva" d="M44 30 q8 -6 6 -12" '+T+' stroke-dasharray="2 3"/><circle class="viva" cx="46" cy="32" r="2.4" '+A+'/>',
+      // Cripto-Café: barra, taza humeante y el cartelito del precio
+      "cripto-cafe":'<path d="M8 54 h52" '+T+'/><path d="M20 40 h16 v10 a4 4 0 0 1 -4 4 h-8 a4 4 0 0 1 -4 -4 z" '+T+'/>'+
+        '<path d="M36 43 q6 0 6 4 t-6 4" '+T+'/>'+
+        '<path class="viva" d="M25 36 q3 -5 0 -9 M31 36 q3 -5 0 -9" '+T+' opacity=".8"/>'+
+        '<rect class="viva" x="44" y="20" width="18" height="12" rx="2" '+A+'/><text x="47" y="29" font-size="7" fill="#16305c" font-family="ui-monospace,monospace">gas↑</text>',
+      // Ascensor: cabina con su cola y el cartel de rechazo
+      "ascensor":'<rect x="18" y="12" width="30" height="44" '+T+'/><path d="M33 12 v44" '+T+' stroke-dasharray="4 4"/>'+
+        '<circle cx="26" cy="30" r="4" '+T+'/><circle cx="40" cy="30" r="4" '+T+'/>'+
+        '<rect class="viva" x="22" y="40" width="22" height="10" rx="2" '+A+'/>'+
+        '<path d="M6 56 h56" '+T+'/><path class="viva" d="M52 24 l8 8 M60 24 l-8 8" stroke="#a83a2f" stroke-width="2" stroke-linecap="round" fill="none"/>',
+      // Sótano: la alcantarilla, el ThinkPad y la terminal encendida
+      "sotano-foss":'<path d="M6 24 h60" '+T+' stroke-dasharray="6 4"/>'+
+        '<ellipse cx="52" cy="24" rx="9" ry="3" '+F+'/>'+
+        '<rect x="14" y="38" width="26" height="16" rx="1.5" '+T+'/>'+
+        '<rect class="viva" x="17" y="41" width="20" height="10" fill="#16305c" stroke="none"/>'+
+        '<path class="viva" d="M20 46 h5" stroke="#5ef2a0" stroke-width="1.6"/>'+
+        '<path d="M10 58 h34" '+T+'/><circle cx="27" cy="32" r="4" '+T+'/>'
+    };
+    return '<svg class="esc" viewBox="0 0 72 68" aria-hidden="true">'+(E[id]||'')+'</svg>';
+  }
+
   // Un botón-vivienda. El ascensor y el sótano no llevan «ref A/B».
   function huecoHtml(n){
     var ref = n.lado==="izq" ? n.espacio : n.lado==="der" ? n.espacio : n.espacio;
     return '<button class="hueco" data-id="'+esc(n.id)+'">' +
+      escena(n.id) +
       '<div class="ref">'+esc(n.espacio)+'</div>' +
       '<div class="rol"><span class="em">'+esc(n.icono)+'</span>'+esc(n.rol)+'</div>' +
       '<div class="tech">'+esc(n.rol_tech)+'</div>' +
@@ -541,13 +633,19 @@
       badge("desconectado · el edificio sigue sin ti");
     }
     function stress(){
-      if(modo==="local"){ S.fridge=26; S.tostadora=true; S.azufre=70; S.banda=25; S.panic=40; ev("hacker-gris","anomaly","💥 anomalía masiva inyectada (local)"); pintaGauges(); if(!timer) play(); return; }
-      // UNA sola vía: el POST también difunde por los sockets abiertos, así que
-      // llega a todos igual. Tener dos caminos solo añadía un sitio donde fallar.
-      fetch(BUS+"/stress", {method:"POST"}).then(function(){
-        if(!ws) sondea().catch(function(){});
-      }).catch(function(){});
+      // Sin condiciones previas y sin depender de `modo`: el botón SIEMPRE dispara
+      // el POST, que es lo único que de verdad mueve el edificio compartido (y ya
+      // difunde por los sockets abiertos). La versión anterior se ramificaba antes
+      // de llamar y en la interfaz no llegaba a lanzarse nunca: el botón parecía
+      // muerto mientras el mismo POST a mano funcionaba. Menos listo, más fiable.
       if(!ws && !timer) play();
+      fetch(BUS+"/stress", {method:"POST"})
+        .then(function(){ if(!ws) sondea().catch(function(){}); })
+        .catch(function(){
+          // Sin worker: al menos que el visitante vea algo pasar.
+          S.fridge=26; S.tostadora=true; S.azufre=70; S.banda=25; S.panic=40;
+          ev("hacker-gris","anomaly","💥 anomalía masiva inyectada (local, sin worker)"); pintaGauges();
+        });
     }
     document.getElementById("m-play").textContent="▶ Conectar al edificio";
     document.getElementById("m-play").addEventListener("click",function(){ timer?pause():play(); });

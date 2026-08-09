@@ -186,6 +186,10 @@
   .log .ev.market .who{color:var(--ambar)} .log .ev.comic .who{color:var(--tinta2)}
   .log .ev.calm .who{color:#2f8a4e} .log .ev.physical .who{color:#b06a1e}
   .log .ev .st{color:var(--dim)}
+  /* Lo REAL no se mezcla con lo simulado: fondo propio, borde y marca. Un panel
+     que confunde la ficción con lo cierto no sirve para mirar la casa. */
+  .log .ev.real{background:rgba(47,138,78,.10);border-left:3px solid #2f8a4e;border-radius:0 6px 6px 0;padding-left:8px}
+  .log .ev.real .who{color:#2f8a4e}
   .motor-nota{margin:16px 0 0;color:var(--tinta2);font-size:.9rem}
   .motor-nota b{color:var(--tinta)}
   .motor-nota .honesto{display:block;margin-top:6px;color:var(--dim);font-style:italic}
@@ -261,7 +265,7 @@
         <div id="gauges"></div>
       </div>
       <div class="log-panel">
-        <p class="mini-k">flujo de eventos · lo último arriba</p>
+        <p class="mini-k">flujo de eventos · lo último arriba · <span style="color:#2f8a4e">en verde, lo REAL de la casa</span></p>
         <div class="log" id="m-log"></div>
       </div>
     </div>

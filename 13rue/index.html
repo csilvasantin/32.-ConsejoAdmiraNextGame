@@ -115,6 +115,19 @@
   .campo .v.prompt{font-size:.94rem;line-height:1.55;background:rgba(22,48,92,.05);border-left:3px solid var(--ambar);border-radius:0 6px 6px 0;padding:11px 13px}
   .chips{display:flex;flex-wrap:wrap;gap:6px}
   .chips .chip{font-family:var(--mono);font-size:11px;padding:5px 9px;border-radius:6px;border:1px solid var(--linea2);color:var(--tinta2);background:rgba(255,255,255,.3)}
+  .hablar-caja{display:flex;gap:6px;margin:2px 0 0}
+  .hablar-caja input{flex:1;min-width:0;font-family:inherit;font-size:.92rem;padding:9px 11px;color:var(--tinta);
+    background:rgba(255,255,255,.5);border:1.5px solid var(--linea2);border-radius:6px}
+  .hablar-caja input:focus{outline:none;border-color:var(--ambar)}
+  .hablar-caja button{font-family:var(--mono);font-size:11.5px;font-weight:700;border:1.5px solid var(--tinta);
+    background:var(--tinta);color:var(--papel);border-radius:6px;padding:9px 12px;cursor:pointer;white-space:nowrap}
+  .hablar-caja button:disabled{opacity:.5;cursor:default}
+  .hilo{margin-top:10px;display:flex;flex-direction:column;gap:8px}
+  .hilo .tu{align-self:flex-end;max-width:88%;font-size:.9rem;background:rgba(22,48,92,.08);
+    border-radius:10px 10px 2px 10px;padding:8px 11px}
+  .hilo .el{align-self:flex-start;max-width:92%;font-size:.94rem;background:rgba(224,138,46,.12);
+    border-left:3px solid var(--ambar);border-radius:0 10px 10px 0;padding:9px 12px;white-space:pre-wrap}
+  .hilo .el.pensando{opacity:.6;font-style:italic}
   .chips .chip.veta{border-color:rgba(200,60,50,.4);color:#a83a2f;text-decoration:line-through;text-decoration-color:rgba(168,58,47,.5)}
 
   /* ── bus JSON ── */
@@ -290,13 +303,21 @@
   <div class="campo"><p class="k">Rol tech</p><p class="v grande" id="ficha-tech"></p></div>
   <div class="campo"><p class="k">Comportamiento de IA</p><p class="v" id="ficha-comp"></p></div>
   <div id="ficha-prompt"></div>
+  <div class="campo hablar">
+    <p class="k">Habla con él · contesta en su voz</p>
+    <div class="hablar-caja">
+      <input id="hablar-txt" type="text" maxlength="240" placeholder="Pregúntale algo…" autocomplete="off">
+      <button id="hablar-btn" type="button">Preguntar</button>
+    </div>
+    <div id="hablar-hilo" class="hilo"></div>
+  </div>
   <div class="ejechip" id="ficha-eje"></div>
 </aside>
 
 <script>
 (function(){
   "use strict";
-  var DATA = null;
+  var DATA = null, ESTADO = null;
 
   function esc(v){ return String(v==null?"":v).replace(/[&<>"]/g,function(c){
     return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
@@ -324,8 +345,53 @@
     var ex = n.eje.x, ey = n.eje.y;
     document.getElementById("ficha-eje").innerHTML =
       '<span>' + (ex>=0?"Caos":"Orden") + '</span><span>' + (ey>=0?"Software · humo":"Hardware · físico") + '</span>';
+    // Cada consejero abre su ficha con el hilo en blanco: hablas con ÉL, no con
+    // el de antes. El estado del edificio viaja con la pregunta, así que contesta
+    // distinto según cómo esté la casa en ese momento.
+    abierto = n;
+    document.getElementById("hablar-hilo").innerHTML = "";
+    document.getElementById("hablar-txt").value = "";
+    document.getElementById("hablar-txt").placeholder = "Pregúntale a " + (n.rol||"") + "…";
     backdrop.classList.add("on"); ficha.classList.add("on");
   }
+  var abierto = null;
+  (function cableaHablar(){
+    var BUSH = "https://incubadora-bus.csilvasantin.workers.dev/hablar";
+    var txt = document.getElementById("hablar-txt"),
+        btn = document.getElementById("hablar-btn"),
+        hilo = document.getElementById("hablar-hilo");
+    function pon(clase, t){
+      var d = document.createElement("div"); d.className = clase; d.textContent = t;
+      hilo.appendChild(d); hilo.scrollIntoView({block:"nearest"}); return d;
+    }
+    function pregunta(){
+      var q = txt.value.trim();
+      if(!q || !abierto || !abierto.system_prompt) return;
+      txt.value = ""; btn.disabled = true;
+      pon("tu", q);
+      var esperando = pon("el pensando", "…");
+      fetch(BUSH, {
+        method:"POST", headers:{"content-type":"application/json"},
+        body: JSON.stringify({
+          agente:{ system_prompt: abierto.system_prompt, lexico: abierto.lexico, veta: abierto.veta },
+          pregunta: q,
+          // El estado real del edificio: por eso el Cripto-Café contesta distinto
+          // con el pánico por las nubes que con la casa en calma.
+          estado: (typeof ESTADO !== "undefined" && ESTADO) ? ESTADO : {}
+        })
+      }).then(function(r){ return r.json(); }).then(function(d){
+        esperando.className = "el";
+        esperando.textContent = d && d.ok ? d.dice
+          : "(no ha contestado: " + ((d && d.error) || "sin respuesta") + ")";
+      }).catch(function(){
+        esperando.className = "el";
+        esperando.textContent = "(no se le pudo preguntar; el edificio sigue en pie)";
+      }).then(function(){ btn.disabled = false; txt.focus(); });
+    }
+    btn.addEventListener("click", pregunta);
+    txt.addEventListener("keydown", function(e){ if(e.key === "Enter") pregunta(); });
+  })();
+
   function cierra(){ backdrop.classList.remove("on"); ficha.classList.remove("on"); }
   backdrop.addEventListener("click", cierra);
   document.getElementById("cerrar").addEventListener("click", cierra);
@@ -558,7 +624,7 @@
       S.panic*=0.90; S.fridge+=(4-S.fridge)*0.15; S.banda+=(100-S.banda)*0.10; S.azufre*=0.88; if(S.panic<8)S.tostadora=false;
       pintaGauges();
     }
-    function pintaGaugesDe(st){ S=st; pintaGauges(); }
+    function pintaGaugesDe(st){ S=st; ESTADO=st; pintaGauges(); }
 
     // ── MODO COMPARTIDO ──────────────────────────────────────────────────────
     // El estado de verdad vive en un Durable Object (incubadora-bus): un solo

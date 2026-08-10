@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.2026.07.24.r1 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google independiente, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.10.08.2026.r5.18:07" />
+<meta name="admiranext-version" content="AdmiraNeXT v.10.08.2026.r6.18:11" />
     <script src="/admira-bar.js?v=20260713-r36"></script>
     <script src="/auth-gate.js?v=20260708-authfix"></script>
 <meta charset="UTF-8">
@@ -869,7 +869,15 @@ async function loadFleet(){
       // estado reportado (para pintar en la tarjeta) — de TODAS las máquinas, online o no
       const st=(m.status||m.currentFocus||'').toString().trim();
       if(st){ [m.id, m.name, m.fqdn].forEach(v=>{ if(!v) return;
-        const k=_norm(String(v).split('.')[0].replace(/^admira-?/,'')); if(k.length>=4) info[k]={status:st, at:(m.profileUpdatedAt||m.lastSeen||0)}; }); }
+        const k=_norm(String(v).split('.')[0].replace(/^admira-?/,'')); if(k.length>=4){ const _ls=+m.lastSeen||0, _pu=+m.profileUpdatedAt||0;
+          // EL «HACE X» ES EL LATIDO, NO LA FICHA (Carlos, 10-08-2026). Aqui
+          // profileUpdatedAt mandaba sobre lastSeen, asi que la tarjeta cantaba
+          // cuando alguien EDITO la ficha como si fuera la ultima senal del equipo:
+          // el MacBookPro16 salia «hace 558h» respondiendo por SSH al instante y el
+          // MacBookPro14 salia «ahora» llevando 1036h sin latido. Invertido justo
+          // donde mas duele: en un panel de mando, la tarjeta que parece viva es a
+          // la que le mandas un comando. Si solo hay ficha se usa, pero se DICE.
+          info[k]={status:st, at:(_ls||_pu), atKind:(_ls?'latido':'ficha')}; } }); }
       // frescura para marcar online (señal distribuida)
       let ls=m.lastSeen; if(!ls) return;
       const sec = ls>1e12 ? ls/1000 : ls;           // epoch en ms o s → s
@@ -892,7 +900,8 @@ function agentNowHtml(m){ const e=agentEntry(m); if(!e||!e.status) return '';
   const age=at?(Date.now()-at):0, mins=Math.round(age/60000);
   const stale=at && age>900000;                              // >15 min sin reportar → rancio
   const ageTxt=at?(mins<1?'ahora':(mins<60?('hace '+mins+'m'):('hace '+Math.round(mins/60)+'h'))):'';
-  return '<div class="agentnow'+(stale?' stale':'')+'" title="En qué está el agente ahora (Mandamiento 11 · report cada 5 min)">🔧 '+String(e.status).replace(/</g,'&lt;')+(ageTxt?(' <span class="agentnow-age">· '+ageTxt+'</span>'):'')+'</div>'; }
+  const kind=(e.atKind==='ficha')?' (ficha)':'';
+  return '<div class="agentnow'+(stale?' stale':'')+'" title="En qué está el agente ahora (Mandamiento 11 · report cada 5 min)">🔧 '+String(e.status).replace(/</g,'&lt;')+(ageTxt?(' <span class="agentnow-age" title="'+(e.atKind==='ficha'?'Ultima edicion de la ficha: este equipo no reporta latido':'Ultimo latido del agente')+'">· '+ageTxt+kind+'</span>'):'')+'</div>'; }
 /* ── MODO DEGRADADO — ningún relay de control responde ─────────────────────
    Fleet Mesh ya ha probado todas las rutas. Solo entonces reconstruye el
    tablero desde admira-fleet (Cloudflare). Esto NO afirma que las máquinas

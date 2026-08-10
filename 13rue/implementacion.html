@@ -1,0 +1,319 @@
+<!-- La casa de los productos — admira.tv en sección, con la misma planta que la
+     Incubadora. Allí cada vivienda aloja a un agente; aquí, a una subapp.
+     El número del censo ES el piso: reordenar la prioridad realquila el edificio. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Implementación · La casa de los productos · admira.tv</title>
+<meta name="description" content="Las 34 subapps de admira.tv dibujadas como un edificio en sección, al modo de 13 Rue del Percebe: una vivienda por producto, con la luz encendida sólo en las que de verdad emiten.">
+<link rel="canonical" href="https://www.admira.live/13rue/implementacion.html">
+<style>
+  :root{
+    --papel:#efe7d3; --papel2:#e7dcc2; --tinta:#16305c; --tinta2:#2c477a;
+    --dim:#6a789a; --linea:rgba(22,48,92,.22); --linea2:rgba(22,48,92,.4);
+    --ambar:#e08a2e; --ambar-bg:rgba(224,138,46,.14);
+    --luz:#2f8a4e; --obra:#c9761c; --vacio:#8b93a8;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--papel);color:var(--tinta);font-family:var(--sans);line-height:1.55;
+    -webkit-font-smoothing:antialiased;overflow-x:hidden;
+    background-image:
+      linear-gradient(rgba(22,48,92,.035) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(22,48,92,.035) 1px,transparent 1px);
+    background-size:26px 26px;
+  }
+  .wrap{max-width:1120px;margin:0 auto;padding:0 20px 80px}
+  a{color:var(--tinta)}
+
+  header{padding:38px 0 18px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:end}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--tinta2);margin:0 0 10px}
+  h1{font-size:clamp(2.1rem,6vw,3.6rem);line-height:.98;margin:0 0 8px;font-weight:800;letter-spacing:-.035em}
+  h1 small{display:block;font-size:clamp(.95rem,2.2vw,1.25rem);font-weight:600;color:var(--tinta2);letter-spacing:-.01em;margin-top:8px}
+  .sello{border:1.5px solid var(--tinta);border-radius:4px;padding:10px 14px;font:600 11px/1.5 var(--mono);
+    text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;background:rgba(255,255,255,.25)}
+  .sello b{color:var(--ambar)}
+  .lede{max-width:730px;color:var(--tinta2);font-size:1.04rem;margin:10px 0 0}
+  .lede b{color:var(--tinta)}
+
+  .volver{display:inline-flex;gap:8px;align-items:center;font-family:var(--mono);font-size:11px;
+    letter-spacing:.12em;text-transform:uppercase;text-decoration:none;color:var(--tinta2);margin-top:22px}
+  .volver:hover{color:var(--ambar)}
+
+  /* recuento: el estado del edificio de un vistazo */
+  .censo{display:grid;grid-template-columns:repeat(auto-fit,minmax(180px,1fr));gap:14px;margin:26px 0 6px}
+  .censo div{border:1.5px solid var(--tinta);padding:14px 16px;background:rgba(255,255,255,.28)}
+  .censo .n{font-family:var(--mono);font-size:1.9rem;font-weight:700;line-height:1;display:block}
+  .censo .t{font-size:.8rem;color:var(--tinta2);margin-top:7px;display:block;line-height:1.35}
+  .censo .luz .n{color:var(--luz)} .censo .obra .n{color:var(--obra)} .censo .vacio .n{color:var(--vacio)}
+
+  .zona-titulo{font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--tinta2);
+    margin:38px 0 12px;display:flex;align-items:center;gap:12px}
+  .zona-titulo::after{content:"";flex:1;height:1px;background:var(--linea)}
+
+  .edificio{position:relative;margin:6px auto 0;max-width:820px}
+  .tejado{height:58px;background:
+    repeating-linear-gradient(90deg,transparent 0 14px,rgba(22,48,92,.10) 14px 15px),
+    linear-gradient(135deg,rgba(22,48,92,.06),rgba(22,48,92,.02));
+    border:1.5px solid var(--tinta);border-bottom:none;
+    clip-path:polygon(50% 0,100% 100%,0 100%)}
+  .planta{display:grid;grid-template-columns:1fr 58px 1fr;border:1.5px solid var(--tinta);border-top:none}
+  .planta.sotano{background:var(--papel2)}
+
+  .hueco{position:relative;padding:12px 14px;min-height:112px;border:none;background:transparent;
+    text-align:left;font-family:inherit;color:inherit;cursor:pointer;transition:background .18s;width:100%}
+  .hueco+.hueco{border-left:1.5px solid var(--tinta)}
+  .hueco:hover{background:rgba(22,48,92,.06)}
+  .hueco:focus-visible{outline:2px solid var(--ambar);outline-offset:-4px}
+  .hueco .num{font-family:var(--mono);font-size:10.5px;font-weight:700;letter-spacing:.06em;color:var(--tinta2)}
+  .hueco .nom{font-size:1.02rem;font-weight:700;letter-spacing:-.012em;margin:2px 0 3px;padding-right:76px}
+  .hueco .fam{font-family:var(--mono);font-size:10.5px;color:var(--dim);padding-right:76px}
+  .hueco .slug{font-family:var(--mono);font-size:10px;color:var(--dim);opacity:.75;margin-top:6px;padding-right:76px}
+  .hueco .abrir{position:absolute;right:11px;bottom:9px;font-family:var(--mono);font-size:10px;letter-spacing:.1em;
+    color:var(--ambar);opacity:0;transition:opacity .18s}
+  .hueco:hover .abrir,.hueco:focus-visible .abrir{opacity:1}
+
+  /* LA VENTANA ES EL ESTADO. No hay treinta y cuatro dibujos distintos: el dibujo
+     es la propia verdad de cada producto. Encendida si emite, a media luz si está
+     en obras, y con el cartel de SE ALQUILA si es sólo una página de escaparate. */
+  .ventana{position:absolute;right:9px;top:11px;width:64px;height:62px;pointer-events:none}
+  .ventana svg{display:block;width:100%;height:100%}
+  /* El cartel cuelga DEBAJO de la ventana, no encima: colocado por `bottom` caía
+     sobre el marco y «SE ALQUILA» se leía cruzado con los cristales. */
+  .hueco .cartel{position:absolute;right:9px;top:78px;font-family:var(--mono);font-size:8px;
+    letter-spacing:.1em;color:var(--vacio);border:1px solid currentColor;padding:1px 4px;transform:rotate(-4deg);
+    background:rgba(255,255,255,.5);white-space:nowrap}
+  .hueco.emite .cartel{color:var(--luz);transform:none}
+  .hueco.parcial .cartel{color:var(--obra);transform:rotate(-2deg)}
+
+  .shaft{border-left:1.5px solid var(--tinta);border-right:1.5px solid var(--tinta);
+    display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
+    background:repeating-linear-gradient(45deg,transparent 0 6px,rgba(22,48,92,.05) 6px 7px)}
+  .shaft .lbl{font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;color:var(--tinta2);
+    writing-mode:vertical-rl;transform:rotate(180deg);white-space:nowrap}
+  .base{height:12px;background:var(--tinta);margin:0 -2px}
+  .suelo{height:1px;background:var(--tinta);margin:2px 0 0;position:relative}
+  .suelo::before{content:"NIVEL DE CALLE";position:absolute;right:0;top:4px;font-family:var(--mono);font-size:8px;letter-spacing:.14em;color:var(--dim)}
+
+  /* ficha lateral, igual que en la Incubadora */
+  .backdrop{position:fixed;inset:0;background:rgba(10,20,40,.42);backdrop-filter:blur(2px);opacity:0;pointer-events:none;transition:opacity .2s;z-index:40}
+  .backdrop.on{opacity:1;pointer-events:auto}
+  .ficha{position:fixed;top:0;right:0;height:100%;width:min(440px,92vw);background:var(--papel);
+    border-left:2px solid var(--tinta);transform:translateX(100%);transition:transform .24s cubic-bezier(.3,.7,.3,1);
+    z-index:50;overflow-y:auto;padding:26px 24px 40px}
+  .ficha.on{transform:translateX(0)}
+  .ficha h2{margin:6px 0 4px;font-size:1.5rem;letter-spacing:-.02em}
+  .ficha .ref{font-family:var(--mono);font-size:11px;letter-spacing:.1em;color:var(--tinta2);text-transform:uppercase}
+  .ficha .cerrar{position:absolute;top:14px;right:16px;background:none;border:1.5px solid var(--tinta);
+    border-radius:3px;font:700 12px var(--mono);padding:4px 9px;cursor:pointer;color:var(--tinta)}
+  .ficha dl{margin:18px 0 0;display:grid;grid-template-columns:auto 1fr;gap:9px 14px;font-size:.9rem}
+  .ficha dt{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);padding-top:3px}
+  .ficha dd{margin:0}
+  .estado-chip{display:inline-block;font-family:var(--mono);font-size:10px;letter-spacing:.09em;text-transform:uppercase;
+    border:1px solid currentColor;padding:2px 7px;border-radius:2px}
+  .estado-chip.emite{color:var(--luz)} .estado-chip.parcial{color:var(--obra)} .estado-chip.escaparate{color:var(--vacio)}
+  .ficha .porque{margin-top:18px;padding-top:14px;border-top:1px solid var(--linea);font-size:.88rem;color:var(--tinta2)}
+  .ficha .ir{display:inline-block;margin-top:16px;font-family:var(--mono);font-size:11px;letter-spacing:.1em;
+    text-transform:uppercase;border:1.5px solid var(--tinta);padding:8px 12px;text-decoration:none}
+  .ficha .ir:hover{background:var(--ambar-bg);border-color:var(--ambar)}
+
+  .pie{margin-top:44px;padding-top:20px;border-top:1px solid var(--linea);font-size:.88rem;color:var(--tinta2)}
+  .pie b{color:var(--tinta)}
+  .fuente{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:10px}
+  @media (max-width:720px){
+    header{grid-template-columns:1fr}
+    .planta{grid-template-columns:1fr 40px 1fr}
+    .ventana{width:48px;height:46px}
+    .hueco{min-height:104px}
+    .hueco .cartel{top:62px}
+    .hueco .nom,.hueco .fam,.hueco .slug{padding-right:58px}
+  }
+  @media (prefers-reduced-motion:reduce){.ficha{transition:none}}
+</style>
+
+<div class="wrap">
+
+<header>
+  <div>
+    <p class="eyebrow">La Incubadora · anexo</p>
+    <h1>La casa de los productos<small>admira.tv en sección: una vivienda por subapp, y la luz encendida sólo donde de verdad se emite</small></h1>
+  </div>
+  <div class="sello">Censo <b>01–34</b><br>10 ago 2026</div>
+</header>
+
+<p class="lede">En 13 Rue del Percebe cada piso guardaba una historia y todas pasaban a la vez en el
+  mismo plano. La Incubadora hizo lo mismo con doce agentes. Este anexo lo hace con los productos:
+  <b>las treinta y cuatro subapps de admira.tv, una por vivienda</b>. El número del censo es el piso,
+  así que <b>reordenar la prioridad realquila el edificio</b>: subir un producto es mudarlo más arriba.</p>
+
+<a class="volver" href="/13rue/">◂ Volver a la Incubadora</a>
+
+<div class="censo" id="censo"></div>
+
+<p class="zona-titulo">Plano transversal · pulsa una vivienda para abrir su ficha</p>
+
+<div class="edificio">
+  <div class="tejado"></div>
+  <div id="plantas"></div>
+  <div class="base"></div>
+  <div class="suelo"></div>
+</div>
+
+<div class="pie">
+  <p><b>La ventana dice la verdad.</b> No hay treinta y cuatro dibujos distintos: el dibujo es el
+    estado medido de cada producto. Ventana encendida si toca un backend real y emite; a media luz si
+    está a medias; y con el cartel de <b>SE ALQUILA</b> si es una página de escaparate sin producto
+    detrás. Hoy el edificio está casi vacío, y eso es exactamente lo que había que poder ver de un vistazo.</p>
+  <p class="fuente" id="fuente">cargando censo…</p>
+</div>
+
+</div>
+
+<div class="backdrop" id="backdrop"></div>
+<aside class="ficha" id="ficha" role="dialog" aria-modal="true" aria-labelledby="ficha-nom">
+  <button class="cerrar" id="cerrar" aria-label="Cerrar ficha">ESC</button>
+  <p class="ref" id="ficha-ref"></p>
+  <h2 id="ficha-nom"></h2>
+  <dl>
+    <dt>Estado</dt><dd id="ficha-estado"></dd>
+    <dt>Familia</dt><dd id="ficha-familia"></dd>
+    <dt>Nº en el censo</dt><dd id="ficha-num"></dd>
+    <dt>Carpeta</dt><dd id="ficha-slug"></dd>
+    <dt>Vitrina</dt><dd id="ficha-vitrina"></dd>
+  </dl>
+  <p class="porque" id="ficha-porque"></p>
+  <a class="ir" id="ficha-ir" href="#" target="_blank" rel="noopener">Abrir en admira.tv ▸</a>
+</aside>
+
+<script>
+(function(){
+  "use strict";
+  var esc = function(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
+
+  var TEXTO = {
+    emite:      { cartel:"EMITIENDO",  chip:"emite",
+      porque:"Toca un backend real y responde. Es de las pocas viviendas con alguien dentro." },
+    parcial:    { cartel:"EN OBRAS",   chip:"parcial",
+      porque:"Llama a algún API pero no cierra el circuito. Hay obra empezada y sin rematar." },
+    escaparate: { cartel:"SE ALQUILA", chip:"escaparate",
+      porque:"Página de producto sin producto detrás: no llama a ningún API. Está bien hecha y vacía." }
+  };
+
+  // La ventana: tres estados, un solo dibujo parametrizado.
+  function ventana(estado){
+    var L="#2f8a4e", O="#c9761c", V="#8b93a8";
+    var marco = '<rect x="6" y="6" width="52" height="50" fill="none" stroke="#16305c" stroke-width="1.6"/>'
+              + '<line x1="32" y1="6" x2="32" y2="56" stroke="#16305c" stroke-width="1.2"/>'
+              + '<line x1="6" y1="31" x2="58" y2="31" stroke="#16305c" stroke-width="1.2"/>';
+    var vidrio="";
+    if(estado==="emite"){
+      vidrio = '<rect x="7.5" y="7.5" width="49" height="47" fill="'+L+'" opacity=".30"/>'
+             + '<rect x="9" y="9" width="21" height="20" fill="'+L+'" opacity=".55"/>'
+             + '<rect x="34" y="33" width="21" height="20" fill="'+L+'" opacity=".45"/>';
+    } else if(estado==="parcial"){
+      vidrio = '<rect x="7.5" y="7.5" width="49" height="47" fill="'+O+'" opacity=".16"/>'
+             + '<rect x="9" y="33" width="21" height="20" fill="'+O+'" opacity=".48"/>';
+    } else {
+      vidrio = '<rect x="7.5" y="7.5" width="49" height="47" fill="'+V+'" opacity=".10"/>'
+             + '<line x1="9" y1="9" x2="55" y2="53" stroke="'+V+'" stroke-width="1" opacity=".5"/>'
+             + '<line x1="55" y1="9" x2="9" y2="53" stroke="'+V+'" stroke-width="1" opacity=".5"/>';
+    }
+    return '<svg viewBox="0 0 64 62" aria-hidden="true">'+vidrio+marco+'</svg>';
+  }
+
+  function huecoHtml(v){
+    var t = TEXTO[v.estado] || TEXTO.escaparate;
+    return '<button class="hueco '+esc(v.estado)+'" data-slug="'+esc(v.slug)+'">'
+      + '<div class="ventana">'+ventana(v.estado)+'</div>'
+      + '<div class="num">'+esc(String(v.n).padStart(2,"0"))+'</div>'
+      + '<div class="nom">'+esc(v.name_es)+'</div>'
+      + '<div class="fam">'+esc(v.familia)+'</div>'
+      + '<div class="slug">/'+esc(v.slug)+'/</div>'
+      + '<span class="cartel">'+esc(t.cartel)+'</span>'
+      + '<span class="abrir">ABRIR ▸</span></button>';
+  }
+
+  function render(doc){
+    var porSlug = {};
+    doc.viviendas.forEach(function(v){ porSlug[v.slug]=v; });
+
+    var html = "";
+    doc.plantas.forEach(function(p){
+      var izq = porSlug[p.viviendas[0]], der = porSlug[p.viviendas[1]];
+      html += '<div class="planta'+(p.piso==="Sótano"?" sotano":"")+'">'
+        + (izq?huecoHtml(izq):'<div class="hueco"></div>')
+        + '<div class="shaft"><span class="lbl">'+esc(p.piso.toUpperCase())+'</span></div>'
+        + (der?huecoHtml(der):'<div class="hueco"></div>')
+        + '</div>';
+    });
+    document.getElementById("plantas").innerHTML = html;
+
+    var c = {emite:0,parcial:0,escaparate:0};
+    doc.viviendas.forEach(function(v){ c[v.estado] = (c[v.estado]||0)+1; });
+    document.getElementById("censo").innerHTML =
+        '<div class="luz"><span class="n">'+c.emite+'</span><span class="t">viviendas ocupadas · emiten de verdad</span></div>'
+      + '<div class="obra"><span class="n">'+c.parcial+'</span><span class="t">en obras · circuito sin cerrar</span></div>'
+      + '<div class="vacio"><span class="n">'+c.escaparate+'</span><span class="t">se alquila · escaparate sin producto</span></div>'
+      + '<div><span class="n">'+doc.plantas.length+'</span><span class="t">plantas, del ático al sótano</span></div>';
+
+    document.getElementById("plantas").addEventListener("click", function(e){
+      var b = e.target.closest("[data-slug]"); if(!b) return;
+      abre(porSlug[b.getAttribute("data-slug")]);
+    });
+  }
+
+  var ficha=document.getElementById("ficha"), backdrop=document.getElementById("backdrop");
+  function abre(v){
+    if(!v) return;
+    var t = TEXTO[v.estado] || TEXTO.escaparate;
+    document.getElementById("ficha-ref").textContent = v.alias;
+    document.getElementById("ficha-nom").textContent = v.name_es;
+    document.getElementById("ficha-estado").innerHTML = '<span class="estado-chip '+esc(t.chip)+'">'+esc(t.cartel)+'</span>';
+    document.getElementById("ficha-familia").textContent = v.familia;
+    document.getElementById("ficha-num").textContent = String(v.n).padStart(2,"0")+" de 34";
+    document.getElementById("ficha-slug").textContent = "/"+v.slug+"/";
+    document.getElementById("ficha-vitrina").textContent = v.en_vitrina
+      ? "sí, sale en el catálogo público" : "no, fuera del catálogo público";
+    document.getElementById("ficha-porque").textContent = t.porque;
+    document.getElementById("ficha-ir").href = "https://admira.tv/"+v.slug+"/";
+    ficha.classList.add("on"); backdrop.classList.add("on");
+    document.getElementById("cerrar").focus();
+  }
+  function cierra(){ ficha.classList.remove("on"); backdrop.classList.remove("on"); }
+  document.getElementById("cerrar").addEventListener("click", cierra);
+  backdrop.addEventListener("click", cierra);
+  document.addEventListener("keydown", function(e){ if(e.key==="Escape") cierra(); });
+
+  // DE DÓNDE SALEN LOS DATOS, Y QUE SE VEA. El censo vive en el repo de
+  // admira.tv; aquí hay una copia. Se intenta primero el original —para que el
+  // edificio no envejezca solo— y si no se llega, se usa la copia Y SE DICE.
+  // Un respaldo silencioso es el que te hace mirar un plano viejo creyéndolo nuevo.
+  var fuente = document.getElementById("fuente");
+  function local(motivo){
+    fetch("./implementacion.json").then(function(r){ return r.json(); }).then(function(doc){
+      render(doc);
+      fuente.textContent = "censo: copia local del " + doc.meta.copia_del
+        + " · no se pudo leer el original (" + motivo + ") · fuente: " + doc.meta.fuente;
+    }).catch(function(){ fuente.textContent = "no se pudo cargar el censo."; });
+  }
+  fetch("https://admira.tv/subapps.json", {mode:"cors"})
+    .then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
+    .then(function(viviendas){
+      fetch("./implementacion.json").then(function(r){ return r.json(); }).then(function(doc){
+        doc.viviendas = viviendas;                     // el orden manda: viene del original
+        var plantas=[], n=viviendas.length;
+        for(var i=0;i<n;i+=2){
+          var idx=i/2, piso = idx===0 ? "Ático" : (i+2>=n ? "Sótano" : "Planta "+((n>>1)-idx));
+          plantas.push({piso:piso, viviendas:[viviendas[i].slug, viviendas[i+1] && viviendas[i+1].slug]});
+        }
+        doc.plantas = plantas;
+        render(doc);
+        fuente.textContent = "censo vivo, leído de admira.tv/subapps.json";
+      });
+    })
+    .catch(function(e){ local(String(e.message||e)); });
+})();
+</script>

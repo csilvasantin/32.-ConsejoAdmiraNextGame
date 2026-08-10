@@ -1,0 +1,472 @@
+{
+  "meta": {
+    "titulo": "La casa de los productos",
+    "subtitulo": "admira.tv en sección: una vivienda por subapp",
+    "fuente": "https://admira.tv/subapps.json",
+    "copia_del": "2026-08-10",
+    "nota": "El número de la subapp es su piso. Reordenar el censo realquila el edificio."
+  },
+  "plantas": [
+    {
+      "piso": "Ático",
+      "viviendas": [
+        "digitalsignage",
+        "videoanalytics"
+      ]
+    },
+    {
+      "piso": "Planta 16",
+      "viviendas": [
+        "adcelerate",
+        "player"
+      ]
+    },
+    {
+      "piso": "Planta 15",
+      "viviendas": [
+        "parrilla",
+        "playlists"
+      ]
+    },
+    {
+      "piso": "Planta 14",
+      "viviendas": [
+        "remotecontrol",
+        "contentcatalogue"
+      ]
+    },
+    {
+      "piso": "Planta 13",
+      "viviendas": [
+        "wall",
+        "dashboard"
+      ]
+    },
+    {
+      "piso": "Planta 12",
+      "viviendas": [
+        "radioanalytics",
+        "apps"
+      ]
+    },
+    {
+      "piso": "Planta 11",
+      "viviendas": [
+        "mcp",
+        "socialwifi"
+      ]
+    },
+    {
+      "piso": "Planta 10",
+      "viviendas": [
+        "gamification",
+        "queuemanager"
+      ]
+    },
+    {
+      "piso": "Planta 9",
+      "viviendas": [
+        "roombooking",
+        "accesscontrol"
+      ]
+    },
+    {
+      "piso": "Planta 8",
+      "viviendas": [
+        "pushnotifications",
+        "presenta"
+      ]
+    },
+    {
+      "piso": "Planta 7",
+      "viviendas": [
+        "audiobranding",
+        "olfactorymarketing"
+      ]
+    },
+    {
+      "piso": "Planta 6",
+      "viviendas": [
+        "augmentedreality",
+        "virtualreality"
+      ]
+    },
+    {
+      "piso": "Planta 5",
+      "viviendas": [
+        "xr",
+        "virtualassistant"
+      ]
+    },
+    {
+      "piso": "Planta 4",
+      "viviendas": [
+        "iotmanager",
+        "nvidia"
+      ]
+    },
+    {
+      "piso": "Planta 3",
+      "viviendas": [
+        "xpaceos",
+        "yarig"
+      ]
+    },
+    {
+      "piso": "Planta 2",
+      "viviendas": [
+        "usuarios",
+        "comprar"
+      ]
+    },
+    {
+      "piso": "Sótano",
+      "viviendas": [
+        "support",
+        "help"
+      ]
+    }
+  ],
+  "viviendas": [
+    {
+      "n": 1,
+      "alias": "01.- Cartelería digital",
+      "slug": "digitalsignage",
+      "name_es": "Cartelería digital",
+      "familia": "Emisión",
+      "estado": "escaparate",
+      "en_vitrina": true,
+      "ruta": "/digitalsignage/"
+    },
+    {
+      "n": 2,
+      "alias": "02.- Analítica de vídeo",
+      "slug": "videoanalytics",
+      "name_es": "Analítica de vídeo",
+      "familia": "Medición",
+      "estado": "escaparate",
+      "en_vitrina": true,
+      "ruta": "/videoanalytics/"
+    },
+    {
+      "n": 3,
+      "alias": "03.- ADcelerate",
+      "slug": "adcelerate",
+      "name_es": "ADcelerate",
+      "familia": "Programática",
+      "estado": "parcial",
+      "en_vitrina": true,
+      "ruta": "/adcelerate/"
+    },
+    {
+      "n": 4,
+      "alias": "04.- Reproductor",
+      "slug": "player",
+      "name_es": "Reproductor",
+      "familia": "Emisión",
+      "estado": "escaparate",
+      "en_vitrina": false,
+      "ruta": "/player/"
+    },
+    {
+      "n": 5,
+      "alias": "05.- Parrilla de emisión",
+      "slug": "parrilla",
+      "name_es": "Parrilla de emisión",
+      "familia": "Emisión",
+      "estado": "escaparate",
+      "en_vitrina": false,
+      "ruta": "/parrilla/"
+    },
+    {
+      "n": 6,
+      "alias": "06.- Listas de reproducción",
+      "slug": "playlists",
+      "name_es": "Listas de reproducción",
+      "familia": "Emisión",
+      "estado": "escaparate",
+      "en_vitrina": false,
+      "ruta": "/playlists/"
+    },
+    {
+      "n": 7,
+      "alias": "07.- Mando a distancia",
+      "slug": "remotecontrol",
+      "name_es": "Mando a distancia",
+      "familia": "Emisión",
+      "estado": "parcial",
+      "en_vitrina": false,
+      "ruta": "/remotecontrol/"
+    },
+    {
+      "n": 8,
+      "alias": "08.- Catálogo de contenidos",
+      "slug": "contentcatalogue",
+      "name_es": "Catálogo de contenidos",
+      "familia": "Contenido",
+      "estado": "escaparate",
+      "en_vitrina": true,
+      "ruta": "/contentcatalogue/"
+    },
+    {
+      "n": 9,
+      "alias": "09.- Videowall",
+      "slug": "wall",
+      "name_es": "Videowall",
+      "familia": "Emisión",
+      "estado": "escaparate",
+      "en_vitrina": false,
+      "ruta": "/wall/"
+    },
+    {
+      "n": 10,
+      "alias": "10.- Cuadro de mando",
+      "slug": "dashboard",
+      "name_es": "Cuadro de mando",
+      "familia": "Medición",
+      "estado": "escaparate",
+      "en_vitrina": true,
+      "ruta": "/dashboard/"
+    },
+    {
+      "n": 11,
+      "alias": "11.- Analítica de audio",
+      "slug": "radioanalytics",
+      "name_es": "Analítica de audio",
+      "familia": "Medición",
+      "estado": "escaparate",
+      "en_vitrina": true,
+      "ruta": "/radioanalytics/"
+    },
+    {
+      "n": 12,
+      "alias": "12.- Catálogo de apps",
+      "slug": "apps",
+      "name_es": "Catálogo de apps",
+      "familia": "Plataforma",
+      "estado": "emite",
+      "en_vitrina": false,
+      "ruta": "/apps/"
+    },
+    {
+      "n": 13,
+      "alias": "13.- Conector MCP",
+      "slug": "mcp",
+      "name_es": "Conector MCP",
+      "familia": "Plataforma",
+      "estado": "parcial",
+      "en_vitrina": false,
+      "ruta": "/mcp/"
+    },
+    {
+      "n": 14,
+      "alias": "14.- WiFi social",
+      "slug": "socialwifi",
+      "name_es": "WiFi social",
+      "familia": "Tienda",
+      "estado": "parcial",
+      "en_vitrina": true,
+      "ruta": "/socialwifi/"
+    },
+    {
+      "n": 15,
+      "alias": "15.- Gamificación",
+      "slug": "gamification",
+      "name_es": "Gamificación",
+      "familia": "Tienda",
+      "estado": "escaparate",
+      "en_vitrina": true,
+      "ruta": "/gamification/"
+    },
+    {
+      "n": 16,
+      "alias": "16.- Gestor de colas",
+      "slug": "queuemanager",
+      "name_es": "Gestor de colas",
+      "familia": "Tienda",
+      "estado": "escaparate",
+      "en_vitrina": true,
+      "ruta": "/queuemanager/"
+    },
+    {
+      "n": 17,
+      "alias": "17.- Reserva de salas",
+      "slug": "roombooking",
+      "name_es": "Reserva de salas",
+      "familia": "Tienda",
+      "estado": "escaparate",
+      "en_vitrina": true,
+      "ruta": "/roombooking/"
+    },
+    {
+      "n": 18,
+      "alias": "18.- Control de accesos",
+      "slug": "accesscontrol",
+      "name_es": "Control de accesos",
+      "familia": "Tienda",
+      "estado": "escaparate",
+      "en_vitrina": false,
+      "ruta": "/accesscontrol/"
+    },
+    {
+      "n": 19,
+      "alias": "19.- Notificaciones push",
+      "slug": "pushnotifications",
+      "name_es": "Notificaciones push",
+      "familia": "Tienda",
+      "estado": "escaparate",
+      "en_vitrina": true,
+      "ruta": "/pushnotifications/"
+    },
+    {
+      "n": 20,
+      "alias": "20.- Presentaciones",
+      "slug": "presenta",
+      "name_es": "Presentaciones",
+      "familia": "Contenido",
+      "estado": "escaparate",
+      "en_vitrina": false,
+      "ruta": "/presenta/"
+    },
+    {
+      "n": 21,
+      "alias": "21.- Marca sonora",
+      "slug": "audiobranding",
+      "name_es": "Marca sonora",
+      "familia": "Sensorial",
+      "estado": "escaparate",
+      "en_vitrina": true,
+      "ruta": "/audiobranding/"
+    },
+    {
+      "n": 22,
+      "alias": "22.- Marketing olfativo",
+      "slug": "olfactorymarketing",
+      "name_es": "Marketing olfativo",
+      "familia": "Sensorial",
+      "estado": "escaparate",
+      "en_vitrina": true,
+      "ruta": "/olfactorymarketing/"
+    },
+    {
+      "n": 23,
+      "alias": "23.- Realidad aumentada",
+      "slug": "augmentedreality",
+      "name_es": "Realidad aumentada",
+      "familia": "Inmersivo",
+      "estado": "escaparate",
+      "en_vitrina": true,
+      "ruta": "/augmentedreality/"
+    },
+    {
+      "n": 24,
+      "alias": "24.- Realidad virtual",
+      "slug": "virtualreality",
+      "name_es": "Realidad virtual",
+      "familia": "Inmersivo",
+      "estado": "escaparate",
+      "en_vitrina": true,
+      "ruta": "/virtualreality/"
+    },
+    {
+      "n": 25,
+      "alias": "25.- Realidad extendida",
+      "slug": "xr",
+      "name_es": "Realidad extendida",
+      "familia": "Inmersivo",
+      "estado": "escaparate",
+      "en_vitrina": false,
+      "ruta": "/xr/"
+    },
+    {
+      "n": 26,
+      "alias": "26.- Asistente virtual",
+      "slug": "virtualassistant",
+      "name_es": "Asistente virtual",
+      "familia": "Inmersivo",
+      "estado": "escaparate",
+      "en_vitrina": true,
+      "ruta": "/virtualassistant/"
+    },
+    {
+      "n": 27,
+      "alias": "27.- Gestor de dispositivos",
+      "slug": "iotmanager",
+      "name_es": "Gestor de dispositivos",
+      "familia": "Plataforma",
+      "estado": "escaparate",
+      "en_vitrina": true,
+      "ruta": "/iotmanager/"
+    },
+    {
+      "n": 28,
+      "alias": "28.- Cómputo en el borde",
+      "slug": "nvidia",
+      "name_es": "Cómputo en el borde",
+      "familia": "Plataforma",
+      "estado": "escaparate",
+      "en_vitrina": false,
+      "ruta": "/nvidia/"
+    },
+    {
+      "n": 29,
+      "alias": "29.- XpaceOS",
+      "slug": "xpaceos",
+      "name_es": "XpaceOS",
+      "familia": "Plataforma",
+      "estado": "escaparate",
+      "en_vitrina": true,
+      "ruta": "/xpaceos/"
+    },
+    {
+      "n": 30,
+      "alias": "30.- Yarig.ai",
+      "slug": "yarig",
+      "name_es": "Yarig.ai",
+      "familia": "Plataforma",
+      "estado": "escaparate",
+      "en_vitrina": true,
+      "ruta": "/yarig/"
+    },
+    {
+      "n": 31,
+      "alias": "31.- Usuarios y permisos",
+      "slug": "usuarios",
+      "name_es": "Usuarios y permisos",
+      "familia": "Plataforma",
+      "estado": "escaparate",
+      "en_vitrina": false,
+      "ruta": "/usuarios/"
+    },
+    {
+      "n": 32,
+      "alias": "32.- Contratación",
+      "slug": "comprar",
+      "name_es": "Contratación",
+      "familia": "Comercial",
+      "estado": "escaparate",
+      "en_vitrina": false,
+      "ruta": "/comprar/"
+    },
+    {
+      "n": 33,
+      "alias": "33.- Soporte",
+      "slug": "support",
+      "name_es": "Soporte",
+      "familia": "Comercial",
+      "estado": "escaparate",
+      "en_vitrina": true,
+      "ruta": "/support/"
+    },
+    {
+      "n": 34,
+      "alias": "34.- Ayuda",
+      "slug": "help",
+      "name_es": "Ayuda",
+      "familia": "Comercial",
+      "estado": "escaparate",
+      "en_vitrina": false,
+      "ruta": "/help/"
+    }
+  ]
+}

@@ -39,6 +39,24 @@
   .lede{max-width:720px;color:var(--tinta2);font-size:1.04rem;margin:8px 0 0}
   .lede b{color:var(--tinta)}
 
+
+  /* ── anexo: el edificio de al lado, el de los productos ── */
+  .anexo{margin:26px 0 0}
+  .boton-anexo{display:grid;grid-template-columns:auto 1fr auto;grid-template-areas:"k t ir" "k d ir";
+    gap:2px 14px;align-items:center;text-decoration:none;color:inherit;
+    border:1.5px solid var(--tinta);background:rgba(255,255,255,.3);padding:14px 16px;
+    transition:background .18s,border-color .18s}
+  .boton-anexo:hover,.boton-anexo:focus-visible{background:var(--ambar-bg);border-color:var(--ambar);outline:none}
+  .ba-k{grid-area:k;font-family:var(--mono);font-size:9.5px;letter-spacing:.16em;text-transform:uppercase;
+    color:var(--tinta2);border:1px solid var(--linea2);padding:5px 8px;align-self:center}
+  .ba-t{grid-area:t;font-weight:700;letter-spacing:-.012em}
+  .ba-d{grid-area:d;font-size:.84rem;color:var(--tinta2)}
+  .ba-ir{grid-area:ir;font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--ambar);white-space:nowrap}
+  @media (max-width:640px){
+    .boton-anexo{grid-template-columns:1fr;grid-template-areas:"k" "t" "d" "ir";gap:6px}
+    .ba-k{justify-self:start}
+  }
+
   /* ── el edificio ── */
   .zona-titulo{font-family:var(--mono);font-size:12px;letter-spacing:.18em;text-transform:uppercase;color:var(--tinta2);
     margin:36px 0 12px;display:flex;align-items:center;gap:12px}
@@ -228,6 +246,18 @@
     <b>agente autónomo de IA</b> con su rol, su vicio y su vocabulario — y ninguno actúa solo: lo que
     hace uno cambia a los demás por un <b>bus de estado común</b>. Su nombre será <b>ieu.ai</b>;
     admira.live es la obra.</p>
+
+  <!-- El anexo de productos. La Incubadora aloja agentes; al lado, con la misma
+       planta, vive el catálogo de admira.tv: una vivienda por subapp y la luz
+       encendida sólo donde de verdad se emite. -->
+  <p class="anexo">
+    <a class="boton-anexo" href="/13rue/implementacion.html">
+      <span class="ba-k">Anexo</span>
+      <span class="ba-t">Implementación · La casa de los productos</span>
+      <span class="ba-d">Las 34 subapps de admira.tv en el mismo plano · 1 emitiendo, 4 en obras, 29 se alquila</span>
+      <span class="ba-ir">ENTRAR ▸</span>
+    </a>
+  </p>
 
   <p class="zona-titulo">Plano transversal · pulsa una vivienda para abrir su ficha</p>
   <div class="edificio" id="edificio" aria-label="Edificio en sección con doce viviendas">

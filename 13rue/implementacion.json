@@ -2,9 +2,8 @@
   "meta": {
     "titulo": "La casa de los productos",
     "subtitulo": "admira.tv en sección: una vivienda por subapp",
-    "fuente": "https://admira.tv/subapps.json",
-    "copia_del": "2026-08-10",
-    "nota": "El número de la subapp es su piso. Reordenar el censo realquila el edificio."
+    "nota": "Este fichero ES el censo publicado: lo que se lee en admira.live/13rue/implementacion. Se genera desde subapps.json del repo admira-tv, donde vive orden.mjs para reordenar. El número de la subapp es su piso.",
+    "al_dia_del": "2026-08-10"
   },
   "plantas": [
     {

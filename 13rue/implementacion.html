@@ -556,36 +556,34 @@
     if(e.target.closest(".cerrar-zoom")){ e.stopPropagation(); quitaZoom(); }
   }, true);
 
-  // DE DÓNDE SALEN LOS DATOS, Y QUE SE VEA. El censo vive en el repo de
-  // admira.tv; aquí hay una copia. Se intenta primero el original —para que el
-  // edificio no envejezca solo— y si no se llega, se usa la copia Y SE DICE.
-  // Un respaldo silencioso es el que te hace mirar un plano viejo creyéndolo nuevo.
+  // EL EDIFICIO ES LA FUENTE ÚNICA (Carlos, 2026-08-10: «corrígelo, pero el
+  // edificio tiene que ser la fuente única»).
+  //
+  // Antes esto intentaba leer admira.tv/subapps.json y, al no llegar, caía sobre
+  // la copia de aquí diciendo «copia local · no se pudo leer el original». O sea:
+  // el edificio se presentaba a sí mismo como una fotocopia de otro sitio, y
+  // encima de uno que devolvía 404. Dos listas de las mismas 34 subapps es una
+  // lista de más: la que se mira acaba discrepando de la que se edita.
+  //
+  // Ahora el censo que sirve esta página ES el censo. implementacion.json se
+  // publica desde subapps.json del repo de admira.tv —donde vive orden.mjs, que
+  // es quien reordena—, pero quien quiera leer el estado de los productos lee
+  // AQUÍ. Sin respaldo, sin «original» en otra parte y sin dos verdades.
   var fuente = document.getElementById("fuente");
-  function local(motivo){
-    fetch("./implementacion.json").then(function(r){ return r.json(); }).then(function(doc){
-      render(doc);
-      fuente.textContent = "censo: copia local del " + doc.meta.copia_del
-        + " · no se pudo leer el original (" + motivo + ") · fuente: " + doc.meta.fuente;
-      document.getElementById("fuente-rail").textContent =
-        "copia local del " + doc.meta.copia_del + " — no se pudo leer " + doc.meta.fuente + " (" + motivo + ")";
-    }).catch(function(){ fuente.textContent = "no se pudo cargar el censo."; });
-  }
-  fetch("https://admira.tv/subapps.json", {mode:"cors"})
+  fetch("./implementacion.json", {cache:"no-cache"})
     .then(function(r){ if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); })
-    .then(function(viviendas){
-      fetch("./implementacion.json").then(function(r){ return r.json(); }).then(function(doc){
-        doc.viviendas = viviendas;                     // el orden manda: viene del original
-        var plantas=[], n=viviendas.length;
-        for(var i=0;i<n;i+=2){
-          var idx=i/2, piso = idx===0 ? "Ático" : (i+2>=n ? "Sótano" : "Planta "+((n>>1)-idx));
-          plantas.push({piso:piso, viviendas:[viviendas[i].slug, viviendas[i+1] && viviendas[i+1].slug]});
-        }
-        doc.plantas = plantas;
-        render(doc);
-        fuente.textContent = "censo vivo, leído de admira.tv/subapps.json";
-        document.getElementById("fuente-rail").textContent = "censo vivo, leído de admira.tv/subapps.json";
-      });
+    .then(function(doc){
+      render(doc);
+      var txt = "censo de " + doc.viviendas.length + " subapps · al día del " + doc.meta.al_dia_del
+              + " · esta página es la fuente; se reordena con orden.mjs en el repo de admira.tv";
+      fuente.textContent = txt;
+      document.getElementById("fuente-rail").textContent =
+        doc.viviendas.length + " subapps · " + doc.meta.al_dia_del + " · el edificio es la fuente";
     })
-    .catch(function(e){ local(String(e.message||e)); });
+    .catch(function(e){
+      // Si el censo no carga no se enseña un edificio a medias: se dice.
+      fuente.textContent = "no se pudo cargar el censo (" + (e.message||e) + "). El plano no se pinta a medias.";
+      var r = document.getElementById("fuente-rail"); if(r) r.textContent = "censo no disponible";
+    });
 })();
 </script>

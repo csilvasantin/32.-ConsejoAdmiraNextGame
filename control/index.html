@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.2026.07.24.r1 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google independiente, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.10.08.2026.r4.17:51" />
+<meta name="admiranext-version" content="AdmiraNeXT v.10.08.2026.r5.18:07" />
     <script src="/admira-bar.js?v=20260713-r36"></script>
     <script src="/auth-gate.js?v=20260708-authfix"></script>
 <meta charset="UTF-8">
@@ -926,6 +926,25 @@ function showControlRouteBanner(on, route){
     }
     b.style.display='block';
   } else if(b){ b.style.display='none'; }
+  // EL AVISO SE RETIRA SOLO (Carlos, 10-08-2026). Antes se quedaba clavado hasta
+  // que alguien recargaba: bastaba un sondeo desperdiciado durante un reinicio del
+  // hub —segundos— para que el panel siguiera anunciando media hora despues que la
+  // primaria no responde. Y peor: anunciaba como ACTIVO un relevo que tampoco
+  // contestaba. Un aviso que no se corrige solo deja de ser informacion y pasa a
+  // ser ruido, que es como se pierde la confianza en un panel de mando.
+  if(on){
+    if(!window._rutaReintento){
+      window._rutaReintento=setInterval(async()=>{
+        try{
+          const r=await fetch(API+'/health',{cache:'no-store',signal:AbortSignal.timeout(4000)});
+          if(!r.ok) return;
+          clearInterval(window._rutaReintento); window._rutaReintento=null;
+          showControlRouteBanner(false);
+          if(typeof refresh==='function') refresh();
+        }catch(e){/* sigue caida: se reintenta en la siguiente vuelta */}
+      },10000);
+    }
+  } else if(window._rutaReintento){ clearInterval(window._rutaReintento); window._rutaReintento=null; }
 }
 async function degradedRefresh(){
   await Promise.all([loadPersonas(), loadFleet(), loadFleetMachines()]);

@@ -168,6 +168,40 @@
     .rail{position:static;max-height:none}
   }
 
+
+  /* ── ZOOM: acercarse a la vivienda ─────────────────────────────────────────
+     Filtrar y quedarse mirando el edificio entero de lejos no sirve de nada: si
+     de 34 quedan una o dos encendidas, lo que quieres es asomarte. La cámara se
+     acerca al piso, el resto de la casa se aparta, y la vivienda abre por dentro
+     lo que se sabe del producto. Salir es Escape, o pulsar fuera. */
+  .edificio.hay-zoom .planta{opacity:.28;filter:grayscale(.85);transition:opacity .35s,filter .35s}
+  .edificio.hay-zoom .planta.con-zoom{opacity:1;filter:none}
+  .hueco.zoom{background:rgba(255,255,255,.62);box-shadow:0 0 0 2px var(--ambar), 0 12px 34px rgba(22,48,92,.22);
+    z-index:3;min-height:auto}
+  .hueco.zoom .nom{font-size:1.5rem;letter-spacing:-.022em;margin-bottom:6px}
+  .hueco.zoom .ventana{width:86px;height:84px;top:14px}
+  .hueco.zoom .cartel{top:102px}
+  .detalle{margin:14px 0 4px;padding-top:12px;border-top:1px solid var(--linea);
+    display:grid;gap:9px;animation:abre .28s ease both}
+  @keyframes abre{from{opacity:0;transform:translateY(-5px)}to{opacity:1;transform:none}}
+  @media (prefers-reduced-motion:reduce){
+    .detalle{animation:none}
+    .edificio.hay-zoom .planta{transition:none}
+  }
+  .detalle dl{display:grid;grid-template-columns:auto 1fr;gap:6px 12px;margin:0;font-size:.86rem}
+  .detalle dt{font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--dim);padding-top:3px}
+  .detalle dd{margin:0}
+  .detalle .llamadas{font-family:var(--mono);font-size:10.5px;line-height:1.7;color:var(--tinta2)}
+  .detalle .llamadas span{display:inline-block;background:rgba(22,48,92,.07);border:1px solid var(--linea);
+    padding:1px 5px;margin:0 4px 4px 0}
+  .detalle .sin{font-style:italic;color:var(--dim);font-size:.84rem}
+  .detalle .acciones{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+  .detalle a,.detalle .cerrar-zoom{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;
+    border:1.5px solid var(--tinta);padding:7px 11px;text-decoration:none;color:var(--tinta);
+    background:rgba(255,255,255,.5);cursor:pointer}
+  .detalle a:hover,.detalle .cerrar-zoom:hover{background:var(--ambar-bg);border-color:var(--ambar)}
+
   .pie{margin-top:44px;padding-top:20px;border-top:1px solid var(--linea);font-size:.88rem;color:var(--tinta2)}
   .pie b{color:var(--tinta)}
   .fuente{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:10px}
@@ -395,6 +429,69 @@
     c.textContent = vistos === CENSO.length
       ? "Se ven las " + CENSO.length + " viviendas."
       : vistos + " de " + CENSO.length + " viviendas encendidas · el resto sigue en su piso, apagada.";
+
+    // Filtrar hasta dejar pocas ES pedir asomarse. Con el edificio entero a la
+    // vista no se acerca: no habría a qué mirar en concreto.
+    var encendidas = CENSO.filter(pasa).map(function(v){ return v.slug; });
+    if(vistos !== CENSO.length && encendidas.length && encendidas.length <= ZOOM_HASTA) zoomA(encendidas);
+    else quitaZoom();
+  }
+
+
+  // ── ZOOM A LA VIVIENDA ────────────────────────────────────────────────────
+  // Cuando el filtro deja pocas viviendas encendidas, la cámara se acerca a la
+  // primera y abre su ficha DENTRO del piso: lo que quieres al filtrar «ocupadas»
+  // no es ver 33 apagadas, es asomarte a la que está viva.
+  var ZOOM_HASTA = 3;   // con más de tres encendidas no se acerca: sería un salto al azar
+
+  function detalleHtml(v){
+    var llamadas = (v.apis && v.apis.length)
+      ? '<div class="llamadas">' + v.apis.map(function(a){ return '<span>'+esc(a)+'</span>'; }).join("") + '</div>'
+      : '<p class="sin">Ninguna llamada a un API. Es una página de producto, sin producto detrás.</p>';
+    return '<div class="detalle">'
+      + '<dl>'
+      +   '<dt>Estado</dt><dd>' + esc((TEXTO[v.estado]||TEXTO.escaparate).cartel) + ' · ' + esc((TEXTO[v.estado]||TEXTO.escaparate).porque) + '</dd>'
+      +   '<dt>Familia</dt><dd>' + esc(v.familia) + '</dd>'
+      +   '<dt>Piso</dt><dd>' + esc(String(v.n).padStart(2,"0")) + ' de 34 · ' + esc(v.ruta || ("/"+v.slug+"/")) + '</dd>'
+      +   '<dt>Tamaño</dt><dd>' + (v.peso_kb!=null ? esc(v.peso_kb)+' KB en '+esc(v.ficheros)+' fichero(s)' : '—') + '</dd>'
+      +   '<dt>Vitrina</dt><dd>' + (v.en_vitrina ? 'sale en el catálogo público' : 'fuera del catálogo público') + '</dd>'
+      + '</dl>'
+      + '<div><dt style="font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)">Llama a</dt>'
+      + llamadas + '</div>'
+      + '<div class="acciones">'
+      +   '<a href="https://admira.tv/' + esc(v.slug) + '/" target="_blank" rel="noopener">Abrir en admira.tv ▸</a>'
+      +   '<button type="button" class="cerrar-zoom">◂ Alejar la cámara</button>'
+      + '</div></div>';
+  }
+
+  function quitaZoom(){
+    var ed = document.querySelector(".edificio");
+    if(ed) ed.classList.remove("hay-zoom");
+    [].forEach.call(document.querySelectorAll(".hueco.zoom"), function(h){
+      h.classList.remove("zoom");
+      var d = h.querySelector(".detalle"); if(d) d.remove();
+    });
+    [].forEach.call(document.querySelectorAll(".planta.con-zoom"), function(p){ p.classList.remove("con-zoom"); });
+  }
+
+  function zoomA(slugs){
+    quitaZoom();
+    if(!slugs.length) return;
+    var ed = document.querySelector(".edificio");
+    ed.classList.add("hay-zoom");
+    slugs.forEach(function(slug){
+      var v = CENSO.filter(function(x){ return x.slug===slug; })[0];
+      var h = document.querySelector('.hueco[data-slug="'+slug+'"]');
+      if(!v || !h) return;
+      h.classList.add("zoom");
+      h.closest(".planta").classList.add("con-zoom");
+      if(!h.querySelector(".detalle")) h.insertAdjacentHTML("beforeend", detalleHtml(v));
+    });
+    var primero = document.querySelector(".hueco.zoom");
+    if(primero){
+      var suave = window.matchMedia("(prefers-reduced-motion: reduce)").matches ? "auto" : "smooth";
+      primero.scrollIntoView({behavior:suave, block:"center"});
+    }
   }
 
   function montaRailes(doc){
@@ -454,7 +551,10 @@
   function cierra(){ ficha.classList.remove("on"); backdrop.classList.remove("on"); }
   document.getElementById("cerrar").addEventListener("click", cierra);
   backdrop.addEventListener("click", cierra);
-  document.addEventListener("keydown", function(e){ if(e.key==="Escape") cierra(); });
+  document.addEventListener("keydown", function(e){ if(e.key==="Escape"){ cierra(); quitaZoom(); } });
+  document.addEventListener("click", function(e){
+    if(e.target.closest(".cerrar-zoom")){ e.stopPropagation(); quitaZoom(); }
+  }, true);
 
   // DE DÓNDE SALEN LOS DATOS, Y QUE SE VEA. El censo vive en el repo de
   // admira.tv; aquí hay una copia. Se intenta primero el original —para que el

@@ -14,7 +14,7 @@
   // La MARCA enlaza a la home (regla: el nombre del site siempre vuelve a la home).
   var PROJECT = "Consejo AdmiraNeXT";
   // Versión interna (solo console, ya no se pinta en el menú superior — Carlos 2026-07-13).
-  var VERSION = "v.2026.07.14.r36";
+  var VERSION = "v.2026.08.10.r37";
 
   // Nav idéntico al top-bar de la home (mismos badges, mismos destinos) → coherencia.
   var TOP = [
@@ -26,6 +26,9 @@
     { t: "🎯 Misiones",  h: "https://www.admira.live/vista-previa" },
     { t: "🧩 Asignaciones", h: "https://www.admira.live/asignaciones/" },
     { t: "📓 Diario",    h: "https://www.admira.live/diario.html" },
+    // La Incubadora vivía fuera del menú: se entraba por enlace suelto y, una vez
+    // dentro, no había por dónde volver ni adónde ir. Ahora es una parada más.
+    { t: "🏢 Incubadora", h: "https://www.admira.live/13rue/" },
   ];
 
   var css =
@@ -129,7 +132,11 @@
     var here = location.pathname.replace(/index\.html$/, "").replace(/\/$/, "");
     nav.innerHTML = TOP.map(function (i) {
       var ph = i.h.replace(/^https?:\/\/[^/]+/, "").replace(/index\.html$/, "").replace(/\/$/, "");
-      var cur = ph !== "" && here === ph;
+      // Se marca la SECCIÓN, no sólo la portada de la sección. Con la coincidencia
+      // exacta, estar en /13rue/implementacion o en /control/loquesea no encendía
+      // nada: la barra dejaba de decirte dónde estás justo al entrar en una página
+      // interior, que es cuando más falta hace saberlo.
+      var cur = ph !== "" && (here === ph || here.indexOf(ph + "/") === 0);
       return '<a href="' + i.h + '"' + (cur ? ' class="active" aria-current="page"' : "") + ">" + i.t + "</a>";
     }).join("");
     top.appendChild(nav);

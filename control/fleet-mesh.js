@@ -1,4 +1,4 @@
-/* control/fleet-mesh.js · AdmiraNeXT Fleet Mesh · v.2026.07.24.r1
+/* control/fleet-mesh.js · AdmiraNeXT Fleet Mesh · v.10.08.2026.r8.20:55
  *
  * Cliente de control sin punto único de fallo. Mantiene una sesión Google
  * independiente por relay, conmuta lecturas y comandos entre relays y adjunta
@@ -14,7 +14,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function (root) {
   'use strict';
 
-  var VERSION = '2026.07.24.r1';
+  var VERSION = 'v.10.08.2026.r8.20:55';
   var DEFAULT_RELAYS = [
     {
       id: 'macmini',
@@ -116,13 +116,33 @@
       s.downUntil = Date.now() + cooldownMs;
       s.lastError = String(err && (err.message || err) || 'sin respuesta');
     }
-    function withTimeout(init) {
+    /* UN ABORTO DICE POR QUÉ ABORTA (2026-08-10). `ctl.abort()` sin argumento hace
+       que fetch rechace con «signal is aborted without reason»: ni dice que fue un
+       tiempo de espera, ni de cuánto era, ni contra qué relay. Ese texto subía tal
+       cual al control remoto y allí se leía como un fallo del agente de la otra
+       máquina. El motivo se declara aquí, y si el motor ignora el argumento de
+       abort() se sustituye el rechazo en `explain`. */
+    function withTimeout(init, etiqueta) {
       init = Object.assign({}, init || {});
-      if (init.signal || typeof AbortController === 'undefined') return { init: init, cancel: function () {} };
+      var tal_cual = function (err) { return err; };
+      if (init.signal || typeof AbortController === 'undefined') {
+        return { init: init, cancel: function () {}, explain: tal_cual };
+      }
       var ctl = new AbortController();
-      var timer = setTimeout(function () { ctl.abort(); }, timeoutMs);
+      var motivo = new Error('sin respuesta en ' + timeoutMs + ' ms' + (etiqueta ? ' · ' + etiqueta : ''));
+      motivo.name = 'FleetMeshTimeout';
+      motivo.fleetMeshTimeout = true;
+      var vencido = false;
+      var timer = setTimeout(function () {
+        vencido = true;
+        try { ctl.abort(motivo); } catch (e) { ctl.abort(); }
+      }, timeoutMs);
       init.signal = ctl.signal;
-      return { init: init, cancel: function () { clearTimeout(timer); } };
+      return {
+        init: init,
+        cancel: function () { clearTimeout(timer); },
+        explain: function (err) { return vencido ? motivo : err; }
+      };
     }
     async function mint(relay, force) {
       if (!force) {
@@ -136,7 +156,7 @@
         headers: { 'Content-Type': 'application/json' },
         body: JSON.stringify({ credential: cred }),
         cache: 'no-store'
-      });
+      }, relay.label + ' · auth');
       try {
         var r = await fetchFn(relay.base + '/auth', timed.init);
         if (!r.ok) throw new Error('auth HTTP ' + r.status);
@@ -145,7 +165,8 @@
         sessions[relay.id] = { token: d.session, exp: d.exp || (Date.now() + 12 * 3600 * 1000) };
         saveSessions();
         return d.session;
-      } finally { timed.cancel(); }
+      } catch (err) { throw timed.explain(err); }
+      finally { timed.cancel(); }
     }
     async function fetchRelay(relay, path, opts, commandId) {
       opts = Object.assign({}, opts || {});
@@ -157,18 +178,19 @@
       delete opts.relayId;
       delete opts.commandId;
       delete opts.retry;
-      var timed = withTimeout(opts);
+      var timed = withTimeout(opts, relay.label);
       try {
         var response = await fetchFn(relay.base + path, timed.init);
         if (response.status === 401 && headers.Authorization) {
           dropSession(relay);
           headers.Authorization = 'Bearer ' + await mint(relay, true);
           timed.cancel();
-          timed = withTimeout(Object.assign({}, opts, { headers: headers }));
+          timed = withTimeout(Object.assign({}, opts, { headers: headers }), relay.label);
           response = await fetchFn(relay.base + path, timed.init);
         }
         return response;
-      } finally { timed.cancel(); }
+      } catch (err) { throw timed.explain(err); }
+      finally { timed.cancel(); }
     }
     async function request(path, opts) {
       opts = Object.assign({}, opts || {});

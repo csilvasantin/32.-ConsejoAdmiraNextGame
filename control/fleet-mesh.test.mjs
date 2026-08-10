@@ -114,3 +114,48 @@ test("fija una sesión interactiva al relay indicado", async () => {
   assert.equal(out.data._mesh.relay.id, "backup");
   assert.ok(calls.every((url) => url.startsWith("https://backup.test")));
 });
+
+// «signal is aborted without reason» era lo único que veía Carlos en el control
+// remoto cuando un relay no contestaba, y el mensaje de arriba lo achacaba a la
+// Grabación de pantalla del agente. El vencimiento tiene que decir su nombre.
+function colgado({ respetaMotivo }) {
+  return (url, init) => new Promise((resolve, reject) => {
+    if (url.endsWith("/auth")) return resolve(json({ session: "s", exp: Date.now() + 60_000 }));
+    init.signal.addEventListener("abort", () => {
+      if (respetaMotivo) return reject(init.signal.reason);
+      const err = new Error("signal is aborted without reason");
+      err.name = "AbortError";
+      reject(err);
+    });
+  });
+}
+
+test("un relay que no contesta se rechaza diciendo el tiempo de espera y el relay", async () => {
+  const mesh = create({
+    relays: [RELAYS[0]],
+    store: store(),
+    timeoutMs: 1000,
+    getCredential: async () => "google",
+    fetch: colgado({ respetaMotivo: true }),
+  });
+
+  const err = await mesh.request("/live/frame").then(() => null, (e) => e);
+  assert.ok(err, "la petición tiene que fallar");
+  assert.equal(err.fleetMeshTimeout, true);
+  assert.match(err.message, /sin respuesta en 1000 ms · Primary/);
+  assert.doesNotMatch(err.message, /aborted without reason/);
+});
+
+test("aunque el motor ignore el motivo del abort, el fallo sigue explicándose", async () => {
+  const mesh = create({
+    relays: [RELAYS[0]],
+    store: store(),
+    timeoutMs: 1000,
+    getCredential: async () => "google",
+    fetch: colgado({ respetaMotivo: false }),
+  });
+
+  const err = await mesh.request("/live/frame").then(() => null, (e) => e);
+  assert.match(err.message, /sin respuesta en 1000 ms · Primary/);
+  assert.equal(err.mesh.attempts[0].error, "sin respuesta en 1000 ms · Primary");
+});

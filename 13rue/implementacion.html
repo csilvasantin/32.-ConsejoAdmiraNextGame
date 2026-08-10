@@ -6,6 +6,11 @@
 <title>Implementación · La casa de los productos · admira.tv</title>
 <meta name="description" content="Las 34 subapps de admira.tv dibujadas como un edificio en sección, al modo de 13 Rue del Percebe: una vivienda por producto, con la luz encendida sólo en las que de verdad emiten.">
 <link rel="canonical" href="https://www.admira.live/13rue/implementacion.html">
+<!-- La barra superior de admira.live es fuente ÚNICA: la misma en todas las páginas
+     tras la DMZ. Trae fijo el menú y, a sus extremos, los iconos que despliegan los
+     raíles: opciones a la izquierda del todo, avanzado a la derecha del todo.
+     Sólo pinta cada icono si esta página tiene ese panel. -->
+<script src="/admira-bar.js?v=20260810-anexo"></script>
 <style>
   :root{
     --papel:#efe7d3; --papel2:#e7dcc2; --tinta:#16305c; --tinta2:#2c477a;
@@ -25,7 +30,8 @@
       linear-gradient(90deg,rgba(22,48,92,.035) 1px,transparent 1px);
     background-size:26px 26px;
   }
-  .wrap{max-width:1120px;margin:0 auto;padding:0 20px 80px}
+  /* El hueco bajo la barra fija lo pone admira-bar.js (html.admira-bar-on body). */
+  .wrap{max-width:1320px;margin:0 auto;padding:0 20px 80px}
   a{color:var(--tinta)}
 
   header{padding:38px 0 18px;display:grid;grid-template-columns:minmax(0,1fr) auto;gap:20px;align-items:end}
@@ -119,6 +125,49 @@
     text-transform:uppercase;border:1.5px solid var(--tinta);padding:8px 12px;text-decoration:none}
   .ficha .ir:hover{background:var(--ambar-bg);border-color:var(--ambar)}
 
+
+  /* ── Cuadratura AdmiraNeXT: opciones (izq) · edificio (centro) · avanzado (der) ──
+     Los iconos de admira-bar.js alternan body.pf-left-off / pf-right-off, y el grid
+     se recuadra solo para que el edificio ocupe lo que dejan libre. */
+  .cuad{display:grid;grid-template-columns:264px minmax(0,1fr) 288px;gap:18px;align-items:start;margin:6px 0 0}
+  .cuad-center{min-width:0}
+  /* EL CROMO ES DE LA CASA, EL CONTENIDO ES MÍO. admira-bar.js impone a los raíles
+     el marco SCUMM en madera (background #5a3a1e !important) porque el nav y el
+     chrome son fuente única en admira.live — y hace bien. Lo que NO puede es
+     heredar mis colores de plano: la primera versión pintó texto azul tinta sobre
+     madera y no se leía una palabra. Así que el contenido va vestido para fondo
+     oscuro. El edificio sigue siendo plano azul; el cromo, madera. */
+  .rail{position:sticky;top:54px;max-height:calc(100vh - 70px);overflow:auto;padding:6px 10px 14px;
+    color:#e8d9b8}
+  .rail .rail-group{margin:16px 0 8px}
+  .rail .rail-group:first-of-type{margin-top:4px}
+  .filtro{display:flex;flex-wrap:wrap;gap:5px;padding:0 8px}
+  .filtro button{font-family:var(--mono);font-size:10px;letter-spacing:.04em;cursor:pointer;
+    border:2px solid #8b5a14;background:#2a1a08;color:#e8d9b8;
+    padding:5px 7px;transition:border-color .15s,background .15s,color .15s}
+  .filtro button:hover{border-color:#f0c040;color:#fff}
+  .filtro button[aria-pressed="true"]{background:#8b5a14;border-color:#f0c040;color:#fff}
+  .filtro button .c{opacity:.6;margin-left:5px}
+  .rail .nota{font-size:11.5px;color:#dcc9a4;line-height:1.5;margin:10px 8px 0}
+  .rail .cmd{font-family:var(--mono);font-size:10px;background:#2a1a08;border:2px solid #8b5a14;
+    color:#ffdd66;padding:7px 8px;margin:8px 8px 0;word-break:break-all;user-select:all;line-height:1.5}
+  .rail select,.rail input[type=number]{font-family:var(--mono);font-size:11px;padding:6px;width:calc(100% - 16px);
+    border:2px solid #8b5a14;background:#2a1a08;color:#e8d9b8;margin:0 8px 7px}
+  .rail select:focus,.rail input:focus{outline:2px solid #f0c040;outline-offset:0}
+  .rail .fuente-r{font-family:var(--mono);font-size:10px;color:#dcc9a4;line-height:1.5;margin:0 8px}
+  /* Atenuar, NO esconder: si una vivienda filtrada desapareciera, el edificio dejaría
+     de ser un edificio y quedarían huecos donde hay pisos. Se apaga la luz, no se tira. */
+  .hueco.apagado{opacity:.22;filter:grayscale(1)}
+  body.pf-left-off  .rail-left {display:none}
+  body.pf-right-off .rail-right{display:none}
+  body.pf-left-off  .cuad{grid-template-columns:minmax(0,1fr) 288px}
+  body.pf-right-off .cuad{grid-template-columns:264px minmax(0,1fr)}
+  body.pf-left-off.pf-right-off .cuad{grid-template-columns:minmax(0,1fr)}
+  @media(max-width:1080px){
+    .cuad,body.pf-left-off .cuad,body.pf-right-off .cuad{grid-template-columns:1fr}
+    .rail{position:static;max-height:none}
+  }
+
   .pie{margin-top:44px;padding-top:20px;border-top:1px solid var(--linea);font-size:.88rem;color:var(--tinta2)}
   .pie b{color:var(--tinta)}
   .fuente{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:10px}
@@ -152,13 +201,43 @@
 
 <div class="censo" id="censo"></div>
 
-<p class="zona-titulo">Plano transversal · pulsa una vivienda para abrir su ficha</p>
+<div class="cuad">
 
-<div class="edificio">
-  <div class="tejado"></div>
-  <div id="plantas"></div>
-  <div class="base"></div>
-  <div class="suelo"></div>
+  <aside class="rail rail-left" aria-label="Opciones · cómo mirar el edificio">
+    <h2 class="rail-hd">Opciones · cómo mirar</h2>
+    <h3 class="rail-group">Por estado</h3>
+    <div class="filtro" id="f-estado"></div>
+    <h3 class="rail-group">Por familia</h3>
+    <div class="filtro" id="f-familia"></div>
+    <h3 class="rail-group">Vitrina pública</h3>
+    <div class="filtro" id="f-vitrina"></div>
+    <p class="nota" id="f-cuenta"></p>
+  </aside>
+
+  <div class="cuad-center">
+    <p class="zona-titulo">Plano transversal · pulsa una vivienda para abrir su ficha</p>
+    <div class="edificio">
+      <div class="tejado"></div>
+      <div id="plantas"></div>
+      <div class="base"></div>
+      <div class="suelo"></div>
+    </div>
+  </div>
+
+  <aside class="rail rail-right" aria-label="Avanzado · reordenar y censo">
+    <h2 class="rail-hd">Avanzado · realquilar</h2>
+    <h3 class="rail-group">Realquilar una vivienda</h3>
+    <select id="mv-slug" aria-label="Vivienda a mover"></select>
+    <input type="number" id="mv-pos" min="1" max="34" value="1" aria-label="Posición destino">
+    <p class="nota">El número es el piso: mover una vivienda cambia su prioridad. Copia el comando y córrelo en el repo de admira.tv.</p>
+    <div class="cmd" id="mv-cmd"></div>
+    <h3 class="rail-group">Orden completo de hoy</h3>
+    <p class="nota">Para fijar de golpe el orden actual:</p>
+    <div class="cmd" id="mv-todo"></div>
+    <h3 class="rail-group">Censo</h3>
+    <p class="fuente-r" id="fuente-rail">…</p>
+  </aside>
+
 </div>
 
 <div class="pie">
@@ -263,6 +342,96 @@
       var b = e.target.closest("[data-slug]"); if(!b) return;
       abre(porSlug[b.getAttribute("data-slug")]);
     });
+
+    montaRailes(doc);
+  }
+
+
+  // ── RAÍLES: filtrar (opciones) y realquilar (avanzado) ────────────────────
+  // Los filtros ATENÚAN, no esconden. Si una vivienda filtrada desapareciera, el
+  // edificio dejaría de ser un edificio: quedarían huecos donde hay pisos, y el
+  // plano miente. Aquí se apaga la luz de la que no toca y se sigue viendo la casa.
+  var FILTROS = { estado:new Set(), familia:new Set(), vitrina:null };
+  var CENSO = [];
+
+  function chips(host, valores, clave, etiqueta){
+    host.innerHTML = valores.map(function(v){
+      return '<button type="button" data-v="'+esc(v.id)+'" aria-pressed="false">'
+        + esc(v.txt) + '<span class="c">'+v.n+'</span></button>';
+    }).join("");
+    host.addEventListener("click", function(e){
+      var b = e.target.closest("button"); if(!b) return;
+      var v = b.getAttribute("data-v"), on = b.getAttribute("aria-pressed")==="true";
+      b.setAttribute("aria-pressed", on ? "false" : "true");
+      if(clave==="vitrina"){
+        // Excluyentes entre sí: «sí» y «no» a la vez no filtra nada.
+        [].forEach.call(host.querySelectorAll("button"), function(o){
+          if(o!==b) o.setAttribute("aria-pressed","false"); });
+        FILTROS.vitrina = on ? null : (v==="si");
+      } else {
+        if(on) FILTROS[clave].delete(v); else FILTROS[clave].add(v);
+      }
+      aplica();
+    });
+  }
+
+  function pasa(v){
+    if(FILTROS.estado.size && !FILTROS.estado.has(v.estado)) return false;
+    if(FILTROS.familia.size && !FILTROS.familia.has(v.familia)) return false;
+    if(FILTROS.vitrina !== null && !!v.en_vitrina !== FILTROS.vitrina) return false;
+    return true;
+  }
+
+  function aplica(){
+    var vistos = 0;
+    CENSO.forEach(function(v){
+      var el = document.querySelector('.hueco[data-slug="'+v.slug+'"]');
+      if(!el) return;
+      var ok = pasa(v);
+      el.classList.toggle("apagado", !ok);
+      if(ok) vistos++;
+    });
+    var c = document.getElementById("f-cuenta");
+    c.textContent = vistos === CENSO.length
+      ? "Se ven las " + CENSO.length + " viviendas."
+      : vistos + " de " + CENSO.length + " viviendas encendidas · el resto sigue en su piso, apagada.";
+  }
+
+  function montaRailes(doc){
+    CENSO = doc.viviendas;
+    var cuenta = function(campo, val){ return CENSO.filter(function(v){ return v[campo]===val; }).length; };
+
+    chips(document.getElementById("f-estado"), [
+      {id:"emite", txt:"Emitiendo", n:cuenta("estado","emite")},
+      {id:"parcial", txt:"En obras", n:cuenta("estado","parcial")},
+      {id:"escaparate", txt:"Se alquila", n:cuenta("estado","escaparate")}
+    ], "estado");
+
+    var familias = [];
+    CENSO.forEach(function(v){ if(familias.indexOf(v.familia)<0) familias.push(v.familia); });
+    chips(document.getElementById("f-familia"), familias.map(function(f){
+      return {id:f, txt:f, n:cuenta("familia",f)}; }), "familia");
+
+    chips(document.getElementById("f-vitrina"), [
+      {id:"si", txt:"Sí sale", n:CENSO.filter(function(v){return v.en_vitrina;}).length},
+      {id:"no", txt:"No sale", n:CENSO.filter(function(v){return !v.en_vitrina;}).length}
+    ], "vitrina");
+
+    // realquilar
+    var sel = document.getElementById("mv-slug");
+    sel.innerHTML = CENSO.map(function(v){
+      return '<option value="'+esc(v.slug)+'">'+esc(v.alias)+'</option>'; }).join("");
+    var pos = document.getElementById("mv-pos");
+    pos.max = CENSO.length;
+    function cmd(){
+      document.getElementById("mv-cmd").textContent =
+        "node orden.mjs --subir " + sel.value + " " + (pos.value||1);
+    }
+    sel.addEventListener("change", cmd); pos.addEventListener("input", cmd); cmd();
+    document.getElementById("mv-todo").textContent =
+      "node orden.mjs --orden " + CENSO.map(function(v){return v.slug;}).join(",");
+
+    aplica();
   }
 
   var ficha=document.getElementById("ficha"), backdrop=document.getElementById("backdrop");
@@ -297,6 +466,8 @@
       render(doc);
       fuente.textContent = "censo: copia local del " + doc.meta.copia_del
         + " · no se pudo leer el original (" + motivo + ") · fuente: " + doc.meta.fuente;
+      document.getElementById("fuente-rail").textContent =
+        "copia local del " + doc.meta.copia_del + " — no se pudo leer " + doc.meta.fuente + " (" + motivo + ")";
     }).catch(function(){ fuente.textContent = "no se pudo cargar el censo."; });
   }
   fetch("https://admira.tv/subapps.json", {mode:"cors"})
@@ -312,6 +483,7 @@
         doc.plantas = plantas;
         render(doc);
         fuente.textContent = "censo vivo, leído de admira.tv/subapps.json";
+        document.getElementById("fuente-rail").textContent = "censo vivo, leído de admira.tv/subapps.json";
       });
     })
     .catch(function(e){ local(String(e.message||e)); });

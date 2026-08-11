@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.11.08.2026.r11.12:16 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google independiente, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.11.08.2026.r13.15:23" />
+<meta name="admiranext-version" content="AdmiraNeXT v.11.08.2026.r14.15:30" />
     <script src="/admira-bar.js?v=20260713-r36"></script>
     <script src="/auth-gate.js?v=20260811-r10"></script>
 <meta charset="UTF-8">
@@ -1057,9 +1057,10 @@ async function degradedRefresh(){
   await Promise.all([loadPersonas(), loadFleet(), loadFleetMachines()]);
   MACHINES=FLEET_MACHINES.slice();
   MACHINES.forEach(m=>{
-    if(agentOnline(m)){ m.online=true; m.viaAgent=true; }
-    else if(presenceOnline(m)){ m.online=true; m.viaPresence=true; }
-    else if(fleetOnline(m)){ m.online=true; m.viaFleet=true; }
+    if(agentOnline(m)) marcarSenal(m,'viaAgent');
+    else if(presenceOnline(m)) marcarSenal(m,'viaPresence');
+    else if(fleetOnline(m)) marcarSenal(m,'viaFleet');
+    else onlineConGracia(m);   // sin señal ahora: se aguanta 90 s antes de darlo por caído
   });
   MACHINES.forEach(m=>{ PREV_ONLINE[m.id]=m.online; }); _baselineDone=true;
   const up=MACHINES.filter(m=>m.online).length;
@@ -1086,6 +1087,30 @@ function _seenIn(set,m){ const ks=_machKeys(m);
   return false; }
 function presenceOnline(m){ return _seenIn(PRESENCE_SEEN,m); }
 function fleetOnline(m){ return _seenIn(FLEET_SEEN,m); }
+/* PERDER EL REGISTRO NO ES APAGARSE (Carlos, 11-ago-2026: «hay mucha desconexión y
+   conexión de equipos que están al lado mío y están conectados»).
+   Medido con 22 muestras a 12s: el MacBook Pro 16 se cae del listado de /api/presence
+   el 23% del tiempo —cinco muestras seguidas, ~1 min— y cuando está, su latido tiene
+   entre 0 y 23 s. O sea que emite de maravilla cada 15 s; lo que desaparece es su
+   ENTRADA en el listado. Y como su lastSeen en admira-fleet lleva 30 h congelado —igual
+   que el de otras 7 máquinas—, fleetOnline() tampoco lo rescata: se queda sin ninguna
+   red. Con el panel repintando cada 8 s, ese minuto son siete vueltas dándolo por caído,
+   un «💤 se ha desconectado» y su «🟢 de vuelta online» al minuto. Un panel de mando que
+   canta caídas falsas enseña a ignorar las caídas.
+   Así que la ausencia se mide en TIEMPO, no en vueltas: se recuerda cuándo se le vio
+   señal por última vez y se le da una gracia de 90 s antes de darlo por caído. No es
+   maquillaje —con latido cada 15 s, 90 s son seis latidos perdidos seguidos—: si se
+   apaga de verdad, se ve igual, solo que un minuto y medio más tarde y sin falsos
+   positivos por medio. La gracia se anota en el objeto (viaGracia) para que quien
+   pinte pueda decirlo en vez de fingir certeza. */
+const ONLINE_GRACIA_MS=90000;
+let LAST_SIGNAL={};
+function marcarSenal(m,via){ LAST_SIGNAL[m.id]=Date.now(); m.online=true; m[via]=true; }
+function onlineConGracia(m){
+  const t=LAST_SIGNAL[m.id];
+  if(!t || (Date.now()-t)>ONLINE_GRACIA_MS) return false;
+  m.online=true; m.viaGracia=true; return true;
+}
 function personaWallpaper(name){
   const f=_personaFile[PERSONA_BY_MACHINE[_norm(name)]];
   return f ? '/wallpapers/'+f+'.png' : '';
@@ -1140,10 +1165,11 @@ async function refresh(){
     // latido fresco en /api/presence (viaPresence, señal principal) o registro fresco en
     // admira-fleet (viaFleet). Así Crema/Rosa (ya registradas) aparecen sin depender del Mini.
     MACHINES.forEach(m=>{
-      if(m.online) return;
-      if(agentOnline(m)){ m.online=true; m.viaAgent=true; }
-      else if(presenceOnline(m)){ m.online=true; m.viaPresence=true; }
-      else if(fleetOnline(m)){ m.online=true; m.viaFleet=true; }
+      if(m.online){ LAST_SIGNAL[m.id]=Date.now(); return; }   // el hub la ve: eso ya es señal
+      if(agentOnline(m)) marcarSenal(m,'viaAgent');
+      else if(presenceOnline(m)) marcarSenal(m,'viaPresence');
+      else if(fleetOnline(m)) marcarSenal(m,'viaFleet');
+      else onlineConGracia(m);   // sin señal ahora: se aguanta 90 s antes de darlo por caído
     });
     const up=MACHINES.filter(m=>m.online).length;
     $('#connPill').textContent=(failedOver?'🟠 ':'🟢 ')+up+'/'+MACHINES.length+' online · vía '+(route&&route.label||'relay');

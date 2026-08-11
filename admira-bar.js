@@ -35,9 +35,14 @@
     { t: "🎯 Misiones",  h: "https://www.admira.live/vista-previa" },
     { t: "🧩 Asignaciones", h: "https://www.admira.live/asignaciones/" },
     { t: "📓 Diario",    h: "https://www.admira.live/diario.html" },
-    // La Incubadora vivía fuera del menú: se entraba por enlace suelto y, una vez
-    // dentro, no había por dónde volver ni adónde ir. Ahora es una parada más.
-    { t: "🏢 Incubadora", h: "https://www.admira.live/13rue/" },
+    // INCUBADORA RETIRADA DE MOMENTO (Carlos, 11-08-2026). Ojo: es temporal, no una
+    // baja. Se deja aquí la línea comentada en vez de borrarla porque devolverla es
+    // descomentar y desplegar; si se borra, dentro de un mes nadie recuerda el emoji,
+    // la ruta ni que estuvo. La página sigue publicada en /13rue/ y accesible por
+    // enlace directo — como Telegram y Status, sale de la barra, no del sitio.
+    // Cuando vuelva, recordar el motivo por el que se metió: se entraba por enlace
+    // suelto y, una vez dentro, no había por dónde volver ni adónde ir.
+    // { t: "🏢 Incubadora", h: "https://www.admira.live/13rue/" },
   ];
 
   var css =

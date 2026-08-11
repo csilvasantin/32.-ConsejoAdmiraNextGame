@@ -1,4 +1,4 @@
-/* control/fleet-mesh.js · AdmiraNeXT Fleet Mesh · v.10.08.2026.r8.20:55
+/* control/fleet-mesh.js · AdmiraNeXT Fleet Mesh · v.11.08.2026.r9.10:46
  *
  * Cliente de control sin punto único de fallo. Mantiene una sesión Google
  * independiente por relay, conmuta lecturas y comandos entre relays y adjunta
@@ -14,8 +14,25 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function (root) {
   'use strict';
 
-  var VERSION = 'v.10.08.2026.r8.20:55';
+  var VERSION = 'v.11.08.2026.r9.10:46';
   var DEFAULT_RELAYS = [
+    {
+      // PUERTA PÚBLICA (Carlos, 11-ago-2026: «le meto el usuario y va muy lento;
+      // en un navegador externo va sin problemas»). Los dos relays de abajo viven
+      // en nombres *.ts.net que, DENTRO del tailnet, MagicDNS resuelve a una IP
+      // PRIVADA (100.64/10). Chrome 138+ corta ese salto público→privado por
+      // «Local Network Access» sin dar error de CORS: la petición muere en 2 ms y
+      // el panel se queda sin sesión pareciendo lento. Fuera del tailnet el mismo
+      // nombre resuelve al Funnel (IP pública) y todo iba bien — de ahí el
+      // síntoma. Este relay va PRIMERO porque funciona en los dos escenarios: el
+      // navegador solo habla con Cloudflare y es el worker quien llama al hub.
+      // Los directos se quedan de respaldo: si el borde falla, siguen sirviendo
+      // a quien esté fuera del tailnet.
+      id: 'proxy',
+      label: 'Puerta pública',
+      base: 'https://fleet.admira.live/api',
+      priority: 5
+    },
     {
       id: 'macmini',
       label: 'Mac Mini',

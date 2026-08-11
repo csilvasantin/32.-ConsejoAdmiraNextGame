@@ -24,8 +24,14 @@
   // Respaldos por puerto del primario. El gateway de este Mac expone el mismo
   // árbol de rutas (/api, /fleet, /council) en :10000; optoken sigue en :8443.
   var BACKUPS = {
-    // primario :443 → 1º respaldo local (este Mac :10000) → 2º Cloudflare degradado
-    '': ['https://macbook-pro-16.tail48b61c.ts.net:10000', 'https://fallback.admira.store'],
+    // primario :443 → 1º puerta pública → 2º respaldo local (:10000) → 3º Cloudflare degradado.
+    // La puerta pública va la PRIMERA porque el fallo más común ya no es que el Mini
+    // esté apagado, sino que el navegador esté DENTRO del tailnet: allí *.ts.net
+    // resuelve a una IP privada y Chrome corta el salto público→privado (Local
+    // Network Access) en 2 ms. El respaldo directo tampoco valdría entonces —es
+    // igual de privado—, así que primero se prueba el borde público, que funciona
+    // dentro y fuera del tailnet (Carlos, 11-ago-2026).
+    '': ['https://fleet.admira.live', 'https://macbook-pro-16.tail48b61c.ts.net:10000', 'https://fallback.admira.store'],
     '8443': ['https://macbook-pro-16.tail48b61c.ts.net:8443'],   // optoken :8443 → respaldo :8443
   };
 

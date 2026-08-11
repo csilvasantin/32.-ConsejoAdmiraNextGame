@@ -12,13 +12,15 @@ test("la verja no abre One Tap ni FedCM silencioso", () => {
 test("challenge+nonce preceden al callback y viajan con cookie", () => {
   assert.match(source, /\/auth\/challenge/);
   assert.match(source, /nonce:challenge\.nonce/);
-  assert.match(source, /state:activeChallenge\.state/);
+  assert.match(source, /state:redirectState/);
+  assert.match(source, /login_uri:LOGIN_URI/);
   assert.match(source, /credentials:"include"/);
 });
 
-test("el acceso manual usa popup clásico y no persiste credenciales", () => {
-  assert.match(source, /ux_mode:"popup"/);
+test("el acceso manual navega top-level y JavaScript no recibe credenciales", () => {
+  assert.match(source, /ux_mode:"redirect"/);
   assert.match(source, /use_fedcm_for_button:false/);
+  assert.doesNotMatch(source, /callback:onCredential|resp\.credential|ephemeralCredential/);
   assert.doesNotMatch(source, /localStorage\.setItem\([^\n]*(cred|session|token)/i);
   assert.doesNotMatch(source, /sessionStorage/);
 });

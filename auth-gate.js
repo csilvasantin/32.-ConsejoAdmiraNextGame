@@ -18,13 +18,13 @@
   var CLIENT_ID = "861856772040-e1ri6kpu6maagtb6crdfbb923hsaalgb.apps.googleusercontent.com";
 
   var AUTH_API = "https://fleet.admira.live/api";
+  var LOGIN_URI = AUTH_API + "/auth/callback";
   var CONNECT_SECONDS = 1.6;     // duración de la "conexión" antes de mostrar el login
   var SCANLINES = true;          // overlay CRT
-  var activeChallenge = null;
   var gateUser = null;
-  var ephemeralCredential = "";
+  var redirectState = "";
   window.admiraGateUser = function () { return gateUser; };
-  window.admiraGateCredential = function () { return ephemeralCredential; };
+  window.admiraGateCredential = function () { return ""; };
   window.admiraGateLogout = function () {
     return fetch(AUTH_API + "/auth/logout", { method:"POST", credentials:"include", cache:"no-store" })
       .catch(function () {}).then(function () { gateUser=null; location.reload(); });
@@ -242,27 +242,8 @@
     var el = document.getElementById("admira-gbtn");
     if (!el || !window.google || !google.accounts || !google.accounts.id) return;
     try {
-      google.accounts.id.renderButton(el, { theme: "filled_black", size: "large", text: "signin_with", shape: "pill", width: 240 });
+      google.accounts.id.renderButton(el, { theme: "filled_black", size: "large", text: "signin_with", shape: "pill", width: 240, state:redirectState });
     } catch (e) {}
-  }
-
-  // ===== validación server-side con challenge+nonce de un solo uso =====
-  function onCredential(resp) {
-    phase = "auth"; spin = 2.2; renderFoot();
-    var anim = animateDots();
-    if (!resp || !resp.credential || !activeChallenge) { clearInterval(anim); failBack("RESPUESTA DE GOOGLE NO VÁLIDA"); return; }
-    fetch(AUTH_API + "/auth", { method:"POST", credentials:"include", cache:"no-store", headers:{"Content-Type":"application/json"},
-      body:JSON.stringify({credential:resp.credential,state:activeChallenge.state}) })
-    .then(function (r) { return r.json().catch(function(){return {};}).then(function(d){return {status:r.status,data:d};}); })
-    .then(function (result) {
-      activeChallenge = null;
-      if (result.status !== 200 || !result.data.ok) throw new Error(result.status === 403 ? "CUENTA NO AUTORIZADA" : "NO SE PUDO VALIDAR");
-      gateUser = { email:String(result.data.email || "").toLowerCase() };
-      ephemeralCredential = resp.credential;
-      clearInterval(anim);
-      phase = "welcome"; renderFoot();
-      setTimeout(unlock, 900);
-    }).catch(function (err) { activeChallenge=null; clearInterval(anim); failBack(String(err&&err.message||"ERROR DE ACCESO")); initGis(); });
   }
 
   function animateDots() {
@@ -293,12 +274,13 @@
   // ===== arranque: GIS + montaje =====
   function initGis() {
     if (!window.google || !google.accounts || !google.accounts.id) return;
-    fetch(AUTH_API + "/auth/challenge", { credentials:"include", cache:"no-store" })
+    var returnTo = location.pathname + location.search + location.hash;
+    fetch(AUTH_API + "/auth/challenge", { method:"POST", credentials:"include", cache:"no-store", headers:{"Content-Type":"application/json"}, body:JSON.stringify({flow:"redirect",return_to:returnTo}) })
       .then(function(r){return r.ok?r.json():Promise.reject(new Error("challenge"));})
       .then(function(challenge){
-        activeChallenge=challenge;
-        google.accounts.id.initialize({ client_id:CLIENT_ID, callback:onCredential, nonce:challenge.nonce,
-          ux_mode:"popup", auto_select:false, cancel_on_tap_outside:false, use_fedcm_for_button:false });
+        redirectState=challenge.state;
+        google.accounts.id.initialize({ client_id:CLIENT_ID, nonce:challenge.nonce, login_uri:LOGIN_URI,
+          ux_mode:"redirect", auto_select:false, cancel_on_tap_outside:false, use_fedcm_for_button:false });
         gisReady=true; if(phase==="ready")renderGoogleButton();
       }).catch(function(){gisReady=true;if(phase==="connecting"){phase="ready";renderFoot();}var el=document.getElementById("admira-err");if(el)el.textContent="✖ NO SE PUDO INICIAR EL ACCESO SEGURO.";});
   }

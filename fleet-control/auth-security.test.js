@@ -17,10 +17,21 @@ test('Google se valida sin token en URL y con claims+nonce completos', () => {
 test('challenge es ligado a cookie, expira y se consume una vez', () => {
   assert.match(server, /__Host-fleet_challenge/);
   assert.match(server, /consumeChallenge\(req/);
-  assert.match(server, /row\.used/);
-  assert.match(server, /row\.expiresAt<Date\.now\(\)/);
+  assert.match(server, /createChallengeStore/);
   assert.match(gate, /nonce:challenge\.nonce/);
-  assert.match(gate, /state:activeChallenge\.state/);
+  assert.match(gate, /state:redirectState/);
+});
+
+test('redirect GIS usa callback backend exacto sin token en URL o logs', () => {
+  assert.match(gate, /LOGIN_URI\s*=\s*AUTH_API\s*\+\s*"\/auth\/callback"/);
+  assert.match(gate, /ux_mode:"redirect"/);
+  assert.match(gate, /method:"POST"[^\n]*body:JSON\.stringify\(\{flow:"redirect",return_to:returnTo\}\)/);
+  assert.doesNotMatch(gate, /challenge\?[^"\n]*return_to/);
+  assert.match(server, /\/api\/auth\/callback/);
+  assert.match(server, /parseGoogleCallback/);
+  assert.match(server, /res\.writeHead\(303/);
+  assert.doesNotMatch(server, /audit\([^\n]*(credential|form\.state)/);
+  assert.doesNotMatch(server, /Location:[^\n]*(credential|form\.state)/);
 });
 
 test('sesión queda en cookie segura, rota y no vuelve en JSON o storage', () => {

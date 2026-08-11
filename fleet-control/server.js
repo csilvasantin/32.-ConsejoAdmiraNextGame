@@ -23,6 +23,7 @@ const os = require('os');
 const path = require('path');
 const { macOpenCommand, linuxOpenCommand, windowsOpenCommand } = require('./open-action');
 const { canonicalScreenId, preflightCommand, assessPreflight } = require('./signage-preflight');
+const { CALLBACK_URI:AUTH_CALLBACK_URI, PUBLIC_ORIGIN:AUTH_PUBLIC_ORIGIN, createChallengeStore, parseGoogleCallback } = require('./auth-redirect');
 
 const DIR = __dirname;
 const PORT = parseInt(process.env.FLEET_PORT || '9140', 10);
@@ -91,7 +92,7 @@ const CHALLENGE_TTL_MS = 10 * 60 * 1000;
 const SESSION_COOKIE = '__Host-fleet_session';
 const CHALLENGE_COOKIE = '__Host-fleet_challenge';
 const GOOGLE_ISSUERS = new Set(['accounts.google.com', 'https://accounts.google.com']);
-const _challenges = new Map();
+const _challengeStore = createChallengeStore({ ttlMs:CHALLENGE_TTL_MS });
 const _activeSessions = new Map();
 const SESSION_SECRET = (function () {
   const f = path.join(DIR, '.session-secret');
@@ -160,18 +161,13 @@ function sessionFromReq(req) {
 function appendSetCookie(res,value){const old=res.getHeader('Set-Cookie');res.setHeader('Set-Cookie',old?(Array.isArray(old)?old.concat(value):[old,value]):value);}
 function setSessionCookie(res, token, maxAge=Math.floor(SESSION_TTL_MS/1000)) { appendSetCookie(res,`${SESSION_COOKIE}=${encodeURIComponent(token)}; Path=/; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Lax`); }
 function clearSessionCookie(res) { appendSetCookie(res,`${SESSION_COOKIE}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`); }
-function setChallengeCookie(res, state, maxAge=Math.floor(CHALLENGE_TTL_MS/1000)) { appendSetCookie(res,`${CHALLENGE_COOKIE}=${encodeURIComponent(state)}; Path=/; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Lax`); }
-function clearChallengeCookie(res) { appendSetCookie(res,`${CHALLENGE_COOKIE}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`); }
-function issueChallenge() {
-  const state=crypto.randomBytes(24).toString('base64url'), nonce=crypto.randomBytes(24).toString('base64url'), expiresAt=Date.now()+CHALLENGE_TTL_MS;
-  _challenges.set(state,{nonce,expiresAt,used:false});
-  for(const [key,value] of _challenges){if(value.expiresAt<Date.now()||value.used)_challenges.delete(key);}
-  return {state,nonce,expiresAt};
+function setChallengeCookie(res, state, maxAge=Math.floor(CHALLENGE_TTL_MS/1000), sameSite='Lax') { appendSetCookie(res,`${CHALLENGE_COOKIE}=${encodeURIComponent(state)}; Path=/; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=${sameSite}`); }
+function clearChallengeCookie(res, sameSite='Lax') { appendSetCookie(res,`${CHALLENGE_COOKIE}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=${sameSite}`); }
+function issueChallenge(returnTo='/', flow='popup') {
+  return _challengeStore.issue(returnTo,flow);
 }
-function consumeChallenge(req,state) {
-  const cookie=parseCookies(req)[CHALLENGE_COOKIE]||'', row=_challenges.get(state);
-  if(!state||!safeEqual(state,cookie)||!row||row.used||row.expiresAt<Date.now())return null;
-  row.used=true; _challenges.delete(state); return row;
+function consumeChallenge(req,state,flow='popup') {
+  return _challengeStore.consume(req.headers.cookie,state,flow);
 }
 
 /* ----- ejecutar en una máquina (local o ssh) -------------------------------- */
@@ -568,6 +564,9 @@ async function gate(req, res, ip, allowToken) {
 function readBody(req) {
   return new Promise((resolve) => { let b = ''; req.on('data', d => { b += d; if (b.length > 1e6) b = b.slice(0, 1e6); }); req.on('end', () => { try { resolve(b ? JSON.parse(b) : {}); } catch (e) { resolve({}); } }); });
 }
+function readRawBody(req, limit=20000) {
+  return new Promise((resolve) => { let body='', tooLarge=false; req.on('data', chunk => { if (tooLarge) return; body += chunk; if (body.length > limit) { tooLarge=true; body=''; } }); req.on('end', () => resolve(tooLarge ? null : body)); req.on('error', () => resolve(null)); });
+}
 
 /* ----- rutas ---------------------------------------------------------------- */
 /* ── TERMINAL INTERACTIVA (PTY real por `ssh -tt`) ───────────────────────────
@@ -625,7 +624,8 @@ const server = http.createServer(async (req, res) => {
   cors(req, res);
   if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
   const ip = clientIp(req);
-  let url = req.url.split('?')[0];
+  const requestUrl = new URL(req.url, 'https://fleet.admira.live');
+  let url = requestUrl.pathname;
   if (url.startsWith(BASE)) url = url.slice(BASE.length) || '/';
 
   if (rateLimited(ip)) { audit({ ip, ev: 'rate_limited', url }); return json(res, 429, { error: 'demasiadas peticiones' }); }
@@ -650,10 +650,13 @@ const server = http.createServer(async (req, res) => {
     hasToken: !!currentToken()
   });
 
-  if (url === '/api/auth/challenge' && req.method === 'GET') {
+  if (url === '/api/auth/challenge' && (req.method === 'GET' || req.method === 'POST')) {
     if (!ALLOW_ORIGINS.includes(String(req.headers.origin || ''))) return json(res,403,{error:'origin no permitido'});
-    const challenge=issueChallenge(); setChallengeCookie(res,challenge.state);
-    return json(res,200,{ok:true,state:challenge.state,nonce:challenge.nonce,expiresAt:challenge.expiresAt});
+    const challengeInput=req.method==='POST'?await readBody(req):{};
+    const flow=(challengeInput.flow||requestUrl.searchParams.get('flow'))==='redirect'?'redirect':'popup';
+    const challenge=issueChallenge(flow==='redirect'?(challengeInput.return_to||requestUrl.searchParams.get('return_to')):'/',flow);
+    setChallengeCookie(res,challenge.state,Math.floor(CHALLENGE_TTL_MS/1000),flow==='redirect'?'None':'Lax');
+    return json(res,200,{ok:true,state:challenge.state,nonce:challenge.nonce,expiresAt:challenge.expiresAt,login_uri:flow==='redirect'?AUTH_CALLBACK_URI:undefined});
   }
   if (url === '/api/auth/session' && req.method === 'GET') {
     if (!ALLOW_ORIGINS.includes(String(req.headers.origin || ''))) return json(res,403,{error:'origin no permitido'});
@@ -681,6 +684,15 @@ const server = http.createServer(async (req, res) => {
     audit({ ip, ev: 'auth_google_ok', email });
     setSessionCookie(res,mintSession(email));
     return json(res, 200, { ok: true, email });
+  }
+  if (url === '/api/auth/callback' && req.method === 'POST') {
+    const raw=await readRawBody(req), form=raw==null?{error:'invalid_form'}:parseGoogleCallback(raw,req.headers['content-type'],req.headers.cookie);
+    if(form.error){clearChallengeCookie(res,'None');audit({ip,ev:'auth_callback_rejected',reason:form.error});return json(res,form.error==='csrf_invalid'?403:400,{error:form.error});}
+    const challenge=consumeChallenge(req,form.state,'redirect'); clearChallengeCookie(res,'None');
+    const email=challenge&&await verifyGoogleCredential(form.credential,challenge.nonce);
+    if(!email){_recentFails.push(Date.now());audit({ip,ev:'auth_google_fail'});return json(res,401,{error:'google no autorizado'});}
+    audit({ip,ev:'auth_google_ok',email}); setSessionCookie(res,mintSession(email));
+    res.writeHead(303,{Location:AUTH_PUBLIC_ORIGIN+challenge.returnPath,'Cache-Control':'no-store','Content-Security-Policy':"default-src 'none'; frame-ancestors 'none'; base-uri 'none'",'Referrer-Policy':'no-referrer'}); return res.end();
   }
 
   // estado de la flota (lectura) — requiere token (el funnel es público)

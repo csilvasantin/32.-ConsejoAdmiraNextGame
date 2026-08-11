@@ -9,7 +9,7 @@ const assets = [
   {
     path: '/auth-gate.js',
     file: new URL('../auth-gate.js', import.meta.url),
-    release: '20260811-r11',
+    release: '20260811-r12',
   },
   {
     path: '/control/fleet-mesh.js',

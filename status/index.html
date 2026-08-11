@@ -29,7 +29,7 @@
       if(q==='on'||q==='off') on = q;         // escape puntual, solo esta carga
     }catch(e){}
     if(on!=='on') return;                     // visor sin gate SOLO con ?gate=off explícito
-    var s=document.createElement('script'); s.src='/auth-gate.js?v=20260811-r10';   // ABSOLUTA: la relativa resolvía a /status/auth-gate.js?v=20260811-r10 (HTML, no script) y la verja moría en silencio dejando /status público; con la raíz se comparte la sesión admira_gate con la home (login 1 vez por dominio)
+    var s=document.createElement('script'); s.src='/auth-gate.js?v=20260811-r14-c7df116ee0bf';   // ABSOLUTA: la relativa resolvía a /status/auth-gate.js?v=20260811-r14-c7df116ee0bf (HTML, no script) y la verja moría en silencio dejando /status público; con la raíz se comparte la sesión admira_gate con la home (login 1 vez por dominio)
     (document.head||document.documentElement).appendChild(s);
     // Si a los 10s el gate sigue bloqueando y no hay sesión, lo más probable es
     // que el origen aún no esté autorizado en Google → mensaje claro en pantalla.

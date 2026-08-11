@@ -27,6 +27,7 @@ test('forwards exact allowlisted Origin and challenge Cookie to the hub', async 
       Origin: 'https://www.admira.live',
       Cookie: '__Host-fleet_challenge=one',
       'Content-Type': 'application/json',
+      'X-Fleet-CSRF': 'csrf-value-1234567890',
       'X-Not-Allowlisted': 'must-not-pass',
     },
     body: '{"state":"state"}',
@@ -36,6 +37,7 @@ test('forwards exact allowlisted Origin and challenge Cookie to the hub', async 
   assert.equal(forwarded.init.headers.get('Origin'), 'https://www.admira.live');
   assert.equal(forwarded.init.headers.get('Cookie'), '__Host-fleet_challenge=one');
   assert.equal(forwarded.init.headers.get('Content-Type'), 'application/json');
+  assert.equal(forwarded.init.headers.get('X-Fleet-CSRF'), 'csrf-value-1234567890');
   assert.equal(forwarded.init.headers.get('Authorization'), null);
   assert.equal(forwarded.init.headers.get('X-Not-Allowlisted'), null);
   assert.equal(response.headers.get('Access-Control-Allow-Origin'), 'https://www.admira.live');
@@ -53,8 +55,41 @@ test('does not synthesize or forward untrusted, wildcard, or missing Origin', ()
     if (origin !== null) headers.set('Origin', origin);
     const outgoing = headersToHub(new Request('https://fleet.admira.live/api/auth/session', { headers }));
     assert.equal(outgoing.get('Origin'), null);
-    assert.equal(outgoing.get('Cookie'), '__Host-fleet_session=value');
+    assert.equal(outgoing.get('Cookie'), null);
   }
+});
+
+test('mutating Cookie auth fails at edge without exact Origin and CSRF', async () => {
+  let hubCalls = 0;
+  const proxy = createFleetProxy({relays:[relay], fetchImpl:async () => { hubCalls += 1; return new Response('unexpected'); }});
+  const cases = [
+    {headers:{Cookie:'__Host-fleet_session=value'}},
+    {headers:{Origin:'https://evil.example', Cookie:'__Host-fleet_session=value', 'X-Fleet-CSRF':'csrf-value-1234567890'}},
+    {headers:{Origin:'https://www.admira.live', Cookie:'__Host-fleet_session=value'}},
+    {headers:{Origin:'https://www.admira.live', Cookie:'__Host-fleet_session=value', 'X-Fleet-CSRF':'short'}},
+  ];
+  for (const item of cases) {
+    const response = await proxy.fetch(new Request('https://fleet.admira.live/api/action', {method:'POST', headers:item.headers, body:'{}'}));
+    assert.equal(response.status, 403);
+  }
+  assert.equal(hubCalls, 0);
+});
+
+test('exact Origin Cookie and CSRF reaches hub; machine token without Cookie remains separate', async () => {
+  const seen = [];
+  const proxy = createFleetProxy({relays:[relay], fetchImpl:async (_url, init) => { seen.push(init.headers); return Response.json({ok:true}); }});
+  const browser = await proxy.fetch(new Request('https://fleet.admira.live/api/action', {
+    method:'POST', headers:{Origin:'https://www.admira.live', Cookie:'__Host-fleet_session=value', 'X-Fleet-CSRF':'csrf-value-1234567890'}, body:'{}'
+  }));
+  const machine = await proxy.fetch(new Request('https://fleet.admira.live/api/register', {
+    method:'POST', headers:{'X-Fleet-Token':'machine-token'}, body:'{}'
+  }));
+  assert.equal(browser.status, 200);
+  assert.equal(machine.status, 200);
+  assert.equal(seen[0].get('Cookie'), '__Host-fleet_session=value');
+  assert.equal(seen[0].get('X-Fleet-CSRF'), 'csrf-value-1234567890');
+  assert.equal(seen[1].get('Cookie'), null);
+  assert.equal(seen[1].get('X-Fleet-Token'), 'machine-token');
 });
 
 test('untrusted Origin receives neither ACAO nor credentials and is not upgraded upstream', async () => {

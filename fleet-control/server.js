@@ -23,7 +23,8 @@ const os = require('os');
 const path = require('path');
 const { macOpenCommand, linuxOpenCommand, windowsOpenCommand } = require('./open-action');
 const { canonicalScreenId, preflightCommand, assessPreflight } = require('./signage-preflight');
-const { CALLBACK_URI:AUTH_CALLBACK_URI, PUBLIC_ORIGIN:AUTH_PUBLIC_ORIGIN, createChallengeStore, parseGoogleCallback } = require('./auth-redirect');
+const { CALLBACK_URI:AUTH_CALLBACK_URI, PUBLIC_ORIGIN:AUTH_PUBLIC_ORIGIN, createChallengeStore, parseGoogleCallback, safeReturnPath } = require('./auth-redirect');
+const { sessionMutationError } = require('./session-csrf');
 
 const DIR = __dirname;
 const PORT = parseInt(process.env.FLEET_PORT || '9140', 10);
@@ -91,6 +92,7 @@ const SESSION_TTL_MS = 12 * 3600 * 1000;
 const CHALLENGE_TTL_MS = 10 * 60 * 1000;
 const SESSION_COOKIE = '__Host-fleet_session';
 const CHALLENGE_COOKIE = '__Host-fleet_challenge';
+const AUTH_HANDOFF_CONSUME = 'https://www.admira.live/auth/handoff/consume';
 const GOOGLE_ISSUERS = new Set(['accounts.google.com', 'https://accounts.google.com']);
 const _challengeStore = createChallengeStore({ ttlMs:CHALLENGE_TTL_MS });
 const _activeSessions = new Map();
@@ -130,9 +132,9 @@ async function verifyGoogleCredential(cred, expectedNonce) {
   } catch (e) { return null; }
 }
 function mintSession(email) {
-  const now=Date.now(), jti=crypto.randomBytes(18).toString('hex'), exp=now+SESSION_TTL_MS;
+  const now=Date.now(), jti=crypto.randomBytes(18).toString('hex'), exp=now+SESSION_TTL_MS, csrf=crypto.randomBytes(24).toString('base64url');
   const payload = b64url(JSON.stringify({ email, jti, iat:now, exp }));
-  _activeSessions.set(jti,{email,exp});
+  _activeSessions.set(jti,{email,exp,csrf});
   for(const [key,value] of _activeSessions){if(value.exp<now)_activeSessions.delete(key);}
   return payload + '.' + hmac(payload);
 }
@@ -147,7 +149,7 @@ function verifySession(token) {
   const active=_activeSessions.get(d.jti);
   if(!active || active.email!==email || active.exp!==d.exp)return null;
   if (!SUPERS.has(email)) return null;   // degradar a alguien le corta /control en ≤60s
-  return { email, jti:d.jti, exp:d.exp };
+  return { email, jti:d.jti, exp:d.exp, csrf:active.csrf };
 }
 function parseCookies(req) {
   const out = {};
@@ -502,7 +504,7 @@ function cors(req, res) {
   if (o && ALLOW_ORIGINS.includes(o)) res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
-  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Fleet-Token, X-Fleet-Session, X-Fleet-Command-Id, Authorization');
+  res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Fleet-Token, X-Fleet-Session, X-Fleet-Command-Id, X-Fleet-CSRF, Authorization');
   res.setHeader('Access-Control-Max-Age', '600');
   // Chrome exige PNA cuando el panel público llama a un relay del tailnet. Se
   // concede sólo a los mismos orígenes exactos ya autorizados por CORS.
@@ -548,9 +550,8 @@ function tarpitMs() {
 async function gate(req, res, ip, allowToken) {
   const session=verifySession(sessionFromReq(req));
   if (session) {
-    if (!/^(GET|HEAD|OPTIONS)$/i.test(req.method) && !ALLOW_ORIGINS.includes(String(req.headers.origin || ''))) {
-      json(res,403,{error:'origin no permitido'}); return false;
-    }
+    const mutationError=sessionMutationError(req,session,ALLOW_ORIGINS);
+    if(mutationError){json(res,403,{error:mutationError});return false;}
     return true;
   }
   if (allowToken && authed(req)) return true;                   // X-Fleet-Token (solo onboarding headless)
@@ -662,11 +663,14 @@ const server = http.createServer(async (req, res) => {
     if (!ALLOW_ORIGINS.includes(String(req.headers.origin || ''))) return json(res,403,{error:'origin no permitido'});
     const session=verifySession(sessionFromReq(req));
     if(!session){clearSessionCookie(res);return json(res,401,{ok:false});}
-    return json(res,200,{ok:true,email:session.email});
+    return json(res,200,{ok:true,email:session.email,csrf:session.csrf});
   }
   if (url === '/api/auth/logout' && req.method === 'POST') {
     if (!ALLOW_ORIGINS.includes(String(req.headers.origin || ''))) return json(res,403,{error:'origin no permitido'});
-    const session=verifySession(sessionFromReq(req)); if(session)_activeSessions.delete(session.jti);
+    const session=verifySession(sessionFromReq(req));
+    const mutationError=session&&sessionMutationError(req,session,ALLOW_ORIGINS);
+    if(mutationError)return json(res,403,{error:mutationError});
+    if(session)_activeSessions.delete(session.jti);
     clearSessionCookie(res); return json(res,200,{ok:true});
   }
   // AUTH: challenge+nonce de un solo uso; el navegador sólo recibe cookie HttpOnly.
@@ -693,6 +697,24 @@ const server = http.createServer(async (req, res) => {
     if(!email){_recentFails.push(Date.now());audit({ip,ev:'auth_google_fail'});return json(res,401,{error:'google no autorizado'});}
     audit({ip,ev:'auth_google_ok',email}); setSessionCookie(res,mintSession(email));
     res.writeHead(303,{Location:AUTH_PUBLIC_ORIGIN+challenge.returnPath,'Cache-Control':'no-store','Content-Security-Policy':"default-src 'none'; frame-ancestors 'none'; base-uri 'none'",'Referrer-Policy':'no-referrer'}); return res.end();
+  }
+  if (url === '/api/auth/handoff' && req.method === 'POST') {
+    if (String(req.headers.origin || '') !== AUTH_PUBLIC_ORIGIN) return json(res,403,{error:'origin no permitido'});
+    const raw=await readRawBody(req);
+    if(raw==null||String(req.headers['content-type']||'').split(';',1)[0].trim().toLowerCase()!=='application/x-www-form-urlencoded'||raw.length>1024)return json(res,400,{error:'invalid_form'});
+    const code=String(new URLSearchParams(raw).get('code')||'');
+    if(!/^[A-Za-z0-9_-]{40,80}$/.test(code))return json(res,400,{error:'invalid_code'});
+    let handoff=null;
+    try{
+      const exchange=await fetch(AUTH_HANDOFF_CONSUME,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded',Origin:'https://fleet.admira.live'},body:new URLSearchParams({code}).toString(),signal:AbortSignal.timeout(8000)});
+      if(exchange.ok)handoff=await exchange.json();
+    }catch(e){}
+    if(!handoff||!handoff.email)return json(res,409,{error:'handoff_invalid'});
+    const email=String(handoff.email).toLowerCase();
+    if(Date.now()-_superTs>60000)await refreshSupers();
+    if(!SUPERS.has(email))return json(res,403,{error:'google no autorizado'});
+    setSessionCookie(res,mintSession(email));
+    res.writeHead(303,{Location:AUTH_PUBLIC_ORIGIN+safeReturnPath(handoff.returnPath),'Cache-Control':'no-store','Content-Security-Policy':"default-src 'none'; frame-ancestors 'none'; base-uri 'none'",'Referrer-Policy':'no-referrer'}); return res.end();
   }
 
   // estado de la flota (lectura) — requiere token (el funnel es público)

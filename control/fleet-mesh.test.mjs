@@ -33,7 +33,7 @@ test("usa el relay primario cuando está sano", async () => {
     getCredential: async () => "google",
     fetch: async (url) => {
       calls.push(url);
-      if (url.endsWith("/auth/session")) return json({ ok:true, email:"owner@example.com" });
+      if (url.endsWith("/auth/session")) return json({ ok:true, email:"owner@example.com", csrf:"csrf-primary" });
       return json({ machines: [] });
     },
   });
@@ -56,7 +56,7 @@ test("conmuta al backup cuando ese host ya tiene su cookie independiente", async
     fetch: async (url) => {
       calls.push(url);
       if (url.startsWith("https://primary.test")) throw new Error("primary unreachable");
-      if (url.endsWith("/auth/session")) return json({ ok:true, email:"owner@example.com" });
+      if (url.endsWith("/auth/session")) return json({ ok:true, email:"owner@example.com", csrf:"csrf-backup" });
       return json({ machines: [{ id: "dgx" }] });
     },
   });
@@ -70,13 +70,15 @@ test("conmuta al backup cuando ese host ya tiene su cookie independiente", async
 
 test("conserva el mismo command id al reintentar por otro relay", async () => {
   const ids = [];
+  const csrf = [];
   const mesh = create({
     relays: RELAYS,
     store: store(),
     getCredential: async () => "google",
     fetch: async (url, init = {}) => {
-      if (url.endsWith("/auth/session")) return json({ ok:true, email:"owner@example.com" });
+      if (url.endsWith("/auth/session")) return json({ ok:true, email:"owner@example.com", csrf:url.includes("primary")?"csrf-primary":"csrf-backup" });
       ids.push(new Headers(init.headers).get("X-Fleet-Command-Id"));
+      csrf.push(new Headers(init.headers).get("X-Fleet-CSRF"));
       if (url.startsWith("https://primary.test")) return json({ error: "relay error" }, { status: 503 });
       return json({ rc: 0 });
     },
@@ -91,6 +93,7 @@ test("conserva el mismo command id al reintentar por otro relay", async () => {
   assert.equal(ids.length, 2);
   assert.ok(ids[0]);
   assert.equal(ids[0], ids[1]);
+  assert.deepEqual(csrf, ["csrf-primary", "csrf-backup"]);
 });
 
 test("fija una sesión interactiva al relay indicado", async () => {
@@ -101,7 +104,7 @@ test("fija una sesión interactiva al relay indicado", async () => {
     getCredential: async () => "google",
     fetch: async (url) => {
       calls.push(url);
-      if (url.endsWith("/auth/session")) return json({ ok:true, email:"owner@example.com" });
+      if (url.endsWith("/auth/session")) return json({ ok:true, email:"owner@example.com", csrf:"csrf-backup" });
       return json({ ok: true });
     },
   });
@@ -120,7 +123,7 @@ test("fija una sesión interactiva al relay indicado", async () => {
 // Grabación de pantalla del agente. El vencimiento tiene que decir su nombre.
 function colgado({ respetaMotivo }) {
   return (url, init) => new Promise((resolve, reject) => {
-    if (url.endsWith("/auth/session")) return resolve(json({ ok:true, email:"owner@example.com" }));
+    if (url.endsWith("/auth/session")) return resolve(json({ ok:true, email:"owner@example.com", csrf:"csrf-value" }));
     init.signal.addEventListener("abort", () => {
       if (respetaMotivo) return reject(init.signal.reason);
       const err = new Error("signal is aborted without reason");

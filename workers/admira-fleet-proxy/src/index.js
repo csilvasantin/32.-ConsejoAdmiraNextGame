@@ -17,6 +17,7 @@ export const HEADERS_TO_HUB = [
   'x-fleet-token',
   'x-fleet-session',
   'x-fleet-command-id',
+  'x-fleet-csrf',
   'accept',
   'cookie',
   'origin',
@@ -43,7 +44,7 @@ export function applyCors(headers, origin) {
   headers.set('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   headers.set(
     'Access-Control-Allow-Headers',
-    'Content-Type, X-Fleet-Token, X-Fleet-Session, X-Fleet-Command-Id, Authorization',
+    'Content-Type, X-Fleet-Token, X-Fleet-Session, X-Fleet-Command-Id, X-Fleet-CSRF, Authorization',
   );
   headers.set('Access-Control-Max-Age', '600');
   return headers;
@@ -55,7 +56,7 @@ export function headersToHub(request) {
   for (const name of HEADERS_TO_HUB) {
     // An absent or untrusted Origin stays absent. In particular, never invent
     // an allowlisted Origin for headless/no-Origin traffic.
-    if (name === 'origin' && (!origin || !ALLOWED_ORIGINS.has(origin))) continue;
+    if ((name === 'origin' || name === 'cookie') && (!origin || !ALLOWED_ORIGINS.has(origin))) continue;
     const value = request.headers.get(name);
     if (value) output.set(name, value);
   }
@@ -91,6 +92,17 @@ export function createFleetProxy({ relays = RELAYS, fetchImpl = fetch } = {}) {
 
       if (request.method === 'OPTIONS') {
         return new Response(null, { status: 204, headers: applyCors(new Headers(), origin) });
+      }
+
+      // Cookie-auth de navegador: el borde corta mutaciones sin Origin y CSRF
+      // exactos antes de leer el body o contactar un relay. Los clientes máquina
+      // no llevan Cookie y conservan su autenticación X-Fleet-Token independiente.
+      const mutating = !/^(GET|HEAD|OPTIONS)$/i.test(request.method);
+      const cookie = request.headers.get('Cookie');
+      if (mutating && cookie) {
+        if (!origin || !ALLOWED_ORIGINS.has(origin)) return jsonResponse(origin, { error:'origin no permitido' }, 403);
+        const csrf = String(request.headers.get('X-Fleet-CSRF') || '');
+        if (!/^[A-Za-z0-9_-]{16,128}$/.test(csrf)) return jsonResponse(origin, { error:'csrf inválido' }, 403);
       }
 
       if (url.pathname === '/proxy-health') {

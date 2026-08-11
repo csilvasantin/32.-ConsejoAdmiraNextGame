@@ -18,15 +18,17 @@
   var CLIENT_ID = "861856772040-e1ri6kpu6maagtb6crdfbb923hsaalgb.apps.googleusercontent.com";
 
   var AUTH_API = "https://fleet.admira.live/api";
-  var LOGIN_URI = AUTH_API + "/auth/callback";
+  var LOGIN_URI = "https://www.admira.live/auth/callback";
   var CONNECT_SECONDS = 1.6;     // duración de la "conexión" antes de mostrar el login
   var SCANLINES = true;          // overlay CRT
   var gateUser = null;
+  var gateCsrf = "";
   var redirectState = "";
   window.admiraGateUser = function () { return gateUser; };
+  window.admiraGateCsrf = function () { return gateCsrf; };
   window.admiraGateCredential = function () { return ""; };
   window.admiraGateLogout = function () {
-    return fetch(AUTH_API + "/auth/logout", { method:"POST", credentials:"include", cache:"no-store" })
+    return fetch(AUTH_API + "/auth/logout", { method:"POST", credentials:"include", cache:"no-store", headers:{"X-Fleet-CSRF":gateCsrf} })
       .catch(function () {}).then(function () { gateUser=null; location.reload(); });
   };
 
@@ -275,7 +277,7 @@
   function initGis() {
     if (!window.google || !google.accounts || !google.accounts.id) return;
     var returnTo = location.pathname + location.search + location.hash;
-    fetch(AUTH_API + "/auth/challenge", { method:"POST", credentials:"include", cache:"no-store", headers:{"Content-Type":"application/json"}, body:JSON.stringify({flow:"redirect",return_to:returnTo}) })
+    fetch("/auth/challenge", { method:"POST", credentials:"include", cache:"no-store", headers:{"Content-Type":"application/json"}, body:JSON.stringify({flow:"redirect",return_to:returnTo}) })
       .then(function(r){return r.ok?r.json():Promise.reject(new Error("challenge"));})
       .then(function(challenge){
         redirectState=challenge.state;
@@ -307,6 +309,6 @@
   // se monta el login interactivo; nunca se lanza One Tap/FedCM silencioso.
   fetch(AUTH_API + "/auth/session", { credentials:"include", cache:"no-store" })
     .then(function(r){return r.ok?r.json():null;})
-    .then(function(d){if(d&&d.ok){gateUser={email:String(d.email||"").toLowerCase()};ready(unlock);}else loadGoogle();})
+    .then(function(d){if(d&&d.ok&&d.csrf){gateCsrf=String(d.csrf);gateUser={email:String(d.email||"").toLowerCase()};ready(unlock);}else loadGoogle();})
     .catch(loadGoogle);
 })();

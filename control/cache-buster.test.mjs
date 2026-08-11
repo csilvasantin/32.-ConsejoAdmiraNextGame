@@ -9,12 +9,12 @@ const assets = [
   {
     path: '/auth-gate.js',
     file: new URL('../auth-gate.js', import.meta.url),
-    release: '20260811-r13',
+    release: '20260811-r14',
   },
   {
     path: '/control/fleet-mesh.js',
     file: new URL('./fleet-mesh.js', import.meta.url),
-    release: '20260811-r10',
+    release: '20260811-r11',
   },
 ];
 

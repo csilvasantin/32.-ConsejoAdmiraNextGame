@@ -7,6 +7,7 @@ const server = fs.readFileSync(path.join(__dirname, 'server.js'), 'utf8');
 const gate = fs.readFileSync(path.join(__dirname, '..', 'auth-gate.js'), 'utf8');
 const mesh = fs.readFileSync(path.join(__dirname, '..', 'control', 'fleet-mesh.js'), 'utf8');
 const headers = fs.readFileSync(path.join(__dirname, '..', '_headers'), 'utf8');
+const csrf = fs.readFileSync(path.join(__dirname, 'session-csrf.js'), 'utf8');
 
 test('Google se valida sin token en URL y con claims+nonce completos', () => {
   assert.match(server, /fetch\('https:\/\/oauth2\.googleapis\.com\/tokeninfo',\s*\{/);
@@ -22,12 +23,15 @@ test('challenge es ligado a cookie, expira y se consume una vez', () => {
   assert.match(gate, /state:redirectState/);
 });
 
-test('redirect GIS usa callback backend exacto sin token en URL o logs', () => {
-  assert.match(gate, /LOGIN_URI\s*=\s*AUTH_API\s*\+\s*"\/auth\/callback"/);
+test('redirect GIS usa callback same-origin y handoff backend sin token en URL o logs', () => {
+  assert.match(gate, /LOGIN_URI\s*=\s*"https:\/\/www\.admira\.live\/auth\/callback"/);
+  assert.match(gate, /fetch\("\/auth\/challenge"/);
   assert.match(gate, /ux_mode:"redirect"/);
   assert.match(gate, /method:"POST"[^\n]*body:JSON\.stringify\(\{flow:"redirect",return_to:returnTo\}\)/);
   assert.doesNotMatch(gate, /challenge\?[^"\n]*return_to/);
   assert.match(server, /\/api\/auth\/callback/);
+  assert.match(server, /\/api\/auth\/handoff/);
+  assert.match(server, /AUTH_HANDOFF_CONSUME/);
   assert.match(server, /parseGoogleCallback/);
   assert.match(server, /res\.writeHead\(303/);
   assert.doesNotMatch(server, /audit\([^\n]*(credential|form\.state)/);
@@ -50,6 +54,10 @@ test('CORS, mutaciones, logout y CSP fallan cerrados', () => {
   assert.match(server, /Access-Control-Allow-Private-Network/);
   assert.match(server, /access-control-request-private-network/);
   assert.match(server, /origin no permitido/);
+  assert.match(server, /X-Fleet-CSRF/i);
+  assert.match(server, /sessionMutationError/);
+  assert.match(csrf, /csrf inválido/);
+  assert.match(mesh, /X-Fleet-CSRF/);
   assert.match(server, /\/api\/auth\/logout/);
   assert.match(server, /_activeSessions\.delete/);
   assert.match(server, /_activeSessions\.get/);

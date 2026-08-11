@@ -94,7 +94,7 @@
     relays.forEach(function (r) { state[r.id] = { failures: 0, downUntil: 0, lastOk: 0, lastError: '' }; });
 
     function sessionFor(relay) {
-      return sessions[relay.id] === true;
+      return !!sessions[relay.id];
     }
     function dropSession(relay) {
       delete sessions[relay.id];
@@ -164,7 +164,8 @@
         if (!r.ok) throw new Error('auth HTTP ' + r.status);
         var d = await r.json();
         if (!d || !d.ok) throw new Error('auth sin sesión');
-        sessions[relay.id] = true;
+        sessions[relay.id] = String(d.csrf || '');
+        if (!sessions[relay.id]) throw new Error('auth sin CSRF');
         return true;
       } catch (err) { throw timed.explain(err); }
       finally { timed.cancel(); }
@@ -174,6 +175,7 @@
       var headers = Object.assign({}, opts.headers || {});
       if (opts.auth !== false) await mint(relay, false);
       if (commandId) headers['X-Fleet-Command-Id'] = commandId;
+      if (!/^(GET|HEAD|OPTIONS)$/i.test(String(opts.method || 'GET'))) headers['X-Fleet-CSRF'] = sessions[relay.id] || '';
       opts.headers = headers;
       opts.credentials = 'include';
       delete opts.auth;

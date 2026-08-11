@@ -14,6 +14,8 @@ test("challenge+nonce preceden al callback y viajan con cookie", () => {
   assert.match(source, /nonce:challenge\.nonce/);
   assert.match(source, /state:redirectState/);
   assert.match(source, /login_uri:LOGIN_URI/);
+  assert.match(source, /state_cookie_domain:"admira\.live"/);
+  assert.doesNotMatch(source, /state_cookie_domain:"\.admira\.live"/);
   assert.match(source, /credentials:"include"/);
 });
 

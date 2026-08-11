@@ -279,7 +279,7 @@
       .then(function(r){return r.ok?r.json():Promise.reject(new Error("challenge"));})
       .then(function(challenge){
         redirectState=challenge.state;
-        google.accounts.id.initialize({ client_id:CLIENT_ID, nonce:challenge.nonce, login_uri:LOGIN_URI,
+        google.accounts.id.initialize({ client_id:CLIENT_ID, nonce:challenge.nonce, login_uri:LOGIN_URI, state_cookie_domain:"admira.live",
           ux_mode:"redirect", auto_select:false, cancel_on_tap_outside:false, use_fedcm_for_button:false });
         gisReady=true; if(phase==="ready")renderGoogleButton();
       }).catch(function(){gisReady=true;if(phase==="connecting"){phase="ready";renderFoot();}var el=document.getElementById("admira-err");if(el)el.textContent="✖ NO SE PUDO INICIAR EL ACCESO SEGURO.";});

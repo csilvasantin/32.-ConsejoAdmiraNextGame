@@ -508,6 +508,11 @@ function cors(req, res) {
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Fleet-Token, X-Fleet-Session, X-Fleet-Command-Id, Authorization');
   res.setHeader('Access-Control-Max-Age', '600');
+  // Chrome exige PNA cuando el panel público llama a un relay del tailnet. Se
+  // concede sólo a los mismos orígenes exactos ya autorizados por CORS.
+  if (o && ALLOW_ORIGINS.includes(o) && req.headers['access-control-request-private-network'] === 'true') {
+    res.setHeader('Access-Control-Allow-Private-Network', 'true');
+  }
 }
 function json(res, code, obj) { res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Content-Security-Policy':"default-src 'none'; frame-ancestors 'none'; base-uri 'none'", 'Cache-Control':'no-store' }); res.end(JSON.stringify(obj)); }
 

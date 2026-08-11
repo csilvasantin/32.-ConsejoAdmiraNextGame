@@ -36,6 +36,8 @@ test('sesión queda en cookie segura, rota y no vuelve en JSON o storage', () =>
 test('CORS, mutaciones, logout y CSP fallan cerrados', () => {
   assert.match(server, /ALLOW_ORIGINS\.includes\(o\)/);
   assert.match(server, /Access-Control-Allow-Credentials/);
+  assert.match(server, /Access-Control-Allow-Private-Network/);
+  assert.match(server, /access-control-request-private-network/);
   assert.match(server, /origin no permitido/);
   assert.match(server, /\/api\/auth\/logout/);
   assert.match(server, /_activeSessions\.delete/);

@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.11.08.2026.r11.12:16 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google independiente, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.11.08.2026.r12.14:47" />
+<meta name="admiranext-version" content="AdmiraNeXT v.11.08.2026.r13.15:23" />
     <script src="/admira-bar.js?v=20260713-r36"></script>
     <script src="/auth-gate.js?v=20260811-r10"></script>
 <meta charset="UTF-8">
@@ -183,7 +183,17 @@
   .card .drag-handle:hover{color:var(--ink)} .card .drag-handle:active{cursor:grabbing}
   .card .card-fold{cursor:pointer;color:var(--mut);font-size:12px;padding:2px 6px;flex:none;transition:transform .15s}
   .card.collapsed .card-fold{transform:rotate(-90deg)}
-  .card.collapsed .info,.card.collapsed .shot,.card.collapsed .acts{display:none}
+  /* COMPACTA = CABECERA + MINIATURA, y se acabó (Carlos, 11-ago-2026). El plegado
+     escondía la ficha de sistema y los botones pero dejaba entero el diagnóstico de
+     signage — ocho renglones de ⚠ por equipo —, y en cambio SÍ escondía la captura,
+     que es justo lo único que se lee de un vistazo. Una parrilla de veintitantos
+     equipos plegados ocupaba más que desplegada y no se veía ninguna pantalla. Al
+     revés: en plegado se va la descripción y se queda la miniatura. El estado no se
+     pierde, sigue en la cabecera (icono online/offline y «hace X»), y el diagnóstico
+     completo está a un clic en el ▾. La miniatura no necesita regla propia: .shot
+     nace en display:none y solo la enciende quien tiene imagen que enseñar, así que
+     una tarjeta sin captura sigue sin dejar hueco. */
+  .card.collapsed .info,.card.collapsed .acts,.card.collapsed .dsflight{display:none}
   .card.dragging{opacity:.4}
   .card.drop-target{box-shadow:0 0 0 2px var(--acc2) inset;border-color:var(--acc2)}
   /* deep-link desde /status (?equipo=): tarjeta seleccionada, resaltada unos segundos */

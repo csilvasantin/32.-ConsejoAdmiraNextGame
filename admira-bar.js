@@ -22,7 +22,12 @@
     { t: "📺 Players",   h: "https://www.admira.live/players/" },
     { t: "🌐 Navegadores", h: "https://www.admira.live/navegadores/" },
     { t: "📡 Status",    h: "https://www.admira.live/status/" },
-    { t: "💬 Telegram",  h: "https://www.admira.live/telegram" },
+    // TELEGRAM FUERA (Carlos, 11-08-2026): nueve paradas no caben y el menú salía con
+    // barra horizontal, que en esta casa es inadmisible. Se va Telegram y no otra
+    // porque es la única cuyo contenido ya llega solo: los avisos del grupo aparecen
+    // en el móvil sin tener que abrir una pestaña a buscarlos. Quitar una parada que
+    // nadie visita cuesta menos que encoger ocho que sí se usan. La página sigue
+    // publicada en /telegram para quien tenga el enlace; deja de ocupar sitio, no existe menos.
     { t: "🎯 Misiones",  h: "https://www.admira.live/vista-previa" },
     { t: "🧩 Asignaciones", h: "https://www.admira.live/asignaciones/" },
     { t: "📓 Diario",    h: "https://www.admira.live/diario.html" },

@@ -99,6 +99,16 @@
   // Devuelve una Promise<cred|null>. null ⇒ no se pudo refrescar en silencio
   // (el consumidor debe caer a re-login manual). Se cachea mientras está en vuelo.
   window.admiraGateRefresh = function () {
+    // El contenido protegido se ejecuta detrás de la verja. FleetControl pedía
+    // credencial nada más cargar y llegaba aquí ANTES de que Carlos pulsara el
+    // botón: eso abría un FedCM silencioso en paralelo al login manual. Chrome
+    // 151 sólo admite una navigator.credentials.get activa y la segunda dejaba
+    // accounts.google.com en negro. Sin una sesión local válida no hay nada que
+    // refrescar: la única puerta es el botón visible de la verja.
+    try {
+      var current = JSON.parse(localStorage.getItem("admira_gate") || "null");
+      if (!current || !current.email || !current.exp || Date.now() >= current.exp) return Promise.resolve(null);
+    } catch (e) { return Promise.resolve(null); }
     if (_refreshing) return _refreshing;
     _refreshing = new Promise(function (resolve) {
       var settled = false;
@@ -359,11 +369,6 @@
           '<div class="err" id="admira-err"></div>' +
         '</div>';
       renderGoogleButton();
-      // Fallback: si el click cae fuera del iframe invisible, dispara One Tap.
-      var gold = document.getElementById("admira-gold");
-      if (gold) gold.addEventListener("click", function () {
-        try { google.accounts.id.prompt(); } catch (e) {}
-      });
     } else if (phase === "auth") {
       f.innerHTML = '<div class="status" id="admira-status">AUTENTICANDO</div><div class="sub">VERIFICANDO CREDENCIALES</div>';
     } else if (phase === "welcome") {
@@ -450,32 +455,14 @@
       // El mismo mecanismo que admiraGateRefresh() ya usaba para refrescar; sólo
       // faltaba intentarlo TAMBIÉN en la primera visita.
       auto_select: true,
-      cancel_on_tap_outside: false
+      cancel_on_tap_outside: false,
+      // El botón FedCM se resuelve dentro de Chromium. Evita el popup clásico
+      // de accounts.google.com que queda negro en el navegador de Codex.
+      use_fedcm_for_button: true
     });
     gisReady = true;
     // Si ya estábamos en ready (barra terminó antes que GIS), pinta el botón ahora.
     if (phase === "ready") renderGoogleButton();
-    trySilentSignIn();
-  }
-
-  // Intento de entrada sin clic. Si Google no lo muestra (varias cuentas, One Tap
-  // suprimido, sin consentimiento previo), NO pasa nada: el botón manual sigue ahí
-  // exactamente igual que antes. Es una mejora aditiva, nunca un bloqueo.
-  var _silentTried = false;
-  function trySilentSignIn() {
-    if (_silentTried) return;
-    _silentTried = true;
-    try {
-      google.accounts.id.prompt(function (n) {
-        try {
-          var no = n && ((n.isNotDisplayed && n.isNotDisplayed()) ||
-                         (n.isSkippedMoment && n.isSkippedMoment()) ||
-                         (n.isDismissedMoment && n.isDismissedMoment()));
-          // Sin entrada silenciosa: asegúrate de que el botón manual está pintado.
-          if (no && phase === "ready") renderGoogleButton();
-        } catch (e) {}
-      });
-    } catch (e) {}
   }
 
   ready(mount);

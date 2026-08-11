@@ -1,7 +1,7 @@
 const test = require('node:test');
 const assert = require('node:assert/strict');
 
-const { CALLBACK_URI, PUBLIC_ORIGIN, createChallengeStore, parseGoogleCallback, safeReturnPath } = require('./auth-redirect');
+const { CALLBACK_URI, PUBLIC_ORIGIN, createChallengeStore, handoffOriginAllowed, parseGoogleCallback, safeReturnPath } = require('./auth-redirect');
 
 test('callback y return_to quedan fijados a first-party exacto', () => {
   assert.equal(CALLBACK_URI, 'https://fleet.admira.live/api/auth/callback');
@@ -31,4 +31,15 @@ test('state+nonce expiran y sólo se consumen una vez con su cookie propia', () 
   assert.equal(store.consume(cookie, issued.state, 'redirect'), null, 'replay falla');
   const expired = store.issue('/control/', 'redirect'); clock += 101;
   assert.equal(store.consume(`__Host-fleet_challenge=${expired.state}`, expired.state, 'redirect'), null);
+});
+
+test('handoff acepta Origin www o null opaco sólo antes de cualquier credencial', () => {
+  assert.equal(handoffOriginAllowed({origin:'https://www.admira.live'}), true);
+  assert.equal(handoffOriginAllowed({origin:'https://www.admira.live', cookie:'__Host-fleet_session=stale'}), false);
+  assert.equal(handoffOriginAllowed({origin:'https://www.admira.live', authorization:'Bearer x'}), false);
+  assert.equal(handoffOriginAllowed({origin:'null'}), true);
+  assert.equal(handoffOriginAllowed({origin:'null', cookie:'__Host-fleet_session=stale'}), false);
+  assert.equal(handoffOriginAllowed({origin:'null', authorization:'Bearer x'}), false);
+  assert.equal(handoffOriginAllowed({}), false);
+  assert.equal(handoffOriginAllowed({origin:'https://evil.example'}), false);
 });

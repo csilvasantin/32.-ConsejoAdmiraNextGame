@@ -23,7 +23,7 @@ const os = require('os');
 const path = require('path');
 const { macOpenCommand, linuxOpenCommand, windowsOpenCommand } = require('./open-action');
 const { canonicalScreenId, preflightCommand, assessPreflight } = require('./signage-preflight');
-const { CALLBACK_URI:AUTH_CALLBACK_URI, PUBLIC_ORIGIN:AUTH_PUBLIC_ORIGIN, createChallengeStore, parseGoogleCallback, safeReturnPath } = require('./auth-redirect');
+const { CALLBACK_URI:AUTH_CALLBACK_URI, PUBLIC_ORIGIN:AUTH_PUBLIC_ORIGIN, createChallengeStore, handoffOriginAllowed, parseGoogleCallback, safeReturnPath } = require('./auth-redirect');
 const { sessionMutationError } = require('./session-csrf');
 
 const DIR = __dirname;
@@ -699,7 +699,7 @@ const server = http.createServer(async (req, res) => {
     res.writeHead(303,{Location:AUTH_PUBLIC_ORIGIN+challenge.returnPath,'Cache-Control':'no-store','Content-Security-Policy':"default-src 'none'; frame-ancestors 'none'; base-uri 'none'",'Referrer-Policy':'no-referrer'}); return res.end();
   }
   if (url === '/api/auth/handoff' && req.method === 'POST') {
-    if (String(req.headers.origin || '') !== AUTH_PUBLIC_ORIGIN) return json(res,403,{error:'origin no permitido'});
+    if (!handoffOriginAllowed(req.headers)) return json(res,403,{error:'origin no permitido'});
     const raw=await readRawBody(req);
     if(raw==null||String(req.headers['content-type']||'').split(';',1)[0].trim().toLowerCase()!=='application/x-www-form-urlencoded'||raw.length>1024)return json(res,400,{error:'invalid_form'});
     const code=String(new URLSearchParams(raw).get('code')||'');

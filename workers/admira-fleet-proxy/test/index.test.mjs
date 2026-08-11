@@ -92,6 +92,58 @@ test('exact Origin Cookie and CSRF reaches hub; machine token without Cookie rem
   assert.equal(seen[1].get('X-Fleet-Token'), 'machine-token');
 });
 
+test('opaque GIS handoff preserves literal null but strips every credential header', async () => {
+  let forwarded;
+  const proxy = createFleetProxy({relays:[relay], fetchImpl:async (_url, init) => { forwarded = init.headers; return Response.json({ok:true}); }});
+  const code = 'a'.repeat(43);
+  const response = await proxy.fetch(new Request('https://fleet.admira.live/api/auth/handoff', {
+    method:'POST',
+    headers:{Origin:'null', Cookie:'__Host-fleet_session=stale', 'Content-Type':'application/x-www-form-urlencoded'},
+    body:new URLSearchParams({code}).toString()
+  }));
+  assert.equal(response.status, 200);
+  assert.equal(forwarded.get('Origin'), 'null');
+  assert.equal(forwarded.get('Cookie'), null);
+  assert.equal(forwarded.get('Authorization'), null);
+  assert.equal(forwarded.get('X-Fleet-Session'), null);
+});
+
+test('www GIS handoff with stale Cookie reaches hub without Cookie or CSRF', async () => {
+  let forwarded;
+  const proxy = createFleetProxy({relays:[relay], fetchImpl:async (_url, init) => { forwarded = init.headers; return Response.json({ok:true}); }});
+  const code = 'b'.repeat(43);
+  const response = await proxy.fetch(new Request('https://fleet.admira.live/api/auth/handoff', {
+    method:'POST',
+    headers:{Origin:'https://www.admira.live', Cookie:'__Host-fleet_session=stale', 'Content-Type':'application/x-www-form-urlencoded'},
+    body:new URLSearchParams({code}).toString()
+  }));
+  assert.equal(response.status, 200);
+  assert.equal(forwarded.get('Origin'), 'https://www.admira.live');
+  assert.equal(forwarded.get('Cookie'), null);
+  assert.equal(forwarded.get('X-Fleet-CSRF'), null);
+});
+
+test('opaque handoff malformed or with auth, and missing/malicious Origin, die before hub', async () => {
+  let hubCalls = 0;
+  const proxy = createFleetProxy({relays:[relay], fetchImpl:async () => { hubCalls += 1; return Response.json({ok:true}); }});
+  const cases = [
+    {origin:'null', body:'code=short'},
+    {origin:'null', body:'code=' + 'a'.repeat(43), authorization:'Bearer no'},
+    {origin:'https://www.admira.live', body:'code=short'},
+    {origin:'https://www.admira.live', body:'code=' + 'a'.repeat(43), authorization:'Bearer no'},
+    {origin:'', body:'code=' + 'a'.repeat(43)},
+    {origin:'https://evil.example', body:'code=' + 'a'.repeat(43)},
+  ];
+  for (const item of cases) {
+    const headers = {'Content-Type':'application/x-www-form-urlencoded'};
+    if (item.origin) headers.Origin = item.origin;
+    if (item.authorization) headers.Authorization = item.authorization;
+    const response = await proxy.fetch(new Request('https://fleet.admira.live/api/auth/handoff', {method:'POST', headers, body:item.body}));
+    assert.equal(response.status, 403);
+  }
+  assert.equal(hubCalls, 0);
+});
+
 test('untrusted Origin receives neither ACAO nor credentials and is not upgraded upstream', async () => {
   let upstreamOrigin = 'not-called';
   const proxy = createFleetProxy({

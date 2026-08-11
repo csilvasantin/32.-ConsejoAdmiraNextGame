@@ -66,4 +66,10 @@ function parseGoogleCallback(raw, contentType, cookieHeader) {
   return { credential, state };
 }
 
-module.exports = { CALLBACK_URI, PUBLIC_ORIGIN, createChallengeStore, parseGoogleCallback, safeReturnPath };
+function handoffOriginAllowed(headers) {
+  const origin = String(headers && headers.origin || '');
+  if (origin !== PUBLIC_ORIGIN && origin !== 'null') return false;
+  return !headers.cookie && !headers.authorization && !headers['x-fleet-token'] && !headers['x-fleet-session'];
+}
+
+module.exports = { CALLBACK_URI, PUBLIC_ORIGIN, createChallengeStore, handoffOriginAllowed, parseGoogleCallback, safeReturnPath };

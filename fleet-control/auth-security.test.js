@@ -32,6 +32,7 @@ test('redirect GIS usa callback same-origin y handoff backend sin token en URL o
   assert.match(server, /\/api\/auth\/callback/);
   assert.match(server, /\/api\/auth\/handoff/);
   assert.match(server, /AUTH_HANDOFF_CONSUME/);
+  assert.match(server, /handoffOriginAllowed/);
   assert.match(server, /parseGoogleCallback/);
   assert.match(server, /res\.writeHead\(303/);
   assert.doesNotMatch(server, /audit\([^\n]*(credential|form\.state)/);

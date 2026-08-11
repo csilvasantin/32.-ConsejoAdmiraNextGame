@@ -89,6 +89,7 @@ export function createFleetProxy({ relays = RELAYS, fetchImpl = fetch } = {}) {
     async fetch(request) {
       const url = new URL(request.url);
       const origin = request.headers.get('Origin');
+      const path = url.pathname.replace(/^\/fleet(?=\/|$)/, '') || '/';
 
       if (request.method === 'OPTIONS') {
         return new Response(null, { status: 204, headers: applyCors(new Headers(), origin) });
@@ -99,7 +100,10 @@ export function createFleetProxy({ relays = RELAYS, fetchImpl = fetch } = {}) {
       // no llevan Cookie y conservan su autenticación X-Fleet-Token independiente.
       const mutating = !/^(GET|HEAD|OPTIONS)$/i.test(request.method);
       const cookie = request.headers.get('Cookie');
-      if (mutating && cookie) {
+      const handoffRequest = request.method === 'POST' && path === '/api/auth/handoff';
+      const opaqueHandoff = request.method === 'POST' && path === '/api/auth/handoff' && origin === 'null';
+      if (handoffRequest && origin !== 'https://www.admira.live' && origin !== 'null') return jsonResponse('', { error:'origin no permitido' }, 403);
+      if (mutating && cookie && !handoffRequest) {
         if (!origin || !ALLOWED_ORIGINS.has(origin)) return jsonResponse(origin, { error:'origin no permitido' }, 403);
         const csrf = String(request.headers.get('X-Fleet-CSRF') || '');
         if (!/^[A-Za-z0-9_-]{16,128}$/.test(csrf)) return jsonResponse(origin, { error:'csrf inválido' }, 403);
@@ -125,7 +129,23 @@ export function createFleetProxy({ relays = RELAYS, fetchImpl = fetch } = {}) {
       const body = request.method === 'GET' || request.method === 'HEAD'
         ? undefined
         : await request.arrayBuffer();
-      const path = url.pathname.replace(/^\/fleet(?=\/|$)/, '') || '/';
+      if (handoffRequest) {
+        // GIS puede renderizar el callback dentro de un documento sandboxed cuyo
+        // Origin de form-submit es literalmente `null`. Esta excepción sólo vale
+        // para el canje pre-sesión de un código opaco one-shot: no acepta ni
+        // reenvía Cookie/token/sesión, y valida el formulario antes del relay.
+        const type = String(request.headers.get('Content-Type') || '').split(';', 1)[0].trim().toLowerCase();
+        const hasAuth = ['Authorization', 'X-Fleet-Token', 'X-Fleet-Session'].some((name) => request.headers.has(name));
+        const raw = body && body.byteLength <= 1024 ? new TextDecoder().decode(body) : '';
+        const form = new URLSearchParams(raw);
+        const entries = [...form.keys()];
+        const code = String(form.get('code') || '');
+        if (type !== 'application/x-www-form-urlencoded' || hasAuth || entries.length !== 1 || entries[0] !== 'code' || !/^[A-Za-z0-9_-]{40,80}$/.test(code)) {
+          return jsonResponse('', { error:'handoff inválido' }, 403);
+        }
+        if (opaqueHandoff) outgoingHeaders.set('Origin', 'null');
+        outgoingHeaders.delete('Cookie');
+      }
       let lastError = null;
 
       for (const relay of relays) {

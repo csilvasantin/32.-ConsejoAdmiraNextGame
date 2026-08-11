@@ -892,17 +892,7 @@ const CAP_FIX_CMD=[
 // firmada por Mac Mini no bloquea el failover hacia MacBook Pro (cada backend
 // puede tener su propio secreto de sesión).
 let SESSION='';
-async function fleetCredential(){
-  let g; try{ g=JSON.parse(localStorage.getItem('admira_gate')||'null'); }catch(e){}
-  const stale = !g || !g.credAt || (Date.now()-g.credAt) > 50*60*1000;
-  if(stale && typeof window.admiraGateRefresh==='function'){
-    try{ await window.admiraGateRefresh(); }catch(e){}
-    try{ g=JSON.parse(localStorage.getItem('admira_gate')||'null'); }catch(e){}
-  }
-  return g&&g.cred||'';
-}
 const FLEET_MESH=window.AdmiraFleetMesh.create({
-  getCredential:fleetCredential,
   timeoutMs:12000,
   cooldownMs:15000
 });
@@ -916,8 +906,7 @@ async function ensureSession(){
 // login de Google (cred fresco). Es la red de seguridad si el refresco silencioso
 // no es posible (One Tap suprimido, varias cuentas, etc.).
 function forceRelogin(){
-  try{ localStorage.removeItem('fleet_session'); sessionStorage.removeItem('admira_fleet_mesh_sessions'); localStorage.removeItem('admira_gate'); }catch(e){}
-  location.reload();
+  Promise.resolve(FLEET_MESH.logoutAll()).then(()=>window.admiraGateLogout?window.admiraGateLogout():location.reload());
 }
 
 /* ---------- fondo de pantalla (persona) por máquina ----------
@@ -1160,8 +1149,8 @@ function consultorWallpaper(machine){
 
 // El acceso es por login de Google (gate). El botón muestra tu identidad y permite
 // cerrar sesión (limpia la sesión del backend y la del gate → vuelve a pedir login).
-function whoami(){ try{ const g=JSON.parse(localStorage.getItem('admira_gate')||'null'); return g&&g.email||''; }catch(e){ return ''; } }
-function logout(){ if(!confirm('¿Cerrar sesión de FleetControl?')) return; localStorage.removeItem('fleet_session'); sessionStorage.removeItem('admira_fleet_mesh_sessions'); localStorage.removeItem('admira_gate'); location.reload(); }
+function whoami(){ try{ const g=window.admiraGateUser&&window.admiraGateUser(); return g&&g.email||''; }catch(e){ return ''; } }
+function logout(){ if(!confirm('¿Cerrar sesión de FleetControl?')) return; forceRelogin(); }
 $('#tokenPill').onclick=logout;
 async function api(path, opts){
   opts=opts||{};
@@ -1228,7 +1217,7 @@ async function refresh(){
   }catch(e){
     if(e.code===401 && !_reauthTried){
       // Sesión caducada → re-intercambia el credential del gate UNA vez.
-      _reauthTried=true; SESSION=''; localStorage.removeItem('fleet_session'); sessionStorage.removeItem('admira_fleet_mesh_sessions');
+      _reauthTried=true; SESSION='';
       if(await ensureSession()) return refresh();
     }
     if(e.code===401){
@@ -1443,8 +1432,8 @@ function renderCards(ms){
     // lista vacía decía «inicia sesión con Google (arriba a la derecha)» — aunque
     // acabaras de entrar y lo que hubiese fallado fuese la sesión de backend. Y el
     // botón que citaba no existe: el login es la pantalla completa del gate.
-    let g=null; try{ g=JSON.parse(localStorage.getItem('admira_gate')||'null'); }catch(e){}
-    const dentro=!!(g&&g.email&&Date.now()<g.exp);
+    let g=null; try{ g=window.admiraGateUser&&window.admiraGateUser(); }catch(e){}
+    const dentro=!!(g&&g.email);
     el.innerHTML='<div class="empty" style="grid-column:1/-1">'+(
       !dentro ? 'Recarga la página para entrar con tu cuenta de Google.'
       : !SESSION ? 'Sesión de FleetControl no establecida como <b>'+dsEsc(g.email)+'</b>. Toca la píldora de estado (arriba) para reintentar.'
@@ -1591,13 +1580,7 @@ const CLEAN_DESKTOP_CMD="osascript -e 'tell application \"System Events\" to set
 const NAV_API='https://admira-navegadores.csilvasantin.workers.dev';
 function navDeviceId(name){ return 'local-'+String(name||'').toLowerCase().replace(/[^a-z0-9]/g,''); }
 async function _gateCred(){
-  let g; try{ g=JSON.parse(localStorage.getItem('admira_gate')||'null'); }catch(e){}
-  const stale = !g || !g.credAt || (Date.now()-g.credAt) > 50*60*1000;
-  if(stale && typeof window.admiraGateRefresh==='function'){
-    try{ const fresh=await window.admiraGateRefresh(); if(fresh) return fresh; }catch(e){}
-    try{ g=JSON.parse(localStorage.getItem('admira_gate')||'null'); }catch(e){}
-  }
-  return g&&g.cred ? g.cred : '';
+  return window.admiraGateCredential ? window.admiraGateCredential() : '';
 }
 // Feedback de ESTADO del canal DS (Carlos 2026-07-11: «con pulsar abrir canal solo no llega»):
 // tras encolar, se vigila la señal REAL del player (api.admira.store/signage/now) hasta 90s.
@@ -1755,7 +1738,7 @@ $('#cards').addEventListener('click', async e=>{
 /* ============================================================
    MENSAJERÍA A EQUIPOS — 💬 por equipo + 📣 a todos.
    Canal: router de encargos AdmiraNeXT (worker admira-telegram).
-   Envío: POST /api/send (auth = credential del gate Google, admira_gate.cred).
+   Envío: POST /api/send (credential efímero del gate; nunca se persiste).
      El worker publica en el grupo Telegram (traza en admira.live/telegram) Y
      enruta el texto como ENCARGO por persona (tabla telegram_inbox).
    Estado: GET /api/task-status?task_id=…  → por destinatario: pending|ack|done.
@@ -1764,7 +1747,7 @@ $('#cards').addEventListener('click', async e=>{
 const MSG_API=DIARY_API;                         // mismo worker (admira-telegram)
 const MSG_PERSONAS={Neo:'neo',Morfeo:'morfeo',Trinity:'trinity','Oráculo':'oraculo',Switch:'switch',Cypher:'cypher'};
 // Credencial del gate (id_token de Google). El worker lo valida contra su lista de emails.
-function gateCred(){ try{ const g=JSON.parse(localStorage.getItem('admira_gate')||'null'); return g&&g.cred||''; }catch(e){ return ''; } }
+function gateCred(){ try{ return window.admiraGateCredential ? window.admiraGateCredential() : ''; }catch(e){ return ''; } }
 // Persona (agente) activa en una máquina, casando por las mismas claves que la presencia.
 function msgPersonaOf(m){
   if(!m) return '';
@@ -1852,11 +1835,6 @@ let _msgReauthTried=false;
 async function sendCurrentMsg(){
   if(!MSG_CUR) return;
   const ta=$('#msgText'); const text=(ta.value||'').trim(); if(!text) return;
-  // Cred rancio (>50min) → refréscalo en silencio antes de enviar (mismo id_token de 1h).
-  let g; try{ g=JSON.parse(localStorage.getItem('admira_gate')||'null'); }catch(e){}
-  if((!g||!g.credAt||(Date.now()-g.credAt)>50*60*1000) && typeof window.admiraGateRefresh==='function'){
-    try{ await window.admiraGateRefresh(); }catch(e){}
-  }
   let cred=gateCred();
   if(!cred){ toast('warn','🔒 sin login de Google','inicia sesión (arriba a la derecha) para enviar mensajes'); return; }
   const btn=$('#msgSend'); btn.disabled=true; const lbl=btn.textContent; btn.textContent='➤ enviando…';
@@ -1879,9 +1857,6 @@ async function sendCurrentMsg(){
       body:JSON.stringify(payload)
     });
     if(r.status===401){
-      // cred caducado → un ÚNICO refresco silencioso + reintento; si no, avisa a re-entrar.
-      const fresh = (!_msgReauthTried && typeof window.admiraGateRefresh==='function') ? await window.admiraGateRefresh() : null;
-      if(fresh){ _msgReauthTried=true; btn.disabled=false; btn.textContent=lbl; return sendCurrentMsg(); }
       _msgReauthTried=false;
       toast('warn','🔒 sesión de Google caducada','toca el candado 🔒 de arriba para re-entrar y reenvía'); btn.disabled=false; btn.textContent=lbl; return;
     }
@@ -2884,11 +2859,8 @@ function collapseAllToggle(){
   // Cabeceras de auth para los endpoints de hackeo. El backend (verify_hack_token)
   // acepta DOS vías: el hack-token dedicado del operador O la identidad de Google
   // (id_token en la allowlist). Mandamos ambas: así el operador logueado (candado 🔒)
-  // autoriza el hackeo SIN pedir token a mano. Refresca el id_token si está rancio (>50min).
+  // autoriza el hackeo SIN pedir token a mano. El id_token sólo vive en memoria.
   async function hackAuthHeaders(){
-    try{ const g=JSON.parse(localStorage.getItem('admira_gate')||'null');
-      if((!g||!g.credAt||(Date.now()-g.credAt)>50*60*1000) && typeof window.admiraGateRefresh==='function'){ await window.admiraGateRefresh(); }
-    }catch(e){}
     const h={ "Content-Type":"application/json", "X-Council-Token":COUNCIL_API_TOKEN, "X-Council-Hack-Token":localStorage.getItem("council_hack_token")||"" };
     const cred=(typeof gateCred==='function')?gateCred():'';
     if(cred) h["Authorization"]="Bearer "+cred;
@@ -2969,11 +2941,7 @@ function collapseAllToggle(){
     catch(e){
       if(/\b403\b/.test(e.message||"")){
         localStorage.removeItem("council_hack_token");
-        // 403 = ni operator-token ni identidad v\u00e1lida. Refresca el login de Google una vez y reintenta.
-        let retried=null;
-        if(typeof window.admiraGateRefresh==='function'){ try{ await window.admiraGateRefresh(); retried=await callCouncilHackeo("start"); }catch(_){ retried=null; } }
-        if(retried&&retried.machines) paintHackeoStatus(retried);
-        else paintHackeoStatus({error:(typeof gateCred==='function'&&gateCred())?"sin permiso para hackeo (identidad no autorizada)":"inicia sesion con el candado \ud83d\udd12 para hackear"});
+        paintHackeoStatus({error:(typeof gateCred==='function'&&gateCred())?"sin permiso para hackeo (identidad no autorizada)":"inicia sesion con el candado \ud83d\udd12 para hackear"});
       } else paintHackeoStatus({error:e.message}); }
   }
 

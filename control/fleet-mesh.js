@@ -86,28 +86,18 @@
     var relays = relayList(options.relays || root.ADMIRA_FLEET_RELAYS);
     var fetchFn = options.fetch || (root.fetch && root.fetch.bind(root));
     if (!fetchFn) throw new Error('Fleet Mesh necesita fetch');
-    var store = options.store || root.sessionStorage || memoryStore();
-    var getCredential = options.getCredential || function () { return Promise.resolve(''); };
     var timeoutMs = Math.max(1000, +(options.timeoutMs || 9000));
     var cooldownMs = Math.max(1000, +(options.cooldownMs || 15000));
     var state = {};
     var active = null;
     var sessions = {};
-
-    try { sessions = JSON.parse(store.getItem('admira_fleet_mesh_sessions') || '{}') || {}; } catch (e) { sessions = {}; }
     relays.forEach(function (r) { state[r.id] = { failures: 0, downUntil: 0, lastOk: 0, lastError: '' }; });
 
-    function saveSessions() {
-      try { store.setItem('admira_fleet_mesh_sessions', JSON.stringify(sessions)); } catch (e) {}
-    }
     function sessionFor(relay) {
-      var s = sessions[relay.id];
-      if (!s || !s.token || !s.exp || Date.now() >= s.exp) return '';
-      return s.token;
+      return sessions[relay.id] === true;
     }
     function dropSession(relay) {
       delete sessions[relay.id];
-      saveSessions();
     }
     function ordered(relayId) {
       if (relayId) return relays.filter(function (r) { return r.id === relayId; });
@@ -163,34 +153,29 @@
     }
     async function mint(relay, force) {
       if (!force) {
-        var cached = sessionFor(relay);
-        if (cached) return cached;
+        if (sessionFor(relay)) return true;
       }
-      var cred = await getCredential();
-      if (!cred) throw new Error('sin credential Google');
       var timed = withTimeout({
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ credential: cred }),
+        method: 'GET', credentials:'include',
         cache: 'no-store'
       }, relay.label + ' · auth');
       try {
-        var r = await fetchFn(relay.base + '/auth', timed.init);
+        var r = await fetchFn(relay.base + '/auth/session', timed.init);
         if (!r.ok) throw new Error('auth HTTP ' + r.status);
         var d = await r.json();
-        if (!d || !d.session) throw new Error('auth sin sesión');
-        sessions[relay.id] = { token: d.session, exp: d.exp || (Date.now() + 12 * 3600 * 1000) };
-        saveSessions();
-        return d.session;
+        if (!d || !d.ok) throw new Error('auth sin sesión');
+        sessions[relay.id] = true;
+        return true;
       } catch (err) { throw timed.explain(err); }
       finally { timed.cancel(); }
     }
     async function fetchRelay(relay, path, opts, commandId) {
       opts = Object.assign({}, opts || {});
       var headers = Object.assign({}, opts.headers || {});
-      if (opts.auth !== false) headers.Authorization = 'Bearer ' + await mint(relay, false);
+      if (opts.auth !== false) await mint(relay, false);
       if (commandId) headers['X-Fleet-Command-Id'] = commandId;
       opts.headers = headers;
+      opts.credentials = 'include';
       delete opts.auth;
       delete opts.relayId;
       delete opts.commandId;
@@ -198,9 +183,9 @@
       var timed = withTimeout(opts, relay.label);
       try {
         var response = await fetchFn(relay.base + path, timed.init);
-        if (response.status === 401 && headers.Authorization) {
+        if (response.status === 401 && opts.auth !== false) {
           dropSession(relay);
-          headers.Authorization = 'Bearer ' + await mint(relay, true);
+          await mint(relay, true);
           timed.cancel();
           timed = withTimeout(Object.assign({}, opts, { headers: headers }), relay.label);
           response = await fetchFn(relay.base + path, timed.init);
@@ -281,6 +266,10 @@
         }
       }));
     }
+    async function logoutAll() {
+      await Promise.all(relays.map(function(relay){return fetchFn(relay.base+'/auth/logout',{method:'POST',credentials:'include',cache:'no-store'}).catch(function(){});}));
+      sessions={}; active=null;
+    }
     function snapshot() {
       return {
         version: VERSION,
@@ -296,6 +285,7 @@
       json: json,
       ensureAnySession: ensureAnySession,
       probeAll: probeAll,
+      logoutAll: logoutAll,
       snapshot: snapshot,
       activeRelay: function () { return active; },
       activeBase: function () { return (active || relays[0] || {}).base || ''; },

@@ -33,7 +33,7 @@ test("usa el relay primario cuando está sano", async () => {
     getCredential: async () => "google",
     fetch: async (url) => {
       calls.push(url);
-      if (url.endsWith("/auth")) return json({ session: "s-primary", exp: Date.now() + 60_000 });
+      if (url.endsWith("/auth/session")) return json({ ok:true, email:"owner@example.com" });
       return json({ machines: [] });
     },
   });
@@ -42,12 +42,12 @@ test("usa el relay primario cuando está sano", async () => {
   assert.equal(out.data._mesh.relay.id, "primary");
   assert.equal(out.data._mesh.failover, false);
   assert.deepEqual(calls, [
-    "https://primary.test/fleet/api/auth",
+    "https://primary.test/fleet/api/auth/session",
     "https://primary.test/fleet/api/status",
   ]);
 });
 
-test("conmuta al backup y acuña una sesión propia", async () => {
+test("conmuta al backup cuando ese host ya tiene su cookie independiente", async () => {
   const calls = [];
   const mesh = create({
     relays: RELAYS,
@@ -56,7 +56,7 @@ test("conmuta al backup y acuña una sesión propia", async () => {
     fetch: async (url) => {
       calls.push(url);
       if (url.startsWith("https://primary.test")) throw new Error("primary unreachable");
-      if (url.endsWith("/auth")) return json({ session: "s-backup", exp: Date.now() + 60_000 });
+      if (url.endsWith("/auth/session")) return json({ ok:true, email:"owner@example.com" });
       return json({ machines: [{ id: "dgx" }] });
     },
   });
@@ -64,7 +64,7 @@ test("conmuta al backup y acuña una sesión propia", async () => {
   const out = await mesh.json("/status");
   assert.equal(out.data._mesh.relay.id, "backup");
   assert.equal(out.data._mesh.failover, true);
-  assert.ok(calls.includes("https://backup.test/fleet/api/auth"));
+  assert.ok(calls.includes("https://backup.test/fleet/api/auth/session"));
   assert.ok(calls.includes("https://backup.test/fleet/api/status"));
 });
 
@@ -75,7 +75,7 @@ test("conserva el mismo command id al reintentar por otro relay", async () => {
     store: store(),
     getCredential: async () => "google",
     fetch: async (url, init = {}) => {
-      if (url.endsWith("/auth")) return json({ session: "session-" + new URL(url).hostname, exp: Date.now() + 60_000 });
+      if (url.endsWith("/auth/session")) return json({ ok:true, email:"owner@example.com" });
       ids.push(new Headers(init.headers).get("X-Fleet-Command-Id"));
       if (url.startsWith("https://primary.test")) return json({ error: "relay error" }, { status: 503 });
       return json({ rc: 0 });
@@ -101,7 +101,7 @@ test("fija una sesión interactiva al relay indicado", async () => {
     getCredential: async () => "google",
     fetch: async (url) => {
       calls.push(url);
-      if (url.endsWith("/auth")) return json({ session: "fixed", exp: Date.now() + 60_000 });
+      if (url.endsWith("/auth/session")) return json({ ok:true, email:"owner@example.com" });
       return json({ ok: true });
     },
   });
@@ -120,7 +120,7 @@ test("fija una sesión interactiva al relay indicado", async () => {
 // Grabación de pantalla del agente. El vencimiento tiene que decir su nombre.
 function colgado({ respetaMotivo }) {
   return (url, init) => new Promise((resolve, reject) => {
-    if (url.endsWith("/auth")) return resolve(json({ session: "s", exp: Date.now() + 60_000 }));
+    if (url.endsWith("/auth/session")) return resolve(json({ ok:true, email:"owner@example.com" }));
     init.signal.addEventListener("abort", () => {
       if (respetaMotivo) return reject(init.signal.reason);
       const err = new Error("signal is aborted without reason");

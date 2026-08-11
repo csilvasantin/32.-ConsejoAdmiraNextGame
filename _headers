@@ -4,3 +4,6 @@
 # para que propaguen en minutos, no en horas.
 /admira-bar.js
   Cache-Control: public, max-age=300, must-revalidate
+
+/control/*
+  Cross-Origin-Opener-Policy: same-origin-allow-popups

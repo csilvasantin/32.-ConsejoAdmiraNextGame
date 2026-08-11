@@ -87,6 +87,12 @@ refreshSupers();
 setInterval(refreshSupers, 60 * 1000).unref?.();
 
 const SESSION_TTL_MS = 12 * 3600 * 1000;
+const CHALLENGE_TTL_MS = 10 * 60 * 1000;
+const SESSION_COOKIE = '__Host-fleet_session';
+const CHALLENGE_COOKIE = '__Host-fleet_challenge';
+const GOOGLE_ISSUERS = new Set(['accounts.google.com', 'https://accounts.google.com']);
+const _challenges = new Map();
+const _activeSessions = new Map();
 const SESSION_SECRET = (function () {
   const f = path.join(DIR, '.session-secret');
   try { const s = fs.readFileSync(f, 'utf8').trim(); if (s) return s; } catch (e) {}
@@ -99,14 +105,23 @@ const hmac = p => crypto.createHmac('sha256', SESSION_SECRET).update(p).digest('
 
 // Verifica un ID token de Google con el endpoint tokeninfo (Google valida la
 // firma). Devuelve el email allowlisted o null.
-async function verifyGoogleCredential(cred) {
+async function verifyGoogleCredential(cred, expectedNonce) {
   if (!cred || typeof cred !== 'string') return null;
   try {
-    const r = await fetch('https://oauth2.googleapis.com/tokeninfo?id_token=' + encodeURIComponent(cred), { signal: AbortSignal.timeout(8000) });
+    const r = await fetch('https://oauth2.googleapis.com/tokeninfo', {
+      method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
+      body:new URLSearchParams({id_token:cred}).toString(), signal:AbortSignal.timeout(8000)
+    });
     if (!r.ok) return null;
     const d = await r.json();
+    const now = Date.now();
+    if (!GOOGLE_ISSUERS.has(String(d.iss || ''))) return null;
     if (d.aud !== GOOGLE_CLIENT_ID) return null;            // token de OTRA app → no
+    if (!Number.isFinite(Number(d.exp)) || Number(d.exp) * 1000 <= now) return null;
+    const iat = Number(d.iat) * 1000;
+    if (!Number.isFinite(iat) || iat > now + 5 * 60 * 1000 || iat < now - 2 * 60 * 60 * 1000) return null;
     if (String(d.email_verified) !== 'true') return null;
+    if (!expectedNonce || String(d.nonce || '') !== expectedNonce) return null;
     const email = String(d.email || '').toLowerCase();
     if (Date.now() - _superTs > 60000) await refreshSupers();  // lista fresca al emitir sesión
     if (!SUPERS.has(email)) return null;                    // no superuser → no
@@ -114,7 +129,10 @@ async function verifyGoogleCredential(cred) {
   } catch (e) { return null; }
 }
 function mintSession(email) {
-  const payload = b64url(JSON.stringify({ email, exp: Date.now() + SESSION_TTL_MS }));
+  const now=Date.now(), jti=crypto.randomBytes(18).toString('hex'), exp=now+SESSION_TTL_MS;
+  const payload = b64url(JSON.stringify({ email, jti, iat:now, exp }));
+  _activeSessions.set(jti,{email,exp});
+  for(const [key,value] of _activeSessions){if(value.exp<now)_activeSessions.delete(key);}
   return payload + '.' + hmac(payload);
 }
 function verifySession(token) {
@@ -123,14 +141,37 @@ function verifySession(token) {
   const payload = token.slice(0, i), sig = token.slice(i + 1);
   if (!safeEqual(sig, hmac(payload))) return null;
   let d; try { d = JSON.parse(Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString()); } catch (e) { return null; }
-  if (!d || !d.exp || Date.now() > d.exp) return null;
+  if (!d || !d.exp || !d.jti || Date.now() > d.exp) return null;
   const email = String(d.email || '').toLowerCase();
+  const active=_activeSessions.get(d.jti);
+  if(!active || active.email!==email || active.exp!==d.exp)return null;
   if (!SUPERS.has(email)) return null;   // degradar a alguien le corta /control en ≤60s
-  return email;
+  return { email, jti:d.jti, exp:d.exp };
+}
+function parseCookies(req) {
+  const out = {};
+  for (const item of String(req.headers.cookie || '').split(';')) { const at=item.indexOf('='); if(at<1)continue; try{out[item.slice(0,at).trim()]=decodeURIComponent(item.slice(at+1).trim());}catch(e){} }
+  return out;
 }
 function sessionFromReq(req) {
   const h = String(req.headers['authorization'] || '');
-  return (h.startsWith('Bearer ') ? h.slice(7).trim() : '') || String(req.headers['x-fleet-session'] || '');
+  return (h.startsWith('Bearer ') ? h.slice(7).trim() : '') || String(req.headers['x-fleet-session'] || '') || parseCookies(req)[SESSION_COOKIE] || '';
+}
+function appendSetCookie(res,value){const old=res.getHeader('Set-Cookie');res.setHeader('Set-Cookie',old?(Array.isArray(old)?old.concat(value):[old,value]):value);}
+function setSessionCookie(res, token, maxAge=Math.floor(SESSION_TTL_MS/1000)) { appendSetCookie(res,`${SESSION_COOKIE}=${encodeURIComponent(token)}; Path=/; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Lax`); }
+function clearSessionCookie(res) { appendSetCookie(res,`${SESSION_COOKIE}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`); }
+function setChallengeCookie(res, state, maxAge=Math.floor(CHALLENGE_TTL_MS/1000)) { appendSetCookie(res,`${CHALLENGE_COOKIE}=${encodeURIComponent(state)}; Path=/; Max-Age=${maxAge}; HttpOnly; Secure; SameSite=Lax`); }
+function clearChallengeCookie(res) { appendSetCookie(res,`${CHALLENGE_COOKIE}=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=Lax`); }
+function issueChallenge() {
+  const state=crypto.randomBytes(24).toString('base64url'), nonce=crypto.randomBytes(24).toString('base64url'), expiresAt=Date.now()+CHALLENGE_TTL_MS;
+  _challenges.set(state,{nonce,expiresAt,used:false});
+  for(const [key,value] of _challenges){if(value.expiresAt<Date.now()||value.used)_challenges.delete(key);}
+  return {state,nonce,expiresAt};
+}
+function consumeChallenge(req,state) {
+  const cookie=parseCookies(req)[CHALLENGE_COOKIE]||'', row=_challenges.get(state);
+  if(!state||!safeEqual(state,cookie)||!row||row.used||row.expiresAt<Date.now())return null;
+  row.used=true; _challenges.delete(state); return row;
 }
 
 /* ----- ejecutar en una máquina (local o ssh) -------------------------------- */
@@ -462,12 +503,13 @@ function resolveAction(action, m) {
 function cors(req, res) {
   const o = req.headers.origin;
   if (o && ALLOW_ORIGINS.includes(o)) res.setHeader('Access-Control-Allow-Origin', o);
+  if (o && ALLOW_ORIGINS.includes(o)) res.setHeader('Access-Control-Allow-Credentials', 'true');
   res.setHeader('Vary', 'Origin');
   res.setHeader('Access-Control-Allow-Methods', 'GET,POST,OPTIONS');
   res.setHeader('Access-Control-Allow-Headers', 'Content-Type, X-Fleet-Token, X-Fleet-Session, X-Fleet-Command-Id, Authorization');
   res.setHeader('Access-Control-Max-Age', '600');
 }
-function json(res, code, obj) { res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8' }); res.end(JSON.stringify(obj)); }
+function json(res, code, obj) { res.writeHead(code, { 'Content-Type': 'application/json; charset=utf-8', 'Content-Security-Policy':"default-src 'none'; frame-ancestors 'none'; base-uri 'none'", 'Cache-Control':'no-store' }); res.end(JSON.stringify(obj)); }
 
 // Comparación de token en tiempo constante (S3). La diferencia de longitud
 // se filtra (inevitable), pero no el contenido.
@@ -503,7 +545,13 @@ function tarpitMs() {
 // Acceso por sesión Google SSO (único método humano). `allowToken` solo lo activa
 // /api/register para el alta HEADLESS de máquinas nuevas (onboard.sh, sin navegador).
 async function gate(req, res, ip, allowToken) {
-  if (verifySession(sessionFromReq(req))) return true;          // sesión Google SSO
+  const session=verifySession(sessionFromReq(req));
+  if (session) {
+    if (!/^(GET|HEAD|OPTIONS)$/i.test(req.method) && !ALLOW_ORIGINS.includes(String(req.headers.origin || ''))) {
+      json(res,403,{error:'origin no permitido'}); return false;
+    }
+    return true;
+  }
   if (allowToken && authed(req)) return true;                   // X-Fleet-Token (solo onboarding headless)
   _recentFails.push(Date.now());
   const wait = tarpitMs();
@@ -597,12 +645,28 @@ const server = http.createServer(async (req, res) => {
     hasToken: !!currentToken()
   });
 
-  // AUTH (opción B): intercambia un ID token de Google (allowlisted) por una
-  // sesión propia del backend (12h). Sin token: es el bootstrap. Google verifica
-  // la firma del ID token; aquí solo aceptamos aud=nuestro client + email allowlisted.
+  if (url === '/api/auth/challenge' && req.method === 'GET') {
+    if (!ALLOW_ORIGINS.includes(String(req.headers.origin || ''))) return json(res,403,{error:'origin no permitido'});
+    const challenge=issueChallenge(); setChallengeCookie(res,challenge.state);
+    return json(res,200,{ok:true,state:challenge.state,nonce:challenge.nonce,expiresAt:challenge.expiresAt});
+  }
+  if (url === '/api/auth/session' && req.method === 'GET') {
+    if (!ALLOW_ORIGINS.includes(String(req.headers.origin || ''))) return json(res,403,{error:'origin no permitido'});
+    const session=verifySession(sessionFromReq(req));
+    if(!session){clearSessionCookie(res);return json(res,401,{ok:false});}
+    return json(res,200,{ok:true,email:session.email});
+  }
+  if (url === '/api/auth/logout' && req.method === 'POST') {
+    if (!ALLOW_ORIGINS.includes(String(req.headers.origin || ''))) return json(res,403,{error:'origin no permitido'});
+    const session=verifySession(sessionFromReq(req)); if(session)_activeSessions.delete(session.jti);
+    clearSessionCookie(res); return json(res,200,{ok:true});
+  }
+  // AUTH: challenge+nonce de un solo uso; el navegador sólo recibe cookie HttpOnly.
   if (url === '/api/auth' && req.method === 'POST') {
+    if (!ALLOW_ORIGINS.includes(String(req.headers.origin || ''))) return json(res,403,{error:'origin no permitido'});
     const body = await readBody(req);
-    const email = await verifyGoogleCredential(body && body.credential);
+    const challenge=consumeChallenge(req,String(body&&body.state||'')); clearChallengeCookie(res);
+    const email = challenge && await verifyGoogleCredential(body && body.credential,challenge.nonce);
     if (!email) {
       _recentFails.push(Date.now()); const wait = tarpitMs();
       audit({ ip, ev: 'auth_google_fail' });
@@ -610,7 +674,8 @@ const server = http.createServer(async (req, res) => {
       return json(res, 401, { error: 'google no autorizado' });
     }
     audit({ ip, ev: 'auth_google_ok', email });
-    return json(res, 200, { ok: true, session: mintSession(email), email, exp: Date.now() + SESSION_TTL_MS });
+    setSessionCookie(res,mintSession(email));
+    return json(res, 200, { ok: true, email });
   }
 
   // estado de la flota (lectura) — requiere token (el funnel es público)

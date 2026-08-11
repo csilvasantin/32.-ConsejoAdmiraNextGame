@@ -6,167 +6,29 @@
  * ⚠️ Es un bloqueo BLANDO: oculta la UI hasta validar, pero el contenido sigue en el
  *    código fuente (sitio estático público). Disuade, no es seguridad fuerte.
  *
- * La LÓGICA de login (Client ID, whitelist, decodificado del JWT, recordar sesión,
- * unlock) es IDÉNTICA a la versión anterior — sólo cambia la interfaz gráfica.
- * Se conserva el ID token (resp.credential) en localStorage.admira_gate.cred para
- * las páginas que lo intercambian por sesión de backend (p.ej. FleetControl).
+ * El ID token sólo existe en memoria durante la pestaña; nunca se persiste.
  *
  * Instalación: en el <head> de cada página a proteger, lo más arriba posible:
  *   <script src="/auth-gate.js"></script>
- * Whitelist: se gestiona en caliente desde admira.live/usuarios.html (worker
- *   admira-whitelist + KV). El array WHITELIST_FALLBACK de abajo es solo la red
- *   de seguridad por si el worker no responde.
+ * La identidad y la allowlist se validan exclusivamente en FleetControl. El
+ * navegador sólo conserva una cookie de sesión __Host- HttpOnly.
  */
 (function () {
   // ===== CONFIG =====
   var CLIENT_ID = "861856772040-e1ri6kpu6maagtb6crdfbb923hsaalgb.apps.googleusercontent.com";
 
-  // Backend de la whitelist (alta/baja desde admira.live/usuarios.html).
-  // La lista se lee de aquí en caliente; si el worker no responde, se usa la
-  // lista FALLBACK embebida para no dejar fuera a nadie.
-  var WL_API = "https://admira-whitelist.csilvasantin.workers.dev";
-  var WL_CACHE_KEY = "admira_wl";
-  var WL_CACHE_MS = 10 * 60 * 1000; // 10 min de caché local de la lista
-
-  var WHITELIST_FALLBACK = [
-    "csilva@admira.com",
-    "csilvasantin@gmail.com",
-    "mzavaleta@admira.com",
-    "agonzalez@admira.com",
-    "jsedano@admira.com"
-  ];
-  var REMEMBER_HOURS = 12;       // recordar una sesión validada
+  var AUTH_API = "https://fleet.admira.live/api";
   var CONNECT_SECONDS = 1.6;     // duración de la "conexión" antes de mostrar el login
   var SCANLINES = true;          // overlay CRT
-
-  function norm(e) { return String(e).toLowerCase().trim(); }
-  function uniqLower(arr) { var seen = {}, out = []; arr.forEach(function (e) { e = norm(e); if (e && !seen[e]) { seen[e] = 1; out.push(e); } }); return out; }
-
-  // WHITELIST inicial: caché reciente del worker si la hay, si no el fallback.
-  var WHITELIST = (function () {
-    try {
-      var c = JSON.parse(localStorage.getItem(WL_CACHE_KEY) || "null");
-      if (c && Array.isArray(c.emails) && (Date.now() - (c.at || 0) < WL_CACHE_MS)) return uniqLower(c.emails);
-    } catch (e) {}
-    return uniqLower(WHITELIST_FALLBACK);
-  })();
-
-  // Trae la lista fresca del worker; actualiza WHITELIST + caché. Promise<array>.
-  function loadWhitelist() {
-    return fetch(WL_API + "/list", { cache: "no-store" })
-      .then(function (r) { return r.ok ? r.json() : null; })
-      .then(function (d) {
-        if (d && Array.isArray(d.emails) && d.emails.length) {
-          WHITELIST = uniqLower(d.emails);
-          try { localStorage.setItem(WL_CACHE_KEY, JSON.stringify({ emails: WHITELIST, at: Date.now() })); } catch (e) {}
-        }
-        return WHITELIST;
-      })
-      .catch(function () { return WHITELIST; });
-  }
-
-  // ── Frescura del credential de Google (fix control remoto 2026-07-08) ────────
-  // El ID token de Google (admira_gate.cred) sólo lo honra Google ~1h, pero aquí
-  // recordamos la sesión REMEMBER_HOURS (12h). Las páginas que lo cambian por una
-  // sesión de backend (FleetControl → /fleet/api/auth) se quedaban SIN ACCESO en
-  // cuanto el cred caducaba: el gate te "recordaba" y nunca refrescaba el cred.
-  // Aquí exponemos un refresco SILENCIOSO (GIS auto_select, sin clic) reutilizable
-  // como window.admiraGateRefresh(); el consumidor lo pide bajo demanda y, además,
-  // lo disparamos en segundo plano al arrancar si el cred está rancio.
-  var CRED_FRESH_MS = 50 * 60 * 1000;   // cred considerado fresco si < 50 min
-  var _gisLoading = null;
-  function ensureGisLoaded() {
-    if (window.google && google.accounts && google.accounts.id) return Promise.resolve(true);
-    if (_gisLoading) return _gisLoading;
-    _gisLoading = new Promise(function (resolve) {
-      var g = document.createElement("script");
-      g.src = "https://accounts.google.com/gsi/client";
-      g.async = true; g.defer = true;
-      g.onload = function () { resolve(!!(window.google && google.accounts && google.accounts.id)); };
-      g.onerror = function () { resolve(false); };
-      (document.head || document.documentElement).appendChild(g);
-    });
-    return _gisLoading;
-  }
-  function _emailFromCred(cred) {
-    try {
-      var p = JSON.parse(decodeURIComponent(atob(String(cred).split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))
-        .split("").map(function (c) { return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2); }).join("")));
-      return String(p.email || "").toLowerCase();
-    } catch (e) { return ""; }
-  }
-  var _refreshing = null;
-  // Devuelve una Promise<cred|null>. null ⇒ no se pudo refrescar en silencio
-  // (el consumidor debe caer a re-login manual). Se cachea mientras está en vuelo.
-  window.admiraGateRefresh = function () {
-    // El contenido protegido se ejecuta detrás de la verja. FleetControl pedía
-    // credencial nada más cargar y llegaba aquí ANTES de que Carlos pulsara el
-    // botón: eso abría un FedCM silencioso en paralelo al login manual. Chrome
-    // 151 sólo admite una navigator.credentials.get activa y la segunda dejaba
-    // accounts.google.com en negro. Sin una sesión local válida no hay nada que
-    // refrescar: la única puerta es el botón visible de la verja.
-    try {
-      var current = JSON.parse(localStorage.getItem("admira_gate") || "null");
-      if (!current || !current.email || !current.exp || Date.now() >= current.exp) return Promise.resolve(null);
-    } catch (e) { return Promise.resolve(null); }
-    if (_refreshing) return _refreshing;
-    _refreshing = new Promise(function (resolve) {
-      var settled = false;
-      function done(cred) { if (settled) return; settled = true; _refreshing = null; resolve(cred || null); }
-      ensureGisLoaded().then(function (ok) {
-        if (!ok) return done(null);
-        try {
-          google.accounts.id.initialize({
-            client_id: CLIENT_ID,
-            auto_select: true,
-            callback: function (resp) {
-              if (!resp || !resp.credential) return done(null);
-              var email = _emailFromCred(resp.credential);
-              if (!email) return done(null);
-              try {
-                localStorage.setItem("admira_gate", JSON.stringify({
-                  email: email, exp: Date.now() + REMEMBER_HOURS * 3600 * 1000,
-                  cred: resp.credential, credAt: Date.now()
-                }));
-              } catch (e) {}
-              done(resp.credential);
-            }
-          });
-          google.accounts.id.prompt(function (n) {
-            try {
-              if (n && ((n.isNotDisplayed && n.isNotDisplayed()) || (n.isSkippedMoment && n.isSkippedMoment()) || (n.isDismissedMoment && n.isDismissedMoment()))) done(null);
-            } catch (e) { done(null); }
-          });
-        } catch (e) { return done(null); }
-        setTimeout(function () { done(null); }, 5000);   // techo de seguridad
-      });
-    });
-    return _refreshing;
+  var activeChallenge = null;
+  var gateUser = null;
+  var ephemeralCredential = "";
+  window.admiraGateUser = function () { return gateUser; };
+  window.admiraGateCredential = function () { return ephemeralCredential; };
+  window.admiraGateLogout = function () {
+    return fetch(AUTH_API + "/auth/logout", { method:"POST", credentials:"include", cache:"no-store" })
+      .catch(function () {}).then(function () { gateUser=null; location.reload(); });
   };
-  window.admiraGateCredAge = function () {
-    try { var g = JSON.parse(localStorage.getItem("admira_gate") || "null"); return (g && g.credAt) ? (Date.now() - g.credAt) : Infinity; } catch (e) { return Infinity; }
-  };
-
-  // Si ya hay una validación reciente y vigente, no molestar — pero revalida en
-  // segundo plano: si al usuario lo han dado de baja, se le caduca la sesión local
-  // y el siguiente acceso le pedirá login (y será rechazado).
-  try {
-    var saved = JSON.parse(localStorage.getItem("admira_gate") || "null");
-    if (saved && saved.email && Date.now() < saved.exp && WHITELIST.indexOf(saved.email) >= 0) {
-      loadWhitelist().then(function (list) {
-        if (list.indexOf(saved.email) < 0) { try { localStorage.removeItem("admira_gate"); } catch (e) {} }
-      });
-      // Cred rancio (>50min) → refréscalo en segundo plano para que FleetControl
-      // pueda cambiarlo por sesión sin que el usuario se quede sin control remoto.
-      if (!saved.credAt || (Date.now() - saved.credAt) > CRED_FRESH_MS) {
-        try { window.admiraGateRefresh(); } catch (e) {}
-      }
-      return;
-    }
-  } catch (e) {}
-
-  // Aún no validado: empieza a cargar la lista fresca ya, para el login que viene.
-  loadWhitelist();
 
   // ===== estado =====
   var phase = "connecting"; // connecting | ready | auth | welcome | error
@@ -384,36 +246,23 @@
     } catch (e) {}
   }
 
-  // ===== validación (idéntica a la versión anterior) =====
+  // ===== validación server-side con challenge+nonce de un solo uso =====
   function onCredential(resp) {
     phase = "auth"; spin = 2.2; renderFoot();
     var anim = animateDots();
-    var email = "";
-    try {
-      var payload = JSON.parse(
-        decodeURIComponent(
-          atob(resp.credential.split(".")[1].replace(/-/g, "+").replace(/_/g, "/"))
-            .split("").map(function (c) { return "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2); }).join("")
-        )
-      );
-      if (!payload.email_verified) throw new Error("email no verificado");
-      email = String(payload.email || "").toLowerCase();
-    } catch (e) {
-      clearInterval(anim); failBack("No se pudo validar la cuenta.".toUpperCase()); return;
-    }
-    function accept() {
-      try { localStorage.setItem("admira_gate", JSON.stringify({ email: email, exp: Date.now() + REMEMBER_HOURS * 3600 * 1000, cred: resp.credential, credAt: Date.now() })); } catch (e) {}
+    if (!resp || !resp.credential || !activeChallenge) { clearInterval(anim); failBack("RESPUESTA DE GOOGLE NO VÁLIDA"); return; }
+    fetch(AUTH_API + "/auth", { method:"POST", credentials:"include", cache:"no-store", headers:{"Content-Type":"application/json"},
+      body:JSON.stringify({credential:resp.credential,state:activeChallenge.state}) })
+    .then(function (r) { return r.json().catch(function(){return {};}).then(function(d){return {status:r.status,data:d};}); })
+    .then(function (result) {
+      activeChallenge = null;
+      if (result.status !== 200 || !result.data.ok) throw new Error(result.status === 403 ? "CUENTA NO AUTORIZADA" : "NO SE PUDO VALIDAR");
+      gateUser = { email:String(result.data.email || "").toLowerCase() };
+      ephemeralCredential = resp.credential;
       clearInterval(anim);
       phase = "welcome"; renderFoot();
       setTimeout(unlock, 900);
-    }
-    function reject() {
-      clearInterval(anim);
-      try { google.accounts.id.disableAutoSelect(); } catch (e) {}
-      failBack("CUENTA NO AUTORIZADA: " + email);
-    }
-    if (WHITELIST.indexOf(email) >= 0) { accept(); }
-    else { loadWhitelist().then(function (list) { if (list.indexOf(email) >= 0) accept(); else reject(); }); }
+    }).catch(function (err) { activeChallenge=null; clearInterval(anim); failBack(String(err&&err.message||"ERROR DE ACCESO")); initGis(); });
   }
 
   function animateDots() {
@@ -444,34 +293,24 @@
   // ===== arranque: GIS + montaje =====
   function initGis() {
     if (!window.google || !google.accounts || !google.accounts.id) return;
-    google.accounts.id.initialize({
-      client_id: CLIENT_ID,
-      callback: onCredential,
-      // ENTRADA SILENCIOSA (Carlos, 24-jul-2026): «si ya tengo acceso en yokup.com,
-      // en admira.live no tengo que poner el usuario dos veces». Son dominios
-      // distintos, así que la sesión NO se puede compartir — pero sí se puede evitar
-      // el clic: con auto_select, si el navegador ya tiene sesión de Google y la
-      // cuenta consintió antes, Google devuelve el credential sin preguntar nada.
-      // El mismo mecanismo que admiraGateRefresh() ya usaba para refrescar; sólo
-      // faltaba intentarlo TAMBIÉN en la primera visita.
-      auto_select: true,
-      cancel_on_tap_outside: false,
-      // El botón FedCM se resuelve dentro de Chromium. Evita el popup clásico
-      // de accounts.google.com que queda negro en el navegador de Codex.
-      use_fedcm_for_button: true
-    });
-    gisReady = true;
-    // Si ya estábamos en ready (barra terminó antes que GIS), pinta el botón ahora.
-    if (phase === "ready") renderGoogleButton();
+    fetch(AUTH_API + "/auth/challenge", { credentials:"include", cache:"no-store" })
+      .then(function(r){return r.ok?r.json():Promise.reject(new Error("challenge"));})
+      .then(function(challenge){
+        activeChallenge=challenge;
+        google.accounts.id.initialize({ client_id:CLIENT_ID, callback:onCredential, nonce:challenge.nonce,
+          ux_mode:"popup", auto_select:false, cancel_on_tap_outside:false, use_fedcm_for_button:false });
+        gisReady=true; if(phase==="ready")renderGoogleButton();
+      }).catch(function(){gisReady=true;if(phase==="connecting"){phase="ready";renderFoot();}var el=document.getElementById("admira-err");if(el)el.textContent="✖ NO SE PUDO INICIAR EL ACCESO SEGURO.";});
   }
 
   ready(mount);
 
-  var s = document.createElement("script");
-  s.src = "https://accounts.google.com/gsi/client";
-  s.async = true; s.defer = true;
-  s.onload = function () { ready(initGis); };
-  s.onerror = function () {
+  function loadGoogle() {
+    var s = document.createElement("script");
+    s.src = "https://accounts.google.com/gsi/client";
+    s.async = true; s.defer = true;
+    s.onload = function () { ready(initGis); };
+    s.onerror = function () {
     ready(function () {
       // Sin Google: deja pasar la barra y muestra error en 'ready'.
       gisReady = true;
@@ -479,6 +318,13 @@
       var el = document.getElementById("admira-err");
       if (el) el.textContent = "✖ NO SE PUDO CARGAR GOOGLE. RECARGA LA PÁGINA.";
     });
-  };
-  (document.head || document.documentElement).appendChild(s);
+    };
+    (document.head || document.documentElement).appendChild(s);
+  }
+  // Una cookie válida desbloquea sin exponer el token a JavaScript. Si no existe,
+  // se monta el login interactivo; nunca se lanza One Tap/FedCM silencioso.
+  fetch(AUTH_API + "/auth/session", { credentials:"include", cache:"no-store" })
+    .then(function(r){return r.ok?r.json():null;})
+    .then(function(d){if(d&&d.ok){gateUser={email:String(d.email||"").toLowerCase()};ready(unlock);}else loadGoogle();})
+    .catch(loadGoogle);
 })();

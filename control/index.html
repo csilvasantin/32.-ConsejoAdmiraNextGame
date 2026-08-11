@@ -8,10 +8,10 @@
 <!-- control-signage · v.2026.07.21.r5 · estado único live/ready/stale/offline/blocked con heartbeat, proof-of-play, captura, versión, contenido y doble acuse. Arranque bloqueado si no es elegible; estado DS nunca sale de localStorage. -->
 <!-- control-tarjetas-honestas · v.2026.07.22.r1 · tarjetas honestas y limpias: a) tarjeta offline/bloqueada COMPACTA (badge + causa raíz + «▸ detalle» plegado, sin ladrillos repetidos); b) FRANJA agregada cuando ≥3 equipos comparten diagnóstico (sin acceso remoto → Tailscale/SSH); c) badge de captura HONESTO (🔴 EN VIVO <2min / captura antigua / SIN CAPTURA · fondo de persona); d) preflight AUTOMÁTICO al cargar (solo lectura, solo si hay online); e) versión al pie r1. -->
 <!-- control-dos-botones-ds · v.2026.07.22.r2 · DOS botones DS explícitos en Acciones de Equipos: «📺 Arrancar DS» (arranca los elegibles pendientes) y «⏹️ Apagar DS» (para los players vivos), ambos siempre visibles y respetando el desplegable «elegir equipos». Sustituye al botón único auto-invertible. -->
-<!-- control-fleet-mesh · v.11.08.2026.r9.10:46 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google independiente, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
+<!-- control-fleet-mesh · v.11.08.2026.r11.12:16 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google independiente, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.11.08.2026.r10.11:18" />
+<meta name="admiranext-version" content="AdmiraNeXT v.11.08.2026.r11.12:16" />
     <script src="/admira-bar.js?v=20260713-r36"></script>
     <script src="/auth-gate.js?v=20260811-r10"></script>
 <meta charset="UTF-8">
@@ -229,6 +229,23 @@
   /* SIN CAPTURA: lo que se ve es el fondo de persona, NO la pantalla emitiendo. Badge honesto y bien visible en esquina + wallpaper atenuado. */
   .shot.isWall::after{content:'⚠️ SIN CAPTURA · fondo de persona';position:absolute;left:8px;top:8px;font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:6px;background:rgba(255,180,84,.92);color:#2a1a08;letter-spacing:.2px;box-shadow:0 1px 6px rgba(0,0,0,.5)}
   .shot.isWall img{opacity:.72;filter:grayscale(.18)}
+  /* DESCARGANDO (Carlos, 11-ago-2026: «se queda todo en negro mientras se capturan
+     las imágenes y eso es un rato largo… mejor que nos dé feedback de que todo está
+     ok y no parece que esté colgado»). El hueco de la imagen dice que está trabajando
+     en vez de quedarse mudo: barrido lento + etiqueta. */
+  .shot.loading{display:block;min-height:96px;background:linear-gradient(100deg,#0b1119 30%,#16202c 50%,#0b1119 70%);background-size:220% 100%;animation:cargando 1.6s ease-in-out infinite}
+  .shot.loading::after{content:'⏳ DESCARGANDO CAPTURA…';position:absolute;left:8px;top:8px;font-size:10.5px;font-weight:800;padding:3px 8px;border-radius:6px;background:rgba(91,214,192,.92);color:#04212b;letter-spacing:.2px}
+  .shot.loading img{visibility:hidden}
+  @keyframes cargando{0%{background-position:130% 0}100%{background-position:-30% 0}}
+  @media (prefers-reduced-motion:reduce){ .shot.loading{animation:none} .skel .sk{animation:none} }
+  /* ESQUELETO DE ARRANQUE: el panel se pinta ANTES de tener datos, para que nunca
+     nazca en negro. Son huecos con la forma de las tarjetas reales, no contenido
+     falso: no llevan nombre de equipo ni estado inventado. */
+  .card.skel{pointer-events:none}
+  .card.skel .sk{background:linear-gradient(100deg,#0d141d 30%,#182430 50%,#0d141d 70%);background-size:220% 100%;animation:cargando 1.6s ease-in-out infinite;border-radius:8px}
+  .card.skel .sk-line{height:12px;margin:6px 0}
+  .card.skel .sk-shot{height:96px;margin-top:10px}
+  .bootnote{grid-column:1/-1;text-align:center;color:var(--mut);font-family:var(--mono);font-size:12px;padding:6px 0 2px;letter-spacing:.3px}
   .acts{display:flex;flex-wrap:wrap;gap:6px}
   .capwarn{display:none;align-items:center;gap:8px;flex-wrap:wrap;font-size:11.5px;color:var(--warn);border:1px solid var(--warn);border-radius:9px;padding:7px 10px;background:rgba(255,180,84,.07)}
   .capwarn button{border-color:var(--warn);color:var(--warn);font-weight:700}
@@ -600,7 +617,7 @@
       <!-- VERSIÓN al pie del raíl (Carlos, 2026-07-21): canon cuadrático de
            AdmiraNeXT — la versión SIEMPRE abajo del todo del menú de opciones,
            como en yokup y el resto de soluciones. -->
-      <div class="rail-ver">AdmiraNeXT · control · <b id="ctlVer">v.11.08.2026.r10.11:18</b></div>
+      <div class="rail-ver">AdmiraNeXT · control · <b id="ctlVer">v.11.08.2026.r11.12:16</b></div>
     </div>
   </aside>
 
@@ -729,6 +746,62 @@ let ACTIVE_ROUTE=null;
 // Equipos cuya captura ha fallado (ERR_NO_CAPTURE / sin permiso). Persiste entre
 // re-renders para volver a pintar el aviso + botón de arreglo por SSH.
 let CAP_FAIL={}, CAP_TS={}, PREV_ONLINE={}, PREV_STALE={}, _baselineDone=false;
+
+/* ───────── DOCUMENTAR LA ESPERA (FLT-1378) ─────────────────────────────────
+ * Carlos, 11-ago-2026: «cuando arrancamos admira.live/control se queda todo en
+ * negro mientras se capturan las imágenes y eso es un rato largo; mejor cargamos
+ * todo y ponemos downloading o algo que nos dé feedback de que todo está ok y no
+ * parece que esté colgado».
+ *
+ * El arranque es una cadena de esperas —sesión → censo → personas/flota → foto de
+ * todos los equipos de 3 en 3— y hasta hoy NADA se pintaba hasta el final. Un panel
+ * negro no distingue «trabajando» de «colgado», y son cosas muy distintas.
+ *
+ * Tres piezas, ninguna decorativa:
+ *   fase()             dice EN QUÉ paso va, con nombre, en la píldora de estado.
+ *   bootSkeleton()     pinta huecos con la forma de las tarjetas ANTES de la 1ª
+ *                      petición, para que el panel nunca nazca en negro.
+ *   capProgreso()      cuenta capturas de verdad (n de m), no un porcentaje falso.
+ * Nada de esto inventa datos: el esqueleto no lleva nombres de equipo y el
+ * contador sólo sube cuando una captura ha llegado o ha fallado de verdad.
+ */
+function fase(txt, clase){
+  const p=$('#connPill'); if(!p) return;
+  p.textContent=txt; p.className='pill '+(clase||'');
+}
+// Cuántas tarjetas dibujar en el esqueleto: lo que había la última vez. Si no hay
+// recuerdo, 6 — un número plausible que se corrige en cuanto llega el censo.
+function bootSkeleton(){
+  const el=$('#cards'); if(!el) return;
+  let n=6; try{ n=Math.min(24, Math.max(2, parseInt(localStorage.getItem('fleet_last_count')||'6',10)||6)); }catch(e){}
+  let h='<div class="bootnote">⏳ preparando el panel · '+n+' equipo(s) del último arranque</div>';
+  for(let i=0;i<n;i++){
+    h+='<div class="card skel"><div class="top"><div class="cardmeta">'+
+       '<div class="sk sk-line" style="width:58%"></div><div class="sk sk-line" style="width:34%"></div>'+
+       '</div></div><div class="sk sk-shot"></div></div>';
+  }
+  el.innerHTML=h;
+}
+// Progreso REAL de la foto de arranque. `hechas` sube tanto con éxito como con
+// fallo: lo que se cuenta es «ya sabemos qué pasa con esta», no «ha ido bien».
+let CAP_PROG={total:0, hechas:0, activo:false};
+function capProgreso(){
+  const el=$('#acState'); if(!el) return;
+  if(!CAP_PROG.activo){ return; }
+  if(CAP_PROG.hechas<CAP_PROG.total){
+    el.textContent='📸 descargando capturas · '+CAP_PROG.hechas+' de '+CAP_PROG.total+'…';
+  }else{
+    const fallos=failingIds().length;
+    el.textContent='📸 capturas listas · '+CAP_PROG.total+' equipo(s)'+(fallos?(' · '+fallos+' sin captura'):'');
+    CAP_PROG.activo=false;
+  }
+}
+// Marca el hueco de la imagen como «descargando» mientras se pide la captura.
+function marcarDescargando(id, on){
+  const box=document.querySelector('.shot[data-m="'+id+'"]'); if(!box) return;
+  box.classList.toggle('loading', !!on);
+  if(on) box.style.display='block';
+}
 let HIDE_OFF=(localStorage.getItem('fleet_hideoff')==='1');
 function machName(id){ const m=MACHINES.find(x=>x.id===id); return m?(m.name||id):id; }
 function setCapFail(id, failed){
@@ -1038,9 +1111,16 @@ let _reauthTried=false;
 async function refresh(){
   if(!SESSION){ $('#connPill').textContent='🔒 inicia sesión Google'; $('#connPill').className='pill bad'; renderCards([]); return; }
   try{
+    if(!_baselineDone) fase('📋 pidiendo el censo de equipos…', 'warn');
     const d=await api('/status'); MACHINES=d.machines; MACHINES.forEach(m=>{ m.sshOnline=!!m.online; }); _reauthTried=false;
     const route=d._mesh&&d._mesh.relay||ACTIVE_ROUTE;
     const failedOver=!!(d._mesh&&d._mesh.failover);
+    // PINTAR YA, con lo que hay (FLT-1378). Antes se esperaba a personas + flota +
+    // agentes para el primer renderCards, y ese tramo es justo el «rato largo» que
+    // se veía en negro. Las tarjetas salen con el censo y se recargan enseguida con
+    // el resto: media tarjeta ahora es infinitamente mejor que una negra en 20 s.
+    try{ localStorage.setItem('fleet_last_count', String(MACHINES.length)); }catch(e){}
+    if(!_baselineDone){ renderCards(MACHINES); fase('🧩 completando datos de los agentes…','warn'); }
     _capturaDeArranque();   // al INICIAR SESIÓN: foto de todos los conectados (una vez)
     await Promise.all([loadPersonas(), loadFleet()]);
     // Un equipo con un agente ACTIVO (Claude/Codex/Grok, beat de presencia <8min) cuenta como
@@ -1069,6 +1149,9 @@ async function refresh(){
     MACHINES.forEach(m=>{ PREV_ONLINE[m.id]=m.online; PREV_STALE[m.id]=isAgentStale(m); }); _baselineDone=true;
     showControlRouteBanner(failedOver, failedOver?route:null);
     renderCards(MACHINES); fillSelect(); updateCapHealth();
+    // renderCards rehace el DOM: hay que volver a marcar los huecos de las capturas
+    // que siguen en vuelo, o el aviso de «descargando» se perdería en el repintado.
+    if(CAP_PROG.pendientes) CAP_PROG.pendientes.forEach(id=>marcarDescargando(id,true));
     deepLinkEquipo();   // ?equipo= desde /status → selecciona la tarjeta
     deepLinkRc();       // ?rc= desde yokup «operar» → abre su control remoto
   }catch(e){
@@ -2247,13 +2330,17 @@ function _capturaDeArranque(){
   if(!online.length) return;                 // aún sin flota: se reintenta en el siguiente refresh
   _capArranqueHecho=true;
   try{ sessionStorage.setItem('fleet_cap_arranque','1'); }catch(e){}
-  const st=$('#acState'); if(st) st.textContent='📸 foto de arranque · '+online.length+' equipo(s)…';
+  // Se declara el trabajo ANTES de empezarlo: cuántas van a venir y cuáles están
+  // pendientes. Así el panel puede decir «3 de 12» y marcar cada hueco (FLT-1378).
+  CAP_PROG={total:online.length, hechas:0, activo:true, pendientes:new Set(online.map(m=>m.id))};
+  online.forEach(m=>marcarDescargando(m.id, true));
+  capProgreso();
   // de 3 en 3 para no saturar el hub ni las máquinas
   (async()=>{
     for(let i=0;i<online.length;i+=3){
       await Promise.all(online.slice(i,i+3).map(m=>captureMachine(m.id).catch(()=>{})));
     }
-    if(st) st.textContent='📸 foto de arranque lista · '+online.length+' equipo(s)';
+    CAP_PROG.hechas=CAP_PROG.total; capProgreso();
   })();
 }
 
@@ -2261,9 +2348,19 @@ function _capturaDeArranque(){
 let AUTOCAP=(()=>{ try{ return Object.assign({on:false,sec:15}, JSON.parse(localStorage.getItem('fleet_autocap')||'null')||{}); }catch(e){ return {on:false,sec:15}; } })();
 let _acTimer=null, _acBusy=false;
 function captureMachine(id){
+  // `cerrar` se ejecuta pase lo que pase: una captura que falla TIENE que quitar el
+  // «descargando…» y sumar en el contador. Si no, el hueco se queda girando para
+  // siempre y volvemos a lo de antes — parecer colgado sin estarlo (FLT-1378).
+  const cerrar=()=>{
+    marcarDescargando(id,false);
+    if(CAP_PROG.pendientes && CAP_PROG.pendientes.has(id)){
+      CAP_PROG.pendientes.delete(id); CAP_PROG.hechas++; capProgreso();
+    }
+  };
   return api('/action',{method:'POST',body:JSON.stringify({machine:id,action:'screenshot'})})
     .then(d=>{ if(d&&d.rc===0 && d.stdout && !/ERR_NO_CAPTURE/.test(d.stdout)){ showShot(id,'data:image/jpeg;base64,'+d.stdout); setCapFail(id,false); markCaptured(id); } else { setCapFail(id,true); } })
-    .catch(()=>{ setCapFail(id,true); });   // en auto: deja la miniatura anterior, pero marca el aviso
+    .catch(()=>{ setCapFail(id,true); })   // en auto: deja la miniatura anterior, pero marca el aviso
+    .finally(cerrar);
 }
 async function autoCapTick(){
   if(_acBusy || !SESSION) return; _acBusy=true;
@@ -2489,6 +2586,10 @@ function collapseAllToggle(){
 // Acceso ÚNICO por login de Google: intercambia el credential del gate por una
 // sesión de backend. Sin tokens, sin optoken, sin prompt.
 (async () => {
+  // Lo PRIMERO, antes de cualquier petición: pintar. El esqueleto tarda 0 ms y
+  // convierte «pantalla negra» en «esto está arrancando» (FLT-1378).
+  bootSkeleton();
+  fase('🔑 abriendo sesión…', 'warn');
   await ensureSession();
   if(SESSION){ const e=whoami(); const tp=$('#tokenPill'); if(tp&&e){ tp.textContent='🔒 '+e; tp.title='Cerrar sesión'; } }
   applyAutoCap();

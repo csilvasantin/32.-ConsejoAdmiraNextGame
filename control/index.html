@@ -17,7 +17,11 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="/failover.js"></script>
-<script src="/control/fleet-mesh.js?v=20260724-r1"></script>
+<!-- El «?v=» sube CON el fichero, no con la fecha en que se escribió: Pages sirve
+     el .js con cache-control de 4 h, así que una cadena vieja deja al navegador
+     con el mesh anterior aunque el HTML ya sea nuevo (cazado el 11-ago-2026: el
+     panel decía r9 y el mesh cargado seguía siendo el r8). -->
+<script src="/control/fleet-mesh.js?v=20260811-r9"></script>
 <title>Control · AdmiraNext Fleet</title>
 <style>
   :root{

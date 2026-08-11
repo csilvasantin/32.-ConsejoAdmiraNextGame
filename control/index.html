@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.11.08.2026.r11.12:16 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google independiente, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.11.08.2026.r15.15:35" />
+<meta name="admiranext-version" content="AdmiraNeXT v.11.08.2026.r16.15:54" />
     <script src="/admira-bar.js?v=20260713-r36"></script>
     <script src="/auth-gate.js?v=20260811-r10"></script>
 <meta charset="UTF-8">
@@ -952,10 +952,23 @@ async function loadPersonas(){
     PERSONA_BY_MACHINE=map; AGENT_ONLINE=on; PRESENCE_SEEN=seen; PRESENCE_FULL=full;
   }catch(e){ /* sin presencia: las tarjetas quedan sin fondo, sin icono roto */ }
 }
-// admira-fleet: registro durable de la flota. `lastSeen` suele estar estático para casi todas
-// las máquinas, así que SÓLO marca online las que tienen un `lastSeen` realmente fresco (<5min).
+// admira-fleet: registro durable de la flota.
+// ⚠️ fleetOnline() ESTÁ MUERTA HOY, y conviene saberlo antes de fiarse de ella (11-08-2026).
+// Marca online por `lastSeen` fresco (<5 min, FLEET_FRESH), pero NADIE refresca ese campo:
+// medido, lleva ~30 h congelado y con el MISMO valor al segundo en 8 máquinas, así que no
+// rescata a nadie nunca. `report-now.sh` NO escribe aquí —sólo publica su línea en
+// AgoraMatrix— y `foco.sh`, que sí escribe, usa POST /machines/profile, que toca
+// project/currentFocus/profileUpdatedAt y DESCARTA `lastSeen` (lista blanca de campos:
+// comprobado mandándolo, se ignora en silencio). Este comentario decía que lo escribía
+// report-now.sh cada 5 min; era falso, y esa creencia es parte de por qué el campo pudo
+// pasar 30 h muerto sin que saltara nada.
+// Consecuencia: la tercera red de seguridad no existe y todo cuelga del hub y de la
+// presencia. Por eso se añadió la gracia de 90 s en onlineConGracia().
+// PARA ARREGLARLO DE VERDAD hace falta tocar el Worker admira-fleet —darle un endpoint de
+// latido— y su fuente NO está en ningún repo local; el rescate pide credenciales de
+// Cloudflare que este agente no tiene. Mientras eso no se haga, esta fuente es decorativa.
 // FLEET_INFO: «en qué está» cada agente por máquina (campo status/currentFocus de
-// admira-fleet, que escribe report-now.sh cada 5 min · Mandamiento 11 en el cockpit).
+// admira-fleet, que sí se actualiza porque lo escribe foco.sh al declarar el proyecto).
 let FLEET_INFO={};
 async function loadFleet(){
   try{

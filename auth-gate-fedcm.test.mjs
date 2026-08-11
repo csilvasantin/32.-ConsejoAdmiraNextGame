@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { readFile } from "node:fs/promises";
+import { readFile, readdir } from "node:fs/promises";
 
 const source = await readFile(new URL("./auth-gate.js", import.meta.url), "utf8");
 
@@ -17,4 +17,18 @@ test("sin sesión local admiraGateRefresh no compite con el botón de Google", (
 
 test("el acceso manual usa el botón FedCM y no el popup clásico", () => {
   assert.match(source, /use_fedcm_for_button:\s*true/);
+});
+
+test("todas las zonas seguras invalidan la caché del perímetro", async () => {
+  const root = new URL("./", import.meta.url);
+  const files = (await readdir(root, { recursive: true })).filter((name) => name.endsWith(".html"));
+  let protectedPages = 0;
+  for (const name of files) {
+    const html = await readFile(new URL(name, root), "utf8");
+    const refs = html.match(/\/auth-gate\.js/g) || [];
+    if (!refs.length) continue;
+    protectedPages += 1;
+    assert.doesNotMatch(html, /\/auth-gate\.js(?!\?v=\d{8}-r\d+)/, name);
+  }
+  assert.ok(protectedPages > 0);
 });

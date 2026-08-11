@@ -123,6 +123,44 @@ test('www GIS handoff with stale Cookie reaches hub without Cookie or CSRF', asy
   assert.equal(forwarded.get('X-Fleet-CSRF'), null);
 });
 
+test('browser handoff preserves 303 absolute Location and Set-Cookie without following it', async () => {
+  const calls = [];
+  const proxy = createFleetProxy({relays:[relay], fetchImpl:async (url, init) => {
+    calls.push({url, init});
+    const headers = new Headers({Location:'https://www.admira.live/control/', 'Cache-Control':'no-store'});
+    headers.append('Set-Cookie', '__Host-fleet_session=opaque; Path=/; HttpOnly; Secure; SameSite=Lax');
+    headers.append('Set-Cookie', '__Host-fleet_challenge=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None');
+    return new Response(null, {status:303, headers});
+  }});
+  const response = await proxy.fetch(new Request('https://fleet.admira.live/api/auth/handoff', {
+    method:'POST', headers:{Origin:'null', 'Content-Type':'application/x-www-form-urlencoded'},
+    body:new URLSearchParams({code:'c'.repeat(43)}).toString()
+  }));
+  assert.equal(calls.length, 1, 'el edge no sigue el Location del backend');
+  assert.equal(calls[0].init.redirect, 'manual');
+  assert.equal(response.status, 303);
+  assert.equal(response.headers.get('Location'), 'https://www.admira.live/control/');
+  assert.deepEqual(response.headers.getSetCookie(), [
+    '__Host-fleet_session=opaque; Path=/; HttpOnly; Secure; SameSite=Lax',
+    '__Host-fleet_challenge=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None',
+  ]);
+  assert.equal(await response.text(), '');
+});
+
+test('session probe forwards the newly stored cookie only from exact www Origin', async () => {
+  let forwarded;
+  const proxy = createFleetProxy({relays:[relay], fetchImpl:async (_url, init) => { forwarded = init; return Response.json({ok:true,email:'owner@example.com',csrf:'csrf-value-1234567890'}); }});
+  const response = await proxy.fetch(new Request('https://fleet.admira.live/api/auth/session', {
+    headers:{Origin:'https://www.admira.live', Cookie:'__Host-fleet_session=opaque'}
+  }));
+  assert.equal(response.status, 200);
+  assert.equal(forwarded.headers.get('Cookie'), '__Host-fleet_session=opaque');
+  assert.equal(forwarded.headers.get('Origin'), 'https://www.admira.live');
+  assert.equal(forwarded.redirect, 'manual');
+  assert.equal(response.headers.get('Access-Control-Allow-Origin'), 'https://www.admira.live');
+  assert.equal(response.headers.get('Access-Control-Allow-Credentials'), 'true');
+});
+
 test('opaque handoff malformed or with auth, and missing/malicious Origin, die before hub', async () => {
   let hubCalls = 0;
   const proxy = createFleetProxy({relays:[relay], fetchImpl:async () => { hubCalls += 1; return Response.json({ok:true}); }});

@@ -155,6 +155,10 @@ export function createFleetProxy({ relays = RELAYS, fetchImpl = fetch } = {}) {
             method: request.method,
             headers: outgoingHeaders,
             body,
+            // El 303 del handoff pertenece al navegador: seguirlo aquí convertiría
+            // la respuesta en HTML 200 bajo fleet.admira.live y descartaría el
+            // Set-Cookie intermedio que crea la sesión __Host-fleet_session.
+            redirect: 'manual',
             signal: AbortSignal.timeout(20000),
           });
           if (response.status === 502 || response.status === 504) {

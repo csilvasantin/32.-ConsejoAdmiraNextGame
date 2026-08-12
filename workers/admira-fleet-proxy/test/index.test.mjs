@@ -147,6 +147,42 @@ test('browser handoff preserves 303 absolute Location and Set-Cookie without fol
   assert.equal(await response.text(), '');
 });
 
+test('top-level GET handoff becomes credential-free POST before the private relay', async () => {
+  let forwarded;
+  const proxy = createFleetProxy({relays:[relay], fetchImpl:async (url, init) => {
+    forwarded = {url, init};
+    const headers = new Headers({Location:'https://www.admira.live/control/'});
+    headers.append('Set-Cookie', '__Host-fleet_session=opaque; Path=/; HttpOnly; Secure; SameSite=Lax');
+    return new Response(null, {status:303, headers});
+  }});
+  const code = 'g'.repeat(43);
+  const response = await proxy.fetch(new Request('https://fleet.admira.live/api/auth/handoff?code=' + code, {
+    headers:{Cookie:'__Host-fleet_session=stale', Authorization:'Bearer stale'}
+  }));
+  assert.equal(response.status, 403, 'una navegación con Authorization no se rescata');
+
+  const clean = await proxy.fetch(new Request('https://fleet.admira.live/api/auth/handoff?code=' + code, {
+    headers:{Cookie:'__Host-fleet_session=stale'}
+  }));
+  assert.equal(clean.status, 303);
+  assert.equal(forwarded.url, relay.base + '/api/auth/handoff');
+  assert.equal(forwarded.init.method, 'POST');
+  assert.equal(forwarded.init.headers.get('Origin'), 'https://www.admira.live');
+  assert.equal(forwarded.init.headers.get('Cookie'), null);
+  assert.equal(forwarded.init.headers.get('Authorization'), null);
+  assert.equal(new URLSearchParams(new TextDecoder().decode(forwarded.init.body)).get('code'), code);
+});
+
+test('GET handoff exige exactamente un código opaco y no contacta el relay si falla', async () => {
+  let calls = 0;
+  const proxy = createFleetProxy({relays:[relay], fetchImpl:async () => { calls += 1; return Response.json({ok:true}); }});
+  for (const suffix of ['', '?code=short', '?code=' + 'a'.repeat(43) + '&next=/evil']) {
+    const response = await proxy.fetch(new Request('https://fleet.admira.live/api/auth/handoff' + suffix));
+    assert.equal(response.status, 403);
+  }
+  assert.equal(calls, 0);
+});
+
 test('session probe forwards the newly stored cookie only from exact www Origin', async () => {
   let forwarded;
   const proxy = createFleetProxy({relays:[relay], fetchImpl:async (_url, init) => { forwarded = init; return Response.json({ok:true,email:'owner@example.com',csrf:'csrf-value-1234567890'}); }});

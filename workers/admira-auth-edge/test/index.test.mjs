@@ -44,7 +44,7 @@ async function challenge(worker, env, returnTo = '/control/') {
   return {body:await response.json(), cookie:response.headers.get('Set-Cookie')};
 }
 
-test('challenge durable sobrevive reinicio y callback emite sólo handoff POST opaco', async () => {
+test('challenge durable sobrevive reinicio y callback navega sin JS ni formulario', async () => {
   const box = environment();
   const worker = createWorker({fetchImpl:trustedFetch, now:() => 1_000_000});
   const issued = await challenge(worker, box.env, '/control/?machine=mini');
@@ -55,11 +55,15 @@ test('challenge durable sobrevive reinicio y callback emite sólo handoff POST o
   const response = await worker.fetch(new Request('https://www.admira.live/auth/callback', {
     method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded', Cookie:`g_csrf_token=${csrf}; ${issued.cookie.split(';')[0]}`}, body:form
   }), box.env);
-  assert.equal(response.status, 200);
-  const html = await response.text();
-  assert.match(html, /method="post" action="https:\/\/fleet\.admira\.live\/api\/auth\/handoff"/);
-  assert.doesNotMatch(html, /credential|carlos@example\.com|state=/);
-  const code = html.match(/name="code" value="([A-Za-z0-9_-]+)"/)[1];
+  assert.equal(response.status, 303);
+  assert.equal(await response.text(), '');
+  assert.equal(response.headers.get('Referrer-Policy'), 'no-referrer');
+  assert.match(response.headers.get('Content-Security-Policy'), /default-src 'none'/);
+  const location = new URL(response.headers.get('Location'));
+  assert.equal(location.origin + location.pathname, 'https://fleet.admira.live/api/auth/handoff');
+  assert.deepEqual([...location.searchParams.keys()], ['code']);
+  const code = location.searchParams.get('code');
+  assert.match(code, /^[A-Za-z0-9_-]{40,80}$/);
   const consume = request => worker.fetch(new Request('https://www.admira.live/auth/handoff/consume', {
     method:'POST', headers:{Origin:'https://fleet.admira.live', 'Content-Type':'application/x-www-form-urlencoded'}, body:new URLSearchParams({code}).toString()
   }), box.env);

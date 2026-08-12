@@ -100,9 +100,11 @@ export function createFleetProxy({ relays = RELAYS, fetchImpl = fetch } = {}) {
       // no llevan Cookie y conservan su autenticación X-Fleet-Token independiente.
       const mutating = !/^(GET|HEAD|OPTIONS)$/i.test(request.method);
       const cookie = request.headers.get('Cookie');
-      const handoffRequest = request.method === 'POST' && path === '/api/auth/handoff';
-      const opaqueHandoff = request.method === 'POST' && path === '/api/auth/handoff' && origin === 'null';
-      if (handoffRequest && origin !== 'https://www.admira.live' && origin !== 'null') return jsonResponse('', { error:'origin no permitido' }, 403);
+      const handoffPost = request.method === 'POST' && path === '/api/auth/handoff';
+      const handoffGet = request.method === 'GET' && path === '/api/auth/handoff';
+      const handoffRequest = handoffPost || handoffGet;
+      const opaqueHandoff = handoffPost && origin === 'null';
+      if (handoffPost && origin !== 'https://www.admira.live' && origin !== 'null') return jsonResponse('', { error:'origin no permitido' }, 403);
       if (mutating && cookie && !handoffRequest) {
         if (!origin || !ALLOWED_ORIGINS.has(origin)) return jsonResponse(origin, { error:'origin no permitido' }, 403);
         const csrf = String(request.headers.get('X-Fleet-CSRF') || '');
@@ -126,9 +128,10 @@ export function createFleetProxy({ relays = RELAYS, fetchImpl = fetch } = {}) {
       }
 
       const outgoingHeaders = headersToHub(request);
-      const body = request.method === 'GET' || request.method === 'HEAD'
+      let body = request.method === 'GET' || request.method === 'HEAD'
         ? undefined
         : await request.arrayBuffer();
+      let upstreamMethod = request.method;
       if (handoffRequest) {
         // GIS puede renderizar el callback dentro de un documento sandboxed cuyo
         // Origin de form-submit es literalmente `null`. Esta excepción sólo vale
@@ -136,23 +139,29 @@ export function createFleetProxy({ relays = RELAYS, fetchImpl = fetch } = {}) {
         // reenvía Cookie/token/sesión, y valida el formulario antes del relay.
         const type = String(request.headers.get('Content-Type') || '').split(';', 1)[0].trim().toLowerCase();
         const hasAuth = ['Authorization', 'X-Fleet-Token', 'X-Fleet-Session'].some((name) => request.headers.has(name));
-        const raw = body && body.byteLength <= 1024 ? new TextDecoder().decode(body) : '';
-        const form = new URLSearchParams(raw);
+        const form = handoffGet ? url.searchParams : new URLSearchParams(body && body.byteLength <= 1024 ? new TextDecoder().decode(body) : '');
         const entries = [...form.keys()];
         const code = String(form.get('code') || '');
-        if (type !== 'application/x-www-form-urlencoded' || hasAuth || entries.length !== 1 || entries[0] !== 'code' || !/^[A-Za-z0-9_-]{40,80}$/.test(code)) {
+        if ((!handoffGet && type !== 'application/x-www-form-urlencoded') || hasAuth || entries.length !== 1 || entries[0] !== 'code' || !/^[A-Za-z0-9_-]{40,80}$/.test(code)) {
           return jsonResponse('', { error:'handoff inválido' }, 403);
         }
-        if (opaqueHandoff) outgoingHeaders.set('Origin', 'null');
+        // La navegación GET es el rescate canónico: se transforma en POST en el
+        // borde para que el código no llegue en logs ni URLs del relay privado.
+        if (handoffGet) {
+          upstreamMethod = 'POST';
+          body = new TextEncoder().encode(new URLSearchParams({code}).toString());
+          outgoingHeaders.set('Content-Type', 'application/x-www-form-urlencoded');
+          outgoingHeaders.set('Origin', 'https://www.admira.live');
+        } else if (opaqueHandoff) outgoingHeaders.set('Origin', 'null');
         outgoingHeaders.delete('Cookie');
       }
       let lastError = null;
 
       for (const relay of relays) {
         try {
-          const destination = relay.base + path + url.search;
+          const destination = relay.base + path + (handoffGet ? '' : url.search);
           const response = await fetchImpl(destination, {
-            method: request.method,
+            method: upstreamMethod,
             headers: outgoingHeaders,
             body,
             // El 303 del handoff pertenece al navegador: seguirlo aquí convertiría

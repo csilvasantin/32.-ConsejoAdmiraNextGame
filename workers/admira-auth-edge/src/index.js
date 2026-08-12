@@ -86,17 +86,15 @@ async function verifyGoogle(credential, nonce, env, fetchImpl, now = Date.now())
   } catch (_) { return null; }
 }
 
-function handoffHtml(code) {
-  const nonce = token(18);
-  const html = '<!doctype html><html><head><meta charset="utf-8"><meta name="referrer" content="no-referrer"></head><body>' +
-    '<form id="handoff" method="post" action="' + API_HANDOFF + '"><input type="hidden" name="code" value="' + code + '"></form>' +
-    '<script nonce="' + nonce + '">document.getElementById("handoff").submit()</script></body></html>';
+function handoffRedirect(code) {
   const headers = new Headers({
-    'Content-Type':'text/html; charset=utf-8', 'Cache-Control':'no-store', 'Referrer-Policy':'no-referrer',
-    'Content-Security-Policy':`default-src 'none'; script-src 'nonce-${nonce}'; form-action ${API_HANDOFF}; frame-ancestors 'none'; base-uri 'none'`
+    'Location':API_HANDOFF + '?code=' + encodeURIComponent(code),
+    'Cache-Control':'no-store',
+    'Referrer-Policy':'no-referrer',
+    'Content-Security-Policy':"default-src 'none'; frame-ancestors 'none'; base-uri 'none'"
   });
   headers.append('Set-Cookie', challengeCookie('', 0));
-  return new Response(html, {status:200, headers});
+  return new Response(null, {status:303, headers});
 }
 
 export class AuthStore {
@@ -194,7 +192,12 @@ export function createWorker({fetchImpl = fetch, now = Date.now} = {}) {
         if (!identity) return json({error:'google_not_authorized'}, 401, {'Set-Cookie':challengeCookie('', 0)});
         const exchange = await storeCall(env, '/exchange', {state, nonce:challenge.nonce, ...identity, now:now()});
         if (!exchange.ok) return json({error:'challenge_used'}, 409, {'Set-Cookie':challengeCookie('', 0)});
-        return handoffHtml((await exchange.json()).code);
+        // El callback termina con una navegación HTTP real. No depende de JS,
+        // form-action, sandbox, temporizadores ni de que el navegador permita
+        // auto-enviar formularios cross-origin. El código es opaco, one-shot,
+        // dura 60 s y viaja sin Referer; el edge público lo convierte de nuevo
+        // a POST antes de tocar el hub privado.
+        return handoffRedirect((await exchange.json()).code);
       }
       if (url.pathname === '/auth/handoff/consume') {
         if (request.method !== 'POST' || request.headers.get('Origin') !== 'https://fleet.admira.live') return json({error:'origin_not_allowed'}, 403);

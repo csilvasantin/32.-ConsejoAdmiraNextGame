@@ -1,8 +1,8 @@
-<!-- El corte: inquilinos reubicables y texto editable. -->
+<!-- El corte: idea por el tejado, escalera a la derecha, abogados en la alcantarilla. -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Pisos · El corte de la Rue · AdmiraNeXT</title>
-<meta name="description" content="El corte de la Incubadora: arrastra a los inquilinos de piso y edita el texto.">
+<meta name="description" content="La idea entra por el tejado y cae piso a piso. Escalera a la derecha. Abogados en la alcantarilla.">
 <link rel="canonical" href="https://www.admira.live/13rue/pisos.html">
 <script src="/admira-bar.js?v=20260810-r37"></script>
 <link rel="stylesheet" href="casa-nav.css?v=20260815-r6">
@@ -15,10 +15,7 @@
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
-  body{
-    background:var(--papel);color:#16305c;font-family:var(--sans);line-height:1.4;
-    -webkit-font-smoothing:antialiased;
-  }
+  body{background:var(--papel);color:#16305c;font-family:var(--sans);line-height:1.4;-webkit-font-smoothing:antialiased}
   .wrap{max-width:560px;margin:0 auto;padding:0 12px 70px}
   a{color:var(--ambar)}
   header{padding:22px 4px 6px}
@@ -27,188 +24,212 @@
   h1 small{display:block;font-size:.95rem;font-weight:600;color:var(--tinta2);margin-top:6px}
   .frase{margin:10px 0 0;font-size:.88rem;color:var(--tinta2);max-width:62ch}
   .frase b{color:#16305c}
-  .acciones{display:flex;gap:8px;margin:10px 0 0;flex-wrap:wrap}
-  .acciones button{
-    font-family:var(--mono);font-size:11px;border:2px solid #111;background:#fff8d6;
-    color:#111;padding:6px 10px;cursor:pointer;
-  }
-  .acciones button:hover{background:#ffd84a}
+
+  .puerta{margin:12px 0 0;border:2px solid #111;background:#fff8d6;padding:10px}
+  .puerta label{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;margin:0 0 6px}
+  .fila{display:flex;gap:6px;flex-wrap:wrap}
+  .fila textarea{flex:1;min-width:180px;min-height:52px;border:2px solid #111;padding:8px;font:inherit;resize:vertical}
+  .fila button{font-family:var(--mono);font-size:11px;font-weight:700;border:2px solid #111;background:#111;color:#fff8d6;padding:8px 12px;cursor:pointer}
+  .fila button:disabled{opacity:.4;cursor:default}
+  .acciones{display:flex;gap:8px;margin:8px 0 0}
+  .acciones button{font-family:var(--mono);font-size:11px;border:2px solid #111;background:#fff;color:#111;padding:6px 10px;cursor:pointer}
 
   .pagina{position:relative;margin:14px auto 0;max-width:520px;
     box-shadow:0 10px 28px rgba(20,20,20,.18);background:#fff;user-select:none}
-  .pagina img{display:block;width:100%;height:auto;vertical-align:top;pointer-events:none}
+  .pagina img{display:block;width:100%;height:auto;pointer-events:none}
   .titulo{
-    position:absolute;left:7.6%;top:3.8%;width:23.5%;height:7.2%;
+    position:absolute;left:32%;top:8.2%;width:32%;height:5.4%;
     display:flex;align-items:center;justify-content:center;text-align:center;
-    font:800 11px/1.05 var(--sans);letter-spacing:.02em;color:#111;
-    transform:rotate(-1deg);pointer-events:none;z-index:2;
+    font:800 11px/1.05 var(--sans);color:#111;pointer-events:none;z-index:2;
   }
-  .titulo b{display:block;font-size:1.55em;letter-spacing:-.04em}
-  @media (min-width:480px){.titulo{font-size:13px}}
+  .titulo b{display:block;font-size:1.45em;letter-spacing:-.04em}
 
   .hueco{
-    position:absolute;z-index:3;
-    display:flex;align-items:flex-end;padding:3px;
+    position:absolute;z-index:3;display:flex;align-items:flex-end;padding:3px;
     outline:2px dashed transparent;outline-offset:-3px;
-    transition:outline-color .12s, background .12s;
   }
-  .hueco.over{outline-color:var(--ambar);background:rgba(224,138,46,.18)}
-  .hueco.vacio{outline-color:rgba(17,17,17,.25)}
+  .hueco.over{outline-color:var(--ambar);background:rgba(224,138,46,.2)}
+  .hueco.vacio{outline-color:rgba(17,17,17,.2)}
+  .hueco.pasa{outline-color:var(--luz);background:rgba(47,138,78,.22)}
   .hueco .sitio{
     position:absolute;top:3px;left:4px;font:700 8px/1 var(--mono);
     letter-spacing:.08em;text-transform:uppercase;color:#111;
-    background:rgba(255,248,214,.75);padding:1px 4px;pointer-events:none;
+    background:rgba(255,248,214,.8);padding:1px 4px;pointer-events:none;
   }
 
-  .inquilino{
-    width:100%;background:rgba(255,248,214,.94);border:2px solid #111;
-    padding:4px 5px 5px;cursor:grab;box-shadow:2px 2px 0 #111;
-  }
-  .inquilino:active{cursor:grabbing}
+  .inquilino{width:100%;background:rgba(255,248,214,.94);border:2px solid #111;padding:4px 5px 5px;cursor:grab;box-shadow:2px 2px 0 #111}
   .inquilino.arrastrando{opacity:.35}
   .inquilino .fila{display:flex;align-items:flex-start;gap:4px}
-  .inquilino .asa{
-    flex:0 0 auto;width:12px;cursor:grab;color:#111;font:700 11px/1.1 var(--mono);
-    padding-top:1px;touch-action:none;user-select:none;
-  }
+  .inquilino .asa{flex:0 0 auto;width:12px;cursor:grab;font:700 11px/1.1 var(--mono);touch-action:none;user-select:none}
   .inquilino .cuerpo{flex:1;min-width:0}
-  .inquilino [contenteditable]{
-    outline:none;cursor:text;user-select:text;
-    border-radius:2px;
-  }
-  .inquilino [contenteditable]:focus{background:rgba(255,255,255,.8);box-shadow:inset 0 0 0 1px var(--ambar)}
+  .inquilino [contenteditable]{outline:none;cursor:text;user-select:text}
+  .inquilino [contenteditable]:focus{background:#fff;box-shadow:inset 0 0 0 1px var(--ambar)}
   .inquilino .nombre{font:800 11px/1.15 var(--sans);color:#111}
   .inquilino .antes{font:10px/1.2 var(--sans);color:#666;margin-top:1px}
   .inquilino .globo{font:700 11px/1.2 var(--sans);color:#111;margin-top:3px}
   .inquilino .detalle{font:11px/1.25 var(--sans);color:#333;margin-top:3px;min-height:1.15em}
-  .inquilino .detalle:empty::before{content:"añade un detalle…";color:#999;font-weight:400}
-  .hueco.estrecho .inquilino{padding:3px 3px 4px}
+  .inquilino .detalle:empty::before{content:"añade un detalle…";color:#999}
   .hueco.estrecho .antes,.hueco.estrecho .detalle{display:none}
-  .hueco.estrecho .nombre{font-size:10px}
-  .hueco.estrecho .globo{font-size:10px}
+  .hueco.estrecho .nombre,.hueco.estrecho .globo{font-size:10px}
 
-  .fantasma{
-    position:fixed;z-index:80;pointer-events:none;width:160px;
-    background:#fff8d6;border:2px solid #111;box-shadow:4px 4px 0 #111;
-    padding:6px 8px;font:800 12px/1.2 var(--sans);color:#111;
+  .papel{
+    position:absolute;z-index:12;left:74%;width:22%;
+    background:#fff;border:2px solid #111;box-shadow:3px 3px 0 #111;
+    padding:6px 7px;font:700 11px/1.2 var(--sans);color:#111;
+    transform:rotate(-6deg);pointer-events:none;
+    transition:top .55s cubic-bezier(.2,.8,.2,1), transform .55s;
   }
+  .papel em{display:block;font:700 8px/1 var(--mono);letter-spacing:.1em;text-transform:uppercase;color:#c4452b;margin-bottom:3px}
 
-  .clave{margin:16px 0 0;border:2px solid #111;background:#fff8d6}
+  .fantasma{position:fixed;z-index:80;pointer-events:none;width:160px;background:#fff8d6;border:2px solid #111;box-shadow:4px 4px 0 #111;padding:6px 8px;font:800 12px/1.2 var(--sans)}
+
+  .caida{margin:14px 0 0;border:2px solid #111;background:#fff}
+  .caida h2{margin:0;padding:8px 10px;border-bottom:2px solid #111;font-size:.82rem;letter-spacing:.08em;text-transform:uppercase}
+  .caida ol{margin:0;padding:8px 12px 10px 28px;font-size:.86rem}
+  .caida li{margin:0 0 6px}
+  .caida b{color:#111}
+  .caida .sello{border-top:2px solid #111;padding:8px 10px;background:#111;color:#ffd84a;font-weight:700}
+
+  .clave{margin:14px 0 0;border:2px solid #111;background:#fff8d6}
   .clave h2{margin:0;padding:8px 10px;border-bottom:2px solid #111;font-size:.82rem;letter-spacing:.08em;text-transform:uppercase}
   .clave ol{margin:0;padding:8px 10px 10px 28px;font-size:.82rem}
-  .clave b{color:#111}
   .clave i{color:#666;font-style:normal}
   footer{margin-top:18px;font-family:var(--mono);font-size:11px;color:var(--dim)}
-  @media (min-width:520px){.clave ol{columns:2;column-gap:18px}}
+  @media (min-width:520px){.clave ol{columns:2;column-gap:16px}}
 </style>
 
 <div class="wrap">
   <header>
     <p class="eyebrow">La casa · el corte</p>
-    <h1>Pisos<small>Arrastra inquilinos. Edita el texto.</small></h1>
-    <p class="frase">Cada vivienda es un hueco. <b>Agarra las rayas</b> y suelta en otro piso:
-      se cambian de casa. Pulsa el nombre, el globo o el detalle para escribir.
-      Se guarda en este navegador.</p>
+    <h1>Pisos<small>La idea entra por el tejado y cae</small></h1>
+    <p class="frase">Como en la Rue: <b>escalera y ascensor a la derecha</b>,
+      <b>alcantarilla abajo</b> — ahí viven <b>las leyes</b>.
+      Tiras el caso por el tejado; cada vecino lo mejora al pasar.
+      Puedes <b>arrastrar</b> inquilinos y <b>escribir</b> en su ficha.</p>
     <nav class="casa-nav" data-casa-nav></nav>
     <script src="casa-nav.js?v=20260815-r6"></script>
-    <div class="acciones">
-      <button type="button" id="reset">Volver al censo original</button>
-    </div>
   </header>
 
-  <div class="pagina" id="pagina" aria-label="Corte de la Incubadora: inquilinos reubicables">
+  <div class="puerta">
+    <label for="idea">Por el tejado</label>
+    <div class="fila">
+      <textarea id="idea" maxlength="240" placeholder="Una frase. El caso entra por arriba."></textarea>
+      <button type="button" id="soltar">Soltar</button>
+    </div>
+    <div class="acciones">
+      <button type="button" id="reset">Volver al censo</button>
+    </div>
+  </div>
+
+  <div class="pagina" id="pagina">
     <img src="media/pisos-corte.jpg" width="832" height="1248" alt="">
     <div class="titulo"><b>13</b>RUE DEL<br>INCUBADORA</div>
     <div id="huecos"></div>
+    <div class="papel" id="papel" hidden><em>el caso</em><span id="papel-txt"></span></div>
+  </div>
+
+  <div class="caida" id="caida" hidden>
+    <h2>Cómo cae y se mejora</h2>
+    <ol id="mejoras"></ol>
+    <div class="sello" id="sello" hidden>Las Leyes sellan el caso en la alcantarilla. Sin eso, no ha pasado.</div>
   </div>
 
   <div class="clave">
-    <h2>Quién vive dónde · ahora mismo</h2>
+    <h2>Quién vive dónde</h2>
     <ol id="clave"></ol>
   </div>
 
-  <footer>AdmiraNeXT · el corte · caja 8 · arrastra y escribe</footer>
+  <footer>AdmiraNeXT · el corte · escalera a la derecha · abogados en el sumidero</footer>
 </div>
 
 <script>
 (function(){
   "use strict";
-  var CLAVE = "13rue:pisos:inquilinos:v1";
+  var CLAVE = "13rue:pisos:inquilinos:v2";
 
+  /* Huecos calzados a esta lámina: muro azul izq, escalera a la DERECHA, sumidero abajo. */
   var HUECOS = [
-    {id:"tejado",     l:48, t:3.5,  w:28, h:10.5, label:"Tejado", estrecho:true},
-    {id:"atico-izq",  l:18.5,t:16.2, w:29.5,h:14.6, label:"Ático izq"},
-    {id:"atico-der",  l:57.2,t:16.2, w:34.5,h:14.6, label:"Ático der"},
-    {id:"p3-izq",     l:18.5,t:31.0, w:29.5,h:13.8, label:"3º izq"},
-    {id:"p3-der",     l:57.2,t:31.0, w:34.5,h:13.8, label:"3º der"},
-    {id:"p2-izq",     l:18.5,t:45.0, w:29.5,h:13.6, label:"2º izq"},
-    {id:"p2-der",     l:57.2,t:45.0, w:34.5,h:13.6, label:"2º der"},
-    {id:"p1-izq",     l:18.5,t:58.8, w:29.5,h:13.6, label:"1º izq"},
-    {id:"p1-der",     l:57.2,t:58.8, w:34.5,h:13.6, label:"1º der"},
-    {id:"pb-izq",     l:18.5,t:72.6, w:29.5,h:14.2, label:"Portal"},
-    {id:"escalera",   l:48.2,t:16.2, w:8.8, h:56.2, label:"Escalera", estrecho:true},
-    {id:"calle",      l:57.2,t:72.6, w:34.5,h:22.0, label:"Calle"}
+    {id:"tejado",       l:20, t:3.5,  w:50, h:12,   label:"Tejado", estrecho:true},
+    {id:"atico-izq",    l:14.5,t:18.0, w:28, h:14.5, label:"Ático izq"},
+    {id:"atico-der",    l:43,  t:18.0, w:28, h:14.5, label:"Ático der"},
+    {id:"p3-izq",       l:14.5,t:33.0, w:28, h:14.2, label:"3º izq"},
+    {id:"p3-der",       l:43,  t:33.0, w:28, h:14.2, label:"3º der"},
+    {id:"p2-izq",       l:14.5,t:47.6, w:28, h:14.4, label:"2º izq"},
+    {id:"p2-der",       l:43,  t:47.6, w:28, h:14.4, label:"2º der"},
+    {id:"pb-izq",       l:14.5,t:62.4, w:28, h:15.2, label:"Bajo izq"},
+    {id:"pb-der",       l:52,  t:62.4, w:19, h:15.2, label:"Bajo der"},
+    {id:"portal",       l:42.5,t:62.4, w:10, h:15.2, label:"Portal", estrecho:true},
+    {id:"escalera",     l:71.5,t:8.0,  w:26, h:68,   label:"Escalera / ascensor", estrecho:true},
+    {id:"alcantarilla", l:58,  t:81.5, w:38, h:16.5, label:"Alcantarilla"}
+  ];
+
+  var CAIDA = [
+    {y:8,  huecos:["tejado"],                       nombre:"Tejado"},
+    {y:22, huecos:["atico-izq","atico-der"],        nombre:"Ático"},
+    {y:36, huecos:["p3-izq","p3-der"],              nombre:"3º"},
+    {y:51, huecos:["p2-izq","p2-der"],              nombre:"2º"},
+    {y:66, huecos:["pb-izq","portal","pb-der"],     nombre:"Bajo"},
+    {y:84, huecos:["alcantarilla"],                 nombre:"Alcantarilla"}
   ];
 
   var INQ = {
-    "guru-ia":           {nombre:"Gurú de la IA",           antes:"Manolo el moroso",           globo:"¡10x en 48 horas!",           detalle:""},
-    "puerto-deliveries": {nombre:"Puerto Deliveries",       antes:"gato y ratón",               globo:"¡ETA ok! ¡paloma a babor!",   detalle:""},
-    "estudio-uxui":      {nombre:"Estudio UX/UI",           antes:"Don Vidal, el sastre",       globo:"¡hagamos un sprint!",         detalle:""},
-    "imperio-nocode":    {nombre:"Imperio No-Code",         antes:"el contratista chapucero",   globo:"¡no toques ese campo!",       detalle:""},
-    "hacker-gris":       {nombre:"Hacker sombrero gris",    antes:"Celedonio, el ladrón",       globo:"por probar…",                 detalle:""},
-    "pet-tech":          {nombre:"Taller Pet-Tech",         antes:"la señora de los animales",  globo:"¡se ha escapado otra vez!",   detalle:""},
-    "deeptech-biotech":  {nombre:"DeepTech & Biotech",      antes:"Don Alcornoque",             globo:"¡margen aceptable!",          detalle:""},
-    "coliving-nomadas":  {nombre:"Coliving nómadas",        antes:"la pensión de Doña Rita",    globo:"¡nos vemos en Bali!",         detalle:""},
-    "porteria":          {nombre:"Chief of Happiness",      antes:"Leonor, la portera",         globo:"¿cómo lo estás viviendo?",    detalle:""},
-    "cripto-cafe":       {nombre:"Cripto-Café Web3",        antes:"Senén, el colmado",          globo:"¿leche NORMAL?",              detalle:""},
-    "ascensor":          {nombre:"Smart-Elevator",          antes:"las trampas de la Rue",      globo:"30 s o humo detectado",       detalle:""},
-    "sotano-foss":       {nombre:"Bootstrapper FOSS",       antes:"Don Hurón, la alcantarilla", globo:"hazlo con un bash",           detalle:""}
+    "guru-ia":           {nombre:"Gurú de la IA",        antes:"Manolo el moroso",          globo:"¡10x en 48 horas!",         detalle:""},
+    "puerto-deliveries": {nombre:"Puerto Deliveries",    antes:"gato y ratón",              globo:"¡ETA ok! paloma a babor",   detalle:""},
+    "estudio-uxui":      {nombre:"Estudio UX/UI",        antes:"Don Vidal, el sastre",      globo:"¡hagamos un sprint!",       detalle:""},
+    "imperio-nocode":    {nombre:"Imperio No-Code",      antes:"el contratista",            globo:"¡no toques ese campo!",     detalle:""},
+    "hacker-gris":       {nombre:"Hacker sombrero gris", antes:"Celedonio, el ladrón",      globo:"por probar…",               detalle:""},
+    "pet-tech":          {nombre:"Taller Pet-Tech",      antes:"la señora de los animales", globo:"¡se ha escapado otra vez!", detalle:""},
+    "deeptech-biotech":  {nombre:"DeepTech & Biotech",   antes:"Don Alcornoque",            globo:"¡margen aceptable!",        detalle:""},
+    "coliving-nomadas":  {nombre:"Coliving nómadas",     antes:"la pensión de Doña Rita",   globo:"¡nos vemos en Bali!",       detalle:""},
+    "porteria":          {nombre:"Chief of Happiness",   antes:"Leonor, la portera",        globo:"¿cómo lo estás viviendo?",  detalle:""},
+    "cripto-cafe":       {nombre:"Cripto-Café Web3",     antes:"Senén, el colmado",         globo:"¿leche NORMAL?",            detalle:""},
+    "ascensor":          {nombre:"Smart-Elevator",       antes:"las trampas de la Rue",     globo:"30 s o humo detectado",     detalle:""},
+    "abogados":          {nombre:"Las Leyes",            antes:"Don Hurón, la alcantarilla",globo:"sin contrato no baja",      detalle:"El sello de los abogados. Si no es legal, no ha pasado."}
   };
 
   var CENSO = {
-    "tejado":"puerto-deliveries",
+    tejado:"puerto-deliveries",
     "atico-izq":"guru-ia",
     "atico-der":"estudio-uxui",
-    "p3-izq":"hacker-gris",
-    "p3-der":"pet-tech",
-    "p2-izq":"deeptech-biotech",
-    "p2-der":"coliving-nomadas",
-    "p1-izq":"porteria",
-    "p1-der":"cripto-cafe",
-    "pb-izq":"imperio-nocode",
-    "escalera":"ascensor",
-    "calle":"sotano-foss"
+    "p3-izq":"imperio-nocode",
+    "p3-der":"hacker-gris",
+    "p2-izq":"pet-tech",
+    "p2-der":"deeptech-biotech",
+    "pb-izq":"cripto-cafe",
+    "pb-der":"coliving-nomadas",
+    portal:"porteria",
+    escalera:"ascensor",
+    alcantarilla:"abogados"
   };
 
   function clonar(o){ return JSON.parse(JSON.stringify(o)); }
+  function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
 
   var estado = { mapa: clonar(CENSO), ficha: clonar(INQ) };
 
   function carga(){
     try{
-      var raw = localStorage.getItem(CLAVE);
-      if(!raw) return;
-      var doc = JSON.parse(raw);
+      var doc = JSON.parse(localStorage.getItem(CLAVE)||"null");
       if(doc && doc.mapa && doc.ficha){
         estado.mapa = Object.assign(clonar(CENSO), doc.mapa);
         Object.keys(INQ).forEach(function(id){
           estado.ficha[id] = Object.assign({}, INQ[id], doc.ficha[id]||{});
         });
       }
-    }catch(_){ /* si el localStorage miente, se usa el censo */ }
+    }catch(_){}
+    try{
+      var crono = JSON.parse(localStorage.getItem("13rue:cronograma:v1")||"null");
+      if(crono && crono.idea && !document.getElementById("idea").value)
+        document.getElementById("idea").value = crono.idea;
+    }catch(_){}
   }
-  function guarda(){
-    try{ localStorage.setItem(CLAVE, JSON.stringify(estado)); }catch(_){}
-  }
-
-  function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){
-    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+  function guarda(){ try{ localStorage.setItem(CLAVE, JSON.stringify(estado)); }catch(_){} }
 
   function tarjeta(id){
     var t = estado.ficha[id]; if(!t) return "";
-    return '<article class="inquilino" draggable="false" data-inq="'+esc(id)+'">'
-      + '<div class="fila"><span class="asa" title="Arrastra a otro piso" aria-label="Arrastrar">☰</span>'
-      + '<div class="cuerpo">'
+    return '<article class="inquilino" data-inq="'+esc(id)+'">'
+      + '<div class="fila"><span class="asa" title="Arrastra">☰</span><div class="cuerpo">'
       + '<div class="nombre" contenteditable="true" spellcheck="false">'+esc(t.nombre)+'</div>'
       + '<div class="antes" contenteditable="true" spellcheck="false">'+esc(t.antes)+'</div>'
       + '<div class="globo" contenteditable="true" spellcheck="false">'+esc(t.globo)+'</div>'
@@ -216,9 +237,15 @@
       + '</div></div></article>';
   }
 
+  function pintaClave(){
+    document.getElementById("clave").innerHTML = HUECOS.map(function(h){
+      var id = estado.mapa[h.id], t = id && estado.ficha[id];
+      return '<li><b>'+esc(h.label)+'</b> · '+(t?esc(t.nombre)+' <i>· era '+esc(t.antes)+'</i>':'<i>vacío</i>')+'</li>';
+    }).join("");
+  }
+
   function pinta(){
-    var host = document.getElementById("huecos");
-    host.innerHTML = HUECOS.map(function(h){
+    document.getElementById("huecos").innerHTML = HUECOS.map(function(h){
       var quien = estado.mapa[h.id];
       return '<div class="hueco'+(h.estrecho?" estrecho":"")+(quien?"":" vacio")+'" data-hueco="'+h.id+'"'
         + ' style="left:'+h.l+'%;top:'+h.t+'%;width:'+h.w+'%;height:'+h.h+'%">'
@@ -226,16 +253,11 @@
         + (quien?tarjeta(quien):"")
         + '</div>';
     }).join("");
-    document.getElementById("clave").innerHTML = HUECOS.map(function(h){
-      var id = estado.mapa[h.id], t = id && estado.ficha[id];
-      return '<li><b>'+esc(h.label)+'</b> · '
-        + (t ? esc(t.nombre)+' <i>· era '+esc(t.antes)+'</i>' : '<i>vacío</i>')
-        + '</li>';
-    }).join("");
+    pintaClave();
   }
 
-  function huecoBajo(x, y){
-    var els = document.elementsFromPoint(x, y);
+  function huecoBajo(x,y){
+    var els = document.elementsFromPoint(x,y);
     for(var i=0;i<els.length;i++){
       var h = els[i].closest && els[i].closest("[data-hueco]");
       if(h) return h.getAttribute("data-hueco");
@@ -244,86 +266,110 @@
   }
 
   var drag = null;
-
-  function inicia(e, card){
-    if(e.button!=null && e.button!==0) return;
-    if(e.target && e.target.closest("[contenteditable]")) return;
-    var id = card.getAttribute("data-inq");
-    var origen = card.closest("[data-hueco]").getAttribute("data-hueco");
-    drag = {id:id, origen:origen, pointer:e.pointerId};
-    card.classList.add("arrastrando");
-    var ghost = document.createElement("div");
-    ghost.className = "fantasma";
-    ghost.textContent = estado.ficha[id].nombre;
-    ghost.id = "fantasma";
-    document.body.appendChild(ghost);
-    mueve(e);
-    if(card.setPointerCapture) try{ card.setPointerCapture(e.pointerId); }catch(_){}
-    e.preventDefault();
-  }
-  function mueve(e){
-    if(!drag) return;
-    var g = document.getElementById("fantasma");
-    if(g){ g.style.left = (e.clientX+10)+"px"; g.style.top = (e.clientY+10)+"px"; }
-    var hid = huecoBajo(e.clientX, e.clientY);
-    document.querySelectorAll(".hueco").forEach(function(el){
-      el.classList.toggle("over", el.getAttribute("data-hueco")===hid);
-    });
-  }
-  function suelta(e){
-    if(!drag) return;
-    var dest = huecoBajo(e.clientX, e.clientY);
-    var origen = drag.origen;
-    if(dest && dest!==origen){
-      var a = estado.mapa[origen];
-      var b = estado.mapa[dest]||null;
-      estado.mapa[dest] = a;
-      estado.mapa[origen] = b;
-      guarda();
-    }
-    drag = null;
-    var g = document.getElementById("fantasma");
-    if(g) g.remove();
-    pinta();
-  }
-
   var host = document.getElementById("huecos");
   host.addEventListener("pointerdown", function(e){
     var card = e.target.closest(".inquilino");
-    if(!card) return;
-    if(e.target.closest("[contenteditable]")) return;
-    inicia(e, card);
+    if(!card || e.target.closest("[contenteditable]")) return;
+    var id = card.getAttribute("data-inq");
+    drag = {id:id, origen:card.closest("[data-hueco]").getAttribute("data-hueco")};
+    card.classList.add("arrastrando");
+    var g = document.createElement("div");
+    g.className="fantasma"; g.id="fantasma"; g.textContent = estado.ficha[id].nombre;
+    document.body.appendChild(g);
+    g.style.left=(e.clientX+10)+"px"; g.style.top=(e.clientY+10)+"px";
+    if(card.setPointerCapture) try{ card.setPointerCapture(e.pointerId); }catch(_){}
+    e.preventDefault();
   });
-  host.addEventListener("pointermove", mueve);
-  host.addEventListener("pointerup", suelta);
-  host.addEventListener("pointercancel", suelta);
-
+  host.addEventListener("pointermove", function(e){
+    if(!drag) return;
+    var g = document.getElementById("fantasma");
+    if(g){ g.style.left=(e.clientX+10)+"px"; g.style.top=(e.clientY+10)+"px"; }
+    var hid = huecoBajo(e.clientX,e.clientY);
+    document.querySelectorAll(".hueco").forEach(function(el){
+      el.classList.toggle("over", el.getAttribute("data-hueco")===hid);
+    });
+  });
+  host.addEventListener("pointerup", function(e){
+    if(!drag) return;
+    var dest = huecoBajo(e.clientX,e.clientY);
+    if(dest && dest!==drag.origen){
+      var a = estado.mapa[drag.origen], b = estado.mapa[dest]||null;
+      estado.mapa[dest]=a; estado.mapa[drag.origen]=b; guarda();
+    }
+    drag=null;
+    var g=document.getElementById("fantasma"); if(g) g.remove();
+    pinta();
+  });
+  host.addEventListener("pointercancel", function(){
+    drag=null; var g=document.getElementById("fantasma"); if(g) g.remove(); pinta();
+  });
   host.addEventListener("input", function(e){
-    var el = e.target.closest("[contenteditable]");
-    if(!el) return;
-    var card = el.closest(".inquilino");
-    var id = card && card.getAttribute("data-inq");
-    if(!id || !estado.ficha[id]) return;
+    var el = e.target.closest("[contenteditable]"); if(!el) return;
+    var card = el.closest(".inquilino"); var id = card && card.getAttribute("data-inq");
     var campo = el.className.split(" ")[0];
-    if(!estado.ficha[id].hasOwnProperty(campo)) return;
+    if(!id || !estado.ficha[id] || !estado.ficha[id].hasOwnProperty(campo)) return;
     estado.ficha[id][campo] = el.textContent.replace(/\u00a0/g," ").trim();
     guarda();
-    if(campo==="nombre" || campo==="antes"){
-      var clave = document.getElementById("clave");
-      /* se refresca la lista sin tumbar el foco del editor */
-      var items = clave.querySelectorAll("li");
-      HUECOS.forEach(function(h, i){
-        var tid = estado.mapa[h.id], t = tid && estado.ficha[tid];
-        if(items[i]) items[i].innerHTML = '<b>'+esc(h.label)+'</b> · '
-          + (t ? esc(t.nombre)+' <i>· era '+esc(t.antes)+'</i>' : '<i>vacío</i>');
-      });
-    }
+    if(campo==="nombre"||campo==="antes") pintaClave();
   });
 
   document.getElementById("reset").addEventListener("click", function(){
     estado = { mapa: clonar(CENSO), ficha: clonar(INQ) };
-    guarda();
-    pinta();
+    guarda(); pinta();
+  });
+
+  function espera(ms){ return new Promise(function(r){ setTimeout(r, ms); }); }
+
+  async function soltar(){
+    var idea = (document.getElementById("idea").value||"").replace(/\s+/g," ").trim();
+    if(!idea){ document.getElementById("idea").focus(); return; }
+    var btn = document.getElementById("soltar");
+    btn.disabled = true;
+    var papel = document.getElementById("papel");
+    var txt = document.getElementById("papel-txt");
+    var lista = document.getElementById("mejoras");
+    var caja = document.getElementById("caida");
+    var sello = document.getElementById("sello");
+    caja.hidden = false; sello.hidden = true; lista.innerHTML = "";
+    txt.textContent = idea;
+    papel.hidden = false;
+    papel.style.top = "4%";
+    papel.style.transform = "rotate(-8deg)";
+    document.querySelectorAll(".hueco").forEach(function(el){ el.classList.remove("pasa"); });
+
+    var acumulado = idea;
+    for(var i=0;i<CAIDA.length;i++){
+      var paso = CAIDA[i];
+      papel.style.top = paso.y+"%";
+      papel.style.transform = "rotate("+(i%2?5:-7)+"deg)";
+      document.querySelectorAll(".hueco").forEach(function(el){
+        el.classList.toggle("pasa", paso.huecos.indexOf(el.getAttribute("data-hueco"))>=0);
+      });
+      var voces = [];
+      paso.huecos.forEach(function(hid){
+        var tid = estado.mapa[hid], t = tid && estado.ficha[tid];
+        if(!t) return;
+        var mejora = t.detalle || t.globo;
+        voces.push(t.nombre+" — "+mejora);
+        acumulado = acumulado.replace(/[. ]+$/,"") + ". " + t.nombre + " añade: " + mejora;
+      });
+      var li = document.createElement("li");
+      li.innerHTML = "<b>"+esc(paso.nombre)+"</b> · "
+        + (voces.length ? voces.map(esc).join(" · ") : "el hueco está vacío");
+      lista.appendChild(li);
+      lista.parentElement.scrollIntoView({block:"nearest"});
+      await espera(i===0?700:850);
+    }
+    txt.textContent = idea;
+    sello.hidden = false;
+    document.querySelectorAll(".hueco").forEach(function(el){ el.classList.remove("pasa"); });
+    document.querySelector('.hueco[data-hueco="alcantarilla"]')?.classList.add("pasa");
+    btn.disabled = false;
+  }
+
+  document.getElementById("soltar").addEventListener("click", function(){ soltar(); });
+  document.getElementById("idea").addEventListener("keydown", function(e){
+    if(e.key==="Enter" && (e.metaKey||e.ctrlKey)) soltar();
   });
 
   carga();

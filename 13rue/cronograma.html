@@ -1,0 +1,150 @@
+<!-- Cronograma: misiones y tareas para llegar al caso. Donde acaba la idea. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Cronograma · Misiones del caso · AdmiraNeXT</title>
+<meta name="description" content="El caso partido en tres misiones —vender, hacer, emitir— con las tareas de cada piso de la Rue.">
+<link rel="canonical" href="https://www.admira.live/13rue/cronograma.html">
+<script src="/admira-bar.js?v=20260810-r37"></script>
+<link rel="stylesheet" href="casa-nav.css?v=20260815-r5">
+<style>
+  :root{
+    --papel:#efe7d3; --papel2:#e7dcc2; --tinta:#16305c; --tinta2:#2c477a;
+    --dim:#6a789a; --linea:rgba(22,48,92,.22); --linea2:rgba(22,48,92,.4);
+    --ambar:#e08a2e; --luz:#2f8a4e;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--papel);color:var(--tinta);font-family:var(--sans);line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    background-image:
+      linear-gradient(rgba(22,48,92,.035) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(22,48,92,.035) 1px,transparent 1px);
+    background-size:26px 26px;
+  }
+  .wrap{max-width:920px;margin:0 auto;padding:0 20px 80px}
+  a{color:var(--ambar)}
+  header{padding:38px 0 10px}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--tinta2);margin:0 0 10px}
+  h1{font-size:clamp(2.1rem,6vw,3.4rem);line-height:.98;margin:0 0 8px;font-weight:800;letter-spacing:-.035em}
+  h1 small{display:block;font-size:clamp(.95rem,2.2vw,1.2rem);font-weight:600;color:var(--tinta2);margin-top:8px}
+  .frase{margin:18px 0 0;padding:16px 18px;border:1.5px solid var(--tinta);
+    background:rgba(224,138,46,.10);font-size:1.02rem;line-height:1.45;max-width:72ch}
+  .frase b{color:var(--tinta)}
+  .vacio{margin:28px 0 0;padding:22px;border:1.5px solid var(--tinta);background:rgba(255,255,255,.3)}
+  .caso{margin:22px 0 0;padding:14px 16px;border:1.5px solid var(--tinta);background:rgba(255,255,255,.34)}
+  .caso .k{font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--tinta2);margin:0 0 6px}
+  .caso p{margin:0;font-size:1.15rem;font-weight:700;letter-spacing:-.015em}
+  .caso .meta{margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--dim)}
+
+  .eje{display:grid;grid-template-columns:repeat(3,1fr);gap:8px;margin:18px 0 0}
+  .eje div{border:1.5px solid var(--tinta);padding:10px 12px;background:rgba(255,255,255,.28)}
+  .eje .n{font-family:var(--mono);font-size:11px;color:var(--ambar);letter-spacing:.1em}
+  .eje b{display:block;margin:2px 0}
+  .eje span{font-size:.82rem;color:var(--tinta2)}
+
+  .mision{margin:28px 0 0;border:1.5px solid var(--tinta);background:rgba(255,255,255,.34)}
+  .mision > header{padding:14px 16px;border-bottom:1px solid var(--linea);display:grid;grid-template-columns:auto 1fr auto;gap:12px;align-items:end}
+  .mision h2{margin:0;font-size:1.25rem;letter-spacing:-.02em}
+  .mision .num{font-family:var(--mono);font-size:1.6rem;font-weight:700;color:var(--ambar);line-height:1}
+  .mision .sem{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--tinta2);text-align:right}
+  .mision .para{grid-column:1/-1;margin:4px 0 0;color:var(--tinta2);font-size:.9rem}
+  .tareas{margin:0;padding:0;list-style:none}
+  .tareas li{padding:14px 16px;border-top:1px solid var(--linea)}
+  .tareas li:first-child{border-top:0}
+  .quien{display:flex;justify-content:space-between;gap:10px;align-items:baseline;margin:0 0 6px}
+  .quien b{font-size:1rem}
+  .quien span{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--tinta2)}
+  .voz{margin:0 0 10px;font-style:italic;color:var(--tinta)}
+  .abc{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .abc div{border:1px solid var(--linea);padding:8px 9px;background:rgba(255,255,255,.4)}
+  .abc .k{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--ambar);margin:0 0 3px}
+  .abc p{margin:0;font-size:.84rem;color:var(--tinta2)}
+  footer{margin-top:36px;font-family:var(--mono);font-size:11px;color:var(--dim)}
+  @media (max-width:720px){
+    .eje,.abc,.mision > header{grid-template-columns:1fr}
+    .mision .sem{text-align:left}
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">La casa · donde acaba el caso</p>
+    <h1>Cronograma<small>Misiones y tareas para llegar al objetivo</small></h1>
+    <p class="frase">La idea no se queda en un «sí» oral. Se parte en <b>tres misiones</b>
+      —vender, hacer, emitir— y cada vecino deja su <b>tarea a · b · c</b>.
+      Este es el plan. Se afina; no es un contrato de plazos.</p>
+    <nav class="casa-nav" data-casa-nav></nav>
+    <script src="casa-nav.js?v=20260815-r5"></script>
+  </header>
+
+  <div id="vacio" class="vacio" hidden>
+    <p>Aún no hay un caso. Entra uno en <a href="/13rue/implementar">Implementar</a>,
+      deja que la Rue lo trabaje y da el sí. El cronograma nace ahí.</p>
+  </div>
+
+  <div id="cuerpo" hidden>
+    <div class="caso">
+      <p class="k">El caso</p>
+      <p id="caso"></p>
+      <p class="meta" id="meta"></p>
+    </div>
+    <div class="eje" id="eje"></div>
+    <div id="misiones"></div>
+  </div>
+
+  <footer>AdmiraNeXT · cronograma · prototipo para afinar · caja 7</footer>
+</div>
+
+<script src="cronograma.js?v=20260815-r5"></script>
+<script>
+(function(){
+  "use strict";
+  function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+  function fecha(iso){
+    if(!iso) return "";
+    var d = new Date(iso);
+    if(isNaN(d.getTime())) return "";
+    return d.toLocaleString("es-ES", {day:"numeric", month:"short", year:"numeric", hour:"2-digit", minute:"2-digit"});
+  }
+
+  var doc = window.CronogramaCasa && CronogramaCasa.lee();
+  if(!doc){
+    document.getElementById("vacio").hidden = false;
+    return;
+  }
+
+  document.getElementById("cuerpo").hidden = false;
+  document.getElementById("caso").textContent = doc.idea;
+  document.getElementById("meta").textContent =
+    "Nace del sí en Implementar · "+fecha(doc.createdAt)+" · "+
+    (doc.misiones||[]).reduce(function(n,m){ return n+(m.tareas||[]).length; },0)+" tareas";
+
+  document.getElementById("eje").innerHTML = (doc.misiones||[]).map(function(m){
+    return '<div><div class="n">'+esc(m.n)+" · "+esc(m.semana)+'</div><b>'+esc(m.titulo)+'</b>'
+      + '<span>'+esc(m.pata)+" · "+(m.tareas||[]).length+" tareas</span></div>";
+  }).join("");
+
+  document.getElementById("misiones").innerHTML = (doc.misiones||[]).map(function(m){
+    var tareas = (m.tareas||[]).map(function(t){
+      return '<li>'
+        + '<div class="quien"><b>'+esc(t.icono||"")+" "+esc(t.quien)+'</b>'
+        + '<span>'+esc(t.piso)+(t.espacio?" · "+t.espacio:"")+'</span></div>'
+        + (t.voz?'<p class="voz">'+esc(t.voz)+'</p>':'')
+        + '<div class="abc">'
+        + '<div><div class="k">A · qué</div><p>'+esc(t.a||"—")+'</p></div>'
+        + '<div><div class="k">B · prueba</div><p>'+esc(t.b||"—")+'</p></div>'
+        + '<div><div class="k">C · dónde</div><p>'+esc(t.c||"—")+'</p></div>'
+        + '</div></li>';
+    }).join("");
+    return '<section class="mision">'
+      + '<header><div class="num">'+esc(m.n)+'</div>'
+      + '<div><h2>'+esc(m.titulo)+'</h2><p class="para">'+esc(m.para)+' · '+esc(m.pata)+'</p></div>'
+      + '<div class="sem">'+esc(m.semana)+'</div></header>'
+      + '<ol class="tareas">'+tareas+'</ol></section>';
+  }).join("");
+})();
+</script>

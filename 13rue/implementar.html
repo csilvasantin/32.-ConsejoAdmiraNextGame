@@ -5,7 +5,7 @@
 <meta name="description" content="Escribes una idea y los doce vecinos de 13 Rue la desarrollan, cada uno en su oficio, hasta un paquete a·b·c que el carbono puede aceptar.">
 <link rel="canonical" href="https://www.admira.live/13rue/implementar.html">
 <script src="/admira-bar.js?v=20260810-r37"></script>
-<link rel="stylesheet" href="casa-nav.css?v=20260815-r4">
+<link rel="stylesheet" href="casa-nav.css?v=20260815-r5">
 <style>
   :root{
     --papel:#efe7d3; --papel2:#e7dcc2; --tinta:#16305c; --tinta2:#2c477a;
@@ -108,9 +108,11 @@
     <h1>Implementar<small>Una idea entra. Los doce pisos la desarrollan.</small></h1>
     <p class="frase">Esto es el <b>ejemplo de cómo debe funcionar</b> la suite. Escribes un caso.
       Entra por la portería, el ascensor lo deja pasar y <b>cada vecino lo trabaja en su oficio</b>
-      dejando a · b · c. Al final el carbono da el sí. Lo afinamos desde aquí.</p>
+      dejando a · b · c. El sí no se queda aquí: <b>acaba en el cronograma</b>,
+      con las misiones y las tareas para llegar al objetivo.</p>
     <nav class="casa-nav" data-casa-nav></nav>
-    <script src="casa-nav.js?v=20260815-r4"></script>
+    <script src="casa-nav.js?v=20260815-r5"></script>
+    <script src="cronograma.js?v=20260815-r5"></script>
   </header>
 
   <div class="puerta">
@@ -129,14 +131,13 @@
       <div class="feed" id="feed"></div>
       <div class="paquete" id="paquete" hidden>
         <h2>3 · El carbono decide</h2>
-        <p class="lede">El silicio ya armó el paquete. Mira, cambia o da el sí.
-          Aún no nace misión en Yokup: este es el prototipo. El sí queda anotado aquí.</p>
+        <p class="lede">El silicio ya armó el paquete. El sí no es un «listo» oral:
+          abre el <b>cronograma</b> — tres misiones y las tareas de cada piso.</p>
         <div class="abc" id="paquete-abc"></div>
         <div class="si">
-          <button type="button" id="si">Sí · el ciclo se cierra</button>
+          <button type="button" id="si">Sí · abrir cronograma</button>
           <button type="button" class="ghost" id="otra">Otra idea</button>
         </div>
-        <p class="cierre" id="cierre">Anotado. Cuando afinemos, este sí abre misión en Yokup, con prueba y destino.</p>
       </div>
     </div>
   </div>
@@ -274,7 +275,7 @@
     var primero = piezas[0], foss = piezas.filter(function(x){return x.id==="sotano-foss";})[0];
     var a = "La casa toma «"+idea+"»: cada oficio deja su pieza.";
     var b = "Doce tarjetas visibles. Si un piso no se encendió, no trabajó.";
-    var c = "Aquí, en el recorrido. Cuando afinemos: Yokup (misión), la casa (prueba) y admira.tv si hay que emitir.";
+    var c = "En el cronograma: tres misiones (vender, hacer, emitir) y una tarea por piso.";
     if(primero) a = primero.p.a;
     if(foss) b = foss.p.b;
     document.getElementById("paquete-abc").innerHTML =
@@ -291,7 +292,6 @@
     piezas = [];
     document.getElementById("feed").innerHTML = "";
     document.getElementById("paquete").hidden = true;
-    document.getElementById("cierre").classList.remove("on");
     document.querySelectorAll(".celda").forEach(function(el){ el.classList.remove("on","habla"); });
   }
 
@@ -312,7 +312,7 @@
       marca(id, "on");
       pintaPieza(n, p);
     }
-    setEstado("Los doce pisos han hablado. Falta el sí.");
+    setEstado("Los doce pisos han hablado. El sí abre el cronograma.");
     cierraPaquete();
     btn.disabled = false;
   }
@@ -322,8 +322,10 @@
     if(e.key==="Enter" && (e.metaKey||e.ctrlKey)) correr();
   });
   document.getElementById("si").addEventListener("click", function(){
-    document.getElementById("cierre").classList.add("on");
-    setEstado("Cerrado. El carbono dio el sí. Prototipo: aún no escribe en Yokup.");
+    if(!window.CronogramaCasa){ location.href = "/13rue/cronograma"; return; }
+    var doc = CronogramaCasa.arma(idea, piezas, nodos);
+    CronogramaCasa.guarda(doc);
+    location.href = "/13rue/cronograma";
   });
   document.getElementById("otra").addEventListener("click", function(){
     reset();

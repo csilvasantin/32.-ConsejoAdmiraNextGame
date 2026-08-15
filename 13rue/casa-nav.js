@@ -8,7 +8,8 @@
     { id: "grafico",        href: "/13rue/grafico",       n: "4", t: "Gráfico · qué hacemos" },
     { id: "videodemo",      href: "/13rue/videodemo",     n: "5", t: "VideoDemo · el vídeo" },
     { id: "implementar",    href: "/13rue/implementar",   n: "6", t: "Implementar · una idea" },
-    { id: "cronograma",     href: "/13rue/cronograma",    n: "7", t: "Cronograma · el plan" }
+    { id: "cronograma",     href: "/13rue/cronograma",    n: "7", t: "Cronograma · el plan" },
+    { id: "pisos",          href: "/13rue/pisos",         n: "8", t: "Pisos · el corte" }
   ];
 
   function current() {
@@ -19,6 +20,7 @@
     if (/\/13rue\/videodemo$/.test(p)) return "videodemo";
     if (/\/13rue\/implementar$/.test(p)) return "implementar";
     if (/\/13rue\/cronograma$/.test(p)) return "cronograma";
+    if (/\/13rue\/pisos$/.test(p)) return "pisos";
     if (/\/13rue$/.test(p)) return "incubadora";
     return "";
   }

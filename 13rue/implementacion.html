@@ -243,7 +243,7 @@
     <p class="eyebrow">La Incubadora · anexo</p>
     <h1>La casa de los productos<small>admira.tv en sección: una vivienda por subapp, y la luz encendida sólo donde de verdad se emite</small></h1>
   </div>
-  <div class="sello">Censo <b>01–34</b><br>10 ago 2026</div>
+  <div class="sello">Censo <b>01–34</b><br>15 ago 2026</div>
 </header>
 
 <details class="pliegue">
@@ -331,6 +331,12 @@
   "use strict";
   var esc = function(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){
     return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); };
+
+  function urlProducto(v){
+    var r = (v && v.ruta) ? String(v.ruta) : ("/" + v.slug + "/");
+    if(/^https?:\/\//i.test(r)) return r;
+    return "https://admira.tv" + (r.charAt(0)==="/" ? r : "/" + r);
+  }
 
   var TEXTO = {
     emite:      { cartel:"EMITIENDO",  chip:"emite",
@@ -485,7 +491,7 @@
       + '<div><dt style="font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)">Llama a</dt>'
       + llamadas + '</div>'
       + '<div class="acciones">'
-      +   '<a href="https://admira.tv/' + esc(v.slug) + '/" target="_blank" rel="noopener">Abrir en admira.tv ▸</a>'
+      +   '<a href="' + esc(urlProducto(v)) + '" target="_blank" rel="noopener">Abrir en admira.tv ▸</a>'
       +   '<button type="button" class="cerrar-zoom">◂ Alejar la cámara</button>'
       + '</div></div>';
   }
@@ -566,11 +572,11 @@
     document.getElementById("ficha-estado").innerHTML = '<span class="estado-chip '+esc(t.chip)+'">'+esc(t.cartel)+'</span>';
     document.getElementById("ficha-familia").textContent = v.familia;
     document.getElementById("ficha-num").textContent = String(v.n).padStart(2,"0")+" de 34";
-    document.getElementById("ficha-slug").textContent = "/"+v.slug+"/";
+    document.getElementById("ficha-slug").textContent = v.ruta || ("/"+v.slug+"/");
     document.getElementById("ficha-vitrina").textContent = v.en_vitrina
       ? "sí, sale en el catálogo público" : "no, fuera del catálogo público";
     document.getElementById("ficha-porque").textContent = t.porque;
-    document.getElementById("ficha-ir").href = "https://admira.tv/"+v.slug+"/";
+    document.getElementById("ficha-ir").href = urlProducto(v);
     ficha.classList.add("on"); backdrop.classList.add("on");
     document.getElementById("cerrar").focus();
   }

@@ -3,7 +3,7 @@
     "titulo": "La casa de los productos",
     "subtitulo": "admira.tv en sección: una vivienda por subapp",
     "nota": "Este fichero ES el censo publicado: lo que se lee en admira.live/13rue/implementacion. Se genera desde subapps.json del repo admira-tv, donde vive orden.mjs para reordenar. El número de la subapp es su piso.",
-    "al_dia_del": "2026-08-10"
+    "al_dia_del": "2026-08-15"
   },
   "plantas": [
     {
@@ -133,12 +133,17 @@
       "slug": "digitalsignage",
       "name_es": "Cartelería digital",
       "familia": "Emisión",
-      "estado": "escaparate",
+      "estado": "emite",
       "en_vitrina": true,
-      "ruta": "/digitalsignage/",
-      "peso_kb": 36,
-      "ficheros": 1,
-      "apis": []
+      "ruta": "/cms",
+      "peso_kb": 229,
+      "ficheros": 3,
+      "apis": [
+        "https://api.admira.store/signage/screens",
+        "https://api.admira.store/signage/now",
+        "https://api.admira.store/grid/projects",
+        "https://omnipublicity-api.csilvasantin.workers.dev/locations"
+      ]
     },
     {
       "n": 2,

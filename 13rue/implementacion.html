@@ -11,6 +11,7 @@
      raíles: opciones a la izquierda del todo, avanzado a la derecha del todo.
      Sólo pinta cada icono si esta página tiene ese panel. -->
 <script src="/admira-bar.js?v=20260810-r37"></script>
+<link rel="stylesheet" href="casa-nav.css?v=20260815-r1">
 <style>
   :root{
     --papel:#efe7d3; --papel2:#e7dcc2; --tinta:#16305c; --tinta2:#2c477a;
@@ -258,7 +259,11 @@
     así que <b>reordenar la prioridad realquila el edificio</b>: subir un producto es mudarlo más arriba.</p>
 </details>
 
-<a class="volver" href="/13rue/">◂ Volver a la Incubadora</a>
+<nav class="casa-nav" aria-label="Las tres puertas">
+  <a href="/13rue/"><span class="n">1</span><span class="t">Incubadora · los agentes</span></a>
+  <a href="/13rue/estrategia"><span class="n">2</span><span class="t">Estrategia · la suite</span></a>
+  <a class="on" href="/13rue/implementacion" aria-current="page"><span class="n">3</span><span class="t">Implementación · el plano</span></a>
+</nav>
 
 <div class="censo" id="censo"></div>
 

@@ -1,0 +1,45 @@
+/* Las tres puertas de 13rue. Misma caja que los cuadrados del CENSO. */
+.casa-nav{
+  display:grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  gap:14px;
+  margin:26px 0 6px;
+}
+.casa-nav a{
+  border:1.5px solid var(--tinta);
+  padding:14px 16px;
+  background:rgba(255,255,255,.28);
+  text-decoration:none;
+  color:inherit;
+  display:block;
+  min-height:96px;
+  transition:background .15s,border-color .15s;
+}
+.casa-nav a:hover,
+.casa-nav a:focus-visible{
+  background:rgba(224,138,46,.14);
+  border-color:var(--ambar,#e08a2e);
+  outline:none;
+}
+.casa-nav a.on{
+  background:rgba(224,138,46,.16);
+  border-color:var(--ambar,#e08a2e);
+}
+.casa-nav .n{
+  font-family:var(--mono);
+  font-size:1.9rem;
+  font-weight:700;
+  line-height:1;
+  display:block;
+}
+.casa-nav a.on .n{color:var(--ambar,#e08a2e)}
+.casa-nav .t{
+  font-size:.8rem;
+  color:var(--tinta2);
+  margin-top:7px;
+  display:block;
+  line-height:1.35;
+}
+@media (max-width:520px){
+  .casa-nav{grid-template-columns:1fr}
+}

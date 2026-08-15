@@ -5,5 +5,8 @@
 /admira-bar.js
   Cache-Control: public, max-age=300, must-revalidate
 
+/13rue/casa-nav.css
+  Cache-Control: public, max-age=300, must-revalidate
+
 /control/*
   Cross-Origin-Opener-Policy: same-origin-allow-popups

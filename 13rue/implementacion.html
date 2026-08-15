@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Implementación · La casa de los productos · admira.tv</title>
-<meta name="description" content="Las 34 subapps de admira.tv dibujadas como un edificio en sección, al modo de 13 Rue del Percebe: una vivienda por producto, con la luz encendida sólo en las que de verdad emiten.">
+<meta name="description" content="Las 34 subapps de admira.tv dibujadas como un edificio en sección, al modo de 13 Rue del Percebe: una vivienda por producto, con la luz encendida sólo donde hay obra real.">
 <link rel="canonical" href="https://www.admira.live/13rue/implementacion.html">
 <!-- La barra superior de admira.live es fuente ÚNICA: la misma en todas las páginas
      tras la DMZ. Trae fijo el menú y, a sus extremos, los iconos que despliegan los
@@ -64,6 +64,24 @@
   @media (prefers-reduced-motion:reduce){.pliegue .tri{transition:none}}
   .pliegue.pie{margin-top:28px;padding-top:16px;border-top:1px solid var(--linea)}
 
+  /* Mapa de relaciones + plazos */
+  .mapa{margin:36px 0 0;border:1.5px solid var(--tinta);background:rgba(255,255,255,.28);padding:18px 18px 14px}
+  .mapa h2{margin:0 0 6px;font-size:1.15rem;letter-spacing:-.015em}
+  .mapa .aviso{color:var(--tinta2);font-size:.88rem;max-width:78ch;margin:0 0 16px}
+  .mapa .aviso b{color:var(--tinta)}
+  .mapa svg{display:block;width:100%;height:auto;max-width:980px;margin:0 auto 18px}
+  .plazos{width:100%;border-collapse:collapse;font-size:.82rem}
+  .plazos th,.plazos td{text-align:left;padding:6px 8px;border-top:1px solid var(--linea);vertical-align:top}
+  .plazos th{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);border-top:none}
+  .plazos .sem{font-family:var(--mono);white-space:nowrap;font-weight:700}
+  .plazos .dep{color:var(--tinta2);font-size:.78rem}
+  .bar{display:block;height:6px;border-radius:3px;background:rgba(22,48,92,.08);margin-top:4px;overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--ambar)}
+  .leyenda-mapa{display:flex;flex-wrap:wrap;gap:10px 16px;margin:0 0 12px;font-family:var(--mono);font-size:10px;letter-spacing:.06em;color:var(--tinta2)}
+  .leyenda-mapa span{display:inline-flex;align-items:center;gap:6px}
+  .leyenda-mapa i{width:10px;height:10px;border:1.2px solid var(--tinta);display:inline-block}
+  @media (max-width:720px){.plazos .dep{display:none}}
+
   .volver{display:inline-flex;gap:8px;align-items:center;font-family:var(--mono);font-size:11px;
     letter-spacing:.12em;text-transform:uppercase;text-decoration:none;color:var(--tinta2);margin-top:22px}
   .volver:hover{color:var(--ambar)}
@@ -111,7 +129,7 @@
   .hueco .cartel{position:absolute;right:9px;top:78px;font-family:var(--mono);font-size:8px;
     letter-spacing:.1em;color:var(--vacio);border:1px solid currentColor;padding:1px 4px;transform:rotate(-4deg);
     background:rgba(255,255,255,.5);white-space:nowrap}
-  .hueco.emite .cartel{color:var(--luz);transform:none}
+  .hueco.emite .cartel{color:var(--luz);transform:none;white-space:normal;text-align:center;max-width:64px;line-height:1.15}
   .hueco.parcial .cartel{color:var(--obra);transform:rotate(-2deg)}
 
   .shaft{border-left:1.5px solid var(--tinta);border-right:1.5px solid var(--tinta);
@@ -241,7 +259,7 @@
 <header>
   <div>
     <p class="eyebrow">La Incubadora · anexo</p>
-    <h1>La casa de los productos<small>admira.tv en sección: una vivienda por subapp, y la luz encendida sólo donde de verdad se emite</small></h1>
+    <h1>La casa de los productos<small>admira.tv en sección: una vivienda por subapp, y la luz encendida sólo donde hay obra real</small></h1>
   </div>
   <div class="sello">Censo <b>01–34</b><br>15 ago 2026</div>
 </header>
@@ -297,13 +315,33 @@
 
 </div>
 
+<section class="mapa" aria-labelledby="mapa-tit">
+  <h2 id="mapa-tit">Relaciones y plazos</h2>
+  <p class="aviso">El CMS es el núcleo. El resto o se cuelga de él, o es un producto hermano.
+    Los plazos son <b>mi estimación</b>: semanas de <b>un agente enfocado</b> hasta un circuito
+    cerrado (no pulido infinito). En paralelo se acorta el calendario; en serie suman más de un año.
+    Camino crítico: emisión alrededor del CMS.</p>
+  <p class="leyenda-mapa">
+    <span><i style="background:#2f8a4e"></i> En construcción</span>
+    <span><i style="background:#c9761c"></i> En obras</span>
+    <span><i style="background:#8b93a8"></i> Se alquila</span>
+  </p>
+  <svg id="diagrama" viewBox="0 0 980 560" role="img" aria-label="Diagrama de relaciones entre subapps"></svg>
+  <div style="overflow-x:auto">
+    <table class="plazos" id="plazos">
+      <thead><tr><th>Piso</th><th>Producto</th><th>Depende de</th><th>Plazo</th><th>Por qué</th></tr></thead>
+      <tbody></tbody>
+    </table>
+  </div>
+</section>
+
 <details class="pliegue pie">
   <summary><span class="tri" aria-hidden="true"></span> La ventana dice la verdad</summary>
   <div class="cuerpo">
     <p>No hay treinta y cuatro dibujos distintos: el dibujo es el estado medido de cada producto.
-      Ventana encendida si toca un backend real y emite; a media luz si está a medias; y con el cartel
-      de <b>SE ALQUILA</b> si es una página de escaparate sin producto detrás. Hoy el edificio está
-      casi vacío, y eso es exactamente lo que había que poder ver de un vistazo.</p>
+      Ventana encendida si hay producto real <b>en construcción</b>; a media luz si está a medias;
+      y con el cartel de <b>SE ALQUILA</b> si es una página de escaparate sin producto detrás.
+      Hoy el edificio está casi vacío, y eso es exactamente lo que había que poder ver de un vistazo.</p>
     <p class="fuente" id="fuente">cargando censo…</p>
   </div>
 </details>
@@ -339,12 +377,51 @@
   }
 
   var TEXTO = {
-    emite:      { cartel:"EMITIENDO",  chip:"emite",
-      porque:"Toca un backend real y responde. Es de las pocas viviendas con alguien dentro." },
+    emite:      { cartel:"EN CONSTRUCCIÓN",  chip:"emite",
+      porque:"Hay producto real y backend, pero no está cerrado: se construye. No se alquila, y aún no se da por emitido." },
     parcial:    { cartel:"EN OBRAS",   chip:"parcial",
       porque:"Llama a algún API pero no cierra el circuito. Hay obra empezada y sin rematar." },
     escaparate: { cartel:"SE ALQUILA", chip:"escaparate",
       porque:"Página de producto sin producto detrás: no llama a ningún API. Está bien hecha y vacía." }
+  };
+
+  // Plazos: semanas de UN agente enfocado hasta circuito cerrado.
+  // Deps = slugs de los que cuelga. Crítico = no tiene sentido cerrarlo antes.
+  var PLAZOS = {
+    digitalsignage:     { sem:4,  dep:[], crit:true,  pq:"El CMS ya opera; faltan remates, honestidad de estados y que el resto se cuelgue de él." },
+    videoanalytics:     { sem:6,  dep:["player","digitalsignage"], crit:true, pq:"Necesita señal real del player. Sin cámaras y pipeline no hay producto." },
+    adcelerate:         { sem:3,  dep:["contentcatalogue"], crit:false, pq:"Ya decide RTB. Cerrar el circuito comercial y el inventario." },
+    player:             { sem:2,  dep:["digitalsignage"], crit:true, pq:"Hay player real; la vivienda es landing. Enlazar y mostrar emisión viva." },
+    parrilla:           { sem:2,  dep:["digitalsignage","playlists"], crit:true, pq:"La parrilla vive en el CMS. Esta página tiene que ser la misma verdad." },
+    playlists:          { sem:2,  dep:["digitalsignage","contentcatalogue"], crit:true, pq:"Listas sin catálogo ni CMS son un cajón vacío." },
+    remotecontrol:      { sem:1,  dep:["player","digitalsignage"], crit:true, pq:"El mando ya existe (mando.html). Apuntar aquí y no a un escaparate." },
+    contentcatalogue:   { sem:3,  dep:["digitalsignage"], crit:true, pq:"El stock de Pixeria ya se lista en el CMS. Esta vivienda debe ser esa fuente." },
+    wall:               { sem:3,  dep:["player","digitalsignage"], crit:false, pq:"Varios players a la vez: encima del player, no al lado." },
+    dashboard:          { sem:2,  dep:["digitalsignage","player"], crit:true, pq:"Cuadro de mando = recuento del CMS. Si no lee flota, miente." },
+    radioanalytics:     { sem:4,  dep:["player"], crit:false, pq:"Misma idea que vídeo, sobre audio. Depende de que el player hable." },
+    apps:               { sem:1,  dep:[], crit:false, pq:"El catálogo ya emite JSON. Poco para cerrar; no bloquea a nadie." },
+    mcp:                { sem:2,  dep:["digitalsignage"], crit:false, pq:"Hay conector a medias. Cerrar contrato con el CMS." },
+    socialwifi:         { sem:3,  dep:["gamification"], crit:false, pq:"Ya llama un API. Falta el circuito de captación y el premio." },
+    gamification:       { sem:4,  dep:["digitalsignage"], crit:false, pq:"Tienda: encima de pantallas reales, no de un mock." },
+    queuemanager:       { sem:4,  dep:["digitalsignage"], crit:false, pq:"Colas en el punto de venta: XpaceOS + pantalla." },
+    roombooking:        { sem:3,  dep:["accesscontrol"], crit:false, pq:"Reservar sin accesos es un calendario huérfano." },
+    accesscontrol:      { sem:3,  dep:["usuarios"], crit:false, pq:"Hoy redirige a users. Hay que ser esa puerta, no un cartel." },
+    pushnotifications:  { sem:3,  dep:["usuarios"], crit:false, pq:"Push exige identidad. Sin usuarios es humo." },
+    presenta:           { sem:3,  dep:["contentcatalogue"], crit:false, pq:"El generador vive en AdmiraNeXT. Traerlo aquí o apuntar allí con honestidad." },
+    audiobranding:      { sem:4,  dep:["player"], crit:false, pq:"Marca sonora = player que suena + catálogo de audios." },
+    olfactorymarketing: { sem:6,  dep:["iotmanager"], crit:false, pq:"Hardware. Sin IoT no hay olor, hay landing." },
+    augmentedreality:   { sem:5,  dep:["xr","contentcatalogue"], crit:false, pq:"AR de escaparate hasta que XR y contenidos se junten." },
+    virtualreality:     { sem:5,  dep:["xr"], crit:false, pq:"Igual que AR: el núcleo es XR." },
+    xr:                 { sem:4,  dep:["player"], crit:false, pq:"Ya hay código gordo. Cerrar un circuito visible, no más demos sueltas." },
+    virtualassistant:   { sem:4,  dep:["yarig","digitalsignage"], crit:false, pq:"Asistente sin Yarig ni CMS es un chat de feria." },
+    iotmanager:         { sem:4,  dep:["digitalsignage"], crit:false, pq:"Dispositivos = la flota. No inventar un segundo inventario." },
+    nvidia:             { sem:6,  dep:["iotmanager","player"], crit:false, pq:"Borde de verdad: player + IoT. Pesado y tardío." },
+    xpaceos:            { sem:6,  dep:["digitalsignage","iotmanager"], crit:false, pq:"El gemelo del punto de venta. Producto hermano; no se improvisa." },
+    yarig:              { sem:4,  dep:["mcp"], crit:false, pq:"Capa de IA. Útil cuando MCP y CMS ya contestan." },
+    usuarios:           { sem:2,  dep:["digitalsignage"], crit:true, pq:"Permisos del CMS. Sin esto cada vivienda finge su propia llave." },
+    comprar:            { sem:3,  dep:["apps"], crit:false, pq:"Contratación cuando hay algo que vender que no sea un escaparate." },
+    support:            { sem:2,  dep:[], crit:false, pq:"Soporte se puede cerrar pronto: tickets y verdad, no brochure." },
+    help:               { sem:1,  dep:[], crit:false, pq:"Ayuda: una semana si no se inventa un producto nuevo." }
   };
 
   // La ventana: tres estados, un solo dibujo parametrizado.
@@ -399,7 +476,7 @@
     var c = {emite:0,parcial:0,escaparate:0};
     doc.viviendas.forEach(function(v){ c[v.estado] = (c[v.estado]||0)+1; });
     document.getElementById("censo").innerHTML =
-        '<div class="luz"><span class="n">'+c.emite+'</span><span class="t">viviendas ocupadas · emiten de verdad</span></div>'
+        '<div class="luz"><span class="n">'+c.emite+'</span><span class="t">en construcción · hay producto, aún se construye</span></div>'
       + '<div class="obra"><span class="n">'+c.parcial+'</span><span class="t">en obras · circuito sin cerrar</span></div>'
       + '<div class="vacio"><span class="n">'+c.escaparate+'</span><span class="t">se alquila · escaparate sin producto</span></div>'
       + '<div><span class="n">'+doc.plantas.length+'</span><span class="t">plantas, del ático al sótano</span></div>';
@@ -410,6 +487,8 @@
     });
 
     montaRailes(doc);
+    pintaMapa(doc);
+    pintaPlazos(doc);
   }
 
 
@@ -526,12 +605,87 @@
     }
   }
 
+  function colorEstado(estado){
+    return estado==="emite" ? "#2f8a4e" : estado==="parcial" ? "#c9761c" : "#8b93a8";
+  }
+
+  function pintaMapa(doc){
+    var porSlug = {};
+    doc.viviendas.forEach(function(v){ porSlug[v.slug]=v; });
+    var grupos = [
+      { t:"CMS · núcleo", x:390, y:18, ids:["digitalsignage"] },
+      { t:"Emisión", x:20, y:150, ids:["player","parrilla","playlists","remotecontrol","wall"] },
+      { t:"Programática", x:390, y:150, ids:["adcelerate"] },
+      { t:"Contenido", x:680, y:150, ids:["contentcatalogue","presenta"] },
+      { t:"Medición", x:20, y:310, ids:["dashboard","videoanalytics","radioanalytics"] },
+      { t:"Tienda", x:300, y:310, ids:["socialwifi","gamification","queuemanager","roombooking","accesscontrol","pushnotifications"] },
+      { t:"Inmersivo + sensorial", x:640, y:310, ids:["xr","augmentedreality","virtualreality","virtualassistant","audiobranding","olfactorymarketing"] },
+      { t:"Plataforma", x:20, y:430, ids:["apps","mcp","iotmanager","nvidia","xpaceos","yarig","usuarios"] },
+      { t:"Comercial", x:640, y:430, ids:["comprar","support","help"] }
+    ];
+    var nodos = {};
+    var svg = "";
+    grupos.forEach(function(g){
+      var w = g.ids.length > 4 ? 300 : (g.ids.length > 2 ? 270 : 240);
+      if(g.ids.length===1 && g.t.indexOf("CMS")===0) w = 200;
+      svg += '<rect x="'+g.x+'" y="'+g.y+'" width="'+w+'" height="'+(g.ids.length===1?58:78)+'" fill="none" stroke="#16305c" stroke-width="1.2" opacity=".35"/>';
+      svg += '<text x="'+(g.x+8)+'" y="'+(g.y+14)+'" font-family="ui-monospace,monospace" font-size="10" fill="#6a789a" letter-spacing=".08em">'+esc(g.t.toUpperCase())+'</text>';
+      g.ids.forEach(function(id, i){
+        var v = porSlug[id]; if(!v) return;
+        var nx = g.x + 10 + (i%3)*96;
+        var ny = g.y + 28 + Math.floor(i/3)*24;
+        if(g.ids.length===1){ nx = g.x+18; ny = g.y+36; }
+        nodos[id] = { x:nx+36, y:ny+6 };
+        svg += '<circle cx="'+nx+'" cy="'+(ny+4)+'" r="5" fill="'+colorEstado(v.estado)+'" stroke="#16305c" stroke-width="1"/>';
+        svg += '<text x="'+(nx+10)+'" y="'+(ny+8)+'" font-family="ui-monospace,monospace" font-size="10" fill="#16305c">'+esc(String(v.n).padStart(2,"0"))+' '+esc(v.name_es.length>16?v.name_es.slice(0,15)+"…":v.name_es)+'</text>';
+      });
+    });
+    var arcos = [
+      ["digitalsignage","player"],["digitalsignage","parrilla"],["digitalsignage","playlists"],
+      ["digitalsignage","remotecontrol"],["digitalsignage","wall"],["digitalsignage","dashboard"],
+      ["digitalsignage","contentcatalogue"],["digitalsignage","usuarios"],["digitalsignage","iotmanager"],
+      ["player","videoanalytics"],["player","radioanalytics"],["player","audiobranding"],
+      ["contentcatalogue","adcelerate"],["contentcatalogue","presenta"],["contentcatalogue","playlists"],
+      ["mcp","yarig"],["yarig","virtualassistant"],["xr","augmentedreality"],["xr","virtualreality"],
+      ["usuarios","accesscontrol"],["usuarios","pushnotifications"],["iotmanager","xpaceos"],
+      ["iotmanager","olfactorymarketing"],["apps","comprar"]
+    ];
+    var lines = "";
+    arcos.forEach(function(a){
+      var A = nodos[a[0]], B = nodos[a[1]];
+      if(!A||!B) return;
+      lines += '<line x1="'+A.x+'" y1="'+A.y+'" x2="'+B.x+'" y2="'+B.y+'" stroke="#16305c" stroke-width="1" opacity=".28"/>';
+    });
+    document.getElementById("diagrama").innerHTML = lines + svg;
+  }
+
+  function pintaPlazos(doc){
+    var porSlug = {};
+    doc.viviendas.forEach(function(v){ porSlug[v.slug]=v; });
+    var max = 6;
+    var filas = doc.viviendas.map(function(v){
+      var p = PLAZOS[v.slug] || { sem:3, dep:[], pq:"Sin dato fino: tres semanas de default, no de ciencia." };
+      var deps = (p.dep||[]).map(function(s){
+        var d = porSlug[s]; return d ? (String(d.n).padStart(2,"0")+" "+d.name_es) : s;
+      }).join(" · ") || "—";
+      var pct = Math.round((p.sem/max)*100);
+      return '<tr>'
+        + '<td>'+esc(String(v.n).padStart(2,"0"))+'</td>'
+        + '<td><b>'+esc(v.name_es)+'</b></td>'
+        + '<td class="dep">'+esc(deps)+'</td>'
+        + '<td class="sem">'+p.sem+' sem<div class="bar"><i style="width:'+pct+'%"></i></div></td>'
+        + '<td>'+esc(p.pq)+'</td>'
+        + '</tr>';
+    }).join("");
+    document.querySelector("#plazos tbody").innerHTML = filas;
+  }
+
   function montaRailes(doc){
     CENSO = doc.viviendas;
     var cuenta = function(campo, val){ return CENSO.filter(function(v){ return v[campo]===val; }).length; };
 
     chips(document.getElementById("f-estado"), [
-      {id:"emite", txt:"Emitiendo", n:cuenta("estado","emite")},
+      {id:"emite", txt:"En construcción", n:cuenta("estado","emite")},
       {id:"parcial", txt:"En obras", n:cuenta("estado","parcial")},
       {id:"escaparate", txt:"Se alquila", n:cuenta("estado","escaparate")}
     ], "estado");

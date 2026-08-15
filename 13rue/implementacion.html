@@ -41,8 +41,28 @@
   .sello{border:1.5px solid var(--tinta);border-radius:4px;padding:10px 14px;font:600 11px/1.5 var(--mono);
     text-transform:uppercase;letter-spacing:.08em;white-space:nowrap;background:rgba(255,255,255,.25)}
   .sello b{color:var(--ambar)}
-  .lede{max-width:730px;color:var(--tinta2);font-size:1.04rem;margin:10px 0 0}
+  .lede{max-width:730px;color:var(--tinta2);font-size:.92rem;margin:8px 0 0;line-height:1.45}
   .lede b{color:var(--tinta)}
+
+  /* Texto plegado por defecto: un triángulo, no un icono decorativo. */
+  .pliegue{margin:10px 0 0;border:none}
+  .pliegue > summary{
+    list-style:none;cursor:pointer;display:inline-flex;align-items:center;gap:8px;
+    font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;
+    color:var(--tinta2);user-select:none;padding:2px 0;
+  }
+  .pliegue > summary::-webkit-details-marker{display:none}
+  .pliegue > summary:hover{color:var(--ambar)}
+  .pliegue > summary:focus-visible{outline:2px solid var(--ambar);outline-offset:3px}
+  .pliegue .tri{
+    display:inline-block;width:0;height:0;flex:0 0 auto;
+    border-style:solid;border-width:5px 0 5px 8px;
+    border-color:transparent transparent transparent var(--ambar);
+    transform:rotate(0deg);transition:transform .16s ease;
+  }
+  .pliegue[open] > summary .tri{transform:rotate(90deg)}
+  @media (prefers-reduced-motion:reduce){.pliegue .tri{transition:none}}
+  .pliegue.pie{margin-top:28px;padding-top:16px;border-top:1px solid var(--linea)}
 
   .volver{display:inline-flex;gap:8px;align-items:center;font-family:var(--mono);font-size:11px;
     letter-spacing:.12em;text-transform:uppercase;text-decoration:none;color:var(--tinta2);margin-top:22px}
@@ -202,9 +222,9 @@
     background:rgba(255,255,255,.5);cursor:pointer}
   .detalle a:hover,.detalle .cerrar-zoom:hover{background:var(--ambar-bg);border-color:var(--ambar)}
 
-  .pie{margin-top:44px;padding-top:20px;border-top:1px solid var(--linea);font-size:.88rem;color:var(--tinta2)}
-  .pie b{color:var(--tinta)}
-  .fuente{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:10px}
+  .pie .cuerpo{font-size:.88rem;color:var(--tinta2);margin:10px 0 0;max-width:730px;line-height:1.45}
+  .pie .cuerpo b{color:var(--tinta)}
+  .fuente{font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:8px}
   @media (max-width:720px){
     header{grid-template-columns:1fr}
     .planta{grid-template-columns:1fr 40px 1fr}
@@ -226,10 +246,13 @@
   <div class="sello">Censo <b>01–34</b><br>10 ago 2026</div>
 </header>
 
-<p class="lede">En 13 Rue del Percebe cada piso guardaba una historia y todas pasaban a la vez en el
-  mismo plano. La Incubadora hizo lo mismo con doce agentes. Este anexo lo hace con los productos:
-  <b>las treinta y cuatro subapps de admira.tv, una por vivienda</b>. El número del censo es el piso,
-  así que <b>reordenar la prioridad realquila el edificio</b>: subir un producto es mudarlo más arriba.</p>
+<details class="pliegue">
+  <summary><span class="tri" aria-hidden="true"></span> Cómo se lee este plano</summary>
+  <p class="lede">En 13 Rue del Percebe cada piso guardaba una historia y todas pasaban a la vez en el
+    mismo plano. La Incubadora hizo lo mismo con doce agentes. Este anexo lo hace con los productos:
+    <b>las treinta y cuatro subapps de admira.tv, una por vivienda</b>. El número del censo es el piso,
+    así que <b>reordenar la prioridad realquila el edificio</b>: subir un producto es mudarlo más arriba.</p>
+</details>
 
 <a class="volver" href="/13rue/">◂ Volver a la Incubadora</a>
 
@@ -274,13 +297,16 @@
 
 </div>
 
-<div class="pie">
-  <p><b>La ventana dice la verdad.</b> No hay treinta y cuatro dibujos distintos: el dibujo es el
-    estado medido de cada producto. Ventana encendida si toca un backend real y emite; a media luz si
-    está a medias; y con el cartel de <b>SE ALQUILA</b> si es una página de escaparate sin producto
-    detrás. Hoy el edificio está casi vacío, y eso es exactamente lo que había que poder ver de un vistazo.</p>
-  <p class="fuente" id="fuente">cargando censo…</p>
-</div>
+<details class="pliegue pie">
+  <summary><span class="tri" aria-hidden="true"></span> La ventana dice la verdad</summary>
+  <div class="cuerpo">
+    <p>No hay treinta y cuatro dibujos distintos: el dibujo es el estado medido de cada producto.
+      Ventana encendida si toca un backend real y emite; a media luz si está a medias; y con el cartel
+      de <b>SE ALQUILA</b> si es una página de escaparate sin producto detrás. Hoy el edificio está
+      casi vacío, y eso es exactamente lo que había que poder ver de un vistazo.</p>
+    <p class="fuente" id="fuente">cargando censo…</p>
+  </div>
+</details>
 
 </div>
 

@@ -6,7 +6,8 @@
     { id: "estrategia",     href: "/13rue/estrategia",    n: "2", t: "Estrategia · la suite" },
     { id: "implementacion", href: "/13rue/implementacion",n: "3", t: "Implementación · el plano" },
     { id: "grafico",        href: "/13rue/grafico",       n: "4", t: "Gráfico · qué hacemos" },
-    { id: "videodemo",      href: "/13rue/videodemo",     n: "5", t: "VideoDemo · el vídeo" }
+    { id: "videodemo",      href: "/13rue/videodemo",     n: "5", t: "VideoDemo · el vídeo" },
+    { id: "implementar",    href: "/13rue/implementar",   n: "6", t: "Implementar · una idea" }
   ];
 
   function current() {
@@ -15,6 +16,7 @@
     if (/\/13rue\/implementacion$/.test(p) || /\/13rue\/timeline$/.test(p)) return "implementacion";
     if (/\/13rue\/grafico$/.test(p)) return "grafico";
     if (/\/13rue\/videodemo$/.test(p)) return "videodemo";
+    if (/\/13rue\/implementar$/.test(p)) return "implementar";
     if (/\/13rue$/.test(p)) return "incubadora";
     return "";
   }

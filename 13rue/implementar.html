@@ -1,0 +1,341 @@
+<!-- Implementar: una idea entra y recorre los doce pisos. El ejemplo del ciclo. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Implementar · Una idea por la Rue · AdmiraNeXT</title>
+<meta name="description" content="Escribes una idea y los doce vecinos de 13 Rue la desarrollan, cada uno en su oficio, hasta un paquete a·b·c que el carbono puede aceptar.">
+<link rel="canonical" href="https://www.admira.live/13rue/implementar.html">
+<script src="/admira-bar.js?v=20260810-r37"></script>
+<link rel="stylesheet" href="casa-nav.css?v=20260815-r4">
+<style>
+  :root{
+    --papel:#efe7d3; --papel2:#e7dcc2; --tinta:#16305c; --tinta2:#2c477a;
+    --dim:#6a789a; --linea:rgba(22,48,92,.22); --linea2:rgba(22,48,92,.4);
+    --ambar:#e08a2e; --ambar-bg:rgba(224,138,46,.14); --luz:#2f8a4e;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--papel);color:var(--tinta);font-family:var(--sans);line-height:1.5;
+    -webkit-font-smoothing:antialiased;
+    background-image:
+      linear-gradient(rgba(22,48,92,.035) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(22,48,92,.035) 1px,transparent 1px);
+    background-size:26px 26px;
+  }
+  .wrap{max-width:1120px;margin:0 auto;padding:0 20px 80px}
+  a{color:var(--ambar)}
+  header{padding:38px 0 10px}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--tinta2);margin:0 0 10px}
+  h1{font-size:clamp(2.1rem,6vw,3.4rem);line-height:.98;margin:0 0 8px;font-weight:800;letter-spacing:-.035em}
+  h1 small{display:block;font-size:clamp(.95rem,2.2vw,1.2rem);font-weight:600;color:var(--tinta2);margin-top:8px}
+  .frase{margin:18px 0 0;padding:16px 18px;border:1.5px solid var(--tinta);
+    background:rgba(224,138,46,.10);font-size:1.02rem;line-height:1.45;max-width:72ch}
+  .frase b{color:var(--tinta)}
+
+  .puerta{margin:22px 0 0;border:1.5px solid var(--tinta);background:rgba(255,255,255,.34);padding:14px}
+  .puerta label{display:block;font-family:var(--mono);font-size:11px;letter-spacing:.14em;text-transform:uppercase;color:var(--tinta2);margin:0 0 8px}
+  .fila{display:flex;gap:8px;flex-wrap:wrap}
+  .fila textarea{
+    flex:1;min-width:220px;min-height:64px;resize:vertical;font:inherit;color:var(--tinta);
+    border:1.5px solid var(--linea2);background:rgba(255,255,255,.6);padding:10px 12px;
+  }
+  .fila textarea:focus{outline:2px solid var(--ambar);outline-offset:0;border-color:var(--ambar)}
+  .fila button{
+    font-family:var(--mono);font-size:12px;font-weight:700;letter-spacing:.04em;
+    border:1.5px solid var(--tinta);background:var(--tinta);color:var(--papel);
+    padding:12px 16px;cursor:pointer;align-self:stretch;
+  }
+  .fila button:disabled{opacity:.45;cursor:default}
+  .ejemplos{display:flex;flex-wrap:wrap;gap:6px;margin:10px 0 0}
+  .ejemplos button{
+    font-family:var(--mono);font-size:10.5px;border:1px solid var(--linea2);background:transparent;
+    color:var(--tinta2);padding:5px 8px;cursor:pointer;
+  }
+  .ejemplos button:hover{border-color:var(--ambar);color:var(--ambar)}
+  .estado{font-family:var(--mono);font-size:11px;color:var(--dim);margin:10px 0 0}
+
+  .duo{display:grid;grid-template-columns:240px minmax(0,1fr);gap:22px;margin:26px 0 0;align-items:start}
+  .casa{position:sticky;top:64px}
+  .tejado{height:28px;border:1.5px solid var(--tinta);border-bottom:none;
+    clip-path:polygon(50% 0,100% 100%,0 100%);background:rgba(22,48,92,.06)}
+  .planta{display:grid;grid-template-columns:1fr 26px 1fr;border:1.5px solid var(--tinta);border-top:none}
+  .planta.sotano{grid-template-columns:1fr}
+  .celda{padding:7px 8px;min-height:46px;font-size:11px;line-height:1.25;opacity:.32;transition:opacity .2s,background .2s}
+  .celda + .celda{border-left:1.5px solid var(--tinta)}
+  .celda .p{font-family:var(--mono);font-size:8.5px;letter-spacing:.08em;color:var(--tinta2)}
+  .celda.on{opacity:1;background:var(--ambar-bg)}
+  .celda.habla{opacity:1;background:rgba(47,138,78,.16);box-shadow:inset 0 0 0 1.5px var(--luz)}
+  .shaft{display:flex;align-items:center;justify-content:center;font-family:var(--mono);font-size:8px;
+    letter-spacing:.1em;color:var(--tinta2);writing-mode:vertical-rl;transform:rotate(180deg);
+    background:repeating-linear-gradient(45deg,transparent 0 5px,rgba(22,48,92,.05) 5px 6px)}
+  .base{height:8px;background:var(--tinta)}
+
+  .feed{display:flex;flex-direction:column;gap:10px}
+  .pieza{border:1.5px solid var(--tinta);background:rgba(255,255,255,.34);padding:12px 14px}
+  .pieza header{display:flex;justify-content:space-between;gap:10px;align-items:baseline;margin:0 0 6px}
+  .pieza h3{margin:0;font-size:1rem}
+  .pieza .piso{font-family:var(--mono);font-size:10px;letter-spacing:.1em;text-transform:uppercase;color:var(--tinta2)}
+  .pieza .voz{margin:0 0 10px;font-style:italic;color:var(--tinta)}
+  .abc{display:grid;grid-template-columns:repeat(3,1fr);gap:8px}
+  .abc div{border:1px solid var(--linea);padding:8px 9px;background:rgba(255,255,255,.35)}
+  .abc .k{font-family:var(--mono);font-size:10px;letter-spacing:.12em;color:var(--ambar);margin:0 0 3px}
+  .abc p{margin:0;font-size:.84rem;color:var(--tinta2)}
+  .pieza.local .piso::after{content:" · local";color:var(--dim)}
+
+  .paquete{border:1.5px solid var(--tinta);padding:16px;background:linear-gradient(120deg,rgba(224,138,46,.10),rgba(47,138,78,.07))}
+  .paquete h2{margin:0 0 8px;font-size:1.15rem}
+  .paquete .lede{margin:0 0 12px;color:var(--tinta2);font-size:.92rem}
+  .si{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+  .si button{font-family:var(--mono);font-size:12px;font-weight:700;border:1.5px solid var(--tinta);
+    background:var(--tinta);color:var(--papel);padding:10px 14px;cursor:pointer}
+  .si button.ghost{background:transparent;color:var(--tinta)}
+  .cierre{margin-top:12px;font-size:.92rem;color:var(--luz);display:none}
+  .cierre.on{display:block}
+
+  footer{margin-top:36px;font-family:var(--mono);font-size:11px;color:var(--dim)}
+  @media (max-width:820px){
+    .duo{grid-template-columns:1fr}
+    .casa{position:static;max-width:320px}
+    .abc{grid-template-columns:1fr}
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">La casa · el ciclo en marcha</p>
+    <h1>Implementar<small>Una idea entra. Los doce pisos la desarrollan.</small></h1>
+    <p class="frase">Esto es el <b>ejemplo de cómo debe funcionar</b> la suite. Escribes un caso.
+      Entra por la portería, el ascensor lo deja pasar y <b>cada vecino lo trabaja en su oficio</b>
+      dejando a · b · c. Al final el carbono da el sí. Lo afinamos desde aquí.</p>
+    <nav class="casa-nav" data-casa-nav></nav>
+    <script src="casa-nav.js?v=20260815-r4"></script>
+  </header>
+
+  <div class="puerta">
+    <label for="idea">1 · Entras · el caso</label>
+    <div class="fila">
+      <textarea id="idea" maxlength="280" placeholder="Una frase basta. Cliente, producto o arreglo."></textarea>
+      <button type="button" id="go">Entra en la Rue</button>
+    </div>
+    <div class="ejemplos" id="ejemplos"></div>
+    <p class="estado" id="estado">El edificio espera un caso.</p>
+  </div>
+
+  <div class="duo">
+    <div class="casa" id="casa" aria-label="La Rue, se enciende piso a piso"></div>
+    <div>
+      <div class="feed" id="feed"></div>
+      <div class="paquete" id="paquete" hidden>
+        <h2>3 · El carbono decide</h2>
+        <p class="lede">El silicio ya armó el paquete. Mira, cambia o da el sí.
+          Aún no nace misión en Yokup: este es el prototipo. El sí queda anotado aquí.</p>
+        <div class="abc" id="paquete-abc"></div>
+        <div class="si">
+          <button type="button" id="si">Sí · el ciclo se cierra</button>
+          <button type="button" class="ghost" id="otra">Otra idea</button>
+        </div>
+        <p class="cierre" id="cierre">Anotado. Cuando afinemos, este sí abre misión en Yokup, con prueba y destino.</p>
+      </div>
+    </div>
+  </div>
+
+  <footer>AdmiraNeXT · implementar · prototipo para afinar · 15 ago 2026 · caja 6</footer>
+</div>
+
+<script>
+(function(){
+  "use strict";
+  var BUS = "https://incubadora-bus.csilvasantin.workers.dev/hablar";
+  var RUTA = [
+    "porteria","ascensor","guru-ia","estudio-uxui","imperio-nocode","sotano-foss",
+    "hacker-gris","puerto-deliveries","pet-tech","deeptech-biotech","coliving-nomadas","cripto-cafe"
+  ];
+  var EJEMPLOS = [
+    "Un mupi que solo emite lo recién creado",
+    "Presentación y presupuesto del cliente X en una sola puerta",
+    "Una misión Yokup que cierra cuando la pantalla se enciende"
+  ];
+
+  var nodos = {};
+  var idea = "";
+  var piezas = [];
+
+  function esc(s){ return String(s==null?"":s).replace(/[&<>"]/g,function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]; }); }
+  function limpia(s){ return String(s||"").replace(/\s+/g," ").trim(); }
+
+  var ejemplario = document.getElementById("ejemplos");
+  EJEMPLOS.forEach(function(t){
+    var b = document.createElement("button");
+    b.type = "button"; b.textContent = t;
+    b.addEventListener("click", function(){ document.getElementById("idea").value = t; document.getElementById("idea").focus(); });
+    ejemplario.appendChild(b);
+  });
+
+  function pintaCasa(){
+    var filas = [
+      {piso:"ÁTICO", izq:"guru-ia", der:"puerto-deliveries"},
+      {piso:"3", izq:"estudio-uxui", der:"imperio-nocode"},
+      {piso:"2", izq:"hacker-gris", der:"pet-tech"},
+      {piso:"1", izq:"deeptech-biotech", der:"coliving-nomadas"},
+      {piso:"PB", izq:"porteria", der:"cripto-cafe"}
+    ];
+    function celda(id){
+      var n = nodos[id]; if(!n) return '<div class="celda"></div>';
+      return '<div class="celda" data-id="'+esc(id)+'"><div class="p">'+esc(n.piso)+'</div>'+esc(n.rol)+'</div>';
+    }
+    var html = '<div class="tejado"></div>';
+    filas.forEach(function(f){
+      html += '<div class="planta">'+celda(f.izq)+'<div class="shaft">'+esc(f.piso)+'</div>'+celda(f.der)+'</div>';
+    });
+    html += '<div class="planta"><div class="celda" data-id="ascensor"><div class="p">NÚCLEO</div>Ascensor</div>'
+      + '<div class="shaft">API</div>'
+      + '<div class="celda" data-id="sotano-foss"><div class="p">SÓTANO</div>FOSS</div></div>';
+    html += '<div class="base"></div>';
+    document.getElementById("casa").innerHTML = html;
+  }
+
+  function marca(id, cls){
+    var el = document.querySelector('.celda[data-id="'+id+'"]');
+    if(!el) return;
+    el.classList.remove("habla");
+    el.classList.add(cls);
+  }
+
+  function pregunta(nodo){
+    return "Han encargado esto en la casa: «"+idea+"». "
+      + "Responde SOLO en este formato, en tu voz, sin humo y sin inventar clientes: "
+      + "A) una acción concreta que HACES TÚ con este encargo. "
+      + "B) cómo se prueba que lo has hecho (algo que se ve). "
+      + "C) dónde queda. "
+      + "VOZ: una sola frase en tu personaje.";
+  }
+
+  function parsea(txt, nodo){
+    var a = (txt.match(/A\)\s*([\s\S]*?)(?=B\)|$)/i)||[])[1];
+    var b = (txt.match(/B\)\s*([\s\S]*?)(?=C\)|$)/i)||[])[1];
+    var c = (txt.match(/C\)\s*([\s\S]*?)(?=VOZ:|$)/i)||[])[1];
+    var voz = (txt.match(/VOZ:\s*([\s\S]*)$/i)||[])[1];
+    if(limpia(a) && limpia(b)){
+      return {a:limpia(a), b:limpia(b), c:limpia(c)||("Piso "+nodo.piso+" · "+nodo.espacio), voz:limpia(voz||txt), fuente:"bus"};
+    }
+    return null;
+  }
+
+  function local(nodo){
+    var lex = (nodo.lexico && nodo.lexico[0]) || nodo.rol;
+    return {
+      a: nodo.rol+" toma «"+idea+"» desde su oficio ("+nodo.rol_tech+").",
+      b: "Se prueba cuando esta vivienda se enciende y deja esta tarjeta en el recorrido.",
+      c: nodo.piso+" · "+nodo.espacio+" · la casa lo enseña.",
+      voz: lex+" — "+idea+".",
+      fuente:"local"
+    };
+  }
+
+  function habla(nodo){
+    var ctrl = new AbortController();
+    var t = setTimeout(function(){ ctrl.abort(); }, 12000);
+    return fetch(BUS, {
+      method:"POST",
+      headers:{"content-type":"application/json"},
+      signal: ctrl.signal,
+      body: JSON.stringify({
+        agente:{ system_prompt:nodo.system_prompt, lexico:nodo.lexico, veta:nodo.veta },
+        pregunta: pregunta(nodo),
+        estado:{}
+      })
+    }).then(function(r){ return r.json(); }).then(function(d){
+      var txt = d && d.ok ? d.dice : "";
+      return parsea(txt, nodo) || (txt ? Object.assign(local(nodo),{voz:limpia(txt),fuente:"bus"}) : local(nodo));
+    }).catch(function(){ return local(nodo); })
+      .then(function(p){ clearTimeout(t); return p; });
+  }
+
+  function pintaPieza(nodo, p){
+    var art = document.createElement("article");
+    art.className = "pieza"+(p.fuente==="local"?" local":"");
+    art.innerHTML =
+      "<header><h3>"+esc(nodo.icono||"")+" "+esc(nodo.rol)+"</h3>"
+      + "<span class=\"piso\">"+esc(nodo.piso)+" · "+esc(nodo.espacio)+"</span></header>"
+      + "<p class=\"voz\">"+esc(p.voz)+"</p>"
+      + "<div class=\"abc\">"
+      + "<div><div class=\"k\">A · qué</div><p>"+esc(p.a)+"</p></div>"
+      + "<div><div class=\"k\">B · prueba</div><p>"+esc(p.b)+"</p></div>"
+      + "<div><div class=\"k\">C · dónde</div><p>"+esc(p.c)+"</p></div>"
+      + "</div>";
+    document.getElementById("feed").appendChild(art);
+    art.scrollIntoView({block:"nearest", behavior:"smooth"});
+  }
+
+  function cierraPaquete(){
+    var primero = piezas[0], foss = piezas.filter(function(x){return x.id==="sotano-foss";})[0];
+    var a = "La casa toma «"+idea+"»: cada oficio deja su pieza.";
+    var b = "Doce tarjetas visibles. Si un piso no se encendió, no trabajó.";
+    var c = "Aquí, en el recorrido. Cuando afinemos: Yokup (misión), la casa (prueba) y admira.tv si hay que emitir.";
+    if(primero) a = primero.p.a;
+    if(foss) b = foss.p.b;
+    document.getElementById("paquete-abc").innerHTML =
+      "<div><div class=\"k\">A · qué se hace</div><p>"+esc(a)+"</p></div>"
+      + "<div><div class=\"k\">B · cómo se prueba</div><p>"+esc(b)+"</p></div>"
+      + "<div><div class=\"k\">C · dónde queda</div><p>"+esc(c)+"</p></div>";
+    document.getElementById("paquete").hidden = false;
+    document.getElementById("paquete").scrollIntoView({block:"nearest", behavior:"smooth"});
+  }
+
+  function setEstado(t){ document.getElementById("estado").textContent = t; }
+
+  function reset(){
+    piezas = [];
+    document.getElementById("feed").innerHTML = "";
+    document.getElementById("paquete").hidden = true;
+    document.getElementById("cierre").classList.remove("on");
+    document.querySelectorAll(".celda").forEach(function(el){ el.classList.remove("on","habla"); });
+  }
+
+  async function correr(){
+    idea = limpia(document.getElementById("idea").value);
+    if(!idea){ document.getElementById("idea").focus(); return; }
+    var btn = document.getElementById("go");
+    btn.disabled = true;
+    reset();
+    setEstado("2 · El silicio arma · la idea entra por la portería…");
+    for(var i=0;i<RUTA.length;i++){
+      var id = RUTA[i], n = nodos[id];
+      if(!n) continue;
+      marca(id, "habla");
+      setEstado("Habla "+n.rol+" · "+n.piso+"…");
+      var p = await habla(n);
+      piezas.push({id:id, p:p});
+      marca(id, "on");
+      pintaPieza(n, p);
+    }
+    setEstado("Los doce pisos han hablado. Falta el sí.");
+    cierraPaquete();
+    btn.disabled = false;
+  }
+
+  document.getElementById("go").addEventListener("click", function(){ correr(); });
+  document.getElementById("idea").addEventListener("keydown", function(e){
+    if(e.key==="Enter" && (e.metaKey||e.ctrlKey)) correr();
+  });
+  document.getElementById("si").addEventListener("click", function(){
+    document.getElementById("cierre").classList.add("on");
+    setEstado("Cerrado. El carbono dio el sí. Prototipo: aún no escribe en Yokup.");
+  });
+  document.getElementById("otra").addEventListener("click", function(){
+    reset();
+    setEstado("El edificio espera un caso.");
+    document.getElementById("idea").focus();
+  });
+
+  fetch("incubadora.json", {cache:"no-store"}).then(function(r){ return r.json(); }).then(function(doc){
+    (doc.nodos||[]).forEach(function(n){ nodos[n.id]=n; });
+    pintaCasa();
+  }).catch(function(){
+    setEstado("No se pudo leer el plano de la incubadora. Sin vecinos no hay recorrido.");
+  });
+})();
+</script>

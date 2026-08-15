@@ -1,212 +1,124 @@
-<!-- El corte: qué hay en cada piso. Forma de la Rue, textos de esta casa. -->
+<!-- El corte, lengua de tebeo: escena primero, texto en el globo. -->
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Pisos · El corte de la Rue · AdmiraNeXT</title>
-<meta name="description" content="Resumen visual de los doce vecinos: el corte de 13 Rue del Percebe con los textos de la Incubadora.">
+<meta name="description" content="El corte de la Incubadora al modo de 13 Rue del Percebe: todas las viviendas a la vez, el texto en el globo.">
 <link rel="canonical" href="https://www.admira.live/13rue/pisos.html">
 <script src="/admira-bar.js?v=20260810-r37"></script>
 <link rel="stylesheet" href="casa-nav.css?v=20260815-r6">
 <style>
   :root{
-    --papel:#efe7d3; --tinta:#16305c; --tinta2:#2c477a;
-    --dim:#6a789a; --linea:rgba(22,48,92,.22);
-    --ambar:#e08a2e; --luz:#2f8a4e;
-    --teja:#c4452b; --comic:#f4e29a; --comic2:#efe08a; --calle:#d8c89a;
+    --papel:#efe7d3; --tinta:#111; --tinta2:#2c477a;
+    --dim:#6a789a; --ambar:#e08a2e;
     --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
     --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
   }
   *{box-sizing:border-box}
   html,body{margin:0;padding:0}
   body{
-    background:var(--papel);color:var(--tinta);font-family:var(--sans);line-height:1.4;
+    background:#f3ead2;color:#16305c;font-family:var(--sans);line-height:1.4;
     -webkit-font-smoothing:antialiased;
-    background-image:
-      linear-gradient(rgba(22,48,92,.035) 1px,transparent 1px),
-      linear-gradient(90deg,rgba(22,48,92,.035) 1px,transparent 1px);
-    background-size:26px 26px;
   }
-  .wrap{max-width:760px;margin:0 auto;padding:0 16px 80px}
+  .wrap{max-width:560px;margin:0 auto;padding:0 12px 70px}
   a{color:var(--ambar)}
-  header{padding:34px 0 8px}
-  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--tinta2);margin:0 0 10px}
-  h1{font-size:clamp(2rem,6vw,3.2rem);line-height:.98;margin:0 0 8px;font-weight:800;letter-spacing:-.035em}
-  h1 small{display:block;font-size:clamp(.95rem,2.2vw,1.15rem);font-weight:600;color:var(--tinta2);margin-top:8px}
-  .frase{margin:16px 0 0;padding:14px 16px;border:1.5px solid var(--tinta);
-    background:rgba(224,138,46,.10);font-size:.98rem;max-width:68ch}
-  .frase b{color:var(--tinta)}
+  header{padding:22px 4px 6px}
+  .eyebrow{font-family:var(--mono);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--tinta2);margin:0 0 8px}
+  h1{font-size:clamp(1.6rem,5vw,2.2rem);line-height:.98;margin:0 0 6px;font-weight:800;letter-spacing:-.03em}
+  h1 small{display:block;font-size:.95rem;font-weight:600;color:var(--tinta2);margin-top:6px}
+  .frase{margin:10px 0 0;font-size:.88rem;color:var(--tinta2);max-width:62ch}
+  .frase b{color:#16305c}
 
-  .cartel{margin:22px auto 0;max-width:680px}
-  .cielo{height:36px;background:linear-gradient(#8ec4dc,#efe7d3);border:2px solid var(--tinta);border-bottom:none;
-    display:flex;align-items:center;justify-content:center;
-    font-family:var(--mono);font-size:11px;letter-spacing:.18em;text-transform:uppercase;color:var(--tinta)}
-  .tejado{height:54px;background:
-      repeating-linear-gradient(90deg,var(--teja) 0 18px,#a83620 18px 19px);
-    border:2px solid var(--tinta);border-bottom:none;
-    clip-path:polygon(50% 0,100% 100%,0 100%);
-    display:flex;align-items:flex-end;justify-content:center;padding-bottom:6px}
-  .tejado span{font:800 13px/1 var(--sans);color:#fff;letter-spacing:.04em;text-shadow:0 1px 0 #7a2414}
-
-  .planta{display:grid;grid-template-columns:1fr 44px 1fr;border:2px solid var(--tinta);border-top:none;background:var(--comic)}
-  .planta.sotano{grid-template-columns:1fr;background:#cfc4a0}
-  .hueco{padding:10px 11px 12px;min-height:118px;position:relative}
-  .hueco + .hueco,.hueco + .shaft,.shaft + .hueco{border-left:2px solid var(--tinta)}
-  .hueco .antes{font-family:var(--mono);font-size:9px;letter-spacing:.08em;text-transform:uppercase;color:var(--tinta2);margin:0 0 3px}
-  .hueco h2{margin:0 0 4px;font-size:1.05rem;letter-spacing:-.02em;line-height:1.15}
-  .hueco .oficio{font-family:var(--mono);font-size:10px;color:var(--ambar);margin:0 0 6px}
-  .hueco p{margin:0;font-size:.86rem;color:var(--tinta);line-height:1.35}
-  .hueco .n{position:absolute;top:8px;right:8px;font-family:var(--mono);font-size:10px;font-weight:700;color:var(--tinta2)}
-
-  .shaft{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
-    background:repeating-linear-gradient(45deg,#e7d7a0 0 6px,#dfc98c 6px 7px)}
-  .shaft .em{font-size:1.1rem}
-  .shaft .lbl{font-family:var(--mono);font-size:8px;letter-spacing:.12em;color:var(--tinta);
-    writing-mode:vertical-rl;transform:rotate(180deg)}
-
-  .sotano{min-height:96px;background:#b7ad8a}
-  .base{height:14px;background:var(--tinta);margin:0}
-  .calle{border:2px solid var(--tinta);border-top:none;background:var(--calle);padding:8px 12px;
-    font-family:var(--mono);font-size:10px;letter-spacing:.16em;text-transform:uppercase;color:var(--tinta2);
-    display:flex;justify-content:space-between}
-
-  .leyenda{margin:16px 0 0;font-size:.88rem;color:var(--tinta2);max-width:68ch}
-  .leyenda b{color:var(--tinta)}
-  footer{margin-top:28px;font-family:var(--mono);font-size:11px;color:var(--dim)}
-  @media (max-width:560px){
-    .hueco{min-height:108px;padding:8px 8px 10px}
-    .hueco h2{font-size:.95rem}
-    .hueco p{font-size:.8rem}
-    .shaft{width:auto}
+  .pagina{position:relative;margin:14px auto 0;max-width:520px;
+    box-shadow:0 10px 28px rgba(20,20,20,.18);background:#fff}
+  .pagina img{display:block;width:100%;height:auto;vertical-align:top}
+  .titulo{
+    position:absolute;left:7.6%;top:3.8%;width:23.5%;height:7.2%;
+    display:flex;align-items:center;justify-content:center;text-align:center;
+    font:800 11px/1.05 var(--sans);letter-spacing:.02em;color:#111;
+    transform:rotate(-1deg);
   }
+  .titulo b{display:block;font-size:1.55em;letter-spacing:-.04em}
+
+  .globo{
+    position:absolute;background:transparent;color:#111;
+    font:700 10.5px/1.15 var(--sans);letter-spacing:-.01em;
+    text-align:center;pointer-events:none;
+  }
+  @media (min-width:480px){
+    .globo{font-size:12px}
+    .titulo{font-size:13px}
+  }
+
+  /* Coordenadas sobre la lámina 832×1248 */
+  .g-guru    {left:36.5%;top:17.6%;width:12%;}
+  .g-drones  {left:62.5%;top:15.4%;width:14%;}
+  .g-pets    {left:58.5%;top:32.6%;width:16%;}
+  .g-coli    {left:57.5%;top:47.8%;width:14%;}
+  .g-port1   {left:24.5%;top:60.6%;width:11%;}
+  .g-port2   {left:36.0%;top:60.6%;width:11%;}
+  .g-cafe    {left:76.5%;top:59.4%;width:13%;}
+  .g-nocode  {left:23.5%;top:75.8%;width:11%;}
+  .g-ux      {left:36.5%;top:75.8%;width:11%;}
+  .g-foss    {left:22%;top:91.5%;width:18%;font-size:11px}
+
+  .placa{
+    position:absolute;font:800 8px/1 var(--sans);letter-spacing:.08em;
+    text-transform:uppercase;background:#ffd84a;border:2px solid #111;padding:2px 5px;color:#111;
+  }
+  .p-port{left:48%;top:57.6%}
+
+  .clave{margin:16px 0 0;border:2px solid #111;background:#fff8d6}
+  .clave h2{margin:0;padding:8px 10px;border-bottom:2px solid #111;font-size:.82rem;letter-spacing:.08em;text-transform:uppercase}
+  .clave ol{margin:0;padding:8px 10px 10px 28px;columns:1;font-size:.82rem}
+  .clave b{color:#111}
+  .clave i{color:#666;font-style:normal}
+  footer{margin-top:18px;font-family:var(--mono);font-size:11px;color:var(--dim)}
+  @media (min-width:520px){.clave ol{columns:2;column-gap:18px}}
 </style>
 
 <div class="wrap">
   <header>
-    <p class="eyebrow">La casa · de un vistazo</p>
-    <h1>Pisos<small>El corte de la Rue, con nuestros textos</small></h1>
-    <p class="frase">Misma forma de mirar que <b>13 Rue del Percebe</b>: todas las viviendas a la vez.
-      Los dibujos son nuestros. Los textos, también: cada casilla dice <b>quién era</b> y
-      <b>quién es ahora</b>. La obra de Ibáñez es suya.</p>
+    <p class="eyebrow">La casa · el corte</p>
+    <h1>Pisos<small>Como la Rue: se ve todo a la vez</small></h1>
+    <p class="frase">Misma página que el tebeo: <b>tejado, muro, escalera, sótano, globos</b>.
+      El dibujo es nuestro. Las frases, también. Ibáñez es Ibáñez.</p>
     <nav class="casa-nav" data-casa-nav></nav>
     <script src="casa-nav.js?v=20260815-r6"></script>
   </header>
 
-  <div class="cartel" role="img" aria-label="Edificio en sección con doce vecinos">
-    <div class="cielo">admira.live / 13rue · incubadora v1.0</div>
-    <div class="tejado"><span>13 RUE · INCUBADORA</span></div>
+  <div class="pagina" role="img" aria-label="Corte de la Incubadora al modo de 13 Rue del Percebe">
+    <img src="media/pisos-corte.jpg" width="832" height="1248" alt="">
+    <div class="titulo"><b>13</b>RUE DEL<br>INCUBADORA</div>
 
-    <div class="planta">
-      <div class="hueco">
-        <span class="n">ÁTICO IZQ</span>
-        <p class="antes">antes · Manolo el moroso</p>
-        <h2>Gurú de la IA</h2>
-        <p class="oficio">Prompt engineer vendehumos</p>
-        <p>Promete el 10x en 48 horas. Debe tres meses de los 10 m². Si llega la factura de la API, monta un webinar.</p>
-      </div>
-      <div class="shaft"><span class="em">🛗</span><span class="lbl">ÁTICO</span></div>
-      <div class="hueco">
-        <span class="n">TEJADO</span>
-        <p class="antes">antes · gato y ratón</p>
-        <h2>Puerto Deliveries</h2>
-        <p class="oficio">Drones autónomos</p>
-        <p>ETA, ruta, carga. Esquivan palomas mutantes y un robot jubilado que persigue el láser de las 5G.</p>
-      </div>
-    </div>
-
-    <div class="planta">
-      <div class="hueco">
-        <span class="n">3º IZQ</span>
-        <p class="antes">antes · Don Vidal, el sastre</p>
-        <h2>Estudio UX/UI</h2>
-        <p class="oficio">Agencia boutique de Figma</p>
-        <p>No deciden ni la comida sin un Design Sprint. Pánico si la alerta no respeta el sistema de diseño.</p>
-      </div>
-      <div class="shaft"><span class="lbl">3</span></div>
-      <div class="hueco">
-        <span class="n">3º DER</span>
-        <p class="antes">antes · el contratista chapucero</p>
-        <h2>Imperio No-Code</h2>
-        <p class="oficio">Zapier / Airtable</p>
-        <p>Setenta automatizaciones y una coma las tira. «Totalmente escalable. No toques ese campo.»</p>
-      </div>
-    </div>
-
-    <div class="planta">
-      <div class="hueco">
-        <span class="n">2º IZQ</span>
-        <p class="antes">antes · Celedonio, el ladrón</p>
-        <h2>Hacker sombrero gris</h2>
-        <p class="oficio">Pentester IoT</p>
-        <p>Vive a oscuras. Toca la nevera y la tostadora «por probar». De ahí salen casi todas las anomalías.</p>
-      </div>
-      <div class="shaft"><span class="lbl">2</span></div>
-      <div class="hueco">
-        <span class="n">2º DER</span>
-        <p class="antes">antes · la señora de los animales</p>
-        <h2>Taller Pet-Tech</h2>
-        <p class="oficio">Hardware IoT de mascotas</p>
-        <p>Dispensadores con reconocimiento facial. El gato-robot se ha vuelto a escapar por el pasillo.</p>
-      </div>
-    </div>
-
-    <div class="planta">
-      <div class="hueco">
-        <span class="n">1º IZQ</span>
-        <p class="antes">antes · Don Alcornoque</p>
-        <h2>DeepTech &amp; Biotech</h2>
-        <p class="oficio">Biología sintética</p>
-        <p>Carne en la bañera, hongos con Wi-Fi. Todo riesgo es «un margen aceptable».</p>
-      </div>
-      <div class="shaft"><span class="lbl">1</span></div>
-      <div class="hueco">
-        <span class="n">1º DER</span>
-        <p class="antes">antes · la pensión de Doña Rita</p>
-        <h2>Coliving nómadas</h2>
-        <p class="oficio">Hub de criptobros</p>
-        <p>Doce en literas. Mindset, Bali y se roban la banda del pasillo para la videollamada.</p>
-      </div>
-    </div>
-
-    <div class="planta">
-      <div class="hueco">
-        <span class="n">PB IZQ</span>
-        <p class="antes">antes · Leonor, la portera</p>
-        <h2>Chief of Happiness</h2>
-        <p class="oficio">Community manager</p>
-        <p>Lee todos los canales. Sabe quién quiebra y quién dejó el táper. Nada se le escapa.</p>
-      </div>
-      <div class="shaft"><span class="em">🛗</span><span class="lbl">PB · 30s</span></div>
-      <div class="hueco">
-        <span class="n">PB DER</span>
-        <p class="antes">antes · Senén, el colmado</p>
-        <h2>Cripto-Café Web3</h2>
-        <p class="oficio">Barista / hub de gas</p>
-        <p>Gas fee dinámica. Juzga la leche normal. Si te despistas, te mintea un muffin.</p>
-      </div>
-    </div>
-
-    <div class="planta">
-      <div class="hueco" style="background:#efe08a">
-        <p class="antes">antes · las trampas de la Rue</p>
-        <h2>El ascensor · API</h2>
-        <p class="oficio">Guardián del pitch</p>
-        <p>Treinta segundos para subir. «Disrupción», «sinergia» o «Web3»: rechazado, humo detectado.</p>
-      </div>
-      <div class="shaft"><span class="lbl">API</span></div>
-      <div class="hueco sotano">
-        <p class="antes">antes · Don Hurón, la alcantarilla</p>
-        <h2>El Bootstrapper FOSS</h2>
-        <p class="oficio">Dev de sótano</p>
-        <p>ThinkPad, bash, sin dependencias. El VC es el enemigo. Eso lo hace un cron.</p>
-      </div>
-    </div>
-
-    <div class="base"></div>
-    <div class="calle"><span>nivel de calle</span><span>camino de ieu.ai</span></div>
+    <div class="globo g-guru">¡10x en<br>48 horas!</div>
+    <div class="globo g-drones">¡ETA ok!<br>¡paloma a babor!</div>
+    <div class="globo g-pets">¡se ha escapado<br>otra vez!</div>
+    <div class="globo g-coli">¡nos vemos<br>en Bali!</div>
+    <div class="globo g-port1">¿cómo lo estás<br>viviendo?</div>
+    <div class="globo g-port2">¡me ha<br>llegado que…!</div>
+    <div class="globo g-cafe">¿leche<br>NORMAL?</div>
+    <div class="globo g-nocode">¡no toques<br>ese campo!</div>
+    <div class="globo g-ux">¡hagamos<br>un sprint!</div>
+    <div class="globo g-foss">hazlo con un bash.<br>el vc es el enemigo.</div>
+    <div class="placa p-port">Portería</div>
   </div>
 
-  <p class="leyenda">Ibáñez miraba así el vecindario: <b>nadie manda, todos se ven</b>.
-    Aquí cada vivienda es un agente. El corte no se copia: se traduce.
-    Para hablarles, la <a href="/13rue/">Incubadora</a>. Para meter un caso, <a href="/13rue/implementar">Implementar</a>.</p>
+  <div class="clave">
+    <h2>Quién es quién · de arriba abajo</h2>
+    <ol>
+      <li><b>Gurú de la IA</b> <i>· era Manolo el moroso</i></li>
+      <li><b>Puerto Deliveries</b> <i>· eran el gato y el ratón</i></li>
+      <li><b>Hacker sombrero gris</b> <i>· era Celedonio</i></li>
+      <li><b>Taller Pet-Tech</b> <i>· era la señora de los animales</i></li>
+      <li><b>DeepTech &amp; Biotech</b> <i>· era Don Alcornoque</i></li>
+      <li><b>Coliving nómadas</b> <i>· era la pensión de Doña Rita</i></li>
+      <li><b>Chief of Happiness</b> <i>· era Leonor</i></li>
+      <li><b>Cripto-Café</b> <i>· era el colmado Senén</i></li>
+      <li><b>Imperio No-Code + UX</b> <i>· eran sastre y contratista</i></li>
+      <li><b>El sótano FOSS</b> <i>· era Don Hurón</i></li>
+      <li><b>La escalera</b> <i>· era el ascensor tramposo · 30 s o humo</i></li>
+    </ol>
+  </div>
 
-  <footer>AdmiraNeXT · el corte · 15 ago 2026 · caja 8 · homenaje de forma, no de dibujo</footer>
+  <footer>AdmiraNeXT · el corte · caja 8 · forma de tebeo, dibujo propio</footer>
 </div>

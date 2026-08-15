@@ -1,0 +1,131 @@
+<!-- VideoDemo — el TikTok que explica el gráfico. Caja 5. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>VideoDemo · Qué hacemos · AdmiraNeXT</title>
+<meta name="description" content="Vídeo de 15 segundos, 9:16, que explica el gráfico de AdmiraNeXT: silicio hace, carbono decide, vender-hacer-emitir.">
+<link rel="canonical" href="https://www.admira.live/13rue/videodemo.html">
+<script src="/admira-bar.js?v=20260810-r37"></script>
+<link rel="stylesheet" href="casa-nav.css?v=20260815-r3">
+<style>
+  :root{
+    --papel:#efe7d3; --papel2:#e7dcc2; --tinta:#16305c; --tinta2:#2c477a;
+    --dim:#6a789a; --linea:rgba(22,48,92,.22); --linea2:rgba(22,48,92,.4);
+    --ambar:#e08a2e; --luz:#2f8a4e;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--papel);color:var(--tinta);font-family:var(--sans);line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+    background-image:
+      linear-gradient(rgba(22,48,92,.035) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(22,48,92,.035) 1px,transparent 1px);
+    background-size:26px 26px;
+  }
+  .wrap{max-width:980px;margin:0 auto;padding:0 20px 80px}
+  a{color:var(--ambar)}
+  header{padding:38px 0 10px}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--tinta2);margin:0 0 10px}
+  h1{font-size:clamp(2.1rem,6vw,3.4rem);line-height:.98;margin:0 0 8px;font-weight:800;letter-spacing:-.035em}
+  h1 small{display:block;font-size:clamp(.95rem,2.2vw,1.2rem);font-weight:600;color:var(--tinta2);margin-top:8px}
+  .frase{
+    margin:18px 0 0;padding:16px 18px;border:1.5px solid var(--tinta);
+    background:rgba(224,138,46,.10);font-size:1.04rem;line-height:1.45;max-width:68ch;
+  }
+  .frase b{color:var(--tinta)}
+  .duo{display:grid;grid-template-columns:minmax(0,320px) minmax(0,1fr);gap:28px;align-items:start;margin:28px 0 0}
+  .phone{
+    border:1.5px solid var(--tinta);background:#111;padding:10px;
+    box-shadow:0 18px 40px rgba(22,48,92,.18);
+  }
+  .phone video{display:block;width:100%;height:auto;background:#000;aspect-ratio:9/16}
+  .guion{border:1.5px solid var(--tinta);background:rgba(255,255,255,.34);padding:16px 18px}
+  .guion h2{margin:0 0 10px;font-family:var(--mono);font-size:12px;letter-spacing:.16em;text-transform:uppercase;color:var(--tinta2)}
+  .guion p{margin:0 0 12px;color:var(--tinta);font-size:1.02rem}
+  .beats{margin:0;padding:0;list-style:none}
+  .beats li{border-top:1px solid var(--linea);padding:10px 0;display:grid;grid-template-columns:52px 1fr;gap:10px}
+  .beats .k{font-family:var(--mono);font-size:11px;color:var(--ambar);letter-spacing:.08em}
+  .beats b{display:block}
+  .beats span{color:var(--tinta2);font-size:.9rem}
+  .tabla{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:22px 0 0}
+  .tabla figure{margin:0;border:1.5px solid var(--tinta);background:rgba(255,255,255,.28);padding:8px}
+  .tabla img{display:block;width:100%;height:auto;aspect-ratio:9/16;object-fit:cover}
+  .tabla figcaption{font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--tinta2);margin-top:8px}
+  .nota{margin:18px 0 0;color:var(--tinta2);font-size:.92rem;max-width:68ch}
+  .nota b{color:var(--tinta)}
+  footer{margin-top:36px;font-family:var(--mono);font-size:11px;color:var(--dim)}
+  @media (max-width:760px){
+    .duo,.tabla{grid-template-columns:1fr}
+    .phone{max-width:320px;margin:0 auto}
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">La casa · el vídeo</p>
+    <h1>VideoDemo<small>Quince segundos que explican el gráfico</small></h1>
+    <p class="frase">Mismo contrato que el <a href="https://www.admiranext.com/tiktok/">creador de TikToks</a>:
+      <b>15 s · 9:16</b>, tres escenas, Pix Fusion. El dibujo del
+      <a href="/13rue/grafico">gráfico</a> puesto en movimiento: el silicio hace, el carbono decide,
+      y todo aterriza en vender, hacer o emitir.</p>
+    <nav class="casa-nav" data-casa-nav></nav>
+    <script src="casa-nav.js?v=20260815-r3"></script>
+  </header>
+
+  <div class="duo">
+    <div class="phone">
+      <video
+        src="media/videodemo.mp4"
+        poster="media/shot-1.jpg"
+        controls
+        playsinline
+        preload="metadata"
+        aria-label="VideoDemo de 15 segundos: qué hacemos">
+      </video>
+    </div>
+    <div class="guion">
+      <h2>El guion · Pix Fusion</h2>
+      <p>«Atajo detectado. Una sola puerta. El silicio hace. El carbono decide.
+        Entras. El silicio arma el paquete. Tú das el sí. Vender, hacer o emitir.
+        Si no llega ahí, no ha pasado. Menos clics. Más hecho.»</p>
+      <ol class="beats">
+        <li>
+          <span class="k">0–3 s</span>
+          <div><b>Gancho</b><span>Demasiadas pantallas. Hace falta una puerta.</span></div>
+        </li>
+        <li>
+          <span class="k">3–11 s</span>
+          <div><b>Acción</b><span>Entras · el silicio arma · el carbono da el sí.</span></div>
+        </li>
+        <li>
+          <span class="k">11–15 s</span>
+          <div><b>Cierre</b><span>Vender · hacer · emitir. Si no aterriza, no ha pasado.</span></div>
+        </li>
+      </ol>
+    </div>
+  </div>
+
+  <div class="tabla" aria-label="Storyboard de las tres escenas">
+    <figure>
+      <img src="media/shot-1.jpg" alt="Escena 1: el robot frente a demasiadas pantallas">
+      <figcaption>1 · Atajo detectado</figcaption>
+    </figure>
+    <figure>
+      <img src="media/shot-2.jpg" alt="Escena 2: el ciclo, el paquete y el sí">
+      <figcaption>2 · El silicio arma</figcaption>
+    </figure>
+    <figure>
+      <img src="media/shot-3.jpg" alt="Escena 3: vender, hacer, emitir">
+      <figcaption>3 · Tres patas</figcaption>
+    </figure>
+  </div>
+
+  <p class="nota">Plan generado con <b>TikTokCore</b>, el mismo motor de
+    <a href="https://www.admiranext.com/tiktok/">admiranext.com/tiktok</a>.
+    Fotogramas Grok Imagine, 9:16, sin texto en cuadro — el contrato del estudio.
+    El relato escrito vive en el <a href="/13rue/grafico">gráfico</a>.</p>
+
+  <footer>AdmiraNeXT · VideoDemo · 15 ago 2026 · 15s · 1080×1920 · caja 5</footer>
+</div>

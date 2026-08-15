@@ -1,0 +1,16 @@
+{
+  "version": "admiranext-tiktok-plan-v1",
+  "page": "/13rue/videodemo",
+  "explains": "https://www.admira.live/13rue/grafico",
+  "studio": "https://www.admiranext.com/tiktok/",
+  "duration": 15,
+  "format": { "width": 1080, "height": 1920, "aspectRatio": "9:16" },
+  "presenter": "fusion",
+  "script": "Atajo detectado. Una sola puerta. El silicio hace. El carbono decide. Entras. El silicio arma el paquete. Tú das el sí. Vender, hacer o emitir. Si no llega ahí, no ha pasado. Menos clics. Más hecho.",
+  "scenes": [
+    { "id": "hook", "from": 0, "to": 3, "label": "ATAJO DETECTADO", "file": "shot-1.jpg" },
+    { "id": "action", "from": 3, "to": 11, "label": "EL SILICIO ARMA", "file": "shot-2.jpg" },
+    { "id": "result", "from": 11, "to": 15, "label": "TRES PATAS", "file": "shot-3.jpg" }
+  ],
+  "video": "videodemo.mp4"
+}

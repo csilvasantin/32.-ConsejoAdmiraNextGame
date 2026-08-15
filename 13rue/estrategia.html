@@ -1,0 +1,269 @@
+<!-- Estrategia de la suite — una puerta que aúna lo que ya existe. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Estrategia · Suite agentica · AdmiraNeXT</title>
+<meta name="description" content="La suite agentica de AdmiraNeXT: una puerta que junta presentaciones, presupuestos, informes, Yokup y el CMS para que el silicio haga el trabajo pesado y el carbono decida.">
+<link rel="canonical" href="https://www.admira.live/13rue/estrategia.html">
+<script src="/admira-bar.js?v=20260810-r37"></script>
+<style>
+  :root{
+    --papel:#efe7d3; --papel2:#e7dcc2; --tinta:#16305c; --tinta2:#2c477a;
+    --dim:#6a789a; --linea:rgba(22,48,92,.22); --linea2:rgba(22,48,92,.4);
+    --ambar:#e08a2e; --luz:#2f8a4e; --obra:#c9761c;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--papel);color:var(--tinta);font-family:var(--sans);line-height:1.6;
+    -webkit-font-smoothing:antialiased;
+    background-image:
+      linear-gradient(rgba(22,48,92,.035) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(22,48,92,.035) 1px,transparent 1px);
+    background-size:26px 26px;
+  }
+  .wrap{max-width:880px;margin:0 auto;padding:0 20px 90px}
+  a{color:var(--ambar)}
+  header{padding:38px 0 10px}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--tinta2);margin:0 0 10px}
+  h1{font-size:clamp(2.2rem,6vw,3.6rem);line-height:.98;margin:0 0 8px;font-weight:800;letter-spacing:-.035em}
+  h1 small{display:block;font-size:clamp(.95rem,2.2vw,1.25rem);font-weight:600;color:var(--tinta2);margin-top:10px}
+  .frase{
+    margin:22px 0 0;padding:18px 20px;border:1.5px solid var(--tinta);
+    background:rgba(224,138,46,.10);font-size:1.08rem;line-height:1.45;
+  }
+  .frase b{color:var(--tinta)}
+  .volver{display:inline-flex;gap:8px;align-items:center;font-family:var(--mono);font-size:11px;
+    letter-spacing:.12em;text-transform:uppercase;text-decoration:none;color:var(--tinta2);margin-top:22px}
+  .volver:hover{color:var(--ambar)}
+  nav.salta{display:flex;flex-wrap:wrap;gap:8px;margin:22px 0 0}
+  nav.salta a{
+    font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;
+    text-decoration:none;color:var(--tinta);border:1.5px solid var(--linea2);padding:6px 9px;
+  }
+  nav.salta a:hover{border-color:var(--ambar);color:var(--ambar)}
+
+  h2{font-size:1.25rem;margin:42px 0 12px;letter-spacing:-.015em;
+    font-family:var(--mono);font-size:13px;letter-spacing:.16em;text-transform:uppercase;color:var(--tinta2);
+    display:flex;align-items:center;gap:12px}
+  h2::after{content:"";flex:1;height:1px;background:var(--linea)}
+  h2 .n{color:var(--ambar);letter-spacing:.04em}
+  p.lede{color:var(--tinta2);margin:0 0 16px;max-width:68ch}
+  p.lede b{color:var(--tinta)}
+
+  .abc{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin:0 0 8px}
+  .card{border:1.5px solid var(--tinta);background:rgba(255,255,255,.30);padding:16px 16px 14px}
+  .card .k{font-family:var(--mono);font-size:11px;letter-spacing:.14em;color:var(--ambar);margin:0 0 6px}
+  .card h3{margin:0 0 8px;font-size:1.05rem;letter-spacing:-.015em}
+  .card p{margin:0;color:var(--tinta2);font-size:.92rem}
+  .card p b{color:var(--tinta)}
+  .card a{color:var(--tinta);border-bottom:1px solid var(--linea2);text-decoration:none}
+  .card.luz{border-color:var(--luz)}
+  .noes .card{background:rgba(22,48,92,.04)}
+
+  .ciclo{display:grid;grid-template-columns:1fr auto 1fr auto 1fr;gap:8px;align-items:stretch;margin:8px 0 0}
+  .ciclo .flecha{align-self:center;color:var(--ambar);font-family:var(--mono);font-size:18px}
+
+  .lista{margin:0;padding:0;list-style:none}
+  .lista li{border-top:1px solid var(--linea);padding:12px 0;display:grid;grid-template-columns:28px 1fr;gap:12px}
+  .lista li:first-child{border-top:0;padding-top:0}
+  .lista .num{font-family:var(--mono);font-weight:700;color:var(--ambar)}
+  .lista b{color:var(--tinta)}
+  .lista span{color:var(--tinta2);display:block;font-size:.92rem;margin-top:3px}
+
+  .cierre{
+    margin:46px 0 0;padding:22px;border:1.5px solid var(--tinta);text-align:center;
+    background:linear-gradient(120deg,rgba(224,138,46,.10),rgba(47,138,78,.06));
+  }
+  .cierre .q{font-size:1.15rem;font-weight:700}
+  .cierre .a{margin-top:8px;color:var(--tinta2);font-size:.92rem}
+
+  footer{margin-top:36px;font-family:var(--mono);font-size:11px;color:var(--dim)}
+  @media (max-width:720px){
+    .abc,.ciclo{grid-template-columns:1fr}
+    .ciclo .flecha{display:none}
+  }
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">La casa de los productos · definición</p>
+    <h1>Estrategia<small>La suite que junta lo que ya hacemos</small></h1>
+    <p class="frase">Queremos <b>una sola herramienta</b> que aúne presentaciones, presupuestos, informes y el trabajo del día,
+      para que los <b>agentes de silicio</b> (la IA) hagan el trabajo pesado y los <b>agentes de carbono</b> (las personas)
+      decidan mejor, más rápido y con más ganas.</p>
+    <a class="volver" href="/13rue/implementacion">◂ Volver a la casa</a>
+    <nav class="salta" aria-label="Ir a una parte">
+      <a href="#que">1 · Qué es</a>
+      <a href="#para">2 · Para quién</a>
+      <a href="#como">3 · Cómo se usa</a>
+      <a href="#abc">Máxima a·b·c</a>
+      <a href="#une">Qué une</a>
+      <a href="#noes">Qué no es</a>
+      <a href="#primero">Los 3 primeros pasos</a>
+    </nav>
+  </header>
+
+  <h2 id="que"><span class="n">1</span> Qué es</h2>
+  <p class="lede">No es un producto nuevo al lado de los demás. Es <b>la puerta común</b> de lo que ya existe.
+    Si hay que explicar diez URLs, la suite ha fallado.</p>
+  <div class="abc">
+    <article class="card luz">
+      <p class="k">A</p>
+      <h3>Una puerta</h3>
+      <p>Entras una vez. Dices el cliente, el problema o la idea. No abres cinco pestañas.</p>
+    </article>
+    <article class="card">
+      <p class="k">B</p>
+      <h3>Las herramientas de siempre</h3>
+      <p>Por detrás siguen vivas: presentaciones, presupuestos, informes, Yokup y el CMS. No se tiran. Se enganchan.</p>
+    </article>
+    <article class="card">
+      <p class="k">C</p>
+      <h3>Un ciclo que se cierra</h3>
+      <p>No vale “generar”. Vale cuando llega a producción: una presentación enviada, un presupuesto fuera, una misión hecha, una pantalla encendida.</p>
+    </article>
+  </div>
+
+  <h2 id="para"><span class="n">2</span> Para quién</h2>
+  <p class="lede">Somos un equipo de <b>carbono + silicio</b>. La suite no sustituye a las personas.
+    Les quita lo pesado y les deja lo que solo un humano debe hacer: elegir.</p>
+  <div class="abc">
+    <article class="card">
+      <p class="k">A · Carbono</p>
+      <h3>Las personas</h3>
+      <p>Menos copiar y pegar. Más decidir. El trabajo se ve en su navegador, no dentro de la herramienta del agente.</p>
+    </article>
+    <article class="card">
+      <p class="k">B · Silicio</p>
+      <h3>Los agentes</h3>
+      <p>Tienen un sitio donde el trabajo <b>cuenta</b>: misión, prueba, puntos. No improvisan en el vacío.</p>
+    </article>
+    <article class="card">
+      <p class="k">C · La empresa</p>
+      <h3>Quien paga</h3>
+      <p>Ve de un vistazo qué se vende, qué se hace y qué se emite. Sin un informe que mienta y sin un dashboard fantasma.</p>
+    </article>
+  </div>
+
+  <h2 id="como"><span class="n">3</span> Cómo se usa — siempre 1, 2, 3</h2>
+  <p class="lede">Si no cabe en tres pasos, está mal cortado. Da igual que sea un cliente nuevo o un arreglo interno.</p>
+  <div class="ciclo">
+    <article class="card">
+      <p class="k">1 · Entras</p>
+      <h3>El caso</h3>
+      <p>Un cliente, una idea, una incidencia. Una frase basta. El silicio pregunta solo lo que falta.</p>
+    </article>
+    <div class="flecha" aria-hidden="true">→</div>
+    <article class="card">
+      <p class="k">2 · El silicio arma</p>
+      <h3>El paquete</h3>
+      <p>Presentación, presupuesto y plan de trabajo en a·b·c. Tú no abres tres generadores: se rellenan solos.</p>
+    </article>
+    <div class="flecha" aria-hidden="true">→</div>
+    <article class="card">
+      <p class="k">3 · El carbono decide</p>
+      <h3>El sí</h3>
+      <p>Miras, cambias una cosa, das el sí. Entonces se publica, se asigna y se mide. El ciclo no se queda en un borrador.</p>
+    </article>
+  </div>
+
+  <h2 id="abc">La máxima a · b · c</h2>
+  <p class="lede">Todo encargo de esta casa se parte así. Si no se puede explicar a un extraño en tres líneas, aún no está listo.</p>
+  <div class="abc">
+    <article class="card">
+      <p class="k">A</p>
+      <h3>Qué se hace</h3>
+      <p>Una acción concreta. No “mejorar la plataforma”. Sí “montar la presentación del cliente X”.</p>
+    </article>
+    <article class="card">
+      <p class="k">B</p>
+      <h3>Cómo se prueba</h3>
+      <p>Una evidencia que se ve: un enlace, un PDF, una captura, una pantalla encendida. Sin prueba no hay cierre.</p>
+    </article>
+    <article class="card">
+      <p class="k">C</p>
+      <h3>Dónde queda</h3>
+      <p>Yokup lo anota. El Highscore lo cuenta. La casa lo enseña. Lo que solo ve uno, no existe.</p>
+    </article>
+  </div>
+
+  <h2 id="une">Qué une — las tres patas que ya tenemos</h2>
+  <p class="lede">La suite no inventa un cuarto mundo. Junta <b>tres sitios que ya laten</b>.</p>
+  <div class="abc">
+    <article class="card">
+      <p class="k">1 · Vender</p>
+      <h3>AdmiraNeXT</h3>
+      <p><a href="https://www.admiranext.com/presentaciones">Presentaciones</a>,
+        <a href="https://www.admiranext.com/presupuestos/">presupuestos</a>,
+        <a href="https://www.admiranext.com/presites">presites</a>.
+        Aquí se conquista al cliente.</p>
+    </article>
+    <article class="card">
+      <p class="k">2 · Hacer</p>
+      <h3>Yokup</h3>
+      <p><a href="https://www.yokup.com/misiones">Misiones</a>, tareas a·b·c,
+        <a href="https://www.yokup.com/highscore">Highscore</a>.
+        Aquí el silicio trabaja y se ve quién produjo qué.</p>
+    </article>
+    <article class="card">
+      <p class="k">3 · Emitir</p>
+      <h3>Admira.tv</h3>
+      <p><a href="https://admira.tv/cms">CMS</a>, players, parrilla.
+        Aquí las cosas se conectan a Internet: la pantalla, la tienda, el robot.</p>
+    </article>
+  </div>
+  <p class="lede" style="margin-top:14px">Los <a href="/13rue/informes/">informes</a> no son una cuarta pata: son el
+    <b>relato de las tres</b>. Si un número no sale de Yokup, del CMS o del presupuesto, no se escribe.</p>
+
+  <h2 id="noes">Qué no es</h2>
+  <div class="abc noes">
+    <article class="card">
+      <p class="k">A</p>
+      <h3>No es otro dashboard</h3>
+      <p>Si solo enseña gráficos y no cierra un ciclo, es decorado.</p>
+    </article>
+    <article class="card">
+      <p class="k">B</p>
+      <h3>No es un chatbot suelto</h3>
+      <p>Un agente que habla y no deja huella en Yokup no ha trabajado.</p>
+    </article>
+    <article class="card">
+      <p class="k">C</p>
+      <h3>No sustituye al carbono</h3>
+      <p>El humano da el sí. El silicio no publica dinero, permisos ni verdades sin prueba.</p>
+    </article>
+  </div>
+
+  <h2 id="primero">Los 3 primeros pasos — para que esto deje de ser un texto</h2>
+  <p class="lede">Una estrategia que no se puede empezar el lunes no es estrategia. Esto sí se puede.</p>
+  <ol class="lista">
+    <li>
+      <span class="num">1</span>
+      <div><b>La puerta.</b>
+        <span>Una página (esta suite) que pide: ¿quién es el cliente? ¿qué necesita? A partir de ahí abre sola presentación, presupuesto e informe. Sin menú de diez destinos.</span></div>
+    </li>
+    <li>
+      <span class="num">2</span>
+      <div><b>El plan a·b·c automático.</b>
+        <span>Cada caso nace en Yokup como misión de tres tareas. El silicio las ejecuta. El carbono las ve en /misiones. Si no aparece ahí, no pasó.</span></div>
+    </li>
+    <li>
+      <span class="num">3</span>
+      <div><b>El cierre visible.</b>
+        <span>Al terminar: el PDF o la web en el navegador de la persona, el punto en el Highscore y, si toca emitir, la vivienda del CMS encendida. Tres pruebas. Ninguna es un “listo” oral.</span></div>
+    </li>
+  </ol>
+
+  <div class="cierre">
+    <div class="q">Silicio que trabaja. Carbono que decide. Empresa que se ve.</div>
+    <div class="a">Eso es la suite. Lo demás es herramienta al servicio de esas tres frases.</div>
+  </div>
+
+  <footer>
+    AdmiraNeXT · definición de estrategia · 15 ago 2026 · opinión para decidir, no un contrato de plazos ·
+    <a href="/13rue/timeline">timeline de la casa</a> ·
+    <a href="/13rue/implementacion">plano</a>
+  </footer>
+</div>

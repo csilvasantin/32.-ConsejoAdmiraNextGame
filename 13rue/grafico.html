@@ -1,0 +1,177 @@
+<!-- Gráfico de un vistazo: qué estamos haciendo, sin diez URLs. -->
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Gráfico · Qué hacemos · AdmiraNeXT</title>
+<meta name="description" content="Un gráfico simple: carbono decide, silicio hace, y todo aterriza en vender, hacer o emitir.">
+<link rel="canonical" href="https://www.admira.live/13rue/grafico.html">
+<script src="/admira-bar.js?v=20260810-r37"></script>
+<link rel="stylesheet" href="casa-nav.css?v=20260815-r2">
+<style>
+  :root{
+    --papel:#efe7d3; --papel2:#e7dcc2; --tinta:#16305c; --tinta2:#2c477a;
+    --dim:#6a789a; --linea:rgba(22,48,92,.22); --linea2:rgba(22,48,92,.4);
+    --ambar:#e08a2e; --luz:#2f8a4e;
+    --mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;padding:0}
+  body{
+    background:var(--papel);color:var(--tinta);font-family:var(--sans);line-height:1.55;
+    -webkit-font-smoothing:antialiased;
+    background-image:
+      linear-gradient(rgba(22,48,92,.035) 1px,transparent 1px),
+      linear-gradient(90deg,rgba(22,48,92,.035) 1px,transparent 1px);
+    background-size:26px 26px;
+  }
+  .wrap{max-width:980px;margin:0 auto;padding:0 20px 80px}
+  a{color:var(--ambar)}
+  header{padding:38px 0 10px}
+  .eyebrow{font-family:var(--mono);font-size:12px;letter-spacing:.22em;text-transform:uppercase;color:var(--tinta2);margin:0 0 10px}
+  h1{font-size:clamp(2.1rem,6vw,3.4rem);line-height:.98;margin:0 0 8px;font-weight:800;letter-spacing:-.035em}
+  h1 small{display:block;font-size:clamp(.95rem,2.2vw,1.2rem);font-weight:600;color:var(--tinta2);margin-top:8px}
+  .frase{
+    margin:18px 0 0;padding:16px 18px;border:1.5px solid var(--tinta);
+    background:rgba(224,138,46,.10);font-size:1.04rem;line-height:1.45;max-width:68ch;
+  }
+  .frase b{color:var(--tinta)}
+  .lienzo{margin:28px 0 0;border:1.5px solid var(--tinta);background:rgba(255,255,255,.34);padding:12px 8px 8px}
+  svg#que{display:block;width:100%;height:auto}
+  .leyenda{margin:16px 0 0;color:var(--tinta2);font-size:.92rem;max-width:68ch}
+  .leyenda b{color:var(--tinta)}
+  footer{margin-top:36px;font-family:var(--mono);font-size:11px;color:var(--dim)}
+</style>
+
+<div class="wrap">
+  <header>
+    <p class="eyebrow">La casa · de un vistazo</p>
+    <h1>Gráfico<small>Qué estamos haciendo, en un dibujo</small></h1>
+    <p class="frase">Una puerta. El <b>silicio hace</b> el trabajo pesado. El <b>carbono decide</b>.
+      Todo aterriza en una de tres patas que ya existen: <b>vender, hacer o emitir</b>.
+      Si no llega ahí, no ha pasado.</p>
+    <nav class="casa-nav" data-casa-nav></nav>
+    <script src="casa-nav.js?v=20260815-r2"></script>
+  </header>
+
+  <div class="lienzo">
+    <svg id="que" viewBox="0 0 940 620" role="img" aria-labelledby="que-titulo que-desc">
+      <title id="que-titulo">Qué hacemos</title>
+      <desc id="que-desc">
+        Carbono (personas) decide y silicio (agentes) hace.
+        Se usa en tres pasos: entras, el silicio arma, el carbono da el sí.
+        Cada encargo se parte en a qué se hace, b cómo se prueba, c dónde queda.
+        Aterriza en vender (AdmiraNeXT), hacer (Yokup) o emitir (admira.tv).
+      </desc>
+
+      <defs>
+        <style>
+          .tinta{fill:#16305c}
+          .tinta2{fill:#2c477a}
+          .dim{fill:#6a789a}
+          .ambar{fill:#e08a2e}
+          .papel{fill:rgba(255,255,255,.55)}
+          .papel2{fill:rgba(224,138,46,.10)}
+          .papel3{fill:rgba(47,138,78,.08)}
+          .trazo{stroke:#16305c;stroke-width:1.5}
+          .trazo-ambar{fill:none;stroke:#e08a2e;stroke-width:1.6}
+          .lbl{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:11px;letter-spacing:.14em}
+          .num{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;font-size:28px;font-weight:700}
+          .tit{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;font-size:18px;font-weight:700}
+          .sub{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif;font-size:13px}
+        </style>
+        <marker id="flecha" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto-start-reverse">
+          <path d="M0 1.2 L9 5 L0 8.8 Z" fill="#e08a2e"/>
+        </marker>
+      </defs>
+
+      <!-- 0 · el equipo -->
+      <text class="lbl dim" x="24" y="28">EL EQUIPO</text>
+      <rect class="papel trazo" x="24" y="40" width="400" height="86"/>
+      <text class="lbl ambar" x="44" y="66">CARBONO</text>
+      <text class="tit tinta" x="44" y="92">Las personas</text>
+      <text class="sub tinta2" x="44" y="112">Deciden. Dan el sí. No copian y pegan.</text>
+
+      <text class="num ambar" x="446" y="96" text-anchor="middle">+</text>
+
+      <rect class="papel trazo" x="516" y="40" width="400" height="86"/>
+      <text class="lbl ambar" x="536" y="66">SILICIO</text>
+      <text class="tit tinta" x="536" y="92">Los agentes</text>
+      <text class="sub tinta2" x="536" y="112">Hacen el trabajo pesado. Dejan prueba.</text>
+
+      <!-- 1 · el uso -->
+      <text class="lbl dim" x="24" y="164">CÓMO SE USA · SIEMPRE 1 · 2 · 3</text>
+
+      <rect class="papel trazo" x="24" y="176" width="268" height="118"/>
+      <text class="num ambar" x="44" y="214">1</text>
+      <text class="tit tinta" x="80" y="212">Entras</text>
+      <text class="sub tinta2" x="44" y="240">El caso.</text>
+      <text class="sub tinta2" x="44" y="260">Cliente, idea o incidencia.</text>
+      <text class="sub tinta2" x="44" y="278">Una frase basta.</text>
+
+      <line class="trazo-ambar" x1="302" y1="235" x2="334" y2="235" marker-end="url(#flecha)"/>
+
+      <rect class="papel2 trazo" x="336" y="176" width="268" height="118"/>
+      <text class="num ambar" x="356" y="214">2</text>
+      <text class="tit tinta" x="392" y="212">El silicio arma</text>
+      <text class="sub tinta2" x="356" y="240">El paquete.</text>
+      <text class="sub tinta2" x="356" y="260">Presentación, presupuesto</text>
+      <text class="sub tinta2" x="356" y="278">y plan. Tú no abres tres apps.</text>
+
+      <line class="trazo-ambar" x1="614" y1="235" x2="646" y2="235" marker-end="url(#flecha)"/>
+
+      <rect class="papel trazo" x="648" y="176" width="268" height="118"/>
+      <text class="num ambar" x="668" y="214">3</text>
+      <text class="tit tinta" x="704" y="212">El carbono decide</text>
+      <text class="sub tinta2" x="668" y="240">El sí.</text>
+      <text class="sub tinta2" x="668" y="260">Se publica, se asigna</text>
+      <text class="sub tinta2" x="668" y="278">y se mide. No queda en borrador.</text>
+
+      <!-- 2 · la máxima -->
+      <text class="lbl dim" x="24" y="328">LA MÁXIMA · SI NO CABE AQUÍ, NO ESTÁ LISTO</text>
+
+      <rect class="papel trazo" x="24" y="340" width="288" height="72"/>
+      <text class="lbl ambar" x="40" y="366">A</text>
+      <text class="tit tinta" x="64" y="368">Qué se hace</text>
+      <text class="sub tinta2" x="40" y="392">Una acción concreta. No un deseo.</text>
+
+      <rect class="papel trazo" x="326" y="340" width="288" height="72"/>
+      <text class="lbl ambar" x="342" y="366">B</text>
+      <text class="tit tinta" x="366" y="368">Cómo se prueba</text>
+      <text class="sub tinta2" x="342" y="392">Enlace, PDF, captura, pantalla.</text>
+
+      <rect class="papel trazo" x="628" y="340" width="288" height="72"/>
+      <text class="lbl ambar" x="644" y="366">C</text>
+      <text class="tit tinta" x="668" y="368">Dónde queda</text>
+      <text class="sub tinta2" x="644" y="392">Yokup lo anota. La casa lo enseña.</text>
+
+      <!-- 3 · las patas -->
+      <text class="lbl dim" x="24" y="448">DÓNDE ATERRIZA · TRES PATAS QUE YA LATEN</text>
+
+      <rect class="papel3 trazo" x="24" y="460" width="288" height="96"/>
+      <text class="lbl ambar" x="40" y="484">1 · VENDER</text>
+      <text class="tit tinta" x="40" y="510">AdmiraNeXT</text>
+      <text class="sub tinta2" x="40" y="532">Presentaciones · presupuestos · presites</text>
+
+      <rect class="papel3 trazo" x="326" y="460" width="288" height="96"/>
+      <text class="lbl ambar" x="342" y="484">2 · HACER</text>
+      <text class="tit tinta" x="342" y="510">Yokup</text>
+      <text class="sub tinta2" x="342" y="532">Misiones · highscore · la prueba</text>
+
+      <rect class="papel3 trazo" x="628" y="460" width="288" height="96"/>
+      <text class="lbl ambar" x="644" y="484">3 · EMITIR</text>
+      <text class="tit tinta" x="644" y="510">admira.tv</text>
+      <text class="sub tinta2" x="644" y="532">CMS · players · la pantalla encendida</text>
+
+      <!-- cierre -->
+      <rect x="24" y="572" width="892" height="32" fill="rgba(224,138,46,.12)" stroke="#16305c" stroke-width="1.5"/>
+      <text class="tit tinta" x="470" y="594" text-anchor="middle">Si no se vende, no se hace o no se emite — no ha pasado.</text>
+    </svg>
+  </div>
+
+  <p class="leyenda">Esto es todo el proyecto. La <a href="/13rue/estrategia">estrategia</a> lo escribe;
+    la <a href="/13rue/">incubadora</a> aloja a quien lo hace;
+    la <a href="/13rue/implementacion">implementación</a> enseña dónde hay obra de verdad.
+    El gráfico no añade un cuarto mundo: enseña cómo encajan los tres.</p>
+
+  <footer>AdmiraNeXT · gráfico de la suite · 15 ago 2026 · para enseñar, no para decorar</footer>
+</div>

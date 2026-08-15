@@ -11,7 +11,7 @@
 <!-- La barra superior de admira.live, fuente única del nav tras la DMZ. 13rue era
      la única zona que no la llevaba, así que el menú desaparecía al entrar aquí. -->
 <script src="/admira-bar.js?v=20260810-r37"></script>
-<link rel="stylesheet" href="casa-nav.css?v=20260815-r1">
+<link rel="stylesheet" href="casa-nav.css?v=20260815-r2">
 <style>
   :root{
     --papel:#efe7d3; --papel2:#e7dcc2; --tinta:#16305c; --tinta2:#2c477a;
@@ -251,12 +251,9 @@
     hace uno cambia a los demás por un <b>bus de estado común</b>. Su nombre será <b>ieu.ai</b>;
     admira.live es la obra.</p>
 
-  <!-- Las tres puertas de la casa: agentes, suite, productos. -->
-  <nav class="casa-nav" aria-label="Las tres puertas">
-    <a class="on" href="/13rue/" aria-current="page"><span class="n">1</span><span class="t">Incubadora · los agentes</span></a>
-    <a href="/13rue/estrategia"><span class="n">2</span><span class="t">Estrategia · la suite</span></a>
-    <a href="/13rue/implementacion"><span class="n">3</span><span class="t">Implementación · el plano</span></a>
-  </nav>
+  <!-- Las puertas de la casa. Fuente: casa-nav.js — cada pieza nueva, una caja más. -->
+  <nav class="casa-nav" data-casa-nav></nav>
+  <script src="casa-nav.js?v=20260815-r2"></script>
 
   <p class="zona-titulo">Plano transversal · pulsa una vivienda para abrir su ficha</p>
   <div class="edificio" id="edificio" aria-label="Edificio en sección con doce viviendas">

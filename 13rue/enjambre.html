@@ -1,0 +1,158 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Enjambre · Un problema, ocho habitantes · AdmiraNeXT</title>
+<meta name="description" content="Deja un problema de Admira: ocho deepagents ejecutivos cogen su parte en paralelo y el reparto queda registrado en Yokup.">
+<link rel="canonical" href="https://www.admira.live/13rue/enjambre.html">
+<script src="/admira-bar.js?v=20260810-r37"></script>
+<link rel="stylesheet" href="casa-nav.css?v=20260823-r1">
+<style>
+  :root{--papel:#efe7d3;--papel2:#e7dcc2;--tinta:#16305c;--tinta2:#2c477a;--dim:#6a789a;
+    --linea:rgba(22,48,92,.22);--linea2:rgba(22,48,92,.46);--ambar:#d87918;--luz:#277f48;
+    --rojo:#a6372f;--mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif}
+  *{box-sizing:border-box}html,body{margin:0;padding:0}body{background:var(--papel);color:var(--tinta);
+    font-family:var(--sans);line-height:1.45;background-image:linear-gradient(rgba(22,48,92,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(22,48,92,.035) 1px,transparent 1px);background-size:26px 26px}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 20px 80px}a{color:var(--ambar)}header{padding:38px 0 10px}
+  .eyebrow,.k{font:700 11px/1.3 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--tinta2)}
+  h1{font-size:clamp(2.2rem,6vw,3.9rem);line-height:.95;margin:8px 0 12px;letter-spacing:-.045em}
+  h1 small{display:block;margin-top:10px;font-size:clamp(1rem,2.2vw,1.25rem);font-weight:650;color:var(--tinta2);letter-spacing:0}
+  .lede{max-width:79ch;margin:18px 0 0;padding:16px 18px;border:1.5px solid var(--tinta);background:rgba(216,121,24,.1)}
+  .entrada{margin-top:24px;border:1.5px solid var(--tinta);background:rgba(255,255,255,.36);padding:16px;box-shadow:6px 6px 0 rgba(22,48,92,.08)}
+  textarea,input{width:100%;border:1.5px solid var(--linea2);background:rgba(255,255,255,.72);color:var(--tinta);font:inherit;padding:10px 12px;border-radius:0}
+  textarea{min-height:92px;resize:vertical;margin-top:8px}textarea:focus,input:focus{outline:2px solid var(--ambar);border-color:var(--ambar)}
+  .identity{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-top:10px}.field label{display:block;margin-bottom:5px;font:700 10px/1.2 var(--mono);color:var(--tinta2);text-transform:uppercase;letter-spacing:.1em}
+  .actions{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-top:12px}.primary{border:1.5px solid var(--tinta);background:var(--tinta);color:var(--papel);font:800 12px/1 var(--mono);padding:14px 18px;cursor:pointer}
+  .primary:disabled{opacity:.48;cursor:wait}.status{font:11px/1.4 var(--mono);color:var(--dim)}.status.ok{color:var(--luz)}.status.bad{color:var(--rojo)}
+  .secondary{border:1.5px solid var(--tinta);background:transparent;color:var(--tinta);font:800 11px/1 var(--mono);padding:13px 15px;cursor:pointer}.secondary:disabled{opacity:.48;cursor:wait}
+  .law{margin:12px 0 0;color:var(--tinta2);font-size:.84rem}.law b{color:var(--tinta)}
+  .section-head{display:flex;justify-content:space-between;gap:16px;align-items:end;margin:32px 0 10px;border-bottom:1.5px solid var(--tinta);padding-bottom:8px}
+  .section-head h2{margin:0;font-size:1.45rem}.section-head span{font:10px/1.3 var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:.09em;text-align:right}
+  .roles{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:10px}.role{border:1.5px solid var(--tinta);background:rgba(255,255,255,.34);padding:13px;min-height:208px;position:relative;transition:.2s}
+  .role.claimed{background:rgba(216,121,24,.12);box-shadow:inset 0 0 0 2px var(--ambar)}.role.done{background:rgba(39,127,72,.09);box-shadow:inset 0 0 0 2px var(--luz)}
+  .role-top{display:flex;gap:9px;align-items:flex-start}.ico{font-size:1.65rem}.role h3{margin:0;font-size:1.08rem}.role .full{font:9.5px/1.25 var(--mono);color:var(--dim);margin-top:2px}.badge{position:absolute;right:10px;top:10px;font:800 9px/1 var(--mono);padding:4px 6px;border:1px solid var(--linea2);color:var(--dim);background:var(--papel)}
+  .role.claimed .badge{color:var(--ambar);border-color:var(--ambar)}.role.done .badge{color:var(--luz);border-color:var(--luz)}
+  .territory{margin:10px 0;color:var(--tinta2);font-size:.82rem}.part{border-top:1px solid var(--linea);padding-top:8px}.part p{margin:5px 0;font-size:.78rem}.part b{font:800 9px/1 var(--mono);color:var(--ambar);letter-spacing:.06em}
+  .missions{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}.mission{border:1.5px solid var(--tinta);background:rgba(255,255,255,.34);padding:13px}.mission h3{margin:0 0 4px;font-size:1rem}.mission p{margin:5px 0;color:var(--tinta2);font-size:.82rem}.mission .mstate{display:block;margin-top:10px;font:800 10px/1.3 var(--mono);color:var(--dim)}.mission.ok .mstate{color:var(--luz)}.mission.bad .mstate{color:var(--rojo)}
+  .canon{margin-top:10px;border:1.5px solid var(--tinta);background:var(--tinta);color:var(--papel);padding:14px 16px;font:11px/1.6 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}
+  footer{margin-top:38px;padding-top:12px;border-top:1px solid var(--linea);font:10px/1.5 var(--mono);color:var(--dim)}
+  @media(max-width:900px){.roles{grid-template-columns:repeat(2,minmax(0,1fr))}.missions{grid-template-columns:1fr}}
+  @media(max-width:560px){.roles,.identity{grid-template-columns:1fr}.section-head{display:block}.section-head span{display:block;text-align:left;margin-top:5px}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <p class="eyebrow">13 Rue · sala de problemas</p>
+    <h1>Enjambre<small>Una entrada. Ocho habitantes cogen su parte a la vez.</small></h1>
+    <p class="lede">Deja un problema real de Admira. <b>CEO, CTO, COO, CFO, CCO, CDO, CXO y CSO</b>
+      lo leen en paralelo, entregan acción · prueba · destino y el reparto se registra en
+      <b>Yokup</b> como tres misiones enlazadas por el mismo identificador de enjambre.</p>
+    <nav class="casa-nav" data-casa-nav></nav>
+    <script src="casa-nav.js?v=20260823-r1"></script>
+  </header>
+
+  <section class="entrada" aria-labelledby="entrada-title">
+    <div id="entrada-title" class="k">01 · La tarea entra por el tejado</div>
+    <textarea id="problem" aria-label="Problema o tarea de Admira" placeholder="Ejemplo: reducir el tiempo entre una idea del cliente y una prueba visible en una pantalla real"></textarea>
+    <div class="identity">
+      <div class="field"><label for="agent">Agente que abre el enjambre en Yokup</label><input id="agent" value="TrinityMBP16" autocomplete="off"></div>
+      <div class="field"><label for="machine">Equipo físico</label><input id="machine" value="MacBook Pro 16" autocomplete="off"></div>
+    </div>
+    <div class="actions"><button class="primary" id="launch" type="button">LANZAR ENJAMBRE + YOKUP</button><button class="secondary" id="retry" type="button" hidden>REINTENTAR SÓLO YOKUP</button><span class="status" id="status">Esperando un problema.</span></div>
+    <p class="law"><b>Contrato:</b> cada habitante sólo entrega su territorio. Yokup acepta hasta tres tareas por misión;
+      por eso el enjambre produce 3 misiones canónicas (3 + 3 + 2), nunca una lista truncada.</p>
+  </section>
+
+  <div class="section-head"><h2>02 · Los habitantes</h2><span id="role-count">0/8 partes cogidas</span></div>
+  <section class="roles" id="roles" aria-live="polite"></section>
+
+  <div class="section-head"><h2>03 · Registro Yokup</h2><span>dirección · operación · mercado y relato</span></div>
+  <section class="missions" id="missions" aria-live="polite"></section>
+  <div class="canon" id="canonical">INFORME CANÓNICO · todavía no hay un enjambre ejecutado.</div>
+
+  <footer>AdmiraNeXT · 13 Rue · Enjambre ejecutivo · cada parte deja acción, prueba y destino · proyecto Yokup: admira-live</footer>
+</main>
+
+<script src="enjambre.js?v=20260823-r1"></script>
+<script>
+(function(){
+  "use strict";
+  var E=window.Enjambre13, BUS="https://incubadora-bus.csilvasantin.workers.dev/hablar";
+  var YOKUP="https://api.yokup.com", STORE="13rue:enjambre:v1", active=null;
+  function $(id){return document.getElementById(id)}
+  function safe(value){return String(value==null?"":value)}
+  function esc(value){return safe(value).replace(/[&<>"']/g,function(char){return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[char]})}
+  function setStatus(text,kind){$("status").textContent=text;$("status").className="status"+(kind?" "+kind:"")}
+  function toggleRetry(run){var ok=(run&&run.results||[]).filter(function(x){return x&&x.ok}).length;$("retry").hidden=!(run&&run.payloads&&ok<3)}
+  function renderRoles(parts,states){
+    $("roles").innerHTML="";
+    E.ROLES.forEach(function(item){
+      var card=document.createElement("article"),state=(states&&states[item.id])||"waiting",part=parts&&parts[item.id];
+      card.className="role "+(state==="claimed"?"claimed":state==="done"?"done":"");card.dataset.role=item.id;
+      card.innerHTML='<span class="badge"></span><div class="role-top"><span class="ico">'+item.icon+'</span><div><h3>'+item.id+'</h3><div class="full">'+item.name+'</div></div></div><p class="territory"></p><div class="part"><p data-a></p><p data-b></p><p data-c></p></div>';
+      card.querySelector(".badge").textContent=state==="claimed"?"COGIENDO":state==="done"?"ENTREGADO":"ESPERA";
+      card.querySelector(".territory").textContent=item.territory;
+      card.querySelector("[data-a]").textContent=part?"A · "+part.a:"A · —";
+      card.querySelector("[data-b]").textContent=part?"B · "+part.b:"B · —";
+      card.querySelector("[data-c]").textContent=part?"C · "+part.c:"C · —";
+      $("roles").appendChild(card);
+    });
+    var count=Object.keys(parts||{}).length;$("role-count").textContent=count+"/8 partes cogidas";
+  }
+  function renderMissions(results){
+    $("missions").innerHTML="";
+    E.GROUPS.forEach(function(group,index){
+      var result=results&&results[index],box=document.createElement("article");box.className="mission"+(result&&result.ok?" ok":result?" bad":"");
+      box.innerHTML="<h3>"+(index+1)+" · "+group.label+"</h3><p>"+group.roles.join(" · ")+"</p><span class=\"mstate\"></span>";
+      var state=box.querySelector(".mstate");
+      if(!result) state.textContent="pendiente";
+      else if(result.ok){var ref=result.display_ref||result.mission_id||"registrada";state.innerHTML='✓ <a href="https://www.yokup.com/misiones?project_id=admira-live" target="_blank" rel="noopener">'+esc(ref)+'</a>';}
+      else state.textContent="⚠ "+safe(result.error||"Yokup no respondió");
+      $("missions").appendChild(box);
+    });
+  }
+  function canonical(run){
+    if(!run){$("canonical").textContent="INFORME CANÓNICO · todavía no hay un enjambre ejecutado.";return}
+    var ok=(run.results||[]).filter(function(x){return x&&x.ok}).length;
+    $("canonical").textContent="INFORME CANÓNICO · "+run.id+"\nPROBLEMA · "+run.problem+"\nHABITANTES · "+Object.keys(run.parts||{}).length+"/8 entregados\nYOKUP · "+ok+"/3 misiones registradas\nAGENTE · "+run.identity.agent+" · "+run.identity.machine+"\nINICIO · "+run.startedAt+"\nFIN · "+(run.finishedAt||"en curso");
+  }
+  function save(run){try{localStorage.setItem(STORE,JSON.stringify(run))}catch(_){}canonical(run)}
+  function ask(item,problem){
+    var ctrl=new AbortController(),timer=setTimeout(function(){ctrl.abort()},18000);
+    return fetch(BUS,{method:"POST",headers:{"content-type":"application/json"},signal:ctrl.signal,body:JSON.stringify({agente:{system_prompt:item.prompt+" Tu territorio es "+item.territory+".",lexico:[item.id,"acción","prueba"],veta:["depende","ya veremos"]},pregunta:E.promptFor(item,problem),estado:{swarm:true,role:item.id}})})
+      .then(function(response){if(!response.ok)throw new Error("bus "+response.status);return response.json()})
+      .then(function(data){return E.parse(data&&data.dice)||E.fallback(item,problem)})
+      .catch(function(){return E.fallback(item,problem)}).then(function(part){clearTimeout(timer);return part});
+  }
+  function declare(payload){
+    var ctrl=new AbortController(),timer=setTimeout(function(){ctrl.abort()},60000);
+    return fetch(YOKUP+"/declare",{method:"POST",headers:{"content-type":"application/json"},signal:ctrl.signal,body:JSON.stringify(payload)})
+      .then(function(response){return response.json().catch(function(){return {ok:false,error:"respuesta no JSON"}}).then(function(data){if(!response.ok&&data.ok!==false)data.ok=false;return data})})
+      .catch(function(error){return {ok:false,error:error&&error.name==="AbortError"?"timeout al registrar":safe(error&&error.message||error)}})
+      .then(function(result){clearTimeout(timer);return result});
+  }
+  async function launch(){
+    var problem=E.clean($("problem").value),identity={agent:E.clean($("agent").value),machine:E.clean($("machine").value)};
+    if(!problem){$("problem").focus();setStatus("Falta el problema.","bad");return}
+    if(!identity.agent||!identity.machine){setStatus("Falta la identidad exacta de Yokup.","bad");return}
+    $("launch").disabled=true;$("retry").hidden=true;var started=Date.now();active={id:E.runId(problem,started),problem:problem,identity:identity,startedAt:new Date(started).toISOString(),parts:{},states:{},results:[]};
+    E.ROLES.forEach(function(item){active.states[item.id]="claimed"});renderRoles(active.parts,active.states);renderMissions();save(active);setStatus("Los 8 habitantes han cogido su parte en paralelo…");
+    await Promise.all(E.ROLES.map(async function(item){var part=await ask(item,problem);active.parts[item.id]=part;active.states[item.id]="done";renderRoles(active.parts,active.states);save(active)}));
+    setStatus("8/8 entregados · registrando tres misiones en Yokup…");var payloads=E.payloads(problem,active.parts,identity,active.id);active.payloads=payloads;save(active);
+    active.results=await Promise.all(payloads.map(declare));active.finishedAt=new Date().toISOString();renderMissions(active.results);save(active);
+    var ok=active.results.filter(function(x){return x&&x.ok}).length;setStatus(ok===3?"Enjambre completo · 8 partes · 3 misiones Yokup.":"Enjambre completo; "+ok+"/3 altas Yokup. El plan queda conservado para reintentar.",ok===3?"ok":"bad");toggleRetry(active);$("launch").disabled=false;
+  }
+  async function retryRegistration(){
+    if(!active||!active.payloads)return;$("launch").disabled=true;$("retry").disabled=true;setStatus("Reintentando las mismas llaves idempotentes en Yokup…");
+    active.results=await Promise.all(active.payloads.map(declare));active.finishedAt=new Date().toISOString();renderMissions(active.results);save(active);
+    var ok=active.results.filter(function(x){return x&&x.ok}).length;setStatus(ok===3?"Yokup confirmado · 3/3 misiones, sin duplicados.":"Yokup sigue parcial · "+ok+"/3; las mismas llaves quedan guardadas.",ok===3?"ok":"bad");toggleRetry(active);$("launch").disabled=false;$("retry").disabled=false;
+  }
+  $("launch").addEventListener("click",launch);$("retry").addEventListener("click",retryRegistration);$("problem").addEventListener("keydown",function(event){if(event.key==="Enter"&&(event.metaKey||event.ctrlKey))launch()});
+  try{var previous=JSON.parse(localStorage.getItem(STORE)||"null");if(previous&&previous.problem){active=previous;$("problem").value=previous.problem;$("agent").value=previous.identity.agent;$("machine").value=previous.identity.machine;renderRoles(previous.parts,previous.states);renderMissions(previous.results);canonical(previous);toggleRetry(previous);setStatus("Último enjambre recuperado del navegador.","ok")}else{renderRoles({},{});renderMissions()}}catch(_){renderRoles({},{});renderMissions()}
+})();
+</script>
+</body>
+</html>

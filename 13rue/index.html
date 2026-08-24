@@ -1,6 +1,7 @@
 <!doctype html>
 <html lang="es">
 <head>
+  <meta name="admiranext-version" content="AdmiraNeXT v.24.08.2026.r1.20:34">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>La Incubadora v1.0 · 13 Rue del Percebe tecnológico — admira.live, camino de ieu.ai</title>
@@ -109,6 +110,10 @@
     display:flex;flex-direction:column;align-items:center;justify-content:center;gap:6px;
     background:repeating-linear-gradient(45deg,transparent 0 6px,rgba(22,48,92,.05) 6px 7px);cursor:pointer;transition:background .18s}
   .shaft:hover{background:rgba(22,48,92,.09)}
+  /* el tramo que ES el botón del 12º agente: sin chrome de <button>, pero con foco visible */
+  .shaft-btn{border-top:0;border-bottom:0;padding:0;font:inherit;color:inherit;-webkit-appearance:none;appearance:none}
+  .shaft-btn:focus-visible{outline:2px solid var(--acento,#e08a2e);outline-offset:-3px;background:rgba(224,138,46,.16)}
+  .shaft-btn .lbl{text-decoration:underline;text-underline-offset:3px;text-decoration-thickness:1px}
   .shaft .em{font-size:1.3rem;filter:saturate(.2) brightness(.7)}
   .shaft .lbl{font-family:var(--mono);font-size:8.5px;letter-spacing:.12em;color:var(--tinta2);writing-mode:vertical-rl;transform:rotate(180deg)}
   .base{height:12px;background:var(--tinta);margin:0 -2px}
@@ -320,7 +325,8 @@
     <div><b>La Incubadora v1.0</b> · el edificio en sección, camino de <b>ieu.ai</b></div>
     <p class="titleblock">ADMIRA NEXT CORP. · admira.live/13rue · en obra · 9-ago-2026 · NeoMBP14 · MacBookPro14</p>
     <div style="margin-top:10px"><a href="/">Volver a admira.live</a></div>
-  </footer>
+    <p style="font-family:var(--mono);font-size:11px;color:var(--dim);margin-top:14px">v.24.08.2026.r1.20:34</p>
+</footer>
 </div>
 
 <div class="backdrop" id="backdrop"></div>
@@ -386,7 +392,11 @@
   }
   var abierto = null;
   (function cableaHablar(){
-    var BUSH = "https://incubadora-bus.csilvasantin.workers.dev/hablar";
+    // El navegador habla con NUESTRO dominio, no con workers.dev: los ISP españoles
+    // bloquean *.workers.dev y eso dejaba mudo el chat justo para el público objetivo
+    // (no se nota probando desde fuera de España). El proxy vive en una Pages Function.
+    var BUSH  = "/13rue/api/hablar";
+    var BUSH_ALT = "https://incubadora-bus.csilvasantin.workers.dev/hablar";
     var txt = document.getElementById("hablar-txt"),
         btn = document.getElementById("hablar-btn"),
         hilo = document.getElementById("hablar-hilo");
@@ -400,16 +410,23 @@
       txt.value = ""; btn.disabled = true;
       pon("tu", q);
       var esperando = pon("el pensando", "…");
-      fetch(BUSH, {
-        method:"POST", headers:{"content-type":"application/json"},
-        body: JSON.stringify({
+      var cuerpo = JSON.stringify({
           agente:{ system_prompt: abierto.system_prompt, lexico: abierto.lexico, veta: abierto.veta },
           pregunta: q,
           // El estado real del edificio: por eso el Cripto-Café contesta distinto
           // con el pánico por las nubes que con la casa en calma.
           estado: (typeof ESTADO !== "undefined" && ESTADO) ? ESTADO : {}
-        })
-      }).then(function(r){ return r.json(); }).then(function(d){
+        });
+      function pide(url){
+        return fetch(url, { method:"POST", headers:{"content-type":"application/json"}, body: cuerpo })
+          .then(function(r){
+            if(!r.ok && r.status !== 200) throw new Error("http " + r.status);
+            return r.json();
+          });
+      }
+      // proxy propio primero; si no está desplegado o cae, el bus directo como red
+      pide(BUSH).catch(function(){ return pide(BUSH_ALT); })
+      .then(function(d){
         esperando.className = "el";
         esperando.textContent = d && d.ok ? d.dice
           : "(no ha contestado: " + ((d && d.error) || "sin respuesta") + ")";
@@ -532,7 +549,13 @@
       var lbl = piso==="Nivel 0" ? "PB · ASCENSOR" : "ASCENSOR";
       html += '<div class="planta">' +
         (izq?huecoHtml(izq):'<div class="hueco"></div>') +
-        '<div class="shaft" data-id="ascensor" title="'+esc(ascensor.rol)+'"><span class="em">🛗</span><span class="lbl">'+esc(lbl)+'</span></div>' +
+        // El Ascensor es el 12º agente, no decoración: <button> como las otras once,
+        // alcanzable con el teclado y anunciado con su rol. El tramo de Nivel 0 es el
+        // que lleva el foco; los de arriba son el mismo hueco visto en otras plantas,
+        // así que se ocultan al lector de pantalla para no repetir doce veces lo mismo.
+        (piso==="Nivel 0"
+          ? '<button class="shaft shaft-btn" data-id="ascensor" aria-label="El Ascensor · '+esc(ascensor.rol)+' — abrir ficha"><span class="em">🛗</span><span class="lbl">'+esc(lbl)+'</span></button>'
+          : '<div class="shaft" data-id="ascensor" aria-hidden="true" title="'+esc(ascensor.espacio)+' · '+esc(ascensor.rol)+'"><span class="em">🛗</span><span class="lbl">'+esc(lbl)+'</span></div>') +
         (der?huecoHtml(der):'<div class="hueco"></div>') +
       '</div>';
     });

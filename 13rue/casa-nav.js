@@ -11,7 +11,8 @@
     { id: "cronograma",     href: "/13rue/cronograma",    n: "7", t: "Cronograma · el plan" },
     { id: "pisos",          href: "/13rue/pisos",         n: "8", t: "Pisos · el corte" },
     { id: "enjambre",       href: "/13rue/enjambre",      n: "9", t: "Enjambre · repartir un problema" },
-    { id: "ojo",            href: "/13rue/ojo",           n: "10", t: "Ojo de Dios · el enjambre DOOH" }
+    { id: "ojo",            href: "/13rue/ojo",           n: "10", t: "Ojo de Dios · el enjambre DOOH" },
+    { id: "vecinos",        href: "/13rue/vecinos",       n: "11", t: "Vecinos · un piso, un agente" }
   ];
 
   function current() {
@@ -25,6 +26,7 @@
     if (/\/13rue\/pisos$/.test(p)) return "pisos";
     if (/\/13rue\/enjambre$/.test(p)) return "enjambre";
     if (/\/13rue\/ojo$/.test(p)) return "ojo";
+    if (/\/13rue\/vecinos$/.test(p)) return "vecinos";
     if (/\/13rue$/.test(p)) return "incubadora";
     return "";
   }

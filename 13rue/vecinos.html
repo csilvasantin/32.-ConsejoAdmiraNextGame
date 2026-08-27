@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="admiranext-version" content="AdmiraNeXT v.27.08.2026.r3.07:41">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Vecinos · quién vive en cada piso de 13 Rue · AdmiraNeXT</title>
+<meta name="description" content="Página de asociación vecino↔agente: cada vivienda de 13 Rue del Percebe se asigna a un agente real, la parte operativa del edificio se enciende y Neo supervisa que todos dejen constancia en Yokup.">
+<link rel="canonical" href="https://www.admira.live/13rue/vecinos.html">
+<meta name="robots" content="noindex">
+<script src="/admira-bar.js?v=20260810-r37"></script>
+<link rel="stylesheet" href="casa-nav.css?v=20260827-r2">
+<style>
+  :root{--papel:#efe7d3;--tinta:#16305c;--tinta2:#2c477a;--dim:#6a789a;
+    --linea:rgba(22,48,92,.22);--linea2:rgba(22,48,92,.46);--ambar:#d87918;--luz:#277f48;
+    --rojo:#a6372f;--mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif}
+  *{box-sizing:border-box}html,body{margin:0;padding:0}
+  body{background:var(--papel);color:var(--tinta);font-family:var(--sans);line-height:1.45;
+    background-image:linear-gradient(rgba(22,48,92,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(22,48,92,.035) 1px,transparent 1px);background-size:26px 26px}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 20px 80px}a{color:var(--ambar)}header{padding:38px 0 10px}
+  .eyebrow,.k{font:700 11px/1.3 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--tinta2)}
+  h1{font-size:clamp(2.2rem,6vw,3.9rem);line-height:.95;margin:8px 0 12px;letter-spacing:-.045em}
+  h1 small{display:block;margin-top:10px;font-size:clamp(1rem,2.2vw,1.25rem);font-weight:650;color:var(--tinta2);letter-spacing:0}
+  .lede{max-width:79ch;margin:18px 0 0;padding:16px 18px;border:1.5px solid var(--tinta);background:rgba(216,121,24,.1)}
+  .section-head{display:flex;justify-content:space-between;gap:16px;align-items:end;margin:30px 0 10px;border-bottom:1.5px solid var(--tinta);padding-bottom:8px}
+  .section-head h2{margin:0;font-size:1.4rem}
+  .section-head span{font:10px/1.3 var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:.09em;text-align:right}
+
+  .marcador{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}
+  .cifra{border:1.5px solid var(--tinta);background:rgba(255,255,255,.4);padding:12px 14px}
+  .cifra b{display:block;font:800 1.9rem/1 var(--sans);letter-spacing:-.03em}
+  .cifra span{display:block;margin-top:5px;font:9.5px/1.35 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--dim)}
+
+  .casa-cols{display:grid;grid-template-columns:minmax(0,440px) minmax(0,1fr);gap:18px;align-items:start}
+  .pagina{position:relative;border:1.5px solid var(--tinta);background:#fff8d6;box-shadow:6px 6px 0 rgba(22,48,92,.1)}
+  .pagina img{display:block;width:100%;height:auto;pointer-events:none}
+  .vivienda{position:absolute;z-index:3;border:2px dashed rgba(22,48,92,.32);background:rgba(120,130,150,.14);
+    cursor:pointer;padding:4px 5px;overflow:hidden;transition:background .25s,box-shadow .25s,border-color .25s;
+    display:flex;flex-direction:column;justify-content:flex-end;text-align:left}
+  .vivienda:hover{border-color:var(--tinta);box-shadow:inset 0 0 0 2px rgba(22,48,92,.35)}
+  .vivienda .quien{font:800 10px/1.1 var(--mono);letter-spacing:.02em;color:rgba(22,48,92,.62)}
+  .vivienda .que{font:9px/1.15 var(--mono);color:rgba(22,48,92,.5);margin-top:2px}
+  .vivienda.ocupada{border-style:solid;border-color:rgba(0,0,0,.35)}
+  .vivienda.ocupada .quien,.vivienda.ocupada .que{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.55)}
+  .vivienda.viva{box-shadow:0 0 0 3px rgba(255,255,255,.55),0 0 22px 3px currentColor}
+  .vivienda.sel{outline:3px solid var(--ambar);outline-offset:1px}
+  .vivienda.estrecha .que{display:none}
+  .leyenda{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font:10px/1.5 var(--mono);color:var(--dim)}
+  .leyenda i{display:inline-block;width:12px;height:12px;margin-right:5px;vertical-align:-2px;border:1.5px solid var(--tinta)}
+
+  .panel{border:1.5px solid var(--tinta);background:rgba(255,255,255,.42);padding:16px;box-shadow:6px 6px 0 rgba(22,48,92,.08)}
+  .panel h3{margin:0 0 3px;font-size:1.15rem}
+  .panel .sub{font:10px/1.4 var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
+  .campo{margin-top:12px}
+  .campo label{display:block;margin-bottom:5px;font:700 10px/1.2 var(--mono);color:var(--tinta2);text-transform:uppercase;letter-spacing:.1em}
+  select,textarea,input{width:100%;border:1.5px solid var(--linea2);background:rgba(255,255,255,.8);color:var(--tinta);font:inherit;padding:9px 10px;border-radius:0}
+  textarea{min-height:74px;resize:vertical}
+  select:focus,textarea:focus,input:focus{outline:2px solid var(--ambar);border-color:var(--ambar)}
+  .botones{display:flex;gap:9px;flex-wrap:wrap;margin-top:13px}
+  .primary{border:1.5px solid var(--tinta);background:var(--tinta);color:var(--papel);font:800 11px/1 var(--mono);padding:13px 15px;cursor:pointer}
+  .secondary{border:1.5px solid var(--tinta);background:transparent;color:var(--tinta);font:800 11px/1 var(--mono);padding:12px 14px;cursor:pointer}
+  .primary:disabled,.secondary:disabled{opacity:.45;cursor:wait}
+  .status{margin-top:10px;font:11px/1.45 var(--mono);color:var(--dim)}
+  .status.ok{color:var(--luz)}.status.bad{color:var(--rojo)}
+
+  table{width:100%;border-collapse:collapse;margin-top:2px;font-size:.84rem}
+  th,td{border:1px solid var(--linea);padding:8px 9px;text-align:left;vertical-align:top}
+  th{font:800 9.5px/1.3 var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--tinta2);background:rgba(255,255,255,.42)}
+  td.chip span{display:inline-block;padding:3px 6px;border:1px solid currentColor;font:800 9px/1.3 var(--mono)}
+  .si{color:var(--luz)}.no{color:var(--rojo)}.gris{color:var(--dim)}
+  .punto{display:inline-block;width:10px;height:10px;border:1.5px solid var(--tinta);margin-right:6px;vertical-align:-1px}
+  footer{margin-top:34px;padding-top:12px;border-top:1px solid var(--linea);font:10px/1.5 var(--mono);color:var(--dim)}
+  @media(max-width:900px){.casa-cols{grid-template-columns:1fr}.marcador{grid-template-columns:repeat(2,1fr)}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <p class="eyebrow">13 Rue · puerta 11 · el censo</p>
+    <h1>Vecinos<small>Cada vivienda, un agente real. Lo que está operativo, se enciende.</small></h1>
+    <p class="lede">La Rue deja de ser un chiste el día que <b>cada piso tiene dueño</b>. Aquí se asocia
+      cada vivienda con un agente de la flota: la parte del edificio que está <b>operativa se colorea</b>
+      con el color de su inquilino, la que está a oscuras sigue en gris. <b>Neo supervisa</b> desde el ático
+      y la única prueba que vale es la <b>constancia en Yokup</b> — quien no deja rastro, no ha trabajado.</p>
+    <nav class="casa-nav" data-casa-nav></nav>
+    <script src="casa-nav.js?v=20260827-r2"></script>
+    <div class="marcador" id="marcador"></div>
+  </header>
+
+  <div class="section-head"><h2>01 · El edificio</h2><span id="pie-casa">pulsa una vivienda para asignarla</span></div>
+  <section class="casa-cols">
+    <div>
+      <div class="pagina" id="pagina">
+        <img src="media/pisos-corte.jpg" width="832" height="1248" alt="Corte del edificio de 13 Rue del Percebe">
+        <div id="viviendas"></div>
+      </div>
+      <div class="leyenda">
+        <span><i style="background:rgba(120,130,150,.14);border-style:dashed"></i>libre</span>
+        <span><i style="background:#2c477a;opacity:.45"></i>asignada, a oscuras</span>
+        <span><i style="background:#2c477a"></i>operativa ahora</span>
+      </div>
+    </div>
+
+    <div class="panel" id="panel">
+      <div class="sub" id="panel-hueco">ninguna vivienda seleccionada</div>
+      <h3 id="panel-vecino">—</h3>
+      <div class="campo">
+        <label for="sel-agente">Agente que la ocupa</label>
+        <select id="sel-agente"><option value="">— libre —</option></select>
+      </div>
+      <div class="campo">
+        <label for="sel-papel">Papel en la casa</label>
+        <input id="sel-papel" autocomplete="off" placeholder="p. ej. Obra fina">
+      </div>
+      <div class="campo">
+        <label for="sel-tarea">Su parte del trabajo</label>
+        <textarea id="sel-tarea" placeholder="Qué le toca hacer, en una frase que se pueda comprobar."></textarea>
+      </div>
+      <div class="botones">
+        <button class="primary" id="guardar" type="button">ASIGNAR VIVIENDA</button>
+        <button class="secondary" id="vaciar" type="button">DEJAR LIBRE</button>
+        <button class="secondary" id="restaurar" type="button">VOLVER AL CENSO</button>
+      </div>
+      <div class="botones">
+        <button class="primary" id="declarar" type="button">DEJAR CONSTANCIA EN YOKUP</button>
+        <button class="secondary" id="copiar" type="button">COPIAR JSON</button>
+      </div>
+      <p class="status" id="status">El reparto vive en <b>vecinos.json</b>. Lo que cambies aquí queda en este navegador hasta que Neo lo fije en el repo.</p>
+    </div>
+  </section>
+
+  <div class="section-head"><h2>02 · Supervisión de Neo</h2><span id="pie-sup">presencia y constancia, cada 20 s</span></div>
+  <table id="tabla">
+    <thead><tr><th>Vivienda</th><th>Vecino</th><th>Agente</th><th>Su parte</th><th>Presencia</th><th>Constancia hoy</th><th>Puntos</th></tr></thead>
+    <tbody id="filas"></tbody>
+  </table>
+
+  <footer id="pie">AdmiraNeXT · 13 Rue · puerta 11 · Vecinos</footer>
+</main>
+
+<script>
+(function(){
+  "use strict";
+  var PRESENCE="https://admira-telegram.csilvasantin.workers.dev/api/presence";
+  var YOKUP="https://api.yokup.com";
+  var STORE="13rue:vecinos:v1";
+  var D=null, mapa={}, sel=null, presencia={}, puntos={}, constancia={};
+
+  function $(id){return document.getElementById(id)}
+  function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+  function norm(v){return String(v==null?"":v).toLowerCase().normalize("NFD").replace(/[^a-z0-9]/g,"")}
+  function agente(id){for(var i=0;i<D.agentes.length;i++){if(D.agentes[i].id===id)return D.agentes[i]}return null}
+  function hueco(id){for(var i=0;i<D.huecos.length;i++){if(D.huecos[i].id===id)return D.huecos[i]}return null}
+  function estado(txt,kind){$("status").innerHTML=txt;$("status").className="status"+(kind?" "+kind:"")}
+
+  function baseMapa(){
+    var m={};
+    (D.asignaciones||[]).forEach(function(a){ m[a.hueco]={agente:a.agente,papel:a.papel,tarea:a.tarea} });
+    return m;
+  }
+  function carga(){
+    mapa=baseMapa();
+    try{
+      var g=JSON.parse(localStorage.getItem(STORE)||"null");
+      if(g&&typeof g==="object") Object.keys(g).forEach(function(k){ mapa[k]=g[k]||null; if(!mapa[k])delete mapa[k] });
+    }catch(e){}
+  }
+  function guarda(){ try{ localStorage.setItem(STORE,JSON.stringify(mapa)) }catch(e){} }
+
+  function vivo(ag){ return !!presencia[norm(ag.persona)+"@"+norm(ag.maquina)] }
+
+  function pintaCasa(){
+    $("viviendas").innerHTML=D.huecos.map(function(h){
+      var v=D.censo[h.id]||{}, asg=mapa[h.id], ag=asg?agente(asg.agente):null;
+      var clases="vivienda"+(h.estrecho?" estrecha":"")+(ag?" ocupada":"")+(ag&&vivo(ag)?" viva":"")+(sel===h.id?" sel":"");
+      var estilo="left:"+h.l+"%;top:"+h.t+"%;width:"+h.w+"%;height:"+h.h+"%";
+      if(ag) estilo+=";background:"+ag.color+(vivo(ag)?"":"99")+";color:"+ag.color;
+      return '<div class="'+clases+'" data-hueco="'+esc(h.id)+'" style="'+estilo+'" role="button" tabindex="0"'
+        +' title="'+esc(h.label+" · "+(v.nombre||""))+'">'
+        +'<div class="quien">'+esc(v.icono||"")+" "+esc(ag?ag.persona:"libre")+'</div>'
+        +'<div class="que">'+esc(ag?ag.runtime+" · "+ag.casa:(v.nombre||""))+'</div></div>';
+    }).join("");
+    Array.prototype.forEach.call($("viviendas").children,function(el){
+      el.addEventListener("click",function(){ selecciona(el.getAttribute("data-hueco")) });
+      el.addEventListener("keydown",function(e){ if(e.key==="Enter"||e.key===" "){e.preventDefault();selecciona(el.getAttribute("data-hueco"))} });
+    });
+    var ocup=Object.keys(mapa).length, vivas=0;
+    Object.keys(mapa).forEach(function(k){ var a=agente(mapa[k].agente); if(a&&vivo(a))vivas++ });
+    $("pie-casa").textContent=ocup+" de "+D.huecos.length+" viviendas asignadas · "+vivas+" encendidas";
+  }
+
+  function selecciona(id){
+    sel=id;
+    var v=D.censo[id]||{}, h=hueco(id), asg=mapa[id]||{};
+    $("panel-hueco").textContent=(h?h.label:id)+" · vivienda "+id;
+    $("panel-vecino").textContent=(v.icono||"")+" "+(v.nombre||"—")+(v.antes?" — "+v.antes:"");
+    $("sel-agente").value=asg.agente||"";
+    $("sel-papel").value=asg.papel||"";
+    $("sel-tarea").value=asg.tarea||"";
+    pintaCasa();
+  }
+
+  function pintaMarcador(){
+    var ocup=Object.keys(mapa).length, vivas=0, conc=0, pts=0;
+    Object.keys(mapa).forEach(function(k){
+      var a=agente(mapa[k].agente); if(!a)return;
+      if(vivo(a))vivas++;
+      if(constancia[a.id])conc++;
+      pts+=(puntos[a.id]||0);
+    });
+    var datos=[[vivas,"viviendas encendidas"],[ocup,"viviendas con dueño"],[conc+"/"+ocup,"con constancia hoy"],[pts,"puntos del equipo"]];
+    $("marcador").innerHTML=datos.map(function(d){
+      return '<div class="cifra"><b>'+esc(d[0])+'</b><span>'+esc(d[1])+'</span></div>' }).join("");
+  }
+
+  function pintaTabla(){
+    var ids=D.huecos.map(function(h){return h.id}).filter(function(id){return mapa[id]});
+    if(!ids.length){ $("filas").innerHTML='<tr><td colspan="7" class="gris">Ninguna vivienda asignada todavía.</td></tr>'; return }
+    $("filas").innerHTML=ids.map(function(id){
+      var v=D.censo[id]||{}, asg=mapa[id], ag=agente(asg.agente), h=hueco(id);
+      if(!ag) return "";
+      var on=vivo(ag), c=constancia[ag.id];
+      return "<tr>"
+        +'<td><span class="punto" style="background:'+esc(ag.color)+';opacity:'+(on?1:.4)+'"></span>'+esc(h?h.label:id)+"</td>"
+        +"<td>"+esc((v.icono||"")+" "+(v.nombre||""))+"</td>"
+        +"<td><b>"+esc(ag.persona)+"</b><br><span class=\"gris\">"+esc(ag.id+" · "+ag.runtime+" ("+ag.casa+")")+"</span></td>"
+        +"<td>"+esc(asg.tarea||asg.papel||"—")+"</td>"
+        +'<td class="chip"><span class="'+(on?"si":"no")+'">'+(on?"DESPIERTO":"SIN SEÑAL")+"</span></td>"
+        +'<td class="chip">'+(c?'<span class="si">'+esc(c)+"</span>":'<span class="no">SIN RASTRO</span>')+"</td>"
+        +"<td>"+(puntos[ag.id]==null?'<span class="gris">—</span>':"<b>"+puntos[ag.id]+"</b>")+"</td></tr>";
+    }).join("");
+  }
+
+  function repinta(){ pintaCasa(); pintaTabla(); pintaMarcador() }
+
+  function leePresencia(){
+    return fetch(PRESENCE,{cache:"no-store"}).then(function(r){return r.json()}).then(function(d){
+      var ahora=Math.floor(Date.now()/1000); presencia={};
+      (d.presence||[]).forEach(function(p){
+        if(ahora-(p.updated||0)<900) presencia[norm(p.persona)+"@"+norm(p.machine)]=p;
+      });
+    }).catch(function(){});
+  }
+  function leePuntos(){
+    return fetch(YOKUP+"/highscore/daily",{cache:"no-store"}).then(function(r){return r.json()}).then(function(d){
+      var sc=(d.hourly&&d.hourly.scores)||d.scores||[]; puntos={};
+      sc.forEach(function(s){ var k=s.agent||s.name; if(k) puntos[k]=s.current });
+    }).catch(function(){});
+  }
+  function leeConstancia(){
+    return fetch(YOKUP+"/fleet/missions",{cache:"no-store"}).then(function(r){return r.json()}).then(function(d){
+      constancia={};
+      var hoy=new Date(); hoy.setHours(0,0,0,0); var t0=hoy.getTime();
+      (d.missions||[]).forEach(function(m){
+        var when=m.updated_at||m.created_at||0;
+        if(when>=t0 && m.assignee) constancia[m.assignee]=(m.proof_image||m.live_shot)?"CON PRUEBA":"DECLARADA";
+      });
+    }).catch(function(){});
+  }
+  function tick(){ Promise.all([leePresencia(),leePuntos(),leeConstancia()]).then(repinta) }
+
+  function declarar(){
+    var ids=D.huecos.map(function(h){return h.id}).filter(function(id){return mapa[id]}).slice(0,3);
+    if(!ids.length){ estado("No hay ninguna vivienda asignada que declarar.","bad"); return }
+    $("declarar").disabled=true; estado("Declarando el reparto en Yokup…");
+    var cod=["a","b","c"];
+    var cuerpo={ agent:D.meta.supervisor, machine:"admira-macbookpro16", project_id:D.meta.proyecto_yokup,
+      subject:("13 Rue · reparto de viviendas · "+ids.length+" vecinos con dueño").slice(0,160),
+      idempotency_key:("13rue-vecinos-"+new Date().toISOString().slice(0,10)+"-"+ids.join("_")).slice(0,120),
+      tasks:ids.map(function(id,i){
+        var asg=mapa[id], ag=agente(asg.agente), v=D.censo[id]||{}, h=hueco(id);
+        return { code:cod[i], status:"in_progress",
+          title:("["+(ag?ag.id:"?")+"] "+(h?h.label:id)+" — "+(v.nombre||"")).slice(0,120),
+          report:("Vivienda "+(h?h.label:id)+" ("+(v.nombre||"")+") asignada a "+(ag?ag.persona+" / "+ag.id+" · "+ag.runtime+" ("+ag.casa+") en "+ag.maquina:"?")
+            +"\nPapel · "+(asg.papel||"—")+"\nSu parte · "+(asg.tarea||"—")
+            +"\nSupervisa · "+D.meta.supervisor+" desde el ático. Sin constancia en Yokup, no ha trabajado.").slice(0,1800) };
+      })};
+    fetch(YOKUP+"/declare",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(cuerpo)})
+      .then(function(r){return r.json()})
+      .then(function(d){
+        $("declarar").disabled=false;
+        if(d&&d.ok) estado("Constancia dejada en Yokup · referencia <b>"+esc(d.display_ref||d.mission_id||"")+"</b>","ok"), tick();
+        else estado("Yokup rechazó el reparto: "+esc((d&&(d.error||d.code))||"desconocido"),"bad");
+      })
+      .catch(function(e){ $("declarar").disabled=false; estado("No se pudo hablar con Yokup: "+esc(e),"bad") });
+  }
+
+  function arranca(){
+    $("sel-agente").innerHTML='<option value="">— libre —</option>'+D.agentes.map(function(a){
+      return '<option value="'+esc(a.id)+'">'+esc(a.persona+" · "+a.runtime+" ("+a.casa+") · "+a.maquina)+"</option>" }).join("");
+    $("guardar").addEventListener("click",function(){
+      if(!sel){ estado("Antes elige una vivienda en el edificio.","bad"); return }
+      var id=$("sel-agente").value;
+      if(!id){ estado("Elige un agente o pulsa DEJAR LIBRE.","bad"); return }
+      mapa[sel]={agente:id,papel:$("sel-papel").value.trim(),tarea:$("sel-tarea").value.trim()};
+      guarda(); repinta(); estado("Vivienda asignada a "+esc(agente(id).persona)+". Déjalo en Yokup para que cuente.","ok");
+    });
+    $("vaciar").addEventListener("click",function(){
+      if(!sel){ estado("Antes elige una vivienda.","bad"); return }
+      delete mapa[sel]; guarda(); selecciona(sel); repinta(); estado("Vivienda libre.","ok");
+    });
+    $("restaurar").addEventListener("click",function(){
+      try{ localStorage.removeItem(STORE) }catch(e){}
+      carga(); if(sel) selecciona(sel); repinta(); estado("Vuelto al censo publicado en vecinos.json.","ok");
+    });
+    $("copiar").addEventListener("click",function(){
+      var salida=JSON.stringify(D.huecos.map(function(h){return h.id}).filter(function(id){return mapa[id]})
+        .map(function(id){return {hueco:id,agente:mapa[id].agente,papel:mapa[id].papel,tarea:mapa[id].tarea}}),null,2);
+      if(navigator.clipboard&&navigator.clipboard.writeText){
+        navigator.clipboard.writeText(salida).then(function(){estado("Reparto copiado. Pégalo en <b>vecinos.json</b> → asignaciones.","ok")},
+          function(){estado("<pre>"+esc(salida)+"</pre>")});
+      } else estado("<pre>"+esc(salida)+"</pre>");
+    });
+    $("declarar").addEventListener("click",declarar);
+
+    carga(); repinta(); tick(); setInterval(tick,20000);
+    $("pie").textContent="AdmiraNeXT · 13 Rue · puerta 11 · Vecinos · "+D.meta.sello+" · supervisa "+D.meta.supervisor;
+  }
+
+  fetch("./vecinos.json?_="+Date.now(),{cache:"no-store"})
+    .then(function(r){return r.json()}).then(function(d){ D=d; arranca() })
+    .catch(function(e){ $("status").textContent="No se pudo leer vecinos.json: "+e });
+})();
+</script>
+</body>
+</html>

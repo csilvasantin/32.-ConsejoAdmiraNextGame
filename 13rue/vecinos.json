@@ -4,9 +4,18 @@
     "subtitulo": "Cada vivienda de la Rue, un agente real. Lo que está operativo, se enciende.",
     "supervisor": "NeoMBP16",
     "proyecto_yokup": "digitalsignage-ai",
-    "sello": "v.27.08.2026.r5.12:41"
+    "sello": "v.27.08.2026.r6.12:52"
   },
   "huecos": [
+    {
+      "id": "terrado",
+      "l": 79.2,
+      "t": 3.6,
+      "w": 16.4,
+      "h": 13.5,
+      "label": "Terrado",
+      "vertical": false
+    },
     {
       "id": "tejado",
       "l": 23.6,
@@ -111,15 +120,21 @@
     },
     {
       "id": "alcantarilla",
-      "l": 70.5,
-      "t": 83.0,
-      "w": 22.0,
-      "h": 15.0,
+      "l": 18.0,
+      "t": 87.3,
+      "w": 25.2,
+      "h": 8.8,
       "label": "Alcantarilla",
       "vertical": false
     }
   ],
   "censo": {
+    "terrado": {
+      "id": "terrado",
+      "nombre": "El Terrado",
+      "icono": "🧺",
+      "antes": "la azotea de la Rue"
+    },
     "tejado": {
       "id": "puerto-deliveries",
       "nombre": "Puerto Deliveries",
@@ -303,5 +318,19 @@
         "detalle": "El proyecto llega al bajo y sale a la calle: modo demo para la presentación y modo público abierto, con su sello."
       }
     ]
+  },
+  "ascensor": {
+    "l": 88.0,
+    "w": 7.4,
+    "h": 6.6,
+    "riel_t": 18.0,
+    "riel_h": 71.0,
+    "paradas": [
+      43.3,
+      59.1,
+      75.4,
+      85.5
+    ],
+    "nota": "una parada por fase, siempre una planta por debajo de donde se trabaja: 3o, 2o, bajo y calle"
   }
 }

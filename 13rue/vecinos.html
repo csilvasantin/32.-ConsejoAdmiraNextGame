@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="admiranext-version" content="AdmiraNeXT v.27.08.2026.r5.12:41">
+<meta name="admiranext-version" content="AdmiraNeXT v.27.08.2026.r6.12:52">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Vecinos · quién vive en cada piso de 13 Rue · AdmiraNeXT</title>
 <meta name="description" content="Página de asociación vecino↔agente: cada vivienda de 13 Rue del Percebe se asigna a un agente real, la parte operativa del edificio se enciende y Neo supervisa que todos dejen constancia en Yokup.">
@@ -61,7 +61,7 @@
   .modo:hover{border-color:var(--ambar);color:var(--ambar)}
   .modo[aria-pressed="true"]:hover{background:var(--ambar);border-color:var(--ambar);color:#fff}
 
-  .antena{position:absolute;z-index:9;cursor:pointer;border:1.5px dashed rgba(22,48,92,0);
+  .antena{position:absolute;z-index:9;cursor:pointer;background:transparent;padding:0;-webkit-appearance:none;appearance:none;border:1.5px dashed rgba(22,48,92,0);
     border-radius:6px;transition:border-color .25s,background .25s}
   .antena:hover,.antena:focus-visible{border-color:var(--ambar);background:rgba(216,121,24,.22);outline:none}
   .antena b{position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:4px;white-space:nowrap;
@@ -81,12 +81,11 @@
   .pagina{container-type:inline-size}
 
   .riel{position:absolute;z-index:4;width:2px;background:repeating-linear-gradient(180deg,rgba(22,48,92,.5) 0 6px,transparent 6px 12px)}
-  .cabina{position:absolute;z-index:7;display:flex;align-items:center;gap:4%;padding:0 4%;
+  .cabina{position:absolute;z-index:7;display:flex;align-items:center;justify-content:center;
     border:2px solid #2b2b2b;background:linear-gradient(180deg,#f6e3a8,#e2c46f);
     box-shadow:0 6px 14px rgba(0,0,0,.45),inset 0 0 0 2px rgba(255,255,255,.5);
     transition:top 1.25s cubic-bezier(.55,.06,.3,1)}
   .cabina em{font-style:normal;font:800 13px/1 var(--mono);color:#2b2b2b}
-  .cabina span{font:700 9px/1.15 var(--mono);color:#3a3a3a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .foco{position:absolute;z-index:5;border:2.5px solid var(--ambar);background:rgba(216,121,24,.2);
     box-shadow:0 0 0 2px rgba(255,255,255,.55),0 0 22px 4px rgba(216,121,24,.7);
     animation:late 2.6s ease-in-out infinite;display:flex;align-items:flex-end}
@@ -368,24 +367,26 @@
 
   /* ---- modo antena: el proyecto baja por la escalera ---- */
   var MODO="agentes", fase=0, reloj=null, andando=true;
-  var CAB={l:80.6,w:13.6,h:6.6};
+  function ASC(){ return D.ascensor||{l:88,w:7.4,h:6.6,riel_t:18,riel_h:71,paradas:[]} }
 
   function fases(){ return ((D.proyecto||{}).fases)||[] }
   function centroY(id){ var h=hueco(id); return h? h.t+h.h/2 : 50 }
 
   function pintaAntenaCapa(){
     var pr=D.proyecto||{}, F=fases(), f=F[fase]||{}, tj=hueco("tejado")||{l:23,t:8,w:34,h:8};
-    var cabTop=Math.round((centroY(f.hueco)-CAB.h/2)*100)/100, foco=hueco(f.hueco);
+    var A=ASC(), parada=(A.paradas||[])[fase];
+    if(parada==null) parada=centroY(f.hueco);
+    var cabTop=Math.round((parada-A.h/2)*100)/100, foco=hueco(f.hueco);
     var html=""
       +'<div class="cartel" style="left:'+tj.l+'%;top:'+tj.t+'%;width:'+tj.w+'%;height:'+tj.h+'%">'
       +  "<b>"+esc(pr.nombre||"—")+"</b>"
       +  "<i>"+esc(pr.lema||pr.descripcion||"")+"</i>"
       +  "<u>fase "+(fase+1)+" de "+F.length+" · "+esc(f.titulo||"")+"</u></div>"
-      +'<div class="riel" style="left:'+(CAB.l+CAB.w/2)+'%;top:22%;height:60%"></div>';
+      +'<div class="riel" style="left:'+(A.l+A.w/2)+'%;top:'+A.riel_t+'%;height:'+A.riel_h+'%"></div>';
     if(foco) html+='<div class="foco" style="left:'+foco.l+'%;top:'+foco.t+'%;width:'+foco.w+'%;height:'+foco.h+'%">'
       +"<span>FASE "+(fase+1)+" · "+esc(f.titulo||"")+"</span></div>";
-    html+='<div class="cabina" style="left:'+CAB.l+'%;width:'+CAB.w+'%;height:'+CAB.h+'%;top:'+cabTop+'%">'
-      +"<em>"+(fase+1)+"</em><span>"+esc(f.titulo||"")+"</span></div>";
+    html+='<div class="cabina" style="left:'+A.l+'%;width:'+A.w+'%;height:'+A.h+'%;top:'+cabTop+'%">'
+      +"<em>"+(fase+1)+"</em></div>";
     $("capa-antena").innerHTML=html;
   }
 

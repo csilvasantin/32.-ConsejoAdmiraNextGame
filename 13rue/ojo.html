@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="admiranext-version" content="AdmiraNeXT v.27.08.2026.r1.07:25">
+<meta name="admiranext-version" content="AdmiraNeXT v.27.08.2026.r2.07:28">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Ojo de Dios · el enjambre DOOH de Valencia y Barcelona · AdmiraNeXT</title>
 <meta name="description" content="Un globo 3D donde no se rastrean aviones sino pantallas. Cuatro agentes reales cogen su parte a la vez y aquí se ve quién tiene qué, en qué máquina corre y si está despierto.">
@@ -114,7 +114,7 @@
 
   function pintaReparto(){
     $("reparto").innerHTML=D.reparto.map(function(p){
-      return '<article class="parte" data-persona="'+esc(p.persona)+'" style="border-left-color:'+esc(p.color)+'">'
+      return '<article class="parte" data-quien="'+llave(p.persona,p.maquina)+'" style="border-left-color:'+esc(p.color)+'">'
         +'<span class="vivo" data-vivo>· · ·</span>'
         +'<div class="parte-top"><span class="ico">'+esc(p.icono)+'</span>'
         +'<div><h3>'+esc(p.agente)+'</h3><div class="full">'+esc(p.runtime)+' · '+esc(p.maquina)+'</div></div></div>'
@@ -143,21 +143,25 @@
       "proyecto Yokup · "+D.meta.proyecto_yokup,
       ""];
     D.reparto.forEach(function(p){
-      lineas.push((vivos[p.persona]?"● despierto":"○ sin señal")+"  "+p.agente+" — "+p.territorio);
+      lineas.push((vivos[llave(p.persona,p.maquina)]?"● despierto":"○ sin señal")+"  "+p.agente+" — "+p.territorio);
     });
     lineas.push("", "sello · "+D.meta.sello+"  ·  abierto por "+D.meta.abierto_por);
     $("canon").textContent=lineas.join("\n");
   }
 
+  function llave(persona,maquina){
+    return String(persona||"").toLowerCase().normalize("NFD").replace(/[^a-z0-9]/g,"")
+      +"@"+String(maquina||"").toLowerCase().normalize("NFD").replace(/[^a-z0-9]/g,"");
+  }
   function aplicaPresencia(lista){
     var vivos={}, ahora=Math.floor(Date.now()/1000);
     (lista||[]).forEach(function(p){
       var edad=ahora-(p.updated||0);
-      if(edad<900) vivos[p.persona]=p;
+      if(edad<900) vivos[llave(p.persona,p.machine)]=p;
     });
     var n=0;
     Array.prototype.forEach.call(document.querySelectorAll(".parte"),function(card){
-      var quien=card.getAttribute("data-persona"), v=vivos[quien], badge=card.querySelector("[data-vivo]");
+      var quien=card.getAttribute("data-quien"), v=vivos[quien], badge=card.querySelector("[data-vivo]");
       if(v){ n++; badge.className="vivo on"; badge.textContent="DESPIERTO"; }
       else { badge.className="vivo off"; badge.textContent="SIN SEÑAL"; }
     });

@@ -4,7 +4,7 @@
     "subtitulo": "Cada vivienda de la Rue, un agente real. Lo que está operativo, se enciende.",
     "supervisor": "NeoMBP16",
     "proyecto_yokup": "digitalsignage-ai",
-    "sello": "v.27.08.2026.r6.12:52"
+    "sello": "v.27.08.2026.r7.13:07"
   },
   "huecos": [
     {
@@ -18,10 +18,10 @@
     },
     {
       "id": "tejado",
-      "l": 23.6,
-      "t": 7.6,
-      "w": 34.5,
-      "h": 8.4,
+      "l": 25.7,
+      "t": 9.4,
+      "w": 31.3,
+      "h": 7.4,
       "label": "Tejado",
       "estrecho": true,
       "vertical": false
@@ -294,28 +294,36 @@
         "hueco": "atico-izq",
         "titulo": "Definir",
         "agente": "NeoMBP16",
-        "detalle": "Neo fija desde el ático el resultado único, el orden y lo que queda fuera. Sale el esqueleto del visor y el modo público."
+        "detalle": "Neo fija desde el ático el resultado único, el orden y lo que queda fuera. Sale el esqueleto del visor y el modo público.",
+        "hito": "v0.1",
+        "estado": "hecha"
       },
       {
         "n": 2,
         "hueco": "p3-izq",
         "titulo": "Datos",
         "agente": "TrinityMBP16",
-        "detalle": "El ascensor baja al 3º: Trinity levanta la capa real — pantallas de Valencia y Barcelona con lat/lon, circuito y qué emiten ahora."
+        "detalle": "El ascensor baja al 3º: Trinity levanta la capa real — pantallas de Valencia y Barcelona con lat/lon, circuito y qué emiten ahora.",
+        "hito": "v0.2",
+        "estado": "en curso"
       },
       {
         "n": 3,
         "hueco": "p2-izq",
         "titulo": "Romper",
         "agente": "SmithMBP16",
-        "detalle": "Baja al 2º: Smith lo rompe antes de que lo rompa un cliente y deja el parte de cada rotura."
+        "detalle": "Baja al 2º: Smith lo rompe antes de que lo rompa un cliente y deja el parte de cada rotura.",
+        "hito": "v0.3",
+        "estado": "pendiente"
       },
       {
         "n": 4,
         "hueco": "pb-izq",
         "titulo": "Entregar",
         "agente": null,
-        "detalle": "El proyecto llega al bajo y sale a la calle: modo demo para la presentación y modo público abierto, con su sello."
+        "detalle": "El proyecto llega al bajo y sale a la calle: modo demo para la presentación y modo público abierto, con su sello.",
+        "hito": "v1.0",
+        "estado": "pendiente"
       }
     ]
   },
@@ -332,5 +340,15 @@
       85.5
     ],
     "nota": "una parada por fase, siempre una planta por debajo de donde se trabaja: 3o, 2o, bajo y calle"
+  },
+  "pancarta": {
+    "l": 23.8,
+    "t": 8.6,
+    "w": 44.4,
+    "h": 9.2,
+    "giro": -1.05,
+    "fondo": "#eace25",
+    "borde": "#3b2a12",
+    "nota": "mas ancha que el rotulo dibujado y con su mismo amarillo, para que se lea la evolucion sin salirse del tejado"
   }
 }

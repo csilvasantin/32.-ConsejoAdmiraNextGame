@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="admiranext-version" content="AdmiraNeXT v.27.08.2026.r4.12:06">
+<meta name="admiranext-version" content="AdmiraNeXT v.27.08.2026.r5.12:41">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Vecinos · quién vive en cada piso de 13 Rue · AdmiraNeXT</title>
 <meta name="description" content="Página de asociación vecino↔agente: cada vivienda de 13 Rue del Percebe se asigna a un agente real, la parte operativa del edificio se enciende y Neo supervisa que todos dejen constancia en Yokup.">
@@ -54,6 +54,54 @@
   .vivienda.sel{outline:3px solid var(--ambar);outline-offset:-1px}
   .vivienda.estrecha .chapa i{display:none}
   @media(prefers-reduced-motion:reduce){.vivienda.viva{animation:none}}
+  .modos{display:flex;gap:8px;flex-wrap:wrap;margin:16px 0 0}
+  .modo{border:1.5px solid var(--tinta);background:transparent;color:var(--tinta);cursor:pointer;
+    font:800 11px/1 var(--mono);letter-spacing:.06em;padding:12px 14px}
+  .modo[aria-pressed="true"]{background:var(--tinta);color:var(--papel)}
+  .modo:hover{border-color:var(--ambar);color:var(--ambar)}
+  .modo[aria-pressed="true"]:hover{background:var(--ambar);border-color:var(--ambar);color:#fff}
+
+  .antena{position:absolute;z-index:9;cursor:pointer;border:1.5px dashed rgba(22,48,92,0);
+    border-radius:6px;transition:border-color .25s,background .25s}
+  .antena:hover,.antena:focus-visible{border-color:var(--ambar);background:rgba(216,121,24,.22);outline:none}
+  .antena b{position:absolute;left:50%;top:100%;transform:translateX(-50%);margin-top:4px;white-space:nowrap;
+    background:var(--tinta);color:var(--papel);font:800 8.5px/1.5 var(--mono);padding:1px 5px;opacity:0;transition:opacity .25s}
+  .antena:hover b,.antena:focus-visible b{opacity:1}
+  .antena.on{border-color:var(--ambar);background:rgba(216,121,24,.28);animation:late 2.6s ease-in-out infinite}
+
+  .capa{position:absolute;inset:0;z-index:3}
+  .capa[hidden]{display:none}
+
+  .cartel{position:absolute;z-index:6;display:flex;flex-direction:column;justify-content:center;overflow:hidden;
+    padding:2% 3%;color:#1a1408;text-shadow:0 1px 0 rgba(255,255,255,.45)}
+  .cartel b{display:block;font:800 clamp(13px,3.1cqw,25px)/1.02 var(--sans);letter-spacing:-.035em}
+  .cartel i{display:block;font-style:normal;margin-top:.5em;font:600 clamp(7px,1.35cqw,11px)/1.3 var(--sans);opacity:.82}
+  .cartel u{display:block;text-decoration:none;margin-top:.5em;font:800 clamp(6.5px,1.2cqw,10px)/1.2 var(--mono);
+    letter-spacing:.09em;text-transform:uppercase;color:#7a3a05}
+  .pagina{container-type:inline-size}
+
+  .riel{position:absolute;z-index:4;width:2px;background:repeating-linear-gradient(180deg,rgba(22,48,92,.5) 0 6px,transparent 6px 12px)}
+  .cabina{position:absolute;z-index:7;display:flex;align-items:center;gap:4%;padding:0 4%;
+    border:2px solid #2b2b2b;background:linear-gradient(180deg,#f6e3a8,#e2c46f);
+    box-shadow:0 6px 14px rgba(0,0,0,.45),inset 0 0 0 2px rgba(255,255,255,.5);
+    transition:top 1.25s cubic-bezier(.55,.06,.3,1)}
+  .cabina em{font-style:normal;font:800 13px/1 var(--mono);color:#2b2b2b}
+  .cabina span{font:700 9px/1.15 var(--mono);color:#3a3a3a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .foco{position:absolute;z-index:5;border:2.5px solid var(--ambar);background:rgba(216,121,24,.2);
+    box-shadow:0 0 0 2px rgba(255,255,255,.55),0 0 22px 4px rgba(216,121,24,.7);
+    animation:late 2.6s ease-in-out infinite;display:flex;align-items:flex-end}
+  .foco span{margin:4px;padding:3px 7px;background:var(--ambar);color:#fff;font:800 10px/1.2 var(--mono);
+    box-shadow:0 1px 3px rgba(0,0,0,.3)}
+  .apagado{position:absolute;z-index:4;background:rgba(16,26,48,.42)}
+
+  .fases{list-style:none;margin:14px 0 0;padding:0;counter-reset:f}
+  .fases li{border-left:3px solid var(--linea);padding:8px 0 10px 12px;margin-bottom:2px;cursor:pointer}
+  .fases li:hover{border-left-color:var(--ambar)}
+  .fases li.on{border-left-color:var(--ambar);background:rgba(216,121,24,.12)}
+  .fases li.hecha{opacity:.62}
+  .fases b{display:block;font:800 11px/1.3 var(--mono);letter-spacing:.05em}
+  .fases i{display:block;font-style:normal;font-size:.82rem;margin-top:3px}
+  .fases u{display:block;text-decoration:none;margin-top:4px;font:700 9px/1.2 var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
   .leyenda{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font:10px/1.5 var(--mono);color:var(--dim)}
   .leyenda i{display:inline-block;width:12px;height:12px;margin-right:5px;vertical-align:-2px;border:1.5px solid var(--tinta)}
 
@@ -94,6 +142,10 @@
     <nav class="casa-nav" data-casa-nav></nav>
     <script src="casa-nav.js?v=20260827-r2"></script>
     <div class="marcador" id="marcador"></div>
+    <div class="modos">
+      <button class="modo" id="m-agentes" type="button" aria-pressed="true">👥 AGENTES</button>
+      <button class="modo" id="m-antena" type="button" aria-pressed="false">📡 ANTENA · EL PROYECTO BAJA</button>
+    </div>
   </header>
 
   <div class="section-head"><h2>01 · El edificio</h2><span id="pie-casa">pulsa una vivienda para asignarla</span></div>
@@ -101,13 +153,28 @@
     <div>
       <div class="pagina" id="pagina">
         <img src="media/pisos-corte.jpg" width="832" height="1248" alt="Corte del edificio de 13 Rue del Percebe">
-        <div id="viviendas"></div>
+        <button class="antena" id="antena" type="button" aria-pressed="false"
+          title="La antena: quita los agentes y baja el proyecto por la escalera"><b>📡 el proyecto</b></button>
+        <div class="capa" id="capa-agentes"><div id="viviendas"></div></div>
+        <div class="capa" id="capa-antena" hidden></div>
       </div>
       <div class="leyenda">
         <span><i style="background:transparent;border-style:dashed"></i>libre — se ve el vecino de debajo</span>
         <span><i style="background:#2c477a;opacity:.34"></i>con dueño, a oscuras</span>
         <span><i style="background:#2c477a"></i>operativa ahora (late)</span>
       </div>
+    </div>
+
+    <div class="panel" id="panel-antena" hidden>
+      <div class="sub">el proyecto que baja por la escalera</div>
+      <h3 id="pr-nombre">—</h3>
+      <p id="pr-desc" style="margin:6px 0 0;font-size:.88rem"></p>
+      <div class="botones">
+        <button class="primary" id="pr-play" type="button">⏸ PAUSA</button>
+        <button class="secondary" id="pr-reset" type="button">VOLVER AL ÁTICO</button>
+      </div>
+      <ol class="fases" id="pr-fases"></ol>
+      <p class="status">Sin la capa de agentes: solo el proyecto, la planta encendida y el ascensor bajando. Pulsa una fase para saltar a ella.</p>
     </div>
 
     <div class="panel" id="panel">
@@ -195,9 +262,7 @@
       el.addEventListener("click",function(){ selecciona(el.getAttribute("data-hueco")) });
       el.addEventListener("keydown",function(e){ if(e.key==="Enter"||e.key===" "){e.preventDefault();selecciona(el.getAttribute("data-hueco"))} });
     });
-    var ocup=Object.keys(mapa).length, vivas=0;
-    Object.keys(mapa).forEach(function(k){ var a=agente(mapa[k].agente); if(a&&vivo(a))vivas++ });
-    $("pie-casa").textContent=ocup+" de "+D.huecos.length+" viviendas asignadas · "+vivas+" encendidas";
+    if(MODO!=="antena") $("pie-casa").textContent=resumenCasa();
   }
 
   function selecciona(id){
@@ -242,6 +307,11 @@
     }).join("");
   }
 
+  function resumenCasa(){
+    var ocup=Object.keys(mapa).length, vivas=0;
+    Object.keys(mapa).forEach(function(k){ var a=agente(mapa[k].agente); if(a&&vivo(a))vivas++ });
+    return ocup+" de "+D.huecos.length+" viviendas asignadas · "+vivas+" encendidas";
+  }
   function repinta(){ pintaCasa(); pintaTabla(); pintaMarcador() }
 
   function leePresencia(){
@@ -296,6 +366,67 @@
       .catch(function(e){ $("declarar").disabled=false; estado("No se pudo hablar con Yokup: "+esc(e),"bad") });
   }
 
+  /* ---- modo antena: el proyecto baja por la escalera ---- */
+  var MODO="agentes", fase=0, reloj=null, andando=true;
+  var CAB={l:80.6,w:13.6,h:6.6};
+
+  function fases(){ return ((D.proyecto||{}).fases)||[] }
+  function centroY(id){ var h=hueco(id); return h? h.t+h.h/2 : 50 }
+
+  function pintaAntenaCapa(){
+    var pr=D.proyecto||{}, F=fases(), f=F[fase]||{}, tj=hueco("tejado")||{l:23,t:8,w:34,h:8};
+    var cabTop=Math.round((centroY(f.hueco)-CAB.h/2)*100)/100, foco=hueco(f.hueco);
+    var html=""
+      +'<div class="cartel" style="left:'+tj.l+'%;top:'+tj.t+'%;width:'+tj.w+'%;height:'+tj.h+'%">'
+      +  "<b>"+esc(pr.nombre||"—")+"</b>"
+      +  "<i>"+esc(pr.lema||pr.descripcion||"")+"</i>"
+      +  "<u>fase "+(fase+1)+" de "+F.length+" · "+esc(f.titulo||"")+"</u></div>"
+      +'<div class="riel" style="left:'+(CAB.l+CAB.w/2)+'%;top:22%;height:60%"></div>';
+    if(foco) html+='<div class="foco" style="left:'+foco.l+'%;top:'+foco.t+'%;width:'+foco.w+'%;height:'+foco.h+'%">'
+      +"<span>FASE "+(fase+1)+" · "+esc(f.titulo||"")+"</span></div>";
+    html+='<div class="cabina" style="left:'+CAB.l+'%;width:'+CAB.w+'%;height:'+CAB.h+'%;top:'+cabTop+'%">'
+      +"<em>"+(fase+1)+"</em><span>"+esc(f.titulo||"")+"</span></div>";
+    $("capa-antena").innerHTML=html;
+  }
+
+  function pintaFases(){
+    var F=fases();
+    $("pr-nombre").textContent=(D.proyecto||{}).nombre||"—";
+    $("pr-desc").textContent=(D.proyecto||{}).descripcion||"";
+    $("pr-fases").innerHTML=F.map(function(f,i){
+      var ag=f.agente?agente(f.agente):null, h=hueco(f.hueco);
+      return '<li class="'+(i===fase?"on":(i<fase?"hecha":""))+'" data-fase="'+i+'">'
+        +"<b>"+(i+1)+" · "+esc(f.titulo||"")+"</b>"
+        +"<i>"+esc(f.detalle||"")+"</i>"
+        +"<u>"+esc((h?h.label:"")+(ag?" · "+ag.persona+" ("+ag.runtime+")":" · la calle"))+"</u></li>";
+    }).join("");
+    Array.prototype.forEach.call($("pr-fases").children,function(li){
+      li.addEventListener("click",function(){ vaFase(+li.getAttribute("data-fase"),true) });
+    });
+  }
+
+  function vaFase(i,manual){
+    var F=fases(); if(!F.length) return;
+    fase=((i%F.length)+F.length)%F.length;
+    pintaAntenaCapa(); pintaFases();
+    if(manual){ andando=false; $("pr-play").textContent="▶ SEGUIR"; para() }
+  }
+  function para(){ if(reloj){clearInterval(reloj);reloj=null} }
+  function anda(){ para(); reloj=setInterval(function(){ vaFase(fase+1) },3800) }
+
+  function modo(m){
+    MODO=m;
+    var an=(m==="antena");
+    $("capa-agentes").hidden=an; $("capa-antena").hidden=!an;
+    $("panel").hidden=an; $("panel-antena").hidden=!an;
+    $("m-agentes").setAttribute("aria-pressed",String(!an));
+    $("m-antena").setAttribute("aria-pressed",String(an));
+    $("antena").setAttribute("aria-pressed",String(an));
+    $("antena").className="antena"+(an?" on":"");
+    $("pie-casa").textContent=an?"la antena manda: sin agentes, solo el proyecto bajando":resumenCasa();
+    if(an){ pintaAntenaCapa(); pintaFases(); if(andando) anda(); } else para();
+  }
+
   function arranca(){
     $("sel-agente").innerHTML='<option value="">— libre —</option>'+D.agentes.map(function(a){
       return '<option value="'+esc(a.id)+'">'+esc(a.persona+" · "+a.runtime+" ("+a.casa+") · "+a.maquina)+"</option>" }).join("");
@@ -323,6 +454,17 @@
       } else estado("<pre>"+esc(salida)+"</pre>");
     });
     $("declarar").addEventListener("click",declarar);
+
+    var a=D.antena||{l:11,t:4.6,w:7.6,h:9};
+    $("antena").style.cssText="left:"+a.l+"%;top:"+a.t+"%;width:"+a.w+"%;height:"+a.h+"%";
+    $("antena").addEventListener("click",function(){ modo(MODO==="antena"?"agentes":"antena") });
+    $("m-agentes").addEventListener("click",function(){ modo("agentes") });
+    $("m-antena").addEventListener("click",function(){ modo("antena") });
+    $("pr-play").addEventListener("click",function(){
+      andando=!andando; $("pr-play").textContent=andando?"⏸ PAUSA":"▶ SEGUIR";
+      if(andando){ vaFase(fase+1); anda() } else para();
+    });
+    $("pr-reset").addEventListener("click",function(){ fase=0; pintaAntenaCapa(); pintaFases(); });
 
     carga(); repinta(); tick(); setInterval(tick,20000);
     $("pie").textContent="AdmiraNeXT · 13 Rue · puerta 11 · Vecinos · "+D.meta.sello+" · supervisa "+D.meta.supervisor;

@@ -4,7 +4,7 @@
     "subtitulo": "Cada vivienda de la Rue, un agente real. Lo que está operativo, se enciende.",
     "supervisor": "NeoMBP16",
     "proyecto_yokup": "digitalsignage-ai",
-    "sello": "v.27.08.2026.r4.12:06"
+    "sello": "v.27.08.2026.r5.12:41"
   },
   "huecos": [
     {
@@ -262,5 +262,46 @@
       "papel": "Pruebas y roturas",
       "tarea": "Rompe lo que los demás construyen antes de que lo rompa un cliente, y deja el parte de cada rotura."
     }
-  ]
+  ],
+  "antena": {
+    "l": 11.1,
+    "t": 4.6,
+    "w": 7.6,
+    "h": 9.0
+  },
+  "proyecto": {
+    "nombre": "Ojo de Dios DOOH",
+    "lema": "Valencia y Barcelona, pantalla a pantalla.",
+    "descripcion": "Un globo 3D con las pantallas reales de Valencia y Barcelona: modo demo espectacular con tiles fotorrealistas y voz, y modo público sobre Cesium con voz robotizada y coste cero.",
+    "fases": [
+      {
+        "n": 1,
+        "hueco": "atico-izq",
+        "titulo": "Definir",
+        "agente": "NeoMBP16",
+        "detalle": "Neo fija desde el ático el resultado único, el orden y lo que queda fuera. Sale el esqueleto del visor y el modo público."
+      },
+      {
+        "n": 2,
+        "hueco": "p3-izq",
+        "titulo": "Datos",
+        "agente": "TrinityMBP16",
+        "detalle": "El ascensor baja al 3º: Trinity levanta la capa real — pantallas de Valencia y Barcelona con lat/lon, circuito y qué emiten ahora."
+      },
+      {
+        "n": 3,
+        "hueco": "p2-izq",
+        "titulo": "Romper",
+        "agente": "SmithMBP16",
+        "detalle": "Baja al 2º: Smith lo rompe antes de que lo rompa un cliente y deja el parte de cada rotura."
+      },
+      {
+        "n": 4,
+        "hueco": "pb-izq",
+        "titulo": "Entregar",
+        "agente": null,
+        "detalle": "El proyecto llega al bajo y sale a la calle: modo demo para la presentación y modo público abierto, con su sello."
+      }
+    ]
+  }
 }

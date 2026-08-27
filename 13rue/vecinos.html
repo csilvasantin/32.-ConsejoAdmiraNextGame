@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="admiranext-version" content="AdmiraNeXT v.27.08.2026.r3.07:41">
+<meta name="admiranext-version" content="AdmiraNeXT v.27.08.2026.r4.12:06">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Vecinos · quién vive en cada piso de 13 Rue · AdmiraNeXT</title>
 <meta name="description" content="Página de asociación vecino↔agente: cada vivienda de 13 Rue del Percebe se asigna a un agente real, la parte operativa del edificio se enciende y Neo supervisa que todos dejen constancia en Yokup.">
@@ -35,17 +35,25 @@
   .casa-cols{display:grid;grid-template-columns:minmax(0,440px) minmax(0,1fr);gap:18px;align-items:start}
   .pagina{position:relative;border:1.5px solid var(--tinta);background:#fff8d6;box-shadow:6px 6px 0 rgba(22,48,92,.1)}
   .pagina img{display:block;width:100%;height:auto;pointer-events:none}
-  .vivienda{position:absolute;z-index:3;border:2px dashed rgba(22,48,92,.32);background:rgba(120,130,150,.14);
-    cursor:pointer;padding:4px 5px;overflow:hidden;transition:background .25s,box-shadow .25s,border-color .25s;
-    display:flex;flex-direction:column;justify-content:flex-end;text-align:left}
-  .vivienda:hover{border-color:var(--tinta);box-shadow:inset 0 0 0 2px rgba(22,48,92,.35)}
-  .vivienda .quien{font:800 10px/1.1 var(--mono);letter-spacing:.02em;color:rgba(22,48,92,.62)}
-  .vivienda .que{font:9px/1.15 var(--mono);color:rgba(22,48,92,.5);margin-top:2px}
-  .vivienda.ocupada{border-style:solid;border-color:rgba(0,0,0,.35)}
-  .vivienda.ocupada .quien,.vivienda.ocupada .que{color:#fff;text-shadow:0 1px 2px rgba(0,0,0,.55)}
-  .vivienda.viva{box-shadow:0 0 0 3px rgba(255,255,255,.55),0 0 22px 3px currentColor}
-  .vivienda.sel{outline:3px solid var(--ambar);outline-offset:1px}
-  .vivienda.estrecha .que{display:none}
+  .vivienda{position:absolute;z-index:3;cursor:pointer;display:flex;align-items:flex-end;
+    border:1.5px dashed rgba(22,48,92,.34);background:transparent;overflow:hidden;
+    transition:background .3s,box-shadow .3s,border-color .3s}
+  .vivienda:hover{border-color:var(--ambar);background:rgba(216,121,24,.16)}
+  .vivienda.vertical{align-items:flex-start}
+  .chapa{margin:4px;max-width:calc(100% - 8px);padding:3px 6px;border-left:4px solid rgba(22,48,92,.32);
+    background:rgba(255,255,255,.74);color:rgba(22,48,92,.72);backdrop-filter:blur(2px);
+    box-shadow:0 1px 3px rgba(0,0,0,.25);pointer-events:none}
+  .chapa b{display:block;font:800 11px/1.15 var(--mono);letter-spacing:.01em;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .chapa i{display:block;font:9px/1.25 var(--mono);font-style:normal;opacity:.88;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .vivienda.ocupada{border:2px solid var(--c);background:color-mix(in srgb,var(--c) 20%,transparent)}
+  .vivienda.ocupada .chapa{background:var(--c);color:#fff;border-left-color:rgba(255,255,255,.85)}
+  .vivienda.viva{background:color-mix(in srgb,var(--c) 36%,transparent);
+    box-shadow:0 0 0 2px rgba(255,255,255,.6),0 0 20px 3px var(--c);animation:late 2.6s ease-in-out infinite}
+  @keyframes late{0%,100%{box-shadow:0 0 0 2px rgba(255,255,255,.6),0 0 14px 1px var(--c)}
+    50%{box-shadow:0 0 0 2px rgba(255,255,255,.75),0 0 26px 5px var(--c)}}
+  .vivienda.sel{outline:3px solid var(--ambar);outline-offset:-1px}
+  .vivienda.estrecha .chapa i{display:none}
+  @media(prefers-reduced-motion:reduce){.vivienda.viva{animation:none}}
   .leyenda{display:flex;gap:14px;flex-wrap:wrap;margin-top:10px;font:10px/1.5 var(--mono);color:var(--dim)}
   .leyenda i{display:inline-block;width:12px;height:12px;margin-right:5px;vertical-align:-2px;border:1.5px solid var(--tinta)}
 
@@ -96,9 +104,9 @@
         <div id="viviendas"></div>
       </div>
       <div class="leyenda">
-        <span><i style="background:rgba(120,130,150,.14);border-style:dashed"></i>libre</span>
-        <span><i style="background:#2c477a;opacity:.45"></i>asignada, a oscuras</span>
-        <span><i style="background:#2c477a"></i>operativa ahora</span>
+        <span><i style="background:transparent;border-style:dashed"></i>libre — se ve el vecino de debajo</span>
+        <span><i style="background:#2c477a;opacity:.34"></i>con dueño, a oscuras</span>
+        <span><i style="background:#2c477a"></i>operativa ahora (late)</span>
       </div>
     </div>
 
@@ -174,13 +182,14 @@
   function pintaCasa(){
     $("viviendas").innerHTML=D.huecos.map(function(h){
       var v=D.censo[h.id]||{}, asg=mapa[h.id], ag=asg?agente(asg.agente):null;
-      var clases="vivienda"+(h.estrecho?" estrecha":"")+(ag?" ocupada":"")+(ag&&vivo(ag)?" viva":"")+(sel===h.id?" sel":"");
+      var clases="vivienda"+(h.estrecho?" estrecha":"")+(h.vertical?" vertical":"")
+        +(ag?" ocupada":" libre")+(ag&&vivo(ag)?" viva":"")+(sel===h.id?" sel":"");
       var estilo="left:"+h.l+"%;top:"+h.t+"%;width:"+h.w+"%;height:"+h.h+"%";
-      if(ag) estilo+=";background:"+ag.color+(vivo(ag)?"":"99")+";color:"+ag.color;
+      if(ag) estilo+=";--c:"+ag.color;
       return '<div class="'+clases+'" data-hueco="'+esc(h.id)+'" style="'+estilo+'" role="button" tabindex="0"'
-        +' title="'+esc(h.label+" · "+(v.nombre||""))+'">'
-        +'<div class="quien">'+esc(v.icono||"")+" "+esc(ag?ag.persona:"libre")+'</div>'
-        +'<div class="que">'+esc(ag?ag.runtime+" · "+ag.casa:(v.nombre||""))+'</div></div>';
+        +' title="'+esc(h.label+" · "+(v.nombre||"")+(ag?" · "+ag.persona:" · libre"))+'">'
+        +'<span class="chapa"><b>'+esc((v.icono||"")+" "+(ag?ag.persona:"libre"))+'</b>'
+        +'<i>'+esc(ag?ag.runtime+" · "+ag.casa:(v.nombre||""))+'</i></span></div>';
     }).join("");
     Array.prototype.forEach.call($("viviendas").children,function(el){
       el.addEventListener("click",function(){ selecciona(el.getAttribute("data-hueco")) });

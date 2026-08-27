@@ -4,50 +4,263 @@
     "subtitulo": "Cada vivienda de la Rue, un agente real. Lo que está operativo, se enciende.",
     "supervisor": "NeoMBP16",
     "proyecto_yokup": "digitalsignage-ai",
-    "sello": "v.27.08.2026.r3.07:41"
+    "sello": "v.27.08.2026.r4.12:06"
   },
   "huecos": [
-    { "id": "tejado",       "l": 20,   "t": 3.5,  "w": 50, "h": 12,   "label": "Tejado",              "estrecho": true },
-    { "id": "atico-izq",    "l": 14.5, "t": 18.0, "w": 28, "h": 14.5, "label": "Ático izq" },
-    { "id": "atico-der",    "l": 43,   "t": 18.0, "w": 28, "h": 14.5, "label": "Ático der" },
-    { "id": "p3-izq",       "l": 14.5, "t": 33.0, "w": 28, "h": 14.2, "label": "3º izq" },
-    { "id": "p3-der",       "l": 43,   "t": 33.0, "w": 28, "h": 14.2, "label": "3º der" },
-    { "id": "p2-izq",       "l": 14.5, "t": 47.6, "w": 28, "h": 14.4, "label": "2º izq" },
-    { "id": "p2-der",       "l": 43,   "t": 47.6, "w": 28, "h": 14.4, "label": "2º der" },
-    { "id": "pb-izq",       "l": 14.5, "t": 62.4, "w": 28, "h": 15.2, "label": "Bajo izq" },
-    { "id": "portal",       "l": 42.5, "t": 62.4, "w": 10, "h": 15.2, "label": "Portal", "estrecho": true },
-    { "id": "pb-der",       "l": 52,   "t": 62.4, "w": 19, "h": 15.2, "label": "Bajo der" },
-    { "id": "escalera",     "l": 71.5, "t": 8.0,  "w": 26, "h": 68,   "label": "Escalera / ascensor", "estrecho": true },
-    { "id": "alcantarilla", "l": 58,   "t": 81.5, "w": 38, "h": 16.5, "label": "Alcantarilla" }
+    {
+      "id": "tejado",
+      "l": 23.6,
+      "t": 7.6,
+      "w": 34.5,
+      "h": 8.4,
+      "label": "Tejado",
+      "estrecho": true,
+      "vertical": false
+    },
+    {
+      "id": "atico-izq",
+      "l": 15.4,
+      "t": 20.0,
+      "w": 31.4,
+      "h": 15.2,
+      "label": "Ático izq",
+      "vertical": false
+    },
+    {
+      "id": "atico-der",
+      "l": 48.1,
+      "t": 20.0,
+      "w": 30.6,
+      "h": 15.2,
+      "label": "Ático der",
+      "vertical": false
+    },
+    {
+      "id": "p3-izq",
+      "l": 15.4,
+      "t": 36.2,
+      "w": 31.4,
+      "h": 14.2,
+      "label": "3º izq",
+      "vertical": false
+    },
+    {
+      "id": "p3-der",
+      "l": 48.1,
+      "t": 36.2,
+      "w": 30.6,
+      "h": 14.2,
+      "label": "3º der",
+      "vertical": false
+    },
+    {
+      "id": "p2-izq",
+      "l": 15.4,
+      "t": 51.4,
+      "w": 31.4,
+      "h": 15.3,
+      "label": "2º izq",
+      "vertical": false
+    },
+    {
+      "id": "p2-der",
+      "l": 48.1,
+      "t": 51.4,
+      "w": 30.6,
+      "h": 15.3,
+      "label": "2º der",
+      "vertical": false
+    },
+    {
+      "id": "pb-izq",
+      "l": 15.4,
+      "t": 67.8,
+      "w": 29.6,
+      "h": 15.1,
+      "label": "Bajo izq",
+      "vertical": false
+    },
+    {
+      "id": "portal",
+      "l": 45.5,
+      "t": 67.8,
+      "w": 14.8,
+      "h": 15.1,
+      "label": "Portal",
+      "estrecho": true,
+      "vertical": false
+    },
+    {
+      "id": "pb-der",
+      "l": 60.7,
+      "t": 67.8,
+      "w": 18.0,
+      "h": 15.1,
+      "label": "Bajo der",
+      "vertical": false
+    },
+    {
+      "id": "escalera",
+      "l": 79.2,
+      "t": 36.2,
+      "w": 16.4,
+      "h": 43.2,
+      "label": "Escalera / ascensor",
+      "estrecho": true,
+      "vertical": true
+    },
+    {
+      "id": "alcantarilla",
+      "l": 70.5,
+      "t": 83.0,
+      "w": 22.0,
+      "h": 15.0,
+      "label": "Alcantarilla",
+      "vertical": false
+    }
   ],
   "censo": {
-    "tejado":       { "id": "puerto-deliveries", "nombre": "Puerto Deliveries",    "icono": "🛸", "antes": "gato y ratón" },
-    "atico-izq":    { "id": "guru-ia",           "nombre": "Gurú de la IA",        "icono": "🪵", "antes": "Manolo el moroso" },
-    "atico-der":    { "id": "estudio-uxui",      "nombre": "Estudio UX/UI",        "icono": "🎨", "antes": "Don Vidal, el sastre" },
-    "p3-izq":       { "id": "imperio-nocode",    "nombre": "Imperio No-Code",      "icono": "🧩", "antes": "el contratista" },
-    "p3-der":       { "id": "hacker-gris",       "nombre": "Hacker sombrero gris", "icono": "💻", "antes": "Celedonio, el ladrón" },
-    "p2-izq":       { "id": "pet-tech",          "nombre": "Taller Pet-Tech",      "icono": "🐕", "antes": "la señora de los animales" },
-    "p2-der":       { "id": "deeptech-biotech",  "nombre": "DeepTech & Biotech",   "icono": "🔬", "antes": "Don Alcornoque" },
-    "pb-izq":       { "id": "cripto-cafe",       "nombre": "Cripto-Café Web3",     "icono": "☕", "antes": "Senén, el colmado" },
-    "portal":       { "id": "porteria",          "nombre": "Chief of Happiness",   "icono": "🧹", "antes": "Leonor, la portera" },
-    "pb-der":       { "id": "coliving-nomadas",  "nombre": "Coliving nómadas",     "icono": "🛏️", "antes": "la pensión de Doña Rita" },
-    "escalera":     { "id": "ascensor",          "nombre": "Smart-Elevator",       "icono": "🛗", "antes": "las trampas de la Rue" },
-    "alcantarilla": { "id": "abogados",          "nombre": "Las Leyes",            "icono": "⚖️", "antes": "Don Hurón, la alcantarilla" }
+    "tejado": {
+      "id": "puerto-deliveries",
+      "nombre": "Puerto Deliveries",
+      "icono": "🛸",
+      "antes": "gato y ratón"
+    },
+    "atico-izq": {
+      "id": "guru-ia",
+      "nombre": "Gurú de la IA",
+      "icono": "🪵",
+      "antes": "Manolo el moroso"
+    },
+    "atico-der": {
+      "id": "estudio-uxui",
+      "nombre": "Estudio UX/UI",
+      "icono": "🎨",
+      "antes": "Don Vidal, el sastre"
+    },
+    "p3-izq": {
+      "id": "imperio-nocode",
+      "nombre": "Imperio No-Code",
+      "icono": "🧩",
+      "antes": "el contratista"
+    },
+    "p3-der": {
+      "id": "hacker-gris",
+      "nombre": "Hacker sombrero gris",
+      "icono": "💻",
+      "antes": "Celedonio, el ladrón"
+    },
+    "p2-izq": {
+      "id": "pet-tech",
+      "nombre": "Taller Pet-Tech",
+      "icono": "🐕",
+      "antes": "la señora de los animales"
+    },
+    "p2-der": {
+      "id": "deeptech-biotech",
+      "nombre": "DeepTech & Biotech",
+      "icono": "🔬",
+      "antes": "Don Alcornoque"
+    },
+    "pb-izq": {
+      "id": "cripto-cafe",
+      "nombre": "Cripto-Café Web3",
+      "icono": "☕",
+      "antes": "Senén, el colmado"
+    },
+    "portal": {
+      "id": "porteria",
+      "nombre": "Chief of Happiness",
+      "icono": "🧹",
+      "antes": "Leonor, la portera"
+    },
+    "pb-der": {
+      "id": "coliving-nomadas",
+      "nombre": "Coliving nómadas",
+      "icono": "🛏️",
+      "antes": "la pensión de Doña Rita"
+    },
+    "escalera": {
+      "id": "ascensor",
+      "nombre": "Smart-Elevator",
+      "icono": "🛗",
+      "antes": "las trampas de la Rue"
+    },
+    "alcantarilla": {
+      "id": "abogados",
+      "nombre": "Las Leyes",
+      "icono": "⚖️",
+      "antes": "Don Hurón, la alcantarilla"
+    }
   },
   "agentes": [
-    { "id": "NeoMBP16",     "persona": "Neo",     "runtime": "Claude",   "casa": "Anthropic", "maquina": "MacBook Pro 16", "color": "#2c477a" },
-    { "id": "TrinityMBP16", "persona": "Trinity", "runtime": "Codex",    "casa": "OpenAI",    "maquina": "MacBook Pro 16", "color": "#277f48" },
-    { "id": "SmithMBP16",   "persona": "Smith",   "runtime": "Grok",     "casa": "xAI",       "maquina": "MacBook Pro 16", "color": "#a6372f" },
-    { "id": "MorfeoMini",   "persona": "Morfeo",  "runtime": "Claude",   "casa": "Anthropic", "maquina": "MacMini",        "color": "#6b3fa0" },
-    { "id": "OraculoMini",  "persona": "Oráculo", "runtime": "Codex",    "casa": "OpenAI",    "maquina": "MacMini",        "color": "#d87918" },
-    { "id": "NiobeMini",    "persona": "Niobe",   "runtime": "OpenCode", "casa": "xAI",       "maquina": "MacMini",        "color": "#0f7f8f" }
+    {
+      "id": "NeoMBP16",
+      "persona": "Neo",
+      "runtime": "Claude",
+      "casa": "Anthropic",
+      "maquina": "MacBook Pro 16",
+      "color": "#2c477a"
+    },
+    {
+      "id": "TrinityMBP16",
+      "persona": "Trinity",
+      "runtime": "Codex",
+      "casa": "OpenAI",
+      "maquina": "MacBook Pro 16",
+      "color": "#277f48"
+    },
+    {
+      "id": "SmithMBP16",
+      "persona": "Smith",
+      "runtime": "Grok",
+      "casa": "xAI",
+      "maquina": "MacBook Pro 16",
+      "color": "#a6372f"
+    },
+    {
+      "id": "MorfeoMini",
+      "persona": "Morfeo",
+      "runtime": "Claude",
+      "casa": "Anthropic",
+      "maquina": "MacMini",
+      "color": "#6b3fa0"
+    },
+    {
+      "id": "OraculoMini",
+      "persona": "Oráculo",
+      "runtime": "Codex",
+      "casa": "OpenAI",
+      "maquina": "MacMini",
+      "color": "#d87918"
+    },
+    {
+      "id": "NiobeMini",
+      "persona": "Niobe",
+      "runtime": "OpenCode",
+      "casa": "xAI",
+      "maquina": "MacMini",
+      "color": "#0f7f8f"
+    }
   ],
   "asignaciones": [
-    { "hueco": "atico-izq", "agente": "NeoMBP16",     "papel": "Supervisor de la casa",
-      "tarea": "Reparte las viviendas, vigila que cada vecino deje constancia en Yokup y publica lo que sale." },
-    { "hueco": "p3-izq",    "agente": "TrinityMBP16", "papel": "Obra fina",
-      "tarea": "Capa de datos del Ojo de Dios: pantallas reales de Valencia y Barcelona con lat/lon y qué emiten." },
-    { "hueco": "p2-izq",    "agente": "SmithMBP16",   "papel": "Pruebas y roturas",
-      "tarea": "Rompe lo que los demás construyen antes de que lo rompa un cliente, y deja el parte de cada rotura." }
+    {
+      "hueco": "atico-izq",
+      "agente": "NeoMBP16",
+      "papel": "Supervisor de la casa",
+      "tarea": "Reparte las viviendas, vigila que cada vecino deje constancia en Yokup y publica lo que sale."
+    },
+    {
+      "hueco": "p3-izq",
+      "agente": "TrinityMBP16",
+      "papel": "Obra fina",
+      "tarea": "Capa de datos del Ojo de Dios: pantallas reales de Valencia y Barcelona con lat/lon y qué emiten."
+    },
+    {
+      "hueco": "p2-izq",
+      "agente": "SmithMBP16",
+      "papel": "Pruebas y roturas",
+      "tarea": "Rompe lo que los demás construyen antes de que lo rompa un cliente, y deja el parte de cada rotura."
+    }
   ]
 }

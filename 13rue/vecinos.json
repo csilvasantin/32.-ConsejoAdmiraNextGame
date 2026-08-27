@@ -4,7 +4,7 @@
     "subtitulo": "Cada vivienda de la Rue, un agente real. Lo que está operativo, se enciende.",
     "supervisor": "NeoMBP16",
     "proyecto_yokup": "digitalsignage-ai",
-    "sello": "v.27.08.2026.r7.13:07"
+    "sello": "v.27.08.2026.r8.13:40"
   },
   "huecos": [
     {
@@ -328,18 +328,18 @@
     ]
   },
   "ascensor": {
-    "l": 88.0,
-    "w": 7.4,
-    "h": 6.6,
+    "l": 90.2,
+    "w": 5.4,
+    "h": 5.6,
     "riel_t": 18.0,
-    "riel_h": 71.0,
+    "riel_h": 64.0,
     "paradas": [
+      27.6,
       43.3,
-      59.1,
-      75.4,
-      85.5
+      59.05,
+      75.35
     ],
-    "nota": "una parada por fase, siempre una planta por debajo de donde se trabaja: 3o, 2o, bajo y calle"
+    "nota": "hueco estrecho pegado al muro exterior, a la derecha de los rellanos de la escalera; baja desde justo debajo del terrado y para en la planta de cada fase"
   },
   "pancarta": {
     "l": 23.8,

@@ -10,7 +10,8 @@
     { id: "implementar",    href: "/13rue/implementar",   n: "6", t: "Implementar · una idea" },
     { id: "cronograma",     href: "/13rue/cronograma",    n: "7", t: "Cronograma · el plan" },
     { id: "pisos",          href: "/13rue/pisos",         n: "8", t: "Pisos · el corte" },
-    { id: "enjambre",       href: "/13rue/enjambre",      n: "9", t: "Enjambre · repartir un problema" }
+    { id: "enjambre",       href: "/13rue/enjambre",      n: "9", t: "Enjambre · repartir un problema" },
+    { id: "ojo",            href: "/13rue/ojo",           n: "10", t: "Ojo de Dios · el enjambre DOOH" }
   ];
 
   function current() {
@@ -23,6 +24,7 @@
     if (/\/13rue\/cronograma$/.test(p)) return "cronograma";
     if (/\/13rue\/pisos$/.test(p)) return "pisos";
     if (/\/13rue\/enjambre$/.test(p)) return "enjambre";
+    if (/\/13rue\/ojo$/.test(p)) return "ojo";
     if (/\/13rue$/.test(p)) return "incubadora";
     return "";
   }

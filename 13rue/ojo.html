@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="admiranext-version" content="AdmiraNeXT v.27.08.2026.r1.07:16">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Ojo de Dios · el enjambre DOOH de Valencia y Barcelona · AdmiraNeXT</title>
+<meta name="description" content="Un globo 3D donde no se rastrean aviones sino pantallas. Cuatro agentes reales cogen su parte a la vez y aquí se ve quién tiene qué, en qué máquina corre y si está despierto.">
+<link rel="canonical" href="https://www.admira.live/13rue/ojo.html">
+<meta name="robots" content="noindex">
+<script src="/admira-bar.js?v=20260810-r37"></script>
+<link rel="stylesheet" href="casa-nav.css?v=20260827-r1">
+<style>
+  :root{--papel:#efe7d3;--papel2:#e7dcc2;--tinta:#16305c;--tinta2:#2c477a;--dim:#6a789a;
+    --linea:rgba(22,48,92,.22);--linea2:rgba(22,48,92,.46);--ambar:#d87918;--luz:#277f48;
+    --rojo:#a6372f;--mono:ui-monospace,"SF Mono",SFMono-Regular,Menlo,Consolas,monospace;
+    --sans:-apple-system,BlinkMacSystemFont,"Segoe UI",Inter,Roboto,sans-serif}
+  *{box-sizing:border-box}html,body{margin:0;padding:0}
+  body{background:var(--papel);color:var(--tinta);font-family:var(--sans);line-height:1.45;
+    background-image:linear-gradient(rgba(22,48,92,.035) 1px,transparent 1px),linear-gradient(90deg,rgba(22,48,92,.035) 1px,transparent 1px);background-size:26px 26px}
+  .wrap{max-width:1180px;margin:0 auto;padding:0 20px 80px}a{color:var(--ambar)}header{padding:38px 0 10px}
+  .eyebrow,.k{font:700 11px/1.3 var(--mono);letter-spacing:.14em;text-transform:uppercase;color:var(--tinta2)}
+  h1{font-size:clamp(2.2rem,6vw,3.9rem);line-height:.95;margin:8px 0 12px;letter-spacing:-.045em}
+  h1 small{display:block;margin-top:10px;font-size:clamp(1rem,2.2vw,1.25rem);font-weight:650;color:var(--tinta2);letter-spacing:0}
+  .lede{max-width:79ch;margin:18px 0 0;padding:16px 18px;border:1.5px solid var(--tinta);background:rgba(216,121,24,.1)}
+  .section-head{display:flex;justify-content:space-between;gap:16px;align-items:end;margin:32px 0 10px;border-bottom:1.5px solid var(--tinta);padding-bottom:8px}
+  .section-head h2{margin:0;font-size:1.45rem}
+  .section-head span{font:10px/1.3 var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:.09em;text-align:right}
+  .modos{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .modo{border:1.5px solid var(--tinta);background:rgba(255,255,255,.34);padding:15px;box-shadow:6px 6px 0 rgba(22,48,92,.08)}
+  .modo h3{margin:0 0 2px;font-size:1.1rem}.modo .ico{font-size:1.6rem}
+  .modo dl{margin:10px 0 0;display:grid;grid-template-columns:auto 1fr;gap:5px 12px;font-size:.82rem}
+  .modo dt{font:800 9px/1.5 var(--mono);color:var(--ambar);letter-spacing:.06em;text-transform:uppercase}
+  .modo dd{margin:0;color:var(--tinta2)}
+  .reparto{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .parte{border:1.5px solid var(--tinta);background:rgba(255,255,255,.34);padding:14px;position:relative;border-left-width:7px}
+  .parte-top{display:flex;gap:10px;align-items:flex-start}
+  .parte .ico{font-size:1.5rem;line-height:1}
+  .parte h3{margin:0;font-size:1.05rem}
+  .parte .full{font:9.5px/1.3 var(--mono);color:var(--dim);margin-top:3px}
+  .vivo{position:absolute;right:11px;top:11px;font:800 9px/1 var(--mono);padding:4px 6px;border:1px solid var(--linea2);color:var(--dim);background:var(--papel);white-space:nowrap}
+  .vivo.on{color:var(--luz);border-color:var(--luz)}.vivo.off{color:var(--rojo);border-color:var(--rojo)}
+  .papel-rol{margin:9px 0 8px;font:800 9px/1 var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--ambar)}
+  .territorio{margin:0 0 9px;color:var(--tinta2);font-size:.85rem;font-weight:650}
+  .campos{border-top:1px solid var(--linea);padding-top:8px}
+  .campos p{margin:6px 0;font-size:.79rem;color:var(--tinta2)}
+  .campos b{font:800 9px/1 var(--mono);color:var(--ambar);letter-spacing:.06em}
+  .pie-parte{margin-top:10px;font:9.5px/1.4 var(--mono);color:var(--dim);border-top:1px dotted var(--linea);padding-top:7px}
+  .misiones{display:grid;grid-template-columns:1fr 1fr;gap:10px}
+  .mision{border:1.5px solid var(--tinta);background:rgba(255,255,255,.34);padding:13px}
+  .mision h3{margin:0 0 4px;font-size:1rem}.mision p{margin:4px 0;color:var(--tinta2);font-size:.82rem}
+  .mision code{font:800 11px/1.4 var(--mono);color:var(--tinta)}
+  .canon{margin-top:12px;border:1.5px solid var(--tinta);background:var(--tinta);color:var(--papel);padding:14px 16px;font:11px/1.6 var(--mono);white-space:pre-wrap;overflow-wrap:anywhere}
+  .ciudades{display:flex;gap:10px;flex-wrap:wrap;margin-top:10px}
+  .ciudad{border:1.5px solid var(--tinta);background:rgba(255,255,255,.34);padding:11px 15px;font:700 12px/1.4 var(--mono)}
+  .ciudad span{display:block;font:9px/1.4 var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:.08em;font-weight:400}
+  footer{margin-top:38px;padding-top:12px;border-top:1px solid var(--linea);font:10px/1.5 var(--mono);color:var(--dim)}
+  @media(max-width:900px){.reparto,.modos,.misiones{grid-template-columns:1fr}}
+</style>
+</head>
+<body>
+<main class="wrap">
+  <header>
+    <p class="eyebrow">13 Rue · puerta 10 · obra en curso</p>
+    <h1>Ojo de Dios<small>Un globo 3D donde no se rastrean aviones: se rastrean pantallas.</small></h1>
+    <p class="lede">El original — <b>God's Eye View V1</b>, código MIT — pinta sobre una Tierra fotorrealista
+      todo lo que el planeta emite: aviones, barcos, satélites, cámaras. Nosotros cambiamos la carga:
+      pintamos <b>las pantallas DOOH de Valencia y Barcelona</b>, qué emite cada una ahora mismo y cuánta
+      gente la está viendo. Y como el espectáculo cuesta dinero, sale en <b>dos modos</b>.
+      Aquí abajo se ve el reparto real: cuatro agentes, cuatro máquinas, cada uno con su parte.</p>
+    <nav class="casa-nav" data-casa-nav></nav>
+    <script src="casa-nav.js?v=20260827-r1"></script>
+    <div class="ciudades" id="ciudades"></div>
+  </header>
+
+  <div class="section-head"><h2>01 · Los dos modos</h2><span>lo espectacular se enciende, lo público no se apaga</span></div>
+  <section class="modos" id="modos"></section>
+
+  <div class="section-head"><h2>02 · El reparto</h2><span id="reparto-estado">comprobando quién está despierto…</span></div>
+  <section class="reparto" id="reparto" aria-live="polite"></section>
+
+  <div class="section-head"><h2>03 · Registro Yokup</h2><span>proyecto digitalsignage-ai</span></div>
+  <section class="misiones" id="misiones"></section>
+  <div class="canon" id="canon">Cargando el enjambre…</div>
+
+  <footer id="pie">AdmiraNeXT · 13 Rue · puerta 10</footer>
+</main>
+
+<script>
+(function(){
+  "use strict";
+  var PRESENCE="https://admira-telegram.csilvasantin.workers.dev/api/presence";
+  var D=null;
+  function $(id){return document.getElementById(id)}
+  function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){
+    return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]})}
+
+  function pintaCiudades(){
+    $("ciudades").innerHTML=D.meta.ciudades.map(function(c){
+      return '<div class="ciudad">'+esc(c)+'<span>pantallas reales</span></div>';
+    }).join("")+'<div class="ciudad">'+esc(D.meta.enjambre)+'<span>identificador de enjambre</span></div>';
+  }
+
+  function pintaModos(){
+    $("modos").innerHTML=D.modos.map(function(m){
+      return '<article class="modo"><div class="ico">'+esc(m.icono)+'</div>'
+        +'<h3>'+esc(m.nombre)+'</h3>'
+        +'<dl><dt>Globo</dt><dd>'+esc(m.globo)+'</dd>'
+        +'<dt>Voz</dt><dd>'+esc(m.voz)+'</dd>'
+        +'<dt>Coste</dt><dd>'+esc(m.coste)+'</dd>'
+        +'<dt>Para</dt><dd>'+esc(m.para)+'</dd></dl></article>';
+    }).join("");
+  }
+
+  function pintaReparto(){
+    $("reparto").innerHTML=D.reparto.map(function(p){
+      return '<article class="parte" data-persona="'+esc(p.persona)+'" style="border-left-color:'+esc(p.color)+'">'
+        +'<span class="vivo" data-vivo>· · ·</span>'
+        +'<div class="parte-top"><span class="ico">'+esc(p.icono)+'</span>'
+        +'<div><h3>'+esc(p.agente)+'</h3><div class="full">'+esc(p.runtime)+' · '+esc(p.maquina)+'</div></div></div>'
+        +'<div class="papel-rol">'+esc(p.papel)+'</div>'
+        +'<p class="territorio">'+esc(p.territorio)+'</p>'
+        +'<div class="campos">'
+        +'<p><b>A · ACCIÓN</b><br>'+esc(p.accion)+'</p>'
+        +'<p><b>B · PRUEBA</b><br>'+esc(p.prueba)+'</p>'
+        +'<p><b>C · DESTINO</b><br>'+esc(p.destino)+'</p></div>'
+        +'<div class="pie-parte">misión '+esc(p.mision)+'</div></article>';
+    }).join("");
+  }
+
+  function pintaMisiones(){
+    $("misiones").innerHTML=D.misiones.map(function(m){
+      return '<article class="mision"><h3>'+esc(m.titulo)+'</h3>'
+        +'<p><code>'+esc(m.ref)+'</code></p>'
+        +'<p>'+m.partes+' partes · declarada por '+esc(D.meta.abierto_por)+'</p></article>';
+    }).join("");
+  }
+
+  function canon(vivos){
+    var lineas=["ENJAMBRE "+D.meta.enjambre+" · "+D.meta.titulo,
+      "origen · "+D.meta.origen,
+      "ciudades · "+D.meta.ciudades.join(" + "),
+      "proyecto Yokup · "+D.meta.proyecto_yokup,
+      ""];
+    D.reparto.forEach(function(p){
+      lineas.push((vivos[p.persona]?"● despierto":"○ sin señal")+"  "+p.agente+" — "+p.territorio);
+    });
+    lineas.push("", "sello · "+D.meta.sello+"  ·  abierto por "+D.meta.abierto_por);
+    $("canon").textContent=lineas.join("\n");
+  }
+
+  function aplicaPresencia(lista){
+    var vivos={}, ahora=Math.floor(Date.now()/1000);
+    (lista||[]).forEach(function(p){
+      var edad=ahora-(p.updated||0);
+      if(edad<900) vivos[p.persona]=p;
+    });
+    var n=0;
+    Array.prototype.forEach.call(document.querySelectorAll(".parte"),function(card){
+      var quien=card.getAttribute("data-persona"), v=vivos[quien], badge=card.querySelector("[data-vivo]");
+      if(v){ n++; badge.className="vivo on"; badge.textContent="DESPIERTO"; }
+      else { badge.className="vivo off"; badge.textContent="SIN SEÑAL"; }
+    });
+    $("reparto-estado").textContent=n+" de "+D.reparto.length+" agentes despiertos ahora mismo";
+    canon(vivos);
+  }
+
+  function tick(){
+    fetch(PRESENCE,{cache:"no-store"})
+      .then(function(r){return r.json()})
+      .then(function(d){aplicaPresencia(d.presence||[])})
+      .catch(function(){ $("reparto-estado").textContent="presencia no disponible · el reparto sigue en pie"; canon({}); });
+  }
+
+  fetch("./ojo.json?_="+Date.now(),{cache:"no-store"})
+    .then(function(r){return r.json()})
+    .then(function(d){
+      D=d;
+      pintaCiudades(); pintaModos(); pintaReparto(); pintaMisiones();
+      $("pie").textContent="AdmiraNeXT · 13 Rue · puerta 10 · Ojo de Dios · "+D.meta.sello+" · abierto por "+D.meta.abierto_por;
+      tick(); setInterval(tick,20000);
+    })
+    .catch(function(e){ $("canon").textContent="No se pudo leer ojo.json: "+e; });
+})();
+</script>
+</body>
+</html>

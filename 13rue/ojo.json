@@ -1,0 +1,58 @@
+{
+  "meta": {
+    "enjambre": "ojo-dios-20260827",
+    "titulo": "Ojo de Dios DOOH",
+    "subtitulo": "Un globo 3D donde no se rastrean aviones: se rastrean pantallas.",
+    "origen": "bilawalsidhu/gods-eye-view · God's Eye View V1 · licencia MIT",
+    "ciudades": ["Valencia", "Barcelona"],
+    "proyecto_yokup": "digitalsignage-ai",
+    "sello": "v.27.08.2026.r1.07:16",
+    "abierto_por": "NeoMBP16 · MacBookPro16"
+  },
+  "modos": [
+    { "id": "demo", "nombre": "DEMO · espectacular", "icono": "🛰️",
+      "globo": "Google Photorealistic 3D Tiles",
+      "voz": "Voz realtime conversacional",
+      "coste": "De pago por sesión — vive tras un gate para que no sangre",
+      "para": "La presentación del martes y las visitas" },
+    { "id": "publico", "nombre": "PÚBLICO · siempre encendido", "icono": "🌐",
+      "globo": "Cesium World Terrain + edificios OSM",
+      "voz": "Voz robotizada (Web Speech API)",
+      "coste": "0 €",
+      "para": "Enlace que se puede dejar suelto en una web o un email" }
+  ],
+  "reparto": [
+    { "id": "neo", "agente": "NeoMBP16", "persona": "Neo", "runtime": "Claude", "maquina": "MacBook Pro 16",
+      "color": "#2c477a", "icono": "🟦", "papel": "Coordina y levanta el esqueleto",
+      "territorio": "Fork MIT reducido + modo PÚBLICO sobre Cesium + esta vivienda",
+      "accion": "Quita aviones, barcos y satélites del fork; deja el motor del globo y mete el modo público sin Google.",
+      "prueba": "URL viva con Valencia y Barcelona navegables a coste 0.",
+      "destino": "13 Rue · puerta 10 · repo consejo32",
+      "mision": "0034.27/08/2026.06:46" },
+    { "id": "trinity", "agente": "TrinityMBP16", "persona": "Trinity", "runtime": "Codex", "maquina": "MacBook Pro 16",
+      "color": "#277f48", "icono": "🟩", "papel": "Dependencia crítica",
+      "territorio": "Capa de datos real de las pantallas",
+      "accion": "GeoJSON y endpoint de las pantallas de Valencia (Instore Xtanco) y Barcelona (kioskos de prensa): lat/lon, tipo, circuito y qué emite ahora vía admira.tv /emit.",
+      "prueba": "Endpoint respondiendo y los puntos pintados sobre las dos ciudades.",
+      "destino": "admira.tv · capa /ojo/pantallas",
+      "mision": "0034.27/08/2026.06:46" },
+    { "id": "oraculo", "agente": "OraculoMini", "persona": "Oráculo", "runtime": "Codex", "maquina": "Mac Mini",
+      "color": "#d87918", "icono": "🟧", "papel": "El espectáculo y el despliegue",
+      "territorio": "Modo DEMO y publicación",
+      "accion": "Teselas fotorrealistas de Google y voz realtime, con la clave leída de la Cúpula y nunca escrita en el repo; el interruptor DEMO/PÚBLICO tras un gate.",
+      "prueba": "Sello de despliegue + captura del vuelo sobre Barcelona.",
+      "destino": "Mac Mini · Pages/Workers",
+      "mision": "0049.27/08/2026.07:06" },
+    { "id": "morfeo", "agente": "MorfeoMini", "persona": "Morfeo", "runtime": "Claude", "maquina": "Mac Mini",
+      "color": "#a6372f", "icono": "🟪", "papel": "La voz y el relato",
+      "territorio": "Voz robotizada del modo público + guion",
+      "accion": "Voz sin coste que contesta preguntas sobre el mapa, y guion de 3 minutos Valencia→Barcelona para el martes.",
+      "prueba": "Audio sonando en la página pública y guion escrito.",
+      "destino": "13 Rue · guion de la demo",
+      "mision": "0034.27/08/2026.06:46" }
+  ],
+  "misiones": [
+    { "ref": "0034.27/08/2026.06:46", "titulo": "Núcleo y modo público (Valencia + Barcelona)", "partes": 3 },
+    { "ref": "0049.27/08/2026.07:06", "titulo": "Modo demo espectacular y vitrina del reparto", "partes": 2 }
+  ]
+}

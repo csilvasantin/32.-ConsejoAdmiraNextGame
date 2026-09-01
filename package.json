@@ -5,6 +5,7 @@
   "type": "module",
   "scripts": {
     "start": "node src/server.js",
+    "test:13rue": "node --test 13rue-enjambre.test.mjs 13rue-connectivity.test.mjs",
     "start:gui": "bash ./ops/macos/start-control-agent.sh",
     "crear:worker": "node tools/chatgpt-crear-worker.mjs",
     "yarig:sync": "node tools/yarig-tasks-sync.mjs --once",

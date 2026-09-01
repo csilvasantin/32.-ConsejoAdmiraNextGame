@@ -686,7 +686,8 @@
     // worker no responde, cae al motor local para no quedarse en blanco.
     var BUS = "https://incubadora-bus.csilvasantin.workers.dev";
     var WSU = BUS.replace(/^http/, "ws") + "/ws";
-    var vistoSeq = -1, modo = "conectando", ws = null, aforo = 1;
+    var vistoSeq = -1, modo = "pausa", ws = null, aforo = 1;
+    var pausado = true, intentoConexion = 0;
     function badge(txt){ tickLbl.textContent = txt; }
     function pintaEventosRemotos(logArr){
       // Por seq monotónico, no por tick: en un mismo tick pasan varios eventos, y
@@ -701,19 +702,34 @@
     // El DO tickea con su propio alarm y difunde el delta. La página ya no pregunta:
     // escucha. Si el socket no se puede abrir o se cae, se vuelve al sondeo, y si
     // tampoco hay worker, al motor local: tres escalones, nunca una pantalla muerta.
-    function conecta(){
+    function conecta(intento){
       return new Promise(function(res, rej){
         var s;
         try { s = new WebSocket(WSU); } catch(e){ return rej(e); }
         var abierto = false;
         var guarda = setTimeout(function(){ if(!abierto){ try{s.close();}catch(_){ } rej(new Error("timeout")); } }, 6000);
-        s.onopen = function(){ abierto = true; clearTimeout(guarda); ws = s; modo = "vivo"; res(true); };
+        s.onopen = function(){
+          abierto = true; clearTimeout(guarda);
+          // Pausar también cancela un socket que aún estaba negociando la conexión.
+          if(pausado || intento !== intentoConexion){ try{s.close();}catch(_){ } return rej(new Error("conexión cancelada")); }
+          ws = s; modo = "vivo"; res(true);
+        };
         s.onerror = function(){ clearTimeout(guarda); if(!abierto) rej(new Error("ws error")); };
         s.onclose = function(){
-          if(modo === "vivo"){ modo = "sondeo"; badge("conexión perdida · volviendo al sondeo");
-            if(timer){ clearInterval(timer); timer = setInterval(function(){ sondea().catch(function(){}); }, 1500); } }
+          clearTimeout(guarda);
+          if(ws === s) ws = null;
+          // Un cierre pedido por Pausar no debe reactivar nada. Un cierre remoto sí:
+          // arranca el sondeo aunque en modo WebSocket todavía no existiera `timer`.
+          if(!abierto){
+            if(!pausado && intento === intentoConexion) rej(new Error("ws cerrado antes de conectar"));
+            return;
+          }
+          if(pausado || intento !== intentoConexion) return;
+          badge("conexión perdida · volviendo al sondeo");
+          empiezaSondeo().catch(empiezaLocal);
         };
         s.onmessage = function(m){
+          if(pausado || intento !== intentoConexion) return;
           var d; try { d = JSON.parse(m.data); } catch(_) { return; }
           if(d.t === "aforo"){ aforo = d.vecinos || 1; return; }
           if(d.vecinos) aforo = d.vecinos;
@@ -735,23 +751,43 @@
         return true;
       });
     }
+    function empiezaSondeo(){
+      if(pausado) return Promise.resolve(false);
+      return sondea().then(function(){
+        if(pausado) return false;
+        if(timer) clearInterval(timer);
+        timer=setInterval(function(){ sondea().catch(function(){}); }, 1500);
+        return true;
+      });
+    }
+    function empiezaLocal(){
+      if(pausado) return false;
+      if(timer) clearInterval(timer);
+      modo="local"; badge("worker no disponible · motor local (respaldo)");
+      timer=setInterval(tick,1400); tick();
+      return true;
+    }
     function play(){
-      if(ws || timer) return;
+      if(!pausado) return;
+      pausado=false;
+      var intento=++intentoConexion;
       document.getElementById("m-play").textContent="⏸ Pausar";
       badge("conectando al edificio…");
       // Tres escalones: WebSocket (el edificio empuja) → sondeo → motor local.
-      conecta().catch(function(){
-        return sondea().then(function(){
-          timer=setInterval(function(){ sondea().catch(function(){}); }, 1500);
-        });
+      conecta(intento).catch(function(){
+        if(pausado || intento !== intentoConexion) return false;
+        return empiezaSondeo();
       }).catch(function(){
-        modo="local"; badge("worker no disponible · motor local (respaldo)");
-        timer=setInterval(tick,1400); tick();
+        if(pausado || intento !== intentoConexion) return false;
+        return empiezaLocal();
       });
     }
     function pause(){
-      if(ws){ try{ ws.close(); }catch(_){ } ws=null; }
-      clearInterval(timer); timer=null; modo="pausa";
+      // Invalidar primero el intento evita que onclose confunda una pausa con caída.
+      pausado=true; intentoConexion++;
+      var activo=ws; ws=null;
+      if(activo){ try{ activo.close(); }catch(_){ } }
+      if(timer) clearInterval(timer); timer=null; modo="pausa";
       document.getElementById("m-play").textContent="▶ Conectar al edificio";
       badge("desconectado · el edificio sigue sin ti");
     }
@@ -761,7 +797,7 @@
       // difunde por los sockets abiertos). La versión anterior se ramificaba antes
       // de llamar y en la interfaz no llegaba a lanzarse nunca: el botón parecía
       // muerto mientras el mismo POST a mano funcionaba. Menos listo, más fiable.
-      if(!ws && !timer) play();
+      if(pausado) play();
       fetch(BUS+"/stress", {method:"POST"})
         .then(function(){ if(!ws) sondea().catch(function(){}); })
         .catch(function(){
@@ -771,9 +807,9 @@
         });
     }
     document.getElementById("m-play").textContent="▶ Conectar al edificio";
-    document.getElementById("m-play").addEventListener("click",function(){ timer?pause():play(); });
+    document.getElementById("m-play").addEventListener("click",function(){ pausado?play():pause(); });
     document.getElementById("m-stress").addEventListener("click",stress);
-    document.getElementById("m-reset").addEventListener("click",function(){ pause(); reset(); vistoSeq=-1; modo="conectando"; badge("en reposo · pulsa Conectar al edificio"); });
+    document.getElementById("m-reset").addEventListener("click",function(){ pause(); reset(); vistoSeq=-1; badge("en reposo · pulsa Conectar al edificio"); });
     reset(); badge("en reposo · pulsa Conectar al edificio");
     // /13rue/?play conecta solo (demo + captura del estado compartido en marcha).
     if(/(^|[?&])play\b/.test(location.search)){ play(); }

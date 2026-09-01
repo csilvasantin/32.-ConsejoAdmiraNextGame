@@ -57,6 +57,58 @@ print("  ✓ sello en %d paginas (%d reescritas, %d nuevas)%s"
          "" if not sin_head else " · %d sin <head>, intactas" % sin_head))
 PY
 
+# LA BARRA COMPARTIDA, SELLADA POR CONSTRUCCION (NeoMBP14, 01-09-2026 · norma 09).
+# La zona admira.live pisa el Cache-Control de origen con su Browser Cache TTL de 4 h: las dos
+# reglas de _headers (admira-bar.js y casa-nav.css, 300 s) viven en admira-live.pages.dev y
+# mueren en www — comprobado el 01-09 con el mismo etag en ambos. Ademas el ?v= se venia
+# escribiendo A MANO y habia derivado: 40 paginas en v=20260713-r36, 12 en v=20260810-r37,
+# 2 en v=20260711-r2 y 1 en v=20260723 — cuatro barras distintas conviviendo en el mismo sitio.
+# Aqui se sella el ?v= de los assets compartidos con la version del despliegue, sobre la copia
+# temporal: cada release estrena URL en las 56 paginas a la vez, propaga en segundos aunque la
+# zona siga cacheando 4 h, y la deriva deja de ser posible. Si alguien pone el Browser Cache TTL
+# en "Respect Existing Headers", esto sigue siendo correcto (solo deja de ser imprescindible).
+python3 - "$TMP" "$SELLO" <<'PY2'
+import pathlib, re, sys
+raiz, sello = pathlib.Path(sys.argv[1]), sys.argv[2]
+# el sello va en un query param: fuera los dos puntos (norma de sellos en atributos)
+version = sello.lstrip("v.").replace(":", "")
+ASSETS = ("admira-bar.js", "casa-nav.css")
+rx = re.compile(r'((?:src|href)=")([^"]*(?:%s))(?:\?[^"]*)?(")'
+                % "|".join(a.replace(".", r"\.") for a in ASSETS))
+tocados = sellados = 0
+for f in sorted(raiz.rglob("*.html")):
+    txt = f.read_text(encoding="utf-8", errors="surrogateescape")
+    nuevo, n = rx.subn(lambda m: m.group(1) + m.group(2) + "?v=" + version + m.group(3), txt)
+    if n and nuevo != txt:
+        f.write_text(nuevo, encoding="utf-8", errors="surrogateescape")
+        tocados += 1; sellados += n
+if tocados:
+    print("  ✓ assets compartidos sellados ?v=%s · %d referencias en %d paginas"
+          % (version, sellados, tocados))
+else:
+    print("  ⚠ no encontre referencias a la barra compartida — revisa el patron")
+PY2
+
 npx --yes wrangler pages deploy "$TMP" --project-name=admira-live --branch=main --commit-dirty=true
 rm -rf "$TMP"
+# VERIFICACION POST-DESPLIEGUE (NeoMBP14, 01-09-2026). Publicar no es funcionar: se comprueba
+# por el camino del usuario (www, no pages.dev) que la barra recien sellada responde 200, y se
+# avisa si la zona sigue pisando el Cache-Control de _headers.
+VER_URL="https://www.admira.live/admira-bar.js?v=$(printf '%s' "$SELLO" | sed 's/^v\.//; s/://g')"
+sleep 5
+VER="$(curl -sI -A "Mozilla/5.0" --max-time 20 "$VER_URL" | tr -d '\r')"
+VER_CODE="$(printf '%s' "$VER" | sed -n 's|^HTTP/[0-9.]* \([0-9]*\).*|\1|p' | head -1)"
+VER_CC="$(printf '%s' "$VER" | sed -n 's/^[Cc]ache-[Cc]ontrol: //p' | head -1)"
+if [ "$VER_CODE" = "200" ]; then
+  echo "  ✓ barra sellada viva en www ($VER_CODE) · $VER_CC"
+  case "$VER_CC" in
+    *max-age=300*) ;;
+    *) echo "  ⚠ la zona admira.live pisa el Cache-Control de _headers (deberia ser max-age=300)."
+       echo "    Arreglo de raiz (1 clic en el panel de Cloudflare): Caching → Configuration →"
+       echo "    Browser Cache TTL = «Respect Existing Headers». Mientras tanto, el ?v= sellado cubre." ;;
+  esac
+else
+  echo "  ✗ la barra sellada NO responde en www (codigo: ${VER_CODE:-sin respuesta}) — revisa el deploy" >&2
+fi
+
 echo "✓ desplegado en https://admira-live.pages.dev (y www.admira.live si el dominio ya apunta aquí)"

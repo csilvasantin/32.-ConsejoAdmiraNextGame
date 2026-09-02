@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.11.08.2026.r11.12:16 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google independiente, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.02.09.2026.r1.06:20" />
+<meta name="admiranext-version" content="AdmiraNeXT v.02.09.2026.r2.06:34" />
     <script src="/admira-bar.js?v=20260713-r36"></script>
     <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
 <meta charset="UTF-8">
@@ -248,6 +248,12 @@
   .card .mando.stale{color:var(--warn,#f0a35e);opacity:.75}
   .card .mando.none{color:var(--mut,#75aab9);opacity:.55}
   .card .mando .mando-age,.card .mando .mando-fix{opacity:.7;font-size:10.5px;font-variant-numeric:tabular-nums}
+  /* Una fila por ranura, con sus dos botones. Envuelve si no cabe: mejor dos líneas
+     que una lista cortada donde no se sabe a quién estás parando. */
+  .card .mando-slots{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;white-space:normal}
+  .card .mando-slot{display:inline-flex;align-items:center;gap:3px;font-size:10px;border:1px solid rgba(127,227,161,.28);border-radius:7px;padding:1px 3px 1px 6px;opacity:.9}
+  .card .mando-slot button{font-size:10px;line-height:1;padding:2px 4px;border-radius:5px;background:transparent;border:1px solid transparent;cursor:pointer;color:inherit}
+  .card .mando-slot button:hover{border-color:currentColor;background:rgba(255,255,255,.06)}
   .dot{width:10px;height:10px;border-radius:50%;background:#5a6678;flex:none;display:inline-block}
   .dot.on{background:var(--ok);box-shadow:0 0 9px var(--ok)}
   .info{font-family:var(--mono);font-size:11.5px;color:var(--mut);white-space:pre-wrap;line-height:1.6;min-height:18px}
@@ -1057,10 +1063,83 @@ function mandoHtml(m){
   const viejo=g.age>MANDO_FRESH;
   const edad=g.age<60?(g.age+'s'):(g.age<3600?(Math.round(g.age/60)+'m'):(Math.round(g.age/360)/10+'h'));
   const quien=g.slots.map(s=>[s.persona,s.runtime,s.host].filter(Boolean).join('/')).join(' · ');
+  // Con el watcher rancio NO se ofrecen botones: la orden se encolaría y nadie la
+  // recogería. Se enseña el estado, que es información, y no un botón que miente.
+  const botones = viejo ? '' : g.slots.map(sl=>{
+    const et=[sl.persona,sl.runtime,sl.host].filter(Boolean).join('/');
+    const js=JSON.stringify(sl).replace(/"/g,'&quot;');
+    return '<span class="mando-slot" title="'+et.replace(/"/g,'&quot;')+'">'+et
+      + '<button data-mando="start" data-maq="'+String(m.name||m.id).replace(/"/g,'&quot;')+'" data-slot="'+js+'" title="Arrancar '+et.replace(/"/g,'&quot;')+'">▶</button>'
+      + '<button data-mando="stop" data-maq="'+String(m.name||m.id).replace(/"/g,'&quot;')+'" data-slot="'+js+'" title="Parar '+et.replace(/"/g,'&quot;')+'">⏹</button></span>';
+  }).join('');
   return '<div class="mando'+(viejo?' stale':'')+'" title="Ranuras que este equipo declara gobernables: '
     + quien.replace(/"/g,'&quot;') + ' — las recoge su watcher de presencia">'
-    + '🎛 mando: <b>'+g.slots.length+'</b> ranuras <span class="mando-age">· watcher hace '+edad+'</span></div>';
+    + '🎛 mando: <b>'+g.slots.length+'</b> ranuras <span class="mando-age">· watcher hace '+edad+'</span>'
+    + (botones?('<div class="mando-slots">'+botones+'</div>'):'')+'</div>';
 }
+
+// ARRANCAR Y PARAR UN AGENTE (2026-09-02). Los endpoints existían enteros en el
+// worker desde hace semanas, pero el panel no los usaba: encolar exigía la PANEL_KEY
+// y esa no puede estar en una web pública. Ahora el worker acepta también el login de
+// Google del gate —la misma puerta de /api/send— así que el panel puede mandar sin
+// llevar ningún secreto encima.
+//
+// Los botones salen SÓLO en ranuras gobernables. Un botón que nadie va a atender es
+// peor que no tenerlo: promete algo que no ocurre y te deja mirando la pantalla.
+// PARAR PIDE CONFIRMACIÓN y el arranque no: parar interrumpe a un agente que puede
+// estar a media misión, y eso no se hace de un clic despistado.
+async function mandoAgente(machine, slot, action){
+  const cred=gateCred();
+  if(!cred){ toast('warn','🔒 sin sesión','entra con Google para mandar sobre los agentes'); return; }
+  if(action==='stop' && !confirm('¿Parar '+slot.persona+' ('+slot.runtime+'/'+slot.host+') en '+machine+'?\n\nSi está a media misión, se interrumpe.')) return;
+  const body={ action, machine:_norm(machine), persona:slot.persona, runtime:slot.runtime, host:slot.host, session_id:slot.session_id };
+  try{
+    const r=await fetch(DIARY_API+'/api/fleet/agent/control',{
+      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+cred},
+      body:JSON.stringify(body)});
+    const d=await r.json().catch(()=>({}));
+    if(r.ok&&d.ok) toast('ok', (action==='stop'?'⏹ parando ':'▶️ arrancando ')+slot.persona, 'orden encolada · la recoge el watcher de '+machine);
+    else toast('warn','⚠️ no se pudo '+(action==='stop'?'parar':'arrancar'), (d&&d.error)||('HTTP '+r.status));
+  }catch(e){ toast('warn','⚠️ error de red', e.message||'sin detalle'); }
+}
+// CAPTURA POR EL WATCHER, LA RUTA QUE SÍ FUNCIONA (2026-09-02).
+// macOS NO concede Grabación de pantalla a un proceso lanzado por SSH, así que la
+// captura del panel fallaba siempre en los Mac y el tablero lo traducía a «sin permiso
+// de captura» — un permiso que sí está puesto, sólo que no por esa vía: el propio
+// agente captura sin problema desde su sesión gráfica, y así se hacen las pruebas de
+// las misiones todos los días. Carlos lo vio como «4 equipos sin permiso de captura»,
+// y los 4 eran justo los que SÍ tienen watcher.
+// Se encola la captura en el watcher y se recoge cuando la deja. Devuelve la imagen
+// en base64 o null si no llega a tiempo; quien llama decide qué contar.
+async function capturaPorWatcher(machine, slot){
+  const cred=gateCred(); if(!cred) return null;
+  const cab={'Content-Type':'application/json','Authorization':'Bearer '+cred};
+  const cuerpo={ machine:_norm(machine), persona:slot.persona, runtime:slot.runtime, host:slot.host, session_id:slot.session_id };
+  try{
+    const r=await fetch(DIARY_API+'/api/fleet/desktop/capture',{method:'POST',headers:cab,body:JSON.stringify(cuerpo)});
+    const d=await r.json().catch(()=>({})); if(!r.ok||!d.ok) return null;
+    // El watcher sondea cada ~2 s; se espera hasta 12 s y se deja de insistir. Un panel
+    // que reintenta para siempre parece colgado y no dice nada nuevo.
+    for(let i=0;i<12;i++){
+      await new Promise(r=>setTimeout(r,1000));
+      const c=await fetch(DIARY_API+'/api/fleet/desktop/capture/consume',{method:'POST',headers:cab,body:JSON.stringify({...cuerpo,id:d.id})});
+      const cd=await c.json().catch(()=>({}));
+      if(c.ok&&cd.ok&&cd.image) return cd.image;
+      if(cd&&cd.status==='failed') return null;
+    }
+  }catch(e){}
+  return null;
+}
+// Ranura preferente de un equipo para capturar: la de escritorio, que es la que ve
+// la pantalla. Sin ranuras no hay ruta y se deja el diagnóstico como estaba.
+function ranuraCaptura(machine){
+  const g=MANDO_BY_MACHINE[_norm(machine)]; if(!g||!g.slots.length||g.age>MANDO_FRESH) return null;
+  return g.slots.find(s=>s.host==='app') || g.slots[0];
+}
+document.addEventListener('click', e=>{
+  const b=e.target.closest('[data-mando]'); if(!b) return;
+  try{ mandoAgente(b.dataset.maq, JSON.parse(b.dataset.slot), b.dataset.mando); }catch(err){}
+});
 
 /* ── MODO DEGRADADO — ningún relay de control responde ─────────────────────
    Fleet Mesh ya ha probado todas las rutas. Solo entonces reconstruye el
@@ -1675,7 +1754,12 @@ $('#cards').addEventListener('click', async e=>{
       await new Promise(r=>setTimeout(r,700));   // deja que se oculten antes de capturar
       const d=await api('/action',{method:'POST',body:JSON.stringify({machine,action:'screenshot'})});
       if(d.rc===0 && d.stdout && !/ERR_NO_CAPTURE/.test(d.stdout)){ showShot(machine,'data:image/jpeg;base64,'+d.stdout); setCapFail(machine,false); markCaptured(machine); }
-      else { setCapFail(machine,true); pushResult(machine,'📸 fondo',{rc:d.rc||1,stdout:'',stderr:d.stderr||'escritorio limpio, pero no pude capturar (¿permiso de Grabación de pantalla?)'}); }
+      else {
+        const sl=ranuraCaptura(machine);
+        const img=sl?await capturaPorWatcher(machine,sl):null;
+        if(img){ showShot(machine,'data:image/jpeg;base64,'+img); setCapFail(machine,false); markCaptured(machine); }
+        else { setCapFail(machine,true); pushResult(machine,'📸 fondo',{rc:d.rc||1,stdout:'',stderr:d.stderr||(sl?'ni por SSH ni por el watcher':'sin permiso por SSH y este equipo no tiene watcher')}); }
+      }
     }catch(err){ pushResult(machine,'🧹 escritorio',{rc:-1,stdout:'',stderr:err.msg||'error'}); }
     icon.classList.remove('em-busy');
     return;
@@ -1778,7 +1862,14 @@ $('#cards').addEventListener('click', async e=>{
     const d=await api('/action',{method:'POST',body:JSON.stringify({machine,action,arg})});
     if(action==='screenshot'){
       if(d.rc===0 && d.stdout && !/ERR_NO_CAPTURE/.test(d.stdout)){ showShot(machine,'data:image/jpeg;base64,'+d.stdout); setCapFail(machine,false); markCaptured(machine); pushResult(machine,'📸 captura',{rc:0,stdout:'(imagen arriba)',ms:d.ms}); }
-      else { setCapFail(machine,true); pushResult(machine,'📸 captura',{rc:d.rc||1,stdout:'',stderr:d.stderr||'no se pudo capturar (¿permiso de Grabación de pantalla a AgoraCapture?)'}); }
+      else {
+        // Antes de acusar a nadie de no tener permiso, se prueba la ruta que SÍ lo tiene.
+        const sl=ranuraCaptura(machine);
+        const img=sl?await capturaPorWatcher(machine,sl):null;
+        if(img){ showShot(machine,'data:image/jpeg;base64,'+img); setCapFail(machine,false); markCaptured(machine);
+          pushResult(machine,'📸 captura',{rc:0,stdout:'(imagen arriba · vía watcher)',ms:d.ms}); }
+        else { setCapFail(machine,true); pushResult(machine,'📸 captura',{rc:d.rc||1,stdout:'',stderr:d.stderr||(sl?'ni por SSH ni por el watcher':'sin permiso por SSH y este equipo no tiene watcher')}); }
+      }
     } else pushResult(machine, '⚡ '+action+(arg?(' '+arg):''), d);
   }catch(err){ pushResult(machine,'⚡ '+action,{rc:-1,stdout:'',stderr:err.msg||'error'}); }
   b.disabled=false; b.textContent=lbl;

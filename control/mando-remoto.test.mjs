@@ -10,7 +10,7 @@ const trozo = (a, b) => html.slice(html.indexOf(a), html.indexOf(b));
 const fabrica = (mando) => new Function(
   "MANDO_BY_MACHINE", "MANDO_FRESH",
   "const _norm=s=>(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');\n"
-  + trozo("function mandoHtml(m){", "/* ── MODO DEGRADADO")
+  + trozo("function mandoHtml(m){", "// ARRANCAR Y PARAR UN AGENTE")
   + "\nreturn mandoHtml;")(mando, 60);
 
 test("un equipo con watcher fresco dice cuántas ranuras gobierna", () => {
@@ -47,4 +47,26 @@ test("el nombre del equipo se normaliza: «MacBook Pro 16» casa con macbookpro1
 
 test("sin equipo no se inventa nada", () => {
   assert.equal(fabrica({})({}), "");
+});
+
+test("con watcher fresco salen los botones de cada ranura", () => {
+  const h = fabrica({ macmini: { slots: [{ persona: "Morfeo", runtime: "Claude", host: "app", session_id: "desktop:claude" },
+                                         { persona: "Oraculo", runtime: "Codex", host: "cli", session_id: "tmux:ora" }],
+                                 updated: 1, age: 4 } })({ name: "MacMini" });
+  assert.match(h, /data-mando="start"/);
+  assert.match(h, /data-mando="stop"/);
+  assert.equal((h.match(/data-mando="start"/g) || []).length, 2, "un par de botones por ranura");
+  // la ranura entera viaja en data-slot: sin session_id el worker no casa la orden
+  assert.match(h, /desktop:claude/);
+});
+
+test("con el watcher rancio NO hay botones: la orden no la recogeria nadie", () => {
+  const h = fabrica({ dgxspark: { slots: [{ persona: "Smith", runtime: "Grok", host: "cli", session_id: "t" }],
+                                  updated: 1, age: 40320 } })({ name: "DGX Spark" });
+  assert.match(h, /class="mando stale"/);
+  assert.doesNotMatch(h, /data-mando/, "un boton que nadie atiende es peor que no tenerlo");
+});
+
+test("sin watcher tampoco hay botones", () => {
+  assert.doesNotMatch(fabrica({})({ name: "MacBookAirRosa" }), /data-mando/);
 });

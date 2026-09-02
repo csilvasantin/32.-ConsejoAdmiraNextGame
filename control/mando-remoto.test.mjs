@@ -1,0 +1,50 @@
+import test from "node:test";
+import assert from "node:assert/strict";
+import { readFile } from "node:fs/promises";
+
+// mandoHtml vive dentro del <script> de control/index.html, así que se extrae y se
+// evalúa con sus dos dependencias (_norm y el mapa). Es la misma técnica que usan las
+// pruebas de contrato del worker: el fichero se mantiene a mano y no exporta nada.
+const html = await readFile(new URL("./index.html", import.meta.url), "utf8");
+const trozo = (a, b) => html.slice(html.indexOf(a), html.indexOf(b));
+const fabrica = (mando) => new Function(
+  "MANDO_BY_MACHINE", "MANDO_FRESH",
+  "const _norm=s=>(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');\n"
+  + trozo("function mandoHtml(m){", "/* ── MODO DEGRADADO")
+  + "\nreturn mandoHtml;")(mando, 60);
+
+test("un equipo con watcher fresco dice cuántas ranuras gobierna", () => {
+  const h = fabrica({ macmini: { slots: [{ persona: "Morfeo", runtime: "Claude", host: "app" },
+                                          { persona: "Oraculo", runtime: "Codex", host: "cli" }],
+                                 updated: 1, age: 3 } })({ name: "MacMini" });
+  assert.match(h, /mando: <b>2<\/b> ranuras/);
+  assert.match(h, /watcher hace 3s/);
+  assert.doesNotMatch(h, /class="mando stale"/);
+  // las ranuras concretas viajan en el title, para no descuadrar la parrilla
+  assert.match(h, /Morfeo\/Claude\/app · Oraculo\/Codex\/cli/);
+});
+
+test("un equipo SIN watcher lo dice, y dice qué le falta", () => {
+  const h = fabrica({})({ name: "MacBook Pro 16" });
+  assert.match(h, /class="mando none"/);
+  assert.match(h, /sin mando remoto/);
+  assert.match(h, /falta el watcher/);
+  assert.match(h, /install-presence-watch\.sh/, "hay que decir CÓMO se arregla, no sólo que falta");
+});
+
+test("un watcher que ya no responde se marca: sus ranuras están escritas, pero no las recoge nadie", () => {
+  const h = fabrica({ dgxspark: { slots: [{ persona: "Smith", runtime: "Grok", host: "cli" }],
+                                  updated: 1, age: 40320 } })({ name: "DGX Spark" });
+  assert.match(h, /class="mando stale"/);
+  assert.match(h, /watcher hace 11\.2h/);
+});
+
+test("el nombre del equipo se normaliza: «MacBook Pro 16» casa con macbookpro16", () => {
+  const mando = { macbookpro16: { slots: [{ persona: "Neo", runtime: "Claude", host: "app" }], updated: 1, age: 5 } };
+  assert.match(fabrica(mando)({ name: "MacBook Pro 16" }), /mando: <b>1<\/b>/);
+  assert.match(fabrica(mando)({ name: "macbook-pro-16" }), /mando: <b>1<\/b>/);
+});
+
+test("sin equipo no se inventa nada", () => {
+  assert.equal(fabrica({})({}), "");
+});

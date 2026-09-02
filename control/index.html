@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.11.08.2026.r11.12:16 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google independiente, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.01.09.2026.r2.15:17" />
+<meta name="admiranext-version" content="AdmiraNeXT v.02.09.2026.r1.06:20" />
     <script src="/admira-bar.js?v=20260713-r36"></script>
     <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
 <meta charset="UTF-8">
@@ -239,6 +239,15 @@
   .card .agentnow{color:var(--acc,#f7c95d);font-size:11.5px;line-height:1.35;margin-top:3px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.92}
   .card .agentnow.stale{color:var(--mut,#75aab9);opacity:.55}
   .card .agentnow .agentnow-age{opacity:.7;font-size:10.5px;font-variant-numeric:tabular-nums}
+  /* MANDO REMOTO. Deliberadamente sobrio y en la misma línea visual que «en qué anda»:
+     es un dato de capacidad, no una alarma. Con ranuras va en el color de acento tenue;
+     sin ellas, en apagado — porque «no se puede remotar» no es un error del equipo, es
+     que le falta el watcher. Y `stale` avisa de un watcher que ya no responde: las
+     ranuras que declaró siguen ahí escritas, pero ya no las recoge nadie. */
+  .card .mando{font-size:11px;line-height:1.35;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ok,#7fe3a1);opacity:.85}
+  .card .mando.stale{color:var(--warn,#f0a35e);opacity:.75}
+  .card .mando.none{color:var(--mut,#75aab9);opacity:.55}
+  .card .mando .mando-age,.card .mando .mando-fix{opacity:.7;font-size:10.5px;font-variant-numeric:tabular-nums}
   .dot{width:10px;height:10px;border-radius:50%;background:#5a6678;flex:none;display:inline-block}
   .dot.on{background:var(--ok);box-shadow:0 0 9px var(--ok)}
   .info{font-family:var(--mono);font-size:11.5px;color:var(--mut);white-space:pre-wrap;line-height:1.6;min-height:18px}
@@ -924,6 +933,17 @@ let AGENT_ONLINE=new Set(); // máquinas con un agente (Claude/Codex/Grok) con b
 let PRESENCE_SEEN=new Set();
 let FLEET_SEEN=new Set();
 let PRESENCE_FULL={}; // key(_norm máquina) → registro más reciente {persona,runtime,mode,focus,updated} (para el tablero TAREAS)
+// MANDO REMOTO: qué equipos se pueden gobernar DE VERDAD (2026-09-02).
+// El panel decidía «online» por la antigüedad del latido, y eso no dice nada sobre si
+// una orden llegará a ejecutarse: quien las recoge es el watcher de presencia de cada
+// Mac, y sólo está instalado en algunos. Resultado medido hoy: de 8 equipos listados
+// sólo 3 tenían watcher, y los otros 5 salían igual de vivos con latidos de entre 57
+// minutos y 11 horas — Tailscale confirma los cinco apagados, con las mismas edades.
+// Eran 9 de 22 sesiones fantasma, ofrecidas como si se les pudiera mandar algo.
+// `control_machines` viene en el MISMO /api/presence que ya se pedía; sólo había que
+// mirarlo. key(_norm máquina) → {slots:[…], updated}
+let MANDO_BY_MACHINE={};
+const MANDO_FRESH=60;   // s — un watcher que no reporta hace un minuto ya no manda
 const PRESENCE_FRESH=180;   // s — latido de presencia considerado "online"
 const FLEET_FRESH=300;      // s — registro de admira-fleet considerado "online"
 async function loadPersonas(){
@@ -939,6 +959,12 @@ async function loadPersonas(){
       if(age<PRESENCE_FRESH) seen.add(k);            // latido fresco (<3min) → online por presencia
     });
     PERSONA_BY_MACHINE=map; AGENT_ONLINE=on; PRESENCE_SEEN=seen; PRESENCE_FULL=full;
+    const mando={};
+    (d.control_machines||[]).forEach(cm=>{
+      const k=_norm(cm&&cm.machine); if(!k) return;
+      mando[k]={slots:(cm.slots||[]), updated:+cm.updated||0, age:Math.max(0,Math.round(now-(+cm.updated||0)))};
+    });
+    MANDO_BY_MACHINE=mando;
   }catch(e){ /* sin presencia: las tarjetas quedan sin fondo, sin icono roto */ }
 }
 // admira-fleet: registro durable de la flota. Marca online por `lastSeen` fresco
@@ -1014,6 +1040,28 @@ function agentNowHtml(m){ const e=agentEntry(m); if(!e||!e.status) return '';
   const statusTxt=String(e.status), statusHtml=statusTxt.replace(/</g,'&lt;');
   const tituloCompleto=statusTxt.replace(/"/g,'&quot;')+' — en qué está el agente ahora (Mandamiento 11 · report cada 5 min)';
   return '<div class="agentnow'+(stale?' stale':'')+'" title="'+tituloCompleto+'">🔧 '+statusHtml+(ageTxt?(' <span class="agentnow-age" title="'+((_censoRancio&&_vivoAgora)?'Agora ve al agente ahora; el censo de flota va rancio':(e.atKind==='ficha'?'Ultima edicion de la ficha: este equipo no reporta latido':'Ultimo latido del agente'))+'">· '+ageFinal+kind+'</span>'):'')+'</div>'; }
+// QUIÉN SE PUEDE REMOTAR, DICHO EN LA TARJETA (2026-09-02).
+// No basta con «online»: para mandarle algo a un agente hace falta que su equipo
+// tenga el watcher de presencia recogiendo órdenes. Sin él, el botón existiría pero
+// nadie lo atendería, que es peor que no tenerlo. Así que la tarjeta lo dice: cuántas
+// ranuras gobernables hay y hace cuánto respondió el watcher; y si no hay, lo dice
+// también, con el comando exacto para instalarlo en vez de dejarte adivinando.
+function mandoHtml(m){
+  const k=_norm(m&&(m.name||m.id)); if(!k) return '';
+  const g=MANDO_BY_MACHINE[k];
+  if(!g||!g.slots.length){
+    return '<div class="mando none" title="Este equipo no recoge órdenes: no tiene el watcher de presencia instalado. '
+      + 'Instálalo desde el repo admira-telegram con ./tools/install-presence-watch.sh">'
+      + '🎛 sin mando remoto <span class="mando-fix">· falta el watcher</span></div>';
+  }
+  const viejo=g.age>MANDO_FRESH;
+  const edad=g.age<60?(g.age+'s'):(g.age<3600?(Math.round(g.age/60)+'m'):(Math.round(g.age/360)/10+'h'));
+  const quien=g.slots.map(s=>[s.persona,s.runtime,s.host].filter(Boolean).join('/')).join(' · ');
+  return '<div class="mando'+(viejo?' stale':'')+'" title="Ranuras que este equipo declara gobernables: '
+    + quien.replace(/"/g,'&quot;') + ' — las recoge su watcher de presencia">'
+    + '🎛 mando: <b>'+g.slots.length+'</b> ranuras <span class="mando-age">· watcher hace '+edad+'</span></div>';
+}
+
 /* ── MODO DEGRADADO — ningún relay de control responde ─────────────────────
    Fleet Mesh ya ha probado todas las rutas. Solo entonces reconstruye el
    tablero desde admira-fleet (Cloudflare). Esto NO afirma que las máquinas
@@ -1456,6 +1504,7 @@ function renderCards(ms){
         <div class="cardmeta"><div class="nm">${m.name}</div>
         <div class="role">${m.role||''}${m.local?' · local':' · ssh'}</div>
         ${agentNowHtml(m)}
+        ${mandoHtml(m)}
         <span class="msgbadge" data-msgbadge="${m.id}" title="Último mensaje enviado desde Control — pulsa para ver el hilo"><span class="mb-dot"></span><span class="mb-txt"></span></span></div>
         <span class="card-fold" data-fold="${m.id}" title="Comprimir / expandir">▾</span>
         <span class="drag-handle" draggable="true" data-drag="${m.id}" title="Arrastra para reordenar">⠿</span>

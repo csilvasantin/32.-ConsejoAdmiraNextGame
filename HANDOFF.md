@@ -13,7 +13,8 @@ Proyecto: `32.-ConsejoAdmiraNextGame`
 
 ## Estado canónico — misión login 525
 
-- Misión Yokup: `DCL-289877170cf98ae6e44ef6b7` · referencia `0177.03/09/2026.12:45`.
+- Misión Yokup: `DCL-289877170cf98ae6e44ef6b7` · referencia `0177.03/09/2026.12:45` · **resuelta**.
+- Evidencia final: `https://api.yokup.com/media/fleet/e58fd50dade3e268.png`.
 - Auth Edge publicado: versión Cloudflare `6e47351d-05ab-4372-ad38-008358adc0c5`.
 - Fleet Proxy publicado: versión Cloudflare `afbb02eb-e567-4910-8f53-1e32a9dd783c`.
 - Los dos hubs ejecutan el mismo código y cargan dos secretos compartidos desde

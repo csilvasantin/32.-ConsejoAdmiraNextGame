@@ -1,4 +1,4 @@
-/* control/health.js · Fleet Mesh · v.2026.07.24.r1
+/* control/health.js · Fleet Mesh · v.2026.09.03.r1
    Semáforo de SALUD de las rutas y dependencias de FleetControl. Una ruta roja
    NO significa que el equipo físico esté caído: solo que este navegador no
    alcanza ese endpoint. Verde/rojo + latencia, con resumen n/N. Reachabilidad
@@ -8,7 +8,7 @@
 (function () {
   var DEPS = [
     { k: 'mini',  name: 'Relay Mac Mini',      url: 'https://macmini.tail48b61c.ts.net/fleet/api/health',       note: 'Ruta primaria de control. «sin ruta» no equivale a Mac Mini apagado.', down: 'sin ruta' },
-    { k: 'mbp16', name: 'Relay MacBook Pro 16',url: 'https://macbook-pro-16.tail48b61c.ts.net:10000/fleet/api/health', note: 'Ruta alternativa de control de Fleet Mesh.', down: 'sin ruta' },
+    { k: 'mbp16', name: 'Relay MacBook Pro 16',url: 'https://macbook-pro-16.tail48b61c.ts.net:8443/fleet/api/health', note: 'Ruta alternativa de control de Fleet Mesh.', down: 'sin ruta' },
     { k: 'fleet', name: 'admira-fleet',        url: 'https://admira-fleet.csilvasantin.workers.dev/machines',   note: 'registro de flota (Cloudflare) — fuente del modo degradado' },
     { k: 'yokup', name: 'yokup-rtc',           url: 'https://api.yokup.com/fleet/missions', note: 'misiones y decisiones' },
     { k: 'tg',    name: 'admira-telegram',     url: 'https://admira-telegram.csilvasantin.workers.dev/',        note: 'AgoraMatrix / espejo Telegram' },

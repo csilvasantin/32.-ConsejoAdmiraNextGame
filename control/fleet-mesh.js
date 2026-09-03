@@ -1,4 +1,4 @@
-/* control/fleet-mesh.js · AdmiraNeXT Fleet Mesh · v.11.08.2026.r9.10:46
+/* control/fleet-mesh.js · AdmiraNeXT Fleet Mesh · v.03.09.2026.r1.13:08
  *
  * Cliente de control sin punto único de fallo. Mantiene una sesión Google
  * independiente por relay, conmuta lecturas y comandos entre relays y adjunta
@@ -14,7 +14,7 @@
 })(typeof globalThis !== 'undefined' ? globalThis : this, function (root) {
   'use strict';
 
-  var VERSION = 'v.11.08.2026.r9.10:46';
+  var VERSION = 'v.03.09.2026.r1.13:08';
   var DEFAULT_RELAYS = [
     {
       // PUERTA PÚBLICA (Carlos, 11-ago-2026: «le meto el usuario y va muy lento;
@@ -42,7 +42,7 @@
     {
       id: 'macbookpro16',
       label: 'MacBook Pro 16',
-      base: 'https://macbook-pro-16.tail48b61c.ts.net:10000/fleet/api',
+      base: 'https://macbook-pro-16.tail48b61c.ts.net:8443/fleet/api',
       priority: 20
     }
   ];

@@ -18,7 +18,7 @@ Una ruta inaccesible nunca se presenta como «equipo caído».
 | # | Nivel | URL base | Sirve |
 |---|---|---|---|
 | 1 | **Mac Mini** (preferido) | `https://macmini.tail48b61c.ts.net/fleet/api` | lectura + comandos |
-| 2 | **MacBook Pro 16** | `https://macbook-pro-16.tail48b61c.ts.net:10000/fleet/api` | lectura + comandos |
+| 2 | **MacBook Pro 16** | `https://macbook-pro-16.tail48b61c.ts.net:8443/fleet/api` | lectura + comandos |
 | 3 | **Cloudflare degradado** | `https://fallback.admira.store` | solo-lectura (roster + último estado conocido) |
 
 `control/fleet-mesh.js` gobierna específicamente `/fleet`:
@@ -102,7 +102,7 @@ node fleet-control/server.js
 ```js
 window.ADMIRA_FLEET_RELAYS = [
   { id: "macmini", label: "Mac Mini", base: "https://macmini.tail48b61c.ts.net/fleet/api", priority: 10 },
-  { id: "macbookpro16", label: "MacBook Pro 16", base: "https://macbook-pro-16.tail48b61c.ts.net:10000/fleet/api", priority: 20 },
+  { id: "macbookpro16", label: "MacBook Pro 16", base: "https://macbook-pro-16.tail48b61c.ts.net:8443/fleet/api", priority: 20 },
   { id: "macbookpro14", label: "MacBook Pro 14", base: "https://HOST:PUERTO/fleet/api", priority: 30 }
 ];
 ```
@@ -122,7 +122,10 @@ LaunchAgents (en `~/Library/LaunchAgents/com.admiranext.*`, KeepAlive/StartInter
 | `snap-push` | empuja feed+tareas reales al KV del nivel 3 | /300s |
 | `mini-recover` | al volver el Mini, sincroniza datos + trae `.env`/optoken | /120s |
 
-Funnel de este Mac: `tailscale funnel --bg --https=10000 http://127.0.0.1:8088` (el `/` ya estaba ocupado).
+Funnel de este Mac: `tailscale funnel --bg --https=8443 --set-path=/fleet http://127.0.0.1:8088/fleet`.
+Se usa `8443` porque Cloudflare admite de forma estable ese puerto TLS; la ruta
+histórica `:10000` queda fuera del proxy público por haber producido `525`
+intermitentes entre el edge y Tailscale Funnel.
 
 ## Cloudflare
 
@@ -151,7 +154,7 @@ for L in backup-node backup-fleet backup-gateway mini-monitor snap-push mini-rec
   echo -n "$L: "; launchctl print gui/$(id -u)/com.admiranext.$L | grep -m1 'state ='; done
 # salud por nivel
 curl -s https://macmini.tail48b61c.ts.net/fleet/api/health           # nivel 1 (Mini)
-curl -s https://macbook-pro-16.tail48b61c.ts.net:10000/fleet/api/health # nivel 2
+curl -s https://macbook-pro-16.tail48b61c.ts.net:8443/fleet/api/health # nivel 2
 curl -s https://fallback.admira.store/__fallback/health              # nivel 3 (Cloudflare)
 # estado remoto del monitor
 curl -s https://fleet-monitor.csilvasantin.workers.dev/

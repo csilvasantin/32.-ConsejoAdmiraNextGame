@@ -8,10 +8,10 @@
 <!-- control-signage · v.2026.07.21.r5 · estado único live/ready/stale/offline/blocked con heartbeat, proof-of-play, captura, versión, contenido y doble acuse. Arranque bloqueado si no es elegible; estado DS nunca sale de localStorage. -->
 <!-- control-tarjetas-honestas · v.2026.07.22.r1 · tarjetas honestas y limpias: a) tarjeta offline/bloqueada COMPACTA (badge + causa raíz + «▸ detalle» plegado, sin ladrillos repetidos); b) FRANJA agregada cuando ≥3 equipos comparten diagnóstico (sin acceso remoto → Tailscale/SSH); c) badge de captura HONESTO (🔴 EN VIVO <2min / captura antigua / SIN CAPTURA · fondo de persona); d) preflight AUTOMÁTICO al cargar (solo lectura, solo si hay online); e) versión al pie r1. -->
 <!-- control-dos-botones-ds · v.2026.07.22.r2 · DOS botones DS explícitos en Acciones de Equipos: «📺 Arrancar DS» (arranca los elegibles pendientes) y «⏹️ Apagar DS» (para los players vivos), ambos siempre visibles y respetando el desplegable «elegir equipos». Sustituye al botón único auto-invertible. -->
-<!-- control-fleet-mesh · v.11.08.2026.r11.12:16 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google independiente, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
+<!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.03.09.2026.r1.09:17" />
+<meta name="admiranext-version" content="Admira v.26.09.03.r1" />
     <script src="/admira-bar.js?v=20260713-r36"></script>
     <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
 <meta charset="UTF-8">
@@ -21,7 +21,7 @@
      el .js con cache-control de 4 h, así que una cadena vieja deja al navegador
      con el mesh anterior aunque el HTML ya sea nuevo (cazado el 11-ago-2026: el
      panel decía r9 y el mesh cargado seguía siendo el r8). -->
-<script src="/control/fleet-mesh.js?v=20260811-r11-1b6d1f233ac2"></script>
+<script src="/control/fleet-mesh.js?v=20260903-r1-bd8d5d8ae536"></script>
 <title>Control · AdmiraNext Fleet</title>
 <style>
   :root{

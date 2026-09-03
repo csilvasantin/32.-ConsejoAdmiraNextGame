@@ -1,6 +1,6 @@
 const RELAYS = [
   { id: 'macmini', base: 'https://macmini.tail48b61c.ts.net/fleet' },
-  { id: 'macbookpro16', base: 'https://macbook-pro-16.tail48b61c.ts.net:10000/fleet' },
+  { id: 'macbookpro16', base: 'https://macbook-pro-16.tail48b61c.ts.net:8443/fleet' },
 ];
 
 // Estos estados los genera la capa de conectividad (Cloudflare/origen), no la

@@ -42,7 +42,7 @@
     {
       id: 'macbookpro16',
       label: 'MacBook Pro 16',
-      base: 'https://macbook-pro-16.tail48b61c.ts.net:8443/fleet/api',
+      base: 'https://macbook-pro-16.tail48b61c.ts.net:10000/fleet/api',
       priority: 20
     }
   ];

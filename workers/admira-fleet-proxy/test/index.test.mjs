@@ -123,6 +123,19 @@ test('www GIS handoff with stale Cookie reaches hub without Cookie or CSRF', asy
   assert.equal(forwarded.get('X-Fleet-CSRF'), null);
 });
 
+test('POST handoff elimina toda query antes del relay privado', async () => {
+  let destination;
+  const proxy = createFleetProxy({relays:[relay], fetchImpl:async url => { destination=url; return Response.json({ok:true}); }});
+  const response = await proxy.fetch(new Request('https://fleet.admira.live/api/auth/handoff?code=query-leak&credential=visible', {
+    method:'POST',
+    headers:{Origin:'https://www.admira.live', 'Content-Type':'application/x-www-form-urlencoded'},
+    body:new URLSearchParams({code:'q'.repeat(43)}).toString(),
+  }));
+  assert.equal(response.status, 200);
+  assert.equal(destination, relay.base + '/api/auth/handoff');
+  assert.doesNotMatch(destination, /query-leak|credential|visible/);
+});
+
 test('browser handoff preserves 303 absolute Location and Set-Cookie without following it', async () => {
   const calls = [];
   const proxy = createFleetProxy({relays:[relay], fetchImpl:async (url, init) => {
@@ -179,6 +192,7 @@ test('GET handoff exige exactamente un código opaco y no contacta el relay si f
   for (const suffix of ['', '?code=short', '?code=' + 'a'.repeat(43) + '&next=/evil']) {
     const response = await proxy.fetch(new Request('https://fleet.admira.live/api/auth/handoff' + suffix));
     assert.equal(response.status, 403);
+    assert.equal(response.headers.get('Cache-Control'), 'no-store');
   }
   assert.equal(calls, 0);
 });
@@ -310,16 +324,116 @@ test('preserves request path, query, and body bytes across relay failover', asyn
     },
   });
 
-  const response = await proxy.fetch(new Request('https://fleet.admira.live/fleet/api/auth/login?attempt=1', {
+  const response = await proxy.fetch(new Request('https://fleet.admira.live/fleet/api/action?attempt=1', {
     method: 'POST',
-    headers: { Origin: 'https://admira.live', 'Content-Type': 'application/octet-stream' },
+    headers: {
+      Origin: 'https://admira.live',
+      'Content-Type': 'application/octet-stream',
+      'X-Fleet-Command-Id': 'command-12345678',
+    },
     body: payload,
   }));
 
   assert.equal(response.status, 201);
   assert.deepEqual(calls, [
-    { url: 'https://first.invalid/fleet/api/auth/login?attempt=1', bytes: [...payload] },
-    { url: 'https://second.invalid/fleet/api/auth/login?attempt=1', bytes: [...payload] },
+    { url: 'https://first.invalid/fleet/api/action?attempt=1', bytes: [...payload] },
+    { url: 'https://second.invalid/fleet/api/action?attempt=1', bytes: [...payload] },
   ]);
   assert.equal(response.headers.get('X-Fleet-Relay'), 'second');
+});
+
+test('handoff retries TLS/pre-origin failures and preserves final 303 with every Set-Cookie', async () => {
+  const calls = [];
+  const proxy = createFleetProxy({
+    relays: [
+      { id: 'first', base: 'https://first.invalid/fleet' },
+      { id: 'second', base: 'https://second.invalid/fleet' },
+    ],
+    fetchImpl: async (url, init) => {
+      calls.push({url, method:init.method, redirect:init.redirect});
+      if (calls.length === 1) return new Response('ssl handshake failed', {status:525});
+      const headers = new Headers({Location:'https://www.admira.live/control/'});
+      headers.append('Set-Cookie', '__Host-fleet_session=shared; Path=/; HttpOnly; Secure; SameSite=Lax');
+      headers.append('Set-Cookie', '__Host-fleet_challenge=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None');
+      return new Response(null, {status:303, headers});
+    },
+  });
+
+  const response = await proxy.fetch(new Request('https://fleet.admira.live/api/auth/handoff', {
+    method:'POST',
+    headers:{Origin:'null', 'Content-Type':'application/x-www-form-urlencoded'},
+    body:new URLSearchParams({code:'t'.repeat(43)}).toString(),
+  }));
+
+  assert.equal(response.status, 303);
+  assert.equal(response.headers.get('Location'), 'https://www.admira.live/control/');
+  assert.equal(response.headers.get('X-Fleet-Relay'), 'second');
+  assert.deepEqual(response.headers.getSetCookie(), [
+    '__Host-fleet_session=shared; Path=/; HttpOnly; Secure; SameSite=Lax',
+    '__Host-fleet_challenge=; Path=/; Max-Age=0; HttpOnly; Secure; SameSite=None',
+  ]);
+  assert.deepEqual(calls, [
+    {url:'https://first.invalid/fleet/api/auth/handoff', method:'POST', redirect:'manual'},
+    {url:'https://second.invalid/fleet/api/auth/handoff', method:'POST', redirect:'manual'},
+  ]);
+});
+
+test('safe reads fail over for every relay connectivity status', async () => {
+  for (const status of [502, 504, 521, 522, 523, 525, 526]) {
+    let calls = 0;
+    const proxy = createFleetProxy({
+      relays:[
+        {id:'first', base:'https://first.invalid/fleet'},
+        {id:'second', base:'https://second.invalid/fleet'},
+      ],
+      fetchImpl:async () => (++calls === 1 ? new Response('unavailable', {status}) : Response.json({ok:true})),
+    });
+    const response = await proxy.fetch(new Request('https://fleet.admira.live/api/status', {
+      headers:{Origin:'https://www.admira.live'},
+    }));
+    assert.equal(response.status, 200, `status ${status}`);
+    assert.equal(response.headers.get('X-Fleet-Relay'), 'second');
+    assert.equal(calls, 2);
+  }
+});
+
+test('outage total devuelve 502 no-store sin detalle de infraestructura', async () => {
+  const proxy = createFleetProxy({
+    relays:[
+      {id:'first', base:'https://first.invalid/fleet'},
+      {id:'second', base:'https://second.invalid/fleet'},
+    ],
+    fetchImpl:async () => new Response('tls detail', {status:525}),
+  });
+  const response = await proxy.fetch(new Request('https://fleet.admira.live/api/status', {
+    headers:{Origin:'https://www.admira.live'},
+  }));
+  assert.equal(response.status, 502);
+  assert.equal(response.headers.get('Cache-Control'), 'no-store');
+  assert.deepEqual(await response.json(), {ok:false, error:'ningún relay disponible'});
+});
+
+test('does not replay an ambiguous mutation after response or transport failure', async () => {
+  for (const fail of ['response', 'throw']) {
+    let calls = 0;
+    const proxy = createFleetProxy({
+      relays:[
+        {id:'first', base:'https://first.invalid/fleet'},
+        {id:'second', base:'https://second.invalid/fleet'},
+      ],
+      fetchImpl:async () => {
+        calls += 1;
+        if (fail === 'throw') throw new Error('connection reset after write');
+        return new Response('gateway timeout', {status:504});
+      },
+    });
+    const response = await proxy.fetch(new Request('https://fleet.admira.live/api/term/input', {
+      method:'POST',
+      headers:{Origin:'https://www.admira.live', Cookie:'__Host-fleet_session=value', 'X-Fleet-CSRF':'csrf-value-1234567890'},
+      body:'{"input":"ls\\n"}',
+    }));
+    assert.equal(calls, 1, fail);
+    assert.equal(response.status, 502, fail);
+    assert.doesNotMatch(await response.text(), /gateway timeout|connection reset|first\.invalid/, fail);
+  }
 });

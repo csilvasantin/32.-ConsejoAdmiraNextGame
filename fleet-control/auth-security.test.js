@@ -8,6 +8,8 @@ const gate = fs.readFileSync(path.join(__dirname, '..', 'auth-gate.js'), 'utf8')
 const mesh = fs.readFileSync(path.join(__dirname, '..', 'control', 'fleet-mesh.js'), 'utf8');
 const headers = fs.readFileSync(path.join(__dirname, '..', '_headers'), 'utf8');
 const csrf = fs.readFileSync(path.join(__dirname, 'session-csrf.js'), 'utf8');
+const sessionToken = fs.readFileSync(path.join(__dirname, 'session-token.js'), 'utf8');
+const sessionRegistry = fs.readFileSync(path.join(__dirname, 'session-registry.js'), 'utf8');
 
 test('Google se valida sin token en URL y con claims+nonce completos', () => {
   assert.match(server, /fetch\('https:\/\/oauth2\.googleapis\.com\/tokeninfo',\s*\{/);
@@ -42,7 +44,14 @@ test('redirect GIS usa callback same-origin y handoff backend sin token en URL o
 test('sesión queda en cookie segura, rota y no vuelve en JSON o storage', () => {
   assert.match(server, /__Host-fleet_session/);
   assert.match(server, /HttpOnly; Secure; SameSite=Lax/);
-  assert.match(server, /jti=crypto\.randomBytes/);
+  assert.match(sessionToken, /jti:randomBytes\(18\)/);
+  assert.match(sessionToken, /csrf:randomBytes\(24\)/);
+  assert.match(server, /FLEET_SESSION_SECRET/);
+  assert.match(server, /FLEET_SESSION_SECRET_FILE/);
+  assert.match(server, /AUTH_EDGE_SHARED_SECRET/);
+  assert.match(sessionToken, /AUTH_EDGE_SHARED_SECRET_FILE/);
+  assert.match(server, /deriveSessionSecret/);
+  assert.doesNotMatch(server, /_activeSessions|\.session-secret/);
   assert.doesNotMatch(server, /session:\s*mintSession/);
   assert.doesNotMatch(mesh, /sessionStorage|Authorization\s*=/);
   assert.doesNotMatch(gate, /localStorage\.setItem/);
@@ -60,8 +69,12 @@ test('CORS, mutaciones, logout y CSP fallan cerrados', () => {
   assert.match(csrf, /csrf inválido/);
   assert.match(mesh, /X-Fleet-CSRF/);
   assert.match(server, /\/api\/auth\/logout/);
-  assert.match(server, /_activeSessions\.delete/);
-  assert.match(server, /_activeSessions\.get/);
+  assert.match(server, /clearSessionCookie\(res\)/);
+  assert.match(server, /_sessionRegistry\.revoke/);
+  assert.match(server, /_sessionRegistry\.check/);
+  assert.match(sessionRegistry, /UNAVAILABLE/);
+  assert.match(sessionRegistry, /clearCookie:false/);
+  assert.match(sessionToken, /timingSafeEqual/);
   assert.match(server, /Content-Security-Policy/);
   assert.match(server, /default-src 'none'; frame-ancestors 'none'; base-uri 'none'/);
 });

@@ -11,8 +11,11 @@
  * TOKEN fuerte; toda ejecución exige token. CORS solo para admira.live.
  *
  * Sin dependencias (solo Node http + child_process). Arrancar:
- *   FLEET_TOKEN=<token> FLEET_PORT=9140 node fleet-control/server.js
- * El token también se lee de fleet-control/.fleet-token si no hay env.
+ *   FLEET_TOKEN=<token> FLEET_SESSION_SECRET=<shared-secret> FLEET_PORT=9140 node fleet-control/server.js
+ * El token también se lee de fleet-control/.fleet-token si no hay env. El
+ * secreto de sesión admite FLEET_SESSION_SECRET_FILE y, por defecto,
+ * ~/.fleet/fleet-session-secret (fichero regular propio y modo 0600).
+ * AUTH_EDGE_SHARED_SECRET admite el mismo patrón de fichero seguro.
  * ========================================================================== */
 'use strict';
 const http = require('http');
@@ -25,6 +28,8 @@ const { macOpenCommand, linuxOpenCommand, windowsOpenCommand } = require('./open
 const { canonicalScreenId, preflightCommand, assessPreflight } = require('./signage-preflight');
 const { CALLBACK_URI:AUTH_CALLBACK_URI, PUBLIC_ORIGIN:AUTH_PUBLIC_ORIGIN, createChallengeStore, handoffOriginAllowed, parseGoogleCallback, safeReturnPath } = require('./auth-redirect');
 const { sessionMutationError } = require('./session-csrf');
+const { ACTIVE, REVOKED, UNAVAILABLE, createSessionRegistry, logoutEndpointPolicy, sessionEndpointPolicy } = require('./session-registry');
+const { createSessionCodec, deriveSessionSecret, loadAuthEdgeSecretMaterial, loadSessionSecretMaterial } = require('./session-token');
 
 const DIR = __dirname;
 const PORT = parseInt(process.env.FLEET_PORT || '9140', 10);
@@ -93,18 +98,17 @@ const CHALLENGE_TTL_MS = 10 * 60 * 1000;
 const SESSION_COOKIE = '__Host-fleet_session';
 const CHALLENGE_COOKIE = '__Host-fleet_challenge';
 const AUTH_HANDOFF_CONSUME = 'https://www.admira.live/auth/handoff/consume';
+const AUTH_SESSION_API = 'https://www.admira.live/auth/session/';
 const GOOGLE_ISSUERS = new Set(['accounts.google.com', 'https://accounts.google.com']);
 const _challengeStore = createChallengeStore({ ttlMs:CHALLENGE_TTL_MS });
-const _activeSessions = new Map();
-const SESSION_SECRET = (function () {
-  const f = path.join(DIR, '.session-secret');
-  try { const s = fs.readFileSync(f, 'utf8').trim(); if (s) return s; } catch (e) {}
-  const s = crypto.randomBytes(32).toString('hex');
-  try { fs.writeFileSync(f, s, { mode: 0o600 }); } catch (e) {}
-  return s;
-})();
-const b64url = b => Buffer.from(b).toString('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
-const hmac = p => crypto.createHmac('sha256', SESSION_SECRET).update(p).digest('base64').replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+// La sesion no vive en memoria ni en un fichero distinto por relay. Ambos hubs
+// verifican el mismo token autocontenido con FLEET_SESSION_SECRET. No se deriva
+// del token de maquinas: ambas credenciales mantienen dominios de riesgo distintos.
+// Así un restart o un cambio de relay no invalida la cookie del navegador.
+const SESSION_SECRET_MATERIAL = loadSessionSecretMaterial();
+const _sessionCodec = createSessionCodec({secret:deriveSessionSecret(SESSION_SECRET_MATERIAL), ttlMs:SESSION_TTL_MS});
+const AUTH_EDGE_SHARED_SECRET = loadAuthEdgeSecretMaterial();
+const _sessionRegistry = createSessionRegistry({api:AUTH_SESSION_API, secret:AUTH_EDGE_SHARED_SECRET});
 
 // Verifica un ID token de Google con el endpoint tokeninfo (Google valida la
 // firma). Devuelve el email allowlisted o null.
@@ -131,25 +135,18 @@ async function verifyGoogleCredential(cred, expectedNonce) {
     return email;
   } catch (e) { return null; }
 }
-function mintSession(email) {
-  const now=Date.now(), jti=crypto.randomBytes(18).toString('hex'), exp=now+SESSION_TTL_MS, csrf=crypto.randomBytes(24).toString('base64url');
-  const payload = b64url(JSON.stringify({ email, jti, iat:now, exp }));
-  _activeSessions.set(jti,{email,exp,csrf});
-  for(const [key,value] of _activeSessions){if(value.exp<now)_activeSessions.delete(key);}
-  return payload + '.' + hmac(payload);
+async function mintSession(email) {
+  const token=_sessionCodec.mint(email), session=_sessionCodec.verify(token);
+  return await _sessionRegistry.register(session) === ACTIVE ? token : null;
 }
-function verifySession(token) {
-  if (!token || typeof token !== 'string') return null;
-  const i = token.lastIndexOf('.'); if (i < 1) return null;
-  const payload = token.slice(0, i), sig = token.slice(i + 1);
-  if (!safeEqual(sig, hmac(payload))) return null;
-  let d; try { d = JSON.parse(Buffer.from(payload.replace(/-/g, '+').replace(/_/g, '/'), 'base64').toString()); } catch (e) { return null; }
-  if (!d || !d.exp || !d.jti || Date.now() > d.exp) return null;
-  const email = String(d.email || '').toLowerCase();
-  const active=_activeSessions.get(d.jti);
-  if(!active || active.email!==email || active.exp!==d.exp)return null;
-  if (!SUPERS.has(email)) return null;   // degradar a alguien le corta /control en ≤60s
-  return { email, jti:d.jti, exp:d.exp, csrf:active.csrf };
+function verifySessionLocally(token) {
+  return _sessionCodec.verify(token);
+}
+async function sessionState(token) {
+  const session=verifySessionLocally(token);
+  if(!session)return {state:REVOKED,session:null};
+  if(!SUPERS.has(session.email))return {state:REVOKED,session:null}; // degradar corta /control en ≤60s
+  return {state:await _sessionRegistry.check(session),session};
 }
 function parseCookies(req) {
   const out = {};
@@ -581,12 +578,13 @@ function tarpitMs() {
 // Acceso por sesión Google SSO (único método humano). `allowToken` solo lo activa
 // /api/register para el alta HEADLESS de máquinas nuevas (onboard.sh, sin navegador).
 async function gate(req, res, ip, allowToken) {
-  const session=verifySession(sessionFromReq(req));
-  if (session) {
-    const mutationError=sessionMutationError(req,session,ALLOW_ORIGINS);
+  const auth=await sessionState(sessionFromReq(req));
+  if (auth.state===ACTIVE) {
+    const mutationError=sessionMutationError(req,auth.session,ALLOW_ORIGINS);
     if(mutationError){json(res,403,{error:mutationError});return false;}
     return true;
   }
+  if(auth.state===UNAVAILABLE){json(res,503,{error:'registro de sesión no disponible'});return false;}
   if (allowToken && authed(req)) return true;                   // X-Fleet-Token (solo onboarding headless)
   _recentFails.push(Date.now());
   const wait = tarpitMs();
@@ -694,17 +692,25 @@ const server = http.createServer(async (req, res) => {
   }
   if (url === '/api/auth/session' && req.method === 'GET') {
     if (!ALLOW_ORIGINS.includes(String(req.headers.origin || ''))) return json(res,403,{error:'origin no permitido'});
-    const session=verifySession(sessionFromReq(req));
-    if(!session){clearSessionCookie(res);return json(res,401,{ok:false});}
-    return json(res,200,{ok:true,email:session.email,csrf:session.csrf});
+    const auth=await sessionState(sessionFromReq(req));
+    const policy=sessionEndpointPolicy(auth.state);
+    if(policy.clearCookie)clearSessionCookie(res);
+    if(policy.status===503)return json(res,503,{ok:false,error:'registro de sesión no disponible'});
+    if(policy.status===401)return json(res,401,{ok:false});
+    return json(res,200,{ok:true,email:auth.session.email,csrf:auth.session.csrf});
   }
   if (url === '/api/auth/logout' && req.method === 'POST') {
     if (!ALLOW_ORIGINS.includes(String(req.headers.origin || ''))) return json(res,403,{error:'origin no permitido'});
-    const session=verifySession(sessionFromReq(req));
+    // Logout no depende de un check previo: valida firma+CSRF localmente y
+    // solicita revocación aun cuando el endpoint de check esté degradado.
+    const session=verifySessionLocally(sessionFromReq(req));
     const mutationError=session&&sessionMutationError(req,session,ALLOW_ORIGINS);
     if(mutationError)return json(res,403,{error:mutationError});
-    if(session)_activeSessions.delete(session.jti);
-    clearSessionCookie(res); return json(res,200,{ok:true});
+    const state=session?await _sessionRegistry.revoke(session):REVOKED;
+    const policy=logoutEndpointPolicy(!!session,state);
+    if(!policy.clearCookie)return json(res,503,{error:'no se pudo revocar la sesión'});
+    clearSessionCookie(res);
+    return json(res,200,{ok:true});
   }
   // AUTH: challenge+nonce de un solo uso; el navegador sólo recibe cookie HttpOnly.
   if (url === '/api/auth' && req.method === 'POST') {
@@ -719,7 +725,9 @@ const server = http.createServer(async (req, res) => {
       return json(res, 401, { error: 'google no autorizado' });
     }
     audit({ ip, ev: 'auth_google_ok', email });
-    setSessionCookie(res,mintSession(email));
+    const token=await mintSession(email);
+    if(!token)return json(res,503,{error:'registro de sesión no disponible'});
+    setSessionCookie(res,token);
     return json(res, 200, { ok: true, email });
   }
   if (url === '/api/auth/callback' && req.method === 'POST') {
@@ -728,7 +736,9 @@ const server = http.createServer(async (req, res) => {
     const challenge=consumeChallenge(req,form.state,'redirect'); clearChallengeCookie(res,'None');
     const email=challenge&&await verifyGoogleCredential(form.credential,challenge.nonce);
     if(!email){_recentFails.push(Date.now());audit({ip,ev:'auth_google_fail'});return json(res,401,{error:'google no autorizado'});}
-    audit({ip,ev:'auth_google_ok',email}); setSessionCookie(res,mintSession(email));
+    const token=await mintSession(email);
+    if(!token)return json(res,503,{error:'registro de sesión no disponible'});
+    audit({ip,ev:'auth_google_ok',email}); setSessionCookie(res,token);
     res.writeHead(303,{Location:AUTH_PUBLIC_ORIGIN+challenge.returnPath,'Cache-Control':'no-store','Content-Security-Policy':"default-src 'none'; frame-ancestors 'none'; base-uri 'none'",'Referrer-Policy':'no-referrer'}); return res.end();
   }
   if (url === '/api/auth/handoff' && req.method === 'POST') {
@@ -739,14 +749,18 @@ const server = http.createServer(async (req, res) => {
     if(!/^[A-Za-z0-9_-]{40,80}$/.test(code))return json(res,400,{error:'invalid_code'});
     let handoff=null;
     try{
-      const exchange=await fetch(AUTH_HANDOFF_CONSUME,{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded',Origin:'https://fleet.admira.live'},body:new URLSearchParams({code}).toString(),signal:AbortSignal.timeout(8000)});
+      const exchange=await fetch(AUTH_HANDOFF_CONSUME,{method:'POST',headers:{Authorization:'Bearer '+AUTH_EDGE_SHARED_SECRET,'Content-Type':'application/x-www-form-urlencoded',Origin:'https://fleet.admira.live'},body:new URLSearchParams({code}).toString(),signal:AbortSignal.timeout(8000)});
       if(exchange.ok)handoff=await exchange.json();
     }catch(e){}
-    if(!handoff||!handoff.email)return json(res,409,{error:'handoff_invalid'});
+    if(!handoff||!handoff.email||!handoff.session)return json(res,409,{error:'handoff_invalid'});
     const email=String(handoff.email).toLowerCase();
     if(Date.now()-_superTs>60000)await refreshSupers();
     if(!SUPERS.has(email))return json(res,403,{error:'google no autorizado'});
-    setSessionCookie(res,mintSession(email));
+    let token;
+    try{token=_sessionCodec.mintClaims(handoff.session);}catch(e){return json(res,409,{error:'handoff_invalid'});}
+    const session=_sessionCodec.verify(token);
+    if(!session||session.email!==email||await _sessionRegistry.check(session)!==ACTIVE)return json(res,409,{error:'handoff_invalid'});
+    setSessionCookie(res,token);
     res.writeHead(303,{Location:AUTH_PUBLIC_ORIGIN+safeReturnPath(handoff.returnPath),'Cache-Control':'no-store','Content-Security-Policy':"default-src 'none'; frame-ancestors 'none'; base-uri 'none'",'Referrer-Policy':'no-referrer'}); return res.end();
   }
 

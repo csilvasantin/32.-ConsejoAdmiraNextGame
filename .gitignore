@@ -3,6 +3,7 @@ budget.json
 __pycache__/
 *.pyc
 node_modules/
+**/.wrangler/
 
 # capturas de prueba de tareas (runtime)
 data/proofs/

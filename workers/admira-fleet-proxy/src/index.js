@@ -3,6 +3,11 @@ const RELAYS = [
   { id: 'macbookpro16', base: 'https://macbook-pro-16.tail48b61c.ts.net:10000/fleet' },
 ];
 
+// Estos estados los genera la capa de conectividad (Cloudflare/origen), no la
+// aplicacion FleetControl. Sólo permiten probar otro relay cuando repetir la
+// peticion no puede duplicar una mutacion.
+export const RETRYABLE_RELAY_STATUSES = new Set([502, 504, 521, 522, 523, 525, 526]);
+
 export const ALLOWED_ORIGINS = new Set([
   'https://www.admira.live',
   'https://admira.live',
@@ -80,8 +85,20 @@ function responseHeaders(upstream, origin) {
 }
 
 function jsonResponse(origin, body, status) {
-  const headers = applyCors(new Headers({ 'Content-Type': 'application/json; charset=utf-8' }), origin);
+  const headers = applyCors(new Headers({
+    'Content-Type': 'application/json; charset=utf-8',
+    'Cache-Control': 'no-store',
+  }), origin);
   return new Response(JSON.stringify(body, null, 1), { status, headers });
+}
+
+function retrySafe(request, path, handoffRequest) {
+  if (/^(GET|HEAD)$/i.test(request.method)) return true;
+  // El handoff tiene resultado estable durante sus 60 s de TTL en AuthStore.
+  if (handoffRequest) return true;
+  // /run y /action deduplican este identificador en la maquina objetivo.
+  const commandId = String(request.headers.get('X-Fleet-Command-Id') || '');
+  return (path === '/api/run' || path === '/api/action') && /^[A-Za-z0-9._:-]{8,120}$/.test(commandId);
 }
 
 export function createFleetProxy({ relays = RELAYS, fetchImpl = fetch } = {}) {
@@ -103,6 +120,7 @@ export function createFleetProxy({ relays = RELAYS, fetchImpl = fetch } = {}) {
       const handoffPost = request.method === 'POST' && path === '/api/auth/handoff';
       const handoffGet = request.method === 'GET' && path === '/api/auth/handoff';
       const handoffRequest = handoffPost || handoffGet;
+      const mayFailover = retrySafe(request, path, handoffRequest);
       const opaqueHandoff = handoffPost && origin === 'null';
       if (handoffPost && origin !== 'https://www.admira.live' && origin !== 'null') return jsonResponse('', { error:'origin no permitido' }, 403);
       if (mutating && cookie && !handoffRequest) {
@@ -155,11 +173,11 @@ export function createFleetProxy({ relays = RELAYS, fetchImpl = fetch } = {}) {
         } else if (opaqueHandoff) outgoingHeaders.set('Origin', 'null');
         outgoingHeaders.delete('Cookie');
       }
-      let lastError = null;
-
       for (const relay of relays) {
         try {
-          const destination = relay.base + path + (handoffGet ? '' : url.search);
+          // Ningún handoff reenvía query strings: el único código aceptado ya
+          // fue validado en el body (o transformado desde el GET de rescate).
+          const destination = relay.base + path + (handoffRequest ? '' : url.search);
           const response = await fetchImpl(destination, {
             method: upstreamMethod,
             headers: outgoingHeaders,
@@ -170,19 +188,26 @@ export function createFleetProxy({ relays = RELAYS, fetchImpl = fetch } = {}) {
             redirect: 'manual',
             signal: AbortSignal.timeout(20000),
           });
-          if (response.status === 502 || response.status === 504) {
-            lastError = `relay ${relay.id} → ${response.status}`;
-            continue;
+          if (RETRYABLE_RELAY_STATUSES.has(response.status)) {
+            // No necesitamos el cuerpo de la respuesta de infraestructura y
+            // cancelarlo libera pronto la conexion antes del siguiente relay.
+            try { await response.body?.cancel(); } catch (_) {}
+            if (mayFailover) continue;
+            return jsonResponse(origin, {ok:false, error:'relay no disponible; operación no reintentada'}, 502);
           }
           const headers = responseHeaders(response.headers, origin);
           headers.set('X-Fleet-Relay', relay.id);
           return new Response(response.body, { status: response.status, headers });
         } catch (error) {
-          lastError = `relay ${relay.id} → ${String(error.message || error)}`;
+          // Un timeout de escritura puede ocurrir después de que el origen haya
+          // aplicado la mutacion. Sin idempotencia demostrable, no se repite.
+          if (!mayFailover) break;
         }
       }
 
-      return jsonResponse(origin, { ok: false, error: 'ningún relay disponible', detalle: lastError }, 502);
+      // Los mensajes de red pueden contener hostnames o datos del proveedor;
+      // no se reflejan al cliente.
+      return jsonResponse(origin, { ok: false, error: 'ningún relay disponible' }, 502);
     },
   };
 }

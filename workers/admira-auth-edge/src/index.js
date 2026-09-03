@@ -6,6 +6,7 @@ const WHITELIST_URL = 'https://admira-whitelist.csilvasantin.workers.dev/list';
 const CHALLENGE_COOKIE = '__Host-fleet_challenge';
 const CHALLENGE_TTL_MS = 10 * 60 * 1000;
 const HANDOFF_TTL_MS = 60 * 1000;
+const SESSION_TTL_MS = 12 * 60 * 60 * 1000;
 const GOOGLE_ISSUERS = new Set(['accounts.google.com', 'https://accounts.google.com']);
 
 function token(bytes = 24) {
@@ -32,6 +33,31 @@ function equalText(left, right) {
   let difference = 0;
   for (let index = 0; index < a.length; index += 1) difference |= a.charCodeAt(index) ^ b.charCodeAt(index);
   return difference === 0;
+}
+
+function internalAuthorized(request, env) {
+  const header = String(request.headers.get('Authorization') || '');
+  const supplied = header.startsWith('Bearer ') ? header.slice(7).trim() : '';
+  const expected = String(env.AUTH_EDGE_SHARED_SECRET || '');
+  return expected.length >= 32 && equalText(supplied, expected);
+}
+
+function sessionClaims(value) {
+  if (!value || typeof value !== 'object') return null;
+  const claims = {
+    email:String(value.email || '').trim().toLowerCase(),
+    jti:String(value.jti || ''),
+    csrf:String(value.csrf || ''),
+    iat:Number(value.iat),
+    exp:Number(value.exp),
+  };
+  if (!claims.email || !/^[A-Za-z0-9_-]{24,64}$/.test(claims.jti) || !/^[A-Za-z0-9_-]{32}$/.test(claims.csrf)) return null;
+  if (!Number.isFinite(claims.iat) || !Number.isFinite(claims.exp) || claims.exp - claims.iat !== SESSION_TTL_MS) return null;
+  return claims;
+}
+
+function sameSession(left, right) {
+  return left && right && left.email === right.email && left.jti === right.jti && left.csrf === right.csrf && left.iat === right.iat && left.exp === right.exp;
 }
 
 function safeReturnPath(value) {
@@ -121,20 +147,51 @@ export class AuthStore {
         if (!row || row.expiresAt < now || row.nonce !== data.nonce) return null;
         await txn.delete(key);
         const code = token(32);
-        await txn.put('handoff:' + code, {email:String(data.email || ''), name:String(data.name || ''), returnPath:safeReturnPath(row.returnPath), expiresAt:now + HANDOFF_TTL_MS});
+        const session = {email:String(data.email || '').trim().toLowerCase(), jti:token(18), csrf:token(24), iat:now, exp:now + SESSION_TTL_MS};
+        await txn.put('session:' + session.jti, {...session, expiresAt:session.exp});
+        await txn.put('handoff:' + code, {email:session.email, name:String(data.name || ''), returnPath:safeReturnPath(row.returnPath), session, expiresAt:now + HANDOFF_TTL_MS});
+        await txn.setAlarm?.(Math.min(now + HANDOFF_TTL_MS, session.exp));
         return {code};
       });
       return json(result || {error:'challenge_used'}, result ? 200 : 409);
     }
     if (path === '/consume') {
+      // No borrar al leer: si el relay recibe la identidad pero su respuesta
+      // 303 se pierde, el proxy debe poder repetir el canje por otro relay. El
+      // mismo codigo siempre devuelve la misma identidad hasta expirar; el TTL
+      // corto y el alarm del Durable Object acotan el replay.
+      const key = 'handoff:' + String(data.code || '');
+      const row = await this.state.storage.get(key);
+      return json(row && row.expiresAt >= now ? row : {error:'handoff_invalid'}, row && row.expiresAt >= now ? 200 : 409);
+    }
+    if (path === '/session/register') {
+      const session = sessionClaims(data.session);
+      if (!session || session.exp < now) return json({error:'session_invalid'}, 400);
       const result = await this.state.storage.transaction(async (txn) => {
-        const key = 'handoff:' + String(data.code || '');
-        const row = await txn.get(key);
-        if (!row || row.expiresAt < now) return null;
-        await txn.delete(key);
-        return row;
+        const key = 'session:' + session.jti;
+        const current = await txn.get(key);
+        if (current && !sameSession(current, session)) return false;
+        await txn.put(key, {...session, expiresAt:session.exp});
+        await txn.setAlarm?.(session.exp);
+        return true;
       });
-      return json(result || {error:'handoff_used'}, result ? 200 : 409);
+      return json(result ? {ok:true} : {error:'session_conflict'}, result ? 200 : 409);
+    }
+    if (path === '/session/check') {
+      const session = sessionClaims(data.session);
+      const current = session && await this.state.storage.get('session:' + session.jti);
+      return json(current && current.expiresAt >= now && sameSession(current, session) ? {ok:true} : {ok:false}, current && current.expiresAt >= now && sameSession(current, session) ? 200 : 401);
+    }
+    if (path === '/session/revoke') {
+      const session = sessionClaims(data.session);
+      const result = session && await this.state.storage.transaction(async (txn) => {
+        const key = 'session:' + session.jti;
+        const current = await txn.get(key);
+        if (!current || !sameSession(current, session)) return false;
+        await txn.delete(key);
+        return true;
+      });
+      return json(result ? {ok:true} : {error:'session_invalid'}, result ? 200 : 404);
     }
     return json({error:'not_found'}, 404);
   }
@@ -194,18 +251,27 @@ export function createWorker({fetchImpl = fetch, now = Date.now} = {}) {
         if (!exchange.ok) return json({error:'challenge_used'}, 409, {'Set-Cookie':challengeCookie('', 0)});
         // El callback termina con una navegación HTTP real. No depende de JS,
         // form-action, sandbox, temporizadores ni de que el navegador permita
-        // auto-enviar formularios cross-origin. El código es opaco, one-shot,
-        // dura 60 s y viaja sin Referer; el edge público lo convierte de nuevo
-        // a POST antes de tocar el hub privado.
+        // auto-enviar formularios cross-origin. El código es opaco, dura 60 s
+        // y viaja sin Referer; el edge público lo convierte de nuevo
+        // a POST antes de tocar el hub privado. El canje es idempotente durante
+        // su TTL para tolerar perdida de respuesta y failover entre relays.
         return handoffRedirect((await exchange.json()).code);
       }
       if (url.pathname === '/auth/handoff/consume') {
-        if (request.method !== 'POST' || request.headers.get('Origin') !== 'https://fleet.admira.live') return json({error:'origin_not_allowed'}, 403);
+        if (request.method !== 'POST' || request.headers.get('Origin') !== 'https://fleet.admira.live' || !internalAuthorized(request, env)) return json({error:'origin_not_allowed'}, 403);
         const raw = await readBody(request, 'application/x-www-form-urlencoded', 1024);
         if (raw == null) return json({error:'invalid_form'}, 400);
         const code = String(new URLSearchParams(raw).get('code') || '');
         if (!/^[A-Za-z0-9_-]{40,80}$/.test(code)) return json({error:'invalid_code'}, 400);
         return storeCall(env, '/consume', {code, now:now()});
+      }
+      if (url.pathname === '/auth/session/check' || url.pathname === '/auth/session/revoke' || url.pathname === '/auth/session/register') {
+        if (request.method !== 'POST' || !internalAuthorized(request, env)) return json({error:'not_authorized'}, 403);
+        const raw = await readBody(request, 'application/json', 2048);
+        if (raw == null) return json({error:'invalid_form'}, 400);
+        let data; try { data = JSON.parse(raw); } catch (_) { return json({error:'invalid_form'}, 400); }
+        const action = url.pathname.slice('/auth'.length);
+        return storeCall(env, action, {...data, now:now()});
       }
       return new Response('Not Found', {status:404, headers:{'Cache-Control':'no-store'}});
     }

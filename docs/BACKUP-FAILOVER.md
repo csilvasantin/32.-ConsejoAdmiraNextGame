@@ -23,7 +23,7 @@ Una ruta inaccesible nunca se presenta como «equipo caído».
 
 `control/fleet-mesh.js` gobierna específicamente `/fleet`:
 
-- conserva una sesión Google independiente para cada relay;
+- conserva la cookie Google HttpOnly y cada relay valida la misma concesión;
 - prueba el relay activo y conmuta al siguiente ante error de red o 5xx;
 - recuerda temporalmente las rutas que fallan;
 - indica en cada respuesta qué relay se utilizó;
@@ -38,6 +38,48 @@ Los endpoints de estado, preflight, captura, acciones y control remoto usan la
 malla. Las sesiones interactivas de terminal quedan fijadas al relay que las
 abrió hasta que se cierran.
 
+## Login y sesiones compartidas
+
+`admira-auth-edge` crea una sola concesión (`jti`, `csrf`, `iat`, `exp`) en su
+Durable Object al completar Google. Repetir el handoff dentro de sus 60 segundos
+devuelve exactamente esa concesión; los dos relays producen por tanto la misma
+cookie firmada. El Durable Object conserva el registro activo durante 12 horas
+y los hubs lo consultan al validar. Logout elimina el registro, así que la
+revocación se aplica a ambos relays y sobrevive sus reinicios.
+
+Hay dos secretos distintos y nunca se guardan en Git:
+
+- `FLEET_SESSION_SECRET`: firma las cookies. Tiene prioridad el env directo,
+  después `FLEET_SESSION_SECRET_FILE` y finalmente
+  `~/.fleet/fleet-session-secret`. El fichero debe ser regular, propiedad del
+  usuario del servicio, modo `0600` y contener al menos 32 bytes. Ambos relays
+  deben tener exactamente el mismo valor.
+- `AUTH_EDGE_SHARED_SECRET`: autentica hub→Auth Edge para consumir handoffs,
+  registrar, comprobar y revocar sesiones. Admite env directo,
+  `AUTH_EDGE_SHARED_SECRET_FILE` o el fallback
+  `~/.fleet/auth-edge-shared-secret`, con las mismas reglas de fichero seguro.
+  Debe ser el mismo secreto Wrangler y en ambos hubs, con al menos 32 bytes.
+
+Orden de rollout: crear y distribuir ambos secretos; publicar Auth Edge;
+actualizar ambos hubs de forma coordinada —o mantener el tráfico pinneado al hub
+ya actualizado— y reiniciarlos uno por uno, comprobando `/api/health` en cada
+paso; publicar el proxy público sólo cuando ambos hubs estén sanos y homogéneos;
+ejecutar los canarios de login y forzar la caída de cada relay. El proxy nunca
+se activa frente a una mezcla de hubs antiguos y nuevos.
+
+```bash
+install -d -m 700 "$HOME/.fleet"
+umask 077
+openssl rand -base64 48 > "$HOME/.fleet/fleet-session-secret"
+openssl rand -base64 48 > "$HOME/.fleet/auth-edge-shared-secret"
+chmod 600 "$HOME/.fleet/fleet-session-secret" "$HOME/.fleet/auth-edge-shared-secret"
+```
+
+Los comandos se ejecutan una sola vez y ambos ficheros se copian por canal seguro
+al segundo relay; no se generan otros valores allí ni se imprimen en terminal o
+logs. El contenido de `auth-edge-shared-secret` se provisiona además como secreto
+Wrangler `AUTH_EDGE_SHARED_SECRET`.
+
 ## Añadir otro relay
 
 1. Instalar el mismo repositorio y `fleet-control/fleet.json`.
@@ -47,6 +89,8 @@ abrió hasta que se cierran.
 ```bash
 FLEET_RELAY_ID=macbookpronegro14 \
 FLEET_RELAY_LABEL="MacBook Pro 14" \
+FLEET_SESSION_SECRET_FILE="$HOME/.fleet/fleet-session-secret" \
+AUTH_EDGE_SHARED_SECRET_FILE="$HOME/.fleet/auth-edge-shared-secret" \
 FLEET_PORT=9140 \
 node fleet-control/server.js
 ```

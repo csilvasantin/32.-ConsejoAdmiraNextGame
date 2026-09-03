@@ -251,6 +251,38 @@ function winPS(script) {
 
 // El estado del player se mide en el equipo, no se deduce del último botón
 // pulsado en el navegador. Reconoce tanto la app nativa como el kiosko dedicado.
+// ── READINESS DE CONTROL (Neo·MBP14, 3-sep-2026, DEC-mtl6hbywm54t) ──────────
+// Carlos: «no podemos irnos sin controlar desde aquí todos los equipos». Hasta hoy
+// /status solo decía online/offline; que el hub llegue por SSH no significa que
+// pueda VER (fleet-capture.sh) ni TOCAR (fleet-input.py + pantalla desbloqueada).
+// El inventario del 3-sep lo demostró: Pro16 online pero bloqueada → 0 pantallas,
+// Azul online pero sin fleet-input.py. Tres marcadores más en la MISMA sonda SSH,
+// sin ronda extra. `locked` sale de Quartz (CGSSessionScreenIsLocked); si python
+// no responde en la caja, queda a «?» y no se inventa.
+const CONTROL_PROBE_MACOS =
+  '[ -f "$HOME/.fleet/fleet-capture.sh" ] && echo __FLEET_CAPTURE__=1 || echo __FLEET_CAPTURE__=0; ' +
+  '[ -f "$HOME/.fleet/fleet-input.py" ] && echo __FLEET_INPUT__=1 || echo __FLEET_INPUT__=0; ' +
+  'echo __FLEET_LOCKED__=$(/usr/bin/python3 -c "import Quartz;d=Quartz.CGSessionCopyCurrentDictionary() or {};print(int(bool(d.get(\"CGSSessionScreenIsLocked\",0))))" 2>/dev/null || echo ?); ';
+const CONTROL_PROBE_LINUX =
+  '[ -f "$HOME/.fleet/fleet-capture-linux.sh" ] && echo __FLEET_CAPTURE__=1 || echo __FLEET_CAPTURE__=0; ' +
+  'echo __FLEET_INPUT__=0; echo __FLEET_LOCKED__=?; ';
+function parseControlSignals(stdout, online) {
+  const pick = (k) => { const mm = String(stdout || '').match(new RegExp('__FLEET_' + k + '__=([01?])')); return mm ? mm[1] : null; };
+  const tri = (v) => v === '1' ? true : (v === '0' ? false : null);
+  const capture = tri(pick('CAPTURE')), input = tri(pick('INPUT')), locked = tri(pick('LOCKED'));
+  const ready = !!online && capture === true && input === true && locked === false;
+  const why = !online ? 'sin ssh desde el hub'
+    : capture === false ? 'sin agente de captura'
+    : input === false ? 'sin fleet-input.py'
+    : locked === true ? 'pantalla bloqueada'
+    : (capture === null || input === null || locked === null) ? 'sonda incompleta'
+    : 'ver + tocar';
+  return { capture, input, locked, ready, why };
+}
+function stripControlMarkers(txt) {
+  return String(txt || '').replace(/^__FLEET_(CAPTURE|INPUT|LOCKED)__=[01?]\s*$/gm, '').trim();
+}
+
 function statusProbe(m) {
   const plat = platOf(m);
   // cmd.exe nativo y rápido: Get-CimInstance tardaba >4,5s en AsusFold y el
@@ -258,8 +290,9 @@ function statusProbe(m) {
   if (plat === 'windows') return 'echo ONLINE & hostname & echo __FLEET_SIGNAGE__=0';
   const base = 'echo ONLINE; scutil --get ComputerName 2>/dev/null || hostname; ';
   if (plat === 'macos') return base +
-    "if pgrep -x AdmiraSignageMac >/dev/null 2>&1 || pgrep -f '[.]canal-kiosk' >/dev/null 2>&1; then echo __FLEET_SIGNAGE__=1; else echo __FLEET_SIGNAGE__=0; fi";
-  if (plat === 'linux') return base + LGUI +
+    "if pgrep -x AdmiraSignageMac >/dev/null 2>&1 || pgrep -f '[.]canal-kiosk' >/dev/null 2>&1; then echo __FLEET_SIGNAGE__=1; else echo __FLEET_SIGNAGE__=0; fi; " +
+    CONTROL_PROBE_MACOS;
+  if (plat === 'linux') return base + CONTROL_PROBE_LINUX + LGUI +
     "if systemctl --user is-active --quiet admira-signage.service 2>/dev/null || pgrep -f '[a]dmira-signage' >/dev/null 2>&1 || pgrep -f '[.]canal-kiosk' >/dev/null 2>&1; then echo __FLEET_SIGNAGE__=1; else echo __FLEET_SIGNAGE__=0; fi";
   return base;
 }
@@ -726,7 +759,8 @@ const server = http.createServer(async (req, res) => {
       const r = await run(m, statusProbe(m), platOf(m) === 'windows' ? 9000 : 4500);
       const online = r.rc === 0 && /ONLINE/.test(r.stdout);
       const sm = r.stdout.match(/__FLEET_SIGNAGE__=([01])/);
-      const info = r.stdout.replace(/ONLINE\s*/, '').replace(/^__FLEET_SIGNAGE__=[01]\s*$/gm, '').trim();
+      const info = stripControlMarkers(r.stdout.replace(/ONLINE\s*/, '').replace(/^__FLEET_SIGNAGE__=[01]\s*$/gm, ''));
+      const control = parseControlSignals(r.stdout, online);
       return {
         id: m.id,
         name: m.name,
@@ -747,7 +781,8 @@ const server = http.createServer(async (req, res) => {
             checkedAt: Date.now(),
             relay: RELAY_ID,
             latencyMs: r.ms
-          }
+          },
+          control
         }
       };
     }));

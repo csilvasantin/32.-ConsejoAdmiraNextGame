@@ -1,20 +1,57 @@
 # HANDOFF — Consejo AdmiraNext
 
-Actualizado: 2026-08-01  
+Actualizado: 2026-09-03
 Proyecto: `32.-ConsejoAdmiraNextGame`
 
 ## Punto de entrada
 
 - URL pública: [https://www.admira.live](https://www.admira.live) · **Informes: [https://www.admira.live/informes/](https://www.admira.live/informes/)** · Mesa: [https://www.admira.live/teamwork.html](https://www.admira.live/teamwork.html) · Fichas: [https://www.admira.live/consejero.html?p=steve-jobs](https://www.admira.live/consejero.html?p=steve-jobs)
 - Este HANDOFF: [github.com/csilvasantin/32.-ConsejoAdmiraNextGame/blob/main/HANDOFF.md](https://github.com/csilvasantin/32.-ConsejoAdmiraNextGame/blob/main/HANDOFF.md)
-- Versión visible: `Admira v.2026.08.01.r1` (badge de `/informes`; la home sigue con su propio sello)
+- Versión visible de Control: `Admira v.26.09.03.r1`
 - Rama: `main`
-- Commit actual: `ee0be7e` (último en `main`) · retorno: tag `retorno/pre-informes-20260801` → `9a056f7`
+- Commit actual de la release: `b17ee58` · implementación de login: `e5c3dda`
+
+## Estado canónico — misión login 525
+
+- Misión Yokup: `DCL-289877170cf98ae6e44ef6b7` · referencia `0177.03/09/2026.12:45`.
+- Auth Edge publicado: versión Cloudflare `6e47351d-05ab-4372-ad38-008358adc0c5`.
+- Fleet Proxy publicado: versión Cloudflare `afbb02eb-e567-4910-8f53-1e32a9dd783c`.
+- Los dos hubs ejecutan el mismo código y cargan dos secretos compartidos desde
+  ficheros propios, regulares y `0600`; los valores no están en Git ni en los
+  LaunchAgents.
+- El proxy conmuta `502/504/521/522/523/525/526` sólo en lecturas, handoff
+  idempotente u órdenes con identificador de deduplicación. Nunca repite una
+  mutación ambigua.
+- Auth Store entrega una única concesión durante 60 segundos. Ambos relays firman
+  la misma cookie, consultan un registro compartido y aplican logout/revocación
+  global incluso después de reiniciar.
+- QA independiente: `93/93` pruebas, cinco comprobaciones sintácticas y
+  `git diff --check`; prueba focal `525 → relay alternativo → 303` conservando
+  `Location` y todos los `Set-Cookie`.
+- Producción: `20/20` recorridos del endpoint de handoff y un login Google real
+  con `csilva@admira.com`, retorno correcto a `/control/` y cero errores de consola.
+
+### Riesgo abierto
+
+El Funnel del MacBook Pro 16 responde `200` a navegadores, pero Cloudflare sigue
+observando `525` en ese origen. El proxy ya lo clasifica y salta de relay, por lo
+que deja de mostrar el error cuando existe otra ruta sana. Para tolerar una caída
+total del Mac Mini hace falta sustituir ese Funnel por un origen estándar en
+`443` (preferiblemente Cloudflare Tunnel con hostname dedicado); no se hizo
+público el puerto `443` actual porque Tailscale habría expuesto también rutas
+ajenas a FleetControl.
+
+### Siguiente paso recomendado
+
+Crear `fleet-backup.admira.live` sobre Cloudflare Tunnel dedicado al puerto local
+de FleetControl y añadirlo como segundo relay. Hasta entonces, vigilar
+`https://fleet.admira.live/proxy-health`: `ok:true` global confirma servicio,
+pero el detalle del backup puede seguir mostrando `525`.
 
 ## Qué comprobar al retomar
 
 1. Abrir la URL pública.
-2. Verificar arriba que pone `Admira v.26.06.19.r7`.
+2. Verificar en `/control/` que pone `Admira v.26.09.03.r1`.
 3. Si se va a desarrollar, clonar y actualizar:
 
 ```bash

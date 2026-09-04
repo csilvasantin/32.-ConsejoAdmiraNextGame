@@ -58,14 +58,21 @@ export function crearTelegram(env = {}, identidad, deps = {}) {
   // firma con el DESTINATARIO del encargo cuando es un consejero con carné.
   async function firmante(encargoId) {
     const id = exigir();
-    try {
-      const q = new URLSearchParams({ persona: id.persona, machine: id.machine });
-      const d = await llamar(`${base}/api/bot-inbox?${q}`);
-      const fila = (d.items || []).find((x) => Number(x.id) === Number(encargoId));
-      const dest = String(fila && fila.target_persona || '').replace(/\s+/g, '');
-      const conocido = ['Wozniak', 'Jobs', 'Lucas', 'Disney'].find((c) => dest.toLowerCase().startsWith(c.toLowerCase()));
-      if (conocido && conocido !== id.persona) return { ...id, persona: conocido, agent: `${conocido}${id.machine}` };
-    } catch { /* si no se puede leer, firma la identidad de la clave */ }
+    // La vista privada solo devuelve lo de la persona consultada: se mira la bandeja de
+    // cada consejero (empezando por la mía) hasta dar con el encargo.
+    const consejeros = [id.persona, ...['Wozniak', 'Jobs', 'Lucas', 'Disney'].filter((c) => c !== id.persona)];
+    for (const c of consejeros) {
+      try {
+        const q = new URLSearchParams({ persona: c, machine: id.machine });
+        const d = await llamar(`${base}/api/bot-inbox?${q}`);
+        const fila = (d.items || []).find((x) => Number(x.id) === Number(encargoId));
+        if (!fila) continue;
+        const dest = String(fila.target_persona || '').replace(/\s+/g, '');
+        const conocido = ['Wozniak', 'Jobs', 'Lucas', 'Disney'].find((k) => dest.toLowerCase().startsWith(k.toLowerCase()));
+        if (conocido && conocido !== id.persona) return { ...id, persona: conocido, agent: `${conocido}${id.machine}` };
+        return id;
+      } catch { /* siguiente */ }
+    }
     return id;
   }
 

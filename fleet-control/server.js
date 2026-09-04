@@ -1038,9 +1038,11 @@ const server = http.createServer(async (req, res) => {
     }
     if (r.rc !== 0 || !b64 || /ERR_NO_CAPTURE/.test(b64) || b64.length < 200) {
       audit({ ip, ev: 'live_frame_fail', machine: m.id, rc: r.rc });
-      return json(res, 502, { error: 'capture_failed_or_no_permission', detail: String(r.stderr || b64 || '').slice(0, 140) });
+      // 424 (Failed Dependency), no 502: es un fallo de la MÁQUINA, no del relé. Con 5xx la malla
+      // saltaba a otro relé sin cookie y el overlay enseñaba «auth 401» (Carlos, 3-sep-2026).
+      return json(res, 424, { error: 'capture_failed_or_no_permission', detail: String(r.stderr || b64 || '').slice(0, 140) });
     }
-    let buf; try { buf = Buffer.from(b64, 'base64'); } catch (e) { return json(res, 502, { error: 'bad-capture' }); }
+    let buf; try { buf = Buffer.from(b64, 'base64'); } catch (e) { return json(res, 424, { error: 'bad-capture' }); }
     res.writeHead(200, { 'Content-Type': 'image/jpeg', 'Cache-Control': 'no-store' });
     return res.end(buf);
   }
@@ -1086,7 +1088,7 @@ const server = http.createServer(async (req, res) => {
       // Fallar en VOZ ALTA: el silencio de antes es justo lo que hizo que esto
       // pasara meses sin que nadie supiera que el ratón no llegaba.
       audit({ ip, ev: 'input_fail', machine: m.id, type: accion.type, rc: r.rc });
-      return json(res, 502, {
+      return json(res, 424, {
         error: (out && out.error) || 'input_failed',
         detalle: (out && out.detalle) || String(r.stderr || r.stdout || '').slice(0, 200)
       });
@@ -1186,7 +1188,7 @@ const server = http.createServer(async (req, res) => {
     if (!cmdDisplays) return json(res, 200, { displays: [] });
     const r = await run(m, cmdDisplays, 8000);
     let out = null; try { out = JSON.parse(String(r.stdout || '').trim()); } catch (e) {}
-    if (!out || !out.ok) return json(res, 502, { error: 'sin_agente_de_entrada', detalle: String(r.stderr || r.stdout || '').slice(0, 200) });
+    if (!out || !out.ok) return json(res, 424, { error: 'sin_agente_de_entrada', detalle: String(r.stderr || r.stdout || '').slice(0, 200) });
     return json(res, 200, { displays: out.displays || [] });
   }
 

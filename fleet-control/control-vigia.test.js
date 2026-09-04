@@ -87,6 +87,8 @@ test('fuera de la red: avisa UNA vez al superar 1 h sin SSH y se limpia al volve
 
 test('comandoWol: paquete mágico por broadcast (y a la IP local si se conoce)', () => {
   const c = V.comandoWol('1C:F6:4C:3B:F0:17', '192.168.1.34');
-  assert.match(c, /python3 -c/); assert.match(c, /1cf64c3bf017/); assert.match(c, /255\.255\.255\.255/); assert.match(c, /192\.168\.1\.34/);
+  assert.match(c, /base64 -d \| python3 -$/);
+  const py = Buffer.from(c.match(/^echo (\S+) \|/)[1], 'base64').toString('utf8');
+  assert.match(py, /1cf64c3bf017/); assert.match(py, /255\.255\.255\.255/); assert.match(py, /192\.168\.1\.34/); assert.match(py, /except Exception/);
   assert.equal(V.comandoWol('no-es-mac'), null);
 });

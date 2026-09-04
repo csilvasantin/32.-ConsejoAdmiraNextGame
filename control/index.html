@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.04.09.2026.r3.09:42" />
+<meta name="admiranext-version" content="AdmiraNeXT v.04.09.2026.r4.09:48" />
     <script src="/admira-bar.js?v=20260713-r36"></script>
     <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
 <meta charset="UTF-8">
@@ -3205,19 +3205,37 @@ function collapseAllToggle(){
     try{ while(cur && cur.iq && cur.iq.length){ const p=cur.iq.shift(); await postInput(p); } }
     finally{ if(cur) cur.sending=false; } }
   function normCoords(e){ const img=cur.img;const r=img.getBoundingClientRect();const nr=(img.naturalWidth||16)/(img.naturalHeight||9);let dw=r.width,dh=r.width/nr;if(dh>r.height){dh=r.height;dw=r.height*nr;}const ox=r.left+(r.width-dw)/2,oy=r.top+(r.height-dh)/2;const nx=(e.clientX-ox)/dw,ny=(e.clientY-oy)/dh;return{x:Math.min(1,Math.max(0,nx)),y:Math.min(1,Math.max(0,ny))};}
-  function frameLoop(){ if(!cur||cur.closed)return; const t0=performance.now(); const path='/live/frame?machine='+encodeURIComponent(cur.machine)+'&scale='+cur.scale+'&q='+cur.q+'&display='+(cur.display||0)+'&_='+t0; meshFetch(path,{cache:'no-store'}).then(r=>{if(!r.ok)return r.text().then(t=>{throw new Error('HTTP '+r.status+' '+t.slice(0,140));});const meta=r.__admiraMesh;return r.blob().then(blob=>({blob,meta}));}).then(({blob,meta})=>{ if(!cur||cur.closed)return; const u=URL.createObjectURL(blob);const old=cur.img.src;cur.img.onload=()=>{if(old&&old.startsWith('blob:'))URL.revokeObjectURL(old);};cur.img.src=u;cur.msg.style.display='none';const dt=performance.now()-t0;cur.fpsArr.push(dt);if(cur.fpsArr.length>10)cur.fpsArr.shift();const avg=cur.fpsArr.reduce((a,b)=>a+b,0)/cur.fpsArr.length;cur.stat.textContent=Math.round(1000/Math.max(1,avg))+' fps · '+Math.round(avg)+' ms · '+Math.round(blob.size/1024)+' KB · '+(meta&&meta.relay&&meta.relay.label||'relay');const wait=Math.max(0,(1000/cur.targetFps)-dt);cur.timer=setTimeout(frameLoop,wait);}).catch(err=>{ if(!cur||cur.closed)return; const txt=String(err&&(err.message||err)||''); cur.msg.style.display='block'; cur.msg.innerHTML='Esperando al agente…<br><b>'+txt.replace(/</g,'&lt;')+'</b><br><br>'+pistaDeFallo(err,txt); cur.timer=setTimeout(frameLoop,1200); }); }
+  function frameLoop(){ if(!cur||cur.closed)return; const t0=performance.now(); const path='/live/frame?machine='+encodeURIComponent(cur.machine)+'&scale='+cur.scale+'&q='+cur.q+'&display='+(cur.display||0)+'&_='+t0; meshFetch(path,{cache:'no-store'}).then(r=>{if(!r.ok)return r.text().then(t=>{const e=new Error('HTTP '+r.status+' '+t.slice(0,140));e.status=r.status;e.relay=r.__admiraMesh&&r.__admiraMesh.relay&&r.__admiraMesh.relay.label||'';e.failover=!!(r.__admiraMesh&&r.__admiraMesh.failover);throw e;});const meta=r.__admiraMesh;return r.blob().then(blob=>({blob,meta}));}).then(({blob,meta})=>{ if(!cur||cur.closed)return; const u=URL.createObjectURL(blob);const old=cur.img.src;cur.img.onload=()=>{if(old&&old.startsWith('blob:'))URL.revokeObjectURL(old);};cur.img.src=u;cur.msg.style.display='none';const dt=performance.now()-t0;cur.fpsArr.push(dt);if(cur.fpsArr.length>10)cur.fpsArr.shift();const avg=cur.fpsArr.reduce((a,b)=>a+b,0)/cur.fpsArr.length;cur.stat.textContent=Math.round(1000/Math.max(1,avg))+' fps · '+Math.round(avg)+' ms · '+Math.round(blob.size/1024)+' KB · '+(meta&&meta.relay&&meta.relay.label||'relay');const wait=Math.max(0,(1000/cur.targetFps)-dt);cur.timer=setTimeout(frameLoop,wait);}).catch(err=>{ if(!cur||cur.closed)return; const txt=String(err&&(err.message||err)||''); cur.fallosFeed=(cur.fallosFeed||0)+1; cur.msg.style.display='block'; cur.msg.innerHTML=tituloDeFallo(err,txt)+'<br><b>'+causaDeFallo(err,txt).replace(/</g,'&lt;')+'</b><br><br>'+pistaDeFallo(err,txt)+'<br><small>reintento '+cur.fallosFeed+' · reconexión automática cada 1,2 s</small>'; cur.timer=setTimeout(frameLoop,1200); }); }
   /* CADA FALLO CON SU CAUSA (2026-08-10). Antes se colgaba SIEMPRE la misma pista
      —«falta conceder Grabación de pantalla»— debajo de cualquier error, así que un
      tiempo de espera del relay mandaba a Carlos a revisar un permiso que ya estaba
      dado. Ahora el permiso solo se nombra cuando el agente lo dice, y un vencimiento
      del Fleet Mesh se cuenta como lo que es: el relay no contestó a tiempo. */
+  /* OVERLAY VERAZ (mejora 3, decisión 0148, 4-sep-2026). Cada fallo con su título y su
+     causa REAL: un 424 del hub es la máquina (agente/permiso), un 401 en un relé de respaldo
+     es «ese relé no tiene tu sesión» (no un problema de login), un 5xx es el relé. */
+  function tituloDeFallo(err,txt){
+    if(err&&err.status===424) return 'La máquina no devuelve imagen';
+    if(err&&err.status===401) return err.failover?'Relé de respaldo sin tu sesión':'Sesión caducada en el hub';
+    if(err&&err.status>=500) return 'El relé de control ha fallado';
+    if(/aborted|Timeout|sin respuesta/i.test(txt)) return 'El relé no contesta a tiempo';
+    return 'Esperando al agente…';
+  }
+  function causaDeFallo(err,txt){
+    let d=''; try{ const j=JSON.parse(txt.replace(/^HTTP \d+ /,'')); d=(j.error||'')+(j.detail||j.detalle?(' · '+(j.detail||j.detalle)):''); }catch(e){ d=txt; }
+    if(err&&err.status===401) d=(err.relay?('relé '+err.relay+' · '):'')+'HTTP 401'+(err.failover?' (respaldo)':'');
+    return d.slice(0,160);
+  }
   function pistaDeFallo(err,txt){
-    if(/capture_failed_or_no_permission/.test(txt)) return 'Falta conceder <b>Grabación de pantalla</b> al agente en esa máquina.';
+    if(err&&err.status===401&&err.failover) return 'La cookie de sesión sólo viaja al relé principal (fleet.admira.live). Reconectando por el principal; si persiste, recarga y entra de nuevo.';
+    if(err&&err.status===401) return 'Vuelve a entrar con Google (la sesión ha caducado).';
+    if(/agente de captura desactualizado|ERR_NO_CAPTURE/.test(txt)) return 'El agente de captura de esa máquina no responde: el vigía lo redesplegará; pulsa «🔎 probar» en su tarjeta para forzarlo.';
+    if(/capture_failed_or_no_permission/.test(txt)) return 'La máquina no ha devuelto captura: agente de captura caído o sin <b>Grabación de pantalla</b>. Pulsa «🔎 probar» en su tarjeta: el vigía diagnostica y repara.';
     if((err&&err.fleetMeshTimeout)||/aborted without reason|FleetMeshTimeout|sin respuesta en \d+ ms/.test(txt))
       return 'El relay no contestó a tiempo — no es un permiso del agente. Fleet Mesh probará otro relay; si se repite, la máquina está saturada o sin ruta.';
     return 'Fleet Mesh probará otro relay.';
   }
-  window.openRemoteControl=function(machineId,machineName){ styleOnce(); if(document.getElementById('rc-ov'))document.getElementById('rc-ov').remove(); const ov=document.createElement('div');ov.id='rc-ov'; ov.innerHTML='<div id="rc-bar"><b>🖥️ Control remoto · '+(machineName||machineId)+'</b><span class="stat" id="rc-stat">conectando…</span><span class="sp"></span><select id="rc-disp" style="display:none" title="Pantalla del equipo remoto"></select><label class="stat">fps <input type="range" id="rc-fps" min="1" max="30" value="12"></label><label class="stat">escala <input type="range" id="rc-esc" min="3" max="10" value="5"></label><label class="stat">calidad <input type="range" id="rc-q" min="2" max="9" value="5"></label><button id="rc-rapido" title="Menos calidad, mas fotogramas">&#9889; rapido</button><button id="rc-nitido" title="Mas calidad, menos fotogramas">&#128269; nitido</button><button id="rc-ctl" class="on">🎮 control: ON</button><button id="rc-full">⛶</button><button id="rc-close">✕ cerrar</button></div><div id="rc-stage"><img id="rc-img" draggable="false"><div id="rc-msg">Conectando…</div></div>'; document.body.appendChild(ov);
+  window.openRemoteControl=function(machineId,machineName){ styleOnce(); if(document.getElementById('rc-ov'))document.getElementById('rc-ov').remove(); const ov=document.createElement('div');ov.id='rc-ov'; ov.innerHTML='<div id="rc-bar"><b>🖥️ Control remoto · '+(machineName||machineId)+'</b><span class="stat" id="rc-stat">conectando…</span><span class="sp"></span><select id="rc-disp" title="Pantalla del equipo remoto"><option value="0">🖵 pantalla principal</option></select><label class="stat">fps <input type="range" id="rc-fps" min="1" max="30" value="12"></label><label class="stat">escala <input type="range" id="rc-esc" min="3" max="10" value="5"></label><label class="stat">calidad <input type="range" id="rc-q" min="2" max="9" value="5"></label><button id="rc-rapido" title="Menos calidad, mas fotogramas">&#9889; rapido</button><button id="rc-nitido" title="Mas calidad, menos fotogramas">&#128269; nitido</button><button id="rc-unlock" title="Teclear la contraseña de sesión en la máquina remota y pulsar Intro (desbloqueo asistido)">🔓 desbloquear</button><button id="rc-paste" title="Escribir un texto en la máquina remota (portapapeles remoto)">📋 pegar</button><button id="rc-ctl" class="on">🎮 control: ON</button><button id="rc-full">⛶</button><button id="rc-close">✕ cerrar</button></div><div id="rc-stage"><img id="rc-img" draggable="false"><div id="rc-msg">Conectando…</div></div>'; document.body.appendChild(ov);
     cur={machine:machineId,name:machineName,closed:false,img:ov.querySelector('#rc-img'),msg:ov.querySelector('#rc-msg'),stat:ov.querySelector('#rc-stat'),scale:0.5,q:0.5,targetFps:6,control:true,fpsArr:[],timer:null,lastUp:0,lastPos:{x:-9,y:-9},clicks:0,dragging:false,lastMove:0,iq:[],sending:false,display:0,fallos:0};
     // SELECTOR DE PANTALLA (FLT-1021, Carlos: «el MacMini tiene 3 pantallas y
     // estamos en la del centro»). Se pregunta a la máquina cuántas tiene; con una
@@ -3228,10 +3246,9 @@ function collapseAllToggle(){
         const r=await meshFetch('/displays?machine='+encodeURIComponent(machineId),{});
         if(!r.ok) return;
         const d=await r.json(); const ds=(d&&d.displays)||[];
-        if(ds.length<2) return;
-        const sel=ov.querySelector('#rc-disp'); if(!sel||!cur||cur.closed) return;
+        const sel=ov.querySelector('#rc-disp'); if(!sel||!cur||cur.closed||!ds.length) return;
+        // SIEMPRE visible (mejora 3): con una pantalla enseña su nombre; con varias, elige.
         sel.innerHTML=ds.map(p=>'<option value="'+p.indice+'">🖵 '+dsEsc(p.nombre)+'</option>').join('');
-        sel.style.display='';
         sel.addEventListener('change',()=>{ if(cur) cur.display=parseInt(sel.value,10)||0; });
       }catch(e){/* sin selector: se sigue viendo la pantalla 0, como siempre */}
     })();
@@ -3257,6 +3274,19 @@ function collapseAllToggle(){
     ov.querySelector('#rc-nitido').addEventListener('click',()=>rcPreset(1.0,0.8,8));
     ov.querySelector('#rc-q').addEventListener('input',e=>cur.q=(+e.target.value)/10);
     const ctlBtn=ov.querySelector('#rc-ctl');ctlBtn.addEventListener('click',()=>{cur.control=!cur.control;ctlBtn.classList.toggle('on',cur.control);ctlBtn.textContent=cur.control?'🎮 control: ON':'👁️ solo ver';img.style.cursor=cur.control?'crosshair':'default';});
+    /* DESBLOQUEO ASISTIDO y PORTAPAPELES REMOTO (mejora 3): van por el mismo inyector que el
+       teclado (texto Unicode + Intro). La contraseña no se guarda en ningún sitio: se pide en
+       un campo de contraseña, se manda y se olvida. */
+    ov.querySelector('#rc-unlock').addEventListener('click',()=>{ if(!cur)return;
+      const pw=window.prompt('Contraseña de sesión de '+(cur.name||cur.machine)+' (se teclea en la máquina y no se guarda):'); if(pw==null||!pw.length) return;
+      enqueueInput({type:'key',code:49,mods:[]});        // espacio: despierta la pantalla de bloqueo
+      setTimeout(()=>{ enqueueInput({type:'text',text:pw}); enqueueInput({type:'key',code:36,mods:[]}); toast('up','🔓 '+(cur&&cur.name||''),'contraseña tecleada + Intro'); },700);
+    });
+    ov.querySelector('#rc-paste').addEventListener('click',async()=>{ if(!cur)return;
+      let t=''; try{ t=await navigator.clipboard.readText(); }catch(e){}
+      const txt=window.prompt('Texto a escribir en '+(cur.name||cur.machine)+':', t||''); if(txt==null||!txt.length) return;
+      enqueueInput({type:'text',text:txt}); toast('up','📋 '+(cur&&cur.name||''),txt.length+' caracteres enviados');
+    });
     ov.querySelector('#rc-full').addEventListener('click',()=>{if(!document.fullscreenElement)ov.requestFullscreen&&ov.requestFullscreen();else document.exitFullscreen&&document.exitFullscreen();});
     ov.querySelector('#rc-close').addEventListener('click',()=>{cur.closed=true;clearTimeout(cur.timer);document.removeEventListener('keydown',cur.keyHandler,true);if(document.fullscreenElement)document.exitFullscreen&&document.exitFullscreen();ov.remove();cur=null;});
     frameLoop();

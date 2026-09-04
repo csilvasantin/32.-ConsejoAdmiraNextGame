@@ -94,12 +94,29 @@ function transicion(anterior, actual, nombre) {
            : ('🔴 ' + nombre + ' ha dejado de ser controlable: ' + actual.why);
 }
 
-/** Comando (python3, presente en macOS y Linux) que envía el paquete mágico WoL a `mac` por broadcast y a `ip`. */
+/** Comando (python3, presente en macOS y Linux) que envía el paquete mágico WoL a `mac`
+ *  por broadcast y, si se conoce, a `ip`. Cada destino por separado: el unicast a una IP
+ *  que no está en la red levanta «Host is down / No route to host» en macOS y no debe
+ *  tapar que el broadcast sí salió. */
 function comandoWol(mac, ip) {
   const m = String(mac || '').toLowerCase().replace(/[^0-9a-f]/g, '');
   if (m.length !== 12) return null;
   const dest = String(ip || '').replace(/[^0-9.]/g, '');
-  return "python3 -c 'import socket,binascii;p=b\"\\xff\"*6+binascii.unhexlify(\"" + m + "\")*16;s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);s.setsockopt(socket.SOL_SOCKET,socket.SO_BROADCAST,1);[s.sendto(p,(d,9)) for d in ([\"255.255.255.255\"]+([\"" + dest + "\"] if \"" + dest + "\" else []))];print(\"wol enviado a " + m + "\")'";
+  const py = [
+    'import socket,binascii',
+    'p=b"\\xff"*6+binascii.unhexlify("' + m + '")*16',
+    's=socket.socket(socket.AF_INET,socket.SOCK_DGRAM)',
+    's.setsockopt(socket.SOL_SOCKET,socket.SO_BROADCAST,1)',
+    'ok=[]',
+    'for d in ["255.255.255.255"' + (dest ? ',"' + dest + '"' : '') + ']:',
+    '  try:',
+    '    s.sendto(p,(d,9)); ok.append(d)',
+    '  except Exception as e:',
+    '    pass',
+    'print("wol enviado a ' + m + ' via "+",".join(ok) if ok else "wol NO enviado")'
+  ].join('\n');
+  // En base64: ni comillas ni saltos de línea que pelear con ssh + shell.
+  return 'echo ' + Buffer.from(py, 'utf8').toString('base64') + ' | base64 -d | python3 -';
 }
 
 function crear(deps) {

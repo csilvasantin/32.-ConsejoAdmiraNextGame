@@ -1,0 +1,24 @@
+{
+  "name": "admira-live-mcp-server",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "MCP de admira.live (Streamable HTTP): los consejeros del Consejo de Silicio, la flota y AgoraMatrix, operativos desde GrokBot y cualquier cliente MCP remoto.",
+  "main": "src/index.js",
+  "scripts": {
+    "test": "node --test test/*.test.js",
+    "check": "node --check src/index.js && node --check src/consejo.js",
+    "deploy": "wrangler deploy",
+    "dev": "wrangler dev"
+  },
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.29.0",
+    "zod": "^4.2.0"
+  },
+  "devDependencies": {
+    "wrangler": "^4.81.1"
+  },
+  "engines": {
+    "node": ">=20"
+  }
+}

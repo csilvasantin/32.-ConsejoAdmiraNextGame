@@ -1,0 +1,24 @@
+# admira-live-mcp — el MCP de admira.live (Streamable HTTP) para GrokBot y cualquier
+# cliente MCP remoto. Pone a los consejeros del Consejo de Silicio a trabajar con el
+# equipo de AdmiraNeXT: preguntar al Consejo o a un consejero, ver flota y tareas,
+# hablar en AgoraMatrix. FLT-1578 · Morfeo · MacMini · 4-sep-2026.
+#
+# Secretos (wrangler secret put):
+#   MCP_KEY               clave que exige el endpoint /mcp (Bearer o ?key=)
+#   COUNCIL_MACHINE_TOKEN token máquina-a-máquina del council-api (X-Council-Token)
+#   AGORA_SYNC_KEY        (opcional) clave del feed de AgoraMatrix en pixer-worker
+name = "admira-live-mcp"
+main = "src/index.js"
+compatibility_date = "2026-08-01"
+compatibility_flags = ["nodejs_compat"]
+workers_dev = true
+
+[vars]
+# El Consejo (FastAPI, puerto 8420 del Mac Mini) sale por el funnel de Tailscale en
+# /council: el prefijo se quita, así que /council/api/council/models → :8420/api/council/models.
+COUNCIL_BASE = "https://macmini.tail48b61c.ts.net/council"
+# Tablero, salud de bots y censo de máquinas viven en el proxy Node del 3030 (/api).
+FLEET_BASE = "https://macmini.tail48b61c.ts.net/api"
+AGORA_WORKER = "https://pixer-eleven.csilvasantin.workers.dev"
+SITIO = "https://www.admira.live"
+VERSION = "v.04.09.2026.r1.06:20"

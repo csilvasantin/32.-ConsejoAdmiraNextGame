@@ -63,3 +63,29 @@ test('sin identidad las herramientas de Telegram fallan legibles', async () => {
   const r = await client.callTool({ name: 'telegram_bandeja', arguments: {} });
   assert.equal(r.isError, true); assert.match(r.content[0].text, /sin identidad/);
 });
+
+test('`como` manda sobre la clave (conector de cuenta) y la bandeja solo enseña lo mío', async () => {
+  const peticiones = [];
+  const fetch = async (url, init = {}) => {
+    const u = String(url); peticiones.push({ url: u, body: init.body ? JSON.parse(init.body) : null });
+    const ok = (o) => new Response(JSON.stringify(o), { status: 200, headers: { 'content-type': 'application/json' } });
+    if (u.startsWith('https://telegram.test/api/bot-inbox?')) return ok({ ok: true, items: [
+      { id: 1, ts: 1788500000, from_name: 'Carlos', target_persona: 'Wozniak', target_machine: 'grokbot', text: 'para Woz', status: 'pending' },
+      { id: 2, ts: 1788500001, from_name: 'Carlos', target_persona: 'Lucas', target_machine: 'grokbot', text: 'para Lucas', status: 'pending' },
+    ] });
+    if (/\/status$/.test(u)) return ok({ ok: true, item: { status: 'ack' } });
+    return new Response('nf', { status: 404 });
+  };
+  const server = crearServidor(ENV, { fetch }, identidadPorClave(ENV.MCP_KEY, ENV)); // la clave dice Wozniak
+  const [a, b] = InMemoryTransport.createLinkedPair(); await server.connect(b);
+  const client = new Client({ name: 'x', version: '1' }); await client.connect(a);
+  const lucas = res(await client.callTool({ name: 'telegram_bandeja', arguments: { como: 'Lucas' } }));
+  assert.equal(lucas.yo, 'LucasGrokBot'); assert.deepEqual(lucas.encargos.map((e) => e.encargo), [2], 'Lucas no ve el encargo de Wozniak');
+  assert.match(peticiones[0].url, /persona=Lucas&machine=GrokBot/);
+  const woz = res(await client.callTool({ name: 'telegram_bandeja', arguments: {} }));
+  assert.equal(woz.yo, 'WozniakGrokBot'); assert.deepEqual(woz.encargos.map((e) => e.encargo), [1]);
+  await client.callTool({ name: 'telegram_responder', arguments: { como: 'Lucas', encargo: 2, estado: 'ack' } });
+  assert.equal(peticiones.at(-1).body.persona, 'LucasGrokBot');
+  const q = res(await client.callTool({ name: 'yokup_quien_soy', arguments: { como: 'Disney' } })).identidad;
+  assert.equal(q.agent, 'DisneyGrokBot');
+});

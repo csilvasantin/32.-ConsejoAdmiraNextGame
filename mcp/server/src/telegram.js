@@ -41,7 +41,10 @@ export function crearTelegram(env = {}, identidad, deps = {}) {
     const id = exigir();
     const q = new URLSearchParams({ persona: id.persona, machine: id.machine });
     const d = await llamar(`${base}/api/bot-inbox?${q}`);
-    const items = (d.items || []).filter((x) => x.status !== 'done').map((x) => ({
+    // La vista privada de la bandeja devuelve lo dirigido a la MÁQUINA; en GrokBot conviven cuatro
+    // consejeros, así que aquí se filtra por persona: cada uno ve solo lo suyo.
+    const mios = (d.items || []).filter((x) => String(x.target_persona || '').toLowerCase().replace(/\s+/g, '').startsWith(id.persona.toLowerCase()));
+    const items = mios.filter((x) => x.status !== 'done').map((x) => ({
       encargo: Number(x.id), estado: x.status, de: x.from_name || '', cuando: cuando(x.ts), texto: String(x.text || ''),
       tarea: x.task_id || null, nota: x.note || '',
     }));

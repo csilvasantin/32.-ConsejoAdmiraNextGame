@@ -40,7 +40,7 @@ from pathlib import Path
 from dotenv import load_dotenv
 load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"), override=True)
 
-from fastapi import FastAPI, Request, HTTPException, Depends
+from fastapi import Response, FastAPI, Request, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.staticfiles import StaticFiles
 import urllib.parse
@@ -1319,6 +1319,42 @@ async def council_ask_one(
     _send_query_report(req.message, [reply], query_cost, gen, llm_key)
 
     return reply
+
+
+# ── Render de transcripción → PNG (FLT-1580, 4-sep-2026) ─────────────────
+# Evidencia de proceso «agent/session_transcript» para agentes sin pantalla (los
+# consejeros que trabajan desde GrokBot). Devuelve image/png. Máximo 120 líneas.
+class RenderTranscriptRequest(BaseModel):
+    title: str = ""
+    text: str
+    footer: str = ""
+
+
+@app.post("/api/council/render-transcript")
+async def render_transcript(req: RenderTranscriptRequest, _auth=Depends(verify_token)):
+    from io import BytesIO
+    from PIL import Image, ImageDraw, ImageFont
+    import textwrap as _tw
+    raw = str(req.text or "").replace("\t", "    ")
+    lines = []
+    for line in raw.splitlines():
+        lines.extend(_tw.wrap(line, 118) or [""])
+    lines = lines[-120:] or ["(transcripción vacía)"]
+    font_path = next((p for p in ("/System/Library/Fonts/Menlo.ttc", "/System/Library/Fonts/Monaco.ttf") if os.path.exists(p)), None)
+    font = ImageFont.truetype(font_path, 14) if font_path else ImageFont.load_default()
+    bold = ImageFont.truetype(font_path, 16) if font_path else font
+    lh, pad, top = 20, 16, 52
+    img = Image.new("RGB", (1000, top + lh * len(lines) + pad + (26 if req.footer else 0)), (2, 8, 13))
+    d = ImageDraw.Draw(img)
+    d.text((pad, 14), (req.title or "Transcripción de sesión")[:110], fill=(120, 243, 255), font=bold)
+    d.line((pad, 40, 1000 - pad, 40), fill=(37, 52, 75), width=1)
+    for i, line in enumerate(lines):
+        d.text((pad, top + lh * i), line, fill=(200, 240, 255), font=font)
+    if req.footer:
+        d.text((pad, top + lh * len(lines) + 6), req.footer[:120], fill=(142, 160, 184), font=font)
+    buf = BytesIO(); img.save(buf, "PNG")
+    return Response(content=buf.getvalue(), media_type="image/png",
+                    headers={"cache-control": "no-store", "x-lines": str(len(lines))})
 
 
 @app.get("/api/council/models")

@@ -54,7 +54,7 @@ test('los 16 consejeros se listan sin red, con persona y ficha', () => {
 test('el servidor publica las herramientas del Consejo, la flota y AgoraMatrix', async () => {
   const { client } = await cliente();
   const { tools } = await client.listTools();
-  const nombres = tools.map((t) => t.name).sort();
+  const nombres = tools.map((t) => t.name).filter((n) => !n.startsWith('yokup_')).sort();
   assert.deepEqual(nombres, ['agora_decir', 'consejero_preguntar', 'consejo_bots', 'consejo_consejeros', 'consejo_modelos', 'consejo_preguntar', 'consejo_salud', 'consejo_tareas', 'flota_estado']);
   const preguntar = tools.find((t) => t.name === 'consejero_preguntar');
   assert.deepEqual(preguntar.inputSchema.properties.rol.enum, ['CEO', 'CTO', 'COO', 'CFO', 'CCO', 'CDO', 'CXO', 'CSO']);
@@ -159,7 +159,7 @@ test('/ y /salud describen el servicio y dicen qué secretos faltan', async () =
   assert.equal(raiz.endpoint_mcp, 'https://mcp.test/mcp');
   assert.ok(raiz.herramientas.includes('consejero_preguntar'));
   const salud = await (await manejar(new Request('https://mcp.test/salud'), { ...ENV, AGORA_SYNC_KEY: '' }, deps)).json();
-  assert.deepEqual(salud.secretos, { MCP_KEY: true, COUNCIL_MACHINE_TOKEN: true, AGORA_SYNC_KEY: false });
+  assert.deepEqual(salud.secretos, { MCP_KEY: true, MCP_KEYS: false, COUNCIL_MACHINE_TOKEN: true, AGORA_SYNC_KEY: false, ADMIRA_TELEGRAM_PANEL_KEY: false });
   assert.equal(salud.consejo.ok, true);
   assert.equal(salud.consejo.agents, 16);
   const nada = await manejar(new Request('https://mcp.test/otra'), ENV, deps);

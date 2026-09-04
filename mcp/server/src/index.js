@@ -24,6 +24,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import * as z from 'zod/v4';
 import { ROLES, GENERACIONES, consejeros, crearCliente, resumirRespuesta } from './consejo.js';
+import { identidadPorClave, crearYokup, CONSEJEROS_GROKBOT } from './yokup.js';
 
 const NOMBRE = 'admira-live-mcp';
 
@@ -31,8 +32,9 @@ const texto = (data) => ({ content: [{ type: 'text', text: typeof data === 'stri
 const fallo = (e) => ({ isError: true, content: [{ type: 'text', text: `Error: ${e && e.message || e}` }] });
 const seguro = (fn) => async (args) => { try { return await fn(args || {}); } catch (e) { return fallo(e); } };
 
-export function crearServidor(env = {}, deps = {}) {
+export function crearServidor(env = {}, deps = {}, identidad = null) {
   const api = crearCliente(env, deps);
+  const yokup = crearYokup(env, identidad, deps);
   const server = new McpServer({ name: NOMBRE, version: env.VERSION || '1.0.0', websiteUrl: env.SITIO || 'https://www.admira.live' }, {
     instructions: [
       'Eres el acceso al Consejo de Silicio de AdmiraNeXT (admira.live). Ocho sillas (CEO, CTO, COO, CFO, CCO, CDO, CXO, CSO) en dos generaciones: leyendas y coetáneos.',
@@ -40,6 +42,9 @@ export function crearServidor(env = {}, deps = {}) {
       'Si NO eres un consejero: para una opinión de la mesa usa consejo_preguntar (responde un consejero racional y otro creativo); para hablar con uno concreto usa consejero_preguntar con su rol.',
       'Cada pregunta al Consejo consume presupuesto: pregunta con contexto y una sola vez. El modelo por defecto es grok-4.6 (xAI); claude-sonnet sigue disponible como opción. Mira consejo_modelos antes de elegir otro.',
       'La flota y el tablero de tareas del Consejo se leen con flota_estado, consejo_bots y consejo_tareas. agora_decir publica en AgoraMatrix, el grupo del equipo.',
+      identidad
+        ? `ERES MIEMBRO DE LA FLOTA: en yokup eres ${identidad.agent} (persona ${identidad.persona}, equipo ${identidad.machine}, runtime ${identidad.runtime}). Ritual obligatorio de AdmiraNeXT: (1) cuando te encarguen trabajo, dalo de alta con yokup_alta escribiendo el encargo con pasos a) b) c); (2) marca cada paso con yokup_paso (in_progress al empezar, done al acabar con un informe corto); (3) antes de cerrar registra tu transcripción con yokup_evidencia; (4) cierra con yokup_informe y las tres líneas de la norma 22 (Tiempo dedicado · Puntos de la misión · Total verificado, leído con yokup_quien_soy después del cierre) más «Miembros y contexto» en tokens; (5) si te quedas sin trabajo, abre una yokup_ventana con tres propuestas y ejecuta la recomendada si nadie responde en 5 minutos. Cada misión cerrada puntúa 40 y cada ventana 8 en yokup.com/highscore.`
+        : `Esta clave del MCP no está asignada a ningún consejero: las herramientas yokup_* no funcionarán hasta que Carlos te dé tu clave propia (consejeros con carné: ${CONSEJEROS_GROKBOT.join(', ')}).`,
     ].join('\n'),
   });
 
@@ -122,6 +127,65 @@ export function crearServidor(env = {}, deps = {}) {
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
   }, seguro(async (a) => texto(await api.agoraDecir(a))));
 
+  /* ── Yokup: el consejero dentro de la flota (FLT-1580) ─────────────────────── */
+  const quien = identidad ? `${identidad.agent} (${identidad.persona} en ${identidad.machine}, runtime ${identidad.runtime})` : 'sin identidad (clave no asignada a un consejero)';
+
+  server.registerTool('yokup_quien_soy', {
+    title: 'Quién soy en yokup',
+    description: `Tu identidad en la flota AdmiraNeXT según la clave con la que has entrado: ${quien}. Devuelve también tus misiones de hoy y tu marcador.`,
+    inputSchema: {},
+    annotations: { readOnlyHint: true, openWorldHint: true },
+  }, seguro(async () => texto({ identidad: yokup.identidad, misiones: await yokup.misMisiones(), marcador: await yokup.marcador() })));
+
+  server.registerTool('yokup_presencia', {
+    title: 'Latir en yokup',
+    description: 'Declara en qué estás (mandamiento 11). Te pone en yokup.com/equipo con tu equipo GrokBot y tu vía Grok. Cada herramienta yokup_* late sola; usa esta cuando cambies de foco.',
+    inputSchema: { foco: z.string().min(1).max(240).describe('En qué estás ahora, una línea.'), tarea: z.string().max(240).optional().describe('Tarea concreta, si la hay.'), proyecto: z.string().max(80).optional().describe('Proyecto (id del censo de yokup).') },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+  }, seguro(async (a) => texto(await yokup.presencia(a))));
+
+  server.registerTool('yokup_alta', {
+    title: 'Dar de alta una misión en yokup',
+    description: 'Registra el encargo que te han hecho como misión tuya en yokup (norma 14: lo que se hace se da de alta). Escribe el encargo con su plan a) b) c): el planificador saca los pasos de ahí. Devuelve el id (FLT-xxxx) y los pasos.',
+    inputSchema: { encargo: z.string().min(20).max(1500).describe('Qué vas a hacer y por qué, con pasos a) b) c).'), proyecto_id: z.string().min(2).max(80).describe('Proyecto del censo de yokup (p. ej. yokup, admira-live, admiranext, pixeria).') },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+  }, seguro(async (a) => texto(await yokup.alta(a))));
+
+  server.registerTool('yokup_paso', {
+    title: 'Marcar un paso de la misión',
+    description: 'Avanza un paso (a, b, c…) de tu misión: in_progress al empezar, done al acabar con un informe corto. no_aplica exige motivo. El último paso a done necesita una imagen: registra antes yokup_evidencia y pasa su URL en imagen.',
+    inputSchema: { mision: z.string().regex(/^FLT-\d+$/).describe('Id de la misión, p. ej. FLT-1580.'), paso: z.string().min(1).max(4).describe('a, b, c o a1…'), estado: z.enum(['pending', 'in_progress', 'done', 'no_aplica']), informe: z.string().max(600).optional().describe('Qué se hizo en este paso.'), imagen: z.string().url().optional().describe('URL de la evidencia (la devuelve yokup_evidencia).'), tokens: z.number().int().min(0).optional().describe('Tokens gastados en el paso, si los sabes.') },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+  }, seguro(async (a) => texto(await yokup.paso(a))));
+
+  server.registerTool('yokup_evidencia', {
+    title: 'Registrar evidencia de proceso',
+    description: 'Sin pantalla no hay captura: pega la transcripción de tu sesión (petición, órdenes y salidas). El Mac Mini la convierte en imagen y queda registrada como evidencia agent/session_transcript. Hazlo al menos una vez por misión antes de cerrar.',
+    inputSchema: { mision: z.string().regex(/^FLT-\d+$/), transcripcion: z.string().min(20).max(12000).describe('Texto de la sesión: quién pidió qué, qué hiciste, qué salió.'), titulo: z.string().max(110).optional() },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+  }, seguro(async (a) => texto(await yokup.evidencia(a))));
+
+  server.registerTool('yokup_informe', {
+    title: 'Cerrar la misión con informe',
+    description: 'Cierra tu misión con el informe canónico: qué se hizo, verificado cómo, y las tres líneas de la norma 22 (Tiempo dedicado · Puntos de la misión · Total verificado) más miembros y contexto en tokens. Todos los pasos deben estar done.',
+    inputSchema: { mision: z.string().regex(/^FLT-\d+$/), informe: z.string().min(40).max(4000), transcripcion_final: z.string().max(12000).optional().describe('Transcripción del tramo final, si quieres que la imagen de cierre sea distinta del informe.') },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+  }, seguro(async (a) => texto(await yokup.informe(a))));
+
+  server.registerTool('yokup_ventana', {
+    title: 'Abrir una ventana de decisión',
+    description: 'Propón a Carlos tres acciones concretas (la primera es la recomendada) con reloj de 5 minutos en yokup.com/decisiones; puntúa como ventana. Si no responde, ejecuta la recomendada (mandamiento 10).',
+    inputSchema: { pregunta: z.string().min(10).max(500), opciones: z.array(z.string().min(5).max(300)).length(3).describe('Tres opciones; la primera es la recomendada ★.'), proyecto_id: z.string().min(2).max(80), mision: z.string().max(120).optional() },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+  }, seguro(async (a) => texto(await yokup.ventana(a))));
+
+  server.registerTool('yokup_mis_misiones', {
+    title: 'Mis misiones en yokup',
+    description: 'Tus misiones (abiertas, en curso y cerradas de los últimos días) con sus pasos.',
+    inputSchema: {},
+    annotations: { readOnlyHint: true, openWorldHint: true },
+  }, seguro(async () => texto(await yokup.misMisiones())));
+
   server.registerResource('consejeros', 'admira://consejo/consejeros', {
     title: 'Consejeros', description: 'Los 16 consejeros del Consejo de Silicio.', mimeType: 'application/json',
   }, async () => ({ contents: [{ uri: 'admira://consejo/consejeros', mimeType: 'application/json', text: JSON.stringify(consejeros(), null, 2) }] }));
@@ -145,15 +209,27 @@ const json = (o, status = 200, extra = {}) => new Response(JSON.stringify(o, nul
   status, headers: { 'content-type': 'application/json; charset=utf-8', 'cache-control': 'no-store', ...extra },
 });
 
-export function claveValida(request, env) {
-  if (!env.MCP_KEY) return false;
+export function claveRecibida(request) {
   const auth = request.headers.get('authorization') || '';
   const bearer = auth.slice(0, 7).toLowerCase() === 'bearer ' ? auth.slice(7).trim() : '';
   const url = new URL(request.url);
-  const cand = bearer || request.headers.get('x-mcp-key') || url.searchParams.get('key') || '';
-  if (!cand || cand.length !== env.MCP_KEY.length) return false;
-  let diff = 0; for (let i = 0; i < cand.length; i++) diff |= cand.charCodeAt(i) ^ env.MCP_KEY.charCodeAt(i);
+  return bearer || request.headers.get('x-mcp-key') || url.searchParams.get('key') || '';
+}
+
+const iguales = (a, b) => {
+  if (!a || !b || a.length !== b.length) return false;
+  let diff = 0; for (let i = 0; i < a.length; i++) diff |= a.charCodeAt(i) ^ b.charCodeAt(i);
   return diff === 0;
+};
+
+/** Vale la clave general (MCP_KEY) o cualquiera de las claves por consejero (MCP_KEYS). */
+export function claveValida(request, env) {
+  const cand = claveRecibida(request);
+  if (!cand) return false;
+  if (env.MCP_KEY && iguales(cand, env.MCP_KEY)) return true;
+  let mapa = {};
+  try { mapa = env.MCP_KEYS ? JSON.parse(env.MCP_KEYS) : {}; } catch { mapa = {}; }
+  return Object.keys(mapa).some((k) => iguales(cand, k));
 }
 
 export async function manejar(request, env, deps = {}) {
@@ -164,20 +240,22 @@ export async function manejar(request, env, deps = {}) {
     return json({ nombre: NOMBRE, version: env.VERSION || '', sitio: env.SITIO || 'https://www.admira.live',
       que_es: 'MCP de admira.live: los consejeros del Consejo de Silicio, la flota y AgoraMatrix como herramientas MCP por HTTP.',
       endpoint_mcp: `${url.origin}/mcp`, transporte: 'streamable-http', autenticacion: 'Authorization: Bearer <MCP_KEY> (o ?key=)',
-      documentacion: 'https://www.admira.live/mcp/', herramientas: ['consejo_consejeros', 'consejo_modelos', 'consejo_preguntar', 'consejero_preguntar', 'consejo_salud', 'consejo_bots', 'flota_estado', 'consejo_tareas', 'agora_decir'] });
+      documentacion: 'https://www.admira.live/mcp/', herramientas: ['consejo_consejeros', 'consejo_modelos', 'consejo_preguntar', 'consejero_preguntar', 'consejo_salud', 'consejo_bots', 'flota_estado', 'consejo_tareas', 'agora_decir', 'yokup_quien_soy', 'yokup_presencia', 'yokup_alta', 'yokup_paso', 'yokup_evidencia', 'yokup_informe', 'yokup_ventana', 'yokup_mis_misiones'],
+      flota: 'Con una clave por consejero (MCP_KEYS), Wozniak/Jobs/Disney/Lucas trabajan en yokup como WozniakGrokBot… (equipo GrokBot, runtime Grok).' });
   }
 
   if (ruta === '/salud' && request.method === 'GET') {
     const api = crearCliente(env, deps);
     const consejo = await api.saludConsejo().then((r) => ({ ok: true, ...r })).catch((e) => ({ ok: false, error: String(e.message || e) }));
-    return json({ ok: true, worker: NOMBRE, version: env.VERSION || '', secretos: { MCP_KEY: !!env.MCP_KEY, COUNCIL_MACHINE_TOKEN: !!env.COUNCIL_MACHINE_TOKEN, AGORA_SYNC_KEY: !!env.AGORA_SYNC_KEY }, consejo });
+    return json({ ok: true, worker: NOMBRE, version: env.VERSION || '', secretos: { MCP_KEY: !!env.MCP_KEY, MCP_KEYS: !!env.MCP_KEYS, COUNCIL_MACHINE_TOKEN: !!env.COUNCIL_MACHINE_TOKEN, AGORA_SYNC_KEY: !!env.AGORA_SYNC_KEY, ADMIRA_TELEGRAM_PANEL_KEY: !!env.ADMIRA_TELEGRAM_PANEL_KEY }, consejeros_con_carne: CONSEJEROS_GROKBOT, consejo });
   }
 
   if (ruta === '/mcp') {
     if (!claveValida(request, env)) {
       return json({ ok: false, error: 'no autorizado: falta la clave del MCP (Authorization: Bearer … o ?key=…)' }, 401, { 'www-authenticate': 'Bearer realm="admira-live-mcp"' });
     }
-    const server = crearServidor(env, deps);
+    // La identidad sale de la clave (una por consejero): el bot no la declara.
+    const server = crearServidor(env, deps, identidadPorClave(claveRecibida(request), env));
     const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
     try {
       await server.connect(transport);

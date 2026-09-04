@@ -30,4 +30,10 @@ COUNCIL_BASE = "https://macmini.tail48b61c.ts.net/council"
 FLEET_BASE = "https://macmini.tail48b61c.ts.net/api"
 AGORA_WORKER = "https://pixer-eleven.csilvasantin.workers.dev"
 SITIO = "https://www.admira.live"
-VERSION = "v.04.09.2026.r3.06:43"
+# Yokup y el bot-inbox (FLT-1580): los consejeros de GrokBot dan de alta, avanzan y cierran
+# misiones con su carné. Secretos: MCP_KEYS (JSON clave→{persona}) y ADMIRA_TELEGRAM_PANEL_KEY.
+YOKUP_API = "https://api.yokup.com"
+ADMIRA_TELEGRAM_URL = "https://admira-telegram.csilvasantin.workers.dev"
+# MCP_KEY (la primera clave, la que ya tiene Wozniak) se mapea a esta persona.
+MCP_KEY_PERSONA = "Wozniak"
+VERSION = "v.04.09.2026.r4.07:10"

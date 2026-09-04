@@ -260,9 +260,18 @@ const CONTROL_PROBE_MACOS =
   '[ -f "$HOME/.fleet/fleet-capture.sh" ] && echo __FLEET_CAPTURE__=1 || echo __FLEET_CAPTURE__=0; ' +
   '[ -f "$HOME/.fleet/fleet-input.py" ] && echo __FLEET_INPUT__=1 || echo __FLEET_INPUT__=0; ' +
   'echo __FLEET_LOCKED__=$(/usr/bin/python3 -c "import Quartz;d=Quartz.CGSessionCopyCurrentDictionary() or {};print(int(bool(d.get(\"CGSSessionScreenIsLocked\",0))))" 2>/dev/null || echo ?); ';
+// Linux (4-sep-2026, misión 0052): el inyector es fleet-input-linux.py (xdotool/ydotool) y
+// el bloqueo sale de loginctl (LockedHint); sin sesión gráfica queda «?».
 const CONTROL_PROBE_LINUX =
   '[ -f "$HOME/.fleet/fleet-capture-linux.sh" ] && echo __FLEET_CAPTURE__=1 || echo __FLEET_CAPTURE__=0; ' +
-  'echo __FLEET_INPUT__=0; echo __FLEET_LOCKED__=?; ';
+  '[ -f "$HOME/.fleet/fleet-input-linux.py" ] && echo __FLEET_INPUT__=1 || echo __FLEET_INPUT__=0; ' +
+  'L=$(loginctl show-session $(loginctl list-sessions --no-legend 2>/dev/null | awk "NR==1{print \\$1}") -p LockedHint 2>/dev/null | cut -d= -f2); ' +
+  'case "$L" in yes) echo __FLEET_LOCKED__=1;; no) echo __FLEET_LOCKED__=0;; *) echo __FLEET_LOCKED__=?;; esac; ';
+// Windows (PowerShell como shell SSH): captura = FleetTrigger.exe, entrada = fleet-input.ps1.
+const CONTROL_PROBE_WINDOWS =
+  'if (Test-Path "$env:USERPROFILE\\.fleet\\FleetTrigger.exe") { "__FLEET_CAPTURE__=1" } else { "__FLEET_CAPTURE__=0" }; ' +
+  'if (Test-Path "$env:USERPROFILE\\.fleet\\fleet-input.ps1") { "__FLEET_INPUT__=1" } else { "__FLEET_INPUT__=0" }; ' +
+  '"__FLEET_LOCKED__=?"; ';
 function parseControlSignals(stdout, online) {
   const pick = (k) => { const mm = String(stdout || '').match(new RegExp('__FLEET_' + k + '__=([01?])')); return mm ? mm[1] : null; };
   const tri = (v) => v === '1' ? true : (v === '0' ? false : null);
@@ -270,7 +279,7 @@ function parseControlSignals(stdout, online) {
   const ready = !!online && capture === true && input === true && locked === false;
   const why = !online ? 'sin ssh desde el hub'
     : capture === false ? 'sin agente de captura'
-    : input === false ? 'sin fleet-input.py'
+    : input === false ? 'sin inyector de entrada'
     : locked === true ? 'pantalla bloqueada'
     : (capture === null || input === null || locked === null) ? 'sonda incompleta'
     : 'ver + tocar';
@@ -291,6 +300,7 @@ function statusProbe(m) {
     CONTROL_PROBE_MACOS;
   if (plat === 'linux') return base + CONTROL_PROBE_LINUX + LGUI +
     "if systemctl --user is-active --quiet admira-signage.service 2>/dev/null || pgrep -f '[a]dmira-signage' >/dev/null 2>&1 || pgrep -f '[.]canal-kiosk' >/dev/null 2>&1; then echo __FLEET_SIGNAGE__=1; else echo __FLEET_SIGNAGE__=0; fi";
+  if (plat === 'windows') return base + CONTROL_PROBE_WINDOWS;
   return base;
 }
 
@@ -1001,7 +1011,8 @@ const server = http.createServer(async (req, res) => {
     const body = await readBody(req);
     const m = machineById(body.machine);
     if (!m) return json(res, 400, { error: 'máquina desconocida' });
-    if (platOf(m) !== 'macos') return json(res, 501, { error: 'input_no_soportado_en_' + platOf(m) });
+    const plataforma = platOf(m);
+    if (!['macos', 'linux', 'windows'].includes(plataforma)) return json(res, 501, { error: 'input_no_soportado_en_' + plataforma });
     const accion = {
       type: String(body.type || ''),
       x: body.x, y: body.y, dx: body.dx, dy: body.dy,
@@ -1012,7 +1023,14 @@ const server = http.createServer(async (req, res) => {
     // El JSON viaja en base64: así no hay que pelearse con el escapado de comillas,
     // acentos ni emojis a través de ssh + shell (escribir « ñ » se rompía si no).
     const b64 = Buffer.from(JSON.stringify(accion), 'utf8').toString('base64');
-    const cmd = 'echo ' + sh(b64) + ' | base64 -d | /usr/bin/python3 "$HOME/.fleet/fleet-input.py"';
+    // Un inyector por plataforma, mismo contrato JSON (misión 0052, 4-sep-2026):
+    //   macOS   → fleet-input.py (Quartz)      linux → fleet-input-linux.py (xdotool/ydotool)
+    //   windows → fleet-input.ps1 (SendInput), con PowerShell como shell de SSH.
+    const cmd = plataforma === 'linux'
+      ? LGUI + 'echo ' + sh(b64) + ' | base64 -d | python3 "$HOME/.fleet/fleet-input-linux.py"'
+      : plataforma === 'windows'
+        ? '& "$env:USERPROFILE\\.fleet\\fleet-input.ps1" -Json ([Text.Encoding]::UTF8.GetString([Convert]::FromBase64String(\'' + b64 + '\')))'
+        : 'echo ' + sh(b64) + ' | base64 -d | /usr/bin/python3 "$HOME/.fleet/fleet-input.py"';
     const r = await run(m, cmd, 8000);
     let out = null; try { out = JSON.parse(String(r.stdout || '').trim()); } catch (e) {}
     if (!out || out.ok !== true) {
@@ -1034,8 +1052,12 @@ const server = http.createServer(async (req, res) => {
     const q = new URL(req.url, 'http://x').searchParams;
     const m = machineById(q.get('machine'));
     if (!m) return json(res, 400, { error: 'máquina desconocida' });
-    if (platOf(m) !== 'macos') return json(res, 200, { displays: [] });
-    const r = await run(m, '/usr/bin/python3 "$HOME/.fleet/fleet-input.py" --displays', 8000);
+    const plataforma = platOf(m);
+    const cmdDisplays = plataforma === 'linux' ? LGUI + 'python3 "$HOME/.fleet/fleet-input-linux.py" --displays'
+      : plataforma === 'windows' ? '& "$env:USERPROFILE\\.fleet\\fleet-input.ps1" -Displays'
+      : plataforma === 'macos' ? '/usr/bin/python3 "$HOME/.fleet/fleet-input.py" --displays' : null;
+    if (!cmdDisplays) return json(res, 200, { displays: [] });
+    const r = await run(m, cmdDisplays, 8000);
     let out = null; try { out = JSON.parse(String(r.stdout || '').trim()); } catch (e) {}
     if (!out || !out.ok) return json(res, 502, { error: 'sin_agente_de_entrada', detalle: String(r.stderr || r.stdout || '').slice(0, 200) });
     return json(res, 200, { displays: out.displays || [] });

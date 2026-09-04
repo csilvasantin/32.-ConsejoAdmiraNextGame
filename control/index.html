@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.04.09.2026.r2.09:35" />
+<meta name="admiranext-version" content="AdmiraNeXT v.04.09.2026.r3.09:42" />
     <script src="/admira-bar.js?v=20260713-r36"></script>
     <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
 <meta charset="UTF-8">
@@ -895,6 +895,15 @@ function controlReadyHtml(m){
     +(m.online?'<button type="button" class="pill vigia-probar" data-vigia="'+m.id+'" title="Probar ahora ver + tocar (y reparar si hace falta)">🔎 probar</button>':'')+'</div>';
 }
 document.addEventListener('click', async (ev)=>{
+  const w=ev.target.closest && ev.target.closest('.wake-btn'); if(!w) return;
+  const id=w.getAttribute('data-wake'); w.disabled=true; const l=w.textContent; w.textContent='⏰ despertando…';
+  try{ const d=await api('/wake',{method:'POST',body:JSON.stringify({machine:id})});
+    pushResult(id,'⏰ despertar',{rc:d&&d.ok?0:1,stdout:(d&&d.pasos||[]).join('\n'),stderr:d&&d.error||''});
+    toast(d&&d.ok?'up':'warn','⏰ '+machName(id),(d&&d.resumen)||(d&&d.error)||'sin respuesta');
+  }catch(err){ pushResult(id,'⏰ despertar',{rc:-1,stdout:'',stderr:err.msg||'error'}); }
+  w.disabled=false; w.textContent=l;
+});
+document.addEventListener('click', async (ev)=>{
   const b=ev.target.closest && ev.target.closest('.vigia-probar'); if(!b) return;
   const id=b.getAttribute('data-vigia'); b.disabled=true; const l=b.textContent; b.textContent='🔎 probando…';
   try{ const d=await api('/vigia/run',{method:'POST',body:JSON.stringify({machine:id})});
@@ -1477,6 +1486,10 @@ function dsPreflightHtml(m){
     return '<div class="dsflight bad compact" data-dsflight="'+dsEsc(m.id)+'">'
       +'<div class="dsf-title">⛔ '+word+' <span class="dsf-chip bad">estado '+dsEsc(state)+'</span></div>'
       +'<div class="dsf-cause">⛔ '+dsEsc(rc.label)+'</div>'
+      /* DESPERTAR (mejora 2, decisión 0148): si el equipo está caído, el hub manda el paquete
+         Wake-on-LAN desde un vecino de su misma red, despierta la pantalla y hace tailscale up
+         por la red local. El resultado, paso a paso, va al panel de resultados. */
+      +(state==='offline'?'<button type="button" class="pill wake-btn" data-wake="'+dsEsc(m.id)+'" title="Wake-on-LAN desde un vecino de su red + tailscale up">⏰ despertar</button>':'')
       +'<details class="dsf-more"><summary>detalle</summary><div class="dsf-body">'+head+body+'</div></details>'
       +'</div>';
   }

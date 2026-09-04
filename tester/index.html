@@ -1,0 +1,48 @@
+<!doctype html>
+<html lang="es">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="referrer" content="no-referrer">
+  <meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' blob:; media-src 'self' blob:; connect-src 'none'; object-src 'none'; base-uri 'none'; form-action 'none'">
+  <title>Tester visual · Admira.live</title>
+  <link rel="stylesheet" href="./tester.css">
+  <script type="module" src="./tester.js"></script>
+</head>
+<body>
+<header><a href="/control/">Admira.live / Control</a><span>Soporte · Tester visual</span><a href="https://admira.tv/support/">Volver a Soporte ↗</a></header>
+<main>
+  <div class="heading"><div><p class="eyebrow">PRUEBA FÍSICA DEL PLAYER</p><h1>Ver la pantalla. Detectar incidencias.</h1></div><span class="privacy">Cámara local · sin audio · sin subida de imágenes</span></div>
+  <div class="workspace">
+    <section class="panel viewer" aria-label="Cámara de comprobación">
+      <div class="panel-head"><h2>Pantalla observada</h2><strong id="state" role="status">Cámara apagada</strong></div>
+      <div class="stage"><video id="camera" muted playsinline aria-label="Vista en directo de la cámara"></video><div id="empty">Apunta una webcam hacia la pantalla.<br>Actívala cuando esté encuadrada y sin personas.</div></div>
+      <p id="notice" role="status">No se ha solicitado acceso a la cámara.</p>
+      <div class="metrics"><div>Luminosidad<strong id="brightness">—</strong></div><div>Cambio entre muestras<strong id="change">—</strong></div><div>Diferencia con referencia<strong id="deviation">—</strong></div></div>
+      <div class="crop-view"><canvas id="crop" width="160" height="90" aria-label="Zona exacta analizada"></canvas><p>Solo se analiza este recorte. Ver una imagen no demuestra que corresponda al player seleccionado.</p></div>
+    </section>
+    <section class="panel settings" aria-label="Configuración de prueba">
+      <h2>1. Player y cámara</h2>
+      <label>Identificador del player<input id="machine" value="macbookairrosa" maxlength="80" autocomplete="off"></label>
+      <a id="remote" class="button" target="_blank" rel="noopener noreferrer">Abrir mando del player ↗</a>
+      <p class="hint">El mando requiere su sesión habitual. Selecciona un contenido conocido; este tester no envía órdenes automáticamente.</p>
+      <label>Cámara<select id="device"><option value="">Cámara predeterminada</option></select></label>
+      <div class="actions"><button id="start" class="primary">Activar cámara</button><button id="stop" disabled>Apagar cámara</button></div>
+      <h2>2. Encuadrar la pantalla</h2>
+      <p class="hint">Porcentajes desde la esquina superior izquierda. Excluye marco, reflejos y entorno; mantén fija la webcam.</p>
+      <div class="roi"><label>X %<input id="x" type="number" min="0" max="95" value="10"></label><label>Y %<input id="y" type="number" min="0" max="95" value="10"></label><label>Ancho %<input id="w" type="number" min="5" max="100" value="80"></label><label>Alto %<input id="h" type="number" min="5" max="100" value="80"></label></div>
+      <button id="apply">Aplicar encuadre</button>
+      <h2>3. Qué debe cumplirse</h2>
+      <label class="check"><input type="checkbox" id="motion"> El contenido debe tener movimiento continuo</label>
+      <p class="hint">Déjalo desmarcado para carteles estáticos. Una pausa legítima puede parecer una congelación.</p>
+      <label>Persistencia antes de alarma<select id="duration"><option value="15">15 segundos</option><option value="30" selected>30 segundos</option><option value="60">60 segundos</option></select></label>
+      <div class="actions"><button id="reference" disabled>Fijar referencia visible</button><button id="clearReference" disabled>Quitar referencia</button></div>
+      <p class="hint">La referencia compara apariencia, no identifica contenidos. Úsala solo para una imagen que deba permanecer igual.</p>
+      <label class="check"><input type="checkbox" id="ready"> Confirmo el player, el encuadre y el contenido esperado</label>
+      <div class="actions"><button id="monitor" class="primary" disabled>Iniciar vigilancia</button><button id="pause" disabled>Pausar vigilancia</button></div>
+      <button id="notifications">Permitir avisos del navegador</button>
+    </section>
+  </div>
+  <section class="panel events"><div class="panel-head"><h2>Observaciones y alarmas</h2><button id="export">Descargar informe sin imágenes</button></div><p>Son indicios para revisión humana. No hay reconocimiento de personas, análisis semántico por IA ni grabación. Las alarmas son locales: no se envían a Telegram o Yokup. La vigilancia se pausa si ocultas esta pestaña; no es un servicio 24/7.</p><ol id="events"><li>Aún no hay observaciones.</li></ol></section>
+  <footer>Tester visual · v1 · Misión 0158 · Una alerta no equivale a un fallo confirmado.</footer>
+</main>
+</body></html>

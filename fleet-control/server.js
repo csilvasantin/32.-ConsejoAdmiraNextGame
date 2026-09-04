@@ -610,6 +610,53 @@ function readRawBody(req, limit=20000) {
   return new Promise((resolve) => { let body='', tooLarge=false; req.on('data', chunk => { if (tooLarge) return; body += chunk; if (body.length > limit) { tooLarge=true; body=''; } }); req.on('end', () => resolve(tooLarge ? null : body)); req.on('error', () => resolve(null)); });
 }
 
+// ── VIGÍA DE CONTROL (decisión yokup 0148 ★, 4-sep-2026) ─────────────────────
+// Prueba real «ver + tocar» cada 10 min, aviso en cada transición y auto-reparación.
+const Vigia = require('./control-vigia');
+const VIGIA_FILE = path.join(DIR, 'control-vigia.json');
+const VIGIA_MD5 = (() => { try { return Vigia.md5AgenteCanonico(fs.readFileSync(path.join(DIR, 'deploy-capture-agent.sh'), 'utf8')); } catch (e) { return null; } })();
+function vigiaSpawn(bin, args, stdinText, timeoutMs) {
+  return new Promise((resolve) => {
+    const ch = spawn(bin, args, { env: process.env });
+    let out = '', err = '', done = false;
+    const kill = setTimeout(() => { if (!done) { done = true; try { ch.kill('SIGKILL'); } catch (e) {} resolve({ rc: 124, stdout: out, stderr: err }); } }, timeoutMs || 60000);
+    ch.stdout.on('data', d => { out += d; }); ch.stderr.on('data', d => { err += d; });
+    ch.on('close', (rc) => { if (!done) { done = true; clearTimeout(kill); resolve({ rc, stdout: out, stderr: err }); } });
+    ch.on('error', (e) => { if (!done) { done = true; clearTimeout(kill); resolve({ rc: -1, stdout: out, stderr: String(e) }); } });
+    if (stdinText != null) { try { ch.stdin.end(stdinText); } catch (e) {} } else { try { ch.stdin.end(); } catch (e) {} }
+  });
+}
+async function vigiaReparar(m, tipo) {
+  const target = (m.user || 'csilvasantin') + '@' + m.host;
+  if (tipo === 'agente') {
+    const inst = fs.readFileSync(path.join(DIR, 'deploy-capture-agent.sh'), 'utf8');
+    const r = isRelayLocal(m) ? await vigiaSpawn('bash', ['-s', '--', 'local'], inst, 60000)
+      : await vigiaSpawn('ssh', ['-o', 'ConnectTimeout=8', '-o', 'BatchMode=yes', '-o', 'StrictHostKeyChecking=accept-new', target, 'bash -s -- local'], inst, 60000);
+    return r.rc === 0 && /instalado/.test(r.stdout);
+  }
+  if (tipo === 'inyector') {
+    const src = path.join(os.homedir(), '.fleet', 'fleet-input.py');
+    if (!fs.existsSync(src)) return false;
+    const r = isRelayLocal(m) ? { rc: 0 } : await vigiaSpawn('scp', ['-o', 'ConnectTimeout=8', '-o', 'BatchMode=yes', src, target + ':~/.fleet/fleet-input.py'], null, 30000);
+    return r.rc === 0;
+  }
+  return false;
+}
+async function vigiaAvisar(texto) {
+  const agora = path.join(os.homedir(), '.local', 'bin', 'agora');
+  if (!fs.existsSync(agora)) return;
+  await vigiaSpawn(agora, ['send', '--from', 'Claude', '--code', '[vigía de control · ' + RELAY_ID + '] ' + texto], null, 20000);
+}
+const VIGIA = Vigia.crear({
+  maquinas: () => FLEET.machines.filter((m) => ['macos', 'linux', 'windows'].includes(platOf(m))),
+  platOf, run, reparar: vigiaReparar, avisar: vigiaAvisar, audit,
+  persistir: (e) => { try { fs.writeFileSync(VIGIA_FILE, JSON.stringify(e, null, 1)); } catch (err) {} },
+  estadoInicial: (() => { try { return JSON.parse(fs.readFileSync(VIGIA_FILE, 'utf8')); } catch (e) { return {}; } })(),
+  md5Canonico: VIGIA_MD5,
+});
+setTimeout(() => { VIGIA.ronda().catch(() => {}); }, 60 * 1000).unref?.();
+const _vigiaTimer = setInterval(() => { VIGIA.ronda().catch(() => {}); }, Vigia.INTERVALO_MS); if (_vigiaTimer.unref) _vigiaTimer.unref();
+
 /* ----- rutas ---------------------------------------------------------------- */
 /* ── TERMINAL INTERACTIVA (PTY real por `ssh -tt`) ───────────────────────────
  * Consola interactiva de verdad para las maquinas (pensada para las Linux).
@@ -806,7 +853,8 @@ const server = http.createServer(async (req, res) => {
             relay: RELAY_ID,
             latencyMs: r.ms
           },
-          control
+          control,
+          vigia: VIGIA.estado[m.id] || null
         }
       };
     }));
@@ -1043,6 +1091,27 @@ const server = http.createServer(async (req, res) => {
       });
     }
     return json(res, 200, out);
+  }
+
+  // ── VIGÍA: estado y prueba manual ────────────────────────────────────────────
+  // Sesión Google O X-Fleet-Token: el vigía también lo consultan y disparan agentes headless.
+  if (url === '/api/vigia' && req.method === 'GET') {
+    if (!(await gate(req, res, ip, true))) return;
+    return json(res, 200, { ok: true, intervaloMs: Vigia.INTERVALO_MS, agenteCanonico: VIGIA_MD5, maquinas: VIGIA.estado });
+  }
+  if (url === '/api/vigia/run' && req.method === 'POST') {
+    if (!(await gate(req, res, ip, true))) return;
+    const body = await readBody(req);
+    if (body && body.machine) {
+      const m = machineById(body.machine);
+      if (!m) return json(res, 400, { error: 'máquina desconocida' });
+      const r = await VIGIA.vigilar(m, { forzar: true });
+      audit({ ip, ev: 'vigia_manual', machine: m.id, ready: r && r.ready });
+      return json(res, 200, { ok: true, maquina: m.id, resultado: r });
+    }
+    const e = await VIGIA.ronda({ forzar: true });
+    audit({ ip, ev: 'vigia_manual', machine: '*' });
+    return json(res, 200, { ok: true, maquinas: e });
   }
 
   // Pantallas de una máquina, para el selector del panel (FLT-1021). El MacMini

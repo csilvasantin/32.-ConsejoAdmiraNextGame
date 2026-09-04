@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.04.09.2026.r3.07:16" />
+<meta name="admiranext-version" content="AdmiraNeXT v.04.09.2026.r2.09:35" />
     <script src="/admira-bar.js?v=20260713-r36"></script>
     <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
 <meta charset="UTF-8">
@@ -875,15 +875,35 @@ function markCaptured(id){ CAP_TS[id]=Date.now(); paintAge(id); }
 // Lee signals.control del backend (captura · input · pantalla bloqueada) y lo resume
 // en una píldora: 🟢 ver + tocar · 🟡 le falta algo (dice qué) · 🔴 sin ssh.
 // Si el backend es viejo y no manda `control`, no pinta nada: no se inventa.
+function haceTexto(ms){ const s=Math.max(0,Math.round(ms/1000)); return s<60?('hace '+s+' s'):(s<3600?('hace '+Math.round(s/60)+' min'):('hace '+Math.round(s/3600)+' h')); }
+/* VIGÍA DE CONTROL (decisión 0148, 4-sep-2026): si el hub ya ha PROBADO de verdad
+   «ver + tocar» en esta máquina, manda esa lectura (con hora y causa) sobre la sonda
+   de ficheros; y un botón «probar» fuerza la prueba (y la reparación) ahora mismo. */
 function controlReadyHtml(m){
   const c=m&&m.signals&&m.signals.control; if(!c) return '';
-  const cls=!m.online?'bad':(c.ready?'ok':'warn');
-  const ico=!m.online?'🔴':(c.ready?'🟢':'🟡');
-  const bits=[['captura',c.capture],['input',c.input],['desbloqueada',c.locked===null?null:!c.locked]]
-    .map(([k,v])=>(v===true?'✓':v===false?'✗':'?')+' '+k).join(' · ');
-  return '<div class="ctlready" data-ctl="'+m.id+'" title="'+bits.replace(/"/g,'&quot;')+'">'
-    +'<span class="pill '+cls+'">'+ico+' control</span><span class="why">'+String(c.why||'').replace(/</g,'&lt;')+'</span></div>';
+  const v=m.signals.vigia||null;
+  const src=v?v:c, ready=!!src.ready;
+  const cls=!m.online?'bad':(ready?'ok':'warn');
+  const ico=!m.online?'🔴':(ready?'🟢':'🟡');
+  const bits=v
+    ? [['ver (captura real)',v.ver],['tocar (inyector)',v.tocar],['agente canónico',v.agenteOk],['desbloqueada',v.locked===null?null:!v.locked]]
+    : [['captura',c.capture],['input',c.input],['desbloqueada',c.locked===null?null:!c.locked]];
+  const title=bits.map(([k,x])=>(x===true?'✓':x===false?'✗':'?')+' '+k).join(' · ')+(v?(' · probado '+haceTexto(Date.now()-(v.at||0))+(v.reparado?(' · reparación '+v.reparado.tipo+(v.reparado.ok?' OK':' fallida')):'')):' · sin prueba real aún');
+  const why=String((v&&v.why)||c.why||'').replace(/</g,'&lt;');
+  return '<div class="ctlready" data-ctl="'+m.id+'" title="'+title.replace(/"/g,'&quot;')+'">'
+    +'<span class="pill '+cls+'">'+ico+' control'+(v?'':' ?')+'</span><span class="why">'+why+(v?' <small>'+haceTexto(Date.now()-(v.at||0))+'</small>':'')+'</span>'
+    +(m.online?'<button type="button" class="pill vigia-probar" data-vigia="'+m.id+'" title="Probar ahora ver + tocar (y reparar si hace falta)">🔎 probar</button>':'')+'</div>';
 }
+document.addEventListener('click', async (ev)=>{
+  const b=ev.target.closest && ev.target.closest('.vigia-probar'); if(!b) return;
+  const id=b.getAttribute('data-vigia'); b.disabled=true; const l=b.textContent; b.textContent='🔎 probando…';
+  try{ const d=await api('/vigia/run',{method:'POST',body:JSON.stringify({machine:id})});
+    const r=d&&d.resultado; const m=MACHINES.find(x=>x.id===id); if(m&&r){ m.signals=m.signals||{}; m.signals.vigia=r; }
+    pushResult(id,'🔎 vigía',{rc:r&&r.ready?0:1,stdout:r?(r.why+(r.reparado?(' · reparación '+r.reparado.tipo+(r.reparado.ok?' OK':' fallida')):'')):'',stderr:''});
+    const el=document.querySelector('.ctlready[data-ctl="'+id+'"]'); if(el&&m){ el.outerHTML=controlReadyHtml(m); }
+  }catch(err){ pushResult(id,'🔎 vigía',{rc:-1,stdout:'',stderr:err.msg||'error'}); }
+  b.disabled=false; b.textContent=l;
+});
 function failingIds(){ return MACHINES.filter(m=>m.online && CAP_FAIL[m.id]).map(m=>m.id); }
 function updateCapHealth(){
   const el=$('#capHealth'), fa=$('#fixAll'); if(!el) return;

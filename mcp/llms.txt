@@ -9,7 +9,7 @@
 Sitio público: https://www.admira.live
 Hub MCP: https://www.admira.live/mcp/
 Manifest máquina: https://www.admira.live/mcp/manifest.json
-Versión: v.26.06.19.r4
+Versión: v.04.09.2026.r1.06:12
 Repo: https://github.com/csilvasantin/32.-ConsejoAdmiraNextGame
 
 ## Qué es
@@ -38,6 +38,26 @@ Interacción (rate-limit; las escrituras de tareas requieren credencial del Cons
 
 Control acotado (gated al operador / red de confianza, no para terceros):
 - POST /api/teamwork/machine-action — acción de lista blanca sobre una máquina (claude-open, claude-quit, claude-restart, refresh-capture).
+
+## MCP remoto por HTTP (para GrokBot y cualquier cliente MCP) — v.04.09.2026.r1.06:12
+
+Servidor MCP de admira.live con transporte Streamable HTTP (MCP 2025-06-18), sin estado.
+- Endpoint: https://admira-live-mcp.csilvasantin.workers.dev/mcp
+- Autenticación: `Authorization: Bearer <MCP_KEY>` (o `?key=<MCP_KEY>`). Sin clave → 401. La clave la da Carlos.
+- Salud pública: https://admira-live-mcp.csilvasantin.workers.dev/salud (dice si llega al Consejo y qué secretos tiene)
+- Herramientas: consejo_consejeros · consejo_modelos · consejo_preguntar (mesa: 1 racional + 1 creativo) ·
+  consejero_preguntar (rol CEO/CTO/COO/CFO/CCO/CDO/CXO/CSO × generación leyendas/coetaneos) ·
+  consejo_salud · consejo_bots · flota_estado · consejo_tareas · agora_decir
+- Recurso: admira://consejo/consejeros · Prompt: consejo_brief
+- Por dentro: worker Cloudflare (código en /mcp/server de este repo) que llama a council-api
+  (Mac Mini :8420) por el funnel https://macmini.tail48b61c.ts.net/council/api/council/… con
+  X-Council-Token = COUNCIL_MACHINE_TOKEN (secreto solo servidor). Cada pregunta gasta presupuesto
+  del Consejo salvo con modelo gratuito.
+- GrokBot (app de escritorio «sand» 0.39.0, SpaceXAI): conectores MCP remotos streamableHttp/sse,
+  con cabeceras u OAuth; NO stdio. Se añade con la URL y la cabecera Authorization.
+- Trampa pagada el 4-sep-2026: los modelos gratuitos de Groq que declara council-api
+  (llama-3.3-70b-versatile, deepseek-r1, gemma-2-9b) ya no existen en Groq → 500; usa
+  claude-sonnet o espera a que se actualice LLM_MODELS (hoy en Groq: openai/gpt-oss-120b, qwen/qwen3.6-27b…).
 
 ## AgoraMatrix MCP (stdio)
 
@@ -117,7 +137,7 @@ repo fuente, nunca se duplica dentro de `admira-tv`.
 
 ## Convenciones
 
-- Versionado visible: v.AA.MM.DD.rN (año.mes.día.release).
+- Versionado visible: v.DD.MM.AAAA.rN.HH:MM (regla 07 de la normativa).
 - Avisos de cambios: Telegram grupo AdmiraXP, firmados "Admira IA".
 
 ## Comandos del Consejo (CLI)

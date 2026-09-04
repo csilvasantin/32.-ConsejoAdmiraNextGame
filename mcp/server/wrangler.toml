@@ -24,6 +24,12 @@ workers_dev = true
 binding = "AGORA"
 service = "pixer-eleven"
 
+# El bot-inbox y la presencia viven en el worker admira-telegram (misma cuenta → 1042 por
+# URL): también por service binding.
+[[services]]
+binding = "TELEGRAM"
+service = "admira-telegram"
+
 [vars]
 # El Consejo (FastAPI, puerto 8420 del Mac Mini) sale por el funnel de Tailscale en
 # /council: el prefijo se quita, así que /council/api/council/models → :8420/api/council/models.
@@ -38,4 +44,4 @@ YOKUP_API = "https://api.yokup.com"
 ADMIRA_TELEGRAM_URL = "https://admira-telegram.csilvasantin.workers.dev"
 # MCP_KEY (la primera clave, la que ya tiene Wozniak) se mapea a esta persona.
 MCP_KEY_PERSONA = "Wozniak"
-VERSION = "v.04.09.2026.r5.07:16"
+VERSION = "v.04.09.2026.r6.07:17"

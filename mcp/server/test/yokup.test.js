@@ -136,3 +136,12 @@ test('crearYokup sin identidad falla legible en todo menos en construirse', asyn
   const y = crearYokup(ENV, null, { fetch: fetchFalso([]) });
   await assert.rejects(() => y.presencia({ foco: 'x' }), /sin identidad/);
 });
+
+test('bot-inbox y presencia van por el service binding TELEGRAM cuando existe (Cloudflare 1042)', async () => {
+  const porBinding = [];
+  const env = { ...ENV, TELEGRAM: { fetch: async (url, init) => { porBinding.push(String(url)); return new Response(JSON.stringify({ ok: true, via: 'binding' }), { status: 200 }); } } };
+  const y = crearYokup(env, identidadPorClave(ENV.MCP_KEY, ENV), { fetch: fetchFalso([]) });
+  const r = await y.presencia({ foco: 'prueba' });
+  assert.equal(r.via, 'binding');
+  assert.deepEqual(porBinding, ['https://telegram.test/api/presence']);
+});

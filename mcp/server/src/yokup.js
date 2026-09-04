@@ -58,11 +58,12 @@ export function crearYokup(env = {}, identidad, deps = {}) {
     return identidad;
   }
 
-  async function llamar(url, init = {}, { timeoutMs = 45_000, binario = false } = {}) {
+  async function llamar(url, init = {}, { timeoutMs = 45_000, binario = false, via } = {}) {
+    const enviar = via && typeof via.fetch === 'function' ? (u, i) => via.fetch(u, i) : doFetch;
     const ctl = new AbortController();
     const t = setTimeout(() => ctl.abort(), timeoutMs);
     let r;
-    try { r = await doFetch(url, { ...init, signal: ctl.signal, headers: { accept: 'application/json', 'user-agent': 'admira-live-mcp/1.0', ...(init.headers || {}) } }); }
+    try { r = await enviar(url, { ...init, signal: ctl.signal, headers: { accept: 'application/json', 'user-agent': 'admira-live-mcp/1.0', ...(init.headers || {}) } }); }
     catch (e) { throw new Error(`no se pudo llegar a ${url}: ${e && e.message || e}`); }
     finally { clearTimeout(t); }
     if (binario) {
@@ -78,6 +79,9 @@ export function crearYokup(env = {}, identidad, deps = {}) {
     return body;
   }
   const json = (o) => ({ method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(o) });
+  // admira-telegram es un worker de la misma cuenta: por URL workers.dev Cloudflare responde
+  // 1042 (pasó en la primera alta real, 4-sep-2026 07:20). Con el binding va por dentro.
+  const viaTelegram = env.TELEGRAM && typeof env.TELEGRAM.fetch === 'function' ? { via: env.TELEGRAM } : {};
   const panel = () => {
     if (!env.ADMIRA_TELEGRAM_PANEL_KEY) throw new Error('falta ADMIRA_TELEGRAM_PANEL_KEY en el worker: sin ella no hay encargo ni presencia');
     return { authorization: `Bearer ${env.ADMIRA_TELEGRAM_PANEL_KEY}` };
@@ -92,7 +96,7 @@ export function crearYokup(env = {}, identidad, deps = {}) {
     const body = { persona: id.persona, machine: id.machine, runtime: id.runtime, focus: foco, host: 'app', model: id.model };
     if (tarea) body.task = tarea;
     if (proyecto) body.project = proyecto;
-    return llamar(`${telegram}/api/presence`, { ...json(body), headers: { 'content-type': 'application/json', ...panel() } });
+    return llamar(`${telegram}/api/presence`, { ...json(body), headers: { 'content-type': 'application/json', ...panel() } }, viaTelegram);
   }
   /** Latido silencioso en cada acción: si falla no rompe la acción. */
   async function latir(foco) { try { return await presencia({ foco }); } catch (e) { return { ok: false, error: String(e.message || e) }; } }
@@ -111,7 +115,7 @@ export function crearYokup(env = {}, identidad, deps = {}) {
     const p = await proyectoDelCenso(proyecto_id);
     await llamar(`${api}/projects/principal`, json({ agent: id.agent, machine: id.machine, project_id: p.id, project: p.name, project_slug: p.slug, by: id.agent }));
     const desde = ahora() - 60_000;
-    await llamar(`${telegram}/api/bot-inbox`, { ...json({ text: encargo, target_persona: id.persona, target_machine: id.machine, project_id: p.id }), headers: { 'content-type': 'application/json', ...panel() } });
+    await llamar(`${telegram}/api/bot-inbox`, { ...json({ text: encargo, target_persona: id.persona, target_machine: id.machine, project_id: p.id }), headers: { 'content-type': 'application/json', ...panel() } }, viaTelegram);
     let mision = null;
     for (let i = 0; i < 8 && !mision; i++) {
       await dormir(i === 0 ? 1500 : 4000);

@@ -2,7 +2,7 @@
   "name": "admira-live-consejo",
   "title": "AdmiraNeXT · Consejo de Silicio",
   "description": "Hub MCP del Consejo de Silicio: consultar estado del Consejo y la flota, e interactuar con AgoraMatrix y el tablero de tareas. Sección pública 'oculta' para interoperabilidad agente-a-agente.",
-  "version": "v.04.09.2026.r3.07:16",
+  "version": "v.04.09.2026.r3.14:54",
   "site": "https://www.admira.live",
   "hub": "https://www.admira.live/mcp/",
   "llms_txt": "https://www.admira.live/mcp/llms.txt",
@@ -135,7 +135,9 @@
         "yokup_evidencia",
         "yokup_informe",
         "yokup_ventana",
-        "yokup_mis_misiones"
+        "yokup_mis_misiones",
+        "telegram_bandeja",
+        "telegram_responder"
       ],
       "resources": [
         "admira://consejo/consejeros"

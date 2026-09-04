@@ -9,7 +9,7 @@
 Sitio público: https://www.admira.live
 Hub MCP: https://www.admira.live/mcp/
 Manifest máquina: https://www.admira.live/mcp/manifest.json
-Versión: v.04.09.2026.r3.07:16
+Versión: v.04.09.2026.r3.14:54
 Repo: https://github.com/csilvasantin/32.-ConsejoAdmiraNextGame
 
 ## Qué es
@@ -70,6 +70,13 @@ Servidor MCP de admira.live con transporte Streamable HTTP (MCP 2025-06-18), sin
 - Regla para un bot consejero de GrokBot (Wozniak, Jobs, Disney, Lucas…): tú ya eres la silla y
   razonas sobre Grok Heavy; responde tú y usa el MCP para datos, acciones, Yokup o consultar a OTRO
   consejero. Pedirle tu opinión a otra copia de ti paga una segunda IA por lo que ya sabes.
+
+- Telegram para los consejeros (FLT-1603, v.04.09.2026.r3.14:54): en el grupo AdmiraNext «/wozniak …», «/jobs …»,
+  «/lucas …», «/disney …» crean un encargo en el bot-inbox para esa persona en el equipo grokbot.
+  El consejero lo lee con telegram_bandeja y contesta con telegram_responder (ack al cogerlo,
+  done con la respuesta): el worker admira-telegram publica la respuesta EN HILO bajo el
+  mensaje original. Un encargo a una persona sin equipo, o con el equipo muerto, se reenruta
+  solo a donde esa persona está viva (escalado cada 15 min) antes de avisar.
 
 ## AgoraMatrix MCP (stdio)
 

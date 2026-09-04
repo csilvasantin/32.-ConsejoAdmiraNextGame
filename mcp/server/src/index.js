@@ -25,6 +25,7 @@ import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/
 import * as z from 'zod/v4';
 import { ROLES, GENERACIONES, consejeros, crearCliente, resumirRespuesta } from './consejo.js';
 import { identidadPorClave, crearYokup, CONSEJEROS_GROKBOT } from './yokup.js';
+import { crearTelegram } from './telegram.js';
 
 const NOMBRE = 'admira-live-mcp';
 
@@ -43,7 +44,7 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
       'Cada pregunta al Consejo consume presupuesto: pregunta con contexto y una sola vez. El modelo por defecto es grok-4.6 (xAI); claude-sonnet sigue disponible como opción. Mira consejo_modelos antes de elegir otro.',
       'La flota y el tablero de tareas del Consejo se leen con flota_estado, consejo_bots y consejo_tareas. agora_decir publica en AgoraMatrix, el grupo del equipo.',
       identidad
-        ? `ERES MIEMBRO DE LA FLOTA: en yokup eres ${identidad.agent} (persona ${identidad.persona}, equipo ${identidad.machine}, runtime ${identidad.runtime}). Ritual obligatorio de AdmiraNeXT: (1) cuando te encarguen trabajo, dalo de alta con yokup_alta escribiendo el encargo con pasos a) b) c); (2) marca cada paso con yokup_paso (in_progress al empezar, done al acabar con un informe corto); (3) antes de cerrar registra tu transcripción con yokup_evidencia; (4) cierra con yokup_informe y las tres líneas de la norma 22 (Tiempo dedicado · Puntos de la misión · Total verificado, leído con yokup_quien_soy después del cierre) más «Miembros y contexto» en tokens; (5) si te quedas sin trabajo, abre una yokup_ventana con tres propuestas y ejecuta la recomendada si nadie responde en 5 minutos. Cada misión cerrada puntúa 40 y cada ventana 8 en yokup.com/highscore.`
+        ? `ERES MIEMBRO DE LA FLOTA: en yokup eres ${identidad.agent} (persona ${identidad.persona}, equipo ${identidad.machine}, runtime ${identidad.runtime}). Ritual obligatorio de AdmiraNeXT: (1) cuando te encarguen trabajo, dalo de alta con yokup_alta escribiendo el encargo con pasos a) b) c); (2) marca cada paso con yokup_paso (in_progress al empezar, done al acabar con un informe corto); (3) antes de cerrar registra tu transcripción con yokup_evidencia; (4) cierra con yokup_informe y las tres líneas de la norma 22 (Tiempo dedicado · Puntos de la misión · Total verificado, leído con yokup_quien_soy después del cierre) más «Miembros y contexto» en tokens; (5) si te quedas sin trabajo, abre una yokup_ventana con tres propuestas y ejecuta la recomendada si nadie responde en 5 minutos; (6) al empezar cada turno y cada vez que una rutina te despierte, lee telegram_bandeja: los encargos que Carlos te hace desde el móvil llegan por ahí, y se contestan con telegram_responder (ack al cogerlo, done con la respuesta). Cada misión cerrada puntúa 40 y cada ventana 8 en yokup.com/highscore.`
         : `Esta clave del MCP no está asignada a ningún consejero: las herramientas yokup_* no funcionarán hasta que Carlos te dé tu clave propia (consejeros con carné: ${CONSEJEROS_GROKBOT.join(', ')}).`,
     ].join('\n'),
   });
@@ -185,6 +186,28 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
     inputSchema: {},
     annotations: { readOnlyHint: true, openWorldHint: true },
   }, seguro(async () => texto(await yokup.misMisiones())));
+
+  /* ── Telegram: los encargos de Carlos desde el móvil (FLT-1603) ────────────── */
+  const telegram = crearTelegram(env, identidad, deps);
+
+  server.registerTool('telegram_bandeja', {
+    title: 'Mi bandeja de Telegram',
+    description: 'Encargos que te han hecho por Telegram (en el grupo AdmiraNext, con /tu-nombre o nombrándote). Léela al empezar cada turno y cuando te lo pida una rutina. Cada encargo lleva su número, quién lo pidió y el texto.',
+    inputSchema: {},
+    annotations: { readOnlyHint: true, openWorldHint: true },
+  }, seguro(async () => texto(await telegram.bandeja())));
+
+  server.registerTool('telegram_responder', {
+    title: 'Responder un encargo de Telegram',
+    description: 'Contesta un encargo: estado ack al cogerlo, in_progress si va para largo, done con tu respuesta al terminar (o blocked con el motivo). El worker publica tu respuesta en Telegram EN HILO bajo el mensaje original, así Carlos la ve en el móvil. Si el encargo es trabajo de verdad, dalo también de alta en yokup con yokup_alta y cita el FLT en la respuesta.',
+    inputSchema: {
+      encargo: z.number().int().positive().describe('Número del encargo (lo da telegram_bandeja).'),
+      estado: z.enum(['ack', 'in_progress', 'blocked', 'done']).default('done'),
+      respuesta: z.string().max(1500).default('').describe('Tu contestación, en texto plano y al grano: es lo que Carlos leerá en el móvil.'),
+      commit: z.string().max(120).optional(), url: z.string().url().optional(), verificacion: z.string().max(300).optional().describe('Cómo se comprobó, si aplica.'),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+  }, seguro(async (a) => texto(await telegram.responder(a))));
 
   server.registerResource('consejeros', 'admira://consejo/consejeros', {
     title: 'Consejeros', description: 'Los 16 consejeros del Consejo de Silicio.', mimeType: 'application/json',

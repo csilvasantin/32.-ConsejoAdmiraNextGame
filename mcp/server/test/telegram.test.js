@@ -74,6 +74,8 @@ test('`como` manda sobre la clave (conector de cuenta) y la bandeja solo enseña
       { id: 2, ts: 1788500001, from_name: 'Carlos', target_persona: 'Lucas', target_machine: 'grokbot', text: 'para Lucas', status: 'pending' },
     ] });
     if (/\/status$/.test(u)) return ok({ ok: true, item: { status: 'ack' } });
+    if (u.includes('/fleet/missions')) return ok({ missions: [] });
+    if (u.endsWith('/highscore/daily')) return ok({ day: '2026-09-04', scores: [], hourly: { scores: [] }, weights: {} });
     return new Response('nf', { status: 404 });
   };
   const server = crearServidor(ENV, { fetch }, identidadPorClave(ENV.MCP_KEY, ENV)); // la clave dice Wozniak

@@ -15,6 +15,15 @@ compatibility_date = "2026-08-01"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = true
 
+# Dominio propio (4-sep-2026, MorfeoMacMini): los ISP españoles bloquean el rango de
+# *.workers.dev en horas de fútbol (LaLiga, 188.114.96.0/22); GrokBot llama desde fuera
+# de España, pero la flota y las pruebas desde aquí caían. Un dominio en zona propia sale
+# por otras IPs. El conector de Grok Bot debe apuntar a https://mcp.admira.live/mcp
+# (lo cambia Carlos en la app). workers.dev sigue como respaldo.
+[[routes]]
+pattern = "mcp.admira.live"
+custom_domain = true
+
 # AgoraMatrix vive en el worker pixer-eleven de ESTA cuenta. Un worker no puede
 # llamar a otro de la misma cuenta por su URL workers.dev (error 1042 de Cloudflare):
 # la primera prueba desde GrokBot cayó justo ahí (4-sep-2026, 06:25). Por eso va por
@@ -36,12 +45,12 @@ service = "admira-telegram"
 COUNCIL_BASE = "https://macmini.tail48b61c.ts.net/council"
 # Tablero, salud de bots y censo de máquinas viven en el proxy Node del 3030 (/api).
 FLEET_BASE = "https://macmini.tail48b61c.ts.net/api"
-AGORA_WORKER = "https://pixer-eleven.csilvasantin.workers.dev"
+AGORA_WORKER = "https://api.admira.store"
 SITIO = "https://www.admira.live"
 # Yokup y el bot-inbox (FLT-1580): los consejeros de GrokBot dan de alta, avanzan y cierran
 # misiones con su carné. Secretos: MCP_KEYS (JSON clave→{persona}) y ADMIRA_TELEGRAM_PANEL_KEY.
 YOKUP_API = "https://api.yokup.com"
-ADMIRA_TELEGRAM_URL = "https://admira-telegram.csilvasantin.workers.dev"
+ADMIRA_TELEGRAM_URL = "https://bot.yokup.com"
 # MCP_KEY (la primera clave, la que ya tiene Wozniak) se mapea a esta persona.
 MCP_KEY_PERSONA = "Wozniak"
-VERSION = "v.04.09.2026.r10.20:20"
+VERSION = "v.04.09.2026.r11.21:47"

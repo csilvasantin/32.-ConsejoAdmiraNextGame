@@ -268,8 +268,9 @@
    botones take/doing/done → proxy admira-estado /task-update (verifica el gate de Google y
    reenvía al backend con la key SERVER-SIDE). Sin exponer secretos en el JS de cliente. */
 (function(){
-  var API='https://admira-telegram.csilvasantin.workers.dev/api/public/tasks';
-  var PROXY='https://admira-estado.csilvasantin.workers.dev/task-update';
+  // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+  var API='https://bot.yokup.com/api/public/tasks';
+  var PROXY='https://estado.admira.store/task-update';
   var esc=function(s){return String(s==null?'':s).replace(/[&<>"]/g,function(c){return {'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];});};
   function yoName(){ try{ return (typeof YO!=='undefined'&&YO&&YO.persona)?YO.persona:''; }catch(e){ return ''; } }
   function cred(){ try{ return (typeof gateCred==='function')?gateCred():''; }catch(e){ return ''; } }
@@ -538,7 +539,8 @@ function render(d){
 /* Fuente del estado: si hay sesión del gate (admira_gate.cred), lee del worker
    privado admira-estado (live y compartido entre máquinas); si no, cae al
    estado.json local. Así el panel local funciona sin auth y la nube es privada. */
-const ESTADO_API='https://admira-estado.csilvasantin.workers.dev';
+// dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+const ESTADO_API='https://estado.admira.store';
 let FUENTE_ESTADO='local';
 function gateCred(){ try{ const g=JSON.parse(localStorage.getItem('admira_gate')||'null'); return (g&&g.cred&&g.exp&&Date.now()<g.exp)?g.cred:''; }catch(e){ return ''; } }
 async function cargarEstado(){
@@ -632,7 +634,8 @@ function renderAgentList(recs, now){
 async function renderAgentes(){
   const el=document.getElementById('agentes'); if(!el) return;
   try{
-    const r=await fetch('https://admira-telegram.csilvasantin.workers.dev/api/presence',{cache:'no-store'});
+    // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+    const r=await fetch('https://bot.yokup.com/api/presence',{cache:'no-store'});
     const d=await r.json(); const now=(d.now||(Date.now()/1000))|0;
     const ONLINE=8*60, STALE=12*3600;
     const byP={}; (d.presence||[]).forEach(p=>{ const k=(p.persona||p.machine||'?'); if(!byP[k]||(p.updated||0)>(byP[k].updated||0)) byP[k]=p; });
@@ -663,7 +666,8 @@ async function renderAgentes(){
     const peticiones={};
     await Promise.all([...new Set(list.map(p=>p.persona).filter(Boolean))].map(async persona=>{
       try{
-        const rr=await fetch('https://admira-telegram.csilvasantin.workers.dev/api/bot-inbox?persona='+encodeURIComponent(persona),{cache:'no-store'});
+        // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+        const rr=await fetch('https://bot.yokup.com/api/bot-inbox?persona='+encodeURIComponent(persona),{cache:'no-store'});
         const dd=await rr.json();
         const its=(dd.items||[]).filter(it=>/carlos/i.test(it.from_name||'') && it.status!=='done');
         peticiones[persona]={n:its.length, txt:its.map(it=>(it.text||'').replace(/\s+/g,' ').trim()).join(' · ').slice(0,240)};
@@ -721,7 +725,8 @@ async function adjustCD(btn){
   if(!cred){ alert('Inicia sesión con Google en admira.live para ajustar el reloj.'); return; }
   const twins=badge.querySelectorAll('.cd-adj'); twins.forEach(b=>b.disabled=true);
   try{
-    const r=await fetch('https://admira-telegram.csilvasantin.workers.dev/api/decide-at',{
+    // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+    const r=await fetch('https://bot.yokup.com/api/decide-at',{
       method:'POST',headers:{'Content-Type':'application/json','Authorization':'Bearer '+cred},
       body:JSON.stringify({persona,machine,delta})});
     const d=await r.json().catch(()=>({}));
@@ -741,7 +746,8 @@ async function showDiary(persona, machine){
   ov.style.display='flex';
   const body=ov.querySelector('.diary-body');
   try{
-    const API='https://admira-telegram.csilvasantin.workers.dev';
+    // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+    const API='https://bot.yokup.com';
     const r=await fetch(API+'/api/diary?persona='+encodeURIComponent(persona)+'&machine='+encodeURIComponent(machine)+'&limit=150',{cache:'no-store'});
     const d=await r.json();
     const ents=d.entries||[];
@@ -790,7 +796,8 @@ const _norm=s=>(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
 const _pf={Neo:'Neo',Morfeo:'Morfeo',Trinity:'Trinity','Oráculo':'Oraculo',Oraculo:'Oraculo',Cypher:'Cypher',Smith:'Smith'};
 async function personaDe(nombre){
   try{
-    const r=await fetch('https://admira-telegram.csilvasantin.workers.dev/api/presence',{cache:'no-store'});
+    // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+    const r=await fetch('https://bot.yokup.com/api/presence',{cache:'no-store'});
     const d=await r.json(); const k=_norm(nombre);
     const hit=(d.presence||[]).slice().sort((a,b)=>b.updated-a.updated).find(p=>_norm(p.machine)===k);
     return hit?hit.persona:'';
@@ -851,7 +858,8 @@ setInterval(tick, 3000);
 <script>
 /* ===== MODO de equipo (estado compartido, worker admira-navegadores) ===== */
 (function(){
-  const MW='https://admira-navegadores.csilvasantin.workers.dev';
+  // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+  const MW='https://navegadores.yokup.com';
   const CLIENT_ID='861856772040-e1ri6kpu6maagtb6crdfbb923hsaalgb.apps.googleusercontent.com';
   const LABELS={'en-que-andamos':'👀 En qué andamos','tu-por-tu-cuenta':'🤖 Tú por tu cuenta','trabajando':'⚙️ Trabajando'};
   const $=s=>document.querySelector(s);
@@ -909,7 +917,8 @@ setInterval(tick, 3000);
 /* Línea de tiempo de HOY por agente (Diario /api/diary): desplegable de agente + selector de
    horas con actividad (zoom a la hora elegida). Rota sola cada 10s hasta que el usuario elige algo. */
 (function(){
-  var API='https://admira-telegram.csilvasantin.workers.dev/api/diary';
+  // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+  var API='https://bot.yokup.com/api/diary';
   var RANK={decision:5,avance:4,problema:4,siguiente:3,log:2,resumen:1};
   var COLOR={decision:'#c792ea',avance:'#5bd6c0',problema:'#ff5c5c',siguiente:'#7aa2ff',log:'#8a97ab',resumen:'#ffb454'};
   var agents=[], idx=0, curHour=null, manual=false;
@@ -1011,7 +1020,8 @@ setInterval(tick, 3000);
 /* "Mientras no estabas" — al volver tras un rato fuera, resume lo que la flota hizo desde tu
    último acceso (Diario /api/diary). Guarda el último acceso en localStorage. Se cierra con la ✕. */
 (function(){
-  var API='https://admira-telegram.csilvasantin.workers.dev/api/diary';
+  // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+  var API='https://bot.yokup.com/api/diary';
   var KEY='vp_last_visit';
   var AGENTS_KIND={decision:1,avance:1,problema:1,siguiente:1};   // hitos con sustancia
   function esc(s){ return String(s).replace(/[&<>"]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[c];}); }
@@ -1067,7 +1077,8 @@ setInterval(tick, 3000);
    La respuesta va, por /api/bot-say, al LLM que la pidió (estado.json.por) → su puente la recoge,
    la resuelve y la quita de necesita_carbono. */
 (function(){
-  var MW='https://admira-telegram.csilvasantin.workers.dev';
+  // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+  var MW='https://bot.yokup.com';
   var sel=-1, items=[], persona='Neo', lastUpd='';
   var cli=document.getElementById('carbCli'), input=document.getElementById('carbCliInput'),
       send=document.getElementById('carbCliSend'), tgt=document.getElementById('carbCliTgt');

@@ -395,8 +395,9 @@
   const SCREENS_API='https://api.admira.store/signage/screens';
   const NOW_API='https://api.admira.store/signage/now?screen=';
   const SHOT_API='https://api.admira.store/signage/shot?screen=';   // fase 2: captura REAL del cristal (image/jpeg o 404; &meta=1 → {ok,ts,ageSeconds,bytes})
-  const CMD_API='https://omnipublicity-api.csilvasantin.workers.dev/control/cmd';
-  const SEEN_API='https://omnipublicity-api.csilvasantin.workers.dev/control/seen?screen=';
+  // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+  const CMD_API='https://brain.digitalavatar.ai/control/cmd';
+  const SEEN_API='https://brain.digitalavatar.ai/control/seen?screen=';
   const NOW_MS=10000;
   let REFRESH_MS=10000, ONLINE_MAX_AGE=90;   // ajustables desde los raíles
   /* ── PREVIO por tarjeta (persistido en localStorage) ──
@@ -777,7 +778,8 @@
    Self-contained (IIFE). Reutiliza el mismo login Google del gate que /control (admira_gate.cred).
    ══════════════════════════════════════════════════════════════════════════ */
 (function(){
-  const NAV_API='https://admira-navegadores.csilvasantin.workers.dev';
+  // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+  const NAV_API='https://navegadores.yokup.com';
   const BROWSERS_API=NAV_API+'/api/browsers';
   const CMD_API=NAV_API+'/api/cmd';
   const NOW_API='https://api.admira.store/signage/now?screen=';

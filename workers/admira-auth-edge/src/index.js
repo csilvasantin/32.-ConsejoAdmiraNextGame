@@ -2,7 +2,8 @@ const PUBLIC_ORIGIN = 'https://www.admira.live';
 const API_HANDOFF = 'https://fleet.admira.live/api/auth/handoff';
 const LOGIN_URI = PUBLIC_ORIGIN + '/auth/callback';
 const GOOGLE_CLIENT_ID = '861856772040-e1ri6kpu6maagtb6crdfbb923hsaalgb.apps.googleusercontent.com';
-const WHITELIST_URL = 'https://admira-whitelist.csilvasantin.workers.dev/list';
+// dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+const WHITELIST_URL = 'https://whitelist.admira.store/list';
 const CHALLENGE_COOKIE = '__Host-fleet_challenge';
 const CHALLENGE_TTL_MS = 10 * 60 * 1000;
 const HANDOFF_TTL_MS = 60 * 1000;

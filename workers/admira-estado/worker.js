@@ -20,7 +20,8 @@
  * ========================================================================== */
 
 const GOOGLE_CLIENT_ID = '861856772040-e1ri6kpu6maagtb6crdfbb923hsaalgb.apps.googleusercontent.com';
-const WL_API = 'https://admira-whitelist.csilvasantin.workers.dev';
+// dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+const WL_API = 'https://whitelist.admira.store';
 const FALLBACK_ALLOW = ['csilva@admira.com', 'csilvasantin@gmail.com'];
 const KV_KEY = 'estado';
 
@@ -126,7 +127,8 @@ export default {
       try { body = await req.json(); } catch (e) { return json({ error: 'JSON inválido' }, 400, origin); }
       const target = url.pathname === '/task-create' ? '/api/tasks' : '/api/tasks/update';
       try {
-        const r = await fetch('https://admira-telegram.csilvasantin.workers.dev' + target, {
+        // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+        const r = await fetch('https://bot.yokup.com' + target, {
           method: 'POST',
           headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + env.TASKS_PANEL_KEY },
           body: JSON.stringify(body || {}),

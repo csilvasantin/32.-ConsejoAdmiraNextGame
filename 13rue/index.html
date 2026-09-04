@@ -397,7 +397,8 @@
     // bloquean *.workers.dev y eso dejaba mudo el chat justo para el público objetivo
     // (no se nota probando desde fuera de España). El proxy vive en una Pages Function.
     var BUSH  = "/13rue/api/hablar";
-    var BUSH_ALT = "https://incubadora-bus.csilvasantin.workers.dev/hablar";
+    // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+    var BUSH_ALT = "https://incubadora.admira.store/hablar";
     var txt = document.getElementById("hablar-txt"),
         btn = document.getElementById("hablar-btn"),
         hilo = document.getElementById("hablar-hilo");
@@ -685,7 +686,7 @@
     // edificio para todos los visitantes. La página deja de simular y se vuelve un
     // ESPEJO: sondea el estado y pinta lo que el edificio real está haciendo. Si el
     // worker no responde, cae al motor local para no quedarse en blanco.
-    var BUS = "https://incubadora-bus.csilvasantin.workers.dev";
+    var BUS = "https://incubadora.admira.store";
     var WSU = BUS.replace(/^http/, "ws") + "/ws";
     var vistoSeq = -1, modo = "pausa", aforo = 1, reiniciaSondeo = false;
     function badge(txt){ tickLbl.textContent = txt; }

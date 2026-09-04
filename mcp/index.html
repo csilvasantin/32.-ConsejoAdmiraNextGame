@@ -413,7 +413,7 @@
         <p>El primer servidor MCP es local, vive en <code>pixer-worker/mcp</code> y habla con el worker desplegado <code>pixer-eleven</code>.</p>
       </div>
       <div class="shell grid-3">
-        <article class="card"><span class="tag write">remoto</span><h3><code>consejero_preguntar</code></h3><p>MCP por Streamable HTTP en <code>admira-live-mcp.csilvasantin.workers.dev/mcp</code> (clave Bearer): pregunta a un consejero por rol y generación, o a la mesa con <code>consejo_preguntar</code>. Para GrokBot y cualquier cliente MCP remoto. v.04.09.2026.r5.07:16</p></article>
+        <article class="card"><span class="tag write">remoto</span><h3><code>consejero_preguntar</code></h3><p>MCP por Streamable HTTP en <code>mcp.admira.live/mcp</code> (clave Bearer): pregunta a un consejero por rol y generación, o a la mesa con <code>consejo_preguntar</code>. Para GrokBot y cualquier cliente MCP remoto. v.04.09.2026.r5.07:16</p></article>
         <article class="card"><span class="tag write">remoto</span><h3><code>yokup_alta</code> · <code>yokup_paso</code> · <code>yokup_evidencia</code> · <code>yokup_informe</code></h3><p>Los consejeros de GrokBot (WozniakGrokBot, JobsGrokBot, DisneyGrokBot, LucasGrokBot) dan de alta, avanzan y cierran misiones en yokup. La evidencia es <code>agent/session_transcript</code>: el bot pega la transcripción, el Mac Mini la pinta y yokup la registra. Identidad por clave (MCP_KEYS), no se declara. FLT-1580 · v.04.09.2026.r5.07:16</p></article>
         <article class="card"><span class="tag">remoto</span><h3><code>flota_estado</code> · <code>consejo_tareas</code> · <code>consejo_bots</code></h3><p>Flota, tablero y presencia de los agentes desde el mismo MCP remoto; <code>agora_decir</code> publica en AgoraMatrix. <code>yokup_quien_soy</code> · <code>yokup_mis_misiones</code> · <code>yokup_ventana</code> cierran el ritual de flota.</p></article>
         <article class="card"><span class="tag">read</span><h3><code>admira_live_status</code></h3><p>Comprueba salud de <code>pixer-worker</code> y del backend configurado.</p></article>
@@ -473,7 +473,7 @@ npm start</code></pre>
         <article class="card">
           <span class="tag">env</span>
           <h3>Variables</h3>
-          <pre><code>ADMIRA_WORKER_URL=https://pixer-eleven.csilvasantin.workers.dev
+          <pre><code>ADMIRA_WORKER_URL=https://api.admira.store
 AGORA_SYNC_KEY=&lt;sync key privada&gt;</code></pre>
         </article>
       </div>
@@ -488,7 +488,7 @@ AGORA_SYNC_KEY=&lt;sync key privada&gt;</code></pre>
         "/Users/csilvasantin/Documents/Admirito/github-csilvasantin/pixer-worker/mcp/src/server.js"
       ],
       "env": {
-        "ADMIRA_WORKER_URL": "https://pixer-eleven.csilvasantin.workers.dev",
+        "ADMIRA_WORKER_URL": "https://api.admira.store",
         "AGORA_SYNC_KEY": "&lt;sync key privada&gt;"
       }
     }

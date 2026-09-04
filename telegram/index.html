@@ -119,8 +119,11 @@
   // === Configuración ===
   // URL del Worker (rellénala tras desplegar): https://admira-telegram.<subdominio>.workers.dev
   let WORKER_BASE = localStorage.getItem("tg_worker_base") || "";
+  // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633 — si el navegador
+  // guardó el host viejo, se sustituye por bot.yokup.com (misma API, otra IP)
+  if(WORKER_BASE.indexOf("admira-telegram.csilvasantin.workers.dev")>=0){ WORKER_BASE="https://bot.yokup.com"; try{localStorage.setItem("tg_worker_base",WORKER_BASE);}catch(e){} }
   // Auto-conexión inmune a deploys: en admira.live, si falta la URL, fijarla Y persistirla en el navegador.
-  if(!WORKER_BASE && location.hostname.endsWith("admira.live")){ WORKER_BASE="https://admira-telegram.csilvasantin.workers.dev"; try{localStorage.setItem("tg_worker_base",WORKER_BASE);}catch(e){} }
+  if(!WORKER_BASE && location.hostname.endsWith("admira.live")){ WORKER_BASE="https://bot.yokup.com"; try{localStorage.setItem("tg_worker_base",WORKER_BASE);}catch(e){} }
   const POLL_MS = 4000;
   // Servicio de control del Mini: /sendto enruta al Claude Code de una máquina
   // (NO se postea al grupo ni a White Rabbit). Usa la "Clave operador" del Consejo.
@@ -228,7 +231,7 @@
   // Rellena el selector «Enviar a» con la flota. INDEPENDENCIA DE MÁQUINA: lee primero
   // del registro durable (worker Cloudflare admira-fleet, siempre online) y solo cae al
   // Mini como fallback → el selector funciona aunque el Mini esté caído.
-  const FLEET_API = "https://admira-fleet.csilvasantin.workers.dev/machines";
+  const FLEET_API = "https://fleet.yokup.com/machines";
   async function loadMachines(){
     let ms = [];
     try{   // 1) registro durable (fuente de verdad, no depende del Mini)

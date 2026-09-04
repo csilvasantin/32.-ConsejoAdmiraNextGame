@@ -274,7 +274,7 @@
       email = g && g.email ? String(g.email).toLowerCase() : "";
     } catch (e) {}
     if (!email) return;
-    fetch("https://admira-whitelist.csilvasantin.workers.dev/list", { cache: "no-store" })
+    fetch("https://whitelist.admira.store/list", { cache: "no-store" })
       .then(function (r) { return r.ok ? r.json() : null; })
       .then(function (d) {
         if (!d || (d.superusers || []).indexOf(email) < 0) return;

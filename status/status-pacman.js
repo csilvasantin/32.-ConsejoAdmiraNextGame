@@ -20,7 +20,8 @@
 (function () {
   "use strict";
 
-  var INBOX_URL = "https://admira-telegram.csilvasantin.workers.dev/api/public/inbox";
+  // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+  var INBOX_URL = "https://bot.yokup.com/api/public/inbox";
   var POLL_MS = 30000;                       // sondeo cada 30s (tab visible)
   var LS_KEY = "pacman.celebrated.v1";       // ids done ya celebrados
   var LS_CAP = 300;                          // recorta el histórico

@@ -91,13 +91,14 @@
 
   <footer>
     AdmiraNeXT · Equipo de Silicio · datos en vivo vía
-    <a href="https://admira-telegram.csilvasantin.workers.dev/api/health" target="_blank" rel="noopener">admira-telegram</a>
+    <a href="https://bot.yokup.com/api/health" target="_blank" rel="noopener">admira-telegram</a>
     · el fondo de cada máquina y el bot que lo escribe los fija el sistema de personas (Neo/Morfeo/Trinity/Oráculo/Cypher)
   </footer>
 </div>
 
 <script>
-const API = "https://admira-telegram.csilvasantin.workers.dev";
+// dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+const API = "https://bot.yokup.com";
 const BOTS = ["Neo","Morfeo","Trinity","Oráculo","Cypher"];
 const COLOR = {Neo:"var(--neo)",Morfeo:"var(--morfeo)",Trinity:"var(--trinity)","Oráculo":"var(--oraculo)",Cypher:"var(--cypher)"};
 const colorOf = p => COLOR[p] || "var(--dim)";

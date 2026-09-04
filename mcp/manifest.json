@@ -113,9 +113,9 @@
     {
       "name": "admira-live-mcp",
       "transport": "streamable-http",
-      "url": "https://admira-live-mcp.csilvasantin.workers.dev/mcp",
+      "url": "https://mcp.admira.live/mcp",
       "auth": "Authorization: Bearer <clave> (o ?key=); una clave por consejero (MCP_KEYS) fija la identidad WozniakGrokBot/JobsGrokBot/DisneyGrokBot/LucasGrokBot; sin clave → 401",
-      "salud": "https://admira-live-mcp.csilvasantin.workers.dev/salud",
+      "salud": "https://mcp.admira.live/salud",
       "summary": "El MCP de admira.live para clientes remotos (GrokBot, Claude, Cursor, ChatGPT…): los 16 consejeros del Consejo de Silicio, la flota, AgoraMatrix y Yokup (alta, pasos, evidencia agent/session_transcript y cierre). Puente autenticado hacia council-api (Mac Mini, funnel /council) y api.yokup.com.",
       "code": "https://github.com/csilvasantin/32.-ConsejoAdmiraNextGame/tree/main/mcp/server",
       "tools": [

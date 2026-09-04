@@ -53,11 +53,12 @@
   </div>
 <script>
   // ═══ Backend YA existente (reutilizar, NO reinventar) — worker admira-telegram ═══
-  var API='https://admira-telegram.csilvasantin.workers.dev';
+  var API='https://bot.yokup.com';
   // ═══ SOURCE — 'admira' en admira.live/helpdesk (Yokup usa 'yokup'). Mismo backend + agentes;
   //     cada helpdesk ve SOLO su carbono. ═══
   var SOURCE='admira';
-  var PROXY='https://admira-estado.csilvasantin.workers.dev/task-create';  // crea incidencia con gate → key server-side
+  // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+  var PROXY='https://estado.admira.store/task-create';  // crea incidencia con gate → key server-side
   function cred(){ try{ var g=JSON.parse(localStorage.getItem('admira_gate')||'null'); return (g&&g.cred&&g.exp&&Date.now()<g.exp)?g.cred:''; }catch(e){ return ''; } }
   var COL={Neo:'#5b8cff',Morfeo:'#c792ea',Smith:'#39d98a',Cypher:'#39d98a',Trinity:'#ffb454',Oráculo:'#5bd6c0',Bot:'#8a90a3'};
   function esc(s){return String(s==null?'':s).replace(/[&<>]/g,function(c){return{'&':'&amp;','<':'&lt;','>':'&gt;'}[c];});}

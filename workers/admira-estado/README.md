@@ -22,13 +22,13 @@ npx wrangler kv namespace create ESTADO         # copia el id que imprime…
 #   …y pégalo en wrangler.toml → [[kv_namespaces]] id = "…"
 npx wrangler secret put ESTADO_TOKEN            # inventa un token fuerte para los agentes
 npx wrangler deploy
-#   queda en https://admira-estado.csilvasantin.workers.dev
+#   queda en https://estado.admira.store
 npx wrangler tail                               # (opcional) ver logs en vivo
 ```
 
 ## Conectar el tablero
 En `vista-previa/index.html` la constante `ESTADO_API` ya apunta a
-`https://admira-estado.csilvasantin.workers.dev`. En cuanto el worker responda y el
+`https://estado.admira.store`. En cuanto el worker responda y el
 usuario tenga sesión del gate, el tablero lee del worker; si no, cae al `estado.json`
 local (comportamiento actual, no se rompe nada).
 

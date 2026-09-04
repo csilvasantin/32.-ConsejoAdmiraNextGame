@@ -205,14 +205,15 @@
   </div>
 
   <footer>
-    Admira v.26.07.06.r2 · comms vía admira-telegram · datos en vivo vía <a href="https://admira-live-worker.csilvasantin.workers.dev/api/health" target="_blank" rel="noopener">admira-live-worker</a>
+    Admira v.26.07.06.r2 · comms vía admira-telegram · datos en vivo vía <a href="https://live.admira.store/api/health" target="_blank" rel="noopener">admira-live-worker</a>
     · auto-refresh 30s · <span id="lastFetch">—</span>
   </footer>
 </div>
 
 <script>
-const API = "https://admira-live-worker.csilvasantin.workers.dev";
-const COMMS = "https://admira-telegram.csilvasantin.workers.dev";
+// dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+const API = "https://live.admira.store";
+const COMMS = "https://bot.yokup.com";
 const REFRESH_MS = 30000;
 const PRESENCE_MS = 15000;
 const COMMS_MS = 10000;

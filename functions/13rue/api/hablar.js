@@ -11,7 +11,8 @@
  * el edge de Cloudflare, que no está sujeto al bloqueo del ISP del visitante.
  */
 
-const BUS = "https://incubadora-bus.csilvasantin.workers.dev/hablar";
+// dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+const BUS = "https://incubadora.admira.store/hablar";
 const LIMITE = 16 * 1024; // el cuerpo es un prompt y un JSON de estado, no un fichero
 
 export async function onRequestPost({ request }) {

@@ -1070,26 +1070,28 @@
   // así que admiranext.com NO puede leerlo directo (el fetch fallaba y el contador
   // caía a «3 vivos» = sólo fleet). Lo leemos vía un proxy neutral CORS-abierto
   // (draw-gen /presence, service-binding worker→worker). Fallback al directo.
-  const PRESENCE_URL     = 'https://draw-gen.csilvasantin.workers.dev/presence';
-  const PRESENCE_URL_ALT = 'https://admira-telegram.csilvasantin.workers.dev/api/presence';
-  const FLEET_URL        = 'https://admira-fleet.csilvasantin.workers.dev/machines'; // CORS abierto
+  const PRESENCE_URL     = 'https://draw.admira.store/presence';
+  // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+  const PRESENCE_URL_ALT = 'https://bot.yokup.com/api/presence';
+  const FLEET_URL        = 'https://fleet.yokup.com/machines'; // CORS abierto
   // ASIGNACIONES (FASE 1): Carlos asigna proyectos a ordenadores/agentes desde aquí.
   // GET público (lista vigente) + POST protegido con el token de mando (Bearer).
-  const ASSIGN_URL       = 'https://admira-telegram.csilvasantin.workers.dev/api/assign';
+  const ASSIGN_URL       = 'https://bot.yokup.com/api/assign';
   // GESTIÓN (r8): eliminar nodos/misiones y editar la cartera de proyectos.
-  const MANAGE_URL       = 'https://admira-telegram.csilvasantin.workers.dev/api/manage';
-  const PROJECTS_URL     = 'https://admira-telegram.csilvasantin.workers.dev/api/projects';
+  const MANAGE_URL       = 'https://bot.yokup.com/api/manage';
+  // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+  const PROJECTS_URL     = 'https://bot.yokup.com/api/projects';
   // POLLING ADAPTATIVO (r14): endpoint barato de metadatos (MAX id/updated por tabla).
   // Se sondea cada 3s y solo se recarga TODO (load) si su firma cambió → baja la
   // latencia encargo→pantalla de 20s a ~3s sin machacar los feeds pesados.
-  const HEADS_URL        = 'https://admira-telegram.csilvasantin.workers.dev/api/heads';
+  const HEADS_URL        = 'https://bot.yokup.com/api/heads';
   // NAVES-DUDA (r20): ÚNICA fuente real — el diálogo a/b/c de Claude Code
   // (AskUserQuestion) que un hook de la flota publica en el worker. GET
   // público con CORS; el servidor solo devuelve dudas ABIERTAS (<24 h, máx 8)
   // con agente · máquina · proyecto + opciones {label, descripcion}. La fuente
   // heurística ❓ de /api/messages (r17/r18) se eliminó en r20: las naves solo
   // salen de aquí o del 👾 emulador (AVANZADO / comando /dudaAgente).
-  const DUDAS_URL        = 'https://admira-telegram.csilvasantin.workers.dev/api/dudas';
+  const DUDAS_URL        = 'https://bot.yokup.com/api/dudas';
   // MODO MANDO — dos vías (la sesión Google manda):
   //  1) SESIÓN GOOGLE del auth-gate (localStorage.admira_gate, el mismo de
   //     admira.live): si hay sesión vigente de un usuario de la whitelist, el
@@ -2136,7 +2138,7 @@
   // Miniatura de la ÚLTIMA captura de una máquina desatendida/forzada. El reporter
   // proof-of-play.sh la sube a /api/proof; aquí la leemos por máquina (perezoso,
   // TTL 55s) y la pintamos en la ficha con «proof of play · hace <t>» + badge.
-  const PROOF_URL='https://admira-telegram.csilvasantin.workers.dev/api/proof';
+  const PROOF_URL='https://bot.yokup.com/api/proof';
   const PROOF={};          // norm(máquina) -> {ts,forced,img,persona,at} | {empty,at} | {loading}
   let LASTCARD_N=null, LASTCARD_POS=null;   // última ficha pintada (para refrescar al llegar la imagen)
   function proofFetch(label){
@@ -2433,7 +2435,7 @@
   // ordena ascendente. Caché en memoria 60s compartida por todas las fichas;
   // el filtro por agente/máquina es client-side con norm() (el filtro del
   // worker es exacto y los labels del /status llevan espacios: «Mac Mini»).
-  const DIARY_URL='https://admira-telegram.csilvasantin.workers.dev/api/diary?limit=200';
+  const DIARY_URL='https://bot.yokup.com/api/diary?limit=200';
   let DIARY={at:0, entries:null, err:false, fetching:null};
   function diaryFetch(){
     const now=Date.now();
@@ -2530,7 +2532,7 @@
   // POST /api/bot-inbox del worker admira-telegram → inserta el encargo (status pending);
   // el agente lo lee en SU máquina con bot-inbox.sh. Auth: la sesión Google del perímetro
   // (mismo id_token que el mando) → envío verificado; sin ella, va con rate-limit del worker.
-  const TG_INBOX_POST='https://admira-telegram.csilvasantin.workers.dev/api/bot-inbox';
+  const TG_INBOX_POST='https://bot.yokup.com/api/bot-inbox';
   // Deriva persona(s) + máquina(s) destino del nodo según la vista.
   function promptTargetOf(n){
     if(!n) return {personas:[],machines:[]};
@@ -2585,7 +2587,8 @@
       if(!machine){ msg.textContent='sin máquina destino para inyección directa'; msg.className='pc-msg err'; return; }
       const deviceId='local-'+String(machine).toLowerCase().replace(/[^a-z0-9]/g,'');
       try{
-        const r=await fetch('https://admira-navegadores.csilvasantin.workers.dev/api/cmd',{method:'POST',headers,body:JSON.stringify({deviceId,action:'prompt',text,persona})});
+        // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+        const r=await fetch('https://navegadores.yokup.com/api/cmd',{method:'POST',headers,body:JSON.stringify({deviceId,action:'prompt',text,persona})});
         const d=await r.json().catch(()=>({}));
         if(r.ok && d.ok){
           msg.textContent='⚡ inyectando en la sesión de '+persona+' en '+machine+' (si corre en tmux «claude»)';
@@ -3406,8 +3409,9 @@
   // auth) del worker admira-telegram; se leen una vez al abrir la ficha (no
   // tocan el bucle congelado). El helpdesk de Yokup ingiere la MISMA cola, así
   // que cada encargo del CLI ya es un ticket allí — no se duplica nada.
-  const AF_PUB_INBOX='https://admira-telegram.csilvasantin.workers.dev/api/public/inbox';
-  const AF_PUB_DIARY='https://admira-telegram.csilvasantin.workers.dev/api/public/diary';
+  const AF_PUB_INBOX='https://bot.yokup.com/api/public/inbox';
+  // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+  const AF_PUB_DIARY='https://bot.yokup.com/api/public/diary';
   const AF_YOKUP='https://www.yokup.com/admira-live';
   const AF_ST_LABEL={pending:'pendiente',ack:'ack',in_progress:'en curso',blocked:'bloqueada',done:'hecha'};
   let AF_META_TIMER=null;                              // ticker de «visto hace Xs» en vivo
@@ -4621,7 +4625,7 @@
   }
 
   // ── P3: vía GENERATIVA — pide la figura a un worker LLM neutral y la anima.
-  const DRAW_GEN_URL='https://draw-gen.csilvasantin.workers.dev/';
+  const DRAW_GEN_URL='https://draw.admira.store/';
   async function drawGenerative(name){
     try{
       const r=await fetch(DRAW_GEN_URL+'?shape='+encodeURIComponent(name),{cache:'no-store'});

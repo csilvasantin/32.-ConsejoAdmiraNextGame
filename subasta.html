@@ -133,7 +133,8 @@
   <div class="foot">admira.live · gemelo digital XpaceOS · powered by ADmira</div>
 
 <script>
-const PIXER='https://pixer-eleven.csilvasantin.workers.dev';
+// dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+const PIXER='https://api.admira.store';
 const ADVERTISERS=['Coca-Cola','El Corte Inglés','BBVA','Iberia','Estrella Galicia','Lotería Nac','Nestlé','Sanitas','Telefónica','Repsol','Mahou','Mercadona','Google','Samsung','L\'Oréal'];
 const Q=new URLSearchParams(location.search);
 const ESPACIO=(Q.get('espacio')||'').trim();

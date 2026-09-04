@@ -89,7 +89,8 @@
 <script>
 (function(){
   "use strict";
-  var PRESENCE="https://admira-telegram.csilvasantin.workers.dev/api/presence";
+  // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+  var PRESENCE="https://bot.yokup.com/api/presence";
   var D=null;
   function $(id){return document.getElementById(id)}
   function esc(v){return String(v==null?"":v).replace(/[&<>"']/g,function(c){

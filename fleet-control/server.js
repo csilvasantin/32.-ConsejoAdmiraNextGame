@@ -75,7 +75,7 @@ const GOOGLE_CLIENT_ID = '861856772040-e1ri6kpu6maagtb6crdfbb923hsaalgb.apps.goo
 // Quién accede a los EQUIPOS (/control) = los "superusers" gestionados en
 // admira.live/usuarios.html. La fuente de verdad es el worker admira-whitelist;
 // aquí se cachea (60s) con fallback a los owners por si el worker no responde.
-const WL_API = 'https://admira-whitelist.csilvasantin.workers.dev';
+const WL_API = 'https://whitelist.admira.store';
 const FALLBACK_ALLOW = ['csilva@admira.com', 'csilvasantin@gmail.com'];
 let SUPERS = new Set(FALLBACK_ALLOW);
 let _superTs = 0;
@@ -907,7 +907,8 @@ const server = http.createServer(async (req, res) => {
         })(),
         (async () => {
           try {
-            const r = await fetch('https://omnipublicity-api.csilvasantin.workers.dev/control/seen?screen=' + encodeURIComponent(screen), { signal: AbortSignal.timeout(5000) });
+            // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+            const r = await fetch('https://brain.digitalavatar.ai/control/seen?screen=' + encodeURIComponent(screen), { signal: AbortSignal.timeout(5000) });
             const d = r.ok ? await r.json() : null, seen = d && Array.isArray(d.seen) ? d.seen : [];
             commandAck = seen.length ? seen[seen.length - 1] : null;
           } catch (e) {}

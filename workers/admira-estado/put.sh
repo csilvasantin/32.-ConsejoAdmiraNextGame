@@ -1,7 +1,8 @@
 #!/bin/sh
 # Empuja vista-previa/estado.json al worker admira-estado (estado live compartido).
 # Uso:  ESTADO_TOKEN=<token> ./put.sh   [ruta-al-estado.json]
-API="${ESTADO_API:-https://admira-estado.csilvasantin.workers.dev}"
+# dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+API="${ESTADO_API:-https://estado.admira.store}"
 FILE="${1:-$(cd "$(dirname "$0")/../../vista-previa" && pwd)/estado.json}"
 if [ -z "$ESTADO_TOKEN" ]; then echo "falta ESTADO_TOKEN (el secreto del worker)"; exit 1; fi
 if [ ! -f "$FILE" ]; then echo "no existe $FILE"; exit 1; fi

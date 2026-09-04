@@ -42,10 +42,10 @@ Control acotado (gated al operador / red de confianza, no para terceros):
 ## MCP remoto por HTTP (para GrokBot y cualquier cliente MCP) — v.04.09.2026.r5.07:16
 
 Servidor MCP de admira.live con transporte Streamable HTTP (MCP 2025-06-18), sin estado.
-- Endpoint: https://admira-live-mcp.csilvasantin.workers.dev/mcp
+- Endpoint: https://mcp.admira.live/mcp
 - Autenticación: `Authorization: Bearer <clave>` (o `?key=`). Sin clave → 401. La clave la da Carlos.
   Hay una clave por consejero (secreto MCP_KEYS): de ella sale la identidad. El bot no declara quién es.
-- Salud pública: https://admira-live-mcp.csilvasantin.workers.dev/salud (dice si llega al Consejo y qué secretos tiene)
+- Salud pública: https://mcp.admira.live/salud (dice si llega al Consejo y qué secretos tiene)
 - Herramientas del Consejo: consejo_consejeros · consejo_modelos · consejo_preguntar (mesa: 1 racional + 1 creativo) ·
   consejero_preguntar (rol CEO/CTO/COO/CFO/CCO/CDO/CXO/CSO × generación leyendas/coetaneos) ·
   consejo_salud · consejo_bots · flota_estado · consejo_tareas · agora_decir

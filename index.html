@@ -2880,7 +2880,7 @@ body.rail-open{overflow:hidden}
         </div>
         <script>
         /* «Usuarios» solo para superusers (mismo criterio que admira-bar.js) */
-        (function(){try{var g=JSON.parse(localStorage.getItem('admira_gate')||'null');var e=g&&g.email?String(g.email).toLowerCase():'';if(!e)return;fetch('https://admira-whitelist.csilvasantin.workers.dev/list',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){if(d&&(d.superusers||[]).indexOf(e)>=0){var u=document.getElementById('home-usuarios');if(u)u.style.display='';}}).catch(function(){});}catch(_){}})();
+        (function(){try{var g=JSON.parse(localStorage.getItem('admira_gate')||'null');var e=g&&g.email?String(g.email).toLowerCase():'';if(!e)return;fetch('https://whitelist.admira.store/list',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){if(d&&(d.superusers||[]).indexOf(e)>=0){var u=document.getElementById('home-usuarios');if(u)u.style.display='';}}).catch(function(){});}catch(_){}})();
         </script>
 
         <div class="status-grid" id="status-grid" style="display:none">

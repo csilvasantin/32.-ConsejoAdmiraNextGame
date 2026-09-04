@@ -10,7 +10,8 @@
 # el token (y la pubkey SSH del hub) de la cúpula y no hace falta pasarlo.
 set -euo pipefail
 API="https://macmini.tail48b61c.ts.net/fleet/api"
-VAULT="https://admira-vault.csilvasantin.workers.dev/secret"
+# dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+VAULT="https://vault.yokup.com/secret"
 vget(){ curl -s --max-time 10 "$VAULT/$1?key=$2" 2>/dev/null | python3 -c 'import sys,json;print(json.load(sys.stdin).get("value","") or "")' 2>/dev/null || true; }
 
 SK="$(cat "$HOME/.agents-comms/.synckey" 2>/dev/null || true)"

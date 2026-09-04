@@ -3043,7 +3043,8 @@ async def council_importar_video_status(
 # yt-dlp y publicamos en /stock/publish del worker (que clasifica y notifica).
 # Sin auth a propósito: solo accesible por Tailscale.
 PIXER_STOCK_PUBLISH_URL = os.environ.get(
-    "PIXER_STOCK_PUBLISH_URL", "https://pixer-eleven.csilvasantin.workers.dev/stock/publish")
+    # dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+    "PIXER_STOCK_PUBLISH_URL", "https://api.admira.store/stock/publish")
 TUBE_MAX_BYTES = int(os.environ.get("TUBE_MAX_BYTES", str(70 * 1024 * 1024)))
 
 

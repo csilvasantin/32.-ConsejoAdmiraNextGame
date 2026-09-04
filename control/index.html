@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.04.09.2026.r3.14:54" />
+<meta name="admiranext-version" content="AdmiraNeXT v.04.09.2026.r4.22:33" />
     <script src="/admira-bar.js?v=20260713-r36"></script>
     <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
 <meta charset="UTF-8">
@@ -973,7 +973,8 @@ function forceRelogin(){
 /* ---------- fondo de pantalla (persona) por máquina ----------
    Mientras no haya captura real, cada equipo muestra el fondo de la persona que tiene
    activa en ese momento (Neo/Morfeo/Trinity/Oráculo/Cypher), leído del worker del diario. */
-const DIARY_API='https://admira-telegram.csilvasantin.workers.dev';
+// dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+const DIARY_API='https://bot.yokup.com';
 const _norm=s=>(s||'').toLowerCase().replace(/[^a-z0-9]/g,'');
 const _personaFile={Neo:'Neo',Morfeo:'Morfeo',Trinity:'Trinity','Oráculo':'Oraculo',Oraculo:'Oraculo',Cypher:'Cypher'};
 let PERSONA_BY_MACHINE={};
@@ -1036,7 +1037,7 @@ async function loadPersonas(){
 let FLEET_INFO={};
 async function loadFleet(){
   try{
-    const r=await fetch('https://admira-fleet.csilvasantin.workers.dev/machines',{cache:'no-store'});
+    const r=await fetch('https://fleet.yokup.com/machines',{cache:'no-store'});
     const d=await r.json(); const seen=new Set(); const info={}; const now=Date.now()/1000;
     (d.machines||[]).forEach(m=>{
       // estado reportado (para pintar en la tarjeta) — de TODAS las máquinas, online o no
@@ -1194,7 +1195,7 @@ document.addEventListener('click', e=>{
 let FLEET_MACHINES=[];
 async function loadFleetMachines(){
   try{
-    const r=await fetch('https://admira-fleet.csilvasantin.workers.dev/machines',{cache:'no-store'});
+    const r=await fetch('https://fleet.yokup.com/machines',{cache:'no-store'});
     const d=await r.json();
     FLEET_MACHINES=(d.machines||[]).map(m=>({
       id:m.id||_norm(m.name||m.fqdn||''), name:m.name||m.id||m.fqdn||'?',
@@ -1756,7 +1757,8 @@ const CLEAN_DESKTOP_CMD="osascript -e 'tell application \"System Events\" to set
    Encola un comando en el worker admira-navegadores; el executor local de esa máquina
    (navegadores.executor) lo ejecuta y abre el canal en VENTANA NUEVA con screen ds-<maquina>.
    Auth: credential Google del gate (mismo login que /control), aceptado por el worker. */
-const NAV_API='https://admira-navegadores.csilvasantin.workers.dev';
+// dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+const NAV_API='https://navegadores.yokup.com';
 function navDeviceId(name){ return 'local-'+String(name||'').toLowerCase().replace(/[^a-z0-9]/g,''); }
 async function _gateCred(){
   return window.admiraGateCredential ? window.admiraGateCredential() : '';
@@ -2742,7 +2744,8 @@ function renderSsToggle(){
    el comando 'standby'/'resume' a cada CIRCUITO por /locations/cmd, así llega a TODOS los
    players (mac/win/linux/ios/android) que sondean ese canal. Pone el canal del player en
    negro sin cerrar la app y persiste tras reinicio. Estado COMANDADO, persistido. */
-const CMD_API_PLAYERS='https://omnipublicity-api.csilvasantin.workers.dev/locations/cmd';
+// dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+const CMD_API_PLAYERS='https://brain.digitalavatar.ai/locations/cmd';
 let PLAYERS_STANDBY = localStorage.getItem('fleet_players_standby')==='1';
 function renderPlayersStandby(){
   const b=$('#playersStandby'); if(!b) return;

@@ -49,7 +49,8 @@ export function identidadPorClave(clave, env = {}) {
 export function crearYokup(env = {}, identidad, deps = {}) {
   const doFetch = deps.fetch || globalThis.fetch;
   const api = limpiar(env.YOKUP_API || 'https://api.yokup.com');
-  const telegram = limpiar(env.ADMIRA_TELEGRAM_URL || 'https://admira-telegram.csilvasantin.workers.dev');
+  // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+  const telegram = limpiar(env.ADMIRA_TELEGRAM_URL || 'https://bot.yokup.com');
   const consejo = limpiar(env.COUNCIL_BASE || 'https://macmini.tail48b61c.ts.net/council');
   const ahora = deps.now || (() => Date.now());
 

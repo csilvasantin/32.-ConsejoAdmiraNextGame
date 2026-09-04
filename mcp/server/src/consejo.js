@@ -41,7 +41,8 @@ export function crearCliente(env = {}, deps = {}) {
   const doFetch = deps.fetch || globalThis.fetch;
   const councilBase = limpiar(env.COUNCIL_BASE || 'https://macmini.tail48b61c.ts.net/council');
   const fleetBase = limpiar(env.FLEET_BASE || 'https://macmini.tail48b61c.ts.net/api');
-  const agoraBase = limpiar(env.AGORA_WORKER || 'https://pixer-eleven.csilvasantin.workers.dev');
+  // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+  const agoraBase = limpiar(env.AGORA_WORKER || 'https://api.admira.store');
 
   async function llamar(url, init = {}, { timeoutMs = 90_000, via } = {}) {
     const ctl = new AbortController();

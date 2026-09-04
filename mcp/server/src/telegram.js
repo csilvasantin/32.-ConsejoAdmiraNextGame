@@ -14,7 +14,8 @@ const limpiar = (s) => String(s || '').replace(/\/+$/, '');
 
 export function crearTelegram(env = {}, identidad, deps = {}) {
   const doFetch = deps.fetch || globalThis.fetch;
-  const base = limpiar(env.ADMIRA_TELEGRAM_URL || 'https://admira-telegram.csilvasantin.workers.dev');
+  // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+  const base = limpiar(env.ADMIRA_TELEGRAM_URL || 'https://bot.yokup.com');
   const via = env.TELEGRAM && typeof env.TELEGRAM.fetch === 'function' ? (u, i) => env.TELEGRAM.fetch(u, i) : doFetch;
 
   function exigir() {

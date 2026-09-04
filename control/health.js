@@ -9,9 +9,10 @@
   var DEPS = [
     { k: 'mini',  name: 'Relay Mac Mini',      url: 'https://macmini.tail48b61c.ts.net/fleet/api/health',       note: 'Ruta primaria de control. «sin ruta» no equivale a Mac Mini apagado.', down: 'sin ruta' },
     { k: 'mbp16', name: 'Relay MacBook Pro 16',url: 'https://macbook-pro-16.tail48b61c.ts.net:10000/fleet/api/health', note: 'Ruta alternativa de control de Fleet Mesh.', down: 'sin ruta' },
-    { k: 'fleet', name: 'admira-fleet',        url: 'https://admira-fleet.csilvasantin.workers.dev/machines',   note: 'registro de flota (Cloudflare) — fuente del modo degradado' },
+    // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
+    { k: 'fleet', name: 'admira-fleet',        url: 'https://fleet.yokup.com/machines',   note: 'registro de flota (Cloudflare) — fuente del modo degradado' },
     { k: 'yokup', name: 'yokup-rtc',           url: 'https://api.yokup.com/fleet/missions', note: 'misiones y decisiones' },
-    { k: 'tg',    name: 'admira-telegram',     url: 'https://admira-telegram.csilvasantin.workers.dev/',        note: 'AgoraMatrix / espejo Telegram' },
+    { k: 'tg',    name: 'admira-telegram',     url: 'https://bot.yokup.com/',        note: 'AgoraMatrix / espejo Telegram' },
     { k: 'store', name: 'api.admira.store',    url: 'https://api.admira.store/signage/now',                     note: 'signage / proof-of-play' }
   ];
   var mount = document.getElementById('healthMount');

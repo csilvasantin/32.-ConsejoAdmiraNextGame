@@ -9,7 +9,7 @@
 Sitio público: https://www.admira.live
 Hub MCP: https://www.admira.live/mcp/
 Manifest máquina: https://www.admira.live/mcp/manifest.json
-Versión: v.04.09.2026.r1.06:12
+Versión: v.04.09.2026.r2.06:44
 Repo: https://github.com/csilvasantin/32.-ConsejoAdmiraNextGame
 
 ## Qué es
@@ -55,9 +55,13 @@ Servidor MCP de admira.live con transporte Streamable HTTP (MCP 2025-06-18), sin
   del Consejo salvo con modelo gratuito.
 - GrokBot (app de escritorio «sand» 0.39.0, SpaceXAI): conectores MCP remotos streamableHttp/sse,
   con cabeceras u OAuth; NO stdio. Se añade con la URL y la cabecera Authorization.
-- Trampa pagada el 4-sep-2026: los modelos gratuitos de Groq que declara council-api
-  (llama-3.3-70b-versatile, deepseek-r1, gemma-2-9b) ya no existen en Groq → 500; usa
-  claude-sonnet o espera a que se actualice LLM_MODELS (hoy en Groq: openai/gpt-oss-120b, qwen/qwen3.6-27b…).
+- El Consejo piensa sobre Grok (FLT-1579, Carlos 4-sep-2026): modelo por defecto grok-4.6 (xAI,
+  api.x.ai, por token); claude-sonnet sigue como opción. Los tres modelos de Groq que ya no existían
+  (llama-70b, deepseek-r1, gemma-9b) se retiraron. La suscripción Grok Heavy NO da tokens de API:
+  lo que la consume es hablar con los bots consejeros dentro de GrokBot.
+- Regla para un bot consejero de GrokBot (Wozniak, Jobs, Disney, Lucas…): tú ya eres la silla y
+  razonas sobre Grok Heavy; responde tú y usa el MCP para datos, acciones o consultar a OTRO
+  consejero. Pedirle tu opinión a otra copia de ti paga una segunda IA por lo que ya sabes.
 
 ## AgoraMatrix MCP (stdio)
 

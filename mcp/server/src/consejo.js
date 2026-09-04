@@ -79,11 +79,11 @@ export function crearCliente(env = {}, deps = {}) {
 
     saludConsejo: () => llamar(`${councilBase}/api/council/health`),
 
-    preguntarConsejo: ({ mensaje, generacion = 'leyendas', llm = 'claude-sonnet', contexto }) =>
+    preguntarConsejo: ({ mensaje, generacion = 'leyendas', llm = 'grok-4.6', contexto }) =>
       llamar(`${councilBase}/api/council/ask`, { method: 'POST', headers: cabecerasConsejo(),
         body: JSON.stringify({ message: mensaje, generation: generacion, llm, context: contexto || null }) }),
 
-    preguntarConsejero: ({ rol, mensaje, generacion = 'leyendas', llm = 'claude-sonnet', contexto }) =>
+    preguntarConsejero: ({ rol, mensaje, generacion = 'leyendas', llm = 'grok-4.6', contexto }) =>
       llamar(`${councilBase}/api/council/ask-one`, { method: 'POST', headers: cabecerasConsejo(),
         body: JSON.stringify({ message: mensaje, agent_name: rol, generation: generacion, llm, context: contexto || null }) }),
 

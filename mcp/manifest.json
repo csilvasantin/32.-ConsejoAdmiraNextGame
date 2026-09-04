@@ -2,7 +2,7 @@
   "name": "admira-live-consejo",
   "title": "AdmiraNeXT · Consejo de Silicio",
   "description": "Hub MCP del Consejo de Silicio: consultar estado del Consejo y la flota, e interactuar con AgoraMatrix y el tablero de tareas. Sección pública 'oculta' para interoperabilidad agente-a-agente.",
-  "version": "v.04.09.2026.r1.06:12",
+  "version": "v.04.09.2026.r2.06:44",
   "site": "https://www.admira.live",
   "hub": "https://www.admira.live/mcp/",
   "llms_txt": "https://www.admira.live/mcp/llms.txt",
@@ -135,7 +135,8 @@
       "prompts": [
         "consejo_brief"
       ],
-      "grokbot": "Grok Bot (app sand 0.39.0) soporta conectores MCP remotos streamableHttp/sse con cabeceras u OAuth; stdio no. Añadir el conector con la URL de arriba y la cabecera Authorization."
+      "grokbot": "Grok Bot (app sand 0.39.0) soporta conectores MCP remotos streamableHttp/sse con cabeceras u OAuth; stdio no. Añadir el conector con la URL de arriba y la cabecera Authorization. Un bot consejero de GrokBot responde él mismo (Grok Heavy) y usa el MCP solo para datos, acciones u otro consejero.",
+      "default_llm": "grok-4.6"
     },
     {
       "name": "admira-live",

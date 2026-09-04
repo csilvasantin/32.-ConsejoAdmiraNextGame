@@ -75,11 +75,21 @@ test('preguntar a un consejero llama a ask-one con el token de máquina y devuel
   assert.deepEqual(p.body, { message: '¿Cómo conectamos GrokBot al Consejo?', agent_name: 'CTO', generation: 'leyendas', llm: 'llama-70b', context: null });
 });
 
-test('preguntar al Consejo resume racional y creativo en un solo texto', async () => {
-  const { client } = await cliente();
+test('preguntar al Consejo resume racional y creativo en un solo texto, y por defecto va por grok-4.6', async () => {
+  const { client, peticiones } = await cliente();
   const r = await client.callTool({ name: 'consejo_preguntar', arguments: { mensaje: '¿Qué mejoramos primero en yokup.com?' } });
   assert.match(r.content[0].text, /CEO · Steve Jobs \(racional\):\nSimplifica\./);
   assert.match(r.content[0].text, /CCO · Walt Disney \(creativo\):\nCuenta una historia\./);
+  const p = peticiones.find((x) => x.url.endsWith('/api/council/ask'));
+  assert.equal(p.body.llm, 'grok-4.6', 'FLT-1579: el Consejo piensa sobre Grok salvo que se pida otro modelo');
+});
+
+test('las instrucciones dicen a un bot consejero de GrokBot que responda él mismo', async () => {
+  const { client } = await cliente();
+  const instrucciones = client.getInstructions();
+  assert.match(instrucciones, /SI TÚ ERES UN CONSEJERO/);
+  assert.match(instrucciones, /NO uses consejero_preguntar ni consejo_preguntar para pedirle tu propia opinión/);
+  assert.match(instrucciones, /grok-4\.6/);
 });
 
 test('sin token de máquina el error es legible y no tumba el servidor', async () => {

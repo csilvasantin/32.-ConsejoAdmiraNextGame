@@ -1260,7 +1260,7 @@
     let debateRunning = false;
     let selectedAgent = null; // { name, persona, side, icon } of selected agent for "Preguntar"
     let preguntarMode = false;
-    let selectedLLM = "llama-70b"; // Active LLM model key (default: free model)
+    let selectedLLM = "grok-4.6"; // Active LLM model key (default: Grok, FLT-1579)
     let selectedLeer = "audio";         // Sub-opción del verbo PENSAR
     let selectedMirar = "presentacion"; // [legacy] sub-opción del verbo MIRAR (sustituido por CREAR)
     let selectedCrear = "standard-square"; // Sub-opción del verbo CREAR (calidad/tamaño)
@@ -4110,7 +4110,7 @@
                             "Content-Type": "application/json",
                             "X-Council-Token": COUNCIL_API_TOKEN,
                         },
-                        body: JSON.stringify({ llm: selectedLLM || "llama-70b" }),
+                        body: JSON.stringify({ llm: selectedLLM || "grok-4.6" }),
                         signal: AbortSignal.timeout(180000),  // 3 min
                     });
                     if (res.ok) {
@@ -4791,10 +4791,8 @@
 
         // Show "thinking" animation — mensaje según LLM activo y tipo de contenido
         const llmNameMap = {
+            "grok-4.6": "Grok 4.6",
             "claude-sonnet": "Claude Sonnet 4",
-            "llama-70b": "Llama 3.3 70B",
-            "deepseek-r1": "DeepSeek R1",
-            "gemma-9b": "Gemma 2 9B",
             "gemini-flash": "Gemini 2.5 Flash",
             "nvidia-deepseek-v4-flash": "NVIDIA DeepSeek V4 Flash",
             "nvidia-glm47": "NVIDIA GLM 4.7",

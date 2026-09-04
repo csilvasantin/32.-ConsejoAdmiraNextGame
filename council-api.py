@@ -90,33 +90,19 @@ except ImportError:
 
 # ── LLM Models registry ──────────────────────────────────────
 LLM_MODELS = {
+    "grok-4.6": {
+        "name": "Grok 4.6",
+        "provider": "xai",
+        "model_id": "grok-4.6",
+        "free": False,
+        "icon": "🚀",
+    },
     "claude-sonnet": {
         "name": "Claude Sonnet 4",
         "provider": "anthropic",
         "model_id": "claude-sonnet-4-20250514",
         "free": False,
         "icon": "💎",
-    },
-    "llama-70b": {
-        "name": "Llama 3.3 70B",
-        "provider": "groq",
-        "model_id": "llama-3.3-70b-versatile",
-        "free": True,
-        "icon": "🦙",
-    },
-    "deepseek-r1": {
-        "name": "DeepSeek R1",
-        "provider": "groq",
-        "model_id": "deepseek-r1-distill-llama-70b",
-        "free": True,
-        "icon": "🔮",
-    },
-    "gemma-9b": {
-        "name": "Gemma 2 9B",
-        "provider": "groq",
-        "model_id": "gemma2-9b-it",
-        "free": True,
-        "icon": "🌀",
     },
     "gemini-flash": {
         "name": "Gemini 2.5 Flash",
@@ -156,6 +142,11 @@ LLM_MODELS = {
 }
 
 GROQ_API_KEY = os.environ.get("GROQ_API_KEY", "")
+# xAI (Grok) — FLT-1579, Carlos 4-sep-2026: el Consejo piensa sobre Grok. La suscripción
+# Grok Heavy NO da tokens de API: esto va por api.x.ai y se factura por token.
+XAI_API_KEY = os.environ.get("XAI_API_KEY", "")
+XAI_API_URL = "https://api.x.ai/v1/chat/completions"
+DEFAULT_LLM = "grok-4.6"
 GROQ_API_URL = "https://api.groq.com/openai/v1/chat/completions"
 GOOGLE_API_KEY = os.environ.get("GOOGLE_API_KEY", "")
 NVIDIA_API_KEY = os.environ.get("NVIDIA_API_KEY", "")
@@ -567,9 +558,9 @@ def _save_budget(data: dict):
         json.dump(data, f, indent=2, ensure_ascii=False)
 
 
-def track_usage(input_tokens: int, output_tokens: int, agent_name: str, llm_key: str = "claude-sonnet"):
+def track_usage(input_tokens: int, output_tokens: int, agent_name: str, llm_key: str = DEFAULT_LLM):
     """Track API token usage and check budget limits."""
-    model_cfg = LLM_MODELS.get(llm_key, LLM_MODELS["claude-sonnet"])
+    model_cfg = LLM_MODELS.get(llm_key, LLM_MODELS[DEFAULT_LLM])
     is_free = model_cfg.get("free", False)
 
     with _budget_lock:
@@ -884,7 +875,7 @@ class AskRequest(BaseModel):
     message: str
     generation: str = "leyendas"
     context: Optional[list] = None
-    llm: str = "claude-sonnet"  # LLM model key from LLM_MODELS
+    llm: str = DEFAULT_LLM  # LLM model key from LLM_MODELS
     confirm_expensive_video: bool = False
 
 
@@ -893,7 +884,7 @@ class AskOneRequest(BaseModel):
     agent_name: str  # e.g. "CEO", "CTO", "CCO"...
     generation: str = "leyendas"
     context: Optional[list] = None
-    llm: str = "claude-sonnet"  # LLM model key from LLM_MODELS
+    llm: str = DEFAULT_LLM  # LLM model key from LLM_MODELS
     confirm_expensive_video: bool = False
 
 
@@ -988,7 +979,7 @@ def _build_conversation(agent: CouncilAgent, message: str, context: Optional[lis
 
 def _requires_expensive_video_confirmation(llm_key: str, message: str) -> bool:
     """Flag Gemini + YouTube requests because they can consume a very large token budget."""
-    model_cfg = LLM_MODELS.get(llm_key, LLM_MODELS["claude-sonnet"])
+    model_cfg = LLM_MODELS.get(llm_key, LLM_MODELS[DEFAULT_LLM])
     return model_cfg["provider"] == "gemini" and bool(YOUTUBE_RE.search(message or ""))
 
 
@@ -1042,6 +1033,40 @@ def agent_ask_groq(agent: CouncilAgent, message: str, context: Optional[list], m
     usage = data.get("usage", {})
     return text, usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0)
 
+
+
+def agent_ask_xai(agent: CouncilAgent, message: str, context: Optional[list], model_id: str, max_tokens: int = 300) -> tuple:
+    """Call xAI (Grok) API, OpenAI-compatible. Returns (text, input_tokens, output_tokens).
+    Los modelos grok-4.x razonan: completion_tokens incluye el razonamiento y se cobra como salida."""
+    if not XAI_API_KEY:
+        raise ValueError("XAI_API_KEY not configured — add it to .env (console.x.ai)")
+
+    conv_system, messages = _build_conversation(agent, message, context)
+
+    # xAI uses OpenAI-compatible format: system message + conversation
+    xai_messages = [{"role": "system", "content": conv_system}] + messages
+
+    headers = {
+        "Authorization": f"Bearer {XAI_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "model": model_id,
+        "messages": xai_messages,
+        "max_tokens": max_tokens,
+        "temperature": 0.7,
+    }
+
+    # Para resúmenes largos el timeout 30s puede no bastar
+    timeout = 120 if max_tokens > 1000 else 30
+    resp = http_requests.post(XAI_API_URL, json=payload, headers=headers, timeout=timeout)
+    if resp.status_code != 200:
+        raise ValueError(f"xAI API error {resp.status_code}: {resp.text[:200]}")
+
+    data = resp.json()
+    text = data["choices"][0]["message"]["content"]
+    usage = data.get("usage", {})
+    return text, usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0)
 
 def agent_ask_nvidia(agent: CouncilAgent, message: str, context: Optional[list], model_id: str, max_tokens: int = 300) -> tuple:
     """Call NVIDIA NIM API (OpenAI-compatible chat completions)."""
@@ -1126,12 +1151,14 @@ def agent_ask_gemini(agent: CouncilAgent, message: str, context: Optional[list],
     return text, in_tok, out_tok
 
 
-def agent_ask(agent: CouncilAgent, message: str, context: Optional[list], llm_key: str = "claude-sonnet", max_tokens: int = 300) -> tuple:
+def agent_ask(agent: CouncilAgent, message: str, context: Optional[list], llm_key: str = DEFAULT_LLM, max_tokens: int = 300) -> tuple:
     """Route to the correct LLM provider. Returns (text, input_tokens, output_tokens)."""
-    model_cfg = LLM_MODELS.get(llm_key, LLM_MODELS["claude-sonnet"])
+    model_cfg = LLM_MODELS.get(llm_key, LLM_MODELS[DEFAULT_LLM])
 
     if model_cfg["provider"] == "anthropic":
         return agent_ask_anthropic(agent, message, context, model_cfg["model_id"], max_tokens)
+    elif model_cfg["provider"] == "xai":
+        return agent_ask_xai(agent, message, context, model_cfg["model_id"], max_tokens)
     elif model_cfg["provider"] == "groq":
         return agent_ask_groq(agent, message, context, model_cfg["model_id"], max_tokens)
     elif model_cfg["provider"] == "gemini":
@@ -1142,9 +1169,9 @@ def agent_ask(agent: CouncilAgent, message: str, context: Optional[list], llm_ke
         raise ValueError(f"Unknown provider: {model_cfg['provider']}")
 
 
-def _send_query_report(question: str, replies: list, cost_eur: float, gen: str, llm_key: str = "claude-sonnet"):
+def _send_query_report(question: str, replies: list, cost_eur: float, gen: str, llm_key: str = DEFAULT_LLM):
     """Send a usage report with full responses to Telegram for historical record."""
-    model_cfg = LLM_MODELS.get(llm_key, LLM_MODELS["claude-sonnet"])
+    model_cfg = LLM_MODELS.get(llm_key, LLM_MODELS[DEFAULT_LLM])
     model_label = f"{model_cfg['icon']} {model_cfg['name']}"
     cost_label = "FREE" if model_cfg["free"] else f"€{cost_eur:.4f}"
 
@@ -1174,7 +1201,7 @@ async def council_ask(
     _auth=Depends(verify_token),
 ):
     """Send a message to the council. 1 racional + 1 creativo (random) by default."""
-    llm_key = req.llm if req.llm in LLM_MODELS else "claude-sonnet"
+    llm_key = req.llm if req.llm in LLM_MODELS else DEFAULT_LLM
     model_cfg = LLM_MODELS[llm_key]
 
     if _requires_expensive_video_confirmation(llm_key, req.message) and not req.confirm_expensive_video:
@@ -1240,7 +1267,7 @@ async def council_ask_one(
     _auth=Depends(verify_token),
 ):
     """Ask a single specific agent. Used by 'Preguntar' verb."""
-    llm_key = req.llm if req.llm in LLM_MODELS else "claude-sonnet"
+    llm_key = req.llm if req.llm in LLM_MODELS else DEFAULT_LLM
     model_cfg = LLM_MODELS[llm_key]
 
     if _requires_expensive_video_confirmation(llm_key, req.message) and not req.confirm_expensive_video:
@@ -1301,6 +1328,8 @@ async def list_models():
     for key, cfg in LLM_MODELS.items():
         available = True
         if cfg["provider"] == "groq" and not GROQ_API_KEY:
+            available = False
+        if cfg["provider"] == "xai" and not XAI_API_KEY:
             available = False
         if cfg["provider"] == "gemini" and not GOOGLE_API_KEY:
             available = False

@@ -14,7 +14,7 @@
  *   POST /mcp         → el endpoint MCP (también GET/DELETE, como manda el transporte)
  *
  * Seguridad: /mcp exige MCP_KEY (Authorization: Bearer <clave> o ?key=<clave>): las
- * preguntas al Consejo cuestan dinero (Claude Sonnet) y no pueden quedar abiertas al
+ * preguntas al Consejo cuestan dinero (Grok 4.6 por defecto, Claude Sonnet opcional) y no pueden quedar abiertas al
  * mundo. El Consejo se llama con COUNCIL_MACHINE_TOKEN, que nunca sale del worker.
  * Sin estado (stateless): cada petición monta su servidor y lo cierra; en un worker
  * no hay memoria entre peticiones y los clientes lo llevan bien.
@@ -36,8 +36,9 @@ export function crearServidor(env = {}, deps = {}) {
   const server = new McpServer({ name: NOMBRE, version: env.VERSION || '1.0.0', websiteUrl: env.SITIO || 'https://www.admira.live' }, {
     instructions: [
       'Eres el acceso al Consejo de Silicio de AdmiraNeXT (admira.live). Ocho sillas (CEO, CTO, COO, CFO, CCO, CDO, CXO, CSO) en dos generaciones: leyendas y coetáneos.',
-      'Para una opinión de la mesa usa consejo_preguntar (responde un consejero racional y otro creativo). Para hablar con uno concreto usa consejero_preguntar con su rol.',
-      'Cada pregunta al Consejo consume presupuesto: pregunta con contexto y una sola vez. Los modelos gratuitos (llama-70b, deepseek-r1, gemma-9b) no gastan.',
+      'SI TÚ ERES UN CONSEJERO (un bot de GrokBot llamado Steve Wozniak, Steve Jobs, Walt Disney, George Lucas…): tú ya eres esa silla y razonas sobre Grok. Responde tú mismo; NO uses consejero_preguntar ni consejo_preguntar para pedirle tu propia opinión a otra copia de ti, porque eso paga una segunda IA para decir lo que tú ya sabes. Usa el MCP para lo que no tienes: datos vivos (flota_estado, consejo_bots, consejo_tareas, consejo_salud), acciones (agora_decir) y para consultar a OTRO consejero distinto de ti.',
+      'Si NO eres un consejero: para una opinión de la mesa usa consejo_preguntar (responde un consejero racional y otro creativo); para hablar con uno concreto usa consejero_preguntar con su rol.',
+      'Cada pregunta al Consejo consume presupuesto: pregunta con contexto y una sola vez. El modelo por defecto es grok-4.6 (xAI); claude-sonnet sigue disponible como opción. Mira consejo_modelos antes de elegir otro.',
       'La flota y el tablero de tareas del Consejo se leen con flota_estado, consejo_bots y consejo_tareas. agora_decir publica en AgoraMatrix, el grupo del equipo.',
     ].join('\n'),
   });
@@ -62,7 +63,7 @@ export function crearServidor(env = {}, deps = {}) {
     inputSchema: {
       mensaje: z.string().min(3).max(1000).describe('La pregunta o el asunto, con el contexto necesario (máx. 1000 caracteres).'),
       generacion: z.enum(GENERACIONES).default('leyendas').describe('leyendas o coetaneos.'),
-      llm: z.string().min(2).max(40).default('claude-sonnet').describe('Clave del modelo (ver consejo_modelos). claude-sonnet por defecto; llama-70b es gratuito.'),
+      llm: z.string().min(2).max(40).default('grok-4.6').describe('Clave del modelo (ver consejo_modelos). grok-4.6 (xAI) por defecto; claude-sonnet como opción.'),
       contexto: z.array(z.object({ role: z.string(), content: z.string() })).max(20).optional().describe('Turnos previos de conversación, si los hay.'),
     },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
@@ -75,7 +76,7 @@ export function crearServidor(env = {}, deps = {}) {
       rol: z.enum(ROLES).describe('Silla del consejero.'),
       mensaje: z.string().min(3).max(1000).describe('La pregunta, con contexto (máx. 1000 caracteres).'),
       generacion: z.enum(GENERACIONES).default('leyendas').describe('leyendas o coetaneos.'),
-      llm: z.string().min(2).max(40).default('claude-sonnet').describe('Clave del modelo (ver consejo_modelos).'),
+      llm: z.string().min(2).max(40).default('grok-4.6').describe('Clave del modelo (ver consejo_modelos). grok-4.6 por defecto.'),
       contexto: z.array(z.object({ role: z.string(), content: z.string() })).max(20).optional().describe('Turnos previos, si los hay.'),
     },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },

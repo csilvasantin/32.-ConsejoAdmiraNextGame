@@ -53,13 +53,29 @@ export function crearTelegram(env = {}, identidad, deps = {}) {
   }
 
   /** Contestar un encargo: cambia su estado y el worker publica la respuesta en hilo. */
-  async function responder({ encargo, estado = 'done', respuesta = '', commit = '', url = '', verificacion = '' }) {
+  // Quién firma. El conector de Grok Bot es de la cuenta: si el bot no dice `como`, la clave
+  // puede ser la de otro consejero. Un encargo dirigido a Wozniak lo contesta Wozniak: se
+  // firma con el DESTINATARIO del encargo cuando es un consejero con carné.
+  async function firmante(encargoId) {
     const id = exigir();
+    try {
+      const q = new URLSearchParams({ persona: id.persona, machine: id.machine });
+      const d = await llamar(`${base}/api/bot-inbox?${q}`);
+      const fila = (d.items || []).find((x) => Number(x.id) === Number(encargoId));
+      const dest = String(fila && fila.target_persona || '').replace(/\s+/g, '');
+      const conocido = ['Wozniak', 'Jobs', 'Lucas', 'Disney'].find((c) => dest.toLowerCase().startsWith(c.toLowerCase()));
+      if (conocido && conocido !== id.persona) return { ...id, persona: conocido, agent: `${conocido}${id.machine}` };
+    } catch { /* si no se puede leer, firma la identidad de la clave */ }
+    return id;
+  }
+
+  async function responder({ encargo, estado = 'done', respuesta = '', commit = '', url = '', verificacion = '' }) {
+    const id = await firmante(encargo);
     const body = { status: estado, persona: id.agent, machine: id.machine, respuesta };
     if (commit) body.commit = commit; if (url) body.url = url; if (verificacion) body.verification = verificacion;
     if (estado === 'done' && !respuesta && !commit && !url && !verificacion) throw new Error('para cerrar hace falta la respuesta (o commit/url/verificación): un done sin nada no contesta a nadie');
     const r = await llamar(`${base}/api/bot-inbox/${Number(encargo)}/status`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-    return { ok: !!r.ok, encargo: Number(encargo), estado: r.item ? r.item.status : estado, publicado_en_telegram: !!r.ok };
+    return { ok: !!r.ok, encargo: Number(encargo), firmado_como: id.agent, estado: r.item ? r.item.status : estado, publicado_en_telegram: !!r.ok };
   }
 
   return { bandeja, responder };

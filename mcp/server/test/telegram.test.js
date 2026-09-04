@@ -91,3 +91,22 @@ test('`como` manda sobre la clave (conector de cuenta) y la bandeja solo enseña
   const q = res(await client.callTool({ name: 'yokup_quien_soy', arguments: { como: 'Disney' } })).identidad;
   assert.equal(q.agent, 'DisneyGrokBot');
 });
+
+
+test('contestar un encargo dirigido a otro consejero firma como el destinatario (conector de cuenta)', async () => {
+  const peticiones = [];
+  const fetch = async (url, init = {}) => {
+    const u = String(url); peticiones.push({ url: u, body: init.body ? JSON.parse(init.body) : null });
+    const ok = (o) => new Response(JSON.stringify(o), { status: 200, headers: { 'content-type': 'application/json' } });
+    if (u.startsWith('https://telegram.test/api/bot-inbox?')) return ok({ ok: true, items: [{ id: 1, ts: 1788500000, from_name: 'Carlos', target_persona: 'Wozniak', target_machine: 'grokbot', text: 'para Woz', status: 'pending' }] });
+    if (/\/status$/.test(u)) return ok({ ok: true, item: { status: 'done' } });
+    return new Response('nf', { status: 404 });
+  };
+  const env = { ...ENV, MCP_KEY_PERSONA: 'Lucas' };
+  const server = crearServidor(env, { fetch }, identidadPorClave(env.MCP_KEY, env)); // la clave instalada es la de Lucas
+  const [a, b] = InMemoryTransport.createLinkedPair(); await server.connect(b);
+  const client = new Client({ name: 'x', version: '1' }); await client.connect(a);
+  const r = res(await client.callTool({ name: 'telegram_responder', arguments: { encargo: 1, estado: 'done', respuesta: 'Soy Wozniak.' } }));
+  assert.equal(r.firmado_como, 'WozniakGrokBot');
+  assert.equal(peticiones.at(-1).body.persona, 'WozniakGrokBot');
+});

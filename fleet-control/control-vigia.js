@@ -17,6 +17,7 @@ const crypto = require('crypto');
 
 const INTERVALO_MS = 10 * 60 * 1000;
 const REPARACION_MIN_MS = 60 * 60 * 1000;   // una reparación por máquina y hora
+const FUERA_AVISO_MS = 60 * 60 * 1000;      // aviso cuando lleva más de 1 h sin SSH (mejora 2)
 const LGUI = 'export XDG_RUNTIME_DIR="${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"; export DISPLAY="${DISPLAY:-:0}"; ';
 
 /** md5 del agente canónico embebido en deploy-capture-agent.sh (entre <<'EOS' y EOS). */
@@ -93,6 +94,14 @@ function transicion(anterior, actual, nombre) {
            : ('🔴 ' + nombre + ' ha dejado de ser controlable: ' + actual.why);
 }
 
+/** Comando (python3, presente en macOS y Linux) que envía el paquete mágico WoL a `mac` por broadcast y a `ip`. */
+function comandoWol(mac, ip) {
+  const m = String(mac || '').toLowerCase().replace(/[^0-9a-f]/g, '');
+  if (m.length !== 12) return null;
+  const dest = String(ip || '').replace(/[^0-9.]/g, '');
+  return "python3 -c 'import socket,binascii;p=b\"\\xff\"*6+binascii.unhexlify(\"" + m + "\")*16;s=socket.socket(socket.AF_INET,socket.SOCK_DGRAM);s.setsockopt(socket.SOL_SOCKET,socket.SO_BROADCAST,1);[s.sendto(p,(d,9)) for d in ([\"255.255.255.255\"]+([\"" + dest + "\"] if \"" + dest + "\" else []))];print(\"wol enviado a " + m + "\")'";
+}
+
 function crear(deps) {
   // deps: { maquinas(), platOf(m), run(m,cmd,ms), reparar(m,tipo)→Promise<bool>, avisar(txt), audit(ev), persistir(estado), estadoInicial, md5Canonico, ahora() }
   const estado = Object.assign({}, deps.estadoInicial || {});
@@ -123,6 +132,17 @@ function crear(deps) {
       if (ok) ev = (await probar(m)) || ev;
     }
     const actual = Object.assign({}, ev, { at: ahora(), plataforma: plat, reparado });
+    // FUERA DE LA RED (mejora 2, decisión 0148): se recuerda desde cuándo no hay SSH y se avisa
+    // UNA vez al superar la hora; al volver, se limpia.
+    if (!actual.online) {
+      actual.fueraDesde = (anterior && anterior.fueraDesde != null) ? anterior.fueraDesde : ahora();
+      actual.fueraAvisado = !!(anterior && anterior.fueraAvisado);
+      if (!actual.fueraAvisado && ahora() - actual.fueraDesde > FUERA_AVISO_MS) {
+        actual.fueraAvisado = true;
+        deps.audit({ ev: 'vigia_fuera', machine: m.id, desde: actual.fueraDesde });
+        try { await deps.avisar('⏰ ' + (m.name || m.id) + ' lleva más de 1 h sin SSH desde el hub (fuera de Tailscale o apagado): despertar desde /control'); } catch (e) {}
+      }
+    }
     estado[m.id] = actual;
     const aviso = transicion(anterior, actual, m.name || m.id);
     if (aviso) { deps.audit({ ev: 'vigia_transicion', machine: m.id, ready: actual.ready, why: actual.why }); try { await deps.avisar(aviso); } catch (e) {} }
@@ -144,4 +164,4 @@ function crear(deps) {
   return { estado, probar, vigilar, ronda, INTERVALO_MS };
 }
 
-module.exports = { INTERVALO_MS, REPARACION_MIN_MS, md5AgenteCanonico, comandoSonda, marcador, evaluar, necesitaReparacion, transicion, crear };
+module.exports = { INTERVALO_MS, REPARACION_MIN_MS, FUERA_AVISO_MS, md5AgenteCanonico, comandoSonda, comandoWol, marcador, evaluar, necesitaReparacion, transicion, crear };

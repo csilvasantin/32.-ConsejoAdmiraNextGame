@@ -845,6 +845,7 @@ const server = http.createServer(async (req, res) => {
         host: m.host,
         user: m.user || 'csilvasantin',
         platform: platOf(m),
+        net: m.net || null,
         info: online ? info : (r.stderr || 'sin respuesta').slice(0, 120),
         signals: {
           controlProbe: {
@@ -1093,6 +1094,63 @@ const server = http.createServer(async (req, res) => {
     return json(res, 200, out);
   }
 
+  // ── DESPERTAR (mejora 2, decisión 0148): WoL desde un vecino + pantalla + tailscale up ──
+  if (url === '/api/wake' && req.method === 'POST') {
+    if (!(await gate(req, res, ip, true))) return;
+    const body = await readBody(req);
+    const m = machineById(body.machine);
+    if (!m) return json(res, 400, { error: 'máquina desconocida' });
+    const pasos = [];
+    const plat = platOf(m);
+    // 1) ¿responde ya? → sólo despertar la pantalla.
+    const vivo = await run(m, plat === 'windows' ? 'echo ONLINE' : 'echo ONLINE', plat === 'windows' ? 9000 : 5000);
+    if (vivo.rc === 0 && /ONLINE/.test(vivo.stdout)) {
+      const despierta = plat === 'macos' ? 'caffeinate -u -t 5 >/dev/null 2>&1 & /usr/bin/pmset touch >/dev/null 2>&1; echo pantalla despierta'
+        : plat === 'linux' ? LGUI + '(xset dpms force on 2>/dev/null; xset s reset 2>/dev/null; echo pantalla despierta) || (swaymsg "output * dpms on" 2>/dev/null && echo pantalla despierta)'
+        : 'Add-Type -AssemblyName System.Windows.Forms; [System.Windows.Forms.Cursor]::Position = [System.Windows.Forms.Cursor]::Position; "pantalla despierta"';
+      const r = await run(m, despierta, 8000);
+      pasos.push('SSH responde · ' + (String(r.stdout || '').trim() || 'orden de despertar enviada'));
+      audit({ ip, ev: 'wake', machine: m.id, via: 'ssh', ok: true });
+      return json(res, 200, { ok: true, resumen: 'ya estaba en red: pantalla despierta', pasos });
+    }
+    pasos.push('sin SSH por Tailscale');
+    // 2) Vecinos de la misma red local que sí responden.
+    const net = m.net || {};
+    if (!net.lan || !net.mac) {
+      audit({ ip, ev: 'wake', machine: m.id, via: 'none', ok: false });
+      return json(res, 200, { ok: false, error: 'sin datos de red (lan/mac) en fleet.json: registra la máquina con net', pasos });
+    }
+    const candidatos = FLEET.machines.filter(x => x.id !== m.id && x.net && x.net.lan === net.lan);
+    const vecinos = [];
+    await Promise.all(candidatos.map(async (v) => { const r = await run(v, 'echo ONLINE', 5000); if (r.rc === 0 && /ONLINE/.test(r.stdout)) vecinos.push(v); }));
+    if (!vecinos.length) {
+      pasos.push('ningún vecino de la red «' + net.lan + '» responde: no hay quien mande el paquete');
+      audit({ ip, ev: 'wake', machine: m.id, via: 'none', ok: false });
+      return json(res, 200, { ok: false, error: 'sin vecino vivo en ' + net.lan, pasos });
+    }
+    // 3) Paquete mágico desde cada vecino + intento de tailscale up por la red local.
+    const wol = Vigia.comandoWol(net.mac, net.lanIp);
+    let subio = false;
+    for (const v of vecinos) {
+      const r = await run(v, wol, 8000);
+      pasos.push('vecino ' + (v.name || v.id) + ': ' + (String(r.stdout || r.stderr || '').trim().slice(0, 80) || ('rc ' + r.rc)));
+    }
+    await new Promise(r => setTimeout(r, 6000));
+    if (net.lanIp && plat !== 'windows') {
+      const v = vecinos[0];
+      const tsUp = 'ssh -o ConnectTimeout=6 -o BatchMode=yes -o StrictHostKeyChecking=accept-new ' + (m.user || 'csilvasantin') + '@' + net.lanIp +
+        ' \'(/Applications/Tailscale.app/Contents/MacOS/Tailscale up 2>/dev/null || tailscale up 2>/dev/null || sudo -n tailscale up 2>/dev/null) && echo TS_UP; caffeinate -u -t 5 >/dev/null 2>&1 & echo LAN_OK\'';
+      const r = await run(v, tsUp, 20000);
+      subio = /TS_UP/.test(r.stdout);
+      pasos.push('por la red local vía ' + (v.name || v.id) + ': ' + (/LAN_OK/.test(r.stdout) ? ('responde' + (subio ? ' · tailscale up' : ' · tailscale no subió')) : 'sin respuesta aún (' + String(r.stderr || '').trim().slice(0, 60) + ')'));
+    }
+    const otra = await run(m, 'echo ONLINE', 6000);
+    const ok = otra.rc === 0 && /ONLINE/.test(otra.stdout);
+    pasos.push(ok ? 'ya responde por Tailscale' : 'todavía sin Tailscale: si estaba apagado, tarda 30-60 s; si es un portátil con la tapa cerrada, WoL no lo abre');
+    audit({ ip, ev: 'wake', machine: m.id, via: 'wol', vecinos: vecinos.map(v => v.id), ok });
+    return json(res, 200, { ok, resumen: ok ? 'despierto y en Tailscale' : 'paquete enviado; sin Tailscale todavía', pasos });
+  }
+
   // ── VIGÍA: estado y prueba manual ────────────────────────────────────────────
   // Sesión Google O X-Fleet-Token: el vigía también lo consultan y disparan agentes headless.
   if (url === '/api/vigia' && req.method === 'GET') {
@@ -1144,7 +1202,8 @@ const server = http.createServer(async (req, res) => {
     if (!host || !name) return json(res, 400, { error: 'host y name son obligatorios' });
     const slug = String(body.id || name).toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
     const id = slug || ('mac-' + Date.now());
-    const plat = String(body.platform || 'macos').toLowerCase().startsWith('lin') ? 'linux' : 'macos';
+    const _pl = String(body.platform || 'macos').toLowerCase();
+    const plat = _pl.startsWith('lin') ? 'linux' : (_pl.startsWith('win') ? 'windows' : 'macos');
     const machine = {
       id,
       name,
@@ -1161,6 +1220,15 @@ const server = http.createServer(async (req, res) => {
         url: String(body.signage.url || ''),
         start: String(body.signage.start || ''),
         stop: String(body.signage.stop || '')
+      };
+    }
+    // Red local (mejora 2, decisión 0148): { lan, lanIp, mac, wol } para despertar desde un vecino.
+    if (body.net && typeof body.net === 'object') {
+      machine.net = {
+        lan: String(body.net.lan || '').slice(0, 40),
+        lanIp: String(body.net.lanIp || '').replace(/[^0-9.]/g, ''),
+        mac: String(body.net.mac || '').toLowerCase().replace(/[^0-9a-f:]/g, ''),
+        wol: body.net.wol === true
       };
     }
     const idx = FLEET.machines.findIndex(m => m.id === id || (m.host && m.host === host));

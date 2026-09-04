@@ -69,3 +69,24 @@ test('la sonda de cada plataforma emite los cinco marcadores', () => {
   }
   assert.equal(V.comandoSonda('ios'), null);
 });
+
+test('fuera de la red: avisa UNA vez al superar 1 h sin SSH y se limpia al volver', async () => {
+  let avisos = [], t = 0, online = false;
+  const v = V.crear({
+    maquinas: () => [{ id: 'dgx', name: 'DGX' }], platOf: () => 'linux',
+    run: async () => online ? { rc: 0, stdout: '__V_CAP__=1\n__V_AGENT__=linux\n__V_INPUT__=1\n__V_AX__=1\n__V_LOCK__=0\n' } : { rc: 255, stdout: '' },
+    reparar: async () => false, avisar: async (x) => { avisos.push(x); }, audit: () => {}, persistir: () => {},
+    md5Canonico: 'abc', ahora: () => t,
+  });
+  t = 0; await v.ronda(); assert.equal(avisos.length, 0);
+  t = 30 * 60000; await v.ronda(); assert.equal(avisos.length, 0, 'a la media hora aún no');
+  t = 61 * 60000; await v.ronda(); assert.equal(avisos.filter((a) => /lleva más de 1 h/.test(a)).length, 1);
+  t = 90 * 60000; await v.ronda(); assert.equal(avisos.filter((a) => /lleva más de 1 h/.test(a)).length, 1, 'no repite');
+  online = true; t = 100 * 60000; await v.ronda(); assert.equal(v.estado.dgx.fueraDesde, undefined);
+});
+
+test('comandoWol: paquete mágico por broadcast (y a la IP local si se conoce)', () => {
+  const c = V.comandoWol('1C:F6:4C:3B:F0:17', '192.168.1.34');
+  assert.match(c, /python3 -c/); assert.match(c, /1cf64c3bf017/); assert.match(c, /255\.255\.255\.255/); assert.match(c, /192\.168\.1\.34/);
+  assert.equal(V.comandoWol('no-es-mac'), null);
+});

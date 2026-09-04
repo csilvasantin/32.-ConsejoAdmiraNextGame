@@ -2,7 +2,7 @@
   "name": "admira-live-consejo",
   "title": "AdmiraNeXT · Consejo de Silicio",
   "description": "Hub MCP del Consejo de Silicio: consultar estado del Consejo y la flota, e interactuar con AgoraMatrix y el tablero de tareas. Sección pública 'oculta' para interoperabilidad agente-a-agente.",
-  "version": "v.04.09.2026.r2.06:44",
+  "version": "v.04.09.2026.r4.07:25",
   "site": "https://www.admira.live",
   "hub": "https://www.admira.live/mcp/",
   "llms_txt": "https://www.admira.live/mcp/llms.txt",
@@ -114,9 +114,9 @@
       "name": "admira-live-mcp",
       "transport": "streamable-http",
       "url": "https://admira-live-mcp.csilvasantin.workers.dev/mcp",
-      "auth": "Authorization: Bearer <MCP_KEY> (o ?key=<MCP_KEY>); la clave la da Carlos; sin clave → 401",
+      "auth": "Authorization: Bearer <clave> (o ?key=). MCP_KEY genérica consulta; MCP_KEY_WOZNIAK/JOBS/DISNEY/LUCAS firman yokup. Sin clave → 401",
       "salud": "https://admira-live-mcp.csilvasantin.workers.dev/salud",
-      "summary": "El MCP de admira.live para clientes remotos (GrokBot, Claude, Cursor, ChatGPT…): los 16 consejeros del Consejo de Silicio, la flota y AgoraMatrix como herramientas. Hace de puente autenticado hacia council-api (Mac Mini, funnel /council) con COUNCIL_MACHINE_TOKEN.",
+      "summary": "El MCP de admira.live para clientes remotos (GrokBot, Claude, Cursor, ChatGPT…): los 16 consejeros, la flota, AgoraMatrix y yokup (alta, paso, evidencia agent/session_transcript, informe, ventana). Clave por consejero GrokBot. Puente autenticado hacia council-api (Mac Mini) y api.yokup.com.",
       "code": "https://github.com/csilvasantin/32.-ConsejoAdmiraNextGame/tree/main/mcp/server",
       "tools": [
         "consejo_consejeros",
@@ -127,7 +127,12 @@
         "consejo_bots",
         "flota_estado",
         "consejo_tareas",
-        "agora_decir"
+        "agora_decir",
+        "yokup_alta",
+        "yokup_paso",
+        "yokup_evidencia",
+        "yokup_informe",
+        "yokup_ventana"
       ],
       "resources": [
         "admira://consejo/consejeros"

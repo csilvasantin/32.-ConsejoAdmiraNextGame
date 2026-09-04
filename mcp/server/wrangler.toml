@@ -4,9 +4,11 @@
 # hablar en AgoraMatrix. FLT-1578 · Morfeo · MacMini · 4-sep-2026.
 #
 # Secretos (wrangler secret put):
-#   MCP_KEY               clave que exige el endpoint /mcp (Bearer o ?key=)
-#   COUNCIL_MACHINE_TOKEN token máquina-a-máquina del council-api (X-Council-Token)
-#   AGORA_SYNC_KEY        (opcional) clave del feed de AgoraMatrix en pixer-worker
+#   MCP_KEY                     clave genérica del /mcp (consulta al Consejo)
+#   MCP_KEY_WOZNIAK/JOBS/DISNEY/LUCAS  una por consejero GrokBot (firma yokup)
+#   COUNCIL_MACHINE_TOKEN       token máquina-a-máquina del council-api (X-Council-Token)
+#   AGORA_SYNC_KEY              clave del feed de AgoraMatrix en pixer-worker
+#   ADMIRA_TELEGRAM_PANEL_KEY   bandeja + presencia (mismo PANEL_KEY del worker Telegram)
 name = "admira-live-mcp"
 main = "src/index.js"
 compatibility_date = "2026-08-01"
@@ -22,6 +24,12 @@ workers_dev = true
 binding = "AGORA"
 service = "pixer-eleven"
 
+# Misma cuenta: workers.dev entre workers es 1042. Presencia y bot-inbox van por
+# service binding, igual que AgoraMatrix.
+[[services]]
+binding = "TELEGRAM"
+service = "admira-telegram"
+
 [vars]
 # El Consejo (FastAPI, puerto 8420 del Mac Mini) sale por el funnel de Tailscale en
 # /council: el prefijo se quita, así que /council/api/council/models → :8420/api/council/models.
@@ -29,5 +37,8 @@ COUNCIL_BASE = "https://macmini.tail48b61c.ts.net/council"
 # Tablero, salud de bots y censo de máquinas viven en el proxy Node del 3030 (/api).
 FLEET_BASE = "https://macmini.tail48b61c.ts.net/api"
 AGORA_WORKER = "https://pixer-eleven.csilvasantin.workers.dev"
+TELEGRAM_API = "https://admira-telegram.csilvasantin.workers.dev"
+YOKUP_API = "https://api.yokup.com"
+YOKUP_PROJECT = "yokup"
 SITIO = "https://www.admira.live"
-VERSION = "v.04.09.2026.r3.06:43"
+VERSION = "v.04.09.2026.r4.07:25"

@@ -9,7 +9,7 @@
 Sitio público: https://www.admira.live
 Hub MCP: https://www.admira.live/mcp/
 Manifest máquina: https://www.admira.live/mcp/manifest.json
-Versión: v.04.09.2026.r2.06:44
+Versión: v.04.09.2026.r4.07:25
 Repo: https://github.com/csilvasantin/32.-ConsejoAdmiraNextGame
 
 ## Qué es
@@ -39,15 +39,24 @@ Interacción (rate-limit; las escrituras de tareas requieren credencial del Cons
 Control acotado (gated al operador / red de confianza, no para terceros):
 - POST /api/teamwork/machine-action — acción de lista blanca sobre una máquina (claude-open, claude-quit, claude-restart, refresh-capture).
 
-## MCP remoto por HTTP (para GrokBot y cualquier cliente MCP) — v.04.09.2026.r1.06:12
+## MCP remoto por HTTP (para GrokBot y cualquier cliente MCP) — v.04.09.2026.r4.07:25
 
 Servidor MCP de admira.live con transporte Streamable HTTP (MCP 2025-06-18), sin estado.
 - Endpoint: https://admira-live-mcp.csilvasantin.workers.dev/mcp
-- Autenticación: `Authorization: Bearer <MCP_KEY>` (o `?key=<MCP_KEY>`). Sin clave → 401. La clave la da Carlos.
-- Salud pública: https://admira-live-mcp.csilvasantin.workers.dev/salud (dice si llega al Consejo y qué secretos tiene)
+- Autenticación: `Authorization: Bearer <clave>` (o `?key=`). Sin clave → 401.
+  - `MCP_KEY` genérica: consultar el Consejo, la flota y AgoraMatrix.
+  - Una clave por consejero GrokBot (`MCP_KEY_WOZNIAK`, `MCP_KEY_JOBS`, `MCP_KEY_DISNEY`, `MCP_KEY_LUCAS`):
+    firma en yokup como WozniakGrokBot, JobsGrokBot, DisneyGrokBot, LucasGrokBot (FLT-1580).
+- Salud pública: https://admira-live-mcp.csilvasantin.workers.dev/salud (dice si llega al Consejo y qué secretos tiene, sin revelar valores)
 - Herramientas: consejo_consejeros · consejo_modelos · consejo_preguntar (mesa: 1 racional + 1 creativo) ·
   consejero_preguntar (rol CEO/CTO/COO/CFO/CCO/CDO/CXO/CSO × generación leyendas/coetaneos) ·
-  consejo_salud · consejo_bots · flota_estado · consejo_tareas · agora_decir
+  consejo_salud · consejo_bots · flota_estado · consejo_tareas · agora_decir ·
+  yokup_alta · yokup_paso · yokup_evidencia · yokup_informe · yokup_ventana
+- Yokup (exige clave de consejero): alta de misión (bot-inbox + /fleet/sync), avance de pasos,
+  evidencia de proceso `agent/session_transcript` (transcript → PNG vía
+  `POST /council/api/council/render-transcript` o el propio worker; se sube a /fleet/media y
+  /fleet/progress), informe de cierre y ventana de decisión. Cada llamada de un consejero late
+  presencia automática (equipo GrokBot).
 - Recurso: admira://consejo/consejeros · Prompt: consejo_brief
 - Por dentro: worker Cloudflare (código en /mcp/server de este repo) que llama a council-api
   (Mac Mini :8420) por el funnel https://macmini.tail48b61c.ts.net/council/api/council/… con

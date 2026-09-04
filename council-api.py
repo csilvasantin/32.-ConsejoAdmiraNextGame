@@ -42,6 +42,7 @@ load_dotenv(os.path.join(os.path.dirname(os.path.abspath(__file__)), ".env"), ov
 
 from fastapi import FastAPI, Request, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import Response
 from fastapi.staticfiles import StaticFiles
 import urllib.parse
 import subprocess
@@ -1633,6 +1634,46 @@ async def council_capture(req: CaptureRequest, _rate=Depends(check_rate_limit), 
         detail = err[:180] or "sin captura (¿AgoraCapture instalado en esa máquina?)"
         return {"ok": False, "machine": req.machine, "error": detail}
     return {"ok": True, "machine": req.machine, "image": "data:image/jpeg;base64," + out}
+
+
+class TranscriptRender(BaseModel):
+    transcript: str
+    mission: str = ""
+    identity: str = ""
+
+
+def _png_transcript(texto: str) -> bytes:
+    """Pinta el transcript como el pane de tmux (fondo #02080d, texto cian). FLT-1580."""
+    lines = (texto or "").replace("\t", "    ").splitlines()[-34:] or [""]
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+        img = Image.new("RGB", (900, 20 * max(1, len(lines)) + 24), (2, 8, 13))
+        draw = ImageDraw.Draw(img)
+        font_path = next((p for p in ("/System/Library/Fonts/Menlo.ttc", "/System/Library/Fonts/Monaco.ttf") if os.path.exists(p)), None)
+        font = ImageFont.truetype(font_path, 14) if font_path else ImageFont.load_default()
+        for i, line in enumerate(lines):
+            draw.text((12, 12 + 20 * i), line[:150], fill=(200, 240, 255), font=font)
+        buf = tempfile.NamedTemporaryFile(suffix=".png", delete=False)
+        img.save(buf.name, "PNG")
+        data = Path(buf.name).read_bytes()
+        os.unlink(buf.name)
+        return data
+    except Exception:
+        # PNG mínimo 1×1 si PIL no está: el MCP worker pinta el fallback real.
+        return bytes.fromhex(
+            "89504e470d0a1a0a0000000d4948445200000001000000010802000000907753de"
+            "0000000c4944415408d763626202000000050001a5d41c4c0000000049454e44ae426082"
+        )
+
+
+@app.post("/api/council/render-transcript")
+async def render_transcript(req: TranscriptRender, _auth=Depends(verify_token)):
+    """Evidencia agent/session_transcript para consejeros de GrokBot (FLT-1580)."""
+    texto = (req.transcript or "").strip()
+    if len(texto) < 8:
+        raise HTTPException(status_code=400, detail="transcript vacío")
+    png = _png_transcript(texto)
+    return Response(content=png, media_type="image/png")
 
 
 @app.get("/api/council/yar-context")

@@ -9,7 +9,7 @@
 Sitio público: https://www.admira.live
 Hub MCP: https://www.admira.live/mcp/
 Manifest máquina: https://www.admira.live/mcp/manifest.json
-Versión: v.04.09.2026.r2.06:44
+Versión: v.04.09.2026.r3.07:16
 Repo: https://github.com/csilvasantin/32.-ConsejoAdmiraNextGame
 
 ## Qué es
@@ -39,20 +39,28 @@ Interacción (rate-limit; las escrituras de tareas requieren credencial del Cons
 Control acotado (gated al operador / red de confianza, no para terceros):
 - POST /api/teamwork/machine-action — acción de lista blanca sobre una máquina (claude-open, claude-quit, claude-restart, refresh-capture).
 
-## MCP remoto por HTTP (para GrokBot y cualquier cliente MCP) — v.04.09.2026.r1.06:12
+## MCP remoto por HTTP (para GrokBot y cualquier cliente MCP) — v.04.09.2026.r5.07:16
 
 Servidor MCP de admira.live con transporte Streamable HTTP (MCP 2025-06-18), sin estado.
 - Endpoint: https://admira-live-mcp.csilvasantin.workers.dev/mcp
-- Autenticación: `Authorization: Bearer <MCP_KEY>` (o `?key=<MCP_KEY>`). Sin clave → 401. La clave la da Carlos.
+- Autenticación: `Authorization: Bearer <clave>` (o `?key=`). Sin clave → 401. La clave la da Carlos.
+  Hay una clave por consejero (secreto MCP_KEYS): de ella sale la identidad. El bot no declara quién es.
 - Salud pública: https://admira-live-mcp.csilvasantin.workers.dev/salud (dice si llega al Consejo y qué secretos tiene)
-- Herramientas: consejo_consejeros · consejo_modelos · consejo_preguntar (mesa: 1 racional + 1 creativo) ·
+- Herramientas del Consejo: consejo_consejeros · consejo_modelos · consejo_preguntar (mesa: 1 racional + 1 creativo) ·
   consejero_preguntar (rol CEO/CTO/COO/CFO/CCO/CDO/CXO/CSO × generación leyendas/coetaneos) ·
   consejo_salud · consejo_bots · flota_estado · consejo_tareas · agora_decir
+- Herramientas Yokup (FLT-1580, carnés WozniakGrokBot · JobsGrokBot · DisneyGrokBot · LucasGrokBot,
+  equipo GrokBot, runtime Grok): yokup_quien_soy · yokup_presencia · yokup_alta · yokup_paso ·
+  yokup_evidencia · yokup_informe · yokup_ventana · yokup_mis_misiones
+- Ritual Yokup (norma 14): yokup_alta (encargo con pasos a) b) c)) → yokup_paso (in_progress / done) →
+  yokup_evidencia (transcripción de sesión → PNG en el Mac Mini → /fleet/progress con
+  evidence_kind=process, capture_surface=agent, capture_context=session_transcript) → yokup_informe
+  (cierre con las tres líneas de la norma 22). Sin evidencia de proceso la misión no cierra.
 - Recurso: admira://consejo/consejeros · Prompt: consejo_brief
 - Por dentro: worker Cloudflare (código en /mcp/server de este repo) que llama a council-api
   (Mac Mini :8420) por el funnel https://macmini.tail48b61c.ts.net/council/api/council/… con
   X-Council-Token = COUNCIL_MACHINE_TOKEN (secreto solo servidor). Cada pregunta gasta presupuesto
-  del Consejo salvo con modelo gratuito.
+  del Consejo salvo con modelo gratuito. Yokup va por https://api.yokup.com (nunca workers.dev).
 - GrokBot (app de escritorio «sand» 0.39.0, SpaceXAI): conectores MCP remotos streamableHttp/sse,
   con cabeceras u OAuth; NO stdio. Se añade con la URL y la cabecera Authorization.
 - El Consejo piensa sobre Grok (FLT-1579, Carlos 4-sep-2026): modelo por defecto grok-4.6 (xAI,
@@ -60,7 +68,7 @@ Servidor MCP de admira.live con transporte Streamable HTTP (MCP 2025-06-18), sin
   (llama-70b, deepseek-r1, gemma-9b) se retiraron. La suscripción Grok Heavy NO da tokens de API:
   lo que la consume es hablar con los bots consejeros dentro de GrokBot.
 - Regla para un bot consejero de GrokBot (Wozniak, Jobs, Disney, Lucas…): tú ya eres la silla y
-  razonas sobre Grok Heavy; responde tú y usa el MCP para datos, acciones o consultar a OTRO
+  razonas sobre Grok Heavy; responde tú y usa el MCP para datos, acciones, Yokup o consultar a OTRO
   consejero. Pedirle tu opinión a otra copia de ti paga una segunda IA por lo que ya sabes.
 
 ## AgoraMatrix MCP (stdio)

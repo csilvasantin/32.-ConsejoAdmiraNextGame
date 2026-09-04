@@ -4,9 +4,11 @@
 # hablar en AgoraMatrix. FLT-1578 · Morfeo · MacMini · 4-sep-2026.
 #
 # Secretos (wrangler secret put):
-#   MCP_KEY               clave que exige el endpoint /mcp (Bearer o ?key=)
-#   COUNCIL_MACHINE_TOKEN token máquina-a-máquina del council-api (X-Council-Token)
-#   AGORA_SYNC_KEY        (opcional) clave del feed de AgoraMatrix en pixer-worker
+#   MCP_KEY                     clave general (Wozniak, la primera que Carlos dio)
+#   MCP_KEYS                    JSON {"<clave>":{"persona":"Jobs|Disney|Lucas|Wozniak"},…}
+#   COUNCIL_MACHINE_TOKEN       token máquina-a-máquina del council-api (X-Council-Token)
+#   AGORA_SYNC_KEY              (opcional) clave del feed de AgoraMatrix en pixer-worker
+#   ADMIRA_TELEGRAM_PANEL_KEY   alta de encargos y latido de presencia
 name = "admira-live-mcp"
 main = "src/index.js"
 compatibility_date = "2026-08-01"
@@ -36,4 +38,4 @@ YOKUP_API = "https://api.yokup.com"
 ADMIRA_TELEGRAM_URL = "https://admira-telegram.csilvasantin.workers.dev"
 # MCP_KEY (la primera clave, la que ya tiene Wozniak) se mapea a esta persona.
 MCP_KEY_PERSONA = "Wozniak"
-VERSION = "v.04.09.2026.r4.07:10"
+VERSION = "v.04.09.2026.r5.07:16"

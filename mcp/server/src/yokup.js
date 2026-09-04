@@ -86,7 +86,10 @@ export function crearYokup(env = {}, identidad, deps = {}) {
   /** Latido de presencia: es lo que pone al consejero en yokup.com/equipo y da la «vía». */
   async function presencia({ foco = '', tarea = '', proyecto = '' } = {}) {
     const id = exigir();
-    const body = { persona: id.agent, machine: id.machine, runtime: id.runtime, focus: foco, host: 'app', model: id.model };
+    // La presencia se indexa por persona BASE + máquina (yokup.com/mcp). Latir con
+    // apellido (WozniakGrokBot) crea una fila que no lee nadie; el carné completo
+    // va en owner de misiones, no aquí.
+    const body = { persona: id.persona, machine: id.machine, runtime: id.runtime, focus: foco, host: 'app', model: id.model };
     if (tarea) body.task = tarea;
     if (proyecto) body.project = proyecto;
     return llamar(`${telegram}/api/presence`, { ...json(body), headers: { 'content-type': 'application/json', ...panel() } });

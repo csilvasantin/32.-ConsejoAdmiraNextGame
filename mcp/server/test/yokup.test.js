@@ -93,7 +93,7 @@ test('yokup_alta sigue el ritual de alta-mision.sh con la identidad del consejer
   const encargo = peticiones[2].body; assert.deepEqual(encargo, { text: 'Probar el carné de GrokBot en yokup. a) alta b) pasos c) cierre', target_persona: 'Wozniak', target_machine: 'GrokBot', project_id: 'yokup' });
   assert.ok(urls.includes('https://yokup.test/fleet/sync') && urls.includes('https://yokup.test/fleet/plan') && urls.includes('https://yokup.test/projects/mission'));
   const presencia = peticiones.find((p) => p.url.endsWith('/api/presence'));
-  assert.equal(presencia.body.persona, 'WozniakGrokBot'); assert.equal(presencia.body.machine, 'GrokBot'); assert.equal(presencia.body.runtime, 'Grok'); assert.equal(presencia.body.model, 'Grok Heavy');
+  assert.equal(presencia.body.persona, 'Wozniak'); assert.equal(presencia.body.machine, 'GrokBot'); assert.equal(presencia.body.runtime, 'Grok'); assert.equal(presencia.body.model, 'Grok Heavy');
   assert.match(presencia.body.focus, /^misión FLT-1601/);
 });
 

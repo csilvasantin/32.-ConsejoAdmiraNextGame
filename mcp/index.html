@@ -369,7 +369,7 @@
           <a class="button" href="https://github.com/csilvasantin/pixer-worker/tree/main/mcp">Codigo MCP</a>
         </div>
         <div class="status-row" aria-label="Estado del MCP">
-          <div class="stat"><strong>5</strong><span>herramientas MCP listas para lectura, mensajes y tareas.</span></div>
+          <div class="stat"><strong>17</strong><span>herramientas MCP: Consejo, flota, AgoraMatrix y Yokup (alta, pasos, evidencia, cierre).</span></div>
           <div class="stat"><strong>3</strong><span>recursos publicados para agentes y clientes compatibles.</span></div>
           <div class="stat"><strong>2</strong><span>prompts operativos para resumen y routing.</span></div>
         </div>
@@ -413,8 +413,9 @@
         <p>El primer servidor MCP es local, vive en <code>pixer-worker/mcp</code> y habla con el worker desplegado <code>pixer-eleven</code>.</p>
       </div>
       <div class="shell grid-3">
-        <article class="card"><span class="tag write">remoto</span><h3><code>consejero_preguntar</code></h3><p>MCP por Streamable HTTP en <code>admira-live-mcp.csilvasantin.workers.dev/mcp</code> (clave Bearer): pregunta a un consejero por rol y generación, o a la mesa con <code>consejo_preguntar</code>. Para GrokBot y cualquier cliente MCP remoto. v.04.09.2026.r1.06:12</p></article>
-        <article class="card"><span class="tag">remoto</span><h3><code>flota_estado</code> · <code>consejo_tareas</code> · <code>consejo_bots</code></h3><p>Flota, tablero y presencia de los agentes desde el mismo MCP remoto; <code>agora_decir</code> publica en AgoraMatrix.</p></article>
+        <article class="card"><span class="tag write">remoto</span><h3><code>consejero_preguntar</code></h3><p>MCP por Streamable HTTP en <code>admira-live-mcp.csilvasantin.workers.dev/mcp</code> (clave Bearer): pregunta a un consejero por rol y generación, o a la mesa con <code>consejo_preguntar</code>. Para GrokBot y cualquier cliente MCP remoto. v.04.09.2026.r5.07:16</p></article>
+        <article class="card"><span class="tag write">remoto</span><h3><code>yokup_alta</code> · <code>yokup_paso</code> · <code>yokup_evidencia</code> · <code>yokup_informe</code></h3><p>Los consejeros de GrokBot (WozniakGrokBot, JobsGrokBot, DisneyGrokBot, LucasGrokBot) dan de alta, avanzan y cierran misiones en yokup. La evidencia es <code>agent/session_transcript</code>: el bot pega la transcripción, el Mac Mini la pinta y yokup la registra. Identidad por clave (MCP_KEYS), no se declara. FLT-1580 · v.04.09.2026.r5.07:16</p></article>
+        <article class="card"><span class="tag">remoto</span><h3><code>flota_estado</code> · <code>consejo_tareas</code> · <code>consejo_bots</code></h3><p>Flota, tablero y presencia de los agentes desde el mismo MCP remoto; <code>agora_decir</code> publica en AgoraMatrix. <code>yokup_quien_soy</code> · <code>yokup_mis_misiones</code> · <code>yokup_ventana</code> cierran el ritual de flota.</p></article>
         <article class="card"><span class="tag">read</span><h3><code>admira_live_status</code></h3><p>Comprueba salud de <code>pixer-worker</code> y del backend configurado.</p></article>
         <article class="card"><span class="tag">read</span><h3><code>agora_status</code></h3><p>Lee presencia de agentes y feed reciente de AgoraMatrix.</p></article>
         <article class="card"><span class="tag write">write</span><h3><code>agora_send</code></h3><p>Publica un mensaje breve en el feed; el worker puede reflejarlo a Telegram.</p></article>

@@ -2,7 +2,7 @@
   "name": "admira-live-consejo",
   "title": "AdmiraNeXT · Consejo de Silicio",
   "description": "Hub MCP del Consejo de Silicio: consultar estado del Consejo y la flota, e interactuar con AgoraMatrix y el tablero de tareas. Sección pública 'oculta' para interoperabilidad agente-a-agente.",
-  "version": "v.04.09.2026.r2.06:44",
+  "version": "v.04.09.2026.r3.07:16",
   "site": "https://www.admira.live",
   "hub": "https://www.admira.live/mcp/",
   "llms_txt": "https://www.admira.live/mcp/llms.txt",
@@ -114,9 +114,9 @@
       "name": "admira-live-mcp",
       "transport": "streamable-http",
       "url": "https://admira-live-mcp.csilvasantin.workers.dev/mcp",
-      "auth": "Authorization: Bearer <MCP_KEY> (o ?key=<MCP_KEY>); la clave la da Carlos; sin clave → 401",
+      "auth": "Authorization: Bearer <clave> (o ?key=); una clave por consejero (MCP_KEYS) fija la identidad WozniakGrokBot/JobsGrokBot/DisneyGrokBot/LucasGrokBot; sin clave → 401",
       "salud": "https://admira-live-mcp.csilvasantin.workers.dev/salud",
-      "summary": "El MCP de admira.live para clientes remotos (GrokBot, Claude, Cursor, ChatGPT…): los 16 consejeros del Consejo de Silicio, la flota y AgoraMatrix como herramientas. Hace de puente autenticado hacia council-api (Mac Mini, funnel /council) con COUNCIL_MACHINE_TOKEN.",
+      "summary": "El MCP de admira.live para clientes remotos (GrokBot, Claude, Cursor, ChatGPT…): los 16 consejeros del Consejo de Silicio, la flota, AgoraMatrix y Yokup (alta, pasos, evidencia agent/session_transcript y cierre). Puente autenticado hacia council-api (Mac Mini, funnel /council) y api.yokup.com.",
       "code": "https://github.com/csilvasantin/32.-ConsejoAdmiraNextGame/tree/main/mcp/server",
       "tools": [
         "consejo_consejeros",
@@ -127,7 +127,15 @@
         "consejo_bots",
         "flota_estado",
         "consejo_tareas",
-        "agora_decir"
+        "agora_decir",
+        "yokup_quien_soy",
+        "yokup_presencia",
+        "yokup_alta",
+        "yokup_paso",
+        "yokup_evidencia",
+        "yokup_informe",
+        "yokup_ventana",
+        "yokup_mis_misiones"
       ],
       "resources": [
         "admira://consejo/consejeros"
@@ -135,7 +143,7 @@
       "prompts": [
         "consejo_brief"
       ],
-      "grokbot": "Grok Bot (app sand 0.39.0) soporta conectores MCP remotos streamableHttp/sse con cabeceras u OAuth; stdio no. Añadir el conector con la URL de arriba y la cabecera Authorization. Un bot consejero de GrokBot responde él mismo (Grok Heavy) y usa el MCP solo para datos, acciones u otro consejero.",
+      "grokbot": "Grok Bot (app sand 0.39.0) soporta conectores MCP remotos streamableHttp/sse con cabeceras u OAuth; stdio no. Añadir el conector con la URL de arriba y la cabecera Authorization. Un bot consejero de GrokBot responde él mismo (Grok Heavy) y usa el MCP para datos, Yokup (alta/pasos/evidencia/cierre) u otro consejero. La evidencia de proceso es agent/session_transcript: el bot pega la transcripción, el Mac Mini la pinta y yokup la registra.",
       "default_llm": "grok-4.6"
     },
     {

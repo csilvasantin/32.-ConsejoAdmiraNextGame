@@ -43,12 +43,14 @@ export function crearCliente(env = {}, deps = {}) {
   const fleetBase = limpiar(env.FLEET_BASE || 'https://macmini.tail48b61c.ts.net/api');
   const agoraBase = limpiar(env.AGORA_WORKER || 'https://pixer-eleven.csilvasantin.workers.dev');
 
-  async function llamar(url, init = {}, { timeoutMs = 90_000 } = {}) {
+  async function llamar(url, init = {}, { timeoutMs = 90_000, via } = {}) {
     const ctl = new AbortController();
     const t = setTimeout(() => ctl.abort(), timeoutMs);
+    // `via` es un service binding de Cloudflare (tiene .fetch): la petición va por dentro.
+    const enviar = via && typeof via.fetch === 'function' ? (u, i) => via.fetch(u, i) : doFetch;
     let response;
     try {
-      response = await doFetch(url, { ...init, signal: ctl.signal,
+      response = await enviar(url, { ...init, signal: ctl.signal,
         headers: { accept: 'application/json', 'user-agent': 'admira-live-mcp/1.0', ...(init.headers || {}) } });
     } catch (e) {
       throw new Error(`no se pudo llegar a ${url}: ${e && e.message || e}`);
@@ -92,8 +94,12 @@ export function crearCliente(env = {}, deps = {}) {
     agoraDecir: ({ texto, de = 'Consejo · MCP', tipo = 'mcp', url }) => {
       const key = env.AGORA_SYNC_KEY;
       if (!key) throw new Error('falta AGORA_SYNC_KEY en el worker: no se puede escribir en AgoraMatrix');
-      return llamar(`${agoraBase}/agora/feed`, { method: 'POST', headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ key, from: de, text: texto, kind: tipo, url }) });
+      // pixer-eleven es otro worker de la misma cuenta: por URL workers.dev Cloudflare
+      // responde 1042. Con el service binding (env.AGORA) la llamada es interna.
+      const init = { method: 'POST', headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ key, from: de, text: texto, kind: tipo, url }) };
+      if (env.AGORA && typeof env.AGORA.fetch === 'function') return llamar(`${agoraBase}/agora/feed`, init, { via: env.AGORA });
+      return llamar(`${agoraBase}/agora/feed`, init);
     },
   };
 }

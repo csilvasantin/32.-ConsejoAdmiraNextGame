@@ -105,6 +105,20 @@ test('flota, tareas, modelos y AgoraMatrix van a sus bases correctas', async () 
   assert.equal(peticiones[3].body.key, 'agora');
 });
 
+test('agora_decir va por el service binding cuando existe (Cloudflare 1042 entre workers de la misma cuenta)', async () => {
+  const porBinding = [], porRed = [];
+  const env = { ...ENV, AGORA: { fetch: async (url, init) => { porBinding.push({ url: String(url), body: JSON.parse(init.body) }); return new Response(JSON.stringify({ ok: true, via: 'binding' }), { status: 200 }); } } };
+  const { client } = await cliente(env, porRed);
+  const r = await client.callTool({ name: 'agora_decir', arguments: { texto: 'PRUEBA MCP GrokBot 0621 · Wozniak', de: 'Wozniak' } });
+  assert.equal(r.isError, undefined);
+  assert.equal(JSON.parse(r.content[0].text).via, 'binding');
+  assert.equal(porBinding.length, 1);
+  assert.equal(porBinding[0].url, 'https://agora.test/agora/feed');
+  assert.equal(porBinding[0].body.text, 'PRUEBA MCP GrokBot 0621 · Wozniak');
+  assert.equal(porBinding[0].body.key, 'agora');
+  assert.equal(porRed.filter((p) => p.url.includes('/agora/feed')).length, 0, 'sin binding no se llama a la URL pública');
+});
+
 test('resumirRespuesta no rompe con formas desconocidas', () => {
   assert.equal(resumirRespuesta({ otra: 1 }), JSON.stringify({ otra: 1 }, null, 2));
 });

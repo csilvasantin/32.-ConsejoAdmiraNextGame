@@ -13,6 +13,15 @@ compatibility_date = "2026-08-01"
 compatibility_flags = ["nodejs_compat"]
 workers_dev = true
 
+# AgoraMatrix vive en el worker pixer-eleven de ESTA cuenta. Un worker no puede
+# llamar a otro de la misma cuenta por su URL workers.dev (error 1042 de Cloudflare):
+# la primera prueba desde GrokBot cayó justo ahí (4-sep-2026, 06:25). Por eso va por
+# service binding, que es la vía soportada; la URL de AGORA_WORKER queda solo para
+# tests y para correr fuera de Cloudflare.
+[[services]]
+binding = "AGORA"
+service = "pixer-eleven"
+
 [vars]
 # El Consejo (FastAPI, puerto 8420 del Mac Mini) sale por el funnel de Tailscale en
 # /council: el prefijo se quita, así que /council/api/council/models → :8420/api/council/models.
@@ -21,4 +30,4 @@ COUNCIL_BASE = "https://macmini.tail48b61c.ts.net/council"
 FLEET_BASE = "https://macmini.tail48b61c.ts.net/api"
 AGORA_WORKER = "https://pixer-eleven.csilvasantin.workers.dev"
 SITIO = "https://www.admira.live"
-VERSION = "v.04.09.2026.r1.06:20"
+VERSION = "v.04.09.2026.r2.06:27"

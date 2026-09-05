@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r3.07:44" />
+<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r2.07:53" />
     <script src="/admira-bar.js?v=20260713-r36"></script>
     <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
 <meta charset="UTF-8">
@@ -640,6 +640,8 @@
       <div id="dsPicker" class="ds-picker" hidden></div>
       <span id="dsPfSummary">preflight pendiente</span>
       <button id="fleetScreens" title="Apagar o encender la pantalla de TODA la flota online (toggle)">🌙 Apagar todas</button>
+      <button id="fleetPowerOff" title="Dormir TODOS los equipos online (vuelven con ⚡ Encender todos por Wake-on-LAN)">⏾ Dormir todos</button>
+      <button id="fleetPowerOn" title="Encender/despertar TODOS los equipos del censo: los que responden despiertan la pantalla; los dormidos reciben Wake-on-LAN desde un vecino">⚡ Encender todos</button>
       <button id="ssToggle" title="Activar o quitar el salvapantallas en TODA la flota online (toggle)">🖼️ Salva ON</button>
       <button id="ssPickTgl" class="ds-pick-tgl" title="Elegir a qué equipos afecta el salvapantallas" aria-expanded="false">▸ elegir equipos</button>
       <div id="ssPicker" class="ds-picker" hidden></div>
@@ -1650,6 +1652,9 @@ function renderCards(ms){
         <button data-a="sysinfo" data-m="${m.id}">🩺 info</button>
         <button data-a="volume" data-m="${m.id}">🔊 volumen</button>
         <button data-a="displaytoggle" data-m="${m.id}" class="tgl ${screenIsOff(m.id)?'off':'on'}" title="${screenIsOff(m.id)?'Encender la pantalla (despierta el display dormido)':'Apagar la pantalla (duerme el display)'}">${screenIsOff(m.id)?'☀️ encender':'😴 apagar'}</button>
+        <button data-a="powersleep" data-m="${m.id}" title="Dormir el equipo (vuelve con ⚡ encender por Wake-on-LAN desde un vecino de su red)">⏾ dormir</button>
+        <button data-a="powershutdown" data-m="${m.id}" class="danger" title="Apagar el equipo de verdad (sudo sin contraseña). Un Mac apagado se enciende con el botón físico salvo que su firmware admita WoL">⏻ apagar</button>
+        <button data-a="powerwake" data-m="${m.id}" title="Encender/despertar el equipo: si responde, despierta la pantalla; si no, Wake-on-LAN desde un vecino de su misma red">⚡ encender</button>
         <button data-a="say" data-m="${m.id}">🗣️ decir</button>
         <button data-a="notify" data-m="${m.id}">🔔 avisar</button>
         <button data-a="msg" data-m="${m.id}" title="Enviar un mensaje/encargo al agente de este equipo (por el router de encargos AdmiraNeXT — con ACK y traza en Telegram)">💬 mensaje</button>
@@ -1840,6 +1845,22 @@ $('#cards').addEventListener('click', async e=>{
     try{ await navigator.clipboard.writeText(cmd); pushResult(machine,'🔌 ssh',{rc:0,stdout:'Comando copiado al portapapeles:\n  '+cmd+'\nPégalo en tu Terminal para una sesión real.',ms:0}); }
     catch(_){ prompt('Copia este comando para conectar por SSH:', cmd); }
     return;
+  }
+  // energía del equipo (Carlos, 5-sep-2026): dormir / apagar vía /api/action, encender vía /api/wake.
+  if(action==='powersleep'||action==='powershutdown'){
+    const m=MACHINES.find(x=>x.id===machine)||{id:machine};
+    const shut=action==='powershutdown';
+    if(!confirm((shut?'APAGAR':'DORMIR')+' el equipo '+(m.name||machine)+'?'+(shut?'\n\nApagado real: para encenderlo hará falta el botón físico salvo que su firmware admita Wake-on-LAN.':'\n\nVuelve con ⚡ encender (Wake-on-LAN desde un vecino de su red).'))) return;
+    b.disabled=true; const lbl0=b.textContent; b.textContent=(shut?'⏻':'⏾')+' …';
+    try{ const d=await api('/action',{method:'POST',body:JSON.stringify({machine,action:shut?'shutdown':'sleep'})}); pushResult(machine,shut?'⏻ apagar equipo':'⏾ dormir equipo',d); }
+    catch(err){ pushResult(machine,shut?'⏻ apagar equipo':'⏾ dormir equipo',{rc:-1,stdout:'',stderr:err.msg||'error'}); }
+    b.disabled=false; b.textContent=lbl0; return;
+  }
+  if(action==='powerwake'){
+    b.disabled=true; const lbl0=b.textContent; b.textContent='⚡ …';
+    try{ const d=await api('/wake',{method:'POST',body:JSON.stringify({machine})}); pushResult(machine,'⚡ encender equipo',{rc:d.ok?0:1,stdout:(d.pasos||[]).map(x=>typeof x==='string'?x:JSON.stringify(x)).join('\n')||JSON.stringify(d),stderr:d.ok?'':(d.error||'')}); }
+    catch(err){ pushResult(machine,'⚡ encender equipo',{rc:-1,stdout:'',stderr:err.msg||'error'}); }
+    b.disabled=false; b.textContent=lbl0; return;
   }
   // pantalla: toggle apagar/encender por máquina, vía /api/action (platform-aware:
   // macOS pmset/caffeinate · Linux xset/sway). El backend elige el comando según SO.
@@ -2662,6 +2683,30 @@ function renderFleetScreens(){
   };
 })();
 
+
+/* ---------- energía de la flota: dormir todos / encender todos (Carlos, 5-sep-2026) ---------- */
+(function(){
+  const off=$('#fleetPowerOff'), on=$('#fleetPowerOn');
+  if(off) off.onclick=async()=>{
+    const targets=MACHINES.filter(m=>m.online);
+    if(!targets.length){ pushResult('__all__','⏾ dormir todos',{rc:1,stdout:'',stderr:'no hay máquinas online'}); return; }
+    if(!confirm('DORMIR los '+targets.length+' equipos online?\n\n  '+targets.map(m=>m.name).join(', ')+'\n\nVuelven con ⚡ Encender todos (Wake-on-LAN desde un vecino de su red).')) return;
+    off.disabled=true; let okCount=0;
+    for(let i=0;i<targets.length;i++){ const m=targets[i]; off.textContent='⏾ '+(i+1)+'/'+targets.length;
+      try{ const d=await api('/action',{method:'POST',body:JSON.stringify({machine:m.id,action:'sleep'})}); if(d.rc===0) okCount++; pushResult(m.id,'⏾ dormir equipo',d); }
+      catch(err){ pushResult(m.id,'⏾ dormir equipo',{rc:-1,stdout:'',stderr:err.msg||'error'}); } }
+    off.disabled=false; off.textContent='⏾ Dormir todos'; pushResult('__all__','⏾ dormir todos',{rc:okCount?0:1,stdout:okCount+' de '+targets.length+' equipos durmiendo',stderr:''});
+  };
+  if(on) on.onclick=async()=>{
+    const targets=MACHINES.slice();
+    if(!confirm('ENCENDER / despertar los '+targets.length+' equipos del censo?')) return;
+    on.disabled=true; let okCount=0;
+    for(let i=0;i<targets.length;i++){ const m=targets[i]; on.textContent='⚡ '+(i+1)+'/'+targets.length;
+      try{ const d=await api('/wake',{method:'POST',body:JSON.stringify({machine:m.id})}); if(d.ok) okCount++; pushResult(m.id,'⚡ encender equipo',{rc:d.ok?0:1,stdout:(d.pasos||[]).map(x=>typeof x==='string'?x:JSON.stringify(x)).join('\n')||JSON.stringify(d),stderr:d.ok?'':(d.error||'')}); }
+      catch(err){ pushResult(m.id,'⚡ encender equipo',{rc:-1,stdout:'',stderr:err.msg||'error'}); } }
+    on.disabled=false; on.textContent='⚡ Encender todos'; pushResult('__all__','⚡ encender todos',{rc:okCount?0:1,stdout:okCount+' de '+targets.length+' equipos encendidos/despertando',stderr:''});
+  };
+})();
 
 /* ── Selector de equipos REUTILIZABLE (Carlos, 2026-07-21) ──────────────────
    Mismo patrón que el del botón DS, para cualquier acción de flota: plegado por

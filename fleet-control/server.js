@@ -339,6 +339,21 @@ const ACTIONS = {
     macos: () => 'caffeinate -u -t 2; echo "pantalla encendida"',
     linux: () => LGUI + '(xset dpms force on 2>/dev/null; xset s reset 2>/dev/null; echo "pantalla encendida") || (swaymsg "output * dpms on" 2>/dev/null && echo "pantalla encendida (sway)") || echo "no se pudo (sin X11/sway)"'
   },
+  // ENERGÍA DEL EQUIPO (Carlos, 5-sep-2026: «encender y apagar todos los equipos desde
+  // admira.live/control»). `sleep` duerme la máquina (sin sudo; vuelve con /api/wake
+  // por WoL desde un vecino de su LAN). `shutdown` la apaga de verdad: exige sudo sin
+  // contraseña (el Mini lo tiene) y, en un Mac apagado, encender requiere el botón
+  // físico salvo que el firmware admita WoL desde apagado; por eso el panel avisa.
+  sleep: {
+    macos: () => '(sleep 1; pmset sleepnow) >/dev/null 2>&1 & echo "durmiendo el equipo…"',
+    linux: () => '(sleep 1; systemctl suspend 2>/dev/null || sudo -n systemctl suspend 2>/dev/null) >/dev/null 2>&1 & echo "durmiendo el equipo…"',
+    windows: () => 'rundll32.exe powrprof.dll,SetSuspendState 0,1,0 & echo durmiendo el equipo'
+  },
+  shutdown: {
+    macos: () => 'sudo -n true 2>/dev/null && { (sleep 2; sudo -n shutdown -h now) >/dev/null 2>&1 & echo "apagando el equipo…"; } || { echo "apagar requiere sudo sin contraseña en este Mac" >&2; exit 1; }',
+    linux: () => '(sleep 2; systemctl poweroff 2>/dev/null || sudo -n poweroff 2>/dev/null) >/dev/null 2>&1 & echo "apagando el equipo…"',
+    windows: () => 'shutdown /s /t 5 & echo apagando el equipo'
+  },
   lock: {
     macos: () => 'pmset displaysleepnow; echo "bloqueado"',
     linux: () => LGUI + '(loginctl lock-session 2>/dev/null || xdg-screensaver lock 2>/dev/null || xset s activate 2>/dev/null) && echo "bloqueado" || echo "no se pudo bloquear"'
@@ -1222,9 +1237,14 @@ const server = http.createServer(async (req, res) => {
       machine.signage = {
         url: String(body.signage.url || ''),
         start: String(body.signage.start || ''),
-        stop: String(body.signage.stop || '')
+        stop: String(body.signage.stop || ''),
+        circuit: String(body.signage.circuit || '').slice(0, 60),
+        tag: String(body.signage.tag || '').slice(0, 60)
       };
     }
+    // screen del player (si difiere del id de flota): el preflight lo cruza con lo que
+    // el player tiene configurado, así el Mini (admiranext-mupi) deja de salir bloqueado.
+    if (body.screen !== undefined) machine.screen = String(body.screen || '').trim().toLowerCase().replace(/[^a-z0-9_-]+/g, '-').slice(0, 80);
     // Red local (mejora 2, decisión 0148): { lan, lanIp, mac, wol } para despertar desde un vecino.
     if (body.net && typeof body.net === 'object') {
       machine.net = {

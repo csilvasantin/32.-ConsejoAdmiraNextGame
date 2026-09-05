@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r10.12:11" />
+<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r11.12:16" />
     <script src="/admira-bar.js?v=20260713-r36"></script>
     <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
 <meta charset="UTF-8">
@@ -263,6 +263,8 @@
   .card .mando-slots{display:none;flex-direction:column;gap:2px;margin-top:3px;white-space:normal}
   .card .mando.abierto .mando-slots{display:flex}
   .card .mando-caret{display:inline-block;width:9px;color:var(--mut,#75aab9)}
+  .card .mando-extra{display:none}
+  .card .mando.abierto + .mando-extra, .card .mando-extra.siempre{display:block}
   .card .info.vacia{display:none}
   /* Dos filas, APP y CLI: la etiqueta de la fila dice la superficie una vez; las fichas van
      pegadas y envuelven si no caben. Compacto: es la lista de a quién puedes mandar, no un panel. */
@@ -1724,10 +1726,12 @@ function renderCards(ms){
         <span class="drag-handle" draggable="true" data-drag="${m.id}" title="Arrastra para reordenar">⠿</span>
       </div>
       ${mandoHtml(m)}
+      <!-- «control · ver + tocar» y «probar» son diagnóstico del mando (Carlos, 5-sep-2026, FLT-1827):
+           van dentro del pliegue del mando. Sin mando (sin watcher) se ven siempre: ahí dicen qué falta. -->
+      <div class="mando-extra${(MANDO_BY_MACHINE[_norm(m.name||m.id)]&&MANDO_BY_MACHINE[_norm(m.name||m.id)].slots.length)?'':' siempre'}">${controlReadyHtml(m)}</div>
       <div class="info${m.online?'':' offinfo'}${m.online&&infoRedundante(m)?' vacia':''}">${m.online
         ?(infoRedundante(m)?'':(m.info||'').replace(/</g,'&lt;'))
         :('💤 ssh '+((m.user||'csilvasantin')+'@'+(m.host||'?'))+'\n↳ '+((m.info||'sin respuesta').replace(/</g,'&lt;')))}</div>
-      ${controlReadyHtml(m)}
       ${dsPreflightHtml(m)}
       <div class="shot" data-m="${m.id}"><img alt="captura ${m.name}"><span class="shotage" data-age="${m.id}"></span></div>
       <div class="acts" ${m.online?'':'style="opacity:.4;pointer-events:none"'}>

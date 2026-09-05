@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r6.10:36" />
+<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r7.11:04" />
     <script src="/admira-bar.js?v=20260713-r36"></script>
     <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
 <meta charset="UTF-8">
@@ -324,6 +324,11 @@
   .dsflight .dsf-reason{color:var(--bad);margin-top:4px}.dsflight .dsf-warn{color:var(--warn);margin-top:3px}
   /* tarjeta OFFLINE/BLOQUEADA compacta: badge + UNA causa raíz + desplegable de detalle (plegado por defecto). Nada de ladrillos repetidos a la vista. */
   .dsflight.compact{padding:6px 9px}
+  .dsflight.plegable{padding:5px 9px}
+  .dsflight.plegable>details>summary{color:var(--mut);font-weight:600;font-size:10.5px}
+  .dsflight.plegable>details>summary b{color:var(--ink)}
+  .dsflight.plegable .dsf-body{margin-top:6px}
+  .card .mando{cursor:pointer}
   .dsflight .dsf-cause{color:var(--bad);font-weight:700;margin-top:2px}
   .dsflight .dsf-more{margin-top:5px}
   .dsflight .dsf-more>summary{cursor:pointer;color:var(--mut);list-style:none;user-select:none;font-weight:700;font-size:10px}
@@ -908,6 +913,11 @@ function controlReadyHtml(m){
     +'<span class="pill '+cls+'">'+ico+' control'+(v?'':' ?')+'</span><span class="why">'+why+(v?' <small>'+haceTexto(Date.now()-(v.at||0))+'</small>':'')+'</span>'
     +(m.online?'<button type="button" class="pill vigia-probar" data-vigia="'+m.id+'" title="Probar ahora ver + tocar (y reparar si hace falta)">🔎 probar</button>':'')+'</div>';
 }
+document.addEventListener('click', (ev)=>{
+  // FLT-1827: la cabecera «🎛 mando» de la tarjeta despliega lo que hay debajo (señalización).
+  const h=ev.target.closest && ev.target.closest('.card .mando'); if(!h||ev.target.closest('button')) return;
+  const card=h.closest('.card'); const det=card&&card.querySelector('.dsflight.plegable details'); if(det) det.open=!det.open;
+});
 document.addEventListener('click', async (ev)=>{
   const w=ev.target.closest && ev.target.closest('.wake-btn'); if(!w) return;
   const id=w.getAttribute('data-wake'); w.disabled=true; const l=w.textContent; w.textContent='⏰ despertando…';
@@ -1531,7 +1541,16 @@ function dsPreflightHtml(m){
       +'<details class="dsf-more"><summary>detalle</summary><div class="dsf-body">'+head+body+'</div></details>'
       +'</div>';
   }
-  return '<div class="dsflight '+cls+'" data-dsflight="'+dsEsc(m.id)+'">'+head+body+'</div>';
+  // PLEGADA POR DEFECTO (Carlos, 5-sep-2026, FLT-1827): «lo de debajo del mando solo tiene que
+  // aparecer si pulsamos en el mando». Una sola línea legible —qué pantalla, estado del player en
+  // palabras— y el diagnóstico completo dentro, que se abre al pulsar aquí o en la cabecera del mando.
+  const hb=(p.live&&Number.isFinite(Number(p.live.age_seconds)))?Number(p.live.age_seconds):null;
+  const playerTxt=state==='live'?'emitiendo':(hb==null?'player sin señal':(hb>60?('player sin señal desde hace '+(hb<3600?Math.round(hb/60)+' min':Math.round(hb/3600)+' h')):'player en línea'));
+  const ico=state==='live'?'📡':(/^(offline|blocked)$/.test(state)?'⛔':'📺');
+  const resumen=ico+' señalización · pantalla <b>'+dsEsc(p.screen&&(p.screen.configured||p.screen.id)||m.id)+'</b>'+(p.circuit?(' · circuito <b>'+dsEsc(p.circuit)+'</b>'):'')+' · '+playerTxt;
+  return '<div class="dsflight '+cls+' plegable" data-dsflight="'+dsEsc(m.id)+'">'
+    +'<details class="dsf-more"><summary title="Detalle del preflight de señalización (también se abre pulsando en 🎛 mando)">'+resumen+'</summary>'
+    +'<div class="dsf-body">'+head+body+'</div></details></div>';
 }
 function updateDsSummary(){
   const all=Object.values(DS_PREFLIGHT), ok=all.filter(x=>x.eligible).length, blocked=all.filter(x=>!x.eligible).length;

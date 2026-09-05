@@ -4,19 +4,22 @@ import { readFileSync } from "node:fs";
 // FLT-1863 (Carlos, 5-sep-2026): por defecto todas las opciones de los equipos remotos salen compactadas.
 const html = readFileSync(new URL("./index.html", import.meta.url), "utf8");
 const trozo = (a, b) => html.slice(html.indexOf(a), html.indexOf(b));
-const fabrica = (stored) => new Function("localStorage",
-  trozo("const COLLAPSE_KEY=", "// Deep-link desde /status") + "\nreturn { isCollapsed, optsLabel, COLLAPSE_KEY };")({
-  getItem(k) { return k === "fleet_card_collapsed_v2" ? stored : null; }, setItem() {} });
+const fabrica = () => new Function(
+  trozo("const EXPANDIDAS=new Set();", "// Deep-link desde /status") + "\nreturn { isCollapsed, optsLabel, toggleCollapse, EXPANDIDAS };")();
 
-test("sin preferencia, y también con la preferencia ANTIGUA expandida, la tarjeta va compacta", () => {
-  assert.equal(fabrica(null).isCollapsed("macmini"), true);
-  // la clave vieja «fleet_card_collapsed» ya no se lee: lo expandido hace semanas vuelve a compacto
-  assert.equal(fabrica(null).isCollapsed("macbookpro16"), true);
+test("al cargar, TODAS las tarjetas van compactas, sin memoria de otras visitas", () => {
+  const f = fabrica();
+  assert.equal(f.isCollapsed("macmini"), true);
+  assert.equal(f.isCollapsed("macbookpro16"), true);
+  assert.doesNotMatch(html, /fleet_card_collapsed/, "nada del despliegue se guarda en localStorage");
 });
 
-test("lo que el usuario expande hoy sí se recuerda", () => {
-  assert.equal(fabrica(JSON.stringify({ macmini: false })).isCollapsed("macmini"), false);
-  assert.equal(fabrica(JSON.stringify({ macmini: false })).isCollapsed("otro"), true);
+test("desplegar es de esta visita: vive en memoria y se pliega otra vez con el mismo botón", () => {
+  const f = fabrica();
+  globalThis.document = { querySelector() { return null; } };
+  f.toggleCollapse("macmini"); assert.equal(f.isCollapsed("macmini"), false);
+  f.toggleCollapse("macmini"); assert.equal(f.isCollapsed("macmini"), true);
+  delete globalThis.document;
 });
 
 test("compacto oculta botones, info y señalización; deja mando, control y captura; y hay un botón «opciones» visible", () => {

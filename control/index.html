@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r14.12:37" />
+<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r15.12:50" />
     <script src="/admira-bar.js?v=20260713-r36"></script>
     <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
 <meta charset="UTF-8">
@@ -1613,20 +1613,18 @@ function paintToggle(id, action, state){
   if(action==='displaytoggle'){ b.textContent=state?'☀️ encender':'😴 apagar'; b.title=state?'Encender la pantalla (despierta el display dormido)':'Apagar la pantalla (duerme el display)'; b.classList.toggle('off',state); b.classList.toggle('on',!state); }
   else if(action==='signagetoggle'){ b.textContent=state?'⏹️ parar':'📺 arrancar DS'; b.title=state?'Parar el player de digital signage':'Lanzar DS solo tras preflight elegible'; b.classList.toggle('on',state); b.classList.toggle('off',!state); b.disabled=!state&&!signageEligible(id); applySignageTitles(); }
 }
-// COMPACTAS POR DEFECTO (Carlos, 5-sep-2026, FLT-1863). Ya lo eran «si no había preferencia»,
-// pero las preferencias antiguas (tarjetas expandidas hace semanas) sobrevivían en localStorage y
-// Carlos veía todo desplegado. Clave nueva → todos vuelven a compacto una vez; lo que expandas a
-// partir de hoy sí se recuerda. Compacto = nombre, en qué anda, mando, pill de control y captura;
-// botones y señalización solo al pulsar «opciones».
-const COLLAPSE_KEY='fleet_card_collapsed_v2';
-function collapsedMap(){ try{ return JSON.parse(localStorage.getItem(COLLAPSE_KEY)||'{}'); }catch(e){ return {}; } }
-function isCollapsed(id){ const c=collapsedMap(); return (id in c)?!!c[id]:true; }
+// COMPACTAS POR DEFECTO, SIEMPRE (Carlos, 5-sep-2026, FLT-1863 y FLT-1827). Al cargar el tablero
+// TODAS las tarjetas salen plegadas: nombre, en qué anda, mando, captura y «opciones». Desplegar una es
+// algo de ESTA visita: se guarda solo en memoria y al recargar vuelve a compacto. Antes se recordaba en
+// localStorage y una tarjeta que abriste una vez seguía abierta días después, que es justo lo que no quería.
+const EXPANDIDAS=new Set();
+function isCollapsed(id){ return !EXPANDIDAS.has(String(id)); }
 function optsLabel(collapsed, n){ return collapsed ? ('▸ opciones'+(n?(' ('+n+')'):'')) : '▴ menos'; }
 function toggleCollapse(id){
-  const c=collapsedMap(); c[id]=!isCollapsed(id); try{ localStorage.setItem(COLLAPSE_KEY, JSON.stringify(c)); }catch(e){}
+  id=String(id); if(EXPANDIDAS.has(id)) EXPANDIDAS.delete(id); else EXPANDIDAS.add(id);
   const card=document.querySelector('.card[data-card="'+id+'"]'); if(!card) return;
-  card.classList.toggle('collapsed', !!c[id]);
-  const o=card.querySelector('.card-opts'); if(o) o.textContent=optsLabel(!!c[id], card.querySelectorAll('.acts button').length);
+  card.classList.toggle('collapsed', isCollapsed(id));
+  const o=card.querySelector('.card-opts'); if(o) o.textContent=optsLabel(isCollapsed(id), card.querySelectorAll('.acts button').length);
 }
 
 // Deep-link desde /status (Carlos 2026-07-11): /control/?equipo=<nombre> localiza la
@@ -2991,10 +2989,10 @@ function closeWall(){ const w=$('#wall'); if(w) w.style.display='none'; if(_wall
 
 /* ---------- despejar tablero: colapsar/expandir todas ---------- */
 function collapseAllToggle(){
-  const ids=MACHINES.map(m=>m.id), c=collapsedMap();
-  const anyExpanded=ids.some(id=>!c[id]);   // si hay alguna expandida → colapsa todas; si no → expande
-  ids.forEach(id=>{ c[id]=anyExpanded; });
-  localStorage.setItem('fleet_card_collapsed', JSON.stringify(c)); renderCards(MACHINES);
+  const ids=MACHINES.map(m=>String(m.id));
+  const anyExpanded=ids.some(id=>EXPANDIDAS.has(id));   // si hay alguna expandida → colapsa todas; si no → expande
+  EXPANDIDAS.clear(); if(!anyExpanded) ids.forEach(id=>EXPANDIDAS.add(id));
+  renderCards(MACHINES);
 }
 
 /* ---------- wiring de los controles de la barra ---------- */

@@ -3,7 +3,8 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 // FLT-1827 (Carlos, 5-sep-2026): lo binario es UN botón que cambia con el estado.
 const html = readFileSync(new URL("./index.html", import.meta.url), "utf8");
-const tarjeta = html.slice(html.indexOf('<div class="acts"'), html.indexOf("</div>", html.indexOf('data-a="signagetoggle"')));
+const ini = html.indexOf('<div class="acts"');
+const tarjeta = html.slice(ini, html.indexOf("</div>", html.indexOf("data-term=", ini)));
 
 test("energía: un solo botón que apaga si está encendido y enciende si no; dormir solo encendido", () => {
   assert.match(tarjeta, /data-a="powertoggle"/);

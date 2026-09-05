@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r17.14:02" />
+<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r18.14:08" />
     <script src="/admira-bar.js?v=20260713-r36"></script>
     <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
 <meta charset="UTF-8">
@@ -751,7 +751,7 @@
         <button class="primary" id="csRun">▶ ejecutar</button>
         <button id="csClear">limpiar</button>
       </div>
-      <div class="note">El comando se ejecuta de verdad en la máquina elegida (MacMini local · resto por SSH). Acceso por tu login de Google. <span style="opacity:.55">· 💬 mensajería a equipos v.2026.07.08.r1 · 📋 tareas v.2026.07.16.r2 (visor yokup)</span></div>
+      <div class="note">El comando se ejecuta de verdad en la máquina elegida (MacMini local · resto por SSH). Acceso por tu login de Google. <span style="opacity:.55">· 💬 mensajería a equipos · 📋 tareas (visor yokup) · <span id="pageStamp" title="Sello único de la página (normativa 07): mensajería, tareas y fichas salen juntas en cada release"></span></span></div>
       <div class="out" id="out"><div class="empty">Sin resultados todavía.</div></div>
     </div>
   </footer>
@@ -2339,6 +2339,7 @@ function openTareas(){
 function closeTareas(){ $('#tareas').classList.remove('show'); if(_tareasTimer){ clearInterval(_tareasTimer); _tareasTimer=null; } }
 // Wiring: botón de la barra, cierre, refresco, ➕ encargo (tarjeta y kanban) → modal existente.
 (function(){
+  const ps=$('#pageStamp'), mt=document.querySelector('meta[name="admiranext-version"]'); if(ps&&mt) ps.textContent=(mt.getAttribute('content')||'').replace(/^AdmiraNeXT\s*/,'');
   const ob=$('#tareasOpen'); if(ob) ob.onclick=openTareas;
   const cb=$('#tareasClose'); if(cb) cb.onclick=closeTareas;
   const rb=$('#tareasRefresh'); if(rb) rb.onclick=()=>{ loadPersonas().then(refreshTareas).catch(()=>refreshTareas()); };

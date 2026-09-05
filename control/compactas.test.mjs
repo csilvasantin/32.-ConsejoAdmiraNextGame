@@ -56,3 +56,9 @@ test('FLT-1903: todas las fichas iguales — sin bloque MISIONES exclusivo de lo
   const body = html.slice(i, j);
   assert.doesNotMatch(body, /macbookair|isAir|macmini|macbookpro/i, 'la plantilla de la ficha no distingue máquinas');
 });
+
+test('normativa 07: el pie no lleva sellos viejos por módulo; muestra el sello único de la página', () => {
+  const visible = html.replace(/<!--[\s\S]*?-->/g, '');   // el historial en comentarios conserva su fecha (normativa 07)
+  assert.doesNotMatch(visible, /v\.2026\.\d\d\.\d\d\.r\d/, 'sello con el año delante (formato retirado) a la vista');
+  assert.match(html, /id="pageStamp"/);
+});

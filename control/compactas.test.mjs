@@ -34,3 +34,10 @@ test("«control · ver + tocar» y «probar» viven dentro del pliegue del mando
   const acts = html.indexOf('<div class="acts"'); const pf = html.indexOf("${dsPreflightHtml(m)}");
   assert.ok(pf < acts && html.slice(pf - 40, pf).indexOf("controlReadyHtml") === -1, "ya no va suelto antes de la señalización");
 });
+
+test("por defecto solo se pintan los encendidos; los apagados van en un pie con sus nombres", () => {
+  assert.match(html, /let HIDE_OFF=\(localStorage\.getItem\('fleet_hideoff'\)===null\)\?true:/);
+  assert.match(html, /const fuera=HIDE_OFF\?ms\.filter\(m=>!m\.online\):\[\];/);
+  assert.match(html, /el\.innerHTML\+=pieFuera;/);
+  assert.match(html, /🟢 solo encendidos/);
+});

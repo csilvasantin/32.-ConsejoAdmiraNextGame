@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r13.12:26" />
+<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r14.12:37" />
     <script src="/admira-bar.js?v=20260713-r36"></script>
     <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
 <meta charset="UTF-8">
@@ -200,6 +200,7 @@
   .card.collapsed .info,.card.collapsed .acts,.card.collapsed .dsflight{display:none}
   .card .card-opts{align-self:flex-start;margin-top:2px;font:600 11px/1 var(--mono);color:var(--mut);background:transparent;border:1px solid var(--line);border-radius:999px;padding:4px 10px;cursor:pointer}
   .card .card-opts:hover{color:var(--ink);border-color:var(--acc,#f7c95d)}
+  .empty.fuera{font-size:11px;opacity:.7;text-align:left;padding:8px 12px}
   .card.dragging{opacity:.4}
   .card.drop-target{box-shadow:0 0 0 2px var(--acc2) inset;border-color:var(--acc2)}
   /* deep-link desde /status (?equipo=): tarjeta seleccionada, resaltada unos segundos */
@@ -681,7 +682,7 @@
       <button id="msgAll" title="Enviar un mensaje/encargo a TODOS los equipos vivos (broadcast por el router de encargos AdmiraNeXT — con ACK y traza en Telegram)">📣 Mensaje a todos</button>
       <button id="tareasOpen" title="Tablero TAREAS — VISOR de las misiones FLT de yokup por máquina (toda la flota): presencia + misiones + enlace a yokup">📋 Tablero TAREAS</button>
       <label title="Beep cuando un equipo se cae o su captura empieza a fallar"><input type="checkbox" id="sndToggle"> 🔔 sonido</label>
-      <label title="No mostrar los equipos desconectados"><input type="checkbox" id="hideOff"> 🙈 ocultar offline</label>
+      <label title="Mostrar solo los equipos encendidos (los apagados se listan al pie)"><input type="checkbox" id="hideOff"> 🟢 solo encendidos</label>
       <button id="collapseAll" title="Colapsar o expandir todas las tarjetas">⊟ colapsar todas</button>
       <span class="caphealth" id="capHealth"></span>
       <button id="fixAll" style="display:none" title="Enviar el arreglo de captura por SSH a todos los equipos que fallan">🛡️ arreglar todas</button>
@@ -874,7 +875,9 @@ function marcarDescargando(id, on){
   box.classList.toggle('loading', !!on);
   if(on) box.style.display='block';
 }
-let HIDE_OFF=(localStorage.getItem('fleet_hideoff')==='1');
+// SOLO LOS ENCENDIDOS POR DEFECTO (Carlos, 5-sep-2026, FLT-1827): con 4 de 17 online, el tablero
+// enseña los 4; los apagados se ven desmarcando «solo encendidos». Si el usuario ya eligió, se respeta.
+let HIDE_OFF=(localStorage.getItem('fleet_hideoff')===null)?true:(localStorage.getItem('fleet_hideoff')==='1');
 function machName(id){ const m=MACHINES.find(x=>x.id===id); return m?(m.name||id):id; }
 function setCapFail(id, failed){
   const prev=CAP_FAIL[id]; CAP_FAIL[id]=!!failed;
@@ -1723,8 +1726,11 @@ function renderCards(ms){
   let list=sortByOrder(ms);
   if(HIDE_OFF) list=list.filter(m=>m.online);
   list=list.slice().sort((a,b)=>(a.online?0:1)-(b.online?0:1));
-  if(!list.length){ el.innerHTML='<div class="empty" style="grid-column:1/-1">Sin equipos online (desmarca «ocultar offline» para verlos).</div>'; return; }
+  if(!list.length){ el.innerHTML='<div class="empty" style="grid-column:1/-1">Ningún equipo encendido de '+ms.length+' (desmarca «solo encendidos» para ver los apagados).</div>'; return; }
+  // Un pie discreto con los apagados que no se pintan: cuántos y quiénes, para no perderlos de vista.
+  const fuera=HIDE_OFF?ms.filter(m=>!m.online):[];
   // Franja(s) agregada(s) encima de la parrilla: ≥3 equipos caídos con la misma causa raíz.
+  const pieFuera=fuera.length?('<div class="empty fuera" style="grid-column:1/-1" title="Desmarca «solo encendidos» para verlos">💤 '+fuera.length+' apagados: '+fuera.map(m=>m.name).join(' · ')+'</div>'):'';
   el.innerHTML=dsBands(list)+list.map(m=>`
     <div class="card${isCollapsed(m.id)?' collapsed':''}" data-card="${m.id}">
       <div class="top">
@@ -1773,6 +1779,7 @@ function renderCards(ms){
       <button type="button" class="card-opts" data-fold="${m.id}" title="Mostrar u ocultar los botones de acción y la señalización de este equipo">${optsLabel(isCollapsed(m.id), 0)}</button>
       <div class="capwarn" data-capwarn="${m.id}">⚠️ sin permiso de captura <button data-fix="${m.id}" title="Abrir el panel de Grabación de pantalla en ese Mac, avisar al usuario y reactivar el agente">🛡️ enviar arreglo por SSH</button></div>
     </div>`).join('');
+  el.innerHTML+=pieFuera;
   // etiqueta «opciones (N)» con el número real de botones de cada tarjeta
   document.querySelectorAll('.card').forEach(card=>{ const o=card.querySelector('.card-opts'); if(o) o.textContent=optsLabel(card.classList.contains('collapsed'), card.querySelectorAll('.acts button').length); });
   // restaura miniaturas

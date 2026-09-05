@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r5.10:16" />
+<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r6.10:36" />
     <script src="/admira-bar.js?v=20260713-r36"></script>
     <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
 <meta charset="UTF-8">
@@ -248,6 +248,8 @@
      sin ellas, en apagado — porque «no se puede remotar» no es un error del equipo, es
      que le falta el watcher. Y `stale` avisa de un watcher que ya no responde: las
      ranuras que declaró siguen ahí escritas, pero ya no las recoge nadie. */
+  .dsflight.human{border-color:rgba(117,170,185,.35);color:var(--mut,#75aab9);background:rgba(117,170,185,.06)}
+  .dsflight.human .dsf-title{color:var(--mut,#75aab9)}
   /* A TODO EL ANCHO de la tarjeta (FLT-1827): dentro de la columna de la cabecera cada
      ficha caía en su propia línea. Aquí caben tres o cuatro por fila. */
   .card .mando{font-size:11px;line-height:1.35;margin:4px 0 2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:var(--ok,#7fe3a1);opacity:.85}
@@ -1490,6 +1492,14 @@ function dsPreflightHtml(m){
     return '<div class="dsflight wait" data-dsflight="'+dsEsc(m.id)+'"><div class="dsf-title">🧪 preflight pendiente</div><div>Ejecuta la comprobación real antes de arrancar.</div></div>';
   }
   const live=signageIsOn(m.id), dep=p.deployment||{}, state=dep.state||(p.eligible?'ready':'blocked');
+  // EQUIPO HUMANO (FLT-1827): lleva ~/.fleet/no-ds. No es una pantalla bloqueada, es un portátil
+  // con persona: una línea discreta y ninguna alarma roja. Antes el MBP14 salía «⛔ BLOQUEADO».
+  if(state==='human'||p.human){
+    const scr=p.screen&&p.screen.configured&&p.screen.configured!==p.screen.id?(' · player como «'+dsEsc(p.screen.configured)+'»'+(p.circuit?(' en «'+dsEsc(p.circuit)+'»'):'')):'';
+    return '<div class="dsflight human compact" data-dsflight="'+dsEsc(m.id)+'" title="Marca ~/.fleet/no-ds: en este equipo trabaja una persona; el player DOOH no arranca solo.">'
+      +'<div class="dsf-title">👤 equipo humano <span class="dsf-chip">sin señalización automática</span></div>'
+      +'<div class="dsf-cause">Aquí trabaja una persona; no se arranca el player DOOH'+scr+'.</div></div>';
+  }
   const cls=state==='live'?'ok':(/^(offline|blocked)$/.test(state)?'bad':'wait');
   const chips=[
     '<span class="dsf-chip '+(state==='live'?'ok':(/^(offline|blocked|stale)$/.test(state)?'bad':''))+'">estado '+dsEsc(state)+'</span>',

@@ -47,7 +47,7 @@ function preflightCommand(machine) {
       'PLAYER=none; [ -n "$CH" ] && PLAYER=web-browser',
       'EXEC=' + configured,
       '[ "$EXEC" = none ] && systemctl --user cat admira-signage.service >/dev/null 2>&1 && EXEC=systemd-user',
-      'printf "PF_READY=1\\nPF_OS=%s\\nPF_PLAYER=%s\\nPF_VERSION=%s\\nPF_EXECUTOR=%s\\nPF_SCREEN=%s\\nPF_CIRCUIT=%s\\n" "$(uname -sr 2>/dev/null)" "$PLAYER" "$VER" "$EXEC" "$(val ADMIRA_SCREEN)" "$(val ADMIRA_CIRCUIT)"'
+      'printf "PF_READY=1\\nPF_HUMAN=%s\\nPF_OS=%s\\nPF_PLAYER=%s\\nPF_VERSION=%s\\nPF_EXECUTOR=%s\\nPF_SCREEN=%s\\nPF_CIRCUIT=%s\\n" "$([ -f "$HOME/.fleet/no-ds" ] && echo 1 || echo 0)" "$(uname -sr 2>/dev/null)" "$PLAYER" "$VER" "$EXEC" "$(val ADMIRA_SCREEN)" "$(val ADMIRA_CIRCUIT)"'
     ].join('; ');
   }
 
@@ -57,7 +57,7 @@ function preflightCommand(machine) {
     'PLAYER=none; VER=""',
       'if [ -d "$APP" ]; then PLAYER=native; VER="$(defaults read "$APP/Contents/Info" CFBundleShortVersionString 2>/dev/null || true)"; elif [ -x "$CH" ]; then PLAYER=web-browser; VER="$("$CH" --version 2>/dev/null | head -1)"; fi',
     'EXEC=none; { launchctl print "gui/$(id -u)/navegadores.executor" >/dev/null 2>&1 || [ -f "$HOME/Library/LaunchAgents/navegadores.executor.plist" ]; } && EXEC=navegadores',
-    'printf "PF_READY=1\\nPF_OS=%s\\nPF_PLAYER=%s\\nPF_VERSION=%s\\nPF_EXECUTOR=%s\\nPF_SCREEN=%s\\nPF_CIRCUIT=%s\\n" "$(sw_vers -productVersion 2>/dev/null)" "$PLAYER" "$VER" "$EXEC" "$(defaults read tv.admira.signage.mac screen 2>/dev/null || true)" "$(defaults read tv.admira.signage.mac circuit 2>/dev/null || true)"'
+    'printf "PF_READY=1\\nPF_HUMAN=%s\\nPF_OS=%s\\nPF_PLAYER=%s\\nPF_VERSION=%s\\nPF_EXECUTOR=%s\\nPF_SCREEN=%s\\nPF_CIRCUIT=%s\\n" "$([ -f "$HOME/.fleet/no-ds" ] && echo 1 || echo 0)" "$(sw_vers -productVersion 2>/dev/null)" "$PLAYER" "$VER" "$EXEC" "$(defaults read tv.admira.signage.mac screen 2>/dev/null || true)" "$(defaults read tv.admira.signage.mac circuit 2>/dev/null || true)"'
   ].join('; ');
 }
 
@@ -82,11 +82,19 @@ function assessPreflight(machine, runResult, captureResult, live, evidence) {
   const executorInstalled = !!(probe.executor && probe.executor !== 'none');
   const blockers = [];
   const warnings = [];
+  // EQUIPO HUMANO (FLT-1827, Carlos 5-sep-2026). La marca ~/.fleet/no-ds la ponen los guiones
+  // de la flota (proof-of-play.sh) para decir «en este equipo trabaja una persona; no arranca
+  // el player DOOH». El MBP14 la lleva desde el 23-jul y aun así el panel lo pintaba en rojo
+  // «⛔ BLOQUEADO · estado blocked · Screen configurado como neo-lab; unifícalo…», como si
+  // fuera una pantalla averiada. No es un error: es un portátil. Se declara como tal.
+  const human = probe.human === '1';
 
   if (!reachable) blockers.push('Sin acceso remoto real: revisa Tailscale, SSH y la clave del hub.');
-  if (reachable && !playerInstalled && !executorInstalled) blockers.push('Sin player ni executor: instala AdmiraSignage o un navegador kiosk/executor compatible.');
-  if (reachable && !captureReady) blockers.push('Sin captura real: instala el agente y concede permiso de grabación de pantalla/sesión gráfica.');
-  if (configuredScreen && configuredScreen !== screen) blockers.push('Screen configurado como «' + configuredScreen + '»; unifícalo con «' + screen + '».');
+  if (reachable && !human && !playerInstalled && !executorInstalled) blockers.push('Sin player ni executor: instala AdmiraSignage o un navegador kiosk/executor compatible.');
+  if (reachable && !human && !captureReady) blockers.push('Sin captura real: instala el agente y concede permiso de grabación de pantalla/sesión gráfica.');
+  // Un screen distinto del nombre del equipo no es una avería: es cómo se llama esa pantalla en su
+  // circuito (el MBP14 emite como «neo-lab» en «gracia»). Se avisa, no se bloquea.
+  if (configuredScreen && configuredScreen !== screen) warnings.push('Screen «' + configuredScreen + '» (el equipo se llama «' + screen + '»).');
   if (!probe.circuit && !(live && live.circuit)) warnings.push('Sin circuito asignado; emitirá por screen/tag hasta definirlo.');
   const age = live && Number.isFinite(Number(live.age_seconds)) ? Number(live.age_seconds) : null;
   const heartbeatFresh = !!(live && live.online && age != null && age <= 60);
@@ -98,6 +106,7 @@ function assessPreflight(machine, runResult, captureResult, live, evidence) {
   const ack = evidence.commandAck || null;
   let deploymentState = 'ready';
   if (!reachable) deploymentState = 'offline';
+  else if (human) deploymentState = 'human';
   else if (blockers.length) deploymentState = 'blocked';
   else if (live && age != null && age > 60) deploymentState = 'stale';
   else if (heartbeatFresh && proofId && captureReady) deploymentState = 'live';
@@ -115,6 +124,7 @@ function assessPreflight(machine, runResult, captureResult, live, evidence) {
     name: machine.name,
     platform: String(machine.platform || 'macos').toLowerCase(),
     reachable,
+    human,
     player: { installed: playerInstalled, type: probe.player || 'none', version: probe.version || '' },
     executor: { installed: executorInstalled, type: probe.executor || 'none' },
     permissions: { capture: captureReady },

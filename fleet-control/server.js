@@ -259,7 +259,12 @@ function winPS(script) {
 const CONTROL_PROBE_MACOS =
   '[ -f "$HOME/.fleet/fleet-capture.sh" ] && echo __FLEET_CAPTURE__=1 || echo __FLEET_CAPTURE__=0; ' +
   '[ -f "$HOME/.fleet/fleet-input.py" ] && echo __FLEET_INPUT__=1 || echo __FLEET_INPUT__=0; ' +
-  'echo __FLEET_LOCKED__=$(/usr/bin/python3 -c "import Quartz;d=Quartz.CGSessionCopyCurrentDictionary() or {};print(int(bool(d.get(\"CGSSessionScreenIsLocked\",0))))" 2>/dev/null || echo ?); ';
+  // FLT-1827 (5-sep-2026): `echo ?` sin comillas era un GLOB: en el MBP14 casaba con un fichero
+  // «~» de su home y la sonda decía «__FLEET_LOCKED__=~», que el parser no reconocía y el panel
+  // pintaba tal cual. Se cita la interrogación y, si el python del sistema no tiene Quartz
+  // (PyObjC), se cae a ioreg, que sabe si la pantalla está bloqueada sin módulos extra.
+  'echo __FLEET_LOCKED__=$( /usr/bin/python3 -c "import Quartz;d=Quartz.CGSessionCopyCurrentDictionary() or {};print(int(bool(d.get(\"CGSSessionScreenIsLocked\",0))))" 2>/dev/null ' +
+  '|| { ioreg -n Root -d1 -a 2>/dev/null | grep -q "CGSSessionScreenIsLocked" && echo 1 || { ioreg -n Root -d1 2>/dev/null | grep -q IOConsoleUsers && echo 0 || echo "?"; }; } ); ';
 // Linux (4-sep-2026, misión 0052): el inyector es fleet-input-linux.py (xdotool/ydotool) y
 // el bloqueo sale de loginctl (LockedHint); sin sesión gráfica queda «?».
 const CONTROL_PROBE_LINUX =
@@ -273,7 +278,9 @@ const CONTROL_PROBE_WINDOWS =
   'if (Test-Path "$env:USERPROFILE\\.fleet\\fleet-input.ps1") { "__FLEET_INPUT__=1" } else { "__FLEET_INPUT__=0" }; ' +
   '"__FLEET_LOCKED__=?"; ';
 function parseControlSignals(stdout, online) {
-  const pick = (k) => { const mm = String(stdout || '').match(new RegExp('__FLEET_' + k + '__=([01?])')); return mm ? mm[1] : null; };
+  // Cualquier valor que no sea 0/1 es «no se sabe»: antes un marcador raro dejaba el estado
+  // en null Y se colaba en el texto de la tarjeta.
+  const pick = (k) => { const mm = String(stdout || '').match(new RegExp('__FLEET_' + k + '__=(\\S*)')); return mm ? (/^[01]$/.test(mm[1]) ? mm[1] : '?') : null; };
   const tri = (v) => v === '1' ? true : (v === '0' ? false : null);
   const capture = tri(pick('CAPTURE')), input = tri(pick('INPUT')), locked = tri(pick('LOCKED'));
   const ready = !!online && capture === true && input === true && locked === false;
@@ -286,7 +293,7 @@ function parseControlSignals(stdout, online) {
   return { capture, input, locked, ready, why };
 }
 function stripControlMarkers(txt) {
-  return String(txt || '').replace(/^__FLEET_(CAPTURE|INPUT|LOCKED)__=[01?]\s*$/gm, '').trim();
+  return String(txt || '').replace(/^__FLEET_(CAPTURE|INPUT|LOCKED|SIGNAGE)__=\S*\s*$/gm, '').trim();
 }
 
 function statusProbe(m) {

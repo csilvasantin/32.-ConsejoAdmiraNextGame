@@ -80,6 +80,11 @@ Servidor MCP de admira.live con transporte Streamable HTTP (MCP 2025-06-18), sin
 
 ## Hablar con la flota desde el MCP (FLT-2038, v.05.09.2026.r3.20:38)
 
+- REGLA DE CARLOS (5-sep-2026): entre agentes y consejeros, TODA comunicación va por el MCP: es la
+  vía más efectiva (identidad por clave, acuse, estado y respuesta legibles por máquina, sin depender
+  del hilo del móvil). Telegram queda para el humano. Un agente que necesita algo de otro usa
+  agente_encargar y recoge con encargo_estado; no escribe en AgoraMatrix para eso.
+
 - agentes_vivos: agentes con latido en 15 min (persona, equipo, runtime, foco) + los 4 consejeros de GrokBot
   (siempre disponibles por webhook). agente_encargar(persona, texto, maquina?, proyecto_id?, de?): crea el
   encargo en el bot-inbox (bot.yokup.com) para esa persona; agente → su vigilante lo inyecta en su sesión

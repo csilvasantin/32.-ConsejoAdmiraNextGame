@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r7.11:04" />
+<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r8.11:23" />
     <script src="/admira-bar.js?v=20260713-r36"></script>
     <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
 <meta charset="UTF-8">
@@ -1706,19 +1706,19 @@ function renderCards(ms){
         <button data-a="sysinfo" data-m="${m.id}">🩺 info</button>
         <button data-a="volume" data-m="${m.id}">🔊 volumen</button>
         <button data-a="displaytoggle" data-m="${m.id}" class="tgl ${screenIsOff(m.id)?'off':'on'}" title="${screenIsOff(m.id)?'Encender la pantalla (despierta el display dormido)':'Apagar la pantalla (duerme el display)'}">${screenIsOff(m.id)?'☀️ encender':'😴 apagar'}</button>
-        <button data-a="powersleep" data-m="${m.id}" title="Dormir el equipo (vuelve con ⚡ encender por Wake-on-LAN desde un vecino de su red)">⏾ dormir</button>
-        <button data-a="powershutdown" data-m="${m.id}" class="danger" title="Apagar el equipo de verdad (sudo sin contraseña). Un Mac apagado se enciende con el botón físico salvo que su firmware admita WoL">⏻ apagar</button>
-        <button data-a="powerwake" data-m="${m.id}" title="Encender/despertar el equipo: si responde, despierta la pantalla; si no, Wake-on-LAN desde un vecino de su misma red">⚡ encender</button>
-        <button data-a="sudoenergia" data-m="${m.id}" title="Dejar fijado en este Mac el sudo sin contraseña para apagar, reiniciar y dormir: abre allí el diálogo de administrador, se teclea la contraseña una vez y listo">🔐 sudo energía</button>
+        <!-- TOGGLES (Carlos, 5-sep-2026, FLT-1827): lo binario es UN botón que cambia con el estado.
+             Energía: encendido → «⏻ apagar»; apagado → «⚡ encender». Dormir solo tiene sentido encendido. -->
+        <button data-a="powertoggle" data-m="${m.id}" class="tgl ${m.online?'on':'off'}${m.online?' danger':''}" title="${m.online?'Apagar el equipo de verdad (sudo sin contraseña). Vuelve con este mismo botón (⚡ encender) si su firmware admite Wake-on-LAN; si no, con el botón físico.':'Encender/despertar el equipo: si responde, despierta la pantalla; si no, Wake-on-LAN desde un vecino de su misma red'}">${m.online?'⏻ apagar':'⚡ encender'}</button>
+        ${m.online?`<button data-a="powersleep" data-m="${m.id}" title="Dormir el equipo (vuelve con ⚡ encender por Wake-on-LAN desde un vecino de su red)">⏾ dormir</button>`:''}
+        <button data-a="sudoenergia" data-m="${m.id}" title="Dejar fijado en este Mac el sudo sin contraseña para apagar, reiniciar y dormir: abre allí el diálogo de administrador, se teclea una vez y no vuelve a pedirse">🔐 sudo energía</button>
         <button data-a="say" data-m="${m.id}">🗣️ decir</button>
         <button data-a="notify" data-m="${m.id}">🔔 avisar</button>
         <button data-a="msg" data-m="${m.id}" title="Enviar un mensaje/encargo al agente de este equipo (por el router de encargos AdmiraNeXT — con ACK y traza en Telegram)">💬 mensaje</button>
-        <button data-a="open" data-m="${m.id}">📂 abrir app</button>
-        <button data-a="closeapp" data-m="${m.id}">❌ cerrar app</button>
+        <button data-a="apptoggle" data-m="${m.id}" title="Abrir una app (con URL opcional) o cerrarla: escribe «Safari» para abrir, «cerrar Safari» para cerrar">📂 app</button>
         <button data-a="ssh" data-m="${m.id}">🔌 ssh</button>
         <button data-a="signagetoggle" data-m="${m.id}" ${(!signageIsOn(m.id)&&!signageEligible(m.id))?'disabled':''} class="tgl ${signageIsOn(m.id)?'on':'off'}" title="${signageIsOn(m.id)?'Parar el player de digital signage':'Requiere preflight elegible'}">${signageIsOn(m.id)?'⏹️ parar':'📺 arrancar DS'}</button>
         <button data-mando="${m.id}" title="🎛 Mando de EMISIÓN (admira.tv/remotecontrol): volumen +/−, mute, siguiente/anterior, primera/última, playlist y tags en vivo de la pantalla de ESTE equipo — se abre enganchado a su screen." style="border-color:#c9a4ff;color:#c9a4ff;font-weight:700">🎛 mando</button>
-        <button data-a="closechannel" data-m="${m.id}" data-mname="${(m.name||'').replace(/"/g,'')}" title="Cerrar la ventana del canal DS en el Chrome de esta máquina.">⏹ cerrar canal</button>
+        <button data-a="channeltoggle" data-m="${m.id}" data-mname="${(m.name||'').replace(/"/g,'')}" class="tgl ${signageIsOn(m.id)?'on':'off'}" title="${signageIsOn(m.id)?'Cerrar la ventana del canal DS en el Chrome de esta máquina.':'Abrir el canal DS (admira.tv/canal) en el Chrome de esta máquina.'}">${signageIsOn(m.id)?'⏹ cerrar canal':'📺 abrir canal'}</button>
         ${m.online?`<button data-rc="${m.id}" data-rcname="${(m.name||'').replace(/"/g,'')}" title="Control remoto en vivo (ver + ratón + teclado, estilo AnyDesk). Requiere AdmiraRemoteAgent + permisos en la máquina destino." style="border-color:var(--acc);color:var(--acc);font-weight:700">🖥️ control remoto</button>`:''}
         ${m.online?`<button data-term="${m.id}" data-termname="${(m.name||'').replace(/"/g,'')}" title="Terminal interactiva (consola SSH en vivo: cd, htop, vim, logs). Ideal para las máquinas Linux." style="border-color:#5bd6c0;color:#5bd6c0;font-weight:700">🖳 terminal</button>`:''}
       </div>
@@ -1808,7 +1808,8 @@ const NEEDS_ARG={
   say:'¿Qué digo?',
   notify:'Texto del aviso:',
   open:'Aplicación + URL opcional. Si hay URL, el navegador se abre a pantalla completa.\n\nEjemplos:\nFirefox www.marca.com\n"Google Chrome" https://www.admira.live\nSafari',
-  closeapp:'¿Qué app cerrar? (p.ej. Safari)'
+  closeapp:'¿Qué app cerrar? (p.ej. Safari)',
+  apptoggle:'App a abrir, con URL opcional (p.ej. «Firefox www.marca.com»). Para cerrar una: «cerrar Safari».'
 };
 // Comando que oculta TODAS las apps en primer plano → deja el escritorio limpio
 // (se ve el fondo). Verificado en las Air: no requiere permiso extra de Automatización.
@@ -1890,7 +1891,7 @@ $('#cards').addEventListener('click', async e=>{
   // Clic en la insignia de estado del último mensaje → abre el hilo de ese equipo.
   const mbg=e.target.closest('.msgbadge[data-msgbadge]'); if(mbg){ openMsgModal(mbg.dataset.msgbadge); return; }
   const b=e.target.closest('button[data-a]'); if(!b) return;
-  const action=b.dataset.a, machine=b.dataset.m;
+  let action=b.dataset.a; const machine=b.dataset.m;   // let: los toggles (energía, app, canal) resuelven la acción real según el estado (FLT-1827)
   // msg: abre el compositor de mensaje/encargo para el agente de este equipo.
   if(action==='msg'){ openMsgModal(machine); return; }
   // ssh: acción de cliente — copia el comando para conectar de verdad desde tu terminal.
@@ -1902,6 +1903,25 @@ $('#cards').addEventListener('click', async e=>{
     return;
   }
   // energía del equipo (Carlos, 5-sep-2026): dormir / apagar vía /api/action, encender vía /api/wake.
+  // Toggle de energía: encendido → apagar; apagado → encender (FLT-1827).
+  if(action==='powertoggle'){
+    const m0=MACHINES.find(x=>x.id===machine)||{id:machine};
+    action = m0.online ? 'powershutdown' : 'powerwake';
+  }
+  // Toggle de app: «Safari» abre, «cerrar Safari» cierra (FLT-1827).
+  if(action==='apptoggle'){
+    const a=prompt(NEEDS_ARG.apptoggle,''); if(a===null||!a.trim()) return;
+    const mm=a.trim().match(/^(?:cerrar|close|quit)\s+(.+)$/i);
+    if(mm){
+      b.disabled=true; const lbl0=b.textContent; b.textContent='❌ …';
+      try{ const d=await api('/action',{method:'POST',body:JSON.stringify({machine,action:'closeapp',arg:mm[1].trim()})}); pushResult(machine,'❌ cerrar '+mm[1].trim(),d); }
+      catch(err){ pushResult(machine,'❌ cerrar app',{rc:-1,stdout:'',stderr:err.msg||'error'}); }
+      b.disabled=false; b.textContent=lbl0; return;
+    }
+    action='open'; var __appArg=a.trim();
+  }
+  // Toggle de canal DS: emitiendo → cerrar; si no → abrir (FLT-1827).
+  if(action==='channeltoggle'){ action = signageIsOn(machine) ? 'closechannel' : 'openchannel'; }
   if(action==='powersleep'||action==='powershutdown'){
     const m=MACHINES.find(x=>x.id===machine)||{id:machine};
     const shut=action==='powershutdown';
@@ -1986,8 +2006,8 @@ $('#cards').addEventListener('click', async e=>{
     catch(err){ pushResult(machine,'❌ cerrar app',{rc:-1,stdout:'',stderr:err.msg||'error'}); }
     b.disabled=false; b.textContent=lbl0; return;
   }
-  let arg='';
-  if(NEEDS_ARG[action]){
+  let arg=(typeof __appArg==='string')?__appArg:'';
+  if(NEEDS_ARG[action] && !arg){
     arg=prompt(NEEDS_ARG[action], action==='volume'?'50':'');
     if(arg===null) return;
     if(action==='open'&&!arg.trim()){ pushResult(machine,'📂 abrir app',{rc:1,stdout:'',stderr:'indica una aplicación; puedes añadir una URL, p.ej. Firefox www.marca.com'}); return; }

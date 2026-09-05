@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r9.11:45" />
+<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r10.12:11" />
     <script src="/admira-bar.js?v=20260713-r36"></script>
     <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
 <meta charset="UTF-8">
@@ -198,6 +198,8 @@
      nace en display:none y solo la enciende quien tiene imagen que enseñar, así que
      una tarjeta sin captura sigue sin dejar hueco. */
   .card.collapsed .info,.card.collapsed .acts,.card.collapsed .dsflight{display:none}
+  .card .card-opts{align-self:flex-start;margin-top:2px;font:600 11px/1 var(--mono);color:var(--mut);background:transparent;border:1px solid var(--line);border-radius:999px;padding:4px 10px;cursor:pointer}
+  .card .card-opts:hover{color:var(--ink);border-color:var(--acc,#f7c95d)}
   .card.dragging{opacity:.4}
   .card.drop-target{box-shadow:0 0 0 2px var(--acc2) inset;border-color:var(--acc2)}
   /* deep-link desde /status (?equipo=): tarjeta seleccionada, resaltada unos segundos */
@@ -1595,10 +1597,21 @@ function paintToggle(id, action, state){
   if(action==='displaytoggle'){ b.textContent=state?'☀️ encender':'😴 apagar'; b.title=state?'Encender la pantalla (despierta el display dormido)':'Apagar la pantalla (duerme el display)'; b.classList.toggle('off',state); b.classList.toggle('on',!state); }
   else if(action==='signagetoggle'){ b.textContent=state?'⏹️ parar':'📺 arrancar DS'; b.title=state?'Parar el player de digital signage':'Lanzar DS solo tras preflight elegible'; b.classList.toggle('on',state); b.classList.toggle('off',!state); b.disabled=!state&&!signageEligible(id); applySignageTitles(); }
 }
-function collapsedMap(){ try{ return JSON.parse(localStorage.getItem('fleet_card_collapsed')||'{}'); }catch(e){ return {}; } }
-// Colapsado POR DEFECTO: si no hay preferencia guardada para esa tarjeta, va colapsada.
+// COMPACTAS POR DEFECTO (Carlos, 5-sep-2026, FLT-1863). Ya lo eran «si no había preferencia»,
+// pero las preferencias antiguas (tarjetas expandidas hace semanas) sobrevivían en localStorage y
+// Carlos veía todo desplegado. Clave nueva → todos vuelven a compacto una vez; lo que expandas a
+// partir de hoy sí se recuerda. Compacto = nombre, en qué anda, mando, pill de control y captura;
+// botones y señalización solo al pulsar «opciones».
+const COLLAPSE_KEY='fleet_card_collapsed_v2';
+function collapsedMap(){ try{ return JSON.parse(localStorage.getItem(COLLAPSE_KEY)||'{}'); }catch(e){ return {}; } }
 function isCollapsed(id){ const c=collapsedMap(); return (id in c)?!!c[id]:true; }
-function toggleCollapse(id){ const c=collapsedMap(); c[id]=!isCollapsed(id); localStorage.setItem('fleet_card_collapsed', JSON.stringify(c)); const card=document.querySelector('.card[data-card="'+id+'"]'); if(card) card.classList.toggle('collapsed', !!c[id]); }
+function optsLabel(collapsed, n){ return collapsed ? ('▸ opciones'+(n?(' ('+n+')'):'')) : '▴ menos'; }
+function toggleCollapse(id){
+  const c=collapsedMap(); c[id]=!isCollapsed(id); try{ localStorage.setItem(COLLAPSE_KEY, JSON.stringify(c)); }catch(e){}
+  const card=document.querySelector('.card[data-card="'+id+'"]'); if(!card) return;
+  card.classList.toggle('collapsed', !!c[id]);
+  const o=card.querySelector('.card-opts'); if(o) o.textContent=optsLabel(!!c[id], card.querySelectorAll('.acts button').length);
+}
 
 // Deep-link desde /status (Carlos 2026-07-11): /control/?equipo=<nombre> localiza la
 // tarjeta de ese equipo (mismas claves tolerantes que la presencia), la expande,
@@ -1742,8 +1755,11 @@ function renderCards(ms){
         <div class="mq-hd">📋 MISIONES <span class="mq-count" data-mqcount="${m.id}"></span><span class="spacer"></span><a class="mq-add" href="https://www.yokup.com/misiones" target="_blank" rel="noopener" title="Dar de alta una misión en yokup (gestor único) — control ya no crea encargos por su cuenta">➕ misión (yokup)</a></div>
         <div class="mq-list" data-mqlist="${m.id}"><div class="mq-empty">—</div></div>
       </div>`:''}
+      <button type="button" class="card-opts" data-fold="${m.id}" title="Mostrar u ocultar los botones de acción y la señalización de este equipo">${optsLabel(isCollapsed(m.id), 0)}</button>
       <div class="capwarn" data-capwarn="${m.id}">⚠️ sin permiso de captura <button data-fix="${m.id}" title="Abrir el panel de Grabación de pantalla en ese Mac, avisar al usuario y reactivar el agente">🛡️ enviar arreglo por SSH</button></div>
     </div>`).join('');
+  // etiqueta «opciones (N)» con el número real de botones de cada tarjeta
+  document.querySelectorAll('.card').forEach(card=>{ const o=card.querySelector('.card-opts'); if(o) o.textContent=optsLabel(card.classList.contains('collapsed'), card.querySelectorAll('.acts button').length); });
   // restaura miniaturas
   Object.keys(shots).forEach(id=>showShot(id, shots[id]));
   // por defecto: el wallpaper real de cada máquina hasta que se pida captura real
@@ -1871,7 +1887,7 @@ async function navCmd(deviceId, action, url){
 }
 $('#cards').addEventListener('click', async e=>{
   // Comprimir / expandir la tarjeta (chevron).
-  const fold=e.target.closest('.card-fold'); if(fold){ toggleCollapse(fold.dataset.fold); return; }
+  const fold=e.target.closest('.card-fold,.card-opts'); if(fold){ toggleCollapse(fold.dataset.fold); return; }
   // Clic en el ICONO del ordenador: limpia el escritorio y muestra el fondo.
   const icon=e.target.closest('.em[data-icon]');
   if(icon){

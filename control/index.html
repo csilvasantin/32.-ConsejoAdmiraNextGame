@@ -2,7 +2,7 @@
 <!-- control · v2026.07.02c · icono = fondo (personaje) del equipo SIEMPRE, nunca el screenshot en vivo · wallpapers reales subidos por máquina -->
 <!-- control-mensajeria · v.2026.07.08.r1 · 💬 mensaje por equipo + 📣 a todos → router de encargos AdmiraNeXT (ACK + traza Telegram) · auth = gate Google · fix: refresco silencioso de cred + re-login (control remoto) -->
 <!-- control-pantallas · v.2026.07.10.r2 · MUDANZA: la sección «Pantallas · Players» (plano de CONTENIDO: /signage/screens + /signage/now + mando M8 /control/cmd + doble tick) se movió a su PÁGINA PROPIA → /players/. /control queda solo para el plano de MÁQUINAS. -->
-<!-- control-tareas · v.2026.07.16.r2 · VISOR de misiones FLT de yokup por máquina (kanban #tareas-board + mini-cola por tarjeta); fuente /fleet/missions de yokup; ➕ y misiones enlazan a yokup (control NO crea encargos). -->
+<!-- control-tareas · v.05.09.2026.r17 · VISOR de misiones FLT de yokup por máquina (kanban #tareas-board; la mini-cola por tarjeta se retiró en FLT-1903: todas las fichas iguales); fuente /fleet/missions de yokup; ➕ y misiones enlazan a yokup (control NO crea encargos). -->
 <!-- control-open-app · v.2026.07.20.r1 · «abrir app» admite navegador + URL (Firefox www.marca.com); normaliza https y solicita pantalla completa en el equipo remoto. -->
 <!-- control-lanzamiento-ds · v.2026.07.21.r9 · MISIÓN DEL DÍA (FLT-924): a) foto de arranque de todos los equipos conectados al iniciar sesión (una vez por sesión, de 3 en 3); b) el botón DS muestra x/y — cuántos equipos del grupo tienen el player OPERATIVO sobre los conectados; c) versión al pie del menú de opciones (canon cuadrático AdmiraNeXT). -->
 <!-- control-signage · v.2026.07.21.r5 · estado único live/ready/stale/offline/blocked con heartbeat, proof-of-play, captura, versión, contenido y doble acuse. Arranque bloqueado si no es elegible; estado DS nunca sale de localStorage. -->
@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r16.13:49" />
+<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r17.14:02" />
     <script src="/admira-bar.js?v=20260713-r36"></script>
     <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
 <meta charset="UTF-8">
@@ -197,7 +197,7 @@
      completo está a un clic en el ▾. La miniatura no necesita regla propia: .shot
      nace en display:none y solo la enciende quien tiene imagen que enseñar, así que
      una tarjeta sin captura sigue sin dejar hueco. */
-  .card.collapsed .info,.card.collapsed .acts,.card.collapsed .dsflight,.card.collapsed .mqueue{display:none}
+  .card.collapsed .info,.card.collapsed .acts,.card.collapsed .dsflight{display:none}
   .card .card-opts{align-self:flex-start;margin-top:2px;font:600 11px/1 var(--mono);color:var(--mut);background:transparent;border:1px solid var(--line);border-radius:999px;padding:4px 10px;cursor:pointer}
   .card .card-opts:hover{color:var(--ink);border-color:var(--acc,#f7c95d)}
   .empty.fuera{font-size:11px;opacity:.7;text-align:left;padding:8px 12px}
@@ -589,16 +589,6 @@
   .msgfoot a{color:var(--acc2)}
   /* ── TAREAS por máquina (mini-cola en tarjeta + tablero kanban) ──
      Colores de estado: pending ámbar · ack azul · in_progress cian · blocked rojo · done verde. */
-  .mqueue{border-top:1px dashed var(--line);padding-top:9px;display:flex;flex-direction:column;gap:7px}
-  .card.collapsed .mqueue{display:none}
-  .mqueue .mq-hd{display:flex;align-items:center;gap:8px;font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--mut);font-weight:800}
-  .mqueue .mq-hd .mq-count{font-family:var(--mono);color:var(--acc)}
-  .mqueue .mq-hd .spacer{flex:1}
-  .mqueue .mq-add{font:inherit;font-size:11px;border:1px solid var(--acc2);color:var(--acc2);background:transparent;border-radius:8px;padding:3px 9px;cursor:pointer;font-weight:700}
-  .mqueue .mq-add:hover{background:var(--acc2);color:#04120e}
-  .mqueue a.mq-add{text-decoration:none;display:inline-block}
-  .mqueue .mq-list{display:flex;flex-direction:column;gap:5px}
-  .mqueue .mq-empty{font-size:11px;color:var(--mut);font-style:italic}
   .tq-chip{display:flex;align-items:center;gap:7px;font-size:11.5px;border:1px solid var(--line);border-left-width:3px;border-radius:7px;padding:5px 8px;background:rgba(255,255,255,.02)}
   .tq-chip .tq-txt{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--ink)}
   .tq-chip .tq-st{flex:none;font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;opacity:.9}
@@ -1771,10 +1761,6 @@ function renderCards(ms){
         ${m.online?`<button data-rc="${m.id}" data-rcname="${(m.name||'').replace(/"/g,'')}" title="Control remoto en vivo (ver + ratón + teclado, estilo AnyDesk). Requiere AdmiraRemoteAgent + permisos en la máquina destino." style="border-color:var(--acc);color:var(--acc);font-weight:700">🖥️ control remoto</button>`:''}
         ${m.online?`<button data-term="${m.id}" data-termname="${(m.name||'').replace(/"/g,'')}" title="Terminal interactiva (consola SSH en vivo: cd, htop, vim, logs). Ideal para las máquinas Linux." style="border-color:#5bd6c0;color:#5bd6c0;font-weight:700">🖳 terminal</button>`:''}
       </div>
-      ${isAirId(m.id)?`<div class="mqueue" data-mqueue="${m.id}">
-        <div class="mq-hd">📋 MISIONES <span class="mq-count" data-mqcount="${m.id}"></span><span class="spacer"></span><a class="mq-add" href="https://www.yokup.com/misiones" target="_blank" rel="noopener" title="Dar de alta una misión en yokup (gestor único) — control ya no crea encargos por su cuenta">➕ misión (yokup)</a></div>
-        <div class="mq-list" data-mqlist="${m.id}"><div class="mq-empty">—</div></div>
-      </div>`:''}
       <button type="button" class="card-opts" data-fold="${m.id}" title="Mostrar u ocultar los botones de acción y la señalización de este equipo">${optsLabel(isCollapsed(m.id), 0)}</button>
       <div class="capwarn" data-capwarn="${m.id}">⚠️ sin permiso de captura <button data-fix="${m.id}" title="Abrir el panel de Grabación de pantalla en ese Mac, avisar al usuario y reactivar el agente">🛡️ enviar arreglo por SSH</button></div>
     </div>`).join('');
@@ -1791,7 +1777,6 @@ function renderCards(ms){
   paintDsAll();
   paintAllAges(); updateCapHealth();
   try{ paintAllMsgBadges(); }catch(e){}
-  try{ paintAllMiniQueues(); }catch(e){}   // TAREAS por máquina (desde caché; sin refetch en cada render)
 }
 
 // Carga img.src con fallback: si la 1ª URL falla (404), prueba la 2ª; si también
@@ -2221,7 +2206,6 @@ async function sendCurrentMsg(){
     ta.value='';
     toast('up','💬 enviado', MSG_CUR.broadcast?('a todos ('+((MSG_CUR.count)||'')+' equipos)') : ('a '+(MSG_CUR.persona||(MSG_CUR.machine&&MSG_CUR.machine.name)||MSG_CUR.key)));
     renderThread(); paintAllMsgBadges();
-    if(machine && isAirId(machine)){ setTimeout(()=>{ try{ refreshAirQueues(); }catch(e){} }, 2500); } // reflejar el nuevo encargo en la cola
     setTimeout(pollThread, 2500);   // primer refresco de ACK
   }catch(err){ toast('warn','⚠️ error de red', err&&err.message||'sin conexión'); }
   btn.disabled=false; btn.textContent=lbl;
@@ -2255,102 +2239,21 @@ document.addEventListener('keydown',e=>{ if(e.key==='Escape'&&$('#msgModal').cla
 // Poll de estados en segundo plano: refresca insignias y el hilo abierto.
 setInterval(()=>{ try{ paintAllMsgBadges(); if($('#msgModal').classList.contains('show')) pollThread(); }catch(e){} }, 20000);
 
-/* ============================================================
-   TABLERO DE TAREAS por máquina — mini-cola en cada tarjeta Air +
-   vista kanban (Rosa · Azul · Crema · Plata).
-   Datos:
-     · Encargos → GET /api/bot-inbox?machine=<id> (auth = credential del gate,
-       la MISMA que usa la mensajería); si el worker la rechaza, se cae a
-       GET /api/public/inbox?machine=<id> (sin auth). El worker sub-agente está
-       desplegando este contrato AHORA; hasta que exponga `target_machine`, la UI
-       degrada con gracia a «—» (no atribuye encargos sueltos a ninguna máquina).
-     · Presencia → PRESENCE_FULL (mismo /api/presence, casado _norm tolerante).
-   Los 4 ids EXACTOS de flota (fleet.json). La presencia reporta variantes
-   («MacBookAirAzul», «MacBookAir16plata»…): se casan por token de color con _norm.
-   ============================================================ */
-const AIRS=[
-  {id:'macbookairrosa',  label:'Rosa',  em:'🩷', tokens:['macbookairrosa','rosa']},
-  {id:'macbookairazul',  label:'Azul',  em:'🔵', tokens:['macbookairazul','azul']},
-  {id:'macbookaircrema', label:'Crema', em:'🟡', tokens:['macbookaircrema','crema']},
-  {id:'macbookairplata', label:'Plata', em:'⚪', tokens:['macbookairplata','plata','macbookair16plata']},
-];
-const AIR_BY_ID={}; AIRS.forEach(a=>{ AIR_BY_ID[a.id]=a; });
-function isAirId(id){ return !!AIR_BY_ID[_norm(id||'')]; }
-function airOf(id){ return AIR_BY_ID[_norm(id||'')]; }
-// ¿Una clave normalizada (id de flota, target_machine del encargo o máquina de presencia)
-// pertenece a esta Air? Substring en ambas direcciones + tokens de color, con _norm.
-function airMatchKey(air, raw){
-  const k=_norm(raw); if(!k||!air) return false;
-  for(const t of air.tokens){ if(k===t||k.indexOf(t)>=0||t.indexOf(k)===0) return true; }
-  return false;
-}
-// Estados del contrato: pending|ack|in_progress|blocked|done. Orden = activos primero.
-const TASK_ST_ORDER={in_progress:0, blocked:1, ack:2, pending:3, done:4};
-const TASK_ST_LABEL={pending:'pendiente', ack:'ack', in_progress:'en curso', blocked:'bloqueado', done:'hecho'};
-function taskStatus(it){ const s=(it&&it.status||'pending').toLowerCase(); return TASK_ST_ORDER.hasOwnProperty(s)?s:'pending'; }
-function taskText(it){ return String((it&&(it.text||it.body||it.message))||'').replace(/\s+/g,' ').trim(); }
+// ============================================================
+// TAREAS: visor de las MISIONES FLT de yokup por máquina (gestor único).
+// Desde FLT-1903 (5-sep-2026) las fichas de todos los equipos son iguales:
+// ya no hay mini-cola exclusiva de los Air en la tarjeta; la cola vive en el kanban.
+// ============================================================
 function _truncate(s,n){ s=s||''; return s.length>n ? s.slice(0,n-1)+'…' : s; }
-
-// Caché del último inbox bueno por máquina (para re-pintar sin refetch en cada render de 8s).
-let AIR_INBOX={};    // id → array de encargos DIRIGIDOS a esa máquina
-let AIR_INBOX_TS={}; // id → epoch ms de la última lectura buena
-// Lee el inbox de una máquina. Intenta bot-inbox con el credential del gate; si no está
-// autorizado, cae al endpoint público. Devuelve SOLO los encargos con target_machine que
-// case con la máquina (así, mientras el worker no exponga target_machine, la cola queda vacía
-// en vez de mostrar 80 encargos ajenos → degradación con gracia).
-async function fetchMachineInbox(machineId){
-  const air=airOf(machineId); if(!air) return null;
-  const cred=gateCred();
-  const tries=[];
-  if(cred) tries.push({url:MSG_API+'/api/bot-inbox?machine='+encodeURIComponent(air.id), auth:true});
-  tries.push({url:MSG_API+'/api/public/inbox?machine='+encodeURIComponent(air.id), auth:false});
-  for(const t of tries){
-    try{
-      const opts={cache:'no-store'};
-      if(t.auth) opts.headers={'Authorization':'Bearer '+cred};
-      const r=await fetch(t.url+'&_t='+Date.now(), opts);
-      if(!r.ok) continue;
-      const d=await r.json().catch(()=>null);
-      if(!d||d.ok===false||!Array.isArray(d.items)) continue;
-      // Filtra a los encargos DIRIGIDOS a esta máquina (contrato: campo target_machine).
-      const mine=d.items.filter(it=>it && it.target_machine && airMatchKey(air, it.target_machine));
-      return mine;
-    }catch(e){ /* siguiente intento */ }
-  }
-  return null; // sin respuesta usable → degradar
-}
-// Pinta la mini-cola de una tarjeta Air desde las MISIONES FLT de yokup.
-function paintMiniQueue(machineId){
-  const air=airOf(machineId); if(!air) return;
-  const list=document.querySelector('.mq-list[data-mqlist="'+air.id+'"]');
-  const cnt=document.querySelector('.mq-count[data-mqcount="'+air.id+'"]');
-  if(!list) return;
-  const items=(MISSIONS_BY_MACHINE[air.id]||[]).slice()
-    .filter(m=>m.status!=='resolved')
-    .sort((a,b)=>MST_ORDER[missionState(a).k]-MST_ORDER[missionState(b).k]);
-  if(cnt) cnt.textContent=items.length?('· '+items.length):'';
-  if(!MISSIONS_TS){ list.innerHTML='<div class="mq-empty">—</div>'; return; }
-  if(!items.length){ list.innerHTML='<div class="mq-empty">sin misiones activas</div>'; return; }
-  list.innerHTML=items.slice(0,6).map(m=>{ const st=missionState(m);
-    return '<a class="tq-chip st-'+st.k+'" href="'+YOKUP_TICKET+encodeURIComponent(m.id)+'" target="_blank" rel="noopener"><span class="tq-txt">'+_truncate(String(m.subject||'(sin título)'),56).replace(/</g,'&lt;')
-      +'</span><span class="tq-st">'+st.l+'</span></a>'; }).join('');
-}
-function paintAllMiniQueues(){ AIRS.forEach(a=>paintMiniQueue(a.id)); }
-// Refetch de las 4 colas + re-pintado (tarjetas y kanban si está abierto).
-let _airBusy=false;
-async function refreshAirQueues(){
-  if(_airBusy) return; _airBusy=true;
+// Refetch de las misiones + re-pintado del kanban si está abierto.
+let _tareasBusy=false;
+async function refreshTareas(){
+  if(_tareasBusy) return; _tareasBusy=true;
   try{ await loadFleetMissions(); }catch(e){}   // fuente única: misiones FLT de yokup
-  _airBusy=false;
-  try{ paintAllMiniQueues(); }catch(e){}
+  _tareasBusy=false;
   if($('#tareas').classList.contains('show')) renderTareas();
 }
 
-// Presencia (registro completo) de una Air, casada por token con _norm.
-function airPresence(air){
-  for(const k in PRESENCE_FULL){ if(airMatchKey(air,k)) return PRESENCE_FULL[k]; }
-  return null;
-}
 function _agoStr(updatedSec){
   if(!updatedSec) return 'sin latido';
   const s=Math.max(0, Math.round(Date.now()/1000 - updatedSec));
@@ -2390,11 +2293,9 @@ async function loadFleetMissions(){
     MISSIONS_BY_MACHINE=by; MISSIONS_TS=Date.now(); return true;
   }catch(e){ return false; }
 }
-// Columnas = las 4 Airs SIEMPRE + toda máquina con misiones (canon), en orden.
+// Columnas = toda máquina con misiones (canon), en orden; ninguna máquina es especial.
 function tareasCols(){
-  const airIds=AIRS.map(a=>a.id), set=new Set(airIds);
-  Object.keys(MISSIONS_BY_MACHINE).forEach(c=>{ if(c && c!=='_sin') set.add(c); });
-  return [...airIds, ...[...set].filter(c=>!airIds.includes(c)).sort()];
+  return Object.keys(MISSIONS_BY_MACHINE).filter(c=>c && c!=='_sin').sort();
 }
 function presenceFor(canon){ for(const k in PRESENCE_FULL){ if(mqCanon(k)===canon) return PRESENCE_FULL[k]; } return null; }
 
@@ -2431,23 +2332,21 @@ let _tareasTimer=null;
 function openTareas(){
   $('#tareas').classList.add('show');
   renderTareas();
-  refreshAirQueues();
+  refreshTareas();
   if(_tareasTimer) clearInterval(_tareasTimer);
-  _tareasTimer=setInterval(()=>{ try{ loadPersonas().then(()=>{ refreshAirQueues(); }); }catch(e){ refreshAirQueues(); } }, 30000);
+  _tareasTimer=setInterval(()=>{ try{ loadPersonas().then(()=>{ refreshTareas(); }); }catch(e){ refreshTareas(); } }, 30000);
 }
 function closeTareas(){ $('#tareas').classList.remove('show'); if(_tareasTimer){ clearInterval(_tareasTimer); _tareasTimer=null; } }
 // Wiring: botón de la barra, cierre, refresco, ➕ encargo (tarjeta y kanban) → modal existente.
 (function(){
   const ob=$('#tareasOpen'); if(ob) ob.onclick=openTareas;
   const cb=$('#tareasClose'); if(cb) cb.onclick=closeTareas;
-  const rb=$('#tareasRefresh'); if(rb) rb.onclick=()=>{ loadPersonas().then(refreshAirQueues).catch(()=>refreshAirQueues()); };
+  const rb=$('#tareasRefresh'); if(rb) rb.onclick=()=>{ loadPersonas().then(refreshTareas).catch(()=>refreshTareas()); };
   const ov=$('#tareas'); if(ov) ov.addEventListener('click',e=>{ if(e.target===ov) closeTareas(); });
   document.addEventListener('keydown',e=>{ if(e.key==='Escape' && $('#tareas').classList.contains('show')) closeTareas(); });
   // Los ➕ del kanban y de las mini-colas ya NO crean encargos en control: son
   // enlaces (<a>) a yokup.com/misiones (gestor único). No hay wiring a openMsgModal.
 })();
-// Refresco de fondo de las colas (independiente del refresh de 8s de las tarjetas).
-setInterval(()=>{ try{ refreshAirQueues(); }catch(e){} }, 30000);
 
 /* ── reordenar tarjetas por arrastre (asa ⠿) ── */
 let _dragId=null;
@@ -3027,7 +2926,6 @@ function collapseAllToggle(){
   applyAutoCap();
   await refresh();
   autoPreflight();  // preflight AUTOMÁTICO al cargar (solo lectura) para no nacer con «preflight pendiente»
-  try{ refreshAirQueues(); }catch(e){}   // primera carga de las colas TAREAS (Airs)
   setInterval(refresh, 8000);
   setInterval(()=>refreshDsPreflight(), 120000);
   setInterval(paintAllAges, 5000);  // las edades "hace Xs" suben solas y atenúan lo viejo

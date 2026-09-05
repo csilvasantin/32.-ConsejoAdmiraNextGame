@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r8.11:23" />
+<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r9.11:45" />
     <script src="/admira-bar.js?v=20260713-r36"></script>
     <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
 <meta charset="UTF-8">
@@ -258,7 +258,10 @@
   .card .mando .mando-age,.card .mando .mando-fix{opacity:.7;font-size:10.5px;font-variant-numeric:tabular-nums}
   /* Una fila por ranura, con sus dos botones. Envuelve si no cabe: mejor dos líneas
      que una lista cortada donde no se sabe a quién estás parando. */
-  .card .mando-slots{display:flex;flex-direction:column;gap:2px;margin-top:3px;white-space:normal}
+  .card .mando-slots{display:none;flex-direction:column;gap:2px;margin-top:3px;white-space:normal}
+  .card .mando.abierto .mando-slots{display:flex}
+  .card .mando-caret{display:inline-block;width:9px;color:var(--mut,#75aab9)}
+  .card .info.vacia{display:none}
   /* Dos filas, APP y CLI: la etiqueta de la fila dice la superficie una vez; las fichas van
      pegadas y envuelven si no caben. Compacto: es la lista de a quién puedes mandar, no un panel. */
   .card .mando-fila{display:flex;align-items:center;flex-wrap:wrap;gap:2px 3px}
@@ -915,8 +918,10 @@ function controlReadyHtml(m){
 }
 document.addEventListener('click', (ev)=>{
   // FLT-1827: la cabecera «🎛 mando» de la tarjeta despliega lo que hay debajo (señalización).
-  const h=ev.target.closest && ev.target.closest('.card .mando'); if(!h||ev.target.closest('button')) return;
-  const card=h.closest('.card'); const det=card&&card.querySelector('.dsflight.plegable details'); if(det) det.open=!det.open;
+  const h=ev.target.closest && ev.target.closest('.card .mando'); if(!h||ev.target.closest('button')||ev.target.closest('.mando-slots')) return;
+  const k=h.getAttribute("data-mk")||''; const ahora=!h.classList.contains('abierto');
+  h.classList.toggle('abierto',ahora); const c=h.querySelector('.mando-caret'); if(c) c.textContent=ahora?'▾':'▸';
+  try{ localStorage.setItem('mando.abierto.'+k, ahora?'1':'0'); }catch(e){}
 });
 document.addEventListener('click', async (ev)=>{
   const w=ev.target.closest && ev.target.closest('.wake-btn'); if(!w) return;
@@ -1158,9 +1163,12 @@ function mandoHtml(m){
   }).join('');
   const sueltas=g.slots.filter(sl=>!['app','cli'].includes(String(sl.host||'').toLowerCase())).sort(orden);
   const otras=sueltas.length?('<div class="mando-fila"><span class="mando-etq">—</span>'+sueltas.map(ficha).join('')+'</div>'):'';
-  return '<div class="mando'+(viejo?' stale':'')+'" title="Ranuras que este equipo declara gobernables: '
-    + quien.replace(/"/g,'&quot;') + ' — las recoge su watcher de presencia">'
-    + '🎛 mando <b>'+g.slots.length+'</b> <span class="mando-age">· watcher hace '+edad+'</span>'
+  // PLEGADO POR DEFECTO (Carlos, 5-sep-2026): las filas APP/CLI solo se ven al pulsar en la
+  // cabecera «🎛 mando». El estado se recuerda por equipo para que el refresco no lo cierre.
+  let abierto=false; try{ abierto=(typeof localStorage!=='undefined')&&localStorage.getItem('mando.abierto.'+k)==='1'; }catch(e){}
+  return '<div class="mando'+(viejo?' stale':'')+(abierto?' abierto':'')+'" data-mk="'+k+'" title="Ranuras que este equipo declara gobernables: '
+    + quien.replace(/"/g,'&quot;') + ' — las recoge su watcher de presencia. Pulsa para '+(abierto?'plegar':'desplegar')+'">'
+    + '<span class="mando-caret">'+(abierto?'▾':'▸')+'</span> 🎛 mando <b>'+g.slots.length+'</b> <span class="mando-age">· watcher hace '+edad+'</span>'
     + '<div class="mando-slots">'+grupos+otras+'</div></div>';
 }
 
@@ -1659,6 +1667,14 @@ async function loadPlayerVersions(){
 }
 try{ loadPlayerVersions(); setInterval(loadPlayerVersions, 1800000); }catch(e){}
 
+// El nombre del equipo salía DOS veces (Carlos, 5-sep-2026, FLT-1827): en el título y otra vez
+// en la línea de estado, porque la sonda del relay solo devuelve el hostname. Si la línea no dice
+// nada que no diga ya el título, no se pinta.
+function infoRedundante(m){
+  const t=_norm(String(m.info||'').split('\n')[0]);
+  if(!t) return true;
+  return t===_norm(m.name)||t===_norm(m.id)||_norm(m.name).startsWith(t)||t.startsWith(_norm(m.name));
+}
 function renderCards(ms){
   const el=$('#cards');
   if(!ms.length){
@@ -1695,8 +1711,8 @@ function renderCards(ms){
         <span class="drag-handle" draggable="true" data-drag="${m.id}" title="Arrastra para reordenar">⠿</span>
       </div>
       ${mandoHtml(m)}
-      <div class="info${m.online?'':' offinfo'}">${m.online
-        ?(m.info||'').replace(/</g,'&lt;')
+      <div class="info${m.online?'':' offinfo'}${m.online&&infoRedundante(m)?' vacia':''}">${m.online
+        ?(infoRedundante(m)?'':(m.info||'').replace(/</g,'&lt;'))
         :('💤 ssh '+((m.user||'csilvasantin')+'@'+(m.host||'?'))+'\n↳ '+((m.info||'sin respuesta').replace(/</g,'&lt;')))}</div>
       ${controlReadyHtml(m)}
       ${dsPreflightHtml(m)}

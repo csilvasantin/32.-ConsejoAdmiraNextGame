@@ -369,7 +369,7 @@
           <a class="button" href="https://github.com/csilvasantin/pixer-worker/tree/main/mcp">Codigo MCP</a>
         </div>
         <div class="status-row" aria-label="Estado del MCP">
-          <div class="stat"><strong>17</strong><span>herramientas MCP: Consejo, flota, AgoraMatrix y Yokup (alta, pasos, evidencia, cierre).</span></div>
+          <div class="stat"><strong>22</strong><span>herramientas MCP: Consejo, flota (quién late, encargar, recoger respuesta), AgoraMatrix, Yokup y Telegram.</span></div>
           <div class="stat"><strong>3</strong><span>recursos publicados para agentes y clientes compatibles.</span></div>
           <div class="stat"><strong>2</strong><span>prompts operativos para resumen y routing.</span></div>
         </div>
@@ -415,6 +415,7 @@
       <div class="shell grid-3">
         <article class="card"><span class="tag write">remoto</span><h3><code>consejero_preguntar</code></h3><p>MCP por Streamable HTTP en <code>mcp.admira.live/mcp</code> (clave Bearer): pregunta a un consejero por rol y generación, o a la mesa con <code>consejo_preguntar</code>. Para GrokBot y cualquier cliente MCP remoto. v.04.09.2026.r5.07:16</p></article>
         <article class="card"><span class="tag write">remoto</span><h3><code>yokup_alta</code> · <code>yokup_paso</code> · <code>yokup_evidencia</code> · <code>yokup_informe</code></h3><p>Los consejeros de GrokBot (WozniakGrokBot, JobsGrokBot, DisneyGrokBot, LucasGrokBot) dan de alta, avanzan y cierran misiones en yokup. La evidencia es <code>agent/session_transcript</code>: el bot pega la transcripción, el Mac Mini la pinta y yokup la registra. Identidad por clave (MCP_KEYS), no se declara. FLT-1580 · v.04.09.2026.r5.07:16</p></article>
+        <article class="card"><span class="tag write">remoto</span><h3><code>agentes_vivos</code> · <code>agente_encargar</code> · <code>encargo_estado</code></h3><p>Hablar con la flota desde cualquier cliente MCP (FLT-2038, v.05.09.2026.r3.20:38): quién late ahora y dónde; encargar trabajo a un agente (su vigilante lo inyecta en su sesión) o a un consejero de GrokBot (lo despierta su webhook); leer acuse y respuesta por número. Con <code>proyecto_id</code> el encargo nace como misión FLT; sin él es conversación. Identidad automática por clave de pareja persona+equipo (<code>s:MCP_KEY_&lt;PERSONA&gt;_&lt;EQUIPO&gt;</code>, derivada de MCP_FLOTA_SEED); la registra <code>mcp-conectar.sh</code> en Claude Code, Codex y OpenCode desde los lanzadores. Ayuda para humanos: <a href="/help/">admira.live/help</a>.</p></article>
         <article class="card"><span class="tag">remoto</span><h3><code>flota_estado</code> · <code>consejo_tareas</code> · <code>consejo_bots</code></h3><p>Flota, tablero y presencia de los agentes desde el mismo MCP remoto; <code>agora_decir</code> publica en AgoraMatrix. <code>yokup_quien_soy</code> · <code>yokup_mis_misiones</code> · <code>yokup_ventana</code> cierran el ritual de flota.</p></article>
         <article class="card"><span class="tag">read</span><h3><code>admira_live_status</code></h3><p>Comprueba salud de <code>pixer-worker</code> y del backend configurado.</p></article>
         <article class="card"><span class="tag">read</span><h3><code>agora_status</code></h3><p>Lee presencia de agentes y feed reciente de AgoraMatrix.</p></article>

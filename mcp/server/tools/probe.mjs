@@ -1,0 +1,11 @@
+import { Client } from '@modelcontextprotocol/sdk/client/index.js';
+import { StreamableHTTPClientTransport } from '@modelcontextprotocol/sdk/client/streamableHttp.js';
+import fs from 'node:fs';
+const key = fs.readFileSync(process.env.KEYFILE, 'utf8').trim();
+const t = new StreamableHTTPClientTransport(new URL('https://mcp.admira.live/mcp'), { requestInit: { headers: { Authorization: 'Bearer ' + key } } });
+const c = new Client({ name: 'morfeo-probe', version: '1.0' });
+await c.connect(t);
+const tool = process.argv[2]; const args = JSON.parse(process.argv[3] || '{}');
+const r = await c.callTool({ name: tool, arguments: args });
+console.log(r.content[0].text.slice(0, 1800));
+await c.close();

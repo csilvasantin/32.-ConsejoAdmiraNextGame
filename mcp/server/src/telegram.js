@@ -19,7 +19,7 @@ export function crearTelegram(env = {}, identidad, deps = {}) {
   const via = env.TELEGRAM && typeof env.TELEGRAM.fetch === 'function' ? (u, i) => env.TELEGRAM.fetch(u, i) : doFetch;
 
   function exigir() {
-    if (!identidad) throw new Error('sin identidad: esta clave del MCP no está asignada a ningún consejero (MCP_KEYS)');
+    if (!identidad) throw new Error('sin identidad: esta clave del MCP no está asignada a nadie (MCP_KEYS)');
     if (!env.ADMIRA_TELEGRAM_PANEL_KEY) throw new Error('falta ADMIRA_TELEGRAM_PANEL_KEY en el worker');
     return identidad;
   }

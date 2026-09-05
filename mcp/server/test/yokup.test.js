@@ -55,7 +55,7 @@ async function cliente(clave = ENV.MCP_KEY, env = ENV) {
 const res = (r) => JSON.parse(r.content[0].text);
 
 test('la identidad sale de la clave: MCP_KEY es Wozniak, MCP_KEYS mapea a los demás, y el nombre largo firma corto', () => {
-  assert.deepEqual(identidadPorClave(ENV.MCP_KEY, ENV), { persona: 'Wozniak', machine: 'GrokBot', runtime: 'Grok', model: 'Grok Heavy', agent: 'WozniakGrokBot' });
+  assert.deepEqual(identidadPorClave(ENV.MCP_KEY, ENV), { persona: 'Wozniak', machine: 'GrokBot', runtime: 'Grok', model: 'Grok Heavy', agent: 'WozniakGrokBot', tipo: 'consejero' });
   assert.equal(identidadPorClave('clave-de-jobs-xxxxxxxxxxxxxxxxxx', ENV).agent, 'JobsGrokBot');
   assert.equal(identidadPorClave('clave-de-disney-xxxxxxxxxxxxxxxx', ENV).agent, 'DisneyGrokBot', 'el nombre largo firma con el apellido del diccionario');
   assert.equal(identidadPorClave('otra', ENV), null);
@@ -64,14 +64,14 @@ test('la identidad sale de la clave: MCP_KEY es Wozniak, MCP_KEYS mapea a los de
 
 test('las claves por consejero abren /mcp y las instrucciones dicen quién eres', async () => {
   const req = (k) => new Request('https://mcp.test/mcp', { headers: { authorization: `Bearer ${k}` } });
-  assert.equal(claveValida(req('clave-de-jobs-xxxxxxxxxxxxxxxxxx'), ENV), true);
-  assert.equal(claveValida(req(ENV.MCP_KEY), ENV), true);
-  assert.equal(claveValida(req('clave-de-jobs-xxxxxxxxxxxxxxxxxY'), ENV), false);
+  assert.equal(await claveValida(req('clave-de-jobs-xxxxxxxxxxxxxxxxxx'), ENV), true);
+  assert.equal(await claveValida(req(ENV.MCP_KEY), ENV), true);
+  assert.equal(await claveValida(req('clave-de-jobs-xxxxxxxxxxxxxxxxxY'), ENV), false);
   const { client } = await cliente('clave-de-jobs-xxxxxxxxxxxxxxxxxx');
   assert.match(client.getInstructions(), /en yokup eres JobsGrokBot \(persona Jobs, equipo GrokBot, runtime Grok\)/);
   assert.match(client.getInstructions(), /yokup_alta[\s\S]*yokup_paso[\s\S]*yokup_evidencia[\s\S]*yokup_informe[\s\S]*yokup_ventana/);
   const sin = await cliente('clave-que-no-existe-xxxxxxxxxxxxx');
-  assert.match(sin.client.getInstructions(), /no está asignada a ningún consejero/);
+  assert.match(sin.client.getInstructions(), /no está asignada a nadie/);
   const r = await sin.client.callTool({ name: 'yokup_mis_misiones', arguments: {} });
   assert.equal(r.isError, true); assert.match(r.content[0].text, /sin identidad/);
 });

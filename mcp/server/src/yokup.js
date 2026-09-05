@@ -27,23 +27,59 @@ const limpiar = (s) => String(s || '').replace(/\/+$/, '');
 const slug = (name) => String(name || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-|-$/g, '');
 const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
 
+export const PERSONAS_FLOTA = ['Morfeo', 'Neo', 'Smith', 'Trinity', 'Oraculo', 'Niobe', 'Link', 'Cypher', 'Switch', 'Persefone', 'Seraph'];
+export const MAQUINAS_FLOTA = ['MacMini', 'MacBookPro14', 'MacBookPro16', 'MacBookAirAzul', 'MacBookAirRosa', 'MacBookAirCrema', 'MacBookAirPlata'];
+const RUNTIME_POR_DEFECTO = { Oraculo: 'Codex', Trinity: 'Codex', Niobe: 'OpenCode', Persefone: 'OpenCode', Seraph: 'OpenCode' };
+const b64url = (bytes) => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
+
+/**
+ * Clave de un agente de la flota (FLT-2038). Un secreto de Cloudflare no pasa de 5 KB y
+ * la flota son 11 personas × 7 equipos: en vez de un mapa clave→identidad, la clave de
+ * cada pareja se DERIVA de una semilla (MCP_FLOTA_SEED) con HMAC-SHA256 sobre
+ * «Persona|Equipo». El worker la recalcula al recibirla; la flota la lee de la bóveda
+ * (MCP_KEY_<PERSONA>_<EQUIPO>) o la deriva con tools/clave-flota.mjs y la misma semilla.
+ */
+export async function claveFlota(env, persona, machine) {
+  if (!env.MCP_FLOTA_SEED) return null;
+  const k = await crypto.subtle.importKey('raw', new TextEncoder().encode(env.MCP_FLOTA_SEED), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+  const sig = new Uint8Array(await crypto.subtle.sign('HMAC', k, new TextEncoder().encode(`${persona}|${machine}`)));
+  return b64url(sig).slice(0, 40);
+}
+const igualesStr = (a, b) => { if (!a || !b || a.length !== b.length) return false; let d = 0; for (let i = 0; i < a.length; i++) d |= a.charCodeAt(i) ^ b.charCodeAt(i); return d === 0; };
+
 /**
  * Identidad a partir de la clave que ha entrado por /mcp. MCP_KEYS es un JSON
- * {"<clave>": {"persona": "Wozniak"}, …}. MCP_KEY (la primera clave, la que Carlos dio a
- * Wozniak) se sigue aceptando y se mapea a MCP_KEY_PERSONA (por defecto Wozniak).
+ * {"<clave>": {"persona": "Wozniak"}, …} (los consejeros de GrokBot). MCP_KEY (la primera
+ * clave, la que Carlos dio a Wozniak) se sigue aceptando y se mapea a MCP_KEY_PERSONA.
+ * Los AGENTES DE LA FLOTA entran con su clave derivada (claveFlota): el agente en yokup es
+ * persona+equipo (MorfeoMacMini), igual que firma su sesión local, sin declarar nada.
  */
 export function identidadPorClave(clave, env = {}) {
   if (!clave) return null;
   let mapa = {};
   try { mapa = env.MCP_KEYS ? JSON.parse(env.MCP_KEYS) : {}; } catch { mapa = {}; }
-  let persona = null;
-  if (mapa[clave] && mapa[clave].persona) persona = String(mapa[clave].persona);
+  let persona = null, entrada = null;
+  if (mapa[clave] && mapa[clave].persona) { entrada = mapa[clave]; persona = String(entrada.persona); }
   else if (env.MCP_KEY && clave === env.MCP_KEY) persona = String(env.MCP_KEY_PERSONA || 'Wozniak');
   if (!persona) return null;
   // «Steve Wozniak» firma como Wozniak: el apellido corto es la persona del diccionario de yokup.
   const conocido = CONSEJEROS_GROKBOT.find((c) => persona.toLowerCase().includes(c.toLowerCase()));
-  persona = conocido || persona.replace(/\s+/g, '');
-  return { persona, machine: EQUIPO, runtime: RUNTIME, model: MODELO, agent: `${persona}${EQUIPO}` };
+  if (conocido) return { persona: conocido, machine: EQUIPO, runtime: RUNTIME, model: MODELO, agent: `${conocido}${EQUIPO}`, tipo: 'consejero' };
+  return identidadAgente(persona, entrada && entrada.machine, entrada && entrada.runtime, entrada && entrada.model);
+}
+export function identidadAgente(persona, machine, runtime, model) {
+  const p = String(persona).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '');
+  const m = String(machine || '').replace(/\s+/g, '') || 'Flota';
+  return { persona: p, machine: m, runtime: String(runtime || RUNTIME_POR_DEFECTO[p] || 'Claude Code'), model: String(model || ''), agent: `${p}${m}`, tipo: 'agente' };
+}
+/** Como identidadPorClave, pero además reconoce las claves derivadas de la flota. */
+export async function identidadPorClaveAsync(clave, env = {}) {
+  const directa = identidadPorClave(clave, env);
+  if (directa || !clave || !env.MCP_FLOTA_SEED) return directa;
+  for (const p of PERSONAS_FLOTA) for (const m of MAQUINAS_FLOTA) {
+    if (igualesStr(await claveFlota(env, p, m), clave)) return identidadAgente(p, m);
+  }
+  return null;
 }
 
 export function crearYokup(env = {}, identidad, deps = {}) {
@@ -55,7 +91,7 @@ export function crearYokup(env = {}, identidad, deps = {}) {
   const ahora = deps.now || (() => Date.now());
 
   function exigir() {
-    if (!identidad) throw new Error('sin identidad: esta clave del MCP no está asignada a ningún consejero (MCP_KEYS)');
+    if (!identidad) throw new Error('sin identidad: esta clave del MCP no está asignada a nadie (MCP_KEYS)');
     return identidad;
   }
 

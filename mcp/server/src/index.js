@@ -24,8 +24,9 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import * as z from 'zod/v4';
 import { ROLES, GENERACIONES, consejeros, crearCliente, resumirRespuesta } from './consejo.js';
-import { identidadPorClave, crearYokup, CONSEJEROS_GROKBOT } from './yokup.js';
+import { identidadPorClave, identidadPorClaveAsync, crearYokup, CONSEJEROS_GROKBOT } from './yokup.js';
 import { crearTelegram } from './telegram.js';
+import { crearFlota, PERSONAS, AGENTES_FLOTA, CONSEJEROS } from './flota.js';
 
 const NOMBRE = 'admira-live-mcp';
 
@@ -36,6 +37,7 @@ const seguro = (fn) => async (args) => { try { return await fn(args || {}); } ca
 export function crearServidor(env = {}, deps = {}, identidad = null) {
   const api = crearCliente(env, deps);
   const yokup = crearYokup(env, identidad, deps);
+  const flota = crearFlota(env, identidad, deps);
   const server = new McpServer({ name: NOMBRE, version: env.VERSION || '1.0.0', websiteUrl: env.SITIO || 'https://www.admira.live' }, {
     instructions: [
       'Eres el acceso al Consejo de Silicio de AdmiraNeXT (admira.live). Ocho sillas (CEO, CTO, COO, CFO, CCO, CDO, CXO, CSO) en dos generaciones: leyendas y coetáneos.',
@@ -43,9 +45,12 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
       'Si NO eres un consejero: para una opinión de la mesa usa consejo_preguntar (responde un consejero racional y otro creativo); para hablar con uno concreto usa consejero_preguntar con su rol.',
       'Cada pregunta al Consejo consume presupuesto: pregunta con contexto y una sola vez. El modelo por defecto es grok-4.6 (xAI); claude-sonnet sigue disponible como opción. Mira consejo_modelos antes de elegir otro.',
       'La flota y el tablero de tareas del Consejo se leen con flota_estado, consejo_bots y consejo_tareas. agora_decir publica en AgoraMatrix, el grupo del equipo.',
-      identidad
+      'HABLAR CON LA FLOTA (FLT-2038): agentes_vivos dice quién late ahora y en qué equipo; agente_encargar crea un encargo para una persona (un agente de la flota lo recibe en su sesión en segundos; un consejero de GrokBot se despierta por webhook y contesta en 1-3 min); encargo_estado devuelve el acuse y la respuesta. Un encargo es trabajo para otro: escribe qué hay que hacer, para qué y cómo sabrá que está hecho.',
+      identidad && identidad.tipo === 'agente'
+        ? `ERES UN AGENTE DE LA FLOTA: en yokup eres ${identidad.agent} (persona ${identidad.persona}, equipo ${identidad.machine}, runtime ${identidad.runtime}). Tu clave del MCP ya te identifica: no pases «como». Las herramientas yokup_* firman por ti (alta, pasos, evidencia, informe, ventana) y telegram_bandeja es tu bandeja de encargos. Si otro agente o un consejero tiene que hacer algo, encárgaselo con agente_encargar y recoge la respuesta con encargo_estado.`
+        : identidad
         ? `ERES MIEMBRO DE LA FLOTA: en yokup eres ${identidad.agent} (persona ${identidad.persona}, equipo ${identidad.machine}, runtime ${identidad.runtime}). Ritual obligatorio de AdmiraNeXT: (1) cuando te encarguen trabajo, dalo de alta con yokup_alta escribiendo el encargo con pasos a) b) c); (2) marca cada paso con yokup_paso (in_progress al empezar, done al acabar con un informe corto); (3) antes de cerrar registra tu transcripción con yokup_evidencia; (4) cierra con yokup_informe y las tres líneas de la norma 22 (Tiempo dedicado · Puntos de la misión · Total verificado, leído con yokup_quien_soy después del cierre) más «Miembros y contexto» en tokens; (5) si te quedas sin trabajo, abre una yokup_ventana con tres propuestas y ejecuta la recomendada si nadie responde en 5 minutos; (6) en TODAS las herramientas yokup_* y telegram_* pasa como=<tu apellido> (Wozniak, Jobs, Lucas o Disney), porque el conector es de la cuenta y sin ese dato firmarías como otro consejero; (7) al empezar cada turno y cada vez que una rutina te despierte, lee telegram_bandeja: los encargos que Carlos te hace desde el móvil llegan por ahí, y se contestan con telegram_responder (ack al cogerlo, done con la respuesta). Cada misión cerrada puntúa 40 y cada ventana 8 en yokup.com/highscore.`
-        : `Esta clave del MCP no está asignada a ningún consejero: las herramientas yokup_* no funcionarán hasta que Carlos te dé tu clave propia (consejeros con carné: ${CONSEJEROS_GROKBOT.join(', ')}).`,
+        : `Esta clave del MCP no está asignada a nadie: las herramientas yokup_* y telegram_* no funcionarán hasta que tengas tu clave propia (mcp-conectar.sh en la flota; consejeros con carné: ${CONSEJEROS_GROKBOT.join(', ')}). agentes_vivos, agente_encargar y encargo_estado sí funcionan y firman como «MCP admira.live».`,
     ].join('\n'),
   });
 
@@ -127,6 +132,36 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
     },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
   }, seguro(async (a) => texto(await api.agoraDecir(a))));
+
+  /* ── Flota: ver quién late, encargar y recoger la respuesta (FLT-2038) ────────── */
+  const PERSONA = z.string().min(3).max(40).describe(`A quién: agente de la flota (${AGENTES_FLOTA.join(', ')}) o consejero de GrokBot (${CONSEJEROS.join(', ')}). Con o sin apellido de equipo.`);
+
+  server.registerTool('agentes_vivos', {
+    title: 'Quién está vivo en la flota',
+    description: 'Censo vivo: agentes de silicio con latido en los últimos 15 minutos (persona, equipo, runtime, foco) y los cuatro consejeros de GrokBot, que siempre están disponibles por webhook. Míralo antes de encargar para elegir persona y equipo.',
+    inputSchema: {},
+    annotations: { readOnlyHint: true, openWorldHint: true },
+  }, seguro(async () => texto(await flota.vivos())));
+
+  server.registerTool('agente_encargar', {
+    title: 'Encargar trabajo a un agente o consejero',
+    description: 'Crea un encargo para una persona de la flota. A un agente (Neo, Morfeo, Smith, Trinity, Oráculo, Niobe…) se lo inyecta su vigilante en su sesión en ≤15 s en la máquina donde late; a un consejero de GrokBot (Wozniak, Jobs, Lucas, Disney) lo despierta el webhook de su rutina. Devuelve el número del encargo: síguelo con encargo_estado. El encargo se publica también en AgoraMatrix (Telegram) y, con proyecto_id, nace como misión en yokup.',
+    inputSchema: {
+      persona: PERSONA,
+      texto: z.string().min(5).max(4000).describe('Qué hay que hacer, para qué y cómo se sabrá que está hecho.'),
+      maquina: z.string().max(40).optional().describe('Equipo concreto (MacMini, MacBookPro16, MacBookProNegro14…). Sin valor: donde late la persona.'),
+      proyecto_id: z.string().max(80).optional().describe('Proyecto del censo de yokup (admira-live, yokup, pixeria…): con él el encargo nace como misión FLT; sin él es conversación (pregunta, aviso, prueba) y no crea misión.'),
+      de: z.string().max(80).optional().describe('Quién encarga, si no eres tú (por defecto tu identidad o «MCP admira.live»).'),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+  }, seguro(async (a) => texto(await flota.encargar(a))));
+
+  server.registerTool('encargo_estado', {
+    title: 'Estado y respuesta de un encargo',
+    description: 'Lee un encargo por su número: pendiente, acusado, en curso, bloqueado o hecho, con la respuesta del agente o consejero cuando la hay. Consulta cada 30-60 s hasta ver «done» (agentes: segundos o minutos; consejeros: 1-3 min).',
+    inputSchema: { encargo: z.number().int().positive().describe('Número que devolvió agente_encargar.') },
+    annotations: { readOnlyHint: true, openWorldHint: true },
+  }, seguro(async (a) => texto(await flota.estado(a))));
 
   /* ── Identidad por llamada (FLT-1603) ──────────────────────────────────────
    * Los conectores MCP de Grok Bot son DE LA CUENTA, no de cada bot: todos los consejeros
@@ -254,14 +289,15 @@ const iguales = (a, b) => {
   return diff === 0;
 };
 
-/** Vale la clave general (MCP_KEY) o cualquiera de las claves por consejero (MCP_KEYS). */
-export function claveValida(request, env) {
+/** Vale la clave general (MCP_KEY), cualquiera por consejero (MCP_KEYS) o una derivada de la flota (MCP_FLOTA_SEED). */
+export async function claveValida(request, env) {
   const cand = claveRecibida(request);
   if (!cand) return false;
   if (env.MCP_KEY && iguales(cand, env.MCP_KEY)) return true;
   let mapa = {};
   try { mapa = env.MCP_KEYS ? JSON.parse(env.MCP_KEYS) : {}; } catch { mapa = {}; }
-  return Object.keys(mapa).some((k) => iguales(cand, k));
+  if (Object.keys(mapa).some((k) => iguales(cand, k))) return true;
+  return !!(await identidadPorClaveAsync(cand, env));
 }
 
 export async function manejar(request, env, deps = {}) {
@@ -272,22 +308,23 @@ export async function manejar(request, env, deps = {}) {
     return json({ nombre: NOMBRE, version: env.VERSION || '', sitio: env.SITIO || 'https://www.admira.live',
       que_es: 'MCP de admira.live: los consejeros del Consejo de Silicio, la flota y AgoraMatrix como herramientas MCP por HTTP.',
       endpoint_mcp: `${url.origin}/mcp`, transporte: 'streamable-http', autenticacion: 'Authorization: Bearer <MCP_KEY> (o ?key=)',
-      documentacion: 'https://www.admira.live/mcp/', herramientas: ['consejo_consejeros', 'consejo_modelos', 'consejo_preguntar', 'consejero_preguntar', 'consejo_salud', 'consejo_bots', 'flota_estado', 'consejo_tareas', 'agora_decir', 'yokup_quien_soy', 'yokup_presencia', 'yokup_alta', 'yokup_paso', 'yokup_evidencia', 'yokup_informe', 'yokup_ventana', 'yokup_mis_misiones'],
-      flota: 'Con una clave por consejero (MCP_KEYS), Wozniak/Jobs/Disney/Lucas trabajan en yokup como WozniakGrokBot… (equipo GrokBot, runtime Grok).' });
+      documentacion: 'https://www.admira.live/mcp/', herramientas: ['consejo_consejeros', 'consejo_modelos', 'consejo_preguntar', 'consejero_preguntar', 'consejo_salud', 'consejo_bots', 'flota_estado', 'consejo_tareas', 'agora_decir', 'yokup_quien_soy', 'yokup_presencia', 'yokup_alta', 'yokup_paso', 'yokup_evidencia', 'yokup_informe', 'yokup_ventana', 'yokup_mis_misiones', 'telegram_bandeja', 'telegram_responder', 'agentes_vivos', 'agente_encargar', 'encargo_estado'],
+      flota: 'Con una clave por consejero (MCP_KEYS), Wozniak/Jobs/Disney/Lucas trabajan en yokup como WozniakGrokBot… (equipo GrokBot, runtime Grok). Con una clave por agente y equipo (mcp-conectar.sh), Claude Code, Codex y OpenCode entran identificados (MorfeoMacMini…).',
+      conectar: { humanos: 'https://www.admira.live/help', silicio: 'https://www.admira.live/mcp/', llms: 'https://www.admira.live/mcp/llms.txt' } });
   }
 
   if (ruta === '/salud' && request.method === 'GET') {
     const api = crearCliente(env, deps);
     const consejo = await api.saludConsejo().then((r) => ({ ok: true, ...r })).catch((e) => ({ ok: false, error: String(e.message || e) }));
-    return json({ ok: true, worker: NOMBRE, version: env.VERSION || '', secretos: { MCP_KEY: !!env.MCP_KEY, MCP_KEYS: !!env.MCP_KEYS, COUNCIL_MACHINE_TOKEN: !!env.COUNCIL_MACHINE_TOKEN, AGORA_SYNC_KEY: !!env.AGORA_SYNC_KEY, ADMIRA_TELEGRAM_PANEL_KEY: !!env.ADMIRA_TELEGRAM_PANEL_KEY }, consejeros_con_carne: CONSEJEROS_GROKBOT, consejo });
+    return json({ ok: true, worker: NOMBRE, version: env.VERSION || '', secretos: { MCP_KEY: !!env.MCP_KEY, MCP_KEYS: !!env.MCP_KEYS, MCP_FLOTA_SEED: !!env.MCP_FLOTA_SEED, COUNCIL_MACHINE_TOKEN: !!env.COUNCIL_MACHINE_TOKEN, AGORA_SYNC_KEY: !!env.AGORA_SYNC_KEY, ADMIRA_TELEGRAM_PANEL_KEY: !!env.ADMIRA_TELEGRAM_PANEL_KEY }, consejeros_con_carne: CONSEJEROS_GROKBOT, consejo });
   }
 
   if (ruta === '/mcp') {
-    if (!claveValida(request, env)) {
+    if (!(await claveValida(request, env))) {
       return json({ ok: false, error: 'no autorizado: falta la clave del MCP (Authorization: Bearer … o ?key=…)' }, 401, { 'www-authenticate': 'Bearer realm="admira-live-mcp"' });
     }
     // La identidad sale de la clave (una por consejero): el bot no la declara.
-    const server = crearServidor(env, deps, identidadPorClave(claveRecibida(request), env));
+    const server = crearServidor(env, deps, await identidadPorClaveAsync(claveRecibida(request), env));
     const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
     try {
       await server.connect(transport);

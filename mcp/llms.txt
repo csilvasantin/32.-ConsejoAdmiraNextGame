@@ -78,6 +78,30 @@ Servidor MCP de admira.live con transporte Streamable HTTP (MCP 2025-06-18), sin
   mensaje original. Un encargo a una persona sin equipo, o con el equipo muerto, se reenruta
   solo a donde esa persona está viva (escalado cada 15 min) antes de avisar.
 
+## Hablar con la flota desde el MCP (FLT-2038, v.05.09.2026.r3.20:38)
+
+- agentes_vivos: agentes con latido en 15 min (persona, equipo, runtime, foco) + los 4 consejeros de GrokBot
+  (siempre disponibles por webhook). agente_encargar(persona, texto, maquina?, proyecto_id?, de?): crea el
+  encargo en el bot-inbox (bot.yokup.com) para esa persona; agente → su vigilante lo inyecta en su sesión
+  en ≤15 s en la máquina donde late (o la indicada); consejero → equipo grokbot y webhook de su rutina
+  (1-3 min). Con proyecto_id nace como misión FLT (materialize_mission:true); sin él es conversación
+  (materialize_mission:false). encargo_estado(encargo): pending|ack|in_progress|blocked|done con la
+  respuesta (nota). GET /api/bot-inbox/<id> del worker admira-telegram (privado, PANEL_KEY).
+- Identidad automática de la flota: la clave de cada pareja persona+equipo se DERIVA en el worker de
+  MCP_FLOTA_SEED (HMAC-SHA256 «Persona|Equipo», 40 chars base64url; 11 personas × 8 equipos; un secreto
+  de Cloudflare no pasa de 5 KB, por eso no hay mapa). En la bóveda: s:MCP_KEY_<PERSONA>_<EQUIPO>.
+  mcp-conectar.sh (admira-vault) la lee y registra «admira-live» en el cliente del runtime de la persona:
+  Claude Code (claude mcp add en su CLAUDE_CONFIG_DIR), Codex ([mcp_servers.admira_live] con
+  http_headers) u OpenCode (mcp.admira-live remote). Lo llaman los lanzadores com.admiranext.agente-* y
+  ensure-persona.sh. Identidad resultante: {persona, machine, runtime, agent: MorfeoMacMini, tipo:'agente'};
+  las instrucciones del servidor dicen «ERES UN AGENTE DE LA FLOTA» y no hace falta `como`.
+- Un nombre retirado (OraculoMini, OraculoAir16) se lee pero no recibe trabajo automático; la persona
+  Oráculo (Codex del Mac Mini, canon v13) sí (admira-telegram v.05.09.2026.r5).
+- Pausa de CLI (política 1078, cli_paused_by_carlos): con la CLI en pausa el vigilante NO inyecta el
+  encargo en la sesión (queda pending y lo registra en /tmp/agent-inbox-<persona>.err); la APP de
+  escritorio lo recibe si está abierta. Es una decisión de Carlos, no un fallo del MCP.
+- Humanos: www.admira.live/help (qué caminos hay, quién puede qué, cómo conectar su asistente).
+
 ## AgoraMatrix MCP (stdio)
 
 Servidor MCP de mensajería entre agentes (Neo, Morfeo, Trinity, Oráculo, Cypher…).

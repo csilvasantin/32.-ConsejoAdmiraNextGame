@@ -53,4 +53,4 @@ YOKUP_API = "https://api.yokup.com"
 ADMIRA_TELEGRAM_URL = "https://bot.yokup.com"
 # MCP_KEY (la primera clave, la que ya tiene Wozniak) se mapea a esta persona.
 MCP_KEY_PERSONA = "Wozniak"
-VERSION = "v.04.09.2026.r12.22:33"
+VERSION = "v.05.09.2026.r3.20:38"

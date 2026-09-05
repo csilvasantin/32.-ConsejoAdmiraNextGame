@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r12.12:21" />
+<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r13.12:26" />
     <script src="/admira-bar.js?v=20260713-r36"></script>
     <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
 <meta charset="UTF-8">
@@ -264,7 +264,7 @@
   .card .mando.abierto .mando-slots{display:flex}
   .card .mando-caret{display:inline-block;width:9px;color:var(--mut,#75aab9)}
   .card .mando-extra{display:none}
-  .card .mando.abierto + .mando-extra, .card .mando-extra.siempre{display:block}
+  .card .mando.abierto + .mando-extra{display:block}
   .card .info.vacia{display:none}
   /* Dos filas, APP y CLI: la etiqueta de la fila dice la superficie una vez; las fichas van
      pegadas y envuelven si no caben. Compacto: es la lista de a quién puedes mandar, no un panel. */
@@ -1144,9 +1144,12 @@ function mandoHtml(m){
   const k=_norm(m&&(m.name||m.id)); if(!k) return '';
   const g=MANDO_BY_MACHINE[k];
   if(!g||!g.slots.length){
-    return '<div class="mando none" title="Este equipo no recoge órdenes: no tiene el watcher de presencia instalado. '
-      + 'Instálalo desde el repo admira-telegram con ./tools/install-presence-watch.sh">'
-      + '🎛 sin mando remoto <span class="mando-fix">· falta el watcher</span></div>';
+    // Sin watcher también se pliega igual que los demás (Carlos, 5-sep-2026): el pill de control y
+    // «probar» quedan dentro, y al desplegar se lee qué falta y cómo se instala.
+    let ab=false; try{ ab=(typeof localStorage!=='undefined')&&localStorage.getItem('mando.abierto.'+k)==='1'; }catch(e){}
+    return '<div class="mando none'+(ab?' abierto':'')+'" data-mk="'+k+'" title="Este equipo no recoge órdenes: no tiene el watcher de presencia instalado. Pulsa para ver el diagnóstico.">'
+      + '<span class="mando-caret">'+(ab?'▾':'▸')+'</span> 🎛 sin mando remoto <span class="mando-fix">· falta el watcher</span>'
+      + '<div class="mando-slots"><div class="mando-fila"><span class="mando-etq">FIX</span><span class="mando-slot mudo" title="Instálalo desde el repo admira-telegram">./tools/install-presence-watch.sh (repo admira-telegram)</span></div></div></div>';
   }
   const viejo=g.age>MANDO_FRESH;
   const edad=g.age<60?(g.age+'s'):(g.age<3600?(Math.round(g.age/60)+'m'):(Math.round(g.age/360)/10+'h'));
@@ -1736,7 +1739,7 @@ function renderCards(ms){
       ${mandoHtml(m)}
       <!-- «control · ver + tocar» y «probar» son diagnóstico del mando (Carlos, 5-sep-2026, FLT-1827):
            van dentro del pliegue del mando. Sin mando (sin watcher) se ven siempre: ahí dicen qué falta. -->
-      <div class="mando-extra${(MANDO_BY_MACHINE[_norm(m.name||m.id)]&&MANDO_BY_MACHINE[_norm(m.name||m.id)].slots.length)?'':' siempre'}">${controlReadyHtml(m)}</div>
+      <div class="mando-extra">${controlReadyHtml(m)}</div>
       <div class="info${m.online?'':' offinfo'}${m.online&&infoRedundante(m)?' vacia':''}">${m.online
         ?(infoRedundante(m)?'':(m.info||'').replace(/</g,'&lt;'))
         :('💤 ssh '+((m.user||'csilvasantin')+'@'+(m.host||'?'))+'\n↳ '+((m.info||'sin respuesta').replace(/</g,'&lt;')))}</div>

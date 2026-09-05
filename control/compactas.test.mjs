@@ -28,8 +28,9 @@ test("compacto oculta botones, info y señalización; deja mando, control y capt
 });
 
 test("«control · ver + tocar» y «probar» viven dentro del pliegue del mando; sin watcher se ven siempre", () => {
-  assert.match(html, /<div class="mando-extra\$\{[^}]*\?'':' siempre'\}">\$\{controlReadyHtml\(m\)\}<\/div>/);
-  assert.match(html, /\.card \.mando\.abierto \+ \.mando-extra, \.card \.mando-extra\.siempre\{display:block\}/);
+  assert.match(html, /<div class="mando-extra">\$\{controlReadyHtml\(m\)\}<\/div>/);
+  assert.match(html, /\.card \.mando\.abierto \+ \.mando-extra\{display:block\}/);
+  assert.doesNotMatch(html, /mando-extra\.siempre/, "sin watcher también va dentro del pliegue");
   const acts = html.indexOf('<div class="acts"'); const pf = html.indexOf("${dsPreflightHtml(m)}");
   assert.ok(pf < acts && html.slice(pf - 40, pf).indexOf("controlReadyHtml") === -1, "ya no va suelto antes de la señalización");
 });

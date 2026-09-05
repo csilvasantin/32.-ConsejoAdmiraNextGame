@@ -26,7 +26,7 @@ test("un equipo con watcher fresco dice cuántas ranuras gobierna", () => {
 
 test("un equipo SIN watcher lo dice, y dice qué le falta", () => {
   const h = fabrica({})({ name: "MacBook Pro 16" });
-  assert.match(h, /class="mando none"/);
+  assert.match(h, /class="mando none/);   // plegable como los demás (FLT-1827)
   assert.match(h, /sin mando remoto/);
   assert.match(h, /falta el watcher/);
   assert.match(h, /install-presence-watch\.sh/, "hay que decir CÓMO se arregla, no sólo que falta");

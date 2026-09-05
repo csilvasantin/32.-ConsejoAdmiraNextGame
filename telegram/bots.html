@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r2.07:38">
+<meta name="robots" content="noindex,nofollow">
+<title>Grupos y bots de Telegram · AdmiraNeXT</title>
+<style>
+  :root{--bg:#0a0a14;--panel:#0d0b1a;--border:#1a1428;--ink:#e8e6f2;--dim:#8f8aa8;--acc:#7cf3ff;--ok:#88ffaa;--warn:#ffd866;--bad:#ff8866;--mono:ui-monospace,SFMono-Regular,Menlo,monospace}
+  *{box-sizing:border-box} body{margin:0;background:var(--bg);color:var(--ink);font:15px/1.5 -apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}
+  .wrap{max-width:1080px;margin:0 auto;padding:28px 18px 60px}
+  h1{font-size:1.7rem;margin:0 0 4px} .sub{color:var(--dim);margin:0 0 22px}
+  h2{font-size:1.15rem;margin:30px 0 10px;border-bottom:1px solid var(--border);padding-bottom:6px}
+  table{width:100%;border-collapse:collapse;font-size:14px;background:var(--panel);border:1px solid var(--border)}
+  th,td{padding:9px 10px;border-bottom:1px solid var(--border);vertical-align:top;text-align:left} th{color:var(--dim);font-weight:600;font-size:12px;text-transform:uppercase;letter-spacing:.06em}
+  code{font:12.5px var(--mono);background:rgba(124,243,255,.08);padding:1px 5px;border-radius:3px} .k{color:var(--acc);font-weight:600}
+  .ok{color:var(--ok)} .warn{color:var(--warn)} .bad{color:var(--bad)} .dim{color:var(--dim)}
+  ul{margin:6px 0;padding-left:20px} .nota{background:var(--panel);border:1px solid var(--border);border-left:3px solid var(--warn);padding:10px 14px;margin:14px 0}
+  .tw{overflow-x:auto} a{color:var(--acc)} footer{margin-top:40px;color:var(--dim);font-size:12px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>📡 Grupos y bots de Telegram de AdmiraNeXT</h1>
+  <p class="sub">Qué chat es cada uno, qué bot escribe en él, qué publica y quién puede leer y escribir. Cada bot contesta a <code>/help</code> (o <code>/ayuda</code>) con este mismo resumen. Censo de FLT-1779 · MorfeoMacMini · MacMini · 5-sep-2026.</p>
+
+  <div class="nota"><b>Lo primero.</b> Para hablar con el equipo (consejeros <code>/wozniak /jobs /lucas /disney</code> y agentes <code>/neo /morfeo /trinity /smith /niobe /link</code>) el sitio es el grupo <b>AgoraMatrix</b>. El chat <b>«AdmiraNext»</b> con megáfono es un <i>canal de difusión</i>: ahí nadie lee los comandos. <code>/ayuda</code> en AgoraMatrix devuelve el censo vivo de quién está disponible.</div>
+
+  <h2>Chats y bots</h2>
+  <div class="tw"><table>
+    <thead><tr><th>Chat en tu Telegram</th><th>Tipo</th><th>Bot(s) que escriben</th><th>Qué publica</th><th>Quién lee · quién escribe</th></tr></thead>
+    <tbody>
+      <tr><td class="k">AgoraMatrix</td><td>Grupo · 11 miembros<br><span class="dim">id −5110197528</span></td><td>@AdmiraNext2ControlBot («Admirito», «Monitor central») + el bot propio de cada agente (@ClaudeSilvaBot Morfeo · @ClaudeAdmiraNextBot Neo/Link · @CodexAdmiraNextBot Trinity · @CodexSilvaBot Codex del Mac Mini · @CypherAdmiraBot Smith · hermes compartido)</td><td>Encargos y sus acuses (📥 Recibido · #N), respuestas de consejeros y agentes en hilo, ventanas de decisión, progreso y cierres de misiones, avisos de presencia, escalados «SIN ACK», resúmenes horarios del diario. Es también el espejo de <a href="/telegram">admira.live/telegram</a>.</td><td>Lee: Carlos y todo el equipo de silicio. Escribe: Carlos (órdenes), los bots. Comandos: <code>/ayuda</code>, <code>/&lt;persona&gt; texto</code>, <code>/mini /pro16 /air16 texto</code>, o texto sin nombre → agente vivo con menos carga.</td></tr>
+      <tr><td class="k">AdmiraXP <span class="dim">(bot, chat privado)</span></td><td>Privado con Carlos</td><td>@AdmiraXPBot (worker pixer-eleven · api.admira.store)</td><td>🩺 salud de pantallas (MUDA tras dos comprobaciones &gt; 6 min, de vuelta, INTERMITENTE una vez por hora), ▶️ STOCK PLAY, ✅ publicaciones en Stock, leads, importaciones, ⚠️/🚨 errores de la API agrupados con RECUPERADO. <span class="ok">Desde el 5-sep los éxitos («POST … 200») ya no se notifican.</span></td><td>Lee: solo Carlos. Escribe: el worker. Carlos puede pegarle una URL o una foto/vídeo y lo importa al Stock; <code>/avisosaqui</code>, <code>/avisosdonde</code>, <code>/help</code>.</td></tr>
+      <tr><td class="k">Pixeria</td><td>Grupo</td><td>@AdmiraXPBot</td><td>«✅ Publicado en Stock · tamaño · título» por cada asset publicado (destino fijado con <code>/avisosaqui</code>).</td><td>Lee: miembros del grupo. Escribe: el worker.</td></tr>
+      <tr><td class="k">AdmiraXP <span class="dim">(grupo, icono TECNOLOGÍA)</span></td><td>Grupo<br><span class="dim">id −1003841065210</span></td><td>«Memorizer» (council-api del Mac Mini, puerto 8420)</td><td>«📋 Consejo AdmiraNext — Consulta …»: cada consulta al Consejo de Silicio y las alertas del council-api.</td><td>Lee: miembros del grupo. Escribe: el council-api. <span class="warn">Pendiente: el token de este bot va escrito en council-api.py; hay que moverlo a la bóveda.</span></td></tr>
+      <tr><td class="k">Admirito OpenClaw</td><td>Bot (chat privado)</td><td>Worker admira-telegram-bridge (bridge.admira.store /telegram/send)</td><td>«👤 NUEVA SESIÓN AdmiraXP · IP · ciudad» por cada visita a admira.store/admira-xp y xpaceos.com (lo manda el propio navegador del visitante, session-ping.js). <span class="warn">Ruido: también avisa de rastreadores (IP 66.249… es Google).</span></td><td>Lee: Carlos. Escribe: el bridge. <span class="dim">Sin fuente local del worker en el Mac Mini.</span></td></tr>
+      <tr><td class="k">MBP16</td><td>Bot (chat privado)</td><td>Vigilante del MacBook Pro 16</td><td>Estado del funnel del Mac Mini («🟢 Mac Mini (hub) RECUPERADO — el funnel responde»).</td><td>Lee: Carlos. Escribe: un launchd del MBP16. <span class="dim">Fuente en el MBP16, no en este Mac.</span></td></tr>
+      <tr><td class="k">NeoMatrix</td><td>Bot (chat privado)</td><td>Gateway OpenClaw de Neo</td><td>Avisos del gateway («⚠️ Gateway shutting down — Your current task…»).</td><td>Lee: Carlos. Escribe: el gateway de Neo. <span class="dim">Fuente en la máquina de Neo.</span></td></tr>
+      <tr><td class="k">Auditor</td><td>Bot</td><td>—</td><td>Se unió el miércoles; sin mensajes registrados.</td><td class="dim">Por identificar (quien lo dio de alta que lo documente aquí).</td></tr>
+      <tr><td class="k">AdmiraNext <span class="dim">(megáfono)</span></td><td>Canal · 2 suscriptores</td><td>Nadie automático</td><td>Publicaciones manuales (LinkedIn, vídeos). <span class="bad">Los comandos escritos aquí no llegan a ningún bot.</span></td><td>Lee: suscriptores. Escribe: Carlos.</td></tr>
+    </tbody>
+  </table></div>
+
+  <h2>Qué es ruido y qué se ha silenciado (FLT-1779)</h2>
+  <ul>
+    <li><b>Éxitos de la API</b> («✅ POST /grid/upload · 200 · 165ms»): silenciados. Solo avisan los errores 4xx/5xx, agrupados (primer fallo → recordatorio → RECUPERADO).</li>
+    <li><b>Vaivén de pantallas</b> («MUDAS» / «de vuelta emitiendo» cada pocos minutos, xtore-inicial y macbookairrosa): una pantalla es MUDA solo tras dos comprobaciones seguidas sin señal (&gt; 6 min) y de vuelta tras dos con señal; con ≥ 3 vaivenes por hora se avisa una vez como INTERMITENTE y se calla una hora.</li>
+    <li><b>Pendiente</b>: filtrar rastreadores en «NUEVA SESIÓN» (Admirito OpenClaw) y llevar el token de Memorizer a la bóveda.</li>
+  </ul>
+
+  <h2>Normas de la casa</h2>
+  <ul>
+    <li>Cada bot responde a <code>/help</code> y <code>/ayuda</code> diciendo qué hace y quién puede leer y escribir. Si un bot no contesta a /help, es que le falta y hay que ponérselo.</li>
+    <li>Un éxito no es noticia; un error sí, una vez, con recuperación. Nada de latidos ni de «200 OK» en Telegram.</li>
+    <li>Las órdenes al equipo van a AgoraMatrix y quedan en <a href="https://yokup.com/misiones">yokup.com/misiones</a> con su número; la respuesta llega en el hilo.</li>
+    <li>Los tokens de los bots viven en la bóveda o en secretos de worker, nunca en el código.</li>
+  </ul>
+
+  <footer>AdmiraNeXT · Telegram · censo de bots · v.05.09.2026.r2.07:38 · MorfeoMacMini · MacMini · <a href="/13rue/vecinos">vecinos y presencia</a> · <a href="/telegram">espejo del grupo</a></footer>
+</div>
+</body>
+</html>

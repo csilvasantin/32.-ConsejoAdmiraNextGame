@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r3.08:06" />
+<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r4.10:10" />
     <script src="/admira-bar.js?v=20260713-r36"></script>
     <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
 <meta charset="UTF-8">
@@ -254,7 +254,13 @@
   .card .mando .mando-age,.card .mando .mando-fix{opacity:.7;font-size:10.5px;font-variant-numeric:tabular-nums}
   /* Una fila por ranura, con sus dos botones. Envuelve si no cabe: mejor dos líneas
      que una lista cortada donde no se sabe a quién estás parando. */
-  .card .mando-slots{display:flex;flex-wrap:wrap;gap:4px;margin-top:4px;white-space:normal}
+  .card .mando-slots{display:flex;flex-direction:column;gap:2px;margin-top:3px;white-space:normal}
+  /* Dos filas, APP y CLI: la etiqueta de la fila dice la superficie una vez; las fichas van
+     pegadas y envuelven si no caben. Compacto: es la lista de a quién puedes mandar, no un panel. */
+  .card .mando-fila{display:flex;align-items:center;flex-wrap:wrap;gap:3px}
+  .card .mando-etq{font-size:9px;font-weight:800;letter-spacing:.08em;color:var(--mut,#75aab9);min-width:26px;opacity:.9}
+  .card .mando-slot i{font-style:normal;opacity:.6}
+  .card .mando-slot.mudo{opacity:.5;border-style:dashed}
   .card .mando-slot{display:inline-flex;align-items:center;gap:3px;font-size:10px;border:1px solid rgba(127,227,161,.28);border-radius:7px;padding:1px 3px 1px 6px;opacity:.9}
   .card .mando-slot button{font-size:10px;line-height:1;padding:2px 4px;border-radius:5px;background:transparent;border:1px solid transparent;cursor:pointer;color:inherit}
   .card .mando-slot button:hover{border-color:currentColor;background:rgba(255,255,255,.06)}
@@ -1112,19 +1118,34 @@ function mandoHtml(m){
   const viejo=g.age>MANDO_FRESH;
   const edad=g.age<60?(g.age+'s'):(g.age<3600?(Math.round(g.age/60)+'m'):(Math.round(g.age/360)/10+'h'));
   const quien=g.slots.map(s=>[s.persona,s.runtime,s.host].filter(Boolean).join('/')).join(' · ');
+  // COMPACTO Y AGRUPADO (Carlos, 5-sep-2026, FLT-1827): el Mac Mini listaba nueve ranuras
+  // planas y mezcladas («Morfeo/Claude/app», «Morfeo/Claude/cli»…), una por línea. Ahora
+  // van en dos filas —APP y CLI— con la superficie escrita UNA vez como etiqueta de fila y
+  // cada agente como una ficha «Persona·Runtime» con sus dos botones pegados. Dentro de
+  // cada fila, por orden alfabético de persona, para que se encuentren de un vistazo.
   // Con el watcher rancio NO se ofrecen botones: la orden se encolaría y nadie la
   // recogería. Se enseña el estado, que es información, y no un botón que miente.
-  const botones = viejo ? '' : g.slots.map(sl=>{
+  const maq=String(m.name||m.id).replace(/"/g,'&quot;');
+  const ficha=(sl)=>{
     const et=[sl.persona,sl.runtime,sl.host].filter(Boolean).join('/');
     const js=JSON.stringify(sl).replace(/"/g,'&quot;');
-    return '<span class="mando-slot" title="'+et.replace(/"/g,'&quot;')+'">'+et
-      + '<button data-mando="start" data-maq="'+String(m.name||m.id).replace(/"/g,'&quot;')+'" data-slot="'+js+'" title="Arrancar '+et.replace(/"/g,'&quot;')+'">▶</button>'
-      + '<button data-mando="stop" data-maq="'+String(m.name||m.id).replace(/"/g,'&quot;')+'" data-slot="'+js+'" title="Parar '+et.replace(/"/g,'&quot;')+'">⏹</button></span>';
+    const nombre=String(sl.persona||'?')+(sl.runtime?('<i>·'+String(sl.runtime)+'</i>'):'');
+    if(viejo) return '<span class="mando-slot mudo" title="'+et.replace(/"/g,'&quot;')+' — el watcher no responde">'+nombre+'</span>';
+    return '<span class="mando-slot" title="'+et.replace(/"/g,'&quot;')+'">'+nombre
+      + '<button data-mando="start" data-maq="'+maq+'" data-slot="'+js+'" title="Arrancar '+et.replace(/"/g,'&quot;')+'">▶</button>'
+      + '<button data-mando="stop" data-maq="'+maq+'" data-slot="'+js+'" title="Parar '+et.replace(/"/g,'&quot;')+'">⏹</button></span>';
+  };
+  const orden=(a,b)=>String(a.persona||'').localeCompare(String(b.persona||''))||String(a.runtime||'').localeCompare(String(b.runtime||''));
+  const grupos=[['app','APP'],['cli','CLI']].map(([h,et])=>{
+    const ss=g.slots.filter(sl=>String(sl.host||'').toLowerCase()===h).sort(orden);
+    return ss.length?('<div class="mando-fila"><span class="mando-etq" title="'+(h==='app'?'Aplicaciones de escritorio (Claude, Codex, OpenCode…)':'Sesiones de terminal (tmux)')+'">'+et+'</span>'+ss.map(ficha).join('')+'</div>'):'';
   }).join('');
+  const sueltas=g.slots.filter(sl=>!['app','cli'].includes(String(sl.host||'').toLowerCase())).sort(orden);
+  const otras=sueltas.length?('<div class="mando-fila"><span class="mando-etq">—</span>'+sueltas.map(ficha).join('')+'</div>'):'';
   return '<div class="mando'+(viejo?' stale':'')+'" title="Ranuras que este equipo declara gobernables: '
     + quien.replace(/"/g,'&quot;') + ' — las recoge su watcher de presencia">'
-    + '🎛 mando: <b>'+g.slots.length+'</b> ranuras <span class="mando-age">· watcher hace '+edad+'</span>'
-    + (botones?('<div class="mando-slots">'+botones+'</div>'):'')+'</div>';
+    + '🎛 mando <b>'+g.slots.length+'</b> <span class="mando-age">· watcher hace '+edad+'</span>'
+    + '<div class="mando-slots">'+grupos+otras+'</div></div>';
 }
 
 // ARRANCAR Y PARAR UN AGENTE (2026-09-02). Los endpoints existían enteros en el

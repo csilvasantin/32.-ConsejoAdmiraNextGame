@@ -23,7 +23,7 @@ test("desplegar es de esta visita: vive en memoria y se pliega otra vez con el m
 });
 
 test("compacto oculta botones, info y señalización; deja mando, control y captura; y hay un botón «opciones» visible", () => {
-  assert.match(html, /\.card\.collapsed \.info,\.card\.collapsed \.acts,\.card\.collapsed \.dsflight\{display:none\}/);
+  assert.match(html, /\.card\.collapsed \.info,\.card\.collapsed \.acts,\.card\.collapsed \.dsflight,\.card\.collapsed \.mqueue\{display:none\}/);
   assert.doesNotMatch(html, /\.card\.collapsed \.(mando|ctlready|shot)\{display:none/);
   assert.match(html, /<button type="button" class="card-opts" data-fold="\$\{m\.id\}"/);
   assert.equal(fabrica(null).optsLabel(true, 17), "▸ opciones (17)");
@@ -43,4 +43,9 @@ test("por defecto solo se pintan los encendidos; los apagados van en un pie con 
   assert.match(html, /const fuera=HIDE_OFF\?ms\.filter\(m=>!m\.online\):\[\];/);
   assert.match(html, /el\.innerHTML\+=pieFuera;/);
   assert.match(html, /🟢 solo encendidos/);
+});
+
+test("el botón de la barra dice lo que hace: plegar si hay abiertas, desplegar si no", () => {
+  assert.match(html, /ca\.textContent=any\?'⊟ plegar todas':'⊞ desplegar todas'/);
+  assert.match(html, /<button id="collapseAll"[^>]*>⊞ desplegar todas<\/button>/);
 });

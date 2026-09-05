@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r15.12:50" />
+<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r16.13:49" />
     <script src="/admira-bar.js?v=20260713-r36"></script>
     <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
 <meta charset="UTF-8">
@@ -197,7 +197,7 @@
      completo está a un clic en el ▾. La miniatura no necesita regla propia: .shot
      nace en display:none y solo la enciende quien tiene imagen que enseñar, así que
      una tarjeta sin captura sigue sin dejar hueco. */
-  .card.collapsed .info,.card.collapsed .acts,.card.collapsed .dsflight{display:none}
+  .card.collapsed .info,.card.collapsed .acts,.card.collapsed .dsflight,.card.collapsed .mqueue{display:none}
   .card .card-opts{align-self:flex-start;margin-top:2px;font:600 11px/1 var(--mono);color:var(--mut);background:transparent;border:1px solid var(--line);border-radius:999px;padding:4px 10px;cursor:pointer}
   .card .card-opts:hover{color:var(--ink);border-color:var(--acc,#f7c95d)}
   .empty.fuera{font-size:11px;opacity:.7;text-align:left;padding:8px 12px}
@@ -683,7 +683,7 @@
       <button id="tareasOpen" title="Tablero TAREAS — VISOR de las misiones FLT de yokup por máquina (toda la flota): presencia + misiones + enlace a yokup">📋 Tablero TAREAS</button>
       <label title="Beep cuando un equipo se cae o su captura empieza a fallar"><input type="checkbox" id="sndToggle"> 🔔 sonido</label>
       <label title="Mostrar solo los equipos encendidos (los apagados se listan al pie)"><input type="checkbox" id="hideOff"> 🟢 solo encendidos</label>
-      <button id="collapseAll" title="Colapsar o expandir todas las tarjetas">⊟ colapsar todas</button>
+      <button id="collapseAll" title="Desplegar todas las tarjetas (solo esta visita)">⊞ desplegar todas</button>
       <span class="caphealth" id="capHealth"></span>
       <button id="fixAll" style="display:none" title="Enviar el arreglo de captura por SSH a todos los equipos que fallan">🛡️ arreglar todas</button>
       <span class="acstate" id="acState">— para monitorizar qué emite cada pantalla</span>
@@ -1625,6 +1625,7 @@ function toggleCollapse(id){
   const card=document.querySelector('.card[data-card="'+id+'"]'); if(!card) return;
   card.classList.toggle('collapsed', isCollapsed(id));
   const o=card.querySelector('.card-opts'); if(o) o.textContent=optsLabel(isCollapsed(id), card.querySelectorAll('.acts button').length);
+  if(typeof paintCollapseAll==='function') paintCollapseAll();
 }
 
 // Deep-link desde /status (Carlos 2026-07-11): /control/?equipo=<nombre> localiza la
@@ -2988,11 +2989,18 @@ function openWall(){ const w=$('#wall'); if(!w) return; w.style.display='flex'; 
 function closeWall(){ const w=$('#wall'); if(w) w.style.display='none'; if(_wallTimer){ clearInterval(_wallTimer); _wallTimer=null; } }
 
 /* ---------- despejar tablero: colapsar/expandir todas ---------- */
+// El botón dice SIEMPRE lo que va a hacer (Carlos, 5-sep-2026): con alguna tarjeta abierta, «⊟ plegar
+// todas»; con todas plegadas, «⊞ desplegar todas». Antes decía «colapsar» y, con todo plegado, las abría.
+function paintCollapseAll(){
+  const ca=$('#collapseAll'); if(!ca) return;
+  const any=MACHINES.some(m=>EXPANDIDAS.has(String(m.id)));
+  ca.textContent=any?'⊟ plegar todas':'⊞ desplegar todas'; ca.title=any?'Plegar todas las tarjetas':'Desplegar todas las tarjetas (solo esta visita)';
+}
 function collapseAllToggle(){
   const ids=MACHINES.map(m=>String(m.id));
-  const anyExpanded=ids.some(id=>EXPANDIDAS.has(id));   // si hay alguna expandida → colapsa todas; si no → expande
+  const anyExpanded=ids.some(id=>EXPANDIDAS.has(id));
   EXPANDIDAS.clear(); if(!anyExpanded) ids.forEach(id=>EXPANDIDAS.add(id));
-  renderCards(MACHINES);
+  renderCards(MACHINES); paintCollapseAll();
 }
 
 /* ---------- wiring de los controles de la barra ---------- */
@@ -3003,7 +3011,7 @@ function collapseAllToggle(){
   document.addEventListener('keydown', e=>{ if(e.key==='Escape' && $('#wall') && $('#wall').style.display==='flex') closeWall(); });
   if(snd){ snd.checked=SOUND; snd.onchange=e=>{ SOUND=e.target.checked; localStorage.setItem('fleet_sound', SOUND?'1':'0'); if(SOUND) beep('up'); }; }
   if(ho){ ho.checked=HIDE_OFF; ho.onchange=e=>{ HIDE_OFF=e.target.checked; localStorage.setItem('fleet_hideoff', HIDE_OFF?'1':'0'); renderCards(MACHINES); }; }
-  if(ca) ca.onclick=collapseAllToggle;
+  if(ca){ ca.onclick=collapseAllToggle; paintCollapseAll(); }
 })();
 
 /* ---------- arranque ---------- */

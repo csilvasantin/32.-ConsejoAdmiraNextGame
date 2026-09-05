@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r2.07:53" />
+<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r3.08:06" />
     <script src="/admira-bar.js?v=20260713-r36"></script>
     <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
 <meta charset="UTF-8">
@@ -1655,6 +1655,7 @@ function renderCards(ms){
         <button data-a="powersleep" data-m="${m.id}" title="Dormir el equipo (vuelve con ⚡ encender por Wake-on-LAN desde un vecino de su red)">⏾ dormir</button>
         <button data-a="powershutdown" data-m="${m.id}" class="danger" title="Apagar el equipo de verdad (sudo sin contraseña). Un Mac apagado se enciende con el botón físico salvo que su firmware admita WoL">⏻ apagar</button>
         <button data-a="powerwake" data-m="${m.id}" title="Encender/despertar el equipo: si responde, despierta la pantalla; si no, Wake-on-LAN desde un vecino de su misma red">⚡ encender</button>
+        <button data-a="sudoenergia" data-m="${m.id}" title="Dejar fijado en este Mac el sudo sin contraseña para apagar, reiniciar y dormir: abre allí el diálogo de administrador, se teclea la contraseña una vez y listo">🔐 sudo energía</button>
         <button data-a="say" data-m="${m.id}">🗣️ decir</button>
         <button data-a="notify" data-m="${m.id}">🔔 avisar</button>
         <button data-a="msg" data-m="${m.id}" title="Enviar un mensaje/encargo al agente de este equipo (por el router de encargos AdmiraNeXT — con ACK y traza en Telegram)">💬 mensaje</button>
@@ -1854,6 +1855,12 @@ $('#cards').addEventListener('click', async e=>{
     b.disabled=true; const lbl0=b.textContent; b.textContent=(shut?'⏻':'⏾')+' …';
     try{ const d=await api('/action',{method:'POST',body:JSON.stringify({machine,action:shut?'shutdown':'sleep'})}); pushResult(machine,shut?'⏻ apagar equipo':'⏾ dormir equipo',d); }
     catch(err){ pushResult(machine,shut?'⏻ apagar equipo':'⏾ dormir equipo',{rc:-1,stdout:'',stderr:err.msg||'error'}); }
+    b.disabled=false; b.textContent=lbl0; return;
+  }
+  if(action==='sudoenergia'){
+    b.disabled=true; const lbl0=b.textContent; b.textContent='🔐 …';
+    try{ const d=await api('/action',{method:'POST',body:JSON.stringify({machine,action:'sudoers_energia'})}); pushResult(machine,'🔐 sudo energía',d); }
+    catch(err){ pushResult(machine,'🔐 sudo energía',{rc:-1,stdout:'',stderr:err.msg||'error'}); }
     b.disabled=false; b.textContent=lbl0; return;
   }
   if(action==='powerwake'){

@@ -350,7 +350,8 @@ const ACTIONS = {
     windows: () => 'rundll32.exe powrprof.dll,SetSuspendState 0,1,0 & echo durmiendo el equipo'
   },
   shutdown: {
-    macos: () => 'sudo -n true 2>/dev/null && { (sleep 2; sudo -n shutdown -h now) >/dev/null 2>&1 & echo "apagando el equipo…"; } || { echo "apagar requiere sudo sin contraseña en este Mac" >&2; exit 1; }',
+    macos: () => 'if sudo -n true 2>/dev/null; then (sleep 2; sudo -n /sbin/shutdown -h now) >/dev/null 2>&1 & echo "apagando el equipo (sudo)…"; ' +
+      'else (sleep 2; osascript -e \'tell application "System Events" to shut down\') >/dev/null 2>&1 & echo "apagando el equipo (System Events; sin sudo: 🔐 sudo energía lo deja fijado)…"; fi',
     linux: () => '(sleep 2; systemctl poweroff 2>/dev/null || sudo -n poweroff 2>/dev/null) >/dev/null 2>&1 & echo "apagando el equipo…"',
     windows: () => 'shutdown /s /t 5 & echo apagando el equipo'
   },
@@ -493,8 +494,24 @@ const ACTIONS = {
     },
     windows: () => winPS("Write-Error 'Windows requiere el executor local navegadores'; exit 1")
   },
+  // sudo sin contraseña PARA ENERGÍA (Carlos, 5-sep-2026: «sí, desde admira.live, son
+  // usuarios registrados en admira/admiranext»). No se puede escribir /etc/sudoers.d por
+  // SSH sin contraseña; en cambio, un diálogo de administrador EN el propio Mac sí: se
+  // lanza desatendido, quien esté delante teclea la contraseña una vez y queda fijada
+  // la regla mínima (shutdown, reboot, pmset). Vuelve al panel el estado real.
+  sudoers_energia: {
+    macos: () => {
+      const rule = 'csilvasantin ALL=(ALL) NOPASSWD: /sbin/shutdown, /sbin/reboot, /usr/bin/pmset';
+      const write = 'echo ' + sh(rule) + ' > /etc/sudoers.d/admira-energia && chmod 440 /etc/sudoers.d/admira-energia && visudo -cf /etc/sudoers.d/admira-energia';
+      const osa = 'do shell script ' + JSON.stringify(write) + ' with prompt "admira.live/control · dejar apagar, reiniciar y dormir este Mac sin contraseña" with administrator privileges';
+      return 'if sudo -n true 2>/dev/null || [ -r /etc/sudoers.d/admira-energia ]; then echo "ya tiene sudo sin contraseña para energía"; ' +
+        'else (nohup osascript -e ' + sh(osa) + ' >/tmp/admira-sudoers.log 2>&1 &) ; sleep 1; echo "diálogo de administrador abierto en este Mac: teclea la contraseña ahí y vuelve a pulsar para comprobar"; fi'
+    },
+    linux: () => 'sudo -n true 2>/dev/null && echo "ya tiene sudo sin contraseña" || echo "en Linux: añade a /etc/sudoers.d una línea NOPASSWD para systemctl poweroff/reboot/suspend" '
+  },
   reboot: {
-    macos: () => 'sudo -n shutdown -r now 2>/dev/null && echo "reiniciando…" || echo "reinicio requiere sudo sin contraseña"',
+    macos: () => 'if sudo -n true 2>/dev/null; then (sleep 2; sudo -n /sbin/shutdown -r now) >/dev/null 2>&1 & echo "reiniciando (sudo)…"; ' +
+      'else (sleep 2; osascript -e \'tell application "System Events" to restart\') >/dev/null 2>&1 & echo "reiniciando (System Events; sin sudo)…"; fi',
     linux: () => '(systemctl reboot 2>/dev/null || sudo -n reboot 2>/dev/null) && echo "reiniciando…" || echo "reinicio requiere permisos (systemd/sudo)"'
   },
   // Salvapantallas de la flota: macOS = ScreenSaverEngine · Linux = GNOME ScreenSaver (dbus) con fallback a xset.

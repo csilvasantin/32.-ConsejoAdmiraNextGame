@@ -34,8 +34,8 @@ test("«control · ver + tocar» y «probar» viven dentro del pliegue del mando
   assert.match(html, /<div class="mando-extra">\$\{controlReadyHtml\(m\)\}<\/div>/);
   assert.match(html, /\.card \.mando\.abierto \+ \.mando-extra\{display:block\}/);
   assert.doesNotMatch(html, /mando-extra\.siempre/, "sin watcher también va dentro del pliegue");
-  const acts = html.indexOf('<div class="acts"'); const pf = html.indexOf("${dsPreflightHtml(m)}");
-  assert.ok(pf < acts && html.slice(pf - 40, pf).indexOf("controlReadyHtml") === -1, "ya no va suelto antes de la señalización");
+  const pf = html.indexOf("${dsPreflightHtml(m)}");
+  assert.ok(html.slice(pf - 200, pf).indexOf("controlReadyHtml") === -1, "controlReadyHtml ya no va suelto junto a la señalización (vive en .mando-extra)");
 });
 
 test("por defecto solo se pintan los encendidos; los apagados van en un pie con sus nombres", () => {
@@ -61,4 +61,13 @@ test('normativa 07: el pie no lleva sellos viejos por módulo; muestra el sello 
   const visible = html.replace(/<!--[\s\S]*?-->/g, '');   // el historial en comentarios conserva su fecha (normativa 07)
   assert.doesNotMatch(visible, /v\.2026\.\d\d\.\d\d\.r\d/, 'sello con el año delante (formato retirado) a la vista');
   assert.match(html, /id="pageStamp"/);
+});
+
+test('5-sep: la señalización va al pie de la ficha y el monitor pequeño refleja la caja grande', () => {
+  const i = html.indexOf('function renderCards('); const body = html.slice(i, html.indexOf('\n}\n', i));
+  const shot = body.indexOf('class="shot"'), opts = body.indexOf('class="card-opts"'), ds = body.indexOf('${dsPreflightHtml(m)}');
+  assert.ok(shot > 0 && opts > shot && ds > opts, 'orden: captura → acciones → opciones → señalización');
+  assert.match(html, /function setIconScreen\(machineId, src\)/);
+  assert.match(html, /setIconScreen\(machineId, src\);\s*\/\/ el monitor pequeño/);
+  assert.match(html, /img\.onload=\(\)=>\{ img\.onload=null; setIconScreen\(machineId, img\.src\); \}/);
 });

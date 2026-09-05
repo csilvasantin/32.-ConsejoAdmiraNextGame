@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r18.14:08" />
+<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r19.16:05" />
     <script src="/admira-bar.js?v=20260713-r36"></script>
     <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
 <meta charset="UTF-8">
@@ -1738,7 +1738,6 @@ function renderCards(ms){
       <div class="info${m.online?'':' offinfo'}${m.online&&infoRedundante(m)?' vacia':''}">${m.online
         ?(infoRedundante(m)?'':(m.info||'').replace(/</g,'&lt;'))
         :('💤 ssh '+((m.user||'csilvasantin')+'@'+(m.host||'?'))+'\n↳ '+((m.info||'sin respuesta').replace(/</g,'&lt;')))}</div>
-      ${dsPreflightHtml(m)}
       <div class="shot" data-m="${m.id}"><img alt="captura ${m.name}"><span class="shotage" data-age="${m.id}"></span></div>
       <div class="acts" ${m.online?'':'style="opacity:.4;pointer-events:none"'}>
         <button data-a="screenshot" data-m="${m.id}">📸 captura</button>
@@ -1762,6 +1761,7 @@ function renderCards(ms){
         ${m.online?`<button data-term="${m.id}" data-termname="${(m.name||'').replace(/"/g,'')}" title="Terminal interactiva (consola SSH en vivo: cd, htop, vim, logs). Ideal para las máquinas Linux." style="border-color:#5bd6c0;color:#5bd6c0;font-weight:700">🖳 terminal</button>`:''}
       </div>
       <button type="button" class="card-opts" data-fold="${m.id}" title="Mostrar u ocultar los botones de acción y la señalización de este equipo">${optsLabel(isCollapsed(m.id), 0)}</button>
+      ${dsPreflightHtml(m)}
       <div class="capwarn" data-capwarn="${m.id}">⚠️ sin permiso de captura <button data-fix="${m.id}" title="Abrir el panel de Grabación de pantalla en ese Mac, avisar al usuario y reactivar el agente">🛡️ enviar arreglo por SSH</button></div>
     </div>`).join('');
   el.innerHTML+=pieFuera;
@@ -1809,15 +1809,17 @@ function loadImgChain(img, urls, onfail){
   (function next(){ if(i>=urls.length){ onfail&&onfail(); return; } img.onerror=next; img.src=urls[i++]; })();
 }
 
-// Pinta DENTRO de la pantalla del icono-ordenador el FONDO (personaje) del equipo.
-// SIEMPRE el wallpaper que lo representa, NUNCA el screenshot en vivo: un escritorio
-// con apps abiertas jamás debe contaminar el icono. Si el equipo no tiene fondo propio
-// ni persona activa, el icono queda vacío (genérico), no con una captura.
-function setIconScreen(machineId){
+// Pinta DENTRO de la pantalla del icono-ordenador LA MISMA imagen que muestra la caja
+// grande de la ficha (Carlos, 5-sep-2026): el fondo del equipo mientras no hay captura,
+// y la captura cuando la hay. Antes el icono resolvía su propio fondo y, si el equipo no
+// tenía fichero propio, caía al logo de la persona («NEO») mientras la caja grande
+// enseñaba otra cosa. Sin src → pantalla vacía (genérica).
+function setIconScreen(machineId, src){
   const ic=document.querySelector('.em.devicon[data-icon="'+machineId+'"]'); if(!ic) return;
   const scr=ic.querySelector('.dscr'), img=scr&&scr.querySelector('img'); if(!img) return;
+  if(!src){ scr.classList.add('empty-scr'); img.removeAttribute('src'); return; }
   scr.classList.remove('empty-scr');
-  loadImgChain(img, machineWallpapers(machineId), ()=>scr.classList.add('empty-scr'));
+  img.onerror=()=>scr.classList.add('empty-scr'); img.src=src;
 }
 
 function showShot(machineId, src){
@@ -1825,8 +1827,7 @@ function showShot(machineId, src){
   box.classList.remove('isWall'); box.classList.remove('nada'); const t=box.querySelector('.shot-nada'); if(t) t.remove();
   box.querySelector('img').src=src; box.style.display='block';
   box.onclick=()=>{ $('#lbImg').src=src; $('#lb').style.display='flex'; };
-  // El icono pequeño muestra SIEMPRE el wallpaper real del equipo, no el screenshot.
-  setIconScreen(machineId);
+  setIconScreen(machineId, src);   // el monitor pequeño enseña lo mismo que la caja grande
 }
 
 // Miniatura grande por defecto = wallpaper real del equipo (fallback a persona),
@@ -1834,7 +1835,9 @@ function showShot(machineId, src){
 function setDefaultShot(machineId){
   const box=document.querySelector('.shot[data-m="'+machineId+'"]'); if(!box) return;
   const img=box.querySelector('img'); box.style.display='block'; box.classList.add('isWall'); box.classList.remove('nada'); const t0=box.querySelector('.shot-nada'); if(t0) t0.remove();
+  img.onload=()=>{ img.onload=null; setIconScreen(machineId, img.src); };   // mismo fondo en el monitor pequeño
   loadImgChain(img, machineWallpapers(machineId), ()=>{
+    img.onload=null; setIconScreen(machineId, null);
     const m=MACHINES.find(x=>x.id===machineId)||{};
     const c=m.signals&&m.signals.control;
     const por=!m.online?'sin acceso desde el hub':(c&&c.why&&c.why!=='ver + tocar'?c.why:'sin fondo de persona subido');
@@ -1842,7 +1845,6 @@ function setDefaultShot(machineId){
     let t=box.querySelector('.shot-nada'); if(!t){ t=document.createElement('div'); t.className='shot-nada'; box.appendChild(t); }
     t.textContent='sin imagen · '+por+(m.online?'':' · ⚡ encender o revisar Tailscale'); });
   box.onclick=()=>{ $('#lbImg').src=img.src; $('#lb').style.display='flex'; };
-  setIconScreen(machineId);
 }
 $('#lb').onclick=()=>{ $('#lb').style.display='none'; };
 

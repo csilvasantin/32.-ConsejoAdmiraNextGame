@@ -2,7 +2,7 @@
 <html lang="es">
 <head>
 <meta charset="utf-8">
-<meta name="admiranext-version" content="AdmiraNeXT v.27.08.2026.r8.13:40">
+<meta name="admiranext-version" content="AdmiraNeXT v.05.09.2026.r1.06:14">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>Vecinos · quién vive en cada piso de 13 Rue · AdmiraNeXT</title>
 <meta name="description" content="Página de asociación vecino↔agente: cada vivienda de 13 Rue del Percebe se asigna a un agente real, la parte operativa del edificio se enciende y Neo supervisa que todos dejen constancia en Yokup.">
@@ -25,6 +25,13 @@
   .lede{max-width:79ch;margin:18px 0 0;padding:16px 18px;border:1.5px solid var(--tinta);background:rgba(216,121,24,.1)}
   .section-head{display:flex;justify-content:space-between;gap:16px;align-items:end;margin:30px 0 10px;border-bottom:1.5px solid var(--tinta);padding-bottom:8px}
   .section-head h2{margin:0;font-size:1.4rem}
+.tg p{margin:6px 0 12px;max-width:72ch}
+  .tg-cols{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:18px}
+  .tg .k{font:10px/1.3 var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:.09em;margin:0 0 6px}
+  .tg .k2{font:11.5px/1.45 var(--mono);color:var(--dim);margin:8px 0 0}
+  .tg ul{margin:0;padding-left:18px;line-height:1.55}
+  .tg code{font:12px var(--mono);background:rgba(0,0,0,.05);padding:1px 5px;border-radius:3px}
+  .tg .dim{color:var(--dim)}
   .section-head span{font:10px/1.3 var(--mono);color:var(--dim);text-transform:uppercase;letter-spacing:.09em;text-align:right}
 
   .marcador{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-top:16px}
@@ -221,6 +228,40 @@
     <tbody id="filas"></tbody>
   </table>
 
+  <div class="section-head"><h2>03 · Hablar con el equipo por Telegram</h2><span id="pie-tg">consejeros siempre · agentes con señal en 15 min</span></div>
+  <section class="tg">
+    <p>Todo el equipo se manda desde el grupo <b>AdmiraNext</b> de Telegram, desde el móvil o el ordenador. Cada orden nace con
+       número (<b>#N</b>) y misión en <a href="https://yokup.com/misiones">yokup.com/misiones</a>; la respuesta llega
+       <b>en el hilo</b> del mensaje original. Escribe <code>/ayuda</code> en el grupo y el bot te devuelve este mismo censo.</p>
+    <div class="tg-cols">
+      <div>
+        <p class="k">Consejeros del Consejo de Silicio · siempre disponibles</p>
+        <ul id="tg-consejeros">
+          <li><code>/wozniak</code> · ingeniería y producto</li>
+          <li><code>/jobs</code> · foco, diseño, decir no</li>
+          <li><code>/lucas</code> · narrativa, mundos, producción</li>
+          <li><code>/disney</code> · experiencia, parques, magia</li>
+        </ul>
+        <p class="k2">Los despierta un webhook: contestan en 1-2 min aunque nadie tenga el portátil abierto.</p>
+      </div>
+      <div>
+        <p class="k">Agentes de la flota · vivos ahora</p>
+        <ul id="tg-agentes"><li class="dim">leyendo presencia…</li></ul>
+        <p class="k2">Por equipo: <code>/mini</code> <code>/pro16</code> <code>/air16</code> → quien esté vivo allí. Sin nombre → el agente vivo con menos carga.</p>
+      </div>
+      <div>
+        <p class="k">Qué pasa si el agente está apagado</p>
+        <ul>
+          <li>El bot acusa recibo y lo dice: <i>⏸ sin equipo vivo (hace 3 h): en cola</i>.</li>
+          <li>Su vigilante lo recoge al despertar y contesta en el hilo.</li>
+          <li>A los 30 min sin acuse, pasa al agente vivo con menos carga y se avisa.</li>
+          <li>Nada se pierde: todo queda en yokup con su número y su misión.</li>
+        </ul>
+        <p class="k2">Decisión FLT-1735 · DEC-mtnulpwpmped · 5-sep-2026.</p>
+      </div>
+    </div>
+  </section>
+
   <footer id="pie">AdmiraNeXT · 13 Rue · puerta 11 · Vecinos</footer>
 </main>
 
@@ -323,7 +364,21 @@
     Object.keys(mapa).forEach(function(k){ var a=agente(mapa[k].agente); if(a&&vivo(a))vivas++ });
     return ocup+" de "+D.huecos.length+" viviendas asignadas · "+vivas+" encendidas";
   }
-  function repinta(){ pintaCasa(); pintaTabla(); pintaMarcador() }
+  // 03 · Hablar con el equipo (FLT-1735): los agentes con señal en 15 min, con su comando y equipo.
+  var CONSEJEROS={wozniak:1,jobs:1,lucas:1,disney:1}, RETIRADOS={oraculo:1,oráculo:1};
+  function pintaTelegram(){
+    var ul=$("tg-agentes"); if(!ul) return;
+    var por={};
+    Object.keys(presencia).forEach(function(k){
+      var p=presencia[k]; var base=String(p.persona||"").replace(/(MBP16|MBP14|MBA16|MacMini|Mini|Air16|Plata|Azul|Rosa|Crema)$/i,"");
+      var key=norm(base); if(!key||CONSEJEROS[key]||RETIRADOS[key]) return;
+      (por[key]=por[key]||{n:base,m:{}}).m[p.machine||"?"]=1;
+    });
+    var keys=Object.keys(por).sort();
+    ul.innerHTML = keys.length ? keys.map(function(k){ return '<li><code>/'+esc(k)+'</code> · '+esc(Object.keys(por[k].m).join(", "))+'</li>' }).join("")
+      : '<li class="dim">ninguno con señal en 15 min: los encargos quedan en cola</li>';
+  }
+  function repinta(){ pintaCasa(); pintaTabla(); pintaMarcador(); pintaTelegram() }
 
   function leePresencia(){
     return fetch(PRESENCE,{cache:"no-store"}).then(function(r){return r.json()}).then(function(d){

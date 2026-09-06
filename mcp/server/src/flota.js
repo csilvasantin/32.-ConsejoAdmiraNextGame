@@ -39,12 +39,16 @@ export function crearFlota(env = {}, identidad, deps = {}) {
   const via = env.TELEGRAM && typeof env.TELEGRAM.fetch === 'function' ? (u, i) => env.TELEGRAM.fetch(u, i) : doFetch;
   const ahora = deps.now || (() => Date.now());
 
-  async function llamar(url, init = {}, { auth = true } = {}) {
+  async function llamar(url, init = {}, { auth = true, directo = false } = {}) {
     if (auth && !env.ADMIRA_TELEGRAM_PANEL_KEY) throw new Error('falta ADMIRA_TELEGRAM_PANEL_KEY en el worker');
     const ctl = new AbortController(); const t = setTimeout(() => ctl.abort(), 30_000);
     let r;
+    // `via` es el service binding del worker admira-telegram: solo vale para bot.yokup.com. Una URL
+    // de otro servicio (api.yokup.com) va por fetch normal; si no, el worker de Telegram contesta 404
+    // (Jobs, #2456, 6-sep-2026: consumo_reportar 404 mientras Wozniak sí publicaba).
+    const enviar = directo ? doFetch : via;
     try {
-      r = await via(url, { ...init, signal: ctl.signal, headers: { accept: 'application/json', 'user-agent': 'admira-live-mcp/1.0', ...(auth ? { authorization: `Bearer ${env.ADMIRA_TELEGRAM_PANEL_KEY}` } : {}), ...(init.headers || {}) } });
+      r = await enviar(url, { ...init, signal: ctl.signal, headers: { accept: 'application/json', 'user-agent': 'admira-live-mcp/1.0', ...(auth ? { authorization: `Bearer ${env.ADMIRA_TELEGRAM_PANEL_KEY}` } : {}), ...(init.headers || {}) } });
     } catch (e) { throw new Error(`no se pudo llegar a ${url}: ${e && e.message || e}`); }
     finally { clearTimeout(t); }
     const text = await r.text();
@@ -137,7 +141,7 @@ export function crearFlota(env = {}, identidad, deps = {}) {
     const body = { machine: identidad.machine, owner: identidad.agent, kind: 'consumo', dia: d, titulo,
       datos: { persona: identidad.persona, equipo: identidad.machine, runtime: identidad.runtime, origen: 'mcp consumo_reportar', total, entrada: Number(tokens_entrada), cache: Number(tokens_cache), salida: Number(tokens_salida), sesiones, llamadas, modelos: modelo ? { [modelo]: sesiones } : {}, despertares, duplicados, causa } };
     const yokup = limpiar(env.YOKUP_API || 'https://api.yokup.com');
-    const r = await llamar(`${yokup}/fleet/notificacion`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }, { auth: false });
+    const r = await llamar(`${yokup}/fleet/notificacion`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }, { auth: false, directo: true });
     return { ok: !!(r && r.ok), notificacion: r && r.id, nueva: r && r.nueva, titulo, ver: 'https://www.yokup.com/notificaciones' };
   }
 

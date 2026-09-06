@@ -172,3 +172,15 @@ test('mandamiento 15: consumo_reportar declara el consumo en Notificaciones de Y
   assert.equal(p.body.datos.total, 1028000); assert.match(p.body.titulo, /JobsGrokBot · Grok grok-4.6 · 1.0 M tokens \(88 % caché/);
   assert.match(p.body.titulo, /6 despertares \(2 dup.\) · causa: seis webhooks/);
 });
+
+test('#2456: consumo_reportar va a api.yokup.com por fetch directo, nunca por el service binding de Telegram', async () => {
+  const peticiones = [], estado = {}; const fetchBase = fetchFalso(peticiones, estado);
+  const directas = [];
+  const fetchDirecto = async (url, init = {}) => { if (String(url).endsWith('/fleet/notificacion')) { directas.push(String(url)); return new Response('{"ok":true,"id":"NOTIF-x","nueva":true}', { status: 200, headers: { 'content-type': 'application/json' } }); } return fetchBase(url, init); };
+  const TELEGRAM = { fetch: async (url) => new Response('{"ok":false,"error":"not found"}', { status: 404 }) };   // el binding solo conoce bot.yokup.com
+  const server = crearServidor({ ...ENV, TELEGRAM, YOKUP_API: 'https://yokup.test' }, { fetch: fetchDirecto, now: () => AHORA }, identidadPorClave('clave-de-jobs-xxxxxxxxxxxxxxxxxxxx', ENV));
+  const [a, b] = InMemoryTransport.createLinkedPair(); await server.connect(b);
+  const client = new Client({ name: 'grokbot', version: '1' }); await client.connect(a);
+  const r = res(await client.callTool({ name: 'consumo_reportar', arguments: { como: 'Jobs', tokens_entrada: 1000, tokens_salida: 100 } }));
+  assert.equal(r.ok, true); assert.equal(directas.length, 1);
+});

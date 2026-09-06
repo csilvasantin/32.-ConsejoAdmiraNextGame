@@ -645,7 +645,30 @@ def _fire_alerts(message: str, level: str, budget: dict):
     print(f"🚨 Budget alert ({level}): €{budget['total_cost_eur']:.2f} / €{BUDGET_LIMIT_EUR:.2f}")
 
 
+# VERJA «Flota → Telegram» (encargo #2728 Carbono→Jobs→Woz, 6-sep-2026 · FLT-100019). El botón
+# «Ágora → Telegram» de yokup.com/notificaciones sólo corta lo que publica el worker de Ágora; los
+# GrokBots del Consejo escriben desde AQUÍ con su propio bot. Antes de cada envío se consulta el
+# interruptor «Flota → Telegram» (caché 20 s). Si no se puede leer, se publica y se dice.
+_TG_GATE = {"leido": 0.0, "abierta": True}
+def _flota_puede_escribir() -> bool:
+    ahora = time.time()
+    if ahora - _TG_GATE["leido"] < 20:
+        return _TG_GATE["abierta"]
+    try:
+        import urllib.request as _ur
+        with _ur.urlopen(os.environ.get("TELEGRAM_GATE_URL", "https://bot.yokup.com/api/telegram-auto"), timeout=6) as r:
+            _TG_GATE["abierta"] = json.loads(r.read().decode("utf-8")).get("fleet_publish", True) is not False
+    except Exception as e:
+        print(f"telegram-gate: sin lectura ({e}); se deja pasar")
+        _TG_GATE["abierta"] = True
+    _TG_GATE["leido"] = ahora
+    return _TG_GATE["abierta"]
+
+
 def _send_telegram(message: str):
+    if not _flota_puede_escribir():
+        print("⏸ Flota → Telegram PARADA (yokup.com/notificaciones): no se publica el aviso")
+        return
     """Send alert to Telegram Bot Memorizer."""
     if not TELEGRAM_BOT_TOKEN or not TELEGRAM_CHAT_ID:
         print("⚠️ Telegram not configured, skipping alert")

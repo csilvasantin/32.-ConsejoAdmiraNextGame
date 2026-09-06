@@ -45,6 +45,7 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
       'Si NO eres un consejero: para una opinión de la mesa usa consejo_preguntar (responde un consejero racional y otro creativo); para hablar con uno concreto usa consejero_preguntar con su rol.',
       'Cada pregunta al Consejo consume presupuesto: pregunta con contexto y una sola vez. El modelo por defecto es grok-4.6 (xAI); claude-sonnet sigue disponible como opción. Mira consejo_modelos antes de elegir otro.',
       'La flota y el tablero de tareas del Consejo se leen con flota_estado, consejo_bots y consejo_tareas. agora_decir publica en AgoraMatrix, el grupo del equipo.',
+      'MANDAMIENTO 15 «Cuenta tus tokens» (Carlos, 6-sep-2026): cada agente y consejero mide lo que gasta y lo declara en las Notificaciones de Yokup. Si no tienes medidor local (GrokBot, OpenCode, Grok CLI), llama a consumo_reportar al terminar cada jornada o cada misión larga, con entrada, caché, salida, modelo, despertares y qué los quemó. Un despertar sin trabajo nuevo cuesta una línea, no una sesión; un eco duplicado se cierra, no se rehace.',
       'REGLA DE CARLOS (5-sep-2026): entre agentes y consejeros, TODA comunicación va por el MCP; es la vía más efectiva porque deja identidad, acuse, estado y respuesta legibles por máquina. Telegram es el canal del humano (Carlos desde el móvil), no el de un agente para hablar con otro. Si tienes que pedir algo a otro miembro, usa agente_encargar y recoge con encargo_estado; no escribas en el grupo para eso.',
       'HABLAR CON LA FLOTA (FLT-2038): agentes_vivos dice quién late ahora y en qué equipo; agente_encargar crea un encargo para una persona (un agente de la flota lo recibe en su sesión en segundos; un consejero de GrokBot se despierta por webhook y contesta en 1-3 min); encargo_estado devuelve el acuse y la respuesta. Un encargo es trabajo para otro: escribe qué hay que hacer, para qué y cómo sabrá que está hecho.',
       identidad && identidad.tipo === 'agente'
@@ -173,6 +174,13 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
   const idDe = (a) => (a && a.como ? identidadPorClave('__como__', { MCP_KEYS: JSON.stringify({ __como__: { persona: a.como } }) }) : identidad);
   const Y = (a) => crearYokup(env, idDe(a), deps);
   const T = (a) => crearTelegram(env, idDe(a), deps);
+  server.registerTool('consumo_reportar', {
+    title: 'Declarar mi consumo de tokens (mandamiento 15)',
+    description: 'Cuenta tus tokens: declara en las Notificaciones de Yokup lo que has gastado hoy (entrada, caché, salida, modelo, sesiones, despertares y qué los quemó). Obligatorio para consejeros de GrokBot y agentes sin medidor local; en los Mac lo hace consumo-tokens.py a diario. Un parte por agente y día; repetirlo actualiza las cifras.',
+    inputSchema: { como: COMO, tokens_entrada: z.number().int().min(0).describe('Tokens de entrada no cacheados del día.'), tokens_cache: z.number().int().min(0).default(0).describe('Tokens de entrada servidos desde caché.'), tokens_salida: z.number().int().min(0).describe('Tokens generados.'), modelo: z.string().max(60).optional(), sesiones: z.number().int().min(1).default(1), llamadas: z.number().int().min(0).default(0).describe('Llamadas al modelo.'), despertares: z.number().int().min(0).default(0).describe('Veces que te despertó un webhook, rutina o encargo.'), duplicados: z.number().int().min(0).default(0).describe('Despertares repetidos por el mismo encargo.'), causa: z.string().max(200).optional().describe('Qué se llevó la mayor parte, en una frase.'), dia: z.string().regex(/^\d{4}-\d{2}-\d{2}$/).optional() },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+  }, seguro(async (a) => texto(await crearFlota(env, idDe(a), deps).reportarConsumo(a))));
+
   /* ── Yokup: el consejero dentro de la flota (FLT-1580) ─────────────────────── */
   const quien = identidad ? `${identidad.agent} (${identidad.persona} en ${identidad.machine}, runtime ${identidad.runtime})` : 'sin identidad (clave no asignada a un consejero)';
 
@@ -309,7 +317,7 @@ export async function manejar(request, env, deps = {}) {
     return json({ nombre: NOMBRE, version: env.VERSION || '', sitio: env.SITIO || 'https://www.admira.live',
       que_es: 'MCP de admira.live: los consejeros del Consejo de Silicio, la flota y AgoraMatrix como herramientas MCP por HTTP.',
       endpoint_mcp: `${url.origin}/mcp`, transporte: 'streamable-http', autenticacion: 'Authorization: Bearer <MCP_KEY> (o ?key=)',
-      documentacion: 'https://www.admira.live/mcp/', herramientas: ['consejo_consejeros', 'consejo_modelos', 'consejo_preguntar', 'consejero_preguntar', 'consejo_salud', 'consejo_bots', 'flota_estado', 'consejo_tareas', 'agora_decir', 'yokup_quien_soy', 'yokup_presencia', 'yokup_alta', 'yokup_paso', 'yokup_evidencia', 'yokup_informe', 'yokup_ventana', 'yokup_mis_misiones', 'telegram_bandeja', 'telegram_responder', 'agentes_vivos', 'agente_encargar', 'encargo_estado'],
+      documentacion: 'https://www.admira.live/mcp/', herramientas: ['consejo_consejeros', 'consejo_modelos', 'consejo_preguntar', 'consejero_preguntar', 'consejo_salud', 'consejo_bots', 'flota_estado', 'consejo_tareas', 'agora_decir', 'yokup_quien_soy', 'yokup_presencia', 'yokup_alta', 'yokup_paso', 'yokup_evidencia', 'yokup_informe', 'yokup_ventana', 'yokup_mis_misiones', 'telegram_bandeja', 'telegram_responder', 'agentes_vivos', 'agente_encargar', 'encargo_estado', 'consumo_reportar'],
       flota: 'Con una clave por consejero (MCP_KEYS), Wozniak/Jobs/Disney/Lucas trabajan en yokup como WozniakGrokBot… (equipo GrokBot, runtime Grok). Con una clave por agente y equipo (mcp-conectar.sh), Claude Code, Codex y OpenCode entran identificados (MorfeoMacMini…).',
       conectar: { humanos: 'https://www.admira.live/help', silicio: 'https://www.admira.live/mcp/', llms: 'https://www.admira.live/mcp/llms.txt' } });
   }

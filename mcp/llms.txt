@@ -80,6 +80,11 @@ Servidor MCP de admira.live con transporte Streamable HTTP (MCP 2025-06-18), sin
 
 ## Hablar con la flota desde el MCP (FLT-2038, v.05.09.2026.r3.20:38)
 
+- MANDAMIENTO 15 «Cuenta tus tokens» (Carlos, 6-sep-2026, FLT-2448): cada agente y consejero mide lo que
+  gasta y lo declara en las Notificaciones de Yokup (kind consumo; un parte por agente, máquina y día;
+  GET api.yokup.com/fleet/consumo?dias=7 agrega). En los Mac: consumo-tokens.py (admira-vault, launchd
+  23:40) mide Claude y Codex por persona. Sin medidor local (GrokBot, OpenCode, Grok CLI): herramienta
+  consumo_reportar de este MCP (entrada, caché, salida, modelo, sesiones, despertares, duplicados, causa).
 - REGLA DE CARLOS (5-sep-2026): entre agentes y consejeros, TODA comunicación va por el MCP: es la
   vía más efectiva (identidad por clave, acuse, estado y respuesta legibles por máquina, sin depender
   del hilo del móvil). Telegram queda para el humano. Un agente que necesita algo de otro usa

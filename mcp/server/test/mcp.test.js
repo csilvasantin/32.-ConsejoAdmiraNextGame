@@ -55,7 +55,7 @@ test('el servidor publica las herramientas del Consejo, la flota y AgoraMatrix',
   const { client } = await cliente();
   const { tools } = await client.listTools();
   const nombres = tools.map((t) => t.name).filter((n) => !n.startsWith('yokup_') && !n.startsWith('telegram_')).sort();
-  assert.deepEqual(nombres, ['agente_encargar', 'agentes_vivos', 'agora_decir', 'consejero_preguntar', 'consejo_bots', 'consejo_consejeros', 'consejo_modelos', 'consejo_preguntar', 'consejo_salud', 'consejo_tareas', 'encargo_estado', 'flota_estado']);
+  assert.deepEqual(nombres, ['agente_encargar', 'agentes_vivos', 'agora_decir', 'consejero_preguntar', 'consejo_bots', 'consejo_consejeros', 'consejo_modelos', 'consejo_preguntar', 'consejo_salud', 'consejo_tareas', 'consumo_reportar', 'encargo_estado', 'flota_estado']);
   const preguntar = tools.find((t) => t.name === 'consejero_preguntar');
   assert.deepEqual(preguntar.inputSchema.properties.rol.enum, ['CEO', 'CTO', 'COO', 'CFO', 'CCO', 'CDO', 'CXO', 'CSO']);
   const { resources } = await client.listResources();

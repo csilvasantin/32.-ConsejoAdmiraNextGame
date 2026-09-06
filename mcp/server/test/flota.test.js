@@ -154,3 +154,21 @@ test('la clave derivada de la semilla identifica a la pareja persona+equipo y ab
   const cuerpo = await r.json();
   assert.match(cuerpo.result.instructions, /ERES UN AGENTE DE LA FLOTA: en yokup eres TrinityMacBookPro14/);
 });
+
+test('mandamiento 15: consumo_reportar declara el consumo en Notificaciones de Yokup con la identidad de la clave', async () => {
+  const peticiones = [], estado = {};
+  const fetchBase = fetchFalso(peticiones, estado);
+  const fetchConYokup = async (url, init = {}) => {
+    if (String(url).endsWith('/fleet/notificacion')) { peticiones.push({ url: String(url), method: init.method, body: JSON.parse(init.body) }); return new Response(JSON.stringify({ ok: true, id: 'NOTIF-abc', nueva: true }), { status: 200, headers: { 'content-type': 'application/json' } }); }
+    return fetchBase(url, init);
+  };
+  const server = crearServidor({ ...ENV, YOKUP_API: 'https://yokup.test' }, { fetch: fetchConYokup, now: () => AHORA }, identidadPorClave('clave-de-jobs-xxxxxxxxxxxxxxxxxxxx', ENV));
+  const [a, b] = InMemoryTransport.createLinkedPair(); await server.connect(b);
+  const client = new Client({ name: 'grokbot', version: '1' }); await client.connect(a);
+  const r = res(await client.callTool({ name: 'consumo_reportar', arguments: { como: 'Jobs', tokens_entrada: 120000, tokens_cache: 900000, tokens_salida: 8000, modelo: 'grok-4.6', despertares: 6, duplicados: 2, causa: 'seis webhooks por el mismo encargo' } }));
+  assert.equal(r.ok, true); assert.equal(r.notificacion, 'NOTIF-abc');
+  const p = peticiones.find((x) => x.url.endsWith('/fleet/notificacion'));
+  assert.equal(p.body.kind, 'consumo'); assert.equal(p.body.owner, 'JobsGrokBot'); assert.equal(p.body.machine, 'GrokBot');
+  assert.equal(p.body.datos.total, 1028000); assert.match(p.body.titulo, /JobsGrokBot · Grok grok-4.6 · 1.0 M tokens \(88 % caché/);
+  assert.match(p.body.titulo, /6 despertares \(2 dup.\) · causa: seis webhooks/);
+});

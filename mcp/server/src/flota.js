@@ -125,5 +125,21 @@ export function crearFlota(env = {}, identidad, deps = {}) {
       acuse: x.ack_at ? cuando(x.ack_at) : null, cierre: x.done_at ? cuando(x.done_at) : null, texto: String(x.text || ''), respuesta: x.note || '', proyecto_id: x.project_id || null, task_id: x.task_id || null };
   }
 
-  return { vivos, encargar, estado, maquinaDe };
+  /** Mandamiento 15 «Cuenta tus tokens» (Carlos, 6-sep-2026): declarar el consumo propio en las
+   *  Notificaciones de Yokup. Para quien no tiene medidor local (consejeros de GrokBot, OpenCode, Grok CLI). */
+  async function reportarConsumo({ tokens_entrada = 0, tokens_cache = 0, tokens_salida = 0, modelo = '', sesiones = 1, llamadas = 0, despertares = 0, duplicados = 0, causa = '', dia = '' } = {}) {
+    if (!identidad) throw new Error('sin identidad: la clave del MCP no dice quién eres, y el consumo se declara con nombre');
+    const total = Number(tokens_entrada) + Number(tokens_cache) + Number(tokens_salida);
+    const d = dia || new Date(ahora()).toISOString().slice(0, 10);
+    const pc = Math.round(100 * Number(tokens_cache) / Math.max(1, Number(tokens_entrada) + Number(tokens_cache)));
+    const f = (n) => (n >= 1e6 ? (n / 1e6).toFixed(1) + ' M' : n >= 1e3 ? Math.round(n / 1e3) + ' k' : String(n));
+    const titulo = `📟 Consumo ${d} · ${identidad.agent} · ${identidad.runtime}${modelo ? ' ' + modelo : ''} · ${f(total)} tokens (${pc} % caché, salida ${f(Number(tokens_salida))}) · ${sesiones} sesiones · ${llamadas} llamadas · ${despertares} despertares${duplicados ? ` (${duplicados} dup.)` : ''}${causa ? ' · causa: ' + causa : ''}`.slice(0, 300);
+    const body = { machine: identidad.machine, owner: identidad.agent, kind: 'consumo', dia: d, titulo,
+      datos: { persona: identidad.persona, equipo: identidad.machine, runtime: identidad.runtime, origen: 'mcp consumo_reportar', total, entrada: Number(tokens_entrada), cache: Number(tokens_cache), salida: Number(tokens_salida), sesiones, llamadas, modelos: modelo ? { [modelo]: sesiones } : {}, despertares, duplicados, causa } };
+    const yokup = limpiar(env.YOKUP_API || 'https://api.yokup.com');
+    const r = await llamar(`${yokup}/fleet/notificacion`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) }, { auth: false });
+    return { ok: !!(r && r.ok), notificacion: r && r.id, nueva: r && r.nueva, titulo, ver: 'https://www.yokup.com/notificaciones' };
+  }
+
+  return { vivos, encargar, estado, maquinaDe, reportarConsumo };
 }

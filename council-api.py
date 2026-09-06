@@ -656,7 +656,9 @@ def _flota_puede_escribir() -> bool:
         return _TG_GATE["abierta"]
     try:
         import urllib.request as _ur
-        with _ur.urlopen(os.environ.get("TELEGRAM_GATE_URL", "https://bot.yokup.com/api/telegram-auto"), timeout=6) as r:
+        # Cloudflare responde 403 al User-Agent de Python: se va con UA de navegador (medido 6-sep-2026).
+        peticion = _ur.Request(os.environ.get("TELEGRAM_GATE_URL", "https://bot.yokup.com/api/telegram-auto"), headers={"User-Agent": "Mozilla/5.0 (telegram-gate)"})
+        with _ur.urlopen(peticion, timeout=6) as r:
             _TG_GATE["abierta"] = json.loads(r.read().decode("utf-8")).get("fleet_publish", True) is not False
     except Exception as e:
         print(f"telegram-gate: sin lectura ({e}); se deja pasar")

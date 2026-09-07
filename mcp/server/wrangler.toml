@@ -53,6 +53,8 @@ YOKUP_API = "https://api.yokup.com"
 ADMIRA_TELEGRAM_URL = "https://bot.yokup.com"
 # MCP_KEY (la primera clave, la que ya tiene Wozniak) se mapea a esta persona.
 MCP_KEY_PERSONA = "Wozniak"
-VERSION = "v.07.09.2026.r4.06:24"
-# Cada consejero se representa a sí mismo (Carlos, 7-sep-2026): cuatro conectores por silla en GrokBot desde las 06:2x; la clave de una silla ya no firma por otra.
-MCP_FIRMA_ESTRICTA = "1"
+VERSION = "v.07.09.2026.r5.06:37"
+# Cada consejero se representa a sí mismo (Carlos, 7-sep-2026). Estricto = "1" solo cuando cada Bot de GrokBot
+# entre por SU conector: el smoke de las 06:30 demostró que los cuatro Bots seguían saliendo por la clave de Lucas
+# (los conectores son de la cuenta y el Bot no elige solo), así que con "1" Jobs, Disney y Wozniak no podían escribir.
+MCP_FIRMA_ESTRICTA = "0"

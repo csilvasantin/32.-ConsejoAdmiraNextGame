@@ -53,4 +53,6 @@ YOKUP_API = "https://api.yokup.com"
 ADMIRA_TELEGRAM_URL = "https://bot.yokup.com"
 # MCP_KEY (la primera clave, la que ya tiene Wozniak) se mapea a esta persona.
 MCP_KEY_PERSONA = "Wozniak"
-VERSION = "v.07.09.2026.r3.06:03"
+VERSION = "v.07.09.2026.r4.06:24"
+# Cada consejero se representa a sí mismo (Carlos, 7-sep-2026): cuatro conectores por silla en GrokBot desde las 06:2x; la clave de una silla ya no firma por otra.
+MCP_FIRMA_ESTRICTA = "1"

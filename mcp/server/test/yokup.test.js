@@ -162,7 +162,34 @@ test('yokup_quien_soy sin «como» avisa de que la clave compartida de GrokBot f
   const sin = res(await client.callTool({ name: 'yokup_quien_soy', arguments: {} }));
   assert.equal(sin.identidad.agent, 'WozniakGrokBot'); assert.match(sin.aviso, /sin «como» firma como WozniakGrokBot/);
   const con = res(await client.callTool({ name: 'yokup_quien_soy', arguments: { como: 'Jobs' } }));
-  assert.equal(con.identidad.agent, 'JobsGrokBot'); assert.equal(con.aviso, undefined);
+  assert.equal(con.identidad.agent, 'JobsGrokBot'); assert.match(con.aviso, /firma delegada/, 'con la clave de Wozniak, Jobs firma delegado y se le dice');
+  const propio = res(await client.callTool({ name: 'yokup_quien_soy', arguments: { como: 'Wozniak' } }));
+  assert.equal(propio.identidad.agent, 'WozniakGrokBot'); assert.equal(propio.aviso, undefined, 'con su propia clave y su como, sin aviso');
+});
+
+test('firma delegada: con la clave de Wozniak y como=Jobs se firma como Jobs y queda anotada la clave usada', async () => {
+  const { client, peticiones } = await cliente();
+  const r = res(await client.callTool({ name: 'yokup_quien_soy', arguments: { como: 'Jobs' } }));
+  assert.equal(r.identidad.agent, 'JobsGrokBot'); assert.equal(r.identidad.firmado_con_clave_de, 'WozniakGrokBot'); assert.match(r.aviso, /firma delegada/);
+  res(await client.callTool({ name: 'yokup_paso', arguments: { como: 'Jobs', mision: 'FLT-1601', paso: 'a', estado: 'in_progress' } }));
+  assert.equal(peticiones.find((x) => x.url.endsWith('/fleet/task-status')).body.owner, 'JobsGrokBot');
+});
+
+test('modo estricto (MCP_FIRMA_ESTRICTA=1): la clave de una silla no firma por otra', async () => {
+  const { client } = await cliente(ENV.MCP_KEY, { ...ENV, MCP_FIRMA_ESTRICTA: '1' });
+  const r = await client.callTool({ name: 'yokup_quien_soy', arguments: { como: 'Jobs' } });
+  assert.equal(r.isError, true); assert.match(r.content[0].text, /clave es la de WozniakGrokBot y no puede firmar como Jobs/);
+  const yo = res(await client.callTool({ name: 'yokup_quien_soy', arguments: { como: 'Wozniak' } }));
+  assert.equal(yo.identidad.agent, 'WozniakGrokBot'); assert.equal(yo.aviso, undefined);
+});
+
+test('clave compartida del Consejo (MCP_KEY_CONSEJO): sin como no firma; con como firma esa silla sin firma delegada', async () => {
+  const env = { ...ENV, MCP_KEY_CONSEJO: 'clave-compartida-del-consejo-xxxxxxxx' };
+  const { client } = await cliente(env.MCP_KEY_CONSEJO, env);
+  const sin = await client.callTool({ name: 'yokup_quien_soy', arguments: {} });
+  assert.equal(sin.isError, true); assert.match(sin.content[0].text, /no firma por nadie: pasa como=/);
+  const con = res(await client.callTool({ name: 'yokup_quien_soy', arguments: { como: 'Disney' } }));
+  assert.equal(con.identidad.agent, 'DisneyGrokBot'); assert.equal(con.identidad.firmado_con_clave_de, undefined); assert.equal(con.aviso, undefined);
 });
 
 test('yokup_mis_misiones pide al servidor solo las del titular', async () => {

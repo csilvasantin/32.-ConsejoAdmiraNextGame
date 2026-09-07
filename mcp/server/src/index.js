@@ -51,7 +51,7 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
       identidad && identidad.tipo === 'agente'
         ? `ERES UN AGENTE DE LA FLOTA: en yokup eres ${identidad.agent} (persona ${identidad.persona}, equipo ${identidad.machine}, runtime ${identidad.runtime}). Tu clave del MCP ya te identifica: no pases «como». Las herramientas yokup_* firman por ti (alta, pasos, evidencia, informe, ventana) y telegram_bandeja es tu bandeja de encargos. Si otro agente o un consejero tiene que hacer algo, encárgaselo con agente_encargar y recoge la respuesta con encargo_estado.`
         : identidad
-        ? `ERES MIEMBRO DE LA FLOTA: en yokup eres ${identidad.agent} (persona ${identidad.persona}, equipo ${identidad.machine}, runtime ${identidad.runtime}). Ritual obligatorio de AdmiraNeXT: (1) cuando te encarguen trabajo, dalo de alta con yokup_alta escribiendo el encargo con pasos a) b) c) — UNA sola vez: si te da timeout la misión se ha creado igual, léela con yokup_mis_misiones en vez de repetir el alta; (2) marca cada paso con yokup_paso (in_progress al empezar, done al acabar con un informe corto); (3) antes de cerrar registra tu transcripción con yokup_evidencia; (4) cierra con yokup_informe y las tres líneas de la norma 22 (Tiempo dedicado · Puntos de la misión · Total verificado, leído con yokup_quien_soy después del cierre) más «Miembros y contexto» en tokens; (5) si te quedas sin trabajo, abre una yokup_ventana con tres propuestas y ejecuta la recomendada si nadie responde en 5 minutos; (6) en TODAS las herramientas yokup_* y telegram_* pasa como=<tu apellido> (Wozniak, Jobs, Lucas o Disney), porque el conector es de la cuenta y sin ese dato firmarías como otro consejero; (7) al empezar cada turno y cada vez que una rutina te despierte, lee telegram_bandeja: los encargos que Carlos te hace desde el móvil llegan por ahí, y se contestan con telegram_responder (ack al cogerlo, done con la respuesta). Cada misión cerrada puntúa 40 y cada ventana 8 en yokup.com/highscore.`
+        ? `ERES MIEMBRO DE LA FLOTA: en yokup eres ${identidad.agent} (persona ${identidad.persona}, equipo ${identidad.machine}, runtime ${identidad.runtime}). Ritual obligatorio de AdmiraNeXT: (1) cuando te encarguen trabajo, dalo de alta con yokup_alta escribiendo el encargo con pasos a) b) c) — UNA sola vez: si te da timeout la misión se ha creado igual, léela con yokup_mis_misiones en vez de repetir el alta; (2) marca cada paso con yokup_paso (in_progress al empezar, done al acabar con un informe corto); (3) antes de cerrar registra tu transcripción con yokup_evidencia; (4) cierra con yokup_informe y las tres líneas de la norma 22 (Tiempo dedicado · Puntos de la misión · Total verificado, leído con yokup_quien_soy después del cierre) más «Miembros y contexto» en tokens; (5) si te quedas sin trabajo, abre una yokup_ventana con tres propuestas y ejecuta la recomendada si nadie responde en 5 minutos; (6) cada consejero se representa a sí mismo: lo ideal es que tu Bot entre con SU conector y SU clave; mientras el conector sea el compartido de la cuenta, pasa como=<tu apellido> (Wozniak, Jobs, Lucas o Disney) en TODAS las herramientas yokup_* y telegram_*, porque sin ese dato firmarías como otro consejero (y esa firma delegada queda anotada); (7) al empezar cada turno y cada vez que una rutina te despierte, lee telegram_bandeja: los encargos que Carlos te hace desde el móvil llegan por ahí, y se contestan con telegram_responder (ack al cogerlo, done con la respuesta). Cada misión cerrada puntúa 40 y cada ventana 8 en yokup.com/highscore.`
         : `Esta clave del MCP no está asignada a nadie: las herramientas yokup_* y telegram_* no funcionarán hasta que tengas tu clave propia (mcp-conectar.sh en la flota; consejeros con carné: ${CONSEJEROS_GROKBOT.join(', ')}). agentes_vivos, agente_encargar y encargo_estado sí funcionan y firman como «MCP admira.live».`,
     ].join('\n'),
   });
@@ -171,7 +171,24 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
    * apellido) y esa identidad manda; la de la clave queda de respaldo. Solo se admiten
    * los cuatro consejeros con carné, así que no se puede firmar como nadie más. */
   const COMO = z.enum(CONSEJEROS_GROKBOT).optional().describe('Quién eres: Wozniak, Jobs, Lucas o Disney. Ponlo SIEMPRE si eres un consejero de GrokBot.');
-  const idDe = (a) => (a && a.como ? identidadPorClave('__como__', { MCP_KEYS: JSON.stringify({ __como__: { persona: a.como } }) }) : identidad);
+  // QUIÉN FIRMA (Carlos, 7-sep-2026: «que cada consejero se represente a sí mismo»).
+  //  · Clave individual de una silla (MCP_KEYS): firma esa silla. Con «como» de OTRA silla se
+  //    anota firmado_con_clave_de (auditoría) y, en modo estricto (MCP_FIRMA_ESTRICTA=1, cuando
+  //    cada Bot de GrokBot tenga su conector), se rechaza.
+  //  · Clave compartida del Consejo (MCP_KEY_CONSEJO): no es de nadie; sin «como» no firma.
+  const estricta = String(env.MCP_FIRMA_ESTRICTA || '') === '1';
+  const idDe = (a) => {
+    const como = a && a.como ? String(a.como) : '';
+    if (!como) {
+      if (identidad && identidad.tipo === 'consejo-compartido') throw new Error('esta clave es la compartida del Consejo y no firma por nadie: pasa como=Wozniak|Jobs|Lucas|Disney (tu silla) en cada herramienta yokup_* y telegram_*');
+      return identidad;
+    }
+    if (identidad && identidad.tipo === 'consejero' && identidad.persona !== como) {
+      if (estricta) throw new Error(`esta clave es la de ${identidad.agent} y no puede firmar como ${como}: cada consejero entra con su propio conector (o con la clave compartida del Consejo)`);
+      return { ...identidadPorClave('__como__', { MCP_KEYS: JSON.stringify({ __como__: { persona: como } }) }), firmado_con_clave_de: identidad.agent };
+    }
+    return identidadPorClave('__como__', { MCP_KEYS: JSON.stringify({ __como__: { persona: como } }) });
+  };
   const Y = (a) => crearYokup(env, idDe(a), deps);
   const T = (a) => crearTelegram(env, idDe(a), deps);
   server.registerTool('consumo_reportar', {
@@ -195,7 +212,9 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
     // concreto: Wozniak llamó sin `como` y se vio como LucasGrokBot (#2754, 7-sep-2026).
     const aviso = !(a && a.como) && id && id.tipo === 'consejero'
       ? `Esta clave es la del conector compartido de GrokBot y sin «como» firma como ${id.agent}. Si no eres ${id.persona}, pasa como=<tu apellido> (Wozniak, Jobs, Lucas o Disney) en TODAS las herramientas yokup_* y telegram_*; si no, tus misiones y tu consumo se apuntan a otro consejero.`
-      : undefined;
+      : id && id.firmado_con_clave_de
+        ? `Firmas como ${id.agent} con la clave de ${id.firmado_con_clave_de}: es una firma delegada (autodeclarada). Para representarte a ti mismo, tu Bot debe entrar con su propio conector y su propia clave.`
+        : undefined;
     return texto({ identidad: id, ...(aviso ? { aviso } : {}), misiones: await Y(a).misMisiones(), marcador: await Y(a).marcador() });
   }));
 
@@ -311,6 +330,7 @@ export async function claveValida(request, env) {
   const cand = claveRecibida(request);
   if (!cand) return false;
   if (env.MCP_KEY && iguales(cand, env.MCP_KEY)) return true;
+  if (env.MCP_KEY_CONSEJO && iguales(cand, env.MCP_KEY_CONSEJO)) return true;
   let mapa = {};
   try { mapa = env.MCP_KEYS ? JSON.parse(env.MCP_KEYS) : {}; } catch { mapa = {}; }
   if (Object.keys(mapa).some((k) => iguales(cand, k))) return true;
@@ -333,7 +353,7 @@ export async function manejar(request, env, deps = {}) {
   if (ruta === '/salud' && request.method === 'GET') {
     const api = crearCliente(env, deps);
     const consejo = await api.saludConsejo().then((r) => ({ ok: true, ...r })).catch((e) => ({ ok: false, error: String(e.message || e) }));
-    return json({ ok: true, worker: NOMBRE, version: env.VERSION || '', secretos: { MCP_KEY: !!env.MCP_KEY, MCP_KEYS: !!env.MCP_KEYS, MCP_FLOTA_SEED: !!env.MCP_FLOTA_SEED, COUNCIL_MACHINE_TOKEN: !!env.COUNCIL_MACHINE_TOKEN, AGORA_SYNC_KEY: !!env.AGORA_SYNC_KEY, ADMIRA_TELEGRAM_PANEL_KEY: !!env.ADMIRA_TELEGRAM_PANEL_KEY }, consejeros_con_carne: CONSEJEROS_GROKBOT, consejo });
+    return json({ ok: true, worker: NOMBRE, version: env.VERSION || '', secretos: { MCP_KEY: !!env.MCP_KEY, MCP_KEYS: !!env.MCP_KEYS, MCP_KEY_CONSEJO: !!env.MCP_KEY_CONSEJO, MCP_FIRMA_ESTRICTA: String(env.MCP_FIRMA_ESTRICTA || '') === '1', MCP_FLOTA_SEED: !!env.MCP_FLOTA_SEED, COUNCIL_MACHINE_TOKEN: !!env.COUNCIL_MACHINE_TOKEN, AGORA_SYNC_KEY: !!env.AGORA_SYNC_KEY, ADMIRA_TELEGRAM_PANEL_KEY: !!env.ADMIRA_TELEGRAM_PANEL_KEY }, consejeros_con_carne: CONSEJEROS_GROKBOT, consejo });
   }
 
   if (ruta === '/mcp') {

@@ -159,7 +159,7 @@ test('/ y /salud describen el servicio y dicen qué secretos faltan', async () =
   assert.equal(raiz.endpoint_mcp, 'https://mcp.test/mcp');
   assert.ok(raiz.herramientas.includes('consejero_preguntar'));
   const salud = await (await manejar(new Request('https://mcp.test/salud'), { ...ENV, AGORA_SYNC_KEY: '' }, deps)).json();
-  assert.deepEqual(salud.secretos, { MCP_KEY: true, MCP_KEYS: false, MCP_FLOTA_SEED: false, COUNCIL_MACHINE_TOKEN: true, AGORA_SYNC_KEY: false, ADMIRA_TELEGRAM_PANEL_KEY: false });
+  assert.deepEqual(salud.secretos, { MCP_KEY: true, MCP_KEYS: false, MCP_KEY_CONSEJO: false, MCP_FIRMA_ESTRICTA: false, MCP_FLOTA_SEED: false, COUNCIL_MACHINE_TOKEN: true, AGORA_SYNC_KEY: false, ADMIRA_TELEGRAM_PANEL_KEY: false });
   assert.equal(salud.consejo.ok, true);
   assert.equal(salud.consejo.agents, 16);
   const nada = await manejar(new Request('https://mcp.test/otra'), ENV, deps);

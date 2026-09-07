@@ -61,6 +61,9 @@ export function identidadPorClave(clave, env = {}) {
   let persona = null, entrada = null;
   if (mapa[clave] && mapa[clave].persona) { entrada = mapa[clave]; persona = String(entrada.persona); }
   else if (env.MCP_KEY && clave === env.MCP_KEY) persona = String(env.MCP_KEY_PERSONA || 'Wozniak');
+  // Clave COMPARTIDA del Consejo (MCP_KEY_CONSEJO): la usa el conector único de la cuenta de
+  // GrokBot cuando no se puede dar una clave por silla. No firma por nadie: exige «como».
+  if (!persona && env.MCP_KEY_CONSEJO && clave === env.MCP_KEY_CONSEJO) return { persona: null, machine: EQUIPO, runtime: RUNTIME, model: MODELO, agent: null, tipo: 'consejo-compartido' };
   if (!persona) return null;
   // «Steve Wozniak» firma como Wozniak: el apellido corto es la persona del diccionario de yokup.
   const conocido = CONSEJEROS_GROKBOT.find((c) => persona.toLowerCase().includes(c.toLowerCase()));

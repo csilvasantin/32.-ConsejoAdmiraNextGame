@@ -146,26 +146,82 @@ export function crearYokup(env = {}, identidad, deps = {}) {
     return { id: p.id, name: p.name, slug: slug(p.name) };
   }
 
-  /** Alta de misión: el mismo ritual que alta-mision.sh, con la identidad del consejero. */
-  async function alta({ encargo, proyecto_id }) {
-    const id = exigir();
-    const p = await proyectoDelCenso(proyecto_id);
-    await llamar(`${api}/projects/principal`, json({ agent: id.agent, machine: id.machine, project_id: p.id, project: p.name, project_slug: p.slug, by: id.agent }));
-    const desde = ahora() - 60_000;
-    await llamar(`${telegram}/api/bot-inbox`, { ...json({ text: encargo, target_persona: id.persona, target_machine: id.machine, project_id: p.id }), headers: { 'content-type': 'application/json', ...panel() } }, viaTelegram);
-    let mision = null;
-    for (let i = 0; i < 8 && !mision; i++) {
-      await dormir(i === 0 ? 1500 : 4000);
-      await llamar(`${api}/fleet/sync`, { method: 'POST' }).catch(() => null);
-      const { missions } = await llamar(`${api}/fleet/missions?limit=30`);
-      const key = id.persona.toLowerCase();
-      mision = (missions || []).find((m) => String(m.persona || m.assignee || '').toLowerCase().startsWith(key) && Number(m.created_at || 0) >= desde && String(m.subject || '').slice(0, 40) === String(encargo).slice(0, 40)) || null;
-    }
-    if (!mision) throw new Error('el encargo entró en el bot-inbox pero yokup no lo ha importado todavía: repite yokup_mis_misiones en un minuto');
+  /** Misiones del titular, filtradas en el servidor (agent=WozniakGrokBot…): una llamada, no 120 filas. */
+  async function misionesDelTitular(id, limit = 12) {
+    const d = await llamar(`${api}/fleet/missions?agent=${encodeURIComponent(id.agent)}&limit=${limit}`);
+    return d && Array.isArray(d.missions) ? d.missions : [];
+  }
+  const MISMO_ASUNTO = 40;
+  const mismoAsunto = (m, encargo) => String(m.subject || '').slice(0, MISMO_ASUNTO) === String(encargo).slice(0, MISMO_ASUNTO);
+  const viva = (m) => !['cancelled', 'resolved', 'closed'].includes(String(m.status || '').toLowerCase());
+  const resumen = (m) => ({ mision: m.id, display_ref: m.display_ref, estado: m.status, proyecto: m.project_id || null, asunto: String(m.subject || '').slice(0, 120), pasos: (m.tasks || []).map((t) => `${t.code}: ${t.title}`) });
+
+  /** Lo que sigue tras la importación: colgar del proyecto y planificar (a/b/c). Tarda hasta 60 s: nunca en el camino de la respuesta. */
+  async function planificar(mision, p, encargo) {
     await llamar(`${api}/projects/mission`, json({ mission: mision.id, project: p.id })).catch(() => null);
     const plan = await llamar(`${api}/fleet/plan?mission=${encodeURIComponent(mision.id)}`, { method: 'POST' }, { timeoutMs: 60_000 }).catch((e) => ({ ok: false, error: String(e.message || e) }));
     await latir(`misión ${mision.id}: ${String(encargo).slice(0, 80)}`);
-    return { mision: mision.id, display_ref: mision.display_ref, proyecto: p.id, plan: plan && plan.tasks ? plan.tasks.map((t) => `${t.code}: ${t.title}`) : plan, siguiente: `marca cada paso con yokup_paso (${mision.id}, a/b/c, in_progress → done) y registra evidencia con yokup_evidencia antes de cerrar` };
+    return plan;
+  }
+  /** Trabajo que sigue después de contestar al cliente (ctx.waitUntil en Cloudflare; en pruebas, la lista de deps). */
+  function enSegundoPlano(fn) {
+    const pr = Promise.resolve().then(fn).catch(() => null);
+    if (typeof deps.waitUntil === 'function') deps.waitUntil(pr);
+    return pr;
+  }
+
+  /**
+   * Alta de misión: el mismo ritual que alta-mision.sh, con la identidad del consejero.
+   *
+   * RÁPIDA E IDEMPOTENTE (Carlos, 7-sep-2026): la versión anterior esperaba en bucle a que
+   * yokup importase el encargo (hasta 8 × sync de 6 s) y luego al planificador (60 s). El
+   * cliente MCP de GrokBot corta antes: Wozniak vio «timeout», la misión SÍ se había creado,
+   * y al reintentar Jobs dejó tres misiones iguales en tres minutos (FLT-100036/37/39).
+   * Ahora: (1) si ya hay una misión viva del titular con el mismo asunto —o abierta hace
+   * menos de 10 min en el mismo proyecto— se devuelve ESA, no se crea otra; (2) una sola
+   * pasada de importación (≈10 s); (3) el plan se lanza en segundo plano y la respuesta
+   * sale con el FLT; (4) si yokup aún no la importó se contesta con el número de encargo y
+   * estado «importando», y la importación y el plan siguen en segundo plano.
+   */
+  const DIEZ_MIN = 10 * 60_000;
+  async function alta({ encargo, proyecto_id, forzar = false }) {
+    const id = exigir();
+    const p = await proyectoDelCenso(proyecto_id);
+    const t0 = ahora();
+    const previas = await misionesDelTitular(id).catch(() => []);
+    const repetida = previas.find((m) => viva(m) && mismoAsunto(m, encargo)) || null;
+    if (repetida) {
+      return { ...resumen(repetida), ya_existia: true, nota: 'Ya tenías esta misión dada de alta (mismo asunto): no se crea otra. Si el alta anterior te dio timeout, la misión se creó igual.', siguiente: `marca cada paso con yokup_paso (${repetida.id}, a/b/c, in_progress → done) y registra evidencia con yokup_evidencia antes de cerrar` };
+    }
+    const reciente = !forzar ? previas.find((m) => viva(m) && String(m.project_id || '') === String(p.id) && t0 - Number(m.created_at || 0) < DIEZ_MIN) || null : null;
+    if (reciente) {
+      return { ...resumen(reciente), ya_existia: true, posible_duplicado: true, nota: `Hace menos de 10 min diste de alta ${reciente.id} en «${p.id}» y sigue viva: te devuelvo esa por si el alta anterior te dio timeout (la misión se crea aunque el cliente corte). Si de verdad es OTRA misión, repite yokup_alta con forzar:true.`, siguiente: `yokup_paso (${reciente.id}, a/b/c) o yokup_alta con forzar:true` };
+    }
+    await llamar(`${api}/projects/principal`, json({ agent: id.agent, machine: id.machine, project_id: p.id, project: p.name, project_slug: p.slug, by: id.agent }));
+    const desde = t0 - 60_000;
+    const r = await llamar(`${telegram}/api/bot-inbox`, { ...json({ text: encargo, target_persona: id.persona, target_machine: id.machine, project_id: p.id }), headers: { 'content-type': 'application/json', ...panel() } }, viaTelegram);
+    const numEncargo = r && r.id != null ? Number(r.id) : null;
+    const buscar = async () => {
+      await llamar(`${api}/fleet/sync`, { method: 'POST' }, { timeoutMs: 20_000 }).catch(() => null);
+      const lista = await misionesDelTitular(id).catch(() => []);
+      return lista.find((m) => Number(m.created_at || 0) >= desde && mismoAsunto(m, encargo)) || null;
+    };
+    await dormir(deps.esperaImportacion ?? 1500);
+    const mision = await buscar();
+    if (!mision) {
+      enSegundoPlano(async () => {
+        for (let i = 0; i < 6; i++) {
+          await dormir(deps.esperaImportacion ?? 5000);
+          const m = await buscar();
+          if (m) { await planificar(m, p, encargo); return; }
+        }
+      });
+      await latir(`alta en curso: ${String(encargo).slice(0, 80)}`);
+      return { ok: true, mision: null, encargo: numEncargo, proyecto: p.id, estado: 'importando', nota: 'El encargo ya está en el bot-inbox y yokup lo importa en menos de un minuto; el plan a/b/c se hace solo. NO repitas yokup_alta: crearía un duplicado.', siguiente: 'yokup_mis_misiones en 1 min → te da el FLT y sus pasos; luego yokup_paso' };
+    }
+    enSegundoPlano(() => planificar(mision, p, encargo));
+    await latir(`misión ${mision.id}: ${String(encargo).slice(0, 80)}`);
+    return { mision: mision.id, display_ref: mision.display_ref, proyecto: p.id, encargo: numEncargo, plan: 'en curso: el planificador saca los pasos a/b/c de tu encargo en menos de 1 min (yokup_mis_misiones los lista)', siguiente: `marca cada paso con yokup_paso (${mision.id}, a/b/c, in_progress → done) y registra evidencia con yokup_evidencia antes de cerrar` };
   }
 
   async function paso({ mision, paso: code, estado, informe = '', imagen = '', tokens }) {
@@ -218,9 +274,10 @@ export function crearYokup(env = {}, identidad, deps = {}) {
 
   async function misMisiones() {
     const id = exigir();
-    const { missions } = await llamar(`${api}/fleet/missions?limit=120`);
-    const key = id.persona.toLowerCase();
-    return (missions || []).filter((m) => String(m.persona || m.assignee || '').toLowerCase().startsWith(key)).map((m) => ({ id: m.id, ref: m.display_ref, estado: m.status, progreso: m.progress ? `${m.progress.done || 0}/${m.progress.total || 0}` : '', asunto: String(m.subject || '').slice(0, 120), tareas: (m.tasks || []).map((t) => `${t.code} ${t.status}: ${String(t.title || '').slice(0, 60)}`) }));
+    // Filtro en el servidor por agente: antes se pedían 120 misiones de toda la flota y se
+    // cribaban aquí; con 200+ misiones al día el consejero se quedaba sin las suyas.
+    const missions = await misionesDelTitular(id, 40);
+    return missions.map((m) => ({ id: m.id, ref: m.display_ref, estado: m.status, progreso: m.progress ? `${m.progress.done || 0}/${m.progress.total || 0}` : '', asunto: String(m.subject || '').slice(0, 120), tareas: (m.tasks || []).map((t) => `${t.code} ${t.status}: ${String(t.title || '').slice(0, 60)}`) }));
   }
 
   async function marcador() {

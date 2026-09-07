@@ -26,7 +26,9 @@ function fetchFalso(peticiones, estado = {}) {
     if (u.endsWith('/api/bot-inbox')) { if ((init.headers || {}).authorization !== 'Bearer panel') return new Response('{"ok":false}', { status: 401 }); estado.encargo = body; return ok({ ok: true, id: 1601 }); }
     if (u.endsWith('/fleet/sync')) { estado.syncs++; return ok({ ok: true }); }
     if (u.includes('/fleet/missions')) {
-      const lista = estado.encargo && estado.syncs >= 1 ? [{ id: 'FLT-1601', persona: 'WozniakGrokBot', subject: estado.encargo.text, created_at: Date.now(), display_ref: '0301.04/09/2026.07:30', status: 'open', tasks: [{ code: 'a', status: 'pending', title: 'Uno' }] }] : [];
+      // Filtro en el servidor (agent=WozniakGrokBot): la lista solo trae misiones del titular.
+      estado.filtros = (estado.filtros || []).concat(new URL(u).searchParams.get('agent') || '');
+      const lista = estado.encargo && estado.syncs >= (estado.syncsNecesarios || 1) ? [{ id: 'FLT-1601', persona: 'WozniakGrokBot', subject: estado.encargo.text, project_id: estado.encargo.project_id, created_at: estado.creadaEn || Date.now(), display_ref: '0301.04/09/2026.07:30', status: 'open', tasks: [{ code: 'a', status: 'pending', title: 'Uno' }] }] : [];
       return ok({ missions: lista });
     }
     if (u.endsWith('/projects/mission')) return ok({ ok: true });
@@ -43,14 +45,16 @@ function fetchFalso(peticiones, estado = {}) {
   };
 }
 
-async function cliente(clave = ENV.MCP_KEY, env = ENV) {
-  const peticiones = [], estado = {};
-  const server = crearServidor(env, { fetch: fetchFalso(peticiones, estado), now: () => Date.now() }, identidadPorClave(clave, env));
+async function cliente(clave = ENV.MCP_KEY, env = ENV, extra = {}) {
+  const peticiones = [], estado = {}, fondo = [];
+  // waitUntil y esperaImportacion: lo que el worker haría tras responder (ctx.waitUntil) se
+  // recoge en `fondo` para poder esperarlo en la prueba, y sin dormir de verdad.
+  const server = crearServidor(env, { fetch: fetchFalso(peticiones, estado), now: () => Date.now(), waitUntil: (p) => fondo.push(p), esperaImportacion: 0, ...extra }, identidadPorClave(clave, env));
   const [a, b] = InMemoryTransport.createLinkedPair();
   await server.connect(b);
   const client = new Client({ name: 'grokbot-de-prueba', version: '0.39.0' });
   await client.connect(a);
-  return { client, peticiones, estado };
+  return { client, peticiones, estado, fondo };
 }
 const res = (r) => JSON.parse(r.content[0].text);
 
@@ -82,19 +86,69 @@ test('el servidor publica las herramientas yokup', async () => {
   assert.deepEqual(nombres, ['yokup_alta', 'yokup_evidencia', 'yokup_informe', 'yokup_mis_misiones', 'yokup_paso', 'yokup_presencia', 'yokup_quien_soy', 'yokup_ventana']);
 });
 
-test('yokup_alta sigue el ritual de alta-mision.sh con la identidad del consejero', async () => {
-  const { client, peticiones } = await cliente();
+test('yokup_alta sigue el ritual de alta-mision.sh con la identidad del consejero y responde sin esperar al planificador', async () => {
+  const { client, peticiones, estado, fondo } = await cliente();
   const r = res(await client.callTool({ name: 'yokup_alta', arguments: { encargo: 'Probar el carné de GrokBot en yokup. a) alta b) pasos c) cierre', proyecto_id: 'yokup' } }));
   assert.equal(r.mision, 'FLT-1601');
-  assert.deepEqual(r.plan, ['a: Auditar', 'b: Hacer', 'c: Cerrar']);
-  const urls = peticiones.map((p) => p.url.replace(/\?.*$/, ''));
-  assert.deepEqual(urls.slice(0, 3), ['https://yokup.test/projects', 'https://yokup.test/projects/principal', 'https://telegram.test/api/bot-inbox']);
-  const principal = peticiones[1].body; assert.deepEqual(principal, { agent: 'WozniakGrokBot', machine: 'GrokBot', project_id: 'yokup', project: 'Yokup', project_slug: 'YOKUP', by: 'WozniakGrokBot' });
-  const encargo = peticiones[2].body; assert.deepEqual(encargo, { text: 'Probar el carné de GrokBot en yokup. a) alta b) pasos c) cierre', target_persona: 'Wozniak', target_machine: 'GrokBot', project_id: 'yokup' });
-  assert.ok(urls.includes('https://yokup.test/fleet/sync') && urls.includes('https://yokup.test/fleet/plan') && urls.includes('https://yokup.test/projects/mission'));
+  assert.equal(r.encargo, 1601);
+  assert.match(r.plan, /en curso/, 'el plan no se espera: el cliente de GrokBot corta antes de los 60 s del planificador');
+  let urls = peticiones.map((p) => p.url.replace(/\?.*$/, ''));
+  assert.deepEqual(urls.slice(0, 4), ['https://yokup.test/projects', 'https://yokup.test/fleet/missions', 'https://yokup.test/projects/principal', 'https://telegram.test/api/bot-inbox'], 'primero mira si ya existe; luego declara y encarga');
+  assert.deepEqual(estado.filtros.slice(0, 1), ['WozniakGrokBot'], 'las misiones se piden filtradas por el titular en el servidor');
+  const principal = peticiones[2].body; assert.deepEqual(principal, { agent: 'WozniakGrokBot', machine: 'GrokBot', project_id: 'yokup', project: 'Yokup', project_slug: 'YOKUP', by: 'WozniakGrokBot' });
+  const encargo = peticiones[3].body; assert.deepEqual(encargo, { text: 'Probar el carné de GrokBot en yokup. a) alta b) pasos c) cierre', target_persona: 'Wozniak', target_machine: 'GrokBot', project_id: 'yokup' });
+  assert.ok(urls.includes('https://yokup.test/fleet/sync'));
+  assert.equal(fondo.length, 1, 'el plan queda en ctx.waitUntil, fuera del camino de la respuesta');
+  await Promise.all(fondo);
+  urls = peticiones.map((p) => p.url.replace(/\?.*$/, ''));
+  assert.ok(urls.includes('https://yokup.test/fleet/plan') && urls.includes('https://yokup.test/projects/mission'), 'en segundo plano se cuelga del proyecto y se planifica');
   const presencia = peticiones.find((p) => p.url.endsWith('/api/presence'));
   assert.equal(presencia.body.persona, 'Wozniak'); assert.equal(presencia.body.machine, 'GrokBot'); assert.equal(presencia.body.runtime, 'Grok'); assert.equal(presencia.body.model, 'Grok Heavy');
   assert.match(presencia.body.focus, /^misión FLT-1601/);
+});
+
+test('yokup_alta es idempotente: el mismo asunto vivo devuelve la misma misión y no encarga otra (timeout del cliente → reintento)', async () => {
+  const { client, peticiones, fondo } = await cliente();
+  const encargo = 'Probar el carné de GrokBot en yokup. a) alta b) pasos c) cierre';
+  res(await client.callTool({ name: 'yokup_alta', arguments: { encargo, proyecto_id: 'yokup' } }));
+  await Promise.all(fondo);
+  const antes = peticiones.filter((p) => p.url.endsWith('/api/bot-inbox')).length;
+  const r = res(await client.callTool({ name: 'yokup_alta', arguments: { encargo, proyecto_id: 'yokup' } }));
+  assert.equal(r.mision, 'FLT-1601'); assert.equal(r.ya_existia, true);
+  assert.equal(peticiones.filter((p) => p.url.endsWith('/api/bot-inbox')).length, antes, 'ni un encargo más en el bot-inbox');
+  assert.match(r.siguiente, /yokup_paso \(FLT-1601/);
+});
+
+test('yokup_alta con otra misión abierta hace <10 min en el mismo proyecto avisa de posible duplicado, salvo forzar:true', async () => {
+  const { client, peticiones, fondo } = await cliente();
+  res(await client.callTool({ name: 'yokup_alta', arguments: { encargo: 'HandON 7-sep: lidero admiranext.com. a) mapa sitio; b) anotar handON', proyecto_id: 'yokup' } }));
+  await Promise.all(fondo);
+  const antes = peticiones.filter((p) => p.url.endsWith('/api/bot-inbox')).length;
+  const r = res(await client.callTool({ name: 'yokup_alta', arguments: { encargo: 'HandON 7-sep Jobs=admiranext.com mapa+fusión. a) mapa sitio; b) handON', proyecto_id: 'yokup' } }));
+  assert.equal(r.mision, 'FLT-1601'); assert.equal(r.posible_duplicado, true);
+  assert.equal(peticiones.filter((p) => p.url.endsWith('/api/bot-inbox')).length, antes, 'Jobs reformuló tres veces el mismo alta en tres minutos: no se crea otra');
+  const f = res(await client.callTool({ name: 'yokup_alta', arguments: { encargo: 'Otra misión de verdad: auditar consumo. a) medir b) publicar c) cerrar', proyecto_id: 'yokup', forzar: true } }));
+  assert.equal(f.mision, 'FLT-1601', 'con forzar:true se encarga de nuevo (el falso siempre devuelve FLT-1601)');
+  assert.equal(peticiones.filter((p) => p.url.endsWith('/api/bot-inbox')).length, antes + 1);
+});
+
+test('si yokup tarda en importar, yokup_alta contesta «importando» con el número de encargo y termina en segundo plano', async () => {
+  const { client, peticiones, estado, fondo } = await cliente();
+  estado.syncsNecesarios = 3;
+  const r = res(await client.callTool({ name: 'yokup_alta', arguments: { encargo: 'Probar el carné de GrokBot en yokup. a) alta b) pasos c) cierre', proyecto_id: 'yokup' } }));
+  assert.equal(r.mision, null); assert.equal(r.estado, 'importando'); assert.equal(r.encargo, 1601);
+  assert.match(r.nota, /NO repitas yokup_alta/);
+  assert.equal(fondo.length, 1);
+  await Promise.all(fondo);
+  const urls = peticiones.map((p) => p.url.replace(/\?.*$/, ''));
+  assert.ok(urls.includes('https://yokup.test/fleet/plan'), 'la importación siguió sola y se planificó');
+  assert.ok(estado.syncs >= 3);
+});
+
+test('yokup_mis_misiones pide al servidor solo las del titular', async () => {
+  const { client, estado } = await cliente();
+  res(await client.callTool({ name: 'yokup_mis_misiones', arguments: {} }));
+  assert.deepEqual(estado.filtros, ['WozniakGrokBot']);
 });
 
 test('paso, evidencia (agent/session_transcript) e informe llevan owner, imagen y procedencia canónica', async () => {

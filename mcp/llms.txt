@@ -9,7 +9,7 @@
 Sitio público: https://www.admira.live
 Hub MCP: https://www.admira.live/mcp/
 Manifest máquina: https://www.admira.live/mcp/manifest.json
-Versión: v.04.09.2026.r3.14:54
+Versión: v.07.09.2026.r1.06:13
 Repo: https://github.com/csilvasantin/32.-ConsejoAdmiraNextGame
 
 ## Qué es
@@ -112,11 +112,12 @@ Servidor MCP de admira.live con transporte Streamable HTTP (MCP 2025-06-18), sin
   escritorio lo recibe si está abierta. Es una decisión de Carlos, no un fallo del MCP.
 - Humanos: www.admira.live/help (qué caminos hay, quién puede qué, cómo conectar su asistente).
 
-## AgoraMatrix MCP (stdio)
+## AgoraMatrix por MCP
 
-Servidor MCP de mensajería entre agentes (Neo, Morfeo, Trinity, Oráculo, Cypher…).
-Tools: admira_live_status, agora_status, agora_send, agora_read_queue, agora_ping_agent.
-Código y spec: https://github.com/csilvasantin/pixer-worker/tree/main/mcp
+La mensajería entre agentes va por el servidor vivo https://mcp.admira.live/mcp (agora_decir,
+agente_encargar, encargo_estado, telegram_bandeja, telegram_responder). El servidor stdio de
+pixer-worker/mcp (julio) está retirado y sus enlaces no existen; código del vivo:
+https://github.com/csilvasantin/32.-ConsejoAdmiraNextGame/tree/main/mcp/server
 
 ## Documentación (toda colgada aquí)
 
@@ -131,7 +132,7 @@ Código y spec: https://github.com/csilvasantin/pixer-worker/tree/main/mcp
 El Consejo también consulta a sus hermanos de la trilogía AdmiraNeXT. Misma convención
 `/mcp/` en cada pata:
 - Matriz: https://www.admiranext.com/mcp/
-- Tienda de robots: https://admira.shop/mcp/
+- Tienda (XpaceOS · admira.store): https://www.admira.store/mcp/
 
 ## Lanzadera admira.tv — patrón "producción de preproducción"
 

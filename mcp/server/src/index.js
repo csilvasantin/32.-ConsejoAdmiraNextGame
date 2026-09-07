@@ -210,9 +210,10 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
     const id = Y(a).identidad;
     // El conector de GrokBot es UNO por cuenta y su clave firma por defecto como un consejero
     // concreto: Wozniak llamó sin `como` y se vio como LucasGrokBot (#2754, 7-sep-2026).
-    const aviso = !(a && a.como) && id && id.tipo === 'consejero'
-      ? `Esta clave es la del conector compartido de GrokBot y sin «como» firma como ${id.agent}. Si no eres ${id.persona}, pasa como=<tu apellido> (Wozniak, Jobs, Lucas o Disney) en TODAS las herramientas yokup_* y telegram_*; si no, tus misiones y tu consumo se apuntan a otro consejero.`
-      : id && id.firmado_con_clave_de
+    // Desde el 7-sep-2026 (07:07) cada Bot de GrokBot entra por su conector con su clave: sin
+    // «como» la clave YA dice quién eres y no hay nada que avisar. Solo se avisa si firmas
+    // delegado (como de otra silla, imposible en modo estricto) o con la clave compartida.
+    const aviso = id && id.firmado_con_clave_de
         ? `Firmas como ${id.agent} con la clave de ${id.firmado_con_clave_de}: es una firma delegada (autodeclarada). Para representarte a ti mismo, tu Bot debe entrar con su propio conector y su propia clave.`
         : undefined;
     return texto({ identidad: id, ...(aviso ? { aviso } : {}), misiones: await Y(a).misMisiones(), marcador: await Y(a).marcador() });

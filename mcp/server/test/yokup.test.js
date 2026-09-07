@@ -132,6 +132,18 @@ test('yokup_alta con otra misión abierta hace <10 min en el mismo proyecto avis
   assert.equal(peticiones.filter((p) => p.url.endsWith('/api/bot-inbox')).length, antes + 1);
 });
 
+test('yokup_alta espera un segundo sync en primer plano y aún así devuelve FLT (presupuesto <15s del cliente GrokBot)', async () => {
+  const { client, estado, fondo } = await cliente();
+  estado.syncsNecesarios = 2;
+  const t0 = Date.now();
+  const r = res(await client.callTool({ name: 'yokup_alta', arguments: { encargo: 'Probar el carné de GrokBot en yokup. a) alta b) pasos c) cierre', proyecto_id: 'yokup' } }));
+  assert.ok(Date.now() - t0 < 15000, 'la respuesta tiene que salir antes del timeout -32001 de GrokBot');
+  assert.equal(r.mision, 'FLT-1601');
+  assert.equal(r.estado, undefined);
+  assert.equal(estado.syncs, 2);
+  await Promise.all(fondo);
+});
+
 test('si yokup tarda en importar, yokup_alta contesta «importando» con el número de encargo y termina en segundo plano', async () => {
   const { client, peticiones, estado, fondo } = await cliente();
   estado.syncsNecesarios = 3;

@@ -202,16 +202,23 @@ export function crearYokup(env = {}, identidad, deps = {}) {
     const r = await llamar(`${telegram}/api/bot-inbox`, { ...json({ text: encargo, target_persona: id.persona, target_machine: id.machine, project_id: p.id }), headers: { 'content-type': 'application/json', ...panel() } }, viaTelegram);
     const numEncargo = r && r.id != null ? Number(r.id) : null;
     const buscar = async () => {
-      await llamar(`${api}/fleet/sync`, { method: 'POST' }, { timeoutMs: 20_000 }).catch(() => null);
+      await llamar(`${api}/fleet/sync`, { method: 'POST' }, { timeoutMs: 8_000 }).catch(() => null);
       const lista = await misionesDelTitular(id).catch(() => []);
       return lista.find((m) => Number(m.created_at || 0) >= desde && mismoAsunto(m, encargo)) || null;
     };
-    await dormir(deps.esperaImportacion ?? 1500);
-    const mision = await buscar();
+    // Presupuesto del cliente GrokBot: ~15 s (-32001). Un sync real ronda 3.5 s;
+    // dos intentos cortos caben; el planificador (60 s) NUNCA va en este camino.
+    const espera = deps.esperaImportacion ?? 400;
+    const intentos = deps.intentosImportacion ?? 2;
+    let mision = null;
+    for (let i = 0; i < intentos && !mision; i++) {
+      await dormir(espera);
+      mision = await buscar();
+    }
     if (!mision) {
       enSegundoPlano(async () => {
         for (let i = 0; i < 6; i++) {
-          await dormir(deps.esperaImportacion ?? 5000);
+          await dormir(deps.esperaImportacionFondo ?? (deps.esperaImportacion === 0 ? 0 : 5000));
           const m = await buscar();
           if (m) { await planificar(m, p, encargo); return; }
         }

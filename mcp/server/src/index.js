@@ -361,7 +361,17 @@ export async function manejar(request, env, deps = {}) {
       return json({ ok: false, error: 'no autorizado: falta la clave del MCP (Authorization: Bearer … o ?key=…)' }, 401, { 'www-authenticate': 'Bearer realm="admira-live-mcp"' });
     }
     // La identidad sale de la clave (una por consejero): el bot no la declara.
-    const server = crearServidor(env, deps, await identidadPorClaveAsync(claveRecibida(request), env));
+    const identidadPeticion = await identidadPorClaveAsync(claveRecibida(request), env);
+    // QUIÉN LLAMA, medido (7-sep-2026): para saber si GrokBot manda alguna señal por Bot
+    // (cabecera, user-agent, clientInfo del initialize) que permita representar a cada
+    // consejero sin fiarse de «como». Nunca se registra la clave.
+    try {
+      const cab = {}; for (const [k, v] of request.headers) if (!/authorization|cookie|cf-connecting-ip|x-real-ip/i.test(k)) cab[k] = String(v).slice(0, 120);
+      let metodo = '', cliente = null;
+      try { const b = await request.clone().json(); metodo = b && b.method || ''; cliente = b && b.params && b.params.clientInfo || null; if (metodo === 'tools/call') metodo += ':' + (b.params && b.params.name) + (b.params && b.params.arguments && b.params.arguments.como ? ' como=' + b.params.arguments.como : ''); } catch (_) {}
+      console.log(JSON.stringify({ quien_llama: identidadPeticion && identidadPeticion.agent, metodo, cliente, cabeceras: cab }));
+    } catch (_) {}
+    const server = crearServidor(env, deps, identidadPeticion);
     const transport = new WebStandardStreamableHTTPServerTransport({ sessionIdGenerator: undefined, enableJsonResponse: true });
     try {
       await server.connect(transport);

@@ -189,7 +189,15 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
     description: `Tu identidad en la flota AdmiraNeXT según la clave con la que has entrado: ${quien}. Devuelve también tus misiones de hoy y tu marcador.`,
     inputSchema: { como: COMO },
     annotations: { readOnlyHint: true, openWorldHint: true },
-  }, seguro(async (a) => texto({ identidad: Y(a).identidad, misiones: await Y(a).misMisiones(), marcador: await Y(a).marcador() })));
+  }, seguro(async (a) => {
+    const id = Y(a).identidad;
+    // El conector de GrokBot es UNO por cuenta y su clave firma por defecto como un consejero
+    // concreto: Wozniak llamó sin `como` y se vio como LucasGrokBot (#2754, 7-sep-2026).
+    const aviso = !(a && a.como) && id && id.tipo === 'consejero'
+      ? `Esta clave es la del conector compartido de GrokBot y sin «como» firma como ${id.agent}. Si no eres ${id.persona}, pasa como=<tu apellido> (Wozniak, Jobs, Lucas o Disney) en TODAS las herramientas yokup_* y telegram_*; si no, tus misiones y tu consumo se apuntan a otro consejero.`
+      : undefined;
+    return texto({ identidad: id, ...(aviso ? { aviso } : {}), misiones: await Y(a).misMisiones(), marcador: await Y(a).marcador() });
+  }));
 
   server.registerTool('yokup_presencia', {
     title: 'Latir en yokup',

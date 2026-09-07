@@ -157,6 +157,14 @@ test('si yokup tarda en importar, yokup_alta contesta «importando» con el núm
   assert.ok(estado.syncs >= 3);
 });
 
+test('yokup_quien_soy sin «como» avisa de que la clave compartida de GrokBot firma por otro consejero', async () => {
+  const { client } = await cliente();
+  const sin = res(await client.callTool({ name: 'yokup_quien_soy', arguments: {} }));
+  assert.equal(sin.identidad.agent, 'WozniakGrokBot'); assert.match(sin.aviso, /sin «como» firma como WozniakGrokBot/);
+  const con = res(await client.callTool({ name: 'yokup_quien_soy', arguments: { como: 'Jobs' } }));
+  assert.equal(con.identidad.agent, 'JobsGrokBot'); assert.equal(con.aviso, undefined);
+});
+
 test('yokup_mis_misiones pide al servidor solo las del titular', async () => {
   const { client, estado } = await cliente();
   res(await client.callTool({ name: 'yokup_mis_misiones', arguments: {} }));

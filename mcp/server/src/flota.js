@@ -20,6 +20,22 @@ export const AGENTES_FLOTA = ['Neo', 'Morfeo', 'Trinity', 'Oraculo', 'Smith', 'C
 export const CONSEJEROS = ['Wozniak', 'Jobs', 'Lucas', 'Disney'];
 export const PERSONAS = [...AGENTES_FLOTA, ...CONSEJEROS];
 const MAQUINA_CONSEJEROS = 'grokbot';
+/** SILLA ↔ MacBook Air (Jobs/Carbono, 8-sep-2026, encargo #2882 · FLT-100131): cada consejero tiene su
+ *  equipo físico en la flota. Racional (Azul + Plata) · Creativo (Rosa + Crema). El consejero sigue
+ *  despertándose en GrokBot: la silla es su máquina canónica en el censo, no donde corre el LLM. */
+export const SILLAS = {
+  Jobs:    { rol: 'CEO', lado: 'racional', maquina: 'MacBookAirAzul',  fleet_id: 'admira-macbookairazul',  alias: ['MBAAzul', 'MBA Azul', 'Luna', 'admira-macbookairluna'] },
+  Wozniak: { rol: 'CTO', lado: 'racional', maquina: 'MacBookAirPlata', fleet_id: 'admira-macbookairplata', alias: ['MBAPlata', 'MBA Plata'] },
+  Lucas:   { rol: 'CSO', lado: 'creativo', maquina: 'MacBookAirRosa',  fleet_id: 'admira-macbookairrosa',  alias: ['MBARosa', 'MBA Rosa'] },
+  Disney:  { rol: 'CCO', lado: 'creativo', maquina: 'MacBookAirCrema', fleet_id: 'admira-macbookaircrema', alias: ['MBACrema', 'MBA Crema', 'Carla', 'admira-macbook-carla'] },
+};
+/** «MacBookAirAzul», «mba azul», «admira-macbookairazul» → «Jobs». */
+export function consejeroDeMaquina(maquina) {
+  const n = norm(maquina);
+  if (!n) return null;
+  for (const [persona, s] of Object.entries(SILLAS)) if ([s.maquina, s.fleet_id, ...s.alias].some((a) => norm(a) === n)) return persona;
+  return null;
+}
 const VIVO_SEG = 900;
 
 const limpiar = (s) => String(s || '').replace(/\/+$/, '');
@@ -82,7 +98,7 @@ export function crearFlota(env = {}, identidad, deps = {}) {
     }
     const agentes = [...porPersona.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([persona, maquinas]) => ({ persona, maquinas }));
     return {
-      consejeros: CONSEJEROS.map((persona) => ({ persona, equipo: 'GrokBot', disponibilidad: 'siempre: se le despierta por webhook, contesta en 1-3 min' })),
+      consejeros: CONSEJEROS.map((persona) => ({ persona, equipo: 'GrokBot', silla: SILLAS[persona].rol, lado: SILLAS[persona].lado, maquina: SILLAS[persona].maquina, disponibilidad: 'siempre: se le despierta por webhook, contesta en 1-3 min' })),
       agentes,
       sin_senal: AGENTES_FLOTA.filter((p) => !porPersona.has(p)),
       como_encargar: 'agente_encargar con persona (y máquina si hay varias); luego encargo_estado con el número devuelto. Un agente sin señal recibe el encargo en cola y lo coge al despertar; a los 30 min sin acuse se reasigna al agente vivo con menos carga.',
@@ -97,13 +113,17 @@ export function crearFlota(env = {}, identidad, deps = {}) {
 
   /** Crear un encargo para una persona (agente de la flota o consejero). */
   async function encargar({ persona, maquina = '', texto, proyecto_id = '', de = '' }) {
-    const p = personaCanonica(persona);
-    if (!p) throw new Error(`persona desconocida «${persona}»: vale ${PERSONAS.join(', ')}`);
+    // Silla por máquina: agente_encargar(persona:'', maquina:'MacBookAirAzul') o persona = la máquina → Jobs.
+    let p = personaCanonica(persona);
+    if (!p && consejeroDeMaquina(persona)) p = consejeroDeMaquina(persona);
+    if (!p && maquina && consejeroDeMaquina(maquina)) p = consejeroDeMaquina(maquina);
+    if (!p) throw new Error(`persona desconocida «${persona}»: vale ${PERSONAS.join(', ')} (o la máquina de una silla: ${Object.values(SILLAS).map((x) => x.maquina).join(', ')})`);
+    if (esConsejero(p) && maquina && consejeroDeMaquina(maquina) && consejeroDeMaquina(maquina) !== p) throw new Error(`${maquina} es la silla de ${consejeroDeMaquina(maquina)}, no de ${p}`);
     const cuerpo = String(texto || '').trim();
     if (cuerpo.length < 5) throw new Error('el encargo necesita texto (qué hay que hacer y para qué)');
     let destino = maquina ? norm(maquina) : '';
     let nota = '';
-    if (esConsejero(p)) { destino = MAQUINA_CONSEJEROS; nota = 'consejero de GrokBot: el worker lo despierta por su webhook; suele contestar en 1-3 min'; }
+    if (esConsejero(p)) { destino = MAQUINA_CONSEJEROS; nota = `consejero de GrokBot (silla ${SILLAS[p].rol} · ${SILLAS[p].maquina}): el worker lo despierta por su webhook; suele contestar en 1-3 min`; }
     else if (!destino) {
       destino = await maquinaDe(p);
       nota = destino ? `en cola para ${p} en ${destino} (la máquina donde late ahora); su vigilante lo inyecta en su sesión en ≤15 s` : `${p} no late en ningún equipo desde hace 15 min: el encargo queda en cola y lo cogerá al despertar; a los 30 min sin acuse se reasigna`;

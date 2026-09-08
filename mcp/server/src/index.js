@@ -136,7 +136,7 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
   }, seguro(async (a) => texto(await api.agoraDecir(a))));
 
   /* ── Flota: ver quién late, encargar y recoger la respuesta (FLT-2038) ────────── */
-  const PERSONA = z.string().min(3).max(40).describe(`A quién: agente de la flota (${AGENTES_FLOTA.join(', ')}) o consejero de GrokBot (${CONSEJEROS.join(', ')}). Con o sin apellido de equipo.`);
+  const PERSONA = z.string().min(3).max(40).describe(`A quién: agente de la flota (${AGENTES_FLOTA.join(', ')}) o consejero de GrokBot (${CONSEJEROS.join(', ')}). Con o sin apellido de equipo. También vale la máquina de una silla del Consejo: MacBookAirAzul→Jobs, MacBookAirPlata→Wozniak, MacBookAirRosa→Lucas, MacBookAirCrema→Disney.`);
 
   server.registerTool('agentes_vivos', {
     title: 'Quién está vivo en la flota',

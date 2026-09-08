@@ -82,6 +82,7 @@ test('agentes_vivos agrupa por persona y equipo, deja fuera los latidos viejos y
   assert.deepEqual(v.agentes.find((a) => a.persona === 'Smith').maquinas.map((m) => m.maquina), ['MacMini', 'MacBookPro16']);
   assert.ok(v.sin_senal.includes('Neo') && v.sin_senal.includes('Trinity'));
   assert.equal(v.consejeros.length, 4);
+  assert.deepEqual(v.consejeros.map((c) => [c.persona, c.silla, c.maquina]), [['Wozniak', 'CTO', 'MacBookAirPlata'], ['Jobs', 'CEO', 'MacBookAirAzul'], ['Lucas', 'CSO', 'MacBookAirRosa'], ['Disney', 'CCO', 'MacBookAirCrema']], 'silla ↔ MacBook Air (Jobs/Carbono 8-sep-2026, #2882)');
   assert.ok(!v.agentes.some((a) => a.persona === 'Lucas'));
 });
 
@@ -183,4 +184,14 @@ test('#2456: consumo_reportar va a api.yokup.com por fetch directo, nunca por el
   const client = new Client({ name: 'grokbot', version: '1' }); await client.connect(a);
   const r = res(await client.callTool({ name: 'consumo_reportar', arguments: { como: 'Jobs', tokens_entrada: 1000, tokens_salida: 100 } }));
   assert.equal(r.ok, true); assert.equal(directas.length, 1);
+});
+
+test('la silla del Consejo se puede nombrar por su MacBook Air: agente_encargar(MacBookAirAzul) va a Jobs, y la máquina de otra silla se rechaza', async () => {
+  const { client, peticiones } = await cliente();
+  const r = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'MacBookAirAzul', texto: 'Jobs, revisa el mapa del sitio.' } }));
+  assert.equal(r.persona, 'Jobs'); assert.equal(r.maquina, 'grokbot'); assert.match(r.nota, /silla CEO · MacBookAirAzul/);
+  const enc = peticiones.filter((p) => p.url.endsWith('/api/bot-inbox') && p.method === 'POST').pop();
+  assert.equal(enc.body.target_persona, 'Jobs');
+  const mal = await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Wozniak', maquina: 'MacBookAirAzul', texto: 'esto no es tuyo' } });
+  assert.equal(mal.isError, true); assert.match(mal.content[0].text, /MacBookAirAzul es la silla de Jobs, no de Wozniak/);
 });

@@ -192,7 +192,7 @@ export function crearYokup(env = {}, identidad, deps = {}) {
     const p = await proyectoDelCenso(proyecto_id);
     const t0 = ahora();
     const previas = await misionesDelTitular(id).catch(() => []);
-    const repetida = previas.find((m) => viva(m) && mismoAsunto(m, encargo)) || null;
+    const repetida = previas.find((m) => viva(m) && !/^MIS-DEC/i.test(String(m.id || '')) && mismoAsunto(m, encargo)) || null;
     if (repetida) {
       return { ...resumen(repetida), ya_existia: true, nota: 'Ya tenías esta misión dada de alta (mismo asunto): no se crea otra. Si el alta anterior te dio timeout, la misión se creó igual.', siguiente: `marca cada paso con yokup_paso (${repetida.id}, a/b/c, in_progress → done) y registra evidencia con yokup_evidencia antes de cerrar` };
     }
@@ -207,7 +207,9 @@ export function crearYokup(env = {}, identidad, deps = {}) {
     const buscar = async () => {
       await llamar(`${api}/fleet/sync`, { method: 'POST' }, { timeoutMs: 8_000 }).catch(() => null);
       const lista = await misionesDelTitular(id).catch(() => []);
-      return lista.find((m) => Number(m.created_at || 0) >= desde && mismoAsunto(m, encargo)) || null;
+      // Los contenedores de las tandas de decisión (MIS-DEC-…) no son la misión que se acaba de
+      // encargar: el 8-sep una alta se casó con el contenedor de una ventana y salió con su ★.
+      return lista.find((m) => !/^MIS-DEC/i.test(String(m.id || '')) && Number(m.created_at || 0) >= desde && mismoAsunto(m, encargo)) || null;
     };
     // Presupuesto del cliente GrokBot: ~15 s (-32001). Un sync real ronda 3.5 s;
     // dos intentos cortos caben; el planificador (60 s) NUNCA va en este camino.
@@ -282,6 +284,15 @@ export function crearYokup(env = {}, identidad, deps = {}) {
     return r;
   }
 
+  /** Registrar en yokup la opción que Carlos ha elegido (en el chat, en Telegram o donde sea):
+   *  POST /decisions/<id o referencia humana>/choose. Vale para ventanas pendientes y caducadas. */
+  async function decidir({ ventana, opcion, por = '' }) {
+    const id = exigir();
+    const r = await llamar(`${api}/decisions/${encodeURIComponent(String(ventana).trim())}/choose`, json({ choice: Number(opcion) - 1, by: String(por || `Carlos (vía ${id.agent})`).slice(0, 40) }));
+    await latir(`ventana ${ventana}: opción ${opcion} registrada`);
+    return { ...r, siguiente: r && r.batch && r.batch.relabelled ? `el contenedor ${r.batch.relabelled} ya lleva la opción elegida: trabaja ahí` : 'la tanda de la ventana arranca con la opción elegida (yokup_mis_misiones la lista)' };
+  }
+
   async function misMisiones() {
     const id = exigir();
     // Filtro en el servidor por agente: antes se pedían 120 misiones de toda la flota y se
@@ -299,5 +310,5 @@ export function crearYokup(env = {}, identidad, deps = {}) {
     return { dia: d.day, agente: id.agent, hoy: fila || null, hora: hora ? hora.metrics : null, baremo: d.weights, marcador: 'https://www.yokup.com/highscore' };
   }
 
-  return { identidad, presencia, alta, paso, evidencia, informe, ventana, misMisiones, marcador };
+  return { identidad, presencia, alta, paso, evidencia, informe, ventana, decidir, misMisiones, marcador };
 }

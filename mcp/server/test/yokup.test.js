@@ -23,12 +23,14 @@ function fetchFalso(peticiones, estado = {}) {
     const ok = (o, extra = {}) => new Response(JSON.stringify(o), { status: 200, headers: { 'content-type': 'application/json' }, ...extra });
     if (u.endsWith('/projects') && method === 'GET') return ok({ projects: [{ id: 'yokup', name: 'Yokup' }, { id: 'admira-live', name: 'Admira Live · Consejo' }] });
     if (u.endsWith('/projects/principal')) return ok({ ok: true });
+    if (/\/decisions\/[^/]+\/choose$/.test(u)) return ok({ ok: true, id: 'DEC-1', display_ref: '0020.10/09/2026.06:37', chosen: body.choice, option: 'La elegida', batch: { relabelled: 'MIS-DEC-1-01' } });
     if (u.endsWith('/api/bot-inbox')) { if ((init.headers || {}).authorization !== 'Bearer panel') return new Response('{"ok":false}', { status: 401 }); estado.encargo = body; return ok({ ok: true, id: 1601 }); }
     if (u.endsWith('/fleet/sync')) { estado.syncs++; return ok({ ok: true }); }
     if (u.includes('/fleet/missions')) {
       // Filtro en el servidor (agent=WozniakGrokBot): la lista solo trae misiones del titular.
       estado.filtros = (estado.filtros || []).concat(new URL(u).searchParams.get('agent') || '');
       const lista = estado.encargo && estado.syncs >= (estado.syncsNecesarios || 1) ? [{ id: 'FLT-1601', persona: 'WozniakGrokBot', subject: estado.encargo.text, project_id: estado.encargo.project_id, created_at: estado.creadaEn || Date.now(), display_ref: '0301.04/09/2026.07:30', status: 'open', tasks: [{ code: 'a', status: 'pending', title: 'Uno' }] }] : [];
+      if (estado.contenedor && estado.encargo) lista.unshift({ id: 'MIS-DEC-x-01', persona: 'WozniakGrokBot', subject: estado.encargo.text, project_id: estado.encargo.project_id, created_at: Date.now(), status: 'in_progress', tasks: [] });
       return ok({ missions: lista });
     }
     if (u.endsWith('/projects/mission')) return ok({ ok: true });
@@ -83,7 +85,7 @@ test('las claves por consejero abren /mcp y las instrucciones dicen quién eres'
 test('el servidor publica las herramientas yokup', async () => {
   const { client } = await cliente();
   const nombres = (await client.listTools()).tools.map((t) => t.name).filter((n) => n.startsWith('yokup_')).sort();
-  assert.deepEqual(nombres, ['yokup_alta', 'yokup_evidencia', 'yokup_informe', 'yokup_mis_misiones', 'yokup_paso', 'yokup_presencia', 'yokup_quien_soy', 'yokup_ventana']);
+  assert.deepEqual(nombres, ['yokup_alta', 'yokup_decidir', 'yokup_evidencia', 'yokup_informe', 'yokup_mis_misiones', 'yokup_paso', 'yokup_presencia', 'yokup_quien_soy', 'yokup_ventana']);
 });
 
 test('yokup_alta sigue el ritual de alta-mision.sh con la identidad del consejero y responde sin esperar al planificador', async () => {
@@ -245,4 +247,20 @@ test('bot-inbox y presencia van por el service binding TELEGRAM cuando existe (C
   const r = await y.presencia({ foco: 'prueba' });
   assert.equal(r.via, 'binding');
   assert.deepEqual(porBinding, ['https://telegram.test/api/presence']);
+});
+
+test('yokup_decidir registra la elección de Carlos por id o referencia humana, también tras caducar', async () => {
+  const { client, peticiones } = await cliente();
+  const r = res(await client.callTool({ name: 'yokup_decidir', arguments: { ventana: '0020.10/09/2026.06:37', opcion: 1 } }));
+  const p = peticiones.find((x) => /\/decisions\/.*\/choose$/.test(x.url));
+  assert.ok(p.url.endsWith('/decisions/0020.10%2F09%2F2026.06%3A37/choose'));
+  assert.deepEqual(p.body, { choice: 0, by: 'Carlos (vía WozniakGrokBot)' });
+  assert.equal(r.chosen, 0); assert.match(r.siguiente, /MIS-DEC-1-01 ya lleva la opción elegida/);
+});
+
+test('yokup_alta no confunde el contenedor de una ventana (MIS-DEC) con la misión recién encargada', async () => {
+  const { client, estado } = await cliente();
+  estado.contenedor = true;
+  const r = res(await client.callTool({ name: 'yokup_alta', arguments: { encargo: 'Probar el carné de GrokBot en yokup. a) alta b) pasos c) cierre', proyecto_id: 'yokup' } }));
+  assert.equal(r.mision, 'FLT-1601');
 });

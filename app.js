@@ -1303,27 +1303,33 @@
         if (verb === "presentar") selectedPresentar = el.dataset.presentar;
     }
 
-    function selectLLM(el) {
+    function applyLLMSelection(el, { silent = false } = {}) {
+        if (!el) return false;
         if (el.dataset.available === "false") {
-            setActionLine("⚠️ Ese motor no está disponible aún en este backend");
-            return;
+            if (!silent) setActionLine("⚠️ Ese motor no está disponible aún en este backend");
+            return false;
         }
         const isPaid = el.dataset.paid === "true";
         const name = el.textContent.trim().replace('FREE', '').replace('€', '').trim();
 
-        // Ask confirmation + password for paid models
-        if (isPaid) {
+        // FLT-100210: clave admin SOLO si el usuario elige un modelo de pago (nunca en fallback silencioso)
+        if (isPaid && !silent) {
             const pwd = prompt("🔒 " + name + " es un modelo DE PAGO (~€0.003/consulta).\n\nIntroduce la clave de administrador para activarlo:");
             if (pwd !== "admira2026") {
                 if (pwd !== null) alert("❌ Clave incorrecta. Usa un modelo gratuito.");
-                return;
+                return false;
             }
         }
 
         document.querySelectorAll('.llm-option').forEach(i => i.classList.remove('selected'));
         el.classList.add('selected');
         selectedLLM = el.dataset.llm;
-        console.log("LLM selected:", selectedLLM, name, isPaid ? "(PAID)" : "(FREE)");
+        console.log("LLM selected:", selectedLLM, name, isPaid ? "(PAID)" : "(FREE)", silent ? "(silent)" : "");
+        return true;
+    }
+
+    function selectLLM(el) {
+        applyLLMSelection(el, { silent: false });
     }
 
     async function refreshLLMAvailability() {
@@ -1349,8 +1355,11 @@
                     }
                 });
                 if (!selectedStillAvailable) {
-                    const fallback = document.querySelector('.llm-option[data-available="true"]');
-                    if (fallback) selectLLM(fallback);
+                    // Prefer free/available; never prompt admin key on auto-fallback (FLT-100210)
+                    const freeFb = document.querySelector('.llm-option[data-available="true"]:not([data-paid="true"])');
+                    const anyFb = document.querySelector('.llm-option[data-available="true"]');
+                    const fallback = freeFb || anyFb;
+                    if (fallback) applyLLMSelection(fallback, { silent: true });
                 }
                 activeApiUrl = baseUrl;
                 return;

@@ -1303,27 +1303,38 @@
         if (verb === "presentar") selectedPresentar = el.dataset.presentar;
     }
 
+    function pinConsejoGrok(el) {
+        const target = el || document.querySelector('.llm-option[data-llm="grok-4.6"]');
+        if (!target) {
+            selectedLLM = "grok-4.6";
+            return;
+        }
+        target.dataset.available = "true";
+        target.classList.remove("unavailable");
+        document.querySelectorAll('.llm-option').forEach(i => i.classList.remove('selected'));
+        target.classList.add('selected');
+        selectedLLM = "grok-4.6";
+    }
+
     function selectLLM(el) {
-        if (el.dataset.available === "false") {
+        if (el.dataset.available === "false" && el.dataset.llm !== "grok-4.6") {
             setActionLine("⚠️ Ese motor no está disponible aún en este backend");
             return;
         }
-        const isPaid = el.dataset.paid === "true";
+        const key = el.dataset.llm || "grok-4.6";
         const name = el.textContent.trim().replace('FREE', '').replace('€', '').trim();
-
-        // Ask confirmation + password for paid models
-        if (isPaid) {
-            const pwd = prompt("🔒 " + name + " es un modelo DE PAGO (~€0.003/consulta).\n\nIntroduce la clave de administrador para activarlo:");
-            if (pwd !== "admira2026") {
-                if (pwd !== null) alert("❌ Clave incorrecta. Usa un modelo gratuito.");
-                return;
-            }
+        // FLT-100210 / FLT-100211: chat Consejo = GrokBot (Grok/flota).
+        // Cero modal de clave. Cero Claude Sonnet como canal. Paid no-Grok → Grok.
+        const isFleet = key === "grok-4.6" || key === "grok";
+        if (!isFleet && el.dataset.paid === "true") {
+            setActionLine("Este chat usa Grok/flota, igual que GrokBot. Sin clave de administrador.");
+            pinConsejoGrok();
+            return;
         }
-
         document.querySelectorAll('.llm-option').forEach(i => i.classList.remove('selected'));
         el.classList.add('selected');
-        selectedLLM = el.dataset.llm;
-        console.log("LLM selected:", selectedLLM, name, isPaid ? "(PAID)" : "(FREE)");
+        selectedLLM = key;
+        console.log("LLM selected:", selectedLLM, name);
     }
 
     async function refreshLLMAvailability() {
@@ -1348,10 +1359,13 @@
                         el.title = available ? (meta.name + " · " + meta.provider) : (meta.name + " · no disponible en este backend");
                     }
                 });
-                if (!selectedStillAvailable) {
-                    const fallback = document.querySelector('.llm-option[data-available="true"]');
-                    if (fallback) selectLLM(fallback);
+                const grokEl = document.querySelector('.llm-option[data-llm="grok-4.6"]');
+                if (grokEl) {
+                    grokEl.dataset.available = "true";
+                    grokEl.classList.remove("unavailable");
                 }
+                // Nunca caer a Sonnet (abría el modal DE PAGO). Grok/flota es el canal.
+                if (!selectedStillAvailable) pinConsejoGrok(grokEl);
                 activeApiUrl = baseUrl;
                 return;
             } catch (e) {

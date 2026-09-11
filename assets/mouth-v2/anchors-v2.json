@@ -1,0 +1,281 @@
+{
+  "version": 2,
+  "mission": "FLT-100227",
+  "order": [
+    "Jobs",
+    "Woz",
+    "Cook",
+    "Buffett",
+    "Disney",
+    "Scorsese",
+    "Carlos",
+    "Lucas"
+  ],
+  "image": {
+    "w": 3420,
+    "h": 2214
+  },
+  "notes": "Soft elliptical mouths; feathered alpha; per-face sampled skin/lip; multiply on halo; opaque cavity/teeth; smaller than v1 plates.",
+  "mouth": {
+    "Jobs": {
+      "x": 385,
+      "y": 1456,
+      "fx": 0.1126,
+      "fy": 0.6576,
+      "w": 44,
+      "h": 30,
+      "sprite": "sprites/jobs-sheet.png",
+      "cell": [
+        56,
+        40
+      ],
+      "style": "soft-oval-v2"
+    },
+    "Woz": {
+      "x": 769,
+      "y": 1306,
+      "fx": 0.225,
+      "fy": 0.59,
+      "style": "inherit-idle"
+    },
+    "Cook": {
+      "x": 1112,
+      "y": 1147,
+      "fx": 0.3251,
+      "fy": 0.5181,
+      "w": 36,
+      "h": 24,
+      "sprite": "sprites/cook-sheet.png",
+      "cell": [
+        56,
+        40
+      ],
+      "style": "soft-oval-v2"
+    },
+    "Buffett": {
+      "x": 1521,
+      "y": 1129,
+      "fx": 0.445,
+      "fy": 0.51,
+      "style": "inherit-idle"
+    },
+    "Disney": {
+      "x": 1967,
+      "y": 1103,
+      "fx": 0.5751,
+      "fy": 0.4982,
+      "w": 40,
+      "h": 28,
+      "sprite": "sprites/disney-sheet.png",
+      "cell": [
+        56,
+        40
+      ],
+      "style": "soft-oval-v2"
+    },
+    "Scorsese": {
+      "x": 2411,
+      "y": 1162,
+      "fx": 0.705,
+      "fy": 0.525,
+      "style": "inherit-idle"
+    },
+    "Carlos": {
+      "x": 2787,
+      "y": 1261,
+      "fx": 0.815,
+      "fy": 0.57,
+      "style": "inherit-idle"
+    },
+    "Lucas": {
+      "x": 3103,
+      "y": 1465,
+      "fx": 0.9073,
+      "fy": 0.6617,
+      "w": 42,
+      "h": 28,
+      "sprite": "sprites/lucas-sheet.png",
+      "cell": [
+        56,
+        40
+      ],
+      "style": "soft-oval-v2"
+    }
+  },
+  "demo": {
+    "Jobs": "hablar",
+    "Cook": "pensar",
+    "Disney": "hablar",
+    "Lucas": "hablar"
+  },
+  "palettes": {
+    "Jobs": {
+      "skin": [
+        158,
+        119,
+        98
+      ],
+      "skin_shadow": [
+        129,
+        97,
+        80
+      ],
+      "skin_hi": [
+        169,
+        127,
+        104
+      ],
+      "lip": [
+        107,
+        54,
+        42
+      ],
+      "lip_hi": [
+        133,
+        67,
+        52
+      ],
+      "cavity": [
+        20,
+        11,
+        9
+      ],
+      "teeth": [
+        242,
+        234,
+        220
+      ],
+      "gum": [
+        145,
+        80,
+        80
+      ]
+    },
+    "Cook": {
+      "skin": [
+        170,
+        130,
+        106
+      ],
+      "skin_shadow": [
+        139,
+        106,
+        86
+      ],
+      "skin_hi": [
+        181,
+        139,
+        113
+      ],
+      "lip": [
+        115,
+        59,
+        45
+      ],
+      "lip_hi": [
+        143,
+        73,
+        56
+      ],
+      "cavity": [
+        20,
+        11,
+        9
+      ],
+      "teeth": [
+        242,
+        234,
+        220
+      ],
+      "gum": [
+        145,
+        80,
+        80
+      ]
+    },
+    "Disney": {
+      "skin": [
+        183,
+        127,
+        102
+      ],
+      "skin_shadow": [
+        150,
+        104,
+        83
+      ],
+      "skin_hi": [
+        195,
+        135,
+        109
+      ],
+      "lip": [
+        124,
+        58,
+        43
+      ],
+      "lip_hi": [
+        155,
+        72,
+        53
+      ],
+      "cavity": [
+        20,
+        11,
+        9
+      ],
+      "teeth": [
+        242,
+        234,
+        220
+      ],
+      "gum": [
+        145,
+        80,
+        80
+      ]
+    },
+    "Lucas": {
+      "skin": [
+        181,
+        135,
+        116
+      ],
+      "skin_shadow": [
+        148,
+        110,
+        95
+      ],
+      "skin_hi": [
+        193,
+        144,
+        124
+      ],
+      "lip": [
+        123,
+        62,
+        49
+      ],
+      "lip_hi": [
+        153,
+        77,
+        61
+      ],
+      "cavity": [
+        20,
+        11,
+        9
+      ],
+      "teeth": [
+        242,
+        234,
+        220
+      ],
+      "gum": [
+        145,
+        80,
+        80
+      ]
+    }
+  }
+}

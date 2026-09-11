@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.10.08.2026.r1.17:17" />
+<meta name="admiranext-version" content="AdmiraNeXT v.11.09.2026.r3.boca-v2" />
     <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1532,33 +1532,38 @@
         /* ── Bocas que se mueven cuando el consejero está "vivo" ──
            alive  = su máquina está online (habla despacio, idle)
            active = acaba de hablar en AgoraMatrix/Telegram (habla rápido) */
+        /* FLT-100228 · bocas v2 soft-oval (Disney FLT-100227 blend sheets) */
         .mouth-overlays {
             position: absolute; top: 0; left: 0; width: 100%; height: 100%;
             pointer-events: none; z-index: 4;
         }
-        .mouth-overlays { display: none !important; } /* bocas desactivadas: quedaban mal */
+        body.mouths-off .mouth-overlays { display: none; }
         .mouth {
-            position: absolute; width: 1.6%; height: 1.1%;
+            position: absolute;
             transform: translate(-50%, -50%);
-            pointer-events: none; display: none;
+            pointer-events: none;
+            display: none;
+            background-repeat: no-repeat;
+            background-position: 0 0;
+            image-rendering: auto;
+            opacity: 0.95;
+            --cw: 64px;
+            --ch: 42px;
+            width: var(--cw);
+            height: var(--ch);
+            background-size: calc(var(--cw) * 4) var(--ch);
         }
         .mouth.alive { display: block; }
-        .mouth .lips {
-            width: 100%; height: 100%; border-radius: 50%;
-            background: radial-gradient(ellipse at 50% 35%, #7a2727, #2a0c0c 75%);
-            box-shadow: 0 0 5px rgba(255, 70, 70, 0.5), inset 0 -1px 2px rgba(0, 0, 0, 0.6);
-            transform-origin: center; transform: scaleY(0.28); opacity: 0.88;
+        .mouth.pensar, .mouth.idle { background-position: 0 0; animation: none; }
+        .mouth.alive.active, .mouth.hablar {
+            animation: mouth-talk-v2 0.45s steps(1) infinite;
         }
-        .mouth.alive .lips { animation: mouth-talk 1.5s ease-in-out infinite; }
-        .mouth.alive.active .lips {
-            animation-duration: 0.42s;
-            box-shadow: 0 0 9px rgba(255, 90, 90, 0.85), inset 0 -1px 2px rgba(0, 0, 0, 0.6);
-        }
-        @keyframes mouth-talk {
-            0%, 100% { transform: scaleY(0.25); }
-            30% { transform: scaleY(1); }
-            55% { transform: scaleY(0.42); }
-            78% { transform: scaleY(0.92); }
+        @keyframes mouth-talk-v2 {
+            0%   { background-position: 0 0; }
+            25%  { background-position: calc(var(--cw) * -1) 0; }
+            50%  { background-position: calc(var(--cw) * -2) 0; }
+            75%  { background-position: calc(var(--cw) * -3) 0; }
+            100% { background-position: 0 0; }
         }
         /* ── ENTRENAR table viewer: pinta el vídeo/libro seleccionado sobre la mesa ── */
         .table-viewer {
@@ -3603,6 +3608,6 @@ body.rail-open{overflow:hidden}
 </style>
 <!-- El markup del panel vive DENTRO del riel AVANZADO (#rail-avanzado), sección
      «Tareas» — reubicado ahí para respetar el metaestilo SCUMM de la home. -->
-<script defer src="app.js?v=tareas-scumm-20260707"></script>
+<script defer src="app.js?v=boca-v2-20260911"></script>
 </body>
 </html>

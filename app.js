@@ -2111,7 +2111,8 @@
         '/help', '/sites', '/admira.live', '/admira.studio', '/admiranext.com',
         '/admira.app', '/clearchannel.tv', '/pixeria.com', '/equipos', '/control',
         '/scumm', '/top', '/bocas', '/menu', '/agoramatrix', '/tareas', '/google',
-        '/importar', '/nombres', '/tarea', '/diario', '/leyendas', '/coetaneos', '/agentes', '/comandos', '/sendto'
+        '/importar', '/nombres', '/tarea', '/diario', '/leyendas', '/coetaneos', '/agentes', '/comandos', '/sendto',
+        '/marcador', '/flota'
     ];
     (function setupCliAutocomplete() {
         const inp = document.getElementById('action-input');
@@ -2156,6 +2157,21 @@
             addUserEntry(text);
             window.open("https://www.admira.live/comandos", "_blank");
             setActionLine("\u2328\ufe0f Abriendo la p\u00e1gina de comandos\u2026");
+            return true;
+        }
+
+        // MARCADOR DE LA FLOTA (Carlos, 16-09-2026). Primera vista de gestión que se
+        // muda de yokup.com a admira.live: yokup se queda con el terreno —incidencias,
+        // tickets, altas de instalador y retailer— y la flota vive aquí, en modo
+        // avanzado. Detrás vendrán misiones, tareas, agentes, objetivos, informes y
+        // consumos; cada una retira su página equivalente en yokup para que nunca haya
+        // dos tableros vivos diciendo cosas distintas.
+        // Se abre igual desde aquí que desde el botón del riel AVANZADO.
+        const marcadorMatch = text.match(/^\/(marcador|flota)$/i);
+        if (marcadorMatch) {
+            addUserEntry(text);
+            window.open("/marcador.html", "_blank");
+            setActionLine("\ud83c\udfc1 Abriendo el marcador de la flota\u2026");
             return true;
         }
         // ── Generación del Consejo: /leyendas y /coetaneos ──

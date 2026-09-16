@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex,nofollow">
+<title>Marcador de la flota · AdmiraNeXT · admira.live</title>
+<meta name="description" content="Marcador del día del equipo de silicio y quién está trabajando ahora mismo, leído en vivo de Yokup.">
+<link rel="canonical" href="https://www.admira.live/marcador.html">
+<script src="/admira-bar.js?v=20260713-r36"></script>
+<style>
+  :root{
+    --bg:#020602; --panel:#08130b; --line:#11331c; --ink:#cdeccd; --dim:#5f8f6a;
+    --neo:#7dff9b; --amber:#ffcf6b; --rojo:#ff7b7b; --frio:#76e6ff;
+  }
+  *{box-sizing:border-box}
+  html,body{margin:0;background:var(--bg);color:var(--ink);font-family:"SF Mono",Menlo,Consolas,monospace}
+  a{color:var(--neo);text-decoration:none} a:hover{text-decoration:underline}
+  .wrap{max-width:1040px;margin:0 auto;padding:18px 16px 60px}
+  header.top{display:flex;flex-wrap:wrap;align-items:baseline;gap:10px 16px;border-bottom:1px solid var(--line);padding-bottom:12px;margin-bottom:16px}
+  h1{margin:0;font-size:20px;color:var(--neo);letter-spacing:.04em}
+  h2{margin:0 0 4px;font-size:15px;color:var(--neo)}
+  .meta{color:var(--dim);font-size:12px}
+  .acciones{margin-left:auto;display:flex;gap:10px;flex-wrap:wrap}
+  button,a.btn{background:#0b1c12;border:1px solid var(--line);color:var(--ink);font:inherit;font-size:12px;padding:6px 10px;border-radius:6px;cursor:pointer}
+  button:hover,a.btn:hover{border-color:var(--neo);text-decoration:none}
+  section{border:1px solid var(--line);background:var(--panel);border-radius:10px;padding:14px;margin:14px 0}
+  .cab{display:flex;justify-content:space-between;align-items:baseline;gap:12px;flex-wrap:wrap;margin-bottom:10px}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--dim);font-weight:400;text-transform:uppercase;font-size:11px;letter-spacing:.08em}
+  td.n{text-align:right}
+  .kpis{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-bottom:12px}
+  .kpi{border:1px solid var(--line);border-radius:8px;padding:10px;background:#061009}
+  .kpi b{display:block;font-size:22px;color:var(--neo)}
+  .aviso{border:1px solid #5a4a1e;background:#15110447;color:var(--amber);border-radius:8px;padding:10px 12px;margin:10px 0;font-size:13px;line-height:1.55}
+  .aviso.mal{border-color:#5a1e1e;background:#1504044f;color:var(--rojo)}
+  .et{font-size:11px;border:1px solid var(--line);border-radius:999px;padding:2px 7px;color:var(--dim);white-space:nowrap}
+  .et.ok{color:var(--neo);border-color:#1e5a33} .et.tibia{color:var(--amber);border-color:#5a4a1e}
+  .vacio{color:var(--dim);font-size:13px;padding:6px 0}
+  .ref{color:var(--dim);font-size:11px}
+  @media(max-width:720px){table,tbody,tr,td{display:block}thead{display:none}tr{padding:10px 0;border-bottom:1px solid var(--line)}td{border:0;padding:3px 0}td.n{text-align:left}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div>
+      <h1>Marcador de la flota</h1>
+      <div class="meta" id="cuando">cargando…</div>
+    </div>
+    <div class="acciones">
+      <button id="refrescar">Refrescar</button>
+      <a class="btn" href="/">← Consejo</a>
+    </div>
+  </header>
+
+  <div id="fallo"></div>
+
+  <section>
+    <div class="cab"><div><h2>Quién está trabajando</h2><div class="meta">api.yokup.com/highscore/active-work</div></div><span class="et" id="modo"></span></div>
+    <div class="kpis" id="kpis"></div>
+    <div id="diagnostico"></div>
+    <div id="trabajando"></div>
+  </section>
+
+  <section>
+    <div class="cab"><div><h2>Marcador del día</h2><div class="meta">api.yokup.com/highscore/daily</div></div><span class="et" id="dia"></span></div>
+    <div id="marcador"></div>
+  </section>
+</div>
+
+<script>
+const API='https://api.yokup.com';
+const $=s=>document.querySelector(s);
+const esc=s=>String(s??'').replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const hora=ms=>ms?new Intl.DateTimeFormat('es-ES',{hour:'2-digit',minute:'2-digit'}).format(new Date(Number(ms))):'—';
+const hace=ms=>{if(!ms)return '—';const s=Math.round((Date.now()-Number(ms))/1000);if(s<60)return s+' s';if(s<3600)return Math.round(s/60)+' min';return Math.round(s/3600)+' h';};
+
+async function pide(ruta){
+  const r=await fetch(API+ruta,{cache:'no-store'});
+  if(!r.ok) throw new Error(ruta+' → HTTP '+r.status);
+  return r.json();
+}
+
+// El marcador agrupa por NOMBRE de persona: la misma persona en dos máquinas sale dos
+// veces y sus puntos no se suman. No se corrige aquí —el arreglo es de Yokup— pero
+// tampoco se disimula.
+function duplicados(scores){
+  const veces=new Map();
+  scores.forEach(s=>veces.set(s.agent,(veces.get(s.agent)||0)+1));
+  return [...veces.entries()].filter(([,n])=>n>1).map(([nombre,n])=>nombre+' ×'+n);
+}
+
+function pintaMarcador(d){
+  const scores=(d&&d.scores||[]).map(s=>({...s,total:(s.objective_points||0)+(s.window_points||0)+(s.mission_points||0)}));
+  scores.sort((a,b)=>b.total-a.total);
+  $('#dia').textContent=(d&&d.day||'')+' · '+scores.length+' agentes';
+  const dup=duplicados(scores);
+  $('#marcador').innerHTML=(dup.length?`<div class="aviso">El marcador agrupa por <b>nombre de persona</b>, no por agente: ${esc(dup.join(', '))} aparece más de una vez porque la misma persona trabaja en varias máquinas. Sus puntos no se suman entre sí.</div>`:'')+
+    (scores.length?`<table><thead><tr><th>#</th><th>Agente</th><th>Total</th><th>Misiones</th><th>Ventanas</th></tr></thead><tbody>`+
+      scores.map((s,i)=>`<tr><td class="n">${i+1}</td><td><b>${esc(s.agent)}</b></td><td class="n">${s.total}</td><td class="n">${s.missions||0}</td><td class="n">${s.windows||0}</td></tr>`).join('')+
+      `</tbody></table>`:'<p class="vacio">Hoy no puntúa nadie todavía.</p>');
+}
+
+function pintaTrabajo(d){
+  const part=d&&d.participants||[], obs=d&&d.observations||[];
+  $('#modo').textContent='modo '+(d&&d.mode||'?');
+  const abiertas=obs.filter(o=>o.process_state==='open').length;
+  const corriendo=Number(d&&d.running_count||0);
+  $('#kpis').innerHTML=[['Contados trabajando',corriendo],['Sesiones abiertas',abiertas],['Con trabajo asignado',part.length]]
+    .map(([t,v])=>`<div class="kpi"><b>${v}</b><span class="meta">${t}</span></div>`).join('');
+
+  let aviso='';
+  if(corriendo===0&&abiertas>0){
+    const motivos=new Map();
+    obs.filter(o=>o.process_state==='open').forEach(o=>{const k=o.reason||o.activity_state||'sin motivo';motivos.set(k,(motivos.get(k)||0)+1)});
+    aviso=`<div class="aviso mal"><b>Nadie figura trabajando</b> y hay ${abiertas} sesión(es) abierta(s). Yokup ve los procesos, pero no puede atarlos a una misión o tarea. Motivos que declara: ${[...motivos.entries()].map(([k,n])=>esc(k)+' ×'+n).join(' · ')}.</div>`;
+  }
+  const rancias=part.filter(p=>String(p.state||'').includes('stale')).length;
+  if(rancias) aviso+=`<div class="aviso">${rancias} trabajo(s) en estado <b>rancio</b>: hay misión o tarea asignada, pero sin señal de avance reciente.</div>`;
+  $('#diagnostico').innerHTML=aviso;
+
+  $('#trabajando').innerHTML=part.length?`<table><thead><tr><th>Agente</th><th>Máquina</th><th>Trabajo</th><th>Estado</th><th>Última señal</th></tr></thead><tbody>`+
+    part.map(p=>`<tr>
+      <td><b>${esc(p.agent||p.family_key||'?')}</b>${p.executor&&p.executor!==p.agent?`<div class="ref">ejecuta ${esc(p.executor)}</div>`:''}</td>
+      <td class="ref">${esc(p.machine||'—')}</td>
+      <td>${esc(p.title||'—')}<div class="ref">${esc(p.kind||'')} · ${esc(p.reference||'')}</div></td>
+      <td><span class="et ${String(p.state||'').includes('stale')?'tibia':'ok'}">${esc(p.state||'?')}</span></td>
+      <td class="ref">hace ${hace(p.work_progress_at||p.active_at)}</td>
+    </tr>`).join('')+`</tbody></table>`:'<p class="vacio">Yokup no ve a nadie con trabajo asignado ahora mismo.</p>';
+}
+
+async function carga(){
+  $('#fallo').innerHTML='';
+  const fallos=[];
+  const [trabajo,marcador]=await Promise.all([
+    pide('/highscore/active-work').catch(e=>{fallos.push(e.message);return null}),
+    pide('/highscore/daily').catch(e=>{fallos.push(e.message);return null}),
+  ]);
+  if(trabajo)pintaTrabajo(trabajo); if(marcador)pintaMarcador(marcador);
+  // Un bloque que no carga se dice; no se deja en blanco como si no hubiera datos.
+  if(fallos.length)$('#fallo').innerHTML=`<div class="aviso mal"><b>No he podido leer Yokup entero:</b> ${esc(fallos.join(' · '))}. Lo de abajo puede estar incompleto.</div>`;
+  $('#cuando').textContent='Datos de api.yokup.com · actualizado a las '+hora(Date.now())+' · se refresca solo cada 30 s';
+}
+$('#refrescar').onclick=carga;
+carga(); setInterval(carga,30000);
+</script>
+</body>
+</html>

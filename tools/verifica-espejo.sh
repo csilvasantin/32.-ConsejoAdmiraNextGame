@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# verifica-espejo.sh — ¿sirve admira.live el MISMO Highscore que yokup.com?
+# verifica-espejo.sh — ¿sirve admira.live las MISMAS páginas que yokup.com?
 #
 # No compara capturas ni «parece igual»: baja las dos páginas de PRODUCCIÓN, les
 # quita las cinco divergencias declaradas en tools/sync-yokup.sh y compara el
@@ -32,7 +32,7 @@ normaliza() {
     -e 's#<meta name="admiranext-version"[^>]*>##g' \
     -e 's#<meta name="yokup-espejo"[^>]*>##g' \
     -e '/id="yk-espejo-aviso"/d' \
-    -e '/rel="(icon|apple-touch-icon)"/d' \
+    -e 's#<link[^>]*rel="(icon|apple-touch-icon)"[^>]*>##g' \
     -e '/<script src="\/acceso\.js/d' \
     -e 's#https://www\.yokup\.com/#/#g' \
     -e 's#/version\.json\?frame=#/__yokup-gate?frame=#g' \
@@ -88,5 +88,5 @@ else
 fi
 
 echo
-[ "$fallos" -eq 0 ] && echo "✓ las dos webs sirven el mismo Highscore" || echo "✗ $fallos comprobación(es) en rojo"
+[ "$fallos" -eq 0 ] && echo "✓ las dos webs sirven las mismas páginas" || echo "✗ $fallos comprobación(es) en rojo"
 exit "$fallos"

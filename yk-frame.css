@@ -70,6 +70,7 @@ html.yk-framed body{ padding-top: var(--yk-bar-h); }
   color: var(--yk-ink);
 }
 .yk-logo b{ color: var(--yk-brand) }
+.yk-logo-img{ height:20px; width:auto; display:block; image-rendering:pixelated; image-rendering:-moz-crisp-edges }
 .yk-logo .yk-dot{
   width: 8px; height: 8px; border-radius: 50%;
   background: var(--yk-brand); box-shadow: 0 0 16px var(--yk-brand);

@@ -1773,10 +1773,12 @@
     var icoL = icon("yk-ico yk-ico-left", "left", "▤", "Opciones");
 
     // logotipo YO KUP (→ /)
+    // El logo es el de Admira pixelado estilo retro (Carlos, 17-09-2026), el mismo
+    // que la barra nativa admira-bar.js: /admira-logo-retro.svg.
     var logo = el("a", "yk-logo",
-      '<span class="yk-dot" aria-hidden="true"></span>Yo<b>kup</b>');
+      '<img class="yk-logo-img" src="/admira-logo-retro.svg" alt="admira" width="119" height="25">');
     logo.href = "/";
-    logo.setAttribute("aria-label", "Yokup · inicio");
+    logo.setAttribute("aria-label", "admira.live · inicio");
 
     // menú de la barra (se calcula ya para deducir el ítem activo)
     var navItems = pageNav();

@@ -1,8 +1,8 @@
 {
   "origen": "https://www.yokup.com",
   "origen_repo": "yokup/yokup-site",
-  "origen_commit": "00ba695",
-  "sincronizado": "17.09.2026 19:12",
+  "origen_commit": "247c876",
+  "sincronizado": "17.09.2026 22:14",
   "fase": "espejo de lectura en admira.live",
   "paginas_migradas": [
     "highscore",

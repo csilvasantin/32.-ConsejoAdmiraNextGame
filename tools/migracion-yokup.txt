@@ -22,5 +22,10 @@ asistencia | asistencia.html app/apple-touch-icon.png
 # cero escrituras), pero su nombre ya está cogido: /informes en admira.live es el Generador
 # de Informes, que es OTRA aplicación. Así que aquí vive como /informes-flota y el menú del
 # marco apunta ahí. OJO: /tasks/all exige sesión de Yokup, así que hasta que la haya, la
-# tabla saldrá vacía y el aviso de arriba es el que lo explica.
-informes como informes-flota | informes.html yk-maquina.js yk-informes-sort.js yk-informes-columns.js yk-informes-groups.js yk-informes-view.js yk-informes-view.css informe-pdf.js avatar-widget.js app/apple-touch-icon.png
+# tabla la llena la sesión: por eso lleva puerta (acceso-espejo.js).
+informes como informes-flota con puerta | informes.html yk-maquina.js yk-informes-sort.js yk-informes-columns.js yk-informes-groups.js yk-informes-view.js yk-informes-view.css informe-pdf.js avatar-widget.js app/apple-touch-icon.png
+
+# Equipo: el censo de la flota y los proyectos. Es una CONSOLA (8 escrituras: altas y bajas
+# de máquinas, orden y responsables de proyectos, notas), así que sin sesión no serviría de
+# nada. Se muda el 17-09-2026, cuando el worker empezó a aceptar la sesión desde admira.live.
+equipo con puerta | equipo.html yk-maquina.js yk-misiones.js yk-decisions.js avatar-widget.js app/apple-touch-icon.png

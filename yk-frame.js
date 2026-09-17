@@ -229,6 +229,7 @@
     ["MISIONES",    "https://www.yokup.com/misiones"],
     ["TAREAS",      "https://www.yokup.com/tareas"],
     ["INCIDENCIAS", "https://www.yokup.com/incidencias"],
+    ["SUPERVISOR",  "/supervisor"],
     ["INFORMES",    "/informes-flota"],
     // FLT-1020: un diálogo del sistema en cualquier equipo lo deja PARADO. Va en la
     // barra para que se vea desde cualquier página, no sólo si entras a buscarlo.
@@ -815,7 +816,7 @@
       "admira-live": "ADMIRA.LIVE", misiones: "MISIONES", tareas: "TAREAS",
       decisiones: "DECISIONES", objetivos: "OBJETIVOS", ideas: "OBJETIVOS",
       dashboard: "DASHBOARD", informes: "INFORMES", status: "STATUS", equipo: "EQUIPO",
-      asistencia: "ASISTENCIA", intervencion: "INTERVENCIÓN"
+      asistencia: "ASISTENCIA", intervencion: "INTERVENCIÓN", supervisor: "SUPERVISOR"
     };
     return map[seg] || "";
   }
@@ -1992,7 +1993,7 @@
     // ahora aquí, en el raíl OPCIONES, como navegación de gestión. Orden del pie:
     // EQUIPO · STATUS · Panel de control · sello de versión.
     var _path = (location.pathname.replace(/\/+$/, "") || "/").toLowerCase();
-    [["◫", "EQUIPO", "https://www.yokup.com/equipo"], ["◈", "STATUS", "https://www.yokup.com/status"]].forEach(function (r) {
+    [["◫", "EQUIPO", "/equipo"], ["◈", "STATUS", "https://www.yokup.com/status"]].forEach(function (r) {
       var on = (_path === r[2] || _path === r[2] + ".html");
       var a = el("a", "yk-set-btn" + (on ? " on" : ""),
         '<span aria-hidden="true">' + r[0] + '</span> ' + r[1]);

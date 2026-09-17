@@ -1,0 +1,1022 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta name="yokup-espejo" content="origen www.yokup.com · commit fdb09ee · sincronizado 17.09.2026 13:04">
+<script src="/acceso-espejo.js?v=r1"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Equipo · Yokup</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#02080d">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/app/apple-touch-icon.png">
+<link rel="stylesheet" href="https://www.carlossilva.info/admira-design/tokens.css">
+<link rel="stylesheet" href="/yk-frame.css?v=r17">
+<style>
+:root{--bg:#02080d;--card:#0a1620;--card2:#0d1c28;--ink:#dff8ff;--mut:#75aab9;--dim:#4d7a88;--brand:#78f3ff;--accent:#ffd866;--good:#88ffaa;--warn:#ff8866;--violet:#aa88ff;--line:rgba(120,243,255,.16);--line2:rgba(120,243,255,.30);--sans:var(--admira-font-sans,-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif);--mono:var(--admira-font-mono,ui-monospace,SFMono-Regular,"JetBrains Mono",Menlo,monospace)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;min-height:100vh}
+.wrap{max-width:1180px;margin:0 auto;padding:22px 24px 56px}
+h1{font-size:clamp(23px,3vw,31px);letter-spacing:-.02em;margin:4px 0 5px}
+.sub{color:var(--mut);font-size:14.5px;max-width:74ch;line-height:1.55}
+.kpis{display:flex;gap:10px;flex-wrap:wrap;margin:18px 0 20px}
+.kpi{border:1px solid var(--line);border-radius:11px;background:var(--card);padding:11px 15px;min-width:104px}
+.kpi b{font-size:21px;font-weight:700;display:block;line-height:1.1}
+.kpi span{font-family:var(--mono);font-size:9.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--dim)}
+.kpi.viva b{color:var(--good)}.kpi.mis b{color:var(--accent)}.kpi.tot b{color:var(--brand)}.kpi.gap b{color:var(--warn)}
+
+.tabs{display:flex;gap:8px;margin:6px 0 20px;flex-wrap:wrap}
+.tab{font-family:var(--mono);font-size:11px;letter-spacing:.07em;text-transform:uppercase;padding:10px 16px;border-radius:10px;border:1px solid var(--line);background:var(--card);color:var(--mut);cursor:pointer;transition:.2s}
+.tab:hover{border-color:var(--line2);color:var(--ink)}
+.tab.on{border-color:var(--brand);color:var(--brand);background:rgba(120,243,255,.08)}
+
+.capa{margin:24px 0 12px;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.capa h2{font-family:var(--mono);font-size:11.5px;letter-spacing:.13em;text-transform:uppercase;color:var(--brand)}
+.capa p{font-size:12.5px;color:var(--dim);flex:1;min-width:220px}
+.capa .add{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--brand);border:1px solid var(--line2);border-radius:8px;padding:6px 11px;background:transparent;cursor:pointer}
+.capa .add:hover{background:rgba(120,243,255,.08)}
+
+.grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(330px,100%),1fr));gap:14px}
+.ag{border:1px solid var(--line);border-radius:15px;background:var(--card);padding:19px;position:relative;overflow:hidden;transition:.2s}
+.ag::before{content:"";position:absolute;inset:0 auto 0 0;width:3px;background:var(--c,var(--brand))}
+.ag:hover{border-color:var(--line2)}
+.ag.off{opacity:.62}
+.top{display:flex;align-items:center;gap:13px;margin-bottom:13px}
+.av{width:48px;height:48px;border-radius:13px;display:grid;place-items:center;font-family:var(--mono);font-weight:700;font-size:16px;flex:0 0 auto;overflow:hidden;
+    color:var(--c,var(--brand));border:1px solid color-mix(in srgb,var(--c,var(--brand)) 40%,transparent);background:color-mix(in srgb,var(--c,var(--brand)) 12%,transparent)}
+/* RETRATO real de la persona de silicio (yk-avatar.js, el mismo de /misiones).
+   Nada de iconos de guardería: cada agente tiene cara. Quien no la tenga cae en
+   las iniciales sobre el color de su ficha, que es sobrio y no finge ser otro. */
+.av img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block}
+.avmini{width:18px;height:18px;border-radius:5px;object-fit:cover;object-position:center top;vertical-align:-4px;margin-right:4px;
+        border:1px solid color-mix(in srgb,var(--good) 40%,transparent)}
+.avini{display:inline-grid;place-items:center;width:18px;height:18px;border-radius:5px;vertical-align:-4px;margin-right:4px;
+       font-size:8.5px;font-weight:700;border:1px solid var(--line2);color:var(--mut)}
+.who{min-width:0;flex:1}
+.who b{font-size:16.5px;display:block;letter-spacing:-.01em}
+.who .rt{font-family:var(--mono);font-size:10.5px;color:var(--mut);text-transform:uppercase;letter-spacing:.07em;display:flex;gap:8px;align-items:baseline;margin-top:2px;min-width:0}
+.who .rt .sub2{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* Responsable DE CARBONO: la persona humana, a la derecha del subtítulo. Si no
+   hay nadie apuntado no se pinta — ni «—», ni relleno, ni suposiciones. */
+.who .rt .carb{margin-left:auto;flex:0 0 auto;color:var(--accent);text-transform:none;letter-spacing:.02em;max-width:46%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pulse{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;padding:5px 9px;border-radius:999px;white-space:nowrap;display:flex;align-items:center;gap:5px;border:1px solid var(--line)}
+.pulse i{width:6px;height:6px;border-radius:50%;background:var(--dim)}
+.pulse.on{color:var(--good);border-color:rgba(136,255,170,.36)}.pulse.on i{background:var(--good);box-shadow:0 0 8px var(--good);animation:bl 2s infinite}
+@keyframes bl{0%,100%{opacity:1}50%{opacity:.35}}
+
+.lema{font-size:13px;font-style:italic;color:var(--ink);opacity:.9;border-left:2px solid color-mix(in srgb,var(--c,var(--brand)) 45%,transparent);padding-left:11px;margin-bottom:13px}
+.rows{display:flex;flex-direction:column;gap:7px;margin-bottom:13px}
+.row{display:flex;gap:9px;font-size:12.5px;line-height:1.45}
+.row .k{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);flex:0 0 90px;padding-top:2px}
+.row .v{color:var(--ink);min-width:0;word-break:break-word}
+.row .v.mono{font-family:var(--mono);font-size:11.5px;color:var(--mut)}
+.row .v.falta{color:var(--warn);font-style:italic}
+
+.mdia{border:1px solid var(--line2);border-radius:12px;background:rgba(120,243,255,.04);padding:11px 12px 12px;margin-bottom:13px}
+.mdia-h{font-family:var(--mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);margin-bottom:4px;display:flex;align-items:center;gap:8px}
+.mdia-sel{margin-left:auto;font-family:var(--mono);font-size:10px;color:var(--mut);background:var(--bg);border:1px solid var(--line);border-radius:7px;padding:3px 6px;cursor:pointer;max-width:150px}
+.mdia-sel:hover{border-color:var(--brand);color:var(--brand)}
+.mdia.sinmision{border-style:dashed;background:transparent}
+.mdia-n{font-size:16px;font-weight:700;color:var(--brand);letter-spacing:-.01em;margin-bottom:9px;word-break:break-all}
+.mdia-shot{display:block;border-radius:9px;overflow:hidden;border:1px solid var(--line);background:#061019;aspect-ratio:16/10}
+.mdia-shot img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block;transition:.25s}
+.mdia-shot:hover img{transform:scale(1.03)}
+.mdia-sin{font-family:var(--mono);font-size:11px;color:var(--dim)}
+.agchip{font-family:var(--mono);font-size:10px;letter-spacing:.04em;border:1px solid var(--line);border-radius:7px;padding:2px 7px;margin:0 4px 4px 0;display:inline-block;color:var(--good)}
+.agchip.ext{color:var(--accent);border-color:rgba(255,216,102,.34)}
+.tags{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:13px}
+.tags span{font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--mut);border:1px solid var(--line);border-radius:7px;padding:4px 8px}
+.mis{border-top:1px solid var(--line);padding-top:12px;display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap}
+.mis .n{font-family:var(--mono);font-size:11px;color:var(--mut)}.mis .n b{color:var(--accent)}
+.mis a,.mis button{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--brand);text-decoration:none;border:1px solid var(--line2);border-radius:8px;padding:6px 10px;background:transparent;cursor:pointer}
+.mis a:hover,.mis button:hover{background:rgba(120,243,255,.08)}
+.foot{margin-top:30px;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);line-height:1.9}.foot b{color:var(--brand)}
+.load{color:var(--dim);font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;padding:26px 0}
+
+/* ---- editor ---- */
+.mod{position:fixed;inset:0;background:rgba(2,8,13,.82);backdrop-filter:blur(4px);display:none;align-items:flex-start;justify-content:center;z-index:80;padding:40px 18px;overflow:auto}
+.mod.on{display:flex}
+.box{background:var(--card);border:1px solid var(--line2);border-radius:16px;padding:24px;max-width:600px;width:100%}
+.box h3{font-size:18px;margin-bottom:4px}
+.box .hint{font-size:12.5px;color:var(--dim);margin-bottom:16px;line-height:1.5}
+.f{margin-bottom:12px}
+.f label{font-family:var(--mono);font-size:10px;letter-spacing:.07em;text-transform:uppercase;color:var(--dim);display:block;margin-bottom:5px}
+.f input,.f textarea,.f select{width:100%;font-family:var(--sans);font-size:13.5px;color:var(--ink);background:var(--bg);border:1px solid var(--line);border-radius:9px;padding:10px 12px;outline:none}
+.f input:focus,.f textarea:focus,.f select:focus{border-color:var(--brand)}
+.f textarea{min-height:66px;resize:vertical}
+.f2{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+.mbtns{display:flex;gap:8px;margin-top:18px;flex-wrap:wrap;align-items:center}
+.mbtns button{font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;padding:11px 16px;border-radius:10px;border:1px solid var(--line2);background:transparent;color:var(--ink);cursor:pointer}
+.mbtns .save{background:var(--brand);color:#02181d;border-color:var(--brand);font-weight:700}
+.mbtns .del{color:var(--warn);border-color:rgba(255,136,102,.4);margin-left:auto}
+.mbtns .msg{font-family:var(--mono);font-size:11px;color:var(--mut)}
+@media(max-width:620px){.row .k{flex-basis:76px}.f2{grid-template-columns:1fr}}
+
+/* ---- proyectos ---- */
+.pchip{font-family:var(--mono);font-size:9.5px;letter-spacing:.05em;text-transform:uppercase;border:1px solid var(--line);border-radius:999px;padding:4px 9px;color:var(--mut);white-space:nowrap}
+.pchip.on{color:var(--good);border-color:rgba(136,255,170,.36)}
+.pchip.pausado{color:var(--accent);border-color:rgba(255,216,102,.36)}
+.pchip.archivado{color:var(--dim)}
+.pweb{font-family:var(--mono);font-size:11.5px;color:var(--brand);text-decoration:none;word-break:break-all}
+.pweb:hover{text-decoration:underline}
+.pblurb{font-size:13px;line-height:1.5;color:var(--mut);margin-bottom:12px;overflow-wrap:anywhere}
+.pshot{display:block;border-radius:9px;overflow:hidden;border:1px solid var(--line);background:#061019;aspect-ratio:16/10;margin-bottom:12px}
+.pshot img{width:100%;height:100%;object-fit:cover;object-position:top center;display:block}
+/* Casilleros de asignación del editor: máquinas y agentes, uno por línea. */
+.picks{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(180px,100%),1fr));gap:6px;max-height:210px;overflow:auto;border:1px solid var(--line);border-radius:9px;padding:9px;background:var(--bg)}
+.picks label{display:flex;gap:8px;align-items:center;font-size:12.5px;color:var(--ink);cursor:pointer;font-family:var(--sans);text-transform:none;letter-spacing:0;margin:0;min-width:0}
+.picks label span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.picks input{width:auto;flex:0 0 auto}
+.pvacio{border:1px dashed var(--line2);border-radius:14px;padding:26px 20px;text-align:center;color:var(--mut);font-size:13.5px;line-height:1.6}
+
+/* ---- combo de agentes (sustituye a las casillas) ------------------------- */
+/* Al pulsar «Agente» se elige del censo, con su retrato. Un proyecto puede
+   llevar varios: se van añadiendo y cada uno queda como chip con su ✕. */
+.combo{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.combo select{flex:1 1 140px;min-width:0}
+/* Un <option> nativo no admite imágenes: el retrato del agente que hay elegido
+   se enseña al lado del combo, y vuelve a salir en su chip al añadirlo. */
+.combo .prev{flex:0 0 auto;width:34px;height:34px;border-radius:9px;overflow:hidden;display:grid;place-items:center;
+  border:1px solid var(--line);background:var(--bg);font-family:var(--mono);font-size:11px;font-weight:700;color:var(--mut)}
+.combo .prev img{width:100%;height:100%;object-fit:cover;object-position:center top;display:block}
+.echip .avmini{margin-right:0}
+.combo .add2{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--brand);
+  border:1px solid var(--line2);border-radius:9px;padding:10px 13px;background:transparent;cursor:pointer;flex:0 0 auto;min-height:40px}
+.combo .add2:hover:not(:disabled){background:rgba(120,243,255,.08)}
+.combo .add2:disabled{opacity:.4;cursor:default}
+.elegidos{display:flex;gap:6px;flex-wrap:wrap;margin-top:9px;min-width:0}
+.elegidos:empty::before{content:"nadie asignado todavía";font-family:var(--mono);font-size:11px;color:var(--dim)}
+.echip{display:inline-flex;align-items:center;gap:6px;max-width:100%;min-width:0;font-family:var(--mono);font-size:11px;color:var(--ink);
+  border:1px solid var(--line2);border-radius:999px;padding:4px 6px 4px 5px;background:var(--bg)}
+.echip span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+.echip button{flex:0 0 auto;width:20px;height:20px;border-radius:50%;border:0;background:transparent;color:var(--mut);cursor:pointer;font-size:13px;line-height:1;padding:0}
+.echip button:hover{color:var(--warn)}
+
+/* ---- reordenar fichas (arrastrar + teclado) ------------------------------ */
+/* El asa es lo único arrastrable: así se puede seguir seleccionando texto y
+   pulsando enlaces dentro de la ficha. En el teclado, el asa es un botón: con
+   ←/→ (o ↑/↓) la ficha se mueve un puesto, y al soltar el foco se guarda. */
+.ag.mov .top{padding-right:42px}   /* el asa vive en esa esquina */
+.asa{position:absolute;top:8px;right:8px;z-index:2;display:inline-flex;align-items:center;justify-content:center;
+  width:34px;height:34px;border-radius:9px;border:1px solid var(--line);background:var(--card2);color:var(--mut);
+  cursor:grab;font-size:13px;line-height:1;padding:0;touch-action:none}
+.asa:hover,.asa:focus-visible{color:var(--brand);border-color:var(--brand);outline:none}
+.asa:focus-visible{box-shadow:0 0 0 2px rgba(120,243,255,.35)}
+.asa:active{cursor:grabbing}
+.ag.arrastrando{opacity:.55;border-color:var(--brand);box-shadow:0 0 0 1px var(--brand) inset}
+/* ---- misión en curso · reloj de decisión (FLT-985 c) --------------------- */
+/* Lo pendiente se dice, pero no grita: no es trabajo en marcha. */
+.mpend{color:var(--dim)}
+/* «⏳ decidiendo» en el mismo renglón que las misiones en curso; lleva a la ficha
+   completa del reloj, que está arriba en esta misma página. */
+.mis .n{min-width:0;overflow-wrap:anywhere}
+.mis a.decreloj{display:inline-flex;align-items:center;gap:4px;font-family:var(--mono);font-size:10px;letter-spacing:.05em;
+  text-transform:uppercase;color:var(--accent);border:1px solid var(--accent);border-radius:6px;padding:2px 6px;
+  text-decoration:none;margin-right:6px;white-space:nowrap}
+.mis a.decreloj:hover,.mis a.decreloj:focus-visible{background:rgba(255,216,102,.12);outline:none}
+.ordmsg{font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--dim);margin:0 0 10px}
+.ordmsg.ok{color:var(--good)}.ordmsg.err{color:var(--warn)}
+/* intro plegable REUTILIZABLE — patrón .page-intro de /objetivos. */
+.page-intro{margin:0}
+.page-intro>summary{list-style:none;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;cursor:pointer}
+.page-intro>summary::-webkit-details-marker{display:none}
+.page-intro>summary h1{margin:0}
+.page-intro .pi-toggle{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;font:600 10px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mut);border:1px solid var(--line);border-radius:999px;padding:6px 11px;transition:color .15s,border-color .15s}
+.page-intro>summary:hover .pi-toggle{color:var(--dim);border-color:var(--mut)}
+.page-intro .pi-chevron{font-size:13px;line-height:1;transition:transform .18s}
+.page-intro[open] .pi-chevron{transform:rotate(90deg)}
+.page-intro .pi-body{margin-top:10px;animation:pi-in .18s ease}
+@keyframes pi-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body data-yk-title="EQUIPO" data-yk-zone="app">
+<div id="yk-espejo-aviso" style="background:#0a1620;border-bottom:1px solid rgba(120,243,255,.30);color:#75aab9;font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;padding:8px 14px">Espejo en <b style="color:#78f3ff">admira.live</b> de Yokup · misma sesión y mismos datos de <code>api.yokup.com</code>. Si algo no cuadra con <a href="https://www.yokup.com" style="color:#78f3ff">el original</a>, es un fallo: dilo.</div>
+<div class="wrap">
+  <details class="page-intro">
+    <summary>
+      <h1>Equipo</h1>
+      <span class="pi-toggle">Qué es esto <span class="pi-chevron">›</span></span>
+    </summary>
+    <div class="pi-body">
+      <p class="sub">Quién forma AdmiraNeXT, en dos planos que no se mezclan: los <b>agentes</b> — software, <i>bits</i>: una persona es un LLM más una cuenta, y puede levantarse en cualquier sitio — y las <b>máquinas</b> — hardware, <i>átomos</i>: cajas físicas con ubicación, dueño y un estado comprobado. Un agente CORRE EN una máquina; ni es ella, ni depende de ella. Todo se edita aquí y vive en <b>admira-fleet</b>, la misma fuente que lee admira.live/control.</p>
+    </div>
+  </details>
+
+  <div class="kpis">
+    <div class="kpi tot"><b id="kSil">—</b><span>Agentes · bits</span></div>
+    <div class="kpi"><b id="kEq">—</b><span>Máquinas · átomos</span></div>
+    <div class="kpi viva"><b id="kViva">—</b><span>Con latido</span></div>
+    <div class="kpi mis"><b id="kMis">—</b><span>Misión en curso</span></div>
+    <div class="kpi"><b id="kPro">—</b><span>Proyecto</span></div>
+    <div class="kpi gap"><b id="kGap">—</b><span>Sin ficha</span></div>
+  </div>
+
+  <!-- RELOJES DE DECISIÓN, aquí y no en otro rincón (Carlos, FLT-985 c2): si un
+       agente está en momento de decisiones, se ve en la misma página donde se
+       leen sus misiones en curso. La sección la pinta el módulo compartido
+       yk-decisions.js — el mismo de /misiones y /decisiones, sin copia. -->
+  <section class="decs" id="decs" hidden>
+    <div class="decs-hd">⏳ Reloj de decisión <span class="decs-n" id="decsN"></span></div>
+    <div class="decs-list" id="decsList"></div>
+  </section>
+
+  <div class="tabs">
+    <button class="tab on" data-v="agentes">🤖 Agentes <small>· software · bits</small></button>
+    <button class="tab" data-v="maquinas">🖥 Máquinas <small>· hardware · átomos</small></button>
+    <button class="tab" data-v="proyectos">📁 Proyectos <small>· el trabajo</small></button>
+  </div>
+
+  <div id="root"><div class="load">Cargando el equipo…</div></div>
+
+  <div class="foot">
+    Fuente única <b>admira-fleet</b> · compartida con <b>admira.live/control</b><br>
+    Latido en vivo de <b>/api/presence</b> · misiones de <b>yokup</b> · técnicos humanos de campo en <b>/agentes</b>
+  </div>
+
+  <div class="yk-expert-btns" data-yk-slot="bottom">
+    <button data-yk-fetch="/tickets?scope=fleet">misiones JSON</button>
+  </div>
+  <pre class="yk-expert-out" data-yk-slot="bottom">Vuelca las misiones crudas del worker.</pre>
+</div>
+
+<!-- EDITOR: mismo modal para persona de silicio y ficha de equipo -->
+<div class="mod" id="mod">
+  <div class="box">
+    <h3 id="mTit">Editar</h3>
+    <p class="hint" id="mHint"></p>
+    <div id="mForm"></div>
+    <div class="mbtns">
+      <button class="save" id="mSave">Guardar</button>
+      <button id="mCancel">Cancelar</button>
+      <span class="msg" id="mMsg"></span>
+      <button class="del" id="mDel">Borrar</button>
+    </div>
+  </div>
+</div>
+
+<div class="mod" id="notasMod"><div class="box notasbox"><h3 id="notasTit">Seguimiento del proyecto</h3><div class="notaslista" id="notasLista">Cargando seguimiento…</div><div class="f"><label>Nueva nota</label><textarea id="notaTexto"></textarea></div><div class="f"><label>Autor</label><input id="notaAutor"></div><div class="mbtns"><button class="save" id="notaSave">Añadir seguimiento</button><button id="notaClose">Cerrar</button><span class="msg" id="notaMsg"></span></div></div></div>
+
+<script src="/yk-agent-identity.js?v=1"></script>
+<script src="/yk-maquina.js?v=r1"></script>
+<script src="/yk-avatar.js?v=r2"></script>
+<script src="/yk-misiones.js?v=r47"></script>
+<script src="/yk-decisions.js?v=20260723a"></script>
+<script>
+const WORKER="https://api.yokup.com";
+// Dominio propio: LaLiga bloquea workers.dev en horas de fútbol (FLT-1633); workers.dev sigue vivo como respaldo.
+const TG="https://bot.yokup.com";
+// Registro de flota: se LEE directo (abierto) y se ESCRIBE por yokup-rtc, que
+// guarda el FLEET_TOKEN — nunca viaja al navegador.
+const FLEET="https://fleet.yokup.com";
+// EL CENSO QUE COMPRUEBA, NO EL QUE SE DECLARA (2026-08-10). El `lastSeen` de
+// admira-fleet NO es un latido: es la hora en que se escribió la ficha. Por eso
+// diez equipos comparten el mismo sello al minuto —una escritura del censo— y
+// cinco llevan 43 días con el mismo. La tarjeta lo esquivaba diciendo «vivo ·
+// por agente», que es honesto pero deja sin respuesta la pregunta de si la
+// máquina está encendida cuando nadie corre encima. /api/fleet-census sí lo
+// comprueba: nace de `tailscale status --json` y confirma con SSH. Es el mismo
+// veredicto que ya usan /status y el dashboard; Equipo era el que faltaba.
+const CENSO="/api/fleet-census";
+const $=x=>document.getElementById(x);
+function esc(x){ return String(x==null?"":x).replace(/[<>&"]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[c])); }
+
+/* Campos editables. Definen el formulario Y lo que se manda al worker, así que
+   añadir un campo aquí es todo lo que hace falta para que sea editable. */
+const F_SIL=[
+  {k:"name",   l:"Nombre",              t:"text"},
+  {k:"runtime",l:"Runtime (LLM)",       t:"text", ph:"Claude · Codex · Grok"},
+  {k:"account",l:"Cuenta",              t:"text", ph:"csilva@admira.com"},
+  {k:"role",   l:"Rol",                 t:"text"},
+  {k:"archetype",l:"Arquetipo",         t:"text", ph:"≈ CTO"},
+  {k:"motto",  l:"Lema",                t:"text"},
+  {k:"duty",   l:"De qué responde",     t:"area"},
+  {k:"tags",   l:"Etiquetas (coma)",    t:"text", ph:"infraestructura, deploys"},
+  {k:"layer",  l:"Capa",                t:"sel",  opts:[["1","Capa 1 · Principal"],["2","Capa 2 · Especialista"]]},
+  {k:"color",  l:"Color",               t:"text", ph:"#78f3ff"},
+  {k:"initials",l:"Iniciales",          t:"text", ph:"MO"}
+];
+const F_EQ=[
+  {k:"member",     l:"Responsable (humano)", t:"text", ph:"Carlos"},
+  {k:"role",       l:"Rol del responsable",t:"text"},
+  {k:"machineRole",l:"Rol del equipo",  t:"text", ph:"Servidor central / Hub"},
+  {k:"location",   l:"Ubicación",       t:"text", ph:"Madrid"},
+  {k:"project",    l:"Proyecto",        t:"text", ph:"admira.live"},
+  {k:"currentFocus",l:"Foco actual",    t:"area"},
+  {k:"unitType",   l:"Tipo de unidad",  t:"text", ph:"council"},
+  {k:"color",      l:"Color",           t:"text", ph:"plata"},
+  {k:"note",       l:"Nota",            t:"area"}
+];
+/* Un PROYECTO es la unidad de trabajo: se da de alta aquí y se asigna a las
+   máquinas y a los agentes que lo tocan. Vive en yokup-rtc (D1), no en
+   admira-fleet: admira-fleet es el censo de máquinas y personas, y los proyectos
+   son de yokup, que es quien lleva misiones y decisiones. Las asignaciones
+   apuntan a los IDS de admira-fleet — ni un censo paralelo más. */
+const F_PRO=[
+  {k:"name",  l:"Nombre",           t:"text", ph:"Yokup"},
+  {k:"blurb", l:"Descripción",      t:"area", ph:"De qué va, en una línea"},
+  // FLT-1505: `owner` era un agente de silicio aunque esta pantalla lo llamaba
+  // carbono. Los dos responsables viajan ahora por campos inequívocos para que
+  // editar al humano nunca reescriba la familia de agente asignada.
+  {k:"silicon_responsible",l:"Responsable Silicio",t:"text",ph:"NiobeMacMini"},
+  {k:"carbon_responsible",l:"Responsable Carbono",t:"text",ph:"Carlos"},
+  {k:"web",   l:"Web",              t:"text", ph:"www.yokup.com"},
+  {k:"status",l:"Estado",           t:"sel",  opts:[["activo","Activo"],["pausado","Pausado"],["archivado","Archivado"]]},
+  {k:"color", l:"Color",            t:"text", ph:"#3df08a"}
+];
+function responsablesDe(p){return Array.isArray(p.responsibles)&&p.responsibles.length?p.responsibles:(p.carbon_responsible?[{name:p.carbon_responsible,role:"Responsable Carbono"}]:[]);}
+function normalizaWebProyecto(value){let v=String(value||"").trim();if(!v)return "";if(!/^https?:\/\//i.test(v))v="https://"+v;const u=new URL(v);return u.href.replace(/\/$/,"");}
+function fechaSeguimiento(ms){return ms?new Date(ms).toLocaleString("es-ES",{timeZone:"Europe/Madrid"}):"";}
+const CAPAS={
+  1:{ t:"Capa 1 · Principales", d:"Siempre con el mejor modelo disponible. Definen estrategia y arquitectura con el máximo detalle; no ejecutan tareas mecánicas: las reparten." },
+  2:{ t:"Capa 2 · Especialistas", d:"Perfiles de apoyo con criterio propio: contrastan, exploran y cubren frentes que los principales no alcanzan." }
+};
+
+/* RETRATOS. La cara de cada persona de silicio sale del módulo compartido
+   yk-avatar.js — el mismo que usa /misiones, con su herencia de capa (subMorfeo
+   lleva la cara de Morfeo) y con la foto del Panel de control pisando a la de
+   serie. Aquí no se guarda ninguna lista de caras: si hay que cambiar un retrato
+   se cambia en un sitio y cambia en todas las páginas.
+   Sin retrato NO se cae a un emoji: se ponen las iniciales, que son sobrias. */
+function iniciales(n){
+  const s=String(n||"?").trim().replace(/^(sub|infra)/i,"")||"?";
+  return s.slice(0,2).toUpperCase();
+}
+function retratoUrl(n){ try{ return window.ykAvatar?ykAvatar.img(n):""; }catch(e){ return ""; } }
+// 48px, el hueco grande de la cabecera de la ficha.
+function retratoGrande(nombre,ini){
+  const u=retratoUrl(nombre);
+  return u?'<div class="av"><img loading="lazy" alt="" src="'+esc(u)+'" onerror="this.remove()"></div>'
+          :'<div class="av">'+esc(ini||iniciales(nombre))+'</div>';
+}
+// 18px, para chips y listas. Devuelve solo el trocito visual, sin el nombre.
+function retratoMini(nombre){
+  const u=retratoUrl(nombre);
+  return u?'<img class="avmini" loading="lazy" alt="" src="'+esc(u)+'" onerror="this.remove()">'
+          :'<span class="avini">'+esc(iniciales(nombre))+'</span>';
+}
+
+const canon=s=>YkMisiones.canonMachine(String(s||""));
+const norm=s=>String(s||"").toLowerCase().replace(/[^a-z0-9]/g,"");
+let PRES=[], MIS=[], MAQ=[], SIL=[], PRO=[], CEN=[], VISTA="agentes";
+
+async function cargar(){
+  const [pr,tk,mq,si,po,ce]=await Promise.all([
+    fetch(TG+"/api/presence",{cache:"no-store"}).then(r=>r.json()).catch(()=>({presence:[]})),
+    fetch(WORKER+"/tickets?scope=fleet&limit=300",{cache:"no-store"}).then(r=>r.json()).catch(()=>({tickets:[]})),
+    fetch(FLEET+"/machines",{cache:"no-store"}).then(r=>r.json()).catch(()=>({machines:[]})),
+    fetch(FLEET+"/silicon",{cache:"no-store"}).then(r=>r.json()).catch(()=>({silicon:[]})),
+    fetch(WORKER+"/projects",{cache:"no-store"}).then(r=>r.json()).catch(()=>({projects:[]})),
+    // Si el Mini que sondea la flota está caído, el censo no llega y la tarjeta
+    // vuelve sola a lo de siempre. Nunca se inventa un veredicto que no hay.
+    fetch(CENSO,{cache:"no-store"}).then(r=>r.ok?r.json():null).catch(()=>null)
+  ]);
+  // Cancelada NO es misión: se caía en el mismo saco que las vivas y engordaba
+  // el contador con trabajo que nadie va a hacer.
+  PRES=pr.presence||[]; MIS=(tk.tickets||[]).filter(t=>t.status!=="resolved"&&t.status!=="cancelled");
+  MAQ=mq.machines||[];  SIL=si.silicon||[];  PRO=po.projects||[];
+  CEN=(ce&&ce.ok&&Array.isArray(ce.machines))?ce.machines:[];
+  pinta();
+}
+// El veredicto se busca por el id del registro y, si no, por el nombre del nodo.
+// Devuelve null cuando el censo no conoce la máquina: no saber es un resultado
+// legítimo y se dice, no se rellena con el latido de otro.
+function veredictoCenso(m){
+  if(!CEN.length||!m) return null;
+  const id=norm(m.id), nom=norm(canon(m.name||m.id));
+  const c=CEN.find(x=>x.id&&norm(x.id)===id)
+        ||CEN.find(x=>norm(canon(x.host||""))===nom||norm(canon(x.name||""))===nom);
+  if(!c) return null;
+  return {online:!!c.online, lastSeen:c.lastSeen||0, ssh:!!c.ssh, host:c.host||c.name||""};
+}
+const proPorId=id=>PRO.find(p=>p.id===id)||null;
+// Un valor suelto (id, nombre o dominio) → proyecto del censo. Nada de adivinar
+// por palabras: o está dado de alta, o no está.
+function proDe(v){
+  const s=String(v||"").trim().toLowerCase();
+  if(!s) return null;
+  return PRO.find(p=>p.id.toLowerCase()===s||String(p.name||"").toLowerCase()===s
+                   ||String(p.web||"").replace(/^https?:\/\//,"").toLowerCase()===s)||null;
+}
+
+function presenciaDe(nombre){
+  const k=norm(nombre);
+  const mios=PRES.filter(p=>norm(p.persona)===k);   // «WhiteRabbit» ≡ «White Rabbit»
+  return mios.length?mios.sort((a,b)=>(b.updated||0)-(a.updated||0))[0]:null;
+}
+function presenciaMaq(id,nombre){
+  const c=norm(canon(nombre||id));
+  const mios=PRES.filter(p=>p.machine&&norm(canon(p.machine))===c);
+  return mios.length?mios.sort((a,b)=>(b.updated||0)-(a.updated||0))[0]:null;
+}
+function nombreVisibleAg(nombre,maquina){return window.ykAgentIdentity?ykAgentIdentity.display(nombre,maquina):nombre;}
+// Agentes vivos sobre una máquina — el puente átomos→bits. Se cruza por
+// presencia, no por la ficha: quién corre dónde cambia solo y a cada rato.
+function agentesEn(id,nombre){
+  const c=norm(canon(nombre||id)), lim=Date.now()/1000-900;
+  const vivos=PRES.filter(p=>p.machine&&norm(canon(p.machine))===c&&(p.updated||0)>lim);
+  const nombres=[...new Set(vivos.map(p=>p.persona).filter(Boolean))];
+  // se marcan los que además están dados de alta como agentes del equipo
+  return nombres.map(n=>({n, alta: SIL.some(a=>norm(a.name||a.id)===norm(n))}));
+}
+function misionesDe(nombre){ const k=norm(nombre); return MIS.filter(m=>norm(m.assignee)===k); }
+/* VIVA = EN CURSO (Carlos, FLT-985 c1). «Vivas» venía contando todo lo no cerrado,
+   así que una cola de encargos sin empezar se presentaba como trabajo en marcha.
+   Ahora viva es `in_progress` y lo `open` se dice aparte —«· N pendiente»— en vez
+   de sumarse a escondidas: se pierde la mentira, no el dato. */
+const enCurso=ms=>ms.filter(m=>m.status==="in_progress");
+const pendientes=ms=>ms.filter(m=>m.status!=="in_progress");
+/* MOMENTO DE DECISIONES (Carlos, FLT-985 c2). El reloj abierto de un agente sale
+   dos veces en esta misma página y en ningún rincón aparte: la FICHA entera arriba
+   —la pinta yk-decisions.js, que es quien sabe pintarla— y aquí una marca en el
+   mismo renglón donde se leen sus misiones en curso, para no tener que buscarlo.
+   La lista la trae el módulo por onData: ni una segunda consulta ni un segundo render. */
+let DEC_PEND=[];
+// Los relojes los abre quien ejecuta —infraNeo, subOraculo—, y en esta pestaña las
+// fichas son las de la PERSONA. Se hereda la capa igual que el retrato (yk-avatar):
+// se quita el prefijo y se busca la persona al principio de lo que queda, así el
+// reloj de infraNeo marca la ficha de Neo en vez de perderse.
+function baseAgente(n){
+  if(window.ykAgentIdentity) return norm(ykAgentIdentity.base(n));
+  let s=String(n||"").toLowerCase().replace(/[^a-z0-9]/g,"");
+  let antes; do{ antes=s; s=s.replace(/^(sub|infra)/,""); }while(s!==antes);
+  return s;
+}
+function relojDe(nombre){
+  const k=baseAgente(nombre);
+  if(!k) return "";
+  const d=DEC_PEND.filter(x=>{ const b=baseAgente(x.agent); return b===k||b.indexOf(k)===0; })[0];
+  if(!d) return "";
+  const suyo=norm(d.agent)===norm(nombre);
+  return '<a class="decreloj" href="#decs" title="'+esc(d.question||"")+'">⏳ '+
+    (suyo?"decidiendo":esc(d.agent)+" decidiendo")+'</a> ';
+}
+// Rótulo del pie de una ficha. Singular y sin adverbios.
+function rotuloMisiones(nCurso,nPend){
+  if(nCurso) return '<b>'+nCurso+'</b> en curso'+(nPend?' <span class="mpend">· '+nPend+' pendiente</span>':"");
+  if(nPend)  return '<span class="mpend">sin misión en curso · '+nPend+' pendiente</span>';
+  return "sin misión en curso";
+}
+function vivo(p){ return p && (Date.now()/1000-(p.updated||0))<900; }
+function hace(ts){
+  if(!ts) return "sin señal";
+  const s=Math.round(Date.now()/1000-ts);
+  if(s<90) return "ahora mismo";
+  if(s<3600) return "hace "+Math.round(s/60)+" min";
+  if(s<86400) return "hace "+Math.round(s/3600)+" h";
+  return "hace "+Math.round(s/86400)+" d";
+}
+const fila=(k,v,cls)=>'<div class="row"><span class="k">'+esc(k)+'</span><span class="v '+(cls||"")+'">'+v+'</span></div>';
+// El foco lo escribe cada agente a mano y a veces arrastra ruido del arnés
+// (etiquetas <task-notification>, ids de herramienta…). Se limpia y se corta:
+// la tarjeta quiere el titular, no el volcado.
+function foco(t){
+  let s=String(t||"").replace(/<[^>]*>/g," ").replace(/\s+/g," ").trim();
+  return s.length>110 ? s.slice(0,110).replace(/\s+\S*$/,"")+"…" : s;
+}
+
+// La declaración diaria es distinta de la membresía estable. Se pinta aparte y
+// manda como «Principal hoy»; `Proyecto` conserva todos los proyectos del censo.
+function proyectoPrincipalHoy(agente, maquina){
+  const id=window.ykAgentIdentity, raw=String(agente&&agente.id||agente&&agente.name||agente||"");
+  const parsed=id&&id.parse?id.parse(raw):null, expected=id&&id.scoped?id.scoped(raw,maquina||""):raw;
+  const matches=[];
+  PRO.forEach(p=>(p.daily_primary_agents||[]).forEach(d=>{
+    if(id&&id.key&&id.key(d.agent)===id.key(expected)) matches.push(p);
+    else if(!maquina&&id&&id.parse&&parsed&&id.key(id.parse(d.agent).persona)===id.key(parsed.persona)) matches.push(p);
+  }));
+  const unique=[...new Set(matches)];
+  return unique.length===1?unique[0]:null;
+}
+
+function tarjetaSil(a){
+  const p=presenciaDe(a.name||a.id), on=vivo(p), ms=misionesDe(a.name||a.id);
+  const maq=p&&p.machine?canon(p.machine):"";
+  const principalHoy=proyectoPrincipalHoy(a,maq);
+  const tags=Array.isArray(a.tags)?a.tags:String(a.tags||"").split(",").map(s=>s.trim()).filter(Boolean);
+  return '<div class="ag'+(on?"":" off")+'" style="--c:'+esc(a.color||"#78f3ff")+'">'+
+    '<div class="top">'+retratoGrande(a.name||a.id, a.initials)+
+      '<div class="who"><b>'+esc(nombreVisibleAg(a.name||a.id,maq))+'</b><span class="rt"><span class="sub2">'+esc(a.runtime||"—")+' · '+esc(a.role||"")+'</span></span></div>'+
+      '<span class="pulse'+(on?" on":"")+'" title="'+esc(hace(p&&p.updated))+'"><i></i>'+(on?"vivo":"reposo")+'</span></div>'+
+    (a.motto?'<div class="lema">«'+esc(a.motto)+'»</div>':"")+
+    '<div class="rows">'+
+      fila("Runtime",esc(a.runtime||"—")+" · "+esc(a.account||"—"),"mono")+
+      fila("Rol",esc(a.role||"—")+(a.archetype?' <span class="v mono">'+esc(a.archetype)+"</span>":""))+
+      (a.duty?fila("De qué responde",esc(a.duty)):"")+
+      fila("Corre en",maq?"🖥 "+(window.ykMaquina?ykMaquina.html(maq):esc(maq))+" · "+esc(hace(p&&p.updated)):"— sin latido","mono")+
+      (principalHoy?fila("Principal hoy",'<span class="agchip">★ '+esc(principalHoy.name||principalHoy.id)+'</span>',"principal-hoy"):"")+
+      (function(){ const ps=PRO.filter(x=>(x.agents||[]).indexOf(a.id)>=0);
+        return fila("Proyecto", ps.length?ps.map(x=>'<span class="agchip">📁 '+esc(x.name||x.id)+'</span>').join(" "):"— sin asignar", ps.length?"":"falta"); })()+
+      (p&&foco(p.focus)?fila("Su foco",esc(foco(p.focus))):"")+
+    '</div>'+
+    (tags.length?'<div class="tags">'+tags.map(t=>"<span>"+esc(t)+"</span>").join("")+'</div>':"")+
+    '<div class="mis"><span class="n">'+relojDe(a.name||a.id)+rotuloMisiones(enCurso(ms).length,pendientes(ms).length)+'</span>'+
+      '<button data-ed="sil" data-id="'+esc(a.id)+'">✏️ editar</button>'+
+      '<a href="https://www.yokup.com/misiones">'+(ms.length?"ver misiones →":"asignarle una →")+'</a></div>'+
+  '</div>';
+}
+
+
+/* Opciones del selector de misión del día. Salen del CENSO de proyectos (la
+   pestaña Proyectos), no de una lista escrita a mano. Se añaden además los
+   valores que YA tienen las máquinas y que nadie ha dado de alta todavía: son
+   datos reales, y esconderlos sería peor — salen marcados para que se vean. */
+function opcionesProyecto(actual){
+  const vivos=PRO.filter(p=>p.status!=="archivado").map(p=>[p.name, p.name]);
+  const alta=new Set(PRO.map(p=>String(p.name||"").toLowerCase()).concat(PRO.map(p=>p.id)));
+  const sueltos=[...new Set(MAQ.map(m=>String(m.project||"").trim()).filter(Boolean)
+    .concat(actual?[String(actual)]:[]))]
+    .filter(v=>!alta.has(v.toLowerCase())&&!proDe(v))
+    .map(v=>[v, v+" · sin dar de alta"]);
+  return vivos.concat(sueltos);
+}
+
+/* MISIÓN DEL DÍA de una máquina: el proyecto al que se dedica hoy (o hasta que
+   Carlos diga lo contrario). Se pinta el NOMBRE arriba y debajo una CAPTURA VIVA
+   del sitio, para saber de un vistazo a qué se dedica ese ordenador sin leer nada.
+   La captura la sirve el worker (/shot), que sólo admite nuestros dominios. */
+function webDeProyecto(p){
+  let s=String(p||"").trim().toLowerCase();
+  if(!s || /^sin asignar|^—|^-$/.test(s)) return "";
+  // Si el proyecto está en el censo, su web es la que puso Carlos al darlo de
+  // alta; sólo si no está se cae al viejo apaño de tratar el valor como dominio.
+  const cen=proDe(s);
+  if(cen) s=String(cen.web||"").trim().toLowerCase();
+  if(!s) return "";
+  const host=s.replace(/^https?:\/\//,"").replace(/\/.*$/,"");
+  // el worker rechaza dominios de fuera: no se pide captura de lo que no va a dar
+  if(!/^(www\.)?(pixeria|xpaceos|yokup|admira\.live|admira\.tv|admira\.store|clearchannel|admiranext|carlossilva)\./.test(host+".")
+     && !/^(www\.)?(pixeria\.com|xpaceos\.com|yokup\.com|admira\.live|admira\.tv|admira\.store|clearchannel\.tv|admiranext\.com|carlossilva\.info)$/.test(host)) return "";
+  return "https://"+host;
+}
+function misionDelDia(m){
+  const web=webDeProyecto(m.project);
+  if(!m.project){ // sin misión: se ofrece igualmente el selector para asignarla
+    const o=opcionesProyecto("").map(x=>'<option value="'+esc(x[0])+'">'+esc(x[1])+'</option>').join('');
+    return '<div class="mdia sinmision"><div class="mdia-h">🎯 Misión de hoy'
+      +'<select class="mdia-sel" data-maq="'+esc(m.id)+'"><option value="">— sin asignar —</option>'+o
+      +(o?'':'<option value="__otro">otro…</option>')+'</select></div>'
+      +'<div class="mdia-sin">'+(PRO.length?'sin misión asignada · elígela arriba':'sin proyecto en el censo · date de alta uno en la pestaña Proyectos')+'</div></div>'; }
+  const nombre=esc(String(m.project));
+  const opts=opcionesProyecto(m.project)
+    .map(x=>'<option value="'+esc(x[0])+'"'+(String(m.project)===x[0]?' selected':'')+'>'+esc(x[1])+'</option>').join('');
+  return '<div class="mdia">'+
+    '<div class="mdia-h">🎯 Misión de hoy'+
+      '<select class="mdia-sel" data-maq="'+esc(m.id)+'" title="cambiar la misión del día">'+opts+
+      '<option value="__otro">otro…</option></select></div>'+
+    '<div class="mdia-n">'+nombre+'</div>'+
+    (web?'<a class="mdia-shot" href="'+esc(web)+'" target="_blank" rel="noopener" title="abrir '+esc(web)+'">'+
+         '<img loading="lazy" src="'+esc(WORKER+"/shot?url="+encodeURIComponent(web))+'" alt="'+nombre+'"></a>'
+        :'<div class="mdia-sin">sin sitio que capturar</div>')+
+  '</div>';
+}
+
+function tarjetaEq(m){
+  const p=presenciaMaq(m.id,m.name);
+  // DOS señales distintas que no hay que confundir: la máquina late por su cuenta
+  // (registro de admira-fleet) y los agentes que corren encima laten por la suya.
+  // Una máquina con el registro rancio pero un agente vivo SÍ está encendida: se
+  // dice «vivo · por agente» en vez de cantar un «vivo» que choca con un
+  // «último latido hace 11 d».
+  // EL VEREDICTO MANDA SOBRE EL REGISTRO Y SOBRE EL AGENTE. Si el censo ha
+  // sondeado la máquina, su sí/no decide: un agente vivo no puede resucitar un
+  // equipo que no responde, y un registro rancio no puede matar uno que sí.
+  // Sin veredicto se conserva la regla anterior, que sigue siendo lo mejor que
+  // hay: registro fresco, o un agente latiendo encima.
+  const cen=veredictoCenso(m);
+  const onMaq=(Date.now()/1000-(m.lastSeen||0))<900, onAg=vivo(p);
+  const on=cen?cen.online:(onMaq||onAg);
+  const pulso=cen?(cen.online?"vivo · comprobado":"apagado · comprobado")
+                 :onMaq?"vivo":onAg?"vivo · por agente":"reposo";
+  const sinFicha=!m.member&&!m.role&&!m.machineRole;
+  const nom=canon(m.name||m.id);
+  return '<div class="ag'+(on?"":" off")+'" style="--c:'+(sinFicha?"#ff8866":"#78f3ff")+'">'+
+    '<div class="top"><div class="av">🖥</div>'+
+      '<div class="who"><b>'+esc(nom)+'</b><span class="rt"><span class="sub2">'+esc(m.platform||"—")+' · '+esc(m.id)+'</span>'+
+        (m.member?'<span class="carb" title="responsable de carbono">'+esc(m.member)+'</span>':"")+'</span></div>'+
+      '<span class="pulse'+(on?" on":"")+'" title="'+esc(cen
+          ?"censo comprobado: Tailscale + SSH sobre "+(cen.host||m.id)+" · "+hace(cen.lastSeen)
+          :"sin censo que lo compruebe; se deduce de la ficha ("+hace(m.lastSeen)+") y de los agentes encima")+
+        '"><i></i>'+pulso+'</span></div>'+
+    misionDelDia(m)+
+    '<div class="rows">'+
+      fila("Responsable", m.member?esc(m.member):"sin asignar", m.member?"":"falta")+
+      fila("Rol", m.role?esc(m.role):"—")+
+      (m.machineRole?fila("Rol del equipo",esc(m.machineRole)):"")+
+      fila("Ubicación", m.location?esc(m.location):"—","mono")+
+      (m.project?fila("Proyecto",esc(m.project),"mono"):"")+
+      (m.currentFocus?fila("Foco",esc(foco(m.currentFocus))):"")+
+      // «Latido propio» era el rótulo que engañaba: admira-fleet no guarda ningún
+      // latido de la máquina, guarda cuándo se escribió su ficha. Cada dato dice
+      // ahora de dónde sale, y el que comprueba va primero.
+      (cen?fila("Comprobado", (cen.online
+            ? "responde"+(cen.ssh?" · canal SSH abierto":"")
+            : "no responde")+" · Tailscale"+(cen.lastSeen?" · "+esc(hace(cen.lastSeen)):""),"mono"):"")+
+      fila("Ficha escrita", esc(hace(m.lastSeen))+(!cen&&!onMaq&&onAg?" · pero hay un agente vivo encima":""),"mono")+
+      (function(){ const ag=agentesEn(m.id,m.name);
+        return fila("Agentes encima", ag.length
+          ? ag.map(a=>'<span class="agchip'+(a.alta?"":" ext")+'" title="'+(a.alta?"agente del equipo":"late aquí pero NO está dado de alta como agente")+'">'+retratoMini(a.n)+esc(a.n)+(a.alta?"":" ·?")+"</span>").join(" ")
+          : "— ninguno ahora"); })()+
+    '</div>'+
+    '<div class="mis"><span class="n">'+(sinFicha?"⚠️ ficha por rellenar":"ficha "+esc(hace(m.profileUpdatedAt)))+'</span>'+
+      '<button data-ed="eq" data-id="'+esc(m.id)+'">✏️ editar ficha</button></div>'+
+  '</div>';
+}
+
+/* Tarjeta de PROYECTO: qué es, dónde se ve y a quién toca. Las asignaciones se
+   pintan con el nombre real de la máquina/agente; si el id ya no existe en
+   admira-fleet se enseña el id crudo en vez de callarlo. */
+function nombreMaq(id){ const m=MAQ.find(x=>x.id===id); return m?canon(m.name||m.id):id; }
+function nombreAg(id){ const a=SIL.find(x=>x.id===id); return a?(a.name||a.id):id; }
+function tarjetaPro(p,i){
+  const web=webDeProyecto(p.web||p.name);
+  const est=String(p.status||"activo");
+  const responsables=responsablesDe(p),ultima=p.latest_note||null;
+  return '<div class="ag mov'+(est==="archivado"?" off":"")+'" style="--c:'+esc(p.color||"#3df08a")+'"'+
+      ' data-ord="'+esc(p.id)+'" data-pos="'+i+'">'+
+    '<button type="button" class="asa" data-asa="'+esc(p.id)+'" aria-label="Mover '+esc(p.name||p.id)+
+      '" title="Arrastra para colocar la ficha · con el teclado, flechas">⠿</button>'+
+    '<div class="top"><div class="av">📁</div>'+
+      '<div class="who"><b>'+esc(p.name||p.id)+'</b><span class="rt"><span class="sub2">'+esc(p.id)+'</span>'+
+        (responsables.length?'<span class="carb" title="responsable principal">'+esc(responsables[0].name)+'</span>':"")+'</span></div>'+
+      '<span class="pchip '+esc(est)+(est==="activo"?" on":"")+'">'+esc(est)+'</span></div>'+
+    (p.blurb?'<div class="pblurb">'+esc(p.blurb)+'</div>':"")+
+    (web?'<a class="pshot" href="'+esc(web)+'" target="_blank" rel="noopener" title="abrir '+esc(web)+'">'+
+         '<img loading="lazy" src="'+esc(WORKER+"/shot?url="+encodeURIComponent(web))+'" alt="'+esc(p.name||p.id)+'"></a>':"")+
+    '<div class="rows">'+
+      fila("Web", p.web?'<a class="pweb" href="'+esc(/^https?:\/\//.test(p.web)?p.web:"https://"+p.web)+'" target="_blank" rel="noopener">'+esc(p.web)+'</a>':"— sin web", p.web?"":"falta")+
+      fila("Responsables",responsables.length?responsables.map(r=>'<span class="rchip"><b>'+esc(r.name)+'</b>'+(r.role?' · '+esc(r.role):'')+'</span>').join(" "):"— sin asignar",responsables.length?"":"falta")+
+      fila("Máquina", p.machines.length?p.machines.map(id=>'<span class="agchip">🖥 '+esc(nombreMaq(id))+'</span>').join(" "):"— sin asignar", p.machines.length?"":"falta")+
+      fila("Agente", p.agents.length?p.agents.map(id=>'<span class="agchip">'+retratoMini(nombreAg(id))+esc(nombreAg(id))+'</span>').join(" "):"— sin asignar", p.agents.length?"":"falta")+
+    '</div>'+
+      (ultima?fila("Último seguimiento",'<span class="ultnota">'+esc(ultima.body)+'</span><small>'+esc(ultima.author||"Yokup")+' · '+esc(fechaSeguimiento(ultima.created_at))+'</small>',"seguimiento"):"")+
+    '<div class="mis"><span class="n">'+rotuloMisiones(+p.missions||0,+p.missions_pending||0)+' · '+(+p.notes_count||0)+' notas</span>'+
+      '<button data-notas="'+esc(p.id)+'">📝 seguimiento</button>'+
+      '<button data-ed="pro" data-id="'+esc(p.id)+'">✏️ editar</button>'+
+      '<a href="https://www.yokup.com/misiones">ver misiones →</a></div>'+
+  '</div>';
+}
+
+function pinta(){
+  if(VISTA==="proyectos"){
+    $("root").innerHTML='<div class="capa"><h2>Proyectos · el trabajo</h2>'+
+      '<p>En qué se trabaja. Un proyecto se da de alta aquí y se asigna a las máquinas y a los agentes que lo tocan — puede tocar varios de cada. Es el nombre que sale luego en la ficha de cada decisión y de cada misión: sin alta, la ficha dice «sin proyecto» y no se inventa ninguno.</p>'+
+      '<button class="add" id="addPro">➕ nuevo proyecto</button></div>'+
+      (PRO.length?'<p class="ordmsg" id="ordMsg">Arrastra una ficha por su asa (⠿) para colocarla · con el teclado, foco en el asa y flechas</p>'+
+                  '<div class="grid" id="gridPro">'+PRO.map(tarjetaPro).join("")+'</div>'
+                 :'<div class="pvacio">Todavía no hay ningún proyecto dado de alta.<br>Empieza por el que tengas entre manos: nombre, web y a quién toca.</div>');
+    const b=$("addPro"); if(b) b.onclick=()=>abrir("pro",null);
+    if(PRO.length) montaOrden();
+  }else if(VISTA==="agentes"){
+    $("root").innerHTML=[1,2].map(c=>{
+      const g=SIL.filter(a=>+a.layer===c);
+      return '<div class="capa"><h2>'+esc(CAPAS[c].t)+'</h2><p>'+esc(CAPAS[c].d)+'</p>'+
+             (c===1?'<button class="add" id="addSil">➕ nuevo agente</button>':"")+'</div>'+
+             (g.length?'<div class="grid">'+g.map(tarjetaSil).join("")+'</div>':'<div class="load">Nadie en esta capa.</div>');
+    }).join("");
+    const b=$("addSil"); if(b) b.onclick=()=>abrir("sil",null);
+  }else{
+    $("root").innerHTML='<div class="capa"><h2>Máquinas · átomos</h2><p>El hardware: cajas físicas con ubicación, responsable humano y un estado que se COMPRUEBA — Tailscale más un SSH real, no la máquina declarándose viva. La ficha vive en admira-fleet y su parte humana se edita aquí. Los agentes que corren encima son otra cosa — están en la pestaña de al lado.</p></div>'+
+      '<div class="grid">'+MAQ.map(tarjetaEq).join("")+'</div>';
+  }
+  document.querySelectorAll("[data-ed]").forEach(b=>{ b.onclick=()=>abrir(b.dataset.ed,b.dataset.id); });
+  document.querySelectorAll("[data-notas]").forEach(b=>{b.onclick=()=>abrirNotas(b.dataset.notas);});
+  // Selector rápido de MISIÓN DEL DÍA: guarda sin abrir el editor, porque esto
+  // se cambia a diario y no es una edición de ficha.
+  document.querySelectorAll(".mdia-sel").forEach(sel=>{
+    sel.onchange=async()=>{
+      let v=sel.value;
+      if(v==="__otro"){ v=prompt("Proyecto (dominio, p.ej. www.yokup.com):","")||""; if(!v){ pinta(); return; } }
+      const antes=sel.value; sel.disabled=true;
+      try{
+        const r=await fetch(WORKER+"/equipo/machine",{method:"POST",headers:{"content-type":"application/json"},
+          body:JSON.stringify({id:sel.dataset.maq, project:v.trim(), by:"yokup/equipo·foco"})});
+        const d=await r.json().catch(()=>({}));
+        if(!r.ok||!d.ok) throw new Error(d.error||("HTTP "+r.status));
+        // Si el proyecto está dado de alta, la máquina queda además asignada a
+        // él en el censo: elegirlo aquí y verlo en la pestaña Proyectos es lo
+        // mismo. Si no lo está, no se crea nada a espaldas de Carlos.
+        const cen=proDe(v.trim());
+        if(cen) await fetch(WORKER+"/projects/assign",{method:"POST",headers:{"content-type":"application/json"},
+          body:JSON.stringify({project:cen.id, kind:"machine", ref:sel.dataset.maq})}).catch(()=>{});
+        await cargar();
+      }catch(e){ sel.disabled=false; sel.value=antes; alert("No se pudo cambiar la misión: "+(e&&e.message||e)); }
+    };
+  });
+  const vivos=SIL.filter(a=>vivo(presenciaDe(a.name||a.id))).length;
+  $("kEq").textContent=MAQ.length; $("kSil").textContent=SIL.length;
+  $("kViva").textContent=vivos; $("kMis").textContent=enCurso(MIS).length;
+  $("kPro").textContent=PRO.filter(p=>p.status!=="archivado").length;
+  $("kGap").textContent=MAQ.filter(m=>!m.member&&!m.role&&!m.machineRole).length;
+}
+
+document.querySelectorAll(".tab").forEach(t=>{ t.onclick=()=>{
+  document.querySelectorAll(".tab").forEach(x=>x.classList.remove("on"));
+  t.classList.add("on"); VISTA=t.dataset.v; pinta();
+};});
+
+/* ---- reordenar las fichas de proyecto ------------------------------------ */
+/* Dos caminos a lo mismo, y ninguno es de segunda:
+   · RATÓN/DEDO: se arrastra el asa (⠿) y la ficha se suelta sobre otra.
+   · TECLADO:    foco en el asa y flechas — ←/↑ un puesto atrás, →/↓ uno adelante,
+                 Inicio/Fin a los extremos. Sin arrastrar nada.
+   El orden se guarda en el worker (columna sort_order), no en este navegador.
+   Mientras se guarda NO se recarga la lista: recargar en medio le quitaría el
+   foco al asa a quien esté navegando con el teclado. */
+let ORD_T=null;
+function ordActual(){
+  return [...document.querySelectorAll("#gridPro .ag[data-ord]")].map(el=>el.dataset.ord);
+}
+function ordDi(txt,cls){
+  const m=$("ordMsg"); if(!m) return;
+  m.textContent=txt; m.className="ordmsg"+(cls?" "+cls:"");
+}
+async function ordGuarda(){
+  clearTimeout(ORD_T); ORD_T=null;
+  const ids=ordActual(); if(ids.length<2) return;
+  ordDi("guardando el orden…");
+  try{
+    const r=await fetch(WORKER+"/projects/order",{method:"POST",headers:{"content-type":"application/json"},
+      body:JSON.stringify({ids})});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok||!d.ok) throw new Error(d.error||("HTTP "+r.status));
+    // se refresca la copia en memoria SIN repintar, para no robar el foco
+    if(Array.isArray(d.projects)) PRO=d.projects;
+    ordDi("✓ orden guardado","ok");
+  }catch(e){ ordDi("✗ no se pudo guardar el orden: "+(e&&e.message||e),"err"); }
+}
+function ordGuardaPronto(){ clearTimeout(ORD_T); ORD_T=setTimeout(ordGuarda,700); }
+function mueve(id,delta){
+  const g=$("gridPro"); if(!g) return;
+  const els=[...g.querySelectorAll(".ag[data-ord]")];
+  const i=els.findIndex(el=>el.dataset.ord===id);
+  let j=delta==="inicio"?0:delta==="fin"?els.length-1:i+delta;
+  if(i<0||j<0||j>=els.length||j===i) return;
+  if(j<i) g.insertBefore(els[i],els[j]); else g.insertBefore(els[i],els[j].nextSibling);
+  const asa=els[i].querySelector(".asa"); if(asa) asa.focus();
+  ordDi("«"+(proPorId(id)||{name:id}).name+"» en el puesto "+(j+1)+" de "+els.length);
+  ordGuardaPronto();
+}
+/* El arrastre va por POINTER EVENTS y no por el drag&drop de HTML5 a propósito:
+   el nativo no existe en el móvil, y Carlos pide que reordenar siga siendo
+   posible con el dedo. Pointer sirve al ratón y al dedo con el mismo código.
+   La ficha se recoloca EN VIVO al pasar por encima de otra (no hay fantasma que
+   se salga del ancho: nada se posiciona fuera del grid, así que no aparece
+   barra horizontal). Sólo el asa arranca el gesto — el resto de la ficha sigue
+   siendo texto que se selecciona y enlaces que se pulsan. */
+function montaOrden(){
+  const g=$("gridPro"); if(!g) return;
+  g.querySelectorAll(".asa").forEach(asa=>{
+    const ficha=asa.closest(".ag");
+    asa.addEventListener("pointerdown",e=>{
+      if(e.button!==undefined&&e.button!==0) return;
+      e.preventDefault();
+      // El seguimiento va en WINDOW y no en el asa. Se intentó capturando el
+      // puntero EN EL ASA y NO servía: al colocar la ficha se la mueve de sitio
+      // con insertBefore, y sacar del documento al elemento que tiene la captura
+      // la SUELTA. A partir de ahí el pointerup caía en la
+      // ficha de debajo, alSoltar no llegaba a correr y el orden se veía movido
+      // pero no se guardaba: al siguiente refresco volvía como estaba.
+      // (FLT-985 c3 — se pilló arrastrando de verdad, no leyendo el código.)
+      const pid=e.pointerId;
+      ficha.classList.add("arrastrando");
+      let movido=false;
+      const alMover=ev=>{
+        if(ev.pointerId!==pid) return;
+        const bajo=document.elementFromPoint(ev.clientX,ev.clientY);
+        const otra=bajo&&bajo.closest?bajo.closest(".ag[data-ord]"):null;
+        if(!otra||otra===ficha||otra.parentNode!==g) return;
+        const els=[...g.querySelectorAll(".ag[data-ord]")];
+        if(els.indexOf(ficha)<els.indexOf(otra)) g.insertBefore(ficha,otra.nextSibling);
+        else g.insertBefore(ficha,otra);
+        movido=true;
+      };
+      const alSoltar=ev=>{
+        if(ev&&ev.pointerId!==undefined&&ev.pointerId!==pid) return;
+        window.removeEventListener("pointermove",alMover);
+        window.removeEventListener("pointerup",alSoltar);
+        window.removeEventListener("pointercancel",alSoltar);
+        ficha.classList.remove("arrastrando");
+        if(movido) ordGuarda();
+      };
+      window.addEventListener("pointermove",alMover);
+      window.addEventListener("pointerup",alSoltar);
+      window.addEventListener("pointercancel",alSoltar);
+    });
+    asa.addEventListener("keydown",e=>{
+      const k=e.key;
+      if(k==="ArrowLeft"||k==="ArrowUp") { e.preventDefault(); mueve(ficha.dataset.ord,-1); }
+      else if(k==="ArrowRight"||k==="ArrowDown"){ e.preventDefault(); mueve(ficha.dataset.ord,1); }
+      else if(k==="Home"){ e.preventDefault(); mueve(ficha.dataset.ord,"inicio"); }
+      else if(k==="End"){  e.preventDefault(); mueve(ficha.dataset.ord,"fin"); }
+    });
+  });
+}
+
+/* ---- combo de agentes del proyecto --------------------------------------- */
+/* Los elegidos viven aquí mientras el editor está abierto; al guardar se manda
+   esta lista tal cual. Se mantiene que un proyecto lleve VARIOS agentes: lo que
+   cambia es la forma de darlos de alta — antes casillas, ahora elegir del combo. */
+let AG_SEL=[];
+function comboAgentes(iniciales_){
+  AG_SEL=(iniciales_||[]).filter(id=>SIL.some(a=>a.id===id));
+  const sel=$("selAg"), prev=$("agPrev"), btn=$("addAg");
+  if(!sel) return;
+  function pintaPrev(){
+    const a=SIL.find(x=>x.id===sel.value);
+    prev.innerHTML=a?retratoGrandeChico(a.name||a.id):"";
+  }
+  function pintaCombo(){
+    const libres=SIL.filter(a=>AG_SEL.indexOf(a.id)<0);
+    sel.innerHTML=libres.length
+      ? libres.map(a=>'<option value="'+esc(a.id)+'">'+esc(a.name||a.id)+'</option>').join("")
+      : '<option value="">— ya están todos —</option>';
+    sel.disabled=!libres.length; btn.disabled=!libres.length;
+    pintaPrev();
+    $("agSel").innerHTML=AG_SEL.map(id=>{
+      const n=nombreAg(id);
+      return '<span class="echip">'+retratoMini(n)+'<span>'+esc(n)+'</span>'+
+        '<button type="button" data-quita="'+esc(id)+'" aria-label="Quitar '+esc(n)+'" title="Quitar">✕</button></span>';
+    }).join("");
+    $("agSel").querySelectorAll("[data-quita]").forEach(b=>{
+      b.onclick=()=>{ AG_SEL=AG_SEL.filter(x=>x!==b.dataset.quita); pintaCombo(); };
+    });
+  }
+  sel.onchange=pintaPrev;
+  btn.onclick=()=>{ const v=sel.value; if(v&&AG_SEL.indexOf(v)<0){ AG_SEL.push(v); pintaCombo(); } };
+  pintaCombo();
+}
+// Retrato de 34px para la vista previa del combo (mismo módulo, otro tamaño).
+function retratoGrandeChico(nombre){
+  const u=retratoUrl(nombre);
+  return u?'<img loading="lazy" alt="" src="'+esc(u)+'" onerror="this.remove()">':esc(iniciales(nombre));
+}
+
+/* ---- editor ------------------------------------------------------------- */
+let ED={tipo:"",id:""};
+function abrir(tipo,id){
+  ED={tipo,id:id||""};
+  const campos=tipo==="sil"?F_SIL:tipo==="pro"?F_PRO:F_EQ;
+  const dato=(tipo==="sil"?SIL.find(x=>x.id===id):tipo==="pro"?PRO.find(x=>x.id===id):MAQ.find(x=>x.id===id))||{};
+  $("mTit").textContent = tipo==="sil" ? (id?"Editar "+(dato.name||id):"Nuevo agente")
+    : tipo==="pro" ? (id?"Editar "+(dato.name||id):"Nuevo proyecto")
+    : "Ficha de "+canon(dato.name||id);
+  $("mHint").textContent = tipo==="sil"
+    ? "La persona la define el runtime (LLM) + la cuenta, no la máquina. Se guarda en admira-fleet."
+    : tipo==="pro"
+    ? "El proyecto vive en yokup y se asigna a las máquinas y agentes del censo de admira-fleet. Su nombre es el que sale en la ficha de cada decisión y de cada misión."
+    : "Aquí se edita la parte humana de la ficha; el estado de encendido no se edita, se comprueba. La ficha la comparte admira.live/control.";
+  $("mForm").innerHTML=campos.map(f=>{
+    let v=dato[f.k]; if(Array.isArray(v)) v=v.join(", ");
+    v=v==null?"":String(v);
+    if(f.t==="area") return '<div class="f"><label>'+esc(f.l)+'</label><textarea data-k="'+f.k+'" placeholder="'+esc(f.ph||"")+'">'+esc(v)+'</textarea></div>';
+    if(f.t==="sel")  return '<div class="f"><label>'+esc(f.l)+'</label><select data-k="'+f.k+'">'+f.opts.map(o=>'<option value="'+o[0]+'"'+(String(v)===o[0]?" selected":"")+'>'+esc(o[1])+'</option>').join("")+'</select></div>';
+    return '<div class="f"><label>'+esc(f.l)+'</label><input data-k="'+f.k+'" value="'+esc(v)+'" placeholder="'+esc(f.ph||"")+'"></div>';
+  }).join("");
+  // ASIGNACIÓN del proyecto: máquinas y agentes, por casilla. Los ids son los de
+  // admira-fleet, así que lo marcado aquí y lo que enseña la pestaña de al lado
+  // son la misma cosa.
+  if(tipo==="pro"){
+    const marc=(arr,x)=>(arr||[]).indexOf(x)>=0?" checked":"";
+    $("mForm").innerHTML+=
+      '<div class="f"><label>Máquina</label><div class="picks" id="pickMaq">'+
+        (MAQ.length?MAQ.map(m=>'<label><input type="checkbox" value="'+esc(m.id)+'"'+marc(dato.machines,m.id)+'><span>🖥 '+esc(canon(m.name||m.id))+'</span></label>').join("")
+                   :'<span class="mdia-sin">sin máquinas en el censo</span>')+'</div></div>'+
+      // AGENTE: se elige del combo, no por casillas (Carlos, FLT-985). Pueden ser
+      // varios: cada uno que se añade queda como chip con su retrato y su ✕.
+      '<div class="f"><label>Agente</label>'+
+        (SIL.length
+          ? '<div class="combo"><span id="agPrev" class="prev"></span><select id="selAg" aria-label="Agente del proyecto"></select>'+
+            '<button type="button" class="add2" id="addAg">➕ añadir</button></div>'+
+            '<div class="elegidos" id="agSel"></div>'
+          : '<div class="picks"><span class="mdia-sin">sin agentes en el censo</span></div>')+
+      '</div>';
+    if(SIL.length) comboAgentes(Array.isArray(dato.agents)?dato.agents.slice():[]);
+  }
+  // el id de un equipo no se inventa (lo fija la máquina al registrarse); el de
+  // una persona nueva se deriva del nombre en el worker.
+  $("mDel").style.display = ((tipo==="sil"||tipo==="pro")&&id) ? "" : "none";
+  $("mMsg").textContent="";
+  $("mod").classList.add("on");
+}
+$("mCancel").onclick=()=>$("mod").classList.remove("on");
+$("mod").onclick=e=>{ if(e.target===$("mod")) $("mod").classList.remove("on"); };
+
+$("mSave").onclick=async()=>{
+  const body={by:"yokup/equipo"};
+  let cambioResponsables=null;
+  $("mForm").querySelectorAll("[data-k]").forEach(el=>{
+    let v=el.value.trim();
+    if(el.dataset.k==="tags") body.tags=v?v.split(",").map(s=>s.trim()).filter(Boolean):[];
+    else body[el.dataset.k]=v;
+  });
+  if(ED.tipo==="pro"){
+    const marcados=sel=>[...document.querySelectorAll("#"+sel+" input:checked")].map(c=>c.value);
+    body.machines=marcados("pickMaq");
+    // Los agentes salen del combo. Si no hay censo no se manda el campo: mandar
+    // [] borraría las asignaciones que ya tuviera el proyecto.
+    if(SIL.length) body.agents=AG_SEL.slice();
+    try{body.web=normalizaWebProyecto(body.web);}catch(e){$("mMsg").textContent="web no válida";return;}
+    const anterior=PRO.find(p=>p.id===ED.id)||null;
+    cambioResponsables={
+      anterior,
+      silicon:String(body.silicon_responsible||"").trim(),
+      carbon:String(body.carbon_responsible||"").trim()
+    };
+    // El alta/edición histórica de proyectos queda limitada a metadatos. Los
+    // dos responsables se guardan únicamente por el endpoint autenticado con
+    // CAS, para que ningún formulario antiguo pueda eludir ese contrato.
+    delete body.silicon_responsible;
+    delete body.carbon_responsible;
+  }
+  if(ED.id) body.id=ED.id;
+  if((ED.tipo==="sil"||ED.tipo==="pro")&&!ED.id&&!body.name){ $("mMsg").textContent="pon un nombre"; return; }
+  $("mMsg").textContent="guardando…";
+  try{
+    const r=await fetch(WORKER+(ED.tipo==="sil"?"/equipo/silicon":ED.tipo==="pro"?"/projects":"/equipo/machine"),
+      {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(body)});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok||!d.ok) throw new Error(d.error||("HTTP "+r.status));
+    if(ED.tipo==="pro"&&cambioResponsables){
+      const base=cambioResponsables.anterior||d.project||{};
+      const project=(d.project&&d.project.id)||ED.id||body.id;
+      const siliconActual=String(base.silicon_responsible??base.primary_responsible??base.owner??"").trim();
+      const carbonActual=String(base.carbon_responsible??"").trim();
+      const cambio={project};
+      if(cambioResponsables.silicon!==siliconActual){
+        cambio.silicon_responsible=cambioResponsables.silicon;
+        cambio.expected_silicon_responsible=siliconActual;
+      }
+      if(cambioResponsables.carbon!==carbonActual){
+        cambio.carbon_responsible=cambioResponsables.carbon;
+        cambio.expected_carbon_responsible=carbonActual;
+      }
+      if(Object.keys(cambio).length>1){
+        const rr=await fetch(WORKER+"/projects/responsibles",{
+          method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(cambio)
+        });
+        const dr=await rr.json().catch(()=>({}));
+        if(!rr.ok||!dr.ok) throw new Error(dr.error||("responsables HTTP "+rr.status));
+      }
+    }
+    $("mMsg").textContent="✓ guardado";
+    await cargar();
+    setTimeout(()=>$("mod").classList.remove("on"),450);
+  }catch(e){ $("mMsg").textContent="✗ "+(e&&e.message||e); }
+};
+
+let NOTAS_PROYECTO="";
+function pintaNotas(rows){$("notasLista").innerHTML=rows.length?rows.map(n=>'<article class="nota"><div>'+esc(n.body)+'</div><small>'+esc(n.author||"Yokup")+' · '+esc(fechaSeguimiento(n.created_at))+'</small></article>').join(""):'<div class="notavacia">Todavía no hay notas.</div>';}
+async function abrirNotas(id){NOTAS_PROYECTO=id;const p=PRO.find(x=>x.id===id);$("notasTit").textContent="Seguimiento · "+(p?p.name:id);$("notasMod").classList.add("on");const r=await fetch(WORKER+"/projects/notes?project="+encodeURIComponent(id),{cache:"no-store"});const d=await r.json();pintaNotas(d.notes||[]);}
+$("notaClose").onclick=()=>$("notasMod").classList.remove("on");
+$("notaSave").onclick=async()=>{const body=$("notaTexto").value.trim(),author=$("notaAutor").value.trim()||"Yokup";if(!body)return;await fetch(WORKER+"/projects/notes",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({project:NOTAS_PROYECTO,body,author})});$("notaTexto").value="";await abrirNotas(NOTAS_PROYECTO);await cargar();};
+$("mDel").onclick=async()=>{
+  if(!ED.id||!confirm("¿Dar de baja a "+ED.id+"?")) return;
+  $("mMsg").textContent="borrando…";
+  try{
+    const r=ED.tipo==="pro"
+      ? await fetch(WORKER+"/projects/delete",{method:"POST",headers:{"content-type":"application/json"},
+          body:JSON.stringify({id:ED.id})})
+      : await fetch(WORKER+"/equipo/silicon",{method:"POST",headers:{"content-type":"application/json"},
+      body:JSON.stringify({delete:true,id:ED.id})});
+    const d=await r.json().catch(()=>({}));
+    if(!r.ok||!d.ok) throw new Error(d.error||("HTTP "+r.status));
+    await cargar(); $("mod").classList.remove("on");
+  }catch(e){ $("mMsg").textContent="✗ "+(e&&e.message||e); }
+};
+
+// Los retratos vienen del módulo compartido, que antes de nada pide al worker la
+// personalización (la foto que puso Carlos pisa a la de serie). Se espera a que
+// esté para no pintar una tanda de fichas con las iniciales y cambiarlas después.
+(window.ykAvatar&&ykAvatar.ready?ykAvatar.ready:Promise.resolve()).then(cargar,cargar);
+
+// Relojes de decisión, con el MISMO módulo que /misiones y /decisiones. Al llegar
+// datos se refresca la marca «⏳ decidiendo» de las fichas, pero solo si CAMBIA la
+// lista de agentes con reloj: repintar cada 15 s le robaría el foco al asa a quien
+// esté colocando fichas con el teclado.
+let DEC_SIG=null;
+YkDecisions.mount({worker:WORKER, onData:function(ds){
+  DEC_PEND=(ds||[]).filter(function(d){ return d.status==="pending"; });
+  const sig=DEC_PEND.map(function(d){ return d.agent||""; }).sort().join("|");
+  if(sig===DEC_SIG) return;
+  DEC_SIG=sig;
+  if($("mod").classList.contains("on")) return;
+  if(document.querySelector(".ag.arrastrando")||ORD_T) return;
+  const f=document.activeElement;
+  if(f&&f.classList&&f.classList.contains("asa")) return;
+  if(MAQ.length||SIL.length||PRO.length) pinta();
+}});
+// El refresco automático NO puede pisar lo que Carlos tiene entre manos: ni un
+// editor abierto, ni una ficha a medio colocar, ni el asa con el foco puesto.
+setInterval(()=>{
+  if($("mod").classList.contains("on")) return;
+  if(document.querySelector(".ag.arrastrando")) return;
+  if(ORD_T) return;
+  const f=document.activeElement;
+  if(f&&f.classList&&f.classList.contains("asa")) return;
+  cargar();
+},45000);
+</script>
+<script type="module" src="/avatar-widget.js?v=3"></script>
+<script src="/yk-frame.js?v=r31"></script>
+</body>
+</html>

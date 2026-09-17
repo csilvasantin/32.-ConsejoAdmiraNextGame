@@ -44,7 +44,7 @@ echo "· mudadas: $MIGRADAS"
 echo "· siguen en yokup: ${PENDIENTES//|/ }"
 
 # ── Copia ────────────────────────────────────────────────────────────────────
-HTMLS=""
+HTMLS=""; CON_PUERTA=""
 while IFS= read -r linea; do
   case "$linea" in \#*|"") continue ;; esac
   case "$linea" in *"|"*) ;; *) continue ;; esac
@@ -56,26 +56,37 @@ while IFS= read -r linea; do
   case "$linea" in *"(propia)"*) continue ;; esac
   clave="$(echo "$linea" | cut -d'|' -f1 | awk '{print $1}')"
   comose="$(echo "$linea" | cut -d'|' -f1 | awk '/ como /{print $3}')"
+  # «con puerta» = esta página necesita la sesión de Yokup para servir de algo (las
+  # consolas, y el visor de informes, cuyo dato es /tasks/all). Lleva acceso-espejo.js.
+  puerta=""; case "$linea" in *"con puerta"*) puerta="si" ;; esac
   for f in $(echo "$linea" | cut -d'|' -f2); do
     [ -f "$SRC/$f" ] || { echo "✗ falta en el origen: $f"; exit 1; }
     destino="$f"
     [ -n "$comose" ] && [ "$f" = "$clave.html" ] && destino="$comose.html"
     mkdir -p "$REPO/$(dirname "$destino")"
     cp "$SRC/$f" "$REPO/$destino"
-    case "$destino" in *.html) HTMLS="$HTMLS $destino" ;; esac
+    case "$destino" in *.html) HTMLS="$HTMLS $destino"; [ -n "$puerta" ] && CON_PUERTA="$CON_PUERTA $destino" ;; esac
   done
 done < "$MANIFIESTO"
 mkdir -p "$REPO/avatars"
 rsync -a --delete "$SRC/avatars/" "$REPO/avatars/"
 
 # ── DIVERGENCIAS respecto al original ────────────────────────────────────────
-# 1) Sin puerta. En yokup las páginas van detrás de /acceso.js (login Google + cookie
-#    de sesión de api.yokup.com). Esa cookie es de yokup.com y el CORS con credenciales
-#    sólo abraza a www.yokup.com: desde admira.live no se puede tener la misma sesión
-#    sin tocar el worker. Lo que se lee sin sesión se ve entero; lo que no, da 401 y lo
-#    canta el aviso de la divergencia 5 en vez de fallar callado.
+# 1) Otra puerta. En yokup las páginas van detrás de /acceso.js, que hace el login con el
+#    flujo de REDIRECCIÓN contra https://www.yokup.com/auth/callback —una página de yokup—
+#    y fija la cookie de estado en el dominio yokup.com. Aquí se cambia por
+#    acceso-espejo.js, que hace el mismo login con el flujo de VENTANA y no sale de
+#    admira.live. La sesión es LA MISMA (cookie HttpOnly de api.yokup.com): desde el
+#    17-09-2026 el worker acepta este origen y la cookie cruza de sitio.
+#
+#    Y sólo la llevan las páginas que la NECESITAN, marcadas «con puerta» en el
+#    manifiesto. El Highscore, por ejemplo, se lee entero sin sesión y sigue abierto: no
+#    se le pone una verja a una página que no la pide.
 for f in $HTMLS; do
   perl -0pi -e 's{^\s*<script src="/acceso\.js[^"]*"[^>]*>\s*</script>\s*\n}{}mg' "$REPO/$f"
+done
+for f in $CON_PUERTA; do
+  perl -0pi -e 's{<head>}{<head>\n<script src="/acceso-espejo.js?v=r1"></script>}' "$REPO/$f"
 done
 
 # 2) Enlaces a lo que todavía no se ha mudado → al original absoluto.
@@ -109,9 +120,11 @@ perl -pi -e 's{"/__yokup-gate\?frame="}{"/version.json?frame="}g' "$REPO/yk-fram
 
 # 5) Y lo dice a la cara, no sólo en un meta: una tira arriba avisa de que esto es el
 #    espejo y de qué no funciona aquí por no tener sesión de Yokup.
+AVISO_CON_PUERTA='<div id="yk-espejo-aviso" style="background:#0a1620;border-bottom:1px solid rgba(120,243,255,.30);color:#75aab9;font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;padding:8px 14px">Espejo en <b style="color:#78f3ff">admira.live</b> de Yokup · misma sesión y mismos datos de <code>api.yokup.com</code>. Si algo no cuadra con <a href="https://www.yokup.com" style="color:#78f3ff">el original</a>, es un fallo: dilo.</div>'
 AVISO='<div id="yk-espejo-aviso" style="background:#0a1620;border-bottom:1px solid rgba(120,243,255,.30);color:#75aab9;font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;padding:8px 14px">Espejo en <b style="color:#78f3ff">admira.live</b> de Yokup · mismos datos en vivo de <code>api.yokup.com</code>. Aquí se <b>mira</b>: sin sesión de Yokup, lo que pide login (tareas, tickets y mandar órdenes al CLI) no responde. Para eso, <a href="https://www.yokup.com/highscore" style="color:#78f3ff">el original</a>.</div>'
 for f in $HTMLS; do
-  perl -0pi -e "s{(<body[^>]*>)}{\$1\n$AVISO}" "$REPO/$f"
+  texto="$AVISO"; case " $CON_PUERTA " in *" $f "*) texto="$AVISO_CON_PUERTA" ;; esac
+  perl -0pi -e "s{(<body[^>]*>)}{\$1\n$texto}" "$REPO/$f"
 done
 
 python3 - "$REPO" "$ORIGEN_COMMIT" "$SELLO" "$MIGRADAS" "$PENDIENTES" <<'PY'

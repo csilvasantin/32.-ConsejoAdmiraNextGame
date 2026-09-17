@@ -1,18 +1,19 @@
 {
   "origen": "https://www.yokup.com",
   "origen_repo": "yokup/yokup-site",
-  "origen_commit": "9ea9ccc",
-  "sincronizado": "17.09.2026 12:49",
+  "origen_commit": "fdb09ee",
+  "sincronizado": "17.09.2026 13:04",
   "fase": "espejo de lectura en admira.live",
   "paginas_migradas": [
     "highscore",
     "asistencia",
-    "informes"
+    "informes",
+    "equipo"
   ],
   "sin_sesion": [
     "/tasks/all",
     "/tickets",
     "acciones de escritura del CLI y del control de agentes"
   ],
-  "paginas_pendientes_de_migrar": "dashboard|objetivos|decisiones|misiones|tareas|incidencias|notificaciones|equipo|status|app|admira-live|asignaciones|normativa"
+  "paginas_pendientes_de_migrar": "dashboard|objetivos|decisiones|misiones|tareas|incidencias|notificaciones|status|app|admira-live|asignaciones|normativa"
 }

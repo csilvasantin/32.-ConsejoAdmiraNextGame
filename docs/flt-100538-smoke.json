@@ -1,0 +1,43 @@
+{
+  "mission": "FLT-100538",
+  "helper": "FLT-100539 / encargo #3440 SmithMacMini",
+  "endpoint": "POST http://127.0.0.1:3032/wallpaper/mode",
+  "funnel": "https://macmini.tail48b61c.ts.net/demo/wallpaper/mode",
+  "map": {
+    "consejeros": {
+      "azul": "Jobs",
+      "plata": "Wozniak",
+      "rosa": "Lucas",
+      "crema": "Disney"
+    },
+    "deepagent": {
+      "azul": "Neo",
+      "plata": "Trinity",
+      "rosa": "Morfeo",
+      "crema": "Oraculo"
+    }
+  },
+  "piloto": {
+    "consejeros": {
+      "total": 4,
+      "ok": 4,
+      "paths": {
+        "azul": "consejero-jobs.jpg",
+        "plata": "consejero-wozniak.jpg",
+        "rosa": "consejero-lucas.jpg",
+        "crema": "consejero-disney.jpg"
+      }
+    },
+    "deepagent": {
+      "total": 4,
+      "ok": 4,
+      "paths": {
+        "azul": "deepagent-neo.png",
+        "plata": "deepagent-trinity.png",
+        "rosa": "deepagent-morfeo.png",
+        "crema": "deepagent-oraculo.png"
+      }
+    }
+  },
+  "hackeo_untouched": true
+}

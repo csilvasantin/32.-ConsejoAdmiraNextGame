@@ -894,6 +894,16 @@
             background: #000;
             animation: pulse 1s infinite;
         }
+        .mode-stack {
+            position: fixed;
+            bottom: 3.6rem;
+            left: 1rem;
+            z-index: 9999;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+        .mode-stack .hack-toggle { position: static; }
 
         /* Design mode toggle — entre hack y control */
         .design-toggle {
@@ -2566,6 +2576,14 @@
         <div class="screen-overlay-label" id="screen-overlay-label"></div>
     </div>
 
+    <div class="mode-stack" id="mode-stack">
+        <button class="hack-toggle" id="consejeros-btn" onclick="toggleWallpaperMode('consejeros')" title="Fondos leyendas por silla (Jobs/Wozniak/Lucas/Disney)">
+            <span class="hack-dot"></span> CONSEJEROS
+        </button>
+        <button class="hack-toggle" id="deepagent-btn" onclick="toggleWallpaperMode('deepagent')" title="Fondos DeepAgent por silla (Neo/Trinity/Morfeo/Oráculo)">
+            <span class="hack-dot"></span> DEEPAGENT
+        </button>
+    </div>
     <button class="hack-toggle" id="hack-btn" onclick="toggleHack()">
         <span class="hack-dot"></span> HACKEO
     </button>
@@ -3441,6 +3459,31 @@
         });
         if (!res.ok) throw new Error("HTTP " + res.status);
         return await res.json();
+    }
+
+    async function toggleWallpaperMode(mode) {
+        const btn = document.getElementById(mode === "deepagent" ? "deepagent-btn" : "consejeros-btn");
+        const other = document.getElementById(mode === "deepagent" ? "consejeros-btn" : "deepagent-btn");
+        try {
+            if (btn) btn.classList.add("active");
+            if (other) other.classList.remove("active");
+            const res = await fetch(HACK_API + "/wallpaper/mode", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({ mode: mode, only_ids: [] }),
+                signal: AbortSignal.timeout(60000),
+            });
+            const data = await res.json();
+            console.log("WALLPAPER", mode, data && data.summary, data);
+            if (!res.ok || (data && data.ok === false)) {
+                if (btn) btn.classList.remove("active");
+                alert("Wallpaper " + mode + ": " + ((data && data.error) || ("HTTP " + res.status)));
+            }
+        } catch (e) {
+            if (btn) btn.classList.remove("active");
+            console.warn("WALLPAPER failed", e);
+            alert("Wallpaper " + mode + " falló: " + (e.message || e));
+        }
     }
 
     // Pinta sobre cada panel del overlay un badge con el estado real

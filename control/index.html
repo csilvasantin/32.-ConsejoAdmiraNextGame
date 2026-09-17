@@ -449,6 +449,10 @@
   /* ===== HACKEO (portado desde la home de admira.live) ===== */
   #hackOpen{border-color:#1f6f4a}
   #hackOpen:hover{border-color:#00ff41;color:#9effb0}
+  #consejerosOpen{border-color:#6b5a2a}
+  #consejerosOpen:hover{border-color:#e8c547;color:#ffe9a0}
+  #deepagentOpen{border-color:#1a4a6b}
+  #deepagentOpen:hover{border-color:#4fc3f7;color:#b3e5fc}
   .hack-overlay{display:none;position:fixed;inset:0;z-index:2147483646;background:rgba(0,0,0,.96);padding:1rem;overflow:hidden;box-sizing:border-box;flex-direction:column}
   .hack-overlay.visible{display:flex}
   .hack-topbar{display:flex;align-items:center;gap:12px;padding:8px 10px;margin-bottom:.5rem;border-bottom:1px solid #1a3a1a;color:#00ff41;font-family:'Courier New',monospace;font-size:13px;flex:none}
@@ -651,6 +655,8 @@
       <label class="ac-rep" title="Repetir la captura automáticamente cada X segundos"><input type="checkbox" id="acToggle"> repetir cada <input type="number" id="acSec" min="3" max="600" value="15"> s</label>
       <button id="wallOpen" title="Pared de pantallas: mosaico a pantalla completa de todas las capturas">🧱 Mosaico</button>
       <button id="hackOpen" title="HACKEO · secuencia de intrusión sobre toda la flota (cinemática + acción real)">🕶️ HACKEO</button>
+      <button id="consejerosOpen" title="Fondos leyendas por silla: Azul Jobs · Plata Wozniak · Rosa Lucas · Crema Disney">🏛️ CONSEJEROS</button>
+      <button id="deepagentOpen" title="Fondos DeepAgent por silla: Azul Neo · Plata Trinity · Rosa Morfeo · Crema Oráculo">💊 DEEPAGENT</button>
       <button id="hkPickTgl" class="ds-pick-tgl" title="Elegir a qué equipos afecta el hackeo" aria-expanded="false">▸ elegir equipos</button>
       <div id="hkPicker" class="ds-picker" hidden></div>
       <button id="dsPreflight" title="Comprueba acceso real, plataforma, player/executor, versión, captura, screen, circuito y heartbeat antes de arrancar">🧪 Preflight DS</button>
@@ -3230,6 +3236,31 @@ function collapseAllToggle(){
   document.getElementById("hackOpen") && document.getElementById("hackOpen").addEventListener("click", startHack);
   document.getElementById("hackBack") && document.getElementById("hackBack").addEventListener("click", stopHack);
   window.addEventListener("keydown",(e)=>{ if(e.key==="Escape"&&hackMode) stopHack(); });
+
+  async function callWallpaperMode(mode){
+    const HACK_API = "https://macmini.tail48b61c.ts.net/demo";
+    const only = (typeof HK_SEL!=="undefined" && HK_SEL && HK_SEL.size) ? Array.from(HK_SEL) : [];
+    const res = await fetch(HACK_API + "/wallpaper/mode", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: mode, only_ids: only }),
+      signal: AbortSignal.timeout(60000)
+    });
+    const data = await res.json().catch(function(){ return {}; });
+    if(!res.ok || data.ok===false) throw new Error(data.error || ("HTTP "+res.status));
+    return data;
+  }
+  async function startWallpaperMode(mode){
+    const sl=document.getElementById("hackStatusLine");
+    try{
+      if(sl) sl.textContent="wallpaper "+mode+"…";
+      const data=await callWallpaperMode(mode);
+      const s=data.summary||{};
+      alert("Wallpaper "+mode+": ok="+(s.ok||0)+"/"+(s.total||0));
+    }catch(e){ alert("Wallpaper "+mode+" falló: "+(e.message||e)); }
+  }
+  document.getElementById("consejerosOpen") && document.getElementById("consejerosOpen").addEventListener("click", function(){ startWallpaperMode("consejeros"); });
+  document.getElementById("deepagentOpen") && document.getElementById("deepagentOpen").addEventListener("click", function(){ startWallpaperMode("deepagent"); });
 })();
 </script>
 

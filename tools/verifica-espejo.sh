@@ -80,6 +80,17 @@ compara "/informe-pdf.js"               "informe-pdf.js"
 compara "/equipo"                       "equipo"
 compara "/yk-misiones.js"               "yk-misiones.js"
 compara "/yk-decisions.js"              "yk-decisions.js"
+# Tramo 3 · 17-09-2026 · FLT-100549: Consumos y el tablero de trabajo.
+compara "/consumos"                     "consumos"
+compara "/decisiones"                   "decisiones"
+compara "/tareas"                       "tareas"
+compara "/misiones"                     "misiones"
+compara "/notificaciones"               "notificaciones"
+compara "/yk-cabezal.js"                "yk-cabezal.js"
+compara "/yk-adjuntos.js"               "yk-adjuntos.js"
+compara "/yk-mission-duplicates.js"     "yk-mission-duplicates.js"
+compara "/yk-decisiones-grid.js"        "yk-decisiones-grid.js"
+compara "/yk-tareas-columns.js"         "yk-tareas-columns.js"
 
 # Y que los dos miran la MISMA fuente de datos, que es lo que hace que enseñen lo
 # mismo: el marcador del día sale del mismo worker para los dos orígenes.

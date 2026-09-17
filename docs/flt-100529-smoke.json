@@ -1,0 +1,124 @@
+{
+  "mission": "FLT-100529",
+  "helper": "FLT-100532 / encargo #3426 SmithMacMini",
+  "proxy": "POST http://127.0.0.1:3032/hackeo -> 127.0.0.1:8420/api/council/hackeo with X-Council-Hack-Token",
+  "funnel": "https://macmini.tail48b61c.ts.net/demo/hackeo",
+  "short_ids_note": "luna/plata/rosa/carla expanded in proxy to full machine ids",
+  "start": {
+    "ok": true,
+    "version": "Admira v.26.05.07.r6",
+    "ts": "2026-09-17T09:17:16.833491Z",
+    "summary": {
+      "total": 4,
+      "online": 4,
+      "offline": 0,
+      "ssh_ok": 4,
+      "wol_sent": 0,
+      "failed": 0,
+      "macs_discovered": 0
+    },
+    "machines": [
+      {
+        "id": "admira-macbookairluna",
+        "name": "MacBook Air Luna (Cesar)",
+        "host": "macbookairazul.tail48b61c.ts.net",
+        "online": true,
+        "action": "ssh_launched",
+        "ok": true,
+        "detail": "ssh launched"
+      },
+      {
+        "id": "admira-macbook-carla",
+        "name": "MacBook Air Crema",
+        "host": "macbookaircrema.tail48b61c.ts.net",
+        "online": true,
+        "action": "ssh_launched",
+        "ok": true,
+        "detail": "ssh launched"
+      },
+      {
+        "id": "admira-macbookairrosa",
+        "name": "MacBook Air Rosa",
+        "host": "macbookairrosa.tail48b61c.ts.net",
+        "online": true,
+        "action": "ssh_launched",
+        "ok": true,
+        "detail": "ssh launched"
+      },
+      {
+        "id": "admira-macbookairplata",
+        "name": "MacBook Air Plata",
+        "host": "macbookairplata.tail48b61c.ts.net",
+        "online": true,
+        "action": "ssh_launched",
+        "ok": true,
+        "detail": "ssh launched"
+      }
+    ],
+    "excluded": null
+  },
+  "stop_targets": [
+    {
+      "id": "admira-macbookairluna",
+      "name": "MacBook Air Luna (Cesar)",
+      "host": "macbookairazul.tail48b61c.ts.net",
+      "online": true,
+      "action": "ssh_stop",
+      "ok": true,
+      "detail": "ssh stop ok"
+    },
+    {
+      "id": "admira-macbook-carla",
+      "name": "MacBook Air Crema",
+      "host": "macbookaircrema.tail48b61c.ts.net",
+      "online": true,
+      "action": "ssh_stop",
+      "ok": true,
+      "detail": "ssh stop ok"
+    },
+    {
+      "id": "admira-macbookairrosa",
+      "name": "MacBook Air Rosa",
+      "host": "macbookairrosa.tail48b61c.ts.net",
+      "online": true,
+      "action": "ssh_stop",
+      "ok": true,
+      "detail": "ssh stop ok"
+    },
+    {
+      "id": "admira-macbookairplata",
+      "name": "MacBook Air Plata",
+      "host": "macbookairplata.tail48b61c.ts.net",
+      "online": true,
+      "action": "ssh_stop",
+      "ok": true,
+      "detail": "ssh stop ok"
+    }
+  ],
+  "funnel_luna": {
+    "ok": true,
+    "version": "Admira v.26.05.07.r6",
+    "ts": "2026-09-17T09:17:22.672452Z",
+    "summary": {
+      "total": 1,
+      "online": 1,
+      "offline": 0,
+      "ssh_ok": 1,
+      "wol_sent": 0,
+      "failed": 0,
+      "macs_discovered": 0
+    },
+    "machines": [
+      {
+        "id": "admira-macbookairluna",
+        "name": "MacBook Air Luna (Cesar)",
+        "host": "macbookairazul.tail48b61c.ts.net",
+        "online": true,
+        "action": "ssh_launched",
+        "ok": true,
+        "detail": "ssh launched"
+      }
+    ],
+    "excluded": null
+  }
+}

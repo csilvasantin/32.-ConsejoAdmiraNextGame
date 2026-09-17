@@ -3901,29 +3901,19 @@
         }
     }
 
-    // Llama al backend (council-api.py) probando los URLs en orden.
-    // mode: "start" → /api/council/hackeo, "stop" → /api/council/hackeo/stop
+    // Llama al proxy demo-server (HACK_API=/demo). El token NO sale del Mini.
+    // mode: "start" → POST /hackeo, "stop" → POST /hackeo/stop
     async function callCouncilHackeo(mode) {
-        const path = mode === "stop" ? "/api/council/hackeo/stop" : "/api/council/hackeo";
-        const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
-        let lastErr = null;
-        for (const baseUrl of urls) {
-            try {
-                const res = await fetch(baseUrl + path, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-Council-Token": COUNCIL_API_TOKEN,
-                    },
-                    signal: AbortSignal.timeout(20000),
-                });
-                if (!res.ok) { lastErr = "HTTP " + res.status; continue; }
-                return await res.json();
-            } catch (e) {
-                lastErr = e.message || String(e);
-            }
-        }
-        throw new Error(lastErr || "all council-api urls failed");
+        const path = mode === "stop" ? "/hackeo/stop" : "/hackeo";
+        const body = JSON.stringify({ only_ids: [], exclude_ip: "" });
+        const res = await fetch(HACK_API + path, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: body,
+            signal: AbortSignal.timeout(90000),
+        });
+        if (!res.ok) throw new Error("HTTP " + res.status);
+        return await res.json();
     }
 
     // Pinta sobre cada panel del overlay un badge con el estado real

@@ -12,3 +12,9 @@
 TODAS = dashboard objetivos decisiones misiones tareas incidencias informes notificaciones equipo status asistencia app admira-live asignaciones normativa highscore
 
 highscore | highscore.html highscoreDetail.html highscore-daily-record.js highscore-desktop-app.js highscore-race.js highscore-race-bonus.js highscore-work-clock.js highscore-runner-state.css highscore-detail.js highscore-detail-page.js yk-frame.css yk-frame.js yk-agent-identity.js yk-avatar.js img/highscore-podio-pixel.png img/highscore-podio-pixel.webp img/highscore-presite-decathlon.webp media/trackfield-1722.mp3
+
+# NO migrada todavía · asistencia (sala de vídeo WebRTC): no escribe nada por HTTP, pero
+# pide las credenciales TURN a GET /turn, y ese endpoint comprueba el Origin desde que dejó
+# de ser un grifo abierto (yokup, 16-09-2026): con https://www.admira.live responde 403
+# bad_origin. Traerla ahora sería publicar una sala que no puede negociar la llamada. Entra
+# en cuanto el worker acepte este origen.

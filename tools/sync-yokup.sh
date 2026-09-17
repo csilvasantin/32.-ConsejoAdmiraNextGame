@@ -44,6 +44,12 @@ HTMLS=""
 while IFS= read -r linea; do
   case "$linea" in \#*|"") continue ;; esac
   case "$linea" in *"|"*) ;; *) continue ;; esac
+  # «(propia)» = esa página de yokup NO se copia porque admira.live ya tiene la suya,
+  # que hace ese trabajo y además lee la API de Yokup por su cuenta (dashboard, status,
+  # informes). Cuenta como mudada: sus enlaces dejan de apuntar a yokup y llevan a la
+  # de casa. Lo que la de yokup enseñaba y la de aquí no, se anota antes de darla por
+  # migrada; no se pierde en silencio.
+  case "$linea" in *"(propia)"*) continue ;; esac
   for f in $(echo "$linea" | cut -d'|' -f2); do
     [ -f "$SRC/$f" ] || { echo "✗ falta en el origen: $f"; exit 1; }
     mkdir -p "$REPO/$(dirname "$f")"

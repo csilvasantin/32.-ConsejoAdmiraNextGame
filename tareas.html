@@ -1,0 +1,393 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta name="yokup-espejo" content="origen www.yokup.com · commit 00ba695 · sincronizado 17.09.2026 18:56">
+<script src="/acceso-espejo.js?v=r1"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="/yk-display-ref.js?v=1"></script>
+<title>Tareas · Yokup</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#02080d">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/app/apple-touch-icon.png">
+<link rel="stylesheet" href="https://www.carlossilva.info/admira-design/tokens.css">
+<link rel="stylesheet" href="/yk-frame.css?v=r17">
+<link rel="stylesheet" href="/yk-misiones.css?v=r34">
+<link rel="stylesheet" href="/yk-cabezal.css?v=r2">
+<script src="/yk-tareas-columns.js?v=r1"></script>
+<style>
+:root{--bg:#02080d;--card:#0a1620;--card2:#0d1c28;--ink:#dff8ff;--mut:#75aab9;--dim:#4d7a88;--brand:#78f3ff;--accent:#ffd866;--good:#88ffaa;--warn:#ff8866;--violet:#aa88ff;--line:rgba(120,243,255,.16);--line2:rgba(120,243,255,.30);--sans:var(--admira-font-sans,-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif);--mono:var(--admira-font-mono,ui-monospace,SFMono-Regular,"JetBrains Mono",Menlo,monospace)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;min-height:100vh}
+.wrap{max-width:1100px;margin:0 auto;padding:22px 24px 48px}
+h1{font-size:clamp(23px,3vw,31px);letter-spacing:-.02em;margin:4px 0 4px}
+.sub{color:var(--mut);font-size:14.5px;margin-bottom:14px}.sub b{color:var(--brand)}
+/* Filtro por FECHA de creación de la misión (por defecto: hoy). */
+.tfilter{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:18px}
+.tfilter label{font:10px var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--dim)}
+.tf{min-height:40px;font-family:var(--mono);font-size:11px;letter-spacing:.04em;padding:8px 34px 8px 11px;border-radius:9px;border:1px solid var(--line);color:var(--ink);background:var(--card);cursor:pointer;color-scheme:dark}
+.tf:hover,.tf:focus-visible{color:var(--brand);border-color:var(--line2);outline:none}
+.tfday[hidden]{display:none}
+/* Una misión = una fila completa, igual que en /misiones. El árbol accionable
+   queda debajo y no altera la identidad mission_id + code de cada chip. */
+.taskboard{overflow:auto}
+.taskmission{width:max-content;min-width:100%;border-bottom:1px solid var(--line);background:var(--card)}
+.taskmission:last-child{border-bottom:0}
+.taskmission>.tk{border-bottom:0}
+.taskdetail{padding:10px 16px 14px 32px;border-top:1px dashed var(--line);background:rgba(120,243,255,.018)}
+.taskdetail[hidden]{display:none}
+.taskfold{display:flex;align-items:center;gap:7px;margin:0 16px 9px 32px;border:1px solid var(--line);border-radius:7px;background:transparent;color:var(--mut);font:10px var(--mono);letter-spacing:.05em;text-transform:uppercase;padding:5px 9px;cursor:pointer}
+.taskfold:hover,.taskfold:focus-visible{color:var(--brand);border-color:var(--line2);outline:none}
+.taskfold .caret{transition:transform .15s}.taskmission.open .taskfold .caret{transform:rotate(90deg)}
+.archive-note{margin:8px 16px 8px 32px;padding:8px 10px;border:1px solid rgba(255,216,102,.32);border-radius:8px;background:rgba(255,216,102,.07);color:var(--accent);font:10.5px var(--mono);line-height:1.45}
+.node.archived-incomplete{opacity:.76}.node .archive-badge{flex-basis:100%;margin-left:30px;color:var(--accent);font:9.5px var(--mono);letter-spacing:.04em;text-transform:uppercase}.node.archived-incomplete .chip:disabled{cursor:not-allowed;filter:saturate(.25)}
+/* AGENTE/PLATAFORMA primero; los mismos seis carriles legibles de /misiones. */
+.hd.project-id-layout{width:max-content;min-width:100%;grid-template-columns:8px var(--c-who,170px) var(--c-id,170px) var(--c-mis,296px) var(--c-ord,250px) var(--c-est,124px)}
+.taskboard .tk .rz{display:none}
+.task-col-head{position:relative;min-width:0;display:flex;align-items:center;justify-content:center;padding:0 15px 0 8px}
+.task-col-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.task-col-resize{position:absolute;z-index:4;top:-5px;right:-8px;width:16px;height:29px;cursor:col-resize;touch-action:none;outline:none}
+.task-col-resize::before{content:"";position:absolute;top:4px;bottom:4px;left:7px;width:1px;background:var(--line2);transition:background .12s,box-shadow .12s}
+.task-col-resize:hover::before,.task-col-resize:focus-visible::before,.task-col-resize.dragging::before{background:var(--brand);box-shadow:0 0 6px rgba(120,243,255,.7)}
+.project-id-cell{padding-right:10px}.project-id-main{position:relative}
+.project-id-layout .mission-col{padding-block:3px}
+.project-id-layout .mission-col .subj .t{-webkit-line-clamp:2;line-clamp:2}
+.task-sort-cell{display:flex;align-items:center;min-width:0;height:100%;font-family:var(--mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)}
+.task-sort-head{display:flex;align-items:center;justify-content:space-between;gap:7px;width:100%;min-height:38px;padding:5px 8px;border:0;background:transparent;color:inherit;font:inherit;letter-spacing:inherit;text-transform:inherit;text-align:left;cursor:pointer;border-radius:7px}
+.task-sort-head:hover{color:var(--brand);background:rgba(120,243,255,.05)}
+.task-sort-head:focus-visible{outline:2px solid var(--brand);outline-offset:-2px;background:rgba(120,243,255,.07)}
+.task-sort-arrow{color:var(--dim);font-size:11px;flex:none}.task-sort-cell[aria-sort]:not([aria-sort="none"]) .task-sort-arrow{color:var(--brand)}
+/* El conmutador histórico sigue siendo útil: Fichas conserva el detalle plegable;
+   Lista deja sólo las filas completas, sin recuperar la antigua parrilla. */
+html[data-yk-view="list"] .taskfold,html[data-yk-view="list"] .taskdetail{display:none}
+@media(max-width:1100px){.task-col-resize{width:18px;right:-9px}.task-col-resize::before{left:8px}}
+@media(max-width:720px){.hd.project-id-layout{grid-template-columns:8px 1fr}.hd.project-id-layout,.taskmission{width:auto;min-width:0}.taskboard{overflow-x:hidden}.taskdetail{padding:9px 12px 13px 20px}.taskfold{margin-left:20px}.taskfold,.abc-task,.focobar a{min-height:44px}.tf{min-height:44px}:is(.chip,.tkopen,.substog){display:inline-flex;min-width:44px;min-height:44px;align-items:center;justify-content:center}}
+/* Foco de una misión (964): breadcrumb de vuelta a la lista completa. */
+.focobar{display:flex;align-items:center;gap:12px;padding:10px 14px;border-bottom:1px solid var(--line);font-family:var(--mono);font-size:11px}
+.focobar a{color:var(--brand);text-decoration:none;border:1px solid var(--line2);border-radius:8px;padding:6px 11px}.focobar a:hover{background:rgba(120,243,255,.08)}
+.focobar .focoid{color:var(--mut);letter-spacing:.05em}
+.bigempty{border:1px dashed var(--line2);border-radius:14px;padding:44px 24px;text-align:center;color:var(--dim);font-family:var(--mono);font-size:12.5px;letter-spacing:.04em;line-height:1.7}
+.bigempty b{color:var(--mut);display:block;font-size:13px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+.bigempty a{color:var(--brand)}
+.foot{margin-top:24px;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}.foot b{color:var(--brand)}
+.tgl{font-family:var(--mono);font-size:13px;line-height:1;color:var(--mut);background:transparent;border:1px solid var(--line);border-radius:6px;padding:3px 7px;cursor:pointer;vertical-align:middle;margin-left:6px}.tgl:hover{color:var(--brand);border-color:var(--brand)}
+</style>
+</head>
+<body data-yk-title="TAREAS" data-yk-zone="app">
+<div id="yk-espejo-aviso" style="background:#0a1620;border-bottom:1px solid rgba(120,243,255,.30);color:#75aab9;font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;padding:8px 14px">Espejo en <b style="color:#78f3ff">admira.live</b> de Yokup · misma sesión y mismos datos de <code>api.yokup.com</code>. Si algo no cuadra con <a href="https://www.yokup.com" style="color:#78f3ff">el original</a>, es un fallo: dilo.</div>
+<div class="wrap">
+  <!-- CABEZAL COMPARTIDO con /misiones (Carlos, 2026-07-21): contadores por
+       estado + día del tablero · título + buscador · alta de misión de flota.
+       Lo inyecta y cablea yk-cabezal.js. REGLA DE LOS TERCIOS (FLT-979): cada
+       misión se descompone en 3 tareas a·b·c con 3 subtareas cada una
+       (a1…c3, máx 9) — la JORNADA COMPLETA de un agente: las define el agente
+       principal y las ejecuta el subagente. Los planes ANTIGUOS con pasos d…h
+       (modelo de 8) no se tocan: sus filas se cuentan aparte como «+n». -->
+  <div id="cabezal"></div>
+
+  <!-- Un único control temporal: presets y día concreto integrados. -->
+  <div class="tfilter" id="tfilter">
+    <label for="rangePreset">Fecha de creación</label>
+    <select class="tf" id="rangePreset" aria-label="Rango de fecha">
+      <option value="hoy">Hoy</option><option value="ayer">Ayer</option>
+      <option value="7d">Últimos 7 días</option><option value="todas">Todas</option>
+      <option value="dia">Día concreto…</option>
+    </select>
+    <input class="tf tfday" id="rangeDay" type="date" aria-label="Día concreto" hidden>
+  </div>
+
+  <div class="list taskboard" id="grid"><div class="bigempty"><b>Cargando tareas…</b>Reuniendo los planes de todas las misiones.</div></div>
+  <div class="foot">Yokup · tareas de todas las misiones · plan <b>a·b·c × 1·2·3</b> · persistencia <b>D1</b></div>
+
+  <!-- EXPERTO (raíl inferior) -->
+  <div class="yk-expert-btns" data-yk-slot="bottom">
+    <button data-yk-fetch="/tickets">misiones JSON</button>
+  </div>
+  <pre class="yk-expert-out" data-yk-slot="bottom">Pulsa «misiones JSON» para volcar los datos crudos del worker.</pre>
+</div>
+
+<script src="/yk-agent-identity.js?v=v.2026.08.02.224605"></script>
+<script src="/yk-avatar.js?v=r3"></script>
+<script src="/yk-misiones.js?v=r49"></script>
+<script src="/yk-tareas-sort.js?v=1"></script>
+<script src="/yk-adjuntos.js?v=r3"></script>
+<script src="/yk-cabezal.js?v=r3"></script>
+<script>
+const WORKER="https://api.yokup.com";
+const $=id=>document.getElementById(id);
+const esc=YkMisiones.esc;
+// Fichas PLEGADAS por defecto (ocupan menos); recuerda en localStorage cuáles abrió
+// Carlos para no re-plegárselas. «Sino decido yo lo contrario» = por defecto plegadas. (954)
+const OPEN_CARDS=new Set((()=>{try{return JSON.parse(localStorage.getItem("yk_tareas_open")||"[]")}catch(e){return[]}})());
+function saveOpenCards(){try{localStorage.setItem("yk_tareas_open",JSON.stringify([...OPEN_CARDS]))}catch(e){}}
+YkMisiones.init({worker:WORKER, columnMode:"tasks", projectIdLayout:true});
+const TASK_COLUMNS=YkTareasColumns.mount($("grid"),{
+  who:{label:"Agente/Plataforma",default:170,min:120,max:340},
+  id:{label:"Proyecto",default:170,min:130,max:340},
+  mis:{label:"Misión",default:296,min:220,max:640},
+  ord:{label:"Tareas A·B·C",default:250,min:210,max:520},
+  est:{label:"Estado / acciones",default:124,min:104,max:300}
+});
+// FOCO desde la URL (964): /tareas?mission=FLT-XXX muestra SOLO esa misión (con su
+// ficha ABIERTA aunque el resto vaya plegado), y #a / #b2 hace scroll y la RESALTA.
+// Enlace compartible que abre justo donde toca, en las dos vistas.
+const FOCUS=(new URLSearchParams(location.search).get("mission")||"").trim();
+if(FOCUS) OPEN_CARDS.add(FOCUS);
+let GROUPS=[];  // [{mission:{...ticket}, tasks:[...]}]
+let STATE=null; // filtro por estado (KPI): sin | asignadas | in_progress | resolved | null
+let SEARCH=""; // texto del buscador del cabezal
+let PROJECT_SCOPE=null; // null=Todos; selección recibida por id canónico
+const TASK_SORT_KEY="yk_tareas_sort_v1";
+let TASK_SORT=(()=>{try{return YkTareasSort.normalize(JSON.parse(localStorage.getItem(TASK_SORT_KEY)||"null"))}catch(e){return YkTareasSort.normalize(null)}})();
+function saveTaskSort(){try{localStorage.setItem(TASK_SORT_KEY,JSON.stringify(TASK_SORT))}catch(e){}}
+
+// ── CABEZAL COMPARTIDO (mismo que /misiones): KPIs + buscador + alta ──────────
+// Los KPIs cuentan las misiones (por estado) de la fecha elegida y filtran el
+// tablero de tareas; el buscador filtra por título/id/pantalla; el selector de
+// día del cabezal fija el «día concreto». Aquí el alta encarga UNA tarea suelta:
+// el backend crea una misión-contenedor ligera con una sola fila, sin plan A/B/C
+// artificial, y la vista se recarga para mostrarla de inmediato.
+const CAB=YkCabezal.mount($("cabezal"), {
+  worker:WORKER,
+  getProjectId:()=>PROJECT_SCOPE,
+  title:"Tareas",
+  createKind:"task",
+  altaPlaceholder:"Nueva tarea suelta… (Enter para encargarla)",
+  searchPlaceholder:"🔎 Buscar tarea…",
+  intro:'Los pasos en que se descompone cada misión — <b>regla de los tercios</b>: <b>3 tareas</b> a·b·c con <b>3 subtareas</b> cada una (a1…c3, máx 9) — una misión = jornada completa de un agente. Las <b>tareas sueltas</b> son la excepción explícita: nacen dentro de una misión-contenedor ligera con una sola tarea y no reciben pasos artificiales. Chips clicables ○◐● para avanzar estado; ⚙️ ejecutan los subagentes, 📝 reportan los infraagentes. Agrupado por misión, lo más reciente primero.',
+  defaultView:"cards",   // /tareas nace en FICHAS; el conmutador la pasa a lista (962)
+  showDay:false,          // los presets y el día viven en el único control inferior
+  onView:()=>render(),
+  onState:f=>{ STATE=f; render(); },
+  onSearch:q=>{ SEARCH=q; render(); },
+  onCreated:()=>load()
+});
+
+// ── FILTRO POR FECHA (de creación de la misión) ──────────────────────────────
+// Por defecto sólo salen las creadas HOY (Carlos, 2026-07-15). Los presets y el
+// selector de día cambian el rango y recargan. created_at tolerante a s/ms.
+let DFILTER={mode:"hoy", day:""};
+const _ms=v=>{v=+v||0;return v>4102444800?v:v*1000;};
+const _pad=n=>(n<10?"0":"")+n;
+const _ymd=d=>d.getFullYear()+"-"+_pad(d.getMonth()+1)+"-"+_pad(d.getDate());
+function dayBounds(ymd){ const[y,m,d]=ymd.split("-").map(Number); const s=new Date(y,m-1,d,0,0,0,0).getTime(); return [s,s+86400000]; }
+function inRange(created){
+  const c=_ms(created); if(!c) return false;
+  if(DFILTER.mode==="todas") return true;
+  if(DFILTER.mode==="7d") return c>=Date.now()-7*86400000;
+  let ymd;
+  if(DFILTER.mode==="dia") ymd=DFILTER.day;
+  else if(DFILTER.mode==="ayer"){ const d=new Date(); d.setDate(d.getDate()-1); ymd=_ymd(d); }
+  else ymd=_ymd(new Date()); // hoy
+  if(!ymd) return true;
+  const [s,e]=dayBounds(ymd); return c>=s && c<e;
+}
+function filterLabel(){
+  return DFILTER.mode==="hoy"?"creadas hoy":DFILTER.mode==="ayer"?"creadas ayer":
+    DFILTER.mode==="7d"?"de los últimos 7 días":DFILTER.mode==="dia"?("del "+DFILTER.day):null;
+}
+
+let TASK_LOAD_GENERATION=0;
+function taskServerFilters(){
+  const filters={projectId:PROJECT_SCOPE||"",mission:FOCUS||""};
+  if(FOCUS||DFILTER.mode==="todas")return filters;
+  if(DFILTER.mode==="7d"){filters.createdFrom=Date.now()-7*86400000;return filters;}
+  let ymd;
+  if(DFILTER.mode==="dia")ymd=DFILTER.day;
+  else if(DFILTER.mode==="ayer"){const d=new Date();d.setDate(d.getDate()-1);ymd=_ymd(d);}
+  else ymd=_ymd(new Date());
+  if(ymd){const[s,e]=dayBounds(ymd);filters.createdFrom=s;filters.createdTo=e;}
+  return filters;
+}
+async function load(){
+  const generation=++TASK_LOAD_GENERATION, scopeAtStart=PROJECT_SCOPE;
+  // scope=todas: el árbol de tareas es el mismo modelo para las misiones de la
+  // flota (encargos a los agentes) y las de campo (incidencias de pantallas).
+  // UNA sola petición al endpoint agregado /tasks/all (antes: /tickets + un
+  // fetch por misión = N+1, cada 15 s; ahora una query D1 con JOIN).
+  let rows; try{ rows=await YkMisiones.fetchAllTasks("todas",taskServerFilters()); }catch(e){
+    if(generation!==TASK_LOAD_GENERATION||scopeAtStart!==PROJECT_SCOPE)return;
+    const board=$("grid");
+    if(board)board.innerHTML='<div class="bigempty"><b>No se pudieron cargar las tareas</b>La consulta a Yokup ha fallado. <button type="button" class="tgl" id="retryTasks">Reintentar</button></div>';
+    const retry=$("retryTasks");if(retry)retry.onclick=load;
+    return;
+  }
+  if(generation!==TASK_LOAD_GENERATION||scopeAtStart!==PROJECT_SCOPE)return;
+  // Agrupa por misión y filtra por fecha de creación (sólo las del rango).
+  // Con foco (?mission=), esa misión se muestra IGNORANDO el filtro de fecha (para
+  // que el enlace abra aunque sea de otro día); sin foco, sólo las del rango. (964)
+  let scopedRows=PROJECT_SCOPE?rows.filter(row=>String(row.project||"")===PROJECT_SCOPE):rows;
+  // La vista normal no se contamina con deuda de padres terminales. «Todas» y
+  // un enlace directo conservan esas filas para auditarlas con etiqueta propia.
+  if(DFILTER.mode!=="todas"&&!FOCUS) scopedRows=scopedRows.filter(row=>!esDeudaArchivada(row));
+  const groups=YkMisiones.groupByMission(scopedRows)
+    .filter(g=>FOCUS?g.mission.id===FOCUS:inRange(g.mission.created_at));
+  GROUPS=groups;
+  // KPIs del cabezal: aquí contamos TAREAS (los pasos a/b/c en que se desglosa
+  // cada misión), NO misiones — si contáramos misiones saldría el mismo número
+  // que en /misiones, y son cosas distintas (una misión ≈ 3 tareas). Cada tarea
+  // tiene su propio estado; su bucket se deriva igual que el de una misión
+  // (done→Finalizada, in_progress→En curso, pending con dueño→Pendiente, sin
+  // dueño→Sin asignar). Se cuentan TODAS las tareas del rango de fecha.
+  const allTasks=groups.flatMap(g=>g.tasks);
+  CAB.setCounts({
+    sin: allTasks.filter(t=>taskEstado(t)==="Sin asignar").length,
+    asig: allTasks.filter(t=>taskEstado(t)==="Pendiente").length,
+    prog: allTasks.filter(t=>taskEstado(t)==="En curso").length,
+    res: allTasks.filter(t=>taskEstado(t)==="Finalizada").length
+  });
+  render();
+}
+if(window.addEventListener)window.addEventListener("yk:project-change",event=>{
+  TASK_LOAD_GENERATION++;
+  PROJECT_SCOPE=event.detail&&event.detail.project_id||null;
+  const board=$("grid");
+  if(board) board.innerHTML='<div class="bigempty"><b>Filtrando tareas…</b>Aplicando el proyecto seleccionado.</div>';
+  load();
+});
+// Estado canónico de UNA tarea (paso a/b/c), espejo de YkMisiones.estadoDe pero
+// sobre el estado propio de la tarea y su dueño (owner ↔ assignee de la misión).
+function taskEstado(t){
+  if(t.operational_state==="done"||t.status==="done"||t.status==="resolved"||t.status==="completed") return "Finalizada";
+  if(t.operational_state==="cancelled"||t.status==="cancelled") return "Cancelada";
+  if(t.operational_state==="orphaned") return "Huérfana";
+  if(t.operational_state==="invalid_parent") return "Padre inválido";
+  if(t.operational_state==="archived_incomplete") return "Archivada incompleta";
+  const parent=String(t.mission_status||"").toLowerCase();
+  if(parent==="resolved"||parent==="cancelled") return "Archivada incompleta";
+  if(parent!=="open"&&parent!=="in_progress") return "Padre inválido";
+  if(t.operational_state==="unconcluded") return "No concluida";
+  if(t.status==="in_progress"||t.status==="doing"||t.status==="active"||t.status==="unconcluded") return "En curso";
+  return t.owner ? "Pendiente" : "Sin asignar";
+}
+function esDeudaArchivada(t){return ["Archivada incompleta","Huérfana","Padre inválido"].includes(taskEstado(t));}
+// Filtra los grupos por el KPI de estado activo y por el buscador del cabezal.
+const STATE_LBL={sin:"Sin asignar",asignadas:"Pendiente",in_progress:"En curso",resolved:"Finalizada"};
+function visibles(){
+  let gs=GROUPS;
+  // El KPI filtra por estado de TAREA: se muestran las misiones que tienen al
+  // menos una tarea en ese estado (el árbol a/b/c completo, para no perder contexto).
+  if(STATE&&STATE_LBL[STATE]) gs=gs.filter(g=>g.tasks.some(t=>taskEstado(t)===STATE_LBL[STATE]));
+  if(SEARCH){
+    const nrm=s=>String(s||"").toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"");
+    const nq=nrm(SEARCH);
+    gs=gs.filter(g=>[g.mission.subject,g.mission.id,g.mission.screen,g.mission.loc,g.mission.assignee].some(v=>nrm(v).includes(nq)));
+  }
+  return gs;
+}
+const TASK_SORT_COLUMNS=[
+  ["agent","Agente/Plataforma"],["project","Proyecto"],["mission","Misión"],
+  ["tasks","Tareas A·B·C"],["state","Estado / acciones"]
+];
+const TASK_RESIZE_KEY={agent:"who",project:"id",mission:"mis",tasks:"ord",state:"est"};
+function taskSortHead(key,label){
+  const active=TASK_SORT.key===key,aria=active?(TASK_SORT.dir==="asc"?"ascending":"descending"):"none";
+  const arrow=active?(TASK_SORT.dir==="asc"?"▲":"▼"):"↕";
+  const next=active&&TASK_SORT.dir==="asc"?"descendente":"ascendente";
+  const resize=TASK_RESIZE_KEY[key];
+  return '<div class="task-sort-cell task-col-head" role="columnheader" aria-sort="'+aria+'"><button type="button" class="task-sort-head" data-task-sort="'+key+'" aria-label="Ordenar por '+esc(label)+' en orden '+next+'"><span class="task-col-label">'+esc(label)+'</span><span class="task-sort-arrow" aria-hidden="true">'+arrow+'</span></button><span class="task-col-resize" data-task-resize="'+resize+'" role="separator" aria-orientation="vertical" tabindex="0"></span></div>';
+}
+function sortedVisibleGroups(){return YkTareasSort.sort(visibles(),TASK_SORT.key,TASK_SORT.dir);}
+function render(){
+  const box=$("grid");
+  if(!GROUPS.length){
+    const lbl=filterLabel();
+    box.innerHTML=lbl
+      ? '<div class="bigempty"><b>Sin tareas '+esc(lbl)+'</b>No hay misiones con plan en esa fecha. Prueba otro día o pulsa <b style="display:inline">Todas</b>.</div>'
+      : '<div class="bigempty"><b>Ninguna misión tiene plan todavía</b>Entra en <a href="/misiones">Misiones</a>, selecciona una y pulsa «🧠 Proponer plan (IA)» — su árbol a/b/c aparecerá aquí.</div>';
+    return;
+  }
+  const gs=sortedVisibleGroups();
+  if(!gs.length){
+    box.innerHTML='<div class="bigempty"><b>Sin resultados en este filtro</b>'+
+      (SEARCH?'No hay misiones que casen con «'+esc(SEARCH)+'».':'No hay misiones en ese estado para la fecha elegida.')+
+      ' Ajusta el buscador o los contadores de arriba.</div>';
+    return;
+  }
+  // Breadcrumb de vuelta cuando hay foco (964): que no se quede uno atrapado.
+  const _focusMission=FOCUS&&GROUPS.map(g=>g.mission).find(m=>m.id===FOCUS);
+  const _bc = FOCUS ? '<div class="focobar"><a href="/tareas">← ver todas las misiones</a><span class="focoid" title="ID técnico: '+esc(FOCUS)+'">🎯 '+esc(YkMisiones.visibleId(_focusMission||{id:FOCUS}))+'</span></div>' : "";
+  const _head='<div class="hd lhead project-id-layout" role="row"><div aria-hidden="true"></div>'+TASK_SORT_COLUMNS.map(([key,label])=>taskSortHead(key,label)).join("")+'</div>';
+  box.innerHTML=_bc+_head+gs.map(g=>{
+    const _op=OPEN_CARDS.has(g.mission.id)||g.mission.id===FOCUS;
+    const _arch=g.tasks.filter(esDeudaArchivada);
+    const mission={...g.mission,_tasks:g.tasks,_prog:YkMisiones.tercios(g.tasks,g.mission.role==="standalone-task")};
+    return `<section class="taskmission ${_op?'open':''}" data-id="${esc(g.mission.id)}">
+      ${YkMisiones.rowHtml(mission)}
+      ${_arch.length?'<div class="archive-note" role="status">Archivada incompleta · misión '+esc(g.mission.status||'sin padre válido')+' · '+_arch.length+' '+(_arch.length===1?'tarea no terminal':'tareas no terminales')+' conservadas sólo en el histórico.</div>':''}
+      <button type="button" class="taskfold" aria-expanded="${_op}" aria-controls="tasks-${esc(g.mission.id)}"><span class="caret">▸</span> ${_op?'Ocultar':'Mostrar'} árbol accionable</button>
+      <div class="taskdetail" id="tasks-${esc(g.mission.id)}"${_op?'':' hidden'}><div class="tree">${YkMisiones.stepsHtml(g.tasks)}</div></div>
+    </section>`;
+  }).join("");
+  TASK_COLUMNS.apply();
+  box.querySelectorAll(".task-sort-head").forEach(button=>{button.onclick=()=>{
+    TASK_SORT=YkTareasSort.next(TASK_SORT,button.dataset.taskSort);saveTaskSort();render();
+    const active=box.querySelector('.task-sort-head[data-task-sort="'+button.dataset.taskSort+'"]');if(active)active.focus();
+  }});
+  YkMisiones.bindRows(box);
+  // chips clicables: avanzan estado contra el worker y repintan
+  box.querySelectorAll(".taskmission").forEach(card=>{
+    const mid=card.dataset.id;
+    const group=gs.find(g=>g.mission.id===mid);
+    (group?group.tasks:[]).filter(esDeudaArchivada).forEach(t=>{
+      const node=Array.from(card.querySelectorAll(".node")).find(n=>n.dataset.code===t.code);if(!node)return;
+      node.classList.add("archived-incomplete");
+      const state=taskEstado(t), parent=String(t.mission_status||t.parent_lifecycle||"ausente");
+      const chip=node.querySelector(".chip");if(chip){chip.disabled=true;chip.title=state+" · misión padre "+parent;}
+      const badge=document.createElement("span");badge.className="archive-badge";badge.textContent=state+" · padre "+parent;node.appendChild(badge);
+    });
+    // El botón es el ÚNICO control que pliega/despliega. El clic libre en la
+    // fila queda reservado al selector compartido de misión (bindRows).
+    const toggle=()=>{
+      const open=!card.classList.contains("open");
+      card.classList.toggle("open",open);
+      if(open) OPEN_CARDS.add(mid); else OPEN_CARDS.delete(mid);
+      saveOpenCards();
+      const detail=card.querySelector(".taskdetail");if(detail)detail.hidden=!open;
+      const b=card.querySelector(".taskfold");if(b){b.setAttribute("aria-expanded",String(open));b.lastChild.textContent=open?" Ocultar árbol accionable":" Mostrar árbol accionable";}
+    };
+    const fold=card.querySelector(".taskfold");if(fold)fold.onclick=toggle;
+    card.querySelectorAll(".chip").forEach(ch=>{
+      ch.onclick=()=>{
+        const cur=["pending","in_progress","done"].find(s=>ch.classList.contains(s))||"pending";
+        YkMisiones.postStatus(mid, ch.dataset.code, YkMisiones.nextStatus(cur)).then(load);
+      };
+    });
+  });
+  // Scroll + RESALTADO al paso del hash (#a, #b2): el enlace abre justo donde toca. (964)
+  if(location.hash){
+    const code=location.hash.slice(1).replace(/[^a-z0-9]/gi,"");
+    const node=code&&box.querySelector('.node[data-code="'+code+'"]');
+    if(node){ const st=node.closest(".step"); if(st) st.classList.remove("collapsed");
+      box.querySelectorAll(".foco-step").forEach(n=>n.classList.remove("foco-step"));
+      node.classList.add("foco-step");
+      setTimeout(()=>{ try{node.scrollIntoView({behavior:"smooth",block:"center"});}catch(e){} },90);
+    }
+  }
+}
+// Presets + día concreto comparten un único selector; el calendario sólo aparece
+// cuando se elige «Día concreto…», por lo que no compiten dos filtros visibles.
+const _pd=n=>(n<10?"0":"")+n, _dstr=d=>d.getFullYear()+"-"+_pd(d.getMonth()+1)+"-"+_pd(d.getDate());
+const rangePreset=$("rangePreset"),rangeDay=$("rangeDay");
+rangeDay.value=_dstr(new Date());
+function applyDateFilter(){
+  const mode=rangePreset.value;
+  rangeDay.hidden=mode!=="dia";
+  if(mode==="dia"&&!rangeDay.value)return;
+  DFILTER={mode,day:mode==="dia"?rangeDay.value:""};
+  $("grid").innerHTML='<div class="bigempty"><b>Cargando…</b>Filtrando por fecha.</div>';
+  load();
+}
+rangePreset.onchange=applyDateFilter;
+rangeDay.onchange=applyDateFilter;
+
+load(); setInterval(load,15000);
+</script>
+<script type="module" src="/avatar-widget.js?v=3"></script>
+<script src="/yk-frame.js?v=r31"></script>
+<!-- Los relojes de decisión viven en /decisiones (sección propia, Carlos 22-07-2026)
+     y en /misiones en modo vivo. La implementación histórica que aquí quedaba
+     inerte (bloque no ejecutable) se retiró en FLT-981-c. -->
+</body>
+</html>

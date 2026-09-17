@@ -1,0 +1,316 @@
+/* ============================================================================
+ * yk-misiones.css — Estilos compartidos del modelo MISIONES · TAREAS.
+ * Lista de misiones (fila .tk con selección glow cian) + árbol de tareas
+ * abc/123 (.tree). Fuente única para /incidencias, /misiones y /tareas —
+ * antes vivían inline en incidencias.html y habrían divergido.
+ * Requiere las variables de tema de la página (--card, --brand, --line, …).
+ * ==========================================================================*/
+
+/* ------- Lista de MISIONES (filas) ------- */
+.list{border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.tk{border-bottom:1px solid var(--line);background:var(--card);transition:.15s;text-decoration:none;color:inherit;display:block;cursor:pointer}
+.tk:last-child{border-bottom:0}.tk:hover{background:var(--card2)}
+.tk.open{border-left:3px solid var(--warn)}
+/* MISIÓN activa: la fila se resalta (borde/glow cian) al seleccionarla. */
+.tk.sel{border-left:3px solid var(--brand);background:var(--card2);box-shadow:inset 0 0 0 1px rgba(120,243,255,.45),0 0 18px rgba(120,243,255,.22)}
+/* Rejilla de COLUMNAS compartida por todas las filas: anchos en variables --c-*
+ * (el sujeto absorbe el resto). Las líneas divisorias .rz son arrastrables. */
+/* minmax(0, var(--c-*)): en pantallas/anchos justos las columnas fijas ENCOGEN
+ * proporcionalmente en vez de desbordar sobre la misión (responsive). */
+/* Defaults: ID y Fecha son de ancho ~FIJO (FLT-999 · 16/07 11:37) → estrechas;
+ * la Misión (1fr) se lleva el espacio ganado. (Carlos, 2026-07-16) */
+.hd{display:grid;grid-template-columns:8px minmax(0,var(--c-id,92px)) minmax(0,var(--c-shot,124px)) minmax(140px,1fr) minmax(0,var(--c-fch,104px)) minmax(0,var(--c-ord,128px)) minmax(0,var(--c-who,132px)) minmax(0,var(--c-est,124px));gap:0;align-items:center;padding:14px 16px}
+/* /misiones agrupa ID + proyecto + previo y entrega el texto a su columna Misión. */
+.hd.project-id-layout{grid-template-columns:8px minmax(150px,var(--c-id,170px)) minmax(260px,var(--c-mis,1fr)) minmax(210px,var(--c-ord,250px)) minmax(140px,var(--c-who,170px)) minmax(0,var(--c-est,124px));padding-top:10px;padding-bottom:10px}
+.project-id-cell{position:relative;min-width:0;padding:0 14px 0 0;overflow:hidden}
+.project-id-top{display:grid;grid-template-columns:1fr;justify-items:center;align-items:center;gap:5px;min-width:0}
+.project-id-layout .tkid{display:flex;align-items:center;gap:6px;padding:0;overflow:visible;white-space:nowrap}
+.project-id-layout .tkid .prioflag{margin:0}
+.project-id-main{display:block;width:112px;min-width:0}.project-id-meta{display:grid;justify-items:center;text-align:center;gap:4px;min-width:0}.project-id-time{display:flex;align-items:center;justify-content:center;gap:5px;flex-wrap:wrap;min-width:0}
+.mission-col{position:relative;align-self:stretch;display:flex;flex-direction:column;justify-content:center;min-width:0;overflow:hidden;padding:0 12px}
+.mission-col .subj{align-self:auto;padding:0;overflow:visible}
+.mission-col .subj .t{font-size:13.5px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:3;line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.mission-col .subj .m{font-size:9.5px;gap:8px;margin-top:3px}
+.mission-col .mission-source{color:var(--accent);text-transform:uppercase;letter-spacing:.04em}
+.mission-time{display:flex;align-items:center;gap:8px;min-width:0;margin-top:6px;padding-top:5px;border-top:1px solid rgba(120,243,255,.1)}
+.mission-time :is(.fch2,.dur){font-size:9px}
+.project-id-layout .cel.shot{padding:0}
+.project-id-layout .shot-img{max-width:108px}
+/* Columna CAPTURA del proyecto (entre ID y Misión): referencia visual. */
+.cel.shot{padding:0 8px;justify-content:center;align-items:center}
+.shot-lnk{display:block;width:100%;line-height:0}
+.shot-img{width:100%;max-width:112px;height:auto;aspect-ratio:16/9;object-fit:cover;border-radius:6px;border:1px solid var(--line2);background:var(--card2);display:block;cursor:zoom-in;transition:.15s}
+.shot-img:hover{border-color:var(--brand);box-shadow:0 0 10px rgba(120,243,255,.25)}
+.shot-img.proof{border-color:rgba(136,255,170,.65);box-shadow:0 0 9px rgba(136,255,170,.18)}
+/* HALO del previo cuando HAY un agente trabajando la misión (máquina/agente vivo
+   en presencia y misión no resuelta). Carlos, FLT-761 · prioridad absoluta. */
+@keyframes yk-working-halo{
+  0%,100%{ box-shadow:0 0 0 1px var(--brand,#78f3ff), 0 0 8px 1px rgba(120,243,255,.35); }
+  50%    { box-shadow:0 0 0 1px var(--brand,#78f3ff), 0 0 17px 5px rgba(120,243,255,.70); }
+}
+.shot-img.working{ border-color:var(--brand,#78f3ff); animation:yk-working-halo 1.7s ease-in-out infinite; }
+@media (prefers-reduced-motion:reduce){ .shot-img.working{ animation:none; box-shadow:0 0 0 1px var(--brand,#78f3ff),0 0 14px 3px rgba(120,243,255,.6); } }
+.shot-none{color:var(--dim);font-family:var(--mono);font-size:12px}
+/* Placeholder por defecto cuando la misión no tiene proof NI proyecto detectado:
+   logo AdmiraNeXT (Carlos, 2026-07-18: nunca «—», siempre una imagen). Sobrio y
+   NO clicable — no lleva data-proof/data-shot, así que no abre el lightbox. */
+.shot-logo{object-fit:contain;background:#02080d;cursor:default;opacity:.82}
+.shot-logo:hover{border-color:var(--line2);box-shadow:none}
+/* PREVIO EN VIVO: el previo muestra la ACTIVIDAD real del agente (su foco de
+   /api/presence) en vez de la home genérica de la web. Carlos, 2026-07-17. */
+.cel.shot .live-act{display:flex;flex-direction:column;gap:3px;width:100%;max-width:130px;padding:5px 7px;border-radius:7px;border:1px solid var(--brand,#78f3ff);background:rgba(120,243,255,.07);box-shadow:0 0 10px rgba(120,243,255,.22);text-align:left}
+.cel.shot .live-act .la-hd{display:flex;align-items:center;gap:4px;font-family:var(--mono);font-size:8px;letter-spacing:.08em;color:var(--brand,#78f3ff)}
+.cel.shot .live-act .la-dot{flex:none;width:6px;height:6px;border-radius:50%;background:var(--good,#88ffaa);box-shadow:0 0 6px var(--good,#88ffaa);animation:ykm-blink 1.4s infinite}
+.cel.shot .live-act .la-shot{width:100%;border-radius:4px;border:1px solid var(--line2);margin-bottom:1px}
+.cel.shot .live-act .la-focus{font-size:9.5px;line-height:1.28;color:var(--ink,#dff8ff);display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+/* Lightbox de la miniatura (clic → captura en grande). */
+#yk-lightbox{position:fixed;inset:0;z-index:9998;background:rgba(2,8,13,.92);display:none;align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
+#yk-lightbox.show{display:flex}
+#yk-lightbox .ykl-box{max-width:min(1100px,94vw);display:flex;flex-direction:column;gap:10px;align-items:center}
+#yk-lightbox .ykl-img{max-width:100%;max-height:82vh;border-radius:12px;border:1px solid var(--line2);box-shadow:0 20px 60px rgba(0,0,0,.6);background:var(--card2)}
+#yk-lightbox .ykl-open{font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--brand);text-decoration:none;border:1px solid var(--line2);border-radius:9px;padding:8px 13px;cursor:pointer}
+#yk-lightbox .ykl-open:hover{background:rgba(120,243,255,.12)}
+.pri{width:8px;height:8px;border-radius:50%}.pri.urgente{background:var(--warn);box-shadow:0 0 10px var(--warn)}.pri.alta{background:var(--accent)}.pri.media,.pri.baja{background:var(--good);opacity:.5}
+.tkid{font-family:var(--mono);font-size:12px;color:var(--brand)}.tkid .st{display:block;font-size:9.5px;color:var(--dim);letter-spacing:.06em;text-transform:uppercase;margin-top:3px}
+.tkid .mision-dia{display:block;font-size:15px;font-weight:800;letter-spacing:-.02em;color:var(--ink);line-height:1.15}
+.tkid .flt-id{display:block;font-size:10.5px;color:#8b97a8;letter-spacing:.02em;margin-top:3px}
+.tkid .mach{display:block;font-size:9.5px;color:var(--mut);letter-spacing:.04em;margin-top:2px}.tkid .mach.dim{color:var(--dim)}
+/* Etiqueta de PRIORIDAD bajo el id (sacada del título). Carlos, 2026-07-18. */
+.tkid .prioflag{display:inline-block;margin-top:4px;font-family:var(--mono);font-size:8px;letter-spacing:.03em;text-transform:uppercase;color:var(--mut);border:1px solid var(--line);border-radius:6px;padding:1px 5px;line-height:1.35;white-space:normal;max-width:100%}
+.tkid .prioflag.abs{color:var(--warn,#ff8866);border-color:rgba(255,136,102,.45);background:rgba(255,136,102,.08)}
+.tkid{padding-right:10px;min-width:0;overflow:hidden}
+.tkid .st,.tkid .mach{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.subj{position:relative;padding:0 14px;align-self:stretch;display:flex;flex-direction:column;justify-content:center;min-width:0;overflow:hidden}
+.subj .t{font-size:14.5px;font-weight:600;color:var(--ink)}.subj .m{font-family:var(--mono);font-size:11px;color:var(--mut);margin-top:3px;display:flex;gap:12px;flex-wrap:wrap}.subj .m .scr{color:var(--brand)}
+.subj .m .adjn{color:var(--accent,#ffd866);border:1px solid rgba(255,216,102,.32);border-radius:999px;padding:0 7px;line-height:16px}
+
+/* Delegada: quien pidio la mision, cuando no fue quien la hace. Discreta —es
+   procedencia, no el titulo— pero legible de un vistazo en el tablero. */
+.subj .m .deleg{color:#8ab4ff;white-space:nowrap}
+
+/* Cada celda es un CARRIL: nada se sale de él — lo que no cabe, se recorta con … */
+.cel{position:relative;align-self:stretch;display:flex;align-items:center;justify-content:flex-end;padding:0 12px;min-width:0;overflow:hidden}
+.cel .who,.cel .badge,.cel .sla,.cel .fch2,.cel .mach2,.cel .dur{max-width:100%;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+/* Divisor vertical SUTIL y arrastrable (col-resize). Al pasar el ratón, se enciende. */
+.rz{position:absolute;left:0;top:-8px;bottom:-8px;width:9px;cursor:col-resize;z-index:2}
+.rz::before{content:"";position:absolute;left:4px;top:0;bottom:0;width:1px;background:rgba(120,243,255,.10)}
+.rz:hover::before{background:rgba(120,243,255,.5);box-shadow:0 0 6px rgba(120,243,255,.35)}
+.badge{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;padding:5px 9px;border-radius:999px;white-space:nowrap;display:flex;align-items:center;gap:6px}.badge i{width:6px;height:6px;border-radius:50%}
+.b-open{color:var(--warn);border:1px solid rgba(255,136,102,.5);background:rgba(255,136,102,.08)}.b-open i{background:var(--warn);animation:ykm-blink 1s infinite}
+.b-pend{color:var(--mut);border:1px solid var(--line2);background:rgba(216,200,255,.05)}.b-pend i{background:var(--mut)}
+.b-prog{color:var(--accent);border:1px solid rgba(255,216,102,.4);background:rgba(255,216,102,.06)}.b-prog i{background:var(--accent)}
+.b-res{color:var(--good);border:1px solid rgba(136,255,170,.35);background:rgba(136,255,170,.06)}.b-res i{background:var(--good)}
+.b-sina{color:var(--violet);border:1px solid rgba(170,136,255,.4);background:rgba(170,136,255,.07)}.b-sina i{background:var(--violet)}
+.b-cancel{color:var(--dim);border:1px solid var(--line);background:rgba(120,160,180,.05);text-decoration:line-through}.b-cancel i{background:var(--dim)}
+.cel.est .cancel-note{display:block;font-family:var(--sans);font-size:10px;font-style:italic;color:var(--dim);margin-top:3px;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.sla{font-family:var(--mono);font-size:10.5px;color:var(--warn)}.who{font-family:var(--mono);font-size:10.5px;color:var(--mut);display:flex;flex-direction:column;align-items:center;text-align:center;line-height:1.25}.who .agent-surface{font-size:8.5px;letter-spacing:.04em;text-transform:uppercase;color:var(--good);min-height:11px}.who .agent-surface.pend{color:var(--mut);text-transform:none;letter-spacing:normal;font-style:italic}
+.who .agent-surface.off{color:var(--warn);text-transform:none;letter-spacing:normal;font-weight:600;cursor:help}
+.tasks-col{min-width:210px;overflow:hidden}.abc-tasks{display:grid;grid-template-columns:minmax(0,1fr) 24px;align-items:stretch;gap:7px;min-width:0;width:100%}.abc-list{display:flex;flex-direction:column;gap:4px;min-width:0;width:100%}.abc-task{position:relative;display:grid;grid-template-columns:6px 12px minmax(0,1fr) auto;align-items:center;gap:5px;min-width:0;padding:4px 6px;border:1px solid var(--line);border-radius:6px;background:rgba(120,243,255,.025);color:var(--mut);text-decoration:none;font:8.5px var(--mono)}.abc-task:hover,.abc-task:focus-visible{border-color:var(--brand);outline:none}.abc-task b{color:var(--ink);font-size:9.5px}.abc-dot{width:6px;height:6px;border-radius:50%;background:var(--dim);box-shadow:0 0 0 2px rgba(77,122,136,.12)}.abc-label{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--mut)}.abc-task.done{border-color:rgba(136,255,170,.42);background:rgba(136,255,170,.06)}.abc-task.done .abc-dot{background:var(--good);box-shadow:0 0 7px var(--good)}.abc-task.in_progress{border-color:rgba(255,216,102,.7);background:rgba(255,216,102,.08);box-shadow:inset 2px 0 0 var(--accent)}.abc-task.in_progress .abc-dot{background:var(--accent);box-shadow:0 0 8px var(--accent)}.abc-state{color:var(--accent);font-size:7px;font-weight:800;letter-spacing:.06em}.abc-task.missing{cursor:default;opacity:.52;border-style:dashed}.abc-mission-progress{display:flex;flex-direction:column;justify-content:space-around;align-items:center;gap:3px;padding:4px 3px;border-radius:8px;border:1px solid var(--line);background:var(--card)}.abc-mission-progress>i{display:flex;align-items:center;justify-content:center;width:13px;height:13px;border-radius:50%;font-style:normal;opacity:.95}.abc-mission-progress>i b{font:7px var(--mono);color:#031016}.abc-mission-progress>i.pending{background:#ff5f56;box-shadow:0 0 7px rgba(255,95,86,.65)}.abc-mission-progress>i.in_progress{background:#ffd866;box-shadow:0 0 7px rgba(255,216,102,.65)}.abc-mission-progress>i.done{background:#88ffaa;box-shadow:0 0 7px rgba(136,255,170,.65)}.traffic-red{border-color:rgba(255,95,86,.45)}.traffic-yellow{border-color:rgba(255,216,102,.5)}.traffic-green{border-color:rgba(136,255,170,.5)}
+.who .agent-surface.deduc{color:var(--brand);font-style:italic;opacity:.75;cursor:help}
+.cel.rtiempo{flex-direction:column;justify-content:center;align-items:flex-end;gap:3px}
+.fch2{font-family:var(--mono);font-size:10.5px;color:var(--mut);white-space:nowrap}
+.fch2.fin{color:var(--good)}.fch2.run{color:var(--accent)}.fch2.overdue,.dur.overdue{color:var(--warn)}
+/* Duración: de asignada a finalizada (o transcurrido si sigue viva, en ámbar). */
+.dur{font-family:var(--mono);font-size:10.5px;color:var(--good)}.dur.run{color:var(--accent)}
+/* Progreso: n/total real + barra que se acerca al objetivo. El chip lo pinta
+   YkMisiones.progHtml() y se usa en la fila de /misiones Y en la cabecera de
+   cada tarjeta de /tareas (FLT-979 c) — por eso .prog NO va scopeado a .cel.est. */
+.prog{position:relative;display:inline-flex;align-items:center;justify-content:center;min-width:44px;height:16px;margin-top:3px;border:1px solid var(--line);border-radius:5px;overflow:hidden;background:rgba(120,243,255,.04);font-family:var(--mono);font-size:9px;color:var(--mut)}
+.prog .prog-fill{position:absolute;inset:0 auto 0 0;background:rgba(120,243,255,.16);transition:width .5s ease;z-index:0}
+.prog b{position:relative;z-index:1;font-weight:600;letter-spacing:.03em}
+/* Tercios (979): tareas n/3 en negrita + subtareas n/9 atenuadas en el mismo chip.
+   `+n` avisa de pasos de un plan antiguo (d…h) que quedan fuera del tercio. */
+.prog{min-width:58px;gap:4px;padding:0 5px}
+.prog i{position:relative;z-index:1;font-style:normal;color:var(--dim);font-size:8.5px}
+.prog .prog-mas{color:var(--warn)}
+/* Pasos DESCARTADOS con motivo (estado no_aplica). Deliberadamente apagado y sin
+   verde: concluyen el arbol pero no son trabajo hecho, y el color no debe
+   sugerir lo contrario. El tooltip del chip explica que no cuentan como hechos. */
+.prog .prog-na{color:var(--muted,#8a8f98);font-style:normal;opacity:.85}
+.prog.full{border-color:rgba(136,255,170,.4)}.prog.full .prog-fill{background:rgba(136,255,170,.22)}.prog.full b{color:var(--good)}
+/* PLAN INCOMPLETO (979 c): el denominador es siempre 3 y 9, así que un plan a
+   medio definir se DICE — borde discontinuo + ◌ atenuado — en vez de bajarle el
+   denominador y fingir que está completo. Sobrio: ni color de alarma ni peso. */
+.prog.inc{border-style:dashed}
+.prog .prog-inc{position:relative;z-index:1;font-style:normal;color:var(--dim);font-size:9px;line-height:1}
+/* Todo lo DEFINIDO hecho, pero el plan no llega a 3×3: cifras en verde para no
+   perder la señal de «esto está hecho», sin el relleno pleno de .full. */
+.prog.hechoinc b{color:var(--good)}.prog.hechoinc{border-color:rgba(136,255,170,.28)}
+/* En la tarjeta de /tareas el chip se alinea a la derecha de la cabecera. */
+.mcard .mhd .prog{margin-top:0;margin-left:auto;flex:none}
+/* Cabecera del cajón de detalle: mismo chip, alineado a la derecha del 🎯. */
+.thd .prog{margin-top:0;margin-left:auto;flex:none}
+/* Columna ORDENADOR (entre Fecha y Agente). */
+.cel.ord{justify-content:flex-start}
+.mach2{font-family:var(--mono);font-size:10.5px;color:var(--mut);display:inline-flex;align-items:center;gap:5px}.mach2.dim{color:var(--dim)}
+/* Estado + ABRIR apilados (ABRIR debajo de la insignia). */
+.cel.est{flex-direction:column;align-items:flex-start;justify-content:center;gap:7px}
+/* Cabecera de COLUMNAS estilo hoja de cálculo: misma rejilla que las filas;
+ * clic en un título = ordenar por esa columna (▲ asc / ▼ desc). */
+.lhead{padding:9px 16px;border-bottom:1px solid var(--line);background:rgba(120,243,255,.035)}
+.lhead .lh{font-family:var(--mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);cursor:pointer;white-space:nowrap;padding:0 12px;text-align:center;user-select:none}
+.lhead .lh[data-k="id"]{text-align:center;padding:0 10px 0 0}
+.lhead .lh[data-k="subject"]{text-align:center;padding:0 14px}
+.lhead .lh:hover,.lhead .lh.on{color:var(--brand)}
+.lhead .lh-static{font-family:var(--mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim);white-space:nowrap;padding:0 8px;text-align:center;user-select:none}
+@media(max-width:720px){.lhead{display:none}}
+.empty{padding:36px;text-align:center;color:var(--dim);font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+.tkopen{font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--brand);border:1px solid var(--line2);border-radius:7px;padding:4px 9px;text-decoration:none;white-space:nowrap}
+.tkopen:hover{background:rgba(120,243,255,.12)}
+@keyframes ykm-blink{0%,100%{opacity:1}50%{opacity:.3}}
+@media(max-width:1100px){.hd.project-id-layout{grid-template-columns:8px minmax(142px,var(--c-id,158px)) minmax(230px,var(--c-mis,1fr)) minmax(210px,var(--c-ord,230px)) minmax(130px,var(--c-who,150px)) minmax(0,var(--c-est,112px))}}
+@media(max-width:720px){.hd,.hd.project-id-layout{grid-template-columns:8px 1fr;gap:6px}.tkid,.subj,.cel,.project-id-cell,.mission-col{grid-column:2}.subj{padding:0}.cel,.mission-col{justify-content:flex-start;padding:2px 0}.cel.rtiempo{align-items:flex-start}.rz{display:none}.project-id-cell{padding:0}.project-id-top{grid-template-columns:1fr}.project-id-layout .tkid{grid-column:1/-1}.mission-time{flex-wrap:wrap}.abc-tasks{grid-template-columns:minmax(0,1fr) 26px}}
+
+/* ------- Misión MADRE → HIJAS (FLT-990 b3) ------- */
+/* Un grupo no ensucia el tablero: la madre se pinta como una fila normal, con una
+ * barra fina debajo que despliega/replega sus hijas. Replegado por defecto. */
+.yk-grp{border-bottom:1px solid var(--line)}
+.yk-grp>.tk{border-bottom:0}
+.yk-grp.abierta{box-shadow:inset 2px 0 0 var(--brand)}
+.yk-grp-bar{display:flex;align-items:center;gap:6px;width:100%;box-sizing:border-box;background:transparent;border:0;border-top:1px dashed var(--line);
+  padding:5px 16px;cursor:pointer;font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);text-align:left}
+.yk-grp-bar:hover{background:var(--card2);color:var(--brand)}
+.yk-grp-bar b{color:var(--brand);font-weight:600}
+.yk-grp-caret{display:inline-block;transition:transform .15s;color:var(--dim)}
+.yk-grp.abierta .yk-grp-caret{transform:rotate(90deg);color:var(--brand)}
+.yk-kids{background:var(--card2)}
+.yk-kids.plegado{display:none}
+.yk-kids>.tk{border-left:2px solid var(--brand);border-bottom:1px solid var(--line)}
+.yk-kids>.tk:last-child{border-bottom:0}
+.yk-kids>.tk .hd{padding-left:30px}
+/* SEGUNDO NIVEL (madre → misión → submisión, FLT-990 c): una hija con submisiones es
+ * a su vez un grupo dentro del cajón; sus filas van al nivel de las hijas y las
+ * submisiones un escalón más adentro, con un borde algo más tenue para distinguir. */
+.yk-kids>.yk-grp{border-bottom:0}
+.yk-kids>.yk-grp>.tk{border-left:2px solid var(--brand)}
+.yk-kids>.yk-grp>.tk .hd{padding-left:30px}
+.yk-kids .yk-grp-bar{padding-left:30px}
+.yk-kids .yk-kids>.tk{border-left:2px solid var(--mut)}
+.yk-kids .yk-kids>.tk .hd,.yk-kids .yk-kids>.yk-grp>.tk .hd{padding-left:46px}
+@media(max-width:720px){
+  .yk-kids>.tk .hd,.yk-kids>.yk-grp>.tk .hd{padding-left:20px}
+  .yk-kids .yk-kids>.tk .hd,.yk-kids .yk-kids>.yk-grp>.tk .hd{padding-left:32px}
+  .yk-grp-bar{padding:5px 12px}.yk-kids .yk-grp-bar{padding-left:20px}
+}
+
+/* ------- Alarma de misiones equivalentes ------- */
+.yk-dup{border-bottom:1px solid rgba(255,216,102,.28);background:rgba(255,216,102,.025)}
+.yk-dup-alert{display:flex;align-items:stretch;gap:0;border-left:3px solid var(--accent,#ffd866)}
+.yk-dup-tg{min-width:0;flex:1;display:grid;grid-template-columns:auto auto minmax(120px,1fr) auto auto;align-items:center;gap:9px;
+  padding:10px 13px;background:transparent;border:0;color:var(--mut);font:10px/1.35 var(--mono);letter-spacing:.04em;text-align:left;cursor:pointer}
+.yk-dup-tg:hover{background:rgba(255,216,102,.06);color:var(--ink)}
+.yk-dup-tg:focus-visible,.yk-dup-select:focus-visible{outline:2px solid var(--brand);outline-offset:-2px}
+.yk-dup-tg strong{color:var(--accent,#ffd866);font-size:11px;text-transform:uppercase;white-space:nowrap}
+.yk-dup-ref{color:var(--ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.yk-dup-meta{color:var(--mut);white-space:nowrap}
+.yk-dup-action{color:var(--brand);text-transform:uppercase;white-space:nowrap}
+.yk-dup-caret{color:var(--accent,#ffd866);transition:transform .15s}.yk-dup.abierta .yk-dup-caret{transform:rotate(90deg)}
+.yk-dup-select{flex:none;margin:7px 9px 7px 0;padding:5px 9px;border:1px solid rgba(255,216,102,.35);border-radius:7px;background:transparent;
+  color:var(--accent,#ffd866);font:9px/1.2 var(--mono);letter-spacing:.05em;text-transform:uppercase;cursor:pointer;white-space:nowrap}
+.yk-dup-select:hover{background:rgba(255,216,102,.1)}
+.yk-dup-members{background:var(--card2)}.yk-dup-members.plegado{display:none}
+.yk-dup-members>.tk{border-left:3px solid rgba(255,216,102,.45);border-bottom:1px solid var(--line)}
+@media(max-width:720px){.yk-dup-tg{grid-template-columns:auto 1fr;padding:9px}.yk-dup-ref,.yk-dup-meta,.yk-dup-action{grid-column:2}.yk-dup-select{align-self:center}}
+
+/* ------- Árbol de TAREAS abc/123 ------- */
+.tree{font-family:var(--mono)}
+.tree .thd{display:flex;align-items:center;justify-content:space-between;gap:8px;margin-bottom:10px}
+.tree .tmid{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--brand);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.tree .tmid a{color:inherit;text-decoration:none}.tree .tmid a:hover{text-decoration:underline}
+.tree .tcount{font-size:10px;color:var(--mut);border:1px solid var(--line);border-radius:999px;padding:3px 8px;white-space:nowrap}
+.tree .empty2{font-family:var(--sans);color:var(--dim);font-size:12px;line-height:1.55;padding:4px 0 10px}.tree .empty2 b{color:var(--mut)}
+.tree .propose{font-family:var(--mono);font-size:11px;letter-spacing:.04em;padding:9px 12px;border-radius:9px;border:1px solid rgba(170,136,255,.4);color:var(--violet);background:rgba(170,136,255,.08);cursor:pointer;width:100%}
+.tree .propose:hover{background:rgba(170,136,255,.16)}.tree .propose:disabled{opacity:.55;cursor:default}
+.step{margin-bottom:10px}
+.node{display:flex;align-items:flex-start;flex-wrap:wrap;gap:7px;padding:4px 0}
+.node .node-rep{flex-basis:100%;padding-left:22px;font-size:11px;line-height:1.4;color:var(--mut)}
+.node .node-rep a{color:var(--brand);text-decoration:underline;word-break:break-all}
+.node.sub{padding-left:18px}
+.step.collapsed .substeps{display:none}
+.substog{margin:1px 0 2px 22px;font-family:var(--mono);font-size:9.5px;letter-spacing:.04em;color:var(--mut);background:transparent;border:1px solid var(--line);border-radius:6px;padding:2px 7px;cursor:pointer}
+.substog:hover{color:var(--brand);border-color:var(--brand)}
+.chip{flex:none;cursor:pointer;border:none;background:transparent;font-size:14px;line-height:1.15;padding:0;width:16px;text-align:center}
+.chip.pending{color:var(--accent)}.chip.in_progress{color:var(--brand)}.chip.done{color:var(--good)}
+.node .scode,.node a.scode{flex:none;font-size:8.5px;color:var(--dim);width:auto;max-width:180px;padding:2px 5px;border:1px solid var(--line);border-radius:5px;text-decoration:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.node a.scode:hover{color:var(--brand);text-decoration:underline}
+.node.foco-step{background:rgba(255,216,102,.12);border-radius:6px;outline:1px solid rgba(255,216,102,.5);animation:ykm-foco 2.2s ease-out}
+@keyframes ykm-foco{0%{background:rgba(255,216,102,.34)}100%{background:rgba(255,216,102,.12)}}
+.node .ttl{flex:1;min-width:0;font-size:12px;line-height:1.4;color:var(--ink);display:-webkit-box;-webkit-line-clamp:2;line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.node .ttl a{color:var(--brand);text-decoration:underline;word-break:break-all}
+.node.sub .ttl{color:var(--mut);font-size:11.5px}
+.node.done{background:rgba(136,255,170,.055);border-radius:6px;box-shadow:inset 2px 0 rgba(136,255,170,.72)}
+.node.done .ttl,.node.done.sub .ttl{color:var(--good);text-decoration:none;opacity:.92}
+.node.done .scode{color:var(--good);opacity:.78}
+.node .own{flex:none;display:inline-flex;align-items:center;justify-content:center;font-size:12px;opacity:.85;cursor:default;padding-top:1px}
+.node-owner-avatar{width:22px;height:22px;border-radius:6px;object-fit:cover;object-position:center top;display:block;border:1px solid rgba(120,243,255,.3)}
+.node-owner-fallback{line-height:22px}
+.node .node-shot{flex:none;width:36px;height:23px;object-fit:cover;border-radius:4px;border:1px solid var(--line2);cursor:zoom-in;margin-top:1px}
+.tsep{height:1px;background:var(--line);margin:4px 0 10px}
+.tsep-lbl{font-family:var(--mono);font-size:9px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim);margin:0 0 8px}
+
+/* --- avatares de agente en la columna AGENTE (Ajustes · Personalización) --- */
+.who-av{ display:flex; flex-direction:column; align-items:center; gap:4px; text-align:center }
+.agava{ width:46px; height:46px; object-fit:cover; object-position:center top; display:block;
+  border:1px solid rgba(120,243,255,.28); filter:saturate(.92) }
+.tk:hover .agava{ border-color:rgba(120,243,255,.6) }
+.who-av > span{ font-size:11px }
+
+/* --- icono/foto personalizada de máquina (Panel de control) --- */
+.machava{ width:20px; height:20px; object-fit:cover; vertical-align:-5px;
+  border:1px solid rgba(120,243,255,.28); margin-right:2px }
+
+/* --- columna AGENTE centrada + pila de retratos multi-agente (2026-07-19) --- */
+.hd.project-id-layout .cel.agc{justify-content:center;flex-direction:column;gap:5px;text-align:center}
+.agstack{ display:flex; flex-direction:column; align-items:center }
+.agstack .agava{ margin-top:-30px; box-shadow:0 -2px 6px rgba(0,0,0,.55) }
+.agstack .agava:first-child{ margin-top:0 }
+
+/* --- TABLERO a medida: columnas ocultas + densidad (Panel de control, 2026-07-20) ---
+   Ocultar = pista del grid a 0 (las vars --c-*) + contenido invisible: el nº de
+   celdas por fila no cambia y nada se descuadra. */
+.list.hide-proyecto{--c-shot:0px}  .list.hide-proyecto :is(.cel.shot,.lh-static){visibility:hidden;padding:0;min-width:0;overflow:hidden}
+.list.hide-fecha{--c-fch:0px}      .list.hide-fecha :is(.cel.rtiempo,.lh[data-k="fecha"]){visibility:hidden;padding:0;min-width:0;overflow:hidden}
+.list.hide-ordenador{--c-ord:0px}  .list.hide-ordenador :is(.cel.ord,.lh[data-k="ordenador"]){visibility:hidden;padding:0;min-width:0;overflow:hidden}
+.list.hide-agente{--c-who:0px}     .list.hide-agente :is(.cel.agc,.lh[data-k="agente"]){visibility:hidden;padding:0;min-width:0;overflow:hidden}
+.list.hide-estado{--c-est:0px}     .list.hide-estado :is(.cel.est,.lh[data-k="estado"]){visibility:hidden;padding:0;min-width:0;overflow:hidden}
+/* densidad COMPACTA: más misiones por pantalla sin perder legibilidad */
+.list.dens-c .hd{padding:5px 16px}
+.list.dens-c .cel.shot .shot-img{max-height:40px;width:auto}
+.list.dens-c .agava{width:28px;height:28px}
+.list.dens-c .agstack .agava{margin-top:-18px}
+.list.dens-c .subj .t{font-size:12.5px;line-height:1.3}
+.list.dens-c .subj .m{font-size:10px}
+.list.dens-c .mission-time{margin-top:3px;padding-top:3px}
+.list.dens-c .who-av > span{font-size:10px}
+.list.dens-c .badge{font-size:9px;padding:3px 8px}
+.list.dens-c .tkopen{font-size:9px}
+
+/* --- CAJÓN DE DETALLE en el raíl derecho (Carlos, 2026-07-21) ---
+   La misión seleccionada muestra su ficha ENCIMA del árbol abc: asunto, estado,
+   equipo/agente, la captura de prueba y el informe. Evita saltar a /ticket. */
+.mdet{display:flex;flex-direction:column;gap:7px;padding-bottom:11px;margin-bottom:11px;
+  border-bottom:1px solid var(--line,rgba(120,243,255,.14))}
+.mdet-t{font-size:12.5px;line-height:1.32;color:var(--ink,#dff8ff);font-weight:600}
+.mdet-m{display:flex;flex-wrap:wrap;align-items:center;gap:6px}
+.mdet-k{font-family:var(--mono);font-size:9.5px;letter-spacing:.04em;color:var(--mut);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:100%}
+.mdet-policy{display:flex;flex-direction:column;gap:3px;padding:7px 9px;border:1px solid rgba(120,160,180,.28);
+  border-left:3px solid var(--dim,#4d7a88);border-radius:7px;background:rgba(120,160,180,.06);
+  color:var(--mut,#75aab9);font-size:10.5px;line-height:1.45;overflow-wrap:anywhere}
+.mdet-policy b{color:var(--ink,#dff8ff);font:700 9.5px/1.4 var(--mono);letter-spacing:.04em;text-transform:uppercase}
+.mdet-img{width:100%;border-radius:6px;border:1px solid var(--line2);display:block}
+.mdet-inf{font-size:10.5px;line-height:1.45;color:var(--ink,#dff8ff);
+  background:rgba(120,243,255,.05);border-left:2px solid var(--brand,#78f3ff);
+  padding:7px 9px;max-height:150px;overflow:auto;white-space:pre-wrap;word-break:break-word}
+.mdet-inf .dim{color:var(--mut)}
+.mdet-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px}
+.mdet-open{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--brand,#78f3ff);text-decoration:none;align-self:flex-start}
+.mdet-open:hover{text-decoration:underline}
+/* «+ misión»: sobrio, misma escala mono que el enlace de la ficha (FLT-1005 b1). */
+.mdet-addchild{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;
+  color:var(--mut,#75aab9);background:transparent;border:1px dashed var(--line2,rgba(120,243,255,.30));
+  border-radius:7px;padding:4px 9px;cursor:pointer;transition:.15s}
+.mdet-addchild:hover{color:var(--brand,#78f3ff);border-color:var(--brand,#78f3ff)}
+.mdet-addchild:disabled{opacity:.6;cursor:default}
+@media(max-width:520px){.mdet-policy{padding:8px;font-size:11px}.mdet-policy b{font-size:10px}}

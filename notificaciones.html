@@ -1,0 +1,996 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta name="yokup-espejo" content="origen www.yokup.com · commit 00ba695 · sincronizado 17.09.2026 18:56">
+<script src="/acceso-espejo.js?v=r1"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Notificaciones · Yokup</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#02080d">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/app/apple-touch-icon.png">
+<link rel="stylesheet" href="https://www.carlossilva.info/admira-design/tokens.css">
+<link rel="stylesheet" href="/yk-frame.css?v=r18">
+<style>
+:root{--bg:#02080d;--card:#0a1620;--card2:#0d1c28;--ink:#dff8ff;--mut:#75aab9;--dim:#4d7a88;--brand:#78f3ff;--accent:#ffd866;--good:#88ffaa;--warn:#ff8866;--alarm:#ff5f56;--line:rgba(120,243,255,.16);--line2:rgba(120,243,255,.30);--sans:var(--admira-font-sans,-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif);--mono:var(--admira-font-mono,ui-monospace,SFMono-Regular,"JetBrains Mono",Menlo,monospace)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;min-height:100vh}
+.wrap{max-width:1180px;margin:0 auto;padding:22px 24px 48px}
+nav{display:flex;align-items:center;justify-content:space-between;padding:4px 0 16px}
+.back{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);text-decoration:none}.back:hover{color:var(--brand)}
+h1{font-size:clamp(23px,3vw,31px);letter-spacing:-.02em;margin:4px 0 4px}
+.sub{color:var(--mut);font-size:14.5px;margin-bottom:16px;max-width:74ch;line-height:1.55}.sub b{color:var(--alarm)}
+/* intro plegable — patrón .page-intro del resto del perímetro */
+.page-intro{border:1px solid var(--line);border-radius:14px;background:var(--card);margin-bottom:16px}
+.page-intro>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:14px 16px}
+.page-intro>summary::-webkit-details-marker{display:none}
+.pi-toggle{margin-left:auto;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.pi-body{padding:0 16px 16px}
+.page-intro.vivo>summary .pi-toggle{color:var(--alarm);font-weight:700}
+.pi-body .tfilter{margin-top:4px}
+.tfilter{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:18px}
+.tf{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:8px 13px;border-radius:9px;border:1px solid var(--line);color:var(--mut);background:var(--card);cursor:pointer;transition:.2s}
+.tf:hover{color:var(--brand);border-color:var(--line2)}
+.tf.on{background:var(--brand);color:#04232a;border-color:var(--brand);font-weight:700}
+/* ── Tarjeta de aviso: captura grande a la izquierda, el qué/dónde a la derecha.
+      La CAPTURA manda: lo que hay que decidir se ve en la pantalla, no en el texto. */
+.grid{display:flex;flex-direction:column;gap:14px}
+.n{display:grid;grid-template-columns:340px 1fr;gap:0;border:1px solid var(--line);border-radius:16px;overflow:hidden;background:var(--card)}
+.n.reciente{border-color:rgba(255,95,86,.45);box-shadow:0 0 0 1px rgba(255,95,86,.12)}
+.n.historica{border-color:rgba(255,216,102,.28)}
+.n .shot{background:#050d14;display:flex;align-items:center;justify-content:center;min-height:190px;border-right:1px solid var(--line)}
+.n .shot img{width:100%;height:100%;object-fit:cover;display:block;cursor:zoom-in}
+.n .shot .none{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);padding:20px;text-align:center}
+.n .shot .none.bad{color:var(--warn);line-height:1.55}
+.n .body{padding:16px 18px;display:flex;flex-direction:column;gap:10px}
+.n .top{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.badge{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;padding:4px 9px;border-radius:999px;font-weight:700}
+.badge.abierta{background:var(--alarm);color:#160406}
+.badge.historica{background:rgba(255,216,102,.14);color:var(--accent)}
+.badge.cerrada{background:rgba(136,255,170,.16);color:var(--good)}
+.maq{font-family:var(--mono);font-size:13px;letter-spacing:.04em;color:var(--brand);font-weight:700}
+.n h2{font-size:17px;line-height:1.35;font-weight:650;letter-spacing:-.01em}
+.n .quien{color:var(--mut);font-size:13.5px}
+.n .quien b{color:var(--ink);font-weight:600}
+.meta{display:flex;gap:14px;flex-wrap:wrap;font-family:var(--mono);font-size:10.5px;letter-spacing:.05em;text-transform:uppercase;color:var(--dim);margin-top:auto;padding-top:6px}
+.acts{display:flex;gap:8px;flex-wrap:wrap;margin-top:4px}
+.acts a,.acts button{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;padding:8px 12px;border-radius:9px;border:1px solid var(--line);background:transparent;color:var(--mut);cursor:pointer;text-decoration:none;transition:.18s}
+.acts a:hover,.acts button:hover{color:var(--brand);border-color:var(--line2)}
+.acts .go{color:var(--alarm);border-color:rgba(255,95,86,.45);font-weight:700}
+.acts .go:hover{background:rgba(255,95,86,.12);color:var(--alarm)}
+.empty{border:1px dashed var(--line2);border-radius:14px;padding:44px 24px;text-align:center;color:var(--dim);font-family:var(--mono);font-size:12.5px;letter-spacing:.04em;line-height:1.7}
+.empty b{color:var(--good);display:block;font-size:13px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+.load-error{border:1px solid rgba(255,136,102,.45);border-radius:10px;background:rgba(255,136,102,.08);color:var(--warn);padding:10px 13px;margin:-6px 0 14px;font-size:13px;line-height:1.45}
+.load-error button{margin-left:8px;border:1px solid currentColor;border-radius:7px;background:transparent;color:inherit;padding:5px 9px;font:inherit;cursor:pointer}
+.foot{margin-top:26px;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}.foot b{color:var(--brand)}
+/* ── Consumo de tokens (mandamiento 15 «Cuenta tus tokens»), COMPACTO: un quesito con el 100 %
+      del día repartido por agente/consejero, a la derecha quién más gasta y quién late sin gastar,
+      y el detalle (tabla de partes) plegado. Colores por entidad, no por puesto en el ranking. */
+.cons{border:1px solid var(--line);border-radius:16px;background:var(--card);margin-bottom:18px;overflow:hidden;
+  --s1:#3987e5;--s2:#d95926;--s3:#199e70;--s4:#c98500;--s5:#d55181;--s6:#008300;--s7:#9085e9;--s8:#e66767;--s0:#4d6570}
+.cons .ch{display:flex;align-items:center;gap:10px 14px;flex-wrap:wrap;padding:12px 16px;border-bottom:1px solid var(--line)}
+.cons .ch h2{font-size:16px;font-weight:650;letter-spacing:-.01em}
+.cons .dia{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+.cons .kp{display:flex;gap:6px 14px;flex-wrap:wrap;margin-left:auto;font-family:var(--mono);font-size:11px;letter-spacing:.04em;color:var(--mut)}
+.cons .k b{color:var(--brand);font-size:13px;letter-spacing:-.01em;margin-right:4px}
+.cons .k.warn b{color:var(--warn)}.cons .k.good b{color:var(--good)}
+.cons .cuerpo{display:grid;grid-template-columns:var(--qw,290px) 6px minmax(0,1fr);gap:0}
+/* Divisor ARRASTRABLE entre el quesito y la cuadrícula: ancho del quesito en --qw (se recuerda en el
+   navegador); doble clic lo devuelve al ancho por defecto. */
+.cons .divisor{cursor:col-resize;background:linear-gradient(to right,transparent 2px,var(--line2) 2px,var(--line2) 4px,transparent 4px);position:relative;touch-action:none;user-select:none}
+.cons .divisor:hover,.cons .divisor.on{background:linear-gradient(to right,transparent 1px,var(--brand) 1px,var(--brand) 5px,transparent 5px)}
+.cons .divisor::after{content:"⋮";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);color:var(--dim);font-size:12px;background:var(--card);padding:6px 0;line-height:1}
+.cons .cuerpo.arrastre{cursor:col-resize}.cons .cuerpo.arrastre *{user-select:none}
+.cons .queso{padding:14px 16px;display:flex;flex-direction:column;align-items:center;gap:10px;min-width:0;overflow:hidden;position:relative}
+/* Cruz de cierre de la zona de estadísticas: siempre abierta al cargar; cerrada, la cuadrícula ocupa todo el ancho. */
+.cons .qx{position:absolute;top:6px;right:6px;width:22px;height:22px;border-radius:6px;border:1px solid var(--line);background:var(--card);color:var(--dim);font:700 12px/1 var(--mono);cursor:pointer;display:flex;align-items:center;justify-content:center;z-index:2}
+.cons .qx:hover{color:var(--alarm);border-color:rgba(255,95,86,.45)}
+.cons .cuerpo.sinq{grid-template-columns:minmax(0,1fr)!important}
+.cons .cuerpo.sinq .queso,.cons .cuerpo.sinq .divisor{display:none}
+.cons .qabre{font:600 10px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--brand);background:transparent;border:1px solid var(--line2);border-radius:7px;padding:5px 8px;cursor:pointer}
+.cons .qabre:hover{background:rgba(120,243,255,.1)}
+/* Interruptor de escritura automática a Telegram (encargo #2717 · FLT-100009): estado claro ON/OFF. */
+.cons .tgauto{font:700 10px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;padding:7px 11px;border-radius:9px;cursor:pointer;border:1px solid var(--line2);background:transparent;color:var(--mut)}
+.cons .tgauto.on{color:var(--good);border-color:rgba(68,214,132,.5)}
+.cons .tgauto.off{color:var(--alarm);border-color:rgba(255,95,86,.55);background:rgba(255,95,86,.10)}
+.cons .tgauto.dud{color:var(--dim);border-style:dashed}
+.cons .tgauto:disabled{opacity:.55;cursor:wait}
+.cons .tgauto:hover:not(:disabled){filter:brightness(1.15)}
+.cons .queso svg{width:100%;max-width:210px;height:auto;display:block;overflow:visible}
+/* Grupo del quesito (encargo #2581 de Wozniak, 6-sep-2026): Flota · Agentes · Consejeros GrokBot, con el %
+   relativo DENTRO del grupo; con el total de flota los consejeros salían al 0 % y no servía para autorregular. */
+.cons .grp{display:inline-flex;gap:0;border:1px solid var(--line2);border-radius:8px;overflow:hidden;margin-top:26px}
+.cons .grp button{font:600 9.5px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--mut);background:transparent;border:0;border-right:1px solid var(--line);padding:6px 9px;cursor:pointer}
+.cons .grp button:last-child{border-right:0}
+.cons .grp button:hover{color:var(--brand)}
+.cons .grp button.on{background:var(--brand);color:#04232a}
+.cons .est{color:var(--accent);font-weight:700;cursor:help}
+/* EN VIVO (Carlos, 6-sep-2026): el consumo no para; cada Mac publica su parte cada 5 min y aquí se ve cuándo llegó el último. */
+.cons .vivo{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--good);display:inline-flex;align-items:center;gap:6px}
+.cons .vivo i{width:7px;height:7px;border-radius:50%;background:currentColor;animation:yk-blink 1.2s steps(2,start) infinite}
+.cons .vivo.viejo{color:var(--warn)}.cons .vivo.viejo i{animation:none}
+@media(prefers-reduced-motion:reduce){.cons .vivo i{animation:none}}
+.cons .queso .arc{cursor:pointer;transition:opacity .15s}
+.cons .queso.hov .arc:not(.on){opacity:.32}
+.cons .hero{font-family:var(--mono);fill:var(--ink);font-size:22px;font-weight:700;letter-spacing:-.02em}
+.cons .hero2{font-family:var(--mono);fill:var(--dim);font-size:8.5px;letter-spacing:.08em;text-transform:uppercase}
+/* Bajo el quesito: AGENTES (los Mac) y CONSEJEROS (GrokBot) separados, una fila por cabeza con su % y a qué hora empezó hoy. */
+.cons .qls{width:100%;display:flex;flex-direction:column;gap:8px}
+.cons .ql h4{font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);font-weight:600;margin:0 0 4px;display:flex;justify-content:space-between}
+.cons .ql h4 span{color:var(--dim);letter-spacing:.04em;text-transform:none;font-weight:400}
+.cons .ql h4 b{color:var(--ink)}
+.cons .qr{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto;gap:6px;align-items:center;font-family:var(--mono);font-size:10.5px;color:var(--mut);padding:2px 0;border-top:1px solid rgba(120,243,255,.07)}
+.cons .qr b{color:var(--ink);font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cons .qr .pc{color:var(--mut);white-space:nowrap}
+.cons .qr .desde{color:var(--brand);white-space:nowrap}
+.cons .qr .desde small{color:var(--dim);font-size:9px;letter-spacing:.04em}
+.cons .qr .desde.no{color:var(--dim)}
+.cons .ql .nadie{font-family:var(--mono);font-size:10px;color:var(--dim);letter-spacing:.04em}
+.cons .sw{width:9px;height:9px;border-radius:2px;flex:none}
+.cons .lado{display:flex;flex-direction:column;min-width:0}
+.cons .col{padding:14px 16px;min-width:0}
+.cons .col+.col{border-top:1px solid var(--line)}
+.cons h3{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin-bottom:10px;font-weight:600}
+.cons h3 b{color:var(--ink)}
+.cons .rk{display:flex;flex-direction:column;gap:7px}
+.cons .r{display:grid;grid-template-columns:minmax(0,auto) auto minmax(48px,1fr) auto;align-items:center;gap:8px;font-size:12.5px}
+.cons .r .ag{color:var(--ink);font-weight:600;font-family:var(--mono);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:24ch}
+.cons .r .rt{color:var(--dim);font-family:var(--mono);font-size:9.5px;text-transform:uppercase;letter-spacing:.06em;margin-left:5px}
+.cons .r .bar{height:6px;border-radius:3px;background:rgba(120,243,255,.08);overflow:hidden;min-width:40px}
+.cons .r .bar i{display:block;height:100%;border-radius:0 3px 3px 0;min-width:2px}
+.cons .r .num{font-family:var(--mono);font-size:11.5px;color:var(--mut);white-space:nowrap;text-align:right}
+.cons .r .num b{color:var(--ink);font-weight:600}
+.cons .r.foco .num{color:var(--warn)}
+.cons .r{cursor:pointer;border-radius:8px;padding:3px 6px;margin:0 -6px;transition:background .15s}
+.cons .r:hover,.cons .r:focus-visible{background:rgba(120,243,255,.06);outline:none}
+.cons .r.abierto{background:rgba(120,243,255,.09)}
+.cons .r .ag .fl{display:inline-block;transition:transform .15s;color:var(--dim);margin-right:4px;font-size:10px}
+.cons .r.abierto .ag .fl{transform:rotate(90deg)}
+/* El agente OCUPADO (presencia con tarea en los últimos 10 min) parpadea; sin animación si el lector la rechaza. */
+.cons .sw.ocupado{animation:yk-blink 1s steps(2,start) infinite;box-shadow:0 0 0 2px rgba(255,216,102,.55)}
+@keyframes yk-blink{to{visibility:hidden}}
+@media(prefers-reduced-motion:reduce){.cons .sw.ocupado{animation:none;box-shadow:0 0 0 2px var(--accent)}}
+.cons .cap{font-family:var(--mono);font-size:9.5px;letter-spacing:.04em;color:var(--good);white-space:nowrap}
+.cons .cap.no{color:var(--warn)}
+.cons .cap.nd{color:var(--dim)}
+.cons .mis{display:none;flex-direction:column;gap:5px;padding:4px 0 8px 18px;margin:-2px 0 4px 4px;border-left:2px solid var(--line)}
+.cons .mis.on{display:flex}
+.cons .m{display:grid;grid-template-columns:auto minmax(0,1fr) auto auto auto;gap:8px;align-items:center;font-size:12px;min-width:0}
+.cons .m .id{font-family:var(--mono);color:var(--brand);font-size:11px;text-decoration:none;white-space:nowrap}
+.cons .m .id:hover{text-decoration:underline}
+.cons .m .sub{color:var(--mut);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.cons .m .st{font-family:var(--mono);font-size:9px;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:999px;border:1px solid var(--line);color:var(--dim);white-space:nowrap}
+.cons .m .st.in_progress,.cons .m .st.doing{color:var(--accent);border-color:rgba(255,216,102,.4)}
+.cons .m .st.done,.cons .m .st.closed,.cons .m .st.cerrada{color:var(--good);border-color:rgba(136,255,170,.35)}
+.cons .m .pr{font-family:var(--mono);font-size:10px;color:var(--dim);white-space:nowrap}
+.cons .m img{width:34px;height:21px;object-fit:cover;border-radius:3px;border:1px solid var(--line);display:block}
+.cons .m .noimg{width:34px;height:21px;border-radius:3px;border:1px dashed rgba(255,136,102,.5);font-size:9px;color:var(--warn);display:flex;align-items:center;justify-content:center}
+.cons .mis .vacio{color:var(--dim);font-family:var(--mono);font-size:10.5px;letter-spacing:.04em}
+/* ── CUADRÍCULA tipo hoja de cálculo: retícula fina, cabecera fija, números en mono a la derecha,
+      numeración de filas y una fila desplegable con las misiones del periodo bajo cada agente. */
+.cons .per{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:10px}
+.cons .per .txt{font-size:13.5px;color:var(--mut);line-height:1.4}
+.cons .per .txt b{color:var(--ink);font-weight:700;font-family:var(--mono)}
+.cons .per .txt em{color:var(--brand);font-style:normal;font-weight:700}
+.cons .per .nav{display:inline-flex;align-items:center;gap:4px;margin-left:auto;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.cons .per .nav button{font:inherit;color:var(--brand);background:transparent;border:1px solid var(--line2);border-radius:7px;padding:4px 8px;cursor:pointer;line-height:1}
+.cons .per .nav button:hover:not(:disabled){background:rgba(120,243,255,.1)}
+.cons .per .nav button:disabled{opacity:.3;cursor:default}
+.cons .per .nav .cur{min-width:9ch;text-align:center;color:var(--ink);font-weight:700;letter-spacing:.1em}
+.cons .per .rango{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);width:100%}
+.cons .hoja{overflow:auto;max-height:420px;border:1px solid var(--line2);border-radius:8px;background:
+  linear-gradient(rgba(120,243,255,.04) 1px,transparent 1px) 0 0/100% 28px, #07121a}
+.cons .hoja table{border-collapse:separate;border-spacing:0;width:100%;min-width:760px;font-size:12px;font-family:var(--mono)}
+.cons .hoja th,.cons .hoja td{border-right:1px solid rgba(120,243,255,.12);border-bottom:1px solid rgba(120,243,255,.12);padding:0 9px;height:28px;white-space:nowrap;vertical-align:middle}
+.cons .hoja th{position:sticky;top:0;z-index:2;background:#0b1b26;color:var(--dim);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:600;text-align:left;border-bottom:1px solid var(--line2)}
+.cons .hoja th[data-sort]{cursor:pointer;user-select:none}
+.cons .hoja th[data-sort]:hover{color:var(--brand)}
+.cons .hoja th[data-sort].on{color:var(--brand)}
+.cons .hoja th .dir{color:var(--brand);margin-left:3px;font-size:8px}
+.cons .hoja th.num,.cons .hoja td.num{text-align:right;font-variant-numeric:tabular-nums}
+.cons .hoja th:first-child,.cons .hoja td:first-child{position:sticky;left:0;z-index:1;background:#0b1b26;color:var(--dim);text-align:right;width:3ch;font-size:10px}
+.cons .hoja th:first-child{z-index:3}
+.cons .hoja tbody tr.f{cursor:pointer}
+.cons .hoja tbody tr.f:hover td{background:rgba(120,243,255,.05)}
+.cons .hoja tbody tr.f.abierto td{background:rgba(120,243,255,.09)}
+.cons .hoja td.ag{color:var(--ink);font-weight:700}
+.cons .hoja td.ag .fl{display:inline-block;color:var(--dim);font-size:9px;margin-right:5px;transition:transform .15s}
+.cons .hoja tr.abierto td.ag .fl{transform:rotate(90deg)}
+.cons .hoja td.ag .sw{display:inline-block;vertical-align:-1px;margin-right:6px}
+.cons .hoja td.tipo{color:var(--dim);font-size:10px;letter-spacing:.06em;text-transform:uppercase}
+.cons .hoja td.tipo.cj{color:var(--accent)}
+.cons .hoja td.est{font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+.cons .hoja td.est.oc{color:var(--accent)}
+.cons .hoja td.pc{color:var(--mut)}
+.cons .hoja td.foco{color:var(--warn)}
+.cons .hoja td.nd{color:var(--dim)}
+.cons .hoja td .cap{margin:0}
+.cons .hoja tr.det td{padding:0;height:auto;background:#050d14;position:static}
+/* La fila desplegada no ensancha la tabla: ancho 0 para el cálculo y min-width 100 % para pintarse. */
+.cons .hoja tr.det td>div{width:0;min-width:100%}
+.cons .hoja tr.det .mis{display:flex;margin:0;padding:6px 10px 8px 34px;border-left:0;font-family:var(--sans)}
+.cons .hoja tr.det .m{grid-template-columns:auto minmax(0,1fr) auto auto auto auto}
+.cons .hoja .m .pt{font-family:var(--mono);font-size:10px;color:var(--good);white-space:nowrap}
+.cons .hoja .m .hh{font-family:var(--mono);font-size:10px;color:var(--dim);white-space:nowrap}
+.cons .hoja .estado{padding:10px 12px;font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;color:var(--dim)}
+/* Columnas REDIMENSIONABLES: asa en el borde derecho de cada cabecera; el ancho se recuerda en el navegador. */
+.cons .hoja th{position:sticky;overflow:hidden;text-overflow:ellipsis}
+.cons .hoja th .rz{position:absolute;top:0;right:-3px;width:7px;height:100%;cursor:col-resize;z-index:4;touch-action:none}
+.cons .hoja th .rz:hover,.cons .hoja th .rz.on{background:rgba(120,243,255,.35)}
+.cons .hoja table.fijo{table-layout:fixed}
+.cons .hoja table.fijo td{overflow:hidden;text-overflow:ellipsis}
+/* Sub-cuadrícula de misiones dentro de la fila desplegada: misma retícula, un tono más oscuro. */
+.cons .hoja tr.det td>div{padding:6px 8px 8px 30px;overflow:auto}
+.cons .hoja table.sub{min-width:640px;font-size:11.5px;background:#050d14}
+.cons .hoja table.sub th{background:#081620;top:0;position:sticky}
+.cons .hoja table.sub th:first-child,.cons .hoja table.sub td:first-child{background:#081620;position:static}
+.cons .hoja table.sub td{height:26px}
+.cons .hoja table.sub td.id a{color:var(--brand);text-decoration:none}.cons .hoja table.sub td.id a:hover{text-decoration:underline}
+.cons .hoja table.sub td.sub{font-family:var(--sans);color:var(--mut);max-width:44ch;overflow:hidden;text-overflow:ellipsis}
+.cons .hoja table.sub td.st{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+.cons .hoja table.sub td.st.in_progress,.cons .hoja table.sub td.st.doing{color:var(--accent)}
+.cons .hoja table.sub td.st.resolved,.cons .hoja table.sub td.st.done,.cons .hoja table.sub td.st.closed{color:var(--good)}
+.cons .hoja table.sub td.st.cancelled{color:var(--dim)}
+.cons .hoja table.sub td img{width:34px;height:20px;object-fit:cover;border-radius:3px;border:1px solid var(--line);display:block}
+.cons .hoja table.sub td .noimg{width:34px;height:20px;border-radius:3px;border:1px dashed rgba(255,136,102,.5);font-size:9px;color:var(--warn);display:flex;align-items:center;justify-content:center}
+.cons .hoja table.sub td .nc{color:var(--dim)}
+/* Última misión de un agente al pulsar su fila bajo el quesito. */
+.cons .qr{cursor:pointer}.cons .qr:hover b{color:var(--brand)}.cons .qr.on b{color:var(--brand)}
+.cons .qinfo{border:1px solid var(--line2);border-radius:8px;background:#07121a;padding:8px 10px;margin:4px 0 6px;font-family:var(--sans);font-size:12px;color:var(--mut);line-height:1.45;display:flex;flex-direction:column;gap:4px}
+.cons .qinfo .qi-h{display:flex;align-items:center;gap:8px;flex-wrap:wrap;font-family:var(--mono);font-size:10.5px}
+.cons .qinfo .qi-h a{color:var(--brand);text-decoration:none;font-weight:700}.cons .qinfo .qi-h a:hover{text-decoration:underline}
+.cons .qinfo .qi-h .st{font-size:9px;letter-spacing:.06em;text-transform:uppercase;padding:2px 6px;border-radius:999px;border:1px solid var(--line);color:var(--dim)}
+.cons .qinfo .qi-h .st.in_progress{color:var(--accent);border-color:rgba(255,216,102,.4)}.cons .qinfo .qi-h .st.resolved{color:var(--good);border-color:rgba(136,255,170,.35)}
+.cons .qinfo .qi-s{color:var(--ink)}
+.cons .qinfo .qi-m{font-family:var(--mono);font-size:10px;letter-spacing:.04em;color:var(--dim);display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.cons .qinfo img{width:120px;height:68px;object-fit:cover;border-radius:4px;border:1px solid var(--line2);display:block;margin-top:4px}
+.cons .qinfo .vacio{color:var(--dim);font-family:var(--mono);font-size:10.5px}
+.cons .hoja .estado.err{color:var(--warn)}
+.cons .disp{display:flex;flex-wrap:wrap;gap:6px}
+.cons .chip{border:1px solid rgba(136,255,170,.35);color:var(--good);border-radius:999px;padding:4px 9px;font-family:var(--mono);font-size:10.5px;letter-spacing:.04em;display:inline-flex;align-items:center;gap:6px}
+.cons .chip small{color:var(--dim);font-size:9px;letter-spacing:.06em;text-transform:uppercase}
+.cons .chip.ok{border-color:rgba(136,255,170,.35);color:var(--good)}
+.cons .chip.warn{border-color:rgba(255,136,102,.45);color:var(--warn)}
+.cons .sin{padding:0;margin-top:10px;font-family:var(--mono);font-size:10px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim);line-height:1.6}
+.cons details{border-top:1px solid var(--line)}
+.cons details>summary{list-style:none;cursor:pointer;padding:10px 16px;font-family:var(--mono);font-size:10.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim)}
+.cons details>summary::-webkit-details-marker{display:none}
+.cons details>summary:hover{color:var(--brand)}
+.cons .tw{overflow-x:auto}
+.cons table{width:100%;border-collapse:collapse;font-size:12.5px}
+.cons th{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);text-align:left;padding:8px 12px;border-top:1px solid var(--line);border-bottom:1px solid var(--line);white-space:nowrap}
+.cons td{padding:8px 12px;border-bottom:1px solid var(--line);vertical-align:top}
+.cons tbody tr:last-child td{border-bottom:0}
+.cons td.num,.cons th.num{text-align:right;font-family:var(--mono);white-space:nowrap}
+.cons td .ag{color:var(--brand);font-weight:700;font-family:var(--mono);font-size:12px}
+.cons td .rt{color:var(--dim);font-family:var(--mono);font-size:10px;text-transform:uppercase;letter-spacing:.06em}
+.cons td.causa{color:var(--mut);font-size:12px;line-height:1.45;min-width:26ch;max-width:44ch}
+.cons .foco{color:var(--warn);font-weight:700}
+.cons .nota{padding:10px 16px 12px;color:var(--mut);font-size:12.5px;line-height:1.5}
+.cons .nota b{color:var(--ink);font-weight:600}
+@media(max-width:900px){ .cons .cuerpo{grid-template-columns:1fr!important} .cons .divisor{display:none} .cons .queso{border-bottom:1px solid var(--line)} }
+@media(max-width:560px){ .cons .r .rt{display:none} .cons .per .nav{margin-left:0} }
+#lb{position:fixed;inset:0;background:rgba(2,8,13,.94);display:none;align-items:center;justify-content:center;z-index:9999;padding:24px;cursor:zoom-out}
+#lb img{max-width:100%;max-height:100%;border-radius:10px;border:1px solid var(--line2)}
+@media(max-width:760px){ .n{grid-template-columns:1fr} .n .shot{border-right:0;border-bottom:1px solid var(--line)} }
+@media(max-width:640px){.wrap{padding:16px 12px 40px}}
+</style>
+</head>
+<body data-yk-title="NOTIFICACIONES" data-yk-zone="app">
+<div id="yk-espejo-aviso" style="background:#0a1620;border-bottom:1px solid rgba(120,243,255,.30);color:#75aab9;font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;padding:8px 14px">Espejo en <b style="color:#78f3ff">admira.live</b> de Yokup · misma sesión y mismos datos de <code>api.yokup.com</code>. Si algo no cuadra con <a href="https://www.yokup.com" style="color:#78f3ff">el original</a>, es un fallo: dilo.</div>
+<div class="wrap">
+  <nav><a class="back" href="https://www.yokup.com/incidencias">← Bandeja</a></nav>
+
+  <details class="page-intro" id="intro">
+    <summary>
+      <h1>Notificaciones</h1>
+      <span class="pi-toggle"><span id="piAvisos">avisos</span> · qué es esto <span class="pi-chevron">›</span></span>
+    </summary>
+    <div class="pi-body">
+      <p class="sub">Cuando un agente se pasa de consumo (mandamiento 15) <b>levanta la mano ✋</b>: avisa al CEO en AgoraMatrix con cifras y medidas y deja aquí un aviso hasta que se atiende. Un diálogo del sistema confirmado en los últimos 90 segundos aparece como <b>aviso en vivo que requiere atención</b>. Entre 90 segundos y cinco minutos queda sin confirmar. Después pasa a histórico, igual que los avisos informativos, conservando su edad real sin afirmar que el equipo siga detenido.</p>
+      <div class="tfilter" id="filtros">
+        <button class="tf on" data-f="abiertas" aria-pressed="true">Pendientes</button>
+        <button class="tf" data-f="todas" aria-pressed="false">Todas</button>
+        <button class="tf" data-f="consumo" aria-pressed="false">Partes de consumo</button>
+        <span class="tf" id="resumen" role="status" aria-live="polite" style="cursor:default;border-color:transparent"></span>
+      </div>
+      <div class="load-error" id="loadError" role="status" aria-live="polite" hidden><span id="loadErrorText"></span><button id="retryLoad" type="button">Reintentar</button></div>
+      <div class="grid" id="lista"><div class="empty">Cargando…</div></div>
+    </div>
+  </details>
+
+  <section class="cons" id="consumo" aria-labelledby="consumoTitulo">
+    <div class="ch"><h2 id="consumoTitulo">📟 Consumo de tokens · <a href="/consumos" style="color:var(--brand);text-decoration:none;font-size:0.85em">por proyecto →</a></h2><span class="dia" id="consDia">hoy</span><span class="vivo" id="consVivo" title="cuándo llegó el último parte de consumo"></span><button class="tgauto dud" id="tgAuto" type="button" data-flag="auto_publish" aria-pressed="true" title="Lo que publica Ágora (bot-say, avisos, ventanas, diario) en el grupo de Telegram">Ágora → Telegram: …</button><button class="tgauto dud" id="tgFlota" type="button" data-flag="fleet_publish" aria-pressed="true" title="Lo que escriben los agentes por cliente propio (Morfeo, White Rabbit, GrokBots del Consejo) en Telegram">Flota → Telegram: …</button><div class="kp" id="consKpi"></div></div>
+    <div id="consCuerpo"><div class="nota">Cargando partes de consumo…</div></div>
+  </section>
+
+  <div class="foot">Yokup · notificaciones del sistema · vigilante por máquina · fuente <b>D1</b> (notifs)</div>
+</div>
+<div id="lb" role="dialog" aria-modal="true" aria-label="Captura ampliada" tabindex="-1"><img id="lbImg" alt=""></div>
+
+<script>
+const WORKER="https://api.yokup.com";
+const $=id=>document.getElementById(id);
+const esc=s=>String(s==null?"":s).replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+const _ms=v=>{v=+v||0;return v>4102444800?v:v*1000;};
+let VISTA="abiertas", DATOS=[], RESUMEN={total_open:0,live:0,unconfirmed:0,stale:0,backlog:0,affected_machines:0};
+let SERVER_NOW=0, SYNC_PERF=0, HAS_SNAPSHOT=false, SNAPSHOT_STALE=false, LB_TRIGGER=null;
+
+function hhmm(ms){ try{ return new Date(ms).toLocaleTimeString("es-ES",{hour:"2-digit",minute:"2-digit"}); }catch(e){ return ""; } }
+function ddmm(ms){ try{ return new Date(ms).toLocaleDateString("es-ES",{day:"2-digit",month:"short"}); }catch(e){ return ""; } }
+function serverNow(){ return SERVER_NOW+Math.max(0,performance.now()-SYNC_PERF); }
+// Cuánto lleva ESPERANDO. Es el dato que decide si hay que ir corriendo o no.
+function espera(ms){
+  if(!(ms>0)) return "edad desconocida";
+  const s=Math.max(0,Math.round((serverNow()-ms)/1000));
+  if(s<90) return s+" s";
+  const m=Math.round(s/60); if(m<90) return m+" min";
+  const h=Math.floor(m/60); return h>=24 ? Math.floor(h/24)+" d "+(h%24)+" h" : h+" h "+(m%60)+" min";
+}
+
+// Cada dueño de diálogo, en cristiano. Lo que ve el sistema es un proceso; lo que
+// necesita saber quien lee es QUÉ le están pidiendo a esa máquina.
+const QUE={
+  usernotificationcenter:"Permiso del sistema (acceso a datos, cámara, micro, pantalla…)",
+  securityagent:"Pide contraseña de administrador",
+  coreservicesuiagent:"Gatekeeper: una app sin firmar quiere abrirse",
+  universalaccessauthwarn:"Pide permiso de Accesibilidad",
+  osascript:"Diálogo de un script",
+  loginwindow:"Diálogo de sesión (reiniciar, apagar, cerrar sesión)",
+  "software update":"Actualización de macOS esperando confirmación",
+  instalador:"Instalador esperando confirmación",
+  installer:"Instalador esperando confirmación"
+};
+const queEs=o=>QUE[String(o||"").toLowerCase()]||("Diálogo de "+(o||"el sistema"));
+const KIND={bloqueo:"Bloqueo operativo",flota:"Aviso de flota",release:"Aviso de versión",auth:"Aviso de acceso",autenticacion:"Aviso de acceso",conexion:"Aviso de conexión","correccion-informe":"Corrección de informe",consumo:"Parte de consumo","consumo-alerta":"✋ Mano levantada · consumo",sistema:"Diálogo del sistema"};
+// ✋ Un agente que se ha pasado de consumo levanta la mano (aviso consumo-alerta abierto hoy).
+function manoLevantada(owner){ const k=canonM(owner), ini=new Date(hoyISO()+"T00:00:00").getTime(); return DATOS.find(n=>n&&n.status==="abierta"&&String(n.kind||"")==="consumo-alerta"&&canonM(n.owner)===k&&(n.last_at_ms||_ms(n.last_at))>=ini)||null; }
+const manoHTML=o=>{ const m=manoLevantada(o); return m?'<span class="est" title="'+esc(m.titulo||"levanta la mano por consumo")+'">✋</span> ':''; };
+const kindLabel=k=>KIND[String(k||"").toLowerCase()]||("Aviso "+String(k||"general"));
+
+function shotFallback(img,reason){
+  const box=img&&img.closest(".shot"); if(!box)return;
+  box.innerHTML='<div class="none bad">Captura no disponible<br><small>'+esc(reason||"macOS no devolvió una imagen legible")+'</small></div>';
+}
+function checkShot(img){
+  try{
+    const c=document.createElement("canvas"), w=32,h=18; c.width=w;c.height=h;
+    const x=c.getContext("2d",{willReadFrequently:true}); x.drawImage(img,0,0,w,h);
+    const p=x.getImageData(0,0,w,h).data; let sum=0,bright=0;
+    for(let i=0;i<p.length;i+=4){const y=(p[i]+p[i+1]+p[i+2])/3;sum+=y;if(y>18)bright++;}
+    if(sum/(w*h)<4&&bright/(w*h)<.005) shotFallback(img,"macOS bloqueó la captura o falta permiso de Grabación de pantalla");
+  }catch(e){}
+}
+
+function render(){
+  const box=$("lista");
+  const esCons=n=>String(n.kind||"").toLowerCase()==="consumo";
+  // Los partes de consumo no son avisos que atender: viven en el panel de arriba y en su filtro.
+  const list=VISTA==="abiertas" ? DATOS.filter(n=>n.status==="abierta"&&!esCons(n)) : VISTA==="consumo" ? DATOS.filter(esCons) : DATOS;
+  const live=SNAPSHOT_STALE?0:(RESUMEN.live|0), unconfirmed=SNAPSHOT_STALE?0:(RESUMEN.unconfirmed|0);
+  const historicos=(RESUMEN.stale|0)+(RESUMEN.backlog|0)+(SNAPSHOT_STALE?((RESUMEN.live|0)+(RESUMEN.unconfirmed|0)):0);
+  const affected=SNAPSHOT_STALE?0:(RESUMEN.affected_machines|0);
+  $("resumen").textContent = (live===1?"1 aviso en vivo":live+" avisos en vivo")+
+    " · "+unconfirmed+" sin confirmar · "+historicos+" históricos";
+  const pend=live+unconfirmed+historicos; $("piAvisos").textContent=(live?"⚠ "+live+" en vivo · ":"")+pend+(pend===1?" aviso pendiente":" avisos pendientes");
+  $("intro").classList.toggle("vivo",live>0);
+  $("resumen").title=affected+" máquinas afectadas ahora · "+
+    (RESUMEN.stale|0)+" diálogos sin señal · "+(RESUMEN.backlog|0)+" avisos informativos";
+  if(!list.length){
+    box.innerHTML=VISTA==="abiertas"
+      ? '<div class="empty"><b>Sin avisos pendientes</b>No hay avisos recientes ni pendientes históricos abiertos.</div>'
+      : VISTA==="consumo"
+      ? '<div class="empty"><b>Sin partes de consumo</b>Nadie ha declarado tokens todavía. En cada Mac lo publica consumo-tokens.py; los consejeros de GrokBot, consumo_reportar del MCP.</div>'
+      : '<div class="empty"><b>Sin registro</b>Todavía no se ha detectado ninguna notificación del sistema en la flota.</div>';
+    return;
+  }
+  box.innerHTML=list.map(n=>{
+    const first=_ms(n.first_at), last=n.last_at_ms||null, abierta=n.status==="abierta";
+    const originalState=String(n.activity_state||"stale");
+    const kind=String(n.kind||"").toLowerCase(), system=kind==="sistema";
+    const state=SNAPSHOT_STALE&&abierta&&system&&(originalState==="live"||originalState==="unconfirmed")?"stale":originalState;
+    const reciente=state==="live";
+    const imageUrl=n.image+(String(n.image||"").includes("?")?"&":"?")+"v="+encodeURIComponent(n.last_at||0);
+    const img=n.image
+      ? '<img src="'+esc(imageUrl)+'" crossorigin="anonymous" alt="Pantalla de '+esc(n.machine)+'" loading="lazy" data-full="'+esc(imageUrl)+'" tabindex="0" role="button" aria-label="Ampliar captura de '+esc(n.machine)+'" onload="checkShot(this)" onerror="shotFallback(this,\'No se pudo descargar la captura\')">'
+      : '<div class="none">Sin captura<br>(el vigilante no pudo fotografiar la pantalla)</div>';
+    const heading=system?queEs(n.owner):(n.titulo||kindLabel(kind));
+    const detail=system&&n.titulo?'<div class="quien">'+esc(n.titulo)+'</div>':'';
+    const source=system?'<div class="quien">Lo pide <b>'+esc(n.owner)+'</b></div>':'<div class="quien">Tipo <b>'+esc(kindLabel(kind))+'</b></div>';
+    const badge=state==="live"?"⚠ requiere atención":state==="unconfirmed"?"señal sin confirmar":state==="stale"?"histórico sin señal":state==="backlog"?"aviso pendiente":"✓ resuelta";
+    const age=abierta
+      ? (reciente?'🔄 última señal hace '+espera(last):'🗂 pendiente desde '+espera(first)+' · última señal hace '+espera(last))
+      : '⏱ duró '+espera_entre(first,_ms(n.closed_at)||last);
+    return '<div class="n '+(reciente?"reciente":(abierta?"historica":"cerrada"))+'">'+
+      '<div class="shot">'+img+'</div>'+
+      '<div class="body">'+
+        '<div class="top">'+
+          '<span class="badge '+(reciente?"abierta":(abierta?"historica":"cerrada"))+'">'+badge+'</span>'+
+          '<span class="maq">🖥 '+esc(n.machine)+'</span>'+
+        '</div>'+
+        '<h2>'+esc(heading)+'</h2>'+detail+source+
+        '<div class="acts">'+
+          (reciente?'<a class="go" target="_blank" rel="noopener" href="https://www.admira.live/control?rc='+encodeURIComponent(rcId(n.machine))+'&name='+encodeURIComponent(n.machine)+'">🖥 operar y resolverlo ↗</a>':'')+
+          (abierta?'<button data-cerrar="'+esc(n.id)+'">✓ ya está atendido</button>':'')+
+        '</div>'+
+        '<div class="meta">'+
+          '<span>'+age+'</span>'+
+          '<span>📅 '+ddmm(first)+' '+hhmm(first)+'</span>'+
+          '<span>👁 visto '+(n.seen_count||1)+'×</span>'+
+        '</div>'+
+      '</div>'+
+    '</div>';
+  }).join("");
+}
+function espera_entre(a,b){ const s=Math.max(0,Math.round((b-a)/1000)); if(s<90) return s+" s"; const m=Math.round(s/60); return m<90?m+" min":Math.floor(m/60)+" h "+(m%60)+" min"; }
+
+// Mismo id de flota que usa el «operar» de /misiones: minúsculas, sin separadores
+// y un único prefijo «admira-» (FLT-1019).
+function rcId(maq){ var n=String(maq||"").toLowerCase().replace(/[\s·._-]+/g,""); if(n.slice(0,6)==="admira") n=n.slice(6); return n?"admira-"+n:""; }
+
+// ── CONSUMO (mandamiento 15 «Cuenta tus tokens», Carlos 6-sep-2026): los partes del día,
+//    de todos, en una tabla. Lo que no se mide no se optimiza; lo que no se declara se señala.
+//    Quién «late hoy y no ha declarado» sale de cruzar la presencia de la flota con los partes.
+const PRESENCIA="https://draw-gen.csilvasantin.workers.dev/presence";
+let CONS=null, CONS_ERR="", PRES=[]; let SERIE=new Map();   // canonM(owner) → puntos [{ts,dia,total,entrada,cache,salida}] de las últimas 24 h
+const fmtTok=n=>{n=+n||0;return n>=1e9?(n/1e9).toFixed(2)+" G":n>=1e6?(n/1e6).toFixed(1)+" M":n>=1e3?Math.round(n/1e3)+" k":String(n);};
+const pad2=n=>String(n).padStart(2,"0");
+function hoyISO(){const d=new Date();return d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate());}
+const canon=s=>String(s||"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/[^a-z0-9]/gi,"").toLowerCase();
+// Misma regla que whoami.sh (Carlos, 13-ago-2026): el color de la carcasa NO es nombre cuando
+// queda un número que distingue la máquina (MacBookProNegro14 = MacBookPro14 = NeoMBP14), y se
+// conserva cuando es lo único que la distingue (MacBookAirRosa). Así el parte «NeoMacBookPro14»
+// casa con la presencia «Neo · MacBookProNegro14» y nadie sale como «sin declarar» por un alias.
+const canonM=s=>{const b=canon(s).replace(/^admira/,"").replace(/mbp/g,"macbookpro").replace(/mba/g,"macbookair");const sc=b.replace(/(negro|crema|azul|rosa|plata|gris|blanco)/g,"");return /\d/.test(sc)?sc:b;};
+const pcCache=d=>{const e=+d.entrada||0,c=+d.cache||0;return e+c>0?Math.round(100*c/(e+c)):0;};
+// El foco de ahorro sale de la causa declarada y de los duplicados: es lo que hay que cambiar mañana.
+function focoAhorro(d){
+  const c=String(d.causa||"").toLowerCase();
+  if(/heartbeat|latido/.test(c)) return "latidos: un despertar sin trabajo nuevo cuesta una línea, no una sesión";
+  if((+d.duplicados||0)>0) return (+d.duplicados)+" ecos duplicados: se cierran, no se rehacen";
+  if(/contexto largo/.test(c)) return "contexto largo: sesión nueva por misión, no una que dure todo el día";
+  if(/estimaci/.test(c)||/estimacion|sin-medidor/.test(String(d.origen||""))) return "cifra estimada: falta medidor";
+  return "";
+}
+// Colores por ENTIDAD: cada agente recibe su hue por orden alfabético estable, no por su puesto
+// en el ranking, para que al refrescar nadie cambie de color. Paleta categórica validada (8 pasos
+// para superficie oscura: CVD ΔE ≥ 8.4, contraste ≥ 3:1); del noveno en adelante se pliega en «otros».
+const SLOTS=8;
+function colorMap(nombres){ const m=new Map(); [...new Set(nombres)].sort((a,b)=>a.localeCompare(b)).forEach((n,i)=>m.set(n,i<SLOTS?"var(--s"+(i+1)+")":"var(--s0)")); return m; }
+function arco(cx,cy,r,ri,a0,a1){
+  const P=(r,a)=>[cx+r*Math.cos(a),cy+r*Math.sin(a)];
+  if(a1-a0>=2*Math.PI-1e-6){ return "M"+P(r,0).join(" ")+"A"+r+" "+r+" 0 1 1 "+P(r,Math.PI).join(" ")+"A"+r+" "+r+" 0 1 1 "+P(r,0).join(" ")+"M"+P(ri,0).join(" ")+"A"+ri+" "+ri+" 0 1 0 "+P(ri,Math.PI).join(" ")+"A"+ri+" "+ri+" 0 1 0 "+P(ri,0).join(" ")+"Z"; }
+  const big=a1-a0>Math.PI?1:0, o0=P(r,a0),o1=P(r,a1),i0=P(ri,a0),i1=P(ri,a1);
+  return "M"+o0.join(" ")+"A"+r+" "+r+" 0 "+big+" 1 "+o1.join(" ")+"L"+i1.join(" ")+"A"+ri+" "+ri+" 0 "+big+" 0 "+i0.join(" ")+"Z";
+}
+function quesitoSinMedida(){
+  return '<svg viewBox="0 0 200 200" role="img" aria-label="Sin medida de tokens por hora"><circle cx="100" cy="100" r="75" fill="none" stroke="var(--line2)" stroke-width="34" stroke-dasharray="4 6"/>'+
+    '<text class="hero" x="100" y="97" text-anchor="middle">—</text><text class="hero2" x="100" y="113" text-anchor="middle">sin medida por hora</text></svg>';
+}
+function quesito(segs,tot,etiqueta){
+  // segs: [{k,nombre,v,color}] ya ordenados por peso; 2 px de hueco (trazo del color de la tarjeta).
+  const cx=100,cy=100,r=92,ri=58; let a=-Math.PI/2;
+  const paths=segs.map(g=>{ const f=tot>0?g.v/tot:0, a1=a+f*2*Math.PI; const d=arco(cx,cy,r,ri,a,a1); a=a1;
+    return '<path class="arc" data-k="'+esc(g.k)+'" d="'+d+'" fill="'+g.color+'" stroke="var(--card)" stroke-width="2" stroke-linejoin="round"><title>'+esc(g.nombre)+' · '+fmtTok(g.v)+' · '+Math.round(100*f)+' %</title></path>'; }).join("");
+  return '<svg viewBox="0 0 200 200" role="img" aria-label="Reparto del consumo de hoy por agente">'+paths+
+    '<text class="hero" x="100" y="97" text-anchor="middle">'+fmtTok(tot)+'</text><text class="hero2" x="100" y="113" text-anchor="middle">'+esc(etiqueta||"tokens · 100 %")+'</text></svg>';
+}
+// ── MISIONES DEL DÍA por agente (se despliegan bajo su fila al pulsar), OCUPADO (presencia con
+//    tarea en los últimos 10 min → parpadea) y CAPTURA (si esa máquina ha entregado alguna imagen:
+//    notificación con captura o misión con evidencia; si no, la información está incompleta).
+const MIS=new Map(), MIS_PEND=new Map(), ABIERTOS=new Set(); const OCUPADO_MS=10*60*1000, MIS_TTL=5*60*1000;
+let RK=null;
+function presenciaDe(owner,machine){
+  // Casa persona+máquina (el parte «NeoMacBookPro14» con la presencia «Neo · MacBookProNegro14»); NUNCA
+  // por máquina sola, o Trinity heredaría la tarea de Neo. Si esa persona tiene varias sesiones en la
+  // misma máquina, manda la que declara tarea reciente; si ninguna, la más reciente.
+  const k=canonM(owner); let mejor=null;
+  for(const a of PRES){ if(!a||!a.persona||!a.machine) continue; if(canonM(a.persona+a.machine)!==k) continue;
+    const e={tarea:String(a.task||"").trim(),updated:(+a.updated||0)*1000}; e.viva=!!(e.tarea&&(Date.now()-e.updated)<OCUPADO_MS);
+    if(!mejor||(e.viva&&!mejor.viva)||(e.viva===mejor.viva&&e.updated>mejor.updated)) mejor=e; }
+  return mejor;
+}
+// OCUPADO con tres fuentes, porque una sola miente: Codex (Oráculo) no ejecuta now.sh y su presencia va
+// sin tarea aunque esté trabajando (Carlos, 6-sep-2026). 1) presencia con tarea reciente; 2) trabajo en
+// curso según el Highscore (/highscore/active-work); 3) una misión suya tocada en los últimos 10 min.
+let ACTIVO=[];
+function ocupado(owner,machine){
+  const k=canonM(owner), lim=Date.now()-OCUPADO_MS;
+  const p=presenciaDe(owner,machine); if(p&&p.tarea&&p.updated>=lim) return {tarea:p.tarea,updated:p.updated,src:"presencia"};
+  let mejor=null;
+  for(const w of ACTIVO){ if(!w||canonM(w.agent||"")!==k) continue; const t=Math.max(+w.work_progress_at||0,+w.active_at||0,+w.activity_at||0,+w.work_started_at||0); if(t<lim||w.ended_at) continue; if(!mejor||t>mejor.updated) mejor={tarea:(w.reference?w.reference+" · ":"")+(w.title||w.kind||"trabajo en curso"),updated:t,src:"Highscore"+(/unverified/.test(String(w.activity_reason||w.state||""))?" · sesión sin verificar":"")}; }
+  if(mejor) return mejor;
+  const h=HIST.get("dia"); if(h&&h.list) for(const m of h.list){ if(canonM(m.agent||"")!==k) continue; const t=Math.max(+m.at||0,+m.started_at||0,+m.finished_at||0); if(t>=lim&&(!mejor||t>mejor.updated)) mejor={tarea:(m.id||"")+" · "+(m.subject||""),updated:t,src:"misión tocada "+hhmm(t)}; }
+  const c=MIS.get(k); if(c&&c.list) for(const m of c.list){ const t=+m.updated_at||0; if(t>=lim&&(!mejor||t>mejor.updated)) mejor={tarea:(m.id||"")+" · "+(m.subject||""),updated:t,src:"misión actualizada "+hhmm(t)}; }
+  return mejor;
+}
+async function loadActivo(){ try{ const r=await fetch(WORKER+"/highscore/active-work",{cache:"no-store"}); const d=await r.json(); if(d&&Array.isArray(d.participants)) ACTIVO=d.participants; }catch(e){} }
+async function cargaMisiones(owner,machine,dia){
+  const k=canonM(owner), c=MIS.get(k); if(c&&Date.now()-c.t<MIS_TTL) return c;
+  if(MIS_PEND.has(k)) return MIS_PEND.get(k);   // una petición en vuelo por agente: pulsar no la duplica
+  const pr=_cargaMisiones(k,owner,machine,dia).finally(()=>MIS_PEND.delete(k)); MIS_PEND.set(k,pr); return pr;
+}
+async function _cargaMisiones(k,owner,machine,dia){
+  const out={t:Date.now(),list:null,err:""};
+  try{
+    const r=await fetch(WORKER+"/fleet/missions?agent="+encodeURIComponent(owner)+"&limit=120",{cache:"no-store"});
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const d=await r.json(); const ms=Array.isArray(d&&d.missions)?d.missions:[];
+    const ini=new Date(dia+"T00:00:00").getTime(), cm=canonM(machine);
+    out.list=ms.filter(m=>m&&(+m.updated_at||+m.created_at||0)>=ini&&(!m.machine||canonM(m.machine)===cm||canonM(m.persona||m.assignee||"")===k))
+      .sort((a,b)=>(+b.updated_at||0)-(+a.updated_at||0));
+  }catch(e){ out.err=String(e&&e.message||e); out.t=Date.now()-MIS_TTL+60000; }
+  MIS.set(k,out); return out;
+}
+// La evidencia se entrega AL CERRAR la misión (mission-evidence.sh final / consumo del MCP): una misión
+// abierta o en curso no tiene captura todavía y no es un fallo. Se mide sobre las CERRADAS de hoy.
+const esCerrada=st=>/resolved|done|closed|cerrad|complet/i.test(String(st||""));
+function capturaDe(owner,machine){
+  const c=MIS.get(canonM(owner)); if(!c||!c.list) return null;
+  const cerradas=c.list.filter(m=>esCerrada(m.status)), con=cerradas.filter(m=>m.proof_image).length;
+  const cm=canonM(machine), hace7=Date.now()-7*86400000;
+  const vig=DATOS.some(n=>n&&n.image&&canonM(n.machine)===cm&&(n.last_at_ms||_ms(n.last_at))>=hace7);
+  return {cerradas:cerradas.length,con,sin:cerradas.length-con,vig};
+}
+function capturaOK(owner,machine){ const c=capturaDe(owner,machine); return !!(c&&(c.vig||(c.cerradas>0&&c.sin===0))); }
+function capturaCelda(owner,machine){
+  const c=capturaDe(owner,machine);
+  if(!c) return '<span class="cap nd" title="comprobando capturas…">…</span>';
+  if(!c.cerradas) return '<span class="cap nd" title="sin misiones cerradas hoy: nada que evidenciar todavía'+(c.vig?' · el vigilante sí entrega capturas':'')+'">📷 '+(c.vig?'vigilante':'— sin cerradas')+'</span>';
+  return '<span class="cap'+(c.sin?' no':'')+'" title="'+c.con+' de '+c.cerradas+' misiones cerradas hoy con captura'+(c.sin?' · '+c.sin+' sin captura: información incompleta':'')+'">📷 '+c.con+'/'+c.cerradas+(c.sin?' sin captura':'')+'</span>';
+}
+function filaMisiones(owner){
+  const c=MIS.get(canonM(owner));
+  if(!c) return '<div class="vacio">cargando misiones del día…</div>';
+  if(c.err) return '<div class="vacio">no se pudieron leer las misiones ('+esc(c.err)+')</div>';
+  if(!c.list.length) return '<div class="vacio">sin misiones hoy</div>';
+  return c.list.map(m=>{const pr=m.progress&&typeof m.progress==="object"?m.progress:null, st=String(m.status||"").toLowerCase();
+    return '<div class="m"><a class="id" href="/misiones#'+encodeURIComponent(m.id||"")+'">'+esc(m.id||"?")+'</a><span class="sub" title="'+esc(m.subject||"")+'">'+esc(m.subject||"sin asunto")+'</span>'+
+      '<span class="pr">'+(pr?(+pr.done||0)+'/'+(+pr.total||0):'')+'</span><span class="st '+esc(st)+'">'+esc(st||"?")+'</span>'+
+      (m.proof_image?'<a href="'+esc(m.proof_image)+'" target="_blank" rel="noopener" title="evidencia"><img src="'+esc(m.proof_image)+'" alt="" loading="lazy"></a>':'<span class="noimg" title="misión sin captura: información incompleta">📷</span>')+'</div>';}).join("");
+}
+// ¿A qué hora empezó hoy? La PRIMERA señal del día de esa persona en esa máquina: presencia (since /
+// process_birth), primera misión o tarea tocada, primer parte o aviso publicado. Se dice la fuente.
+function inicioHoy(owner,machine,dia){
+  const k=canonM(owner), ini=new Date(dia+"T00:00:00").getTime(); let mejor=null;
+  const cand=(t,src)=>{ t=+t||0; if(t>0&&t<4102444800) t*=1000; if(t>=ini&&t<=Date.now()+60000&&(!mejor||t<mejor.t)) mejor={t,src}; };
+  for(const a of PRES){ if(a&&a.persona&&a.machine&&canonM(a.persona+a.machine)===k){ cand(a.since,"presencia"); cand(a.process_birth,"arranque del proceso"); } }
+  const c=MIS.get(k); if(c&&c.list) for(const m of c.list){ cand(m.created_at,"misión "+(m.id||"")); cand(m.updated_at,"misión "+(m.id||"")); for(const t of (m.tasks||[])){ cand(t.created_at,"tarea "+(m.id||"")); cand(t.updated_at,"tarea "+(m.id||"")); } }
+  // El parte de consumo NO cuenta: lo publica un cron a la misma hora para todos y no dice cuándo empezó nadie.
+  for(const n of DATOS){ if(n&&canonM(n.owner)===k&&String(n.kind||"")!=="consumo"){ cand(n.first_at,"aviso "+String(n.kind||"")); } }
+  return mejor;
+}
+const esConsejero=p=>canonM(p.machine)==="grokbot"||/grokbot$/i.test(canonM(p.owner));
+// Última misión de un agente: la más reciente del historial del día (Highscore) o, si no, de /fleet/missions.
+let QINFO="";
+function ultimaMision(owner){
+  const k=canonM(owner); let mejor=null, src="";
+  const h=HIST.get("dia"); if(h&&h.list) for(const m of h.list){ if(canonM(m.agent)===k){ const t=+m.at||+m.finished_at||+m.started_at||0; if(!mejor||t>(+mejor.at||0)){ mejor=Object.assign({},m,{at:t}); src="Highscore"; } } }
+  const c=MIS.get(k); if(c&&c.list){ if(mejor){ const x=c.list.find(m=>m.id===mejor.id); if(x&&x.proof_image) mejor.proof_image=x.proof_image; }
+    else for(const m of c.list){ const t=+m.updated_at||+m.created_at||0; if(!mejor||t>(+mejor.at||0)){ mejor={id:m.id,subject:m.subject,status:m.status,started_at:+m.created_at||0,finished_at:0,at:t,points:null,proof_image:m.proof_image}; src="/fleet/missions"; } } }
+  return mejor?{m:mejor,src}:null;
+}
+function qinfoHTML(owner){
+  const u=ultimaMision(owner); if(!u) return '<div class="qinfo"><div class="vacio">'+(HIST.get("dia")||MIS.get(canonM(owner))?'sin misiones hoy':'cargando…')+'</div></div>';
+  const m=u.m, st=String(m.status||"").toLowerCase(), ini=+m.started_at||0, fin=+m.finished_at||0;
+  return '<div class="qinfo"><div class="qi-h"><a href="/misiones#'+encodeURIComponent(m.id||"")+'">'+esc(m.id||"?")+'</a><span class="st '+esc(st)+'">'+esc(st||"?")+'</span><span>última misión · '+esc(u.src)+'</span></div>'+
+    '<div class="qi-s">'+esc(m.subject||"sin asunto")+'</div>'+
+    '<div class="qi-m"><span>'+(ini?'inicio '+hhmm(ini):'')+'</span><span>'+(fin?'fin '+hhmm(fin)+' · '+dur(ini,fin):'')+'</span>'+(m.points!=null?'<span>'+((+m.points||0)+(+m.race_bonus_points||0))+' pt</span>':'')+'<span>última señal '+hhmm(+m.at||0)+'</span></div>'+
+    (function(){ const f=filasPeriodo(), r=f&&f.rows.find(x=>x.k===canonM(owner)); const c=r?costeMisiones(r).get(m.id):null; return c?'<div class="qi-m"><span class="est" title="'+esc(costeTitulo(c))+'">≈ '+fmtTok(c.tok)+' tokens</span><span>entrada '+fmtTok(c.ent)+' · caché '+fmtTok(c.cac)+' · salida '+fmtTok(c.sal)+'</span><span>estimado</span></div>':''; })()+
+    (m.proof_image?'<a href="'+esc(m.proof_image)+'" target="_blank" rel="noopener" title="evidencia"><img src="'+esc(m.proof_image)+'" alt="evidencia de '+esc(m.id||"")+'" loading="lazy"></a>':'<div class="qi-m"><span class="vacio">sin evidencia adjunta</span></div>')+'</div>';
+}
+function listaQueso(titulo,filas,cmap,tot,dia,per){
+  const html=filas.map(r=>{const k=r.k, on=QINFO===k, t=r.tok, cargando=!MIS.has(k);
+    let cuando="";
+    if(per.k==="hora"||per.k==="dia"){ const ini=inicioHoy(r.owner,r.machine,dia); cuando=ini?'<span class="desde" title="empezó hoy a las '+hhmm(ini.t)+' · primera señal de hoy: '+esc(ini.src)+'">'+hhmm(ini.t)+' <small>'+esc(ini.src.split(" ")[0])+'</small></span>':'<span class="desde no" title="ninguna señal de hoy con hora">'+(cargando?'…':'sin hora')+'</span>'; }
+    else { const t0=r.list.reduce((m,x)=>{const v=+x.started_at||+x.at||0; return v&&(!m||v<m)?v:m;},0); cuando=t0?'<span class="desde" title="primera misión del periodo: '+ddmm(t0)+' '+hhmm(t0)+'">'+ddmm(t0)+' <small>'+hhmm(t0)+'</small></span>':'<span class="desde no">sin misión</span>'; }
+    return '<div class="qr'+(on?' on':'')+'" data-k="'+esc(k)+'" data-owner="'+esc(r.owner)+'" role="button" tabindex="0" aria-expanded="'+on+'" title="pulsa para ver su última misión"><i class="sw" style="background:'+(cmap.get(r.owner)||"var(--s0)")+'"></i><b title="'+esc(r.owner)+'">'+manoHTML(r.owner)+esc(r.owner)+'</b><span class="pc" title="'+(t?fmtTok(t.total)+' tokens'+(t.est?' · estimación sin medidor local':''):(per.k==="hora"?'sin serie horaria'+(r.tokDia?' · parte de hoy: '+fmtTok(r.tokDia.total)+' tokens':''):'sin parte de consumo en el periodo'))+'">'+(t&&t.est?'<span class="est">≈</span>':'')+(t&&tot>0?Math.round(100*t.total/tot)+' %':'—')+'</span>'+cuando+'</div>'+(on?qinfoHTML(r.owner):'');}).join("");
+  return '<div class="ql"><h4>'+titulo+'<span>% · '+((per.k==="hora"||per.k==="dia")?'empezó hoy':'primera misión')+'</span><b>'+filas.length+'</b></h4>'+(html||'<div class="nadie">nadie '+esc(per.l)+'</div>')+'</div>';
+}
+const filasGrupo=rows=>GRUPO==="flota"?rows:rows.filter(r=>esConsejero({owner:r.owner,machine:r.machine})===(GRUPO==="consejeros"));
+function listasQueso(f){
+  if(!f) f=filasPeriodo(); if(!f) return "";
+  const rows=filasGrupo(f.rows), tot=rows.reduce((s,r)=>s+(r.tok?r.tok.total:0),0), cmap=colorMap(rows.map(r=>r.owner));
+  const ag=rows.filter(r=>!esConsejero({owner:r.owner,machine:r.machine})), cj=rows.filter(r=>esConsejero({owner:r.owner,machine:r.machine}));
+  return '<div class="qls">'+(GRUPO!=="consejeros"?listaQueso("Agentes",ag,cmap,tot,RK.dia,f.per):'')+(GRUPO!=="agentes"?listaQueso("Consejeros · GrokBot",cj,cmap,tot,RK.dia,f.per):'')+'</div>';
+}
+const grupoHTML=()=>'<div class="grp" role="group" aria-label="grupo del gráfico">'+[["flota","Flota"],["agentes","Agentes"],["consejeros","Consejeros"]].map(([k,l])=>'<button type="button" data-grupo="'+k+'" class="'+(GRUPO===k?'on':'')+'" aria-pressed="'+(GRUPO===k)+'" title="'+(k==="flota"?"toda la flota":k==="agentes"?"solo los agentes de los Mac":"solo los consejeros de GrokBot, con el % entre ellos")+'">'+l+'</button>').join("")+'</div>';
+// ── PERIODO de la cuadrícula: ◀ baja a la hora, ▶ sube a semana, mes o siempre. Las misiones salen
+//    del historial del Highscore (la misma fuente que puntúa); los tokens, del parte del día para
+//    hora/día y del acumulado de /fleet/consumo para el resto (el servidor guarda 90 días como máximo).
+const PER=[{k:"hora",l:"de la última hora",cur:"hora"},{k:"dia",l:"del día",cur:"día"},{k:"semana",l:"de la semana",cur:"semana",dias:7},{k:"mes",l:"del mes",cur:"mes",dias:30},{k:"siempre",l:"de siempre",cur:"siempre",dias:365}];
+let PERIODO=1, STATS=true; let GRUPO="flota"; try{ GRUPO=["flota","agentes","consejeros"].includes(localStorage.getItem("yk-cons-grupo"))?localStorage.getItem("yk-cons-grupo"):"flota"; }catch(e){}
+// Un parte declarado SIN medidor local (consejeros de GrokBot hasta que Carbono dé feed real) es una estimación
+// y se marca ≈ siempre: nunca un cero ni una cifra exacta silenciosa.
+const esEstimado=d=>/estimaci|sin medidor|sin-medidor/i.test(String((d&&d.origen)||"")+" "+String((d&&d.causa)||""));
+const HIST=new Map(), HIST_PEND=new Map(), CONSP=new Map(), CONSP_PEND=new Map(); const HIST_TTL=2*60*1000;
+const isoDia=d=>d.getFullYear()+"-"+pad2(d.getMonth()+1)+"-"+pad2(d.getDate());
+function rangoDe(per,dia){ const h=new Date(dia+"T00:00:00"); if(per.k==="siempre") return {desde:"2025-01-01",hasta:dia}; if(!per.dias) return {desde:dia,hasta:dia}; const d=new Date(h.getTime()-(per.dias-1)*86400000); return {desde:isoDia(d),hasta:dia}; }
+async function cargaHist(per,dia){
+  const key=per.k==="hora"?"dia":per.k, c=HIST.get(key); if(c&&Date.now()-c.t<HIST_TTL) return c; if(HIST_PEND.has(key)) return HIST_PEND.get(key);
+  const pr=(async()=>{ const out={t:Date.now(),list:null,err:"",rango:rangoDe(PER.find(x=>x.k===key),dia)};
+    try{ const r=await fetch(WORKER+"/highscore/history?scope=global&desde="+out.rango.desde+"&hasta="+out.rango.hasta,{cache:"no-store"}); if(!r.ok) throw new Error("HTTP "+r.status);
+      const d=await r.json(); if(!d||!Array.isArray(d.missions)) throw new Error("respuesta incompleta"); out.list=d.missions; }
+    catch(e){ out.err=String(e&&e.message||e); out.t=Date.now()-HIST_TTL+30000; }
+    HIST.set(key,out); return out; })().finally(()=>HIST_PEND.delete(key));
+  HIST_PEND.set(key,pr); return pr;
+}
+async function cargaConsP(dias){
+  const c=CONSP.get(dias); if(c&&Date.now()-c.t<MIS_TTL) return c; if(CONSP_PEND.has(dias)) return CONSP_PEND.get(dias);
+  const pr=(async()=>{ const out={t:Date.now(),list:null,err:"",dias}; try{ const r=await fetch(WORKER+"/fleet/consumo?dias="+dias,{cache:"no-store"}); if(!r.ok) throw new Error("HTTP "+r.status); const d=await r.json(); if(!d||!Array.isArray(d.por_agente)) throw new Error("respuesta incompleta"); out.list=d.por_agente; out.dias=+d.dias||dias; out.dias_partes=[...new Set((d.partes||[]).map(p=>p&&p.dia).filter(Boolean))].sort(); }catch(e){ out.err=String(e&&e.message||e); out.t=Date.now()-MIS_TTL+30000; } CONSP.set(dias,out); return out; })().finally(()=>CONSP_PEND.delete(dias));
+  CONSP_PEND.set(dias,pr); return pr;
+}
+// Anchos de columna (asa en la cabecera), recordados en este navegador por tabla y columna.
+let COLW={}; try{ COLW=JSON.parse(localStorage.getItem("yk-cons-colw")||"{}")||{}; }catch(e){ COLW={}; }
+const colw=(t,k)=>{ const w=+COLW[t+"|"+k]; return w>=40&&w<=900?' style="width:'+w+'px;min-width:'+w+'px;max-width:'+w+'px"':''; };
+function guardaColw(){ try{ localStorage.setItem("yk-cons-colw",JSON.stringify(COLW)); }catch(e){} }
+// Ordenación del DETALLE de misiones (sub-cuadrícula): una sola preferencia para todos los agentes.
+let DSORT={k:"at",dir:-1};
+const DSORT_DEF={id:1,sub:1,ini:-1,fin:-1,dur:-1,pts:-1,tok:-1,st:1,ev:-1,at:-1};
+function valorMis(m,k){ switch(k){
+  case "id": return String(m.id||""); case "sub": return String(m.subject||"").toLowerCase();
+  case "ini": return +m.started_at||+m.at||0; case "fin": return +m.finished_at||0; case "at": return +m.at||+m.updated_at||0;
+  case "dur": return (+m.finished_at&&+m.started_at)?(+m.finished_at-+m.started_at):-1;
+  case "pts": return (+m.points||0)+(+m.race_bonus_points||0); case "st": return String(m.status||""); case "tok": return m.__tok==null?-1:+m.__tok;
+  case "ev": return m.proof_image?1:0; } return 0; }
+function ordenaMis(list){ const k=DSORT.k, d=DSORT.dir; return list.slice().sort((a,b)=>{ const va=valorMis(a,k), vb=valorMis(b,k); if(va<vb) return -d; if(va>vb) return d; return (+b.at||0)-(+a.at||0); }); }
+function thd(k,txt,num){ const on=DSORT.k===k; return '<th'+colw("d",k)+' data-dsort="'+k+'" data-col="'+k+'" class="'+(num?'num ':'')+(on?'on':'')+'" title="ordenar por '+esc(txt)+'">'+txt+(on?'<span class="dir">'+(DSORT.dir<0?"▼":"▲")+'</span>':'')+'<span class="rz" data-rz="d|'+k+'"></span></th>'; }
+const dur=(a,b)=>{ if(!(a>0&&b>0&&b>=a)) return "—"; const s=Math.round((b-a)/1000); if(s<90) return s+" s"; const m=Math.round(s/60); return m<90?m+" min":Math.floor(m/60)+" h "+(m%60)+" min"; };
+// Ordenación de la cuadrícula: pulsar una cabecera ordena por esa columna; pulsarla otra vez invierte.
+let SORT={k:"tokens",dir:-1};
+const SORT_DEF={agente:1,tipo:1,estado:-1,cap:-1,n:-1,res:-1,pts:-1,tokens:-1,pc:-1,cache:-1,salida:-1,desp:-1,ini:1};
+function valorOrden(r,k){
+  const t=r.tok;
+  switch(k){
+    case "agente": return r.owner.toLowerCase();
+    case "tipo": return esConsejero({owner:r.owner,machine:r.machine})?"consejero":"agente";
+    case "estado": return ocupado(r.owner,r.machine)?1:0;
+    case "cap": { const c=capturaDe(r.owner,r.machine); return c?(c.sin>0?0:(c.cerradas>0?2:(c.vig?2:1))):-1; }
+    case "n": return r.n; case "res": return r.res; case "pts": return r.pts;
+    case "tokens": return t?t.total:-1; case "pc": return t?t.total:-1;
+    case "cache": return t&&t.entrada+t.cache>0?t.cache/(t.entrada+t.cache):-1;
+    case "salida": return t?t.salida:-1; case "desp": return t&&t.desp!=null?t.desp:-1;
+    case "ini": { const i=inicioHoy(r.owner,r.machine,RK.dia); return i?i.t:Infinity; }
+  } return 0;
+}
+function ordena(rows){
+  const k=SORT.k, d=SORT.dir;
+  return rows.slice().sort((a,b)=>{ const va=valorOrden(a,k), vb=valorOrden(b,k); if(va<vb) return -d; if(va>vb) return d; return ((b.tok?b.tok.total:0)-(a.tok?a.tok.total:0))||a.owner.localeCompare(b.owner); });
+}
+function th(k,txt,num){ const on=SORT.k===k; return '<th'+colw("g",k)+' data-sort="'+k+'" data-col="'+k+'" class="'+(num?'num ':'')+(on?'on':'')+'" title="ordenar por '+esc(txt)+'">'+txt+(on?'<span class="dir">'+(SORT.dir<0?"▼":"▲")+'</span>':'')+'<span class="rz" data-rz="g|'+k+'"></span></th>'; }
+function filasPeriodo(){
+  // Une agentes con misiones en el periodo (Highscore) y agentes con tokens en el periodo (consumo).
+  if(!RK) return null; const per=PER[PERIODO], h=HIST.get(per.k==="hora"?"dia":per.k);
+  let ms=h&&h.list?h.list.slice():null;
+  if(ms&&per.k==="hora"){ const lim=Date.now()-3600000; ms=ms.filter(m=>Math.max(+m.at||0,+m.started_at||0,+m.finished_at||0)>=lim); }
+  const porAg=new Map();
+  for(const m of (ms||[])){ if(!m||!m.agent) continue; const k=canonM(m.agent); const g=porAg.get(k)||{k,nombre:m.agent,machine:m.machine||"",n:0,res:0,pts:0,list:[]}; g.n++; if(esCerrada(m.status)) g.res++; g.pts+=(+m.points||0)+(+m.race_bonus_points||0); g.list.push(m); porAg.set(k,g); }
+  // LOS TOKENS SE DECLARAN POR DÍA (Carlos, 6-sep-2026: «no puede ser que en 26 minutos hayamos consumido
+  // lo mismo que en todo el día»). En «hora» no hay medida: el parte diario se guarda aparte (tokDia) para
+  // el tooltip y la fila no afirma consumo. En semana/mes/siempre se dice de cuántos días de partes sale.
+  const tok=new Map(), tokDia=new Map(); let consErr="", consDias=per.dias||1, diasPartes=null;
+  for(const p of RK.deHoy){ const d=p.datos; tokDia.set(canonM(p.owner),{owner:p.owner,machine:p.machine,runtime:d.runtime||"",total:+d.total||0,entrada:+d.entrada||0,cache:+d.cache||0,salida:+d.salida||0,desp:+d.despertares||0,dups:+d.duplicados||0,foco:focoAhorro(d),est:esEstimado(d)}); }
+  if(per.k==="dia"){ for(const [k,v] of tokDia) tok.set(k,v); diasPartes=[RK.dia]; }
+  else if(per.k==="hora"){
+    // ÚLTIMA HORA REAL: diferencia entre el último parte y el parte de hace ≥60 min del mismo día (serie del
+    // worker, partes cada 5 min). Si el primer parte del día tiene menos de una hora, la diferencia va desde
+    // ese primer parte y se marca parcial. Sin serie (o con un solo punto) no se afirma nada.
+    diasPartes=[]; const ahora=Date.now(), lim=ahora-3600000;
+    for(const [k,td] of tokDia){ const pts=SERIE.get(k)||[]; if(pts.length<2) continue; const p1=pts[pts.length-1]; if(ahora-(+p1.ts)>20*60000) continue;
+      let p0=null; for(const q of pts){ if(+q.ts<=lim&&q.dia===p1.dia) p0=q; } const base=p0||pts.find(q=>q.dia===p1.dia); if(!base||base===p1) continue;
+      const dlt=x=>Math.max(0,(+p1[x]||0)-(+base[x]||0));
+      tok.set(k,Object.assign({},td,{total:dlt("total"),entrada:dlt("entrada"),cache:dlt("cache"),salida:dlt("salida"),desp:null,dups:0,foco:"",horario:true,desde:+base.ts,hasta:+p1.ts,parcial:!p0})); }
+  }
+  else { const c=CONSP.get(per.dias); if(c&&c.list){ consDias=c.dias; diasPartes=c.dias_partes||[]; for(const a of c.list) tok.set(canonM(a.owner),{owner:a.owner,machine:a.machine||"",runtime:"",total:+a.total_tokens||0,entrada:+a.entrada||0,cache:+a.cache||0,salida:+a.salida||0,desp:null,dups:0,foco:"",est:false}); } else if(c&&c.err) consErr=c.err; }
+  const keys=new Set([...porAg.keys(),...tok.keys()]);
+  const rows=[...keys].map(k=>{ const g=porAg.get(k), t=tok.get(k), td=tokDia.get(k); const owner=t?t.owner:(td?td.owner:g.nombre), machine=(t&&t.machine)||(td&&td.machine)||(g&&g.machine)||"";
+    return {k,owner,machine,runtime:t?t.runtime:(td?td.runtime:""),n:g?g.n:0,res:g?g.res:0,pts:g?g.pts:0,list:g?g.list:[],tok:t||null,tokDia:td||null}; });
+  // Solo quien ha ESTADO ACTIVO en el periodo (con misiones en esa franja). Quien tiene consumo pero
+  // ninguna misión en la franja no se lista; se dice cuántos son para que no desaparezcan en silencio.
+  const activos=ms?rows.filter(r=>r.n>0):rows, ocultos=rows.length-activos.length;
+  const tot=activos.reduce((s,r)=>s+(r.tok?r.tok.total:0),0);
+  return {per,h,ms,rows:ordena(activos),ocultos,tot,consErr,consDias,diasPartes,horario:per.k==="hora",sinMedida:per.k==="hora"&&tok.size===0,cargandoHist:!h,cargandoCons:!(per.k==="hora"||per.k==="dia")&&!CONSP.get(per.dias)};
+}
+// COSTE POR MISIÓN (encargo #2581): consumo_reportar y consumo-tokens.py declaran tokens por agente y día,
+// no por misión. Hasta que lo declaren, el coste de cada misión es un REPARTO ESTIMADO del parte diario del
+// agente proporcional al tiempo de cada misión (mínimo un minuto), y va marcado ≈ con la cuenta en el tooltip.
+function costeMisiones(r){
+  const out=new Map(); const t=r.tok; if(!t||!(PERIODO<=1)||!t.total||!r.list.length) return out;
+  const ahora=Date.now(); const dur=m=>{ const a=+m.started_at||+m.at||0, b=+m.finished_at||(a?Math.min(ahora,+m.at||ahora):0); return Math.max(60000,(a&&b&&b>a)?b-a:60000); };
+  const total=r.list.reduce((s,m)=>s+dur(m),0)||1;
+  for(const m of r.list){ const f=dur(m)/total; out.set(m.id,{tok:Math.round(t.total*f),ent:Math.round(t.entrada*f),cac:Math.round(t.cache*f),sal:Math.round(t.salida*f),pct:Math.round(100*f),declarado:!!t.est}); }
+  return out;
+}
+const costeTitulo=c=>'≈ estimado: '+c.pct+' % del parte diario del agente por tiempo de misión · entrada '+fmtTok(c.ent)+' · caché '+fmtTok(c.cac)+' · salida '+fmtTok(c.sal)+(c.declarado?' · el parte ya es una estimación sin medidor':'')+' · consumo_reportar no declara tokens por misión';
+function filaMisionesPeriodo(r){
+  if(!r.list.length) return '<div class="vacio">sin misiones '+esc(PER[PERIODO].l)+'</div>';
+  const mc=MIS.get(r.k), byId=new Map(); if(mc&&mc.list) for(const m of mc.list) byId.set(m.id,m);
+  const costes=costeMisiones(r);
+  const filas=ordenaMis(r.list.map(m=>Object.assign({},m,{__tok:costes.has(m.id)?costes.get(m.id).tok:-1}))).map((m,i)=>{const st=String(m.status||"").toLowerCase(), x=byId.get(m.id), img=x&&x.proof_image, ini=+m.started_at||+m.at||0, fin=+m.finished_at||0, c=costes.get(m.id);
+    return '<tr><td>'+(i+1)+'</td><td class="id"><a href="/misiones#'+encodeURIComponent(m.id||"")+'">'+esc(m.id||"?")+'</a></td><td class="sub" title="'+esc(m.subject||"")+'">'+esc(m.subject||"sin asunto")+'</td>'+
+      '<td class="num">'+(ini?hhmm(ini):"—")+'</td><td class="num">'+(fin?hhmm(fin):"—")+'</td><td class="num">'+dur(ini,fin)+'</td><td class="num">'+((+m.points||0)+(+m.race_bonus_points||0))+'</td>'+
+      '<td class="num">'+(c?'<span class="est" title="'+esc(costeTitulo(c))+'">≈ '+fmtTok(c.tok)+'</span>':'<span class="nc" title="sin parte diario del agente o periodo sin parte: no se estima">—</span>')+'</td>'+
+      '<td class="st '+esc(st)+'">'+esc(st||"?")+'</td><td>'+(img?'<a href="'+esc(img)+'" target="_blank" rel="noopener" title="evidencia"><img src="'+esc(img)+'" alt="" loading="lazy"></a>':(x?'<span class="noimg" title="misión sin captura: información incompleta">📷</span>':'<span class="nc" title="evidencia no comprobada en este periodo">·</span>'))+'</td></tr>';}).join("");
+  return '<table class="sub"><thead><tr><th>#</th>'+thd("id","misión")+thd("sub","asunto")+thd("ini","inicio",1)+thd("fin","fin",1)+thd("dur","duración",1)+thd("pts","puntos",1)+thd("tok","tokens ≈",1)+thd("st","estado")+thd("ev","📷")+'</tr></thead><tbody>'+filas+'</tbody></table>';
+}
+function cabeceraPeriodo(f){
+  const per=f.per, nAg=f.rows.filter(r=>r.n>0).length, nMs=f.ms?f.ms.length:null;
+  const txt=f.cargandoHist?'Cargando las misiones '+esc(per.l)+'…':(f.h&&f.h.err)?'No se pudieron leer las misiones '+esc(per.l)+' ('+esc(f.h.err)+').':'Los <b>'+nAg+'</b> agentes que han intervenido en las <b>'+nMs+'</b> misiones <em>'+esc(per.l)+'</em>';
+  const rango=f.h&&f.h.rango?(per.k==="hora"?'última hora · ':'')+f.h.rango.desde+(f.h.rango.hasta!==f.h.rango.desde?' → '+f.h.rango.hasta:'')+' · fuente Highscore'+((per.dias&&per.dias>1)?' · tokens '+f.consDias+' días':'')+(f.ocultos?' · '+f.ocultos+' con consumo y sin misión en la franja (no se listan)':''):'';
+  return '<div class="per">'+(STATS?'':'<button type="button" class="qabre" data-stats="1" title="volver a mostrar el gráfico y las listas">📊 estadísticas</button>')+'<div class="txt">'+txt+'</div>'+
+    '<div class="nav"><button type="button" data-per="-1" title="bajar a un periodo más corto" aria-label="periodo anterior"'+(PERIODO<=0?' disabled':'')+'>◀</button><span class="cur">'+esc(per.cur)+'</span><button type="button" data-per="1" title="subir a un periodo más largo" aria-label="periodo siguiente"'+(PERIODO>=PER.length-1?' disabled':'')+'>▶</button></div>'+
+    (rango?'<div class="rango">'+esc(rango)+'</div>':'')+'</div>';
+}
+function hojaHTML(f){
+  if(f.cargandoHist&&!f.rows.length) return '<div class="hoja"><div class="estado">cargando…</div></div>';
+  const cmap=RK.cmap, dia=RK.dia;
+  const filas=f.rows.map((r,i)=>{ const t=r.tok, oc=ocupado(r.owner,r.machine), ab=ABIERTOS.has(r.k), mc=MIS.has(r.k), ini=inicioHoy(r.owner,r.machine,dia), cj=esConsejero({owner:r.owner,machine:r.machine});
+    const pc=t&&t.entrada+t.cache>0?Math.round(100*t.cache/(t.entrada+t.cache)):null;
+    return '<tr class="f'+(ab?' abierto':'')+'" role="button" tabindex="0" aria-expanded="'+ab+'" data-owner="'+esc(r.owner)+'" data-machine="'+esc(r.machine)+'" data-k="'+esc(r.k)+'" title="'+esc(oc?'ocupado ('+oc.src+'): '+oc.tarea:(t&&t.foco||""))+'">'+
+      '<td>'+(i+1)+'</td>'+
+      '<td class="ag"><span class="fl">▶</span><i class="sw'+(oc?' ocupado':'')+'" style="background:'+(cmap.get(r.owner)||"var(--s0)")+'"></i>'+manoHTML(r.owner)+esc(r.owner)+(t&&t.foco?' <span title="'+esc(t.foco)+'">🔥</span>':'')+'</td>'+
+      '<td class="tipo'+(cj?' cj':'')+'">'+(cj?'consejero':'agente')+'</td>'+
+      '<td class="est'+(oc?' oc':'')+'" title="'+esc(oc?oc.src+': '+oc.tarea:'sin tarea en presencia, sin trabajo en curso en el Highscore y sin misión tocada en 10 min')+'">'+(oc?'● ocupado'+(/sin verificar/.test(oc.src)?' ?':''):'○ libre')+'</td>'+
+      '<td>'+capturaCelda(r.owner,r.machine)+'</td>'+
+      '<td class="num">'+r.n+'</td><td class="num">'+r.res+'</td><td class="num">'+r.pts+'</td>'+
+      (t?'<td class="num"'+(t.horario?' title="Δ entre el parte de las '+hhmm(t.desde)+' y el de las '+hhmm(t.hasta)+(t.parcial?' (primer parte del día: menos de una hora)':'')+'"':'')+'>'+(t.horario?'Δ ':'')+(t.est?'<span class="est" title="estimación declarada sin medidor local (consumo_reportar): no es una medida">≈ </span>':'')+fmtTok(t.total)+(t.parcial?' <small class="nd">parcial</small>':'')+'</td><td class="num pc">'+(f.tot>0?Math.round(100*t.total/f.tot):0)+' %</td><td class="num pc">'+(pc==null?'—':pc+' %')+'</td><td class="num">'+fmtTok(t.salida)+'</td><td class="num'+(t.dups?' foco':'')+'">'+(t.desp==null?'—':t.desp+(t.dups?' ·'+t.dups+'dup':''))+'</td>'
+        :f.horario?'<td class="num nd" colspan="5" title="sin serie de partes de la última hora (hacen falta partes cada 5 min: consumo-tokens-install.sh en su Mac, o consumo_reportar periódico)'+(r.tokDia?' · parte de hoy: '+fmtTok(r.tokDia.total)+' tokens':'')+'">sin serie horaria'+(r.tokDia?' · hoy '+fmtTok(r.tokDia.total):'')+'</td>'
+        :'<td class="num nd" colspan="5" title="sin parte de consumo en este periodo">sin parte de consumo</td>')+
+      '<td class="nd">'+(ini?hhmm(ini.t)+' <small>'+esc(ini.src.split(" ")[0])+'</small>':(mc?'sin hora':'…'))+'</td>'+
+      '</tr>'+
+      (ab?'<tr class="det"><td colspan="15"><div>'+filaMisionesPeriodo(r)+'</div></td></tr>':''); }).join("");
+  const err=(f.h&&f.h.err)?'<div class="estado err">misiones: '+esc(f.h.err)+'</div>':''; const errC=f.consErr?'<div class="estado err">tokens del periodo: '+esc(f.consErr)+'</div>':(f.cargandoCons?'<div class="estado">cargando tokens del periodo…</div>':'');
+  return '<div class="hoja">'+err+errC+'<table><thead><tr><th>#</th>'+th("agente","agente")+th("tipo","tipo")+th("estado","estado")+th("cap","📷")+th("n","misiones",1)+th("res","cerradas",1)+th("pts","puntos",1)+th("tokens","tokens",1)+th("pc","%",1)+th("cache","caché",1)+th("salida","salida",1)+th("desp","despert.",1)+th("ini","empezó hoy")+'</tr></thead><tbody>'+
+    (filas||'<tr><td colspan="15"><div class="estado">nadie '+esc(f.per.l)+'</div></td></tr>')+'</tbody></table></div>';
+}
+function filasRanking(){ const f=filasPeriodo(); if(!f) return ""; return cabeceraPeriodo(f)+hojaHTML(f); }
+// ESTADÍSTICAS POR PERIODO: el quesito, las listas y los indicadores siguen a la franja elegida
+// (hora, día, semana, mes, siempre), con los mismos activos y tokens que la cuadrícula.
+function pintaEstadisticas(f){
+  if(!RK) return; f=f||filasPeriodo(); if(!f) return;
+  const rowsG=filasGrupo(f.rows), totG=rowsG.reduce((s,r)=>s+(r.tok?r.tok.total:0),0);
+  const cmap=colorMap(rowsG.map(r=>r.owner)); RK.cmap=colorMap(f.rows.map(r=>r.owner));
+  const con=rowsG.filter(r=>r.tok);
+  let segs=con.map(r=>({k:r.k,nombre:r.owner,v:r.tok.total,color:cmap.get(r.owner)})).filter(g=>g.v>0);
+  if(segs.length>SLOTS){ const resto=segs.slice(SLOTS-1); segs=segs.slice(0,SLOTS-1).concat([{k:"otros",nombre:"otros ("+resto.length+")",v:resto.reduce((s,g)=>s+g.v,0),color:"var(--s0)"}]); }
+  const qs=$("qsvg"); if(qs) qs.innerHTML=f.sinMedida?quesitoSinMedida():quesito(segs,totG,f.horario?"Δ última hora":""); const qg=$("qgrupo"); if(qg) qg.innerHTML=grupoHTML();
+  f=Object.assign({},f,{tot:totG});
+  const ql=$("qlistas"); if(ql) ql.innerHTML=listasQueso(f);
+  const sum=k=>con.reduce((s,r)=>s+(+r.tok[k]||0),0);
+  const ent=sum("entrada"), cac=sum("cache"), sal=sum("salida"), pc=ent+cac>0?Math.round(100*cac/(ent+cac)):0;
+  const conDesp=con.filter(r=>r.tok.desp!=null), desp=conDesp.reduce((s,r)=>s+r.tok.desp,0), dups=con.reduce((s,r)=>s+(+r.tok.dups||0),0);
+  const diasTxt=f.diasPartes&&f.diasPartes.length>0&&f.per.dias?' · partes de '+f.diasPartes.length+(f.diasPartes.length===1?' día ('+f.diasPartes[0]+')':' días ('+f.diasPartes[0]+' → '+f.diasPartes[f.diasPartes.length-1]+')'):'';
+  const kpi=$("consKpi"); if(kpi) kpi.innerHTML=(f.sinMedida
+    ?'<span class="k warn" title="sin serie de partes en la última hora: hacen falta partes cada 5 min (consumo-tokens-install.sh en cada Mac)"><b>—</b>sin serie horaria · parte de hoy '+fmtTok(RK.tot)+(GRUPO!=="flota"?' ('+GRUPO+': '+fmtTok(rowsG.reduce((s,r)=>s+(r.tokDia?r.tokDia.total:0),0))+')':'')+'</span>'
+    :f.horario?'<span class="k" title="diferencia entre partes de la serie (cada 5 min) en los últimos 60 min"><b>Δ '+fmtTok(f.tot)+'</b>última hora'+(GRUPO!=="flota"?' · '+GRUPO:'')+' · '+con.length+' con serie</span>'
+    :'<span class="k" title="'+esc(f.per.k==="dia"?'parte del día':'acumulado de los partes del periodo'+diasTxt)+'"><b>'+(con.some(r=>r.tok.est)?'≈ ':'')+fmtTok(f.tot)+'</b>'+esc(f.per.cur)+(GRUPO!=="flota"?' · '+GRUPO:'')+' · '+con.length+' con parte'+esc(diasTxt)+'</span>')+
+    (f.sinMedida?'<span class="k"><b>—</b>caché</span><span class="k"><b>—</b>salida</span><span class="k"><b>—</b>despertares</span>':f.horario?'<span class="k'+(pc<80?' warn':' good')+'"><b>'+pc+' %</b>caché</span><span class="k"><b>Δ '+fmtTok(sal)+'</b>salida</span><span class="k"><b>—</b>despertares</span>':
+    '<span class="k'+(pc<80?' warn':' good')+'"><b>'+pc+' %</b>caché</span>'+
+    '<span class="k"><b>'+fmtTok(sal)+'</b>salida</span>'+
+    '<span class="k'+(dups>0?' warn':'')+'"><b>'+(conDesp.length?desp:"—")+'</b>despertares'+(dups?' · '+dups+' dup':'')+'</span>')+
+    '<span class="k'+(RK.sinParte?' warn':' good')+'" title="laten hoy y no han declarado consumo"><b>'+(RK.sinParte||0)+'</b>vivos sin declarar</span>';
+  const cd=$("consDia"); if(cd) cd.textContent=(f.per.k==="dia"?(RK.dia===hoyISO()?"hoy · ":"último parte · ")+RK.dia:f.per.k==="hora"?(f.sinMedida?"última hora · sin serie de partes todavía":"última hora · Δ entre partes (cada 5 min) · "+RK.dia):f.h&&f.h.rango?f.per.cur+" · "+f.h.rango.desde+" → "+f.h.rango.hasta+diasTxt:f.per.cur);
+}
+function pintaRanking(){ const f=filasPeriodo(); const el=$("rk"); if(el&&RK&&f) el.innerHTML=cabeceraPeriodo(f)+hojaHTML(f); pintaEstadisticas(f); }
+async function cargaPeriodo(){
+  if(!RK) return; const per=PER[PERIODO];
+  const tareas=[cargaHist(per,RK.dia).then(()=>{ pintaRanking(); if(PERIODO<=1) precargaMisiones(); })]; if(per.dias&&per.dias>1) tareas.push(cargaConsP(per.dias).then(pintaRanking));
+  await Promise.all(tareas);
+}
+async function precargaMisiones(){
+  // Todos los que han declarado hoy (no solo el top del ranking): la hora de inicio y la bandera de
+  // captura las necesita cada fila. Se repinta según llega CADA respuesta, porque alguna tarda 20 s.
+  // De dos en dos y por orden del ranking: siete a la vez se atascan en el worker (D1) y tardan más que en fila.
+  if(!RK) return; const cola=RK.deHoy.map(p=>({owner:p.owner,machine:p.machine})), vistos=new Set(cola.map(p=>canonM(p.owner)));
+  const f=filasPeriodo(); if(f) for(const r of f.rows){ if(!vistos.has(r.k)){ vistos.add(r.k); cola.push({owner:r.owner,machine:r.machine}); } }
+  async function obrero(){ while(cola.length){ const p=cola.shift(), k=canonM(p.owner), c=MIS.get(k); if(c&&Date.now()-c.t<MIS_TTL) continue; await cargaMisiones(p.owner,p.machine,RK.dia); pintaRanking(); } }
+  await Promise.all([obrero(),obrero()]);
+}
+function renderConsumo(){
+  const box=$("consCuerpo"), kpi=$("consKpi"); const hoy=hoyISO();
+  if(!CONS){ kpi.innerHTML=""; box.innerHTML='<div class="nota">'+(CONS_ERR?'No se pudieron leer los partes de consumo ('+esc(CONS_ERR)+'). No hay datos suficientes para afirmar cuánto se ha gastado.':'Cargando partes de consumo…')+'</div>'; return; }
+  const partes=(CONS.partes||[]).filter(p=>p&&p.datos&&typeof p.datos==="object");
+  const dias=[...new Set(partes.map(p=>p.dia))].filter(Boolean).sort();
+  const dia=dias.includes(hoy)?hoy:(dias[dias.length-1]||hoy);
+  const vistos=new Set();
+  const deHoy=partes.filter(p=>p.dia===dia).sort((a,b)=>(+b.last_at||0)-(+a.last_at||0)).filter(p=>{const k=canonM(p.owner)+"|"+canonM(p.machine);if(vistos.has(k))return false;vistos.add(k);return true;}).sort((a,b)=>(+b.datos.total||0)-(+a.datos.total||0));
+  $("consDia").textContent=(dia===hoy?"hoy · ":"último parte · ")+dia;
+  const sum=k=>deHoy.reduce((s,p)=>s+(+p.datos[k]||0),0);
+  const tot=sum("total"), ent=sum("entrada"), cac=sum("cache"), sal=sum("salida"), desp=sum("despertares"), dups=sum("duplicados");
+  const pc=ent+cac>0?Math.round(100*cac/(ent+cac)):0;
+  // Quién late hoy (presencia) y no tiene parte del día: está disponible y no gasta. Las capas
+  // sub/infra gastan dentro de su principal. Si además no declara tarea, se marca «sin tarea».
+  const declarados=new Set(deHoy.map(p=>canonM(p.owner)));
+  const ini=new Date(dia+"T00:00:00").getTime()/1000, vivos=new Map();
+  for(const a of PRES){
+    if(!a||!(+a.updated>=ini)||!a.persona||!a.machine) continue;
+    if(/^(sub|infra)/i.test(String(a.persona))) continue;
+    const k=canonM(a.persona+a.machine), prev=vivos.get(k);
+    const e={persona:a.persona,machine:a.machine,runtime:a.runtime||"",tarea:String(a.task||"").trim(),updated:+a.updated||0};
+    if(!prev||(!prev.tarea&&e.tarea)||(e.updated>prev.updated&&!!e.tarea===!!prev.tarea)) vivos.set(k,e);
+  }
+  const sinParte=[...vivos.values()].filter(a=>!declarados.has(canonM(a.persona+a.machine))).sort((x,y)=>String(x.persona).localeCompare(String(y.persona)));
+  kpi.innerHTML=
+    '<span class="k"><b>'+fmtTok(tot)+'</b>flota · '+deHoy.length+' partes</span>'+
+    '<span class="k'+(pc<80?' warn':' good')+'"><b>'+pc+' %</b>caché</span>'+
+    '<span class="k"><b>'+fmtTok(sal)+'</b>salida</span>'+
+    '<span class="k'+(dups>0?' warn':'')+'"><b>'+desp+'</b>despertares'+(dups?' · '+dups+' dup':'')+'</span>'+
+    '<span class="k'+(sinParte.length?' warn':' good')+'" title="laten hoy y no han declarado consumo"><b>'+sinParte.length+'</b>vivos sin declarar</span>';
+  const chipsDisp=sinParte.length
+    ? sinParte.map(a=>{const oc=ocupado(a.persona,a.machine);return '<span class="chip" title="'+esc(a.runtime)+(a.tarea?' · '+esc(a.tarea):'')+'">'+(oc?'<i class="sw ocupado" style="background:var(--accent)"></i>':'')+esc(a.persona+a.machine)+(a.tarea?'':'<small>sin tarea</small>')+'</span>';}).join("")
+    : '<span class="chip ok">todos los que laten hoy han declarado</span>';
+  if(!deHoy.length){
+    box.innerHTML='<div class="nota">Nadie ha declarado consumo el '+esc(dia)+'. En cada Mac lo publica <b>consumo-tokens.py</b>; los consejeros de GrokBot, <b>consumo_reportar</b> del MCP.</div>'+
+      '<div class="col"><h3>Disponibles · laten y no gastan <b>'+sinParte.length+'</b></h3><div class="disp">'+chipsDisp+'</div><div class="sin">late hoy y no ha declarado: '+sinParte.length+'</div></div>';
+    return;
+  }
+  // Quesito: un segmento por agente/consejero; del noveno en adelante, «otros».
+  const cmap=colorMap(deHoy.map(p=>p.owner));
+  let segs=deHoy.map(p=>({k:canonM(p.owner),nombre:p.owner,v:+p.datos.total||0,color:cmap.get(p.owner)})).filter(g=>g.v>0);
+  if(segs.length>SLOTS){ const resto=segs.slice(SLOTS-1); segs=segs.slice(0,SLOTS-1).concat([{k:"otros",nombre:"otros ("+resto.length+")",v:resto.reduce((s,g)=>s+g.v,0),color:"var(--s0)"}]); }
+  // Ranking: los que más gastan, con barra proporcional al primero; cada fila se despliega con sus misiones del día.
+  const top=deHoy.slice(0,6), max=+top[0].datos.total||1;
+  RK={top,deHoy,cmap,tot,max,dia,sinParte:sinParte.length}; const rk=filasRanking();
+  const filas=deHoy.map(p=>{const d=p.datos, f=focoAhorro(d), modelos=d.modelos&&typeof d.modelos==="object"?Object.keys(d.modelos).join(", "):"";
+    return '<tr><td><span class="ag">'+esc(p.owner)+'</span><br><span class="rt">'+esc(d.runtime||"")+(modelos?' · '+esc(modelos):'')+'</span></td>'+
+      '<td class="num">'+fmtTok(d.total)+'</td><td class="num">'+pcCache(d)+' %</td><td class="num">'+fmtTok(d.salida)+'</td>'+
+      '<td class="num">'+(+d.llamadas||0)+'</td><td class="num">'+(+d.despertares||0)+((+d.duplicados||0)?' <span class="foco">('+(+d.duplicados)+' dup)</span>':'')+'</td>'+
+      '<td class="causa">'+(f?'<span class="foco">🔥 '+esc(f)+'</span><br>':'')+esc(d.causa||"sin causa declarada")+'</td>'+
+      '<td class="num" title="hora del parte">'+hhmm(+p.last_at||0)+'</td></tr>';}).join("");
+  const top7=(CONS.por_agente||[]).slice(0,6).map(a=>esc(a.owner)+" "+fmtTok(a.total_tokens)).join(" · ");
+  box.innerHTML=
+    '<div class="cuerpo'+(STATS?'':' sinq')+'">'+
+      '<div class="queso" id="queso"><button type="button" class="qx" data-stats="0" title="cerrar las estadísticas para ganar espacio en la cuadrícula" aria-label="cerrar estadísticas">✕</button><div id="qgrupo">'+grupoHTML()+'</div><div id="qsvg">'+quesito(segs,tot)+'</div><div id="qlistas"></div></div>'+
+      '<div class="divisor" id="divisor" role="separator" aria-orientation="vertical" aria-label="ancho del gráfico (arrastra; doble clic para restaurar)" tabindex="0"></div>'+
+      '<div class="lado">'+
+        '<div class="col"><div class="rk" id="rk">'+rk+'</div></div>'+
+        '<div class="col"><h3>Disponibles · laten y no gastan <b>'+sinParte.length+'</b></h3><div class="disp">'+chipsDisp+'</div>'+
+          '<div class="sin">late hoy y no ha declarado: '+sinParte.length+' · vivos hoy: '+vivos.size+'</div></div>'+
+      '</div>'+
+    '</div>'+
+    '<details><summary>Detalle de los partes · causa y foco de ahorro ›</summary>'+
+      '<div class="tw"><table><thead><tr><th>agente · runtime</th><th class="num">total</th><th class="num">caché</th><th class="num">salida</th><th class="num">llamadas</th><th class="num">despertares</th><th>causa y foco de ahorro</th><th class="num">parte</th></tr></thead><tbody>'+filas+'</tbody></table></div>'+
+      (top7?'<div class="nota"><b>'+(CONS.dias||7)+' días</b> · '+top7+'</div>':'')+
+    '</details>';
+  pintaEstadisticas(); precargaMisiones(); cargaPeriodo(); montaDivisor();
+  box.addEventListener("click",e=>{ const g=e.target.closest("button[data-grupo]"); if(g){ GRUPO=g.dataset.grupo; try{ localStorage.setItem("yk-cons-grupo",GRUPO); }catch(err){} pintaRanking(); return; } const b=e.target.closest("[data-stats]"); if(!b) return; STATS=b.dataset.stats==="1"; box.querySelector(".cuerpo").classList.toggle("sinq",!STATS); pintaRanking(); });
+  // Al pasar por un segmento o su leyenda se resalta ese agente y el resto se atenúa.
+  const q=$("queso");
+  q.addEventListener("mouseover",e=>{const t=e.target.closest("[data-k]");if(!t)return;q.classList.add("hov");q.querySelectorAll(".arc").forEach(x=>x.classList.toggle("on",x.dataset.k===t.dataset.k));});
+  q.addEventListener("mouseleave",()=>{q.classList.remove("hov");q.querySelectorAll(".arc.on").forEach(x=>x.classList.remove("on"));});
+  // Pulsar un agente despliega (o pliega) sus misiones del día justo debajo.
+  const rkEl=$("rk");
+  async function toggleFila(r){ const k=canonM(r.dataset.owner); if(ABIERTOS.has(k)) ABIERTOS.delete(k); else ABIERTOS.add(k); pintaRanking(); if(ABIERTOS.has(k)&&PERIODO<=1){ await cargaMisiones(r.dataset.owner,r.dataset.machine,dia); pintaRanking(); } }
+  rkEl.addEventListener("click",e=>{ const a=e.target.closest("a"); if(a) return; if(e.target.closest(".rz")) return; const hd=e.target.closest("th[data-dsort]"); if(hd){ const k=hd.dataset.dsort; DSORT=DSORT.k===k?{k,dir:-DSORT.dir}:{k,dir:DSORT_DEF[k]||-1}; pintaRanking(); return; } const h=e.target.closest("th[data-sort]"); if(h){ const k=h.dataset.sort; SORT=SORT.k===k?{k,dir:-SORT.dir}:{k,dir:SORT_DEF[k]||-1}; pintaRanking(); return; } const b=e.target.closest("button[data-per]"); if(b){ PERIODO=Math.max(0,Math.min(PER.length-1,PERIODO+(+b.dataset.per))); pintaRanking(); cargaPeriodo(); return; } const r=e.target.closest("tr.f[data-owner]"); if(r) toggleFila(r); });
+  rkEl.addEventListener("keydown",e=>{ const r=e.target.closest("tr.f[data-owner]"); if(r&&(e.key==="Enter"||e.key===" ")){ e.preventDefault(); toggleFila(r); } });
+  // Asa de ancho en las cabeceras (cuadrícula y sub-cuadrícula): arrastrar fija el ancho de esa columna.
+  rkEl.addEventListener("pointerdown",e=>{ const z=e.target.closest(".rz"); if(!z) return; e.preventDefault(); e.stopPropagation(); const th=z.parentElement, key=z.dataset.rz, x0=e.clientX, w0=th.getBoundingClientRect().width; z.setPointerCapture(e.pointerId); z.classList.add("on");
+    const mueve=ev=>{ const w=Math.max(40,Math.min(900,Math.round(w0+(ev.clientX-x0)))); th.style.width=th.style.minWidth=th.style.maxWidth=w+"px"; COLW[key]=w; };
+    const suelta=()=>{ z.classList.remove("on"); guardaColw(); z.removeEventListener("pointermove",mueve); z.removeEventListener("pointerup",suelta); z.removeEventListener("pointercancel",suelta); };
+    z.addEventListener("pointermove",mueve); z.addEventListener("pointerup",suelta); z.addEventListener("pointercancel",suelta); });
+  rkEl.addEventListener("dblclick",e=>{ const z=e.target.closest(".rz"); if(!z) return; delete COLW[z.dataset.rz]; guardaColw(); pintaRanking(); });
+  // Pulsar un agente o consejero bajo el quesito muestra su última misión.
+  const qlEl=$("qlistas");
+  function toggleQ(r){ const k=r.dataset.k; QINFO=QINFO===k?"":k; pintaRanking(); if(QINFO===k&&!HIST.get("dia")) cargaHist(PER[1],dia).then(pintaRanking); }
+  qlEl.addEventListener("click",e=>{ if(e.target.closest("a")) return; const r=e.target.closest(".qr[data-k]"); if(r) toggleQ(r); });
+  qlEl.addEventListener("keydown",e=>{ const r=e.target.closest(".qr[data-k]"); if(r&&(e.key==="Enter"||e.key===" ")){ e.preventDefault(); toggleQ(r); } });
+}
+// ── Divisor arrastrable entre el quesito y la cuadrícula (el ancho se recuerda en este navegador).
+const QW_DEF=290, QW_MIN=170, QW_MAX=760;
+function qwGuardado(){ try{ const v=+localStorage.getItem("yk-cons-qw"); return v>=QW_MIN&&v<=QW_MAX?v:QW_DEF; }catch(e){ return QW_DEF; } }
+function montaDivisor(){
+  const cuerpo=$("consCuerpo").querySelector(".cuerpo"), d=$("divisor"); if(!cuerpo||!d) return;
+  const pon=w=>{ w=Math.max(QW_MIN,Math.min(QW_MAX,Math.round(w))); cuerpo.style.setProperty("--qw",w+"px"); try{ localStorage.setItem("yk-cons-qw",String(w)); }catch(e){} return w; };
+  cuerpo.style.setProperty("--qw",qwGuardado()+"px");
+  d.addEventListener("pointerdown",e=>{ e.preventDefault(); const x0=e.clientX, w0=cuerpo.querySelector(".queso").getBoundingClientRect().width; d.setPointerCapture(e.pointerId); d.classList.add("on"); cuerpo.classList.add("arrastre");
+    const mueve=ev=>pon(w0+(ev.clientX-x0)); const suelta=()=>{ d.classList.remove("on"); cuerpo.classList.remove("arrastre"); d.removeEventListener("pointermove",mueve); d.removeEventListener("pointerup",suelta); d.removeEventListener("pointercancel",suelta); };
+    d.addEventListener("pointermove",mueve); d.addEventListener("pointerup",suelta); d.addEventListener("pointercancel",suelta); });
+  d.addEventListener("dblclick",()=>pon(QW_DEF));
+  d.addEventListener("keydown",e=>{ const w=cuerpo.querySelector(".queso").getBoundingClientRect().width; if(e.key==="ArrowLeft"){ pon(w-20); e.preventDefault(); } if(e.key==="ArrowRight"){ pon(w+20); e.preventDefault(); } if(e.key==="Home"){ pon(QW_DEF); e.preventDefault(); } });
+}
+function pintaVivo(){
+  const el=$("consVivo"); if(!el||!CONS) return;
+  let ult=0; for(const p of (CONS.partes||[])) ult=Math.max(ult,+p.last_at||0); for(const pts of SERIE.values()) for(const q of pts) ult=Math.max(ult,+q.ts||0);
+  if(!ult){ el.textContent=""; return; }
+  const s=Math.max(0,Math.round((Date.now()-ult)/1000)), viejo=s>6*60;
+  el.className="vivo"+(viejo?" viejo":""); el.innerHTML='<i></i>'+(viejo?'último parte hace '+(s<3600?Math.round(s/60)+' min':Math.floor(s/3600)+' h')+' · sin latido de 5 min':'en vivo · último parte hace '+(s<90?s+' s':Math.round(s/60)+' min'));
+}
+setInterval(pintaVivo,1000);
+async function loadConsumo(){
+  try{
+    const r=await fetch(WORKER+"/fleet/consumo?dias=7",{cache:"no-store"});
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const d=await r.json(); if(!d||!d.ok||!Array.isArray(d.partes)) throw new Error("respuesta incompleta");
+    CONS=d; CONS_ERR="";
+    SERIE=new Map(); for(const [k,pts] of Object.entries(d.serie||{})){ if(!Array.isArray(pts)) continue; const key=canonM(String(k).split("|")[0]); SERIE.set(key,(SERIE.get(key)||[]).concat(pts).sort((a,b)=>(+a.ts)-(+b.ts))); }
+  }catch(e){ CONS_ERR=String(e&&e.message||e); }
+  try{ const r=await fetch(PRESENCIA,{cache:"no-store"}); const d=await r.json(); if(d&&Array.isArray(d.presence)) PRES=d.presence; }catch(e){}
+  await loadActivo();
+  renderConsumo(); pintaVivo();
+}
+
+async function load(){
+  try{
+    const r=await fetch(WORKER+"/fleet/notificaciones?todas=1",{cache:"no-store"});
+    if(!r.ok) throw new Error("HTTP "+r.status);
+    const d=await r.json();
+    if(!d||!d.ok||!(Number(d.generated_at)>0)||!d.summary) throw new Error("respuesta incompleta");
+    SERVER_NOW=Number(d.generated_at); SYNC_PERF=performance.now();
+    DATOS=(d&&d.notificaciones)||[];
+    RESUMEN=d.summary; HAS_SNAPSHOT=true; SNAPSHOT_STALE=false; $("loadError").hidden=true;
+  }catch(e){
+    const msg=HAS_SNAPSHOT?"No se pudo actualizar. Se mantiene la última lectura; las edades siguen avanzando con el reloj del servidor.":"No se pudieron cargar las notificaciones. No hay datos suficientes para afirmar que no existan avisos.";
+    $("loadErrorText").textContent=msg; $("loadError").hidden=false;
+    if(HAS_SNAPSHOT){ SNAPSHOT_STALE=true; render(); }
+    else $("lista").innerHTML='<div class="empty"><b>Estado no disponible</b>'+esc(msg)+'</div>';
+    return;
+  }
+  render();
+}
+
+$("filtros").addEventListener("click",e=>{
+  const b=e.target.closest(".tf[data-f]"); if(!b) return;
+  VISTA=b.dataset.f;
+  document.querySelectorAll("#filtros .tf[data-f]").forEach(x=>{const on=x===b;x.classList.toggle("on",on);x.setAttribute("aria-pressed",String(on));});
+  render();
+});
+$("lista").addEventListener("click",async e=>{
+  const im=e.target.closest("img[data-full]");
+  if(im){ LB_TRIGGER=im; $("lbImg").src=im.dataset.full; $("lb").style.display="flex"; $("lb").focus(); return; }
+  const b=e.target.closest("[data-cerrar]"); if(!b) return;
+  b.disabled=true; b.textContent="cerrando…";
+  try{
+    await fetch(WORKER+"/fleet/notificacion/cerrar",{method:"POST",headers:{"Content-Type":"application/json"},body:JSON.stringify({id:b.dataset.cerrar})});
+    await load();
+  }catch(e){ b.disabled=false; b.textContent="✓ ya está atendido"; }
+});
+function closeLightbox(){ $("lb").style.display="none"; if(LB_TRIGGER)LB_TRIGGER.focus(); }
+$("lista").addEventListener("keydown",e=>{const im=e.target.closest("img[data-full]");if(im&&(e.key==="Enter"||e.key===" ")){e.preventDefault();im.click();}});
+$("lb").addEventListener("click",closeLightbox);
+$("lb").addEventListener("keydown",e=>{if(e.key==="Escape")closeLightbox();});
+$("retryLoad").addEventListener("click",load);
+
+load(); setInterval(load,20000);
+loadConsumo(); setInterval(loadConsumo,60000);
+// ── Interruptores de escritura a Telegram (encargos #2717 y #2728 · FLT-100009 / FLT-100019) ──
+// DOS botones independientes, con nombre honesto: «Ágora → Telegram» corta lo que publica el worker
+// admira-telegram (bot-say, avisos, ventanas, diario); «Flota → Telegram» corta lo que escriben los
+// agentes por cliente propio (Morfeo, puente de White Rabbit, GrokBots del Consejo), que consultan
+// esa verja antes de llamar a api.telegram.org. Los flags viven en D1 del worker admira-telegram
+// (ajustes.telegram_auto_publish / ajustes.fleet_telegram_publish). OFF = se mide y se guarda, no se publica.
+const TG_TOGGLES={auto_publish:{id:"tgAuto",nombre:"Ágora → Telegram",onTitle:"Ágora publica en el grupo (bot-say, avisos, ventanas, diario). Pulsa para PARAR.",offTitle:"Ágora PARADA: el worker no publica nada en Telegram (se mide y se guarda). Pulsa para ACTIVAR."},
+  fleet_publish:{id:"tgFlota",nombre:"Flota → Telegram",onTitle:"Los agentes pueden escribir en Telegram por cliente propio (Morfeo, White Rabbit, GrokBots). Pulsa para PARAR.",offTitle:"Flota PARADA: ningún agente escribe en Telegram por su cuenta; sus programas consultan esta verja. Pulsa para ACTIVAR."}};
+function pintaTgAuto(d){
+  for(const [flag,cfg] of Object.entries(TG_TOGGLES)){
+    const b=$(cfg.id); if(!b) continue;
+    if(!d||!d.ok){ b.className="tgauto dud"; b.textContent=cfg.nombre+": ?"; b.title="No se pudo leer el interruptor"; continue; }
+    const on=!!d[flag]; b.dataset.on=on?"1":"0"; b.setAttribute("aria-pressed",on?"true":"false");
+    b.className="tgauto "+(on?"on":"off"); b.textContent=cfg.nombre+": "+(on?"ON":"OFF");
+    const por=flag==="auto_publish"?d.updated_by:d.fleet_updated_by, cuando=flag==="auto_publish"?d.updated_at:d.fleet_updated_at;
+    b.title=(on?cfg.onTitle:cfg.offTitle)+(por?" · último cambio: "+por+(cuando?" "+hhmm(_ms(cuando)):""):"")+(flag==="auto_publish"&&d.suppressed?" · mensajes suprimidos: "+d.suppressed:"");
+  }
+}
+async function loadTgAuto(){
+  try{ const r=await fetch(WORKER+"/fleet/telegram-auto",{cache:"no-store"}); pintaTgAuto(await r.json()); }catch(e){ pintaTgAuto(null); }
+}
+async function toggleTgAuto(flag){
+  const cfg=TG_TOGGLES[flag], b=$(cfg.id); if(!b) return; const on=b.dataset.on==="1";
+  if(!confirm(on?"¿PARAR «"+cfg.nombre+"»?\n"+cfg.offTitle.split(". Pulsa")[0]+".":"¿ACTIVAR «"+cfg.nombre+"»?")) return;
+  b.disabled=true;
+  try{
+    const r=await fetch(WORKER+"/fleet/telegram-auto",{method:"POST",credentials:"include",cache:"no-store",headers:{"content-type":"application/json"},body:JSON.stringify({[flag]:!on})});
+    const d=await r.json().catch(()=>({}));
+    if(r.status===401) alert("Hace falta la sesión de Google del perímetro para cambiar el interruptor.");
+    else if(!d.ok) alert("No se pudo cambiar: "+(d.error||r.status));
+    else pintaTgAuto(d);
+  }catch(e){ alert("Sin respuesta del worker."); }
+  finally{ b.disabled=false; }
+}
+$("tgAuto").addEventListener("click",()=>toggleTgAuto("auto_publish"));
+$("tgFlota").addEventListener("click",()=>toggleTgAuto("fleet_publish"));
+loadTgAuto(); setInterval(loadTgAuto,60000);
+</script>
+<script src="/yk-frame.js?v=r32"></script>
+</body>
+</html>

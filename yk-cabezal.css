@@ -1,0 +1,88 @@
+/* ═══════════════════════════════════════════════════════════════════════════
+   yk-cabezal.css — el CABEZAL COMPARTIDO de Yokup (Carlos, 2026-07-21)
+   Contadores por estado (KPIs) + día del tablero · fila de título + buscador ·
+   ALTA de misión de flota (con selector de agente/equipo, prioridad y adjuntos).
+   Extraído VERBATIM del <style> de misiones.html para que /tareas luzca y se
+   comporte con EL MISMO cabezal que /misiones sin divergir. El JS lo monta
+   yk-cabezal.js. Depende de los tokens de color (:root) de la página anfitriona.
+   ═══════════════════════════════════════════════════════════════════════════ */
+
+/* Fila de título + buscador */
+.hrow{display:flex;align-items:center;gap:16px;flex-wrap:wrap;margin:4px 0 10px}
+.hrow h1{margin:0}
+.hrow #busca{flex:1 1 220px;max-width:460px}
+
+/* Contadores por ESTADO canónico + día del tablero */
+.kpis{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.kpi{font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;border:1px solid var(--line);border-radius:10px;padding:9px 13px;background:var(--card);color:var(--mut);display:flex;align-items:center;gap:8px}
+.kpi{cursor:pointer;font:inherit;transition:.18s}
+.kpi[data-f]:hover{border-color:var(--line2);color:var(--ink)}
+.kpi.on{border-color:var(--brand);background:rgba(120,243,255,.08);color:var(--brand)}
+.kpi b{font-size:16px;color:var(--ink)}.kpi.a b{color:var(--mut)}.kpi.b b{color:var(--accent)}.kpi.c b{color:var(--good)}.kpi.v b{color:var(--violet)}.kpi.d b{color:#ff8866}
+.kpi.kdate{color:var(--ink);color-scheme:dark;font-family:var(--mono)}
+.kpi.kview{cursor:pointer;font-size:14px;line-height:1;padding:0 11px}.kpi.kview:hover{border-color:var(--brand);color:var(--brand)}
+.kpi.kdate::-webkit-calendar-picker-indicator{cursor:pointer;filter:invert(.75) sepia(1) saturate(3) hue-rotate(150deg)}
+
+/* ALTA de misión de flota */
+.alta{display:flex;gap:8px;flex-wrap:wrap;align-items:center;margin-bottom:14px}
+.alta-field{position:relative;flex:1 1 320px;min-width:220px;background:var(--card);border:1px solid var(--line);border-radius:10px;transition:.2s}
+.alta-field:focus-within{border-color:var(--line2)}
+.alta-txt{width:100%;font-family:var(--sans);font-size:14px;color:var(--ink);background:transparent;border:0;border-radius:10px;padding:11px 46px 11px 13px;outline:none}
+.alta-txt::placeholder{color:var(--dim)}
+.alta-agente{font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--mut);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px 10px;cursor:pointer;max-width:280px}
+.alta-go{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:11px 15px;border-radius:10px;border:1px solid var(--brand);color:#02080d;background:var(--brand);cursor:pointer;transition:.2s}
+.alta-go:disabled{opacity:.5;cursor:wait}
+.alta-msg{flex-basis:100%;font-family:var(--mono);font-size:11px;letter-spacing:.05em;color:var(--dim);min-height:14px}
+.alta-msg.ok{color:var(--good)}.alta-msg.err{color:var(--warn)}
+/* ⚡ Prioridad: entrega la máquina destino a la IA aunque haya humanos. */
+.alta-pa{display:inline-flex;align-items:center;gap:6px;font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;color:var(--mut);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:11px 12px;cursor:pointer;user-select:none;transition:.2s;white-space:nowrap}
+.alta-pa:hover{border-color:var(--line2)}
+.alta-pa input{accent-color:var(--warn);width:14px;height:14px;cursor:pointer;margin:0}
+.alta-pa.on{color:var(--warn);border-color:var(--warn)}
+.alta-hint{flex-basis:100%;font-family:var(--mono);font-size:11px;line-height:1.5;letter-spacing:.03em;color:var(--warn);opacity:.92}
+/* 📎 Adjuntar imágenes a la misión (paste/drop/picker → R2). */
+.alta-adj{position:absolute;right:6px;top:50%;transform:translateY(-50%);display:grid;place-items:center;width:32px;height:32px;color:var(--mut);background:transparent;border:0;border-radius:8px;padding:0;cursor:pointer;transition:.2s;font-size:16px}
+.alta-adj:hover{color:var(--brand);background:rgba(120,243,255,.08)}
+.alta.yk-drag{outline:2px dashed var(--brand);outline-offset:4px;border-radius:12px}
+.yk-thumbs{flex-basis:100%;display:flex;gap:8px;flex-wrap:wrap;margin-top:2px}
+.yk-adj{position:relative;width:56px;height:56px;border-radius:9px;overflow:hidden;border:1px solid var(--line2);background:var(--card);display:flex;align-items:center;justify-content:center}
+.yk-adj img{width:100%;height:100%;object-fit:cover;display:block}
+.yk-adj.up{border-style:dashed}.yk-adj.err{border-color:var(--warn)}
+.yk-adj-sp{font-size:18px;animation:ykspin 1.4s linear infinite}
+@keyframes ykspin{to{transform:rotate(360deg)}}
+.yk-adj-x{position:absolute;top:2px;right:2px;width:18px;height:18px;line-height:16px;text-align:center;border-radius:50%;border:none;background:rgba(2,8,13,.82);color:var(--ink);font-size:13px;cursor:pointer;padding:0}
+.yk-adj-x:hover{background:var(--warn);color:#02080d}
+/* 🎯 Detección desde el texto del alta: a dónde irá la misión según lo escrito. */
+.alta-det{flex-basis:100%;font-family:var(--mono);font-size:11px;line-height:1.5;letter-spacing:.03em;color:var(--brand);opacity:.95;overflow-wrap:anywhere}
+.alta-det b{color:var(--accent)}
+
+/* Buscador */
+#busca{flex:1 1 170px;min-width:150px;font-family:var(--mono);font-size:11px;letter-spacing:.05em;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:8px 10px;outline:none}
+#busca:focus{border-color:var(--line2)}
+#busca::placeholder{color:var(--dim);text-transform:uppercase}
+
+/* Popover del selector de agente/equipo del alta (acordeón equipo→agentes) */
+.yk-picker{position:fixed;z-index:9999;min-width:214px;max-width:min(320px,calc(100vw - 16px));max-height:min(62vh,440px);overflow-y:auto;overflow-x:hidden;background:var(--card2);border:1px solid var(--line2);border-radius:12px;box-shadow:0 14px 44px rgba(0,0,0,.6),0 0 0 1px rgba(120,243,255,.08);padding:6px;font-family:var(--mono)}
+.yk-picker-hd{font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);padding:6px 8px 7px}
+.yk-picker-grp{font-size:9px;letter-spacing:.07em;text-transform:uppercase;color:var(--mut);padding:9px 8px 4px;margin-top:2px;border-top:1px solid var(--line)}
+.yk-pick-it{display:flex;align-items:center;gap:8px;width:100%;text-align:left;font-family:var(--mono);font-size:11.5px;color:var(--ink);background:transparent;border:0;border-radius:8px;padding:8px 9px;cursor:pointer;transition:.12s;white-space:nowrap;overflow:hidden}
+.yk-pick-it .lb{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.yk-pick-it:hover,.yk-pick-it:focus{background:rgba(120,243,255,.12);outline:none}
+.yk-pick-it.on{color:var(--brand)}
+.yk-pick-it .ck{color:var(--brand);font-size:11px;flex:none}
+.yk-pick-it .kg{color:var(--dim);margin-left:auto;font-size:10px;padding-left:10px;flex:none}
+.yk-pick-it.none{color:var(--dim)}
+.alta-agente .cv{color:var(--dim);font-size:9px}
+.yk-pick-agent{display:flex;align-items:center;gap:7px;width:100%;text-align:left;background:transparent;border:0;color:var(--ink);font-family:var(--mono);font-size:11.5px;padding:8px 9px;border-radius:8px;cursor:pointer;transition:.12s}
+.yk-pick-agent:hover,.yk-pick-agent:focus{background:rgba(120,243,255,.10);outline:none}
+.yk-pick-agent .cv{color:var(--dim);flex:none;font-size:9px;transition:.15s;width:10px;text-align:center}
+.yk-pick-agent.open .cv{transform:rotate(90deg)}
+.yk-pick-agent .kg{color:var(--dim);margin-left:auto;font-size:10px;flex:none}
+.yk-pick-agent .machine-state{margin-left:auto;color:var(--dim);font-size:9.5px;white-space:nowrap}
+.yk-pick-machines{display:none;padding-left:13px;margin:1px 0 4px;border-left:1px solid var(--line)}
+.yk-pick-machines.open{display:block}
+.yk-pick-machines .yk-pick-it{font-size:11px}
+.yk-pick-it.offline{opacity:.42;color:var(--mut)}
+.yk-pick-it.offline:hover,.yk-pick-it.offline:focus{opacity:.75}
+.yk-pick-it .agent-state{margin-left:auto;font-size:9.5px;color:var(--dim);white-space:nowrap}
+.yk-pick-it.online .agent-state{color:var(--good)}

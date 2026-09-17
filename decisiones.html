@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta name="yokup-espejo" content="origen www.yokup.com · commit 00ba695 · sincronizado 17.09.2026 18:56">
+<script src="/acceso-espejo.js?v=r1"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<script src="/yk-display-ref.js?v=1"></script>
+<title>Decisiones · Yokup</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#02080d">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/app/apple-touch-icon.png">
+<link rel="stylesheet" href="https://www.carlossilva.info/admira-design/tokens.css">
+<link rel="stylesheet" href="/yk-frame.css?v=r17">
+<link rel="stylesheet" href="/yk-informes-view.css?v=r3">
+<style>
+/* Sección DECISIONES: los relojes vivos permanecen arriba y el histórico se
+   presenta como una hoja operativa, una decisión por fila. */
+:root{--bg:#02080d;--card:#0a1620;--card2:#0d1c28;--ink:#dff8ff;--mut:#75aab9;--dim:#4d7a88;--brand:#78f3ff;--accent:#ffd866;--good:#88ffaa;--warn:#ff8866;--violet:#aa88ff;--line:rgba(120,243,255,.16);--line2:rgba(120,243,255,.30);--sans:var(--admira-font-sans,-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif);--mono:var(--admira-font-mono,ui-monospace,SFMono-Regular,"JetBrains Mono",Menlo,monospace)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;min-height:100vh;overflow-x:hidden}
+.wrap{max-width:1100px;margin:0 auto;padding:22px 24px 48px;min-width:0}
+h1{font-size:clamp(23px,3vw,31px);letter-spacing:-.02em;margin:4px 0 10px}
+.sub{color:var(--mut);font-size:14.5px;line-height:1.5;margin-bottom:16px}
+.sub b{color:var(--brand)}
+.kpis{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:18px}
+.kpi{font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;border:1px solid var(--line);border-radius:10px;padding:9px 13px;background:var(--card);color:var(--mut);display:flex;align-items:center;gap:8px;min-width:0}
+.kpi b{font-size:16px;color:var(--ink)}
+.kpi.a b{color:var(--accent)}.kpi.b b{color:var(--good)}.kpi.c b{color:var(--mut)}.kpi.d b{color:var(--violet)}
+/* Los chips son también FILTROS del histórico (pulsa para acotar; púlsalo de nuevo para ver todas). */
+.kpi[role=button]{cursor:pointer;transition:border-color .15s,background .15s,box-shadow .15s}
+.kpi[role=button]:hover{border-color:var(--line2)}
+.kpi[role=button]:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.kpi.active{border-color:var(--brand);background:var(--card2);box-shadow:inset 0 0 0 1px var(--brand)}
+.decision-controls{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin:-2px 0 18px}
+.decision-range{display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.decision-range-button,.decision-range-date{min-height:38px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--mut);font:700 10px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;padding:8px 12px;cursor:pointer}
+.decision-range-button:hover,.decision-range-button:focus-visible,.decision-range-date:focus-visible{border-color:var(--brand);color:var(--brand);outline:none}
+.decision-range-button[aria-pressed="true"]{border-color:var(--brand);background:var(--brand);color:var(--bg)}
+.decision-range-date{color:var(--ink);color-scheme:dark;text-transform:none}
+#decisionView{margin-left:auto}
+.foot{font-family:var(--mono);font-size:10.5px;line-height:1.6;color:var(--dim);margin-top:20px;padding-top:14px;border-top:1px solid var(--line)}
+.foot b{color:var(--mut)}
+.foot a{color:var(--brand)}
+@media(max-width:520px){
+  .wrap{padding:18px 14px 40px}
+  .kpis{gap:8px}
+  .kpi{font-size:10px;padding:8px 10px;flex:1 1 132px}
+  .decision-controls{align-items:stretch}.decision-range{width:100%}.decision-range-button{flex:1 1 auto}.decision-range-date{flex:1 1 150px}#decisionView{width:100%;margin-left:0}
+}
+/* intro plegable REUTILIZABLE — patrón .page-intro de /objetivos (plegado por
+   defecto, píldora «Qué es esto ›» junto al titular; más espacio para lo vivo). */
+.page-intro{margin:0}
+.page-intro>summary{list-style:none;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;cursor:pointer}
+.page-intro>summary::-webkit-details-marker{display:none}
+.page-intro>summary h1{margin:0}
+.page-intro .pi-toggle{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;font:600 10px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mut);border:1px solid var(--line);border-radius:999px;padding:6px 11px;transition:color .15s,border-color .15s}
+.page-intro>summary:hover .pi-toggle{color:var(--dim);border-color:var(--mut)}
+.page-intro .pi-chevron{font-size:13px;line-height:1;transition:transform .18s}
+.page-intro[open] .pi-chevron{transform:rotate(90deg)}
+.page-intro .pi-body{margin-top:10px;animation:pi-in .18s ease}
+@keyframes pi-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body data-yk-title="DECISIONES" data-yk-zone="app">
+<div id="yk-espejo-aviso" style="background:#0a1620;border-bottom:1px solid rgba(120,243,255,.30);color:#75aab9;font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;padding:8px 14px">Espejo en <b style="color:#78f3ff">admira.live</b> de Yokup · misma sesión y mismos datos de <code>api.yokup.com</code>. Si algo no cuadra con <a href="https://www.yokup.com" style="color:#78f3ff">el original</a>, es un fallo: dilo.</div>
+<div class="wrap">
+  <details class="page-intro">
+    <summary>
+      <h1>Decisiones</h1>
+      <span class="pi-toggle">Qué es esto <span class="pi-chevron">›</span></span>
+    </summary>
+    <div class="pi-body">
+      <p class="sub">Todas las ventanas de decisión de la flota en un solo sitio. Lo que proponen son <b>misiones</b> completas, no pasos de una misión — por eso viven aquí y no en <a href="/tareas" style="color:var(--brand)">/tareas</a>. Si el reloj llega a cero sin respuesta, el agente tira con la <b>recomendada (★)</b>.</p>
+    </div>
+  </details>
+
+  <div class="kpis">
+    <div class="kpi a"><b data-dec-count="pending">0</b> vivas</div>
+    <div class="kpi b"><b data-dec-count="decided">0</b> decididas</div>
+    <div class="kpi c"><b data-dec-count="expired">0</b> vencidas</div>
+    <div class="kpi d"><b data-dec-count="cancelled">0</b> canceladas</div>
+  </div>
+
+  <div class="decision-controls">
+    <div class="decision-range" id="decisionRange" role="group" aria-label="Periodo de decisiones">
+      <button type="button" class="decision-range-button" data-decision-range="today" aria-pressed="true">Hoy</button>
+      <button type="button" class="decision-range-button" data-decision-range="yesterday" aria-pressed="false">Ayer</button>
+      <button type="button" class="decision-range-button" data-decision-range="7days" aria-pressed="false">Últimos 7 días</button>
+      <button type="button" class="decision-range-button" data-decision-range="all" aria-pressed="false">Todas</button>
+      <input type="date" id="decisionDay" class="decision-range-date" title="Ver las decisiones de un día concreto" aria-label="Ver las decisiones de un día concreto">
+    </div>
+    <div id="decisionView"></div>
+  </div>
+
+  <!-- VIVAS: reloj corriendo y opciones pulsables (POST /decisions/<id>/choose) -->
+  <section class="decs" id="decs">
+    <div class="decs-hd">⏳ Relojes de decisión <span class="decs-n" id="decsN"></span></div>
+    <div class="decs-list" id="decsList" aria-live="polite"></div>
+  </section>
+
+  <!-- HISTÓRICO: decisiones cerradas agrupadas por la hora en que se abrieron. -->
+  <section class="decs hist" id="decsHist">
+    <div class="decs-hd">🗂 Decisiones por hora <span class="decs-n" id="decsHistN"></span></div>
+    <div class="decision-history-alt" id="decsHistAlt"></div>
+    <div class="decision-grid-scroll" tabindex="0" aria-label="Histórico de decisiones, desplazamiento horizontal">
+      <div class="decision-grid" id="decisionGrid" role="table" aria-label="Histórico de decisiones">
+        <div class="decision-grid-head" role="row">
+          <div role="columnheader" data-decision-col="agent">Agente / plataforma</div>
+          <div role="columnheader" data-decision-col="project">Proyecto</div>
+          <div role="columnheader" data-decision-col="decision">Decisión</div>
+          <div role="columnheader" data-decision-col="result">Resultado</div>
+          <div role="columnheader" data-decision-col="state">Estado</div>
+          <div role="columnheader" data-decision-col="time">Tiempo</div>
+        </div>
+        <div class="decision-grid-body" id="decsHistList"></div>
+      </div>
+    </div>
+    <p class="decs-note" id="decsHistNote"></p>
+  </section>
+
+  <div class="foot">Yokup · decisiones de toda la flota · datos de <b>yokup-rtc /decisions</b> · sello <b data-yk-deploy-version>versión pendiente</b></div>
+
+  <!-- EXPERTO (raíl inferior) -->
+  <div class="yk-expert-btns" data-yk-slot="bottom">
+    <button data-yk-fetch="/decisions">decisiones JSON</button>
+  </div>
+  <pre class="yk-expert-out" data-yk-slot="bottom">Pulsa «decisiones JSON» para volcar los datos crudos del worker.</pre>
+</div>
+
+<script src="/yk-agent-identity.js?v=1"></script>
+<script type="module" src="/avatar-widget.js?v=3"></script>
+<script src="/yk-avatar.js?v=r2"></script>
+<script src="/yk-frame.js?v=r31"></script>
+<script src="/yk-informes-view.js?v=r3"></script>
+<script src="/yk-decisions.js?v=decision-target-r1"></script>
+<script src="/yk-decisiones-grid.js?v=r1"></script>
+<script>
+var DECISIONS_APP=YkDecisions.mount({worker:"https://api.yokup.com", mode:"full"});
+var DECISIONS_VIEW=YkInformesView.mount(document.getElementById("decisionView"),{
+  storageKey:"yokup.decisiones.view.v1",
+  noun:"decisiones",
+  controls:"decsHist",
+  target:document.getElementById("decsHist"),
+  attribute:"data-decision-view",
+  onChange:function(view){DECISIONS_APP.setView(view);}
+});
+DECISIONS_APP.setView(DECISIONS_VIEW.getView());
+YkDecisionesGrid.mount(document.getElementById("decisionGrid"));
+</script>
+</body>
+</html>

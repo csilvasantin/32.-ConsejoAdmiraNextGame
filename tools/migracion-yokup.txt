@@ -9,7 +9,7 @@
 # añadir su línea aquí y relanzar tools/sync-yokup.sh — no hay más sitios que tocar.
 #
 # TODAS: la lista completa de páginas de la plataforma, para poder calcular las pendientes.
-TODAS = dashboard objetivos decisiones misiones tareas incidencias informes notificaciones equipo status asistencia app admira-live asignaciones normativa highscore
+TODAS = dashboard objetivos decisiones misiones tareas incidencias informes notificaciones equipo status asistencia app admira-live asignaciones normativa highscore consumos
 
 highscore | highscore.html highscoreDetail.html highscore-daily-record.js highscore-desktop-app.js highscore-race.js highscore-race-bonus.js highscore-work-clock.js highscore-runner-state.css highscore-detail.js highscore-detail-page.js yk-frame.css yk-frame.js yk-agent-identity.js yk-avatar.js img/highscore-podio-pixel.png img/highscore-podio-pixel.webp img/highscore-presite-decathlon.webp media/trackfield-1722.mp3
 
@@ -29,3 +29,27 @@ informes como informes-flota con puerta | informes.html yk-maquina.js yk-informe
 # de máquinas, orden y responsables de proyectos, notas), así que sin sesión no serviría de
 # nada. Se muda el 17-09-2026, cuando el worker empezó a aceptar la sesión desde admira.live.
 equipo con puerta | equipo.html yk-maquina.js yk-misiones.js yk-decisions.js avatar-widget.js app/apple-touch-icon.png
+
+# ── Tramo 3 · 17-09-2026 · MorfeoMacMini · MacMini · FLT-100549 (Carlos: «mover las funcionalidades de
+#    empresa como los consumos, highscore etc. a admira.live») ──────────────────────────────────────────
+
+# Consumos: tokens y hosting por proyecto. No estaba ni en TODAS, así que el menú del marco nunca
+# reescribía su enlace. Se lee entera SIN sesión (GET /fleet/consumo/proyectos y /hosting-map son
+# públicos) y en yokup tampoco lleva acceso.js: va sin puerta, como el Highscore. Su única escritura
+# (guardar el mapa de hosting) manda credentials:'include' ella sola: funciona si ya hay sesión de
+# Yokup abierta desde cualquier página con puerta, y si no, la página lo dice en vez de callar.
+consumos | consumos.html
+
+# Decisiones: las ventanas de decisión de la flota. GET/POST /decisions son públicos, pero en yokup va
+# detrás de acceso.js y el guion se lo quita a todas: lleva puerta para quedar igual que el original.
+decisiones con puerta | decisiones.html yk-decisiones-grid.js yk-display-ref.js yk-decisions.js yk-informes-view.js yk-informes-view.css yk-agent-identity.js yk-avatar.js avatar-widget.js app/apple-touch-icon.png
+
+# Tareas y Misiones: el tablero de trabajo. Las dos leen /tickets, que exige sesión de Yokup; Misiones
+# es además una CONSOLA (9 escrituras: estado, padre, empujón, sync). Llevan puerta. No se copian el
+# favicon ni los apple-touch-icon de la RAÍZ de yokup: marcarían admira.live con el icono de otra casa.
+tareas con puerta | tareas.html yk-adjuntos.js yk-cabezal.css yk-cabezal.js yk-display-ref.js yk-misiones.css yk-misiones.js yk-tareas-columns.js yk-tareas-sort.js yk-agent-identity.js yk-avatar.js avatar-widget.js img/admiranext-logo.svg app/apple-touch-icon.png
+misiones con puerta | misiones.html yk-adjuntos.js yk-cabezal.css yk-cabezal.js yk-display-ref.js yk-maquina.js yk-misiones.css yk-misiones.js yk-mission-duplicates.js yk-agent-identity.js avatar-widget.js img/admiranext-logo.svg
+
+# Notificaciones: bloqueos, consumo y avisos de la flota. Sólo carga el marco; cierra avisos y cambia el
+# automático de Telegram, así que lleva puerta.
+notificaciones con puerta | notificaciones.html app/apple-touch-icon.png

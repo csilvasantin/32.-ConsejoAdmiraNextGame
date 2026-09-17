@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 780 500" role="img" aria-labelledby="title desc">
+  <title id="title">Admira Next</title>
+  <desc id="desc">Admira Next wordmark with white Admira text and red, yellow, green and pink Next text on black.</desc>
+  <rect width="780" height="500" fill="#030409"/>
+  <g font-family="Arial Rounded MT Bold, Arial, Helvetica, sans-serif" font-weight="800">
+    <text x="28" y="205" font-size="118" letter-spacing="8" fill="#ffffff">ADMIRA</text>
+    <text x="28" y="388" font-size="178" letter-spacing="-2" fill="#ff2029">N</text>
+    <text x="190" y="388" font-size="178" letter-spacing="-9" fill="#fff400">e</text>
+    <text x="365" y="388" font-size="178" letter-spacing="-8" fill="#62d650">X</text>
+    <text x="570" y="388" font-size="178" letter-spacing="-8" fill="#ff00a8">T</text>
+  </g>
+</svg>

@@ -225,15 +225,15 @@
   var APP_NAV = [
     ["DASHBOARD",   "https://www.yokup.com/dashboard"],
     ["OBJETIVOS",   "https://www.yokup.com/objetivos"],
-    ["DECISIONES",  "https://www.yokup.com/decisiones"],
-    ["MISIONES",    "https://www.yokup.com/misiones"],
-    ["TAREAS",      "https://www.yokup.com/tareas"],
+    ["DECISIONES",  "/decisiones"],
+    ["MISIONES",    "/misiones"],
+    ["TAREAS",      "/tareas"],
     ["INCIDENCIAS", "https://www.yokup.com/incidencias"],
     ["SUPERVISOR",  "/supervisor"],
     ["INFORMES",    "/informes-flota"],
     // FLT-1020: un diálogo del sistema en cualquier equipo lo deja PARADO. Va en la
     // barra para que se vea desde cualquier página, no sólo si entras a buscarlo.
-    ["NOTIFICACIONES", "https://www.yokup.com/notificaciones"],
+    ["NOTIFICACIONES", "/notificaciones"],
     // FLT-1321 (Carlos, 2026-08-08): el Highscore es la foto de cómo va la flota y
     // sólo se alcanzaba desde el raíl AVANZADO, que hay que abrir para verlo. A la
     // derecha de NOTIFICACIONES y en todas las páginas de la plataforma.

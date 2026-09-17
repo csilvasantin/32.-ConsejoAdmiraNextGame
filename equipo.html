@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta name="yokup-espejo" content="origen www.yokup.com · commit fdb09ee · sincronizado 17.09.2026 13:04">
+<meta name="yokup-espejo" content="origen www.yokup.com · commit 00ba695 · sincronizado 17.09.2026 18:56">
 <script src="/acceso-espejo.js?v=r1"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
@@ -511,7 +511,7 @@ function tarjetaSil(a){
     (tags.length?'<div class="tags">'+tags.map(t=>"<span>"+esc(t)+"</span>").join("")+'</div>':"")+
     '<div class="mis"><span class="n">'+relojDe(a.name||a.id)+rotuloMisiones(enCurso(ms).length,pendientes(ms).length)+'</span>'+
       '<button data-ed="sil" data-id="'+esc(a.id)+'">✏️ editar</button>'+
-      '<a href="https://www.yokup.com/misiones">'+(ms.length?"ver misiones →":"asignarle una →")+'</a></div>'+
+      '<a href="/misiones">'+(ms.length?"ver misiones →":"asignarle una →")+'</a></div>'+
   '</div>';
 }
 
@@ -652,7 +652,7 @@ function tarjetaPro(p,i){
     '<div class="mis"><span class="n">'+rotuloMisiones(+p.missions||0,+p.missions_pending||0)+' · '+(+p.notes_count||0)+' notas</span>'+
       '<button data-notas="'+esc(p.id)+'">📝 seguimiento</button>'+
       '<button data-ed="pro" data-id="'+esc(p.id)+'">✏️ editar</button>'+
-      '<a href="https://www.yokup.com/misiones">ver misiones →</a></div>'+
+      '<a href="/misiones">ver misiones →</a></div>'+
   '</div>';
 }
 

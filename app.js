@@ -1087,19 +1087,7 @@
 
         if (!hackMode) {
             // === ACTIVATE HACK ===
-            // Gate de seguridad: el backend exige X-Council-Hack-Token (secreto server-only).
-            // Se pide una vez por navegador y se guarda en localStorage.
-            let hackTok = localStorage.getItem("council_hack_token") || "";
-            if (!hackTok) {
-                // Auto-login en máquinas de AgoraMatrix (tailnet) — sin preguntar.
-                hackTok = await fetchOperatorToken();
-                if (hackTok) localStorage.setItem("council_hack_token", hackTok);
-            }
-            if (!hackTok) {
-                hackTok = (prompt("Token de HACKEO (o pídelo por Telegram con /token a @Memorizer2Bot):") || "").trim();
-                if (!hackTok) return;  // cancelado
-                localStorage.setItem("council_hack_token", hackTok);
-            }
+            // FLT-100529: hack token injected by demo-server /hackeo proxy — no browser prompt.
             hackMode = true;
             btn.classList.add("active");
             btn.querySelector(".hack-dot").style.background = "#000";
@@ -1166,13 +1154,7 @@
                     paintHackeoStatus({ error: "no response" });
                 }
             } catch (e) {
-                // 403 → token de hackeo inválido: lo borramos para volver a pedirlo.
-                if (/\b403\b/.test(e.message || "")) {
-                    localStorage.removeItem("council_hack_token");
-                    paintHackeoStatus({ error: "token de hackeo inválido — vuelve a activar para reintroducirlo" });
-                } else {
-                    paintHackeoStatus({ error: e.message });
-                }
+                paintHackeoStatus({ error: e.message });
                 console.warn("HACK: council-api error", e.message);
             }
 
@@ -1198,34 +1180,24 @@
         }
     }
 
-    // Llama al backend (council-api.py) probando los URLs en orden.
-    // mode: "start" → /api/council/hackeo, "stop" → /api/council/hackeo/stop
+    // FLT-100529: proxy via demo-server /hackeo (injects X-Council-Hack-Token server-side).
+    // mode: "start" → /hackeo, "stop" → /hackeo/stop — never send hack token from browser.
     async function callCouncilHackeo(mode) {
-        const path = mode === "stop" ? "/api/council/hackeo/stop" : "/api/council/hackeo";
-        // Al lanzar, excluir ESTA máquina (no taparle la pantalla al operador).
+        const path = mode === "stop" ? "/hackeo/stop" : "/hackeo";
         if (mode !== "stop" && !MY_TAILNET_IP) { try { await fetchOperatorToken(); } catch(e){} }
-        const body = mode === "stop" ? "{}" : JSON.stringify({ exclude_ip: MY_TAILNET_IP || "" });
-        const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u => u !== activeApiUrl)) : COUNCIL_API_URLS.slice();
-        let lastErr = null;
-        for (const baseUrl of urls) {
-            try {
-                const res = await fetch(baseUrl + path, {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-Council-Token": COUNCIL_API_TOKEN,
-                        "X-Council-Hack-Token": localStorage.getItem("council_hack_token") || "",
-                    },
-                    body: body,
-                    signal: AbortSignal.timeout(20000),
-                });
-                if (!res.ok) { lastErr = "HTTP " + res.status; continue; }
-                return await res.json();
-            } catch (e) {
-                lastErr = e.message || String(e);
-            }
+        const body = mode === "stop" ? "{}" : JSON.stringify({ only_ids: [], exclude_ip: MY_TAILNET_IP || "" });
+        try {
+            const res = await fetch(HACK_API + path, {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: body,
+                signal: AbortSignal.timeout(20000),
+            });
+            if (!res.ok) throw new Error("HTTP " + res.status);
+            return await res.json();
+        } catch (e) {
+            throw new Error(e.message || String(e));
         }
-        throw new Error(lastErr || "all council-api urls failed");
     }
 
     // Pinta sobre cada panel del overlay un badge con el estado real

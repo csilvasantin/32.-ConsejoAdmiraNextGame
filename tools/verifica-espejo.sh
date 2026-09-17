@@ -18,7 +18,8 @@ fallos=0
 # Deshace las divergencias para poder comparar el fondo, no la forma:
 #  · el sello de release de cada casa (admiranext-version / yokup-espejo)
 #  · el aviso de espejo
-#  · el <script> del gate de yokup
+#  · el <script> de la puerta (acceso.js allí, acceso-espejo.js aquí: mismo login, flujo
+#    de ventana en vez de redirección)
 #  · los enlaces absolutos al original
 #  · el guardián de versión (/__yokup-gate ↔ /version.json)
 #  · los iconos: el gate de yokup inyecta los suyos en cada página y admira.live
@@ -33,7 +34,7 @@ normaliza() {
     -e 's#<meta name="yokup-espejo"[^>]*>##g' \
     -e '/id="yk-espejo-aviso"/d' \
     -e 's#<link[^>]*rel="(icon|apple-touch-icon)"[^>]*>##g' \
-    -e '/<script src="\/acceso\.js/d' \
+    -e '/<script src="\/acceso(-espejo)?\.js/d' \
     -e 's#https://www\.yokup\.com/#/#g' \
     -e 's#/version\.json\?frame=#/__yokup-gate?frame=#g' \
     -e 's#"/informes-flota"#"/informes"#g' \
@@ -76,6 +77,9 @@ compara "/asistencia"                   "asistencia"
 compara "/informes" "/informes-flota"   "informes → informes-flota"
 compara "/yk-informes-view.js"          "yk-informes-view.js"
 compara "/informe-pdf.js"               "informe-pdf.js"
+compara "/equipo"                       "equipo"
+compara "/yk-misiones.js"               "yk-misiones.js"
+compara "/yk-decisions.js"              "yk-decisions.js"
 
 # Y que los dos miran la MISMA fuente de datos, que es lo que hace que enseñen lo
 # mismo: el marcador del día sale del mismo worker para los dos orígenes.

@@ -3158,28 +3158,18 @@ function collapseAllToggle(){
   const HK_SEL=new Set();
   window.__HK_SEL=HK_SEL;
   async function callCouncilHackeo(mode){
-    const path = mode==="stop" ? "/api/council/hackeo/stop" : "/api/council/hackeo";
-    if(mode!=="stop" && !MY_TAILNET_IP){ try{ await fetchOperatorToken(); }catch(e){} }
-    // Sin autoexclusión: el hackeo toma TODAS las pantallas, incluida la de la
-    // máquina desde la que se lanza (decisión del operador). Antes se enviaba
-    // exclude_ip = MY_TAILNET_IP para no tapar el panel del que lo lanzaba.
-    // GRANULAR (Carlos, 2026-07-21): si hay equipos elegidos, se mandan como
-    // only_ids y el backend actúa SOLO sobre ellos. Si el backend fuese antiguo
-    // e ignorase el campo, el hackeo sigue yendo a todos — nunca falla por esto.
+    const HACK_API = "https://macmini.tail48b61c.ts.net/demo";
+    const path = mode==="stop" ? "/hackeo/stop" : "/hackeo";
     const only = Array.from(HK_SEL);
-    const body = mode==="stop" ? JSON.stringify({ only_ids: only })
-                               : JSON.stringify({ exclude_ip: "", only_ids: only });
-    const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u=>u!==activeApiUrl)) : COUNCIL_API_URLS.slice();
-    const headers = await hackAuthHeaders();
-    let lastErr=null;
-    for(const baseUrl of urls){
-      try{
-        const res=await fetch(baseUrl+path,{ method:"POST", headers:headers, body:body, signal:AbortSignal.timeout(20000) });
-        if(!res.ok){ lastErr="HTTP "+res.status; continue; }
-        activeApiUrl=baseUrl; return await res.json();
-      }catch(e){ lastErr=e.message||String(e); }
-    }
-    throw new Error(lastErr||"all council-api urls failed");
+    const body = JSON.stringify({ only_ids: only, exclude_ip: "" });
+    const res = await fetch(HACK_API + path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: body,
+      signal: AbortSignal.timeout(20000)
+    });
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    return await res.json();
   }
 
   function paintHackeoStatus(res){
@@ -3202,12 +3192,7 @@ function collapseAllToggle(){
 
   async function startHack(){
     if(hackMode) return;
-    // Auth automática: intenta traer el operator-token del Mini en silencio. Si no hay,
-    // no pasa nada — el hackeo se autoriza con la identidad de Google del gate (candado 🔒)
-    // en callCouncilHackeo(). NUNCA pedimos token a mano por prompt().
-    if(!localStorage.getItem("council_hack_token")){
-      try{ const tok=await fetchOperatorToken(); if(tok) localStorage.setItem("council_hack_token",tok); }catch(e){}
-    }
+    // Token de hackeo solo en demo-server. El navegador no pide ni guarda council_hack_token.
     hackMode=true;
     const overlay=document.getElementById("hack"), body=document.getElementById("hackBody");
     overlay.classList.add("visible"); lockView();
@@ -3225,11 +3210,7 @@ function collapseAllToggle(){
     });
     const sl=document.getElementById("hackStatusLine"); if(sl) sl.textContent="lanzando intrusion\u2026";
     try{ const res=await callCouncilHackeo("start"); paintHackeoStatus(res&&res.machines?res:{error:"no response"}); }
-    catch(e){
-      if(/\b403\b/.test(e.message||"")){
-        localStorage.removeItem("council_hack_token");
-        paintHackeoStatus({error:(typeof gateCred==='function'&&gateCred())?"sin permiso para hackeo (identidad no autorizada)":"inicia sesion con el candado \ud83d\udd12 para hackear"});
-      } else paintHackeoStatus({error:e.message}); }
+    catch(e){ paintHackeoStatus({error:e.message}); }
   }
 
   async function stopHack(){

@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Clear Channel × Yokup — mantenimiento de circuitos DOOH como servicio</title>
+<meta name="robots" content="noindex, nofollow">
+<!-- Edición Clear Channel · METAESTILO real de www.clearchannel.tv: admira-design tokens + skin cian-teal + maplibre -->
+<link rel="stylesheet" href="https://www.carlossilva.info/admira-design/tokens.css">
+<link href="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.css" rel="stylesheet">
+<script src="https://unpkg.com/maplibre-gl@5.6.0/dist/maplibre-gl.js"></script>
+<style>
+:root{
+  --bg:#02080d; --card:#0a1620; --card2:#0d1c28;
+  --ink:#dff8ff; --mut:#75aab9; --dim:#4d7a88;
+  --brand:#78f3ff; --accent:#ffd866; --good:#88ffaa; --warn:#ff8866; --mag:#ff6b9d;
+  --line:rgba(120,243,255,.16); --line2:rgba(120,243,255,.30);
+  --glow:0 0 30px rgba(120,243,255,.30);
+  --sans:var(--admira-font-sans,-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif);
+  --mono:var(--admira-font-mono,ui-monospace,SFMono-Regular,"JetBrains Mono",Menlo,Consolas,monospace);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.55;-webkit-font-smoothing:antialiased;overflow-x:hidden}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;z-index:0;
+  background:radial-gradient(900px 520px at 80% 2%,rgba(120,243,255,.10),transparent 60%),radial-gradient(700px 500px at 4% 70%,rgba(255,216,102,.05),transparent 60%)}
+.wrap{position:relative;z-index:2;max-width:1240px;margin:0 auto;padding:0 32px}
+section{position:relative;z-index:2}
+.mono{font-family:var(--mono);letter-spacing:.14em;text-transform:uppercase}
+.eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.2em;text-transform:uppercase;color:var(--brand)}
+h1,h2,h3{font-family:var(--sans);font-weight:700;letter-spacing:-.02em}
+h2{font-size:clamp(27px,3.5vw,42px);line-height:1.08;margin:12px 0 14px}
+.sub{color:var(--mut);font-size:16.5px;line-height:1.6;max-width:580px}
+
+nav{display:flex;align-items:center;justify-content:space-between;padding:20px 0;position:sticky;top:0;z-index:20;backdrop-filter:blur(10px);background:linear-gradient(180deg,rgba(2,8,13,.9),transparent)}
+.logo{font-family:var(--mono);font-weight:700;letter-spacing:.1em;font-size:16px;display:flex;align-items:center;gap:9px;text-transform:uppercase}
+.logo b{color:var(--brand)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--brand);box-shadow:var(--glow);animation:blink 2.2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.nav-links{display:flex;gap:26px}
+.nav-links a{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut);text-decoration:none;transition:.2s}
+.nav-links a:hover{color:var(--ink)}
+.btn{font-family:var(--mono);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;padding:10px 16px;border-radius:8px;border:1px solid var(--line2);color:var(--ink);background:rgba(10,22,32,.6);cursor:pointer;transition:.2s;text-decoration:none;display:inline-flex;align-items:center;justify-content:center;min-height:44px}
+.btn:hover{border-color:var(--brand);color:var(--brand)}
+.btn.solid{background:var(--accent);color:#1a1200;border-color:var(--accent);box-shadow:var(--admira-shadow-glow-amber,0 0 24px rgba(255,216,102,.4))}
+.btn.solid:hover{background:#ffe49a;color:#1a1200}
+/* ACCESO A PLATAFORMA — botón cian de la casa, mismo peso que ENTRAR o más */
+.nav-cta{display:flex;gap:10px;align-items:center}
+/* MENÚ MÓVIL — hamburguesa + cajón con los mismos enlaces (bajo 900px) */
+.nav-burger{display:none;font-family:var(--mono);font-size:15px;line-height:1;letter-spacing:0;padding:0;width:44px;min-height:44px;border-radius:8px;border:1px solid var(--line2);background:rgba(10,22,32,.6);color:var(--brand);cursor:pointer;align-items:center;justify-content:center;transition:.2s}
+.nav-burger:hover,.nav-burger[aria-expanded="true"]{border-color:var(--brand);box-shadow:0 0 18px rgba(120,243,255,.28)}
+.btn.access{background:var(--brand);color:#02222a;border-color:var(--brand);font-weight:700;box-shadow:0 0 26px rgba(120,243,255,.45)}
+.btn.access:hover{background:#a5f7ff;color:#02222a;border-color:#a5f7ff}
+@media(max-width:560px){.btn.access{padding:10px 12px}}
+
+.hero{display:grid;grid-template-columns:1.02fr 1fr;gap:44px;align-items:center;padding:44px 0 30px;min-height:72vh}
+.tag{display:inline-flex;align-items:center;gap:8px;font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--accent);border:1px solid rgba(255,216,102,.35);background:rgba(255,216,102,.05);padding:7px 12px;border-radius:999px;margin-bottom:22px}
+h1{font-size:clamp(34px,5vw,60px);line-height:1.04;margin-bottom:20px}
+h1 em{font-style:normal;color:var(--brand);position:relative}
+h1 em::after{content:"";position:absolute;left:0;right:0;bottom:3px;height:9px;background:rgba(120,243,255,.16);z-index:-1}
+.lead{font-size:17.5px;line-height:1.6;color:var(--mut);max-width:500px;margin-bottom:28px}
+.lead b{color:var(--ink);font-weight:600}
+.cta{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.cta .note{font-family:var(--mono);font-size:11px;letter-spacing:.08em;color:var(--dim);text-transform:uppercase}
+.trust{display:flex;gap:32px;margin-top:38px;padding-top:22px;border-top:1px solid var(--line)}
+.trust .n{font-family:var(--sans);font-weight:700;font-size:27px;letter-spacing:-.02em}
+.trust .n b{color:var(--brand)}
+.trust .l{font-family:var(--mono);font-size:10.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);margin-top:5px}
+
+/* maplibre panel */
+.mapcard{position:relative;border:1px solid var(--line2);border-radius:14px;overflow:hidden;background:var(--card);box-shadow:var(--admira-shadow-card,0 12px 32px rgba(0,0,0,.55))}
+.mlmap{height:360px;width:100%;background:#0a1620}
+.maplibregl-ctrl-attrib,.maplibregl-ctrl-logo{display:none!important}
+.map-ov-head{position:absolute;top:0;left:0;right:0;display:flex;align-items:center;justify-content:space-between;padding:13px 16px;background:linear-gradient(180deg,rgba(2,8,13,.85),transparent);z-index:5;pointer-events:none}
+.map-ov-head .t{font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;display:flex;align-items:center;gap:9px;color:var(--ink)}
+.live{font-family:var(--mono);font-size:10.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--brand);display:flex;align-items:center;gap:6px}
+.live i{width:6px;height:6px;border-radius:50%;background:var(--brand);animation:blink 1.4s infinite}
+.map-ov-foot{position:absolute;bottom:0;left:0;right:0;display:flex;gap:8px;padding:11px 14px;background:linear-gradient(0deg,rgba(2,8,13,.9),transparent);z-index:5;flex-wrap:wrap}
+.chip{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);border:1px solid var(--line);border-radius:8px;padding:6px 10px;display:flex;align-items:center;gap:7px;background:rgba(10,22,32,.75);backdrop-filter:blur(4px)}
+.chip i{width:7px;height:7px;border-radius:50%}
+.i-a{background:var(--good)}.i-b{background:var(--accent)}.i-c{background:var(--warn)}
+.chip b{color:var(--ink)}
+
+.sectors{padding:30px 0 4px;border-top:1px solid var(--line);margin-top:6px}
+.sectors .lab{font-family:var(--mono);font-size:11px;letter-spacing:.16em;text-transform:uppercase;color:var(--dim);text-align:center;margin-bottom:16px}
+.sectors .row{display:flex;gap:11px;flex-wrap:wrap;justify-content:center}
+.sectors .s{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);border:1px solid var(--line);border-radius:999px;padding:9px 15px;background:var(--card)}
+.sectors .s.key{color:var(--brand);border-color:var(--line2)}
+
+.band{padding:72px 0;border-top:1px solid var(--line)}
+.head-c{text-align:center;max-width:660px;margin:0 auto 40px}.head-c .sub{margin:0 auto}
+.steps{display:grid;grid-template-columns:repeat(3,1fr);gap:18px}
+.step{border:1px solid var(--line);border-radius:12px;padding:24px;background:var(--card);transition:.25s}
+.step:hover{border-color:var(--line2);transform:translateY(-3px)}
+.step .k{font-family:var(--mono);font-size:12px;letter-spacing:.1em;color:var(--brand)}
+.step h3{font-size:19px;margin:12px 0 8px}
+.step p{color:var(--mut);font-size:14px;line-height:1.55}
+.step .ico{width:40px;height:40px;border-radius:10px;border:1px solid var(--line);display:grid;place-items:center;font-size:19px;background:var(--card2)}
+.feat{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+.card{border:1px solid var(--line);border-radius:12px;padding:22px;background:var(--card);transition:.25s}
+.card:hover{border-color:var(--line2);background:var(--card2)}
+.card .ico{font-size:21px;margin-bottom:12px}.card h3{font-size:16px;margin-bottom:7px}.card p{color:var(--mut);font-size:13.5px;line-height:1.5}
+.card.big{grid-column:span 2;display:flex;gap:20px;align-items:center}.card.big .txt{flex:1}
+.split{display:grid;grid-template-columns:1fr 1fr;gap:42px;align-items:center}
+.mk{border:1px solid var(--line);border-radius:14px;background:var(--card);overflow:hidden}
+.mk .row{display:flex;align-items:center;gap:13px;padding:14px 17px;border-bottom:1px solid var(--line)}.mk .row:last-child{border-bottom:0}
+.mk .av{width:36px;height:36px;border-radius:9px;background:linear-gradient(135deg,rgba(120,243,255,.22),rgba(255,216,102,.14));display:grid;place-items:center;font-family:var(--mono);font-weight:700;font-size:13px;color:var(--brand)}
+.mk .who{flex:1}.mk .who b{font-size:14px}.mk .who span{display:block;color:var(--mut);font-size:12px;margin-top:2px}
+.mk .rate{font-family:var(--mono);font-size:12px;color:var(--accent)}
+.mk .go{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--brand);border:1px solid var(--line2);border-radius:7px;padding:6px 9px}
+.list{margin-top:18px;display:flex;flex-direction:column;gap:12px}
+.li{display:flex;gap:11px;align-items:flex-start}.li .c{color:var(--brand);font-family:var(--mono)}.li p{color:var(--mut);font-size:14px;line-height:1.5}.li b{color:var(--ink);font-weight:600}
+.twocol{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+.exp{border:1px solid var(--line);border-radius:12px;padding:22px;background:var(--card)}
+.exp h3{font-size:17px;display:flex;align-items:center;gap:9px;margin-bottom:11px}.exp p{color:var(--mut);font-size:14px;line-height:1.55}
+.exp .tags{display:flex;gap:7px;flex-wrap:wrap;margin-top:13px}.exp .tags span{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);border:1px solid var(--line);border-radius:7px;padding:5px 9px}
+.geo{display:flex;gap:11px;flex-wrap:wrap;justify-content:center}
+.geo .ct{font-family:var(--mono);font-size:12px;letter-spacing:.06em;text-transform:uppercase;color:var(--mut);border:1px solid var(--line);border-radius:999px;padding:10px 16px;background:var(--card)}
+.geo .ct.on{color:#02080d;background:var(--brand);border-color:var(--brand);box-shadow:var(--glow)}
+.geo .ct.soon{opacity:.55}
+.final{margin-top:18px;border:1px solid var(--line2);border-radius:18px;padding:56px 38px;text-align:center;background:radial-gradient(600px 300px at 50% 0%,rgba(120,243,255,.1),transparent 70%),var(--card)}
+.final h2{margin-bottom:9px}.final .cta{justify-content:center;margin-top:24px}
+.foot{padding:32px 0 44px;color:var(--dim);font-family:var(--mono);font-size:11px;letter-spacing:.06em;display:flex;justify-content:space-between;flex-wrap:wrap;gap:12px;border-top:1px solid var(--line);margin-top:64px;text-transform:uppercase}
+.foot b{color:var(--brand)}
+
+.rv{opacity:0;transform:translateY(18px);transition:opacity .8s cubic-bezier(.2,.7,.2,1),transform .8s cubic-bezier(.2,.7,.2,1)}
+.rv.in{opacity:1;transform:none}
+.rv.d1{transition-delay:.05s}.rv.d2{transition-delay:.13s}.rv.d3{transition-delay:.21s}.rv.d4{transition-delay:.29s}
+@media(max-width:900px){.hero{grid-template-columns:1fr;gap:28px}.steps,.feat,.twocol{grid-template-columns:1fr}.card.big{grid-column:span 1;flex-direction:column;align-items:flex-start}.split{grid-template-columns:1fr;gap:24px}.wrap{padding:0 20px}.band{padding:52px 0}.trust{gap:20px;flex-wrap:wrap}}
+/* Bajo 900px los enlaces pasan al cajón que abre la hamburguesa */
+@media(max-width:900px){
+  nav{flex-wrap:wrap;row-gap:10px}
+  .nav-burger{display:inline-flex}
+  .nav-burger{order:1;margin-left:auto}
+  .nav-cta{order:2;flex-wrap:wrap;justify-content:flex-end;gap:8px}
+  .nav-links{display:none;order:3;flex-basis:100%;width:100%;max-width:100%;flex-direction:column;gap:0;margin:2px 0 12px;border:1px solid var(--line2);border-radius:10px;background:rgba(10,22,32,.96);overflow:hidden}
+  .nav-links.open{display:flex}
+  .nav-links a{display:flex;align-items:center;min-height:48px;padding:12px 16px;font-size:11.5px;color:var(--ink);border-bottom:1px solid var(--line)}
+  .nav-links a:last-child{border-bottom:none}
+  .nav-links a:hover,.nav-links a:active{color:var(--brand);background:rgba(120,243,255,.06)}
+}
+@media(max-width:420px){
+  .btn.access{padding:10px 10px;font-size:10.5px}
+  .btn.solid{padding:10px 14px}
+}
+</style>
+  <link rel="manifest" href="/manifest.webmanifest"><link rel="apple-touch-icon" href="/app/apple-touch-icon.png"><meta name="theme-color" content="#02080d">
+</head>
+<body>
+<div class="wrap">
+  <nav>
+    <div class="logo"><span class="dot"></span>Yo<b>kup</b></div>
+    <button type="button" class="nav-burger" id="navBurger" aria-controls="navLinks" aria-expanded="false" aria-label="Menú">☰</button>
+    <div class="nav-links" id="navLinks"><a href="#plataforma">Plataforma</a><a href="#como">Agentes IoT</a><a href="#xaas">as a Service</a><a href="#equipo">Equipo</a><a href="/incidencias">Incidencias</a><a href="/asistencia">Asistencia</a><a href="/app">App</a></div>
+    <div class="nav-cta"><a href="/dashboard" class="btn access">⚡ Acceso a plataforma</a><a href="/entrar" class="btn solid">Entrar</a></div>
+  </nav>
+
+  <section class="hero">
+    <div>
+      <span class="tag rv in"><span class="dot" style="width:6px;height:6px;background:var(--accent);box-shadow:none"></span>Clear Channel × Yokup</span>
+      <h1 class="rv in d1">Todos tus circuitos,<br><em>siempre en emisión.</em></h1>
+      <p class="claim rv in d2" style="font-size:clamp(18px,2.2vw,24px);font-weight:600;color:var(--ink);margin-bottom:18px">Nosotros ponemos la tecnología. Tú pones la <b style="color:var(--accent)">magia</b>.</p>
+      <p class="lead rv in d3">Yokup opera y mantiene los circuitos DOOH de Clear Channel: cada pantalla, escaparate o quiosco es un <b>Xpacio conectado</b>. Agentes de IoT vigilan la emisión 24/7, detectan la caída, abren el parte y despachan al técnico — con <b>proof-of-play y SLA garantizados</b>, todo como servicio.</p>
+      <div class="cta rv in d3">
+        <a href="#demo" class="btn solid">Solicitar demo</a>
+        <a href="#plataforma" class="btn">Ver la plataforma</a>
+        <span class="note">Proof-of-play · SLA por circuito</span>
+      </div>
+      <div class="trust rv in d4">
+        <div><div class="n" data-count="109">0</div><div class="l">Superficies · circuito BCN</div></div>
+        <div><div class="n" data-count="4200">0</div><div class="l">Impresiones/día verificadas</div></div>
+        <div><div class="n">99.9<b>%</b></div><div class="l">Proof-of-play</div></div>
+      </div>
+    </div>
+
+    <div class="mapcard rv in d3" id="mapCard">
+      <div class="map-ov-head"><div class="t"><span class="dot" style="width:6px;height:6px"></span>Circuitos Clear Channel · Barcelona</div><div class="live"><i></i>en vivo · <span id="clock">--:--</span></div></div>
+      <div class="mlmap" id="map"></div>
+      <div class="map-ov-foot">
+        <div class="chip"><i class="i-a"></i>En emisión <b>100</b></div>
+        <div class="chip"><i class="i-b"></i>Técnico en ruta <b>6</b></div>
+        <div class="chip"><i class="i-c"></i>Incidencia <b>3</b></div>
+        <a class="chip" href="/intervencion?id=INT-BCN-214" style="text-decoration:none;color:var(--brand);border-color:var(--line2)">Ver ficha →</a>
+      </div>
+    </div>
+  </section>
+
+  <section class="sectors rv">
+    <div class="lab">Formatos DOOH bajo mantenimiento</div>
+    <div class="row">
+      <div class="s key">Vía pública &amp; mobiliario</div><div class="s key">Retail &amp; escaparate</div>
+      <div class="s">Metro &amp; transporte</div><div class="s">Malls &amp; córners</div><div class="s">Quioscos</div><div class="s">Vending</div>
+    </div>
+  </section>
+
+  <section class="band" id="como">
+    <div class="head-c rv"><div class="eyebrow">Agentes IoT</div><h2>De la caída a la emisión, sin que nadie llame.</h2><p class="sub">Yokup no solo lee tus pantallas: las <b style="color:var(--ink)">gobierna</b>. Agentes que vigilan la emisión y actúan, 24/7.</p></div>
+    <div class="steps">
+      <div class="step rv d1"><div class="ico">🔌</div><div class="k">01</div><h3>Conecta el circuito</h3><p>Cada pantalla, player y sensor del circuito DOOH entra en la plataforma con su gemelo digital.</p></div>
+      <div class="step rv d2"><div class="ico">🛰️</div><div class="k">02</div><h3>El agente detecta y decide</h3><p>Vigila la emisión y el proof-of-play; si una pantalla cae, diagnostica la causa y abre el parte al instante.</p></div>
+      <div class="step rv d3"><div class="ico">✅</div><div class="k">03</div><h3>Despacha y verifica</h3><p>Envía al técnico más cercano, sigue la reparación en vivo y confirma la vuelta a emisión. SLA por circuito, como servicio.</p></div>
+    </div>
+  </section>
+
+  <section class="band" id="plataforma">
+    <div class="rv" style="margin-bottom:32px"><div class="eyebrow">La plataforma</div><h2>Una capa agéntica sobre todo el circuito.</h2><p class="sub">Un producto, cinco módulos que hablan entre sí — y con cada pantalla.</p></div>
+    <div class="feat">
+      <div class="card rv d1"><div class="ico">🗺️</div><h3>Mapa de circuitos</h3><p>Todas las superficies geolocalizadas en una vista viva. Filtra por estado, zona, formato o incidencia.</p></div>
+      <div class="card rv d2"><div class="ico">🧠</div><h3>Agentes IoT</h3><p>Reglas + autonomía. Vigilan cada señal de emisión y actúan solos: reinician, avisan, abren parte.</p></div>
+      <div class="card rv d3"><div class="ico">📟</div><h3>Pantallas &amp; players</h3><p>Inventario, salud y telemetría de cada equipo del circuito. Gemelo digital e histórico completo.</p></div>
+      <div class="card big rv d1"><div class="ico" style="margin:0">🧰</div><div class="txt"><h3>Panel &amp; proof-of-play</h3><p>Cuadros de mando por circuito y por formato, SLA, verificación de emisión y facturación del servicio. El backoffice que ata todo el modelo XaaS.</p></div></div>
+      <div class="card rv d2"><div class="ico">🛒</div><h3>Red de técnicos</h3><p>Capacidad y partners verificados bajo demanda para desplegar y mantener el circuito.</p></div>
+    </div>
+  </section>
+
+  <section class="band" id="xaas">
+    <div class="split">
+      <div class="rv">
+        <div class="eyebrow">Everything as a Service</div><h2>Capacidad y servicio, bajo demanda.</h2>
+        <p class="sub">Cuando el mantenimiento supera a tu equipo, publica el trabajo y recibe partners verificados de la red Yokup — con su valoración, especialidad y disponibilidad. Misma trazabilidad en todo el circuito.</p>
+        <div class="list">
+          <div class="li"><span class="c">→</span><p><b>Sin CAPEX.</b> Hardware, conectividad y agentes como servicio; pagas por superficie activa.</p></div>
+          <div class="li"><span class="c">→</span><p><b>Verificados y valorados.</b> Cada partner con historial, skills y nota media real.</p></div>
+          <div class="li"><span class="c">→</span><p><b>Proof-of-play total.</b> Del sensor a la firma: telemetría, verificación de emisión, SLA y liquidación.</p></div>
+        </div>
+      </div>
+      <div class="mk rv d2">
+        <div class="row"><div class="av">JM</div><div class="who"><b>Javier M.</b><span>Pantalla LED · Madrid · 12 km</span></div><div class="rate">★ 4.9</div><div class="go">Asignar</div></div>
+        <div class="row"><div class="av">CO</div><div class="who"><b>Construcciones Oria</b><span>Instalación &amp; obra · Barcelona · disp.</span></div><div class="rate">★ 4.8</div><div class="go">Asignar</div></div>
+        <div class="row"><div class="av">DK</div><div class="who"><b>Dani K.</b><span>Redes &amp; players · Valencia · 3 activos</span></div><div class="rate">★ 5.0</div><div class="go">Asignar</div></div>
+        <div class="row"><div class="av">SP</div><div class="who"><b>Sofía P.</b><span>Retail &amp; escaparate · Bilbao · 8 km</span></div><div class="rate">★ 4.7</div><div class="go">Asignar</div></div>
+      </div>
+    </div>
+  </section>
+
+  <section class="band" id="equipo">
+    <div class="head-c rv"><div class="eyebrow">El equipo</div><h2>Años creando Xpacios. En retail y en obra.</h2><p class="sub">Detrás de la plataforma hay un equipo que ha diseñado, montado y operado espacios conectados. Esa experiencia de terreno es el motor de los agentes.</p></div>
+    <div class="twocol">
+      <div class="exp rv d1"><h3>🛍️ Retail</h3><p>Flagships, córners y franquicias conectadas: pantallas, aforo, climatización, accesos y señalización DOOH — orquestado desde un único panel.</p><div class="tags"><span>Flagships</span><span>Franquicias</span><span>DOOH</span><span>Aforo</span></div></div>
+      <div class="exp rv d2"><h3>🏗️ Construcción</h3><p>Obra instrumentada: sensórica estructural, seguridad, control de accesos y energía. El circuito empieza en la obra y sigue vivo cuando el espacio abre.</p><div class="tags"><span>Obra conectada</span><span>Sensórica</span><span>Seguridad</span><span>Energía</span></div></div>
+    </div>
+  </section>
+
+  <section class="band" id="global">
+    <div class="head-c rv"><div class="eyebrow">Alcance</div><h2>Todos los circuitos de Clear Channel.<br>Empezamos por Barcelona.</h2><p class="sub">El mismo modelo escala a todos los circuitos — vía pública, metro, retail, aeropuertos. Hoy, sobre el circuito real de Barcelona (109 superficies) — y expandiendo a nivel nacional.</p></div>
+    <div class="geo rv">
+      <div class="ct on">📍 Barcelona · en vivo</div><div class="ct soon">Madrid</div><div class="ct soon">Valencia</div><div class="ct soon">Sevilla</div><div class="ct soon">Bilbao</div><div class="ct soon">＋ circuito nacional</div>
+    </div>
+  </section>
+
+  <section id="demo" style="padding-top:24px">
+    <div class="final rv">
+      <div class="eyebrow">Empieza hoy</div><h2>Pon tus circuitos en modo agéntico.</h2>
+      <p class="sub" style="margin:0 auto">Vigilancia de emisión + agentes + red de técnicos, como servicio. Cero pantallas apagadas, proof-of-play garantizado.</p>
+      <div class="cta"><a href="#" class="btn solid">Solicitar demo</a><a href="#" class="btn">Hablar con el equipo</a></div>
+    </div>
+  </section>
+
+  <div class="foot">
+    <div class="logo" style="font-size:14px"><span class="dot" style="width:6px;height:6px"></span>Yo<b>kup</b></div>
+    <div>Clear Channel × Yokup · mantenimiento de circuitos DOOH como servicio · ecosistema Admira</div>
+  </div>
+</div>
+
+<script>
+// MENÚ MÓVIL — la hamburguesa abre y cierra el cajón de enlaces
+(function(){
+  var b=document.getElementById('navBurger'),m=document.getElementById('navLinks');
+  if(!b||!m)return;
+  function set(open){m.classList.toggle('open',open);b.setAttribute('aria-expanded',open?'true':'false');b.textContent=open?'✕':'☰';}
+  b.addEventListener('click',function(){set(!m.classList.contains('open'));});
+  m.addEventListener('click',function(e){if(e.target.tagName==='A')set(false);});
+  document.addEventListener('keydown',function(e){if(e.key==='Escape')set(false);});
+  addEventListener('resize',function(){if(innerWidth>900)set(false);});
+})();
+function tick(){var d=new Date();document.getElementById('clock').textContent=d.toTimeString().slice(0,5);}
+tick();setInterval(tick,10000);
+function runCounts(){document.querySelectorAll('[data-count]').forEach(function(el){if(el._d)return;el._d=1;var end=+el.dataset.count,cur=0,s=end/55;var id=setInterval(function(){cur+=s;if(cur>=end){cur=end;clearInterval(id);}el.textContent=Math.round(cur).toLocaleString('es-ES');},18);});}
+var io=new IntersectionObserver(function(es){es.forEach(function(e){if(e.isIntersecting){e.target.classList.add('in');if(e.target.querySelector('[data-count]')||e.target.hasAttribute('data-count'))runCounts();io.unobserve(e.target);}});},{threshold:.15});
+document.querySelectorAll('.rv:not(.in)').forEach(function(el){io.observe(el);});runCounts();
+
+// MAPA REAL — maplibre-gl (misma tecnología que clearchannel.tv)
+var BCN=[[2.208566, 41.456931], [2.204685, 41.454113], [2.206464, 41.455401], [2.140973, 41.419423], [2.16303, 41.405239], [2.158286, 41.402464], [2.149624, 41.375841], [2.170465, 41.375047], [2.145932, 41.389913], [2.176668, 41.376813], [2.174706, 41.379447], [2.189196, 41.418784], [2.188411, 41.407888], [2.083256, 41.363556], [2.099244, 41.359443], [2.157333, 41.400264], [2.203572, 41.424503], [2.18081, 41.39918], [2.174718, 41.416074], [2.161032, 41.374154], [2.140098, 41.412223], [2.140593, 41.379565], [2.126879, 41.403131], [2.205227, 41.405265], [2.189001, 41.403381], [2.153561, 41.398602], [2.151949, 41.39994], [2.159736, 41.396025], [2.173744, 41.3852], [2.17637, 41.385311], [2.178045, 41.386601], [2.165392, 41.389231], [2.188142, 41.416145], [2.172777, 41.388721], [2.163162, 41.385822], [2.136863, 41.410023], [2.168938, 41.389152], [2.144323, 41.392122], [2.183467, 41.385347], [2.189879, 41.43531], [2.125464, 41.391871], [2.163264, 41.378668], [2.162244, 41.377736], [2.17803, 41.392786], [2.155121, 41.376418], [2.117604, 41.392213], [2.145521, 41.393324], [2.160981, 41.378503], [2.17022, 41.385492], [2.133378, 41.375505], [2.15418, 41.382476], [2.167121, 41.390079], [2.118656, 41.375824], [2.149606, 41.406309], [2.193681, 41.413566], [2.086479, 41.364497], [2.205828, 41.402698], [2.221894, 41.440535], [2.216798, 41.433622], [2.170386, 41.385195], [2.144106, 41.38633], [2.164123, 41.376051], [2.151706, 41.390926], [2.173636, 41.40395], [2.17996, 41.407043], [2.126069, 41.390095], [2.12056, 41.38987], [2.155255, 41.409729], [2.189162, 41.379779], [2.212283, 41.450618], [2.210585, 41.45259], [2.118556, 41.375702], [2.146677, 41.377253], [2.20584, 41.423366], [2.15208, 41.36609], [2.142064, 41.381099], [2.187927, 41.385781], [2.156547, 41.392594], [2.151684, 41.383788], [2.194922, 41.405568], [2.119672, 41.374381], [2.119406, 41.374725], [2.191553, 41.386431], [2.183425, 41.399448], [2.082709, 41.360252], [2.083411, 41.374209], [2.173815, 41.380534], [2.197467, 41.415428], [2.196679, 41.414779], [2.18495, 41.422006], [2.18091, 41.420548], [2.198701, 41.411635], [2.1972, 41.412832], [2.20262, 41.399786], [2.199062, 41.404574], [2.203768, 41.398914], [2.2006, 41.40139], [2.21689, 41.437688], [2.225574, 41.438806], [2.135954, 41.375593], [2.1654, 41.3925], [2.1583, 41.4061], [2.1539, 41.4015], [2.168902, 41.3877], [2.181271, 41.383613], [2.189, 41.369], [2.182866, 41.375195], [2.149315, 41.376057], [2.198741, 41.441097]];
+function st(i){return i%17===5?'b':(i%34===11?'c':'a');}
+var COL={a:'#88ffaa',b:'#ffd866',c:'#ff8866'};
+try{
+  var map=new maplibregl.Map({container:'map',style:'https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json',center:[2.168,41.408],zoom:11.2,attributionControl:false,scrollZoom:false,dragRotate:false,pitchWithRotate:false});
+  map.on('load',function(){
+    var feats=BCN.map(function(p,i){return {type:'Feature',geometry:{type:'Point',coordinates:p},properties:{c:COL[st(i)]}};});
+    map.addSource('cc',{type:'geojson',data:{type:'FeatureCollection',features:feats}});
+    map.addLayer({id:'glow',type:'circle',source:'cc',paint:{'circle-radius':9,'circle-color':['get','c'],'circle-opacity':.18,'circle-blur':1}});
+    map.addLayer({id:'pts',type:'circle',source:'cc',paint:{'circle-radius':3.4,'circle-color':['get','c'],'circle-stroke-width':1,'circle-stroke-color':'rgba(2,8,13,.8)'}});
+    // pulso: variar radio del glow
+    var t=0;setInterval(function(){t+=.08;var r=8+Math.sin(t)*3;if(map.getLayer('glow'))map.setPaintProperty('glow','circle-radius',r);},60);
+  });
+}catch(e){document.getElementById('map').innerHTML='<div style="padding:24px;color:var(--mut);font-family:var(--mono);font-size:12px">Mapa Clear Channel · 109 superficies (Barcelona)</div>';}
+</script>
+</body>
+</html>

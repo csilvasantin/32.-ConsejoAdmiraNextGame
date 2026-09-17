@@ -1,0 +1,9 @@
+{
+  "origen": "https://www.yokup.com/highscore",
+  "origen_repo": "yokup/yokup-site",
+  "origen_commit": "da6ab28",
+  "sincronizado": "17.09.2026 09:06",
+  "fase": "1 · espejo de lectura en admira.live",
+  "sin_sesion": ["/tasks/all", "acciones de escritura del CLI y del control de agentes"],
+  "paginas_pendientes_de_migrar": "dashboard|objetivos|decisiones|misiones|tareas|incidencias|informes|notificaciones|equipo|status|asistencia|app|admira-live|asignaciones|normativa"
+}

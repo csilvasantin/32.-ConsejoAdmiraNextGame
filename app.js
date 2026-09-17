@@ -2112,7 +2112,7 @@
         '/admira.app', '/clearchannel.tv', '/pixeria.com', '/equipos', '/control',
         '/scumm', '/top', '/bocas', '/menu', '/agoramatrix', '/tareas', '/google',
         '/importar', '/nombres', '/tarea', '/diario', '/leyendas', '/coetaneos', '/agentes', '/comandos', '/sendto',
-        '/marcador', '/flota'
+        '/marcador', '/flota', '/highscore'
     ];
     (function setupCliAutocomplete() {
         const inp = document.getElementById('action-input');
@@ -2172,6 +2172,15 @@
             addUserEntry(text);
             window.open("/marcador.html", "_blank");
             setActionLine("\ud83c\udfc1 Abriendo el marcador de la flota\u2026");
+            return true;
+        }
+        // El Highscore entero (podio, ranking, carrera y detalle por agente) ya vive
+        // aqu\u00ed: /highscore es el espejo del de yokup.com, con los mismos datos en vivo
+        // de api.yokup.com. Se mira; lo que exige sesi\u00f3n de Yokup sigue en el original.
+        if (/^\/highscore$/i.test(text)) {
+            addUserEntry(text);
+            window.open("/highscore", "_blank");
+            setActionLine("\ud83c\udfc6 Abriendo el Highscore de la flota\u2026");
             return true;
         }
         // ── Generación del Consejo: /leyendas y /coetaneos ──

@@ -1,0 +1,22 @@
+/* Estado visual aislado del corredor histórico.
+   last_work no está de pie ni vuelve a competir: conserva una zancada real en
+   gris, inmóvil, para representar el último trabajo terminado sin sugerir que
+   el agente sigue avanzando. Este fichero se carga después del estilo base para
+   no acoplar el contrato de estado al layout compacto de las calles. */
+.refresh-race .refresh-lane[data-work-state="last_work"] .runner-standing,
+.refresh-race .refresh-lane[data-work-state="last_work"] .runner-pose-ready,
+.refresh-race .refresh-lane[data-work-state="last_work"] .runner-pose-set,
+.refresh-race .refresh-lane[data-work-state="last_work"] .runner-pose-go,
+.refresh-race .refresh-lane[data-work-state="last_work"] .runner-run-b,
+.refresh-race .refresh-lane[data-work-state="last_work"] .runner-run-c,
+.refresh-race .refresh-lane[data-work-state="last_work"] .runner-finish-win,
+.refresh-race .refresh-lane[data-work-state="last_work"] .runner-finish-lose {
+  display:none!important;
+  animation:none!important;
+}
+
+.refresh-race .refresh-lane[data-work-state="last_work"] .runner-run-a {
+  display:block!important;
+  animation:none!important;
+  opacity:1!important;
+}

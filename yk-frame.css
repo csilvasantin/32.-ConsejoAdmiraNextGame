@@ -1,0 +1,694 @@
+/* ============================================================================
+ * yk-frame.css — Marco CUADRÁTICO de AdmiraNeXT para el perímetro de seguridad
+ * de Yokup.  ·  yk-frame v3 (2026-07-12, canon precisado por Carlos)
+ *
+ * CANON v3:
+ *  · BARRA SUPERIOR REAL (.yk-bar): entidad propia del sitio, fixed top:0, ancho
+ *    completo, fondo sólido del tema terminal cian, borde inferior. Estructura:
+ *      [icono OPCIONES] · logotipo YO KUP (→ /) · rótulo de la página ·
+ *      referencias de la home (Plataforma · Agentes IoT · as a Service · Equipo ·
+ *      Incidencias · Asistencia · App) · FLOTA admira.tv + reloj ·
+ *      [icono AVANZADO] [icono EXPERTO]
+ *  · La barra NUNCA se mueve ni se tapa: z-index por encima de paneles.
+ *  · Los tres paneles OVERLAY nacen DESDE el borde inferior de la barra
+ *    (top: var(--yk-bar-h)) y NO encogen el contenido (flotan encima). La esquina
+ *    inferior derecha queda libre para la burbuja del avatar.
+ *  · El contenido recibe padding-top = alto de la barra (única excepción al
+ *    «no empujar»: padding constante, no dependiente de paneles).
+ *  · Los ICONOS viven DENTRO de la barra y NO se mueven: toggle + Escape, estado
+ *    encendido (relleno cian + aria-pressed) cuando su panel está abierto.
+ *
+ * Estética terminal oscuro / fósforo-cian / monospace de la casa (sci-fi
+ * 80s/90s). Los colores salen de las CSS vars de cada página, con fallback.
+ * ==========================================================================*/
+
+:root{
+  --yk-bar-h: 46px;        /* alto de la barra superior real */
+  --yk-rail-w: 300px;      /* ancho de paneles laterales */
+  --yk-rail-h: 240px;      /* alto del panel inferior */
+  --yk-avatar-safe: 132px; /* esquina inf-dcha reservada para la burbuja avatar */
+  --yk-z: 2147483000;      /* por debajo del gate de acceso.js, por encima de todo lo demás */
+  /* fallbacks por si la página no define los tokens */
+  --yk-bg: var(--card, #0a1620);
+  --yk-bg2: var(--bg, #02080d);
+  --yk-ink: var(--ink, #dff8ff);
+  --yk-mut: var(--mut, #75aab9);
+  --yk-dim: var(--dim, #4d7a88);
+  --yk-brand: var(--brand, #78f3ff);
+  /* azul vibrante: el escalón por encima del cian de marca. Marca «estás
+     encima de esto» en el menú y titula la tarjeta de detalle. Va en la paleta
+     y no en .yk-nav porque la tarjeta cuelga de <body>, fuera del menú. */
+  --yk-hi: #5fe0ff;
+  --yk-line: var(--line, rgba(120,243,255,.16));
+  --yk-line2: var(--line2, rgba(120,243,255,.30));
+  --yk-mono: var(--mono, ui-monospace, SFMono-Regular, "JetBrains Mono", Menlo, monospace);
+}
+
+/* El contenido baja bajo la barra: padding-top constante. Scoped a las páginas
+ * con marco (html.yk-framed) — vence al reset *{padding:0} de cada página. */
+html.yk-framed body{ padding-top: var(--yk-bar-h); }
+
+/* ============================ BARRA SUPERIOR ============================== */
+.yk-bar{
+  position: fixed; top:0; left:0; right:0;
+  height: var(--yk-bar-h);
+  z-index: calc(var(--yk-z) + 3);   /* SIEMPRE por encima de paneles y contenido */
+  display: flex; align-items: center; gap: 12px;
+  padding: 0 10px;
+  background: var(--yk-bg2);         /* fondo sólido del tema terminal */
+  border-bottom: 1px solid var(--yk-line2);
+  box-shadow: 0 2px 20px rgba(0,0,0,.55), inset 0 -1px 0 rgba(120,243,255,.05);
+  font-family: var(--yk-mono);
+  color: var(--yk-ink);
+}
+
+/* logotipo YO KUP — igual que la landing: puntito cian + YO KUP (enlace a /) */
+.yk-logo{
+  display: inline-flex; align-items: center; gap: 8px;
+  flex: 0 0 auto; text-decoration: none; white-space: nowrap;
+  font-weight: 700; letter-spacing: .14em; text-transform: uppercase; font-size: 14px;
+  color: var(--yk-ink);
+}
+.yk-logo b{ color: var(--yk-brand) }
+.yk-logo .yk-dot{
+  width: 8px; height: 8px; border-radius: 50%;
+  background: var(--yk-brand); box-shadow: 0 0 16px var(--yk-brand);
+  animation: yk-blink 2s infinite;
+}
+@keyframes yk-blink{ 0%,100%{ opacity:1 } 50%{ opacity:.3 } }
+
+/* rótulo de la página actual (SOPORTE / TICKET / …) */
+.yk-page{
+  flex: 0 0 auto; white-space: nowrap;
+  font-size: 10.5px; letter-spacing: .16em; text-transform: uppercase; font-weight: 700;
+  color: var(--yk-brand);
+  padding-left: 13px; border-left: 1px solid var(--yk-line);
+}
+
+/* referencias de la home — zona central compresible (scroll horizontal interno) */
+.yk-nav{
+  display: flex; align-items: center; gap: 15px;
+  /* blindaje: grupo compacto tras el rótulo SIEMPRE — un nav{} legacy de la
+     página (p.ej. justify-content:space-between) no puede esparcir el menú */
+  justify-content: flex-start !important;
+  flex: 1 1 auto; min-width: 0;
+  overflow-x: auto; padding: 4px 2px;
+  scrollbar-width: none; -ms-overflow-style: none;
+}
+.yk-nav::-webkit-scrollbar{ display: none }
+.yk-nav a{
+  display:inline-flex; flex-direction:column; align-items:center; justify-content:center;
+  min-height:32px;
+  font-size: 11px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--yk-mut); text-decoration: none; white-space: nowrap; transition: .15s;
+}
+.yk-nav a:hover{ color: var(--yk-ink) }
+.yk-nav a.on{ color: var(--yk-brand); font-weight: 700 }
+.yk-nav a[data-yk-open]{ cursor: pointer }
+/* CONTADOR «curso/pend» (2026-08-04): segunda línea centrada bajo el rótulo.
+   Vacío cuando no hay dato (:empty), para que una sección a cero conserve sólo
+   su nombre y no deje una cifra ni un hueco artificial. */
+/* El contador ya NO escribe cifras (Carlos, 2026-08-05): el hover da el detalle
+   y la luz del rótulo da la novedad. El span sigue existiendo porque sostiene la
+   alarma de NOTIFICACIONES, que conserva su rojo — sin número, pero visible: un
+   equipo parado no es una novedad más. Sin alarma no ocupa ni un píxel. */
+.yk-nav-c{ display:block; margin:0; min-height:0; font-size:9.5px;
+  line-height:0; text-align:center; font-weight:600; letter-spacing:.02em;
+  color:var(--yk-dim); font-variant-numeric:tabular-nums }
+.yk-nav a.on .yk-nav-c{ color:var(--yk-brand) }
+.yk-nav-c:empty{ display:none }
+/* INFORMES con deuda: hay misiones terminadas sin su parte. Ámbar, para que se
+   distinga de un contador normal sin gritar como una incidencia. */
+.yk-nav-c.yk-count-debe{ color:#ffb454 }
+.yk-nav a.on .yk-nav-c.yk-count-debe{ color:#ffb454 }
+/* NOTIFICACIONES: equipo parado esperando a un humano. Rojo y con latido — es lo
+   único de la barra que pide ir AHORA, así que se distingue de un contador. */
+/* Alarma sin cifra: un punto rojo con latido bajo el rótulo. */
+.yk-nav-c.yk-count-alarma, .yk-nav a.on .yk-nav-c.yk-count-alarma{
+  width:6px; height:6px; margin:3px auto 0; padding:0; line-height:0;
+  background:#ff5f56; border-radius:50%; box-shadow:0 0 7px #ff5f56;
+  animation:yk-alarma 1.6s ease-in-out infinite }
+.yk-nav a.yk-nuevo .yk-nav-c.yk-count-alarma{ background:#ff5f56 }
+@keyframes yk-alarma{ 0%,100%{ opacity:1 } 50%{ opacity:.55 } }
+@media (prefers-reduced-motion: reduce){ .yk-nav-c.yk-count-alarma{ animation:none } }
+
+/* ============ REFERENCIA LUMÍNICA DE LA BARRA (Carlos, 2026-08-05) =========
+ * La barra es el nexo de todos los proyectos: de un vistazo hay que ver DÓNDE
+ * está pasando algo, sin pulsar nada. Escalera de tres niveles de luz sobre el
+ * mismo cian del sistema — el ámbar (deuda) y el rojo (equipo parado) siguen
+ * reservados para lo suyo y no entran aquí:
+ *   apagado  .yk-mut   → sin novedad desde tu última visita
+ *   encendido .yk-brand + halo + pulso lento → HAY NOVEDAD
+ *   vibrante  --yk-hi  + halo fuerte → estás encima (y sale el detalle)
+ * ------------------------------------------------------------------------- */
+/* NOVEDAD: el rótulo se enciende. Es estado en reposo, así que pulsa despacio
+   para captarse por el rabillo del ojo sin competir con la alarma roja. */
+.yk-nav a.yk-nuevo{
+  color:var(--yk-brand);
+  text-shadow:0 0 10px rgba(120,243,255,.45);
+  animation:yk-nuevo 2.6s ease-in-out infinite;
+}
+.yk-nav a.yk-nuevo .yk-nav-c{ color:var(--yk-brand) }
+/* punto de novedad: marca la sección aunque su contador esté vacío */
+.yk-nav a.yk-nuevo::before{
+  content:""; position:absolute; top:2px; right:-5px;
+  width:5px; height:5px; border-radius:50%;
+  background:var(--yk-brand); box-shadow:0 0 6px var(--yk-brand);
+}
+.yk-nav a{ position:relative }
+@keyframes yk-nuevo{ 0%,100%{ opacity:1 } 50%{ opacity:.62 } }
+
+/* HOVER/FOCO: el azul vibrante. Pisa a .yk-nuevo (estás mirándolo ya) y para
+   el pulso — mientras lees el detalle nada se mueve. */
+.yk-nav a:hover, .yk-nav a:focus-visible,
+.yk-nav a.yk-nuevo:hover, .yk-nav a.yk-nuevo:focus-visible{
+  color:var(--yk-hi);
+  text-shadow:0 0 12px rgba(95,224,255,.65);
+  animation:none;
+}
+.yk-nav a:hover .yk-nav-c, .yk-nav a:focus-visible .yk-nav-c{ color:var(--yk-hi) }
+/* el contador de alarma conserva SIEMPRE su rojo: el hover no lo apaga */
+.yk-nav a:hover .yk-nav-c.yk-count-alarma{ color:#0b0f14 }
+.yk-nav a:hover .yk-nav-c.yk-count-debe{ color:#ffb454 }
+@media (prefers-reduced-motion: reduce){ .yk-nav a.yk-nuevo{ animation:none } }
+
+/* DETALLE AL VUELO: tarjeta bajo el rótulo. No navega, no pliega nada y no
+   empuja la barra — flota. Sin hover, ni existe. */
+.yk-navpop{
+  position:fixed; z-index:calc(var(--yk-z) + 4);
+  min-width:186px; max-width:300px;
+  padding:9px 11px 10px;
+  background:var(--yk-bg); border:1px solid var(--yk-line2); border-radius:8px;
+  box-shadow:0 10px 28px rgba(0,0,0,.55), 0 0 0 1px rgba(120,243,255,.06) inset;
+  font-family:var(--yk-mono); font-size:11px; line-height:1.45; color:var(--yk-ink);
+  opacity:0; transform:translateY(-4px); pointer-events:none;
+  transition:opacity .13s ease, transform .13s ease;
+}
+/* Submenú del HIGHSCORE (FLT-1426): hermano clicable del popover — misma caja,
+   pero sus filas son enlaces de verdad (Marcador + podio del día → Detalle). */
+.yk-submenu{
+  position:fixed; z-index:calc(var(--yk-z) + 4);
+  min-width:196px; max-width:320px;
+  padding:8px;
+  background:var(--yk-bg); border:1px solid var(--yk-line2); border-radius:8px;
+  box-shadow:0 10px 28px rgba(0,0,0,.55), 0 0 0 1px rgba(120,243,255,.06) inset;
+  font-family:var(--yk-mono); font-size:11.5px; line-height:1.45; color:var(--yk-ink);
+  opacity:0; transform:translateY(-4px); pointer-events:none;
+  transition:opacity .13s ease, transform .13s ease;
+}
+.yk-submenu.on{ opacity:1; transform:translateY(0); pointer-events:auto }
+.yk-submenu .yk-sub-h{
+  font-size:9.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--yk-hi); font-weight:700; margin:2px 3px 6px;
+}
+.yk-submenu a{
+  display:flex; justify-content:space-between; align-items:baseline; gap:14px;
+  padding:5px 8px; border-radius:6px; text-decoration:none; color:var(--yk-ink);
+}
+.yk-submenu a:hover, .yk-submenu a:focus-visible{
+  background:rgba(120,243,255,.10); outline:none; color:var(--yk-hi);
+}
+.yk-submenu a b{ font-weight:700; font-variant-numeric:tabular-nums; color:var(--yk-mut) }
+.yk-submenu .yk-sub-score.sube{ color:#88ffaa; text-shadow:0 0 8px rgba(136,255,170,.28) }
+.yk-submenu .yk-sub-score.baja{ color:#ff7f87; text-shadow:0 0 8px rgba(255,127,135,.25) }
+.yk-submenu .yk-sub-score.igual{ color:#ffd45e; text-shadow:0 0 8px rgba(255,212,94,.24) }
+.yk-submenu .yk-sub-espera{ padding:5px 8px; color:var(--yk-mut) }
+.yk-navpop.on{ opacity:1; transform:translateY(0) }
+.yk-navpop .yk-pop-h{
+  font-size:9.5px; letter-spacing:.1em; text-transform:uppercase;
+  color:var(--yk-hi); font-weight:700; margin-bottom:6px;
+}
+.yk-navpop .yk-pop-r{
+  display:flex; justify-content:space-between; gap:14px; padding:1.5px 0;
+  color:var(--yk-mut);
+}
+.yk-navpop .yk-pop-r b{ color:var(--yk-ink); font-weight:700; font-variant-numeric:tabular-nums }
+.yk-navpop .yk-pop-r.nuevo b{ color:var(--yk-brand) }
+.yk-navpop .yk-pop-r.debe b{ color:#ffb454 }
+.yk-navpop .yk-pop-r.alarma b{ color:#ff5f56 }
+.yk-navpop .yk-pop-n{
+  margin-top:7px; padding-top:6px; border-top:1px solid var(--yk-line);
+  color:var(--yk-brand); font-size:10px; font-weight:700;
+}
+.yk-navpop .yk-pop-f{ margin-top:6px; color:var(--yk-dim); font-size:9.5px; line-height:1.35 }
+/* móvil: la barra ya esconde .yk-nav, así que la tarjeta tampoco pinta nada */
+@media (max-width:520px){ .yk-navpop{ display:none } }
+.yk-nav-live{position:fixed!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+
+/* PESTAÑA CADUCA: producción ha publicado otra versión y esta pestaña sigue
+   ejecutando la suya. Los datos se refrescan solos, el código no — así que lo
+   que hay en pantalla puede estar pintado con lógica vieja. Ámbar, no rojo: no
+   es un equipo parado, es un aviso de que hay que recargar. Sale a la derecha,
+   junto a los iconos, y no desplaza el menú. */
+.yk-stale{
+  flex:0 0 auto; margin-left:8px; padding:5px 11px;
+  font-family:var(--yk-mono); font-size:10px; font-weight:800; letter-spacing:.08em;
+  color:#0b0f14; background:#ffb454; border:0; border-radius:999px; cursor:pointer;
+  white-space:nowrap; animation:yk-stale 2.2s ease-in-out infinite;
+}
+.yk-stale:hover{ background:#ffc978 }
+.yk-stale:focus-visible{ outline:2px solid var(--yk-hi); outline-offset:2px }
+@keyframes yk-stale{ 0%,100%{ opacity:1 } 50%{ opacity:.7 } }
+@media (prefers-reduced-motion:reduce){ .yk-stale{ animation:none } }
+@media (max-width:520px){ .yk-stale{ font-size:0; padding:9px } .yk-stale span{ font-size:12px } }
+
+/* ===================== SELECTOR DE PROYECTO (desplegable) ================= */
+/* Absorbe el antiguo rótulo «FLOTA admira.tv»: el botón lee el proyecto activo
+ * y el menú (clic, no hover) permite saltar al otro proyecto. Estética terminal
+ * cian, hermana de los iconos cuadráticos de la barra. */
+.yk-proj{ position: relative; flex: 0 0 auto }
+.yk-proj-btn{
+  display: inline-flex; align-items: center; gap: 7px;
+  height: 32px; padding: 0 10px;
+  font-family: var(--yk-mono); font-size: 11px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--yk-ink); cursor: pointer; white-space: nowrap;
+  background: rgba(120,243,255,.05);
+  border: 1px solid var(--yk-line2); border-radius: 8px;
+  transition: background .15s, border-color .15s, box-shadow .15s;
+  user-select: none; -webkit-tap-highlight-color: transparent;
+}
+.yk-proj-btn:hover{
+  border-color: var(--yk-brand);
+  background: rgba(120,243,255,.12);
+  box-shadow: 0 0 14px rgba(120,243,255,.25);
+}
+.yk-proj-btn b{ color: var(--yk-brand); font-weight: 700 }
+.yk-proj-ic{ font-size: 13px; line-height: 1 }
+.yk-proj-dot{ width:6px; height:6px; flex:0 0 6px; border-radius:50%; background:#fff;
+  box-shadow:0 0 5px rgba(255,255,255,.55) }
+.yk-proj.has-new .yk-proj-dot{ animation:yk-project-new 1.15s ease-in-out infinite }
+@keyframes yk-project-new{
+  0%,100%{ opacity:1; box-shadow:0 0 5px rgba(255,255,255,.55) }
+  50%{ opacity:.28; box-shadow:0 0 13px #fff }
+}
+.yk-proj-cx{ color: var(--yk-mut); font-size: 10px; transition: transform .15s, color .15s }
+.yk-proj-nm .yk-pj-short{ display: none }
+.yk-proj.open .yk-proj-btn{
+  border-color: var(--yk-brand);
+  background: rgba(120,243,255,.12);
+  box-shadow: 0 0 16px rgba(120,243,255,.30);
+}
+.yk-proj.open .yk-proj-cx{ transform: rotate(180deg); color: var(--yk-brand) }
+
+/* menú desplegado bajo el botón (se abre por clic; JS conmuta .open) */
+.yk-proj-menu{
+  position: absolute; top: calc(100% + 8px); right: 0;
+  min-width: 232px; max-width: calc(100vw - 16px);
+  display: none; flex-direction: column; gap: 2px;
+  padding: 6px;
+  background: var(--yk-bg2);
+  border: 1px solid var(--yk-line2); border-radius: 10px;
+  box-shadow: 0 14px 36px rgba(0,0,0,.6), inset 0 0 30px rgba(120,243,255,.03);
+  z-index: calc(var(--yk-z) + 4);
+}
+.yk-proj.open .yk-proj-menu{ display: flex }
+.yk-proj-opt{
+  display: flex; align-items: center; gap: 10px;
+  padding: 9px 11px; border-radius: 8px; text-decoration: none;
+  border: 1px solid transparent; transition: .15s;
+  width:100%; background:transparent; color:var(--yk-ink); font:inherit; text-align:left; cursor:pointer;
+}
+.yk-proj-opt:hover{ background: rgba(120,243,255,.10); border-color: var(--yk-line2) }
+.yk-proj-opt .yk-proj-txt{ display: flex; flex:1; min-width:0; flex-direction: column; gap: 2px }
+.yk-proj-opt .yk-proj-txt b{ font-size: 12px; letter-spacing: .04em; color: var(--yk-ink); font-weight: 700 }
+.yk-proj-opt .yk-proj-txt em{
+  font-style: normal; font-size: 9.5px; letter-spacing: .08em; text-transform: uppercase;
+  color: var(--yk-mut);
+}
+.yk-proj-opt.on{ background: rgba(120,243,255,.08); border-color: var(--yk-line2) }
+.yk-proj-opt.on .yk-proj-txt b{ color: var(--yk-brand) }
+.yk-proj-new-badge{ flex:none; color:#02080d; background:#fff; border-radius:999px;
+  padding:3px 6px; font:800 8px/1 var(--yk-mono); letter-spacing:.08em }
+.yk-proj-opt:focus-visible{ outline: 2px solid var(--yk-brand); outline-offset: 1px }
+@media (prefers-reduced-motion:reduce){
+  .yk-proj.has-new .yk-proj-dot{ animation:none; box-shadow:0 0 10px #fff }
+}
+
+/* reloj (separador + hora) */
+.yk-meta{
+  flex: 0 0 auto; white-space: nowrap;
+  font-size: 10.5px; letter-spacing: .06em; text-transform: uppercase;
+  color: var(--yk-mut);
+}
+.yk-meta .yk-sep{ color: var(--yk-dim); margin: 0 4px 0 8px }
+.yk-clock{ color: var(--yk-ink) }
+
+/* ===================== ICONOS CUADRÁTICOS (en la barra) ================== */
+.yk-ico{
+  flex: 0 0 auto;
+  height: 32px; min-width: 32px; padding: 0 9px;
+  display: inline-flex; align-items: center; gap: 6px;
+  font-family: var(--yk-mono); cursor: pointer;
+  color: var(--yk-brand);
+  background: rgba(120,243,255,.05);
+  border: 1px solid var(--yk-line2);
+  border-radius: 8px;
+  transition: background .15s, border-color .15s, color .15s, box-shadow .15s;
+  user-select: none; -webkit-tap-highlight-color: transparent;
+}
+.yk-ico:hover{
+  border-color: var(--yk-brand);
+  background: rgba(120,243,255,.12);
+  box-shadow: 0 0 14px rgba(120,243,255,.25);
+}
+.yk-ico-gl{ font-size: 15px; line-height: 1 }
+/* estado ABIERTO: icono «encendido» (relleno) — NO se mueve */
+.yk-ico[aria-pressed="true"]{
+  color: var(--yk-bg2);
+  background: var(--yk-brand);
+  border-color: var(--yk-brand);
+  box-shadow: 0 0 16px rgba(120,243,255,.45);
+}
+
+/* =============================== PANELES ================================= */
+.yk-rail{
+  position: fixed;
+  z-index: var(--yk-z);   /* por debajo de la barra */
+  background: linear-gradient(180deg, var(--yk-bg), var(--yk-bg2));
+  border: 1px solid var(--yk-line2);
+  box-shadow: 0 0 40px rgba(0,0,0,.6), inset 0 0 40px rgba(120,243,255,.03);
+  transition: transform .28s cubic-bezier(.4,.0,.2,1);
+  overflow: auto;
+  font-family: var(--yk-mono);
+  color: var(--yk-ink);
+  scrollbar-width: thin;
+}
+.yk-rail::-webkit-scrollbar{ width:8px; height:8px }
+.yk-rail::-webkit-scrollbar-thumb{ background: var(--yk-line2); border-radius:8px }
+
+/* --- panel IZQUIERDO (OPCIONES) — nace bajo la barra --- */
+.yk-rail-left{
+  top: var(--yk-bar-h); bottom:0; left:0;
+  width: var(--yk-rail-w);
+  border-left: 0; border-top: 0; border-bottom: 0;
+  transform: translateX(-103%);
+  padding: 18px 14px 22px;
+}
+.yk-open-left .yk-rail-left{ transform: translateX(0) }
+
+/* --- panel DERECHO (AVANZADO) — nace bajo la barra --- */
+.yk-rail-right{
+  top: var(--yk-bar-h); bottom:0; right:0;
+  width: var(--yk-rail-w);
+  border-right: 0; border-top: 0; border-bottom: 0;
+  transform: translateX(103%);
+  padding: 18px 14px 22px;
+}
+.yk-open-right .yk-rail-right{ transform: translateX(0) }
+.yk-adv-nav{display:flex;flex-direction:column;gap:8px;margin-bottom:12px}
+.yk-adv-link{text-decoration:none}
+.yk-project-new{color:var(--yk-brand);border-color:var(--yk-brand)}
+.yk-project-modal{position:fixed;inset:0;z-index:calc(var(--yk-z) + 20);background:rgba(2,8,13,.78);display:grid;place-items:center;padding:18px}
+.yk-project-card{width:min(94vw,620px);max-height:calc(100vh - 36px);overflow:auto;background:var(--yk-card);border:1px solid var(--yk-line2);border-radius:12px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.yk-project-hd{display:flex;align-items:flex-start;justify-content:space-between;gap:14px;padding-bottom:12px;border-bottom:1px solid var(--yk-line)}
+.yk-project-hd b{color:var(--yk-brand);font-size:13px;letter-spacing:.12em}.yk-project-hd small{display:block;color:var(--yk-dim);font-size:9px;letter-spacing:.07em;margin-top:5px}
+.yk-project-x{border:0;background:transparent;color:var(--yk-dim);font-size:22px;line-height:1;cursor:pointer}
+.yk-project-field{display:flex;flex-direction:column;gap:6px;color:var(--yk-dim);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase}
+.yk-project-field :is(input,textarea){width:100%;background:#02080d;color:var(--yk-ink);border:1px solid var(--yk-line2);border-radius:8px;padding:9px;font:12px/1.4 var(--yk-mono)}
+.yk-project-field :is(input,textarea):focus{border-color:var(--yk-brand)}.yk-project-field textarea{min-height:66px;resize:vertical}
+.yk-project-actions{display:flex;align-items:center;gap:9px;border-top:1px solid var(--yk-line);padding-top:12px;flex-wrap:wrap}.yk-project-msg{flex:1;min-width:150px;color:var(--yk-dim);font-size:9.5px;letter-spacing:.05em}
+.yk-project-actions button{font:700 9.5px/1 var(--yk-mono);letter-spacing:.1em;padding:8px 11px;cursor:pointer;border:1px solid var(--yk-line2)}.yk-project-cancel{color:var(--yk-dim);background:transparent}.yk-project-save{color:#02080d;background:var(--yk-brand);border-color:var(--yk-brand)!important}.yk-project-save:disabled{opacity:.55;cursor:wait}
+
+/* --- panel INFERIOR (EXPERTO) — fondo y contenido de borde a borde. El avatar
+       no puede restar ancho al espacio operativo de la consola. --- */
+.yk-rail-bottom{
+  left:0; right:0; bottom:0;
+  height: var(--yk-rail-h);
+  border-left: 0; border-right: 0; border-bottom: 0;
+  transform: translateY(103%);
+  padding:14px 16px 16px;
+  display:flex;flex-direction:column;overflow:hidden;
+}
+.yk-open-bottom .yk-rail-bottom{ transform: translateY(0) }
+
+/* --- cabeceras de panel --- */
+.yk-hd{
+  font-size: 10.5px; letter-spacing:.14em; text-transform:uppercase;
+  color: var(--yk-brand); font-weight:700;
+  padding-bottom: 10px; margin-bottom: 12px;
+  border-bottom: 1px solid var(--yk-line);
+  display:flex; align-items:center; gap:8px;
+}
+.yk-hd::before{ content:""; width:7px; height:7px; border-radius:50%;
+  background: var(--yk-brand); box-shadow:0 0 10px var(--yk-brand) }
+.yk-expert-hd{min-width:0}
+.yk-expert-title{white-space:nowrap}
+.yk-expert-ver{margin-left:auto;text-align:right;white-space:nowrap;font-size:9px}
+
+/* Contenedores donde caen los nodos movidos: verticalizar y ocupar el ancho */
+.yk-slot{ display:flex; flex-direction:column; align-items:stretch; gap:8px }
+.yk-slot :is(button, a.simBtn, a.bellBtn, .tab, .btn){ width:100%; text-align:left }
+.yk-slot .tabs, .yk-slot .tools{ display:flex; flex-direction:column; gap:8px; width:100% }
+/* dentro del EXPERTO los botones van en fila, no apilados a full-width */
+.yk-expert > .yk-slot{ flex:1; min-height:0 }
+.yk-slot .yk-expert-btns button{ width:auto; text-align:center }
+.yk-empty{
+  font-size: 11px; letter-spacing:.06em; text-transform:uppercase;
+  color: var(--yk-dim); padding: 8px 2px; opacity:.8;
+}
+
+/* --- Panel EXPERTO --- */
+.yk-expert-resizer{position:relative;z-index:2;flex:0 0 12px;margin:-14px -16px 2px;cursor:ns-resize;touch-action:none;background:transparent}
+.yk-expert-resizer::after{content:"";position:absolute;left:50%;top:4px;width:min(160px,28vw);height:3px;border-radius:999px;transform:translateX(-50%);background:var(--yk-line2);box-shadow:0 0 8px rgba(120,243,255,.18)}
+.yk-expert-resizer:hover::after,.yk-expert-resizer:focus-visible::after,.yk-resizing-expert .yk-expert-resizer::after{background:var(--yk-brand);box-shadow:0 0 12px rgba(120,243,255,.55)}
+.yk-expert-resizer:focus-visible{outline:1px solid var(--yk-brand);outline-offset:-2px}
+.yk-resizing-expert{cursor:ns-resize;user-select:none}
+.yk-expert{ display:flex; flex:1; flex-direction:column; min-height:0; gap:10px }
+.yk-fleet{border:1px solid var(--yk-line);border-radius:9px;background:rgba(2,8,13,.42);padding:10px;min-width:0}
+.yk-fleet-head{display:flex;align-items:center;justify-content:space-between;gap:8px;color:var(--yk-brand);font:700 10px/1.2 var(--yk-mono);letter-spacing:.11em;text-transform:uppercase}
+.yk-fleet-head span{color:var(--yk-warn,#ffd45e);font-size:9px;white-space:nowrap}.yk-fleet-help,.yk-fleet-empty{color:var(--yk-dim);font:9px/1.45 var(--yk-mono);margin:8px 0 0}
+.yk-fleet-list,.yk-cli-list{display:flex;flex-direction:column;gap:6px;margin-top:9px;max-height:calc(100vh - 210px);overflow:auto}
+.yk-fleet-row{display:flex;align-items:center;gap:8px;border-top:1px solid var(--yk-line);padding-top:7px}.yk-fleet-copy{display:flex;flex:1;min-width:0;flex-direction:column;gap:3px}
+.yk-fleet-copy b{color:var(--yk-ink);font:700 10px/1.2 var(--yk-mono);overflow:hidden;text-overflow:ellipsis}.yk-fleet-copy small{color:var(--yk-dim);font:8.5px/1.2 var(--yk-mono)}
+.yk-slot .yk-fleet-action{width:auto;padding:6px 7px;border:1px solid var(--yk-line2);border-radius:6px;background:transparent;color:var(--yk-brand);font:700 8px/1 var(--yk-mono);cursor:pointer;text-align:center}
+.yk-slot .yk-fleet-action:disabled{opacity:.45;cursor:not-allowed}
+/* AVANZADO conserva el control DesktopAPP compacto que precedía al traslado de
+ * los CLIs: una cabecera plegable y, dentro, una barra plegable por máquina. */
+.yk-app-control{display:grid;gap:8px;padding:10px 0;border-bottom:1px solid var(--yk-line);min-width:0}
+.yk-slot .yk-app-head,.yk-slot .yk-app-machine{appearance:none;display:flex;align-items:center;gap:7px;width:100%;text-align:left;cursor:pointer;font-family:var(--yk-mono)}
+.yk-slot .yk-app-head{padding:0;border:0;background:transparent;color:var(--yk-brand);font-size:9px;font-weight:900;letter-spacing:.13em;text-transform:uppercase}
+.yk-app-head:hover,.yk-app-head:focus-visible{color:var(--yk-ink);outline:none}.yk-app-count{margin-left:auto;border:1px solid var(--yk-line2);border-radius:999px;padding:2px 7px;color:var(--yk-warn,#ffd45e);font-size:8px;letter-spacing:.03em;text-transform:none;white-space:nowrap}
+.yk-app-chevron{flex:0 0 auto;width:9px;color:var(--yk-brand);font:900 10px/1 var(--yk-mono)}.yk-app-chevron::before{content:"\25B8"}[aria-expanded="true"]>.yk-app-chevron::before{content:"\25BE"}
+.yk-app-body{display:grid;gap:8px}.yk-app-body[hidden],.yk-app-rows[hidden]{display:none}.yk-app-list{display:grid;gap:5px;max-height:min(58vh,520px);overflow:auto;padding-right:2px;scrollbar-width:thin}
+.yk-app-group{display:grid;min-width:0;margin:0;padding:0;border:0;gap:3px}.yk-slot .yk-app-machine{min-height:24px;padding:4px 7px;border:1px solid rgba(120,243,255,.24);border-radius:7px;background:rgba(120,243,255,.08);color:var(--yk-ink);font-size:9px;font-weight:900;letter-spacing:.05em}
+.yk-app-machine:hover,.yk-app-machine:focus-visible{border-color:var(--yk-brand);background:rgba(120,243,255,.14);outline:none}.yk-app-machine-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.yk-app-tally{margin-left:auto;min-width:26px;padding:1px 5px;border:1px solid var(--yk-line);border-radius:999px;color:var(--yk-dim);font-size:8px;font-weight:400;text-align:center}.yk-app-tally.live{color:#88ffaa;border-color:rgba(136,255,170,.35)}
+.yk-app-rows{display:grid;gap:3px}.yk-app-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:6px;padding:5px 7px;border:1px solid var(--yk-line);border-radius:7px;background:rgba(120,243,255,.025)}.yk-app-row:hover,.yk-app-row:focus-within{border-color:var(--yk-brand);background:rgba(120,243,255,.06)}
+.yk-app-copy{display:grid;gap:3px;min-width:0}.yk-app-copy b{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;color:var(--yk-ink);font:700 9.5px/1.2 var(--yk-mono)}.yk-app-copy small{color:var(--yk-dim);font:8px/1.2 var(--yk-mono)}.yk-app-copy small.live{color:#88ffaa}.yk-app-status{min-height:12px;margin:0;color:#88ffaa;font:8.5px/1.3 var(--yk-mono)}.yk-app-status.error{color:#ff7f87}
+.yk-slot .yk-app-switch{width:auto;min-width:116px;display:grid;grid-template-columns:minmax(36px,1fr) auto 28px;align-items:center;gap:5px;padding:5px 6px;border:1px solid var(--yk-line2);border-radius:999px;background:rgba(120,243,255,.04);color:var(--yk-dim);font:700 7.5px/1 var(--yk-mono);cursor:pointer;text-align:center}.yk-app-switch[aria-checked="true"]{border-color:rgba(136,255,170,.55);color:#88ffaa;background:rgba(136,255,170,.06)}.yk-app-switch:disabled{opacity:.45;cursor:not-allowed}.yk-app-switch-name{color:var(--yk-ink);overflow:hidden;text-overflow:ellipsis}.yk-app-switch-state{text-transform:uppercase;letter-spacing:.05em}.yk-app-switch-track{position:relative;width:26px;height:14px;border:1px solid currentColor;border-radius:999px}.yk-app-switch-track::after{content:"";position:absolute;top:2px;left:2px;width:8px;height:8px;border-radius:50%;background:currentColor;transition:transform .16s}.yk-app-switch[aria-checked="true"] .yk-app-switch-track::after{transform:translateX(12px)}
+@property --yk-app-progress{syntax:"<angle>";inherits:false;initial-value:0deg}
+.yk-slot :is(.yk-app-switch,.yk-expert-app-power).is-pending{--yk-app-progress-color:#78f3ff;--yk-app-progress:0deg;border-color:transparent;opacity:1;background:linear-gradient(#07141c,#07141c) padding-box,conic-gradient(from -90deg,var(--yk-app-progress-color) var(--yk-app-progress),rgba(120,243,255,.12) 0deg) border-box;box-shadow:0 0 10px color-mix(in srgb,var(--yk-app-progress-color) 28%,transparent);animation:yk-app-border-progress 30s linear forwards}
+.yk-slot :is(.yk-app-switch,.yk-expert-app-power).is-pending.is-stop{--yk-app-progress-color:#ff8a83}
+.yk-slot :is(.yk-app-switch,.yk-expert-app-power).is-success{border-color:#88ffaa;color:#88ffaa;opacity:1;box-shadow:0 0 11px rgba(136,255,170,.38)}
+.yk-slot :is(.yk-app-switch,.yk-expert-app-power).is-error{border-color:#ff7f87;color:#ff7f87;opacity:1;box-shadow:0 0 11px rgba(255,127,135,.34)}
+@keyframes yk-app-border-progress{to{--yk-app-progress:360deg}}
+@media (prefers-reduced-motion:reduce){.yk-slot :is(.yk-app-switch,.yk-expert-app-power).is-pending{--yk-app-progress:180deg;animation:none}}
+.yk-app-bulk{display:grid;gap:5px;margin-top:10px;padding-top:9px;border-top:1px solid var(--yk-line)}.yk-app-bulk:empty{display:none}.yk-app-bulk-title{color:var(--yk-brand);font:800 8px/1.2 var(--yk-mono);letter-spacing:.11em;text-transform:uppercase}.yk-app-bulk-row{display:grid;grid-template-columns:minmax(0,1fr) 30px 30px;align-items:center;gap:5px;padding:5px 6px;border:1px solid rgba(120,243,255,.18);border-radius:7px;background:rgba(120,243,255,.035)}.yk-app-bulk-copy{display:grid;gap:2px;min-width:0}.yk-app-bulk-copy b{color:var(--yk-ink);font:800 9px/1 var(--yk-mono)}.yk-app-bulk-copy small{color:var(--yk-dim);font:7.5px/1 var(--yk-mono)}.yk-app-bulk-copy small.live{color:#88ffaa}.yk-slot .yk-app-bulk-action{display:grid;place-items:center;width:30px;min-width:30px;height:28px;padding:6px;border:1px solid var(--yk-line2);border-radius:6px;background:rgba(120,243,255,.06);color:#88ffaa;cursor:pointer}.yk-slot .yk-app-bulk-action.danger{color:#ff8a83}.yk-slot .yk-app-bulk-action svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.yk-slot .yk-app-bulk-action svg path[d^="M8"]{fill:currentColor;stroke:none}.yk-slot .yk-app-bulk-action:hover,.yk-slot .yk-app-bulk-action:focus-visible{border-color:currentColor;background:rgba(120,243,255,.12);outline:none}.yk-slot .yk-app-bulk-action:disabled{opacity:.3;cursor:not-allowed}.yk-app-bulk-status{min-height:11px;margin:1px 0 0;color:#88ffaa;font:8px/1.3 var(--yk-mono)}.yk-app-bulk-status.error{color:#ff7f87}
+.yk-sr-only{position:absolute!important;width:1px!important;height:1px!important;padding:0!important;margin:-1px!important;overflow:hidden!important;clip:rect(0,0,0,0)!important;white-space:nowrap!important;border:0!important}
+.yk-cli-console{display:grid;grid-template-columns:minmax(250px,28%) minmax(0,1fr);gap:12px;height:100%;min-height:140px;flex:0 0 100%}
+.yk-cli-side,.yk-cli-terminal{min-width:0;min-height:0;border:1px solid var(--yk-line);border-radius:9px;background:rgba(2,8,13,.42);padding:10px}
+.yk-cli-side{display:flex;flex-direction:column;gap:6px;overflow:auto}.yk-cli-list{margin-top:6px;max-height:min(42vh,430px);min-height:0;overflow:auto}
+.yk-expert-fold{display:grid;gap:0;min-width:0;border:1px solid var(--yk-line);border-radius:7px;background:rgba(120,243,255,.025)}
+.yk-slot .yk-expert-fold-head{appearance:none;display:flex;align-items:center;gap:7px;width:100%;min-height:31px;padding:7px 8px;border:0;border-radius:7px;background:rgba(120,243,255,.045);color:var(--yk-brand);font:900 8.5px/1.2 var(--yk-mono);letter-spacing:.11em;text-transform:uppercase;cursor:pointer;text-align:left}
+.yk-expert-fold-head:hover,.yk-expert-fold-head:focus-visible{background:rgba(120,243,255,.11);color:var(--yk-ink);outline:none}.yk-expert-fold-chevron{flex:0 0 auto;width:9px}.yk-expert-fold-chevron::before{content:"\25B8"}.yk-expert-fold-head[aria-expanded="true"]>.yk-expert-fold-chevron::before{content:"\25BE"}
+.yk-expert-fold-count{margin-left:auto;color:var(--yk-warn,#ffd45e);font-size:8px;letter-spacing:.03em;text-transform:none;white-space:nowrap}.yk-expert-fold-body{display:grid;gap:6px;padding:7px}.yk-expert-fold-body[hidden]{display:none}
+.yk-expert-app-list{display:grid;gap:4px;max-height:min(32vh,320px);overflow:auto}.yk-expert-app-group{display:grid;gap:3px;min-width:0;margin:0;padding:0;border:0}.yk-slot .yk-expert-app-machine{appearance:none;display:flex;align-items:center;gap:6px;width:100%;min-height:25px;padding:4px 6px;border:1px solid rgba(120,243,255,.22);border-radius:6px;background:rgba(120,243,255,.06);color:var(--yk-ink);font:800 8.5px/1.2 var(--yk-mono);cursor:pointer;text-align:left}.yk-expert-app-machine:hover,.yk-expert-app-machine:focus-visible{border-color:var(--yk-brand);outline:none}.yk-expert-app-machine-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.yk-expert-app-tally{margin-left:auto;padding:1px 5px;border:1px solid var(--yk-line);border-radius:999px;color:var(--yk-dim);font:400 7.5px/1 var(--yk-mono)}.yk-expert-app-tally.live{color:#88ffaa;border-color:rgba(136,255,170,.35)}
+.yk-expert-app-rows{display:grid;gap:3px;padding-left:7px;border-left:1px solid var(--yk-line)}.yk-expert-app-rows[hidden]{display:none}.yk-expert-app-row{display:grid;grid-template-columns:minmax(0,1fr) 28px;gap:4px;align-items:stretch;border:1px solid transparent;border-radius:6px}.yk-expert-app-row.selected{border-color:var(--yk-brand);background:rgba(120,243,255,.06)}.yk-slot .yk-expert-app-select{display:grid;gap:2px;width:100%;min-width:0;padding:5px 6px;border:0;background:transparent;color:var(--yk-ink);cursor:pointer;text-align:left}.yk-expert-app-select b,.yk-expert-app-select small{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-family:var(--yk-mono)}.yk-expert-app-select b{font-size:8.5px}.yk-expert-app-select small{color:var(--yk-dim);font-size:7.5px}.yk-expert-app-select small.live{color:#88ffaa}.yk-slot .yk-expert-app-power{display:grid;place-items:center;width:28px;min-width:28px;padding:5px;border:1px solid var(--yk-line2);border-radius:6px;background:rgba(120,243,255,.05);color:var(--yk-brand);cursor:pointer}.yk-expert-app-power[aria-checked="true"]{color:#88ffaa;border-color:rgba(136,255,170,.45)}.yk-expert-app-power:disabled{opacity:.4;cursor:not-allowed}.yk-expert-app-power svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.yk-expert-app-power svg path[d^="M8"]{fill:currentColor;stroke:none}
+.yk-app-dispatch-form{display:grid;grid-template-columns:auto minmax(0,1fr);gap:5px}.yk-slot .yk-app-dispatch-kind,.yk-slot .yk-app-dispatch-input,.yk-slot .yk-app-dispatch-send{min-width:0;border:1px solid var(--yk-line2);border-radius:6px;background:#02080d;color:var(--yk-ink);font:8.5px/1.3 var(--yk-mono);outline:none}.yk-slot .yk-app-dispatch-kind{width:auto;padding:6px}.yk-slot .yk-app-dispatch-input{width:100%;min-height:48px;padding:7px;resize:vertical}.yk-slot .yk-app-dispatch-send{grid-column:1/-1;width:100%;padding:7px;color:var(--yk-brand);font-weight:800;text-align:center;cursor:pointer}.yk-slot :is(.yk-app-dispatch-kind,.yk-app-dispatch-input,.yk-app-dispatch-send):focus{border-color:var(--yk-brand)}.yk-slot :is(.yk-app-dispatch-kind,.yk-app-dispatch-input,.yk-app-dispatch-send):disabled{opacity:.42;cursor:not-allowed}.yk-app-dispatch-status{min-height:11px;margin:0;color:#88ffaa;font:8px/1.3 var(--yk-mono)}.yk-app-dispatch-status.error{color:#ff7f87}
+.yk-app-capture{display:grid;gap:5px;margin:2px 0 0;padding:5px;border:1px solid var(--yk-line);border-radius:7px;background:#02080d}.yk-app-capture[hidden]{display:none}.yk-app-capture-image{display:block;width:100%;max-height:min(30vh,300px);object-fit:contain;border-radius:4px;background:#000}.yk-app-capture-image[hidden]{display:none}.yk-app-capture-caption{display:grid;gap:3px;color:var(--yk-dim);font:7.5px/1.3 var(--yk-mono)}.yk-app-capture-meta.stale{color:var(--yk-warn,#ffd45e)}.yk-app-capture-status{color:#88ffaa}.yk-app-capture-status.error{color:#ff7f87}
+.yk-cli-machine-group{display:grid;min-width:0;margin:0;padding:0;border:0;gap:3px}.yk-slot .yk-cli-machine{appearance:none;display:flex;align-items:center;gap:7px;width:100%;min-height:28px;padding:5px 7px;border:1px solid rgba(120,243,255,.24);border-radius:7px;background:rgba(120,243,255,.08);color:var(--yk-ink);font:900 9px/1.2 var(--yk-mono);letter-spacing:.05em;text-align:left;cursor:pointer}.yk-cli-machine:hover,.yk-cli-machine:focus-visible{border-color:var(--yk-brand);background:rgba(120,243,255,.14);outline:none}.yk-cli-machine-chevron{flex:0 0 auto;width:9px;color:var(--yk-brand);font:900 10px/1 var(--yk-mono)}.yk-cli-machine-chevron::before{content:"\25B8"}[aria-expanded="true"]>.yk-cli-machine-chevron::before{content:"\25BE"}.yk-cli-machine-name{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.yk-cli-machine-tally{margin-left:auto;min-width:32px;padding:2px 6px;border:1px solid var(--yk-line);border-radius:999px;color:var(--yk-dim);font:400 8px/1 var(--yk-mono);text-align:center;white-space:nowrap}.yk-cli-machine-tally.live{color:#88ffaa;border-color:rgba(136,255,170,.35)}.yk-cli-machine-rows{display:grid;gap:3px;padding-left:7px;border-left:1px solid var(--yk-line)}.yk-cli-machine-rows[hidden]{display:none}
+.yk-cli-agent-group{display:grid;gap:4px}.yk-cli-agent-tab{display:flex;align-items:stretch;gap:3px;min-width:0;border-radius:7px}.yk-slot .yk-cli-agent{width:auto;flex:1;min-width:0;display:flex;align-items:center;gap:5px;padding:6px;border:1px solid transparent;border-radius:6px;background:transparent;color:var(--yk-dim);cursor:pointer;text-align:left}
+.yk-cli-agent b{flex:1;min-width:0;font:700 9.5px/1.2 var(--yk-mono);color:var(--yk-ink);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.yk-cli-agent small{flex:0 1 72px;min-width:0;overflow:hidden;text-overflow:ellipsis;font:8px/1.2 var(--yk-mono);white-space:nowrap}.yk-cli-agent small.live{color:#88ffaa}.yk-cli-agent.selected{border-color:var(--yk-brand);background:rgba(120,243,255,.07);color:var(--yk-brand)}
+.yk-cli-chevron{flex:0 0 auto;width:9px;color:var(--yk-brand);font:900 10px/1 var(--yk-mono)}.yk-cli-chevron::before{content:"\25B8"}[aria-expanded="true"]>.yk-cli-chevron::before{content:"\25BE"}
+.yk-cli-agent-buttons{display:flex;align-items:stretch;gap:3px;flex:0 0 auto}
+.yk-cli-bulk{display:grid;gap:4px}.yk-cli-bulk-title{display:none;color:var(--yk-brand);font:800 8px/1.2 var(--yk-mono);letter-spacing:.11em;text-transform:uppercase}.yk-cli-bulk-row{display:grid;grid-template-columns:minmax(0,1fr) 28px 28px;align-items:center;gap:4px;padding:4px 5px;border:1px solid rgba(120,243,255,.18);border-radius:6px;background:rgba(120,243,255,.035)}.yk-cli-bulk-copy{display:grid;gap:2px;min-width:0}.yk-cli-bulk-copy b{color:var(--yk-ink);font:800 9px/1 var(--yk-mono)}.yk-cli-bulk-copy small{color:var(--yk-dim);font:7.5px/1 var(--yk-mono)}.yk-cli-bulk-copy small.live{color:#88ffaa}.yk-slot .yk-cli-bulk-action{display:grid;place-items:center;width:28px;min-width:28px;height:26px;padding:5px;border:1px solid var(--yk-line2);border-radius:6px;background:rgba(120,243,255,.06);color:#88ffaa;cursor:pointer}.yk-slot .yk-cli-bulk-action.danger{color:#ff8a83}.yk-slot .yk-cli-bulk-action svg{width:13px;height:13px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.yk-slot .yk-cli-bulk-action svg path[d^="M8"]{fill:currentColor;stroke:none}.yk-slot .yk-cli-bulk-action:hover,.yk-slot .yk-cli-bulk-action:focus-visible{border-color:currentColor;background:rgba(120,243,255,.12);outline:none}.yk-slot .yk-cli-bulk-action:disabled{opacity:.3;cursor:not-allowed}
+.yk-cli-terminal{display:flex;flex-direction:column;gap:7px}.yk-cli-terminal-head{display:flex;align-items:center;gap:8px}.yk-cli-terminal-head>span{display:flex;min-width:0;flex:1;flex-direction:column;gap:2px}.yk-cli-disconnect{border:1px solid var(--yk-line2);border-radius:6px;background:transparent;color:var(--yk-dim);padding:6px 8px;font:700 8px/1 var(--yk-mono);cursor:pointer}.yk-cli-disconnect:hover,.yk-cli-disconnect:focus-visible{color:var(--yk-brand);border-color:var(--yk-brand);outline:none}
+.yk-cli-terminal-head b{color:var(--yk-ink);font:700 10px/1.2 var(--yk-mono)}.yk-cli-terminal-head small{color:var(--yk-dim);font:8px/1.2 var(--yk-mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.yk-slot :is(.yk-cli-read,.yk-cli-power,.yk-cli-focus){display:grid;place-items:center;width:28px;min-width:28px;text-align:center;white-space:nowrap;border:1px solid var(--yk-line2);border-radius:6px;background:rgba(120,243,255,.06);color:var(--yk-brand);padding:5px 3px;cursor:pointer}.yk-slot :is(.yk-cli-read,.yk-cli-power,.yk-cli-focus) svg{width:14px;height:14px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}.yk-slot .yk-cli-power svg path[d^="M8"]{fill:currentColor;stroke:none}.yk-slot :is(.yk-cli-power,.yk-cli-focus)[aria-checked="true"]{border-color:rgba(136,255,170,.55);color:#88ffaa;background:rgba(136,255,170,.08)}.yk-slot :is(.yk-cli-read,.yk-cli-power,.yk-cli-focus):hover,.yk-slot :is(.yk-cli-read,.yk-cli-power,.yk-cli-focus):focus-visible{border-color:var(--yk-brand);background:rgba(120,243,255,.13);outline:none}.yk-slot :is(.yk-cli-read,.yk-cli-power,.yk-cli-focus):disabled{opacity:.42;cursor:not-allowed}
+.yk-cli-xterm{flex:1;min-height:74px;overflow:hidden;padding:5px;border:1px solid var(--yk-line);border-radius:7px;background:#02080d}.yk-cli-xterm .xterm{height:100%;padding:2px}.yk-cli-xterm .xterm-viewport{scrollbar-width:thin}.yk-cli-xterm:focus-within{border-color:var(--yk-brand);box-shadow:0 0 0 1px rgba(120,243,255,.12)}
+.yk-cli-pty-status,.yk-cli-terminal-help{display:block;min-height:10px;color:var(--yk-dim);font:8px/1.25 var(--yk-mono);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.yk-cli-pty-status{color:#88ffaa}.yk-cli-pty-status.error{color:#ff7f87}
+.yk-cli-terminal-form{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:7px;align-items:stretch}.yk-slot .yk-cli-terminal-input{width:100%;min-width:0;min-height:52px;max-height:160px;resize:vertical;padding:9px 10px;border:1px solid var(--yk-line2);border-radius:7px;background:#02080d;color:var(--yk-ink);font:10px/1.4 var(--yk-mono);outline:none}.yk-slot .yk-cli-terminal-input:focus{border-color:var(--yk-brand);box-shadow:0 0 0 1px rgba(120,243,255,.12)}.yk-slot .yk-cli-terminal-input:disabled{opacity:.45}.yk-slot .yk-cli-terminal-send{width:auto;min-width:88px;padding:8px 12px;border:1px solid var(--yk-line2);border-radius:7px;background:rgba(120,243,255,.08);color:var(--yk-brand);font:800 9px/1 var(--yk-mono);cursor:pointer}.yk-slot .yk-cli-terminal-send:hover,.yk-slot .yk-cli-terminal-send:focus-visible{border-color:var(--yk-brand);background:rgba(120,243,255,.14);outline:none}.yk-slot .yk-cli-terminal-send:disabled{opacity:.4;cursor:not-allowed}
+.yk-cli-status{min-height:12px;margin:7px 0 0;color:var(--yk-brand);font:8.5px/1.3 var(--yk-mono)}.yk-cli-status.error{color:#ff7f87}
+.yk-expert-btns{ display:flex; gap:8px; flex-wrap:wrap }
+.yk-expert-btns button{
+  font-family: var(--yk-mono); font-size:10.5px; letter-spacing:.06em; text-transform:uppercase;
+  padding: 8px 12px; border-radius:8px; cursor:pointer;
+  color: var(--yk-brand); background: rgba(120,243,255,.06);
+  border: 1px dashed var(--yk-line2); transition:.15s;
+}
+.yk-expert-btns button:hover{ background: rgba(120,243,255,.14); border-style:solid }
+.yk-expert-out{
+  flex:1; min-height:0; overflow:auto; margin:0;
+  font-family: var(--yk-mono); font-size:11px; line-height:1.5;
+  color: var(--yk-mut); white-space:pre-wrap; word-break:break-word;
+  background: rgba(2,8,13,.5); border:1px solid var(--yk-line); border-radius:10px;
+  padding: 10px 12px;
+}
+.yk-ver{ font-size:10px; letter-spacing:.08em; text-transform:uppercase; color: var(--yk-dim) }
+.yk-ver b{ color: var(--yk-brand) }
+
+/* ============================ RESPONSIVE ================================= */
+/* ≤790px: el nombre del proyecto se compacta (admira.live ▾) para no desplazar
+ * el reloj ni los iconos; la zona de referencias se comprime con scroll. */
+@media (max-width: 790px){
+  .yk-proj-nm .yk-pj-full{ display: none }
+  .yk-proj-nm .yk-pj-short{ display: inline }
+}
+
+/* ============== MENÚ DE SECCIONES DEL CAJÓN (móvil) — FLT-983 ==============
+ * En escritorio la barra ya lista las secciones: aquí NO se pinta nada. Por
+ * debajo de 520px la barra las esconde, así que el mismo menú vive dentro del
+ * cajón OPCIONES. Filas de 44px de alto mínimo, activo en fósforo con barra
+ * lateral, foco visible por teclado. */
+.yk-rail-nav{ display: none }
+.yk-rail-navhd{
+  font-size: 9.5px; letter-spacing:.14em; text-transform:uppercase;
+  color: var(--yk-dim); padding: 0 2px 6px;
+}
+.yk-rail-navlink{
+  display: flex; align-items: center;
+  min-height: 44px; padding: 0 10px;
+  font-size: 12px; letter-spacing:.10em; text-transform:uppercase;
+  color: var(--yk-ink); text-decoration: none;
+  border: 1px solid transparent; border-bottom-color: var(--yk-line);
+  border-left: 2px solid transparent;
+  transition: background .15s, color .15s, border-color .15s;
+}
+.yk-rail-navlink:hover{ color: var(--yk-brand); background: rgba(120,243,255,.06) }
+.yk-rail-navlink.on{
+  color: var(--yk-brand); font-weight: 700;
+  border-left-color: var(--yk-brand);
+  background: rgba(120,243,255,.10);
+}
+.yk-rail-navlink:focus-visible{
+  outline: 2px solid var(--yk-brand); outline-offset: -2px; color: var(--yk-brand);
+}
+/* contador «curso/pend» del cajón (móvil): empujado a la derecha de la fila */
+.yk-rail-navc{ margin-left:auto; font-size:11px; font-weight:600;
+  color:var(--yk-dim); font-variant-numeric:tabular-nums }
+.yk-rail-navlink.on .yk-rail-navc{ color:var(--yk-brand) }
+.yk-rail-navc:empty{ display:none }
+
+/* ≤520px: las referencias y el reloj salen de la barra; el selector queda como
+ * icono + caret (sin nombre); permanecen logo + iconos (quietos). Las secciones
+ * NO desaparecen: se sirven en el cajón OPCIONES (.yk-rail-nav). */
+@media (max-width: 520px){
+  :root{ --yk-rail-w: 92vw; --yk-rail-h: 78vh; --yk-avatar-safe: 0px; }
+  .yk-rail-bottom{ right:0;padding-right:16px }
+  .yk-expert-hd{align-items:flex-start;flex-wrap:wrap}
+  .yk-expert-ver{width:100%;margin-left:15px;text-align:left;white-space:normal;line-height:1.35}
+  .yk-cli-console{grid-template-columns:1fr;grid-template-rows:minmax(160px,42%) minmax(0,1fr)}
+  .yk-cli-list{display:flex;flex-direction:column;gap:5px}
+  .yk-cli-agent{align-items:center!important}
+  .yk-cli-agent-buttons{gap:2px}.yk-slot :is(.yk-cli-read,.yk-cli-power,.yk-cli-focus){width:28px;min-width:28px}
+  .yk-nav, .yk-meta, .yk-page{ display:none }
+  .yk-proj-nm{ display: none }
+  .yk-bar{ gap:10px }
+  /* el cajón sí muestra el menú, y su bloque de secciones puede desplazarse */
+  .yk-rail-nav{ display:flex; flex-direction:column; margin-bottom:14px }
+  /* cuando va detrás del panel de trabajo, el aire cambia de lado */
+  .yk-slot + .yk-rail-nav{
+    margin: 16px 0 0; padding-top: 14px; border-top: 1px solid var(--yk-line);
+  }
+  /* con las secciones delante, el «— sin opciones» del cajón solo estorba */
+  .yk-rail-left .yk-empty{ display:none }
+  /* área táctil de 44x44 para los iconos de la barra SIN ensanchar la barra
+     (la barra mide 46px y a 320px no cabe un icono de 44 de lado). Se fija por
+     tamaño y no por desplazamientos: el botón es border-box con borde de 1px y
+     el pseudo-elemento se ancla a la caja de relleno, así que unos -6/-4 daban
+     42x42 medidos. Con 44x44 centrado el área es exacta sea cual sea el borde. */
+  .yk-ico{ position:relative; min-width:36px; padding:0 8px }
+  .yk-ico::after{
+    content:""; position:absolute; width:44px; height:44px;
+    left:50%; top:50%; transform:translate(-50%,-50%);
+  }
+  .yk-proj-btn{ position:relative }
+  .yk-proj-btn::after{
+    content:""; position:absolute; width:100%; min-width:44px; height:44px;
+    left:50%; top:50%; transform:translate(-50%,-50%);
+  }
+}
+
+/* foco visible también en los iconos y el selector de la barra */
+.yk-ico:focus-visible, .yk-proj-btn:focus-visible{
+  outline: 2px solid var(--yk-brand); outline-offset: 2px;
+}
+
+/* quien pida menos movimiento, no lo sufre */
+@media (prefers-reduced-motion: reduce){
+  .yk-rail{ transition: none }
+  .yk-logo .yk-dot{ animation: none }
+}
+
+/* --- pie del raíl OPCIONES: AJUSTES + versión, abajo del todo (2026-07-19) --- */
+.yk-rail-left{ display:flex; flex-direction:column }
+.yk-rail-left > .yk-slot{ flex:0 0 auto }
+.yk-rail-foot{ margin-top:auto; padding-top:12px; border-top:1px solid var(--yk-line);
+  display:flex; flex-direction:column; gap:10px }
+.yk-set-btn{ width:100%; text-align:left; font-family:inherit; font-size:10.5px;
+  letter-spacing:.14em; text-transform:uppercase; color:var(--yk-ink);
+  background:transparent; border:1px solid var(--yk-line2); padding:8px 10px;
+  cursor:pointer; display:flex; align-items:center; gap:8px }
+.yk-set-btn:hover{ border-color:var(--yk-brand); color:var(--yk-brand) }
+.yk-set-btn.on{ border-color:var(--yk-brand); color:var(--yk-brand);
+  background:rgba(120,243,255,.08) }
+.yk-set-cx{ margin-left:auto; transition:transform .2s }
+.yk-set.open .yk-set-cx{ transform:rotate(180deg) }
+.yk-set-body{ display:none; flex-direction:column; gap:8px; padding:10px;
+  border:1px solid var(--yk-line); border-top:0 }
+.yk-set.open .yk-set-body{ display:flex }
+.yk-set-row{ display:flex; justify-content:space-between; gap:8px; font-size:10.5px;
+  text-transform:uppercase; letter-spacing:.08em; color:var(--yk-dim) }
+.yk-set-row .yk-set-v{ color:var(--yk-ink); text-transform:none; letter-spacing:0;
+  overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:60% }
+.yk-set-out{ font-family:inherit; font-size:10px; letter-spacing:.12em;
+  text-transform:uppercase; color:#ff8866; background:transparent;
+  border:1px solid currentColor; padding:6px 10px; cursor:pointer; text-align:center }
+.yk-set-out:hover{ background:rgba(255,136,102,.08) }
+
+/* --- AJUSTES · PERSONALIZACIÓN (2026-07-19) --- */
+.yk-set-sec{ font-size:9.5px; letter-spacing:.14em; text-transform:uppercase;
+  color:var(--yk-brand); padding-top:4px; border-top:1px solid var(--yk-line) }
+.yk-set-chk{ display:flex; align-items:center; gap:8px; font-size:10.5px;
+  letter-spacing:.08em; text-transform:uppercase; color:var(--yk-ink); cursor:pointer }
+.yk-set-chk input{ accent-color:var(--yk-brand) }
+
+/* --- PANEL DE CONTROL · personalización (2026-07-19) --- */
+.yk-pc{ position:fixed; inset:0; z-index:calc(var(--yk-z) + 10); background:rgba(2,8,13,.72);
+  display:flex; align-items:center; justify-content:center; padding:24px;
+  font-family:var(--yk-mono); color:var(--yk-ink) }
+.yk-pc-card{ width:min(94vw,560px); max-height:86vh; display:flex; flex-direction:column;
+  background:linear-gradient(180deg,var(--yk-bg),var(--yk-bg2));
+  border:1px solid var(--yk-line2); box-shadow:0 0 60px rgba(0,0,0,.7), inset 0 0 40px rgba(120,243,255,.03);
+  padding:18px 16px }
+.yk-pc-body{ overflow:auto; display:flex; flex-direction:column; gap:8px; padding-right:4px }
+.yk-pc-row{ display:flex; align-items:center; gap:10px; border:1px solid var(--yk-line);
+  padding:6px 10px }
+.yk-pc-vis{ width:40px; height:40px; display:flex; align-items:center; justify-content:center; flex:0 0 40px }
+.yk-pc-img{ width:40px; height:40px; object-fit:cover; object-position:center top; border:1px solid var(--yk-line2) }
+.yk-pc-ico{ font-size:22px } .yk-pc-ico.dim{ opacity:.45 }
+.yk-pc-nm{ flex:1; font-size:11.5px; letter-spacing:.06em; overflow:hidden; text-overflow:ellipsis; white-space:nowrap }
+.yk-pc-icoin{ width:64px; font-family:inherit; font-size:14px; text-align:center; color:var(--yk-ink);
+  background:transparent; border:1px solid var(--yk-line); padding:5px 4px }
+.yk-pc-foto,.yk-pc-quitar,.yk-pc-save,.yk-pc-close{ font-family:inherit; font-size:9.5px; letter-spacing:.1em;
+  text-transform:uppercase; background:transparent; color:var(--yk-ink); border:1px solid var(--yk-line2);
+  padding:6px 9px; cursor:pointer }
+.yk-pc-foto:hover,.yk-pc-save:hover{ border-color:var(--yk-brand); color:var(--yk-brand) }
+.yk-pc-quitar{ color:var(--yk-dim) } .yk-pc-quitar:hover{ color:#ff8866; border-color:#ff8866 }
+.yk-pc-foot{ display:flex; align-items:center; gap:10px; padding-top:12px; margin-top:10px;
+  border-top:1px solid var(--yk-line) }
+.yk-pc-msg{ flex:1; font-size:10px; letter-spacing:.06em; color:var(--yk-dim) }
+.yk-pc-save{ background:var(--yk-brand); color:#02080d; border-color:var(--yk-brand); font-weight:700 }
+.yk-pc-save:hover{ color:#02080d; filter:brightness(1.1) }
+.yk-pc-save:disabled{ opacity:.6; cursor:wait }
+
+/* --- Panel de control: fila activa (pegado) y arrastre (2026-07-19) --- */
+.yk-pc-row{ cursor:pointer }
+.yk-pc-row.sel{ border-color:var(--yk-brand); box-shadow:inset 0 0 12px rgba(120,243,255,.08) }
+.yk-pc-row.drag{ border-color:var(--yk-brand); background:rgba(120,243,255,.07) }
+
+/* --- Panel de control · Tablero de misiones (2026-07-20) --- */
+.yk-pc-dens{ display:flex; align-items:center; gap:8px; padding:4px 0 }
+.yk-pc-dens .yk-set-k{ font-size:10.5px; letter-spacing:.08em; text-transform:uppercase; color:var(--yk-dim); flex:1 }
+.yk-pc-densb{ font-family:inherit; font-size:9.5px; letter-spacing:.1em; background:transparent;
+  color:var(--yk-ink); border:1px solid var(--yk-line2); padding:6px 10px; cursor:pointer }
+.yk-pc-densb.on{ background:var(--yk-brand); color:#02080d; border-color:var(--yk-brand); font-weight:700 }

@@ -1,0 +1,214 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta name="yokup-espejo" content="origen www.yokup.com · commit da6ab28 · sincronizado 17.09.2026 09:06">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<link rel="icon" href="/favicon.ico" sizes="any">
+<title>Detalle Highscore · Yokup</title>
+<meta name="robots" content="noindex,nofollow">
+<link rel="stylesheet" href="/yk-frame.css?v=r19">
+<style>
+:root{--bg:#02080d;--card:#0a1620;--card2:#0d1c28;--ink:#dff8ff;--mut:#75aab9;--dim:#4d7a88;
+  --brand:#78f3ff;--accent:#ffd866;--good:#88ffaa;--warn:#ff8866;--line:rgba(120,243,255,.18);
+  --mono:ui-monospace,SFMono-Regular,"JetBrains Mono",Menlo,monospace}
+*{box-sizing:border-box}html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font-family:var(--mono)}
+a{color:var(--brand)}.wrap{max-width:1040px;margin:0 auto;padding:54px 20px 72px}.back{display:inline-flex;align-items:center;gap:8px;
+  margin-bottom:24px;text-decoration:none;font-size:12px;font-weight:800;letter-spacing:.08em}.back:hover,.back:focus-visible{color:var(--ink)}
+.hero{display:grid;grid-template-columns:auto 1fr;gap:18px;align-items:center;padding:20px;border:1px solid var(--line);border-radius:16px;
+  background:linear-gradient(135deg,rgba(13,28,40,.95),rgba(2,8,13,.85));box-shadow:0 18px 52px rgba(0,0,0,.32)}
+.avatar-stack{width:92px;display:flex;flex-direction:column;align-items:center;gap:8px}
+.avatar{display:grid;place-items:center;width:88px;height:88px;border-radius:18px;border:1px solid rgba(120,243,255,.42);background:#07131b;
+  color:var(--brand);font-size:34px;font-weight:950;overflow:hidden}.avatar img{width:100%;height:100%;object-fit:cover}.eyebrow{color:var(--dim);font-size:10px;letter-spacing:.18em;text-transform:uppercase}
+.rank-navigation{display:flex;align-items:center;justify-content:center;gap:4px;min-width:92px}
+.rank-agent{display:grid;place-items:center;min-width:44px;height:44px;padding:0 9px;border:1px solid rgba(120,243,255,.5);border-radius:999px;background:rgba(120,243,255,.09);color:var(--brand);font:950 14px/1 var(--mono);cursor:pointer;white-space:nowrap}
+.rank-agent:hover,.rank-agent:focus-visible{border-color:var(--brand);background:rgba(120,243,255,.16);color:var(--ink);outline:2px solid var(--brand);outline-offset:2px}.rank-agent:disabled{opacity:.38;cursor:not-allowed}
+.latest-work{display:flex;align-items:center;justify-content:space-between;gap:18px;margin:14px 0;padding:14px 16px;border:1px solid rgba(255,216,102,.42);border-radius:12px;background:rgba(255,216,102,.07)}
+.latest-work-body{min-width:0}.latest-work h2{margin:0 0 6px;color:var(--accent);font-size:12px}.latest-work-project{display:block;color:var(--ink);font-size:12px}.latest-work-title,.latest-work-meta{margin:5px 0 0;color:var(--mut);font-size:10px;line-height:1.45}.latest-work-meta{color:var(--dim)}
+.latest-work-link{flex:0 0 auto;padding:10px 12px;border:1px solid rgba(120,243,255,.45);border-radius:8px;text-decoration:none;font-size:10px;font-weight:900}.latest-work-link:hover,.latest-work-link:focus-visible{border-color:var(--brand);color:var(--ink);outline:2px solid var(--brand);outline-offset:2px}
+.ranking-series{margin:0 0 18px}.series-chart-wrap{width:100%;overflow-x:auto;overscroll-behavior-inline:contain}.series-chart-svg{display:block;width:100%;height:auto;min-width:640px;background:rgba(2,8,13,.5);border:1px solid var(--line);border-radius:10px}
+.series-grid-line{stroke:rgba(70,144,160,.22);stroke-width:1}.series-axis-x,.series-axis-y{fill:var(--dim);font:800 9px var(--mono)}.series-axis-x{text-anchor:middle}.series-axis-y{text-anchor:end}.series-line{opacity:.72}.series-line.current{opacity:1;filter:drop-shadow(0 0 4px rgba(255,216,102,.55))}
+.series-marker-target{cursor:pointer}.series-marker-hit{fill:transparent;pointer-events:all}.series-marker-dot{pointer-events:none;stroke:#02080d;stroke-width:1.5}.series-marker-target:focus{outline:none}.series-marker-target:focus .series-marker-dot,.series-marker-target.selected .series-marker-dot{stroke:var(--ink);stroke-width:3;filter:drop-shadow(0 0 5px var(--brand))}
+.series-svg-tooltip{pointer-events:none}.series-svg-tooltip[hidden]{display:none}.series-svg-tooltip rect{fill:#07131b;stroke:var(--brand);stroke-width:1.5;filter:drop-shadow(0 4px 8px rgba(0,0,0,.65))}.series-tooltip-line{fill:var(--ink);font:800 10px var(--mono)}
+.series-point-inspector{display:grid;grid-template-columns:12px auto auto minmax(180px,1fr);align-items:center;gap:8px 12px;margin:10px 0 0;padding:12px 14px;border:1px solid rgba(120,243,255,.34);border-radius:10px;background:rgba(120,243,255,.06);font-size:10px}.series-point-inspector[data-mode="preview"]{border-style:dashed}.series-point-inspector[data-mode="selected"]{border-color:var(--accent);background:rgba(255,216,102,.07)}.series-point-inspector>span:first-child{width:10px;height:10px;border-radius:50%}.series-point-inspector strong{color:var(--ink)}.series-point-inspector small{color:var(--accent);font-weight:900}.series-point-inspector>span:last-child{color:var(--mut);line-height:1.45}
+.series-legend{display:flex;flex-wrap:wrap;gap:8px 16px;margin:14px 0;padding:0;list-style:none}.series-legend li{display:grid;grid-template-columns:10px minmax(110px,1fr) auto;gap:7px;align-items:center;color:var(--mut);font-size:10px}.series-legend li.current{color:var(--ink)}.series-legend li>span:first-child{width:9px;height:9px;border-radius:50%}.series-legend strong{overflow-wrap:anywhere}.series-legend li>span:last-child{color:var(--accent);white-space:nowrap}.series-color-0{background:#78f3ff}.series-color-1{background:#ffd866}.series-color-2{background:#88ffaa}.series-color-3{background:#ff8b6b}.series-color-4{background:#bd93f9}.series-color-5{background:#ff79c6}.series-color-6{background:#8be9fd}.series-color-7{background:#f1fa8c}
+.ranking-series details{margin-top:12px;color:var(--mut);font-size:10px}.ranking-series summary{min-height:44px;display:flex;align-items:center;width:max-content;max-width:100%;cursor:pointer;color:var(--brand);font-weight:900}.series-data-table{width:100%;margin-top:8px;border-collapse:collapse;font-size:9px}.series-data-table caption{padding:8px;text-align:left;color:var(--ink);font-weight:900}.series-data-table th,.series-data-table td{padding:7px;border:1px solid var(--line);text-align:right}.series-data-table th:first-child{text-align:left}.series-data-table .current{background:rgba(255,216,102,.08);color:var(--accent)}
+.weekly-control{margin:0 0 18px}.weekly-control .period-heading{margin-bottom:12px}.weekly-control-grid{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.weekly-signal{min-width:0;padding:14px;border:1px solid var(--line);border-radius:11px;background:rgba(2,8,13,.55)}.weekly-signal.good{border-color:rgba(136,255,170,.38)}.weekly-signal.alert{border-color:rgba(255,216,102,.58);background:rgba(255,216,102,.06)}.weekly-signal-label{display:block;color:var(--mut);font-size:9px;font-weight:900;letter-spacing:.12em;text-transform:uppercase}.weekly-signal b{display:block;margin:7px 0 5px;color:var(--ink);font-size:25px}.weekly-signal.alert b{color:var(--accent)}.weekly-signal small{display:block;color:var(--dim);font-size:9px;line-height:1.45}
+h1{margin:6px 0 4px;color:var(--brand);font-size:clamp(23px,5vw,42px);word-break:break-word}.source{margin:0;color:var(--mut);font-size:11px;line-height:1.5}
+.identity{min-width:0}.identity-title-row{display:flex;align-items:center;justify-content:space-between;gap:18px}.identity-title-row h1{min-width:0}
+.onidle-control{display:grid;grid-template-columns:auto auto;align-items:center;justify-content:end;gap:7px 10px;min-width:max-content}
+.onidle-time{color:var(--mut);font-size:10px;font-weight:800;font-variant-numeric:tabular-nums}.onidle-request{min-height:38px;padding:8px 12px;border:1px solid rgba(120,243,255,.5);border-radius:8px;background:rgba(120,243,255,.09);color:var(--brand);font:800 10px/1 var(--mono);cursor:pointer}
+.onidle-request:hover,.onidle-request:focus-visible{border-color:var(--brand);background:rgba(120,243,255,.16);color:var(--ink);outline:2px solid transparent}.onidle-request:disabled{opacity:.55;cursor:wait}.onidle-status{grid-column:1/-1;max-width:380px;color:var(--dim);font-size:9px;line-height:1.35;text-align:right;white-space:normal}
+.stats{display:grid;grid-template-columns:repeat(6,minmax(0,1fr));gap:10px;margin:18px 0}.stat{padding:14px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+.stat b{display:block;color:var(--accent);font-size:22px}.stat span{display:block;margin-top:5px;color:var(--dim);font-size:9px;letter-spacing:.1em;text-transform:uppercase}
+.grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}.panel{min-width:0;padding:18px;border:1px solid var(--line);border-radius:14px;background:var(--card)}
+.panel h2{margin:0 0 14px;color:var(--brand);font-size:12px;letter-spacing:.12em;text-transform:uppercase}.facts{list-style:none;padding:0;margin:0;display:grid;gap:9px}
+.facts a{display:grid;grid-template-columns:auto 1fr;gap:10px;align-items:center;padding:11px;border:1px solid var(--line);border-radius:8px;text-decoration:none;color:var(--mut)}
+.facts a:hover,.facts a:focus-visible{border-color:var(--brand);color:var(--ink)}.facts b{font-size:18px;color:var(--ink)}.empty{margin:0;color:var(--dim);font-size:12px;line-height:1.55}
+.timeline{grid-column:1/-1}.hours{display:grid;gap:10px}.hour{display:grid;grid-template-columns:58px 1fr auto;gap:10px;align-items:center}.hour time{color:var(--mut);font-size:11px}
+.bar{height:12px;border-radius:20px;background:#031018;overflow:hidden}.bar i{display:block;height:100%;min-width:4px;background:linear-gradient(90deg,var(--brand),var(--accent));box-shadow:0 0 10px rgba(120,243,255,.3)}
+.hour button{appearance:none;border:0;background:transparent;color:var(--ink);font:inherit;font-size:11px;cursor:pointer}.hour-detail{grid-column:2/-1;margin:0;padding-left:18px;color:var(--mut);font-size:10px;line-height:1.6}
+.hour-detail[hidden]{display:none}.state{padding:28px;border:1px solid var(--line);border-radius:14px;background:var(--card)}.state h1{font-size:22px}.state p{color:var(--mut);line-height:1.6}
+.score-evolution{grid-column:1/-1}.score-days{display:grid;gap:8px}.score-day{display:grid;grid-template-columns:minmax(160px,230px) 1fr 56px;gap:10px;align-items:center}
+.group-date,.chronology-order{appearance:none;border:0;background:transparent;color:var(--mut);font:800 10px/1.35 var(--mono);text-align:left;cursor:pointer}.group-date:hover,.group-date:focus-visible,.chronology-order:hover,.chronology-order:focus-visible{color:var(--brand);outline:1px solid var(--brand);outline-offset:4px}.score-day-bar{height:12px;border-radius:20px;background:#031018;overflow:hidden}.score-day-bar i{display:block;height:100%;min-width:0;background:linear-gradient(90deg,var(--brand),var(--accent))}
+.score-day b{color:var(--accent);font-size:11px;text-align:right}.score-sampled{margin:12px 0 0;color:var(--dim);font-size:9px;line-height:1.45}
+.period-nav{display:flex;flex-wrap:wrap;gap:8px;margin:18px 0;padding:7px;border:1px solid var(--line);border-radius:12px;background:#061019}
+.period-nav button{min-height:42px;flex:1 1 112px;padding:9px 14px;border:1px solid transparent;border-radius:8px;background:transparent;color:var(--mut);
+  font:800 11px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;cursor:pointer}
+.period-nav button:hover,.period-nav button:focus-visible{border-color:var(--brand);color:var(--ink);outline:none}
+.period-nav button[aria-pressed="true"]{border-color:rgba(120,243,255,.48);background:rgba(120,243,255,.1);color:var(--brand);box-shadow:inset 0 -2px 0 var(--brand)}
+.period-heading{display:flex;flex-wrap:wrap;justify-content:space-between;gap:8px;align-items:baseline;margin:0 0 14px}
+.period-heading-controls{display:flex;flex-wrap:wrap;justify-content:flex-end;align-items:center;gap:8px 14px}.chronology-order{color:var(--brand)}
+.period-heading h2{margin:0}.period-range{color:var(--dim);font-size:10px}
+/* Selector de proyecto en la esquina del gráfico: ocupa el sitio del rótulo que había
+   antes, así que hereda su tamaño y su color apagado — es un control de ámbito, no el
+   protagonista del panel. El área táctil sí sube a 28px: se usa con el dedo en la tablet. */
+.project-scope{display:inline-flex;align-items:center;gap:6px}
+.project-scope-label{text-transform:uppercase;letter-spacing:.08em;color:var(--dim);font-size:10px}
+.project-scope-select{min-height:28px;background:#0b1119;color:var(--ink,#e7edf7);border:1px solid var(--line);
+  border-radius:8px;padding:3px 8px;font:inherit;font-size:11px;max-width:min(340px,52vw);cursor:pointer}
+.project-scope-select:hover,.project-scope-select:focus{border-color:var(--brand);outline:none}.metric-grid{grid-column:1/-1;display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:10px}
+.metric{appearance:none;width:100%;padding:16px;border:1px solid var(--line);border-radius:10px;background:var(--card2);color:inherit;font:inherit;text-align:left;cursor:pointer}
+.metric:hover,.metric:focus-visible{border-color:var(--brand);outline:none;box-shadow:0 0 0 2px rgba(120,243,255,.12)}.metric[aria-pressed="true"]{border-color:var(--accent);background:rgba(255,216,102,.08);box-shadow:inset 0 -3px 0 var(--accent)}
+.metric b{display:block;color:var(--accent);font-size:22px}.metric span{color:var(--dim);font-size:9px;text-transform:uppercase}.metric[aria-pressed="true"] span{color:var(--ink)}
+.event-list{list-style:none;margin:0;padding:0;display:grid;gap:8px}.event{display:grid;grid-template-columns:96px 1fr auto;gap:12px;align-items:start;padding:12px;border:1px solid var(--line);border-radius:9px;background:#061019}
+.event time{color:var(--mut);font-size:10px}.event strong{display:block;color:var(--ink);font-size:11px}.event small{display:block;margin-top:3px;color:var(--dim)}.event-points{color:var(--accent);font-size:10px;font-weight:900}
+.timeline-groups{display:grid;gap:18px}.timeline-group{display:grid;gap:8px}.timeline-group-heading{margin:0;padding:0 2px 6px;border-bottom:1px solid var(--line);font-size:10px}.timeline-group-heading .group-date{color:var(--accent);letter-spacing:.06em;text-transform:uppercase}
+.loading{opacity:.58;pointer-events:none}.period-error{grid-column:1/-1}
+@media(max-width:760px){.stats{grid-template-columns:repeat(3,1fr)}.grid{grid-template-columns:1fr}.timeline{grid-column:auto}.identity-title-row{align-items:flex-start;flex-direction:column;gap:9px}.onidle-control{justify-content:start}.onidle-status{text-align:left}}
+@media(max-width:760px){.weekly-control-grid{grid-template-columns:1fr}.metric-grid{grid-template-columns:repeat(2,minmax(0,1fr))}.score-evolution,.timeline{grid-column:1/-1}.score-day{grid-template-columns:minmax(128px,190px) 1fr 54px}}
+@media(max-width:470px){.wrap{padding:42px 14px 56px}.hero{grid-template-columns:1fr;text-align:center}.avatar-stack{margin:auto}.identity-title-row{align-items:center}.onidle-control{justify-content:center;grid-template-columns:1fr}.onidle-status{text-align:center}.latest-work{align-items:stretch;flex-direction:column}.latest-work-link{text-align:center}.series-chart-wrap{margin-inline:-4px;width:calc(100% + 8px)}.series-chart-svg{min-width:560px}.series-point-inspector{grid-template-columns:12px 1fr auto}.series-point-inspector>span:last-child{grid-column:1/-1}.series-legend{display:grid;grid-template-columns:1fr}.series-data-table{min-width:560px}.ranking-series details{overflow-x:auto}.stats{grid-template-columns:repeat(2,1fr)}.hour{grid-template-columns:50px 1fr auto}.period-nav button{flex-basis:30%}.period-heading-controls{justify-content:flex-start}.score-day{grid-template-columns:1fr 48px}.score-day .score-day-bar{grid-column:1/-1;grid-row:2}.event{grid-template-columns:1fr auto}.event time{grid-column:1/-1}}
+.turno{margin:14px 0;padding:12px 14px;border:1px solid rgba(120,243,255,.22);border-radius:10px;background:rgba(2,8,13,.5)}
+.turno-t{font-size:9.5px;letter-spacing:.12em;text-transform:uppercase;color:var(--mut,#75aab9);font-weight:800}
+.turno-v{font-size:26px;font-weight:800;line-height:1.15;margin:4px 0 2px;color:var(--brand,#78f3ff);font-variant-numeric:tabular-nums}
+.turno.ya .turno-v{color:var(--good,#88ffaa)}
+.turno-m{font-size:11px;color:var(--dim,#4d7a88)}
+</style>
+</head>
+<body data-yk-title="HIGHSCORE" data-yk-zone="app" data-yk-parent="/highscore">
+<div id="yk-espejo-aviso" style="background:#0a1620;border-bottom:1px solid rgba(120,243,255,.30);color:#75aab9;font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;padding:8px 14px">Espejo en <b style="color:#78f3ff">admira.live</b> del Highscore de Yokup · mismos datos en vivo de <code>api.yokup.com</code>. Aquí se <b>mira</b>: sin sesión de Yokup, lo que pide login (tareas, tickets y mandar órdenes al CLI) no responde. Para eso, <a href="https://www.yokup.com/highscore" style="color:#78f3ff">el original</a>.</div>
+<main class="wrap">
+  <a class="back" href="/highscore" aria-label="Volver al Highscore">← Volver al Highscore</a>
+  <div id="content" aria-live="polite"><section class="state"><p>Cargando datos reales…</p></section></div>
+</main>
+<script src="/yk-agent-identity.js?v=v.2026.08.02.202305"></script>
+<script src="/yk-avatar.js?v=v.2026.08.02.202305"></script>
+<script src="/highscore-detail.js?v=weekly-control-r1"></script>
+<script type="application/x-yokup-legacy-detail">
+(function () {
+  "use strict";
+  var API = "https://api.yokup.com", DETAIL = window.YkHighscoreDetail, ID = window.ykAgentIdentity;
+  var target = document.getElementById("content"), agent = new URLSearchParams(location.search).get("agent") || "";
+  function el(tag, cls, value) { var node = document.createElement(tag); if (cls) node.className = cls; if (value != null) node.textContent = String(value); return node; }
+  function state(title, message) { target.replaceChildren(); var box=el("section","state"), h=el("h1","",title), p=el("p","",message); box.append(h,p); target.appendChild(box); }
+  function get(url, pick, fallback) { return fetch(url, { cache:"no-store" }).then(function (response) {
+    if (!response.ok) throw new Error(response.status); return response.json();
+  }).then(function(payload){ return { ok:true, value:pick(payload) }; })
+    .catch(function () { return { ok:false, value:fallback }; }); }
+  function stat(value, label) { var box=el("div","stat"), strong=el("b","",value), caption=el("span","",label); box.append(strong,caption); return box; }
+  // Franja «próxima ventana de decisión» del agente del detalle.
+  function turnoPanel(agent){
+    var caja=el("section","turno"), t=el("div","turno-t","Próxima ventana de decisión"),
+        v=el("div","turno-v","comprobando…"), m=el("div","turno-m","");
+    caja.append(t,v,m);
+    function pinta(d){
+      if(!d||!d.ok){ v.textContent="—"; m.textContent="No se pudo consultar el reparto de turnos."; return; }
+      var mio=null,i;
+      for(i=0;i<d.turnos.length;i++){ if(String(d.turnos[i].agent).toLowerCase()===String(agent).toLowerCase()){ mio=d.turnos[i]; break; } }
+      if(!mio){ v.textContent="—"; m.textContent="Este agente aún no entra en el reparto: no ha abierto ninguna ventana en 24 h."; return; }
+      m.textContent="Turno "+mio.turno+" de "+d.agentes+" · una cada "+d.pasoMin+" min · su franja empieza en el minuto "+mio.offsetMin;
+      function tic(){
+        var falta=mio.proxima-Date.now();
+        if(falta<=0){ v.textContent="puede abrir YA"; caja.classList.add("ya"); return; }
+        var s=Math.round(falta/1000), h=Math.floor(s/3600), mm=Math.floor((s%3600)/60), ss=s%60;
+        v.textContent=(h?h+"h ":"")+mm+"m "+(ss<10?"0":"")+ss+"s";
+        caja.classList.remove("ya");
+      }
+      tic(); window.setInterval(tic,1000);
+    }
+    fetch("https://api.yokup.com/fleet/turnos?agent="+encodeURIComponent(agent),{cache:"no-store"})
+      .then(function(r){return r.json();}).then(pinta).catch(function(){ pinta(null); });
+    return caja;
+  }
+
+  function factsPanel(title, rows, emptyText, complete) {
+    var panel=el("section","panel"), heading=el("h2","",title); panel.appendChild(heading);
+    if (!rows.length) { panel.appendChild(el("p","empty",complete?emptyText:"Datos no disponibles para completar esta sección.")); return panel; }
+    var list=el("ul","facts"); rows.forEach(function (row) { var li=el("li"), link=el("a"); link.href=row.href;
+      link.append(el("b","",row.value),el("span","",row.label)); li.appendChild(link); list.appendChild(li); }); panel.appendChild(list);
+    if (!complete) panel.appendChild(el("p","empty","Resultado parcial: una o más fuentes de datos no están disponibles.")); return panel;
+  }
+  function timelinePanel(hours, complete) {
+    var panel=el("section","panel timeline"), heading=el("h2","","Evolución por horas · eventos observables de hoy (Europe/Madrid)"); panel.appendChild(heading);
+    if (!hours.length) { panel.appendChild(el("p","empty",complete?"No hay eventos con hora real atribuibles a este agente durante hoy.":"Datos no disponibles para reconstruir la evolución por horas.")); return panel; }
+    var list=el("div","hours"), max=Math.max.apply(null,hours.map(function (hour) { return hour.count; }));
+    hours.forEach(function (hour, index) { var row=el("div","hour"), time=el("time","",hour.hour), bar=el("div","bar"), fill=el("i"), button=el("button","",hour.count + (hour.count===1?" evento":" eventos"));
+      var detail=el("ul","hour-detail"); detail.id="hour-detail-"+index; detail.hidden=true; fill.style.width=(hour.count/max*100)+"%"; bar.appendChild(fill);
+      button.type="button"; button.setAttribute("aria-expanded","false"); button.setAttribute("aria-controls",detail.id);
+      button.addEventListener("click",function(){ detail.hidden=!detail.hidden; button.setAttribute("aria-expanded",String(!detail.hidden)); });
+      hour.events.forEach(function(event){ detail.appendChild(el("li","",event.type+" · "+event.detail)); }); row.append(time,bar,button,detail); list.appendChild(row); });
+    panel.appendChild(list); if (!complete) panel.appendChild(el("p","empty","Evolución parcial: una o más fuentes de datos no están disponibles.")); return panel;
+  }
+  function scoreEvolutionPanel(history, complete) {
+    var panel=el("section","panel score-evolution"), heading=el("h2","","Evolución de puntos · últimos 30 días"); panel.appendChild(heading);
+    if (!complete || !history) { panel.appendChild(el("p","empty","Histórico no disponible: no se muestran ceros en sustitución de datos ausentes.")); return panel; }
+    var days=history.evolution||[], list=el("div","score-days"); list.setAttribute("role","list");
+    if (!days.length) { panel.appendChild(el("p","empty","No hay días verificables en la serie histórica.")); return panel; }
+    var max=Math.max.apply(null,days.map(function(row){return row.points;}));
+    days.forEach(function(row){ var line=el("div","score-day"), time=el("time","",row.day.slice(8,10)+"/"+row.day.slice(5,7)),bar=el("div","score-day-bar"),fill=el("i"),points=el("b","",row.points+" pts");
+      line.setAttribute("role","listitem"); line.setAttribute("aria-label",row.day+": "+row.points+" puntos"); time.dateTime=row.day;
+      fill.style.width=(max?row.points/max*100:0)+"%"; bar.appendChild(fill); line.append(time,bar,points); list.appendChild(line); });
+    panel.appendChild(list); panel.appendChild(el("p","score-sampled","Datos canónicos muestreados el "+new Date(history.sampledAt).toLocaleString("es-ES",{timeZone:"Europe/Madrid"})+".")); return panel;
+  }
+  function render(data) {
+    var identitySourcesAvailable=data.available.daily||data.available.tasks||data.available.missions||data.available.incidents;
+    var known = !!data.history || !!data.snap || data.daily.scores.some(function(row){ return DETAIL.sameFamily(row.agent,row.machine,agent,ID); }) ||
+      data.tasks.some(function(t){ return DETAIL.sameFamily(DETAIL.taskIdentity(t,ID),t.loc,agent,ID); }) ||
+      data.missions.some(function(m){ return DETAIL.sameFamily(m.assignee||m.persona,m.machine||m.loc,agent,ID); }) ||
+      data.incidents.some(function(i){ return DETAIL.sameFamily(i.assignee||i.persona||i.agent,i.machine||i.loc,agent,ID); });
+    if (!known && !identitySourcesAvailable) { state("Datos no disponibles", "No se pudo comprobar esta identidad porque las fuentes del Highscore no están disponibles."); return; }
+    if (!known) { state("Agente no encontrado", "La identidad solicitada no aparece en el marcador ni en los datos operativos disponibles."); return; }
+    var calculated=DETAIL.scoreFor(agent,data.daily,data.tasks,ID), rank=DETAIL.ranking(agent,data.daily,data.tasks,ID), snap=data.snap, history=data.history;
+    var place=snap&&Number(snap.posicion)||rank.place||"—", total=snap&&Number(snap.total);
+    if (!Number.isFinite(total)) total=data.available.daily&&data.available.tasks?calculated.total:"—";
+    var taskCount=data.available.tasks?calculated.taskCount:"—";
+    // Nº de ventanas de decisión que lleva hoy este agente (Carlos, 3-sep-2026): el
+    // snapshot del ranking trae «ventanas»; si no, se cuenta de /highscore/daily.
+    var windowCount=snap&&Number.isFinite(Number(snap.ventanas))?Number(snap.ventanas):(data.available.daily?calculated.windowCount:"—");
+    var fact=DETAIL.facts(agent,data.tasks,data.missions,data.incidents,ID), hours=DETAIL.timeline(agent,data.tasks,data.missions,data.incidents,ID);
+    target.replaceChildren(); var hero=el("header","hero"), avatar=el("div","avatar",agent.charAt(0).toUpperCase()), avatarUrl=window.ykAvatar&&window.ykAvatar.img(agent);
+    if (avatarUrl) { var image=document.createElement("img"); image.src=avatarUrl; image.alt="Avatar de "+agent; image.addEventListener("error",function(){ image.remove(); avatar.textContent=agent.charAt(0).toUpperCase(); }); avatar.replaceChildren(image); }
+    var identity=el("div"), eyebrow=el("div","eyebrow","Identidad canónica"), title=el("h1","",agent), source=el("p","source",history?"Histórico factual por periodos naturales de Europe/Madrid; identidad y equipo exactos.":(snap?"Puesto y puntos del snapshot exacto del Highscore.":"Puesto reconstruido con actividad atribuible directamente; no se reasignan datos sin equipo."));
+    identity.append(eyebrow,title,source); hero.append(avatar,identity); target.appendChild(hero);
+    var stats=el("section","stats"), scoreAvailable=!!snap||data.available.daily;
+    stats.append(stat(place,"Puesto"),stat(total,"Puntos hoy"),stat(history?history.periods.week.points:"—","Semana · lunes a hoy"),
+      stat(history?history.periods.month.points:"—","Mes · día 1 a hoy"),stat(history?history.periods.total.points:"—","Total histórico"),
+      stat(snap?snap.tareas:taskCount,"Tareas hoy"),stat(windowCount,"Ventanas de decisión hoy")); target.appendChild(stats);
+    // CUÁNTO FALTA HASTA SU PRÓXIMA VENTANA (Carlos, 2026-08-07). El dato lo da
+    // /fleet/turnos, que cruza las dos condiciones —su hora cumplida Y su turno
+    // dentro del reparto— y devuelve la más tardía. Se pide aparte y en
+    // silencio: si no responde, el detalle se pinta igual sin esta franja.
+    target.appendChild(turnoPanel(agent));
+    var operationalComplete=data.available.tasks&&data.available.missions&&data.available.incidents;
+    var grid=el("div","grid"); grid.append(factsPanel("Lo que hizo bien",fact.good,"No hay hechos positivos verificables en los datos disponibles.",operationalComplete),
+      factsPanel("A mejorar",fact.improve,"No hay pendientes o incidencias atribuibles en los datos disponibles.",operationalComplete),
+      timelinePanel(hours,operationalComplete),scoreEvolutionPanel(history,data.available.history)); target.appendChild(grid);
+  }
+  if (!agent) { state("Falta el agente", "Abre el detalle desde uno de los tres puestos del podio o añade ?agent=<identidad-canónica>."); return; }
+  if (!DETAIL.validAgent(agent,ID)) { state("Identidad no válida", "El parámetro agent debe contener una identidad canónica con apellido de equipo, por ejemplo MorfeoMBP16 u NeoMBAAzul."); return; }
+  var snap=DETAIL.snapshot(agent);
+  Promise.all([
+    get(API+"/highscore/daily",function(d){return d||{scores:[]};},{scores:[]}),
+    get(API+"/tasks/all?scope=fleet",function(d){return d.tasks||[];},[]),
+    get(API+"/fleet/missions",function(d){return d.missions||[];},[]),
+    get(API+"/tickets?scope=campo&limit=500",function(d){return d.tickets||[];},[]),
+    get(API+"/highscore/history?agent="+encodeURIComponent(agent),function(d){ var value=DETAIL.history(d,agent,ID,Date.now()); if(!value) throw new Error("histórico inválido"); return value; },null)
+  ]).then(function(rows){ render({daily:rows[0].value&&rows[0].value.scores?rows[0].value:{scores:[]},tasks:rows[1].value,
+      missions:rows[2].value,incidents:rows[3].value,history:rows[4].value,snap:snap,
+      available:{daily:rows[0].ok,tasks:rows[1].ok,missions:rows[2].ok,incidents:rows[3].ok,history:rows[4].ok}}); });
+})();
+</script>
+<script src="/highscore-detail-page.js?v=weekly-control-r1"></script>
+<script src="/yk-frame.js?v=r19-parent1"></script>
+</body>
+</html>

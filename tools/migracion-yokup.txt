@@ -1,0 +1,14 @@
+# Migración yokup.com → www.admira.live · manifiesto
+#
+# Una línea por página mudada:  <ruta limpia> | <ficheros que la componen, separados por espacios>
+# Los ficheros son rutas RELATIVAS dentro de yokup-site y se copian con el MISMO nombre aquí,
+# para que las dos webs sirvan exactamente las mismas URLs.
+#
+# Lo que NO está en este fichero sigue viviendo sólo en yokup.com: el guion reescribe sus
+# enlaces al original absoluto para que no queden en 404 mientras tanto. Mudar una página es
+# añadir su línea aquí y relanzar tools/sync-yokup.sh — no hay más sitios que tocar.
+#
+# TODAS: la lista completa de páginas de la plataforma, para poder calcular las pendientes.
+TODAS = dashboard objetivos decisiones misiones tareas incidencias informes notificaciones equipo status asistencia app admira-live asignaciones normativa highscore
+
+highscore | highscore.html highscoreDetail.html highscore-daily-record.js highscore-desktop-app.js highscore-race.js highscore-race-bonus.js highscore-work-clock.js highscore-runner-state.css highscore-detail.js highscore-detail-page.js yk-frame.css yk-frame.js yk-agent-identity.js yk-avatar.js img/highscore-podio-pixel.png img/highscore-podio-pixel.webp img/highscore-presite-decathlon.webp media/trackfield-1722.mp3

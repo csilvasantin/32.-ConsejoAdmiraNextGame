@@ -2,7 +2,7 @@
 # verifica-espejo.sh — ¿sirve admira.live el MISMO Highscore que yokup.com?
 #
 # No compara capturas ni «parece igual»: baja las dos páginas de PRODUCCIÓN, les
-# quita las cinco divergencias declaradas en tools/sync-highscore.sh y compara el
+# quita las cinco divergencias declaradas en tools/sync-yokup.sh y compara el
 # resto byte a byte. Si las huellas coinciden, las dos webs sirven exactamente la
 # misma página. Si no, dice en qué fichero se han separado.
 #

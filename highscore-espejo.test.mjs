@@ -5,7 +5,7 @@
 //
 // Un espejo sin vigilancia se pudre: alguien retoca la copia a mano, o el original
 // cambia y nadie lo trae. Esto comprueba que la copia sigue siendo copia y que las
-// ÚNICAS diferencias son las declaradas en tools/sync-highscore.sh. Sin red.
+// ÚNICAS diferencias son las declaradas en tools/sync-yokup.sh. Sin red.
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFile, stat } from 'node:fs/promises';
@@ -39,7 +39,8 @@ test('el espejo se identifica: sello de origen en las dos páginas y en el manif
   for (const html of [highscore, detalle]) {
     assert.match(html, /<meta name="yokup-espejo" content="origen www\.yokup\.com · commit [0-9a-f]{7,}/);
   }
-  assert.equal(espejo.origen, 'https://www.yokup.com/highscore');
+  assert.equal(espejo.origen, 'https://www.yokup.com');
+  assert.ok(espejo.paginas_migradas.includes('highscore'), 'el manifiesto no declara el highscore como mudado');
   assert.match(espejo.origen_commit, /^[0-9a-f]{7,}$/);
   assert.match(espejo.sincronizado, /^\d{2}\.\d{2}\.\d{4} \d{2}:\d{2}$/);
 });
@@ -120,5 +121,5 @@ test('la copia sigue siendo copia del original (si el repo de yokup está al lad
     if (a !== await lee(f)) sucios.push(f);
   }
   assert.deepEqual(sucios, [], 'el espejo se ha desviado a mano en: ' + sucios.join(', ') +
-    ' — vuelve a lanzar tools/sync-highscore.sh en vez de editar la copia');
+    ' — vuelve a lanzar tools/sync-yokup.sh en vez de editar la copia');
 });

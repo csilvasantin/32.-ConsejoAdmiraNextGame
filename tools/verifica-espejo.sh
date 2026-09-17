@@ -40,6 +40,10 @@ normaliza() {
     -e 's#"/informes-flota"#"/informes"#g' \
     -e 's#\?v=[^"'\''<> ]*##g' \
     -e 's#<!-- Cloudflare Pages Analytics -->.*<!-- Cloudflare Pages Analytics -->##g' \
+    -e 's#<a [^>]*__cf_email__[^>]*>\[email[^<]*</a>#EMAIL#g' \
+    -e 's#<a [^>]*/cdn-cgi/l/email-protection[^>]*>[^<]*</a>#EMAIL#g' \
+    -e 's#[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Za-z]{2,}#EMAIL#g' \
+    -e 's#<script data-cfasync="false" src="/cdn-cgi/scripts/[^"]*email-decode[^"]*"></script>##g' \
     -e '/^[[:space:]]*$/d'
 }
 
@@ -91,6 +95,17 @@ compara "/yk-adjuntos.js"               "yk-adjuntos.js"
 compara "/yk-mission-duplicates.js"     "yk-mission-duplicates.js"
 compara "/yk-decisiones-grid.js"        "yk-decisiones-grid.js"
 compara "/yk-tareas-columns.js"         "yk-tareas-columns.js"
+# Tramo 4 · 17-09-2026 · FLT-100551. status es (propia) y app no viaja: no se comparan como espejo.
+compara "/objetivos"                   "objetivos"
+compara "/normativa"                   "normativa"
+compara "/asignaciones/"               "asignaciones/"
+compara "/admira-live"                 "admira-live"
+compara "/incidencias"                 "incidencias"
+compara "/dashboard"                   "dashboard"
+compara "/yk-objetivos-grid.js"        "yk-objetivos-grid.js"
+compara "/agent-control.js"            "agent-control.js"
+compara "/agent-detail.js"             "agent-detail.js"
+compara "/presence-groups.js"          "presence-groups.js"
 
 # Y que los dos miran la MISMA fuente de datos, que es lo que hace que enseñen lo
 # mismo: el marcador del día sale del mismo worker para los dos orígenes.

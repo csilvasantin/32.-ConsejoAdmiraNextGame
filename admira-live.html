@@ -1,0 +1,371 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta name="yokup-espejo" content="origen www.yokup.com · commit 00ba695 · sincronizado 17.09.2026 19:12">
+<script src="/acceso-espejo.js?v=r1"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" href="/favicon.ico?v=v.2026.08.02.224605" sizes="any">
+<link rel="icon" type="image/png" href="/favicon-32x32.png?v=v.2026.08.02.224605" sizes="32x32">
+<link rel="apple-touch-icon" href="/apple-touch-icon.png?v=v.2026.08.02.224605">
+<title>www.admira.live · encolados · Yokup</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#02080d">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="stylesheet" href="https://www.carlossilva.info/admira-design/tokens.css">
+<link rel="stylesheet" href="/yk-frame.css?v=r17">
+<style>
+:root{--bg:#02080d;--card:#0a1620;--card2:#0d1c28;--ink:#dff8ff;--mut:#75aab9;--dim:#4d7a88;--brand:#78f3ff;--accent:#ffd866;--good:#88ffaa;--warn:#ff8866;--red:#ff5566;--violet:#aa88ff;--line:rgba(120,243,255,.16);--line2:rgba(120,243,255,.30);--sans:var(--admira-font-sans,-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif);--mono:var(--admira-font-mono,ui-monospace,SFMono-Regular,"JetBrains Mono",Menlo,monospace)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;min-height:100vh}
+.wrap{max-width:1100px;margin:0 auto;padding:22px 24px 48px}
+h1{font-size:clamp(23px,3vw,31px);letter-spacing:-.02em;margin:4px 0 4px}
+.tah{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
+.agentSel{font-family:var(--sans);font-size:clamp(20px,2.6vw,28px);font-weight:600;letter-spacing:-.01em;
+  color:var(--brand);background:var(--card);border:1px solid var(--line2);border-radius:12px;
+  padding:4px 34px 4px 14px;outline:none;cursor:pointer;max-width:100%;
+  -webkit-appearance:none;appearance:none;
+  background-image:linear-gradient(45deg,transparent 50%,var(--brand) 50%),linear-gradient(135deg,var(--brand) 50%,transparent 50%);
+  background-position:calc(100% - 18px) center,calc(100% - 12px) center;background-size:6px 6px,6px 6px;background-repeat:no-repeat}
+.agentSel:focus{border-color:var(--violet)}
+.agentSel option{background:var(--card);color:var(--ink);font-size:15px}
+.sub{color:var(--mut);font-size:14.5px;margin-bottom:14px}
+
+.kpis{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.kpi{font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;border:1px solid var(--line);border-radius:10px;padding:9px 13px;background:var(--card);color:var(--mut);display:flex;align-items:center;gap:8px}
+.kpi b{font-size:16px;color:var(--ink)}
+.kpi.a b{color:var(--warn)}.kpi.b b{color:var(--accent)}.kpi.c b{color:var(--red)}.kpi.d b{color:var(--good)}.kpi.e b{color:var(--brand)}
+
+.bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:8px 13px;border-radius:9px;border:1px solid var(--line);color:var(--mut);background:var(--card);cursor:pointer;transition:.2s}
+.tab.on{color:#02080d;background:var(--brand);border-color:var(--brand)}
+.kb{display:flex;gap:8px;margin:0}
+.kb input,.kb select{font-family:var(--sans);font-size:13.5px;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:10px;padding:10px 12px;outline:none}
+.kb input{flex:1;min-width:120px}
+.kb input:focus,.kb select:focus{border-color:var(--violet)}
+label.fl{display:block;font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);margin:2px 0 5px}
+
+/* ---- Acciones masivas (AVANZADO) ---- */
+.mass{display:flex;flex-direction:column;gap:8px}
+.mass button{font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;padding:10px 12px;border-radius:10px;border:1px solid var(--line2);color:var(--mut);background:rgba(120,243,255,.05);cursor:pointer;text-align:left;transition:.15s}
+.mass button:hover{color:var(--ink);border-color:var(--brand)}
+.mass .hint{font-family:var(--mono);font-size:10.5px;color:var(--dim);line-height:1.5}
+
+/* ---- Cola de tickets ---- */
+.list{border:1px solid var(--line);border-radius:14px;overflow:hidden}
+.tk{border-bottom:1px solid var(--line);background:var(--card);transition:.15s}
+.tk:last-child{border-bottom:0}.tk:hover{background:var(--card2)}
+.tk.st-pending{border-left:3px solid var(--warn)}
+.tk.st-blocked{border-left:3px solid var(--red)}
+.tk.st-in_progress{border-left:3px solid var(--accent)}
+.hd{display:grid;grid-template-columns:22px 92px 1fr auto;gap:14px;align-items:start;padding:14px 16px}
+.sel{margin-top:3px;width:16px;height:16px;accent-color:var(--brand);cursor:pointer}
+.tkid{font-family:var(--mono);font-size:12px;color:var(--brand)}.tkid .st{display:block;font-size:9.5px;color:var(--dim);letter-spacing:.06em;text-transform:uppercase;margin-top:3px}
+.subj .t{font-size:14px;line-height:1.5;color:var(--ink);cursor:pointer}
+.subj .t.clamp{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.subj .m{font-family:var(--mono);font-size:11px;color:var(--mut);margin-top:6px;display:flex;gap:12px;flex-wrap:wrap}
+.subj .m .to{color:var(--brand)}.subj .m .mach{color:var(--violet)}.subj .m .fr{color:var(--mut)}
+.right{display:flex;flex-direction:column;align-items:flex-end;gap:9px}
+.badge{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;padding:5px 9px;border-radius:999px;white-space:nowrap;display:flex;align-items:center;gap:6px}.badge i{width:6px;height:6px;border-radius:50%}
+.b-pending{color:var(--warn);border:1px solid rgba(255,136,102,.5);background:rgba(255,136,102,.08)}.b-pending i{background:var(--warn);animation:blink 1s infinite}
+.b-in_progress{color:var(--accent);border:1px solid rgba(255,216,102,.4);background:rgba(255,216,102,.06)}.b-in_progress i{background:var(--accent)}
+.b-blocked{color:var(--red);border:1px solid rgba(255,85,102,.5);background:rgba(255,85,102,.08)}.b-blocked i{background:var(--red);animation:blink 1s infinite}
+.b-ack,.b-done{color:var(--good);border:1px solid rgba(136,255,170,.35);background:rgba(136,255,170,.06)}.b-ack i,.b-done i{background:var(--good)}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+.acts{display:flex;gap:6px;flex-wrap:wrap;justify-content:flex-end}
+.act{font-family:var(--mono);font-size:9.5px;letter-spacing:.04em;text-transform:uppercase;padding:6px 9px;border-radius:8px;border:1px solid var(--line);color:var(--mut);background:transparent;cursor:pointer;transition:.15s}
+.act:hover{color:var(--ink);border-color:var(--line2)}
+.act.a-ack:hover{color:var(--good);border-color:rgba(136,255,170,.5)}
+.act.a-prog:hover{color:var(--accent);border-color:rgba(255,216,102,.5)}
+.act.a-block:hover{color:var(--red);border-color:rgba(255,85,102,.5)}
+.act.a-done:hover{color:var(--good);border-color:rgba(136,255,170,.5)}
+.age{font-family:var(--mono);font-size:10.5px;color:var(--mut)}.age.old{color:var(--warn)}
+.empty{padding:36px;text-align:center;color:var(--dim);font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase}
+.foot{margin-top:24px;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}.foot b{color:var(--brand)}
+.foot a{color:var(--violet);text-decoration:none}
+@media(max-width:720px){.hd{grid-template-columns:22px 1fr}.tkid,.right{grid-column:2}.right{align-items:flex-start}.acts{justify-content:flex-start}}
+
+/* ---- Incidencias en vivo (calculadas desde /api/presence, sin escritura) ---- */
+.inc{margin-bottom:16px;border:1px solid rgba(255,136,102,.35);border-radius:14px;background:linear-gradient(180deg,rgba(255,136,102,.05),transparent);padding:12px 14px}
+.inc-h{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--warn);margin-bottom:10px;display:flex;align-items:center;gap:8px;flex-wrap:wrap}
+.inc-h b{color:var(--ink)}.inc-h .note{color:var(--dim);letter-spacing:.04em;text-transform:none;font-size:10.5px}
+.inc-grid{display:flex;flex-direction:column;gap:8px}
+.inc-card{display:flex;align-items:center;gap:12px;flex-wrap:wrap;border:1px solid var(--line);border-radius:10px;background:var(--card);padding:10px 12px}
+.inc-card.sev-red{border-left:3px solid var(--red)}
+.inc-card.sev-warn{border-left:3px solid var(--warn)}
+.inc-who{font-size:13.5px;color:var(--ink)}.inc-who .mach{font-family:var(--mono);font-size:11px;color:var(--violet);margin-left:6px}
+.inc-type{font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;padding:4px 9px;border-radius:999px;white-space:nowrap}
+.inc-type.sev-red{color:var(--red);border:1px solid rgba(255,85,102,.5)}
+.inc-type.sev-warn{color:var(--warn);border:1px solid rgba(255,136,102,.5)}
+.inc-detail{font-family:var(--mono);font-size:11px;color:var(--mut);margin-left:auto}
+.inc-none{font-family:var(--mono);font-size:11px;color:var(--good);letter-spacing:.04em}
+@media(max-width:560px){.inc-detail{margin-left:0;width:100%}}
+</style>
+</head>
+<body data-yk-title="ADMIRA.LIVE">
+<div id="yk-espejo-aviso" style="background:#0a1620;border-bottom:1px solid rgba(120,243,255,.30);color:#75aab9;font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;padding:8px 14px">Espejo en <b style="color:#78f3ff">admira.live</b> de Yokup · misma sesión y mismos datos de <code>api.yokup.com</code>. Si algo no cuadra con <a href="https://www.yokup.com" style="color:#78f3ff">el original</a>, es un fallo: dilo.</div>
+<div class="wrap">
+  <!-- La barra Yokup (yk-frame) aporta logo, rótulo «ADMIRA.LIVE», selector de PROYECTO y reloj. -->
+
+  <h1 class="tah">Tareas Asignadas a <select id="fPersona" class="agentSel" onchange="onAgent()"><option value="">toda la flota</option></select></h1>
+  <p class="sub" id="agentSub">Tickets encolados a este agente desde <b style="color:var(--violet)">admira.live</b> (cola <b style="color:var(--brand)">bot-inbox</b>). Cada encargo mantiene su estado: ACK, en curso, bloqueado o hecho.</p>
+
+  <div class="kpis">
+    <div class="kpi a"><b id="kPend">—</b> pendientes</div>
+    <div class="kpi b"><b id="kProg">—</b> en curso</div>
+    <div class="kpi c"><b id="kBlock">—</b> bloqueadas</div>
+    <div class="kpi d"><b id="kDone">—</b> hechas</div>
+    <div class="kpi"><b id="kOld">—</b> pendiente + viejo</div>
+    <div class="kpi e"><b id="kTot">—</b> en cola</div>
+  </div>
+
+  <div class="bar">
+    <div class="tabs" id="tabs">
+      <button class="tab on" data-f="todas">Todas</button>
+      <button class="tab" data-f="pending">Pendientes</button>
+      <button class="tab" data-f="in_progress">En curso</button>
+      <button class="tab" data-f="blocked">Bloqueadas</button>
+      <button class="tab" data-f="ack">ACK</button>
+      <button class="tab" data-f="done">Hechas</button>
+    </div>
+  </div>
+
+  <!-- OPCIONES (raíl izquierdo): filtros -->
+  <div data-yk-slot="left">
+    <label class="fl">Buscar en la cola</label>
+    <div class="kb"><input id="q" placeholder="texto o remitente…" oninput="render()"></div>
+    <label class="fl" style="margin-top:14px">Estado</label>
+    <div class="kb"><select id="fEstado" onchange="syncTabsFromSelect();render()">
+      <option value="todas">Todos</option>
+      <option value="pending">Pendientes</option>
+      <option value="in_progress">En curso</option>
+      <option value="blocked">Bloqueadas</option>
+      <option value="ack">ACK</option>
+      <option value="done">Hechas</option>
+    </select></div>
+    <p class="mass hint" style="margin-top:16px">Auto-refresco cada 30 s · fuente <b style="color:var(--brand)">bot-inbox</b> (sin auth).</p>
+  </div>
+
+  <!-- AVANZADO (raíl derecho): acciones masivas -->
+  <div class="mass" data-yk-slot="right">
+    <p class="hint">Acciones en lote sobre la cola visible. Marca las tarjetas con su casilla para operar sobre la selección.</p>
+    <button id="mAckAvisos">✓ ACK de todos los avisos informativos (🐇)</button>
+    <button id="mDoneSel">✓ Marcar hechas las seleccionadas (<span id="nSel">0</span>)</button>
+    <button id="mClearSel">✗ Limpiar selección</button>
+    <p class="hint" id="massMsg"></p>
+  </div>
+
+  <!-- INCIDENCIAS EN VIVO: latido viejo / sin latido / sin foco — calculadas
+       desde /api/presence en cada carga (auto-sanadas, sin escribir tickets:
+       cero duplicados). Los ENCARGOS del CLI sí son tickets reales (bot-inbox). -->
+  <div class="inc" id="incWrap" hidden>
+    <div class="inc-h">⚠ Incidencias en vivo <b id="incN">0</b> <span class="note">latido viejo · sin latido · sin foco — se resuelven solas cuando el agente se recupera</span></div>
+    <div class="inc-grid" id="incGrid"></div>
+  </div>
+
+  <div class="list" id="list"><div class="empty">Cargando cola…</div></div>
+  <div class="foot">Yokup · proyecto <b>www.admira.live</b> · cola de encargos <b>bot-inbox</b> (worker admira-telegram) · <a href="/incidencias">← admira.tv (flota DOOH)</a> · versión <span data-yk-deploy-version style="color:var(--dim)">versión pendiente</span></div>
+
+  <!-- EXPERTO (raíl inferior): JSON crudo del inbox -->
+  <div class="yk-expert-btns" data-yk-slot="bottom">
+    <button id="rawBtn">inbox JSON</button>
+  </div>
+  <pre class="yk-expert-out" id="rawOut" data-yk-slot="bottom">Pulsa «inbox JSON» para volcar la respuesta cruda de /api/public/inbox.</pre>
+</div>
+
+<script>
+// Dominio propio: LaLiga bloquea workers.dev en horas de fútbol (FLT-1633); workers.dev sigue vivo como respaldo.
+const INBOX="https://bot.yokup.com";
+const PRESENCE=INBOX+"/api/presence";
+let ITEMS=[], FILTER="todas", SEL=new Set();
+const $=id=>document.getElementById(id);
+const norm=s=>String(s||"").toLowerCase().replace(/[^a-z0-9]/g,"");
+// Deep-link desde la ficha del UFO: ?persona=Neo&machine=MacMini
+let PARAM_PERSONA="", PARAM_MACHINE="";
+(function(){ try{ const u=new URL(location.href); PARAM_PERSONA=u.searchParams.get("persona")||""; PARAM_MACHINE=u.searchParams.get("machine")||""; }catch(e){} })();
+function esc(x){ return String(x==null?"":x).replace(/[<>&"]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[c])); }
+// ts a veces en ms, a veces en segundos: normaliza a ms
+function tsMs(ts){ ts=Number(ts)||0; return ts<1e12 ? ts*1000 : ts; }
+function ago(ms){ if(!ms) return "—"; let s=Math.round((Date.now()-ms)/1000); if(s<0)s=0; if(s<60)return "hace "+s+"s"; if(s<3600)return "hace "+Math.round(s/60)+"m"; if(s<86400)return "hace "+Math.round(s/3600)+"h"; return "hace "+Math.round(s/86400)+"d"; }
+function isAviso(it){ const f=(it.from_name||""); return /white rabbit/i.test(f) || /^🐇/.test((it.text||"").trim()); }
+
+// Persona seleccionada = valor del combo «Tareas Asignadas a». Fuente única.
+function selPersona(){ const s=$("fPersona"); return s?s.value:""; }
+let PRESENCE_PERSONAS=[];   // agentes vistos en /api/presence (primarios)
+let LAST_PRES=[];           // última foto de presencia (para recalcular al cambiar de agente)
+let AGENT_INIT=false;       // primera selección: ?persona= o Neo por defecto
+
+// Rellena el combo con agentes REALES (presencia ∪ personas de los tickets),
+// sin lista rancia hardcodeada. Por defecto Neo (o el ?persona= del deep-link).
+function rebuildAgentCombo(){
+  const sel=$("fPersona"); if(!sel) return;
+  const fromTickets=ITEMS.map(x=>x.target_persona).filter(Boolean);
+  const all=[...new Set([...PRESENCE_PERSONAS,...fromTickets])]
+    .filter(p=>!/^sub/i.test(p)&&!/^infra/i.test(p)&&!/^_/.test(p))   // agentes primarios; fuera sub*/infra*/artefactos
+    .sort((a,b)=>a.localeCompare(b,"es"));
+  const cur=sel.value;
+  sel.innerHTML='<option value="">toda la flota</option>'+all.map(p=>`<option>${esc(p)}</option>`).join("");
+  let want=cur;
+  if(!AGENT_INIT){
+    AGENT_INIT=true;
+    if(PARAM_PERSONA){ want=all.find(p=>norm(p)===norm(PARAM_PERSONA))||PARAM_PERSONA; }
+    else { want=all.find(p=>norm(p)==="neo")||""; }   // Neo por defecto
+  }
+  sel.value=want;
+  if(want && sel.value!==want){ sel.insertAdjacentHTML("beforeend",`<option>${esc(want)}</option>`); sel.value=want; }
+}
+
+async function load(){
+  let d; try{ const r=await fetch(INBOX+"/api/public/inbox",{cache:"no-store"}); d=await r.json(); }catch(e){ return; }
+  ITEMS=(d.items||[]).slice();
+  rebuildAgentCombo();
+  render();
+}
+
+// Cambio de agente en el combo: refiltra lista + incidencias del agente elegido.
+function onAgent(){ render(); renderIncidents(classifyIncidents(LAST_PRES)); }
+
+// INCIDENCIAS EN VIVO desde /api/presence (sin escritura → idempotente por
+// definición, cero tickets duplicados). Acotadas al agente seleccionado.
+// Umbrales del encargo:
+//  · >24 h  → «sin latido» (siempre)
+//  · >15 min con modo != pasivo → «latido viejo»
+//  · foco vacío → «sin foco publicado»
+function classifyIncidents(pres){
+  const now=Math.floor(Date.now()/1000), out=[], sp=selPersona();
+  (pres||[]).forEach(p=>{
+    const per=String(p.persona||""); if(!per||/^sub/i.test(per)||/^infra/i.test(per)) return;
+    if(sp && norm(per)!==norm(sp)) return;   // acota al agente del combo
+    const age=now-(+p.updated||0), mode=String(p.mode||""), mach=String(p.machine||"");
+    if(age>86400) out.push({persona:per,machine:mach,type:"sin latido",sev:"red",detail:"visto "+ago(tsMs(p.updated))});
+    else if(age>900 && mode!=="pasivo") out.push({persona:per,machine:mach,type:"latido viejo",sev:"warn",detail:"visto "+ago(tsMs(p.updated))+" · modo "+esc(mode)});
+    if(!String(p.focus||"").trim()) out.push({persona:per,machine:mach,type:"sin foco",sev:"warn",detail:"sin foco publicado — actualizar bóveda en esa máquina"});
+  });
+  return out;
+}
+function renderIncidents(list){
+  const wrap=$("incWrap"), grid=$("incGrid"), n=$("incN"); if(!wrap) return;
+  const sp=selPersona();
+  if(!list.length){
+    // con un agente concreto seleccionado, decirlo explícito (verde); con toda la flota, ocultar
+    if(sp){ wrap.hidden=false; n.textContent="0"; grid.innerHTML='<div class="inc-none">✓ sin incidencias — el agente late y publica foco</div>'; }
+    else wrap.hidden=true;
+    return;
+  }
+  wrap.hidden=false; n.textContent=list.length;
+  grid.innerHTML=list.map(i=>`
+    <div class="inc-card sev-${i.sev}">
+      <span class="inc-who">${esc(i.persona)}${i.machine?`<span class="mach">@${esc(i.machine)}</span>`:""}</span>
+      <span class="inc-type sev-${i.sev}">${esc(i.type)}</span>
+      <span class="inc-detail">${i.detail}</span>
+    </div>`).join("");
+}
+async function loadPresence(){
+  try{
+    const r=await fetch(PRESENCE,{cache:"no-store"}); const d=await r.json();
+    LAST_PRES=d.presence||[];
+    // agentes primarios para el combo (no sub*/infra*)
+    PRESENCE_PERSONAS=[...new Set(LAST_PRES.map(p=>String(p.persona||"")).filter(p=>p&&!/^sub/i.test(p)&&!/^infra/i.test(p)))];
+    rebuildAgentCombo();
+    renderIncidents(classifyIncidents(LAST_PRES));
+  }catch(e){ /* silencioso: la cola sigue funcionando sin presence */ }
+}
+
+// Tickets del agente seleccionado (o toda la flota si el combo está en «toda la flota»)
+function agentItems(){ const sp=selPersona(); return sp ? ITEMS.filter(t=>norm(t.target_persona)===norm(sp)) : ITEMS.slice(); }
+function kpis(){
+  const base=agentItems();
+  const c={pending:0,in_progress:0,blocked:0,done:0,ack:0};
+  let oldest=null;
+  base.forEach(it=>{ if(it.status in c) c[it.status]++; if(it.status==="pending"){ const t=tsMs(it.ts); if(oldest==null||t<oldest) oldest=t; } });
+  $("kPend").textContent=c.pending; $("kProg").textContent=c.in_progress; $("kBlock").textContent=c.blocked;
+  $("kDone").textContent=c.done; $("kTot").textContent=base.length;
+  $("kOld").textContent=oldest!=null?ago(oldest).replace("hace ",""):"—";
+}
+
+function render(){
+  kpis();
+  const q=$("q").value.trim().toLowerCase();
+  let list=agentItems();
+  if(FILTER!=="todas") list=list.filter(t=>t.status===FILTER);
+  if(q) list=list.filter(t=>((t.text||"")+" "+(t.from_name||"")+" "+(t.target_persona||"")).toLowerCase().includes(q));
+  $("nSel").textContent=SEL.size;
+  const el=$("list");
+  if(!list.length){ el.innerHTML='<div class="empty">Sin encargos en este filtro ✓</div>'; return; }
+  el.innerHTML=list.map(t=>{
+    const stt={pending:"Pendiente",in_progress:"En curso",blocked:"Bloqueada",ack:"ACK",done:"Hecha"}[t.status]||esc(t.status);
+    const sb="b-"+(t.status||"pending");
+    const oldMs=tsMs(t.ts); const old=(t.status==="pending"&&(Date.now()-oldMs)>86400000)?" old":"";
+    const dest=esc(t.target_persona||"—")+(t.target_machine?` <span class="mach">@${esc(t.target_machine)}</span>`:"");
+    const checked=SEL.has(t.id)?"checked":"";
+    return `<div class="tk st-${esc(t.status)}">
+      <div class="hd">
+        <input type="checkbox" class="sel" data-id="${t.id}" ${checked} onchange="toggleSel(${t.id},this.checked)">
+        <div class="tkid">#${esc(t.id)}<span class="st">${t.task_id?'task '+esc(t.task_id):'sin task'}</span></div>
+        <div class="subj">
+          <div class="t clamp" onclick="this.classList.toggle('clamp')" title="Pulsa para expandir">${esc(t.text)||'<i style="color:var(--dim)">(sin texto)</i>'}</div>
+          <div class="m"><span class="to">→ ${dest}</span><span class="fr">de ${esc(t.from_name||"—")}</span><span class="age${old}">${ago(oldMs)}</span></div>
+        </div>
+        <div class="right">
+          <span class="badge ${sb}"><i></i>${stt}</span>
+          <div class="acts">
+            <button class="act a-ack" onclick="doAck(${t.id})">ACK</button>
+            <button class="act a-prog" onclick="doStatus(${t.id},'in_progress')">En curso</button>
+            <button class="act a-block" onclick="doStatus(${t.id},'blocked')">Bloqueada</button>
+            <button class="act a-done" onclick="doStatus(${t.id},'done')">Hecha</button>
+          </div>
+        </div>
+      </div></div>`;
+  }).join("");
+}
+
+function toggleSel(id,on){ if(on) SEL.add(id); else SEL.delete(id); $("nSel").textContent=SEL.size; }
+
+function optimistic(id,status){ const it=ITEMS.find(x=>x.id===id); if(it) it.status=status; render(); }
+async function doAck(id){
+  optimistic(id,"ack");
+  try{ await fetch(INBOX+"/api/bot-inbox/"+id+"/ack",{method:"POST"}); }catch(e){}
+  setTimeout(load,600);
+}
+async function doStatus(id,status){
+  optimistic(id,status);
+  try{ await fetch(INBOX+"/api/bot-inbox/"+id+"/status",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({status:status,commit:"",url:""})}); }catch(e){}
+  setTimeout(load,600);
+}
+
+// --- filtros: pestañas <-> selector de estado ---
+function setFilter(f){ FILTER=f; document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on",x.dataset.f===f)); $("fEstado").value=f; render(); }
+function syncTabsFromSelect(){ FILTER=$("fEstado").value; document.querySelectorAll(".tab").forEach(x=>x.classList.toggle("on",x.dataset.f===FILTER)); }
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>setFilter(b.dataset.f));
+
+// --- acciones masivas ---
+$("mAckAvisos").onclick=async()=>{
+  const av=ITEMS.filter(t=>isAviso(t)&&t.status==="pending");
+  if(!av.length){ $("massMsg").textContent="No hay avisos informativos pendientes."; return; }
+  $("massMsg").textContent="ACK a "+av.length+" aviso(s)…";
+  for(const t of av){ optimistic(t.id,"ack"); try{ await fetch(INBOX+"/api/bot-inbox/"+t.id+"/ack",{method:"POST"}); }catch(e){} }
+  $("massMsg").textContent="✓ "+av.length+" aviso(s) marcados ACK."; setTimeout(load,700);
+};
+$("mDoneSel").onclick=async()=>{
+  if(!SEL.size){ $("massMsg").textContent="Selección vacía."; return; }
+  const ids=[...SEL]; $("massMsg").textContent="Marcando hechas "+ids.length+"…";
+  for(const id of ids){ optimistic(id,"done"); try{ await fetch(INBOX+"/api/bot-inbox/"+id+"/status",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({status:"done",commit:"",url:""})}); }catch(e){} }
+  SEL.clear(); $("massMsg").textContent="✓ "+ids.length+" marcadas hechas."; setTimeout(load,700);
+};
+$("mClearSel").onclick=()=>{ SEL.clear(); $("massMsg").textContent="Selección limpiada."; render(); };
+
+// --- EXPERTO: JSON crudo del inbox (worker admira-telegram, no yokup-rtc) ---
+$("rawBtn").onclick=async()=>{
+  $("rawOut").textContent="… solicitando /api/public/inbox";
+  try{ const r=await fetch(INBOX+"/api/public/inbox",{cache:"no-store"}); $("rawOut").textContent=JSON.stringify(await r.json(),null,2); }
+  catch(e){ $("rawOut").textContent="El worker admira-telegram no responde ahora."; }
+};
+
+load(); loadPresence();
+setInterval(()=>{ load(); loadPresence(); },30000);
+</script>
+<script type="module" src="/avatar-widget.js?v=3"></script>
+<script src="/yk-frame.js?v=v.2026.08.02.224605"></script>
+</body>
+</html>

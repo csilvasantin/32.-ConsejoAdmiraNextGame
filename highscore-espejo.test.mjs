@@ -60,8 +60,10 @@ test('ningún enlace apunta a una página de yokup que aquí no existe', () => {
         nombre + ' enlaza a /' + p + ', que sólo existe en yokup.com');
     }
   }
-  // …y sí apuntan al original absoluto.
-  assert.match(marco, /"https:\/\/www\.yokup\.com\/dashboard"/);
+  // …y una página que SIGUE en yokup (app: la descarga del técnico, producto, no viaja) sí apunta al
+  // original absoluto. Antes se comprobaba con dashboard; dashboard se mudó en el tramo 4, app no.
+  assert.ok(PENDIENTES.includes('app'), 'app debe seguir pendiente (no viaja)');
+  assert.match(marco, /"https:\/\/www\.yokup\.com\/app"/);
 });
 
 test('el marco pregunta por el sello de esta casa, no por el guardián de yokup', () => {

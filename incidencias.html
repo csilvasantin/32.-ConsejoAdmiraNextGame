@@ -1,0 +1,357 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta name="yokup-espejo" content="origen www.yokup.com · commit 00ba695 · sincronizado 17.09.2026 19:12">
+<script src="/acceso-espejo.js?v=r1"></script>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Soporte de incidencias · Yokup</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#02080d">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/app/apple-touch-icon.png">
+<link rel="stylesheet" href="https://www.carlossilva.info/admira-design/tokens.css">
+<link rel="stylesheet" href="/yk-frame.css?v=r17">
+<link rel="stylesheet" href="/yk-misiones.css?v=r34">
+<link rel="stylesheet" href="/yk-cabezal.css?v=r3">
+<style>
+:root{--bg:#02080d;--card:#0a1620;--card2:#0d1c28;--ink:#dff8ff;--mut:#75aab9;--dim:#4d7a88;--brand:#78f3ff;--accent:#ffd866;--good:#88ffaa;--warn:#ff8866;--violet:#aa88ff;--line:rgba(120,243,255,.16);--line2:rgba(120,243,255,.30);--sans:var(--admira-font-sans,-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif);--mono:var(--admira-font-mono,ui-monospace,SFMono-Regular,"JetBrains Mono",Menlo,monospace)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;min-height:100vh}
+.wrap{max-width:1100px;margin:0 auto;padding:22px 24px 48px}
+/* (fuera el CSS del header legacy — nav{space-between}/.logo/.dot/.src: sin
+   markup ya, y el nav{} elemento se filtraba al menú de la barra yk-frame y
+   lo esparcía a todo el ancho) */
+h1{font-size:clamp(23px,3vw,31px);letter-spacing:-.02em;margin:4px 0 4px}
+.sub{color:var(--mut);font-size:14.5px;margin-bottom:14px}
+.hrow{display:flex;align-items:flex-start;gap:16px;flex-wrap:wrap;margin:4px 0 14px}.hrow .page-intro{flex:1 1 420px}.hrow #busca{flex:1 1 240px;max-width:420px;margin-top:2px}
+.incident-create{display:grid;grid-template-columns:minmax(240px,1fr) minmax(120px,180px) minmax(120px,160px) auto;gap:8px;align-items:start;margin-bottom:14px}
+.incident-create :is(input,select,button){min-height:44px;border:1px solid var(--line);border-radius:10px;background:var(--card);color:var(--ink);font:12px var(--mono);padding:9px 11px}
+.incident-create input{font:14px var(--sans)}.incident-create button{border-color:var(--brand);background:var(--brand);color:#02080d;text-transform:uppercase;letter-spacing:.05em;cursor:pointer}.incident-create button:disabled{opacity:.55;cursor:wait}
+.incident-create-msg{grid-column:1/-1;min-height:15px;color:var(--dim);font:11px var(--mono)}.incident-create-msg.ok{color:var(--good)}.incident-create-msg.err{color:var(--warn)}
+.kb{display:flex;gap:8px;margin-bottom:16px}
+.kb input{flex:1;font-family:var(--sans);font-size:14px;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:11px;padding:12px 14px;outline:none}
+.kb input:focus{border-color:var(--violet)}
+.kb button{font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;padding:0 16px;border-radius:11px;border:1px solid rgba(170,136,255,.4);color:var(--violet);background:rgba(170,136,255,.08);cursor:pointer}
+.kb button:hover{background:rgba(170,136,255,.16)}
+.kbans{border:1px solid rgba(170,136,255,.3);background:rgba(170,136,255,.05);border-radius:12px;padding:14px 16px;margin-bottom:16px;display:none}
+.kbans.show{display:block}
+.kbans h4{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--violet);margin-bottom:8px;display:flex;align-items:center;gap:8px}
+.kbans p{font-size:14px;line-height:1.6;color:var(--ink)}
+.kbans .srcs{margin-top:8px;font-family:var(--mono);font-size:11px;color:var(--mut)}
+.kpis{display:flex;gap:10px;flex-wrap:wrap;margin-bottom:14px}
+.kpi{font-family:var(--mono);font-size:11px;letter-spacing:.05em;text-transform:uppercase;border:1px solid var(--line);border-radius:10px;padding:9px 13px;background:var(--card);color:var(--mut);display:flex;align-items:center;gap:8px}
+.kpi{cursor:pointer;transition:.18s;font:inherit}
+.kpi[data-f]:hover{border-color:var(--line2);color:var(--ink)}
+.kpi.on{border-color:var(--brand);background:rgba(120,243,255,.08);color:var(--brand)}
+.kpi b{font-size:16px;color:var(--ink)}.kpi.a b{color:var(--warn)}.kpi.b b{color:var(--accent)}.kpi.c b{color:var(--good)}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:14px}
+.tabs{display:flex;gap:6px;flex-wrap:wrap}
+.tab{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:8px 13px;border-radius:9px;border:1px solid var(--line);color:var(--mut);background:var(--card);cursor:pointer;transition:.2s}
+.tab.on{color:#02080d;background:var(--brand);border-color:var(--brand)}
+.tools{display:flex;gap:8px}
+.inc-filters{display:flex;flex-direction:column;gap:10px}.inc-filter-selects{display:grid;gap:8px}.inc-filter-selects label{display:grid;gap:4px;color:var(--dim);font:9.5px var(--mono);letter-spacing:.08em;text-transform:uppercase}.inc-filter-selects select{min-height:44px;border:1px solid var(--line);border-radius:9px;background:var(--card);color:var(--ink);font:11px var(--mono);padding:8px 10px}
+.simBtn,.bellBtn{font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;padding:8px 12px;border-radius:9px;border:1px dashed var(--line2);color:var(--mut);background:transparent;cursor:pointer}
+.simBtn:hover{color:var(--warn);border-color:var(--warn)}.bellBtn:hover{color:var(--accent);border-color:var(--accent)}.bellBtn.on{color:var(--good);border-style:solid;border-color:rgba(136,255,170,.4)}
+.foot{margin-top:24px;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}.foot b{color:var(--brand)}
+/* La lista de misiones y el árbol de tareas viven en /yk-misiones.css (compartido). */
+/* intro plegable REUTILIZABLE — patrón .page-intro de /objetivos. */
+.page-intro{margin:0}
+.page-intro>summary{list-style:none;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;cursor:pointer}
+.page-intro>summary::-webkit-details-marker{display:none}
+.page-intro>summary h1{margin:0}
+.page-intro .pi-toggle{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;font:600 10px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mut);border:1px solid var(--line);border-radius:999px;padding:6px 11px;transition:color .15s,border-color .15s}
+.page-intro>summary:hover .pi-toggle{color:var(--dim);border-color:var(--mut)}
+.page-intro .pi-chevron{font-size:13px;line-height:1;transition:transform .18s}
+.page-intro[open] .pi-chevron{transform:rotate(90deg)}
+.page-intro .pi-body{margin-top:10px;animation:pi-in .18s ease}
+@keyframes pi-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+
+/* Incidencias reutiliza el contenedor/selección de YkMisiones, pero conserva
+   su semántica: una incidencia no es una misión ni tiene columnas abc. */
+.inc-head,.inc-main{display:grid;grid-template-columns:minmax(170px,.9fr) minmax(260px,1.65fr) minmax(190px,1fr) minmax(160px,.85fr);gap:0;align-items:stretch}
+.inc-head{padding:9px 16px;border-bottom:1px solid var(--line);background:rgba(120,243,255,.035);color:var(--dim);font:9.5px var(--mono);letter-spacing:.09em;text-transform:uppercase}
+.inc-head span{padding:0 12px;text-align:center}.incident-row{cursor:default;overflow:hidden}.incident-row:focus-visible{outline:2px solid var(--brand);outline-offset:-2px}.inc-main{padding:12px 16px;min-width:0;width:100%}.inc-cell{min-width:0;padding:3px 12px;border-left:1px solid rgba(120,243,255,.09);display:flex;flex-direction:column;justify-content:center;gap:5px}.inc-cell:first-child{border-left:0;padding-left:0}.inc-project{color:var(--brand);font:700 11px var(--mono);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.inc-origin,.inc-meta{color:var(--mut);font:9.5px var(--mono);letter-spacing:.035em;overflow-wrap:anywhere}.inc-ref{color:var(--brand);font:10px var(--mono);text-decoration:none}.inc-ref:hover{text-decoration:underline}.inc-subject{min-width:0;color:var(--ink);font-size:14px;font-weight:650;line-height:1.3;overflow-wrap:anywhere;word-break:break-word;display:-webkit-box;-webkit-line-clamp:3;line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}.inc-resource{color:var(--mut);font:10px var(--mono);overflow-wrap:anywhere}.inc-owner{overflow:hidden}.inc-owner .who{align-items:flex-start;text-align:left;max-width:100%;min-width:0}.inc-machine{max-width:100%;color:var(--mut);font:10px var(--mono);overflow-wrap:anywhere}
+.inc-state{align-items:flex-start}.inc-actions{display:flex;gap:6px;flex-wrap:wrap}.inc-action{min-height:44px;display:inline-flex;align-items:center;justify-content:center;border:1px solid var(--line2);border-radius:8px;background:transparent;color:var(--brand);font:9.5px var(--mono);letter-spacing:.05em;text-transform:uppercase;padding:7px 9px;text-decoration:none;cursor:pointer}.inc-action:hover,.inc-action:focus-visible{background:rgba(120,243,255,.1);outline:2px solid transparent}.inc-action.advance{color:var(--accent);border-color:rgba(255,216,102,.38)}
+.inc-detail{border-top:1px dashed var(--line);margin:0 16px;padding:0 0 10px}.inc-detail summary{min-height:44px;display:flex;align-items:center;gap:7px;color:var(--mut);font:10px var(--mono);letter-spacing:.06em;text-transform:uppercase;cursor:pointer;list-style:none}.inc-detail summary::-webkit-details-marker{display:none}.inc-detail summary::before{content:"▸";color:var(--brand)}.inc-detail[open] summary::before{content:"▾"}.inc-detail-body{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px 16px;padding:2px 0 4px}.inc-detail-body p{color:var(--mut);font-size:11.5px;line-height:1.45;overflow-wrap:anywhere}.inc-detail-body .inc-triage{grid-column:1/-1;color:var(--ink);padding:9px 11px;border-left:2px solid var(--violet);background:rgba(170,136,255,.055)}
+.inc-focus{box-shadow:inset 0 0 0 1px rgba(255,216,102,.65),0 0 18px rgba(255,216,102,.2)}
+.inc-empty{padding:36px;text-align:center;color:var(--dim);font:12px var(--mono);letter-spacing:.08em;text-transform:uppercase}
+@media(max-width:820px){.incident-create{grid-template-columns:1fr 1fr}.incident-create input{grid-column:1/-1}.incident-create button{grid-column:2}.inc-head{display:none}.inc-main{grid-template-columns:minmax(0,1.3fr) minmax(0,1fr)}.inc-cell{border-left:0;border-top:1px solid rgba(120,243,255,.08);padding:9px 10px}.inc-cell:nth-child(-n+2){border-top:0}.inc-cell:first-child{padding:9px 10px}.inc-detail-body{grid-template-columns:1fr 1fr}}
+@media(max-width:520px){.wrap{padding-left:14px;padding-right:14px}.hrow #busca{max-width:none}.incident-create{grid-template-columns:1fr}.incident-create :is(input,select,button){grid-column:1}.kb{flex-direction:column}.kb button{min-height:44px}.inc-main{grid-template-columns:1fr;padding:8px 10px}.inc-cell,.inc-cell:nth-child(-n+2){border-top:1px solid rgba(120,243,255,.08);padding:10px 4px}.inc-cell:first-child{border-top:0}.inc-detail{margin:0 10px}.inc-detail-body{grid-template-columns:1fr}.inc-detail-body .inc-triage{grid-column:1}.tabs{display:grid;grid-template-columns:1fr 1fr;width:100%}.tab{min-height:44px}.tools{flex-wrap:wrap}.simBtn,.bellBtn{min-height:44px}.kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:6px}.kpi{min-width:0;padding:9px 7px;justify-content:center;flex-direction:column;gap:2px;text-align:center}}
+@media(prefers-reduced-motion:reduce){.page-intro .pi-body{animation:none}.incident-row,.inc-action{transition:none}}
+</style>
+</head>
+<body data-yk-title="INCIDENCIAS" data-yk-rail-left="MISIONES" data-yk-rail-right="TAREAS" data-yk-zone="app">
+<div id="yk-espejo-aviso" style="background:#0a1620;border-bottom:1px solid rgba(120,243,255,.30);color:#75aab9;font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;padding:8px 14px">Espejo en <b style="color:#78f3ff">admira.live</b> de Yokup · misma sesión y mismos datos de <code>api.yokup.com</code>. Si algo no cuadra con <a href="https://www.yokup.com" style="color:#78f3ff">el original</a>, es un fallo: dilo.</div>
+<div class="wrap">
+  <!-- La barra Yokup (yk-frame) aporta logo, rótulo, selector de PROYECTO y reloj. -->
+
+  <div class="hrow">
+    <details class="page-intro">
+      <summary>
+        <h1>Incidencias</h1>
+        <span class="pi-toggle">Qué es esto <span class="pi-chevron">›</span></span>
+      </summary>
+      <div class="pi-body">
+        <p class="sub">Punto único de <b>todas</b> las incidencias de AdmiraNeXT: <b style="color:var(--brand)">🖥 pantallas DOOH</b>, <b style="color:var(--brand)">🌐 servicios/webs caídos</b>, <b style="color:var(--brand)">🖥 máquinas de la flota</b> y <b style="color:var(--brand)">🤖 agentes bloqueados</b>. La <b style="color:var(--violet)">IA</b> las diagnostica y asigna; lanzas la asistencia en vivo.</p>
+      </div>
+    </details>
+    <label class="sr-only" for="busca">Buscar incidencias</label>
+    <input id="busca" type="search" autocomplete="off" placeholder="🔎 Buscar incidencia…">
+  </div>
+
+  <form class="incident-create" id="incidentCreate" aria-label="Crear incidencia">
+    <input id="newSubject" required maxlength="200" placeholder="Nueva incidencia…" aria-label="Descripción de la incidencia">
+    <select id="newKind" aria-label="Clasificación de la incidencia">
+      <option value="screen">Pantalla</option><option value="service">Servicio/web</option><option value="machine">Máquina</option><option value="agent">Agente</option><option value="external">Otra</option>
+    </select>
+    <select id="newSeverity" aria-label="Severidad de la incidencia">
+      <option value="alta">Alta</option><option value="urgente">Urgente</option><option value="normal">Normal</option><option value="baja">Baja</option>
+    </select>
+    <button id="newSubmit" type="submit">Crear incidencia</button>
+    <div class="incident-create-msg" id="incidentCreateMsg" role="status" aria-live="polite"></div>
+  </form>
+
+  <div class="kb">
+    <input id="kbq" placeholder="🤖 Pregunta a la base de conocimiento IA (p.ej. «pantalla sin red»)…" onkeydown="if(event.key==='Enter')askKb()">
+    <button onclick="askKb()">Preguntar</button>
+  </div>
+  <div class="kbans" id="kbans"><h4>🤖 Base de conocimiento · IA</h4><p id="kbtext"></p><div class="srcs" id="kbsrcs"></div></div>
+
+  <div class="kpis">
+    <button class="kpi a" data-f="open"><b id="kOpen">—</b> abiertas</button>
+    <button class="kpi b" data-f="in_progress"><b id="kProg">—</b> en curso</button>
+    <button class="kpi c" data-f="resolved"><b id="kRes">—</b> resueltas</button>
+  </div>
+
+  <div class="bar">
+    <div class="inc-filters" data-yk-slot="left" aria-label="Filtros de incidencias">
+      <div class="tabs">
+        <button class="tab on" type="button" data-f="activas">Activas</button>
+        <button class="tab" type="button" data-f="open">Abiertas</button>
+        <button class="tab" type="button" data-f="in_progress">En curso</button>
+        <button class="tab" type="button" data-f="resolved">Resueltas</button>
+        <button class="tab" type="button" data-f="todas">Todas</button>
+      </div>
+      <div class="inc-filter-selects">
+        <label>Clasificación<select id="kindFilter"><option value="todas">Todas</option><option value="screen">Pantalla</option><option value="service">Servicio/web</option><option value="machine">Máquina</option><option value="agent">Agente</option><option value="external">Otra</option></select></label>
+        <label>Severidad<select id="severityFilter"><option value="todas">Todas</option><option value="urgente">Urgente</option><option value="alta">Alta</option><option value="normal">Normal</option><option value="baja">Baja</option></select></label>
+      </div>
+    </div>
+    <!-- Raíl TAREAS: ARRIBA el árbol abc/123 de la misión activa; DEBAJO, tras el
+         separador, las herramientas de siempre (Agentes/Avisos/Simular). -->
+    <div class="tree" id="taskTree" data-yk-slot="right">
+      <div class="empty2">Selecciona una <b>misión</b> (incidencia) en la lista para ver y planificar sus <b>tareas</b>.</div>
+    </div>
+    <div data-yk-slot="right"><div class="tsep"></div><div class="tsep-lbl">Herramientas</div></div>
+    <div class="tools" data-yk-slot="right">
+      <a class="simBtn" href="/agentes" style="text-decoration:none">👥 Agentes</a>
+      <button class="bellBtn" id="bellBtn">🔔 Avisos</button>
+      <button class="simBtn" id="simBtn">⚡ Simular caída</button>
+    </div>
+  </div>
+
+  <div class="list" id="list" aria-live="polite"><div class="empty">Cargando incidencias…</div></div>
+  <div class="foot">Yokup · helpdesk con IA · persistencia <b>D1</b> · triaje/resumen/KB <b>Workers AI</b> · datos flota <b>admira.tv</b></div>
+
+  <!-- EXPERTO (raíl inferior): el marco cuadrático mueve estos nodos al panel -->
+  <div class="yk-expert-btns" data-yk-slot="bottom">
+    <button data-yk-fetch="/tickets">tickets JSON</button>
+    <button data-yk-fetch="/tickets" data-yk-pick="stats">stats JSON</button>
+  </div>
+  <pre class="yk-expert-out" data-yk-slot="bottom">Pulsa un botón para volcar el JSON crudo del worker yokup-rtc.</pre>
+</div>
+
+<script src="/yk-agent-identity.js?v=v.2026.08.02.224605"></script>
+<script src="/yk-avatar.js?v=r3"></script>
+<script src="/yk-misiones.js?v=r48"></script>
+<script>
+const WORKER="https://api.yokup.com";
+// Compat: llegadas antiguas con #misiones / #tareas abren su raíl (el nav ya no lo usa).
+try{ if(location.hash==="#misiones") localStorage.setItem("yk_frame_open_left","1");
+     else if(location.hash==="#tareas") localStorage.setItem("yk_frame_open_right","1"); }catch(e){}
+const PARAMS=new URLSearchParams(location.search);
+const HASH_FOCUS=/^#(?:INC|SVC|MAQ|AGT)-/i.test(location.hash)?location.hash.slice(1):"";
+const FOCUS=String(PARAMS.get("incident")||PARAMS.get("id")||HASH_FOCUS||"").trim();
+let FILTER="activas", SEARCH="", KIND_FILTER="todas", SEVERITY_FILTER="todas", PROJECT_SCOPE=null, ROWS=[], LOAD_GENERATION=0, SCOPE_READY=false;
+let seen=new Set();
+const $=id=>document.getElementById(id);
+const esc=YkMisiones.esc;
+// Modelo MISIONES·TAREAS compartido (fila, selección con glow, árbol abc/123).
+YkMisiones.init({worker:WORKER, treeId:"taskTree"});
+
+function classificationOf(t){
+  const role=String(t&&t.role||"").toLowerCase(), resource=String(t&&t.screen||"").toLowerCase();
+  if(/^(svc|service):/.test(resource)||/service|servicio|web/.test(role))return "service";
+  if(/^(maq|machine):/.test(resource)||/machine|maquina|máquina/.test(role))return "machine";
+  if(/^(agt|agent):/.test(resource)||/agent|agente/.test(role))return "agent";
+  if(/screen|pantalla|player|dooh/.test(role)||!resource.includes(":"))return "screen";
+  return "external";
+}
+const KIND_LABEL={screen:"Pantalla",service:"Servicio/web",machine:"Máquina",agent:"Agente",external:"Otra"};
+function incidentState(t){
+  if(t.status==="resolved"||t.status==="done")return{label:"Resuelta",cls:"b-res",next:"open",action:"Reabrir"};
+  if(t.status==="in_progress")return{label:"En curso",cls:"b-prog",next:"resolved",action:"Resolver"};
+  if(t.status==="cancelled")return{label:"Eliminada",cls:"b-cancel",next:"open",action:"Recuperar"};
+  return{label:"Abierta",cls:"b-open",next:"in_progress",action:"Empezar"};
+}
+function incidenceRowHtml(t){
+  YkMisiones.cacheMission(t);
+  const state=incidentState(t), kind=classificationOf(t), machine=YkMisiones.machineOf(t)||t.loc||"";
+  const project=t.project_name||t.project||"Sin proyecto", source=t.source||"origen no indicado";
+  const detail=[t.loc&&("Ubicación: "+t.loc),t.role&&("Tipo declarado: "+t.role),t.priority&&("Severidad: "+t.priority)].filter(Boolean);
+  return '<article class="tk incident-row '+(t.status==="open"?'open ':'')+(t.id===FOCUS?'inc-focus ':'')+'" data-id="'+esc(t.id)+'" data-kind="'+esc(kind)+'" tabindex="0" role="group" aria-label="Incidencia '+esc(t.id)+' · '+esc(t.subject||'sin título')+'">'+
+    '<div class="inc-main">'+
+      '<div class="inc-cell inc-origin-cell"><span class="inc-project">'+esc(project)+'</span><span class="inc-origin">'+esc(KIND_LABEL[kind]||KIND_LABEL.external)+' · '+esc(source)+'</span></div>'+
+      '<div class="inc-cell inc-copy"><a class="inc-ref tkopen" href="/ticket?id='+encodeURIComponent(t.id)+'" title="Abrir ficha '+esc(t.id)+'">'+esc(YkMisiones.visibleId(t))+'</a><span class="inc-subject">'+esc(t.subject||"Incidencia sin título")+'</span><span class="inc-resource">'+esc(t.screen||"recurso no indicado")+'</span></div>'+
+      '<div class="inc-cell inc-owner">'+YkMisiones.whoHtml(t.assignee||"",machine,"",t._agents,null)+'<span class="inc-machine">'+(machine?'🖥 '+esc(machine):'sin equipo indicado')+'</span></div>'+
+      '<div class="inc-cell inc-state"><span class="badge '+state.cls+'"><i></i>'+state.label+'</span><div class="inc-actions"><button class="inc-action advance" type="button" data-status-id="'+esc(t.id)+'" data-next="'+state.next+'" aria-label="'+state.action+' incidencia '+esc(t.id)+'">'+state.action+'</button><a class="inc-action tkopen" href="/ticket?id='+encodeURIComponent(t.id)+'">Abrir →</a></div></div>'+
+    '</div>'+
+    '<details class="inc-detail"'+(t.id===FOCUS?' open':'')+'><summary>Detalle de la incidencia</summary><div class="inc-detail-body">'+
+      '<p><b>Proyecto/origen</b><br>'+esc(project)+' · '+esc(source)+'</p><p><b>Clasificación</b><br>'+esc(KIND_LABEL[kind]||KIND_LABEL.external)+'</p><p><b>Creada</b><br>'+esc(YkMisiones.ago(t.created_at))+'</p>'+
+      (detail.length?'<p class="inc-triage">'+esc(detail.join(' · '))+'</p>':'')+(t.ai_triage?'<p class="inc-triage"><b>Triaje IA</b><br>'+esc(t.ai_triage)+'</p>':'')+
+    '</div></details></article>';
+}
+
+async function askKb(){
+  const q=$("kbq").value.trim(); if(!q)return;
+  $("kbans").classList.add("show"); $("kbtext").textContent="Buscando en incidencias resueltas…"; $("kbsrcs").textContent="";
+  try{ const r=await fetch(WORKER+"/kb-search?q="+encodeURIComponent(q)); const d=await r.json();
+    $("kbtext").textContent=d.text||"Sin resultados."; $("kbsrcs").textContent=(d.sources&&d.sources.length)?("Fuentes: "+d.sources.map(s=>"#"+s.id).join(", ")):""; }
+  catch(e){ $("kbtext").textContent="La base de conocimiento no responde ahora."; }
+}
+
+async function load(){
+  if(!SCOPE_READY)return;
+  const generation=++LOAD_GENERATION, scopeAtStart=PROJECT_SCOPE;
+  let d; try{ const r=await fetch(WORKER+"/tickets?scope=campo&limit=500",{cache:"no-store"}); if(!r.ok)throw new Error("tickets "+r.status); d=await r.json(); }catch(e){
+    if(generation===LOAD_GENERATION) $("list").innerHTML='<div class="inc-empty" role="alert">No se pudieron cargar las incidencias.</div>'; return;
+  }
+  if(generation!==LOAD_GENERATION||scopeAtStart!==PROJECT_SCOPE)return;
+  const all=d.tickets||[];
+  // El selector global usa exclusivamente project_id canónico. Nunca se infiere
+  // el proyecto desde asunto, ubicación u origen: igualdad exacta o Todos.
+  const tks=PROJECT_SCOPE?all.filter(t=>String(t.project||"")===PROJECT_SCOPE):all;
+  ROWS=tks;
+  $("kOpen").textContent=tks.filter(t=>t.status==="open").length;
+  $("kProg").textContent=tks.filter(t=>t.status==="in_progress").length;
+  $("kRes").textContent=tks.filter(t=>t.status==="resolved"||t.status==="done").length;
+  // el reloj lo pinta la barra Yokup (yk-frame)
+  // avisos: nuevas abiertas no vistas
+  tks.filter(t=>t.status==="open"&&!seen.has(t.id)).forEach(t=>{ notify(t); seen.add(t.id); });
+  try{localStorage.setItem("yk_seen:"+(PROJECT_SCOPE||"todos"),JSON.stringify([...seen]));}catch(e){}
+  let list=tks;
+  if(FOCUS) list=tks.filter(t=>t.id===FOCUS);
+  else if(FILTER==="activas") list=tks.filter(t=>t.status!=="resolved"&&t.status!=="done"&&t.status!=="cancelled");
+  else if(FILTER!=="todas") list=tks.filter(t=>t.status===FILTER);
+  if(KIND_FILTER!=="todas")list=list.filter(t=>classificationOf(t)===KIND_FILTER);
+  if(SEVERITY_FILTER!=="todas")list=list.filter(t=>String(t.priority||"normal")===SEVERITY_FILTER);
+  if(SEARCH){
+    const normalize=v=>String(v||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+    const q=normalize(SEARCH);
+    list=list.filter(t=>[t.id,t.display_ref,t.project,t.project_name,t.source,t.subject,t.screen,t.loc,t.assignee,t.role,t.priority,KIND_LABEL[classificationOf(t)]].some(v=>normalize(v).includes(q)));
+  }
+  const el=$("list");
+  if(!list.length){ el.innerHTML='<div class="inc-empty">Sin incidencias en este filtro ✓</div>'; return; }
+  el.innerHTML='<div class="inc-head" aria-hidden="true"><span>Proyecto / origen</span><span>Incidencia</span><span>Responsable / equipo</span><span>Estado / acciones</span></div>'+list.map(incidenceRowHtml).join("");
+  YkMisiones.bindRows(el);   // selección compartida + árbol de tareas del ticket
+  el.querySelectorAll(".incident-row").forEach(row=>row.onkeydown=event=>{
+    if((event.key!=="Enter"&&event.key!==" ")||event.target.closest("a,button,summary,select,input"))return;
+    event.preventDefault(); YkMisiones.selectMission(row.dataset.id);
+  });
+  el.querySelectorAll("[data-status-id]").forEach(button=>button.onclick=async event=>{
+    event.preventDefault(); event.stopPropagation(); button.disabled=true;
+    try{ const r=await fetch(WORKER+"/ticket/status",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({id:button.dataset.statusId,status:button.dataset.next,author:"Yokup · Incidencias"})});
+      const out=await r.json().catch(()=>({})); if(!r.ok||out.ok===false)throw new Error(out.error||"status"); await load();
+    }catch(e){button.disabled=false;button.textContent="Reintentar";}
+  });
+  if(FOCUS){
+    const row=el.querySelector('[data-id="'+CSS.escape(FOCUS)+'"]');
+    if(row){YkMisiones.selectMission(FOCUS);setTimeout(()=>row.scrollIntoView({block:"center"}),40);}
+  }
+}
+function notify(t){
+  if(!("Notification" in window)||Notification.permission!=="granted")return;
+  try{ new Notification("🔴 Nueva incidencia · "+t.id,{body:t.subject+" — "+t.screen+" · "+t.assignee, tag:t.id}); }catch(e){}
+}
+const VAPID="BDqJIroeM7TZyFufMupmO6v9q-b4ahgGZ3JJL-E_5Kj1d4pBsHSVlsr-ju2J1vpr9zoMVwXWZUMudqXJ9KRVri4";
+function urlB64(b){ const pad="=".repeat((4-b.length%4)%4); const s=(b+pad).replace(/-/g,"+").replace(/_/g,"/"); const raw=atob(s); return Uint8Array.from([...raw].map(c=>c.charCodeAt(0))); }
+async function enablePush(){
+  try{
+    if(!("serviceWorker" in navigator)||!("PushManager" in window)){ if("Notification" in window) await Notification.requestPermission(); return; }
+    const reg=await navigator.serviceWorker.register("/sw.js");
+    const perm=await Notification.requestPermission(); if(perm!=="granted") return;
+    let sub=await reg.pushManager.getSubscription();
+    if(!sub) sub=await reg.pushManager.subscribe({userVisibleOnly:true, applicationServerKey:urlB64(VAPID)});
+    const r=await fetch(WORKER+"/push/subscribe",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify(sub)});
+    const d=await r.json().catch(()=>({}));
+    // El aviso llega sin contenido: el service worker tiene que preguntar qué
+    // incidencia anunciar, y no puede usar la sesión Google. Se le re-registra
+    // con su llave en la URL (self.location la conserva entre reinicios) para
+    // que pueda leer /push/peek. Sin esto el aviso sale genérico.
+    if(d && d.key) await navigator.serviceWorker.register("/sw.js?k="+encodeURIComponent(d.key));
+    $("bellBtn").classList.add("on"); $("bellBtn").textContent="🔔 Avisos ON";
+  }catch(e){}
+}
+$("bellBtn").onclick=enablePush;
+// OJO: registrar "/sw.js" a secas en cada carga PISABA el registro con llave que
+// deja enablePush ("/sw.js?k=…"), y el aviso volvía a salir genérico. Sólo se
+// registra el pelado si no hay ya uno con llave.
+if("serviceWorker" in navigator) navigator.serviceWorker.getRegistrations()
+  .then(rs=>{ const conLlave=rs.some(r=>((r.active||r.installing||r.waiting||{}).scriptURL||"").includes("k="));
+              if(!conLlave) navigator.serviceWorker.register("/sw.js").catch(()=>{}); })
+  .catch(()=>{ navigator.serviceWorker.register("/sw.js").catch(()=>{}); });
+if(("Notification" in window)&&Notification.permission==="granted"){ $("bellBtn").classList.add("on"); $("bellBtn").textContent="🔔 Avisos ON"; }
+$("simBtn").onclick=async()=>{ $("simBtn").textContent="creando…"; try{ await fetch(WORKER+"/ticket/simulate",{method:"POST"}); }catch(e){} $("simBtn").textContent="⚡ Simular caída"; aplicaFiltro("activas"); };
+const CREATE_PENDING_KEY="yk_incident_create_pending_v1";
+function readPendingCreate(){try{return JSON.parse(sessionStorage.getItem(CREATE_PENDING_KEY)||"null");}catch(e){return null;}}
+function writePendingCreate(value){try{if(value)sessionStorage.setItem(CREATE_PENDING_KEY,JSON.stringify(value));else sessionStorage.removeItem(CREATE_PENDING_KEY);}catch(e){}}
+function createSignature(subject,kind,severity){return [subject,kind,severity,PROJECT_SCOPE||""].join("\u001f");}
+function newManualResource(kind){const uuid=window.crypto&&crypto.randomUUID?crypto.randomUUID():Date.now().toString(36)+Math.random().toString(36).slice(2);return "manual:"+kind+":"+uuid;}
+$("incidentCreate").onsubmit=async event=>{
+  event.preventDefault();
+  const subject=$("newSubject").value.trim(), button=$("newSubmit"), msg=$("incidentCreateMsg"); if(!subject)return;
+  button.disabled=true; msg.className="incident-create-msg"; msg.textContent="Creando incidencia…";
+  try{
+    const kind=$("newKind").value, severity=$("newSeverity").value, signature=createSignature(subject,kind,severity);
+    let pending=readPendingCreate();
+    if(!pending||pending.signature!==signature){pending={signature,resource:newManualResource(kind),createdId:""};writePendingCreate(pending);}
+    let out={ok:true,id:pending.createdId};
+    if(!pending.createdId){
+      if(!PROJECT_SCOPE)throw new Error("Selecciona un proyecto antes de crear la incidencia");
+      const r=await fetch(WORKER+"/incident",{method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({subject,resource:pending.resource,kind,project_id:PROJECT_SCOPE,severity,source:"yokup-web",detail:subject,by:"Yokup · Incidencias"})});
+      out=await r.json().catch(()=>({})); if(!r.ok||!out.ok||!out.id)throw new Error(out.error||"alta");
+      pending.createdId=out.id;writePendingCreate(pending);
+    }
+    writePendingCreate(null);$("newSubject").value=""; msg.className="incident-create-msg ok"; msg.textContent="Incidencia "+out.id+" creada."; await load();
+  }catch(e){const pending=readPendingCreate();msg.className="incident-create-msg err";msg.textContent=pending&&pending.createdId?("Incidencia "+pending.createdId+" creada; falta completar su vínculo. Reintenta sin duplicarla."):"No se pudo crear la incidencia. Reintentar conservará el mismo recurso y no la duplicará.";} finally{button.disabled=false;}
+};
+let SEARCH_TIMER=0;
+$("busca").oninput=()=>{SEARCH=$("busca").value.trim();clearTimeout(SEARCH_TIMER);SEARCH_TIMER=setTimeout(load,160);};
+$("kindFilter").onchange=()=>{KIND_FILTER=$("kindFilter").value;load();};
+$("severityFilter").onchange=()=>{SEVERITY_FILTER=$("severityFilter").value;load();};
+window.addEventListener("yk:project-change",event=>{
+  LOAD_GENERATION++;
+  PROJECT_SCOPE=event.detail&&event.detail.project_id||null;
+  SCOPE_READY=true;
+  try{seen=new Set(JSON.parse(localStorage.getItem("yk_seen:"+(PROJECT_SCOPE||"todos"))||"[]"));}catch(e){seen=new Set();}
+  $("list").innerHTML='<div class="inc-empty">Filtrando incidencias…</div>';
+  load();
+});
+// Filtro ÚNICO: lo fijan tanto las pestañas como los KPIs de arriba (que son
+// botones, no adornos). Se sincronizan los dos grupos para que no puedan
+// contradecirse: pulsar «18 abiertas» deja marcada también la pestaña Abiertas.
+function aplicaFiltro(f){
+  FILTER=f;
+  document.querySelectorAll(".tab").forEach(x=>{const on=x.dataset.f===f;x.classList.toggle("on",on);x.setAttribute("aria-pressed",String(on));});
+  document.querySelectorAll(".kpi[data-f]").forEach(x=>{const on=x.dataset.f===f;x.classList.toggle("on",on);x.setAttribute("aria-pressed",String(on));});
+  load();
+}
+document.querySelectorAll(".tab").forEach(b=>b.onclick=()=>aplicaFiltro(b.dataset.f));
+document.querySelectorAll(".kpi[data-f]").forEach(b=>b.onclick=()=>aplicaFiltro(b.dataset.f));
+aplicaFiltro("activas"); setInterval(()=>{if(SCOPE_READY)load();},12000);
+</script>
+<script type="module" src="/avatar-widget.js?v=3"></script>
+<script src="/yk-frame.js?v=r31"></script>
+</body>
+</html>

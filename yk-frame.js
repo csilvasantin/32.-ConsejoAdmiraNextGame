@@ -223,12 +223,12 @@
   // navegación de gestión, no del flujo de trabajo → viven ahora en el raíl
   // OPCIONES (ver buildRailFoot), encima de «Panel de control».
   var APP_NAV = [
-    ["DASHBOARD",   "https://www.yokup.com/dashboard"],
-    ["OBJETIVOS",   "https://www.yokup.com/objetivos"],
+    ["DASHBOARD",   "/dashboard"],
+    ["OBJETIVOS",   "/objetivos"],
     ["DECISIONES",  "/decisiones"],
     ["MISIONES",    "/misiones"],
     ["TAREAS",      "/tareas"],
-    ["INCIDENCIAS", "https://www.yokup.com/incidencias"],
+    ["INCIDENCIAS", "/incidencias"],
     ["SUPERVISOR",  "/supervisor"],
     ["INFORMES",    "/informes-flota"],
     // FLT-1020: un diálogo del sistema en cualquier equipo lo deja PARADO. Va en la
@@ -291,8 +291,8 @@
     ["Agentes IoT",  "/#como"],
     ["as a Service", "/#xaas"],
     ["Equipo",       "/#equipo"],
-    ["Incidencias",  "https://www.yokup.com/incidencias"],
-    ["admira.live",  "https://www.yokup.com/admira-live"],
+    ["Incidencias",  "/incidencias"],
+    ["admira.live",  "/admira-live"],
     ["Asistencia",   "/asistencia"],
     ["App",          "https://www.yokup.com/app"]
   ];
@@ -1993,7 +1993,7 @@
     // ahora aquí, en el raíl OPCIONES, como navegación de gestión. Orden del pie:
     // EQUIPO · STATUS · Panel de control · sello de versión.
     var _path = (location.pathname.replace(/\/+$/, "") || "/").toLowerCase();
-    [["◫", "EQUIPO", "/equipo"], ["◈", "STATUS", "https://www.yokup.com/status"]].forEach(function (r) {
+    [["◫", "EQUIPO", "/equipo"], ["◈", "STATUS", "/status"]].forEach(function (r) {
       var on = (_path === r[2] || _path === r[2] + ".html");
       var a = el("a", "yk-set-btn" + (on ? " on" : ""),
         '<span aria-hidden="true">' + r[0] + '</span> ' + r[1]);
@@ -2006,7 +2006,7 @@
     // (antes «Panel de control») vive ahora dentro de AJUSTES como «Personalización».
     var pc = el("a", "yk-set-btn",
       '<span aria-hidden="true">▣</span> Panel de control');
-    pc.href = "https://www.yokup.com/asignaciones";
+    pc.href = "/asignaciones";
     foot.appendChild(pc);
     var ver = el("div", "yk-ver",
       'yokup · perímetro de seguridad · <b>' + VERSION + '</b>');

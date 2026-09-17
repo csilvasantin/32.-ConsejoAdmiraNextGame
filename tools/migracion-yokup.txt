@@ -53,3 +53,33 @@ misiones con puerta | misiones.html yk-adjuntos.js yk-cabezal.css yk-cabezal.js 
 # Notificaciones: bloqueos, consumo y avisos de la flota. Sólo carga el marco; cierra avisos y cambia el
 # automático de Telegram, así que lleva puerta.
 notificaciones con puerta | notificaciones.html app/apple-touch-icon.png
+
+# ── Tramo 4 · 17-09-2026 · MorfeoMacMini · MacMini · FLT-100551 ─────────────────────────────────────────
+# app NO viaja: /app es la descarga del APK para el TÉCNICO (producto de yokup, no flota). Se queda en
+# yokup.com. Sigue en TODAS y sin línea de migración a propósito: así cuenta como pendiente y el guion
+# reescribe sus enlaces al original absoluto (https://www.yokup.com/app) en vez de dejarlos en 404 aquí.
+
+# Objetivos/Ideas de la flota: 12 escrituras a /projects → con puerta.
+objetivos con puerta | objetivos.html yk-objetivos-grid.js yk-display-ref.js yk-avatar.js avatar-widget.js app/apple-touch-icon.png
+
+# Normativa: las 30 normas. Cero escrituras, ningún endpoint protegido, sólo lee admiranext.com; se lee sin
+# sesión, así que va SIN puerta (como el Highscore y Consumos).
+normativa | normativa.html app/apple-touch-icon.png
+
+# Asignaciones: censo de responsables por proyecto. Escribe → con puerta. Vive en subcarpeta.
+asignaciones con puerta | asignaciones/index.html app/apple-touch-icon.png
+
+# admira.live · encolados: el visor de la cola de AgoraMatrix de admira.live. Escribe por bot.yokup.com → con puerta.
+admira-live con puerta | admira-live.html avatar-widget.js app/apple-touch-icon.png
+
+# Incidencias de la flota (NO el producto de retailers): lee/escribe /tickets, /ticket, /incident → con puerta.
+incidencias con puerta | incidencias.html yk-agent-identity.js yk-avatar.js avatar-widget.js yk-cabezal.css yk-misiones.css yk-misiones.js app/apple-touch-icon.png
+
+# Dashboard: la consola de mando de la flota (mando remoto de agentes, PTY). 14 escrituras, endpoints
+# protegidos (/fleet/agent/control|stop, /tickets) → con puerta. Es la página más pesada del set.
+dashboard con puerta | dashboard.html agent-control.js agent-detail.js presence-groups.js avatar-widget.js highscore-daily-record.js highscore-detail.js yk-agent-identity.js app/apple-touch-icon.png
+
+# Status: la constelación de la flota. admira.live YA sirve su /status nativo (status/index.html +
+# status/status-pacman.js + auth-gate.js propio); la de yokup ya declara admira.live/status como su casa
+# canónica. Es (propia): no se copia, cuenta como mudada, sus enlaces llevan a la de casa.
+status (propia) | status.html

@@ -1,0 +1,905 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta name="yokup-espejo" content="origen www.yokup.com · commit 9ea9ccc · sincronizado 17.09.2026 12:49">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Informes · Yokup Soporte</title>
+<meta name="robots" content="noindex, nofollow">
+<meta name="theme-color" content="#02080d">
+<link rel="manifest" href="/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/app/apple-touch-icon.png">
+<link rel="stylesheet" href="https://www.carlossilva.info/admira-design/tokens.css">
+<link rel="stylesheet" href="/yk-frame.css?v=r17">
+<link rel="stylesheet" href="/yk-informes-view.css?v=r3">
+<!-- Retrato de agente compartido con /misiones. Va en el <head> a propósito: el render
+     de la tabla lo consulta y tiene que existir ya en el primer pintado. -->
+<script src="/yk-avatar.js?v=r2"></script>
+<script src="/yk-maquina.js?v=r1"></script>
+<script src="/yk-agent-identity.js?v=1"></script>
+<script src="/yk-informes-sort.js?v=r1"></script>
+<script src="/yk-informes-columns.js?v=r1"></script>
+<script src="/yk-informes-groups.js?v=r2"></script>
+<script src="/yk-informes-view.js?v=r3"></script>
+<style>
+:root{--bg:#02080d;--card:#0a1620;--card2:#0d1c28;--ink:#dff8ff;--mut:#75aab9;--dim:#4d7a88;--brand:#78f3ff;--accent:#ffd866;--good:#88ffaa;--warn:#ff8866;--violet:#aa88ff;--line:rgba(120,243,255,.16);--line2:rgba(120,243,255,.30);--sans:var(--admira-font-sans,-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif);--mono:var(--admira-font-mono,ui-monospace,SFMono-Regular,"JetBrains Mono",Menlo,monospace)}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;min-height:100vh}
+.wrap{max-width:1180px;margin:0 auto;padding:22px 24px 48px}
+nav{display:flex;align-items:center;justify-content:space-between;padding:4px 0 16px}
+.back{font-family:var(--mono);font-size:11px;letter-spacing:.1em;text-transform:uppercase;color:var(--mut);text-decoration:none}.back:hover{color:var(--brand)}
+h1{font-size:clamp(23px,3vw,31px);letter-spacing:-.02em;margin:4px 0 4px}
+.sub{color:var(--mut);font-size:14.5px;margin-bottom:14px}.sub b{color:var(--violet)}
+/* Filtro por FECHA del informe (updated_at) — por defecto: hoy. Igual que /tareas. */
+.report-controls{display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;margin-bottom:18px}
+.tfilter{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+.tf{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:8px 13px;border-radius:9px;border:1px solid var(--line);color:var(--mut);background:var(--card);cursor:pointer;transition:.2s}
+.tf:hover{color:var(--brand);border-color:var(--line2)}
+.tf.on{color:#02080d;background:var(--brand);border-color:var(--brand)}
+.tf-date{font-family:var(--mono);font-size:11px;color:var(--ink);background:var(--card);border:1px solid var(--line);border-radius:9px;padding:7px 10px;outline:none;cursor:pointer;color-scheme:dark}
+.tf-date:focus,.tf-date.on{border-color:var(--brand)}
+
+/* ── HOJA DE CÁLCULO (columnas, estilo /misiones) ─────────────────────────────
+   Cada informe es una FILA con columnas: Agente · Misión · Petición · Resultado ·
+   Informe · Tiempo · Puntos. PETICIÓN y RESULTADO llevan una miniatura cada una
+   —así se comparan de un vistazo— y PUNTOS cierra la fila con UNA sola pastilla
+   que reúne el Highscore, lo producido (points_start → points_end), el total del
+   agente y el tiempo dedicado. Ya no hay columna ESTADO: en esta tabla sólo hay
+   informes entregados, así que decía «hecha» en todas las filas y sólo gastaba
+   ancho (Carlos, 2026-08-08). En escritorio las columnas se redistribuyen dentro del 100%;
+   en pantallas estrechas la misma fila pasa a tarjeta, sin scrollbar permanente. */
+.sheet-wrap{width:100%;min-width:0;overflow-x:hidden;border:1px solid var(--line);border-radius:13px;background:var(--card)}
+.sheet{width:100%;min-width:0}
+.sheet-wrap[data-informes-view="grid"],.sheet-wrap[data-informes-view="list"]{overflow:visible;border:0;border-radius:0;background:transparent}
+.sheet[data-informes-view="grid"]{display:grid;grid-template-columns:repeat(auto-fit,minmax(min(100%,340px),1fr));gap:12px}
+/* La cuadrícula recupera el lenguaje de las tarjetas de Informes anterior a la
+   hoja de cálculo (14d9820): borde fino, fondo Yokup, cabecera mono y parte con
+   barra cian. Se conservan las evidencias y métricas añadidas después. */
+.sheet[data-informes-view="grid"]>.rep{min-width:0;border:1px solid var(--line);border-radius:13px;background:var(--card);padding:15px 17px;transition:.15s}
+.sheet[data-informes-view="grid"]>.rep:hover{background:var(--card2);border-color:var(--line2)}
+.rhd{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-family:var(--mono);margin-bottom:8px}
+.rcode{font-size:10px;color:var(--dim);border:1px solid var(--line);border-radius:6px;padding:2px 7px;letter-spacing:.04em;text-transform:uppercase}
+.rown{font-size:10px;color:var(--mut);margin-left:auto;overflow-wrap:anywhere}
+.rttl{font-size:14px;font-weight:600;color:var(--ink);margin-bottom:3px;overflow-wrap:anywhere}
+.rmeta{font-family:var(--mono);font-size:10px;line-height:1.4;color:var(--mut);margin-bottom:9px;overflow-wrap:anywhere}.rmeta .scr{color:var(--brand)}
+.rbody{font-size:13.5px;line-height:1.55;color:var(--ink);border-left:2px solid var(--line2);padding:2px 0 2px 12px;white-space:pre-wrap;overflow-wrap:anywhere}
+.rep-evidence{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:9px;margin-top:12px}
+.rep-proof{min-width:0;border:1px solid var(--line);border-radius:9px;background:rgba(120,243,255,.025);padding:8px;display:flex;flex-direction:column;align-items:flex-start;gap:6px}
+.rep-proof>span:first-child{font:700 8.5px/1 var(--mono);letter-spacing:.07em;text-transform:uppercase;color:var(--dim)}
+.rep-proof .shot-img{width:100%;max-width:none}.rep-proof .shot-none{min-height:58px;display:flex;align-items:center}
+.rep-foot{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1fr);gap:9px;align-items:start;margin-top:10px}
+.rep-foot .hs-ev{max-width:none}.rep-foot .rep-pdf{grid-column:1/-1;margin-top:0}
+.rts{font-family:var(--mono);font-size:10px;line-height:1.45;letter-spacing:.05em;text-transform:uppercase;color:var(--dim);margin-top:9px}
+/* LISTA es el resumen compacto. DETALLE conserva la hoja histórica del 19-jul:
+   agente con retrato, evidencias, parte, tiempo y puntos en columnas. */
+.sheet[data-informes-view="list"]{display:flex;flex-direction:column;gap:7px}
+.report-list-row{display:grid;grid-template-columns:minmax(130px,.8fr) minmax(230px,1.35fr) minmax(0,2.2fr) auto;gap:14px;align-items:center;min-width:0;padding:11px 13px;border:1px solid var(--line);border-radius:10px;background:var(--card);text-decoration:none;color:inherit;transition:.12s}
+.report-list-row:hover{border-color:var(--line2);background:var(--card2)}
+.report-list-ref{font:700 10.5px/1.35 var(--mono);color:var(--brand);letter-spacing:.025em}
+.report-list-title{min-width:0;color:var(--ink);font-size:12.5px;font-weight:650;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.report-list-body{min-width:0;color:var(--mut);font-size:12.5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.report-list-agent{font:10.5px/1.35 var(--mono);color:var(--dim);white-space:nowrap}
+.grow{width:100%;min-width:0;display:grid;grid-template-columns:minmax(0,var(--col-agente,138px)) minmax(0,var(--col-mision,170px)) minmax(0,var(--col-proceso,132px)) minmax(0,var(--col-captura,150px)) minmax(0,var(--col-informe,258px)) minmax(0,var(--col-tiempo,150px)) minmax(0,var(--col-puntos,172px));align-items:stretch}
+.ghead{position:sticky;top:0;z-index:2;background:var(--card2);border-bottom:1px solid var(--line2)}
+.ghead>div{position:relative;font-family:var(--mono);font-size:9.5px;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);border-left:1px solid var(--line)}
+.ghead>div:first-child{border-left:0}
+.sort-head{width:100%;min-height:38px;padding:9px 13px;display:flex;align-items:center;justify-content:space-between;gap:7px;border:0;background:transparent;color:inherit;font:inherit;letter-spacing:inherit;text-transform:inherit;text-align:left;cursor:pointer}
+.sort-head:hover{background:rgba(120,243,255,.06);color:var(--ink)}
+.sort-head:focus-visible{outline:2px solid var(--brand);outline-offset:-3px}
+.sort-arrow{font-size:11px;line-height:1;color:var(--dim);transition:color .12s}
+.col-resize{position:absolute;z-index:3;top:4px;right:-5px;width:10px;height:30px;cursor:col-resize;touch-action:none;outline:none}
+.col-resize:before{content:"";position:absolute;top:5px;bottom:5px;left:4px;width:1px;background:var(--line2);transition:background .12s,box-shadow .12s}
+.col-resize:hover:before,.col-resize:focus-visible:before,.col-resize.dragging:before{background:var(--brand);box-shadow:0 0 6px rgba(120,243,255,.7)}
+.ghead>[aria-sort="ascending"] .sort-head,.ghead>[aria-sort="descending"] .sort-head{color:var(--ink);background:rgba(120,243,255,.07)}
+.ghead>[aria-sort="ascending"] .sort-arrow,.ghead>[aria-sort="descending"] .sort-arrow{color:var(--brand)}
+.grow.item{border-bottom:1px solid var(--line);transition:.12s}
+.grow.item:last-child{border-bottom:0}
+.grow.item:hover{background:var(--card2)}
+.mission-group{display:block;border-bottom:1px solid var(--line2);background:rgba(120,243,255,.012)}
+.mission-group:last-child{border-bottom:0}
+.mission-group+.mission-group{border-top:2px solid rgba(120,243,255,.18)}
+.mission-group:nth-of-type(even){background:rgba(120,243,255,.025)}
+.family-group{display:block;border-bottom:1px solid var(--line2)}
+.family-group:last-child{border-bottom:0}
+.family-summary{background:rgba(120,243,255,.045);border-bottom:1px solid var(--line)}
+.family-toggle{width:100%;min-height:58px;padding:8px 13px;display:flex;align-items:center;gap:10px;border:0;background:transparent;color:var(--ink);font:600 11px/1.3 var(--mono);text-align:left;cursor:pointer}
+.family-toggle:hover{background:rgba(120,243,255,.06)}
+.family-toggle:focus-visible{outline:2px solid var(--brand);outline-offset:-3px}
+.family-chevron{color:var(--brand);transition:transform .15s}.family-toggle[aria-expanded="false"] .family-chevron{transform:rotate(-90deg)}
+.family-toggle-avatar .who-av{flex-direction:row;text-align:left}.family-toggle-avatar .agava{width:34px;height:34px}.family-toggle-avatar .who-av>span{display:none}
+.family-identity{display:flex;flex-direction:column;gap:3px;min-width:0}.family-kicker{color:var(--dim);font-size:8.5px;letter-spacing:.08em;text-transform:uppercase}
+.family-name{color:var(--brand);letter-spacing:.035em;font-size:12px}.family-count{color:var(--dim);font-weight:400}
+.family-action{margin-left:auto;color:var(--mut);font-weight:400;font-size:9.5px;letter-spacing:.045em;text-transform:uppercase}
+.family-toggle:hover .family-action,.family-toggle:focus-visible .family-action{color:var(--brand)}
+.family-mission-summaries{display:block}
+.mission-rollup-group{display:block;border-bottom:1px solid var(--line2);background:rgba(120,243,255,.012)}
+.mission-rollup-group:last-child{border-bottom:0}
+.mission-rollup-group:nth-child(even){background:rgba(120,243,255,.025)}
+.mission-task-rows{background:rgba(3,13,20,.44);border-top:1px dashed rgba(120,243,255,.24)}
+.mission-task-rows[hidden]{display:none}
+.mission-summary-row{background:rgba(120,243,255,.018)}
+.mission-summary-row .role-badge{color:var(--brand)}
+.mission-rollup{align-self:center;color:var(--dim);font:700 9px/1.4 var(--mono);letter-spacing:.04em;text-align:center}
+.mission-rollup b{display:block;color:var(--ink);font-size:11px}
+.gc{padding:12px 13px;border-left:1px solid var(--line);min-width:0;display:flex;flex-direction:column;justify-content:center;gap:5px}
+.gc:first-child{border-left:0}
+/* Misión */
+.mid{font-family:var(--mono);font-size:11.5px;line-height:1.35;letter-spacing:.03em;color:var(--brand);text-decoration:none;font-weight:600;overflow-wrap:anywhere}.mid:hover{text-decoration:underline}
+.msubj{font-size:11.5px;line-height:1.35;color:var(--mut);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.mmeta{display:flex;align-items:center;gap:5px;flex-wrap:wrap;min-width:0}
+.mcode{align-self:flex-start;font-family:var(--mono);font-size:9px;color:var(--ink);border:1px solid var(--line2);border-radius:6px;padding:2px 6px;letter-spacing:.04em;text-transform:uppercase;white-space:nowrap}
+.mref{font-family:var(--mono);font-size:9.5px;line-height:1.35;color:var(--dim);overflow-wrap:anywhere}
+.mcopy{appearance:none;border:1px solid var(--line);border-radius:6px;background:transparent;color:var(--dim);font:9px/1.35 var(--mono);letter-spacing:.03em;padding:2px 6px;cursor:pointer;white-space:nowrap}
+.mcopy:hover,.mcopy:focus-visible{color:var(--brand);border-color:var(--brand);outline:none}
+.mcopy.copied{color:var(--good);border-color:rgba(136,255,170,.45)}
+/* Recorte del Highscore dentro de RESULTADO: los mismos números y rótulos que la
+   página, traídos de su traza pública. Compacto, porque comparte celda con la
+   miniatura de la prueba. */
+.hs-ev{display:flex;flex-direction:column;align-items:center;gap:2px;padding:6px 7px;width:100%;max-width:210px;border:1px solid rgba(136,255,170,.28);border-radius:8px;background:rgba(136,255,170,.05);text-decoration:none;color:var(--mut)}
+.hs-ev:hover{border-color:var(--good);background:rgba(136,255,170,.1)}
+.hs-ev-hd{font:700 8px/1 var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--dim);white-space:nowrap}
+.hs-ev-st{align-self:stretch;display:flex;flex-wrap:wrap;justify-content:center;gap:5px}
+.hs-st{font:600 9px/1.3 var(--mono);color:var(--mut);white-space:nowrap}
+.hs-st i{font-style:normal;margin-right:2px}
+.hs-ev-total{font:800 13px/1.2 var(--mono);color:var(--good)}
+.hs-ev-ft{font:600 9px/1.2 var(--mono);color:var(--dim);text-align:center;white-space:nowrap}
+/* Puntos: columna propia al final de la fila (Carlos, 2026-08-08). Dentro de
+   RESULTADO competían con la miniatura y no se podían ordenar. */
+.pts-cell{align-items:center}
+.pts-none{color:var(--dim);font:700 11px/1 var(--mono)}
+.pt-up .hs-ev-total{color:var(--good,#88ffaa)}
+.pt-flat .hs-ev-total{color:var(--mut,#75aab9)}
+.pt-nd .hs-ev-total{color:var(--dim,#4d7a88)}
+/* Captura */
+.shot-a{display:block;line-height:0}
+.shot-img{width:100%;max-width:104px;height:auto;aspect-ratio:16/9;object-fit:cover;border-radius:6px;border:1px solid var(--line2);background:var(--card2);display:block;cursor:zoom-in;transition:.15s}
+.shot-img:hover{border-color:var(--brand);box-shadow:0 0 10px rgba(120,243,255,.25)}
+.shot-none{font-family:var(--mono);font-size:13px;color:var(--dim)}
+/* Captura de CIERRE de la MISIÓN (fallback cuando la tarea no dejó imagen propia):
+   se tiñe de ámbar (var(--accent)) para distinguirla de la prueba propia del paso
+   (borde cian). Título «proof de la misión». (Carlos, 2026-07-23.) */
+.shot-img.shot-mission{border-color:rgba(255,216,102,.55);box-shadow:0 0 0 1px rgba(255,216,102,.22) inset}
+.shot-img.shot-mission:hover{border-color:var(--accent);box-shadow:0 0 10px rgba(255,216,102,.3)}
+/* Informe (texto) */
+.gc.rep{white-space:normal}
+.rep-tx{font-size:12.5px;line-height:1.5;color:var(--ink);display:-webkit-box;-webkit-line-clamp:4;-webkit-box-orient:vertical;overflow:hidden}
+/* Adjunto PDF: el parte completo (aquí el texto va recortado a 4 líneas) con sus dos
+   capturas DENTRO del fichero, para poder compartirlo fuera del perímetro. */
+.rep-pdf{align-self:flex-start;display:inline-flex;align-items:center;gap:6px;margin-top:7px;
+  font-family:var(--mono);font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;
+  padding:5px 10px;border-radius:7px;border:1px solid var(--line2);color:var(--mut);
+  background:var(--card2);cursor:pointer;transition:.16s}
+.rep-pdf:hover{color:var(--brand);border-color:var(--brand);box-shadow:0 0 10px rgba(120,243,255,.2)}
+.rep-pdf[disabled]{opacity:.6;cursor:progress}
+.rep-pdf.ko{color:var(--warn);border-color:var(--warn)}
+/* Agente / Estado / Fecha */
+.who{font-family:var(--mono);font-size:11px;color:var(--mut);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+/* Retrato del agente, igual que en /misiones (yk-avatar.js). El CSS vive en
+   yk-misiones.css, que esta página no carga: se repiten aquí las 3 reglas justas. */
+.who-av{display:flex;flex-direction:column;align-items:center;gap:4px;text-align:center;-webkit-line-clamp:none}
+.agava{width:46px;height:46px;object-fit:cover;object-position:center top;display:block;
+  border:1px solid rgba(120,243,255,.28);filter:saturate(.92)}
+.grow.item:hover .agava{border-color:rgba(120,243,255,.6)}
+.who-av>span{font-size:11px;color:var(--ink)}
+.role-badge{align-self:center;font:700 8.5px/1 var(--mono);letter-spacing:.055em;text-transform:uppercase;padding:3px 6px;border:1px solid var(--line2);border-radius:999px;color:var(--mut)}
+.role-main{color:var(--brand)}.role-sub{color:var(--accent)}.role-infra{color:var(--violet)}
+.fch{font-family:var(--mono);font-size:11px;color:var(--ink)}
+.fch .ago{color:var(--dim);font-size:10px;display:block;margin-top:2px}
+/* Columna TIEMPO: HORA INICIO → HORA FIN de la misión + duración compacta. La fecha
+   corta va ARRIBA (en ámbar) SÓLO si la misión no empezó hoy. (Carlos, 2026-07-23:
+   «lo importante no es la fecha sino la hora de inicio y fin de la misión».) */
+.tcell{font-family:var(--mono);font-size:11.5px;color:var(--ink);line-height:1.45;letter-spacing:.02em}
+.tcell .tdate{display:block;color:var(--accent);font-size:9.5px;letter-spacing:.05em;margin-bottom:1px}
+.tcell .tlive{color:var(--brand)}
+.tcell .tdur{color:var(--dim)}
+/* Lightbox de la captura a tamaño completo */
+#lb{position:fixed;inset:0;z-index:9998;background:rgba(2,8,13,.9);display:none;align-items:center;justify-content:center;padding:24px;cursor:zoom-out}
+#lb.on{display:flex}
+#lb img{max-width:96vw;max-height:92vh;border:1px solid var(--line2);border-radius:10px;box-shadow:0 20px 60px rgba(0,0,0,.7)}
+.empty{border:1px dashed var(--line2);border-radius:14px;padding:44px 24px;text-align:center;color:var(--dim);font-family:var(--mono);font-size:12.5px;letter-spacing:.04em;line-height:1.7}
+.empty b{color:var(--mut);display:block;font-size:13px;letter-spacing:.06em;text-transform:uppercase;margin-bottom:6px}
+.empty.loading{border-style:solid;color:var(--mut);overflow:hidden;position:relative}
+.empty.loading:after{content:"";position:absolute;inset:0;transform:translateX(-100%);background:linear-gradient(90deg,transparent,rgba(120,243,255,.08),transparent);animation:rep-load 1.15s infinite}
+@keyframes rep-load{to{transform:translateX(100%)}}
+.foot{margin-top:26px;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}.foot b{color:var(--brand)}
+.page-state{display:flex;align-items:center;justify-content:center;gap:12px;flex-wrap:wrap;padding:14px 8px 2px;font:10.5px/1.4 var(--mono);color:var(--dim)}
+.load-more{min-height:40px;padding:8px 15px;border:1px solid var(--line2);border-radius:8px;background:var(--card2);color:var(--brand);font:700 10px/1 var(--mono);letter-spacing:.055em;text-transform:uppercase;cursor:pointer}
+.load-more:hover,.load-more:focus-visible{border-color:var(--brand);outline:none}.load-more[disabled]{opacity:.55;cursor:progress}
+@media(max-width:640px){.wrap{padding:16px 12px 40px}.report-controls{align-items:stretch}.tfilter{flex:1 1 100%}#reportView{margin-left:auto}.col-resize{width:16px;right:-8px}.col-resize:before{left:7px}}
+@media(max-width:900px){
+  .sheet-wrap{overflow-x:hidden}
+  [data-informes-view="detail"] .ghead{position:absolute!important;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
+  [data-informes-view="detail"] .grow.item{grid-template-columns:minmax(0,1fr) minmax(0,1fr);padding:4px 10px 10px}
+  [data-informes-view="detail"] .gc{border-left:0;border-top:1px solid var(--line);padding:10px;align-items:flex-start;min-width:0}
+  [data-informes-view="detail"] .gc:before{content:attr(data-label);display:block;margin-bottom:6px;color:var(--dim);font:700 8.5px/1.2 var(--mono);letter-spacing:.08em;text-transform:uppercase}
+  [data-informes-view="detail"] .gc.rep{grid-column:1/-1}.shot-img{max-width:100%}
+  .report-list-row{grid-template-columns:minmax(110px,.8fr) minmax(160px,1.2fr) minmax(0,2fr)}.report-list-agent{display:none}
+  .family-toggle{min-height:44px}.col-resize{display:none}
+}
+@media(max-width:520px){
+  [data-informes-view="detail"] .grow.item{grid-template-columns:minmax(0,1fr);padding-inline:8px}
+  [data-informes-view="detail"] .gc,[data-informes-view="detail"] .gc.rep{grid-column:1}.rep-tx{-webkit-line-clamp:6}.shot-img{max-width:min(100%,280px)}
+  .report-list-row{grid-template-columns:minmax(0,1fr);gap:5px}.report-list-title,.report-list-body{white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical}
+  .sheet[data-informes-view="grid"],.rep-evidence,.rep-foot{grid-template-columns:minmax(0,1fr)}
+  .rep-foot .rep-pdf{grid-column:1}
+}
+/* intro plegable REUTILIZABLE — patrón .page-intro de /objetivos. */
+.page-intro{margin:0}
+.page-intro>summary{list-style:none;display:flex;align-items:baseline;gap:12px;flex-wrap:wrap;cursor:pointer}
+.page-intro>summary::-webkit-details-marker{display:none}
+.page-intro>summary h1{margin:0}
+.page-intro .pi-toggle{display:inline-flex;align-items:center;gap:5px;white-space:nowrap;font:600 10px/1 var(--mono);letter-spacing:.08em;text-transform:uppercase;color:var(--mut);border:1px solid var(--line);border-radius:999px;padding:6px 11px;transition:color .15s,border-color .15s}
+.page-intro>summary:hover .pi-toggle{color:var(--dim);border-color:var(--mut)}
+.page-intro .pi-chevron{font-size:13px;line-height:1;transition:transform .18s}
+.page-intro[open] .pi-chevron{transform:rotate(90deg)}
+.page-intro .pi-body{margin-top:10px;animation:pi-in .18s ease}
+@keyframes pi-in{from{opacity:0;transform:translateY(-4px)}to{opacity:1;transform:none}}
+</style>
+</head>
+<body data-yk-title="INFORMES" data-yk-zone="app">
+<div id="yk-espejo-aviso" style="background:#0a1620;border-bottom:1px solid rgba(120,243,255,.30);color:#75aab9;font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;padding:8px 14px">Espejo en <b style="color:#78f3ff">admira.live</b> de Yokup · mismos datos en vivo de <code>api.yokup.com</code>. Aquí se <b>mira</b>: sin sesión de Yokup, lo que pide login (tareas, tickets y mandar órdenes al CLI) no responde. Para eso, <a href="https://www.yokup.com/highscore" style="color:#78f3ff">el original</a>.</div>
+<div class="wrap">
+  <details class="page-intro">
+    <summary>
+      <h1>Informes</h1>
+      <span class="pi-toggle">Qué es esto <span class="pi-chevron">›</span></span>
+    </summary>
+    <div class="pi-body">
+      <p class="sub">Superficie de reporte de los <b>infraagentes</b> 📝. Cada tarea acaba en un parte: cómo ha ido, el <b>proceso</b> (el CLI trabajando), la <b>captura de prueba</b> del resultado y si hubo incidencias. Por misión, ordenada por fecha — hoy primero.</p>
+    </div>
+  </details>
+
+  <div class="report-controls">
+    <!-- Filtro por FECHA del informe. Por defecto sólo los de HOY (igual que /tareas). -->
+    <div class="tfilter" id="tfilter">
+      <button class="tf on" data-r="hoy">Hoy</button>
+      <button class="tf" data-r="ayer">Ayer</button>
+      <button class="tf" data-r="7d">Últimos 7 días</button>
+      <button class="tf" data-r="todas">Todas</button>
+      <input class="tf-date" id="tfDate" type="date" title="Ver los informes de un día concreto">
+    </div>
+    <div id="reportView"></div>
+  </div>
+
+  <div class="sheet-wrap" id="reportsSurface">
+    <div class="sheet" id="reps" role="table" aria-label="Detalle de informes de misiones y tareas" aria-busy="true"><div class="empty loading" role="status"><b>Cargando informes…</b>Reuniendo los partes de todas las misiones.</div></div>
+  </div>
+  <div class="page-state" aria-live="polite"><span id="pageStatus" role="status">0 cargados</span><button class="load-more" id="loadMore" type="button" hidden>Cargar más</button></div>
+
+  <div class="foot">Yokup · informes · tareas con <b>report</b> · fuente <b>D1</b> (mission_tasks)</div>
+
+  <!-- EXPERTO: JSON crudo de tickets del worker yokup-rtc -->
+  <div class="yk-expert-btns" data-yk-slot="bottom">
+    <button data-yk-fetch="/tickets">tickets JSON</button>
+  </div>
+  <pre class="yk-expert-out" data-yk-slot="bottom">Pulsa «tickets JSON» para volcar los datos crudos del worker.</pre>
+</div>
+<div id="lb"><img alt="Captura de prueba a tamaño completo"></div>
+<script>
+const WORKER="https://api.yokup.com";
+const $=id=>document.getElementById(id);
+const esc=x=>String(x==null?"":x).replace(/[<>&"]/g,c=>({"<":"&lt;",">":"&gt;","&":"&amp;",'"':"&quot;"}[c]));
+// ── Columna TIEMPO: hora de INICIO → hora de FIN de la MISIÓN + duración compacta.
+const p2=n=>(n<10?"0":"")+n;
+function hhmm(ms){ const d=new Date(ms); return p2(d.getHours())+":"+p2(d.getMinutes()); }
+function esHoy(ms){ const d=new Date(ms),n=new Date(); return d.getFullYear()===n.getFullYear()&&d.getMonth()===n.getMonth()&&d.getDate()===n.getDate(); }
+function ddmm(ms){ const d=new Date(ms); return p2(d.getDate())+"/"+p2(d.getMonth()+1); }
+function durTxt(a,b){ let m=Math.round((b-a)/60000); if(m<1)return "<1m"; if(m<60)return m+"m"; const h=Math.floor(m/60),r=m%60; return r? h+"h "+r+"m" : h+"h"; }
+const OWN_ICON={principal:"🧠",subagente:"⚙️",infraagente:"📝"};
+function reportAgent(t){
+  const person=t.agent_identity||t.owner||"";
+  const executor=t.executor||person;
+  const machine=t.machine||t.target_machine||t.loc||t.mission_machine||(t.mission&&t.mission.machine)||"";
+  return window.ykAgentIdentity?ykAgentIdentity.reportDisplay(executor,machine):executor;
+}
+
+// ── FILTRO POR FECHA del informe (updated_at = cuándo lo reportó el infraagente).
+// Por defecto sólo los de HOY (Carlos, 2026-07-15). Filtra sobre lo ya cargado.
+const PAGE_LIMIT=30;
+let ALL=[], MLAST={}, DFILTER={mode:"hoy", day:""}, PROJECT_SCOPE=null, PROJECT_READY=false;
+let SORT={key:"tiempo",dir:"desc"};
+let REPORT_VIEW=YkInformesView.DETAIL;
+let LOAD_STATE="loading", LOAD_INFLIGHT=null, LOAD_ABORT=null, LOAD_SEQ=0;
+let PAGE={cursor:null,hasMore:false,total:null,legacy:false,legacyRest:[]};
+let RENDERED_GROUPS=[],LAST_VIEW_ROWS=[];
+const _ms=v=>{v=+v||0;return v>4102444800?v:v*1000;};
+const _pad=n=>(n<10?"0":"")+n;
+const REPORT_TZ="Europe/Madrid";
+const MADRID_DTF=new Intl.DateTimeFormat("en-CA",{timeZone:REPORT_TZ,year:"numeric",month:"2-digit",day:"2-digit"});
+const MADRID_CLOCK=new Intl.DateTimeFormat("en-GB",{timeZone:REPORT_TZ,year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",minute:"2-digit",second:"2-digit",hourCycle:"h23"});
+function madridParts(ms,clock=false){const out={};(clock?MADRID_CLOCK:MADRID_DTF).formatToParts(new Date(ms)).forEach(p=>{if(p.type!=="literal")out[p.type]=+p.value;});return out;}
+function madridYmd(ms=Date.now()){const p=madridParts(ms);return p.year+"-"+_pad(p.month)+"-"+_pad(p.day);}
+function shiftYmd(ymd,days){const[y,m,d]=ymd.split("-").map(Number),n=new Date(Date.UTC(y,m-1,d+days));return n.getUTCFullYear()+"-"+_pad(n.getUTCMonth()+1)+"-"+_pad(n.getUTCDate());}
+function madridMidnight(ymd){
+  const[y,m,d]=ymd.split("-").map(Number),target=Date.UTC(y,m-1,d);let guess=target;
+  for(let i=0;i<3;i++){const p=madridParts(guess,true),local=Date.UTC(p.year,p.month-1,p.day,p.hour,p.minute,p.second);guess=target-(local-guess);}
+  return guess;
+}
+function dayBounds(ymd){const s=madridMidnight(ymd);return [s,madridMidnight(shiftYmd(ymd,1))];}
+function inRange(when){
+  const c=_ms(when); if(!c) return false;
+  if(DFILTER.mode==="todas") return true;
+  if(DFILTER.mode==="7d") return c>=Date.now()-7*86400000;
+  let ymd;
+  if(DFILTER.mode==="dia") ymd=DFILTER.day;
+  else if(DFILTER.mode==="ayer")ymd=shiftYmd(madridYmd(),-1);
+  else ymd=madridYmd();
+  if(!ymd) return true;
+  const [s,e]=dayBounds(ymd); return c>=s && c<e;
+}
+function filterLabel(){ return DFILTER.mode==="hoy"?"de hoy":DFILTER.mode==="ayer"?"de ayer":DFILTER.mode==="7d"?"de los últimos 7 días":DFILTER.mode==="dia"?("del "+DFILTER.day):null; }
+function emptyScopeLabel(){
+  const project=PROJECT_SCOPE?PROJECT_SCOPE:"todos los proyectos";
+  const period=filterLabel()||"de todas las fechas";
+  return {project,period};
+}
+function filterBounds(){
+  if(DFILTER.mode==="todas")return [0,Date.now()+86400000];
+  if(DFILTER.mode==="7d")return [Date.now()-7*86400000,Date.now()+60000];
+  let ymd=DFILTER.day;
+  if(DFILTER.mode==="ayer")ymd=shiftYmd(madridYmd(),-1);
+  if(!ymd)ymd=madridYmd();
+  return dayBounds(ymd);
+}
+function applyFilter(){
+  if(LOAD_STATE==="error"){ renderLoadError(); return; }
+  if(LOAD_STATE!=="ready"||!PROJECT_READY){ renderLoading(); return; }
+  const filtered=ALL.filter(t=>!PROJECT_SCOPE||String(t.project||"")===PROJECT_SCOPE).filter(t=>inRange(t.updated_at));
+  const sorted=YkInformesSort.sort(filtered,SORT.key,SORT.dir,{agentName:reportAgent,missionLast:MLAST});
+  const ordered=YkInformesView.canonicalMissionRows?YkInformesView.canonicalMissionRows(sorted):sorted;
+  render(ordered);
+}
+if(window.addEventListener)window.addEventListener("yk:project-change",event=>{
+  const next=event.detail&&event.detail.project_id||null,wasReady=PROJECT_READY,changed=next!==PROJECT_SCOPE;
+  PROJECT_SCOPE=next;
+  if(event.detail&&event.detail.ready)PROJECT_READY=true;
+  if(PROJECT_READY&&changed&&(wasReady||!!next)){load();return;}
+  applyFilter();
+});
+
+function taskKey(t){return String(t.mission_id||"")+"\u0000"+String(t.code||"");}
+function mergeTasks(current,incoming){
+  const map=new Map(current.map(t=>[taskKey(t),t]));
+  incoming.forEach(t=>{const key=taskKey(t),before=map.get(key);if(!before||_ms(t.updated_at)>=_ms(before.updated_at))map.set(key,t);});
+  return Array.from(map.values());
+}
+function updateMissionLast(rows){
+  rows.forEach(x=>{const u=_ms(x.updated_at);if(u&&x.mission_id!=null){const k=String(x.mission_id);if(!MLAST[k]||u>MLAST[k])MLAST[k]=u;}});
+}
+function updatePageState(){
+  const status=$("pageStatus"),button=$("loadMore");if(!status||!button)return;
+  const total=Number.isFinite(Number(PAGE.total))?Number(PAGE.total):null;
+  const visible=LAST_VIEW_ROWS.length,loaded=ALL.length;
+  status.textContent=visible+" visibles · "+loaded+" cargados"+(total==null||total===loaded?"":" de "+total);
+  button.hidden=!PAGE.hasMore;button.disabled=!!LOAD_INFLIGHT;
+  button.textContent=LOAD_INFLIGHT?"Cargando…":"Cargar más";
+}
+function pageUrl(cursor,includeTotal){
+  const bounds=filterBounds();
+  let url=WORKER+"/tasks/all?scope=fleet&paginated=1&limit="+PAGE_LIMIT+
+    "&updated_from="+Math.floor(bounds[0])+"&updated_to="+Math.floor(bounds[1]);
+  if(cursor)url+="&cursor="+encodeURIComponent(cursor);
+  if(PROJECT_SCOPE)url+="&project="+encodeURIComponent(PROJECT_SCOPE);
+  if(includeTotal)url+="&include_total=1";
+  return url;
+}
+function loadPage(options={}){
+  const reset=!!options.reset,refresh=!!options.refresh;
+  if(LOAD_INFLIGHT&&!reset)return LOAD_INFLIGHT;
+  if(reset&&LOAD_ABORT)LOAD_ABORT.abort();
+  const seq=++LOAD_SEQ,controller=typeof AbortController!=="undefined"?new AbortController():null;
+  LOAD_ABORT=controller;
+  if(reset){LOAD_STATE="loading";PAGE={cursor:null,hasMore:false,total:null,legacy:false,legacyRest:[]};renderLoading();}
+  updatePageState();
+  LOAD_INFLIGHT=(async()=>{
+    let d;try{
+      const r=await fetch(pageUrl(options.cursor||"",!!options.includeTotal),{cache:"no-store",signal:controller&&controller.signal});
+      if(!r.ok)throw new Error("tasks HTTP "+r.status);
+      d=await r.json();
+      if(seq!==LOAD_SEQ)return false;
+      if(!d||!Array.isArray(d.tasks))throw new Error("respuesta de informes inválida");
+    }catch(e){
+      if(seq!==LOAD_SEQ||(e&&e.name==="AbortError"))return false;
+      if(LOAD_STATE!=="ready"){LOAD_STATE="error";renderLoadError();}
+      return false;
+    }
+    const reports=d.tasks.filter(t=>t.report&&String(t.report).trim());
+    updateMissionLast(reports);
+    const paginated=Object.prototype.hasOwnProperty.call(d,"has_more")||Object.prototype.hasOwnProperty.call(d,"next_cursor");
+    if(!paginated){
+      const sorted=reports.sort((a,b)=>_ms(b.updated_at)-_ms(a.updated_at));
+      PAGE.legacy=true;PAGE.legacyRest=sorted.slice(PAGE_LIMIT);PAGE.hasMore=PAGE.legacyRest.length>0;PAGE.total=sorted.length;
+      ALL=sorted.slice(0,PAGE_LIMIT);
+    }else if(refresh){
+      ALL=mergeTasks(ALL,reports);
+      if(d.total!=null)PAGE.total=Number(d.total);
+    }else{
+      ALL=reset?mergeTasks([],reports):mergeTasks(ALL,reports);
+      PAGE.cursor=d.next_cursor||null;PAGE.hasMore=!!d.has_more;PAGE.total=d.total==null?PAGE.total:Number(d.total);
+    }
+    if(PAGE.total!=null)PAGE.total=Math.max(Number(PAGE.total)||0,ALL.length);
+    LOAD_STATE="ready";applyFilter();return true;
+  })().finally(()=>{
+    if(seq===LOAD_SEQ){LOAD_INFLIGHT=null;LOAD_ABORT=null;updatePageState();}
+  });
+  return LOAD_INFLIGHT;
+}
+function load(){return loadPage({reset:true,includeTotal:true});}
+function loadMore(){
+  if(LOAD_INFLIGHT||!PAGE.hasMore)return Promise.resolve(false);
+  if(PAGE.legacy){const next=PAGE.legacyRest.splice(0,PAGE_LIMIT);ALL=mergeTasks(ALL,next);PAGE.hasMore=PAGE.legacyRest.length>0;applyFilter();updatePageState();return Promise.resolve(true);}
+  return loadPage({cursor:PAGE.cursor});
+}
+function refresh(){if(LOAD_INFLIGHT||PAGE.legacy||LOAD_STATE!=="ready")return Promise.resolve(false);return loadPage({refresh:true});}
+
+// RESULTADO = lo que se ve + lo que produjo (Carlos, 8-ago-2026). La columna se
+// llamaba «Captura» y sólo enseñaba una miniatura: decía QUE se hizo, no CUANTO
+// valio. El worker sella los puntos del agente al empezar y al cerrar, y aqui se
+// muestra la diferencia, que es la aportacion real de ESE encargo.
+// Sin datos NO se pinta un 0: un cero se lee como «no produjo nada», y no saberlo
+// no es lo mismo que saber que fue cero (regla 17).
+// ── EVIDENCIA DEL HIGHSCORE ─────────────────────────────────────────────────
+// Carlos (2026-08-08) pidió «una captura de pantalla de yokup.com/highscore donde
+// se vea cómo ha puntuado el agente en esa misión». Una FOTO no se puede hacer:
+// /highscore vive detrás del perímetro de Google y el capturador del worker
+// (/shot, Browser Rendering) abre un navegador limpio — retrataría la tarjeta de
+// login, no el Highscore. Así que la evidencia no se fotografía: se TRAE.
+// GET /highscore/daily es público y su `traceability.chains[]` dice, misión a
+// misión, quién puntuó y cuánto en cada etapa. Esto pinta ese recorte con los
+// mismos números y los mismos rótulos que la página, y enlaza a ella.
+// Ventaja sobre una captura: no envejece. Una foto de las 16:07 miente a las 18:00.
+// Límite honesto: la traza es del DÍA EN CURSO. Para un informe de ayer no hay
+// recorte, y entonces no se pinta nada en vez de inventar un cero.
+let HS_CHAINS=Object.create(null), HS_DAY="";
+async function cargaHighscore(){
+  try{
+    const r=await fetch(WORKER+"/highscore/daily",{cache:"no-store"});
+    if(!r.ok)return false;
+    const d=await r.json();
+    const chains=(d&&d.traceability&&d.traceability.chains)||[];
+    const mapa=Object.create(null);
+    chains.forEach(c=>{
+      const id=String((c&&c.mission&&c.mission.id)||(c&&c.origin&&c.origin.id)||"").trim();
+      if(id)mapa[id]=c;
+    });
+    HS_CHAINS=mapa;HS_DAY=String((d&&d.day)||"");
+    return true;
+  }catch(e){return false;}
+}
+const HS_ETAPAS=[["objective","🎯","Objetivo"],["windows","🗳","Ventanas"],["mission","🚀","Misión"],["tasks","✅","Tareas"]];
+// UNA SOLA PASTILLA (Carlos, 9-ago-2026). El recorte del Highscore y el sello de
+// la misión decían la misma cifra dos veces, una encima de otra: «+40 pts» y
+// debajo otra vez «+40 pts». Ahora el total del agente y el tiempo dedicado
+// viven DENTRO del recuadro y no hay zona inferior que repita nada.
+function puntosHTML(t){
+  // `null` de la base NO es un cero: Number(null) vale 0 y durante meses la tabla
+  // dijo «0 pts» de misiones que habían puntuado 40 (el sello venía roto del
+  // worker). Un cero se lee como «no produjo nada»; no saberlo es otra cosa.
+  const num=v=>{const n=Number(v);return (v===null||v===undefined||v===""||!Number.isFinite(n))?null:n;};
+  const a=num(t.points_start), b=num(t.points_end);
+  if(b===null) return '<span class="pts-none" title="Este informe se cerró sin sellar los puntos del agente: no se sabe cuánto produjo, que no es lo mismo que cero.">—</span>';
+  const delta=a===null?null:b-a;
+  const signo=delta===null?"":(delta>0?"+":"");
+  const cls=delta===null?"pt-nd":(delta>0?"pt-up":"pt-flat");
+  const pie=`${b} total${dedicadoTxt(t)}`;
+
+  // Cabecera y etapas sólo si el Highscore tiene cadena de ESTA misión (sólo
+  // guarda el día en curso); si no la hay, la pastilla se queda con el sello.
+  const chain=HS_CHAINS[String(t.mission_id||"").trim()];
+  const p=(chain&&chain.points)||{},hsTotal=Number(p.total)||0;
+  const vivas=HS_ETAPAS.filter(([k])=>Number(p[k])>0);
+  const etapas=vivas.map(([k,ico,label])=>`<span class="hs-st" title="${esc(label)}: +${Number(p[k])} puntos"><i aria-hidden="true">${ico}</i>+${Number(p[k])}</span>`).join("");
+  const conHs=!!chain&&(!!etapas||hsTotal>0);
+
+  const grande=conHs?`+${hsTotal} pts`:(delta===null?`${b} pts`:`${signo}${delta} pts`);
+  const sello=delta===null
+    ? `Total del agente al cerrar: ${b} puntos · sin punto de partida registrado`
+    : `Antes ${a} · después ${b} · aportación de este encargo: ${signo}${delta}`;
+  if(!conHs) return `<div class="hs-ev ${cls}" title="${esc(sello)}"><b class="hs-ev-total">${esc(grande)}</b><span class="hs-ev-ft">${esc(pie)}</span></div>`;
+
+  const quien=esc(String(chain.agent||t.executor||"")),hora=chain.latest_at?hhmm(_ms(chain.latest_at)):"";
+  const tit=`Cómo puntuó ${quien} esta misión en el Highscore de ${esc(HS_DAY||"hoy")}`+
+    vivas.map(([k,,label])=>` · ${label} +${Number(p[k])}`).join("")+
+    ` · total +${hsTotal}. ${sello}. Pulsa para abrir el Highscore.`;
+  return `<a class="hs-ev ${cls}" href="/highscore" title="${esc(tit)}">`+
+    `<span class="hs-ev-hd">Highscore${hora?" · "+esc(hora):""}</span>`+
+    (etapas?`<span class="hs-ev-st">${etapas}</span>`:"")+
+    `<b class="hs-ev-total">${esc(grande)}</b>`+
+    `<span class="hs-ev-ft">${esc(pie)}</span></a>`;
+}
+
+// El tiempo dedicado ya se pintaba en su columna, pero no formaba parte del
+// RESULTADO: un informe leido fuera de la tabla —el PDF, un resumen en
+// Telegram— decia cuanto valio y no cuanto costo. Puntos y tiempo juntos son
+// lo que de verdad mide la productividad (Carlos, 8-ago-2026).
+// Solo cuenta el trabajo TERMINADO: mientras esta en curso el reloj sigue
+// corriendo y un "llevo 3m" no es tiempo dedicado, es una foto a medias.
+function dedicadoTxt(t){
+  const ini=_ms(t.mission_created), fin=_ms(t.mission_resolved);
+  if(!ini||!fin||fin<ini) return "";
+  return " · " + durTxt(ini,fin);
+}
+// Tres cambios de Carlos (2026-08-08) sobre esta sábana:
+//  · PROCESO pasa a llamarse PETICIÓN: lo que enseña esa miniatura es de dónde
+//    salió el encargo (la idea, o la sesión con la petición a la vista), no una
+//    foto del proceso. La CLAVE interna sigue siendo `proceso` — renombrarla
+//    obligaría a migrar los anchos guardados y el orden por defecto de todos.
+//  · Fuera ESTADO: cada fila de esta tabla es un informe entregado, así que la
+//    columna decía «HECHA» 13 veces seguidas y sólo gastaba ancho.
+//  · PUNTOS sale de dentro de RESULTADO y se va AL FINAL, con columna propia:
+//    dentro de la celda competía con la miniatura y no se podía ordenar por él,
+//    que es justo lo que se quiere mirar en una casa que puntúa el trabajo.
+const SORT_COLUMNS=[
+  ["agente","Agente"],["mision","Misión"],["proceso","Petición"],["captura","Resultado"],
+  ["informe","Informe"],["tiempo","Tiempo"],["puntos","Puntos"]
+];
+const COLUMN_SPECS={
+  agente:{label:"Agente",default:138,min:100,max:260},mision:{label:"Misión",default:170,min:130,max:360},
+  proceso:{label:"Petición",default:132,min:96,max:260},captura:{label:"Resultado",default:150,min:96,max:300},
+  informe:{label:"Informe",default:258,min:180,max:520},
+  tiempo:{label:"Tiempo",default:150,min:120,max:280},puntos:{label:"Puntos",default:172,min:140,max:280}
+};
+// v2: la v1 guardaba un ancho para `estado`, que ya no existe, y ninguno para
+// `puntos`. Con la clave vieja el reparto salía torcido hasta el primer arrastre.
+const COLUMN_RESIZE=YkInformesColumns.mount($("reps"),COLUMN_SPECS,{storageKey:"yokup.informes.columnWidths.v2"});
+function syncReportSemantics(){
+  const box=$("reps");if(!box)return;
+  const detail=REPORT_VIEW===YkInformesView.DETAIL;
+  box.setAttribute("role",detail?"table":"list");
+  box.setAttribute("aria-label",detail?"Detalle de informes de misiones y tareas":REPORT_VIEW===YkInformesView.GRID?"Informes de misiones y tareas en cuadrícula":"Informes de misiones y tareas en lista");
+}
+const REPORT_VIEW_CONTROL=YkInformesView.mount($("reportView"),{
+  targets:[$("reportsSurface"),$("reps")],controls:"reps",
+  onChange:view=>{REPORT_VIEW=view;syncReportSemantics();applyFilter();}
+});
+REPORT_VIEW=REPORT_VIEW_CONTROL.getView();syncReportSemantics();
+function headHTML(){
+  return '<div class="grow ghead" role="row">'+SORT_COLUMNS.map(([key,label])=>{
+    const active=SORT.key===key;
+    const aria=active?(SORT.dir==="asc"?"ascending":"descending"):"none";
+    const arrow=active?(SORT.dir==="asc"?"▲":"▼"):"↕";
+    const next=active&&SORT.dir==="asc"?"descendente":"ascendente";
+    const spec=COLUMN_SPECS[key];
+    return '<div role="columnheader" aria-sort="'+aria+'" data-column="'+key+'"><button class="sort-head" type="button" data-sort="'+key+'" aria-label="Ordenar por '+label+' en orden '+next+'"><span>'+label+'</span><span class="sort-arrow" aria-hidden="true">'+arrow+'</span></button><span class="col-resize" role="separator" aria-orientation="vertical" tabindex="0" data-resize="'+key+'" aria-valuemin="'+spec.min+'" aria-valuemax="'+spec.max+'"></span></div>';
+  }).join("")+'</div>';
+}
+function reportHeadHTML(){return REPORT_VIEW===YkInformesView.DETAIL?headHTML():"";}
+function renderLoading(){
+  const box=$("reps"); box.setAttribute("aria-busy","true");
+  LAST_VIEW_ROWS=[];syncReportSemantics();box.innerHTML=reportHeadHTML()+'<div class="empty loading" role="status"><b>Cargando informes…</b>Reuniendo datos y aplicando el proyecto seleccionado.</div>';
+  if(REPORT_VIEW===YkInformesView.DETAIL)COLUMN_RESIZE.apply();
+}
+function renderLoadError(){
+  const box=$("reps"); box.setAttribute("aria-busy","false");
+  LAST_VIEW_ROWS=[];syncReportSemantics();box.innerHTML=reportHeadHTML()+'<div class="empty" role="alert"><b>No se pudieron cargar los informes</b>Conservamos la vista en espera; se reintentará automáticamente.</div>';
+  if(REPORT_VIEW===YkInformesView.DETAIL)COLUMN_RESIZE.apply();
+}
+// Miniatura clicable (lightbox) o «—» honesto. `mission`=tiñe de ámbar (proof de cierre).
+function shotHTML(src,title,alt,mission){ return src
+  ? `<a class="shot-a" href="${esc(src)}" data-full="${esc(src)}" title="${esc(title)}"><img class="shot-img${mission?' shot-mission':''}" loading="lazy" decoding="async" src="${esc(src)}" alt="${esc(alt)}"></a>`
+  : `<span class="shot-none" title="${esc(title)}">—</span>`; }
+// Celda TIEMPO: usa el mismo inicio factual que Highscore. Un created_at, report,
+// updated_at o latido no sustituyen started_at/transición interna. Las abiertas
+// terminan en el generated_at del servidor; las resueltas quedan congeladas.
+function tiempoHTML(t){
+  const start=_ms(t.mission_started);
+  if(!start) return '<span class="tcell tdur">—</span>';
+  const resolved=_ms(t.mission_resolved);
+  const done=(t.mission_status==='resolved')||!!resolved;
+  const generated=_ms(t.mission_generated_at);
+  const endMs=resolved||(!done?generated:0);
+  const live=!done;
+  const pref=esHoy(start)?'':('<span class="tdate">'+ddmm(start)+'</span>');
+  const ini=hhmm(start);
+  let body;
+  if(endMs && endMs>=start){
+    body=ini+' → '+hhmm(endMs)+(live?' · <span class="tlive">en curso</span>':' · <span class="tdur">'+durTxt(start,endMs)+'</span>');
+  }else body=ini+' → '+(live?'<span class="tlive">en curso</span>':'—');
+  return '<span class="tcell">'+pref+'⏱ '+body+'</span>';
+}
+// Referencia humana canónica de la API: 0047.06/08/2026.19:09 →
+// 0047 · 06/08 · 19:09. Los prefijos internos (FLT/DCL/MIS) no son lenguaje de
+// producto: la interfaz dice Misión o Tarea y conserva el ID sólo en tooltip/copia.
+function compactMissionRef(raw){
+  const value=String(raw||"").trim();
+  const match=/^(\d{4})\.(\d{2})\/(\d{2})\/\d{4}\.(\d{2}:\d{2})$/.exec(value);
+  return match?match[1]+" · "+match[2]+"/"+match[3]+" · "+match[4]:value;
+}
+function missionNumber(id,ref){
+  const technical=/^FLT-(\d+)$/i.exec(String(id||"").trim());
+  if(technical)return technical[1];
+  const canonical=/^(\d{4})\b/.exec(String(ref||"").trim());
+  return canonical?canonical[1]:"";
+}
+function humanWorkLabel(t,forcedKind){
+  const id=String((t&&t.mission_id)||(t&&t.id)||"").trim();
+  const ref=compactMissionRef(t&&t.mission_display_ref);
+  const explicit=String(t&&(t.report_scope||t.report_kind)||"").toLowerCase();
+  const code=String((t&&t.code)||"").trim();
+  const inferred=explicit==="mission"||explicit==="mision"?"mission":explicit==="task"||explicit==="tarea"?"task":code?( /^z\d+$/i.test(code)?"mission":"task" ):"mission";
+  const number=missionNumber(id,ref),kind=forcedKind||inferred;
+  if(kind==="task"){
+    const taskCode=code.toUpperCase();
+    return (number?"Misión "+number+" · ":"")+"Tarea"+(taskCode?" "+taskCode:"");
+  }
+  return "Misión"+(number?" "+number:"");
+}
+function missionPresentation(t,forcedKind){
+  const id=String(t.mission_id||"").trim();
+  const ref=compactMissionRef(t.mission_display_ref);
+  const primary=humanWorkLabel(t,forcedKind);
+  const secondary=ref.replace(/^\d{4}\s*·\s*/,"");
+  return {id,primary:primary||"Misión",secondary,copy:!!id};
+}
+// Jerarquía efímera: cada entrada a /informes empieza resumida por DeepAgent y
+// misión. Sólo un clic explícito descubre las tareas y sus ejecutores.
+let EXPANDED_FAMILIES={};
+const ROLE_LABEL={main:"principal",sub:"subagente",infra:"infraagente"};
+function familyDomId(key){let h=2166136261;for(const c of String(key)){h^=c.charCodeAt(0);h=Math.imul(h,16777619);}return "family-"+(h>>>0).toString(36);}
+function missionCountLabel(count){return count+" "+(count===1?"misión":"misiones");}
+function familyToggleLabel(name,missions,expanded){return (expanded?"Ocultar":"Mostrar")+" detalle de "+missionCountLabel(missions)+" de "+name;}
+function render(list){
+  const rows=YkInformesView.rowsForView(list,REPORT_VIEW);
+  LAST_VIEW_ROWS=rows;syncReportSemantics();
+  if(REPORT_VIEW===YkInformesView.GRID)return renderGrid(rows);
+  if(REPORT_VIEW===YkInformesView.LIST)return renderList(rows);
+  return renderDetail(rows);
+}
+function reportAge(value){
+  const ms=_ms(value);if(!ms)return "fecha no disponible";
+  const seconds=Math.max(0,Math.round((Date.now()-ms)/1000));
+  if(seconds<60)return "hace "+seconds+"s";
+  if(seconds<3600)return "hace "+Math.round(seconds/60)+"m";
+  if(seconds<86400)return "hace "+Math.round(seconds/3600)+"h";
+  return "hace "+Math.round(seconds/86400)+"d";
+}
+function renderGrid(list){
+  const box=$("reps");box.setAttribute("aria-busy","false");
+  if(!list.length){
+    RENDERED_GROUPS=[];
+    const scope=emptyScopeLabel();
+    box.innerHTML='<div class="empty"><b>Sin actividad reportada de '+esc(scope.project)+' '+esc(scope.period)+'</b>'+
+      'No se cerró ni reportó trabajo en este proyecto y periodo. Puede haber informes en otros proyectos o fechas.</div>';
+    updatePageState();return;
+  }
+  RENDERED_GROUPS=[{key:"__grid__",name:"Cuadrícula",rows:list}];
+  box.innerHTML=list.map(t=>{
+    const agent=t._executor||t.executor||reportAgent(t),role=t._agent_role||t.executor_role||t.role||"main";
+    const own=role==="main"?"🧠":role==="infra"?"📝":"⚙️";
+    const mission=missionPresentation(t),taskCode=String(t.code||"—").toUpperCase();
+    const cardId=familyDomId("report:"+taskKey(t));
+    const proc = t.idea_image
+      ? shotHTML(t.idea_image, "Ampliar la idea que originó la misión" + (t.idea_url ? " — " + t.idea_url : ""),
+          "La idea que lo originó", false)
+      : shotHTML(t.process_image,
+          t.process_image ? "Ampliar el proceso — el CLI trabajando" : "sin captura de proceso",
+          "Proceso del CLI", false);
+    const capMission=!t.image?(t.mission_proof||""):"";
+    const shot=t.image
+      ? shotHTML(t.image,"Ampliar la captura de prueba","Captura de prueba",false)
+      : shotHTML(capMission,capMission?"proof de la misión — captura de cierre":"sin captura de prueba","Proof de la misión",true);
+    const subject=String(t.subject||t.title||"Informe de misión");
+    const project=String(t.project_name||t.project||t.screen||"").trim();
+    const detail=YkInformesView.detailHref(t),kind=YkInformesView.reportKind(t);
+    return `<article class="rep" role="listitem" data-row-key="${esc(YkInformesView.rowKey(t))}" aria-labelledby="${cardId}">
+      <div class="rhd">
+        <a class="mid" href="${esc(detail)}" title="Abrir ${kind==="mission"?"misión":"tarea"} · ID técnico ${esc(mission.id)}">🎯 ${esc(mission.primary)}</a>
+        <span class="rcode" title="Código de ${kind==="mission"?"informe final":"tarea"}">${kind==="mission"?"Informe de misión":"Tarea"} ${esc(taskCode)}</span>
+        ${mission.secondary?`<span class="mref">${esc(mission.secondary)}</span>`:""}${mission.copy?`<button class="mcopy" type="button" data-copy-mission="${esc(mission.id)}" title="Copiar ID técnico ${esc(mission.id)}" aria-label="Copiar ID técnico ${esc(mission.id)}">copiar ID</button>`:""}
+        <span class="rown" title="${esc(agent)}">${own} ${esc(agent)} · ${esc(ROLE_LABEL[role]||role)}</span>
+      </div>
+      <h2 class="rttl" id="${cardId}">${esc(t.title||subject)}</h2>
+      <div class="rmeta">${project?`<span class="scr">${esc(project)}</span> · `:""}misión: ${esc(subject)}</div>
+      <div class="rbody">${esc(t.report)}</div>
+      <div class="rep-evidence">
+        <div class="rep-proof"><span>Petición</span>${proc}</div>
+        <div class="rep-proof"><span>Resultado</span>${shot}</div>
+      </div>
+      <div class="rep-foot">
+        <div class="rep-proof"><span>Tiempo</span>${tiempoHTML(t)}</div>
+        <div class="rep-proof pts-cell"><span>Puntos</span>${puntosHTML(t)}</div>
+        <button class="rep-pdf" data-pdf="${esc(t.mission_id)}|${esc(t.code||'')}" title="Descargar el parte completo en PDF — con el informe entero y las dos capturas dentro del fichero">📄 PDF</button>
+      </div>
+      <div class="rts">actualizado ${esc(reportAge(t.updated_at))}</div>
+    </article>`;
+  }).join("");
+  updatePageState();
+}
+function renderList(list){
+  const box=$("reps");box.setAttribute("aria-busy","false");
+  if(!list.length){
+    RENDERED_GROUPS=[];
+    const scope=emptyScopeLabel();
+    box.innerHTML='<div class="empty"><b>Sin actividad reportada de '+esc(scope.project)+' '+esc(scope.period)+'</b>No se cerró ni reportó trabajo en este proyecto y periodo.</div>';
+    updatePageState();return;
+  }
+  RENDERED_GROUPS=[{key:"__list__",name:"Lista",rows:list}];
+  box.innerHTML=list.map(t=>{
+    const agent=t._executor||t.executor||reportAgent(t),mission=missionPresentation(t);
+    const detail=YkInformesView.detailHref(t),subject=String(t.title||t.subject||"Informe");
+    return `<a class="report-list-row" role="listitem" data-row-key="${esc(YkInformesView.rowKey(t))}" href="${esc(detail)}" title="Abrir ${esc(mission.primary)} · ID técnico ${esc(mission.id)}">
+      <span class="report-list-ref">${esc(mission.primary)}</span>
+      <span class="report-list-title">${esc(subject)}</span>
+      <span class="report-list-body">${esc(t.report)}</span>
+      <span class="report-list-agent">${esc(agent)}</span>
+    </a>`;
+  }).join("");
+  updatePageState();
+}
+function renderDetail(list){
+  const box=$("reps");
+  box.setAttribute("aria-busy","false");
+  if(!list.length){
+    RENDERED_GROUPS=[];
+    const scope=emptyScopeLabel();
+    box.innerHTML=headHTML()+'<div class="empty"><b>Sin actividad reportada de '+esc(scope.project)+' '+esc(scope.period)+'</b>'+
+      'No se cerró ni reportó trabajo en este proyecto y periodo. Puede haber informes en otros proyectos o fechas.</div>';
+    COLUMN_RESIZE.apply();
+    updatePageState();return;
+  }
+  function rollup(missionGroup){
+    const all=missionGroup.rows,missionRow=all.find(t=>YkInformesView.reportKind(t)==="mission")||all[0];
+    const row={...missionRow};
+    const process=all.find(t=>t.idea_image||t.process_image),result=all.find(t=>t.image)||all.find(t=>t.mission_proof);
+    if(process){row.idea_image=process.idea_image||"";row.idea_url=process.idea_url||"";row.process_image=process.process_image||"";}
+    if(result){row.image=result.image||"";row.mission_proof=result.mission_proof||row.mission_proof||"";}
+    const details=all.filter(t=>YkInformesView.reportKind(t)!=="mission");
+    const agents=[...new Set(details.map(t=>t._executor||t.executor||reportAgent(t)).filter(Boolean))];
+    return {key:missionGroup.key,row,details,agents,total:all.length};
+  }
+  function detailRowHTML(t,options={}){
+    const summary=!!options.summary;
+    // El feed recompone esta identidad con tickets.loc, la máquina real de la
+    // misión. owner queda como fallback durante el rollout del worker.
+    const agent=summary?options.familyName:(t._executor||t.executor||reportAgent(t));
+    const role=summary?"main":(t._agent_role||t.executor_role||t.role||"main");
+    const own=role==="main"?"🧠":role==="infra"?"📝":"⚙️";
+    const mission=missionPresentation(t,summary?"mission":undefined);
+    const taskCode=String(t.code||"—").toUpperCase();
+    // Dos capturas, sin «—» gratuito y sin inventar (Carlos, 2026-07-23):
+    //  · PROCESO (el «durante»): sólo evidencia tipada como `process` por el
+    //    backend. Un `final-fallback` nunca se presenta como trabajo en curso;
+    //    si no la hay, «—» honesto.
+    //  · CAPTURA (el «después»): la prueba PROPIA del paso (mission_tasks.image); si la
+    //    tarea no dejó imagen, CAE al proof de CIERRE de la misión (mission_proof, teñido
+    //    de ámbar y titulado «proof de la misión»); si tampoco hay, «—» honesto.
+    // Cada miniatura sale en UNA sola columna: nunca se repite la misma imagen.
+    // Si la misión NACIÓ DE UNA IDEA, el proceso que interesa ver es el vídeo que
+    // la originó (Carlos, 7-ago-2026: «los informes que vengan de ideas, el proceso
+    // tiene que ser la captura del vídeo de la idea, así queda mucho mejor
+    // documentado y podemos comparar con lo que hemos hecho»). Puestas una al lado
+    // de la otra, Proceso y Captura cuentan la historia entera: de dónde salió y en
+    // qué quedó. Se etiqueta como lo que es —la idea, no el CLI trabajando— para no
+    // hacer pasar una cosa por otra; la captura técnica sigue guardada en la misión.
+    const proc = t.idea_image
+      ? shotHTML(t.idea_image, "Ampliar la idea que originó la misión" + (t.idea_url ? " — " + t.idea_url : ""),
+          "La idea que lo originó", false)
+      : shotHTML(t.process_image,
+          t.process_image ? "Ampliar el proceso — el CLI trabajando" : "sin captura de proceso",
+          "Proceso del CLI", false);
+    const capMission = !t.image ? (t.mission_proof||"") : "";
+    const shot = t.image
+      ? shotHTML(t.image,"Ampliar la captura de prueba","Captura de prueba",false)
+      : shotHTML(capMission, capMission?"proof de la misión — captura de cierre":"sin captura de prueba","Proof de la misión",true);
+    const kind=summary?"mission":YkInformesView.reportKind(t);
+    const detail=summary?("/ticket?id="+encodeURIComponent(t.mission_id||"")):YkInformesView.detailHref(t);
+    const rowClass=summary?" mission-summary-row":"";
+    const roleText=summary?"DeepAgent":(ROLE_LABEL[role]||role);
+    const rollupText=summary?`<span class="mission-rollup"><b>${options.taskCount} tarea${options.taskCount===1?"":"s"}</b>${options.agentCount} agente${options.agentCount===1?"":"s"}</span>`:"";
+    return `<div class="grow item${rowClass}" role="row" data-row-key="${esc(YkInformesView.rowKey(t))}"${summary?' data-mission-summary="true"':""}>
+      <div class="gc" role="cell" data-label="Agente">${summary?rollupText:(window.ykAvatar ? ykAvatar.html(agent) : `<span class="who" title="${esc(agent)}">${own} ${esc(agent)}</span>`)}<span class="role-badge role-${esc(role)}">${esc(roleText)}</span></div>
+      <div class="gc mis" role="cell" data-label="Misión">
+        <a class="mid" href="${esc(detail)}" title="Abrir ${kind==="mission"?"misión":"tarea"} · ID técnico ${esc(mission.id)}">🎯 ${esc(mission.primary)}</a>
+        <div class="mmeta"><span class="mcode">${summary?"Resumen de misión":kind==="mission"?"Informe de misión":"Tarea "+esc(taskCode)}</span>${mission.secondary?`<span class="mref">${esc(mission.secondary)}</span>`:""}${mission.copy?`<button class="mcopy" type="button" data-copy-mission="${esc(mission.id)}" title="Copiar ID técnico ${esc(mission.id)}" aria-label="Copiar ID técnico ${esc(mission.id)}">copiar ID</button>`:""}</div>
+        <div class="msubj" title="${esc(t.subject||'')}">${esc(t.subject||t.title||'')}</div>
+      </div>
+      <div class="gc shot" role="cell" data-label="Petición">${proc}</div>
+      <div class="gc shot" role="cell" data-label="Resultado">${shot}</div>
+      <div class="gc rep" role="cell" data-label="Informe"><div class="rep-tx" title="${esc(t.report)}">${esc(t.report)}</div>
+        <button class="rep-pdf" data-pdf="${esc(t.mission_id)}|${esc(t.code||'')}" title="Descargar el parte completo en PDF — con el informe entero y las dos capturas dentro del fichero">📄 PDF</button></div>
+      <div class="gc" role="cell" data-label="Tiempo">${tiempoHTML(t)}</div>
+      <div class="gc pts-cell" role="cell" data-label="Puntos">${puntosHTML(t)}</div>
+    </div>`;
+  }
+  const families=YkInformesGroups.group(list,window.ykAgentIdentity);
+  RENDERED_GROUPS=families;
+  box.innerHTML=headHTML()+families.map(family=>{
+    const familyId=familyDomId(family.key),expanded=EXPANDED_FAMILIES[family.key]===true;
+    const missions=YkInformesView.missionGroups(family.rows).map(rollup);
+    const missionRows=missions.map(item=>{
+      const summary=detailRowHTML(item.row,{summary:true,familyName:family.name,taskCount:item.details.length,agentCount:item.agents.length});
+      const tasks=item.details.length?`<div class="mission-task-rows" data-family-detail="true"${expanded?"":" hidden"}>${item.details.map(t=>detailRowHTML(t)).join("")}</div>`:"";
+      return `<section class="mission-rollup-group" role="rowgroup" data-mission="${esc(item.key)}">${summary}${tasks}</section>`;
+    }).join("");
+    const avatar=window.ykAvatar?ykAvatar.html(family.name):`<span class="who">🧠 ${esc(family.name)}</span>`;
+    const scope=filterLabel()||"todas las fechas";
+    return `<section class="family-group" role="rowgroup" data-family="${esc(family.key)}" aria-labelledby="${familyId}-label">
+      <div class="family-summary" role="row"><div role="cell" aria-colspan="7"><button class="family-toggle" type="button" aria-expanded="${expanded?"true":"false"}" aria-controls="${familyId}" data-family-toggle="${esc(family.key)}" data-family-count="${missions.length}" data-family-name="${esc(family.name)}" aria-label="${esc(familyToggleLabel(family.name,missions.length,expanded))}"><span class="family-chevron" aria-hidden="true">▾</span><span class="family-toggle-avatar">${avatar}</span><span class="family-identity"><span class="family-kicker">DeepAgent · agente principal</span><span class="family-name" id="${familyId}-label">${esc(family.name)}</span><span class="family-count">${missionCountLabel(missions.length)} · ${family.rows.length} informe${family.rows.length===1?"":"s"} · ${esc(scope)}</span></span><span class="family-action">${expanded?"Ocultar detalle":"Ver subagentes"}</span></button></div></div>
+      <div class="family-mission-summaries" id="${familyId}">${missionRows}</div>
+    </section>`;
+  }).join("");
+  COLUMN_RESIZE.apply();updatePageState();
+}
+$('reps').addEventListener("click",e=>{
+  const button=e.target.closest&&e.target.closest("[data-family-toggle]");if(!button)return;
+  const key=button.dataset.familyToggle,rows=$(button.getAttribute("aria-controls"));
+  const expanded=button.getAttribute("aria-expanded")==="true",nextExpanded=!expanded;
+  button.setAttribute("aria-expanded",String(nextExpanded));if(rows)rows.querySelectorAll("[data-family-detail]").forEach(detail=>{detail.hidden=!nextExpanded;});
+  if(nextExpanded)EXPANDED_FAMILIES[key]=true;else delete EXPANDED_FAMILIES[key];
+  const count=Number(button.dataset.familyCount)||0,name=button.dataset.familyName||"familia";
+  button.setAttribute("aria-label",familyToggleLabel(name,count,nextExpanded));
+  const action=button.querySelector(".family-action");if(action)action.textContent=nextExpanded?"Ocultar detalle":"Ver subagentes";
+  updatePageState();
+});
+// Los ids opacos siguen disponibles sin ocupar el título principal ni truncarse.
+$("reps").addEventListener("click",async e=>{
+  const b=e.target.closest&&e.target.closest(".mcopy"); if(!b)return;
+  e.preventDefault();
+  const id=b.dataset.copyMission||"";
+  try{ await navigator.clipboard.writeText(id); b.textContent="ID copiado"; b.classList.add("copied"); }
+  catch(err){ b.textContent=id; }
+});
+// Las siete cabeceras son botones nativos: clic, Intro o Espacio alternan asc/desc.
+// Al repintar se devuelve el foco a la misma cabecera para no romper la navegación.
+$("reps").addEventListener("click",e=>{
+  const b=e.target.closest&&e.target.closest(".sort-head"); if(!b)return;
+  const key=b.dataset.sort;
+  SORT=SORT.key===key?{key,dir:SORT.dir==="asc"?"desc":"asc"}:{key,dir:"asc"};
+  applyFilter();
+  const next=$("reps").querySelector('.sort-head[data-sort="'+key+'"]');
+  if(next)next.focus();
+});
+// Adjunto PDF del parte. Se genera al vuelo en el navegador (informe-pdf.js): el fichero
+// lleva el informe ENTERO —aquí se ve recortado a 4 líneas— y las dos capturas incrustadas,
+// así que se puede compartir fuera del perímetro de Yokup y sigue abriéndose entero.
+$("reps").addEventListener("click",async e=>{
+  const b=e.target.closest && e.target.closest(".rep-pdf"); if(!b) return;
+  e.preventDefault();
+  const [mid,code]=(b.dataset.pdf||"").split("|");
+  const t=ALL.find(x=>String(x.mission_id)===mid && String(x.code||"")===(code||""));
+  if(!t || !window.informePDF){ b.classList.add("ko"); b.textContent="📄 no disponible"; return; }
+  const txt=b.textContent; b.disabled=true; b.textContent="📄 generando…";
+  try{ await window.informePDF(t); b.textContent="📄 descargado"; }
+  catch(err){ b.classList.add("ko"); b.textContent="📄 falló"; console.error("informe-pdf:",err); }
+  setTimeout(()=>{ b.disabled=false; b.classList.remove("ko"); b.textContent=txt; },2600);
+});
+// Lightbox: clic en la miniatura la abre a tamaño completo (sin salir de la hoja).
+$("reps").addEventListener("click",e=>{
+  const a=e.target.closest && e.target.closest(".shot-a"); if(!a) return;
+  e.preventDefault(); const lb=$("lb"); lb.querySelector("img").src=a.dataset.full; lb.classList.add("on");
+});
+$("lb").addEventListener("click",()=>$("lb").classList.remove("on"));
+document.addEventListener("keydown",e=>{ if(e.key==="Escape") $("lb").classList.remove("on"); });
+$("loadMore").addEventListener("click",loadMore);
+// Un cambio de fecha inicia un snapshot paginado nuevo y aborta el anterior.
+$("tfilter").querySelectorAll(".tf").forEach(b=>b.onclick=()=>{
+  DFILTER={mode:b.dataset.r, day:""};
+  $("tfilter").querySelectorAll(".tf").forEach(x=>x.classList.toggle("on",x===b));
+  $("tfDate").classList.remove("on"); $("tfDate").value="";
+  load();
+});
+$("tfDate").onchange=()=>{
+  if(!$("tfDate").value) return;
+  DFILTER={mode:"dia", day:$("tfDate").value};
+  $("tfilter").querySelectorAll(".tf").forEach(x=>x.classList.remove("on"));
+  $("tfDate").classList.add("on");
+  load();
+};
+
+// Datos, catálogo de proyectos (yk-frame) y personalización arrancan en
+// paralelo. La foto no bloquea /tasks/all: al llegar repinta sólo si ya hay datos.
+load();
+(window.ykAvatar ? ykAvatar.ready : Promise.resolve()).then(()=>{if(LOAD_STATE==="ready")applyFilter();});
+// El recorte del Highscore va por libre, igual que los avatares: si tarda o falla,
+// la tabla sale entera y sin él. Nunca bloquea /tasks/all.
+cargaHighscore().then(ok=>{if(ok&&LOAD_STATE==="ready")applyFilter();});
+setInterval(refresh,15000);
+// Detrás del refresco de datos a propósito: el orden de los temporizadores es
+// contrato para las pruebas, que disparan intervals[0] esperando el refresco.
+setInterval(()=>{cargaHighscore();},120000);
+</script>
+<script src="/informe-pdf.js?v=r1"></script>
+<script type="module" src="/avatar-widget.js?v=3"></script>
+<script src="/yk-frame.js?v=r32"></script>
+</body>
+</html>

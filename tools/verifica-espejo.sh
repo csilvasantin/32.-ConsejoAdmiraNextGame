@@ -36,15 +36,19 @@ normaliza() {
     -e '/<script src="\/acceso\.js/d' \
     -e 's#https://www\.yokup\.com/#/#g' \
     -e 's#/version\.json\?frame=#/__yokup-gate?frame=#g' \
+    -e 's#"/informes-flota"#"/informes"#g' \
     -e 's#\?v=[^"'\''<> ]*##g' \
     -e 's#<!-- Cloudflare Pages Analytics -->.*<!-- Cloudflare Pages Analytics -->##g' \
     -e '/^[[:space:]]*$/d'
 }
 
 compara() {
-  local ruta="$1" etiqueta="$2"
-  curl -fsS --max-time 45 "$ORIG$ruta"   | normaliza > "$TMP/orig"   || { echo "✗ $etiqueta · no baja de yokup.com"; fallos=$((fallos+1)); return; }
-  curl -fsS --max-time 45 "$ESPEJO$ruta" | normaliza > "$TMP/espejo" || { echo "✗ $etiqueta · no baja de admira.live"; fallos=$((fallos+1)); return; }
+  # compara <ruta>            <etiqueta>          → misma ruta en las dos webs
+  # compara <ruta-allí> <ruta-aquí> <etiqueta>    → la página vive aquí con otro nombre
+  local alla="$1" aca="$1" etiqueta="$2"
+  if [ "$#" -eq 3 ]; then aca="$2"; etiqueta="$3"; fi
+  curl -fsS --max-time 45 "$ORIG$alla"  | normaliza > "$TMP/orig"   || { echo "✗ $etiqueta · no baja de yokup.com"; fallos=$((fallos+1)); return; }
+  curl -fsS --max-time 45 "$ESPEJO$aca" | normaliza > "$TMP/espejo" || { echo "✗ $etiqueta · no baja de admira.live"; fallos=$((fallos+1)); return; }
   local a b
   a="$(shasum -a 256 < "$TMP/orig"   | cut -c1-12)"
   b="$(shasum -a 256 < "$TMP/espejo" | cut -c1-12)"
@@ -58,6 +62,8 @@ compara() {
 }
 
 echo "· original: $ORIG   · espejo: $ESPEJO"
+# Las páginas que aquí viven con otro nombre se comparan contra el suyo de allí: el
+# contenido tiene que ser el mismo aunque la ruta no lo sea.
 compara "/highscore"                    "highscore"
 compara "/highscoreDetail"              "highscoreDetail"
 compara "/yk-frame.js"                  "yk-frame.js"
@@ -66,6 +72,10 @@ compara "/highscore-race.js"            "highscore-race.js"
 compara "/highscore-detail.js"          "highscore-detail.js"
 compara "/highscore-daily-record.js"    "highscore-daily-record.js"
 compara "/highscore-desktop-app.js"     "highscore-desktop-app.js"
+compara "/asistencia"                   "asistencia"
+compara "/informes" "/informes-flota"   "informes → informes-flota"
+compara "/yk-informes-view.js"          "yk-informes-view.js"
+compara "/informe-pdf.js"               "informe-pdf.js"
 
 # Y que los dos miran la MISMA fuente de datos, que es lo que hace que enseñen lo
 # mismo: el marcador del día sale del mismo worker para los dos orígenes.

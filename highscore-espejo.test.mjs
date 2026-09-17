@@ -100,11 +100,17 @@ test('lee los mismos datos en vivo que el original', () => {
   assert.match(highscore, /https:\/\/api\.yokup\.com/);
 });
 
-test('está cableado: riel AVANZADO, CLI y salto desde el marcador', () => {
+test('está cableado: riel AVANZADO, CLI y salto desde el marcador', async () => {
   assert.match(index, /href="\/highscore"[^>]*title="Highscore completo/);
-  assert.ok(app.includes("'/highscore'"), 'el CLI no autocompleta /highscore');
-  assert.match(app, /\/\^\\\/highscore\$\/i|\^\\\/highscore\$/);
   assert.match(marcador, /href="\/highscore"/);
+  // El CLI se comprueba en el fichero que index.html CARGA de verdad, no en app.js por
+  // costumbre: hay una copia cache-busted (app.flt-100529.js) y el sitio sirve esa. Si
+  // alguien vuelve a duplicar el CLI, esto canta en cuanto las copias se separen.
+  const cargado = (index.match(/<script[^>]+src="(app[^"?]*\.js)/) || [])[1];
+  assert.ok(cargado, 'index.html no carga ningún app*.js');
+  const cli = cargado === 'app.js' ? app : await lee(cargado);
+  assert.ok(cli.includes("'/highscore'"), cargado + ' no autocompleta /highscore en el CLI');
+  assert.match(cli, /\^\\\/highscore\$/);
 });
 
 test('la copia sigue siendo copia del original (si el repo de yokup está al lado)', async () => {

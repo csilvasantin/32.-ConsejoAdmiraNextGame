@@ -229,7 +229,7 @@
     ["MISIONES",    "https://www.yokup.com/misiones"],
     ["TAREAS",      "https://www.yokup.com/tareas"],
     ["INCIDENCIAS", "https://www.yokup.com/incidencias"],
-    ["INFORMES",    "https://www.yokup.com/informes"],
+    ["INFORMES",    "/informes-flota"],
     // FLT-1020: un diálogo del sistema en cualquier equipo lo deja PARADO. Va en la
     // barra para que se vea desde cualquier página, no sólo si entras a buscarlo.
     ["NOTIFICACIONES", "https://www.yokup.com/notificaciones"],
@@ -292,7 +292,7 @@
     ["Equipo",       "/#equipo"],
     ["Incidencias",  "https://www.yokup.com/incidencias"],
     ["admira.live",  "https://www.yokup.com/admira-live"],
-    ["Asistencia",   "https://www.yokup.com/asistencia"],
+    ["Asistencia",   "/asistencia"],
     ["App",          "https://www.yokup.com/app"]
   ];
 

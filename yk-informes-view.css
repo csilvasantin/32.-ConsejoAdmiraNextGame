@@ -1,0 +1,48 @@
+.informes-view-switch{
+  display:inline-grid;
+  grid-template-columns:repeat(3,minmax(0,1fr));
+  max-width:100%;
+  border:1px solid var(--line,#173d47);
+  border-radius:10px;
+  overflow:hidden;
+}
+.informes-view-option{
+  min-width:0;
+  min-height:38px;
+  padding:8px 12px;
+  border:0;
+  background:transparent;
+  color:var(--dim,#8fb7c2);
+  font:700 11px/1 var(--mono,monospace);
+  letter-spacing:.06em;
+  cursor:pointer;
+  overflow-wrap:anywhere;
+}
+.informes-view-option+ .informes-view-option{border-left:1px solid var(--line,#173d47)}
+.informes-view-option[aria-pressed="true"]{background:rgba(98,230,242,.13);color:var(--brand,#62e6f2)}
+.informes-view-option:focus-visible{outline:2px solid var(--brand,#62e6f2);outline-offset:-3px}
+
+/* Contrato responsive para el renderer que integre la vista: ningún hijo puede
+   imponer un ancho mayor que el contenedor. La maqueta concreta sigue siendo
+   responsabilidad de informes.html. */
+[data-informes-view] .family-group,
+[data-informes-view] .family-rows,
+[data-informes-view] .grow.item,
+[data-informes-view] .gc{min-width:0;max-width:100%}
+[data-informes-view="grid"] .family-rows{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,310px),1fr));
+}
+[data-informes-view="grid"].debe .debe-list,
+[data-informes-view="grid"] .debe-list{
+  display:grid;
+  grid-template-columns:repeat(auto-fit,minmax(min(100%,310px),1fr));
+}
+[data-informes-view="list"].debe .debe-list,
+[data-informes-view="list"] .debe-list{display:flex;flex-direction:column}
+@media(max-width:520px){
+  [data-informes-view="grid"] .family-rows,
+  [data-informes-view="grid"].debe .debe-list,
+  [data-informes-view="grid"] .debe-list{grid-template-columns:minmax(0,1fr)}
+  .informes-view-switch{width:100%}
+}

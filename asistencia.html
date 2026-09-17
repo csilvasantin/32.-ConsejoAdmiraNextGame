@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta name="yokup-espejo" content="origen www.yokup.com · commit 9ea9ccc · sincronizado 17.09.2026 12:49">
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Asistencia en vivo · Yokup</title>
+<meta name="robots" content="noindex, nofollow">
+<link rel="stylesheet" href="https://www.carlossilva.info/admira-design/tokens.css">
+<link rel="stylesheet" href="/yk-frame.css?v=r17">
+<style>
+:root{
+  --bg:#02080d; --card:#0a1620; --ink:#dff8ff; --mut:#75aab9; --dim:#4d7a88;
+  --brand:#78f3ff; --accent:#ffd866; --good:#88ffaa; --warn:#ff8866;
+  --line:rgba(120,243,255,.16); --line2:rgba(120,243,255,.30);
+  --sans:var(--admira-font-sans,-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif);
+  --mono:var(--admira-font-mono,ui-monospace,SFMono-Regular,"JetBrains Mono",Menlo,monospace);
+}
+*{box-sizing:border-box;margin:0;padding:0}
+body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;min-height:100vh}
+.wrap{max-width:1160px;margin:0 auto;padding:22px 24px 40px}
+nav{display:flex;align-items:center;justify-content:space-between;padding:4px 0 20px}
+.logo{font-family:var(--mono);font-weight:700;letter-spacing:.14em;font-size:15px;text-transform:uppercase;display:flex;align-items:center;gap:9px}
+.logo b{color:var(--brand)}
+.dot{width:8px;height:8px;border-radius:50%;background:var(--brand);box-shadow:0 0 22px rgba(120,243,255,.5);animation:blink 2s infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.3}}
+h1{font-size:clamp(22px,3vw,32px);letter-spacing:-.02em;margin-bottom:6px}
+.sub{color:var(--mut);font-size:15px;margin-bottom:16px}
+.status{font-family:var(--mono);font-size:11.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--accent);display:flex;align-items:center;gap:8px}
+.status i{width:8px;height:8px;border-radius:50%;background:var(--accent);animation:blink 1.3s infinite}
+.status.ok{color:var(--good)} .status.ok i{background:var(--good)}
+.stage{display:grid;grid-template-columns:1fr 300px;gap:16px;margin-top:14px;align-items:start}
+#gallery{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:12px}
+.vwrap{position:relative;border:1px solid var(--line2);border-radius:14px;overflow:hidden;background:#000;aspect-ratio:16/10}
+video{width:100%;height:100%;object-fit:cover;display:block;background:#0a1620}
+.vwrap.self video{transform:scaleX(-1)}
+.vwrap .lbl{position:absolute;top:9px;left:9px;font-family:var(--mono);font-size:9.5px;letter-spacing:.1em;text-transform:uppercase;color:var(--ink);background:rgba(2,8,13,.7);border:1px solid var(--line);border-radius:7px;padding:4px 8px;backdrop-filter:blur(4px)}
+.empty{grid-column:1/-1;border:1px dashed var(--line2);border-radius:14px;padding:44px 20px;text-align:center;font-family:var(--mono);font-size:12px;letter-spacing:.1em;text-transform:uppercase;color:var(--dim)}
+.panel{border:1px solid var(--line);border-radius:14px;background:var(--card);padding:18px;display:flex;flex-direction:column;gap:13px;position:sticky;top:14px}
+.panel h3{font-family:var(--mono);font-size:11px;letter-spacing:.12em;text-transform:uppercase;color:var(--brand)}
+.field{font-size:13px;color:var(--mut)}
+.link{font-family:var(--mono);font-size:12px;color:var(--ink);background:rgba(2,8,13,.5);border:1px solid var(--line);border-radius:8px;padding:9px 11px;word-break:break-all;cursor:pointer;transition:.2s}
+.link:hover{border-color:var(--brand)}
+.selfbox{border:1px solid var(--line);border-radius:12px;overflow:hidden;aspect-ratio:16/10;position:relative}
+.btn{font-family:var(--mono);font-size:11px;letter-spacing:.06em;text-transform:uppercase;padding:10px 12px;border-radius:9px;border:1px solid var(--line2);color:var(--ink);background:rgba(10,22,32,.6);cursor:pointer;transition:.2s;text-align:center}
+.btn:hover{border-color:var(--brand);color:var(--brand)}
+.btn.solid{background:var(--accent);color:#1a1200;border-color:var(--accent)}
+.btn.danger{border-color:rgba(255,136,102,.5);color:var(--warn)}
+.btn.danger:hover{background:var(--warn);color:#1a0a06;border-color:var(--warn)}
+.row{display:flex;gap:8px}.row .btn{flex:1}
+.count{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--mut)}
+.count b{color:var(--good)}
+.note{font-size:11.5px;color:var(--dim);line-height:1.5}
+.foot{margin-top:24px;font-family:var(--mono);font-size:10.5px;letter-spacing:.06em;text-transform:uppercase;color:var(--dim)}
+.foot b{color:var(--brand)}
+@media(max-width:820px){.stage{grid-template-columns:1fr}}
+/* Reservar cita · asistencia humana */
+.booking{border:1px solid var(--line2);border-radius:14px;background:linear-gradient(180deg,rgba(120,243,255,.05),transparent);padding:18px 20px;margin:4px 0 18px}
+.booking h2{font-size:17px;letter-spacing:-.01em;margin-bottom:4px;display:flex;align-items:center;gap:9px}
+.booking .bsub{color:var(--mut);font-size:13px;margin-bottom:6px}
+.bk-label{font-family:var(--mono);font-size:10px;letter-spacing:.12em;text-transform:uppercase;color:var(--brand);margin:14px 0 7px}
+.cal-days{display:flex;gap:7px;overflow-x:auto;padding-bottom:4px}
+.day-chip{flex:0 0 auto;min-width:56px;text-align:center;border:1px solid var(--line);border-radius:10px;background:rgba(10,22,32,.5);color:var(--ink);padding:8px 6px;cursor:pointer;transition:.15s;font-family:var(--mono)}
+.day-chip:hover{border-color:var(--brand)}
+.day-chip.sel{background:var(--accent);color:#1a1200;border-color:var(--accent)}
+.day-chip .dow{font-size:9px;letter-spacing:.08em;text-transform:uppercase;opacity:.75}
+.day-chip .dnum{font-size:17px;font-weight:700;line-height:1.15}
+.day-chip .dmon{font-size:9px;opacity:.75}
+.slots{display:grid;grid-template-columns:repeat(auto-fill,minmax(64px,1fr));gap:7px;margin-top:2px}
+.slot{border:1px solid var(--line);border-radius:8px;background:rgba(2,8,13,.5);color:var(--ink);padding:8px 4px;cursor:pointer;font-family:var(--mono);font-size:12px;text-align:center;transition:.12s}
+.slot:hover{border-color:var(--brand);color:var(--brand)}
+.slot.sel{background:var(--brand);color:#001620;border-color:var(--brand)}
+.cal-more{margin-top:9px;font-family:var(--mono);font-size:11px;letter-spacing:.04em;color:var(--mut);display:flex;align-items:center;gap:9px;flex-wrap:wrap}
+.cal-input{background:rgba(2,8,13,.5);border:1px solid var(--line);border-radius:8px;color:var(--ink);font-family:var(--mono);font-size:12px;padding:7px 10px;color-scheme:dark;cursor:pointer}
+.cal-input:hover{border-color:var(--line2)}
+.cal-input:focus{outline:0;border-color:var(--brand)}
+.bk-motivo{width:100%;margin-top:12px;background:rgba(2,8,13,.5);border:1px solid var(--line);border-radius:8px;color:var(--ink);font-family:var(--sans);font-size:13px;padding:9px 11px}
+.bk-motivo:focus{outline:0;border-color:var(--brand)}
+.bk-confirm{margin-top:12px;width:auto;min-width:180px}
+.bk-confirm:disabled{opacity:.45;cursor:not-allowed}
+.bk-ok{margin-top:12px;border:1px solid rgba(136,255,170,.4);background:rgba(136,255,170,.06);border-radius:10px;padding:12px 14px;color:var(--good);font-size:13px;line-height:1.5;display:none}
+.bk-ok.show{display:block}
+.bk-ok a{color:var(--brand);word-break:break-all}
+.bk-note{font-size:11px;color:var(--dim);margin-top:9px;line-height:1.5}
+</style>
+  <link rel="manifest" href="/manifest.webmanifest"><link rel="apple-touch-icon" href="/app/apple-touch-icon.png"><meta name="theme-color" content="#02080d">
+</head>
+<body data-yk-title="ASISTENCIA">
+<div id="yk-espejo-aviso" style="background:#0a1620;border-bottom:1px solid rgba(120,243,255,.30);color:#75aab9;font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;padding:8px 14px">Espejo en <b style="color:#78f3ff">admira.live</b> de Yokup · mismos datos en vivo de <code>api.yokup.com</code>. Aquí se <b>mira</b>: sin sesión de Yokup, lo que pide login (tareas, tickets y mandar órdenes al CLI) no responde. Para eso, <a href="https://www.yokup.com/highscore" style="color:#78f3ff">el original</a>.</div>
+<div class="wrap">
+  <nav>
+    <div class="status" id="status"><i></i><span id="statusTxt">Iniciando…</span></div>
+  </nav>
+
+  <h1>Asistencia en vivo</h1>
+  <p class="sub">Vídeo en grupo (técnico + expertos) para resolver la incidencia sin desplazamiento. WebRTC en malla sobre la red de Cloudflare (TURN).</p>
+
+  <section class="booking">
+    <h2>📅 Reservar hora · asistencia humana</h2>
+    <p class="bsub">¿No es urgente? Pide cita con una persona del equipo y te llega la confirmación por Google Calendar. Para atención inmediata, usa la sala de vídeo de abajo.</p>
+    <div class="bk-label">1 · Elige día</div>
+    <div class="cal-days" id="calDays"></div>
+    <div class="cal-more">¿Más adelante? Elige cualquier fecha: <input type="date" id="calPick" class="cal-input"></div>
+    <div id="slotsWrap" style="display:none">
+      <div class="bk-label">2 · Elige hora <span id="slotDayLbl" style="color:var(--mut)"></span></div>
+      <div class="slots" id="slots"></div>
+      <input class="bk-motivo" id="bkMotivo" placeholder="Motivo (opcional): qué necesitas resolver">
+      <button class="btn solid bk-confirm" id="bkConfirm" disabled>Reservar cita →</button>
+    </div>
+    <div class="bk-ok" id="bkOk"></div>
+    <p class="bk-note">Horario provisional: L–V, 8:00–20:00, franjas de 30 min (hora peninsular). Al reservar se abre Google Calendar con la cita e invitación al equipo; queda sujeta a confirmación.</p>
+  </section>
+
+  <div class="stage">
+    <div id="gallery"><div class="empty" id="emptyMsg">Comparte el enlace de sala — los participantes aparecerán aquí</div></div>
+
+    <div class="panel">
+      <div class="selfbox"><video id="local" autoplay playsinline muted></video><div class="vwrap self" style="position:absolute;inset:0;border:0;background:transparent"><div class="lbl">Tú</div></div></div>
+      <div class="count"><b id="nCount">1</b> · en la sala</div>
+      <div data-yk-slot="right">
+        <h3>Invitar</h3>
+        <div class="field" style="margin:8px 0 6px">Enlace de la sala (id + URL, pulsa para copiar):</div>
+        <div class="link" id="shareLink" title="Copiar">—</div>
+      </div>
+      <div class="row">
+        <button class="btn" id="micBtn">🎙️ Micro</button>
+        <button class="btn" id="camBtn">📷 Cámara</button>
+      </div>
+      <div class="row">
+        <button class="btn" id="screenBtn">🖥️ Pantalla</button>
+        <button class="btn" id="recBtn">⏺ Grabar</button>
+      </div>
+      <button class="btn danger" id="hangBtn">Salir</button>
+      <div class="note">Sala: <b id="roomName" style="color:var(--brand)">—</b>. Comparte el enlace; cada persona se une desde su dispositivo. Malla P2P (ideal 3-5). Permite cámara y micro.</div>
+    </div>
+  </div>
+
+  <div class="foot">Yokup · Asistencia en vivo — WebRTC malla + Cloudflare Realtime (TURN) · señalización <b>yokup-rtc</b></div>
+</div>
+
+<script>
+const WORKER = "https://api.yokup.com";
+const params = new URLSearchParams(location.search);
+let room = params.get("room");
+if(!room){ room = "yokup-" + Math.random().toString(36).slice(2,8); history.replaceState(null,"","?room="+room); }
+const shareUrl = location.origin + location.pathname + "?room=" + room;
+const $ = id => document.getElementById(id);
+$("shareLink").textContent = shareUrl;
+$("roomName").textContent = room;
+$("shareLink").onclick = ()=>{ navigator.clipboard.writeText(shareUrl); setStatus("enlace copiado"); };
+function setStatus(t, ok){ $("statusTxt").textContent = t; $("status").classList.toggle("ok", !!ok); }
+
+const localV = $("local"), gallery = $("gallery"), emptyMsg = $("emptyMsg");
+let localStream, iceServer, ws, myId=null;
+const pcs = new Map();       // peerId -> RTCPeerConnection
+const tiles = new Map();     // peerId -> video element
+const rStreams = new Map();  // peerId -> MediaStream (remoto)
+
+async function getTurn(){ const r = await fetch(WORKER + "/turn"); const j = await r.json(); return j.iceServers; }
+
+async function start(){
+  try{ localStream = await navigator.mediaDevices.getUserMedia({ video:true, audio:true }); }
+  catch(e){ setStatus("permite cámara/micro y recarga"); return; }
+  localV.srcObject = localStream;
+  iceServer = await getTurn();
+  connectWS();
+}
+
+function tileFor(peerId){
+  if(tiles.has(peerId)) return tiles.get(peerId);
+  emptyMsg.style.display = "none";
+  const wrap = document.createElement("div"); wrap.className="vwrap"; wrap.dataset.peer=peerId;
+  const v = document.createElement("video"); v.autoplay=true; v.playsInline=true;
+  const lbl = document.createElement("div"); lbl.className="lbl"; lbl.textContent="Participante";
+  wrap.appendChild(v); wrap.appendChild(lbl); gallery.appendChild(wrap);
+  tiles.set(peerId, v); updateCount(); return v;
+}
+function dropPeer(peerId){
+  const pc = pcs.get(peerId); if(pc){ try{pc.close();}catch(e){} pcs.delete(peerId); }
+  const v = tiles.get(peerId); if(v){ v.closest(".vwrap").remove(); tiles.delete(peerId); }
+  rStreams.delete(peerId); updateCount();
+  if(tiles.size===0) emptyMsg.style.display="";
+}
+function updateCount(){ $("nCount").textContent = tiles.size + 1; }
+
+function makePc(peerId){
+  const pc = new RTCPeerConnection({ iceServers: [iceServer] });
+  localStream.getTracks().forEach(t => pc.addTrack(t, localStream));
+  pc.ontrack = e => { const v = tileFor(peerId); v.srcObject = e.streams[0]; rStreams.set(peerId, e.streams[0]); setStatus("en llamada", true); };
+  pc.onicecandidate = e => { if(e.candidate) send({ to:peerId, type:"ice", candidate:e.candidate }); };
+  pcs.set(peerId, pc);
+  return pc;
+}
+function send(o){ if(ws && ws.readyState===1) ws.send(JSON.stringify(o)); }
+
+function connectWS(){
+  ws = new WebSocket(WORKER.replace("https","wss") + "/room/" + room);
+  ws.onopen = () => setStatus("en sala · esperando participantes");
+  ws.onclose = () => setStatus("señalización cerrada");
+  ws.onmessage = async (evt) => {
+    let m; try{ m = JSON.parse(evt.data); }catch(e){ return; }
+    if(m.type==="welcome"){
+      myId = m.id;
+      // yo soy el nuevo → ofrezco a cada peer existente
+      for(const pid of m.peers){
+        const pc = makePc(pid);
+        const offer = await pc.createOffer(); await pc.setLocalDescription(offer);
+        send({ to:pid, type:"offer", sdp: pc.localDescription });
+      }
+      if(m.peers.length) setStatus("conectando…");
+    } else if(m.type==="peer-joined"){
+      setStatus("alguien se une…"); // el nuevo me ofrecerá; espero
+    } else if(m.type==="offer"){
+      let pc = pcs.get(m.from) || makePc(m.from);
+      await pc.setRemoteDescription(m.sdp);
+      const ans = await pc.createAnswer(); await pc.setLocalDescription(ans);
+      send({ to:m.from, type:"answer", sdp: pc.localDescription });
+    } else if(m.type==="answer"){
+      const pc = pcs.get(m.from); if(pc) await pc.setRemoteDescription(m.sdp);
+    } else if(m.type==="ice"){
+      const pc = pcs.get(m.from); if(pc){ try{ await pc.addIceCandidate(m.candidate); }catch(e){} }
+    } else if(m.type==="peer-left"){
+      dropPeer(m.id);
+      if(tiles.size===0) setStatus("no queda nadie en la sala");
+    }
+  };
+}
+
+// controles
+let micOn=true, camOn=true;
+$("micBtn").onclick = (e)=>{ micOn=!micOn; localStream.getAudioTracks().forEach(t=>t.enabled=micOn); e.target.style.opacity=micOn?1:.5; };
+$("camBtn").onclick = (e)=>{ camOn=!camOn; localStream.getVideoTracks().forEach(t=>t.enabled=camOn); e.target.style.opacity=camOn?1:.5; };
+$("hangBtn").onclick = ()=>{ pcs.forEach(pc=>{try{pc.close();}catch(e){}}); try{ws.close();}catch(e){} localStream.getTracks().forEach(t=>t.stop()); setStatus("has salido"); gallery.innerHTML=""; };
+
+// compartir pantalla (reemplaza el vídeo enviado a TODOS los peers)
+let screenOn=false, camTrack=null;
+$("screenBtn").onclick = async (e)=>{
+  if(!screenOn){
+    let ds; try{ ds = await navigator.mediaDevices.getDisplayMedia({video:true}); }catch(err){ return; }
+    const scr = ds.getVideoTracks()[0];
+    camTrack = localStream.getVideoTracks()[0];
+    for(const pc of pcs.values()){ const s = pc.getSenders().find(x=>x.track&&x.track.kind==="video"); if(s) await s.replaceTrack(scr); }
+    localV.srcObject = ds;
+    screenOn=true; e.target.classList.add("solid"); e.target.textContent="🖥️ Detener";
+    scr.onended = ()=> stopScreen(e.target);
+  } else { stopScreen(e.target); }
+};
+async function stopScreen(btn){
+  if(camTrack){ for(const pc of pcs.values()){ const s = pc.getSenders().find(x=>x.track&&x.track.kind==="video"); if(s) await s.replaceTrack(camTrack); } localV.srcObject = localStream; }
+  screenOn=false; btn.classList.remove("solid"); btn.textContent="🖥️ Pantalla";
+}
+
+// grabación (proof-of-work): graba el primer remoto disponible, o tu propio vídeo
+let rec=null, chunks=[];
+$("recBtn").onclick = (e)=>{
+  if(!rec){
+    const src = rStreams.size ? [...rStreams.values()][0] : localStream;
+    if(!src){ setStatus("nada que grabar aún"); return; }
+    chunks=[];
+    try{ rec = new MediaRecorder(src, {mimeType:"video/webm"}); }catch(err){ try{ rec=new MediaRecorder(src);}catch(e2){ setStatus("grabación no soportada"); return; } }
+    rec.ondataavailable = ev => { if(ev.data && ev.data.size) chunks.push(ev.data); };
+    rec.onstop = ()=>{ const blob = new Blob(chunks,{type:"video/webm"}); const a=document.createElement("a"); a.href=URL.createObjectURL(blob); a.download = "asistencia-"+room+"-"+new Date().toISOString().slice(0,16).replace(/[:T]/g,"")+".webm"; a.click(); };
+    rec.start(); e.target.classList.add("solid"); e.target.textContent="⏹ Detener"; setStatus("grabando… (proof-of-work)");
+  } else { rec.stop(); rec=null; e.target.classList.remove("solid"); e.target.textContent="⏺ Grabar"; setStatus("grabación descargada", true); }
+};
+
+// ---- Reservar cita · asistencia humana (Google Calendar, sin backend) -------
+(function(){
+  const HUMAN_EMAIL="csilvasantin@gmail.com", TZ="Europe/Madrid";
+  const HSTART=8, HEND=20, STEP=30, MAXDAYS=10;   // provisional: L-V 8-20, 30 min
+  const DOW=["Dom","Lun","Mar","Mié","Jue","Vie","Sáb"], MON=["Ene","Feb","Mar","Abr","May","Jun","Jul","Ago","Sep","Oct","Nov","Dic"];
+  const calDays=$("calDays"), slotsWrap=$("slotsWrap"), slotsEl=$("slots"), okEl=$("bkOk"), confirmBtn=$("bkConfirm");
+  if(!calDays) return;
+  const pad=n=>String(n).padStart(2,"0");
+  let selDay=null, selSlot=null, selLbl="";
+  const today=new Date();
+  for(let i=0, added=0; added<MAXDAYS && i<21; i++){
+    const d=new Date(today); d.setDate(today.getDate()+i);
+    const dow=d.getDay(); if(dow===0||dow===6) continue;   // salta finde
+    added++;
+    const iso=d.getFullYear()+"-"+pad(d.getMonth()+1)+"-"+pad(d.getDate());
+    const chip=document.createElement("button"); chip.className="day-chip";
+    chip.dataset.iso=iso; chip.dataset.label=DOW[dow]+" "+d.getDate()+" "+MON[d.getMonth()];
+    chip.innerHTML='<div class="dow">'+DOW[dow]+'</div><div class="dnum">'+d.getDate()+'</div><div class="dmon">'+MON[d.getMonth()]+'</div>';
+    chip.onclick=()=>pickDate(chip.dataset.iso, chip.dataset.label, chip);
+    calDays.appendChild(chip);
+  }
+  // Selector de fecha (calendario nativo) para días MÁS ALLÁ de los chips.
+  const calPick=$("calPick");
+  if(calPick){
+    const tIso=today.getFullYear()+"-"+pad(today.getMonth()+1)+"-"+pad(today.getDate());
+    calPick.min=tIso;
+    calPick.onchange=()=>{
+      if(!calPick.value) return;
+      const p=calPick.value.split("-"); const d=new Date(+p[0], +p[1]-1, +p[2]);
+      pickDate(calPick.value, DOW[d.getDay()]+" "+d.getDate()+" "+MON[d.getMonth()], null);
+    };
+  }
+  function pickDate(iso, label, chip){
+    [...calDays.children].forEach(c=>c.classList.remove("sel")); if(chip) chip.classList.add("sel");
+    if(calPick && !chip) { /* mantiene el valor del input */ } else if(calPick) calPick.value="";
+    selDay=iso; selLbl=label; selSlot=null;
+    $("slotDayLbl").textContent="· "+selLbl;
+    slotsEl.innerHTML="";
+    for(let h=HSTART; h<HEND; h++){ for(let m=0; m<60; m+=STEP){
+      const b=document.createElement("button"); b.className="slot"; b.textContent=pad(h)+":"+pad(m);
+      b.onclick=()=>{ [...slotsEl.children].forEach(s=>s.classList.remove("sel")); b.classList.add("sel"); selSlot={h,m}; confirmBtn.disabled=false; };
+      slotsEl.appendChild(b);
+    }}
+    slotsWrap.style.display=""; confirmBtn.disabled=true; okEl.classList.remove("show");
+  }
+  function gcalLink(){
+    const motivo=$("bkMotivo").value.trim();
+    const ymd=selDay.replace(/-/g,"");
+    let eh=selSlot.h, em=selSlot.m+STEP; if(em>=60){ eh++; em-=60; }
+    const start=ymd+"T"+pad(selSlot.h)+pad(selSlot.m)+"00", end=ymd+"T"+pad(eh)+pad(em)+"00";
+    const det="Cita de asistencia humana solicitada desde yokup.com/asistencia.\nSala de vídeo (únete a esta hora): "+shareUrl+(motivo?"\nMotivo: "+motivo:"");
+    return "https://calendar.google.com/calendar/render?action=TEMPLATE"
+      +"&text="+encodeURIComponent("Asistencia humana · Yokup")
+      +"&dates="+start+"/"+end+"&ctz="+encodeURIComponent(TZ)
+      +"&details="+encodeURIComponent(det)
+      +"&location="+encodeURIComponent(shareUrl)
+      +"&add="+encodeURIComponent(HUMAN_EMAIL);
+  }
+  confirmBtn.onclick=()=>{
+    if(!selDay||!selSlot) return;
+    window.open(gcalLink(),"_blank","noopener");
+    okEl.innerHTML="✅ Abriendo Google Calendar con tu cita del <b>"+selLbl+" · "+pad(selSlot.h)+":"+pad(selSlot.m)+"</b>. Guárdala para enviar la solicitud al equipo. A esa hora, únete a la sala:<br><a href=\""+shareUrl+"\">"+shareUrl+"</a>";
+    okEl.classList.add("show");
+  };
+})();
+
+start();
+</script>
+<script src="/yk-frame.js?v=r31"></script>
+</body>
+</html>

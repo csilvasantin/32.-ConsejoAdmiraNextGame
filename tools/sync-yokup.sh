@@ -24,7 +24,11 @@ SRC="$(cd "$SRC" && pwd)"
 
 TODAS="$(sed -n 's/^TODAS *= *//p' "$MANIFIESTO" | head -1)"
 [ -n "$TODAS" ] || { echo "✗ el manifiesto no declara TODAS"; exit 1; }
-MIGRADAS="$(grep -v '^ *#' "$MANIFIESTO" | grep '|' | cut -d'|' -f1 | tr -d ' ' | tr '\n' ' ')"
+# Cada línea empieza por la página de yokup y, opcionalmente, «como <otra-ruta>» cuando
+# aquí tiene que vivir con otro nombre porque el suyo ya está cogido por una página propia
+# de admira.live que hace otra cosa (informes → informes-flota).
+MIGRADAS="$(grep -v '^ *#' "$MANIFIESTO" | grep '|' | cut -d'|' -f1 | awk '{print $1}' | tr '\n' ' ')"
+RENOMBRES="$(grep -v '^ *#' "$MANIFIESTO" | grep '|' | cut -d'|' -f1 | awk '/ como /{print $1":"$3}' | tr '\n' ' ')"
 
 # Pendientes = todas menos las que ya viven aquí. De aquí sale la reescritura de enlaces:
 # lo mudado se enlaza en relativo (resuelve en admira.live) y lo que sigue en yokup se
@@ -50,11 +54,15 @@ while IFS= read -r linea; do
   # de casa. Lo que la de yokup enseñaba y la de aquí no, se anota antes de darla por
   # migrada; no se pierde en silencio.
   case "$linea" in *"(propia)"*) continue ;; esac
+  clave="$(echo "$linea" | cut -d'|' -f1 | awk '{print $1}')"
+  comose="$(echo "$linea" | cut -d'|' -f1 | awk '/ como /{print $3}')"
   for f in $(echo "$linea" | cut -d'|' -f2); do
     [ -f "$SRC/$f" ] || { echo "✗ falta en el origen: $f"; exit 1; }
-    mkdir -p "$REPO/$(dirname "$f")"
-    cp "$SRC/$f" "$REPO/$f"
-    case "$f" in *.html) HTMLS="$HTMLS $f" ;; esac
+    destino="$f"
+    [ -n "$comose" ] && [ "$f" = "$clave.html" ] && destino="$comose.html"
+    mkdir -p "$REPO/$(dirname "$destino")"
+    cp "$SRC/$f" "$REPO/$destino"
+    case "$destino" in *.html) HTMLS="$HTMLS $destino" ;; esac
   done
 done < "$MANIFIESTO"
 mkdir -p "$REPO/avatars"
@@ -77,6 +85,14 @@ if [ -n "$PENDIENTES" ]; then
     perl -pi -e "s{href=\"/($PENDIENTES)\"}{href=\"https://www.yokup.com/\$1\"}g" "$REPO/$f"
   done
 fi
+
+# 2b) Las que viven aquí con otro nombre: sus enlaces se reescriben a la ruta nueva, para
+#     que el menú lleve al sitio donde de verdad está la página en esta casa.
+for par in $RENOMBRES; do
+  de="${par%%:*}"; a="${par##*:}"
+  perl -pi -e "s{\"/$de\"}{\"/$a\"}g" "$REPO/yk-frame.js"
+  for f in $HTMLS; do perl -pi -e "s{href=\"/$de\"}{href=\"/$a\"}g" "$REPO/$f"; done
+done
 
 # 3) El espejo se identifica: de qué commit de yokup viene esta copia.
 ORIGEN_COMMIT="$(git -C "$SRC" rev-parse --short HEAD 2>/dev/null || echo desconocido)"

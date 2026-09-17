@@ -13,8 +13,14 @@ TODAS = dashboard objetivos decisiones misiones tareas incidencias informes noti
 
 highscore | highscore.html highscoreDetail.html highscore-daily-record.js highscore-desktop-app.js highscore-race.js highscore-race-bonus.js highscore-work-clock.js highscore-runner-state.css highscore-detail.js highscore-detail-page.js yk-frame.css yk-frame.js yk-agent-identity.js yk-avatar.js img/highscore-podio-pixel.png img/highscore-podio-pixel.webp img/highscore-presite-decathlon.webp media/trackfield-1722.mp3
 
-# NO migrada todavía · asistencia (sala de vídeo WebRTC): no escribe nada por HTTP, pero
-# pide las credenciales TURN a GET /turn, y ese endpoint comprueba el Origin desde que dejó
-# de ser un grifo abierto (yokup, 16-09-2026): con https://www.admira.live responde 403
-# bad_origin. Traerla ahora sería publicar una sala que no puede negociar la llamada. Entra
-# en cuanto el worker acepte este origen.
+# Asistencia en vivo (sala de vídeo WebRTC). No escribe nada por HTTP: sólo GET /turn y el
+# WebSocket wss://api.yokup.com/room/<sala>. Pudo mudarse el 17-09-2026, cuando el worker
+# yokup-rtc añadió admira.live a TURN_ORIGENES (antes: 403 bad_origin y sala muda).
+asistencia | asistencia.html app/apple-touch-icon.png
+
+# El visor de informes de la flota. Es LECTURA PURA (GET /tasks/all y GET /highscore/daily,
+# cero escrituras), pero su nombre ya está cogido: /informes en admira.live es el Generador
+# de Informes, que es OTRA aplicación. Así que aquí vive como /informes-flota y el menú del
+# marco apunta ahí. OJO: /tasks/all exige sesión de Yokup, así que hasta que la haya, la
+# tabla saldrá vacía y el aviso de arriba es el que lo explica.
+informes como informes-flota | informes.html yk-maquina.js yk-informes-sort.js yk-informes-columns.js yk-informes-groups.js yk-informes-view.js yk-informes-view.css informe-pdf.js avatar-widget.js app/apple-touch-icon.png

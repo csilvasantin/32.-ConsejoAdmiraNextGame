@@ -80,6 +80,7 @@
     "border:2px solid #a07828;border-radius:0;background:#3a2410;box-shadow:2px 2px 0 #000;padding:6px 10px;margin-right:6px}" +
     "#pf-brand:hover{border-color:#f0c040;color:#fff}" +
     "#pf-brand .pf-ver{color:#c9a86a;font-size:0.4rem;margin-top:3px;letter-spacing:0}" +
+    "#pf-brand .pf-logo{height:20px;width:auto;vertical-align:middle;margin-right:7px;image-rendering:pixelated;image-rendering:-moz-crisp-edges}" +
     /* Sello de versión (#pf-ver-foot) retirado del menú superior — Carlos 2026-07-13 */
     /* icono de contraer OPCIONES: a la izquierda (tras la marca) */
     "#pf-toggle-left{order:-3;display:flex;align-items:center;align-self:center;margin-right:6px;flex:0 0 auto}" +
@@ -196,7 +197,8 @@
     brand.id = "pf-brand";
     brand.href = "https://www.admira.live/";
     // La versión YA NO va en la marca (Carlos): la marca es solo el nombre → home.
-    brand.innerHTML = "🏛️ " + PROJECT;
+    // El logo es el de Admira pixelado estilo retro (Carlos, 17-09-2026): /admira-logo-retro.svg.
+    brand.innerHTML = '<img class="pf-logo" src="/admira-logo-retro.svg" alt="admira" width="119" height="25">' + PROJECT;
     top.appendChild(brand);
 
     document.body.appendChild(top);

@@ -2869,11 +2869,14 @@ body.rail-open{overflow:hidden}
             </button>
             <!-- Barra idéntica a admira-bar.js (subpáginas) para consistencia — mantener en sync con var TOP -->
             <a href="https://www.admira.live/" class="version-badge" title="Consejo AdmiraNeXT">🏛️ Consejo AdmiraNeXT</a>
-            <a href="https://www.admira.live/control/" target="_blank" rel="noopener" class="version-badge" title="Control · FleetControl">🖥️ Control</a>
-            <a href="https://www.admira.live/players/" class="version-badge" title="Players · pantallas de emisión">📺 Players</a>
+            <a href="/dashboard" class="version-badge" title="Dashboard · resumen de actividad">📊 Dashboard</a>
+            <a href="/objetivos" class="version-badge" title="Objetivos · propuestas y progreso">🎯 Objetivos</a>
+            <a href="/decisiones" class="version-badge" title="Decisiones · opciones y resultados">⚖️ Decisiones</a>
+            <a href="/misiones" class="version-badge" title="Misiones · ¿En qué estamos?">🚀 Misiones</a>
+            <a href="/tareas" class="version-badge" title="Tareas · pendiente y en curso">✅ Tareas</a>
             <a href="/highscore" class="version-badge" title="Highscore completo · actividad y puntuación de la flota">🏆 Highscore</a>
-            <a href="https://www.admira.live/misiones" class="version-badge" title="Misiones · ¿En qué estamos?">🎯 Misiones</a>
-            <a href="/diario.html" class="version-badge" title="Diario de Silicio">📓 Diario</a>
+            <a href="/asignaciones/" class="version-badge" title="Asignaciones · reparto del trabajo">🧩 Asignaciones</a>
+            <!-- Control, Players y Diario van al riel AVANZADO (grupo «Sistema»), no al top-bar (Carlos, 18-09-2026). -->
             <a id="home-usuarios" href="https://www.admira.live/usuarios.html" class="version-badge" style="display:none" title="Usuarios · whitelist (solo superusers)">👥 Usuarios</a>
             <!-- Los contadores de flota (#summary) viven en el riel AVANZADO (grupo «Flota»)
                  para que el top-bar quepa en UNA fila; los iconos van arriba a la derecha. -->
@@ -3045,6 +3048,7 @@ body.rail-open{overflow:hidden}
                 <button class="rail-btn" onclick="railVerb('leer')" title="El Consejo te cuenta el libro del día">Pensar</button>
                 <div class="rail-group">Sistema</div>
                 <a class="rail-btn" href="https://www.admira.live/control/" target="_blank" rel="noopener" title="FleetControl · control de la flota">🖥️ Control</a>
+                <a class="rail-btn" href="/players/" title="Players · pantallas de emisión">📺 Players</a>
                 <a class="rail-btn" href="/diario.html" title="Diario de Silicio en vivo">📓 Diario</a>
                 <a class="rail-btn" href="https://www.admira.studio/" target="_blank" rel="noopener" title="Abrir ADmiraNeXT Studio">🎬 Demo</a>
                 <button class="rail-btn" onclick="window.toggleDesign&&toggleDesign()" title="Modo diseño (rejilla/reglas)">📐 Diseño</button>

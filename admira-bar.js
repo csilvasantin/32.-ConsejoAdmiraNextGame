@@ -14,35 +14,32 @@
   // La MARCA enlaza a la home (regla: el nombre del site siempre vuelve a la home).
   var PROJECT = "Consejo AdmiraNeXT";
   // Versión interna (solo console, ya no se pinta en el menú superior — Carlos 2026-07-13).
-  var VERSION = "v.2026.08.10.r37";
+  var VERSION = "v.2026.09.18.r38";
 
-  // Nav idéntico al top-bar de la home (mismos badges, mismos destinos) → coherencia.
+  // Nav de FLUJO DE TRABAJO, junto a la marca (Carlos, 18-09-2026): las secciones del
+  // trabajo diario van primero y en el MISMO orden que la barra de plataforma (yk-frame),
+  // para que las dos superficies no divergan. Rutas limpias (todas 200 en producción).
   var TOP = [
-    { t: "🖥️ Control",   h: "https://www.admira.live/control/" },
-    { t: "📺 Players",   h: "https://www.admira.live/players/" },
-    { t: "🏆 Highscore", h: "https://www.admira.live/highscore" },
-    // STATUS FUERA (Carlos, 11-08-2026): el mapa de flota vive en admiranext.com/status y
-    // tenerlo en dos menús obliga al visitante a decidir cuál de los dos mira, que es un
-    // trabajo que no debería ser suyo. Ademas esta copia pesa 216 KB de HTML, ocho veces la
-    // siguiente página del sitio. La página sigue publicada en /status: deja de ocupar sitio
-    // en la barra, no se borra.
-    // TELEGRAM FUERA (Carlos, 11-08-2026): nueve paradas no caben y el menú salía con
-    // barra horizontal, que en esta casa es inadmisible. Se va Telegram y no otra
-    // porque es la única cuyo contenido ya llega solo: los avisos del grupo aparecen
-    // en el móvil sin tener que abrir una pestaña a buscarlos. Quitar una parada que
-    // nadie visita cuesta menos que encoger ocho que sí se usan. La página sigue
-    // publicada en /telegram para quien tenga el enlace; deja de ocupar sitio, no existe menos.
-    { t: "🎯 Misiones",  h: "https://www.admira.live/misiones" },
+    { t: "📊 Dashboard",   h: "https://www.admira.live/dashboard" },
+    { t: "🎯 Objetivos",   h: "https://www.admira.live/objetivos" },
+    { t: "⚖️ Decisiones",  h: "https://www.admira.live/decisiones" },
+    { t: "🚀 Misiones",    h: "https://www.admira.live/misiones" },
+    { t: "✅ Tareas",      h: "https://www.admira.live/tareas" },
+    // Highscore siempre visible (Carlos, FLT-1321) y Asignaciones son flujo, se quedan.
+    { t: "🏆 Highscore",   h: "https://www.admira.live/highscore" },
     { t: "🧩 Asignaciones", h: "https://www.admira.live/asignaciones/" },
-    { t: "📓 Diario",    h: "https://www.admira.live/diario.html" },
-    // INCUBADORA RETIRADA DE MOMENTO (Carlos, 11-08-2026). Ojo: es temporal, no una
-    // baja. Se deja aquí la línea comentada en vez de borrarla porque devolverla es
-    // descomentar y desplegar; si se borra, dentro de un mes nadie recuerda el emoji,
-    // la ruta ni que estuvo. La página sigue publicada en /13rue/ y accesible por
-    // enlace directo — como Telegram y Status, sale de la barra, no del sitio.
-    // Cuando vuelva, recordar el motivo por el que se metió: se entraba por enlace
-    // suelto y, una vez dentro, no había por dónde volver ni adónde ir.
-    // { t: "🏢 Incubadora", h: "https://www.admira.live/13rue/" },
+    // STATUS y TELEGRAM salieron de la barra (Carlos, 11-08-2026): STATUS vive en
+    // admiranext.com/status; los avisos de Telegram ya llegan solos al móvil. Ambas
+    // páginas siguen publicadas (/status, /telegram), sólo dejan de ocupar sitio aquí.
+    // Incubadora retirada temporalmente (sigue en /13rue/ por enlace directo).
+  ];
+  // AVANZADO (Carlos, 18-09-2026): Control, Players y Diario son gestión/infra, no el
+  // flujo de trabajo → se recogen tras el botón «Avanzado» para no saturar la barra.
+  // Siguen a un clic desde cualquier página; sus páginas no se tocan.
+  var ADV = [
+    { t: "🖥️ Control",  h: "https://www.admira.live/control/" },
+    { t: "📺 Players",  h: "https://www.admira.live/players/" },
+    { t: "📓 Diario",   h: "https://www.admira.live/diario.html" }
   ];
 
   var css =
@@ -61,6 +58,17 @@
     "border:2px solid #8b5a14;border-radius:0;padding:6px 9px;white-space:nowrap;background:#2a1a08;box-shadow:2px 2px 0 #000}" +
     "#admira-topbar a:hover{background:#8b5a14;border-color:#f0c040;color:#fff}" +
     "#admira-topbar a.active{background:#8b5a14;border-color:#f0c040;color:#fff}" +
+    /* Grupo AVANZADO: botón + desplegable (Control/Players/Diario) */
+    ".admira-adv{position:relative;display:flex;align-items:stretch;flex:0 0 auto}" +
+    ".admira-adv-btn{display:flex;align-items:center;color:#ffdd66;cursor:pointer;" +
+    "font-family:'Press Start 2P',monospace;font-size:8px;line-height:1.5;letter-spacing:.5px;" +
+    "border:2px solid #8b5a14;border-radius:0;padding:6px 9px;white-space:nowrap;background:#2a1a08;box-shadow:2px 2px 0 #000}" +
+    ".admira-adv-btn:hover,.admira-adv-btn.active,.admira-adv-btn[aria-expanded=\"true\"]{background:#8b5a14;border-color:#f0c040;color:#fff}" +
+    ".admira-adv-menu{position:absolute;top:100%;right:0;margin-top:4px;z-index:99991;" +
+    "display:flex;flex-direction:column;gap:5px;padding:6px;min-width:150px;" +
+    "background:#5a3a1e;border:3px solid #8b5a14;box-shadow:3px 3px 0 #000}" +
+    ".admira-adv-menu[hidden]{display:none}" +
+    ".admira-adv-menu a{box-shadow:none;margin:0}" +
     /* Contenedor de los enlaces de navegación (para poder colapsarlos en móvil) */
     "#admira-nav{order:0;display:flex;gap:6px;align-items:stretch;flex:1 1 auto;min-width:0;overflow-x:auto;" +
     "scrollbar-width:thin;scrollbar-color:#a07828 #3a2410}" +
@@ -106,6 +114,10 @@
       "#admira-nav[hidden]{display:none}" +
       "#admira-nav a{min-height:44px;font-size:9px;padding:10px 12px;box-shadow:none;margin:0 0 5px}" +
       "#admira-nav a:last-child{margin-bottom:0}" +
+      /* En móvil el grupo Avanzado se apila en la columna y su menú va estático (no flotante) */
+      "#admira-nav .admira-adv{flex-direction:column}" +
+      "#admira-nav .admira-adv-btn{min-height:44px;font-size:9px;padding:10px 12px;box-shadow:none;margin:0 0 5px}" +
+      "#admira-nav .admira-adv-menu{position:static;right:auto;margin:0 0 5px;min-width:0;border-width:2px;box-shadow:none}" +
     "}" +
     "@media (max-width:400px){" +
       /* móvil muy estrecho: compacta la marca */
@@ -145,15 +157,52 @@
     nav.setAttribute("aria-label", "Navegación AdmiraNeXT");
     // Resalta el badge de la página actual (orientación) comparando el path.
     var here = location.pathname.replace(/index\.html$/, "").replace(/\/$/, "");
-    nav.innerHTML = TOP.map(function (i) {
-      var ph = i.h.replace(/^https?:\/\/[^/]+/, "").replace(/index\.html$/, "").replace(/\/$/, "");
-      // Se marca la SECCIÓN, no sólo la portada de la sección. Con la coincidencia
-      // exacta, estar en /13rue/implementacion o en /control/loquesea no encendía
-      // nada: la barra dejaba de decirte dónde estás justo al entrar en una página
-      // interior, que es cuando más falta hace saberlo.
-      var cur = ph !== "" && (here === ph || here.indexOf(ph + "/") === 0);
+    // Se marca la SECCIÓN, no sólo la portada de la sección. Con la coincidencia
+    // exacta, estar en /13rue/implementacion o en /control/loquesea no encendía
+    // nada: la barra dejaba de decirte dónde estás justo al entrar en una página
+    // interior, que es cuando más falta hace saberlo.
+    function isHere(h) {
+      var ph = h.replace(/^https?:\/\/[^/]+/, "").replace(/index\.html$/, "").replace(/\/$/, "");
+      return ph !== "" && (here === ph || here.indexOf(ph + "/") === 0);
+    }
+    function linkHTML(i) {
+      var cur = isHere(i.h);
       return '<a href="' + i.h + '"' + (cur ? ' class="active" aria-current="page"' : "") + ">" + i.t + "</a>";
-    }).join("");
+    }
+    nav.innerHTML = TOP.map(linkHTML).join("");
+
+    // Grupo AVANZADO: un botón «Avanzado» que despliega Control/Players/Diario. Va DENTRO
+    // del nav, así se colapsa con el resto tras el ☰ en móvil. Autocontenido: no depende
+    // de que la página tenga un raíl AVANZADO propio (muchas no lo tienen).
+    var adv = document.createElement("div");
+    adv.className = "admira-adv";
+    var advActive = ADV.some(function (i) { return isHere(i.h); });
+    var advBtn = document.createElement("button");
+    advBtn.type = "button";
+    advBtn.className = "admira-adv-btn" + (advActive ? " active" : "");
+    advBtn.setAttribute("aria-haspopup", "true");
+    advBtn.setAttribute("aria-expanded", "false");
+    advBtn.innerHTML = "⚙️ Avanzado ▾";
+    var advMenu = document.createElement("div");
+    advMenu.className = "admira-adv-menu";
+    advMenu.setAttribute("hidden", "");
+    advMenu.innerHTML = ADV.map(linkHTML).join("");
+    function advOpen(open) {
+      if (open) advMenu.removeAttribute("hidden"); else advMenu.setAttribute("hidden", "");
+      advBtn.setAttribute("aria-expanded", open ? "true" : "false");
+    }
+    advBtn.addEventListener("click", function () {
+      advOpen(advMenu.hasAttribute("hidden"));
+    });
+    // Un clic FUERA del grupo (o Escape) cierra el desplegable. Se comprueba el target en vez
+    // de fiarlo a stopPropagation: así el mismo clic que abre el botón no lo cierra acto seguido.
+    document.addEventListener("click", function (e) {
+      if (!adv.contains(e.target) && !advMenu.hasAttribute("hidden")) advOpen(false);
+    });
+    document.addEventListener("keydown", function (e) { if (e.key === "Escape") advOpen(false); });
+    adv.appendChild(advBtn);
+    adv.appendChild(advMenu);
+    nav.appendChild(adv);
     top.appendChild(nav);
 
     // Botón hamburguesa (☰): oculto en desktop vía CSS; en móvil abre/cierra el nav.

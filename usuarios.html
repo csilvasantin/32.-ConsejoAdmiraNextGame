@@ -8,8 +8,6 @@
   <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
   <!-- Barra superior + botones inferiores de navegación (consistente en admira.live) -->
   <script src="/admira-bar.js?v=20260713-r36"></script>
-  <!-- Google Identity Services: para renovar el credential al gestionar (caduca ~1h) -->
-  <script src="https://accounts.google.com/gsi/client" async defer></script>
   <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Press+Start+2P&family=VT323&display=swap" />
   <style>
     :root{
@@ -93,14 +91,13 @@
   </div>
 
   <script>
-    // dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
-    var API = "https://whitelist.admira.store";
-    var CLIENT_ID = "861856772040-e1ri6kpu6maagtb6crdfbb923hsaalgb.apps.googleusercontent.com";
+    // Writes van a Fleet (cookie __Host-fleet_session + CSRF). El worker ya no
+    // acepta GET /list anónimo (FLT-100603 P0).
+    var API = "https://fleet.admira.live/api/whitelist";
     var OWNERS = ["csilva@admira.com", "csilvasantin@gmail.com"]; // solo para la UI; el worker es quien protege
 
-    function gate() { try { return JSON.parse(localStorage.getItem("admira_gate") || "null"); } catch (e) { return null; } }
-    function myEmail() { var g = gate(); return g && g.email ? String(g.email).toLowerCase() : ""; }
-    function myCred() { var g = gate(); return g && g.cred ? g.cred : ""; }
+    function myEmail() { try { return String((window.admiraGateUser && window.admiraGateUser()) || "").toLowerCase(); } catch (e) { return ""; } }
+    function csrf() { try { return String((window.admiraGateCsrf && window.admiraGateCsrf()) || ""); } catch (e) { return ""; } }
     function $(id) { return document.getElementById(id); }
     function esc(s) { return String(s).replace(/[&<>"]/g, function (c) { return ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" })[c]; }); }
     function setMsg(t, kind) { var m = $("msg"); m.textContent = t || ""; m.className = "msg " + (kind || "mut"); }
@@ -145,67 +142,32 @@
     }
 
     function load() {
-      return fetch(API + "/list", { cache: "no-store" })
-        .then(function (r) { return r.json(); })
-        .then(function (d) {
-          var emails = d.emails || [], supers = d.superusers || [];
+      ME = myEmail();
+      return fetch(API, { cache: "no-store", credentials: "include" })
+        .then(function (r) { return r.json().then(function (d) { return { ok: r.ok, status: r.status, d: d }; }); })
+        .then(function (res) {
+          if (res.status === 401) { setMsg("✖ sesión Fleet requerida (entra otra vez)", "err"); return; }
+          if (!res.ok) { setMsg("✖ " + (res.d.error || "no se pudo cargar la lista"), "err"); return; }
+          var emails = res.d.emails || [], supers = res.d.superusers || [];
           IAM_SUPER = supers.indexOf(ME) >= 0;
           applyRole();
           render(emails, supers);
-          return d;
+          return res.d;
         })
         .catch(function () { setMsg("✖ no se pudo cargar la lista", "err"); });
     }
 
-    // ── Renovación del credential de Google ──────────────────────────────────
-    // El ID token de Google caduca a la ~1h, pero la sesión de la verja dura 12h.
-    // Para escribir hace falta un credential fresco; si no lo es, se renueva con GIS
-    // y se reintenta la acción pendiente.
-    var GIS_READY = false, pending = null;
-
-    function credFresh() { var g = gate(); return !!(g && g.cred && g.credAt && (Date.now() - g.credAt < 55 * 60 * 1000)); }
-    function saveCred(cred) {
-      try { var g = gate() || {}; g.cred = cred; g.credAt = Date.now(); if (!g.email) g.email = ME; if (!g.exp) g.exp = Date.now() + 12 * 3600 * 1000; localStorage.setItem("admira_gate", JSON.stringify(g)); } catch (e) {}
-    }
-    function initGIS() {
-      if (GIS_READY) return true;
-      if (!(window.google && google.accounts && google.accounts.id)) return false;
-      google.accounts.id.initialize({ client_id: CLIENT_ID, callback: onFreshCred, auto_select: true });
-      GIS_READY = true; return true;
-    }
-    function waitGIS(cb) {
-      if (initGIS()) { cb(); return; }
-      var n = 0, t = setInterval(function () { if (initGIS() || ++n > 50) { clearInterval(t); cb(); } }, 150);
-    }
-    function showRenew(msg) {
-      setMsg(msg || "Tu sesión de Google caducó (~1h). Renueva para continuar.", "err");
-      var box = $("renew"); box.style.display = "block"; box.innerHTML = '<div id="gbtn2"></div>';
-      waitGIS(function () {
-        try { google.accounts.id.renderButton($("gbtn2"), { theme: "filled_black", size: "large", text: "continue_with", shape: "pill" }); } catch (e) {}
-        try { google.accounts.id.prompt(); } catch (e) {}  // intenta One Tap silencioso
-      });
-    }
-    function hideRenew() { var box = $("renew"); if (box) { box.style.display = "none"; box.innerHTML = ""; } }
-    function onFreshCred(resp) {
-      if (!resp || !resp.credential) return;
-      saveCred(resp.credential);
-      hideRenew();
-      setMsg("✔ sesión de Google renovada", "ok");
-      if (pending) { var p = pending; pending = null; doWrite(p.action, p.email); }
-    }
-
-    function write(action, email) {
-      if (!credFresh()) { pending = { action: action, email: email }; showRenew(); return; }
-      doWrite(action, email);
-    }
+    function write(action, email) { doWrite(action, email); }
     function doWrite(action, email) {
       setMsg("…", "mut");
-      return fetch(API + "/" + action, {
-        method: "POST", headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email, credential: myCred() })
+      return fetch(API, {
+        method: "POST", credentials: "include",
+        headers: { "Content-Type": "application/json", "X-Fleet-CSRF": csrf() },
+        body: JSON.stringify({ action: action, email: email })
       }).then(function (r) { return r.json().then(function (d) { return { ok: r.ok, status: r.status, d: d }; }); })
         .then(function (res) {
-          if (res.status === 401) { pending = { action: action, email: email }; showRenew("Tu sesión de Google caducó. Renueva para continuar."); return; }
+          if (res.status === 401) { setMsg("✖ sesión caducada. Recarga e entra otra vez.", "err"); return; }
+          if (res.status === 403) { setMsg("✖ CSRF inválido. Recarga la página.", "err"); return; }
           if (!res.ok) { setMsg("✖ " + (res.d.error || "error"), "err"); return; }
           IAM_SUPER = (res.d.superusers || []).indexOf(ME) >= 0;
           applyRole();
@@ -227,9 +189,15 @@
     $("addBtn").addEventListener("click", add);
     $("email").addEventListener("keydown", function (e) { if (e.key === "Enter") add(); });
     $("logout").addEventListener("click", function () {
-      localStorage.removeItem("admira_gate"); localStorage.removeItem("admira_wl"); location.reload();
+      if (window.admiraGateLogout) window.admiraGateLogout();
+      else location.reload();
     });
-    load();
+    (function boot() {
+      var n = 0, t = setInterval(function () {
+        ME = myEmail();
+        if (ME || ++n > 50) { clearInterval(t); load(); }
+      }, 100);
+    })();
   </script>
 </body>
 </html>

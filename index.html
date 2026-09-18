@@ -2793,6 +2793,9 @@
 .rail-btn:hover{color:#ffff00;background:#7a5a2e}
 .rail-btn.primary{color:#ffaaaa}
 .rail-btn.primary:hover{color:#ffff00;background:#7a5a2e}
+.advanced-fleet-nav{flex:0 0 auto;min-width:0}
+.advanced-fleet-nav .rail-btn{white-space:normal;overflow:visible;line-height:1.6;overflow-wrap:anywhere}
+.advanced-fleet-nav .rail-btn:focus-visible{outline:2px solid #ffdd66;outline-offset:-2px;color:#ffff00;background:#7a5a2e}
 /* Sello de versión al PIE del rail de opciones (discreto, empujado abajo) */
 .rail-ver{margin-top:auto;padding:0.7rem 0.45rem 0.2rem;font-size:0.4rem;letter-spacing:0.5px;color:#886633;text-align:left;text-transform:none}
 /* Tira de leyendas integrada dentro del rail AVANZADO (como las Sillas del Consejo en Control):
@@ -2868,7 +2871,7 @@ body.rail-open{overflow:hidden}
             <a href="https://www.admira.live/" class="version-badge" title="Consejo AdmiraNeXT">🏛️ Consejo AdmiraNeXT</a>
             <a href="https://www.admira.live/control/" target="_blank" rel="noopener" class="version-badge" title="Control · FleetControl">🖥️ Control</a>
             <a href="https://www.admira.live/players/" class="version-badge" title="Players · pantallas de emisión">📺 Players</a>
-            <a href="https://www.admira.live/navegadores/" class="version-badge" title="Navegadores · flota de navegadores Claude-in-Chrome">🌐 Navegadores</a>
+            <a href="/highscore" class="version-badge" title="Highscore completo · actividad y puntuación de la flota">🏆 Highscore</a>
             <a href="https://www.admira.live/vista-previa" class="version-badge" title="Misiones · ¿En qué estamos?">🎯 Misiones</a>
             <a href="/diario.html" class="version-badge" title="Diario de Silicio">📓 Diario</a>
             <a id="home-usuarios" href="https://www.admira.live/usuarios.html" class="version-badge" style="display:none" title="Usuarios · whitelist (solo superusers)">👥 Usuarios</a>
@@ -3045,12 +3048,29 @@ body.rail-open{overflow:hidden}
                 <a class="rail-btn" href="/diario.html" title="Diario de Silicio en vivo">📓 Diario</a>
                 <a class="rail-btn" href="https://www.admira.studio/" target="_blank" rel="noopener" title="Abrir ADmiraNeXT Studio">🎬 Demo</a>
                 <button class="rail-btn" onclick="window.toggleDesign&&toggleDesign()" title="Modo diseño (rejilla/reglas)">📐 Diseño</button>
+                <nav class="advanced-fleet-nav" aria-label="Gestión y flota">
+                <div class="rail-group">Gestión</div>
+                <a class="rail-btn" href="/misiones" title="Misiones · seguimiento del trabajo de los agentes">🎯 Misiones</a>
+                <a class="rail-btn" href="/tareas" title="Tareas · trabajo pendiente y en curso">🗂️ Tareas</a>
+                <a class="rail-btn" href="/objetivos" title="Objetivos · propuestas y progreso por proyecto">💡 Objetivos</a>
+                <a class="rail-btn" href="/decisiones" title="Decisiones · opciones y resultados">⚖️ Decisiones</a>
+                <a class="rail-btn" href="/asignaciones/" title="Asignaciones · reparto del trabajo">🧩 Asignaciones</a>
+                <a class="rail-btn" href="/incidencias" title="Incidencias · seguimiento de problemas">⚠️ Incidencias</a>
                 <div class="rail-group">Flota</div>
                 <a class="rail-btn" href="/marcador.html" title="Marcador del día y quién está trabajando (CLI: /marcador)">🏁 Marcador</a>
-                <a class="rail-btn" href="/highscore" title="Highscore completo de la flota, espejo del de Yokup (CLI: /highscore)">🏆 Highscore</a>
-                <a class="rail-btn" href="/informes-flota" title="Informes de la flota: tareas con report (pide sesión de Yokup)">📄 Informes flota</a>
-                <a class="rail-btn" href="/equipo" title="Censo de la flota y proyectos (pide sesión de Yokup)">◫ Equipo</a>
+                <a class="rail-btn" href="/highscore" title="Highscore completo de la flota (CLI: /highscore)">🏆 Highscore</a>
+                <a class="rail-btn" href="/equipo" title="Equipo · censo de agentes y proyectos">◫ Equipo</a>
+                <a class="rail-btn" href="/navegadores/" title="Navegadores · flota de navegadores Claude-in-Chrome">🌐 Navegadores</a>
+                <a class="rail-btn" href="/status/" title="Estado · mapa de la flota">🖥️ Estado</a>
                 <a class="rail-btn" href="/asistencia" title="Asistencia en vivo: sala de vídeo con el equipo">🎥 Asistencia</a>
+                <div class="rail-group">Seguimiento</div>
+                <a class="rail-btn" href="/informes-flota" title="Informes de la flota · resultados y evidencias">📄 Informes flota</a>
+                <a class="rail-btn" href="/notificaciones" title="Notificaciones · actividad y avisos">🔔 Notificaciones</a>
+                <a class="rail-btn" href="/consumos" title="Consumos · uso de los agentes">📊 Consumos</a>
+                <a class="rail-btn" href="/dashboard" title="Dashboard · resumen de actividad">📈 Dashboard</a>
+                <a class="rail-btn" href="/admira-live" title="Cola de agentes · tareas asignadas a la flota">📥 Cola de agentes</a>
+                <a class="rail-btn" href="/normativa" title="Normativa · reglas de trabajo del equipo">📜 Normativa</a>
+                </nav>
                 <div class="summary" id="summary"></div>
                 <div class="rail-group">Tareas</div>
                 <div id="task-panel" aria-label="Tareas del Consejo">

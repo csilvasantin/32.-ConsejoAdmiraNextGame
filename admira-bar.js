@@ -20,7 +20,7 @@
   var TOP = [
     { t: "🖥️ Control",   h: "https://www.admira.live/control/" },
     { t: "📺 Players",   h: "https://www.admira.live/players/" },
-    { t: "🌐 Navegadores", h: "https://www.admira.live/navegadores/" },
+    { t: "🏆 Highscore", h: "https://www.admira.live/highscore" },
     // STATUS FUERA (Carlos, 11-08-2026): el mapa de flota vive en admiranext.com/status y
     // tenerlo en dos menús obliga al visitante a decidir cuál de los dos mira, que es un
     // trabajo que no debería ser suyo. Ademas esta copia pesa 216 KB de HTML, ocho veces la

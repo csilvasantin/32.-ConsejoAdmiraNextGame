@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.18.09.2026.r1.15:29" />
+<meta name="admiranext-version" content="AdmiraNeXT v.18.09.2026.r2.19:29" />
 <script src="/admira-bar.js?v=20260713-r36"></script>
 <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
 <meta charset="UTF-8">
@@ -184,7 +184,7 @@
     });
     $("#hist-res").textContent = zs.length
       ? (zs.length+" zonas · top acumula "+fmtDur(zs[0].permanencia_ms)+" ("+zs[0].invitados+" invitado"+(zs[0].invitados===1?"":"s")+")"+(d.recortado?" · (recortado a "+d.filas+" filas)":""))
-      : "sin paradas en esta ventana (nadie quieto ≥ 45 s todavía)";
+      : "sin paradas en esta ventana (nadie quieto ≥ 30 s todavía)";
   }
   function cargaZonas(){
     var e = ev.value.trim(); if (!e || !zonasOn) return;

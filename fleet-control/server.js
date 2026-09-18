@@ -31,7 +31,12 @@ const { sessionMutationError } = require('./session-csrf');
 const { ACTIVE, REVOKED, UNAVAILABLE, createSessionRegistry, logoutEndpointPolicy, sessionEndpointPolicy } = require('./session-registry');
 const { createSessionCodec, deriveSessionSecret, loadAuthEdgeSecretMaterial, loadSessionSecretMaterial } = require('./session-token');
 const { BridgeError, createGrokBotBridge } = require('./grokbot-bridge');
-const grokBotBridge = createGrokBotBridge();
+const { DesktopBridgeError, createGrokBotDesktop } = require('./grokbot-desktop');
+// The desktop adapter shares the native conversation. Never fall back to a
+// routine when it is unavailable: that would silently create a different chat.
+const grokBotLegacy = createGrokBotBridge();
+const grokBotBridge = process.env.GROKBOT_CHAT_PROVIDER === 'desktop'
+  ? createGrokBotDesktop() : grokBotLegacy;
 
 const DIR = __dirname;
 const PORT = parseInt(process.env.FLEET_PORT || '9140', 10);
@@ -868,17 +873,35 @@ const server = http.createServer(async (req, res) => {
   if (url === '/api/grokbot' || url.startsWith('/api/grokbot/')) {
     if (!(await gate(req, res, ip))) return;
     try {
-      if (url === '/api/grokbot/capabilities' && req.method === 'GET') return json(res,200,{ok:true,...grokBotBridge.capabilities()});
+      if (url === '/api/grokbot/capabilities' && req.method === 'GET') return json(res,200,{ok:true,...await grokBotBridge.capabilities(req.fleetSession)});
+      if (url === '/api/grokbot/selection' && req.method === 'POST') {
+        if (!grokBotBridge.select) throw new BridgeError(503,'desktop_chat_not_configured');
+        const raw = await readRawBody(req, 1024);
+        let body; try { body=JSON.parse(raw); } catch (_) { throw new BridgeError(400,'invalid_json'); }
+        if(!body || Object.keys(body).some(k=>k!=='persona') || typeof body.persona!=='string') throw new BridgeError(400,'invalid_selection');
+        return json(res,200,{ok:true,...await grokBotBridge.select(req.fleetSession,body.persona)});
+      }
       if (url === '/api/grokbot/messages' && req.method === 'POST') {
-        const message = await grokBotBridge.send(req.fleetSession, await readBody(req));
+        const raw = await readRawBody(req, 100000);
+        if (raw === null) throw new BridgeError(413,'message_too_large');
+        let body; try { body=JSON.parse(raw); } catch (_) { throw new BridgeError(400,'invalid_json'); }
+        const message = await grokBotBridge.send(req.fleetSession,body);
         return json(res,202,{ok:true,message});
       }
-      if (url === '/api/grokbot/messages' && req.method === 'GET') return json(res,200,{ok:true,messages:grokBotBridge.list(req.fleetSession, requestUrl.searchParams.get('persona'))});
+      if (url === '/api/grokbot/messages' && req.method === 'GET') {
+        const persona = requestUrl.searchParams.get('persona');
+        const messages = await grokBotBridge.list(req.fleetSession, persona);
+        // Keep previous routine receipts explicitly separate in the UI. Reading
+        // the archive is local-only and never resends or polls an old job.
+        if (grokBotBridge !== grokBotLegacy) messages.push(...grokBotLegacy.list(req.fleetSession, persona));
+        return json(res,200,{ok:true,messages});
+      }
       const match = /^\/api\/grokbot\/messages\/(gb_[a-f0-9]{48})$/.exec(url);
       if (match && req.method === 'GET') return json(res,200,{ok:true,message:await grokBotBridge.get(req.fleetSession,match[1])});
       return json(res,404,{ok:false,error:'grokbot_route_not_found'});
     } catch (error) {
-      return json(res,error instanceof BridgeError ? error.status : 503,{ok:false,error:error instanceof BridgeError ? error.code : 'bridge_unavailable'});
+      const known=error instanceof BridgeError || error instanceof DesktopBridgeError;
+      return json(res,known ? error.status : 503,{ok:false,error:known ? error.code : 'bridge_unavailable'});
     }
   }
 
@@ -1314,5 +1337,8 @@ const server = http.createServer(async (req, res) => {
 });
 
 server.listen(PORT, '127.0.0.1', () => {
+  grokBotBridge.start?.();
   console.log('[fleet-control] relay ' + RELAY_ID + ' · escuchando en 127.0.0.1:' + PORT + ' · ' + FLEET.machines.length + ' máquinas · token ' + (TOKEN ? 'OK' : 'FALTA'));
 });
+process.on('SIGTERM',()=>{grokBotBridge.stop?.();server.close(()=>process.exit(0));});
+process.on('SIGINT',()=>{grokBotBridge.stop?.();server.close(()=>process.exit(0));});

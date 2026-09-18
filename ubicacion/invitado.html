@@ -1,0 +1,90 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<title>Tu badge · AdmiraXperience</title>
+<meta name="robots" content="noindex,nofollow">
+<meta name="theme-color" content="#0b0e07">
+<link rel="icon" href="/admira-logo-retro.svg">
+<style>
+  :root{--bg:#0b0e07;--panel:#141a10;--ink:#dfe8d0;--dim:#8fae6a;--amber:#ffdd66;--green:#689840;--vip:#f0c040;--line:rgba(143,174,106,.25);--rojo:#e06c5a}
+  html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font:16px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
+  main{max-width:520px;margin:0 auto;padding:28px 18px 40px}
+  .logo{height:26px;image-rendering:pixelated;display:block;margin:0 auto 18px}
+  .badge{background:var(--panel);border:1px solid var(--line);border-radius:14px;padding:18px;text-align:center;box-shadow:0 10px 40px rgba(0,0,0,.5)}
+  .badge .ev{font-size:11px;color:var(--dim);letter-spacing:.14em;text-transform:uppercase}
+  .badge h1{margin:6px 0 4px;font-size:26px;color:var(--amber);word-break:break-word}
+  .badge .vip{display:inline-block;background:var(--vip);color:#1a1206;font-weight:800;letter-spacing:.14em;padding:3px 10px;border-radius:6px;font-size:12px}
+  .btn{display:block;width:100%;margin-top:18px;padding:16px;border-radius:12px;border:2px solid var(--green);background:var(--green);color:#0b0e07;font:inherit;font-weight:700;font-size:18px;cursor:pointer}
+  .btn.stop{background:transparent;color:var(--ink);border-color:var(--rojo)}
+  .btn:disabled{opacity:.5}
+  #estado{margin-top:16px;padding:12px 14px;background:var(--panel);border:1px solid var(--line);border-radius:10px;font-size:14px;min-height:22px}
+  #estado b{color:var(--amber)}
+  .luz{display:inline-block;width:10px;height:10px;border-radius:50%;background:#555;margin-right:8px;vertical-align:middle}
+  .luz.on{background:var(--green);box-shadow:0 0 10px var(--green);animation:p 1.4s infinite}
+  .luz.err{background:var(--rojo)}
+  @keyframes p{0%,100%{opacity:1}50%{opacity:.35}}
+  .nota{margin-top:18px;font-size:12px;color:var(--dim)}
+  .falta{color:var(--rojo)}
+</style>
+</head>
+<body>
+<main>
+  <img class="logo" src="/admira-logo-retro.svg" alt="admira">
+  <div class="badge">
+    <div class="ev" id="ev">AdmiraXperience</div>
+    <h1 id="nombre">Invitado</h1>
+    <span class="vip" id="vip" style="display:none">VIP</span>
+  </div>
+  <button class="btn" id="b-ir">Compartir mi ubicación</button>
+  <button class="btn stop" id="b-stop" style="display:none">Dejar de compartir</button>
+  <div id="estado"><span class="luz" id="luz"></span><span id="txt">Pulsa el botón y acepta el permiso de ubicación de tu móvil.</span></div>
+  <div class="nota">Tu posición solo se comparte <b>mientras esta página está abierta</b> y desaparece del mapa 90 segundos después de cerrarla. No se guarda historial. Solo la ve el equipo de la AdmiraXperience.</div>
+</main>
+<script>
+(function(){
+  var API = "https://api.yokup.com", CADA_MS = 4000;
+  var q = new URLSearchParams(location.search), $ = function(s){ return document.querySelector(s); };
+  var evento = (q.get("evento")||"").trim(), invitado = (q.get("invitado")||"").trim(), nombre = (q.get("nombre")||invitado||"Invitado").trim(), vip = q.get("vip")==="1";
+  $("#ev").textContent = evento ? "AdmiraXperience · " + evento : "AdmiraXperience";
+  $("#nombre").textContent = nombre; if (vip) $("#vip").style.display = "inline-block";
+  var luz = $("#luz"), txt = $("#txt"), bIr = $("#b-ir"), bStop = $("#b-stop");
+  if (!evento || !invitado) { bIr.disabled = true; luz.className = "luz err"; txt.innerHTML = '<span class="falta">Este enlace está incompleto (falta evento o invitado). Pide uno nuevo al equipo.</span>'; return; }
+  if (!("geolocation" in navigator)) { bIr.disabled = true; luz.className = "luz err"; txt.textContent = "Este navegador no tiene geolocalización."; return; }
+
+  var watchId = null, ultimoEnvio = 0, enviados = 0, fallos = 0, wake = null, pendiente = null;
+  function estado(cls, html){ luz.className = "luz " + cls; txt.innerHTML = html; }
+  function enviar(pos){
+    var c = pos.coords, ahora = Date.now();
+    if (ahora - ultimoEnvio < CADA_MS) { pendiente = pos; return; }   // se manda la última cada 4 s
+    ultimoEnvio = ahora; pendiente = null;
+    fetch(API + "/ubicacion/report", { method:"POST", headers:{ "Content-Type":"application/json" },
+      body: JSON.stringify({ evento:evento, invitado:invitado, nombre:nombre, vip:vip, lat:c.latitude, lng:c.longitude, acc:c.accuracy }) })
+      .then(function(r){ return r.json(); })
+      .then(function(d){ if (!d.ok) throw new Error(d.error||"no ok"); enviados++; fallos = 0;
+        estado("on", "<b>Compartiendo</b> · precisión ±" + Math.round(c.accuracy) + " m · " + enviados + " envíos · " + new Date().toLocaleTimeString()); })
+      .catch(function(e){ fallos++; estado("err", "No llega al servidor (" + fallos + "): " + e.message + ". Reintentando…"); });
+  }
+  setInterval(function(){ if (pendiente && Date.now() - ultimoEnvio >= CADA_MS) enviar(pendiente); }, 1000);
+  function iniciar(){
+    estado("", "Pidiendo permiso de ubicación…");
+    watchId = navigator.geolocation.watchPosition(enviar, function(err){
+      var m = err.code===1 ? "Has denegado la ubicación. Actívala para esta página en los ajustes del navegador." : err.code===2 ? "El móvil no consigue posición ahora mismo." : "La ubicación tarda demasiado.";
+      estado("err", m);
+    }, { enableHighAccuracy:true, maximumAge:2000, timeout:15000 });
+    bIr.style.display = "none"; bStop.style.display = "block";
+    if (navigator.wakeLock) navigator.wakeLock.request("screen").then(function(w){ wake = w; }).catch(function(){});
+  }
+  function parar(){
+    if (watchId != null) navigator.geolocation.clearWatch(watchId); watchId = null;
+    if (wake) { wake.release().catch(function(){}); wake = null; }
+    bStop.style.display = "none"; bIr.style.display = "block";
+    estado("", "Has dejado de compartir. Desaparecerás del mapa en 90 s.");
+  }
+  bIr.onclick = iniciar; bStop.onclick = parar;
+  document.addEventListener("visibilitychange", function(){ if (document.visibilityState==="visible" && watchId!=null && navigator.wakeLock && !wake) navigator.wakeLock.request("screen").then(function(w){ wake = w; }).catch(function(){}); });
+})();
+</script>
+</body>
+</html>

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.17.09.2026.r8.22:17" />
+<meta name="admiranext-version" content="AdmiraNeXT v.18.09.2026.r1.15:29" />
 <script src="/admira-bar.js?v=20260713-r36"></script>
 <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
 <meta charset="UTF-8">
@@ -48,6 +48,8 @@
   #qrbox .enl{font-size:10px;color:#333;word-break:break-all;margin-top:6px}
   .pin{width:18px;height:18px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid #0b0e07;box-shadow:0 0 10px rgba(0,0,0,.6)}
   .pin.vip{background:var(--vip)} .pin.std{background:var(--green)} .pin.rancio{background:#666}
+  .zona-tip{background:rgba(11,14,7,.85);border:1px solid var(--line);color:var(--amber);font-weight:700;font-size:11px;box-shadow:none}
+  .zona-tip:before{display:none}
   .leaflet-popup-content-wrapper,.leaflet-popup-tip{background:var(--panel);color:var(--ink);border:1px solid var(--line)}
   .leaflet-container{background:#0b0e07}
   @media (max-width:720px){#panel{width:calc(100% - 24px);max-height:45%}}
@@ -74,6 +76,7 @@
   <div id="hist">
     <div class="fila">
       <button id="b-hist" title="Pinta el recorrido de cada invitado">Recorridos</button>
+      <button id="b-zonas" title="Mapa de calor: dónde y cuánto se para la gente">Zonas</button>
       <select id="ventana" title="Ventana de tiempo del historial">
         <option value="3600">última hora</option>
         <option value="hoy">hoy</option>
@@ -94,7 +97,7 @@
   var ev = $("#evento");
   var q = new URLSearchParams(location.search);
   ev.value = (q.get("evento") || localStorage.getItem("ubic-evento") || "xperience-2026").trim();
-  ev.addEventListener("change", function(){ ev.value = ev.value.trim(); localStorage.setItem("ubic-evento", ev.value); marcadores = {}; capa.clearLayers(); primera = true; tick(); if (typeof cargaHist === "function") { sel = null; cargaHist(); } });
+  ev.addEventListener("change", function(){ ev.value = ev.value.trim(); localStorage.setItem("ubic-evento", ev.value); marcadores = {}; capa.clearLayers(); primera = true; tick(); if (typeof cargaHist === "function") { sel = null; cargaHist(); cargaZonas(); } });
 
   var mapa = L.map("mapa", { zoomControl:false, attributionControl:true }).setView([41.3874, 2.1686], 13);
   L.control.zoom({ position:"topright" }).addTo(mapa);   // a la derecha: el panel vive a la izquierda
@@ -158,6 +161,44 @@
     if (sel) resalta();
   }
   function fmtM(m){ return m >= 1000 ? (m/1000).toFixed(2)+" km" : m+" m"; }
+  function fmtDur(ms){ var s=Math.round(ms/1000); if(s<60) return s+" s"; var m=Math.floor(s/60), r=s%60; if(m<60) return m+" min"+(r?" "+r+" s":""); var h=Math.floor(m/60); return h+" h "+(m%60)+" min"; }
+  // ── ZONAS CALIENTES (permanencia / dwell, FLT-100569) ────────────────────────────────
+  // Dónde se para la gente y cuánto: la suma del tiempo parado de todos los invitados por
+  // zona. El círculo crece y se enrojece con la permanencia total → se ve de un vistazo
+  // qué stand gusta más. Fuente: /ubicacion/zonas (mismas ventanas que los recorridos).
+  var capaZonas = L.layerGroup().addTo(mapa), zonasOn = false, zonasTimer = null;
+  function mezcla(p,q,t){ return [Math.round(p[0]+(q[0]-p[0])*t),Math.round(p[1]+(q[1]-p[1])*t),Math.round(p[2]+(q[2]-p[2])*t)]; }
+  function calor(frac){ frac=Math.max(0,Math.min(1,frac)); var v=[104,152,64],a=[240,192,64],r=[224,64,48];
+    var x = frac<0.5 ? mezcla(v,a,frac/0.5) : mezcla(a,r,(frac-0.5)/0.5); return "rgb("+x[0]+","+x[1]+","+x[2]+")"; }
+  function pintaZonas(d){
+    capaZonas.clearLayers();
+    var zs = d.zonas || [];
+    var max = zs.reduce(function(m,z){ return Math.max(m, z.permanencia_ms); }, 1);
+    zs.forEach(function(z, idx){
+      var frac = z.permanencia_ms / max;
+      var radio = 12 + Math.round(28 * Math.sqrt(frac));   // 12..40 m según permanencia
+      var col = calor(frac);
+      var c = L.circle([z.lat, z.lng], { radius:radio, color:col, weight:2, opacity:.9, fillColor:col, fillOpacity:.35 }).addTo(capaZonas);
+      c.bindPopup("<b>Zona #"+(idx+1)+"</b><br><span style='color:#8fae6a'>permanencia total <b style='color:#ffdd66'>"+fmtDur(z.permanencia_ms)+"</b><br>"+z.visitas+" paradas · "+z.invitados+" invitado"+(z.invitados===1?"":"s")+"<br>media "+fmtDur(z.permanencia_media_ms)+"</span>");
+      if (idx < 3) c.bindTooltip("#"+(idx+1)+" · "+fmtDur(z.permanencia_ms), { permanent:true, direction:"top", className:"zona-tip" });
+    });
+    $("#hist-res").textContent = zs.length
+      ? (zs.length+" zonas · top acumula "+fmtDur(zs[0].permanencia_ms)+" ("+zs[0].invitados+" invitado"+(zs[0].invitados===1?"":"s")+")"+(d.recortado?" · (recortado a "+d.filas+" filas)":""))
+      : "sin paradas en esta ventana (nadie quieto ≥ 45 s todavía)";
+  }
+  function cargaZonas(){
+    var e = ev.value.trim(); if (!e || !zonasOn) return;
+    var w = ventana();
+    fetch(API+"/ubicacion/zonas?evento="+encodeURIComponent(e)+"&desde="+w.desde+"&hasta="+w.hasta+"&t="+Date.now(), { cache:"no-store" })
+      .then(function(r){ return r.json(); })
+      .then(function(d){ if (!d.ok) throw new Error(d.error||"no ok"); pintaZonas(d); })
+      .catch(function(err){ $("#hist-res").textContent = "zonas sin respuesta: "+err.message; });
+  }
+  $("#b-zonas").onclick = function(){
+    zonasOn = !zonasOn; this.classList.toggle("on", zonasOn);
+    if (zonasOn) { cargaZonas(); zonasTimer = setInterval(cargaZonas, 15000); }
+    else { clearInterval(zonasTimer); capaZonas.clearLayers(); if (!histOn) $("#hist-res").textContent = ""; }
+  };
   function resalta(){ for (var k in lineas) lineas[k].setStyle(estiloLinea(k, lineas[k].options.color === "#f0c040")); }
   function selecciona(inv){ sel = (sel === inv) ? null : inv; resalta(); if (sel && lineas[sel]) mapa.fitBounds(lineas[sel].getBounds().pad(0.3)); tickLista(); }
   function cargaHist(){
@@ -173,7 +214,7 @@
     if (histOn) { cargaHist(); histTimer = setInterval(cargaHist, 15000); }
     else { clearInterval(histTimer); capaHist.clearLayers(); lineas = {}; metrosPor = {}; sel = null; $("#hist-res").textContent = ""; tickLista(); }
   };
-  $("#ventana").onchange = cargaHist;
+  $("#ventana").onchange = function(){ cargaHist(); cargaZonas(); };
   var ultimaFoto = null;
   function tickLista(){ if (ultimaFoto) pinta(ultimaFoto); }
 

@@ -127,7 +127,7 @@
   $("#b-gen").onclick = function(){
     var nombre = $("#inv-nombre").value.trim(); if (!nombre) { $("#inv-nombre").focus(); return; }
     var slug = nombre.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g,"").replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"").slice(0,40) + "-" + Math.random().toString(36).slice(2,6);
-    var url = location.origin + "/ubicacion/invitado.html?evento=" + encodeURIComponent(ev.value.trim()) + "&invitado=" + encodeURIComponent(slug) + "&nombre=" + encodeURIComponent(nombre) + ($("#inv-vip").checked ? "&vip=1" : "");
+    var url = location.origin + "/ubicacion/invitado?evento=" + encodeURIComponent(ev.value.trim()) + "&invitado=" + encodeURIComponent(slug) + "&nombre=" + encodeURIComponent(nombre) + ($("#inv-vip").checked ? "&vip=1" : "");
     $("#qr").innerHTML = ""; qr = new QRCode($("#qr"), { text:url, width:160, height:160, correctLevel:QRCode.CorrectLevel.M });
     $("#enl").innerHTML = '<a href="'+url+'" target="_blank" rel="noopener">'+esc(url)+'</a>';
   };

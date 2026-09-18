@@ -149,6 +149,145 @@ export function crearFlota(env = {}, identidad, deps = {}) {
       acuse: x.ack_at ? cuando(x.ack_at) : null, cierre: x.done_at ? cuando(x.done_at) : null, texto: String(x.text || ''), respuesta: x.note || '', proyecto_id: x.project_id || null, task_id: x.task_id || null };
   }
 
+  const ABIERTOS = new Set(['pending', 'ack', 'in_progress', 'blocked']);
+  const STALE_SEG = 10 * 60;
+  const ultimoTs = (x) => seg(x.done_at) || seg(x.ack_at) || seg(x.ts);
+  const snippet = (s, n = 160) => String(s || '').replace(/\s+/g, ' ').trim().slice(0, n);
+  const edadAckSeg = (x) => {
+    const t = seg(x.ack_at);
+    return t ? Math.max(0, Math.floor(ahora() / 1000) - t) : null;
+  };
+
+  async function focoDe(persona, maquina) {
+    const filas = await presenciaViva();
+    const p = personaCanonica(persona);
+    const hits = filas.filter((r) => personaCanonica(r.persona) === p && (!maquina || norm(r.machine) === norm(maquina)));
+    if (!hits.length) return { vivo: false, foco: '', ultimo_latido: null };
+    hits.sort((a, b) => seg(b.updated) - seg(a.updated));
+    const r = hits[0];
+    return { vivo: true, foco: r.focus || r.task || '', ultimo_latido: hace(r.updated), runtime: r.runtime || '' };
+  }
+
+  function sugerir(x, foco) {
+    const st = String(x.status || 'pending');
+    if (st === 'done') return 'esperar';
+    if (st === 'blocked') return 'reasignar';
+    if (!foco.vivo && !esConsejero(x.target_persona)) return 'reasignar';
+    const stale = (Math.floor(ahora() / 1000) - ultimoTs(x)) > STALE_SEG;
+    if (stale) return 'nudge';
+    return 'esperar';
+  }
+
+  function filaAbierta(x, foco) {
+    const st = String(x.status || 'pending');
+    const stale = ABIERTOS.has(st) && (Math.floor(ahora() / 1000) - ultimoTs(x)) > STALE_SEG;
+    return {
+      encargo: Number(x.id),
+      estado: st,
+      persona: x.target_persona || null,
+      maquina: x.target_machine || null,
+      de: x.from_name || '',
+      cuando: cuando(x.ts),
+      edad_ack: edadAckSeg(x) == null ? null : (edadAckSeg(x) < 60 ? `${edadAckSeg(x)} s` : `${Math.round(edadAckSeg(x) / 60)} min`),
+      foco_actual: foco.foco || '',
+      vivo: !!foco.vivo,
+      ultima_respuesta: snippet(x.note),
+      stale,
+      texto: snippet(x.text, 120),
+    };
+  }
+
+  /** FLT-100618: lista encargos abiertos (anti-nirvana). */
+  async function abiertos({ persona = '', estado: est = '', desde_min = 0 } = {}) {
+    const d = await llamar(`${base}/api/bot-inbox`);
+    const items = Array.isArray(d && d.items) ? d.items : [];
+    const p = persona ? personaCanonica(persona) : null;
+    const estNorm = String(est || '').trim().toLowerCase();
+    const minSeg = Math.max(0, Number(desde_min) || 0) * 60;
+    const corte = Math.floor(ahora() / 1000) - minSeg;
+    const out = [];
+    const filasVivas = await presenciaViva();
+    const focoCached = (persona, maquina) => {
+      const pc = personaCanonica(persona);
+      const hits = filasVivas.filter((r) => personaCanonica(r.persona) === pc && (!maquina || norm(r.machine) === norm(maquina)));
+      if (!hits.length) return { vivo: false, foco: '', ultimo_latido: null };
+      hits.sort((a, b) => seg(b.updated) - seg(a.updated));
+      const r = hits[0];
+      return { vivo: true, foco: r.focus || r.task || '', ultimo_latido: hace(r.updated), runtime: r.runtime || '' };
+    };
+    for (const x of items) {
+      const st = String(x.status || 'pending');
+      if (!ABIERTOS.has(st)) continue;
+      if (p && personaCanonica(x.target_persona) !== p) continue;
+      if (estNorm && st !== estNorm) continue;
+      if (minSeg && ultimoTs(x) > corte) continue;
+      out.push(filaAbierta(x, focoCached(x.target_persona, x.target_machine)));
+    }
+    out.sort((a, b) => Number(b.encargo) - Number(a.encargo));
+    return {
+      ok: true,
+      n: out.length,
+      stale: out.filter((r) => r.stale).length,
+      encargos: out,
+      siguiente: out.length ? 'encargo_progreso con el número; si stale, encargo_nudge' : 'nada abierto',
+    };
+  }
+
+  /** FLT-100618: estado enriquecido + sugerencia nudge|esperar|reasignar. */
+  async function progreso({ encargo }) {
+    const d = await llamar(`${base}/api/bot-inbox/${Number(encargo)}`);
+    const x = d && d.item; if (!x) throw new Error(`encargo #${encargo} no encontrado`);
+    const baseEstado = await estado({ encargo });
+    const foco = await focoDe(x.target_persona, x.target_machine);
+    const sugerencia = sugerir(x, foco);
+    const stale = ABIERTOS.has(String(x.status || '')) && (Math.floor(ahora() / 1000) - ultimoTs(x)) > STALE_SEG;
+    return {
+      ...baseEstado,
+      latido: foco,
+      stale,
+      sugerencia,
+      porque: sugerencia === 'nudge' ? 'más de 10 min sin avance' : sugerencia === 'reasignar' ? (String(x.status) === 'blocked' ? 'bloqueado' : 'la persona no late') : 'hay señal reciente o ya está cerrado',
+    };
+  }
+
+  /** FLT-100618: pulso STATUS al mismo agente/máquina SIN crear misión Yokup. */
+  async function nudge({ encargo, motivo = '' } = {}) {
+    const d = await llamar(`${base}/api/bot-inbox/${Number(encargo)}`);
+    const x = d && d.item; if (!x) throw new Error(`encargo #${encargo} no encontrado`);
+    if (String(x.status) === 'done') throw new Error(`encargo #${encargo} ya está hecho: no se pulsa`);
+    const firma = identidad ? identidad.agent : 'MCP admira.live';
+    const why = String(motivo || 'más de 10 min sin avance visible').slice(0, 200);
+    const pulse = `pulse ${new Date(ahora()).toISOString()} · ${why}`;
+    await llamar(`${base}/api/bot-inbox/${Number(x.id)}/status`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({
+        status: String(x.status) === 'pending' ? 'pending' : 'in_progress',
+        persona: firma,
+        machine: identidad ? identidad.machine : '',
+        respuesta: pulse,
+      }),
+    });
+    const cuerpo = `[NUDGE #${x.id}] STATUS: ${why}. Responde el estado del encargo #${x.id} (qué hiciste, qué falta, ETA). No des de alta otra misión Yokup.`;
+    const pulseBody = {
+      text: cuerpo,
+      target_persona: x.target_persona,
+      target_machine: x.target_machine || '',
+      from: firma,
+      materialize_mission: false,
+    };
+    const r = await llamar(`${base}/api/bot-inbox`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(pulseBody) });
+    return {
+      ok: true,
+      encargo: Number(x.id),
+      pulse_encargo: r && r.id ? Number(r.id) : null,
+      persona: x.target_persona,
+      maquina: x.target_machine || null,
+      mision_en_yokup: false,
+      nota: 'STATUS reinyectado (conversación, sin FLT nuevo). El vigilante lo inyecta en la sesión.',
+    };
+  }
+
   /** Mandamiento 15 «Cuenta tus tokens» (Carlos, 6-sep-2026): declarar el consumo propio en las
    *  Notificaciones de Yokup. Para quien no tiene medidor local (consejeros de GrokBot, OpenCode, Grok CLI). */
   async function reportarConsumo({ tokens_entrada = 0, tokens_cache = 0, tokens_salida = 0, modelo = '', sesiones = 1, llamadas = 0, despertares = 0, duplicados = 0, causa = '', dia = '' } = {}) {
@@ -165,5 +304,5 @@ export function crearFlota(env = {}, identidad, deps = {}) {
     return { ok: !!(r && r.ok), notificacion: r && r.id, nueva: r && r.nueva, titulo, ver: 'https://www.yokup.com/notificaciones' };
   }
 
-  return { vivos, encargar, estado, maquinaDe, reportarConsumo };
+  return { vivos, encargar, estado, abiertos, progreso, nudge, maquinaDe, reportarConsumo };
 }

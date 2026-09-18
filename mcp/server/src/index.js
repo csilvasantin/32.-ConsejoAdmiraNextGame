@@ -47,7 +47,7 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
       'La flota y el tablero de tareas del Consejo se leen con flota_estado, consejo_bots y consejo_tareas. agora_decir publica en AgoraMatrix, el grupo del equipo.',
       'MANDAMIENTO 15 «Cuenta tus tokens» (Carlos, 6-sep-2026): cada agente y consejero mide lo que gasta y lo declara en las Notificaciones de Yokup. Si no tienes medidor local (GrokBot, OpenCode, Grok CLI), llama a consumo_reportar al terminar cada jornada o cada misión larga, con entrada, caché, salida, modelo, despertares y qué los quemó. Un despertar sin trabajo nuevo cuesta una línea, no una sesión; un eco duplicado se cierra, no se rehace.',
       'REGLA DE CARLOS (5-sep-2026): entre agentes y consejeros, TODA comunicación va por el MCP; es la vía más efectiva porque deja identidad, acuse, estado y respuesta legibles por máquina. Telegram es el canal del humano (Carlos desde el móvil), no el de un agente para hablar con otro. Si tienes que pedir algo a otro miembro, usa agente_encargar y recoge con encargo_estado; no escribas en el grupo para eso.',
-      'HABLAR CON LA FLOTA (FLT-2038): agentes_vivos dice quién late ahora y en qué equipo; agente_encargar crea un encargo para una persona (un agente de la flota lo recibe en su sesión en segundos; un consejero de GrokBot se despierta por webhook y contesta en 1-3 min); encargo_estado devuelve el acuse y la respuesta. Un encargo es trabajo para otro: escribe qué hay que hacer, para qué y cómo sabrá que está hecho.',
+      'HABLAR CON LA FLOTA (FLT-2038 / FLT-100618): agentes_vivos dice quién late ahora y en qué equipo; agente_encargar crea un encargo; encargo_estado lee acuse y respuesta; encargos_abiertos lista pending/in_progress/blocked (stale >10 min); encargo_progreso sugiere nudge|esperar|reasignar; encargo_nudge reinyecta un STATUS sin crear misión Yokup. Un encargo es trabajo para otro: escribe qué hay que hacer, para qué y cómo sabrá que está hecho.',
       identidad && identidad.tipo === 'agente'
         ? `ERES UN AGENTE DE LA FLOTA: en yokup eres ${identidad.agent} (persona ${identidad.persona}, equipo ${identidad.machine}, runtime ${identidad.runtime}). Tu clave del MCP ya te identifica: no pases «como». Las herramientas yokup_* firman por ti (alta, pasos, evidencia, informe, ventana) y telegram_bandeja es tu bandeja de encargos. Si otro agente o un consejero tiene que hacer algo, encárgaselo con agente_encargar y recoge la respuesta con encargo_estado.`
         : identidad
@@ -164,6 +164,34 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
     inputSchema: { encargo: z.number().int().positive().describe('Número que devolvió agente_encargar.') },
     annotations: { readOnlyHint: true, openWorldHint: true },
   }, seguro(async (a) => texto(await flota.estado(a))));
+
+  server.registerTool('encargos_abiertos', {
+    title: 'Encargos abiertos (anti-nirvana)',
+    description: 'Lista encargos pending/ack/in_progress/blocked: número, persona, máquina, edad del acuse, foco actual (agentes_vivos), snippet de la última nota y stale (>10 min sin avance). Úsalo tras agente_encargar para no dejar silencio.',
+    inputSchema: {
+      persona: z.string().max(40).optional().describe('Filtrar por persona (Smith, Morfeo, Wozniak…).'),
+      estado: z.enum(['pending', 'ack', 'in_progress', 'blocked']).optional().describe('Filtrar por estado.'),
+      desde_min: z.number().int().min(0).max(10080).optional().describe('Solo encargos cuyo último evento tiene al menos estos minutos.'),
+    },
+    annotations: { readOnlyHint: true, openWorldHint: true },
+  }, seguro(async (a) => texto(await flota.abiertos(a))));
+
+  server.registerTool('encargo_progreso', {
+    title: 'Progreso enriquecido de un encargo',
+    description: 'Estado + latido de la persona + foco + sugerencia nudge|esperar|reasignar. Si stale (>10 min sin avance) conviene encargo_nudge.',
+    inputSchema: { encargo: z.number().int().positive().describe('Número del encargo.') },
+    annotations: { readOnlyHint: true, openWorldHint: true },
+  }, seguro(async (a) => texto(await flota.progreso(a))));
+
+  server.registerTool('encargo_nudge', {
+    title: 'Pulso STATUS a un encargo abierto',
+    description: 'Reinyecta un STATUS al mismo agente/máquina sin crear misión Yokup (materialize_mission:false) y deja un pulse en la nota del encargo original.',
+    inputSchema: {
+      encargo: z.number().int().positive().describe('Encargo abierto a pulsar.'),
+      motivo: z.string().max(200).optional().describe('Por qué se pulsa (stale, bloqueo, Carlos pide STATUS).'),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
+  }, seguro(async (a) => texto(await flota.nudge(a))));
 
   /* ── Identidad por llamada (FLT-1603) ──────────────────────────────────────
    * Los conectores MCP de Grok Bot son DE LA CUENTA, no de cada bot: todos los consejeros
@@ -353,7 +381,7 @@ export async function manejar(request, env, deps = {}) {
     return json({ nombre: NOMBRE, version: env.VERSION || '', sitio: env.SITIO || 'https://www.admira.live',
       que_es: 'MCP de admira.live: los consejeros del Consejo de Silicio, la flota y AgoraMatrix como herramientas MCP por HTTP.',
       endpoint_mcp: `${url.origin}/mcp`, transporte: 'streamable-http', autenticacion: 'Authorization: Bearer <MCP_KEY> (o ?key=)',
-      documentacion: 'https://www.admira.live/mcp/', herramientas: ['consejo_consejeros', 'consejo_modelos', 'consejo_preguntar', 'consejero_preguntar', 'consejo_salud', 'consejo_bots', 'flota_estado', 'consejo_tareas', 'agora_decir', 'yokup_quien_soy', 'yokup_presencia', 'yokup_alta', 'yokup_paso', 'yokup_evidencia', 'yokup_informe', 'yokup_ventana', 'yokup_decidir', 'yokup_mis_misiones', 'telegram_bandeja', 'telegram_responder', 'agentes_vivos', 'agente_encargar', 'encargo_estado', 'consumo_reportar'],
+      documentacion: 'https://www.admira.live/mcp/', herramientas: ['consejo_consejeros', 'consejo_modelos', 'consejo_preguntar', 'consejero_preguntar', 'consejo_salud', 'consejo_bots', 'flota_estado', 'consejo_tareas', 'agora_decir', 'yokup_quien_soy', 'yokup_presencia', 'yokup_alta', 'yokup_paso', 'yokup_evidencia', 'yokup_informe', 'yokup_ventana', 'yokup_decidir', 'yokup_mis_misiones', 'telegram_bandeja', 'telegram_responder', 'agentes_vivos', 'agente_encargar', 'encargo_estado', 'encargos_abiertos', 'encargo_progreso', 'encargo_nudge', 'consumo_reportar'],
       flota: 'Con una clave por consejero (MCP_KEYS), Wozniak/Jobs/Disney/Lucas trabajan en yokup como WozniakGrokBot… (equipo GrokBot, runtime Grok). Con una clave por agente y equipo (mcp-conectar.sh), Claude Code, Codex y OpenCode entran identificados (MorfeoMacMini…).',
       conectar: { humanos: 'https://www.admira.live/help', silicio: 'https://www.admira.live/mcp/', llms: 'https://www.admira.live/mcp/llms.txt' } });
   }

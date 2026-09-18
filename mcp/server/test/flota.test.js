@@ -33,10 +33,23 @@ function fetchFalso(peticiones, estado) {
         { persona: 'Lucas', machine: 'GrokBot', runtime: 'Grok', updated: AHORA / 1000 - 5 },                      // consejero: en su bloque
       ]);
     }
+    const mSt = u.match(/\/api\/bot-inbox\/(\d+)\/status$/);
+    if (mSt && method === 'POST') {
+      const x = estado.encargos[Number(mSt[1])];
+      if (!x) return ok({ ok: false, error: 'encargo no encontrado' }, 404);
+      if (body && body.status) x.status = body.status;
+      if (body && body.respuesta) x.note = [x.note, body.respuesta].filter(Boolean).join(' · ');
+      return ok({ ok: true, item: x });
+    }
+    if ((u.endsWith('/api/bot-inbox') || /\/api\/bot-inbox\?/.test(u)) && method === 'GET') {
+      if ((init.headers || {}).authorization !== 'Bearer panel') return ok({ ok: false, error: 'unauthorized' }, 401);
+      const items = Object.values(estado.encargos).filter((x) => x.status !== 'done');
+      return ok({ ok: true, items });
+    }
     if (u.endsWith('/api/bot-inbox') && method === 'POST') {
       if ((init.headers || {}).authorization !== 'Bearer panel') return ok({ ok: false, error: 'unauthorized' }, 401);
       const id = estado.siguiente++;
-      estado.encargos[id] = { id, ts: AHORA / 1000, from_name: `status-web · ${body.from}`, target_persona: body.target_persona, target_machine: body.target_machine, task_id: `task-web-${id}`, text: body.text, status: 'pending', project_id: body.project_id || null };
+      estado.encargos[id] = { id, ts: AHORA / 1000, from_name: `status-web · ${body.from}`, target_persona: body.target_persona, target_machine: body.target_machine, task_id: `task-web-${id}`, text: body.text, status: 'pending', project_id: body.project_id || null, materialize_mission: body.materialize_mission };
       return ok({ ok: true, id, task_id: `task-web-${id}`, owner_verified: true, project_id: body.project_id || null });
     }
     const m = u.match(/\/api\/bot-inbox\/(\d+)$/);
@@ -108,6 +121,50 @@ test('a un consejero va al equipo grokbot y avisa de que se le despierta por web
   const { client } = await cliente('clave-de-morfeo-macmini-xxxxxxxxxx');
   const r = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Wozniak', texto: '¿Qué opinas del MCP como bandeja única de la flota?' } }));
   assert.equal(r.maquina, 'grokbot'); assert.match(r.nota, /webhook/);
+});
+
+test('encargos_abiertos lista pending y marca stale a los de más de 10 min', async () => {
+  const { client, estado } = await cliente('clave-de-morfeo-macmini-xxxxxxxxxx');
+  const r = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Smith', maquina: 'MacMini', texto: 'Dime la versión de control.' } }));
+  estado.encargos[r.encargo].ts = AHORA / 1000 - 20 * 60;
+  const fresco = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Oráculo', texto: 'Publica el sello de hoy ya.' } }));
+  const lista = res(await client.callTool({ name: 'encargos_abiertos', arguments: { persona: 'Smith' } }));
+  assert.equal(lista.ok, true);
+  assert.equal(lista.n, 1);
+  assert.equal(lista.encargos[0].encargo, r.encargo);
+  assert.equal(lista.encargos[0].stale, true);
+  assert.equal(lista.encargos[0].vivo, true);
+  const todos = res(await client.callTool({ name: 'encargos_abiertos', arguments: {} }));
+  assert.ok(todos.n >= 2);
+  assert.ok(todos.encargos.some((e) => e.encargo === fresco.encargo && e.stale === false));
+});
+
+test('encargo_progreso sugiere nudge si está stale y esperar si es fresco', async () => {
+  const { client, estado } = await cliente('clave-de-morfeo-macmini-xxxxxxxxxx');
+  const r = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Smith', texto: 'Dime la versión de control.' } }));
+  let p = res(await client.callTool({ name: 'encargo_progreso', arguments: { encargo: r.encargo } }));
+  assert.equal(p.sugerencia, 'esperar');
+  assert.equal(p.stale, false);
+  estado.encargos[r.encargo].ts = AHORA / 1000 - 20 * 60;
+  p = res(await client.callTool({ name: 'encargo_progreso', arguments: { encargo: r.encargo } }));
+  assert.equal(p.sugerencia, 'nudge');
+  assert.equal(p.stale, true);
+});
+
+test('encargo_nudge reinyecta STATUS sin misión Yokup y no duplica si ya está done', async () => {
+  const { client, estado, peticiones } = await cliente('clave-de-morfeo-macmini-xxxxxxxxxx');
+  const r = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Smith', texto: 'Dime la versión de control.' } }));
+  const n = res(await client.callTool({ name: 'encargo_nudge', arguments: { encargo: r.encargo, motivo: 'silencio de 12 min' } }));
+  assert.equal(n.ok, true);
+  assert.equal(n.encargo, r.encargo);
+  assert.equal(n.mision_en_yokup, false);
+  assert.ok(n.pulse_encargo && n.pulse_encargo !== r.encargo);
+  const pulsePost = peticiones.filter((p) => p.method === 'POST' && p.url.endsWith('/api/bot-inbox')).pop();
+  assert.equal(pulsePost.body.materialize_mission, false);
+  assert.match(pulsePost.body.text, /NUDGE #/);
+  Object.assign(estado.encargos[r.encargo], { status: 'done', done_at: AHORA / 1000 });
+  const mal = await client.callTool({ name: 'encargo_nudge', arguments: { encargo: r.encargo } });
+  assert.equal(mal.isError, true);
 });
 
 test('encargo_estado devuelve el estado legible y la respuesta cuando está hecho', async () => {

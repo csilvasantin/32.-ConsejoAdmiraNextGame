@@ -24,6 +24,15 @@ Las dos etiquetas trabajan con las redes **Apple Find My** y **Google Find Hub**
 
 Lo que **sí** aportan: badge físico VIP, y que el propio invitado recupere el badge si lo pierde. Si el **evento** es dueño de las etiquetas (todas emparejadas a un Apple ID o una cuenta Google de Admira), el equipo ve todos los badges en la app Find My / Find Hub, con las tres limitaciones anteriores: no en nuestro mapa, no en tiempo real, y con tope de 32 accesorios por Apple ID.
 
+## DECISIÓN (Carlos, 18-09-2026): balizas de identificador fijo
+
+Comprobado empíricamente con la MiTag Duo real (lector BLE desde el MacMini): emparejada a Google
+Find Hub emite un EID que **rota** (`36c4369f…` → `ae4418db…` en minutos), diseño antirrastreo de
+Google. Ni el MiTag ni el AirTag pueden ser el identificador del badge en nuestro mapa. **Se tira por
+balizas iBeacon/Eddystone de UUID fijo** dentro del badge + lectores propios por zona. El lector→mapa
+está probado en vivo (mete balizas reales en el mapa). Material y lector de referencia en
+[`ubicacion/lector/`](lector/README.md).
+
 ## Si se quiere ubicar por badge SIN móvil (decisión de Carlos)
 
 La única vía que funciona en tiempo real y en nuestro mapa es un **RTLS propio**: balizas BLE con identificador estable (iBeacon/Eddystone, ~5–10 € la unidad, meses de batería) en el badge, y **lectores propios** repartidos por el recinto (ESP32 ~8 € o Raspberry Pi, o un móvil Android como lector) que reportan a la misma API la señal de cada baliza. Da posición por **zona** (sala, stand, pasillo) con precisión de metros, no de centímetros. El backend y el mapa actuales lo admiten sin cambios de contrato: un lector reporta por `/ubicacion/report` igual que el móvil. Coste: hardware + una tarde de montaje y calibración por recinto.

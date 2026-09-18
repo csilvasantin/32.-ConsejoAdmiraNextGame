@@ -87,30 +87,71 @@ function json(body, status = 200, extra = {}) {
   return Response.json(body, {status, headers:{'Cache-Control':'no-store', 'Content-Security-Policy':"default-src 'none'; frame-ancestors 'none'; base-uri 'none'", ...extra}});
 }
 
+// The authorization service is private. Never follow a redirect with its credential.
+async function readAuthorization(env, fetchImpl) {
+  const secret = String(env.WHITELIST_MACHINE_TOKEN || '').trim();
+  if (!secret || /[\r\n]/.test(secret) || (env.WHITELIST_URL && env.WHITELIST_URL !== WHITELIST_URL)) {
+    return {error:'authorization_unavailable', status:503};
+  }
+  try {
+    const response = await fetchImpl(WHITELIST_URL, {
+      headers:{Accept:'application/json', 'X-Whitelist-Token':secret},
+      redirect:'error', signal:AbortSignal.timeout(8000), cache:'no-store'
+    });
+    if (!response.ok) return {error:'authorization_unavailable', status:503};
+    const data = await response.json();
+    if (!Array.isArray(data.superusers) || !data.superusers.every(email => typeof email === 'string')) {
+      return {error:'authorization_unavailable', status:503};
+    }
+    return {superusers:data.superusers.map(email => email.trim().toLowerCase())};
+  } catch (_) { return {error:'authorization_unavailable', status:503}; }
+}
+
 async function verifyGoogle(credential, nonce, env, fetchImpl, now = Date.now()) {
-  if (!credential || credential.length > 16384 || !nonce) return null;
+  const invalid = {error:'google_not_authorized', status:401};
+  if (!credential || credential.length > 16384 || !nonce) return invalid;
+  let claims;
   try {
     const response = await fetchImpl('https://oauth2.googleapis.com/tokeninfo', {
       method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
-      body:new URLSearchParams({id_token:credential}).toString()
+      body:new URLSearchParams({id_token:credential}).toString(),
+      redirect:'error', signal:AbortSignal.timeout(8000)
     });
-    if (!response.ok) return null;
-    const claims = await response.json();
-    const exp = Number(claims.exp) * 1000, iat = Number(claims.iat) * 1000;
-    if (!GOOGLE_ISSUERS.has(String(claims.iss || ''))) return null;
-    if (String(claims.aud || '') !== String(env.GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID)) return null;
-    if (!Number.isFinite(exp) || exp <= now) return null;
-    if (!Number.isFinite(iat) || iat > now + 5 * 60 * 1000 || iat < now - 2 * 60 * 60 * 1000) return null;
-    if (claims.email_verified !== true && String(claims.email_verified) !== 'true') return null;
-    if (String(claims.nonce || '') !== nonce) return null;
-    const email = String(claims.email || '').toLowerCase();
-    if (!email) return null;
-    const allowResponse = await fetchImpl(env.WHITELIST_URL || WHITELIST_URL, {headers:{Accept:'application/json'}});
-    if (!allowResponse.ok) return null;
-    const allow = await allowResponse.json();
-    const allowed = Array.isArray(allow.superusers) && allow.superusers.some((entry) => String(entry).toLowerCase() === email);
-    return allowed ? {email, name:String(claims.name || '')} : null;
-  } catch (_) { return null; }
+    if (!response.ok) return response.status === 400 || response.status === 401
+      ? invalid : {error:'google_validation_unavailable', status:503};
+    claims = await response.json();
+    if (!claims || typeof claims !== 'object') return {error:'google_validation_unavailable', status:503};
+  } catch (_) { return {error:'google_validation_unavailable', status:503}; }
+  const exp = Number(claims.exp) * 1000, iat = Number(claims.iat) * 1000;
+  if (!GOOGLE_ISSUERS.has(String(claims.iss || ''))) return invalid;
+  if (String(claims.aud || '') !== String(env.GOOGLE_CLIENT_ID || GOOGLE_CLIENT_ID)) return invalid;
+  if (!Number.isFinite(exp) || exp <= now) return invalid;
+  if (!Number.isFinite(iat) || iat > now + 5 * 60 * 1000 || iat < now - 2 * 60 * 60 * 1000) return invalid;
+  if (claims.email_verified !== true && String(claims.email_verified) !== 'true') return invalid;
+  if (String(claims.nonce || '') !== nonce) return invalid;
+  const email = String(claims.email || '').trim().toLowerCase();
+  if (!email) return invalid;
+  const allow = await readAuthorization(env, fetchImpl);
+  if (allow.error) return allow;
+  return allow.superusers.includes(email)
+    ? {identity:{email, name:String(claims.name || '')}}
+    : {error:'account_not_authorized', status:403};
+}
+
+function callbackError(request, error, status, extra = {}) {
+  const headers = {'Set-Cookie':challengeCookie('', 0), ...extra};
+  if (!String(request.headers.get('Accept') || '').includes('text/html')) return json({error}, status, headers);
+  const unavailable = status === 503;
+  const message = unavailable
+    ? 'No podemos comprobar el acceso en este momento. Es un problema temporal del servicio; no significa que tu cuenta haya perdido permisos.'
+    : error === 'account_not_authorized'
+      ? 'Esta cuenta no tiene acceso a Admira. Vuelve al inicio para elegir una cuenta autorizada.'
+      : 'No se ha podido completar el inicio de sesión. Vuelve al inicio para intentarlo de nuevo.';
+  return new Response(`<!doctype html><html lang="es"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Acceso · Admira</title><style>body{margin:0;background:#211608;color:#ffdd66;font:18px/1.6 system-ui,sans-serif;display:grid;min-height:100vh;place-items:center}main{max-width:36rem;padding:2rem}h1{font-size:1.7rem}p{color:#f2e3c9}a{display:inline-block;padding:.7rem 1rem;border:2px solid #ffdd66;color:#ffdd66;text-decoration:none}a:focus-visible{outline:3px solid white;outline-offset:4px}small{display:block;margin-top:1.4rem;color:#c9a86a}</style></head><body><main><h1>${unavailable ? 'Acceso temporalmente no disponible' : 'No se ha podido entrar'}</h1><p>${message}</p><a href="/">Volver al inicio de sesión</a><small>Referencia: ${error}</small></main></body></html>`, {
+    status, headers:{...headers, 'Content-Type':'text/html; charset=utf-8', 'Cache-Control':'no-store',
+      'Referrer-Policy':'no-referrer', 'X-Content-Type-Options':'nosniff',
+      'Content-Security-Policy':"default-src 'none'; style-src 'unsafe-inline'; frame-ancestors 'none'; base-uri 'none'; form-action 'none'"}
+  });
 }
 
 function handoffRedirect(code) {
@@ -224,6 +265,12 @@ export function createWorker({fetchImpl = fetch, now = Date.now} = {}) {
     async fetch(request, env) {
       const url = new URL(request.url);
       if (!url.pathname.startsWith('/auth/')) return new Response('Not Found', {status:404});
+      if (url.pathname === '/auth/health') {
+        if (request.method !== 'GET' || !internalAuthorized(request, env)) return json({error:'not_authorized'}, 403);
+        const result = await readAuthorization(env, fetchImpl);
+        return result.error ? json({ok:false, error:result.error}, result.status)
+          : json({ok:true, authorization:'ready'});
+      }
       if (url.pathname === '/auth/challenge') {
         if (request.method !== 'POST' || request.headers.get('Origin') !== PUBLIC_ORIGIN) return json({error:'origin_not_allowed'}, 403);
         const raw = await readBody(request, 'application/json', 2048);
@@ -236,20 +283,20 @@ export function createWorker({fetchImpl = fetch, now = Date.now} = {}) {
         return new Response(JSON.stringify({...value, login_uri:LOGIN_URI}), {status:200, headers});
       }
       if (url.pathname === '/auth/callback') {
-        if (request.method !== 'POST') return json({error:'method_not_allowed'}, 405, {Allow:'POST'});
+        if (request.method !== 'POST') return callbackError(request, 'method_not_allowed', 405, {Allow:'POST'});
         const raw = await readBody(request, 'application/x-www-form-urlencoded', 20000);
-        if (raw == null) return json({error:'invalid_form'}, 400, {'Set-Cookie':challengeCookie('', 0)});
+        if (raw == null) return callbackError(request, 'invalid_form', 400);
         const form = new URLSearchParams(raw), allCookies = parseCookies(request.headers.get('Cookie'));
-        if (!equalText(allCookies.g_csrf_token, form.get('g_csrf_token'))) return json({error:'csrf_invalid'}, 403, {'Set-Cookie':challengeCookie('', 0)});
+        if (!equalText(allCookies.g_csrf_token, form.get('g_csrf_token'))) return callbackError(request, 'csrf_invalid', 403);
         const state = String(form.get('state') || ''), credential = String(form.get('credential') || '');
-        if (!equalText(allCookies[CHALLENGE_COOKIE], state) || !credential || credential.length > 16384) return json({error:'challenge_invalid'}, 403, {'Set-Cookie':challengeCookie('', 0)});
+        if (!equalText(allCookies[CHALLENGE_COOKIE], state) || !credential || credential.length > 16384) return callbackError(request, 'challenge_invalid', 403);
         const peekResponse = await storeCall(env, '/peek', {state, now:now()});
-        if (!peekResponse.ok) return json({error:'challenge_invalid'}, 403, {'Set-Cookie':challengeCookie('', 0)});
+        if (!peekResponse.ok) return callbackError(request, 'challenge_invalid', 403);
         const challenge = await peekResponse.json();
-        const identity = await verifyGoogle(credential, challenge.nonce, env, fetchImpl, now());
-        if (!identity) return json({error:'google_not_authorized'}, 401, {'Set-Cookie':challengeCookie('', 0)});
-        const exchange = await storeCall(env, '/exchange', {state, nonce:challenge.nonce, ...identity, now:now()});
-        if (!exchange.ok) return json({error:'challenge_used'}, 409, {'Set-Cookie':challengeCookie('', 0)});
+        const verification = await verifyGoogle(credential, challenge.nonce, env, fetchImpl, now());
+        if (verification.error) return callbackError(request, verification.error, verification.status);
+        const exchange = await storeCall(env, '/exchange', {state, nonce:challenge.nonce, ...verification.identity, now:now()});
+        if (!exchange.ok) return callbackError(request, 'challenge_used', 409);
         // El callback termina con una navegación HTTP real. No depende de JS,
         // form-action, sandbox, temporizadores ni de que el navegador permita
         // auto-enviar formularios cross-origin. El código es opaco, dura 60 s

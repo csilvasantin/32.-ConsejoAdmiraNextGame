@@ -36,6 +36,12 @@
   .inv .n{flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .inv .vipb{font-size:9px;background:var(--vip);color:#1a1206;padding:1px 5px;border-radius:4px;font-weight:700;letter-spacing:.08em}
   .inv .age{font-size:11px;color:var(--dim)}
+  #hist{margin-top:10px;border-top:1px solid var(--line);padding-top:8px}
+  #hist .fila{display:flex;align-items:center;gap:6px;flex-wrap:wrap}
+  #hist select{background:#0b0e07;border:1px solid var(--line);color:var(--ink);padding:6px 8px;border-radius:6px;font:inherit}
+  #hist .res{font-size:11px;color:var(--dim);margin-top:6px;min-height:14px}
+  .inv.sel{background:#1f2a16;border-left:2px solid var(--amber)}
+  .inv .km{font-size:10px;color:var(--dim);margin-left:4px}
   #estado{font-size:11px;color:var(--dim);margin-top:8px;min-height:16px}
   #qrbox{display:none;margin-top:10px;background:#fff;padding:10px;border-radius:8px;text-align:center}
   #qrbox #qr{display:inline-block}
@@ -65,6 +71,18 @@
     <button id="b-gen" style="background:#689840;color:#fff;border-color:#689840">Generar</button>
     <div id="qr"></div><div class="enl" id="enl"></div>
   </div>
+  <div id="hist">
+    <div class="fila">
+      <button id="b-hist" title="Pinta el recorrido de cada invitado">Recorridos</button>
+      <select id="ventana" title="Ventana de tiempo del historial">
+        <option value="3600">última hora</option>
+        <option value="hoy">hoy</option>
+        <option value="86400">24 h</option>
+        <option value="604800">7 días</option>
+      </select>
+    </div>
+    <div class="res" id="hist-res"></div>
+  </div>
   <div id="lista"></div>
   <div id="estado">conectando…</div>
 </div>
@@ -76,13 +94,13 @@
   var ev = $("#evento");
   var q = new URLSearchParams(location.search);
   ev.value = (q.get("evento") || localStorage.getItem("ubic-evento") || "xperience-2026").trim();
-  ev.addEventListener("change", function(){ ev.value = ev.value.trim(); localStorage.setItem("ubic-evento", ev.value); marcadores = {}; capa.clearLayers(); primera = true; tick(); });
+  ev.addEventListener("change", function(){ ev.value = ev.value.trim(); localStorage.setItem("ubic-evento", ev.value); marcadores = {}; capa.clearLayers(); primera = true; tick(); if (typeof cargaHist === "function") { sel = null; cargaHist(); } });
 
   var mapa = L.map("mapa", { zoomControl:false, attributionControl:true }).setView([41.3874, 2.1686], 13);
   L.control.zoom({ position:"topright" }).addTo(mapa);   // a la derecha: el panel vive a la izquierda
   L.tileLayer("https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png", { maxZoom:19, attribution:"© OpenStreetMap" }).addTo(mapa);
   var capa = L.layerGroup().addTo(mapa);
-  var marcadores = {}, primera = true, seguir = true;
+  var marcadores = {}, primera = true, seguir = true, sel = null;
   $("#b-seguir").onclick = function(){ seguir = !seguir; this.classList.toggle("on", seguir); if (seguir) encuadra(); };
 
   function icono(vip, rancio){ return L.divIcon({ className:"", html:'<div class="pin '+(rancio?"rancio":(vip?"vip":"std"))+'"></div>', iconSize:[18,18], iconAnchor:[9,18], popupAnchor:[0,-16] }); }
@@ -103,20 +121,68 @@
     $("#k-vivos").textContent = vivos.length; $("#k-vip").textContent = nvip; $("#k-act").textContent = ultimo==null ? "–" : ultimo+" s";
     var lista = $("#lista"); lista.innerHTML = vivos.length ? "" : "<div style='color:#8fae6a;padding:6px 4px'>Nadie en vivo. Genera un enlace con «Invitar» y ábrelo en el móvil del invitado.</div>";
     vivos.forEach(function(i){
-      var row = document.createElement("div"); row.className = "inv"+(i.vip?" vip":"")+(i.age_s>TTL_RANCIO_S?" rancio":"");
-      row.innerHTML = '<span class="dot"></span><span class="n">'+esc(i.nombre)+'</span>'+(i.vip?'<span class="vipb">VIP</span>':'')+'<span class="age">'+i.age_s+' s</span>';
-      row.onclick = function(){ var m = marcadores[i.invitado]; if (m) { mapa.setView(m.getLatLng(), Math.max(mapa.getZoom(),17)); m.openPopup(); } };
+      var row = document.createElement("div"); row.className = "inv"+(i.vip?" vip":"")+(i.age_s>TTL_RANCIO_S?" rancio":"")+(sel===i.invitado?" sel":"");
+      var km = (histOn && metrosPor[i.invitado] != null) ? '<span class="km">'+fmtM(metrosPor[i.invitado])+'</span>' : '';
+      row.innerHTML = '<span class="dot"></span><span class="n">'+esc(i.nombre)+km+'</span>'+(i.vip?'<span class="vipb">VIP</span>':'')+'<span class="age">'+i.age_s+' s</span>';
+      row.onclick = function(){ if (histOn) { selecciona(i.invitado); } var m = marcadores[i.invitado]; if (m && !histOn) { mapa.setView(m.getLatLng(), Math.max(mapa.getZoom(),17)); m.openPopup(); } };
       lista.appendChild(row);
     });
-    if (vivos.length && (primera || seguir)) { encuadra(); primera = false; }
+    // con un recorrido seleccionado, «Seguir» no reencuadra: el foco es ese recorrido
+    if (vivos.length && (primera || (seguir && !sel))) { encuadra(); primera = false; }
   }
   function esc(s){ return String(s==null?"":s).replace(/[&<>"']/g, function(c){ return {"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[c]; }); }
+  // ── RECORRIDOS (historial, FLT-100567) ──────────────────────────────────────────────
+  var capaHist = L.layerGroup().addTo(mapa), histOn = false, lineas = {}, metrosPor = {}, histTimer = null;
+  function ventana(){
+    var v = $("#ventana").value, hasta = Date.now(), desde;
+    if (v === "hoy") { var d0 = new Date(); d0.setHours(0,0,0,0); desde = d0.getTime(); } else desde = hasta - Number(v)*1000;
+    return { desde:desde, hasta:hasta };
+  }
+  function estiloLinea(inv, vip){ var s = (sel === inv); return { color: vip ? "#f0c040" : "#689840", weight: s ? 5 : 3, opacity: s ? 1 : (sel ? 0.25 : 0.8) }; }
+  function pintaHist(d){
+    capaHist.clearLayers(); lineas = {}; metrosPor = {};
+    var total = 0, pts = 0;
+    (d.recorridos || []).forEach(function(r){
+      metrosPor[r.invitado] = r.metros; total += r.metros; pts += r.n;
+      var ll = r.puntos.map(function(p){ return [p[0], p[1]]; });
+      if (ll.length >= 2) {
+        var pl = L.polyline(ll, estiloLinea(r.invitado, r.vip)).addTo(capaHist);
+        pl.bindPopup("<b>"+esc(r.nombre)+"</b>"+(r.vip?' <span class="inv vipb" style="display:inline">VIP</span>':"")+"<br><span style='color:#8fae6a'>"+r.n+" puntos · "+fmtM(r.metros)+" · "+new Date(r.desde).toLocaleTimeString()+" → "+new Date(r.hasta).toLocaleTimeString()+"</span>");
+        pl.on("click", function(){ selecciona(r.invitado); });
+        lineas[r.invitado] = pl;
+      }
+      // punto de inicio del recorrido
+      L.circleMarker(ll[0], { radius:4, color:"#0b0e07", weight:1, fillColor: r.vip ? "#f0c040" : "#689840", fillOpacity:1 }).addTo(capaHist).bindTooltip("inicio · "+esc(r.nombre)+" · "+new Date(r.desde).toLocaleTimeString());
+    });
+    $("#hist-res").textContent = (d.recorridos||[]).length ? ((d.recorridos.length)+" recorridos · "+pts+" puntos · "+fmtM(total)+(d.recortado?" · (recortado a "+d.filas+" filas)":"")) : "sin historial en esta ventana";
+    if (sel) resalta();
+  }
+  function fmtM(m){ return m >= 1000 ? (m/1000).toFixed(2)+" km" : m+" m"; }
+  function resalta(){ for (var k in lineas) lineas[k].setStyle(estiloLinea(k, lineas[k].options.color === "#f0c040")); }
+  function selecciona(inv){ sel = (sel === inv) ? null : inv; resalta(); if (sel && lineas[sel]) mapa.fitBounds(lineas[sel].getBounds().pad(0.3)); tickLista(); }
+  function cargaHist(){
+    var e = ev.value.trim(); if (!e || !histOn) return;
+    var w = ventana();
+    fetch(API+"/ubicacion/historial?evento="+encodeURIComponent(e)+"&desde="+w.desde+"&hasta="+w.hasta+"&t="+Date.now(), { cache:"no-store" })
+      .then(function(r){ return r.json(); })
+      .then(function(d){ if (!d.ok) throw new Error(d.error||"no ok"); pintaHist(d); })
+      .catch(function(err){ $("#hist-res").textContent = "historial sin respuesta: "+err.message; });
+  }
+  $("#b-hist").onclick = function(){
+    histOn = !histOn; this.classList.toggle("on", histOn);
+    if (histOn) { cargaHist(); histTimer = setInterval(cargaHist, 15000); }
+    else { clearInterval(histTimer); capaHist.clearLayers(); lineas = {}; metrosPor = {}; sel = null; $("#hist-res").textContent = ""; tickLista(); }
+  };
+  $("#ventana").onchange = cargaHist;
+  var ultimaFoto = null;
+  function tickLista(){ if (ultimaFoto) pinta(ultimaFoto); }
+
   var fallos = 0;
   function tick(){
     var e = ev.value.trim(); if (!e) { $("#estado").textContent = "indica el evento"; return; }
     fetch(API+"/ubicacion/live?evento="+encodeURIComponent(e)+"&t="+Date.now(), { cache:"no-store" })
       .then(function(r){ return r.json(); })
-      .then(function(d){ if (!d.ok) throw new Error(d.error||"respuesta no ok"); fallos = 0; pinta(d); $("#estado").textContent = "en vivo · "+e+" · "+new Date(d.now).toLocaleTimeString(); })
+      .then(function(d){ if (!d.ok) throw new Error(d.error||"respuesta no ok"); fallos = 0; ultimaFoto = d; pinta(d); $("#estado").textContent = "en vivo · "+e+" · "+new Date(d.now).toLocaleTimeString(); })
       .catch(function(err){ fallos++; $("#estado").textContent = "sin respuesta de la API ("+fallos+"): "+err.message; });
   }
   tick(); setInterval(tick, 3000);

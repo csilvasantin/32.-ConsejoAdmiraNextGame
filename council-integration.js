@@ -54,10 +54,10 @@
     }
   }
   function close({dismiss=true}={}){dismissed=dismiss;activeTurn=null;speech.close();bubble.hidden=true;bubble.style.display='none';dock.hidden=true;}
-  const table=CouncilTable.mount({scene,generation,allowedOrigins:[location.origin],onAction(action){if(action==='history')bridge.openHistory();}});
+  const table=CouncilTable.mount({scene,generation,allowedOrigins:[location.origin,'https://macmini.tail48b61c.ts.net','https://fleet.admira.live'],onAction(action){if(action==='history')bridge.openHistory();}});
   const bridge=CouncilGrokBot.mount({
     container:dock,csrf:()=>window.admiraGateCsrf?.()||'',
-    onSelect(persona){activePersona=persona;speech.select(persona||'');table.close();close({dismiss:false});},
+    onSelect(persona){if(window.__consejoDeskPoll){clearInterval(window.__consejoDeskPoll);window.__consejoDeskPoll=null;}activePersona=persona;speech.select(persona||'');table.close();close({dismiss:false});},
     onPending({persona}){if(activePersona!==persona)return;dismissed=false;activeTurn=null;prepare(persona,'GrokBot');speech.begin({persona,turnId:'pending'});bubble.querySelector('.speech-text').textContent='Enviando al bot…';},
     onAnswer({persona,text,messageId,status}){if(activePersona===persona&&!dismissed)show(persona,'GrokBot',text,{animate:true,messageId,status});},
     onRestore({persona,text,messageId,status='done'}){if(activePersona===persona){dismissed=false;show(persona,'GrokBot',text,{messageId,status});}},
@@ -66,12 +66,38 @@
     onStatus(message){if(typeof setActionLine==='function')setActionLine(message);},
     onDesktop({persona}){
       if(typeof closeTableViewer==='function')closeTableViewer();
-      const p=document.createElement('p');p.textContent='La pantalla cloud de este bot se abre en GrokBot. El conector actual no comparte el escritorio.';
-      const a=document.createElement('a');a.href='grokbot://';a.textContent='Abrir GrokBot ↗';
-      table.show({persona,generation,status:'unavailable',message:p.textContent,capabilities:{history:true}});
-      // A link is an alternative, never a fake remote screen.
-      const empty=scene.querySelector('.council-table__empty')||document.querySelector('.council-table__empty');
-      if(empty){empty.replaceChildren(p,a);}
+      if(window.__consejoDeskPoll){clearInterval(window.__consejoDeskPoll);window.__consejoDeskPoll=null;}
+      const alias=({'Steve Jobs':'Jobs','Steve Wozniak':'Wozniak','Walt Disney':'Disney','George Lucas':'Lucas'})[persona]||persona;
+      const mini='https://macmini.tail48b61c.ts.net';
+      const fleet='https://fleet.admira.live';
+      table.show({persona,generation,status:'connecting',message:'Conectando escritorio GrokBot…',media:null,capabilities:{history:true,reconnect:true}});
+      const csrf=window.admiraGateCsrf?.()||'';
+      const urls=[mini+'/demo/grokbot-sync/screen?persona='+encodeURIComponent(alias),fleet+'/api/grokbot/screen?persona='+encodeURIComponent(alias)];
+      const showLive=(data)=>{
+        const media=data.media||(data.url?{kind:data.kind||'image',url:data.url}:null);
+        if(!media||!media.url)return false;
+        const base=media.url.replace(/([?&])t=[^&]*/g,'').replace(/[?&]$/,'');
+        const stamp=()=>base+(base.includes('?')?'&':'?')+'t='+Date.now();
+        media.url=stamp();
+        table.show({persona,generation,status:data.status||'live',message:data.message||'Escritorio GrokBot vivo',media:{...media,url:media.url},capabilities:{history:true,reconnect:true}});
+        window.__consejoDeskPoll=setInterval(()=>{
+          table.show({persona,generation,status:'live',message:'Escritorio GrokBot vivo',media:{kind:'image',url:stamp(),title:media.title||('Escritorio de '+persona)},capabilities:{history:true,reconnect:true}});
+        },2500);
+        return true;
+      };
+      (async()=>{
+        let lastErr='Escritorio no disponible';
+        for(const url of urls){
+          try{
+            const r=await fetch(url,{credentials:'include',cache:'no-store',headers:{Accept:'application/json','X-Fleet-CSRF':csrf}});
+            const data=await r.json().catch(()=>null);
+            if(!r.ok||!data?.ok){lastErr=(data&&(data.error||data.message))||('HTTP '+r.status);continue;}
+            if(showLive(data))return;
+            lastErr='Sin media.url';
+          }catch(e){lastErr=e.message||String(e);}
+        }
+        table.show({persona,generation,status:'unavailable',message:'Escritorio GrokBot no disponible ('+lastErr+').',media:null,capabilities:{history:true,reconnect:true}});
+      })();
     }
   });
   window.CouncilInterface={

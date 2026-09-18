@@ -847,6 +847,7 @@
     let hackMode = false;
     let hackIntervals = [];
     const HACK_API = DEMO_API.replace("/status", "");  // https://macmini.../demo
+    const CONSEJO_PROXY = HACK_API + "/consejo";  // FLT-100570 Enviar → grok-4.6 via Mini proxy
 
     // El HACKEO debe quedarse SOBRE la página actual (sin moverse ni dejar que
     // otros paneles tapen) hasta que se desactive: subimos el overlay por encima
@@ -4575,11 +4576,10 @@
 
     async function askCouncilAPI(message) {
         /**
-         * Calls the real council API backed by Claude.
-         * Tries configured URLs in order, caches the working one.
-         * Falls back to simulation if all are unreachable.
+         * FLT-100570: prefer Mini /demo/consejo proxy (Grok 4.6 + MACHINE_TOKEN),
+         * then legacy council-api URLs. Falls back to simulation if all fail.
          */
-        const urls = activeApiUrl ? [activeApiUrl] : COUNCIL_API_URLS;
+        const urls = [CONSEJO_PROXY].concat(activeApiUrl ? [activeApiUrl] : COUNCIL_API_URLS);
         const effectiveMessage = buildCouncilPrompt(message);
         const confirmedExpensiveVideo = confirmExpensiveVideoApproval(effectiveMessage);
         if (!confirmedExpensiveVideo) {
@@ -4592,17 +4592,18 @@
 
         for (const baseUrl of urls) {
             try {
-                const res = await fetch(baseUrl + "/api/council/ask", {
+                const askPath = (baseUrl === CONSEJO_PROXY) ? (baseUrl + "/ask") : (baseUrl + "/api/council/ask");
+                const res = await fetch(askPath, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "X-Council-Token": COUNCIL_API_TOKEN,
+                        ...(baseUrl === CONSEJO_PROXY ? {} : { "X-Council-Token": COUNCIL_API_TOKEN }),
                     },
                     body: JSON.stringify({
                         message: effectiveMessage,
                         generation: currentGen,
                         context: conversationHistory.slice(-6),
-                        llm: selectedLLM,
+                        llm: (baseUrl === CONSEJO_PROXY) ? "grok-4.6" : selectedLLM,
                         confirm_expensive_video: confirmedExpensiveVideo,
                     }),
                 });
@@ -4640,7 +4641,7 @@
 
     async function askOneAgentAPI(message, agentName) {
         /** Call /api/council/ask-one for a single agent. */
-        const urls = activeApiUrl ? [activeApiUrl] : COUNCIL_API_URLS;
+        const urls = [CONSEJO_PROXY].concat(activeApiUrl ? [activeApiUrl] : COUNCIL_API_URLS);
         const effectiveMessage = buildCouncilPrompt(message);
         const confirmedExpensiveVideo = confirmExpensiveVideoApproval(effectiveMessage, agentName);
         if (!confirmedExpensiveVideo) {
@@ -4652,18 +4653,19 @@
         }
         for (const baseUrl of urls) {
             try {
-                const res = await fetch(baseUrl + "/api/council/ask-one", {
+                const askPath = (baseUrl === CONSEJO_PROXY) ? (baseUrl + "/ask-one") : (baseUrl + "/api/council/ask-one");
+                const res = await fetch(askPath, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "X-Council-Token": COUNCIL_API_TOKEN,
+                        ...(baseUrl === CONSEJO_PROXY ? {} : { "X-Council-Token": COUNCIL_API_TOKEN }),
                     },
                     body: JSON.stringify({
                         message: effectiveMessage,
                         agent_name: agentName,
                         generation: currentGen,
                         context: conversationHistory.slice(-6),
-                        llm: selectedLLM,
+                        llm: (baseUrl === CONSEJO_PROXY) ? "grok-4.6" : selectedLLM,
                         confirm_expensive_video: confirmedExpensiveVideo,
                     }),
                 });
@@ -4868,7 +4870,7 @@
                 addConvEntry("conv-creativo", m.icon, m.name, m.persona, "creativo", "[Offline] " + m.persona + " responde desde el lado creativo.");
                 await new Promise(r => setTimeout(r, 300));
             }
-            setActionLine("Modo offline — arranca council-api.py para conectar con Claude");
+            setActionLine("Modo offline — el puente Mini/Grok no respondió (revisa /demo/consejo)");
         }
     }
 
@@ -4893,7 +4895,7 @@
         const creativos = members.filter(m => m.side === "creativo");
         const roundName = { debatir:"Debate" }[verb] || verb;
         const verbGerund = { debatir:"debatiendo" }[verb] || verb;
-        setActionLine("🧠 " + roundName + " en curso — los consejeros deliberan con Claude...");
+        setActionLine("🧠 " + roundName + " en curso — los consejeros deliberan con Grok...");
 
         // Build the prompt based on the verb + project
         const verbPrompts = {
@@ -5757,7 +5759,7 @@
         if (!audioUrl && !pdfUrl && !slidesUrl) {
             html += `<div class="presentar-tab-panel active" id="ptab-noapi">
                 <div style="font-family:'Press Start 2P',monospace;font-size:6px;color:#886633;text-align:center;padding:16px;line-height:2">
-                    ⚠️ API no activa<br>Arranca council-api.py<br>para generar archivos reales
+                    ⚠️ API no activa<br>El puente del Consejo no respondió<br>revisa Mini /demo/consejo
                 </div>
             </div>`;
         }

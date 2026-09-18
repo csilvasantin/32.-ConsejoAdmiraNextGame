@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.18.09.2026.r7.08:12" />
+<meta name="admiranext-version" content="AdmiraNeXT v.18.09.2026.r8.19:07" />
     <script src="/admira-bar.js?v=20260713-r36"></script>
     <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
 <meta charset="UTF-8">
@@ -449,6 +449,10 @@
   /* ===== HACKEO (portado desde la home de admira.live) ===== */
   #hackOpen{border-color:#1f6f4a}
   #hackOpen:hover{border-color:#00ff41;color:#9effb0}
+  #consejerosOpen{border-color:#6b5a2a}
+  #consejerosOpen:hover{border-color:#e8c547;color:#ffe9a0}
+  #deepagentOpen{border-color:#1a4a6b}
+  #deepagentOpen:hover{border-color:#4fc3f7;color:#b3e5fc}
   .hack-overlay{display:none;position:fixed;inset:0;z-index:2147483646;background:rgba(0,0,0,.96);padding:1rem;overflow:hidden;box-sizing:border-box;flex-direction:column}
   .hack-overlay.visible{display:flex}
   .hack-topbar{display:flex;align-items:center;gap:12px;padding:8px 10px;margin-bottom:.5rem;border-bottom:1px solid #1a3a1a;color:#00ff41;font-family:'Courier New',monospace;font-size:13px;flex:none}
@@ -651,6 +655,8 @@
       <label class="ac-rep" title="Repetir la captura automáticamente cada X segundos"><input type="checkbox" id="acToggle"> repetir cada <input type="number" id="acSec" min="3" max="600" value="15"> s</label>
       <button id="wallOpen" title="Pared de pantallas: mosaico a pantalla completa de todas las capturas">🧱 Mosaico</button>
       <button id="hackOpen" title="HACKEO · secuencia de intrusión sobre toda la flota (cinemática + acción real)">🕶️ HACKEO</button>
+      <button id="consejerosOpen" title="Fondos leyendas por silla: Azul Jobs · Plata Wozniak · Rosa Lucas · Crema Disney">🏛️ CONSEJEROS</button>
+      <button id="deepagentOpen" title="Fondos DeepAgent por silla: Azul Neo · Plata Trinity · Rosa Morfeo · Crema Oráculo">💊 DEEPAGENT</button>
       <button id="hkPickTgl" class="ds-pick-tgl" title="Elegir a qué equipos afecta el hackeo" aria-expanded="false">▸ elegir equipos</button>
       <div id="hkPicker" class="ds-picker" hidden></div>
       <button id="dsPreflight" title="Comprueba acceso real, plataforma, player/executor, versión, captura, screen, circuito y heartbeat antes de arrancar">🧪 Preflight DS</button>
@@ -1030,7 +1036,7 @@ let PRESENCE_FULL={}; // key(_norm máquina) → registro más reciente {persona
 // `control_machines` viene en el MISMO /api/presence que ya se pedía; sólo había que
 // mirarlo. key(_norm máquina) → {slots:[…], updated}
 let MANDO_BY_MACHINE={};
-const MANDO_FRESH=60;   // s — un watcher que no reporta hace un minuto ya no manda
+const MANDO_FRESH=180;   // s — un timeout de snapshot no puede pintar «falta el watcher»
 const PRESENCE_FRESH=180;   // s — latido de presencia considerado "online"
 const FLEET_FRESH=300;      // s — registro de admira-fleet considerado "online"
 async function loadPersonas(){
@@ -1134,8 +1140,8 @@ function agentNowHtml(m){ const e=agentEntry(m); if(!e||!e.status) return '';
 // ranuras gobernables hay y hace cuánto respondió el watcher; y si no hay, lo dice
 // también, con el comando exacto para instalarlo en vez de dejarte adivinando.
 function mandoHtml(m){
-  const k=_norm(m&&(m.name||m.id)); if(!k) return '';
-  const g=MANDO_BY_MACHINE[k];
+  const k=_norm(m&&(m.name||m.id))||_norm(m&&m.id); if(!k) return '';
+  const g=MANDO_BY_MACHINE[k]||MANDO_BY_MACHINE[_norm(m&&m.id)]||MANDO_BY_MACHINE[_norm(String(m&&m.fqdn||'').split('.')[0])];
   if(!g||!g.slots.length){
     // Sin watcher también se pliega igual que los demás (Carlos, 5-sep-2026): el pill de control y
     // «probar» quedan dentro, y al desplegar se lee qué falta y cómo se instala.
@@ -3158,28 +3164,18 @@ function collapseAllToggle(){
   const HK_SEL=new Set();
   window.__HK_SEL=HK_SEL;
   async function callCouncilHackeo(mode){
-    const path = mode==="stop" ? "/api/council/hackeo/stop" : "/api/council/hackeo";
-    if(mode!=="stop" && !MY_TAILNET_IP){ try{ await fetchOperatorToken(); }catch(e){} }
-    // Sin autoexclusión: el hackeo toma TODAS las pantallas, incluida la de la
-    // máquina desde la que se lanza (decisión del operador). Antes se enviaba
-    // exclude_ip = MY_TAILNET_IP para no tapar el panel del que lo lanzaba.
-    // GRANULAR (Carlos, 2026-07-21): si hay equipos elegidos, se mandan como
-    // only_ids y el backend actúa SOLO sobre ellos. Si el backend fuese antiguo
-    // e ignorase el campo, el hackeo sigue yendo a todos — nunca falla por esto.
+    const HACK_API = "https://macmini.tail48b61c.ts.net/demo";
+    const path = mode==="stop" ? "/hackeo/stop" : "/hackeo";
     const only = Array.from(HK_SEL);
-    const body = mode==="stop" ? JSON.stringify({ only_ids: only })
-                               : JSON.stringify({ exclude_ip: "", only_ids: only });
-    const urls = activeApiUrl ? [activeApiUrl].concat(COUNCIL_API_URLS.filter(u=>u!==activeApiUrl)) : COUNCIL_API_URLS.slice();
-    const headers = await hackAuthHeaders();
-    let lastErr=null;
-    for(const baseUrl of urls){
-      try{
-        const res=await fetch(baseUrl+path,{ method:"POST", headers:headers, body:body, signal:AbortSignal.timeout(20000) });
-        if(!res.ok){ lastErr="HTTP "+res.status; continue; }
-        activeApiUrl=baseUrl; return await res.json();
-      }catch(e){ lastErr=e.message||String(e); }
-    }
-    throw new Error(lastErr||"all council-api urls failed");
+    const body = JSON.stringify({ only_ids: only, exclude_ip: "" });
+    const res = await fetch(HACK_API + path, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: body,
+      signal: AbortSignal.timeout(20000)
+    });
+    if(!res.ok) throw new Error("HTTP "+res.status);
+    return await res.json();
   }
 
   function paintHackeoStatus(res){
@@ -3202,12 +3198,7 @@ function collapseAllToggle(){
 
   async function startHack(){
     if(hackMode) return;
-    // Auth automática: intenta traer el operator-token del Mini en silencio. Si no hay,
-    // no pasa nada — el hackeo se autoriza con la identidad de Google del gate (candado 🔒)
-    // en callCouncilHackeo(). NUNCA pedimos token a mano por prompt().
-    if(!localStorage.getItem("council_hack_token")){
-      try{ const tok=await fetchOperatorToken(); if(tok) localStorage.setItem("council_hack_token",tok); }catch(e){}
-    }
+    // Token de hackeo solo en demo-server. El navegador no pide ni guarda council_hack_token.
     hackMode=true;
     const overlay=document.getElementById("hack"), body=document.getElementById("hackBody");
     overlay.classList.add("visible"); lockView();
@@ -3225,11 +3216,7 @@ function collapseAllToggle(){
     });
     const sl=document.getElementById("hackStatusLine"); if(sl) sl.textContent="lanzando intrusion\u2026";
     try{ const res=await callCouncilHackeo("start"); paintHackeoStatus(res&&res.machines?res:{error:"no response"}); }
-    catch(e){
-      if(/\b403\b/.test(e.message||"")){
-        localStorage.removeItem("council_hack_token");
-        paintHackeoStatus({error:(typeof gateCred==='function'&&gateCred())?"sin permiso para hackeo (identidad no autorizada)":"inicia sesion con el candado \ud83d\udd12 para hackear"});
-      } else paintHackeoStatus({error:e.message}); }
+    catch(e){ paintHackeoStatus({error:e.message}); }
   }
 
   async function stopHack(){
@@ -3249,6 +3236,31 @@ function collapseAllToggle(){
   document.getElementById("hackOpen") && document.getElementById("hackOpen").addEventListener("click", startHack);
   document.getElementById("hackBack") && document.getElementById("hackBack").addEventListener("click", stopHack);
   window.addEventListener("keydown",(e)=>{ if(e.key==="Escape"&&hackMode) stopHack(); });
+
+  async function callWallpaperMode(mode){
+    const HACK_API = "https://macmini.tail48b61c.ts.net/demo";
+    const only = (typeof HK_SEL!=="undefined" && HK_SEL && HK_SEL.size) ? Array.from(HK_SEL) : [];
+    const res = await fetch(HACK_API + "/wallpaper/mode", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ mode: mode, only_ids: only }),
+      signal: AbortSignal.timeout(60000)
+    });
+    const data = await res.json().catch(function(){ return {}; });
+    if(!res.ok || data.ok===false) throw new Error(data.error || ("HTTP "+res.status));
+    return data;
+  }
+  async function startWallpaperMode(mode){
+    const sl=document.getElementById("hackStatusLine");
+    try{
+      if(sl) sl.textContent="wallpaper "+mode+"…";
+      const data=await callWallpaperMode(mode);
+      const s=data.summary||{};
+      alert("Wallpaper "+mode+": ok="+(s.ok||0)+"/"+(s.total||0));
+    }catch(e){ alert("Wallpaper "+mode+" falló: "+(e.message||e)); }
+  }
+  document.getElementById("consejerosOpen") && document.getElementById("consejerosOpen").addEventListener("click", function(){ startWallpaperMode("consejeros"); });
+  document.getElementById("deepagentOpen") && document.getElementById("deepagentOpen").addEventListener("click", function(){ startWallpaperMode("deepagent"); });
 })();
 </script>
 

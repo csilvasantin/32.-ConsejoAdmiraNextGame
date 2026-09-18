@@ -48,7 +48,8 @@ decisiones con puerta | decisiones.html yk-decisiones-grid.js yk-display-ref.js 
 # es además una CONSOLA (9 escrituras: estado, padre, empujón, sync). Llevan puerta. No se copian el
 # favicon ni los apple-touch-icon de la RAÍZ de yokup: marcarían admira.live con el icono de otra casa.
 tareas con puerta | tareas.html yk-adjuntos.js yk-cabezal.css yk-cabezal.js yk-display-ref.js yk-misiones.css yk-misiones.js yk-tareas-columns.js yk-tareas-sort.js yk-agent-identity.js yk-avatar.js avatar-widget.js img/admiranext-logo.svg app/apple-touch-icon.png
-misiones con puerta | misiones.html yk-adjuntos.js yk-cabezal.css yk-cabezal.js yk-display-ref.js yk-maquina.js yk-misiones.css yk-misiones.js yk-mission-duplicates.js yk-agent-identity.js avatar-widget.js img/admiranext-logo.svg
+# FLT-100640: Misiones pasa a página propia global, con histórico y carga completa.
+misiones con puerta (propia) | misiones.html yk-adjuntos.js yk-cabezal.css yk-cabezal.js yk-display-ref.js yk-maquina.js yk-misiones.css yk-misiones.js yk-mission-duplicates.js yk-agent-identity.js avatar-widget.js img/admiranext-logo.svg
 
 # Notificaciones: bloqueos, consumo y avisos de la flota. Sólo carga el marco; cierra avisos y cambia el
 # automático de Telegram, así que lleva puerta.

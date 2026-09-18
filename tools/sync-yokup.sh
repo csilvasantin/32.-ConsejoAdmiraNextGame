@@ -86,7 +86,7 @@ for f in $HTMLS; do
   perl -0pi -e 's{^\s*<script src="/acceso\.js[^"]*"[^>]*>\s*</script>\s*\n}{}mg' "$REPO/$f"
 done
 for f in $CON_PUERTA; do
-  perl -0pi -e 's{<head>}{<head>\n<script src="/acceso-espejo.js?v=r1"></script>}' "$REPO/$f"
+  perl -0pi -e 's{<head>}{<head>\n<script src="/acceso-espejo.js?v=r2"></script>}' "$REPO/$f"
 done
 
 # 2) Enlaces a lo que todavía no se ha mudado → al original absoluto.
@@ -117,6 +117,19 @@ done
 #    versión. Aquí pregunta por el version.json que escribe deploy.sh, que trae el mismo
 #    campo `version`: el marco enseña el sello de admira.live, que es el que manda.
 perl -pi -e 's{"/__yokup-gate\?frame="}{"/version.json?frame="}g' "$REPO/yk-frame.js"
+
+# FLT-100640: conservar el alcance global declarativo de las páginas propias.
+python3 - "$REPO/yk-frame.js" <<'PYGLOBAL'
+from pathlib import Path
+import sys
+p=Path(sys.argv[1]);s=p.read_text()
+marker='  function globalProjectScopeSurface(pathname) {\n    return '
+if marker not in s:
+    raise SystemExit('Revisar contrato globalProjectScopeSurface antes de sincronizar')
+if 'document.documentElement.hasAttribute("data-yk-global-projects")' not in s:
+    s=s.replace(marker,marker+'document.documentElement.hasAttribute("data-yk-global-projects") || ',1)
+p.write_text(s)
+PYGLOBAL
 
 # 5) Y lo dice a la cara, no sólo en un meta: una tira arriba avisa de que esto es el
 #    espejo y de qué no funciona aquí por no tener sesión de Yokup.

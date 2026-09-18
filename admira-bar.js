@@ -32,7 +32,7 @@
     // en el móvil sin tener que abrir una pestaña a buscarlos. Quitar una parada que
     // nadie visita cuesta menos que encoger ocho que sí se usan. La página sigue
     // publicada en /telegram para quien tenga el enlace; deja de ocupar sitio, no existe menos.
-    { t: "🎯 Misiones",  h: "https://www.admira.live/vista-previa" },
+    { t: "🎯 Misiones",  h: "https://www.admira.live/misiones" },
     { t: "🧩 Asignaciones", h: "https://www.admira.live/asignaciones/" },
     { t: "📓 Diario",    h: "https://www.admira.live/diario.html" },
     // INCUBADORA RETIRADA DE MOMENTO (Carlos, 11-08-2026). Ojo: es temporal, no una

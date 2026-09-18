@@ -1,15 +1,15 @@
 <!DOCTYPE html>
-<html lang="es">
+<html lang="es" data-yk-global-projects>
 <head>
 <meta name="yokup-espejo" content="origen www.yokup.com · commit dc134d1 · sincronizado 17.09.2026 22:17">
-<script src="/acceso-espejo.js?v=r1"></script>
+<script src="/acceso-espejo.js?v=r2"></script>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="/favicon.ico?v=v.2026.08.02.224605" sizes="any">
 <link rel="icon" type="image/png" href="/favicon-32x32.png?v=v.2026.08.02.224605" sizes="32x32">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=v.2026.08.02.224605">
 <script src="/yk-display-ref.js?v=2"></script>
-<title>Misiones · Yokup</title>
+<title>Misiones globales · AdmiraNeXT</title>
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#02080d">
 <link rel="manifest" href="/manifest.webmanifest">
@@ -18,6 +18,13 @@
 <link rel="stylesheet" href="/yk-misiones.css?v=v.2026.09.07.r1">
 <link rel="stylesheet" href="/yk-cabezal.css?v=r3">
 <style>
+.mission-history{margin:0 0 18px;padding:14px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
+.mission-days{display:flex;align-items:center;flex-wrap:wrap;gap:8px}
+.mission-days button,.mission-days a{font:inherit;font-size:12px;min-height:36px;padding:8px 10px;border:1px solid var(--line2);border-radius:7px;background:var(--card2);color:var(--brand);cursor:pointer;text-decoration:none}
+.mission-days button:disabled{opacity:.4;cursor:default}
+#missionCoverage{margin-top:12px;font-size:14px;color:var(--ink);overflow-wrap:anywhere}
+.mission-day-help{margin-top:6px;font-size:12px;color:var(--mut)}
+
 /* Segmentación dentro del raíl de opciones: apilada y a lo ancho del panel. */
 .segm{display:flex;flex-direction:column;gap:8px}
 .segm-h{font-family:var(--mono);font-size:9.5px;letter-spacing:.09em;text-transform:uppercase;color:var(--dim)}
@@ -216,12 +223,23 @@ h1{font-size:clamp(23px,3vw,31px);letter-spacing:-.02em;margin:4px 0 10px;displa
 </style>
 </head>
 <body data-yk-title="MISIONES" data-yk-rail-left="OPCIONES" data-yk-rail-right="AVANZADO" data-yk-zone="app">
-<div id="yk-espejo-aviso" style="background:#0a1620;border-bottom:1px solid rgba(120,243,255,.30);color:#75aab9;font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;padding:8px 14px">Espejo en <b style="color:#78f3ff">admira.live</b> de Yokup · misma sesión y mismos datos de <code>api.yokup.com</code>. Si algo no cuadra con <a href="https://www.yokup.com" style="color:#78f3ff">el original</a>, es un fallo: dilo.</div>
+<div id="yk-espejo-aviso" style="background:#0a1620;border-bottom:1px solid rgba(120,243,255,.30);color:#75aab9;font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;padding:8px 14px"><b style="color:#78f3ff">AdmiraNeXT · Registro global de misiones</b> · Encargos, tareas e informes de toda la flota.</div>
 <div class="wrap">
   <!-- CABEZAL COMPARTIDO con /tareas (Carlos, 2026-07-21): contadores por estado
        + día del tablero · título + buscador · alta de misión de flota. Lo inyecta
        y cablea yk-cabezal.js — UNA sola fuente del cabezal para ambas páginas. -->
   <div id="cabezal"></div>
+  <section class="mission-history" aria-label="Histórico global de misiones">
+    <div class="mission-days">
+      <button id="dayPrev" type="button">← Día anterior</button>
+      <button id="dayToday" type="button">Hoy</button>
+      <button id="dayNext" type="button">Día siguiente →</button>
+      <button id="allMissions" type="button">Todas las misiones del día</button>
+      <a href="/vista-previa">Coordinación de agentes</a>
+    </div>
+    <p id="missionCoverage" role="status" aria-live="polite">Cargando el registro global…</p>
+    <p class="mission-day-help">Fecha de alta · horario de Madrid. Todos los proyectos y agentes. Selecciona una fecha para consultar el histórico.</p>
+  </section>
 
   <!-- SELECTORES/ORDENADORES + BUSCADOR en una sola línea (Carlos, 2026-07-15).
        Misiones = SOLO flota·agentes: el ámbito campo·pantallas se fue con su
@@ -244,13 +262,13 @@ h1{font-size:clamp(23px,3vw,31px);letter-spacing:-.02em;margin:4px 0 10px;displa
 
   <!-- Raíl MISIONES: filtros. Raíl TAREAS: árbol de la misión seleccionada. -->
   <div class="tabs" id="missionStateTabs" data-yk-slot="left">
-    <button class="tab on" data-f="activas" aria-pressed="true">Activas</button>
+    <button class="tab" data-f="activas" aria-pressed="false">Activas</button>
     <button class="tab" data-f="asignadas" aria-pressed="false">Pendientes</button>
     <button class="tab" data-f="in_progress" aria-pressed="false">En curso</button>
     <button class="tab" data-f="unconcluded" aria-pressed="false">No concluidas</button>
     <button class="tab" data-f="resolved" aria-pressed="false">Finalizadas</button>
     <button class="tab" data-f="cancelled" aria-pressed="false">Eliminadas</button>
-    <button class="tab" data-f="todas" aria-pressed="false">Todas</button>
+    <button class="tab on" data-f="todas" aria-pressed="true">Todas</button>
     <details class="mission-policy">
       <summary>¿Qué ocurre al cerrar el día?</summary>
       <p>Las misiones <b>No concluidas</b> pasan automáticamente a <b>Eliminadas</b>. Es un cierre recuperable: no borra la misión, sus tareas, pruebas ni historial.</p>
@@ -303,9 +321,9 @@ h1{font-size:clamp(23px,3vw,31px);letter-spacing:-.02em;margin:4px 0 10px;displa
 <script src="/yk-agent-identity.js?v=v.2026.08.02.224605"></script>
 <script src="/yk-maquina.js?v=r1"></script>
 <script src="/yk-misiones.js?v=v.2026.09.07.r1"></script>
-<script src="/yk-mission-duplicates.js?v=1"></script>
 <script src="/yk-adjuntos.js?v=r3"></script>
 <script src="/yk-cabezal.js?v=r4"></script>
+<script src="/mission-ledger.js?v=100640-1"></script>
 <script>
 const WORKER="https://api.yokup.com";
 const WORKER_FALLBACK="https://rtc.yokup.com";
@@ -320,10 +338,7 @@ function ykf(path,opts){
     ? window.ykFetch(path,opts)
     : window.fetch(WORKER+path,opts).catch(function(){ return window.fetch(WORKER_FALLBACK+path,opts); });
 }
-let FILTER="activas";
-// Cascada de preselección: userPicked = el usuario ya tocó un filtro (no pisarle);
-// didCascade = la cascada ya corrió una vez (solo en la carga inicial). (Carlos, 21-jul-2026)
-let userPicked=false, didCascade=false;
+let FILTER="todas";
 let SCOPE="fleet";     // ámbito por defecto: el trabajo de los agentes
 let PROJECT_SCOPE=null; // null=Todos; selección recibida por id canónico
 let SEL=new Set(), LAST_LIST=[], REP_IDS={};   // selección múltiple para cambio de estado en bloque
@@ -349,17 +364,31 @@ function madridToday(){return madridDayKey(Date.now());}
 // además sincroniza su raíl de pestañas). onState/onSearch/onDay/onCreated se
 // enganchan con el flujo existente (load() lee $("busca")/$("selDia")).
 const CAB=YkCabezal.mount($("cabezal"), {
-  worker:WORKER, title:"Misiones", searchPlaceholder:"🔎 Buscar misión…", manageState:false,
+  worker:WORKER, title:"Misiones globales", searchPlaceholder:"🔎 Buscar misión…", manageState:false,
   altaPlaceholder:"Título breve de la misión… (Enter para crearla)",
   getProjectId:()=>PROJECT_SCOPE,
   intro:'Lo que hay que hacer. <b>Regla de los tercios</b>: cada misión se descompone en <b>3 tareas</b> a·b·c × <b>3 subtareas</b> cada una (a1…c3, máx 9 — la jornada completa de un agente; el denominador es SIEMPRE 3 y 9 para poder comparar dos misiones de un vistazo — un plan a medio definir se marca «◌ incompleto», no se le baja el denominador; los planes antiguos con pasos d…h se cuentan aparte como «+n»): el arquitecto y el agente principal definen el plan, los <b>subagentes</b> ⚙️ lo ejecutan y los <b>infraagentes</b> 📝 reportan. Las misiones de la <b>flota</b> son los encargos a los agentes (se ven vivos en <a href="https://www.admira.live/status/" target="_blank" rel="noopener" style="color:var(--brand)">admira.live/status</a>); las de <b>campo</b>, las incidencias de pantallas.',
   defaultView:"list",   // /misiones nace en LISTA; el conmutador la pasa a fichas (962)
   onView:()=>load(),
-  onState:f=>{userPicked=true;aplicaFiltro(f);}, onSearch:()=>load(), onDay:()=>load(), onCreated:()=>load()
+  onState:f=>aplicaFiltro(f), onSearch:()=>load(), onDay:()=>changeDay(CAB.getDay()), onCreated:()=>load()
 });
 // La vista operativa nace en la jornada actual. El histórico completo sigue
 // disponible mediante la acción explícita «Ver todas las fechas» del resumen.
-CAB.setDay(madridToday());
+const initialDay=new URL(location.href).searchParams.get("day");
+let FOLLOW_TODAY=!initialDay;
+CAB.setDay(initialDay==="all"?"":MissionLedger.validDay(initialDay)?initialDay:madridToday());
+function changeDay(day){
+  FOLLOW_TODAY=day===madridToday();
+  CAB.setDay(day);FILTER="todas";sincronizaFiltro(FILTER);
+  SORT={k:"fecha",dir:"asc"};$("selOrden").value="antiguas";
+  $("selAgente").value="";$("selEquipo").value="";$("busca").value="";
+  const url=new URL(location.href);url.searchParams.set("day",day||"all");
+  history.replaceState(history.state,"",url.pathname+url.search+url.hash);load();
+}
+$("dayPrev").onclick=()=>changeDay(MissionLedger.shiftDay(CAB.getDay()||madridToday(),-1));
+$("dayNext").onclick=()=>changeDay(MissionLedger.shiftDay(CAB.getDay()||madridToday(),1));
+$("dayToday").onclick=()=>changeDay(madridToday());
+$("allMissions").onclick=()=>changeDay(CAB.getDay());
 if($("selDia")){
   $("selDia").title="Filtrar por fecha de creación · por defecto hoy en Madrid · vacío = todas las fechas";
   $("selDia").setAttribute("aria-label","Filtrar misiones por fecha; sin fecha se muestran todas");
@@ -378,69 +407,12 @@ function llenaSel(id, etiqueta, valores){
 }
 
 // ORDEN estilo hoja de cálculo: clic en el título de la columna alterna ▲/▼.
-let SORT={k:"fecha",dir:"desc"};
-// Misiones MADRE desplegadas (FLT-990 b3). Por defecto REPLEGADAS: una madre no
-// alarga el tablero con sus hijas hasta que se abre.
-const OPEN_GRP=new Set();
-// Grupos de alarma de duplicados abiertos. Empiezan replegados: una ráfaga de
-// ecos ocupa una sola línea, pero todos sus registros siguen inspeccionables.
-const OPEN_DUP=new Set();
-// Agrupa las filas por parent_id: cada MADRE lleva sus HIJAS en un cajón replegable
-// justo debajo, en vez de sembrarlas sueltas por la lista. Las misiones planas (sin
-// parent_id) se pintan igual que siempre. DOS niveles (lo garantiza /fleet/parent,
-// FLT-990 c): madre → misión → submisión. Una hija con submisiones es a su vez un
-// grupo anidado bajo su madre; una submisión (nivel 2) ya es hoja, no anida más.
-function groupedHtml(list){
-  const byId={}; list.forEach(t=>{byId[t.id]=t;});
-  const kids={};
-  list.forEach(t=>{ const p=t.parent_id; if(p&&byId[p]&&p!==t.id) (kids[p]=kids[p]||[]).push(t); });
-  const esHija=t=>t.parent_id&&byId[t.parent_id]&&t.parent_id!==t.id;
-  // Pinta un nodo y, si tiene hijas (y aún no es nivel 2), su cajón replegable con
-  // cada hija pintada recursivamente un escalón más abajo. Tope defensivo en depth 2.
-  function nodeHtml(t, depth){
-    const ch=kids[t.id];
-    if(!ch||!ch.length) return YkMisiones.rowHtml(t);
-    // Tope de profundidad 2: a partir del nivel 2 no se abre otro cajón (el worker
-    // ya impide un 3er nivel), pero si datos malformados lo trajeran no se pierden —
-    // se aplanan como filas hermanas en vez de anidar sin fin.
-    if(depth>=2) return YkMisiones.rowHtml(t)+ch.map(c=>nodeHtml(c, depth)).join("");
-    const abierta=OPEN_GRP.has(t.id);
-    const uno=depth===0?"hija":"submisión", varios=depth===0?"hijas":"submisiones";
-    return '<div class="yk-grp yk-grp-l'+depth+(abierta?" abierta":"")+'" data-grp="'+esc(t.id)+'">'
-        +   YkMisiones.rowHtml(t)
-        +   '<button type="button" class="yk-grp-bar" data-grp-tg="'+esc(t.id)+'" aria-expanded="'+(abierta?"true":"false")+'">'
-        +     '<span class="yk-grp-caret">▸</span><b>'+ch.length+'</b> '+(ch.length===1?uno:varios)
-        +   '</button>'
-        +   '<div class="yk-kids'+(abierta?"":" plegado")+'" data-kids="'+esc(t.id)+'">'
-        +     ch.map(c=>nodeHtml(c, depth+1)).join("")
-        +   '</div>'
-        + '</div>';
-  }
-  function duplicateHtml(t){
-    const d=t._duplicate||{}, members=t._members||[], key=d.key||t.id, abierta=OPEN_DUP.has(key);
-    const panelId="dup-members-"+String(t.id||"").replace(/[^a-zA-Z0-9_-]/g,"-");
-    const labels={open:"pendiente",pending:"pendiente",unassigned:"sin asignar",in_progress:"en curso",unconcluded:"no concluida",resolved:"finalizada",cancelled:"eliminada"};
-    const stateText=Object.entries(d.states||{}).map(([state,count])=>count+" "+(labels[state]||state)).join(" · ");
-    const agents=(t._agents||[]).join(" · "), project=t.project_name||t.project_id||t.project||"proyecto sin identificar";
-    return '<section class="yk-dup'+(abierta?' abierta':'')+'" data-dup="'+esc(key)+'" role="group" aria-label="'+members.length+' misiones equivalentes">'
-      +'<div class="yk-dup-alert">'
-      +'<button type="button" class="yk-dup-tg" data-dup-tg="'+esc(key)+'" aria-controls="'+esc(panelId)+'" aria-expanded="'+(abierta?'true':'false')+'">'
-      +'<span class="yk-dup-caret">▸</span><strong>⚠ '+members.length+' misiones equivalentes</strong>'
-      +'<span class="yk-dup-ref">'+esc(d.reference||"mismo encargo")+' · '+esc(project)+'</span>'
-      +'<span class="yk-dup-meta">'+esc(stateText)+(agents?' · '+esc(agents):'')+'</span>'
-      +'<span class="yk-dup-action">'+(abierta?'ocultar':'inspeccionar')+' miembros</span></button>'
-      +'<button type="button" class="yk-dup-select" title="Seleccionar las '+members.length+' misiones del grupo">seleccionar '+members.length+'</button>'
-      +'</div><div class="yk-dup-members'+(abierta?'':' plegado')+'" id="'+esc(panelId)+'" role="region" aria-label="Miembros del grupo '+esc(d.reference||"equivalente")+'">'
-      +members.map(member=>nodeHtml(member,0)).join("")+'</div></section>';
-  }
-  let html="";
-  list.forEach(t=>{ if(esHija(t)) return; html+=(t._members&&t._members.length>1)?duplicateHtml(t):nodeHtml(t, 0); });
-  return html;
-}
+let SORT={k:"fecha",dir:"asc"};
+$("selOrden").value="antiguas";
 const SORTERS={
   id:t=>parseInt(String(t.id).replace(/\D/g,""),10)||0,
   subject:t=>String(t.subject||"").toLowerCase(),
-  fecha:t=>t.created_at||0,
+  fecha:t=>Number(t.created_at)<4102444800?Number(t.created_at)*1000:Number(t.created_at)||0,
   ordenador:t=>String(YkMisiones.machineOf(t)||"").toLowerCase(),
   agente:t=>String(t.assignee||"").toLowerCase(),
   estado:t=>({"Sin asignar":0,"Pendiente":1,"En curso":2,"No concluida":3,"Finalizada":4,"Eliminada":5}[YkMisiones.estadoDe(t).l]??6)
@@ -534,37 +506,6 @@ function bindHead(el){
   });
 }
 
-// El worker identifica ecos equivalentes con anclas trazables de story/TG y un
-// aislamiento estricto por proyecto y clase de estado. El fallback legacy conserva
-// la igualdad exacta previa. Sólo se aplica a FLOTA; campo nunca se agrupa.
-function agrupaFlota(tks){
-  if(typeof YkMissionDuplicates!=="undefined") return YkMissionDuplicates.group(tks,{machineOf:YkMisiones.machineOf});
-  // Compatibilidad durante el rollout: el HTML puede servirse antes que el módulo
-  // versionado. En ese instante sólo se aplica la igualdad exacta histórica.
-  const norm=s=>String(s||"").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/\s+/g," ").trim();
-  const num=x=>parseInt(String(x).replace(/\D/g,""),10)||0;
-  const by=new Map();
-  tks.forEach(t=>{ const k=norm(t.subject)+"||"+YkMisiones.machineOf(t)+"||"+norm(t.assignee)+"||"+String(t.visible_state||"");
-    (by.get(k)||by.set(k,[]).get(k)).push(t); });
-  const out=[];
-  by.forEach(ms=>{
-    if(ms.length===1){ out.push(ms[0]); return; }
-    const s=ms.slice().sort((a,b)=>num(a.id)-num(b.id));
-    const rep=Object.assign({},s[0]);
-    const agents=[...new Set(s.map(m=>m.assignee).filter(Boolean))];
-    const machines=[...new Set(s.map(m=>YkMisiones.machineOf(m)).filter(Boolean))];
-    const n=s.length, done=s.filter(m=>m.status==="resolved").length, prog=s.filter(m=>m.status==="in_progress").length,
-      cancelled=s.filter(m=>m.status==="cancelled").length;
-    const visible={};s.forEach(m=>{const key=m.visible_state||"";if(key)visible[key]=(visible[key]||0)+1;});
-    rep._agents=agents; rep._machines=machines; rep._ids=s.map(m=>m.id); rep._members=s; rep._n=n; rep._done=done;
-    rep.status = done===n ? "resolved" : cancelled===n ? "cancelled" : prog>0 ? "in_progress" : "open";
-    if(Object.keys(visible).length)rep.visible_state=visible.resolved===n?"resolved":visible.cancelled===n?"cancelled":visible.in_progress?"in_progress":visible.unconcluded?"unconcluded":visible.pending?"pending":"unassigned";
-    rep.assignee = agents.length<=1 ? (agents[0]||rep.assignee||"") : (agents.length+" agentes ("+done+"/"+n+")");
-    out.push(rep);
-  });
-  return out;
-}
-
 // FLT-761 (Carlos, prioridad absoluta): el previo del proyecto lleva un HALO
 // cuando hay un agente TRABAJANDO la misión — su máquina o su agente está VIVO
 // en presencia (<15 min, mismo criterio que el radar). Fire-and-forget: no
@@ -595,35 +536,8 @@ async function marcarHalos(container, list, generation, scopeAtStart){
 }
 
 let LOAD_GENERATION=0;
-const VISIBLE_KEYS=["unassigned","pending","in_progress","unconcluded","resolved","cancelled"];
-function addVisibleCounts(total,page){
-  if(!page)return total;
-  total=total||{unassigned:0,pending:0,in_progress:0,unconcluded:0,resolved:0,cancelled:0,total:0};
-  VISIBLE_KEYS.forEach(k=>{total[k]+=Number(page[k])||0;});total.total+=Number(page.total)||0;return total;
-}
-// Filtros que NO necesitan el historial: lo que pintan ya está entre las misiones
-// vivas. Con ellos se pide state=vivas y el servidor recorta en SQL lo que el
-// tablero iba a tirar de todos modos — el 94 % de las filas. Los contadores de
-// «Finalizada»/«Eliminada» siguen llegando completos (el worker los cuenta con
-// una agregada, sin traerse las filas). «Finalizadas», «Eliminadas» y «Todas»
-// sí piden el universo entero, que es justo lo que enseñan.
-const FILTROS_SOLO_VIVAS=new Set(["activas","asignadas","in_progress","unconcluded"]);
-async function fetchMissionUniverse(scope,day,projectId,soloVivas){
-  const limit=1000,rows=[],seen=new Set();let offset=0,first=null,counts=null,universe=null;
-  for(let page=0;page<100;page++){
-    let path="/tickets?scope="+encodeURIComponent(scope)+"&limit="+limit+"&offset="+offset;
-    if(day)path+="&day="+encodeURIComponent(day);
-    if(projectId)path+="&project_id="+encodeURIComponent(projectId);
-    if(soloVivas)path+="&state=vivas";
-    const response=await ykf(path,{cache:"no-store"});if(!response.ok)throw new Error("tickets "+response.status);
-    const data=await response.json();if(!first)first=data||{};
-    const pageRows=(data&&((Array.isArray(data.rows)&&data.rows)||data.tickets))||[];
-    pageRows.forEach(row=>{const key=String(row&&row.id||"");if(key&&!seen.has(key)){seen.add(key);rows.push(row);}});
-    counts=addVisibleCounts(counts,data&&data.visible_counts);universe=data&&data.universe||universe;
-    const hasMore=universe&&typeof universe.has_more==="boolean"?universe.has_more:pageRows.length===limit;
-    if(!hasMore||!pageRows.length)break;offset+=pageRows.length;
-  }
-  first=first||{};first.tickets=rows;first.rows=rows;first.visible_counts=counts;first.universe=Object.assign({},universe||{scope,day:day||null,project_id:projectId||null},{returned:rows.length,has_more:false});return first;
+function fetchMissionUniverse(scope,day,projectId,isCurrent){
+  return MissionLedger.fetchAll(ykf,{scope,day,projectId,isCurrent});
 }
 function visibleCountsFallback(rows){
   const out={unassigned:0,pending:0,in_progress:0,unconcluded:0,resolved:0,cancelled:0,total:0};
@@ -631,10 +545,19 @@ function visibleCountsFallback(rows){
   (rows||[]).forEach(t=>{const key=t.visible_state||byLabel[YkMisiones.estadoDe(t).l];if(Object.prototype.hasOwnProperty.call(out,key))out[key]++;out.total++;});return out;
 }
 function formatScopeDay(day){if(!day)return "todas las fechas";const p=day.split("-");return p.length===3?(p[2]+"/"+p[1]+"/"+p[0]):day;}
+let BOARD_LOADING=0;
 async function load(){
+  BOARD_LOADING++;
+  try{await loadBoard();}finally{BOARD_LOADING--;}
+}
+async function loadBoard(){
   const generation=++LOAD_GENERATION, scopeAtStart=PROJECT_SCOPE;
+  if(FOLLOW_TODAY)CAB.setDay(madridToday());
   const requestedDay=$("selDia")&&$("selDia").value||"";
   const isCurrent=()=>generation===LOAD_GENERATION&&scopeAtStart===PROJECT_SCOPE;
+  $("allMissions").textContent=requestedDay?"Todas las misiones del día":"Todas las misiones";
+  $("dayNext").disabled=!!requestedDay&&requestedDay>=madridToday();
+  $("missionCoverage").textContent="Cargando misiones de "+formatScopeDay(requestedDay)+"…";
   // FLT-1015 · CAMINO CRÍTICO EN PARALELO. Antes esperábamos personalización,
   // luego proyectos y sólo entonces arrancábamos /tickets: tres latencias de red
   // sumadas antes de pintar una sola misión. Las tres peticiones independientes
@@ -643,17 +566,18 @@ async function load(){
   const projectsP=ykf("/projects",{cache:"no-store"}).then(r=>r.json()).then(po=>{
     if(isCurrent())YkMisiones.setProyectos(po.projects||[]);
   }).catch(()=>{});
-  const ticketsP=fetchMissionUniverse(SCOPE,requestedDay,scopeAtStart,FILTROS_SOLO_VIVAS.has(FILTER));
+  const ticketsP=fetchMissionUniverse(SCOPE,requestedDay,scopeAtStart,isCurrent).then(value=>({value}),error=>({error}));
   await Promise.all([customizeP,projectsP]);
   if(!isCurrent())return;
   // El tablero SÍ es crítico: si /tickets no carga (red caída EN LOS DOS hosts),
   // NO se disfraza de «Sin misiones ✓» — se avisa honestamente y se ofrece reintento.
-  // (El poll de 12 s se recupera solo cuando vuelva la red; el botón fuerza ya.)
+  // (El poll de 30 s se recupera solo cuando vuelva la red; el botón fuerza ya.)
   let d;
   try{
-    d=await ticketsP;
+    const result=await ticketsP;if(result.error)throw result.error;d=result.value;
   }catch(e){
     if(!isCurrent())return;
+    $("missionCoverage").textContent="No se pudo verificar el listado completo. Pulsa Reintentar.";
     const el=$("list");
     if(el){
       el.innerHTML='<div class="empty board-err" style="text-transform:none;letter-spacing:normal;font-size:13px;line-height:1.55;color:#ff9977">'
@@ -673,7 +597,7 @@ async function load(){
   if(PROJECT_SCOPE&&(!d.universe||String(d.universe.project_id||"")!==String(PROJECT_SCOPE)))rawTickets=rawTickets.filter(t=>String(t.project_id||t.project||"")===PROJECT_SCOPE);
   const dayFilteredByServer=!requestedDay||!!(d.universe&&String(d.universe.day||"")===requestedDay);
   if(requestedDay&&!dayFilteredByServer)rawTickets=rawTickets.filter(t=>madridDayKey(t.created_at)===requestedDay);
-  let tks=(SCOPE==="fleet") ? agrupaFlota(rawTickets) : rawTickets; const st=d.stats||{};
+  let tks=rawTickets; const st=d.stats||{}; // Una fila por referencia, incluidas hijas y equivalentes.
   // Índice de misiones para el picker de reasignación (equipo/agente actuales por id).
   ROWS_BY_ID={};
   rawTickets.forEach(t=>{ ROWS_BY_ID[t.id]={maq:YkMisiones.machineOf(t)||"",rawmaq:(t.machine||t.loc||""),agente:t.assignee||"",project_id:t.project_id||t.project||"",subject:t.subject||"",loc:t.loc||"",screen:t.screen||"",inbox_id:t.inbox_id}; });
@@ -684,7 +608,6 @@ async function load(){
   tks.forEach(t=>{ t._unconcluded=t.visible_state==="unconcluded"||
     (!t.visible_state&&t.status==="in_progress"&&!!_ms60(t.created_at)&&(Date.now()-_ms60(t.created_at)>=60*60*1000)); });
   // KPIs por ESTADO visible, calculados de las misiones vivas (no del stats crudo)
-  const estL=t=>YkMisiones.estadoDe(t).l;
   const vc=dayFilteredByServer&&d.visible_counts?d.visible_counts:visibleCountsFallback(rawTickets);
   const nAsig=Number(vc.pending)||0,nProg=Number(vc.in_progress)||0,nNoCon=Number(vc.unconcluded)||0,nRes=Number(vc.resolved)||0,nDel=Number(vc.cancelled)||0;
   $("kAsig").textContent=nAsig;
@@ -692,24 +615,6 @@ async function load(){
   $("kNoCon").textContent=nNoCon;
   $("kRes").textContent=nRes;
   $("kDel").textContent=nDel;
-  // Preselección operativa: en la PRIMERA carga se abre «En curso» si existe;
-  // si no, «Finalizadas». Pendientes, no concluidas y eliminadas siguen disponibles
-  // como filtros explícitos, pero no desplazan la vista pedida por Carlos.
-  // Se aplica DESPUÉS de tener los contadores (nunca a ciegas) y SOLO una vez: los
-  // refrescos (cada 12 s) y la vuelta atrás del usuario no le resetean su elección.
-  if(!userPicked && !didCascade){
-    didCascade=true;
-    // Con ambos contadores a cero mantenemos «Finalizadas» para que el vacío sea
-    // honesto y estable. Un deep-link o una elección manual nunca llegan aquí.
-    const pick = nProg>0?"in_progress":"resolved";
-    if(pick && pick!==FILTER){
-      // La petición inicial `state=vivas` ya contiene En curso, pero no trae las
-      // filas resueltas. Si sabemos que existen, recargamos el histórico exacto;
-      // si no existe ninguna, pintamos el vacío Finalizadas sin un segundo fetch.
-      if(pick==="resolved"&&nRes>0){ aplicaFiltro(pick); return; }
-      FILTER=pick; sincronizaFiltro(pick);
-    }
-  }
   let base=tks;
   // «Activas» oculta las resueltas, PERO mantiene las de FLOTA finalizadas hace poco
   // (<3 h): las misiones de la desktop app se cierran en segundos, así que si no, se
@@ -761,6 +666,11 @@ async function load(){
   const sk=SORTERS[SORT.k]||SORTERS.fecha;
   list=list.slice().sort((a,b)=>{const va=sk(a),vb=sk(b);const c=va<vb?-1:(va>vb?1:0);return SORT.dir==="asc"?c:-c;});
   const el=$("list");
+  const chronological=rawTickets.slice().sort((a,b)=>Number(a.created_at)-Number(b.created_at)||String(a.id).localeCompare(String(b.id)));
+  const first=chronological[0],last=chronological[chronological.length-1];
+  $("missionCoverage").textContent=list.length+" de "+rawTickets.length+" misiones · "+formatScopeDay(requestedDay)
+    +(first?" · Primera: "+first.id+" · Última: "+last.id:"")
+    +" · Todos los proyectos · "+(FILTER==="todas"?"Todos los estados":"Vista filtrada");
   // TABLERO a medida (Panel de control → Tablero): columnas ocultas y densidad.
   {
     const bp=(YkMisiones.boardPrefs&&YkMisiones.boardPrefs())||{}, cols=bp.cols||{};
@@ -771,7 +681,7 @@ async function load(){
   if(!list.length){
     el.innerHTML=headHtml()+'<div class="empty" id="missionEmpty"></div>';bindHead(el);wireBulk(el,[]);
     const empty=$("missionEmpty"),stateName={activas:"activas",asignadas:"pendientes",in_progress:"en curso",unconcluded:"no concluidas",resolved:"finalizadas",cancelled:"eliminadas",todas:""}[FILTER]||"";
-    if(empty)empty.textContent="Sin misiones"+(stateName?(" "+stateName):"")+" en "+formatScopeDay(requestedDay)+(PROJECT_SCOPE?(" para "+PROJECT_SCOPE):"")+". "+(requestedDay?"El tooltip MISIONES resume todo el backlog; vacía la fecha de arriba para ver todas.":"✓");
+    if(empty)empty.textContent="Sin misiones"+(stateName?(" "+stateName):"")+" en "+formatScopeDay(requestedDay)+(PROJECT_SCOPE?(" para "+PROJECT_SCOPE):"")+". "+(requestedDay?"Elige otro día o pulsa Hoy para volver al registro actual.":"✓");
     notifyMissionsRendered([]);return;
   }
   // Progreso por misión: UNA sola petición /tasks/all (no N+1); done/total REALES del
@@ -789,7 +699,7 @@ async function load(){
     list.forEach(t=>{ (t._members||[t]).forEach(member=>{ const g=_g[member.id]||null; member._prog=YkMisiones.tercios(g||[],member.role==="standalone-task"); member._tasks=g; }); });
   }catch(e){if(!isCurrent())return;}
   if(!isCurrent())return;
-  el.innerHTML=headHtml()+groupedHtml(list);
+  el.innerHTML=headHtml()+list.map(t=>YkMisiones.rowHtml(t)).join("");
   bindHead(el);
   YkMisiones.bindRows(el);   // click=misión activa + refresco del árbol de tareas
   marcarHalos(el, list, generation, scopeAtStart); // FLT-761: halo sólo para la generación vigente
@@ -800,10 +710,7 @@ async function load(){
 if(window.addEventListener)window.addEventListener("yk:project-change",event=>{
   LOAD_GENERATION++;
   PROJECT_SCOPE=event.detail&&event.detail.project_id||null;
-  // El selector global emite también su estado inicial. Ese evento puede llegar
-  // antes que el primer /tickets: no debe consumir la preselección En curso →
-  // Finalizadas y dejar la pestaña legacy «Activas» marcada. Tras la primera
-  // carga didCascade ya es true; una elección manual queda protegida por userPicked.
+  // Alcance global, sin heredar filtros de proyecto de otras páginas.
   const board=$("list");
   if(board) board.innerHTML='<div class="empty">Filtrando misiones por proyecto…</div>';
   load();
@@ -841,12 +748,12 @@ function aplicaFiltro(f){
 // los listeners directos sobreviven al traslado y el control visible conserva
 // su identidad/estado ARIA. `addEventListener` evita pisar otros contratos.
 STATE_TABS.forEach(button=>button.addEventListener("click",()=>{
-  userPicked=true;aplicaFiltro(button.dataset.f);
+  aplicaFiltro(button.dataset.f);
 }));
 // (el clic en los KPIs lo reenvía yk-cabezal.js a onState → aplicaFiltro)
 if(window.addEventListener) window.addEventListener("yk:mission-deadline",()=>load());
 if(window.addEventListener) window.addEventListener("yk:mission-project",()=>load());
-load(); setInterval(load,12000);
+load(); setInterval(()=>{if(!BOARD_LOADING)load();},30000);
 
 // ---- ALTA de misiones de flota ---------------------------------------------
 // La misión nace como ENCARGO del bot-inbox (admira-telegram); yokup-rtc la
@@ -878,7 +785,7 @@ let RUNTIME={}, ROWS_BY_ID={};
 // Agentes PRINCIPALES vivos (latido <15 min) leídos de la presencia del radar (MAQS).
 // Con 'maq' (canónica) se limita a los vivos EN esa máquina (cruce con selEquipo).
 // Value = nombre pelado que casa con assignee/_agents; el radar los repinta cada 60 s
-// y el poll de load() (12 s) los sube al desplegable aunque no tengan misión en la vista.
+// y el poll de load() (30 s) los sube al desplegable aunque no tengan misión en la vista.
 function agentesVivos(maq){
   return Object.keys(MAQS).filter(per=>
     Object.entries(MAQS[per]).some(([cm,i])=>i&&i.online&&(!maq||cm===maq)));
@@ -1211,37 +1118,6 @@ $("list").addEventListener("click",ev=>{
   if(ordCell) pickerOrdenador(mid,ordCell); else pickerAgente(mid,agcCell);
 },true);
 
-// ---- Desplegar/replegar las HIJAS de una misión madre (FLT-990 b3) ---------
-// En captura, ANTES del listener de fila: el clic en la barra de grupo NO
-// selecciona la madre, solo abre/cierra su cajón. Sin recargar la lista.
-$("list").addEventListener("click",ev=>{
-  const toggle=ev.target.closest(".yk-dup-tg"), select=ev.target.closest(".yk-dup-select");
-  if(!toggle&&!select) return;
-  ev.stopPropagation(); ev.preventDefault();
-  const grp=(toggle||select).closest(".yk-dup"), members=grp&&grp.querySelector(".yk-dup-members");
-  if(select){
-    [...grp.querySelectorAll(".selrow")].forEach(cb=>{cb.checked=true;SEL.add(cb.dataset.id);});
-    refreshBulk($("list")); return;
-  }
-  const key=toggle.dataset.dupTg, abierta=OPEN_DUP.has(key);
-  if(abierta)OPEN_DUP.delete(key);else OPEN_DUP.add(key);
-  grp.classList.toggle("abierta",!abierta);if(members)members.classList.toggle("plegado",abierta);
-  toggle.setAttribute("aria-expanded",abierta?"false":"true");
-  const action=toggle.querySelector(".yk-dup-action");if(action)action.textContent=(abierta?"inspeccionar":"ocultar")+" miembros";
-},true);
-
-$("list").addEventListener("click",ev=>{
-  const bar=ev.target.closest(".yk-grp-bar"); if(!bar) return;
-  ev.stopPropagation(); ev.preventDefault();
-  const id=bar.dataset.grpTg;
-  const abierta=OPEN_GRP.has(id);
-  if(abierta) OPEN_GRP.delete(id); else OPEN_GRP.add(id);
-  const grp=bar.closest(".yk-grp"), kids=grp&&grp.querySelector(".yk-kids");
-  if(grp) grp.classList.toggle("abierta",!abierta);
-  if(kids) kids.classList.toggle("plegado",abierta);
-  bar.setAttribute("aria-expanded",abierta?"false":"true");
-},true);
-
 // ---- «+ misión» / «+ submisión»: colgar HIJA o SUBMISIÓN desde la ficha ------
 // El botón vive en la ficha del cajón (#taskTree, lo pinta yk-misiones.addChildBtn).
 // Modelo de DOS niveles (FLT-990 c): una madre/plana ofrece «+ misión» (hija); una
@@ -1281,7 +1157,6 @@ $("taskTree").addEventListener("click", async ev=>{
     if(hija){
       const pr=await fetch(WORKER+"/fleet/parent",{method:"POST",headers:{"content-type":"application/json"},
         body:JSON.stringify({child:hija,parent:madre})}).then(x=>x.json()).catch(()=>({}));
-      if(pr&&pr.ok) OPEN_GRP.add(madre);   // abrir el cajón de hijas para que se vea replegada bajo su madre
     }
     b.textContent="✓ "+(hija||"creada");
     if(typeof toast==="function") toast(hija?("✓ "+hija+" colgada de "+madre):("✓ "+kind+" creada"),true);
@@ -1293,6 +1168,6 @@ $("taskTree").addEventListener("click", async ev=>{
 });
 </script>
 <script type="module" src="/avatar-widget.js?v=3"></script>
-<script src="/yk-frame.js?v=r34"></script>
+<script src="/yk-frame.js?v=100640-1"></script>
 </body>
 </html>

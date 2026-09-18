@@ -76,6 +76,7 @@ test('lo que no es del worker pasa intacto: no se le cuela la cookie', async () 
 test('es el flujo de ventana, no el de redirección de yokup', () => {
   assert.match(fuente, /flow: "popup"/);
   assert.match(fuente, /ux_mode: "popup"/);
+  assert.match(fuente, /use_fedcm_for_button: false/);
   // Nada de `login_uri:` ni `ux_mode: "redirect"` en el código: el flujo de ventana no
   // necesita callback propio, que es justo lo que nos ahorra dar de alta una URI nueva.
   // (Los comentarios sí nombran el callback de yokup, para explicar por qué NO se usa.)

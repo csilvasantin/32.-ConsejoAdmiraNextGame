@@ -71,7 +71,7 @@ echo "· original: $ORIG   · espejo: $ESPEJO"
 # contenido tiene que ser el mismo aunque la ruta no lo sea.
 compara "/highscore"                    "highscore"
 compara "/highscoreDetail"              "highscoreDetail"
-compara "/yk-frame.js"                  "yk-frame.js"
+# yk-frame.js añade el alcance global declarativo de páginas propias (FLT-100640).
 compara "/yk-frame.css"                 "yk-frame.css"
 compara "/highscore-race.js"            "highscore-race.js"
 compara "/highscore-detail.js"          "highscore-detail.js"
@@ -88,7 +88,7 @@ compara "/yk-decisions.js"              "yk-decisions.js"
 compara "/consumos"                     "consumos"
 compara "/decisiones"                   "decisiones"
 compara "/tareas"                       "tareas"
-compara "/misiones"                     "misiones"
+# /misiones es propia desde FLT-100640: se valida con mission-ledger.test.mjs.
 compara "/notificaciones"               "notificaciones"
 compara "/yk-cabezal.js"                "yk-cabezal.js"
 compara "/yk-adjuntos.js"               "yk-adjuntos.js"

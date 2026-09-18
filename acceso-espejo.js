@@ -121,6 +121,7 @@
           client_id: CLIENT_ID,
           nonce: reto.nonce,
           ux_mode: "popup",
+          use_fedcm_for_button: false,
           auto_select: false,
           cancel_on_tap_outside: false,
           state_cookie_domain: "admira.live",

@@ -260,7 +260,7 @@
   // superficie el único alcance honesto es Todos; no borramos la preferencia
   // guardada, para que siga vigente al volver a una sección que sí es filtrable.
   function globalProjectScopeSurface(pathname) {
-    return /^\/highscore(?:\.html)?\/?$/i.test(String(pathname || ""));
+    return document.documentElement.hasAttribute("data-yk-global-projects") || /^\/highscore(?:\.html)?\/?$/i.test(String(pathname || ""));
   }
   function projectScopeMatch(row, projectId) {
     return projectId == null || String(row && (row.project_id || row.project) || "") === String(projectId);

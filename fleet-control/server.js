@@ -30,6 +30,8 @@ const { CALLBACK_URI:AUTH_CALLBACK_URI, PUBLIC_ORIGIN:AUTH_PUBLIC_ORIGIN, create
 const { sessionMutationError } = require('./session-csrf');
 const { ACTIVE, REVOKED, UNAVAILABLE, createSessionRegistry, logoutEndpointPolicy, sessionEndpointPolicy } = require('./session-registry');
 const { createSessionCodec, deriveSessionSecret, loadAuthEdgeSecretMaterial, loadSessionSecretMaterial } = require('./session-token');
+const { BridgeError, createGrokBotBridge } = require('./grokbot-bridge');
+const grokBotBridge = createGrokBotBridge();
 
 const DIR = __dirname;
 const PORT = parseInt(process.env.FLEET_PORT || '9140', 10);
@@ -631,6 +633,7 @@ async function gate(req, res, ip, allowToken) {
   if (auth.state===ACTIVE) {
     const mutationError=sessionMutationError(req,auth.session,ALLOW_ORIGINS);
     if(mutationError){json(res,403,{error:mutationError});return false;}
+    req.fleetSession = auth.session;
     return true;
   }
   if(auth.state===UNAVAILABLE){json(res,503,{error:'registro de sesión no disponible'});return false;}
@@ -858,6 +861,25 @@ const server = http.createServer(async (req, res) => {
     if(!session||session.email!==email||await _sessionRegistry.check(session)!==ACTIVE)return json(res,409,{error:'handoff_invalid'});
     setSessionCookie(res,token);
     res.writeHead(303,{Location:AUTH_PUBLIC_ORIGIN+safeReturnPath(handoff.returnPath),'Cache-Control':'no-store','Content-Security-Policy':"default-src 'none'; frame-ancestors 'none'; base-uri 'none'",'Referrer-Policy':'no-referrer'}); return res.end();
+  }
+
+  // Same Google session + CSRF gate as fleet control. No service credentials or
+  // raw upstream inbox ids are exposed to the browser.
+  if (url === '/api/grokbot' || url.startsWith('/api/grokbot/')) {
+    if (!(await gate(req, res, ip))) return;
+    try {
+      if (url === '/api/grokbot/capabilities' && req.method === 'GET') return json(res,200,{ok:true,...grokBotBridge.capabilities()});
+      if (url === '/api/grokbot/messages' && req.method === 'POST') {
+        const message = await grokBotBridge.send(req.fleetSession, await readBody(req));
+        return json(res,202,{ok:true,message});
+      }
+      if (url === '/api/grokbot/messages' && req.method === 'GET') return json(res,200,{ok:true,messages:grokBotBridge.list(req.fleetSession, requestUrl.searchParams.get('persona'))});
+      const match = /^\/api\/grokbot\/messages\/(gb_[a-f0-9]{48})$/.exec(url);
+      if (match && req.method === 'GET') return json(res,200,{ok:true,message:await grokBotBridge.get(req.fleetSession,match[1])});
+      return json(res,404,{ok:false,error:'grokbot_route_not_found'});
+    } catch (error) {
+      return json(res,error instanceof BridgeError ? error.status : 503,{ok:false,error:error instanceof BridgeError ? error.code : 'bridge_unavailable'});
+    }
   }
 
   // estado de la flota (lectura) — requiere token (el funnel es público)

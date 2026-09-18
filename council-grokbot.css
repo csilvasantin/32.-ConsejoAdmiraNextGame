@@ -1,0 +1,28 @@
+.council-chat[hidden]{display:none!important}
+.council-chat{margin:6px 0;border:2px solid #9c7326;background:#100b05;color:#f5e5a6;font-family:'Press Start 2P',monospace;font-size:10px;line-height:1.7;box-shadow:3px 3px #090603}
+.council-chat summary{cursor:pointer;padding:12px 14px;background:linear-gradient(#422a10,#201406);color:#ffdf73}
+.council-chat__connection{font-family:system-ui,sans-serif;font-size:12px}
+.council-chat__toolbar{display:flex;align-items:center;gap:10px;padding:12px 14px;flex-wrap:wrap}
+.council-chat__person{margin-right:auto;color:#ffff77}
+.council-chat button,.council-chat__native{background:#211405;color:#ffdf73;border:1px solid #9c7326;padding:7px 9px;cursor:pointer;font:inherit;text-decoration:none}
+.council-chat button:focus-visible,.council-chat a:focus-visible{outline:2px solid #ffff00}
+.council-chat__scope,.council-chat__limits,.council-chat__status{margin:4px 14px 10px;font:14px/1.5 system-ui,sans-serif;color:#c9ba9c}
+.council-chat__status{color:#ffdd66}
+.council-chat__messages{max-height:380px;overflow:auto;padding:0 14px 14px;overscroll-behavior:contain;font:16px/1.5 system-ui,sans-serif}
+.council-chat__turn{margin-bottom:18px}.council-chat__turn p{margin:8px 0;padding:12px 14px;white-space:pre-wrap;overflow-wrap:anywhere;border:1px solid #574729;background:#1c1b1c}.council-chat__turn strong{display:block;margin-bottom:8px;color:#e6cb75;font:10px/1.5 'Press Start 2P',monospace}.council-chat__turn .council-chat__user{margin-left:15%;background:#292217}.council-chat__meta{font:12px system-ui,sans-serif;color:#bcae92}
+/* The windows above the faces are the only bubble area in the retro artwork. */
+.speech-bubble.grokbot-bubble{box-sizing:border-box;left:14%!important;top:10%!important;width:22%;max-width:none;max-height:16.5%;padding:6px 10px;display:flex!important;flex-direction:column;font-size:clamp(8px,.65vw,13px);line-height:1.55;overflow:visible}
+.speech-bubble.grokbot-bubble .speaker{flex:none;font-size:inherit;line-height:1.5;padding-right:22px}
+.speech-bubble.grokbot-bubble .speech-text{white-space:pre-wrap;overflow:auto;overflow-wrap:anywhere;min-height:0;overscroll-behavior:contain}
+.speech-bubble.grokbot-bubble .speech-ficha{flex:none;font-size:8px;margin-top:3px;padding-top:3px}
+.speech-bubble.grokbot-bubble[data-side="right"]{left:64%!important;width:23%}
+.speech-bubble.grokbot-bubble[data-side="center"]{left:38%!important;top:10.5%!important;width:24%;max-height:12.5%}
+.speech-bubble.grokbot-bubble[hidden]{display:none!important}
+.council-speech-dock[hidden]{display:none!important}
+.council-speech-dock{width:100%;margin:6px 0;min-width:0}
+.speech-bubble.grokbot-bubble.grokbot-docked{position:relative;left:0!important;top:0!important;width:100%!important;max-height:230px;margin:0;font-size:12px}
+.speech-bubble.grokbot-bubble.grokbot-docked::after{display:none}
+.council-table__empty a{color:#ffe776;display:block;margin-top:8px}
+body.mouths-off .council-speech-mouth{display:none!important}
+.speech-bubble.grokbot-bubble::after{left:var(--speech-tail,50%)}
+.council-table__empty{flex-direction:column;overflow:auto}

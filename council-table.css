@@ -1,0 +1,60 @@
+/* A separate screen surface preserves the original SCUMM artwork and controls. */
+.council-table-dock[hidden], .council-table[hidden],
+.council-table [hidden] { display: none !important; }
+.council-table-dock { margin: 8px 0 0; width: 100%; }
+.council-table {
+  --table-wood: #3a2410;
+  display: flex; flex-direction: column; min-width: 0; min-height: 0;
+  box-sizing: border-box; overflow: hidden;
+  background: #070709; border: 2px solid #a07828;
+  box-shadow: 3px 3px 0 #160d04;
+  color: #ffeeaa; font-family: 'Press Start 2P', monospace;
+  isolation: isolate;
+}
+.council-table[data-placement="table"] { position: absolute; z-index: 8; }
+.council-table[data-placement="dock"] { position: relative; width: 100%; height: clamp(250px, 55vw, 580px); }
+.council-table__header {
+  display: flex; flex: 0 0 auto; align-items: center; justify-content: space-between;
+  gap: 8px; padding: 5px 6px; min-width: 0;
+  background: var(--table-wood); border-bottom: 1px solid #8b5a14;
+}
+.council-table__heading { display: flex; flex-direction: column; gap: 5px; min-width: 0; }
+.council-table__person { font-size: 8px; line-height: 1.4; white-space: nowrap; text-overflow: ellipsis; overflow: hidden; }
+.council-table__status { font-family: system-ui, sans-serif; font-size: 10px; line-height: 1.2; color: #d0b786; }
+.council-table[data-connection="live"] .council-table__status { color: #a4e8a0; }
+.council-table[data-connection="error"] .council-table__status { color: #ffbc9b; }
+.council-table__window-actions { display: flex; gap: 4px; flex: 0 0 auto; }
+.council-table button {
+  box-sizing: border-box; margin: 0; font-family: inherit; line-height: 1.3;
+  border: 1px solid #9c7326; border-radius: 0; background: #241707;
+  color: #ffee88; cursor: pointer; box-shadow: 1px 1px 0 #000;
+}
+.council-table button:hover { background: #614016; color: #fff; }
+.council-table button:focus-visible { outline: 2px solid #ffff00; outline-offset: -2px; }
+.council-table__window-actions button { width: 28px; height: 28px; padding: 2px; font-family: system-ui, sans-serif; font-size: 18px; }
+.council-table__surface { position: relative; flex: 1 1 auto; min-height: 0; min-width: 0; background: #08080c; }
+.council-table__media { position: absolute; inset: 0; overflow: hidden; }
+.council-table .council-table__stream,
+.council-image .council-table .council-table__stream {
+  display: block; position: absolute; inset: 0; width: 100%; height: 100%;
+  max-width: none; max-height: none; margin: 0; border: 0; border-radius: 0;
+  object-fit: contain; image-rendering: auto; transform: none;
+}
+.council-table__empty {
+  position: absolute; inset: 0; display: flex; align-items: center; justify-content: center;
+  margin: 0; padding: 16px; text-align: center;
+  font-family: system-ui, sans-serif; font-size: 13px; line-height: 1.5; color: #bdb6a3;
+}
+.council-table__actions { display: flex; gap: 4px; flex: 0 0 auto; flex-wrap: wrap; padding: 4px; background: var(--table-wood); border-top: 1px solid #8b5a14; }
+.council-table__actions button { padding: 6px; font-size: 7px; min-height: 26px; }
+.council-table[data-placement="expanded"] {
+  position: fixed; inset: max(12px, env(safe-area-inset-top)) max(12px, env(safe-area-inset-right)) max(12px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-left));
+  z-index: 11000; box-shadow: 0 0 0 100vmax rgb(0 0 0 / .8);
+}
+.council-table[data-placement="expanded"] .council-table__person,
+.council-table[data-placement="dock"] .council-table__person { font-size: 10px; }
+.council-table[data-placement="expanded"] .council-table__window-actions button,
+.council-table[data-placement="dock"] .council-table__window-actions button { width: 44px; height: 44px; }
+.council-table[data-placement="expanded"] .council-table__actions button,
+.council-table[data-placement="dock"] .council-table__actions button { font-size: 9px; min-height: 44px; padding: 9px; }
+@media (prefers-reduced-motion: reduce) { .council-table, .council-table * { animation: none !important; transition: none !important; } }

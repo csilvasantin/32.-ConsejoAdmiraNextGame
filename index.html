@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.17.09.2026.r3.FLT-100529" />
+<meta name="admiranext-version" content="AdmiraNeXT v.18.09.2026.r1.07:06" />
     <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -2926,7 +2926,7 @@ body.rail-open{overflow:hidden}
                 <div class="design-cursor" id="design-cursor"></div>
             </div>
             <div class="body-hotspots" id="body-hotspots"></div>
-            <!-- Bocas animadas: se mueven cuando el consejero está vivo (máquina online / hablando en AgoraMatrix) -->
+            <!-- La boca se anima únicamente durante la intervención visible del consejero. -->
             <div class="mouth-overlays" id="mouth-overlays"></div>
             <!-- Vídeo de presentación: cubre la imagen del consejo. Su poster (primer fotograma generado
                  con qlmanage) ya muestra el Apple II integrado en la mesa con el mismo estilo SCUMM. -->
@@ -2943,7 +2943,7 @@ body.rail-open{overflow:hidden}
             <div class="nameplates hidden" id="nameplates"></div>
             <div class="speech-overlay" id="speech-overlay">
                 <div class="speech-bubble" id="speech-bubble">
-                    <button class="speech-close" type="button" aria-label="Cerrar" onclick="hideSpeechBubble()">×</button>
+                    <button class="speech-close" type="button" aria-label="Cerrar" onclick="window.CouncilInterface ? window.CouncilInterface.close() : hideSpeechBubble()">×</button>
                     <div class="speaker"></div>
                     <div class="speech-text"></div>
                     <a class="speech-ficha" target="_blank" rel="noopener">📋 Ver ficha completa →</a>
@@ -3613,6 +3613,12 @@ body.rail-open{overflow:hidden}
 </style>
 <!-- El markup del panel vive DENTRO del riel AVANZADO (#rail-avanzado), sección
      «Tareas» — reubicado ahí para respetar el metaestilo SCUMM de la home. -->
-<script defer src="app.flt-100529.js?v=1"></script>
+<link rel="stylesheet" href="council-table.css?v=20260918-r1">
+<link rel="stylesheet" href="council-grokbot.css?v=20260918-r1">
+<script defer src="council-table.js?v=20260918-r1"></script>
+<script defer src="council-speech.js?v=20260918-r1"></script>
+<script defer src="council-grokbot.js?v=20260918-r1"></script>
+<script defer src="app.flt-100529.js?v=20260918-r1"></script>
+<script defer src="council-integration.js?v=20260918-r1"></script>
 </body>
 </html>

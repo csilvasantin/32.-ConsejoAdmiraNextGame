@@ -279,106 +279,20 @@
     // El Mac sigue en Tailscale como "online" pero la pantalla esta apagada
     const sleepingMachines = new Set();
 
-    // ── Bocas animadas v2 (FLT-100228 · soft-oval blend sheets) ─────────────
-    // Vivo = máquina online (render) O presente en AgoraMatrix. active/hablar =
-    // posteando / burst / stream answer. idle|pensar = frame cerrado.
-    const MOUTH_V2_SEAT = {
-        "Steve Jobs":   { seat: "Jobs",   sheet: "assets/mouth-v2/blend-sheet-jobs.png",   cw: 64, ch: 42 },
-        "Tim Cook":     { seat: "Cook",   sheet: "assets/mouth-v2/blend-sheet-cook.png",   cw: 60, ch: 40 },
-        "Walt Disney":  { seat: "Disney", sheet: "assets/mouth-v2/blend-sheet-disney.png", cw: 66, ch: 44 },
-        "George Lucas": { seat: "Lucas",  sheet: "assets/mouth-v2/blend-sheet-lucas.png",  cw: 64, ch: 42 },
-    };
-    let _mouthAnchorsV2 = null; // loaded once from anchors-v2.json
+    // Presence is not speech. The single turn controller owns the mouth now.
     let _mouthMachineAlive = new Set();
-    let _mouthAgoraAlive = new Set();
-    let _mouthTalking = new Set();
-    let _mouthForced = {}; // persona → idle|pensar|hablar from stream API
-    function applyMouths() {
-        // v2 sprites stay visible on Leyendas (soft closed line); cycle only when talking.
-        document.querySelectorAll('#mouth-overlays .mouth').forEach(el => {
-            const persona = el.getAttribute('data-persona');
-            const forced = _mouthForced[persona];
-            const talking = _mouthTalking.has(persona) || forced === 'hablar';
-            const pensar = forced === 'pensar';
-            el.classList.add('alive'); // always visible when rendered
-            el.classList.toggle('active', talking);
-            el.classList.toggle('hablar', talking);
-            el.classList.toggle('pensar', !talking && pensar);
-            el.classList.toggle('idle', !talking && !pensar);
-        });
-    }
-    window.councilUpdateAgora = function (alivePersonas, talkingPersonas) {
-        _mouthAgoraAlive = new Set(alivePersonas || []);
-        if (Array.isArray(talkingPersonas)) _mouthTalking = new Set(talkingPersonas);
-        applyMouths();
-    };
-    // Stream mapping: ask→idle, pensar→pensar, answer→hablar
+    window.councilUpdateAgora = function () {};
     window.councilMouthState = function (persona, state) {
-        if (!persona) return;
-        const s = String(state || 'idle').toLowerCase();
-        if (s === 'hablar' || s === 'answer') {
-            _mouthForced[persona] = 'hablar';
-            _mouthTalking.add(persona);
-        } else if (s === 'pensar') {
-            _mouthForced[persona] = 'pensar';
-            _mouthTalking.delete(persona);
-        } else {
-            _mouthForced[persona] = 'idle';
-            _mouthTalking.delete(persona);
-        }
-        applyMouths();
+        if (state === 'idle' || state === 'pensar') window.CouncilInterface?.cancel();
     };
-    window.councilMouthBurst = function (persona) {
-        if (!persona) return;
-        _mouthTalking.add(persona);
-        _mouthForced[persona] = 'hablar';
-        applyMouths();
-        clearTimeout((window._mouthBurstTimers ||= {})[persona]);
-        window._mouthBurstTimers[persona] = setTimeout(() => {
-            _mouthTalking.delete(persona);
-            _mouthForced[persona] = 'idle';
-            applyMouths();
-        }, 5000);
-    };
-    async function ensureMouthAnchorsV2() {
-        if (_mouthAnchorsV2) return _mouthAnchorsV2;
-        try {
-            const r = await fetch('assets/mouth-v2/anchors-v2.json', { cache: 'no-store' });
-            _mouthAnchorsV2 = await r.json();
-        } catch (e) {
-            console.warn('mouth-v2 anchors load failed', e);
-            _mouthAnchorsV2 = { mouth: {} };
-        }
-        return _mouthAnchorsV2;
-    }
-    function renderMouthOverlaysV2() {
-        const moEl = document.getElementById('mouth-overlays');
-        if (!moEl) return;
-        if (currentGen !== 'leyendas') {
-            moEl.innerHTML = '';
-            return;
-        }
-        const mouths = (_mouthAnchorsV2 && _mouthAnchorsV2.mouth) || {};
-        const parts = [];
-        Object.entries(MOUTH_V2_SEAT).forEach(([persona, cfg]) => {
-            const a = mouths[cfg.seat];
-            if (!a || a.style === 'inherit-idle' || a.fx == null || a.fy == null) return;
-            const left = (a.fx * 100).toFixed(3);
-            const top = (a.fy * 100).toFixed(3);
-            parts.push(
-                `<div class="mouth idle" data-persona="${persona}" data-seat="${cfg.seat}" ` +
-                `style="left:${left}%;top:${top}%;--cw:${cfg.cw}px;--ch:${cfg.ch}px;` +
-                `background-image:url('${cfg.sheet}?v=boca-v2');background-size:calc(var(--cw)*4) var(--ch)"></div>`
-            );
-        });
-        moEl.innerHTML = parts.join('');
-        // Machine-alive from current render pass
-        applyMouths();
-    }
+    window.councilMouthBurst = function () {};
+    async function ensureMouthAnchorsV2() { return {}; }
+    function renderMouthOverlaysV2() { document.getElementById('mouth-overlays')?.replaceChildren(); }
 
     function toggleGen() { setGen(currentGen === "leyendas" ? "coetaneos" : "leyendas"); }
 
     function setGen(gen) {
+        window.CouncilInterface?.setGeneration(gen);
         currentGen = gen;
         const gb = document.getElementById("btn-gen");
         if (gb) {
@@ -710,7 +624,7 @@
                 .filter(p => p.machineId && machineStatus[p.machineId]?.online)
                 .map(p => p.persona)
         );
-        ensureMouthAnchorsV2().then(() => { renderMouthOverlaysV2(); applyMouths(); });
+        renderMouthOverlaysV2();
 
         // Re-apply preguntar styles after DOM rebuild
         if (typeof _applyPreguntarStyles === 'function') _applyPreguntarStyles();
@@ -1487,6 +1401,7 @@
     function enterPreguntarMode() {
         preguntarMode = true;
         selectedAgent = null;
+        window.CouncilInterface?.select(null);
         document.getElementById("nameplates").classList.add("preguntar-active");
         document.getElementById("body-hotspots").classList.add("preguntar-active");
         _applyPreguntarStyles();
@@ -1496,6 +1411,7 @@
     function exitPreguntarMode() {
         preguntarMode = false;
         selectedAgent = null;
+        window.CouncilInterface?.select(null);
         document.getElementById("nameplates").classList.remove("preguntar-active");
         document.getElementById("body-hotspots").classList.remove("preguntar-active");
         document.querySelectorAll('.np').forEach(np => {
@@ -1557,6 +1473,12 @@
         if (npMatch) npMatch.classList.add('selected');
         if (bhMatch) bhMatch.classList.add('selected');
         selectedAgent = agent;
+        if (!examinarMode && window.CouncilInterface?.has(persona)) {
+            window.CouncilInterface.select(persona);
+            setActionLine("GrokBot · " + persona + " — escribe y pulsa Enviar");
+            return;
+        }
+        window.CouncilInterface?.select(null);
         markCouncilConsulted(agent.persona);
         if (examinarMode) {
             setActionLine("👁 " + agent.persona + " · " + agent.role);
@@ -2562,6 +2484,10 @@
 
         // If in "preguntar" mode with a selected agent, ask only that one
         if (preguntarMode && selectedAgent) {
+            if (window.CouncilInterface?.has(selectedAgent.persona)) {
+                window.CouncilInterface.send(selectedAgent.persona, text);
+                return;
+            }
             enterConversation();
             addUserEntry(text);
             askSingleAgent(text, selectedAgent);
@@ -4798,6 +4724,10 @@
     }
 
     async function askSingleAgent(question, agent) {
+        if (window.CouncilInterface?.has(agent.persona)) {
+            if (window.CouncilInterface.bridge.selected !== agent.persona) await window.CouncilInterface.select(agent.persona);
+            return window.CouncilInterface.send(agent.persona, question);
+        }
         /** Ask a single selected agent via the API. */
         const panelId = agent.side === "racional" ? "conv-racional" : "conv-creativo";
         resetSpeakerTurns();
@@ -5029,6 +4959,8 @@
     }
 
     function showSpeechBubble(persona, role, text) {
+        if (window.CouncilInterface?.bridge.selected) return;
+        if (window.CouncilInterface) { window.CouncilInterface.show(persona, role, text); return; }
         const b = document.getElementById("speech-bubble");
         b.querySelector(".speaker").textContent = role + " — " + persona;
         b.querySelector(".speech-text").textContent = text;
@@ -5130,7 +5062,11 @@
     });
     // ════════════ fin Oleada 4 ════════════
 
-    function hideSpeechBubble() { document.getElementById("speech-bubble").style.display = "none"; }
+    function hideSpeechBubble() {
+        if (window.CouncilInterface?.bridge.selected) return;
+        if (window.CouncilInterface) { window.CouncilInterface.close(); return; }
+        document.getElementById("speech-bubble").style.display = "none";
+    }
 
     function setSpeakerTurn(persona, turn) {
         if (!persona) return;

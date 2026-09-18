@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.14.09.2026.r1.17:44" />
+<meta name="admiranext-version" content="AdmiraNeXT v.18.09.2026.r3.18:50" />
     <script src="/admira-bar.js?v=20260713-r36"></script>
     <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
 <meta charset="UTF-8">
@@ -1036,7 +1036,7 @@ let PRESENCE_FULL={}; // key(_norm máquina) → registro más reciente {persona
 // `control_machines` viene en el MISMO /api/presence que ya se pedía; sólo había que
 // mirarlo. key(_norm máquina) → {slots:[…], updated}
 let MANDO_BY_MACHINE={};
-const MANDO_FRESH=60;   // s — un watcher que no reporta hace un minuto ya no manda
+const MANDO_FRESH=180;   // s — un timeout de snapshot no puede pintar «falta el watcher»
 const PRESENCE_FRESH=180;   // s — latido de presencia considerado "online"
 const FLEET_FRESH=300;      // s — registro de admira-fleet considerado "online"
 async function loadPersonas(){
@@ -1140,8 +1140,8 @@ function agentNowHtml(m){ const e=agentEntry(m); if(!e||!e.status) return '';
 // ranuras gobernables hay y hace cuánto respondió el watcher; y si no hay, lo dice
 // también, con el comando exacto para instalarlo en vez de dejarte adivinando.
 function mandoHtml(m){
-  const k=_norm(m&&(m.name||m.id)); if(!k) return '';
-  const g=MANDO_BY_MACHINE[k];
+  const k=_norm(m&&(m.name||m.id))||_norm(m&&m.id); if(!k) return '';
+  const g=MANDO_BY_MACHINE[k]||MANDO_BY_MACHINE[_norm(m&&m.id)]||MANDO_BY_MACHINE[_norm(String(m&&m.fqdn||'').split('.')[0])];
   if(!g||!g.slots.length){
     // Sin watcher también se pliega igual que los demás (Carlos, 5-sep-2026): el pill de control y
     // «probar» quedan dentro, y al desplegar se lee qué falta y cómo se instala.

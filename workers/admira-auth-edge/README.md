@@ -48,3 +48,7 @@ Google inválida `401 google_not_authorized` y una cuenta fuera de `superusers`
 `403 account_not_authorized`. Los navegadores reciben explicación y enlace para
 reiniciar el login; los clientes JSON conservan el código de error. No se crea
 sesión ante fallos de red, configuración, formato o autorización.
+
+El fetch de Workers usa `redirect:manual` y rechaza cualquier 3xx: su runtime no
+admite `redirect:error`, aunque Node sí. El health posterior al despliegue
+comprueba esa diferencia real; las pruebas locales por sí solas no bastan.

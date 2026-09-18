@@ -35,7 +35,7 @@ function trustedFetch(url, init) {
   }
   assert.equal(url, 'https://whitelist.admira.store/list');
   assert.equal(init.headers['X-Whitelist-Token'], 'test-machine-credential');
-  assert.equal(init.redirect, 'error');
+  assert.equal(init.redirect, 'manual');
   return Promise.resolve(Response.json({superusers:['carlos@example.com']}));
 }
 
@@ -178,7 +178,7 @@ async function loginCase({allow, google, env = {}, accept = 'application/json', 
     allowCalls++;
     assert.equal(url, 'https://whitelist.admira.store/list');
     assert.equal(init.headers['X-Whitelist-Token'], 'test-machine-credential');
-    assert.equal(init.redirect, 'error');
+    assert.equal(init.redirect, 'manual');
     assert.ok(init.signal);
     return allow ? allow(url, init) : Response.json({superusers:['carlos@example.com']});
   }});

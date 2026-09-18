@@ -91,20 +91,20 @@ function json(body, status = 200, extra = {}) {
 async function readAuthorization(env, fetchImpl) {
   const secret = String(env.WHITELIST_MACHINE_TOKEN || '').trim();
   if (!secret || /[\r\n]/.test(secret) || (env.WHITELIST_URL && env.WHITELIST_URL !== WHITELIST_URL)) {
-    return {error:'authorization_unavailable', status:503};
+    return {error:'authorization_unavailable', status:503, dependency_reason:'configuration'};
   }
   try {
     const response = await fetchImpl(WHITELIST_URL, {
       headers:{Accept:'application/json', 'X-Whitelist-Token':secret},
-      redirect:'error', signal:AbortSignal.timeout(8000), cache:'no-store'
+      redirect:'manual', signal:AbortSignal.timeout(8000)
     });
-    if (!response.ok) return {error:'authorization_unavailable', status:503};
+    if (!response.ok) return {error:'authorization_unavailable', status:503, dependency_reason:'upstream_status', dependency_status:response.status};
     const data = await response.json();
     if (!Array.isArray(data.superusers) || !data.superusers.every(email => typeof email === 'string')) {
-      return {error:'authorization_unavailable', status:503};
+      return {error:'authorization_unavailable', status:503, dependency_reason:'invalid_response'};
     }
     return {superusers:data.superusers.map(email => email.trim().toLowerCase())};
-  } catch (_) { return {error:'authorization_unavailable', status:503}; }
+  } catch (error) { return {error:'authorization_unavailable', status:503, dependency_reason:'fetch_failed', dependency_error:error?.name || 'Error', dependency_detail:String(error?.message || '').replaceAll(secret, '[redacted]').slice(0, 180)}; }
 }
 
 async function verifyGoogle(credential, nonce, env, fetchImpl, now = Date.now()) {
@@ -115,7 +115,7 @@ async function verifyGoogle(credential, nonce, env, fetchImpl, now = Date.now())
     const response = await fetchImpl('https://oauth2.googleapis.com/tokeninfo', {
       method:'POST', headers:{'Content-Type':'application/x-www-form-urlencoded'},
       body:new URLSearchParams({id_token:credential}).toString(),
-      redirect:'error', signal:AbortSignal.timeout(8000)
+      redirect:'manual', signal:AbortSignal.timeout(8000)
     });
     if (!response.ok) return response.status === 400 || response.status === 401
       ? invalid : {error:'google_validation_unavailable', status:503};
@@ -268,7 +268,7 @@ export function createWorker({fetchImpl = fetch, now = Date.now} = {}) {
       if (url.pathname === '/auth/health') {
         if (request.method !== 'GET' || !internalAuthorized(request, env)) return json({error:'not_authorized'}, 403);
         const result = await readAuthorization(env, fetchImpl);
-        return result.error ? json({ok:false, error:result.error}, result.status)
+        return result.error ? json({ok:false, error:result.error, dependency_reason:result.dependency_reason, dependency_status:result.dependency_status, dependency_error:result.dependency_error, dependency_detail:result.dependency_detail}, result.status)
           : json({ok:true, authorization:'ready'});
       }
       if (url.pathname === '/auth/challenge') {

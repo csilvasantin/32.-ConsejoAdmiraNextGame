@@ -7,6 +7,12 @@
 <meta name="robots" content="noindex,nofollow">
 <meta name="theme-color" content="#0b0e07">
 <link rel="icon" href="/admira-logo-retro.svg">
+<link rel="manifest" href="/ubicacion/manifest.webmanifest">
+<link rel="apple-touch-icon" href="/app/apple-touch-icon.png">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Badge">
+<meta name="mobile-web-app-capable" content="yes">
 <style>
   :root{--bg:#0b0e07;--panel:#141a10;--ink:#dfe8d0;--dim:#8fae6a;--amber:#ffdd66;--green:#689840;--vip:#f0c040;--line:rgba(143,174,106,.25);--rojo:#e06c5a}
   html,body{margin:0;min-height:100%;background:var(--bg);color:var(--ink);font:16px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace}
@@ -40,7 +46,8 @@
   <button class="btn" id="b-ir">Compartir mi ubicación</button>
   <button class="btn stop" id="b-stop" style="display:none">Dejar de compartir</button>
   <div id="estado"><span class="luz" id="luz"></span><span id="txt">Pulsa el botón y acepta el permiso de ubicación de tu móvil.</span></div>
-  <div class="nota">Tu posición solo se comparte <b>mientras esta página está abierta</b> y desaparece del mapa 90 segundos después de cerrarla. No se guarda historial. Solo la ve el equipo de la AdmiraXperience.</div>
+  <div class="nota" id="plataforma"></div>
+  <div class="nota">Tu posición solo se comparte <b>mientras esta página está abierta en primer plano</b> y desaparece del mapa 90 segundos después de cerrarla o bloquear el móvil. Solo la ve el equipo de la AdmiraXperience.</div>
 </main>
 <script>
 (function(){
@@ -54,6 +61,17 @@
   if (!("geolocation" in navigator)) { bIr.disabled = true; luz.className = "luz err"; txt.textContent = "Este navegador no tiene geolocalización."; return; }
 
   var watchId = null, ultimoEnvio = 0, enviados = 0, fallos = 0, wake = null, pendiente = null;
+  // Plataforma: consejo concreto para cada móvil. En iPhone/Android la web NO puede ubicar en
+  // segundo plano: hay que dejar la página abierta. «Añadir a pantalla de inicio» la deja a pantalla
+  // completa y evita cerrarla sin querer.
+  var ua = navigator.userAgent || "", esIOS = /iPhone|iPad|iPod/.test(ua) || (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1), esAndroid = /Android/.test(ua);
+  var standalone = window.matchMedia("(display-mode: standalone)").matches || navigator.standalone === true;
+  var tieneWake = !!(navigator.wakeLock && navigator.wakeLock.request);
+  $("#plataforma").innerHTML = esIOS
+    ? "<b>iPhone:</b> deja esta página abierta y con la pantalla encendida" + (tieneWake ? " (la mantengo despierta)" : " (sube el tiempo de bloqueo en Ajustes › Pantalla)") + ". Para tenerla a mano: Compartir → <b>Añadir a pantalla de inicio</b>." + (standalone ? " ✓ Ya está en tu pantalla de inicio." : "")
+    : esAndroid
+    ? "<b>Android:</b> deja esta página abierta" + (tieneWake ? " (la mantengo despierta)" : "") + ". Para tenerla a mano: menú ⋮ → <b>Añadir a pantalla de inicio</b>." + (standalone ? " ✓ Ya está en tu pantalla de inicio." : "")
+    : "Funciona en iPhone y Android desde el navegador, sin instalar nada.";
   function estado(cls, html){ luz.className = "luz " + cls; txt.innerHTML = html; }
   function enviar(pos){
     var c = pos.coords, ahora = Date.now();
@@ -83,7 +101,12 @@
     estado("", "Has dejado de compartir. Desaparecerás del mapa en 90 s.");
   }
   bIr.onclick = iniciar; bStop.onclick = parar;
-  document.addEventListener("visibilitychange", function(){ if (document.visibilityState==="visible" && watchId!=null && navigator.wakeLock && !wake) navigator.wakeLock.request("screen").then(function(w){ wake = w; }).catch(function(){}); });
+  document.addEventListener("visibilitychange", function(){
+    if (document.visibilityState !== "visible" || watchId == null) return;
+    if (navigator.wakeLock && !wake) navigator.wakeLock.request("screen").then(function(w){ wake = w; }).catch(function(){});
+    ultimoEnvio = 0;  // al volver a primer plano, la siguiente posición sale sin esperar
+    navigator.geolocation.getCurrentPosition(enviar, function(){}, { enableHighAccuracy:true, maximumAge:0, timeout:15000 });
+  });
 })();
 </script>
 </body>

@@ -1,0 +1,15 @@
+{
+  "name": "Badge · AdmiraXperience",
+  "short_name": "Badge",
+  "description": "Tu badge de invitado: comparte tu ubicación con el equipo mientras la página está abierta.",
+  "start_url": "/ubicacion/invitado",
+  "scope": "/ubicacion/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#0b0e07",
+  "theme_color": "#0b0e07",
+  "icons": [
+    { "src": "/admira-logo-retro.svg", "sizes": "any", "type": "image/svg+xml", "purpose": "any" },
+    { "src": "/app/apple-touch-icon.png", "sizes": "180x180", "type": "image/png" }
+  ]
+}

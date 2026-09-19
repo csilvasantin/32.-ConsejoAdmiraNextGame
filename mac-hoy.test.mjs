@@ -109,3 +109,13 @@ test('noveno objeto: el motor devuelve la elección de modelo', () => {
   assert.match(html, /data-panel="llm"/);
   assert.match(html, /\.inventory\.motor-abierto .inv-panel\[data-panel="llm"\]/);
 });
+
+test('paintCrt: la última escritura manda (no se pisan al navegar rápido)', async () => {
+  const { paintCrt } = await import('./assets/mac-hoy.js');
+  const el = { textContent: '', scrollTop: 0, scrollHeight: 0 };
+  const primera = paintCrt(el, 'AAAAAAAAAAAAAAAAAAAAAAAA');
+  const segunda = paintCrt(el, 'BBB');                 // releva a la anterior
+  await Promise.all([primera, segunda]);
+  await new Promise(r => setTimeout(r, 120));
+  assert.equal(el.textContent, 'BBB', 'no debe quedar rastro de la primera');
+});

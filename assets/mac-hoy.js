@@ -105,10 +105,15 @@ export function linesFor(missions, day = todayMadrid()) {
 
 export function paintCrt(el, text) {
   if (!el) return Promise.resolve();
+  // Testigo de relevo: el tecleado va letra a letra, y al pasar de ficha rápido
+  // dos escrituras se pisaban sobre el mismo elemento y salía el texto a medias.
+  // La última que entra manda; la anterior se retira en su siguiente tic.
+  const turno = (el.__crtTurno = (el.__crtTurno || 0) + 1);
   el.textContent = '';
   let i = 0;
   return new Promise((resolve) => {
     const tick = () => {
+      if (el.__crtTurno !== turno) return resolve();
       i += 2;
       el.textContent = text.slice(0, i);
       el.scrollTop = el.scrollHeight;

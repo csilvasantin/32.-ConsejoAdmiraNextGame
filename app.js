@@ -1759,6 +1759,7 @@
             '<li><strong>/scumm on|off|toggle</strong> — pliega/despliega el menú intermedio (verbos) — o el botón ▾</li>' +
             '<li><strong>/top on|off|toggle</strong> — pliega/despliega el menú superior (botón ▾)</li>' +
             '<li><strong>/bocas on|off|toggle</strong> — los consejeros vivos mueven la boca (hablan)</li>' +
+            '<li><strong>/mac on|off|toggle</strong> — muestra u oculta el Macintosh 1984 (misiones Hoy)</li>' +
             '<li><strong>/yarig on|off|toggle</strong> — fija u oculta Yarig en la mesa</li>' +
             '<li><strong>/yarig login</strong> — abre la sesión persistente de Yarig</li>' +
             '<li><strong>/yarig estado</strong> — comprueba watcher y frescura del sync</li>' +
@@ -2311,6 +2312,20 @@
         const yarigStatusMatch = text.match(/^\/yarig(?:\.ai)?\s+(estado|status|salud|health)$/i);
         if (yarigStatusMatch) {
             void checkYarigStatus();
+            return true;
+        }
+        const macMatch = text.match(/^\/mac(?:\s+(on|off|toggle))?$/i);
+        if (macMatch) {
+            const action = (macMatch[1] || 'toggle').toLowerCase();
+            const api = window.MacHoy;
+            if (!api || typeof api.setVisible !== 'function') {
+                setActionLine('🖥 Macintosh Hoy no está listo');
+                return true;
+            }
+            if (action === 'on') api.setVisible(true);
+            else if (action === 'off') api.setVisible(false);
+            else api.toggle();
+            setActionLine(api.isVisible() ? '🖥 Macintosh Hoy — CRT con misiones vivas · /mac off limpia la mesa' : '🖥 mesa limpia — /mac o MOSTRAR para encender el CRT');
             return true;
         }
         const yarigMatch = text.match(/^\/yarig(?:\.ai)?(?:\s+(on|off|toggle))?$/i);

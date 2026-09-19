@@ -25,15 +25,15 @@ export function seatOf(mission) {
 }
 
 export function linesFor(missions, day = todayMadrid()) {
-  const order = { in_progress: 0, open: 1, pending: 1, resolved: 2 };
+  const order = { in_progress: 0, open: 1, pending: 1 };
   const rows = (Array.isArray(missions) ? missions : [])
-    .filter((m) => isHoy(m, day) && m.status !== 'cancelled')
+    .filter((m) => isHoy(m, day) && m.status !== 'cancelled' && m.status !== 'resolved')
     .sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9) || Number(b.created_at || 0) - Number(a.created_at || 0))
-    .slice(0, 4);
+    .slice(0, 3);
   const head = [`HOY ${day.slice(8, 10)}-${day.slice(5, 7)}`];
-  if (!rows.length) return head.concat(['sin FLT hoy']);
+  if (!rows.length) return head.concat(['sin FLT vivas']);
   return head.concat(rows.map((m) => {
-    const mark = m.status === 'resolved' ? '+' : m.status === 'in_progress' ? '*' : '·';
+    const mark = m.status === 'in_progress' ? '*' : '·';
     const id = String(m.id || '').replace(/^FLT-/, '').slice(-4);
     const nick = seatOf(m).split('·')[0].trim().slice(0, 8);
     return `${mark}${id} ${nick}`;
@@ -62,32 +62,67 @@ export async function fetchHoy(fetchImpl = fetch) {
   return data.missions || data.items || [];
 }
 
-export async function boot(root = document, fetchImpl = fetch) {
+let visible = false;
+let beatTimer = null;
+let lastRoot = null;
+let lastFetch = fetch;
+
+async function draw(root, fetchImpl) {
   const screen = root.querySelector('#mac-hoy-crt');
   const prop = root.querySelector('#mac-hoy-prop');
-  if (!screen || !prop) return;
-  const draw = async () => {
-    prop.classList.add('refreshing');
-    try {
-      const lines = linesFor(await fetchHoy(fetchImpl));
-      await paintCrt(screen, lines.join('\n'));
-    } catch (_) {
-      await paintCrt(screen, 'HOY\n(sin cable Yokup)');
-    }
-    prop.classList.remove('refreshing');
-  };
+  if (!screen || !prop || !visible) return;
+  prop.classList.add('refreshing');
+  try {
+    const lines = linesFor(await fetchHoy(fetchImpl));
+    await paintCrt(screen, lines.join('\n'));
+  } catch (_) {
+    await paintCrt(screen, 'HOY\n(sin cable Yokup)');
+  }
+  prop.classList.remove('refreshing');
+}
+
+export function isVisible() { return visible; }
+
+export function setVisible(on, root = lastRoot || (typeof document !== 'undefined' ? document : null), fetchImpl = lastFetch) {
+  if (!root) return false;
+  lastRoot = root;
+  lastFetch = fetchImpl;
+  const prop = root.querySelector('#mac-hoy-prop');
+  const btn = root.querySelector('#btn-mostrar');
+  visible = !!on;
+  if (prop) prop.classList.toggle('on', visible);
+  if (btn) {
+    btn.classList.toggle('active', visible);
+    btn.textContent = visible ? 'Ocultar' : 'Mostrar';
+  }
+  if (visible) {
+    draw(root, fetchImpl);
+    if (!beatTimer) beatTimer = setInterval(() => draw(lastRoot, lastFetch), 45000);
+  } else if (beatTimer) {
+    clearInterval(beatTimer);
+    beatTimer = null;
+  }
+  return visible;
+}
+
+export function toggle(root, fetchImpl) {
+  return setVisible(!visible, root, fetchImpl);
+}
+
+export function boot(root = document, fetchImpl = fetch) {
+  const prop = root.querySelector('#mac-hoy-prop');
+  if (!prop) return;
+  setVisible(false, root, fetchImpl);
   const video = root.getElementById && root.getElementById('presentation-video');
   if (video) {
-    video.addEventListener('play', () => { prop.style.visibility = 'hidden'; });
-    video.addEventListener('pause', () => { prop.style.visibility = ''; });
-    video.addEventListener('ended', () => { prop.style.visibility = ''; });
+    video.addEventListener('play', () => { if (prop) prop.style.visibility = 'hidden'; });
+    video.addEventListener('pause', () => { if (prop) prop.style.visibility = ''; });
+    video.addEventListener('ended', () => { if (prop) prop.style.visibility = ''; });
   }
-  await draw();
-  setInterval(draw, 45000);
 }
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-  window.MacHoy = { todayMadrid, isHoy, seatOf, linesFor, paintCrt, fetchHoy, boot };
+  window.MacHoy = { todayMadrid, isHoy, seatOf, linesFor, paintCrt, fetchHoy, boot, setVisible, toggle, isVisible };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => boot());
   else boot();
 }

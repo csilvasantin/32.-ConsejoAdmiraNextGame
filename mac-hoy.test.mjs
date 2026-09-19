@@ -21,7 +21,7 @@ test('isHoy usa display_day y no cuela histórico', () => {
   assert.equal(isHoy({ created_at: Date.parse('2026-09-19T10:00:00+02:00') }, day), true);
 });
 
-test('linesFor: FLT + silla + solo Hoy, resueltas incluidas', () => {
+test('linesFor: FLT + silla + solo Hoy vivas (sin resueltas ni histórico)', () => {
   const day = todayMadrid(Date.parse('2026-09-19T15:00:00+02:00'));
   const lines = linesFor([
     { id: 'FLT-100657', display_day: day, status: 'in_progress', persona: 'SmithMacMini', role: 'status-web · Smith', subject: 'Mac CRT 1984 en mesa Consejo' },
@@ -32,7 +32,18 @@ test('linesFor: FLT + silla + solo Hoy, resueltas incluidas', () => {
   assert.match(blob, /HOY/);
   assert.match(blob, /0657|100657|657/);
   assert.match(blob, /Smith/);
-  assert.match(blob, /0655|100655|655/);
+  assert.doesNotMatch(blob, /0655|100655/);
   assert.doesNotMatch(blob, /histórico/);
   assert.equal(seatOf({ persona: 'DisneyGrokBot', role: 'CCO' }).includes('Disney'), true);
+});
+
+test('P0 on-demand: mesa limpia por defecto, MOSTRAR en col3 fila4, /mac en CLI', () => {
+  assert.match(html, /id="btn-mostrar"/);
+  assert.match(html, />Mostrar</);
+  assert.match(html, /mac-hoy-prop\.on/);
+  const app = fs.readFileSync(new URL('./app.js', import.meta.url), 'utf8');
+  assert.match(app, /\/mac/);
+  const css = html.slice(html.indexOf('.mac-hoy-prop {'), html.indexOf('.mac-hoy-prop.on'));
+  assert.match(css, /display:\s*none/);
+  assert.match(css, /width:\s*20%/);
 });

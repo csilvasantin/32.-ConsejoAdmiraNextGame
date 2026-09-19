@@ -1529,17 +1529,19 @@
             0%, 100% { box-shadow: 0 0 18px rgba(80, 255, 120, 0.4), inset 0 0 12px rgba(80, 255, 120, 0.2); }
             50% { box-shadow: 0 0 28px rgba(80, 255, 120, 0.6), inset 0 0 18px rgba(80, 255, 120, 0.35); }
         }
-        /* FLT-100659 HandON FLT-100656: prop recortado (PNG alpha), CRT legible desde la silla, cero pegote. */
+        /* FLT-100662 P0: Mac −45% centrado, ON-DEMAND (/mac · MOSTRAR). Off = mesa limpia. */
         .mac-hoy-prop {
+            display: none;
             position: absolute;
-            left: 31%;
-            top: 46%;
-            width: 38%;
+            left: 41%;
+            top: 55%;
+            width: 20%;
             z-index: 5;
             pointer-events: auto;
             cursor: pointer;
-            filter: drop-shadow(0 14px 16px rgba(0,0,0,.62));
+            filter: drop-shadow(0 10px 12px rgba(0,0,0,.55));
         }
+        .mac-hoy-prop.on { display: block; }
         .mac-hoy-prop img {
             width: 100%;
             height: auto;
@@ -1559,7 +1561,7 @@
             background: radial-gradient(ellipse at 50% 40%, #0c3218 0%, #021004 75%);
             color: #b6ffc2;
             font-family: 'Press Start 2P', ui-monospace, monospace;
-            font-size: clamp(8px, 0.95vw, 13px);
+            font-size: clamp(6px, 0.7vw, 10px);
             line-height: 1.45;
             letter-spacing: 0.01em;
             white-space: pre;
@@ -1579,8 +1581,8 @@
             pointer-events: none;
         }
         @media (max-width: 720px) {
-            .mac-hoy-prop { left: 24%; top: 50%; width: 52%; }
-            .mac-hoy-crt { font-size: 8px; }
+            .mac-hoy-prop { left: 36%; top: 56%; width: 28%; }
+            .mac-hoy-crt { font-size: 6px; }
         }
         /* ── Bocas que se mueven cuando el consejero está "vivo" ──
            alive  = su máquina está online (habla despacio, idle)
@@ -3202,6 +3204,7 @@ body.rail-open{overflow:hidden}
                     <button class="verb-btn" data-verb="analizar" title="Analiza una URL, texto o archivo con el Consejo" onclick="selectVerb(this)">Analizar</button>
                     <button class="verb-btn" data-verb="presentar" title="Genera una presentación a partir de un tema" onclick="selectVerb(this)">Presentar</button>
                     <button class="verb-btn verb-primary" data-verb="reunion" title="Reúnete a solas con un consejero (chat 1 a 1)" onclick="selectVerb(this)">Reunión</button>
+                    <button class="verb-btn" id="btn-mostrar" type="button" title="Muestra u oculta el Macintosh 1984 (misiones Hoy) · mismo gesto que /mac" onclick="event.stopPropagation(); window.MacHoy && window.MacHoy.toggle()">Mostrar</button>
                     <button class="verb-btn" data-verb="previo" id="btn-previo" title="Reabre la última presentación generada" onclick="selectVerb(this)" style="display:none;border-left:2px solid #5a3a1e">Previo</button>
                 </div>
                 <div class="inventory">
@@ -3668,7 +3671,7 @@ body.rail-open{overflow:hidden}
 </style>
 <!-- El markup del panel vive DENTRO del riel AVANZADO (#rail-avanzado), sección
      «Tareas» — reubicado ahí para respetar el metaestilo SCUMM de la home. -->
-<script defer src="app.js?v=boca-v2-20260911"></script>
-<script type="module" src="assets/mac-hoy.js?v=20260919-handon"></script>
+<script defer src="app.js?v=20260919-mac"></script>
+<script type="module" src="assets/mac-hoy.js?v=20260919-p0"></script>
 </body>
 </html>

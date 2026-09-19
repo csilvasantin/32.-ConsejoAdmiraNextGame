@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { todayMadrid, isHoy, linesFor, seatOf } from './assets/mac-hoy.js';
+import { todayMadrid, isHoy, linesFor, seatOf, mesaLines, frontLines, MESA_COPY, IDLE_COPY, ERROR_COPY } from './assets/mac-hoy.js';
 
 const html = fs.readFileSync(new URL('./index.html', import.meta.url), 'utf8');
 
@@ -21,20 +21,26 @@ test('isHoy usa display_day y no cuela histórico', () => {
   assert.equal(isHoy({ created_at: Date.parse('2026-09-19T10:00:00+02:00') }, day), true);
 });
 
-test('linesFor: FLT + silla + solo Hoy vivas (sin resueltas ni histórico)', () => {
+test('copy 8-bit Lucas+Disney: mesa teaser, frontal FLT+[OPEN|DONE], idle y error', () => {
+  assert.equal(MESA_COPY, 'HOY · CONSEJO\nPULSO DEL DIA\nCLICK PARA LEER');
+  assert.match(IDLE_COPY, /ESPERANDO LATIDO/);
+  assert.match(ERROR_COPY, /SIN SENAL/);
+  assert.deepEqual(mesaLines(), ['HOY · CONSEJO', 'PULSO DEL DIA', 'CLICK PARA LEER']);
   const day = todayMadrid(Date.parse('2026-09-19T15:00:00+02:00'));
-  const lines = linesFor([
-    { id: 'FLT-100657', display_day: day, status: 'in_progress', persona: 'SmithMacMini', role: 'status-web · Smith', subject: 'Mac CRT 1984 en mesa Consejo' },
-    { id: 'FLT-100655', display_day: day, status: 'resolved', persona: 'WozniakGrokBot', role: 'CTO', subject: 'Macintosh 1984 beige CRT' },
-    { id: 'FLT-9', display_day: '2020-01-01', status: 'open', persona: 'Viejo', subject: 'histórico' },
-  ], day);
-  const blob = lines.join('\n');
-  assert.match(blob, /HOY/);
-  assert.match(blob, /0657|100657|657/);
-  assert.match(blob, /Smith/);
-  assert.doesNotMatch(blob, /0655|100655/);
+  const blob = frontLines([
+    { id: 'FLT-100657', display_day: day, status: 'in_progress', subject: 'Mac CRT 1984 en mesa Consejo' },
+    { id: 'FLT-100655', display_day: day, status: 'resolved', subject: 'Macintosh 1984 beige CRT' },
+    { id: 'FLT-9', display_day: '2020-01-01', status: 'open', subject: 'histórico' },
+  ], day).join('\n');
+  assert.match(blob, />>> MISIONES HOY/);
+  assert.match(blob, /FLT-100657/);
+  assert.match(blob, /\[OPEN\]/);
+  assert.match(blob, /FLT-100655/);
+  assert.match(blob, /\[DONE\]/);
+  assert.match(blob, /DREAM\.PLAN\.DO\.REVIEW/);
   assert.doesNotMatch(blob, /histórico/);
   assert.equal(seatOf({ persona: 'DisneyGrokBot', role: 'CCO' }).includes('Disney'), true);
+  assert.equal(linesFor([], day).join('\n'), frontLines([], day).join('\n'));
 });
 
 test('P0 on-demand: mesa limpia por defecto, MOSTRAR en col3 fila4, /mac en CLI', () => {

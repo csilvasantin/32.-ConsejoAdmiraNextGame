@@ -24,20 +24,33 @@ export function seatOf(mission) {
   return bits.join(' · ') || 'sin silla';
 }
 
+export const MESA_COPY = 'HOY · CONSEJO\nPULSO DEL DIA\nCLICK PARA LEER';
+export const IDLE_COPY = 'ESPERANDO LATIDO...\nYOKUP · HOY';
+export const ERROR_COPY = 'SIN SENAL\nREINTENTAR';
+
 export function linesFor(missions, day = todayMadrid()) {
-  const order = { in_progress: 0, open: 1, pending: 1 };
+  return frontLines(missions, day);
+}
+
+export function mesaLines() {
+  return MESA_COPY.split('\n');
+}
+
+export function frontLines(missions, day = todayMadrid()) {
+  const order = { in_progress: 0, open: 1, pending: 1, resolved: 2 };
   const rows = (Array.isArray(missions) ? missions : [])
-    .filter((m) => isHoy(m, day) && m.status !== 'cancelled' && m.status !== 'resolved')
+    .filter((m) => isHoy(m, day) && m.status !== 'cancelled')
     .sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9) || Number(b.created_at || 0) - Number(a.created_at || 0))
-    .slice(0, 3);
-  const head = [`HOY ${day.slice(8, 10)}-${day.slice(5, 7)}`];
-  if (!rows.length) return head.concat(['sin FLT vivas']);
-  return head.concat(rows.map((m) => {
-    const mark = m.status === 'in_progress' ? '*' : '·';
-    const id = String(m.id || '').replace(/^FLT-/, '').slice(-4);
-    const nick = seatOf(m).split('·')[0].trim().slice(0, 8);
-    return `${mark}${id} ${nick}`;
-  }));
+    .slice(0, 4);
+  const head = ['>>> MISIONES HOY'];
+  if (!rows.length) return head.concat(['SIN FLT HOY', 'DREAM.PLAN.DO.REVIEW']);
+  const body = rows.map((m) => {
+    const st = m.status === 'resolved' ? 'DONE' : 'OPEN';
+    const id = String(m.id || 'FLT-????');
+    const title = String(m.subject || m.display_ref || '').replace(/\s+/g, ' ').trim().slice(0, 16);
+    return `${id} · ${title} · [${st}]`;
+  });
+  return head.concat(body, ['DREAM.PLAN.DO.REVIEW']);
 }
 
 export function paintCrt(el, text) {
@@ -67,7 +80,7 @@ let focused = false;
 let beatTimer = null;
 let lastRoot = null;
 let lastFetch = fetch;
-let lastText = 'HOY';
+let lastText = IDLE_COPY;
 
 async function draw(root, fetchImpl) {
   const mesa = root.querySelector('#mac-hoy-crt');
@@ -75,13 +88,17 @@ async function draw(root, fetchImpl) {
   const prop = root.querySelector('#mac-hoy-prop');
   if (!mesa || !prop || !visible) return;
   prop.classList.add('refreshing');
+  if (mesa) mesa.textContent = IDLE_COPY;
+  if (front) front.textContent = IDLE_COPY;
   try {
-    lastText = linesFor(await fetchHoy(fetchImpl)).join('\n');
+    lastText = frontLines(await fetchHoy(fetchImpl)).join('\n');
+    await paintCrt(mesa, MESA_COPY);
+    if (front) await paintCrt(front, lastText);
   } catch (_) {
-    lastText = 'HOY\n(sin cable Yokup)';
+    lastText = ERROR_COPY;
+    await paintCrt(mesa, ERROR_COPY);
+    if (front) await paintCrt(front, ERROR_COPY);
   }
-  await paintCrt(mesa, lastText);
-  if (front) await paintCrt(front, lastText);
   prop.classList.remove('refreshing');
 }
 
@@ -156,7 +173,7 @@ export function boot(root = document, fetchImpl = fetch) {
 }
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-  window.MacHoy = { todayMadrid, isHoy, seatOf, linesFor, paintCrt, fetchHoy, boot, setVisible, toggle, isVisible, isFocused, openFront, closeFront };
+  window.MacHoy = { todayMadrid, isHoy, seatOf, linesFor, mesaLines, frontLines, MESA_COPY, IDLE_COPY, ERROR_COPY, paintCrt, fetchHoy, boot, setVisible, toggle, isVisible, isFocused, openFront, closeFront };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => boot());
   else boot();
 }

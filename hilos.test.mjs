@@ -54,3 +54,18 @@ test('saltar a un consejero de GrokBot no deja en pantalla el hilo del anterior'
   assert.match(rama, /conv-creativo/);
   assert.match(rama, /innerHTML = ""/);
 });
+
+test('streaming: se pinta en vivo, sin duplicar y sin innerHTML del modelo', () => {
+  assert.match(src, /async function askOneAgentStream/);
+  // SSE de verdad: eventos separados por línea en blanco, montados desde trozos de red
+  assert.match(src, /buffer\.indexOf\("\\n\\n"\)/);
+  assert.match(src, /getReader\(\)/);
+  // el texto del modelo NUNCA por innerHTML mientras se pinta en vivo
+  const f = src.slice(src.indexOf('function pintaParcial'), src.indexOf('function cierraParcial'));
+  assert.match(f, /_entradaViva\.txt\.textContent = texto/);
+  assert.ok(!/innerHTML = texto/.test(f));
+  // si el streaming no sale, se cae al camino de siempre
+  assert.match(src, /if \(!reply\) \{ cierraParcial\(\); reply = await askOneAgentAPI/);
+  // y no se pinta dos veces la misma respuesta
+  assert.match(src, /if \(pintadoEnVivo\) \{ pintaParcial\(panelId, agent, reply\.content\); cierraParcial\(\); \}/);
+});

@@ -4865,6 +4865,76 @@
         return null; // triggers fallback
     }
 
+    // ── P4 · STREAMING ──────────────────────────────────────────────────────
+    // La respuesta llegaba de una pieza tras 10-40 s de pantalla muerta. Ahora
+    // se va pintando conforme el modelo la emite. Si el streaming no sale
+    // —proxy viejo, red rara, proveedor sin soporte— devuelve null y quien
+    // llama se cae al camino de siempre sin que el usuario note nada.
+    let _entradaViva = null;
+    function pintaParcial(panelId, agent, texto) {
+        const panel = document.getElementById(panelId);
+        if (!panel) return;
+        if (!_entradaViva || _entradaViva.panelId !== panelId || !_entradaViva.el.isConnected) {
+            const el = document.createElement("div");
+            el.className = "conv-entry";
+            el.innerHTML = '<div class="conv-speaker ' + agent.side + '"></div><div class="conv-text"></div>';
+            el.querySelector(".conv-speaker").textContent = agent.icon + " " + agent.name;
+            panel.appendChild(el);
+            _entradaViva = { panelId, el, txt: el.querySelector(".conv-text") };
+        }
+        // textContent, no innerHTML: esto viene de un modelo y se pinta en vivo.
+        _entradaViva.txt.textContent = texto;
+        panel.scrollTop = panel.scrollHeight;
+    }
+    function cierraParcial() { _entradaViva = null; }
+
+    async function askOneAgentStream(message, agentName, onDelta) {
+        if (typeof AbortController === "undefined" || !window.ReadableStream) return null;
+        const effectiveMessage = buildCouncilPrompt(message);
+        let res;
+        try {
+            res = await fetch(CONSEJO_PROXY + "/ask-one/stream", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    message: effectiveMessage,
+                    agent_name: agentName,
+                    generation: currentGen,
+                    context: contextoParaApi(),
+                    llm: selectedLLM,
+                    confirm_expensive_video: true,
+                }),
+            });
+        } catch (e) { return null; }
+        if (!res.ok || !res.body || !/text\/event-stream/i.test(res.headers.get("Content-Type") || "")) return null;
+
+        const lector = res.body.getReader();
+        const dec = new TextDecoder();
+        let buffer = "", acumulado = "", cabecera = null, fallo = null;
+        try {
+            for (;;) {
+                const { value, done } = await lector.read();
+                if (done) break;
+                buffer += dec.decode(value, { stream: true });
+                let corte;
+                // Un evento SSE acaba en línea en blanco; un trozo de red puede
+                // traer medio evento, así que se acumula hasta tener uno entero.
+                while ((corte = buffer.indexOf("\n\n")) >= 0) {
+                    const bloque = buffer.slice(0, corte).trim();
+                    buffer = buffer.slice(corte + 2);
+                    if (!bloque.startsWith("data:")) continue;
+                    let o; try { o = JSON.parse(bloque.slice(5)); } catch (e) { continue; }
+                    if (o.start) cabecera = o;
+                    if (o.error) fallo = o.error;
+                    if (o.delta) { acumulado += o.delta; if (onDelta) onDelta(acumulado); }
+                    if (o.done) { cabecera = Object.assign({}, cabecera || {}, o); if (o.content) acumulado = o.content; }
+                }
+            }
+        } catch (e) { if (!acumulado) return null; }
+        if (!acumulado) { if (fallo) console.warn("stream:", fallo); return null; }
+        return Object.assign({}, cabecera || {}, { content: acumulado });
+    }
+
     async function askOneAgentAPI(message, agentName) {
         /** Call /api/council/ask-one for a single agent. */
         const urls = [CONSEJO_PROXY].concat(activeApiUrl ? [activeApiUrl] : COUNCIL_API_URLS);
@@ -4988,7 +5058,16 @@
             return;
         }
 
-        const reply = await askOneAgentAPI(question, agent.name);
+        // Primero por streaming: se pinta segun llega. Si no sale, al camino de
+        // siempre, y el usuario no se entera de la diferencia.
+        cierraParcial();
+        let pintadoEnVivo = false;
+        let reply = await askOneAgentStream(question, agent.name, (texto) => {
+            pintadoEnVivo = true;
+            pintaParcial(panelId, agent, texto);
+            showSpeechBubble(agent.persona, agent.name, texto.slice(-80));
+        });
+        if (!reply) { cierraParcial(); reply = await askOneAgentAPI(question, agent.name); pintadoEnVivo = false; }
 
         hideSpeechBubble();
         clearNameplateHighlight();
@@ -4997,7 +5076,10 @@
             // Show the speech bubble with the response
             showSpeechBubble(agent.persona, reply.name, reply.content.substring(0, 80) + "...");
             highlightNameplate(agent.persona, 1);
-            addConvEntry(panelId, reply.icon, reply.name, reply.persona, reply.side, reply.content);
+            // Si ya se pinto en vivo, se deja esa entrada: volver a añadirla
+            // duplicaria la respuesta en el panel.
+            if (pintadoEnVivo) { pintaParcial(panelId, agent, reply.content); cierraParcial(); }
+            else addConvEntry(panelId, reply.icon, reply.name, reply.persona, reply.side, reply.content);
             apuntaEnHilo({ role: "assistant", content: reply.name + ": " + reply.content, persona: reply.persona, name: reply.name, icon: reply.icon, side: reply.side });
             void notifyAgoraCouncil("answer", question, agent, reply.content);
 

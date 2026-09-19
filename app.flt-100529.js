@@ -1486,6 +1486,10 @@
         if (npMatch) npMatch.classList.add('selected');
         if (bhMatch) bhMatch.classList.add('selected');
         selectedAgent = agent;
+        // Cada silla, su hilo. Se abre ANTES de cualquier bifurcación para que el
+        // contexto que viaje al modelo sea el de ESTE consejero y no el del
+        // anterior, que era lo que pasaba con un array único para toda la mesa.
+        abreHilo(claveHilo(agent));
         if (!examinarMode && window.CouncilInterface?.has(persona)) {
             window.CouncilInterface.select(persona);
             setActionLine("GrokBot · " + persona + " — escribe y pulsa Enviar");
@@ -1504,8 +1508,17 @@
         const llmShort = llmEl ? llmEl.textContent.trim().replace('FREE','').trim().split(' ').slice(1).join(' ') : 'Claude';
         const matrixLink = getMatrixLink(agent);
         const matrixLabel = matrixLink ? " · Matrix: " + matrixLink.alias : "";
-        setActionLine("❓ Pregunta a " + agent.icon + " " + agent.persona + " (" + agent.name + matrixLabel + ") via " + llmShort + " — escribe y pulsa Enviar");
-        showSpeechBubble(agent.persona, agent.name, councilGreeting(agent));
+        // Si ya hablasteis, se repinta el hilo y se dice por dónde ibais, en vez
+        // de saludar como si fuera la primera vez teniendo memoria de lo anterior.
+        const turnos = conversationHistory.length;
+        if (turnos) {
+            repintaHilo(agent);
+            setActionLine("❓ " + agent.icon + " " + agent.persona + " · seguís donde lo dejasteis (" +
+                turnos + " turno" + (turnos === 1 ? "" : "s") + ") via " + llmShort + " — /olvidar borra el hilo");
+        } else {
+            setActionLine("❓ Pregunta a " + agent.icon + " " + agent.persona + " (" + agent.name + matrixLabel + ") via " + llmShort + " — escribe y pulsa Enviar");
+            showSpeechBubble(agent.persona, agent.name, councilGreeting(agent));
+        }
     }
 
     const VERB_LABELS = { preguntar:"Preguntar", examinar:"Examinar", debatir:"Debatir", entrenar:"Entrenar", crear:"Crear", hablar:"Yarig.AI", leer:"Pensar", votar:"Votar", analizar:"Analizar", presentar:"Presentar", previo:"Ver Previo", reunion:"Reunión" };
@@ -1756,6 +1769,7 @@
             '<li><strong>/bocas on|off|toggle</strong> — los consejeros vivos mueven la boca (hablan)</li>' +
             '<li><strong>/mac on|off|toggle</strong> — muestra u oculta el Macintosh 1984 (HOY + 3 FLT hechas)</li>' +
             '<li><strong>/motor on|off|toggle</strong> — abre la lista de modelos (Grok, Claude, Gemini…)</li>' +
+            '<li><strong>/olvidar [todo]</strong> — borra el hilo con el consejero actual (o el de toda la mesa)</li>' +
             '<li><strong>/yarig on|off|toggle</strong> — fija u oculta Yarig en la mesa</li>' +
             '<li><strong>/yarig login</strong> — abre la sesión persistente de Yarig</li>' +
             '<li><strong>/yarig estado</strong> — comprueba watcher y frescura del sync</li>' +
@@ -2073,7 +2087,7 @@
     const CLI_COMMANDS = [
         '/help', '/sites', '/admira.live', '/admira.studio', '/admiranext.com',
         '/admira.app', '/clearchannel.tv', '/pixeria.com', '/equipos', '/control',
-        '/scumm', '/top', '/bocas', '/mac', '/motor', '/menu', '/agoramatrix', '/tareas', '/google',
+        '/scumm', '/top', '/bocas', '/mac', '/motor', '/olvidar', '/menu', '/agoramatrix', '/tareas', '/google',
         '/importar', '/nombres', '/tarea', '/diario', '/leyendas', '/coetaneos', '/agentes', '/comandos', '/sendto',
         '/marcador', '/flota', '/highscore'
     ];
@@ -2215,6 +2229,28 @@
         // de modelo se queda sin puerta en el inventario: /motor la abre y la
         // cierra. La lista sigue en el DOM —de ella leen selectedLLM y
         // refreshLLMAvailability—, solo estaba oculta.
+        // Ahora que el hilo sobrevive al cierre y a la recarga, hace falta una
+        // forma explicita de borrarlo: sin esto no habria manera de empezar de
+        // cero con un consejero.
+        const olvidarMatch = text.match(/^\/olvidar(?:\s+(todo))?$/i);
+        if (olvidarMatch) {
+            if (olvidarMatch[1]) {
+                hilos = {}; guardaHilos(); abreHilo('mesa');
+                document.getElementById("conv-racional").innerHTML = "";
+                document.getElementById("conv-creativo").innerHTML = "";
+                setActionLine('🧹 Olvidados TODOS los hilos del Consejo');
+                return true;
+            }
+            const quien = selectedAgent ? selectedAgent.persona : null;
+            delete hilos[hiloActual];
+            guardaHilos();
+            abreHilo(hiloActual);
+            document.getElementById("conv-racional").innerHTML = "";
+            document.getElementById("conv-creativo").innerHTML = "";
+            setActionLine('🧹 Hilo olvidado' + (quien ? ' con ' + quien : '') + ' · /olvidar todo borra los de toda la mesa');
+            return true;
+        }
+
         const motorMatch = text.match(/^\/motor(?:\s+(on|off|toggle))?$/i);
         if (motorMatch) {
             const inv = document.querySelector('.inventory');
@@ -2427,7 +2463,9 @@
         document.getElementById("conv-area").classList.remove("active");
         document.getElementById("conv-racional").innerHTML = "";
         document.getElementById("conv-creativo").innerHTML = "";
-        conversationHistory = [];
+        // El hilo NO se borra: cerrar es dejar de mirar, no olvidar. Para
+        // olvidarlo de verdad está /olvidar.
+        abreHilo('mesa');
         exitPreguntarMode();
         setActionLine("Escribe aquí o usa /help...");
     }
@@ -2550,6 +2588,27 @@
             typing.style.display = "none";
             addMeetingMsg(meetingAdvisor, "Error de conexión: " + e.message);
         }
+    }
+
+    // Repinta en pantalla el hilo guardado de un consejero, para que al volver a
+    // él se vea lo que ya hablasteis en vez de un panel en blanco con memoria
+    // invisible. Escapa el contenido: viene de localStorage y de un modelo, y
+    // addConvEntry lo mete por innerHTML.
+    function repintaHilo(agent) {
+        const rac = document.getElementById("conv-racional");
+        const cre = document.getElementById("conv-creativo");
+        if (rac) rac.innerHTML = "";
+        if (cre) cre.innerHTML = "";
+        if (!conversationHistory.length) return;
+        const esc = t => String(t == null ? "" : t).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+        const panelId = (agent && agent.side === "creativo") ? "conv-creativo" : "conv-racional";
+        conversationHistory.forEach(e => {
+            if (e.role === "user") { addUserEntry(esc(e.content)); return; }
+            const cuerpo = String(e.content || "").replace(/^[^:]{1,40}:\s*/, "");
+            addConvEntry(panelId, e.icon || "🧠", e.name || (agent && agent.name) || "Consejo",
+                e.persona || (agent && agent.persona) || "", e.side || (agent && agent.side) || "racional", esc(cuerpo));
+        });
+        enterConversation();
     }
 
     function addConvEntry(panelId, icon, name, persona, side, text) {
@@ -3378,7 +3437,63 @@
     const YAR_DONE_BLOCK_END = '[/YAR_DONE]';
     let activeApiUrl = null;
     let activeAgoraCouncilUrl = null;
+    // ── HILOS DE CONVERSACIÓN, uno por consejero y persistentes ──────────────
+    // (Carlos, 2026-09-19: «que hablar en admira.live sea como hablar en GrokBot»;
+    // en GrokBot el hilo vive en la app y sobrevive a todo.)
+    // Aquí había UN solo array para toda la mesa, y eso daba dos problemas:
+    //   1) se compartía — preguntabas a Jobs, luego a Buffett, y Buffett recibía
+    //      como contexto lo que había dicho Jobs;
+    //   2) se perdía — exitConversation() lo vaciaba y recargar lo borraba.
+    // Ahora cada silla tiene su hilo, guardado por generación+persona.
+    // Turnos que se MANDAN al modelo. Eran 6 y por eso el consejero perdía el
+    // hilo a la tercera pregunta. El servidor recorta por su cuenta, así que
+    // subir esto solo no basta: hay que subirlo también allí.
+    const CONTEXTO_TURNOS = 20;
+    const HILOS_KEY = 'consejoHilos.v1';
+    const HILO_MAX = 40;          // turnos guardados por silla (no lo que se envía)
+    let hilos = {};
+    let hiloActual = 'mesa';      // los verbos de mesa (debatir, preguntar a todos) van aparte
+
+    function cargaHilos() {
+        try {
+            const crudo = JSON.parse(localStorage.getItem(HILOS_KEY) || '{}');
+            hilos = (crudo && typeof crudo === 'object' && !Array.isArray(crudo)) ? crudo : {};
+        } catch (e) { hilos = {}; }
+    }
+    function guardaHilos() {
+        // El navegador puede negarse (ventana privada, cuota llena): el hilo en
+        // memoria sigue sirviendo, sólo se perderá al recargar. No se avisa por
+        // cada turno; sería ruido.
+        try { localStorage.setItem(HILOS_KEY, JSON.stringify(hilos)); } catch (e) {}
+    }
+    function claveHilo(agent) {
+        if (!agent || !agent.persona) return 'mesa';
+        return (agent.gen || currentGen) + ':' + agent.persona;
+    }
+    function abreHilo(clave) {
+        hiloActual = clave || 'mesa';
+        const guardado = hilos[hiloActual];
+        conversationHistory = Array.isArray(guardado) ? guardado : [];
+        hilos[hiloActual] = conversationHistory;
+        return conversationHistory;
+    }
+    function apuntaEnHilo(entrada) {
+        conversationHistory.push(entrada);
+        if (conversationHistory.length > HILO_MAX) {
+            conversationHistory.splice(0, conversationHistory.length - HILO_MAX);
+        }
+        hilos[hiloActual] = conversationHistory;
+        guardaHilos();
+    }
+    // Lo que se manda al modelo va limpio: sólo role y content. Las entradas
+    // guardan además quién habló, para poder repintar el hilo al volver.
+    function contextoParaApi(turnos) {
+        return conversationHistory
+            .slice(-(turnos || CONTEXTO_TURNOS))
+            .map(e => ({ role: e.role, content: e.content }));
+    }
     let conversationHistory = [];
+    cargaHilos();
     let yarContext = { focus: "", doing: "", done: [], tasks: [], pending: [], taskBuckets: { inProgress: [], pending: [], done: [] }, activeTask: "", ask: "", updatedAt: "", syncUser: "", syncSource: "", dayStartAt: "", dayEndAt: "" };
     let yarStatus = null;
     let yarStatusErrors = [];
@@ -4706,7 +4821,7 @@
                     body: JSON.stringify({
                         message: effectiveMessage,
                         generation: currentGen,
-                        context: conversationHistory.slice(-6),
+                        context: contextoParaApi(),
                         llm: (baseUrl === CONSEJO_PROXY) ? "grok-4.6" : selectedLLM,
                         confirm_expensive_video: confirmedExpensiveVideo,
                     }),
@@ -4768,7 +4883,7 @@
                         message: effectiveMessage,
                         agent_name: agentName,
                         generation: currentGen,
-                        context: conversationHistory.slice(-6),
+                        context: contextoParaApi(),
                         llm: (baseUrl === CONSEJO_PROXY) ? "grok-4.6" : selectedLLM,
                         confirm_expensive_video: confirmedExpensiveVideo,
                     }),
@@ -4847,7 +4962,7 @@
         highlightNameplate(agent.persona, 1);
         setActionLine("🧠 " + agent.persona + " está pensando con " + llmLabel + matrixThinking + "...");
 
-        conversationHistory.push({ role: "user", content: question });
+        apuntaEnHilo({ role: "user", content: question });
         void notifyAgoraCouncil("question", question, agent);
 
         if (isScreenEmissionQuestion(question)) {
@@ -4858,7 +4973,7 @@
             showSpeechBubble(agent.persona, agent.name, deterministic.substring(0, 80) + "...");
             highlightNameplate(agent.persona, 1);
             addConvEntry(panelId, agent.icon, agent.name, agent.persona, agent.side, deterministic);
-            conversationHistory.push({ role: "assistant", content: agent.name + ": " + deterministic });
+            apuntaEnHilo({ role: "assistant", content: agent.name + ": " + deterministic, persona: agent.persona, name: agent.name, icon: agent.icon, side: agent.side });
             setActionLine("🖥️ " + agent.persona + " ha respondido desde el estado visual real de las pantallas");
             void notifyAgoraCouncil("answer", question, agent, deterministic);
             await new Promise(r => setTimeout(r, 3000));
@@ -4876,7 +4991,7 @@
             showSpeechBubble(agent.persona, reply.name, reply.content.substring(0, 80) + "...");
             highlightNameplate(agent.persona, 1);
             addConvEntry(panelId, reply.icon, reply.name, reply.persona, reply.side, reply.content);
-            conversationHistory.push({ role: "assistant", content: reply.name + ": " + reply.content });
+            apuntaEnHilo({ role: "assistant", content: reply.name + ": " + reply.content, persona: reply.persona, name: reply.name, icon: reply.icon, side: reply.side });
             void notifyAgoraCouncil("answer", question, agent, reply.content);
 
             setActionLine("✅ " + agent.persona + " ha respondido — escribe para seguir preguntando");
@@ -4924,7 +5039,7 @@
         showSpeechBubble(racionales[0].persona, "Consejo", bubbleMsg);
 
         // Add to conversation history
-        conversationHistory.push({ role: "user", content: question });
+        apuntaEnHilo({ role: "user", content: question });
 
         // Call real API
         const apiResponse = await askCouncilAPI(question);
@@ -4942,7 +5057,7 @@
                     highlightNameplate(member.persona, turnNumber);
                 }
                 addConvEntry("conv-racional", reply.icon, reply.name, reply.persona, "racional", reply.content);
-                conversationHistory.push({ role: "assistant", content: reply.name + ": " + reply.content });
+                apuntaEnHilo({ role: "assistant", content: reply.name + ": " + reply.content, persona: reply.persona, name: reply.name, icon: reply.icon, side: reply.side });
                 await new Promise(r => setTimeout(r, 400));
                 clearNameplateHighlight();
                 turnNumber += 1;
@@ -4954,7 +5069,7 @@
                     highlightNameplate(member.persona, turnNumber);
                 }
                 addConvEntry("conv-creativo", reply.icon, reply.name, reply.persona, "creativo", reply.content);
-                conversationHistory.push({ role: "assistant", content: reply.name + ": " + reply.content });
+                apuntaEnHilo({ role: "assistant", content: reply.name + ": " + reply.content, persona: reply.persona, name: reply.name, icon: reply.icon, side: reply.side });
                 await new Promise(r => setTimeout(r, 400));
                 clearNameplateHighlight();
                 turnNumber += 1;
@@ -5011,7 +5126,7 @@
         for (const m of [...racionales, ...creativos]) highlightNameplate(m.persona);
         showSpeechBubble(racionales[0].persona, "Consejo", "Los consejeros están " + verbGerund + "...");
 
-        conversationHistory.push({ role: "user", content: prompt });
+        apuntaEnHilo({ role: "user", content: prompt });
         const apiResponse = await askCouncilAPI(prompt);
 
         hideSpeechBubble();
@@ -5027,7 +5142,7 @@
                     highlightNameplate(member.persona, turnNumber);
                 }
                 addConvEntry("conv-racional", reply.icon, reply.name, reply.persona, "racional", reply.content);
-                conversationHistory.push({ role: "assistant", content: reply.name + ": " + reply.content });
+                apuntaEnHilo({ role: "assistant", content: reply.name + ": " + reply.content, persona: reply.persona, name: reply.name, icon: reply.icon, side: reply.side });
                 await new Promise(r => setTimeout(r, 500));
                 clearNameplateHighlight();
                 turnNumber += 1;
@@ -5039,7 +5154,7 @@
                     highlightNameplate(member.persona, turnNumber);
                 }
                 addConvEntry("conv-creativo", reply.icon, reply.name, reply.persona, "creativo", reply.content);
-                conversationHistory.push({ role: "assistant", content: reply.name + ": " + reply.content });
+                apuntaEnHilo({ role: "assistant", content: reply.name + ": " + reply.content, persona: reply.persona, name: reply.name, icon: reply.icon, side: reply.side });
                 await new Promise(r => setTimeout(r, 500));
                 clearNameplateHighlight();
                 turnNumber += 1;

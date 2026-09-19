@@ -70,6 +70,50 @@ let lastRoot = null;
 let lastFetch = fetch;
 let lastText = IDLE_COPY;
 
+/* Ancho natural de mac-1984-mesa.png. El plano del CRT se compone en 512x342
+   —los píxeles reales del Macintosh 128K— y la matriz --mac-scr lo proyecta
+   sobre el tubo de ESE dibujo, a tamaño natural. --mac-k reduce el resultado al
+   ancho al que la mesa esté pintando el Mac, así que la proyección sigue siendo
+   exacta a cualquier resolución. La traslación de una matrix3d va en px: no hay
+   forma de escribirla en % y por eso este factor se mide, no se supone. */
+export const MAC_ART_W = 967;          // mac-1984-mesa.png
+export const MAC_FRONT_W = 918;        // mac-1984-front.png
+
+function fitOne(el, natural, prop) {
+  if (!el) return 0;
+  const w = el.clientWidth || (el.getBoundingClientRect ? el.getBoundingClientRect().width : 0) || 0;
+  if (!w) return 0;                    // oculto (display:none) -> no pisamos el valor bueno
+  const k = w / natural;
+  el.style.setProperty(prop, String(k));
+  return k;
+}
+
+export function fitScreen(root = lastRoot || (typeof document !== 'undefined' ? document : null)) {
+  if (!root || !root.querySelector) return 0;
+  const k = fitOne(root.querySelector('#mac-hoy-prop'), MAC_ART_W, '--mac-k');
+  fitOne(root.querySelector('.mac-hoy-front-stage'), MAC_FRONT_W, '--mac-front-k');
+  return k;
+}
+
+function watchScreen(root) {
+  const prop = root && root.querySelector ? root.querySelector('#mac-hoy-prop') : null;
+  if (!prop || prop.__macFit) return;
+  prop.__macFit = true;
+  if (typeof ResizeObserver !== 'undefined') {
+    const ro = new ResizeObserver(() => fitScreen(root));
+    ro.observe(prop);
+    const stage = root.querySelector('.mac-hoy-front-stage');
+    if (stage) ro.observe(stage);
+    [prop.querySelector('img'), stage && stage.querySelector('img')].forEach((img) => {
+      if (!img) return;
+      ro.observe(img);
+      if (!img.complete) img.addEventListener('load', () => fitScreen(root), { once: true });
+    });
+  } else if (typeof window !== 'undefined') {
+    window.addEventListener('resize', () => fitScreen(root));
+  }
+}
+
 async function draw(root, fetchImpl) {
   const mesa = root.querySelector('#mac-hoy-crt');
   const front = root.querySelector('#mac-hoy-crt-front');
@@ -106,6 +150,7 @@ export function openFront(root = lastRoot || (typeof document !== 'undefined' ? 
   focused = true;
   const el = root.querySelector('#mac-hoy-front');
   if (el) el.classList.add('on');
+  fitScreen(root);                // el escenario frontal medía 0 mientras estaba oculto
   const front = root.querySelector('#mac-hoy-crt-front');
   if (front) paintCrt(front, lastText);
   draw(root, fetchImpl);
@@ -123,6 +168,7 @@ export function setVisible(on, root = lastRoot || (typeof document !== 'undefine
   if (btn) btn.classList.toggle('active', visible);
   if (!visible) closeFront(root);
   if (visible) {
+    fitScreen(root);              // oculto medía 0: el encaje se rehace al mostrarlo
     draw(root, fetchImpl);
     if (!beatTimer) beatTimer = setInterval(() => draw(lastRoot, lastFetch), 45000);
   } else if (beatTimer) {
@@ -142,6 +188,8 @@ export function boot(root = document, fetchImpl = fetch) {
   lastRoot = root;
   lastFetch = fetchImpl;
   setVisible(false, root, fetchImpl);
+  fitScreen(root);
+  watchScreen(root);
   const glass = root.querySelector('#mac-hoy-glass') || prop;
   glass.addEventListener('click', (e) => {
     e.preventDefault();
@@ -162,7 +210,7 @@ export function boot(root = document, fetchImpl = fetch) {
 }
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-  window.MacHoy = { todayMadrid, isHoy, seatOf, linesFor, IDLE_COPY, ERROR_COPY, paintCrt, fetchHoy, boot, setVisible, toggle, isVisible, isFocused, openFront, closeFront };
+  window.MacHoy = { todayMadrid, isHoy, seatOf, linesFor, IDLE_COPY, ERROR_COPY, paintCrt, fetchHoy, boot, setVisible, toggle, isVisible, isFocused, openFront, closeFront, fitScreen, MAC_ART_W };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => boot());
   else boot();
 }

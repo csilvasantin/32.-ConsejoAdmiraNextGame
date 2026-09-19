@@ -181,7 +181,7 @@ h1{font-size:clamp(23px,3vw,31px);letter-spacing:-.02em;margin:4px 0 10px;displa
 .mdet-imglink:hover .mdet-img{border-color:var(--brand,#78f3ff);box-shadow:0 0 10px rgba(120,243,255,.3)}
 /* FLT-1161 · PROJECT ID compacto. La asociación proyecto↔agente se gestiona en
    Dashboard: aquí quedan sólo miniatura, referencia humana y ciclo temporal. */
-.hd.project-id-layout{grid-template-columns:8px minmax(140px,var(--c-who,170px)) minmax(150px,var(--c-id,170px)) minmax(230px,var(--c-mis,1fr)) minmax(210px,var(--c-ord,250px)) minmax(0,var(--c-est,124px))}
+.hd.project-id-layout{grid-template-columns:8px minmax(58px,66px) minmax(140px,var(--c-who,170px)) minmax(150px,var(--c-id,170px)) minmax(230px,var(--c-mis,1fr)) minmax(210px,var(--c-ord,250px)) minmax(0,var(--c-est,124px))}
 .project-id-cell{padding-right:10px}
 .project-id-top{
   grid-template-columns:1fr;
@@ -213,8 +213,12 @@ h1{font-size:clamp(23px,3vw,31px);letter-spacing:-.02em;margin:4px 0 10px;displa
    y el texto íntegro sigue disponible mediante title/aria-label. */
 .project-id-layout .mission-col .subj .t{-webkit-line-clamp:4;line-clamp:4}
 .project-id-layout .mission-col .subj .m{margin-top:2px}
+/* PRIMERA COLUMNA · Hora + Nº de misión (Carlos, 2026-09-19) */
+.project-id-layout .cel.hora-mis{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:4px 2px;text-align:center;min-width:0}
+.hora-mis .hm-num{font-family:var(--mono);font-weight:800;font-size:13px;line-height:1;color:var(--brand);letter-spacing:.02em}
+.hora-mis .hm-hora{font-family:var(--mono);font-size:10px;line-height:1;color:var(--mut)}
 @media(max-width:1100px){
-  .hd.project-id-layout{grid-template-columns:8px minmax(130px,var(--c-who,150px)) minmax(142px,var(--c-id,158px)) minmax(210px,var(--c-mis,1fr)) minmax(210px,var(--c-ord,230px)) minmax(0,var(--c-est,112px))}
+  .hd.project-id-layout{grid-template-columns:8px minmax(52px,60px) minmax(130px,var(--c-who,150px)) minmax(142px,var(--c-id,158px)) minmax(210px,var(--c-mis,1fr)) minmax(210px,var(--c-ord,230px)) minmax(0,var(--c-est,112px))}
 }
 @media(max-width:720px){
   .hd.project-id-layout{grid-template-columns:8px 1fr}
@@ -320,7 +324,7 @@ h1{font-size:clamp(23px,3vw,31px);letter-spacing:-.02em;margin:4px 0 10px;displa
 
 <script src="/yk-agent-identity.js?v=v.2026.08.02.224605"></script>
 <script src="/yk-maquina.js?v=r1"></script>
-<script src="/yk-misiones.js?v=v.2026.09.07.r1"></script>
+<script src="/yk-misiones.js?v=v.2026.09.19.r1"></script>
 <script src="/yk-adjuntos.js?v=r3"></script>
 <script src="/yk-cabezal.js?v=r4"></script>
 <script src="/mission-ledger.js?v=100640-1"></script>
@@ -425,7 +429,9 @@ function headHtml(){
   // AGENTE/PLATAFORMA primero (Carlos, 2026-08-05). «Seleccionar todas» se queda
   // en PROJECT ID: las casillas de cada fila van superpuestas a su miniatura,
   // dentro de esa misma columna, y separarlas dejaría el «todas» huérfano.
-  return '<div class="hd lhead project-id-layout"><div></div>'+col("agente","Agente/Plataforma")+idcol+col("subject","Misión")+col("ordenador","Tareas")+col("estado","Estado")+"</div>";
+  // PRIMERA COLUMNA: Hora + Nº de misión (Carlos, 2026-09-19). Índice rápido de la
+  // jornada —a qué hora entró y con qué número— antes de saber quién la lleva.
+  return '<div class="hd lhead project-id-layout"><div></div>'+col("fecha","Hora · Nº")+col("agente","Agente/Plataforma")+idcol+col("subject","Misión")+col("ordenador","Tareas")+col("estado","Estado")+"</div>";
 }
 // ACK explícito para la marca de navegación: sólo se declara «vista» una misión
 // después de que una carga real haya pintado las filas que el usuario puede ver.

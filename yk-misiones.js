@@ -239,6 +239,14 @@
     var p = function (n) { return (n < 10 ? "0" : "") + n; };
     return p(d.getDate()) + "/" + p(d.getMonth() + 1) + " " + p(d.getHours()) + ":" + p(d.getMinutes());
   }
+  // Sólo la hora (HH:MM) — primera columna del tablero: hora + Nº de misión.
+  function horaCorta(ms) {
+    if (!ms) return "";
+    var d = new Date(ms > 4102444800 ? ms : ms * 1000);
+    if (isNaN(d)) return "";
+    var p = function (n) { return (n < 10 ? "0" : "") + n; };
+    return p(d.getHours()) + ":" + p(d.getMinutes());
+  }
 
   function init(opts) {
     opts = opts || {};
@@ -746,6 +754,12 @@
     var host = t.agent_host === "cli" ? "CLI" : t.agent_host === "app" ? "Desktop App" : "";
     var surface = [rt, host].filter(Boolean).join(" · ");
     var sourceLabel = missionSourceLabel(t);
+    // PRIMERA COLUMNA (Carlos, 2026-09-19): hora de entrada + Nº de misión del día.
+    var numMis = (t.display_n != null && t.display_n !== "") ? "#" + t.display_n : "";
+    var horaMis = horaCorta(t.created_at);
+    var horaMisHtml = '<div class="cel hora-mis" title="' + esc((numMis ? "Misión " + numMis + " · " : "") + "creada " + fechaCorta(t.created_at)) + '">' +
+      (numMis ? '<span class="hm-num">' + esc(numMis) + "</span>" : "") +
+      (horaMis ? '<span class="hm-hora">' + esc(horaMis) + "</span>" : "") + "</div>";
     var idHtml = '<div class="tkid" title="ID técnico: ' + esc(t.id) + '">' +
       (window.YkDisplayRef && window.YkDisplayRef.screenHtml ? window.YkDisplayRef.screenHtml(t, esc) : esc(visibleId(t))) +
       (CFG.projectIdLayout ? "" : '<span class="st">' + esc(sourceLabel) + "</span>") +
@@ -795,6 +809,8 @@
     return '<div class="tk ' + (t.status === "open" ? "open" : "") + " " + (t.id === SELECTED ? "sel" : "") + '" data-id="' + esc(t.id) + '">' +
       '<div class="hd' + (CFG.projectIdLayout ? " project-id-layout" : "") + '">' +
         '<div class="pri ' + esc(t.priority) + '"></div>' +
+        // Hora + Nº de misión como índice de la jornada, delante de todo (Carlos, 2026-09-19).
+        (CFG.projectIdLayout ? horaMisHtml : "") +
         // AGENTE/PLATAFORMA va PRIMERO (Carlos, 2026-08-05): lo que importa de un
         // vistazo es QUIÉN lleva la misión, antes que su referencia. La celda
         // conserva su clase `agc` —es el target del picker de reasignación— y su

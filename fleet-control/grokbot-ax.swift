@@ -202,6 +202,23 @@ func parseMessages(_ transcript: Node, persona: String, observedAt: Date = Date(
     return result
 }
 
+// Chromium expone a veces el PLACEHOLDER del editor como AXValue en vez del
+// texto escrito —hasDraft ya lo contempla—, asi que exigir que el compositor
+// relea exactamente el prompt hacia el envio IMPOSIBLE: tras escribir, el valor
+// leido era "Escribele a <persona>" y la condicion no se cumplia nunca. El
+// bucle agotaba sus 3 s y devolvia "unknown", que en la interfaz sale como
+// "Envio sin confirmar" con el texto esperando en el compositor.
+// Se acepta tambien ese caso, pero SOLO si el boton de enviar esta disponible:
+// ese boton no existe mientras el compositor esta vacio, asi que su presencia
+// es la prueba de que la app si tiene el texto.
+func compositorListo(valor: String, prompt: String, persona: String, envioDisponible: Bool) -> Bool {
+    if comparable(valor) == comparable(prompt) { return true }
+    guard envioDisponible else { return false }
+    let contenido = normalized(valor)
+    let marcadores = ["Escríbele a " + persona, "Message " + persona]
+    return contenido.isEmpty || marcadores.contains(contenido)
+}
+
 func hasDraft(value: String, persona: String, sendEnabled: Bool) -> Bool {
     let content = normalized(value)
     // Chromium exposes the editor's placeholder as AXValue and character count.
@@ -209,6 +226,42 @@ func hasDraft(value: String, persona: String, sendEnabled: Bool) -> Bool {
     let placeholders = ["Escríbele a " + persona, "Message " + persona]
     if content.isEmpty { return sendEnabled } // Includes attachment-only drafts.
     return !(placeholders.contains(content) && !sendEnabled)
+}
+
+// Clave estable de un boton dentro de una misma ventana: etiqueta + orden de
+// aparicion. Sirve para comparar dos lecturas seguidas del mismo arbol.
+func botonClave(_ n: Node, _ vistos: inout [String: Int]) -> String {
+    let base = n.label
+    let i = vistos[base] ?? 0
+    vistos[base] = i + 1
+    return base + "#" + String(i)
+}
+
+func botonesHabilitados(_ nodes: [Node]) -> Set<String> {
+    var vistos: [String: Int] = [:]
+    var out = Set<String>()
+    for n in nodes where n.role == "AXButton" {
+        let k = botonClave(n, &vistos)
+        if n.enabled { out.insert(k) }
+    }
+    return out
+}
+
+// El boton de enviar es el UNICO que pasa de apagado a encendido cuando el
+// compositor tiene texto. Identificarlo asi —y no por una etiqueta fija— es lo
+// que evita que una actualizacion de la app vuelva a romper el envio: el 19-sep
+// Grok Bot 0.57.1 renombro "Enviar mensaje" y el puente, compilado el 18, dejo
+// de encontrarlo; escribia el texto y no pulsaba nunca.
+// Si aparece mas de uno NO se pulsa nada: es preferible no enviar que pulsar
+// "entrada de voz" o "nuevo chat".
+func botonQueSeEnciende(antes: Set<String>, ahora nodes: [Node]) -> Node? {
+    var vistos: [String: Int] = [:]
+    var nuevos: [Node] = []
+    for n in nodes where n.role == "AXButton" {
+        let k = botonClave(n, &vistos)
+        if n.enabled && !antes.contains(k) { nuevos.append(n) }
+    }
+    return nuevos.count == 1 ? nuevos[0] : nil
 }
 
 struct Context {
@@ -298,6 +351,7 @@ final class GrokAX {
         guard let heading = initial.heading.element, stringAttribute(heading, kAXDescriptionAttribute) == persona,
               !hasDraft(value: stringAttribute(composer, kAXValueAttribute), persona: persona, sendEnabled: initial.sendButton?.enabled == true) else { return failed(initial.snapshot, "selection_or_draft_changed") }
         let before = Set(initial.snapshot.messages.filter { $0.sender == "user" }.map { $0.key })
+        let botonesAntes = botonesHabilitados(initial.pane.descendants())
         let write = AXUIElementSetAttributeValue(composer, kAXValueAttribute as CFString, prompt as CFString)
         guard write == .success else { return failed((try? read().snapshot) ?? initial.snapshot, "unknown") }
         var ready: Context? = nil
@@ -308,13 +362,19 @@ final class GrokAX {
             if let current = try? read() {
                 latest = current.snapshot
                 guard current.snapshot.selectedPersona == persona else { return failed(latest, "unknown") }
-                if comparable(current.composer.value) == comparable(prompt), current.sendButton?.enabled == true { ready = current; break }
+                let envio = current.sendButton ?? botonQueSeEnciende(antes: botonesAntes, ahora: current.pane.descendants())
+                if compositorListo(valor: current.composer.value, prompt: prompt, persona: persona, envioDisponible: envio?.enabled == true) {
+                    ready = current; break
+                }
             }
         } while Date() < composeDeadline
-        guard let current = ready, let send = current.sendButton?.element, let currentComposer = current.composer.element,
+        // Primero la etiqueta conocida; si no esta, el que se acaba de encender.
+        guard let current = ready,
+              let sendNode = current.sendButton ?? botonQueSeEnciende(antes: botonesAntes, ahora: current.pane.descendants()),
+              let send = sendNode.element, let currentComposer = current.composer.element,
               let currentHeading = current.heading.element,
               stringAttribute(currentHeading, kAXDescriptionAttribute) == persona,
-              comparable(stringAttribute(currentComposer, kAXValueAttribute)) == comparable(prompt) else { return failed(latest, "unknown") }
+              compositorListo(valor: stringAttribute(currentComposer, kAXValueAttribute), prompt: prompt, persona: persona, envioDisponible: sendNode.enabled) else { return failed(latest, "unknown") }
         // Exactly one press. Never retry after an AX error or ambiguous result.
         let press = AXUIElementPerformAction(send, kAXPressAction as CFString)
         guard press == .success else { return failed((try? read().snapshot) ?? latest, "unknown") }
@@ -387,12 +447,70 @@ do {
     let request: Request
     do { request = try JSONDecoder().decode(Request.self, from: data) }
     catch { throw BridgeError(code: "invalid_request") }
-    guard ["snapshot", "select", "send"].contains(request.action) else { throw BridgeError(code: "unsupported_action") }
-    if request.action != "snapshot" {
+    guard ["snapshot", "select", "send", "dump", "probe"].contains(request.action) else { throw BridgeError(code: "unsupported_action") }
+    if request.action != "snapshot" && request.action != "dump" && request.action != "probe" {
         guard let persona = request.persona, supportedPersonas.contains(persona) else { throw BridgeError(code: "unsupported_persona") }
     }
     let bridge = try GrokAX()
     let snapshot: Snapshot
+    if request.action == "probe" {
+        // SONDEO: escribe, mira si aparece el boton de enviar, y BORRA lo escrito
+        // sin pulsarlo. Sirve para comprobar el arreglo sin mandar un mensaje de
+        // verdad al chat de un consejero ni dejar un borrador atascado.
+        let ctx = try bridge.read()
+        guard let composer = ctx.composer.element else { throw BridgeError(code: "composer_unavailable") }
+        let antes = botonesHabilitados(ctx.pane.descendants())
+        _ = AXUIElementSetAttributeValue(composer, kAXValueAttribute as CFString, "sondeo" as CFString)
+        Thread.sleep(forTimeInterval: 0.8)
+        var encontrado = "(ninguno)"
+        var candidatos: [String] = []
+        if let despues = try? bridge.read() {
+            var vistos: [String: Int] = [:]
+            for n in despues.pane.descendants() where n.role == "AXButton" {
+                let k = botonClave(n, &vistos)
+                if n.enabled && !antes.contains(k) { candidatos.append(k) }
+            }
+            if let b = botonQueSeEnciende(antes: antes, ahora: despues.pane.descendants()) { encontrado = b.label.isEmpty ? "(sin etiqueta)" : b.label }
+        }
+        _ = AXUIElementSetAttributeValue(composer, kAXValueAttribute as CFString, "" as CFString)
+        // Replica TODAS las comprobaciones de send() sin pulsar, y dice en cual
+        // se pararia. Asi se localiza el fallo sin mandar nada a nadie.
+        var paradas: [String] = []
+        let pedida = request.persona ?? ctx.snapshot.selectedPersona ?? ""
+        if ctx.snapshot.selectedPersona != pedida { paradas.append("persona_not_selected (seleccionada=\(ctx.snapshot.selectedPersona ?? "nil"), pedida=\(pedida))") }
+        if ctx.snapshot.composerHasDraft { paradas.append("draft_exists") }
+        if ctx.snapshot.busy { paradas.append("conversation_busy") }
+        var settable: DarwinBoolean = false
+        if !(AXUIElementIsAttributeSettable(composer, kAXValueAttribute as CFString, &settable) == .success && settable.boolValue) { paradas.append("composer_not_writable") }
+        if let h = ctx.heading.element {
+            let desc = stringAttribute(h, kAXDescriptionAttribute)
+            if desc != pedida { paradas.append("heading_no_coincide (heading=\(desc), pedida=\(pedida))") }
+        } else { paradas.append("heading_ausente") }
+        var leido = "(no leido)"
+        if let d2 = try? bridge.read() { leido = d2.composer.value }
+        let envioOk = encontrado != "(ninguno)"
+        if !compositorListo(valor: leido, prompt: "sondeo", persona: pedida, envioDisponible: envioOk) {
+            paradas.append("composer_no_listo (leido=\(leido), envioDisponible=\(envioOk))")
+        }
+        let salida = ["ok": true, "botonDeEnvioDetectado": encontrado, "candidatosNuevos": candidatos,
+                      "etiquetaViejaExiste": ctx.sendButton != nil,
+                      "seParariaEn": paradas.isEmpty ? ["(nada: enviaria)"] : paradas] as [String: Any]
+        FileHandle.standardOutput.write(try JSONSerialization.data(withJSONObject: salida, options: [.sortedKeys]))
+        FileHandle.standardOutput.write(Data("\n".utf8))
+        exit(0)
+    }
+    if request.action == "dump" {
+        // Solo lectura: lista lo que el puente ve, para no volver a diagnosticar a ciegas.
+        let ctx = try bridge.read()
+        var vistos: [String: Int] = [:]
+        let lineas = ctx.pane.descendants().filter { $0.role == "AXButton" }.map { n -> String in
+            botonClave(n, &vistos) + (n.enabled ? " [encendido]" : " [apagado]")
+        }
+        let salida = ["ok": true, "botones": lineas, "composerHasDraft": ctx.snapshot.composerHasDraft] as [String: Any]
+        let datos = try JSONSerialization.data(withJSONObject: salida, options: [.sortedKeys])
+        FileHandle.standardOutput.write(datos); FileHandle.standardOutput.write(Data("\n".utf8))
+        exit(0)
+    }
     if request.action == "snapshot" {
         snapshot = try bridge.read().snapshot // No selection, focus, or AX mutation.
     } else {

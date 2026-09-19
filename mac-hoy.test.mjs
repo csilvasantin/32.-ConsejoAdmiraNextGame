@@ -39,7 +39,8 @@ test('linesFor: FLT + silla + solo Hoy vivas (sin resueltas ni histórico)', () 
 
 test('P0 on-demand: mesa limpia por defecto, MOSTRAR en col3 fila4, /mac en CLI', () => {
   assert.match(html, /id="btn-mostrar"/);
-  assert.match(html, />Mostrar</);
+  assert.match(html, /mac-hoy-chip/);
+  assert.match(html, /Mostrar<br>Ocultar/);
   assert.match(html, /mac-hoy-prop\.on/);
   const app = fs.readFileSync(new URL('./app.js', import.meta.url), 'utf8');
   assert.match(app, /\/mac/);

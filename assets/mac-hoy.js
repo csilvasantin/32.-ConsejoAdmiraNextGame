@@ -91,10 +91,7 @@ export function setVisible(on, root = lastRoot || (typeof document !== 'undefine
   const btn = root.querySelector('#btn-mostrar');
   visible = !!on;
   if (prop) prop.classList.toggle('on', visible);
-  if (btn) {
-    btn.classList.toggle('active', visible);
-    btn.textContent = visible ? 'Ocultar' : 'Mostrar';
-  }
+  if (btn) btn.classList.toggle('active', visible);
   if (visible) {
     draw(root, fetchImpl);
     if (!beatTimer) beatTimer = setInterval(() => draw(lastRoot, lastFetch), 45000);

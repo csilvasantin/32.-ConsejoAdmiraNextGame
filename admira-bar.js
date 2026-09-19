@@ -28,6 +28,8 @@
     // Highscore siempre visible (Carlos, FLT-1321) y Asignaciones son flujo, se quedan.
     { t: "🏆 Highscore",   h: "https://www.admira.live/highscore" },
     { t: "🧩 Asignaciones", h: "https://www.admira.live/asignaciones/" },
+    // Consumo (Carlos, 19-09-2026): cuánto gastan los agentes, visible en el menú superior.
+    { t: "💸 Consumo",     h: "https://www.admira.live/consumos" },
     // STATUS y TELEGRAM salieron de la barra (Carlos, 11-08-2026): STATUS vive en
     // admiranext.com/status; los avisos de Telegram ya llegan solos al móvil. Ambas
     // páginas siguen publicadas (/status, /telegram), sólo dejan de ocupar sitio aquí.

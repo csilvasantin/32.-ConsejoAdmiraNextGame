@@ -1714,7 +1714,12 @@
            que ir tan apretada: más aire abajo para que la última línea no muera
            pegada al bisel. */
         .modo-detalle .mac-hoy-crt-front {
-            padding: 26px 26px 26px 32px;
+            /* Aquí la ficha CABE: desbordaba por 29 px —una línea— y el paseo se
+               llevaba la cabecera fuera de cuadro justo al abrirla. Con el
+               interlineado y el relleno ajustados entra entera y se queda quieta;
+               sólo se pasea si el asunto es de verdad larguísimo. */
+            line-height: 1.32;
+            padding: 16px 26px 10px 32px;
         }
         .mac-hoy-prop.refreshing .mac-hoy-glass::before { animation: mac-hoy-idle .4s linear infinite; }
         @keyframes mac-hoy-idle {
@@ -4122,6 +4127,6 @@ body.rail-open{overflow:hidden}
 <script defer src="council-grokbot.js?v=20260918-r5-desk-cors"></script>
 <script defer src="app.flt-100529.js?v=20260919-r11-motor"></script>
 <script defer src="council-integration.js?v=20260918-r5-desk-cors"></script>
-<script type="module" src="assets/mac-hoy.js?v=20260919-frontal"></script>
+<script type="module" src="assets/mac-hoy.js?v=20260919-frontal2"></script>
 </body>
 </html>

@@ -119,3 +119,19 @@ test('paintCrt: la última escritura manda (no se pisan al navegar rápido)', as
   await new Promise(r => setTimeout(r, 120));
   assert.equal(el.textContent, 'BBB', 'no debe quedar rastro de la primera');
 });
+
+test('paintCrt: una ficha larga tiene techo de tiempo', async () => {
+  const { paintCrt } = await import('./assets/mac-hoy.js');
+  const mide = async (n) => {
+    const el = { textContent: '', scrollTop: 0, scrollHeight: 0 };
+    const t = Date.now();
+    await paintCrt(el, 'x'.repeat(n));
+    assert.equal(el.textContent.length, n, 'debe escribirla entera');
+    return Date.now() - t;
+  };
+  // Lo que importa no es que tarden lo mismo —una pantalla corta acaba antes a
+  // propósito— sino que una ficha larga no se eternice: a dos caracteres fijos,
+  // 240 caracteres eran 1,4 s y en segundo plano no acababa nunca.
+  const larga = await mide(240);
+  assert.ok(larga < 1000, `una ficha larga tardó ${larga}ms; debe quedar por debajo de 1 s`);
+});

@@ -110,11 +110,15 @@ export function paintCrt(el, text) {
   // La última que entra manda; la anterior se retira en su siguiente tic.
   const turno = (el.__crtTurno = (el.__crtTurno || 0) + 1);
   el.textContent = '';
+  // El paso se ajusta al largo para que CUALQUIER pantalla tarde lo mismo en
+  // escribirse. A dos caracteres fijos, una ficha de detalle (el triple de texto
+  // que «HOY») tardaba el triple y se quedaba a medias.
+  const paso = Math.max(2, Math.ceil(text.length / 60));
   let i = 0;
   return new Promise((resolve) => {
     const tick = () => {
       if (el.__crtTurno !== turno) return resolve();
-      i += 2;
+      i += paso;
       el.textContent = text.slice(0, i);
       el.scrollTop = el.scrollHeight;
       if (i >= text.length) resolve();
@@ -263,8 +267,12 @@ async function draw(root, fetchImpl) {
     const ms = await fetchHoy(fetchImpl);
     misionesCache = ultimasMisiones(ms);
     lastText = textoDelModo();
-    await paintCrt(mesa, lastText);
-    if (front) await paintCrt(front, lastText);
+    // Si la pantalla ya dice exactamente eso, no se vuelve a teclear: el latido
+    // de 45 s reescribía la ficha que estabas leyendo, y en una pestaña de fondo
+    // —donde el navegador estrangula los temporizadores— no llegaba a acabarla
+    // nunca, así que el texto se quedaba siempre a medias.
+    if (mesa.textContent !== lastText) await paintCrt(mesa, lastText);
+    if (front && front.textContent !== lastText) await paintCrt(front, lastText);
   } catch (_) {
     lastText = ERROR_COPY;
     await paintCrt(mesa, ERROR_COPY);

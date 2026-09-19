@@ -1613,6 +1613,35 @@
                 0 0 44px rgba(48,220,110,.32);
             filter: blur(1.5px);             /* el haz nunca deja un borde perfecto */
         }
+        /* TRES MODOS DE PANTALLA (Carlos, 2026-09-19). Los periféricos del dibujo
+           son los mandos: el TECLADO enciende el logo y el RATÓN saca la última
+           misión con detalle. El logo va DENTRO del plano proyectado, así que la
+           misma matriz lo tumba sobre el tubo; se pinta como máscara sobre verde
+           fósforo para que salga monocromo pase lo que pase con el SVG. */
+        .mac-hoy-logo {
+            position: absolute;
+            left: 0;
+            top: 0;
+            width: 512px;
+            height: 342px;
+            display: none;
+            background: #b9ffc9;
+            -webkit-mask: url(/admira-logo-retro.svg) no-repeat center / 74% auto;
+            mask: url(/admira-logo-retro.svg) no-repeat center / 74% auto;
+            filter: drop-shadow(0 0 7px rgba(120,255,160,.85)) blur(.8px);
+            pointer-events: none;
+        }
+        .mac-hoy-logo-front { mix-blend-mode: screen; }
+        .modo-logo .mac-hoy-logo { display: block; }
+        .modo-logo .mac-hoy-crt,
+        .modo-logo .mac-hoy-crt-front { visibility: hidden; }
+        /* En detalle cabe más texto: letra menor y el bloque sube un poco. */
+        .modo-detalle .mac-hoy-crt,
+        .modo-detalle .mac-hoy-crt-front {
+            font-size: 26px;
+            line-height: 1.4;
+            padding-top: 40px;
+        }
         .mac-hoy-prop.refreshing .mac-hoy-glass::before { animation: mac-hoy-idle .4s linear infinite; }
         @keyframes mac-hoy-idle {
             0%, 100% { opacity: .4; }
@@ -1620,10 +1649,24 @@
         }
         .mac-hoy-keys, .mac-hoy-mouse {
             position: absolute;
-            z-index: 3;
+            z-index: 4;
             pointer-events: auto;
             cursor: pointer;
             background: transparent;
+            border: 0;
+            padding: 0;
+            appearance: none;
+            -webkit-appearance: none;
+            border-radius: 8px;
+            /* Son mandos, pero el dibujo manda: sólo un resplandor al pasar por
+               encima, nada de cajas ni bordes que delaten un botón encima. */
+            transition: box-shadow .18s ease, background-color .18s ease;
+        }
+        .mac-hoy-keys:hover, .mac-hoy-mouse:hover,
+        .mac-hoy-keys:focus-visible, .mac-hoy-mouse:focus-visible {
+            background-color: rgba(150,255,190,.10);
+            box-shadow: 0 0 12px rgba(120,255,160,.35);
+            outline: none;
         }
         .mac-hoy-keys { left: 1%; top: 57%; width: 63%; height: 32%; }
         .mac-hoy-mouse { left: 73%; top: 79%; width: 22%; height: 19%; }
@@ -1681,6 +1724,7 @@
         }
         .mac-hoy-front-stage img { width: 100%; height: auto; display: block; }
         .mac-hoy-crt-front,
+        .mac-hoy-logo-front,
         .mac-hoy-front-shade {
             position: absolute;
             left: 0;
@@ -3185,16 +3229,18 @@ body.rail-open{overflow:hidden}
                 <img src="assets/mac-1984-mesa.png" alt="Macintosh 1984 beige CRT sobre la mesa del Consejo">
                 <button type="button" class="mac-hoy-glass" id="mac-hoy-glass" title="Macintosh 1984 · pulsa la pantalla para leer Hoy">
                     <pre class="mac-hoy-crt" id="mac-hoy-crt">HOY</pre>
+                    <i class="mac-hoy-logo" aria-hidden="true"></i>
                 </button>
                 <div class="mac-hoy-shade" id="mac-hoy-shade" aria-hidden="true"></div>
-                <a class="mac-hoy-keys" id="mac-hoy-keys" href="https://www.yokup.com/misiones" target="_blank" rel="noopener" title="Misiones Yokup"></a>
-                <a class="mac-hoy-mouse" id="mac-hoy-mouse" href="https://www.yokup.com/misiones" target="_blank" rel="noopener" title="Misiones Yokup"></a>
+                <button type="button" class="mac-hoy-keys" id="mac-hoy-keys" title="Teclado · enciende el logo de Admira en la pantalla"></button>
+                <button type="button" class="mac-hoy-mouse" id="mac-hoy-mouse" title="Ratón · la última misión, con detalle"></button>
             </div>
             <div class="mac-hoy-front" id="mac-hoy-front">
                 <button type="button" class="mac-hoy-front-close" id="mac-hoy-front-close">Cerrar</button>
                 <div class="mac-hoy-front-stage">
                     <img src="assets/mac-1984-front.png" alt="Macintosh 1984 vista frontal">
                     <pre class="mac-hoy-crt-front" id="mac-hoy-crt-front">HOY</pre>
+                    <i class="mac-hoy-logo mac-hoy-logo-front" aria-hidden="true"></i>
                     <div class="mac-hoy-front-shade" aria-hidden="true"></div>
                 </div>
             </div>
@@ -3901,6 +3947,6 @@ body.rail-open{overflow:hidden}
 <script defer src="council-grokbot.js?v=20260918-r5-desk-cors"></script>
 <script defer src="app.flt-100529.js?v=20260919-r7-mac"></script>
 <script defer src="council-integration.js?v=20260918-r5-desk-cors"></script>
-<script type="module" src="assets/mac-hoy.js?v=20260919-crt-homografia"></script>
+<script type="module" src="assets/mac-hoy.js?v=20260919-mandos"></script>
 </body>
 </html>

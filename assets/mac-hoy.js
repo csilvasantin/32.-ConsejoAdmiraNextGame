@@ -27,6 +27,49 @@ export function seatOf(mission) {
 export const IDLE_COPY = 'HOY\n…';
 export const ERROR_COPY = 'HOY\nsin cable';
 
+/* La pantalla tiene tres modos, y los periféricos del dibujo son los mandos:
+   el TECLADO enciende el logo de Admira y el RATÓN saca la última misión con
+   detalle. Volver a pulsar devuelve a HOY. */
+export const MODOS = ['hoy', 'detalle', 'logo'];
+
+export function envolver(txt, ancho, maxLineas) {
+  const palabras = String(txt == null ? '' : txt).trim().split(/\s+/).filter(Boolean);
+  const out = [];
+  let cur = '';
+  for (const p of palabras) {
+    const cand = cur ? cur + ' ' + p : p;
+    if (cand.length <= ancho) { cur = cand; continue; }
+    if (cur) out.push(cur);
+    if (out.length >= maxLineas) { cur = ''; break; }
+    cur = p.length > ancho ? p.slice(0, ancho - 1) + '…' : p;
+  }
+  if (cur && out.length < maxLineas) out.push(cur);
+  return out.slice(0, maxLineas);
+}
+
+export function ultimaMision(missions, day = todayMadrid()) {
+  return (Array.isArray(missions) ? missions : [])
+    .filter((m) => m && m.status === 'resolved' && isHoy(m, day))
+    .sort((a, b) => Number(b.updated_at || b.created_at || 0) - Number(a.updated_at || a.created_at || 0))[0] || null;
+}
+
+export function detalleLineas(missions, day = todayMadrid()) {
+  const m = ultimaMision(missions, day);
+  if (!m) return ['ULTIMA MISION', '', 'sin FLT done'];
+  const id = String(m.id || 'FLT-????').replace(/^FLT-/, '');
+  const quien = seatOf(m).split('·')[0].trim().slice(0, 15) || '—';
+  const ts = Number(m.updated_at || m.created_at || 0);
+  let hora = '';
+  if (ts) {
+    try {
+      hora = new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' })
+        .format(new Date(ts > 1e12 ? ts : ts * 1000));
+    } catch (_) { hora = ''; }
+  }
+  return ['ULTIMA MISION', '#' + id + (hora ? '  ' + hora : ''), quien, '']
+    .concat(envolver(m.subject || m.title || '', 16, 3));
+}
+
 export function linesFor(missions, day = todayMadrid()) {
   const rows = (Array.isArray(missions) ? missions : [])
     .filter((m) => m && m.status === 'resolved' && isHoy(m, day))
@@ -65,6 +108,7 @@ export async function fetchHoy(fetchImpl = fetch) {
 
 let visible = false;
 let focused = false;
+let modo = 'hoy';
 let beatTimer = null;
 let lastRoot = null;
 let lastFetch = fetch;
@@ -114,16 +158,38 @@ function watchScreen(root) {
   }
 }
 
+function aplicarModo(root) {
+  if (!root || !root.querySelectorAll) return;
+  root.querySelectorAll('#mac-hoy-prop, .mac-hoy-front-stage').forEach((el) => {
+    MODOS.forEach((m) => el.classList.toggle('modo-' + m, m === modo));
+  });
+}
+
+export function modoActual() { return modo; }
+
+export function setModo(nuevo, root = lastRoot || (typeof document !== 'undefined' ? document : null), fetchImpl = lastFetch) {
+  if (MODOS.indexOf(nuevo) < 0) return modo;
+  modo = nuevo;
+  if (!root) return modo;
+  lastRoot = root;
+  aplicarModo(root);
+  if (modo !== 'logo') draw(root, fetchImpl);   // el logo no escribe texto: es la pantalla entera
+  return modo;
+}
+
 async function draw(root, fetchImpl) {
   const mesa = root.querySelector('#mac-hoy-crt');
   const front = root.querySelector('#mac-hoy-crt-front');
   const prop = root.querySelector('#mac-hoy-prop');
   if (!mesa || !prop || !visible) return;
+  aplicarModo(root);
+  if (modo === 'logo') return;
   prop.classList.add('refreshing');
   if (mesa) mesa.textContent = IDLE_COPY;
   if (front) front.textContent = IDLE_COPY;
   try {
-    lastText = linesFor(await fetchHoy(fetchImpl)).join('\n');
+    const ms = await fetchHoy(fetchImpl);
+    lastText = (modo === 'detalle' ? detalleLineas(ms) : linesFor(ms)).join('\n');
     await paintCrt(mesa, lastText);
     if (front) await paintCrt(front, lastText);
   } catch (_) {
@@ -166,7 +232,7 @@ export function setVisible(on, root = lastRoot || (typeof document !== 'undefine
   visible = !!on;
   if (prop) prop.classList.toggle('on', visible);
   if (btn) btn.classList.toggle('active', visible);
-  if (!visible) closeFront(root);
+  if (!visible) { modo = 'hoy'; aplicarModo(root); closeFront(root); }
   if (visible) {
     fitScreen(root);              // oculto medía 0: el encaje se rehace al mostrarlo
     draw(root, fetchImpl);
@@ -197,6 +263,20 @@ export function boot(root = document, fetchImpl = fetch) {
     if (!visible) return;
     openFront(root, fetchImpl);
   });
+  // Los periféricos del dibujo son los mandos de la pantalla. Pulsar de nuevo
+  // el mismo devuelve a HOY, así que nunca se queda uno atrapado en un modo.
+  const mando = (sel, destino) => {
+    const el = root.querySelector(sel);
+    if (!el) return;
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!visible) return;
+      setModo(modo === destino ? 'hoy' : destino, root, fetchImpl);
+    });
+  };
+  mando('#mac-hoy-keys', 'logo');     // teclado -> logo de Admira
+  mando('#mac-hoy-mouse', 'detalle'); // ratón   -> última misión con detalle
   const front = root.querySelector('#mac-hoy-front');
   const close = root.querySelector('#mac-hoy-front-close');
   if (close) close.addEventListener('click', (e) => { e.stopPropagation(); closeFront(root); });
@@ -210,7 +290,7 @@ export function boot(root = document, fetchImpl = fetch) {
 }
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-  window.MacHoy = { todayMadrid, isHoy, seatOf, linesFor, IDLE_COPY, ERROR_COPY, paintCrt, fetchHoy, boot, setVisible, toggle, isVisible, isFocused, openFront, closeFront, fitScreen, MAC_ART_W };
+  window.MacHoy = { todayMadrid, isHoy, seatOf, linesFor, IDLE_COPY, ERROR_COPY, paintCrt, fetchHoy, boot, setVisible, toggle, isVisible, isFocused, openFront, closeFront, fitScreen, MAC_ART_W, MODOS, setModo, modoActual, detalleLineas, ultimaMision, envolver };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => boot());
   else boot();
 }

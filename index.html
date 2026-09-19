@@ -1710,12 +1710,19 @@
             line-height: 1.38;
             padding: 24px 24px 14px 30px;   /* recortado: entra una línea más */
         }
+        /* En la vista frontal el tubo se ve mucho mayor, así que la ficha no tiene
+           que ir tan apretada: más aire abajo para que la última línea no muera
+           pegada al bisel. */
+        .modo-detalle .mac-hoy-crt-front {
+            padding: 26px 26px 26px 32px;
+        }
         .mac-hoy-prop.refreshing .mac-hoy-glass::before { animation: mac-hoy-idle .4s linear infinite; }
         @keyframes mac-hoy-idle {
             0%, 100% { opacity: .4; }
             50% { opacity: .85; }
         }
-        .mac-hoy-keys, .mac-hoy-mouse, .mac-hoy-floppy {
+        .mac-hoy-keys, .mac-hoy-mouse, .mac-hoy-floppy,
+        .mac-hoy-front-keys, .mac-hoy-front-mouse {
             position: absolute;
             z-index: 4;
             pointer-events: auto;
@@ -1730,18 +1737,26 @@
                encima, nada de cajas ni bordes que delaten un botón encima. */
             transition: box-shadow .18s ease, background-color .18s ease;
         }
-        .mac-hoy-keys:hover, .mac-hoy-mouse:hover, .mac-hoy-floppy:hover,
-        .mac-hoy-keys:focus-visible, .mac-hoy-mouse:focus-visible, .mac-hoy-floppy:focus-visible {
-            background-color: rgba(150,255,190,.10);
-            box-shadow: 0 0 12px rgba(120,255,160,.35);
-            outline: none;
+        /* Sin realce al pasar por encima (Carlos, 2026-09-19): el cursor ya dice
+           que se puede pulsar, y un rectángulo encendido sobre el dibujo delata
+           que hay botones invisibles pegados al Mac. Sólo el foco de teclado deja
+           marca, que ésa hace falta para navegar sin ratón. */
+        .mac-hoy-keys:focus-visible, .mac-hoy-mouse:focus-visible, .mac-hoy-floppy:focus-visible,
+        .mac-hoy-front-keys:focus-visible, .mac-hoy-front-mouse:focus-visible {
+            outline: 2px solid rgba(255,210,122,.8);
+            outline-offset: -2px;
         }
         .mac-hoy-keys { left: 1%; top: 57%; width: 63%; height: 32%; }
         .mac-hoy-mouse { left: 73%; top: 79%; width: 22%; height: 19%; }
         /* Ranura del disquete, medida sobre el PNG (x 462..678, y 520..566 de
            967x975): va inclinada como el resto del Mac, así que la caja se deja
            algo más alta para que se pueda pulsar cómodamente. */
-        .mac-hoy-floppy { left: 47.5%; top: 52.5%; width: 23%; height: 6.5%; }
+                .mac-hoy-floppy { left: 47.5%; top: 52.5%; width: 23%; height: 6.5%; }
+        /* Mandos de la VISTA FRONTAL, sobre su propio teclado y su propio ratón:
+           al abrirla en grande también se pasa de misión (Carlos, 2026-09-19). */
+        .mac-hoy-front-keys, .mac-hoy-front-mouse { position: absolute; z-index: 4; }
+        .mac-hoy-front-keys { left: 3%; top: 76%; width: 72%; height: 20%; }
+        .mac-hoy-front-mouse { left: 76%; top: 84%; width: 22%; height: 15%; }
         @media (max-width: 720px) {
             .mac-hoy-prop { left: 36%; top: 56%; width: 28%; }
             /* el texto ya no se re-dimensiona aquí: vive en píxeles de Mac y lo
@@ -3382,6 +3397,8 @@ body.rail-open{overflow:hidden}
                     <pre class="mac-hoy-crt-front" id="mac-hoy-crt-front">HOY</pre>
                     <i class="mac-hoy-logo mac-hoy-logo-front" aria-hidden="true"></i>
                     <div class="mac-hoy-front-shade" aria-hidden="true"></div>
+                    <button type="button" class="mac-hoy-front-keys" id="mac-hoy-front-keys" title="Teclado · misión anterior"></button>
+                    <button type="button" class="mac-hoy-front-mouse" id="mac-hoy-front-mouse" title="Ratón · misión siguiente"></button>
                 </div>
             </div>
             <!-- Door hotspot to enter Private Meeting Room (Sala del Consejo) -->
@@ -4105,6 +4122,6 @@ body.rail-open{overflow:hidden}
 <script defer src="council-grokbot.js?v=20260918-r5-desk-cors"></script>
 <script defer src="app.flt-100529.js?v=20260919-r11-motor"></script>
 <script defer src="council-integration.js?v=20260918-r5-desk-cors"></script>
-<script type="module" src="assets/mac-hoy.js?v=20260919-pong2"></script>
+<script type="module" src="assets/mac-hoy.js?v=20260919-frontal"></script>
 </body>
 </html>

@@ -193,3 +193,20 @@ test('pong: salir del juego suelta la pala', async () => {
   paraPong();
   assert.equal(estadoPong().jugador, 0, 'al sacar el disco la pala no puede quedarse subiendo sola');
 });
+
+test('la vista frontal tiene sus propios mandos de misión', () => {
+  assert.match(html, /id="mac-hoy-front-keys"/);
+  assert.match(html, /id="mac-hoy-front-mouse"/);
+  const src = fs.readFileSync(new URL('./assets/mac-hoy.js', import.meta.url), 'utf8');
+  assert.match(src, /mando\('#mac-hoy-front-mouse', \+1\)/);
+  assert.match(src, /mando\('#mac-hoy-front-keys', -1\)/);
+  // y al abrirla, la ficha se pasea igual que en la mesa
+  assert.match(src, /paintCrt\(front, lastText\)\.then\(\(\) => paseaTexto\(front\)\)/);
+});
+
+test('los puntos sensibles no se delatan al pasar por encima', () => {
+  assert.ok(!/\.mac-hoy-keys:hover/.test(html), 'nada de realce en hover sobre el dibujo');
+  assert.ok(!/box-shadow: 0 0 12px rgba\(120,255,160/.test(html));
+  // el foco de teclado SÍ deja marca: hace falta para navegar sin ratón
+  assert.match(html, /\.mac-hoy-keys:focus-visible[^{]*\{[^}]*outline/);
+});

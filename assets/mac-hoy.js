@@ -413,7 +413,7 @@ export function openFront(root = lastRoot || (typeof document !== 'undefined' ? 
   if (el) el.classList.add('on');
   fitScreen(root);                // el escenario frontal medía 0 mientras estaba oculto
   const front = root.querySelector('#mac-hoy-crt-front');
-  if (front) paintCrt(front, lastText);
+  if (front) paintCrt(front, lastText).then(() => paseaTexto(front));
   draw(root, fetchImpl);
   return true;
 }
@@ -484,8 +484,10 @@ export function boot(root = document, fetchImpl = fetch) {
       avanzaPantalla(delta, root, fetchImpl);
     });
   };
-  mando('#mac-hoy-mouse', +1);   // ratón   -> misión siguiente · pala abajo
-  mando('#mac-hoy-keys', -1);    // teclado -> misión anterior · pala arriba
+  mando('#mac-hoy-mouse', +1);         // ratón   -> misión siguiente · pala abajo
+  mando('#mac-hoy-keys', -1);          // teclado -> misión anterior · pala arriba
+  mando('#mac-hoy-front-mouse', +1);   // los mismos, en la vista frontal
+  mando('#mac-hoy-front-keys', -1);
   // Y con el teclado de verdad, que para eso es un Pong. Nunca mientras se
   // escribe en un campo: ahí las flechas son del texto.
   if (typeof document !== 'undefined' && !document.__macTeclas) {

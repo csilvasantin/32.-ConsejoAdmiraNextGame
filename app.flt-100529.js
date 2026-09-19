@@ -611,7 +611,7 @@
             const porGrokBot = !!window.CouncilInterface?.has(p.persona);
             const marca = porGrokBot
                 ? '<span class="np-via np-via-libre" title="Por GrokBot · incluido en la suscripcion, no gasta tokens">∞</span>'
-                : '<span class="np-via np-via-pago" title="Por la API del Consejo · esta consulta gasta presupuesto">€</span>';
+                : '<span class="np-via np-via-pago" title="Pendiente de crear su silla en GrokBot — aun no se le puede preguntar">⏳</span>';
             return `<div class="np ${cls} ${porGrokBot ? 'np-libre' : 'np-pago'}" data-persona="${p.persona}" style="left:${p.x}%;top:${p.y}%">
                 <span class="np-turn"></span>
                 ${p.persona}${marca}<span class="np-role">${p.role}</span>
@@ -1525,6 +1525,7 @@
         const matrixLabel = matrixLink ? " · Matrix: " + matrixLink.alias : "";
         // Si ya hablasteis, se repinta el hilo y se dice por dónde ibais, en vez
         // de saludar como si fuera la primera vez teniendo memoria de lo anterior.
+        if (consejeroPendiente(agent)) { avisoPendiente(agent); return; }
         const turnos = conversationHistory.length;
         if (turnos) {
             repintaHilo(agent);
@@ -2600,6 +2601,7 @@
                 typing.textContent = meetingAdvisor.name + " · por GrokBot, sin gastar tokens — mira su chat";
                 return;
             }
+            if (consejeroPendiente(meetingAdvisor)) { typing.style.display = "none"; avisoPendiente(meetingAdvisor, "sala"); return; }
             const reply = await askOneAgentAPI(text, meetingAdvisor.name);
             typing.style.display = "none";
 
@@ -2673,6 +2675,7 @@
                 window.CouncilInterface.send(selectedAgent.persona, text);
                 return;
             }
+            if (consejeroPendiente(selectedAgent)) { avisoPendiente(selectedAgent); return; }
             enterConversation();
             addUserEntry(text);
             askSingleAgent(text, selectedAgent);
@@ -4887,6 +4890,23 @@
     // se va pintando conforme el modelo la emite. Si el streaming no sale
     // —proxy viejo, red rara, proveedor sin soporte— devuelve null y quien
     // llama se cae al camino de siempre sin que el usuario note nada.
+    // ── SOLO LOS CONSEJEROS GRATUITOS (Carlos, 2026-09-19) ──────────────────
+    // Un consejero solo se consulta si tiene chat en GrokBot, que va con la
+    // suscripcion. Los demas NO se preguntan a la API de pago: se avisa de que
+    // su silla esta pendiente de crearse en GrokBot. Antes la pregunta salia
+    // igual y gastaba presupuesto sin que nadie lo pidiera.
+    function consejeroPendiente(agent) {
+        return !!agent && !window.CouncilInterface?.has(agent.persona);
+    }
+    function avisoPendiente(agent, donde) {
+        const quien = agent ? (agent.icon + " " + agent.persona) : "Este consejero";
+        const txt = "⏳ " + quien + " todavia no tiene silla en GrokBot — pendiente de crearla. "
+                  + "Mientras tanto pregunta a los que llevan ∞ (Jobs, Wozniak, Disney, Lucas).";
+        setActionLine(txt);
+        if (donde === "sala" && agent) addMeetingMsg(agent, "Todavia no tengo chat propio en GrokBot. Mi silla esta pendiente de crearse; preguntame cuando este lista.");
+        return txt;
+    }
+
     let _entradaViva = null;
     function pintaParcial(panelId, agent, texto) {
         const panel = document.getElementById(panelId);

@@ -78,11 +78,29 @@ test('la sala privada usa GrokBot cuando la silla lo tiene (no gasta tokens)', (
   assert.ok(viaGrok > 0 && viaGrok < viaApi, 'GrokBot primero; la API es el ultimo recurso');
 });
 
-test('el rótulo dice si el consejero cuesta dinero', () => {
+test('el rótulo distingue el que se puede usar del que está pendiente', () => {
   assert.match(src, /const porGrokBot = !!window\.CouncilInterface\?\.has\(p\.persona\)/);
   assert.match(src, /np-via-libre/);
   assert.match(src, /np-via-pago/);
   const html = fs.readFileSync(new URL('./index.html', import.meta.url), 'utf8');
-  assert.match(html, /\.np-via-libre \{ color: #7fe28d; \}/);
-  assert.match(html, /\.np-via-pago \{ color: #e3b436; \}/);
+  assert.match(html, /\.np-via-libre \{ color: #7fe28d; \}/, 'el usable, en verde vivo');
+  assert.match(html, /\.np-via-pago \{ color: #b99a5e; \}/, 'el pendiente, apagado');
+});
+
+test('a un consejero sin silla en GrokBot NO se le pregunta: se avisa', () => {
+  assert.match(src, /function consejeroPendiente\(agent\)/);
+  assert.match(src, /!window\.CouncilInterface\?\.has\(agent\.persona\)/);
+  // las tres puertas por las que se podia colar una consulta de pago
+  assert.match(src, /if \(consejeroPendiente\(selectedAgent\)\) \{ avisoPendiente\(selectedAgent\); return; \}/);
+  assert.match(src, /if \(consejeroPendiente\(meetingAdvisor\)\) \{[^}]*avisoPendiente\(meetingAdvisor, "sala"\); return; \}/);
+  assert.match(src, /if \(consejeroPendiente\(agent\)\) \{ avisoPendiente\(agent\); return; \}/);
+  // y el aviso dice QUE pasa y QUE hacer mientras tanto
+  assert.match(src, /pendiente de crearla/);
+  assert.match(src, /Jobs, Wozniak, Disney, Lucas/);
+});
+
+test('el consejero pendiente se ve apagado antes de escribirle', () => {
+  const html = fs.readFileSync(new URL('./index.html', import.meta.url), 'utf8');
+  assert.match(html, /\.np\.np-pago \{ opacity: \.55/);
+  assert.match(src, /title="Pendiente de crear su silla en GrokBot/);
 });

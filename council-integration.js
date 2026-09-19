@@ -67,36 +67,41 @@
     onDesktop({persona}){
       if(typeof closeTableViewer==='function')closeTableViewer();
       if(window.__consejoDeskPoll){clearInterval(window.__consejoDeskPoll);window.__consejoDeskPoll=null;}
-      const alias=({'Steve Jobs':'Jobs','Steve Wozniak':'Wozniak','Walt Disney':'Disney','George Lucas':'Lucas'})[persona]||persona;
+      const alias=({'Steve Jobs':'Jobs','Steve Wozniak':'Wozniak','Walt Disney':'Disney','George Lucas':'Lucas'})[persona]||String(persona||'').split(/\s+/).pop();
       const mini='https://macmini.tail48b61c.ts.net';
-      const fleet='https://fleet.admira.live';
+      // Solo Funnel Mini (público). Fleet /api/grokbot/screen exige sesión y responde grokbot_route_not_found.
+      const jsonUrl=mini+'/demo/grokbot-sync/screen?persona='+encodeURIComponent(alias);
+      const jpegBase=mini+'/demo/grokbot-sync/screen.jpg?persona='+encodeURIComponent(alias);
       table.show({persona,generation,status:'connecting',message:'Conectando escritorio GrokBot…',media:null,capabilities:{history:true,reconnect:true}});
-      const csrf=window.admiraGateCsrf?.()||'';
-      const urls=[mini+'/demo/grokbot-sync/screen?persona='+encodeURIComponent(alias),fleet+'/api/grokbot/screen?persona='+encodeURIComponent(alias)];
-      const showLive=(data)=>{
-        const media=data.media||(data.url?{kind:data.kind||'image',url:data.url}:null);
-        if(!media||!media.url)return false;
-        const base=media.url.replace(/([?&])t=[^&]*/g,'').replace(/[?&]$/,'');
-        const stamp=()=>base+(base.includes('?')?'&':'?')+'t='+Date.now();
-        media.url=stamp();
-        table.show({persona,generation,status:data.status||'live',message:data.message||'Escritorio GrokBot vivo',media:{...media,url:media.url},capabilities:{history:true,reconnect:true}});
+      const stamp=u=>u+(u.includes('?')?'&':'?')+'t='+Date.now();
+      const showJpeg=(label)=>{
+        const media={kind:'image',url:stamp(jpegBase),title:label||('Escritorio de '+persona)};
+        table.show({persona,generation,status:'live',message:'Escritorio GrokBot vivo',media,capabilities:{history:true,reconnect:true}});
         window.__consejoDeskPoll=setInterval(()=>{
-          table.show({persona,generation,status:'live',message:'Escritorio GrokBot vivo',media:{kind:'image',url:stamp(),title:media.title||('Escritorio de '+persona)},capabilities:{history:true,reconnect:true}});
+          table.show({persona,generation,status:'live',message:'Escritorio GrokBot vivo',media:{kind:'image',url:stamp(jpegBase),title:media.title},capabilities:{history:true,reconnect:true}});
         },2500);
-        return true;
       };
       (async()=>{
-        let lastErr='Escritorio no disponible';
-        for(const url of urls){
-          try{
-            const r=await fetch(url,{credentials:'include',cache:'no-store',headers:{Accept:'application/json','X-Fleet-CSRF':csrf}});
-            const data=await r.json().catch(()=>null);
-            if(!r.ok||!data?.ok){lastErr=(data&&(data.error||data.message))||('HTTP '+r.status);continue;}
-            if(showLive(data))return;
-            lastErr='Sin media.url';
-          }catch(e){lastErr=e.message||String(e);}
+        try{
+          const r=await fetch(jsonUrl,{cache:'no-store',headers:{Accept:'application/json'}});
+          const data=await r.json().catch(()=>null);
+          if(r.ok&&data?.ok&&data.media?.url){
+            const base=String(data.media.url).replace(/([?&])t=[^&]*/g,'').replace(/[?&]$/,'');
+            const media={kind:data.media.kind||'image',url:stamp(base),title:data.media.title||('Escritorio de '+persona)};
+            table.show({persona,generation,status:data.status||'live',message:data.message||'Escritorio GrokBot vivo',media,capabilities:{history:true,reconnect:true}});
+            window.__consejoDeskPoll=setInterval(()=>{
+              table.show({persona,generation,status:'live',message:'Escritorio GrokBot vivo',media:{kind:'image',url:stamp(base),title:media.title},capabilities:{history:true,reconnect:true}});
+            },2500);
+            return;
+          }
+          // JSON falló → JPEG directo (misma captura)
+          showJpeg('Escritorio GrokBot');
+        }catch(e){
+          try{showJpeg('Escritorio GrokBot');}
+          catch(_){
+            table.show({persona,generation,status:'unavailable',message:'Escritorio GrokBot no disponible ('+(e.message||e)+').',media:null,capabilities:{history:true,reconnect:true}});
+          }
         }
-        table.show({persona,generation,status:'unavailable',message:'Escritorio GrokBot no disponible ('+lastErr+').',media:null,capabilities:{history:true,reconnect:true}});
       })();
     }
   });

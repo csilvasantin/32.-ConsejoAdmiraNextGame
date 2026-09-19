@@ -1742,14 +1742,16 @@
                encima, nada de cajas ni bordes que delaten un botón encima. */
             transition: box-shadow .18s ease, background-color .18s ease;
         }
-        /* Sin realce al pasar por encima (Carlos, 2026-09-19): el cursor ya dice
-           que se puede pulsar, y un rectángulo encendido sobre el dibujo delata
-           que hay botones invisibles pegados al Mac. Sólo el foco de teclado deja
-           marca, que ésa hace falta para navegar sin ratón. */
+        /* NADA de marco sobre el dibujo (Carlos, 2026-09-19, dos veces). El
+           realce de foco saltaba al jugar al Pong con las flechas: el botón
+           tiene el foco, pulsas una tecla y el navegador pasa a «modo teclado»
+           y lo pinta encima del Mac. Además se suelta el foco al pulsar, para
+           que un clic no deje nada marcado. */
+        .mac-hoy-keys:focus, .mac-hoy-mouse:focus, .mac-hoy-floppy:focus,
+        .mac-hoy-front-keys:focus, .mac-hoy-front-mouse:focus, .mac-hoy-front-floppy:focus,
         .mac-hoy-keys:focus-visible, .mac-hoy-mouse:focus-visible, .mac-hoy-floppy:focus-visible,
         .mac-hoy-front-keys:focus-visible, .mac-hoy-front-mouse:focus-visible, .mac-hoy-front-floppy:focus-visible {
-            outline: 2px solid rgba(255,210,122,.8);
-            outline-offset: -2px;
+            outline: none;
         }
         .mac-hoy-keys { left: 1%; top: 57%; width: 63%; height: 32%; }
         .mac-hoy-mouse { left: 73%; top: 79%; width: 22%; height: 19%; }
@@ -3653,12 +3655,12 @@ body.rail-open{overflow:hidden}
                          verbos. Por eso el Mac vive aquí: se llega a él en cualquier
                          momento, que es lo que pediste. -->
                     <div class="inv-objetos" id="inv-objetos">
-                        <button class="obj" type="button" data-obj="mac" title="Macintosh 1984 · HOY + 3 últimas FLT"><img src="assets/iconos/mac.svg" alt="Macintosh 1984"></button>
-                        <button class="obj" type="button" data-obj="deck" data-verb="presentar" title="Presentar · generar una presentación"><img src="assets/iconos/deck.svg" alt="Presentación"></button>
-                        <button class="obj" type="button" data-obj="bot" data-verb="hablar" title="Yarig.AI · conectar contexto"><img src="assets/iconos/bot.svg" alt="Yarig.AI"></button>
-                        <button class="obj" type="button" data-obj="book" data-verb="leer" title="Pensar · el libro del día"><img src="assets/iconos/book.svg" alt="Libro del día"></button>
-                        <button class="obj" type="button" data-obj="urna" data-verb="votar" title="Votar · someter una propuesta"><img src="assets/iconos/urna.svg" alt="Urna de votación"></button>
-                        <button class="obj" type="button" data-obj="lupa" data-verb="examinar" title="Examinar · perfil y lore de un consejero"><img src="assets/iconos/lupa.svg" alt="Lupa"></button>
+                        <button class="obj" type="button" data-obj="next" data-url="https://www.admiranext.com" title="AdmiraNeXT · admiranext.com"><img src="assets/iconos/next.svg" alt="AdmiraNeXT"></button>
+                        <button class="obj" type="button" data-obj="tv" data-url="https://www.admira.tv" title="Admira TV · admira.tv"><img src="assets/iconos/tv.svg" alt="Admira TV"></button>
+                        <button class="obj" type="button" data-obj="yokup" data-url="https://www.yokup.com" title="Yokup · yokup.com"><img src="assets/iconos/yokup.svg" alt="Yokup"></button>
+                        <button class="obj" type="button" data-obj="studio" data-url="https://www.admira.studio" title="Admira Studio · admira.studio"><img src="assets/iconos/studio.svg" alt="Admira Studio"></button>
+                        <button class="obj" type="button" data-obj="store" data-url="https://www.admira.store" title="Admira Store · admira.store"><img src="assets/iconos/store.svg" alt="Admira Store"></button>
+                        <button class="obj" type="button" data-obj="app" data-url="https://www.admira.app" title="Admira App · admira.app"><img src="assets/iconos/app.svg" alt="Admira App"></button>
                         <button class="obj" type="button" data-obj="pincel" data-verb="crear" title="Crear · generar una imagen"><img src="assets/iconos/pincel.svg" alt="Pincel"></button>
                         <button class="obj" type="button" data-obj="chip" data-verb="entrenar" title="Entrenar · alimentar a un consejero"><img src="assets/iconos/chip.svg" alt="Chip"></button>
                         <button class="obj" type="button" data-obj="motor" title="Motor · elegir el modelo que responde"><img src="assets/iconos/motor.svg" alt="Motor"></button>
@@ -4131,8 +4133,8 @@ body.rail-open{overflow:hidden}
 <script defer src="council-table.js?v=20260918-r5-desk-cors"></script>
 <script defer src="council-speech.js?v=20260918-r5-desk-cors"></script>
 <script defer src="council-grokbot.js?v=20260918-r5-desk-cors"></script>
-<script defer src="app.flt-100529.js?v=20260919-r11-motor"></script>
+<script defer src="app.flt-100529.js?v=20260919-r12-proyectos"></script>
 <script defer src="council-integration.js?v=20260918-r5-desk-cors"></script>
-<script type="module" src="assets/mac-hoy.js?v=20260919-pongfront"></script>
+<script type="module" src="assets/mac-hoy.js?v=20260919-sinmarco"></script>
 </body>
 </html>

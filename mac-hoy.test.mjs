@@ -226,3 +226,27 @@ test('el Pong también existe en la vista frontal', () => {
   // y abrir el frontal con el juego puesto lo engancha al lienzo recién aparecido
   assert.match(src, /if \(modo === 'pong'\) \{ arrancaPong\(root\); return true; \}/);
 });
+
+test('los seis primeros objetos abren los proyectos grandes', () => {
+  const esperado = [
+    ['next',   'https://www.admiranext.com'],
+    ['tv',     'https://www.admira.tv'],
+    ['yokup',  'https://www.yokup.com'],
+    ['studio', 'https://www.admira.studio'],
+    ['store',  'https://www.admira.store'],
+    ['app',    'https://www.admira.app'],
+  ];
+  // el ORDEN importa: Carlos los enumeró del primero al sexto
+  const orden = [...html.matchAll(/data-obj="([a-z]+)" data-url="([^"]+)"/g)].map(m => [m[1], m[2]]);
+  assert.deepEqual(orden, esperado);
+  esperado.forEach(([n]) => assert.ok(fs.existsSync(new URL(`./assets/iconos/${n}.svg`, import.meta.url)), `falta el icono ${n}`));
+  const app = fs.readFileSync(new URL('./app.flt-100529.js', import.meta.url), 'utf8');
+  assert.match(app, /window\.open\(url, '_blank', 'noopener'\)/, 'pestaña nueva y sin opener');
+});
+
+test('los puntos sensibles del Mac no pintan marco ni con el foco', () => {
+  assert.match(html, /\.mac-hoy-front-floppy:focus-visible \{\s*\n\s*outline: none;/);
+  assert.ok(!/outline: 2px solid rgba\(255,210,122/.test(html), 'fuera el marco dorado');
+  const src = fs.readFileSync(new URL('./assets/mac-hoy.js', import.meta.url), 'utf8');
+  assert.match(src, /el\.addEventListener\('mouseup', \(\) => \{ try \{ el\.blur\(\)/);
+});

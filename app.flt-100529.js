@@ -1633,6 +1633,11 @@
         if (previo) previo.classList.toggle('apagado', !window._hayPresentacion);
     }
     function usarObjeto(el) {
+        // Los seis primeros objetos son las puertas a los proyectos grandes de
+        // AdmiraNeXT (Carlos, 2026-09-19). Van a pestaña nueva: el Consejo se
+        // queda como estaba, con su partida o su ficha a medio leer.
+        const url = el.dataset.url;
+        if (url) { try { window.open(url, '_blank', 'noopener'); } catch (e) {} return; }
         if (el.dataset.obj === 'mac') { if (window.MacHoy) window.MacHoy.toggle(); return; }
         if (el.dataset.obj === 'motor') {
             const inv = document.querySelector('.inventory');

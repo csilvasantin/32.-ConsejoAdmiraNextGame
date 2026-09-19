@@ -482,6 +482,9 @@ export function boot(root = document, fetchImpl = fetch) {
       jugador = delta;                       // ratón (+1) baja, teclado (-1) sube
     };
     const suelta = () => { if (jugador === delta) jugador = 0; };
+    // Un clic de ratón no debe dejar el botón con el foco: si luego se pulsa
+    // una tecla, el navegador lo pintaría con su marco encima del dibujo.
+    el.addEventListener('mouseup', () => { try { el.blur(); } catch (e) {} });
     el.addEventListener('pointerdown', empuja);
     el.addEventListener('pointerup', suelta);
     el.addEventListener('pointerleave', suelta);

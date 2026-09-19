@@ -2573,6 +2573,70 @@
         .verb-btn.verb-primary { color: #ffaaaa; text-shadow: none; }
         .verb-btn.verb-primary:hover { color: #ffff00; background: #7a5a2e; text-shadow: none; }
         .verb-btn.verb-primary.active { color: #000000; text-shadow: none; background: #e74c3c; font-weight: bold; }
+        /* ══ SCUMM · cajas de verbo con marco biselado ═══════════════════════════
+           (Carlos, 2026-09-19, con la captura de Fate of Atlantis delante.) Luz
+           arriba-izquierda y sombra abajo-derecha; al pulsar se invierte y la caja
+           se hunde. El COLOR dice si el verbo se puede usar: vivo = seleccionable,
+           apagado = ahora no. El rosa/blanco anterior no significaba nada, sólo
+           decoraba, y se leía como si unos estuvieran deshabilitados. */
+        .verb-grid {
+            grid-template-columns: repeat(3, minmax(104px, max-content));
+            grid-template-rows: none;
+            justify-content: start;
+            align-content: center;
+            column-gap: 4px;
+            row-gap: 4px;
+        }
+        .verb-btn,
+        .verb-btn.verb-primary {
+            background: #7a5530;
+            border-top: 2px solid #bb9058;
+            border-left: 2px solid #bb9058;
+            border-right: 2px solid #402a12;
+            border-bottom: 2px solid #402a12;
+            border-radius: 0;
+            color: #f2e3bd;
+            text-align: left;
+            padding: 5px 8px;
+            text-shadow: none;
+            transform: none;
+        }
+        .verb-btn:hover,
+        .verb-btn.verb-primary:hover {
+            background: #8d6337; color: #ffffff; text-shadow: none; transform: none;
+        }
+        .verb-btn.active,
+        .verb-btn.verb-primary.active,
+        .verb-btn:active {
+            background: #5d3f22; color: #ffee88; font-weight: normal; transform: none;
+            border-top-color: #402a12; border-left-color: #402a12;
+            border-right-color: #bb9058; border-bottom-color: #bb9058;
+        }
+        /* APAGADO: el verbo existe pero ahora no se puede usar. */
+        .verb-btn.apagado,
+        .verb-btn.apagado:hover {
+            color: #97784b; background: #6b4a28; cursor: default;
+            border-top-color: #8a6a3e; border-left-color: #8a6a3e;
+        }
+        /* Ranuras del inventario: cajas biseladas, tambien las vacias. */
+        .obj, .obj-vacio {
+            background: #b09a6e;
+            border-top: 2px solid #dccaa0;
+            border-left: 2px solid #dccaa0;
+            border-right: 2px solid #4a3418;
+            border-bottom: 2px solid #4a3418;
+            border-radius: 0;
+        }
+        .obj:hover { background: #c6ae7c; border-color: #dccaa0 #4a3418 #4a3418 #dccaa0; }
+        .obj-vacio { cursor: default; }
+        .verb-arrow {
+            background: #7a5530; border-radius: 0;
+            border-top: 2px solid #bb9058; border-left: 2px solid #bb9058;
+            border-right: 2px solid #402a12; border-bottom: 2px solid #402a12;
+            color: #f2e3bd;
+        }
+        .verb-arrow:hover:not(:disabled) { background: #8d6337; color: #fff; }
+        .verb-arrow:disabled { opacity: 1; color: #97784b; background: #6b4a28; }
         .inventory { border-left: 2px solid #3a2410; }
         .inventory-title { color: #ffee88; }
         .inv-item { border-radius: 0; }
@@ -3517,7 +3581,7 @@ body.rail-open{overflow:hidden}
                     <button class="verb-btn mac-hoy-chip" id="btn-mostrar" type="button" title="Macintosh 1984 · HOY + 3 últimas FLT · mismo gesto que /mac" onclick="event.stopPropagation(); window.MacHoy && window.MacHoy.toggle()">Mostrar<br>Ocultar</button>
                     <button class="verb-btn" data-verb="presentar" title="Genera una presentación a partir de un tema" onclick="selectVerb(this)">Presentar</button>
                     <button class="verb-btn verb-primary" data-verb="reunion" title="Reúnete a solas con un consejero (chat 1 a 1)" onclick="selectVerb(this)">Reunión</button>
-                    <button class="verb-btn" data-verb="previo" id="btn-previo" title="Reabre la última presentación generada" onclick="selectVerb(this)" style="display:none;border-left:2px solid #5a3a1e">Previo</button>
+                    <button class="verb-btn apagado" data-verb="previo" id="btn-previo" title="Reabre la última presentación generada — se enciende cuando hay una" onclick="selectVerb(this)">Previo</button>
                 </div>
                 <div class="verb-pager">
                     <button class="verb-arrow" id="verb-up" type="button" onclick="verbPage(-1)" title="Verbos anteriores" aria-label="Verbos anteriores">▲</button>
@@ -4005,7 +4069,7 @@ body.rail-open{overflow:hidden}
 <script defer src="council-table.js?v=20260918-r5-desk-cors"></script>
 <script defer src="council-speech.js?v=20260918-r5-desk-cors"></script>
 <script defer src="council-grokbot.js?v=20260918-r5-desk-cors"></script>
-<script defer src="app.flt-100529.js?v=20260919-r8-scumm9"></script>
+<script defer src="app.flt-100529.js?v=20260919-r9-scumm90"></script>
 <script defer src="council-integration.js?v=20260918-r5-desk-cors"></script>
 <script type="module" src="assets/mac-hoy.js?v=20260919-mandos"></script>
 </body>

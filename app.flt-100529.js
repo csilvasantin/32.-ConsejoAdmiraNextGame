@@ -1329,6 +1329,8 @@
     }
 
     function selectVerb(btn) {
+        // Un verbo apagado está a la vista pero no se puede usar: el color no miente.
+        if (btn && btn.classList && btn.classList.contains('apagado')) return;
         // Presentar va directo a la galería de todas las presentaciones, sin paso de confirmar
         // (Carlos, 19-09-2026). Un solo clic desde el botón del verbo.
         if (btn && btn.dataset && btn.dataset.verb === 'presentar') {
@@ -1607,50 +1609,41 @@
     }
     function toggleScumm() { const bar = document.querySelector('.scumm-bar'); setScummCollapsed(!(bar && bar.classList.contains('scumm-collapsed'))); }
 
-    // ── SCUMM: nueve cajas de verbo y flechas para el resto ──────────────────
-    // (Carlos, 2026-09-19: «compactando los textos a 9 cajas como en el motor
-    // SCUMM… utilizar la flecha arriba y abajo exactamente igual»). No se recorta
-    // ningún verbo: los que no caben en la página están a una flecha.
-    const VERBOS_POR_PAGINA = 9;
-    let verbPagina = 0;
-    function verbosPaginables() {
-        return Array.from(document.querySelectorAll('.verb-grid .verb-btn'))
-            // «Previo» sólo existe cuando hay una presentación que reabrir: mientras
-            // esté oculto no debe gastar una casilla ni empujar a otro verbo de página.
-            .filter(b => b.style.display !== 'none');
-    }
-    function pintaVerbos() {
-        const todos = verbosPaginables();
-        const paginas = Math.max(1, Math.ceil(todos.length / VERBOS_POR_PAGINA));
-        verbPagina = Math.min(Math.max(verbPagina, 0), paginas - 1);
-        const desde = verbPagina * VERBOS_POR_PAGINA;
-        todos.forEach((b, i) => { b.hidden = i < desde || i >= desde + VERBOS_POR_PAGINA; });
+    // ── SCUMM: verbos siempre a la vista; las flechas mueven el INVENTARIO ────
+    // (Carlos, 2026-09-19: «te caben todos los verbos sin usar el scroll».) En el
+    // motor original las flechas no paginan los verbos —esos están siempre los
+    // nueve— sino los objetos del inventario. Aquí hacen exactamente eso.
+    const OBJETOS_POR_PAGINA = 8;
+    let objPagina = 0;
+    function pintaObjetos() {
+        const todos = Array.from(document.querySelectorAll('#inv-objetos .obj'));
+        const paginas = Math.max(1, Math.ceil(todos.length / OBJETOS_POR_PAGINA));
+        objPagina = Math.min(Math.max(objPagina, 0), paginas - 1);
+        const desde = objPagina * OBJETOS_POR_PAGINA;
+        todos.forEach((o, i) => { o.hidden = i < desde || i >= desde + OBJETOS_POR_PAGINA; });
         const up = document.getElementById('verb-up'), dn = document.getElementById('verb-down');
-        if (up) up.disabled = verbPagina === 0;
-        if (dn) dn.disabled = verbPagina >= paginas - 1;
-        const pager = document.querySelector('.verb-pager');
-        if (pager) pager.style.visibility = paginas > 1 ? '' : 'hidden';
+        if (up) up.disabled = objPagina === 0;
+        if (dn) dn.disabled = objPagina >= paginas - 1;
     }
-    function verbPage(delta) { verbPagina += delta; pintaVerbos(); }
-    // Trae a la vista la página donde vive un verbo, para que al usar su objeto del
-    // inventario se vea también iluminado en la rejilla.
-    function muestraVerbo(btn) {
-        const i = verbosPaginables().indexOf(btn);
-        if (i >= 0) { verbPagina = Math.floor(i / VERBOS_POR_PAGINA); pintaVerbos(); }
+    function verbPage(delta) { objPagina += delta; pintaObjetos(); }
+    // El COLOR del verbo dice si se puede usar. Hoy el único que puede no estarlo
+    // es «Previo»: no hay presentación que reabrir hasta que se genere una.
+    function refrescaVerbos() {
+        const previo = document.getElementById('btn-previo');
+        if (previo) previo.classList.toggle('apagado', !window._hayPresentacion);
     }
     function usarObjeto(el) {
         if (el.dataset.obj === 'mac') { if (window.MacHoy) window.MacHoy.toggle(); return; }
         const v = el.dataset.verb;
         const btn = v && document.querySelector('.verb-grid .verb-btn[data-verb="' + v + '"]');
-        if (!btn) return;
-        muestraVerbo(btn);
-        if (typeof selectVerb === 'function') selectVerb(btn);
+        if (btn && typeof selectVerb === 'function') selectVerb(btn);
     }
     window.verbPage = verbPage;
-    window.pintaVerbos = pintaVerbos;
+    window.refrescaVerbos = refrescaVerbos;
     window.usarObjeto = usarObjeto;
     function arrancaScummInventario() {
-        pintaVerbos();
+        pintaObjetos();
+        refrescaVerbos();
         document.querySelectorAll('#inv-objetos .obj').forEach(o =>
             o.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); usarObjeto(o); }));
     }
@@ -5772,7 +5765,11 @@
     function showPresentarResult(result) {
         _lastPresentarResult = result;
         const previoBtn = document.getElementById('btn-previo');
-        if (previoBtn) { previoBtn.style.display = ''; if (window.pintaVerbos) window.pintaVerbos(); }
+        // «Previo» no se oculta: se enciende. La caja está siempre, apagada hasta
+        // que hay algo que reabrir (Carlos, 2026-09-19).
+        window._hayPresentacion = true;
+        if (previoBtn) previoBtn.style.display = '';
+        if (window.refrescaVerbos) window.refrescaVerbos();
 
         document.getElementById('pdlg-loading').style.display = 'none';
         const dlg = document.getElementById('pdlg-result');

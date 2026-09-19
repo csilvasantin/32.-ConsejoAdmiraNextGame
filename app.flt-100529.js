@@ -4533,7 +4533,10 @@
     // Wire del click del hotspot y del fin de vídeo
     document.addEventListener("DOMContentLoaded", () => {
         try { if (localStorage.getItem('councilMenuHidden') === '1') document.body.classList.add('cli-menu-hidden'); } catch (e) {}
-        try { setScummCollapsed(localStorage.getItem('scummCollapsed') !== '0'); } catch (e) { setScummCollapsed(true); }
+        // La barra de verbos arranca EXPANDIDA por defecto (Carlos, 19-09-2026): solo queda
+        // colapsada si el usuario la cerró él mismo (scummCollapsed==='1'). Antes arrancaba
+        // cerrada salvo '0', y quien reseteaba el almacenamiento se quedaba sin verbos.
+        try { setScummCollapsed(localStorage.getItem('scummCollapsed') === '1'); } catch (e) { setScummCollapsed(false); }
         try { if (localStorage.getItem('topCollapsed') === '1') setTopCollapsed(true); } catch (e) {}
         try { if (localStorage.getItem('mouthsOff') === '1') setMouthsEnabled(false); } catch (e) {}
         refreshLLMAvailability();

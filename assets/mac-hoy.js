@@ -114,10 +114,17 @@ export function paintCrt(el, text) {
   // escribirse. A dos caracteres fijos, una ficha de detalle (el triple de texto
   // que «HOY») tardaba el triple y se quedaba a medias.
   const paso = Math.max(2, Math.ceil(text.length / 60));
+  const t0 = Date.now();
   let i = 0;
   return new Promise((resolve) => {
     const tick = () => {
       if (el.__crtTurno !== turno) return resolve();
+      // PLAZO. En una pestaña de fondo el navegador estrangula los
+      // temporizadores a ~1 tic por segundo: el tecleo no acababa nunca, el
+      // latido lo encontraba a medias y lo reiniciaba, así que la pantalla se
+      // quedaba clavada en cuatro letras. Pasado el plazo se renuncia al efecto
+      // y se escribe entera: mejor sin animación que a medias.
+      if (Date.now() - t0 > 3000) { el.textContent = text; return resolve(); }
       i += paso;
       el.textContent = text.slice(0, i);
       el.scrollTop = el.scrollHeight;

@@ -135,3 +135,19 @@ test('paintCrt: una ficha larga tiene techo de tiempo', async () => {
   const larga = await mide(240);
   assert.ok(larga < 1000, `una ficha larga tardó ${larga}ms; debe quedar por debajo de 1 s`);
 });
+
+test('paintCrt: si los temporizadores van estrangulados, escribe entera igual', async () => {
+  const { paintCrt } = await import('./assets/mac-hoy.js');
+  const real = globalThis.setTimeout;
+  // Simula una pestaña de fondo: un tic por segundo (comprimido a 20 ms de reloj
+  // falso no se puede, así que estiramos el retardo real lo justo para cruzar el
+  // plazo de 3 s con pocos tics).
+  globalThis.setTimeout = (fn) => real(fn, 700);
+  try {
+    const el = { textContent: '', scrollTop: 0, scrollHeight: 0 };
+    await paintCrt(el, 'y'.repeat(300));
+    assert.equal(el.textContent.length, 300, 'debe acabar la pantalla pese al estrangulamiento');
+  } finally {
+    globalThis.setTimeout = real;
+  }
+});

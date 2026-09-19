@@ -1329,6 +1329,12 @@
     }
 
     function selectVerb(btn) {
+        // Presentar va directo a la galería de todas las presentaciones, sin paso de confirmar
+        // (Carlos, 19-09-2026). Un solo clic desde el botón del verbo.
+        if (btn && btn.dataset && btn.dataset.verb === 'presentar') {
+            try { window.open('https://www.admiranext.com/presentaciones/galeria','_blank','noopener'); } catch(e){}
+            return;
+        }
         document.querySelectorAll('.verb-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         currentVerb = btn.dataset.verb;

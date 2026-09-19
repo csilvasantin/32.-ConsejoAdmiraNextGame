@@ -181,7 +181,7 @@ h1{font-size:clamp(23px,3vw,31px);letter-spacing:-.02em;margin:4px 0 10px;displa
 .mdet-imglink:hover .mdet-img{border-color:var(--brand,#78f3ff);box-shadow:0 0 10px rgba(120,243,255,.3)}
 /* FLT-1161 · PROJECT ID compacto. La asociación proyecto↔agente se gestiona en
    Dashboard: aquí quedan sólo miniatura, referencia humana y ciclo temporal. */
-.hd.project-id-layout{grid-template-columns:8px minmax(58px,66px) minmax(140px,var(--c-who,170px)) minmax(150px,var(--c-id,170px)) minmax(230px,var(--c-mis,1fr)) minmax(210px,var(--c-ord,250px)) minmax(0,var(--c-est,124px))}
+.hd.project-id-layout{grid-template-columns:8px minmax(50px,58px) minmax(46px,54px) minmax(140px,var(--c-who,170px)) minmax(150px,var(--c-id,170px)) minmax(230px,var(--c-mis,1fr)) minmax(210px,var(--c-ord,250px)) minmax(0,var(--c-est,124px))}
 .project-id-cell{padding-right:10px}
 .project-id-top{
   grid-template-columns:1fr;
@@ -213,12 +213,15 @@ h1{font-size:clamp(23px,3vw,31px);letter-spacing:-.02em;margin:4px 0 10px;displa
    y el texto íntegro sigue disponible mediante title/aria-label. */
 .project-id-layout .mission-col .subj .t{-webkit-line-clamp:4;line-clamp:4}
 .project-id-layout .mission-col .subj .m{margin-top:2px}
-/* PRIMERA COLUMNA · Hora + Nº de misión (Carlos, 2026-09-19) */
-.project-id-layout .cel.hora-mis{display:flex;flex-direction:column;align-items:center;justify-content:center;gap:3px;padding:4px 2px;text-align:center;min-width:0}
-.hora-mis .hm-num{font-family:var(--mono);font-weight:800;font-size:13px;line-height:1;color:var(--brand);letter-spacing:.02em}
-.hora-mis .hm-hora{font-family:var(--mono);font-size:10px;line-height:1;color:var(--mut)}
+/* DOS PRIMERAS COLUMNAS · Hora y Nº de misión, ordenables por separado
+   (Carlos, 2026-09-19) */
+.project-id-layout .cel.hora-col,
+.project-id-layout .cel.num-col{display:flex;align-items:center;justify-content:center;padding:4px 2px;text-align:center;min-width:0}
+.hora-col .hm-hora{font-family:var(--mono);font-size:11px;line-height:1.15;color:var(--mut)}
+.num-col .hm-num{font-family:var(--mono);font-weight:800;font-size:13px;line-height:1;color:var(--brand);letter-spacing:.02em}
+.num-col .hm-num.sin{color:var(--mut);opacity:.45;font-weight:600}
 @media(max-width:1100px){
-  .hd.project-id-layout{grid-template-columns:8px minmax(52px,60px) minmax(130px,var(--c-who,150px)) minmax(142px,var(--c-id,158px)) minmax(210px,var(--c-mis,1fr)) minmax(210px,var(--c-ord,230px)) minmax(0,var(--c-est,112px))}
+  .hd.project-id-layout{grid-template-columns:8px minmax(46px,52px) minmax(42px,48px) minmax(130px,var(--c-who,150px)) minmax(142px,var(--c-id,158px)) minmax(210px,var(--c-mis,1fr)) minmax(210px,var(--c-ord,230px)) minmax(0,var(--c-est,112px))}
 }
 @media(max-width:720px){
   .hd.project-id-layout{grid-template-columns:8px 1fr}
@@ -324,7 +327,7 @@ h1{font-size:clamp(23px,3vw,31px);letter-spacing:-.02em;margin:4px 0 10px;displa
 
 <script src="/yk-agent-identity.js?v=v.2026.08.02.224605"></script>
 <script src="/yk-maquina.js?v=r1"></script>
-<script src="/yk-misiones.js?v=v.2026.09.19.r1"></script>
+<script src="/yk-misiones.js?v=v.2026.09.19.r2"></script>
 <script src="/yk-adjuntos.js?v=r3"></script>
 <script src="/yk-cabezal.js?v=r4"></script>
 <script src="/mission-ledger.js?v=100640-1"></script>
@@ -417,6 +420,15 @@ const SORTERS={
   id:t=>parseInt(String(t.id).replace(/\D/g,""),10)||0,
   subject:t=>String(t.subject||"").toLowerCase(),
   fecha:t=>Number(t.created_at)<4102444800?Number(t.created_at)*1000:Number(t.created_at)||0,
+  // Nº de misión del día. Ordena por jornada y DENTRO de ella por número, así el
+  // histórico no mezcla el #2 de hoy con el #2 de ayer. Sin número va al final:
+  // -Infinity lo hundiría al principio en ascendente y mentiría sobre su orden.
+  numero:t=>{
+    const n=Number(t.display_n);
+    if(!Number.isFinite(n)) return Number.MAX_SAFE_INTEGER;
+    const d=String(t.display_day||"").replace(/\D/g,"");
+    return (d?Number(d):0)*100000+n;
+  },
   ordenador:t=>String(YkMisiones.machineOf(t)||"").toLowerCase(),
   agente:t=>String(t.assignee||"").toLowerCase(),
   estado:t=>({"Sin asignar":0,"Pendiente":1,"En curso":2,"No concluida":3,"Finalizada":4,"Eliminada":5}[YkMisiones.estadoDe(t).l]??6)
@@ -429,9 +441,10 @@ function headHtml(){
   // AGENTE/PLATAFORMA primero (Carlos, 2026-08-05). «Seleccionar todas» se queda
   // en PROJECT ID: las casillas de cada fila van superpuestas a su miniatura,
   // dentro de esa misma columna, y separarlas dejaría el «todas» huérfano.
-  // PRIMERA COLUMNA: Hora + Nº de misión (Carlos, 2026-09-19). Índice rápido de la
-  // jornada —a qué hora entró y con qué número— antes de saber quién la lleva.
-  return '<div class="hd lhead project-id-layout"><div></div>'+col("fecha","Hora · Nº")+col("agente","Agente/Plataforma")+idcol+col("subject","Misión")+col("ordenador","Tareas")+col("estado","Estado")+"</div>";
+  // DOS PRIMERAS COLUMNAS: Hora y Nº de misión, separadas (Carlos, 2026-09-19) para
+  // poder ordenar por cada una. Índice de la jornada —cuándo entró y con qué
+  // número— antes de saber quién la lleva.
+  return '<div class="hd lhead project-id-layout"><div></div>'+col("fecha","Hora")+col("numero","Nº")+col("agente","Agente/Plataforma")+idcol+col("subject","Misión")+col("ordenador","Tareas")+col("estado","Estado")+"</div>";
 }
 // ACK explícito para la marca de navegación: sólo se declara «vista» una misión
 // después de que una carga real haya pintado las filas que el usuario puede ver.

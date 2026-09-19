@@ -754,12 +754,15 @@
     var host = t.agent_host === "cli" ? "CLI" : t.agent_host === "app" ? "Desktop App" : "";
     var surface = [rt, host].filter(Boolean).join(" · ");
     var sourceLabel = missionSourceLabel(t);
-    // PRIMERA COLUMNA (Carlos, 2026-09-19): hora de entrada + Nº de misión del día.
+    // DOS PRIMERAS COLUMNAS (Carlos, 2026-09-19): hora de entrada y Nº de misión del
+    // día, separadas para poder ordenar por cada una.
     var numMis = (t.display_n != null && t.display_n !== "") ? "#" + t.display_n : "";
     var horaMis = horaCorta(t.created_at);
-    var horaMisHtml = '<div class="cel hora-mis" title="' + esc((numMis ? "Misión " + numMis + " · " : "") + "creada " + fechaCorta(t.created_at)) + '">' +
-      (numMis ? '<span class="hm-num">' + esc(numMis) + "</span>" : "") +
-      (horaMis ? '<span class="hm-hora">' + esc(horaMis) + "</span>" : "") + "</div>";
+    var horaMisHtml =
+      '<div class="cel hora-col" title="' + esc("creada " + fechaCorta(t.created_at)) + '">' +
+        '<span class="hm-hora">' + esc(horaMis || "—") + "</span></div>" +
+      '<div class="cel num-col" title="' + esc(numMis ? "Misión " + numMis + " del día" : "sin número de misión del día") + '">' +
+        '<span class="hm-num' + (numMis ? "" : " sin") + '">' + esc(numMis || "—") + "</span></div>";
     var idHtml = '<div class="tkid" title="ID técnico: ' + esc(t.id) + '">' +
       (window.YkDisplayRef && window.YkDisplayRef.screenHtml ? window.YkDisplayRef.screenHtml(t, esc) : esc(visibleId(t))) +
       (CFG.projectIdLayout ? "" : '<span class="st">' + esc(sourceLabel) + "</span>") +

@@ -1634,7 +1634,7 @@
         const bar = document.querySelector('.scumm-bar'); if (!bar) return;
         bar.classList.toggle('scumm-collapsed', collapsed);
         const f = document.getElementById('scumm-fold'); if (f) f.textContent = collapsed ? '▸' : '▾';
-        try { localStorage.setItem('scummCollapsed', collapsed ? '1' : '0'); } catch (e) {}
+        try { localStorage.setItem('scummCollapsed.v2', collapsed ? '1' : '0'); } catch (e) {}
     }
     function toggleScumm() { const bar = document.querySelector('.scumm-bar'); setScummCollapsed(!(bar && bar.classList.contains('scumm-collapsed'))); }
 
@@ -4769,7 +4769,11 @@
         // La barra de verbos arranca EXPANDIDA por defecto (Carlos, 19-09-2026): solo queda
         // colapsada si el usuario la cerró él mismo (scummCollapsed==='1'). Antes arrancaba
         // cerrada salvo '0', y quien reseteaba el almacenamiento se quedaba sin verbos.
-        try { setScummCollapsed(localStorage.getItem('scummCollapsed') === '1'); } catch (e) { setScummCollapsed(false); }
+        // Clave nueva (Carlos, 2026-09-20: «por defecto el menu Scumm visible»):
+        // asi el menu arranca desplegado una vez para todos, y a partir de ahi
+        // se vuelve a respetar que alguien lo cierre a mano. Con la clave vieja,
+        // quien lo hubiera plegado alguna vez seguiria sin verlo.
+        try { setScummCollapsed(localStorage.getItem('scummCollapsed.v2') === '1'); } catch (e) { setScummCollapsed(false); }
         try { if (localStorage.getItem('topCollapsed') === '1') setTopCollapsed(true); } catch (e) {}
         try { if (localStorage.getItem('mouthsOff') === '1') setMouthsEnabled(false); } catch (e) {}
         refreshLLMAvailability();

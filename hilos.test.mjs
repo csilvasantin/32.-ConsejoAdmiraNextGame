@@ -132,3 +132,30 @@ test('el aviso de pausa no se disfraza de error de red', () => {
   assert.match(f, /Mesa en pausa/);
   assert.ok(!/Modo offline/.test(f));
 });
+
+test('el rótulo y el campo comparten una sola fila', () => {
+  const html = fs.readFileSync(new URL('./index.html', import.meta.url), 'utf8');
+  // el rótulo va DENTRO de la barra de escritura, no como franja aparte encima
+  const fila = html.slice(html.indexOf('<div class="action-line">'), html.indexOf('</div>', html.indexOf('action-send')));
+  assert.match(fila, /id="sentence-line"/);
+  assert.match(fila, /id="action-input"/);
+  assert.match(fila, /action-send/);
+  // el rótulo cede el sitio al campo y desaparece si está vacío
+  assert.match(html, /\.sentence-line:empty \{ display: none; \}/);
+  assert.match(html, /flex: 0 1 auto; max-width: 42%/);
+});
+
+test('el menú SCUMM nace visible y sin parpadeo', () => {
+  const html = fs.readFileSync(new URL('./index.html', import.meta.url), 'utf8');
+  assert.ok(!/<div class="scumm-bar scumm-collapsed">/.test(html), 'no debe nacer plegado');
+  assert.match(html, /<div class="scumm-bar">/);
+  // clave nueva: quien lo hubiera plegado antes vuelve a verlo una vez
+  assert.match(src, /localStorage\.getItem\('scummCollapsed\.v2'\)/);
+  assert.match(src, /localStorage\.setItem\('scummCollapsed\.v2'/);
+});
+
+test('el panel se llama DeepAgents Team', () => {
+  const html = fs.readFileSync(new URL('./index.html', import.meta.url), 'utf8');
+  assert.match(html, /<b>📡 DeepAgents Team<\/b>/);
+  assert.ok(!/<b>📡 AgoraMatrix · Consejo<\/b>/.test(html));
+});

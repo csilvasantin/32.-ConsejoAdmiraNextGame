@@ -3182,12 +3182,18 @@
         .np.selectable, .body-hotspot, .meeting-door-hotspot, button, a, [onclick] {
             cursor: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='24' height='24'%3E%3Cg fill='none' stroke='%23ffff33' stroke-width='2.2'%3E%3Ccircle cx='12' cy='12' r='6'/%3E%3Cpath d='M12 0 L12 5 M12 19 L12 24 M0 12 L5 12 M19 12 L24 12'/%3E%3C/g%3E%3C/svg%3E") 12 12, pointer;
         }
+        /* El rotulo y el campo comparten fila (Carlos, 2026-09-20): eran dos
+           franjas apiladas y se comian alto de pantalla para decir muy poco.
+           El rotulo se cine a su texto y cede el resto al campo; si no cabe,
+           se recorta el rotulo, nunca el sitio para escribir. */
         .sentence-line {
             font-family: 'Press Start 2P', monospace; font-size: 9px; color: #ffee88;
-            background: #2e1c0a; border-bottom: 2px solid #2a1a08; padding: 7px 10px;
-            min-height: 14px; line-height: 1.5; letter-spacing: 0.5px;
+            line-height: 1.5; letter-spacing: 0.5px;
             white-space: nowrap; overflow: hidden; text-overflow: ellipsis;
+            flex: 0 1 auto; max-width: 42%; padding-right: 10px;
+            border-right: 2px solid #2a1a08;
         }
+        .sentence-line:empty { display: none; }
         .sentence-line .sl-verb { color: #ffd24a; }
         .sentence-line .sl-obj { color: #ffffff; }
         .sentence-line:empty::before { content: "Pulsa un verbo y un consejero\2026"; color: #7a5a30; }
@@ -3633,9 +3639,9 @@ body.rail-open{overflow:hidden}
         </div>
 
 
-        <div class="scumm-bar scumm-collapsed">
-            <div class="sentence-line" id="sentence-line"></div>
+        <div class="scumm-bar">
             <div class="action-line">
+                <div class="sentence-line" id="sentence-line"></div>
                 <input class="action-input" id="action-input" type="text" placeholder="escribe aquí · /help para todos los comandos" autocomplete="off" onkeydown="if(event.key==='Enter')sendMessage()">
                 <button class="action-send" onclick="sendMessage()">Enviar</button>
                 <button class="scumm-fold" id="scumm-fold" onclick="toggleScumm()" title="Plegar / desplegar el menú (verbos)" aria-label="Plegar menú">▾</button>
@@ -3996,7 +4002,7 @@ body.rail-open{overflow:hidden}
   #agm-wr{ border-top:1px solid #5a3a1e; }
 </style>
 <div id="agm-panel" class="agm-min" aria-label="AgoraMatrix Consejo">
-  <div id="agm-head"><span class="agm-dot"></span><b>📡 AgoraMatrix · Consejo</b><span class="agm-toggle">▸</span></div>
+  <div id="agm-head"><span class="agm-dot"></span><b>📡 DeepAgents Team</b><span class="agm-toggle">▸</span></div>
   <div id="agm-body">
     <div id="agm-presence"></div>
     <div id="agm-brief"><div class="agm-agent empty">Pide estado para ver aqui que hace cada agente.</div></div>
@@ -4143,7 +4149,7 @@ body.rail-open{overflow:hidden}
 <script defer src="council-table.js?v=20260918-r5-desk-cors"></script>
 <script defer src="council-speech.js?v=20260918-r5-desk-cors"></script>
 <script defer src="council-grokbot.js?v=20260918-r5-desk-cors"></script>
-<script defer src="app.flt-100529.js?v=20260920-r20-pausa"></script>
+<script defer src="app.flt-100529.js?v=20260920-r21-unalinea"></script>
 <script defer src="council-integration.js?v=20260918-r5-desk-cors"></script>
 <script type="module" src="assets/mac-hoy.js?v=20260919-sinmarco"></script>
 </body>

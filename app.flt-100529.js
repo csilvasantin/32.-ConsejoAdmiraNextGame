@@ -1698,6 +1698,7 @@
             '<li><strong>/scumm on|off|toggle</strong> — pliega/despliega el menú intermedio (verbos) — o el botón ▾</li>' +
             '<li><strong>/top on|off|toggle</strong> — pliega/despliega el menú superior (botón ▾)</li>' +
             '<li><strong>/bocas on|off|toggle</strong> — los consejeros vivos mueven la boca (hablan)</li>' +
+            '<li><strong>/mac on|off|toggle</strong> — muestra u oculta el Macintosh 1984 (HOY + 3 FLT hechas)</li>' +
             '<li><strong>/yarig on|off|toggle</strong> — fija u oculta Yarig en la mesa</li>' +
             '<li><strong>/yarig login</strong> — abre la sesión persistente de Yarig</li>' +
             '<li><strong>/yarig estado</strong> — comprueba watcher y frescura del sync</li>' +
@@ -2015,7 +2016,7 @@
     const CLI_COMMANDS = [
         '/help', '/sites', '/admira.live', '/admira.studio', '/admiranext.com',
         '/admira.app', '/clearchannel.tv', '/pixeria.com', '/equipos', '/control',
-        '/scumm', '/top', '/bocas', '/menu', '/agoramatrix', '/tareas', '/google',
+        '/scumm', '/top', '/bocas', '/mac', '/menu', '/agoramatrix', '/tareas', '/google',
         '/importar', '/nombres', '/tarea', '/diario', '/leyendas', '/coetaneos', '/agentes', '/comandos', '/sendto',
         '/marcador', '/flota', '/highscore'
     ];
@@ -2150,6 +2151,21 @@
             setTopCollapsed(nv);
             addUserEntry(text);
             setActionLine('🔼 Menú superior ' + (nv ? 'plegado' : 'desplegado') + ' · /top on · off · toggle');
+            return true;
+        }
+
+        const macMatch = text.match(/^\/mac(?:\s+(on|off|toggle))?$/i);
+        if (macMatch) {
+            const action = (macMatch[1] || 'toggle').toLowerCase();
+            const api = window.MacHoy;
+            if (!api || typeof api.setVisible !== 'function') {
+                setActionLine('🖥 Macintosh Hoy no está listo');
+                return true;
+            }
+            if (action === 'on') api.setVisible(true);
+            else if (action === 'off') api.setVisible(false);
+            else api.toggle();
+            setActionLine(api.isVisible() ? '🖥 Macintosh 1984 — HOY + 3 FLT hechas · /mac off limpia la mesa' : '🖥 mesa limpia — /mac o MOSTRAR para encender el CRT');
             return true;
         }
         const bocasMatch = text.match(/^\/(?:bocas|boca)\s*(on|off|toggle)?$/i);

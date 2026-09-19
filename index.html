@@ -1502,6 +1502,185 @@
             pointer-events: none;
             background: transparent;
         }
+        /* FLT-100662 P0: Mac −45% centrado, ON-DEMAND (/mac · MOSTRAR). Off = mesa limpia.
+           FLT-100670 P0 anti-pegote: el texto vive DENTRO del cristal (mask + plano 3/4).
+           Sin caja verde flotante. Teclado/ratón → Misiones; cristal → frontal. */
+        .mac-hoy-prop {
+            display: none;
+            position: absolute;
+            left: 41%;
+            top: 55%;
+            width: 20%;
+            z-index: 5;
+            pointer-events: none;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            filter: drop-shadow(0 10px 12px rgba(0,0,0,.55));
+        }
+        .mac-hoy-prop.on { display: block; }
+        .mac-hoy-prop img {
+            width: 100%;
+            height: auto;
+            display: block;
+            image-rendering: auto;
+            pointer-events: none;
+        }
+        .mac-hoy-glass {
+            position: absolute;
+            left: 31.2%;
+            top: 11.2%;
+            width: 27.6%;
+            height: 22.8%;
+            padding: 0;
+            border: 0;
+            background: transparent;
+            overflow: hidden;
+            cursor: pointer;
+            pointer-events: auto;
+            z-index: 2;
+            clip-path: polygon(7% 9%, 92% 6%, 97% 92%, 4% 96%);
+            transform: perspective(380px) rotateY(-18deg) rotateX(7deg) rotateZ(-0.6deg);
+            transform-origin: 10% 58%;
+        }
+        .mac-hoy-glass::before {
+            content: '';
+            position: absolute; inset: 0;
+            background: radial-gradient(ellipse at 42% 38%, rgba(90,255,140,.22) 0%, transparent 72%);
+            mix-blend-mode: screen;
+            pointer-events: none;
+            animation: mac-hoy-idle 2.8s ease-in-out infinite;
+        }
+        .mac-hoy-glass::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: repeating-linear-gradient(180deg, transparent 0 2px, rgba(0,0,8,.22) 2px 3px);
+            mix-blend-mode: multiply;
+            opacity: .5;
+            pointer-events: none;
+        }
+        .mac-hoy-crt {
+            position: absolute;
+            inset: 0;
+            margin: 0;
+            overflow: hidden;
+            padding: 14% 11% 10% 13%;
+            box-sizing: border-box;
+            background: transparent;
+            color: #8aff9c;
+            font-family: 'Press Start 2P', ui-monospace, monospace;
+            font-size: clamp(3px, 0.28vw, 4.5px);
+            line-height: 1.4;
+            letter-spacing: 0;
+            white-space: pre;
+            text-shadow: 0 0 3px #5dff90, 0 0 7px rgba(80,255,140,.75);
+            mix-blend-mode: screen;
+        }
+        .mac-hoy-prop.refreshing .mac-hoy-glass::before { animation: mac-hoy-idle .4s linear infinite; }
+        @keyframes mac-hoy-idle {
+            0%, 100% { opacity: .4; }
+            50% { opacity: .85; }
+        }
+        .mac-hoy-keys, .mac-hoy-mouse {
+            position: absolute;
+            z-index: 3;
+            pointer-events: auto;
+            cursor: pointer;
+            background: transparent;
+        }
+        .mac-hoy-keys { left: 1%; top: 57%; width: 63%; height: 32%; }
+        .mac-hoy-mouse { left: 73%; top: 79%; width: 22%; height: 19%; }
+        @media (max-width: 720px) {
+            .mac-hoy-prop { left: 36%; top: 56%; width: 28%; }
+            .mac-hoy-crt { font-size: 5px; }
+        }
+        /* Sello CCO FLT-100661: pastilla chip pixel, no chrome moderno */
+        #btn-mostrar.mac-hoy-chip {
+            border: 2px solid #daa520;
+            border-radius: 999px;
+            padding: 8px 6px;
+            background: #1a1006;
+            color: #f0cf6a;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 7px;
+            line-height: 1.4;
+            white-space: normal;
+            letter-spacing: 0;
+            box-shadow: 0 3px 0 #0c0702, inset 0 0 0 1px #3a2a14;
+            text-transform: uppercase;
+        }
+        #btn-mostrar.mac-hoy-chip:hover {
+            color: #fff6c8;
+            background: #2a1a08;
+            box-shadow: 0 3px 0 #0c0702, 0 0 10px rgba(218,165,32,.35);
+        }
+        #btn-mostrar.mac-hoy-chip.active {
+            background: #daa520;
+            color: #1a0e05;
+            box-shadow: 0 2px 0 #7a4e12, inset 0 0 0 1px #f0cf6a;
+        }
+        /* P1 FLT-100665: click → vista frontal centrada del mismo Mac */
+        .mac-hoy-front {
+            display: none;
+            position: absolute;
+            inset: 0;
+            z-index: 22;
+            background: rgba(6,4,2,.72);
+            align-items: center;
+            justify-content: center;
+        }
+        .mac-hoy-front.on { display: flex; }
+        .mac-hoy-front-stage {
+            position: relative;
+            width: min(52%, 520px);
+            filter: drop-shadow(0 18px 28px #000);
+        }
+        .mac-hoy-front-stage img { width: 100%; height: auto; display: block; }
+        .mac-hoy-crt-front {
+            position: absolute;
+            left: 26.5%;
+            top: 11%;
+            width: 45%;
+            height: 29%;
+            overflow: hidden;
+            padding: 6% 7%;
+            box-sizing: border-box;
+            margin: 0;
+            border: 0;
+            background: transparent;
+            color: #c8ffd0;
+            font-family: 'Press Start 2P', ui-monospace, monospace;
+            font-size: clamp(6px, 0.62vw, 8px);
+            line-height: 1.35;
+            letter-spacing: 0;
+            white-space: pre;
+            text-shadow: 0 0 4px #5dff90, 0 0 10px rgba(80,255,140,.7);
+            mix-blend-mode: screen;
+            clip-path: ellipse(47% 48% at 50% 50%);
+        }
+        .mac-hoy-crt-front::after {
+            content: '';
+            position: absolute; inset: 0;
+            background: repeating-linear-gradient(180deg, transparent 0 2px, rgba(0,0,8,.2) 2px 3px);
+            mix-blend-mode: multiply;
+            pointer-events: none;
+        }
+        .mac-hoy-front-close {
+            position: absolute;
+            top: 10px; right: 12px;
+            z-index: 23;
+            border: 2px solid #daa520;
+            border-radius: 999px;
+            background: #1a1006;
+            color: #f0cf6a;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 8px;
+            padding: 8px 12px;
+            cursor: pointer;
+            text-transform: uppercase;
+            box-shadow: 0 3px 0 #0c0702;
+        }
+        .mac-hoy-front-close:hover { background: #daa520; color: #1a0e05; }
         /* Apple II hotspot — pantalla del ordenador en la mesa, activa cuando MIRAR está seleccionado */
         .apple-ii-hotspot {
             position: absolute;
@@ -2943,6 +3122,21 @@ body.rail-open{overflow:hidden}
             <div class="apple-ii-hotspot" id="apple-ii-hotspot"
                  style="left:46%;top:53%;width:10%;height:11%"
                  title="Apple II — pulsa MIRAR y haz clic"></div>
+            <div class="mac-hoy-prop" id="mac-hoy-prop">
+                <img src="assets/mac-1984-mesa.png" alt="Macintosh 1984 beige CRT sobre la mesa del Consejo">
+                <button type="button" class="mac-hoy-glass" id="mac-hoy-glass" title="Macintosh 1984 · pulsa la pantalla para leer Hoy">
+                    <pre class="mac-hoy-crt" id="mac-hoy-crt">HOY</pre>
+                </button>
+                <a class="mac-hoy-keys" id="mac-hoy-keys" href="https://www.yokup.com/misiones" target="_blank" rel="noopener" title="Misiones Yokup"></a>
+                <a class="mac-hoy-mouse" id="mac-hoy-mouse" href="https://www.yokup.com/misiones" target="_blank" rel="noopener" title="Misiones Yokup"></a>
+            </div>
+            <div class="mac-hoy-front" id="mac-hoy-front">
+                <button type="button" class="mac-hoy-front-close" id="mac-hoy-front-close">Cerrar</button>
+                <div class="mac-hoy-front-stage">
+                    <img src="assets/mac-1984-front.png" alt="Macintosh 1984 vista frontal">
+                    <pre class="mac-hoy-crt-front" id="mac-hoy-crt-front">HOY</pre>
+                </div>
+            </div>
             <!-- Door hotspot to enter Private Meeting Room (Sala del Consejo) -->
             <div class="meeting-door-hotspot" id="meeting-door-hotspot"
                  style="right:3%;top:15%;width:8%;height:25%"
@@ -3170,6 +3364,7 @@ body.rail-open{overflow:hidden}
                     <button class="verb-btn" data-verb="leer" title="El Consejo te cuenta el libro/resumen del día (audio)" onclick="selectVerb(this)">Pensar</button>
                     <button class="verb-btn" data-verb="votar" title="Somete una propuesta a votación del Consejo" onclick="selectVerb(this)">Votar</button>
                     <button class="verb-btn" data-verb="analizar" title="Analiza una URL, texto o archivo con el Consejo" onclick="selectVerb(this)">Analizar</button>
+                    <button class="verb-btn mac-hoy-chip" id="btn-mostrar" type="button" title="Macintosh 1984 · HOY + 3 últimas FLT · mismo gesto que /mac" onclick="event.stopPropagation(); window.MacHoy && window.MacHoy.toggle()">Mostrar<br>Ocultar</button>
                     <button class="verb-btn" data-verb="presentar" title="Genera una presentación a partir de un tema" onclick="selectVerb(this)">Presentar</button>
                     <button class="verb-btn verb-primary" data-verb="reunion" title="Reúnete a solas con un consejero (chat 1 a 1)" onclick="selectVerb(this)">Reunión</button>
                     <button class="verb-btn" data-verb="previo" id="btn-previo" title="Reabre la última presentación generada" onclick="selectVerb(this)" style="display:none;border-left:2px solid #5a3a1e">Previo</button>
@@ -3643,7 +3838,8 @@ body.rail-open{overflow:hidden}
 <script defer src="council-table.js?v=20260918-r5-desk-cors"></script>
 <script defer src="council-speech.js?v=20260918-r5-desk-cors"></script>
 <script defer src="council-grokbot.js?v=20260918-r5-desk-cors"></script>
-<script defer src="app.flt-100529.js?v=20260919-r6-verbs"></script>
+<script defer src="app.flt-100529.js?v=20260919-r7-mac"></script>
 <script defer src="council-integration.js?v=20260918-r5-desk-cors"></script>
+<script type="module" src="assets/mac-hoy.js?v=20260919-main"></script>
 </body>
 </html>

@@ -1298,7 +1298,13 @@
            debajo, para no perder la elección de LLM. */
         /* Casillas a tamaño fijo (no 1fr): a lo ancho de 330 px los iconos salían
            enormes y estiraban el panel, dejando un hueco muerto sobre los verbos. */
-        .inv-objetos { display: grid; grid-template-columns: repeat(4, 58px); justify-content: center; gap: 4px; margin-bottom: 6px; }
+        /* Sin la lista de motores, el inventario es SOLO objetos: casillas grandes
+           (Carlos, 2026-09-19). El panel de Motor LLM se oculta, no se borra: la
+           elección de modelo vive en una variable que sólo esa lista escribe, y
+           arrancarla del DOM dejaría a refreshLLMAvailability() sin nada que leer.
+           Oculto sigue valiendo su opción por defecto (Grok 4.6) y nada revienta. */
+        .inv-panel[data-panel="llm"] { display: none !important; }
+        .inv-objetos { display: grid; grid-template-columns: repeat(4, 72px); justify-content: center; gap: 5px; margin-bottom: 6px; }
         .obj {
             background: #3b2a16; border: 1px solid #5a3a1e; border-radius: 3px;
             padding: 2px; cursor: pointer; line-height: 0; transition: .15s;
@@ -2579,10 +2585,12 @@
            se hunde. El COLOR dice si el verbo se puede usar: vivo = seleccionable,
            apagado = ahora no. El rosa/blanco anterior no significaba nada, sólo
            decoraba, y se leía como si unos estuvieran deshabilitados. */
+        /* Las cajas se estiran hasta tocar la columna de flechas (Carlos,
+           2026-09-19): en el juego los verbos ocupan todo su lado del panel, no
+           se quedan encogidos a la izquierda con una franja muerta al lado. */
         .verb-grid {
-            grid-template-columns: repeat(3, minmax(104px, max-content));
+            grid-template-columns: repeat(3, 1fr);
             grid-template-rows: none;
-            justify-content: start;
             align-content: center;
             column-gap: 4px;
             row-gap: 4px;
@@ -4069,7 +4077,7 @@ body.rail-open{overflow:hidden}
 <script defer src="council-table.js?v=20260918-r5-desk-cors"></script>
 <script defer src="council-speech.js?v=20260918-r5-desk-cors"></script>
 <script defer src="council-grokbot.js?v=20260918-r5-desk-cors"></script>
-<script defer src="app.flt-100529.js?v=20260919-r9-scumm90"></script>
+<script defer src="app.flt-100529.js?v=20260919-r10-inv"></script>
 <script defer src="council-integration.js?v=20260918-r5-desk-cors"></script>
 <script type="module" src="assets/mac-hoy.js?v=20260919-mandos"></script>
 </body>

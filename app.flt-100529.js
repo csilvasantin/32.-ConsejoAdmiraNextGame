@@ -1492,6 +1492,13 @@
         abreHilo(claveHilo(agent));
         if (!examinarMode && window.CouncilInterface?.has(persona)) {
             window.CouncilInterface.select(persona);
+            // Los paneles se limpian: esta silla habla por GrokBot y su hilo se
+            // pinta en otro sitio. Si no, al saltar aquí desde otro consejero se
+            // quedaba en pantalla la conversación del anterior, como si fuera suya.
+            const rac = document.getElementById("conv-racional");
+            const cre = document.getElementById("conv-creativo");
+            if (rac) rac.innerHTML = "";
+            if (cre) cre.innerHTML = "";
             setActionLine("GrokBot · " + persona + " — escribe y pulsa Enviar");
             return;
         }

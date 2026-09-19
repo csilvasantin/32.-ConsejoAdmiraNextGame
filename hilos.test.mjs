@@ -46,3 +46,11 @@ test('repintar escapa lo que viene de localStorage y del modelo', () => {
   assert.match(f, /replace\(\/\[<>&\]\/g/, 'addConvEntry usa innerHTML: hay que escapar');
   assert.match(f, /esc\(cuerpo\)/);
 });
+
+test('saltar a un consejero de GrokBot no deja en pantalla el hilo del anterior', () => {
+  const sel = src.slice(src.indexOf('function selectAgentByPersona'));
+  const rama = sel.slice(sel.indexOf("CouncilInterface?.has(persona)"), sel.indexOf("markCouncilConsulted"));
+  assert.match(rama, /conv-racional/);
+  assert.match(rama, /conv-creativo/);
+  assert.match(rama, /innerHTML = ""/);
+});

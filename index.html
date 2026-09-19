@@ -1286,7 +1286,9 @@
            dibujados a mano en el mismo lenguaje que admira-logo-retro.svg. Conviven
            con el selector de motor: los objetos arriba, el panel del verbo activo
            debajo, para no perder la elección de LLM. */
-        .inv-objetos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin-bottom: 6px; }
+        /* Casillas a tamaño fijo (no 1fr): a lo ancho de 330 px los iconos salían
+           enormes y estiraban el panel, dejando un hueco muerto sobre los verbos. */
+        .inv-objetos { display: grid; grid-template-columns: repeat(4, 58px); justify-content: center; gap: 4px; margin-bottom: 6px; }
         .obj {
             background: #3b2a16; border: 1px solid #5a3a1e; border-radius: 3px;
             padding: 2px; cursor: pointer; line-height: 0; transition: .15s;

@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { todayMadrid, isHoy, linesFor, seatOf, envolver, ultimaMision, detalleLineas, MODOS } from './assets/mac-hoy.js';
+import { todayMadrid, isHoy, linesFor, seatOf, envolver, ultimaMision, ultimasMisiones, detalleLineas, DETALLE_ANCHO, MODOS } from './assets/mac-hoy.js';
 
 const html = fs.readFileSync(new URL('./index.html', import.meta.url), 'utf8');
 
@@ -53,19 +53,26 @@ const MISIONES = [
   { id: 'FLT-100690', status: 'in_progress', display_day: HOY, updated_at: 1758299999, persona: 'Neo', subject: 'Sin terminar' },
 ];
 
-test('ratón: la ÚLTIMA misión cerrada hoy, con detalle', () => {
-  assert.equal(ultimaMision(MISIONES, HOY).id, 'FLT-100678');   // la más reciente RESUELTA
-  const l = detalleLineas(MISIONES, HOY);
-  assert.equal(l[0], 'ULTIMA MISION');
-  assert.match(l[1], /^#100678/);
-  assert.equal(l[2], 'Smith');
-  assert.ok(l.slice(4).join(' ').includes('Macintosh'), 'debe contar DE QUÉ iba');
-  assert.ok(l.every((x) => x.length <= 16), 'ninguna línea desborda el tubo');
+test('detalle: una ficha por misión, navegable, con su posición', () => {
+  assert.equal(ultimasMisiones(MISIONES, HOY).length, 2);           // solo las RESUELTAS
+  assert.equal(ultimaMision(MISIONES, HOY).id, 'FLT-100678');       // la más reciente
+  const a = detalleLineas(MISIONES, HOY, 0);
+  assert.equal(a[0], 'MISION 1/2', 'la cabecera dice por cuál vas');
+  assert.match(a[1], /^#100678/);
+  assert.equal(a[2], 'Smith');
+  assert.ok(a.slice(4).join(' ').includes('Macintosh'), 'debe contar DE QUÉ iba');
+  const b = detalleLineas(MISIONES, HOY, 1);
+  assert.equal(b[0], 'MISION 2/2');
+  assert.match(b[1], /^#100673/);
+  // el índice da la vuelta por los dos lados: el ratón y el teclado no se atascan
+  assert.deepEqual(detalleLineas(MISIONES, HOY, 2), a);
+  assert.deepEqual(detalleLineas(MISIONES, HOY, -1), b);
+  [a, b].forEach(l => l.forEach(x => assert.ok(x.length <= DETALLE_ANCHO, 'cabe en el tubo: ' + x)));
 });
 
-test('ratón sin nada cerrado: lo dice, no inventa', () => {
+test('sin nada cerrado: lo dice, no inventa', () => {
   const l = detalleLineas([{ id: 'FLT-1', status: 'in_progress', display_day: HOY }], HOY);
-  assert.deepEqual(l, ['ULTIMA MISION', '', 'sin FLT done']);
+  assert.deepEqual(l, ['SIN MISIONES', '', 'cerradas hoy']);
 });
 
 test('envolver parte por palabras y respeta el máximo', () => {

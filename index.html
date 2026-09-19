@@ -1309,7 +1309,7 @@
            objetos y volver a pulsarlo la recoge. */
         .inventory.motor-abierto .inv-panel[data-panel="llm"] { display: flex !important; }
         .obj.motor-on { background: #d8bd86; border-color: #f0e0b4 #4a3418 #4a3418 #f0e0b4; }
-        .inv-objetos { display: grid; grid-template-columns: repeat(3, 88px); justify-content: center; gap: 5px; margin-bottom: 6px; }
+        .inv-objetos { display: grid; grid-template-columns: repeat(3, 78px); justify-content: center; gap: 5px; margin-bottom: 6px; }
         .obj {
             background: #3b2a16; border: 1px solid #5a3a1e; border-radius: 3px;
             padding: 2px; cursor: pointer; line-height: 0; transition: .15s;
@@ -1690,11 +1690,14 @@
         .modo-logo .mac-hoy-crt,
         .modo-logo .mac-hoy-crt-front { visibility: hidden; }
         /* En detalle cabe más texto: letra menor y el bloque sube un poco. */
+        /* Un 20% menos que antes (26 → 21): ahora la ficha son ocho líneas —
+           cabecera, referencia, quién, regla y cuatro de asunto— y a 26 px se
+           salían del tubo. */
         .modo-detalle .mac-hoy-crt,
         .modo-detalle .mac-hoy-crt-front {
-            font-size: 26px;
-            line-height: 1.4;
-            padding-top: 40px;
+            font-size: 21px;
+            line-height: 1.45;
+            padding: 34px 26px 24px 32px;
         }
         .mac-hoy-prop.refreshing .mac-hoy-glass::before { animation: mac-hoy-idle .4s linear infinite; }
         @keyframes mac-hoy-idle {
@@ -4085,6 +4088,6 @@ body.rail-open{overflow:hidden}
 <script defer src="council-grokbot.js?v=20260918-r5-desk-cors"></script>
 <script defer src="app.flt-100529.js?v=20260919-r11-motor"></script>
 <script defer src="council-integration.js?v=20260918-r5-desk-cors"></script>
-<script type="module" src="assets/mac-hoy.js?v=20260919-logo"></script>
+<script type="module" src="assets/mac-hoy.js?v=20260919-fichas"></script>
 </body>
 </html>

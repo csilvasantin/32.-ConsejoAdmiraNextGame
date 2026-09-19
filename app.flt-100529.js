@@ -59,6 +59,10 @@
                 }
             };
             window.railVerb = function(v){
+                // Presentar ya no abre el diálogo de creación: lleva a la galería con TODAS
+                // las presentaciones del generador (Carlos, 19-09-2026). Crear una nueva se
+                // hace desde ahí. Se abre en pestaña nueva para no perder el Consejo.
+                if (v === 'presentar') { try { window.open('https://www.admiranext.com/presentaciones/galeria','_blank','noopener'); } catch(e){} return; }
                 try { if (typeof setScummCollapsed === 'function') setScummCollapsed(false); } catch(e){}
                 var b = document.querySelector('.verb-btn[data-verb="' + v + '"]');
                 if (b) b.click();
@@ -5527,7 +5531,9 @@
     let _presentarFileName = null;
 
     function triggerPresentar() {
-        showPresentarOverlay();
+        // Presentar → galería de todas las presentaciones (Carlos, 19-09-2026). Antes abría
+        // el diálogo de creación (showPresentarOverlay, se conserva por si se reactiva).
+        try { window.open('https://www.admiranext.com/presentaciones/galeria','_blank','noopener'); } catch(e){ showPresentarOverlay(); }
     }
 
     function showPresentarOverlay() {

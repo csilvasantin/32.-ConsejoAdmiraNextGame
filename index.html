@@ -1263,6 +1263,35 @@
         .verb-btn.verb-primary { color: #e74c3c; }
         .verb-btn.verb-primary:hover { color: #ff6b6b; text-shadow: 0 0 8px rgba(231,76,60,0.5); background: rgba(231,76,60,0.08); }
         .verb-btn.verb-primary.active { color: #fff; text-shadow: 0 0 12px rgba(231,76,60,0.8); background: rgba(231,76,60,0.15); }
+        /* SCUMM DE VERDAD (Carlos, 2026-09-19): NUEVE cajas de verbo en 3x3 y una
+           columna de flechas para alcanzar el resto, como en Fate of Atlantis.
+           Antes eran doce cajas en cuatro filas y la rejilla no cuadraba. No se
+           recorta ningún verbo: los que no caben están a una flecha. */
+        .verb-grid { grid-template-rows: repeat(3, 1fr); align-content: start; }
+        .verb-btn[hidden] { display: none !important; }
+        .verb-pager {
+            display: flex; flex-direction: column; justify-content: center; gap: 5px;
+            padding: 8px 5px; border-left: 1px solid #1a1a2e;
+        }
+        .verb-arrow {
+            background: #4a3016; border: 1px solid #7a5228; color: #f0cf6a;
+            font-family: 'Press Start 2P', monospace; font-size: 9px; line-height: 1;
+            padding: 8px 6px; border-radius: 3px; cursor: pointer; transition: .15s;
+        }
+        .verb-arrow:hover:not(:disabled) { background: #7a5228; color: #ffd27a; }
+        .verb-arrow:disabled { opacity: .25; cursor: default; }
+        /* INVENTARIO DE OBJETOS: iconos pixelados PROPIOS (assets/iconos/*.svg),
+           dibujados a mano en el mismo lenguaje que admira-logo-retro.svg. Conviven
+           con el selector de motor: los objetos arriba, el panel del verbo activo
+           debajo, para no perder la elección de LLM. */
+        .inv-objetos { display: grid; grid-template-columns: repeat(4, 1fr); gap: 3px; margin-bottom: 6px; }
+        .obj {
+            background: #3b2a16; border: 1px solid #5a3a1e; border-radius: 3px;
+            padding: 2px; cursor: pointer; line-height: 0; transition: .15s;
+        }
+        .obj:hover { border-color: #daa520; background: #4a351c; }
+        .obj:focus-visible { outline: none; border-color: #ffd27a; }
+        .obj img { width: 100%; height: auto; display: block; image-rendering: pixelated; }
         .inventory { width: 240px; border-left: 1px solid #1a1a2e; padding: 6px 8px; display: flex; flex-direction: column; }
         /* Panels del inventario — uno visible a la vez según el verbo activo */
         .inv-panel { display: none; flex: 1; flex-direction: column; }
@@ -3476,7 +3505,24 @@ body.rail-open{overflow:hidden}
                     <button class="verb-btn verb-primary" data-verb="reunion" title="Reúnete a solas con un consejero (chat 1 a 1)" onclick="selectVerb(this)">Reunión</button>
                     <button class="verb-btn" data-verb="previo" id="btn-previo" title="Reabre la última presentación generada" onclick="selectVerb(this)" style="display:none;border-left:2px solid #5a3a1e">Previo</button>
                 </div>
+                <div class="verb-pager">
+                    <button class="verb-arrow" id="verb-up" type="button" onclick="verbPage(-1)" title="Verbos anteriores" aria-label="Verbos anteriores">▲</button>
+                    <button class="verb-arrow" id="verb-down" type="button" onclick="verbPage(1)" title="Más verbos" aria-label="Más verbos">▼</button>
+                </div>
                 <div class="inventory">
+                    <!-- OBJETOS: siempre visibles, pase lo que pase con la página de
+                         verbos. Por eso el Mac vive aquí: se llega a él en cualquier
+                         momento, que es lo que pediste. -->
+                    <div class="inv-objetos" id="inv-objetos">
+                        <button class="obj" type="button" data-obj="mac" title="Macintosh 1984 · HOY + 3 últimas FLT"><img src="assets/iconos/mac.svg" alt="Macintosh 1984"></button>
+                        <button class="obj" type="button" data-obj="deck" data-verb="presentar" title="Presentar · generar una presentación"><img src="assets/iconos/deck.svg" alt="Presentación"></button>
+                        <button class="obj" type="button" data-obj="bot" data-verb="hablar" title="Yarig.AI · conectar contexto"><img src="assets/iconos/bot.svg" alt="Yarig.AI"></button>
+                        <button class="obj" type="button" data-obj="book" data-verb="leer" title="Pensar · el libro del día"><img src="assets/iconos/book.svg" alt="Libro del día"></button>
+                        <button class="obj" type="button" data-obj="urna" data-verb="votar" title="Votar · someter una propuesta"><img src="assets/iconos/urna.svg" alt="Urna de votación"></button>
+                        <button class="obj" type="button" data-obj="lupa" data-verb="examinar" title="Examinar · perfil y lore de un consejero"><img src="assets/iconos/lupa.svg" alt="Lupa"></button>
+                        <button class="obj" type="button" data-obj="pincel" data-verb="crear" title="Crear · generar una imagen"><img src="assets/iconos/pincel.svg" alt="Pincel"></button>
+                        <button class="obj" type="button" data-obj="chip" data-verb="entrenar" title="Entrenar · alimentar a un consejero"><img src="assets/iconos/chip.svg" alt="Chip"></button>
+                    </div>
                     <!-- Panel LLM: por defecto y para verbos que usan modelo (preguntar, debatir, hablar) -->
                     <div class="inv-panel active" data-panel="llm">
                         <div class="inventory-title">Motor LLM</div>
@@ -3945,7 +3991,7 @@ body.rail-open{overflow:hidden}
 <script defer src="council-table.js?v=20260918-r5-desk-cors"></script>
 <script defer src="council-speech.js?v=20260918-r5-desk-cors"></script>
 <script defer src="council-grokbot.js?v=20260918-r5-desk-cors"></script>
-<script defer src="app.flt-100529.js?v=20260919-r7-mac"></script>
+<script defer src="app.flt-100529.js?v=20260919-r8-scumm9"></script>
 <script defer src="council-integration.js?v=20260918-r5-desk-cors"></script>
 <script type="module" src="assets/mac-hoy.js?v=20260919-mandos"></script>
 </body>

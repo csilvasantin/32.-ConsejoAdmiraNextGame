@@ -1606,6 +1606,58 @@
         try { localStorage.setItem('scummCollapsed', collapsed ? '1' : '0'); } catch (e) {}
     }
     function toggleScumm() { const bar = document.querySelector('.scumm-bar'); setScummCollapsed(!(bar && bar.classList.contains('scumm-collapsed'))); }
+
+    // ── SCUMM: nueve cajas de verbo y flechas para el resto ──────────────────
+    // (Carlos, 2026-09-19: «compactando los textos a 9 cajas como en el motor
+    // SCUMM… utilizar la flecha arriba y abajo exactamente igual»). No se recorta
+    // ningún verbo: los que no caben en la página están a una flecha.
+    const VERBOS_POR_PAGINA = 9;
+    let verbPagina = 0;
+    function verbosPaginables() {
+        return Array.from(document.querySelectorAll('.verb-grid .verb-btn'))
+            // «Previo» sólo existe cuando hay una presentación que reabrir: mientras
+            // esté oculto no debe gastar una casilla ni empujar a otro verbo de página.
+            .filter(b => b.style.display !== 'none');
+    }
+    function pintaVerbos() {
+        const todos = verbosPaginables();
+        const paginas = Math.max(1, Math.ceil(todos.length / VERBOS_POR_PAGINA));
+        verbPagina = Math.min(Math.max(verbPagina, 0), paginas - 1);
+        const desde = verbPagina * VERBOS_POR_PAGINA;
+        todos.forEach((b, i) => { b.hidden = i < desde || i >= desde + VERBOS_POR_PAGINA; });
+        const up = document.getElementById('verb-up'), dn = document.getElementById('verb-down');
+        if (up) up.disabled = verbPagina === 0;
+        if (dn) dn.disabled = verbPagina >= paginas - 1;
+        const pager = document.querySelector('.verb-pager');
+        if (pager) pager.style.visibility = paginas > 1 ? '' : 'hidden';
+    }
+    function verbPage(delta) { verbPagina += delta; pintaVerbos(); }
+    // Trae a la vista la página donde vive un verbo, para que al usar su objeto del
+    // inventario se vea también iluminado en la rejilla.
+    function muestraVerbo(btn) {
+        const i = verbosPaginables().indexOf(btn);
+        if (i >= 0) { verbPagina = Math.floor(i / VERBOS_POR_PAGINA); pintaVerbos(); }
+    }
+    function usarObjeto(el) {
+        if (el.dataset.obj === 'mac') { if (window.MacHoy) window.MacHoy.toggle(); return; }
+        const v = el.dataset.verb;
+        const btn = v && document.querySelector('.verb-grid .verb-btn[data-verb="' + v + '"]');
+        if (!btn) return;
+        muestraVerbo(btn);
+        if (typeof selectVerb === 'function') selectVerb(btn);
+    }
+    window.verbPage = verbPage;
+    window.pintaVerbos = pintaVerbos;
+    window.usarObjeto = usarObjeto;
+    function arrancaScummInventario() {
+        pintaVerbos();
+        document.querySelectorAll('#inv-objetos .obj').forEach(o =>
+            o.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); usarObjeto(o); }));
+    }
+    // El script puede cargarse ya con el DOM listo: en ese caso DOMContentLoaded
+    // no vuelve a dispararse y la rejilla se quedaría con las doce cajas.
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancaScummInventario);
+    else arrancaScummInventario();
     // Menú superior plegable (persistente)
     function setTopCollapsed(collapsed) {
         const c = document.querySelector('.container'); if (!c) return;
@@ -5720,7 +5772,7 @@
     function showPresentarResult(result) {
         _lastPresentarResult = result;
         const previoBtn = document.getElementById('btn-previo');
-        if (previoBtn) previoBtn.style.display = '';
+        if (previoBtn) { previoBtn.style.display = ''; if (window.pintaVerbos) window.pintaVerbos(); }
 
         document.getElementById('pdlg-loading').style.display = 'none';
         const dlg = document.getElementById('pdlg-result');

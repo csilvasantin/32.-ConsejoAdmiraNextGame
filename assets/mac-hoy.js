@@ -30,7 +30,7 @@ export const ERROR_COPY = 'HOY\nsin cable';
 /* La pantalla tiene tres modos, y los periféricos del dibujo son los mandos:
    el TECLADO enciende el logo de Admira y el RATÓN saca la última misión con
    detalle. Volver a pulsar devuelve a HOY. */
-export const MODOS = ['hoy', 'detalle', 'logo'];
+export const MODOS = ['hoy', 'detalle', 'logo', 'pong'];
 
 export function envolver(txt, ancho, maxLineas) {
   const palabras = String(txt == null ? '' : txt).trim().split(/\s+/).filter(Boolean);
@@ -86,7 +86,10 @@ export function detalleLineas(missions, day = todayMadrid(), idx = 0) {
     '#' + id + (hora ? '  ' + hora : ''),
     quien,
     '--------------------'.slice(0, DETALLE_ANCHO),
-  ].concat(envolver(m.subject || m.title || '', DETALLE_ANCHO, 4));
+    // El asunto ya no se recorta a lo que cabe: se escribe entero y la pantalla
+    // lo pasea sola (Carlos, 2026-09-19). Antes se cortaba en la cuarta línea y
+    // te quedabas sin saber de qué iba la misión.
+  ].concat(envolver(m.subject || m.title || '', DETALLE_ANCHO, 12));
 }
 
 export function linesFor(missions, day = todayMadrid()) {
@@ -127,7 +130,10 @@ export function paintCrt(el, text) {
       if (Date.now() - t0 > 3000) { el.textContent = text; return resolve(); }
       i += paso;
       el.textContent = text.slice(0, i);
-      el.scrollTop = el.scrollHeight;
+      // Antes saltaba al final en cada tic. Con fichas que no caben, eso escribía
+      // la ficha por el final; ahora se lee desde arriba y al acabar la pasea
+      // paseaTexto().
+      el.scrollTop = 0;
       if (i >= text.length) resolve();
       else setTimeout(tick, 12);
     };
@@ -218,6 +224,95 @@ export function setModo(nuevo, root = lastRoot || (typeof document !== 'undefine
   return modo;
 }
 
+/* ── El texto largo se pasea solo ───────────────────────────────────────────
+   Una ficha entera no cabe en el tubo. En vez de recortarla, la pantalla la
+   recorre de arriba abajo y vuelve, con una pausa en cada extremo para poder
+   leer. Si cabe entera no se mueve: nada de movimiento gratuito. */
+function paseaTexto(el) {
+  if (!el) return;
+  if (el.__paseo) { clearInterval(el.__paseo); el.__paseo = null; }
+  el.scrollTop = 0;
+  const alcance = el.scrollHeight - el.clientHeight;
+  if (alcance <= 2) return;
+  let dir = 1, pausa = 16;
+  el.__paseo = setInterval(() => {
+    if (pausa > 0) { pausa--; return; }
+    el.scrollTop += dir;
+    if (el.scrollTop >= alcance) { dir = -1; pausa = 16; }
+    else if (el.scrollTop <= 0) { dir = 1; pausa = 16; }
+  }, 90);
+}
+
+function paraPaseo(root) {
+  if (!root || !root.querySelectorAll) return;
+  root.querySelectorAll('#mac-hoy-crt, #mac-hoy-crt-front').forEach((el) => {
+    if (el && el.__paseo) { clearInterval(el.__paseo); el.__paseo = null; }
+  });
+}
+
+/* ── Pong en la pantalla, al pulsar la disquetera ───────────────────────────
+   Se juega solo: es un cacharro sobre una mesa, no un mando. Las palas siguen
+   la bola SÓLO cuando viene hacia ellas y con velocidad tope; si siguieran
+   siempre no fallarían nunca y el peloteo no acabaría jamás. */
+let pongRaf = null;
+export function paraPong() {
+  if (pongRaf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(pongRaf);
+  pongRaf = null;
+}
+
+function arrancaPong(root) {
+  const cv = root && root.querySelector('#mac-hoy-pong');
+  if (!cv || !cv.getContext) return;
+  const ctx = cv.getContext('2d');
+  const W = cv.width, H = cv.height;
+  const PW = 12, PH = 68, BOLA = 12, TOPE = 5.4, BORDE = 26;
+  let izq = (H - PH) / 2, der = (H - PH) / 2;
+  let bx = W / 2, by = H / 2, vx = 5, vy = 3.2, marcaI = 0, marcaD = 0;
+  const saca = (hacia) => { bx = W / 2; by = H / 2; vx = 5 * hacia; vy = (Math.random() * 4 - 2) || 2; };
+  const sigue = (y, objetivo) => {
+    const d = objetivo - (y + PH / 2);
+    return Math.max(BORDE, Math.min(H - PH - BORDE, y + Math.max(-TOPE, Math.min(TOPE, d))));
+  };
+  paraPong();
+  const cuadro = () => {
+    bx += vx; by += vy;
+    if (by <= BORDE) { by = BORDE; vy = -vy; }
+    if (by + BOLA >= H - BORDE) { by = H - BORDE - BOLA; vy = -vy; }
+    izq = sigue(izq, vx < 0 ? by : H / 2);
+    der = sigue(der, vx > 0 ? by : H / 2);
+    const xI = BORDE + 8, xD = W - BORDE - 8 - PW;
+    if (vx < 0 && bx <= xI + PW && bx >= xI - 6 && by + BOLA >= izq && by <= izq + PH) { bx = xI + PW; vx = -vx; vy += (by - (izq + PH / 2)) * 0.05; }
+    if (vx > 0 && bx + BOLA >= xD && bx + BOLA <= xD + PW + 6 && by + BOLA >= der && by <= der + PH) { bx = xD - BOLA; vx = -vx; vy += (by - (der + PH / 2)) * 0.05; }
+    vy = Math.max(-6, Math.min(6, vy));
+    if (bx < -30) { marcaD++; saca(1); }
+    if (bx > W + 30) { marcaI++; saca(-1); }
+
+    ctx.clearRect(0, 0, W, H);
+    ctx.fillStyle = '#7fe28d';
+    for (let y = BORDE; y < H - BORDE; y += 26) ctx.fillRect(W / 2 - 3, y, 6, 14);
+    ctx.fillRect(xI, izq, PW, PH);
+    ctx.fillRect(xD, der, PW, PH);
+    ctx.fillRect(bx, by, BOLA, BOLA);
+    ctx.font = '30px "Press Start 2P", monospace';
+    ctx.textBaseline = 'top';
+    ctx.textAlign = 'right'; ctx.fillText(String(marcaI), W / 2 - 34, BORDE + 6);
+    ctx.textAlign = 'left';  ctx.fillText(String(marcaD), W / 2 + 34, BORDE + 6);
+    pongRaf = requestAnimationFrame(cuadro);
+  };
+  cuadro();
+}
+
+export function alternaPong(root = lastRoot || (typeof document !== 'undefined' ? document : null), fetchImpl = lastFetch) {
+  if (!root || !visible) return modo;
+  lastRoot = root;
+  if (modo === 'pong') { modo = 'logo'; detalleIdx = 0; paraPong(); aplicarModo(root); return modo; }
+  modo = 'pong';
+  paraPaseo(root);
+  aplicarModo(root);
+  arrancaPong(root);
+  return modo;
+}
+
 function textoDelModo() {
   if (modo === 'hoy') return linesFor(misionesCache).join('\n');
   return detalleLineas(misionesCache, todayMadrid(), detalleIdx).join('\n');
@@ -229,16 +324,18 @@ function repinta(root) {
   const mesa = root && root.querySelector('#mac-hoy-crt');
   const front = root && root.querySelector('#mac-hoy-crt-front');
   if (!mesa) return;
+  paraPaseo(root);
   lastText = textoDelModo();
-  paintCrt(mesa, lastText);
-  if (front) paintCrt(front, lastText);
+  paintCrt(mesa, lastText).then(() => paseaTexto(mesa));
+  if (front) paintCrt(front, lastText).then(() => paseaTexto(front));
 }
 
 export function avanzaPantalla(delta, root = lastRoot || (typeof document !== 'undefined' ? document : null), fetchImpl = lastFetch) {
   if (!root || !visible) return modo;
   lastRoot = root;
   const n = misionesCache.length;
-  if (modo === 'logo') {
+  if (modo === 'pong') paraPong();
+  if (modo === 'logo' || modo === 'pong') {
     modo = 'detalle';
     detalleIdx = (n && delta < 0) ? n - 1 : 0;
   } else if (!n) {
@@ -263,7 +360,8 @@ async function draw(root, fetchImpl) {
   const prop = root.querySelector('#mac-hoy-prop');
   if (!mesa || !prop || !visible) return;
   aplicarModo(root);
-  if (modo === 'logo') return;
+  if (modo === 'logo' || modo === 'pong') return;
+  paraPaseo(root);
   prop.classList.add('refreshing');
   // El comodín de carga dice en qué pantalla estás: poner «HOY …» mientras se
   // pide una ficha de detalle despistaba.
@@ -280,6 +378,8 @@ async function draw(root, fetchImpl) {
     // nunca, así que el texto se quedaba siempre a medias.
     if (mesa.textContent !== lastText) await paintCrt(mesa, lastText);
     if (front && front.textContent !== lastText) await paintCrt(front, lastText);
+    paseaTexto(mesa);
+    if (front) paseaTexto(front);
   } catch (_) {
     lastText = ERROR_COPY;
     await paintCrt(mesa, ERROR_COPY);
@@ -320,7 +420,7 @@ export function setVisible(on, root = lastRoot || (typeof document !== 'undefine
   visible = !!on;
   if (prop) prop.classList.toggle('on', visible);
   if (btn) btn.classList.toggle('active', visible);
-  if (!visible) { modo = 'logo'; detalleIdx = 0; aplicarModo(root); closeFront(root); }
+  if (!visible) { modo = 'logo'; detalleIdx = 0; paraPong(); paraPaseo(root); aplicarModo(root); closeFront(root); }
   if (visible) {
     fitScreen(root);              // oculto medía 0: el encaje se rehace al mostrarlo
     draw(root, fetchImpl);
@@ -365,6 +465,12 @@ export function boot(root = document, fetchImpl = fetch) {
   };
   mando('#mac-hoy-mouse', +1);   // ratón   -> misión siguiente
   mando('#mac-hoy-keys', -1);    // teclado -> misión anterior
+  const disq = root.querySelector('#mac-hoy-floppy');
+  if (disq) disq.addEventListener('click', (e) => {
+    e.preventDefault(); e.stopPropagation();
+    if (!visible) return;
+    alternaPong(root, fetchImpl);          // disquetera -> Pong, y otra vez al logo
+  });
   const front = root.querySelector('#mac-hoy-front');
   const close = root.querySelector('#mac-hoy-front-close');
   if (close) close.addEventListener('click', (e) => { e.stopPropagation(); closeFront(root); });
@@ -378,7 +484,7 @@ export function boot(root = document, fetchImpl = fetch) {
 }
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-  window.MacHoy = { todayMadrid, isHoy, seatOf, linesFor, IDLE_COPY, ERROR_COPY, paintCrt, fetchHoy, boot, setVisible, toggle, isVisible, isFocused, openFront, closeFront, fitScreen, MAC_ART_W, MODOS, setModo, modoActual, detalleLineas, ultimaMision, ultimasMisiones, envolver, avanzaPantalla, DETALLE_ANCHO };
+  window.MacHoy = { todayMadrid, isHoy, seatOf, linesFor, IDLE_COPY, ERROR_COPY, paintCrt, fetchHoy, boot, setVisible, toggle, isVisible, isFocused, openFront, closeFront, fitScreen, MAC_ART_W, MODOS, setModo, modoActual, detalleLineas, ultimaMision, ultimasMisiones, envolver, avanzaPantalla, alternaPong, paraPong, DETALLE_ANCHO };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => boot());
   else boot();
 }

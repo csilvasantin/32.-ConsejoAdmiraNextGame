@@ -83,7 +83,7 @@ test('envolver parte por palabras y respeta el máximo', () => {
 });
 
 test('teclado y ratón son mandos, y existe el logo retro en pantalla', () => {
-  assert.deepEqual(MODOS, ['hoy', 'detalle', 'logo']);
+  assert.deepEqual(MODOS, ['hoy', 'detalle', 'logo', 'pong']);
   assert.match(html, /<button[^>]+class="mac-hoy-keys"/);
   assert.match(html, /<button[^>]+class="mac-hoy-mouse"/);
   assert.ok(!/class="mac-hoy-(keys|mouse)"[^>]*href=/.test(html), 'ya no son enlaces a yokup');
@@ -150,4 +150,23 @@ test('paintCrt: si los temporizadores van estrangulados, escribe entera igual', 
   } finally {
     globalThis.setTimeout = real;
   }
+});
+
+test('el asunto ya no se recorta a lo que cabe: se escribe entero', () => {
+  const largo = 'Cablear el generador de presentaciones AdmiraNeXT con la galeria publica y el sello de version para que el equipo lo vea';
+  const l = detalleLineas([{ id: 'FLT-1', status: 'resolved', display_day: HOY, updated_at: 1, persona: 'Neo', subject: largo }], HOY, 0);
+  const cuerpo = l.slice(4).join(' ');
+  assert.ok(cuerpo.includes('el equipo lo vea'), 'debe llegar hasta el final del asunto');
+  assert.ok(l.length > 9, 'y ocupar mas lineas de las que caben, para que la pantalla lo pasee');
+  l.forEach(x => assert.ok(x.length <= DETALLE_ANCHO, 'cada linea cabe en el tubo: ' + x));
+});
+
+test('disquetera: hay Pong y su propio modo de pantalla', () => {
+  assert.ok(MODOS.includes('pong'));
+  assert.match(html, /id="mac-hoy-floppy"/);
+  assert.match(html, /id="mac-hoy-pong"[^>]*width="512"[^>]*height="342"/);
+  assert.match(html, /\.modo-pong \.mac-hoy-pong \{ display: block; \}/);
+  const src = fs.readFileSync(new URL('./assets/mac-hoy.js', import.meta.url), 'utf8');
+  assert.match(src, /export function alternaPong/);
+  assert.match(src, /requestAnimationFrame/);
 });

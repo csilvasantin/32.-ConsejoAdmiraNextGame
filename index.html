@@ -1687,6 +1687,17 @@
         }
         .mac-hoy-logo-front { mix-blend-mode: screen; }
         .modo-logo .mac-hoy-logo { display: block; }
+        /* PONG. Vive DENTRO del plano proyectado, así que la misma matriz lo tumba
+           sobre el tubo. Fondo transparente: el plano mezcla en «screen», de modo
+           que lo negro no pinta y sólo el verde suma luz, como un fósforo. */
+        .mac-hoy-pong {
+            position: absolute; left: 0; top: 0; width: 512px; height: 342px;
+            display: none; pointer-events: none;
+            filter: drop-shadow(0 0 6px rgba(120,255,160,.75));
+        }
+        .modo-pong .mac-hoy-pong { display: block; }
+        .modo-pong .mac-hoy-crt,
+        .modo-pong .mac-hoy-crt-front { visibility: hidden; }
         .modo-logo .mac-hoy-crt,
         .modo-logo .mac-hoy-crt-front { visibility: hidden; }
         /* En detalle cabe más texto: letra menor y el bloque sube un poco. */
@@ -1696,15 +1707,15 @@
         .modo-detalle .mac-hoy-crt,
         .modo-detalle .mac-hoy-crt-front {
             font-size: 21px;
-            line-height: 1.45;
-            padding: 34px 26px 24px 32px;
+            line-height: 1.38;
+            padding: 24px 24px 14px 30px;   /* recortado: entra una línea más */
         }
         .mac-hoy-prop.refreshing .mac-hoy-glass::before { animation: mac-hoy-idle .4s linear infinite; }
         @keyframes mac-hoy-idle {
             0%, 100% { opacity: .4; }
             50% { opacity: .85; }
         }
-        .mac-hoy-keys, .mac-hoy-mouse {
+        .mac-hoy-keys, .mac-hoy-mouse, .mac-hoy-floppy {
             position: absolute;
             z-index: 4;
             pointer-events: auto;
@@ -1719,14 +1730,18 @@
                encima, nada de cajas ni bordes que delaten un botón encima. */
             transition: box-shadow .18s ease, background-color .18s ease;
         }
-        .mac-hoy-keys:hover, .mac-hoy-mouse:hover,
-        .mac-hoy-keys:focus-visible, .mac-hoy-mouse:focus-visible {
+        .mac-hoy-keys:hover, .mac-hoy-mouse:hover, .mac-hoy-floppy:hover,
+        .mac-hoy-keys:focus-visible, .mac-hoy-mouse:focus-visible, .mac-hoy-floppy:focus-visible {
             background-color: rgba(150,255,190,.10);
             box-shadow: 0 0 12px rgba(120,255,160,.35);
             outline: none;
         }
         .mac-hoy-keys { left: 1%; top: 57%; width: 63%; height: 32%; }
         .mac-hoy-mouse { left: 73%; top: 79%; width: 22%; height: 19%; }
+        /* Ranura del disquete, medida sobre el PNG (x 462..678, y 520..566 de
+           967x975): va inclinada como el resto del Mac, así que la caja se deja
+           algo más alta para que se pueda pulsar cómodamente. */
+        .mac-hoy-floppy { left: 47.5%; top: 52.5%; width: 23%; height: 6.5%; }
         @media (max-width: 720px) {
             .mac-hoy-prop { left: 36%; top: 56%; width: 28%; }
             /* el texto ya no se re-dimensiona aquí: vive en píxeles de Mac y lo
@@ -3353,10 +3368,12 @@ body.rail-open{overflow:hidden}
                 <button type="button" class="mac-hoy-glass" id="mac-hoy-glass" title="Macintosh 1984 · pulsa la pantalla para leer Hoy">
                     <pre class="mac-hoy-crt" id="mac-hoy-crt">HOY</pre>
                     <i class="mac-hoy-logo" aria-hidden="true"></i>
+                    <canvas class="mac-hoy-pong" id="mac-hoy-pong" width="512" height="342" aria-hidden="true"></canvas>
                 </button>
                 <div class="mac-hoy-shade" id="mac-hoy-shade" aria-hidden="true"></div>
                 <button type="button" class="mac-hoy-keys" id="mac-hoy-keys" title="Teclado · alterna entre el logo de Admira y las misiones de hoy"></button>
-                <button type="button" class="mac-hoy-mouse" id="mac-hoy-mouse" title="Ratón · la última misión, con detalle"></button>
+                <button type="button" class="mac-hoy-mouse" id="mac-hoy-mouse" title="Ratón · misión siguiente"></button>
+                <button type="button" class="mac-hoy-floppy" id="mac-hoy-floppy" title="Disquetera · mete el disco del Pong"></button>
             </div>
             <div class="mac-hoy-front" id="mac-hoy-front">
                 <button type="button" class="mac-hoy-front-close" id="mac-hoy-front-close">Cerrar</button>
@@ -4088,6 +4105,6 @@ body.rail-open{overflow:hidden}
 <script defer src="council-grokbot.js?v=20260918-r5-desk-cors"></script>
 <script defer src="app.flt-100529.js?v=20260919-r11-motor"></script>
 <script defer src="council-integration.js?v=20260918-r5-desk-cors"></script>
-<script type="module" src="assets/mac-hoy.js?v=20260919-fichas5"></script>
+<script type="module" src="assets/mac-hoy.js?v=20260919-pong"></script>
 </body>
 </html>

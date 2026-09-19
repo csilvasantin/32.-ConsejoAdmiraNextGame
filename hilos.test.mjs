@@ -104,3 +104,24 @@ test('el consejero pendiente se ve apagado antes de escribirle', () => {
   assert.match(html, /\.np\.np-pago \{ opacity: \.55/);
   assert.match(src, /title="Pendiente de crear su silla en GrokBot/);
 });
+
+test('el camino de pago está bloqueado en un solo sitio', () => {
+  assert.match(src, /const API_DE_PAGO_BLOQUEADA = true;/);
+  // el corte va DENTRO de askCouncilAPI, que es por donde pasan todas las vias
+  const f = src.slice(src.indexOf('async function askCouncilAPI'), src.indexOf('async function askCouncilAPI') + 600);
+  assert.match(f, /if \(API_DE_PAGO_BLOQUEADA\)/);
+  assert.match(f, /return null;/);
+  // y el aviso dice a quien SI se puede preguntar
+  assert.match(f, /Jobs, Wozniak, Disney, Lucas/);
+});
+
+test('DEBATIR se limita a las sillas de GrokBot y no paga', () => {
+  const f = src.slice(src.indexOf('async function runSimulation'), src.indexOf('async function runSimulation') + 2600);
+  assert.match(f, /filter\(m => window\.CouncilInterface\?\.has\(m\.persona\)\)/);
+  assert.match(f, /CouncilInterface\.send\(m\.persona, prompt\)/);
+  // sale antes de tocar la API, y suelta el cerrojo del debate al salir
+  const envia = f.indexOf('CouncilInterface.send(m.persona, prompt)');
+  const paga  = f.indexOf('askCouncilAPI(prompt)');
+  assert.ok(envia > 0 && envia < paga, 'GrokBot antes que la API');
+  assert.match(f, /debateRunning = false;\s*\n\s*return;/);
+});

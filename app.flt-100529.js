@@ -4820,7 +4820,19 @@
         void loadYarContext();
     });
 
+    // ── BLOQUEO DEL CAMINO DE PAGO (Carlos, 2026-09-19) ─────────────────────
+    // Mientras no existan las sillas en GrokBot no se consulta a la API por
+    // token. Se corta AQUI, en el unico sitio por el que pasan todas las vias
+    // (mesa sin consejero elegido, ANALIZAR, y lo que venga), para que no se
+    // pueda gastar por descuido desde una rama que se olvide de mirar.
+    // Quitar este bloque es lo unico que hay que hacer para reactivarlo.
+    const API_DE_PAGO_BLOQUEADA = true;
     async function askCouncilAPI(message) {
+        if (API_DE_PAGO_BLOQUEADA) {
+            setActionLine("⏳ La mesa completa esta en pausa: solo se consulta a quien tiene silla en GrokBot " +
+                "(∞ Jobs, Wozniak, Disney, Lucas). Elige uno de ellos y pregúntale.");
+            return null;
+        }
         /**
          * FLT-100570: prefer Mini /demo/consejo proxy (Grok 4.6 + MACHINE_TOKEN),
          * then legacy council-api URLs. Falls back to simulation if all fail.
@@ -5253,6 +5265,31 @@
         showSpeechBubble(racionales[0].persona, "Consejo", "Los consejeros están " + verbGerund + "...");
 
         apuntaEnHilo({ role: "user", content: prompt });
+
+        // DEBATIR se limita a las sillas de GrokBot (Carlos, 2026-09-19): va con
+        // la suscripcion. Antes llamaba a /ask, que elige consejeros en el
+        // servidor y los paga por token. Se manda el tema a cada uno y cada
+        // cual responde en SU chat, que es donde vive su hilo de verdad.
+        const enGrokBot = [...racionales, ...creativos].filter(m => window.CouncilInterface?.has(m.persona));
+        if (enGrokBot.length) {
+            for (const m of enGrokBot) {
+                try { window.CouncilInterface.select(m.persona); window.CouncilInterface.send(m.persona, prompt); }
+                catch (e) { console.warn("debate GrokBot", m.persona, e); }
+            }
+            hideSpeechBubble();
+            clearNameplateHighlight();
+            addUserEntry(prompt);
+            setActionLine("🗣 Debate enviado por GrokBot a " + enGrokBot.map(m => m.persona).join(", ") +
+                " — sin gastar tokens. Cada uno responde en su chat.");
+            debateRunning = false;
+            return;
+        }
+        setActionLine("⏳ Nadie de esta generacion tiene silla en GrokBot todavia — debate no enviado");
+        hideSpeechBubble();
+        clearNameplateHighlight();
+        debateRunning = false;
+        return;
+        // eslint-disable-next-line no-unreachable
         const apiResponse = await askCouncilAPI(prompt);
 
         hideSpeechBubble();

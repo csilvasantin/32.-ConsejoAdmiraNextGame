@@ -135,11 +135,13 @@ test('el aviso de pausa no se disfraza de error de red', () => {
 
 test('el rótulo y el campo comparten una sola fila', () => {
   const html = fs.readFileSync(new URL('./index.html', import.meta.url), 'utf8');
-  // el rótulo va DENTRO de la barra de escritura, no como franja aparte encima
-  const fila = html.slice(html.indexOf('<div class="action-line">'), html.indexOf('</div>', html.indexOf('action-send')));
-  assert.match(fila, /id="sentence-line"/);
-  assert.match(fila, /id="action-input"/);
-  assert.match(fila, /action-send/);
+  // recortar desde el MARCADO, no desde la primera aparición del texto (que es el CSS)
+  const ini = html.indexOf('<div class="scumm-bar">');
+  const fila = html.slice(ini, html.indexOf('<div class="scumm-bottom">', ini));
+  const orden = ['id="sentence-line"', 'id="action-input"', 'class="action-send"', 'id="scumm-fold"']
+    .map(t => fila.indexOf(t));
+  assert.ok(orden.every(i => i > 0), 'los cuatro van en la misma fila: ' + JSON.stringify(orden));
+  assert.deepEqual(orden, [...orden].sort((a, b) => a - b), 'y en ese orden');
   // el rótulo cede el sitio al campo y desaparece si está vacío
   assert.match(html, /\.sentence-line:empty \{ display: none; \}/);
   assert.match(html, /flex: 0 1 auto; max-width: 42%/);

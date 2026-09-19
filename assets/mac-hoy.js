@@ -1,6 +1,6 @@
 /*
  * Macintosh 1984 en la mesa del Consejo — misiones Yokup de Hoy.
- * FLT-100655 / FLT-100657. Solo el día (abiertas + resueltas). Sin histórico.
+ * FLT-100656 HandON / FLT-100659. Solo el día (abiertas + resueltas). Sin histórico.
  */
 export function todayMadrid(now = Date.now()) {
   return new Intl.DateTimeFormat('en-CA', { timeZone: 'Europe/Madrid', year: 'numeric', month: '2-digit', day: '2-digit' }).format(new Date(now));
@@ -17,7 +17,8 @@ export function isHoy(mission, day = todayMadrid()) {
 }
 
 export function seatOf(mission) {
-  const persona = String(mission.persona || mission.assignee || '').replace(/GrokBot$/i, '').trim();
+  let persona = String(mission.persona || mission.assignee || '');
+  persona = persona.replace(/GrokBot$/i, '').replace(/MacMini$/i, '').replace(/MacBook.*$/i, '').trim();
   const role = String(mission.role || '').split('·')[0].trim();
   const bits = [persona, role].filter(Boolean);
   return bits.join(' · ') || 'sin silla';
@@ -28,14 +29,14 @@ export function linesFor(missions, day = todayMadrid()) {
   const rows = (Array.isArray(missions) ? missions : [])
     .filter((m) => isHoy(m, day) && m.status !== 'cancelled')
     .sort((a, b) => (order[a.status] ?? 9) - (order[b.status] ?? 9) || Number(b.created_at || 0) - Number(a.created_at || 0))
-    .slice(0, 5);
-  const head = [`HOY ${day.slice(8, 10)}-${day.slice(5, 7)}  ${rows.length} FLT`];
-  if (!rows.length) return head.concat(['sin misiones de hoy']);
+    .slice(0, 4);
+  const head = [`HOY ${day.slice(8, 10)}-${day.slice(5, 7)}`];
+  if (!rows.length) return head.concat(['sin FLT hoy']);
   return head.concat(rows.map((m) => {
     const mark = m.status === 'resolved' ? '+' : m.status === 'in_progress' ? '*' : '·';
-    const id = String(m.id || '').replace(/^FLT-/, '');
-    const sub = String(m.subject || m.display_ref || '').replace(/\s+/g, ' ').trim().slice(0, 28);
-    return `${mark}${id} ${seatOf(m).slice(0, 18)}\n ${sub}`;
+    const id = String(m.id || '').replace(/^FLT-/, '').slice(-4);
+    const nick = seatOf(m).split('·')[0].trim().slice(0, 8);
+    return `${mark}${id} ${nick}`;
   }));
 }
 

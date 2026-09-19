@@ -1268,8 +1268,18 @@
            Antes eran doce cajas en cuatro filas y la rejilla no cuadraba. No se
            recorta ningún verbo: los que no caben están a una flecha. */
         /* Filas a su altura natural y centradas: con 1fr las tres se estiraban a lo
-           alto del panel y los verbos quedaban desparramados en vez de compactos. */
-        .verb-grid { grid-template-rows: repeat(3, auto); align-content: center; max-width: 620px; }
+           alto del panel y los verbos quedaban desparramados en vez de compactos.
+           Columnas a max-content y alineadas a la izquierda (Carlos, 2026-09-19):
+           en el SCUMM cada columna se ciñe a su verbo más largo y el texto va
+           pegado a la izquierda, no centrado en una casilla ancha. */
+        .verb-grid {
+            grid-template-columns: repeat(3, max-content);
+            grid-template-rows: repeat(3, auto);
+            justify-content: start;
+            align-content: center;
+            column-gap: 26px;
+        }
+        .verb-btn { text-align: left; }
         .verb-btn[hidden] { display: none !important; }
         .verb-pager {
             display: flex; flex-direction: column; justify-content: center; gap: 5px;

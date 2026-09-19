@@ -221,10 +221,14 @@ function repinta(root) {
 export function avanzaPantalla(delta, root = lastRoot || (typeof document !== 'undefined' ? document : null), fetchImpl = lastFetch) {
   if (!root || !visible) return modo;
   lastRoot = root;
-  const n = Math.max(1, misionesCache.length);
+  const n = misionesCache.length;
   if (modo === 'logo') {
     modo = 'detalle';
-    detalleIdx = delta >= 0 ? 0 : n - 1;
+    detalleIdx = (n && delta < 0) ? n - 1 : 0;
+  } else if (!n) {
+    // Todavía se están pidiendo: navegar a ciegas con n=1 hacía que el segundo
+    // clic se desbordara y volviera al logo. Mejor no moverse hasta que lleguen.
+    return modo;
   } else {
     detalleIdx += (delta >= 0 ? 1 : -1);
     if (detalleIdx >= n || detalleIdx < 0) { modo = 'logo'; detalleIdx = 0; }
@@ -245,8 +249,11 @@ async function draw(root, fetchImpl) {
   aplicarModo(root);
   if (modo === 'logo') return;
   prop.classList.add('refreshing');
-  if (mesa) mesa.textContent = IDLE_COPY;
-  if (front) front.textContent = IDLE_COPY;
+  // El comodín de carga dice en qué pantalla estás: poner «HOY …» mientras se
+  // pide una ficha de detalle despistaba.
+  const cargando = modo === 'detalle' ? 'MISION\n…' : IDLE_COPY;
+  if (mesa) mesa.textContent = cargando;
+  if (front) front.textContent = cargando;
   try {
     const ms = await fetchHoy(fetchImpl);
     misionesCache = ultimasMisiones(ms);

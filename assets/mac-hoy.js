@@ -153,7 +153,8 @@ export function boot(root = document, fetchImpl = fetch) {
   lastRoot = root;
   lastFetch = fetchImpl;
   setVisible(false, root, fetchImpl);
-  prop.addEventListener('click', (e) => {
+  const glass = root.querySelector('#mac-hoy-glass') || prop;
+  glass.addEventListener('click', (e) => {
     e.preventDefault();
     e.stopPropagation();
     if (!visible) return;

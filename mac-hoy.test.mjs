@@ -55,7 +55,7 @@ test('P0 on-demand: mesa limpia por defecto, MOSTRAR en col3 fila4, /mac en CLI'
 });
 
 test('P1: CRT en perspectiva y vista frontal del mismo Mac', () => {
-  assert.match(html, /rotateY\(-22deg\)/);
+  assert.match(html, /rotateY\(-18deg\)/);
   assert.match(html, /id="mac-hoy-front"/);
   assert.match(html, /id="mac-hoy-crt-front"/);
   assert.match(html, /assets\/mac-1984-front\.png/);
@@ -63,4 +63,16 @@ test('P1: CRT en perspectiva y vista frontal del mismo Mac', () => {
   const js = fs.readFileSync(new URL('./assets/mac-hoy.js', import.meta.url), 'utf8');
   assert.match(js, /openFront/);
   assert.match(js, /closeFront/);
+});
+
+test('P0 anti-pegote: cristal mask+blend, teclado/ratón a Misiones', () => {
+  assert.match(html, /id="mac-hoy-glass"/);
+  assert.match(html, /clip-path:\s*polygon/);
+  assert.match(html, /mix-blend-mode:\s*screen/);
+  assert.match(html, /id="mac-hoy-keys"/);
+  assert.match(html, /id="mac-hoy-mouse"/);
+  assert.match(html, /href="https:\/\/www\.yokup\.com\/misiones"/);
+  const crt = html.slice(html.indexOf('.mac-hoy-crt {'), html.indexOf('.mac-hoy-prop.refreshing'));
+  assert.match(crt, /background:\s*transparent/);
+  assert.doesNotMatch(crt, /#0c3218/);
 });

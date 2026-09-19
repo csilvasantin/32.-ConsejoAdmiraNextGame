@@ -170,3 +170,26 @@ test('disquetera: hay Pong y su propio modo de pantalla', () => {
   assert.match(src, /export function alternaPong/);
   assert.match(src, /requestAnimationFrame/);
 });
+
+test('pong: los periféricos juegan y no navegan mientras está puesto', async () => {
+  const src = fs.readFileSync(new URL('./assets/mac-hoy.js', import.meta.url), 'utf8');
+  // navegar sólo fuera del pong
+  assert.match(src, /if \(!visible \|\| modo === 'pong'\) return;\s*\/\/ jugando no se navega/);
+  // mantener pulsado mueve la pala, soltar la para
+  assert.match(src, /pointerdown/);
+  assert.match(src, /pointerup/);
+  assert.match(src, /el\.addEventListener\('pointerleave', suelta\)/, 'soltar fuera del botón no debe dejar la pala lanzada');
+  // la pala izquierda la mueve el jugador, no la máquina
+  assert.match(src, /izq \+ jugador \* \(TOPE \+ 1\.6\)/);
+  // teclado de verdad, pero nunca mientras se escribe en un campo
+  assert.match(src, /ArrowUp/);
+  assert.match(src, /t\.tagName === 'INPUT'/);
+});
+
+test('pong: salir del juego suelta la pala', async () => {
+  const { paraPong, mandoPong, estadoPong } = await import('./assets/mac-hoy.js');
+  mandoPong(-1);
+  assert.equal(estadoPong().jugador, -1);
+  paraPong();
+  assert.equal(estadoPong().jugador, 0, 'al sacar el disco la pala no puede quedarse subiendo sola');
+});

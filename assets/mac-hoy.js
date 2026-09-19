@@ -255,10 +255,14 @@ function paraPaseo(root) {
    la bola SÓLO cuando viene hacia ellas y con velocidad tope; si siguieran
    siempre no fallarían nunca y el peloteo no acabaría jamás. */
 let pongRaf = null;
+let jugador = 0;          // -1 sube, +1 baja, 0 quieto — lo mueven teclado y ratón
 export function paraPong() {
   if (pongRaf && typeof cancelAnimationFrame === 'function') cancelAnimationFrame(pongRaf);
   pongRaf = null;
+  jugador = 0;
 }
+export function mandoPong(dir) { jugador = dir; }
+export function estadoPong() { return { jugando: !!pongRaf, jugador }; }
 
 function arrancaPong(root) {
   const cv = root && root.querySelector('#mac-hoy-pong');
@@ -278,7 +282,10 @@ function arrancaPong(root) {
     bx += vx; by += vy;
     if (by <= BORDE) { by = BORDE; vy = -vy; }
     if (by + BOLA >= H - BORDE) { by = H - BORDE - BOLA; vy = -vy; }
-    izq = sigue(izq, vx < 0 ? by : H / 2);
+    // La pala IZQUIERDA es tuya: la mueven el teclado (arriba) y el ratón (abajo)
+    // del propio dibujo. La derecha la lleva la máquina, y sólo persigue la bola
+    // cuando viene hacia ella: si la siguiera siempre no fallaría nunca.
+    izq = Math.max(BORDE, Math.min(H - PH - BORDE, izq + jugador * (TOPE + 1.6)));
     der = sigue(der, vx > 0 ? by : H / 2);
     const xI = BORDE + 8, xD = W - BORDE - 8 - PW;
     if (vx < 0 && bx <= xI + PW && bx >= xI - 6 && by + BOLA >= izq && by <= izq + PH) { bx = xI + PW; vx = -vx; vy += (by - (izq + PH / 2)) * 0.05; }
@@ -453,18 +460,46 @@ export function boot(root = document, fetchImpl = fetch) {
   });
   // Los periféricos del dibujo son los mandos de la pantalla. Pulsar de nuevo
   // el mismo devuelve a HOY, así que nunca se queda uno atrapado en un modo.
+  // Los dos periféricos cambian de oficio según lo que haya en pantalla: con el
+  // Pong puesto JUEGAN (mantener pulsado mueve la pala) y fuera de él pasan de
+  // misión. Avanzar y retroceder es cosa del detalle, no del juego
+  // (Carlos, 2026-09-19).
   const mando = (sel, delta) => {
     const el = root.querySelector(sel);
     if (!el) return;
+    const empuja = (e) => {
+      if (!visible || modo !== 'pong') return;
+      e.preventDefault();
+      jugador = delta;                       // ratón (+1) baja, teclado (-1) sube
+    };
+    const suelta = () => { if (jugador === delta) jugador = 0; };
+    el.addEventListener('pointerdown', empuja);
+    el.addEventListener('pointerup', suelta);
+    el.addEventListener('pointerleave', suelta);
+    el.addEventListener('pointercancel', suelta);
     el.addEventListener('click', (e) => {
       e.preventDefault();
       e.stopPropagation();
-      if (!visible) return;
+      if (!visible || modo === 'pong') return;   // jugando no se navega
       avanzaPantalla(delta, root, fetchImpl);
     });
   };
-  mando('#mac-hoy-mouse', +1);   // ratón   -> misión siguiente
-  mando('#mac-hoy-keys', -1);    // teclado -> misión anterior
+  mando('#mac-hoy-mouse', +1);   // ratón   -> misión siguiente · pala abajo
+  mando('#mac-hoy-keys', -1);    // teclado -> misión anterior · pala arriba
+  // Y con el teclado de verdad, que para eso es un Pong. Nunca mientras se
+  // escribe en un campo: ahí las flechas son del texto.
+  if (typeof document !== 'undefined' && !document.__macTeclas) {
+    document.__macTeclas = true;
+    const esCampo = (t) => t && (t.tagName === 'INPUT' || t.tagName === 'TEXTAREA' || t.isContentEditable);
+    document.addEventListener('keydown', (e) => {
+      if (modo !== 'pong' || !visible || esCampo(e.target)) return;
+      if (e.key === 'ArrowUp' || e.key === 'w' || e.key === 'W') { jugador = -1; e.preventDefault(); }
+      else if (e.key === 'ArrowDown' || e.key === 's' || e.key === 'S') { jugador = 1; e.preventDefault(); }
+    });
+    document.addEventListener('keyup', (e) => {
+      if (['ArrowUp', 'ArrowDown', 'w', 'W', 's', 'S'].includes(e.key)) jugador = 0;
+    });
+  }
   const disq = root.querySelector('#mac-hoy-floppy');
   if (disq) disq.addEventListener('click', (e) => {
     e.preventDefault(); e.stopPropagation();
@@ -484,7 +519,7 @@ export function boot(root = document, fetchImpl = fetch) {
 }
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-  window.MacHoy = { todayMadrid, isHoy, seatOf, linesFor, IDLE_COPY, ERROR_COPY, paintCrt, fetchHoy, boot, setVisible, toggle, isVisible, isFocused, openFront, closeFront, fitScreen, MAC_ART_W, MODOS, setModo, modoActual, detalleLineas, ultimaMision, ultimasMisiones, envolver, avanzaPantalla, alternaPong, paraPong, DETALLE_ANCHO };
+  window.MacHoy = { todayMadrid, isHoy, seatOf, linesFor, IDLE_COPY, ERROR_COPY, paintCrt, fetchHoy, boot, setVisible, toggle, isVisible, isFocused, openFront, closeFront, fitScreen, MAC_ART_W, MODOS, setModo, modoActual, detalleLineas, ultimaMision, ultimasMisiones, envolver, avanzaPantalla, alternaPong, paraPong, mandoPong, estadoPong, DETALLE_ANCHO };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => boot());
   else boot();
 }

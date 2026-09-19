@@ -101,13 +101,14 @@ test('el Mac arranca con el logo, y Mac 1984 es un botón como los demás', () =
   assert.ok(!/class="verb-btn mac-hoy-chip"/.test(html), 'ya no lleva el estilo de chip');
 });
 
-test('noveno objeto: el motor devuelve la elección de modelo', () => {
-  assert.match(html, /data-obj="motor"/);
-  assert.match(html, /assets\/iconos\/motor\.svg/);
-  assert.ok(fs.existsSync(new URL('./assets/iconos/motor.svg', import.meta.url)));
-  // la lista de motores sigue en el DOM (oculta), no borrada: selectedLLM depende de ella
+test('la elección de modelo sigue viva aunque el motor perdiera su casilla', () => {
+  // La lista NO se borra: de ella leen selectedLLM y refreshLLMAvailability.
   assert.match(html, /data-panel="llm"/);
   assert.match(html, /\.inventory\.motor-abierto .inv-panel\[data-panel="llm"\]/);
+  // y se sigue pudiendo abrir, ahora por comando
+  const app = fs.readFileSync(new URL('./app.flt-100529.js', import.meta.url), 'utf8');
+  assert.match(app, /motorMatch/);
+  assert.match(app, /classList\.toggle\('motor-abierto', abierto\)/);
 });
 
 test('paintCrt: la última escritura manda (no se pisan al navegar rápido)', async () => {
@@ -227,14 +228,17 @@ test('el Pong también existe en la vista frontal', () => {
   assert.match(src, /if \(modo === 'pong'\) \{ arrancaPong\(root\); return true; \}/);
 });
 
-test('los seis primeros objetos abren los proyectos grandes', () => {
+test('los NUEVE objetos abren los proyectos grandes', () => {
   const esperado = [
-    ['next',   'https://www.admiranext.com'],
-    ['tv',     'https://www.admira.tv'],
-    ['yokup',  'https://www.yokup.com'],
-    ['studio', 'https://www.admira.studio'],
-    ['store',  'https://www.admira.store'],
-    ['app',    'https://www.admira.app'],
+    ['next',         'https://www.admiranext.com'],
+    ['tv',           'https://www.admira.tv'],
+    ['yokup',        'https://www.yokup.com'],
+    ['studio',       'https://www.admira.studio'],
+    ['store',        'https://www.admira.store'],
+    ['app',          'https://www.admira.app'],
+    ['pixeria',      'https://www.pixeria.com'],
+    ['xpace',        'https://www.xpaceos.com'],
+    ['clearchannel', 'https://www.clearchannel.tv'],
   ];
   // el ORDEN importa: Carlos los enumeró del primero al sexto
   const orden = [...html.matchAll(/data-obj="([a-z]+)" data-url="([^"]+)"/g)].map(m => [m[1], m[2]]);
@@ -249,4 +253,15 @@ test('los puntos sensibles del Mac no pintan marco ni con el foco', () => {
   assert.ok(!/outline: 2px solid rgba\(255,210,122/.test(html), 'fuera el marco dorado');
   const src = fs.readFileSync(new URL('./assets/mac-hoy.js', import.meta.url), 'utf8');
   assert.match(src, /el\.addEventListener\('mouseup', \(\) => \{ try \{ el\.blur\(\)/);
+});
+
+test('/motor sigue abriendo la elección de modelo aunque el icono ya no exista', () => {
+  const app = fs.readFileSync(new URL('./app.flt-100529.js', import.meta.url), 'utf8');
+  assert.match(app, /\/\^\\\/motor/, 'debe existir el comando /motor');
+  assert.match(app, /motor-abierto/);
+  assert.match(app, /'\/motor'/, 'y salir en las sugerencias');
+  assert.match(app, /<strong>\/motor on\|off\|toggle<\/strong>/, 'y estar en /help');
+  // la lista de motores NO se ha borrado: de ella leen selectedLLM y refreshLLMAvailability
+  assert.match(html, /data-panel="llm"/);
+  assert.ok(!/data-obj="motor"/.test(html), 'el icono cedió su casilla a clearchannel.tv');
 });

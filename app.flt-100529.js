@@ -1755,6 +1755,7 @@
             '<li><strong>/top on|off|toggle</strong> — pliega/despliega el menú superior (botón ▾)</li>' +
             '<li><strong>/bocas on|off|toggle</strong> — los consejeros vivos mueven la boca (hablan)</li>' +
             '<li><strong>/mac on|off|toggle</strong> — muestra u oculta el Macintosh 1984 (HOY + 3 FLT hechas)</li>' +
+            '<li><strong>/motor on|off|toggle</strong> — abre la lista de modelos (Grok, Claude, Gemini…)</li>' +
             '<li><strong>/yarig on|off|toggle</strong> — fija u oculta Yarig en la mesa</li>' +
             '<li><strong>/yarig login</strong> — abre la sesión persistente de Yarig</li>' +
             '<li><strong>/yarig estado</strong> — comprueba watcher y frescura del sync</li>' +
@@ -2072,7 +2073,7 @@
     const CLI_COMMANDS = [
         '/help', '/sites', '/admira.live', '/admira.studio', '/admiranext.com',
         '/admira.app', '/clearchannel.tv', '/pixeria.com', '/equipos', '/control',
-        '/scumm', '/top', '/bocas', '/mac', '/menu', '/agoramatrix', '/tareas', '/google',
+        '/scumm', '/top', '/bocas', '/mac', '/motor', '/menu', '/agoramatrix', '/tareas', '/google',
         '/importar', '/nombres', '/tarea', '/diario', '/leyendas', '/coetaneos', '/agentes', '/comandos', '/sendto',
         '/marcador', '/flota', '/highscore'
     ];
@@ -2207,6 +2208,24 @@
             setTopCollapsed(nv);
             addUserEntry(text);
             setActionLine('🔼 Menú superior ' + (nv ? 'plegado' : 'desplegado') + ' · /top on · off · toggle');
+            return true;
+        }
+
+        // El objeto MOTOR cedio su casilla a clearchannel.tv, asi que la eleccion
+        // de modelo se queda sin puerta en el inventario: /motor la abre y la
+        // cierra. La lista sigue en el DOM —de ella leen selectedLLM y
+        // refreshLLMAvailability—, solo estaba oculta.
+        const motorMatch = text.match(/^\/motor(?:\s+(on|off|toggle))?$/i);
+        if (motorMatch) {
+            const inv = document.querySelector('.inventory');
+            if (!inv) { setActionLine('⚙️ el inventario no esta listo'); return true; }
+            const accion = (motorMatch[1] || 'toggle').toLowerCase();
+            const abierto = accion === 'on' ? true : accion === 'off' ? false : !inv.classList.contains('motor-abierto');
+            inv.classList.toggle('motor-abierto', abierto);
+            const sel = document.querySelector('.llm-option.selected');
+            setActionLine(abierto
+                ? '⚙️ Motor LLM abierto — elige modelo abajo a la derecha · /motor off lo cierra'
+                : '⚙️ Motor: ' + ((sel && sel.textContent.trim()) || 'Grok 4.6') + ' · /motor lo vuelve a abrir');
             return true;
         }
 

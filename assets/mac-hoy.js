@@ -63,25 +63,49 @@ export async function fetchHoy(fetchImpl = fetch) {
 }
 
 let visible = false;
+let focused = false;
 let beatTimer = null;
 let lastRoot = null;
 let lastFetch = fetch;
+let lastText = 'HOY';
 
 async function draw(root, fetchImpl) {
-  const screen = root.querySelector('#mac-hoy-crt');
+  const mesa = root.querySelector('#mac-hoy-crt');
+  const front = root.querySelector('#mac-hoy-crt-front');
   const prop = root.querySelector('#mac-hoy-prop');
-  if (!screen || !prop || !visible) return;
+  if (!mesa || !prop || !visible) return;
   prop.classList.add('refreshing');
   try {
-    const lines = linesFor(await fetchHoy(fetchImpl));
-    await paintCrt(screen, lines.join('\n'));
+    lastText = linesFor(await fetchHoy(fetchImpl)).join('\n');
   } catch (_) {
-    await paintCrt(screen, 'HOY\n(sin cable Yokup)');
+    lastText = 'HOY\n(sin cable Yokup)';
   }
+  await paintCrt(mesa, lastText);
+  if (front) await paintCrt(front, lastText);
   prop.classList.remove('refreshing');
 }
 
 export function isVisible() { return visible; }
+export function isFocused() { return focused; }
+
+export function closeFront(root = lastRoot || (typeof document !== 'undefined' ? document : null)) {
+  focused = false;
+  const el = root && root.querySelector('#mac-hoy-front');
+  if (el) el.classList.remove('on');
+}
+
+export function openFront(root = lastRoot || (typeof document !== 'undefined' ? document : null), fetchImpl = lastFetch) {
+  if (!root || !visible) return false;
+  lastRoot = root;
+  lastFetch = fetchImpl;
+  focused = true;
+  const el = root.querySelector('#mac-hoy-front');
+  if (el) el.classList.add('on');
+  const front = root.querySelector('#mac-hoy-crt-front');
+  if (front) paintCrt(front, lastText);
+  draw(root, fetchImpl);
+  return true;
+}
 
 export function setVisible(on, root = lastRoot || (typeof document !== 'undefined' ? document : null), fetchImpl = lastFetch) {
   if (!root) return false;
@@ -92,6 +116,7 @@ export function setVisible(on, root = lastRoot || (typeof document !== 'undefine
   visible = !!on;
   if (prop) prop.classList.toggle('on', visible);
   if (btn) btn.classList.toggle('active', visible);
+  if (!visible) closeFront(root);
   if (visible) {
     draw(root, fetchImpl);
     if (!beatTimer) beatTimer = setInterval(() => draw(lastRoot, lastFetch), 45000);
@@ -109,17 +134,29 @@ export function toggle(root, fetchImpl) {
 export function boot(root = document, fetchImpl = fetch) {
   const prop = root.querySelector('#mac-hoy-prop');
   if (!prop) return;
+  lastRoot = root;
+  lastFetch = fetchImpl;
   setVisible(false, root, fetchImpl);
+  prop.addEventListener('click', (e) => {
+    e.preventDefault();
+    e.stopPropagation();
+    if (!visible) return;
+    openFront(root, fetchImpl);
+  });
+  const front = root.querySelector('#mac-hoy-front');
+  const close = root.querySelector('#mac-hoy-front-close');
+  if (close) close.addEventListener('click', (e) => { e.stopPropagation(); closeFront(root); });
+  if (front) front.addEventListener('click', (e) => { if (e.target === front) closeFront(root); });
   const video = root.getElementById && root.getElementById('presentation-video');
   if (video) {
-    video.addEventListener('play', () => { if (prop) prop.style.visibility = 'hidden'; });
+    video.addEventListener('play', () => { if (prop) prop.style.visibility = 'hidden'; closeFront(root); });
     video.addEventListener('pause', () => { if (prop) prop.style.visibility = ''; });
     video.addEventListener('ended', () => { if (prop) prop.style.visibility = ''; });
   }
 }
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-  window.MacHoy = { todayMadrid, isHoy, seatOf, linesFor, paintCrt, fetchHoy, boot, setVisible, toggle, isVisible };
+  window.MacHoy = { todayMadrid, isHoy, seatOf, linesFor, paintCrt, fetchHoy, boot, setVisible, toggle, isVisible, isFocused, openFront, closeFront };
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => boot());
   else boot();
 }

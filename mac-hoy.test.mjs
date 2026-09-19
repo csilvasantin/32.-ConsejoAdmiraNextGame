@@ -48,3 +48,14 @@ test('P0 on-demand: mesa limpia por defecto, MOSTRAR en col3 fila4, /mac en CLI'
   assert.match(css, /display:\s*none/);
   assert.match(css, /width:\s*20%/);
 });
+
+test('P1: CRT en perspectiva y vista frontal del mismo Mac', () => {
+  assert.match(html, /rotateY\(-22deg\)/);
+  assert.match(html, /id="mac-hoy-front"/);
+  assert.match(html, /id="mac-hoy-crt-front"/);
+  assert.match(html, /assets\/mac-1984-front\.png/);
+  assert.ok(fs.existsSync(new URL('./assets/mac-1984-front.png', import.meta.url)));
+  const js = fs.readFileSync(new URL('./assets/mac-hoy.js', import.meta.url), 'utf8');
+  assert.match(js, /openFront/);
+  assert.match(js, /closeFront/);
+});

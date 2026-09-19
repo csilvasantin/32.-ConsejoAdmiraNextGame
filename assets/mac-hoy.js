@@ -47,8 +47,7 @@ export function frontLines(missions, day = todayMadrid()) {
   const body = rows.map((m) => {
     const st = m.status === 'resolved' ? 'DONE' : 'OPEN';
     const id = String(m.id || 'FLT-????');
-    const title = String(m.subject || m.display_ref || '').replace(/\s+/g, ' ').trim().slice(0, 16);
-    return `${id} · ${title} · [${st}]`;
+    return `${id} [${st}]`;
   });
   return head.concat(body, ['DREAM.PLAN.DO.REVIEW']);
 }

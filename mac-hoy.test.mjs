@@ -33,12 +33,11 @@ test('copy 8-bit Lucas+Disney: mesa teaser, frontal FLT+[OPEN|DONE], idle y erro
     { id: 'FLT-9', display_day: '2020-01-01', status: 'open', subject: 'histórico' },
   ], day).join('\n');
   assert.match(blob, />>> MISIONES HOY/);
-  assert.match(blob, /FLT-100657/);
-  assert.match(blob, /\[OPEN\]/);
-  assert.match(blob, /FLT-100655/);
-  assert.match(blob, /\[DONE\]/);
+  assert.match(blob, /FLT-100657 \[OPEN\]/);
+  assert.match(blob, /FLT-100655 \[DONE\]/);
   assert.match(blob, /DREAM\.PLAN\.DO\.REVIEW/);
   assert.doesNotMatch(blob, /histórico/);
+  blob.split('\n').forEach((line) => assert.ok(line.length <= 20, `CRT overflow: ${line}`));
   assert.equal(seatOf({ persona: 'DisneyGrokBot', role: 'CCO' }).includes('Disney'), true);
   assert.equal(linesFor([], day).join('\n'), frontLines([], day).join('\n'));
 });

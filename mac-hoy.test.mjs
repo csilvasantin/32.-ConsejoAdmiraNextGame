@@ -1,0 +1,38 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import { todayMadrid, isHoy, linesFor, seatOf } from './assets/mac-hoy.js';
+
+const html = fs.readFileSync(new URL('./index.html', import.meta.url), 'utf8');
+
+test('inventario: Apple II es hotspot DOM; el Mac 1984 es prop con asset', () => {
+  assert.match(html, /id="apple-ii-hotspot"/);
+  assert.match(html, /id="mac-hoy-prop"/);
+  assert.match(html, /assets\/mac-1984-mesa\.jpg/);
+  assert.match(html, /id="mac-hoy-crt"/);
+  assert.match(html, /objeto de prop/);
+  assert.ok(fs.existsSync(new URL('./assets/mac-1984-mesa.jpg', import.meta.url)));
+});
+
+test('isHoy usa display_day y no cuela histórico', () => {
+  const day = '2026-09-19';
+  assert.equal(isHoy({ display_day: '2026-09-19', status: 'open' }, day), true);
+  assert.equal(isHoy({ display_day: '2026-09-18', status: 'open' }, day), false);
+  assert.equal(isHoy({ created_at: Date.parse('2026-09-19T10:00:00+02:00') }, day), true);
+});
+
+test('linesFor: FLT + silla + solo Hoy, resueltas incluidas', () => {
+  const day = todayMadrid(Date.parse('2026-09-19T15:00:00+02:00'));
+  const lines = linesFor([
+    { id: 'FLT-100657', display_day: day, status: 'in_progress', persona: 'SmithMacMini', role: 'status-web · Smith', subject: 'Mac CRT 1984 en mesa Consejo' },
+    { id: 'FLT-100655', display_day: day, status: 'resolved', persona: 'WozniakGrokBot', role: 'CTO', subject: 'Macintosh 1984 beige CRT' },
+    { id: 'FLT-9', display_day: '2020-01-01', status: 'open', persona: 'Viejo', subject: 'histórico' },
+  ], day);
+  const blob = lines.join('\n');
+  assert.match(blob, /HOY/);
+  assert.match(blob, /100657/);
+  assert.match(blob, /Smith/);
+  assert.match(blob, /100655/);
+  assert.doesNotMatch(blob, /histórico/);
+  assert.equal(seatOf({ persona: 'DisneyGrokBot', role: 'CCO' }).includes('Disney'), true);
+});

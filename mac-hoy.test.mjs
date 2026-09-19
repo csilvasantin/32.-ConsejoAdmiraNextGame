@@ -210,3 +210,19 @@ test('los puntos sensibles no se delatan al pasar por encima', () => {
   // el foco de teclado SÍ deja marca: hace falta para navegar sin ratón
   assert.match(html, /\.mac-hoy-keys:focus-visible[^{]*\{[^}]*outline/);
 });
+
+test('el Pong también existe en la vista frontal', () => {
+  assert.match(html, /id="mac-hoy-pong-front"[^>]*width="512"[^>]*height="342"/);
+  assert.match(html, /id="mac-hoy-front-floppy"/);
+  // el lienzo frontal se proyecta con la matriz del frontal, como su texto
+  assert.match(html, /\.mac-hoy-pong-front,\s*\n\s*\.mac-hoy-front-shade \{/);
+  assert.match(html, /\.mac-hoy-logo-front, \.mac-hoy-pong-front \{ mix-blend-mode: screen; \}/);
+  const src = fs.readFileSync(new URL('./assets/mac-hoy.js', import.meta.url), 'utf8');
+  // se pinta en TODOS los tubos, no sólo en el de la mesa
+  assert.match(src, /querySelectorAll\('\.mac-hoy-pong'\)/);
+  assert.match(src, /ctxs\.forEach/);
+  // las dos disqueteras meten y sacan el disco
+  assert.match(src, /\['#mac-hoy-floppy', '#mac-hoy-front-floppy'\]/);
+  // y abrir el frontal con el juego puesto lo engancha al lienzo recién aparecido
+  assert.match(src, /if \(modo === 'pong'\) \{ arrancaPong\(root\); return true; \}/);
+});

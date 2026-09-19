@@ -1685,7 +1685,7 @@
             filter: drop-shadow(0 0 7px rgba(120,255,160,.85)) blur(.8px);
             pointer-events: none;
         }
-        .mac-hoy-logo-front { mix-blend-mode: screen; }
+        .mac-hoy-logo-front, .mac-hoy-pong-front { mix-blend-mode: screen; }
         .modo-logo .mac-hoy-logo { display: block; }
         /* PONG. Vive DENTRO del plano proyectado, así que la misma matriz lo tumba
            sobre el tubo. Fondo transparente: el plano mezcla en «screen», de modo
@@ -1727,7 +1727,7 @@
             50% { opacity: .85; }
         }
         .mac-hoy-keys, .mac-hoy-mouse, .mac-hoy-floppy,
-        .mac-hoy-front-keys, .mac-hoy-front-mouse {
+        .mac-hoy-front-keys, .mac-hoy-front-mouse, .mac-hoy-front-floppy {
             position: absolute;
             z-index: 4;
             pointer-events: auto;
@@ -1747,7 +1747,7 @@
            que hay botones invisibles pegados al Mac. Sólo el foco de teclado deja
            marca, que ésa hace falta para navegar sin ratón. */
         .mac-hoy-keys:focus-visible, .mac-hoy-mouse:focus-visible, .mac-hoy-floppy:focus-visible,
-        .mac-hoy-front-keys:focus-visible, .mac-hoy-front-mouse:focus-visible {
+        .mac-hoy-front-keys:focus-visible, .mac-hoy-front-mouse:focus-visible, .mac-hoy-front-floppy:focus-visible {
             outline: 2px solid rgba(255,210,122,.8);
             outline-offset: -2px;
         }
@@ -1759,9 +1759,12 @@
                 .mac-hoy-floppy { left: 47.5%; top: 52.5%; width: 23%; height: 6.5%; }
         /* Mandos de la VISTA FRONTAL, sobre su propio teclado y su propio ratón:
            al abrirla en grande también se pasa de misión (Carlos, 2026-09-19). */
-        .mac-hoy-front-keys, .mac-hoy-front-mouse { position: absolute; z-index: 4; }
+        .mac-hoy-front-keys, .mac-hoy-front-mouse, .mac-hoy-front-floppy { position: absolute; z-index: 4; }
         .mac-hoy-front-keys { left: 3%; top: 76%; width: 72%; height: 20%; }
         .mac-hoy-front-mouse { left: 76%; top: 84%; width: 22%; height: 15%; }
+        /* Ranura del disquete del frontal, medida sobre mac-1984-front.png:
+           la franja oscura del cuerpo cae en y 526..558 de 893 (59%..62,5%). */
+        .mac-hoy-front-floppy { left: 51%; top: 57%; width: 28%; height: 7%; }
         @media (max-width: 720px) {
             .mac-hoy-prop { left: 36%; top: 56%; width: 28%; }
             /* el texto ya no se re-dimensiona aquí: vive en píxeles de Mac y lo
@@ -1817,6 +1820,7 @@
         .mac-hoy-front-stage img { width: 100%; height: auto; display: block; }
         .mac-hoy-crt-front,
         .mac-hoy-logo-front,
+        .mac-hoy-pong-front,
         .mac-hoy-front-shade {
             position: absolute;
             left: 0;
@@ -3402,8 +3406,10 @@ body.rail-open{overflow:hidden}
                     <pre class="mac-hoy-crt-front" id="mac-hoy-crt-front">HOY</pre>
                     <i class="mac-hoy-logo mac-hoy-logo-front" aria-hidden="true"></i>
                     <div class="mac-hoy-front-shade" aria-hidden="true"></div>
-                    <button type="button" class="mac-hoy-front-keys" id="mac-hoy-front-keys" title="Teclado · misión anterior"></button>
-                    <button type="button" class="mac-hoy-front-mouse" id="mac-hoy-front-mouse" title="Ratón · misión siguiente"></button>
+                    <canvas class="mac-hoy-pong mac-hoy-pong-front" id="mac-hoy-pong-front" width="512" height="342" aria-hidden="true"></canvas>
+                    <button type="button" class="mac-hoy-front-floppy" id="mac-hoy-front-floppy" title="Disquetera · mete y saca el disco del Pong"></button>
+                    <button type="button" class="mac-hoy-front-keys" id="mac-hoy-front-keys" title="Teclado · misión anterior — con el Pong puesto, sube la pala"></button>
+                    <button type="button" class="mac-hoy-front-mouse" id="mac-hoy-front-mouse" title="Ratón · misión siguiente — con el Pong puesto, baja la pala"></button>
                 </div>
             </div>
             <!-- Door hotspot to enter Private Meeting Room (Sala del Consejo) -->
@@ -4127,6 +4133,6 @@ body.rail-open{overflow:hidden}
 <script defer src="council-grokbot.js?v=20260918-r5-desk-cors"></script>
 <script defer src="app.flt-100529.js?v=20260919-r11-motor"></script>
 <script defer src="council-integration.js?v=20260918-r5-desk-cors"></script>
-<script type="module" src="assets/mac-hoy.js?v=20260919-frontal2"></script>
+<script type="module" src="assets/mac-hoy.js?v=20260919-pongfront"></script>
 </body>
 </html>

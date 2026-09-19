@@ -265,9 +265,15 @@ export function mandoPong(dir) { jugador = dir; }
 export function estadoPong() { return { jugando: !!pongRaf, jugador }; }
 
 function arrancaPong(root) {
-  const cv = root && root.querySelector('#mac-hoy-pong');
-  if (!cv || !cv.getContext) return;
-  const ctx = cv.getContext('2d');
+  // El juego se pinta en TODOS los tubos a la vez —la mesa y la vista frontal—
+  // porque son dos dibujos del mismo Mac: si sólo se pintara en uno, abrir el
+  // frontal dejaba la pantalla en negro con la partida corriendo por detrás.
+  const lienzos = root && root.querySelectorAll
+    ? Array.from(root.querySelectorAll('.mac-hoy-pong')).filter((c) => c && c.getContext)
+    : [];
+  if (!lienzos.length) return;
+  const ctxs = lienzos.map((c) => c.getContext('2d'));
+  const cv = lienzos[0];
   const W = cv.width, H = cv.height;
   const PW = 12, PH = 68, BOLA = 12, TOPE = 5.4, BORDE = 26;
   let izq = (H - PH) / 2, der = (H - PH) / 2;
@@ -294,16 +300,18 @@ function arrancaPong(root) {
     if (bx < -30) { marcaD++; saca(1); }
     if (bx > W + 30) { marcaI++; saca(-1); }
 
-    ctx.clearRect(0, 0, W, H);
-    ctx.fillStyle = '#7fe28d';
-    for (let y = BORDE; y < H - BORDE; y += 26) ctx.fillRect(W / 2 - 3, y, 6, 14);
-    ctx.fillRect(xI, izq, PW, PH);
-    ctx.fillRect(xD, der, PW, PH);
-    ctx.fillRect(bx, by, BOLA, BOLA);
-    ctx.font = '30px "Press Start 2P", monospace';
-    ctx.textBaseline = 'top';
-    ctx.textAlign = 'right'; ctx.fillText(String(marcaI), W / 2 - 34, BORDE + 6);
-    ctx.textAlign = 'left';  ctx.fillText(String(marcaD), W / 2 + 34, BORDE + 6);
+    ctxs.forEach((ctx) => {
+      ctx.clearRect(0, 0, W, H);
+      ctx.fillStyle = '#7fe28d';
+      for (let y = BORDE; y < H - BORDE; y += 26) ctx.fillRect(W / 2 - 3, y, 6, 14);
+      ctx.fillRect(xI, izq, PW, PH);
+      ctx.fillRect(xD, der, PW, PH);
+      ctx.fillRect(bx, by, BOLA, BOLA);
+      ctx.font = '30px "Press Start 2P", monospace';
+      ctx.textBaseline = 'top';
+      ctx.textAlign = 'right'; ctx.fillText(String(marcaI), W / 2 - 34, BORDE + 6);
+      ctx.textAlign = 'left';  ctx.fillText(String(marcaD), W / 2 + 34, BORDE + 6);
+    });
     pongRaf = requestAnimationFrame(cuadro);
   };
   cuadro();
@@ -412,6 +420,7 @@ export function openFront(root = lastRoot || (typeof document !== 'undefined' ? 
   const el = root.querySelector('#mac-hoy-front');
   if (el) el.classList.add('on');
   fitScreen(root);                // el escenario frontal medía 0 mientras estaba oculto
+  if (modo === 'pong') { arrancaPong(root); return true; }   // el lienzo frontal acaba de aparecer
   const front = root.querySelector('#mac-hoy-crt-front');
   if (front) paintCrt(front, lastText).then(() => paseaTexto(front));
   draw(root, fetchImpl);
@@ -502,11 +511,15 @@ export function boot(root = document, fetchImpl = fetch) {
       if (['ArrowUp', 'ArrowDown', 'w', 'W', 's', 'S'].includes(e.key)) jugador = 0;
     });
   }
-  const disq = root.querySelector('#mac-hoy-floppy');
-  if (disq) disq.addEventListener('click', (e) => {
-    e.preventDefault(); e.stopPropagation();
-    if (!visible) return;
-    alternaPong(root, fetchImpl);          // disquetera -> Pong, y otra vez al logo
+  // Las dos disqueteras —la de la mesa y la del frontal— meten y sacan el disco.
+  ['#mac-hoy-floppy', '#mac-hoy-front-floppy'].forEach((sel) => {
+    const disq = root.querySelector(sel);
+    if (!disq) return;
+    disq.addEventListener('click', (e) => {
+      e.preventDefault(); e.stopPropagation();
+      if (!visible) return;
+      alternaPong(root, fetchImpl);
+    });
   });
   const front = root.querySelector('#mac-hoy-front');
   const close = root.querySelector('#mac-hoy-front-close');

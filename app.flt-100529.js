@@ -604,9 +604,17 @@
             const machine = p.machineId ? machineStatus[p.machineId] : null;
             const isOnline = machine ? machine.online : false;
             const cls = isOnline ? "gold" : "gray";
-            return `<div class="np ${cls}" data-persona="${p.persona}" style="left:${p.x}%;top:${p.y}%">
+            // QUIEN CUESTA DINERO Y QUIEN NO (Carlos, 2026-09-19). Las sillas con
+            // chat en GrokBot van con la suscripcion; las demas se pagan por
+            // token contra la API. Antes no habia forma de saberlo antes de
+            // preguntar, y la diferencia es real: unas son gratis y otras no.
+            const porGrokBot = !!window.CouncilInterface?.has(p.persona);
+            const marca = porGrokBot
+                ? '<span class="np-via np-via-libre" title="Por GrokBot · incluido en la suscripcion, no gasta tokens">∞</span>'
+                : '<span class="np-via np-via-pago" title="Por la API del Consejo · esta consulta gasta presupuesto">€</span>';
+            return `<div class="np ${cls} ${porGrokBot ? 'np-libre' : 'np-pago'}" data-persona="${p.persona}" style="left:${p.x}%;top:${p.y}%">
                 <span class="np-turn"></span>
-                ${p.persona}<span class="np-role">${p.role}</span>
+                ${p.persona}${marca}<span class="np-role">${p.role}</span>
             </div>`;
         }).join("");
         applySpeakerTurns();
@@ -2582,10 +2590,19 @@
         typing.style.display = "block";
         
         try {
-            // Call API for single agent
+            // Si esta silla tiene chat en GrokBot, se habla POR AHI: va con la
+            // suscripcion y no gasta tokens de API. La sala privada llamaba
+            // siempre a la API, asi que elegir a Jobs aqui costaba dinero
+            // mientras preguntarle en la mesa era gratis (Carlos, 2026-09-19).
+            if (window.CouncilInterface?.has(meetingAdvisor.persona)) {
+                window.CouncilInterface.select(meetingAdvisor.persona);
+                window.CouncilInterface.send(meetingAdvisor.persona, text);
+                typing.textContent = meetingAdvisor.name + " · por GrokBot, sin gastar tokens — mira su chat";
+                return;
+            }
             const reply = await askOneAgentAPI(text, meetingAdvisor.name);
             typing.style.display = "none";
-            
+
             if (reply) {
                 addMeetingMsg(meetingAdvisor, reply.content);
             } else {

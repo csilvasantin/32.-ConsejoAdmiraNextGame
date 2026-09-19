@@ -190,6 +190,11 @@
             top: 0; left: 0; right: 0; bottom: 0;
             pointer-events: none;
         }
+        /* Marca de coste en el rotulo: ∞ = va con la suscripcion (GrokBot),
+           € = se paga por token. Discreta: informa, no grita. */
+        .np-via { font-size: .75em; margin-left: 4px; opacity: .85; vertical-align: super; }
+        .np-via-libre { color: #7fe28d; }
+        .np-via-pago { color: #e3b436; }
         .np {
             position: absolute;
             padding: 2px 6px;
@@ -4133,7 +4138,7 @@ body.rail-open{overflow:hidden}
 <script defer src="council-table.js?v=20260918-r5-desk-cors"></script>
 <script defer src="council-speech.js?v=20260918-r5-desk-cors"></script>
 <script defer src="council-grokbot.js?v=20260918-r5-desk-cors"></script>
-<script defer src="app.flt-100529.js?v=20260919-r16-stream"></script>
+<script defer src="app.flt-100529.js?v=20260919-r17-grokbot"></script>
 <script defer src="council-integration.js?v=20260918-r5-desk-cors"></script>
 <script type="module" src="assets/mac-hoy.js?v=20260919-sinmarco"></script>
 </body>

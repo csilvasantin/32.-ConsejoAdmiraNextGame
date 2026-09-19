@@ -69,3 +69,20 @@ test('streaming: se pinta en vivo, sin duplicar y sin innerHTML del modelo', () 
   // y no se pinta dos veces la misma respuesta
   assert.match(src, /if \(pintadoEnVivo\) \{ pintaParcial\(panelId, agent, reply\.content\); cierraParcial\(\); \}/);
 });
+
+test('la sala privada usa GrokBot cuando la silla lo tiene (no gasta tokens)', () => {
+  const f = src.slice(src.indexOf('async function sendPrivateMessage'), src.indexOf('async function sendPrivateMessage') + 1600);
+  assert.match(f, /CouncilInterface\?\.has\(meetingAdvisor\.persona\)/);
+  const viaGrok = f.indexOf('CouncilInterface.send(meetingAdvisor.persona, text)');
+  const viaApi  = f.indexOf('askOneAgentAPI(text, meetingAdvisor.name)');
+  assert.ok(viaGrok > 0 && viaGrok < viaApi, 'GrokBot primero; la API es el ultimo recurso');
+});
+
+test('el rótulo dice si el consejero cuesta dinero', () => {
+  assert.match(src, /const porGrokBot = !!window\.CouncilInterface\?\.has\(p\.persona\)/);
+  assert.match(src, /np-via-libre/);
+  assert.match(src, /np-via-pago/);
+  const html = fs.readFileSync(new URL('./index.html', import.meta.url), 'utf8');
+  assert.match(html, /\.np-via-libre \{ color: #7fe28d; \}/);
+  assert.match(html, /\.np-via-pago \{ color: #e3b436; \}/);
+});

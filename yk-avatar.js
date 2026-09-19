@@ -20,7 +20,9 @@
   // link: principal de Claude·csilva@admira.com en el Mac Mini desde el 1-sep-2026.
   // neo NO se quita: sigue siendo esa identidad en las demás máquinas y, sobre todo,
   // firma misiones e informes ya cerrados que deben seguir enseñando su cara.
-  var AVATARES = { link: 1, neo: 1, morfeo: 1, smith: 1, trinity: 1, oraculo: 1 };
+  // Consejeros incluidos (Carlos, 2026-09-19): sus retratos viven en avatars/ con
+  // el mismo formato que los agentes. Origen y licencias, en avatars/FUENTES.md.
+  var AVATARES = { link: 1, neo: 1, morfeo: 1, smith: 1, trinity: 1, oraculo: 1, wozniak: 1, jobs: 1, disney: 1, lucas: 1 };
   var CUSTOM = { agents: {}, machines: {} };
 
   var esc = function (x) {

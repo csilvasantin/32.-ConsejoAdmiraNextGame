@@ -5146,6 +5146,17 @@
     }
 
     async function simulateCouncilResponse(question) {
+        // El corte va tambien AQUI, no solo en askCouncilAPI: si no, quien
+        // llama ve un null y lo cuenta como «modo offline — el puente no
+        // respondio», que es falso y manda a revisar algo que esta bien.
+        if (API_DE_PAGO_BLOQUEADA) {
+            enterConversation();
+            addConvEntry("conv-racional", "⏳", "Consejo", "", "racional",
+                "La mesa completa esta en pausa: solo se consulta a quien tiene silla en GrokBot. " +
+                "Pregunta a Jobs, Wozniak, Disney o Lucas (los que llevan ∞).");
+            setActionLine("⏳ Mesa en pausa — pregunta a un consejero con ∞ (Jobs, Wozniak, Disney, Lucas)");
+            return;
+        }
         // Show thinking state for all members
         const members = COUNCIL.filter(m => m.gen === currentGen);
         const racionales = members.filter(m => m.side === "racional");

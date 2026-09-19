@@ -125,3 +125,10 @@ test('DEBATIR se limita a las sillas de GrokBot y no paga', () => {
   assert.ok(envia > 0 && envia < paga, 'GrokBot antes que la API');
   assert.match(f, /debateRunning = false;\s*\n\s*return;/);
 });
+
+test('el aviso de pausa no se disfraza de error de red', () => {
+  const f = src.slice(src.indexOf('async function simulateCouncilResponse'), src.indexOf('async function simulateCouncilResponse') + 900);
+  assert.match(f, /if \(API_DE_PAGO_BLOQUEADA\)/, 'cortar antes de que el llamante invente un fallo');
+  assert.match(f, /Mesa en pausa/);
+  assert.ok(!/Modo offline/.test(f));
+});

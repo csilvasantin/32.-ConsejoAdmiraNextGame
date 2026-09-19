@@ -84,3 +84,21 @@ test('teclado y ratón son mandos, y existe el logo retro en pantalla', () => {
   assert.match(html, /admira-logo-retro\.svg/);
   assert.ok(fs.existsSync(new URL('./admira-logo-retro.svg', import.meta.url)));
 });
+
+test('el Mac arranca con el logo, y Mac 1984 es un botón como los demás', () => {
+  const src = fs.readFileSync(new URL('./assets/mac-hoy.js', import.meta.url), 'utf8');
+  assert.match(src, /let modo = 'logo'/, "el modo inicial debe ser el logo de Admira");
+  assert.ok(!/let modo = 'hoy'/.test(src));
+  // El botón pierde la píldora dorada y se llama Mac 1984
+  assert.match(html, /id="btn-mostrar"[^>]*>Mac 1984</);
+  assert.ok(!/class="verb-btn mac-hoy-chip"/.test(html), 'ya no lleva el estilo de chip');
+});
+
+test('noveno objeto: el motor devuelve la elección de modelo', () => {
+  assert.match(html, /data-obj="motor"/);
+  assert.match(html, /assets\/iconos\/motor\.svg/);
+  assert.ok(fs.existsSync(new URL('./assets/iconos/motor.svg', import.meta.url)));
+  // la lista de motores sigue en el DOM (oculta), no borrada: selectedLLM depende de ella
+  assert.match(html, /data-panel="llm"/);
+  assert.match(html, /\.inventory\.motor-abierto .inv-panel\[data-panel="llm"\]/);
+});

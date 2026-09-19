@@ -1613,7 +1613,7 @@
     // (Carlos, 2026-09-19: «te caben todos los verbos sin usar el scroll».) En el
     // motor original las flechas no paginan los verbos —esos están siempre los
     // nueve— sino los objetos del inventario. Aquí hacen exactamente eso.
-    const OBJETOS_POR_PAGINA = 8;
+    const OBJETOS_POR_PAGINA = 9;
     let objPagina = 0;
     function pintaObjetos() {
         const todos = Array.from(document.querySelectorAll('#inv-objetos .obj'));
@@ -1634,6 +1634,12 @@
     }
     function usarObjeto(el) {
         if (el.dataset.obj === 'mac') { if (window.MacHoy) window.MacHoy.toggle(); return; }
+        if (el.dataset.obj === 'motor') {
+            const inv = document.querySelector('.inventory');
+            const abierto = inv && inv.classList.toggle('motor-abierto');
+            el.classList.toggle('motor-on', !!abierto);
+            return;
+        }
         const v = el.dataset.verb;
         const btn = v && document.querySelector('.verb-grid .verb-btn[data-verb="' + v + '"]');
         if (btn && typeof selectVerb === 'function') selectVerb(btn);

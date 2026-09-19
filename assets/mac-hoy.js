@@ -108,7 +108,9 @@ export async function fetchHoy(fetchImpl = fetch) {
 
 let visible = false;
 let focused = false;
-let modo = 'hoy';
+// Arranca con el LOGO (Carlos, 2026-09-19): encender el Mac enseña la marca, y
+// el teclado alterna a las misiones del día. Antes nacía en 'hoy'.
+let modo = 'logo';
 let beatTimer = null;
 let lastRoot = null;
 let lastFetch = fetch;
@@ -232,7 +234,7 @@ export function setVisible(on, root = lastRoot || (typeof document !== 'undefine
   visible = !!on;
   if (prop) prop.classList.toggle('on', visible);
   if (btn) btn.classList.toggle('active', visible);
-  if (!visible) { modo = 'hoy'; aplicarModo(root); closeFront(root); }
+  if (!visible) { modo = 'logo'; aplicarModo(root); closeFront(root); }
   if (visible) {
     fitScreen(root);              // oculto medía 0: el encaje se rehace al mostrarlo
     draw(root, fetchImpl);

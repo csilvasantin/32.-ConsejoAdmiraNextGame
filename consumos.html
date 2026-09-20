@@ -1,7 +1,6 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta name="yokup-espejo" content="origen www.yokup.com · commit dc134d1 · sincronizado 17.09.2026 22:17">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="/favicon.ico" sizes="any">
@@ -19,7 +18,12 @@ body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-
 nav{display:flex;align-items:center;gap:14px;padding:4px 0 16px;flex-wrap:wrap}
 nav a{color:var(--brand);text-decoration:none;font-family:var(--mono);font-size:12px}
 nav a:hover{text-decoration:underline}
-h1{font-size:clamp(22px,2.6vw,30px);letter-spacing:-.02em;margin:0 0 6px}
+.title-row{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:0 0 8px}
+h1{font-size:clamp(22px,2.6vw,30px);letter-spacing:-.02em;margin:0}
+.seg{display:inline-flex;border:1px solid var(--line2);border-radius:10px;overflow:hidden;background:var(--card)}
+.seg button{font:700 12px/1 var(--mono);letter-spacing:.04em;text-transform:uppercase;padding:10px 14px;border:0;background:transparent;color:var(--dim);cursor:pointer}
+.seg button+button{border-left:1px solid var(--line)}
+.seg button.on{color:#02080d;background:var(--brand)}
 .sub{color:var(--mut);font-size:14px;line-height:1.45;margin-bottom:18px}
 .sub b{color:var(--accent);font-weight:600}
 .bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 16px}
@@ -29,6 +33,19 @@ h1{font-size:clamp(22px,2.6vw,30px);letter-spacing:-.02em;margin:0 0 6px}
 .kpi{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
 .kpi .k{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-family:var(--mono);font-size:12px;color:var(--mut)}
 .kpi .k b{display:block;color:var(--ink);font-size:16px;margin-bottom:2px}
+.pill{display:inline-block;margin-left:6px;padding:2px 7px;border-radius:999px;border:1px solid var(--line);color:var(--dim);font:10px/1.4 var(--mono);letter-spacing:.04em;text-transform:uppercase}
+.roster{margin:0 0 16px;padding:12px 14px;border:1px solid var(--line2);border-radius:12px;background:var(--card)}
+.roster h3{font-family:var(--mono);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);margin:0 0 10px}
+.roster-grid{display:grid;gap:8px;grid-template-columns:repeat(auto-fit,minmax(220px,1fr))}
+.roster-card{padding:8px 10px;border:1px solid var(--line);border-radius:8px;background:rgba(2,8,13,.45)}
+.roster-card .name{font-weight:700;color:var(--ink);font-size:14px}
+.roster-card .motor{font-family:var(--mono);font-size:11px;color:var(--accent);margin-top:2px}
+.roster-card .acct{font-family:var(--mono);font-size:11px;color:var(--mut);margin-top:2px;word-break:break-all}
+.roster.compact{padding:8px 12px;margin-bottom:12px}
+.roster.compact .roster-grid{grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:6px}
+.roster.compact .roster-card{padding:6px 8px}
+.roster.compact .roster-card .name{font-size:12px}
+.roster.compact .roster-card .motor,.roster.compact .roster-card .acct{font-size:10px}
 table{width:100%;border-collapse:collapse;font-size:13px}
 th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
 th{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);position:sticky;top:0;background:var(--bg)}
@@ -39,6 +56,7 @@ tr.detail td{background:rgba(10,22,32,.85);color:var(--mut);font-size:12px}
 .detail-box{display:grid;gap:10px;grid-template-columns:1fr 1fr}
 @media(max-width:720px){.detail-box{grid-template-columns:1fr}}
 .detail-box h4{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);margin-bottom:4px}
+.id{color:var(--dim);font-family:var(--mono);font-size:11px}
 .nota{color:var(--mut);font-size:13px;padding:16px;border:1px dashed var(--line);border-radius:10px}
 .admin{margin-top:28px;padding:16px;border:1px solid var(--line2);border-radius:12px;background:var(--card)}
 .admin h2{font-size:16px;margin-bottom:8px}
@@ -48,20 +66,33 @@ tr.detail td{background:rgba(10,22,32,.85);color:var(--mut);font-size:12px}
 .admin .msg.err{color:var(--warn)}
 .admin .msg.ok{color:var(--good)}
 .foot{margin-top:28px;font-family:var(--mono);font-size:11px;color:var(--dim)}
+#yk-espejo-aviso{background:#0a1620;border-bottom:1px solid rgba(120,243,255,.30);color:#75aab9;font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;padding:8px 14px}
+#yk-espejo-aviso b{color:#78f3ff}
+#yk-espejo-aviso a{color:#78f3ff}
+#yk-espejo-aviso code{font-size:12px}
 </style>
 </head>
 <body>
-<div id="yk-espejo-aviso" style="background:#0a1620;border-bottom:1px solid rgba(120,243,255,.30);color:#75aab9;font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;padding:8px 14px">Espejo en <b style="color:#78f3ff">admira.live</b> de Yokup · mismos datos en vivo de <code>api.yokup.com</code>. Aquí se <b>mira</b>: sin sesión de Yokup, lo que pide login (tareas, tickets y mandar órdenes al CLI) no responde. Para eso, <a href="https://www.yokup.com/highscore" style="color:#78f3ff">el original</a>.</div>
+<div id="yk-espejo-aviso" hidden>Espejo en <b>admira.live</b> de Yokup · mismos datos en vivo de <code>api.yokup.com</code>. Aquí se <b>mira</b>: sin sesión de Yokup, lo que pide login (tareas, tickets y mandar órdenes al CLI) no responde. Para eso, <a href="https://www.yokup.com/highscore">el original</a>.</div>
 <div class="wrap">
   <nav>
     <a href="/notificaciones">← Notificaciones</a>
     <a href="/equipo">Equipo</a>
     <a href="/misiones">Misiones</a>
   </nav>
-  <h1>Consumos por proyecto</h1>
-  <p class="sub">Tokens agregados por proyecto Yokup (últimos N días) + hosting del mes calendario desde el mapa editable.
-    Tarifas token: <b>estimación</b> input $3/MTok · cache $0.75/MTok · output $15/MTok — no es factura.
-    Un agente en varios proyectos reparte tokens a partes iguales.</p>
+  <div class="title-row">
+    <h1 id="title">Consumos por proyecto</h1>
+    <div class="seg" role="tablist" aria-label="Segmentar consumos">
+      <button type="button" data-seg="proyecto" class="on" role="tab" aria-selected="true">Proyecto</button>
+      <button type="button" data-seg="deepagent" role="tab" aria-selected="false">DeepAgent</button>
+    </div>
+  </div>
+  <p class="sub" id="subtitle"></p>
+
+  <div id="roster-strip" class="roster">
+    <h3>Mapa sellado · seguimiento DeepAgents</h3>
+    <div class="roster-grid" id="roster-strip-grid"></div>
+  </div>
 
   <div class="bar">
     <label for="dias">Periodo tokens</label>
@@ -89,15 +120,128 @@ tr.detail td{background:rgba(10,22,32,.85);color:var(--mut);font-size:12px}
     <div class="msg" id="adminMsg"></div>
   </section>
 
-  <div class="foot">Yokup · FLT-100480 · API <code>/fleet/consumo/proyectos</code> · hosting_cost_map</div>
+  <div class="foot">Yokup · FLT-100480 · FLT-100700 · FLT-100721 · API <code>/fleet/consumo/proyectos</code> · hosting_cost_map</div>
 </div>
 <script>
+(function(){
+"use strict";
 const WORKER="https://api.yokup.com";
 const ADMIN=new URLSearchParams(location.search).has("admin");
-const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
+const DEEP_AGENTS=["Arquitecto","Consejeros","Neo","Trinity","Morfeo","Oraculo"];
+const DEEP_LABEL={Arquitecto:"Arquitecto",Consejeros:"Consejeros",Neo:"Neo",Trinity:"Trinity",Morfeo:"Morfeo",Oraculo:"Oráculo"};
+const ROSTER=[
+  {name:"Neo",motor:"Anthropic",account:"csilva@admira.com"},
+  {name:"Trinity",motor:"Claude",account:"csilva@admira.com"},
+  {name:"Morfeo",motor:"Claude Code",account:"csilvasantin@gmail.com"},
+  {name:"Oráculo",motor:"OpenAI",account:"csilvasantin@gmail.com"}
+];
+
+const esc=s=>String(s==null?"":s).replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
 const fmtTok=n=>{n=Number(n)||0;return n>=1e6?(n/1e6).toFixed(2)+" M":n>=1e3?(n/1e3).toFixed(1)+" k":String(Math.round(n));};
 const fmtUsd=n=>{n=Number(n)||0;return "$"+n.toFixed(2);};
-let DATA=null, OPEN=new Set();
+
+function mapOwnerToDeepAgent(owner){
+  const o=String(owner||"").trim();
+  if(!o) return null;
+  const key=o.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g,"");
+  if(/arquitecto|architect/.test(key)) return "Arquitecto";
+  if(/^(neo)|neomac|neombp/.test(key)) return "Neo";
+  if(/trinity/.test(key)) return "Trinity";
+  if(/morfeo|morpheus/.test(key)) return "Morfeo";
+  if(/oraculo|oracle/.test(key)) return "Oraculo";
+  if(/jobs|disney|lucas|woz|wozniak|walt|consejer|grokbot|smith|rabbit|white.?rabbit/.test(key)) return "Consejeros";
+  return null;
+}
+
+function projectHasActivity(p){
+  const tok=Number(p.tokens&&p.tokens.total)||0;
+  const host=Number(p.hosting&&p.hosting.monthly_usd)||0;
+  if(tok>0||host>0) return true;
+  return (p.agents||[]).some(a=>(Number(a.total_tokens)||0)>0);
+}
+
+function aggregateDeepAgents(proyectos,rates){
+  const entradaRate=(rates&&rates.entrada_per_mtok)!=null?rates.entrada_per_mtok:3;
+  const cacheRate=(rates&&rates.cache_per_mtok)!=null?rates.cache_per_mtok:0.75;
+  const salidaRate=(rates&&rates.salida_per_mtok)!=null?rates.salida_per_mtok:15;
+  const byOwner=new Map();
+  for(const p of proyectos){
+    for(const a of p.agents||[]){
+      const owner=String(a.owner||"?");
+      const share=Number(a.share)||1;
+      const tot=Number(a.total_tokens)||0;
+      const entrada=Number(a.entrada)||0;
+      const cache=Number(a.cache)||0;
+      const salida=Number(a.salida)||0;
+      const grossTot=share>0?tot/share:tot;
+      const grossIn=share>0?entrada/share:entrada;
+      const grossCache=share>0?cache/share:cache;
+      const grossOut=share>0?salida/share:salida;
+      const prev=byOwner.get(owner);
+      if(!prev){
+        byOwner.set(owner,{
+          tokens:grossTot,entrada:grossIn,cache:grossCache,salida:grossOut,
+          machines:new Set(a.machine?[a.machine]:[]),
+          projects:new Set([p.project_id||p.name||""])
+        });
+      }else{
+        prev.tokens=Math.max(prev.tokens,grossTot);
+        prev.entrada=Math.max(prev.entrada,grossIn);
+        prev.cache=Math.max(prev.cache,grossCache);
+        prev.salida=Math.max(prev.salida,grossOut);
+        if(a.machine) prev.machines.add(a.machine);
+        prev.projects.add(p.project_id||p.name||"");
+      }
+    }
+  }
+  const buckets=new Map();
+  for(const name of DEEP_AGENTS){
+    buckets.set(name,{name,tokens:0,entrada:0,cache:0,salida:0,usd_estimate:0,owners:[],machines:[],projects:[]});
+  }
+  for(const [owner,acc] of byOwner){
+    const bucket=mapOwnerToDeepAgent(owner);
+    if(!bucket) continue;
+    const b=buckets.get(bucket);
+    b.tokens+=acc.tokens;
+    b.entrada+=acc.entrada;
+    b.cache+=acc.cache;
+    b.salida+=acc.salida;
+    b.owners.push(owner);
+    for(const m of acc.machines) if(!b.machines.includes(m)) b.machines.push(m);
+    for(const pr of acc.projects) if(pr&&!b.projects.includes(pr)) b.projects.push(pr);
+  }
+  for(const b of buckets.values()){
+    b.usd_estimate=b.entrada/1e6*entradaRate+b.cache/1e6*cacheRate+b.salida/1e6*salidaRate;
+  }
+  return DEEP_AGENTS.map(n=>buckets.get(n));
+}
+
+function rosterHtml(compact){
+  return ROSTER.map(r=>
+    '<div class="roster-card"><div class="name">'+esc(r.name)+'</div>'+
+    '<div class="motor">'+esc(r.motor)+'</div>'+
+    '<div class="acct">'+esc(r.account)+'</div></div>'
+  ).join("");
+}
+
+let DATA=null, OPEN=new Set(), SEGMENT="proyecto";
+
+function titleForSegment(){
+  return SEGMENT==="proyecto"?"Consumos por proyecto":"Consumos por DeepAgent";
+}
+function subtitle(){
+  if(SEGMENT==="proyecto"){
+    return "Tokens por proyecto Yokup (últimos N días) + hosting del mes calendario desde el mapa editable. "+
+      "Tarifas token: <b>estimación</b> input $3/MTok · cache $0.75/MTok · output $15/MTok — no es factura. "+
+      "Solo se listan proyectos con actividad en el periodo (tokens o hosting &gt; 0). Un agente en varios proyectos reparte tokens a partes iguales.";
+  }
+  return "Gasto agregado por <b>DeepAgent</b>: Arquitecto, Consejeros, Neo, Trinity, Morfeo y Oráculo. "+
+    "Totales brutos (sin equal_split). Consejeros = Jobs · Disney · Lucas · Wozniak y familia GrokBot.";
+}
+
+function updateRosterVisibility(){
+  document.getElementById("roster-strip-grid").innerHTML=rosterHtml(false);
+}
 
 async function load(){
   const dias=document.getElementById("dias").value;
@@ -114,21 +258,39 @@ async function load(){
   }
 }
 
-function render(){
-  const t=DATA.totales||{};
-  const tok=t.tokens||{};
-  document.getElementById("meta").textContent=
-    (DATA.dias||"?")+" días · atribución "+(DATA.attribution||"?")+" · hosting = mes calendario (estimate)";
-  document.getElementById("kpi").innerHTML=
-    '<span class="k"><b>'+fmtTok(tok.total)+'</b>tokens</span>'+
-    '<span class="k"><b>'+fmtUsd(tok.usd_estimate)+'</b>tokens USD est.</span>'+
-    '<span class="k"><b>'+fmtUsd(t.hosting_monthly_usd)+'</b>hosting USD/mes</span>'+
-    '<span class="k"><b>'+fmtUsd(t.usd_estimate)+'</b>total est.</span>'+
-    '<span class="k"><b>'+(DATA.proyectos||[]).length+'</b>proyectos</span>';
+function activeProjects(){
+  return (DATA&&DATA.proyectos||[]).filter(projectHasActivity);
+}
 
-  const rows=(DATA.proyectos||[]);
+function renderKpiProyecto(rows){
+  const tok=rows.reduce((s,p)=>s+(Number(p.tokens&&p.tokens.total)||0),0);
+  const usd=rows.reduce((s,p)=>s+(Number(p.tokens&&p.tokens.usd_estimate)||0),0);
+  const host=rows.reduce((s,p)=>s+(Number(p.hosting&&p.hosting.monthly_usd)||0),0);
+  const hidden=(DATA&&DATA.proyectos||[]).length-rows.length;
+  document.getElementById("kpi").innerHTML=
+    '<span class="k"><b>'+fmtTok(tok)+'</b>tokens</span>'+
+    '<span class="k"><b>'+fmtUsd(usd)+'</b>tokens USD est.</span>'+
+    '<span class="k"><b>'+fmtUsd(host)+'</b>hosting USD/mes</span>'+
+    '<span class="k"><b>'+fmtUsd(usd+host)+'</b>total est.</span>'+
+    '<span class="k"><b>'+rows.length+'</b>proyectos activos'+(hidden?'<span class="pill">'+hidden+' ocultos</span>':'')+'</span>';
+}
+
+function renderKpiDeep(agents){
+  const tok=agents.reduce((s,a)=>s+a.tokens,0);
+  const usd=agents.reduce((s,a)=>s+a.usd_estimate,0);
+  const withSpend=agents.filter(a=>a.tokens>0).length;
+  document.getElementById("kpi").innerHTML=
+    '<span class="k"><b>'+fmtTok(tok)+'</b>tokens DeepAgents</span>'+
+    '<span class="k"><b>'+fmtUsd(usd)+'</b>USD est.</span>'+
+    '<span class="k"><b>'+withSpend+'</b>con gasto</span>'+
+    '<span class="k"><b>'+agents.length+'</b>DeepAgents</span>';
+}
+
+function renderProyecto(){
+  const rows=activeProjects().slice().sort((a,b)=>(Number(b.tokens&&b.tokens.total)||0)-(Number(a.tokens&&a.tokens.total)||0));
+  renderKpiProyecto(rows);
   if(!rows.length){
-    document.getElementById("cuerpo").innerHTML='<div class="nota">Sin datos de consumo ni mapa de hosting todavía.</div>';
+    document.getElementById("cuerpo").innerHTML='<div class="nota">Ningún proyecto con actividad en este periodo.</div>';
     return;
   }
   let html='<table><thead><tr><th>Proyecto</th><th class="num">Tokens</th><th class="num">Tokens USD est.</th><th class="num">Hosting USD/mes</th><th class="num">Total est.</th></tr></thead><tbody>';
@@ -136,7 +298,7 @@ function render(){
     const id=p.project_id;
     const totalEst=(Number(p.tokens&&p.tokens.usd_estimate)||0)+(Number(p.hosting&&p.hosting.monthly_usd)||0);
     const open=OPEN.has(id);
-    html+='<tr class="exp" data-id="'+esc(id)+'" aria-expanded="'+open+'"><td><b>'+esc(p.name||id)+'</b><div style="color:var(--dim);font-family:var(--mono);font-size:11px">'+esc(id)+'</div></td>'+
+    html+='<tr class="exp" data-id="'+esc(id)+'" aria-expanded="'+open+'"><td><b>'+esc(p.name||id)+'</b><div class="id">'+esc(id)+'</div></td>'+
       '<td class="num">'+fmtTok(p.tokens&&p.tokens.total)+'</td>'+
       '<td class="num">'+fmtUsd(p.tokens&&p.tokens.usd_estimate)+'</td>'+
       '<td class="num">'+fmtUsd(p.hosting&&p.hosting.monthly_usd)+'</td>'+
@@ -151,6 +313,41 @@ function render(){
   if(DATA.rates&&DATA.rates.note) html+='<p class="sub" style="margin-top:12px">'+esc(DATA.rates.note)+'</p>';
   if(DATA.attribution_note) html+='<p class="sub">'+esc(DATA.attribution_note)+'</p>';
   document.getElementById("cuerpo").innerHTML=html;
+  bindExpand();
+}
+
+function renderDeepAgent(){
+  const rates=DATA&&DATA.rates;
+  const agents=aggregateDeepAgents(DATA&&DATA.proyectos||[],rates);
+  renderKpiDeep(agents);
+
+  let html='<table><thead><tr><th>DeepAgent</th><th class="num">Tokens</th><th class="num">USD est.</th><th>Owners / máquinas</th><th>Proyectos tocados</th></tr></thead><tbody>';
+  for(const a of agents){
+    const label=DEEP_LABEL[a.name]||a.name;
+    const open=OPEN.has(a.name);
+    const empty=a.tokens<=0;
+    html+='<tr class="exp" data-id="'+esc(a.name)+'" aria-expanded="'+open+'"'+(empty?' style="opacity:.55"':'')+'>'+
+      '<td><b>'+esc(label)+'</b>'+(empty?'<span class="pill">sin gasto</span>':'')+'</td>'+
+      '<td class="num">'+fmtTok(a.tokens)+'</td>'+
+      '<td class="num">'+fmtUsd(a.usd_estimate)+'</td>'+
+      '<td class="id">'+esc(a.owners.join(", ")||"—")+'<div>'+esc(a.machines.join(" · ")||"")+'</div></td>'+
+      '<td class="id">'+(a.projects.length?esc(a.projects.slice(0,8).join(", "))+(a.projects.length>8?" (+"+(a.projects.length-8)+")":""):"—")+'</td></tr>';
+    if(open){
+      html+='<tr class="detail"><td colspan="5"><div class="detail-box">'+
+        '<div><h4>Desglose tokens</h4>entrada '+fmtTok(a.entrada)+' · cache '+fmtTok(a.cache)+' · salida '+fmtTok(a.salida)+'</div>'+
+        '<div><h4>Mapeo</h4>Owners: '+esc(a.owners.join(", ")||"ninguno aún")+'<br>Máquinas: '+esc(a.machines.join(", ")||"—")+'</div>'+
+        '</div></td></tr>';
+    }
+  }
+  html+='</tbody></table>';
+  html+='<p class="sub" style="margin-top:12px">Arquitecto aparece cuando el reporter etiquete owners con ese nombre. '+
+    'Hasta entonces puede quedar en 0 aunque el Cloud Agent esté activo. Totales brutos: se deshace equal_split vía share.</p>';
+  if(DATA.rates&&DATA.rates.note) html+='<p class="sub">'+esc(DATA.rates.note)+'</p>';
+  document.getElementById("cuerpo").innerHTML=html;
+  bindExpand();
+}
+
+function bindExpand(){
   document.getElementById("cuerpo").querySelectorAll("tr.exp").forEach(tr=>{
     tr.addEventListener("click",()=>{
       const id=tr.getAttribute("data-id");
@@ -158,6 +355,22 @@ function render(){
       render();
     });
   });
+}
+
+function render(){
+  document.getElementById("title").textContent=titleForSegment();
+  document.getElementById("subtitle").innerHTML=subtitle();
+  document.querySelectorAll(".seg button").forEach(b=>{
+    const on=b.getAttribute("data-seg")===SEGMENT;
+    b.classList.toggle("on",on);
+    b.setAttribute("aria-selected",String(on));
+  });
+  updateRosterVisibility();
+  if(!DATA) return;
+  document.getElementById("meta").textContent=
+    (DATA.dias||"?")+" días · atribución "+(DATA.attribution||"?")+" · hosting = mes calendario (estimate)";
+  if(SEGMENT==="proyecto") renderProyecto();
+  else renderDeepAgent();
 }
 
 async function loadMap(){
@@ -192,15 +405,32 @@ async function saveMap(){
   }catch(e){ msg.textContent=String(e.message||e)+" (¿sesión Google en api.yokup.com o x-fleet-token?)"; msg.className="msg err"; }
 }
 
-document.getElementById("dias").addEventListener("change",load);
+(function initEspejo(){
+  const h=location.hostname||"";
+  if(/admira\.live$/i.test(h)||h==="www.admira.live"){
+    document.getElementById("yk-espejo-aviso").hidden=false;
+  }
+})();
+
+document.getElementById("dias").addEventListener("change",()=>{OPEN.clear();load();});
 document.getElementById("reload").addEventListener("click",load);
+document.querySelectorAll(".seg button").forEach(b=>{
+  b.addEventListener("click",()=>{
+    SEGMENT=b.getAttribute("data-seg")||"proyecto";
+    OPEN.clear();
+    render();
+  });
+});
 if(ADMIN){
   document.getElementById("admin").hidden=false;
   document.getElementById("loadMap").addEventListener("click",loadMap);
   document.getElementById("saveMap").addEventListener("click",saveMap);
   loadMap();
 }
+document.getElementById("subtitle").innerHTML=subtitle();
+updateRosterVisibility();
 load();
+})();
 </script>
 <script src="/yk-frame.js?v=r34"></script>
 </body>

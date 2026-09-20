@@ -41,6 +41,16 @@ func comparable(_ value: String) -> String {
 func hash(_ value: String) -> String {
     SHA256.hash(data: Data(value.utf8)).map { String(format: "%02x", $0) }.joined()
 }
+// La barra lateral cuelga el estado del nombre accesible del bot: "Steve Wozniak,
+// Actividad no leida", "Walt Disney, Trabajando". Comparando por igualdad exacta el
+// puente se quedaba sin poder abrir a un consejero justo cuando acababa de contestar
+// —que es cuando mas falta hace— y devolvia bot_button_unavailable. Se acepta el
+// nombre a secas o el nombre seguido de coma y su estado; exigir la coma evita
+// confundir a dos bots cuyo nombre empiece igual.
+func esElBot(_ etiqueta: String, _ persona: String) -> Bool {
+    let e = comparable(etiqueta), p = comparable(persona)
+    return e == p || e.hasPrefix(p + ", ")
+}
 
 final class Node {
     let element: AXUIElement?
@@ -322,7 +332,7 @@ final class GrokAX {
         guard !initial.snapshot.composerHasDraft else { return failed(initial.snapshot, "draft_exists") }
         let lists = initial.root.descendants().filter { $0.role == "AXGroup" && $0.description == "Lista de Bots" }
         guard lists.count == 1 else { return failed(initial.snapshot, "bot_list_unavailable") }
-        let buttons = lists[0].descendants().filter { $0.role == "AXButton" && $0.label == persona && $0.enabled }
+        let buttons = lists[0].descendants().filter { $0.role == "AXButton" && esElBot($0.label, persona) && $0.enabled }
         guard buttons.count == 1, let button = buttons[0].element else { return failed(initial.snapshot, "bot_button_unavailable") }
         // Check the live editor immediately before changing the conversation.
         guard let composer = initial.composer.element,
@@ -437,7 +447,13 @@ func selfTests() throws {
     try expect(hasDraft(value: "Escríbele a Steve Jobs\n", persona: "Steve Jobs", sendEnabled: true), "identical literal draft is protected")
     try expect(hasDraft(value: "Mi borrador", persona: "Steve Jobs", sendEnabled: false), "nonempty draft protected")
     try expect(hasDraft(value: "", persona: "Steve Jobs", sendEnabled: true), "attachment-only draft protected")
-    print("{\"ok\":true,\"tests\":10,\"mode\":\"pure-parsing-no-AX\"}")
+    // Etiquetas reales leidas de la barra lateral el 20-sep-2026.
+    try expect(esElBot("Steve Wozniak", "Steve Wozniak"), "plain sidebar label")
+    try expect(esElBot("Steve Wozniak, Actividad no leida", "Steve Wozniak"), "unread suffix still selects")
+    try expect(esElBot("Walt Disney, Trabajando", "Walt Disney"), "working suffix still selects")
+    try expect(!esElBot("Steve Jobs", "Steve Wozniak"), "another bot never matches")
+    try expect(!esElBot("Steve Wozniak Jr", "Steve Wozniak"), "prefix without comma is a different bot")
+    print("{\"ok\":true,\"tests\":15,\"mode\":\"pure-parsing-no-AX\"}")
 }
 
 do {

@@ -2486,38 +2486,156 @@
         panel.scrollTop = panel.scrollHeight;
     }
 
-    function addUserEntry(text) {
+    function addUserEntry(text, imageUrl) {
         // Show user message in both conv panels
         ["conv-racional", "conv-creativo"].forEach(panelId => {
             const panel = document.getElementById(panelId);
             const entry = document.createElement("div");
             entry.className = "conv-entry";
-            entry.innerHTML = '<div class="conv-speaker user">👤 Tú</div><div class="conv-text">' + text.replace(/</g,'&lt;') + '</div>';
+            const img = imageUrl ? '<img class="conv-attach" alt="imagen adjunta" src="' + String(imageUrl).replace(/"/g, '') + '">' : '';
+            entry.innerHTML = '<div class="conv-speaker user">👤 Tú</div><div class="conv-text">' + text.replace(/</g,'&lt;') + img + '</div>';
             panel.appendChild(entry);
             panel.scrollTop = panel.scrollHeight;
         });
     }
 
+    let _mesaPendingImage = null; // {dataUrl, mime, name, url?}
+
+    function mesaClearImage() {
+        _mesaPendingImage = null;
+        const box = document.getElementById('mesa-img-preview');
+        if (!box) return;
+        box.innerHTML = '';
+        box.hidden = true;
+        box.classList.remove('on');
+    }
+
+    function mesaShowPreview(dataUrl, name) {
+        const box = document.getElementById('mesa-img-preview');
+        if (!box) return;
+        box.hidden = false;
+        box.classList.add('on');
+        box.innerHTML = '<img alt="preview" src="' + dataUrl.replace(/"/g, '') + '"><span>' + String(name || 'imagen').replace(/</g, '') + '</span><button type="button" id="mesa-img-x">quitar</button>';
+        const x = document.getElementById('mesa-img-x');
+        if (x) x.onclick = function (e) { e.preventDefault(); mesaClearImage(); };
+    }
+
+    function mesaDownscale(file, cb) {
+        const api = window.MesaPaste;
+        const gate = api && api.acceptImageFile ? api.acceptImageFile(file) : { ok: !!file };
+        if (!gate.ok) { if (typeof setActionLine === 'function') setActionLine('🖼 ' + (gate.error || 'imagen no válida')); cb(null); return; }
+        const im = new Image();
+        const url = URL.createObjectURL(file);
+        im.onload = function () {
+            const max = (api && api.MESA_PASTE && api.MESA_PASTE.maxEdge) || 1400;
+            let w = im.width, h = im.height;
+            if (w > max || h > max) {
+                if (w > h) { h = Math.round(h * max / w); w = max; }
+                else { w = Math.round(w * max / h); h = max; }
+            }
+            const c = document.createElement('canvas');
+            c.width = w; c.height = h;
+            c.getContext('2d').drawImage(im, 0, 0, w, h);
+            URL.revokeObjectURL(url);
+            const q = (api && api.MESA_PASTE && api.MESA_PASTE.jpegQuality) || 0.85;
+            cb(c.toDataURL('image/jpeg', q));
+        };
+        im.onerror = function () { URL.revokeObjectURL(url); cb(null); };
+        im.src = url;
+    }
+
+    function mesaStageFile(file) {
+        mesaDownscale(file, function (dataUrl) {
+            if (!dataUrl) return;
+            _mesaPendingImage = { dataUrl: dataUrl, mime: 'image/jpeg', name: file.name || 'imagen.jpg' };
+            mesaShowPreview(dataUrl, _mesaPendingImage.name);
+            if (typeof setActionLine === 'function') setActionLine('🖼 imagen lista — escribe y Enviar · PNG/JPG/WebP/GIF · máx. 6 MB');
+        });
+    }
+
+    async function mesaUploadPending() {
+        if (!_mesaPendingImage || !_mesaPendingImage.dataUrl) return null;
+        try {
+            const raw = _mesaPendingImage.dataUrl.split(',')[1] || '';
+            const bin = atob(raw);
+            const bytes = new Uint8Array(bin.length);
+            for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+            const blob = new Blob([bytes], { type: _mesaPendingImage.mime || 'image/jpeg' });
+            const r = await fetch('https://api.yokup.com/fleet/media', { method: 'POST', headers: { 'Content-Type': blob.type }, body: blob });
+            const d = await r.json().catch(function () { return {}; });
+            if (d && d.url) { _mesaPendingImage.url = d.url; return d.url; }
+        } catch (e) { /* CORS o red: el Consejo recibe nota + preview local */ }
+        return null;
+    }
+
+    function bootMesaPaste() {
+        const input = document.getElementById('action-input');
+        const line = input && input.closest('.action-line');
+        if (!input) return;
+        const take = function (e) {
+            const api = window.MesaPaste;
+            let f = api && api.fileFromClipboard ? api.fileFromClipboard(e.clipboardData) : null;
+            if (!f) {
+                const items = (e.clipboardData && e.clipboardData.items) || [];
+                for (let i = 0; i < items.length; i++) {
+                    if (items[i].type && items[i].type.indexOf('image/') === 0) {
+                        f = items[i].getAsFile && items[i].getAsFile();
+                        if (f) break;
+                    }
+                }
+            }
+            if (f) { e.preventDefault(); mesaStageFile(f); }
+        };
+        input.addEventListener('paste', take);
+        if (line) {
+            ['dragover', 'dragenter'].forEach(function (ev) {
+                line.addEventListener(ev, function (e) {
+                    if (e.dataTransfer && [].slice.call(e.dataTransfer.types || []).indexOf('Files') >= 0) {
+                        e.preventDefault();
+                        line.classList.add('mesa-drop');
+                    }
+                });
+            });
+            line.addEventListener('dragleave', function () { line.classList.remove('mesa-drop'); });
+            line.addEventListener('drop', function (e) {
+                line.classList.remove('mesa-drop');
+                const f = e.dataTransfer && e.dataTransfer.files && e.dataTransfer.files[0];
+                if (f && /^image\//.test(f.type || '')) { e.preventDefault(); mesaStageFile(f); }
+            });
+        }
+    }
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootMesaPaste);
+    else bootMesaPaste();
+
     // Send message to council
-    function sendMessage() {
+    async function sendMessage() {
         const input = document.getElementById("action-input");
         const text = input.value.trim();
-        if (!text) return;
+        const pending = _mesaPendingImage;
+        if (!text && !pending) return;
         input.value = "";
 
-        if (handleCliCommand(text)) {
+        if (text && handleCliCommand(text)) {
             return;
         }
+
+        let imageUrl = pending && pending.url;
+        if (pending && !imageUrl) imageUrl = await mesaUploadPending();
+        const caption = text || (pending ? '¿qué ves en esta imagen?' : '');
+        const forCouncil = imageUrl
+            ? (caption + '\n\n[imagen adjunta] ' + imageUrl)
+            : (pending ? (caption + '\n\n[imagen pegada en la mesa, JPEG reescalado ≤1400px]') : caption);
+        mesaClearImage();
 
         // If in "preguntar" mode with a selected agent, ask only that one
         if (preguntarMode && selectedAgent) {
             if (window.CouncilInterface?.has(selectedAgent.persona)) {
-                window.CouncilInterface.send(selectedAgent.persona, text);
+                window.CouncilInterface.send(selectedAgent.persona, forCouncil);
                 return;
             }
             enterConversation();
-            addUserEntry(text);
-            askSingleAgent(text, selectedAgent);
+            addUserEntry(caption, imageUrl || (pending && pending.dataUrl));
+            askSingleAgent(forCouncil, selectedAgent);
             return;
         }
 
@@ -2537,9 +2655,10 @@
         }
 
         enterConversation();
-        addUserEntry(text);
-        simulateCouncilResponse(text);
+        addUserEntry(caption, imageUrl || (pending && pending.dataUrl));
+        simulateCouncilResponse(forCouncil);
     }
+    window.sendMessage = sendMessage;
 
     // ── ENTRENAR: corpus compartido por consejero (API + caché local) ──
     const ENTRENAR_LEGACY_PREFIX = "entrenar:";

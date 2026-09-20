@@ -1183,10 +1183,44 @@
         .action-line {
             display: flex;
             align-items: center;
+            flex-wrap: wrap;
             gap: 6px;
             padding: 6px 10px;
             min-height: 32px;
             border-bottom: 1px solid #1a1a2e;
+        }
+        .action-line.mesa-drop {
+            outline: 1px dashed #daa520;
+            background: rgba(218,165,32,.08);
+        }
+        .mesa-img-preview {
+            display: none;
+            align-items: center;
+            gap: 8px;
+            width: 100%;
+            order: -1;
+        }
+        .mesa-img-preview.on { display: flex; }
+        .mesa-img-preview img {
+            max-height: 72px;
+            max-width: 160px;
+            border: 1px solid #daa520;
+            border-radius: 2px;
+        }
+        .mesa-img-preview button {
+            background: transparent;
+            border: 0;
+            color: #f88;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 7px;
+            cursor: pointer;
+        }
+        .conv-attach {
+            display: block;
+            max-height: 140px;
+            max-width: 220px;
+            margin-top: 6px;
+            border: 1px solid #5a3a1e;
         }
         .action-input {
             flex: 1;
@@ -3349,7 +3383,8 @@ body.rail-open{overflow:hidden}
         <div class="scumm-bar scumm-collapsed">
             <div class="sentence-line" id="sentence-line"></div>
             <div class="action-line">
-                <input class="action-input" id="action-input" type="text" placeholder="escribe aquí · /help para todos los comandos" autocomplete="off" onkeydown="if(event.key==='Enter')sendMessage()">
+                <div class="mesa-img-preview" id="mesa-img-preview" hidden></div>
+                <input class="action-input" id="action-input" type="text" placeholder="escribe aquí · pega una imagen · /help" autocomplete="off" onkeydown="if(event.key==='Enter')sendMessage()">
                 <button class="action-send" onclick="sendMessage()">Enviar</button>
                 <button class="scumm-fold" id="scumm-fold" onclick="toggleScumm()" title="Plegar / desplegar el menú (verbos)" aria-label="Plegar menú">▾</button>
             </div>
@@ -3838,8 +3873,9 @@ body.rail-open{overflow:hidden}
 <script defer src="council-table.js?v=20260918-r5-desk-cors"></script>
 <script defer src="council-speech.js?v=20260918-r5-desk-cors"></script>
 <script defer src="council-grokbot.js?v=20260918-r5-desk-cors"></script>
-<script defer src="app.flt-100529.js?v=20260919-r7-mac"></script>
+<script defer src="app.flt-100529.js?v=20260920-paste"></script>
 <script defer src="council-integration.js?v=20260918-r5-desk-cors"></script>
 <script type="module" src="assets/mac-hoy.js?v=20260919-main"></script>
+<script type="module" src="assets/mesa-paste.js?v=20260920-paste"></script>
 </body>
 </html>

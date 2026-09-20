@@ -59,6 +59,10 @@
                 }
             };
             window.railVerb = function(v){
+                // Presentar ya no abre el diálogo de creación: lleva a la galería con TODAS
+                // las presentaciones del generador (Carlos, 19-09-2026). Crear una nueva se
+                // hace desde ahí. Se abre en pestaña nueva para no perder el Consejo.
+                if (v === 'presentar') { try { window.open('https://www.admiranext.com/presentaciones/galeria','_blank','noopener'); } catch(e){} return; }
                 try { if (typeof setScummCollapsed === 'function') setScummCollapsed(false); } catch(e){}
                 var b = document.querySelector('.verb-btn[data-verb="' + v + '"]');
                 if (b) b.click();
@@ -600,9 +604,17 @@
             const machine = p.machineId ? machineStatus[p.machineId] : null;
             const isOnline = machine ? machine.online : false;
             const cls = isOnline ? "gold" : "gray";
-            return `<div class="np ${cls}" data-persona="${p.persona}" style="left:${p.x}%;top:${p.y}%">
+            // QUIEN CUESTA DINERO Y QUIEN NO (Carlos, 2026-09-19). Las sillas con
+            // chat en GrokBot van con la suscripcion; las demas se pagan por
+            // token contra la API. Antes no habia forma de saberlo antes de
+            // preguntar, y la diferencia es real: unas son gratis y otras no.
+            const porGrokBot = !!window.CouncilInterface?.has(p.persona);
+            const marca = porGrokBot
+                ? '<span class="np-via np-via-libre" title="Por GrokBot · incluido en la suscripcion, no gasta tokens">∞</span>'
+                : '<span class="np-via np-via-pago" title="Pendiente de crear su silla en GrokBot — aun no se le puede preguntar">⏳</span>';
+            return `<div class="np ${cls} ${porGrokBot ? 'np-libre' : 'np-pago'}" data-persona="${p.persona}" style="left:${p.x}%;top:${p.y}%">
                 <span class="np-turn"></span>
-                ${p.persona}<span class="np-role">${p.role}</span>
+                ${p.persona}${marca}<span class="np-role">${p.role}</span>
             </div>`;
         }).join("");
         applySpeakerTurns();
@@ -847,6 +859,7 @@
     let hackMode = false;
     let hackIntervals = [];
     const HACK_API = DEMO_API.replace("/status", "");  // https://macmini.../demo
+    const CONSEJO_PROXY = HACK_API + "/consejo";  // FLT-100570 Enviar → grok-4.6 via Mini proxy
 
     // El HACKEO debe quedarse SOBRE la página actual (sin moverse ni dejar que
     // otros paneles tapen) hasta que se desactive: subimos el overlay por encima
@@ -1324,6 +1337,14 @@
     }
 
     function selectVerb(btn) {
+        // Un verbo apagado está a la vista pero no se puede usar: el color no miente.
+        if (btn && btn.classList && btn.classList.contains('apagado')) return;
+        // Presentar va directo a la galería de todas las presentaciones, sin paso de confirmar
+        // (Carlos, 19-09-2026). Un solo clic desde el botón del verbo.
+        if (btn && btn.dataset && btn.dataset.verb === 'presentar') {
+            try { window.open('https://www.admiranext.com/presentaciones/galeria','_blank','noopener'); } catch(e){}
+            return;
+        }
         document.querySelectorAll('.verb-btn').forEach(b => b.classList.remove('active'));
         btn.classList.add('active');
         currentVerb = btn.dataset.verb;
@@ -1473,8 +1494,19 @@
         if (npMatch) npMatch.classList.add('selected');
         if (bhMatch) bhMatch.classList.add('selected');
         selectedAgent = agent;
+        // Cada silla, su hilo. Se abre ANTES de cualquier bifurcación para que el
+        // contexto que viaje al modelo sea el de ESTE consejero y no el del
+        // anterior, que era lo que pasaba con un array único para toda la mesa.
+        abreHilo(claveHilo(agent));
         if (!examinarMode && window.CouncilInterface?.has(persona)) {
             window.CouncilInterface.select(persona);
+            // Los paneles se limpian: esta silla habla por GrokBot y su hilo se
+            // pinta en otro sitio. Si no, al saltar aquí desde otro consejero se
+            // quedaba en pantalla la conversación del anterior, como si fuera suya.
+            const rac = document.getElementById("conv-racional");
+            const cre = document.getElementById("conv-creativo");
+            if (rac) rac.innerHTML = "";
+            if (cre) cre.innerHTML = "";
             setActionLine("GrokBot · " + persona + " — escribe y pulsa Enviar");
             return;
         }
@@ -1491,8 +1523,18 @@
         const llmShort = llmEl ? llmEl.textContent.trim().replace('FREE','').trim().split(' ').slice(1).join(' ') : 'Claude';
         const matrixLink = getMatrixLink(agent);
         const matrixLabel = matrixLink ? " · Matrix: " + matrixLink.alias : "";
-        setActionLine("❓ Pregunta a " + agent.icon + " " + agent.persona + " (" + agent.name + matrixLabel + ") via " + llmShort + " — escribe y pulsa Enviar");
-        showSpeechBubble(agent.persona, agent.name, councilGreeting(agent));
+        // Si ya hablasteis, se repinta el hilo y se dice por dónde ibais, en vez
+        // de saludar como si fuera la primera vez teniendo memoria de lo anterior.
+        if (consejeroPendiente(agent)) { avisoPendiente(agent); return; }
+        const turnos = conversationHistory.length;
+        if (turnos) {
+            repintaHilo(agent);
+            setActionLine("❓ " + agent.icon + " " + agent.persona + " · seguís donde lo dejasteis (" +
+                turnos + " turno" + (turnos === 1 ? "" : "s") + ") via " + llmShort + " — /olvidar borra el hilo");
+        } else {
+            setActionLine("❓ Pregunta a " + agent.icon + " " + agent.persona + " (" + agent.name + matrixLabel + ") via " + llmShort + " — escribe y pulsa Enviar");
+            showSpeechBubble(agent.persona, agent.name, councilGreeting(agent));
+        }
     }
 
     const VERB_LABELS = { preguntar:"Preguntar", examinar:"Examinar", debatir:"Debatir", entrenar:"Entrenar", crear:"Crear", hablar:"Yarig.AI", leer:"Pensar", votar:"Votar", analizar:"Analizar", presentar:"Presentar", previo:"Ver Previo", reunion:"Reunión" };
@@ -1592,9 +1634,63 @@
         const bar = document.querySelector('.scumm-bar'); if (!bar) return;
         bar.classList.toggle('scumm-collapsed', collapsed);
         const f = document.getElementById('scumm-fold'); if (f) f.textContent = collapsed ? '▸' : '▾';
-        try { localStorage.setItem('scummCollapsed', collapsed ? '1' : '0'); } catch (e) {}
+        try { localStorage.setItem('scummCollapsed.v2', collapsed ? '1' : '0'); } catch (e) {}
     }
     function toggleScumm() { const bar = document.querySelector('.scumm-bar'); setScummCollapsed(!(bar && bar.classList.contains('scumm-collapsed'))); }
+
+    // ── SCUMM: verbos siempre a la vista; las flechas mueven el INVENTARIO ────
+    // (Carlos, 2026-09-19: «te caben todos los verbos sin usar el scroll».) En el
+    // motor original las flechas no paginan los verbos —esos están siempre los
+    // nueve— sino los objetos del inventario. Aquí hacen exactamente eso.
+    const OBJETOS_POR_PAGINA = 9;
+    let objPagina = 0;
+    function pintaObjetos() {
+        const todos = Array.from(document.querySelectorAll('#inv-objetos .obj'));
+        const paginas = Math.max(1, Math.ceil(todos.length / OBJETOS_POR_PAGINA));
+        objPagina = Math.min(Math.max(objPagina, 0), paginas - 1);
+        const desde = objPagina * OBJETOS_POR_PAGINA;
+        todos.forEach((o, i) => { o.hidden = i < desde || i >= desde + OBJETOS_POR_PAGINA; });
+        const up = document.getElementById('verb-up'), dn = document.getElementById('verb-down');
+        if (up) up.disabled = objPagina === 0;
+        if (dn) dn.disabled = objPagina >= paginas - 1;
+    }
+    function verbPage(delta) { objPagina += delta; pintaObjetos(); }
+    // El COLOR del verbo dice si se puede usar. Hoy el único que puede no estarlo
+    // es «Previo»: no hay presentación que reabrir hasta que se genere una.
+    function refrescaVerbos() {
+        const previo = document.getElementById('btn-previo');
+        if (previo) previo.classList.toggle('apagado', !window._hayPresentacion);
+    }
+    function usarObjeto(el) {
+        // Los seis primeros objetos son las puertas a los proyectos grandes de
+        // AdmiraNeXT (Carlos, 2026-09-19). Van a pestaña nueva: el Consejo se
+        // queda como estaba, con su partida o su ficha a medio leer.
+        const url = el.dataset.url;
+        if (url) { try { window.open(url, '_blank', 'noopener'); } catch (e) {} return; }
+        if (el.dataset.obj === 'mac') { if (window.MacHoy) window.MacHoy.toggle(); return; }
+        if (el.dataset.obj === 'motor') {
+            const inv = document.querySelector('.inventory');
+            const abierto = inv && inv.classList.toggle('motor-abierto');
+            el.classList.toggle('motor-on', !!abierto);
+            return;
+        }
+        const v = el.dataset.verb;
+        const btn = v && document.querySelector('.verb-grid .verb-btn[data-verb="' + v + '"]');
+        if (btn && typeof selectVerb === 'function') selectVerb(btn);
+    }
+    window.verbPage = verbPage;
+    window.refrescaVerbos = refrescaVerbos;
+    window.usarObjeto = usarObjeto;
+    function arrancaScummInventario() {
+        pintaObjetos();
+        refrescaVerbos();
+        document.querySelectorAll('#inv-objetos .obj').forEach(o =>
+            o.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); usarObjeto(o); }));
+    }
+    // El script puede cargarse ya con el DOM listo: en ese caso DOMContentLoaded
+    // no vuelve a dispararse y la rejilla se quedaría con las doce cajas.
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arrancaScummInventario);
+    else arrancaScummInventario();
     // Menú superior plegable (persistente)
     function setTopCollapsed(collapsed) {
         const c = document.querySelector('.container'); if (!c) return;
@@ -1687,6 +1783,9 @@
             '<li><strong>/scumm on|off|toggle</strong> — pliega/despliega el menú intermedio (verbos) — o el botón ▾</li>' +
             '<li><strong>/top on|off|toggle</strong> — pliega/despliega el menú superior (botón ▾)</li>' +
             '<li><strong>/bocas on|off|toggle</strong> — los consejeros vivos mueven la boca (hablan)</li>' +
+            '<li><strong>/mac on|off|toggle</strong> — muestra u oculta el Macintosh 1984 (HOY + 3 FLT hechas)</li>' +
+            '<li><strong>/motor on|off|toggle</strong> — abre la lista de modelos (Grok, Claude, Gemini…)</li>' +
+            '<li><strong>/olvidar [todo]</strong> — borra el hilo con el consejero actual (o el de toda la mesa)</li>' +
             '<li><strong>/yarig on|off|toggle</strong> — fija u oculta Yarig en la mesa</li>' +
             '<li><strong>/yarig login</strong> — abre la sesión persistente de Yarig</li>' +
             '<li><strong>/yarig estado</strong> — comprueba watcher y frescura del sync</li>' +
@@ -2004,7 +2103,7 @@
     const CLI_COMMANDS = [
         '/help', '/sites', '/admira.live', '/admira.studio', '/admiranext.com',
         '/admira.app', '/clearchannel.tv', '/pixeria.com', '/equipos', '/control',
-        '/scumm', '/top', '/bocas', '/menu', '/agoramatrix', '/tareas', '/google',
+        '/scumm', '/top', '/bocas', '/mac', '/motor', '/olvidar', '/menu', '/agoramatrix', '/tareas', '/google',
         '/importar', '/nombres', '/tarea', '/diario', '/leyendas', '/coetaneos', '/agentes', '/comandos', '/sendto',
         '/marcador', '/flota', '/highscore'
     ];
@@ -2139,6 +2238,61 @@
             setTopCollapsed(nv);
             addUserEntry(text);
             setActionLine('🔼 Menú superior ' + (nv ? 'plegado' : 'desplegado') + ' · /top on · off · toggle');
+            return true;
+        }
+
+        // El objeto MOTOR cedio su casilla a clearchannel.tv, asi que la eleccion
+        // de modelo se queda sin puerta en el inventario: /motor la abre y la
+        // cierra. La lista sigue en el DOM —de ella leen selectedLLM y
+        // refreshLLMAvailability—, solo estaba oculta.
+        // Ahora que el hilo sobrevive al cierre y a la recarga, hace falta una
+        // forma explicita de borrarlo: sin esto no habria manera de empezar de
+        // cero con un consejero.
+        const olvidarMatch = text.match(/^\/olvidar(?:\s+(todo))?$/i);
+        if (olvidarMatch) {
+            if (olvidarMatch[1]) {
+                hilos = {}; guardaHilos(); abreHilo('mesa');
+                document.getElementById("conv-racional").innerHTML = "";
+                document.getElementById("conv-creativo").innerHTML = "";
+                setActionLine('🧹 Olvidados TODOS los hilos del Consejo');
+                return true;
+            }
+            const quien = selectedAgent ? selectedAgent.persona : null;
+            delete hilos[hiloActual];
+            guardaHilos();
+            abreHilo(hiloActual);
+            document.getElementById("conv-racional").innerHTML = "";
+            document.getElementById("conv-creativo").innerHTML = "";
+            setActionLine('🧹 Hilo olvidado' + (quien ? ' con ' + quien : '') + ' · /olvidar todo borra los de toda la mesa');
+            return true;
+        }
+
+        const motorMatch = text.match(/^\/motor(?:\s+(on|off|toggle))?$/i);
+        if (motorMatch) {
+            const inv = document.querySelector('.inventory');
+            if (!inv) { setActionLine('⚙️ el inventario no esta listo'); return true; }
+            const accion = (motorMatch[1] || 'toggle').toLowerCase();
+            const abierto = accion === 'on' ? true : accion === 'off' ? false : !inv.classList.contains('motor-abierto');
+            inv.classList.toggle('motor-abierto', abierto);
+            const sel = document.querySelector('.llm-option.selected');
+            setActionLine(abierto
+                ? '⚙️ Motor LLM abierto — elige modelo abajo a la derecha · /motor off lo cierra'
+                : '⚙️ Motor: ' + ((sel && sel.textContent.trim()) || 'Grok 4.6') + ' · /motor lo vuelve a abrir');
+            return true;
+        }
+
+        const macMatch = text.match(/^\/mac(?:\s+(on|off|toggle))?$/i);
+        if (macMatch) {
+            const action = (macMatch[1] || 'toggle').toLowerCase();
+            const api = window.MacHoy;
+            if (!api || typeof api.setVisible !== 'function') {
+                setActionLine('🖥 Macintosh Hoy no está listo');
+                return true;
+            }
+            if (action === 'on') api.setVisible(true);
+            else if (action === 'off') api.setVisible(false);
+            else api.toggle();
+            setActionLine(api.isVisible() ? '🖥 Macintosh 1984 — HOY + 3 FLT hechas · /mac off limpia la mesa' : '🖥 mesa limpia — /mac o MOSTRAR para encender el CRT');
             return true;
         }
         const bocasMatch = text.match(/^\/(?:bocas|boca)\s*(on|off|toggle)?$/i);
@@ -2325,7 +2479,9 @@
         document.getElementById("conv-area").classList.remove("active");
         document.getElementById("conv-racional").innerHTML = "";
         document.getElementById("conv-creativo").innerHTML = "";
-        conversationHistory = [];
+        // El hilo NO se borra: cerrar es dejar de mirar, no olvidar. Para
+        // olvidarlo de verdad está /olvidar.
+        abreHilo('mesa');
         exitPreguntarMode();
         setActionLine("Escribe aquí o usa /help...");
     }
@@ -2435,10 +2591,20 @@
         typing.style.display = "block";
         
         try {
-            // Call API for single agent
+            // Si esta silla tiene chat en GrokBot, se habla POR AHI: va con la
+            // suscripcion y no gasta tokens de API. La sala privada llamaba
+            // siempre a la API, asi que elegir a Jobs aqui costaba dinero
+            // mientras preguntarle en la mesa era gratis (Carlos, 2026-09-19).
+            if (window.CouncilInterface?.has(meetingAdvisor.persona)) {
+                window.CouncilInterface.select(meetingAdvisor.persona);
+                window.CouncilInterface.send(meetingAdvisor.persona, text);
+                typing.textContent = meetingAdvisor.name + " · por GrokBot, sin gastar tokens — mira su chat";
+                return;
+            }
+            if (consejeroPendiente(meetingAdvisor)) { typing.style.display = "none"; avisoPendiente(meetingAdvisor, "sala"); return; }
             const reply = await askOneAgentAPI(text, meetingAdvisor.name);
             typing.style.display = "none";
-            
+
             if (reply) {
                 addMeetingMsg(meetingAdvisor, reply.content);
             } else {
@@ -2450,6 +2616,27 @@
         }
     }
 
+    // Repinta en pantalla el hilo guardado de un consejero, para que al volver a
+    // él se vea lo que ya hablasteis en vez de un panel en blanco con memoria
+    // invisible. Escapa el contenido: viene de localStorage y de un modelo, y
+    // addConvEntry lo mete por innerHTML.
+    function repintaHilo(agent) {
+        const rac = document.getElementById("conv-racional");
+        const cre = document.getElementById("conv-creativo");
+        if (rac) rac.innerHTML = "";
+        if (cre) cre.innerHTML = "";
+        if (!conversationHistory.length) return;
+        const esc = t => String(t == null ? "" : t).replace(/[<>&]/g, c => ({ '<': '&lt;', '>': '&gt;', '&': '&amp;' }[c]));
+        const panelId = (agent && agent.side === "creativo") ? "conv-creativo" : "conv-racional";
+        conversationHistory.forEach(e => {
+            if (e.role === "user") { addUserEntry(esc(e.content)); return; }
+            const cuerpo = String(e.content || "").replace(/^[^:]{1,40}:\s*/, "");
+            addConvEntry(panelId, e.icon || "🧠", e.name || (agent && agent.name) || "Consejo",
+                e.persona || (agent && agent.persona) || "", e.side || (agent && agent.side) || "racional", esc(cuerpo));
+        });
+        enterConversation();
+    }
+
     function addConvEntry(panelId, icon, name, persona, side, text) {
         const panel = document.getElementById(panelId);
         const entry = document.createElement("div");
@@ -2459,24 +2646,126 @@
         panel.scrollTop = panel.scrollHeight;
     }
 
-    function addUserEntry(text) {
+    function addUserEntry(text, imageData) {
         // Show user message in both conv panels
+        const imgHtml = imageData
+            ? '<div class="conv-user-image" style="margin-top:6px"><img alt="adjunto" src="' + imageData + '" style="max-height:120px;max-width:100%;border:1px solid #5a3a1e;border-radius:3px"></div>'
+            : '';
         ["conv-racional", "conv-creativo"].forEach(panelId => {
             const panel = document.getElementById(panelId);
             const entry = document.createElement("div");
             entry.className = "conv-entry";
-            entry.innerHTML = '<div class="conv-speaker user">👤 Tú</div><div class="conv-text">' + text.replace(/</g,'&lt;') + '</div>';
+            entry.innerHTML = '<div class="conv-speaker user">👤 Tú</div><div class="conv-text">' + String(text || '').replace(/</g,'&lt;') + imgHtml + '</div>';
             panel.appendChild(entry);
             panel.scrollTop = panel.scrollHeight;
         });
     }
 
+
+    // ── FLT-100706 · pegar/soltar imagen en el input del Consejo ─────────────
+    let pendingChatImage = null; // data:image/jpeg;base64,...
+    function chatImageDownscale(file, cb) {
+        const im = new Image();
+        const url = URL.createObjectURL(file);
+        im.onload = function () {
+            let m = 1400, w = im.width, h = im.height;
+            if (w > m || h > m) {
+                if (w > h) { h = Math.round(h * m / w); w = m; }
+                else { w = Math.round(w * m / h); h = m; }
+            }
+            const c = document.createElement('canvas');
+            c.width = w; c.height = h;
+            c.getContext('2d').drawImage(im, 0, 0, w, h);
+            URL.revokeObjectURL(url);
+            cb(c.toDataURL('image/jpeg', 0.85));
+        };
+        im.onerror = function () { URL.revokeObjectURL(url); cb(null); };
+        im.src = url;
+    }
+    function setPendingChatImage(dataUrl) {
+        pendingChatImage = dataUrl || null;
+        let chip = document.getElementById('chat-image-preview');
+        const bar = document.querySelector('.action-bar') || document.getElementById('action-input')?.parentElement;
+        if (!chip && bar) {
+            chip = document.createElement('div');
+            chip.id = 'chat-image-preview';
+            chip.style.cssText = 'display:none;align-items:center;gap:8px;padding:4px 8px;margin:0 0 4px;background:#1a1520;border:1px solid #5a3a1e;border-radius:4px;font-family:monospace;font-size:11px;color:#ffee88;';
+            bar.insertBefore(chip, bar.firstChild);
+        }
+        if (!chip) return;
+        if (!pendingChatImage) {
+            chip.style.display = 'none';
+            chip.innerHTML = '';
+            return;
+        }
+        chip.style.display = 'flex';
+        chip.innerHTML = '<img alt="adjunto" style="height:40px;width:auto;border:1px solid #886633;border-radius:2px" src="' + pendingChatImage + '">'
+            + '<span>🖼️ imagen lista · Enviar para hablar de ella</span>'
+            + '<a href="#" id="chat-image-clear" style="color:#f88;margin-left:auto">quitar</a>';
+        const x = document.getElementById('chat-image-clear');
+        if (x) x.onclick = function (e) { e.preventDefault(); setPendingChatImage(null); setActionLine('Imagen quitada'); };
+        setActionLine('🖼️ Imagen pegada — escribe un comentario o pulsa Enviar');
+    }
+    function takePendingChatImage() {
+        const img = pendingChatImage;
+        setPendingChatImage(null);
+        return img;
+    }
+    function wireChatImagePasteDrop() {
+        const input = document.getElementById('action-input');
+        if (!input || input.dataset.chatImageWired === '1') return;
+        input.dataset.chatImageWired = '1';
+        const zone = input.parentElement || input;
+        function absorbImageFile(file) {
+            if (!file || !(file.type || '').startsWith('image/')) return;
+            chatImageDownscale(file, function (u) {
+                if (u) setPendingChatImage(u);
+                else setActionLine('No pude leer la imagen');
+            });
+        }
+        input.addEventListener('paste', function (e) {
+            const items = (e.clipboardData || {}).items || [];
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type && items[i].type.indexOf('image') === 0) {
+                    const f = items[i].getAsFile();
+                    if (f) { absorbImageFile(f); e.preventDefault(); }
+                    break;
+                }
+            }
+        });
+        zone.addEventListener('dragover', function (e) {
+            if (e.dataTransfer && [].slice.call(e.dataTransfer.types || []).indexOf('Files') >= 0) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'copy';
+            }
+        });
+        zone.addEventListener('drop', function (e) {
+            const files = e.dataTransfer && e.dataTransfer.files;
+            if (!files || !files.length) return;
+            for (let i = 0; i < files.length; i++) {
+                if ((files[i].type || '').startsWith('image/')) {
+                    e.preventDefault();
+                    absorbImageFile(files[i]);
+                    break;
+                }
+            }
+        });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', wireChatImagePasteDrop);
+    } else {
+        wireChatImagePasteDrop();
+    }
+
     // Send message to council
     function sendMessage() {
         const input = document.getElementById("action-input");
-        const text = input.value.trim();
-        if (!text) return;
+        let text = input.value.trim();
+        const chatImage = pendingChatImage;
+        if (!text && !chatImage) return;
+        if (!text && chatImage) text = "¿Qué ves en esta imagen?";
         input.value = "";
+        const imageForSend = takePendingChatImage();
 
         if (handleCliCommand(text)) {
             return;
@@ -2484,10 +2773,21 @@
 
         // If in "preguntar" mode with a selected agent, ask only that one
         if (preguntarMode && selectedAgent) {
+            // Con imagen: visión por ask-one (+imageData), no solo bridge texto GrokBot
+            if (imageForSend) {
+                if (consejeroPendiente(selectedAgent) && !window.CouncilInterface?.has(selectedAgent.persona)) {
+                    avisoPendiente(selectedAgent); return;
+                }
+                enterConversation();
+                addUserEntry(text, imageForSend);
+                askSingleAgent(text, selectedAgent, imageForSend);
+                return;
+            }
             if (window.CouncilInterface?.has(selectedAgent.persona)) {
                 window.CouncilInterface.send(selectedAgent.persona, text);
                 return;
             }
+            if (consejeroPendiente(selectedAgent)) { avisoPendiente(selectedAgent); return; }
             enterConversation();
             addUserEntry(text);
             askSingleAgent(text, selectedAgent);
@@ -2510,8 +2810,8 @@
         }
 
         enterConversation();
-        addUserEntry(text);
-        simulateCouncilResponse(text);
+        addUserEntry(text, imageForSend);
+        simulateCouncilResponse(text, imageForSend);
     }
 
     // ── ENTRENAR: corpus compartido por consejero (API + caché local) ──
@@ -3276,7 +3576,63 @@
     const YAR_DONE_BLOCK_END = '[/YAR_DONE]';
     let activeApiUrl = null;
     let activeAgoraCouncilUrl = null;
+    // ── HILOS DE CONVERSACIÓN, uno por consejero y persistentes ──────────────
+    // (Carlos, 2026-09-19: «que hablar en admira.live sea como hablar en GrokBot»;
+    // en GrokBot el hilo vive en la app y sobrevive a todo.)
+    // Aquí había UN solo array para toda la mesa, y eso daba dos problemas:
+    //   1) se compartía — preguntabas a Jobs, luego a Buffett, y Buffett recibía
+    //      como contexto lo que había dicho Jobs;
+    //   2) se perdía — exitConversation() lo vaciaba y recargar lo borraba.
+    // Ahora cada silla tiene su hilo, guardado por generación+persona.
+    // Turnos que se MANDAN al modelo. Eran 6 y por eso el consejero perdía el
+    // hilo a la tercera pregunta. El servidor recorta por su cuenta, así que
+    // subir esto solo no basta: hay que subirlo también allí.
+    const CONTEXTO_TURNOS = 20;
+    const HILOS_KEY = 'consejoHilos.v1';
+    const HILO_MAX = 40;          // turnos guardados por silla (no lo que se envía)
+    let hilos = {};
+    let hiloActual = 'mesa';      // los verbos de mesa (debatir, preguntar a todos) van aparte
+
+    function cargaHilos() {
+        try {
+            const crudo = JSON.parse(localStorage.getItem(HILOS_KEY) || '{}');
+            hilos = (crudo && typeof crudo === 'object' && !Array.isArray(crudo)) ? crudo : {};
+        } catch (e) { hilos = {}; }
+    }
+    function guardaHilos() {
+        // El navegador puede negarse (ventana privada, cuota llena): el hilo en
+        // memoria sigue sirviendo, sólo se perderá al recargar. No se avisa por
+        // cada turno; sería ruido.
+        try { localStorage.setItem(HILOS_KEY, JSON.stringify(hilos)); } catch (e) {}
+    }
+    function claveHilo(agent) {
+        if (!agent || !agent.persona) return 'mesa';
+        return (agent.gen || currentGen) + ':' + agent.persona;
+    }
+    function abreHilo(clave) {
+        hiloActual = clave || 'mesa';
+        const guardado = hilos[hiloActual];
+        conversationHistory = Array.isArray(guardado) ? guardado : [];
+        hilos[hiloActual] = conversationHistory;
+        return conversationHistory;
+    }
+    function apuntaEnHilo(entrada) {
+        conversationHistory.push(entrada);
+        if (conversationHistory.length > HILO_MAX) {
+            conversationHistory.splice(0, conversationHistory.length - HILO_MAX);
+        }
+        hilos[hiloActual] = conversationHistory;
+        guardaHilos();
+    }
+    // Lo que se manda al modelo va limpio: sólo role y content. Las entradas
+    // guardan además quién habló, para poder repintar el hilo al volver.
+    function contextoParaApi(turnos) {
+        return conversationHistory
+            .slice(-(turnos || CONTEXTO_TURNOS))
+            .map(e => ({ role: e.role, content: e.content }));
+    }
     let conversationHistory = [];
+    cargaHilos();
     let yarContext = { focus: "", doing: "", done: [], tasks: [], pending: [], taskBuckets: { inProgress: [], pending: [], done: [] }, activeTask: "", ask: "", updatedAt: "", syncUser: "", syncSource: "", dayStartAt: "", dayEndAt: "" };
     let yarStatus = null;
     let yarStatusErrors = [];
@@ -4254,6 +4610,15 @@
 
     // ── CREAR: generación de imagen sobre la mesa ──
     function enterCrearMode() {
+        // CREAR abre el Mapa del Tesoro (Carlos, 2026-09-20): es donde se anotan
+        // las ideas para luego debatirlas. La generación de imágenes NO se pierde
+        // —sigue en el mismo sitio de siempre: escribe el prompt y pulsa Enviar—,
+        // sólo deja de ser lo primero que aparece.
+        if (window.MapaTesoro) {
+            window.MapaTesoro.abre();
+            setActionLine("🗺️ Mapa del Tesoro — pulsa el pergamino y escribe tu idea · o describe una imagen y pulsa Enviar");
+            return;
+        }
         const last = _loadCrearSnapshot(currentGen);
         if (last && last.imageUrl) {
             _renderCrearImage(last.imageUrl, last.prompt || '', last.meta || 'ÚLTIMA IMAGEN');
@@ -4262,6 +4627,24 @@
         }
         setActionLine("🎨 Crear — describe la imagen y pulsa Enviar");
     }
+    /* La generación activa, para quien esté fuera de este fichero (el mapa guarda
+       un pergamino por generación). Getter y no copia: `currentGen` cambia al
+       alternar Leyendas/Coetáneos y una copia se quedaría en la de arranque. */
+    try { Object.defineProperty(window, 'currentGenPublic', { get: () => currentGen, configurable: true }); }
+    catch (e) { window.currentGenPublic = currentGen; }
+    /* Puerta para el mapa: fija el tema y lanza el debate. Va por aquí y no desde
+       el módulo porque `currentProject` es un `let` de este fichero y no vive en
+       window. De paso evita el window.prompt() de DEBATIR, que bloquea la pestaña:
+       aquí el tema ya viene escrito. */
+    window.debateIdea = function (tema) {
+        const t = String(tema || '').trim();
+        if (!t) { setActionLine("Escribe la idea antes de llevarla al Consejo"); return false; }
+        currentProject = t;
+        const btn = document.querySelector('[data-verb="debatir"]');
+        if (btn) selectVerb(btn);
+        else { currentVerb = 'debatir'; updateActionLine(); executeCouncilVerb('debatir'); }
+        return true;
+    };
     function exitCrearMode() {
         // No state to clear; el viewer se cierra al cambiar de verbo via closeTableViewer()
     }
@@ -4522,7 +4905,14 @@
     // Wire del click del hotspot y del fin de vídeo
     document.addEventListener("DOMContentLoaded", () => {
         try { if (localStorage.getItem('councilMenuHidden') === '1') document.body.classList.add('cli-menu-hidden'); } catch (e) {}
-        try { setScummCollapsed(localStorage.getItem('scummCollapsed') !== '0'); } catch (e) { setScummCollapsed(true); }
+        // La barra de verbos arranca EXPANDIDA por defecto (Carlos, 19-09-2026): solo queda
+        // colapsada si el usuario la cerró él mismo (scummCollapsed==='1'). Antes arrancaba
+        // cerrada salvo '0', y quien reseteaba el almacenamiento se quedaba sin verbos.
+        // Clave nueva (Carlos, 2026-09-20: «por defecto el menu Scumm visible»):
+        // asi el menu arranca desplegado una vez para todos, y a partir de ahi
+        // se vuelve a respetar que alguien lo cierre a mano. Con la clave vieja,
+        // quien lo hubiera plegado alguna vez seguiria sin verlo.
+        try { setScummCollapsed(localStorage.getItem('scummCollapsed.v2') === '1'); } catch (e) { setScummCollapsed(false); }
         try { if (localStorage.getItem('topCollapsed') === '1') setTopCollapsed(true); } catch (e) {}
         try { if (localStorage.getItem('mouthsOff') === '1') setMouthsEnabled(false); } catch (e) {}
         refreshLLMAvailability();
@@ -4573,13 +4963,24 @@
         void loadYarContext();
     });
 
-    async function askCouncilAPI(message) {
+    // ── BLOQUEO DEL CAMINO DE PAGO (Carlos, 2026-09-19) ─────────────────────
+    // Mientras no existan las sillas en GrokBot no se consulta a la API por
+    // token. Se corta AQUI, en el unico sitio por el que pasan todas las vias
+    // (mesa sin consejero elegido, ANALIZAR, y lo que venga), para que no se
+    // pueda gastar por descuido desde una rama que se olvide de mirar.
+    // Quitar este bloque es lo unico que hay que hacer para reactivarlo.
+    const API_DE_PAGO_BLOQUEADA = true;
+    async function askCouncilAPI(message, imageData) {
+        if (API_DE_PAGO_BLOQUEADA) {
+            setActionLine("⏳ La mesa completa esta en pausa: solo se consulta a quien tiene silla en GrokBot " +
+                "(∞ Jobs, Wozniak, Disney, Lucas). Elige uno de ellos y pregúntale.");
+            return null;
+        }
         /**
-         * Calls the real council API backed by Claude.
-         * Tries configured URLs in order, caches the working one.
-         * Falls back to simulation if all are unreachable.
+         * FLT-100570: prefer Mini /demo/consejo proxy (Grok 4.6 + MACHINE_TOKEN),
+         * then legacy council-api URLs. Falls back to simulation if all fail.
          */
-        const urls = activeApiUrl ? [activeApiUrl] : COUNCIL_API_URLS;
+        const urls = [CONSEJO_PROXY].concat(activeApiUrl ? [activeApiUrl] : COUNCIL_API_URLS);
         const effectiveMessage = buildCouncilPrompt(message);
         const confirmedExpensiveVideo = confirmExpensiveVideoApproval(effectiveMessage);
         if (!confirmedExpensiveVideo) {
@@ -4592,18 +4993,20 @@
 
         for (const baseUrl of urls) {
             try {
-                const res = await fetch(baseUrl + "/api/council/ask", {
+                const askPath = (baseUrl === CONSEJO_PROXY) ? (baseUrl + "/ask") : (baseUrl + "/api/council/ask");
+                const res = await fetch(askPath, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "X-Council-Token": COUNCIL_API_TOKEN,
+                        ...(baseUrl === CONSEJO_PROXY ? {} : { "X-Council-Token": COUNCIL_API_TOKEN }),
                     },
                     body: JSON.stringify({
                         message: effectiveMessage,
                         generation: currentGen,
-                        context: conversationHistory.slice(-6),
-                        llm: selectedLLM,
+                        context: contextoParaApi(),
+                        llm: (baseUrl === CONSEJO_PROXY) ? "grok-4.6" : selectedLLM,
                         confirm_expensive_video: confirmedExpensiveVideo,
+                        ...(imageData ? { imageData } : {}),
                     }),
                 });
                 if (res.status === 409) {
@@ -4638,9 +5041,97 @@
         return null; // triggers fallback
     }
 
-    async function askOneAgentAPI(message, agentName) {
+    // ── P4 · STREAMING ──────────────────────────────────────────────────────
+    // La respuesta llegaba de una pieza tras 10-40 s de pantalla muerta. Ahora
+    // se va pintando conforme el modelo la emite. Si el streaming no sale
+    // —proxy viejo, red rara, proveedor sin soporte— devuelve null y quien
+    // llama se cae al camino de siempre sin que el usuario note nada.
+    // ── SOLO LOS CONSEJEROS GRATUITOS (Carlos, 2026-09-19) ──────────────────
+    // Un consejero solo se consulta si tiene chat en GrokBot, que va con la
+    // suscripcion. Los demas NO se preguntan a la API de pago: se avisa de que
+    // su silla esta pendiente de crearse en GrokBot. Antes la pregunta salia
+    // igual y gastaba presupuesto sin que nadie lo pidiera.
+    function consejeroPendiente(agent) {
+        return !!agent && !window.CouncilInterface?.has(agent.persona);
+    }
+    function avisoPendiente(agent, donde) {
+        const quien = agent ? (agent.icon + " " + agent.persona) : "Este consejero";
+        const txt = "⏳ " + quien + " todavia no tiene silla en GrokBot — pendiente de crearla. "
+                  + "Mientras tanto pregunta a los que llevan ∞ (Jobs, Wozniak, Disney, Lucas).";
+        setActionLine(txt);
+        if (donde === "sala" && agent) addMeetingMsg(agent, "Todavia no tengo chat propio en GrokBot. Mi silla esta pendiente de crearse; preguntame cuando este lista.");
+        return txt;
+    }
+
+    let _entradaViva = null;
+    function pintaParcial(panelId, agent, texto) {
+        const panel = document.getElementById(panelId);
+        if (!panel) return;
+        if (!_entradaViva || _entradaViva.panelId !== panelId || !_entradaViva.el.isConnected) {
+            const el = document.createElement("div");
+            el.className = "conv-entry";
+            el.innerHTML = '<div class="conv-speaker ' + agent.side + '"></div><div class="conv-text"></div>';
+            el.querySelector(".conv-speaker").textContent = agent.icon + " " + agent.name;
+            panel.appendChild(el);
+            _entradaViva = { panelId, el, txt: el.querySelector(".conv-text") };
+        }
+        // textContent, no innerHTML: esto viene de un modelo y se pinta en vivo.
+        _entradaViva.txt.textContent = texto;
+        panel.scrollTop = panel.scrollHeight;
+    }
+    function cierraParcial() { _entradaViva = null; }
+
+    async function askOneAgentStream(message, agentName, onDelta, imageData) {
+        if (typeof AbortController === "undefined" || !window.ReadableStream) return null;
+        const effectiveMessage = buildCouncilPrompt(message);
+        let res;
+        try {
+            res = await fetch(CONSEJO_PROXY + "/ask-one/stream", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify({
+                    message: effectiveMessage,
+                    agent_name: agentName,
+                    generation: currentGen,
+                    context: contextoParaApi(),
+                    llm: selectedLLM,
+                    confirm_expensive_video: true,
+                    ...(imageData ? { imageData } : {}),
+                }),
+            });
+        } catch (e) { return null; }
+        if (!res.ok || !res.body || !/text\/event-stream/i.test(res.headers.get("Content-Type") || "")) return null;
+
+        const lector = res.body.getReader();
+        const dec = new TextDecoder();
+        let buffer = "", acumulado = "", cabecera = null, fallo = null;
+        try {
+            for (;;) {
+                const { value, done } = await lector.read();
+                if (done) break;
+                buffer += dec.decode(value, { stream: true });
+                let corte;
+                // Un evento SSE acaba en línea en blanco; un trozo de red puede
+                // traer medio evento, así que se acumula hasta tener uno entero.
+                while ((corte = buffer.indexOf("\n\n")) >= 0) {
+                    const bloque = buffer.slice(0, corte).trim();
+                    buffer = buffer.slice(corte + 2);
+                    if (!bloque.startsWith("data:")) continue;
+                    let o; try { o = JSON.parse(bloque.slice(5)); } catch (e) { continue; }
+                    if (o.start) cabecera = o;
+                    if (o.error) fallo = o.error;
+                    if (o.delta) { acumulado += o.delta; if (onDelta) onDelta(acumulado); }
+                    if (o.done) { cabecera = Object.assign({}, cabecera || {}, o); if (o.content) acumulado = o.content; }
+                }
+            }
+        } catch (e) { if (!acumulado) return null; }
+        if (!acumulado) { if (fallo) console.warn("stream:", fallo); return null; }
+        return Object.assign({}, cabecera || {}, { content: acumulado });
+    }
+
+    async function askOneAgentAPI(message, agentName, imageData) {
         /** Call /api/council/ask-one for a single agent. */
-        const urls = activeApiUrl ? [activeApiUrl] : COUNCIL_API_URLS;
+        const urls = [CONSEJO_PROXY].concat(activeApiUrl ? [activeApiUrl] : COUNCIL_API_URLS);
         const effectiveMessage = buildCouncilPrompt(message);
         const confirmedExpensiveVideo = confirmExpensiveVideoApproval(effectiveMessage, agentName);
         if (!confirmedExpensiveVideo) {
@@ -4652,19 +5143,21 @@
         }
         for (const baseUrl of urls) {
             try {
-                const res = await fetch(baseUrl + "/api/council/ask-one", {
+                const askPath = (baseUrl === CONSEJO_PROXY) ? (baseUrl + "/ask-one") : (baseUrl + "/api/council/ask-one");
+                const res = await fetch(askPath, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        "X-Council-Token": COUNCIL_API_TOKEN,
+                        ...(baseUrl === CONSEJO_PROXY ? {} : { "X-Council-Token": COUNCIL_API_TOKEN }),
                     },
                     body: JSON.stringify({
                         message: effectiveMessage,
                         agent_name: agentName,
                         generation: currentGen,
-                        context: conversationHistory.slice(-6),
-                        llm: selectedLLM,
+                        context: contextoParaApi(),
+                        llm: (baseUrl === CONSEJO_PROXY) ? "grok-4.6" : selectedLLM,
                         confirm_expensive_video: confirmedExpensiveVideo,
+                        ...(imageData ? { imageData } : {}),
                     }),
                 });
                 if (res.status === 409) { setActionLine("💸 Gemini + YouTube bloqueado hasta confirmar el coste"); return null; }
@@ -4723,8 +5216,8 @@
         return null;
     }
 
-    async function askSingleAgent(question, agent) {
-        if (window.CouncilInterface?.has(agent.persona)) {
+    async function askSingleAgent(question, agent, imageData) {
+        if (!imageData && window.CouncilInterface?.has(agent.persona)) {
             if (window.CouncilInterface.bridge.selected !== agent.persona) await window.CouncilInterface.select(agent.persona);
             return window.CouncilInterface.send(agent.persona, question);
         }
@@ -4741,7 +5234,7 @@
         highlightNameplate(agent.persona, 1);
         setActionLine("🧠 " + agent.persona + " está pensando con " + llmLabel + matrixThinking + "...");
 
-        conversationHistory.push({ role: "user", content: question });
+        apuntaEnHilo({ role: "user", content: question });
         void notifyAgoraCouncil("question", question, agent);
 
         if (isScreenEmissionQuestion(question)) {
@@ -4752,7 +5245,7 @@
             showSpeechBubble(agent.persona, agent.name, deterministic.substring(0, 80) + "...");
             highlightNameplate(agent.persona, 1);
             addConvEntry(panelId, agent.icon, agent.name, agent.persona, agent.side, deterministic);
-            conversationHistory.push({ role: "assistant", content: agent.name + ": " + deterministic });
+            apuntaEnHilo({ role: "assistant", content: agent.name + ": " + deterministic, persona: agent.persona, name: agent.name, icon: agent.icon, side: agent.side });
             setActionLine("🖥️ " + agent.persona + " ha respondido desde el estado visual real de las pantallas");
             void notifyAgoraCouncil("answer", question, agent, deterministic);
             await new Promise(r => setTimeout(r, 3000));
@@ -4760,7 +5253,16 @@
             return;
         }
 
-        const reply = await askOneAgentAPI(question, agent.name);
+        // Primero por streaming: se pinta segun llega. Si no sale, al camino de
+        // siempre, y el usuario no se entera de la diferencia.
+        cierraParcial();
+        let pintadoEnVivo = false;
+        let reply = await askOneAgentStream(question, agent.name, (texto) => {
+            pintadoEnVivo = true;
+            pintaParcial(panelId, agent, texto);
+            showSpeechBubble(agent.persona, agent.name, texto.slice(-80));
+        }, imageData);
+        if (!reply) { cierraParcial(); reply = await askOneAgentAPI(question, agent.name, imageData); pintadoEnVivo = false; }
 
         hideSpeechBubble();
         clearNameplateHighlight();
@@ -4769,8 +5271,11 @@
             // Show the speech bubble with the response
             showSpeechBubble(agent.persona, reply.name, reply.content.substring(0, 80) + "...");
             highlightNameplate(agent.persona, 1);
-            addConvEntry(panelId, reply.icon, reply.name, reply.persona, reply.side, reply.content);
-            conversationHistory.push({ role: "assistant", content: reply.name + ": " + reply.content });
+            // Si ya se pinto en vivo, se deja esa entrada: volver a añadirla
+            // duplicaria la respuesta en el panel.
+            if (pintadoEnVivo) { pintaParcial(panelId, agent, reply.content); cierraParcial(); }
+            else addConvEntry(panelId, reply.icon, reply.name, reply.persona, reply.side, reply.content);
+            apuntaEnHilo({ role: "assistant", content: reply.name + ": " + reply.content, persona: reply.persona, name: reply.name, icon: reply.icon, side: reply.side });
             void notifyAgoraCouncil("answer", question, agent, reply.content);
 
             setActionLine("✅ " + agent.persona + " ha respondido — escribe para seguir preguntando");
@@ -4786,7 +5291,18 @@
         }
     }
 
-    async function simulateCouncilResponse(question) {
+    async function simulateCouncilResponse(question, imageData) {
+        // El corte va tambien AQUI, no solo en askCouncilAPI: si no, quien
+        // llama ve un null y lo cuenta como «modo offline — el puente no
+        // respondio», que es falso y manda a revisar algo que esta bien.
+        if (API_DE_PAGO_BLOQUEADA) {
+            enterConversation();
+            addConvEntry("conv-racional", "⏳", "Consejo", "", "racional",
+                "La mesa completa esta en pausa: solo se consulta a quien tiene silla en GrokBot. " +
+                "Pregunta a Jobs, Wozniak, Disney o Lucas (los que llevan ∞).");
+            setActionLine("⏳ Mesa en pausa — pregunta a un consejero con ∞ (Jobs, Wozniak, Disney, Lucas)");
+            return;
+        }
         // Show thinking state for all members
         const members = COUNCIL.filter(m => m.gen === currentGen);
         const racionales = members.filter(m => m.side === "racional");
@@ -4818,10 +5334,10 @@
         showSpeechBubble(racionales[0].persona, "Consejo", bubbleMsg);
 
         // Add to conversation history
-        conversationHistory.push({ role: "user", content: question });
+        apuntaEnHilo({ role: "user", content: question });
 
         // Call real API
-        const apiResponse = await askCouncilAPI(question);
+        const apiResponse = await askCouncilAPI(question, imageData);
 
         hideSpeechBubble();
         clearNameplateHighlight();
@@ -4836,7 +5352,7 @@
                     highlightNameplate(member.persona, turnNumber);
                 }
                 addConvEntry("conv-racional", reply.icon, reply.name, reply.persona, "racional", reply.content);
-                conversationHistory.push({ role: "assistant", content: reply.name + ": " + reply.content });
+                apuntaEnHilo({ role: "assistant", content: reply.name + ": " + reply.content, persona: reply.persona, name: reply.name, icon: reply.icon, side: reply.side });
                 await new Promise(r => setTimeout(r, 400));
                 clearNameplateHighlight();
                 turnNumber += 1;
@@ -4848,7 +5364,7 @@
                     highlightNameplate(member.persona, turnNumber);
                 }
                 addConvEntry("conv-creativo", reply.icon, reply.name, reply.persona, "creativo", reply.content);
-                conversationHistory.push({ role: "assistant", content: reply.name + ": " + reply.content });
+                apuntaEnHilo({ role: "assistant", content: reply.name + ": " + reply.content, persona: reply.persona, name: reply.name, icon: reply.icon, side: reply.side });
                 await new Promise(r => setTimeout(r, 400));
                 clearNameplateHighlight();
                 turnNumber += 1;
@@ -4868,7 +5384,7 @@
                 addConvEntry("conv-creativo", m.icon, m.name, m.persona, "creativo", "[Offline] " + m.persona + " responde desde el lado creativo.");
                 await new Promise(r => setTimeout(r, 300));
             }
-            setActionLine("Modo offline — arranca council-api.py para conectar con Claude");
+            setActionLine("Modo offline — el puente Mini/Grok no respondió (revisa /demo/consejo)");
         }
     }
 
@@ -4893,7 +5409,7 @@
         const creativos = members.filter(m => m.side === "creativo");
         const roundName = { debatir:"Debate" }[verb] || verb;
         const verbGerund = { debatir:"debatiendo" }[verb] || verb;
-        setActionLine("🧠 " + roundName + " en curso — los consejeros deliberan con Claude...");
+        setActionLine("🧠 " + roundName + " en curso — los consejeros deliberan con Grok...");
 
         // Build the prompt based on the verb + project
         const verbPrompts = {
@@ -4905,7 +5421,32 @@
         for (const m of [...racionales, ...creativos]) highlightNameplate(m.persona);
         showSpeechBubble(racionales[0].persona, "Consejo", "Los consejeros están " + verbGerund + "...");
 
-        conversationHistory.push({ role: "user", content: prompt });
+        apuntaEnHilo({ role: "user", content: prompt });
+
+        // DEBATIR se limita a las sillas de GrokBot (Carlos, 2026-09-19): va con
+        // la suscripcion. Antes llamaba a /ask, que elige consejeros en el
+        // servidor y los paga por token. Se manda el tema a cada uno y cada
+        // cual responde en SU chat, que es donde vive su hilo de verdad.
+        const enGrokBot = [...racionales, ...creativos].filter(m => window.CouncilInterface?.has(m.persona));
+        if (enGrokBot.length) {
+            for (const m of enGrokBot) {
+                try { window.CouncilInterface.select(m.persona); window.CouncilInterface.send(m.persona, prompt); }
+                catch (e) { console.warn("debate GrokBot", m.persona, e); }
+            }
+            hideSpeechBubble();
+            clearNameplateHighlight();
+            addUserEntry(prompt);
+            setActionLine("🗣 Debate enviado por GrokBot a " + enGrokBot.map(m => m.persona).join(", ") +
+                " — sin gastar tokens. Cada uno responde en su chat.");
+            debateRunning = false;
+            return;
+        }
+        setActionLine("⏳ Nadie de esta generacion tiene silla en GrokBot todavia — debate no enviado");
+        hideSpeechBubble();
+        clearNameplateHighlight();
+        debateRunning = false;
+        return;
+        // eslint-disable-next-line no-unreachable
         const apiResponse = await askCouncilAPI(prompt);
 
         hideSpeechBubble();
@@ -4921,7 +5462,7 @@
                     highlightNameplate(member.persona, turnNumber);
                 }
                 addConvEntry("conv-racional", reply.icon, reply.name, reply.persona, "racional", reply.content);
-                conversationHistory.push({ role: "assistant", content: reply.name + ": " + reply.content });
+                apuntaEnHilo({ role: "assistant", content: reply.name + ": " + reply.content, persona: reply.persona, name: reply.name, icon: reply.icon, side: reply.side });
                 await new Promise(r => setTimeout(r, 500));
                 clearNameplateHighlight();
                 turnNumber += 1;
@@ -4933,7 +5474,7 @@
                     highlightNameplate(member.persona, turnNumber);
                 }
                 addConvEntry("conv-creativo", reply.icon, reply.name, reply.persona, "creativo", reply.content);
-                conversationHistory.push({ role: "assistant", content: reply.name + ": " + reply.content });
+                apuntaEnHilo({ role: "assistant", content: reply.name + ": " + reply.content, persona: reply.persona, name: reply.name, icon: reply.icon, side: reply.side });
                 await new Promise(r => setTimeout(r, 500));
                 clearNameplateHighlight();
                 turnNumber += 1;
@@ -5525,7 +6066,9 @@
     let _presentarFileName = null;
 
     function triggerPresentar() {
-        showPresentarOverlay();
+        // Presentar → galería de todas las presentaciones (Carlos, 19-09-2026). Antes abría
+        // el diálogo de creación (showPresentarOverlay, se conserva por si se reactiva).
+        try { window.open('https://www.admiranext.com/presentaciones/galeria','_blank','noopener'); } catch(e){ showPresentarOverlay(); }
     }
 
     function showPresentarOverlay() {
@@ -5687,7 +6230,11 @@
     function showPresentarResult(result) {
         _lastPresentarResult = result;
         const previoBtn = document.getElementById('btn-previo');
+        // «Previo» no se oculta: se enciende. La caja está siempre, apagada hasta
+        // que hay algo que reabrir (Carlos, 2026-09-19).
+        window._hayPresentacion = true;
         if (previoBtn) previoBtn.style.display = '';
+        if (window.refrescaVerbos) window.refrescaVerbos();
 
         document.getElementById('pdlg-loading').style.display = 'none';
         const dlg = document.getElementById('pdlg-result');
@@ -5757,7 +6304,7 @@
         if (!audioUrl && !pdfUrl && !slidesUrl) {
             html += `<div class="presentar-tab-panel active" id="ptab-noapi">
                 <div style="font-family:'Press Start 2P',monospace;font-size:6px;color:#886633;text-align:center;padding:16px;line-height:2">
-                    ⚠️ API no activa<br>Arranca council-api.py<br>para generar archivos reales
+                    ⚠️ API no activa<br>El puente del Consejo no respondió<br>revisa Mini /demo/consejo
                 </div>
             </div>`;
         }

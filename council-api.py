@@ -902,6 +902,7 @@ class AskRequest(BaseModel):
     context: Optional[list] = None
     llm: str = DEFAULT_LLM  # LLM model key from LLM_MODELS
     confirm_expensive_video: bool = False
+    imageData: Optional[str] = None  # FLT-100706 data URL or raw base64
 
 
 class AskOneRequest(BaseModel):
@@ -911,6 +912,7 @@ class AskOneRequest(BaseModel):
     context: Optional[list] = None
     llm: str = DEFAULT_LLM  # LLM model key from LLM_MODELS
     confirm_expensive_video: bool = False
+    imageData: Optional[str] = None  # FLT-100706 data URL or raw base64
 
 
 class AnalyzeYoutubeRequest(BaseModel):
@@ -979,7 +981,70 @@ ICONS = {
 MAX_MESSAGE_LENGTH = 1000
 
 
-def _build_conversation(agent: CouncilAgent, message: str, context: Optional[list]) -> tuple:
+
+def _normalize_image_data(image_data: Optional[str]) -> Optional[str]:
+    """Accept data URL or raw base64; reject oversized payloads (~1.8MB decoded)."""
+    if not image_data:
+        return None
+    raw = str(image_data).strip()
+    if not raw:
+        return None
+    if raw.startswith("data:"):
+        try:
+            header, b64 = raw.split(",", 1)
+        except ValueError:
+            raise ValueError("imageData data-URL inválida")
+        if ";base64" not in header:
+            raise ValueError("imageData debe ser base64")
+        payload = b64
+        data_url = raw
+    else:
+        payload = raw
+        data_url = "data:image/jpeg;base64," + raw
+    # rough decoded size
+    pad = payload.count("=")
+    nbytes = (len(payload) * 3) // 4 - pad
+    if nbytes > 1_800_000:
+        raise ValueError("imageData demasiado grande (máx ~1.8MB)")
+    if nbytes < 32:
+        raise ValueError("imageData vacía o corrupta")
+    return data_url
+
+
+def _user_content_with_optional_image(message: str, image_data: Optional[str], provider: str):
+    """Build multimodal user content for providers that support vision."""
+    text = (message or "")[:MAX_MESSAGE_LENGTH] or "¿Qué ves en esta imagen?"
+    data_url = _normalize_image_data(image_data)
+    if not data_url:
+        return text
+    if provider == "xai":
+        return [
+            {"type": "text", "text": text},
+            {"type": "image_url", "image_url": {"url": data_url}},
+        ]
+    if provider == "anthropic":
+        # anthropic wants media_type + data without prefix
+        try:
+            header, b64 = data_url.split(",", 1)
+            media = "image/jpeg"
+            if "image/png" in header:
+                media = "image/png"
+            elif "image/webp" in header:
+                media = "image/webp"
+            elif "image/gif" in header:
+                media = "image/gif"
+            return [
+                {"type": "text", "text": text},
+                {"type": "image", "source": {"type": "base64", "media_type": media, "data": b64}},
+            ]
+        except Exception:
+            return text + "\n\n[Imagen adjunta no se pudo parsear para Claude]"
+    if provider == "gemini":
+        return ("__GEMINI_IMAGE__", text, data_url)
+    return text + "\n\n[El usuario adjuntó una imagen, pero este modelo no tiene visión.]"
+
+
+def _build_conversation(agent: CouncilAgent, message: str, context: Optional[list], image_data: Optional[str] = None, provider: str = "") -> tuple:
     """Build system prompt and messages list for any LLM provider."""
     messages = []
     if context:
@@ -988,7 +1053,11 @@ def _build_conversation(agent: CouncilAgent, message: str, context: Optional[lis
                 "role": msg.get("role", "user"),
                 "content": str(msg.get("content", ""))[:MAX_MESSAGE_LENGTH],
             })
-    messages.append({"role": "user", "content": message[:MAX_MESSAGE_LENGTH]})
+    content = _user_content_with_optional_image(message, image_data, provider) if image_data else message[:MAX_MESSAGE_LENGTH]
+    if isinstance(content, tuple) and content and content[0] == "__GEMINI_IMAGE__":
+        # Gemini handled in agent_ask_gemini — keep text placeholder here
+        content = content[1]
+    messages.append({"role": "user", "content": content})
 
     conv_system = (
         agent.system_prompt + "\n\n"
@@ -1013,9 +1082,9 @@ def _is_expensive_video_request(llm_key: str, message: str) -> bool:
     return _requires_expensive_video_confirmation(llm_key, message)
 
 
-def agent_ask_anthropic(agent: CouncilAgent, message: str, context: Optional[list], model_id: str, max_tokens: int = 300) -> tuple:
+def agent_ask_anthropic(agent: CouncilAgent, message: str, context: Optional[list], model_id: str, max_tokens: int = 300, image_data: Optional[str] = None) -> tuple:
     """Call Anthropic Claude API. Returns (text, input_tokens, output_tokens)."""
-    conv_system, messages = _build_conversation(agent, message, context)
+    conv_system, messages = _build_conversation(agent, message, context, image_data, provider="anthropic")
 
     response = client.messages.create(
         model=model_id,
@@ -1060,13 +1129,13 @@ def agent_ask_groq(agent: CouncilAgent, message: str, context: Optional[list], m
 
 
 
-def agent_ask_xai(agent: CouncilAgent, message: str, context: Optional[list], model_id: str, max_tokens: int = 300) -> tuple:
+def agent_ask_xai(agent: CouncilAgent, message: str, context: Optional[list], model_id: str, max_tokens: int = 300, image_data: Optional[str] = None) -> tuple:
     """Call xAI (Grok) API, OpenAI-compatible. Returns (text, input_tokens, output_tokens).
     Los modelos grok-4.x razonan: completion_tokens incluye el razonamiento y se cobra como salida."""
     if not XAI_API_KEY:
         raise ValueError("XAI_API_KEY not configured — add it to .env (console.x.ai)")
 
-    conv_system, messages = _build_conversation(agent, message, context)
+    conv_system, messages = _build_conversation(agent, message, context, image_data, provider="xai")
 
     # xAI uses OpenAI-compatible format: system message + conversation
     xai_messages = [{"role": "system", "content": conv_system}] + messages
@@ -1124,7 +1193,7 @@ def agent_ask_nvidia(agent: CouncilAgent, message: str, context: Optional[list],
     return text, usage.get("prompt_tokens", 0), usage.get("completion_tokens", 0)
 
 
-def agent_ask_gemini(agent: CouncilAgent, message: str, context: Optional[list], model_id: str, max_tokens: int = 300) -> tuple:
+def agent_ask_gemini(agent: CouncilAgent, message: str, context: Optional[list], model_id: str, max_tokens: int = 300, image_data: Optional[str] = None) -> tuple:
     """Call Google Gemini API. Supports YouTube URLs as native video input."""
     try:
         import google.generativeai as genai
@@ -1158,8 +1227,22 @@ def agent_ask_gemini(agent: CouncilAgent, message: str, context: Optional[list],
         # Video analysis needs more tokens: 300 corta respuestas a mitad.
         effective_max = max(max_tokens, 800)
     else:
-        parts = [message]
-        effective_max = max_tokens
+        data_url = _normalize_image_data(image_data) if image_data else None
+        if data_url:
+            import base64 as _b64
+            header, b64 = data_url.split(",", 1)
+            mime = "image/jpeg"
+            if "image/png" in header: mime = "image/png"
+            elif "image/webp" in header: mime = "image/webp"
+            elif "image/gif" in header: mime = "image/gif"
+            parts = [
+                message or "¿Qué ves en esta imagen?",
+                {"mime_type": mime, "data": _b64.b64decode(b64)},
+            ]
+            effective_max = max(max_tokens, 600)
+        else:
+            parts = [message]
+            effective_max = max_tokens
 
     response = model.generate_content(
         parts,
@@ -1176,20 +1259,27 @@ def agent_ask_gemini(agent: CouncilAgent, message: str, context: Optional[list],
     return text, in_tok, out_tok
 
 
-def agent_ask(agent: CouncilAgent, message: str, context: Optional[list], llm_key: str = DEFAULT_LLM, max_tokens: int = 300) -> tuple:
+def agent_ask(agent: CouncilAgent, message: str, context: Optional[list], llm_key: str = DEFAULT_LLM, max_tokens: int = 300, image_data: Optional[str] = None) -> tuple:
     """Route to the correct LLM provider. Returns (text, input_tokens, output_tokens)."""
     model_cfg = LLM_MODELS.get(llm_key, LLM_MODELS[DEFAULT_LLM])
 
     if model_cfg["provider"] == "anthropic":
-        return agent_ask_anthropic(agent, message, context, model_cfg["model_id"], max_tokens)
+        return agent_ask_anthropic(agent, message, context, model_cfg["model_id"], max_tokens, image_data)
     elif model_cfg["provider"] == "xai":
-        return agent_ask_xai(agent, message, context, model_cfg["model_id"], max_tokens)
+        return agent_ask_xai(agent, message, context, model_cfg["model_id"], max_tokens, image_data)
     elif model_cfg["provider"] == "groq":
-        return agent_ask_groq(agent, message, context, model_cfg["model_id"], max_tokens)
+        # Groq path: text note if image present
+        msg = message
+        if image_data:
+            msg = (message or "") + "\n\n[El usuario adjuntó una imagen; este modelo no tiene visión.]"
+        return agent_ask_groq(agent, msg, context, model_cfg["model_id"], max_tokens)
     elif model_cfg["provider"] == "gemini":
-        return agent_ask_gemini(agent, message, context, model_cfg["model_id"], max_tokens)
+        return agent_ask_gemini(agent, message, context, model_cfg["model_id"], max_tokens, image_data)
     elif model_cfg["provider"] == "nvidia":
-        return agent_ask_nvidia(agent, message, context, model_cfg["model_id"], max_tokens)
+        msg = message
+        if image_data:
+            msg = (message or "") + "\n\n[El usuario adjuntó una imagen; este modelo no tiene visión.]"
+        return agent_ask_nvidia(agent, msg, context, model_cfg["model_id"], max_tokens)
     else:
         raise ValueError(f"Unknown provider: {model_cfg['provider']}")
 
@@ -1226,6 +1316,10 @@ async def council_ask(
     _auth=Depends(verify_token),
 ):
     """Send a message to the council. 1 racional + 1 creativo (random) by default."""
+    try:
+        req.imageData = _normalize_image_data(req.imageData)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     llm_key = req.llm if req.llm in LLM_MODELS else DEFAULT_LLM
     model_cfg = LLM_MODELS[llm_key]
 
@@ -1258,7 +1352,7 @@ async def council_ask(
     async def run_agent(cls):
         agent = get_agent(cls)
         content, inp_tok, out_tok = await loop.run_in_executor(
-            None, agent_ask, agent, req.message, req.context, llm_key
+            None, lambda: agent_ask(agent, req.message, req.context, llm_key, 300, getattr(req, "imageData", None))
         )
         track_usage(inp_tok, out_tok, agent.name, llm_key)
         return AgentReply(
@@ -1292,6 +1386,10 @@ async def council_ask_one(
     _auth=Depends(verify_token),
 ):
     """Ask a single specific agent. Used by 'Preguntar' verb."""
+    try:
+        req.imageData = _normalize_image_data(req.imageData)
+    except ValueError as e:
+        raise HTTPException(status_code=400, detail=str(e))
     llm_key = req.llm if req.llm in LLM_MODELS else DEFAULT_LLM
     model_cfg = LLM_MODELS[llm_key]
 
@@ -1325,7 +1423,7 @@ async def council_ask_one(
 
     loop = asyncio.get_event_loop()
     content, inp_tok, out_tok = await loop.run_in_executor(
-        None, agent_ask, agent, req.message, req.context, llm_key
+        None, lambda: agent_ask(agent, req.message, req.context, llm_key, 300, getattr(req, "imageData", None))
     )
     track_usage(inp_tok, out_tok, agent.name, llm_key)
 

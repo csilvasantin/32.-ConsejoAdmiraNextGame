@@ -2646,24 +2646,126 @@
         panel.scrollTop = panel.scrollHeight;
     }
 
-    function addUserEntry(text) {
+    function addUserEntry(text, imageData) {
         // Show user message in both conv panels
+        const imgHtml = imageData
+            ? '<div class="conv-user-image" style="margin-top:6px"><img alt="adjunto" src="' + imageData + '" style="max-height:120px;max-width:100%;border:1px solid #5a3a1e;border-radius:3px"></div>'
+            : '';
         ["conv-racional", "conv-creativo"].forEach(panelId => {
             const panel = document.getElementById(panelId);
             const entry = document.createElement("div");
             entry.className = "conv-entry";
-            entry.innerHTML = '<div class="conv-speaker user">👤 Tú</div><div class="conv-text">' + text.replace(/</g,'&lt;') + '</div>';
+            entry.innerHTML = '<div class="conv-speaker user">👤 Tú</div><div class="conv-text">' + String(text || '').replace(/</g,'&lt;') + imgHtml + '</div>';
             panel.appendChild(entry);
             panel.scrollTop = panel.scrollHeight;
         });
     }
 
+
+    // ── FLT-100706 · pegar/soltar imagen en el input del Consejo ─────────────
+    let pendingChatImage = null; // data:image/jpeg;base64,...
+    function chatImageDownscale(file, cb) {
+        const im = new Image();
+        const url = URL.createObjectURL(file);
+        im.onload = function () {
+            let m = 1400, w = im.width, h = im.height;
+            if (w > m || h > m) {
+                if (w > h) { h = Math.round(h * m / w); w = m; }
+                else { w = Math.round(w * m / h); h = m; }
+            }
+            const c = document.createElement('canvas');
+            c.width = w; c.height = h;
+            c.getContext('2d').drawImage(im, 0, 0, w, h);
+            URL.revokeObjectURL(url);
+            cb(c.toDataURL('image/jpeg', 0.85));
+        };
+        im.onerror = function () { URL.revokeObjectURL(url); cb(null); };
+        im.src = url;
+    }
+    function setPendingChatImage(dataUrl) {
+        pendingChatImage = dataUrl || null;
+        let chip = document.getElementById('chat-image-preview');
+        const bar = document.querySelector('.action-bar') || document.getElementById('action-input')?.parentElement;
+        if (!chip && bar) {
+            chip = document.createElement('div');
+            chip.id = 'chat-image-preview';
+            chip.style.cssText = 'display:none;align-items:center;gap:8px;padding:4px 8px;margin:0 0 4px;background:#1a1520;border:1px solid #5a3a1e;border-radius:4px;font-family:monospace;font-size:11px;color:#ffee88;';
+            bar.insertBefore(chip, bar.firstChild);
+        }
+        if (!chip) return;
+        if (!pendingChatImage) {
+            chip.style.display = 'none';
+            chip.innerHTML = '';
+            return;
+        }
+        chip.style.display = 'flex';
+        chip.innerHTML = '<img alt="adjunto" style="height:40px;width:auto;border:1px solid #886633;border-radius:2px" src="' + pendingChatImage + '">'
+            + '<span>🖼️ imagen lista · Enviar para hablar de ella</span>'
+            + '<a href="#" id="chat-image-clear" style="color:#f88;margin-left:auto">quitar</a>';
+        const x = document.getElementById('chat-image-clear');
+        if (x) x.onclick = function (e) { e.preventDefault(); setPendingChatImage(null); setActionLine('Imagen quitada'); };
+        setActionLine('🖼️ Imagen pegada — escribe un comentario o pulsa Enviar');
+    }
+    function takePendingChatImage() {
+        const img = pendingChatImage;
+        setPendingChatImage(null);
+        return img;
+    }
+    function wireChatImagePasteDrop() {
+        const input = document.getElementById('action-input');
+        if (!input || input.dataset.chatImageWired === '1') return;
+        input.dataset.chatImageWired = '1';
+        const zone = input.parentElement || input;
+        function absorbImageFile(file) {
+            if (!file || !(file.type || '').startsWith('image/')) return;
+            chatImageDownscale(file, function (u) {
+                if (u) setPendingChatImage(u);
+                else setActionLine('No pude leer la imagen');
+            });
+        }
+        input.addEventListener('paste', function (e) {
+            const items = (e.clipboardData || {}).items || [];
+            for (let i = 0; i < items.length; i++) {
+                if (items[i].type && items[i].type.indexOf('image') === 0) {
+                    const f = items[i].getAsFile();
+                    if (f) { absorbImageFile(f); e.preventDefault(); }
+                    break;
+                }
+            }
+        });
+        zone.addEventListener('dragover', function (e) {
+            if (e.dataTransfer && [].slice.call(e.dataTransfer.types || []).indexOf('Files') >= 0) {
+                e.preventDefault();
+                e.dataTransfer.dropEffect = 'copy';
+            }
+        });
+        zone.addEventListener('drop', function (e) {
+            const files = e.dataTransfer && e.dataTransfer.files;
+            if (!files || !files.length) return;
+            for (let i = 0; i < files.length; i++) {
+                if ((files[i].type || '').startsWith('image/')) {
+                    e.preventDefault();
+                    absorbImageFile(files[i]);
+                    break;
+                }
+            }
+        });
+    }
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', wireChatImagePasteDrop);
+    } else {
+        wireChatImagePasteDrop();
+    }
+
     // Send message to council
     function sendMessage() {
         const input = document.getElementById("action-input");
-        const text = input.value.trim();
-        if (!text) return;
+        let text = input.value.trim();
+        const chatImage = pendingChatImage;
+        if (!text && !chatImage) return;
+        if (!text && chatImage) text = "¿Qué ves en esta imagen?";
         input.value = "";
+        const imageForSend = takePendingChatImage();
 
         if (handleCliCommand(text)) {
             return;
@@ -2671,6 +2773,16 @@
 
         // If in "preguntar" mode with a selected agent, ask only that one
         if (preguntarMode && selectedAgent) {
+            // Con imagen: visión por ask-one (+imageData), no solo bridge texto GrokBot
+            if (imageForSend) {
+                if (consejeroPendiente(selectedAgent) && !window.CouncilInterface?.has(selectedAgent.persona)) {
+                    avisoPendiente(selectedAgent); return;
+                }
+                enterConversation();
+                addUserEntry(text, imageForSend);
+                askSingleAgent(text, selectedAgent, imageForSend);
+                return;
+            }
             if (window.CouncilInterface?.has(selectedAgent.persona)) {
                 window.CouncilInterface.send(selectedAgent.persona, text);
                 return;
@@ -2698,8 +2810,8 @@
         }
 
         enterConversation();
-        addUserEntry(text);
-        simulateCouncilResponse(text);
+        addUserEntry(text, imageForSend);
+        simulateCouncilResponse(text, imageForSend);
     }
 
     // ── ENTRENAR: corpus compartido por consejero (API + caché local) ──
@@ -4858,7 +4970,7 @@
     // pueda gastar por descuido desde una rama que se olvide de mirar.
     // Quitar este bloque es lo unico que hay que hacer para reactivarlo.
     const API_DE_PAGO_BLOQUEADA = true;
-    async function askCouncilAPI(message) {
+    async function askCouncilAPI(message, imageData) {
         if (API_DE_PAGO_BLOQUEADA) {
             setActionLine("⏳ La mesa completa esta en pausa: solo se consulta a quien tiene silla en GrokBot " +
                 "(∞ Jobs, Wozniak, Disney, Lucas). Elige uno de ellos y pregúntale.");
@@ -4894,6 +5006,7 @@
                         context: contextoParaApi(),
                         llm: (baseUrl === CONSEJO_PROXY) ? "grok-4.6" : selectedLLM,
                         confirm_expensive_video: confirmedExpensiveVideo,
+                        ...(imageData ? { imageData } : {}),
                     }),
                 });
                 if (res.status === 409) {
@@ -4968,7 +5081,7 @@
     }
     function cierraParcial() { _entradaViva = null; }
 
-    async function askOneAgentStream(message, agentName, onDelta) {
+    async function askOneAgentStream(message, agentName, onDelta, imageData) {
         if (typeof AbortController === "undefined" || !window.ReadableStream) return null;
         const effectiveMessage = buildCouncilPrompt(message);
         let res;
@@ -4983,6 +5096,7 @@
                     context: contextoParaApi(),
                     llm: selectedLLM,
                     confirm_expensive_video: true,
+                    ...(imageData ? { imageData } : {}),
                 }),
             });
         } catch (e) { return null; }
@@ -5015,7 +5129,7 @@
         return Object.assign({}, cabecera || {}, { content: acumulado });
     }
 
-    async function askOneAgentAPI(message, agentName) {
+    async function askOneAgentAPI(message, agentName, imageData) {
         /** Call /api/council/ask-one for a single agent. */
         const urls = [CONSEJO_PROXY].concat(activeApiUrl ? [activeApiUrl] : COUNCIL_API_URLS);
         const effectiveMessage = buildCouncilPrompt(message);
@@ -5043,6 +5157,7 @@
                         context: contextoParaApi(),
                         llm: (baseUrl === CONSEJO_PROXY) ? "grok-4.6" : selectedLLM,
                         confirm_expensive_video: confirmedExpensiveVideo,
+                        ...(imageData ? { imageData } : {}),
                     }),
                 });
                 if (res.status === 409) { setActionLine("💸 Gemini + YouTube bloqueado hasta confirmar el coste"); return null; }
@@ -5101,8 +5216,8 @@
         return null;
     }
 
-    async function askSingleAgent(question, agent) {
-        if (window.CouncilInterface?.has(agent.persona)) {
+    async function askSingleAgent(question, agent, imageData) {
+        if (!imageData && window.CouncilInterface?.has(agent.persona)) {
             if (window.CouncilInterface.bridge.selected !== agent.persona) await window.CouncilInterface.select(agent.persona);
             return window.CouncilInterface.send(agent.persona, question);
         }
@@ -5146,8 +5261,8 @@
             pintadoEnVivo = true;
             pintaParcial(panelId, agent, texto);
             showSpeechBubble(agent.persona, agent.name, texto.slice(-80));
-        });
-        if (!reply) { cierraParcial(); reply = await askOneAgentAPI(question, agent.name); pintadoEnVivo = false; }
+        }, imageData);
+        if (!reply) { cierraParcial(); reply = await askOneAgentAPI(question, agent.name, imageData); pintadoEnVivo = false; }
 
         hideSpeechBubble();
         clearNameplateHighlight();
@@ -5176,7 +5291,7 @@
         }
     }
 
-    async function simulateCouncilResponse(question) {
+    async function simulateCouncilResponse(question, imageData) {
         // El corte va tambien AQUI, no solo en askCouncilAPI: si no, quien
         // llama ve un null y lo cuenta como «modo offline — el puente no
         // respondio», que es falso y manda a revisar algo que esta bien.
@@ -5222,7 +5337,7 @@
         apuntaEnHilo({ role: "user", content: question });
 
         // Call real API
-        const apiResponse = await askCouncilAPI(question);
+        const apiResponse = await askCouncilAPI(question, imageData);
 
         hideSpeechBubble();
         clearNameplateHighlight();

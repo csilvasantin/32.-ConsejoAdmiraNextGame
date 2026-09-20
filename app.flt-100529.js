@@ -4498,6 +4498,15 @@
 
     // ── CREAR: generación de imagen sobre la mesa ──
     function enterCrearMode() {
+        // CREAR abre el Mapa del Tesoro (Carlos, 2026-09-20): es donde se anotan
+        // las ideas para luego debatirlas. La generación de imágenes NO se pierde
+        // —sigue en el mismo sitio de siempre: escribe el prompt y pulsa Enviar—,
+        // sólo deja de ser lo primero que aparece.
+        if (window.MapaTesoro) {
+            window.MapaTesoro.abre();
+            setActionLine("🗺️ Mapa del Tesoro — pulsa el pergamino y escribe tu idea · o describe una imagen y pulsa Enviar");
+            return;
+        }
         const last = _loadCrearSnapshot(currentGen);
         if (last && last.imageUrl) {
             _renderCrearImage(last.imageUrl, last.prompt || '', last.meta || 'ÚLTIMA IMAGEN');
@@ -4506,6 +4515,24 @@
         }
         setActionLine("🎨 Crear — describe la imagen y pulsa Enviar");
     }
+    /* La generación activa, para quien esté fuera de este fichero (el mapa guarda
+       un pergamino por generación). Getter y no copia: `currentGen` cambia al
+       alternar Leyendas/Coetáneos y una copia se quedaría en la de arranque. */
+    try { Object.defineProperty(window, 'currentGenPublic', { get: () => currentGen, configurable: true }); }
+    catch (e) { window.currentGenPublic = currentGen; }
+    /* Puerta para el mapa: fija el tema y lanza el debate. Va por aquí y no desde
+       el módulo porque `currentProject` es un `let` de este fichero y no vive en
+       window. De paso evita el window.prompt() de DEBATIR, que bloquea la pestaña:
+       aquí el tema ya viene escrito. */
+    window.debateIdea = function (tema) {
+        const t = String(tema || '').trim();
+        if (!t) { setActionLine("Escribe la idea antes de llevarla al Consejo"); return false; }
+        currentProject = t;
+        const btn = document.querySelector('[data-verb="debatir"]');
+        if (btn) selectVerb(btn);
+        else { currentVerb = 'debatir'; updateActionLine(); executeCouncilVerb('debatir'); }
+        return true;
+    };
     function exitCrearMode() {
         // No state to clear; el viewer se cierra al cambiar de verbo via closeTableViewer()
     }

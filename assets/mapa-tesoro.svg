@@ -1,0 +1,295 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 1200 900" width="1200" height="900" role="img" aria-label="Mapa del tesoro del Consejo de Silicio">
+  <title>Mapa del tesoro</title>
+  <!--
+    Mapa del tesoro del Consejo — dibujado a mano aquí, no descargado.
+    (MorfeoMacMini, 2026-09-20, con el encargo de Carlos: "como el de Monkey
+    Island".) Todo es trazo de tinta sepia sobre pergamino: nada de fotos ni de
+    material de terceros. El grano y las manchas son filtros SVG, así que el
+    fichero pesa unos pocos kB y escala sin pixelarse.
+
+    Sistema: 1200x900. El marco ocupa 40 px por lado; el mar y las islas viven
+    dentro. Las ideas que escribe Carlos se colocan ENCIMA en HTML, con
+    coordenadas en %, para que sigan siendo texto seleccionable y legible.
+  -->
+  <defs>
+    <linearGradient id="mt-pergamino" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#eecf90"/>
+      <stop offset=".42" stop-color="#e0b877"/>
+      <stop offset="1" stop-color="#c79551"/>
+    </linearGradient>
+    <radialGradient id="mt-mancha" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#a97b3f" stop-opacity=".26"/>
+      <stop offset=".6" stop-color="#9c6f33" stop-opacity=".12"/>
+      <stop offset="1" stop-color="#8a5f2a" stop-opacity="0"/>
+    </radialGradient>
+    <radialGradient id="mt-quemado" cx=".5" cy=".5" r=".5">
+      <stop offset="0" stop-color="#5a3a14" stop-opacity="0"/>
+      <stop offset=".78" stop-color="#5a3a14" stop-opacity=".03"/>
+      <stop offset="1" stop-color="#3d250c" stop-opacity=".26"/>
+    </radialGradient>
+    <!-- Grano del papel: turbulencia fina en multiply, muy suave. -->
+    <filter id="mt-grano" x="0" y="0" width="100%" height="100%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.85" numOctaves="4" seed="7" result="n"/>
+      <feColorMatrix in="n" type="saturate" values="0" result="g"/>
+      <feComponentTransfer in="g" result="gg">
+        <feFuncA type="linear" slope=".28" intercept="0"/>
+      </feComponentTransfer>
+      <feComposite in="gg" in2="SourceGraphic" operator="in"/>
+    </filter>
+    <!-- Temblor de mano: desplaza ligerísimamente el trazo para que no sea recto de máquina. -->
+    <filter id="mt-pulso" x="-6%" y="-6%" width="112%" height="112%">
+      <feTurbulence type="fractalNoise" baseFrequency="0.028" numOctaves="2" seed="11" result="t"/>
+      <feDisplacementMap in="SourceGraphic" in2="t" scale="2.4" xChannelSelector="R" yChannelSelector="G"/>
+    </filter>
+
+    <!-- ── Piezas que se repiten ─────────────────────────────────────────── -->
+    <g id="mt-monte" stroke="#7a5328" stroke-width="2.1" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M-13 8 L0 -11 L13 8"/>
+      <path d="M-5.5 0.6 L0 -3 L5.5 0.6"/>
+    </g>
+    <g id="mt-monte-doble" stroke="#7a5328" stroke-width="2.1" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M-18 8 L-7 -8 L2 8"/>
+      <path d="M-3 8 L7 -13 L18 8"/>
+      <path d="M2.5 -3.4 L7 -7.4 L11.5 -3.4"/>
+    </g>
+    <g id="mt-palma" stroke="#7a5328" stroke-width="1.9" fill="none" stroke-linecap="round">
+      <path d="M0 10 C1.6 3 1.2 -1 -0.6 -6"/>
+      <path d="M-0.6 -6 C-5 -10 -9.5 -10 -12 -7.5"/>
+      <path d="M-0.6 -6 C-4 -12 -8 -14 -11 -13.5"/>
+      <path d="M-0.6 -6 C3.5 -10.5 8 -10.5 10.5 -8"/>
+      <path d="M-0.6 -6 C3 -12 7 -14 10 -13"/>
+      <path d="M-0.6 -6 C0.5 -11 0.2 -14 -1.5 -16"/>
+    </g>
+    <g id="mt-pino" stroke="#7a5328" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round">
+      <path d="M0 9 V2"/>
+      <path d="M-7 2 L0 -12 L7 2 Z"/>
+    </g>
+    <g id="mt-ola" stroke="#a5834d" stroke-width="1.5" fill="none" stroke-linecap="round">
+      <path d="M0 0 c5 -4 11 -4 16 0 c5 4 11 4 16 0"/>
+    </g>
+    <g id="mt-pez" stroke="#8a6535" stroke-width="1.5" fill="none" stroke-linejoin="round">
+      <path d="M-11 0 c5 -6 13 -6 18 0 c-5 6 -13 6 -18 0 Z"/>
+      <path d="M7 0 l7 -5 v10 z"/>
+      <circle cx="-5" cy="-1.4" r="1.1" fill="#8a6535" stroke="none"/>
+    </g>
+  </defs>
+
+  <!-- ── Pergamino ──────────────────────────────────────────────────────── -->
+  <rect width="1200" height="900" fill="url(#mt-pergamino)"/>
+  <rect width="1200" height="900" fill="#8a5f2a" filter="url(#mt-grano)" opacity=".15"/>
+  <ellipse cx="250" cy="200" rx="210" ry="150" fill="url(#mt-mancha)" opacity=".7"/>
+  <ellipse cx="980" cy="700" rx="240" ry="170" fill="url(#mt-mancha)" opacity=".7"/>
+  <ellipse cx="640" cy="480" rx="330" ry="240" fill="url(#mt-mancha)" opacity=".3"/>
+  <rect width="1200" height="900" fill="url(#mt-quemado)"/>
+  <!-- Baño cálido: sin él el grano gris enfría el pergamino y sale verdoso. -->
+  <rect width="1200" height="900" fill="#b8792a" opacity=".13" style="mix-blend-mode:multiply"/>
+
+  <!-- ── Marco doble con marcas de escala ───────────────────────────────── -->
+  <g filter="url(#mt-pulso)">
+    <rect x="16" y="16" width="1168" height="868" fill="none" stroke="#6b4a25" stroke-width="7"/>
+    <rect x="34" y="34" width="1132" height="832" fill="none" stroke="#6b4a25" stroke-width="2.2"/>
+    <rect x="44" y="44" width="1112" height="812" fill="none" stroke="#6b4a25" stroke-width="1.2" opacity=".65"/>
+    <g stroke="#6b4a25" stroke-width="1.6" opacity=".8">
+      <path d="M96 34 v10 M156 34 v10 M216 34 v10 M276 34 v10 M336 34 v10 M396 34 v10 M456 34 v10 M516 34 v10 M576 34 v10 M636 34 v10 M696 34 v10 M756 34 v10 M816 34 v10 M876 34 v10 M936 34 v10 M996 34 v10 M1056 34 v10 M1116 34 v10"/>
+      <path d="M96 866 v-10 M156 866 v-10 M216 866 v-10 M276 866 v-10 M336 866 v-10 M396 866 v-10 M456 866 v-10 M516 866 v-10 M576 866 v-10 M636 866 v-10 M696 866 v-10 M756 866 v-10 M816 866 v-10 M876 866 v-10 M936 866 v-10 M996 866 v-10 M1056 866 v-10 M1116 866 v-10"/>
+      <path d="M34 106 h10 M34 166 h10 M34 226 h10 M34 286 h10 M34 346 h10 M34 406 h10 M34 466 h10 M34 526 h10 M34 586 h10 M34 646 h10 M34 706 h10 M34 766 h10"/>
+      <path d="M1166 106 h-10 M1166 166 h-10 M1166 226 h-10 M1166 286 h-10 M1166 346 h-10 M1166 406 h-10 M1166 466 h-10 M1166 526 h-10 M1166 586 h-10 M1166 646 h-10 M1166 706 h-10 M1166 766 h-10"/>
+    </g>
+  </g>
+
+  <!-- ── Mar: renglones de oleaje ───────────────────────────────────────── -->
+  <g opacity=".5" filter="url(#mt-pulso)">
+    <use href="#mt-ola" x="90" y="130"/><use href="#mt-ola" x="140" y="130"/>
+    <use href="#mt-ola" x="820" y="120"/><use href="#mt-ola" x="870" y="120"/><use href="#mt-ola" x="920" y="120"/>
+    <use href="#mt-ola" x="120" y="700"/><use href="#mt-ola" x="170" y="700"/><use href="#mt-ola" x="220" y="700"/>
+    <use href="#mt-ola" x="760" y="820"/><use href="#mt-ola" x="810" y="820"/>
+    <use href="#mt-ola" x="1020" y="330"/><use href="#mt-ola" x="1070" y="330"/>
+    <use href="#mt-ola" x="470" y="820"/><use href="#mt-ola" x="520" y="820"/><use href="#mt-ola" x="570" y="820"/>
+    <use href="#mt-ola" x="640" y="96"/><use href="#mt-ola" x="690" y="96"/>
+    <use href="#mt-ola" x="470" y="160"/><use href="#mt-ola" x="520" y="160"/>
+    <use href="#mt-ola" x="90" y="352"/><use href="#mt-ola" x="140" y="352"/>
+    <use href="#mt-ola" x="286" y="386"/><use href="#mt-ola" x="336" y="386"/>
+    <use href="#mt-ola" x="960" y="176"/><use href="#mt-ola" x="1010" y="176"/>
+    <use href="#mt-ola" x="1000" y="600"/><use href="#mt-ola" x="1050" y="600"/>
+    <use href="#mt-ola" x="120" y="606"/><use href="#mt-ola" x="170" y="606"/>
+    <use href="#mt-ola" x="300" y="768"/><use href="#mt-ola" x="350" y="768"/>
+    <use href="#mt-ola" x="60" y="246"/><use href="#mt-ola" x="110" y="246"/>
+    <use href="#mt-ola" x="1080" y="740"/>
+  </g>
+  <g opacity=".45">
+    <use href="#mt-pez" x="150" y="330"/>
+    <use href="#mt-pez" x="1060" y="470"/>
+    <use href="#mt-pez" x="700" y="806"/>
+  </g>
+
+  <!-- ── Isla grande (la del Consejo) ───────────────────────────────────── -->
+  <g filter="url(#mt-pulso)">
+    <path d="M362 470
+             C352 402 392 350 452 336
+             C486 328 508 300 552 292
+             C606 282 644 306 690 300
+             C742 294 772 262 818 276
+             C862 289 872 334 866 376
+             C860 418 884 444 876 486
+             C868 530 826 540 806 574
+             C784 612 794 660 756 686
+             C716 714 668 692 622 702
+             C572 713 544 748 496 736
+             C444 723 438 672 412 636
+             C388 602 370 540 362 470 Z"
+          fill="#e8d3a2" stroke="#6b4a25" stroke-width="3.4" stroke-linejoin="round"/>
+    <path d="M378 470
+             C369 406 406 360 460 347
+             C494 339 516 311 556 304
+             C606 295 642 318 688 312
+             C736 306 766 277 810 290
+             C848 301 857 340 852 378
+             C847 416 869 442 861 480
+             C854 519 815 529 796 560
+             C776 594 785 640 750 663
+             C714 687 671 668 628 677
+             C583 687 556 718 512 707
+             C466 696 460 650 436 617
+             C414 586 386 528 378 470 Z"
+          fill="none" stroke="#8a6535" stroke-width="1.5" opacity=".75"/>
+  </g>
+  <g opacity=".95">
+    <use href="#mt-monte-doble" x="612" y="470"/>
+    <use href="#mt-monte" x="672" y="486"/>
+    <use href="#mt-monte" x="560" y="500"/>
+    <use href="#mt-monte" x="726" y="440"/>
+    <use href="#mt-monte-doble" x="500" y="580"/>
+    <use href="#mt-palma" x="452" y="430"/>
+    <use href="#mt-palma" x="478" y="452"/>
+    <use href="#mt-palma" x="806" y="400"/>
+    <use href="#mt-palma" x="830" y="424"/>
+    <use href="#mt-pino" x="700" y="600"/>
+    <use href="#mt-pino" x="736" y="614"/>
+    <use href="#mt-pino" x="560" y="640"/>
+    <use href="#mt-pino" x="596" y="654"/>
+  </g>
+  <!-- Calavera en el interior: aquí la cosa se pone seria. -->
+  <g transform="translate(646,556)" stroke="#6b4a25" stroke-width="2" fill="none" opacity=".9">
+    <path d="M-13 -2 C-13 -13 -6 -18 0 -18 C6 -18 13 -13 13 -2 C13 4 9 8 6 9 L-6 9 C-9 8 -13 4 -13 -2 Z"/>
+    <circle cx="-5.4" cy="-4" r="3.2" fill="#6b4a25" stroke="none"/>
+    <circle cx="5.4" cy="-4" r="3.2" fill="#6b4a25" stroke="none"/>
+    <path d="M0 0 l-2.2 4 h4.4 z" fill="#6b4a25" stroke="none"/>
+    <path d="M-7 12 h14 M-5 9 v5 M0 9 v5 M5 9 v5"/>
+    <path d="M-22 16 L22 -6 M-22 -6 L22 16" stroke-width="2.4"/>
+  </g>
+
+  <!-- ── Isla del norte ─────────────────────────────────────────────────── -->
+  <g filter="url(#mt-pulso)">
+    <path d="M208 196
+             C214 156 258 132 306 138
+             C346 143 366 124 402 132
+             C440 140 452 176 440 206
+             C428 236 444 260 424 282
+             C402 306 362 292 330 302
+             C294 313 268 336 240 320
+             C212 304 216 268 210 240
+             C206 222 205 208 208 196 Z"
+          fill="#e8d3a2" stroke="#6b4a25" stroke-width="3.4" stroke-linejoin="round"/>
+    <path d="M222 198
+             C228 163 266 143 308 148
+             C346 153 364 135 398 143
+             C430 150 440 180 429 206
+             C418 232 432 254 414 273
+             C394 294 359 281 330 291
+             C298 301 272 321 248 307
+             C224 293 229 264 224 239
+             C220 222 220 209 222 198 Z"
+          fill="none" stroke="#8a6535" stroke-width="1.5" opacity=".75"/>
+  </g>
+  <use href="#mt-monte" x="352" y="186"/>
+  <use href="#mt-monte-doble" x="296" y="214"/>
+  <use href="#mt-pino" x="252" y="256"/>
+  <use href="#mt-palma" x="392" y="244"/>
+
+  <!-- ── Isla del oeste ─────────────────────────────────────────────────── -->
+  <g filter="url(#mt-pulso)">
+    <path d="M78 448
+             C82 416 116 398 152 404
+             C184 409 206 392 236 402
+             C266 412 274 442 262 464
+             C250 486 262 508 242 524
+             C220 542 188 530 162 538
+             C132 547 108 562 90 546
+             C72 530 76 502 76 478
+             C76 466 77 456 78 448 Z"
+          fill="#e8d3a2" stroke="#6b4a25" stroke-width="3.4" stroke-linejoin="round"/>
+  </g>
+  <use href="#mt-monte-doble" x="150" y="464"/>
+  <use href="#mt-pino" x="208" y="490"/>
+  <use href="#mt-palma" x="108" y="508"/>
+
+  <!-- ── Galeón ─────────────────────────────────────────────────────────── -->
+  <g transform="translate(296,656)" stroke="#6b4a25" stroke-width="2.1" fill="none" stroke-linejoin="round" stroke-linecap="round">
+    <!-- casco -->
+    <path d="M-50 10 L50 10 C44 28 -40 28 -50 10 Z" fill="#dfc58f"/>
+    <path d="M-50 10 L-56 -2 M50 10 L57 0" />
+    <path d="M-42 17 L42 17" opacity=".55"/>
+    <!-- palos -->
+    <path d="M-26 10 V-28 M2 10 V-50 M30 10 V-22"/>
+    <!-- velas hinchadas por babor -->
+    <path d="M-40 -24 C-31 -17 -22 -17 -13 -24 L-13 -6 C-22 -13 -31 -13 -40 -6 Z" fill="#f2e0b8"/>
+    <path d="M-12 -46 C0 -37 10 -37 18 -46 L18 -22 C10 -31 0 -31 -12 -22 Z" fill="#f2e0b8"/>
+    <path d="M-10 -18 C0 -11 8 -11 16 -18 L16 -1 C8 -8 0 -8 -10 -1 Z" fill="#f2e0b8"/>
+    <path d="M18 -20 C25 -14 32 -14 40 -20 L40 -4 C32 -10 25 -10 18 -4 Z" fill="#f2e0b8"/>
+    <!-- gallardete -->
+    <path d="M2 -50 L2 -60 L18 -55 Z" fill="#c9aa72"/>
+  </g>
+
+  <!-- ── Serpiente de mar ───────────────────────────────────────────────── -->
+  <g transform="translate(920,760)" stroke="#6b4a25" stroke-width="2.3" fill="none" stroke-linecap="round">
+    <path d="M-70 18 C-56 0 -42 34 -28 16 C-14 -2 0 32 14 14 C24 1 34 12 42 4"/>
+    <path d="M42 4 C48 -2 54 -10 50 -18 C46 -26 34 -26 30 -18 C27 -12 31 -6 36 -6"/>
+    <circle cx="41" cy="-17" r="1.8" fill="#6b4a25" stroke="none"/>
+    <path d="M30 -18 l-9 -6 M33 -24 l-3 -9"/>
+  </g>
+
+  <!-- ── Rosa de los vientos ────────────────────────────────────────────── -->
+  <g transform="translate(150,742)">
+    <circle r="62" fill="none" stroke="#6b4a25" stroke-width="2.6"/>
+    <circle r="53" fill="none" stroke="#6b4a25" stroke-width="1.3" opacity=".7"/>
+    <circle r="20" fill="none" stroke="#6b4a25" stroke-width="1.6"/>
+    <g stroke="#6b4a25" stroke-width="1.2" opacity=".8">
+      <path d="M0 -62 v9 M0 62 v-9 M-62 0 h9 M62 0 h-9"/>
+      <path d="M-43.8 -43.8 l6.4 6.4 M43.8 43.8 l-6.4 -6.4 M43.8 -43.8 l-6.4 6.4 M-43.8 43.8 l6.4 -6.4"/>
+    </g>
+    <!-- Puntas diagonales, primero, para que las cardinales queden encima -->
+    <g fill="#c9aa72" stroke="#6b4a25" stroke-width="1.4">
+      <path d="M0 0 L26 -26 L7 -7 Z"/><path d="M0 0 L26 26 L7 7 Z"/>
+      <path d="M0 0 L-26 26 L-7 7 Z"/><path d="M0 0 L-26 -26 L-7 -7 Z"/>
+    </g>
+    <g stroke="#6b4a25" stroke-width="1.6">
+      <path d="M0 0 L-9 -9 L0 -52 L9 -9 Z" fill="#f0dcb0"/>
+      <path d="M0 0 L9 -9 L0 -52 Z" fill="#a9854e"/>
+      <path d="M0 0 L9 9 L52 0 L9 -9 Z" fill="#f0dcb0"/>
+      <path d="M0 0 L9 -9 L52 0 Z" fill="#a9854e"/>
+      <path d="M0 0 L-9 9 L0 52 L9 9 Z" fill="#f0dcb0"/>
+      <path d="M0 0 L-9 9 L0 52 Z" fill="#a9854e"/>
+      <path d="M0 0 L-9 -9 L-52 0 L-9 9 Z" fill="#f0dcb0"/>
+      <path d="M0 0 L-9 9 L-52 0 Z" fill="#a9854e"/>
+    </g>
+    <circle r="5" fill="#6b4a25"/>
+    <text x="0" y="-66" text-anchor="middle" font-family="'IM Fell English','Times New Roman',serif" font-size="17" fill="#6b4a25">N</text>
+  </g>
+
+  <!-- ── Líneas de rumbo ────────────────────────────────────────────────── -->
+  <g stroke="#6b4a25" stroke-width="1" opacity=".35">
+    <path d="M150 742 L690 96"/>
+    <path d="M150 742 L1156 300"/>
+    <path d="M150 742 L1080 812"/>
+    <path d="M150 742 L300 60"/>
+    <path d="M690 96 L1156 500"/>
+  </g>
+
+  <!-- ── Título ─────────────────────────────────────────────────────────── -->
+  <text x="600" y="92" text-anchor="middle"
+        font-family="'Pirata One','IM Fell English','Times New Roman',serif"
+        font-size="46" letter-spacing="7" fill="#5e3f1d" opacity=".92">MAPA DEL TESORO</text>
+  <text x="600" y="120" text-anchor="middle"
+        font-family="'IM Fell English','Times New Roman',serif"
+        font-size="16" letter-spacing="4" fill="#7a5328" opacity=".8">CONSEJO DE SILICIO</text>
+</svg>

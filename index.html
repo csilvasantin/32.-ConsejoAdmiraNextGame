@@ -44,6 +44,10 @@
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=Press+Start+2P&display=swap" rel="stylesheet">
+    <!-- Mapa del tesoro: IM Fell English es del XVII y se LEE (que era el encargo:
+         «estilo pirata pero legible»). Pirata One sólo para el rótulo, que es
+         grande y ahí sí puede permitirse ser decorativa. -->
+    <link href="https://fonts.googleapis.com/css2?family=IM+Fell+English:ital@0;1&family=Pirata+One&display=swap" rel="stylesheet">
     <style>
         * { margin: 0; padding: 0; box-sizing: border-box; }
         /* Accesibilidad: respeta la preferencia de menos movimiento (las animaciones SCUMM se calman) */
@@ -3236,6 +3240,100 @@
         .sentence-line .sl-verb { color: #ffd24a; }
         .sentence-line .sl-obj { color: #ffffff; }
         .sentence-line:empty::before { content: "Pulsa un verbo y un consejero\2026"; color: #7a5a30; }
+        /* ══ MAPA DEL TESORO ═══════════════════════════════════════════════ */
+        .mt-overlay {
+            position: fixed; inset: 0; z-index: 60; display: none;
+            align-items: center; justify-content: center;
+            background: rgba(10, 6, 2, .82); padding: 18px;
+        }
+        .mt-overlay.on { display: flex; }
+        .mt-marco {
+            width: min(1180px, 96vw); max-height: 94vh; display: flex; flex-direction: column;
+            background: #2a1a08; border: 3px solid #6b4a25;
+            box-shadow: 0 18px 50px rgba(0, 0, 0, .65);
+        }
+        .mt-barra {
+            display: flex; align-items: center; gap: 12px; padding: 8px 12px;
+            background: linear-gradient(#3a2510, #241506); border-bottom: 2px solid #6b4a25;
+            font-family: 'Press Start 2P', monospace; font-size: 9px; color: #f0cf6a;
+        }
+        .mt-titulo { font-family: 'Pirata One', 'IM Fell English', serif; font-size: 26px; letter-spacing: 1px; color: #ffd98a; line-height: 1; }
+        .mt-contaje { color: #c9a463; }
+        .mt-ayuda { margin-left: auto; color: #8a6c3c; font-size: 8px; }
+        .mt-cerrar {
+            font-family: 'Press Start 2P', monospace; font-size: 9px; cursor: pointer;
+            color: #ffee88; background: #5d3f22; padding: 7px 10px; border-radius: 0;
+            border-top: 2px solid #bb9058; border-left: 2px solid #bb9058;
+            border-right: 2px solid #402a12; border-bottom: 2px solid #402a12;
+        }
+        .mt-cerrar:hover { background: #7a5530; color: #fff; }
+        /* El lienzo manda: todo lo de encima se posiciona en % sobre ÉL, así que
+           el pergamino y las ideas escalan juntos y una idea nunca se despega de
+           donde se escribió. */
+        .mt-lienzo { position: relative; overflow: auto; background: #1a0f04; }
+        .mt-lienzo img { display: block; width: 100%; height: auto; }
+        .mt-lienzo .mt-ruta, .mt-lienzo .mt-ideas { position: absolute; inset: 0; }
+        .mt-ruta { width: 100%; height: 100%; pointer-events: none; overflow: visible; }
+        /* La ruta se dibuja en el sistema de la caja (0..100) con
+           preserveAspectRatio="none": así un punto al 40/60 cae exactamente donde
+           está la nota, sin tener que convertir a píxeles en cada repintado. */
+        /* vector-effect + stroke-width en px: sin eso, el escalado no uniforme de
+           preserveAspectRatio="none" deformaría el trazo (grueso en un eje, fino
+           en el otro) y el discontinuo saldría estirado. */
+        .mt-ruta-linea {
+            fill: none; stroke: #b3341f; stroke-width: 2.4px;
+            stroke-dasharray: 7 7; stroke-linecap: round; opacity: .92;
+            vector-effect: non-scaling-stroke;
+        }
+        .mt-ruta-x { fill: none; stroke: #b3341f; stroke-width: 3px; stroke-linecap: round; vector-effect: non-scaling-stroke; }
+        .mt-ideas { pointer-events: none; }
+        .mt-nota {
+            position: absolute; transform: translate(-50%, -50%) rotate(var(--giro, 0deg));
+            display: flex; align-items: center; gap: 6px; pointer-events: auto;
+            max-width: 34%;
+        }
+        .mt-marca {
+            flex: none; width: 20px; height: 20px; border-radius: 50%;
+            display: grid; place-items: center; cursor: grab;
+            background: #b3341f; color: #ffe9c9; border: 1px solid #6b2110;
+            font-family: 'IM Fell English', serif; font-size: 13px; line-height: 1;
+        }
+        .mt-nota.moviendo .mt-marca { cursor: grabbing; }
+        /* La letra del encargo: pirata pero LEGIBLE. IM Fell English en cursiva
+           sobre una nota de papel, no sobre el pergamino pelado — encima de las
+           manchas y los dibujos, el texto solo no se lee. */
+        .mt-texto {
+            font-family: 'IM Fell English', 'Times New Roman', serif; font-style: italic;
+            font-size: 18px; line-height: 1.25; color: #40260e; cursor: text;
+            background: rgba(247, 233, 199, .8); padding: 3px 8px;
+            border: 1px solid rgba(107, 74, 37, .45);
+            box-shadow: 0 1px 0 rgba(107, 74, 37, .3);
+            overflow-wrap: anywhere;
+        }
+        .mt-texto:hover { background: rgba(252, 241, 214, .95); }
+        .mt-acciones { display: none; gap: 4px; }
+        .mt-nota:hover .mt-acciones, .mt-nota:focus-within .mt-acciones { display: flex; }
+        .mt-acciones button {
+            font-family: 'Press Start 2P', monospace; font-size: 7px; cursor: pointer;
+            color: #ffee88; background: #5d3f22; padding: 5px 6px;
+            border-top: 1px solid #bb9058; border-left: 1px solid #bb9058;
+            border-right: 1px solid #402a12; border-bottom: 1px solid #402a12;
+        }
+        .mt-acciones button:hover { background: #7a5530; color: #fff; }
+        .mt-acciones .mt-borrar { background: #6b2110; color: #ffd8cc; }
+        .mt-escribe {
+            position: absolute; transform: translate(-50%, -50%); pointer-events: auto;
+            width: min(330px, 30%);
+            font-family: 'IM Fell English', 'Times New Roman', serif; font-style: italic;
+            font-size: 18px; color: #40260e; background: #fbf0d6;
+            border: 1px solid #6b4a25; padding: 4px 8px; outline: none;
+        }
+        .mt-escribe::placeholder { color: #9a7b4c; font-style: normal; font-size: 15px; }
+        @media (max-width: 700px) {
+            .mt-ayuda { display: none; }
+            .mt-nota { max-width: 60%; }
+            .mt-texto { font-size: 15px; }
+        }
         .inv-item.locked { opacity: 0.5; }
         .inv-item.locked:hover { opacity: 0.7; }
         html, body { overflow-x: hidden; }
@@ -3822,6 +3920,27 @@ body.rail-open{overflow:hidden}
             </div>
         </div>
 
+        <!-- ── MAPA DEL TESORO ──────────────────────────────────────────────
+             Lo abre el verbo CREAR. El pergamino es un SVG dibujado a mano en
+             assets/mapa-tesoro.svg; las ideas van ENCIMA en HTML, para que sigan
+             siendo texto de verdad —seleccionable, editable, legible— y no
+             etiquetas dentro de un dibujo. -->
+        <div class="mt-overlay" id="mapa-tesoro" hidden>
+            <div class="mt-marco">
+                <div class="mt-barra">
+                    <b class="mt-titulo">Mapa del Tesoro</b>
+                    <span class="mt-contaje"></span>
+                    <span class="mt-ayuda">pulsa el pergamino para escribir · arrastra el número para mover</span>
+                    <button type="button" class="mt-cerrar" title="Cerrar el mapa (Esc)">Cerrar</button>
+                </div>
+                <div class="mt-lienzo">
+                    <img src="assets/mapa-tesoro.svg?v=20260920-r3" alt="Mapa del tesoro del Consejo de Silicio">
+                    <svg class="mt-ruta" viewBox="0 0 100 100" preserveAspectRatio="none" aria-hidden="true"></svg>
+                    <div class="mt-ideas"></div>
+                </div>
+            </div>
+        </div>
+
         <div class="yar-overlay" id="yar-overlay" onclick="if(event.target===this) closeYarOverlay()">
             <div class="yar-dialog">
                 <div class="yar-title">🧭 YARIG.AI — RECOGIDA Y ENVÍO DE CONTEXTO</div>
@@ -4217,8 +4336,9 @@ body.rail-open{overflow:hidden}
 <script defer src="council-table.js?v=20260918-r5-desk-cors"></script>
 <script defer src="council-speech.js?v=20260918-r5-desk-cors"></script>
 <script defer src="council-grokbot.js?v=20260918-r5-desk-cors"></script>
-<script defer src="app.flt-100529.js?v=20260920-r21-unalinea"></script>
+<script defer src="app.flt-100529.js?v=20260920-r22-mapa"></script>
 <script defer src="council-integration.js?v=20260918-r5-desk-cors"></script>
 <script type="module" src="assets/mac-hoy.js?v=20260920-macbarra2"></script>
+<script type="module" src="assets/mapa-ideas.js?v=20260920-mapa1"></script>
 </body>
 </html>

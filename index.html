@@ -1332,12 +1332,12 @@
            (3×78 + 2×5 = 244) para que las dos casillas grandes de la derecha
            pesen igual. Sin el `filter: drop-shadow` de la vista grande: a este
            tamaño sólo ensuciaba el borde. */
-        /* La zona del Mac se queda con el ancho que sobra y lo centra. Apretar los
-           verbos libera bastante más de lo que ocupa el Mac, y dejar ese sobrante
-           como una franja muerta al final de la barra la hacía parecer a medio
-           terminar; repartido a los lados del Mac, la barra termina en algo. */
+        /* Pegado a los objetos, y lo que sobre que quede al final de la barra
+           (Carlos, 2026-09-20). No crece —si creciera, el Mac se despegaría de los
+           iconos y se iría flotando al centro del sobrante— pero sí encoge, para
+           no salirse cuando la barra se estrecha. */
         .mac-scumm {
-            flex: 1 1 260px; min-width: 0; border-left: 1px solid #1a1a2e;
+            flex: 0 1 260px; min-width: 0; border-left: 1px solid #1a1a2e;
             padding: 6px 8px; display: flex; align-items: center; justify-content: center;
         }
         /* El Mac ENCOGE si la barra se estrecha, en vez de salirse por la derecha
@@ -1348,8 +1348,20 @@
             width: min(244px, 100%); filter: none; cursor: pointer;
             background: transparent; border: 0; padding: 0; display: block;
         }
-        .mac-scumm .mac-hoy-front-stage:hover { filter: brightness(1.12); }
-        .mac-scumm .mac-hoy-front-stage:focus-visible { outline: 1px solid #ffd27a; outline-offset: 2px; }
+        .mac-scumm .mac-hoy-front-stage { position: relative; }
+        /* El cristal del Mac de la barra. Cae justo sobre el tubo: la matriz de la
+           vista frontal lleva el plano de 512x342 a (263,90) del dibujo de 918x893
+           y lo deja midiendo 400x334 — o sea 28.6%..72.2% de ancho y 10.1%..47.5%
+           de alto. Va sólo aquí: en la vista grande la pantalla ya no tiene que
+           abrir nada. */
+        .mac-scumm-glass {
+            position: absolute; z-index: 4;
+            left: 28.6%; top: 10.1%; width: 43.6%; height: 37.4%;
+            background: transparent; border: 0; padding: 0; cursor: pointer;
+            -webkit-appearance: none; appearance: none;
+        }
+        .mac-scumm-glass:focus { outline: none; }
+        .mac-scumm-glass:focus-visible { outline: none; }
         /* Panels del inventario — uno visible a la vez según el verbo activo */
         .inv-panel { display: none; flex: 1; flex-direction: column; }
         .inv-panel.active { display: flex; }
@@ -3690,7 +3702,10 @@ body.rail-open{overflow:hidden}
                     <button class="verb-btn" id="btn-mostrar" type="button" title="Macintosh 1984 sobre la mesa · mismo gesto que /mac" onclick="event.stopPropagation(); window.MacHoy && window.MacHoy.toggle()">Mac 1984</button>
                     <button class="verb-btn" data-verb="presentar" title="Genera una presentación a partir de un tema" onclick="selectVerb(this)">Presentar</button>
                     <button class="verb-btn verb-primary" data-verb="reunion" title="Reúnete a solas con un consejero (chat 1 a 1)" onclick="selectVerb(this)">Reunión</button>
-                    <button class="verb-btn apagado" data-verb="previo" id="btn-previo" title="Reabre la última presentación generada — se enciende cuando hay una" onclick="selectVerb(this)">Previo</button>
+                    <!-- PREVIO ya no tiene caja propia (Carlos, 2026-09-20): el previo
+                         es el Mac 1984, que ahora está siempre a la vista en la barra.
+                         El verbo sigue existiendo —/previo y triggerPrevio()— y el
+                         código que lo encendía ya preguntaba si la caja estaba. -->
                 </div>
                 <div class="verb-pager">
                     <button class="verb-arrow" id="verb-up" type="button" onclick="verbPage(-1)" title="Verbos anteriores" aria-label="Verbos anteriores">▲</button>
@@ -3788,15 +3803,21 @@ body.rail-open{overflow:hidden}
                      .mac-hoy-front-stage y no una copia de sus reglas: el día que se
                      retoque el encaje del tubo, se retoca en un sitio. -->
                 <div class="mac-scumm" id="mac-scumm">
-                    <button type="button" class="mac-hoy-front-stage mac-scumm-stage"
-                            title="Macintosh 1984 · pulsa para verlo en grande"
-                            onclick="if(window.MacHoy){ if(!window.MacHoy.isVisible()) window.MacHoy.setVisible(true); window.MacHoy.openFront(); }">
+                    <div class="mac-hoy-front-stage mac-scumm-stage">
                         <img src="assets/mac-1984-front.png?v=20260919-sinhalo" alt="Macintosh 1984">
                         <pre class="mac-hoy-crt-front" id="mac-hoy-crt-bar">HOY</pre>
                         <i class="mac-hoy-logo mac-hoy-logo-front" aria-hidden="true"></i>
                         <div class="mac-hoy-front-shade" aria-hidden="true"></div>
                         <canvas class="mac-hoy-pong mac-hoy-pong-front" width="512" height="342" aria-hidden="true"></canvas>
-                    </button>
+                        <!-- Los mismos cuatro mandos que sobre la mesa. Llevan las
+                             clases de la vista frontal, que es de donde sale el
+                             dibujo, y por eso mac-hoy.js los engancha sin nombrarlos
+                             uno a uno. -->
+                        <button type="button" class="mac-scumm-glass" title="Pantalla · ábrelo en grande"></button>
+                        <button type="button" class="mac-hoy-front-floppy" title="Disquetera · mete y saca el disco del Pong"></button>
+                        <button type="button" class="mac-hoy-front-keys" title="Teclado · misión anterior — con el Pong puesto, sube la pala"></button>
+                        <button type="button" class="mac-hoy-front-mouse" title="Ratón · misión siguiente — con el Pong puesto, baja la pala"></button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -4198,6 +4219,6 @@ body.rail-open{overflow:hidden}
 <script defer src="council-grokbot.js?v=20260918-r5-desk-cors"></script>
 <script defer src="app.flt-100529.js?v=20260920-r21-unalinea"></script>
 <script defer src="council-integration.js?v=20260918-r5-desk-cors"></script>
-<script type="module" src="assets/mac-hoy.js?v=20260920-macbarra"></script>
+<script type="module" src="assets/mac-hoy.js?v=20260920-macbarra2"></script>
 </body>
 </html>

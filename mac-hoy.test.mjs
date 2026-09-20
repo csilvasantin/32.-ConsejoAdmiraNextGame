@@ -175,7 +175,10 @@ test('disquetera: hay Pong y su propio modo de pantalla', () => {
 test('pong: los periféricos juegan y no navegan mientras está puesto', async () => {
   const src = fs.readFileSync(new URL('./assets/mac-hoy.js', import.meta.url), 'utf8');
   // navegar sólo fuera del pong
-  assert.match(src, /if \(!visible \|\| modo === 'pong'\) return;\s*\/\/ jugando no se navega/);
+  assert.match(src, /if \(modo === 'pong'\) return;\s*\/\/ jugando no se navega/);
+  // y sólo con el Mac encendido: `enciende()` lo da por bueno si ya lo está y,
+  // si no, sólo lo enciende cuando el mando pulsado es el de la barra SCUMM.
+  assert.match(src, /if \(!enciende\(el\)\) return;/);
   // mantener pulsado mueve la pala, soltar la para
   assert.match(src, /pointerdown/);
   assert.match(src, /pointerup/);
@@ -199,8 +202,9 @@ test('la vista frontal tiene sus propios mandos de misión', () => {
   assert.match(html, /id="mac-hoy-front-keys"/);
   assert.match(html, /id="mac-hoy-front-mouse"/);
   const src = fs.readFileSync(new URL('./assets/mac-hoy.js', import.meta.url), 'utf8');
-  assert.match(src, /mando\('#mac-hoy-front-mouse', \+1\)/);
-  assert.match(src, /mando\('#mac-hoy-front-keys', -1\)/);
+  // Por clase, de una vez: mesa, vista grande y barra llevan las mismas.
+  assert.match(src, /mando\('\.mac-hoy-mouse, \.mac-hoy-front-mouse', \+1\)/);
+  assert.match(src, /mando\('\.mac-hoy-keys, \.mac-hoy-front-keys', -1\)/);
   // y al abrirla, la ficha se pasea igual que en la mesa
   assert.match(src, /paintCrt\(front, lastText\)\.then\(\(\) => paseaTexto\(front\)\)/);
 });
@@ -216,6 +220,38 @@ test('el Mac vive también en la barra SCUMM, a la derecha de los objetos', () =
   // Y ocupa lo mismo que la rejilla de iconos: 3x78 + 2x5 = 244.
   assert.match(html, /\.mac-scumm \.mac-hoy-front-stage\s*\{[^}]*width: min\(244px, 100%\)/);
   assert.match(html, /\.inv-objetos \{[^}]*repeat\(3, 78px\)[^}]*gap: 5px/);
+});
+
+test('el Mac de la barra hace lo mismo que el de la mesa', () => {
+  // El bloque de la barra: desde su div hasta que se cierra la zona.
+  const abre = html.indexOf('<div class="mac-scumm" id="mac-scumm">');
+  assert.ok(abre > 0, 'no está el Mac de la barra');
+  const dentro = html.slice(abre, html.indexOf('</div>', html.indexOf('mac-hoy-front-mouse', abre)));
+  for (const mando of ['mac-scumm-glass', 'mac-hoy-front-floppy', 'mac-hoy-front-keys', 'mac-hoy-front-mouse']) {
+    assert.ok(dentro.includes(mando), 'falta ' + mando + ' en el Mac de la barra');
+  }
+  // Y los cuatro van DENTRO del mismo dibujo, que es quien los coloca en %.
+  assert.ok(dentro.indexOf('mac-scumm-stage') < dentro.indexOf('mac-scumm-glass'));
+  // La pantalla cae sobre el tubo, no sobre la carcasa.
+  assert.match(html, /\.mac-scumm-glass \{[^}]*left: 28\.6%; top: 10\.1%; width: 43\.6%; height: 37\.4%/);
+  const src = fs.readFileSync(new URL('./assets/mac-hoy.js', import.meta.url), 'utf8');
+  // Y valen con el Mac apagado: en la barra está siempre a la vista, así que sus
+  // mandos lo encienden en vez de no hacer nada.
+  assert.match(src, /const enLaBarra = \(el\) => !!\(el && el\.closest && el\.closest\('\.mac-scumm'\)\)/);
+  assert.match(src, /if \(!enLaBarra\(el\)\) return false;\s*\n\s*setVisible\(true, root, fetchImpl\);/);
+  assert.match(src, /querySelectorAll\('#mac-hoy-glass, \.mac-scumm-glass'\)/);
+});
+
+test('PREVIO ya no tiene caja: el previo es el Mac 1984', () => {
+  assert.ok(!/id="btn-previo"/.test(html), 'la caja de PREVIO se quita de la rejilla');
+  assert.ok(!/data-verb="previo"/.test(html));
+  // El verbo NO se borra: /previo y triggerPrevio() siguen valiendo.
+  const app = fs.readFileSync(new URL('./app.flt-100529.js', import.meta.url), 'utf8');
+  assert.match(app, /function triggerPrevio\(\)/);
+  assert.match(app, /if \(currentVerb === 'previo'\) triggerPrevio\(\);/);
+  // Y lo que encendía la caja ya preguntaba si estaba, así que no revienta.
+  assert.match(app, /const previo = document\.getElementById\('btn-previo'\);\s*\n\s*if \(previo\)/);
+  assert.match(app, /if \(previoBtn\) previoBtn\.style\.display = '';/);
 });
 
 test('los tres tubos del Mac se escriben a la vez y por clase', () => {
@@ -246,8 +282,8 @@ test('el Pong también existe en la vista frontal', () => {
   // se pinta en TODOS los tubos, no sólo en el de la mesa
   assert.match(src, /querySelectorAll\('\.mac-hoy-pong'\)/);
   assert.match(src, /ctxs\.forEach/);
-  // las dos disqueteras meten y sacan el disco
-  assert.match(src, /\['#mac-hoy-floppy', '#mac-hoy-front-floppy'\]/);
+  // las TRES disqueteras meten y sacan el disco
+  assert.match(src, /querySelectorAll\('\.mac-hoy-floppy, \.mac-hoy-front-floppy'\)/);
   // y abrir el frontal con el juego puesto lo engancha al lienzo recién aparecido
   assert.match(src, /if \(modo === 'pong'\) \{ arrancaPong\(root\); return true; \}/);
 });

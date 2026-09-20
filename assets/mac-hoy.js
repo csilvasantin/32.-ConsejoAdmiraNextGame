@@ -468,12 +468,24 @@ export function boot(root = document, fetchImpl = fetch) {
   setVisible(false, root, fetchImpl);
   fitScreen(root);
   watchScreen(root);
-  const glass = root.querySelector('#mac-hoy-glass') || prop;
-  glass.addEventListener('click', (e) => {
-    e.preventDefault();
-    e.stopPropagation();
-    if (!visible) return;
-    openFront(root, fetchImpl);
+  // El Mac de la barra SCUMM está SIEMPRE a la vista, así que sus mandos tienen
+  // que valer también con el Mac de la mesa apagado: lo encienden y siguen. Los
+  // de la mesa y los de la vista grande no lo necesitan —si está apagado, no se
+  // ven—, y por eso se distingue por dónde se ha pulsado.
+  const enLaBarra = (el) => !!(el && el.closest && el.closest('.mac-scumm'));
+  const enciende = (el) => {
+    if (visible) return true;
+    if (!enLaBarra(el)) return false;
+    setVisible(true, root, fetchImpl);
+    return true;
+  };
+  root.querySelectorAll('#mac-hoy-glass, .mac-scumm-glass').forEach((glass) => {
+    glass.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!enciende(glass)) return;
+      openFront(root, fetchImpl);
+    });
   });
   // Los periféricos del dibujo son los mandos de la pantalla. Pulsar de nuevo
   // el mismo devuelve a HOY, así que nunca se queda uno atrapado en un modo.
@@ -482,32 +494,33 @@ export function boot(root = document, fetchImpl = fetch) {
   // misión. Avanzar y retroceder es cosa del detalle, no del juego
   // (Carlos, 2026-09-19).
   const mando = (sel, delta) => {
-    const el = root.querySelector(sel);
-    if (!el) return;
-    const empuja = (e) => {
-      if (!visible || modo !== 'pong') return;
-      e.preventDefault();
-      jugador = delta;                       // ratón (+1) baja, teclado (-1) sube
-    };
-    const suelta = () => { if (jugador === delta) jugador = 0; };
-    // Un clic de ratón no debe dejar el botón con el foco: si luego se pulsa
-    // una tecla, el navegador lo pintaría con su marco encima del dibujo.
-    el.addEventListener('mouseup', () => { try { el.blur(); } catch (e) {} });
-    el.addEventListener('pointerdown', empuja);
-    el.addEventListener('pointerup', suelta);
-    el.addEventListener('pointerleave', suelta);
-    el.addEventListener('pointercancel', suelta);
-    el.addEventListener('click', (e) => {
-      e.preventDefault();
-      e.stopPropagation();
-      if (!visible || modo === 'pong') return;   // jugando no se navega
-      avanzaPantalla(delta, root, fetchImpl);
+    root.querySelectorAll(sel).forEach((el) => {
+      const empuja = (e) => {
+        if (!visible || modo !== 'pong') return;
+        e.preventDefault();
+        jugador = delta;                       // ratón (+1) baja, teclado (-1) sube
+      };
+      const suelta = () => { if (jugador === delta) jugador = 0; };
+      // Un clic de ratón no debe dejar el botón con el foco: si luego se pulsa
+      // una tecla, el navegador lo pintaría con su marco encima del dibujo.
+      el.addEventListener('mouseup', () => { try { el.blur(); } catch (e) {} });
+      el.addEventListener('pointerdown', empuja);
+      el.addEventListener('pointerup', suelta);
+      el.addEventListener('pointerleave', suelta);
+      el.addEventListener('pointercancel', suelta);
+      el.addEventListener('click', (e) => {
+        e.preventDefault();
+        e.stopPropagation();
+        if (!enciende(el)) return;
+        if (modo === 'pong') return;           // jugando no se navega
+        avanzaPantalla(delta, root, fetchImpl);
+      });
     });
   };
-  mando('#mac-hoy-mouse', +1);         // ratón   -> misión siguiente · pala abajo
-  mando('#mac-hoy-keys', -1);          // teclado -> misión anterior · pala arriba
-  mando('#mac-hoy-front-mouse', +1);   // los mismos, en la vista frontal
-  mando('#mac-hoy-front-keys', -1);
+  // Por CLASE: la mesa, la vista grande y el de la barra llevan las mismas y se
+  // enganchan los tres de una vez.
+  mando('.mac-hoy-mouse, .mac-hoy-front-mouse', +1);   // ratón   -> siguiente · pala abajo
+  mando('.mac-hoy-keys, .mac-hoy-front-keys', -1);     // teclado -> anterior  · pala arriba
   // Y con el teclado de verdad, que para eso es un Pong. Nunca mientras se
   // escribe en un campo: ahí las flechas son del texto.
   if (typeof document !== 'undefined' && !document.__macTeclas) {
@@ -522,13 +535,12 @@ export function boot(root = document, fetchImpl = fetch) {
       if (['ArrowUp', 'ArrowDown', 'w', 'W', 's', 'S'].includes(e.key)) jugador = 0;
     });
   }
-  // Las dos disqueteras —la de la mesa y la del frontal— meten y sacan el disco.
-  ['#mac-hoy-floppy', '#mac-hoy-front-floppy'].forEach((sel) => {
-    const disq = root.querySelector(sel);
-    if (!disq) return;
+  // Las disqueteras —la de la mesa, la del frontal y la de la barra— meten y
+  // sacan el disco.
+  root.querySelectorAll('.mac-hoy-floppy, .mac-hoy-front-floppy').forEach((disq) => {
     disq.addEventListener('click', (e) => {
       e.preventDefault(); e.stopPropagation();
-      if (!visible) return;
+      if (!enciende(disq)) return;
       alternaPong(root, fetchImpl);
     });
   });

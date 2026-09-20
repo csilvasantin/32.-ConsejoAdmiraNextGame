@@ -205,6 +205,30 @@ test('la vista frontal tiene sus propios mandos de misión', () => {
   assert.match(src, /paintCrt\(front, lastText\)\.then\(\(\) => paseaTexto\(front\)\)/);
 });
 
+test('el Mac vive también en la barra SCUMM, a la derecha de los objetos', () => {
+  const objetos = html.indexOf('class="inv-objetos"');
+  const mac = html.indexOf('class="mac-scumm"');
+  assert.ok(objetos > 0 && mac > objetos, 'el Mac va DESPUÉS de los nueve objetos');
+  assert.match(html, /id="mac-hoy-crt-bar"/);
+  // Reutiliza la vista frontal en vez de copiar sus reglas: si se retoca el
+  // encaje del tubo, se retoca una sola vez.
+  assert.match(html, /class="mac-hoy-front-stage mac-scumm-stage"/);
+  // Y ocupa lo mismo que la rejilla de iconos: 3x78 + 2x5 = 244.
+  assert.match(html, /\.mac-scumm \.mac-hoy-front-stage\s*\{[^}]*width: min\(244px, 100%\)/);
+  assert.match(html, /\.inv-objetos \{[^}]*repeat\(3, 78px\)[^}]*gap: 5px/);
+});
+
+test('los tres tubos del Mac se escriben a la vez y por clase', () => {
+  const src = fs.readFileSync(new URL('./assets/mac-hoy.js', import.meta.url), 'utf8');
+  // Por clase: añadir una vista más no debe obligar a alargar una lista de ids.
+  assert.match(src, /const TUBOS = '\.mac-hoy-crt, \.mac-hoy-crt-front'/);
+  assert.ok(!/'#mac-hoy-crt, #mac-hoy-crt-front'/.test(src), 'ya no se listan por id');
+  // A la vez, no en fila: encadenados, el tercero agotaba el plazo de paintCrt.
+  assert.match(src, /await Promise\.all\(ts\.map\(/);
+  // Y el factor de escala se mide en TODAS las vistas frontales, no sólo la primera.
+  assert.match(src, /querySelectorAll\('\.mac-hoy-front-stage'\)\.forEach/);
+});
+
 test('los puntos sensibles no se delatan al pasar por encima', () => {
   assert.ok(!/\.mac-hoy-keys:hover/.test(html), 'nada de realce en hover sobre el dibujo');
   assert.ok(!/box-shadow: 0 0 12px rgba\(120,255,160/.test(html));

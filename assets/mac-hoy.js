@@ -182,7 +182,10 @@ function fitOne(el, natural, prop) {
 export function fitScreen(root = lastRoot || (typeof document !== 'undefined' ? document : null)) {
   if (!root || !root.querySelector) return 0;
   const k = fitOne(root.querySelector('#mac-hoy-prop'), MAC_ART_W, '--mac-k');
-  fitOne(root.querySelector('.mac-hoy-front-stage'), MAC_FRONT_W, '--mac-front-k');
+  // TODAS las vistas frontales, no sólo la primera: cada una mide distinto (la
+  // grande del centro y la pequeña de la barra SCUMM) y cada una guarda su
+  // propio factor, porque la traslación de la matriz va en píxeles.
+  root.querySelectorAll('.mac-hoy-front-stage').forEach((el) => fitOne(el, MAC_FRONT_W, '--mac-front-k'));
   return k;
 }
 
@@ -193,9 +196,9 @@ function watchScreen(root) {
   if (typeof ResizeObserver !== 'undefined') {
     const ro = new ResizeObserver(() => fitScreen(root));
     ro.observe(prop);
-    const stage = root.querySelector('.mac-hoy-front-stage');
-    if (stage) ro.observe(stage);
-    [prop.querySelector('img'), stage && stage.querySelector('img')].forEach((img) => {
+    const stages = Array.from(root.querySelectorAll('.mac-hoy-front-stage'));
+    stages.forEach((s) => ro.observe(s));
+    [prop.querySelector('img'), ...stages.map((s) => s.querySelector('img'))].forEach((img) => {
       if (!img) return;
       ro.observe(img);
       if (!img.complete) img.addEventListener('load', () => fitScreen(root), { once: true });
@@ -243,9 +246,18 @@ function paseaTexto(el) {
   }, 90);
 }
 
+/* Todos los tubos del mismo Mac —el de la mesa, el de la vista frontal y el de
+   la barra SCUMM— se escriben a la vez: son dibujos distintos del mismo cacharro
+   y, si sólo se pintara uno, abrir otro lo encontraba en negro. Por CLASE y no
+   por id, para que añadir una vista más no obligue a volver aquí a alargar una
+   lista (que es justo lo que pasó al meter el Mac en la barra). */
+const TUBOS = '.mac-hoy-crt, .mac-hoy-crt-front';
+function tubos(root) {
+  return root && root.querySelectorAll ? Array.from(root.querySelectorAll(TUBOS)) : [];
+}
+
 function paraPaseo(root) {
-  if (!root || !root.querySelectorAll) return;
-  root.querySelectorAll('#mac-hoy-crt, #mac-hoy-crt-front').forEach((el) => {
+  tubos(root).forEach((el) => {
     if (el && el.__paseo) { clearInterval(el.__paseo); el.__paseo = null; }
   });
 }
@@ -336,13 +348,11 @@ function textoDelModo() {
 // Repinta SIN volver a la red: navegar entre fichas no debe costar una petición
 // por clic. La caché la refresca draw() cada 45 s o al encender el Mac.
 function repinta(root) {
-  const mesa = root && root.querySelector('#mac-hoy-crt');
-  const front = root && root.querySelector('#mac-hoy-crt-front');
-  if (!mesa) return;
+  const ts = tubos(root);
+  if (!ts.length) return;
   paraPaseo(root);
   lastText = textoDelModo();
-  paintCrt(mesa, lastText).then(() => paseaTexto(mesa));
-  if (front) paintCrt(front, lastText).then(() => paseaTexto(front));
+  ts.forEach((t) => paintCrt(t, lastText).then(() => paseaTexto(t)));
 }
 
 export function avanzaPantalla(delta, root = lastRoot || (typeof document !== 'undefined' ? document : null), fetchImpl = lastFetch) {
@@ -370,10 +380,9 @@ export function avanzaPantalla(delta, root = lastRoot || (typeof document !== 'u
 }
 
 async function draw(root, fetchImpl) {
-  const mesa = root.querySelector('#mac-hoy-crt');
-  const front = root.querySelector('#mac-hoy-crt-front');
+  const ts = tubos(root);
   const prop = root.querySelector('#mac-hoy-prop');
-  if (!mesa || !prop || !visible) return;
+  if (!ts.length || !prop || !visible) return;
   aplicarModo(root);
   if (modo === 'logo' || modo === 'pong') return;
   paraPaseo(root);
@@ -381,8 +390,7 @@ async function draw(root, fetchImpl) {
   // El comodín de carga dice en qué pantalla estás: poner «HOY …» mientras se
   // pide una ficha de detalle despistaba.
   const cargando = modo === 'detalle' ? 'MISION\n…' : IDLE_COPY;
-  if (mesa) mesa.textContent = cargando;
-  if (front) front.textContent = cargando;
+  ts.forEach((t) => { t.textContent = cargando; });
   try {
     const ms = await fetchHoy(fetchImpl);
     misionesCache = ultimasMisiones(ms);
@@ -391,14 +399,14 @@ async function draw(root, fetchImpl) {
     // de 45 s reescribía la ficha que estabas leyendo, y en una pestaña de fondo
     // —donde el navegador estrangula los temporizadores— no llegaba a acabarla
     // nunca, así que el texto se quedaba siempre a medias.
-    if (mesa.textContent !== lastText) await paintCrt(mesa, lastText);
-    if (front && front.textContent !== lastText) await paintCrt(front, lastText);
-    paseaTexto(mesa);
-    if (front) paseaTexto(front);
+    // A la vez, no en fila: cada tubo se teclea con su propio temporizador y
+    // paintCrt se rinde a los 3 s. Encadenándolos, el tercero —el de la barra—
+    // empezaba con el plazo ya medio gastado y se quedaba en «HOY …».
+    await Promise.all(ts.map((t) => (t.textContent !== lastText ? paintCrt(t, lastText) : null)));
+    ts.forEach(paseaTexto);
   } catch (_) {
     lastText = ERROR_COPY;
-    await paintCrt(mesa, ERROR_COPY);
-    if (front) await paintCrt(front, ERROR_COPY);
+    await Promise.all(ts.map((t) => paintCrt(t, ERROR_COPY)));
   }
   prop.classList.remove('refreshing');
 }

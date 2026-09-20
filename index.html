@@ -1328,6 +1328,28 @@
         .obj:focus-visible { outline: none; border-color: #ffd27a; }
         .obj img { width: 100%; height: auto; display: block; image-rendering: pixelated; }
         .inventory { width: 330px; flex: none; border-left: 1px solid #1a1a2e; padding: 6px 8px; display: flex; flex-direction: column; }
+        /* TERCERA ZONA · el Mac 1984. Mismo ancho que la rejilla de objetos
+           (3×78 + 2×5 = 244) para que las dos casillas grandes de la derecha
+           pesen igual. Sin el `filter: drop-shadow` de la vista grande: a este
+           tamaño sólo ensuciaba el borde. */
+        /* La zona del Mac se queda con el ancho que sobra y lo centra. Apretar los
+           verbos libera bastante más de lo que ocupa el Mac, y dejar ese sobrante
+           como una franja muerta al final de la barra la hacía parecer a medio
+           terminar; repartido a los lados del Mac, la barra termina en algo. */
+        .mac-scumm {
+            flex: 1 1 260px; min-width: 0; border-left: 1px solid #1a1a2e;
+            padding: 6px 8px; display: flex; align-items: center; justify-content: center;
+        }
+        /* El Mac ENCOGE si la barra se estrecha, en vez de salirse por la derecha
+           (a 900 px se comía 35 px fuera del marco). Puede permitírselo porque su
+           factor de escala se mide del ancho real en cada resize: a cualquier
+           tamaño el texto sigue cayendo dentro del tubo. */
+        .mac-scumm .mac-hoy-front-stage {
+            width: min(244px, 100%); filter: none; cursor: pointer;
+            background: transparent; border: 0; padding: 0; display: block;
+        }
+        .mac-scumm .mac-hoy-front-stage:hover { filter: brightness(1.12); }
+        .mac-scumm .mac-hoy-front-stage:focus-visible { outline: 1px solid #ffd27a; outline-offset: 2px; }
         /* Panels del inventario — uno visible a la vez según el verbo activo */
         .inv-panel { display: none; flex: 1; flex-direction: column; }
         .inv-panel.active { display: flex; }
@@ -2644,15 +2666,20 @@
            se hunde. El COLOR dice si el verbo se puede usar: vivo = seleccionable,
            apagado = ahora no. El rosa/blanco anterior no significaba nada, sólo
            decoraba, y se leía como si unos estuvieran deshabilitados. */
-        /* Las cajas se estiran hasta tocar la columna de flechas (Carlos,
-           2026-09-19): en el juego los verbos ocupan todo su lado del panel, no
-           se quedan encogidos a la izquierda con una franja muerta al lado. */
+        /* Las cajas se ciñen a su verbo más largo (Carlos, 2026-09-20). Estirarlas
+           a 1fr hasta las flechas —como estaban desde el 19— llenaba media barra
+           de caja vacía detrás de cada palabra; ese ancho de más es justo el que
+           hacía falta para que quepa el Mac a la derecha de los objetos. Cada
+           COLUMNA se mide entera, así que las tres siguen alineadas y no bailan
+           al cambiar de página de verbos. */
         .verb-grid {
-            grid-template-columns: repeat(3, 1fr);
+            grid-template-columns: repeat(3, max-content);
             grid-template-rows: none;
+            justify-content: start;
             align-content: center;
             column-gap: 4px;
             row-gap: 4px;
+            flex: 0 0 auto;
         }
         .verb-btn,
         .verb-btn.verb-primary {
@@ -3206,6 +3233,9 @@
             .inventory { width: 100%; border-left: none; border-top: 2px solid #3a2410; }
             .inventory-list { max-height: 160px; }
             .verb-grid { grid-template-columns: repeat(2, 1fr); gap: 4px; padding: 6px; }
+            /* En columna el Mac se pondría debajo de todo y alargaría la barra
+               media pantalla. Sigue estando a un verbo (MAC 1984) y a /mac. */
+            .mac-scumm { display: none; }
             .verb-btn { min-height: 44px; font-size: clamp(8px, 3.2vw, 11px); display: flex; align-items: center; justify-content: center; }
             .inv-item { min-height: 34px; display: flex; align-items: center; }
             .action-line { flex-wrap: wrap; }
@@ -3751,6 +3781,23 @@ body.rail-open{overflow:hidden}
                         </div>
                     </div>
                 </div>
+                <!-- ZONA 3 · el Mac 1984, a la derecha de los objetos y de su mismo
+                     tamaño (Carlos, 2026-09-20). Es la MISMA vista frontal que abre
+                     el overlay: misma ilustración, misma homografía y el mismo texto
+                     en el tubo, sólo que medida más pequeña. Por eso lleva la clase
+                     .mac-hoy-front-stage y no una copia de sus reglas: el día que se
+                     retoque el encaje del tubo, se retoca en un sitio. -->
+                <div class="mac-scumm" id="mac-scumm">
+                    <button type="button" class="mac-hoy-front-stage mac-scumm-stage"
+                            title="Macintosh 1984 · pulsa para verlo en grande"
+                            onclick="if(window.MacHoy){ if(!window.MacHoy.isVisible()) window.MacHoy.setVisible(true); window.MacHoy.openFront(); }">
+                        <img src="assets/mac-1984-front.png?v=20260919-sinhalo" alt="Macintosh 1984">
+                        <pre class="mac-hoy-crt-front" id="mac-hoy-crt-bar">HOY</pre>
+                        <i class="mac-hoy-logo mac-hoy-logo-front" aria-hidden="true"></i>
+                        <div class="mac-hoy-front-shade" aria-hidden="true"></div>
+                        <canvas class="mac-hoy-pong mac-hoy-pong-front" width="512" height="342" aria-hidden="true"></canvas>
+                    </button>
+                </div>
             </div>
         </div>
 
@@ -4151,6 +4198,6 @@ body.rail-open{overflow:hidden}
 <script defer src="council-grokbot.js?v=20260918-r5-desk-cors"></script>
 <script defer src="app.flt-100529.js?v=20260920-r21-unalinea"></script>
 <script defer src="council-integration.js?v=20260918-r5-desk-cors"></script>
-<script type="module" src="assets/mac-hoy.js?v=20260919-sinmarco"></script>
+<script type="module" src="assets/mac-hoy.js?v=20260920-macbarra"></script>
 </body>
 </html>

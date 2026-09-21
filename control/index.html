@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.20.09.2026.r3.13:42" />
+<meta name="admiranext-version" content="AdmiraNeXT v.21.09.2026.r1.12:36" />
     <script src="/admira-bar.js?v=20260918-r38"></script>
     <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
 <meta charset="UTF-8">
@@ -450,7 +450,7 @@
   #hackOpen{border-color:#1f6f4a}
   #hackOpen:hover{border-color:#00ff41;color:#9effb0}
   #consejerosOpen{border-color:#6b5a2a}
-  #consejerosOpen:hover{border-color:#e8c547;color:#ffe9a0}
+  #consejerosOpen:hover,#consejerosOpen.active{border-color:#e8c547;color:#ffe9a0}
   #deepagentOpen{border-color:#1a4a6b}
   #deepagentOpen:hover{border-color:#4fc3f7;color:#b3e5fc}
   .hack-overlay{display:none;position:fixed;inset:0;z-index:2147483646;background:rgba(0,0,0,.96);padding:1rem;overflow:hidden;box-sizing:border-box;flex-direction:column}
@@ -3251,6 +3251,10 @@ function collapseAllToggle(){
     return data;
   }
   async function startWallpaperMode(mode){
+    if(mode==="consejeros"){
+      if(typeof window.openConsejerosDesk==="function") window.openConsejerosDesk();
+      return;
+    }
     const sl=document.getElementById("hackStatusLine");
     try{
       if(sl) sl.textContent="wallpaper "+mode+"…";
@@ -3650,6 +3654,7 @@ function collapseAllToggle(){
   document.addEventListener('click', e => { const b = e.target.closest && e.target.closest('[data-term]'); if (!b) return; e.preventDefault(); window.openTerminal(b.getAttribute('data-term'), b.getAttribute('data-termname') || b.getAttribute('data-term')); });
 })();
 </script>
+<script src="/consejeros-desk.js?v=20260921-r1"></script>
 <script src="/control/ideas.js?v=20260723-r1"></script>
 <script src="/control/health.js?v=20260724-r1"></script>
 <script src="/control/decisions.js?v=20260723-r6b"></script>

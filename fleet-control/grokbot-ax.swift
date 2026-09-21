@@ -258,11 +258,11 @@ func parseMessages(_ transcript: Node, persona: String, observedAt: Date = Date(
 // Se acepta tambien ese caso, pero SOLO si el boton de enviar esta disponible:
 // ese boton no existe mientras el compositor esta vacio, asi que su presencia
 // es la prueba de que la app si tiene el texto.
-func compositorListo(valor: String, prompt: String, persona: String, envioDisponible: Bool) -> Bool {
+func compositorListo(valor: String, prompt: String, persona: String, envioDisponible: Bool, ownAttachment: Bool = false) -> Bool {
     if comparable(valor) == comparable(prompt) { return true }
     guard envioDisponible else { return false }
     let contenido = normalized(valor)
-    let marcadores = ["Escríbele a " + persona, "Message " + persona]
+    let marcadores = ["Escríbele a " + persona, "Message " + persona] + (ownAttachment ? ["Agrega un mensaje o presiona enviar."] : [])
     return contenido.isEmpty || marcadores.contains(contenido)
 }
 
@@ -463,12 +463,35 @@ final class GrokAX {
         Thread.sleep(forTimeInterval: 0.2)
         return try read().snapshot
     }
-    func applicationTree() throws -> Node { try Reader().read(app) }
+    func findDialogControl(_ predicate: (Node) -> Bool) -> Node? {
+        // Native Open panels contain lazily populated file lists. Read shallow
+        // controls breadth-first so an unreadable file row cannot discard the
+        // whole sheet or hide its path field and Open button.
+        var queue = (attribute(app, kAXWindowsAttribute) as? [AXUIElement]) ?? []
+        if let focused = attribute(app, kAXFocusedWindowAttribute), CFGetTypeID(focused) == AXUIElementGetTypeID() { queue.insert(unsafeBitCast(focused, to: AXUIElement.self), at: 0) }
+        var visited: [CFHashCode:[AXUIElement]] = [:], index = 0
+        var match: Node? = nil
+        while index < queue.count && index < 4000 {
+            let element = queue[index]; index += 1
+            let hashCode = CFHash(element)
+            if (visited[hashCode] ?? []).contains(where: { CFEqual($0,element) }) { continue }
+            visited[hashCode,default:[]].append(element)
+            let dom = stringAttribute(element, "AXDOMIdentifier")
+            let node = Node(element:element, role:stringAttribute(element,kAXRoleAttribute), description:stringAttribute(element,kAXDescriptionAttribute), title:stringAttribute(element,kAXTitleAttribute), value:stringAttribute(element,kAXValueAttribute), domID:dom.isEmpty ? stringAttribute(element,kAXIdentifierAttribute) : dom, enabled:boolAttribute(element,kAXEnabledAttribute,fallback:true))
+            if predicate(node) {
+                guard match == nil else { return nil }
+                match = node
+            }
+            queue.append(contentsOf:(attribute(element,kAXChildrenAttribute) as? [AXUIElement]) ?? [])
+            queue.append(contentsOf:(attribute(element,"AXSheets") as? [AXUIElement]) ?? [])
+        }
+        // Refuse ambiguous controls or a truncated traversal.
+        return index == queue.count ? match : nil
+    }
     func waitNode(_ step: String, _ predicate: (Node) -> Bool) throws -> Node {
         let until = Date().addingTimeInterval(5)
         repeat {
-            let nodes = try applicationTree().descendants().filter(predicate)
-            if nodes.count == 1 { return nodes[0] }
+            if let node = findDialogControl(predicate) { return node }
             Thread.sleep(forTimeInterval: 0.1)
         } while Date() < until
         throw BridgeError(code: "attachment_" + step + "_unavailable")
@@ -494,12 +517,36 @@ final class GrokAX {
               ((attrs[.posixPermissions] as? NSNumber)?.intValue ?? 0777) & 0077 == 0 else { throw BridgeError(code: "invalid_attachment_path") }
         let initial = try read()
         guard initial.snapshot.selectedPersona == persona, !initial.snapshot.composerHasDraft, !initial.snapshot.busy else { throw BridgeError(code: "selection_or_draft_changed") }
+        // Native file dialogs refuse activation while GrokBot is in the
+        // background. Only explicit attachment preparation activates it;
+        // snapshots/polling never do. No window position or size changes.
+        let previous = NSWorkspace.shared.frontmostApplication
+        var pid: pid_t = 0
+        guard AXUIElementGetPid(app, &pid) == .success,
+              let native = NSRunningApplication(processIdentifier: pid) else { throw BridgeError(code: "attachment_focus_unavailable") }
+        let windows = (attribute(app, kAXWindowsAttribute) as? [AXUIElement]) ?? []
+        let targets = windows.filter { stringAttribute($0, kAXTitleAttribute) == "Grok Bot" }
+        guard targets.count == 1 else { throw BridgeError(code: "attachment_focus_unavailable") }
+        _ = AXUIElementSetAttributeValue(app, kAXFrontmostAttribute as CFString, kCFBooleanTrue)
+        _ = native.activate(options: [])
+        guard AXUIElementPerformAction(targets[0], kAXRaiseAction as CFString) == .success else { throw BridgeError(code: "attachment_focus_unavailable") }
+        defer {
+            if let previous = previous, previous.processIdentifier != pid,
+               NSWorkspace.shared.frontmostApplication?.processIdentifier == pid {
+                _ = AXUIElementSetAttributeValue(AXUIElementCreateApplication(previous.processIdentifier), kAXFrontmostAttribute as CFString, kCFBooleanTrue)
+                previous.activate(options: [])
+            }
+        }
+        let focusDeadline = Date().addingTimeInterval(2)
+        while NSWorkspace.shared.frontmostApplication?.processIdentifier != pid && Date() < focusDeadline { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
+        // AXRaise succeeded. A command-line AppKit client may have stale
+        // NSWorkspace foreground metadata; the actual panel below is decisive.
         let controls = initial.pane.descendants().filter { ["AXButton", "AXPopUpButton", "AXMenuButton"].contains($0.role) && $0.label == "Adjuntar archivo" }
         guard controls.count == 1 else { throw BridgeError(code: "attachment_button_unavailable") }
         try press(controls[0])
         let attachItem = try waitNode("menu") { $0.label == "Adjuntar archivos" && $0.role != "AXStaticText" }
         try press(attachItem)
-        _ = try waitNode("picker") { $0.domID == "open-panel" }
+        _ = try waitNode("picker") { $0.domID == "open-panel" || ($0.role == "AXSheet" && ["abrir","open"].contains($0.label.lowercased())) }
         // Target this application, never the foreground app. Release modifiers
         // on every path; all subsequent actions are on the verified native panel.
         try key(55, down: true); try key(56, down: true)
@@ -514,7 +561,7 @@ final class GrokAX {
         let until = Date().addingTimeInterval(8)
         repeat {
             Thread.sleep(forTimeInterval: 0.15)
-            let ctx=try read()
+            guard let ctx=try? read() else { continue }
             guard ctx.snapshot.selectedPersona == persona else { throw BridgeError(code: "selection_or_draft_changed") }
             if ctx.pane.descendants().contains(where: { $0.role == "AXButton" && $0.label == "Quitar " + url.lastPathComponent }) && ctx.sendButton?.enabled == true { return }
         } while Date() < until
@@ -522,7 +569,13 @@ final class GrokAX {
     }
     func send(_ persona: String, prompt: String, attachmentPaths: [String] = []) throws -> Snapshot {
         guard attachmentPaths.count <= 1 else { throw BridgeError(code: "invalid_attachment_path") }
-        for file in attachmentPaths { try attach(persona, file: file) }
+        for file in attachmentPaths {
+            do { try attach(persona, file: file) }
+            catch let error as BridgeError {
+                if error.code.hasPrefix("attachment_") || error.code == "invalid_attachment_path" { throw error }
+                throw BridgeError(code:"attachment_prepare_failed")
+            } catch { throw BridgeError(code:"attachment_prepare_failed") }
+        }
         let initial = try read()
         let ownAttachment = attachmentPaths.count == 1 && initial.pane.descendants().filter { $0.role == "AXButton" && $0.label.hasPrefix("Quitar ") }.map { $0.label } == attachmentPaths.map { "Quitar " + URL(fileURLWithPath: $0).lastPathComponent } && comparable(initial.composer.value) == "Agrega un mensaje o presiona enviar."
         guard initial.snapshot.selectedPersona == persona else { return failed(initial.snapshot, "persona_not_selected") }
@@ -546,7 +599,7 @@ final class GrokAX {
                 latest = current.snapshot
                 guard current.snapshot.selectedPersona == persona else { return failed(latest, "unknown") }
                 let envio = current.sendButton ?? botonQueSeEnciende(antes: botonesAntes, ahora: current.pane.descendants())
-                if compositorListo(valor: current.composer.value, prompt: prompt, persona: persona, envioDisponible: envio?.enabled == true) {
+                if compositorListo(valor: current.composer.value, prompt: prompt, persona: persona, envioDisponible: envio?.enabled == true, ownAttachment: ownAttachment) {
                     ready = current; break
                 }
             }
@@ -557,7 +610,7 @@ final class GrokAX {
               let send = sendNode.element, let currentComposer = current.composer.element,
               let currentHeading = current.heading.element,
               stringAttribute(currentHeading, kAXDescriptionAttribute) == persona,
-              compositorListo(valor: stringAttribute(currentComposer, kAXValueAttribute), prompt: prompt, persona: persona, envioDisponible: sendNode.enabled) else { return failed(latest, "unknown") }
+              compositorListo(valor: stringAttribute(currentComposer, kAXValueAttribute), prompt: prompt, persona: persona, envioDisponible: sendNode.enabled, ownAttachment: ownAttachment) else { return failed(latest, "unknown") }
         // Exactly one press. Never retry after an AX error or ambiguous result.
         let press = AXUIElementPerformAction(send, kAXPressAction as CFString)
         guard press == .success else { return failed((try? read().snapshot) ?? latest, "unknown") }
@@ -641,7 +694,9 @@ func selfTests() throws {
     let distinct = parseMessages(Node(children:[first,second]), persona:"Steve Jobs", observedAt:at)
     try expect(distinct[0].key != distinct[1].key, "native IDs separate same-minute cards")
     try expect(distinct[0].legacyKey == distinct[1].legacyKey, "legacy migration key retained")
-    print("{\"ok\":true,\"tests\":22,\"mode\":\"pure-parsing-no-AX\"}")
+    try expect(!compositorListo(valor:"Agrega un mensaje o presiona enviar.",prompt:"test",persona:"Walt Disney",envioDisponible:true),"another attachment does not authorize sending")
+    try expect(compositorListo(valor:"Agrega un mensaje o presiona enviar.",prompt:"test",persona:"Walt Disney",envioDisponible:true,ownAttachment:true),"owned attachment placeholder supports composition")
+    print("{\"ok\":true,\"tests\":24,\"mode\":\"pure-parsing-no-AX\"}")
 }
 
 do {

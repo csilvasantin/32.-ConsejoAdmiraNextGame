@@ -404,10 +404,10 @@ test('native ids migrate an assistant-only viewport without duplicating its reta
  const after=await desktop.list(user,'Jobs');assert.equal(after.length,1);assert.equal(after[0].id,before[0].id);
 });
 
-test('attachment preparation failure is recorded as non-delivery, never an ambiguous send',async t=>{
+for (const failure of ['attachment_button_unavailable','attachment_focus_unavailable','attachment_path_unavailable','attachment_prepare_failed']) test(`${failure} is recorded as non-delivery, never an ambiguous send`,async t=>{
  let sends=0;
- const {desktop,file}=setup(t,async request=>{if(request.action==='send'){sends++;return snapshot({protocolVersion:3,ok:false,error:'attachment_button_unavailable'});}return snapshot({protocolVersion:3});});
+ const {desktop,file}=setup(t,async request=>{if(request.action==='send'){sends++;return snapshot({protocolVersion:3,ok:false,error:failure});}return snapshot({protocolVersion:3});});
  const attachment=await desktop.upload(user,{name:'prueba.txt',type:'text/plain',data:Buffer.from('prueba').toString('base64')});
- await assert.rejects(desktop.send(user,body({attachments:[attachment.id]})),errorCode('desktop_attachment_button_unavailable'));
+ await assert.rejects(desktop.send(user,body({attachments:[attachment.id]})),errorCode('desktop_'+failure));
  const rows=JSON.parse(fs.readFileSync(file)).messages;assert.equal(rows.length,1);assert.equal(rows[0].status,'failed');assert.equal(sends,1);
 });

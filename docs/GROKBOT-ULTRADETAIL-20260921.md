@@ -8,8 +8,12 @@ La ruta autenticada mantiene la autorización de propietario existente y CSRF. C
 
 Admite clic, doble clic, botón derecho, arrastre, rueda, texto y teclas de edición/navegación. La imagen se renueva aproximadamente cada segundo más el tiempo de captura; no es vídeo en tiempo real. GrokBot y el puente del Mac Mini deben permanecer disponibles. No cambia tamaños ni posiciones de ventanas nativas.
 
-Validación: 112 pruebas JS y 31 pruebas puras Swift. La comprobación funcional se hace desde la UI pública, sin mandar mensajes a consejeros ni ejecutar tareas en su computadora.
+Validación: 113 pruebas JS y 31 pruebas puras Swift. La comprobación funcional se hace desde la UI pública, sin mandar mensajes a consejeros ni ejecutar tareas en su computadora.
 
 Los eventos de ratón enlazan coordenadas de pantalla y ventana, según el mecanismo de [axcli](https://github.com/andelf/axcli/blob/main/src/input.rs). El símbolo del sistema para la posición local se resuelve al ejecutar y, si falta, se rechaza la entrada; no se recurre a eventos globales.
 
 La captura usa ScreenCaptureKit sobre la ventana concreta, incluida cuando está oculta. Una miniatura pasiva fallida conserva el modo Escritorio y permite abrir ultradetalle.
+
+El visor llena la ventana al abrirse. La pantalla completa nativa se activa con su botón, para evitar que un cambio de Space oculte GrokBot al probar desde el mismo Mac.
+
+Regresión cubierta: seleccionar Disney desde una conversación de Jobs conserva Disney al cambiar a Escritorio; el evento de modo logo ya no recupera el consejero anterior.

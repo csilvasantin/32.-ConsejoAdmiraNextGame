@@ -691,10 +691,10 @@ extension GrokAX {
     func remoteOpen(_ persona:String) throws -> RemoteReply {
         let ctx=try read()
         guard ctx.snapshot.selectedPersona == persona else { throw BridgeError(code:"remote_selection_changed") }
+        let restore=try activateForInteraction();defer { restore() }
         if (try? remoteSurface(persona,context:ctx)) == nil {
             let buttons=ctx.root.descendants().filter { $0.role == "AXButton" && $0.label == "Abrir computadora" && $0.enabled }
             guard buttons.count == 1, let button=buttons[0].element else { throw BridgeError(code:"remote_computer_unavailable") }
-            let restore=try activateForInteraction();defer { restore() }
             guard AXUIElementPerformAction(button,kAXPressAction as CFString) == .success else { throw BridgeError(code:"remote_computer_unavailable") }
             let deadline=Date().addingTimeInterval(4)
             while Date() < deadline {
@@ -789,15 +789,15 @@ extension GrokAX {
             // A raw CGEvent posted to a PID lacks that association in Electron.
             let local=CGPoint(x:p.x-target.windowX,y:p.y-target.windowY)
             guard let type=NSEvent.EventType(rawValue:UInt(kind.rawValue)) else { throw BridgeError(code:"remote_invalid_input") }
-            let e=NSEvent.mouseEvent(with:type,location:p,modifierFlags:NSEvent.ModifierFlags(rawValue:UInt(flags.rawValue)),timestamp:ProcessInfo.processInfo.systemUptime,windowNumber:Int(target.windowID),context:nil,eventNumber:0,clickCount:clicks,pressure:1)?.cgEvent
+            let e=NSEvent.mouseEvent(with:type,location:p,modifierFlags:NSEvent.ModifierFlags(rawValue:UInt(flags.rawValue)),timestamp:ProcessInfo.processInfo.systemUptime,windowNumber:Int(target.windowID),context:nil,eventNumber:Int(ProcessInfo.processInfo.systemUptime*1000),clickCount:clicks,pressure:1)?.cgEvent
             guard let e=e else { throw BridgeError(code:"remote_input_unavailable") }
             e.location=p
-            try setRemoteWindowLocation(e,local)
             e.setIntegerValueField(.mouseEventSubtype,value:3)
             e.setIntegerValueField(.mouseEventButtonNumber,value:button == .right ? 1 : 0)
             e.setIntegerValueField(.mouseEventClickState,value:Int64(clicks))
             e.setIntegerValueField(.mouseEventWindowUnderMousePointer,value:Int64(target.windowID))
-            e.setIntegerValueField(.mouseEventWindowUnderMousePointerThatCanHandleThisEvent,value:Int64(target.windowID));try post(e)
+            e.setIntegerValueField(.mouseEventWindowUnderMousePointerThatCanHandleThisEvent,value:Int64(target.windowID))
+            try setRemoteWindowLocation(e,local);try post(e)
         }
         let modifierKeys:[(String,CGKeyCode,CGEventFlags)]=[("ctrl",59,.maskControl),("alt",58,.maskAlternate),("shift",56,.maskShift),("meta",55,.maskCommand)]
         let held=modifierKeys.filter { (event.modifiers ?? []).contains($0.0) }
@@ -821,6 +821,7 @@ extension GrokAX {
             try mouse(.mouseMoved,p)
             RunLoop.current.run(until:Date().addingTimeInterval(0.03))
             try mouse(right ? .rightMouseDown : .leftMouseDown,p,right ? .right : .left,clicks)
+            RunLoop.current.run(until:Date().addingTimeInterval(0.05))
             try mouse(right ? .rightMouseUp : .leftMouseUp,p,right ? .right : .left,clicks)
         case "drag":
             guard let path=event.path,path.count>=2,path.count<=40 else { throw BridgeError(code:"remote_invalid_input") }

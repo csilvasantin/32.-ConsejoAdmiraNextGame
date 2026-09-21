@@ -112,7 +112,9 @@ export function openRemote(){
   }
   overlay.querySelector('[data-close]').onclick=close;
   document.addEventListener('keydown',onKey,true);document.addEventListener('fullscreenchange',onFullscreen);
-  active={close};fullscreen();connect();
+  // Fill the viewport immediately. Native fullscreen is explicit: on the same Mac
+  // entering another Space can hide the GrokBot window being controlled.
+  active={close};connect();
 }
 if(typeof window!=='undefined'){
   window.MacRemote={open:openRemote,close:()=>active?.close()};

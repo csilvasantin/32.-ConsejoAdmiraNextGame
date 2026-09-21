@@ -41,7 +41,7 @@
     doc.addEventListener('keydown',event=>{if(event.key==='Escape'&&expanded){expand(false);event.preventDefault();}});
     retry.addEventListener('click',()=>{if(persona)root.MacHoy?.showRemote(persona);});
     doc.addEventListener('mac-screen-mode',event=>{
-      if(event.detail.persona)persona=event.detail.persona;
+      if(event.detail.mode==='remote'&&event.detail.persona)persona=event.detail.persona;
       if(event.detail.mode==='remote')setView('desktop',{activate:false});
       if(event.detail.mode==='pong')setView('pong',{activate:false});
     });

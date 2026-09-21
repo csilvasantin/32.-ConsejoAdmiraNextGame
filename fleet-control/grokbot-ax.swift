@@ -4,6 +4,7 @@
 import Cocoa
 import ApplicationServices
 import CryptoKit
+import ScreenCaptureKit
 import Darwin
 
 let supportedPersonas = ["Steve Jobs", "Steve Wozniak", "Walt Disney", "George Lucas"]
@@ -735,15 +736,21 @@ extension GrokAX {
     }
     func remoteFrame(_ persona:String) throws -> RemoteReply {
         let target = try remoteTarget(persona)
-        let file = FileManager.default.temporaryDirectory.appendingPathComponent("admira-remote-" + UUID().uuidString + ".jpg")
-        defer { try? FileManager.default.removeItem(at:file) }
-        guard FileManager.default.createFile(atPath:file.path,contents:Data(),attributes:[.posixPermissions:0o600]) else { throw BridgeError(code:"remote_capture_unavailable") }
-        let process = Process(); process.executableURL = URL(fileURLWithPath:"/usr/sbin/screencapture")
-        process.arguments = ["-x","-o","-l",String(target.windowID),"-t","jpg",file.path]
-        process.standardOutput = FileHandle.nullDevice; process.standardError = FileHandle.nullDevice
-        try process.run(); process.waitUntilExit()
-        guard process.terminationStatus == 0 else { throw BridgeError(code:"remote_capture_failed") }
-        guard let bytes=try? Data(contentsOf:file),bytes.count>1000,bytes.count<6*1024*1024,let bitmap=NSBitmapImageRep(data:bytes) else { throw BridgeError(code:"remote_capture_invalid") }
+        guard #available(macOS 14.0, *),CGPreflightScreenCaptureAccess() else { throw BridgeError(code:"remote_capture_permission") }
+        var content:SCShareableContent?,enumerated=false
+        SCShareableContent.getExcludingDesktopWindows(true,onScreenWindowsOnly:false) { value,_ in content=value;enumerated=true }
+        let deadline=Date().addingTimeInterval(6)
+        while !enumerated && Date()<deadline { RunLoop.current.run(until:Date().addingTimeInterval(0.01)) }
+        guard let window=content?.windows.first(where:{$0.windowID == target.windowID && $0.owningApplication?.processID == target.pid}) else { throw BridgeError(code:"remote_window_unavailable") }
+        let filter=SCContentFilter(desktopIndependentWindow:window),config=SCStreamConfiguration()
+        config.width=Int(target.windowWidth*2);config.height=Int(target.windowHeight*2);config.showsCursor=false
+        if #available(macOS 14.2, *) { config.ignoreShadowsSingleWindow=true }
+        var captured:CGImage?,finished=false
+        SCScreenshotManager.captureImage(contentFilter:filter,configuration:config) { image,_ in captured=image;finished=true }
+        let captureDeadline=Date().addingTimeInterval(6)
+        while !finished && Date()<captureDeadline { RunLoop.current.run(until:Date().addingTimeInterval(0.01)) }
+        guard let captured=captured else { throw BridgeError(code:"remote_capture_failed") }
+        let bitmap=NSBitmapImageRep(cgImage:captured)
         guard try remoteTarget(persona) == target else { throw BridgeError(code:"remote_view_changed") }
         let sx=Double(bitmap.pixelsWide)/target.windowWidth,sy=Double(bitmap.pixelsHigh)/target.windowHeight
         let crop=CGRect(x:(target.x-target.windowX)*sx,y:(target.y-target.windowY)*sy,width:target.width*sx,height:target.height*sy).integral

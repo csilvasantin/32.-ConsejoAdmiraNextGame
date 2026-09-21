@@ -474,7 +474,9 @@ function remoteStatus(root,alias,code,message,retry=false){
 function paintRemoteError(root, alias, code='capture_unavailable') {
   const frame=lastRemoteFrames.get(alias);
   if(!frame){
-    modo='hoy';aplicarModo(root);
+    // Keep the selected desktop clickable when the passive preview fails.
+    // Ultradetail has its own authenticated capture and must not be closed by it.
+    if(code!=='capture_unavailable'){modo='hoy';aplicarModo(root);}
     const msg='CAPTURA\nNO DISPONIBLE\n'+String(alias||'SILLA').toUpperCase().slice(0,12);
     lastText=msg;tubos(root).forEach(t=>paintCrt(t,msg));
   }

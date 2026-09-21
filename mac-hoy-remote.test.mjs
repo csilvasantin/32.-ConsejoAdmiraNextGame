@@ -72,3 +72,18 @@ for (const succeeds of [true, false]) test(`Pong ignores a late remote ${succeed
     assert.ok(imgs.every(i=>i.style.display==='none'));
   } finally {setVisible(false,root);}
 });
+
+
+test('a failed passive preview keeps the desktop selected for ultradetail',async()=>{
+  const nodes=Array.from({length:3},()=>({clientWidth:244,style:{setProperty(){}},classList:{toggle(){}}}));
+  const imgs=[{src:'',style:{}}];
+  const root={querySelector:s=>s==='#mac-hoy-prop'?nodes[0]:null,querySelectorAll:s=>s==='.mac-hoy-remote'?imgs:s==='#mac-hoy-prop, .mac-hoy-front-stage'?nodes:s==='.mac-hoy-front-stage'?nodes.slice(1):[]};
+  setVisible(false,root);
+  try{
+    showRemote('Walt Disney',root,async()=>({ok:true,json:async()=>({ok:true})}));
+    for(let i=0;i<8;i++)await Promise.resolve();
+    imgs[0].onerror();
+    assert.equal(modoActual(),'remote');
+    assert.equal(imgs[0].style.display,'block');
+  }finally{setVisible(false,root);}
+});

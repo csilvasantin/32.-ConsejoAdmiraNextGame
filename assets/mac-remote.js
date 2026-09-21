@@ -22,6 +22,7 @@ const MESSAGES={
   remote_capture_unavailable:'No se puede capturar la ventana de GrokBot. Comprueba el permiso de grabación de pantalla del puente.',
   remote_computer_unavailable:'Abre la computadora del consejero en GrokBot y pulsa Reconectar.',
   remote_keyboard_unavailable:'El teclado de la computadora no está disponible. Pulsa Reconectar.',
+  remote_capture_permission:'El puente necesita su permiso de grabación de pantalla para mostrar la computadora.',
   remote_capture_failed:'No se pudo obtener la imagen de la computadora. Pulsa Reconectar.',
   remote_capture_invalid:'La imagen de la computadora no es válida. Pulsa Reconectar.',
   remote_crop_unavailable:'No se pudo encajar la pantalla de la computadora. Pulsa Reconectar.',

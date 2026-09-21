@@ -1,7 +1,8 @@
 // Layout controls enhance the existing SCUMM nodes; their actions keep their handlers.
 export const IDS = ['verbos', 'accesos', 'previos'];
 const LABELS = { verbos: 'Verbos', accesos: 'Accesos', previos: 'Previos' };
-const KEY = 'admira.scumm.layout.v2';
+const KEY = 'admira.scumm.layout.v3';
+const PREVIOUS_KEY = 'admira.scumm.layout.v2';
 const LEGACY_KEY = 'admira.scumm.layout.v1';
 const DEFAULT_WEIGHTS = { verbos: 22, accesos: 22, previos: 56 };
 export function normalizeLayout(raw = {}) {
@@ -10,7 +11,7 @@ export function normalizeLayout(raw = {}) {
     order: [...order, ...IDS.filter(id => !order.includes(id))],
     hidden: IDS.filter(id => Array.isArray(raw?.hidden) && raw.hidden.includes(id)),
     weights: Object.fromEntries(IDS.map(id => [id, Number.isFinite(raw?.weights?.[id]) && raw.weights[id] > 0 ? Math.min(100, Math.max(.01, raw.weights[id])) : DEFAULT_WEIGHTS[id]])),
-    height: Number.isFinite(raw?.height) ? Math.min(600, Math.max(160, raw.height)) : 270
+    height: Number.isFinite(raw?.height) ? Math.min(600, Math.max(160, raw.height)) : 294
   };
 }
 export function migrateLegacyLayout(raw) {
@@ -44,7 +45,14 @@ function init() {
   let state;
   try {
     const saved = localStorage.getItem(KEY);
-    state = saved === null ? migrateLegacyLayout(JSON.parse(localStorage.getItem(LEGACY_KEY))) : normalizeLayout(JSON.parse(saved));
+    if (saved !== null) state = normalizeLayout(JSON.parse(saved));
+    else {
+      const v2 = localStorage.getItem(PREVIOUS_KEY);
+      const previous = v2 ?? localStorage.getItem(LEGACY_KEY);
+      const raw = previous === null ? null : JSON.parse(previous);
+      state = previous === null ? normalizeLayout() : v2 !== null ? normalizeLayout(raw) : migrateLegacyLayout(raw);
+      if (previous !== null) state.height = Math.min(600, (Number.isFinite(raw?.height) ? state.height : 270) + 24);
+    }
   } catch { state = normalizeLayout(); }
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} };
   const create = (tag, cls, text) => {
@@ -56,9 +64,16 @@ function init() {
     const node = create('button', '', text); node.type = 'button';
     node.setAttribute('aria-label', label); node.title = label; return node;
   };
+  const menu = create('details', 'scumm-layout-menu');
+  const menuToggle = create('summary', '', '⋯');
+  menuToggle.setAttribute('aria-label', 'Opciones de los bloques SCUMM');
+  menuToggle.title = 'Restaurar o mostrar bloques SCUMM';
   const toolbar = create('div', 'scumm-layout-tools');
   toolbar.setAttribute('aria-label', 'Bloques del menú SCUMM');
-  row.before(toolbar);
+  menu.append(menuToggle, toolbar);
+  row.parentElement.querySelector('.action-line').insertBefore(menu, document.getElementById('scumm-fold'));
+  document.addEventListener('click', e => { if (!menu.contains(e.target)) menu.open = false; });
+  menu.addEventListener('keydown', e => { if (e.key === 'Escape') { menu.open = false; menuToggle.focus(); } });
   const modules = {}, toggles = {};
   const source = { verbos: [grid, pager], accesos: [inventory], previos: [preview] };
   for (const id of IDS) {
@@ -69,7 +84,7 @@ function init() {
     grip.className = 'scumm-module-grip';
     const close = button('Cerrar ' + LABELS[id], '×'); close.className = 'scumm-module-close';
     close.addEventListener('click', () => {
-      state.hidden.push(id); render(); save(); toggles[id].focus();
+      state.hidden.push(id); render(); save(); menuToggle.focus();
     });
     head.append(grip, close);
     const content = create('div', 'scumm-module-content'); content.append(...source[id]);
@@ -81,7 +96,7 @@ function init() {
     modules[id] = { module, grip, handle };
     const toggle = button('Mostrar ' + LABELS[id], '+ ' + LABELS[id].toUpperCase());
     toggle.addEventListener('click', () => {
-      state.hidden = state.hidden.filter(x => x !== id); render(); save(); grip.focus();
+      state.hidden = state.hidden.filter(x => x !== id); render(); save(); menu.open = false; grip.focus();
     });
     toggles[id] = toggle; toolbar.append(toggle);
     const neighbour = () => { const visible = state.order.filter(x => !state.hidden.includes(x)); return visible[visible.indexOf(id) + 1]; };
@@ -133,7 +148,7 @@ function init() {
     });
   }
   const reset = button('Restaurar los tres bloques', '↺ RESTAURAR');
-  reset.addEventListener('click', () => { state = normalizeLayout(); render(); save(); });
+  reset.addEventListener('click', () => { state = normalizeLayout(); render(); save(); menu.open = false; menuToggle.focus(); });
   toolbar.append(reset);
   const heightHandle = create('div', 'scumm-height-resizer'); heightHandle.tabIndex = 0;
   heightHandle.setAttribute('role', 'separator'); heightHandle.setAttribute('aria-orientation', 'horizontal');

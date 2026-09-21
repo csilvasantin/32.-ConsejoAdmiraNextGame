@@ -1,9 +1,16 @@
 /* Three independent SCUMM blocks. Hidden blocks surrender their full share. */
-.scumm-layout-tools { display:flex; gap:6px; justify-content:flex-end; flex-wrap:wrap; padding:3px 8px; border-bottom:1px solid #291b0c; }
+/* Layout actions live in the existing command row, without a dedicated strip. */
+.scumm-layout-menu { position:relative; flex:0 0 auto; }
+.scumm-layout-menu summary { list-style:none; cursor:pointer; color:#e6c788; border:1px solid #886633; padding:0 7px; font:16px/1.2 monospace; }
+.scumm-layout-menu summary::-webkit-details-marker { display:none; }
+.scumm-layout-menu summary:focus-visible { outline:2px solid #ffe28c; }
+.scumm-layout-menu[open] { z-index:25; }
+.scumm-layout-tools { position:absolute; right:0; top:calc(100% + 4px); min-width:190px; display:flex; flex-direction:column; gap:4px; padding:6px; background:#2a1a08; border:1px solid #ad8448; box-shadow:0 3px 8px #0008; }
+.scumm-layout-tools button { text-align:left; white-space:nowrap; }
 .scumm-layout-tools button,.scumm-module-head button { font-family:'Press Start 2P',monospace; font-size:7px; color:#e6c788; background:transparent; border:0; cursor:pointer; padding:5px; }
 .scumm-layout-tools button:hover,.scumm-module-head button:hover { color:#fff0b0; background:#79532d; }
 .scumm-bar button:focus-visible,.scumm-module-resizer:focus-visible,.scumm-height-resizer:focus-visible { outline:2px solid #ffe28c; outline-offset:-2px; }
-.scumm-bottom[data-layout-ready] { gap:0; height:var(--scumm-height,270px); align-items:stretch; }
+.scumm-bottom[data-layout-ready] { gap:0; height:var(--scumm-height,294px); align-items:stretch; }
 .scumm-module { position:relative; flex:1 1 0; min-width:0; display:flex; flex-direction:column; border-right:1px solid #291b0c; overflow:hidden; }
 .scumm-module-head { display:flex; align-items:center; justify-content:space-between; flex-shrink:0; min-height:25px; border-bottom:1px solid #291b0c; background:rgba(30,18,4,.28); padding:0 8px; }
 .scumm-module-head .scumm-module-grip { cursor:grab; touch-action:none; text-align:left; flex:1; }
@@ -23,11 +30,11 @@
 .scumm-height-resizer { height:9px; border-top:1px solid #ad8448; cursor:row-resize; touch-action:none; background:linear-gradient(#63421f,#392510); }
 .scumm-height-resizer::after { content:''; display:block; width:36px; height:2px; margin:3px auto; background:#c0995a; }
 .scumm-module[hidden],.scumm-layout-tools [hidden],.scumm-bottom[data-layout-ready][hidden],.scumm-module-resizer[hidden],.scumm-height-resizer[hidden] { display:none!important; }
-.scumm-collapsed .scumm-layout-tools,.scumm-collapsed .scumm-height-resizer { display:none; }
+.scumm-collapsed .scumm-height-resizer { display:none; }
 @media(max-width:600px) {
   .scumm-bottom[data-layout-ready] { flex-direction:column; height:auto; }
   .scumm-module { flex:none!important; width:100%; }
-  .scumm-module-content { min-height:160px; max-height:var(--scumm-height,270px); }
+  .scumm-module-content { min-height:160px; max-height:var(--scumm-height,294px); }
   .scumm-module-resizer,.scumm-height-resizer { display:none; }
   .scumm-module-content .verb-grid { grid-template-columns:repeat(3,max-content); }
   .scumm-module-head button { min-height:32px; }

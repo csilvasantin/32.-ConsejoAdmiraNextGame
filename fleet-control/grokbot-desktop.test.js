@@ -396,3 +396,10 @@ test('native entry ids migrate old receipts without merging distinct same-minute
  assert.equal(migrated.length,2);assert.equal(migrated.find(m=>m.prompt==='Primero').id,first[0].id);
  assert.equal((await desktop.list(user,'Jobs')).length,2);
 });
+
+test('native ids migrate an assistant-only viewport without duplicating its retained turn',async t=>{
+ const legacy='ax_'+'d'.repeat(64);let messages=[card('assistant','Respuesta retenida',legacy)];
+ const {desktop}=setup(t,async()=>snapshot({messages}));const before=await desktop.list(user,'Jobs');
+ messages=[{...card('assistant','Respuesta retenida','native-answer'),legacyKey:legacy}];
+ const after=await desktop.list(user,'Jobs');assert.equal(after.length,1);assert.equal(after[0].id,before[0].id);
+});

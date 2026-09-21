@@ -507,7 +507,7 @@ export function showRemote(persona, root = lastRoot || (typeof document !== 'und
   const isCurrent = () => generation === remoteGeneration && remotePersona === alias && modo === 'remote';
   remoteStatus(root,alias,'connecting','Conectando escritorio de '+alias+'…');
   const previous=lastRemoteFrames.get(alias);
-  remoteImgs(root).forEach(img=>{if(previous)img.src=previous.url;else if(img.removeAttribute)img.removeAttribute('src');});
+  remoteImgs(root).forEach(img=>{img.crossOrigin='use-credentials';if(previous)img.src=previous.url;else if(img.removeAttribute)img.removeAttribute('src');});
   let loading=false;
   const tick = () => {
     if (!isCurrent()||loading) return;
@@ -522,7 +522,7 @@ export function showRemote(persona, root = lastRoot || (typeof document !== 'und
     // Preload before replacing the frame: a failed refresh must not destroy
     // the last readable image. No extra native selection on any refresh.
     if(typeof Image==='function'){
-      loading=true;const next=new Image();next.onload=accept;next.onerror=fail;next.src=url;
+      loading=true;const next=new Image();next.crossOrigin='use-credentials';next.onload=accept;next.onerror=fail;next.src=url;
     }else accept();
   };
   remoteImgs(root).forEach(img=>{img.onerror=()=>{if(isCurrent())paintRemoteError(root,alias);};});

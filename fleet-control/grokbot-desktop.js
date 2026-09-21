@@ -214,6 +214,12 @@ function createGrokBotDesktop({environment = process.env, runNative, now = Date.
           if(old.length===1)entry=old[0];
         }
         if (!entry) entry = rows().find(row => row.nativeKeys.some(key => keys.includes(key)) && (!userKey || !row.nativeUserKey || row.nativeUserKey === userKey));
+        if(!entry&&!current.user){
+          const migrated=rows().filter(row=>row.parts.some(part=>current.assistants.some(item=>
+            item.legacyKey===part.key && item.label===part.label && item.time===part.time &&
+            (item.text.startsWith(part.text)||part.text.startsWith(item.text)))));
+          if(migrated.length===1)entry=migrated[0];
+        }
         if (!entry && !current.user) {
           // A viewport can begin at a growing assistant card. Older helpers use
           // content hashes as keys, so identify an unambiguous continuing card

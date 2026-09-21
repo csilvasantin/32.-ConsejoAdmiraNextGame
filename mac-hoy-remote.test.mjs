@@ -34,6 +34,7 @@ test('Examinar opens the seat once before passive JPEG refreshes; late openings 
     finish({ok:true,json:async()=>({ok:true})});
     for(let i=0;i<8;i++)await Promise.resolve();
     assert.ok(imgs.every(i=>/screen\.jpg\?persona=Lucas&/.test(i.src)));
+    assert.ok(imgs.every(i=>i.crossOrigin==='use-credentials'),'Fleet proxy requires Origin and the authenticated session for images');
   }finally{setVisible(false,root);}
 });
 

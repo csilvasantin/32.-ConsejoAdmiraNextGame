@@ -411,3 +411,9 @@ for (const failure of ['attachment_button_unavailable','attachment_focus_unavail
  await assert.rejects(desktop.send(user,body({attachments:[attachment.id]})),errorCode('desktop_'+failure));
  const rows=JSON.parse(fs.readFileSync(file)).messages;assert.equal(rows.length,1);assert.equal(rows[0].status,'failed');assert.equal(sends,1);
 });
+
+test('failure to activate GrokBot is a known pre-send failure, not an uncertain delivery',async t=>{
+ const {desktop,file}=setup(t,async request=>request.action==='send'?snapshot({ok:false,error:'interaction_focus_unavailable'}):snapshot());
+ await assert.rejects(desktop.send(user,body()),errorCode('desktop_focus_unavailable'));
+ const rows=JSON.parse(fs.readFileSync(file)).messages;assert.equal(rows.length,1);assert.equal(rows[0].status,'failed');
+});

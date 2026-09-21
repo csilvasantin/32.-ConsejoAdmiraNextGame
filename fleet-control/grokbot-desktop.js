@@ -134,6 +134,7 @@ function parseSnapshot(value, now) {
     draft:'desktop_draft_present', draft_present:'desktop_draft_present', composer_has_draft:'desktop_draft_present', draft_exists:'desktop_draft_present',
     busy:'desktop_busy', conversation_busy:'desktop_busy', bridge_busy:'desktop_busy',
     persona_not_selected:'desktop_selection_mismatch', selection_or_draft_changed:'desktop_selection_mismatch', selection_unconfirmed:'desktop_selection_mismatch', unsupported_or_ambiguous_conversation:'desktop_selection_mismatch',
+    interaction_focus_unavailable:'desktop_focus_unavailable',
     composer_not_writable:'desktop_composer_unavailable', application_not_running:'desktop_application_not_running',
     attachment_prepare_failed:'desktop_attachment_prepare_failed', attachment_focus_unavailable:'desktop_attachment_focus_unavailable', attachment_button_unavailable:'desktop_attachment_button_unavailable', attachment_menu_unavailable:'desktop_attachment_menu_unavailable', attachment_picker_unavailable:'desktop_attachment_picker_unavailable', attachment_path_unavailable:'desktop_attachment_path_unavailable', attachment_open_unavailable:'desktop_attachment_open_unavailable',
     routine_controls_unavailable:'desktop_routines_unavailable', routine_not_found:'routine_not_found', routine_changed:'routine_changed', routine_state_unconfirmed:'routine_state_unconfirmed',
@@ -373,7 +374,7 @@ function createGrokBotDesktop({environment = process.env, runNative, now = Date.
       let response;
       try { response = await observe({action:'send', persona:PERSONAS[target], prompt,...(files.length?{attachmentPaths:files.map(f=>f.path)}:{})}); }
       catch (_) { /* Ambiguous process timeout: retain the durable reservation. */ }
-      if(response&&!response.ok&&(response.error.startsWith('desktop_attachment_')||response.error==='invalid_attachment'||(files.length&&response.error==='desktop_control_unavailable'))){
+      if(response&&!response.ok&&(response.error.startsWith('desktop_attachment_')||response.error==='invalid_attachment'||response.error==='desktop_focus_unavailable'||(files.length&&response.error==='desktop_control_unavailable'))){
         // Attachment preparation throws before composing/pressing Send. This
         // is proven non-delivery, unlike a timeout after pressing Send.
         state.transact(records=>{const entry=records.get(id);if(!entry.nativeUserKey){entry.status='failed';entry.error=response.error;entry.updatedAt=new Date(now()).toISOString();}});

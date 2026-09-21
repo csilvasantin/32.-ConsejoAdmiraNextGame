@@ -27,7 +27,7 @@
     const base=options.base || 'https://fleet.admira.live/api/grokbot';
     const request=options.fetch || root.fetch.bind(root);
     let selected=null, selectedEpoch=0, capabilities=null, destroyed=false, selectionReady=false, connected=false, pollTimer=null, refreshing=null, selecting=null;
-    let renderedPersona=null;
+    let renderedPersona=null, selectionError=null;
     const attachments=new Map(), uploading=new Set();
     const histories=new Map(), pendingSends=new Set(), requests=new Set(), announced=new Map(), settled=new Map(), baselined=new Set();
     const details=doc.createElement(options.mountInside?'section':'details'); details.className='council-chat';
@@ -118,6 +118,7 @@
         routine_state_unconfirmed:'No se pudo confirmar el cambio de la rutina. Consulta su estado antes de repetir.',
         desktop_run_changed:'La ejecución ha cambiado. Actualiza antes de detenerla.',
         desktop_control_unavailable:'Ese control no está disponible ahora en GrokBot.',
+        desktop_focus_unavailable:'No se pudo activar la ventana de GrokBot; tu mensaje no se ha enviado. Abre GrokBot y vuelve a intentarlo.',
         desktop_accessibility_required:'GrokBot está abierto, pero el puente no tiene permiso de Accesibilidad en el Mac Mini.',
         desktop_application_not_running:'GrokBot no está abierto en el Mac Mini. Ábrelo para continuar esta misma conversación.',
         desktop_not_configured:'El puente de GrokBot no está configurado en el Mac Mini.',
@@ -205,7 +206,7 @@
           if(restoreHistory){
             for(const row of rows)remember(row);
             if(last?.text)options.onRestore?.({persona:name,text:last.text,messageId:last.id,status:last.status,source:'desktop',native:true});
-            if(!selectionReady)say('Historial recuperado. Pulsa Enviar para conectar con '+name+'; se conservará tu texto si no puede enviarse.');
+            if(!selectionReady)say(selectionError||'Historial recuperado. Pulsa Enviar para conectar con '+name+'; se conservará tu texto si no puede enviarse.');
             else if(last)say(LABELS[last.status] || 'Conversación recuperada');
             else say('Chat de GrokBot · esperando mensajes visibles de '+name+'.');
           }else{
@@ -215,7 +216,7 @@
               if(latestKnown && timestamp(row.createdAt)<timestamp(latestKnown.createdAt))remember(row);
               else report(row,epoch);
             }
-            if(!changes.length && wasDisconnected)say(selectionReady?'Chat de GrokBot · sincronización recuperada.':'Historial recuperado. Pulsa Enviar para conectar con el consejero.');
+            if(!changes.length && wasDisconnected)say(selectionReady?'Chat de GrokBot · sincronización recuperada.':selectionError||'Historial recuperado. Pulsa Enviar para conectar con el consejero.');
           }
         }catch(e){if(current(epoch)){connection(false);say(errorMessage(e));}}
         finally{if(refreshing===entry)refreshing=null;schedule(epoch);}
@@ -230,7 +231,7 @@
     }
     async function selectNative(persona){
       if(destroyed)return false;
-      const epoch=++selectedEpoch;selected=PEOPLE[persona]?persona:null;selectionReady=false;
+      const epoch=++selectedEpoch;selected=PEOPLE[persona]?persona:null;selectionReady=false;selectionError=null;
       clearTimeout(pollTimer);pollTimer=null;options.onSelect?.(selected);
       details.hidden=!selected;
       if(operations){operations.hidden=true;operations.replaceChildren();}
@@ -244,7 +245,7 @@
         if(!current(epoch))return false;
         selectionReady=true;
         await refresh();return current(epoch);
-      }catch(e){if(current(epoch)){connection(false);say(errorMessage(e));schedule(epoch);}return false;}
+      }catch(e){if(current(epoch)){selectionError=errorMessage(e);connection(false);say(selectionError);schedule(epoch);}return false;}
     }
     async function send(persona,prompt){
       if(!PEOPLE[persona]||destroyed)return false;
@@ -275,7 +276,7 @@
           render();report(canonical,selectedEpoch);schedule(selectedEpoch);
         }
       }catch(e){
-        if(e.code?.startsWith('desktop_attachment_')||e.code==='desktop_control_unavailable'||['invalid_attachment','attachment_not_found','attachment_changed','desktop_attachments_unavailable','desktop_draft_present','desktop_busy','desktop_not_configured','desktop_owner_required','desktop_unavailable','desktop_timeout','desktop_read_failed','desktop_accessibility_required','desktop_application_not_running','desktop_selection_mismatch'].includes(e.code) || e.status===401)submitted=false;
+        if(e.code?.startsWith('desktop_attachment_')||e.code==='desktop_control_unavailable'||['desktop_focus_unavailable','invalid_attachment','attachment_not_found','attachment_changed','desktop_attachments_unavailable','desktop_draft_present','desktop_busy','desktop_not_configured','desktop_owner_required','desktop_unavailable','desktop_timeout','desktop_read_failed','desktop_accessibility_required','desktop_application_not_running','desktop_selection_mismatch'].includes(e.code) || e.status===401)submitted=false;
         if(current(epoch)){
           if(e.code==='desktop_draft_present')selectionReady=false;
           connection(false);const message=e.name==='AbortError'?'No se pudo confirmar el envío. Actualiza el historial antes de repetir.':errorMessage(e);

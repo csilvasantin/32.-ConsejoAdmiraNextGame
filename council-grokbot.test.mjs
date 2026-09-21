@@ -417,3 +417,14 @@ test('native result links are clickable without interpreting HTML or executable 
  assert.ok(links.length>0);assert.ok(links.every(n=>n.href==='https://example.test/result.pdf'&&n.rel==='noopener noreferrer'));
  assert.match(h.log.textContent,/<img src=x onerror=evil\(\)> javascript:evil\(\)/);h.api.destroy();
 });
+
+test('passive history refresh retains the failed selection reason until explicit recovery',async()=>{
+ const h=harness();h.selectionHandler=()=>response({ok:false,code:'desktop_selection_mismatch'},409);
+ assert.equal(await h.api.select('Steve Jobs'),false);
+ const reason=h.statuses.at(-1);assert.match(reason,/No se ha podido confirmar el consejero/);
+ await h.api.refresh();assert.equal(h.statuses.at(-1),reason);
+ assert.equal(h.posts.length,0);
+ h.selectionHandler=()=>response({ok:true,selectedPersona:'Jobs'});
+ assert.equal(await h.api.send('Steve Jobs','Pregunta tras recuperar'),true);
+ assert.equal(h.posts.length,1);h.api.destroy();
+});

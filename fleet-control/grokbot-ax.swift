@@ -365,8 +365,37 @@ final class GrokAX {
         guard let liveHeading = heading.element, stringAttribute(liveHeading, kAXDescriptionAttribute) == persona else { throw BridgeError(code: "selection_changed_during_snapshot") }
         return Context(root: tree, heading: heading, pane: pane, transcript: transcript, composer: composer, sendButton: send, snapshot: snapshot)
     }
+    // Explicit selection/send needs an active Electron window. Passive reads
+    // never call this helper. Restore focus without changing window geometry.
+    func activateForInteraction() throws -> () -> Void {
+        let previous = NSWorkspace.shared.frontmostApplication
+        var pid: pid_t = 0
+        guard AXUIElementGetPid(app, &pid) == .success,
+              let native = NSRunningApplication(processIdentifier: pid) else { throw BridgeError(code: "interaction_focus_unavailable") }
+        let windows = (attribute(app, kAXWindowsAttribute) as? [AXUIElement]) ?? []
+        let targets = windows.filter { stringAttribute($0, kAXTitleAttribute) == "Grok Bot" }
+        guard targets.count == 1 else { throw BridgeError(code: "interaction_focus_unavailable") }
+        let restore: () -> Void = {
+            if let previous = previous, previous.processIdentifier != pid,
+               NSWorkspace.shared.frontmostApplication?.processIdentifier == pid {
+                _ = AXUIElementSetAttributeValue(AXUIElementCreateApplication(previous.processIdentifier), kAXFrontmostAttribute as CFString, kCFBooleanTrue)
+                previous.activate(options: [])
+            }
+        }
+        _ = AXUIElementSetAttributeValue(app, kAXFrontmostAttribute as CFString, kCFBooleanTrue)
+        _ = native.activate(options: [])
+        guard AXUIElementPerformAction(targets[0], kAXRaiseAction as CFString) == .success else { restore(); throw BridgeError(code: "interaction_focus_unavailable") }
+        let focusDeadline = Date().addingTimeInterval(2)
+        while NSWorkspace.shared.frontmostApplication?.processIdentifier != pid && Date() < focusDeadline { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
+        return restore
+    }
     func select(_ persona: String) throws -> Snapshot {
-        let initial = try read()
+        var initial = try read()
+        if initial.snapshot.selectedPersona == persona { return initial.snapshot }
+        guard !initial.snapshot.composerHasDraft else { return failed(initial.snapshot, "draft_exists") }
+        let restore = try activateForInteraction()
+        defer { restore() }
+        initial = try read()
         if initial.snapshot.selectedPersona == persona { return initial.snapshot }
         guard !initial.snapshot.composerHasDraft else { return failed(initial.snapshot, "draft_exists") }
         let lists = initial.root.descendants().filter { $0.role == "AXGroup" && $0.description == "Lista de Bots" }
@@ -517,30 +546,8 @@ final class GrokAX {
               ((attrs[.posixPermissions] as? NSNumber)?.intValue ?? 0777) & 0077 == 0 else { throw BridgeError(code: "invalid_attachment_path") }
         let initial = try read()
         guard initial.snapshot.selectedPersona == persona, !initial.snapshot.composerHasDraft, !initial.snapshot.busy else { throw BridgeError(code: "selection_or_draft_changed") }
-        // Native file dialogs refuse activation while GrokBot is in the
-        // background. Only explicit attachment preparation activates it;
-        // snapshots/polling never do. No window position or size changes.
-        let previous = NSWorkspace.shared.frontmostApplication
-        var pid: pid_t = 0
-        guard AXUIElementGetPid(app, &pid) == .success,
-              let native = NSRunningApplication(processIdentifier: pid) else { throw BridgeError(code: "attachment_focus_unavailable") }
-        let windows = (attribute(app, kAXWindowsAttribute) as? [AXUIElement]) ?? []
-        let targets = windows.filter { stringAttribute($0, kAXTitleAttribute) == "Grok Bot" }
-        guard targets.count == 1 else { throw BridgeError(code: "attachment_focus_unavailable") }
-        _ = AXUIElementSetAttributeValue(app, kAXFrontmostAttribute as CFString, kCFBooleanTrue)
-        _ = native.activate(options: [])
-        guard AXUIElementPerformAction(targets[0], kAXRaiseAction as CFString) == .success else { throw BridgeError(code: "attachment_focus_unavailable") }
-        defer {
-            if let previous = previous, previous.processIdentifier != pid,
-               NSWorkspace.shared.frontmostApplication?.processIdentifier == pid {
-                _ = AXUIElementSetAttributeValue(AXUIElementCreateApplication(previous.processIdentifier), kAXFrontmostAttribute as CFString, kCFBooleanTrue)
-                previous.activate(options: [])
-            }
-        }
-        let focusDeadline = Date().addingTimeInterval(2)
-        while NSWorkspace.shared.frontmostApplication?.processIdentifier != pid && Date() < focusDeadline { RunLoop.current.run(until: Date().addingTimeInterval(0.05)) }
-        // AXRaise succeeded. A command-line AppKit client may have stale
-        // NSWorkspace foreground metadata; the actual panel below is decisive.
+        let restore = try activateForInteraction()
+        defer { restore() }
         let controls = initial.pane.descendants().filter { ["AXButton", "AXPopUpButton", "AXMenuButton"].contains($0.role) && $0.label == "Adjuntar archivo" }
         guard controls.count == 1 else { throw BridgeError(code: "attachment_button_unavailable") }
         try press(controls[0])
@@ -569,6 +576,8 @@ final class GrokAX {
     }
     func send(_ persona: String, prompt: String, attachmentPaths: [String] = []) throws -> Snapshot {
         guard attachmentPaths.count <= 1 else { throw BridgeError(code: "invalid_attachment_path") }
+        let restore = try activateForInteraction()
+        defer { restore() }
         for file in attachmentPaths {
             do { try attach(persona, file: file) }
             catch let error as BridgeError {

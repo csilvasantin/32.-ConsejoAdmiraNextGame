@@ -2765,7 +2765,9 @@
         const input = document.getElementById("action-input");
         let text = input.value.trim();
         const chatImage = pendingChatImage;
-        if (!text && !chatImage) return;
+        const nativeFiles=selectedAgent&&window.CouncilInterface?.hasAttachments?.(selectedAgent.persona);
+        if (!text && !chatImage && !nativeFiles) return;
+        if (!text && nativeFiles) text='Adjunto este archivo.';
         if (!text && chatImage) text = "¿Qué ves en esta imagen?";
         input.value = "";
         const imageForSend = takePendingChatImage();
@@ -2776,6 +2778,17 @@
 
         // If in "preguntar" mode with a selected agent, ask only that one
         if (preguntarMode && selectedAgent) {
+            if (window.CouncilInterface?.has(selectedAgent.persona)) {
+                const recipient=selectedAgent.persona;
+                if(imageForSend){
+                    const type=(/^data:([^;]+)/.exec(imageForSend)||[])[1]||'image/png';
+                    const uploaded=await window.CouncilInterface.attachDataURL(imageForSend,type==='image/jpeg'?'imagen.jpg':'imagen.png',type);
+                    if(!uploaded){window.CouncilInterface.restoreDraft(recipient,text);setPendingChatImage(imageForSend);return;}
+                }
+                const accepted=await window.CouncilInterface.send(recipient,text);
+                if(!accepted)window.CouncilInterface.restoreDraft(recipient,text);
+                return;
+            }
             // Con imagen: visión por ask-one (+imageData), no solo bridge texto GrokBot
             if (imageForSend) {
                 if (consejeroPendiente(selectedAgent) && !window.CouncilInterface?.has(selectedAgent.persona)) {
@@ -2784,11 +2797,6 @@
                 enterConversation();
                 addUserEntry(text, imageForSend);
                 askSingleAgent(text, selectedAgent, imageForSend);
-                return;
-            }
-            if (window.CouncilInterface?.has(selectedAgent.persona)) {
-                const accepted=await window.CouncilInterface.send(selectedAgent.persona, text);
-                if(!accepted && !input.value)input.value=text;
                 return;
             }
             if (consejeroPendiente(selectedAgent)) { avisoPendiente(selectedAgent); return; }

@@ -221,6 +221,10 @@ function watchScreen(root) {
   }
 }
 
+function emitScreen(root, name, detail) {
+  if(root?.dispatchEvent && typeof CustomEvent!=='undefined')root.dispatchEvent(new CustomEvent(name,{detail}));
+}
+
 function aplicarModo(root) {
   if (!root || !root.querySelectorAll) return;
   // Todas las entradas (disquetera, teclado, menú) pasan por aquí. Salir del
@@ -235,6 +239,7 @@ function aplicarModo(root) {
     // captura y Pong nunca deben quedar visibles simultáneamente.
     if (img.style) img.style.display = modo === 'remote' ? 'block' : 'none';
   });
+  emitScreen(root,'mac-screen-mode',{mode:modo,persona:remotePersona});
 }
 
 export function modoActual() { return modo; }
@@ -449,12 +454,31 @@ function stopRemotePoll() {
   if (remoteTimer) { clearInterval(remoteTimer); remoteTimer = null; }
 }
 
-function paintRemoteError(root, alias) {
-  modo = 'hoy';
-  aplicarModo(root);
-  const msg = 'SIN CABLE\n' + String(alias || 'SILLA').toUpperCase().slice(0, 12);
-  lastText = msg;
-  tubos(root).forEach((t) => paintCrt(t, msg));
+const lastRemoteFrames = new Map();
+export function remoteErrorMessage(code) {
+  const messages={
+    session_expired:'Inicia sesión para abrir el escritorio.',
+    desktop_draft_present:'Hay un borrador en GrokBot. No se ha cambiado de consejero.',
+    desktop_busy:'GrokBot está ocupado. Vuelve a intentarlo.',
+    desktop_application_not_running:'GrokBot no está abierto en el Mac Mini.',
+    desktop_accessibility_required:'Falta el permiso de Accesibilidad del puente en el Mac Mini.',
+    desktop_selection_mismatch:'No se pudo confirmar el consejero en GrokBot.',
+    unsupported_persona:'Este consejero aún no tiene escritorio conectado.',
+    capture_unavailable:'No se ha podido cargar la captura. El chat tiene una conexión independiente.'
+  };
+  return messages[code]||'No se pudo abrir el escritorio. Reintenta la conexión con GrokBot.';
+}
+function remoteStatus(root,alias,code,message,retry=false){
+  emitScreen(root,'mac-remote-status',{persona:alias,code,message,retry,lastFrameAt:lastRemoteFrames.get(alias)?.at||null});
+}
+function paintRemoteError(root, alias, code='capture_unavailable') {
+  const frame=lastRemoteFrames.get(alias);
+  if(!frame){
+    modo='hoy';aplicarModo(root);
+    const msg='CAPTURA\nNO DISPONIBLE\n'+String(alias||'SILLA').toUpperCase().slice(0,12);
+    lastText=msg;tubos(root).forEach(t=>paintCrt(t,msg));
+  }
+  remoteStatus(root,alias,code,(frame?'Imagen anterior · ':'')+remoteErrorMessage(code),true);
 }
 
 export function remoteSeat() { return remotePersona; }
@@ -469,7 +493,7 @@ export function showRemote(persona, root = lastRoot || (typeof document !== 'und
   stopRemotePoll();
   if (!alias) {
     if (!visible) setVisible(true, root, fetchImpl);
-    paintRemoteError(root, persona);
+    paintRemoteError(root, persona, 'unsupported_persona');
     return false;
   }
   remotePersona = alias;
@@ -481,20 +505,27 @@ export function showRemote(persona, root = lastRoot || (typeof document !== 'und
   fitScreen(root);
   const generation = remoteGeneration;
   const isCurrent = () => generation === remoteGeneration && remotePersona === alias && modo === 'remote';
+  remoteStatus(root,alias,'connecting','Conectando escritorio de '+alias+'…');
+  const previous=lastRemoteFrames.get(alias);
+  remoteImgs(root).forEach(img=>{if(previous)img.src=previous.url;else if(img.removeAttribute)img.removeAttribute('src');});
+  let loading=false;
   const tick = () => {
-    if (!isCurrent()) return;
+    if (!isCurrent()||loading) return;
     const url = SCREEN_JPEG + '?persona=' + encodeURIComponent(alias) + '&t=' + Date.now();
-    remoteImgs(root).forEach((img) => {
-      img.src = url;
-      img.alt = 'Pantalla de ' + alias;
-    });
-  };
-  remoteImgs(root).forEach((img) => {
-    img.onerror = () => {
-      if (!isCurrent()) return;
-      stopRemotePoll(); paintRemoteError(root, alias);
+    const accept=()=>{
+      loading=false;if(!isCurrent())return;
+      lastRemoteFrames.set(alias,{url,at:Date.now()});
+      remoteImgs(root).forEach(img=>{img.src=url;img.alt='Pantalla de '+alias;});
+      remoteStatus(root,alias,'frame','Captura de '+alias);
     };
-  });
+    const fail=()=>{loading=false;if(isCurrent())paintRemoteError(root,alias);};
+    // Preload before replacing the frame: a failed refresh must not destroy
+    // the last readable image. No extra native selection on any refresh.
+    if(typeof Image==='function'){
+      loading=true;const next=new Image();next.onload=accept;next.onerror=fail;next.src=url;
+    }else accept();
+  };
+  remoteImgs(root).forEach(img=>{img.onerror=()=>{if(isCurrent())paintRemoteError(root,alias);};});
   // Opening a seat may select it once. JPEG refreshes must stay passive so a
   // background preview cannot steal the native chat from a web conversation.
   if (!remoteImgs(root).length) return true;
@@ -509,9 +540,9 @@ export function showRemote(persona, root = lastRoot || (typeof document !== 'und
     .then(async response => {
       const data = await response.json();
       if (!isCurrent()) return;
-      if (!response.ok || !data?.ok) throw new Error('screen_unavailable');
+      if (!response.ok || !data?.ok) {const e=new Error('screen_unavailable');e.code=response.status===401?'session_expired':data?.code||data?.error;throw e;}
       tick(); remoteTimer = setInterval(tick, 2500);
-    }).catch(() => { if (isCurrent()) paintRemoteError(root, alias); });
+    }).catch(error => { if (isCurrent()) paintRemoteError(root, alias,error.code||'selection_failed'); });
   return true;
 }
 

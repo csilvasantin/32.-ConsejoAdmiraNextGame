@@ -12,7 +12,7 @@
   const terminal = status => ['done','blocked','failed','unknown'].includes(status);
   const timestamp = value => Number.isFinite(Number(value)) ? Number(value) : Date.parse(value) || 0;
   const native = row => row.source === 'desktop' && row.native === true;
-  const signature = row => JSON.stringify([row.prompt || '',row.text || '',row.status,row.source,row.native]);
+  const signature = row => JSON.stringify([row.prompt || '',row.text || '',row.status,row.source,row.native,row.attachments||[]]);
   function reconcile(previous, incoming) {
     const rows = new Map((previous || []).map(row => [row.id, row]));
     for (const row of incoming || []) {
@@ -27,13 +27,18 @@
     const base=options.base || 'https://fleet.admira.live/api/grokbot';
     const request=options.fetch || root.fetch.bind(root);
     let selected=null, selectedEpoch=0, capabilities=null, destroyed=false, selectionReady=false, connected=false, pollTimer=null, refreshing=null, selecting=null;
+    let renderedPersona=null;
+    const attachments=new Map(), uploading=new Set();
     const histories=new Map(), pendingSends=new Set(), requests=new Set(), announced=new Map(), settled=new Map(), baselined=new Set();
-    const details=doc.createElement('details'); details.className='council-chat';
-    details.innerHTML='<summary>Chat de GrokBot <span class="council-chat__connection"></span></summary><div class="council-chat__toolbar"><strong class="council-chat__person"></strong><button type="button" data-chat-refresh>Actualizar</button><button type="button" data-chat-screen>Escritorio</button><a href="grokbot://" class="council-chat__native">Abrir GrokBot ↗</a></div><p class="council-chat__scope">Los mismos mensajes visibles en GrokBot, sincronizados a través del Mac Mini. El historial observado es parcial; no se importa la conversación completa.</p><p class="council-chat__status" role="status"></p><div class="council-chat__messages" role="log" aria-label="Mensajes visibles de GrokBot"></div><p class="council-chat__limits">El Mac Mini y GrokBot deben estar disponibles. Los adjuntos, las aprobaciones, las rutinas y la pantalla cloud se abren en GrokBot.</p>';
+    const details=doc.createElement(options.mountInside?'section':'details'); details.className='council-chat';
+    details.innerHTML='<summary>Chat de GrokBot <span class="council-chat__connection"></span></summary><div class="council-chat__toolbar"><strong class="council-chat__person"></strong><button type="button" data-chat-refresh>Actualizar</button><button type="button" data-chat-screen>Escritorio</button><button type="button" data-chat-attach hidden>Adjuntar</button><input type="file" data-chat-file hidden><button type="button" data-chat-routines hidden>Rutinas</button><button type="button" data-chat-stop hidden>Detener</button><a href="grokbot://" class="council-chat__native">Abrir GrokBot ↗</a></div><p class="council-chat__scope">Los mismos mensajes visibles en GrokBot, sincronizados a través del Mac Mini. Historial observado en GrokBot; puede faltar contenido antiguo.</p><p class="council-chat__status" role="status"></p><div class="council-chat__attachments" hidden></div><div class="council-chat__operations" hidden></div><div class="council-chat__messages" role="log" aria-label="Mensajes visibles de GrokBot"></div><p class="council-chat__limits">El Mac Mini y GrokBot deben estar disponibles. Las aprobaciones y los resultados descargables todavía se gestionan en GrokBot. Adjuntos: un archivo de hasta 4 MB por mensaje.</p>';
+    if(options.mountInside)details.innerHTML=details.innerHTML.replace('<summary>', '<header class="council-chat__heading">').replace('</summary>','</header>');
     details.hidden=true;
-    options.container.insertAdjacentElement('afterend',details);
+    if(options.mountInside){options.container.append(details);details.open=true;}
+    else options.container.insertAdjacentElement('afterend',details);
     const $=s=>details.querySelector(s);
-    const status=$('.council-chat__status'), log=$('.council-chat__messages');
+    const status=$('.council-chat__status'), log=$('.council-chat__messages'), operations=$('.council-chat__operations');
+    if(options.mountInside)$('.council-chat__toolbar').append($('.council-chat__connection'));
     const current=epoch=>!destroyed && epoch===selectedEpoch;
     const desktop=()=>capabilities?.mode==='desktop';
     function say(message){if(destroyed)return;status.textContent=message;options.onStatus?.(message);}
@@ -43,6 +48,9 @@
     }
     function render(){
       if(destroyed)return;
+      const oldTop=log.scrollTop;
+      const follow=renderedPersona!==selected || !options.mountInside || log.scrollHeight-log.clientHeight-oldTop<48;
+      renderedPersona=selected;
       log.replaceChildren();
       if(!selected)return;
       $('.council-chat__person').textContent=selected;
@@ -62,15 +70,19 @@
             const reply=doc.createElement('p');reply.className='council-chat__reply';
             const botName=doc.createElement('strong');botName.textContent=FULL[row.persona];reply.append(botName,doc.createTextNode(row.text));item.append(reply);
           }
+          for(const file of row.attachments||[]){const p=doc.createElement('p');p.className='council-chat__file';p.textContent='📎 '+file.name;item.append(p);}
           const meta=doc.createElement('span');meta.className='council-chat__meta';meta.textContent=LABELS[row.status] || 'Estado pendiente';item.append(meta);log.append(item);
         }
       }
       if(!log.childElementCount){const p=doc.createElement('p');p.textContent='Aún no se han observado mensajes visibles de este consejero en GrokBot.';log.append(p);}
-      log.scrollTop=log.scrollHeight;
+      log.scrollTop=follow?log.scrollHeight:oldTop;
     }
     function connection(available){
       if(destroyed)return;
       connected=available;
+      if($('[data-chat-attach]'))$('[data-chat-attach]').hidden=!available||!capabilities?.attachments;
+      if($('[data-chat-routines]'))$('[data-chat-routines]').hidden=!available||!capabilities?.routines;
+      if($('[data-chat-stop]'))$('[data-chat-stop]').hidden=!available||!capabilities?.interrupt||capabilities?.status!=='busy'||!capabilities?.runKey;
       const node=$('.council-chat__connection');
       const nativePersona=PEOPLE[capabilities?.selectedPersona] || capabilities?.selectedPersona;
       const observedAt=timestamp(capabilities?.lastObservedAt);
@@ -81,6 +93,18 @@
       if(error.code==='desktop_draft_present')return 'Hay un borrador en GrokBot. Guárdalo o envíalo allí y vuelve a seleccionar el consejero; no se ha cambiado el chat.';
       if(error.code==='desktop_busy')return 'GrokBot está ocupado. La sincronización volverá a intentarlo; no se reenviará ningún mensaje.';
       const explanations={
+        desktop_attachments_unavailable:'El puente aún no admite adjuntos. Se conserva el archivo; no se envía por otro modelo.',
+        attachment_too_large:'El archivo supera el límite de 4 MB del puente.',
+        invalid_attachment_name:'El nombre del archivo no se puede usar. Renómbralo y vuelve a adjuntarlo.',
+        invalid_attachment:'El adjunto no es válido. Adjunta de nuevo el archivo.',
+        attachment_not_found:'No se encuentra tu adjunto. Vuelve a adjuntarlo.',
+        desktop_attachment_control_unavailable:'No se pudo preparar el archivo en GrokBot. Comprueba su compositor antes de repetir.',
+        desktop_controls_unavailable:'El puente necesita actualizarse para mostrar estos controles.',
+        desktop_routines_unavailable:'No se ha podido leer el panel de rutinas de GrokBot.',
+        routine_changed:'La rutina ha cambiado. Ábrela de nuevo antes de modificar su estado.',
+        routine_state_unconfirmed:'No se pudo confirmar el cambio de la rutina. Consulta su estado antes de repetir.',
+        desktop_run_changed:'La ejecución ha cambiado. Actualiza antes de detenerla.',
+        desktop_control_unavailable:'Ese control no está disponible ahora en GrokBot.',
         desktop_accessibility_required:'GrokBot está abierto, pero el puente no tiene permiso de Accesibilidad en el Mac Mini.',
         desktop_application_not_running:'GrokBot no está abierto en el Mac Mini. Ábrelo para continuar esta misma conversación.',
         desktop_not_configured:'El puente de GrokBot no está configurado en el Mac Mini.',
@@ -99,7 +123,7 @@
       return explanations[error.code] || error.message;
     }
     async function api(path,body){
-      const ctl=new AbortController();requests.add(ctl);const timeout=setTimeout(()=>ctl.abort(),25000);
+      const ctl=new AbortController();requests.add(ctl);const timeout=setTimeout(()=>ctl.abort(),body?.attachments?.length?60000:25000);
       try{
         const headers={Accept:'application/json'};
         if(body){headers['Content-Type']='application/json';headers['X-Fleet-CSRF']=options.csrf?.() || '';}
@@ -196,9 +220,11 @@
       const epoch=++selectedEpoch;selected=PEOPLE[persona]?persona:null;selectionReady=false;
       clearTimeout(pollTimer);pollTimer=null;options.onSelect?.(selected);
       details.hidden=!selected;
+      if(operations){operations.hidden=true;operations.replaceChildren();}
       if(!selected)return false;
+      log.scrollTop=log.scrollHeight;
       connected=false;$('.council-chat__connection').textContent='· Conectando…';
-      render();say('Abriendo el chat de '+selected+' en GrokBot…');
+      renderAttachments();render();say('Abriendo el chat de '+selected+' en GrokBot…');
       try{
         if(!await connect(epoch)||!current(epoch))return false;
         await api('/selection',{persona});
@@ -210,6 +236,7 @@
     async function send(persona,prompt){
       if(!PEOPLE[persona]||destroyed)return false;
       if(selected!==persona){say('Selecciona el consejero antes de enviar.');return false;}
+      if(uploading.has(persona)){say('Espera a que termine la subida del adjunto.');return false;}
       if(pendingSends.has(persona)){say('El envío anterior aún se está confirmando.');return false;}
       let epoch=selectedEpoch, submitted=false;
       pendingSends.add(persona);
@@ -226,7 +253,8 @@
         if(!await connect(epoch)||!current(epoch))return false;
         options.onPending?.({persona,prompt});
         submitted=true;
-        const data=await api('/messages',{message_id,persona,prompt});
+        const files=attachments.get(persona)||[];
+        const data=await api('/messages',{message_id,persona,prompt,...(files.length?{attachments:files.map(f=>f.id)}:{})});
         if(destroyed)return true;
         merge([data.message]);
         if(PEOPLE[selected]===data.message.persona){
@@ -234,18 +262,89 @@
           render();report(canonical,selectedEpoch);schedule(selectedEpoch);
         }
       }catch(e){
-        if(['desktop_draft_present','desktop_busy','desktop_not_configured','desktop_owner_required','desktop_unavailable','desktop_timeout','desktop_read_failed','desktop_accessibility_required','desktop_application_not_running','desktop_selection_mismatch'].includes(e.code) || e.status===401)submitted=false;
+        if(['invalid_attachment','attachment_not_found','attachment_changed','desktop_attachments_unavailable','desktop_draft_present','desktop_busy','desktop_not_configured','desktop_owner_required','desktop_unavailable','desktop_timeout','desktop_read_failed','desktop_accessibility_required','desktop_application_not_running','desktop_selection_mismatch'].includes(e.code) || e.status===401)submitted=false;
         if(current(epoch)){
           if(e.code==='desktop_draft_present')selectionReady=false;
           connection(false);const message=e.name==='AbortError'?'No se pudo confirmar el envío. Actualiza el historial antes de repetir.':errorMessage(e);
           say(message);options.onError?.({persona,message});schedule(epoch);
         }
-      }finally{pendingSends.delete(persona);}
+      }finally{pendingSends.delete(persona);if(submitted)attachments.delete(persona);renderAttachments();}
       return submitted;
     }
+    function renderAttachments(){
+      const node=$('.council-chat__attachments');if(!node)return;
+      node.replaceChildren();const files=attachments.get(selected)||[];node.hidden=!files.length;
+      for(const file of files){
+        const label=doc.createElement('span');label.textContent='📎 '+file.name+' · '+Math.ceil(file.size/1024)+' KB';
+        node.append(label,operationButton('Quitar adjunto',()=>{attachments.delete(selected);renderAttachments();}));
+      }
+    }
+    async function attachDataURL(dataURL,name='imagen.png',type){
+      const persona=selected,epoch=selectedEpoch;
+      if(!persona||pendingSends.has(persona)||uploading.has(persona))return false;
+      if((attachments.get(persona)||[]).length){say('Quita el adjunto actual antes de añadir otro.');return false;}
+      const match=/^data:([^;,]*);base64,([A-Za-z0-9+/=]+)$/.exec(dataURL||'');
+      if(!match){say('No se ha podido leer el archivo.');return false;}
+      uploading.add(persona);
+      try{
+        if(!await connect(epoch)||!current(epoch))return false;
+        if(!capabilities.attachments){say(errorMessage({code:'desktop_attachments_unavailable'}));return false;}
+        say('Subiendo '+name+'…');
+        const data=await api('/attachments',{name,type:type||match[1]||'application/octet-stream',data:match[2]});
+        attachments.set(persona,[data.attachment]);
+        if(current(epoch)){renderAttachments();say('Adjunto preparado. Escribe tu mensaje y pulsa Enviar.');}
+        return true;
+      }catch(error){if(current(epoch))say(errorMessage(error));return false;}finally{uploading.delete(persona);}
+    }
+    $('[data-chat-attach]')?.addEventListener('click',()=>$('[data-chat-file]').click());
+    $('[data-chat-file]')?.addEventListener('change',async event=>{
+      const file=event.target.files[0];event.target.value='';if(!file)return;
+      if(file.size>4*1024*1024){say(errorMessage({code:'attachment_too_large'}));return;}
+      const target=selected;const reader=new FileReader();reader.onload=()=>{if(selected===target)attachDataURL(reader.result,file.name,file.type);};reader.onerror=()=>say('No se pudo leer el archivo.');reader.readAsDataURL(file);
+    });
+    async function control(action,extra={}){
+      const epoch=selectedEpoch;
+      try{
+        const data=await api('/controls',{persona:selected,action,...extra});
+        if(!current(epoch))return null;
+        return data;
+      }catch(e){if(current(epoch))say(errorMessage(e));return null;}
+    }
+    function prepareRoutine(text){
+      if(options.onDraft?.(text)!==true)say('Conserva o envía tu borrador antes de preparar esta petición.');
+      else say('Petición preparada. Revísala y pulsa Enviar cuando esté lista.');
+    }
+    function operationButton(label,fn){const b=doc.createElement('button');b.type='button';b.textContent=label;b.addEventListener('click',async()=>{b.disabled=true;try{await fn();}finally{b.disabled=false;}});return b;}
+    async function showRoutines(){
+      const data=await control('routines');if(!data||!operations)return;
+      operations.hidden=false;operations.replaceChildren();
+      operations.append(operationButton('Cerrar rutinas',()=>{operations.hidden=true;}),operationButton('Crear rutina…',()=>prepareRoutine('Crea una rutina: ')));
+      if(data.routines===null){const p=doc.createElement('p');p.textContent='El panel de rutinas no está disponible ahora.';operations.append(p);return;}
+      for(const item of data.routines||[]){
+        operations.append(operationButton(item.name+' · '+item.schedule,async()=>{
+          const result=await control('routine',{routine_id:item.id});if(result?.routine)showRoutine(result.routine);
+        }));
+      }
+    }
+    function showRoutine(item){
+      operations.hidden=false;operations.replaceChildren();
+      const title=doc.createElement('strong');title.textContent=item.name;
+      const content=doc.createElement('p');content.textContent=item.instruction;
+      operations.append(operationButton('Volver a rutinas',showRoutines),title,content,
+        operationButton(item.paused?'Reanudar':'Pausar',async()=>{
+          const data=await control('routine_set',{routine_id:item.id,revision:item.revision,paused:!item.paused});
+          if(data?.routine)showRoutine(data.routine);
+        }),
+        operationButton('Editar en conversación…',()=>prepareRoutine('Edita tu rutina: '+item.name+'\n')));
+    }
+    $('[data-chat-routines]')?.addEventListener('click',showRoutines);
+    $('[data-chat-stop]')?.addEventListener('click',async()=>{
+      const data=await control('interrupt',{run_key:capabilities?.runKey});
+      if(data){say(data.status==='busy'?'Parada solicitada; esperando confirmación.':'La ejecución se ha detenido.');refresh({restore:false});}
+    });
     $('[data-chat-refresh]').addEventListener('click',()=>refresh());
     $('[data-chat-screen]').addEventListener('click',()=>options.onDesktop?.({persona:selected,capabilities}));
-    return {select,send,refresh,has:persona=>Boolean(PEOPLE[persona]),openHistory(){if(destroyed)return;details.open=true;details.scrollIntoView({block:'nearest',behavior:'smooth'});},get selected(){return selected;},get capabilities(){return capabilities;},destroy(){destroyed=true;selectedEpoch++;clearTimeout(pollTimer);pollTimer=null;for(const ctl of requests)ctl.abort();requests.clear();details.remove();}};
+    return {select,send,refresh,attachDataURL,hasAttachments:persona=>(attachments.get(persona)||[]).length>0,has:persona=>Boolean(PEOPLE[persona]),openHistory(){if(destroyed)return;details.open=true;options.onOpenHistory?.();details.scrollIntoView({block:'nearest',behavior:'smooth'});},get selected(){return selected;},get capabilities(){return capabilities;},destroy(){destroyed=true;selectedEpoch++;clearTimeout(pollTimer);pollTimer=null;for(const ctl of requests)ctl.abort();requests.clear();details.remove();}};
   }
   root.CouncilGrokBot={mount,PEOPLE,FULL,reconcile,terminal,LABELS};
 })(typeof window!=='undefined'?window:globalThis);

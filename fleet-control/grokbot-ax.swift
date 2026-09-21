@@ -13,6 +13,11 @@ struct Request: Decodable {
     let action: String
     let persona: String?
     let prompt: String?
+    let routineID: String?
+    let revision: String?
+    let paused: Bool?
+    let runKey: String?
+    let attachmentPaths: [String]?
 }
 struct Message: Codable {
     let sender: String
@@ -21,7 +26,32 @@ struct Message: Codable {
     let text: String
     let key: String
 }
+struct Routine: Codable {
+    let id: String
+    let name: String
+    let schedule: String
+}
+struct RoutineDetail: Codable {
+    let id: String
+    let name: String
+    let instruction: String
+    let paused: Bool
+    let revision: String
+}
+func routineItems(_ root: Node, persona: String) -> [Routine]? {
+    let lists = root.descendants().filter { $0.label == "Rutinas" && $0.role != "AXStaticText" && $0.children.contains(where: { $0.role == "AXButton" }) }
+    guard lists.count == 1 else { return nil }
+    return lists[0].children.filter { $0.role == "AXButton" }.compactMap { button in
+        let texts = button.descendants().filter { $0.role == "AXStaticText" }.map { $0.label }.filter { !$0.isEmpty }
+        guard let name = texts.first else { return nil }
+        return Routine(id: hash(persona + "\0" + name), name: name, schedule: texts.dropFirst().joined(separator: " "))
+    }
+}
 struct Snapshot: Codable {
+    var protocolVersion = 3
+    var routines: [Routine]? = nil
+    var routine: RoutineDetail? = nil
+    var runKey: String? = nil
     var ok = true
     var selectedPersona: String? = nil
     var composerHasDraft = false
@@ -97,7 +127,7 @@ final class Reader {
             description: stringAttribute(element, kAXDescriptionAttribute),
             title: stringAttribute(element, kAXTitleAttribute),
             value: stringAttribute(element, kAXValueAttribute),
-            domID: stringAttribute(element, "AXDOMIdentifier"),
+            domID: stringAttribute(element, "AXDOMIdentifier").isEmpty ? stringAttribute(element, kAXIdentifierAttribute) : stringAttribute(element, "AXDOMIdentifier"),
             roleDescription: stringAttribute(element, kAXRoleDescriptionAttribute),
             enabled: boolAttribute(element, kAXEnabledAttribute, fallback: true),
             elementBusy: boolAttribute(element, "AXElementBusy"))
@@ -323,6 +353,8 @@ final class GrokAX {
         snapshot.composerHasDraft = hasDraft(value: composer.value, persona: persona, sendEnabled: send?.enabled == true)
         snapshot.busy = busy
         snapshot.messages = parseMessages(transcript, persona: persona)
+        snapshot.routines = routineItems(tree, persona: persona)
+        snapshot.runKey = snapshot.messages.last(where: { $0.sender == "user" })?.key
         guard let liveHeading = heading.element, stringAttribute(liveHeading, kAXDescriptionAttribute) == persona else { throw BridgeError(code: "selection_changed_during_snapshot") }
         return Context(root: tree, heading: heading, pane: pane, transcript: transcript, composer: composer, sendButton: send, snapshot: snapshot)
     }
@@ -350,16 +382,143 @@ final class GrokAX {
         } while Date() < deadline
         return failed(latest, "selection_unconfirmed")
     }
-    func send(_ persona: String, prompt: String) throws -> Snapshot {
+    func press(_ node: Node) throws {
+        guard node.enabled, let el = node.element,
+              AXUIElementPerformAction(el, kAXPressAction as CFString) == .success else { throw BridgeError(code: "control_unavailable") }
+    }
+    func routineList(_ persona: String) throws -> Context {
+        var ctx = try read()
+        guard ctx.snapshot.selectedPersona == persona else { throw BridgeError(code: "persona_not_selected") }
+        if ctx.snapshot.routines != nil { return ctx }
+        if let back = ctx.root.descendants().first(where: { $0.role == "AXButton" && $0.label == "Volver a Rutinas" }) {
+            try press(back)
+        } else {
+            let buttons = ctx.pane.descendants().filter { $0.role == "AXButton" && $0.label == "Ver detalles de la conversación" }
+            guard buttons.count == 1 else { throw BridgeError(code: "routine_controls_unavailable") }
+            try press(buttons[0])
+        }
+        let deadline = Date().addingTimeInterval(3)
+        repeat {
+            Thread.sleep(forTimeInterval: 0.1); ctx = try read()
+            guard ctx.snapshot.selectedPersona == persona else { throw BridgeError(code: "persona_not_selected") }
+            if ctx.snapshot.routines != nil { return ctx }
+        } while Date() < deadline
+        throw BridgeError(code: "routine_controls_unavailable")
+    }
+    func routine(_ persona: String, id: String, paused: Bool?, revision: String?) throws -> Snapshot {
+        let ctx = try routineList(persona)
+        guard let item = ctx.snapshot.routines?.first(where: { $0.id == id }) else { throw BridgeError(code: "routine_not_found") }
+        let cards = ctx.root.descendants().filter { $0.role == "AXButton" && $0.children.contains(where: { $0.role == "AXStaticText" && $0.label == item.name }) }
+        guard cards.count == 1 else { throw BridgeError(code: "routine_controls_unavailable") }
+        try press(cards[0])
+        func detail() throws -> (Context, RoutineDetail, Node) {
+            let current = try read()
+            guard current.snapshot.selectedPersona == persona else { throw BridgeError(code: "persona_not_selected") }
+            let panels = current.root.descendants().filter { $0.description == item.name && $0.role == "AXGroup" }
+            guard panels.count == 1 else { throw BridgeError(code: "routine_controls_unavailable") }
+            let nodes = panels[0].descendants()
+            let toggles = nodes.filter { $0.role == "AXButton" && ["Pausar", "Reanudar"].contains($0.label) }
+            guard toggles.count == 1 else { throw BridgeError(code: "routine_controls_unavailable") }
+            let instruction = nodes.filter { $0.role == "AXStaticText" }.map { $0.label }.joined(separator: "\n")
+            let off = toggles[0].label == "Reanudar"
+            let detail = RoutineDetail(id: id, name: item.name, instruction: instruction, paused: off, revision: hash(persona + "\0" + id + "\0" + instruction + "\0" + String(off)))
+            return (current, detail, toggles[0])
+        }
+        Thread.sleep(forTimeInterval: 0.25)
+        var (current, info, control) = try detail()
+        if let desired = paused {
+            if info.paused != desired {
+                guard revision == info.revision else { throw BridgeError(code: "routine_changed") }
+                try press(control) // Explicit desired state, never a blind toggle/retry.
+                Thread.sleep(forTimeInterval: 0.25)
+                (current, info, control) = try detail()
+                guard info.paused == desired else { throw BridgeError(code: "routine_state_unconfirmed") }
+            }
+        }
+        var result = current.snapshot; result.routine = info
+        return result
+    }
+    func interrupt(_ persona: String, runKey: String) throws -> Snapshot {
+        let ctx = try read()
+        guard ctx.snapshot.selectedPersona == persona else { return failed(ctx.snapshot, "persona_not_selected") }
+        guard ctx.snapshot.runKey == runKey else { return failed(ctx.snapshot, "run_changed") }
+        if !ctx.snapshot.busy { return ctx.snapshot }
+        let controls = ctx.pane.descendants().filter { $0.role == "AXButton" && $0.enabled && ["Detener respuesta", "Detener generación", "Detener", "Stop generating", "Stop response"].contains($0.label) }
+        guard controls.count == 1 else { return failed(ctx.snapshot, "control_unavailable") }
+        try press(controls[0])
+        Thread.sleep(forTimeInterval: 0.2)
+        return try read().snapshot
+    }
+    func applicationTree() throws -> Node { try Reader().read(app) }
+    func waitNode(_ predicate: (Node) -> Bool) throws -> Node {
+        let until = Date().addingTimeInterval(5)
+        repeat {
+            let nodes = try applicationTree().descendants().filter(predicate)
+            if nodes.count == 1 { return nodes[0] }
+            Thread.sleep(forTimeInterval: 0.1)
+        } while Date() < until
+        throw BridgeError(code: "attachment_control_unavailable")
+    }
+    var keyFlags: CGEventFlags = []
+    func key(_ code: CGKeyCode, down: Bool) throws {
+        var pid: pid_t = 0
+        guard AXUIElementGetPid(app, &pid) == .success, pid > 0,
+              let event = CGEvent(keyboardEventSource: nil, virtualKey: code, keyDown: down) else { throw BridgeError(code: "attachment_control_unavailable") }
+        if code == 55 { if down { keyFlags.insert(.maskCommand) } else { keyFlags.remove(.maskCommand) } }
+        if code == 56 { if down { keyFlags.insert(.maskShift) } else { keyFlags.remove(.maskShift) } }
+        event.flags = keyFlags
+        event.postToPid(pid) // Application target only, never global keyboard injection.
+    }
+    func attach(_ persona: String, file: String) throws {
+        let base = FileManager.default.homeDirectoryForCurrentUser.appendingPathComponent(".fleet/grokbot-uploads").path + "/"
+        let url = URL(fileURLWithPath: file)
+        guard file.hasPrefix(base), url.standardizedFileURL.path == file,
+              url.resolvingSymlinksInPath().path == file,
+              let attrs = try? FileManager.default.attributesOfItem(atPath: file),
+              attrs[.type] as? FileAttributeType == .typeRegular,
+              (attrs[.ownerAccountID] as? NSNumber)?.uint32Value == getuid(),
+              ((attrs[.posixPermissions] as? NSNumber)?.intValue ?? 0777) & 0077 == 0 else { throw BridgeError(code: "invalid_attachment_path") }
         let initial = try read()
+        guard initial.snapshot.selectedPersona == persona, !initial.snapshot.composerHasDraft, !initial.snapshot.busy else { throw BridgeError(code: "selection_or_draft_changed") }
+        let controls = initial.pane.descendants().filter { ["AXButton", "AXPopUpButton"].contains($0.role) && $0.label == "Adjuntar archivo" }
+        guard controls.count == 1 else { throw BridgeError(code: "attachment_control_unavailable") }
+        try press(controls[0])
+        let attachItem = try waitNode { $0.label == "Adjuntar archivos" && $0.role != "AXStaticText" }
+        try press(attachItem)
+        _ = try waitNode { $0.domID == "open-panel" }
+        // Target this application, never the foreground app. Release modifiers
+        // on every path; all subsequent actions are on the verified native panel.
+        try key(55, down: true); try key(56, down: true)
+        defer { try? key(56, down: false); try? key(55, down: false) }
+        try key(5, down: true); try key(5, down: false)
+        try key(56, down: false); try key(55, down: false)
+        let pathField = try waitNode { $0.domID == "PathTextField" }
+        guard let el=pathField.element, AXUIElementSetAttributeValue(el,kAXValueAttribute as CFString,file as CFString) == .success else { throw BridgeError(code: "attachment_control_unavailable") }
+        try key(36, down: true); try key(36, down: false)
+        let open = try waitNode { $0.domID == "OKButton" && $0.enabled }
+        try press(open)
+        let until = Date().addingTimeInterval(8)
+        repeat {
+            Thread.sleep(forTimeInterval: 0.15)
+            let ctx=try read()
+            guard ctx.snapshot.selectedPersona == persona else { throw BridgeError(code: "selection_or_draft_changed") }
+            if ctx.pane.descendants().contains(where: { $0.role == "AXButton" && $0.label == "Quitar " + url.lastPathComponent }) && ctx.sendButton?.enabled == true { return }
+        } while Date() < until
+        throw BridgeError(code: "attachment_unconfirmed")
+    }
+    func send(_ persona: String, prompt: String, attachmentPaths: [String] = []) throws -> Snapshot {
+        guard attachmentPaths.count <= 1 else { throw BridgeError(code: "invalid_attachment_path") }
+        for file in attachmentPaths { try attach(persona, file: file) }
+        let initial = try read()
+        let ownAttachment = attachmentPaths.count == 1 && initial.pane.descendants().filter { $0.role == "AXButton" && $0.label.hasPrefix("Quitar ") }.map { $0.label } == attachmentPaths.map { "Quitar " + URL(fileURLWithPath: $0).lastPathComponent } && comparable(initial.composer.value) == "Agrega un mensaje o presiona enviar."
         guard initial.snapshot.selectedPersona == persona else { return failed(initial.snapshot, "persona_not_selected") }
-        guard !initial.snapshot.composerHasDraft else { return failed(initial.snapshot, "draft_exists") }
+        guard !initial.snapshot.composerHasDraft || ownAttachment else { return failed(initial.snapshot, "draft_exists") }
         guard !initial.snapshot.busy else { return failed(initial.snapshot, "conversation_busy") }
         guard let composer = initial.composer.element else { return failed(initial.snapshot, "composer_unavailable") }
         var settable: DarwinBoolean = false
         guard AXUIElementIsAttributeSettable(composer, kAXValueAttribute as CFString, &settable) == .success, settable.boolValue else { return failed(initial.snapshot, "composer_not_writable") }
         guard let heading = initial.heading.element, stringAttribute(heading, kAXDescriptionAttribute) == persona,
-              !hasDraft(value: stringAttribute(composer, kAXValueAttribute), persona: persona, sendEnabled: initial.sendButton?.enabled == true) else { return failed(initial.snapshot, "selection_or_draft_changed") }
+              (!hasDraft(value: stringAttribute(composer, kAXValueAttribute), persona: persona, sendEnabled: initial.sendButton?.enabled == true) || (ownAttachment && comparable(stringAttribute(composer, kAXValueAttribute)) == "Agrega un mensaje o presiona enviar.")) else { return failed(initial.snapshot, "selection_or_draft_changed") }
         let before = Set(initial.snapshot.messages.filter { $0.sender == "user" }.map { $0.key })
         let botonesAntes = botonesHabilitados(initial.pane.descendants())
         let write = AXUIElementSetAttributeValue(composer, kAXValueAttribute as CFString, prompt as CFString)
@@ -453,7 +612,12 @@ func selfTests() throws {
     try expect(esElBot("Walt Disney, Trabajando", "Walt Disney"), "working suffix still selects")
     try expect(!esElBot("Steve Jobs", "Steve Wozniak"), "another bot never matches")
     try expect(!esElBot("Steve Wozniak Jr", "Steve Wozniak"), "prefix without comma is a different bot")
-    print("{\"ok\":true,\"tests\":15,\"mode\":\"pure-parsing-no-AX\"}")
+    let list = Node(role: "AXList", description: "Rutinas", children: [Node(role: "AXButton", children: [Node(role: "AXStaticText", value: "Rutina de prueba"), Node(role: "AXStaticText", value: "Cada día")])])
+    let parsedRoutines = routineItems(list, persona: "Walt Disney")
+    try expect(parsedRoutines?.count == 1 && parsedRoutines?.first?.schedule == "Cada día", "routine card parsing")
+    try expect(parsedRoutines?.first?.id != routineItems(list, persona: "Steve Jobs")?.first?.id, "routine identity is bound to its adviser")
+    try expect(routineItems(Node(), persona: "Walt Disney") == nil, "closed details are unavailable, not an empty routine list")
+    print("{\"ok\":true,\"tests\":18,\"mode\":\"pure-parsing-no-AX\"}")
 }
 
 do {
@@ -463,7 +627,7 @@ do {
     let request: Request
     do { request = try JSONDecoder().decode(Request.self, from: data) }
     catch { throw BridgeError(code: "invalid_request") }
-    guard ["snapshot", "select", "send", "dump", "probe"].contains(request.action) else { throw BridgeError(code: "unsupported_action") }
+    guard ["snapshot", "select", "send", "dump", "probe", "routines", "routine", "routine_set", "interrupt"].contains(request.action) else { throw BridgeError(code: "unsupported_action") }
     if request.action != "snapshot" && request.action != "dump" && request.action != "probe" {
         guard let persona = request.persona, supportedPersonas.contains(persona) else { throw BridgeError(code: "unsupported_persona") }
     }
@@ -533,9 +697,19 @@ do {
         let lock = try MutationLock()
         defer { withExtendedLifetime(lock) {} }
         if request.action == "select" { snapshot = try bridge.select(request.persona!) }
+        else if request.action == "routines" { snapshot = try bridge.routineList(request.persona!).snapshot }
+        else if request.action == "routine" || request.action == "routine_set" {
+            guard let id = request.routineID, id.count == 64 else { throw BridgeError(code: "invalid_routine") }
+            if request.action == "routine_set" && (request.paused == nil || request.revision == nil) { throw BridgeError(code: "invalid_routine") }
+            snapshot = try bridge.routine(request.persona!, id: id, paused: request.action == "routine_set" ? request.paused : nil, revision: request.revision)
+        }
+        else if request.action == "interrupt" {
+            guard let key = request.runKey, !key.isEmpty else { throw BridgeError(code: "invalid_run") }
+            snapshot = try bridge.interrupt(request.persona!, runKey: key)
+        }
         else {
             guard let prompt = request.prompt, !normalized(prompt).isEmpty, prompt.count <= 16000 else { throw BridgeError(code: "invalid_prompt") }
-            snapshot = try bridge.send(request.persona!, prompt: prompt)
+            snapshot = try bridge.send(request.persona!, prompt: prompt, attachmentPaths: request.attachmentPaths ?? [])
         }
     }
     let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]

@@ -26,3 +26,35 @@
 body.mouths-off .council-speech-mouth{display:none!important}
 .speech-bubble.grokbot-bubble::after{left:var(--speech-tail,50%)}
 .council-table__empty{flex-direction:column;overflow:auto}
+/* Previos uses its full module for text; the Macintosh remains a separate view. */
+.scumm-module-content .council-preview{position:relative;display:flex;flex-direction:column;align-items:stretch;justify-content:flex-start;min-height:0;padding:0;overflow:hidden;background:#100d09}
+.council-preview__controls{display:flex;flex:none;align-items:center;justify-content:space-between;gap:4px;padding:5px;border-bottom:1px solid #765628}
+.council-preview__views{display:flex;flex-wrap:wrap;gap:3px}
+.council-preview__controls button,.council-preview__screen-status button{font:12px/1.4 system-ui,sans-serif;color:#e8d9b1;background:#302416;border:1px solid #8a6735;padding:4px 7px;cursor:pointer}
+.council-preview__controls [aria-pressed="true"]{color:#fff4bb;background:#654a20;border-color:#ffe28c}
+.council-preview__chat{display:flex;flex:1;min-height:0;overflow:hidden}
+.council-preview__empty{font:14px/1.5 system-ui,sans-serif;color:#cebd97;padding:12px}
+.council-preview .council-chat{display:flex;flex:1;min-height:0;min-width:0;flex-direction:column;margin:0;border:0;box-shadow:none}
+.council-preview .council-chat summary,.council-preview .council-chat__heading{display:none}
+.council-preview .council-chat__toolbar{padding:4px 8px;gap:5px;font-size:9px;flex:none}
+.council-preview .council-chat__scope,.council-preview .council-chat__limits{font-size:11px;line-height:1.3;margin:2px 8px}
+.council-preview .council-chat__status{font-size:12px;line-height:1.3;margin:3px 8px;flex:none}
+.council-preview .council-chat__messages{flex:1;min-height:40px;max-height:none;padding:0 8px 6px;font:14px/1.5 system-ui,sans-serif}
+.council-preview .council-chat__turn{margin-bottom:10px}.council-preview .council-chat__turn p{padding:7px 9px}
+.council-preview .mac-scumm-stage{align-self:center;flex-shrink:1;min-height:0;margin:auto}
+.council-preview__screen-status{flex:none;padding:4px 8px;color:#eed8a5;font:12px/1.4 system-ui,sans-serif;display:flex;align-items:center;gap:6px}
+.council-preview [hidden]{display:none!important}
+.scumm-module-content .council-preview.is-expanded{position:fixed;inset:8vh 8vw;width:auto;height:auto;z-index:10000;border:2px solid #b78b41;box-shadow:0 0 0 100vmax #000b}
+.council-preview.is-expanded .council-chat__messages{font-size:17px;padding:12px 24px}
+.council-preview.is-expanded .mac-scumm-stage{width:min(420px,70%)!important}
+@media(max-width:600px){.scumm-module-content .council-preview.is-expanded{inset:5vh 3vw}.council-preview .council-chat__scope,.council-preview .council-chat__limits{display:none}}
+
+.council-preview .council-chat__toolbar [data-chat-screen],.council-preview .council-chat__scope,.council-preview .council-chat__limits{display:none}
+.council-preview.is-expanded .council-chat__scope,.council-preview.is-expanded .council-chat__limits{display:block}
+
+.council-chat__operations{overflow:auto;max-height:65%;padding:8px;font:14px/1.5 system-ui,sans-serif;flex-shrink:0;background:#241c12;border-block:1px solid #8a6735}
+.council-chat__operations button{font:13px/1.4 system-ui,sans-serif;margin:4px;display:inline-block}
+.council-chat__operations strong{display:block}.council-chat__operations p{white-space:pre-wrap;overflow-wrap:anywhere}
+.council-preview .council-chat__connection{width:100%;font-size:11px;color:#cabb96}
+
+.council-chat__attachments{padding:6px 8px;font:13px/1.5 system-ui,sans-serif;color:#eee2b5;flex:none}.council-chat__attachments button{margin-left:6px;font:12px system-ui,sans-serif}

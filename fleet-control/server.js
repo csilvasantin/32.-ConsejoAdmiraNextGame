@@ -874,6 +874,19 @@ const server = http.createServer(async (req, res) => {
     if (!(await gate(req, res, ip))) return;
     try {
       if (url === '/api/grokbot/capabilities' && req.method === 'GET') return json(res,200,{ok:true,...await grokBotBridge.capabilities(req.fleetSession)});
+      if(url==='/api/grokbot/attachments'&&req.method==='POST'){
+        if(!grokBotBridge.upload)throw new BridgeError(503,'desktop_attachments_unavailable');
+        const raw=await readRawBody(req,6*1024*1024);
+        if(raw===null)throw new BridgeError(413,'attachment_too_large');
+        let body;try{body=JSON.parse(raw);}catch(_){throw new BridgeError(400,'invalid_json');}
+        return json(res,201,{ok:true,attachment:await grokBotBridge.upload(req.fleetSession,body)});
+      }
+      if (url === '/api/grokbot/controls' && req.method === 'POST') {
+        if(!grokBotBridge.controls)throw new BridgeError(503,'desktop_controls_unavailable');
+        const raw=await readRawBody(req,10000);
+        let body;try{body=JSON.parse(raw);}catch(_){throw new BridgeError(400,'invalid_json');}
+        return json(res,200,{ok:true,...await grokBotBridge.controls(req.fleetSession,body)});
+      }
       if (url === '/api/grokbot/selection' && req.method === 'POST') {
         if (!grokBotBridge.select) throw new BridgeError(503,'desktop_chat_not_configured');
         const raw = await readRawBody(req, 1024);

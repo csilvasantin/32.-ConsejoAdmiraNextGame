@@ -7,6 +7,7 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const {execFile} = require('node:child_process');
+const {createAttachments,AttachmentError}=require('./grokbot-attachments');
 const {PERSONAS, canonicalPersona} = require('./grokbot-bridge');
 
 const PUBLIC_ID = /^gb_[a-f0-9]{48}$/;
@@ -83,7 +84,7 @@ function createNativeRunner({environment = process.env, execFileImpl = execFile,
     // No shell, no command arguments from the browser, and no inherited provider
     // secrets. The helper receives only a bounded JSON command on standard input.
     const child = execFileImpl(binary, [], {
-      shell:false, encoding:'utf8', timeout:timeoutMs, maxBuffer:8 * 1024 * 1024,
+      shell:false, encoding:'utf8', timeout:request.attachmentPaths?.length?Math.max(timeoutMs,45000):timeoutMs, maxBuffer:8 * 1024 * 1024,
       env:{PATH:'/usr/bin:/bin:/usr/sbin:/sbin', HOME:os.homedir(), LANG:'en_US.UTF-8'},
       windowsHide:true,
     }, (error, stdout) => {
@@ -106,7 +107,7 @@ function createNativeRunner({environment = process.env, execFileImpl = execFile,
 function publicMessage(entry) {
   return {id:entry.id, persona:entry.persona, prompt:entry.prompt, text:entry.text,
     status:entry.status, createdAt:entry.createdAt, updatedAt:entry.updatedAt,
-    source:'desktop', native:true};
+    source:'desktop', native:true,...(entry.attachments?.length?{attachments:entry.attachments}: {})};
 }
 function parseSnapshot(value, now) {
   if (!value || typeof value !== 'object' || typeof value.ok !== 'boolean' || typeof value.composerHasDraft !== 'boolean' || typeof value.busy !== 'boolean' || !Array.isArray(value.messages) || value.messages.length > 2000) throw new DesktopBridgeError(503, 'desktop_invalid_snapshot');
@@ -133,9 +134,15 @@ function parseSnapshot(value, now) {
     busy:'desktop_busy', conversation_busy:'desktop_busy', bridge_busy:'desktop_busy',
     persona_not_selected:'desktop_selection_mismatch', selection_or_draft_changed:'desktop_selection_mismatch', selection_unconfirmed:'desktop_selection_mismatch', unsupported_or_ambiguous_conversation:'desktop_selection_mismatch',
     composer_not_writable:'desktop_composer_unavailable', application_not_running:'desktop_application_not_running',
+    routine_controls_unavailable:'desktop_routines_unavailable', routine_not_found:'routine_not_found', routine_changed:'routine_changed', routine_state_unconfirmed:'routine_state_unconfirmed',
+    run_changed:'desktop_run_changed', control_unavailable:'desktop_control_unavailable', attachment_control_unavailable:'desktop_attachment_control_unavailable', attachment_unconfirmed:'desktop_attachment_unconfirmed', invalid_attachment_path:'invalid_attachment',
     unknown:'desktop_delivery_unknown',
   })[value.error] || 'desktop_unavailable';
-  return {ok:value.ok, selected, draft:value.composerHasDraft, busy:value.busy, messages, timestamp, error};
+  const routines = Array.isArray(value.routines) ? value.routines.filter(r=>r&&/^[a-f0-9]{64}$/.test(r.id)&&typeof r.name==='string'&&typeof r.schedule==='string').map(r=>({id:r.id,name:r.name.slice(0,300),schedule:r.schedule.slice(0,1000)})) : null;
+  const r=value.routine;
+  const routine=r&&/^[a-f0-9]{64}$/.test(r.id)&&/^[a-f0-9]{64}$/.test(r.revision)&&typeof r.name==='string'&&typeof r.instruction==='string'&&typeof r.paused==='boolean'?{id:r.id,name:r.name.slice(0,300),instruction:r.instruction.slice(0,20000),paused:r.paused,revision:r.revision}:null;
+  return {ok:value.ok, selected, draft:value.composerHasDraft, busy:value.busy, messages, timestamp, error,
+    protocolVersion:[2,3].includes(value.protocolVersion)?value.protocolVersion:1,routines,routine,runKey:typeof value.runKey==='string'?value.runKey.slice(0,2048):null};
 }
 
 function createGrokBotDesktop({environment = process.env, runNative, now = Date.now, store,
@@ -146,6 +153,7 @@ function createGrokBotDesktop({environment = process.env, runNative, now = Date.
   const configured = owners.size > 0 && path.isAbsolute(binary) && !binary.includes('\0');
   const native = runNative || createNativeRunner({environment, timeoutMs:nativeTimeoutMs});
   const state = store || createDesktopStore(environment.GROKBOT_DESKTOP_STATE_FILE || path.join(os.homedir(), '.fleet', 'grokbot-desktop-state.json'));
+  const uploads=createAttachments(path.join(path.dirname(environment.GROKBOT_DESKTOP_STATE_FILE||path.join(os.homedir(),'.fleet','grokbot-desktop-state.json')),'grokbot-uploads'));
   let queue = Promise.resolve(), last = null, reason = configured ? 'desktop_not_observed' : 'desktop_not_configured';
   let reportedReason = '';
   function diagnose(code) { if(code && code!==reportedReason)console.warn('[grokbot-desktop]',code); reportedReason=code; }
@@ -176,7 +184,7 @@ function createGrokBotDesktop({environment = process.env, runNative, now = Date.
   }
   function info() {
     return {selectedPersona:last?.selected || null, status:currentStatus(), reason,
-      lastObservedAt:last?.timestamp || null, partialVisibleHistory:true, pollingIntervalMs:interval};
+      lastObservedAt:last?.timestamp || null, partialVisibleHistory:true, pollingIntervalMs:interval,runKey:last?.runKey||null};
   }
   function ingest(snapshot) {
     if (!snapshot.selected) return;
@@ -298,7 +306,7 @@ function createGrokBotDesktop({environment = process.env, runNative, now = Date.
       catch (error) { reason = error.code || 'desktop_unavailable'; axAvailable = false; }
       const available = configured && axAvailable;
       return {provider:'desktop', mode:'desktop', available, messages:available, bidirectional:available,
-        historyFromDesktop:available, desktop:false, attachments:false, routines:false, interrupt:false,
+        historyFromDesktop:available, desktop:false, attachments:available&&last?.protocolVersion>=3, maxAttachmentBytes:4*1024*1024, maxAttachments:1, routines:available&&last?.protocolVersion>=2, interrupt:available&&last?.protocolVersion>=2, approvals:false,
         personas:Object.entries(PERSONAS).map(([persona,name]) => ({persona,name})), ...info()};
     });
   }
@@ -316,30 +324,34 @@ function createGrokBotDesktop({environment = process.env, runNative, now = Date.
   }
   async function send(session, body) {
     const email = owner(session);
-    if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(key => !['persona','prompt','message_id'].includes(key))) throw new DesktopBridgeError(400, 'invalid_message');
+    if (!body || typeof body !== 'object' || Array.isArray(body) || Object.keys(body).some(key => !['persona','prompt','message_id','attachments'].includes(key))) throw new DesktopBridgeError(400, 'invalid_message');
     const target = persona(body.persona);
     const prompt = typeof body.prompt === 'string' ? body.prompt.trim() : '';
     if (!prompt || prompt.length > 16000 || prompt.includes('\0')) throw new DesktopBridgeError(400, 'invalid_prompt');
     if (typeof body.message_id !== 'string' || !MESSAGE_ID.test(body.message_id)) throw new DesktopBridgeError(400, 'invalid_message_id');
+    const attachmentIds=body.attachments||[];
+    if(!Array.isArray(attachmentIds)||attachmentIds.length>1||attachmentIds.some(id=>typeof id!=='string'))throw new DesktopBridgeError(400,'invalid_attachment');
     const id = 'gb_' + digest('desktop-web\0' + email + '\0' + body.message_id);
     return serial(async () => {
       requireConfigured();
       const previous = state.read().get(id);
       if (previous) {
-        if (previous.owner !== email || previous.persona !== target || normalized(previous.prompt) !== normalized(prompt)) throw new DesktopBridgeError(409, 'message_id_conflict');
+        if (previous.owner !== email || previous.persona !== target || normalized(previous.prompt) !== normalized(prompt) || JSON.stringify(previous.attachmentIds||[])!==JSON.stringify(attachmentIds)) throw new DesktopBridgeError(409, 'message_id_conflict');
         return publicMessage(previous); // Includes unknown after timeout/restart: never retry.
       }
       if ([...state.read().values()].some(row => row.reservation && !row.nativeUserKey && row.status === 'unknown' && row.persona === target && normalized(row.prompt) === normalized(prompt))) {
         throw new DesktopBridgeError(409, 'desktop_previous_send_unconfirmed');
       }
+      let files;try{files=attachmentIds.map(id=>uploads.get(email,id));}catch(error){throw new DesktopBridgeError(400,error instanceof AttachmentError?error.code:'invalid_attachment');}
       const before = await choose(target);
+      if(files.length&&before.protocolVersion<3)throw new DesktopBridgeError(503,'desktop_attachments_unavailable');
       if (before.draft) throw new DesktopBridgeError(409, 'desktop_draft_present');
       if (before.busy) throw new DesktopBridgeError(409, 'desktop_busy');
       state.transact(records => {
         if (records.has(id)) throw new DesktopBridgeError(409, 'message_id_conflict');
         const lastCreated = Math.max(0, ...[...records.values()].filter(row => row.persona === target).map(row => Date.parse(row.createdAt) || 0));
         const timestamp = new Date(Math.max(now(), lastCreated + 1)).toISOString();
-        records.set(id, {id, owner:email, persona:target, prompt, text:'', status:'unknown',
+        records.set(id, {id, owner:email, persona:target, prompt, attachmentIds, attachments:files.map(f=>({id:f.id,name:f.name,type:f.type,size:f.size})), text:'', status:'unknown',
           createdAt:timestamp, updatedAt:timestamp, source:'desktop', native:true, reservation:true,
           nativeUserKey:null, nativeKeys:[], parts:[], baselineUserKeys:[...new Set([
             ...[...records.values()].filter(row => row.persona === target).map(row => row.nativeUserKey).filter(Boolean),
@@ -347,7 +359,7 @@ function createGrokBotDesktop({environment = process.env, runNative, now = Date.
           ])]});
       });
       let response;
-      try { response = await observe({action:'send', persona:PERSONAS[target], prompt}); }
+      try { response = await observe({action:'send', persona:PERSONAS[target], prompt,...(files.length?{attachmentPaths:files.map(f=>f.path)}:{})}); }
       catch (_) { /* Ambiguous process timeout: retain the durable reservation. */ }
       if (response && !response.ok && ['desktop_draft_present','desktop_busy'].includes(response.error)) {
         state.transact(records => { const entry = records.get(id); if (!entry.nativeUserKey) { entry.status = 'blocked'; entry.updatedAt = new Date(now()).toISOString(); } });
@@ -364,6 +376,29 @@ function createGrokBotDesktop({environment = process.env, runNative, now = Date.
       if (!state.read().has(id)) throw new DesktopBridgeError(404, 'message_not_found');
       await snapshot();
       return publicMessage(state.read().get(id));
+    });
+  }
+  async function upload(session,body){
+    const email=owner(session);requireConfigured();
+    try{return uploads.put(email,body);}catch(error){throw new DesktopBridgeError(400,error instanceof AttachmentError?error.code:'attachment_storage_unavailable');}
+  }
+  async function controls(session, body) {
+    owner(session);
+    if(!body || typeof body!=='object' || Array.isArray(body) || Object.keys(body).some(k=>!['persona','action','routine_id','revision','paused','run_key'].includes(k)))throw new DesktopBridgeError(400,'invalid_control');
+    const target=persona(body.persona), action=body.action;
+    if(!['routines','routine','routine_set','interrupt'].includes(action))throw new DesktopBridgeError(400,'invalid_control');
+    if(['routine','routine_set'].includes(action)&&!/^[a-f0-9]{64}$/.test(body.routine_id||''))throw new DesktopBridgeError(400,'invalid_routine');
+    if(action==='routine_set'&&(typeof body.paused!=='boolean'||!/^[a-f0-9]{64}$/.test(body.revision||'')))throw new DesktopBridgeError(400,'invalid_routine');
+    if(action==='interrupt'&&(typeof body.run_key!=='string'||!body.run_key||body.run_key.length>2048))throw new DesktopBridgeError(400,'invalid_run');
+    return serial(async()=>{
+      const before=await snapshot();
+      if(before.protocolVersion<2)throw new DesktopBridgeError(503,'desktop_controls_unavailable');
+      // Commands act only on the explicitly opened seat, never a stale tab's
+      // cached selection. A user switching the native chat wins.
+      if(before.selected!==target)throw new DesktopBridgeError(409,'desktop_selection_mismatch');
+      const result=await observe({action,persona:PERSONAS[target],routineID:body.routine_id,revision:body.revision,paused:body.paused,runKey:body.run_key});
+      if(!result.ok)throw new DesktopBridgeError(409,result.error);
+      return {routines:result.routines,routine:result.routine,...info()};
     });
   }
   function start() {
@@ -384,7 +419,7 @@ function createGrokBotDesktop({environment = process.env, runNative, now = Date.
     if (timer !== null) clearTimer(timer);
     timer = null;
   }
-  return {capabilities, list, select, send, get, start, stop};
+  return {capabilities, list, select, send, get, controls, upload, start, stop};
 }
 
 module.exports = {DesktopBridgeError, createGrokBotDesktop, createDesktopStore, createNativeRunner};

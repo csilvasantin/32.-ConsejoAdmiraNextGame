@@ -343,5 +343,6 @@ test('FLT-100753: EXAMINAR mapea silla → JPEG GrokBot (Jobs/Wozniak)', () => {
   assert.match(app, /MacHoy\.clearRemote/);
   const src = fs.readFileSync(new URL('./assets/mac-hoy.js', import.meta.url), 'utf8');
   assert.match(src, /export function showRemote/);
-  assert.match(src, /SIN CABLE/);
+  assert.match(src, /CAPTURA/);
+  assert.doesNotMatch(src, /SIN CABLE/);
 });

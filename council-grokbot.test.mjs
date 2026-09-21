@@ -33,14 +33,15 @@ class Element {
   set textContent(value) { this.text = String(value); this.children = []; }
   get textContent() { return this.text + this.children.map(node => node.textContent).join(''); }
   set innerHTML(value) {
-    this.doc.markup.push(String(value)); this.children = []; this.lookup.clear();
+    this.html=String(value); this.doc.markup.push(String(value)); this.children = []; this.lookup.clear();
     // Only the static shell uses HTML. Dynamic conversation content must pass
     // through createTextNode/textContent; no HTML parser is needed for the test.
-    for (const selector of ['.council-chat__connection', '.council-chat__person', '.council-chat__status', '.council-chat__messages', '[data-chat-refresh]', '[data-chat-screen]']) {
+    for (const selector of ['.council-chat__toolbar', '.council-chat__attachments', '.council-chat__operations', '[data-chat-attach]', '[data-chat-file]', '[data-chat-routines]', '[data-chat-stop]', '.council-chat__connection', '.council-chat__person', '.council-chat__status', '.council-chat__messages', '[data-chat-refresh]', '[data-chat-screen]']) {
       const node = this.doc.createElement(selector.startsWith('[') ? 'button' : 'div');
       this.lookup.set(selector, node); this.children.push(node);
     }
   }
+  get innerHTML(){return this.html;}
   querySelector(selector) { return this.lookup.get(selector) || null; }
   append(...nodes) { this.children.push(...nodes); }
   replaceChildren(...nodes) { this.text = ''; this.children = nodes; }
@@ -52,7 +53,7 @@ class Element {
   get scrollHeight() { return this.textContent.length; }
 }
 
-function harness() {
+function harness(mountInside=false) {
   let now = Date.parse('2026-09-18T08:00:00.000Z'), nextTimer = 0, uuid = 0;
   const timers = new Map(), failures = [];
   const clock = {
@@ -77,7 +78,7 @@ function harness() {
   class ClockDate extends Date { static now() { return now; } }
   const doc = {
     markup: [], nodes: [], details: null,
-    createElement(tag) { const node = new Element(tag, this); this.nodes.push(node); return node; },
+    createElement(tag) { const node = new Element(tag, this);if(tag==='section')this.details=node; this.nodes.push(node); return node; },
     createTextNode(text) { const node = new Element('#text', this); node.textContent = text; this.nodes.push(node); return node; }
   };
   const histories = new Map(), calls = [], answers = [], restores = [], statuses = [], errors = [], pending = [], settled = [];
@@ -87,6 +88,7 @@ function harness() {
     const call = { path: parsed.pathname.replace('/api/grokbot', ''), query: parsed.searchParams, method: init.method, headers:init.headers, credentials:init.credentials, body: init.body ? JSON.parse(init.body) : null };
     calls.push(call);
     if (call.path === '/capabilities') return h.capabilitiesHandler ? h.capabilitiesHandler(call) : response({ok:true,mode:'desktop',bidirectional:true,available:true,partialVisibleHistory:true,lastObservedAt:'2026-09-18T08:00:00.000Z'});
+    if (call.path === '/attachments') return h.uploadHandler(call);
     if (call.path === '/selection') return h.selectionHandler ? h.selectionHandler(call) : response({ok:true,selectedPersona:call.body.persona});
     if (call.path === '/messages' && call.method === 'GET') return h.listHandler ? h.listHandler(call) : response({ ok: true, messages: histories.get(call.query.get('persona')) || [] });
     if (call.path === '/messages' && call.method === 'POST') return h.postHandler ? h.postHandler(call) : response({ ok: true, message: message() });
@@ -100,7 +102,7 @@ function harness() {
   vm.runInContext(source, context);
   h.module = context.CouncilGrokBot;
   h.api = h.module.mount({
-    document: doc, container: doc.createElement('div'), fetch,
+    document: doc, container: doc.createElement('div'), fetch,mountInside,
     onAnswer: value => answers.push(plain(value)), onRestore: value => restores.push(plain(value)),
     onStatus: value => statuses.push(value), onError: value => errors.push(plain(value)),
     onPending: value => pending.push(plain(value)), onSettled:value=>settled.push(plain(value)),csrf:()=> 'csrf-test'
@@ -381,4 +383,29 @@ test('a rejected native POST preserves unsent text, but an ambiguous network res
   assert.equal(await h.api.send('Steve Jobs','Entrega desconocida'),true);
   const posts=h.posts.length;await h.clock.advance(3000);assert.equal(h.posts.length,posts);
   h.api.destroy();
+});
+
+
+test('Previos preserves reading position while replies grow and follows the bottom when already there', async()=>{
+ const h=harness(true);h.histories.set('Steve Jobs',[message({text:'Respuesta '.repeat(100)})]);
+ await h.api.select('Steve Jobs');h.log.clientHeight=100;h.log.scrollTop=20;
+ h.histories.set('Steve Jobs',[message({text:'Respuesta '.repeat(150),updatedAt:'2026-09-18T08:00:06.000Z'})]);
+ await h.api.refresh();assert.equal(h.log.scrollTop,20);
+ h.log.scrollTop=h.log.scrollHeight-100;
+ await h.api.refresh();assert.equal(h.log.scrollTop,h.log.scrollHeight);h.api.destroy();
+});
+
+test('uploads remain with their adviser across switches and block concurrent uploads or premature sends',async()=>{
+ const h=harness(true),upload=deferred();
+ h.capabilitiesHandler=()=>response({ok:true,mode:'desktop',bidirectional:true,available:true,attachments:true});
+ h.uploadHandler=()=>upload.promise;
+ await h.api.select('Steve Jobs');
+ const staged=h.api.attachDataURL('data:text/plain;base64,aGk=','prueba.txt','text/plain');await flush();
+ assert.equal(await h.api.attachDataURL('data:text/plain;base64,aGk=','otro.txt','text/plain'),false);
+ assert.equal(await h.api.send('Steve Jobs','No enviar aún'),false);assert.equal(h.posts.length,0);
+ await h.api.select('George Lucas');upload.resolve(response({ok:true,attachment:{id:'ga_test',name:'prueba.txt',size:2}}));
+ assert.equal(await staged,true);assert.equal(h.api.hasAttachments('George Lucas'),false);assert.equal(h.api.hasAttachments('Steve Jobs'),true);
+ assert.equal(await h.api.send('Steve Jobs','No enviar al otro consejero'),false);
+ await h.api.select('Steve Jobs');assert.equal(await h.api.send('Steve Jobs','Adjunto de prueba'),true);
+ assert.deepEqual(h.posts[0].body.attachments,['ga_test']);assert.equal(h.api.hasAttachments('Steve Jobs'),false);h.api.destroy();
 });

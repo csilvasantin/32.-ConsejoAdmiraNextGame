@@ -333,3 +333,55 @@ test('runner preserves structured exit-1 refusal but rejects killed and false su
   error={code:1,killed:true};output=snapshot({ok:false,error:'accessibility_required'});
   await assert.rejects(runner({action:'snapshot'}),errorCode('desktop_timeout'));
 });
+
+test('native controls require owner, updated helper and the currently selected adviser',async t=>{
+  const calls=[];let current=snapshot({protocolVersion:2,runKey:'turn-1'});
+  const {desktop}=setup(t,async request=>{calls.push(request);return current;});
+  await assert.rejects(desktop.controls(outsider,{persona:'Jobs',action:'routines'}),errorCode('desktop_owner_required'));
+  assert.equal(calls.length,0);
+  await assert.rejects(desktop.controls(user,{persona:'Jobs',action:'send',prompt:'injection'}),errorCode('invalid_control'));
+  await assert.rejects(desktop.controls(user,{persona:'Jobs',action:'routine_set',routine_id:'a'.repeat(64),paused:true}),errorCode('invalid_routine'));
+  await assert.rejects(desktop.controls(user,{persona:'Lucas',action:'routines'}),errorCode('desktop_selection_mismatch'));
+  assert.ok(calls.every(x=>x.action==='snapshot'));
+  current=snapshot();
+  await assert.rejects(desktop.controls(user,{persona:'Jobs',action:'routines'}),errorCode('desktop_controls_unavailable'));
+});
+
+test('routine commands preserve desired state and revision, and surface refusal without retry',async t=>{
+  const calls=[],id='a'.repeat(64),revision='b'.repeat(64);
+  const {desktop}=setup(t,async request=>{
+    calls.push(request);
+    if(request.action==='routine_set')return snapshot({protocolVersion:2,ok:false,error:'routine_changed'});
+    return snapshot({protocolVersion:2,routines:[{id,name:'Prueba',schedule:'Cada día'}]});
+  });
+  const result=await desktop.controls(user,{persona:'Jobs',action:'routines'});
+  assert.deepEqual(result.routines,[{id,name:'Prueba',schedule:'Cada día'}]);
+  await assert.rejects(desktop.controls(user,{persona:'Jobs',action:'routine_set',routine_id:id,revision,paused:true}),errorCode('routine_changed'));
+  assert.equal(calls.filter(x=>x.action==='routine_set').length,1);
+  assert.deepEqual(calls.at(-1),{action:'routine_set',persona:'Steve Jobs',routineID:id,revision,paused:true,runKey:undefined});
+});
+
+test('interruption passes an exact observed turn and never retries a changed execution',async t=>{
+  const calls=[];
+  const {desktop}=setup(t,async request=>{
+    calls.push(request);return snapshot({protocolVersion:2,runKey:'turn-current',busy:true,...(request.action==='interrupt'?{ok:false,error:'run_changed'}:{})});
+  });
+  await assert.rejects(desktop.controls(user,{persona:'Jobs',action:'interrupt',run_key:'turn-old'}),errorCode('desktop_run_changed'));
+  assert.equal(calls.filter(x=>x.action==='interrupt').length,1);
+});
+
+test('attachment IDs are owner-bound, participate in idempotence and reach only the native send',async t=>{
+ let latest=snapshot({protocolVersion:3}),calls=[];
+ const {desktop}=setup(t,async request=>{
+   calls.push(request);
+   if(request.action==='send')latest=snapshot({protocolVersion:3,messages:[{sender:'user',text:request.prompt,key:'native-file-turn',label:'Tú',time:new Date(clock).toISOString()}]});
+   return latest;
+ });
+ const attachment=await desktop.upload(user,{name:'prueba.txt',type:'text/plain',data:Buffer.from('test').toString('base64')});
+ const payload=body({attachments:[attachment.id]});
+ const sent=await desktop.send(user,payload);
+ assert.equal(sent.attachments[0].name,'prueba.txt');
+ assert.match(calls.find(x=>x.action==='send').attachmentPaths[0],/grokbot-uploads/);
+ await desktop.send(user,payload);assert.equal(calls.filter(x=>x.action==='send').length,1);
+ await assert.rejects(desktop.send(user,body()),errorCode('message_id_conflict'));
+});

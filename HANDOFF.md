@@ -1,3 +1,15 @@
+# Relevo actual — SCUMM · 21 septiembre 2026
+
+- Misión Hoy #202: `DCL-bd124604d200ef9f6dbe4fbe`, OraculoMacMini · MacMini.
+- Carlos confirma que los módulos son **Verbos, Accesos y Previos** bajo la mesa del Consejo; no los paneles laterales ni AgoraMatrix.
+- Restaurados separadores de ancho, cierre independiente con redistribución, reapertura, orden por arrastre/teclado, altura del conjunto y preferencias persistentes. Botón RESTAURAR recupera los tres bloques.
+- Archivos: `assets/scumm-layout.js`, `assets/scumm-layout.css`, carga desde `index.html`. Se reutilizan los nodos y acciones existentes del Consejo, accesos y Mac 1984.
+- Validación local: 48 pruebas (layout, conversaciones y Mac), arrastre real de ancho y orden, cerrar los tres, recuperar y persistencia tras recargar. Vista de 390 px sin overflow horizontal; consola local sin errores.
+- El historial revisado no permite señalar un commit que eliminara estos controles concretos ayer. Los cambios antiguos de Agora/Tareas no explican esta incidencia.
+- Publicación prevista: `v.21.09.2026.r8.17:43`, https://www.admira.live/ . Confirmar `/version.json` y controles al retomar.
+
+---
+
 # HANDOFF — Consejo AdmiraNext
 
 Actualizado: 2026-09-03

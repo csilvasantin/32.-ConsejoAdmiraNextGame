@@ -14,9 +14,17 @@ export function remoteKey(event){
   return null;
 }
 const MESSAGES={
+  'csrf inválido':'La sesión web ha cambiado. Recarga admira.live antes de conectar.',
+  'registro de sesión no disponible':'No se puede verificar tu sesión ahora. Prueba Reconectar en unos instantes.',
+  desktop_timeout:'GrokBot tarda en responder. Pulsa Reconectar.',
   remote_selection_changed:'Ha cambiado el consejero en GrokBot. Vuelve al Mac y abre su escritorio.',
   remote_view_changed:'La ventana ha cambiado. Pulsa Reconectar para actualizar la vista.',
   remote_capture_unavailable:'No se puede capturar la ventana de GrokBot. Comprueba el permiso de grabación de pantalla del puente.',
+  remote_computer_unavailable:'Abre la computadora del consejero en GrokBot y pulsa Reconectar.',
+  remote_keyboard_unavailable:'El teclado de la computadora no está disponible. Pulsa Reconectar.',
+  remote_capture_failed:'No se pudo obtener la imagen de la computadora. Pulsa Reconectar.',
+  remote_capture_invalid:'La imagen de la computadora no es válida. Pulsa Reconectar.',
+  remote_crop_unavailable:'No se pudo encajar la pantalla de la computadora. Pulsa Reconectar.',
   remote_window_unavailable:'La ventana de GrokBot no está disponible.',
   remote_frame_expired:'La imagen ya no está actualizada. Pulsa Reconectar antes de continuar.',
   remote_session_expired:'La conexión ha caducado. Pulsa Reconectar.',
@@ -28,11 +36,11 @@ export function openRemote(){
   if(typeof document==='undefined'||!window.MacHoy||window.MacHoy.modoActual()!=='remote')return;
   const persona=window.MacHoy.remoteSeat();if(!persona)return;
   if(active)return;
-  const previousFocus=document.activeElement,overflow=document.body.style.overflow;
+  const previousFocus=document.activeElement,overflow=document.body.style.overflow,rootOverflow=document.documentElement.style.overflow;
   const overlay=document.createElement('section');overlay.className='mac-ultra';overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-label','Ultradetalle · escritorio de '+persona);
   overlay.innerHTML='<header class="mac-ultra__bar"><strong></strong><span role="status">Conectando…</span><button type="button" data-reconnect>Reconectar</button><button type="button" data-text>Escribir texto</button><button type="button" data-full>Pantalla completa</button><button type="button" data-close>Volver al Mac · Esc</button></header><form class="mac-ultra__text" hidden><textarea aria-label="Texto para escribir en el escritorio remoto" placeholder="Texto para el campo seleccionado en GrokBot"></textarea><button type="submit">Escribir en remoto</button></form><div class="mac-ultra__stage" tabindex="0" role="application" aria-label="Escritorio remoto interactivo"><img draggable="false" alt="Escritorio remoto"><p class="mac-ultra__hint">Conectando con GrokBot…</p></div>';
   overlay.querySelector('strong').textContent='Ultradetalle · '+persona;
-  document.body.append(overlay);document.body.style.overflow='hidden';
+  document.body.append(overlay);document.body.style.overflow='hidden';document.documentElement.style.overflow='hidden';
   const stage=overlay.querySelector('.mac-ultra__stage'),img=stage.querySelector('img'),hint=stage.querySelector('p'),status=overlay.querySelector('[role="status"]'),form=overlay.querySelector('form');
   let token=null,frame=null,closed=false,ready=false,timer=null,generation=0,queue=Promise.resolve(),queued=0,enteredFullscreen=false,drag=null,suppressClick=false,textBuffer='',textTimer=null;
   const controllers=new Set();
@@ -99,7 +107,7 @@ export function openRemote(){
     if(token)fetch(ENDPOINT,{method:'POST',credentials:'include',keepalive:true,headers:{'Content-Type':'application/json','X-Fleet-CSRF':window.admiraGateCsrf?.()||''},body:JSON.stringify({action:'close',token})}).catch(()=>{});
     document.removeEventListener('keydown',onKey,true);document.removeEventListener('fullscreenchange',onFullscreen);
     if(document.fullscreenElement===overlay)document.exitFullscreen().catch(()=>{});
-    overlay.remove();document.body.style.overflow=overflow;previousFocus?.focus?.({preventScroll:true});active=null;
+    overlay.remove();document.body.style.overflow=overflow;document.documentElement.style.overflow=rootOverflow;previousFocus?.focus?.({preventScroll:true});active=null;
   }
   overlay.querySelector('[data-close]').onclick=close;
   document.addEventListener('keydown',onKey,true);document.addEventListener('fullscreenchange',onFullscreen);

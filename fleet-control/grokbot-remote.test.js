@@ -5,9 +5,9 @@ const owner={email:'test@example.test',jti:'session-one'};
 const target={persona:'Steve Jobs',pid:12,windowID:30,x:-1800,y:0,width:1200,height:900};
 const frame={ok:true,target,frame:{jpeg:'/9j/'+Buffer.alloc(20).toString('base64'),width:2400,height:1800}};
 test('remote session binds account, login session, target and the observed frame',async()=>{
- let calls=[];const bridge=createRemoteDesktop({runNative:async req=>{calls.push(req);return req.action==='remote_frame'?frame:{ok:true};}});
+ let calls=[];const bridge=createRemoteDesktop({runNative:async req=>{calls.push(req);return ['remote_frame','remote_open'].includes(req.action)?frame:{ok:true};}});
  const opened=await bridge.handle(owner,{action:'open',persona:'Jobs'});
- assert.equal(calls[0].action,'remote_frame');
+ assert.equal(calls[0].action,'remote_open');
  await assert.rejects(bridge.handle({...owner,jti:'other'},{action:'frame',token:opened.token}),{code:'remote_session_expired'});
  await bridge.handle(owner,{action:'input',token:opened.token,frameId:opened.frame.id,event:{type:'click',x:.5,y:.5,button:'left',clicks:1}});
  assert.deepEqual(calls.at(-1).remoteTarget,target);assert.equal(calls.at(-1).persona,'Steve Jobs');
@@ -22,7 +22,7 @@ test('old frames and a different selected adviser never authorize input',async()
  await assert.rejects(wrong.handle(owner,{action:'open',persona:'Jobs'}),{code:'remote_invalid_frame'});
 });
 test('remote native refusals are surfaced with no automatic retry',async()=>{
- let n=0;const bridge=createRemoteDesktop({runNative:async req=>{n++;return req.action==='remote_frame'?frame:{ok:false,error:'remote_view_changed'};}});
+ let n=0;const bridge=createRemoteDesktop({runNative:async req=>{n++;return ['remote_frame','remote_open'].includes(req.action)?frame:{ok:false,error:'remote_view_changed'};}});
  const opened=await bridge.handle(owner,{action:'open',persona:'Jobs'});
  await assert.rejects(bridge.handle(owner,{action:'input',token:opened.token,frameId:opened.frame.id,event:{type:'text',text:'draft'}}),{code:'remote_view_changed'});assert.equal(n,2);
 });

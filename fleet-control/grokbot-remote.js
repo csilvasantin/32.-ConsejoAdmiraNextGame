@@ -20,8 +20,8 @@ function validateInput(event){
 function createRemoteDesktop({runNative,now=Date.now}){
  const sessions=new Map();
  const owner=s=>s?.email&&s?.jti?String(s.email).toLowerCase()+'\0'+s.jti:fail('authenticated_session_required',401);
- async function capture(row){
-  const result=await runNative({action:'remote_frame',persona:PERSONAS[row.persona]});
+ async function capture(row,action="remote_frame"){
+  const result=await runNative({action,persona:PERSONAS[row.persona]});
   if(!result?.ok)fail(/^remote_[a-z_]+$/.test(result?.error)?result.error:'remote_capture_unavailable',503);
   const t=result.target,f=result.frame;
   if(!t||t.persona!==PERSONAS[row.persona]||![t.pid,t.windowID,t.x,t.y,t.width,t.height].every(Number.isFinite)||t.pid<=0||t.windowID<=0||t.width<100||t.height<100||typeof f?.jpeg!=='string'||!f.jpeg.startsWith('/9j/')||f.jpeg.length>8*1024*1024||!Number.isFinite(f.width)||!Number.isFinite(f.height))fail('remote_invalid_frame',503);
@@ -41,7 +41,7 @@ function createRemoteDesktop({runNative,now=Date.now}){
    if(sessions.size>=8)fail('remote_busy');
    const token=crypto.randomBytes(24).toString('hex');
    const row={owner:who,persona,expires:now()+300000,frames:new Map()};
-   const frame=await capture(row);sessions.set(token,row);return {token,...frame};
+   const frame=await capture(row,"remote_open");sessions.set(token,row);return {token,...frame};
   }
   const row=sessions.get(body.token);
   if(!row||row.owner!==who)fail('remote_session_expired');

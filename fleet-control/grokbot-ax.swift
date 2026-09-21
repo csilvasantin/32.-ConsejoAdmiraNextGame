@@ -1,6 +1,6 @@
 // Local macOS Accessibility bridge. One JSON request per process, stdout JSON.
 // No Apple Events, private web APIs, browser debugging, tokens, window movement
-// or permission prompts. Only select/send perform AX actions.
+// or permission prompts. Explicit controls perform bounded AX/input actions.
 import Cocoa
 import ApplicationServices
 import CryptoKit
@@ -643,13 +643,14 @@ final class GrokAX {
     }
 }
 
-// Full-window frames and bounded input share the exact Grok Bot process/window.
+// Computer-surface frames and bounded input share the exact Grok Bot process/window.
 // No display fallback, shell command, global hotkeys or arbitrary application.
 struct RemoteTarget: Codable, Equatable {
     let persona: String
     let pid: Int32
     let windowID: UInt32
     let x: Double, y: Double, width: Double, height: Double
+    var windowX: Double = 0, windowY: Double = 0, windowWidth: Double = 0, windowHeight: Double = 0
 }
 struct RemotePoint: Codable { let x: Double, y: Double }
 struct RemoteInput: Decodable {
@@ -664,12 +665,44 @@ struct RemoteReply: Codable {
     var target: RemoteTarget? = nil
     var frame: RemoteFrame? = nil
 }
+// AppKit routes PID-scoped mouse events using an additional local position.
+// Resolve the OS symbol defensively: unavailable means refuse, never global input.
+// Reference: https://github.com/andelf/axcli/blob/main/src/input.rs
+func setRemoteWindowLocation(_ event:CGEvent,_ point:CGPoint) throws {
+    typealias Setter = @convention(c) (CGEvent,CGPoint) -> Void
+    guard let symbol=dlsym(UnsafeMutableRawPointer(bitPattern:-2),"CGEventSetWindowLocation") else { throw BridgeError(code:"remote_input_unavailable") }
+    unsafeBitCast(symbol,to:Setter.self)(event,point)
+}
 func remotePoint(_ p: RemotePoint, target: RemoteTarget) throws -> CGPoint {
     guard p.x.isFinite, p.y.isFinite, p.x >= 0, p.x <= 1, p.y >= 0, p.y <= 1 else { throw BridgeError(code:"remote_invalid_input") }
     return CGPoint(x:target.x + p.x * (target.width - 1), y:target.y + p.y * (target.height - 1))
 }
 let remoteKeys: [String: CGKeyCode] = ["Enter":36,"Tab":48,"Escape":53,"Backspace":51,"Delete":117,"ArrowLeft":123,"ArrowRight":124,"ArrowDown":125,"ArrowUp":126,"Home":115,"End":119,"PageUp":116,"PageDown":121,"a":0,"c":8,"x":7,"v":9,"z":6,"y":16,"f":3]
 extension GrokAX {
+    func remoteSurface(_ persona:String,context:Context? = nil) throws -> Node {
+        let ctx = try context ?? read()
+        guard ctx.snapshot.selectedPersona == persona else { throw BridgeError(code:"remote_selection_changed") }
+        let panes=ctx.root.descendants().filter { $0.role == "AXGroup" && $0.label == "Pantalla de " + persona }
+        let surfaces=panes.flatMap { $0.descendants().filter { $0.role == "AXWebArea" } }
+        guard surfaces.count == 1 else { throw BridgeError(code:"remote_computer_unavailable") }
+        return surfaces[0]
+    }
+    func remoteOpen(_ persona:String) throws -> RemoteReply {
+        let ctx=try read()
+        guard ctx.snapshot.selectedPersona == persona else { throw BridgeError(code:"remote_selection_changed") }
+        if (try? remoteSurface(persona,context:ctx)) == nil {
+            let buttons=ctx.root.descendants().filter { $0.role == "AXButton" && $0.label == "Abrir computadora" && $0.enabled }
+            guard buttons.count == 1, let button=buttons[0].element else { throw BridgeError(code:"remote_computer_unavailable") }
+            let restore=try activateForInteraction();defer { restore() }
+            guard AXUIElementPerformAction(button,kAXPressAction as CFString) == .success else { throw BridgeError(code:"remote_computer_unavailable") }
+            let deadline=Date().addingTimeInterval(4)
+            while Date() < deadline {
+                if (try? remoteSurface(persona)) != nil { break }
+                RunLoop.current.run(until:Date().addingTimeInterval(0.1))
+            }
+        }
+        return try remoteFrame(persona)
+    }
     func remoteTarget(_ persona: String) throws -> RemoteTarget {
         let ctx = try read()
         guard ctx.snapshot.selectedPersona == persona else { throw BridgeError(code:"remote_selection_changed") }
@@ -681,7 +714,7 @@ extension GrokAX {
               CFGetTypeID(pos) == AXValueGetTypeID(), CFGetTypeID(siz) == AXValueGetTypeID(),
               AXValueGetValue(pos as! AXValue,.cgPoint,&position), AXValueGetValue(siz as! AXValue,.cgSize,&size),
               AXUIElementGetPid(app,&pid) == .success else { throw BridgeError(code:"remote_window_unavailable") }
-        let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly,.excludeDesktopElements], kCGNullWindowID) as? [[String:Any]] ?? []
+        let list = CGWindowListCopyWindowInfo([.optionAll,.excludeDesktopElements], kCGNullWindowID) as? [[String:Any]] ?? []
         let matches = list.filter { item in
             guard (item[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value == pid,
                   (item[kCGWindowLayer as String] as? NSNumber)?.intValue == 0,
@@ -690,25 +723,42 @@ extension GrokAX {
             return abs(rect.minX-position.x)<1 && abs(rect.minY-position.y)<1 && abs(rect.width-size.width)<1 && abs(rect.height-size.height)<1
         }
         guard matches.count == 1, let wid = (matches[0][kCGWindowNumber as String] as? NSNumber)?.uint32Value, size.width>100, size.height>100 else { throw BridgeError(code:"remote_window_unavailable") }
-        return RemoteTarget(persona:persona,pid:pid,windowID:wid,x:position.x,y:position.y,width:size.width,height:size.height)
+        let canvases=try remoteSurface(persona,context:ctx).descendants().filter { $0.role == "AXImage" }
+        guard canvases.count == 1,let surface=canvases[0].element,
+              let surfacePos=attribute(surface,kAXPositionAttribute),let surfaceSize=attribute(surface,kAXSizeAttribute),
+              CFGetTypeID(surfacePos) == AXValueGetTypeID(),CFGetTypeID(surfaceSize) == AXValueGetTypeID() else { throw BridgeError(code:"remote_computer_unavailable") }
+        var origin=CGPoint.zero, extent=CGSize.zero
+        guard AXValueGetValue(surfacePos as! AXValue,.cgPoint,&origin),AXValueGetValue(surfaceSize as! AXValue,.cgSize,&extent),
+              extent.width>100,extent.height>100,
+              CGRect(origin:position,size:size).contains(CGRect(origin:origin,size:extent)) else { throw BridgeError(code:"remote_computer_unavailable") }
+        return RemoteTarget(persona:persona,pid:pid,windowID:wid,x:origin.x,y:origin.y,width:extent.width,height:extent.height,windowX:position.x,windowY:position.y,windowWidth:size.width,windowHeight:size.height)
     }
     func remoteFrame(_ persona:String) throws -> RemoteReply {
         let target = try remoteTarget(persona)
         let file = FileManager.default.temporaryDirectory.appendingPathComponent("admira-remote-" + UUID().uuidString + ".jpg")
         defer { try? FileManager.default.removeItem(at:file) }
+        guard FileManager.default.createFile(atPath:file.path,contents:Data(),attributes:[.posixPermissions:0o600]) else { throw BridgeError(code:"remote_capture_unavailable") }
         let process = Process(); process.executableURL = URL(fileURLWithPath:"/usr/sbin/screencapture")
         process.arguments = ["-x","-o","-l",String(target.windowID),"-t","jpg",file.path]
         process.standardOutput = FileHandle.nullDevice; process.standardError = FileHandle.nullDevice
         try process.run(); process.waitUntilExit()
-        guard process.terminationStatus == 0, let bytes=try? Data(contentsOf:file), bytes.count>1000, bytes.count<6*1024*1024,
-              let bitmap=NSBitmapImageRep(data:bytes) else { throw BridgeError(code:"remote_capture_unavailable") }
+        guard process.terminationStatus == 0 else { throw BridgeError(code:"remote_capture_failed") }
+        guard let bytes=try? Data(contentsOf:file),bytes.count>1000,bytes.count<6*1024*1024,let bitmap=NSBitmapImageRep(data:bytes) else { throw BridgeError(code:"remote_capture_invalid") }
         guard try remoteTarget(persona) == target else { throw BridgeError(code:"remote_view_changed") }
-        return RemoteReply(target:target,frame:RemoteFrame(jpeg:bytes.base64EncodedString(),width:bitmap.pixelsWide,height:bitmap.pixelsHigh))
+        let sx=Double(bitmap.pixelsWide)/target.windowWidth,sy=Double(bitmap.pixelsHigh)/target.windowHeight
+        let crop=CGRect(x:(target.x-target.windowX)*sx,y:(target.y-target.windowY)*sy,width:target.width*sx,height:target.height*sy).integral
+        guard let image=bitmap.cgImage?.cropping(to:crop),let jpeg=NSBitmapImageRep(cgImage:image).representation(using:.jpeg,properties:[.compressionFactor:0.85]) else { throw BridgeError(code:"remote_crop_unavailable") }
+        return RemoteReply(target:target,frame:RemoteFrame(jpeg:jpeg.base64EncodedString(),width:image.width,height:image.height))
     }
     func remoteInput(_ persona:String,target:RemoteTarget,event:RemoteInput) throws -> RemoteReply {
         guard target.persona == persona, try remoteTarget(persona) == target else { throw BridgeError(code:"remote_view_changed") }
         let restore=try activateForInteraction();defer { restore() }
         guard try remoteTarget(persona) == target else { throw BridgeError(code:"remote_view_changed") }
+        if event.type == "key" || event.type == "text" {
+            let keys=try remoteSurface(persona).descendants().filter { $0.role == "AXTextArea" && $0.label == "Remote desktop keyboard input" }
+            guard keys.count == 1,let keyboard=keys[0].element,
+                  AXUIElementSetAttributeValue(keyboard,kAXFocusedAttribute as CFString,kCFBooleanTrue) == .success else { throw BridgeError(code:"remote_keyboard_unavailable") }
+        }
         var flags=CGEventFlags()
         for mod in event.modifiers ?? [] {
             switch mod {
@@ -728,13 +778,41 @@ extension GrokAX {
             return try remotePoint(RemotePoint(x:x,y:y),target:target)
         }
         func mouse(_ kind:CGEventType,_ p:CGPoint,_ button:CGMouseButton = .left,_ clicks:Int = 1) throws {
-            let e=CGEvent(mouseEventSource:nil,mouseType:kind,mouseCursorPosition:p,mouseButton:button)
-            e?.setIntegerValueField(.mouseEventClickState,value:Int64(clicks));try post(e)
+            // AppKit mouse events carry window-local coordinates and a window ID.
+            // A raw CGEvent posted to a PID lacks that association in Electron.
+            let local=CGPoint(x:p.x-target.windowX,y:p.y-target.windowY)
+            guard let type=NSEvent.EventType(rawValue:UInt(kind.rawValue)) else { throw BridgeError(code:"remote_invalid_input") }
+            let e=NSEvent.mouseEvent(with:type,location:p,modifierFlags:NSEvent.ModifierFlags(rawValue:UInt(flags.rawValue)),timestamp:ProcessInfo.processInfo.systemUptime,windowNumber:Int(target.windowID),context:nil,eventNumber:0,clickCount:clicks,pressure:1)?.cgEvent
+            guard let e=e else { throw BridgeError(code:"remote_input_unavailable") }
+            e.location=p
+            try setRemoteWindowLocation(e,local)
+            e.setIntegerValueField(.mouseEventSubtype,value:3)
+            e.setIntegerValueField(.mouseEventButtonNumber,value:button == .right ? 1 : 0)
+            e.setIntegerValueField(.mouseEventClickState,value:Int64(clicks))
+            e.setIntegerValueField(.mouseEventWindowUnderMousePointer,value:Int64(target.windowID))
+            e.setIntegerValueField(.mouseEventWindowUnderMousePointerThatCanHandleThisEvent,value:Int64(target.windowID));try post(e)
+        }
+        let modifierKeys:[(String,CGKeyCode,CGEventFlags)]=[("ctrl",59,.maskControl),("alt",58,.maskAlternate),("shift",56,.maskShift),("meta",55,.maskCommand)]
+        let held=modifierKeys.filter { (event.modifiers ?? []).contains($0.0) }
+        var heldFlags=CGEventFlags()
+        for (_,code,flag) in held {
+            heldFlags.insert(flag)
+            let e=CGEvent(keyboardEventSource:nil,virtualKey:code,keyDown:true)
+            e?.type = .flagsChanged;e?.flags=heldFlags;e?.postToPid(target.pid)
+        }
+        defer {
+            for (_,code,flag) in held.reversed() {
+                heldFlags.remove(flag)
+                let e=CGEvent(keyboardEventSource:nil,virtualKey:code,keyDown:false)
+                e?.type = .flagsChanged;e?.flags=heldFlags;e?.postToPid(target.pid)
+            }
         }
         switch event.type {
         case "click":
             let p=try point(event.x,event.y),right=event.button == "right",clicks=event.clicks ?? 1
             guard ["left","right"].contains(event.button ?? ""),[1,2].contains(clicks) else { throw BridgeError(code:"remote_invalid_input") }
+            try mouse(.mouseMoved,p)
+            RunLoop.current.run(until:Date().addingTimeInterval(0.03))
             try mouse(right ? .rightMouseDown : .leftMouseDown,p,right ? .right : .left,clicks)
             try mouse(right ? .rightMouseUp : .leftMouseUp,p,right ? .right : .left,clicks)
         case "drag":
@@ -749,7 +827,12 @@ extension GrokAX {
             guard let dx=event.dx,let dy=event.dy,dx.isFinite,dy.isFinite,abs(dx)<=1200,abs(dy)<=1200 else { throw BridgeError(code:"remote_invalid_input") }
             let p=try point(event.x,event.y)
             let e=CGEvent(scrollWheelEvent2Source:nil,units:.pixel,wheelCount:2,wheel1:Int32(-dy),wheel2:Int32(-dx),wheel3:0)
-            e?.location=p;try post(e)
+            guard let e=e else { throw BridgeError(code:"remote_input_unavailable") }
+            try mouse(.mouseMoved,p)
+            e.location=p
+            e.setIntegerValueField(.mouseEventWindowUnderMousePointer,value:Int64(target.windowID))
+            e.setIntegerValueField(.mouseEventWindowUnderMousePointerThatCanHandleThisEvent,value:Int64(target.windowID))
+            try setRemoteWindowLocation(e,CGPoint(x:p.x-target.windowX,y:p.y-target.windowY));try post(e)
         case "key":
             guard let key=event.key,let code=remoteKeys[key] else { throw BridgeError(code:"remote_invalid_input") }
             try post(CGEvent(keyboardEventSource:nil,virtualKey:code,keyDown:true));try post(CGEvent(keyboardEventSource:nil,virtualKey:code,keyDown:false))
@@ -857,15 +940,16 @@ do {
     let request: Request
     do { request = try JSONDecoder().decode(Request.self, from: data) }
     catch { throw BridgeError(code: "invalid_request") }
-    guard ["snapshot", "select", "send", "dump", "probe", "routines", "routine", "routine_set", "interrupt", "remote_frame", "remote_input"].contains(request.action) else { throw BridgeError(code: "unsupported_action") }
+    guard ["snapshot", "select", "send", "dump", "probe", "routines", "routine", "routine_set", "interrupt", "remote_open", "remote_frame", "remote_input"].contains(request.action) else { throw BridgeError(code: "unsupported_action") }
     if request.action != "snapshot" && request.action != "dump" && request.action != "probe" {
         guard let persona = request.persona, supportedPersonas.contains(persona) else { throw BridgeError(code: "unsupported_persona") }
     }
     let bridge = try GrokAX()
-    if request.action == "remote_frame" || request.action == "remote_input" {
+    if ["remote_open","remote_frame","remote_input"].contains(request.action) {
         let lock=try MutationLock();defer { withExtendedLifetime(lock) {} }
         let result:RemoteReply
-        if request.action == "remote_frame" { result=try bridge.remoteFrame(request.persona!) }
+        if request.action == "remote_open" { result=try bridge.remoteOpen(request.persona!) }
+        else if request.action == "remote_frame" { result=try bridge.remoteFrame(request.persona!) }
         else {
             guard let target=request.remoteTarget,let event=request.remoteEvent else { throw BridgeError(code:"remote_invalid_input") }
             result=try bridge.remoteInput(request.persona!,target:target,event:event)

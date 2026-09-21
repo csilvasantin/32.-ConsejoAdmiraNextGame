@@ -510,7 +510,7 @@ export function showRemote(persona, root = lastRoot || (typeof document !== 'und
   remoteImgs(root).forEach(img=>{img.crossOrigin='use-credentials';if(previous)img.src=previous.url;else if(img.removeAttribute)img.removeAttribute('src');});
   let loading=false;
   const tick = () => {
-    if (!isCurrent()||loading) return;
+    if (!isCurrent()||loading||(typeof document!=='undefined'&&document.querySelector('.mac-ultra'))) return;
     const url = SCREEN_JPEG + '?persona=' + encodeURIComponent(alias) + '&t=' + Date.now();
     const accept=()=>{
       loading=false;if(!isCurrent())return;

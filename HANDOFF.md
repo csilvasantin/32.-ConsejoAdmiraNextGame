@@ -1,3 +1,13 @@
+## 21 septiembre 2026 — Chat nativo GrokBot: reconexión y diagnóstico (OraculoMacMini)
+
+Misión Hoy #232 (`DCL-8150262a1ec389c4a4aa2530`). Carlos pide que hablar con los consejeros desde admira.live use la misma conversación de GrokBot.
+
+Causas verificadas: el ejecutable AX devuelve JSON de error con exit 1 y Node descartaba ese JSON, ocultando causas como `bridge_busy` bajo `desktop_unavailable`. La web no recuperaba selección al volver la conexión; borraba la pregunta antes de saber si podía enviarla. Reunión disparaba selección y envío sin esperar.
+
+Corregido: conservar solo rechazos estructurados del helper (nunca dar éxito a un proceso fallido), diagnóstico público por códigos permitidos sin texto privado, reconectar al pulsar Enviar, esperar selección, conservar texto no enviado. El polling no cambia de consejero ni reenvía mensajes. El Mac Mini ejecuta la copia actualizada de `fleet-control/grokbot-desktop.js`; respaldo previo `/tmp/grokbot-desktop-before-20260921.js`. El helper firmado y los permisos no se modifican.
+
+Prueba real autorizada por Carlos: «Prueba de conexión de admira.live: responde solo CONEXIÓN OK, sin ejecutar ninguna tarea». Aún pendiente de recepción confirmada al escribir este hito; los intentos iniciales no generaron reserva ni tarjeta nativa. GrokBot estaba en Lucas y más tarde con un borrador del usuario; no se altera el borrador. No afirmar paridad completa: el adaptador actual integra texto e historial observado, no adjuntos/aprobaciones/rutinas.
+
 # Relevo actual — encaje remoto de los Mac · 21 septiembre 2026
 
 - Misión Hoy #221: `DCL-422e7888824e494568c4a24d`, OraculoMacMini.

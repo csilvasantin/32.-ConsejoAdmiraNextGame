@@ -348,7 +348,7 @@ test('explicit send waits for the in-flight native selection and sends exactly o
 test('a temporary capability outage recovers on explicit send without passive reselection',async()=>{
   const h=harness();h.capabilitiesHandler=()=>response({ok:true,mode:'desktop',available:false,bidirectional:false,reason:'desktop_unavailable'});
   assert.equal(await h.api.select('Steve Jobs'),false);
-  assert.match(h.statuses.at(-1),/leer GrokBot a tiempo/);
+  assert.match(h.statuses.at(-1),/leer GrokBot/);
   h.capabilitiesHandler=null;await h.clock.advance(3000);
   assert.equal(h.calls.filter(x=>x.path==='/selection').length,0);
   assert.equal(await h.api.send('Steve Jobs','Recuperar conexión'),true);
@@ -370,4 +370,15 @@ test('switching persona while selection is pending cancels the older send',async
   const sent=h.api.send('Steve Jobs','Solo a Jobs');await flush();
   await h.api.select('George Lucas');gate.resolve(response({ok:true,selectedPersona:'Jobs'}));
   await old;assert.equal(await sent,false);assert.equal(h.posts.length,0);h.api.destroy();
+});
+
+
+test('a rejected native POST preserves unsent text, but an ambiguous network result does not invite resending',async()=>{
+  const h=harness();await h.api.select('Steve Jobs');
+  h.postHandler=()=>response({ok:false,error:'desktop_busy'},409);
+  assert.equal(await h.api.send('Steve Jobs','Se conserva'),false);
+  h.postHandler=async()=>{throw new Error('connection lost after POST');};
+  assert.equal(await h.api.send('Steve Jobs','Entrega desconocida'),true);
+  const posts=h.posts.length;await h.clock.advance(3000);assert.equal(h.posts.length,posts);
+  h.api.destroy();
 });

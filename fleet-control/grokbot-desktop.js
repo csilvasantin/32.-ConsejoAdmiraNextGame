@@ -87,7 +87,14 @@ function createNativeRunner({environment = process.env, execFileImpl = execFile,
       env:{PATH:'/usr/bin:/bin:/usr/sbin:/sbin', HOME:os.homedir(), LANG:'en_US.UTF-8'},
       windowsHide:true,
     }, (error, stdout) => {
-      if (error) { reject(new DesktopBridgeError(503, 'desktop_unavailable')); return; }
+      // The signed helper emits a structured refusal and exits 1. Keep that
+      // diagnosis; never accept a success payload from a failed/killed process.
+      if (error) {
+        if (error.code === 1 && !error.killed && !error.signal) {
+          try { const refusal=JSON.parse(stdout); if(refusal?.ok===false){resolve(refusal);return;} } catch (_) {}
+        }
+        reject(new DesktopBridgeError(503, error.killed ? 'desktop_timeout' : 'desktop_unavailable')); return;
+      }
       try { resolve(JSON.parse(stdout)); }
       catch (_) { reject(new DesktopBridgeError(503, 'desktop_invalid_snapshot')); }
     });
@@ -116,6 +123,12 @@ function parseSnapshot(value, now) {
   // Do not forward native error text: it can contain private UI or process data.
   const error = ({
     accessibility_required:'desktop_accessibility_required',
+    accessibility_read_failed:'desktop_read_failed', accessibility_unavailable:'desktop_read_failed',
+    snapshot_too_large:'desktop_snapshot_too_large',
+    conversation_window_unavailable:'desktop_window_unavailable',
+    conversation_structure_unavailable:'desktop_structure_changed', conversation_structure_ambiguous:'desktop_structure_changed',
+    selection_changed_during_snapshot:'desktop_selection_mismatch',
+    bot_list_unavailable:'desktop_bot_list_unavailable', bot_button_unavailable:'desktop_bot_button_unavailable',
     draft:'desktop_draft_present', draft_present:'desktop_draft_present', composer_has_draft:'desktop_draft_present', draft_exists:'desktop_draft_present',
     busy:'desktop_busy', conversation_busy:'desktop_busy', bridge_busy:'desktop_busy',
     persona_not_selected:'desktop_selection_mismatch', selection_or_draft_changed:'desktop_selection_mismatch', selection_unconfirmed:'desktop_selection_mismatch', unsupported_or_ambiguous_conversation:'desktop_selection_mismatch',
@@ -134,6 +147,8 @@ function createGrokBotDesktop({environment = process.env, runNative, now = Date.
   const native = runNative || createNativeRunner({environment, timeoutMs:nativeTimeoutMs});
   const state = store || createDesktopStore(environment.GROKBOT_DESKTOP_STATE_FILE || path.join(os.homedir(), '.fleet', 'grokbot-desktop-state.json'));
   let queue = Promise.resolve(), last = null, reason = configured ? 'desktop_not_observed' : 'desktop_not_configured';
+  let reportedReason = '';
+  function diagnose(code) { if(code && code!==reportedReason)console.warn('[grokbot-desktop]',code); reportedReason=code; }
   let axAvailable = false, running = false, timer = null, generation = 0;
   const observedSignatures = new Map();
   const interval = Math.max(2000, Math.min(5000, Number(pollIntervalMs) || 2500));
@@ -250,6 +265,7 @@ function createGrokBotDesktop({environment = process.env, runNative, now = Date.
     catch (error) {
       axAvailable = false;
       reason = error instanceof DesktopBridgeError ? error.code : 'desktop_unavailable';
+      diagnose(reason);
       throw new DesktopBridgeError(503, reason);
     }
     // A failure can still contain a useful post-send snapshot. Capture it, but
@@ -257,6 +273,7 @@ function createGrokBotDesktop({environment = process.env, runNative, now = Date.
     last = snapshot;
     axAvailable = snapshot.ok;
     reason = snapshot.ok ? (snapshot.draft ? 'desktop_draft_present' : '') : snapshot.error;
+    diagnose(snapshot.ok ? '' : snapshot.error);
     ingest(snapshot);
     return snapshot;
   }

@@ -87,7 +87,14 @@
         desktop_state_unavailable:'El puente no puede guardar o leer el historial local. Tu mensaje no se ha enviado.',
         desktop_selection_mismatch:'No se ha podido confirmar el consejero en GrokBot. Pulsa Enviar para volver a conectarlo.',
         desktop_invalid_snapshot:'El puente no ha podido leer el chat de GrokBot. Volverá a comprobar la conexión.',
-        desktop_unavailable:'El puente no ha podido leer GrokBot a tiempo. Se está intentando recuperar la conexión.'
+        desktop_unavailable:'El puente no ha podido leer GrokBot. Se está intentando recuperar la conexión.',
+        desktop_timeout:'GrokBot está tardando en responder al puente. Se está intentando recuperar la conexión.',
+        desktop_read_failed:'GrokBot está cambiando su contenido y el puente no ha podido leerlo. Se volverá a comprobar la conexión.',
+        desktop_snapshot_too_large:'El chat abierto de GrokBot supera el tamaño que puede leer el puente.',
+        desktop_window_unavailable:'El puente no encuentra la ventana de GrokBot en el Mac Mini.',
+        desktop_structure_changed:'GrokBot ha cambiado la estructura de su chat y el puente necesita adaptarse.',
+        desktop_bot_list_unavailable:'El puente no encuentra la lista de consejeros en GrokBot.',
+        desktop_bot_button_unavailable:'El puente no encuentra el consejero en la lista de GrokBot.'
       };
       return explanations[error.code] || error.message;
     }
@@ -161,7 +168,8 @@
           if(restoreHistory){
             for(const row of rows)remember(row);
             if(last?.text)options.onRestore?.({persona:name,text:last.text,messageId:last.id,status:last.status,source:'desktop',native:true});
-            if(last)say(LABELS[last.status] || 'Conversación recuperada');
+            if(!selectionReady)say('Historial recuperado. Pulsa Enviar para conectar con '+name+'; se conservará tu texto si no puede enviarse.');
+            else if(last)say(LABELS[last.status] || 'Conversación recuperada');
             else say('Chat de GrokBot · esperando mensajes visibles de '+name+'.');
           }else{
             for(const row of changes){
@@ -170,7 +178,7 @@
               if(latestKnown && timestamp(row.createdAt)<timestamp(latestKnown.createdAt))remember(row);
               else report(row,epoch);
             }
-            if(!changes.length && wasDisconnected)say(selectionReady?'Chat de GrokBot · sincronización recuperada.':'Historial observado. Vuelve a seleccionar el consejero para confirmar su chat antes de enviar.');
+            if(!changes.length && wasDisconnected)say(selectionReady?'Chat de GrokBot · sincronización recuperada.':'Historial recuperado. Pulsa Enviar para conectar con el consejero.');
           }
         }catch(e){if(current(epoch)){connection(false);say(errorMessage(e));}}
         finally{if(refreshing===entry)refreshing=null;schedule(epoch);}
@@ -226,7 +234,7 @@
           render();report(canonical,selectedEpoch);schedule(selectedEpoch);
         }
       }catch(e){
-        if(['desktop_draft_present','desktop_busy','desktop_not_configured','desktop_owner_required'].includes(e.code) || e.status===401)submitted=false;
+        if(['desktop_draft_present','desktop_busy','desktop_not_configured','desktop_owner_required','desktop_unavailable','desktop_timeout','desktop_read_failed','desktop_accessibility_required','desktop_application_not_running','desktop_selection_mismatch'].includes(e.code) || e.status===401)submitted=false;
         if(current(epoch)){
           if(e.code==='desktop_draft_present')selectionReady=false;
           connection(false);const message=e.name==='AbortError'?'No se pudo confirmar el envío. Actualiza el historial antes de repetir.':errorMessage(e);

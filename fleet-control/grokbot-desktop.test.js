@@ -318,3 +318,18 @@ test('verified native ISO dates sort older history correctly even when first obs
   assert.equal(rows[0].prompt,'Older'); assert.equal(rows[0].createdAt,'2026-09-16T10:00:00.000Z');
   assert.equal(rows[1].prompt,'Recent');
 });
+
+
+test('runner preserves structured exit-1 refusal but rejects killed and false success output', async t => {
+  const folder=fs.mkdtempSync(path.join(os.tmpdir(),'grokbot-runner-'));
+  t.after(()=>fs.rmSync(folder,{recursive:true,force:true}));
+  const binary=path.join(folder,'helper');fs.writeFileSync(binary,'fixture',{mode:0o700});
+  let error={code:1}, output=snapshot({ok:false,error:'accessibility_required'});
+  const runner=createNativeRunner({environment:{GROKBOT_AX_BINARY:binary},execFileImpl:(file,args,opts,callback)=>{
+    queueMicrotask(()=>callback(error,JSON.stringify(output)));return {stdin:{on(){},end(){}}};
+  }});
+  assert.equal((await runner({action:'snapshot'})).error,'accessibility_required');
+  output=snapshot();await assert.rejects(runner({action:'snapshot'}),errorCode('desktop_unavailable'));
+  error={code:1,killed:true};output=snapshot({ok:false,error:'accessibility_required'});
+  await assert.rejects(runner({action:'snapshot'}),errorCode('desktop_timeout'));
+});

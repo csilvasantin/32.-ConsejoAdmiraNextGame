@@ -92,7 +92,7 @@ export function openRemote(){
   overlay.querySelector('[data-reconnect]').onclick=connect;
   function fullscreen(){if(overlay.requestFullscreen)overlay.requestFullscreen().catch(()=>{});}
   overlay.querySelector('[data-full]').onclick=fullscreen;
-  function onFullscreen(){if(document.fullscreenElement===overlay)enteredFullscreen=true;else if(enteredFullscreen)close();}
+  function onFullscreen(){enteredFullscreen=document.fullscreenElement===overlay;overlay.querySelector('[data-full]').textContent=enteredFullscreen?'Pantalla completa activa':'Pantalla completa';}
   function onKey(e){if(e.key==='Escape'){e.preventDefault();e.stopImmediatePropagation();close();}}
   function close(){
     if(closed)return;closed=true;generation++;ready=false;clearTimeout(timer);clearTimeout(textTimer);controllers.forEach(c=>c.abort());

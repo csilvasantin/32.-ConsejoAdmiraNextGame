@@ -135,6 +135,7 @@ function parseSnapshot(value, now) {
     busy:'desktop_busy', conversation_busy:'desktop_busy', bridge_busy:'desktop_busy',
     persona_not_selected:'desktop_selection_mismatch', selection_or_draft_changed:'desktop_selection_mismatch', selection_unconfirmed:'desktop_selection_mismatch', unsupported_or_ambiguous_conversation:'desktop_selection_mismatch',
     interaction_focus_unavailable:'desktop_focus_unavailable',
+    send_not_ready:'desktop_send_not_ready',
     composer_not_writable:'desktop_composer_unavailable', application_not_running:'desktop_application_not_running',
     attachment_prepare_failed:'desktop_attachment_prepare_failed', attachment_focus_unavailable:'desktop_attachment_focus_unavailable', attachment_button_unavailable:'desktop_attachment_button_unavailable', attachment_menu_unavailable:'desktop_attachment_menu_unavailable', attachment_picker_unavailable:'desktop_attachment_picker_unavailable', attachment_path_unavailable:'desktop_attachment_path_unavailable', attachment_open_unavailable:'desktop_attachment_open_unavailable',
     routine_controls_unavailable:'desktop_routines_unavailable', routine_not_found:'routine_not_found', routine_changed:'routine_changed', routine_state_unconfirmed:'routine_state_unconfirmed',
@@ -205,12 +206,30 @@ function createGrokBotDesktop({environment = process.env, runNative, now = Date.
       }
     }
     if (!groups.length) return;
+    const visibleUsers = groups.filter(group=>group.user).map(group=>group.user);
+    const visibleUserKeys = visibleUsers.map(item=>item.key);
     state.transact(records => {
       const rows = () => [...records.values()].filter(row => row.persona === snapshot.selected);
       for (let index = 0; index < groups.length; index++) {
         const current = groups[index], userKey = current.user?.key;
         const keys = [userKey, ...current.assistants.map(item => item.key)].filter(Boolean);
-        let entry = rows().find(row => userKey && row.nativeUserKey === userKey);
+        let entry = rows().find(row => userKey && (row.nativeUserKey === userKey || row.nativeUserAliases?.includes(userKey)));
+        if (!entry && current.user) {
+          // Electron replaces an optimistic user-card ID when it persists the
+          // message. Only reconcile an acknowledged web receipt when the whole
+          // visible user sequence is unchanged except for this one ID, including
+          // exact text, native timestamp and position. Never merge by text alone.
+          const promotions = rows().filter(row=>{
+            const seen=row.nativeUserObservation;
+            return row.reservation && row.nativeUserKey && seen &&
+              !visibleUserKeys.includes(row.nativeUserKey) &&
+              normalized(row.prompt)===normalized(current.user.text) &&
+              seen.time===current.user.time && seen.label===current.user.label &&
+              seen.keys.length===visibleUserKeys.length &&
+              seen.keys.every((key,i)=>i===seen.index ? visibleUserKeys[i]===userKey : visibleUserKeys[i]===key);
+          });
+          if(promotions.length===1)entry=promotions[0];
+        }
         if(!entry&&current.user?.legacyKey){
           const old=rows().filter(row=>row.nativeUserKey===current.user.legacyKey&&normalized(row.prompt)===normalized(current.user.text));
           if(old.length===1)entry=old[0];
@@ -253,7 +272,11 @@ function createGrokBotDesktop({environment = process.env, runNative, now = Date.
           records.set(id, entry);
         }
         const previous = JSON.stringify([entry.prompt, entry.text, entry.status]);
-        if (current.user) { entry.nativeUserKey = userKey; entry.prompt = current.user.text; }
+        if (current.user) {
+          if(entry.nativeUserKey && entry.nativeUserKey!==userKey)entry.nativeUserAliases=[...new Set([...(entry.nativeUserAliases||[]),entry.nativeUserKey])];
+          entry.nativeUserKey = userKey; entry.prompt = current.user.text;
+          if(entry.reservation)entry.nativeUserObservation={keys:visibleUserKeys,index:visibleUserKeys.indexOf(userKey),time:current.user.time,label:current.user.label};
+        }
         // Never delete absent parts: even a visible user anchor does not prove
         // the entire turn fits in this viewport. Stable helper keys replace
         // streaming cards; the unique metadata fallback supports older helpers.
@@ -374,7 +397,7 @@ function createGrokBotDesktop({environment = process.env, runNative, now = Date.
       let response;
       try { response = await observe({action:'send', persona:PERSONAS[target], prompt,...(files.length?{attachmentPaths:files.map(f=>f.path)}:{})}); }
       catch (_) { /* Ambiguous process timeout: retain the durable reservation. */ }
-      if(response&&!response.ok&&(response.error.startsWith('desktop_attachment_')||response.error==='invalid_attachment'||response.error==='desktop_focus_unavailable'||(files.length&&response.error==='desktop_control_unavailable'))){
+      if(response&&!response.ok&&(response.error.startsWith('desktop_attachment_')||response.error==='invalid_attachment'||response.error==='desktop_focus_unavailable'||response.error==='desktop_send_not_ready'||(files.length&&response.error==='desktop_control_unavailable'))){
         // Attachment preparation throws before composing/pressing Send. This
         // is proven non-delivery, unlike a timeout after pressing Send.
         state.transact(records=>{const entry=records.get(id);if(!entry.nativeUserKey){entry.status='failed';entry.error=response.error;entry.updatedAt=new Date(now()).toISOString();}});

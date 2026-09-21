@@ -259,8 +259,10 @@ func parseMessages(_ transcript: Node, persona: String, observedAt: Date = Date(
 // ese boton no existe mientras el compositor esta vacio, asi que su presencia
 // es la prueba de que la app si tiene el texto.
 func compositorListo(valor: String, prompt: String, persona: String, envioDisponible: Bool, ownAttachment: Bool = false) -> Bool {
-    if comparable(valor) == comparable(prompt) { return true }
+    // AXValue updates before Electron enables Send. Text equality alone is not
+    // readiness: AXPress can succeed on a disabled control without submitting.
     guard envioDisponible else { return false }
+    if comparable(valor) == comparable(prompt) { return true }
     let contenido = normalized(valor)
     let marcadores = ["Escríbele a " + persona, "Message " + persona] + (ownAttachment ? ["Agrega un mensaje o presiona enviar."] : [])
     return contenido.isEmpty || marcadores.contains(contenido)
@@ -597,18 +599,21 @@ final class GrokAX {
               (!hasDraft(value: stringAttribute(composer, kAXValueAttribute), persona: persona, sendEnabled: initial.sendButton?.enabled == true) || (ownAttachment && comparable(stringAttribute(composer, kAXValueAttribute)) == "Agrega un mensaje o presiona enviar.")) else { return failed(initial.snapshot, "selection_or_draft_changed") }
         let before = Set(initial.snapshot.messages.filter { $0.sender == "user" }.map { $0.key })
         let botonesAntes = botonesHabilitados(initial.pane.descendants())
+        // Setting AXValue does not focus the contenteditable. Focus the exact
+        // composer first so Electron commits input before the Send action.
+        guard AXUIElementSetAttributeValue(composer, kAXFocusedAttribute as CFString, kCFBooleanTrue) == .success else { return failed(initial.snapshot, "interaction_focus_unavailable") }
         let write = AXUIElementSetAttributeValue(composer, kAXValueAttribute as CFString, prompt as CFString)
         guard write == .success else { return failed((try? read().snapshot) ?? initial.snapshot, "unknown") }
         var ready: Context? = nil
         var latest = initial.snapshot
         let composeDeadline = Date().addingTimeInterval(3)
         repeat {
-            Thread.sleep(forTimeInterval: 0.1)
+            RunLoop.current.run(until: Date().addingTimeInterval(0.1))
             if let current = try? read() {
                 latest = current.snapshot
                 guard current.snapshot.selectedPersona == persona else { return failed(latest, "unknown") }
                 let envio = current.sendButton ?? botonQueSeEnciende(antes: botonesAntes, ahora: current.pane.descendants())
-                if compositorListo(valor: current.composer.value, prompt: prompt, persona: persona, envioDisponible: envio?.enabled == true, ownAttachment: ownAttachment) {
+                if !current.snapshot.busy && compositorListo(valor: current.composer.value, prompt: prompt, persona: persona, envioDisponible: envio?.enabled == true, ownAttachment: ownAttachment) {
                     ready = current; break
                 }
             }
@@ -619,13 +624,13 @@ final class GrokAX {
               let send = sendNode.element, let currentComposer = current.composer.element,
               let currentHeading = current.heading.element,
               stringAttribute(currentHeading, kAXDescriptionAttribute) == persona,
-              compositorListo(valor: stringAttribute(currentComposer, kAXValueAttribute), prompt: prompt, persona: persona, envioDisponible: sendNode.enabled, ownAttachment: ownAttachment) else { return failed(latest, "unknown") }
+              compositorListo(valor: stringAttribute(currentComposer, kAXValueAttribute), prompt: prompt, persona: persona, envioDisponible: sendNode.enabled && boolAttribute(send, kAXEnabledAttribute), ownAttachment: ownAttachment) else { return failed(latest, "send_not_ready") }
         // Exactly one press. Never retry after an AX error or ambiguous result.
         let press = AXUIElementPerformAction(send, kAXPressAction as CFString)
         guard press == .success else { return failed((try? read().snapshot) ?? latest, "unknown") }
         let deadline = Date().addingTimeInterval(8)
         repeat {
-            Thread.sleep(forTimeInterval: 0.15)
+            RunLoop.current.run(until: Date().addingTimeInterval(0.15))
             if let after = try? read() {
                 latest = after.snapshot
                 guard latest.selectedPersona == persona else { return failed(latest, "unknown") }
@@ -705,7 +710,11 @@ func selfTests() throws {
     try expect(distinct[0].legacyKey == distinct[1].legacyKey, "legacy migration key retained")
     try expect(!compositorListo(valor:"Agrega un mensaje o presiona enviar.",prompt:"test",persona:"Walt Disney",envioDisponible:true),"another attachment does not authorize sending")
     try expect(compositorListo(valor:"Agrega un mensaje o presiona enviar.",prompt:"test",persona:"Walt Disney",envioDisponible:true,ownAttachment:true),"owned attachment placeholder supports composition")
-    print("{\"ok\":true,\"tests\":24,\"mode\":\"pure-parsing-no-AX\"}")
+    try expect(!compositorListo(valor:"test",prompt:"test",persona:"Steve Jobs",envioDisponible:false),"exact text does not authorize a disabled Send")
+    try expect(compositorListo(valor:"test",prompt:"test",persona:"Steve Jobs",envioDisponible:true),"exact text and enabled Send are ready")
+    try expect(!compositorListo(valor:"another draft",prompt:"test",persona:"Steve Jobs",envioDisponible:true),"enabled Send cannot submit a different draft")
+    try expect(!compositorListo(valor:"Escríbele a Steve Jobs",prompt:"test",persona:"Steve Jobs",envioDisponible:false),"placeholder and disabled Send must wait")
+    print("{\"ok\":true,\"tests\":28,\"mode\":\"pure-parsing-no-AX\"}")
 }
 
 do {

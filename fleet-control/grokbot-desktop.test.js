@@ -417,3 +417,45 @@ test('failure to activate GrokBot is a known pre-send failure, not an uncertain 
  await assert.rejects(desktop.send(user,body()),errorCode('desktop_focus_unavailable'));
  const rows=JSON.parse(fs.readFileSync(file)).messages;assert.equal(rows.length,1);assert.equal(rows[0].status,'failed');
 });
+
+test('disabled native Send is recorded as non-delivery and keeps its explicit diagnosis',async t=>{
+ let sends=0;
+ const {desktop,file}=setup(t,async request=>{
+  if(request.action==='send'){sends++;return snapshot({ok:false,composerHasDraft:true,error:'send_not_ready'});}
+  return snapshot();
+ });
+ await assert.rejects(desktop.send(user,body()),errorCode('desktop_send_not_ready'));
+ const rows=JSON.parse(fs.readFileSync(file)).messages;
+ assert.equal(rows.length,1);assert.equal(rows[0].status,'failed');assert.equal(rows[0].error,'desktop_send_not_ready');
+ assert.equal((await desktop.send(user,body())).status,'failed');assert.equal(sends,1);
+});
+
+test('optimistic native ID promotion completes the same receipt, including after restart',async t=>{
+ let native=snapshot(), sends=0;
+ const prompt=body().prompt, nativeTime=new Date(clock).toISOString();
+ const {desktop,config}=setup(t,async request=>{
+  if(request.action==='send'){sends++;native=snapshot({messages:[card('user',prompt,'optimistic',nativeTime)]});}
+  return native;
+ });
+ const receipt=await desktop.send(user,body());assert.equal(receipt.status,'pending');
+ native=snapshot({messages:[card('user',prompt,'persisted',nativeTime),card('assistant','Confirmado','answer',nativeTime)]});
+ const restarted=createGrokBotDesktop(config), rows=await restarted.list(user,'Jobs');
+ assert.equal(rows.length,1);assert.equal(rows[0].id,receipt.id);assert.equal(rows[0].status,'done');
+ assert.equal((await restarted.send(user,body())).id,receipt.id);assert.equal(sends,1);
+});
+
+for(const variant of ['both-visible','different-time','changed-viewport'])test(`native promotion refuses ambiguous matching: ${variant}`,async t=>{
+ const prompt=body().prompt, when=new Date(clock).toISOString();
+ const old=card('user',prompt,'optimistic',when), other=card('user','Another','other',when);
+ let native=snapshot({messages:[other]});
+ const {desktop}=setup(t,async request=>{
+  if(request.action==='send')native=snapshot({messages:[other,old]});
+  return native;
+ });
+ const receipt=await desktop.send(user,body());
+ const next=card('user',prompt,'persisted',variant==='different-time'?new Date(clock+1000).toISOString():when);
+ native=snapshot({messages:variant==='both-visible'?[other,old,next]:variant==='changed-viewport'?[next]:[other,next]});
+ const rows=await desktop.list(user,'Jobs');
+ assert.ok(rows.some(row=>row.id!==receipt.id&&row.prompt===prompt));
+ assert.equal(rows.find(row=>row.id===receipt.id).status,'pending');
+});

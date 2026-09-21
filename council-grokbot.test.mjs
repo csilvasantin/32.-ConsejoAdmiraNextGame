@@ -385,6 +385,15 @@ test('a rejected native POST preserves unsent text, but an ambiguous network res
   h.api.destroy();
 });
 
+test('native Send not ready preserves the web draft and explains that the native text is unsent',async()=>{
+ const h=harness();await h.api.select('Steve Jobs');
+ h.postHandler=()=>response({ok:false,error:'desktop_send_not_ready'},409);
+ assert.equal(await h.api.send('Steve Jobs','Pregunta pendiente'),false);
+ assert.match(h.errors.at(-1).message,/conserva el texto como borrador/);
+ const posts=h.posts.length;await h.clock.advance(3000);assert.equal(h.posts.length,posts);
+ h.api.destroy();
+});
+
 
 test('Previos preserves reading position while replies grow and follows the bottom when already there', async()=>{
  const h=harness(true);h.histories.set('Steve Jobs',[message({text:'Respuesta '.repeat(100)})]);

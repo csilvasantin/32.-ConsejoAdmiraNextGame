@@ -119,6 +119,7 @@
         desktop_run_changed:'La ejecución ha cambiado. Actualiza antes de detenerla.',
         desktop_control_unavailable:'Ese control no está disponible ahora en GrokBot.',
         desktop_focus_unavailable:'No se pudo activar la ventana de GrokBot; tu mensaje no se ha enviado. Abre GrokBot y vuelve a intentarlo.',
+        desktop_send_not_ready:'GrokBot conserva el texto como borrador: su botón Enviar aún no estaba disponible. No se ha enviado; puedes completarlo en GrokBot.',
         desktop_accessibility_required:'GrokBot está abierto, pero el puente no tiene permiso de Accesibilidad en el Mac Mini.',
         desktop_application_not_running:'GrokBot no está abierto en el Mac Mini. Ábrelo para continuar esta misma conversación.',
         desktop_not_configured:'El puente de GrokBot no está configurado en el Mac Mini.',
@@ -276,7 +277,7 @@
           render();report(canonical,selectedEpoch);schedule(selectedEpoch);
         }
       }catch(e){
-        if(e.code?.startsWith('desktop_attachment_')||e.code==='desktop_control_unavailable'||['desktop_focus_unavailable','invalid_attachment','attachment_not_found','attachment_changed','desktop_attachments_unavailable','desktop_draft_present','desktop_busy','desktop_not_configured','desktop_owner_required','desktop_unavailable','desktop_timeout','desktop_read_failed','desktop_accessibility_required','desktop_application_not_running','desktop_selection_mismatch'].includes(e.code) || e.status===401)submitted=false;
+        if(e.code?.startsWith('desktop_attachment_')||e.code==='desktop_control_unavailable'||['desktop_send_not_ready','desktop_focus_unavailable','invalid_attachment','attachment_not_found','attachment_changed','desktop_attachments_unavailable','desktop_draft_present','desktop_busy','desktop_not_configured','desktop_owner_required','desktop_unavailable','desktop_timeout','desktop_read_failed','desktop_accessibility_required','desktop_application_not_running','desktop_selection_mismatch'].includes(e.code) || e.status===401)submitted=false;
         if(current(epoch)){
           if(e.code==='desktop_draft_present')selectionReady=false;
           connection(false);const message=e.name==='AbortError'?'No se pudo confirmar el envío. Actualiza el historial antes de repetir.':errorMessage(e);

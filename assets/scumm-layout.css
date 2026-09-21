@@ -11,6 +11,7 @@
 .scumm-module-content { flex:1; min-height:0; min-width:0; display:flex; overflow:auto; align-items:stretch; }
 .scumm-module-content .verb-grid { flex:1 0 auto; align-content:center; }
 .scumm-module-content .verb-pager { flex:0 0 auto; }
+.verb-pager[hidden] { display:none!important; }
 .scumm-module-content .inventory { width:100%; min-width:0; box-sizing:border-box; border:0; flex:1; justify-content:center; }
 .scumm-module-content .inv-objetos { grid-template-columns:repeat(3,minmax(0,78px)); }
 .scumm-module-content .mac-scumm { display:flex; flex:1; width:100%; border:0; box-sizing:border-box; }

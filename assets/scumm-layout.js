@@ -1,15 +1,23 @@
 // Layout controls enhance the existing SCUMM nodes; their actions keep their handlers.
 export const IDS = ['verbos', 'accesos', 'previos'];
 const LABELS = { verbos: 'Verbos', accesos: 'Accesos', previos: 'Previos' };
-const KEY = 'admira.scumm.layout.v1';
+const KEY = 'admira.scumm.layout.v2';
+const LEGACY_KEY = 'admira.scumm.layout.v1';
+const DEFAULT_WEIGHTS = { verbos: 22, accesos: 22, previos: 56 };
 export function normalizeLayout(raw = {}) {
   const order = Array.isArray(raw?.order) ? [...new Set(raw.order.filter(id => IDS.includes(id)))] : [];
   return {
     order: [...order, ...IDS.filter(id => !order.includes(id))],
     hidden: IDS.filter(id => Array.isArray(raw?.hidden) && raw.hidden.includes(id)),
-    weights: Object.fromEntries(IDS.map(id => [id, Number.isFinite(raw?.weights?.[id]) && raw.weights[id] > 0 ? Math.min(100, Math.max(.01, raw.weights[id])) : 1])),
+    weights: Object.fromEntries(IDS.map(id => [id, Number.isFinite(raw?.weights?.[id]) && raw.weights[id] > 0 ? Math.min(100, Math.max(.01, raw.weights[id])) : DEFAULT_WEIGHTS[id]])),
     height: Number.isFinite(raw?.height) ? Math.min(600, Math.max(160, raw.height)) : 270
   };
+}
+export function migrateLegacyLayout(raw) {
+  const layout = normalizeLayout(raw);
+  // Upgrade the previous default, but preserve manually resized arrangements.
+  if (IDS.every(id => raw?.weights?.[id] === 1)) layout.weights = { ...DEFAULT_WEIGHTS };
+  return layout;
 }
 // Resize two visible neighbours while conserving their total share of the row.
 export function resizePair(weights, left, right, fraction) {
@@ -34,7 +42,10 @@ function init() {
   if (!grid || !pager || !inventory || !preview || row.dataset.layoutReady) return;
   row.dataset.layoutReady = 'true';
   let state;
-  try { state = normalizeLayout(JSON.parse(localStorage.getItem(KEY))); } catch { state = normalizeLayout(); }
+  try {
+    const saved = localStorage.getItem(KEY);
+    state = saved === null ? migrateLegacyLayout(JSON.parse(localStorage.getItem(LEGACY_KEY))) : normalizeLayout(JSON.parse(saved));
+  } catch { state = normalizeLayout(); }
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} };
   const create = (tag, cls, text) => {
     const node = document.createElement(tag); node.className = cls;
@@ -162,5 +173,6 @@ function init() {
     }
   }
   render();
+  save();
 }
 if (typeof document !== 'undefined') init();

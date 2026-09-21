@@ -1658,6 +1658,8 @@
         const desde = objPagina * OBJETOS_POR_PAGINA;
         todos.forEach((o, i) => { o.hidden = i < desde || i >= desde + OBJETOS_POR_PAGINA; });
         const up = document.getElementById('verb-up'), dn = document.getElementById('verb-down');
+        const pager = document.querySelector('.verb-pager');
+        if (pager) pager.hidden = paginas <= 1;
         if (up) up.disabled = objPagina === 0;
         if (dn) dn.disabled = objPagina >= paginas - 1;
     }

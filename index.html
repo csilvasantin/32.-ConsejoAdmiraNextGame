@@ -188,6 +188,17 @@
             transition: opacity 0.3s ease;
         }
 
+        /* The artwork banners and CLI share one generation action. */
+        .council-generation { position:absolute; inset:0; z-index:4; pointer-events:none; }
+        .council-generation button { position:absolute; top:2%; min-height:32px; padding:8px 12px; border:2px solid #d7a640; color:#ffe18a; background:#6e1821; font:clamp(8px,1vw,13px) 'Press Start 2P',monospace; cursor:pointer; pointer-events:auto; }
+        .council-generation [data-council-generation="leyendas"] { left:2.5%; }
+        .council-generation [data-council-generation="coetaneos"] { right:2.5%; background:#103759; }
+        .council-generation button:hover, .council-generation button:focus-visible { outline:3px solid #ffe465; outline-offset:2px; background-color:#9a632b55; }
+        .council-generation button[aria-pressed="true"] { border-color:#fff0a0; }
+        [data-generation="coetaneos"] .council-generation button { top:4%; width:34%; height:21%; padding:0; border:0; background:transparent; }
+        [data-generation="coetaneos"] .council-generation button span { position:absolute; width:1px; height:1px; overflow:hidden; clip-path:inset(50%); }
+        [data-generation="coetaneos"] .council-generation button:hover { background:#ffdd4418; }
+
         /* Nameplate overlays */
         .nameplates {
             position: absolute;
@@ -3568,8 +3579,12 @@ body.rail-open{overflow:hidden}
         </div>
 
         <div class="stage-row">
-        <div class="council-image">
+        <div class="council-image" data-generation="leyendas">
             <img id="council-img" src="assets/council-leyendas.jpg?v=20260613-r2" alt="Consejo AdmiraNext" onload="this.closest('.council-image')&&this.closest('.council-image').classList.add('loaded')">
+            <nav class="council-generation" aria-label="Generación del Consejo">
+                <button type="button" data-council-generation="leyendas" aria-label="Mostrar Leyendas" aria-pressed="true" title="Mostrar Leyendas · /leyendas"><span>★ Leyendas</span></button>
+                <button type="button" data-council-generation="coetaneos" aria-label="Mostrar Coetáneos" aria-pressed="false" title="Mostrar Coetáneos · /coetaneos"><span>🚀 Coetáneos</span></button>
+            </nav>
             <!-- Conversation overlays on background windows -->
             <div class="window-overlay racional" id="win-racional">
                 <div class="window-overlay-title">🧠 Racional</div>
@@ -4395,7 +4410,7 @@ body.rail-open{overflow:hidden}
 <script defer src="council-table.js?v=20260918-r5-desk-cors"></script>
 <script defer src="council-speech.js?v=20260918-r5-desk-cors"></script>
 <script defer src="council-grokbot.js?v=20260921-parity4"></script>
-<script defer src="app.flt-100529.js?v=20260921-parity4"></script>
+<script defer src="app.flt-100529.js?v=20260921-selectors1"></script>
 <script defer src="council-preview.js?v=20260921-parity4"></script>
 <script defer src="council-integration.js?v=20260921-parity4"></script>
 <script type="module" src="assets/mac-hoy.js?v=20260921-parity4"></script>

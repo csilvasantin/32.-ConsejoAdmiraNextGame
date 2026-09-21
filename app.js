@@ -296,6 +296,11 @@
     function toggleGen() { setGen(currentGen === "leyendas" ? "coetaneos" : "leyendas"); }
 
     function setGen(gen) {
+        if (!["leyendas", "coetaneos"].includes(gen)) return;
+        document.querySelector(".council-image")?.setAttribute("data-generation", gen);
+        document.querySelectorAll("[data-council-generation]").forEach(button => {
+            button.setAttribute("aria-pressed", String(button.dataset.councilGeneration === gen));
+        });
         window.CouncilInterface?.setGeneration(gen);
         currentGen = gen;
         const gb = document.getElementById("btn-gen");
@@ -4906,6 +4911,9 @@
 
     // Wire del click del hotspot y del fin de vídeo
     document.addEventListener("DOMContentLoaded", () => {
+        document.querySelectorAll("[data-council-generation]").forEach(button => {
+            button.addEventListener("click", () => handleCliCommand("/" + button.dataset.councilGeneration));
+        });
         try { if (localStorage.getItem('councilMenuHidden') === '1') document.body.classList.add('cli-menu-hidden'); } catch (e) {}
         // La barra de verbos arranca EXPANDIDA por defecto (Carlos, 19-09-2026): solo queda
         // colapsada si el usuario la cerró él mismo (scummCollapsed==='1'). Antes arrancaba

@@ -64,7 +64,7 @@ struct Snapshot: Codable {
     var observedAt = ISO8601DateFormatter().string(from: Date())
     var error: String? = nil
 }
-struct BridgeError: Error { let code: String }
+struct BridgeError: Error { let code: String; var diagnostics: [String:Double]? = nil }
 
 func normalized(_ value: String) -> String {
     value.replacingOccurrences(of: "\r\n", with: "\n").trimmingCharacters(in: .whitespacesAndNewlines)
@@ -674,6 +674,10 @@ func setRemoteWindowLocation(_ event:CGEvent,_ point:CGPoint) throws {
     guard let symbol=dlsym(UnsafeMutableRawPointer(bitPattern:-2),"CGEventSetWindowLocation") else { throw BridgeError(code:"remote_input_unavailable") }
     unsafeBitCast(symbol,to:Setter.self)(event,point)
 }
+func remoteSurfaceRect(_ surface:CGRect,axWindow:CGRect,captureWindow:CGRect) -> CGRect {
+    let sx=captureWindow.width/axWindow.width,sy=captureWindow.height/axWindow.height
+    return CGRect(x:captureWindow.minX+(surface.minX-axWindow.minX)*sx,y:captureWindow.minY+(surface.minY-axWindow.minY)*sy,width:surface.width*sx,height:surface.height*sy)
+}
 func remotePoint(_ p: RemotePoint, target: RemoteTarget) throws -> CGPoint {
     guard p.x.isFinite, p.y.isFinite, p.x >= 0, p.x <= 1, p.y >= 0, p.y <= 1 else { throw BridgeError(code:"remote_invalid_input") }
     return CGPoint(x:target.x + p.x * (target.width - 1), y:target.y + p.y * (target.height - 1))
@@ -702,7 +706,13 @@ extension GrokAX {
                 RunLoop.current.run(until:Date().addingTimeInterval(0.1))
             }
         }
-        return try remoteFrame(persona)
+        // App activation can settle AX and WindowServer on different ticks.
+        // Retry the read only; input is never replayed.
+        do { return try remoteFrame(persona) }
+        catch let error as BridgeError where error.code == "remote_view_changed" {
+            RunLoop.current.run(until:Date().addingTimeInterval(0.15))
+            return try remoteFrame(persona)
+        }
     }
     func remoteTarget(_ persona: String) throws -> RemoteTarget {
         let ctx = try read()
@@ -716,14 +726,24 @@ extension GrokAX {
               AXValueGetValue(pos as! AXValue,.cgPoint,&position), AXValueGetValue(siz as! AXValue,.cgSize,&size),
               AXUIElementGetPid(app,&pid) == .success else { throw BridgeError(code:"remote_window_unavailable") }
         let list = CGWindowListCopyWindowInfo([.optionAll,.excludeDesktopElements], kCGNullWindowID) as? [[String:Any]] ?? []
-        let matches = list.filter { item in
+        let owned=list.filter { item in
             guard (item[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value == pid,
                   (item[kCGWindowLayer as String] as? NSNumber)?.intValue == 0,
-                  let bounds = item[kCGWindowBounds as String] as? [String:Any],
-                  let rect = CGRect(dictionaryRepresentation: bounds as CFDictionary) else { return false }
+                  let bounds=item[kCGWindowBounds as String] as? [String:Any],let rect=CGRect(dictionaryRepresentation:bounds as CFDictionary) else { return false }
+            return rect.width>100 && rect.height>100
+        }
+        let named=owned.filter { ($0[kCGWindowName as String] as? String) == "Grok Bot" }
+        let exactGeometry=owned.filter { item in
+            guard let bounds=item[kCGWindowBounds as String] as? [String:Any],let rect=CGRect(dictionaryRepresentation:bounds as CFDictionary) else{return false}
             return abs(rect.minX-position.x)<1 && abs(rect.minY-position.y)<1 && abs(rect.width-size.width)<1 && abs(rect.height-size.height)<1
         }
-        guard matches.count == 1, let wid = (matches[0][kCGWindowNumber as String] as? NSNumber)?.uint32Value, size.width>100, size.height>100 else { throw BridgeError(code:"remote_window_unavailable") }
+        let matches=named.count == 1 ? named : exactGeometry
+        guard matches.count == 1,let wid=(matches[0][kCGWindowNumber as String] as? NSNumber)?.uint32Value,
+              let rawBounds=matches[0][kCGWindowBounds as String] as? [String:Any],let windowRect=CGRect(dictionaryRepresentation:rawBounds as CFDictionary),size.width>100,size.height>100 else {
+            var diagnostic:[String:Double]=["matches":Double(matches.count),"named":Double(named.count),"axX":position.x,"axY":position.y,"axW":size.width,"axH":size.height,"ownCount":Double(owned.count)]
+            for (i,item) in owned.prefix(4).enumerated(){if let bounds=item[kCGWindowBounds as String] as? [String:Any],let r=CGRect(dictionaryRepresentation:bounds as CFDictionary){diagnostic["x"+String(i)]=r.minX;diagnostic["y"+String(i)]=r.minY;diagnostic["w"+String(i)]=r.width;diagnostic["h"+String(i)]=r.height}}
+            throw BridgeError(code:"remote_window_geometry_unavailable",diagnostics:diagnostic)
+        }
         let canvases=try remoteSurface(persona,context:ctx).descendants().filter { $0.role == "AXImage" }
         guard canvases.count == 1,let surface=canvases[0].element,
               let surfacePos=attribute(surface,kAXPositionAttribute),let surfaceSize=attribute(surface,kAXSizeAttribute),
@@ -732,7 +752,8 @@ extension GrokAX {
         guard AXValueGetValue(surfacePos as! AXValue,.cgPoint,&origin),AXValueGetValue(surfaceSize as! AXValue,.cgSize,&extent),
               extent.width>100,extent.height>100,
               CGRect(origin:position,size:size).contains(CGRect(origin:origin,size:extent)) else { throw BridgeError(code:"remote_computer_unavailable") }
-        return RemoteTarget(persona:persona,pid:pid,windowID:wid,x:origin.x,y:origin.y,width:extent.width,height:extent.height,windowX:position.x,windowY:position.y,windowWidth:size.width,windowHeight:size.height)
+        let screen=remoteSurfaceRect(CGRect(origin:origin,size:extent),axWindow:CGRect(origin:position,size:size),captureWindow:windowRect)
+        return RemoteTarget(persona:persona,pid:pid,windowID:wid,x:screen.minX,y:screen.minY,width:screen.width,height:screen.height,windowX:windowRect.minX,windowY:windowRect.minY,windowWidth:windowRect.width,windowHeight:windowRect.height)
     }
     func remoteFrame(_ persona:String) throws -> RemoteReply {
         let target = try remoteTarget(persona)
@@ -741,7 +762,8 @@ extension GrokAX {
         SCShareableContent.getExcludingDesktopWindows(true,onScreenWindowsOnly:false) { value,_ in content=value;enumerated=true }
         let deadline=Date().addingTimeInterval(6)
         while !enumerated && Date()<deadline { RunLoop.current.run(until:Date().addingTimeInterval(0.01)) }
-        guard let window=content?.windows.first(where:{$0.windowID == target.windowID && $0.owningApplication?.processID == target.pid}) else { throw BridgeError(code:"remote_window_unavailable") }
+        guard let window=content?.windows.first(where:{$0.windowID == target.windowID && $0.owningApplication?.processID == target.pid}) else { throw BridgeError(code:"remote_capture_window_unavailable",diagnostics:["enumerated":enumerated ? 1:0,"windows":Double(content?.windows.count ?? 0),"target":Double(target.windowID)]) }
+        guard window.frame.width>100,window.frame.height>100,window.frame.minX.isFinite,window.frame.minY.isFinite else { throw BridgeError(code:"remote_capture_window_unavailable") }
         let filter=SCContentFilter(desktopIndependentWindow:window),config=SCStreamConfiguration()
         config.width=Int(target.windowWidth*2);config.height=Int(target.windowHeight*2);config.showsCursor=false
         if #available(macOS 14.2, *) { config.ignoreShadowsSingleWindow=true }
@@ -751,7 +773,8 @@ extension GrokAX {
         while !finished && Date()<captureDeadline { RunLoop.current.run(until:Date().addingTimeInterval(0.01)) }
         guard let captured=captured else { throw BridgeError(code:"remote_capture_failed") }
         let bitmap=NSBitmapImageRep(cgImage:captured)
-        guard try remoteTarget(persona) == target else { throw BridgeError(code:"remote_view_changed") }
+        let after=try remoteTarget(persona)
+        guard after == target else { throw BridgeError(code:"remote_view_changed",diagnostics:["x":target.x,"y":target.y,"w":target.width,"h":target.height,"ax":after.x,"ay":after.y,"aw":after.width,"ah":after.height,"wx":target.windowX,"wy":target.windowY,"ww":target.windowWidth,"wh":target.windowHeight,"bwx":after.windowX,"bwy":after.windowY,"bww":after.windowWidth,"bwh":after.windowHeight,"id":Double(target.windowID),"bid":Double(after.windowID)]) }
         let sx=Double(bitmap.pixelsWide)/target.windowWidth,sy=Double(bitmap.pixelsHigh)/target.windowHeight
         let crop=CGRect(x:(target.x-target.windowX)*sx,y:(target.y-target.windowY)*sy,width:target.width*sx,height:target.height*sy).integral
         guard let image=bitmap.cgImage?.cropping(to:crop),let jpeg=NSBitmapImageRep(cgImage:image).representation(using:.jpeg,properties:[.compressionFactor:0.85]) else { throw BridgeError(code:"remote_crop_unavailable") }
@@ -938,7 +961,9 @@ func selfTests() throws {
     do { _ = try remotePoint(RemotePoint(x:-0.1,y:0.5),target:remoteBounds) } catch { rejectedPoint=true }
     try expect(rejectedPoint,"remote input refuses coordinates outside the captured window")
     try expect(remoteKeys["q"] == nil && remoteKeys["Enter"] == 36,"remote key allowlist excludes quit but supports Enter")
-    print("{\"ok\":true,\"tests\":31,\"mode\":\"pure-parsing-no-AX\"}")
+    let mapped=remoteSurfaceRect(CGRect(x:100,y:200,width:800,height:500),axWindow:CGRect(x:0,y:31,width:1280,height:1410),captureWindow:CGRect(x:2000,y:50,width:2560,height:2820))
+    try expect(mapped == CGRect(x:2200,y:388,width:1600,height:1000),"remote surface maps AX offsets and scaling to the capture window")
+    print("{\"ok\":true,\"tests\":32,\"mode\":\"pure-parsing-no-AX\"}")
 }
 
 do {
@@ -1047,6 +1072,7 @@ do {
     let encoder = JSONEncoder(); encoder.outputFormatting = [.sortedKeys, .withoutEscapingSlashes]
     FileHandle.standardOutput.write(try encoder.encode(snapshot)); FileHandle.standardOutput.write(Data("\n".utf8))
 } catch {
+    if let issue=error as? BridgeError,let diagnostic=issue.diagnostics,let data=try? JSONSerialization.data(withJSONObject:["ok":false,"error":issue.code,"diagnostics":diagnostic]) {FileHandle.standardOutput.write(data);exit(1)}
     var failure = Snapshot(); failure.ok = false
     failure.error = (error as? BridgeError)?.code ?? "accessibility_unavailable"
     failure.busy = failure.error == "bridge_busy"

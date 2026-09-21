@@ -26,6 +26,8 @@ const MESSAGES={
   remote_capture_failed:'No se pudo obtener la imagen de la computadora. Pulsa Reconectar.',
   remote_capture_invalid:'La imagen de la computadora no es válida. Pulsa Reconectar.',
   remote_crop_unavailable:'No se pudo encajar la pantalla de la computadora. Pulsa Reconectar.',
+  remote_window_geometry_unavailable:'La ventana de GrokBot está cambiando. Pulsa Reconectar.',
+  remote_capture_window_unavailable:'La computadora no está visible para la captura. Pulsa Reconectar.',
   remote_window_unavailable:'La ventana de GrokBot no está disponible.',
   remote_frame_expired:'La imagen ya no está actualizada. Pulsa Reconectar antes de continuar.',
   remote_session_expired:'La conexión ha caducado. Pulsa Reconectar.',
@@ -67,7 +69,7 @@ export function openRemote(){
     const version=generation;
     try{await paint(await request({action:'frame',token}),version);schedule();}catch(error){
       if(closed||version!==generation)return;
-      const transient=['remote_window_unavailable','remote_capture_failed','remote_computer_unavailable','remote_capture_unavailable'].includes(error.code);
+      const transient=['remote_view_changed','remote_window_geometry_unavailable','remote_capture_window_unavailable','remote_window_unavailable','remote_capture_failed','remote_computer_unavailable','remote_capture_unavailable'].includes(error.code);
       if(transient&&++frameFailures<=2){ready=false;recovering=true;say('Recuperando imagen… controles en pausa');schedule();}
       else fail(error);
     }

@@ -16,7 +16,7 @@ test('remote session binds account, login session, target and the observed frame
 });
 test('old frames and a different selected adviser never authorize input',async()=>{
  let time=0,requests=0;const bridge=createRemoteDesktop({now:()=>time,runNative:async()=>{requests++;return frame;}});
- const opened=await bridge.handle(owner,{action:'open',persona:'Jobs'});time=10001;
+ const opened=await bridge.handle(owner,{action:'open',persona:'Jobs'});time=30001;
  await assert.rejects(bridge.handle(owner,{action:'input',token:opened.token,frameId:opened.frame.id,event:{type:'key',key:'Enter'}}),{code:'remote_frame_expired'});assert.equal(requests,1);
  const wrong=createRemoteDesktop({runNative:async()=>({...frame,target:{...target,persona:'Walt Disney'}})});
  await assert.rejects(wrong.handle(owner,{action:'open',persona:'Jobs'}),{code:'remote_invalid_frame'});
@@ -35,4 +35,11 @@ test('opening again invalidates the previous control session',async()=>{
  const bridge=createRemoteDesktop({runNative:async()=>frame});
  const first=await bridge.handle(owner,{action:'open',persona:'Jobs'});await bridge.handle(owner,{action:'open',persona:'Jobs'});
  await assert.rejects(bridge.handle(owner,{action:'frame',token:first.token}),{code:'remote_session_expired'});
+});
+
+test('serialized interaction tolerates capture latency without relaxing target validation',async()=>{
+ let time=0,last;const bridge=createRemoteDesktop({now:()=>time,runNative:async req=>{last=req;return req.action==='remote_open'?frame:{ok:true};}});
+ const opened=await bridge.handle(owner,{action:'open',persona:'Jobs'});time=15000;
+ await bridge.handle(owner,{action:'input',token:opened.token,frameId:opened.frame.id,event:{type:'key',key:'Backspace'}});
+ assert.deepEqual(last.remoteTarget,target);
 });

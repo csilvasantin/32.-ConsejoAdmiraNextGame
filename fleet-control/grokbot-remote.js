@@ -5,6 +5,8 @@ class RemoteError extends Error{constructor(code,status=409){super(code);this.co
 const fail=(code,status)=>{throw new RemoteError(code,status);};
 const fields=(value,allowed)=>value&&typeof value==='object'&&!Array.isArray(value)&&Object.keys(value).every(k=>allowed.includes(k));
 const point=p=>fields(p,['x','y'])&&[p.x,p.y].every(v=>Number.isFinite(v)&&v>=0&&v<=1);
+// Input still revalidates persona, window and geometry natively before dispatch.
+const FRAME_MAX_AGE_MS=30000;
 const KEYS=new Set(['Enter','Tab','Escape','Backspace','Delete','ArrowLeft','ArrowRight','ArrowUp','ArrowDown','Home','End','PageUp','PageDown','a','c','x','v','z','y','f']);
 function validateInput(event){
  if(!fields(event,['type','x','y','button','clicks','dx','dy','path','key','text','modifiers']))fail('remote_invalid_input',400);
@@ -27,7 +29,7 @@ function createRemoteDesktop({runNative,now=Date.now}){
   if(!t||t.persona!==PERSONAS[row.persona]||![t.pid,t.windowID,t.x,t.y,t.width,t.height].every(Number.isFinite)||t.pid<=0||t.windowID<=0||t.width<100||t.height<100||typeof f?.jpeg!=='string'||!f.jpeg.startsWith('/9j/')||f.jpeg.length>8*1024*1024||!Number.isFinite(f.width)||!Number.isFinite(f.height))fail('remote_invalid_frame',503);
   const id=crypto.randomBytes(12).toString('hex');
   row.frames.set(id,{target:t,at:now()});
-  for(const [key,v] of row.frames)if(now()-v.at>10000||row.frames.size>8)row.frames.delete(key);
+  for(const [key,v] of row.frames)if(now()-v.at>FRAME_MAX_AGE_MS||row.frames.size>8)row.frames.delete(key);
   row.expires=now()+300000;
   return {frame:{id,jpeg:f.jpeg,width:f.width,height:f.height},persona:row.persona};
  }
@@ -49,7 +51,7 @@ function createRemoteDesktop({runNative,now=Date.now}){
   if(body.action==='frame')return capture(row);
   if(body.action==='input'){
    const event=validateInput(body.event),frame=row.frames.get(body.frameId);
-   if(!frame||now()-frame.at>10000)fail('remote_frame_expired');
+   if(!frame||now()-frame.at>FRAME_MAX_AGE_MS)fail('remote_frame_expired');
    const result=await runNative({action:'remote_input',persona:PERSONAS[row.persona],remoteTarget:frame.target,remoteEvent:event});
    if(!result?.ok)fail(/^remote_[a-z_]+$/.test(result?.error)?result.error:'remote_input_unconfirmed');
    row.expires=now()+300000;return {accepted:true};

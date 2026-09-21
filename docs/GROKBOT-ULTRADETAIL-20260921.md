@@ -8,7 +8,7 @@ La ruta autenticada mantiene la autorización de propietario existente y CSRF. C
 
 Admite clic, doble clic, botón derecho, arrastre, rueda, texto y teclas de edición/navegación. La imagen se renueva aproximadamente cada segundo más el tiempo de captura; no es vídeo en tiempo real. GrokBot y el puente del Mac Mini deben permanecer disponibles. No cambia tamaños ni posiciones de ventanas nativas.
 
-Validación: 113 pruebas JS y 31 pruebas puras Swift. La comprobación funcional se hace desde la UI pública, sin mandar mensajes a consejeros ni ejecutar tareas en su computadora.
+Validación: 114 pruebas JS y 32 pruebas puras Swift. La comprobación funcional se hace desde la UI pública, sin mandar mensajes a consejeros ni ejecutar tareas en su computadora.
 
 Los eventos de ratón enlazan coordenadas de pantalla y ventana, según el mecanismo de [axcli](https://github.com/andelf/axcli/blob/main/src/input.rs). El símbolo del sistema para la posición local se resuelve al ejecutar y, si falta, se rechaza la entrada; no se recurre a eventos globales.
 
@@ -20,3 +20,7 @@ Regresión cubierta: seleccionar Disney desde una conversación de Jobs conserva
 
 La ventana se valida por consejero, proceso y geometría de Accesibilidad y WindowServer. Ante un fallo transitorio de captura, el visor pausa los controles y vuelve a leer hasta dos veces; las entradas nunca se reenvían automáticamente.
 Verificación CUA con Disney: menú contextual por clic derecho, cierre por clic izquierdo, Ctrl+F y texto ULTRA PRUEBA en el buscador local.
+
+La geometría de WindowServer es la referencia de captura. El canvas de Accesibilidad se transforma a ella; una ventana se identifica por título exacto único y PID, con coincidencia geométrica como alternativa. Así se admiten diferencias de origen/escala entre APIs sin seleccionar ventanas arbitrarias.
+
+El fotograma autoriza entradas durante un máximo de 30 segundos para admitir la cola de captura; el destino nativo se comprueba de nuevo antes de cada entrada. La apertura repite una lectura si la activación aún estaba estabilizando la geometría.

@@ -6,7 +6,7 @@
 (function () {
   if (window.openConsejerosDesk) return;
 
-  var API = "https://macmini.tail48b61c.ts.net/demo/wallpaper/mode";
+  var API = "/api/wallpaper/mode";
   var STYLE_ID = "cd-desk-style";
   var OV_ID = "cd-desk";
   var BUST = "20260921-bn";
@@ -16,12 +16,16 @@
 
   var CHAIRS = [
     { id: "jobs",    name: "Jobs",    role: "CEO", chair: "Azul",  key: "azul",
+      aliases: ["azul", "jobs", "macbookairazul"],
       src: "/wallpapers/consejero-jobs.jpg?v=" + BUST,    fallback: "/wallpapers/machines/macbookairazul.jpg" },
     { id: "wozniak", name: "Wozniak", role: "CTO", chair: "Plata", key: "plata",
+      aliases: ["plata", "wozniak", "macbookairplata"],
       src: "/wallpapers/consejero-wozniak.jpg?v=" + BUST, fallback: "/wallpapers/machines/macbookairplata.jpg" },
     { id: "lucas",   name: "Lucas",   role: "CSO", chair: "Rosa",  key: "rosa",
+      aliases: ["rosa", "lucas", "macbookairrosa"],
       src: "/wallpapers/consejero-lucas.jpg?v=" + BUST,   fallback: "/wallpapers/machines/macbookairrosa.jpg" },
     { id: "disney",  name: "Disney",  role: "CCO", chair: "Crema", key: "crema",
+      aliases: ["crema", "disney", "carla", "macbookaircrema", "macbook-carla", "macbookcarla"],
       src: "/wallpapers/consejero-disney.jpg?v=" + BUST,  fallback: "/wallpapers/machines/macbookaircrema.jpg" }
   ];
 
@@ -93,10 +97,15 @@
   }
 
   function matchChair(m, chair) {
+    var seat = String((m && (m.seat || m.chair)) || "").toLowerCase();
+    if (seat && (seat === chair.id || seat === chair.key)) return true;
     var id = machineId(m);
     if (!id) return false;
-    if (id.indexOf(chair.key) !== -1) return true;
-    if (id.indexOf(chair.id) !== -1) return true;
+    var keys = [chair.key, chair.id].concat(chair.aliases || []);
+    for (var i = 0; i < keys.length; i++) {
+      var k = String(keys[i] || "").toLowerCase();
+      if (k && id.indexOf(k) !== -1) return true;
+    }
     return false;
   }
 

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.21.09.2026.r8.17:43" />
+<meta name="admiranext-version" content="AdmiraNeXT v.21.09.2026.r9.17:59" />
     <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1667,7 +1667,7 @@
             --mac-k: 0.2275;
         }
         .mac-hoy-prop.on { display: block; }
-        .mac-hoy-prop img {
+        .mac-hoy-prop > img {
             width: 100%;
             height: auto;
             display: block;
@@ -1782,15 +1782,20 @@
         .modo-pong .mac-hoy-crt-front { visibility: hidden; }
         .modo-logo .mac-hoy-crt,
         .modo-logo .mac-hoy-crt-front { visibility: hidden; }
-        /* EXAMINAR: JPEG GrokBot DENTRO del plano 512×342 (FLT-100753). */
-        .mac-hoy-remote,
+        /* EXAMINAR: las tres capturas conservan el plano lógico 512×342.
+           La carcasa escala con width:100%, pero esa regla nunca debe cambiar
+           el plano que proyectan las matrices del CRT. Contain muestra TODO el
+           escritorio, también si es vertical o panorámico, sin deformarlo. */
+        .mac-hoy-front-stage .mac-hoy-remote,
         .mac-hoy-prop .mac-hoy-remote {
             position: absolute; left: 0; top: 0; width: 512px; height: 342px;
-            display: none; object-fit: cover; object-position: center top;
+            display: none; object-fit: contain; object-position: center;
+            background: #030806; max-width: none; max-height: none;
             pointer-events: none; border: 0; margin: 0; padding: 0;
             filter: contrast(1.08) saturate(.9);
         }
         .modo-remote .mac-hoy-remote { display: block; }
+        .mac-hoy-prop.modo-remote .mac-hoy-glass { mix-blend-mode: normal; }
         .modo-remote .mac-hoy-crt,
         .modo-remote .mac-hoy-crt-front { visibility: hidden; }
         .modo-remote .mac-hoy-logo { display: none; }
@@ -1914,7 +1919,7 @@
             --mac-front-scr: matrix3d(0.781343017,0.0120696387,0,-0.0000572498126, -0.00633785346,0.978071581,0,0.0000356556551, 0,0,1,0, 263.01,90.53,0,1);
             --mac-front-k: 0.5665;
         }
-        .mac-hoy-front-stage img { width: 100%; height: auto; display: block; }
+        .mac-hoy-front-stage > img:not(.mac-hoy-remote) { width: 100%; height: auto; display: block; }
         .mac-hoy-crt-front,
         .mac-hoy-logo-front,
         .mac-hoy-pong-front,
@@ -4392,7 +4397,7 @@ body.rail-open{overflow:hidden}
 <script defer src="council-grokbot.js?v=20260918-r5-desk-cors"></script>
 <script defer src="app.flt-100529.js?v=20260921-examinar-crt"></script>
 <script defer src="council-integration.js?v=20260918-r5-desk-cors"></script>
-<script type="module" src="assets/mac-hoy.js?v=20260921-examinar-crt"></script>
+<script type="module" src="assets/mac-hoy.js?v=20260921-remote-fit"></script>
 <script type="module" src="assets/mapa-ideas.js?v=20260920-mapa1"></script>
 <script type="module" src="assets/mesa-paste.js?v=20260920-paste"></script>
 <script src="/consejeros-desk.js?v=20260921-r7-proxy"></script>

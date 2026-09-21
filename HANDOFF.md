@@ -1,3 +1,14 @@
+# Relevo actual — encaje remoto de los Mac · 21 septiembre 2026
+
+- Misión Hoy #221: `DCL-422e7888824e494568c4a24d`, OraculoMacMini.
+- Corregidos escritorio remoto de la mesa, Previos y vista ampliada: las tres capturas conservan 512×342 antes de proyectarse al cristal; `contain` preserva el escritorio entero con bandas cuando cambia la relación de aspecto.
+- Causa: la regla `.mac-hoy-front-stage img` imponía 100%/auto a la captura, anulando las dimensiones del plano. Introducido con el remoto en `3929752`, 21-sep 13:03 CEST. También `cover` recortaba la imagen de la mesa.
+- Corregida la primera pulsación de Examinar con el Mac apagado: ahora aplica el modo remoto a las tres superficies.
+- QA: 49/49 pruebas, escritorio Jobs real en las tres vistas, plano 512×342 y proyección recalculada con Previos estrechado a 151 px. Cambios en `index.html`, `assets/mac-hoy.js`; test `mac-hoy-remote.test.mjs`.
+- Release: `v.21.09.2026.r9.17:59`, https://www.admira.live/ . Mantiene los controles de bloques SCUMM de la misión #202.
+
+---
+
 # Relevo actual — SCUMM · 21 septiembre 2026
 
 - Misión Hoy #202: `DCL-bd124604d200ef9f6dbe4fbe`, OraculoMacMini · MacMini.

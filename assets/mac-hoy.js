@@ -465,7 +465,10 @@ export function showRemote(persona, root = lastRoot || (typeof document !== 'und
   remotePersona = alias;
   modo = 'remote';
   if (!visible) setVisible(true, root, fetchImpl);
-  else aplicarModo(root);
+  // Encender el Mac no aplica el modo: también el PRIMER Examinar debe
+  // sustituir el logo por la captura en las tres superficies.
+  aplicarModo(root);
+  fitScreen(root);
   const tick = () => {
     const url = SCREEN_JPEG + '?persona=' + encodeURIComponent(alias) + '&t=' + Date.now();
     remoteImgs(root).forEach((img) => {

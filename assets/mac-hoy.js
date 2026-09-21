@@ -487,7 +487,12 @@ export function showRemote(persona, root = lastRoot || (typeof document !== 'und
   if (!remoteImgs(root).length) return true;
   const request = fetchImpl || (typeof fetch === 'function' ? fetch : null);
   if (!request) { paintRemoteError(root, alias); return false; }
-  Promise.resolve().then(() => request(SCREEN_JPEG.replace(/\.jpg$/, '') + '?persona=' + encodeURIComponent(alias), {cache:'no-store'}))
+  const nativePersona = {Jobs:'Steve Jobs', Wozniak:'Steve Wozniak', Disney:'Walt Disney', Lucas:'George Lucas'}[alias];
+  Promise.resolve().then(() => request('https://fleet.admira.live/api/grokbot/selection', {
+    method:'POST', credentials:'include', cache:'no-store',
+    headers:{'Content-Type':'application/json','X-Fleet-CSRF':typeof window!=='undefined' ? window.admiraGateCsrf?.() || '' : ''},
+    body:JSON.stringify({persona:nativePersona})
+  }))
     .then(async response => {
       const data = await response.json();
       if (generation !== remoteGeneration || remotePersona !== alias) return;

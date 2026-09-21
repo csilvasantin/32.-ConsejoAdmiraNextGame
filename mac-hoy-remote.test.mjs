@@ -19,12 +19,12 @@ test('Examinar opens the seat once before passive JPEG refreshes; late openings 
   const imgs=Array.from({length:3},()=>({src:''}));
   const root={querySelector:s=>s==='#mac-hoy-prop'?nodes[0]:null,querySelectorAll:s=>s==='.mac-hoy-remote'?imgs:s==='#mac-hoy-prop, .mac-hoy-front-stage'?nodes:s==='.mac-hoy-front-stage'?nodes.slice(1):[]};
   let finish;const calls=[];
-  const request=url=>{calls.push(url);return new Promise(resolve=>{finish=resolve;});};
+  const request=(url,options)=>{calls.push({url,options});return new Promise(resolve=>{finish=resolve;});};
   setVisible(false,root);
   try{
     showRemote('Steve Jobs',root,request);
     await Promise.resolve();
-    assert.equal(calls.length,1);assert.match(calls[0],/screen\?persona=Jobs$/);
+    assert.equal(calls.length,1);assert.match(calls[0].url,/api\/grokbot\/selection$/);assert.equal(calls[0].options.method,'POST');assert.equal(JSON.parse(calls[0].options.body).persona,'Steve Jobs');
     assert.ok(imgs.every(i=>!i.src),'must select before first capture');
     const old=finish;
     showRemote('George Lucas',root,request);await Promise.resolve();

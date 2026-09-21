@@ -8,6 +8,7 @@ const os = require('node:os');
 const path = require('node:path');
 const {execFile} = require('node:child_process');
 const {createAttachments,AttachmentError}=require('./grokbot-attachments');
+const {createRemoteDesktop,RemoteError}=require('./grokbot-remote');
 const {PERSONAS, canonicalPersona} = require('./grokbot-bridge');
 
 const PUBLIC_ID = /^gb_[a-f0-9]{48}$/;
@@ -156,6 +157,7 @@ function createGrokBotDesktop({environment = process.env, runNative, now = Date.
   const binary = String(environment.GROKBOT_AX_BINARY || '');
   const configured = owners.size > 0 && path.isAbsolute(binary) && !binary.includes('\0');
   const native = runNative || createNativeRunner({environment, timeoutMs:nativeTimeoutMs});
+  const remoteDesktop = createRemoteDesktop({runNative:native,now});
   const state = store || createDesktopStore(environment.GROKBOT_DESKTOP_STATE_FILE || path.join(os.homedir(), '.fleet', 'grokbot-desktop-state.json'));
   const uploads=createAttachments(path.join(path.dirname(environment.GROKBOT_DESKTOP_STATE_FILE||path.join(os.homedir(),'.fleet','grokbot-desktop-state.json')),'grokbot-uploads'));
   let queue = Promise.resolve(), last = null, reason = configured ? 'desktop_not_observed' : 'desktop_not_configured';
@@ -443,6 +445,13 @@ function createGrokBotDesktop({environment = process.env, runNative, now = Date.
       return {routines:result.routines,routine:result.routine,...info()};
     });
   }
+  async function remote(session,body) {
+    owner(session);requireConfigured();
+    return serial(async()=>{
+      try { return await remoteDesktop.handle(session,body); }
+      catch(error){if(error instanceof RemoteError)throw new DesktopBridgeError(error.status,error.code);throw error;}
+    });
+  }
   function start() {
     if (running || !configured) return;
     running = true; const run = ++generation;
@@ -461,7 +470,7 @@ function createGrokBotDesktop({environment = process.env, runNative, now = Date.
     if (timer !== null) clearTimer(timer);
     timer = null;
   }
-  return {capabilities, list, select, send, get, controls, upload, start, stop};
+  return {capabilities, list, select, send, get, controls, upload, remote, start, stop};
 }
 
 module.exports = {DesktopBridgeError, createGrokBotDesktop, createDesktopStore, createNativeRunner};

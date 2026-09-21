@@ -629,6 +629,7 @@ export function boot(root = document, fetchImpl = fetch) {
       e.preventDefault();
       e.stopPropagation();
       if (!enciende(glass)) return;
+      if (modo === 'remote' && typeof window !== 'undefined' && window.MacRemote) { window.MacRemote.open(); return; }
       openFront(root, fetchImpl);
     });
   });

@@ -29,7 +29,7 @@ function setup(t, runNative, options={}) {
 test('every public operation checks the explicit desktop owner before AX or reading history', async t => {
   let calls = 0;
   const {desktop} = setup(t, async () => { calls++; return snapshot(); });
-  for (const invoke of [s=>desktop.capabilities(s), s=>desktop.list(s,'Jobs'), s=>desktop.select(s,'Jobs'), s=>desktop.send(s,body()), s=>desktop.get(s,'gb_'+'a'.repeat(48))]) {
+  for (const invoke of [s=>desktop.capabilities(s), s=>desktop.remote(s,{action:'open',persona:'Jobs'}), s=>desktop.list(s,'Jobs'), s=>desktop.select(s,'Jobs'), s=>desktop.send(s,body()), s=>desktop.get(s,'gb_'+'a'.repeat(48))]) {
     await assert.rejects(invoke(outsider), errorCode('desktop_owner_required'));
     await assert.rejects(invoke({email:user.email}), errorCode('authenticated_session_required'));
   }

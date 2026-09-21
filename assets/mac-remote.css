@@ -1,0 +1,14 @@
+.mac-hoy-ultra-trigger{display:none;background:transparent;cursor:zoom-in;z-index:3}
+.modo-remote .mac-hoy-ultra-trigger{display:block}
+.mac-hoy-ultra-trigger:focus-visible{outline:3px solid #ffe28c;outline-offset:-5px}
+.mac-ultra{position:fixed;inset:0;z-index:2147483646;display:flex;flex-direction:column;width:100%;height:100dvh;background:#050505;color:#f3e5be;font:14px/1.4 system-ui,sans-serif;isolation:isolate}
+.mac-ultra__bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;padding:7px 12px;background:#1e170d;border-bottom:1px solid #92713c;flex:none}
+.mac-ultra__bar strong{white-space:nowrap}.mac-ultra__bar [role=status]{flex:1;min-width:180px;font-size:12px;color:#e1cfaa}
+.mac-ultra button{font:12px/1.4 system-ui,sans-serif;background:#352713;color:#ffebaf;border:1px solid #9f7c3e;padding:6px 10px;cursor:pointer}
+.mac-ultra [data-close]{border-color:#efd185}.mac-ultra button:focus-visible,.mac-ultra__stage:focus-visible{outline:2px solid #efd185;outline-offset:-2px}
+.mac-ultra__stage{flex:1;min-width:0;min-height:0;position:relative;overflow:hidden;background:#000;touch-action:none;user-select:none}
+.mac-ultra__stage img{display:block;width:100%;height:100%;object-fit:contain;pointer-events:none}
+.mac-ultra__hint{position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);padding:18px;background:#15110ded;border:1px solid #9f7c3e;max-width:560px}
+.mac-ultra__text{display:flex;gap:8px;padding:8px;flex:none}.mac-ultra__text textarea{flex:1;background:#15110d;color:#fff0bc;padding:8px;font:16px system-ui;min-height:60px}
+.mac-ultra [hidden]{display:none!important}
+@media(max-width:600px){.mac-ultra__bar{gap:5px;padding:5px}.mac-ultra__bar [role=status]{order:5;width:100%;min-width:0}.mac-ultra button{padding:5px}.mac-ultra__bar strong{flex:1}}

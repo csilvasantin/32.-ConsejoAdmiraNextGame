@@ -30,7 +30,7 @@ const { CALLBACK_URI:AUTH_CALLBACK_URI, PUBLIC_ORIGIN:AUTH_PUBLIC_ORIGIN, create
 const { sessionMutationError } = require('./session-csrf');
 const { ACTIVE, REVOKED, UNAVAILABLE, createSessionRegistry, logoutEndpointPolicy, sessionEndpointPolicy } = require('./session-registry');
 const { createSessionCodec, deriveSessionSecret, loadAuthEdgeSecretMaterial, loadSessionSecretMaterial } = require('./session-token');
-const { BridgeError, createGrokBotBridge } = require('./grokbot-bridge');
+const { BridgeError, PERSONAS, canonicalPersona, createGrokBotBridge } = require('./grokbot-bridge');
 const { DesktopBridgeError, createGrokBotDesktop } = require('./grokbot-desktop');
 // The desktop adapter shares the native conversation. Never fall back to a
 // routine when it is unavailable: that would silently create a different chat.
@@ -890,6 +890,12 @@ const server = http.createServer(async (req, res) => {
         if(raw===null)throw new BridgeError(413,'attachment_too_large');
         let body;try{body=JSON.parse(raw);}catch(_){throw new BridgeError(400,'invalid_json');}
         return json(res,201,{ok:true,attachment:await grokBotBridge.upload(req.fleetSession,body)});
+      }
+      if (url === '/api/grokbot/remote' && req.method === 'POST') {
+        if(!grokBotBridge.remote)throw new BridgeError(503,'remote_unavailable');
+        const raw=await readRawBody(req,16000);
+        let body;try{body=JSON.parse(raw);}catch(_){throw new BridgeError(400,'invalid_json');}
+        return json(res,200,{ok:true,...await grokBotBridge.remote(req.fleetSession,body)});
       }
       if (url === '/api/grokbot/controls' && req.method === 'POST') {
         if(!grokBotBridge.controls)throw new BridgeError(503,'desktop_controls_unavailable');

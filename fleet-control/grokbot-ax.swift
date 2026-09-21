@@ -18,6 +18,8 @@ struct Request: Decodable {
     let paused: Bool?
     let runKey: String?
     let attachmentPaths: [String]?
+    let remoteTarget: RemoteTarget?
+    let remoteEvent: RemoteInput?
 }
 struct Message: Codable {
     let sender: String
@@ -641,6 +643,130 @@ final class GrokAX {
     }
 }
 
+// Full-window frames and bounded input share the exact Grok Bot process/window.
+// No display fallback, shell command, global hotkeys or arbitrary application.
+struct RemoteTarget: Codable, Equatable {
+    let persona: String
+    let pid: Int32
+    let windowID: UInt32
+    let x: Double, y: Double, width: Double, height: Double
+}
+struct RemotePoint: Codable { let x: Double, y: Double }
+struct RemoteInput: Decodable {
+    let type: String
+    let x: Double?, y: Double?, button: String?, clicks: Int?
+    let dx: Double?, dy: Double?, path: [RemotePoint]?
+    let key: String?, text: String?, modifiers: [String]?
+}
+struct RemoteFrame: Codable { let jpeg: String; let width: Int, height: Int }
+struct RemoteReply: Codable {
+    var ok = true
+    var target: RemoteTarget? = nil
+    var frame: RemoteFrame? = nil
+}
+func remotePoint(_ p: RemotePoint, target: RemoteTarget) throws -> CGPoint {
+    guard p.x.isFinite, p.y.isFinite, p.x >= 0, p.x <= 1, p.y >= 0, p.y <= 1 else { throw BridgeError(code:"remote_invalid_input") }
+    return CGPoint(x:target.x + p.x * (target.width - 1), y:target.y + p.y * (target.height - 1))
+}
+let remoteKeys: [String: CGKeyCode] = ["Enter":36,"Tab":48,"Escape":53,"Backspace":51,"Delete":117,"ArrowLeft":123,"ArrowRight":124,"ArrowDown":125,"ArrowUp":126,"Home":115,"End":119,"PageUp":116,"PageDown":121,"a":0,"c":8,"x":7,"v":9,"z":6,"y":16,"f":3]
+extension GrokAX {
+    func remoteTarget(_ persona: String) throws -> RemoteTarget {
+        let ctx = try read()
+        guard ctx.snapshot.selectedPersona == persona else { throw BridgeError(code:"remote_selection_changed") }
+        let windows = (attribute(app,kAXWindowsAttribute) as? [AXUIElement]) ?? []
+        let exact = windows.filter { stringAttribute($0,kAXTitleAttribute) == "Grok Bot" }
+        guard exact.count == 1 else { throw BridgeError(code:"remote_window_unavailable") }
+        var position = CGPoint.zero, size = CGSize.zero, pid:pid_t = 0
+        guard let pos = attribute(exact[0],kAXPositionAttribute), let siz = attribute(exact[0],kAXSizeAttribute),
+              CFGetTypeID(pos) == AXValueGetTypeID(), CFGetTypeID(siz) == AXValueGetTypeID(),
+              AXValueGetValue(pos as! AXValue,.cgPoint,&position), AXValueGetValue(siz as! AXValue,.cgSize,&size),
+              AXUIElementGetPid(app,&pid) == .success else { throw BridgeError(code:"remote_window_unavailable") }
+        let list = CGWindowListCopyWindowInfo([.optionOnScreenOnly,.excludeDesktopElements], kCGNullWindowID) as? [[String:Any]] ?? []
+        let matches = list.filter { item in
+            guard (item[kCGWindowOwnerPID as String] as? NSNumber)?.int32Value == pid,
+                  (item[kCGWindowLayer as String] as? NSNumber)?.intValue == 0,
+                  let bounds = item[kCGWindowBounds as String] as? [String:Any],
+                  let rect = CGRect(dictionaryRepresentation: bounds as CFDictionary) else { return false }
+            return abs(rect.minX-position.x)<1 && abs(rect.minY-position.y)<1 && abs(rect.width-size.width)<1 && abs(rect.height-size.height)<1
+        }
+        guard matches.count == 1, let wid = (matches[0][kCGWindowNumber as String] as? NSNumber)?.uint32Value, size.width>100, size.height>100 else { throw BridgeError(code:"remote_window_unavailable") }
+        return RemoteTarget(persona:persona,pid:pid,windowID:wid,x:position.x,y:position.y,width:size.width,height:size.height)
+    }
+    func remoteFrame(_ persona:String) throws -> RemoteReply {
+        let target = try remoteTarget(persona)
+        let file = FileManager.default.temporaryDirectory.appendingPathComponent("admira-remote-" + UUID().uuidString + ".jpg")
+        defer { try? FileManager.default.removeItem(at:file) }
+        let process = Process(); process.executableURL = URL(fileURLWithPath:"/usr/sbin/screencapture")
+        process.arguments = ["-x","-o","-l",String(target.windowID),"-t","jpg",file.path]
+        process.standardOutput = FileHandle.nullDevice; process.standardError = FileHandle.nullDevice
+        try process.run(); process.waitUntilExit()
+        guard process.terminationStatus == 0, let bytes=try? Data(contentsOf:file), bytes.count>1000, bytes.count<6*1024*1024,
+              let bitmap=NSBitmapImageRep(data:bytes) else { throw BridgeError(code:"remote_capture_unavailable") }
+        guard try remoteTarget(persona) == target else { throw BridgeError(code:"remote_view_changed") }
+        return RemoteReply(target:target,frame:RemoteFrame(jpeg:bytes.base64EncodedString(),width:bitmap.pixelsWide,height:bitmap.pixelsHigh))
+    }
+    func remoteInput(_ persona:String,target:RemoteTarget,event:RemoteInput) throws -> RemoteReply {
+        guard target.persona == persona, try remoteTarget(persona) == target else { throw BridgeError(code:"remote_view_changed") }
+        let restore=try activateForInteraction();defer { restore() }
+        guard try remoteTarget(persona) == target else { throw BridgeError(code:"remote_view_changed") }
+        var flags=CGEventFlags()
+        for mod in event.modifiers ?? [] {
+            switch mod {
+            case "meta": flags.insert(.maskCommand)
+            case "shift": flags.insert(.maskShift)
+            case "alt": flags.insert(.maskAlternate)
+            case "ctrl": flags.insert(.maskControl)
+            default: throw BridgeError(code:"remote_invalid_input")
+            }
+        }
+        func post(_ e:CGEvent?) throws {
+            guard let e=e else { throw BridgeError(code:"remote_input_unavailable") }
+            e.flags=flags; e.postToPid(target.pid)
+        }
+        func point(_ x:Double?,_ y:Double?) throws -> CGPoint {
+            guard let x=x,let y=y else { throw BridgeError(code:"remote_invalid_input") }
+            return try remotePoint(RemotePoint(x:x,y:y),target:target)
+        }
+        func mouse(_ kind:CGEventType,_ p:CGPoint,_ button:CGMouseButton = .left,_ clicks:Int = 1) throws {
+            let e=CGEvent(mouseEventSource:nil,mouseType:kind,mouseCursorPosition:p,mouseButton:button)
+            e?.setIntegerValueField(.mouseEventClickState,value:Int64(clicks));try post(e)
+        }
+        switch event.type {
+        case "click":
+            let p=try point(event.x,event.y),right=event.button == "right",clicks=event.clicks ?? 1
+            guard ["left","right"].contains(event.button ?? ""),[1,2].contains(clicks) else { throw BridgeError(code:"remote_invalid_input") }
+            try mouse(right ? .rightMouseDown : .leftMouseDown,p,right ? .right : .left,clicks)
+            try mouse(right ? .rightMouseUp : .leftMouseUp,p,right ? .right : .left,clicks)
+        case "drag":
+            guard let path=event.path,path.count>=2,path.count<=40 else { throw BridgeError(code:"remote_invalid_input") }
+            let points=try path.map{try remotePoint($0,target:target)}
+            // A drag is one transaction: an interrupted network request cannot
+            // leave a mouse button held down on the host.
+            try mouse(.leftMouseDown,points[0])
+            defer { try? mouse(.leftMouseUp,points.last!) }
+            for p in points.dropFirst(){try mouse(.leftMouseDragged,p);RunLoop.current.run(until:Date().addingTimeInterval(0.008))}
+        case "scroll":
+            guard let dx=event.dx,let dy=event.dy,dx.isFinite,dy.isFinite,abs(dx)<=1200,abs(dy)<=1200 else { throw BridgeError(code:"remote_invalid_input") }
+            let p=try point(event.x,event.y)
+            let e=CGEvent(scrollWheelEvent2Source:nil,units:.pixel,wheelCount:2,wheel1:Int32(-dy),wheel2:Int32(-dx),wheel3:0)
+            e?.location=p;try post(e)
+        case "key":
+            guard let key=event.key,let code=remoteKeys[key] else { throw BridgeError(code:"remote_invalid_input") }
+            try post(CGEvent(keyboardEventSource:nil,virtualKey:code,keyDown:true));try post(CGEvent(keyboardEventSource:nil,virtualKey:code,keyDown:false))
+        case "text":
+            guard let text=event.text,!text.isEmpty,text.utf16.count<=4000,(event.modifiers ?? []).isEmpty else { throw BridgeError(code:"remote_invalid_input") }
+            let chars=Array(text.utf16)
+            for down in [true,false] {
+                let e=CGEvent(keyboardEventSource:nil,virtualKey:0,keyDown:down)
+                e?.keyboardSetUnicodeString(stringLength:chars.count,unicodeString:chars);try post(e)
+            }
+        default: throw BridgeError(code:"remote_invalid_input")
+        }
+        RunLoop.current.run(until:Date().addingTimeInterval(0.08))
+        return RemoteReply()
+    }
+}
+
 func failed(_ snapshot: Snapshot, _ code: String) -> Snapshot {
     var result = snapshot; result.ok = false; result.error = code
     result.observedAt = ISO8601DateFormatter().string(from: Date())
@@ -714,7 +840,14 @@ func selfTests() throws {
     try expect(compositorListo(valor:"test",prompt:"test",persona:"Steve Jobs",envioDisponible:true),"exact text and enabled Send are ready")
     try expect(!compositorListo(valor:"another draft",prompt:"test",persona:"Steve Jobs",envioDisponible:true),"enabled Send cannot submit a different draft")
     try expect(!compositorListo(valor:"Escríbele a Steve Jobs",prompt:"test",persona:"Steve Jobs",envioDisponible:false),"placeholder and disabled Send must wait")
-    print("{\"ok\":true,\"tests\":28,\"mode\":\"pure-parsing-no-AX\"}")
+    let remoteBounds=RemoteTarget(persona:"Steve Jobs",pid:1,windowID:2,x:-1200,y:50,width:1000,height:800)
+    let corner=try remotePoint(RemotePoint(x:1,y:1),target:remoteBounds)
+    try expect(corner.x == -201 && corner.y == 849,"remote edges remain inside exact window on negative-coordinate display")
+    var rejectedPoint=false
+    do { _ = try remotePoint(RemotePoint(x:-0.1,y:0.5),target:remoteBounds) } catch { rejectedPoint=true }
+    try expect(rejectedPoint,"remote input refuses coordinates outside the captured window")
+    try expect(remoteKeys["q"] == nil && remoteKeys["Enter"] == 36,"remote key allowlist excludes quit but supports Enter")
+    print("{\"ok\":true,\"tests\":31,\"mode\":\"pure-parsing-no-AX\"}")
 }
 
 do {
@@ -724,11 +857,21 @@ do {
     let request: Request
     do { request = try JSONDecoder().decode(Request.self, from: data) }
     catch { throw BridgeError(code: "invalid_request") }
-    guard ["snapshot", "select", "send", "dump", "probe", "routines", "routine", "routine_set", "interrupt"].contains(request.action) else { throw BridgeError(code: "unsupported_action") }
+    guard ["snapshot", "select", "send", "dump", "probe", "routines", "routine", "routine_set", "interrupt", "remote_frame", "remote_input"].contains(request.action) else { throw BridgeError(code: "unsupported_action") }
     if request.action != "snapshot" && request.action != "dump" && request.action != "probe" {
         guard let persona = request.persona, supportedPersonas.contains(persona) else { throw BridgeError(code: "unsupported_persona") }
     }
     let bridge = try GrokAX()
+    if request.action == "remote_frame" || request.action == "remote_input" {
+        let lock=try MutationLock();defer { withExtendedLifetime(lock) {} }
+        let result:RemoteReply
+        if request.action == "remote_frame" { result=try bridge.remoteFrame(request.persona!) }
+        else {
+            guard let target=request.remoteTarget,let event=request.remoteEvent else { throw BridgeError(code:"remote_invalid_input") }
+            result=try bridge.remoteInput(request.persona!,target:target,event:event)
+        }
+        FileHandle.standardOutput.write(try JSONEncoder().encode(result));exit(0)
+    }
     let snapshot: Snapshot
     if request.action == "probe" {
         // SONDEO: escribe, mira si aparece el boton de enviar, y BORRA lo escrito

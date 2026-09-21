@@ -12,3 +12,27 @@ test('first Examinar turns on remote mode on every screen even when the table Ma
     for(const n of nodes){assert.ok(n.classes.has('modo-remote'));assert.ok(!n.classes.has('modo-logo'));}
   } finally {setVisible(false,root);}
 });
+
+
+test('Examinar opens the seat once before passive JPEG refreshes; late openings cannot replace another seat',async()=>{
+  const nodes=Array.from({length:3},()=>({clientWidth:244,style:{setProperty(){}},classList:{toggle(){}}}));
+  const imgs=Array.from({length:3},()=>({src:''}));
+  const root={querySelector:s=>s==='#mac-hoy-prop'?nodes[0]:null,querySelectorAll:s=>s==='.mac-hoy-remote'?imgs:s==='#mac-hoy-prop, .mac-hoy-front-stage'?nodes:s==='.mac-hoy-front-stage'?nodes.slice(1):[]};
+  let finish;const calls=[];
+  const request=url=>{calls.push(url);return new Promise(resolve=>{finish=resolve;});};
+  setVisible(false,root);
+  try{
+    showRemote('Steve Jobs',root,request);
+    await Promise.resolve();
+    assert.equal(calls.length,1);assert.match(calls[0],/screen\?persona=Jobs$/);
+    assert.ok(imgs.every(i=>!i.src),'must select before first capture');
+    const old=finish;
+    showRemote('George Lucas',root,request);await Promise.resolve();
+    old({ok:true,json:async()=>({ok:true})});
+    for(let i=0;i<8;i++)await Promise.resolve();
+    assert.ok(imgs.every(i=>!i.src),'late Jobs handshake must not overwrite Lucas');
+    finish({ok:true,json:async()=>({ok:true})});
+    for(let i=0;i<8;i++)await Promise.resolve();
+    assert.ok(imgs.every(i=>/screen\.jpg\?persona=Lucas&/.test(i.src)));
+  }finally{setVisible(false,root);}
+});

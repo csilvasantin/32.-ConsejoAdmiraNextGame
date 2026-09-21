@@ -1,3 +1,11 @@
+## 21 septiembre 2026 — Causa del puente ocupado: capturas que robaban el chat
+
+Causa raíz adicional comprobada en `/tmp/demo-server.log`: una vista de Lucas refrescaba `/grokbot-sync/screen.jpg?persona=Lucas` cada 2,5 s. Cada JPEG ejecutaba `select`, robaba el chat a Jobs y competía por el bloqueo AX. Corregido en AdmiraNext-Team, commit `ffe9e04`: seleccionar solo al abrir la vista (JSON), JPEG pasivo, caché por consejero y ninguna imagen de otro chat etiquetada con el nombre solicitado. Instalado en el servicio `com.admiranext.demo-server`.
+
+MacHoy solicita esa apertura una vez antes de pintar sus 3 CRT; los refrescos ya no seleccionan. Se descartan aperturas tardías cuando cambia el consejero.
+
+Prueba autorizada enviada una sola vez y confirmada por tarjeta nativa `gb_742e0a00a8419ea39df4eb7aba8336eb005d42ddb01a09b2`, respuesta literal de Jobs **CONEXIÓN OK**, visible también en admira.live. Antes de corregir el capturador fue necesario volver a abrir Jobs para que el puente observara la respuesta. La verificación final debe comprobar que ya no vuelve a Lucas por los JPEG antiguos.
+
 ## 21 septiembre 2026 — Chat nativo GrokBot: reconexión y diagnóstico (OraculoMacMini)
 
 Misión Hoy #232 (`DCL-8150262a1ec389c4a4aa2530`). Carlos pide que hablar con los consejeros desde admira.live use la misma conversación de GrokBot.

@@ -430,12 +430,14 @@ export function isFocused() { return focused; }
 
 let remoteTimer = null;
 let remotePersona = null;
+let remoteGeneration = 0;
 
 function remoteImgs(root) {
   return root && root.querySelectorAll ? Array.from(root.querySelectorAll('.mac-hoy-remote')) : [];
 }
 
 function stopRemotePoll() {
+  remoteGeneration++;
   if (remoteTimer) { clearInterval(remoteTimer); remoteTimer = null; }
 }
 
@@ -479,8 +481,19 @@ export function showRemote(persona, root = lastRoot || (typeof document !== 'und
   remoteImgs(root).forEach((img) => {
     img.onerror = () => { stopRemotePoll(); paintRemoteError(root, alias); };
   });
-  tick();
-  remoteTimer = setInterval(tick, 2500);
+  const generation = remoteGeneration;
+  // Opening a seat may select it once. JPEG refreshes must stay passive so a
+  // background preview cannot steal the native chat from a web conversation.
+  if (!remoteImgs(root).length) return true;
+  const request = fetchImpl || (typeof fetch === 'function' ? fetch : null);
+  if (!request) { paintRemoteError(root, alias); return false; }
+  Promise.resolve().then(() => request(SCREEN_JPEG.replace(/\.jpg$/, '') + '?persona=' + encodeURIComponent(alias), {cache:'no-store'}))
+    .then(async response => {
+      const data = await response.json();
+      if (generation !== remoteGeneration || remotePersona !== alias) return;
+      if (!response.ok || !data?.ok) throw new Error('screen_unavailable');
+      tick(); remoteTimer = setInterval(tick, 2500);
+    }).catch(() => { if (generation === remoteGeneration) paintRemoteError(root, alias); });
   return true;
 }
 

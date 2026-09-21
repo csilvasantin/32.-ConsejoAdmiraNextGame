@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { todayMadrid, isHoy, linesFor, seatOf, envolver, ultimaMision, ultimasMisiones, detalleLineas, DETALLE_ANCHO, MODOS } from './assets/mac-hoy.js';
+import { todayMadrid, isHoy, linesFor, seatOf, envolver, ultimaMision, ultimasMisiones, detalleLineas, DETALLE_ANCHO, MODOS, chairAlias, CHAIR_ALIAS, SCREEN_JPEG } from './assets/mac-hoy.js';
 
 const html = fs.readFileSync(new URL('./index.html', import.meta.url), 'utf8');
 
@@ -83,7 +83,7 @@ test('envolver parte por palabras y respeta el máximo', () => {
 });
 
 test('teclado y ratón son mandos, y existe el logo retro en pantalla', () => {
-  assert.deepEqual(MODOS, ['hoy', 'detalle', 'logo', 'pong']);
+  assert.deepEqual(MODOS, ['hoy', 'detalle', 'logo', 'pong', 'remote']);
   assert.match(html, /<button[^>]+class="mac-hoy-keys"/);
   assert.match(html, /<button[^>]+class="mac-hoy-mouse"/);
   assert.ok(!/class="mac-hoy-(keys|mouse)"[^>]*href=/.test(html), 'ya no son enlaces a yokup');
@@ -276,7 +276,7 @@ test('el Pong también existe en la vista frontal', () => {
   assert.match(html, /id="mac-hoy-pong-front"[^>]*width="512"[^>]*height="342"/);
   assert.match(html, /id="mac-hoy-front-floppy"/);
   // el lienzo frontal se proyecta con la matriz del frontal, como su texto
-  assert.match(html, /\.mac-hoy-pong-front,\s*\n\s*\.mac-hoy-front-shade \{/);
+  assert.match(html, /\.mac-hoy-pong-front,\s*\n\s*\.mac-hoy-remote-front,\s*\n\s*\.mac-hoy-front-shade \{/);
   assert.match(html, /\.mac-hoy-logo-front, \.mac-hoy-pong-front \{ mix-blend-mode: screen; \}/);
   const src = fs.readFileSync(new URL('./assets/mac-hoy.js', import.meta.url), 'utf8');
   // se pinta en TODOS los tubos, no sólo en el de la mesa
@@ -324,4 +324,24 @@ test('/motor sigue abriendo la elección de modelo aunque el icono ya no exista'
   // la lista de motores NO se ha borrado: de ella leen selectedLLM y refreshLLMAvailability
   assert.match(html, /data-panel="llm"/);
   assert.ok(!/data-obj="motor"/.test(html), 'el icono cedió su casilla a clearchannel.tv');
+});
+
+test('FLT-100753: EXAMINAR mapea silla → JPEG GrokBot (Jobs/Wozniak)', () => {
+  assert.equal(chairAlias('Steve Jobs'), 'Jobs');
+  assert.equal(chairAlias('Jobs'), 'Jobs');
+  assert.equal(chairAlias('Steve Wozniak'), 'Wozniak');
+  assert.equal(chairAlias('Wozniak'), 'Wozniak');
+  assert.equal(chairAlias('George Lucas'), 'Lucas');
+  assert.equal(chairAlias('Walt Disney'), 'Disney');
+  assert.equal(chairAlias('Neo'), null);
+  assert.match(SCREEN_JPEG, /grokbot-sync\/screen\.jpg/);
+  assert.ok(CHAIR_ALIAS.Jobs && CHAIR_ALIAS.Wozniak);
+  assert.match(html, /class="mac-hoy-remote"/);
+  assert.match(html, /\.modo-remote \.mac-hoy-remote \{ display: block; \}/);
+  const app = fs.readFileSync(new URL('./app.flt-100529.js', import.meta.url), 'utf8');
+  assert.match(app, /MacHoy\.showRemote/);
+  assert.match(app, /MacHoy\.clearRemote/);
+  const src = fs.readFileSync(new URL('./assets/mac-hoy.js', import.meta.url), 'utf8');
+  assert.match(src, /export function showRemote/);
+  assert.match(src, /SIN CABLE/);
 });

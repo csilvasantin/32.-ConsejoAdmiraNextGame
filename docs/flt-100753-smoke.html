@@ -1,0 +1,38 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>FLT-100753 smoke · Examinar Jobs / Wozniak</title>
+<style>
+  body{margin:0;background:#111;color:#c8ffd0;font-family:"Press Start 2P",monospace;padding:16px}
+  h1{font-size:14px}
+  .row{display:flex;gap:16px;flex-wrap:wrap}
+  figure{margin:0;flex:1;min-width:280px}
+  img{width:100%;height:auto;border:4px solid #3a2;image-rendering:auto}
+  figcaption{margin:8px 0;font-size:11px}
+</style>
+</head>
+<body>
+<h1>EXAMINAR · CRT feed GrokBot</h1>
+<p>Piloto verde: Jobs + Wozniak · JPEG FLT-100581</p>
+<div class="row">
+  <figure>
+    <figcaption>JOBS</figcaption>
+    <img id="j" alt="Pantalla de Jobs">
+  </figure>
+  <figure>
+    <figcaption>WOZNIAK</figcaption>
+    <img id="w" alt="Pantalla de Wozniak">
+  </figure>
+</div>
+<script>
+const B='https://macmini.tail48b61c.ts.net/demo/grokbot-sync/screen.jpg';
+function tick(){
+  const t=Date.now();
+  document.getElementById('j').src=B+'?persona=Jobs&t='+t;
+  document.getElementById('w').src=B+'?persona=Wozniak&t='+t;
+}
+tick(); setInterval(tick, 2500);
+</script>
+</body>
+</html>

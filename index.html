@@ -1782,6 +1782,19 @@
         .modo-pong .mac-hoy-crt-front { visibility: hidden; }
         .modo-logo .mac-hoy-crt,
         .modo-logo .mac-hoy-crt-front { visibility: hidden; }
+        /* EXAMINAR: JPEG GrokBot DENTRO del plano 512×342 (FLT-100753). */
+        .mac-hoy-remote,
+        .mac-hoy-prop .mac-hoy-remote {
+            position: absolute; left: 0; top: 0; width: 512px; height: 342px;
+            display: none; object-fit: cover; object-position: center top;
+            pointer-events: none; border: 0; margin: 0; padding: 0;
+            filter: contrast(1.08) saturate(.9);
+        }
+        .modo-remote .mac-hoy-remote { display: block; }
+        .modo-remote .mac-hoy-crt,
+        .modo-remote .mac-hoy-crt-front { visibility: hidden; }
+        .modo-remote .mac-hoy-logo { display: none; }
+        .modo-remote .mac-hoy-pong { display: none; }
         /* En detalle cabe más texto: letra menor y el bloque sube un poco. */
         /* Un 20% menos que antes (26 → 21): ahora la ficha son ocho líneas —
            cabecera, referencia, quién, regla y cuatro de asunto— y a 26 px se
@@ -1905,6 +1918,7 @@
         .mac-hoy-crt-front,
         .mac-hoy-logo-front,
         .mac-hoy-pong-front,
+        .mac-hoy-remote-front,
         .mac-hoy-front-shade {
             position: absolute;
             left: 0;
@@ -3583,6 +3597,7 @@ body.rail-open{overflow:hidden}
                 <img src="assets/mac-1984-mesa.png?v=20260919-sinhalo" alt="Macintosh 1984 beige CRT sobre la mesa del Consejo">
                 <button type="button" class="mac-hoy-glass" id="mac-hoy-glass" title="Macintosh 1984 · pulsa la pantalla para leer Hoy">
                     <pre class="mac-hoy-crt" id="mac-hoy-crt">HOY</pre>
+                    <img class="mac-hoy-remote" alt="" aria-hidden="true">
                     <i class="mac-hoy-logo" aria-hidden="true"></i>
                     <canvas class="mac-hoy-pong" id="mac-hoy-pong" width="512" height="342" aria-hidden="true"></canvas>
                 </button>
@@ -3596,6 +3611,7 @@ body.rail-open{overflow:hidden}
                 <div class="mac-hoy-front-stage">
                     <img src="assets/mac-1984-front.png?v=20260919-sinhalo" alt="Macintosh 1984 vista frontal">
                     <pre class="mac-hoy-crt-front" id="mac-hoy-crt-front">HOY</pre>
+                    <img class="mac-hoy-remote mac-hoy-remote-front" alt="" aria-hidden="true">
                     <i class="mac-hoy-logo mac-hoy-logo-front" aria-hidden="true"></i>
                     <div class="mac-hoy-front-shade" aria-hidden="true"></div>
                     <canvas class="mac-hoy-pong mac-hoy-pong-front" id="mac-hoy-pong-front" width="512" height="342" aria-hidden="true"></canvas>
@@ -3941,6 +3957,7 @@ body.rail-open{overflow:hidden}
                     <div class="mac-hoy-front-stage mac-scumm-stage">
                         <img src="assets/mac-1984-front.png?v=20260919-sinhalo" alt="Macintosh 1984">
                         <pre class="mac-hoy-crt-front" id="mac-hoy-crt-bar">HOY</pre>
+                        <img class="mac-hoy-remote mac-hoy-remote-front" alt="" aria-hidden="true">
                         <i class="mac-hoy-logo mac-hoy-logo-front" aria-hidden="true"></i>
                         <div class="mac-hoy-front-shade" aria-hidden="true"></div>
                         <canvas class="mac-hoy-pong mac-hoy-pong-front" width="512" height="342" aria-hidden="true"></canvas>
@@ -4373,9 +4390,9 @@ body.rail-open{overflow:hidden}
 <script defer src="council-table.js?v=20260918-r5-desk-cors"></script>
 <script defer src="council-speech.js?v=20260918-r5-desk-cors"></script>
 <script defer src="council-grokbot.js?v=20260918-r5-desk-cors"></script>
-<script defer src="app.flt-100529.js?v=20260920-r22-paste-img"></script>
+<script defer src="app.flt-100529.js?v=20260921-examinar-crt"></script>
 <script defer src="council-integration.js?v=20260918-r5-desk-cors"></script>
-<script type="module" src="assets/mac-hoy.js?v=20260920-macbarra2"></script>
+<script type="module" src="assets/mac-hoy.js?v=20260921-examinar-crt"></script>
 <script type="module" src="assets/mapa-ideas.js?v=20260920-mapa1"></script>
 <script type="module" src="assets/mesa-paste.js?v=20260920-paste"></script>
 <script src="/consejeros-desk.js?v=20260921-r1"></script>

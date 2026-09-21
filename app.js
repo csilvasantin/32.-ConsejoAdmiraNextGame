@@ -1382,7 +1382,9 @@
         }
         if (currentVerb === 'examinar') {
             enterPreguntarMode();
-            setActionLine("👁 Examinar — haz clic en un consejero para conocerlo");
+            setActionLine("👁 Examinar — haz clic en un consejero: su pantalla viva en el Mac 1984");
+        } else if (window.MacHoy && window.MacHoy.clearRemote) {
+            window.MacHoy.clearRemote();
         }
         if (currentVerb === 'debatir') {
             if (!currentProject) {
@@ -1513,8 +1515,8 @@
         window.CouncilInterface?.select(null);
         markCouncilConsulted(agent.persona);
         if (examinarMode) {
-            setActionLine("👁 " + agent.persona + " · " + agent.role);
-            showSpeechBubble(agent.persona, agent.name, loreFor(agent));
+            setActionLine("👁 " + agent.persona + " · pantalla de " + (window.MacHoy && window.MacHoy.chairAlias ? (window.MacHoy.chairAlias(agent.persona) || agent.name) : agent.name));
+            if (window.MacHoy && window.MacHoy.showRemote) window.MacHoy.showRemote(agent.persona);
             playSfx("talk");
             return;
         }

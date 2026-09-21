@@ -26,11 +26,24 @@ export function seatOf(mission) {
 
 export const IDLE_COPY = 'HOY\n…';
 export const ERROR_COPY = 'HOY\nsin cable';
+export const SCREEN_JPEG = 'https://macmini.tail48b61c.ts.net/demo/grokbot-sync/screen.jpg';
+export const CHAIR_ALIAS = {
+  'Steve Jobs': 'Jobs', Jobs: 'Jobs',
+  'Steve Wozniak': 'Wozniak', Wozniak: 'Wozniak',
+  'George Lucas': 'Lucas', Lucas: 'Lucas',
+  'Walt Disney': 'Disney', Disney: 'Disney',
+};
+export function chairAlias(persona) {
+  const s = String(persona || '').trim();
+  if (CHAIR_ALIAS[s]) return CHAIR_ALIAS[s];
+  const last = s.split(/\s+/).pop();
+  return CHAIR_ALIAS[last] || null;
+}
 
 /* La pantalla tiene tres modos, y los periféricos del dibujo son los mandos:
    el TECLADO enciende el logo de Admira y el RATÓN saca la última misión con
    detalle. Volver a pulsar devuelve a HOY. */
-export const MODOS = ['hoy', 'detalle', 'logo', 'pong'];
+export const MODOS = ['hoy', 'detalle', 'logo', 'pong', 'remote'];
 
 export function envolver(txt, ancho, maxLineas) {
   const palabras = String(txt == null ? '' : txt).trim().split(/\s+/).filter(Boolean);
@@ -223,7 +236,8 @@ export function setModo(nuevo, root = lastRoot || (typeof document !== 'undefine
   if (!root) return modo;
   lastRoot = root;
   aplicarModo(root);
-  if (modo !== 'logo') draw(root, fetchImpl);   // el logo no escribe texto: es la pantalla entera
+  if (nuevo !== 'remote') stopRemotePoll();
+  if (modo !== 'logo' && modo !== 'remote' && modo !== 'pong') draw(root, fetchImpl);
   return modo;
 }
 
@@ -384,7 +398,7 @@ async function draw(root, fetchImpl) {
   const prop = root.querySelector('#mac-hoy-prop');
   if (!ts.length || !prop || !visible) return;
   aplicarModo(root);
-  if (modo === 'logo' || modo === 'pong') return;
+  if (modo === 'logo' || modo === 'pong' || modo === 'remote') return;
   paraPaseo(root);
   prop.classList.add('refreshing');
   // El comodín de carga dice en qué pantalla estás: poner «HOY …» mientras se
@@ -413,6 +427,72 @@ async function draw(root, fetchImpl) {
 
 export function isVisible() { return visible; }
 export function isFocused() { return focused; }
+
+let remoteTimer = null;
+let remotePersona = null;
+
+function remoteImgs(root) {
+  return root && root.querySelectorAll ? Array.from(root.querySelectorAll('.mac-hoy-remote')) : [];
+}
+
+function stopRemotePoll() {
+  if (remoteTimer) { clearInterval(remoteTimer); remoteTimer = null; }
+}
+
+function paintRemoteError(root, alias) {
+  modo = 'hoy';
+  aplicarModo(root);
+  const msg = 'SIN CABLE\n' + String(alias || 'SILLA').toUpperCase().slice(0, 12);
+  lastText = msg;
+  tubos(root).forEach((t) => paintCrt(t, msg));
+}
+
+export function remoteSeat() { return remotePersona; }
+
+export function showRemote(persona, root = lastRoot || (typeof document !== 'undefined' ? document : null), fetchImpl = lastFetch) {
+  if (!root) return false;
+  lastRoot = root;
+  lastFetch = fetchImpl;
+  const alias = chairAlias(persona);
+  paraPong();
+  paraPaseo(root);
+  stopRemotePoll();
+  if (!alias) {
+    if (!visible) setVisible(true, root, fetchImpl);
+    paintRemoteError(root, persona);
+    return false;
+  }
+  remotePersona = alias;
+  modo = 'remote';
+  if (!visible) setVisible(true, root, fetchImpl);
+  else aplicarModo(root);
+  const tick = () => {
+    const url = SCREEN_JPEG + '?persona=' + encodeURIComponent(alias) + '&t=' + Date.now();
+    remoteImgs(root).forEach((img) => {
+      img.src = url;
+      img.alt = 'Pantalla de ' + alias;
+    });
+  };
+  remoteImgs(root).forEach((img) => {
+    img.onerror = () => { stopRemotePoll(); paintRemoteError(root, alias); };
+  });
+  tick();
+  remoteTimer = setInterval(tick, 2500);
+  return true;
+}
+
+export function clearRemote(root = lastRoot || (typeof document !== 'undefined' ? document : null), fetchImpl = lastFetch) {
+  stopRemotePoll();
+  remotePersona = null;
+  if (!root) return;
+  lastRoot = root;
+  lastFetch = fetchImpl;
+  if (modo === 'remote') {
+    modo = 'hoy';
+    aplicarModo(root);
+    if (visible) draw(root, fetchImpl);
+  }
+}
 
 export function closeFront(root = lastRoot || (typeof document !== 'undefined' ? document : null)) {
   focused = false;
@@ -444,11 +524,11 @@ export function setVisible(on, root = lastRoot || (typeof document !== 'undefine
   visible = !!on;
   if (prop) prop.classList.toggle('on', visible);
   if (btn) btn.classList.toggle('active', visible);
-  if (!visible) { modo = 'logo'; detalleIdx = 0; paraPong(); paraPaseo(root); aplicarModo(root); closeFront(root); }
+  if (!visible) { stopRemotePoll(); remotePersona = null; modo = 'logo'; detalleIdx = 0; paraPong(); paraPaseo(root); aplicarModo(root); closeFront(root); }
   if (visible) {
     fitScreen(root);              // oculto medía 0: el encaje se rehace al mostrarlo
-    draw(root, fetchImpl);
-    if (!beatTimer) beatTimer = setInterval(() => draw(lastRoot, lastFetch), 45000);
+    if (modo !== 'remote') draw(root, fetchImpl);
+    if (!beatTimer) beatTimer = setInterval(() => { if (modo !== 'remote') draw(lastRoot, lastFetch); }, 45000);
   } else if (beatTimer) {
     clearInterval(beatTimer);
     beatTimer = null;
@@ -557,7 +637,15 @@ export function boot(root = document, fetchImpl = fetch) {
 }
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-  window.MacHoy = { todayMadrid, isHoy, seatOf, linesFor, IDLE_COPY, ERROR_COPY, paintCrt, fetchHoy, boot, setVisible, toggle, isVisible, isFocused, openFront, closeFront, fitScreen, MAC_ART_W, MODOS, setModo, modoActual, detalleLineas, ultimaMision, ultimasMisiones, envolver, avanzaPantalla, alternaPong, paraPong, mandoPong, estadoPong, DETALLE_ANCHO };
-  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', () => boot());
-  else boot();
+  window.MacHoy = { todayMadrid, isHoy, seatOf, linesFor, IDLE_COPY, ERROR_COPY, paintCrt, fetchHoy, boot, setVisible, toggle, isVisible, isFocused, openFront, closeFront, fitScreen, MAC_ART_W, MODOS, setModo, modoActual, detalleLineas, ultimaMision, ultimasMisiones, envolver, avanzaPantalla, alternaPong, paraPong, mandoPong, estadoPong, DETALLE_ANCHO, chairAlias, CHAIR_ALIAS, SCREEN_JPEG, showRemote, clearRemote, remoteSeat };
+  const bootAndMaybeRemote = () => {
+    boot();
+    try {
+      const q = new URLSearchParams(location.search);
+      const who = q.get('examinar') || (location.hash.match(/^#examinar=(.+)$/i) || [])[1];
+      if (who) showRemote(decodeURIComponent(who));
+    } catch (_) {}
+  };
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', bootAndMaybeRemote);
+  else bootAndMaybeRemote();
 }

@@ -57,15 +57,36 @@
   const table=CouncilTable.mount({scene,generation,allowedOrigins:[location.origin,'https://macmini.tail48b61c.ts.net','https://fleet.admira.live'],onAction(action){if(action==='history')bridge.openHistory();}});
   const preview=window.CouncilPreview?.mount(document.getElementById('mac-scumm'));
   const composer=document.getElementById('action-input');
-  let draftPersona=null, drafts={};
+  let draftPersona=null, drafts={}, inlineComposer=null, mirroredValue=composer?.value||'';
+  const sendingDrafts=new Set();
   try{drafts=JSON.parse(sessionStorage.getItem('admira-grokbot-drafts')||'{}');if(!drafts||typeof drafts!=='object'||Array.isArray(drafts))drafts={};}catch(_){}
-  function saveDraft(){if(draftPersona&&composer){drafts[draftPersona]=composer.value;try{sessionStorage.setItem('admira-grokbot-drafts',JSON.stringify(drafts));}catch(_){}}}
-  function restoreDraft(name,text){if(!name)return;if(name===draftPersona){if(composer&&!composer.value)composer.value=text;saveDraft();}else{if(!drafts[name])drafts[name]=text;try{sessionStorage.setItem('admira-grokbot-drafts',JSON.stringify(drafts));}catch(_){}}}
-  function selectDraft(name){saveDraft();draftPersona=name;if(composer)composer.value=typeof drafts[name]==='string'?drafts[name]:'';}
+  function persistDrafts(){try{sessionStorage.setItem('admira-grokbot-drafts',JSON.stringify(drafts));}catch(_){}}
+  function syncComposer(){inlineComposer?.update({persona:draftPersona,value:typeof drafts[draftPersona]==='string'?drafts[draftPersona]:'',pending:sendingDrafts.has(draftPersona)});}
+  function saveDraft(){if(draftPersona&&composer&&composer.value!==mirroredValue){drafts[draftPersona]=composer.value;mirroredValue=composer.value;persistDrafts();}syncComposer();}
+  function writeDraft(value){if(!draftPersona)return;drafts[draftPersona]=value;if(composer){composer.value=value;mirroredValue=composer.value;}persistDrafts();syncComposer();}
+  function restoreDraft(name,text){
+    if(!name)return;
+    if(name===draftPersona){
+      saveDraft();writeDraft(drafts[name]?text+'\n'+drafts[name]:text);
+    }else{drafts[name]=drafts[name]?text+'\n'+drafts[name]:text;persistDrafts();}
+  }
+  function selectDraft(name){saveDraft();draftPersona=name;if(composer){composer.value=typeof drafts[name]==='string'?drafts[name]:'';mirroredValue=composer.value;}syncComposer();}
   composer?.addEventListener('input',saveDraft);
+  async function sendPreview(text){
+    const persona=draftPersona;
+    if(!persona||sendingDrafts.has(persona))return;
+    let prompt=text.trim();
+    if(!prompt&&bridge.hasAttachments(persona))prompt='Adjunto este archivo.';
+    if(!prompt)return;
+    sendingDrafts.add(persona);
+    writeDraft('');
+    let accepted=false;
+    try{accepted=await bridge.send(persona,prompt);}
+    finally{if(!accepted)restoreDraft(persona,text||prompt);sendingDrafts.delete(persona);syncComposer();}
+  }
 
   const bridge=CouncilGrokBot.mount({
-    container:preview?.chatHost||dock,mountInside:!!preview,onDraft(text){const input=document.getElementById('action-input');if(!input||input.value.trim())return false;input.value=text;saveDraft();input.focus();return true;},onOpenHistory(){preview?.open();},csrf:()=>window.admiraGateCsrf?.()||'',
+    container:preview?.chatHost||dock,mountInside:!!preview,onDraft(text){const input=document.getElementById('action-input');if(!input||input.value.trim())return false;writeDraft(text);if(inlineComposer)inlineComposer.focus();else input.focus();return true;},onOpenHistory(){preview?.open();},csrf:()=>window.admiraGateCsrf?.()||'',
     onSelect(persona){if(window.__consejoDeskPoll){clearInterval(window.__consejoDeskPoll);window.__consejoDeskPoll=null;}selectDraft(persona);activePersona=persona;preview?.select(persona);speech.select(persona||'');table.close();close({dismiss:false});},
     onPending({persona}){if(activePersona!==persona)return;dismissed=false;activeTurn=null;prepare(persona,'GrokBot');speech.begin({persona,turnId:'pending'});bubble.querySelector('.speech-text').textContent='Enviando al bot…';},
     onAnswer({persona,text,messageId,status}){if(activePersona===persona&&!dismissed)show(persona,'GrokBot',text,{animate:true,messageId,status});},
@@ -78,6 +99,11 @@
       else window.MacHoy?.showRemote(persona);
     }
   });
+  if(preview&&window.CouncilComposer){
+    const host=preview.chatHost.querySelector('.council-chat');
+    if(host)inlineComposer=CouncilComposer.mount({container:host,onInput:writeDraft,onSend:sendPreview});
+    syncComposer();
+  }
   window.CouncilInterface={
     select(persona){return bridge.select(persona);},
     has:persona=>bridge.has(persona),

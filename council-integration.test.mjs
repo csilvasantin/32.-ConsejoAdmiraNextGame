@@ -17,6 +17,7 @@ class Element {
     };
     this.children = []; this.lookup = new Map(); this.attributes = new Map();
     this.hidden = false; this.textContent = ''; this.scrollTop = 0; this.scrollHeight = 120;
+    this.value = ''; this.listeners = new Map();
     this.parentElement = null; this.className = ''; this.classes = new Set();
     this.classList = {
       add: value => this.classes.add(value),
@@ -49,10 +50,12 @@ class Element {
   querySelector(selector) { return this.lookup.get(selector) || null; }
   setAttribute(key, value) { this.attributes.set(key, value); }
   removeAttribute(key) { this.attributes.delete(key); }
+  addEventListener(type, callback) { this.listeners.set(type, callback); }
+  focus() {}
   getContext() { return null; } // Canvas rendering has its own tests; do not fake image data.
 }
 
-function harness() {
+function harness({withComposer=false,send=()=>true}={}) {
   let now = 0, sequence = 0, imageWidth = 1360;
   const frames = new Map(), observers = [], listeners = new Map();
   const body = new Element('body'), stage = new Element(), scene = new Element(), image = new Element('img');
@@ -70,12 +73,16 @@ function harness() {
     removeEventListener: event => listeners.delete(event)
   };
   const tables = [], begins = [], updates = [];
+  const input=new Element('input'), chat=new Element();
+  let composerOptions, composerState;
+  const originalGet=doc.getElementById;
+  if(withComposer)doc.getElementById=id=>id==='action-input'?input:originalGet(id);
   let bridgeOptions, selected = null;
   const personas = new Set(['Steve Jobs', 'Steve Wozniak', 'Walt Disney', 'George Lucas']);
   const bridge = {
     has: name => personas.has(name),
     select(name) { selected = personas.has(name) ? name : null; bridgeOptions.onSelect(selected); return true; },
-    send() { return true; }, openHistory() {}, get selected() { return selected; }
+    send, hasAttachments(){return false;}, openHistory() {}, get selected() { return selected; }
   };
   class ResizeObserver {
     constructor(fn) { observers.push(fn); }
@@ -95,6 +102,10 @@ function harness() {
       mount() { const table = { closes: 0, close() { this.closes++; }, show() {} }; tables.push(table); return table; }
     }
   });
+  if(withComposer){
+    context.CouncilPreview={mount(){return {chatHost:{querySelector:()=>chat},select(){},open(){}};}};
+    context.CouncilComposer={mount(options){composerOptions=options;return {update(state){composerState=state;},focus(){}};}};
+  }
   context.window = context;
   vm.runInContext(speechSource, context);
   const original = context.CouncilSpeech;
@@ -113,7 +124,8 @@ function harness() {
   const api = context.CouncilInterface;
   assert.ok(api, 'integration did not mount');
   return {
-    api, frames, begins, updates, tables, bubble, overlay, speaker, text, body, doc,
+    api, frames, begins, updates, tables, bubble, overlay, speaker, text, body, doc, input,
+    get composer(){return composerOptions;}, get composerState(){return composerState;},
     get events() { return bridgeOptions; },
     get state() { return api.speech.snapshot(); },
     step(ms = 40) { now += ms; const batch = [...frames.values()]; frames.clear(); for (const fn of batch) fn(now); },
@@ -223,4 +235,29 @@ test('resizing moves the existing bubble without replacing its text or speech tu
   assert.equal(h.bubble.parentElement.hidden, false);
   h.resize(1920);
   assert.equal(h.bubble.parentElement, h.overlay); assert.equal(h.state.token, token); assert.equal(h.text.textContent, prefix);
+});
+
+
+test('preview preserves multiline drafts across counsellors and mirrors CLI edits',()=>{
+ const h=harness({withComposer:true});h.api.select('Steve Jobs');
+ h.composer.onInput('línea uno\nlínea dos');assert.equal(h.input.value,'línea uno\nlínea dos');
+ h.api.select('Walt Disney');h.composer.onInput('Disney');h.api.select('Steve Jobs');
+ assert.equal(h.composerState.value,'línea uno\nlínea dos');
+ h.input.value='Cambio desde CLI';h.input.listeners.get('input')();
+ assert.equal(h.composerState.value,'Cambio desde CLI');
+});
+test('failed preview send restores only its recipient and preserves text typed meanwhile',async()=>{
+ let resolve;const sends=[];
+ const h=harness({withComposer:true,send:(persona,text)=>{sends.push({persona,text});return new Promise(r=>resolve=r);}});
+ h.api.select('Steve Jobs');h.composer.onInput('Primero');const pending=h.composer.onSend('Primero');
+ assert.equal(h.composerState.pending,true);await h.composer.onSend('Duplicado');assert.equal(sends.length,1);
+ h.composer.onInput('Segundo');h.api.select('Walt Disney');h.composer.onInput('Otro consejero');
+ resolve(false);await pending;assert.equal(h.composerState.value,'Otro consejero');
+ h.api.select('Steve Jobs');assert.equal(h.composerState.value,'Primero\nSegundo');assert.equal(h.composerState.pending,false);
+});
+test('accepted preview send clears submitted draft but keeps next draft',async()=>{
+ let resolve;const h=harness({withComposer:true,send:()=>new Promise(r=>resolve=r)});
+ h.api.select('Steve Jobs');h.composer.onInput('Enviar');const pending=h.composer.onSend('Enviar');
+ h.composer.onInput('Siguiente');resolve(true);await pending;
+ assert.equal(h.composerState.value,'Siguiente');assert.equal(h.composerState.pending,false);
 });

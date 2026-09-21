@@ -58,3 +58,17 @@ body.mouths-off .council-speech-mouth{display:none!important}
 .council-preview .council-chat__connection{width:100%;font-size:11px;color:#cabb96}
 
 .council-chat__attachments{padding:6px 8px;font:13px/1.5 system-ui,sans-serif;color:#eee2b5;flex:none}.council-chat__attachments button{margin-left:6px;font:12px system-ui,sans-serif}
+
+/* Keep writing visible while only the conversation scrolls. */
+.council-composer{flex:none;min-width:0;padding:7px 8px;background:#21180d;border-top:1px solid #8a6735}
+.council-composer textarea{display:block;box-sizing:border-box;width:100%;min-height:48px;max-height:140px;resize:vertical;border:1px solid #a7803c;border-radius:4px;padding:8px;color:#fff3cf;background:#110d08;font:15px/1.4 system-ui,sans-serif}
+.council-composer textarea:focus-visible{outline:2px solid #ffdf73;outline-offset:1px}
+.council-composer__footer{display:flex;align-items:center;justify-content:space-between;gap:6px;margin-top:5px}
+.council-composer__footer span{font:10px/1.3 system-ui,sans-serif;color:#c9ba9c}
+.council-composer button{flex:none;min-height:32px}.council-composer button:disabled{opacity:.55;cursor:wait}
+.council-preview:not(.is-expanded) .council-chat__status{max-height:32px;overflow:auto}
+.council-preview:not(.is-expanded) .council-chat__messages{min-height:0}
+.council-preview:not(.is-expanded) .council-composer textarea{height:48px;resize:none}
+.council-preview.is-expanded .council-composer{padding:10px 24px}
+.council-preview.is-expanded .council-composer textarea{min-height:76px;font-size:16px}
+.council-preview.is-expanded .council-chat__limits{display:none}

@@ -9,7 +9,9 @@
 .scumm-module-head .scumm-module-grip { cursor:grab; touch-action:none; text-align:left; flex:1; }
 .scumm-module-head .scumm-module-close { font:18px/1 monospace; min-width:28px; }
 .scumm-module-content { flex:1; min-height:0; min-width:0; display:flex; overflow:auto; align-items:stretch; }
-.scumm-module-content .verb-grid { flex:1 0 auto; align-content:center; }
+.scumm-module[data-module="verbos"] { container-type:inline-size; }
+.scumm-module-content .verb-grid { flex:1 1 0; min-width:0; align-content:center; grid-template-columns:repeat(3,minmax(0,1fr)); }
+.scumm-module-content .verb-btn { font-size:clamp(6px,2.6cqw,8px); padding-inline:clamp(2px,1.8cqw,8px); overflow-wrap:anywhere; }
 .scumm-module-content .verb-pager { flex:0 0 auto; }
 .verb-pager[hidden] { display:none!important; }
 .scumm-module-content .inventory { width:100%; min-width:0; box-sizing:border-box; border:0; flex:1; justify-content:center; }

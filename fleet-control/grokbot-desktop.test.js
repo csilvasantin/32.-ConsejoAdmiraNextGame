@@ -385,3 +385,14 @@ test('attachment IDs are owner-bound, participate in idempotence and reach only 
  await desktop.send(user,payload);assert.equal(calls.filter(x=>x.action==='send').length,1);
  await assert.rejects(desktop.send(user,body()),errorCode('message_id_conflict'));
 });
+
+test('native entry ids migrate old receipts without merging distinct same-minute messages',async t=>{
+ const legacy='ax_'+ 'c'.repeat(64);
+ let messages=[card('user','Primero',legacy)];
+ const {desktop}=setup(t,async()=>snapshot({messages}));
+ const first=await desktop.list(user,'Jobs');
+ messages=[{...card('user','Primero','native-one'),legacyKey:legacy},{...card('user','Segundo','native-two'),legacyKey:legacy}];
+ const migrated=await desktop.list(user,'Jobs');
+ assert.equal(migrated.length,2);assert.equal(migrated.find(m=>m.prompt==='Primero').id,first[0].id);
+ assert.equal((await desktop.list(user,'Jobs')).length,2);
+});

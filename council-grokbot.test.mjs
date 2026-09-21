@@ -409,3 +409,11 @@ test('uploads remain with their adviser across switches and block concurrent upl
  await h.api.select('Steve Jobs');assert.equal(await h.api.send('Steve Jobs','Adjunto de prueba'),true);
  assert.deepEqual(h.posts[0].body.attachments,['ga_test']);assert.equal(h.api.hasAttachments('Steve Jobs'),false);h.api.destroy();
 });
+
+test('native result links are clickable without interpreting HTML or executable schemes',async()=>{
+ const h=harness();h.histories.set('Steve Jobs',[message({text:'Resultado https://example.test/result.pdf. <img src=x onerror=evil()> javascript:evil()'})]);
+ await h.api.select('Steve Jobs');
+ const links=h.doc.nodes.filter(n=>n.tagName==='A'&&n.href);
+ assert.ok(links.length>0);assert.ok(links.every(n=>n.href==='https://example.test/result.pdf'&&n.rel==='noopener noreferrer'));
+ assert.match(h.log.textContent,/<img src=x onerror=evil\(\)> javascript:evil\(\)/);h.api.destroy();
+});

@@ -26,7 +26,7 @@ export function seatOf(mission) {
 
 export const IDLE_COPY = 'HOY\n…';
 export const ERROR_COPY = 'HOY\nsin cable';
-export const SCREEN_JPEG = 'https://macmini.tail48b61c.ts.net/demo/grokbot-sync/screen.jpg';
+export const SCREEN_JPEG = 'https://fleet.admira.live/api/grokbot/screen.jpg';
 export const CHAIR_ALIAS = {
   'Steve Jobs': 'Jobs', Jobs: 'Jobs',
   'Steve Wozniak': 'Wozniak', Wozniak: 'Wozniak',

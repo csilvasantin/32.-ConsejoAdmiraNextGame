@@ -17,3 +17,10 @@ test('reject traversal, reserved names, invalid payloads and symlink substitutio
  const a=store.put('owner',file),b=store.get('owner',a.id);fs.unlinkSync(b.path);fs.symlinkSync(path.join(dir,'other'),b.path);
  assert.throws(()=>store.get('owner',a.id));
 });
+
+test('accepts the documented 4 MB limit and rejects a byte beyond it',t=>{
+ const {store}=setup(t),data=Buffer.alloc(4*1024*1024,97);
+ const a=store.put('owner',{name:'limite.txt',type:'text/plain',data:data.toString('base64')});
+ assert.equal(store.get('owner',a.id).size,data.length);
+ assert.throws(()=>store.put('owner',{name:'grande.txt',type:'text/plain',data:Buffer.concat([data,Buffer.from('x')]).toString('base64')}),/attachment_too_large/);
+});

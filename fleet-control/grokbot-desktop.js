@@ -115,6 +115,7 @@ function parseSnapshot(value, now) {
   const messages = value.messages.map(message => {
     if (!message || !['user','assistant','event'].includes(message.sender) || typeof message.text !== 'string' || message.text.length > 200000 || typeof message.key !== 'string' || !message.key || message.key.length > 2048) throw new DesktopBridgeError(503, 'desktop_invalid_snapshot');
     return {sender:message.sender, text:message.text, key:message.key,
+      legacyKey:typeof message.legacyKey==='string'&&/^ax_[a-f0-9]{64}$/.test(message.legacyKey)?message.legacyKey:null,
       label:typeof message.label === 'string' ? message.label.slice(0,500) : '',
       time:typeof message.time === 'string' ? message.time.slice(0,200) : ''};
   });
@@ -208,6 +209,10 @@ function createGrokBotDesktop({environment = process.env, runNative, now = Date.
         const current = groups[index], userKey = current.user?.key;
         const keys = [userKey, ...current.assistants.map(item => item.key)].filter(Boolean);
         let entry = rows().find(row => userKey && row.nativeUserKey === userKey);
+        if(!entry&&current.user?.legacyKey){
+          const old=rows().filter(row=>row.nativeUserKey===current.user.legacyKey&&normalized(row.prompt)===normalized(current.user.text));
+          if(old.length===1)entry=old[0];
+        }
         if (!entry) entry = rows().find(row => row.nativeKeys.some(key => keys.includes(key)) && (!userKey || !row.nativeUserKey || row.nativeUserKey === userKey));
         if (!entry && !current.user) {
           // A viewport can begin at a growing assistant card. Older helpers use

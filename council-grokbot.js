@@ -46,6 +46,18 @@
     function merge(rows){
       for(const alias of Object.values(PEOPLE)) histories.set(alias,reconcile(histories.get(alias),rows.filter(r=>r?.persona===alias)));
     }
+    function appendText(node,text){
+      // Native output is untrusted text. Link only explicit HTTP(S) URLs,
+      // without HTML parsing or executable/custom URL schemes.
+      const re=/https?:\/\/[^\s<>"']+/g;let offset=0;
+      for(const match of text.matchAll(re)){
+        const url=match[0].replace(/[.,;!?)+\]}]+$/,'');
+        node.append(doc.createTextNode(text.slice(offset,match.index)));
+        const link=doc.createElement('a');link.href=url;link.target='_blank';link.rel='noopener noreferrer';link.textContent=url;node.append(link);
+        offset=match.index+url.length;
+      }
+      node.append(doc.createTextNode(text.slice(offset)));
+    }
     function render(){
       if(destroyed)return;
       const oldTop=log.scrollTop;
@@ -68,7 +80,7 @@
           }
           if(row.text){
             const reply=doc.createElement('p');reply.className='council-chat__reply';
-            const botName=doc.createElement('strong');botName.textContent=FULL[row.persona];reply.append(botName,doc.createTextNode(row.text));item.append(reply);
+            const botName=doc.createElement('strong');botName.textContent=FULL[row.persona];reply.append(botName);appendText(reply,row.text);item.append(reply);
           }
           for(const file of row.attachments||[]){const p=doc.createElement('p');p.className='council-chat__file';p.textContent='📎 '+file.name;item.append(p);}
           const meta=doc.createElement('span');meta.className='council-chat__meta';meta.textContent=LABELS[row.status] || 'Estado pendiente';item.append(meta);log.append(item);
@@ -316,7 +328,7 @@
     }
     function operationButton(label,fn){const b=doc.createElement('button');b.type='button';b.textContent=label;b.addEventListener('click',async()=>{b.disabled=true;try{await fn();}finally{b.disabled=false;}});return b;}
     async function showRoutines(){
-      const data=await control('routines');if(!data||!operations)return;
+      const data=await control('routines');if(!data||!operations)return;say('Rutinas de '+selected+' leídas de GrokBot.');
       operations.hidden=false;operations.replaceChildren();
       operations.append(operationButton('Cerrar rutinas',()=>{operations.hidden=true;}),operationButton('Crear rutina…',()=>prepareRoutine('Crea una rutina: ')));
       if(data.routines===null){const p=doc.createElement('p');p.textContent='El panel de rutinas no está disponible ahora.';operations.append(p);return;}
@@ -327,6 +339,7 @@
       }
     }
     function showRoutine(item){
+      say('Rutina '+item.name+' · '+(item.paused?'pausada':'activa'));
       operations.hidden=false;operations.replaceChildren();
       const title=doc.createElement('strong');title.textContent=item.name;
       const content=doc.createElement('p');content.textContent=item.instruction;

@@ -25,6 +25,7 @@ struct Message: Codable {
     let time: String
     let text: String
     let key: String
+    var legacyKey: String? = nil
 }
 struct Routine: Codable {
     let id: String
@@ -39,9 +40,9 @@ struct RoutineDetail: Codable {
     let revision: String
 }
 func routineItems(_ root: Node, persona: String) -> [Routine]? {
-    let lists = root.descendants().filter { $0.label == "Rutinas" && $0.role != "AXStaticText" && $0.children.contains(where: { $0.role == "AXButton" }) }
+    let lists = root.descendants().filter { $0.label == "Rutinas" && $0.role != "AXStaticText" }
     guard lists.count == 1 else { return nil }
-    return lists[0].children.filter { $0.role == "AXButton" }.compactMap { button in
+    return lists[0].descendants().filter { $0.role == "AXButton" }.compactMap { button in
         let texts = button.descendants().filter { $0.role == "AXStaticText" }.map { $0.label }.filter { !$0.isEmpty }
         guard let name = texts.first else { return nil }
         return Routine(id: hash(persona + "\0" + name), name: name, schedule: texts.dropFirst().joined(separator: " "))
@@ -233,7 +234,13 @@ func parseMessages(_ transcript: Node, persona: String, observedAt: Date = Date(
             // Do not hash the streaming text: updating an answer must update its
             // existing row. Day+native card label+time survive viewport changes.
             let identity = [persona, sender, day, label, time].joined(separator: "\u{0}")
-            result.append(Message(sender: sender, label: label, time: messageTimestamp(day: day, time: time), text: text, key: "ax_" + hash(identity)))
+            let legacyKey = "ax_" + hash(identity)
+            let nativeIDs = node.descendants().map { $0.domID }.filter { $0.hasPrefix("sand-") && $0.contains("-entry-") && $0.hasSuffix("-timestamp") }
+            let nativeID = Set(nativeIDs).count == 1 ? nativeIDs.first : nil
+            // GrokBot's timestamp DOM id contains its persistent entry id. It
+            // separates two messages in the same minute without hashing text.
+            let key = nativeID.map { "ax_" + hash(persona + "\0" + $0) } ?? legacyKey
+            result.append(Message(sender: sender, label: label, time: messageTimestamp(day: day, time: time), text: text, key: key, legacyKey: key == legacyKey ? nil : legacyKey))
             return
         }
         node.children.forEach(visit)
@@ -390,7 +397,7 @@ final class GrokAX {
         var ctx = try read()
         guard ctx.snapshot.selectedPersona == persona else { throw BridgeError(code: "persona_not_selected") }
         if ctx.snapshot.routines != nil { return ctx }
-        if let back = ctx.root.descendants().first(where: { $0.role == "AXButton" && $0.label == "Volver a Rutinas" }) {
+        if let back = ctx.root.descendants().first(where: { $0.role == "AXButton" && ["Volver a Rutinas", "Volver a los detalles"].contains($0.label) }) {
             try press(back)
         } else {
             let buttons = ctx.pane.descendants().filter { $0.role == "AXButton" && $0.label == "Ver detalles de la conversación" }
@@ -408,13 +415,13 @@ final class GrokAX {
     func routine(_ persona: String, id: String, paused: Bool?, revision: String?) throws -> Snapshot {
         let ctx = try routineList(persona)
         guard let item = ctx.snapshot.routines?.first(where: { $0.id == id }) else { throw BridgeError(code: "routine_not_found") }
-        let cards = ctx.root.descendants().filter { $0.role == "AXButton" && $0.children.contains(where: { $0.role == "AXStaticText" && $0.label == item.name }) }
+        let cards = ctx.root.descendants().filter { $0.role == "AXButton" && $0.descendants().contains(where: { $0.role == "AXStaticText" && $0.label == item.name }) }
         guard cards.count == 1 else { throw BridgeError(code: "routine_controls_unavailable") }
         try press(cards[0])
         func detail() throws -> (Context, RoutineDetail, Node) {
             let current = try read()
             guard current.snapshot.selectedPersona == persona else { throw BridgeError(code: "persona_not_selected") }
-            let panels = current.root.descendants().filter { $0.description == item.name && $0.role == "AXGroup" }
+            let panels = current.root.descendants().filter { $0.label == item.name && $0.role == "AXGroup" }
             guard panels.count == 1 else { throw BridgeError(code: "routine_controls_unavailable") }
             let nodes = panels[0].descendants()
             let toggles = nodes.filter { $0.role == "AXButton" && ["Pausar", "Reanudar"].contains($0.label) }
@@ -424,8 +431,15 @@ final class GrokAX {
             let detail = RoutineDetail(id: id, name: item.name, instruction: instruction, paused: off, revision: hash(persona + "\0" + id + "\0" + instruction + "\0" + String(off)))
             return (current, detail, toggles[0])
         }
-        Thread.sleep(forTimeInterval: 0.25)
-        var (current, info, control) = try detail()
+        let detailDeadline = Date().addingTimeInterval(3)
+        var loaded: (Context, RoutineDetail, Node)? = nil
+        repeat {
+            Thread.sleep(forTimeInterval: 0.1)
+            do { loaded = try detail() } catch let error as BridgeError {
+                if error.code == "persona_not_selected" { throw error }
+            }
+        } while loaded == nil && Date() < detailDeadline
+        guard var (current, info, control) = loaded else { throw BridgeError(code: "routine_controls_unavailable") }
         if let desired = paused {
             if info.paused != desired {
                 guard revision == info.revision else { throw BridgeError(code: "routine_changed") }
@@ -617,7 +631,17 @@ func selfTests() throws {
     try expect(parsedRoutines?.count == 1 && parsedRoutines?.first?.schedule == "Cada día", "routine card parsing")
     try expect(parsedRoutines?.first?.id != routineItems(list, persona: "Steve Jobs")?.first?.id, "routine identity is bound to its adviser")
     try expect(routineItems(Node(), persona: "Walt Disney") == nil, "closed details are unavailable, not an empty routine list")
-    print("{\"ok\":true,\"tests\":18,\"mode\":\"pure-parsing-no-AX\"}")
+    let wrapped = Node(role: "AXList", title: "Rutinas", children: [Node(children: list.children)])
+    try expect(routineItems(wrapped, persona: "Walt Disney")?.count == 1, "routine wrapper and title supported")
+    try expect(routineItems(Node(role: "AXList", description: "Rutinas"), persona: "Walt Disney")?.count == 0, "empty routine list is available")
+    let first = card("Tú 23:18", "Tu mensaje", "Primero")
+    let second = card("Tú 23:18", "Tu mensaje", "Segundo")
+    first.children.append(Node(domID: "sand-message-entry-one-timestamp"))
+    second.children.append(Node(domID: "sand-message-entry-two-timestamp"))
+    let distinct = parseMessages(Node(children:[first,second]), persona:"Steve Jobs", observedAt:at)
+    try expect(distinct[0].key != distinct[1].key, "native IDs separate same-minute cards")
+    try expect(distinct[0].legacyKey == distinct[1].legacyKey, "legacy migration key retained")
+    print("{\"ok\":true,\"tests\":22,\"mode\":\"pure-parsing-no-AX\"}")
 }
 
 do {

@@ -16,8 +16,8 @@ function createAttachments(folder){
     if(!body||Object.keys(body).some(k=>!['name','type','data'].includes(k))||typeof body.name!=='string'||typeof body.data!=='string'||typeof body.type!=='string')throw new AttachmentError('invalid_attachment');
     const name=body.name.normalize('NFC');
     if(!name||name.length>160||name==='.'||name==='..'||name==='.metadata.json'||/[\\/\x00-\x1f\x7f]/.test(name))throw new AttachmentError('invalid_attachment_name');
-    if(body.data.length>Math.ceil(MAX_FILE/3)*4||!body.data||!/^([A-Za-z0-9+/]{4})*([A-Za-z0-9+/]{2}==|[A-Za-z0-9+/]{3}=)?$/.test(body.data))throw new AttachmentError('attachment_too_large');
-    const bytes=Buffer.from(body.data,'base64');if(!bytes.length||bytes.length>MAX_FILE)throw new AttachmentError('attachment_too_large');
+    if(body.data.length>Math.ceil(MAX_FILE/3)*4||!body.data||body.data.length%4!==0||!/^[A-Za-z0-9+/]*={0,2}$/.test(body.data))throw new AttachmentError('attachment_too_large');
+    const bytes=Buffer.from(body.data,'base64');if(bytes.toString('base64')!==body.data||!bytes.length||bytes.length>MAX_FILE)throw new AttachmentError('attachment_too_large');
     const id='ga_'+crypto.randomBytes(16).toString('hex');safeDir(folder,true);const dir=path.join(folder,id);safeDir(dir,true);
     const meta={id,name,type:body.type.slice(0,100),size:bytes.length,owner,sha256:crypto.createHash('sha256').update(bytes).digest('hex')};
     fs.writeFileSync(path.join(dir,name),bytes,{flag:'wx',mode:0o600});

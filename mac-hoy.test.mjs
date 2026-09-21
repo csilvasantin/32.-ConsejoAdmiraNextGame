@@ -334,7 +334,7 @@ test('FLT-100753: EXAMINAR mapea silla → JPEG GrokBot (Jobs/Wozniak)', () => {
   assert.equal(chairAlias('George Lucas'), 'Lucas');
   assert.equal(chairAlias('Walt Disney'), 'Disney');
   assert.equal(chairAlias('Neo'), null);
-  assert.match(SCREEN_JPEG, /grokbot-sync\/screen\.jpg/);
+  assert.match(SCREEN_JPEG, /fleet\.admira\.live\/api\/grokbot\/screen\.jpg/);
   assert.ok(CHAIR_ALIAS.Jobs && CHAIR_ALIAS.Wozniak);
   assert.match(html, /class="mac-hoy-remote"/);
   assert.match(html, /\.modo-remote \.mac-hoy-remote \{ display: block; \}/);

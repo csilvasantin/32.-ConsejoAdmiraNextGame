@@ -874,6 +874,16 @@ const server = http.createServer(async (req, res) => {
     if (!(await gate(req, res, ip))) return;
     try {
       if (url === '/api/grokbot/capabilities' && req.method === 'GET') return json(res,200,{ok:true,...await grokBotBridge.capabilities(req.fleetSession)});
+      // Passive JPEG proxy: same authenticated session, no native selection.
+      if (url === '/api/grokbot/screen.jpg' && req.method === 'GET') {
+        const persona=canonicalPersona(requestUrl.searchParams.get('persona')||'');
+        if(!persona||!PERSONAS[persona])throw new BridgeError(400,'invalid_persona');
+        const frame=await fetch('http://127.0.0.1:3032/demo/consejo/desktop/'+encodeURIComponent(persona),{signal:AbortSignal.timeout(12000)});
+        if(!frame.ok)throw new BridgeError(503,'desktop_capture_unavailable');
+        const bytes=Buffer.from(await frame.arrayBuffer());
+        if(bytes.length<1000||bytes[0]!==0xff||bytes[1]!==0xd8)throw new BridgeError(503,'desktop_invalid_jpeg');
+        res.writeHead(200,{'Content-Type':'image/jpeg','Cache-Control':'no-store'});return res.end(bytes);
+      }
       if(url==='/api/grokbot/attachments'&&req.method==='POST'){
         if(!grokBotBridge.upload)throw new BridgeError(503,'desktop_attachments_unavailable');
         const raw=await readRawBody(req,6*1024*1024);

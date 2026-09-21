@@ -2,9 +2,9 @@
 
 Causa raíz adicional comprobada en `/tmp/demo-server.log`: una vista de Lucas refrescaba `/grokbot-sync/screen.jpg?persona=Lucas` cada 2,5 s. Cada JPEG ejecutaba `select`, robaba el chat a Jobs y competía por el bloqueo AX. Corregido en AdmiraNext-Team, commit `ffe9e04`: seleccionar solo al abrir la vista (JSON), JPEG pasivo, caché por consejero y ninguna imagen de otro chat etiquetada con el nombre solicitado. Instalado en el servicio `com.admiranext.demo-server`.
 
-MacHoy solicita esa apertura una vez antes de pintar sus 3 CRT; los refrescos ya no seleccionan. Se descartan aperturas tardías cuando cambia el consejero.
+MacHoy solicita esa apertura una vez por POST autenticado a Fleet (`/api/grokbot/selection`, cookie + CSRF) antes de pintar sus 3 CRT; los refrescos ya no seleccionan. Se descartan aperturas tardías cuando cambia el consejero.
 
-Prueba autorizada enviada una sola vez y confirmada por tarjeta nativa `gb_742e0a00a8419ea39df4eb7aba8336eb005d42ddb01a09b2`, respuesta literal de Jobs **CONEXIÓN OK**, visible también en admira.live. Antes de corregir el capturador fue necesario volver a abrir Jobs para que el puente observara la respuesta. La verificación final debe comprobar que ya no vuelve a Lucas por los JPEG antiguos.
+Prueba autorizada enviada una sola vez y confirmada por tarjeta nativa `gb_742e0a00a8419ea39df4eb7aba8336eb005d42ddb01a09b2`, respuesta literal de Jobs **CONEXIÓN OK**, visible también en admira.live. Antes de corregir el capturador fue necesario volver a abrir Jobs para que el puente observara la respuesta. Verificación final completada: los JPEG antiguos de Lucas siguieron entrando cada 2,5 s y el chat se mantuvo en Jobs con «Sincronización activa». Examinar sigue mostrando las tres pantallas con ajuste contain. Publicado `adcd1f3`, v.21.09.2026.r13.18:28. 105 pruebas JavaScript y 1 prueba Python pasan.
 
 ## 21 septiembre 2026 — Chat nativo GrokBot: reconexión y diagnóstico (OraculoMacMini)
 
@@ -14,7 +14,7 @@ Causas verificadas: el ejecutable AX devuelve JSON de error con exit 1 y Node de
 
 Corregido: conservar solo rechazos estructurados del helper (nunca dar éxito a un proceso fallido), diagnóstico público por códigos permitidos sin texto privado, reconectar al pulsar Enviar, esperar selección, conservar texto no enviado. El polling no cambia de consejero ni reenvía mensajes. El Mac Mini ejecuta la copia actualizada de `fleet-control/grokbot-desktop.js`; respaldo previo `/tmp/grokbot-desktop-before-20260921.js`. El helper firmado y los permisos no se modifican.
 
-Prueba real autorizada por Carlos: «Prueba de conexión de admira.live: responde solo CONEXIÓN OK, sin ejecutar ninguna tarea». Aún pendiente de recepción confirmada al escribir este hito; los intentos iniciales no generaron reserva ni tarjeta nativa. GrokBot estaba en Lucas y más tarde con un borrador del usuario; no se altera el borrador. No afirmar paridad completa: el adaptador actual integra texto e historial observado, no adjuntos/aprobaciones/rutinas.
+Prueba real autorizada por Carlos: «Prueba de conexión de admira.live: responde solo CONEXIÓN OK, sin ejecutar ninguna tarea». Recepción y respuesta verificadas en el hito superior; los intentos iniciales no generaron reserva ni tarjeta nativa. GrokBot estaba en Lucas y más tarde con un borrador del usuario; no se altera el borrador. No afirmar paridad completa: el adaptador actual integra texto e historial observado, no adjuntos/aprobaciones/rutinas.
 
 # Relevo actual — encaje remoto de los Mac · 21 septiembre 2026
 

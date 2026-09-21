@@ -449,7 +449,7 @@ function createGrokBotDesktop({environment = process.env, runNative, now = Date.
     owner(session);requireConfigured();
     return serial(async()=>{
       try { return await remoteDesktop.handle(session,body); }
-      catch(error){if(error instanceof RemoteError)throw new DesktopBridgeError(error.status,error.code);throw error;}
+      catch(error){if(error instanceof RemoteError){diagnose(error.code);throw new DesktopBridgeError(error.status,error.code);}throw error;}
     });
   }
   function start() {

@@ -17,3 +17,6 @@ La captura usa ScreenCaptureKit sobre la ventana concreta, incluida cuando está
 El visor llena la ventana al abrirse. La pantalla completa nativa se activa con su botón, para evitar que un cambio de Space oculte GrokBot al probar desde el mismo Mac.
 
 Regresión cubierta: seleccionar Disney desde una conversación de Jobs conserva Disney al cambiar a Escritorio; el evento de modo logo ya no recupera el consejero anterior.
+
+La ventana se valida por consejero, proceso y geometría de Accesibilidad y WindowServer. Ante un fallo transitorio de captura, el visor pausa los controles y vuelve a leer hasta dos veces; las entradas nunca se reenvían automáticamente.
+Verificación CUA con Disney: menú contextual por clic derecho, cierre por clic izquierdo, Ctrl+F y texto ULTRA PRUEBA en el buscador local.

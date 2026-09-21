@@ -43,10 +43,10 @@ export function openRemote(){
   overlay.querySelector('strong').textContent='Ultradetalle · '+persona;
   document.body.append(overlay);document.body.style.overflow='hidden';document.documentElement.style.overflow='hidden';
   const stage=overlay.querySelector('.mac-ultra__stage'),img=stage.querySelector('img'),hint=stage.querySelector('p'),status=overlay.querySelector('[role="status"]'),form=overlay.querySelector('form');
-  let token=null,frame=null,closed=false,ready=false,timer=null,generation=0,queue=Promise.resolve(),queued=0,enteredFullscreen=false,drag=null,suppressClick=false,textBuffer='',textTimer=null;
+  let token=null,frame=null,closed=false,ready=false,timer=null,generation=0,queue=Promise.resolve(),queued=0,enteredFullscreen=false,frameFailures=0,recovering=false,drag=null,suppressClick=false,textBuffer='',textTimer=null;
   const controllers=new Set();
   const say=text=>{status.textContent=text;};
-  function fail(error){ready=false;clearTimeout(timer);const message=MESSAGES[error.code]||'No se pudo conectar con el escritorio. Pulsa Reconectar.';say(message);hint.textContent=message;hint.hidden=false;}
+  function fail(error){ready=false;recovering=false;clearTimeout(timer);const message=MESSAGES[error.code]||'No se pudo conectar con el escritorio. Pulsa Reconectar.';say(message);hint.textContent=message;hint.hidden=false;}
   async function request(body){
     const ctl=new AbortController();controllers.add(ctl);const timeout=setTimeout(()=>ctl.abort(),20000);
     try{
@@ -58,17 +58,22 @@ export function openRemote(){
     if(closed||version!==generation)return;
     const next=new Image();next.src='data:image/jpeg;base64,'+data.frame.jpeg;
     await next.decode();if(closed||version!==generation)return;
-    img.src=next.src;frame=data.frame;ready=true;hint.hidden=true;say('Conectado · ratón y teclado activos');
+    img.src=next.src;frame=data.frame;ready=true;recovering=false;frameFailures=0;hint.hidden=true;say('Conectado · ratón y teclado activos');
   }
-  function schedule(){clearTimeout(timer);if(!closed&&ready)timer=setTimeout(refresh,1000);}
+  function schedule(){clearTimeout(timer);if(!closed&&(ready||recovering))timer=setTimeout(refresh,1000);}
   async function refresh(){
-    if(closed||!token||!ready)return;
+    if(closed||!token||(!ready&&!recovering))return;
     if(queued){schedule();return;}
     const version=generation;
-    try{await paint(await request({action:'frame',token}),version);schedule();}catch(error){if(!closed&&version===generation)fail(error);}
+    try{await paint(await request({action:'frame',token}),version);schedule();}catch(error){
+      if(closed||version!==generation)return;
+      const transient=['remote_window_unavailable','remote_capture_failed','remote_computer_unavailable','remote_capture_unavailable'].includes(error.code);
+      if(transient&&++frameFailures<=2){ready=false;recovering=true;say('Recuperando imagen… controles en pausa');schedule();}
+      else fail(error);
+    }
   }
   async function connect(){
-    const version=++generation;ready=false;clearTimeout(timer);hint.hidden=false;hint.textContent='Conectando con GrokBot…';say('Conectando…');
+    const version=++generation;ready=false;recovering=false;frameFailures=0;clearTimeout(timer);hint.hidden=false;hint.textContent='Conectando con GrokBot…';say('Conectando…');
     try{const data=await request({action:'open',persona});if(closed||version!==generation)return;token=data.token;await paint(data,version);stage.focus({preventScroll:true});schedule();}catch(error){if(!closed&&version===generation)fail(error);}
   }
   function send(event){

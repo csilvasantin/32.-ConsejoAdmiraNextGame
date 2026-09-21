@@ -464,14 +464,14 @@ final class GrokAX {
         return try read().snapshot
     }
     func applicationTree() throws -> Node { try Reader().read(app) }
-    func waitNode(_ predicate: (Node) -> Bool) throws -> Node {
+    func waitNode(_ step: String, _ predicate: (Node) -> Bool) throws -> Node {
         let until = Date().addingTimeInterval(5)
         repeat {
             let nodes = try applicationTree().descendants().filter(predicate)
             if nodes.count == 1 { return nodes[0] }
             Thread.sleep(forTimeInterval: 0.1)
         } while Date() < until
-        throw BridgeError(code: "attachment_control_unavailable")
+        throw BridgeError(code: "attachment_" + step + "_unavailable")
     }
     var keyFlags: CGEventFlags = []
     func key(_ code: CGKeyCode, down: Bool) throws {
@@ -494,22 +494,22 @@ final class GrokAX {
               ((attrs[.posixPermissions] as? NSNumber)?.intValue ?? 0777) & 0077 == 0 else { throw BridgeError(code: "invalid_attachment_path") }
         let initial = try read()
         guard initial.snapshot.selectedPersona == persona, !initial.snapshot.composerHasDraft, !initial.snapshot.busy else { throw BridgeError(code: "selection_or_draft_changed") }
-        let controls = initial.pane.descendants().filter { ["AXButton", "AXPopUpButton"].contains($0.role) && $0.label == "Adjuntar archivo" }
-        guard controls.count == 1 else { throw BridgeError(code: "attachment_control_unavailable") }
+        let controls = initial.pane.descendants().filter { ["AXButton", "AXPopUpButton", "AXMenuButton"].contains($0.role) && $0.label == "Adjuntar archivo" }
+        guard controls.count == 1 else { throw BridgeError(code: "attachment_button_unavailable") }
         try press(controls[0])
-        let attachItem = try waitNode { $0.label == "Adjuntar archivos" && $0.role != "AXStaticText" }
+        let attachItem = try waitNode("menu") { $0.label == "Adjuntar archivos" && $0.role != "AXStaticText" }
         try press(attachItem)
-        _ = try waitNode { $0.domID == "open-panel" }
+        _ = try waitNode("picker") { $0.domID == "open-panel" }
         // Target this application, never the foreground app. Release modifiers
         // on every path; all subsequent actions are on the verified native panel.
         try key(55, down: true); try key(56, down: true)
         defer { try? key(56, down: false); try? key(55, down: false) }
         try key(5, down: true); try key(5, down: false)
         try key(56, down: false); try key(55, down: false)
-        let pathField = try waitNode { $0.domID == "PathTextField" }
+        let pathField = try waitNode("path") { $0.domID == "PathTextField" }
         guard let el=pathField.element, AXUIElementSetAttributeValue(el,kAXValueAttribute as CFString,file as CFString) == .success else { throw BridgeError(code: "attachment_control_unavailable") }
         try key(36, down: true); try key(36, down: false)
-        let open = try waitNode { $0.domID == "OKButton" && $0.enabled }
+        let open = try waitNode("open") { $0.domID == "OKButton" && $0.enabled }
         try press(open)
         let until = Date().addingTimeInterval(8)
         repeat {

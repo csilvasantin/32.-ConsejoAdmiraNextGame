@@ -103,6 +103,7 @@
     }
     function errorMessage(error){
       if(error.code==='desktop_draft_present')return 'Hay un borrador en GrokBot. Guárdalo o envíalo allí y vuelve a seleccionar el consejero; no se ha cambiado el chat.';
+      if(error.code?.startsWith('desktop_attachment_')||error.code==='desktop_control_unavailable')return 'El archivo no llegó a prepararse en GrokBot; no se envió el mensaje. Se conservan el texto y el adjunto. Comprueba el compositor nativo antes de reintentar.';
       if(error.code==='desktop_busy')return 'GrokBot está ocupado. La sincronización volverá a intentarlo; no se reenviará ningún mensaje.';
       const explanations={
         desktop_attachments_unavailable:'El puente aún no admite adjuntos. Se conserva el archivo; no se envía por otro modelo.',
@@ -274,7 +275,7 @@
           render();report(canonical,selectedEpoch);schedule(selectedEpoch);
         }
       }catch(e){
-        if(['invalid_attachment','attachment_not_found','attachment_changed','desktop_attachments_unavailable','desktop_draft_present','desktop_busy','desktop_not_configured','desktop_owner_required','desktop_unavailable','desktop_timeout','desktop_read_failed','desktop_accessibility_required','desktop_application_not_running','desktop_selection_mismatch'].includes(e.code) || e.status===401)submitted=false;
+        if(e.code?.startsWith('desktop_attachment_')||e.code==='desktop_control_unavailable'||['invalid_attachment','attachment_not_found','attachment_changed','desktop_attachments_unavailable','desktop_draft_present','desktop_busy','desktop_not_configured','desktop_owner_required','desktop_unavailable','desktop_timeout','desktop_read_failed','desktop_accessibility_required','desktop_application_not_running','desktop_selection_mismatch'].includes(e.code) || e.status===401)submitted=false;
         if(current(epoch)){
           if(e.code==='desktop_draft_present')selectionReady=false;
           connection(false);const message=e.name==='AbortError'?'No se pudo confirmar el envío. Actualiza el historial antes de repetir.':errorMessage(e);

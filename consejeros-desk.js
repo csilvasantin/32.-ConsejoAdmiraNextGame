@@ -41,8 +41,10 @@
       "background:rgba(40,24,14,.7);color:#ffe9c4;border:1px solid rgba(230,200,140,.35);",
       "font-size:22px;line-height:1}",
     "#cd-desk .cd-x:hover{background:#3a2410;border-color:#e8c547;color:#fff}",
-    "#cd-desk .cd-grid{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;",
-      "gap:clamp(12px,2.4vw,28px);padding:18px 22px 28px;align-items:center;justify-items:center}",
+    "#cd-desk .cd-wall{flex:1;min-height:0;position:relative;background:#120c08}",
+    "#cd-desk .cd-wall img{width:100%;height:100%;object-fit:cover;object-position:center;display:block}",
+    "#cd-desk .cd-legend{position:absolute;left:18px;bottom:16px;padding:8px 12px;border-radius:10px;",
+      "background:rgba(12,8,5,.62);color:#ffe9c4;font-size:12px;letter-spacing:.2px}",
     "#cd-desk .cd-seat{width:min(100%,520px);margin:0;display:flex;flex-direction:column;align-items:center;gap:10px}",
     "#cd-desk .cd-mba{width:100%;filter:drop-shadow(0 14px 22px rgba(0,0,0,.45))}",
     "#cd-desk .cd-lid{background:var(--bezel);border-radius:14px 14px 8px 8px;padding:9px 9px 0;",
@@ -227,18 +229,17 @@
     ov.innerHTML =
       '<div class="cd-bar">' +
         '<div class="cd-titles">' +
-          '<h2 id="cd-desk-title">Escritorio · 4 MacBook Air</h2>' +
+          '<h2 id="cd-desk-title">Fondo de escritorio · 4 MacBook Air</h2>' +
           '<p class="cd-sub">Azul Jobs · Plata Wozniak · Rosa Lucas · Crema Disney</p>' +
           '<p class="cd-sum">aplicando fondos…</p>' +
         '</div>' +
         '<button type="button" class="cd-x" data-cd-close title="Cerrar (Esc)" aria-label="Cerrar">✕</button>' +
       '</div>' +
-      '<div class="cd-grid">' + CHAIRS.map(seatHtml).join("") + '</div>';
+      '<div class="cd-wall">' +
+        '<img src="/wallpapers/consejeros-4sillas.jpg" alt="Escritorio 4 MacBook Air · Azul Jobs · Plata Wozniak · Rosa Lucas · Crema Disney">' +
+        '<div class="cd-legend">Azul Jobs · Plata Wozniak · Rosa Lucas · Crema Disney</div>' +
+      '</div>';
     document.body.appendChild(ov);
-    CHAIRS.forEach(function (c) {
-      var img = qs('#cd-desk [data-seat="' + c.id + '"] img');
-      if (img) bindImg(img, c);
-    });
     ov.addEventListener("click", function (e) {
       var t = e.target && e.target.closest && e.target.closest("[data-cd-close]");
       if (t) closeDesk();

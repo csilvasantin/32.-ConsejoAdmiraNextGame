@@ -1,0 +1,87 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<title>Consejeros 4 sillas</title>
+<style>
+  html,body{margin:0;width:1920px;height:1080px;overflow:hidden;background:#1a140e}
+  .desk{
+    width:1920px;height:1080px;position:relative;
+    background:
+      radial-gradient(90% 70% at 50% 0%, #3a2a18 0%, #1a120c 55%, #0c0907 100%);
+  }
+  .wood{
+    position:absolute;left:0;right:0;bottom:0;height:28%;
+    background:
+      repeating-linear-gradient(90deg, #5a3a22 0 28px, #4a2e1a 28px 56px),
+      linear-gradient(180deg,#6a4630,#3a2418);
+    box-shadow:inset 0 18px 40px rgba(0,0,0,.35);
+    z-index:0
+  }
+  .title{
+    position:absolute;top:36px;left:0;right:0;text-align:center;
+    font:800 42px/1.1 -apple-system,BlinkMacSystemFont,sans-serif;color:#fff6e4;
+    letter-spacing:.4px;text-shadow:0 2px 12px rgba(0,0,0,.5)
+  }
+  .sub{
+    position:absolute;top:88px;left:0;right:0;text-align:center;
+    font:500 20px/1.3 -apple-system,sans-serif;color:#e8c547
+  }
+  .row{
+    position:absolute;left:40px;right:40px;top:140px;bottom:18%;
+    display:flex;gap:28px;align-items:flex-end;justify-content:center;
+    z-index:1;padding-bottom:12px
+  }
+  .seat{flex:1;max-width:440px;display:flex;flex-direction:column;align-items:center}
+  .mba{width:100%;filter:drop-shadow(0 18px 28px rgba(0,0,0,.5))}
+  .lid{border-radius:16px 16px 10px 10px;padding:10px 10px 0;background:var(--bezel);
+    box-shadow:inset 0 1px 0 rgba(255,255,255,.35)}
+  .cam{width:8px;height:8px;margin:0 auto 8px;border-radius:50%;background:#111}
+  .screen{aspect-ratio:16/10;background:#111;border-radius:4px;overflow:hidden}
+  .screen img{width:100%;height:100%;object-fit:cover;display:block}
+  .seat.disney img{transform:scale(1.4);transform-origin:center}
+  .chin{height:16px;border-radius:0 0 10px 10px;background:var(--bezel)}
+  .base{height:18px;margin:2px 12px 0;border-radius:0 0 12px 12px;
+    background:linear-gradient(180deg,#d0d2d6,#8e9196)}
+  .cap{margin-top:14px;text-align:center;color:#fff6e4;font:700 22px/1.2 -apple-system,sans-serif}
+  .cap small{display:block;margin-top:4px;font:500 15px/1.2 -apple-system,sans-serif;color:#d4b48a}
+</style>
+</head>
+<body>
+<div class="desk">
+  <div class="title">Escritorio · Consejo de Silicio</div>
+  <div class="sub">Azul Jobs · Plata Wozniak · Rosa Lucas · Crema Disney</div>
+  <div class="row">
+    <div class="seat">
+      <div class="mba" style="--bezel:#3b6ea5">
+        <div class="lid"><div class="cam"></div><div class="screen"><img src="../wallpapers/consejero-jobs.jpg" alt="Jobs"></div><div class="chin"></div></div>
+        <div class="base"></div>
+      </div>
+      <div class="cap">Jobs<small>MacBook Air Azul · CEO</small></div>
+    </div>
+    <div class="seat">
+      <div class="mba" style="--bezel:#c5c7cb">
+        <div class="lid"><div class="cam"></div><div class="screen"><img src="../wallpapers/consejero-wozniak.jpg" alt="Wozniak"></div><div class="chin"></div></div>
+        <div class="base"></div>
+      </div>
+      <div class="cap">Wozniak<small>MacBook Air Plata · CTO</small></div>
+    </div>
+    <div class="seat">
+      <div class="mba" style="--bezel:#d48aa8">
+        <div class="lid"><div class="cam"></div><div class="screen"><img src="../wallpapers/consejero-lucas.jpg" alt="Lucas"></div><div class="chin"></div></div>
+        <div class="base"></div>
+      </div>
+      <div class="cap">Lucas<small>MacBook Air Rosa · CSO</small></div>
+    </div>
+    <div class="seat disney">
+      <div class="mba" style="--bezel:#e6d5b8">
+        <div class="lid"><div class="cam"></div><div class="screen"><img src="../wallpapers/consejero-disney.jpg" alt="Disney"></div><div class="chin"></div></div>
+        <div class="base"></div>
+      </div>
+      <div class="cap">Disney<small>MacBook Air Crema · CCO</small></div>
+    </div>
+  </div>
+  <div class="wood"></div>
+</div>
+</body>
+</html>

@@ -72,3 +72,12 @@ body.mouths-off .council-speech-mouth{display:none!important}
 .council-preview.is-expanded .council-composer{padding:10px 24px}
 .council-preview.is-expanded .council-composer textarea{min-height:76px;font-size:16px}
 .council-preview.is-expanded .council-chat__limits{display:none}
+.council-preview:not(.is-expanded) .council-chat__toolbar{flex-wrap:nowrap;overflow-x:auto;white-space:nowrap;min-height:30px;max-height:40px;box-sizing:border-box}
+.council-preview:not(.is-expanded) .council-chat__toolbar>*{flex-shrink:0}
+.council-preview:not(.is-expanded) .council-chat__connection{display:none}
+.council-preview:not(.is-expanded) .council-chat__toolbar button,.council-preview:not(.is-expanded) .council-chat__native{padding:4px 6px;font:11px/1.4 system-ui,sans-serif}
+.council-preview:not(.is-expanded) .council-composer{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;padding:5px}
+.council-preview:not(.is-expanded) .council-composer__footer{margin:0}
+.council-preview:not(.is-expanded) .council-composer__footer span{display:none}
+.council-preview:not(.is-expanded) .council-composer button{min-height:44px;font:12px/1.4 system-ui,sans-serif;padding:5px}
+.council-preview:not(.is-expanded) .council-chat__operations{max-height:25%;flex-shrink:1}

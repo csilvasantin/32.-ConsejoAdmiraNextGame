@@ -7,11 +7,14 @@
   if (window.openConsejerosDesk) return;
 
   var API = "https://macmini.tail48b61c.ts.net/demo/wallpaper/mode";
+  var API_CAPTURAS = "https://macmini.tail48b61c.ts.net/demo/wallpaper/capturas";
   var STYLE_ID = "cd-desk-style";
   var OV_ID = "cd-desk";
   var posting = false;
   var postedOpen = false;
+  var capturing = false;
   var gen = 0;
+  var capGen = 0;
 
   var CHAIRS = [
     { id: "jobs",    name: "Jobs",    role: "CEO", chair: "Azul",  bezel: "#3b6ea5", key: "azul",
@@ -45,7 +48,10 @@
     "#cd-desk .cd-wall img{width:100%;height:100%;object-fit:cover;object-position:center;display:block}",
     "#cd-desk .cd-legend{position:absolute;left:18px;bottom:16px;padding:8px 12px;border-radius:10px;",
       "background:rgba(12,8,5,.62);color:#ffe9c4;font-size:12px;letter-spacing:.2px}",
-    "#cd-desk .cd-seat{width:min(100%,520px);margin:0;display:flex;flex-direction:column;align-items:center;gap:10px}",
+    "#cd-desk .cd-stage{flex:1;min-height:0;display:flex;flex-direction:column;padding:8px 18px 16px}",
+    "#cd-desk .cd-grid{flex:1;min-height:0;display:grid;grid-template-columns:1fr 1fr;grid-template-rows:1fr 1fr;",
+      "gap:10px 22px;align-items:center;justify-items:center}",
+    "#cd-desk .cd-seat{width:min(100%,560px);margin:0;display:flex;flex-direction:column;align-items:center;gap:8px}"
     "#cd-desk .cd-mba{width:100%;filter:drop-shadow(0 14px 22px rgba(0,0,0,.45))}",
     "#cd-desk .cd-lid{background:var(--bezel);border-radius:14px 14px 8px 8px;padding:9px 9px 0;",
       "box-shadow:inset 0 1px 0 rgba(255,255,255,.35),inset 0 -1px 0 rgba(0,0,0,.25)}",
@@ -53,7 +59,6 @@
       "background:#1a1a1a;box-shadow:inset 0 0 0 1.5px rgba(0,0,0,.35),0 0 0 1px rgba(255,255,255,.15)}",
     "#cd-desk .cd-screen{background:#0b0b0b;border-radius:4px;overflow:hidden;aspect-ratio:16/10;position:relative}",
     "#cd-desk .cd-screen img{width:100%;height:100%;object-fit:cover;object-position:center;display:block;background:#111}",
-    "#cd-desk [data-seat=\"disney\"] img{transform:scale(1.42);transform-origin:center center}",
     "#cd-desk .cd-chin{height:14px;border-radius:0 0 8px 8px;background:var(--bezel);",
       "box-shadow:inset 0 1px 0 rgba(0,0,0,.18)}",
     "#cd-desk .cd-base{height:16px;margin:1px 10px 0;border-radius:0 0 11px 11px;",
@@ -235,16 +240,75 @@
         '</div>' +
         '<button type="button" class="cd-x" data-cd-close title="Cerrar (Esc)" aria-label="Cerrar">✕</button>' +
       '</div>' +
-      '<div class="cd-wall">' +
-        '<img src="/wallpapers/consejeros-4sillas.jpg" alt="Escritorio 4 MacBook Air · Azul Jobs · Plata Wozniak · Rosa Lucas · Crema Disney">' +
-        '<div class="cd-legend">Azul Jobs · Plata Wozniak · Rosa Lucas · Crema Disney</div>' +
-      '</div>';
+      '<div class="cd-stage"><div class="cd-grid">' + CHAIRS.map(seatHtml).join("") + "</div></div>";
     document.body.appendChild(ov);
+    CHAIRS.forEach(function (c) {
+      var img = qs('#cd-desk [data-seat="' + c.id + '"] .cd-screen img');
+      if (img) bindImg(img, c);
+    });
     ov.addEventListener("click", function (e) {
       var t = e.target && e.target.closest && e.target.closest("[data-cd-close]");
       if (t) closeDesk();
     });
     return ov;
+  }
+
+  function setConsejerosCaptures(shots) {
+    shots = shots || {};
+    var ok = 0;
+    CHAIRS.forEach(function (c) {
+      var src = shots[c.id] || shots[c.key] || shots[c.chair.toLowerCase()];
+      var img = qs('#cd-desk [data-seat="' + c.id + '"] .cd-screen img');
+      if (src && img) {
+        img.setAttribute("data-live", "1");
+        img.src = src.indexOf("data:") === 0 || src.indexOf("http") === 0 || src.charAt(0) === "/"
+          ? src
+          : "data:image/jpeg;base64," + src;
+        setBadge(c.id, "captura limpia", "ok");
+        ok++;
+      }
+    });
+    setSummary("capturas " + ok + "/4 · sin iconos ni ventanas");
+    return ok;
+  }
+
+  function captureLive() {
+    if (capturing) return;
+    capturing = true;
+    var my = ++capGen;
+    resetBadges("capturando", "wait");
+    setSummary("despejando escritorios y capturando las 4 sillas…");
+    fetch(API_CAPTURAS, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ capturar: true, only_ids: [] }),
+      mode: "cors",
+      credentials: "omit",
+      signal: timeoutSignal(70000)
+    }).then(function (res) {
+      return res.json().catch(function () { return {}; });
+    }).then(function (data) {
+      if (my !== capGen) return;
+      var shots = {};
+      var machines = (data && data.machines) || [];
+      machines.forEach(function (m) {
+        if (m && m.ok && (m.jpeg || m.jpg || m.image)) {
+          shots[m.seat || m.id] = m.jpeg || m.jpg || m.image;
+        } else if (m && m.seat) {
+          setBadge(m.seat, m.despejado ? "sin captura" : "sin SSH", "fail");
+        }
+      });
+      var n = setConsejerosCaptures(shots);
+      if (!n) {
+        resetBadges("fondo publicado · silla no alcanzada", "warn");
+        setSummary("sin capturas limpias");
+      }
+    }).catch(function () {
+      if (my !== capGen) return;
+      setSummary("captura no alcanzó las sillas");
+    }).then(function () {
+      if (my === capGen) capturing = false;
+    });
   }
 
   function publish() {
@@ -287,15 +351,14 @@
     ov.classList.add("cd-on");
     document.documentElement.style.overflow = "hidden";
     markActive(true);
-    if (!postedOpen) {
-      postedOpen = true;
-      publish();
-    }
+    captureLive();
   }
 
   function closeDesk() {
     gen++;
+    capGen++;
     posting = false;
+    capturing = false;
     postedOpen = false;
     var ov = document.getElementById(OV_ID);
     if (ov) ov.classList.remove("cd-on");
@@ -342,6 +405,8 @@
 
   window.openConsejerosDesk = openDesk;
   window.closeConsejerosDesk = closeDesk;
+  window.setConsejerosCaptures = setConsejerosCaptures;
+  window.refreshConsejerosCaptures = captureLive;
 
   function boot() {
     bind();

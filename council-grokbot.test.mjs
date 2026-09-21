@@ -220,7 +220,7 @@ test('draft rejection prevents sends and periodic refresh never retries native s
   assert.equal(await h.api.select('Steve Jobs'),false);assert.match(h.statuses.at(-1),/borrador/);
   await h.api.send('Steve Jobs','No debe enviarse');assert.equal(h.posts.length,0);
   await h.clock.advance(3000);await h.clock.advance(3000);await h.api.refresh();
-  assert.equal(h.calls.filter(x=>x.path==='/selection').length,1);
+  assert.equal(h.calls.filter(x=>x.path==='/selection').length,2,'only explicit send retries selection; polling does not');
   h.selectionHandler=null;assert.equal(await h.api.select('Steve Jobs'),true);
   await h.api.send('Steve Jobs','Selección confirmada');assert.equal(h.posts.length,1);h.api.destroy();
 });
@@ -230,7 +230,7 @@ test('webhook capability never becomes fallback transport and later reconnect on
   assert.equal(await h.api.select('Steve Jobs'),false);await h.api.send('Steve Jobs','Sin fallback');await h.clock.advance(3000);
   assert.equal(h.posts.length,0);assert.equal(h.gets.length,0);assert.equal(h.calls.filter(x=>x.path==='/selection').length,0);
   h.capabilitiesHandler=null;await h.clock.advance(3000);assert.equal(h.gets.length,1);
-  await h.api.send('Steve Jobs','Necesita selección explícita');assert.equal(h.posts.length,0);h.api.destroy();
+  await h.api.send('Steve Jobs','Enviar confirma la selección');assert.equal(h.posts.length,1);h.api.destroy();
 });
 
 test('ambiguous POST failure never retries despite automatic polling and manual refresh',async()=>{
@@ -331,4 +331,43 @@ test('first successful history after an interrupted initial read is restored rat
   h.listHandler=null;h.histories.set('Steve Jobs',[message({text:'Historia recuperada',status:'done'})]);
   await h.clock.advance(3000);
   assert.equal(h.answers.length,0);assert.equal(h.restores.length,1);assert.equal(h.restores[0].text,'Historia recuperada');h.api.destroy();
+});
+
+
+test('explicit send waits for the in-flight native selection and sends exactly once',async()=>{
+  const h=harness(), gate=deferred();h.selectionHandler=()=>gate.promise;
+  const selected=h.api.select('Steve Jobs');await flush();
+  const sent=h.api.send('Steve Jobs','Conectar antes de enviar');await flush();
+  assert.equal(h.posts.length,0);
+  gate.resolve(response({ok:true,selectedPersona:'Jobs'}));
+  assert.equal(await selected,true);assert.equal(await sent,true);
+  assert.equal(h.posts.length,1);assert.equal(h.calls.filter(x=>x.path==='/selection').length,1);
+  h.api.destroy();
+});
+
+test('a temporary capability outage recovers on explicit send without passive reselection',async()=>{
+  const h=harness();h.capabilitiesHandler=()=>response({ok:true,mode:'desktop',available:false,bidirectional:false,reason:'desktop_unavailable'});
+  assert.equal(await h.api.select('Steve Jobs'),false);
+  assert.match(h.statuses.at(-1),/leer GrokBot a tiempo/);
+  h.capabilitiesHandler=null;await h.clock.advance(3000);
+  assert.equal(h.calls.filter(x=>x.path==='/selection').length,0);
+  assert.equal(await h.api.send('Steve Jobs','Recuperar conexión'),true);
+  assert.equal(h.posts.length,1);assert.equal(h.calls.filter(x=>x.path==='/selection').length,1);
+  h.api.destroy();
+});
+
+test('pre-send connection failures preserve the draft contract and report the actual reason',async()=>{
+  const h=harness();await h.api.select('Steve Jobs');
+  h.capabilitiesHandler=()=>response({ok:true,mode:'desktop',available:false,bidirectional:false,reason:'desktop_accessibility_required'});
+  assert.equal(await h.api.send('Steve Jobs','No perder mi pregunta'),false);
+  assert.equal(h.posts.length,0);assert.match(h.errors.at(-1).message,/permiso de Accesibilidad/);
+  h.api.destroy();
+});
+
+test('switching persona while selection is pending cancels the older send',async()=>{
+  const h=harness(), gate=deferred();h.selectionHandler=call=>call.body.persona==='Steve Jobs'?gate.promise:response({ok:true,selectedPersona:'Lucas'});
+  const old=h.api.select('Steve Jobs');await flush();
+  const sent=h.api.send('Steve Jobs','Solo a Jobs');await flush();
+  await h.api.select('George Lucas');gate.resolve(response({ok:true,selectedPersona:'Jobs'}));
+  await old;assert.equal(await sent,false);assert.equal(h.posts.length,0);h.api.destroy();
 });

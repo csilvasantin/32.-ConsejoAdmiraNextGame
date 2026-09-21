@@ -2598,8 +2598,9 @@
             // siempre a la API, asi que elegir a Jobs aqui costaba dinero
             // mientras preguntarle en la mesa era gratis (Carlos, 2026-09-19).
             if (window.CouncilInterface?.has(meetingAdvisor.persona)) {
-                window.CouncilInterface.select(meetingAdvisor.persona);
-                window.CouncilInterface.send(meetingAdvisor.persona, text);
+                await window.CouncilInterface.select(meetingAdvisor.persona);
+                const accepted=await window.CouncilInterface.send(meetingAdvisor.persona, text);
+                if(!accepted){if(!input.value)input.value=text;typing.textContent='No se ha enviado. Tu texto sigue en el campo para reintentar.';return;}
                 typing.textContent = meetingAdvisor.name + " · por GrokBot, sin gastar tokens — mira su chat";
                 return;
             }
@@ -2760,7 +2761,7 @@
     }
 
     // Send message to council
-    function sendMessage() {
+    async function sendMessage() {
         const input = document.getElementById("action-input");
         let text = input.value.trim();
         const chatImage = pendingChatImage;
@@ -2786,7 +2787,8 @@
                 return;
             }
             if (window.CouncilInterface?.has(selectedAgent.persona)) {
-                window.CouncilInterface.send(selectedAgent.persona, text);
+                const accepted=await window.CouncilInterface.send(selectedAgent.persona, text);
+                if(!accepted && !input.value)input.value=text;
                 return;
             }
             if (consejeroPendiente(selectedAgent)) { avisoPendiente(selectedAgent); return; }

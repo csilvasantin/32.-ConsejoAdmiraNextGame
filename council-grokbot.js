@@ -26,7 +26,7 @@
     const doc=options.document || root.document;
     const base=options.base || 'https://fleet.admira.live/api/grokbot';
     const request=options.fetch || root.fetch.bind(root);
-    let selected=null, selectedEpoch=0, capabilities=null, destroyed=false, selectionReady=false, connected=false, pollTimer=null, refreshing=null;
+    let selected=null, selectedEpoch=0, capabilities=null, destroyed=false, selectionReady=false, connected=false, pollTimer=null, refreshing=null, selecting=null;
     const histories=new Map(), pendingSends=new Set(), requests=new Set(), announced=new Map(), settled=new Map(), baselined=new Set();
     const details=doc.createElement('details'); details.className='council-chat';
     details.innerHTML='<summary>Chat de GrokBot <span class="council-chat__connection"></span></summary><div class="council-chat__toolbar"><strong class="council-chat__person"></strong><button type="button" data-chat-refresh>Actualizar</button><button type="button" data-chat-screen>Escritorio</button><a href="grokbot://" class="council-chat__native">Abrir GrokBot ↗</a></div><p class="council-chat__scope">Los mismos mensajes visibles en GrokBot, sincronizados a través del Mac Mini. El historial observado es parcial; no se importa la conversación completa.</p><p class="council-chat__status" role="status"></p><div class="council-chat__messages" role="log" aria-label="Mensajes visibles de GrokBot"></div><p class="council-chat__limits">El Mac Mini y GrokBot deben estar disponibles. Los adjuntos, las aprobaciones, las rutinas y la pantalla cloud se abren en GrokBot.</p>';
@@ -80,7 +80,16 @@
     function errorMessage(error){
       if(error.code==='desktop_draft_present')return 'Hay un borrador en GrokBot. Guárdalo o envíalo allí y vuelve a seleccionar el consejero; no se ha cambiado el chat.';
       if(error.code==='desktop_busy')return 'GrokBot está ocupado. La sincronización volverá a intentarlo; no se reenviará ningún mensaje.';
-      return error.message;
+      const explanations={
+        desktop_accessibility_required:'GrokBot está abierto, pero el puente no tiene permiso de Accesibilidad en el Mac Mini.',
+        desktop_application_not_running:'GrokBot no está abierto en el Mac Mini. Ábrelo para continuar esta misma conversación.',
+        desktop_not_configured:'El puente de GrokBot no está configurado en el Mac Mini.',
+        desktop_state_unavailable:'El puente no puede guardar o leer el historial local. Tu mensaje no se ha enviado.',
+        desktop_selection_mismatch:'No se ha podido confirmar el consejero en GrokBot. Pulsa Enviar para volver a conectarlo.',
+        desktop_invalid_snapshot:'El puente no ha podido leer el chat de GrokBot. Volverá a comprobar la conexión.',
+        desktop_unavailable:'El puente no ha podido leer GrokBot a tiempo. Se está intentando recuperar la conexión.'
+      };
+      return explanations[error.code] || error.message;
     }
     async function api(path,body){
       const ctl=new AbortController();requests.add(ctl);const timeout=setTimeout(()=>ctl.abort(),25000);
@@ -101,7 +110,10 @@
       if(!current(epoch))return null;
       capabilities=data;
       if(!desktop())throw new Error('El chat nativo de GrokBot no está conectado. Los encargos por webhook no sustituyen esta conversación.');
-      if(!data.available || data.bidirectional!==true)throw new Error('El puente del Mac Mini no está disponible. Comprueba GrokBot y el permiso de Accesibilidad.');
+      if(!data.available || data.bidirectional!==true){
+        const error=new Error('El puente del Mac Mini no está disponible. Se volverá a comprobar la conexión.');
+        error.code=data.reason;throw error;
+      }
       return data;
     }
     function remember(row){
@@ -165,7 +177,13 @@
       })();
       return entry.promise;
     }
-    async function select(persona){
+    function select(persona){
+      const promise=selectNative(persona);
+      const entry={persona,promise};selecting=entry;
+      promise.finally(()=>{if(selecting===entry)selecting=null;});
+      return promise;
+    }
+    async function selectNative(persona){
       if(destroyed)return false;
       const epoch=++selectedEpoch;selected=PEOPLE[persona]?persona:null;selectionReady=false;
       clearTimeout(pollTimer);pollTimer=null;options.onSelect?.(selected);
@@ -183,14 +201,23 @@
     }
     async function send(persona,prompt){
       if(!PEOPLE[persona]||destroyed)return false;
-      if(selected!==persona||!selectionReady){say('Selecciona de nuevo el consejero para confirmar su chat en GrokBot antes de enviar.');return true;}
-      if(pendingSends.has(persona)){say('El envío anterior aún se está confirmando.');return true;}
-      const epoch=selectedEpoch;
+      if(selected!==persona){say('Selecciona el consejero antes de enviar.');return false;}
+      if(pendingSends.has(persona)){say('El envío anterior aún se está confirmando.');return false;}
+      let epoch=selectedEpoch, submitted=false;
       pendingSends.add(persona);
       const message_id=root.crypto.randomUUID();
       try{
-        if(!await connect(epoch)||!current(epoch))return true;
+        // Sending is an explicit user action: finish the initial selection or
+        // reconnect it once. Passive polling never moves the native chat.
+        if(selecting?.persona===persona)await selecting.promise;
+        if(!current(epoch))return false;
+        if(!selectionReady){
+          const ready=await select(persona);epoch=selectedEpoch;
+          if(!ready || selected!==persona || !selectionReady)return false;
+        }
+        if(!await connect(epoch)||!current(epoch))return false;
         options.onPending?.({persona,prompt});
+        submitted=true;
         const data=await api('/messages',{message_id,persona,prompt});
         if(destroyed)return true;
         merge([data.message]);
@@ -199,13 +226,14 @@
           render();report(canonical,selectedEpoch);schedule(selectedEpoch);
         }
       }catch(e){
+        if(['desktop_draft_present','desktop_busy','desktop_not_configured','desktop_owner_required'].includes(e.code) || e.status===401)submitted=false;
         if(current(epoch)){
           if(e.code==='desktop_draft_present')selectionReady=false;
           connection(false);const message=e.name==='AbortError'?'No se pudo confirmar el envío. Actualiza el historial antes de repetir.':errorMessage(e);
           say(message);options.onError?.({persona,message});schedule(epoch);
         }
       }finally{pendingSends.delete(persona);}
-      return true;
+      return submitted;
     }
     $('[data-chat-refresh]').addEventListener('click',()=>refresh());
     $('[data-chat-screen]').addEventListener('click',()=>options.onDesktop?.({persona:selected,capabilities}));

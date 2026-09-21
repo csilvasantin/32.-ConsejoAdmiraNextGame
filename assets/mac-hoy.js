@@ -223,8 +223,17 @@ function watchScreen(root) {
 
 function aplicarModo(root) {
   if (!root || !root.querySelectorAll) return;
+  // Todas las entradas (disquetera, teclado, menú) pasan por aquí. Salir del
+  // escritorio invalida también selecciones y errores de imagen en vuelo.
+  if (modo !== 'remote') stopRemotePoll();
+  if (modo !== 'pong') paraPong();
   root.querySelectorAll('#mac-hoy-prop, .mac-hoy-front-stage').forEach((el) => {
     MODOS.forEach((m) => el.classList.toggle('modo-' + m, m === modo));
+  });
+  remoteImgs(root).forEach((img) => {
+    // No depender de reglas genéricas para las imágenes de la carcasa:
+    // captura y Pong nunca deben quedar visibles simultáneamente.
+    if (img.style) img.style.display = modo === 'remote' ? 'block' : 'none';
   });
 }
 
@@ -236,7 +245,6 @@ export function setModo(nuevo, root = lastRoot || (typeof document !== 'undefine
   if (!root) return modo;
   lastRoot = root;
   aplicarModo(root);
-  if (nuevo !== 'remote') stopRemotePoll();
   if (modo !== 'logo' && modo !== 'remote' && modo !== 'pong') draw(root, fetchImpl);
   return modo;
 }
@@ -471,7 +479,10 @@ export function showRemote(persona, root = lastRoot || (typeof document !== 'und
   // sustituir el logo por la captura en las tres superficies.
   aplicarModo(root);
   fitScreen(root);
+  const generation = remoteGeneration;
+  const isCurrent = () => generation === remoteGeneration && remotePersona === alias && modo === 'remote';
   const tick = () => {
+    if (!isCurrent()) return;
     const url = SCREEN_JPEG + '?persona=' + encodeURIComponent(alias) + '&t=' + Date.now();
     remoteImgs(root).forEach((img) => {
       img.src = url;
@@ -479,9 +490,11 @@ export function showRemote(persona, root = lastRoot || (typeof document !== 'und
     });
   };
   remoteImgs(root).forEach((img) => {
-    img.onerror = () => { stopRemotePoll(); paintRemoteError(root, alias); };
+    img.onerror = () => {
+      if (!isCurrent()) return;
+      stopRemotePoll(); paintRemoteError(root, alias);
+    };
   });
-  const generation = remoteGeneration;
   // Opening a seat may select it once. JPEG refreshes must stay passive so a
   // background preview cannot steal the native chat from a web conversation.
   if (!remoteImgs(root).length) return true;
@@ -495,10 +508,10 @@ export function showRemote(persona, root = lastRoot || (typeof document !== 'und
   }))
     .then(async response => {
       const data = await response.json();
-      if (generation !== remoteGeneration || remotePersona !== alias) return;
+      if (!isCurrent()) return;
       if (!response.ok || !data?.ok) throw new Error('screen_unavailable');
       tick(); remoteTimer = setInterval(tick, 2500);
-    }).catch(() => { if (generation === remoteGeneration) paintRemoteError(root, alias); });
+    }).catch(() => { if (isCurrent()) paintRemoteError(root, alias); });
   return true;
 }
 

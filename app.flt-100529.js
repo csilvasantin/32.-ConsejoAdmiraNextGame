@@ -174,12 +174,12 @@
         return GREETINGS[agent.persona] || (agent.territory ? agent.persona + ": " + agent.territory + "." : agent.persona + " te escucha.");
     }
 
-    // DELTA Carlos 2026-09-23 (FLT-100812): este mapa histórico sigue diciendo
-    // Elon→Neo para Agora. Preguntar en la mesa no lo usa: Elon (elon-musk)
-    // entrega el texto al deepagent Smith, en la máquina donde late.
+    // FLT-100813 · Carlos: Elon (coetáneo CEO) es el deepagent Smith.
+    // Antes este alias era Neo. Preguntar no abre un CLI: deja el texto
+    // en la bandeja de Smith, en la máquina donde late.
     const MATRIX_LINKS = {
         coetaneos: {
-            "Elon Musk":       { alias: "Neo",        channel: "Neo" },
+            "Elon Musk":       { alias: "Smith",      channel: "Smith" },
             "Jensen Huang":    { alias: "Morfeo",     channel: "Morfeo" },
             "Gwynne Shotwell": { alias: "Trinity",    channel: "Trinity" },
             "Ruth Porat":      { alias: "Oráculo",    channel: "Oraculo" },
@@ -6412,7 +6412,7 @@
 (function(){
   // Personas Matrix ligadas a los coetáneos del Consejo (espejo de MATRIX_LINKS).
   var COETANEOS = [
-    {name:"Elon Musk",persona:"Neo"},{name:"Jensen Huang",persona:"Morfeo"},
+    {name:"Elon Musk",persona:"Smith"},{name:"Jensen Huang",persona:"Morfeo"},
     {name:"Gwynne Shotwell",persona:"Trinity"},{name:"Ruth Porat",persona:"Oráculo"},
     {name:"John Lasseter",persona:"Mouse"},{name:"Jony Ive",persona:"Arquitecto"},
     {name:"Carlos Ratti",persona:"Link"},{name:"Ryan Reynolds",persona:"Cypher"}

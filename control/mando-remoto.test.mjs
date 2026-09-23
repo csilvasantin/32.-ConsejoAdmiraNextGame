@@ -90,3 +90,19 @@ test("FLT-1827: con el watcher rancio las fichas salen mudas, sin botones", () =
   assert.match(h, /mando-slot mudo/);
   assert.doesNotMatch(h, /data-mando=/);
 });
+
+test("el botón 🎛 de emisión y los ▶/⏹ de agente no comparten atributo (un clic, una acción)", () => {
+  // Con los dos en `data-mando`, pulsar ▶ abría además /control/remote/?machine=start.
+  assert.match(html, /<button data-mando-emision="\$\{m\.id\}"/);
+  assert.doesNotMatch(html, /<button data-mando="\$\{m\.id\}"/);
+  assert.match(html, /closest\('\[data-mando-emision\]'\)[\s\S]{0,200}\/control\/remote\/\?machine=/);
+  assert.doesNotMatch(html, /closest\('\[data-mando\]'\); if\(!b\)return; e\.preventDefault\(\);\s*window\.open/);
+});
+
+test("mando, captura, mensajes y canal DS van por el puente del relay, no con un Bearer del navegador", () => {
+  // Desde el login por redirect el navegador no tiene id_token: la sesión es la cookie del relay.
+  for (const ruta of ["agent/control", "desktop/capture", "desktop/capture/consume", "send", "nav/cmd"])
+    assert.match(html, new RegExp("bridgePost\\('" + ruta.replace(/\//g, "\\/") + "'"), ruta);
+  assert.doesNotMatch(html, /'Authorization':'Bearer '\+cred/);
+  assert.doesNotMatch(html, /fetch\((DIARY_API|MSG_API)\+'\/api\/(send|fleet\/agent\/control|fleet\/desktop\/capture)/);
+});

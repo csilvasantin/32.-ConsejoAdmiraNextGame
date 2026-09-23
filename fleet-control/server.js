@@ -32,6 +32,7 @@ const { ACTIVE, REVOKED, UNAVAILABLE, createSessionRegistry, logoutEndpointPolic
 const { createSessionCodec, deriveSessionSecret, loadAuthEdgeSecretMaterial, loadSessionSecretMaterial } = require('./session-token');
 const { BridgeError, PERSONAS, canonicalPersona, createGrokBotBridge } = require('./grokbot-bridge');
 const { DesktopBridgeError, createGrokBotDesktop } = require('./grokbot-desktop');
+const { createServiceBridge } = require('./service-bridge');
 // The desktop adapter shares the native conversation. Never fall back to a
 // routine when it is unavailable: that would silently create a different chat.
 const grokBotLegacy = createGrokBotBridge();
@@ -756,6 +757,8 @@ function termCreate(m, cols, rows, ip) {
 
 
 
+const serviceBridge = createServiceBridge({ dir: DIR });
+
 const server = http.createServer(async (req, res) => {
   cors(req, res);
   if (req.method === 'OPTIONS') { res.writeHead(204); return res.end(); }
@@ -932,6 +935,17 @@ const server = http.createServer(async (req, res) => {
       const known=error instanceof BridgeError || error instanceof DesktopBridgeError;
       return json(res,known ? error.status : 503,{ok:false,error:known ? error.code : 'bridge_unavailable'});
     }
+  }
+
+  // Puente de servicio: mando de agentes, captura por watcher, mensajería y canal DS
+  // de /control. Misma puerta (sesión + CSRF); la clave de servicio no sale del relay.
+  if (serviceBridge.handles(url) && req.method === 'POST') {
+    if (!(await gate(req, res, ip))) return;
+    const raw = await readRawBody(req, 100000);
+    if (raw === null) return json(res, 413, { ok: false, error: 'body_too_large' });
+    const out = await serviceBridge.forward(url, raw);
+    audit({ ip, ev: 'bridge', url, by: req.fleetSession && req.fleetSession.email, status: out.status, error: out.body && out.body.error });
+    return json(res, out.status, out.body);
   }
 
   // estado de la flota (lectura) — requiere token (el funnel es público)

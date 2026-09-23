@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.21.09.2026.r33.23:22" />
+<meta name="admiranext-version" content="AdmiraNeXT v.23.09.2026.r1.19:48" />
     <script src="/admira-bar.js?v=20260918-r38"></script>
     <script src="/auth-gate.js?v=20260811-r14-c7df116ee0bf"></script>
 <meta charset="UTF-8">
@@ -1003,6 +1003,26 @@ async function ensureSession(){
   SESSION='';
   return false;
 }
+// Órdenes a bot.yokup y navegadores POR EL RELAY (23-sep-2026). Desde el login por
+// redirect (11-ago) la sesión es una cookie HttpOnly del relay y el navegador ya no
+// tiene id_token que mandar como Bearer: el mando, la captura por watcher, los
+// mensajes y el canal DS se quedaban en «sin sesión». El relay valida sesión + CSRF
+// y firma con la clave de servicio (fleet-control/service-bridge.js). Nunca lanza.
+async function bridgePost(ruta, cuerpo){
+  try{
+    const {response,data}=await FLEET_MESH.json('/bridge/'+ruta,{method:'POST',
+      headers:{'Content-Type':'application/json'}, body:JSON.stringify(cuerpo)});
+    return {status:response.status, data:data||{}};
+  }catch(e){ return {status:0, data:{ok:false, error:(e&&e.message)||'ningún relay de control disponible'}}; }
+}
+// Qué contar cuando el puente no pudo: la sesión, la clave del relay o el servicio.
+function bridgeFallo(r){
+  const d=r.data||{};
+  if(r.status===401) return 'sesión caducada · recarga la página y entra con Google';
+  if(d.error==='bridge_secret_missing') return 'al relay le falta la clave de servicio ('+(d.service||'?')+')';
+  if(d.error==='bridge_secret_rejected') return 'el servicio rechazó la clave del relay ('+(d.service||'?')+')';
+  return d.error || ('HTTP '+r.status);
+}
 // Recuperación garantizada: limpia sesión+gate y recarga → el gate vuelve a pedir
 // login de Google (cred fresco). Es la red de seguridad si el refresco silencioso
 // no es posible (One Tap suprimido, varias cuentas, etc.).
@@ -1197,18 +1217,11 @@ function mandoHtml(m){
 // PARAR PIDE CONFIRMACIÓN y el arranque no: parar interrumpe a un agente que puede
 // estar a media misión, y eso no se hace de un clic despistado.
 async function mandoAgente(machine, slot, action){
-  const cred=gateCred();
-  if(!cred){ toast('warn','🔒 sin sesión','entra con Google para mandar sobre los agentes'); return; }
   if(action==='stop' && !confirm('¿Parar '+slot.persona+' ('+slot.runtime+'/'+slot.host+') en '+machine+'?\n\nSi está a media misión, se interrumpe.')) return;
   const body={ action, machine:_norm(machine), persona:slot.persona, runtime:slot.runtime, host:slot.host, session_id:slot.session_id };
-  try{
-    const r=await fetch(DIARY_API+'/api/fleet/agent/control',{
-      method:'POST', headers:{'Content-Type':'application/json','Authorization':'Bearer '+cred},
-      body:JSON.stringify(body)});
-    const d=await r.json().catch(()=>({}));
-    if(r.ok&&d.ok) toast('ok', (action==='stop'?'⏹ parando ':'▶️ arrancando ')+slot.persona, 'orden encolada · la recoge el watcher de '+machine);
-    else toast('warn','⚠️ no se pudo '+(action==='stop'?'parar':'arrancar'), (d&&d.error)||('HTTP '+r.status));
-  }catch(e){ toast('warn','⚠️ error de red', e.message||'sin detalle'); }
+  const r=await bridgePost('agent/control', body);
+  if(r.status>=200&&r.status<300&&r.data.ok) toast('ok', (action==='stop'?'⏹ parando ':'▶️ arrancando ')+slot.persona, 'orden encolada · la recoge el watcher de '+machine);
+  else toast('warn','⚠️ no se pudo '+(action==='stop'?'parar':'arrancar'), bridgeFallo(r));
 }
 // CAPTURA POR EL WATCHER, LA RUTA QUE SÍ FUNCIONA (2026-09-02).
 // macOS NO concede Grabación de pantalla a un proceso lanzado por SSH, así que la
@@ -1220,19 +1233,17 @@ async function mandoAgente(machine, slot, action){
 // Se encola la captura en el watcher y se recoge cuando la deja. Devuelve la imagen
 // en base64 o null si no llega a tiempo; quien llama decide qué contar.
 async function capturaPorWatcher(machine, slot){
-  const cred=gateCred(); if(!cred) return null;
-  const cab={'Content-Type':'application/json','Authorization':'Bearer '+cred};
   const cuerpo={ machine:_norm(machine), persona:slot.persona, runtime:slot.runtime, host:slot.host, session_id:slot.session_id };
   try{
-    const r=await fetch(DIARY_API+'/api/fleet/desktop/capture',{method:'POST',headers:cab,body:JSON.stringify(cuerpo)});
-    const d=await r.json().catch(()=>({})); if(!r.ok||!d.ok) return null;
+    const r=await bridgePost('desktop/capture', cuerpo);
+    const d=r.data; if(r.status<200||r.status>=300||!d.ok) return null;
     // El watcher sondea cada ~2 s; se espera hasta 12 s y se deja de insistir. Un panel
     // que reintenta para siempre parece colgado y no dice nada nuevo.
     for(let i=0;i<12;i++){
       await new Promise(r=>setTimeout(r,1000));
-      const c=await fetch(DIARY_API+'/api/fleet/desktop/capture/consume',{method:'POST',headers:cab,body:JSON.stringify({...cuerpo,id:d.id})});
-      const cd=await c.json().catch(()=>({}));
-      if(c.ok&&cd.ok&&cd.image) return cd.image;
+      const c=await bridgePost('desktop/capture/consume', {...cuerpo,id:d.id});
+      const cd=c.data;
+      if(c.status>=200&&c.status<300&&cd.ok&&cd.image) return cd.image;
       if(cd&&cd.status==='failed') return null;
     }
   }catch(e){}
@@ -1761,7 +1772,7 @@ function renderCards(ms){
         <button data-a="apptoggle" data-m="${m.id}" title="Abrir una app (con URL opcional) o cerrarla: escribe «Safari» para abrir, «cerrar Safari» para cerrar">📂 app</button>
         <button data-a="ssh" data-m="${m.id}">🔌 ssh</button>
         <button data-a="signagetoggle" data-m="${m.id}" ${(!signageIsOn(m.id)&&!signageEligible(m.id))?'disabled':''} class="tgl ${signageIsOn(m.id)?'on':'off'}" title="${signageIsOn(m.id)?'Parar el player de digital signage':'Requiere preflight elegible'}">${signageIsOn(m.id)?'⏹️ parar':'📺 arrancar DS'}</button>
-        <button data-mando="${m.id}" title="🎛 Mando de EMISIÓN (admira.tv/remotecontrol): volumen +/−, mute, siguiente/anterior, primera/última, playlist y tags en vivo de la pantalla de ESTE equipo — se abre enganchado a su screen." style="border-color:#c9a4ff;color:#c9a4ff;font-weight:700">🎛 mando</button>
+        <button data-mando-emision="${m.id}" title="🎛 Mando de EMISIÓN (admira.tv/remotecontrol): volumen +/−, mute, siguiente/anterior, primera/última, playlist y tags en vivo de la pantalla de ESTE equipo — se abre enganchado a su screen." style="border-color:#c9a4ff;color:#c9a4ff;font-weight:700">🎛 mando</button>
         <button data-a="channeltoggle" data-m="${m.id}" data-mname="${(m.name||'').replace(/"/g,'')}" class="tgl ${signageIsOn(m.id)?'on':'off'}" title="${signageIsOn(m.id)?'Cerrar la ventana del canal DS en el Chrome de esta máquina.':'Abrir el canal DS (admira.tv/canal) en el Chrome de esta máquina.'}">${signageIsOn(m.id)?'⏹ cerrar canal':'📺 abrir canal'}</button>
         ${m.online?`<button data-rc="${m.id}" data-rcname="${(m.name||'').replace(/"/g,'')}" title="Control remoto en vivo (ver + ratón + teclado, estilo AnyDesk). Requiere AdmiraRemoteAgent + permisos en la máquina destino." style="border-color:var(--acc);color:var(--acc);font-weight:700">🖥️ control remoto</button>`:''}
         ${m.online?`<button data-term="${m.id}" data-termname="${(m.name||'').replace(/"/g,'')}" title="Terminal interactiva (consola SSH en vivo: cd, htop, vim, logs). Ideal para las máquinas Linux." style="border-color:#5bd6c0;color:#5bd6c0;font-weight:700">🖳 terminal</button>`:''}
@@ -1870,12 +1881,8 @@ const CLEAN_DESKTOP_CMD="osascript -e 'tell application \"System Events\" to set
    Encola un comando en el worker admira-navegadores; el executor local de esa máquina
    (navegadores.executor) lo ejecuta y abre el canal en VENTANA NUEVA con screen ds-<maquina>.
    Auth: credential Google del gate (mismo login que /control), aceptado por el worker. */
-// dominio propio: LaLiga bloquea workers.dev en horas de fútbol, FLT-1633
-const NAV_API='https://navegadores.yokup.com';
+// Las órdenes van a navegadores.yokup.com por el puente del relay (bridgePost).
 function navDeviceId(name){ return 'local-'+String(name||'').toLowerCase().replace(/[^a-z0-9]/g,''); }
-async function _gateCred(){
-  return window.admiraGateCredential ? window.admiraGateCredential() : '';
-}
 // Feedback de ESTADO del canal DS (Carlos 2026-07-11: «con pulsar abrir canal solo no llega»):
 // tras encolar, se vigila la señal REAL del player (api.admira.store/signage/now) hasta 90s.
 // lastSeen fresco (<30s) = el canal EMITE de verdad; sin señal = executor caído/sin arrancar.
@@ -1895,15 +1902,8 @@ async function watchCanal(machine, name, screen){
 }
 
 async function navCmd(deviceId, action, url){
-  const cred=await _gateCred();
-  if(!cred) return {ok:false,error:'sin login Google (pulsa 🔒 arriba a la derecha)'};
-  try{
-    const r=await fetch(NAV_API+'/api/cmd',{method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+cred},
-      body:JSON.stringify(url?{deviceId,action,url}:{deviceId,action})});
-    const d=await r.json().catch(()=>({}));
-    return r.ok&&d.ok ? {ok:true,id:d.id} : {ok:false,error:(d&&d.error)||('http '+r.status)};
-  }catch(err){ return {ok:false,error:err.message||'error de red'}; }
+  const r=await bridgePost('nav/cmd', url?{deviceId,action,url}:{deviceId,action});
+  return r.status>=200&&r.status<300&&r.data.ok ? {ok:true,id:r.data.id} : {ok:false,error:bridgeFallo(r)};
 }
 $('#cards').addEventListener('click', async e=>{
   // Comprimir / expandir la tarjeta (chevron).
@@ -2178,12 +2178,9 @@ async function pollThread(){
 }
 
 // Envía el mensaje del compositor por el router de encargos.
-let _msgReauthTried=false;
 async function sendCurrentMsg(){
   if(!MSG_CUR) return;
   const ta=$('#msgText'); const text=(ta.value||'').trim(); if(!text) return;
-  let cred=gateCred();
-  if(!cred){ toast('warn','🔒 sin login de Google','inicia sesión (arriba a la derecha) para enviar mensajes'); return; }
   const btn=$('#msgSend'); btn.disabled=true; const lbl=btn.textContent; btn.textContent='➤ enviando…';
   const task=newTaskId();
   // Construye el texto de encargo que el router sabe enrutar.
@@ -2198,18 +2195,9 @@ async function sendCurrentMsg(){
   const payload = { text:body, author:'Carlos' };
   if(machine) payload.machine = machine;
   try{
-    const r=await fetch(MSG_API+'/api/send',{
-      method:'POST',
-      headers:{'Content-Type':'application/json','Authorization':'Bearer '+cred},
-      body:JSON.stringify(payload)
-    });
-    if(r.status===401){
-      _msgReauthTried=false;
-      toast('warn','🔒 sesión de Google caducada','toca el candado 🔒 de arriba para re-entrar y reenvía'); btn.disabled=false; btn.textContent=lbl; return;
-    }
-    _msgReauthTried=false;
-    const d=await r.json().catch(()=>({}));
-    if(!r.ok||!d.ok){ toast('warn','⚠️ no se pudo enviar', (d&&d.error)||('HTTP '+r.status)); btn.disabled=false; btn.textContent=lbl; return; }
+    const r=await bridgePost('send', payload);
+    const d=r.data;
+    if(r.status<200||r.status>=300||!d.ok){ toast('warn','⚠️ no se pudo enviar', bridgeFallo(r)); btn.disabled=false; btn.textContent=lbl; return; }
     msgPush(MSG_CUR.key, { task, text, ts:Date.now(), targets, recipients:{} });
     ta.value='';
     toast('up','💬 enviado', MSG_CUR.broadcast?('a todos ('+((MSG_CUR.count)||'')+' equipos)') : ('a '+(MSG_CUR.persona||(MSG_CUR.machine&&MSG_CUR.machine.name)||MSG_CUR.key)));
@@ -3413,8 +3401,10 @@ function collapseAllToggle(){
   // Botón "🎛 mando" — abre /control/remote (mando de emisión de UN solo equipo:
   // reenvía a admira.tv/remotecontrol?machine=<id>&solo=1, que fija y muestra
   // únicamente la tarjeta de esa pantalla, con playlist y tags en vivo).
-  document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-mando]'); if(!b)return; e.preventDefault();
-    window.open('/control/remote/?machine='+encodeURIComponent(b.getAttribute('data-mando')),'_blank','noopener'); });
+  // Atributo propio: con `data-mando` a secas este manejador también cazaba los ▶/⏹
+  // de las ranuras de agente y abría /control/remote/?machine=start.
+  document.addEventListener('click',e=>{ const b=e.target.closest&&e.target.closest('[data-mando-emision]'); if(!b)return; e.preventDefault();
+    window.open('/control/remote/?machine='+encodeURIComponent(b.getAttribute('data-mando-emision')),'_blank','noopener'); });
 
   /* Reutilizable: engancha el MISMO motor (vídeo en vivo + ratón/teclado) a un <img>
      externo, p.ej. el del monitor CRT. Devuelve {stop, setControl}. No toca el overlay. */

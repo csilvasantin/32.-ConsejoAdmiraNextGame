@@ -4219,7 +4219,37 @@ def _hk_ping(host: str) -> bool:
         return False
 
 
-def _hk_ssh_launch(user: str, host: str) -> tuple:
+# Perfiles de Terminal.app (los que trae macOS). Cada Mac del consejo abre el
+# simulacro con un perfil DISTINTO para que la flota se vea variada (Carlos,
+# 2026-09-23). Orden = de más a menos espectacular: los primeros Macs se llevan
+# los oscuros. Asignación estable por posición en machines.json (no depende de
+# qué equipos se elijan en el panel) y un Mac puede fijar el suyo con
+# "terminal_profile" — los fijados se reservan antes de repartir el resto.
+_HK_TERMINAL_PROFILES = [
+    "Homebrew", "Ocean", "Pro", "Red Sands", "Grass", "Silver Aerogel",
+    "Man Page", "Novel", "Clear Dark", "Basic", "Solid Colors", "Clear Light",
+]
+
+
+def _hk_terminal_profiles() -> dict:
+    """id de máquina → perfil de Terminal, sin repetir entre los Mac del consejo."""
+    macs = [m for m in _hk_load_council() if not _hk_is_windows(m) and not _hk_is_linux(m)]
+    out, used = {}, set()
+    for m in macs:
+        fixed = str(m.get("terminal_profile") or "").strip()
+        if fixed in _HK_TERMINAL_PROFILES and fixed not in used:
+            out[m.get("id")] = fixed
+            used.add(fixed)
+    free = [p for p in _HK_TERMINAL_PROFILES if p not in used]
+    for m in macs:
+        if m.get("id") in out:
+            continue
+        # Con más Macs que perfiles se vuelve a empezar (repetir es mejor que nada).
+        out[m.get("id")] = free.pop(0) if free else _HK_TERMINAL_PROFILES[len(out) % len(_HK_TERMINAL_PROFILES)]
+    return out
+
+
+def _hk_ssh_launch(user: str, host: str, profile: str = "") -> tuple:
     """Lanza la simulación de hackeo en el Terminal del Mac remoto.
 
     Usa osascript para abrir Terminal.app y arranca el script Python
@@ -4254,13 +4284,26 @@ def _hk_ssh_launch(user: str, host: str) -> tuple:
         # pantalla (Terminal lo recorta al tamaño real): así LLENA la pantalla en TODAS
         # las máquinas SIN permiso de Accesibilidad (a diferencia de Ctrl+Cmd+F, que
         # requiere TCC y solo funcionaba donde estaba concedido).
+        # El perfil se aplica a la pestaña que devuelve `do script` (en `try`: si el
+        # perfil no existiera en ese Mac, el simulacro sale igual con el de siempre).
         "osascript "
-        "-e 'tell application \"Terminal\" to do script "
+        "-e 'tell application \"Terminal\"' "
+        "-e 'set prevIds to id of every window' "
+        "-e 'set t to do script "
         "\"clear; echo \\\"== ADMIRA HACK SIMULATION ==\\\"; "
         "exec python3 $HOME/.fleet/hacksim.py\"' "
-        "-e 'tell application \"Terminal\" to activate' "
-        "-e 'delay 0.5' "
-        "-e 'tell application \"Terminal\" to set bounds of front window to {0, 0, 4000, 3000}'"
+        + (f"-e 'try' -e 'set current settings of t to settings set \"{profile}\"' -e 'end try' "
+           if profile in _HK_TERMINAL_PROFILES else "")
+        # Título fijo: el stop cierra SOLO estas ventanas (ver _hk_ssh_stop).
+        + "-e 'try' -e 'set custom title of t to \"ADMIRA HACK\"' -e 'end try' "
+        "-e 'activate' "
+        # Se maximiza la ventana NUEVA (la que no estaba antes), no «front window»:
+        # si quedaba un simulacro viejo en otro Space seguía siendo la del frente y
+        # la nueva se quedaba en 80×24 (visto en el Mac Mini, 23-09-2026).
+        "-e 'repeat with w in windows' "
+        "-e 'if prevIds does not contain (id of w) then set bounds of w to {0, 0, 4000, 3000}' "
+        "-e 'end repeat' "
+        "-e 'end tell'"
     )
     ssh_cmd = [
         "ssh",
@@ -4297,7 +4340,17 @@ def _hk_ssh_stop(user: str, host: str) -> tuple:
         "pkill -f 'ADMIRA[ ]HACK[ ]SIMULATION' 2>/dev/null; "   # shell del simulacro viejo
         "pkill -f 'python3[ ]-$' 2>/dev/null; "                 # best-effort para el python del simulacro viejo
         "sleep 0.4; "
-        "osascript -e 'tell application \"Terminal\" to quit' >/dev/null 2>&1; true"
+        # Se cierran SOLO las ventanas del simulacro (título «ADMIRA HACK» o, las
+        # lanzadas antes del título, «hacksim» en el nombre). Antes se hacía `quit`
+        # de todo Terminal y chocaba con otras sesiones vivas (p. ej. grok/Smith en
+        # el Mini) → diálogo «¿terminar procesos?» colgado en pantalla.
+        "osascript -e 'tell application \"Terminal\"' "
+        "-e 'repeat with w in (every window)' "
+        "-e 'try' "
+        "-e 'if (custom title of selected tab of w is \"ADMIRA HACK\") or (name of w contains \"hacksim\") then close w' "
+        "-e 'end try' "
+        "-e 'end repeat' "
+        "-e 'end tell' >/dev/null 2>&1; true"
     )
     ssh_cmd = [
         "ssh",
@@ -4662,7 +4715,12 @@ def _hk_process_one(machine: dict, action: str) -> dict:
                 result["discovered_mac"] = disc_mac
                 result["mac_source"] = disc_src
         launch_fn = _hk_linux_launch if is_linux else (_hk_win_launch if is_win else _hk_ssh_launch)
-        ok, detail = launch_fn(user, host)
+        if launch_fn is _hk_ssh_launch:
+            profile = _hk_terminal_profiles().get(machine.get("id"), "")
+            result["terminal_profile"] = profile
+            ok, detail = launch_fn(user, host, profile)
+        else:
+            ok, detail = launch_fn(user, host)
         result["action"] = "ssh_launched"
         result["ok"] = ok
         result["detail"] = detail

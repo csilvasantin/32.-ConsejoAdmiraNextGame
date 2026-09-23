@@ -2778,8 +2778,8 @@
     async function askElonSmith(question, agent) {
         const panelId = agent.side === "racional" ? "conv-racional" : "conv-creativo";
         const hosts = (typeof AGORA_COUNCIL_API_URLS !== "undefined" ? AGORA_COUNCIL_API_URLS : ["https://macmini.tail48b61c.ts.net"]).slice();
-        showSpeechBubble(agent.persona, agent.name, "Elon lleva la pregunta a Smith…");
         setActionLine("Elon → Smith · enviando, sin abrir CLI…");
+        try { showSpeechBubble(agent.persona, agent.name, "Elon lleva la pregunta a Smith…"); } catch (e) {}
         let created = null, used = null, lastErr = "";
         for (const base of hosts) {
             try {
@@ -2802,7 +2802,7 @@
         const acuse = "Acuse · encargo #" + created.encargo + " · Smith en " + (created.machine || "su máquina") + ". El texto está en su bandeja. No se ha abierto un CLI.";
         addConvEntry(panelId, agent.icon, agent.name, agent.persona, agent.side, acuse);
         setActionLine(acuse);
-        showSpeechBubble(agent.persona, agent.name, "Encargo #" + created.encargo);
+        try { showSpeechBubble(agent.persona, agent.name, "Encargo #" + created.encargo); } catch (e) {}
         const deadline = Date.now() + 90000;
         while (Date.now() < deadline) {
             await new Promise(r => setTimeout(r, 3000));
@@ -2813,7 +2813,7 @@
                 if (note && String(note).trim()) {
                     addConvEntry(panelId, agent.icon, agent.name, agent.persona, agent.side, String(note));
                     setActionLine("Elon (Smith) ha respondido · encargo #" + created.encargo);
-                    showSpeechBubble(agent.persona, agent.name, String(note).slice(0, 80));
+                    try { showSpeechBubble(agent.persona, agent.name, String(note).slice(0, 80)); } catch (e) {}
                     setTimeout(hideSpeechBubble, 4000);
                     return;
                 }

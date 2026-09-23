@@ -62,7 +62,7 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Private-Network": "true"
 };
 const MATRIX_COUNCIL_LINKS = new Map([
-  ["Elon Musk", { alias: "Neo", role: "CEO" }],
+  ["Elon Musk", { alias: "Smith", role: "CEO" }],
   ["Jensen Huang", { alias: "Morfeo", role: "CTO" }],
   ["Gwynne Shotwell", { alias: "Trinity", role: "COO" }],
   ["Ruth Porat", { alias: "Oráculo", role: "CFO" }],

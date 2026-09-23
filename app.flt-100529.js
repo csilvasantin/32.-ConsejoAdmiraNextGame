@@ -176,7 +176,7 @@
 
     const MATRIX_LINKS = {
         coetaneos: {
-            "Elon Musk":       { alias: "Neo",        channel: "Neo" },
+            "Elon Musk":       { alias: "Smith",      channel: "Smith" },
             "Jensen Huang":    { alias: "Morfeo",     channel: "Morfeo" },
             "Gwynne Shotwell": { alias: "Trinity",    channel: "Trinity" },
             "Ruth Porat":      { alias: "Oráculo",    channel: "Oraculo" },
@@ -6349,7 +6349,7 @@
 (function(){
   // Personas Matrix ligadas a los coetáneos del Consejo (espejo de MATRIX_LINKS).
   var COETANEOS = [
-    {name:"Elon Musk",persona:"Neo"},{name:"Jensen Huang",persona:"Morfeo"},
+    {name:"Elon Musk",persona:"Smith"},{name:"Jensen Huang",persona:"Morfeo"},
     {name:"Gwynne Shotwell",persona:"Trinity"},{name:"Ruth Porat",persona:"Oráculo"},
     {name:"John Lasseter",persona:"Mouse"},{name:"Jony Ive",persona:"Arquitecto"},
     {name:"Carlos Ratti",persona:"Link"},{name:"Ryan Reynolds",persona:"Cypher"}

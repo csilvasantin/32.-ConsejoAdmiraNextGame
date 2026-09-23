@@ -2824,7 +2824,7 @@
             setActionLine("Jensen → El Arquitecto falló: " + lastErr);
             return;
         }
-        const acuse = "Acuse · Cloud Agent " + (created.agentId || "?") + " · El Arquitecto. " + (created.url || "Sin abrir Cursor.");
+        const acuse = "Acuse · run " + (created.runId || "?") + " · El Arquitecto (" + (created.agentId || "") + "). Sin abrir Cursor.";
         addConvEntry(panelId, agent.icon, agent.name, agent.persona, agent.side, acuse);
         setActionLine(acuse);
         try { showSpeechBubble(agent.persona, agent.name, "El Arquitecto " + (created.agentId || "")); } catch (e) {}

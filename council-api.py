@@ -4137,14 +4137,58 @@ LINES = [
  "$ history -c && echo '' > ~/.bash_history",
  "Tracks cleared.",
 ]
+import os, shutil
+# Fase 2 opcional (Carlos, 2026-09-23): con un lenguaje en argv, tras MEDIA
+# pantalla del hackeo el equipo pasa a teclear ~/.fleet/hobbit/<lenguaje>.txt y
+# suelta al azar un dibujo de ~/.fleet/hobbit/ascii.txt (bloques separados por
+# una línea con solo «%»). Sin lenguaje o sin fichero → hackeo clásico en bucle.
+LANG = sys.argv[1] if len(sys.argv) > 1 else ""
+HOBBIT_DIR = os.path.expanduser("~/.fleet/hobbit")
+
+def teclea(line, lo=0.005, hi=0.04):
+    for c in line:
+        sys.stdout.write(c); sys.stdout.flush()
+        time.sleep(random.uniform(lo, hi))
+    sys.stdout.write("\n"); sys.stdout.flush()
+
+def lee(nombre):
+    try:
+        with open(os.path.join(HOBBIT_DIR, nombre), encoding="utf-8") as f:
+            return f.read()
+    except OSError:
+        return ""
+
+def fase_hobbit():
+    codigo = [l.rstrip("\n") for l in lee(LANG + ".txt").splitlines()]
+    if not any(l.strip() for l in codigo):
+        return False
+    dibujos = [b.strip("\n") for b in lee("ascii.txt").split("\n%\n") if b.strip()]
+    teclea("")
+    j, hasta_dibujo = 0, random.randint(6, 15)
+    while True:
+        teclea(codigo[j % len(codigo)], 0.01, 0.05)
+        j += 1
+        hasta_dibujo -= 1
+        if dibujos and hasta_dibujo <= 0:
+            sys.stdout.write("\n")
+            for l in random.choice(dibujos).splitlines():
+                sys.stdout.write(l + "\n"); sys.stdout.flush()
+                time.sleep(0.04)
+            sys.stdout.write("\n")
+            hasta_dibujo = random.randint(6, 15)
+        time.sleep(random.uniform(0.05, 0.35))
+
 i = 0
 try:
     while True:
+        # La altura se mide en cada vuelta: la ventana se maximiza DESPUÉS de
+        # arrancar el script y al principio aún mide 24 filas.
+        if LANG and i >= shutil.get_terminal_size((80, 48)).lines // 2:
+            if fase_hobbit():
+                break
+            LANG = ""
         line = LINES[i % len(LINES)]
-        for c in line:
-            sys.stdout.write(c); sys.stdout.flush()
-            time.sleep(random.uniform(0.005, 0.04))
-        sys.stdout.write("\n"); sys.stdout.flush()
+        teclea(line)
         i += 1
         time.sleep(random.uniform(0.15, 0.5))
 except (KeyboardInterrupt, BrokenPipeError):
@@ -4249,7 +4293,43 @@ def _hk_terminal_profiles() -> dict:
     return out
 
 
-def _hk_ssh_launch(user: str, host: str, profile: str = "") -> tuple:
+# Fase «The Hobbit» del simulacro (Carlos, 2026-09-23): tras media pantalla de
+# hackeo, estos cuatro Air teclean el juego cada uno en un lenguaje. El texto NO
+# vive aquí: se lee de data/hobbit/<lenguaje>.txt y data/hobbit/ascii.txt (en el
+# Mini) y viaja con cada lanzamiento → se edita en un solo sitio. Claves = ids
+# normalizados (_hk_ids_de): id, nombre o host de la máquina.
+_HK_HOBBIT_DIR = Path(__file__).parent / "data" / "hobbit"
+_HK_HOBBIT_LANG = {
+    "macbookairplata": "codigo-maquina",
+    "macbookairazul": "ensamblador",
+    "macbookaircrema": "pascal",
+    "macbookcarla": "pascal",
+    "macbookairrosa": "lingo",
+}
+
+
+def _hk_hobbit_lang(machine: dict) -> str:
+    for k in _hk_ids_de(machine):
+        if k in _HK_HOBBIT_LANG:
+            return _HK_HOBBIT_LANG[k]
+    return ""
+
+
+def _hk_hobbit_files(lang: str) -> dict:
+    """{nombre: base64} de los ficheros que ese equipo necesita (los que existan)."""
+    import base64 as _b64
+    out = {}
+    if not lang:
+        return out
+    for name in (lang + ".txt", "ascii.txt"):
+        try:
+            out[name] = _b64.b64encode((_HK_HOBBIT_DIR / name).read_bytes()).decode("ascii")
+        except OSError:
+            pass
+    return out
+
+
+def _hk_ssh_launch(user: str, host: str, profile: str = "", lang: str = "") -> tuple:
     """Lanza la simulación de hackeo en el Terminal del Mac remoto.
 
     Usa osascript para abrir Terminal.app y arranca el script Python
@@ -4278,6 +4358,10 @@ def _hk_ssh_launch(user: str, host: str, profile: str = "") -> tuple:
         "killall ScreenSaverEngine 2>/dev/null; "
         "caffeinate -u -t 2 && sleep 1 && mkdir -p \"$HOME/.fleet\" && "
         f"echo {payload} | base64 -D > \"$HOME/.fleet/hacksim.py\" && "
+        + "".join(
+            f"mkdir -p \"$HOME/.fleet/hobbit\" && echo {b64} | base64 -D > \"$HOME/.fleet/hobbit/{name}\" && "
+            for name, b64 in _hk_hobbit_files(lang).items()
+        ) +
         # do script PRIMERO (una sola ventana con el simulacro); luego activate.
         # Hacer `activate` antes de `do script` abría una ventana vacía extra → se
         # veía "dos veces". Maximizamos la ventana fijando sus bounds a más que la
@@ -4291,7 +4375,7 @@ def _hk_ssh_launch(user: str, host: str, profile: str = "") -> tuple:
         "-e 'set prevIds to id of every window' "
         "-e 'set t to do script "
         "\"clear; echo \\\"== ADMIRA HACK SIMULATION ==\\\"; "
-        "exec python3 $HOME/.fleet/hacksim.py\"' "
+        "exec python3 $HOME/.fleet/hacksim.py" + (f" {lang}" if lang in _HK_HOBBIT_LANG.values() else "") + "\"' "
         + (f"-e 'try' -e 'set current settings of t to settings set \"{profile}\"' -e 'end try' "
            if profile in _HK_TERMINAL_PROFILES else "")
         # Título fijo: el stop cierra SOLO estas ventanas (ver _hk_ssh_stop).
@@ -4718,7 +4802,10 @@ def _hk_process_one(machine: dict, action: str) -> dict:
         if launch_fn is _hk_ssh_launch:
             profile = _hk_terminal_profiles().get(machine.get("id"), "")
             result["terminal_profile"] = profile
-            ok, detail = launch_fn(user, host, profile)
+            lang = _hk_hobbit_lang(machine)
+            if lang:
+                result["hobbit_lang"] = lang
+            ok, detail = launch_fn(user, host, profile, lang)
         else:
             ok, detail = launch_fn(user, host)
         result["action"] = "ssh_launched"

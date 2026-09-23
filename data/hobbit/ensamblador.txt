@@ -1,0 +1,1 @@
+[ The Hobbit · ensamblador ] pega aquí el código que tecleará este equipo (una línea por línea)

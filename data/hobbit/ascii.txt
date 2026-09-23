@@ -1,0 +1,3 @@
+*** dibujo ASCII de muestra ***
+%
+~~~ otro dibujo de muestra ~~~

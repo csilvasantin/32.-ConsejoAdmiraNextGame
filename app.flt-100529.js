@@ -222,7 +222,7 @@
         coetaneos: [
             // Racional (left/red) — same physical seats, different personas
             { role: "CEO", persona: "Elon Musk",       x: 11, y: 44, machineId: "admira-macbookair16",      body: { left: 3,  top: 46, width: 18, height: 42 } },
-            { role: "CTO", persona: "Jensen Huang",    x: 24, y: 44, machineId: "admira-macbookpronegro14", body: { left: 16, top: 46, width: 22, height: 40 } },
+            { role: "CTO", persona: "Jensen Huang",    x: 22, y: 44, machineId: "admira-macbookpronegro14", body: { left: 16, top: 46, width: 17, height: 40 } },
             { role: "COO", persona: "Gwynne Shotwell", x: 33, y: 26, machineId: "admira-macbookairplata",   body: { left: 31, top: 30, width: 8,  height: 24 } },
             { role: "CFO", persona: "Ruth Porat",      x: 45, y: 25, machineId: "admira-macmini",           body: { left: 43, top: 27, width: 8,  height: 26 } },
             // Creativo (right/blue)

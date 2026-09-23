@@ -2774,7 +2774,7 @@
 
     async function askElonSmith(question, agent) {
         const panelId = agent.side === "racional" ? "conv-racional" : "conv-creativo";
-        const hosts = (typeof AGORA_COUNCIL_API_URLS !== "undefined" ? AGORA_COUNCIL_API_URLS : ["https://macmini.tail48b61c.ts.net"]).slice();
+        const hosts = [location.origin.replace(/\/$/, "")].concat(typeof AGORA_COUNCIL_API_URLS !== "undefined" ? AGORA_COUNCIL_API_URLS : ["https://macmini.tail48b61c.ts.net"]);
         setActionLine("Elon → Smith · enviando, sin abrir CLI…");
         try { showSpeechBubble(agent.persona, agent.name, "Elon lleva la pregunta a Smith…"); } catch (e) {}
         let created = null, used = null, lastErr = "";

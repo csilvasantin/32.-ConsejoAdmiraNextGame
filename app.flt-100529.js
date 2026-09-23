@@ -221,7 +221,7 @@
         ],
         coetaneos: [
             // Racional (left/red) — same physical seats, different personas
-            { role: "CEO", persona: "Elon Musk",       x: 10, y: 38, machineId: "admira-macbookair16",      body: { left: 7,  top: 44, width: 7,  height: 17 } },
+            { role: "CEO", persona: "Elon Musk",       x: 11, y: 44, machineId: "admira-macbookair16",      body: { left: 3,  top: 46, width: 18, height: 42 } },
             { role: "CTO", persona: "Jensen Huang",    x: 20, y: 32, machineId: "admira-macbookpronegro14", body: { left: 18, top: 36, width: 8,  height: 21 } },
             { role: "COO", persona: "Gwynne Shotwell", x: 33, y: 26, machineId: "admira-macbookairplata",   body: { left: 31, top: 30, width: 8,  height: 24 } },
             { role: "CFO", persona: "Ruth Porat",      x: 45, y: 25, machineId: "admira-macmini",           body: { left: 43, top: 27, width: 8,  height: 26 } },
@@ -1511,6 +1511,24 @@
         // contexto que viaje al modelo sea el de ESTE consejero y no el del
         // anterior, que era lo que pasaba con un array único para toda la mesa.
         abreHilo(claveHilo(agent));
+        // Elon no es silla de GrokBot: es Smith. El clic tiene que dejar
+        // la barra escribible y con su nombre, no la del consejero anterior.
+        if (agent.persona === "Elon Musk") {
+            try { window.CouncilInterface?.select(null); } catch (e) {}
+            const input = document.getElementById("action-input");
+            if (input) {
+                input.disabled = false;
+                input.readOnly = false;
+                input.placeholder = "Preguntar a Elon Musk";
+                input.dataset.target = "elon-musk";
+                input.dataset.agent = "Smith";
+                input.focus();
+            }
+            const send = document.querySelector(".action-send");
+            if (send) send.disabled = false;
+            setSentenceHtml('<span class="sl-verb">Preguntar</span> a <span class="sl-obj">Elon Musk</span>');
+            return;
+        }
         if (!examinarMode && window.CouncilInterface?.has(persona)) {
             window.CouncilInterface.select(persona);
             // Los paneles se limpian: esta silla habla por GrokBot y su hilo se
@@ -5137,6 +5155,7 @@
     // su silla esta pendiente de crearse en GrokBot. Antes la pregunta salia
     // igual y gastaba presupuesto sin que nadie lo pidiera.
     function consejeroPendiente(agent) {
+        if (agent && agent.persona === "Elon Musk") return false;
         return !!agent && !window.CouncilInterface?.has(agent.persona);
     }
     function avisoPendiente(agent, donde) {

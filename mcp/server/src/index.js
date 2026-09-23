@@ -11,6 +11,7 @@
  * Rutas:
  *   GET  /            → qué es esto y cómo conectarse (JSON)
  *   GET  /salud       → vive el worker, tiene secretos, llega al Consejo
+ *   POST /carne       → alta de carné (persona+equipo+runtime); exige Bearer patrocinador o X-MCP-Alta (FLT-100854)
  *   POST /mcp         → el endpoint MCP (también GET/DELETE, como manda el transporte)
  *
  * Seguridad: /mcp exige MCP_KEY (Authorization: Bearer <clave> o ?key=<clave>): las
@@ -24,7 +25,7 @@ import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { WebStandardStreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/webStandardStreamableHttp.js';
 import * as z from 'zod/v4';
 import { ROLES, GENERACIONES, consejeros, crearCliente, resumirRespuesta } from './consejo.js';
-import { identidadPorClave, identidadPorClaveAsync, crearYokup, CONSEJEROS_GROKBOT } from './yokup.js';
+import { identidadPorClave, identidadPorClaveAsync, crearYokup, CONSEJEROS_GROKBOT, darseDeAlta, personaFlotaCanonica, equipoFlotaCanonico } from './yokup.js';
 import { crearTelegram } from './telegram.js';
 import { crearFlota, PERSONAS, AGENTES_FLOTA, CONSEJEROS } from './flota.js';
 
@@ -164,6 +165,25 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
     inputSchema: { encargo: z.number().int().positive().describe('Número que devolvió agente_encargar.') },
     annotations: { readOnlyHint: true, openWorldHint: true },
   }, seguro(async (a) => texto(await flota.estado(a))));
+
+  // FLT-100854: un agente sin carné no puede entrar a /mcp. Un miembro YA identificado
+  // (o el token de alta) emite el carné HMAC de una pareja del diccionario. La clave
+  // sale solo en la respuesta; no se registra completa en logs.
+  server.registerTool('mcp_darse_de_alta', {
+    title: 'Darse de alta en el MCP (carné)',
+    description: 'Emite el Bearer de una pareja persona+equipo del diccionario de flota (HMAC con MCP_FLOTA_SEED, sin revelar la semilla). Requiere que YA tengas carné (patrocinio) o que el worker acepte MCP_ALTA_TOKEN. Úsalo para enrolar a Arquitecto (Cursor cloud → equipo CursorCloud). La respuesta incluye la clave UNA vez y la ruta de recogida segura (bóveda / mcp-conectar.sh); no la pegues en Telegram.',
+    inputSchema: {
+      persona: z.string().min(2).max(40).describe('Persona del diccionario (p. ej. Arquitecto).'),
+      equipo: z.string().min(2).max(40).describe('Equipo canónico (p. ej. CursorCloud para Cursor cloud).'),
+      runtime: z.string().max(40).optional().describe('Runtime (por defecto Cursor para Arquitecto).'),
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: false },
+  }, seguro(async (a) => {
+    if (!identidad) throw new Error('sin identidad: mcp_darse_de_alta exige un Bearer ya válido (patrocinio); para bootstrap HTTP usa POST /carne con X-MCP-Alta');
+    if (identidad.tipo === 'consejo-compartido') throw new Error('la clave compartida del Consejo no patrocina altas: entra con la clave de una silla');
+    const r = await darseDeAlta(env, a, { patrocinador: identidad.agent, via: 'mcp_darse_de_alta' });
+    return texto(r);
+  }));
 
   /* ── Identidad por llamada (FLT-1603) ──────────────────────────────────────
    * Los conectores MCP de Grok Bot son DE LA CUENTA, no de cada bot: todos los consejeros
@@ -345,6 +365,19 @@ export async function claveValida(request, env) {
   return !!(await identidadPorClaveAsync(cand, env));
 }
 
+
+/** Alta de carné: Bearer de alguien ya enrolado, o cabecera X-MCP-Alta = MCP_ALTA_TOKEN. No anónimo. */
+export async function autorizarAlta(request, env) {
+  const alta = (request.headers.get('x-mcp-alta') || '').trim();
+  if (env.MCP_ALTA_TOKEN && alta && iguales(alta, env.MCP_ALTA_TOKEN)) return { via: 'alta-token', identidad: null };
+  if (await claveValida(request, env)) {
+    const id = await identidadPorClaveAsync(claveRecibida(request), env);
+    if (id && id.tipo === 'consejo-compartido') return null;
+    if (id) return { via: 'patrocinador', identidad: id };
+  }
+  return null;
+}
+
 export async function manejar(request, env, deps = {}) {
   const url = new URL(request.url);
   const ruta = url.pathname.replace(/\/+$/, '') || '/';
@@ -353,7 +386,7 @@ export async function manejar(request, env, deps = {}) {
     return json({ nombre: NOMBRE, version: env.VERSION || '', sitio: env.SITIO || 'https://www.admira.live',
       que_es: 'MCP de admira.live: los consejeros del Consejo de Silicio, la flota y AgoraMatrix como herramientas MCP por HTTP.',
       endpoint_mcp: `${url.origin}/mcp`, transporte: 'streamable-http', autenticacion: 'Authorization: Bearer <MCP_KEY> (o ?key=)',
-      documentacion: 'https://www.admira.live/mcp/', herramientas: ['consejo_consejeros', 'consejo_modelos', 'consejo_preguntar', 'consejero_preguntar', 'consejo_salud', 'consejo_bots', 'flota_estado', 'consejo_tareas', 'agora_decir', 'yokup_quien_soy', 'yokup_presencia', 'yokup_alta', 'yokup_paso', 'yokup_evidencia', 'yokup_informe', 'yokup_ventana', 'yokup_decidir', 'yokup_mis_misiones', 'telegram_bandeja', 'telegram_responder', 'agentes_vivos', 'agente_encargar', 'encargo_estado', 'consumo_reportar'],
+      documentacion: 'https://www.admira.live/mcp/', herramientas: ['consejo_consejeros', 'consejo_modelos', 'consejo_preguntar', 'consejero_preguntar', 'consejo_salud', 'consejo_bots', 'flota_estado', 'consejo_tareas', 'agora_decir', 'yokup_quien_soy', 'yokup_presencia', 'yokup_alta', 'yokup_paso', 'yokup_evidencia', 'yokup_informe', 'yokup_ventana', 'yokup_decidir', 'yokup_mis_misiones', 'telegram_bandeja', 'telegram_responder', 'agentes_vivos', 'agente_encargar', 'encargo_estado', 'consumo_reportar', 'mcp_darse_de_alta'],
       flota: 'Con una clave por consejero (MCP_KEYS), Wozniak/Jobs/Disney/Lucas trabajan en yokup como WozniakGrokBot… (equipo GrokBot, runtime Grok). Con una clave por agente y equipo (mcp-conectar.sh), Claude Code, Codex y OpenCode entran identificados (MorfeoMacMini…).',
       conectar: { humanos: 'https://www.admira.live/help', silicio: 'https://www.admira.live/mcp/', llms: 'https://www.admira.live/mcp/llms.txt' } });
   }
@@ -361,7 +394,7 @@ export async function manejar(request, env, deps = {}) {
   if (ruta === '/salud' && request.method === 'GET') {
     const api = crearCliente(env, deps);
     const consejo = await api.saludConsejo().then((r) => ({ ok: true, ...r })).catch((e) => ({ ok: false, error: String(e.message || e) }));
-    return json({ ok: true, worker: NOMBRE, version: env.VERSION || '', secretos: { MCP_KEY: !!env.MCP_KEY, MCP_KEYS: !!env.MCP_KEYS, MCP_KEY_CONSEJO: !!env.MCP_KEY_CONSEJO, MCP_FIRMA_ESTRICTA: String(env.MCP_FIRMA_ESTRICTA || '') === '1', MCP_FLOTA_SEED: !!env.MCP_FLOTA_SEED, COUNCIL_MACHINE_TOKEN: !!env.COUNCIL_MACHINE_TOKEN, AGORA_SYNC_KEY: !!env.AGORA_SYNC_KEY, ADMIRA_TELEGRAM_PANEL_KEY: !!env.ADMIRA_TELEGRAM_PANEL_KEY }, consejeros_con_carne: CONSEJEROS_GROKBOT, consejo });
+    return json({ ok: true, worker: NOMBRE, version: env.VERSION || '', secretos: { MCP_KEY: !!env.MCP_KEY, MCP_KEYS: !!env.MCP_KEYS, MCP_KEY_CONSEJO: !!env.MCP_KEY_CONSEJO, MCP_FIRMA_ESTRICTA: String(env.MCP_FIRMA_ESTRICTA || '') === '1', MCP_FLOTA_SEED: !!env.MCP_FLOTA_SEED, MCP_ALTA_TOKEN: !!env.MCP_ALTA_TOKEN, COUNCIL_MACHINE_TOKEN: !!env.COUNCIL_MACHINE_TOKEN, AGORA_SYNC_KEY: !!env.AGORA_SYNC_KEY, ADMIRA_TELEGRAM_PANEL_KEY: !!env.ADMIRA_TELEGRAM_PANEL_KEY }, consejeros_con_carne: CONSEJEROS_GROKBOT, consejo });
   }
 
   if (ruta === '/mcp') {
@@ -391,7 +424,25 @@ export async function manejar(request, env, deps = {}) {
     }
   }
 
-  return json({ ok: false, error: 'ruta desconocida', rutas: ['/', '/salud', '/mcp'] }, 404);
+
+  if (ruta === '/carne' && request.method === 'POST') {
+    const auth = await autorizarAlta(request, env);
+    if (!auth) {
+      return json({ ok: false, error: 'no autorizado: POST /carne exige Authorization: Bearer de un miembro ya enrolado, o cabecera X-MCP-Alta (MCP_ALTA_TOKEN). El MCP no se abre a anónimos.', ayuda: 'https://www.admira.live/mcp/' }, 401, { 'www-authenticate': 'Bearer realm="admira-live-mcp-carne"' });
+    }
+    let body = {};
+    try { body = await request.json(); } catch { body = {}; }
+    try {
+      const r = await darseDeAlta(env, body || {}, { patrocinador: auth.identidad && auth.identidad.agent, via: auth.via });
+      // No loguear la clave completa.
+      console.log(JSON.stringify({ evento: 'mcp_carne_alta', agent: r.agent, via: auth.via, patrocinador: auth.identidad && auth.identidad.agent, clave_prefijo: String(r.clave || '').slice(0, 4) + '…' }));
+      return json(r);
+    } catch (e) {
+      return json({ ok: false, error: String(e && e.message || e) }, 400);
+    }
+  }
+
+  return json({ ok: false, error: 'ruta desconocida', rutas: ['/', '/salud', '/carne', '/mcp'] }, 404);
 }
 
 // ctx.waitUntil: lo que sigue después de contestar (importación y plan de yokup_alta) no

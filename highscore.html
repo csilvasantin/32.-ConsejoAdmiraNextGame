@@ -4982,6 +4982,19 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       var prev = byKey[w.key];
       if (!prev) { byKey[w.key] = w; fromApi.push(w); return; }
       if (prev.state === "last_work") return;
+      // Un encargo assigned_stale no puede tapar a quien está latiendo ahora.
+      if (prev.state !== "running" && w.state === "running") {
+        var keptTitle = normaliza(prev.title);
+        var merged = Object.assign({}, w);
+        if (keptTitle && keptTitle.indexOf("Latido") < 0) merged.title = prev.title;
+        if (prev.projectName) merged.projectName = prev.projectName;
+        if (prev.detailUrl) merged.detailUrl = prev.detailUrl;
+        if (prev.reference) merged.reference = prev.reference;
+        byKey[w.key] = merged;
+        var staleIdx = fromApi.indexOf(prev);
+        if (staleIdx >= 0) fromApi[staleIdx] = merged;
+        return;
+      }
       var presenceAt = Number(w.presenceAt) || 0;
       var prevPresence = Number(prev.presenceAt) || 0;
       var prevAt = Number(prev.at) || 0;
@@ -5311,6 +5324,9 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       parrilla.push(enlace);
       clavesParrilla.push(enlace.clave);
     });
+    pendientesCarrera = enlaces.filter(function (enlace) {
+      return enlace && clavesParrilla.indexOf(enlace.clave) < 0;
+    }).length;
     corredores = parrilla.map(function (enlace, indice) {
       var fila = enlace.fila, clave = enlace.clave, resumen = enlace.resumen;
       var puesto = indice + 1, agente = normaliza(fila.agente), responsable = normaliza(resumen.responsible || agente);

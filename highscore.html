@@ -4613,7 +4613,6 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   }
 
   function hsCliOrdena(machine, cli, accion, ciego) {
-    hsCliMensaje("CLI pausado por Carlos; utiliza el control de proceso con pausa verificada.",true);return;
     var clave = normaliza(machine) + "|" + normaliza(cli);
     if (CLI_PENDIENTES[clave]) return;
     if (ciego && !confirm("Nadie late en " + machine + ", así que no sabemos si " + cli + " ya está corriendo.\n\n" +
@@ -4645,7 +4644,6 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   // estado del CLI —sigue vivo, ahora con trabajo—, así que fingir una espera de
   // "a ver si cambia algo" seria mentir sobre lo que se puede comprobar.
   function hsCliEnviaMision(machine, cli, texto) {
-    hsCliMensaje("CLI pausado por Carlos; utiliza Desktop APP para nuevos trabajos.",true);return;
     var limpio = normaliza(texto).replace(/\s+/g, " ").trim();
     if (!limpio) { hsCliMensaje("Escribe la misión antes de enviarla.", true); return; }
     if (limpio.length > 600) { hsCliMensaje("La misión no puede pasar de 600 caracteres (llevas " + limpio.length + ").", true); return; }
@@ -4717,11 +4715,9 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     var doing=item.task||item.focus||"Sin actividad declarada", project=item.project||"Sin proyecto declarado";
     var declarationAge=item.declared_updated?" · actividad declarada "+hsOpsAge(item.declared_updated):"";
     var state=item.process_state==="open"?"Abierto":item.process_state==="closed"?"Cerrado":"Sin señal", tone=item.active?"viva":item.process_state==="closed"?"parada":"muda";
-    var paused=item.host==="cli",policy=paused?"CLI pausado por Carlos · "+(item.operational_state==="paused"&&item.active?"Pausa confirmada · proceso suspendido":item.process_state==="closed"?"Parada confirmada":pending&&pending.action==="stop"?"Parada solicitada · sin confirmar":item.active?"Proceso aún abierto · parada sin confirmar":"No alcanzable · parada sin confirmar"):"";
-    if(paused)tone="muda";
+    var paused=false,policy="";
     var action=item.active?"stop":"start", label=item.active?"■ Detener":"▶ Arrancar";
-    var disabled=pending||(paused&&!item.pause_supported)||(!item.active&&(paused||!item.watcher||item.process_state!=="closed"))||(!item.active?false:!(item.verified&&item.pid>1));
-    if(paused&&!item.active)label="Pausado por Carlos";
+    var disabled=pending||(!item.active&&(!item.watcher||item.process_state!=="closed"))||(!item.active?false:!(item.verified&&item.pid>1));
     return '<div class="cli-ctl-row">'+
       '<span class="cli-ctl-name"><b class="cli-ctl-label">'+esc(item.persona+' · '+item.runtime)+'</b>'+
       '<span class="cli-ctl-surface '+(item.host==="app"?'app':'cli')+'">'+surface+'</span>'+
@@ -4735,7 +4731,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     var list=document.getElementById("cliCtlList"),count=document.getElementById("cliCtlCount"); if(!list||!count)return;
     var groups=hsOpsItems(),items=[].concat.apply([],groups.map(function(group){return group.items;}));
     var active=items.filter(function(item){return item.active;}).length;
-    count.textContent=active+' procesos abiertos · CLI en pausa · '+groups.length+' eq';
+    count.textContent=active+' procesos abiertos · '+groups.length+' eq';
     if(!groups.length){list.innerHTML='<div class="cli-ctl-empty">No hay ningún watcher de procesos reciente. El estado es desconocido; no se inventa.</div>';return;}
     list.innerHTML=groups.map(function(group,index){
       var open=CLI_ABIERTOS.has(group.machine),activeGroup=group.items.filter(function(item){return item.active;}).length,appActive=group.items.some(function(item){return item.active&&item.host==='app';}),id='cliCtlMaquina'+index;
@@ -4760,7 +4756,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     if(CLI_PENDIENTES[key])return;var item=hsOpsFind(key);if(!item){hsCliMensaje('La ranura ya no existe en el último censo.',true);return;}
     if(!['start','stop'].includes(action)||!['app','cli'].includes(item.host)){hsCliMensaje('Interfaz o acción sin verificar.',true);return;}
     if(action==='stop'&&item.host==='cli'&&!item.pause_supported){hsCliMensaje('Pausa segura no disponible en este ordenador; no se enviará una terminación.',true);return;}
-    if(action==='start'&&item.host==='cli'){hsCliMensaje('CLI pausado por Carlos; utiliza Desktop APP.',true);return;}
+    // Carlos 24-sep-2026 TG#4170: CLI unpaused — start allowed again.
     if(!item.verified||item.updated<Date.now()/1000-30||item.updated>Date.now()/1000+5||action==='stop'&&(!item.active||item.pid<=1)||action==='start'&&item.process_state!=='closed'){hsCliMensaje('El proceso no está verificado. Actualiza antes de actuar.',true);return;}
     var surface=item.host==='app'?'DesktopAPP':'CLI';
     if(action==='stop'&&!confirm('Detener '+item.persona+' · '+surface+' en '+item.machine+' (PID '+item.pid+')?'))return;
@@ -4846,7 +4842,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     }
     var surface=normaliza(item&&item.session_surface).toLowerCase();
     var bound=(surface==="app"||surface==="cli")&&item.session_state==="open"&&!!normaliza(item.dedicated_basis||item.session_basis);
-    var paused=item&&item.cli_paused===true||surface==="cli";
+    var paused=item&&item.cli_paused===true;
     if(item.state==="last_work")return item;
     if(paused)return Object.assign({},item,{state:"assigned_stale",cli_paused:true,activity_reason:"cli_paused_by_carlos"});
     if(item.state==="running"&&!bound)return Object.assign({},item,{state:"assigned_stale",activity_reason:"session_unverified"});
@@ -4973,7 +4969,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   function contextoVisualCorredor(identidad, trabajo, fila) {
     var host = normaliza(trabajo && trabajo.sessionSurface).toLowerCase();
     if (identidad.machine==="GrokBot")return "GrokBot · APP";
-    if (host === "app" || host === "cli") return identidad.machine + " · " + host.toUpperCase()+(host==="cli"&&trabajo.state!=="last_work"?" · pausado por Carlos":"");
+    if (host === "app" || host === "cli") return identidad.machine + " · " + host.toUpperCase();
     var known = Array.from(new Set(((fila && fila.interfaces) || []).map(function(value){return normaliza(value).toLowerCase();})))
       .filter(function(value){return value === "app" || value === "cli";}).sort();
     return identidad.machine + (known.length ? " · interfaces conocidas: " + known.map(function(value){return value.toUpperCase();}).join(" / ") + " · sesión sin vincular" : " · interfaz sin verificar");

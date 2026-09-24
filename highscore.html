@@ -1,13 +1,12 @@
 <!doctype html>
 <html lang="es">
 <head>
-<meta name="yokup-espejo" content="origen www.yokup.com · commit dc134d1 · sincronizado 17.09.2026 22:17">
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="icon" href="/favicon.ico?v=v.2026.08.02.202305" sizes="any">
 <link rel="icon" type="image/png" href="/favicon-32x32.png?v=v.2026.08.02.202305" sizes="32x32">
 <link rel="apple-touch-icon" href="/apple-touch-icon.png?v=v.2026.08.02.202305">
-<title>Highscore · Yokup</title>
+<title>Highscore · admira.live</title>
 <meta name="description" content="Marcador de la flota de agentes AdmiraNeXT: quién trabaja más, en cualquier momento.">
 <meta name="robots" content="noindex,nofollow">
 <script>
@@ -980,7 +979,6 @@ body.resizing-columns{cursor:col-resize;user-select:none}
 <link rel="stylesheet" href="/highscore-runner-state.css?v=20260901-static-last-work-runner">
 </head>
 <body data-yk-title="HIGHSCORE" data-yk-zone="app">
-<div id="yk-espejo-aviso" style="background:#0a1620;border-bottom:1px solid rgba(120,243,255,.30);color:#75aab9;font:12.5px/1.5 ui-monospace,SFMono-Regular,Menlo,monospace;padding:8px 14px">Espejo en <b style="color:#78f3ff">admira.live</b> de Yokup · mismos datos en vivo de <code>api.yokup.com</code>. Aquí se <b>mira</b>: sin sesión de Yokup, lo que pide login (tareas, tickets y mandar órdenes al CLI) no responde. Para eso, <a href="https://www.yokup.com/highscore" style="color:#78f3ff">el original</a>.</div>
 
 <div id="carga">
   <div class="presite-ui">
@@ -3366,7 +3364,24 @@ body.resizing-columns{cursor:col-resize;user-select:none}
      doble clic calcula el ancho necesario para el contenido de esa columna. */
   var COLUMNAS_KEY = "yokup.highscore.columnas.v1";
   var AGENT_SCOPE_KEY = "yokup.highscore.agents.v1";
-  var AGENT_SCOPE_MODE_KEY = "yokup.highscore.agents.mode.v3";
+  var AGENT_SCOPE_MODE_KEY = "yokup.highscore.agents.mode.v4-deepagents";
+  /* FLT-100883: ranking canónico = solo DeepAgents (consejeros fuera del marcador). */
+  var DEEPAGENTS_NAME_RE = /^(neo|trinity|morfeo|oraculo|oracle|smith|arquitecto|architect)\b/i;
+  function hsIsDeepAgentKey(key) {
+    var k = String(key || "").trim();
+    if (!k) return false;
+    var base = k.replace(/MBA(Azul|Plata|Rosa|Crema|16)|MBP(14|16|Negro14)?|MacMini|CursorCloud|GrokBot|Negro14|Air16/gi, " ");
+    base = base.replace(/[^a-zA-ZáéíóúñÁÉÍÓÚÑ]/g, " ").trim().split(/\s+/)[0] || k;
+    if (/^(jobs|woz|wozniak|disney|lucas|walt)\b/i.test(base)) return false;
+    if (/grokbot/i.test(k) && !/smith/i.test(k)) return false;
+    return DEEPAGENTS_NAME_RE.test(base) || DEEPAGENTS_NAME_RE.test(k);
+  }
+  function hsDeepAgentKeys(allKeys) {
+    var out = new Set();
+    (allKeys || []).forEach(function (k) { if (hsIsDeepAgentKey(k)) out.add(String(k)); });
+    return out;
+  }
+
   var DASHBOARD_TEAM_SCOPE_KEY = "yokup.dashboard.teams.v1";
   var AGENT_SCOPE = hsReadAgentScope();
   var AGENT_SCOPE_MODE = hsReadAgentScopeMode();
@@ -3401,10 +3416,12 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   function hsReadAgentScopeMode() {
     try {
       var mode = localStorage.getItem(AGENT_SCOPE_MODE_KEY);
-      if(["active","manual","all"].indexOf(mode)>=0)return mode;
+      if(["deepagents","active","manual","all"].indexOf(mode)>=0)return mode;
       var previous=localStorage.getItem("yokup.highscore.agents.mode.v2");
-      return previous==="manual"?"manual":previous==="active"||previous==="all"?"legacy-default":"legacy";
-    } catch (_) { return "legacy"; }
+      if(previous==="manual")return "manual";
+      /* FLT-100883: sin preferencia previa → DeepAgents (consejeros fuera del ranking). */
+      return "deepagents";
+    } catch (_) { return "deepagents"; }
   }
 
   function hsWriteAgentScope(scope, mode) {
@@ -3456,7 +3473,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   }
 
   function hsAgentScopeMigration(scope, mode, keys, activeKeys) {
-    if(mode==="legacy-default")return {scope:null,mode:"all",changed:true};
+    if(mode==="legacy-default")return {scope:hsDeepAgentKeys(keys),mode:"deepagents",changed:true};
     if (mode !== "legacy") return { scope:scope, mode:mode, changed:false };
     if (scope === null || hsCoversAgentKeys(scope, keys))return {scope:null,mode:"all",changed:true};
     return {scope:new Set(Array.from(scope)),mode:"manual",changed:true};
@@ -3468,11 +3485,20 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     if (!migration.changed) return;
     AGENT_SCOPE = migration.scope; AGENT_SCOPE_MODE = migration.mode;
     hsWriteAgentScope(AGENT_SCOPE, AGENT_SCOPE_MODE);
+    if (AGENT_SCOPE_MODE === "deepagents") {
+      AGENT_SCOPE = hsDeepAgentKeys(keys);
+      hsWriteAgentScope(AGENT_SCOPE, AGENT_SCOPE_MODE);
+    }
   }
 
   function hsEffectiveAgentScope() {
     if (AGENT_SCOPE_MODE === "all" || (AGENT_SCOPE_MODE === "legacy" && AGENT_SCOPE === null)) return null;
     if (AGENT_SCOPE_MODE === "active" && AGENT_SCOPE === null) return null;
+    if (AGENT_SCOPE_MODE === "deepagents") {
+      var base = AGENT_SCOPE instanceof Set ? AGENT_SCOPE : null;
+      /* Si aún no hay lista, el pintado posterior rellenará; devolver Set vacío evita «todos». */
+      return base instanceof Set ? new Set(Array.from(base).filter(hsIsDeepAgentKey)) : new Set();
+    }
     return AGENT_SCOPE instanceof Set ? new Set(Array.from(AGENT_SCOPE)) : new Set();
   }
 
@@ -3656,6 +3682,12 @@ body.resizing-columns{cursor:col-resize;user-select:none}
         var activeKeys = hsActiveAgentKeys(datos.presencia, window.ykAgentIdentity, datos.presenceNow, trabajosEnCurso());
         if (activeKeys instanceof Set) { AGENT_SCOPE = activeKeys; hsWriteAgentScope(AGENT_SCOPE, AGENT_SCOPE_MODE); }
       }
+      if (AGENT_SCOPE_MODE === "deepagents") {
+        var allKeys = (listaCompletaCache || []).map(function (f) { return f && (f.agentKey || f.key || f.id || f.nombre || f.name); }).filter(Boolean);
+        if (!allKeys.length && typeof keys !== "undefined") allKeys = keys;
+        AGENT_SCOPE = hsDeepAgentKeys(allKeys);
+        hsWriteAgentScope(AGENT_SCOPE, AGENT_SCOPE_MODE);
+      }
       hsRenderAgentScope(listaCompletaCache || []); pintaVistaFiltrada(); return payload;
     }).catch(function (error) {
       if (hsAcceptPresenceRequest(requestSequence)) {
@@ -3756,12 +3788,14 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     hsEnsureAgentScopeMode(items, activeKeys);
     var effective = hsEffectiveAgentScope();
     var selected = effective === null ? items.length : items.filter(function (item) { return effective.has(item.key); }).length;
-    count.textContent = AGENT_SCOPE_MODE === "all" ? "Todos" :
+    count.textContent = AGENT_SCOPE_MODE === "deepagents" ? ("DeepAgents " + selected) :
+      AGENT_SCOPE_MODE === "all" ? "Todos" :
       (AGENT_SCOPE_MODE === "active" ? (activeKeys instanceof Set ? "Activos " + selected : "Activos · sin señal") :
         (selected ? selected + "/" + items.length : "Ninguno"));
     if (!items.length) { list.innerHTML = '<div class="agent-scope-empty">No hay agentes disponibles.</div>'; return; }
     var noneSelected = AGENT_SCOPE_MODE === "manual" && selected === 0;
     list.innerHTML = '<div class="agent-scope-presets" role="radiogroup" aria-label="Ámbito de agentes">' +
+      '<button class="agent-scope-preset" type="button" role="radio" data-agent-scope-preset="deepagents" aria-checked="' + (AGENT_SCOPE_MODE === "deepagents") + '">DeepAgents</button>' +
       '<button class="agent-scope-preset" type="button" role="radio" data-agent-scope-preset="all" aria-checked="' + (AGENT_SCOPE_MODE === "all") + '">Todos</button>' +
       '<button class="agent-scope-preset" type="button" role="radio" data-agent-scope-preset="active" aria-checked="' + (AGENT_SCOPE_MODE === "active") + '">Activos</button>' +
       '<button class="agent-scope-preset" type="button" role="radio" data-agent-scope-preset="none" aria-checked="' + noneSelected + '">Ninguno</button>' +
@@ -3801,7 +3835,10 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       button.addEventListener("click", function () {
         hsClearCloneStatus();
         var preset = button.getAttribute("data-agent-scope-preset");
-        if (preset === "all") { AGENT_SCOPE = null; AGENT_SCOPE_MODE = "all"; }
+        if (preset === "deepagents") {
+          AGENT_SCOPE_MODE = "deepagents";
+          AGENT_SCOPE = hsDeepAgentKeys(keys);
+        } else if (preset === "all") { AGENT_SCOPE = null; AGENT_SCOPE_MODE = "all"; }
         else if (preset === "none") { AGENT_SCOPE = new Set(); AGENT_SCOPE_MODE = "manual"; }
         else {
           AGENT_SCOPE_MODE = "active";

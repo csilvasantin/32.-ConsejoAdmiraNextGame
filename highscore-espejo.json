@@ -3,7 +3,7 @@
   "origen_repo": "yokup/yokup-site",
   "origen_commit": "dc134d1",
   "sincronizado": "17.09.2026 22:17",
-  "fase": "espejo de lectura en admira.live",
+  "fase": "canónico en admira.live · FLT-100883 (ya no espejo)",
   "paginas_migradas": [
     "highscore",
     "asistencia",
@@ -18,7 +18,6 @@
     "normativa",
     "asignaciones",
     "admira-live",
-    "incidencias",
     "dashboard",
     "status"
   ],
@@ -27,5 +26,6 @@
     "/tickets",
     "acciones de escritura del CLI y del control de agentes"
   ],
-  "paginas_pendientes_de_migrar": "app"
+  "paginas_pendientes_de_migrar": "app",
+  "nota_flt_100883": "incidencias fuera de live; branding espejo Yokup retirado; ranking DeepAgents-only"
 }

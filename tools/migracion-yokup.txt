@@ -1,6 +1,6 @@
 # Migración yokup.com → www.admira.live · manifiesto
 #
-# Una línea por página mudada:  <ruta limpia> | <ficheros que la componen, separados por espacios>
+# Una línea por página mudada: <ruta limpia> | <ficheros que la componen, separados por espacios>
 # Los ficheros son rutas RELATIVAS dentro de yokup-site y se copian con el MISMO nombre aquí,
 # para que las dos webs sirvan exactamente las mismas URLs.
 #
@@ -9,7 +9,7 @@
 # añadir su línea aquí y relanzar tools/sync-yokup.sh — no hay más sitios que tocar.
 #
 # TODAS: la lista completa de páginas de la plataforma, para poder calcular las pendientes.
-TODAS = dashboard objetivos decisiones misiones tareas incidencias informes notificaciones equipo status asistencia app admira-live asignaciones normativa highscore consumos
+TODAS = dashboard objetivos decisiones misiones tareas informes notificaciones equipo status asistencia app admira-live asignaciones normativa highscore consumos
 
 highscore | highscore.html highscoreDetail.html highscore-daily-record.js highscore-desktop-app.js highscore-race.js highscore-race-bonus.js highscore-work-clock.js highscore-runner-state.css highscore-detail.js highscore-detail-page.js yk-frame.css yk-frame.js yk-agent-identity.js yk-avatar.js img/highscore-podio-pixel.png img/highscore-podio-pixel.webp img/highscore-presite-decathlon.webp media/trackfield-1722.mp3
 
@@ -31,7 +31,7 @@ informes como informes-flota con puerta | informes.html yk-maquina.js yk-informe
 equipo con puerta | equipo.html yk-maquina.js yk-misiones.js yk-decisions.js avatar-widget.js app/apple-touch-icon.png
 
 # ── Tramo 3 · 17-09-2026 · MorfeoMacMini · MacMini · FLT-100549 (Carlos: «mover las funcionalidades de
-#    empresa como los consumos, highscore etc. a admira.live») ──────────────────────────────────────────
+# empresa como los consumos, highscore etc. a admira.live») ──────────────────────────────────────────
 
 # Consumos: tokens y hosting por proyecto. No estaba ni en TODAS, así que el menú del marco nunca
 # reescribía su enlace. Se lee entera SIN sesión (GET /fleet/consumo/proyectos y /hosting-map son
@@ -73,8 +73,8 @@ asignaciones con puerta | asignaciones/index.html app/apple-touch-icon.png
 # admira.live · encolados: el visor de la cola de AgoraMatrix de admira.live. Escribe por bot.yokup.com → con puerta.
 admira-live con puerta | admira-live.html avatar-widget.js app/apple-touch-icon.png
 
-# Incidencias de la flota (NO el producto de retailers): lee/escribe /tickets, /ticket, /incident → con puerta.
-incidencias con puerta | incidencias.html yk-agent-identity.js yk-avatar.js avatar-widget.js yk-cabezal.css yk-misiones.css yk-misiones.js app/apple-touch-icon.png
+# FLT-100883: incidencias NO viaja — gestor agentic solo en yokup.com (/incidencias, /ticket).
+ con puerta | .html yk-agent-identity.js yk-avatar.js avatar-widget.js yk-cabezal.css yk-misiones.css yk-misiones.js app/apple-touch-icon.png
 
 # Dashboard: la consola de mando de la flota (mando remoto de agentes, PTY). 14 escrituras, endpoints
 # protegidos (/fleet/agent/control|stop, /tickets) → con puerta. Es la página más pesada del set.

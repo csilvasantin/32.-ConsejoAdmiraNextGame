@@ -27,9 +27,10 @@ const limpiar = (s) => String(s || '').replace(/\/+$/, '');
 const slug = (name) => String(name || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-|-$/g, '');
 const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
 
-export const PERSONAS_FLOTA = ['Morfeo', 'Neo', 'Smith', 'Trinity', 'Oraculo', 'Niobe', 'Link', 'Cypher', 'Switch', 'Persefone', 'Seraph'];
-export const MAQUINAS_FLOTA = ['MacMini', 'MacBookPro14', 'MacBookPro16', 'MacBookAirAzul', 'MacBookAirRosa', 'MacBookAirCrema', 'MacBookAirPlata'];
-const RUNTIME_POR_DEFECTO = { Oraculo: 'Codex', Trinity: 'Codex', Niobe: 'OpenCode', Persefone: 'OpenCode', Seraph: 'OpenCode' };
+export const PERSONAS_FLOTA = ['Morfeo', 'Neo', 'Smith', 'Trinity', 'Oraculo', 'Niobe', 'Link', 'Cypher', 'Switch', 'Persefone', 'Seraph', 'Arquitecto'];
+/** Equipos físicos de la flota + CursorCloud (orquestador Cursor en la nube; sello Carlos 20-sep-2026: Arquitecto = Cursor cloud, no Jony Ive / Arquitecto Silicio). */
+export const MAQUINAS_FLOTA = ['MacMini', 'MacBookPro14', 'MacBookPro16', 'MacBookAirAzul', 'MacBookAirRosa', 'MacBookAirCrema', 'MacBookAirPlata', 'CursorCloud'];
+const RUNTIME_POR_DEFECTO = { Oraculo: 'Codex', Trinity: 'Codex', Niobe: 'OpenCode', Persefone: 'OpenCode', Seraph: 'OpenCode', Arquitecto: 'Cursor' };
 const b64url = (bytes) => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
 /**
@@ -83,6 +84,52 @@ export async function identidadPorClaveAsync(clave, env = {}) {
     if (igualesStr(await claveFlota(env, p, m), clave)) return identidadAgente(p, m);
   }
   return null;
+}
+
+
+/**
+ * Alta de carné (FLT-100854): deriva la clave HMAC de persona|equipo con MCP_FLOTA_SEED
+ * sin revelar la semilla. Solo admite parejas del diccionario (PERSONAS_FLOTA × MAQUINAS_FLOTA);
+ * no abre el MCP a anónimos — el llamador debe ser un patrocinador con Bearer válido o
+ * presentar MCP_ALTA_TOKEN. La clave se devuelve UNA vez al llamador; no se registra en logs.
+ */
+export function personaFlotaCanonica(nombre) {
+  const n = String(nombre || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  if (!n) return null;
+  return PERSONAS_FLOTA.find((p) => n === p.toLowerCase()) || PERSONAS_FLOTA.find((p) => n.startsWith(p.toLowerCase())) || null;
+}
+export function equipoFlotaCanonico(nombre) {
+  const n = String(nombre || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '');
+  if (!n) return null;
+  if (n.includes('cursorcloud') || n === 'cursor' || n.includes('cursorcloudagent')) return 'CursorCloud';
+  return MAQUINAS_FLOTA.find((m) => n === m.toLowerCase()) || MAQUINAS_FLOTA.find((m) => n === m.toLowerCase().replace(/[^a-z0-9]/g, '')) || null;
+}
+export async function darseDeAlta(env, { persona, equipo, runtime = '' } = {}, meta = {}) {
+  if (!env.MCP_FLOTA_SEED) throw new Error('falta MCP_FLOTA_SEED: sin semilla no se puede emitir carné');
+  const p = personaFlotaCanonica(persona);
+  const e = equipoFlotaCanonico(equipo);
+  if (!p) throw new Error(`persona no enrolable «${persona}»: vale ${PERSONAS_FLOTA.join(', ')} (Arquitecto = Cursor cloud orquestador; no confundir con Arquitecto Silicio / Jony Ive)`);
+  if (!e) throw new Error(`equipo no enrolable «${equipo}»: vale ${MAQUINAS_FLOTA.join(', ')}`);
+  if (p === 'Arquitecto' && e !== 'CursorCloud') throw new Error('Arquitecto (Cursor cloud) se enrola solo en equipo CursorCloud');
+  const id = identidadAgente(p, e, runtime || RUNTIME_POR_DEFECTO[p] || 'Cursor');
+  const clave = await claveFlota(env, p, e);
+  const vault = `MCP_KEY_${p.toUpperCase()}_${e.toUpperCase()}`;
+  return {
+    ok: true,
+    persona: id.persona,
+    equipo: id.machine,
+    runtime: id.runtime,
+    agent: id.agent,
+    tipo: id.tipo,
+    clave,
+    pickup: {
+      vault_slot: vault,
+      mcp_conectar: `mcp-conectar.sh ${p} ${e}`,
+      nota: 'Guarda la clave en la bóveda (vault-set) o en el cliente MCP; NUNCA la pegues en Telegram, Agora ni commits. /mcp sigue exigiendo Bearer; MCP_FIRMA_ESTRICTA no se toca.',
+    },
+    patrocinado_por: meta.patrocinador || null,
+    via: meta.via || null,
+  };
 }
 
 export function crearYokup(env = {}, identidad, deps = {}) {

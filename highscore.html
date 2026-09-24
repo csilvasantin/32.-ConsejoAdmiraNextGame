@@ -503,6 +503,17 @@ h1{font-size:clamp(20px,3.2vw,31px);font-weight:900;letter-spacing:.08em;margin:
 .refresh-race.phase-ready .refresh-lane:not(.refresh-lane-idle):not(.refresh-lane-last) .refresh-mission,
 .refresh-race.phase-set .refresh-lane:not(.refresh-lane-idle):not(.refresh-lane-last) .refresh-mission,
 .refresh-race.phase-go .refresh-lane:not(.refresh-lane-idle):not(.refresh-lane-last) .refresh-mission{opacity:0;visibility:hidden}
+/* El foco se lee en la pista aunque la salida siga en READY/SET/GO y el corredor
+   aún no haya recorrido sitio. La ventana móvil lo escondía detrás del muñeco. */
+.refresh-lane[data-work-state="running"] .refresh-mission,
+.refresh-race.phase-ready .refresh-lane[data-work-state="running"] .refresh-mission,
+.refresh-race.phase-set .refresh-lane[data-work-state="running"] .refresh-mission,
+.refresh-race.phase-go .refresh-lane[data-work-state="running"] .refresh-mission{
+  left:var(--track-start)!important;right:calc(var(--finish-width) + 36px);width:auto!important;
+  max-width:none!important;transform:none!important;opacity:1!important;visibility:visible!important;
+  overflow:hidden;text-align:left}
+.refresh-lane[data-work-state="running"] .refresh-mission-title{text-align:left!important;opacity:1!important;
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .refresh-mission-detail{display:block}.refresh-mission-title{overflow:hidden;text-overflow:ellipsis;text-align:right}
 .refresh-mission-duration,.refresh-mission-idle{display:none!important}
 .refresh-ended{color:var(--accent)}
@@ -4881,9 +4892,11 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       if (!key || !hsLaneDeepEligible(key)) return;
       var focus = normaliza(p.focus), task = normaliza(p.task);
       var exact = normaliza(p.declaration_state).toLowerCase() === "exact_surface";
-      if (!(focus || task || exact)) return;
-      var title = focus || task ||
-        ((normaliza(p.runtime) ? normaliza(p.runtime) + " · " : "") + (machine || "latido reciente"));
+      var runtime = normaliza(p.runtime);
+      var latido = "Latido · " + [runtime, machine || "máquina sin nombre"].filter(Boolean).join(" · ");
+      // Sin foco igual hay pista: el latido y la máquina se leen de un vistazo.
+      var title = focus || task || latido;
+      var presenceReason = (focus || task || exact) ? "presence_focus" : "presence_live";
       var score = (focus ? 4 : 0) + (task ? 2 : 0) + (exact ? 1 : 0) + (host === "app" ? 0.5 : 0) + updated / 1e12;
       var prev = best[key];
       if (prev && prev._score >= score) return;
@@ -4901,7 +4914,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
         sessionDedicatedMs:null, sessionState:"open", sessionBasis:"presence_heartbeat",
         sessionSurface:host, runtime:normaliza(p.runtime),
         activityExpiresAt:(updated + 30) * 1000, cliPaused:false,
-        activityReason:"presence_focus", operationalState:normaliza(p.operational_state)
+        activityReason:presenceReason, operationalState:normaliza(p.operational_state)
       };
     });
     return Object.keys(best).map(function (k) { var row = best[k]; delete row._score; return row; });
@@ -5060,7 +5073,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       ? YkHighscoreRace.clockDurationLabel(reloj.sessionDurationMs) : "—";
     var sessionLabel = trabajo.sessionDedicatedMs === null
       ? "Horas operando no disponibles" : "Horas operando del agente";
-    var stateLabel = trabajo.activityReason==="presence_focus" ? "Presencia + focus verificados" : trabajo.activityReason==="awaiting_decision" ? "Esperando decisión · sin ejecución verificada" : trabajo.kind==="session" ? "Actividad Desktop APP verificada" : trabajo.cliPaused ? "CLI pausado por Carlos" : ["session_unverified","service_activity_unverified"].includes(trabajo.activityReason) ? "Trabajo registrado · sesión sin vincular" : trabajo.state === "running" ? "Trabajo activo" : trabajo.state === "last_work" ? "Trabajo finalizado" : "Trabajo en curso · actividad sin confirmar";
+    var stateLabel = trabajo.activityReason==="presence_focus" ? "Presencia + focus verificados" : trabajo.activityReason==="presence_live" ? "Latido en vivo" : trabajo.activityReason==="awaiting_decision" ? "Esperando decisión · sin ejecución verificada" : trabajo.kind==="session" ? "Actividad Desktop APP verificada" : trabajo.cliPaused ? "CLI pausado por Carlos" : ["session_unverified","service_activity_unverified"].includes(trabajo.activityReason) ? "Trabajo registrado · sesión sin vincular" : trabajo.state === "running" ? "Trabajo activo" : trabajo.state === "last_work" ? "Trabajo finalizado" : "Trabajo en curso · actividad sin confirmar";
     return { reference:trabajo.reference || "", title:trabajo.title, state:stateLabel,
       project:trabajo.projectName || "", projectId:trabajo.projectId || "", detailUrl:trabajo.detailUrl || "",
       executor:trabajo.executor, responsible:trabajo.agente, kind:trabajo.kind, reachable:trabajo.reachable,
@@ -5222,13 +5235,13 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     // Presencia+focus: DeepAgents entran al carril aunque el censo/ranking aún no los tenga.
     // Sólo el modo manual (selección explícita, incl. «ninguno») puede ocultarlos.
     todosTrabajos.forEach(function(work){
-      if(!work||work.activityReason!=="presence_focus"||!work.key)return;
+      if(!work||(work.activityReason!=="presence_focus"&&work.activityReason!=="presence_live")||!work.key)return;
       if(!hsLaneDeepEligible(work.key))return;
       if(AGENT_SCOPE_MODE==="manual" && effectiveScope instanceof Set && !effectiveScope.has(work.key))return;
       scopeKeys.add(work.key);
     });
     var trabajos=todosTrabajos.filter(function(work){return scopeKeys.has(work.key);});
-    var presenceLaneCount=todosTrabajos.filter(function(w){return w&&w.activityReason==="presence_focus";}).length;
+    var presenceLaneCount=todosTrabajos.filter(function(w){return w&&(w.activityReason==="presence_focus"||w.activityReason==="presence_live");}).length;
     completas.forEach(function (fila) { byKey[claveAgenteCarrera(fila && fila.agente)] = fila; });
     var corredores = trabajos.map(function (trabajo, index) {
       var base = byKey[trabajo.key] || { agente:trabajo.agente, posicion:completas.length + index + 1,
@@ -5244,15 +5257,29 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     var filasCarrera = typeof YkHighscoreRace !== "undefined" && YkHighscoreRace.raceRows
       ? YkHighscoreRace.raceRows(filasElegibles, clavesActivas)
       : filasElegibles;
-    corredores = aplicaParrilla(filasCarrera.map(function (fila) {
+    var parrilla = aplicaParrilla(filasCarrera.map(function (fila) {
       return enlaces.find(function (enlace) { return enlace.fila === fila; }) || null;
-    }).filter(Boolean)).map(function (enlace, indice) {
+    }).filter(Boolean));
+    // Una carrera ya cerrada (42 s) no puede esconder a quien acaba de latir.
+    var clavesParrilla = parrilla.map(function (enlace) { return enlace.clave; });
+    enlaces.forEach(function (enlace) {
+      if (!enlace || !enlace.trabajo) return;
+      var reason = enlace.trabajo.activityReason;
+      if (reason !== "presence_focus" && reason !== "presence_live") return;
+      if (clavesParrilla.indexOf(enlace.clave) >= 0) return;
+      parrilla.push(enlace);
+      clavesParrilla.push(enlace.clave);
+    });
+    corredores = parrilla.map(function (enlace, indice) {
       var fila = enlace.fila, clave = enlace.clave, resumen = enlace.resumen;
       var puesto = indice + 1, agente = normaliza(fila.agente), responsable = normaliza(resumen.responsible || agente);
       var identidadVisible = identidadVisualCorredor(responsable, fila);
       var contextoVisible = contextoVisualCorredor(identidadVisible, enlace.trabajo, fila);
       // Sólo el proyecto principal; la faena o el directorio no lo sustituyen.
       var proyectoResponsable = proyectoPrincipalCorredor(fila,enlace.trabajo);
+      if ((!proyectoResponsable || proyectoResponsable === "—") && normaliza(enlace.trabajo.projectName)) {
+        proyectoResponsable = normaliza(enlace.trabajo.projectName);
+      }
       var executor = normaliza(resumen.executor || responsable);
       var variant = typeof YkHighscoreRace !== "undefined" ? YkHighscoreRace.runnerVariant(fila)
         : (clave.split("").reduce(function (n, c) { return n + c.charCodeAt(0); }, 0) % 2 ? "dark" : "light");

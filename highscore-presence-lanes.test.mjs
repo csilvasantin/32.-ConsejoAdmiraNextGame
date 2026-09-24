@@ -79,7 +79,7 @@ test("presencia verificada + focus genera una calle por agente (CLI incluido)", 
   ], now);
   const lanes = A.fromPresence();
   const keys = lanes.map((l) => l.key).sort();
-  assert.deepEqual(keys, ["morfeomacmini", "neomacmini", "smithmacmini"]);
+  assert.deepEqual(keys, ["morfeomacmini", "neomacmini", "smithmacmini", "trinitymacmini"]);
   const smith = lanes.find((l) => l.key === "smithmacmini");
   assert.equal(smith.title, "Player taza");
   assert.equal(smith.sessionSurface, "cli");
@@ -87,6 +87,9 @@ test("presencia verificada + focus genera una calle por agente (CLI incluido)", 
   assert.equal(smith.state, "running");
   const morfeo = lanes.find((l) => l.key === "morfeomacmini");
   assert.match(morfeo.title, /Claude|MacMini|latido/i);
+  const trinity = lanes.find((l) => l.key === "trinitymacmini");
+  assert.equal(trinity.activityReason, "presence_live");
+  assert.equal(trinity.title, "Latido · Claude · MacMini");
 });
 
 test("active-work CLI running también entra en Activos (ya no solo APP)", () => {
@@ -99,6 +102,8 @@ test("active-work CLI running también entra en Activos (ya no solo APP)", () =>
 
 test("el HTML declara el puente presencia→carriles", () => {
   assert.match(html, /function trabajosDesdePresencia\(/);
-  assert.match(html, /activityReason:\s*"presence_focus"/);
+  assert.match(html, /presence_focus/);
+  assert.match(html, /presence_live/);
+  assert.match(html, /Latido · /);
   assert.match(html, /Carriles desde presencia verificada \+ focus/);
 });

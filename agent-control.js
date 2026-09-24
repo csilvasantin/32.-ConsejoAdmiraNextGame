@@ -16,8 +16,8 @@
   function norm(value){return text(value).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();}
   function seconds(value){var number=Number(value)||0;return number>4102444800?Math.floor(number/1000):Math.floor(number);}
   function surface(value){value=norm(value);return value==="cli"||value==="app"?value:"unknown";}
-  // Carlos: CLI remains paused across all machines; process evidence is independent.
-  function cliPaused(row){return surface(row&&(row.surface||row.host))==="cli";}
+  // La pausa CLI solo cuenta si el dato trae el flag. Ser host=cli no pausa.
+  function cliPaused(row){return !!(row&&row.cli_paused===true);}
   function hash(value){var result=2166136261;for(var char of String(value||"")){result^=char.charCodeAt(0);result=Math.imul(result,16777619);}return(result>>>0).toString(36);}
   function canonical(row,identity,machineOverride){
     row=row&&typeof row==="object"?row:{};
@@ -27,6 +27,7 @@
     var family=identity&&typeof identity.base==="function"?identity.base(persona):persona;
     var familyKey=identity&&typeof identity.key==="function"?identity.key(family):norm(family);
     return {agent:agent,persona:persona,family:family,family_key:familyKey,machine:machine,machine_key:norm(machineKey||machine),runtime:runtime,surface:host,
+      cli_paused:row.cli_paused===true,
       public_key:[norm(agent),norm(machineKey||machine),norm(runtime),host].join("\u001f")};
   }
   function configuredTargets(controlMachines,identity){
@@ -102,7 +103,7 @@
         runtime:identityRow.runtime,host:identityRow.surface})):"";
       items.push(Object.assign({control_key:controlKey,identity_key:key,agent:identityRow.agent,persona:identityRow.persona,
         family:identityRow.family,family_key:identityRow.family_key,machine:identityRow.machine,machine_key:identityRow.machine_key,
-        runtime:identityRow.runtime,surface:identityRow.surface,state:state,reason:reason,
+        runtime:identityRow.runtime,surface:identityRow.surface,cli_paused:identityRow.cli_paused===true,state:state,reason:reason,
         pause_supported:pauseSupported,policy_paused:cliPaused(identityRow),policy_reason:cliPaused(identityRow)?"cli_paused_by_carlos":null,
         eligible:{start:start,stop:stop},detail_url:href||null},processObservation(seen,configured,nowSeconds)));
     });

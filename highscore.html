@@ -4593,7 +4593,6 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   }
 
   function hsCliOrdena(machine, cli, accion, ciego) {
-    hsCliMensaje("CLI pausado por Carlos; utiliza el control de proceso con pausa verificada.",true);return;
     var clave = normaliza(machine) + "|" + normaliza(cli);
     if (CLI_PENDIENTES[clave]) return;
     if (ciego && !confirm("Nadie late en " + machine + ", así que no sabemos si " + cli + " ya está corriendo.\n\n" +
@@ -4625,7 +4624,6 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   // estado del CLI —sigue vivo, ahora con trabajo—, así que fingir una espera de
   // "a ver si cambia algo" seria mentir sobre lo que se puede comprobar.
   function hsCliEnviaMision(machine, cli, texto) {
-    hsCliMensaje("CLI pausado por Carlos; utiliza Desktop APP para nuevos trabajos.",true);return;
     var limpio = normaliza(texto).replace(/\s+/g, " ").trim();
     if (!limpio) { hsCliMensaje("Escribe la misión antes de enviarla.", true); return; }
     if (limpio.length > 600) { hsCliMensaje("La misión no puede pasar de 600 caracteres (llevas " + limpio.length + ").", true); return; }
@@ -4671,7 +4669,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       var group=machines[machineKey]||(machines[machineKey]={machine:row.machine,watcher:false,updated:Number(row.updated||0),slots:[],items:{}});
       var item={machine:row.machine,persona:row.persona,runtime:row.runtime,host:row.host,session_id:row.session_id,
         pid:Number(row.pid||0),active:row.online!==false&&row.online!==0&&Number(row.pid)>1,operational_state:row.operational_state==="paused"?"paused":"unknown",process_state:row.online===false||row.online===0?"closed":Number(row.pid)>1?"open":"unknown",attached:row.attached===true,model:row.model||"",project:row.project||"",
-        task:row.task||"",focus:row.focus||"",updated:Number(row.updated||0),declared_updated:Number(row.declared_updated||0),verified:true,watcher:group.watcher,pause_supported:group.updated>=now-30&&group.updated<=now+5&&(group.capabilities||[]).includes("cli_pause_preserve_session")};
+        task:row.task||"",focus:row.focus||"",updated:Number(row.updated||0),declared_updated:Number(row.declared_updated||0),verified:true,watcher:group.watcher,cli_paused:row.cli_paused===true,pause_supported:group.updated>=now-30&&group.updated<=now+5&&(group.capabilities||[]).includes("cli_pause_preserve_session")};
       group.items[hsOpsKey(item)]=item;
     });
     Object.keys(machines).forEach(function (key) {
@@ -4679,7 +4677,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       (group.slots||[]).forEach(function (slot) {
         if(!["app","cli"].includes(slot.host))return;
         var item={machine:group.machine,persona:slot.persona,runtime:slot.runtime,host:slot.host,session_id:slot.session_id,
-          pid:0,active:false,process_state:group.updated>=now-30&&group.updated<=now+5?"closed":"unknown",attached:false,model:"",project:"",task:"",focus:"",updated:group.updated,declared_updated:0,verified:group.updated>=now-30&&group.updated<=now+5,watcher:group.updated>=now-30&&group.updated<=now+5};
+          pid:0,active:false,process_state:group.updated>=now-30&&group.updated<=now+5?"closed":"unknown",attached:false,model:"",project:"",task:"",focus:"",updated:group.updated,declared_updated:0,verified:group.updated>=now-30&&group.updated<=now+5,watcher:group.updated>=now-30&&group.updated<=now+5,cli_paused:slot.cli_paused===true};
         var itemKey=hsOpsKey(item); if(!group.items[itemKey])group.items[itemKey]=item;
         else group.items[itemKey].watcher=group.updated>=now-30&&group.updated<=now+5;
       });
@@ -4697,7 +4695,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     var doing=item.task||item.focus||"Sin actividad declarada", project=item.project||"Sin proyecto declarado";
     var declarationAge=item.declared_updated?" · actividad declarada "+hsOpsAge(item.declared_updated):"";
     var state=item.process_state==="open"?"Abierto":item.process_state==="closed"?"Cerrado":"Sin señal", tone=item.active?"viva":item.process_state==="closed"?"parada":"muda";
-    var paused=item.host==="cli",policy=paused?"CLI pausado por Carlos · "+(item.operational_state==="paused"&&item.active?"Pausa confirmada · proceso suspendido":item.process_state==="closed"?"Parada confirmada":pending&&pending.action==="stop"?"Parada solicitada · sin confirmar":item.active?"Proceso aún abierto · parada sin confirmar":"No alcanzable · parada sin confirmar"):"";
+    var paused=item.cli_paused===true,policy=paused?"CLI pausado por Carlos · "+(item.operational_state==="paused"&&item.active?"Pausa confirmada · proceso suspendido":item.process_state==="closed"?"Parada confirmada":pending&&pending.action==="stop"?"Parada solicitada · sin confirmar":item.active?"Proceso aún abierto · parada sin confirmar":"No alcanzable · parada sin confirmar"):"";
     if(paused)tone="muda";
     var action=item.active?"stop":"start", label=item.active?"■ Detener":"▶ Arrancar";
     var disabled=pending||(paused&&!item.pause_supported)||(!item.active&&(paused||!item.watcher||item.process_state!=="closed"))||(!item.active?false:!(item.verified&&item.pid>1));
@@ -4715,7 +4713,8 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     var list=document.getElementById("cliCtlList"),count=document.getElementById("cliCtlCount"); if(!list||!count)return;
     var groups=hsOpsItems(),items=[].concat.apply([],groups.map(function(group){return group.items;}));
     var active=items.filter(function(item){return item.active;}).length;
-    count.textContent=active+' procesos abiertos · CLI en pausa · '+groups.length+' eq';
+    var cliPausa=items.some(function(item){return item.cli_paused===true;});
+    count.textContent=active+' procesos abiertos'+(cliPausa?' · CLI en pausa':'')+' · '+groups.length+' eq';
     if(!groups.length){list.innerHTML='<div class="cli-ctl-empty">No hay ningún watcher de procesos reciente. El estado es desconocido; no se inventa.</div>';return;}
     list.innerHTML=groups.map(function(group,index){
       var open=CLI_ABIERTOS.has(group.machine),activeGroup=group.items.filter(function(item){return item.active;}).length,appActive=group.items.some(function(item){return item.active&&item.host==='app';}),id='cliCtlMaquina'+index;
@@ -4740,7 +4739,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     if(CLI_PENDIENTES[key])return;var item=hsOpsFind(key);if(!item){hsCliMensaje('La ranura ya no existe en el último censo.',true);return;}
     if(!['start','stop'].includes(action)||!['app','cli'].includes(item.host)){hsCliMensaje('Interfaz o acción sin verificar.',true);return;}
     if(action==='stop'&&item.host==='cli'&&!item.pause_supported){hsCliMensaje('Pausa segura no disponible en este ordenador; no se enviará una terminación.',true);return;}
-    if(action==='start'&&item.host==='cli'){hsCliMensaje('CLI pausado por Carlos; utiliza Desktop APP.',true);return;}
+    if(action==='start'&&item.cli_paused===true){hsCliMensaje('CLI pausado por Carlos; utiliza Desktop APP.',true);return;}
     if(!item.verified||item.updated<Date.now()/1000-30||item.updated>Date.now()/1000+5||action==='stop'&&(!item.active||item.pid<=1)||action==='start'&&item.process_state!=='closed'){hsCliMensaje('El proceso no está verificado. Actualiza antes de actuar.',true);return;}
     var surface=item.host==='app'?'DesktopAPP':'CLI';
     if(action==='stop'&&!confirm('Detener '+item.persona+' · '+surface+' en '+item.machine+' (PID '+item.pid+')?'))return;
@@ -4826,7 +4825,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     }
     var surface=normaliza(item&&item.session_surface).toLowerCase();
     var bound=(surface==="app"||surface==="cli")&&item.session_state==="open"&&!!normaliza(item.dedicated_basis||item.session_basis);
-    var paused=item&&item.cli_paused===true||surface==="cli";
+    var paused=!!(item&&item.cli_paused===true);
     if(item.state==="last_work")return item;
     if(paused)return Object.assign({},item,{state:"assigned_stale",cli_paused:true,activity_reason:"cli_paused_by_carlos"});
     if(item.state==="running"&&!bound)return Object.assign({},item,{state:"assigned_stale",activity_reason:"session_unverified"});

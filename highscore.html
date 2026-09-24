@@ -1773,7 +1773,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       if (!por[d.key]) por[d.key] = { agente:d.base, base:d.base, suffix:d.suffix,
         objetivos:0, ptsObjetivos:0, ventanas:0, ptsVentanas:0,
         misiones:0, ptsMisiones:0, ptsBonus:0, tareas:0, ptsTareas:0, seenDailyScore:false, seenTask:false,
-        vivo:false, haLatido:false, runtime:"", runtimePeso:0, runtimeAt:0,
+        vivo:false, haLatido:false, focoPresencia:"", focoAt:0, runtime:"", runtimePeso:0, runtimeAt:0,
         maquinas:[], maquinasVivas:[], actividad:"", actividadAt:0, actividadDetalle:"", progresion:null,
         proyecto:"", proyectoUrl:"", proyectoAt:0, proyectoPeso:0 };
       return por[d.key];
@@ -1886,6 +1886,8 @@ body.resizing-columns{cursor:col-resize;user-select:none}
           p.cli_paused !== true && p.operational_state !== "paused" && Number(p.pid) > 1 && ["app","cli"].indexOf(p.host) >= 0 &&
           t >= ahora - 30 && t <= ahora + 5;
         f.vivo = true; adoptaRuntime(f, p.runtime, p.host, t, processVerified, processVerified ? p.model : "");
+        var foco = normaliza(p.focus || p.task || "");
+        if (foco && t >= (Number(f.focoAt) || 0)) { f.focoPresencia = foco; f.focoAt = t; }
         // El latido sólo es una pista de respaldo. Una tarea, ventana, misión u
         // objetivo activo manda aunque su timestamp sea anterior al heartbeat.
         marcaProyecto(f, p.project, t * 1000, p.focus, 0);
@@ -4885,6 +4887,21 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     }
     return { key:storageKey, record:record };
   }
+  function mismaPista(a, b) {
+    a = normaliza(a).toLowerCase(); b = normaliza(b).toLowerCase();
+    return !!a && !!b && (a === b || a.indexOf(b) === 0 || b.indexOf(a) === 0);
+  }
+  function pistaPresencia(fila) {
+    var machine = (fila.maquinasVivas && fila.maquinasVivas[0]) || (fila.maquinas && fila.maquinas[0]) || fila.suffix || "";
+    var foco = normaliza(fila.focoPresencia);
+    return { key:claveAgenteCarrera(fila.agente), agente:fila.agente, state:"running", kind:"presence",
+      title:foco || ("Latido · " + (machine || "máquina sin nombre")), presenceFocus:!!foco, reference:"",
+      projectName:fila.proyecto || "", projectId:"", detailUrl:fila.proyectoUrl || "", executor:fila.agente,
+      reachable:true, presenceAt:Date.now(), at:Date.now(), startedAt:0, endedAt:0, elapsedMs:null,
+      sessionSurface:(fila.via === "cli" || fila.via === "app") ? fila.via : "", cliPaused:false,
+      activityReason:"presence_live", sessionDedicatedMs:null, sessionState:"open", sessionBasis:"presence",
+      timingBasis:"presence", assignmentAt:0, assignmentBasis:"" };
+  }
   function trabajosCarrera() {
     return trabajosEnCurso().filter(function (trabajo) {
       if(trabajo.cliPaused||["session_unverified","service_activity_unverified","awaiting_decision"].includes(trabajo.activityReason))return true;
@@ -4952,7 +4969,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   function contextoVisualCorredor(identidad, trabajo, fila) {
     var host = normaliza(trabajo && trabajo.sessionSurface).toLowerCase();
     if (identidad.machine==="GrokBot")return "GrokBot · APP";
-    if (host === "app" || host === "cli") return identidad.machine + " · " + host.toUpperCase()+(host==="cli"&&trabajo.state!=="last_work"?" · pausado por Carlos":"");
+    if (host === "app" || host === "cli") return identidad.machine + " · " + host.toUpperCase()+(host==="cli"&&trabajo.cliPaused?" · pausado por Carlos":"");
     var known = Array.from(new Set(((fila && fila.interfaces) || []).map(function(value){return normaliza(value).toLowerCase();})))
       .filter(function(value){return value === "app" || value === "cli";}).sort();
     return identidad.machine + (known.length ? " · interfaces conocidas: " + known.map(function(value){return value.toUpperCase();}).join(" / ") + " · sesión sin vincular" : " · interfaz sin verificar");
@@ -4977,7 +4994,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       ? YkHighscoreRace.clockDurationLabel(reloj.sessionDurationMs) : "—";
     var sessionLabel = trabajo.sessionDedicatedMs === null
       ? "Horas operando no disponibles" : "Horas operando del agente";
-    var stateLabel = trabajo.activityReason==="awaiting_decision" ? "Esperando decisión · sin ejecución verificada" : trabajo.kind==="session" ? "Actividad Desktop APP verificada" : trabajo.cliPaused ? "CLI pausado por Carlos" : ["session_unverified","service_activity_unverified"].includes(trabajo.activityReason) ? "Trabajo registrado · sesión sin vincular" : trabajo.state === "running" ? "Trabajo activo" : trabajo.state === "last_work" ? "Trabajo finalizado" : "Trabajo en curso · actividad sin confirmar";
+    var stateLabel = trabajo.kind==="presence" ? (trabajo.presenceFocus ? "Foco en vivo" : "Latido en vivo") : trabajo.activityReason==="awaiting_decision" ? "Esperando decisión · sin ejecución verificada" : trabajo.kind==="session" ? "Actividad Desktop APP verificada" : trabajo.cliPaused ? "CLI pausado por Carlos" : ["session_unverified","service_activity_unverified"].includes(trabajo.activityReason) ? "Trabajo registrado · sesión sin vincular" : trabajo.state === "running" ? "Trabajo activo" : trabajo.state === "last_work" ? "Trabajo finalizado" : "Trabajo en curso · actividad sin confirmar";
     return { reference:trabajo.reference || "", title:trabajo.title, state:stateLabel,
       project:trabajo.projectName || "", projectId:trabajo.projectId || "", detailUrl:trabajo.detailUrl || "",
       executor:trabajo.executor, responsible:trabajo.agente, kind:trabajo.kind, reachable:trabajo.reachable,
@@ -5135,6 +5152,19 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     var scopeKeys=new Set(completas.map(function(row){return claveAgenteCarrera(row.agente);}));
     var todosTrabajos=trabajosCarrera();
     var trabajos=todosTrabajos.filter(function(work){return scopeKeys.has(work.key);});
+    var pistasVistas=trabajos.map(function(work){return work.key;});
+    var presenciaPorClave=Object.create(null);
+    completas.forEach(function(fila){
+      if(!fila||!fila.vivo)return;
+      var key=claveAgenteCarrera(fila.agente);if(!key)return;
+      var previo=presenciaPorClave[key];
+      if(!previo||(fila.focoPresencia&&!previo.focoPresencia))presenciaPorClave[key]=fila;
+    });
+    Object.keys(presenciaPorClave).forEach(function(key){
+      if(pistasVistas.some(function(vista){return mismaPista(vista,key);}))return;
+      trabajos.push(pistaPresencia(presenciaPorClave[key]));
+      pistasVistas.push(key);
+    });
     completas.forEach(function (fila) { byKey[claveAgenteCarrera(fila && fila.agente)] = fila; });
     var corredores = trabajos.map(function (trabajo, index) {
       var base = byKey[trabajo.key] || { agente:trabajo.agente, posicion:completas.length + index + 1,

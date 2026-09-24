@@ -1321,7 +1321,14 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   };
   function pedirDesde(base, ruta) {
     return window.__ykJsonOnce(base + ruta, 4000, function () {
-      return fetch(base + ruta, { cache: "no-store" }).then(function (r) {
+      // FLT-100900: un endpoint colgado (el daily llegó a tardar >8s desde
+      // algunos navegadores) no puede congelar Promise.all y dejar el
+      // marcador en 0. A los 8s la llamada falla y seguroYokup la deja en null.
+      var opts = { cache: "no-store" };
+      if (typeof AbortSignal !== "undefined" && typeof AbortSignal.timeout === "function") {
+        opts.signal = AbortSignal.timeout(8000);
+      }
+      return fetch(base + ruta, opts).then(function (r) {
         if (!r.ok) throw new Error(ruta + " → " + r.status);
         return r.json();
       });
@@ -1390,7 +1397,10 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       var fresh = !!(r[1] && r[1].day === claveDia(Date.now()) && Array.isArray(r[1].scores));
       var a = fresh ? r[1] : actividadDiariaGuardada();
       if (fresh) guardaActividadDiaria(r[1]);
-      datos.actividadFresh = fresh && datos.tareasFresh;
+      // FLT-100900: /tasks/all?scope=fleet responde 401 y no puede apagar
+      // el día. Los puntos salen de /highscore/daily. Las tareas, si faltan,
+      // solo dejan vacía su propia lista.
+      datos.actividadFresh = fresh;
       datos.actividadMeta = a || null; datos.actividad = a && a.scores || [];
       datos.misiones = r[2] || []; datos.ideas = r[3] || []; datos.decisiones = r[4] || [];
       datos.presencia = r[5] && r[5].presence || []; datos.controlMachines = r[5] && r[5].controlMachines || [];
@@ -5464,7 +5474,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       datos.tareasFresh = Array.isArray(r[0]);
       if (datos.tareasFresh) datos.tareas = r[0];
       var dailyFresh = !!(r[1] && r[1].day === claveDia(Date.now()) && Array.isArray(r[1].scores));
-      datos.actividadFresh = dailyFresh && datos.tareasFresh;
+      datos.actividadFresh = dailyFresh;
       if (dailyFresh) { guardaActividadDiaria(r[1]); datos.actividadMeta = r[1]; datos.actividad = r[1].scores || []; }
       if (r[2] && hsAcceptPresenceRequest(presenceRequestSequence)) {
         datos.presencia = r[2].presence || []; datos.controlMachines = r[2].controlMachines || [];

@@ -5180,9 +5180,16 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     var filasCarrera = typeof YkHighscoreRace !== "undefined" && YkHighscoreRace.raceRows
       ? YkHighscoreRace.raceRows(filasElegibles, clavesActivas)
       : filasElegibles;
-    corredores = aplicaParrilla(filasCarrera.map(function (fila) {
+    var parrilla = aplicaParrilla(filasCarrera.map(function (fila) {
       return enlaces.find(function (enlace) { return enlace.fila === fila; }) || null;
-    }).filter(Boolean)).map(function (enlace, indice) {
+    }).filter(Boolean));
+    var clavesParrilla = parrilla.map(function (enlace) { return enlace.clave; });
+    enlaces.forEach(function (enlace) {
+      if (!enlace || !enlace.trabajo || enlace.trabajo.kind !== "presence") return;
+      if (clavesParrilla.some(function (clave) { return mismaPista(clave, enlace.clave); })) return;
+      parrilla.push(enlace); clavesParrilla.push(enlace.clave);
+    });
+    corredores = parrilla.map(function (enlace, indice) {
       var fila = enlace.fila, clave = enlace.clave, resumen = enlace.resumen;
       var puesto = indice + 1, agente = normaliza(fila.agente), responsable = normaliza(resumen.responsible || agente);
       var identidadVisible = identidadVisualCorredor(responsable, fila);

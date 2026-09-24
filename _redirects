@@ -1,0 +1,15 @@
+# Carlos, 24-sep-2026 · FLT-100886. Incidencias, tickets, gestor y tablero
+# son de yokup.com. El score (highscore, misiones, tareas, consumos, objetivos)
+# sigue en admira.live y no se redirige desde aquí.
+/incidencias       https://www.yokup.com/incidencias   301
+/incidencias/      https://www.yokup.com/incidencias   301
+/incidencias.html  https://www.yokup.com/incidencias   301
+/tickets           https://www.yokup.com/tickets       301
+/tickets/          https://www.yokup.com/tickets       301
+/tickets.html      https://www.yokup.com/tickets       301
+/gestor            https://www.yokup.com/gestor        301
+/gestor/           https://www.yokup.com/gestor        301
+/gestor.html       https://www.yokup.com/gestor        301
+/tablero           https://www.yokup.com/tablero       301
+/tablero/          https://www.yokup.com/tablero       301
+/tablero.html      https://www.yokup.com/tablero       301

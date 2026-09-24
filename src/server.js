@@ -61,9 +61,10 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Agora-Panel-Key, X-Council-Token",
   "Access-Control-Allow-Private-Network": "true"
 };
+// FLT-100878: Elon→Smith; Jensen→ArquitectoCursorCloud (no Morfeo ni Arquitecto Silicio/Ive).
 const MATRIX_COUNCIL_LINKS = new Map([
   ["Elon Musk", { alias: "Smith", role: "CEO" }],
-  ["Jensen Huang", { alias: "Morfeo", role: "CTO" }],
+  ["Jensen Huang", { alias: "ArquitectoCursorCloud", role: "CTO" }],
   ["Gwynne Shotwell", { alias: "Trinity", role: "COO" }],
   ["Ruth Porat", { alias: "Oráculo", role: "CFO" }],
   ["John Lasseter", { alias: "Mouse", role: "CCO" }],

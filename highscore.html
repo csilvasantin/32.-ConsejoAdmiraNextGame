@@ -4900,23 +4900,25 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       var onlineOk = p.online !== 0 && p.online !== false;
       var focus = normaliza(p.focus), task = normaliza(p.task);
       var exact = normaliza(p.declaration_state).toLowerCase() === "exact_surface";
-      var hasSignal = !!(focus || task || exact);
+      // FLT-100950: foco vacío es latido, no faena. No entra en la parrilla
+      // y no puede poner el running man. exact_surface sin texto no basta.
+      var hasWork = !!(focus || task);
+      if (!hasWork) return;
       // Camino 1 (flota): process_snapshot verificado + pid, 30 s (contratos Morfeo).
       var freshProcess = processLive && !!p.verified && (host === "app" || host === "cli") &&
         onlineOk && pid > 0 && updated >= now - 30 && updated <= now + 5;
-      // Camino 2 (Arquitecto/CursorCloud): heartbeat|process_snapshot con focus|task|exact,
+      // Camino 2 (Arquitecto/CursorCloud): heartbeat|process_snapshot con focus|task,
       // ventana 150 s. No inventa APP para CLI; no resucita Morfeo APP caducado.
       var hostOkCursor = !host || host === "app" || host === "cli";
       var freshCursor = isCursorCloud && hsIsDeepAgentKey(key) && (isHeartbeat || processLive) &&
-        hasSignal && onlineOk && hostOkCursor &&
+        hasWork && onlineOk && hostOkCursor &&
         updated >= now - 150 && updated <= now + 5;
       if (!freshProcess && !freshCursor) return;
       // Superficie factual: no inventar APP si el latido no declara host.
       var surface = (host === "app" || host === "cli") ? host : (freshProcess ? host : "");
       var runtime = normaliza(p.runtime);
-      var latido = "Latido · " + [runtime, machine || machineSuffix || "máquina sin nombre"].filter(Boolean).join(" · ");
-      var title = focus || task || latido;
-      var presenceReason = hasSignal ? "presence_focus" : "presence_live";
+      var title = focus || task;
+      var presenceReason = "presence_focus";
       var score = (focus ? 4 : 0) + (task ? 2 : 0) + (exact ? 1 : 0) +
         (freshProcess ? 2 : 0) + (surface === "app" ? 0.5 : 0) + updated / 1e12;
       var prev = best[key];
@@ -5019,6 +5021,38 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       a.agente.localeCompare(b.agente, "es"); });
   }
 
+  // Una persona, una fila. Neo en dos máquinas no son dos corredores.
+  // Gana la faena real; el latido sin texto no ocupa calle.
+  function personaCarrera(work) {
+    var k = normaliza(work && (work.agente || work.key));
+    var base = k.replace(/SINMAQ|SinMaq|CursorCloud|GrokBot|MacMini|Mini|MBA(?:Azul|Plata|Rosa|Crema|16)|MBP(?:14|16|Negro14)?|Negro14|Air16/gi, " ");
+    base = base.replace(/[^a-zA-ZáéíóúñÁÉÍÓÚÑ]/g, " ").trim().split(/\s+/)[0] || k;
+    return base.toLowerCase();
+  }
+  function faenaReal(work) {
+    if (!work || work.cliPaused === true) return false;
+    var title = normaliza(work.title);
+    if (!title || title.indexOf("Latido") === 0) return false;
+    if (work.activityReason === "presence_live") return false;
+    if (work.activityReason === "presence_focus") return true;
+    return work.state === "running";
+  }
+  function puntuaFaena(work) {
+    var deTrabajo = work.kind !== "presence" && work.state === "running";
+    return (deTrabajo ? 100 : 0) + (work.state === "running" ? 10 : 0) + ((Number(work.at) || 0) / 1e15);
+  }
+  function unaFilaPorPersona(rows) {
+    var best = Object.create(null);
+    (rows || []).forEach(function (work) {
+      if (!faenaReal(work)) return;
+      var persona = personaCarrera(work);
+      if (!persona) return;
+      var prev = best[persona];
+      if (!prev || puntuaFaena(work) > puntuaFaena(prev)) best[persona] = work;
+    });
+    return Object.keys(best).map(function (k) { return best[k]; });
+  }
+
   var staleRaceMemory = Object.create(null);
   var staleRaceChannel = typeof BroadcastChannel === "function" ? new BroadcastChannel("yk.highscore.stale-race.v1") : null;
   function estadoCarreraStale(trabajo) {
@@ -5037,12 +5071,13 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     return { key:storageKey, record:record };
   }
   function trabajosCarrera() {
-    return trabajosEnCurso().filter(function (trabajo) {
+    var rows = trabajosEnCurso().filter(function (trabajo) {
       if(trabajo.cliPaused||["session_unverified","service_activity_unverified","awaiting_decision"].includes(trabajo.activityReason))return true;
       if (trabajo.state !== "assigned_stale") return true;
       var state = estadoCarreraStale(trabajo);
       return state && YkHighscoreRace.staleRaceVisible(state.record);
     });
+    return unaFilaPorPersona(rows);
   }
   function completaCicloStale() {
     if (document.hidden) return;
@@ -5286,11 +5321,10 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     pendientesCarrera = 0;
   }
   function liberaParrilla() { rosterCarrera = null; }
-  // Carril vivo: presencia con o sin foco, o un trabajo running en CLI/APP.
-  // El ranking vacío no puede dejar fuera a quien active-work ya ve corriendo.
+  // Carril vivo: faena con texto, o un running de CLI/APP. El latido sin foco no corre.
   function pistaEnVivo(work) {
-    if (!work || !work.key || !hsLaneDeepEligible(work.key) || work.cliPaused === true) return false;
-    if (work.activityReason === "presence_focus" || work.activityReason === "presence_live") return true;
+    if (!faenaReal(work) || !work.key || !hsLaneDeepEligible(work.key)) return false;
+    if (work.activityReason === "presence_focus") return true;
     var surface = normaliza(work.sessionSurface).toLowerCase();
     return work.state === "running" && (surface === "cli" || surface === "app");
   }
@@ -5341,6 +5375,16 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     pendientesCarrera = enlaces.filter(function (enlace) {
       return enlace && clavesParrilla.indexOf(enlace.clave) < 0;
     }).length;
+    // La parrilla cerrada tampoco conserva un segundo Neo ni un latido sin faena.
+    var mejorPersona = Object.create(null);
+    parrilla.forEach(function (enlace) {
+      var work = enlace && enlace.trabajo;
+      if (!faenaReal(work)) return;
+      var persona = personaCarrera(work);
+      var previo = mejorPersona[persona];
+      if (!previo || puntuaFaena(work) > puntuaFaena(previo.trabajo)) mejorPersona[persona] = enlace;
+    });
+    parrilla = Object.keys(mejorPersona).map(function (persona) { return mejorPersona[persona]; });
     corredores = parrilla.map(function (enlace, indice) {
       var fila = enlace.fila, clave = enlace.clave, resumen = enlace.resumen;
       var puesto = indice + 1, agente = normaliza(fila.agente), responsable = normaliza(resumen.responsible || agente);

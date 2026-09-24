@@ -79,17 +79,30 @@ test("presencia verificada + focus genera una calle por agente (CLI incluido)", 
   ], now);
   const lanes = A.fromPresence();
   const keys = lanes.map((l) => l.key).sort();
-  assert.deepEqual(keys, ["morfeomacmini", "neomacmini", "smithmacmini", "trinitymacmini"]);
+  assert.deepEqual(keys, ["neomacmini", "smithmacmini"]);
   const smith = lanes.find((l) => l.key === "smithmacmini");
   assert.equal(smith.title, "Player taza");
   assert.equal(smith.sessionSurface, "cli");
   assert.equal(smith.activityReason, "presence_focus");
   assert.equal(smith.state, "running");
-  const morfeo = lanes.find((l) => l.key === "morfeomacmini");
-  assert.match(morfeo.title, /Claude|MacMini|latido/i);
-  const trinity = lanes.find((l) => l.key === "trinitymacmini");
-  assert.equal(trinity.activityReason, "presence_live");
-  assert.equal(trinity.title, "Latido · Claude · MacMini");
+  assert.equal(lanes.some((l) => l.key === "trinitymacmini"), false);
+  assert.equal(lanes.some((l) => l.key === "morfeomacmini"), false);
+});
+
+test("dos Neo se quedan en la faena; el latido sin texto no corre", () => {
+  const htmlFns = ["personaCarrera", "faenaReal", "puntuaFaena", "unaFilaPorPersona"].map(functionSource).join("\n");
+  const fold = new Function(`
+    function normaliza(value) { return String(value == null ? "" : value).trim(); }
+    ${htmlFns}
+    return unaFilaPorPersona;
+  `)();
+  const rows = fold([
+    { key: "neomacmini", agente: "NeoMacMini", title: "Latido · Claude · MacMini", state: "running", activityReason: "presence_live", kind: "presence", at: 10 },
+    { key: "neombp14", agente: "NeoMBP14", title: "portal admira.tv", state: "running", activityReason: "presence_focus", kind: "presence", at: 20 },
+    { key: "niobemacmini", agente: "NiobeMacMini", title: "Latido · OpenCode · MacMini", state: "running", activityReason: "presence_live", kind: "presence", at: 30 },
+    { key: "trinitymbp14", agente: "TrinityMBP14", title: "cápsulas", state: "running", activityReason: "presence_focus", kind: "presence", at: 40 },
+  ]);
+  assert.deepEqual(rows.map((row) => row.key).sort(), ["neombp14", "trinitymbp14"]);
 });
 
 test("active-work CLI running también entra en Activos (ya no solo APP)", () => {
@@ -104,7 +117,8 @@ test("el HTML declara el puente presencia→carriles", () => {
   assert.match(html, /function trabajosDesdePresencia\(/);
   assert.match(html, /presence_focus/);
   assert.match(html, /presence_live/);
-  assert.match(html, /Latido · /);
+  assert.match(html, /foco vacío es latido, no faena/);
+  assert.match(html, /function unaFilaPorPersona\(/);
   assert.match(html, /function pistaEnVivo\(/);
   assert.match(html, /active-work no bloquea el primer pintado/);
   assert.match(html, /Carriles desde presencia verificada \+ focus/);

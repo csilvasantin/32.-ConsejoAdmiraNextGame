@@ -4939,11 +4939,16 @@ body.resizing-columns{cursor:col-resize;user-select:none}
         sessionSurface:["app","cli"].includes(item.session_surface)?item.session_surface:"", runtime:item.runtime || "",
         activityExpiresAt:Number(item.activity_expires_at)||0,cliPaused:item.cli_paused===true,activityReason:item.activity_reason||"",operationalState:item.operational_state||"" };
     });
-    // active-work gana si ya trae la familia; presencia solo rellena huecos (CLI+focus).
-    var have = Object.create(null);
-    fromApi.forEach(function (w) { if (w && w.key) have[w.key] = true; });
+    // active-work gana sólo si YA corre con título real; si no, presencia+focus ocupa la calle.
     trabajosDesdePresencia().forEach(function (w) {
-      if (w && w.key && !have[w.key]) { fromApi.push(w); have[w.key] = true; }
+      if (!w || !w.key) return;
+      var idx = -1;
+      for (var i = 0; i < fromApi.length; i++) if (fromApi[i] && fromApi[i].key === w.key) { idx = i; break; }
+      if (idx < 0) { fromApi.push(w); return; }
+      var cur = fromApi[idx];
+      if (cur.state === "running" && cur.activityReason !== "presence_focus" && normaliza(cur.title) &&
+          cur.title !== "Descripción del trabajo pendiente") return;
+      fromApi[idx] = w;
     });
     return fromApi.sort(function (a, b) { return (a.state === "running" ? -1 : 1) - (b.state === "running" ? -1 : 1) ||
       (b.state === "last_work" ? b.endedAt : b.at) - (a.state === "last_work" ? a.endedAt : a.at) ||

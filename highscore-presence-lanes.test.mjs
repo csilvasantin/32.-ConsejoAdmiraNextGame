@@ -102,3 +102,9 @@ test("el HTML declara el puente presencia→carriles", () => {
   assert.match(html, /activityReason:\s*"presence_focus"/);
   assert.match(html, /Carriles desde presencia verificada \+ focus/);
 });
+
+
+test("active-work stale no tapa presencia+focus en el HTML", () => {
+  assert.match(html, /active-work gana sólo si YA corre con título real/);
+  assert.match(html, /fromApi\[idx\] = w/);
+});

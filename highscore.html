@@ -1358,7 +1358,10 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   }
 
   pon(8, "CONECTANDO CON LA FLOTA…");
-  /* BATCH TOTAL: las diez llamadas salen A LA VEZ. Antes /tasks/all iba solo
+  /* active-work no bloquea el primer pintado (FLT-100947). Si cuelga, el
+     cliente lo aborta a los 8 s y las pistas salen de la presencia. */
+  hsRefreshWork(false);
+  /* BATCH TOTAL: las llamadas salen A LA VEZ. Antes /tasks/all iba solo
      por delante —únicamente para poner su cifra en la barra— y el resto esperaba
      su latencia entera sin motivo. La barra sigue contando el tablero: lo dice
      cuando la respuesta llega, no antes. */
@@ -1384,7 +1387,6 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     // Reparto de turnos: quién abre cuándo. Es lo que hace honesta la cuenta
     // atrás de la fila desplegada; si no responde, esa cifra cae al cupo.
     seguroYokup("/fleet/turnos", function (d) { return d && d.ok ? d : null; }),
-    hsRefreshWork(false),
     seguroYokup("/highscore/history?scope=global", function (d) {
       return d && d.ok && Array.isArray(d.all_days) ? d : null;
     })
@@ -1401,7 +1403,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       datos.presenceAvailable = !!(r[5] && Number(r[5].now || 0) > 0);
       datos.proyectos = r[6] && r[6].projects || [];
       datos.declaracionesPrincipales = r[6] && r[6].declarations || [];
-      datos.historial = r[9] || null; datos.historialFresh = !!r[9]; diasCache = datos.historial;
+      datos.historial = r[8] || null; datos.historialFresh = !!r[8]; diasCache = datos.historial;
       datos.turnos = r[7] || null;
 
       pon(76, "OBJETIVOS · VENTANAS · MISIONES · " + ((a && a.recorded && a.recorded.objectives) || 0) + " / " + ((a && a.recorded && a.recorded.windows) || 0) + " / " + ((a && a.recorded && a.recorded.missions) || 0));
@@ -5194,7 +5196,14 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     workRequest = Promise.race([request, deadline]).then(function (payload) {
       if (sequence !== workRequestSequence) return null;
       hsApplyWorkSnapshot(payload);
-      if (render) hsPaintWorkUpdate();
+      // Si el marcador ya está pintado, un active-work tardío no espera al
+      // siguiente lote: incorpora sus filas. Si aún no hay censo, listo() pinta.
+      if (render || listaCompletaCache) hsPaintWorkUpdate();
+      var pie = document.getElementById("pieCarga");
+      if (pie && typeof entradaHecha !== "undefined" && !entradaHecha && typeof agentesEnLiza === "function") {
+        var vivos = agentesEnLiza();
+        pie.textContent = vivos + (vivos === 1 ? " AGENTE EN LIZA" : " AGENTES EN LIZA");
+      }
       return payload;
     }).finally(function () {
       clearTimeout(timeout);
@@ -5517,8 +5526,10 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     entradaTimer = setTimeout(entra, ENTRADA_AUTOMATICA_MS);
   }
   function agentesEnLiza() {
-    return datos.trabajosAvailable && datos.trabajosMode === "active"
-      ? trabajosCarrera().filter(function (work) { return work.state === "running" || work.state === "assigned_stale"; }).length : 0;
+    return trabajosCarrera().filter(function (work) {
+      return work && (work.state === "running" || work.kind === "presence" ||
+        work.activityReason === "presence_focus" || work.activityReason === "presence_live");
+    }).length;
   }
   function listo() {
     listaCompletaCache = calcula();
@@ -5636,6 +5647,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     refrescando = true;
     var presenceRequestSequence = hsBeginPresenceRequest();
     document.getElementById("refreshCount").textContent = "ACT.";
+    hsRefreshWork(true);
     return Promise.all([
       seguroYokup("/tasks/all?scope=fleet", function (d) { return d.tasks || []; }),
       seguroYokup("/highscore/daily", function (d) { return d; }),
@@ -5649,7 +5661,6 @@ body.resizing-columns{cursor:col-resize;user-select:none}
         projects:d.projects || [], declarations:d.principal_declarations || []
       }; }),
       seguroYokup("/fleet/turnos", function (d) { return d && d.ok ? d : null; }),
-      hsRefreshWork(true),
       seguroYokup("/highscore/history?scope=global", function (d) {
         return d && d.ok && Array.isArray(d.all_days) ? d : null;
       })
@@ -5678,8 +5689,8 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       // todos. Si esta vuelta no contesta se conserva el anterior, que envejece
       // mejor que caer al cupo y prometer una ventana que no toca.
       if (r[7]) datos.turnos = r[7];
-      datos.historialFresh = !!r[9];
-      if (r[9]) { datos.historial = r[9]; diasCache = r[9]; }
+      datos.historialFresh = !!r[8];
+      if (r[8]) { datos.historial = r[8]; diasCache = r[8]; }
       fallos = [];
       var listaCompleta = calcula(), l = aplicaAgentScope(listaCompleta);
       var cambioLider = listaCache && l[0] && listaCache[0] && l[0].agente !== listaCache[0].agente;

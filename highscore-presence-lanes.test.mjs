@@ -106,6 +106,7 @@ test("el HTML declara el puente presencia→carriles", () => {
   assert.match(html, /presence_live/);
   assert.match(html, /Latido · /);
   assert.match(html, /function pistaEnVivo\(/);
+  assert.match(html, /active-work no bloquea el primer pintado/);
   assert.match(html, /Carriles desde presencia verificada \+ focus/);
 });
 

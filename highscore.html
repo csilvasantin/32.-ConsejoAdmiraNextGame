@@ -1197,6 +1197,12 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   var ACTIVIDAD_FRESCA_MS = 30 * 60 * 1000, OBJETIVO_FRESCO_MS = 15 * 60 * 1000;
   var PRIORIDAD_ACTIVIDAD = { objetivos:1, misiones:2, ventanas:3, tareas:4 };
   var NO_AGENTES = ["", "-", "—"];
+  // Carlos, 24-sep-2026 · FLT-100877. El marcador solo puntúa DeepAgents
+  // ejecutores. El filtro vive aquí, en fila(): no es una config de Yokup.
+  // www.yokup.com/highscore redirige a esta página. Quien no esté en la lista
+  // no entra en el ranking (Jobs, Wozniak, Lucas, Disney, Niobe y el resto).
+  var DEEP_EJECUTORES = ["neo", "trinity", "morfeo", "oraculo", "smith",
+    "arquitecto", "elarquitecto", "arquitectocursorcloud", "elarquitectocursorcloud"];
   var TIME_ZONE = "Europe/Madrid";
   var DIA_FMT = new Intl.DateTimeFormat("en-CA", {
     timeZone:TIME_ZONE, year:"numeric", month:"2-digit", day:"2-digit"
@@ -1752,7 +1758,8 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     }
     function fila(n, machine) {
       var d = datosId(n, machine);
-      if (!d.base || NO_AGENTES.indexOf(d.base.toLowerCase()) >= 0) return null;
+      var claveEjecutor = id && id.key ? id.key(d.base) : String(d.base || "").toLowerCase();
+      if (!d.base || NO_AGENTES.indexOf(d.base.toLowerCase()) >= 0 || DEEP_EJECUTORES.indexOf(claveEjecutor) < 0) return null;
       if (!por[d.key]) por[d.key] = { agente:d.base, base:d.base, suffix:d.suffix,
         objetivos:0, ptsObjetivos:0, ventanas:0, ptsVentanas:0,
         misiones:0, ptsMisiones:0, ptsBonus:0, tareas:0, ptsTareas:0, seenDailyScore:false, seenTask:false,

@@ -50,7 +50,7 @@
   <p class="nota">v1: no hay cifras de dólares ni tokens inventados. Si la API pública de partes de flota responde, la tarjeta dice si hubo <b>parte hoy</b>. Si no responde, el tablero se queda estático.</p>
   <div class="grid" id="tablero"></div>
   <footer>
-    <p>Mapa de DeepAgents. FLT-100722 los cuatro primeros. FLT-100873 añade El Arquitecto. No modificar <code>consumos.html</code>.</p>
+    <p>Mapa de DeepAgents. FLT-100722 los cuatro primeros. FLT-100875 nombra la fila ArquitectoCursorCloud (Arquitecto Silicio). No modificar <code>consumos.html</code>.</p>
     <p class="sello" id="sello">AdmiraNeXT</p>
   </footer>
 </div>
@@ -61,7 +61,7 @@ const DEEPAGENTS = [
   { persona: "Trinity", motor: "Claude", cuenta: "csilva@admira.com", re: /trinity/i },
   { persona: "Morfeo", motor: "Claude Code", cuenta: "csilvasantin@gmail.com", re: /morfeo/i },
   { persona: "Oráculo", motor: "OpenAI", cuenta: "csilvasantin@gmail.com", re: /or[aá]culo|oraculo/i },
-  { persona: "Arquitecto", motor: "Cursor cloud · Grok 4.7", cuenta: "CursorCloud", equipo: "ArquitectoCursorCloud", re: /arquitecto/i }
+  { persona: "ArquitectoCursorCloud", nombre: "Arquitecto Silicio", motor: "Cursor cloud · Grok 4.7", cuenta: "CursorCloud", equipo: "CursorCloud", re: /arquitecto/i }
 ];
 
 function card(agent, estado) {
@@ -75,6 +75,7 @@ function card(agent, estado) {
   h.textContent = agent.persona;
   const dl = document.createElement("dl");
   dl.innerHTML =
+    (agent.nombre ? "<dt>Nombre</dt><dd>" + agent.nombre + "</dd>" : "") +
     "<dt>Motor</dt><dd>" + agent.motor + "</dd>" +
     "<dt>Cuenta</dt><dd>" + agent.cuenta + "</dd>" +
     (agent.equipo ? "<dt>Equipo</dt><dd>" + agent.equipo + "</dd>" : "");

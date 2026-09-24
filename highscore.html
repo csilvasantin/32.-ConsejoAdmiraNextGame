@@ -3381,6 +3381,13 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     (allKeys || []).forEach(function (k) { if (hsIsDeepAgentKey(k)) out.add(String(k)); });
     return out;
   }
+  /* Carriles Running Man: mismos DeepAgents del ranking + Niobe si está en flota.
+     No altera puntuación/podio (eso sigue en hsIsDeepAgentKey). */
+  function hsLaneDeepEligible(key) {
+    if (hsIsDeepAgentKey(key)) return true;
+    var k = String(key || "").toLowerCase().replace(/[^a-z0-9]/g, "");
+    return k.indexOf("niobe") === 0;
+  }
 
   var DASHBOARD_TEAM_SCOPE_KEY = "yokup.dashboard.teams.v1";
   var AGENT_SCOPE = hsReadAgentScope();
@@ -3458,7 +3465,10 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     // Los elementos llegan normalizados por trabajosEnCurso; un CLI pausado o
     // cualquier fila no ejecutándose quedan fuera de esta unión.
     (workAvailable ? activeWork : []).forEach(function (work) {
-      if (!work || work.state !== "running" || work.sessionSurface !== "app" || work.cliPaused) return;
+      // FLT presence-lanes: CLI en curso también cuenta (antes solo APP; CLI+focus quedaba fuera).
+      var surface = normaliza(work && work.sessionSurface).toLowerCase();
+      if (!work || work.state !== "running" || work.cliPaused) return;
+      if (surface && surface !== "app" && surface !== "cli") return;
       var key = normaliza(work.key) || hsAgentKey(work.agente || work.agent);
       if (key) active.add(key);
     });
@@ -4848,6 +4858,54 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     if(item.state==="running"&&!bound)return Object.assign({},item,{state:"assigned_stale",activity_reason:"session_unverified"});
     return item;
   }
+  // Carriles desde presencia (Lucas/CSO · 24-09-2026): /highscore/active-work a menudo
+  // cuelga o no cubre agentes CLI; bot.yokup.com/api/presence sí trae focus/task.
+  // Una calle por DeepAgent con latido verificado fresco + focus|task|exact_surface.
+  // Si no hay focus, el título es runtime · máquina (latido). No inventa puntos.
+  function trabajosDesdePresencia() {
+    var id = window.ykAgentIdentity, now = Number(datos.presenceNow || 0), best = Object.create(null);
+    if (!(Number.isFinite(now) && now > 0) || !Array.isArray(datos.presencia)) return [];
+    datos.presencia.forEach(function (p) {
+      if (!p || p.cli_paused === true) return;
+      var host = normaliza(p.host).toLowerCase();
+      var updated = Number(p.updated || 0); if (updated > 1e11) updated /= 1000;
+      var pid = Number(p.pid || 0);
+      if (!(p.verified && p.source === "process_snapshot" &&
+        (host === "app" || host === "cli") && p.online !== 0 && p.online !== false &&
+        pid > 0 && updated >= now - 30 && updated <= now + 5)) return;
+      var raw = normaliza(p.persona || p.agent || p.assignee), machine = normaliza(p.machine || p.loc);
+      var parsed = id && id.parse ? id.parse(raw) : null;
+      if (!raw || (parsed && parsed.role && parsed.role !== "main")) return;
+      var agent = id && id.display ? id.display(parsed && parsed.persona || raw, machine) : raw;
+      var key = claveAgenteCarrera(agent);
+      if (!key || !hsLaneDeepEligible(key)) return;
+      var focus = normaliza(p.focus), task = normaliza(p.task);
+      var exact = normaliza(p.declaration_state).toLowerCase() === "exact_surface";
+      if (!(focus || task || exact)) return;
+      var title = focus || task ||
+        ((normaliza(p.runtime) ? normaliza(p.runtime) + " · " : "") + (machine || "latido reciente"));
+      var score = (focus ? 4 : 0) + (task ? 2 : 0) + (exact ? 1 : 0) + (host === "app" ? 0.5 : 0) + updated / 1e12;
+      var prev = best[key];
+      if (prev && prev._score >= score) return;
+      var since = Number(p.since || 0); if (since > 1e11) since /= 1000;
+      var startedSec = since > 0 ? since : updated;
+      best[key] = {
+        _score:score, key:key, agente:agent, machine:machine || (parsed && parsed.suffix) || "",
+        executor:agent, reference:"", projectId:"", projectName:normaliza(p.project),
+        projectSource:"", detailUrl:"",
+        kind:"presence", title:title, state:"running", reachable:true,
+        raceRevision:"", assignmentAt:startedSec * 1000, assignmentBasis:"presence_focus",
+        startedAt:startedSec * 1000, at:updated * 1000, endedAt:0,
+        elapsedMs:Math.max(0, (now - startedSec) * 1000),
+        timingBasis:"presence", presenceAt:updated * 1000,
+        sessionDedicatedMs:null, sessionState:"open", sessionBasis:"presence_heartbeat",
+        sessionSurface:host, runtime:normaliza(p.runtime),
+        activityExpiresAt:(updated + 30) * 1000, cliPaused:false,
+        activityReason:"presence_focus", operationalState:normaliza(p.operational_state)
+      };
+    });
+    return Object.keys(best).map(function (k) { var row = best[k]; delete row._score; return row; });
+  }
   function trabajosEnCurso() {
     var seen = Object.create(null), priority = { session:0, objective:1, mission:2, task:3 };
     (datos.trabajos || []).forEach(function (item) {
@@ -4864,7 +4922,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
           item.state === previous.state && priority[item.kind] > priority[previous.kind] ||
           item.state === previous.state && priority[item.kind] === priority[previous.kind] && itemAt > previousAt)) seen[key] = item;
     });
-    return Object.keys(seen).map(function (key) {
+    var fromApi = Object.keys(seen).map(function (key) {
       var item = seen[key],identity=hsWorkIdentity(item);
       return { key:identity.key, agente:identity.agent, machine:identity.machine, executor:item.executor,
         reference:item.reference || "",
@@ -4880,7 +4938,14 @@ body.resizing-columns{cursor:col-resize;user-select:none}
         sessionState:item.session_state || "unknown", sessionBasis:item.dedicated_basis || item.session_basis || "",
         sessionSurface:["app","cli"].includes(item.session_surface)?item.session_surface:"", runtime:item.runtime || "",
         activityExpiresAt:Number(item.activity_expires_at)||0,cliPaused:item.cli_paused===true,activityReason:item.activity_reason||"",operationalState:item.operational_state||"" };
-    }).sort(function (a, b) { return (a.state === "running" ? -1 : 1) - (b.state === "running" ? -1 : 1) ||
+    });
+    // active-work gana si ya trae la familia; presencia solo rellena huecos (CLI+focus).
+    var have = Object.create(null);
+    fromApi.forEach(function (w) { if (w && w.key) have[w.key] = true; });
+    trabajosDesdePresencia().forEach(function (w) {
+      if (w && w.key && !have[w.key]) { fromApi.push(w); have[w.key] = true; }
+    });
+    return fromApi.sort(function (a, b) { return (a.state === "running" ? -1 : 1) - (b.state === "running" ? -1 : 1) ||
       (b.state === "last_work" ? b.endedAt : b.at) - (a.state === "last_work" ? a.endedAt : a.at) ||
       a.agente.localeCompare(b.agente, "es"); });
   }
@@ -4982,19 +5047,20 @@ body.resizing-columns{cursor:col-resize;user-select:none}
 
   function resumenTrabajoActivo(trabajo) {
     var parado = trabajo.state !== "running";
+    var serverAnchor = datos.trabajosGeneratedAt || (Number(datos.presenceNow) > 0 ? Number(datos.presenceNow) * 1000 : 0);
+    var clientElapsed = datos.trabajosGeneratedAt && datos.trabajosClientAt ? Math.max(0, performance.now() - datos.trabajosClientAt) : 0;
     var reloj = typeof YkHighscoreRace !== "undefined" && YkHighscoreRace.workClock
-      ? YkHighscoreRace.workClock(trabajo, datos.trabajosGeneratedAt,
-        datos.trabajosClientAt ? Math.max(0, performance.now() - datos.trabajosClientAt) : 0)
-      : { at:trabajo.state === "last_work" ? trabajo.endedAt : datos.trabajosGeneratedAt,
+      ? YkHighscoreRace.workClock(trabajo, serverAnchor, clientElapsed)
+      : { at:trabajo.state === "last_work" ? trabajo.endedAt : serverAnchor,
           durationMs:trabajo.elapsedMs };
-    if(typeof YkWorkClock!=="undefined")reloj=Object.assign({},reloj,YkWorkClock.clock(trabajo,datos.trabajosGeneratedAt,datos.trabajosClientAt?Math.max(0,performance.now()-datos.trabajosClientAt):0));
+    if(typeof YkWorkClock!=="undefined")reloj=Object.assign({},reloj,YkWorkClock.clock(trabajo,serverAnchor,clientElapsed));
     var duracion = typeof YkHighscoreRace !== "undefined" && YkHighscoreRace.clockDurationLabel
       ? YkHighscoreRace.clockDurationLabel(reloj.missionDurationMs) : "—";
     var sesion = typeof YkHighscoreRace !== "undefined" && YkHighscoreRace.clockDurationLabel
       ? YkHighscoreRace.clockDurationLabel(reloj.sessionDurationMs) : "—";
     var sessionLabel = trabajo.sessionDedicatedMs === null
       ? "Horas operando no disponibles" : "Horas operando del agente";
-    var stateLabel = trabajo.activityReason==="awaiting_decision" ? "Esperando decisión · sin ejecución verificada" : trabajo.kind==="session" ? "Actividad Desktop APP verificada" : trabajo.cliPaused ? "CLI pausado por Carlos" : ["session_unverified","service_activity_unverified"].includes(trabajo.activityReason) ? "Trabajo registrado · sesión sin vincular" : trabajo.state === "running" ? "Trabajo activo" : trabajo.state === "last_work" ? "Trabajo finalizado" : "Trabajo en curso · actividad sin confirmar";
+    var stateLabel = trabajo.activityReason==="presence_focus" ? "Presencia + focus verificados" : trabajo.activityReason==="awaiting_decision" ? "Esperando decisión · sin ejecución verificada" : trabajo.kind==="session" ? "Actividad Desktop APP verificada" : trabajo.cliPaused ? "CLI pausado por Carlos" : ["session_unverified","service_activity_unverified"].includes(trabajo.activityReason) ? "Trabajo registrado · sesión sin vincular" : trabajo.state === "running" ? "Trabajo activo" : trabajo.state === "last_work" ? "Trabajo finalizado" : "Trabajo en curso · actividad sin confirmar";
     return { reference:trabajo.reference || "", title:trabajo.title, state:stateLabel,
       project:trabajo.projectName || "", projectId:trabajo.projectId || "", detailUrl:trabajo.detailUrl || "",
       executor:trabajo.executor, responsible:trabajo.agente, kind:trabajo.kind, reachable:trabajo.reachable,
@@ -5115,7 +5181,8 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     if (!available) return { label:"TRABAJO NO DISPONIBLE", text:"No se pudo consultar el trabajo registrado. La ausencia de carriles no indica inactividad." };
     if (total > shown) return { label:"TRABAJO FUERA DE LA SELECCIÓN", text:shown + " de " + total + " participantes verificados en esta selección. Revisa el filtro de agentes para ver los demás." };
     if (!shown) return { label:"SIN TRABAJO VERIFICADO", text:"No hay trabajo verificado visible en este ámbito. Puede existir actividad todavía sin vincular a Yokup." };
-    return { label:"", text:mode === "recent" ? "Últimos trabajos finalizados. La actividad actual de otras sesiones no está verificada." : "Carriles de trabajo registrado o actividad Desktop APP verificada. La ausencia de otro agente no confirma inactividad." };
+    if (mode === "presence") return { label:"", text:"Carriles desde presencia verificada + focus (active-work no disponible o incompleto). Ranking y podio no cambian." };
+    return { label:"", text:mode === "recent" ? "Últimos trabajos finalizados. La actividad actual de otras sesiones no está verificada." : "Carriles de trabajo registrado, presencia+focus o actividad Desktop APP verificada. La ausencia de otro agente no confirma inactividad." };
   }
 
   // PARRILLA FIJA (Carlos, 6-sep-2026): una carrera dura 42 s pero el trabajo activo se
@@ -5150,8 +5217,16 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     if (typeof hsRenderWorkObservations === "function") hsRenderWorkObservations();
     var completas=listaVisible(aplicaAgentScope(listaCompletaCache||[])),byKey=Object.create(null);
     var scopeKeys=new Set(completas.map(function(row){return claveAgenteCarrera(row.agente);}));
+    var effectiveScope=typeof hsEffectiveAgentScope==="function"?hsEffectiveAgentScope():null;
     var todosTrabajos=trabajosCarrera();
+    // Presencia+focus: si el DeepAgent aún no está en el ranking filtrado, igual entra al carril.
+    todosTrabajos.forEach(function(work){
+      if(!work||work.activityReason!=="presence_focus"||!work.key)return;
+      if(effectiveScope instanceof Set && !effectiveScope.has(work.key))return;
+      scopeKeys.add(work.key);
+    });
     var trabajos=todosTrabajos.filter(function(work){return scopeKeys.has(work.key);});
+    var presenceLaneCount=todosTrabajos.filter(function(w){return w&&w.activityReason==="presence_focus";}).length;
     completas.forEach(function (fila) { byKey[claveAgenteCarrera(fila && fila.agente)] = fila; });
     var corredores = trabajos.map(function (trabajo, index) {
       var base = byKey[trabajo.key] || { agente:trabajo.agente, posicion:completas.length + index + 1,
@@ -5239,7 +5314,8 @@ body.resizing-columns{cursor:col-resize;user-select:none}
         '<span class="refresh-timing" aria-label="Hora de inicio ' + esc(resumen.startedClock) + esc(timingAria) + '">' +
           marcaInicio + marcaTemporal + '</span></div>';
     }).filter(Boolean);
-    var evidence = hsWorkEvidenceStatus(datos.trabajosAvailable, todosTrabajos.length, corredores.length, datos.trabajosMode);
+    var evidenceMode = datos.trabajosAvailable ? datos.trabajosMode : (presenceLaneCount ? "presence" : datos.trabajosMode);
+    var evidence = hsWorkEvidenceStatus(!!(datos.trabajosAvailable || presenceLaneCount), todosTrabajos.length, corredores.length, evidenceMode);
     var evidenceNode = document.getElementById("raceEvidenceStatus");
     if (evidenceNode) evidenceNode.textContent = evidence.text + (pendientesCarrera ? " · " + pendientesCarrera + (pendientesCarrera === 1 ? " agente espera" : " agentes esperan") + " a la próxima carrera" : "");
     var etiquetaVacia = evidence.label || "SIN TRABAJO VERIFICADO";
@@ -5249,7 +5325,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     // selección, sin trabajo verificado) queda en data-race-reason, en el aria-label, en el
     // tooltip y en la línea de evidencia de debajo. Solo si el trabajo NO SE PUDO CONSULTAR
     // se dice tal cual: eso no es calentar, es no saber (mandamiento 2).
-    var calentando = !!datos.trabajosAvailable;
+    var calentando = !!(datos.trabajosAvailable || presenceLaneCount);
     var textoVacio = calentando ? "Todos nuestros agentes están calentando 🙂" : etiquetaVacia;
     var corredorSinMision = '<div class="refresh-lane refresh-lane-empty" role="listitem" data-race-empty="true" ' +
       'data-race-warmup="' + (calentando ? 'true' : 'false') + '" data-race-reason="' + esc(etiquetaVacia) + '" aria-label="' + etiquetaVacia.toLowerCase() + '"><div class="refresh-track">' +

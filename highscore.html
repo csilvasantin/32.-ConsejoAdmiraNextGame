@@ -5277,6 +5277,14 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     pendientesCarrera = 0;
   }
   function liberaParrilla() { rosterCarrera = null; }
+  // Carril vivo: presencia con o sin foco, o un trabajo running en CLI/APP.
+  // El ranking vacío no puede dejar fuera a quien active-work ya ve corriendo.
+  function pistaEnVivo(work) {
+    if (!work || !work.key || !hsLaneDeepEligible(work.key) || work.cliPaused === true) return false;
+    if (work.activityReason === "presence_focus" || work.activityReason === "presence_live") return true;
+    var surface = normaliza(work.sessionSurface).toLowerCase();
+    return work.state === "running" && (surface === "cli" || surface === "app");
+  }
   function actualizaCarreraPodio() {
     var contenedor = document.getElementById("refreshLanes");
     var focused = document.activeElement, focusedLane = focused && focused.getAttribute && focused.getAttribute("data-race-role") === "agent" && focused.closest ? focused.closest(".refresh-lane") : null;
@@ -5289,8 +5297,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     // Presencia+focus: DeepAgents entran al carril aunque el censo/ranking aún no los tenga.
     // Sólo el modo manual (selección explícita, incl. «ninguno») puede ocultarlos.
     todosTrabajos.forEach(function(work){
-      if(!work||(work.activityReason!=="presence_focus"&&work.activityReason!=="presence_live")||!work.key)return;
-      if(!hsLaneDeepEligible(work.key))return;
+      if(!pistaEnVivo(work))return;
       if(AGENT_SCOPE_MODE==="manual" && effectiveScope instanceof Set && !effectiveScope.has(work.key))return;
       scopeKeys.add(work.key);
     });
@@ -5317,9 +5324,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     // Una carrera ya cerrada (42 s) no puede esconder a quien acaba de latir.
     var clavesParrilla = parrilla.map(function (enlace) { return enlace.clave; });
     enlaces.forEach(function (enlace) {
-      if (!enlace || !enlace.trabajo) return;
-      var reason = enlace.trabajo.activityReason;
-      if (reason !== "presence_focus" && reason !== "presence_live") return;
+      if (!enlace || !pistaEnVivo(enlace.trabajo)) return;
       if (clavesParrilla.indexOf(enlace.clave) >= 0) return;
       parrilla.push(enlace);
       clavesParrilla.push(enlace.clave);

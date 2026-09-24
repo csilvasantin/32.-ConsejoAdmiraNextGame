@@ -5224,10 +5224,10 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     var scopeKeys=new Set(completas.map(function(row){return claveAgenteCarrera(row.agente);}));
     var effectiveScope=typeof hsEffectiveAgentScope==="function"?hsEffectiveAgentScope():null;
     var todosTrabajos=trabajosCarrera();
-    // Presencia+focus: DeepAgents entran al carril aunque el censo/ranking aún no los tenga.
-    // Sólo el modo manual (selección explícita, incl. «ninguno») puede ocultarlos.
+    // DeepAgents en curso (presencia+focus u active-work running) entran al carril
+    // aunque el censo/ranking aún no los tenga. Sólo el modo manual los oculta.
     todosTrabajos.forEach(function(work){
-      if(!work||work.activityReason!=="presence_focus"||!work.key)return;
+      if(!work||!work.key||work.state!=="running")return;
       if(!hsLaneDeepEligible(work.key))return;
       if(AGENT_SCOPE_MODE==="manual" && effectiveScope instanceof Set && !effectiveScope.has(work.key))return;
       scopeKeys.add(work.key);

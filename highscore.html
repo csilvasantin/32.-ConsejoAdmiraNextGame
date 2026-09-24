@@ -4973,31 +4973,31 @@ body.resizing-columns{cursor:col-resize;user-select:none}
         sessionSurface:["app","cli"].includes(item.session_surface)?item.session_surface:"", runtime:item.runtime || "",
         activityExpiresAt:Number(item.activity_expires_at)||0,cliPaused:item.cli_paused===true,activityReason:item.activity_reason||"",operationalState:item.operational_state||"" };
     });
-    // active-work gana estado/superficie; presencia rellena huecos y refresca timestamps
-    // para que un runner con título real no parezca idle por presence_at viejo.
+    // active-work gana estado/superficie (contratos APP/CLI Morfeo); presencia
+    // rellena huecos y, si ya hay fila, refresca at/presenceAt para no parecer idle.
     var byKey = Object.create(null);
     fromApi.forEach(function (w) { if (w && w.key) byKey[w.key] = w; });
     trabajosDesdePresencia().forEach(function (w) {
       if (!w || !w.key) return;
       var prev = byKey[w.key];
       if (!prev) { byKey[w.key] = w; fromApi.push(w); return; }
+      if (prev.state === "last_work") return;
       var presenceAt = Number(w.presenceAt) || 0;
       var prevPresence = Number(prev.presenceAt) || 0;
       var prevAt = Number(prev.at) || 0;
       var nextAt = Number(w.at) || 0;
-      if (prev.state === "running" && (presenceAt > prevPresence || nextAt > prevAt)) {
-        var patch = {
-          presenceAt: Math.max(prevPresence, presenceAt),
-          at: Math.max(prevAt, nextAt),
-          activityExpiresAt: Math.max(Number(prev.activityExpiresAt) || 0, Number(w.activityExpiresAt) || 0)
-        };
-        var focusTitle = normaliza(w.title), prevTitle = normaliza(prev.title);
-        if (focusTitle && focusTitle.indexOf("Latido") < 0 &&
-            (!prevTitle || prevTitle.indexOf("Latido") >= 0)) patch.title = w.title;
-        byKey[w.key] = Object.assign({}, prev, patch);
-        var idx = fromApi.indexOf(prev);
-        if (idx >= 0) fromApi[idx] = byKey[w.key];
-      }
+      if (!(presenceAt > prevPresence || nextAt > prevAt)) return;
+      var patch = {
+        presenceAt: Math.max(prevPresence, presenceAt),
+        at: Math.max(prevAt, nextAt),
+        activityExpiresAt: Math.max(Number(prev.activityExpiresAt) || 0, Number(w.activityExpiresAt) || 0)
+      };
+      var focusTitle = normaliza(w.title), prevTitle = normaliza(prev.title);
+      if (focusTitle && focusTitle.indexOf("Latido") < 0 &&
+          (!prevTitle || prevTitle.indexOf("Latido") >= 0)) patch.title = w.title;
+      byKey[w.key] = Object.assign({}, prev, patch);
+      var idx = fromApi.indexOf(prev);
+      if (idx >= 0) fromApi[idx] = byKey[w.key];
     });
     return fromApi.sort(function (a, b) { return (a.state === "running" ? -1 : 1) - (b.state === "running" ? -1 : 1) ||
       (b.state === "last_work" ? b.endedAt : b.at) - (a.state === "last_work" ? a.endedAt : a.at) ||

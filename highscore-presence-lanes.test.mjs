@@ -108,3 +108,41 @@ test("active-work stale no tapa presencia+focus en el HTML", () => {
   assert.match(html, /active-work gana sólo si YA corre con título real/);
   assert.match(html, /fromApi\[idx\] = w/);
 });
+
+
+test("Arquitecto+CursorCloud identity y SINMAQ legado son DeepAgent", () => {
+  assert.equal(identity.display("Arquitecto", "CursorCloud"), "ArquitectoCursorCloud");
+  assert.equal(identity.display("Arquitecto", "cursor cloud"), "ArquitectoCursorCloud");
+  assert.equal(identity.suffix("CursorCloud"), "CursorCloud");
+  assert.equal(identity.parse("ArquitectoCursorCloud").persona, "Arquitecto");
+  assert.equal(identity.parse("ArquitectoCursorCloud").suffix, "CursorCloud");
+  const A = api();
+  assert.equal(A.deep("ArquitectoCursorCloud"), true);
+  assert.equal(A.deep("ArquitectoSINMAQ"), true);
+  assert.equal(A.laneOk("ArquitectoSINMAQ"), true);
+});
+
+test("CursorCloud heartbeat fresco con focus entra; genérico/stale no", () => {
+  const A = api();
+  const now = 2_000_000;
+  A.setPresence([
+    { persona: "Arquitecto", machine: "CursorCloud", host: "app", runtime: "Cursor",
+      focus: "highscore lanes", task: "FLT-r13", verified: 0, source: "heartbeat",
+      updated: now - 60, online: 1 },
+    { persona: "Smith", machine: "MacBookAirAzul", host: "cli", runtime: "Grok",
+      focus: "stale hb", task: "x", verified: 0, source: "heartbeat",
+      updated: now - 10, online: 1 },
+    { persona: "Arquitecto", machine: "CursorCloud", host: "app", runtime: "Cursor",
+      focus: "too old", task: "y", verified: 0, source: "heartbeat",
+      updated: now - 181, online: 1 },
+    { persona: "Morfeo", machine: "MacMini", host: "cli", runtime: "Claude",
+      focus: "", task: "", verified: 1, source: "process_snapshot", pid: 99,
+      updated: now - 1, online: 1, declaration_state: "exact_surface" },
+  ], now);
+  const lanes = A.fromPresence();
+  const keys = lanes.map((l) => l.key).sort();
+  assert.deepEqual(keys, ["arquitectocursorcloud", "morfeomacmini"]);
+  const arq = lanes.find((l) => l.key === "arquitectocursorcloud");
+  assert.equal(arq.title, "highscore lanes");
+  assert.equal(arq.sessionSurface, "app");
+});

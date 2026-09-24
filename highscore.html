@@ -3370,7 +3370,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   function hsIsDeepAgentKey(key) {
     var k = String(key || "").trim();
     if (!k) return false;
-    var base = k.replace(/MBA(Azul|Plata|Rosa|Crema|16)|MBP(14|16|Negro14)?|MacMini|CursorCloud|GrokBot|Negro14|Air16/gi, " ");
+    var base = k.replace(/MBA(Azul|Plata|Rosa|Crema|16)|MBP(14|16|Negro14)?|MacMini|CursorCloud|GrokBot|Negro14|Air16|SINMAQ|SinMaq/gi, " ");
     base = base.replace(/[^a-zA-ZáéíóúñÁÉÍÓÚÑ]/g, " ").trim().split(/\s+/)[0] || k;
     if (/^(jobs|woz|wozniak|disney|lucas|walt)\b/i.test(base)) return false;
     if (/grokbot/i.test(k) && !/smith/i.test(k)) return false;
@@ -4870,10 +4870,20 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       var host = normaliza(p.host).toLowerCase();
       var updated = Number(p.updated || 0); if (updated > 1e11) updated /= 1000;
       var pid = Number(p.pid || 0);
-      if (!(p.verified && p.source === "process_snapshot" &&
+      var machine = normaliza(p.machine || p.loc);
+      var machineSuffix = id && id.suffix ? id.suffix(machine) : "";
+      var isCursorCloud = machineSuffix === "CursorCloud" || /cursor\s*cloud/i.test(machine);
+      var processOk = p.verified && p.source === "process_snapshot" &&
         (host === "app" || host === "cli") && p.online !== 0 && p.online !== false &&
-        pid > 0 && updated >= now - 30 && updated <= now + 5)) return;
-      var raw = normaliza(p.persona || p.agent || p.assignee), machine = normaliza(p.machine || p.loc);
+        pid > 0 && updated >= now - 30 && updated <= now + 5;
+      // CursorCloud DeepAgents: heartbeat fresco (≤180s) con focus|task — no abre
+      // heartbeats genéricos (Morfeo APP/CLI y el resto siguen en process_snapshot).
+      var heartbeatOk = !processOk && p.source === "heartbeat" && isCursorCloud &&
+        (host === "app" || host === "cli" || !host) &&
+        p.online !== 0 && p.online !== false &&
+        updated >= now - 180 && updated <= now + 5;
+      if (!(processOk || heartbeatOk)) return;
+      var raw = normaliza(p.persona || p.agent || p.assignee);
       var parsed = id && id.parse ? id.parse(raw) : null;
       if (!raw || (parsed && parsed.role && parsed.role !== "main")) return;
       var agent = id && id.display ? id.display(parsed && parsed.persona || raw, machine) : raw;

@@ -63,7 +63,7 @@ const CORS_HEADERS = {
 };
 const MATRIX_COUNCIL_LINKS = new Map([
   ["Elon Musk", { alias: "Smith", role: "CEO" }],
-  ["Jensen Huang", { alias: "Morfeo", role: "CTO" }],
+  ["Jensen Huang", { alias: "ArquitectoCursorCloud", role: "CTO" }],
   ["Gwynne Shotwell", { alias: "Trinity", role: "COO" }],
   ["Ruth Porat", { alias: "Oráculo", role: "CFO" }],
   ["John Lasseter", { alias: "Mouse", role: "CCO" }],

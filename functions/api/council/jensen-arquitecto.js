@@ -47,7 +47,16 @@ async function relay(request, upstream) {
       body: request.method === "POST" ? (body || "{}") : undefined,
       signal: AbortSignal.timeout(25000),
     });
-    const texto = await r.text();
+    let texto = await r.text();
+    // FLT-100878: Jensen = ArquitectoCursorCloud (Cursor), no Arquitecto Silicio/Ive.
+    try {
+      const j = JSON.parse(texto);
+      if (j && j.ok) {
+        const a = String(j.agent || "");
+        if (!a || /^arquitecto$/i.test(a) || /^morfeo$/i.test(a)) j.agent = "ArquitectoCursorCloud";
+        texto = JSON.stringify(j);
+      }
+    } catch (_) {}
     return new Response(texto, {
       status: r.status,
       headers: Object.assign({ "content-type": r.headers.get("content-type") || "application/json; charset=utf-8" }, corsHeaders(origin)),

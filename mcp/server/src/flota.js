@@ -16,7 +16,7 @@
  * encargo_estado.
  */
 
-export const AGENTES_FLOTA = ['Neo', 'Morfeo', 'Trinity', 'Oraculo', 'Smith', 'Cypher', 'Switch', 'Niobe', 'Link', 'Persefone', 'Seraph'];
+export const AGENTES_FLOTA = ['Neo', 'Morfeo', 'Trinity', 'Oraculo', 'Smith', 'Cypher', 'Switch', 'Niobe', 'Link', 'Persefone', 'Seraph', 'Arquitecto'];
 export const CONSEJEROS = ['Wozniak', 'Jobs', 'Lucas', 'Disney'];
 export const PERSONAS = [...AGENTES_FLOTA, ...CONSEJEROS];
 const MAQUINA_CONSEJEROS = 'grokbot';

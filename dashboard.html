@@ -447,7 +447,7 @@ function pulseApplyFilter(value,groupKey="all"){
 }
 
 function pulseStateText(state){return state==="active"?"Control disponible":state==="stopped"?"Arranque disponible":state==="ambiguous"?"Control ambiguo":"Control sin verificar";}
-function pulseCliPaused(item){return String(item&&(item.surface||item.host)||"").trim().toLowerCase()==="cli";}
+function pulseCliPaused(item){return false;}
 function pulsePolicyText(item){
   if(!pulseCliPaused(item))return "";
   const operation=item&&PULSE_OPERATIONS.get(item.control_key);
@@ -630,7 +630,7 @@ function pulseGlobalToolbar(){
 function pulseGroupsMarkup(classified,unavailable=false){
   const byKey=classified&&classified.by_key||{},fallback=key=>({key,label:key==="cli"?"deepAgents CLI":key==="app"?"deepAgents Desktop App":"Sin superficie identificada",items:[]}),cli=byKey.cli||fallback("cli"),app=byKey.app||fallback("app"),unknown=byKey.unknown||fallback("unknown");
   const diagnostics=PULSE_CONTROL_MODEL?.surface_diagnostics,missing=Number(diagnostics?.unresolved||0);
-  return pulseGlobalToolbar()+'<p class="pulse-mode-note">CLI pausado por Carlos en todos los equipos. Desktop APP es la prioridad. La pausa no equivale a proceso cerrado.</p>'+pulseGroupMarkup(cli,unavailable)+pulseGroupMarkup(app,unavailable)+(missing?'<p class="pulse-mode-note">'+missing+' registros sin interfaz confirmada; no incluidos en el recuento ni en los controles.</p>':'');
+  return pulseGlobalToolbar()+'<p class="pulse-mode-note">CLI y Desktop APP disponibles (pausa CLI retirada 24-sep-2026 · TG#4170).</p>'+pulseGroupMarkup(cli,unavailable)+pulseGroupMarkup(app,unavailable)+(missing?'<p class="pulse-mode-note">'+missing+' registros sin interfaz confirmada; no incluidos en el recuento ni en los controles.</p>':'');
 }
 function pulseControlledGroups(classified,control){
   const live=new Map((classified&&classified.groups||[]).flatMap(group=>group.items||[]).map(item=>[item.identity_key,item]));

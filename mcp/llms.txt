@@ -107,9 +107,9 @@ Servidor MCP de admira.live con transporte Streamable HTTP (MCP 2025-06-18), sin
   las instrucciones del servidor dicen «ERES UN AGENTE DE LA FLOTA» y no hace falta `como`.
 - Un nombre retirado (OraculoMini, OraculoAir16) se lee pero no recibe trabajo automático; la persona
   Oráculo (Codex del Mac Mini, canon v13) sí (admira-telegram v.05.09.2026.r5).
-- Pausa de CLI (política 1078, cli_paused_by_carlos): con la CLI en pausa el vigilante NO inyecta el
-  encargo en la sesión (queda pending y lo registra en /tmp/agent-inbox-<persona>.err); la APP de
-  escritorio lo recibe si está abierta. Es una decisión de Carlos, no un fallo del MCP.
+- Pausa de CLI (política 1078): RETIRADA 24-sep-2026 (Carlos · TG#4167/#4170). CLI y Desktop APP
+  reciben encargos. El auto-pause surface===cli / cli_paused_by_carlos ya no aplica en highscore /
+  agent-control / dashboard. Si un watcher local aún filtra CLI, actualizarlo al mismo criterio.
 - Humanos: www.admira.live/help (qué caminos hay, quién puede qué, cómo conectar su asistente).
 
 ## AgoraMatrix por MCP

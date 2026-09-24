@@ -16,8 +16,9 @@
   function norm(value){return text(value).normalize("NFD").replace(/[\u0300-\u036f]/g,"").toLowerCase();}
   function seconds(value){var number=Number(value)||0;return number>4102444800?Math.floor(number/1000):Math.floor(number);}
   function surface(value){value=norm(value);return value==="cli"||value==="app"?value:"unknown";}
-  // Carlos: CLI remains paused across all machines; process evidence is independent.
-  function cliPaused(row){return surface(row&&(row.surface||row.host))==="cli";}
+  // Carlos 24-sep-2026 (TG#4167/#4170): CLI pause OFF — Smith may close Yokup progress/informe.
+  // Was: surface===cli auto-paused all CLI hosts (cli_paused_by_carlos → 409).
+  function cliPaused(row){return false;}
   function hash(value){var result=2166136261;for(var char of String(value||"")){result^=char.charCodeAt(0);result=Math.imul(result,16777619);}return(result>>>0).toString(36);}
   function canonical(row,identity,machineOverride){
     row=row&&typeof row==="object"?row:{};

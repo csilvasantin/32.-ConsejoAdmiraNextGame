@@ -41,7 +41,7 @@
   <header>
     <span class="kicker">admira.live · DeepAgents · /consumo</span>
     <h1>Tablero DeepAgents</h1>
-    <p class="lead">Cuatro agentes con el mapa sellado de motor y cuenta. Esta página <b>no</b> es el gasto por proyecto de Yokup: eso vive en <a href="/consumos"><code>/consumos</code></a> (plural) y no se toca desde aquí.</p>
+    <p class="lead">Seis DeepAgents con el mapa sellado de motor y cuenta. Esta página <b>no</b> es el gasto por proyecto de Yokup: eso vive en <a href="/consumos"><code>/consumos</code></a> (plural) y no se toca desde aquí.</p>
     <nav class="toc">
       <a href="/">Mesa del Consejo</a>
       <a href="/consumos">Gasto por proyecto · /consumos</a>
@@ -60,7 +60,9 @@ const DEEPAGENTS = [
   { persona: "Neo", motor: "Anthropic", cuenta: "csilva@admira.com", re: /(?:^|[^a-z])neo/i },
   { persona: "Trinity", motor: "Claude", cuenta: "csilva@admira.com", re: /trinity/i },
   { persona: "Morfeo", motor: "Claude Code", cuenta: "csilvasantin@gmail.com", re: /morfeo/i },
-  { persona: "Oráculo", motor: "OpenAI", cuenta: "csilvasantin@gmail.com", re: /or[aá]culo|oraculo/i }
+  { persona: "Oráculo", motor: "OpenAI", cuenta: "csilvasantin@gmail.com", re: /or[aá]culo|oraculo/i },
+  { persona: "Smith", motor: "Grok", cuenta: "SmithMacMini", re: /smith/i },
+  { persona: "El Arquitecto", motor: "Cursor", cuenta: "ArquitectoCursorCloud", re: /arquitecto|architect/i }
 ];
 
 function card(agent, estado) {

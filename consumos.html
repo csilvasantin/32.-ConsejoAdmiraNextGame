@@ -4,201 +4,116 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="/favicon.ico" sizes="any">
-<title>Consumos por proyecto · admira.live</title>
+<title>Qué estamos gastando · admira.live</title>
+<meta name="description" content="Lo que cuestan las cuentas del equipo, en español claro, con la fecha de cada lectura.">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#02080d">
 <link rel="manifest" href="/manifest.webmanifest">
 <link rel="stylesheet" href="https://www.carlossilva.info/admira-design/tokens.css">
 <link rel="stylesheet" href="/yk-frame.css?v=r20">
 <style>
-:root{--bg:#02080d;--card:#0a1620;--ink:#dff8ff;--mut:#75aab9;--dim:#4d7a88;--brand:#78f3ff;--accent:#ffd866;--good:#88ffaa;--warn:#ff8866;--line:rgba(120,243,255,.16);--line2:rgba(120,243,255,.30);--sans:var(--admira-font-sans,-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif);--mono:var(--admira-font-mono,ui-monospace,SFMono-Regular,"JetBrains Mono",Menlo,monospace)}
+:root{--bg:#02080d;--card:#0a1620;--ink:#dff8ff;--mut:#75aab9;--dim:#4d7a88;--brand:#78f3ff;--line:rgba(120,243,255,.16);--sans:var(--admira-font-sans,-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif)}
 *{box-sizing:border-box;margin:0;padding:0}
+html,body{max-width:100%;overflow-x:hidden}
 body{background:var(--bg);color:var(--ink);font-family:var(--sans);-webkit-font-smoothing:antialiased;min-height:100vh}
-.wrap{width:100%;max-width:1100px;margin:0 auto;padding:clamp(18px,1.35vw,40px) clamp(14px,2vw,40px) 64px}
-nav{display:flex;align-items:center;gap:14px;padding:4px 0 16px;flex-wrap:wrap}
-nav a{color:var(--brand);text-decoration:none;font-family:var(--mono);font-size:12px}
-nav a:hover{text-decoration:underline}
-h1{font-size:clamp(22px,2.6vw,30px);letter-spacing:-.02em;margin:0 0 6px}
-.sub{color:var(--mut);font-size:14px;line-height:1.45;margin-bottom:18px}
-.sub b{color:var(--accent);font-weight:600}
-.bar{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin:0 0 16px}
-.bar label{font-family:var(--mono);font-size:11px;color:var(--dim);text-transform:uppercase;letter-spacing:.08em}
-.bar select,.bar button{font:inherit;background:var(--card);color:var(--ink);border:1px solid var(--line2);border-radius:8px;padding:7px 12px;cursor:pointer}
-.bar button.on{border-color:var(--brand);color:var(--brand)}
-.kpi{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:14px}
-.kpi .k{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:8px 12px;font-family:var(--mono);font-size:12px;color:var(--mut)}
-.kpi .k b{display:block;color:var(--ink);font-size:16px;margin-bottom:2px}
-table{width:100%;border-collapse:collapse;font-size:13px}
-th,td{text-align:left;padding:10px 8px;border-bottom:1px solid var(--line);vertical-align:top}
-th{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--dim);position:sticky;top:0;background:var(--bg)}
-td.num,th.num{text-align:right;font-variant-numeric:tabular-nums}
-tr.exp{cursor:pointer}
-tr.exp:hover td{background:rgba(120,243,255,.04)}
-tr.detail td{background:rgba(10,22,32,.85);color:var(--mut);font-size:12px}
-.detail-box{display:grid;gap:10px;grid-template-columns:1fr 1fr}
-@media(max-width:720px){.detail-box{grid-template-columns:1fr}}
-.detail-box h4{font-family:var(--mono);font-size:10px;letter-spacing:.08em;text-transform:uppercase;color:var(--brand);margin-bottom:4px}
-.nota{color:var(--mut);font-size:13px;padding:16px;border:1px dashed var(--line);border-radius:10px}
-.admin{margin-top:28px;padding:16px;border:1px solid var(--line2);border-radius:12px;background:var(--card)}
-.admin h2{font-size:16px;margin-bottom:8px}
-.admin textarea{width:100%;min-height:220px;background:#061018;color:var(--ink);border:1px solid var(--line);border-radius:8px;padding:10px;font-family:var(--mono);font-size:12px}
-.admin .row{display:flex;gap:8px;flex-wrap:wrap;margin-top:10px}
-.admin .msg{margin-top:8px;font-size:12px;color:var(--mut)}
-.admin .msg.err{color:var(--warn)}
-.admin .msg.ok{color:var(--good)}
-.foot{margin-top:28px;font-family:var(--mono);font-size:11px;color:var(--dim)}
+.wrap{width:100%;max-width:880px;margin:0 auto;padding:20px 16px 72px}
+.lead,.resumen li,.nombre,.cuenta,.frase,.unidad,.detalle li,.cuando,.pie{overflow-wrap:anywhere}
+.top{min-width:0}
+.top > div{min-width:0}
+nav{display:flex;flex-wrap:wrap;gap:14px;padding:4px 0 18px}
+nav a{color:var(--brand);text-decoration:none;font-size:15px}
+h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0 0 8px}
+.lead{color:var(--mut);font-size:17px;line-height:1.45;margin-bottom:18px}
+.resumen{background:#14080c;border:1px solid rgba(255,90,90,.45);border-radius:16px;padding:16px 16px 8px;margin-bottom:18px}
+.resumen h2{font-size:15px;letter-spacing:.04em;text-transform:uppercase;color:#ffb4b4;margin-bottom:8px}
+.resumen li{margin:0 0 10px 18px;font-size:17px;line-height:1.4}
+.grid{display:grid;gap:14px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:16px}
+.top{display:flex;justify-content:space-between;gap:12px;align-items:flex-start}
+.nombre{font-size:20px;line-height:1.2}
+.cuenta{color:var(--dim);font-size:14px;margin-top:4px}
+.luz{flex:none;border-radius:999px;padding:6px 12px;font-weight:700;font-size:14px}
+.luz.rojo{background:#ff5a5a;color:#2a0000}
+.luz.ambar{background:#ffd866;color:#2a1c00}
+.luz.verde{background:#88ffaa;color:#04210c}
+.luz.sin{background:#24343c;color:#dff8ff}
+.cifra{font-size:clamp(40px,12vw,64px);letter-spacing:-.04em;line-height:1;margin:14px 0 4px;font-variant-numeric:tabular-nums}
+.unidad{color:var(--mut);font-size:16px;margin-bottom:10px}
+.frase{font-size:17px;line-height:1.45}
+.detalle{margin:12px 0 0;padding:0;list-style:none}
+.detalle li{color:var(--mut);font-size:15px;line-height:1.4;margin-top:8px}
+.cuando{margin-top:12px;color:var(--dim);font-size:14px}
+.nota{color:var(--mut);font-size:16px;line-height:1.45;padding:16px;border:1px dashed var(--line);border-radius:14px}
+.pie{margin-top:22px;color:var(--dim);font-size:14px;line-height:1.45}
+.pie a{color:var(--brand)}
+@media (min-width:720px){
+  .wrap{padding:32px 24px 80px}
+  .grid{grid-template-columns:1fr 1fr}
+  .card.ancho{grid-column:1 / -1}
+}
+@media (prefers-reduced-motion: reduce){
+  *{scroll-behavior:auto;transition:none}
+}
 </style>
 </head>
 <body>
 <div class="wrap">
   <nav>
-    <a href="/notificaciones">← Notificaciones</a>
-    <a href="/equipo">Equipo</a>
-    <a href="/misiones">Misiones</a>
+    <a href="/">Inicio</a>
+    <a href="/consumo">Agentes</a>
+    <a href="/consumos-proyectos">Gasto por proyecto</a>
   </nav>
-  <h1>Consumos por proyecto</h1>
-  <p class="sub">Tokens agregados por proyecto Yokup (últimos N días) + hosting del mes calendario desde el mapa editable.
-    Tarifas token: <b>estimación</b> input $3/MTok · cache $0.75/MTok · output $15/MTok — no es factura.
-    Un agente en varios proyectos reparte tokens a partes iguales.</p>
-
-  <div class="bar">
-    <label for="dias">Periodo tokens</label>
-    <select id="dias">
-      <option value="1">1 día</option>
-      <option value="7" selected>7 días</option>
-      <option value="30">30 días</option>
-    </select>
-    <button type="button" id="reload">Actualizar</button>
-    <span id="meta" class="sub" style="margin:0"></span>
-  </div>
-  <div class="kpi" id="kpi"></div>
-  <div id="cuerpo"><div class="nota">Cargando…</div></div>
-
-  <section class="admin" id="admin" hidden>
-    <h2>Admin · mapa de hosting</h2>
-    <p class="sub" style="margin-bottom:8px">Edita el JSON y guarda (sesión Google en api.yokup.com o cabecera <code>x-fleet-token</code>).
-      Campos: id, kind (worker|d1|kv|r2|do|other), resource, project_id, monthly_usd, share_pct, note.
-      Hosting = suma de <code>monthly_usd</code> del mapa; no se inventan líneas de factura Cloudflare.</p>
-    <textarea id="mapJson" spellcheck="false"></textarea>
-    <div class="row">
-      <button type="button" id="loadMap">Recargar mapa</button>
-      <button type="button" id="saveMap">Guardar (upsert)</button>
-    </div>
-    <div class="msg" id="adminMsg"></div>
+  <h1>Qué estamos gastando</h1>
+  <p class="lead">Una tarjeta por cuenta. El color dice si hay que actuar. La fecha es el momento de la lectura, no de ahora mismo.</p>
+  <section class="resumen" id="resumen" hidden>
+    <h2>Lo urgente</h2>
+    <ol id="lineas"></ol>
   </section>
-
-  <div class="foot">Yokup · FLT-100480 · API <code>/fleet/consumo/proyectos</code> · hosting_cost_map</div>
+  <div class="grid" id="grid"><p class="nota">Cargando las lecturas…</p></div>
+  <p class="pie" id="pie"></p>
 </div>
 <script>
-const WORKER="https://api.yokup.com";
-const ADMIN=new URLSearchParams(location.search).has("admin");
-const esc=s=>String(s??"").replace(/[&<>"']/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;","\"":"&quot;","'":"&#39;"}[c]));
-const fmtTok=n=>{n=Number(n)||0;return n>=1e6?(n/1e6).toFixed(2)+" M":n>=1e3?(n/1e3).toFixed(1)+" k":String(Math.round(n));};
-const fmtUsd=n=>{n=Number(n)||0;return "$"+n.toFixed(2);};
-let DATA=null, OPEN=new Set();
+const LUZ = { rojo: "Rojo", ambar: "Ámbar", verde: "Verde", sin: "Sin lectura" };
+const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-async function load(){
-  const dias=document.getElementById("dias").value;
-  const box=document.getElementById("cuerpo");
-  box.innerHTML='<div class="nota">Cargando…</div>';
-  try{
-    const r=await fetch(WORKER+"/fleet/consumo/proyectos?dias="+dias,{cache:"no-store"});
-    if(!r.ok) throw new Error("HTTP "+r.status);
-    DATA=await r.json();
-    if(!DATA||!DATA.ok) throw new Error(DATA&&DATA.error||"respuesta incompleta");
-    render();
-  }catch(e){
-    box.innerHTML='<div class="nota">No se pudo cargar el consumo por proyecto ('+esc(e.message||e)+').</div>';
+function pinta(datos) {
+  const lineas = Array.isArray(datos.resumen) ? datos.resumen.slice(0, 3) : [];
+  const resumen = document.getElementById("resumen");
+  if (lineas.length) {
+    document.getElementById("lineas").innerHTML = lineas.map((t) => "<li>" + esc(t) + "</li>").join("");
+    resumen.hidden = false;
   }
-}
-
-function render(){
-  const t=DATA.totales||{};
-  const tok=t.tokens||{};
-  document.getElementById("meta").textContent=
-    (DATA.dias||"?")+" días · atribución "+(DATA.attribution||"?")+" · hosting = mes calendario (estimate)";
-  document.getElementById("kpi").innerHTML=
-    '<span class="k"><b>'+fmtTok(tok.total)+'</b>tokens</span>'+
-    '<span class="k"><b>'+fmtUsd(tok.usd_estimate)+'</b>tokens USD est.</span>'+
-    '<span class="k"><b>'+fmtUsd(t.hosting_monthly_usd)+'</b>hosting USD/mes</span>'+
-    '<span class="k"><b>'+fmtUsd(t.usd_estimate)+'</b>total est.</span>'+
-    '<span class="k"><b>'+(DATA.proyectos||[]).length+'</b>proyectos</span>';
-
-  const rows=(DATA.proyectos||[]);
-  if(!rows.length){
-    document.getElementById("cuerpo").innerHTML='<div class="nota">Sin datos de consumo ni mapa de hosting todavía.</div>';
+  const plats = Array.isArray(datos.plataformas) ? datos.plataformas : [];
+  const grid = document.getElementById("grid");
+  if (!plats.length) {
+    grid.innerHTML = '<p class="nota">Sin lectura todavía.</p>';
     return;
   }
-  let html='<table><thead><tr><th>Proyecto</th><th class="num">Tokens</th><th class="num">Tokens USD est.</th><th class="num">Hosting USD/mes</th><th class="num">Total est.</th></tr></thead><tbody>';
-  for(const p of rows){
-    const id=p.project_id;
-    const totalEst=(Number(p.tokens&&p.tokens.usd_estimate)||0)+(Number(p.hosting&&p.hosting.monthly_usd)||0);
-    const open=OPEN.has(id);
-    html+='<tr class="exp" data-id="'+esc(id)+'" aria-expanded="'+open+'"><td><b>'+esc(p.name||id)+'</b><div style="color:var(--dim);font-family:var(--mono);font-size:11px">'+esc(id)+'</div></td>'+
-      '<td class="num">'+fmtTok(p.tokens&&p.tokens.total)+'</td>'+
-      '<td class="num">'+fmtUsd(p.tokens&&p.tokens.usd_estimate)+'</td>'+
-      '<td class="num">'+fmtUsd(p.hosting&&p.hosting.monthly_usd)+'</td>'+
-      '<td class="num">'+fmtUsd(totalEst)+'</td></tr>';
-    if(open){
-      const agents=(p.agents||[]).map(a=>esc(a.owner)+' · '+esc(a.machine)+' → '+fmtTok(a.total_tokens)+(a.share!=null&&a.share<1?' (×'+a.share+')':'')).join('<br>')||'—';
-      const res=(p.hosting&&p.hosting.resources||[]).map(r=>esc(r.kind)+':'+esc(r.resource)+' → '+fmtUsd(r.monthly_usd)+(r.share_pct?' · share '+r.share_pct+'%':'')+(r.note?' · '+esc(r.note):'')).join('<br>')||'—';
-      html+='<tr class="detail"><td colspan="5"><div class="detail-box"><div><h4>Agentes</h4>'+agents+'</div><div><h4>Recursos hosting</h4>'+res+'</div></div></td></tr>';
-    }
-  }
-  html+='</tbody></table>';
-  if(DATA.rates&&DATA.rates.note) html+='<p class="sub" style="margin-top:12px">'+esc(DATA.rates.note)+'</p>';
-  if(DATA.attribution_note) html+='<p class="sub">'+esc(DATA.attribution_note)+'</p>';
-  document.getElementById("cuerpo").innerHTML=html;
-  document.getElementById("cuerpo").querySelectorAll("tr.exp").forEach(tr=>{
-    tr.addEventListener("click",()=>{
-      const id=tr.getAttribute("data-id");
-      if(OPEN.has(id)) OPEN.delete(id); else OPEN.add(id);
-      render();
-    });
+  grid.innerHTML = plats.map((p) => {
+    const luz = LUZ[p.semaforo] ? p.semaforo : "sin";
+    const cifra = String(p.cifra || "").trim() || "sin lectura todavía";
+    const detalle = (p.detalle || []).map((t) => "<li>" + esc(t) + "</li>").join("");
+    const ancho = (p.detalle || []).length > 1 ? " ancho" : "";
+    return '<article class="card' + ancho + '">' +
+      '<div class="top"><div><h2 class="nombre">' + esc(p.nombre) + '</h2><p class="cuenta">' + esc(p.cuenta) + '</p></div>' +
+      '<span class="luz ' + luz + '">' + LUZ[luz] + '</span></div>' +
+      '<p class="cifra">' + esc(cifra) + '</p>' +
+      (p.unidad ? '<p class="unidad">' + esc(p.unidad) + '</p>' : '') +
+      '<p class="frase">' + esc(p.frase) + '</p>' +
+      (detalle ? '<ul class="detalle">' + detalle + '</ul>' : '') +
+      '<p class="cuando">Lectura: ' + esc(p.leido || "sin lectura todavía") + '</p>' +
+      '</article>';
+  }).join("");
+  const pie = document.getElementById("pie");
+  pie.innerHTML = esc(datos.como_actualizar || "") + ' <a href="/consumos-plataformas.json">Archivo de lecturas</a>.';
+}
+
+fetch("/consumos-plataformas.json", { cache: "no-store" })
+  .then((r) => { if (!r.ok) throw new Error("sin archivo"); return r.json(); })
+  .then(pinta)
+  .catch(() => {
+    document.getElementById("grid").innerHTML = '<p class="nota">Sin lectura todavía. No se ha podido abrir el archivo de lecturas.</p>';
   });
-}
-
-async function loadMap(){
-  const msg=document.getElementById("adminMsg");
-  msg.textContent="Cargando mapa…"; msg.className="msg";
-  try{
-    const r=await fetch(WORKER+"/fleet/consumo/hosting-map",{cache:"no-store"});
-    const d=await r.json();
-    if(!r.ok||!d.ok) throw new Error(d.error||("HTTP "+r.status));
-    document.getElementById("mapJson").value=JSON.stringify({items:d.items||[]},null,2);
-    msg.textContent=(d.items||[]).length+" recursos"; msg.className="msg ok";
-  }catch(e){ msg.textContent=String(e.message||e); msg.className="msg err"; }
-}
-
-async function saveMap(){
-  const msg=document.getElementById("adminMsg");
-  msg.textContent="Guardando…"; msg.className="msg";
-  let body;
-  try{ body=JSON.parse(document.getElementById("mapJson").value); }
-  catch(e){ msg.textContent="JSON inválido: "+e.message; msg.className="msg err"; return; }
-  try{
-    const r=await fetch(WORKER+"/fleet/consumo/hosting-map",{
-      method:"POST", credentials:"include", cache:"no-store",
-      headers:{"content-type":"application/json"},
-      body:JSON.stringify(body)
-    });
-    const d=await r.json().catch(()=>({}));
-    if(!r.ok||!d.ok) throw new Error(d.error||("HTTP "+r.status));
-    document.getElementById("mapJson").value=JSON.stringify({items:d.items||[]},null,2);
-    msg.textContent="Guardado · "+(d.upserted||0)+" upsert"; msg.className="msg ok";
-    await load();
-  }catch(e){ msg.textContent=String(e.message||e)+" (¿sesión Google en api.yokup.com o x-fleet-token?)"; msg.className="msg err"; }
-}
-
-document.getElementById("dias").addEventListener("change",load);
-document.getElementById("reload").addEventListener("click",load);
-if(ADMIN){
-  document.getElementById("admin").hidden=false;
-  document.getElementById("loadMap").addEventListener("click",loadMap);
-  document.getElementById("saveMap").addEventListener("click",saveMap);
-  loadMap();
-}
-load();
 </script>
 <script src="/yk-frame.js?v=r34"></script>
 </body>

@@ -3797,6 +3797,11 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       (typeof AGENT_SCOPE_MODE === "undefined" ? AGENT_SCOPE : hsEffectiveAgentScope());
     var porDefecto = arguments.length < 2 && typeof AGENT_SCOPE_MODE !== "undefined" && AGENT_SCOPE_MODE === "active";
     var filtrada = (lista || []).filter(function (fila) {
+      // DeepAgents sin selección guardada: el censo aún no sembró el Set y un
+      // Set vacío ocultaba a todos, puntos incluidos.
+      if (AGENT_SCOPE_MODE === "deepagents" && !(effective instanceof Set && effective.size)) {
+        return hsIsDeepAgentKey(fila && (fila.base || fila.agente));
+      }
       return hsAgentScopeAllows(effective, fila && fila.agente) || (porDefecto && (hsHaPuntuadoHoy(fila)||["running","assigned_stale"].indexOf(fila&&fila.workState)>=0));
     });
     return filtrada.map(function (fila, indice) {

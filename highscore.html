@@ -101,6 +101,11 @@ h1{font-size:clamp(20px,3.2vw,31px);font-weight:900;letter-spacing:.08em;margin:
 .work-observations summary{cursor:pointer;color:var(--ink)}
 .work-observations ul{display:flex;flex-wrap:wrap;gap:4px 18px;padding:4px 0 0;list-style:none;margin:0}
 .work-observations li{max-width:100%;overflow-wrap:anywhere}
+.encargo-tiempos-wrap{overflow-x:auto}
+.encargo-tiempos table{border-collapse:collapse;width:100%;min-width:520px;font-variant-numeric:tabular-nums}
+.encargo-tiempos th,.encargo-tiempos td{text-align:left;padding:2px 10px 2px 0;white-space:nowrap}
+.encargo-tiempos th{color:var(--ink);font-weight:normal}
+.encargo-tiempos td.en-curso{color:var(--ink)}
 .work-observation-surface{display:inline-block;border:1px solid rgba(120,243,255,.25);border-radius:4px;padding:0 4px;margin:0 2px;white-space:nowrap}
 .race-evidence-status{font-size:11px;line-height:1.5;color:var(--mut);margin:6px 0 0}
 .ranking-period-metric{display:inline-flex;align-items:baseline;gap:3px;white-space:nowrap}
@@ -1095,6 +1100,13 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     <summary id="workObservationsSummary">Actividad sin verificar</summary>
     <ul id="workObservationsList"></ul>
   </details>
+  <details class="work-observations encargo-tiempos" id="encargoTiempos" hidden>
+    <summary id="encargoTiemposSummary">Tiempos por encargo</summary>
+    <div class="encargo-tiempos-wrap"><table>
+      <thead><tr><th scope="col">Encargo</th><th scope="col">Quién</th><th scope="col">Máquina</th><th scope="col">Inicio</th><th scope="col">Fin</th><th scope="col">Duración</th></tr></thead>
+      <tbody id="encargoTiemposFilas"></tbody>
+    </table></div>
+  </details>
 </div>
 
 <section class="agent-scope" data-yk-slot="right" id="advancedMenu" aria-labelledby="agentScopeTitle">
@@ -1344,6 +1356,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     presencia: [], misiones: [], ideas: [], decisiones: [], proyectos: [],
     declaracionesPrincipales: [], controlMachines: [], presenceNow: 0, presenceAvailable: false,
     trabajos: [], workObservations: [], trabajosAvailable: false, trabajosGeneratedAt: 0, trabajosClientAt: 0,
+    trabajando: [], trabajandoClientAt: 0, trabajandoVentana: 90, tiempos: [],
     trabajosMode: "unavailable", turnos: null, historial: null, historialFresh: false };
   var WORK_POLL_MS = 20000, WORK_TIMEOUT_MS = 8000, workRequestSequence = 0, workRequest = null;
   var DAILY_CACHE_KEY = "yokup.highscore.daily.v1";
@@ -5026,6 +5039,18 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       var idx = fromApi.indexOf(prev);
       if (idx >= 0) fromApi[idx] = byKey[w.key];
     });
+    // FLT-101047: quien late «trabajando» entra aunque active-work no lo traiga.
+    trabajosDesdeLatido().forEach(function (w) {
+      var prev = byKey[w.key];
+      if (!prev) { byKey[w.key] = w; fromApi.push(w); return; }
+      if (prev.state === "running") return;
+      var merged = Object.assign({}, w);
+      if (!focoEsBasura(prev.title) && prev.state !== "last_work") merged.title = prev.title;
+      if (prev.projectName) merged.projectName = prev.projectName;
+      byKey[w.key] = merged;
+      var idx = fromApi.indexOf(prev);
+      if (idx >= 0) fromApi[idx] = merged;
+    });
     return fromApi.sort(function (a, b) { return (a.state === "running" ? -1 : 1) - (b.state === "running" ? -1 : 1) ||
       (b.state === "last_work" ? b.endedAt : b.at) - (a.state === "last_work" ? a.endedAt : a.at) ||
       a.agente.localeCompare(b.agente, "es"); });
@@ -5048,37 +5073,47 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     if (/^el arquitecto me pide\b/i.test(title)) return true;
     return false;
   }
-  function misionEnCurso(work) {
+  // FLT-101047 (encargo #4395, sustituye a la regla de FLT-101000): corre quien tiene
+  // presencia mode=trabajando con latido de menos de 90 s. Ese latido lo manda
+  // box-latido.sh cada 30 s mirando la terminal («esc to interrupt»), así que el
+  // muñeco se para en menos de 2 min al acabar. Misión movida o foco no bastan.
+  function latidoTrabajando() {
+    var out = Object.create(null), d = typeof datos !== "undefined" ? datos : {};
+    var ventana = Number(d.trabajandoVentana) || 90;
+    var transcurrido = d.trabajandoClientAt ? Math.max(0, (performance.now() - d.trabajandoClientAt) / 1000) : 0;
+    (Array.isArray(d.trabajando) ? d.trabajando : []).forEach(function (it) {
+      if (!it || (Number(it.age) || 0) + transcurrido > ventana) return;
+      var key = hsWorkIdentity({ agent:it.persona, machine:it.machine }).key;
+      if (key) out[key] = it;
+    });
+    return out;
+  }
+  function trabajandoDe(work) {
+    return work && work.key ? latidoTrabajando()[work.key] || null : null;
+  }
+  function trabajosDesdeLatido() {
+    var vivos = latidoTrabajando();
+    return Object.keys(vivos).map(function (key) {
+      var it = vivos[key], identity = hsWorkIdentity({ agent:it.persona, machine:it.machine });
+      var desde = (Number(it.working_since) || Number(it.working_at) || 0) * 1000;
+      var visto = (Number(it.working_at) || 0) * 1000;
+      return { key:key, agente:identity.agent, machine:identity.machine, executor:identity.agent,
+        reference:it.encargo ? "#" + it.encargo : "", projectId:"", projectName:"", projectSource:"", detailUrl:"",
+        kind:"presence", title:it.encargo ? "Encargo #" + it.encargo : "Trabajando", state:"running", reachable:true,
+        raceRevision:"", assignmentAt:desde, assignmentBasis:"presence_working",
+        startedAt:desde, at:visto, endedAt:0, elapsedMs:Math.max(0, visto - desde),
+        timingBasis:"presence", presenceAt:visto, sessionDedicatedMs:null, sessionState:"open",
+        sessionBasis:"presence_working", sessionSurface:"cli", runtime:normaliza(it.runtime),
+        activityExpiresAt:visto + 90000, cliPaused:false, activityReason:"presence_working",
+        operationalState:"", encargo:it.encargo || null };
+    });
+  }
+  function correDeVerdad(work) {
     if (!work || work.cliPaused === true) return false;
-    if (work.state !== "running") return false;
-    var kind = normaliza(work.kind).toLowerCase();
-    return kind === "mission" || kind === "task";
-  }
-  function ahoraCarrera() {
-    var generado = typeof datos !== "undefined" && Number(datos.trabajosGeneratedAt);
-    if (generado > 0) return generado;
-    var presencia = typeof datos !== "undefined" && Number(datos.presenceNow);
-    if (presencia > 1e12) return presencia;
-    if (presencia > 0) return presencia * 1000;
-    return Date.now();
-  }
-  // Paso, evidencia o acuse viven en work_progress_at. El latido no cuenta.
-  // Un foco declarado y no vacío cuenta solo si además hay misión en curso.
-  function actividadReciente(work, now) {
-    if (!work || work.activityReason === "presence_live") return false;
-    var at = Number(work.at) || 0;
-    var clock = Number(now) || Date.now();
-    if (!at || clock - at > 20 * 60 * 1000) return false;
-    if (normaliza(work.kind).toLowerCase() === "presence" || work.activityReason === "presence_focus") {
-      return !focoEsBasura(work.title);
-    }
-    return true;
-  }
-  function correDeVerdad(work, now) {
-    return misionEnCurso(work) && actividadReciente(work, now || ahoraCarrera()) && !focoEsBasura(work.title);
+    return !!trabajandoDe(work);
   }
   function faenaReal(work) {
-    return correDeVerdad(work, ahoraCarrera());
+    return correDeVerdad(work);
   }
   function puntuaFaena(work) {
     var deTrabajo = work.kind !== "presence" && work.state === "running";
@@ -5271,7 +5306,9 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     var deadline = new Promise(function (resolve) {
       timeout = setTimeout(function () { controller.abort(); resolve(null); }, WORK_TIMEOUT_MS);
     });
-    workRequest = Promise.race([request, deadline]).then(function (payload) {
+    hsRefreshTiempos();
+    workRequest = Promise.all([Promise.race([request, deadline]), Promise.race([hsRefreshTrabajando(), deadline])]).then(function (res) {
+      var payload = res[0];
       if (sequence !== workRequestSequence) return null;
       hsApplyWorkSnapshot(payload);
       // Si el marcador ya está pintado, un active-work tardío no espera al
@@ -5288,6 +5325,62 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       if (sequence === workRequestSequence) workRequest = null;
     });
     return workRequest;
+  }
+  // FLT-101047: quién trabaja ahora (latido de terminal) y los tiempos por encargo.
+  var trabajandoRequest = null, tiemposRequest = null, tiemposPedidoAt = 0;
+  function hsRefreshTrabajando() {
+    if (trabajandoRequest) return trabajandoRequest;
+    trabajandoRequest = fetch(TG + "/api/presence/trabajando", { cache:"no-store" })
+      .then(function (response) { return response.ok ? response.json() : null; })
+      .catch(function () { return null; })
+      .then(function (payload) {
+        if (payload && payload.ok && Array.isArray(payload.items)) {
+          datos.trabajando = payload.items; datos.trabajandoClientAt = performance.now();
+          datos.trabajandoVentana = Number(payload.window) || 90;
+        }
+        return payload;
+      }).finally(function () { trabajandoRequest = null; });
+    return trabajandoRequest;
+  }
+  function hsRefreshTiempos() {
+    if (tiemposRequest || Date.now() - tiemposPedidoAt < 60000) return;
+    tiemposPedidoAt = Date.now();
+    tiemposRequest = fetch(TG + "/api/bot-inbox/tiempos?horas=48", { cache:"no-store" })
+      .then(function (response) { return response.ok ? response.json() : null; })
+      .catch(function () { return null; })
+      .then(function (payload) {
+        if (payload && payload.ok && Array.isArray(payload.items)) { datos.tiempos = payload.items; hsPintaTiempos(); }
+      }).finally(function () { tiemposRequest = null; });
+  }
+  function hsDuracion(segundos) {
+    var s = Math.max(0, Math.round(Number(segundos) || 0)), h = Math.floor(s / 3600), m = Math.floor(s % 3600 / 60);
+    return (h ? h + " h " : "") + (h || m ? m + " min " : "") + (s % 60) + " s";
+  }
+  function hsHoraExacta(epoch) {
+    if (!epoch) return "—";
+    return new Date(epoch * 1000).toLocaleString("es-ES", { day:"2-digit", month:"2-digit", hour:"2-digit", minute:"2-digit", second:"2-digit" });
+  }
+  function hsPintaTiempos() {
+    var box = document.getElementById("encargoTiempos"), filas = document.getElementById("encargoTiemposFilas"), resumen = document.getElementById("encargoTiemposSummary");
+    if (!box || !filas || !resumen) return;
+    var items = (datos.tiempos || []).slice(0, 40);
+    box.hidden = !items.length;
+    var hechos = items.filter(function (it) { return it.duracion !== null && it.duracion !== undefined; });
+    resumen.textContent = "Tiempos por encargo · " + items.length + " en 48 h" + (hechos.length ? " · mediana " +
+      hsDuracion(hechos.map(function (it) { return it.duracion; }).sort(function (a, b) { return a - b; })[Math.floor(hechos.length / 2)]) : "");
+    filas.textContent = "";
+    items.forEach(function (it) {
+      var tr = document.createElement("tr");
+      var celdas = [it.task_id || "#" + it.id, it.persona || "—", it.maquina || "—",
+        hsHoraExacta(it.inicio) + (it.inicio_base === "acuse" ? " (acuse)" : ""), it.fin ? hsHoraExacta(it.fin) : "en curso",
+        it.duracion !== null && it.duracion !== undefined ? hsDuracion(it.duracion) : it.en_curso ? hsDuracion(it.en_curso) + "…" : "—"];
+      celdas.forEach(function (texto, i) {
+        var td = document.createElement("td"); td.textContent = texto;
+        if (i >= 4 && !it.fin) td.className = "en-curso";
+        tr.appendChild(td);
+      });
+      filas.appendChild(tr);
+    });
   }
   function hsPollWork() {
     if (document.hidden) return Promise.resolve(null);
@@ -5364,12 +5457,12 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     pendientesCarrera = 0;
   }
   function liberaParrilla() { rosterCarrera = null; }
-  // Carril vivo: misión o tarea en curso, con avance real en 20 min.
-  // Vale en cualquier máquina, incluido CursorCloud sin superficie de sesión.
-  // El latido del vigilante no corre.
+  // Carril vivo: presencia mode=trabajando con latido de menos de 90 s (FLT-101047).
+  // Un agente de caja (GrokBot) no es DeepAgent, pero si su terminal trabaja, corre.
   function pistaEnVivo(work) {
-    if (!work || !work.key || !hsLaneDeepEligible(work.key)) return false;
-    return correDeVerdad(work, ahoraCarrera());
+    if (!work || !work.key) return false;
+    if (!hsLaneDeepEligible(work.key) && !trabajandoDe(work)) return false;
+    return correDeVerdad(work);
   }
   function actualizaCarreraPodio() {
     var contenedor = document.getElementById("refreshLanes");

@@ -89,29 +89,38 @@ test("presencia verificada + focus genera una calle por agente (CLI incluido)", 
   assert.equal(lanes.some((l) => l.key === "morfeomacmini"), false);
 });
 
-test("solo corre quien tiene misión en curso y avance de los últimos 20 min", () => {
-  const htmlFns = ["focoEsBasura", "misionEnCurso", "ahoraCarrera", "actividadReciente", "correDeVerdad", "faenaReal", "personaCarrera", "puntuaFaena", "unaFilaPorPersona"].map(functionSource).join("\n");
-  const fold = new Function(`
+test("solo corre quien late mode=trabajando en los últimos 90 s (FLT-101047)", () => {
+  const htmlFns = ["claveAgenteCarrera", "hsWorkIdentity", "focoEsBasura", "latidoTrabajando", "trabajandoDe", "trabajosDesdeLatido",
+    "correDeVerdad", "faenaReal", "personaCarrera", "puntuaFaena", "unaFilaPorPersona"].map(functionSource).join("\n");
+  const make = new Function("identity", "datos", `
+    var window = { ykAgentIdentity: identity };
     function normaliza(value) { return String(value == null ? "" : value).trim(); }
-    var datos = { trabajosGeneratedAt: 2_000_000_000 };
     ${htmlFns}
-    return { fold: unaFilaPorPersona, corre: correDeVerdad, basura: focoEsBasura };
-  `)();
-  const now = 2_000_000_000;
+    return { fold: unaFilaPorPersona, corre: correDeVerdad, basura: focoEsBasura, latido: trabajosDesdeLatido };
+  `);
+  const datos = { trabajandoClientAt: 0, trabajandoVentana: 90, trabajando: [
+    { persona: "Morfeo", machine: "GrokBotBox", runtime: "Claude", encargo: 4395, working_since: 1000, working_at: 1100, age: 5 },
+    { persona: "Smith", machine: "MacMini", runtime: "Codex", encargo: null, working_since: 900, working_at: 950, age: 89 },
+    { persona: "Neo", machine: "GrokBotBox", runtime: "Claude", encargo: 4390, working_since: 800, working_at: 850, age: 91 },
+  ] };
+  const fold = make(identity, datos);
   assert.equal(fold.basura("El Arquitecto me pide: encargo #3874"), true);
-  assert.equal(fold.basura("Latido · Claude · MacMini"), true);
   assert.equal(fold.basura("Pixeria"), false);
+  const latido = fold.latido();
+  assert.deepEqual(latido.map((w) => w.key).sort(), ["morfeogrokbot", "smithmacmini"]);
+  assert.equal(latido.find((w) => w.key === "morfeogrokbot").title, "Encargo #4395");
+  assert.equal(latido.find((w) => w.key === "morfeogrokbot").startedAt, 1000 * 1000);
   const rows = fold.fold([
-    { key: "oraculomacmini", agente: "OraculoMacMini", title: "El Arquitecto me pide: encargo #3874", state: "running", activityReason: "presence_focus", kind: "presence", at: now - 1000 },
-    { key: "morfeomacmini", agente: "MorfeoMacMini", title: "El Arquitecto me pide: encargo #4305", state: "running", activityReason: "presence_focus", kind: "presence", at: now - 1000 },
-    { key: "smithmacmini", agente: "SmithMacMini", title: "Implementar la carrera del highscore", state: "running", kind: "task", sessionSurface: "cli", at: now - 2 * 60 * 1000 },
-    { key: "arquitectocursorcloud", agente: "ArquitectoCursorCloud", title: "Presentar estructura AdmiraNeXT", state: "running", kind: "mission", sessionSurface: "", at: now - 10 * 60 * 1000 },
-    { key: "neombp14", agente: "NeoMBP14", title: "Proof of pass", state: "running", kind: "mission", sessionSurface: "app", at: now - 40 * 60 * 1000 },
-    { key: "trinitymbp14", agente: "TrinityMBP14", title: "cápsulas", state: "assigned_stale", kind: "mission", at: now - 1000 },
+    ...latido,
+    // Misión movida hace 2 min, sin latido «trabajando»: ya no corre.
+    { key: "arquitectocursorcloud", agente: "ArquitectoCursorCloud", title: "Presentar estructura AdmiraNeXT", state: "running", kind: "mission", at: 1 },
+    // Latido de 91 s: se para.
+    { key: "neogrokbot", agente: "NeoGrokBot", title: "Encargo #4390", state: "running", kind: "presence", at: 1 },
   ]);
-  assert.deepEqual(rows.map((row) => row.key).sort(), ["arquitectocursorcloud", "smithmacmini"]);
-  assert.equal(rows.find((row) => row.key === "smithmacmini").title, "Implementar la carrera del highscore");
-  assert.equal(fold.corre(rows.find((row) => row.key === "arquitectocursorcloud"), now), true);
+  assert.deepEqual(rows.map((row) => row.key).sort(), ["morfeogrokbot", "smithmacmini"]);
+  assert.equal(fold.corre({ key: "smithmacmini", cliPaused: true }), false);
+  datos.trabajando = [];
+  assert.equal(fold.corre({ key: "morfeogrokbot" }), false);
 });
 
 test("active-work CLI running también entra en Activos (ya no solo APP)", () => {

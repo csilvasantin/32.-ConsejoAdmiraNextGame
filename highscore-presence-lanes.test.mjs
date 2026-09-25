@@ -32,7 +32,7 @@ function functionSource(name) {
 function api() {
   const names = [
     "hsAgentKey", "hsIsDeepAgentKey", "hsLaneDeepEligible", "hsDeepAgentKeys",
-    "hsActiveAgentKeys", "claveAgenteCarrera", "trabajosDesdePresencia"
+    "hsActiveAgentKeys", "claveAgenteCarrera", "focoEsBasura", "trabajosDesdePresencia"
   ];
   const functions = names.map(functionSource).join("\n");
   return new Function("identity", `
@@ -79,17 +79,39 @@ test("presencia verificada + focus genera una calle por agente (CLI incluido)", 
   ], now);
   const lanes = A.fromPresence();
   const keys = lanes.map((l) => l.key).sort();
-  assert.deepEqual(keys, ["morfeomacmini", "neomacmini", "smithmacmini", "trinitymacmini"]);
+  assert.deepEqual(keys, ["neomacmini", "smithmacmini"]);
   const smith = lanes.find((l) => l.key === "smithmacmini");
   assert.equal(smith.title, "Player taza");
   assert.equal(smith.sessionSurface, "cli");
   assert.equal(smith.activityReason, "presence_focus");
   assert.equal(smith.state, "running");
-  const morfeo = lanes.find((l) => l.key === "morfeomacmini");
-  assert.match(morfeo.title, /Claude|MacMini|latido/i);
-  const trinity = lanes.find((l) => l.key === "trinitymacmini");
-  assert.equal(trinity.activityReason, "presence_live");
-  assert.equal(trinity.title, "Latido · Claude · MacMini");
+  assert.equal(lanes.some((l) => l.key === "trinitymacmini"), false);
+  assert.equal(lanes.some((l) => l.key === "morfeomacmini"), false);
+});
+
+test("solo corre quien tiene misión en curso y avance de los últimos 20 min", () => {
+  const htmlFns = ["focoEsBasura", "misionEnCurso", "ahoraCarrera", "actividadReciente", "correDeVerdad", "faenaReal", "personaCarrera", "puntuaFaena", "unaFilaPorPersona"].map(functionSource).join("\n");
+  const fold = new Function(`
+    function normaliza(value) { return String(value == null ? "" : value).trim(); }
+    var datos = { trabajosGeneratedAt: 2_000_000_000 };
+    ${htmlFns}
+    return { fold: unaFilaPorPersona, corre: correDeVerdad, basura: focoEsBasura };
+  `)();
+  const now = 2_000_000_000;
+  assert.equal(fold.basura("El Arquitecto me pide: encargo #3874"), true);
+  assert.equal(fold.basura("Latido · Claude · MacMini"), true);
+  assert.equal(fold.basura("Pixeria"), false);
+  const rows = fold.fold([
+    { key: "oraculomacmini", agente: "OraculoMacMini", title: "El Arquitecto me pide: encargo #3874", state: "running", activityReason: "presence_focus", kind: "presence", at: now - 1000 },
+    { key: "morfeomacmini", agente: "MorfeoMacMini", title: "El Arquitecto me pide: encargo #4305", state: "running", activityReason: "presence_focus", kind: "presence", at: now - 1000 },
+    { key: "smithmacmini", agente: "SmithMacMini", title: "Implementar la carrera del highscore", state: "running", kind: "task", sessionSurface: "cli", at: now - 2 * 60 * 1000 },
+    { key: "arquitectocursorcloud", agente: "ArquitectoCursorCloud", title: "Presentar estructura AdmiraNeXT", state: "running", kind: "mission", sessionSurface: "", at: now - 10 * 60 * 1000 },
+    { key: "neombp14", agente: "NeoMBP14", title: "Proof of pass", state: "running", kind: "mission", sessionSurface: "app", at: now - 40 * 60 * 1000 },
+    { key: "trinitymbp14", agente: "TrinityMBP14", title: "cápsulas", state: "assigned_stale", kind: "mission", at: now - 1000 },
+  ]);
+  assert.deepEqual(rows.map((row) => row.key).sort(), ["arquitectocursorcloud", "smithmacmini"]);
+  assert.equal(rows.find((row) => row.key === "smithmacmini").title, "Implementar la carrera del highscore");
+  assert.equal(fold.corre(rows.find((row) => row.key === "arquitectocursorcloud"), now), true);
 });
 
 test("active-work CLI running también entra en Activos (ya no solo APP)", () => {
@@ -104,7 +126,10 @@ test("el HTML declara el puente presencia→carriles", () => {
   assert.match(html, /function trabajosDesdePresencia\(/);
   assert.match(html, /presence_focus/);
   assert.match(html, /presence_live/);
-  assert.match(html, /Latido · /);
+  assert.match(html, /foco vacío es latido, no faena/);
+  assert.match(html, /function unaFilaPorPersona\(/);
+  assert.match(html, /function pistaEnVivo\(/);
+  assert.match(html, /active-work no bloquea el primer pintado/);
   assert.match(html, /Carriles desde presencia verificada \+ focus/);
 });
 

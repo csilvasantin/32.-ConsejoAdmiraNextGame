@@ -1,0 +1,87 @@
+{
+  "como_actualizar": "Edita este archivo, consumos-plataformas.json, y publica el sitio con deploy.sh. No hace falta tocar la página. Una visita no lee la base de datos.",
+  "resumen": [
+    "Cloudflare va en rojo: 253,85 dólares en diez días, y a este ritmo el ciclo cerraría en 692,31. Casi todo son lecturas de la base de datos.",
+    "La cuenta de Grok que usa Smith va en rojo: quedan 7,39 dólares. Hay que recargar.",
+    "Cursor va en ámbar, con los modelos de fuera al 87,5 %. Morfeo declaró hoy 137 millones de tokens, casi todos de memoria guardada."
+  ],
+  "plataformas": [
+    {
+      "nombre": "Cloudflare",
+      "cuenta": "csilvasantin@gmail.com",
+      "leido": "25 de septiembre de 2026",
+      "semaforo": "rojo",
+      "cifra": "253,85",
+      "unidad": "dólares en 10 días",
+      "frase": "El ciclo del 15 de septiembre al 14 de octubre ya lleva 253,85 dólares y, si sigue así, cerraría en 692,31. Hay que bajar las lecturas de la base de datos.",
+      "detalle": [
+        "El 84 % son lecturas de filas de la base de datos: 238.820 millones de filas, 213,82 dólares.",
+        "Después: lecturas del almacén de claves, 14,50 dólares. Memoria que permanece encendida, 12,50. Escrituras del almacén de claves, 5. Lecturas del almacén de archivos, 3,60. Peticiones de los programas, 3,60.",
+        "Facturas anteriores: junio 5,15 · julio 75,76 · agosto 443,23 · septiembre 486,55 dólares.",
+        "Investigación en curso: encargo 4350."
+      ]
+    },
+    {
+      "nombre": "Grok, la cuenta de Smith",
+      "cuenta": "Equipo AdmiraNeXT",
+      "leido": "25 de septiembre de 2026, 20:47",
+      "semaforo": "rojo",
+      "cifra": "7,39",
+      "unidad": "dólares que quedan",
+      "frase": "En 30 días se han gastado 169,52 dólares, con 8.720.856 tokens y 12.949 peticiones. Queda muy poco saldo: hay que recargar.",
+      "detalle": []
+    },
+    {
+      "nombre": "Cursor, El Arquitecto",
+      "cuenta": "Plan de 20 dólares al mes, del 19 de septiembre al 19 de octubre",
+      "leido": "25 de septiembre de 2026, 20:53",
+      "semaforo": "ambar",
+      "cifra": "87,5 %",
+      "unidad": "del cupo de modelos de fuera",
+      "frase": "No hay gasto extra: 0 dólares, y ese cobro está desactivado. El cupo de los modelos propios de Cursor va al 16 %. El de los modelos de fuera va al 87,5 %, así que conviene vigilarlo.",
+      "detalle": [
+        "El 25 de septiembre usó 53,6 millones de tokens. Unos 25 millones fueron con Grok 4.7."
+      ]
+    },
+    {
+      "nombre": "Consejeros de Grok",
+      "cuenta": "Jobs, Wozniak, Lucas y Disney, en la aplicación de Carlos",
+      "leido": "25 de septiembre de 2026, 20:37",
+      "semaforo": "verde",
+      "cifra": "28 %",
+      "unidad": "del plan usado",
+      "frase": "El plan de los consejeros va holgado.",
+      "detalle": []
+    },
+    {
+      "nombre": "Lo declarado hoy",
+      "cuenta": "Cifras que los propios agentes han anotado hoy en admira.live",
+      "leido": "25 de septiembre de 2026",
+      "semaforo": "ambar",
+      "cifra": "137 millones",
+      "unidad": "tokens declarados por Morfeo",
+      "frase": "Casi todo ese volumen es memoria guardada de una conversación larga, y está desproporcionado. Se está corrigiendo en el encargo 4336. Oráculo declaró 759 mil tokens.",
+      "detalle": []
+    },
+    {
+      "nombre": "Consolas de Anthropic",
+      "cuenta": "Morfeo y Neo",
+      "leido": "sin lectura todavía",
+      "semaforo": "sin",
+      "cifra": "",
+      "unidad": "",
+      "frase": "Todavía no hay una lectura de estas consolas. Cuando llegue, se escribe en el archivo de datos.",
+      "detalle": []
+    },
+    {
+      "nombre": "Consolas de OpenAI",
+      "cuenta": "Oráculo y Trinity",
+      "leido": "sin lectura todavía",
+      "semaforo": "sin",
+      "cifra": "",
+      "unidad": "",
+      "frase": "Todavía no hay una lectura de estas consolas. Cuando llegue, se escribe en el archivo de datos.",
+      "detalle": []
+    }
+  ]
+}

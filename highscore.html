@@ -1324,7 +1324,8 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   };
   function pedirDesde(base, ruta) {
     return window.__ykJsonOnce(base + ruta, 4000, function () {
-      return fetch(base + ruta, { cache: "no-store" }).then(function (r) {
+      var signal = (typeof AbortSignal !== "undefined" && AbortSignal.timeout) ? AbortSignal.timeout(8000) : undefined;
+      return fetch(base + ruta, { cache: "no-store", signal: signal }).then(function (r) {
         if (!r.ok) throw new Error(ruta + " → " + r.status);
         return r.json();
       });
@@ -1358,7 +1359,10 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   }
 
   pon(8, "CONECTANDO CON LA FLOTA…");
-  /* BATCH TOTAL: las diez llamadas salen A LA VEZ. Antes /tasks/all iba solo
+  /* active-work no bloquea el primer pintado (FLT-100947). Si cuelga, el
+     cliente lo aborta a los 8 s y las pistas salen de la presencia. */
+  hsRefreshWork(false);
+  /* BATCH TOTAL: las llamadas salen A LA VEZ. Antes /tasks/all iba solo
      por delante —únicamente para poner su cifra en la barra— y el resto esperaba
      su latencia entera sin motivo. La barra sigue contando el tablero: lo dice
      cuando la respuesta llega, no antes. */
@@ -1384,7 +1388,6 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     // Reparto de turnos: quién abre cuándo. Es lo que hace honesta la cuenta
     // atrás de la fila desplegada; si no responde, esa cifra cae al cupo.
     seguroYokup("/fleet/turnos", function (d) { return d && d.ok ? d : null; }),
-    hsRefreshWork(false),
     seguroYokup("/highscore/history?scope=global", function (d) {
       return d && d.ok && Array.isArray(d.all_days) ? d : null;
     })
@@ -1393,7 +1396,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       var fresh = !!(r[1] && r[1].day === claveDia(Date.now()) && Array.isArray(r[1].scores));
       var a = fresh ? r[1] : actividadDiariaGuardada();
       if (fresh) guardaActividadDiaria(r[1]);
-      datos.actividadFresh = fresh && datos.tareasFresh;
+      datos.actividadFresh = fresh;
       datos.actividadMeta = a || null; datos.actividad = a && a.scores || [];
       datos.misiones = r[2] || []; datos.ideas = r[3] || []; datos.decisiones = r[4] || [];
       datos.presencia = r[5] && r[5].presence || []; datos.controlMachines = r[5] && r[5].controlMachines || [];
@@ -1401,7 +1404,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       datos.presenceAvailable = !!(r[5] && Number(r[5].now || 0) > 0);
       datos.proyectos = r[6] && r[6].projects || [];
       datos.declaracionesPrincipales = r[6] && r[6].declarations || [];
-      datos.historial = r[9] || null; datos.historialFresh = !!r[9]; diasCache = datos.historial;
+      datos.historial = r[8] || null; datos.historialFresh = !!r[8]; diasCache = datos.historial;
       datos.turnos = r[7] || null;
 
       pon(76, "OBJETIVOS · VENTANAS · MISIONES · " + ((a && a.recorded && a.recorded.objectives) || 0) + " / " + ((a && a.recorded && a.recorded.windows) || 0) + " / " + ((a && a.recorded && a.recorded.missions) || 0));
@@ -1762,7 +1765,8 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     function fila(n, machine) {
       var d = datosId(n, machine);
       if (!d.base || NO_AGENTES.indexOf(d.base.toLowerCase()) >= 0) return null;
-      if (!por[d.key]) por[d.key] = { agente:d.base, base:d.base, suffix:d.suffix,
+      var visible = /^(arquitecto|architect)$/i.test(d.base) ? "El Arquitecto" : d.base;
+      if (!por[d.key]) por[d.key] = { agente:visible, base:d.base, suffix:d.suffix,
         objetivos:0, ptsObjetivos:0, ventanas:0, ptsVentanas:0,
         misiones:0, ptsMisiones:0, ptsBonus:0, tareas:0, ptsTareas:0, seenDailyScore:false, seenTask:false,
         vivo:false, haLatido:false, runtime:"", runtimePeso:0, runtimeAt:0,
@@ -3793,6 +3797,11 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       (typeof AGENT_SCOPE_MODE === "undefined" ? AGENT_SCOPE : hsEffectiveAgentScope());
     var porDefecto = arguments.length < 2 && typeof AGENT_SCOPE_MODE !== "undefined" && AGENT_SCOPE_MODE === "active";
     var filtrada = (lista || []).filter(function (fila) {
+      // DeepAgents sin selección guardada: el censo aún no sembró el Set y un
+      // Set vacío ocultaba a todos, puntos incluidos.
+      if (AGENT_SCOPE_MODE === "deepagents" && !(effective instanceof Set && effective.size)) {
+        return hsIsDeepAgentKey(fila && (fila.base || fila.agente));
+      }
       return hsAgentScopeAllows(effective, fila && fila.agente) || (porDefecto && (hsHaPuntuadoHoy(fila)||["running","assigned_stale"].indexOf(fila&&fila.workState)>=0));
     });
     return filtrada.map(function (fila, indice) {
@@ -4898,23 +4907,26 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       var onlineOk = p.online !== 0 && p.online !== false;
       var focus = normaliza(p.focus), task = normaliza(p.task);
       var exact = normaliza(p.declaration_state).toLowerCase() === "exact_surface";
-      var hasSignal = !!(focus || task || exact);
+      // FLT-100950: foco vacío es latido, no faena. FLT-101000: «El Arquitecto
+      // me pide…» es el aviso del vigilante, no la misión. exact_surface sin
+      // texto no basta, y el latido cada pocos segundos tampoco.
+      var title = focoEsBasura(focus) ? (focoEsBasura(task) ? "" : task) : (focus || task);
+      if (!title) return;
+      var hasWork = true;
       // Camino 1 (flota): process_snapshot verificado + pid, 30 s (contratos Morfeo).
       var freshProcess = processLive && !!p.verified && (host === "app" || host === "cli") &&
         onlineOk && pid > 0 && updated >= now - 30 && updated <= now + 5;
-      // Camino 2 (Arquitecto/CursorCloud): heartbeat|process_snapshot con focus|task|exact,
+      // Camino 2 (Arquitecto/CursorCloud): heartbeat|process_snapshot con focus|task,
       // ventana 150 s. No inventa APP para CLI; no resucita Morfeo APP caducado.
       var hostOkCursor = !host || host === "app" || host === "cli";
       var freshCursor = isCursorCloud && hsIsDeepAgentKey(key) && (isHeartbeat || processLive) &&
-        hasSignal && onlineOk && hostOkCursor &&
+        hasWork && onlineOk && hostOkCursor &&
         updated >= now - 150 && updated <= now + 5;
       if (!freshProcess && !freshCursor) return;
       // Superficie factual: no inventar APP si el latido no declara host.
       var surface = (host === "app" || host === "cli") ? host : (freshProcess ? host : "");
       var runtime = normaliza(p.runtime);
-      var latido = "Latido · " + [runtime, machine || machineSuffix || "máquina sin nombre"].filter(Boolean).join(" · ");
-      var title = focus || task || latido;
-      var presenceReason = hasSignal ? "presence_focus" : "presence_live";
+      var presenceReason = "presence_focus";
       var score = (focus ? 4 : 0) + (task ? 2 : 0) + (exact ? 1 : 0) +
         (freshProcess ? 2 : 0) + (surface === "app" ? 0.5 : 0) + updated / 1e12;
       var prev = best[key];
@@ -4982,6 +4994,19 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       var prev = byKey[w.key];
       if (!prev) { byKey[w.key] = w; fromApi.push(w); return; }
       if (prev.state === "last_work") return;
+      // Un encargo assigned_stale no puede tapar a quien está latiendo ahora.
+      if (prev.state !== "running" && w.state === "running") {
+        var keptTitle = normaliza(prev.title);
+        var merged = Object.assign({}, w);
+        if (keptTitle && keptTitle.indexOf("Latido") < 0) merged.title = prev.title;
+        if (prev.projectName) merged.projectName = prev.projectName;
+        if (prev.detailUrl) merged.detailUrl = prev.detailUrl;
+        if (prev.reference) merged.reference = prev.reference;
+        byKey[w.key] = merged;
+        var staleIdx = fromApi.indexOf(prev);
+        if (staleIdx >= 0) fromApi[staleIdx] = merged;
+        return;
+      }
       var presenceAt = Number(w.presenceAt) || 0;
       var prevPresence = Number(prev.presenceAt) || 0;
       var prevAt = Number(prev.at) || 0;
@@ -4993,8 +5018,10 @@ body.resizing-columns{cursor:col-resize;user-select:none}
         activityExpiresAt: Math.max(Number(prev.activityExpiresAt) || 0, Number(w.activityExpiresAt) || 0)
       };
       var focusTitle = normaliza(w.title), prevTitle = normaliza(prev.title);
-      if (focusTitle && focusTitle.indexOf("Latido") < 0 &&
-          (!prevTitle || prevTitle.indexOf("Latido") >= 0)) patch.title = w.title;
+      // El latido no adelanta el reloj del trabajo: si no, el vigilante del Mini
+      // mantiene corriendo a quien no ha tocado la misión.
+      patch.at = prevAt;
+      if (focusTitle && !focoEsBasura(focusTitle) && focoEsBasura(prevTitle)) patch.title = w.title;
       byKey[w.key] = Object.assign({}, prev, patch);
       var idx = fromApi.indexOf(prev);
       if (idx >= 0) fromApi[idx] = byKey[w.key];
@@ -5002,6 +5029,71 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     return fromApi.sort(function (a, b) { return (a.state === "running" ? -1 : 1) - (b.state === "running" ? -1 : 1) ||
       (b.state === "last_work" ? b.endedAt : b.at) - (a.state === "last_work" ? a.endedAt : a.at) ||
       a.agente.localeCompare(b.agente, "es"); });
+  }
+
+  // Una persona, una fila. Neo en dos máquinas no son dos corredores.
+  // Gana la faena real; el latido sin texto no ocupa calle.
+  function personaCarrera(work) {
+    var k = normaliza(work && (work.agente || work.key));
+    var base = k.replace(/SINMAQ|SinMaq|CursorCloud|GrokBot|MacMini|Mini|MBA(?:Azul|Plata|Rosa|Crema|16)|MBP(?:14|16|Negro14)?|Negro14|Air16/gi, " ");
+    base = base.replace(/[^a-zA-ZáéíóúñÁÉÍÓÚÑ]/g, " ").trim().split(/\s+/)[0] || k;
+    return base.toLowerCase();
+  }
+  // El vigilante del Mini escribe el encargo entero en el foco, empezando por
+  // «El Arquitecto me pide». Eso no es una misión declarada.
+  function focoEsBasura(text) {
+    var title = normaliza(text);
+    if (!title) return true;
+    if (title.indexOf("Latido") === 0) return true;
+    if (/^el arquitecto me pide\b/i.test(title)) return true;
+    return false;
+  }
+  function misionEnCurso(work) {
+    if (!work || work.cliPaused === true) return false;
+    if (work.state !== "running") return false;
+    var kind = normaliza(work.kind).toLowerCase();
+    return kind === "mission" || kind === "task";
+  }
+  function ahoraCarrera() {
+    var generado = typeof datos !== "undefined" && Number(datos.trabajosGeneratedAt);
+    if (generado > 0) return generado;
+    var presencia = typeof datos !== "undefined" && Number(datos.presenceNow);
+    if (presencia > 1e12) return presencia;
+    if (presencia > 0) return presencia * 1000;
+    return Date.now();
+  }
+  // Paso, evidencia o acuse viven en work_progress_at. El latido no cuenta.
+  // Un foco declarado y no vacío cuenta solo si además hay misión en curso.
+  function actividadReciente(work, now) {
+    if (!work || work.activityReason === "presence_live") return false;
+    var at = Number(work.at) || 0;
+    var clock = Number(now) || Date.now();
+    if (!at || clock - at > 20 * 60 * 1000) return false;
+    if (normaliza(work.kind).toLowerCase() === "presence" || work.activityReason === "presence_focus") {
+      return !focoEsBasura(work.title);
+    }
+    return true;
+  }
+  function correDeVerdad(work, now) {
+    return misionEnCurso(work) && actividadReciente(work, now || ahoraCarrera()) && !focoEsBasura(work.title);
+  }
+  function faenaReal(work) {
+    return correDeVerdad(work, ahoraCarrera());
+  }
+  function puntuaFaena(work) {
+    var deTrabajo = work.kind !== "presence" && work.state === "running";
+    return (deTrabajo ? 100 : 0) + (work.state === "running" ? 10 : 0) + ((Number(work.at) || 0) / 1e15);
+  }
+  function unaFilaPorPersona(rows) {
+    var best = Object.create(null);
+    (rows || []).forEach(function (work) {
+      if (!faenaReal(work)) return;
+      var persona = personaCarrera(work);
+      if (!persona) return;
+      var prev = best[persona];
+      if (!prev || puntuaFaena(work) > puntuaFaena(prev)) best[persona] = work;
+    });
+    return Object.keys(best).map(function (k) { return best[k]; });
   }
 
   var staleRaceMemory = Object.create(null);
@@ -5022,12 +5114,13 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     return { key:storageKey, record:record };
   }
   function trabajosCarrera() {
-    return trabajosEnCurso().filter(function (trabajo) {
+    var rows = trabajosEnCurso().filter(function (trabajo) {
       if(trabajo.cliPaused||["session_unverified","service_activity_unverified","awaiting_decision"].includes(trabajo.activityReason))return true;
       if (trabajo.state !== "assigned_stale") return true;
       var state = estadoCarreraStale(trabajo);
       return state && YkHighscoreRace.staleRaceVisible(state.record);
     });
+    return unaFilaPorPersona(rows);
   }
   function completaCicloStale() {
     if (document.hidden) return;
@@ -5181,7 +5274,14 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     workRequest = Promise.race([request, deadline]).then(function (payload) {
       if (sequence !== workRequestSequence) return null;
       hsApplyWorkSnapshot(payload);
-      if (render) hsPaintWorkUpdate();
+      // Si el marcador ya está pintado, un active-work tardío no espera al
+      // siguiente lote: incorpora sus filas. Si aún no hay censo, listo() pinta.
+      if (render || listaCompletaCache) hsPaintWorkUpdate();
+      var pie = document.getElementById("pieCarga");
+      if (pie && typeof entradaHecha !== "undefined" && !entradaHecha && typeof agentesEnLiza === "function") {
+        var vivos = agentesEnLiza();
+        pie.textContent = vivos + (vivos === 1 ? " AGENTE EN LIZA" : " AGENTES EN LIZA");
+      }
       return payload;
     }).finally(function () {
       clearTimeout(timeout);
@@ -5264,6 +5364,13 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     pendientesCarrera = 0;
   }
   function liberaParrilla() { rosterCarrera = null; }
+  // Carril vivo: misión o tarea en curso, con avance real en 20 min.
+  // Vale en cualquier máquina, incluido CursorCloud sin superficie de sesión.
+  // El latido del vigilante no corre.
+  function pistaEnVivo(work) {
+    if (!work || !work.key || !hsLaneDeepEligible(work.key)) return false;
+    return correDeVerdad(work, ahoraCarrera());
+  }
   function actualizaCarreraPodio() {
     var contenedor = document.getElementById("refreshLanes");
     var focused = document.activeElement, focusedLane = focused && focused.getAttribute && focused.getAttribute("data-race-role") === "agent" && focused.closest ? focused.closest(".refresh-lane") : null;
@@ -5276,8 +5383,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     // Presencia+focus: DeepAgents entran al carril aunque el censo/ranking aún no los tenga.
     // Sólo el modo manual (selección explícita, incl. «ninguno») puede ocultarlos.
     todosTrabajos.forEach(function(work){
-      if(!work||(work.activityReason!=="presence_focus"&&work.activityReason!=="presence_live")||!work.key)return;
-      if(!hsLaneDeepEligible(work.key))return;
+      if(!pistaEnVivo(work))return;
       if(AGENT_SCOPE_MODE==="manual" && effectiveScope instanceof Set && !effectiveScope.has(work.key))return;
       scopeKeys.add(work.key);
     });
@@ -5304,13 +5410,24 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     // Una carrera ya cerrada (42 s) no puede esconder a quien acaba de latir.
     var clavesParrilla = parrilla.map(function (enlace) { return enlace.clave; });
     enlaces.forEach(function (enlace) {
-      if (!enlace || !enlace.trabajo) return;
-      var reason = enlace.trabajo.activityReason;
-      if (reason !== "presence_focus" && reason !== "presence_live") return;
+      if (!enlace || !pistaEnVivo(enlace.trabajo)) return;
       if (clavesParrilla.indexOf(enlace.clave) >= 0) return;
       parrilla.push(enlace);
       clavesParrilla.push(enlace.clave);
     });
+    pendientesCarrera = enlaces.filter(function (enlace) {
+      return enlace && clavesParrilla.indexOf(enlace.clave) < 0;
+    }).length;
+    // La parrilla cerrada tampoco conserva un segundo Neo ni un latido sin faena.
+    var mejorPersona = Object.create(null);
+    parrilla.forEach(function (enlace) {
+      var work = enlace && enlace.trabajo;
+      if (!faenaReal(work)) return;
+      var persona = personaCarrera(work);
+      var previo = mejorPersona[persona];
+      if (!previo || puntuaFaena(work) > puntuaFaena(previo.trabajo)) mejorPersona[persona] = enlace;
+    });
+    parrilla = Object.keys(mejorPersona).map(function (persona) { return mejorPersona[persona]; });
     corredores = parrilla.map(function (enlace, indice) {
       var fila = enlace.fila, clave = enlace.clave, resumen = enlace.resumen;
       var puesto = indice + 1, agente = normaliza(fila.agente), responsable = normaliza(resumen.responsible || agente);
@@ -5496,8 +5613,10 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     entradaTimer = setTimeout(entra, ENTRADA_AUTOMATICA_MS);
   }
   function agentesEnLiza() {
-    return datos.trabajosAvailable && datos.trabajosMode === "active"
-      ? trabajosCarrera().filter(function (work) { return work.state === "running" || work.state === "assigned_stale"; }).length : 0;
+    return trabajosCarrera().filter(function (work) {
+      return work && (work.state === "running" || work.kind === "presence" ||
+        work.activityReason === "presence_focus" || work.activityReason === "presence_live");
+    }).length;
   }
   function listo() {
     listaCompletaCache = calcula();
@@ -5615,6 +5734,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     refrescando = true;
     var presenceRequestSequence = hsBeginPresenceRequest();
     document.getElementById("refreshCount").textContent = "ACT.";
+    hsRefreshWork(true);
     return Promise.all([
       seguroYokup("/tasks/all?scope=fleet", function (d) { return d.tasks || []; }),
       seguroYokup("/highscore/daily", function (d) { return d; }),
@@ -5628,7 +5748,6 @@ body.resizing-columns{cursor:col-resize;user-select:none}
         projects:d.projects || [], declarations:d.principal_declarations || []
       }; }),
       seguroYokup("/fleet/turnos", function (d) { return d && d.ok ? d : null; }),
-      hsRefreshWork(true),
       seguroYokup("/highscore/history?scope=global", function (d) {
         return d && d.ok && Array.isArray(d.all_days) ? d : null;
       })
@@ -5636,7 +5755,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       datos.tareasFresh = Array.isArray(r[0]);
       if (datos.tareasFresh) datos.tareas = r[0];
       var dailyFresh = !!(r[1] && r[1].day === claveDia(Date.now()) && Array.isArray(r[1].scores));
-      datos.actividadFresh = dailyFresh && datos.tareasFresh;
+      datos.actividadFresh = dailyFresh;
       if (dailyFresh) { guardaActividadDiaria(r[1]); datos.actividadMeta = r[1]; datos.actividad = r[1].scores || []; }
       if (r[2] && hsAcceptPresenceRequest(presenceRequestSequence)) {
         datos.presencia = r[2].presence || []; datos.controlMachines = r[2].controlMachines || [];
@@ -5657,8 +5776,8 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       // todos. Si esta vuelta no contesta se conserva el anterior, que envejece
       // mejor que caer al cupo y prometer una ventana que no toca.
       if (r[7]) datos.turnos = r[7];
-      datos.historialFresh = !!r[9];
-      if (r[9]) { datos.historial = r[9]; diasCache = r[9]; }
+      datos.historialFresh = !!r[8];
+      if (r[8]) { datos.historial = r[8]; diasCache = r[8]; }
       fallos = [];
       var listaCompleta = calcula(), l = aplicaAgentScope(listaCompleta);
       var cambioLider = listaCache && l[0] && listaCache[0] && l[0].agente !== listaCache[0].agente;

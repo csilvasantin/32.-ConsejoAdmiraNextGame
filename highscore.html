@@ -5371,7 +5371,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     filas.textContent = "";
     items.forEach(function (it) {
       var tr = document.createElement("tr");
-      var celdas = [it.task_id || "#" + it.id, it.persona || "—", it.maquina || "—",
+      var celdas = ["#" + it.id, it.persona || "—", it.maquina || "—",
         hsHoraExacta(it.inicio) + (it.inicio_base === "acuse" ? " (acuse)" : ""), it.fin ? hsHoraExacta(it.fin) : "en curso",
         it.duracion !== null && it.duracion !== undefined ? hsDuracion(it.duracion) : it.en_curso ? hsDuracion(it.en_curso) + "…" : "—"];
       celdas.forEach(function (texto, i) {

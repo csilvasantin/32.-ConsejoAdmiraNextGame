@@ -574,7 +574,10 @@ html.yk-framed body{ padding-top: var(--yk-bar-h); }
  * NO desaparecen: se sirven en el cajón OPCIONES (.yk-rail-nav). */
 @media (max-width: 520px){
   :root{ --yk-rail-w: 92vw; --yk-rail-h: 78vh; --yk-avatar-safe: 0px; }
-  .yk-rail-bottom{ right:0;padding-right:16px }
+  /* EXPERTO fuera en móvil (Carlos, 25-09-2026): la consola no se usa en un
+     teléfono, y compactado con translateY(103%) asomaba en iOS al rebotar el
+     scroll o al plegarse la barra de Safari. Sin panel, tampoco su icono. */
+  .yk-rail-bottom, .yk-ico-exp{ display:none !important }
   .yk-expert-hd{align-items:flex-start;flex-wrap:wrap}
   .yk-expert-ver{width:100%;margin-left:15px;text-align:left;white-space:normal;line-height:1.35}
   .yk-cli-console{grid-template-columns:1fr;grid-template-rows:minmax(160px,42%) minmax(0,1fr)}

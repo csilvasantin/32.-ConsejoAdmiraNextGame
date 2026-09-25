@@ -32,7 +32,7 @@ function functionSource(name) {
 function api() {
   const names = [
     "hsAgentKey", "hsIsDeepAgentKey", "hsLaneDeepEligible", "hsDeepAgentKeys",
-    "hsActiveAgentKeys", "claveAgenteCarrera", "trabajosDesdePresencia"
+    "hsActiveAgentKeys", "claveAgenteCarrera", "focoEsBasura", "trabajosDesdePresencia"
   ];
   const functions = names.map(functionSource).join("\n");
   return new Function("identity", `
@@ -89,20 +89,29 @@ test("presencia verificada + focus genera una calle por agente (CLI incluido)", 
   assert.equal(lanes.some((l) => l.key === "morfeomacmini"), false);
 });
 
-test("dos Neo se quedan en la faena; el latido sin texto no corre", () => {
-  const htmlFns = ["personaCarrera", "faenaReal", "puntuaFaena", "unaFilaPorPersona"].map(functionSource).join("\n");
+test("solo corre quien tiene misión en curso y avance de los últimos 20 min", () => {
+  const htmlFns = ["focoEsBasura", "misionEnCurso", "ahoraCarrera", "actividadReciente", "correDeVerdad", "faenaReal", "personaCarrera", "puntuaFaena", "unaFilaPorPersona"].map(functionSource).join("\n");
   const fold = new Function(`
     function normaliza(value) { return String(value == null ? "" : value).trim(); }
+    var datos = { trabajosGeneratedAt: 2_000_000_000 };
     ${htmlFns}
-    return unaFilaPorPersona;
+    return { fold: unaFilaPorPersona, corre: correDeVerdad, basura: focoEsBasura };
   `)();
-  const rows = fold([
-    { key: "neomacmini", agente: "NeoMacMini", title: "Latido · Claude · MacMini", state: "running", activityReason: "presence_live", kind: "presence", at: 10 },
-    { key: "neombp14", agente: "NeoMBP14", title: "portal admira.tv", state: "running", activityReason: "presence_focus", kind: "presence", at: 20 },
-    { key: "niobemacmini", agente: "NiobeMacMini", title: "Latido · OpenCode · MacMini", state: "running", activityReason: "presence_live", kind: "presence", at: 30 },
-    { key: "trinitymbp14", agente: "TrinityMBP14", title: "cápsulas", state: "running", activityReason: "presence_focus", kind: "presence", at: 40 },
+  const now = 2_000_000_000;
+  assert.equal(fold.basura("El Arquitecto me pide: encargo #3874"), true);
+  assert.equal(fold.basura("Latido · Claude · MacMini"), true);
+  assert.equal(fold.basura("Pixeria"), false);
+  const rows = fold.fold([
+    { key: "oraculomacmini", agente: "OraculoMacMini", title: "El Arquitecto me pide: encargo #3874", state: "running", activityReason: "presence_focus", kind: "presence", at: now - 1000 },
+    { key: "morfeomacmini", agente: "MorfeoMacMini", title: "El Arquitecto me pide: encargo #4305", state: "running", activityReason: "presence_focus", kind: "presence", at: now - 1000 },
+    { key: "smithmacmini", agente: "SmithMacMini", title: "Implementar la carrera del highscore", state: "running", kind: "task", sessionSurface: "cli", at: now - 2 * 60 * 1000 },
+    { key: "arquitectocursorcloud", agente: "ArquitectoCursorCloud", title: "Presentar estructura AdmiraNeXT", state: "running", kind: "mission", sessionSurface: "", at: now - 10 * 60 * 1000 },
+    { key: "neombp14", agente: "NeoMBP14", title: "Proof of pass", state: "running", kind: "mission", sessionSurface: "app", at: now - 40 * 60 * 1000 },
+    { key: "trinitymbp14", agente: "TrinityMBP14", title: "cápsulas", state: "assigned_stale", kind: "mission", at: now - 1000 },
   ]);
-  assert.deepEqual(rows.map((row) => row.key).sort(), ["neombp14", "trinitymbp14"]);
+  assert.deepEqual(rows.map((row) => row.key).sort(), ["arquitectocursorcloud", "smithmacmini"]);
+  assert.equal(rows.find((row) => row.key === "smithmacmini").title, "Implementar la carrera del highscore");
+  assert.equal(fold.corre(rows.find((row) => row.key === "arquitectocursorcloud"), now), true);
 });
 
 test("active-work CLI running también entra en Activos (ya no solo APP)", () => {

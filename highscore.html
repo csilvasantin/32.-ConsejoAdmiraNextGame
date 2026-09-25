@@ -4907,10 +4907,12 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       var onlineOk = p.online !== 0 && p.online !== false;
       var focus = normaliza(p.focus), task = normaliza(p.task);
       var exact = normaliza(p.declaration_state).toLowerCase() === "exact_surface";
-      // FLT-100950: foco vacío es latido, no faena. No entra en la parrilla
-      // y no puede poner el running man. exact_surface sin texto no basta.
-      var hasWork = !!(focus || task);
-      if (!hasWork) return;
+      // FLT-100950: foco vacío es latido, no faena. FLT-101000: «El Arquitecto
+      // me pide…» es el aviso del vigilante, no la misión. exact_surface sin
+      // texto no basta, y el latido cada pocos segundos tampoco.
+      var title = focoEsBasura(focus) ? (focoEsBasura(task) ? "" : task) : (focus || task);
+      if (!title) return;
+      var hasWork = true;
       // Camino 1 (flota): process_snapshot verificado + pid, 30 s (contratos Morfeo).
       var freshProcess = processLive && !!p.verified && (host === "app" || host === "cli") &&
         onlineOk && pid > 0 && updated >= now - 30 && updated <= now + 5;
@@ -4924,7 +4926,6 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       // Superficie factual: no inventar APP si el latido no declara host.
       var surface = (host === "app" || host === "cli") ? host : (freshProcess ? host : "");
       var runtime = normaliza(p.runtime);
-      var title = focus || task;
       var presenceReason = "presence_focus";
       var score = (focus ? 4 : 0) + (task ? 2 : 0) + (exact ? 1 : 0) +
         (freshProcess ? 2 : 0) + (surface === "app" ? 0.5 : 0) + updated / 1e12;
@@ -5017,8 +5018,10 @@ body.resizing-columns{cursor:col-resize;user-select:none}
         activityExpiresAt: Math.max(Number(prev.activityExpiresAt) || 0, Number(w.activityExpiresAt) || 0)
       };
       var focusTitle = normaliza(w.title), prevTitle = normaliza(prev.title);
-      if (focusTitle && focusTitle.indexOf("Latido") < 0 &&
-          (!prevTitle || prevTitle.indexOf("Latido") >= 0)) patch.title = w.title;
+      // El latido no adelanta el reloj del trabajo: si no, el vigilante del Mini
+      // mantiene corriendo a quien no ha tocado la misión.
+      patch.at = prevAt;
+      if (focusTitle && !focoEsBasura(focusTitle) && focoEsBasura(prevTitle)) patch.title = w.title;
       byKey[w.key] = Object.assign({}, prev, patch);
       var idx = fromApi.indexOf(prev);
       if (idx >= 0) fromApi[idx] = byKey[w.key];
@@ -5036,13 +5039,46 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     base = base.replace(/[^a-zA-ZáéíóúñÁÉÍÓÚÑ]/g, " ").trim().split(/\s+/)[0] || k;
     return base.toLowerCase();
   }
-  function faenaReal(work) {
+  // El vigilante del Mini escribe el encargo entero en el foco, empezando por
+  // «El Arquitecto me pide». Eso no es una misión declarada.
+  function focoEsBasura(text) {
+    var title = normaliza(text);
+    if (!title) return true;
+    if (title.indexOf("Latido") === 0) return true;
+    if (/^el arquitecto me pide\b/i.test(title)) return true;
+    return false;
+  }
+  function misionEnCurso(work) {
     if (!work || work.cliPaused === true) return false;
-    var title = normaliza(work.title);
-    if (!title || title.indexOf("Latido") === 0) return false;
-    if (work.activityReason === "presence_live") return false;
-    if (work.activityReason === "presence_focus") return true;
-    return work.state === "running";
+    if (work.state !== "running") return false;
+    var kind = normaliza(work.kind).toLowerCase();
+    return kind === "mission" || kind === "task";
+  }
+  function ahoraCarrera() {
+    var generado = typeof datos !== "undefined" && Number(datos.trabajosGeneratedAt);
+    if (generado > 0) return generado;
+    var presencia = typeof datos !== "undefined" && Number(datos.presenceNow);
+    if (presencia > 1e12) return presencia;
+    if (presencia > 0) return presencia * 1000;
+    return Date.now();
+  }
+  // Paso, evidencia o acuse viven en work_progress_at. El latido no cuenta.
+  // Un foco declarado y no vacío cuenta solo si además hay misión en curso.
+  function actividadReciente(work, now) {
+    if (!work || work.activityReason === "presence_live") return false;
+    var at = Number(work.at) || 0;
+    var clock = Number(now) || Date.now();
+    if (!at || clock - at > 20 * 60 * 1000) return false;
+    if (normaliza(work.kind).toLowerCase() === "presence" || work.activityReason === "presence_focus") {
+      return !focoEsBasura(work.title);
+    }
+    return true;
+  }
+  function correDeVerdad(work, now) {
+    return misionEnCurso(work) && actividadReciente(work, now || ahoraCarrera()) && !focoEsBasura(work.title);
+  }
+  function faenaReal(work) {
+    return correDeVerdad(work, ahoraCarrera());
   }
   function puntuaFaena(work) {
     var deTrabajo = work.kind !== "presence" && work.state === "running";
@@ -5328,12 +5364,12 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     pendientesCarrera = 0;
   }
   function liberaParrilla() { rosterCarrera = null; }
-  // Carril vivo: faena con texto, o un running de CLI/APP. El latido sin foco no corre.
+  // Carril vivo: misión o tarea en curso, con avance real en 20 min.
+  // Vale en cualquier máquina, incluido CursorCloud sin superficie de sesión.
+  // El latido del vigilante no corre.
   function pistaEnVivo(work) {
-    if (!faenaReal(work) || !work.key || !hsLaneDeepEligible(work.key)) return false;
-    if (work.activityReason === "presence_focus") return true;
-    var surface = normaliza(work.sessionSurface).toLowerCase();
-    return work.state === "running" && (surface === "cli" || surface === "app");
+    if (!work || !work.key || !hsLaneDeepEligible(work.key)) return false;
+    return correDeVerdad(work, ahoraCarrera());
   }
   function actualizaCarreraPodio() {
     var contenedor = document.getElementById("refreshLanes");

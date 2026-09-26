@@ -305,9 +305,8 @@ h1{font-size:clamp(20px,3.2vw,31px);font-weight:900;letter-spacing:.08em;margin:
   animation:rank-heartbeat 1.6s ease-in-out infinite}
 @keyframes rank-heartbeat{0%,100%{transform:scale(1);opacity:1}45%{transform:scale(1.18);opacity:.48}60%{transform:scale(1.04);opacity:.9}}
 
-/* Carrera de refresco: una calle por familia con trabajo canónico asignado.
-   Sólo el avance material dentro de 20 minutos activa movimiento; la presencia
-   informa alcance, pero nunca convierte por sí sola una asignación en carrera. */
+/* Carrera de refresco: solo los seis DeepAgents.
+   Corre quien tiene presencia mode=trabajando con latido de como máximo 90 s. */
 .refresh-race{--track-start:2px;--finish-width:7px;
   position:relative;grid-column:1;grid-row:2;min-height:44px;min-width:0;padding:0;display:flex;align-items:flex-start;overflow:hidden;
   cursor:pointer;border-radius:5px}
@@ -3403,7 +3402,6 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     var base = k.replace(/SINMAQ|SinMaq|CursorCloud|GrokBot|MacMini|Mini|MBA(?:Azul|Plata|Rosa|Crema|16)|MBP(?:14|16|Negro14)?|Negro14|Air16/gi, " ");
     base = base.replace(/[^a-zA-ZáéíóúñÁÉÍÓÚÑ]/g, " ").trim().split(/\s+/)[0] || k;
     if (/^(jobs|woz|wozniak|disney|lucas|walt)\b/i.test(base)) return false;
-    if (/grokbot/i.test(k) && !/smith/i.test(k)) return false;
     return DEEPAGENTS_NAME_RE.test(base) || DEEPAGENTS_NAME_RE.test(k);
   }
   function hsDeepAgentKeys(allKeys) {
@@ -3411,12 +3409,9 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     (allKeys || []).forEach(function (k) { if (hsIsDeepAgentKey(k)) out.add(String(k)); });
     return out;
   }
-  /* Carriles Running Man: mismos DeepAgents del ranking + Niobe si está en flota.
-     No altera puntuación/podio (eso sigue en hsIsDeepAgentKey). */
+  /* Carriles Running Man: los mismos seis del ranking. Niobe y los consejeros no corren. */
   function hsLaneDeepEligible(key) {
-    if (hsIsDeepAgentKey(key)) return true;
-    var k = String(key || "").toLowerCase().replace(/[^a-z0-9]/g, "");
-    return k.indexOf("niobe") === 0;
+    return hsIsDeepAgentKey(key);
   }
 
   var DASHBOARD_TEAM_SCOPE_KEY = "yokup.dashboard.teams.v1";
@@ -5457,11 +5452,9 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     pendientesCarrera = 0;
   }
   function liberaParrilla() { rosterCarrera = null; }
-  // Carril vivo: presencia mode=trabajando con latido de menos de 90 s (FLT-101047).
-  // Un agente de caja (GrokBot) no es DeepAgent, pero si su terminal trabaja, corre.
+  // Carril vivo: uno de los seis, con presencia mode=trabajando y latido ≤ 90 s.
   function pistaEnVivo(work) {
-    if (!work || !work.key) return false;
-    if (!hsLaneDeepEligible(work.key) && !trabajandoDe(work)) return false;
+    if (!work || !work.key || !hsLaneDeepEligible(work.key)) return false;
     return correDeVerdad(work);
   }
   function actualizaCarreraPodio() {
@@ -5637,7 +5630,6 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     var actividad = datos.actividadMeta || {}, pesos = actividad.weights || { objective:20, window:10, mission:40 };
     var registrados = actividad.recorded || { objectives:0, windows:0, missions:0 };
     var sinAutor = actividad.unattributed || { objectives:0, windows:0, missions:0 };
-    var sinAvanceMin = Math.round(((window.YkHighscoreRace && window.YkHighscoreRace.IDLE_AFTER_MS) || 20 * 60 * 1000) / 60000);
     var ciclosGrises = Number(window.YkHighscoreRace && window.YkHighscoreRace.STALE_RACE_MAX_CYCLES) || 3;
     var cicloSeg = Math.round((Number(CICLO_MS) || 42 * 1000) / 1000);
     var grisTotalSeg = ciclosGrises * cicloSeg;
@@ -5657,10 +5649,8 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       '<li><b>Bonus Track gratuito:</b> cada victoria confirmada por Yokup suma <b>+1</b> a la misión del Running Man ganador y a su marcador. La carrera es compartida: recargar o abrir otra pestaña no repite el premio. Solo participa trabajo en curso vinculado a una misión; los trabajos sin actividad confirmada y las sesiones sin misión no reciben bonus.</li>' +
       '<li><b>El latido no da puntos.</b> El propio <b>número de posición parpadea en verde</b> cuando recibió uno hace menos de 15 minutos. ' +
       'Los cinco indicadores muestran siempre una pareja numérica <b>hora / total del día</b>; una hora sin actividad se representa con <b>0</b>.</li>' +
-      '<li><b>Running Man en color:</b> existe trabajo canónico abierto y su última marca de avance material tiene como máximo <b>' +
-      sinAvanceMin + ' minutos</b>. Tener el proceso o la máquina conectados no basta: la presencia nunca hace correr ni colorea por sí sola.</li>' +
-      '<li><b>Running Man ámbar · trabajo en curso sin actividad confirmada:</b> la misión o tarea continúa asignada, pero no tiene una marca fiable o lleva más de <b>' +
-      sinAvanceMin + ' minutos</b> sin progreso material. Recorre la pista sólo como aviso, sin puesto ni puntos extra, durante <b>' +
+      '<li><b>Running Man en color:</b> solo Neo, Trinity, Morfeo, Oráculo, Smith y El Arquitecto, cuando su presencia está en modo trabajando y el latido tiene como máximo <b>90 segundos</b>. Si el latido caduca, el muñeco se para. Una misión movida o un texto en el foco no lo hacen correr.</li>' +
+      '<li><b>Running Man ámbar · trabajo en curso sin actividad confirmada:</b> la misión sigue asignada, pero no hay latido de trabajando. Recorre la pista sólo como aviso, sin puesto ni puntos extra, durante <b>' +
       ciclosGrises + ' ciclos de ' + cicloSeg + ' segundos</b> —como máximo <b>' + grisTotal + '</b>— y después desaparece hasta que cambie el trabajo o vuelva a registrar avance.</li>' +
       '<li><b>Running Man gris quieto · trabajo finalizado:</b> la misión o tarea ya terminó. Sólo rellena una calle libre cuando hay menos de tres ' +
       'trabajos activos; puede seguir visible hasta <b>24 horas desde el cierre</b>, pero desaparece antes si lo sustituye un trabajo activo o un cierre más reciente.</li>' +

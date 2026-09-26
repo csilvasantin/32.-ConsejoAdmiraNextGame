@@ -51,11 +51,13 @@ function api() {
   `)(identity);
 }
 
-test("DeepAgents y Niobe entran al carril; consejeros no", () => {
+test("solo los seis DeepAgents entran al carril; Niobe y los consejeros no", () => {
   const A = api();
   assert.equal(A.deep("SmithMacMini"), true);
-  assert.equal(A.laneOk("NiobeMacMini"), true);
-  assert.equal(A.deep("NiobeMacMini"), false, "Niobe no altera el ranking DeepAgents");
+  assert.equal(A.deep("MorfeoGrokBot"), true);
+  assert.equal(A.laneOk("MorfeoGrokBot"), true);
+  assert.equal(A.laneOk("NiobeMacMini"), false);
+  assert.equal(A.deep("NiobeMacMini"), false);
   assert.equal(A.laneOk("JobsGrokBot"), false);
   assert.equal(A.laneOk("WozniakGrokBot"), false);
   assert.equal(A.laneOk("DisneyGrokBot"), false);

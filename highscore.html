@@ -3933,7 +3933,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   }
 
   function hsRankingScopeSummary(mode, shown, total, lifeOnly, compactShown) {
-    var label = mode === "manual" ? "Selección manual" : mode === "active" ? "Activos" : "Todos";
+    var label = mode === "manual" ? "Selección manual" : mode === "active" ? "Activos" : mode === "deepagents" ? "DeepAgents" : "Todos";
     var text = "Agentes: " + label + " · " + shown + "/" + total;
     if (lifeOnly) text += " · filtro con vida";
     if (compactShown < shown) text += " · " + compactShown + (compactShown === 1 ? " fila visible (compacto)" : " filas visibles (compacto)");
@@ -4026,8 +4026,9 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       var parsed = identity && identity.parse ? identity.parse(raw) : null;
       var machine = row && (row.suffix || row.machine || row.maquina || row.loc) || machines[0] || "";
       var suffix = identity && identity.suffix ? (identity.suffix(machine) || parsed && parsed.suffix || "") : machine;
-      return (identity && identity.key ? identity.key(parsed && parsed.persona || raw) : hsAgentKey(raw)) +
-        "|" + (identity && identity.key ? identity.key(suffix) : hsAgentKey(suffix));
+      var personaKey = identity && identity.key ? identity.key(parsed && parsed.persona || raw) : hsAgentKey(raw);
+      if (typeof AGENT_SCOPE_MODE !== "undefined" && AGENT_SCOPE_MODE === "deepagents") return personaKey;
+      return personaKey + "|" + (identity && identity.key ? identity.key(suffix) : hsAgentKey(suffix));
     }
     function addMember(target, row) {
       var key = memberKey(row);
@@ -4042,7 +4043,9 @@ body.resizing-columns{cursor:col-resize;user-select:none}
         target.base = identity && identity.base ? identity.base(row.agente) : (row.base || row.agente);
         var parsed = identity&&identity.parse?identity.parse(row.agente):null;
         target.suffix = row.suffix || parsed&&parsed.suffix || (identity&&identity.suffix?identity.suffix((row.maquinas||[])[0]):"") || "";
-        target.agente = identity&&identity.display?identity.display(target.base,target.suffix):row.agente;
+        target.agente = (typeof AGENT_SCOPE_MODE !== "undefined" && AGENT_SCOPE_MODE === "deepagents")
+          ? (target.base || row.agente)
+          : (identity&&identity.display?identity.display(target.base,target.suffix):row.agente);
         target.maquinas = []; target.maquinasVivas = [];
         target.rankingMembers = []; target.proyectos = [];
         addMember(target, row);

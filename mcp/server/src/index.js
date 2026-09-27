@@ -147,7 +147,7 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
 
   server.registerTool('agente_encargar', {
     title: 'Encargar trabajo a un agente o consejero',
-    description: 'Crea un encargo para una persona de la flota. A un agente (Neo, Morfeo, Smith, Trinity, Oráculo, Niobe…) se lo inyecta su vigilante en su sesión en ≤15 s en la máquina donde late; a un consejero de GrokBot (Wozniak, Jobs, Lucas, Disney) lo despierta el webhook de su rutina. Devuelve el número del encargo: síguelo con encargo_estado. El encargo se publica también en AgoraMatrix (Telegram) y, con proyecto_id, nace como misión en yokup.',
+    description: 'Crea un encargo para una persona de la flota. A un agente (Neo, Morfeo, Smith, Trinity, Oráculo, Niobe…) se lo inyecta su vigilante en su sesión en ≤15 s en la máquina donde late; a un consejero de GrokBot (Wozniak, Jobs, Lucas, Disney) lo despierta el webhook de su rutina. Devuelve el número y la etiqueta visible #número.MM.DD (por ejemplo #4502.09.27): síguelo con encargo_estado pasando solo el número. El id largo (task-web-…, FLT-…) queda dentro. El encargo se publica también en AgoraMatrix (Telegram) y, con proyecto_id, nace como misión en yokup.',
     inputSchema: {
       persona: PERSONA,
       texto: z.string().min(5).max(4000).describe('Qué hay que hacer, para qué y cómo se sabrá que está hecho.'),
@@ -160,8 +160,8 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
 
   server.registerTool('encargo_estado', {
     title: 'Estado y respuesta de un encargo',
-    description: 'Lee un encargo por su número: pendiente, acusado, en curso, bloqueado o hecho, con la respuesta del agente o consejero cuando la hay. Consulta cada 30-60 s hasta ver «done» (agentes: segundos o minutos; consejeros: 1-3 min).',
-    inputSchema: { encargo: z.number().int().positive().describe('Número que devolvió agente_encargar.') },
+    description: 'Lee un encargo por su número: pendiente, acusado, en curso, bloqueado o hecho, con la respuesta del agente o consejero cuando la hay. La respuesta incluye la etiqueta visible #número.MM.DD. Consulta cada 30-60 s hasta ver «done» (agentes: segundos o minutos; consejeros: 1-3 min).',
+    inputSchema: { encargo: z.number().int().positive().describe('Número que devolvió agente_encargar (el de #4502.09.27 es 4502).') },
     annotations: { readOnlyHint: true, openWorldHint: true },
   }, seguro(async (a) => texto(await flota.estado(a))));
 

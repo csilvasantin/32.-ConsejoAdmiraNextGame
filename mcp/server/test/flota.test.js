@@ -37,7 +37,7 @@ function fetchFalso(peticiones, estado) {
       if ((init.headers || {}).authorization !== 'Bearer panel') return ok({ ok: false, error: 'unauthorized' }, 401);
       const id = estado.siguiente++;
       estado.encargos[id] = { id, ts: AHORA / 1000, from_name: `status-web · ${body.from}`, target_persona: body.target_persona, target_machine: body.target_machine, task_id: `task-web-${id}`, text: body.text, status: 'pending', project_id: body.project_id || null };
-      return ok({ ok: true, id, task_id: `task-web-${id}`, owner_verified: true, project_id: body.project_id || null });
+      return ok({ ok: true, id, ts: AHORA / 1000, task_id: `task-web-${id}`, owner_verified: true, project_id: body.project_id || null });
     }
     const m = u.match(/\/api\/bot-inbox\/(\d+)$/);
     if (m && method === 'GET') {
@@ -89,7 +89,7 @@ test('agentes_vivos agrupa por persona y equipo, deja fuera los latidos viejos y
 test('agente_encargar a un agente elige la máquina donde late y firma con la identidad de la clave', async () => {
   const { client, estado, peticiones } = await cliente('clave-de-morfeo-macmini-xxxxxxxxxx');
   const r = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Oráculo', texto: 'Revisa el ranking rojo de yokup y di qué prueba falla.', proyecto_id: 'yokup' } }));
-  assert.equal(r.ok, true); assert.equal(r.encargo, 2100); assert.equal(r.persona, 'Oraculo'); assert.equal(r.maquina, 'macmini'); assert.equal(r.de, 'MorfeoMacMini');
+  assert.equal(r.ok, true); assert.equal(r.encargo, 2100); assert.equal(r.etiqueta, '#2100.01.15'); assert.equal(r.persona, 'Oraculo'); assert.equal(r.maquina, 'macmini'); assert.equal(r.de, 'MorfeoMacMini');
   const post = peticiones.find((p) => p.method === 'POST');
   assert.equal(post.headers.authorization, 'Bearer panel');
   assert.deepEqual(post.body, { text: 'Revisa el ranking rojo de yokup y di qué prueba falla.', target_persona: 'Oraculo', target_machine: 'macmini', from: 'MorfeoMacMini', project_id: 'yokup', materialize_mission: true });

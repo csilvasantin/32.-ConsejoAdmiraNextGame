@@ -4984,7 +4984,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     var fromApi = Object.keys(seen).map(function (key) {
       var item = seen[key],identity=hsWorkIdentity(item);
       return { key:identity.key, agente:identity.agent, machine:identity.machine, executor:item.executor,
-        reference:item.reference || "",
+        reference:item.reference || "", etiqueta:item.etiqueta || "",
         projectId:item.project_id || "", projectName:item.project_name || "", projectSource:item.project_source || "", detailUrl:item.detail_url || "",
         kind:item.kind, title:descripcionTrabajoCorredor(item),
         state:item.state || "assigned_stale", reachable:item.reachable === true,
@@ -5191,6 +5191,12 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       ? YkHighscoreRace.sinceLabel(at, ahora) : "sin marca de avance";
   }
 
+  function rotuloMisionCarrera(resumen) {
+    var etiqueta = normaliza(resumen && resumen.etiqueta);
+    var title = normaliza(resumen && resumen.title);
+    if (!etiqueta) return title;
+    return title.indexOf(etiqueta) === 0 ? title : etiqueta + " · " + title;
+  }
   function horaMadrid(at) {
     if (!(Number(at) > 0)) return "—";
     try {
@@ -5243,7 +5249,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     var sessionLabel = trabajo.sessionDedicatedMs === null
       ? "Horas operando no disponibles" : "Horas operando del agente";
     var stateLabel = trabajo.activityReason==="presence_focus" ? "Presencia + focus verificados" : trabajo.activityReason==="presence_live" ? "Latido en vivo" : trabajo.activityReason==="awaiting_decision" ? "Esperando decisión · sin ejecución verificada" : trabajo.kind==="session" ? "Actividad Desktop APP verificada" : trabajo.cliPaused ? "CLI pausado por Carlos" : ["session_unverified","service_activity_unverified"].includes(trabajo.activityReason) ? "Trabajo registrado · sesión sin vincular" : trabajo.state === "running" ? "Trabajo activo" : trabajo.state === "last_work" ? "Trabajo finalizado" : "Trabajo en curso · actividad sin confirmar";
-    return { reference:trabajo.reference || "", title:trabajo.title, state:stateLabel,
+    return { reference:trabajo.reference || "", etiqueta:trabajo.etiqueta || "", title:trabajo.title, state:stateLabel,
       project:trabajo.projectName || "", projectId:trabajo.projectId || "", detailUrl:trabajo.detailUrl || "",
       executor:trabajo.executor, responsible:trabajo.agente, kind:trabajo.kind, reachable:trabajo.reachable,
       presenceAt:trabajo.presenceAt, at:Number(trabajo.at) || 0, idle:parado,
@@ -5570,7 +5576,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
         (resumen.idle ? 'data-race-idle="true" ' : '') + (enlace.conservado ? 'data-race-kept="true" ' : '') +
         'data-heartbeat="' + heartbeat.replace(/ /g, "-") + '" aria-label="Responsable ' + esc(identidadVisible.nombre) + '. Proyecto responsable ' + esc(proyectoResponsable) + '. Hora de inicio ' + esc(resumen.startedClock) + esc(timingAria) +
         (executor !== responsable ? '. Ejecuta ' + esc(executor) : '') + '. ' + heartbeat + '. ' +
-        esc(resumen.title) + (enlace.trabajo.kind==='session'?'. Tiempo de actividad ':'. Tiempo de misión ') + esc(resumen.duration) +
+        esc(rotuloMisionCarrera(resumen)) + (enlace.trabajo.kind==='session'?'. Tiempo de actividad ':'. Tiempo de misión ') + esc(resumen.duration) +
         '. Tiempo de sesión ' + esc(resumen.sessionDuration) + '">' +
         '<span class="refresh-agent-meta">' + nombreCorredorHtml(identidadVisible, contextoVisible, "race-agent-context-" + indice) +
           '<span class="refresh-agent-project" data-race-role="project" title="Proyecto responsable: ' +
@@ -5586,10 +5592,10 @@ body.resizing-columns{cursor:col-resize;user-select:none}
         // su referencia legible (norma 5). Se quita también del tooltip: el que
         // pasa el ratón por encima es la misma persona.
         (resumen.detailUrl ? '<a class="refresh-mission" data-race-role="mission" href="' + esc(resumen.detailUrl) +
-          '" title="' + esc(resumen.title) +
-          '"><span class="refresh-mission-title">' + esc(resumen.title) + '</span></a>' :
-          '<span class="refresh-mission" data-race-role="mission" title="' + esc(resumen.title) +
-          '"><span class="refresh-mission-title">' + esc(resumen.title) + '</span></span>') +
+          '" title="' + esc(rotuloMisionCarrera(resumen)) +
+          '"><span class="refresh-mission-title">' + esc(rotuloMisionCarrera(resumen)) + '</span></a>' :
+          '<span class="refresh-mission" data-race-role="mission" title="' + esc(rotuloMisionCarrera(resumen)) +
+          '"><span class="refresh-mission-title">' + esc(rotuloMisionCarrera(resumen)) + '</span></span>') +
         runner + '<span class="refresh-finish" aria-hidden="true"></span></div></div>' +
         '<span class="refresh-timing" aria-label="Hora de inicio ' + esc(resumen.startedClock) + esc(timingAria) + '">' +
           marcaInicio + marcaTemporal + '</span></div>';

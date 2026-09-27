@@ -74,6 +74,19 @@ export function crearFlota(env = {}, identidad, deps = {}) {
   }
 
   const seg = (ts) => (Number(ts) > 4102444800 ? Math.floor(Number(ts) / 1000) : Number(ts) || 0);
+  // #4502.09.27. El número largo (task-web-…, FLT-…) no sale en esta etiqueta.
+  function etiquetaEncargo(id, ts, dada) {
+    if (dada) return String(dada);
+    const n = Number(id);
+    if (!Number.isInteger(n) || n <= 0) return "";
+    let ms = Number(ts || 0);
+    if (!ms) return "";
+    if (ms < 4102444800) ms *= 1000;
+    const parts = new Intl.DateTimeFormat("en-GB", { timeZone: "Europe/Madrid", month: "2-digit", day: "2-digit" }).formatToParts(new Date(ms));
+    const mm = (parts.find((p) => p.type === "month") || {}).value;
+    const dd = (parts.find((p) => p.type === "day") || {}).value;
+    return mm && dd ? `#${n}.${mm}.${dd}` : "";
+  }
   const cuando = (ts) => (seg(ts) ? new Date(seg(ts) * 1000).toISOString().replace('T', ' ').slice(0, 16) + ' UTC' : '');
   const hace = (ts) => { const s = Math.max(0, Math.floor(ahora() / 1000) - seg(ts)); return s < 60 ? `hace ${s} s` : s < 3600 ? `hace ${Math.round(s / 60)} min` : `hace ${Math.round(s / 3600)} h`; };
 
@@ -135,8 +148,9 @@ export function crearFlota(env = {}, identidad, deps = {}) {
     if (proyecto_id) { body.project_id = proyecto_id; body.materialize_mission = true; } else body.materialize_mission = false;
     const r = await llamar(`${base}/api/bot-inbox`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
     if (!r || !r.ok) throw new Error(`el bot-inbox no aceptó el encargo: ${JSON.stringify(r)}`);
-    return { ok: true, encargo: Number(r.id), task_id: r.task_id || null, persona: p, maquina: destino || null, de: firma, proyecto_id: r.project_id || proyecto_id || null, mision_en_yokup: !!proyecto_id,
-      nota, siguiente: `encargo_estado con encargo=${r.id} para leer el acuse y la respuesta (se publica también en hilo en Telegram y en admira.live/telegram)` };
+    const etiqueta = etiquetaEncargo(r.id, r.ts, r.etiqueta);
+    return { ok: true, encargo: Number(r.id), etiqueta: etiqueta || null, task_id: r.task_id || null, persona: p, maquina: destino || null, de: firma, proyecto_id: r.project_id || proyecto_id || null, mision_en_yokup: !!proyecto_id,
+      nota, siguiente: `encargo_estado con encargo=${r.id} para leer el acuse y la respuesta. La etiqueta visible es ${etiqueta || ("#" + r.id)} (se publica también en hilo en Telegram y en admira.live/telegram).` };
   }
 
   /** Estado y respuesta de un encargo por su número. */
@@ -145,7 +159,8 @@ export function crearFlota(env = {}, identidad, deps = {}) {
     const x = d && d.item; if (!x) throw new Error(`encargo #${encargo} no encontrado`);
     const st = String(x.status || 'pending');
     const lectura = { pending: 'pendiente: nadie lo ha cogido aún', ack: 'acusado: lo ha cogido y está en ello', in_progress: 'en curso', blocked: 'bloqueado: mira la nota', done: 'hecho: la respuesta está en «respuesta»' }[st] || st;
-    return { encargo: Number(x.id), estado: st, lectura, persona: x.target_persona || null, maquina: x.target_machine || null, de: x.from_name || '', cuando: cuando(x.ts),
+    const etiqueta = etiquetaEncargo(x.id, x.ts, x.etiqueta);
+    return { encargo: Number(x.id), etiqueta: etiqueta || null, estado: st, lectura, persona: x.target_persona || null, maquina: x.target_machine || null, de: x.from_name || '', cuando: cuando(x.ts),
       acuse: x.ack_at ? cuando(x.ack_at) : null, cierre: x.done_at ? cuando(x.done_at) : null, texto: String(x.text || ''), respuesta: x.note || '', proyecto_id: x.project_id || null, task_id: x.task_id || null };
   }
 

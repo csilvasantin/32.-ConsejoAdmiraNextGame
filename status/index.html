@@ -3503,7 +3503,7 @@
           ? `<a class="af-mis" href="https://www.yokup.com/ticket?id=${encodeURIComponent(mid)}" target="_blank" rel="noopener" title="Misión ${esc(mid)} en yokup — planificar y cerrar aquí">🎯 ${esc(mid)}${prog?' · '+prog:' · sin plan'} →</a>`
           : `<span class="af-mis af-mis-off" title="Aún no ingerida por yokup (el sync corre cada 2 min)">🎯 sin misión aún</span>`;
         return `
-        <div class="af-row">${afStBadge(x.status)}<span class="af-rt">#${esc(x.id)}</span> ${esc((x.text||'').slice(0,90))}
+        <div class="af-row">${afStBadge(x.status)}<span class="af-rt">${esc(afEtiqueta(x))}</span> ${esc((x.text||'').slice(0,90))}
           <div class="af-when">${esc(fmtAgo(Math.floor(tsMsAF(x.ts)/1000)))} · de ${esc(x.from_name||'—')} · ${tag}</div></div>`;
       }).join('')
         : '<div class="af-empty">sin encargos en su buzón</div>';
@@ -3520,6 +3520,17 @@
   }
   // ts del inbox público: unas veces en ms, otras en segundos → normaliza a ms
   function tsMsAF(ts){ ts=Number(ts)||0; return ts<1e12 ? ts*1000 : ts; }
+  // #4502.09.27. Si la cola ya manda etiqueta, se usa; si no, se arma con el id y el día de Madrid.
+  function afEtiqueta(x){
+    if(x && x.etiqueta) return String(x.etiqueta);
+    const n=Number(x && x.id), ms=tsMsAF(x && x.ts);
+    if(!Number.isInteger(n) || n<=0 || !ms) return '#'+((x&&x.id)||'');
+    try{
+      const p=new Intl.DateTimeFormat('en-GB',{timeZone:'Europe/Madrid',day:'2-digit',month:'2-digit'}).formatToParts(new Date(ms));
+      const mm=p.find(q=>q.type==='month').value, dd=p.find(q=>q.type==='day').value;
+      return '#'+n+'.'+mm+'.'+dd;
+    }catch(e){ return '#'+n; }
+  }
   function afRenderHist(agente){
     const h=document.getElementById('afHist'); if(!h) return;
     const arr=afLoadHist(agente);
@@ -5380,7 +5391,7 @@
   function agQueueHTML(n, st){
     if(!st) return '<div id="agentQueue"><div class="aq-note">sin dato: la cola de '+esc(agShow(n))+' no respondió.</div></div>';
     const LBL={pending:'pendiente',ack:'ack',in_progress:'en curso',blocked:'bloqueada'};
-    const rows=st.open.map(x=>`<div class="aq-item" title="${esc(String(x.text||'').slice(0,300))}"><span class="aq-id">#${esc(x.id)}</span><span class="aq-t">${esc(agHeadline(x.text))}</span><span class="aq-st ${esc(x.status||'pending')}">${esc(LBL[x.status]||x.status||'pendiente')}</span></div>`).join('');
+    const rows=st.open.map(x=>`<div class="aq-item" title="${esc(String(x.text||'').slice(0,300))}"><span class="aq-id">${esc(afEtiqueta(x))}</span><span class="aq-t">${esc(agHeadline(x.text))}</span><span class="aq-st ${esc(x.status||'pending')}">${esc(LBL[x.status]||x.status||'pendiente')}</span></div>`).join('');
     const done=st.items.length-st.open.length;
     return `<div id="agentQueue"><div class="aq-head">Cola de ${esc(agShow(n))} · ${st.open.length} abiertos</div>${rows||'<div class="aq-note">sin encargos abiertos</div>'}
       <div class="aq-note">${done} hechos entre los ${st.items.length} más recientes${st.capped?' (la cola pública corta en '+AGQ_CAP+')':''}. Fuente: bot-inbox.</div></div>`;

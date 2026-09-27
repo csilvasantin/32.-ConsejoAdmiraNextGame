@@ -6,7 +6,7 @@
   <title>ADmiraNeXT | Status — Constelación de la flota</title>
   <meta name="description" content="Admira no tiene centro — es un universo que se expande. Estado en vivo de la flota AdmiraNeXT: cada ordenador es una estrella con su proyecto y su foco.">
   <meta name="admiranext-version" content="AdmiraNext v26.07.07.12">
-  <meta name="admiranext-status-version" content="admiranext-status v.2026.07.15.r37 (PROOF OF PLAY — la ficha de detalle de un ORDENADOR muestra ahora la MINIATURA de su proof-of-play (la última captura que el agente sube cuando la máquina está desatendida/trabajando) con «proof of play · hace <t>» y un badge: «✓ AVAILABLE» (idle real >=10 min) o «🔒 IA · prioridad absoluta» cuando la máquina está FORZADA (force-unattended). La imagen llega saneada de GET /api/proof?machine= del worker admira-telegram (Cache-Control no-store, se refresca cada ~55s), se carga perezosa SOLO al abrir la ficha, con max-width para no romper el layout ni provocar scroll horizontal. El reporter proof-of-play.sh sube la captura a POST /api/proof tras cada tick de máquina desatendida. — Sobre r36: AVAILABLE — una máquina VIVA y DESATENDIDA >=10 min (sin teclado/ratón, idle>=600s) se rotula «✓ AVAILABLE» en verde Matrix bajo su nodo-ordenador y en su ficha de detalle («✓ desatendida ⏱»). El dato idle llega del reporter presence-beat.sh (machine-idle.sh, HIDIdleTime) en cada latido y lo sirve el worker admira-telegram en /api/presence; el idle de la MÁQUINA es el MÍNIMO de los idle de sus filas frescas (si CUALQUIER runtime tuvo input reciente, la máquina está en uso), y «available» exige que TODOS sus reporters frescos lleven idle>=600. Sin dato o idle<600 → estado normal (en uso). Aditivo, cero scroll horizontal. — r35: MISIONES REALES — YOKUP ES EL GESTOR ÚNICO DEL TRABAJO. Hasta r34 la vista MISIÓN era falsa: missionForAgent() no leía ninguna misión, devolvía el PROYECTO de referencia del agente (AGENT_MISSION), así que «misión» y «proyecto» eran la misma vista con dos nombres. Doctrina de Carlos (14-07-2026): el trabajo vive en yokup.com — cada encargo del bot-inbox es allí una MISIÓN con su árbol de tareas abc/123 (3 pasos × ≤3 subtareas, máx 9), y status pasa a ser el VISOR que las LEE, no quien se las inventa. Nuevo feed público GET /fleet/missions del worker yokup-rtc (misiones source=fleet + su árbol de tareas embebido, porque /mission/* vive tras el perímetro y status no pasa el gate); el worker ingiere el bot-inbox con POST /fleet/sync + cron cada 2 min (service binding a admira-telegram: un fetch normal hacía loopback contra el propio yokup-rtc y devolvía su 404). En status: la vista MISIÓN agrupa por misión REAL (los agentes orbitan la suya y arrastran sus ordenadores; las misiones encargadas y aún sin nadie latiendo también se pintan — ese hueco hay que verlo), la ficha muestra id · estado · «3/9 tareas» y enlaza a la misión en yokup, y la COLA DE ENCARGOS del agente marca cada uno con su misión 🎯 FLT-<id> y su avance. CLARIDAD: el escenario está calibrado para ~10 nodos y las 46 misiones vivas lo desbordaban (se apilaban fuera del encuadre), así que se pintan las 12 que importan —con agente vivo primero, luego las más recientes— y las que quedan fuera SE DICEN en el HUD («4 misiones vivas de 46 · 12 en pantalla»), nunca se recorta en silencio; las etiquetas de nodo se abrevian (shortMission) porque un encargo es una frase larga. OJO al separar los dos conceptos: el PROYECTO de referencia sigue vivo como projectRefForAgent() y es el que alimenta «reportado» y el carril (offRail) — si la misión entrara ahí, todo agente con encargo saldría «fuera de carril» porque el texto de un encargo nunca casa con un proyecto. En el worker, las misiones de flota comparten tabla con las incidencias DOOH de Clear Channel: /tickets y /stats se separan por ?scope=campo|fleet|todas (campo por defecto) para no inundar la bandeja de campo. — Sobre r34: ESCUADRONES DE 4 EN LA VISTA TODO — Carlos con sus 4 MacBook Air (Azul, Plata, Rosa, Crema) delante, todas conectadas, sólo veía MacBookAirAzul como UFO: el foco de la vista TODO FILTRABA a un único ordenador (≤r33 dejaba en pantalla el equipo enfocado + sus agentes y escondía el resto). Ahora la vista TODO pinta TODAS las máquinas vivas A LA VEZ, agrupadas en formaciones de 4 (rombo): con 8 vivas = 2 escuadrones separados en el escenario. layoutAllSquadrons() reparte los anclajes (_anchorX/_anchorY) en rejilla de rombos; physics() lleva cada ordenador a su anclaje con un muelle y los agentes siguen orbitando su máquina. El FOCO (elegido a mano en el riel, o rotando cada 20s de UFO en UFO) ya no filtra: sólo AGRANDA un UFO — factor de escala por nodo _fzs (grande y con detalle el enfocado «como antes», reducidos pero CLARAMENTE presentes y etiquetados los demás), suavizado en physics y leído por volumeRadius/tipografía. Al elegir un ordenador a mano el foco queda fijo en él y el resto sigue visible. Las vistas ORDENADOR/PROYECTO/AGENTE/MISIÓN/SISTEMA OPERATIVO conservan su motor intacto (ALL_MULTI sólo se enciende en la vista TODO con ≥2 ordenadores). — Sobre r33: EMULADORES CON COMBOS REALES — a Carlos le confundía en producción que las dudas emuladas inventaran combos de máquina/agente/proyecto («subNeo en Mac Mini con pixeria.com») al lado de nodos con presencia real. Ahora /dudaAgente y el botón 👾 del AVANZADO muestrean COMBINACIONES REALES de /api/presence — persona+máquina+proyecto tal cual laten (WORLD.presenceRows, guardadas crudas en la carga), priorizando latido fresco (< umbral de vivo), deduplicadas por persona+máquina y barajadas; si presence aún no cargó, caen al aleatorio de antes. El texto de la duda sigue inventado y la marca «(emulada)» se mantiene SIEMPRE. El emulador de tarea acabada (/tareaFinaliza y su botón) firma la pancarta con un agente real de la flota manteniendo la marca «· emulada». Textos de hint/help actualizados para reflejarlo. — Sobre r32: CIELO FULL-BLEED — feedback de Carlos sobre r30 con captura: al refluir el escenario bajo la banda de naves y junto a los paneles laterales, esas zonas quedaban LISAS (el fondo plano de la página, sin estrellas, porque el cielo vivía dentro del canvas de nodos y se empujaba con él). Regla de Carlos: el fondo estrellado cubre TODO, con UFOs o sin ellos, con menús o sin ellos. Cambio de arquitectura: las estrellas se DESACOPLAN de los nodos — nuevo canvas #skyfield position:fixed inset:0 z-index:0 a viewport completo, detrás de banda, paneles y escenario; el twinkle y el parallax con la cámara se mantienen idénticos, y la densidad se calcula sobre el viewport entero. En #galaxy quedan solo nodos/aristas/figuras, que conservan sus zonas de exclusión: reflow bajo la banda (body.duda-band-open + --duda-inset + syncDudaBand()) y rieles en flujo que estrechan el centro (nada oculto tras un panel). Ya no se re-siembran estrellas al abrir/cerrar rieles (el cielo no depende del centro). Pausa con ficha abierta intacta (el frame congela también el cielo), marcha de naves intacta, prefers-reduced-motion respetado, cero scroll horizontal. ADEMÁS: emulador de TAREA ACABADA para previsualizar la celebración Pac-Man de la banda inferior — botón «Lanzar tarea finalizada» en ⚙ AVANZADO junto al 👾 de dudas y comando /tareaFinaliza <texto> en la consola (en el /help); reutiliza la función REAL de la celebración (pacmanTest de status-pacman.js, misma cola/animación/waka-waka que un done de verdad), client-side puro marcado (emulada), sin tocar el bot-inbox real, nada persiste al recargar.)">
+  <meta name="admiranext-status-version" content="admiranext-status v.2026.09.27.r38 (FOCO · AGENTE — encargo #4497 (absorbe #4492/#4494): en la vista AGENTE el bloque «FOCO · ORDENADOR» pasa a «FOCO · AGENTE», con cada agente (Arquitecto, Morfeo, Neo, Oráculo, Smith, Trinity, Niobe, Cypher y los demás que laten), su nº de encargos abiertos, su modelo leído de /api/presence y su cupo (disponible, ocupado, sin cupo, reserva o sin dato). Al pulsar un agente sale su cola: #número + titular breve. Menú superior con desplegables Vista ▾ y Agentes ▾, y comando «agente [nombre]» en la consola. Niobe y Cypher van como reserva. — Sobre r37: PROOF OF PLAY — la ficha de detalle de un ORDENADOR muestra ahora la MINIATURA de su proof-of-play (la última captura que el agente sube cuando la máquina está desatendida/trabajando) con «proof of play · hace <t>» y un badge: «✓ AVAILABLE» (idle real >=10 min) o «🔒 IA · prioridad absoluta» cuando la máquina está FORZADA (force-unattended). La imagen llega saneada de GET /api/proof?machine= del worker admira-telegram (Cache-Control no-store, se refresca cada ~55s), se carga perezosa SOLO al abrir la ficha, con max-width para no romper el layout ni provocar scroll horizontal. El reporter proof-of-play.sh sube la captura a POST /api/proof tras cada tick de máquina desatendida. — Sobre r36: AVAILABLE — una máquina VIVA y DESATENDIDA >=10 min (sin teclado/ratón, idle>=600s) se rotula «✓ AVAILABLE» en verde Matrix bajo su nodo-ordenador y en su ficha de detalle («✓ desatendida ⏱»). El dato idle llega del reporter presence-beat.sh (machine-idle.sh, HIDIdleTime) en cada latido y lo sirve el worker admira-telegram en /api/presence; el idle de la MÁQUINA es el MÍNIMO de los idle de sus filas frescas (si CUALQUIER runtime tuvo input reciente, la máquina está en uso), y «available» exige que TODOS sus reporters frescos lleven idle>=600. Sin dato o idle<600 → estado normal (en uso). Aditivo, cero scroll horizontal. — r35: MISIONES REALES — YOKUP ES EL GESTOR ÚNICO DEL TRABAJO. Hasta r34 la vista MISIÓN era falsa: missionForAgent() no leía ninguna misión, devolvía el PROYECTO de referencia del agente (AGENT_MISSION), así que «misión» y «proyecto» eran la misma vista con dos nombres. Doctrina de Carlos (14-07-2026): el trabajo vive en yokup.com — cada encargo del bot-inbox es allí una MISIÓN con su árbol de tareas abc/123 (3 pasos × ≤3 subtareas, máx 9), y status pasa a ser el VISOR que las LEE, no quien se las inventa. Nuevo feed público GET /fleet/missions del worker yokup-rtc (misiones source=fleet + su árbol de tareas embebido, porque /mission/* vive tras el perímetro y status no pasa el gate); el worker ingiere el bot-inbox con POST /fleet/sync + cron cada 2 min (service binding a admira-telegram: un fetch normal hacía loopback contra el propio yokup-rtc y devolvía su 404). En status: la vista MISIÓN agrupa por misión REAL (los agentes orbitan la suya y arrastran sus ordenadores; las misiones encargadas y aún sin nadie latiendo también se pintan — ese hueco hay que verlo), la ficha muestra id · estado · «3/9 tareas» y enlaza a la misión en yokup, y la COLA DE ENCARGOS del agente marca cada uno con su misión 🎯 FLT-<id> y su avance. CLARIDAD: el escenario está calibrado para ~10 nodos y las 46 misiones vivas lo desbordaban (se apilaban fuera del encuadre), así que se pintan las 12 que importan —con agente vivo primero, luego las más recientes— y las que quedan fuera SE DICEN en el HUD («4 misiones vivas de 46 · 12 en pantalla»), nunca se recorta en silencio; las etiquetas de nodo se abrevian (shortMission) porque un encargo es una frase larga. OJO al separar los dos conceptos: el PROYECTO de referencia sigue vivo como projectRefForAgent() y es el que alimenta «reportado» y el carril (offRail) — si la misión entrara ahí, todo agente con encargo saldría «fuera de carril» porque el texto de un encargo nunca casa con un proyecto. En el worker, las misiones de flota comparten tabla con las incidencias DOOH de Clear Channel: /tickets y /stats se separan por ?scope=campo|fleet|todas (campo por defecto) para no inundar la bandeja de campo. — Sobre r34: ESCUADRONES DE 4 EN LA VISTA TODO — Carlos con sus 4 MacBook Air (Azul, Plata, Rosa, Crema) delante, todas conectadas, sólo veía MacBookAirAzul como UFO: el foco de la vista TODO FILTRABA a un único ordenador (≤r33 dejaba en pantalla el equipo enfocado + sus agentes y escondía el resto). Ahora la vista TODO pinta TODAS las máquinas vivas A LA VEZ, agrupadas en formaciones de 4 (rombo): con 8 vivas = 2 escuadrones separados en el escenario. layoutAllSquadrons() reparte los anclajes (_anchorX/_anchorY) en rejilla de rombos; physics() lleva cada ordenador a su anclaje con un muelle y los agentes siguen orbitando su máquina. El FOCO (elegido a mano en el riel, o rotando cada 20s de UFO en UFO) ya no filtra: sólo AGRANDA un UFO — factor de escala por nodo _fzs (grande y con detalle el enfocado «como antes», reducidos pero CLARAMENTE presentes y etiquetados los demás), suavizado en physics y leído por volumeRadius/tipografía. Al elegir un ordenador a mano el foco queda fijo en él y el resto sigue visible. Las vistas ORDENADOR/PROYECTO/AGENTE/MISIÓN/SISTEMA OPERATIVO conservan su motor intacto (ALL_MULTI sólo se enciende en la vista TODO con ≥2 ordenadores). — Sobre r33: EMULADORES CON COMBOS REALES — a Carlos le confundía en producción que las dudas emuladas inventaran combos de máquina/agente/proyecto («subNeo en Mac Mini con pixeria.com») al lado de nodos con presencia real. Ahora /dudaAgente y el botón 👾 del AVANZADO muestrean COMBINACIONES REALES de /api/presence — persona+máquina+proyecto tal cual laten (WORLD.presenceRows, guardadas crudas en la carga), priorizando latido fresco (< umbral de vivo), deduplicadas por persona+máquina y barajadas; si presence aún no cargó, caen al aleatorio de antes. El texto de la duda sigue inventado y la marca «(emulada)» se mantiene SIEMPRE. El emulador de tarea acabada (/tareaFinaliza y su botón) firma la pancarta con un agente real de la flota manteniendo la marca «· emulada». Textos de hint/help actualizados para reflejarlo. — Sobre r32: CIELO FULL-BLEED — feedback de Carlos sobre r30 con captura: al refluir el escenario bajo la banda de naves y junto a los paneles laterales, esas zonas quedaban LISAS (el fondo plano de la página, sin estrellas, porque el cielo vivía dentro del canvas de nodos y se empujaba con él). Regla de Carlos: el fondo estrellado cubre TODO, con UFOs o sin ellos, con menús o sin ellos. Cambio de arquitectura: las estrellas se DESACOPLAN de los nodos — nuevo canvas #skyfield position:fixed inset:0 z-index:0 a viewport completo, detrás de banda, paneles y escenario; el twinkle y el parallax con la cámara se mantienen idénticos, y la densidad se calcula sobre el viewport entero. En #galaxy quedan solo nodos/aristas/figuras, que conservan sus zonas de exclusión: reflow bajo la banda (body.duda-band-open + --duda-inset + syncDudaBand()) y rieles en flujo que estrechan el centro (nada oculto tras un panel). Ya no se re-siembran estrellas al abrir/cerrar rieles (el cielo no depende del centro). Pausa con ficha abierta intacta (el frame congela también el cielo), marcha de naves intacta, prefers-reduced-motion respetado, cero scroll horizontal. ADEMÁS: emulador de TAREA ACABADA para previsualizar la celebración Pac-Man de la banda inferior — botón «Lanzar tarea finalizada» en ⚙ AVANZADO junto al 👾 de dudas y comando /tareaFinaliza <texto> en la consola (en el /help); reutiliza la función REAL de la celebración (pacmanTest de status-pacman.js, misma cola/animación/waka-waka que un done de verdad), client-side puro marcado (emulada), sin tocar el bot-inbox real, nada persiste al recargar.)">
   <meta name="admiranext-status-build" content="oraculo-triad-1">
   <!-- Orbitron: tipografía tecnológica para la versión del pie del riel (Carlos, 2026-07-11) -->
   <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -619,6 +619,45 @@
     .pf-fbtn:hover,.pf-fbtn:focus-visible{color:var(--text);background:rgba(34,230,255,.06);border-color:rgba(34,230,255,.18);outline:none}
     .pf-fbtn.active{color:#eafcff;background:rgba(34,230,255,.12);border-color:var(--cyan-dim)}
 
+    /* r38: FOCO · AGENTE — en la vista AGENTE el bloque de foco lista los agentes
+       con su nº de encargos abiertos, modelo y estado de cupo; al pulsar uno se
+       despliega su cola (#número + titular breve). Datos de la flota real. */
+    .ag-row{display:grid;grid-template-columns:minmax(0,1fr) auto;align-items:center;gap:2px 8px}
+    .ag-row .ag-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .ag-row .ag-n{font-family:'Orbitron','JetBrains Mono',ui-monospace,monospace;font-weight:700;font-size:11px;color:var(--cyan);min-width:22px;text-align:right}
+    .ag-row .ag-n.zero{color:var(--text-dim);font-weight:400}
+    .ag-row .ag-sub{grid-column:1 / -1;display:flex;gap:6px;align-items:center;font-size:8.5px;letter-spacing:.04em;text-transform:none;color:var(--text-dim);min-width:0}
+    .ag-row .ag-model{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;min-width:0}
+    .ag-cupo{flex:0 0 auto;font-size:8px;letter-spacing:.08em;text-transform:uppercase;border-radius:4px;padding:1px 5px;border:1px solid currentColor}
+    .ag-cupo.disponible{color:#4dff9a}.ag-cupo.ocupado{color:#ffcf3f}.ag-cupo.sincupo{color:#ff6b6b}
+    .ag-cupo.reserva{color:#b58cff}.ag-cupo.sindato{color:var(--text-dim)}
+    #agentQueue{margin:4px 0 8px;padding:8px 9px;border:1px solid rgba(34,230,255,.18);border-radius:8px;background:rgba(34,230,255,.03)}
+    #agentQueue[hidden]{display:none}
+    .aq-head{font-size:9px;letter-spacing:.12em;text-transform:uppercase;color:var(--cyan);margin-bottom:6px}
+    #agentQueue{max-height:340px;overflow-y:auto}
+    .aq-item{display:block;font-size:10px;line-height:1.4;padding:5px 0;border-top:1px solid rgba(34,230,255,.08);color:var(--text)}
+    .aq-item:first-of-type{border-top:0}
+    .aq-id{color:var(--cyan);font-variant-numeric:tabular-nums;margin-right:5px}
+    .aq-t{overflow-wrap:anywhere}
+    .aq-st{display:inline-block;margin-left:6px;font-size:8px;letter-spacing:.06em;text-transform:uppercase;color:var(--text-dim)}
+    .aq-st.in_progress{color:#ffcf3f}.aq-st.blocked{color:#ff6b6b}
+    .aq-note{font-size:8.5px;color:var(--text-dim);margin-top:6px;line-height:1.45}
+    /* r38: menú superior con DESPLEGABLES (norma «la cuadratura», #4494): Vista ▾ y
+       Agentes ▾ junto al ☰. En móvil se ocultan (el ☰ da acceso a lo mismo). */
+    .hdr-dd{position:relative}
+    .hdr-ddbtn{font-family:inherit;height:38px;padding:0 11px;font-size:10px;letter-spacing:.12em;text-transform:uppercase;
+      color:var(--cyan-dim);background:rgba(3,8,16,.78);backdrop-filter:blur(6px);border:1px solid var(--cyan-dim);border-radius:9px;cursor:pointer;white-space:nowrap}
+    .hdr-ddbtn:hover,.hdr-ddbtn:focus-visible,.hdr-ddbtn[aria-expanded="true"]{color:var(--cyan);border-color:var(--cyan);outline:none}
+    .hdr-ddmenu{position:absolute;top:calc(100% + 6px);left:0;min-width:210px;max-height:60vh;overflow-y:auto;background:#06121f;
+      border:1px solid rgba(34,230,255,.25);border-radius:10px;box-shadow:0 10px 30px rgba(0,0,0,.6);padding:6px;z-index:60}
+    .hdr-ddmenu[hidden]{display:none}
+    .hdr-ddmenu button{display:flex;justify-content:space-between;gap:10px;width:100%;text-align:left;font-family:inherit;font-size:10px;letter-spacing:.06em;
+      color:var(--text-dim);background:transparent;border:0;border-radius:7px;padding:7px 9px;cursor:pointer}
+    .hdr-ddmenu button:hover,.hdr-ddmenu button:focus-visible{color:var(--text);background:rgba(34,230,255,.08);outline:none}
+    .hdr-ddmenu button.active{color:#eafcff}
+    .hdr-ddmenu b{color:var(--cyan);font-weight:700}
+    @media (max-width:760px){ .hdr-dd{display:none} }
+
     /* DERECHA — AVANZADO (BARRA A TODA ALTURA, misma anchura que la izquierda) */
     #panelRight{top:0;bottom:0;right:0;transform:translateX(100%);width:var(--pf-w-right);padding:74px 16px 18px;border-top:0;border-bottom:0;border-right:0;border-radius:0;overflow-y:auto}
     #panelRight.open{transform:translateX(0)}
@@ -798,6 +837,11 @@
       <div class="pf-seclabel">Foco · ordenador <button id="focusMyBtn" style="font-size:8px;padding:1px 4px;margin-left:4px;border:1px solid var(--cyan-dim);background:none;color:var(--cyan-dim);cursor:pointer">My machine</button></div>
       <div id="focusList"><!-- se rellena con los ordenadores online --></div>
     </div>
+    <!-- r38: en la vista AGENTE el foco pasa a ser por AGENTE (#4497) -->
+    <div class="pf-sec" id="agentFocusSec" hidden>
+      <div class="pf-seclabel">Foco · agente <span id="agentFocusSum" style="text-transform:none;letter-spacing:.04em"></span></div>
+      <div id="agentFocusList"><div class="hint">cargando la cola de la flota…</div></div>
+    </div>
     <div class="hint">En la vista TODO se ven todos los ordenadores a la vez, en escuadrones de 4. El foco rota de UFO en UFO cada 20s (los demás siguen presentes). Elige uno a mano para fijar el foco en él; en ⚙ AVANZADO pausas la rotación automática.</div>
     <!-- pie del riel (patrón menú de cuenta de Claude Code): usuario+sesión con la versión DENTRO de la pestaña -->
     <div class="pf-user" id="userBlock">
@@ -948,6 +992,14 @@
     <div class="hdr-side left">
       <button class="pf-tg" id="tgLeft" aria-expanded="false" aria-controls="panelLeft"
               title="Opciones — vistas (ORDENADOR / PROYECTOS / AGENTE / MISIÓN / SISTEMA OPERATIVO)">☰</button>
+      <div class="hdr-dd">
+        <button class="hdr-ddbtn" id="ddViewBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="ddViewMenu">Vista ▾</button>
+        <div class="hdr-ddmenu" id="ddViewMenu" hidden></div>
+      </div>
+      <div class="hdr-dd">
+        <button class="hdr-ddbtn" id="ddAgentBtn" type="button" aria-haspopup="true" aria-expanded="false" aria-controls="ddAgentMenu">Agentes ▾</button>
+        <div class="hdr-ddmenu" id="ddAgentMenu" hidden></div>
+      </div>
     </div>
 
     <div class="hdr-center">
@@ -2978,6 +3030,7 @@
     // contador de VIVOS de la vista POR ORDENADOR (verdad de la flota)
     updateLiveCounter();   // contador de cabecera, sensible a la vista activa
     if(typeof renderFocusList==='function') renderFocusList();   // refresca la lista de foco por ordenador
+    try{ if(currentView==='agent') renderAgentFocus(); }catch(e){}   // r38: modelo/latido del foco por agente
     if(typeof updateVersionInfo==='function') updateVersionInfo();
     document.getElementById('lastUpd').textContent = new Date().toLocaleTimeString('es-ES',{hour:'2-digit',minute:'2-digit',second:'2-digit'});
     window.__lastDataAt = Date.now();   // r14: marca de frescura para el ticker «datos hace Xs»
@@ -5150,7 +5203,14 @@
   // --- menú vertical IZQUIERDA sincronizado con el conmutador superior ---
   const leftBtns = panelLeft.querySelectorAll('.pf-vbtn');
   leftBtns.forEach(b=>b.addEventListener('click',()=>setView(b.dataset.view,true)));
-  function syncLeftMenu(v){ leftBtns.forEach(b=>b.classList.toggle('active', b.dataset.view===v)); }
+  function syncLeftMenu(v){
+    leftBtns.forEach(b=>b.classList.toggle('active', b.dataset.view===v));
+    // r38: en la vista AGENTE, «FOCO · ORDENADOR» cede el sitio a «FOCO · AGENTE»
+    const fs=document.getElementById('focusSec'), as=document.getElementById('agentFocusSec');
+    if(fs) fs.hidden = v==='agent';
+    if(as) as.hidden = v!=='agent';
+    if(v==='agent' && typeof loadAgentQueues==='function') loadAgentQueues();
+  }
 
   // FOCO · ORDENADOR: lista de equipos online en el panel de opciones. Elegir uno
   // fija el foco en la vista TODO (solo ese ordenador + sus agentes, con zoom).
@@ -5190,6 +5250,176 @@
       });
     }
   }
+
+  // ── r38: FOCO · AGENTE (#4497, absorbe #4492/#4494) ─────────────────────────
+  // En la vista AGENTE el riel lista cada agente con sus encargos ABIERTOS
+  // (pendiente/ack/en curso/bloqueada), su modelo y su estado de cupo; al pulsar
+  // uno se ve su cola (#número + titular breve). Fuentes REALES y públicas:
+  //   · cola  → bot.yokup.com/api/public/inbox?persona=X (los 80 más recientes)
+  //   · modelo → /api/presence (runtime + model + account de cada latido)
+  //   · cupo  → reparto-cupo.sh deja «[REPARTO sin cupo … · origen #N · X]» y
+  //             bloquea el original citando el cupo; Niobe y Cypher son reserva.
+  // Lo que no se puede leer se rotula «sin dato», nunca se inventa.
+  const AGQ_INBOX='https://bot.yokup.com/api/public/inbox';
+  const AGQ_CORE=['Arquitecto','Morfeo','Neo','Oraculo','Smith','Trinity','Niobe','Cypher'];
+  const AGQ_RESERVA=new Set(['niobe','cypher']);
+  const AGQ_SHOW={oraculo:'Oráculo'};
+  const AGQ_OPEN=new Set(['pending','ack','in_progress','blocked']);
+  const AGQ_CAP=80;                       // tope de la cola pública por persona
+  const AGQ_CUPO_WIN=72*3600;             // ventana para leer «sin cupo» (s)
+  const AGQ_CUPO_LABEL={disponible:'disponible',ocupado:'ocupado',sincupo:'sin cupo',reserva:'reserva',sindato:'sin dato'};
+  let AGQ={at:0, loading:null, byAgent:{}, err:false};
+  let AGENT_FOCUS=null;                   // norm(nombre) del agente desplegado
+  const agShow=n=>AGQ_SHOW[norm(n)]||n;
+
+  function agRoster(){
+    const out=[...AGQ_CORE], seen=new Set(AGQ_CORE.map(norm));
+    const core=[...seen];
+    (WORLD.presenceRows||[]).forEach(r=>{
+      const k=norm(r&&r.persona); if(!k||seen.has(k)) return;
+      if(core.some(c=>k.startsWith(c))) return;   // alias («ArquitectoCursorCloud») → su agente
+      if(/^(sub|infra)/.test(k)) return;            // sub/infraagentes: capas, no agentes con cola
+      seen.add(k); out.push(r.persona);
+    });
+    return out;
+  }
+  // Titular breve: primera frase útil del encargo, sin etiquetas [..] ni «Titular:».
+  function agHeadline(text){
+    let t=String(text||'').replace(/\s+/g,' ').trim();
+    t=t.replace(/^(\[[^\]]{0,160}\]\s*)+/,'').replace(/^titular:\s*/i,'');
+    const m=t.match(/^(.{12,}?)([.:;!?](\s|$)|\s[—–]\s)/);
+    if(m) t=m[1];
+    return t.length>78 ? t.slice(0,76).replace(/\s+\S*$/,'')+'…' : (t||'(sin texto)');
+  }
+  function agModel(name){
+    const k=norm(name);
+    const rows=(WORLD.presenceRows||[]).filter(r=>r&&norm(r.persona)===k);
+    if(!rows.length) return {txt:'sin dato', fresh:false, last:0};
+    const by=new Map(); let last=0;   // runtime+modelo → cuentas (sin repetir «Claude · Claude (gmail)»)
+    rows.forEach(r=>{
+      last=Math.max(last, +r.updated||0);
+      const key=[r.runtime, r.model&&r.model!==r.runtime?r.model:''].filter(Boolean).join(' ');
+      if(!key) return;
+      if(!by.has(key)) by.set(key,new Set());
+      if(r.account) by.get(key).add(r.account);
+    });
+    const parts=[...by].map(([k,acc])=>acc.size?k+' ('+[...acc].join(', ')+')':k);
+    const now=Date.now()/1000, lim=(typeof ONLINE_SEC_DYN==='number'?ONLINE_SEC_DYN:600);
+    return {txt:parts.join(' · ')||'sin dato', fresh:last>0 && (now-last)<lim, last};
+  }
+  function agCupo(name, st){
+    const k=norm(name), now=Date.now()/1000;
+    if(st && st.sinCupo) return {k:'sincupo', why:st.sinCupo};
+    if(AGQ_RESERVA.has(k)) return {k:'reserva', why:'agente de reserva de la flota'+(st&&st.inProg?' · '+st.inProg+' en curso':'')};
+    if(!st) return {k:'sindato', why:'cola no disponible'};
+    if(st.inProg) return {k:'ocupado', why:st.inProg+' encargo'+(st.inProg===1?'':'s')+' en curso'};
+    const m=agModel(name);
+    if(m.fresh) return {k:'disponible', why:'latido fresco y nada en curso'};
+    return {k:'sindato', why:m.last?'sin latido reciente (último '+fmtAgo(Math.floor(m.last))+')':'sin latido en la presencia'};
+  }
+  async function loadAgentQueues(force){
+    if(AGQ.loading) return AGQ.loading;
+    if(!force && Date.now()-AGQ.at<60000){ renderAgentFocus(); return; }
+    const names=agRoster();
+    AGQ.loading=(async()=>{
+      const res=await Promise.all(names.map(n=>
+        fetch(AGQ_INBOX+'?persona='+encodeURIComponent(n),{cache:'no-store'})
+          .then(r=>r.ok?r.json():null).then(d=>({n, items:(d&&d.items)||null})).catch(()=>({n, items:null}))));
+      const now=Date.now()/1000, byAgent={}, all=[];
+      res.forEach(({n,items})=>{ if(items) all.push(...items); });
+      res.forEach(({n,items})=>{
+        if(!items){ byAgent[norm(n)]=null; return; }
+        const open=items.filter(x=>AGQ_OPEN.has(String(x.status||'pending'))).sort((a,b)=>(+b.id)-(+a.id));
+        // «ocupado» = algo EN CURSO tocado en las últimas 48 h (un in_progress de hace meses no ocupa a nadie)
+        const inProg=open.filter(x=>x.status==='in_progress' && (now-Math.max(+x.ack_at||0,+x.ts||0))<48*3600).length;
+        const oldest=items[items.length-1]||null;
+        const k=norm(n); let sinCupo='';
+        const re=new RegExp('\\[REPARTO sin cupo[^\\]]*·\\s*'+k+'\\s*\\]','i');
+        const hit=all.find(x=>(now-(+x.ts||0))<AGQ_CUPO_WIN && re.test(String(x.text||'').normalize('NFD').replace(/[̀-ͯ]/g,'')))
+               || items.find(x=>x.status==='blocked' && (now-(+x.ts||0))<AGQ_CUPO_WIN && /(sin|falta de) cupo/i.test(x.text||''));
+        if(hit) sinCupo='encargo #'+hit.id+' registra falta de cupo';
+        // «+» solo si la cola pública cortó Y lo más antiguo que dio sigue abierto (puede haber más detrás)
+        const capped=items.length>=AGQ_CAP && !!oldest && AGQ_OPEN.has(String(oldest.status||'pending'));
+        byAgent[k]={items, open, inProg, capped, sinCupo};
+      });
+      AGQ={at:Date.now(), loading:null, byAgent, err:res.every(r=>!r.items), names:names.map(norm)};
+      renderAgentFocus();
+    })();
+    return AGQ.loading;
+  }
+  function renderAgentFocus(){
+    const box=document.getElementById('agentFocusList'); if(!box) return;
+    const sum=document.getElementById('agentFocusSum');
+    const names=agRoster(); let total=0;
+    // la presencia puede traer agentes nuevos después de leer la cola → se relee una vez
+    if(AGQ.at && !AGQ.loading && names.some(n=>!(norm(n) in AGQ.byAgent))){ AGQ.at=0; setTimeout(()=>loadAgentQueues(true),0); }
+    let html='';
+    names.forEach(n=>{
+      const k=norm(n), st=AGQ.byAgent[k], m=agModel(n), c=agCupo(n,st);
+      const cnt = st ? st.open.length : null; if(cnt) total+=cnt;
+      const nTxt = cnt==null ? '—' : (st.capped&&cnt>=1 ? cnt+'+' : String(cnt));
+      const nTitle = cnt==null ? 'sin dato: la cola no respondió' : cnt+' encargos abiertos (pendiente/ack/en curso/bloqueada)'+(st.capped?' · la cola pública da los '+AGQ_CAP+' más recientes: puede haber más':'');
+      html+=`<button class="pf-fbtn ag-row${AGENT_FOCUS===k?' active':''}" data-ag="${esc(k)}" aria-expanded="${AGENT_FOCUS===k}">
+        <span class="ag-name"><span class="dot" style="display:inline-block;margin-right:7px;${m.fresh?'':'background:var(--text-dim);box-shadow:none'}"></span>${esc(agShow(n))}</span>
+        <span class="ag-n${cnt?'':' zero'}" title="${esc(nTitle)}">${esc(nTxt)}</span>
+        <span class="ag-sub"><span class="ag-model" title="modelo según la presencia">${esc(m.txt)}</span><span class="ag-cupo ${c.k}" title="${esc(c.why)}">${AGQ_CUPO_LABEL[c.k]}</span></span>
+      </button>`;
+      if(AGENT_FOCUS===k) html+=agQueueHTML(n, st);
+    });
+    if(!AGQ.at) html+='<div class="hint">cargando la cola de la flota…</div>';
+    else if(AGQ.err) html+='<div class="hint">la cola pública no responde ahora: conteos sin dato</div>';
+    box.innerHTML=html;
+    if(sum) sum.textContent = AGQ.at ? '· '+total+' abiertos' : '';
+    box.querySelectorAll('.ag-row').forEach(b=>b.addEventListener('click',()=>{
+      AGENT_FOCUS = AGENT_FOCUS===b.dataset.ag ? null : b.dataset.ag;
+      if(AGENT_FOCUS) setAutoRotate(false);   // leyendo una cola: la vista no se va sola
+      renderAgentFocus();
+    }));
+    renderAgentDropdown();
+  }
+  function agQueueHTML(n, st){
+    if(!st) return '<div id="agentQueue"><div class="aq-note">sin dato: la cola de '+esc(agShow(n))+' no respondió.</div></div>';
+    const LBL={pending:'pendiente',ack:'ack',in_progress:'en curso',blocked:'bloqueada'};
+    const rows=st.open.map(x=>`<div class="aq-item" title="${esc(String(x.text||'').slice(0,300))}"><span class="aq-id">#${esc(x.id)}</span><span class="aq-t">${esc(agHeadline(x.text))}</span><span class="aq-st ${esc(x.status||'pending')}">${esc(LBL[x.status]||x.status||'pendiente')}</span></div>`).join('');
+    const done=st.items.length-st.open.length;
+    return `<div id="agentQueue"><div class="aq-head">Cola de ${esc(agShow(n))} · ${st.open.length} abiertos</div>${rows||'<div class="aq-note">sin encargos abiertos</div>'}
+      <div class="aq-note">${done} hechos entre los ${st.items.length} más recientes${st.capped?' (la cola pública corta en '+AGQ_CAP+')':''}. Fuente: bot-inbox.</div></div>`;
+  }
+  // Menú superior: desplegables Vista ▾ y Agentes ▾
+  function renderAgentDropdown(){
+    const menu=document.getElementById('ddAgentMenu'); if(!menu) return;
+    menu.innerHTML=agRoster().map(n=>{
+      const st=AGQ.byAgent[norm(n)], c=agCupo(n,st);
+      const cnt=st?st.open.length:'—';
+      return `<button type="button" data-ag="${esc(norm(n))}"><span>${esc(agShow(n))} <span class="ag-cupo ${c.k}">${AGQ_CUPO_LABEL[c.k]}</span></span><b>${esc(cnt)}</b></button>`;
+    }).join('');
+    menu.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{
+      AGENT_FOCUS=b.dataset.ag; closeDropdowns();
+      setAutoRotate(false); setView('agent',true);
+      const tg=document.getElementById('tgLeft');
+      if(tg && tg.getAttribute('aria-expanded')!=='true') tg.click();
+      renderAgentFocus();
+    }));
+  }
+  function renderViewDropdown(){
+    const menu=document.getElementById('ddViewMenu'); if(!menu) return;
+    menu.innerHTML=VIEWS.map(v=>`<button type="button" class="${v===currentView?'active':''}" data-v="${v}"><span>${esc(VIEW_LABEL[v])}</span>${v===currentView?'<b>●</b>':''}</button>`).join('');
+    menu.querySelectorAll('button').forEach(b=>b.addEventListener('click',()=>{ closeDropdowns(); setView(b.dataset.v,true); }));
+  }
+  function closeDropdowns(){
+    document.querySelectorAll('.hdr-ddmenu').forEach(m=>m.hidden=true);
+    document.querySelectorAll('.hdr-ddbtn').forEach(b=>b.setAttribute('aria-expanded','false'));
+  }
+  [['ddViewBtn','ddViewMenu',renderViewDropdown],['ddAgentBtn','ddAgentMenu',()=>{ renderAgentDropdown(); loadAgentQueues(); }]].forEach(([bid,mid,fill])=>{
+    const b=document.getElementById(bid), m=document.getElementById(mid); if(!b||!m) return;
+    b.addEventListener('click',e=>{
+      e.stopPropagation(); const open=m.hidden; closeDropdowns();
+      if(open){ fill(); m.hidden=false; b.setAttribute('aria-expanded','true'); }
+    });
+  });
+  document.addEventListener('click',e=>{ if(!e.target.closest('.hdr-dd')) closeDropdowns(); });
+  document.addEventListener('keydown',e=>{ if(e.key==='Escape') closeDropdowns(); });
+  setInterval(()=>{ if(currentView==='agent' && !document.hidden) loadAgentQueues(); }, 90000);
 
   // --- AVANZADO: umbral de vivo, velocidad de rotación, filtros, etiquetas ---
   // (ONLINE_SEC_DYN / ROTATE_MS_DYN / ONLY_LIVE / SHOW_LABELS declarados arriba)
@@ -5653,6 +5883,8 @@
     '  threshold <min>        fija el umbral de «vivo» (1-30)',
     '  rotate <s|on|off>      velocidad de rotación (o pausa)',
     '  clear                  limpia la consola',
+    '  agente [nombre]        carga por agente: encargos abiertos, modelo y cupo;',
+    '                         con nombre, su cola (#número + titular). Datos reales.',
     '  /dudaAgente [N]        emula N dudas de agentes (1-8, def. 3) → naves 👾',
     '                         (combos REALES de la flota — persona+máquina+proyecto de la',
     '                         presencia, frescos primero — con pregunta inventada «(emulada)»)',
@@ -5714,6 +5946,24 @@
         break;
       }
       case 'clear': cliOut.innerHTML=''; break;
+      case 'agente': case 'agentes': case '/agente': {   // r38: carga por agente (#4497)
+        loadAgentQueues(true).then(()=>{
+          const names=agRoster();
+          if(a0){
+            const n=names.find(x=>norm(x)===norm(a0)) || names.find(x=>norm(x).startsWith(norm(a0)));
+            if(!n){ cliPrint('no conozco al agente «'+args[0]+'»','err'); return; }
+            const st=AGQ.byAgent[norm(n)];
+            if(!st){ cliPrint(agShow(n)+': cola sin dato','err'); return; }
+            cliPrint(agShow(n)+' · '+agModel(n).txt+' · '+AGQ_CUPO_LABEL[agCupo(n,st).k]+' · '+st.open.length+' abiertos');
+            st.open.forEach(x=>cliPrint('  #'+x.id+' ['+(x.status||'pending')+'] '+agHeadline(x.text)));
+            AGENT_FOCUS=norm(n); setView('agent',true); renderAgentFocus();
+          } else {
+            names.forEach(n=>{ const st=AGQ.byAgent[norm(n)];
+              cliPrint('  '+agShow(n).padEnd(12)+' '+String(st?st.open.length:'—').padStart(3)+'  '+AGQ_CUPO_LABEL[agCupo(n,st).k].padEnd(10)+' '+agModel(n).txt); });
+          }
+        });
+        break;
+      }
       case '/agentetarea': case 'agentetarea': {   // r23: naves con la TAREA VIVA, bajo petición (r25: trío)
         const shown=actividad.force();             // no toca el ajuste ON/OFF del modo demo
         if(shown){

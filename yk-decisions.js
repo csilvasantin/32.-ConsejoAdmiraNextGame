@@ -203,7 +203,10 @@
       var mark = rollback?"↩":current ? (d.status === "expired" ? "⏱" : "✓") : (!closed && i === rec ? "★" : i + 1);
       return "<button class=\"" + cls + "\"" + attrs + "><span class=\"n\">" + mark + "</span><span>" + esc(o) + "</span></button>";
     }).join("");
-    var result = d.status === "decided" ? "<div class=\"dec-done ok\">✓ decisión aplicada: <b>" + esc(d.options[effective] || "") + "</b></div>" : d.status === "expired" ? "<div class=\"dec-done exp\">⏱ sin respuesta — se aplicó la recomendada: <b>" + esc(d.options[effective] || "") + "</b></div>" : d.status === "cancelled" ? "<div class=\"dec-done exp\">" + (d.parent_decision || d.batch_id ? "↩ continuación descartada: se conserva la tanda actual." : "↩ lote descartado: no se iniciará ninguna misión.") + "</div>" : "";
+    var rollback = (d.status === "expired" && /^https:\/\//i.test(String(d.rollback_url || "")))
+      ? " <a class=\"dec-rollback\" href=\"" + esc(d.rollback_url) + "\" target=\"_blank\" rel=\"noopener noreferrer\" onclick=\"event.stopPropagation()\">↩ punto de retorno</a>"
+      : "";
+    var result = d.status === "decided" ? "<div class=\"dec-done ok\">✓ decisión aplicada: <b>" + esc(d.options[effective] || "") + "</b></div>" : d.status === "expired" ? "<div class=\"dec-done exp\">⏱ sin respuesta — se aplicó la recomendada: <b>" + esc(d.options[effective] || "") + "</b>" + rollback + "</div>" : d.status === "cancelled" ? "<div class=\"dec-done exp\">" + (d.parent_decision || d.batch_id ? "↩ continuación descartada: se conserva la tanda actual." : "↩ lote descartado: no se iniciará ninguna misión.") + "</div>" : "";
     var batch = d.batch, batchHtml = "";
     if (batch) { var active = (batch.items || []).filter(function (x) { return x.status === "active"; })[0]; var queued = (batch.items || []).filter(function (x) { return x.status === "queued"; }); batchHtml = "<div class=\"dec-batch" + (batch.status === "paused" ? " paused" : "") + "\">" + (batch.status === "paused" ? "⏸ <b>cola pausada</b>: " + esc(batch.pause_reason || "requiere decisión") : batch.status === "completed" ? "✓ <b>tanda completada</b>" : "▶ <b>activa</b>: " + esc(active ? active.title : "preparando") + " · cola: " + queued.map(function (x) { return esc(x.title); }).join(" → ")) + "</div>"; }
     var projectTag = opts && opts.nested ? "h4" : "h3";
@@ -219,7 +222,7 @@
     var outCls = d.status === "decided" ? "ok" : d.status === "expired" ? "exp" : "cancel";
     var chosenText = esc(d.options && d.options[effective] || "");
     var outcome = d.status === "decided" ? "✓ eligió <b>" + chosenText + "</b>"
-      : d.status === "expired" ? "⏱★ recomendada <b>" + chosenText + "</b>"
+      : d.status === "expired" ? "⏱★ recomendada <b>" + chosenText + "</b>" + rollback
       : "↩ <b>descartada</b>";
     return "<details class=\"dec dec-fold\"" + (opts && opts.expanded ? " open" : "") + " aria-labelledby=\"" + projectId + "\">"
       + "<summary class=\"dec-sum\"><span class=\"dec-chevron\" aria-hidden=\"true\">›</span><div class=\"dec-sum-main\">"

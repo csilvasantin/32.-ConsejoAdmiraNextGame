@@ -278,11 +278,27 @@ export function crearYokup(env = {}, identidad, deps = {}) {
   async function ventana({ pregunta, opciones, proyecto_id, mision = '' }) {
     const id = exigir();
     const p = await proyectoDelCenso(proyecto_id);
-    const ops = [...opciones.slice(0, 3), 'Volver atras', 'Custom'];
-    const body = { agent: id.agent, machine: id.machine, surface: 'grokbot', minutes: 5, project_id: p.id, project: p.name, project_slug: p.slug, mission: mision || 'Ventana de GrokBot', question: pregunta, url: 'https://www.admira.live/', recommended: 0, options: ops, user_override: true };
+    const ops = [...opciones.slice(0, 3), '↩ Volver atrás', '✍️ Custom · Escribe la mejora que quieras a mano'];
+    // Sin minutes: el worker aplica DECISION_MIN_DEFAULT (15). La URL de trabajo
+    // no es la ficha: el enlace directo se arma después, con el id real.
+    const body = { agent: id.agent, machine: id.machine, surface: 'grokbot', project_id: p.id, project: p.name, project_slug: p.slug, mission: mision || 'Ventana de GrokBot', question: pregunta, url: 'https://www.admira.live/', recommended: 0, options: ops, user_override: true };
     const r = await llamar(`${api}/decisions`, json(body));
+    const decision_id = String((r && (r.id || r.decision_id)) || '');
+    const url = decision_id
+      ? `https://www.admira.live/decisiones?decision_id=${encodeURIComponent(decision_id)}&agent=${encodeURIComponent(id.agent)}&project_id=${encodeURIComponent(p.id)}`
+      : 'https://www.admira.live/decisiones';
+    let captura = '';
+    let captura_error = '';
+    if (decision_id) {
+      try {
+        const texto = [`Ventana ${decision_id}`, pregunta, ...ops.map((op, i) => `${i + 1}. ${op}`), url].join('\n');
+        captura = await renderYSubir({ titulo: `Ventana ${decision_id}`, texto, pie: `${id.agent} · ${p.id}` });
+      } catch (e) {
+        captura_error = String(e && e.message || e).slice(0, 180);
+      }
+    }
     await latir(`ventana de decisión abierta: ${String(pregunta).slice(0, 60)}`);
-    return r;
+    return { ...r, decision_id, url, captura, ...(captura_error ? { captura_error } : {}) };
   }
 
   /** Registrar en yokup la opción que Carlos ha elegido (en el chat, en Telegram o donde sea):

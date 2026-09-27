@@ -222,9 +222,12 @@ test('paso, evidencia (agent/session_transcript) e informe llevan owner, imagen 
 test('ventana, misiones, marcador y quién soy', async () => {
   const { client, peticiones } = await cliente();
   const v = res(await client.callTool({ name: 'yokup_ventana', arguments: { pregunta: '¿Qué hago primero en yokup.com?', opciones: ['★ Uno recomendado', 'Dos alternativo', 'Tres alternativo'], proyecto_id: 'yokup' } }));
-  assert.deepEqual(v.options, ['★ Uno recomendado', 'Dos alternativo', 'Tres alternativo', 'Volver atras', 'Custom']);
+  assert.deepEqual(v.options, ['★ Uno recomendado', 'Dos alternativo', 'Tres alternativo', '↩ Volver atrás', '✍️ Custom · Escribe la mejora que quieras a mano']);
+  assert.equal(v.decision_id, 'DEC-x');
+  assert.equal(v.url, 'https://www.admira.live/decisiones?decision_id=DEC-x&agent=WozniakGrokBot&project_id=yokup');
+  assert.equal(v.captura, 'https://yokup.test/media/fleet/abc.png');
   const dec = peticiones.find((x) => x.url.endsWith('/decisions')).body;
-  assert.equal(dec.agent, 'WozniakGrokBot'); assert.equal(dec.machine, 'GrokBot'); assert.equal(dec.recommended, 0); assert.equal(dec.minutes, 5); assert.equal(dec.project_id, 'yokup'); assert.equal(dec.user_override, true);
+  assert.equal(dec.agent, 'WozniakGrokBot'); assert.equal(dec.machine, 'GrokBot'); assert.equal(dec.recommended, 0); assert.equal(dec.minutes, undefined); assert.equal(dec.project_id, 'yokup'); assert.equal(dec.user_override, true);
   const q = res(await client.callTool({ name: 'yokup_quien_soy', arguments: {} }));
   assert.equal(q.identidad.agent, 'WozniakGrokBot'); assert.equal(q.marcador.hoy.mission_points, 40); assert.equal(q.marcador.baremo.mission, 40);
 });

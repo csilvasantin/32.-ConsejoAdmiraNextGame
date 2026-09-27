@@ -14,26 +14,26 @@
   // La MARCA enlaza a la home (regla: el nombre del site siempre vuelve a la home).
   var PROJECT = "Consejo AdmiraNeXT";
   // Versión interna (solo console, ya no se pinta en el menú superior — Carlos 2026-07-13).
-  var VERSION = "v.2026.09.18.r38";
+  var VERSION = "v.2026.09.27.r39";
 
   // Nav de FLUJO DE TRABAJO, junto a la marca (Carlos, 18-09-2026): las secciones del
   // trabajo diario van primero y en el MISMO orden que la barra de plataforma (yk-frame),
   // para que las dos superficies no divergan. Rutas limpias (todas 200 en producción).
-  var TOP = [
-    { t: "📊 Dashboard",   h: "https://www.admira.live/dashboard" },
-    { t: "🎯 Objetivos",   h: "https://www.admira.live/objetivos" },
-    { t: "⚖️ Decisiones",  h: "https://www.admira.live/decisiones" },
-    { t: "🚀 Misiones",    h: "https://www.admira.live/misiones" },
-    { t: "✅ Tareas",      h: "https://www.admira.live/tareas" },
-    // Highscore siempre visible (Carlos, FLT-1321) y Asignaciones son flujo, se quedan.
-    { t: "🏆 Highscore",   h: "https://www.admira.live/highscore" },
-    { t: "🧩 Asignaciones", h: "https://www.admira.live/asignaciones/" },
-    // Consumo (Carlos, 19-09-2026): cuánto gastan los agentes, visible en el menú superior.
-    { t: "💸 Consumo",     h: "https://www.admira.live/consumos" },
-    // STATUS y TELEGRAM salieron de la barra (Carlos, 11-08-2026): STATUS vive en
-    // admiranext.com/status; los avisos de Telegram ya llegan solos al móvil. Ambas
-    // páginas siguen publicadas (/status, /telegram), sólo dejan de ocupar sitio aquí.
-    // Incubadora retirada temporalmente (sigue en /13rue/ por enlace directo).
+  // Cuadratura #4494: menú fijo horizontal; cada grupo se abre en vertical.
+  // STATUS sigue fuera de la barra (Carlos, 11-08-2026): vive en /status con su propio cuadro.
+  var MENU = [
+    { t: "Flujo ▾", items: [
+      { t: "📊 Dashboard",   h: "https://www.admira.live/dashboard" },
+      { t: "🎯 Objetivos",   h: "https://www.admira.live/objetivos" },
+      { t: "⚖️ Decisiones",  h: "https://www.admira.live/decisiones" },
+      { t: "🚀 Misiones",    h: "https://www.admira.live/misiones" },
+      { t: "✅ Tareas",      h: "https://www.admira.live/tareas" }
+    ]},
+    { t: "Flota ▾", items: [
+      { t: "🏆 Highscore",   h: "https://www.admira.live/highscore" },
+      { t: "🧩 Asignaciones", h: "https://www.admira.live/asignaciones/" },
+      { t: "💸 Consumo",     h: "https://www.admira.live/consumos" }
+    ]}
   ];
   // AVANZADO (Carlos, 18-09-2026): Control, Players y Diario son gestión/infra, no el
   // flujo de trabajo → se recogen tras el botón «Avanzado» para no saturar la barra.
@@ -137,7 +137,18 @@
     ".rail-left .rail-hd,.rail-right .rail-hd,.rail-bottom .rail-hd,.rail-left .rail-group,.rail-right .rail-group,.rail-bottom .rail-group{" +
       "font-family:'Press Start 2P',monospace !important;font-size:8px !important;color:#c9a86a !important;letter-spacing:1px !important;" +
       "text-transform:uppercase !important;padding:8px 8px 5px !important;border:0 !important;background:none !important}" +
-    "html.admira-bar-on body{padding-top:46px !important}";
+    "html.admira-bar-on body{padding-top:46px !important}" +
+    /* Cuadratura #4494, heredada: opciones (.rail-left) a la DERECHA,
+       avanzado (.rail-right) a la IZQUIERDA. Solo raíles con clase .rail
+       (portería fixed). El pliegue sigue a cada lado nuevo. */
+    ".rail.rail-left{left:auto !important;right:0 !important}" +
+    ".rail.rail-right{right:auto !important;left:0 !important}" +
+    "body.pf-left-off .rail.rail-left{transform:translateX(103%) !important}" +
+    "body.pf-right-off .rail.rail-right{transform:translateX(-103%) !important}" +
+    ".cuadratura-hbar{display:flex;flex-wrap:wrap;gap:6px;margin:0 0 8px}" +
+    ".cuadratura-hbar a{font-family:'Press Start 2P',monospace;font-size:7px;color:#ffdd66;" +
+      "text-decoration:none;border:2px solid #8b5a14;background:#2a1a08;padding:6px 8px;box-shadow:2px 2px 0 #000}" +
+    ".cuadratura-hbar a:hover{background:#8b5a14;border-color:#f0c040;color:#fff}";
 
   function mount() {
     // fuente pixel de la home (Press Start 2P) para que la barra case con el SCUMM
@@ -171,41 +182,36 @@
       var cur = isHere(i.h);
       return '<a href="' + i.h + '"' + (cur ? ' class="active" aria-current="page"' : "") + ">" + i.t + "</a>";
     }
-    nav.innerHTML = TOP.map(linkHTML).join("");
-
-    // Grupo AVANZADO: un botón «Avanzado» que despliega Control/Players/Diario. Va DENTRO
-    // del nav, así se colapsa con el resto tras el ☰ en móvil. Autocontenido: no depende
-    // de que la página tenga un raíl AVANZADO propio (muchas no lo tienen).
-    var adv = document.createElement("div");
-    adv.className = "admira-adv";
-    var advActive = ADV.some(function (i) { return isHere(i.h); });
-    var advBtn = document.createElement("button");
-    advBtn.type = "button";
-    advBtn.className = "admira-adv-btn" + (advActive ? " active" : "");
-    advBtn.setAttribute("aria-haspopup", "true");
-    advBtn.setAttribute("aria-expanded", "false");
-    advBtn.innerHTML = "⚙️ Avanzado ▾";
-    var advMenu = document.createElement("div");
-    advMenu.className = "admira-adv-menu";
-    advMenu.setAttribute("hidden", "");
-    advMenu.innerHTML = ADV.map(linkHTML).join("");
-    function advOpen(open) {
-      if (open) advMenu.removeAttribute("hidden"); else advMenu.setAttribute("hidden", "");
-      advBtn.setAttribute("aria-expanded", open ? "true" : "false");
-    }
-    advBtn.addEventListener("click", function () {
-      advOpen(advMenu.hasAttribute("hidden"));
+    // Menú horizontal de grupos; cada uno abre un desplegable vertical (#4494).
+    MENU.concat([{ t: "Avanzado ▾", items: ADV }]).forEach(function (group) {
+      var wrap = document.createElement("div");
+      wrap.className = "admira-adv";
+      var on = group.items.some(function (i) { return isHere(i.h); });
+      var btn = document.createElement("button");
+      btn.type = "button";
+      btn.className = "admira-adv-btn" + (on ? " active" : "");
+      btn.setAttribute("aria-haspopup", "true");
+      btn.setAttribute("aria-expanded", "false");
+      btn.textContent = group.t;
+      var menu = document.createElement("div");
+      menu.className = "admira-adv-menu";
+      menu.setAttribute("hidden", "");
+      menu.innerHTML = group.items.map(linkHTML).join("");
+      function setOpen(open) {
+        if (open) menu.removeAttribute("hidden"); else menu.setAttribute("hidden", "");
+        btn.setAttribute("aria-expanded", open ? "true" : "false");
+      }
+      btn.addEventListener("click", function () { setOpen(menu.hasAttribute("hidden")); });
+      document.addEventListener("click", function (e) {
+        if (!wrap.contains(e.target) && !menu.hasAttribute("hidden")) setOpen(false);
+      });
+      document.addEventListener("keydown", function (e) { if (e.key === "Escape") setOpen(false); });
+      wrap.appendChild(btn);
+      wrap.appendChild(menu);
+      nav.appendChild(wrap);
     });
-    // Un clic FUERA del grupo (o Escape) cierra el desplegable. Se comprueba el target en vez
-    // de fiarlo a stopPropagation: así el mismo clic que abre el botón no lo cierra acto seguido.
-    document.addEventListener("click", function (e) {
-      if (!adv.contains(e.target) && !advMenu.hasAttribute("hidden")) advOpen(false);
-    });
-    document.addEventListener("keydown", function (e) { if (e.key === "Escape") advOpen(false); });
-    adv.appendChild(advBtn);
-    adv.appendChild(advMenu);
-    nav.appendChild(adv);
     top.appendChild(nav);
+    ensureBottomMenu(linkHTML);
 
     // Botón hamburguesa (☰): oculto en desktop vía CSS; en móvil abre/cierra el nav.
     // Empieza cerrado (hidden) para que en móvil el panel no tape el contenido.
@@ -289,13 +295,12 @@
     return b;
   }
 
-  // Iconos toggle (estilo Codex, look SCUMM). Sólo aparece el icono si la página
-  // tiene ese panel. Alternan clases body.pf-*-off (cada página define qué ocultan).
-  //   · OPCIONES (panel izquierdo) → icono a la IZQUIERDA DEL TODO.
-  //   · AVANZADO (panel derecho) + EXPERTO (panel inferior) → a la DERECHA de «Usuarios».
+  // Iconos toggle. Cuadratura #4494:
+  //   · AVANZADO (.rail-right) → icono a la IZQUIERDA (el panel queda a la izquierda).
+  //   · OPCIONES (.rail-left) + EXPERTO (abajo) → icono a la DERECHA.
   function buildToggles(top) {
-    var left = makeToggle({ sel: ".rail-left", cls: "pf-left-off", ls: "pf_left",
-      title: "Contraer opciones · panel izquierdo",
+    var left = makeToggle({ sel: ".rail-right", cls: "pf-right-off", ls: "pf_right",
+      title: "Avanzado · panel izquierdo",
       svg: '<rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="1.6" y="1.6" width="4.4" height="10.8" rx="1"/>' });
     if (left) {
       var lw = document.createElement("div");
@@ -307,9 +312,9 @@
     box.id = "pf-toggles";
     var any = false;
     [
-      { sel: ".rail-right", cls: "pf-right-off", ls: "pf_right", title: "Avanzado · panel derecho",
+      { sel: ".rail-left", cls: "pf-left-off", ls: "pf_left", title: "Opciones · panel derecho",
         svg: '<rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="10" y="1.6" width="4.4" height="10.8" rx="1"/>' },
-      { sel: ".rail-bottom", cls: "pf-bottom-off", ls: "pf_bottom", title: "Modo experto · panel inferior",
+      { sel: ".rail-bottom", cls: "pf-bottom-off", ls: "pf_bottom", title: "Menú avanzado y consola · abajo",
         svg: '<rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="1.6" y="8.4" width="12.8" height="4" rx="1"/>' }
     ].forEach(function (p) {
       var b = makeToggle(p);
@@ -342,6 +347,33 @@
         else top.insertBefore(a, document.getElementById("pf-toggles"));
       })
       .catch(function () {});
+  }
+
+  // Abajo: menú horizontal de avanzado. La línea de comandos la pone la página
+  // si ya tiene input; si no, se añade una consola local que no llama a la flota.
+  function ensureBottomMenu(linkHTML) {
+    var rail = document.querySelector(".rail-bottom");
+    if (!rail || rail.querySelector(".cuadratura-hbar")) return;
+    var nav = document.createElement("nav");
+    nav.className = "cuadratura-hbar";
+    nav.setAttribute("aria-label", "Menú avanzado");
+    nav.innerHTML = ADV.map(linkHTML).join("");
+    rail.insertBefore(nav, rail.firstChild);
+    if (rail.querySelector("input,textarea")) return;
+    var form = document.createElement("form");
+    form.className = "cuadratura-cli";
+    form.innerHTML = '<input type="text" aria-label="Línea de comandos de prueba" placeholder="prueba un comando (local)" autocomplete="off">' +
+      '<output aria-live="polite"></output>';
+    form.addEventListener("submit", function (e) {
+      e.preventDefault();
+      var inp = form.querySelector("input");
+      var out = form.querySelector("output");
+      var line = (inp.value || "").trim();
+      if (!line) return;
+      out.textContent = "local · " + line + " (no se ejecuta en la flota)";
+      inp.value = "";
+    });
+    rail.insertBefore(form, nav.nextSibling);
   }
 
   if (document.body) mount();

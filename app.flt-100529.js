@@ -332,6 +332,9 @@
         if (currentVerb === 'entrenar') renderEntrenarList();
         closeTableViewer();
         renderLegendStrip();
+        if (window.CouncilTodo && window.CouncilTodo.isOpen()) {
+            window.CouncilTodo.setGeneration(gen, (NAMEPLATE_POS[gen] || []).map(p => ({ persona: p.persona, role: p.role, x: p.x, y: p.y })));
+        }
     }
 
     function renderLegendStrip() {
@@ -2905,6 +2908,13 @@
         hideSpeechBubble();
     }
 
+    function showTodoBubbles() {
+        if (typeof hideSpeechBubble === 'function') { try { hideSpeechBubble(); } catch (_) {} }
+        const plates = (NAMEPLATE_POS[currentGen] || []).map(p => ({ persona: p.persona, role: p.role, x: p.x, y: p.y }));
+        setActionLine("Preguntar a todos · qué hace cada consejero ahora mismo (clic para cerrar)");
+        return window.CouncilTodo.show({ gen: currentGen, plates });
+    }
+
     // Send message to council
     function sendMessage() {
         const input = document.getElementById("action-input");
@@ -2916,6 +2926,15 @@
         const imageForSend = takePendingChatImage();
 
         if (handleCliCommand(text)) {
+            return;
+        }
+
+        // «todo» / «all» con Preguntar (Carlos, 27-09-2026): un bocadillo sobre CADA
+        // consejero con lo que está haciendo ahora mismo (council-todo.js). Solo esas
+        // dos palabras exactas; cualquier otra pregunta sigue el flujo de siempre.
+        if ((currentVerb === 'preguntar' || preguntarMode) && !imageForSend &&
+            window.CouncilTodo && window.CouncilTodo.isTodoCommand(text)) {
+            showTodoBubbles();
             return;
         }
 

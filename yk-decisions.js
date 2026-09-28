@@ -83,7 +83,7 @@
        + ".dec-sum-outcome b{color:var(--ink);font-weight:700}.dec-sum-outcome.ok b{color:var(--good,#3df08a)}.dec-sum-outcome.exp b{color:var(--warn,#ffb545)}"
        + ".dec-fold>summary .dec-stamp{border:0;margin:0;padding:0}"
        + ".dec-fold-body{padding:11px 13px 13px;border-top:1px solid var(--line)}";
-  /* El histórico diario se divide por la HORA DE APERTURA en Madrid. Detalle
+  /* El histórico diario se divide por la HORA DE APERTURA local del navegador. Detalle
      conserva máquina → agente; Cuadrícula elimina esa jerarquía visual y Lista
      mantiene la hoja ordenable, siempre sin mezclar filas entre horas. */
   CSS += ".decision-history-alt{padding:0 14px 2px}.decision-hour-group{min-width:0;margin:0 0 14px}"
@@ -373,18 +373,18 @@
       + '</div>';
   }
   function renderDecisionGridRows(items) { return (items || []).map(decisionGridRow).join(""); }
-  function madridParts(ts) {
+  function localParts(ts) {
     var n=gridEpoch(ts),parts={};
     if(!n)return null;
     try {
-      new Intl.DateTimeFormat("en-GB",{timeZone:"Europe/Madrid",year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",hourCycle:"h23"}).formatToParts(new Date(n)).forEach(function(part){if(part.type!=="literal")parts[part.type]=part.value;});
+      new Intl.DateTimeFormat("en-GB",{year:"numeric",month:"2-digit",day:"2-digit",hour:"2-digit",hourCycle:"h23"}).formatToParts(new Date(n)).forEach(function(part){if(part.type!=="literal")parts[part.type]=part.value;});
     } catch (_) {
       var local=new Date(n),pad=function(value){return String(value).padStart(2,"0");};
       parts={year:String(local.getFullYear()),month:pad(local.getMonth()+1),day:pad(local.getDate()),hour:pad(local.getHours())};
     }
     return parts;
   }
-  function ymd(ts) { var p=madridParts(ts);return p?p.year+"-"+p.month+"-"+p.day:""; }
+  function ymd(ts) { var p=localParts(ts);return p?p.year+"-"+p.month+"-"+p.day:""; }
   function shiftYmd(value,days) {
     var parts=String(value||"").split("-").map(Number),date=new Date(Date.UTC(parts[0]||1970,(parts[1]||1)-1,(parts[2]||1)+days));
     return date.toISOString().slice(0,10);
@@ -410,7 +410,7 @@
   function decisionHourGroups(items) {
     var groups={};
     (items||[]).forEach(function(item){
-      var parts=madridParts(item&&item.created_at),key=parts?parts.year+"-"+parts.month+"-"+parts.day+"T"+parts.hour:"0000-00-00T00";
+      var parts=localParts(item&&item.created_at),key=parts?parts.year+"-"+parts.month+"-"+parts.day+"T"+parts.hour:"0000-00-00T00";
       (groups[key]||(groups[key]={key:key,day:parts?parts.year+"-"+parts.month+"-"+parts.day:"",hour:parts?parts.hour:"",items:[]})).items.push(item);
     });
     return Object.keys(groups).sort().reverse().map(function(key){
@@ -448,9 +448,12 @@
   }
   function targetDecisionError(item,target) {
     if (!item||String(item.id||"")!==String(target&&target.id||"")) return "La decisión devuelta no coincide con la solicitada.";
-    if (String(item.status||"")!=="pending") return "La decisión solicitada ya no está pendiente.";
+    if (!/^(pending|decided|expired|cancelled)$/.test(String(item.status||""))) return "La decisión solicitada tiene un estado desconocido.";
     if (!target.agent||identityKey(item.agent,item.machine)!==identityKey(target.agent,"")) return "La decisión solicitada pertenece a otro agente.";
     if (!target.projectId||String(item.project_id||"")!==target.projectId) return "La decisión solicitada pertenece a otro proyecto.";
+    // El histórico conserva su formato original; las cinco opciones canónicas
+    // sólo son requisito para una decisión que todavía se puede elegir.
+    if (item.status!=="pending") return Array.isArray(item.options)&&item.options.length ? "" : "La decisión solicitada no contiene opciones válidas.";
     var options=item.options,recommended=Number(item.recommended);
     if (!Array.isArray(options)||options.length!==5||options.some(function(option){return !String(option==null?"":option).trim();})) return "La decisión solicitada no contiene exactamente cinco opciones válidas.";
     if (!/volver\s+atr[aá]s/i.test(String(options[3]))||!/custom|escribe\s+la\s+mejora/i.test(String(options[4]))) return "La decisión solicitada no respeta el orden canónico de opciones.";
@@ -472,14 +475,14 @@
     // sig/histSig arrancan en null (no ""): con cero elementos la firma también es
 // "" y el primer render se saltaba, dejando la sección vacía sin su mensaje.
     var api = config.worker.replace(/\/$/, "") + "/decisions", decisions = [], sig = null, histSig = null, truncated = false, projectScope = null;
-    var target = full ? targetSpec(window.location&&window.location.search) : null, targetError = "";
+    var target = full ? targetSpec(window.location&&window.location.search) : null, targetError = "", targetStatus = null;
     // FILTRO de los chips (Carlos): null = todas; si no, un estado. Pulsar el chip
     // activo otra vez vuelve a todas. VIVAS actúa sobre la sección de relojes;
     // DECIDIDAS/VENCIDAS/CANCELADAS acotan el histórico a ese estado.
     var filter = null, rangeMode = "today", historyView = "detail";
     var dayInput = full ? document.getElementById("decisionDay") : null;
     var selectedDay = ymd(Date.now());
-    if (dayInput) { dayInput.value = selectedDay; dayInput.disabled=!!target; dayInput.addEventListener("change", function () {
+    if (dayInput) { dayInput.value = selectedDay; dayInput.disabled=false; dayInput.addEventListener("change", function () {
       selectedDay = dayInput.value || ymd(Date.now()); rangeMode = "custom"; sig = null; histSig = null; paintRanges(); renderFull();
     }); }
     var STATUS_LABEL = {pending:"vivas", decided:"decididas", expired:"vencidas", cancelled:"canceladas"};
@@ -497,7 +500,7 @@
     function paintRanges() {
       Array.prototype.forEach.call(document.querySelectorAll("[data-decision-range]"),function(button){
         button.setAttribute("aria-pressed",String(button.getAttribute("data-decision-range")===rangeMode));
-        button.disabled=!!target;
+        button.disabled=false;
       });
     }
     function selectRange(next) {
@@ -516,7 +519,7 @@
     function setView(next) {
       var normalized=/^(grid|list)$/.test(next)?next:"detail";
       if(historyView===normalized&&histSig!==null)return historyView;
-      historyView=normalized;histSig=null;if(full&&!target)renderFull();return historyView;
+      historyView=normalized;histSig=null;if(full)renderFull();return historyView;
     }
 
     function renderTargetState(message,error) {
@@ -524,18 +527,9 @@
       var count=document.getElementById("decsN");if(count)count.textContent="· decisión solicitada";
       list.innerHTML='<p class="decs-target-state'+(error?' error':'')+'" role="'+(error?'alert':'status')+'" aria-live="'+(error?'assertive':'polite')+'">'+esc(message)+'</p>';
     }
-    function renderTarget() {
-      counters(decisions,[]);if(targetError){renderTargetState(targetError,true);return;}
-      var item=decisions[0],invalid=targetDecisionError(item,target);
-      if(invalid){renderTargetState(invalid,true);return;}
-      section.hidden=false;if(histSec)histSec.hidden=true;
-      var count=document.getElementById("decsN");if(count)count.textContent="· 1 esperando tu decisión";
-      list.innerHTML=renderGroups([item],null);
-    }
-
     // Vista COMPLETA: vivas arriba, cerradas abajo. Todo del worker.
     function renderFull() {
-      if(target){renderTarget();return;}
+      if(targetError){sig=null;histSig=null;counters([],[]);renderTargetState(targetError,true);return;}
       var dayItems = decisions.filter(function (d) { return !projectScope || String(d.project_id || "") === projectScope; })
         .filter(function (d) { return decisionInRange(d,rangeMode,selectedDay,Date.now()); });
       var live = dayItems.filter(function (d) { return d.status === "pending"; });
@@ -578,7 +572,7 @@
         if(histAlt)histAlt.innerHTML=closedShown.length?decisionHistoryByHour(closedShown,historyView):empty;
       }
       var histNote = document.getElementById("decsHistNote");
-      if (histNote) histNote.innerHTML = "Las decisiones se agrupan por su hora de apertura en Madrid. Los relojes todavía vivos permanecen arriba; aquí se muestran las cerradas del periodo elegido. <code>GET /decisions?all=1&amp;since=0</code> conserva el histórico común de toda la flota."
+      if (histNote) histNote.innerHTML = "Las decisiones se agrupan por su hora de apertura en tu zona horaria local. Los relojes todavía vivos permanecen arriba; aquí se muestran las cerradas del periodo elegido. <code>GET /decisions?all=1&amp;since=0</code> conserva el histórico común de toda la flota."
         + (truncated ? " Ahora mismo hay más de " + (PAGE * PAGE_MAX) + " y esta lista llega solo hasta ahí: las más antiguas quedan fuera." : "");
     }
 
@@ -657,7 +651,19 @@
       var payload=await response.json();if(!(payload&&payload.ok===true&&Array.isArray(payload.items)))throw new Error("target_contract");
       var item=payload.items.find(function(row){return String(row&&row.id||"")===target.id;});
       if(!item){targetError="No se encontró la decisión solicitada para este agente y proyecto.";return [];}
-      targetError=targetDecisionError(item,target);return targetError?[]:[item];
+      targetError=targetDecisionError(item,target);
+      if(targetError)return [];
+      // El enlace abre también decisiones cerradas. Selecciona su estado y día
+      // una vez, sin deshacer después los filtros que el usuario elija.
+      if(targetStatus!==item.status){
+        filter=item.status;sig=null;histSig=null;paintChips();
+        if(targetStatus===null&&!decisionInRange(item,rangeMode,selectedDay,Date.now())){
+          selectedDay=ymd(item.created_at);rangeMode=selectedDay?"custom":"all";
+          if(dayInput)dayInput.value=selectedDay;paintRanges();
+        }
+        targetStatus=item.status;
+      }
+      return [item];
     }
     async function load() {
       try {
@@ -669,7 +675,7 @@
           decisions = d.items || [];
         }
         render();
-      } catch (e) { if(target){targetError="No se pudo cargar la decisión solicitada. Vuelve a intentarlo.";decisions=[];renderTarget();} }
+      } catch (e) { if(target){targetError="No se pudo cargar la decisión solicitada. Vuelve a intentarlo.";decisions=[];renderFull();} }
     }
     setInterval(function () { var refresh = false; decisions.forEach(function (d) { if (d.status !== "pending") return; d.secondsLeft = Math.max(0, d.secondsLeft - 1); var clock = document.querySelector("[data-clock='" + d.id + "']"); if (clock) { clock.textContent = mmss(d.secondsLeft); var fill = document.querySelector("[data-fill='" + d.id + "']"); if (fill) fill.style.setProperty("--fill", pct(d) + "%"); } if (!d.secondsLeft) refresh = true; }); if (refresh) load(); }, 1000);
     if (!summary) document.addEventListener("click", async function (e) {
@@ -686,7 +692,7 @@
         await fetch(api + "/" + encodeURIComponent(b.dataset.dec) + "/choose", {method:"POST",headers:{"content-type":"application/json"},body:JSON.stringify({choice:choice,by:"Carlos",custom_text:customText})});
       } finally { load(); }
     });
-    if (full&&!target) { wireChips();wireRanges(); }
+    if (full) { wireChips();wireRanges(); }
     if (full && window.addEventListener) window.addEventListener("yk:project-change", function (event) {
       if(target)return;
       projectScope = event.detail && event.detail.project_id || null;

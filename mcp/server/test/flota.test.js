@@ -81,8 +81,11 @@ test('agentes_vivos agrupa por persona y equipo, deja fuera los latidos viejos y
   assert.deepEqual(v.agentes.map((a) => a.persona), ['Morfeo', 'Oraculo', 'Smith']);
   assert.deepEqual(v.agentes.find((a) => a.persona === 'Smith').maquinas.map((m) => m.maquina), ['MacMini', 'MacBookPro16']);
   assert.ok(v.sin_senal.includes('Neo') && v.sin_senal.includes('Trinity'));
-  assert.equal(v.consejeros.length, 4);
-  assert.deepEqual(v.consejeros.map((c) => [c.persona, c.silla, c.maquina]), [['Wozniak', 'CTO', 'MacBookAirPlata'], ['Jobs', 'CEO', 'MacBookAirAzul'], ['Lucas', 'CSO', 'MacBookAirRosa'], ['Disney', 'CCO', 'MacBookAirCrema']], 'silla ↔ MacBook Air (Jobs/Carbono 8-sep-2026, #2882)');
+  assert.equal(v.consejeros.length, 5);
+  assert.deepEqual(v.consejeros.map((c) => [c.persona, c.silla, c.maquina]), [['Wozniak', 'CTO', 'MacBookAirPlata'], ['Jobs', 'CEO', 'MacBookAirAzul'], ['Lucas', 'CSO', 'MacBookAirRosa'], ['Disney', 'CCO', 'MacBookAirCrema'], ['Musk', 'CEO', 'GrokBot']], 'silla ↔ MacBook Air, y Musk sin Mac');
+  assert.deepEqual(v.consejeros.find((c) => c.persona === 'Musk').deepagent, 'Merovingio');
+  assert.equal(v.consejeros.find((c) => c.persona === 'Musk').deepagent_maquina, 'GrokBotBox');
+  assert.ok(v.sin_senal.includes('Merovingio'), 'Merovingio es agente de la flota: sin latido sale en sin_senal');
   assert.ok(!v.agentes.some((a) => a.persona === 'Lucas'));
 });
 
@@ -102,6 +105,21 @@ test('si la persona late en dos equipos y se indica uno, manda ese; sin señal, 
   assert.equal(a.maquina, 'macbookpro16'); assert.equal(a.mision_en_yokup, false, 'sin proyecto es conversación');
   const b = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Trinity', texto: 'Cuando despiertes, revisa el MBP14.' } }));
   assert.equal(b.maquina, null); assert.match(b.nota, /no late/);
+});
+
+test('Merovingio se encarga en la GrokBot box; Elon y Elon Musk llegan a la silla Musk', async () => {
+  const { client, peticiones } = await cliente('clave-de-morfeo-macmini-xxxxxxxxxx');
+  const m = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Merovingio', maquina: 'GrokBotBox', texto: 'Corre esto con Grok CLI en la caja de Musk.' } }));
+  assert.equal(m.persona, 'Merovingio'); assert.equal(m.maquina, 'grokbotbox');
+  const elon = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Elon Musk', texto: 'Revisa el primer principio de este encargo.' } }));
+  assert.equal(elon.persona, 'Musk'); assert.equal(elon.maquina, 'grokbot');
+  const alias = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'el Merovingio', maquina: 'GrokBotBox', texto: 'El artículo también te nombra.' } }));
+  assert.equal(alias.persona, 'Merovingio');
+  const jobs = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Jobs', maquina: 'grokbot', texto: 'el equipo de despertar no es la silla de Musk' } }));
+  assert.equal(jobs.persona, 'Jobs'); assert.equal(jobs.maquina, 'grokbot');
+  const post = peticiones.filter((p) => p.method === 'POST' && String(p.url).endsWith('/api/bot-inbox'));
+  assert.equal(post[0].body.target_persona, 'Merovingio'); assert.equal(post[0].body.target_machine, 'grokbotbox');
+  assert.equal(post[1].body.target_persona, 'Musk'); assert.equal(post[1].body.target_machine, 'grokbot');
 });
 
 test('a un consejero va al equipo grokbot y avisa de que se le despierta por webhook', async () => {

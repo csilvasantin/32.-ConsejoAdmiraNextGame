@@ -10,6 +10,8 @@
  * `respuesta`, y el worker la publica EN HILO bajo el mensaje original de Carlos.
  */
 
+import { CONSEJEROS_GROKBOT, sillaCanonica } from './sillas.js';
+
 const limpiar = (s) => String(s || '').replace(/\/+$/, '');
 
 export function crearTelegram(env = {}, identidad, deps = {}) {
@@ -59,17 +61,19 @@ export function crearTelegram(env = {}, identidad, deps = {}) {
   // firma con el DESTINATARIO del encargo cuando es un consejero con carné.
   async function firmante(encargoId) {
     const id = exigir();
+    // Un agente de la flota ya tiene carné. No se reescribe al destinatario consejero:
+    // responder un encargo de Wozniak no le convierte en WozniakGrokBot.
+    if (id.tipo === 'agente') return id;
     // La vista privada solo devuelve lo de la persona consultada: se mira la bandeja de
     // cada consejero (empezando por la mía) hasta dar con el encargo.
-    const consejeros = [id.persona, ...['Wozniak', 'Jobs', 'Lucas', 'Disney'].filter((c) => c !== id.persona)];
+    const consejeros = [id.persona, ...CONSEJEROS_GROKBOT.filter((c) => c !== id.persona)];
     for (const c of consejeros) {
       try {
         const q = new URLSearchParams({ persona: c, machine: id.machine });
         const d = await llamar(`${base}/api/bot-inbox?${q}`);
         const fila = (d.items || []).find((x) => Number(x.id) === Number(encargoId));
         if (!fila) continue;
-        const dest = String(fila.target_persona || '').replace(/\s+/g, '');
-        const conocido = ['Wozniak', 'Jobs', 'Lucas', 'Disney'].find((k) => dest.toLowerCase().startsWith(k.toLowerCase()));
+        const conocido = sillaCanonica(fila.target_persona);
         if (conocido && conocido !== id.persona) return { ...id, persona: conocido, agent: `${conocido}${id.machine}` };
         return id;
       } catch { /* siguiente */ }

@@ -68,6 +68,12 @@ test('la identidad sale de la clave: MCP_KEY es Wozniak, MCP_KEYS mapea a los de
   assert.equal(identidadPorClave('', ENV), null);
 });
 
+test('MCP_KEYS Musk y Elon Musk resuelven a MuskGrokBot', () => {
+  const env = { ...ENV, MCP_KEYS: JSON.stringify({ ...KEYS, 'clave-de-musk-xxxxxxxxxxxxxxxxx': { persona: 'Musk' }, 'clave-de-elon-musk-xxxxxxxxxxxxx': { persona: 'Elon Musk' } }) };
+  assert.deepEqual(identidadPorClave('clave-de-musk-xxxxxxxxxxxxxxxxx', env), { persona: 'Musk', machine: 'GrokBot', runtime: 'Grok', model: 'Grok Heavy', agent: 'MuskGrokBot', tipo: 'consejero' });
+  assert.equal(identidadPorClave('clave-de-elon-musk-xxxxxxxxxxxxx', env).agent, 'MuskGrokBot');
+});
+
 test('las claves por consejero abren /mcp y las instrucciones dicen quién eres', async () => {
   const req = (k) => new Request('https://mcp.test/mcp', { headers: { authorization: `Bearer ${k}` } });
   assert.equal(await claveValida(req('clave-de-jobs-xxxxxxxxxxxxxxxxxx'), ENV), true);
@@ -185,6 +191,54 @@ test('modo estricto (MCP_FIRMA_ESTRICTA=1): la clave de una silla no firma por o
   assert.equal(yo.identidad.agent, 'WozniakGrokBot'); assert.equal(yo.aviso, undefined);
 });
 
+test('el enum como incluye a Musk', async () => {
+  const { client } = await cliente();
+  const tool = (await client.listTools()).tools.find((t) => t.name === 'yokup_quien_soy');
+  const blob = JSON.stringify(tool.inputSchema);
+  for (const nombre of ['Wozniak', 'Jobs', 'Lucas', 'Disney', 'Musk']) assert.match(blob, new RegExp(nombre));
+});
+
+test('una clave de agente de la flota no firma como consejero con como (ni en modo estricto ni sin él)', async () => {
+  const { claveFlota, identidadPorClaveAsync } = await import('../src/yokup.js');
+  for (const estricta of ['1', '0']) {
+    const env = { ...ENV, MCP_FLOTA_SEED: 'semilla-de-prueba', MCP_FIRMA_ESTRICTA: estricta };
+    const clave = await claveFlota(env, 'Arquitecto', 'CursorCloud');
+    const id = await identidadPorClaveAsync(clave, env);
+    assert.equal(id.agent, 'ArquitectoCursorCloud'); assert.equal(id.tipo, 'agente');
+    const peticiones = [], estado = {}, fondo = [];
+    const server = crearServidor(env, { fetch: fetchFalso(peticiones, estado), now: () => Date.now(), waitUntil: (p) => fondo.push(p) }, id);
+    const [a, b] = InMemoryTransport.createLinkedPair();
+    await server.connect(b);
+    const client = new Client({ name: 'arquitecto', version: '1' });
+    await client.connect(a);
+    const r = await client.callTool({ name: 'yokup_quien_soy', arguments: { como: 'Musk' } });
+    assert.equal(r.isError, true, 'estricta=' + estricta);
+    assert.match(r.content[0].text, /ArquitectoCursorCloud \(agente de la flota\) y no puede firmar como Musk/);
+    const yo = res(await client.callTool({ name: 'yokup_quien_soy', arguments: {} }));
+    assert.equal(yo.identidad.agent, 'ArquitectoCursorCloud');
+    assert.equal(yo.identidad.tipo, 'agente');
+  }
+});
+
+test('la clave HMAC de Merovingio en GrokBotBox es MerovingioGrokBotBox y tampoco suplanta a Musk', async () => {
+  const { claveFlota, identidadPorClaveAsync } = await import('../src/yokup.js');
+  const env = { ...ENV, MCP_FLOTA_SEED: 'semilla-de-prueba', MCP_FIRMA_ESTRICTA: '1' };
+  const clave = await claveFlota(env, 'Merovingio', 'GrokBotBox');
+  const id = await identidadPorClaveAsync(clave, env);
+  assert.deepEqual(id, { persona: 'Merovingio', machine: 'GrokBotBox', runtime: 'Grok CLI', model: '', agent: 'MerovingioGrokBotBox', tipo: 'agente' });
+  const peticiones = [], estado = {}, fondo = [];
+  const server = crearServidor(env, { fetch: fetchFalso(peticiones, estado), now: () => Date.now(), waitUntil: (p) => fondo.push(p) }, id);
+  const [a, b] = InMemoryTransport.createLinkedPair();
+  await server.connect(b);
+  const client = new Client({ name: 'merovingio', version: '1' });
+  await client.connect(a);
+  const r = await client.callTool({ name: 'yokup_quien_soy', arguments: { como: 'Musk' } });
+  assert.equal(r.isError, true);
+  assert.match(r.content[0].text, /no puede firmar como Musk/);
+  const yo = res(await client.callTool({ name: 'yokup_quien_soy', arguments: {} }));
+  assert.equal(yo.identidad.agent, 'MerovingioGrokBotBox');
+});
+
 test('clave compartida del Consejo (MCP_KEY_CONSEJO): sin como no firma; con como firma esa silla sin firma delegada', async () => {
   const env = { ...ENV, MCP_KEY_CONSEJO: 'clave-compartida-del-consejo-xxxxxxxx' };
   const { client } = await cliente(env.MCP_KEY_CONSEJO, env);
@@ -192,6 +246,8 @@ test('clave compartida del Consejo (MCP_KEY_CONSEJO): sin como no firma; con com
   assert.equal(sin.isError, true); assert.match(sin.content[0].text, /no firma por nadie: pasa como=/);
   const con = res(await client.callTool({ name: 'yokup_quien_soy', arguments: { como: 'Disney' } }));
   assert.equal(con.identidad.agent, 'DisneyGrokBot'); assert.equal(con.identidad.firmado_con_clave_de, undefined); assert.equal(con.aviso, undefined);
+  const musk = res(await client.callTool({ name: 'yokup_quien_soy', arguments: { como: 'Musk' } }));
+  assert.equal(musk.identidad.agent, 'MuskGrokBot'); assert.equal(musk.aviso, undefined);
 });
 
 test('yokup_mis_misiones pide al servidor solo las del titular', async () => {
@@ -232,7 +288,7 @@ test('ventana, misiones, marcador y quién soy', async () => {
 test('/salud declara los secretos nuevos y los consejeros con carné', async () => {
   const salud = await (await manejar(new Request('https://mcp.test/salud'), ENV, { fetch: fetchFalso([]) })).json();
   assert.equal(salud.secretos.MCP_KEYS, true); assert.equal(salud.secretos.ADMIRA_TELEGRAM_PANEL_KEY, true);
-  assert.deepEqual(salud.consejeros_con_carne, ['Wozniak', 'Jobs', 'Disney', 'Lucas']);
+  assert.deepEqual(salud.consejeros_con_carne, ['Wozniak', 'Jobs', 'Lucas', 'Disney', 'Musk']);
 });
 
 test('crearYokup sin identidad falla legible en todo menos en construirse', async () => {

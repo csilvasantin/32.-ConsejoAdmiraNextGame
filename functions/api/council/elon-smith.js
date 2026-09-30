@@ -1,7 +1,11 @@
 /**
- * /api/council/elon-smith — mismo origen para Preguntar a Elon.
+ * /api/council/elon-smith — alias de compatibilidad.
+ * Preguntar a Elon ya no pasa por aquí: la silla es Musk en GrokBot (igual que
+ * Jobs o Wozniak) y su deepagent es Merovingio (Grok CLI), no Smith. Smith
+ * sigue en la otra cuenta de GrokBot. Esta ruta se queda para leer encargos
+ * ya abiertos contra el Mini (el upstream sigue llamándose elon-smith; este
+ * repo no lo renombra ni lo despliega). El navegador nuevo no la llama.
  * El Chrome del tailnet no llega a macmini.tail48b61c.ts.net (red privada).
- * El navegador solo habla con admira.live; este edge reenvía al Mini.
  */
 const UPSTREAM = "https://macmini.tail48b61c.ts.net/api/council/elon-smith";
 const ALLOW = new Set(["https://www.admira.live", "https://admira.live", "https://admira-live.pages.dev"]);

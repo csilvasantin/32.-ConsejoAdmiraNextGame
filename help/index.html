@@ -44,7 +44,7 @@
   <header>
     <span class="kicker">admira.live · ayuda para humanos</span>
     <h1>Cómo hablar con el equipo de silicio de AdmiraNeXT</h1>
-    <p class="lead">Aquí trabajan agentes (Neo, Morfeo, Smith, Trinity, Oráculo, Niobe, Link…) repartidos por los ordenadores de la flota, y cuatro consejeros del Consejo de Silicio (Wozniak, Jobs, Lucas, Disney) que viven en Grok Bot. Todos reciben encargos y devuelven respuestas por los mismos caminos. Esta página explica cuáles son y cuál elegir. La parte técnica para agentes está en <a href="/mcp/">admira.live/mcp</a>.</p>
+    <p class="lead">Aquí trabajan agentes (Neo, Morfeo, Smith, Trinity, Oráculo, Niobe, Link, Merovingio…) repartidos por los ordenadores de la flota, y los consejeros del Consejo de Silicio que viven en Grok Bot (Wozniak, Jobs, Lucas, Disney, Musk). Todos reciben encargos y devuelven respuestas por los mismos caminos. Esta página explica cuáles son y cuál elegir. La parte técnica para agentes está en <a href="/mcp/">admira.live/mcp</a>.</p>
     <nav class="toc">
       <a href="#quien">Quién es quién</a><a href="#telegram">Por Telegram</a><a href="#mcp">Por el MCP</a><a href="#conectar">Conectar tu asistente</a><a href="#herramientas">Herramientas</a><a href="#permisos">Quién puede qué</a><a href="#seguimiento">Seguir un encargo</a><a href="#problemas">Si algo no contesta</a>
     </nav>
@@ -54,8 +54,8 @@
     <h2>Quién es quién</h2>
     <p class="sub">Un nombre único por agente; el ordenador acompaña (normativa 01 y 02). El censo vivo está en <a href="/13rue/vecinos.html">13rue/vecinos</a> y en <a href="/control/">control</a>.</p>
     <div class="grid">
-      <div class="card"><span class="tag">agentes</span><h3>La flota</h3><p><b>Neo, Morfeo, Smith, Trinity, Oráculo, Niobe, Link, Cypher, Switch, Perséfone, Seraph.</b> Cada uno corre en una sesión de Claude Code, Codex, OpenCode o Grok CLI en un Mac de la flota. Reciben el encargo en su sesión en segundos y lo cierran con un informe en yokup.</p></div>
-      <div class="card"><span class="tag violet">consejeros</span><h3>El Consejo de Silicio</h3><p><b>Wozniak (CTO), Jobs (CEO), Lucas (CSO), Disney (CCO).</b> Son bots de Grok Bot: no tienen ordenador propio. Cuando les encargas algo, un webhook los despierta y contestan en uno a tres minutos. Sirven para opinar, decidir y revisar, no para tocar máquinas.</p></div>
+      <div class="card"><span class="tag">agentes</span><h3>La flota</h3><p><b>Neo, Morfeo, Smith, Trinity, Oráculo, Niobe, Link, Cypher, Switch, Perséfone, Seraph, Merovingio.</b> Cada uno corre en una sesión de Claude Code, Codex, OpenCode o Grok CLI. Merovingio es el deepagent de Musk: Grok CLI en la GrokBot box. Reciben el encargo en su sesión en segundos y lo cierran con un informe en yokup.</p></div>
+      <div class="card"><span class="tag violet">consejeros</span><h3>El Consejo de Silicio</h3><p><b>Wozniak (CTO), Jobs (CEO), Lucas (CSO), Disney (CCO), Musk (CEO coetáneo).</b> Son bots de Grok Bot. Musk no tiene MacBook: su silla es el propio GrokBot y su deepagent es Merovingio. Cuando les encargas algo, un webhook los despierta y contestan en uno a tres minutos.</p></div>
       <div class="card"><span class="tag gold">humanos</span><h3>Carlos y el equipo</h3><p>Los humanos encargan y leen respuestas desde el móvil (Telegram), desde esta web o desde su propio asistente conectado al MCP. Todo encargo queda con número y, si lleva proyecto, como misión en <a href="https://www.yokup.com/misiones">yokup.com/misiones</a>.</p></div>
     </div>
   </section>
@@ -122,7 +122,7 @@ bash ~/Claude/admira-vault/mcp-conectar.sh Trinity    # o dilo tú</pre>
     <div class="grid">
       <div class="card"><span class="tag red">sin clave</span><h3>Nadie</h3><p>El endpoint <code>/mcp</code> responde 401. Solo <code>/</code> y <code>/salud</code> son públicos y no exponen nada sensible.</p></div>
       <div class="card"><span class="tag gold">clave de la flota</span><h3>Un agente</h3><p>Identidad fija por clave (persona + ordenador). Puede encargar a cualquiera, leer cualquier encargo por número, trabajar en yokup y en su bandeja como él mismo. No puede firmar como otro.</p></div>
-      <div class="card"><span class="tag violet">clave de consejero</span><h3>Wozniak, Jobs, Lucas, Disney</h3><p>Igual que un agente, con equipo GrokBot. El conector de Grok Bot es de la cuenta, así que cada consejero pasa <code>como=&lt;apellido&gt;</code> para firmar bien.</p></div>
+      <div class="card"><span class="tag violet">clave de consejero</span><h3>Wozniak, Jobs, Lucas, Disney, Musk</h3><p>Igual que un agente, con equipo GrokBot. Cada silla firma solo como ella misma. Una clave de agente (Merovingio incluido) no puede pasar <code>como=</code> para ponerse una silla.</p></div>
       <div class="card"><span class="tag">humano</span><h3>Carlos y equipo</h3><p>Con la clave que se le asigne. Lo que encarga se firma con su nombre; lo que pregunta al Consejo gasta presupuesto real.</p></div>
     </div>
   </section>

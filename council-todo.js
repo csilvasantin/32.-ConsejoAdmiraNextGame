@@ -25,17 +25,18 @@
     sinAgente: 'sin agente enlazado'
   });
 
-  /* Consejero de la mesa → agente de la flota. Leyendas: los cuatro consejeros de
-     GrokBot (council-grokbot.js). Coetáneos: MATRIX_LINKS de app.js (FLT-100878:
-     Elon = Smith, Jensen = ArquitectoCursorCloud). Cook, Buffett, Rams y Schultz no
-     tienen agente: su bocadillo lo dice en vez de inventarse nada. */
+  /* Consejero de la mesa → agente de la flota. Leyendas: los consejeros de
+     GrokBot (council-grokbot.js). Coetáneos: su deepagent (MATRIX_LINKS).
+     Elon = Merovingio (Grok CLI en la GrokBot box), pareja de la silla Musk;
+     Smith sigue en la otra cuenta de GrokBot. Jensen = ArquitectoCursorCloud.
+     Cook, Buffett, Rams y Schultz no tienen agente: su bocadillo lo dice. */
   const AGENTS = Object.freeze({
     leyendas: Object.freeze({
       'Steve Jobs': 'Jobs', 'Steve Wozniak': 'Wozniak', 'Tim Cook': null, 'Warren Buffett': null,
       'Walt Disney': 'Disney', 'Dieter Rams': null, 'Howard Schultz': null, 'George Lucas': 'Lucas'
     }),
     coetaneos: Object.freeze({
-      'Elon Musk': 'Smith', 'Jensen Huang': 'ArquitectoCursorCloud', 'Gwynne Shotwell': 'Trinity',
+      'Elon Musk': 'Merovingio', 'Jensen Huang': 'ArquitectoCursorCloud', 'Gwynne Shotwell': 'Trinity',
       'Ruth Porat': 'Oraculo', 'John Lasseter': 'Mouse', 'Jony Ive': 'Arquitecto',
       'Carlos Ratti': 'Link', 'Ryan Reynolds': 'Cypher'
     })

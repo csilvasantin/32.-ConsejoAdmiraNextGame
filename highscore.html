@@ -3394,16 +3394,17 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   var AGENT_SCOPE_KEY = "yokup.highscore.agents.v1";
   var AGENT_SCOPE_MODE_KEY = "yokup.highscore.agents.mode.v4-deepagents";
   /* FLT-100883: ranking canónico = solo DeepAgents (consejeros fuera del marcador). */
-  var DEEPAGENTS_NAME_RE = /^(neo|trinity|morfeo|oraculo|oracle|smith|arquitecto|architect)\b/i;
+  var DEEPAGENTS_NAME_RE = /^(neo|trinity|morfeo|oraculo|oracle|smith|arquitecto|architect|merovingio)\b/i;
   function hsIsDeepAgentKey(key) {
     var k = String(key || "").trim();
     if (!k) return false;
     // Quitar apellidos de máquina (incl. SINMAQ) ANTES del \b: arquitectosinmaq /
-    // smithmini / arquitectocursorcloud deben resolverse al DeepAgent base.
-    var base = k.replace(/SINMAQ|SinMaq|CursorCloud|GrokBot|MacMini|Mini|MBA(?:Azul|Plata|Rosa|Crema|16)|MBP(?:14|16|Negro14)?|Negro14|Air16/gi, " ");
+    // smithmini / arquitectocursorcloud / merovingiogrokbotbox al DeepAgent base.
+    // GrokBotBox antes que GrokBot: si no, la caja se parte y deja «Box».
+    var base = k.replace(/SINMAQ|SinMaq|CursorCloud|GrokBotBox|GrokBot|MacMini|Mini|MBA(?:Azul|Plata|Rosa|Crema|16)|MBP(?:14|16|Negro14)?|Negro14|Air16/gi, " ");
     base = base.replace(/[^a-zA-ZáéíóúñÁÉÍÓÚÑ]/g, " ").trim().split(/\s+/)[0] || k;
-    if (/^(jobs|woz|wozniak|disney|lucas|walt)\b/i.test(base)) return false;
-    if (/grokbot/i.test(k) && !/smith/i.test(k)) return false;
+    if (/^(jobs|woz|wozniak|disney|lucas|walt|musk|elonmusk|elon)\b/i.test(base)) return false;
+    if (/grokbot/i.test(k) && !/smith/i.test(k) && !DEEPAGENTS_NAME_RE.test(base)) return false;
     return DEEPAGENTS_NAME_RE.test(base) || DEEPAGENTS_NAME_RE.test(k);
   }
   function hsDeepAgentKeys(allKeys) {

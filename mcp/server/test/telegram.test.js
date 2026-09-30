@@ -110,3 +110,16 @@ test('contestar un encargo dirigido a otro consejero firma como el destinatario 
   assert.equal(r.firmado_como, 'WozniakGrokBot');
   assert.equal(peticiones.at(-1).body.persona, 'WozniakGrokBot');
 });
+
+test('una clave de agente no contesta un encargo de consejero como si fuera la silla', async () => {
+  const env = { ...ENV, MCP_KEYS: JSON.stringify({ 'clave-morfeo-macmini-xxxxxxxxxxxx': { persona: 'Morfeo', machine: 'MacMini', runtime: 'Claude Code' } }) };
+  const peticiones = [];
+  const server = crearServidor(env, { fetch: fetchFalso(peticiones) }, identidadPorClave('clave-morfeo-macmini-xxxxxxxxxxxx', env));
+  const [a, b] = InMemoryTransport.createLinkedPair(); await server.connect(b);
+  const client = new Client({ name: 'morfeo', version: '1' }); await client.connect(a);
+  const suplantado = await client.callTool({ name: 'telegram_responder', arguments: { como: 'Wozniak', encargo: 1701, estado: 'done', respuesta: 'no soy Wozniak' } });
+  assert.equal(suplantado.isError, true);
+  assert.match(suplantado.content[0].text, /no puede firmar como Wozniak/);
+  const r = res(await client.callTool({ name: 'telegram_responder', arguments: { encargo: 1701, estado: 'done', respuesta: 'sigo siendo Morfeo' } }));
+  assert.equal(r.firmado_como, 'MorfeoMacMini');
+});

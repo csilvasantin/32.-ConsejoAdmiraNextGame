@@ -47,6 +47,8 @@
     ["Jobs",["jobs","steve jobs","stevejobs"]],
     ["Disney",["disney","walt disney","waltdisney"]],
     ["Lucas",["lucas","george lucas","georgelucas"]],
+    ["Musk",["musk","elon musk","elonmusk"]],
+    ["Merovingio",["merovingio","el merovingio","elmerovingio"]],
     // Arquitecto = Cursor cloud (NO Jony Ive / Arquitecto Silicio). Equipo: CursorCloud.
     ["Arquitecto",["arquitecto","architect","elarquitecto","el arquitecto"]]
   ];

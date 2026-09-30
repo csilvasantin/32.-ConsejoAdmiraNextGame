@@ -32,6 +32,7 @@ export const CHAIR_ALIAS = {
   'Steve Wozniak': 'Wozniak', Wozniak: 'Wozniak',
   'George Lucas': 'Lucas', Lucas: 'Lucas',
   'Walt Disney': 'Disney', Disney: 'Disney',
+  'Elon Musk': 'Musk', Musk: 'Musk',
 };
 export function chairAlias(persona) {
   const s = String(persona || '').trim();
@@ -533,7 +534,7 @@ export function showRemote(persona, root = lastRoot || (typeof document !== 'und
   if (!remoteImgs(root).length) return true;
   const request = fetchImpl || (typeof fetch === 'function' ? fetch : null);
   if (!request) { paintRemoteError(root, alias); return false; }
-  const nativePersona = {Jobs:'Steve Jobs', Wozniak:'Steve Wozniak', Disney:'Walt Disney', Lucas:'George Lucas'}[alias];
+  const nativePersona = {Jobs:'Steve Jobs', Wozniak:'Steve Wozniak', Disney:'Walt Disney', Lucas:'George Lucas', Musk:'Elon Musk'}[alias];
   Promise.resolve().then(() => request('https://fleet.admira.live/api/grokbot/selection', {
     method:'POST', credentials:'include', cache:'no-store',
     headers:{'Content-Type':'application/json','X-Fleet-CSRF':typeof window!=='undefined' ? window.admiraGateCsrf?.() || '' : ''},

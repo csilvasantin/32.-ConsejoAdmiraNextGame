@@ -9,7 +9,7 @@ printf '%s\n' '{"action":"snapshot"}' | /private/tmp/grokbot-ax
 ```
 
 Entrada JSON por stdin: `snapshot`, `select` o `send`. `select` y `send` requieren
-`persona` exacta: Steve Jobs, Steve Wozniak, Walt Disney o George Lucas. `send`
+`persona` exacta: Steve Jobs, Steve Wozniak, Walt Disney, George Lucas o Elon Musk. `send`
 también requiere `prompt` no vacío, máximo 16.000 caracteres. Una petición por
 proceso. Stdout siempre contiene JSON; no se escriben transcripciones en disco.
 

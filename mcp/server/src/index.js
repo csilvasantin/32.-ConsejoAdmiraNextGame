@@ -26,7 +26,7 @@ import * as z from 'zod/v4';
 import { ROLES, GENERACIONES, consejeros, crearCliente, resumirRespuesta } from './consejo.js';
 import { identidadPorClave, identidadPorClaveAsync, crearYokup, CONSEJEROS_GROKBOT } from './yokup.js';
 import { crearTelegram } from './telegram.js';
-import { crearFlota, PERSONAS, AGENTES_FLOTA, CONSEJEROS } from './flota.js';
+import { crearFlota, PERSONAS, AGENTES_FLOTA, CONSEJEROS, SILLAS } from './flota.js';
 
 const NOMBRE = 'admira-live-mcp';
 
@@ -41,7 +41,7 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
   const server = new McpServer({ name: NOMBRE, version: env.VERSION || '1.0.0', websiteUrl: env.SITIO || 'https://www.admira.live' }, {
     instructions: [
       'Eres el acceso al Consejo de Silicio de AdmiraNeXT (admira.live). Ocho sillas (CEO, CTO, COO, CFO, CCO, CDO, CXO, CSO) en dos generaciones: leyendas y coetáneos.',
-      'SI TÚ ERES UN CONSEJERO (un bot de GrokBot llamado Steve Wozniak, Steve Jobs, Walt Disney, George Lucas…): tú ya eres esa silla y razonas sobre Grok. Responde tú mismo; NO uses consejero_preguntar ni consejo_preguntar para pedirle tu propia opinión a otra copia de ti, porque eso paga una segunda IA para decir lo que tú ya sabes. Usa el MCP para lo que no tienes: datos vivos (flota_estado, consejo_bots, consejo_tareas, consejo_salud), acciones (agora_decir) y para consultar a OTRO consejero distinto de ti.',
+      `SI TÚ ERES UN CONSEJERO (un bot de GrokBot: ${CONSEJEROS_GROKBOT.join(', ')} — Steve Wozniak, Steve Jobs, Walt Disney, George Lucas, Elon Musk…): tú ya eres esa silla y razonas sobre Grok. Responde tú mismo; NO uses consejero_preguntar ni consejo_preguntar para pedirle tu propia opinión a otra copia de ti, porque eso paga una segunda IA para decir lo que tú ya sabes. Usa el MCP para lo que no tienes: datos vivos (flota_estado, consejo_bots, consejo_tareas, consejo_salud), acciones (agora_decir) y para consultar a OTRO consejero distinto de ti.`,
       'Si NO eres un consejero: para una opinión de la mesa usa consejo_preguntar (responde un consejero racional y otro creativo); para hablar con uno concreto usa consejero_preguntar con su rol.',
       'Cada pregunta al Consejo consume presupuesto: pregunta con contexto y una sola vez. El modelo por defecto es grok-4.6 (xAI); claude-sonnet sigue disponible como opción. Mira consejo_modelos antes de elegir otro.',
       'La flota y el tablero de tareas del Consejo se leen con flota_estado, consejo_bots y consejo_tareas. agora_decir publica en AgoraMatrix, el grupo del equipo.',
@@ -51,7 +51,7 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
       identidad && identidad.tipo === 'agente'
         ? `ERES UN AGENTE DE LA FLOTA: en yokup eres ${identidad.agent} (persona ${identidad.persona}, equipo ${identidad.machine}, runtime ${identidad.runtime}). Tu clave del MCP ya te identifica: no pases «como». Las herramientas yokup_* firman por ti (alta, pasos, evidencia, informe, ventana) y telegram_bandeja es tu bandeja de encargos. Si otro agente o un consejero tiene que hacer algo, encárgaselo con agente_encargar y recoge la respuesta con encargo_estado.`
         : identidad
-        ? `ERES MIEMBRO DE LA FLOTA: en yokup eres ${identidad.agent} (persona ${identidad.persona}, equipo ${identidad.machine}, runtime ${identidad.runtime}). Ritual obligatorio de AdmiraNeXT: (1) cuando te encarguen trabajo, dalo de alta con yokup_alta escribiendo el encargo con pasos a) b) c) — UNA sola vez: si te da timeout la misión se ha creado igual, léela con yokup_mis_misiones en vez de repetir el alta; (2) marca cada paso con yokup_paso (in_progress al empezar, done al acabar con un informe corto); (3) antes de cerrar registra tu transcripción con yokup_evidencia; (4) cierra con yokup_informe y las tres líneas de la norma 22 (Tiempo dedicado · Puntos de la misión · Total verificado, leído con yokup_quien_soy después del cierre) más «Miembros y contexto» en tokens; (5) si te quedas sin trabajo, abre una yokup_ventana con tres propuestas y ejecuta la recomendada si nadie responde en 5 minutos; si Carlos te dice la opción en el chat, regístrala con yokup_decidir (también si la ventana ya caducó); (6) cada consejero se representa a sí mismo: lo ideal es que tu Bot entre con SU conector y SU clave; mientras el conector sea el compartido de la cuenta, pasa como=<tu apellido> (Wozniak, Jobs, Lucas o Disney) en TODAS las herramientas yokup_* y telegram_*, porque sin ese dato firmarías como otro consejero (y esa firma delegada queda anotada); (7) al empezar cada turno y cada vez que una rutina te despierte, lee telegram_bandeja: los encargos que Carlos te hace desde el móvil llegan por ahí, y se contestan con telegram_responder (ack al cogerlo, done con la respuesta). Cada misión cerrada puntúa 40 y cada ventana 8 en yokup.com/highscore.`
+        ? `ERES MIEMBRO DE LA FLOTA: en yokup eres ${identidad.agent} (persona ${identidad.persona}, equipo ${identidad.machine}, runtime ${identidad.runtime}). Ritual obligatorio de AdmiraNeXT: (1) cuando te encarguen trabajo, dalo de alta con yokup_alta escribiendo el encargo con pasos a) b) c) — UNA sola vez: si te da timeout la misión se ha creado igual, léela con yokup_mis_misiones en vez de repetir el alta; (2) marca cada paso con yokup_paso (in_progress al empezar, done al acabar con un informe corto); (3) antes de cerrar registra tu transcripción con yokup_evidencia; (4) cierra con yokup_informe y las tres líneas de la norma 22 (Tiempo dedicado · Puntos de la misión · Total verificado, leído con yokup_quien_soy después del cierre) más «Miembros y contexto» en tokens; (5) si te quedas sin trabajo, abre una yokup_ventana con tres propuestas y ejecuta la recomendada si nadie responde en 5 minutos; si Carlos te dice la opción en el chat, regístrala con yokup_decidir (también si la ventana ya caducó); (6) cada consejero se representa a sí mismo: lo ideal es que tu Bot entre con SU conector y SU clave; mientras el conector sea el compartido de la cuenta, pasa como=<tu apellido> (${CONSEJEROS_GROKBOT.join(', ')}) en TODAS las herramientas yokup_* y telegram_*, porque sin ese dato firmarías como otro consejero (y esa firma delegada queda anotada); (7) al empezar cada turno y cada vez que una rutina te despierte, lee telegram_bandeja: los encargos que Carlos te hace desde el móvil llegan por ahí, y se contestan con telegram_responder (ack al cogerlo, done con la respuesta). Cada misión cerrada puntúa 40 y cada ventana 8 en yokup.com/highscore.`
         : `Esta clave del MCP no está asignada a nadie: las herramientas yokup_* y telegram_* no funcionarán hasta que tengas tu clave propia (mcp-conectar.sh en la flota; consejeros con carné: ${CONSEJEROS_GROKBOT.join(', ')}). agentes_vivos, agente_encargar y encargo_estado sí funcionan y firman como «MCP admira.live».`,
     ].join('\n'),
   });
@@ -136,18 +136,19 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
   }, seguro(async (a) => texto(await api.agoraDecir(a))));
 
   /* ── Flota: ver quién late, encargar y recoger la respuesta (FLT-2038) ────────── */
-  const PERSONA = z.string().min(3).max(40).describe(`A quién: agente de la flota (${AGENTES_FLOTA.join(', ')}) o consejero de GrokBot (${CONSEJEROS.join(', ')}). Con o sin apellido de equipo. También vale la máquina de una silla del Consejo: MacBookAirAzul→Jobs, MacBookAirPlata→Wozniak, MacBookAirRosa→Lucas, MacBookAirCrema→Disney.`);
+  const maquinasSilla = Object.entries(SILLAS).filter(([, s]) => s.fleet_id).map(([p, s]) => `${s.maquina}→${p}`).join(', ');
+  const PERSONA = z.string().min(3).max(40).describe(`A quién: agente de la flota (${AGENTES_FLOTA.join(', ')}) o consejero de GrokBot (${CONSEJEROS.join(', ')}). Con o sin apellido de equipo. También vale la máquina de una silla física: ${maquinasSilla}. Musk no tiene Mac: Elon o Elon Musk.`);
 
   server.registerTool('agentes_vivos', {
     title: 'Quién está vivo en la flota',
-    description: 'Censo vivo: agentes de silicio con latido en los últimos 15 minutos (persona, equipo, runtime, foco) y los cuatro consejeros de GrokBot, que siempre están disponibles por webhook. Míralo antes de encargar para elegir persona y equipo.',
+    description: `Censo vivo: agentes de silicio con latido en los últimos 15 minutos (persona, equipo, runtime, foco) y los consejeros de GrokBot (${CONSEJEROS.join(', ')}), que siempre están disponibles por webhook. Míralo antes de encargar para elegir persona y equipo.`,
     inputSchema: {},
     annotations: { readOnlyHint: true, openWorldHint: true },
   }, seguro(async () => texto(await flota.vivos())));
 
   server.registerTool('agente_encargar', {
     title: 'Encargar trabajo a un agente o consejero',
-    description: 'Crea un encargo para una persona de la flota. A un agente (Neo, Morfeo, Smith, Trinity, Oráculo, Niobe…) se lo inyecta su vigilante en su sesión en ≤15 s en la máquina donde late; a un consejero de GrokBot (Wozniak, Jobs, Lucas, Disney) lo despierta el webhook de su rutina. Devuelve el número y la etiqueta visible #número.MM.DD (por ejemplo #4502.09.27): síguelo con encargo_estado pasando solo el número. El id largo (task-web-…, FLT-…) queda dentro. El encargo se publica también en AgoraMatrix (Telegram) y, con proyecto_id, nace como misión en yokup.',
+    description: `Crea un encargo para una persona de la flota. A un agente (Neo, Morfeo, Smith, Trinity, Oráculo, Niobe…) se lo inyecta su vigilante en su sesión en ≤15 s en la máquina donde late; a un consejero de GrokBot (${CONSEJEROS.join(', ')}) lo despierta el webhook de su rutina. Devuelve el número y la etiqueta visible #número.MM.DD (por ejemplo #4502.09.27): síguelo con encargo_estado pasando solo el número. El id largo (task-web-…, FLT-…) queda dentro. El encargo se publica también en AgoraMatrix (Telegram) y, con proyecto_id, nace como misión en yokup.`,
     inputSchema: {
       persona: PERSONA,
       texto: z.string().min(5).max(4000).describe('Qué hay que hacer, para qué y cómo se sabrá que está hecho.'),
@@ -168,20 +169,26 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
   /* ── Identidad por llamada (FLT-1603) ──────────────────────────────────────
    * Los conectores MCP de Grok Bot son DE LA CUENTA, no de cada bot: todos los consejeros
    * entran con la última clave instalada. Por eso cada herramienta acepta `como` (tu
-   * apellido) y esa identidad manda; la de la clave queda de respaldo. Solo se admiten
-   * los cuatro consejeros con carné, así que no se puede firmar como nadie más. */
-  const COMO = z.enum(CONSEJEROS_GROKBOT).optional().describe('Quién eres: Wozniak, Jobs, Lucas o Disney. Ponlo SIEMPRE si eres un consejero de GrokBot.');
+   * apellido) y, en la clave compartida, esa identidad manda. Solo se admiten las sillas
+   * con carné (sillas.js). Una clave de agente de la flota no puede usar `como` para
+   * ponerse una silla: su carné ya dice quién es. */
+  const COMO = z.enum(CONSEJEROS_GROKBOT).optional().describe(`Quién eres, si entras con la clave compartida del Consejo: ${CONSEJEROS_GROKBOT.join(', ')}. Una clave de silla solo firma como ella misma. Una clave de agente de la flota no usa este campo.`);
   // QUIÉN FIRMA (Carlos, 7-sep-2026: «que cada consejero se represente a sí mismo»).
-  //  · Clave individual de una silla (MCP_KEYS): firma esa silla. Con «como» de OTRA silla se
-  //    anota firmado_con_clave_de (auditoría) y, en modo estricto (MCP_FIRMA_ESTRICTA=1, cuando
-  //    cada Bot de GrokBot tenga su conector), se rechaza.
+  //  · Clave individual de una silla (MCP_KEYS / MCP_KEY→MCP_KEY_PERSONA): firma esa silla.
+  //    Con «como» de OTRA silla se anota firmado_con_clave_de (auditoría) y, en modo
+  //    estricto (MCP_FIRMA_ESTRICTA=1), se rechaza.
   //  · Clave compartida del Consejo (MCP_KEY_CONSEJO): no es de nadie; sin «como» no firma.
+  //  · Clave de agente (MCP_KEYS con machine, o HMAC de la flota): firma esa pareja.
+  //    `como` no le deja hacerse pasar por un consejero, con o sin modo estricto.
   const estricta = String(env.MCP_FIRMA_ESTRICTA || '') === '1';
   const idDe = (a) => {
     const como = a && a.como ? String(a.como) : '';
     if (!como) {
-      if (identidad && identidad.tipo === 'consejo-compartido') throw new Error('esta clave es la compartida del Consejo y no firma por nadie: pasa como=Wozniak|Jobs|Lucas|Disney (tu silla) en cada herramienta yokup_* y telegram_*');
+      if (identidad && identidad.tipo === 'consejo-compartido') throw new Error(`esta clave es la compartida del Consejo y no firma por nadie: pasa como=${CONSEJEROS_GROKBOT.join('|')} (tu silla) en cada herramienta yokup_* y telegram_*`);
       return identidad;
+    }
+    if (identidad && identidad.tipo === 'agente') {
+      throw new Error(`esta clave es la de ${identidad.agent} (agente de la flota) y no puede firmar como ${como}: un agente no se hace pasar por un consejero de GrokBot`);
     }
     if (identidad && identidad.tipo === 'consejero' && identidad.persona !== como) {
       if (estricta) throw new Error(`esta clave es la de ${identidad.agent} y no puede firmar como ${como}: cada consejero entra con su propio conector (o con la clave compartida del Consejo)`);
@@ -354,7 +361,7 @@ export async function manejar(request, env, deps = {}) {
       que_es: 'MCP de admira.live: los consejeros del Consejo de Silicio, la flota y AgoraMatrix como herramientas MCP por HTTP.',
       endpoint_mcp: `${url.origin}/mcp`, transporte: 'streamable-http', autenticacion: 'Authorization: Bearer <MCP_KEY> (o ?key=)',
       documentacion: 'https://www.admira.live/mcp/', herramientas: ['consejo_consejeros', 'consejo_modelos', 'consejo_preguntar', 'consejero_preguntar', 'consejo_salud', 'consejo_bots', 'flota_estado', 'consejo_tareas', 'agora_decir', 'yokup_quien_soy', 'yokup_presencia', 'yokup_alta', 'yokup_paso', 'yokup_evidencia', 'yokup_informe', 'yokup_ventana', 'yokup_decidir', 'yokup_mis_misiones', 'telegram_bandeja', 'telegram_responder', 'agentes_vivos', 'agente_encargar', 'encargo_estado', 'consumo_reportar'],
-      flota: 'Con una clave por consejero (MCP_KEYS), Wozniak/Jobs/Disney/Lucas trabajan en yokup como WozniakGrokBot… (equipo GrokBot, runtime Grok). Con una clave por agente y equipo (mcp-conectar.sh), Claude Code, Codex y OpenCode entran identificados (MorfeoMacMini…).',
+      flota: `Con una clave por consejero (MCP_KEYS), ${CONSEJEROS_GROKBOT.join('/')} trabajan en yokup como ${CONSEJEROS_GROKBOT.map((c) => c + 'GrokBot').join('/')} (equipo GrokBot, runtime Grok). Con una clave por agente y equipo (mcp-conectar.sh), Claude Code, Codex y OpenCode entran identificados (MorfeoMacMini…). Una clave de agente no firma como consejero aunque pase «como».`,
       conectar: { humanos: 'https://www.admira.live/help', silicio: 'https://www.admira.live/mcp/', llms: 'https://www.admira.live/mcp/llms.txt' } });
   }
 

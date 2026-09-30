@@ -61,9 +61,10 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Headers": "Content-Type, Authorization, X-Agora-Panel-Key, X-Council-Token",
   "Access-Control-Allow-Private-Network": "true"
 };
-// FLT-100878: Elon→Smith; Jensen→ArquitectoCursorCloud (no Morfeo ni Arquitecto Silicio/Ive).
+// Elon→Merovingio (Grok CLI, GrokBot box de la silla Musk). Smith sigue como agente extra.
+// Jensen→ArquitectoCursorCloud (no Morfeo ni Arquitecto Silicio/Ive).
 const MATRIX_COUNCIL_LINKS = new Map([
-  ["Elon Musk", { alias: "Smith", role: "CEO" }],
+  ["Elon Musk", { alias: "Merovingio", role: "CEO" }],
   ["Jensen Huang", { alias: "ArquitectoCursorCloud", role: "CTO" }],
   ["Gwynne Shotwell", { alias: "Trinity", role: "COO" }],
   ["Ruth Porat", { alias: "Oráculo", role: "CFO" }],

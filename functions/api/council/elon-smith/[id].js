@@ -1,4 +1,4 @@
-/** GET /api/council/elon-smith/:id — lee acuse y nota, mismo origen. */
+/** GET /api/council/elon-smith/:id — compatibilidad: lee un encargo Smith ya abierto. Las preguntas nuevas a Elon van por la silla Musk (GrokBot), no por este relay. */
 const UPSTREAM = "https://macmini.tail48b61c.ts.net/api/council/elon-smith";
 
 function corsHeaders(origin) {

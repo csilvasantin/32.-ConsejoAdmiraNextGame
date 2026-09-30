@@ -49,7 +49,7 @@ Servidor MCP de admira.live con transporte Streamable HTTP (MCP 2025-06-18), sin
 - Herramientas del Consejo: consejo_consejeros · consejo_modelos · consejo_preguntar (mesa: 1 racional + 1 creativo) ·
   consejero_preguntar (rol CEO/CTO/COO/CFO/CCO/CDO/CXO/CSO × generación leyendas/coetaneos) ·
   consejo_salud · consejo_bots · flota_estado · consejo_tareas · agora_decir
-- Herramientas Yokup (FLT-1580, carnés WozniakGrokBot · JobsGrokBot · DisneyGrokBot · LucasGrokBot,
+- Herramientas Yokup (FLT-1580, carnés WozniakGrokBot · JobsGrokBot · DisneyGrokBot · LucasGrokBot · MuskGrokBot,
   equipo GrokBot, runtime Grok): yokup_quien_soy · yokup_presencia · yokup_alta · yokup_paso ·
   yokup_evidencia · yokup_informe · yokup_ventana · yokup_mis_misiones
 - Ritual Yokup (norma 14): yokup_alta (encargo con pasos a) b) c)) → yokup_paso (in_progress / done) →
@@ -67,12 +67,13 @@ Servidor MCP de admira.live con transporte Streamable HTTP (MCP 2025-06-18), sin
   api.x.ai, por token); claude-sonnet sigue como opción. Los tres modelos de Groq que ya no existían
   (llama-70b, deepseek-r1, gemma-9b) se retiraron. La suscripción Grok Heavy NO da tokens de API:
   lo que la consume es hablar con los bots consejeros dentro de GrokBot.
-- Regla para un bot consejero de GrokBot (Wozniak, Jobs, Disney, Lucas…): tú ya eres la silla y
+- Regla para un bot consejero de GrokBot (Wozniak, Jobs, Disney, Lucas, Musk…): tú ya eres la silla y
   razonas sobre Grok Heavy; responde tú y usa el MCP para datos, acciones, Yokup o consultar a OTRO
   consejero. Pedirle tu opinión a otra copia de ti paga una segunda IA por lo que ya sabes.
 
 - Telegram para los consejeros (FLT-1603, v.04.09.2026.r3.14:54): en el grupo AdmiraNext «/wozniak …», «/jobs …»,
   «/lucas …», «/disney …» crean un encargo en el bot-inbox para esa persona en el equipo grokbot.
+  Musk entra igual cuando el worker privado admira-telegram tenga «/musk» y «/elon» (no vive en este repo).
   El consejero lo lee con telegram_bandeja y contesta con telegram_responder (ack al cogerlo,
   done con la respuesta): el worker admira-telegram publica la respuesta EN HILO bajo el
   mensaje original. Un encargo a una persona sin equipo, o con el equipo muerto, se reenruta
@@ -90,16 +91,20 @@ Servidor MCP de admira.live con transporte Streamable HTTP (MCP 2025-06-18), sin
   del hilo del móvil). Telegram queda para el humano. Un agente que necesita algo de otro usa
   agente_encargar y recoge con encargo_estado; no escribe en AgoraMatrix para eso.
 
-- agentes_vivos: agentes con latido en 15 min (persona, equipo, runtime, foco) + los 4 consejeros de GrokBot
-  (siempre disponibles por webhook). agente_encargar(persona, texto, maquina?, proyecto_id?, de?): crea el
+- agentes_vivos: agentes con latido en 15 min (persona, equipo, runtime, foco) + los consejeros de GrokBot
+  (Wozniak, Jobs, Lucas, Disney, Musk; siempre disponibles por webhook). Musk no tiene Mac; su deepagent
+  es Merovingio (Grok CLI en GrokBotBox). agente_encargar(persona, texto, maquina?, proyecto_id?, de?): crea el
   encargo en el bot-inbox (bot.yokup.com) para esa persona; agente → su vigilante lo inyecta en su sesión
   en ≤15 s en la máquina donde late (o la indicada); consejero → equipo grokbot y webhook de su rutina
   (1-3 min). Con proyecto_id nace como misión FLT (materialize_mission:true); sin él es conversación
   (materialize_mission:false). encargo_estado(encargo): pending|ack|in_progress|blocked|done con la
   respuesta (nota). GET /api/bot-inbox/<id> del worker admira-telegram (privado, PANEL_KEY).
 - Identidad automática de la flota: la clave de cada pareja persona+equipo se DERIVA en el worker de
-  MCP_FLOTA_SEED (HMAC-SHA256 «Persona|Equipo», 40 chars base64url; 11 personas × 8 equipos; un secreto
-  de Cloudflare no pasa de 5 KB, por eso no hay mapa). En la bóveda: s:MCP_KEY_<PERSONA>_<EQUIPO>.
+  MCP_FLOTA_SEED (HMAC-SHA256 «Persona|Equipo», 40 chars base64url; PERSONAS_FLOTA × MAQUINAS_FLOTA,
+  Merovingio incluido; un secreto de Cloudflare no pasa de 5 KB, por eso no hay mapa). En la bóveda:
+  s:MCP_KEY_<PERSONA>_<EQUIPO>. Derivar una clave (la misma orden que el resto de la flota), con la
+  semilla en $MCP_FLOTA_SEED o en ~/.fleet/mcp-flota.seed:
+  node mcp/server/tools/clave-flota.mjs Merovingio GrokBotBox
   mcp-conectar.sh (admira-vault) la lee y registra «admira-live» en el cliente del runtime de la persona:
   Claude Code (claude mcp add en su CLAUDE_CONFIG_DIR), Codex ([mcp_servers.admira_live] con
   http_headers) u OpenCode (mcp.admira-live remote). Lo llaman los lanzadores com.admiranext.agente-* y

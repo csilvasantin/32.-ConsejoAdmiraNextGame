@@ -18,24 +18,27 @@
  *     y el MCP la sube a /fleet/media y la registra.
  */
 
+import { CONSEJEROS_GROKBOT, sillaCanonica } from './sillas.js';
+
 export const EQUIPO = 'GrokBot';
 export const RUNTIME = 'Grok';
 export const MODELO = 'Grok Heavy';
-export const CONSEJEROS_GROKBOT = ['Wozniak', 'Jobs', 'Disney', 'Lucas'];
+export { CONSEJEROS_GROKBOT };
 
 const limpiar = (s) => String(s || '').replace(/\/+$/, '');
 const slug = (name) => String(name || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toUpperCase().replace(/[^A-Z0-9]+/g, '-').replace(/^-|-$/g, '');
 const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
 
-export const PERSONAS_FLOTA = ['Morfeo', 'Neo', 'Smith', 'Trinity', 'Oraculo', 'Niobe', 'Link', 'Cypher', 'Switch', 'Persefone', 'Seraph', 'Arquitecto'];
-/** Equipos físicos + CursorCloud (Arquitecto = Cursor cloud; no confundir con Arquitecto Silicio/Ive). */
+export const PERSONAS_FLOTA = ['Morfeo', 'Neo', 'Smith', 'Trinity', 'Oraculo', 'Niobe', 'Link', 'Cypher', 'Switch', 'Persefone', 'Seraph', 'Arquitecto', 'Merovingio'];
+/** Equipos físicos + CursorCloud (Arquitecto = Cursor cloud; no confundir con Arquitecto Silicio/Ive).
+ *  GrokBotBox ya es la caja de Niobe/Cypher; Merovingio (deepagent de Musk) corre ahí, Grok CLI. */
 export const MAQUINAS_FLOTA = ['MacMini', 'MacBookPro14', 'MacBookPro16', 'MacBookAirAzul', 'MacBookAirRosa', 'MacBookAirCrema', 'MacBookAirPlata', 'CursorCloud', 'GrokBotBox'];
-const RUNTIME_POR_DEFECTO = { Oraculo: 'Codex', Trinity: 'Codex', Niobe: 'OpenCode', Persefone: 'OpenCode', Seraph: 'OpenCode', Arquitecto: 'Cursor' };
+const RUNTIME_POR_DEFECTO = { Oraculo: 'Codex', Trinity: 'Codex', Niobe: 'OpenCode', Persefone: 'OpenCode', Seraph: 'OpenCode', Arquitecto: 'Cursor', Merovingio: 'Grok CLI' };
 const b64url = (bytes) => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
 /**
  * Clave de un agente de la flota (FLT-2038). Un secreto de Cloudflare no pasa de 5 KB y
- * la flota son 11 personas × 7 equipos: en vez de un mapa clave→identidad, la clave de
+ * la flota es PERSONAS_FLOTA × MAQUINAS_FLOTA: en vez de un mapa clave→identidad, la clave de
  * cada pareja se DERIVA de una semilla (MCP_FLOTA_SEED) con HMAC-SHA256 sobre
  * «Persona|Equipo». El worker la recalcula al recibirla; la flota la lee de la bóveda
  * (MCP_KEY_<PERSONA>_<EQUIPO>) o la deriva con tools/clave-flota.mjs y la misma semilla.
@@ -66,8 +69,8 @@ export function identidadPorClave(clave, env = {}) {
   // GrokBot cuando no se puede dar una clave por silla. No firma por nadie: exige «como».
   if (!persona && env.MCP_KEY_CONSEJO && clave === env.MCP_KEY_CONSEJO) return { persona: null, machine: EQUIPO, runtime: RUNTIME, model: MODELO, agent: null, tipo: 'consejo-compartido' };
   if (!persona) return null;
-  // «Steve Wozniak» firma como Wozniak: el apellido corto es la persona del diccionario de yokup.
-  const conocido = CONSEJEROS_GROKBOT.find((c) => persona.toLowerCase().includes(c.toLowerCase()));
+  // «Steve Wozniak» firma como Wozniak; «Elon Musk» como Musk. El apellido corto es la persona del diccionario.
+  const conocido = sillaCanonica(persona);
   if (conocido) return { persona: conocido, machine: EQUIPO, runtime: RUNTIME, model: MODELO, agent: `${conocido}${EQUIPO}`, tipo: 'consejero' };
   return identidadAgente(persona, entrada && entrada.machine, entrada && entrada.runtime, entrada && entrada.model);
 }

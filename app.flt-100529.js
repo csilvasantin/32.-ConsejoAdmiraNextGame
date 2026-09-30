@@ -174,11 +174,11 @@
         return GREETINGS[agent.persona] || (agent.territory ? agent.persona + ": " + agent.territory + "." : agent.persona + " te escucha.");
     }
 
-    // FLT-100878 · Elon (coetáneo CEO) = deepagent Smith.
-    // Jensen (CTO) = ArquitectoCursorCloud (Cursor), no Morfeo ni Arquitecto Silicio/Ive.
+    // Elon (coetáneo CEO) = silla GrokBot Musk + deepagent Merovingio (Grok CLI, GrokBot box).
+    // Smith sigue en la otra cuenta de GrokBot. Jensen (CTO) = ArquitectoCursorCloud.
     const MATRIX_LINKS = {
         coetaneos: {
-            "Elon Musk":       { alias: "Smith",                 channel: "Smith" },
+            "Elon Musk":       { alias: "Merovingio",            channel: "Merovingio" },
             "Jensen Huang":    { alias: "ArquitectoCursorCloud", channel: "ArquitectoCursorCloud" },
             "Gwynne Shotwell": { alias: "Trinity",    channel: "Trinity" },
             "Ruth Porat":      { alias: "Oráculo",    channel: "Oraculo" },
@@ -619,16 +619,16 @@
             // token contra la API. Antes no habia forma de saberlo antes de
             // preguntar, y la diferencia es real: unas son gratis y otras no.
             const porGrokBot = !!window.CouncilInterface?.has(p.persona);
-            const porSmith = p.persona === "Elon Musk";
             const porArquitectoCursor = p.persona === "Jensen Huang";
+            const tituloGrok = p.persona === "Elon Musk"
+                ? "Musk en GrokBot · incluido en la suscripcion. Deepagent: el Merovingio (Grok CLI, GrokBot box)."
+                : "Por GrokBot · incluido en la suscripcion, no gasta tokens";
             const marca = porGrokBot
-                ? '<span class="np-via np-via-libre" title="Por GrokBot · incluido en la suscripcion, no gasta tokens">∞</span>'
-                : porSmith
-                ? '<span class="np-via np-via-libre" title="Elon es el deepagent Smith. La pregunta llega a Smith sin abrir un CLI nuevo.">S</span>'
+                ? '<span class="np-via np-via-libre" title="' + tituloGrok + '">∞</span>'
                 : porArquitectoCursor
                 ? '<span class="np-via np-via-libre" title="Jensen es ArquitectoCursorCloud (Cursor). No es Morfeo ni Arquitecto Silicio/Ive. La pregunta sale por la API, sin abrir Cursor.">C</span>'
                 : '<span class="np-via np-via-pago" title="Pendiente de crear su silla en GrokBot — aun no se le puede preguntar">⏳</span>';
-            return `<div class="np ${cls} ${(porGrokBot || porSmith || porArquitectoCursor) ? 'np-libre' : 'np-pago'}" data-persona="${p.persona}" style="left:${p.x}%;top:${p.y}%">
+            return `<div class="np ${cls} ${(porGrokBot || porArquitectoCursor) ? 'np-libre' : 'np-pago'}" data-persona="${p.persona}" style="left:${p.x}%;top:${p.y}%">
                 <span class="np-turn"></span>
                 ${p.persona}${marca}<span class="np-role">${p.role}</span>
             </div>`;
@@ -1516,10 +1516,9 @@
         // contexto que viaje al modelo sea el de ESTE consejero y no el del
         // anterior, que era lo que pasaba con un array único para toda la mesa.
         abreHilo(claveHilo(agent));
-        // Elon = Smith; Jensen = ArquitectoCursorCloud (Cursor). Clic deja barra escribible.
-        const sillaWeb = agent.persona === "Elon Musk"
-            ? { placeholder: "Preguntar a Elon Musk", target: "elon-musk", agent: "Smith" }
-            : agent.persona === "Jensen Huang"
+        // Elon pregunta por su silla GrokBot (Musk), igual que Jobs o Wozniak.
+        // Jensen = ArquitectoCursorCloud (Cursor). Clic deja barra escribible.
+        const sillaWeb = agent.persona === "Jensen Huang"
             ? { placeholder: "Preguntar a Jensen Huang", target: "jensen-huang", agent: "ArquitectoCursorCloud" }
             : null;
         if (sillaWeb) {
@@ -2853,61 +2852,6 @@
         setActionLine("ArquitectoCursorCloud tiene el agente " + created.agentId + ". La respuesta llega cuando el run termine.");
     }
 
-    async function askElonSmith(question, agent) {
-        const panelId = agent.side === "racional" ? "conv-racional" : "conv-creativo";
-        const hosts = [location.origin.replace(/\/$/, "")].concat(typeof AGORA_COUNCIL_API_URLS !== "undefined" ? AGORA_COUNCIL_API_URLS : ["https://macmini.tail48b61c.ts.net"]);
-        setActionLine("Elon → Smith · enviando, sin abrir CLI…");
-        try { showSpeechBubble(agent.persona, agent.name, "Elon lleva la pregunta a Smith…"); } catch (e) {}
-        let created = null, used = null, lastErr = "";
-        for (const base of hosts) {
-            try {
-                const res = await fetch(base + "/api/council/elon-smith", {
-                    method: "POST",
-                    headers: { "Content-Type": "application/json", "X-Council-Token": COUNCIL_API_TOKEN },
-                    body: JSON.stringify({ question, slug: "elon-musk", persona: "Elon Musk", from: "admira.live Consejo" })
-                });
-                const data = await res.json().catch(() => null);
-                if (!res.ok || !data || !data.ok) { lastErr = (data && data.error) || ("HTTP " + res.status); continue; }
-                created = data; used = base; break;
-            } catch (e) { lastErr = e.message || String(e); }
-        }
-        if (!created) {
-            addConvEntry(panelId, agent.icon, agent.name, agent.persona, agent.side, "No pude entregar la pregunta a Smith. " + lastErr);
-            setActionLine("Elon → Smith falló: " + lastErr);
-            hideSpeechBubble();
-            return;
-        }
-        // Respetar Smith: si el backend devolviera Neo, lo marcamos (FLT-100878).
-        const agente = String(created.agent || "Smith");
-        if (/^neo$/i.test(agente)) {
-            addConvEntry(panelId, agent.icon, agent.name, agent.persona, agent.side, "Acuse rechazado: el backend forzó Neo. Debe ser Smith.");
-            setActionLine("Elon → Smith bloqueado: backend forzó Neo");
-            return;
-        }
-        const acuse = "Acuse · encargo #" + created.encargo + " · Smith en " + (created.machine || "su máquina") + ". El texto está en su bandeja. No se ha abierto un CLI.";
-        addConvEntry(panelId, agent.icon, agent.name, agent.persona, agent.side, acuse);
-        setActionLine(acuse);
-        try { showSpeechBubble(agent.persona, agent.name, "Encargo #" + created.encargo); } catch (e) {}
-        const deadline = Date.now() + 90000;
-        while (Date.now() < deadline) {
-            await new Promise(r => setTimeout(r, 3000));
-            try {
-                const res = await fetch(used + "/api/council/elon-smith/" + created.encargo, { headers: { "X-Council-Token": COUNCIL_API_TOKEN } });
-                const data = await res.json().catch(() => null);
-                const note = data && (data.respuesta || data.note || "");
-                if (note && String(note).trim()) {
-                    addConvEntry(panelId, agent.icon, agent.name, agent.persona, agent.side, String(note));
-                    setActionLine("Elon (Smith) ha respondido · encargo #" + created.encargo);
-                    try { showSpeechBubble(agent.persona, agent.name, String(note).slice(0, 80)); } catch (e) {}
-                    setTimeout(hideSpeechBubble, 4000);
-                    return;
-                }
-            } catch (e) { /* sigue esperando la nota */ }
-        }
-        setActionLine("Smith tiene el encargo #" + created.encargo + ". La respuesta se pinta aquí cuando cierre la nota.");
-        hideSpeechBubble();
-    }
-
     function showTodoBubbles() {
         if (typeof hideSpeechBubble === 'function') { try { hideSpeechBubble(); } catch (_) {} }
         const plates = (NAMEPLATE_POS[currentGen] || []).map(p => ({ persona: p.persona, role: p.role, x: p.x, y: p.y }));
@@ -2940,12 +2884,6 @@
 
         // If in "preguntar" mode with a selected agent, ask only that one
         if (preguntarMode && selectedAgent) {
-            if (selectedAgent.persona === "Elon Musk") {
-                enterConversation();
-                addUserEntry(text, imageForSend);
-                askElonSmith(text, selectedAgent);
-                return;
-            }
             if (selectedAgent.persona === "Jensen Huang") {
                 enterConversation();
                 addUserEntry(text, imageForSend);
@@ -5155,7 +5093,7 @@
     async function askCouncilAPI(message, imageData) {
         if (API_DE_PAGO_BLOQUEADA) {
             setActionLine("⏳ La mesa completa esta en pausa: solo se consulta a quien tiene silla en GrokBot " +
-                "(∞ Jobs, Wozniak, Disney, Lucas). Elige uno de ellos y pregúntale.");
+                "(∞ Jobs, Wozniak, Disney, Lucas, Musk). Elige uno de ellos y pregúntale.");
             return null;
         }
         /**
@@ -5234,13 +5172,13 @@
     // su silla esta pendiente de crearse en GrokBot. Antes la pregunta salia
     // igual y gastaba presupuesto sin que nadie lo pidiera.
     function consejeroPendiente(agent) {
-        if (agent && (agent.persona === "Elon Musk" || agent.persona === "Jensen Huang")) return false;
+        if (agent && agent.persona === "Jensen Huang") return false;
         return !!agent && !window.CouncilInterface?.has(agent.persona);
     }
     function avisoPendiente(agent, donde) {
         const quien = agent ? (agent.icon + " " + agent.persona) : "Este consejero";
         const txt = "⏳ " + quien + " todavia no tiene silla en GrokBot — pendiente de crearla. "
-                  + "Mientras tanto pregunta a los que llevan ∞ (Jobs, Wozniak, Disney, Lucas).";
+                  + "Mientras tanto pregunta a los que llevan ∞ (Jobs, Wozniak, Disney, Lucas, Musk).";
         setActionLine(txt);
         if (donde === "sala" && agent) addMeetingMsg(agent, "Todavia no tengo chat propio en GrokBot. Mi silla esta pendiente de crearse; preguntame cuando este lista.");
         return txt;
@@ -5482,8 +5420,8 @@
             enterConversation();
             addConvEntry("conv-racional", "⏳", "Consejo", "", "racional",
                 "La mesa completa esta en pausa: solo se consulta a quien tiene silla en GrokBot. " +
-                "Pregunta a Jobs, Wozniak, Disney o Lucas (los que llevan ∞).");
-            setActionLine("⏳ Mesa en pausa — pregunta a un consejero con ∞ (Jobs, Wozniak, Disney, Lucas)");
+                "Pregunta a Jobs, Wozniak, Disney, Lucas o Musk (los que llevan ∞).");
+            setActionLine("⏳ Mesa en pausa — pregunta a un consejero con ∞ (Jobs, Wozniak, Disney, Lucas, Musk)");
             return;
         }
         // Show thinking state for all members
@@ -6510,7 +6448,7 @@
 (function(){
   // Personas Matrix ligadas a los coetáneos del Consejo (espejo de MATRIX_LINKS).
   var COETANEOS = [
-    {name:"Elon Musk",persona:"Smith"},{name:"Jensen Huang",persona:"ArquitectoCursorCloud"},
+    {name:"Elon Musk",persona:"Merovingio"},{name:"Jensen Huang",persona:"ArquitectoCursorCloud"},
     {name:"Gwynne Shotwell",persona:"Trinity"},{name:"Ruth Porat",persona:"Oráculo"},
     {name:"John Lasseter",persona:"Mouse"},{name:"Jony Ive",persona:"Arquitecto"},
     {name:"Carlos Ratti",persona:"Link"},{name:"Ryan Reynolds",persona:"Cypher"}

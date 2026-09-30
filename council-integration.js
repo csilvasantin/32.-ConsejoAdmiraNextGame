@@ -104,6 +104,7 @@
     if(host)inlineComposer=CouncilComposer.mount({container:host,onInput:writeDraft,onSend:sendPreview});
     syncComposer();
   }
+  const working=window.CouncilWorking?CouncilWorking.create({speech,generation}):null;
   window.CouncilInterface={
     select(persona){return bridge.select(persona);},
     has:persona=>bridge.has(persona),
@@ -112,9 +113,9 @@
     hasAttachments:persona=>bridge.hasAttachments(persona),
     restoreDraft,
     show,close,
-    setGeneration(gen){generation=gen;speech.setGeneration(gen);bridge.select(null);table.close();close();layoutBubble();},
+    setGeneration(gen){generation=gen;speech.setGeneration(gen);if(working)working.setGeneration(gen);bridge.select(null);table.close();close();layoutBubble();},
     cancel(){speech.cancel();},
-    table,bridge,speech
+    table,bridge,speech,working
   };
   document.getElementById('mouth-overlays')?.replaceChildren();
   bubble.hidden=true;

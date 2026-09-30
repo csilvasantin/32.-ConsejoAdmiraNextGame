@@ -283,6 +283,6 @@
 
   root.CouncilTodo = Object.freeze({
     isTodoCommand, truncate, resolveAgent, statusesFor, fetchSources, prefetch, show, close, isOpen,
-    setGeneration, AGENTS, TEXT, MAX_CHARS, AUTO_CLOSE_MS
+    setGeneration, belongs, AGENTS, TEXT, MAX_CHARS, AUTO_CLOSE_MS
   });
 })(typeof window !== 'undefined' ? window : globalThis);

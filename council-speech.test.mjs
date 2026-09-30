@@ -28,14 +28,21 @@ function harness(options = {}) {
 }
 
 test('all eight legends have anatomically bounded anchors on the active 1360×768 scene', () => {
+    const { images } = globalThis.CouncilSpeech;
     assert.deepEqual(image, { width: 1360, height: 768 });
-    assert.equal(Object.keys(anchors).length, 8);
-    for (const anchor of Object.values(anchors)) {
+    assert.deepEqual(images.leyendas, image);
+    assert.deepEqual(images.coetaneos, { width: 1280, height: 720 });
+    assert.equal(Object.keys(anchors.leyendas).length, 8);
+    assert.deepEqual(Object.keys(anchors.coetaneos), ['Elon Musk']);
+    for (const anchor of Object.values(anchors.leyendas)) {
         assert.ok(anchor.x > 0 && anchor.x < image.width);
         assert.ok(anchor.y > 250 && anchor.y < 425);
         assert.ok(anchor.width >= 20 && anchor.width <= 34);
         assert.ok(anchor.height <= 14 && anchor.opening <= 2);
     }
+    const elon = anchors.coetaneos['Elon Musk'];
+    assert.deepEqual({ x: elon.x, y: elon.y, width: elon.width, height: elon.height }, { x: 181, y: 427, width: 32, height: 10 });
+    assert.ok(elon.opening > 0 && elon.opening <= 2);
 });
 
 test('thinking has no mouth or animation timer, reveal and final text share one turn', () => {
@@ -160,12 +167,21 @@ test('live history keeps its visible prefix and resumes only new text with a fre
     assert.equal(h.frames.size, 0); assert.equal(h.draws.length, drawCount, 'terminal status alone does not animate old text');
 });
 
-test('generation change and upstream error cannot leave a mouth running', () => {
+test('generation change stops the previous mouth; Elon can speak on coetáneos', () => {
     const h = harness(), c = h.controller;
     const token = c.begin({ persona: 'Steve Jobs' }); c.finish(token, 'Mensaje'); h.step();
+    assert.equal(c.snapshot().speaking, true);
     c.setGeneration('coetaneos'); assert.equal(c.snapshot().speaking, false); assert.equal(h.frames.size, 0);
     assert.equal(c.update(token, 'Muy tarde'), false);
-    c.setGeneration('leyendas'); const next = c.begin({ persona: 'Steve Jobs' }); c.update(next, 'Respuesta'); h.step();
+    c.select('Jensen Huang');
+    const quiet = c.begin({ persona: 'Jensen Huang' }); c.finish(quiet, 'Sin ancla'); h.step();
+    assert.equal(c.snapshot().speaking, false); assert.equal(h.draws.at(-1)?.persona, 'Steve Jobs');
+    c.select('Elon Musk');
+    const elon = c.begin({ persona: 'Elon Musk' }); c.finish(elon, 'En marcha'); h.step();
+    assert.equal(c.snapshot().speaking, true); assert.equal(h.draws.at(-1).persona, 'Elon Musk');
+    c.setGeneration('leyendas'); assert.equal(c.snapshot().speaking, false); assert.equal(h.frames.size, 0);
+    c.select('Steve Jobs');
+    const next = c.begin({ persona: 'Steve Jobs' }); c.update(next, 'Respuesta'); h.step();
     assert.equal(c.fail(next), true); assert.equal(c.snapshot().state, 'error'); assert.equal(c.snapshot().speaking, false);
     assert.equal(h.frames.size, 0); assert.equal(c.update(next, 'Error ignorado'), false);
 });
@@ -204,5 +220,89 @@ test('canvas patch scales with the image, stays invisible at rest, and refuses o
     mouth.hide(); assert.equal(canvas.style.display, 'none');
     img.src = 'https://www.admira.live/assets/council-coetaneos.jpg'; mouth.draw('Steve Jobs', 1);
     assert.equal(canvas.style.display, 'none');
+    img.naturalWidth = 1280; img.naturalHeight = 720;
+    img.getBoundingClientRect = () => ({ left: 0, top: 0, width: 640, height: 360 });
+    scene.getBoundingClientRect = () => ({ left: 0, top: 0 });
+    mouth.draw('Elon Musk', 1);
+    assert.equal(canvas.style.display, 'block');
+    assert.equal(canvas.dataset.persona, 'Elon Musk');
+    assert.equal(canvas.style.left, '80px');
+    assert.equal(canvas.style.top, '208.5px');
+    assert.equal(canvas.style.width, '21px');
+    assert.equal(canvas.style.height, '10px');
+    img.src = 'https://www.admira.live/assets/council-leyendas.jpg';
+    img.naturalWidth = 1360; img.naturalHeight = 768;
+    mouth.draw('Elon Musk', 1);
+    assert.equal(canvas.style.display, 'none');
     mouth.destroy(); assert.equal(events.size, 0); assert.equal(removed, true);
+});
+
+test('setWorking moves Elon with the spoken cosine and yields while text is revealing', () => {
+    const h = harness({ generation: 'coetaneos' }), c = h.controller;
+    assert.equal(c.snapshot().working, null);
+    c.setWorking('Elon Musk', true);
+    assert.equal(c.snapshot().working, 'Elon Musk');
+    assert.equal(c.snapshot().speaking, false);
+    assert.equal(h.frames.size, 1);
+    h.step(16);
+    const first = h.draws.at(-1);
+    assert.equal(first.persona, 'Elon Musk');
+    const level = .18 + .82 * (.5 - .5 * Math.cos((16 + 32) / 170 * Math.PI * 2));
+    assert.equal(first.level, level);
+    h.step(40);
+    assert.notEqual(h.draws.at(-1).level, first.level);
+    const token = c.begin({ persona: 'Elon Musk' });
+    c.finish(token, 'Hola');
+    h.step();
+    assert.equal(c.snapshot().speaking, true);
+    assert.equal(h.draws.at(-1).persona, 'Elon Musk');
+    let guard = 0;
+    while (c.snapshot().state !== 'idle' && guard++ < 40) h.step();
+    assert.equal(c.snapshot().state, 'idle');
+    assert.equal(c.snapshot().speaking, false);
+    assert.equal(h.frames.size, 1, 'el trabajo sigue cuando el texto termina');
+    c.setWorking('Elon Musk', false);
+    assert.equal(c.snapshot().working, null);
+    assert.equal(h.frames.size, 0);
+});
+
+test('setWorking respects reduced motion, a hidden tab and body.mouths-off', () => {
+    const reduced = harness({ generation: 'coetaneos', reducedMotion: true });
+    reduced.controller.setWorking('Elon Musk', true);
+    assert.equal(reduced.frames.size, 0);
+    assert.equal(reduced.draws.length, 0);
+    reduced.controller.setReducedMotion(false);
+    assert.equal(reduced.frames.size, 1);
+    reduced.controller.setVisible(false);
+    assert.equal(reduced.frames.size, 0);
+    reduced.step(1000);
+    assert.equal(reduced.draws.length, 0);
+    reduced.controller.setVisible(true);
+    reduced.step();
+    assert.equal(reduced.draws.at(-1).persona, 'Elon Musk');
+
+    let observed = null;
+    class MouthObserver {
+        constructor(fn) { this.fn = fn; observed = this; }
+        observe() {}
+        disconnect() { observed = null; }
+    }
+    const classes = new Set(['mouths-off']);
+    const body = { classList: { contains: name => classes.has(name) } };
+    const doc = { visibilityState: 'visible', body, addEventListener() {}, removeEventListener() {} };
+    const h = harness({ generation: 'coetaneos', document: doc, MutationObserver: MouthObserver });
+    h.controller.setWorking('Elon Musk', true);
+    assert.equal(h.frames.size, 0, 'mouths-off blocks the loop before the first frame');
+    classes.delete('mouths-off');
+    observed.fn();
+    assert.equal(h.frames.size, 1);
+    h.step();
+    assert.equal(h.draws.at(-1).persona, 'Elon Musk');
+    classes.add('mouths-off');
+    h.step();
+    assert.equal(h.frames.size, 0);
+    h.controller.setWorking('Steve Jobs', true);
+    assert.equal(h.frames.size, 0, 'Jobs has no coetáneos anchor');
+    h.controller.destroy();
+    assert.equal(observed, null);
 });

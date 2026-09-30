@@ -113,6 +113,11 @@ test('yokup_alta sigue el ritual de alta-mision.sh con la identidad del consejer
   const presencia = peticiones.find((p) => p.url.endsWith('/api/presence'));
   assert.equal(presencia.body.persona, 'Wozniak'); assert.equal(presencia.body.machine, 'GrokBot'); assert.equal(presencia.body.runtime, 'Grok'); assert.equal(presencia.body.model, 'Grok Heavy');
   assert.match(presencia.body.focus, /^misión FLT-1601/);
+  for (const p of peticiones.filter((x) => x.url.endsWith('/api/presence'))) {
+    assert.equal(p.body.working, undefined, 'el latido automático no marca trabajando');
+    assert.equal(p.body.mode, undefined);
+    assert.equal(p.body.encargo, undefined);
+  }
 });
 
 test('yokup_alta es idempotente: el mismo asunto vivo devuelve la misma misión y no encarga otra (timeout del cliente → reintento)', async () => {
@@ -312,6 +317,33 @@ test('yokup_decidir registra la elección de Carlos por id o referencia humana, 
   assert.ok(p.url.endsWith('/decisions/0020.10%2F09%2F2026.06%3A37/choose'));
   assert.deepEqual(p.body, { choice: 0, by: 'Carlos (vía WozniakGrokBot)' });
   assert.equal(r.chosen, 0); assert.match(r.siguiente, /MIS-DEC-1-01 ya lleva la opción elegida/);
+});
+
+test('yokup_presencia reenvía working y mode solo cuando llega trabajando', async () => {
+  const { client, peticiones } = await cliente();
+  const tool = (await client.listTools()).tools.find((t) => t.name === 'yokup_presencia');
+  assert.match(tool.description, /trabajando:true/);
+  assert.match(tool.description, /cada 60 s/);
+  assert.match(tool.description, /trabajando:false/);
+  const on = res(await client.callTool({ name: 'yokup_presencia', arguments: { foco: 'boca de Elon', trabajando: true, encargo: 101302 } }));
+  assert.equal(on.ok, true);
+  const body = peticiones.filter((p) => p.url.endsWith('/api/presence')).at(-1).body;
+  assert.equal(body.persona, 'Wozniak');
+  assert.equal(body.working, true);
+  assert.equal(body.mode, 'trabajando');
+  assert.equal(body.encargo, 101302);
+  assert.equal(body.focus, 'boca de Elon');
+  const off = res(await client.callTool({ name: 'yokup_presencia', arguments: { foco: 'paro', trabajando: false, encargo: 101302 } }));
+  assert.equal(off.ok, true);
+  const stopped = peticiones.filter((p) => p.url.endsWith('/api/presence')).at(-1).body;
+  assert.equal(stopped.working, false);
+  assert.equal(stopped.mode, 'pasivo');
+  assert.equal(stopped.encargo, 101302);
+  const plain = res(await client.callTool({ name: 'yokup_presencia', arguments: { foco: 'solo foco', tarea: 't', proyecto: 'yokup' } }));
+  assert.equal(plain.ok, true);
+  assert.deepEqual(peticiones.filter((p) => p.url.endsWith('/api/presence')).at(-1).body, {
+    persona: 'Wozniak', machine: 'GrokBot', runtime: 'Grok', focus: 'solo foco', host: 'app', model: 'Grok Heavy', task: 't', project: 'yokup'
+  });
 });
 
 test('yokup_alta no confunde el contenedor de una ventana (MIS-DEC) con la misión recién encargada', async () => {

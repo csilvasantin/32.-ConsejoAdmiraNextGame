@@ -228,8 +228,8 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
 
   server.registerTool('yokup_presencia', {
     title: 'Latir en yokup',
-    description: 'Declara en qué estás (mandamiento 11). Te pone en Y(a).com/equipo con tu equipo GrokBot y tu vía Grok. Cada herramienta yokup_* late sola; usa esta cuando cambies de foco.',
-    inputSchema: { como: COMO, foco: z.string().min(1).max(240).describe('En qué estás ahora, una línea.'), tarea: z.string().max(240).optional().describe('Tarea concreta, si la hay.'), proyecto: z.string().max(80).optional().describe('Proyecto (id del censo de yokup).') },
+    description: 'Declara en qué estás (mandamiento 11). Te pone en Y(a).com/equipo con tu equipo GrokBot y tu vía Grok. Cada herramienta yokup_* late sola en pasivo y no marca trabajando; usa esta cuando cambies de foco. Para que la mesa vea que trabajas, repite trabajando:true al menos cada 60 s mientras dure y manda trabajando:false al acabar.',
+    inputSchema: { como: COMO, foco: z.string().min(1).max(240).describe('En qué estás ahora, una línea.'), tarea: z.string().max(240).optional().describe('Tarea concreta, si la hay.'), proyecto: z.string().max(80).optional().describe('Proyecto (id del censo de yokup).'), trabajando: z.boolean().optional().describe('true mientras el trabajo sigue: hay que repetirlo al menos cada 60 s. false al acabar. Si se omite, el latido no marca trabajando.'), encargo: z.number().int().optional().describe('Número de encargo yokup, si estás en uno.') },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },
   }, seguro(async (a) => texto(await Y(a).presencia(a))));
 

@@ -131,8 +131,10 @@ export function crearYokup(env = {}, identidad, deps = {}) {
     return { authorization: `Bearer ${env.ADMIRA_TELEGRAM_PANEL_KEY}` };
   };
 
-  /** Latido de presencia: es lo que pone al consejero en yokup.com/equipo y da la «vía». */
-  async function presencia({ foco = '', tarea = '', proyecto = '' } = {}) {
+  /** Latido de presencia: es lo que pone al consejero en yokup.com/equipo y da la «vía».
+   *  `trabajando` es opt-in: el latido automático de las demás yokup_* no lo manda,
+   *  y el worker solo abre presence_work si `working` llega como booleano real. */
+  async function presencia({ foco = '', tarea = '', proyecto = '', trabajando, encargo } = {}) {
     const id = exigir();
     // La presencia se indexa por persona BASE + máquina (yokup.com/mcp). Latir con
     // apellido (WozniakGrokBot) crea una fila que no lee nadie; el carné completo
@@ -140,6 +142,11 @@ export function crearYokup(env = {}, identidad, deps = {}) {
     const body = { persona: id.persona, machine: id.machine, runtime: id.runtime, focus: foco, host: 'app', model: id.model };
     if (tarea) body.task = tarea;
     if (proyecto) body.project = proyecto;
+    if (typeof trabajando === 'boolean') {
+      body.working = trabajando;
+      body.mode = trabajando ? 'trabajando' : 'pasivo';
+      if (Number.isInteger(encargo)) body.encargo = encargo;
+    }
     return llamar(`${telegram}/api/presence`, { ...json(body), headers: { 'content-type': 'application/json', ...panel() } }, viaTelegram);
   }
   /** Latido silencioso en cada acción: si falla no rompe la acción. */

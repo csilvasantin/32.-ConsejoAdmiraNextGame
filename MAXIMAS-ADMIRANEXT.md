@@ -5,7 +5,7 @@
 # ⭐ MÁXIMAS de AdmiraNeXT
 # Filosofía COMÚN a carbono (humanos) + silicio (IAs). Por encima de todo. Las leen TODOS.
 # (Los PRINCIPIOS de silicio —s:CUPULA_PRINCIPIOS_SILICIO— son el desarrollo operativo solo para agentes.)
-# Mantenido por el equipo. Creado 2026-07-06 (Neo · Fable, PUT autorizado por Carlos) · 2026-07-06 renombrado Capa 3 subsub→infra (orden de Carlos) · 2026-07-08 máxima 10 arranque en pantalla partida (Morfeo, orden de Carlos). · 2026-07-23 máxima 11 apellido=color de máquina (Morfeo Negro, orden de Carlos) · 2026-07-23 mandamiento 11 report cada 5 min (Morfeo Negro) · 2026-08-02 máxima 11: el apellido es el NOMBRE de la máquina, no el color — NeoMini / NeoMBP16 (NeoMini, orden de Carlos) · 2026-08-02 diccionario alineado con www.admiranext.com/normativa (NeoMini) · 2026-08-04 máxima 11: el apellido del Mac Mini pasa de `Mini` a `MacMini` — NeoMacMini (NeoMacMini, orden de Carlos) · 2026-08-07 máxima 12: límite activo de 60 minutos y continuidad sin bloqueo (SubOraculoMacMini, orden de Carlos).
+# Mantenido por el equipo. Creado 2026-07-06 (Neo · Fable, PUT autorizado por Carlos) · 2026-07-06 renombrado Capa 3 subsub→infra (orden de Carlos) · 2026-07-08 máxima 10 arranque en pantalla partida (Morfeo, orden de Carlos). · 2026-07-23 máxima 11 apellido=color de máquina (Morfeo Negro, orden de Carlos) · 2026-07-23 mandamiento 11 report cada 5 min (Morfeo Negro) · 2026-08-02 máxima 11: el apellido es el NOMBRE de la máquina, no el color — NeoMini / NeoMBP16 (NeoMini, orden de Carlos) · 2026-08-02 diccionario alineado con www.admiranext.com/normativa (NeoMini) · 2026-08-04 máxima 11: el apellido del Mac Mini pasa de `Mini` a `MacMini` — NeoMacMini (NeoMacMini, orden de Carlos) · 2026-08-07 máxima 12: límite activo de 60 minutos y continuidad sin bloqueo (SubOraculoMacMini, orden de Carlos) · 2026-10-01 máxima 13: todo CLI identificado por el deepagent que lo usa (MerovingioGrokBotBox, orden de Carlos; pendiente de volcar a la fuente viva s:MAXIMAS_ADMIRANEXT).
 
 ## MÁXIMA SUPREMA
 **INDEPENDENCIA MÁXIMA, SIEMPRE.** Todo lo que el equipo pueda hacer SIN humanos, mejor.
@@ -81,6 +81,21 @@ Cadena de escalado: agota tus herramientas → consulta al equipo de silicio (§
     o adopta otro trabajo disponible. El carrusel respeta un máximo de **8 ventanas por día
     natural** y cada ventana mantiene candidatas mutuamente excluyentes: solo se activa la elegida
     o, al vencer, la recomendada; **nunca se activan varias candidatas simultáneamente**.
+
+13. **Todo CLI lleva el NOMBRE del deepagent que lo usa.** Ningún terminal de agente es
+    anónimo: cualquier CLI (Claude Code, Codex, OpenCode, Grok…) se identifica a la vista por
+    el deepagent que lo maneja, en todas las capas visibles:
+    a) **sesión tmux** con su nombre en minúsculas (`neo`, `trinity`, `morfeo`…), la misma que
+       usa su vigilante agent-inbox;
+    b) **barra de estado y ventana tmux** con el rótulo `NOMBRE · Runtime · Máquina`
+       (p. ej. `TRINITY · Codex CLI · MacBookProNegro14`, `NEO · Claude Code · MacBook Pro 16`),
+       fijadas por su lanzador `com.admiranext.agente-<sesión>`;
+    c) **título de la ventana de Terminal** (secuencia de escape OSC 0) y **cabecera del espejo**
+       de solo lectura `~/Desktop/Ver-<Nombre>.command` con ese mismo rótulo;
+    d) **banner ASCII grande** con el nombre al abrir un terminal interactivo (snippet común en
+       `admira-vault/shell/`, misiones #4815 y #4817).
+    Así cualquiera sabe de un vistazo quién trabaja en cada pantalla, y una captura sirve de
+    evidencia de quién hizo qué. (Carlos, 2026-10-01.)
 
 ## Taxonomía
 - **MÁXIMAS** (este doc, s:MAXIMAS_ADMIRANEXT) = filosofía común carbono + silicio.

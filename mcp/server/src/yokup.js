@@ -13,9 +13,11 @@
  *     bot-inbox → /fleet/sync → proyecto → /fleet/plan (alta); /fleet/task-status (pasos);
  *     /fleet/progress con evidence_kind=process (evidencia); /fleet/informe (cierre);
  *     /decisions (ventana); /api/presence (latido).
- *  3) LA EVIDENCIA SIN PANTALLA: «agent / session_transcript». El bot manda su
- *     transcripción, el Mac Mini la pinta (POST /api/council/render-transcript, PIL),
- *     y el MCP la sube a /fleet/media y la registra.
+ *  3) LA EVIDENCIA. «agent / session_transcript» sigue siendo la vía de proceso:
+ *     transcripción → PNG del Mac Mini → /fleet/progress. Una captura real
+ *     (png/webp/jpeg, base64 o https) se sube a /fleet/media y se enlaza al paso
+ *     con /fleet/task-status sin cambiar el estado. Norma de Carlos: el inicio y
+ *     el cierre de cada misión llevan un pantallazo de www.admira.live/highscore.
  */
 
 import { CONSEJEROS_GROKBOT, sillaCanonica } from './sillas.js';
@@ -247,11 +249,160 @@ export function crearYokup(env = {}, identidad, deps = {}) {
     return { mision: mision.id, display_ref: mision.display_ref, proyecto: p.id, encargo: numEncargo, plan: 'en curso: el planificador saca los pasos a/b/c de tu encargo en menos de 1 min (yokup_mis_misiones los lista)', siguiente: `marca cada paso con yokup_paso (${mision.id}, a/b/c, in_progress → done) y registra evidencia con yokup_evidencia antes de cerrar` };
   }
 
+  const MAX_IMAGEN = 10 * 1024 * 1024;
+  const TIMEOUT_DESCARGA_MS = 20_000;
+  const conTexto = (v) => v != null && String(v).trim() !== '';
+
+  /** Firma mágica: PNG (8 bytes), JPEG (FF D8 FF) o WebP (RIFF….WEBP). */
+  function firmaImagen(bytes) {
+    if (!bytes || bytes.length < 3) return null;
+    if (bytes.length >= 8
+      && bytes[0] === 0x89 && bytes[1] === 0x50 && bytes[2] === 0x4e && bytes[3] === 0x47
+      && bytes[4] === 0x0d && bytes[5] === 0x0a && bytes[6] === 0x1a && bytes[7] === 0x0a) return 'image/png';
+    if (bytes[0] === 0xff && bytes[1] === 0xd8 && bytes[2] === 0xff) return 'image/jpeg';
+    if (bytes.length >= 12
+      && bytes[0] === 0x52 && bytes[1] === 0x49 && bytes[2] === 0x46 && bytes[3] === 0x46
+      && bytes[8] === 0x57 && bytes[9] === 0x45 && bytes[10] === 0x42 && bytes[11] === 0x50) return 'image/webp';
+    return null;
+  }
+
+  function esMediaFlota(url) {
+    let u;
+    try { u = new URL(url); } catch { return false; }
+    if (u.protocol !== 'https:') return false;
+    if (!/^\/media\/fleet\/[^/]+/.test(u.pathname)) return false;
+    let hostApi = '';
+    try { hostApi = new URL(api).host; } catch { hostApi = ''; }
+    return u.host === 'api.yokup.com' || (!!hostApi && u.host === hostApi);
+  }
+
+  function bytesDeBase64(b64) {
+    const limpio = String(b64 || '').replace(/\s+/g, '');
+    if (!limpio || !/^[A-Za-z0-9+/]*={0,2}$/.test(limpio) || limpio.length % 4 === 1) throw new Error('base64 de la imagen no es válido');
+    const relleno = limpio.endsWith('==') ? 2 : limpio.endsWith('=') ? 1 : 0;
+    if (Math.floor((limpio.length * 3) / 4) - relleno > MAX_IMAGEN) throw new Error('la imagen supera el límite de 10 MB');
+    let bin;
+    try { bin = atob(limpio); } catch { throw new Error('base64 de la imagen no es válido'); }
+    const out = new Uint8Array(bin.length);
+    for (let i = 0; i < bin.length; i++) out[i] = bin.charCodeAt(i) & 0xff;
+    if (out.length > MAX_IMAGEN) throw new Error('la imagen supera el límite de 10 MB');
+    return out;
+  }
+
+  function interpretarBase64(entrada) {
+    const s = String(entrada || '').trim();
+    const m = /^data:image\/(png|webp|jpe?g);base64,([\s\S]+)$/i.exec(s);
+    if (m) {
+      let declarado = `image/${m[1].toLowerCase()}`;
+      if (declarado === 'image/jpg') declarado = 'image/jpeg';
+      return { bytes: bytesDeBase64(m[2]), declarado };
+    }
+    if (/^data:/i.test(s)) throw new Error('data URL no admitida: usa data:image/(png|webp|jpeg);base64,…');
+    return { bytes: bytesDeBase64(s), declarado: null };
+  }
+
+  async function leerConTope(r) {
+    const len = Number(r.headers.get('content-length') || 0);
+    if (Number.isFinite(len) && len > MAX_IMAGEN) {
+      try { await r.body?.cancel(); } catch { /* el cuerpo no se lee */ }
+      throw new Error('la imagen supera el límite de 10 MB');
+    }
+    if (!r.body || typeof r.body.getReader !== 'function') {
+      const buf = new Uint8Array(await r.arrayBuffer());
+      if (buf.length > MAX_IMAGEN) throw new Error('la imagen supera el límite de 10 MB');
+      return buf;
+    }
+    const reader = r.body.getReader();
+    const chunks = [];
+    let total = 0;
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      total += value.byteLength;
+      if (total > MAX_IMAGEN) {
+        try { await reader.cancel(); } catch { /* ya cortado */ }
+        throw new Error('la imagen supera el límite de 10 MB');
+      }
+      chunks.push(value);
+    }
+    const out = new Uint8Array(total);
+    let o = 0;
+    for (const c of chunks) { out.set(c, o); o += c.byteLength; }
+    return out;
+  }
+
+  async function descargarImagen(url) {
+    if (!/^https:\/\//i.test(String(url || ''))) throw new Error('la imagen por URL tiene que ser https');
+    const ctl = new AbortController();
+    const t = setTimeout(() => ctl.abort(), TIMEOUT_DESCARGA_MS);
+    try {
+      const r = await doFetch(url, { signal: ctl.signal, redirect: 'follow', headers: { accept: 'image/png,image/webp,image/jpeg', 'user-agent': 'admira-live-mcp/1.0' } });
+      if (!r.ok) throw new Error(`${r.status} al descargar la imagen (${url})`);
+      return await leerConTope(r);
+    } catch (e) {
+      const msg = String(e && e.message || e);
+      if (e && (e.name === 'AbortError' || /aborted|AbortError/i.test(msg))) throw new Error(`timeout al descargar la imagen (${url})`);
+      if (/10 MB|al descargar la imagen|tiene que ser https/.test(msg)) throw (e instanceof Error ? e : new Error(msg));
+      throw new Error(`no se pudo descargar la imagen (${url}): ${msg}`);
+    } finally { clearTimeout(t); }
+  }
+
+  /**
+   * Sube una captura real a /fleet/media y devuelve su URL.
+   * base64: crudo o data:image/(png|webp|jpeg);base64,…
+   * url: solo https; si ya es …/media/fleet/… (api.yokup.com o el YOKUP_API configurado) no se vuelve a subir.
+   */
+  async function subirImagen({ base64, url } = {}) {
+    const tieneB64 = conTexto(base64);
+    const tieneUrl = conTexto(url);
+    if (tieneB64 && tieneUrl) throw new Error('pasa la imagen como base64 o como URL, no las dos');
+    if (!tieneB64 && !tieneUrl) throw new Error('falta la imagen (base64 o URL https)');
+    let bytes;
+    let declarado = null;
+    if (tieneUrl) {
+      const limpia = String(url).trim();
+      if (esMediaFlota(limpia)) return limpia;
+      if (!/^https:\/\//i.test(limpia)) throw new Error('la imagen por URL tiene que ser https');
+      bytes = await descargarImagen(limpia);
+    } else {
+      const parsed = interpretarBase64(base64);
+      bytes = parsed.bytes;
+      declarado = parsed.declarado;
+    }
+    const tipo = firmaImagen(bytes);
+    if (!tipo) throw new Error('image_content_mismatch: los bytes no tienen firma PNG, WebP ni JPEG');
+    if (declarado && declarado !== tipo) throw new Error(`image_content_mismatch: se declaró ${declarado} pero la firma de los bytes es ${tipo}`);
+    const media = await llamar(`${api}/fleet/media`, { method: 'POST', headers: { 'content-type': tipo }, body: bytes }, { timeoutMs: 60_000 });
+    if (!media || !media.url) throw new Error('yokup no devolvió URL para la imagen');
+    return media.url;
+  }
+
+  /** Sin paso explícito: inicio → a; cierre → último paso cuyo código no es z. */
+  async function pasoDeCaptura(mision, code, momento) {
+    if (conTexto(code)) return String(code).trim();
+    if (momento === 'inicio') return 'a';
+    if (momento === 'cierre') {
+      const id = exigir();
+      const lista = await misionesDelTitular(id, 40);
+      const m = lista.find((x) => String(x.id) === String(mision));
+      if (!m) throw new Error(`no puedo deducir el paso de cierre de ${mision}: no aparece entre tus misiones. Indica paso (a, b, c…).`);
+      const codes = (m.tasks || []).map((t) => String(t.code || '').trim()).filter((c) => c && c.toLowerCase() !== 'z');
+      if (!codes.length) throw new Error(`no puedo deducir el paso de cierre de ${mision}: no hay pasos distintos de z. Indica paso (a, b, c…).`);
+      return codes[codes.length - 1];
+    }
+    throw new Error('falta paso para enlazar la captura: indica paso (a, b, c…) o momento inicio|cierre');
+  }
+
   async function paso({ mision, paso: code, estado, informe = '', imagen = '', tokens }) {
     const id = exigir();
     const body = { mission: mision, code, status: estado, owner: id.agent };
     if (informe) body.report = informe;
-    if (imagen && /^https?:/.test(imagen)) body.image = imagen;
+    const img = String(imagen || '').trim();
+    if (img) {
+      if (/^data:image\/(png|webp|jpe?g);base64,/i.test(img)) body.image = await subirImagen({ base64: img });
+      else if (/^https?:\/\//i.test(img)) body.image = img;
+      else throw new Error('imagen debe ser una URL http(s) o data:image/(png|webp|jpeg);base64,…');
+    }
     if (Number.isInteger(tokens)) body.tokens = tokens;
     const r = await llamar(`${api}/fleet/task-status`, json(body));
     await latir(`misión ${mision} · paso ${code} ${estado}`);
@@ -267,19 +418,42 @@ export function crearYokup(env = {}, identidad, deps = {}) {
     return media.url;
   }
 
-  /** Evidencia de proceso «agent/session_transcript»: transcripción → PNG → /fleet/progress. */
-  async function evidencia({ mision, transcripcion, titulo = '' }) {
+  /**
+   * Evidencia. La transcripción sola sigue el camino de proceso (/fleet/progress).
+   * Si llega una captura, se sube y se enlaza al paso sin cambiar el estado.
+   * Solo imagen: no llama a /fleet/progress.
+   */
+  async function evidencia({ mision, transcripcion, titulo = '', imagen_base64, imagen_url, paso: code, momento } = {}) {
     const id = exigir();
-    const url = await renderYSubir({ titulo: titulo || `${id.agent} · ${mision} · transcripción de sesión`, texto: transcripcion });
-    const r = await llamar(`${api}/fleet/progress`, json({ mission: mision, owner: id.agent, image: url, captured_at: ahora(), evidence_kind: 'process', capture_surface: 'agent', capture_context: 'session_transcript', degraded: false }));
+    const texto = String(transcripcion || '').trim();
+    const hayTexto = texto.length > 0;
+    const hayImagen = conTexto(imagen_base64) || conTexto(imagen_url);
+    if (!hayTexto && !hayImagen) throw new Error('falta evidencia: pasa la transcripción y/o una captura (imagen_base64 o imagen_url)');
+    let imagenUrl = null;
+    let pasoEnlazado = null;
+    if (hayImagen) {
+      pasoEnlazado = await pasoDeCaptura(mision, code, momento);
+      imagenUrl = await subirImagen({ base64: imagen_base64, url: imagen_url });
+      await llamar(`${api}/fleet/task-status`, json({ mission: mision, code: pasoEnlazado, owner: id.agent, image: imagenUrl }));
+    }
+    if (!hayTexto) {
+      await latir(`misión ${mision} · captura en paso ${pasoEnlazado}`);
+      return { ok: true, mision, imagen: imagenUrl, paso: pasoEnlazado };
+    }
+    const transcripcionImagen = await renderYSubir({ titulo: titulo || `${id.agent} · ${mision} · transcripción de sesión`, texto });
+    const progreso = await llamar(`${api}/fleet/progress`, json({ mission: mision, owner: id.agent, image: transcripcionImagen, captured_at: ahora(), evidence_kind: 'process', capture_surface: 'agent', capture_context: 'session_transcript', degraded: false }));
     await latir(`misión ${mision} · evidencia registrada`);
-    return { ...r, imagen: url };
+    if (hayImagen) return { ...progreso, imagen: imagenUrl, paso: pasoEnlazado, transcripcion_imagen: transcripcionImagen };
+    return { ...progreso, imagen: transcripcionImagen };
   }
 
-  /** Cierre con informe: imagen final (transcripción del cierre) + /fleet/informe. */
-  async function informe({ mision, informe: texto, transcripcion_final = '' }) {
+  /** Cierre con informe. Si llega `imagen` (https o base64/data URL), esa es la prueba; si no, el PNG de la transcripción. */
+  async function informe({ mision, informe: texto, transcripcion_final = '', imagen = '' } = {}) {
     const id = exigir();
-    const url = await renderYSubir({ titulo: `${id.agent} · ${mision} · cierre`, texto: transcripcion_final || texto });
+    const captura = String(imagen || '').trim();
+    const url = captura
+      ? (/^https?:\/\//i.test(captura) ? await subirImagen({ url: captura }) : await subirImagen({ base64: captura }))
+      : await renderYSubir({ titulo: `${id.agent} · ${mision} · cierre`, texto: transcripcion_final || texto });
     const r = await llamar(`${api}/fleet/informe`, json({ mission: mision, owner: id.agent, image: url, report: texto, host: 'app', runtime: id.runtime }), { timeoutMs: 60_000 });
     await latir(`misión ${mision} cerrada`);
     return { ...r, imagen: url };

@@ -8,6 +8,12 @@ import { identidadPorClave, crearYokup } from '../src/yokup.js';
 // FLT-1580: los consejeros de GrokBot dentro de la flota. Sin red: yokup, el bot-inbox
 // y el Mac Mini se sustituyen por un fetch falso que graba el ritual completo.
 
+const PNG = Uint8Array.from([0x89, 0x50, 0x4E, 0x47, 0x0D, 0x0A, 0x1A, 0x0A, 0x00, 0x00, 0x00, 0x00]);
+const JPEG = Uint8Array.from([0xFF, 0xD8, 0xFF, 0xE0, 0x00, 0x10, 0x4A, 0x46, 0x49, 0x46, 0x00, 0x01]);
+const WEBP = Uint8Array.from([0x52, 0x49, 0x46, 0x46, 0x1A, 0x00, 0x00, 0x00, 0x57, 0x45, 0x42, 0x50, 0x56, 0x50, 0x38, 0x20]);
+const b64 = (bytes) => Buffer.from(bytes).toString('base64');
+const INFORME = 'Trabajo terminado y verificado. Tiempo dedicado: 3 min. Puntos de la misión: +40. Total verificado: 40.';
+
 const KEYS = { 'clave-de-jobs-xxxxxxxxxxxxxxxxxx': { persona: 'Jobs' }, 'clave-de-disney-xxxxxxxxxxxxxxxx': { persona: 'Walt Disney' } };
 const ENV = { MCP_KEY: 'clave-de-wozniak-xxxxxxxxxxxxxxx', MCP_KEY_PERSONA: 'Wozniak', MCP_KEYS: JSON.stringify(KEYS),
   COUNCIL_MACHINE_TOKEN: 'token-maquina', ADMIRA_TELEGRAM_PANEL_KEY: 'panel', AGORA_SYNC_KEY: 'agora',
@@ -19,7 +25,7 @@ function fetchFalso(peticiones, estado = {}) {
   return async (url, init = {}) => {
     const u = String(url); const method = init.method || 'GET';
     let body = null; if (init.body && typeof init.body === 'string') { try { body = JSON.parse(init.body); } catch { body = init.body; } }
-    peticiones.push({ url: u, method, headers: init.headers || {}, body, bytes: init.body && typeof init.body !== 'string' ? init.body.length : 0 });
+    peticiones.push({ url: u, method, headers: init.headers || {}, body, bytes: init.body && typeof init.body !== 'string' ? init.body.length : 0, raw: init.body && typeof init.body !== 'string' ? init.body : null });
     const ok = (o, extra = {}) => new Response(JSON.stringify(o), { status: 200, headers: { 'content-type': 'application/json' }, ...extra });
     if (u.endsWith('/projects') && method === 'GET') return ok({ projects: [{ id: 'yokup', name: 'Yokup' }, { id: 'admira-live', name: 'Admira Live · Consejo' }] });
     if (u.endsWith('/projects/principal')) return ok({ ok: true });
@@ -29,7 +35,9 @@ function fetchFalso(peticiones, estado = {}) {
     if (u.includes('/fleet/missions')) {
       // Filtro en el servidor (agent=WozniakGrokBot): la lista solo trae misiones del titular.
       estado.filtros = (estado.filtros || []).concat(new URL(u).searchParams.get('agent') || '');
-      const lista = estado.encargo && estado.syncs >= (estado.syncsNecesarios || 1) ? [{ id: 'FLT-1601', persona: 'WozniakGrokBot', subject: estado.encargo.text, project_id: estado.encargo.project_id, created_at: estado.creadaEn || Date.now(), display_ref: '0301.04/09/2026.07:30', status: 'open', tasks: [{ code: 'a', status: 'pending', title: 'Uno' }] }] : [];
+      const tareas = estado.tareas || [{ code: 'a', status: 'pending', title: 'Uno' }];
+      const hayLista = (estado.encargo && estado.syncs >= (estado.syncsNecesarios || 1)) || estado.misiones;
+      const lista = hayLista ? [{ id: 'FLT-1601', persona: 'WozniakGrokBot', subject: estado.encargo && estado.encargo.text, project_id: estado.encargo && estado.encargo.project_id, created_at: estado.creadaEn || Date.now(), display_ref: '0301.04/09/2026.07:30', status: 'open', tasks: tareas }] : [];
       if (estado.contenedor && estado.encargo) lista.unshift({ id: 'MIS-DEC-x-01', persona: 'WozniakGrokBot', subject: estado.encargo.text, project_id: estado.encargo.project_id, created_at: Date.now(), status: 'in_progress', tasks: [] });
       return ok({ missions: lista });
     }
@@ -37,7 +45,14 @@ function fetchFalso(peticiones, estado = {}) {
     if (u.includes('/fleet/plan')) return ok({ ok: true, tasks: [{ code: 'a', title: 'Auditar' }, { code: 'b', title: 'Hacer' }, { code: 'c', title: 'Cerrar' }] });
     if (u.endsWith('/fleet/task-status')) return ok({ ok: true, mission: body.mission, code: body.code, status: body.status });
     if (u.endsWith('/api/council/render-transcript')) { if ((init.headers || {})['x-council-token'] !== 'token-maquina') return new Response('no', { status: 401 }); return new Response(new Uint8Array([0x89, 0x50, 0x4e, 0x47, 1, 2, 3]), { status: 200, headers: { 'content-type': 'image/png' } }); }
-    if (u.endsWith('/fleet/media')) return ok({ url: 'https://yokup.test/media/fleet/abc.png' });
+    if (u.startsWith('https://capturas.test/')) {
+      if (u.endsWith('/grande.png')) return new Response(PNG, { status: 200, headers: { 'content-type': 'image/png', 'content-length': String(11 * 1024 * 1024) } });
+      if (u.endsWith('/pagina.html')) return new Response('<html>no</html>', { status: 200, headers: { 'content-type': 'text/html' } });
+      if (u.endsWith('/shot.jpg')) return new Response(JPEG, { status: 200, headers: { 'content-type': 'image/jpeg', 'content-length': String(JPEG.length) } });
+      if (u.endsWith('/shot.webp')) return new Response(WEBP, { status: 200, headers: { 'content-type': 'image/webp', 'content-length': String(WEBP.length) } });
+      return new Response(PNG, { status: 200, headers: { 'content-type': 'image/png', 'content-length': String(PNG.length) } });
+    }
+    if (u.endsWith('/fleet/media')) return ok({ ok: true, url: 'https://yokup.test/media/fleet/abc.png', key: 'abc', contentType: (init.headers || {})['content-type'] || '' });
     if (u.endsWith('/fleet/progress')) return ok({ ok: true, mission: body.mission, evidence_updated: true, evidence_kind: body.evidence_kind, capture_surface: body.capture_surface, capture_context: body.capture_context });
     if (u.endsWith('/fleet/informe')) return ok({ ok: true, mission: body.mission, resolved: true, proof_image: body.image });
     if (u.endsWith('/decisions')) return ok({ ok: true, id: 'DEC-x', display_ref: '0302.04/09/2026.07:31', options: body.options });
@@ -344,6 +359,206 @@ test('yokup_presencia reenvía working y mode solo cuando llega trabajando', asy
   assert.deepEqual(peticiones.filter((p) => p.url.endsWith('/api/presence')).at(-1).body, {
     persona: 'Wozniak', machine: 'GrokBot', runtime: 'Grok', focus: 'solo foco', host: 'app', model: 'Grok Heavy', task: 't', project: 'yokup'
   });
+});
+
+test('las descripciones piden captura real de www.admira.live/highscore al inicio y al cierre', async () => {
+  const { client } = await cliente();
+  const tools = (await client.listTools()).tools;
+  const ev = tools.find((t) => t.name === 'yokup_evidencia');
+  const inf = tools.find((t) => t.name === 'yokup_informe');
+  const pa = tools.find((t) => t.name === 'yokup_paso');
+  for (const t of [ev, inf, pa]) {
+    assert.match(t.description, /Norma de Carlos/);
+    assert.match(t.description, /www\.admira\.live\/highscore/);
+  }
+  assert.match(ev.description, /momento inicio/);
+  assert.match(inf.description, /en imagen/);
+  assert.match(client.getInstructions(), /www\.admira\.live\/highscore/);
+  const evSchema = JSON.stringify(ev.inputSchema);
+  assert.match(evSchema, /imagen_base64/);
+  assert.match(evSchema, /imagen_url/);
+  assert.match(evSchema, /inicio/);
+  assert.match(evSchema, /cierre/);
+  assert.match(evSchema, /proceso/);
+  assert.ok(!(ev.inputSchema.required || []).includes('transcripcion'), 'la transcripción puede omitirse si hay captura');
+  assert.ok(inf.inputSchema.properties.imagen);
+  assert.match(pa.description, /data:image\/\(png\|webp\|jpeg\);base64/);
+});
+
+test('yokup_evidencia solo con transcripción sigue en /fleet/progress y no enlaza task-status', async () => {
+  const { client, peticiones } = await cliente();
+  const e = res(await client.callTool({ name: 'yokup_evidencia', arguments: { mision: 'FLT-1601', transcripcion: '[Carlos] haz X\n[Wozniak] hecho X, salida: ok' } }));
+  assert.equal(e.imagen, 'https://yokup.test/media/fleet/abc.png');
+  assert.equal(e.paso, undefined);
+  assert.equal(peticiones.some((p) => p.url.endsWith('/fleet/task-status')), false);
+  assert.ok(peticiones.some((p) => p.url.endsWith('/fleet/progress')));
+  assert.ok(peticiones.some((p) => p.url.endsWith('/render-transcript')));
+});
+
+test('yokup_evidencia sube base64, data URL y URL https, y enlaza task-status sin status', async () => {
+  const { client, peticiones } = await cliente();
+  const crudo = res(await client.callTool({ name: 'yokup_evidencia', arguments: { mision: 'FLT-1601', momento: 'inicio', imagen_base64: b64(PNG) } }));
+  assert.equal(crudo.imagen, 'https://yokup.test/media/fleet/abc.png');
+  assert.equal(crudo.paso, 'a');
+  let media = peticiones.filter((p) => p.url.endsWith('/fleet/media'));
+  assert.equal(media.length, 1);
+  assert.equal(media[0].headers['content-type'], 'image/png');
+  assert.equal(Buffer.from(media[0].raw).subarray(0, 8).toString('hex'), Buffer.from(PNG).subarray(0, 8).toString('hex'));
+  let ts = peticiones.filter((p) => p.url.endsWith('/fleet/task-status')).at(-1).body;
+  assert.deepEqual(ts, { mission: 'FLT-1601', code: 'a', owner: 'WozniakGrokBot', image: 'https://yokup.test/media/fleet/abc.png' });
+  assert.equal(peticiones.some((p) => p.url.endsWith('/fleet/progress')), false);
+  assert.equal(peticiones.some((p) => p.url.endsWith('/render-transcript')), false);
+
+  const data = res(await client.callTool({ name: 'yokup_evidencia', arguments: { mision: 'FLT-1601', paso: 'b', imagen_base64: `data:image/webp;base64,${b64(WEBP)}` } }));
+  assert.equal(data.paso, 'b');
+  media = peticiones.filter((p) => p.url.endsWith('/fleet/media'));
+  assert.equal(media.at(-1).headers['content-type'], 'image/webp');
+  assert.equal(Buffer.from(media.at(-1).raw).subarray(8, 12).toString('ascii'), 'WEBP');
+  ts = peticiones.filter((p) => p.url.endsWith('/fleet/task-status')).at(-1).body;
+  assert.equal(ts.code, 'b');
+  assert.equal('status' in ts, false);
+
+  const url = res(await client.callTool({ name: 'yokup_evidencia', arguments: { mision: 'FLT-1601', momento: 'inicio', imagen_url: 'https://capturas.test/shot.jpg' } }));
+  assert.equal(url.imagen, 'https://yokup.test/media/fleet/abc.png');
+  assert.equal(url.paso, 'a');
+  media = peticiones.filter((p) => p.url.endsWith('/fleet/media'));
+  assert.equal(media.at(-1).headers['content-type'], 'image/jpeg');
+  assert.equal(Buffer.from(media.at(-1).raw).subarray(0, 3).toString('hex'), 'ffd8ff');
+  assert.ok(peticiones.some((p) => p.url === 'https://capturas.test/shot.jpg'));
+  assert.equal(peticiones.some((p) => p.url.endsWith('/fleet/progress')), false);
+});
+
+test('yokup_evidencia reutiliza una URL /media/fleet sin volver a subirla', async () => {
+  const { client, peticiones } = await cliente();
+  const ya = 'https://api.yokup.com/media/fleet/deadbeef.png';
+  const e = res(await client.callTool({ name: 'yokup_evidencia', arguments: { mision: 'FLT-1601', momento: 'inicio', imagen_url: ya } }));
+  assert.equal(e.imagen, ya);
+  assert.equal(e.paso, 'a');
+  assert.equal(peticiones.some((p) => p.url.endsWith('/fleet/media')), false);
+  assert.equal(peticiones.some((p) => p.url.endsWith('/fleet/progress')), false);
+  const ts = peticiones.find((p) => p.url.endsWith('/fleet/task-status')).body;
+  assert.equal(ts.image, ya);
+  assert.equal(ts.code, 'a');
+  assert.equal('status' in ts, false);
+  const delApi = 'https://yokup.test/media/fleet/abc.png';
+  const e2 = res(await client.callTool({ name: 'yokup_evidencia', arguments: { mision: 'FLT-1601', paso: 'c', imagen_url: delApi } }));
+  assert.equal(e2.imagen, delApi);
+  assert.equal(e2.paso, 'c');
+  assert.equal(peticiones.filter((p) => p.url.endsWith('/fleet/media')).length, 0);
+});
+
+test('yokup_evidencia rechaza firma que no coincide y no sube', async () => {
+  const { client, peticiones } = await cliente();
+  const mal = await client.callTool({ name: 'yokup_evidencia', arguments: { mision: 'FLT-1601', momento: 'inicio', imagen_base64: `data:image/png;base64,${b64(JPEG)}` } });
+  assert.equal(mal.isError, true);
+  assert.match(mal.content[0].text, /image_content_mismatch/);
+  assert.match(mal.content[0].text, /image\/jpeg/);
+  const html = await client.callTool({ name: 'yokup_evidencia', arguments: { mision: 'FLT-1601', momento: 'inicio', imagen_url: 'https://capturas.test/pagina.html' } });
+  assert.equal(html.isError, true);
+  assert.match(html.content[0].text, /image_content_mismatch/);
+  const http = await client.callTool({ name: 'yokup_evidencia', arguments: { mision: 'FLT-1601', momento: 'inicio', imagen_url: 'http://capturas.test/shot.png' } });
+  assert.equal(http.isError, true);
+  assert.match(http.content[0].text, /https/);
+  const grande = await client.callTool({ name: 'yokup_evidencia', arguments: { mision: 'FLT-1601', momento: 'inicio', imagen_url: 'https://capturas.test/grande.png' } });
+  assert.equal(grande.isError, true);
+  assert.match(grande.content[0].text, /10 MB/);
+  assert.equal(peticiones.some((p) => p.url.endsWith('/fleet/media')), false);
+  assert.equal(peticiones.some((p) => p.url.endsWith('/fleet/task-status')), false);
+  assert.equal(peticiones.some((p) => p.url.startsWith('http://')), false);
+});
+
+test('yokup_evidencia con momento cierre usa el último paso que no es z, y sin paso deducible avisa', async () => {
+  const { client, peticiones, estado } = await cliente();
+  estado.misiones = true;
+  estado.tareas = [
+    { code: 'a', status: 'done', title: 'Abrir' },
+    { code: 'b', status: 'done', title: 'Hacer' },
+    { code: 'c', status: 'in_progress', title: 'Cerrar' },
+    { code: 'z', status: 'pending', title: 'Z' },
+  ];
+  const e = res(await client.callTool({ name: 'yokup_evidencia', arguments: { mision: 'FLT-1601', momento: 'cierre', imagen_base64: b64(JPEG) } }));
+  assert.equal(e.paso, 'c');
+  assert.equal(peticiones.find((p) => p.url.endsWith('/fleet/task-status')).body.code, 'c');
+  assert.equal(peticiones.find((p) => p.url.endsWith('/fleet/media')).headers['content-type'], 'image/jpeg');
+
+  estado.tareas = [{ code: 'z', status: 'pending', title: 'Z' }];
+  const soloZ = await client.callTool({ name: 'yokup_evidencia', arguments: { mision: 'FLT-1601', momento: 'cierre', imagen_base64: b64(PNG) } });
+  assert.equal(soloZ.isError, true);
+  assert.match(soloZ.content[0].text, /distintos de z/);
+
+  const sinPaso = await client.callTool({ name: 'yokup_evidencia', arguments: { mision: 'FLT-1601', momento: 'proceso', imagen_url: 'https://api.yokup.com/media/fleet/x.png' } });
+  assert.equal(sinPaso.isError, true);
+  assert.match(sinPaso.content[0].text, /falta paso/);
+  const mediasTrasError = peticiones.filter((p) => p.url.endsWith('/fleet/media')).length;
+  assert.equal(mediasTrasError, 1, 'el cierre inválido y el proceso sin paso no suben otra imagen');
+});
+
+test('yokup_evidencia con imagen y transcripción enlaza la captura y además registra el proceso', async () => {
+  const { client, peticiones } = await cliente();
+  const e = res(await client.callTool({ name: 'yokup_evidencia', arguments: { mision: 'FLT-1601', momento: 'inicio', imagen_base64: `data:image/jpeg;base64,${b64(JPEG)}`, transcripcion: '[Carlos] haz X\n[Wozniak] hecho X, salida: ok' } }));
+  assert.equal(e.paso, 'a');
+  assert.equal(e.imagen, 'https://yokup.test/media/fleet/abc.png');
+  assert.equal(e.transcripcion_imagen, 'https://yokup.test/media/fleet/abc.png');
+  assert.equal(e.evidence_kind, 'process');
+  const medias = peticiones.filter((p) => p.url.endsWith('/fleet/media'));
+  assert.equal(medias.length, 2);
+  assert.equal(medias[0].headers['content-type'], 'image/jpeg');
+  assert.equal(medias[1].bytes, 7, 'el PNG de la transcripción sigue saliendo del Mac Mini');
+  assert.ok(peticiones.some((p) => p.url.endsWith('/fleet/progress')));
+  assert.equal(peticiones.find((p) => p.url.endsWith('/fleet/task-status')).body.code, 'a');
+});
+
+test('yokup_evidencia solo con captura no exige COUNCIL_MACHINE_TOKEN', async () => {
+  const { client, peticiones } = await cliente(ENV.MCP_KEY, { ...ENV, COUNCIL_MACHINE_TOKEN: '' });
+  const e = res(await client.callTool({ name: 'yokup_evidencia', arguments: { mision: 'FLT-1601', momento: 'inicio', imagen_base64: b64(PNG) } }));
+  assert.equal(e.paso, 'a');
+  assert.equal(e.imagen, 'https://yokup.test/media/fleet/abc.png');
+  assert.equal(peticiones.some((p) => p.url.endsWith('/render-transcript')), false);
+});
+
+test('yokup_informe con imagen no llama a renderYSubir; sin imagen sigue pintando la transcripción', async () => {
+  const { client, peticiones } = await cliente();
+  const conUrl = res(await client.callTool({ name: 'yokup_informe', arguments: { mision: 'FLT-1601', informe: INFORME, imagen: 'https://api.yokup.com/media/fleet/cierre.png' } }));
+  assert.equal(conUrl.imagen, 'https://api.yokup.com/media/fleet/cierre.png');
+  assert.equal(conUrl.proof_image, 'https://api.yokup.com/media/fleet/cierre.png');
+  assert.equal(peticiones.some((p) => p.url.endsWith('/render-transcript')), false);
+  assert.equal(peticiones.some((p) => p.url.endsWith('/fleet/media')), false);
+  assert.equal(peticiones.find((p) => p.url.endsWith('/fleet/informe')).body.image, 'https://api.yokup.com/media/fleet/cierre.png');
+  assert.match(peticiones.find((p) => p.url.endsWith('/fleet/informe')).body.report, /Puntos de la misión/);
+
+  const conB64 = res(await client.callTool({ name: 'yokup_informe', arguments: { mision: 'FLT-1601', informe: INFORME, imagen: `data:image/png;base64,${b64(PNG)}`, transcripcion_final: 'esto no debe pintarse como prueba' } }));
+  assert.equal(conB64.imagen, 'https://yokup.test/media/fleet/abc.png');
+  assert.equal(peticiones.filter((p) => p.url.endsWith('/render-transcript')).length, 0);
+  assert.equal(peticiones.filter((p) => p.url.endsWith('/fleet/media')).at(-1).headers['content-type'], 'image/png');
+  assert.equal(peticiones.filter((p) => p.url.endsWith('/fleet/informe')).at(-1).body.image, 'https://yokup.test/media/fleet/abc.png');
+
+  const conDescarga = res(await client.callTool({ name: 'yokup_informe', arguments: { mision: 'FLT-1601', informe: INFORME, imagen: 'https://capturas.test/shot.webp' } }));
+  assert.equal(conDescarga.imagen, 'https://yokup.test/media/fleet/abc.png');
+  assert.equal(peticiones.filter((p) => p.url.endsWith('/fleet/media')).at(-1).headers['content-type'], 'image/webp');
+  assert.equal(peticiones.filter((p) => p.url.endsWith('/render-transcript')).length, 0);
+
+  const sin = res(await client.callTool({ name: 'yokup_informe', arguments: { mision: 'FLT-1601', informe: INFORME } }));
+  assert.equal(sin.imagen, 'https://yokup.test/media/fleet/abc.png');
+  assert.equal(peticiones.filter((p) => p.url.endsWith('/render-transcript')).length, 1);
+  assert.equal(peticiones.filter((p) => p.url.endsWith('/fleet/informe')).at(-1).body.image, 'https://yokup.test/media/fleet/abc.png');
+});
+
+test('yokup_paso sube data:image y deja pasar la URL http(s) como hasta ahora', async () => {
+  const { client, peticiones } = await cliente();
+  res(await client.callTool({ name: 'yokup_paso', arguments: { mision: 'FLT-1601', paso: 'b', estado: 'done', informe: 'captura', imagen: `data:image/jpeg;base64,${b64(JPEG)}` } }));
+  const media = peticiones.find((p) => p.url.endsWith('/fleet/media'));
+  assert.equal(media.headers['content-type'], 'image/jpeg');
+  const ts = peticiones.find((p) => p.url.endsWith('/fleet/task-status')).body;
+  assert.equal(ts.status, 'done');
+  assert.equal(ts.code, 'b');
+  assert.equal(ts.image, 'https://yokup.test/media/fleet/abc.png');
+  assert.equal(ts.report, 'captura');
+
+  res(await client.callTool({ name: 'yokup_paso', arguments: { mision: 'FLT-1601', paso: 'a', estado: 'in_progress', imagen: 'https://ejemplo.test/ya.png' } }));
+  const directo = peticiones.filter((p) => p.url.endsWith('/fleet/task-status')).at(-1).body;
+  assert.equal(directo.image, 'https://ejemplo.test/ya.png');
+  assert.equal(directo.status, 'in_progress');
+  assert.equal(peticiones.filter((p) => p.url.endsWith('/fleet/media')).length, 1, 'la URL https no se vuelve a subir');
 });
 
 test('yokup_alta no confunde el contenedor de una ventana (MIS-DEC) con la misión recién encargada', async () => {

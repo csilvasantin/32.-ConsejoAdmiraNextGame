@@ -11,7 +11,7 @@
  *   · a un agente de la flota lo recoge su vigilante (agent-inbox-watcher.sh) en la
  *     máquina donde late y se lo inyecta en su sesión tmux;
  *   · a un consejero de GrokBot (las sillas de sillas.js: Wozniak, Jobs, Lucas,
- *     Disney, Musk…) el worker lo despierta por el webhook de su rutina
+ *     Disney, Musk, Huang…) el worker lo despierta por el webhook de su rutina
  *     (despertarConsejero) y contesta en 1-3 minutos.
  * La respuesta queda en la nota del encargo y en hilo en Telegram; aquí se lee con
  * encargo_estado.
@@ -20,18 +20,19 @@
 import { SILLAS, CONSEJEROS_GROKBOT } from './sillas.js';
 
 export const AGENTES_FLOTA = ['Neo', 'Morfeo', 'Trinity', 'Oraculo', 'Smith', 'Cypher', 'Switch', 'Niobe', 'Link', 'Persefone', 'Seraph', 'Arquitecto', 'Merovingio'];
-/** «el Merovingio» es el deepagent de Musk; el carné es Merovingio. */
+/** «el Merovingio» es el deepagent de Musk; el carné es Merovingio.
+ *  Cypher ya es su carné: deepagent de Huang (DeepAgents en GrokBotBox). */
 const ALIAS_FLOTA = { elmerovingio: 'Merovingio' };
 export const CONSEJEROS = CONSEJEROS_GROKBOT;
 export const PERSONAS = [...AGENTES_FLOTA, ...CONSEJEROS];
 const MAQUINA_CONSEJEROS = 'grokbot';
 /** SILLA ↔ MacBook Air (Jobs/Carbono, 8-sep-2026, encargo #2882 · FLT-100131), más Musk
- *  (coetáneo CEO, sin Mac). La tabla vive en sillas.js. El consejero sigue
- *  despertándose en GrokBot: la silla física es su máquina canónica en el censo,
- *  no donde corre el LLM. «grokbot» es el equipo de despertar de todas las sillas,
- *  así que no resuelve a Musk aunque esa sea su máquina declarada. */
+ *  (coetáneo CEO, sin Mac) y Huang (coetáneo CTO, sin Mac). La tabla vive en sillas.js.
+ *  El consejero sigue despertándose en GrokBot: la silla física es su máquina canónica
+ *  en el censo, no donde corre el LLM. «grokbot» es el equipo de despertar de todas
+ *  las sillas, así que no resuelve a Musk ni a Huang aunque esa sea su máquina declarada. */
 export { SILLAS };
-/** «MacBookAirAzul», «mba azul», «admira-macbookairazul» → «Jobs». «Elon» → «Musk». */
+/** «MacBookAirAzul», «mba azul», «admira-macbookairazul» → «Jobs». «Elon» → «Musk». «Jensen» → «Huang». */
 export function consejeroDeMaquina(maquina) {
   const n = norm(maquina);
   if (!n || n === MAQUINA_CONSEJEROS) return null;
@@ -120,7 +121,10 @@ export function crearFlota(env = {}, identidad, deps = {}) {
       consejeros: CONSEJEROS.map((persona) => {
         const s = SILLAS[persona];
         const fila = { persona, equipo: 'GrokBot', silla: s.rol, lado: s.lado, maquina: s.maquina, disponibilidad: 'siempre: se le despierta por webhook, contesta en 1-3 min' };
-        if (s.deepagent) { fila.deepagent = s.deepagent; fila.deepagent_maquina = s.deepagent_maquina; fila.deepagent_runtime = s.deepagent_runtime; }
+        if (s.deepagent) {
+          fila.deepagent = s.deepagent; fila.deepagent_maquina = s.deepagent_maquina; fila.deepagent_runtime = s.deepagent_runtime;
+          if (s.deepagent_model) fila.deepagent_model = s.deepagent_model;
+        }
         return fila;
       }),
       agentes,
@@ -142,7 +146,7 @@ export function crearFlota(env = {}, identidad, deps = {}) {
     if (!p && consejeroDeMaquina(persona)) p = consejeroDeMaquina(persona);
     if (!p && maquina && consejeroDeMaquina(maquina)) p = consejeroDeMaquina(maquina);
     const maquinasSilla = Object.values(SILLAS).filter((x) => x.fleet_id).map((x) => x.maquina);
-    if (!p) throw new Error(`persona desconocida «${persona}»: vale ${PERSONAS.join(', ')} (o la máquina de una silla: ${maquinasSilla.join(', ')}, o Elon / Elon Musk → Musk)`);
+    if (!p) throw new Error(`persona desconocida «${persona}»: vale ${PERSONAS.join(', ')} (o la máquina de una silla: ${maquinasSilla.join(', ')}, o Elon / Elon Musk → Musk, Jensen / Jensen Huang → Huang)`);
     if (esConsejero(p) && maquina && consejeroDeMaquina(maquina) && consejeroDeMaquina(maquina) !== p) throw new Error(`${maquina} es la silla de ${consejeroDeMaquina(maquina)}, no de ${p}`);
     const cuerpo = String(texto || '').trim();
     if (cuerpo.length < 5) throw new Error('el encargo necesita texto (qué hay que hacer y para qué)');

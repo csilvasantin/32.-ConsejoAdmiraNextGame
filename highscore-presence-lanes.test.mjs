@@ -38,7 +38,7 @@ function api() {
   return new Function("identity", `
     var window = { ykAgentIdentity: identity };
     var datos = { presencia: [], presenceNow: 0 };
-    var DEEPAGENTS_NAME_RE = /^(neo|trinity|morfeo|oraculo|oracle|smith|arquitecto|architect|merovingio)\\b/i;
+    var DEEPAGENTS_NAME_RE = /^(neo|trinity|morfeo|oraculo|oracle|smith|arquitecto|architect|merovingio|cypher)\\b/i;
     function normaliza(value) { return String(value == null ? "" : value).trim(); }
     ${functions}
     return {
@@ -65,6 +65,11 @@ test("DeepAgents y Niobe entran al carril; consejeros no", () => {
   assert.equal(A.deep("MerovingioGrokBotBox"), true, "Merovingio entra al ranking");
   assert.equal(A.laneOk("MerovingioGrokBotBox"), true);
   assert.equal(A.deep("ElonMusk"), false);
+  assert.equal(A.deep("CypherGrokBotBox"), true, "Cypher entra al ranking");
+  assert.equal(A.laneOk("CypherGrokBotBox"), true);
+  assert.equal(A.deep("HuangGrokBot"), false, "Huang es silla, no DeepAgent");
+  assert.equal(A.laneOk("HuangGrokBot"), false);
+  assert.equal(A.deep("JensenHuang"), false);
 });
 
 test("presencia verificada + focus genera una calle por agente (CLI incluido)", () => {

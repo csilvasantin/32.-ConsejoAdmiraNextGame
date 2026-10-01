@@ -28,17 +28,20 @@
   /* Consejero de la mesa → agente de la flota. Leyendas: los consejeros de
      GrokBot (council-grokbot.js). Coetáneos: su deepagent (MATRIX_LINKS).
      Elon = Merovingio (Grok CLI en la GrokBot box), pareja de la silla Musk;
-     Smith sigue en la otra cuenta de GrokBot. Jensen = ArquitectoCursorCloud.
-     Cook, Buffett, Rams y Schultz no tienen agente: su bocadillo lo dice. */
+     Smith sigue en la otra cuenta de GrokBot. Jensen = Cypher (DeepAgents en
+     la GrokBot box), pareja de la silla Huang. ArquitectoCursorCloud sigue
+     siendo el orquestador Cursor y no ocupa silla. Ryan Reynolds se queda sin
+     agente: Cypher ya no es del CSO. Cook, Buffett, Rams y Schultz tampoco
+     tienen agente: su bocadillo lo dice. */
   const AGENTS = Object.freeze({
     leyendas: Object.freeze({
       'Steve Jobs': 'Jobs', 'Steve Wozniak': 'Wozniak', 'Tim Cook': null, 'Warren Buffett': null,
       'Walt Disney': 'Disney', 'Dieter Rams': null, 'Howard Schultz': null, 'George Lucas': 'Lucas'
     }),
     coetaneos: Object.freeze({
-      'Elon Musk': 'Merovingio', 'Jensen Huang': 'ArquitectoCursorCloud', 'Gwynne Shotwell': 'Trinity',
+      'Elon Musk': 'Merovingio', 'Jensen Huang': 'Cypher', 'Gwynne Shotwell': 'Trinity',
       'Ruth Porat': 'Oraculo', 'John Lasseter': 'Mouse', 'Jony Ive': 'Arquitecto',
-      'Carlos Ratti': 'Link', 'Ryan Reynolds': 'Cypher'
+      'Carlos Ratti': 'Link', 'Ryan Reynolds': null
     })
   });
 
@@ -60,7 +63,8 @@
   }
 
   /* ¿Este registro (persona + máquina) es del agente enlazado? El Arquitecto se parte
-     en dos: ArquitectoCursorCloud (Jensen) y el Arquitecto de las demás cajas (Jony). */
+     en dos: ArquitectoCursorCloud (orquestador Cursor, sin silla) y el Arquitecto
+     de las demás cajas (Jony). Jensen lee a Cypher, no a CursorCloud. */
   function belongs(agent, persona, machine) {
     const a = key(agent), p = key(persona), m = key(machine);
     if (!a || !p) return false;

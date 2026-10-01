@@ -41,7 +41,7 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
   const server = new McpServer({ name: NOMBRE, version: env.VERSION || '1.0.0', websiteUrl: env.SITIO || 'https://www.admira.live' }, {
     instructions: [
       'Eres el acceso al Consejo de Silicio de AdmiraNeXT (admira.live). Ocho sillas (CEO, CTO, COO, CFO, CCO, CDO, CXO, CSO) en dos generaciones: leyendas y coetáneos.',
-      `SI TÚ ERES UN CONSEJERO (un bot de GrokBot: ${CONSEJEROS_GROKBOT.join(', ')} — Steve Wozniak, Steve Jobs, Walt Disney, George Lucas, Elon Musk…): tú ya eres esa silla y razonas sobre Grok. Responde tú mismo; NO uses consejero_preguntar ni consejo_preguntar para pedirle tu propia opinión a otra copia de ti, porque eso paga una segunda IA para decir lo que tú ya sabes. Usa el MCP para lo que no tienes: datos vivos (flota_estado, consejo_bots, consejo_tareas, consejo_salud), acciones (agora_decir) y para consultar a OTRO consejero distinto de ti.`,
+      `SI TÚ ERES UN CONSEJERO (un bot de GrokBot: ${CONSEJEROS_GROKBOT.join(', ')} — Steve Wozniak, Steve Jobs, Walt Disney, George Lucas, Elon Musk, Jensen Huang…): tú ya eres esa silla y razonas sobre Grok. Responde tú mismo; NO uses consejero_preguntar ni consejo_preguntar para pedirle tu propia opinión a otra copia de ti, porque eso paga una segunda IA para decir lo que tú ya sabes. Usa el MCP para lo que no tienes: datos vivos (flota_estado, consejo_bots, consejo_tareas, consejo_salud), acciones (agora_decir) y para consultar a OTRO consejero distinto de ti.`,
       'Si NO eres un consejero: para una opinión de la mesa usa consejo_preguntar (responde un consejero racional y otro creativo); para hablar con uno concreto usa consejero_preguntar con su rol.',
       'Cada pregunta al Consejo consume presupuesto: pregunta con contexto y una sola vez. El modelo por defecto es grok-4.6 (xAI); claude-sonnet sigue disponible como opción. Mira consejo_modelos antes de elegir otro.',
       'La flota y el tablero de tareas del Consejo se leen con flota_estado, consejo_bots y consejo_tareas. agora_decir publica en AgoraMatrix, el grupo del equipo.',
@@ -137,7 +137,7 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
 
   /* ── Flota: ver quién late, encargar y recoger la respuesta (FLT-2038) ────────── */
   const maquinasSilla = Object.entries(SILLAS).filter(([, s]) => s.fleet_id).map(([p, s]) => `${s.maquina}→${p}`).join(', ');
-  const PERSONA = z.string().min(3).max(40).describe(`A quién: agente de la flota (${AGENTES_FLOTA.join(', ')}) o consejero de GrokBot (${CONSEJEROS.join(', ')}). Con o sin apellido de equipo. También vale la máquina de una silla física: ${maquinasSilla}. Musk no tiene Mac: Elon o Elon Musk.`);
+  const PERSONA = z.string().min(3).max(40).describe(`A quién: agente de la flota (${AGENTES_FLOTA.join(', ')}) o consejero de GrokBot (${CONSEJEROS.join(', ')}). Con o sin apellido de equipo. También vale la máquina de una silla física: ${maquinasSilla}. Musk no tiene Mac: Elon o Elon Musk. Huang no tiene Mac: Jensen o Jensen Huang.`);
 
   server.registerTool('agentes_vivos', {
     title: 'Quién está vivo en la flota',

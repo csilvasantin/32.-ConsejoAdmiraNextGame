@@ -7,7 +7,7 @@ import CryptoKit
 import ScreenCaptureKit
 import Darwin
 
-let supportedPersonas = ["Steve Jobs", "Steve Wozniak", "Walt Disney", "George Lucas", "Elon Musk"]
+let supportedPersonas = ["Steve Jobs", "Steve Wozniak", "Walt Disney", "George Lucas", "Elon Musk", "Jensen Huang"]
 let applicationBundle = "com.anysphere.sand"
 
 struct Request: Decodable {

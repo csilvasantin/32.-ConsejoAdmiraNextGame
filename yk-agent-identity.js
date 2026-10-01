@@ -35,7 +35,9 @@
   var PERSONAS = [
     ["Oraculo",["oraculo","oráculo","oracle"]],
     ["Neo",["neo"]],["Morfeo",["morfeo","morpheus"]],["Trinity",["trinity"]],
-    ["Smith",["smith","cypher","agente smith","smith gris","smith negro","smithgris","smithnegro"]],
+    ["Smith",["smith","agente smith","smith gris","smith negro","smithgris","smithnegro"]],
+    // Cypher ya no es el nombre legado de Smith: es el deepagent de Huang (GrokBot box).
+    ["Cypher",["cypher"]],
     ["WhiteRabbit",["whiterabbit","white rabbit"]],
     ["Niobe",["niobe"]],
     ["Persefone",["persefone","perséfone","persephone"]],
@@ -48,6 +50,7 @@
     ["Disney",["disney","walt disney","waltdisney"]],
     ["Lucas",["lucas","george lucas","georgelucas"]],
     ["Musk",["musk","elon musk","elonmusk"]],
+    ["Huang",["huang","jensen huang","jensenhuang"]],
     ["Merovingio",["merovingio","el merovingio","elmerovingio"]],
     // Arquitecto = Cursor cloud (NO Jony Ive / Arquitecto Silicio). Equipo: CursorCloud.
     ["Arquitecto",["arquitecto","architect","elarquitecto","el arquitecto"]]

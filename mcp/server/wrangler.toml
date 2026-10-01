@@ -5,10 +5,11 @@
 #
 # Secretos (wrangler secret put):
 #   MCP_KEY                     clave general (Wozniak, la primera que Carlos dio)
-#   MCP_KEYS                    JSON {"<clave>":{"persona":"Jobs|Disney|Lucas|Wozniak|Musk"},…}
+#   MCP_KEYS                    JSON {"<clave>":{"persona":"Jobs|Disney|Lucas|Wozniak|Musk|Huang"},…}
 #                               Musk = Elon Musk (CEO, coetáneos). También vale {"persona":"Elon Musk"}.
-#                               Su deepagent no va aquí: Merovingio entra con la clave HMAC
-#                               de la flota (tools/clave-flota.mjs Merovingio GrokBotBox).
+#                               Huang = Jensen Huang (CTO, coetáneos). También vale {"persona":"Jensen Huang"}.
+#                               Sus deepagents no van aquí: Merovingio y Cypher entran con la clave HMAC
+#                               de la flota (tools/clave-flota.mjs Merovingio GrokBotBox, y Cypher GrokBotBox).
 #   COUNCIL_MACHINE_TOKEN       token máquina-a-máquina del council-api (X-Council-Token)
 #   AGORA_SYNC_KEY              (opcional) clave del feed de AgoraMatrix en pixer-worker
 #   ADMIRA_TELEGRAM_PANEL_KEY   alta de encargos y latido de presencia
@@ -56,7 +57,7 @@ YOKUP_API = "https://api.yokup.com"
 ADMIRA_TELEGRAM_URL = "https://bot.yokup.com"
 # MCP_KEY (la primera clave, la que ya tiene Wozniak) se mapea a esta persona.
 MCP_KEY_PERSONA = "Wozniak"
-VERSION = "v.01.10.2026.r1.05:01"
+VERSION = "v.01.10.2026.r2"
 # Cada consejero se representa a sí mismo (Carlos, 7-sep-2026). Estricto = "1" solo cuando cada Bot de GrokBot
 # entre por SU conector: el smoke de las 06:30 demostró que los cuatro Bots seguían saliendo por la clave de Lucas
 # (los conectores son de la cuenta y el Bot no elige solo), así que con "1" Jobs, Disney y Wozniak no podían escribir.

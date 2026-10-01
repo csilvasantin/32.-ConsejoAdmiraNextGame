@@ -24,7 +24,7 @@ interno de la app Grok Bot, ni un segundo modelo con el mismo nombre.
 Desplegar juntos `server.js` y `grokbot-bridge.js`, conservando las dependencias
 de autenticación existentes de FleetControl. Reiniciar el relay mediante su servicio habitual.
 El módulo no instala rutinas, no crea misiones y no configura credenciales.
-Se reutilizan las rutinas de Jobs, Wozniak, Disney, Lucas y Musk ya configuradas en el
+Se reutilizan las rutinas de Jobs, Wozniak, Disney, Lucas, Musk y Huang ya configuradas en el
 worker de Telegram. La disponibilidad de cada rutina se verifica operativamente;
 la capacidad `available` significa que el relay tiene su proveedor configurado.
 
@@ -41,7 +41,7 @@ verificado; no se permite declararlo en el body.
 - `GET /api/grokbot/capabilities` → `{ok:true,provider:'webhook',available,...}`.
   `historyFromDesktop`, `desktop`, `attachments`, `routines` e `interrupt` son
   siempre `false`. `personas` contiene `{persona,name}` para las sillas GrokBot
-  (Jobs, Wozniak, Disney, Lucas y Musk).
+  (Jobs, Wozniak, Disney, Lucas, Musk y Huang).
 - `POST /api/grokbot/messages` con `{message_id,persona,prompt}` → HTTP 202,
   `{ok:true,message}`. `message_id`: 8–120 caracteres alfanuméricos o `._:-`.
   `prompt`: 5–16000 caracteres. `persona`: alias canónico o nombre completo.

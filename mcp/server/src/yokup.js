@@ -33,9 +33,12 @@ const dormir = (ms) => new Promise((r) => setTimeout(r, ms));
 
 export const PERSONAS_FLOTA = ['Morfeo', 'Neo', 'Smith', 'Trinity', 'Oraculo', 'Niobe', 'Link', 'Cypher', 'Switch', 'Persefone', 'Seraph', 'Arquitecto', 'Merovingio'];
 /** Equipos físicos + CursorCloud (Arquitecto = Cursor cloud; no confundir con Arquitecto Silicio/Ive).
- *  GrokBotBox ya es la caja de Niobe/Cypher; Merovingio (deepagent de Musk) corre ahí, Grok CLI. */
+ *  GrokBotBox ya es la caja de Niobe/Cypher; Merovingio (deepagent de Musk) corre ahí, Grok CLI.
+ *  Cypher es el deepagent de Huang (DeepAgents, Nemotron 3 Ultra), no el de Ryan Reynolds. */
 export const MAQUINAS_FLOTA = ['MacMini', 'MacBookPro14', 'MacBookPro16', 'MacBookAirAzul', 'MacBookAirRosa', 'MacBookAirCrema', 'MacBookAirPlata', 'CursorCloud', 'GrokBotBox'];
-const RUNTIME_POR_DEFECTO = { Oraculo: 'Codex', Trinity: 'Codex', Niobe: 'OpenCode', Persefone: 'OpenCode', Seraph: 'OpenCode', Arquitecto: 'Cursor', Merovingio: 'Grok CLI' };
+const RUNTIME_POR_DEFECTO = { Oraculo: 'Codex', Trinity: 'Codex', Niobe: 'OpenCode', Persefone: 'OpenCode', Seraph: 'OpenCode', Arquitecto: 'Cursor', Merovingio: 'Grok CLI', Cypher: 'DeepAgents' };
+/** Sin esto, el latido HMAC de Cypher salía con modelo vacío. NVIDIA Nemotron 3 Ultra (integrate.api.nvidia.com). */
+const MODELO_POR_DEFECTO = { Cypher: 'nvidia/nemotron-3-ultra-550b-a55b' };
 const b64url = (bytes) => btoa(String.fromCharCode(...bytes)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, '');
 
 /**
@@ -79,7 +82,7 @@ export function identidadPorClave(clave, env = {}) {
 export function identidadAgente(persona, machine, runtime, model) {
   const p = String(persona).normalize('NFD').replace(/[\u0300-\u036f]/g, '').replace(/\s+/g, '');
   const m = String(machine || '').replace(/\s+/g, '') || 'Flota';
-  return { persona: p, machine: m, runtime: String(runtime || RUNTIME_POR_DEFECTO[p] || 'Claude Code'), model: String(model || ''), agent: `${p}${m}`, tipo: 'agente' };
+  return { persona: p, machine: m, runtime: String(runtime || RUNTIME_POR_DEFECTO[p] || 'Claude Code'), model: String(model || MODELO_POR_DEFECTO[p] || ''), agent: `${p}${m}`, tipo: 'agente' };
 }
 /** Como identidadPorClave, pero además reconoce las claves derivadas de la flota. */
 export async function identidadPorClaveAsync(clave, env = {}) {

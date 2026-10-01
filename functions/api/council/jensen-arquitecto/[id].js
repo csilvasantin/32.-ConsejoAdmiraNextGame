@@ -1,4 +1,4 @@
-/** GET /api/council/jensen-arquitecto/:id — estado del Cloud Agent, mismo origen. */
+/** GET /api/council/jensen-arquitecto/:id — compatibilidad: lee un run de ArquitectoCursorCloud ya abierto. Las preguntas nuevas a Jensen van por la silla Huang (GrokBot), no por este relay. */
 const UPSTREAM = "https://macmini.tail48b61c.ts.net/api/council/jensen-arquitecto";
 
 function corsHeaders(origin) {

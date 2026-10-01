@@ -1,6 +1,6 @@
 /*
  * coordinacion.js — un solo censo para coordinar deepagents desde el MCP
- * (MuskGrokBot · Merovingio · GrokBotBox, 1-oct-2026).
+ * (MuskGrokBot · Merovingio · GrokBotBox; HuangGrokBot · Cypher · GrokBotBox, 1-oct-2026).
  *
  * Problemas que resuelve:
  *  · consejo_bots decía «en línea» con el latido de 90 s del proxy del Mac Mini y
@@ -40,17 +40,17 @@ export const fresca = (r, ahoraMs) => seg(r && r.updated) >= Math.floor(ahoraMs 
 
 /** Silla coetánea → deepagent (igual que MATRIX_LINKS de app.js y AGENTS de council-todo.js). */
 export const CENSO_COETANEOS = [
-  { id: 'Merovingio', role: 'CEO', persona: 'Elon Musk', agente: 'Merovingio', consejero: 'MuskGrokBot', maquina: SILLAS.Musk.deepagent_maquina, runtime: SILLAS.Musk.deepagent_runtime },
-  { id: 'ArquitectoCursorCloud', role: 'CTO', persona: 'Jensen Huang', agente: 'Arquitecto', maquina: 'CursorCloud', runtime: 'Cursor' },
+  { id: 'Merovingio', role: 'CEO', persona: 'Elon Musk', agente: 'Merovingio', consejero: 'MuskGrokBot', deepagent_de: 'Musk', maquina: SILLAS.Musk.deepagent_maquina, runtime: SILLAS.Musk.deepagent_runtime },
+  { id: 'Cypher', role: 'CTO', persona: 'Jensen Huang', agente: 'Cypher', consejero: 'HuangGrokBot', deepagent_de: 'Huang', maquina: SILLAS.Huang.deepagent_maquina, runtime: SILLAS.Huang.deepagent_runtime, modelo: SILLAS.Huang.deepagent_model },
   { id: 'Trinity', role: 'COO', persona: 'Gwynne Shotwell', agente: 'Trinity' },
   { id: 'Oráculo', role: 'CFO', persona: 'Ruth Porat', agente: 'Oraculo' },
   { id: 'Mouse', role: 'CCO', persona: 'John Lasseter', agente: 'Mouse' },
   { id: 'Arquitecto', role: 'CDO', persona: 'Jony Ive', agente: 'Arquitecto', excluir_maquina: 'CursorCloud' },
   { id: 'Link', role: 'CXO', persona: 'Carlos Ratti', agente: 'Link' },
-  { id: 'Cypher', role: 'CSO', persona: 'Ryan Reynolds', agente: 'Cypher' },
 ];
 export const BOTS_EXTRA = [
   { id: 'Smith', role: 'Soporte', persona: 'Agent Smith', agente: 'Smith', nota: 'Smith es del otro GrokBot (otra cuenta): no es el CEO. El CEO coetáneo Elon Musk es MuskGrokBot con su deepagent Merovingio.' },
+  { id: 'ArquitectoCursorCloud', role: 'Orquestador', persona: 'Arquitecto', agente: 'Arquitecto', maquina: 'CursorCloud', runtime: 'Cursor', nota: 'ArquitectoCursorCloud es el orquestador de Cursor Cloud: no ocupa la silla CTO. El CTO coetáneo Jensen Huang es HuangGrokBot y su deepagent es Cypher (DeepAgents, GrokBotBox).' },
 ];
 
 /** ¿Esta fila de presencia es de este bot? Persona por prefijo normalizado; máquina si la silla la fija. */
@@ -59,7 +59,8 @@ export function filaEsDe(bot, r) {
   const a = norm(bot.agente);
   if (!p || !(p === a || p.startsWith(a))) return false;
   const m = norm(r.machine);
-  if (bot.maquina && bot.id !== 'Merovingio' && m !== norm(bot.maquina) && !p.endsWith(norm(bot.maquina))) return false;
+  // El deepagent de una silla GrokBot (Merovingio, Cypher) se reconoce por persona: la máquina canónica es dato, no filtro.
+  if (bot.maquina && !bot.consejero && m !== norm(bot.maquina) && !p.endsWith(norm(bot.maquina))) return false;
   if (bot.excluir_maquina && (m === norm(bot.excluir_maquina) || p.endsWith(norm(bot.excluir_maquina)))) return false;
   return true;
 }
@@ -74,6 +75,9 @@ export function censoBots({ salud = null, presencia = [], ahoraMs = Date.now(), 
   for (const b of viejos) {
     if (norm(b.persona) === norm('Elon Musk') && b.id !== 'Merovingio') {
       correcciones.push({ id: b.id, antes: `${b.label || b.id} (${b.persona})`, ahora: 'CEO Elon Musk = MuskGrokBot + deepagent Merovingio (Grok CLI, GrokBotBox). ' + (norm(b.id) === 'smith' ? 'Smith queda como Soporte (otro GrokBot).' : `${b.id} no es la silla CEO.`), motivo: 'el proxy del Mac Mini sirve un src/server.js anterior a 6e3afaf' });
+    }
+    if (norm(b.persona) === norm('Jensen Huang') && b.id !== 'Cypher') {
+      correcciones.push({ id: b.id, antes: `${b.label || b.id} (${b.persona})`, ahora: 'CTO Jensen Huang = HuangGrokBot + deepagent Cypher (DeepAgents, GrokBotBox). ' + (norm(b.id) === 'arquitectocursorcloud' ? 'ArquitectoCursorCloud queda como orquestador de Cursor Cloud.' : `${b.id} no es la silla CTO.`), motivo: 'el proxy del Mac Mini sigue mapeando Jensen a ArquitectoCursorCloud' });
     }
   }
   const tabla = [...CENSO_COETANEOS, ...BOTS_EXTRA];
@@ -99,9 +103,11 @@ export function censoBots({ salud = null, presencia = [], ahoraMs = Date.now(), 
       latido_mac_mini: conLatido ? { online: !!conLatido.online, host: conLatido.host || null, lastSeen: conLatido.lastSeen || null, fuente: conLatido.presenceSource || null } : null,
       lastTask: tareas[0] || null,
     };
-    if (bot.consejero) { fila.consejero = bot.consejero; fila.deepagent_de = 'Musk'; }
+    if (bot.consejero) fila.consejero = bot.consejero;
+    if (bot.deepagent_de) fila.deepagent_de = bot.deepagent_de;
     if (bot.maquina) fila.maquina_canonica = bot.maquina;
     if (bot.runtime) fila.runtime_canonico = bot.runtime;
+    if (bot.modelo) fila.modelo_canonico = bot.modelo;
     if (bot.nota) fila.nota = bot.nota;
     return fila;
   });

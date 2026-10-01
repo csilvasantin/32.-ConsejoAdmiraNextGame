@@ -1,7 +1,12 @@
 /**
- * /api/council/jensen-arquitecto — mismo origen para Preguntar a Jensen.
+ * /api/council/jensen-arquitecto — alias de compatibilidad.
+ * Preguntar a Jensen ya no pasa por aquí: la silla es Huang en GrokBot (igual que
+ * Jobs o Wozniak) y su deepagent es Cypher (DeepAgents), no ArquitectoCursorCloud.
+ * ArquitectoCursorCloud sigue siendo el orquestador Cursor. Esta ruta se queda
+ * para leer runs ya abiertos contra el Mini (el upstream sigue llamándose
+ * jensen-arquitecto; este repo no lo renombra ni lo despliega). El navegador
+ * nuevo no la llama.
  * El Chrome del tailnet no llega a macmini.tail48b61c.ts.net (red privada).
- * El navegador solo habla con admira.live; este edge reenvía al Mini.
  */
 const UPSTREAM = "https://macmini.tail48b61c.ts.net/api/council/jensen-arquitecto";
 const ALLOW = new Set(["https://www.admira.live", "https://admira.live", "https://admira-live.pages.dev"]);
@@ -48,7 +53,8 @@ async function relay(request, upstream) {
       signal: AbortSignal.timeout(25000),
     });
     let texto = await r.text();
-    // FLT-100878: Jensen = ArquitectoCursorCloud (Cursor), no Arquitecto Silicio/Ive.
+    // Runs ya abiertos: el Mini legado devolvía «Arquitecto» (Ive) o Morfeo.
+    // Se normaliza al orquestador Cursor. Las preguntas nuevas a Jensen no pasan por aquí.
     try {
       const j = JSON.parse(texto);
       if (j && j.ok) {

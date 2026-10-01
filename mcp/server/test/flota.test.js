@@ -81,11 +81,16 @@ test('agentes_vivos agrupa por persona y equipo, deja fuera los latidos viejos y
   assert.deepEqual(v.agentes.map((a) => a.persona), ['Morfeo', 'Oraculo', 'Smith']);
   assert.deepEqual(v.agentes.find((a) => a.persona === 'Smith').maquinas.map((m) => m.maquina), ['MacMini', 'MacBookPro16']);
   assert.ok(v.sin_senal.includes('Neo') && v.sin_senal.includes('Trinity'));
-  assert.equal(v.consejeros.length, 5);
-  assert.deepEqual(v.consejeros.map((c) => [c.persona, c.silla, c.maquina]), [['Wozniak', 'CTO', 'MacBookAirPlata'], ['Jobs', 'CEO', 'MacBookAirAzul'], ['Lucas', 'CSO', 'MacBookAirRosa'], ['Disney', 'CCO', 'MacBookAirCrema'], ['Musk', 'CEO', 'GrokBot']], 'silla ↔ MacBook Air, y Musk sin Mac');
+  assert.equal(v.consejeros.length, 6);
+  assert.deepEqual(v.consejeros.map((c) => [c.persona, c.silla, c.maquina]), [['Wozniak', 'CTO', 'MacBookAirPlata'], ['Jobs', 'CEO', 'MacBookAirAzul'], ['Lucas', 'CSO', 'MacBookAirRosa'], ['Disney', 'CCO', 'MacBookAirCrema'], ['Musk', 'CEO', 'GrokBot'], ['Huang', 'CTO', 'GrokBot']], 'silla ↔ MacBook Air, y Musk y Huang sin Mac');
   assert.deepEqual(v.consejeros.find((c) => c.persona === 'Musk').deepagent, 'Merovingio');
   assert.equal(v.consejeros.find((c) => c.persona === 'Musk').deepagent_maquina, 'GrokBotBox');
+  assert.equal(v.consejeros.find((c) => c.persona === 'Huang').deepagent, 'Cypher');
+  assert.equal(v.consejeros.find((c) => c.persona === 'Huang').deepagent_maquina, 'GrokBotBox');
+  assert.equal(v.consejeros.find((c) => c.persona === 'Huang').deepagent_runtime, 'DeepAgents');
+  assert.equal(v.consejeros.find((c) => c.persona === 'Huang').deepagent_model, 'nvidia/nemotron-3-ultra-550b-a55b');
   assert.ok(v.sin_senal.includes('Merovingio'), 'Merovingio es agente de la flota: sin latido sale en sin_senal');
+  assert.ok(v.sin_senal.includes('Cypher'), 'Cypher es agente de la flota: sin latido sale en sin_senal');
   assert.ok(!v.agentes.some((a) => a.persona === 'Lucas'));
 });
 
@@ -117,6 +122,12 @@ test('Merovingio se encarga en la GrokBot box; Elon y Elon Musk llegan a la sill
   assert.equal(alias.persona, 'Merovingio');
   const jobs = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Jobs', maquina: 'grokbot', texto: 'el equipo de despertar no es la silla de Musk' } }));
   assert.equal(jobs.persona, 'Jobs'); assert.equal(jobs.maquina, 'grokbot');
+  const cypher = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Cypher', maquina: 'GrokBotBox', texto: 'Corre esto con DeepAgents en la caja de Huang.' } }));
+  assert.equal(cypher.persona, 'Cypher'); assert.equal(cypher.maquina, 'grokbotbox');
+  const jensen = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Jensen Huang', texto: 'Revisa el cómputo de este encargo.' } }));
+  assert.equal(jensen.persona, 'Huang'); assert.equal(jensen.maquina, 'grokbot');
+  const jensenCorto = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Jensen', texto: 'El alias corto también llega a la silla.' } }));
+  assert.equal(jensenCorto.persona, 'Huang'); assert.equal(jensenCorto.maquina, 'grokbot');
   const post = peticiones.filter((p) => p.method === 'POST' && String(p.url).endsWith('/api/bot-inbox'));
   assert.equal(post[0].body.target_persona, 'Merovingio'); assert.equal(post[0].body.target_machine, 'grokbotbox');
   assert.equal(post[1].body.target_persona, 'Musk'); assert.equal(post[1].body.target_machine, 'grokbot');

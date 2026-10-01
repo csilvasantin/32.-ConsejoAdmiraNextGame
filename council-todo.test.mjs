@@ -17,6 +17,7 @@ const sources = {
     { persona: 'Lucas', machine: 'GrokBot', mode: 'pasivo', focus: 'Parte 13:00', updated: NOW - 7200 },
     { persona: 'Smith', machine: 'MacMini', mode: 'trabajando', task: 'SmithMacMini · Pixeria', updated: NOW - 30 },
     { persona: 'Merovingio', machine: 'GrokBotBox', mode: 'trabajando', task: 'Merovingio · Grok CLI', updated: NOW - 15 },
+    { persona: 'Cypher', machine: 'GrokBotBox', mode: 'trabajando', task: 'Cypher · DeepAgents', updated: NOW - 12 },
     { persona: 'Arquitecto', machine: 'CursorCloud', mode: 'trabajando', focus: 'Plan día sellado', updated: NOW - 60 }
   ] }
 };
@@ -48,8 +49,10 @@ test('mapa real: misión, presencia, encargo, nada y sin agente', () => {
   assert.equal(ley['Tim Cook'].kind, 'sin-agente');
   const co = Object.fromEntries(T.statusesFor('coetaneos', coetaneos, sources, NOW).map(s => [s.persona, s]));
   assert.equal(co['Elon Musk'].text, 'Merovingio · Grok CLI');            // deepagent de Musk, no Smith
-  assert.equal(co['Jensen Huang'].text, 'Plan día sellado');              // Arquitecto en CursorCloud
-  assert.equal(co['Jony Ive'].text, 'Encargo #4490 en curso');           // Arquitecto en otras cajas
+  assert.equal(co['Jensen Huang'].text, 'Cypher · DeepAgents');          // deepagent de Huang, no ArquitectoCursorCloud
+  assert.equal(co['Ryan Reynolds'].text, 'sin datos ahora mismo');       // sin agente: Cypher ya no es del CSO
+  assert.equal(co['Ryan Reynolds'].kind, 'sin-agente');
+  assert.equal(co['Jony Ive'].text, 'Encargo #4490 en curso');           // Arquitecto en otras cajas, no CursorCloud
   assert.equal(co['Gwynne Shotwell'].text, 'Evaluar tres mejoras');
   assert.equal(co['John Lasseter'].text, 'ahora mismo nada');
 });

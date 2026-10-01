@@ -62,21 +62,25 @@ const CORS_HEADERS = {
   "Access-Control-Allow-Private-Network": "true"
 };
 // Elon→Merovingio (Grok CLI, GrokBot box de la silla Musk). Smith sigue como agente extra.
-// Jensen→ArquitectoCursorCloud (no Morfeo ni Arquitecto Silicio/Ive).
+// Jensen→Cypher (DeepAgents, GrokBot box de la silla Huang).
+// Ryan Reynolds no tiene enlace: Cypher ya no es del CSO. ArquitectoCursorCloud
+// sigue despachable como extra (orquestador Cursor), no como silla de Jensen.
+// Jony Ive conserva el alias corto «Arquitecto» (otras cajas, no CursorCloud).
 const MATRIX_COUNCIL_LINKS = new Map([
   ["Elon Musk", { alias: "Merovingio", role: "CEO" }],
-  ["Jensen Huang", { alias: "ArquitectoCursorCloud", role: "CTO" }],
+  ["Jensen Huang", { alias: "Cypher", role: "CTO" }],
   ["Gwynne Shotwell", { alias: "Trinity", role: "COO" }],
   ["Ruth Porat", { alias: "Oráculo", role: "CFO" }],
   ["John Lasseter", { alias: "Mouse", role: "CCO" }],
   ["Jony Ive", { alias: "Arquitecto", role: "CDO" }],
-  ["Carlos Ratti", { alias: "Link", role: "CXO" }],
-  ["Ryan Reynolds", { alias: "Cypher", role: "CSO" }]
+  ["Carlos Ratti", { alias: "Link", role: "CXO" }]
 ]);
 // Agentes extra del Consejo (fuera de las 8 leyendas Matrix). Smith = OpenCode+DeepSeek,
 // soporte al resto del equipo, atendido por un demonio agora-attend en su máquina.
+// ArquitectoCursorCloud = Cursor en la nube; ya no es el canal de Jensen.
 const EXTRA_COUNCIL_AGENTS = [
-  { alias: "Smith", role: "Soporte", persona: "Agent Smith", engine: "OpenCode·DeepSeek" }
+  { alias: "Smith", role: "Soporte", persona: "Agent Smith", engine: "OpenCode·DeepSeek" },
+  { alias: "ArquitectoCursorCloud", role: "Orquestador", persona: "Arquitecto", engine: "Cursor" }
 ];
 const AGORA_COUNCIL_ALLOWED_ORIGINS = new Set([
   "http://www.admira.live",

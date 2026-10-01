@@ -45,9 +45,16 @@ test('censo único: Smith deja de ser el CEO; el CEO es Merovingio (MuskGrokBot)
   assert.equal(c.bots.find((b) => b.id === 'Trinity').latido_mac_mini.online, false);
   // Oráculo: solo latido viejo (> 15 min) → fuera.
   assert.equal(c.bots.find((b) => b.id === 'Oráculo').online, false);
-  // Arquitecto en CursorCloud es Jensen (CTO), no Jony Ive (CDO).
-  assert.equal(c.bots.find((b) => b.id === 'ArquitectoCursorCloud').online, true);
+  // Cypher en GrokBotBox es Jensen (CTO, HuangGrokBot). Arquitecto en CursorCloud es el orquestador, no la silla ni Jony Ive (CDO).
+  const cto = c.bots.find((b) => b.role === 'CTO');
+  assert.equal(cto.id, 'Cypher'); assert.equal(cto.persona, 'Jensen Huang'); assert.equal(cto.consejero, 'HuangGrokBot');
+  assert.equal(cto.deepagent_de, 'Huang'); assert.equal(cto.modelo_canonico, 'nvidia/nemotron-3-ultra-550b-a55b');
+  assert.equal(cto.online, true); assert.equal(cto.maquinas[0].maquina, 'GrokBotBox'); assert.equal(cto.maquinas[0].runtime, 'DeepAgents');
+  assert.equal(c.bots.find((b) => b.role === 'CEO').deepagent_de, 'Musk');
+  const cursor = c.bots.find((b) => b.id === 'ArquitectoCursorCloud');
+  assert.equal(cursor.online, true); assert.equal(cursor.role, 'Orquestador'); assert.equal(cursor.persona, 'Arquitecto');
   assert.equal(c.bots.find((b) => b.id === 'Arquitecto').online, false);
+  assert.ok(!c.bots.some((b) => b.persona === 'Ryan Reynolds'));
   assert.match(c.fuente_en_linea, /misma que agentes_vivos/);
 });
 

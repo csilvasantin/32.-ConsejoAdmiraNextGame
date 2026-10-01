@@ -333,6 +333,8 @@ test('FLT-100753: EXAMINAR mapea silla → JPEG GrokBot (Jobs/Wozniak)', () => {
   assert.equal(chairAlias('Wozniak'), 'Wozniak');
   assert.equal(chairAlias('George Lucas'), 'Lucas');
   assert.equal(chairAlias('Elon Musk'), 'Musk');
+  assert.equal(chairAlias('Jensen Huang'), 'Huang');
+  assert.equal(chairAlias('Huang'), 'Huang');
   assert.equal(chairAlias('Walt Disney'), 'Disney');
   assert.equal(chairAlias('Neo'), null);
   assert.match(SCREEN_JPEG, /fleet\.admira\.live\/api\/grokbot\/screen\.jpg/);

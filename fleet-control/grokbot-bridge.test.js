@@ -21,10 +21,13 @@ function setup(t, fetchImpl, options={}) {
 }
 function rejection(code) { return error => error.code === code; }
 
-test('only four verified council aliases are supported; no arbitrary target or role', () => {
+test('verified council aliases are the GrokBot seats; no arbitrary target or role', () => {
   assert.equal(canonicalPersona(' Steve Wozniak '),'Wozniak');
   assert.equal(canonicalPersona('Disney'),'Disney');
   assert.equal(canonicalPersona('George Lucas'),'Lucas');
+  assert.equal(canonicalPersona('Elon Musk'),'Musk');
+  assert.equal(canonicalPersona('Jensen Huang'),'Huang');
+  assert.equal(canonicalPersona('Huang'),'Huang');
   assert.equal(canonicalPersona('CEO'),null);
   assert.equal(canonicalPersona('JobsMacMini'),null);
 });
@@ -35,7 +38,7 @@ test('capabilities expose true provider limits and no token', t => {
   assert.equal(capabilities.provider,'webhook');
   assert.equal(capabilities.available,true);
   for (const key of ['historyFromDesktop','desktop','attachments','routines','interrupt']) assert.equal(capabilities[key],false);
-  assert.equal(capabilities.personas.length,4);
+  assert.equal(capabilities.personas.length,6);
   assert.doesNotMatch(JSON.stringify(capabilities),new RegExp(token));
   assert.equal(createGrokBotBridge({environment:{},store:{read:() => new Map()}}).capabilities().reason,'provider_not_configured');
 });

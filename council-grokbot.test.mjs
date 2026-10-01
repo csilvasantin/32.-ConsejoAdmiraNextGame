@@ -36,7 +36,7 @@ class Element {
     this.html=String(value); this.doc.markup.push(String(value)); this.children = []; this.lookup.clear();
     // Only the static shell uses HTML. Dynamic conversation content must pass
     // through createTextNode/textContent; no HTML parser is needed for the test.
-    for (const selector of ['.council-chat__toolbar', '.council-chat__attachments', '.council-chat__operations', '[data-chat-attach]', '[data-chat-file]', '[data-chat-routines]', '[data-chat-stop]', '.council-chat__connection', '.council-chat__person', '.council-chat__status', '.council-chat__messages', '[data-chat-refresh]', '[data-chat-screen]']) {
+    for (const selector of ['.council-chat__toolbar', '.council-chat__attachments', '.council-chat__operations', '[data-chat-attach]', '[data-chat-file]', '[data-chat-routines]', '[data-chat-stop]', '.council-chat__connection', '.council-chat__person', '.council-chat__status', '.council-chat__messages', '[data-chat-refresh]', '[data-chat-screen]', '.council-chat__scope', '.council-chat__limits']) {
       const node = this.doc.createElement(selector.startsWith('[') ? 'button' : 'div');
       this.lookup.set(selector, node); this.children.push(node);
     }
@@ -447,17 +447,41 @@ test('Elon va por encargo MCP: capacidades por persona, respuesta del Merovingio
   h.postHandler=()=>response({ok:true,message:row()});
   assert.equal(await h.api.select('Elon Musk'),true);
   assert.ok(h.calls.filter(c=>c.path==='/capabilities').every(c=>c.query.get('persona')==='Musk'));
-  assert.match(h.doc.details.querySelector('.council-chat__connection').textContent,/encargo MCP → Merovingio · GrokBotBox/);
+  assert.match(h.doc.details.querySelector('.council-chat__connection').textContent,/Vía Merovingio · GrokBotBox/);
   assert.equal(h.doc.details.querySelector('[data-chat-screen]').hidden,true);
   assert.equal(await h.api.send('Elon Musk','Hola Elon'),true);
   assert.equal(h.posts[0].body.persona,'Elon Musk');
   h.histories.set('Elon Musk',[row({status:'in_progress'})]);
   await h.clock.advance(3000);
   assert.equal(h.answers.length,0);
+  assert.match(h.log.textContent,/escribiendo/);
   h.histories.set('Elon Musk',[row({status:'done',text:'Soy Elon: primeros principios.',updatedAt:'2026-09-18T08:02:00.000Z'})]);
   await h.clock.advance(3000);
   assert.deepEqual(h.answers.map(a=>[a.persona,a.text]),[['Elon Musk','Soy Elon: primeros principios.']]);
   assert.match(h.log.textContent,/Hola Elon/);assert.match(h.log.textContent,/Soy Elon/);
   assert.doesNotMatch(h.log.textContent,/Encargos anteriores/);
+  h.api.destroy();
+});
+
+test('Jensen va por encargo MCP a Cypher: «escribiendo…», ámbito y pie del modo encargo', async()=>{
+  const h=harness();
+  h.capabilitiesHandler=call=>call.query.get('persona')==='Huang'
+    ? response({ok:true,mode:'encargo',provider:'encargo',bidirectional:true,available:true,selectedPersona:'Huang',status:'idle',destino:'Cypher · GrokBotBox',agente:'Cypher',lastObservedAt:'2026-09-18T08:00:00.000Z'})
+    : response({ok:false,error:'desktop_owner_required'},403);
+  const row=over=>message({id:'gb_jensen',persona:'Huang',prompt:'Hola Jensen',source:'encargo',native:true,...over});
+  h.postHandler=()=>response({ok:true,message:row()});
+  assert.equal(await h.api.select('Jensen Huang'),true);
+  assert.match(h.doc.details.querySelector('.council-chat__connection').textContent,/Vía Cypher · GrokBotBox/);
+  assert.match(h.doc.details.querySelector('.council-chat__scope').textContent,/Jensen Huang contesta a través de su deepagent, Cypher/);
+  assert.match(h.doc.details.querySelector('.council-chat__limits').textContent,/Solo texto/);
+  assert.doesNotMatch(h.doc.details.querySelector('.council-chat__limits').textContent,/Adjuntos: un archivo/);
+  assert.equal(await h.api.send('Jensen Huang','Hola Jensen'),true);
+  h.histories.set('Jensen Huang',[row({status:'pending'})]);
+  await h.clock.advance(3000);
+  assert.match(h.log.textContent,/pensando/);
+  h.histories.set('Jensen Huang',[row({status:'done',text:'Hola, aquí Jensen.',updatedAt:'2026-09-18T08:02:00.000Z'})]);
+  await h.clock.advance(3000);
+  assert.deepEqual(h.answers.map(a=>[a.persona,a.text]),[['Jensen Huang','Hola, aquí Jensen.']]);
+  assert.doesNotMatch(h.log.textContent,/escribiendo|pensando/);
   h.api.destroy();
 });

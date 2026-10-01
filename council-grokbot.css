@@ -81,3 +81,6 @@ body.mouths-off .council-speech-mouth{display:none!important}
 .council-preview:not(.is-expanded) .council-composer__footer span{display:none}
 .council-preview:not(.is-expanded) .council-composer button{min-height:44px;font:12px/1.4 system-ui,sans-serif;padding:5px}
 .council-preview:not(.is-expanded) .council-chat__operations{max-height:25%;flex-shrink:1}
+
+/* Modo encargo: indicador «escribiendo…» (chat de coetáneos vía deepagent) */
+.council-chat__typing .council-chat__dots{color:#bcae92;font-style:italic}.council-chat__typing .council-chat__dots i{font-style:normal;animation:council-chat-dot 1.2s infinite both}.council-chat__typing .council-chat__dots i:nth-child(2){animation-delay:.2s}.council-chat__typing .council-chat__dots i:nth-child(3){animation-delay:.4s}@keyframes council-chat-dot{0%,80%,100%{opacity:.2}40%{opacity:1}}@media (prefers-reduced-motion:reduce){.council-chat__typing .council-chat__dots i{animation:none}}

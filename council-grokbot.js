@@ -11,6 +11,9 @@
   });
   const FULL = Object.fromEntries(Object.entries(PEOPLE).map(([name, alias]) => [alias, name]));
   const LABELS = Object.freeze({pending:'Enviado · esperando al bot',in_progress:'El bot está trabajando',ack:'Recibido por el bot',done:'Respuesta recibida',blocked:'El bot necesita atención',failed:'No se pudo completar',unknown:'Envío sin confirmar · consulta el historial antes de repetir'});
+  // Modo encargo (Elon → Merovingio, Jensen → Cypher): estados como en un chat de GrokBot.
+  const ENCARGO_LABELS = Object.freeze({pending:'Enviado',ack:'Escribiendo…',in_progress:'Escribiendo…',done:'Respondido',blocked:'No ha podido contestar',failed:'No se pudo enviar',unknown:LABELS.unknown});
+  const typing = status => ['pending','ack','in_progress'].includes(status);
   const terminal = status => ['done','blocked','failed','unknown'].includes(status);
   const timestamp = value => Number.isFinite(Number(value)) ? Number(value) : Date.parse(value) || 0;
   // encargo: Elon responde por su deepagent (encargo MCP de admira.live), no por el escritorio AX.
@@ -46,7 +49,11 @@
     const desktop=()=>capabilities?.mode==='desktop'||capabilities?.mode==='encargo';
     const encargo=()=>capabilities?.mode==='encargo';
     const SCOPE_DESKTOP='Los mismos mensajes visibles en GrokBot, sincronizados a través del Mac Mini. Historial observado en GrokBot; puede faltar contenido antiguo.';
-    const SCOPE_ENCARGO='Elon contesta a través de su deepagent, el Merovingio: cada mensaje es un encargo del MCP de admira.live (queda registrado y se ve en vivo en su terminal). La respuesta tarda de 1 a 3 minutos. Solo ves tus propios mensajes.';
+    const agente=()=>capabilities?.agente||'su deepagent';
+    const scopeEncargo=()=>(selected||'El consejero')+' contesta a través de su deepagent, '+agente()+': cada mensaje es un encargo del MCP de admira.live marcado como chat (queda registrado y se ve en vivo en su terminal; no se publica en el Ágora ni en Telegram). Suele contestar en unos segundos y recuerda lo último que habéis hablado. Solo ves tus propios mensajes.';
+    const LIMITS_DESKTOP='El Mac Mini y GrokBot deben estar disponibles. Las aprobaciones y los resultados descargables todavía se gestionan en GrokBot. Adjuntos: un archivo de hasta 4 MB por mensaje.';
+    const LIMITS_ENCARGO='Pasa por el relé del Mac Mini (fleet.admira.live) y el MCP de admira.live; no necesita la app GrokBot de escritorio. Solo texto: en este modo no hay adjuntos.';
+    const label=status=>(encargo()?ENCARGO_LABELS:LABELS)[status];
     function say(message){if(destroyed)return;status.textContent=message;options.onStatus?.(message);}
     function rowsFor(name){return histories.get(PEOPLE[name]) || [];}
     function merge(rows){
@@ -87,12 +94,19 @@
           if(row.text){
             const reply=doc.createElement('p');reply.className='council-chat__reply';
             const botName=doc.createElement('strong');botName.textContent=FULL[row.persona];reply.append(botName);appendText(reply,row.text);item.append(reply);
+          }else if(encargo()&&native(row)&&typing(row.status)){
+            // Indicador «escribiendo…» mientras su deepagent contesta (como en GrokBot).
+            const reply=doc.createElement('p');reply.className='council-chat__reply council-chat__typing';reply.title=FULL[row.persona]+' está escribiendo';
+            const botName=doc.createElement('strong');botName.textContent=FULL[row.persona];
+            const dots=doc.createElement('span');dots.className='council-chat__dots';dots.textContent=row.status==='pending'?'pensando':'escribiendo';
+            for(let i=0;i<3;i++){const d=doc.createElement('i');d.textContent='.';dots.append(d);}
+            reply.append(botName,dots);item.append(reply);
           }
           for(const file of row.attachments||[]){const p=doc.createElement('p');p.className='council-chat__file';p.textContent='📎 '+file.name;item.append(p);}
-          const meta=doc.createElement('span');meta.className='council-chat__meta';meta.textContent=LABELS[row.status] || 'Estado pendiente';item.append(meta);log.append(item);
+          const meta=doc.createElement('span');meta.className='council-chat__meta';meta.textContent=label(row.status) || 'Estado pendiente';item.append(meta);log.append(item);
         }
       }
-      if(!log.childElementCount){const p=doc.createElement('p');p.textContent=encargo()?'Aún no has hablado con '+selected+'. Escribe y pulsa Enviar: le llega como encargo a su deepagent, el Merovingio.':'Aún no se han observado mensajes visibles de este consejero en GrokBot.';log.append(p);}
+      if(!log.childElementCount){const p=doc.createElement('p');p.textContent=encargo()?'Aún no has hablado con '+selected+'. Escribe y pulsa Enviar: le llega a su deepagent, '+agente()+', y te contesta aquí.':'Aún no se han observado mensajes visibles de este consejero en GrokBot.';log.append(p);}
       log.scrollTop=follow?log.scrollHeight:oldTop;
     }
     function connection(available){
@@ -101,13 +115,14 @@
       if($('[data-chat-attach]'))$('[data-chat-attach]').hidden=!available||!capabilities?.attachments;
       if($('[data-chat-routines]'))$('[data-chat-routines]').hidden=!available||!capabilities?.routines;
       if($('[data-chat-stop]'))$('[data-chat-stop]').hidden=!available||!capabilities?.interrupt||capabilities?.status!=='busy'||!capabilities?.runKey;
-      const scope=$('.council-chat__scope');if(scope)scope.textContent=encargo()?SCOPE_ENCARGO:SCOPE_DESKTOP;
+      const scope=$('.council-chat__scope');if(scope)scope.textContent=encargo()?scopeEncargo():SCOPE_DESKTOP;
+      const limits=$('.council-chat__limits');if(limits)limits.textContent=encargo()?LIMITS_ENCARGO:LIMITS_DESKTOP;
       if($('[data-chat-screen]'))$('[data-chat-screen]').hidden=encargo();
       const nativeLink=$('.council-chat__native');if(nativeLink)nativeLink.hidden=encargo();
       const node=$('.council-chat__connection');
       const nativePersona=PEOPLE[capabilities?.selectedPersona] || capabilities?.selectedPersona;
       const observedAt=timestamp(capabilities?.lastObservedAt);
-      node.textContent=!available?'· Sincronización desconectada':encargo()?'· Vía encargo MCP → '+(capabilities?.destino||'Merovingio'):capabilities?.status==='draft'?'· Borrador en GrokBot':!selectionReady?'· Selección pendiente':nativePersona&&nativePersona!==PEOPLE[selected]?'· Chat nativo en otro consejero':!observedAt?'· Esperando observación nativa':Date.now()-observedAt>15000?'· Observación con retraso':'· Sincronización activa';
+      node.textContent=!available?'· Sincronización desconectada':encargo()?'· Vía '+(capabilities?.destino||agente()):capabilities?.status==='draft'?'· Borrador en GrokBot':!selectionReady?'· Selección pendiente':nativePersona&&nativePersona!==PEOPLE[selected]?'· Chat nativo en otro consejero':!observedAt?'· Esperando observación nativa':Date.now()-observedAt>15000?'· Observación con retraso':'· Sincronización activa';
       node.title=(capabilities?.lastObservedAt?'Última observación: '+capabilities.lastObservedAt:'Aún no hay una observación del chat nativo.')+(nativePersona?' · Chat abierto: '+(FULL[nativePersona]||nativePersona):'');
     }
     function errorMessage(error){
@@ -178,7 +193,7 @@
     }
     function report(row,epoch,{animate=true}={}){
       if(!current(epoch)||PEOPLE[selected]!==row.persona||!native(row))return;
-      say(LABELS[row.status] || 'Esperando al bot');
+      say(label(row.status) || 'Esperando al bot');
       if(animate && row.text && announced.get(row.id)!==row.text){
         announced.set(row.id,row.text);options.onAnswer?.({persona:FULL[row.persona],text:row.text,messageId:row.id,status:row.status,source:'desktop',native:true});
       }
@@ -217,7 +232,7 @@
             for(const row of rows)remember(row);
             if(last?.text)options.onRestore?.({persona:name,text:last.text,messageId:last.id,status:last.status,source:'desktop',native:true});
             if(!selectionReady)say(selectionError||'Historial recuperado. Pulsa Enviar para conectar con '+name+'; se conservará tu texto si no puede enviarse.');
-            else if(last)say(LABELS[last.status] || 'Conversación recuperada');
+            else if(last)say(label(last.status) || 'Conversación recuperada');
             else say('Chat de GrokBot · esperando mensajes visibles de '+name+'.');
           }else{
             for(const row of changes){

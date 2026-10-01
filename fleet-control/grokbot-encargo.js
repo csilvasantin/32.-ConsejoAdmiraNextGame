@@ -1,6 +1,16 @@
 'use strict';
 
-// Chat de coetáneos → encargo MCP de admira.live (Elon Musk → su deepagent, el Merovingio).
+// Chat de coetáneos → encargo MCP de admira.live (Elon Musk → su deepagent, el Merovingio;
+// Jensen Huang → el suyo, Cypher).
+//
+// Marca común de los encargos de chat (acordada con Jensen, 01-10-2026):
+//   [chat-coetaneos] <remitente> → <consejero>
+//   Contexto:
+//   <historial reciente «Nombre: texto»> | (sin historial)
+//   Mensaje de <nombre <email>>:
+//   <mensaje nuevo>
+// El vigilante genérico de la GrokBotBox (modo chat) la reconoce y contesta corto, sin
+// herramientas ni entregable; el worker admira-telegram no la publica en el Ágora/Telegram.
 //
 // Elon no vive en el Grok Bot de escritorio del Mac Mini (esa app es la otra cuenta:
 // Jobs, Wozniak, Disney, Lucas), así que el adaptador AX no puede llegar a él. Su silla
@@ -22,12 +32,21 @@ const path = require('path');
 const { BridgeError, PERSONAS, canonicalPersona, createPrivateStore } = require('./grokbot-bridge');
 
 const MCP_URL = 'https://mcp.admira.live/mcp';
-const TARGETS = Object.freeze({ Musk: Object.freeze({ persona: 'Merovingio', maquina: 'GrokBotBox', etiqueta: 'Merovingio · GrokBotBox' }) });
+const TARGETS = Object.freeze({
+  Musk: Object.freeze({ persona: 'Merovingio', maquina: 'GrokBotBox', etiqueta: 'Merovingio · GrokBotBox' }),
+  Huang: Object.freeze({ persona: 'Cypher', maquina: 'GrokBotBox', etiqueta: 'Cypher · GrokBotBox' }),
+});
+const MARCA = '[chat-coetaneos]';
+const MAX_TEXTO = 3900;            // el bot-inbox acepta 4000
+const MAX_CONTEXTO = 1600;
+const TURNOS_CONTEXTO = 6;          // últimos intercambios que viajan como «Contexto»
+// Nombre visible de quien escribe (la sesión de FleetControl solo trae el email).
+const NOMBRES = Object.freeze({ 'csilva@admira.com': 'Carlos Silva', 'csilvasantin@gmail.com': 'Carlos Silva', 'jsedano@admira.com': 'Joshua' });
 const MESSAGE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,119}$/;
 const PUBLIC_ID = /^gb_[a-f0-9]{48}$/;
 const MAX_PROMPT = 3000;
 const MAX_RECORDS = 20000;
-const REFRESH_MS = 8000;
+const REFRESH_MS = 2500;
 const STATUS_MAP = Object.freeze({ pending: 'pending', ack: 'in_progress', in_progress: 'in_progress', blocked: 'blocked', done: 'done' });
 
 function verifiedOwner(session) {
@@ -93,20 +112,41 @@ function createMcpClient({ url = MCP_URL, keyProvider, fetchImpl = globalThis.fe
   return { call };
 }
 
-function encargoText(owner, persona, prompt) {
-  const nombre = PERSONAS[persona] || persona;
-  return [
-    `Mensaje del chat de coetáneos de admira.live para ${nombre} (CEO coetáneo), escrito por ${owner}.`,
-    `Contesta TÚ como ${nombre}, en primera persona, en castellano, en texto plano y breve (máximo unos 900 caracteres): tu respuesta final sale tal cual en ese chat.`,
-    'Tu respuesta final (antes de la línea ESTADO) debe ser SOLO lo que Elon le contesta a esa persona: sin contar qué has hecho, sin rutas ni entregables (aquí no hacen falta).',
-    'Es conversación, no una misión: NO uses herramientas, MCP ni comandos (en este modo no tienes permiso y se cancelaría el turno); contesta directamente con tu criterio y lo que ya sabes. Si pide algo grande, di qué harías y que lo tramitarás aparte.',
-    '',
-    'MENSAJE:',
-    prompt,
-  ].join('\n');
+function nombreDe(owner, nombres = NOMBRES) {
+  const n = nombres[String(owner || '').toLowerCase()];
+  return n ? `${n} <${owner}>` : String(owner || 'alguien');
+}
+const corto = (texto, max) => { const t = String(texto || '').replace(/\s+/g, ' ').trim(); return t.length > max ? t.slice(0, max - 1) + '…' : t; };
+
+// historial: [{ prompt, text }] (de más antiguo a más reciente). Solo turnos ya contestados.
+function encargoText(owner, persona, prompt, { history = [], nombres = NOMBRES } = {}) {
+  const consejero = PERSONAS[persona] || persona;
+  const remitente = nombreDe(owner, nombres);
+  const pila = (nombres[String(owner || '').toLowerCase()] || String(owner || 'Usuario')).split(/\s+/)[0];
+  const cabecera = `${MARCA} ${remitente.replace(/\s*<.*$/, '')} → ${consejero}`;
+  const mensaje = String(prompt || '').trim();
+  const pie = `Mensaje de ${remitente}:\n${mensaje}`;
+  let presupuesto = Math.min(MAX_CONTEXTO, MAX_TEXTO - cabecera.length - pie.length - 20);
+  const lineas = [];
+  for (const turno of history.slice(-TURNOS_CONTEXTO).reverse()) {
+    const par = [`${pila}: ${corto(turno.prompt, 300)}`, `${consejero}: ${corto(turno.text, 400)}`];
+    const coste = par.join('\n').length + 1;
+    if (coste > presupuesto) break;
+    presupuesto -= coste; lineas.unshift(...par);
+  }
+  return [cabecera, 'Contexto:', lineas.length ? lineas.join('\n') : '(sin historial)', pie].join('\n');
 }
 
-function createGrokBotEncargo({ environment = process.env, fetchImpl = globalThis.fetch, now = Date.now, store, keyProvider, mcp, targets = TARGETS } = {}) {
+// GROKBOT_ENCARGO_SILLAS=Musk,Huang limita qué sillas van por encargo (por defecto, todas las de TARGETS).
+function sillasActivas(environment, targets) {
+  const raw = String(environment.GROKBOT_ENCARGO_SILLAS || '').trim();
+  if (!raw) return targets;
+  const pedidas = new Set(raw.split(/[\s,]+/).map(canonicalPersona).filter(Boolean));
+  return Object.freeze(Object.fromEntries(Object.entries(targets).filter(([k]) => pedidas.has(k))));
+}
+
+function createGrokBotEncargo({ environment = process.env, fetchImpl = globalThis.fetch, now = Date.now, store, keyProvider, mcp, targets: allTargets = TARGETS } = {}) {
+  const targets = sillasActivas(environment, allTargets);
   const state = store || createPrivateStore(environment.GROKBOT_ENCARGO_STATE_FILE || path.join(os.homedir(), '.fleet', 'grokbot-encargo-state.json'));
   const getKey = keyProvider || (() => loadMcpKey(environment));
   const client = mcp || createMcpClient({ keyProvider: getKey, fetchImpl });
@@ -133,7 +173,7 @@ function createGrokBotEncargo({ environment = process.env, fetchImpl = globalThi
     try { getKey(); state.read(); } catch (error) { available = false; reason = error.code || 'encargo_unavailable'; }
     const t = p && targets[p];
     return { provider: 'encargo', mode: 'encargo', available, bidirectional: available, reason, selectedPersona: p || null, status: 'idle',
-      lastObservedAt: new Date(now()).toISOString(), destino: t ? t.etiqueta : null, historyFromDesktop: false, partialVisibleHistory: false,
+      lastObservedAt: new Date(now()).toISOString(), destino: t ? t.etiqueta : null, agente: t ? t.persona : null, historyFromDesktop: false, partialVisibleHistory: false,
       desktop: false, attachments: false, routines: false, interrupt: false, pollingIntervalMs: 3000,
       personas: Object.keys(targets).map(k => ({ persona: k, name: PERSONAS[k] })) };
   }
@@ -195,7 +235,7 @@ function createGrokBotEncargo({ environment = process.env, fetchImpl = globalThi
     if (!MESSAGE_ID.test(String(body.message_id || ''))) throw new BridgeError(400, 'invalid_message_id');
     if (prompt.length < 2 || prompt.length > MAX_PROMPT) throw new BridgeError(400, 'invalid_prompt');
     const id = 'gb_' + crypto.createHash('sha256').update(owner + '\0encargo\0' + body.message_id).digest('hex').slice(0, 48);
-    let isNew = false;
+    let isNew = false, history = [];
     const record = state.transact(records => {
       const prior = records.get(id);
       if (prior) {
@@ -204,6 +244,8 @@ function createGrokBotEncargo({ environment = process.env, fetchImpl = globalThi
       }
       getKey();
       if (records.size >= MAX_RECORDS) throw new BridgeError(503, 'bridge_capacity_reached');
+      history = [...records.values()].filter(r => r.owner === owner && r.persona === p && r.status === 'done' && r.text)
+        .sort((a, b) => a.createdAt.localeCompare(b.createdAt)).slice(-TURNOS_CONTEXTO).map(r => ({ prompt: r.prompt, text: r.text }));
       const ts = new Date(now()).toISOString();
       const entry = { id, owner, persona: p, prompt, text: '', status: 'unknown', createdAt: ts, updatedAt: ts, encargo: null, etiqueta: null };
       records.set(id, entry); isNew = true; return entry;
@@ -213,7 +255,7 @@ function createGrokBotEncargo({ environment = process.env, fetchImpl = globalThi
     const op = (async () => {
       let r;
       try {
-        r = await client.call('agente_encargar', { persona: t.persona, maquina: t.maquina, de: ('Chat coetáneos admira.live · ' + owner).slice(0, 80), texto: encargoText(owner, p, prompt) });
+        r = await client.call('agente_encargar', { persona: t.persona, maquina: t.maquina, de: ('Chat coetáneos admira.live · ' + owner).slice(0, 80), texto: encargoText(owner, p, prompt, { history }) });
         if (!r || !Number.isSafeInteger(Number(r.encargo)) || Number(r.encargo) <= 0) throw new Error('missing_receipt');
       } catch (error) {
         // Rechazo explícito del MCP: no se creó nada → failed. Ambiguo (red/timeout): unknown, sin reintentar.
@@ -259,4 +301,4 @@ function createGrokBotRouter({ base, encargo }) {
   return router;
 }
 
-module.exports = { TARGETS, createGrokBotEncargo, createGrokBotRouter, createMcpClient, loadMcpKey, encargoText };
+module.exports = { TARGETS, MARCA, createGrokBotEncargo, createGrokBotRouter, createMcpClient, loadMcpKey, encargoText, nombreDe };

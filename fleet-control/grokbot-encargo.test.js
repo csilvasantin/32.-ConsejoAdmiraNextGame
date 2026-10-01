@@ -19,12 +19,14 @@ function setup(t, mcpImpl) {
 }
 const flush = () => new Promise(r => setImmediate(r));
 
-test('solo Elon va por encargo; Jobs sigue en su proveedor', () => {
+test('Elon y Jensen van por encargo; Jobs sigue en su proveedor', () => {
   const { provider } = setup({ after() {} }, async () => ({}));
   assert.equal(provider.handles('Elon Musk'), true);
   assert.equal(provider.handles('Musk'), true);
   assert.equal(provider.handles('Steve Jobs'), false);
-  assert.equal(provider.handles('Jensen Huang'), false);
+  assert.equal(provider.handles('Jensen Huang'), true);
+  assert.equal(provider.handles('Huang'), true);
+  assert.equal(provider.handles('Walt Disney'), false);
 });
 
 test('un mensaje de Joshua crea un encargo MCP para el Merovingio y la respuesta vuelve al chat', async t => {
@@ -42,7 +44,8 @@ test('un mensaje de Joshua crea un encargo MCP para el Merovingio y la respuesta
   assert.equal(sent.status, 'pending'); assert.equal(sent.encargo, 4901); assert.equal(sent.source, 'encargo'); assert.equal(sent.native, true);
   const enc = calls.find(c => c.name === 'agente_encargar').args;
   assert.equal(enc.persona, 'Merovingio'); assert.equal(enc.maquina, 'GrokBotBox');
-  assert.match(enc.de, /jsedano@admira\.com/); assert.match(enc.texto, /¿Qué opinas del plan\?/); assert.match(enc.texto, /como Elon Musk/);
+  assert.match(enc.de, /jsedano@admira\.com/); assert.match(enc.texto, /¿Qué opinas del plan\?/); assert.match(enc.texto, /^\[chat-coetaneos\] Joshua → Elon Musk\nContexto:\n\(sin historial\)\nMensaje de Joshua <jsedano@admira\.com>:\n¿Qué opinas del plan\?$/);
+  assert.equal(caps.agente, 'Merovingio');
   // El acuse no se pinta como respuesta.
   estado = 'ack';
   const acked = await provider.get(joshua, sent.id);
@@ -147,6 +150,40 @@ test('la clave se lee de un fichero privado y nunca de uno abierto', t => {
   fs.chmodSync(file, 0o644);
   assert.throws(() => loadMcpKey({ GROKBOT_ENCARGO_MCP_KEY_FILE: file }), e => e.code === 'encargo_not_configured');
   assert.throws(() => loadMcpKey({ GROKBOT_ENCARGO_MCP_KEY_FILE: path.join(dir, 'no') }), e => e.code === 'encargo_not_configured');
-  assert.match(encargoText('a@b.c', 'Musk', 'hola'), /Elon Musk/);
-  assert.match(encargoText('a@b.c', 'Musk', 'hola'), /NO uses herramientas/);
+  assert.equal(encargoText('a@b.c', 'Musk', 'hola'), '[chat-coetaneos] a@b.c → Elon Musk\nContexto:\n(sin historial)\nMensaje de a@b.c:\nhola');
+});
+
+test('Jensen: encargo a Cypher con la marca común y el historial reciente como Contexto', async t => {
+  let n = 4950;
+  const { provider, calls } = setup(t, async (name, args) => {
+    if (name === 'agente_encargar') return { ok: true, encargo: ++n, etiqueta: '#' + n + '.10.01' };
+    if (name === 'encargo_estado') return { encargo: args.encargo, estado: 'done', respuesta: 'Respuesta ' + args.encargo, cierre: '2026-10-01 09:00 UTC' };
+    throw new Error('unexpected');
+  });
+  assert.equal(provider.capabilities(joshua, 'Jensen Huang').agente, 'Cypher');
+  const a = await provider.send(joshua, { message_id: 'msg-jensen-0001', persona: 'Jensen Huang', prompt: 'Hola Jensen, me llamo Joshua' });
+  assert.equal((await provider.get(joshua, a.id)).text, 'Respuesta 4951');
+  await provider.send(joshua, { message_id: 'msg-jensen-0002', persona: 'Jensen Huang', prompt: '¿Cómo me llamo?' });
+  const encs = calls.filter(c => c.name === 'agente_encargar').map(c => c.args);
+  assert.equal(encs[1].persona, 'Cypher'); assert.equal(encs[1].maquina, 'GrokBotBox');
+  assert.equal(encs[1].texto, '[chat-coetaneos] Joshua → Jensen Huang\nContexto:\nJoshua: Hola Jensen, me llamo Joshua\nJensen Huang: Respuesta 4951\nMensaje de Joshua <jsedano@admira.com>:\n¿Cómo me llamo?');
+  // El historial es por persona y por consejero: Elon no hereda lo hablado con Jensen.
+  await provider.send(joshua, { message_id: 'msg-elon-0001', persona: 'Elon Musk', prompt: 'Hola Elon' });
+  assert.match(calls.filter(c => c.name === 'agente_encargar').at(-1).args.texto, /\(sin historial\)/);
+});
+
+test('el texto del encargo nunca supera el límite del bot-inbox', () => {
+  const largo = 'x'.repeat(3000);
+  const history = Array.from({ length: 10 }, (_, i) => ({ prompt: 'p'.repeat(500) + i, text: 't'.repeat(900) + i }));
+  const texto = encargoText('jsedano@admira.com', 'Huang', largo, { history });
+  assert.ok(texto.length <= 3900, texto.length);
+  assert.ok(texto.endsWith(largo));
+});
+
+test('GROKBOT_ENCARGO_SILLAS limita las sillas por encargo (p. ej. solo Elon mientras Cypher no tiene modo chat)', t => {
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'admira-encargo-sillas-'));
+  t.after(() => fs.rmSync(dir, { recursive: true, force: true }));
+  const p = createGrokBotEncargo({ environment: { GROKBOT_ENCARGO_SILLAS: 'Musk', GROKBOT_ENCARGO_STATE_FILE: path.join(dir, 's.json') }, keyProvider: () => 'k', mcp: { call: async () => ({}) } });
+  assert.equal(p.handles('Elon Musk'), true);
+  assert.equal(p.handles('Jensen Huang'), false);
 });

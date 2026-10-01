@@ -39,8 +39,8 @@ const { createServiceBridge } = require('./service-bridge');
 const grokBotLegacy = createGrokBotBridge();
 const grokBotBase = process.env.GROKBOT_CHAT_PROVIDER === 'desktop'
   ? createGrokBotDesktop() : grokBotLegacy;
-// Elon (coetáneo CEO) no vive en el Grok Bot del Mac Mini: su chat se enruta como
-// encargo MCP de admira.live a su deepagent, el Merovingio (GrokBotBox), y su
+// Elon (CEO) y Jensen (CTO) no viven en el Grok Bot del Mac Mini: su chat se enruta como
+// encargo MCP de admira.live a su deepagent (Merovingio / Cypher, GrokBotBox), y su
 // respuesta vuelve al chat. El resto de sillas siguen en el proveedor de siempre.
 const grokBotEncargo = createGrokBotEncargo();
 const grokBotBridge = createGrokBotRouter({ base: grokBotBase, encargo: grokBotEncargo });

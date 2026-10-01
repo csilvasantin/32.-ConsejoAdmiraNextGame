@@ -55,7 +55,7 @@ test('el servidor publica las herramientas del Consejo, la flota y AgoraMatrix',
   const { client } = await cliente();
   const { tools } = await client.listTools();
   const nombres = tools.map((t) => t.name).filter((n) => !n.startsWith('yokup_') && !n.startsWith('telegram_')).sort();
-  assert.deepEqual(nombres, ['agente_encargar', 'agentes_vivos', 'agora_decir', 'consejero_preguntar', 'consejo_bots', 'consejo_consejeros', 'consejo_modelos', 'consejo_preguntar', 'consejo_salud', 'consejo_tareas', 'consumo_reportar', 'encargo_estado', 'flota_estado']);
+  assert.deepEqual(nombres, ['agente_encargar', 'agentes_vivos', 'agora_decir', 'consejero_preguntar', 'consejo_bots', 'consejo_consejeros', 'consejo_modelos', 'consejo_preguntar', 'consejo_salud', 'consejo_tareas', 'consumo_reportar', 'encargo_estado', 'encargo_responder', 'encargos_listar', 'flota_estado']);
   const preguntar = tools.find((t) => t.name === 'consejero_preguntar');
   assert.deepEqual(preguntar.inputSchema.properties.rol.enum, ['CEO', 'CTO', 'COO', 'CFO', 'CCO', 'CDO', 'CXO', 'CSO']);
   const { resources } = await client.listResources();
@@ -107,12 +107,13 @@ test('flota, tareas, modelos y AgoraMatrix van a sus bases correctas', async () 
   await client.callTool({ name: 'consejo_tareas', arguments: {} });
   await client.callTool({ name: 'consejo_modelos', arguments: {} });
   const agora = await client.callTool({ name: 'agora_decir', arguments: { texto: 'Prueba del MCP', de: 'Morfeo' } });
-  assert.deepEqual(peticiones.map((p) => p.url), [
+  // flota_estado lee además la presencia de bot.yokup.com (runtimes y GrokBotBox).
+  assert.deepEqual(peticiones.map((p) => p.url).filter((u) => !u.endsWith('/api/presence')), [
     'https://consejo.test/api/council/machine-status', 'https://consejo.test/api/council/tasks',
     'https://consejo.test/council/api/council/models', 'https://agora.test/agora/feed',
   ]);
   assert.equal(JSON.parse(agora.content[0].text).echoed.from, 'Morfeo');
-  assert.equal(peticiones[3].body.key, 'agora');
+  assert.equal(peticiones.find((p) => p.url.endsWith('/agora/feed')).body.key, 'agora');
 });
 
 test('agora_decir va por el service binding cuando existe (Cloudflare 1042 entre workers de la misma cuenta)', async () => {

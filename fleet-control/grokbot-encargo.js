@@ -99,7 +99,7 @@ function encargoText(owner, persona, prompt) {
     `Mensaje del chat de coetáneos de admira.live para ${nombre} (CEO coetáneo), escrito por ${owner}.`,
     `Contesta TÚ como ${nombre}, en primera persona, en castellano, en texto plano y breve (máximo unos 900 caracteres): tu respuesta final sale tal cual en ese chat.`,
     'Tu respuesta final (antes de la línea ESTADO) debe ser SOLO lo que Elon le contesta a esa persona: sin contar qué has hecho, sin rutas ni entregables (aquí no hacen falta).',
-    'Es conversación, no una misión: no cambies código, sistemas ni datos salvo que el mensaje lo pida expresamente y sea seguro; si pide algo grande, di qué harías y que lo tramitarás aparte.',
+    'Es conversación, no una misión: NO uses herramientas, MCP ni comandos (en este modo no tienes permiso y se cancelaría el turno); contesta directamente con tu criterio y lo que ya sabes. Si pide algo grande, di qué harías y que lo tramitarás aparte.',
     '',
     'MENSAJE:',
     prompt,

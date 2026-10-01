@@ -148,4 +148,5 @@ test('la clave se lee de un fichero privado y nunca de uno abierto', t => {
   assert.throws(() => loadMcpKey({ GROKBOT_ENCARGO_MCP_KEY_FILE: file }), e => e.code === 'encargo_not_configured');
   assert.throws(() => loadMcpKey({ GROKBOT_ENCARGO_MCP_KEY_FILE: path.join(dir, 'no') }), e => e.code === 'encargo_not_configured');
   assert.match(encargoText('a@b.c', 'Musk', 'hola'), /Elon Musk/);
+  assert.match(encargoText('a@b.c', 'Musk', 'hola'), /NO uses herramientas/);
 });

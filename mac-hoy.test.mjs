@@ -308,6 +308,22 @@ test('los NUEVE objetos abren los proyectos grandes', () => {
   assert.match(app, /window\.open\(url, '_blank', 'noopener'\)/, 'pestaña nueva y sin opener');
 });
 
+test('el hover de cada icono muestra la URL completa', () => {
+  assert.match(html, /\.obj\[data-url\]::after\s*\{[^}]*content:\s*attr\(data-url\)/);
+  assert.match(html, /\.obj\[data-url\]:hover::after/);
+  const btns = [...html.matchAll(/<button class="obj" type="button" data-obj="([a-z]+)" data-url="([^"]+)" title="([^"]+)" aria-label="([^"]+)">/g)];
+  assert.equal(btns.length, 9);
+  for (const [, , url, title, aria] of btns) {
+    assert.equal(title, url);
+    assert.equal(aria, url);
+    assert.match(url, /^https:\/\/www\./);
+  }
+  for (const name of ['app.js', 'app.flt-100529.js']) {
+    const src = fs.readFileSync(new URL('./' + name, import.meta.url), 'utf8');
+    assert.match(src, /function arrancaScummInventario\(\) \{[\s\S]*?o\.title = url;[\s\S]*?setAttribute\('aria-label', url\)/);
+  }
+});
+
 test('los puntos sensibles del Mac no pintan marco ni con el foco', () => {
   assert.match(html, /\.mac-hoy-front-floppy:focus-visible \{\s*\n\s*outline: none;/);
   assert.ok(!/outline: 2px solid rgba\(255,210,122/.test(html), 'fuera el marco dorado');

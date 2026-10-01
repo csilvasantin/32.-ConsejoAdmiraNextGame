@@ -2803,6 +2803,29 @@
             border-radius: 0;
         }
         .obj:hover { background: #c6ae7c; border-color: #dccaa0 #4a3418 #4a3418 #dccaa0; }
+        /* Tip inmediato: la URL completa, sin la espera del title nativo. */
+        .inv-objetos { overflow: visible; }
+        .obj[data-url] { position: relative; }
+        .obj[data-url]::after {
+            content: attr(data-url);
+            position: absolute;
+            left: 50%;
+            bottom: calc(100% + 6px);
+            transform: translateX(-50%);
+            z-index: 40;
+            padding: 4px 6px;
+            background: #000;
+            color: #ffee88;
+            border: 2px solid #ffff00;
+            font-family: 'Press Start 2P', monospace;
+            font-size: 7px;
+            line-height: 1.45;
+            white-space: nowrap;
+            pointer-events: none;
+            opacity: 0;
+        }
+        .obj[data-url]:hover::after,
+        .obj[data-url]:focus-visible::after { opacity: 1; }
         .obj-vacio { cursor: default; }
         .verb-arrow {
             background: #7a5530; border-radius: 0;
@@ -3890,15 +3913,15 @@ body.rail-open{overflow:hidden}
                          verbos. Por eso el Mac vive aquí: se llega a él en cualquier
                          momento, que es lo que pediste. -->
                     <div class="inv-objetos" id="inv-objetos">
-                        <button class="obj" type="button" data-obj="next" data-url="https://www.admiranext.com" title="AdmiraNeXT · admiranext.com"><img src="assets/iconos/next.svg?v=20260919-b" alt="AdmiraNeXT"></button>
-                        <button class="obj" type="button" data-obj="tv" data-url="https://www.admira.tv" title="Admira TV · admira.tv"><img src="assets/iconos/tv.svg?v=20260919-b" alt="Admira TV"></button>
-                        <button class="obj" type="button" data-obj="yokup" data-url="https://www.yokup.com" title="Yokup · yokup.com"><img src="assets/iconos/yokup.svg?v=20260919-b" alt="Yokup"></button>
-                        <button class="obj" type="button" data-obj="studio" data-url="https://www.admira.studio" title="Admira Studio · admira.studio"><img src="assets/iconos/studio.svg?v=20260919-b" alt="Admira Studio"></button>
-                        <button class="obj" type="button" data-obj="store" data-url="https://www.admira.store" title="Admira Store · admira.store"><img src="assets/iconos/store.svg?v=20260919-b" alt="Admira Store"></button>
-                        <button class="obj" type="button" data-obj="app" data-url="https://www.admira.app" title="Admira App · admira.app"><img src="assets/iconos/app.svg?v=20260919-b" alt="Admira App"></button>
-                        <button class="obj" type="button" data-obj="pixeria" data-url="https://www.pixeria.com" title="Pixeria · pixeria.com"><img src="assets/iconos/pixeria.svg?v=20260919-b" alt="Pixeria"></button>
-                        <button class="obj" type="button" data-obj="xpace" data-url="https://www.xpaceos.com" title="XpaceOS · xpaceos.com"><img src="assets/iconos/xpace.svg?v=20260919-b" alt="XpaceOS"></button>
-                        <button class="obj" type="button" data-obj="clearchannel" data-url="https://www.clearchannel.tv" title="Clear Channel · clearchannel.tv"><img src="assets/iconos/clearchannel.svg?v=20260919-b" alt="Clear Channel"></button>
+                        <button class="obj" type="button" data-obj="next" data-url="https://www.admiranext.com" title="https://www.admiranext.com" aria-label="https://www.admiranext.com"><img src="assets/iconos/next.svg?v=20260919-b" alt="AdmiraNeXT"></button>
+                        <button class="obj" type="button" data-obj="tv" data-url="https://www.admira.tv" title="https://www.admira.tv" aria-label="https://www.admira.tv"><img src="assets/iconos/tv.svg?v=20260919-b" alt="Admira TV"></button>
+                        <button class="obj" type="button" data-obj="yokup" data-url="https://www.yokup.com" title="https://www.yokup.com" aria-label="https://www.yokup.com"><img src="assets/iconos/yokup.svg?v=20260919-b" alt="Yokup"></button>
+                        <button class="obj" type="button" data-obj="studio" data-url="https://www.admira.studio" title="https://www.admira.studio" aria-label="https://www.admira.studio"><img src="assets/iconos/studio.svg?v=20260919-b" alt="Admira Studio"></button>
+                        <button class="obj" type="button" data-obj="store" data-url="https://www.admira.store" title="https://www.admira.store" aria-label="https://www.admira.store"><img src="assets/iconos/store.svg?v=20260919-b" alt="Admira Store"></button>
+                        <button class="obj" type="button" data-obj="app" data-url="https://www.admira.app" title="https://www.admira.app" aria-label="https://www.admira.app"><img src="assets/iconos/app.svg?v=20260919-b" alt="Admira App"></button>
+                        <button class="obj" type="button" data-obj="pixeria" data-url="https://www.pixeria.com" title="https://www.pixeria.com" aria-label="https://www.pixeria.com"><img src="assets/iconos/pixeria.svg?v=20260919-b" alt="Pixeria"></button>
+                        <button class="obj" type="button" data-obj="xpace" data-url="https://www.xpaceos.com" title="https://www.xpaceos.com" aria-label="https://www.xpaceos.com"><img src="assets/iconos/xpace.svg?v=20260919-b" alt="XpaceOS"></button>
+                        <button class="obj" type="button" data-obj="clearchannel" data-url="https://www.clearchannel.tv" title="https://www.clearchannel.tv" aria-label="https://www.clearchannel.tv"><img src="assets/iconos/clearchannel.svg?v=20260919-b" alt="Clear Channel"></button>
                     </div>
                     <!-- Panel LLM: por defecto y para verbos que usan modelo (preguntar, debatir, hablar) -->
                     <div class="inv-panel active" data-panel="llm">

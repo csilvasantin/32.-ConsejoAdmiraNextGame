@@ -1708,8 +1708,14 @@
     function arrancaScummInventario() {
         pintaObjetos();
         refrescaVerbos();
-        document.querySelectorAll('#inv-objetos .obj').forEach(o =>
-            o.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); usarObjeto(o); }));
+        document.querySelectorAll('#inv-objetos .obj').forEach(o => {
+            const url = o.dataset.url;
+            if (url) {
+                o.title = url;
+                o.setAttribute('aria-label', url);
+            }
+            o.addEventListener('click', e => { e.preventDefault(); e.stopPropagation(); usarObjeto(o); });
+        });
     }
     // El script puede cargarse ya con el DOM listo: en ese caso DOMContentLoaded
     // no vuelve a dispararse y la rejilla se quedaría con las doce cajas.

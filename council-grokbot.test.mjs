@@ -437,3 +437,27 @@ test('passive history refresh retains the failed selection reason until explicit
  assert.equal(await h.api.send('Steve Jobs','Pregunta tras recuperar'),true);
  assert.equal(h.posts.length,1);h.api.destroy();
 });
+
+test('Elon va por encargo MCP: capacidades por persona, respuesta del Merovingio en el chat y sin escritorio', async()=>{
+  const h=harness();
+  h.capabilitiesHandler=call=>call.query.get('persona')==='Musk'
+    ? response({ok:true,mode:'encargo',provider:'encargo',bidirectional:true,available:true,selectedPersona:'Musk',status:'idle',destino:'Merovingio · GrokBotBox',lastObservedAt:'2026-09-18T08:00:00.000Z'})
+    : response({ok:false,error:'desktop_owner_required'},403);
+  const row=over=>message({id:'gb_elon',persona:'Musk',prompt:'Hola Elon',source:'encargo',native:true,...over});
+  h.postHandler=()=>response({ok:true,message:row()});
+  assert.equal(await h.api.select('Elon Musk'),true);
+  assert.ok(h.calls.filter(c=>c.path==='/capabilities').every(c=>c.query.get('persona')==='Musk'));
+  assert.match(h.doc.details.querySelector('.council-chat__connection').textContent,/encargo MCP → Merovingio · GrokBotBox/);
+  assert.equal(h.doc.details.querySelector('[data-chat-screen]').hidden,true);
+  assert.equal(await h.api.send('Elon Musk','Hola Elon'),true);
+  assert.equal(h.posts[0].body.persona,'Elon Musk');
+  h.histories.set('Elon Musk',[row({status:'in_progress'})]);
+  await h.clock.advance(3000);
+  assert.equal(h.answers.length,0);
+  h.histories.set('Elon Musk',[row({status:'done',text:'Soy Elon: primeros principios.',updatedAt:'2026-09-18T08:02:00.000Z'})]);
+  await h.clock.advance(3000);
+  assert.deepEqual(h.answers.map(a=>[a.persona,a.text]),[['Elon Musk','Soy Elon: primeros principios.']]);
+  assert.match(h.log.textContent,/Hola Elon/);assert.match(h.log.textContent,/Soy Elon/);
+  assert.doesNotMatch(h.log.textContent,/Encargos anteriores/);
+  h.api.destroy();
+});

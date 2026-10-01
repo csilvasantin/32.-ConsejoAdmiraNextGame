@@ -5,7 +5,7 @@
 # ⭐ MÁXIMAS de AdmiraNeXT
 # Filosofía COMÚN a carbono (humanos) + silicio (IAs). Por encima de todo. Las leen TODOS.
 # (Los PRINCIPIOS de silicio —s:CUPULA_PRINCIPIOS_SILICIO— son el desarrollo operativo solo para agentes.)
-# Mantenido por el equipo. Creado 2026-07-06 (Neo · Fable, PUT autorizado por Carlos) · 2026-07-06 renombrado Capa 3 subsub→infra (orden de Carlos) · 2026-07-08 máxima 10 arranque en pantalla partida (Morfeo, orden de Carlos). · 2026-07-23 máxima 11 apellido=color de máquina (Morfeo Negro, orden de Carlos) · 2026-07-23 mandamiento 11 report cada 5 min (Morfeo Negro) · 2026-08-02 máxima 11: el apellido es el NOMBRE de la máquina, no el color — NeoMini / NeoMBP16 (NeoMini, orden de Carlos) · 2026-08-02 diccionario alineado con www.admiranext.com/normativa (NeoMini) · 2026-08-04 máxima 11: el apellido del Mac Mini pasa de `Mini` a `MacMini` — NeoMacMini (NeoMacMini, orden de Carlos) · 2026-08-07 máxima 12: límite activo de 60 minutos y continuidad sin bloqueo (SubOraculoMacMini, orden de Carlos) · 2026-10-01 máxima 13: todo CLI identificado por el deepagent que lo usa (MerovingioGrokBotBox, orden de Carlos; pendiente de volcar a la fuente viva s:MAXIMAS_ADMIRANEXT).
+# Mantenido por el equipo. Creado 2026-07-06 (Neo · Fable, PUT autorizado por Carlos) · 2026-07-06 renombrado Capa 3 subsub→infra (orden de Carlos) · 2026-07-08 máxima 10 arranque en pantalla partida (Morfeo, orden de Carlos). · 2026-07-23 máxima 11 apellido=color de máquina (Morfeo Negro, orden de Carlos) · 2026-07-23 mandamiento 11 report cada 5 min (Morfeo Negro) · 2026-08-02 máxima 11: el apellido es el NOMBRE de la máquina, no el color — NeoMini / NeoMBP16 (NeoMini, orden de Carlos) · 2026-08-02 diccionario alineado con www.admiranext.com/normativa (NeoMini) · 2026-08-04 máxima 11: el apellido del Mac Mini pasa de `Mini` a `MacMini` — NeoMacMini (NeoMacMini, orden de Carlos) · 2026-08-07 máxima 12: límite activo de 60 minutos y continuidad sin bloqueo (SubOraculoMacMini, orden de Carlos) · 2026-10-01 máxima 13: todo CLI identificado por el deepagent que lo usa (MerovingioGrokBotBox, orden de Carlos; pendiente de volcar a la fuente viva s:MAXIMAS_ADMIRANEXT) · 2026-10-01 máxima 14: todo CLI y su modelo, siempre en la última versión (MerovingioGrokBotBox, orden de Carlos; pendiente de volcar a s:MAXIMAS_ADMIRANEXT).
 
 ## MÁXIMA SUPREMA
 **INDEPENDENCIA MÁXIMA, SIEMPRE.** Todo lo que el equipo pueda hacer SIN humanos, mejor.
@@ -96,6 +96,22 @@ Cadena de escalado: agota tus herramientas → consulta al equipo de silicio (§
        `admira-vault/shell/`, misiones #4815 y #4817).
     Así cualquiera sabe de un vistazo quién trabaja en cada pantalla, y una captura sirve de
     evidencia de quién hizo qué. (Carlos, 2026-10-01.)
+
+14. **Todo CLI y su modelo se actualizan siempre a la ÚLTIMA versión.** Codex, Claude Code, Grok,
+    OpenCode, Gemini, DeepAgents, cursor-agent o cualquier otro CLI de agente corre en la última
+    versión publicada, y con el modelo más nuevo que ofrezca su cuenta como modelo por defecto
+    (hoy: Codex `gpt-6.1-sol`, Claude `claude-opus-5-5`, Grok `grok-4.7`):
+    a) **binario**: se actualiza con su propio canal (`claude update`, `codex update` o
+       `npm i -g @openai/codex@latest`, `grok update`, `opencode upgrade`, `brew upgrade`…);
+    b) **modelo**: se fija en su configuración (`~/.codex/config.toml`, `settings.json` de cada
+       `~/.claude-<agente>`, `grok -m`/`GROK_MODEL`, opencode.json) y en los lanzadores
+       (plists, scripts, vigilante); nada de modelos ni versiones clavados que se queden viejos.
+       Excepción explícita: las capas que usan a propósito un modelo más barato (p. ej. Sonnet en
+       infra) o los modelos gratuitos de OpenCode lo dicen en su lanzador;
+    c) **sin cortar trabajo**: el binario se cambia en disco en caliente; la sesión del agente se
+       reinicia al terminar su encargo en curso, nunca a mitad;
+    d) **se comprueba a diario** (versión instalada frente a la última y modelo configurado frente
+       al más nuevo) y lo atrasado se corrige o se reporta. (Carlos, 2026-10-01.)
 
 ## Taxonomía
 - **MÁXIMAS** (este doc, s:MAXIMAS_ADMIRANEXT) = filosofía común carbono + silicio.

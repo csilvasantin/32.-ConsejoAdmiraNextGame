@@ -27,6 +27,8 @@
                 var mob=window.innerWidth<=760;
                 if(bd){ bd.classList.toggle('on', anyOpen && mob); }
                 document.body.classList.toggle('rail-open', anyOpen && mob); // bloquea scroll del fondo
+                // DeepAgents Team (#agm-panel) solo con el riel AVANZADO abierto (Carlos, 01-10-2026).
+                document.body.classList.toggle('modo-avanzado', !railCollapsed('rail-avanzado'));
             };
             // Cierra ambos rieles (lo usa el backdrop del cajón en móvil).
             window.closeRails = function(){

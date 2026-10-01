@@ -87,7 +87,7 @@ export function crearTelegram(env = {}, identidad, deps = {}) {
     if (commit) body.commit = commit; if (url) body.url = url; if (verificacion) body.verification = verificacion;
     if (estado === 'done' && !respuesta && !commit && !url && !verificacion) throw new Error('para cerrar hace falta la respuesta (o commit/url/verificación): un done sin nada no contesta a nadie');
     const r = await llamar(`${base}/api/bot-inbox/${Number(encargo)}/status`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
-    return { ok: !!r.ok, encargo: Number(encargo), firmado_como: id.agent, estado: r.item ? r.item.status : estado, publicado_en_telegram: !!r.ok };
+    return { ok: !!r.ok, encargo: Number(encargo), firmado_como: id.agent, estado: r.item ? r.item.status : estado, publicado_en_telegram: !!r.ok && r.publicado !== false };  // el worker no publica los chats ([chat-coetaneos])
   }
 
   return { bandeja, responder };

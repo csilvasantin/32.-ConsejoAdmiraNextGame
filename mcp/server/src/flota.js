@@ -248,7 +248,7 @@ export function crearFlota(env = {}, identidad, deps = {}) {
     const r = await llamar(`${base}/api/bot-inbox`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
     if (!r || !r.ok) throw new Error(`el bot-inbox no aceptó el encargo: ${JSON.stringify(r)}`);
     const etiqueta = etiquetaEncargo(r.id, r.ts, r.etiqueta);
-    return { ok: true, encargo: Number(r.id), etiqueta: etiqueta || null, task_id: r.task_id || null, persona: p, maquina: destino || null, de: firma, proyecto_id: r.project_id || proyecto_id || null, mision_en_yokup: !!proyecto_id,
+    return { ok: true, encargo: Number(r.id), etiqueta: etiqueta || null, task_id: r.task_id || null, persona: p, publicado_en_telegram: r.posted !== false, maquina: destino || null, de: firma, proyecto_id: r.project_id || proyecto_id || null, mision_en_yokup: !!proyecto_id,
       ...(limite ? { deadline: limite } : {}), ...(hecho ? { criterio: hecho } : {}),
       nota, siguiente: `encargo_estado con encargo=${r.id} para leer el acuse y la respuesta. La etiqueta visible es ${etiqueta || ("#" + r.id)} (se publica también en hilo en Telegram y en admira.live/telegram).` };
   }

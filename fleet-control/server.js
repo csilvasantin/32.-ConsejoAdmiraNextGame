@@ -32,12 +32,18 @@ const { ACTIVE, REVOKED, UNAVAILABLE, createSessionRegistry, logoutEndpointPolic
 const { createSessionCodec, deriveSessionSecret, loadAuthEdgeSecretMaterial, loadSessionSecretMaterial } = require('./session-token');
 const { BridgeError, PERSONAS, canonicalPersona, createGrokBotBridge } = require('./grokbot-bridge');
 const { DesktopBridgeError, createGrokBotDesktop } = require('./grokbot-desktop');
+const { createGrokBotEncargo, createGrokBotRouter } = require('./grokbot-encargo');
 const { createServiceBridge } = require('./service-bridge');
 // The desktop adapter shares the native conversation. Never fall back to a
 // routine when it is unavailable: that would silently create a different chat.
 const grokBotLegacy = createGrokBotBridge();
-const grokBotBridge = process.env.GROKBOT_CHAT_PROVIDER === 'desktop'
+const grokBotBase = process.env.GROKBOT_CHAT_PROVIDER === 'desktop'
   ? createGrokBotDesktop() : grokBotLegacy;
+// Elon (coetáneo CEO) no vive en el Grok Bot del Mac Mini: su chat se enruta como
+// encargo MCP de admira.live a su deepagent, el Merovingio (GrokBotBox), y su
+// respuesta vuelve al chat. El resto de sillas siguen en el proveedor de siempre.
+const grokBotEncargo = createGrokBotEncargo();
+const grokBotBridge = createGrokBotRouter({ base: grokBotBase, encargo: grokBotEncargo });
 
 const DIR = __dirname;
 const PORT = parseInt(process.env.FLEET_PORT || '9140', 10);
@@ -876,7 +882,7 @@ const server = http.createServer(async (req, res) => {
   if (url === '/api/grokbot' || url.startsWith('/api/grokbot/')) {
     if (!(await gate(req, res, ip))) return;
     try {
-      if (url === '/api/grokbot/capabilities' && req.method === 'GET') return json(res,200,{ok:true,...await grokBotBridge.capabilities(req.fleetSession)});
+      if (url === '/api/grokbot/capabilities' && req.method === 'GET') return json(res,200,{ok:true,...await grokBotBridge.capabilities(req.fleetSession, requestUrl.searchParams.get('persona'))});
       // Passive JPEG proxy: same authenticated session, no native selection.
       if (url === '/api/grokbot/screen.jpg' && req.method === 'GET') {
         const persona=canonicalPersona(requestUrl.searchParams.get('persona')||'');
@@ -925,7 +931,7 @@ const server = http.createServer(async (req, res) => {
         const messages = await grokBotBridge.list(req.fleetSession, persona);
         // Keep previous routine receipts explicitly separate in the UI. Reading
         // the archive is local-only and never resends or polls an old job.
-        if (grokBotBridge !== grokBotLegacy) messages.push(...grokBotLegacy.list(req.fleetSession, persona));
+        if (grokBotBase !== grokBotLegacy && !grokBotEncargo.handles(persona)) messages.push(...grokBotLegacy.list(req.fleetSession, persona));
         return json(res,200,{ok:true,messages});
       }
       const match = /^\/api\/grokbot\/messages\/(gb_[a-f0-9]{48})$/.exec(url);

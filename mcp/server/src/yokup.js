@@ -173,7 +173,18 @@ export function crearYokup(env = {}, identidad, deps = {}) {
   const MISMO_ASUNTO = 40;
   const mismoAsunto = (m, encargo) => String(m.subject || '').slice(0, MISMO_ASUNTO) === String(encargo).slice(0, MISMO_ASUNTO);
   const viva = (m) => !['cancelled', 'resolved', 'closed'].includes(String(m.status || '').toLowerCase());
-  const resumen = (m) => ({ mision: m.id, display_ref: m.display_ref, estado: m.status, proyecto: m.project_id || null, asunto: String(m.subject || '').slice(0, 120), pasos: (m.tasks || []).map((t) => `${t.code}: ${t.title}`) });
+  // #4587: el número visible de una misión nacida de un encargo es el del encargo, #n.MM.DD
+  // (día de Madrid), igual que en status, encargo_estado y Telegram. display_ref («Hoy #N»,
+  // contador diario de yokup) se mantiene como referencia secundaria; el FLT sigue dentro.
+  function etiquetaMision(m, encargo) {
+    const n = Number(encargo != null ? encargo : (m && (m.inbox_id != null ? m.inbox_id : (m.fleet_ids && m.fleet_ids.inbox_id))));
+    let ms = Number(m && m.created_at || 0); if (ms && ms < 4102444800) ms *= 1000;
+    if (!Number.isInteger(n) || n <= 0 || !ms) return null;
+    const p = new Intl.DateTimeFormat('en-GB', { timeZone: 'Europe/Madrid', month: '2-digit', day: '2-digit' }).formatToParts(new Date(ms));
+    const mm = (p.find((x) => x.type === 'month') || {}).value, dd = (p.find((x) => x.type === 'day') || {}).value;
+    return mm && dd ? `#${n}.${mm}.${dd}` : null;
+  }
+  const resumen = (m) => ({ mision: m.id, etiqueta: etiquetaMision(m), display_ref: m.display_ref, estado: m.status, proyecto: m.project_id || null, asunto: String(m.subject || '').slice(0, 120), pasos: (m.tasks || []).map((t) => `${t.code}: ${t.title}`) });
 
   /** Lo que sigue tras la importación: colgar del proyecto y planificar (a/b/c). Tarda hasta 60 s: nunca en el camino de la respuesta. */
   async function planificar(mision, p, encargo) {
@@ -249,7 +260,7 @@ export function crearYokup(env = {}, identidad, deps = {}) {
     }
     enSegundoPlano(() => planificar(mision, p, encargo));
     await latir(`misión ${mision.id}: ${String(encargo).slice(0, 80)}`);
-    return { mision: mision.id, display_ref: mision.display_ref, proyecto: p.id, encargo: numEncargo, plan: 'en curso: el planificador saca los pasos a/b/c de tu encargo en menos de 1 min (yokup_mis_misiones los lista)', siguiente: `marca cada paso con yokup_paso (${mision.id}, a/b/c, in_progress → done) y registra evidencia con yokup_evidencia antes de cerrar` };
+    return { mision: mision.id, etiqueta: etiquetaMision(mision, numEncargo), display_ref: mision.display_ref, proyecto: p.id, encargo: numEncargo, plan: 'en curso: el planificador saca los pasos a/b/c de tu encargo en menos de 1 min (yokup_mis_misiones los lista)', siguiente: `marca cada paso con yokup_paso (${mision.id}, a/b/c, in_progress → done) y registra evidencia con yokup_evidencia antes de cerrar` };
   }
 
   const MAX_IMAGEN = 10 * 1024 * 1024;
@@ -486,7 +497,7 @@ export function crearYokup(env = {}, identidad, deps = {}) {
     // Filtro en el servidor por agente: antes se pedían 120 misiones de toda la flota y se
     // cribaban aquí; con 200+ misiones al día el consejero se quedaba sin las suyas.
     const missions = await misionesDelTitular(id, 40);
-    return missions.map((m) => ({ id: m.id, ref: m.display_ref, estado: m.status, progreso: m.progress ? `${m.progress.done || 0}/${m.progress.total || 0}` : '', asunto: String(m.subject || '').slice(0, 120), tareas: (m.tasks || []).map((t) => `${t.code} ${t.status}: ${String(t.title || '').slice(0, 60)}`) }));
+    return missions.map((m) => ({ id: m.id, etiqueta: etiquetaMision(m), ref: m.display_ref, estado: m.status, progreso: m.progress ? `${m.progress.done || 0}/${m.progress.total || 0}` : '', asunto: String(m.subject || '').slice(0, 120), tareas: (m.tasks || []).map((t) => `${t.code} ${t.status}: ${String(t.title || '').slice(0, 60)}`) }));
   }
 
   async function marcador() {

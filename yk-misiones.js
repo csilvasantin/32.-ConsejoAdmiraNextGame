@@ -759,7 +759,9 @@
     var sourceLabel = missionSourceLabel(t);
     // DOS PRIMERAS COLUMNAS (Carlos, 2026-09-19): hora de entrada y Nº de misión del
     // día, separadas para poder ordenar por cada una.
-    var numMis = (t.display_n != null && t.display_n !== "") ? "#" + t.display_n : "";
+    // #4587: con encargo, el «#» es el del encargo (#n.MM.DD); el contador del día va sin «#».
+    var conEncargo = !!(window.YkDisplayRef && window.YkDisplayRef.encargo && window.YkDisplayRef.encargo(t));
+    var numMis = (t.display_n != null && t.display_n !== "") ? (conEncargo ? t.display_n + "º" : "#" + t.display_n) : "";
     var horaMis = horaCorta(t.created_at);
     var horaMisHtml =
       '<div class="cel hora-col" title="' + esc("creada " + fechaCorta(t.created_at)) + '">' +

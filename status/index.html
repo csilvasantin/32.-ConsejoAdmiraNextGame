@@ -1296,15 +1296,18 @@
   const YOKUP_MISION  = 'https://www.yokup.com/misiones';
   let FLEET_MISSIONS   = [];   // tal cual las publica yokup
   let MISSION_BY_PERSONA = {}; // norm(persona) → misión VIVA más reciente
-  let MISSION_BY_ID    = {};   // 'FLT-704' → misión (la cola de encargos enlaza por aquí)
+  let MISSION_BY_ID    = {};   // 'FLT-101263' → misión
+  let MISSION_BY_INBOX = {};   // #4587: nº de encargo del bot-inbox → misión (la cola enlaza por aquí)
   let MISSIONS_HIDDEN  = 0;    // misiones que no caben en el escenario (se dicen en el HUD)
 
   function indexMissions(list){
     FLEET_MISSIONS = Array.isArray(list) ? list : [];
-    MISSION_BY_PERSONA = {}; MISSION_BY_ID = {};
+    MISSION_BY_PERSONA = {}; MISSION_BY_ID = {}; MISSION_BY_INBOX = {};
     for(const m of FLEET_MISSIONS){
       if(!m) continue;
       MISSION_BY_ID[m.id] = m;                     // también las resueltas: la cola las muestra
+      const inb = m.inbox_id != null ? m.inbox_id : (m.fleet_ids && m.fleet_ids.inbox_id);
+      if(inb != null && inb !== '') MISSION_BY_INBOX[String(inb)] = m;
       if(m.status === 'resolved') continue;        // resuelta = ya no es su misión viva
       const k = norm(m.persona||''); if(!k) continue;
       const cur = MISSION_BY_PERSONA[k];
@@ -1312,8 +1315,22 @@
       if(!cur || (m.created_at||0) > (cur.created_at||0)) MISSION_BY_PERSONA[k] = m;
     }
   }
-  // El id de misión en yokup se deriva del encargo del bot-inbox: #704 → FLT-704.
-  function missionIdForEncargo(id){ return 'FLT-' + id; }
+  // #4587: el FLT de yokup YA NO es FLT-<nº de encargo> (desde la colisión yokup numera
+  // FLT-1008xx…1013xx y los encargos van por #47xx-#48xx), así que 'FLT-'+id no casaba nunca.
+  // Orden: inbox_id del feed → FLT-<id> heredado (misiones antiguas) → mismo agente, ±2 min y
+  // mismo arranque de texto (el feed público aún no expone inbox_id).
+  function missionForEncargo(x){
+    if(!x) return null;
+    const id=String(x.id||'');
+    if(MISSION_BY_INBOX[id]) return MISSION_BY_INBOX[id];
+    if(MISSION_BY_ID['FLT-'+id]) return MISSION_BY_ID['FLT-'+id];
+    const per=norm(x.target_persona||''), ms=tsMsAF(x.ts), head=norm(String(x.text||'').slice(0,30));
+    if(!per || !ms || !head) return null;
+    // yokup firma persona+máquina («CypherGrokBotBox», «MorfeoMacMini»): basta con que empiece por la persona
+    return FLEET_MISSIONS.find(m=>m && norm(m.persona||m.assignee||'').startsWith(per)
+      && Math.abs(Number(m.created_at||0)-ms)<=2*60*1000
+      && norm(String(m.subject||'').slice(0,30))===head) || null;
+  }
   // Misión VIVA del agente (objeto de yokup) o null si no tiene ninguna.
   function missionForAgent(persona){
     const n = norm(persona);
@@ -3515,10 +3532,10 @@
       const mine=(d.items||[]).filter(x=>norm(x.target_persona)===per)
                  .sort((x,y)=>(tsMsAF(y.ts))-(tsMsAF(x.ts))).slice(0,8);
       if(nq) nq.textContent=mine.length?('· '+mine.length):'';
-      // r35: cada encargo ES una misión en yokup (FLT-<id>) — se enseña su avance
+      // r35: cada encargo ES una misión en yokup (su FLT propio) — se enseña su avance
       // de tareas y se enlaza allí, que es donde se planifica y se cierra.
       if(qEl) qEl.innerHTML = mine.length ? mine.map(x=>{
-        const mid=missionIdForEncargo(x.id), mi=MISSION_BY_ID[mid];
+        const mi=missionForEncargo(x), mid=mi?mi.id:'';
         const prog=missionProgress(mi);
         const tag = mi
           ? `<a class="af-mis" href="https://www.yokup.com/ticket?id=${encodeURIComponent(mid)}" target="_blank" rel="noopener" title="Misión ${esc(mid)} en yokup — planificar y cerrar aquí">🎯 ${esc(mid)}${prog?' · '+prog:' · sin plan'} →</a>`

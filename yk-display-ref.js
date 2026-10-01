@@ -21,7 +21,21 @@
   function fallback(createdAt) {
     return "";
   }
+  // #4587: si la misión nace de un encargo del bot-inbox, su número visible es el del
+  // encargo, #n.MM.DD (día de Madrid), el mismo que dan status, el MCP y Telegram.
+  // «Hoy #N» (contador diario de yokup) queda solo para lo que no viene de un encargo.
+  function encargo(row) {
+    if (!row) return "";
+    if (row.etiqueta) return String(row.etiqueta);
+    var n = Number(row.inbox_id != null ? row.inbox_id : (row.fleet_ids && row.fleet_ids.inbox_id));
+    var ms = epochMs(row.created_at);
+    if (!Number.isInteger(n) || n <= 0 || !ms) return "";
+    var day = madridDay(ms).split("-");
+    return day.length === 3 ? "#" + n + "." + day[1] + "." + day[2] : "";
+  }
   function of(row) {
+    var enc = encargo(row);
+    if (enc) return enc;
     var supplied = String(row && row.display_ref || "").trim();
     if (supplied) return supplied;
     if (row && row.display_n != null) {
@@ -57,5 +71,5 @@
     return alias.indexOf(nq) >= 0 || id.indexOf(nq) >= 0 || ("hoy #" + (row && row.display_n)).indexOf(nq) >= 0
       || nq.replace(" · ", " ").indexOf(alias.replace(" · ", " ")) >= 0 || hist.indexOf(nq) >= 0;
   }
-  g.YkDisplayRef = { of:of, fallback:fallback, epochMs:epochMs, screenHtml:screenHtml, matchesQuery:matchesQuery };
+  g.YkDisplayRef = { of:of, encargo:encargo, fallback:fallback, epochMs:epochMs, screenHtml:screenHtml, matchesQuery:matchesQuery };
 })(window);

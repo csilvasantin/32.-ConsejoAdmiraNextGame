@@ -1865,7 +1865,8 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       (datos.historial.all_days || []).forEach(function (day) {
         if (!day || !ranges.some(function(range){return day.day>=range.start&&day.day<=range.end;})) return;
         (day.top || []).forEach(function (score) {
-          fila(score && score.agent, score && score.machine || "");
+          var semilla = hsSemillaIdentidad(score && score.agent, score && score.machine, id);
+          fila(semilla.agent, semilla.machine);
         });
       });
     }
@@ -2167,6 +2168,22 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     return ({ hour:"esta hora", day:"hoy", week:"esta semana", month:"este mes" })[periodo] || "hoy";
   }
 
+  /* Semilla del histórico (Semana/Mes). /highscore/history trae «CypherGrokBotBox» SIN
+     machine, y parse() no separa los apellidos largos (GrokBotBox, MacBookProNegro14…): la
+     fila salía como «cypher|» y se pintaba «Cypher · sin registro» a 0 puntos junto a la
+     buena (CypherGrokBot, la que suma el diario con machine=GrokBotBox), y los puntos de
+     Semana/Mes se iban a esa fila fantasma. El apellido se saca del propio nombre y pasa por
+     suffix(), igual que el diario; la usan la semilla y metricasRanking(). Encargo de Jensen
+     Huang · Cypher, 01-10-2026. */
+  function hsSemillaIdentidad(agent, machine, ident) {
+    var nombre = normaliza(agent), maq = normaliza(machine), tal = { agent:nombre, machine:maq };
+    if (!nombre || maq || !ident || typeof ident.parse !== "function") return tal;
+    var p = ident.parse(nombre) || {}, persona = normaliza(p.persona);
+    if (!persona || p.suffix || (p.role && p.role !== "main")) return tal;
+    if (nombre.slice(0, persona.length).toLowerCase() !== persona.toLowerCase()) return tal;
+    var resto = nombre.slice(persona.length);
+    return resto && ident.suffix(resto) ? { agent:persona, machine:resto } : tal;
+  }
   // El periodo conserva persona y máquina; sólo se unifican alias del mismo equipo.
   function claveAgentePeriodo(value, machine) {
     var identity = window.ykAgentIdentity, parsed=identity&&identity.parse?identity.parse(value):null;
@@ -2195,7 +2212,8 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     (Array.isArray(history.all_days) ? history.all_days : []).forEach(function (row) {
       if (!row || row.day < range.start || row.day > range.end) return;
       (Array.isArray(row.top) ? row.top : []).forEach(function (score) {
-        if (claveAgentePeriodo(score && score.agent, score && score.machine) !== agentKey) return;
+        var semilla = hsSemillaIdentidad(score && score.agent, score && score.machine, window.ykAgentIdentity);
+        if (claveAgentePeriodo(semilla.agent, semilla.machine) !== agentKey) return;
         fields.forEach(function (field) { result[field] += Math.max(0, Number(score && score[field]) || 0); });
       });
     });

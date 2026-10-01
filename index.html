@@ -4227,7 +4227,10 @@ body.rail-open{overflow:hidden}
 <style id="agm-skin">
   /* AgoraMatrix re-skin: meta-estilo SCUMM dorado del site (como el menú superior)
      y docked en el flujo, justo debajo del CLI. El !important vence a la geometría
-     inline (left/top/width) que el JS restaura de localStorage, dejándolo fijo. */
+     inline (left/top/width) que el JS restaura de localStorage, dejándolo fijo.
+     Solo en modo avanzado: pfSyncIcons pone body.modo-avanzado (Carlos, 01-10-2026).
+     /agentes off sigue ocultándolo (display inline). */
+  body:not(.modo-avanzado) #agm-panel{display:none!important}
   #agm-panel{
     position:static!important; left:auto!important; right:auto!important; top:auto!important; bottom:auto!important;
     width:100%!important; max-width:none!important;

@@ -962,6 +962,18 @@ try:
 except Exception:
     o["app_claude_code"] = []
 o["claude_running"] = bool(sh("pgrep -f claude-code/"))
+# Runtimes de la flota (1-oct-2026, MuskGrokBot): además de Claude Code, Codex, Grok CLI,
+# OpenCode y DeepAgents. Mismas regex que RUNTIMES de mcp/server/src/coordinacion.js.
+import re
+RUNTIME_PATTERNS = {
+    "claude_code": r"claude-code/|(^|/)claude( |$)",
+    "codex": r"(^|/)codex( |$)|@openai/codex|codex-cli",
+    "grok_cli": r"(^|/)grok( |$)|grok-cli|@vibe-kit/grok",
+    "opencode": r"(^|/)opencode( |$)|opencode-ai",
+    "deepagents": r"deepagents",
+}
+procs = [l for l in sh("ps -axo command=").splitlines() if "ps -axo" not in l]
+o["runtimes"] = {k: any(re.search(rx, l) for l in procs) for k, rx in RUNTIME_PATTERNS.items()}
 print(json.dumps(o))
 `;
 

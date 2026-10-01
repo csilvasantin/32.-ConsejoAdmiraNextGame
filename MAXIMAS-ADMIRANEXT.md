@@ -5,7 +5,7 @@
 # ⭐ MÁXIMAS de AdmiraNeXT
 # Filosofía COMÚN a carbono (humanos) + silicio (IAs). Por encima de todo. Las leen TODOS.
 # (Los PRINCIPIOS de silicio —s:CUPULA_PRINCIPIOS_SILICIO— son el desarrollo operativo solo para agentes.)
-# Mantenido por el equipo. Creado 2026-07-06 (Neo · Fable, PUT autorizado por Carlos) · 2026-07-06 renombrado Capa 3 subsub→infra (orden de Carlos) · 2026-07-08 máxima 10 arranque en pantalla partida (Morfeo, orden de Carlos). · 2026-07-23 máxima 11 apellido=color de máquina (Morfeo Negro, orden de Carlos) · 2026-07-23 mandamiento 11 report cada 5 min (Morfeo Negro) · 2026-08-02 máxima 11: el apellido es el NOMBRE de la máquina, no el color — NeoMini / NeoMBP16 (NeoMini, orden de Carlos) · 2026-08-02 diccionario alineado con www.admiranext.com/normativa (NeoMini) · 2026-08-04 máxima 11: el apellido del Mac Mini pasa de `Mini` a `MacMini` — NeoMacMini (NeoMacMini, orden de Carlos) · 2026-08-07 máxima 12: límite activo de 60 minutos y continuidad sin bloqueo (SubOraculoMacMini, orden de Carlos) · 2026-10-01 máxima 13: todo CLI identificado por el deepagent que lo usa (MerovingioGrokBotBox, orden de Carlos; pendiente de volcar a la fuente viva s:MAXIMAS_ADMIRANEXT) · 2026-10-01 máxima 14: todo CLI y su modelo, siempre en la última versión (MerovingioGrokBotBox, orden de Carlos; pendiente de volcar a s:MAXIMAS_ADMIRANEXT).
+# Mantenido por el equipo. Creado 2026-07-06 (Neo · Fable, PUT autorizado por Carlos) · 2026-07-06 renombrado Capa 3 subsub→infra (orden de Carlos) · 2026-07-08 máxima 10 arranque en pantalla partida (Morfeo, orden de Carlos). · 2026-07-23 máxima 11 apellido=color de máquina (Morfeo Negro, orden de Carlos) · 2026-07-23 mandamiento 11 report cada 5 min (Morfeo Negro) · 2026-08-02 máxima 11: el apellido es el NOMBRE de la máquina, no el color — NeoMini / NeoMBP16 (NeoMini, orden de Carlos) · 2026-08-02 diccionario alineado con www.admiranext.com/normativa (NeoMini) · 2026-08-04 máxima 11: el apellido del Mac Mini pasa de `Mini` a `MacMini` — NeoMacMini (NeoMacMini, orden de Carlos) · 2026-08-07 máxima 12: límite activo de 60 minutos y continuidad sin bloqueo (SubOraculoMacMini, orden de Carlos) · 2026-10-01 máxima 13: todo CLI identificado por el deepagent que lo usa (MerovingioGrokBotBox, orden de Carlos; pendiente de volcar a la fuente viva s:MAXIMAS_ADMIRANEXT) · 2026-10-01 máxima 14: todo CLI y su modelo, siempre en la última versión (MerovingioGrokBotBox, orden de Carlos; pendiente de volcar a s:MAXIMAS_ADMIRANEXT) · 2026-10-01 máxima 15: nunca hablar a Carlos de un encargo solo por su número (MerovingioGrokBotBox, orden de Carlos; pendiente de volcar a s:MAXIMAS_ADMIRANEXT).
 
 ## MÁXIMA SUPREMA
 **INDEPENDENCIA MÁXIMA, SIEMPRE.** Todo lo que el equipo pueda hacer SIN humanos, mejor.
@@ -112,6 +112,11 @@ Cadena de escalado: agota tus herramientas → consulta al equipo de silicio (§
        reinicia al terminar su encargo en curso, nunca a mitad;
     d) **se comprueba a diario** (versión instalada frente a la última y modelo configurado frente
        al más nuevo) y lo atrasado se corrige o se reporta. (Carlos, 2026-10-01.)
+
+15. **Nunca hables a Carlos de un encargo o misión solo por su NÚMERO.** Nada de citar
+    `#4815`, `FLT-101313`… como si supiera de qué se trata: di siempre qué misión es y una breve
+    descripción; el número, como mucho, entre paréntesis al final. Ejemplo: «el banner ASCII con
+    el nombre del deepagent en cada terminal (#4815)». (Carlos, 2026-10-01.)
 
 ## Taxonomía
 - **MÁXIMAS** (este doc, s:MAXIMAS_ADMIRANEXT) = filosofía común carbono + silicio.

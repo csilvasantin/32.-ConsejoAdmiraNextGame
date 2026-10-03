@@ -84,9 +84,9 @@ export function crearCliente(env = {}, deps = {}) {
       llamar(`${councilBase}/api/council/ask`, { method: 'POST', headers: cabecerasConsejo(),
         body: JSON.stringify({ message: mensaje, generation: generacion, llm, context: contexto || null }) }),
 
-    preguntarConsejero: ({ rol, mensaje, generacion = 'leyendas', llm = 'grok-4.6', contexto }) =>
+    preguntarConsejero: ({ rol, mensaje, generacion = 'leyendas', llm = 'grok-4.6', contexto, max_tokens = 300 }) =>
       llamar(`${councilBase}/api/council/ask-one`, { method: 'POST', headers: cabecerasConsejo(),
-        body: JSON.stringify({ message: mensaje, agent_name: rol, generation: generacion, llm, context: contexto || null }) }),
+        body: JSON.stringify({ message: mensaje, agent_name: rol, generation: generacion, llm, max_tokens, context: contexto || null }) }),
 
     saludBots: () => llamar(`${fleetBase}/council/health`),
     flota: () => llamar(`${fleetBase}/council/machine-status`),

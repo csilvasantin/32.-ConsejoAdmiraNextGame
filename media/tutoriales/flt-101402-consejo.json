@@ -1,0 +1,12 @@
+{
+  "mission": "FLT-101402",
+  "encargo_original": 4937,
+  "generator": "https://www.admiranext.com/tiktok/",
+  "engine": "ADmira Motion",
+  "type": "Animación explicativa, no grabación real de pantalla",
+  "duration_seconds": 15.036,
+  "dimensions": "1080x1920",
+  "audio": true,
+  "script": "admira.live: Coetáneos > Elon o Jensen > chat. Sin señal: Grok. Tras 90s sin acuse, pulsa Responder con Grok 4.6. Respuesta aquí, sin duplicados. Solo texto. Animación; API con coste. Enviar bloqueado mientras espera · máximo 1000 tokens.",
+  "validation": "ffprobe, decodificación completa ffmpeg y revisión visual del fotograma del plan B; pruebas de chat con respuestas simuladas sin costes de modelos."
+}

@@ -93,6 +93,7 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
       mensaje: z.string().min(3).max(1000).describe('La pregunta, con contexto (máx. 1000 caracteres).'),
       generacion: z.enum(GENERACIONES).default('leyendas').describe('leyendas o coetaneos.'),
       llm: z.string().min(2).max(40).default('grok-4.6').describe('Clave del modelo (ver consejo_modelos). grok-4.6 por defecto.'),
+      max_tokens: z.number().int().min(100).max(1000).default(300).describe('Límite de salida del consejero.'),
       contexto: z.array(z.object({ role: z.string(), content: z.string() })).max(20).optional().describe('Turnos previos, si los hay.'),
     },
     annotations: { readOnlyHint: false, destructiveHint: false, openWorldHint: true },

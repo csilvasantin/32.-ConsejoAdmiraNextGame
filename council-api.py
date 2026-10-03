@@ -46,7 +46,7 @@ from fastapi.staticfiles import StaticFiles
 import urllib.parse
 import subprocess
 import unicodedata
-from pydantic import BaseModel
+from pydantic import BaseModel, Field
 
 # Add admiranext to path — try multiple locations (optional, not needed on Render)
 for _p in [
@@ -911,6 +911,7 @@ class AskOneRequest(BaseModel):
     generation: str = "leyendas"
     context: Optional[list] = None
     llm: str = DEFAULT_LLM  # LLM model key from LLM_MODELS
+    max_tokens: int = Field(default=300, ge=100, le=1000)
     confirm_expensive_video: bool = False
     imageData: Optional[str] = None  # FLT-100706 data URL or raw base64
 
@@ -1423,7 +1424,7 @@ async def council_ask_one(
 
     loop = asyncio.get_event_loop()
     content, inp_tok, out_tok = await loop.run_in_executor(
-        None, lambda: agent_ask(agent, req.message, req.context, llm_key, 300, getattr(req, "imageData", None))
+        None, lambda: agent_ask(agent, req.message, req.context, llm_key, req.max_tokens, getattr(req, "imageData", None))
     )
     track_usage(inp_tok, out_tok, agent.name, llm_key)
 

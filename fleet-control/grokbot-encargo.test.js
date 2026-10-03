@@ -14,7 +14,7 @@ function setup(t, mcpImpl) {
   const calls = [];
   let clock = 1790000000000;
   const mcp = { call: async (name, args) => { calls.push({ name, args }); return mcpImpl(name, args, calls); } };
-  const provider = createGrokBotEncargo({ environment: { GROKBOT_ENCARGO_STATE_FILE: path.join(dir, 'state.json') }, keyProvider: () => 'k', mcp, now: () => (clock += 10000) });
+  const provider = createGrokBotEncargo({ environment: { GROKBOT_ENCARGO_STATE_FILE: path.join(dir, 'state.json') }, keyProvider: () => 'k', mcp, presenceProvider: async () => ({presence:['Merovingio','Cypher'].map(persona=>({persona,machine:'GrokBotBox',runtime:'DeepAgents',updated:clock/1000}))}), now: () => (clock += 10000) });
   return { provider, calls };
 }
 const flush = () => new Promise(r => setImmediate(r));
@@ -38,7 +38,7 @@ test('un mensaje de Joshua crea un encargo MCP para el Merovingio y la respuesta
       : { encargo: 4901, estado, respuesta: estado === 'ack' ? 'Merovingio lo coge' : null };
     throw new Error('unexpected');
   });
-  const caps = provider.capabilities(joshua, 'Elon Musk');
+  const caps = await provider.capabilities(joshua, 'Elon Musk');
   assert.equal(caps.mode, 'encargo'); assert.equal(caps.available, true); assert.equal(caps.bidirectional, true); assert.equal(caps.selectedPersona, 'Musk');
   const sent = await provider.send(joshua, { message_id: 'msg-joshua-0001', persona: 'Elon Musk', prompt: '¿Qué opinas del plan?' });
   assert.equal(sent.status, 'pending'); assert.equal(sent.encargo, 4901); assert.equal(sent.source, 'encargo'); assert.equal(sent.native, true);
@@ -98,7 +98,7 @@ test('el router manda Elon al encargo y el resto al proveedor base', async t => 
     controls: () => ({ ok: true }), start() { seen.push(['start']); },
   };
   const router = createGrokBotRouter({ base, encargo: provider });
-  assert.equal(router.capabilities(carlos, 'Elon Musk').mode, 'encargo');
+  assert.equal((await router.capabilities(carlos, 'Elon Musk')).mode, 'encargo');
   assert.equal(router.capabilities(carlos, 'Steve Jobs').mode, 'desktop');
   assert.equal(router.capabilities(carlos, null).mode, 'desktop');
   assert.deepEqual(router.select(carlos, 'Elon Musk'), { selectedPersona: 'Musk', status: 'idle' });
@@ -160,7 +160,7 @@ test('Jensen: encargo a Cypher con la marca común y el historial reciente como 
     if (name === 'encargo_estado') return { encargo: args.encargo, estado: 'done', respuesta: 'Respuesta ' + args.encargo, cierre: '2026-10-01 09:00 UTC' };
     throw new Error('unexpected');
   });
-  assert.equal(provider.capabilities(joshua, 'Jensen Huang').agente, 'Cypher');
+  assert.equal((await provider.capabilities(joshua, 'Jensen Huang')).agente, 'Cypher');
   const a = await provider.send(joshua, { message_id: 'msg-jensen-0001', persona: 'Jensen Huang', prompt: 'Hola Jensen, me llamo Joshua' });
   assert.equal((await provider.get(joshua, a.id)).text, 'Respuesta 4951');
   await provider.send(joshua, { message_id: 'msg-jensen-0002', persona: 'Jensen Huang', prompt: '¿Cómo me llamo?' });
@@ -186,4 +186,58 @@ test('GROKBOT_ENCARGO_SILLAS limita las sillas por encargo (p. ej. solo Elon mie
   const p = createGrokBotEncargo({ environment: { GROKBOT_ENCARGO_SILLAS: 'Musk', GROKBOT_ENCARGO_STATE_FILE: path.join(dir, 's.json') }, keyProvider: () => 'k', mcp: { call: async () => ({}) } });
   assert.equal(p.handles('Elon Musk'), true);
   assert.equal(p.handles('Jensen Huang'), false);
+});
+
+function controlled(t, {live = true, handler} = {}) {
+  const dir=fs.mkdtempSync(path.join(os.tmpdir(),'encargo-reliability-'));t.after(()=>fs.rmSync(dir,{recursive:true,force:true}));
+  let time=Date.parse('2026-10-03T14:00:00Z');const calls=[];
+  const provider=createGrokBotEncargo({environment:{GROKBOT_ENCARGO_STATE_FILE:path.join(dir,'s.json')},keyProvider:()=> 'test',now:()=>time,
+    presenceProvider:async()=>({presence:live?['Merovingio','Cypher'].map(persona=>({persona,machine:'GrokBotBox',runtime:'DeepAgents',updated:time/1000})):[]}),
+    mcp:{call:async(name,args)=>{calls.push({name,args});return handler?handler(name,args):name==='agente_encargar'?{encargo:5001}:{texto:'CEO · Elon Musk (racional):\nRespuesta del Consejo.'};}}});
+  return {provider,calls,advance:ms=>{time+=ms;}};
+}
+
+test('sin señal: no crea encargo, contesta una sola vez por council-api con 1000 tokens',async t=>{
+  const h=controlled(t,{live:false});const caps=await h.provider.capabilities(carlos,'Musk');assert.equal(caps.signal,false);
+  const a=await h.provider.send(carlos,{persona:'Musk',prompt:'Hola Elon',message_id:'no-signal-0001'});
+  await flush();const done=await h.provider.get(carlos,a.id);
+  assert.equal(done.status,'done');assert.equal(done.replyProvider,'council-api');assert.equal(done.text,'Respuesta del Consejo.');
+  assert.match(done.notice,/sin señal/);assert.equal(done.encargo,null);
+  assert.equal(h.calls.length,1);assert.equal(h.calls[0].name,'consejero_preguntar');assert.equal(h.calls[0].args.max_tokens,1000);assert.equal(h.calls[0].args.llm,'grok-4.6');
+  assert.equal((await h.provider.fallback(carlos,a.id)).id,a.id);assert.equal(h.calls.length,1);
+});
+
+test('dos ids simultáneos con igual texto para la misma silla crean un único encargo',async t=>{
+  let release;const gate=new Promise(r=>release=r);const h=controlled(t,{handler:async name=>{if(name==='agente_encargar'){await gate;return{encargo:5002};}return{estado:'pending'};}});
+  const a=h.provider.send(carlos,{persona:'Huang',prompt:'Hola Jensen',message_id:'duplicate-0001'});
+  const b=h.provider.send(carlos,{persona:'Huang',prompt:'  Hola Jensen  ',message_id:'duplicate-0002'});
+  await flush();assert.equal(h.calls.length,1);release();const [ra,rb]=await Promise.all([a,b]);assert.equal(ra.id,rb.id);
+  h.advance(119999);assert.equal((await h.provider.send(carlos,{persona:'Huang',prompt:'Hola Jensen',message_id:'duplicate-0003'})).id,ra.id);
+  h.advance(2);await h.provider.send(carlos,{persona:'Huang',prompt:'Hola Jensen',message_id:'duplicate-0004'});assert.equal(h.calls.filter(c=>c.name==='agente_encargar').length,2);
+});
+
+test('plan B se ofrece a 90s sin acuse, es privado e ignora el cierre tardío del deepagent',async t=>{
+  const h=controlled(t,{handler:async name=>name==='agente_encargar'?{encargo:5003}:name==='encargo_estado'?{estado:'pending'}:{texto:'Respuesta alternativa.'}});
+  const a=await h.provider.send(carlos,{persona:'Huang',prompt:'Pregunta Jensen',message_id:'plan-b-00001'});
+  h.advance(89999);assert.equal((await h.provider.get(carlos,a.id)).fallbackAvailable,false);
+  await assert.rejects(async()=>h.provider.fallback(carlos,a.id),e=>e.code==='fallback_not_ready');
+  h.advance(1);assert.equal((await h.provider.get(carlos,a.id)).fallbackAvailable,true);
+  await assert.rejects(async()=>h.provider.fallback(joshua,a.id),e=>e.code==='message_not_found');
+  h.provider.fallback(carlos,a.id);h.provider.fallback(carlos,a.id);await flush();h.advance(3000);
+  const done=await h.provider.get(carlos,a.id);assert.equal(done.text,'Respuesta alternativa.');assert.equal(done.fallbackAvailable,false);
+  assert.equal(h.calls.filter(c=>c.name==='consejero_preguntar').length,1);assert.equal(h.calls.find(c=>c.name==='consejero_preguntar').args.rol,'CTO');
+});
+
+test('el acuse cancela la oferta a 90s; las notas internas jamás son respuestas',async t=>{
+  let state='ack';const h=controlled(t,{handler:async name=>name==='agente_encargar'?{encargo:5004}:{estado:state,respuesta:'sin ESTADO: done · nota interna',acuse:'2026-10-03 14:00 UTC'}});
+  const a=await h.provider.send(carlos,{persona:'Musk',prompt:'Pregunta Elon',message_id:'internal-0001'});
+  h.advance(3000);assert.equal((await h.provider.get(carlos,a.id)).status,'in_progress');h.advance(90000);
+  assert.equal((await h.provider.get(carlos,a.id)).fallbackAvailable,false);
+  state='done';h.advance(3000);const bad=await h.provider.get(carlos,a.id);assert.equal(bad.text,'');assert.equal(bad.fallbackAvailable,true);
+});
+
+test('fallo del plan B acaba con aviso visible y no presenta una excepción como respuesta',async t=>{
+  const h=controlled(t,{live:false,handler:async()=>{throw new Error('private stack/token');}});
+  const a=await h.provider.send(carlos,{persona:'Musk',prompt:'Hola Elon',message_id:'fallback-error-001'});await flush();
+  const failed=await h.provider.get(carlos,a.id);assert.equal(failed.status,'failed');assert.equal(failed.text,'');assert.match(failed.notice,/no ha podido responder/);assert.doesNotMatch(JSON.stringify(failed),/private stack/);
 });

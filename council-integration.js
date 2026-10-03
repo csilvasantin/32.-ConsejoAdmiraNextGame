@@ -61,7 +61,7 @@
   const sendingDrafts=new Set();
   try{drafts=JSON.parse(sessionStorage.getItem('admira-grokbot-drafts')||'{}');if(!drafts||typeof drafts!=='object'||Array.isArray(drafts))drafts={};}catch(_){}
   function persistDrafts(){try{sessionStorage.setItem('admira-grokbot-drafts',JSON.stringify(drafts));}catch(_){}}
-  function syncComposer(){inlineComposer?.update({persona:draftPersona,value:typeof drafts[draftPersona]==='string'?drafts[draftPersona]:'',pending:sendingDrafts.has(draftPersona)});}
+  function syncComposer(){const pending=sendingDrafts.has(draftPersona)||!!bridge?.isPending?.(draftPersona);inlineComposer?.update({persona:draftPersona,value:typeof drafts[draftPersona]==='string'?drafts[draftPersona]:'',pending});const send=document.querySelector('.action-send');if(send)send.disabled=pending;}
   function saveDraft(){if(draftPersona&&composer&&composer.value!==mirroredValue){drafts[draftPersona]=composer.value;mirroredValue=composer.value;persistDrafts();}syncComposer();}
   function writeDraft(value){if(!draftPersona)return;drafts[draftPersona]=value;if(composer){composer.value=value;mirroredValue=composer.value;}persistDrafts();syncComposer();}
   function restoreDraft(name,text){
@@ -88,6 +88,7 @@
   const bridge=CouncilGrokBot.mount({
     container:preview?.chatHost||dock,mountInside:!!preview,onDraft(text){const input=document.getElementById('action-input');if(!input||input.value.trim())return false;writeDraft(text);if(inlineComposer)inlineComposer.focus();else input.focus();return true;},onOpenHistory(){preview?.open();},csrf:()=>window.admiraGateCsrf?.()||'',
     onSelect(persona){if(window.__consejoDeskPoll){clearInterval(window.__consejoDeskPoll);window.__consejoDeskPoll=null;}selectDraft(persona);activePersona=persona;preview?.select(persona);speech.select(persona||'');table.close();close({dismiss:false});},
+    onPendingChange(){syncComposer();},
     onPending({persona}){if(activePersona!==persona)return;dismissed=false;activeTurn=null;prepare(persona,'GrokBot');speech.begin({persona,turnId:'pending'});bubble.querySelector('.speech-text').textContent='Enviando al bot…';},
     onAnswer({persona,text,messageId,status}){if(activePersona===persona&&!dismissed)show(persona,'GrokBot',text,{animate:true,messageId,status});},
     onRestore({persona,text,messageId,status='done'}){if(activePersona===persona){dismissed=false;show(persona,'GrokBot',text,{messageId,status});}},

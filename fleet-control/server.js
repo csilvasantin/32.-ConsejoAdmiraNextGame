@@ -919,6 +919,11 @@ const server = http.createServer(async (req, res) => {
         if(!body || Object.keys(body).some(k=>k!=='persona') || typeof body.persona!=='string') throw new BridgeError(400,'invalid_selection');
         return json(res,200,{ok:true,...await grokBotBridge.select(req.fleetSession,body.persona)});
       }
+      const fallbackMatch = url.match(/^\/api\/grokbot\/messages\/(gb_[a-f0-9]{48})\/fallback$/);
+      if (fallbackMatch && req.method === 'POST') {
+        if (!grokBotBridge.fallback) throw new BridgeError(503,'fallback_unavailable');
+        return json(res,202,{ok:true,message:await grokBotBridge.fallback(req.fleetSession,fallbackMatch[1])});
+      }
       if (url === '/api/grokbot/messages' && req.method === 'POST') {
         const raw = await readRawBody(req, 100000);
         if (raw === null) throw new BridgeError(413,'message_too_large');

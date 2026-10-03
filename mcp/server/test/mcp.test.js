@@ -72,7 +72,7 @@ test('preguntar a un consejero llama a ask-one con el token de máquina y devuel
   const p = peticiones.find((x) => x.url.endsWith('/api/council/ask-one'));
   assert.equal(p.method, 'POST');
   assert.equal(p.headers['x-council-token'], 'token-maquina');
-  assert.deepEqual(p.body, { message: '¿Cómo conectamos GrokBot al Consejo?', agent_name: 'CTO', generation: 'leyendas', llm: 'llama-70b', context: null });
+  assert.deepEqual(p.body, { message: '¿Cómo conectamos GrokBot al Consejo?', agent_name: 'CTO', generation: 'leyendas', llm: 'llama-70b', max_tokens: 300, context: null });
 });
 
 test('preguntar al Consejo resume racional y creativo en un solo texto, y por defecto va por grok-4.6', async () => {
@@ -165,4 +165,13 @@ test('/ y /salud describen el servicio y dicen qué secretos faltan', async () =
   assert.equal(salud.consejo.agents, 16);
   const nada = await manejar(new Request('https://mcp.test/otra'), ENV, deps);
   assert.equal(nada.status, 404);
+});
+
+
+test('plan B coetáneos propaga 1000 tokens y rechaza límites mayores',async()=>{
+ const {client,peticiones}=await cliente();
+ const r=await client.callTool({name:'consejero_preguntar',arguments:{rol:'CEO',generacion:'coetaneos',mensaje:'Hola Elon, responde breve.',llm:'grok-4.6',max_tokens:1000}});
+ assert.equal(r.isError,undefined);
+ const p=peticiones.find(x=>x.url.endsWith('/api/council/ask-one'));assert.equal(p.body.max_tokens,1000);assert.equal(p.body.generation,'coetaneos');
+ const bad=await client.callTool({name:'consejero_preguntar',arguments:{rol:'CEO',mensaje:'Hola Elon',max_tokens:1001}});assert.equal(bad.isError,true);
 });

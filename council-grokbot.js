@@ -18,11 +18,12 @@
   const timestamp = value => Number.isFinite(Number(value)) ? Number(value) : Date.parse(value) || 0;
   // encargo: Elon responde por su deepagent (encargo MCP de admira.live), no por el escritorio AX.
   const native = row => row.native === true && (row.source === 'desktop' || row.source === 'encargo');
-  const signature = row => JSON.stringify([row.prompt || '',row.text || '',row.status,row.source,row.native,row.attachments||[]]);
+  const signature = row => JSON.stringify([row.prompt || '',row.text || '',row.status,row.source,row.native,row.attachments||[],row.fallbackAvailable,row.notice,row.replyProvider]);
   function reconcile(previous, incoming) {
     const rows = new Map((previous || []).map(row => [row.id, row]));
-    for (const row of incoming || []) {
+    for (let row of incoming || []) {
       if (!row || !/^gb_[a-zA-Z0-9_-]+$/.test(row.id || '') || !FULL[row.persona]) continue;
+      if(row.source==='encargo'&&/sin\s+ESTADO\s*:\s*done|(?:^|\n)\s*(?:ESTADO|Estado real)\s*:|encargo_sin_mision|Traceback|mcp_tool_error/i.test(row.text||''))row={...row,text:''};
       const prior = rows.get(row.id);
       if (!prior || timestamp(row.updatedAt) >= timestamp(prior.updatedAt)) rows.set(row.id, {...row});
     }
@@ -35,6 +36,7 @@
     let selected=null, selectedEpoch=0, capabilities=null, destroyed=false, selectionReady=false, connected=false, pollTimer=null, refreshing=null, selecting=null;
     let renderedPersona=null, selectionError=null;
     const attachments=new Map(), uploading=new Set();
+    const recentSends=new Map();
     const histories=new Map(), pendingSends=new Set(), requests=new Set(), announced=new Map(), settled=new Map(), baselined=new Set();
     const details=doc.createElement(options.mountInside?'section':'details'); details.className='council-chat';
     details.innerHTML='<summary>Chat de GrokBot <span class="council-chat__connection"></span></summary><div class="council-chat__toolbar"><strong class="council-chat__person"></strong><button type="button" data-chat-refresh>Actualizar</button><button type="button" data-chat-screen>Escritorio</button><button type="button" data-chat-attach hidden>Adjuntar</button><input type="file" data-chat-file hidden><button type="button" data-chat-routines hidden>Rutinas</button><button type="button" data-chat-stop hidden>Detener</button><a href="grokbot://" class="council-chat__native">Abrir GrokBot ↗</a></div><p class="council-chat__scope">Los mismos mensajes visibles en GrokBot, sincronizados a través del Mac Mini. Historial observado en GrokBot; puede faltar contenido antiguo.</p><p class="council-chat__status" role="status"></p><div class="council-chat__attachments" hidden></div><div class="council-chat__operations" hidden></div><div class="council-chat__messages" role="log" aria-label="Mensajes visibles de GrokBot"></div><p class="council-chat__limits">El Mac Mini y GrokBot deben estar disponibles. Las aprobaciones y los resultados descargables todavía se gestionan en GrokBot. Adjuntos: un archivo de hasta 4 MB por mensaje.</p>';
@@ -50,12 +52,14 @@
     const encargo=()=>capabilities?.mode==='encargo';
     const SCOPE_DESKTOP='Los mismos mensajes visibles en GrokBot, sincronizados a través del Mac Mini. Historial observado en GrokBot; puede faltar contenido antiguo.';
     const agente=()=>capabilities?.agente||'su deepagent';
-    const scopeEncargo=()=>(selected||'El consejero')+' contesta a través de su deepagent, '+agente()+': cada mensaje es un encargo del MCP de admira.live marcado como chat (queda registrado y se ve en vivo en su terminal; no se publica en el Ágora ni en Telegram). Suele contestar en unos segundos y recuerda lo último que habéis hablado. Solo ves tus propios mensajes.';
+    const scopeEncargo=()=>(selected||'El consejero')+' contesta a través de su deepagent, '+agente()+'. Si está sin señal responde Grok 4.6. Si pasan 90 segundos sin acuse puedes pedir ese mismo plan B. Solo ves tus propios mensajes.';
     const LIMITS_DESKTOP='El Mac Mini y GrokBot deben estar disponibles. Las aprobaciones y los resultados descargables todavía se gestionan en GrokBot. Adjuntos: un archivo de hasta 4 MB por mensaje.';
-    const LIMITS_ENCARGO='Pasa por el relé del Mac Mini (fleet.admira.live) y el MCP de admira.live; no necesita la app GrokBot de escritorio. Solo texto: en este modo no hay adjuntos.';
+    const LIMITS_ENCARGO='Solo texto, sin adjuntos. El plan B es una respuesta de Grok 4.6 por la API del Consejo, no de la sesión del deepagent; puede tener coste y usa hasta 1.000 tokens de salida. La API y el relé deben estar disponibles.';
     const label=status=>(encargo()?ENCARGO_LABELS:LABELS)[status];
     function say(message){if(destroyed)return;status.textContent=message;options.onStatus?.(message);}
     function rowsFor(name){return histories.get(PEOPLE[name]) || [];}
+    const isPending=persona=>pendingSends.has(persona)||rowsFor(persona).some(r=>native(r)&&['pending','in_progress','ack','unknown'].includes(r.status));
+    function syncPending(){options.onPendingChange?.({persona:selected,pending:isPending(selected)});}
     function merge(rows){
       for(const alias of Object.values(PEOPLE)) histories.set(alias,reconcile(histories.get(alias),rows.filter(r=>r?.persona===alias)));
     }
@@ -75,7 +79,7 @@
       if(destroyed)return;
       const oldTop=log.scrollTop;
       const follow=renderedPersona!==selected || !options.mountInside || log.scrollHeight-log.clientHeight-oldTop<48;
-      renderedPersona=selected;
+      renderedPersona=selected;syncPending();
       log.replaceChildren();
       if(!selected)return;
       $('.council-chat__person').textContent=selected;
@@ -91,6 +95,7 @@
             const user=doc.createElement('p');user.className='council-chat__user';
             const userName=doc.createElement('strong');userName.textContent='Tú';user.append(userName,doc.createTextNode(row.prompt));item.append(user);
           }
+          if(row.notice){const notice=doc.createElement('p');notice.className='council-chat__meta';notice.textContent=row.notice;item.append(notice);}
           if(row.text){
             const reply=doc.createElement('p');reply.className='council-chat__reply';
             const botName=doc.createElement('strong');botName.textContent=FULL[row.persona];reply.append(botName);appendText(reply,row.text);item.append(reply);
@@ -103,6 +108,15 @@
             reply.append(botName,dots);item.append(reply);
           }
           for(const file of row.attachments||[]){const p=doc.createElement('p');p.className='council-chat__file';p.textContent='📎 '+file.name;item.append(p);}
+          if(row.fallbackAvailable){
+            const fallback=doc.createElement('button');fallback.type='button';fallback.textContent='Responder con Grok 4.6';
+            fallback.title='Plan B por la API del Consejo (puede tener coste). La sesión original aún puede responder.';
+            fallback.addEventListener('click',async()=>{
+              fallback.disabled=true;
+              try{const data=await api('/messages/'+encodeURIComponent(row.id)+'/fallback',{});if(destroyed)return;merge([data.message]);render();report(data.message,selectedEpoch);schedule(selectedEpoch);}
+              catch(e){say(errorMessage(e));fallback.disabled=false;}
+            });item.append(fallback);
+          }
           const meta=doc.createElement('span');meta.className='council-chat__meta';meta.textContent=label(row.status) || 'Estado pendiente';item.append(meta);log.append(item);
         }
       }
@@ -122,7 +136,7 @@
       const node=$('.council-chat__connection');
       const nativePersona=PEOPLE[capabilities?.selectedPersona] || capabilities?.selectedPersona;
       const observedAt=timestamp(capabilities?.lastObservedAt);
-      node.textContent=!available?'· Sincronización desconectada':encargo()?'· Vía '+(capabilities?.destino||agente()):capabilities?.status==='draft'?'· Borrador en GrokBot':!selectionReady?'· Selección pendiente':nativePersona&&nativePersona!==PEOPLE[selected]?'· Chat nativo en otro consejero':!observedAt?'· Esperando observación nativa':Date.now()-observedAt>15000?'· Observación con retraso':'· Sincronización activa';
+      node.textContent=!available?'· Sincronización desconectada':encargo()&&capabilities?.signal===false?'· '+agente()+' sin señal · Grok 4.6':encargo()?'· Vía '+(capabilities?.destino||agente()):capabilities?.status==='draft'?'· Borrador en GrokBot':!selectionReady?'· Selección pendiente':nativePersona&&nativePersona!==PEOPLE[selected]?'· Chat nativo en otro consejero':!observedAt?'· Esperando observación nativa':Date.now()-observedAt>15000?'· Observación con retraso':'· Sincronización activa';
       node.title=(capabilities?.lastObservedAt?'Última observación: '+capabilities.lastObservedAt:'Aún no hay una observación del chat nativo.')+(nativePersona?' · Chat abierto: '+(FULL[nativePersona]||nativePersona):'');
     }
     function errorMessage(error){
@@ -162,7 +176,7 @@
       return explanations[error.code] || error.message;
     }
     async function api(path,body){
-      const ctl=new AbortController();requests.add(ctl);const timeout=setTimeout(()=>ctl.abort(),body?.attachments?.length?60000:25000);
+      const ctl=new AbortController();requests.add(ctl);const timeout=setTimeout(()=>ctl.abort(),60000);
       try{
         const headers={Accept:'application/json'};
         if(body){headers['Content-Type']='application/json';headers['X-Fleet-CSRF']=options.csrf?.() || '';}
@@ -193,7 +207,8 @@
     }
     function report(row,epoch,{animate=true}={}){
       if(!current(epoch)||PEOPLE[selected]!==row.persona||!native(row))return;
-      say(label(row.status) || 'Esperando al bot');
+      const recent=recentSends.get(FULL[row.persona]);if(recent&&recent.prompt===row.prompt&&(['done','ack'].includes(row.status)||(row.status==='in_progress'&&row.replyProvider!=='council-api')))recent.confirmed=true;
+      say(row.notice || label(row.status) || 'Esperando al bot');
       if(animate && row.text && announced.get(row.id)!==row.text){
         announced.set(row.id,row.text);options.onAnswer?.({persona:FULL[row.persona],text:row.text,messageId:row.id,status:row.status,source:'desktop',native:true});
       }
@@ -276,9 +291,11 @@
       if(!PEOPLE[persona]||destroyed)return false;
       if(selected!==persona){say('Selecciona el consejero antes de enviar.');return false;}
       if(uploading.has(persona)){say('Espera a que termine la subida del adjunto.');return false;}
-      if(pendingSends.has(persona)){say('El envío anterior aún se está confirmando.');return false;}
+      const recent=recentSends.get(persona);
+      if(recent&&recent.prompt===prompt.trim()&&Date.now()-recent.at<120000&&!recent.confirmed){say('Este mensaje ya está pendiente de confirmación.');return true;}
+      if(isPending(persona)){say('El envío anterior aún se está confirmando.');return false;}
       let epoch=selectedEpoch, submitted=false;
-      pendingSends.add(persona);
+      pendingSends.add(persona);syncPending();
       const message_id=root.crypto.randomUUID();
       try{
         // Sending is an explicit user action: finish the initial selection or
@@ -291,7 +308,7 @@
         }
         if(!await connect(epoch)||!current(epoch))return false;
         options.onPending?.({persona,prompt});
-        submitted=true;
+        submitted=true;recentSends.set(persona,{prompt:prompt.trim(),at:Date.now(),confirmed:false});
         const files=attachments.get(persona)||[];
         const data=await api('/messages',{message_id,persona,prompt,...(files.length?{attachments:files.map(f=>f.id)}:{})});
         if(destroyed)return true;
@@ -307,7 +324,7 @@
           connection(false);const message=e.name==='AbortError'?'No se pudo confirmar el envío. Actualiza el historial antes de repetir.':errorMessage(e);
           say(message);options.onError?.({persona,message});schedule(epoch);
         }
-      }finally{pendingSends.delete(persona);if(submitted)attachments.delete(persona);renderAttachments();}
+      }finally{pendingSends.delete(persona);if(!submitted)recentSends.delete(persona);if(submitted)attachments.delete(persona);renderAttachments();syncPending();}
       return submitted;
     }
     function renderAttachments(){
@@ -384,7 +401,7 @@
     });
     $('[data-chat-refresh]').addEventListener('click',()=>refresh());
     $('[data-chat-screen]').addEventListener('click',()=>options.onDesktop?.({persona:selected,capabilities}));
-    return {select,send,refresh,attachDataURL,hasAttachments:persona=>(attachments.get(persona)||[]).length>0,has:persona=>Boolean(PEOPLE[persona]),openHistory(){if(destroyed)return;details.open=true;options.onOpenHistory?.();details.scrollIntoView({block:'nearest',behavior:'smooth'});},get selected(){return selected;},get capabilities(){return capabilities;},destroy(){destroyed=true;selectedEpoch++;clearTimeout(pollTimer);pollTimer=null;for(const ctl of requests)ctl.abort();requests.clear();details.remove();}};
+    return {select,send,refresh,attachDataURL,hasAttachments:persona=>(attachments.get(persona)||[]).length>0,has:persona=>Boolean(PEOPLE[persona]),openHistory(){if(destroyed)return;details.open=true;options.onOpenHistory?.();details.scrollIntoView({block:'nearest',behavior:'smooth'});},isPending,get selected(){return selected;},get capabilities(){return capabilities;},destroy(){destroyed=true;selectedEpoch++;clearTimeout(pollTimer);pollTimer=null;for(const ctl of requests)ctl.abort();requests.clear();details.remove();}};
   }
   root.CouncilGrokBot={mount,PEOPLE,FULL,reconcile,terminal,LABELS};
 })(typeof window!=='undefined'?window:globalThis);

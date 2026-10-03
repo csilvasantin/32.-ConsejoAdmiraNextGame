@@ -485,3 +485,23 @@ test('Jensen va por encargo MCP a Cypher: «escribiendo…», ámbito y pie del 
   assert.doesNotMatch(h.log.textContent,/escribiendo|pensando/);
   h.api.destroy();
 });
+
+test('pendiente tras el recibo bloquea otro envío y solo se libera al recibir respuesta',async()=>{
+ const h=harness();await h.api.select('Steve Jobs');await h.api.send('Steve Jobs','Una pregunta');assert.equal(h.api.isPending('Steve Jobs'),true);
+ assert.equal(await h.api.send('Steve Jobs','Otra pregunta'),false);assert.equal(h.posts.length,1);
+ h.histories.set('Steve Jobs',[message({text:'Respuesta',status:'done',updatedAt:'2026-09-18T08:00:03Z'})]);await h.clock.advance(3000);
+ assert.equal(h.api.isPending('Steve Jobs'),false);h.api.destroy();
+});
+
+test('un POST ambiguo no repite igual texto durante 2 minutos aunque cambie el UUID',async()=>{
+ const h=harness();await h.api.select('Steve Jobs');h.postHandler=async()=>{throw new Error('ambiguous');};
+ await h.api.send('Steve Jobs','Texto idéntico');await h.api.send('Steve Jobs','Texto idéntico');assert.equal(h.posts.length,1);
+ await h.clock.advance(120001);await h.api.send('Steve Jobs','Texto idéntico');assert.equal(h.posts.length,2);h.api.destroy();
+});
+
+test('sin señal y notas internas: se anuncia el plan B y no se anima la nota',async()=>{
+ const h=harness();h.capabilitiesHandler=()=>response({ok:true,mode:'encargo',bidirectional:true,available:true,signal:false,agente:'Merovingio'});
+ h.histories.set('Elon Musk',[message({persona:'Musk',source:'encargo',text:'sin ESTADO: done',status:'done',fallbackAvailable:true})]);
+ await h.api.select('Elon Musk');assert.match(h.doc.details.querySelector('.council-chat__connection').textContent,/sin señal/);
+ assert.doesNotMatch(h.log.textContent,/sin ESTADO/);assert.match(h.log.textContent,/Responder con Grok 4.6/);assert.equal(h.restores.length,0);h.api.destroy();
+});

@@ -611,7 +611,7 @@
      ───────────────────────────────────────────────────────────────── */
 
   const COUNCIL = 'https://macmini.tail48b61c.ts.net/council';
-  const COUNCIL_TOKEN = 'admira2026';
+  const COUNCIL_TOKEN = '';
 
   function factsPayload(analyses) {
     return analyses.flatMap((a) => a.facts.map((f) => ({

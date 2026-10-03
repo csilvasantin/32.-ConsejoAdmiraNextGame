@@ -8,7 +8,7 @@ AdmiraNext Consejo — SCUMM Interface v26.13.04.6
 - Se ha sustituido la zona de "Proyectos" por un selector de Motor LLM con 4 modelos disponibles.
 - Modelos gratuitos via Groq API: Llama 3.3 70B, DeepSeek R1, Gemma 2 9B. Modelo de pago: Claude Sonnet 4 via Anthropic API.
 - Por defecto se selecciona un modelo gratuito (Llama 3.3 70B) para evitar consumo accidental de creditos.
-- Los modelos de pago requieren password de administrador ("admira2026") antes de activarse.
+- Los modelos de pago requieren password de administrador ("") antes de activarse.
 - El backend (`council-api.py` v4.0) enruta las peticiones al proveedor correcto segun el modelo seleccionado.
 - El tracking de presupuesto registra coste 0 para modelos gratuitos y coste real para Claude.
 - Los informes de Telegram incluyen el nombre del modelo LLM y la etiqueta FREE/coste.

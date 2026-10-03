@@ -111,7 +111,7 @@ Escribes un prompt en la action-line, una imagen generada se materializa en el c
 - `_renderCrearImage(imageUrl)` reemplaza el placeholder con `<img>` cuando hay resultado.
 
 ### Backend Render (`council-api.py`)
-Cola in-memory con TTL 1h. Endpoints (todos requieren `X-Council-Token: admira2026`):
+Cola in-memory con TTL 1h. Endpoints (todos requieren `X-Council-Token: `):
 
 ```
 POST /api/council/crear              → encola {prompt,calidad,gen,ts} → {id,status:'pending'}
@@ -130,7 +130,7 @@ POST /api/council/crear/<id>/error    → agente reporta {error}
 4. Cuando `status:'error'` → muestra error en action-line.
 
 ### Bug de token (v26.26.04.17)
-El frontend tenía hardcoded `COUNCIL_API_TOKEN = "G3ADHakf…"` (token antiguo) que NO coincidía con `COUNCIL_API_TOKEN=admira2026` del `.env` y de la env var en Render. Cualquier request devolvía 403. Fix: cambio a `"admira2026"`. Verificado contra Render con curl directo.
+El frontend tenía hardcoded `COUNCIL_API_TOKEN = "G3ADHakf…"` (token antiguo) que NO coincidía con `COUNCIL_API_TOKEN=` del `.env` y de la env var en Render. Cualquier request devolvía 403. Fix: cambio a `""`. Verificado contra Render con curl directo.
 
 ---
 
@@ -179,7 +179,7 @@ Memoria correspondiente: [`feedback_release_50_convention.md`](https://github.co
 f141929 v26.26.04.51 — /entrenar acepta destinatario opcional (?target=)
 a1b93ec v26.26.04.50 — release de cierre cross-ordenador
 9a4ae6e v26.26.04.18 — orden inverso + descripciones
-dc65edb v26.26.04.17 — fix token admira2026
+dc65edb v26.26.04.17 — fix token 
 69f3723 v26.26.04.16 — placeholder Crear compacto
 c3c2e4c v26.26.04.15 — cola backend Render + fullscreen viewer
 db94ca5 v26.26.04.14 — handshake localStorage Crear (legacy)

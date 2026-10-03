@@ -6,7 +6,7 @@ import fs from "node:fs/promises";
 import { chromium } from "playwright-core";
 
 const API_BASE_URL = process.env.COUNCIL_API_BASE_URL || "https://three2-consejoadmiranextgame.onrender.com";
-const API_TOKEN = process.env.COUNCIL_API_TOKEN || "admira2026";
+const API_TOKEN = process.env.COUNCIL_API_TOKEN || "";
 const WORKER_ID = process.env.COUNCIL_CREAR_WORKER_ID || `${os.hostname()}-${process.pid}`;
 const POLL_MS = Number(process.env.COUNCIL_CREAR_POLL_MS || 10000);
 const ONCE = process.argv.includes("--once");

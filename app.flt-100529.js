@@ -878,7 +878,7 @@
     let hackMode = false;
     let hackIntervals = [];
     const HACK_API = DEMO_API.replace("/status", "");  // https://macmini.../demo
-    const CONSEJO_PROXY = HACK_API + "/consejo";  // FLT-100570 Enviar → grok-4.6 via Mini proxy
+    const CONSEJO_PROXY = HACK_API + "/consejo";  // #4936 el navegador no lleva clave; el Mini pone la suya y fuerza grok-4.6
 
     // El HACKEO debe quedarse SOBRE la página actual (sin moverse ni dejar que
     // otros paneles tapen) hasta que se desactive: subimos el overlay por encima
@@ -1298,13 +1298,10 @@
         const isPaid = el.dataset.paid === "true";
         const name = el.textContent.trim().replace('FREE', '').replace('€', '').trim();
 
-        // FLT-100210: clave admin SOLO si el usuario elige un modelo de pago (nunca en fallback silencioso)
-        if (isPaid && !silent) {
-            const pwd = prompt("🔒 " + name + " es un modelo DE PAGO (~€0.003/consulta).\n\nIntroduce la clave de administrador para activarlo:");
-            if (pwd !== "admira2026") {
-                if (pwd !== null) alert("❌ Clave incorrecta. Usa un modelo gratuito.");
-                return false;
-            }
+        // #4936: la sesión no activa modelos de pago y el navegador no guarda clave.
+        if (isPaid) {
+            if (!silent) setActionLine("⚠️ Solo modelos gratuitos. " + name + " queda fuera de esta sesión.");
+            return false;
         }
 
         document.querySelectorAll('.llm-option').forEach(i => i.classList.remove('selected'));
@@ -1323,7 +1320,6 @@
         for (const baseUrl of urls) {
             try {
                 const res = await fetch(baseUrl + "/api/council/models", {
-                    headers: { "X-Council-Token": COUNCIL_API_TOKEN },
                     signal: AbortSignal.timeout(8000),
                 });
                 if (!res.ok) throw new Error("HTTP " + res.status);
@@ -1955,9 +1951,7 @@
                 const res = await fetch(baseUrl + '/api/council/importar-video', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'X-Council-Token': COUNCIL_API_TOKEN
-                    },
+                        'Content-Type': 'application/json',},
                     body: JSON.stringify({ url: cleanUrl, subdir: 'AdmiraNext/Importados' }),
                     signal: AbortSignal.timeout(1800000),
                 });
@@ -1982,7 +1976,6 @@
                     if (Date.now() - started > 1800000) throw new Error('Tiempo máximo agotado esperando la importación');
                     await new Promise(resolve => setTimeout(resolve, 2500));
                     const statusRes = await fetch(baseUrl + '/api/council/importar-video/' + encodeURIComponent(data.id), {
-                        headers: { 'X-Council-Token': COUNCIL_API_TOKEN },
                         signal: AbortSignal.timeout(30000),
                     });
                     job = await statusRes.json().catch(() => ({}));
@@ -2029,7 +2022,7 @@
             try {
                 const res = await fetch(baseUrl + path, {
                     method,
-                    headers: { 'Content-Type': 'application/json', 'X-Council-Token': COUNCIL_API_TOKEN },
+                    headers: { 'Content-Type': 'application/json' },
                     body: body ? JSON.stringify(body) : undefined,
                     signal: AbortSignal.timeout(20000),
                 });
@@ -2946,7 +2939,6 @@
         for (const baseUrl of urls) {
             try {
                 const res = await fetch(baseUrl + '/api/council/entrenar/' + encodeURIComponent(gen), {
-                    headers: { 'X-Council-Token': COUNCIL_API_TOKEN },
                     signal: AbortSignal.timeout(12000)
                 });
                 if ([404, 405, 429, 500, 502, 503, 504].includes(res.status)) continue;
@@ -2986,9 +2978,7 @@
                     await fetch(entry.baseUrl + '/api/council/entrenar/' + encodeURIComponent(gen) + '/' + encodeURIComponent(m.persona) + '/merge', {
                         method: 'POST',
                         headers: {
-                            'Content-Type': 'application/json',
-                            'X-Council-Token': COUNCIL_API_TOKEN
-                        },
+                            'Content-Type': 'application/json',},
                         body: JSON.stringify({ items: mergedItems }),
                         signal: AbortSignal.timeout(15000)
                     });
@@ -3010,9 +3000,7 @@
                 const res = await fetch(baseUrl + '/api/council/entrenar/' + encodeURIComponent(gen) + '/' + encodeURIComponent(persona) + '/merge', {
                     method: 'POST',
                     headers: {
-                        'Content-Type': 'application/json',
-                        'X-Council-Token': COUNCIL_API_TOKEN
-                    },
+                        'Content-Type': 'application/json',},
                     body: JSON.stringify({ items: Array.isArray(items) ? items.map(_normalizeEntrenarItem).filter(Boolean) : [] }),
                     signal: AbortSignal.timeout(15000)
                 });
@@ -3618,8 +3606,7 @@
     const AGORA_COUNCIL_API_URLS = isSecure
         ? ['https://macmini.tail48b61c.ts.net']
         : ['http://localhost:3030', 'https://macmini.tail48b61c.ts.net'];
-    const COUNCIL_API_TOKEN = "admira2026";
-    const YAR_DONE_BLOCK_START = '[YAR_DONE]';
+        const YAR_DONE_BLOCK_START = '[YAR_DONE]';
     const YAR_DONE_BLOCK_END = '[/YAR_DONE]';
     let activeApiUrl = null;
     let activeAgoraCouncilUrl = null;
@@ -3877,7 +3864,6 @@
                         method: 'POST',
                         headers: {
                             'Content-Type': 'application/json',
-                            'X-Council-Token': COUNCIL_API_TOKEN,
                         },
                         body: JSON.stringify({ refresh: forceRefresh }),
                         signal: AbortSignal.timeout(180000),
@@ -3965,7 +3951,6 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-Council-Token': COUNCIL_API_TOKEN,
                     },
                     body: JSON.stringify({
                         description,
@@ -4007,7 +3992,6 @@
         for (const baseUrl of urls) {
             try {
                 const res = await fetch(baseUrl + '/api/council/yar-context', {
-                    headers: { 'X-Council-Token': COUNCIL_API_TOKEN },
                     signal: AbortSignal.timeout(8000),
                 });
                 if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -4030,7 +4014,6 @@
         for (const baseUrl of urls) {
             try {
                 const res = await fetch(baseUrl + '/api/council/yar-status', {
-                    headers: { 'X-Council-Token': COUNCIL_API_TOKEN },
                     signal: AbortSignal.timeout(8000),
                 });
                 if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -4137,7 +4120,6 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-Council-Token': COUNCIL_API_TOKEN,
                     },
                     body: JSON.stringify(payload),
                     signal: AbortSignal.timeout(10000),
@@ -4169,7 +4151,6 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-Council-Token': COUNCIL_API_TOKEN,
                     },
                     body: JSON.stringify({ source: 'cli' }),
                     signal: AbortSignal.timeout(95000),
@@ -4229,7 +4210,6 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-Council-Token': COUNCIL_API_TOKEN,
                     },
                     body: JSON.stringify({ action, taskHint: yarContext.activeTask || (yarContext.taskBuckets?.inProgress || [])[0] || '' }),
                     signal: AbortSignal.timeout(120000),
@@ -4273,7 +4253,6 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-Council-Token': COUNCIL_API_TOKEN,
                     },
                     body: JSON.stringify({ source: 'cli' }),
                     signal: AbortSignal.timeout(15000),
@@ -4314,7 +4293,6 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-Council-Token': COUNCIL_API_TOKEN,
                     },
                     body: JSON.stringify({ source: 'cli' }),
                     signal: AbortSignal.timeout(60000),
@@ -4397,7 +4375,6 @@
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
-                        'X-Council-Token': COUNCIL_API_TOKEN,
                     },
                     body: JSON.stringify({
                         ...next,
@@ -4493,7 +4470,6 @@
         for (const baseUrl of urls) {
             try {
                 const res = await fetch(baseUrl + "/api/council/daily", {
-                    headers: { "X-Council-Token": COUNCIL_API_TOKEN },
                     signal: AbortSignal.timeout(8000),
                 });
                 if (res.ok) {
@@ -4511,7 +4487,6 @@
                         method: "POST",
                         headers: {
                             "Content-Type": "application/json",
-                            "X-Council-Token": COUNCIL_API_TOKEN,
                         },
                         body: JSON.stringify({ llm: selectedLLM || "grok-4.6" }),
                         signal: AbortSignal.timeout(180000),  // 3 min
@@ -4710,7 +4685,7 @@
         try {
             const { res, baseUrl } = await _crearApiFetch('/api/council/crear', {
                 method: 'POST',
-                headers: { 'Content-Type': 'application/json', 'X-Council-Token': COUNCIL_API_TOKEN },
+                headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify({ prompt, calidad: selectedCrear, gen: currentGen, ts })
             }, 15000);
             if (!res.ok) throw new Error('HTTP ' + res.status);
@@ -4739,7 +4714,6 @@
             }
             try {
                 const { res, baseUrl } = await _crearApiFetch('/api/council/crear/' + encodeURIComponent(jobId), {
-                    headers: { 'X-Council-Token': COUNCIL_API_TOKEN }
                 }, 12000);
                 if (!res.ok) throw new Error('HTTP ' + res.status);
                 activeApiUrl = baseUrl;
@@ -5030,7 +5004,7 @@
          * FLT-100570: prefer Mini /demo/consejo proxy (Grok 4.6 + MACHINE_TOKEN),
          * then legacy council-api URLs. Falls back to simulation if all fail.
          */
-        const urls = [CONSEJO_PROXY].concat(activeApiUrl ? [activeApiUrl] : COUNCIL_API_URLS);
+        const urls = [CONSEJO_PROXY];
         const effectiveMessage = buildCouncilPrompt(message);
         const confirmedExpensiveVideo = confirmExpensiveVideoApproval(effectiveMessage);
         if (!confirmedExpensiveVideo) {
@@ -5043,18 +5017,17 @@
 
         for (const baseUrl of urls) {
             try {
-                const askPath = (baseUrl === CONSEJO_PROXY) ? (baseUrl + "/ask") : (baseUrl + "/api/council/ask");
+                const askPath = baseUrl + "/ask";
                 const res = await fetch(askPath, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        ...(baseUrl === CONSEJO_PROXY ? {} : { "X-Council-Token": COUNCIL_API_TOKEN }),
                     },
                     body: JSON.stringify({
                         message: effectiveMessage,
                         generation: currentGen,
                         context: contextoParaApi(),
-                        llm: (baseUrl === CONSEJO_PROXY) ? "grok-4.6" : selectedLLM,
+                        llm: "grok-4.6",
                         confirm_expensive_video: confirmedExpensiveVideo,
                         ...(imageData ? { imageData } : {}),
                     }),
@@ -5080,8 +5053,7 @@
                     return null;
                 }
                 if (!res.ok) throw new Error("API " + res.status);
-                activeApiUrl = baseUrl; // Cache working URL
-                console.log("Council API connected:", baseUrl);
+                                console.log("Council API connected:", baseUrl);
                 return await res.json();
             } catch (err) {
                 console.warn("Council API not available at " + baseUrl + ":", err.message);
@@ -5181,7 +5153,7 @@
 
     async function askOneAgentAPI(message, agentName, imageData) {
         /** Call /api/council/ask-one for a single agent. */
-        const urls = [CONSEJO_PROXY].concat(activeApiUrl ? [activeApiUrl] : COUNCIL_API_URLS);
+        const urls = [CONSEJO_PROXY];
         const effectiveMessage = buildCouncilPrompt(message);
         const confirmedExpensiveVideo = confirmExpensiveVideoApproval(effectiveMessage, agentName);
         if (!confirmedExpensiveVideo) {
@@ -5193,19 +5165,18 @@
         }
         for (const baseUrl of urls) {
             try {
-                const askPath = (baseUrl === CONSEJO_PROXY) ? (baseUrl + "/ask-one") : (baseUrl + "/api/council/ask-one");
+                const askPath = baseUrl + "/ask-one";
                 const res = await fetch(askPath, {
                     method: "POST",
                     headers: {
                         "Content-Type": "application/json",
-                        ...(baseUrl === CONSEJO_PROXY ? {} : { "X-Council-Token": COUNCIL_API_TOKEN }),
                     },
                     body: JSON.stringify({
                         message: effectiveMessage,
                         agent_name: agentName,
                         generation: currentGen,
                         context: contextoParaApi(),
-                        llm: (baseUrl === CONSEJO_PROXY) ? "grok-4.6" : selectedLLM,
+                        llm: "grok-4.6",
                         confirm_expensive_video: confirmedExpensiveVideo,
                         ...(imageData ? { imageData } : {}),
                     }),
@@ -5215,7 +5186,6 @@
                 if (res.status === 403) { setActionLine("🔒 Error de autenticación"); return null; }
                 if (res.status === 429) { setActionLine("⏱️ Demasiadas peticiones"); return null; }
                 if (!res.ok) throw new Error("API " + res.status);
-                activeApiUrl = baseUrl;
                 return await res.json();
             } catch (err) {
                 console.warn("ask-one failed at " + baseUrl + ":", err.message);
@@ -5241,28 +5211,18 @@
             llm: selectedLLM,
             url: location.href,
         };
-        const urls = activeAgoraCouncilUrl
-            ? [activeAgoraCouncilUrl].concat(AGORA_COUNCIL_API_URLS.filter(u => u !== activeAgoraCouncilUrl))
-            : AGORA_COUNCIL_API_URLS.slice();
-        for (const baseUrl of urls) {
-            try {
-                const res = await fetch(baseUrl + "/api/agora/council-question", {
-                    method: "POST",
-                    headers: {
-                        "Content-Type": "application/json",
-                        "X-Council-Token": COUNCIL_API_TOKEN,
-                    },
-                    body: JSON.stringify(payload),
-                    signal: AbortSignal.timeout(45000),
-                });
-                if (!res.ok) throw new Error("Agora " + res.status);
-                activeAgoraCouncilUrl = baseUrl;
-                return await res.json();
-            } catch (err) {
-                console.warn("Agora council bridge failed at " + baseUrl + ":", err.message);
-            }
+        try {
+            const res = await fetch(CONSEJO_PROXY + "/agora", {
+                method: "POST",
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(payload),
+                signal: AbortSignal.timeout(45000),
+            });
+            if (!res.ok) throw new Error("Agora " + res.status);
+            return await res.json();
+        } catch (err) {
+            console.warn("Agora council bridge failed:", err.message);
         }
-        activeAgoraCouncilUrl = null;
         return null;
     }
 
@@ -5946,9 +5906,7 @@
                 const res = await fetch(baseUrl + "/api/council/analyze-youtube", {
                     method: "POST",
                     headers: {
-                        "Content-Type": "application/json",
-                        "X-Council-Token": COUNCIL_API_TOKEN
-                    },
+                        "Content-Type": "application/json",},
                     body: JSON.stringify({ url, note: desc || "", question: question || "" }),
                     signal: AbortSignal.timeout(120000),
                 });
@@ -6214,7 +6172,7 @@
                 try {
                     const resp = await fetch(`${baseUrl}/api/council/presentar`, {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json', 'X-Council-Token': COUNCIL_API_TOKEN },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             prompt,
                             file_content: _presentarFileContent,

@@ -168,7 +168,7 @@
     const esc=s=>String(s==null?"":s).replace(/[<>&]/g,x=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[x]));
 
     // ── Estado ──
-    const TOKEN="admira2026";
+    const TOKEN="";
     // Failover de backend (como en index.html): si la página es HTTPS no se puede llamar a http://
     // (mixed-content) → solo HTTPS. Se prueba el primario y, si falla, los respaldos; se recuerda el que va.
     const _secure = location.protocol === 'https:';

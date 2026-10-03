@@ -334,7 +334,7 @@ Despliegue al Mac Mini fichero-a-fichero (repo divergido): `git fetch origin && 
   **HAY QUE RELLENAR las MAC** para que WoL funcione de verdad; mientras
   estén vacías el backend devuelve `action: "wol_skipped"`.
 - El frontend (botón `HACKEO` en la barra inferior) llama al nuevo endpoint
-  vía `COUNCIL_API_URLS` con `X-Council-Token: admira2026`. La animación
+  vía `COUNCIL_API_URLS` con `X-Council-Token: `. La animación
   local se mantiene; encima del overlay se pinta:
   - Banner con resumen `total / online / ssh_ok / wol_sent / failed`.
   - Badge por panel: `● HACKED`, `◐ WoL`, `✗ no MAC`, `○ offline`, `✗ FAIL`.

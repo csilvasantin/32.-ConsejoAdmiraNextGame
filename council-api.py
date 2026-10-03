@@ -463,7 +463,7 @@ def _yar_log_dir() -> Path:
 def _yar_tool_env() -> dict:
     env = os.environ.copy()
     env.setdefault("COUNCIL_API_BASE_URL", "http://127.0.0.1:8420")
-    env.setdefault("COUNCIL_API_TOKEN", COUNCIL_API_TOKEN or "admira2026")
+    env.setdefault("COUNCIL_API_TOKEN", COUNCIL_API_TOKEN or "")
     return env
 
 
@@ -847,7 +847,7 @@ def verify_hack_token(request: Request):
       2) Authorization: Bearer <ID token de Google> en la allowlist.
     Fail-closed: si no hay COUNCIL_HACK_TOKEN ni GOOGLE_CLIENT_ID configurados,
     deniega (el hackeo queda desactivado hasta configurar el secreto en el Mini).
-    No acepta NUNCA el token legacy público (admira2026).
+    No acepta NUNCA el token legacy público ().
     """
     ip = request.headers.get("cf-connecting-ip",
          request.headers.get("x-forwarded-for",

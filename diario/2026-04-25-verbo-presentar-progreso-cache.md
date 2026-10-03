@@ -178,7 +178,7 @@ python3 council-api.py   # API en localhost:8420
 
 `.env` mínimo requerido:
 ```
-COUNCIL_API_TOKEN=admira2026
+COUNCIL_API_TOKEN=
 TELEGRAM_BOT_TOKEN=8753533419:...
 TELEGRAM_CHAT_ID=-1003841065210
 ```
@@ -251,7 +251,7 @@ en **Render.com** (tier gratuito, siempre encendido).
 1. [render.com](https://render.com) → New → Web Service → conectar repo GitHub
 2. Render detecta `render.yaml` automáticamente
 3. En Environment Variables añadir:
-   - `COUNCIL_API_TOKEN=admira2026`
+   - `COUNCIL_API_TOKEN=`
    - `GROQ_API_KEY=gsk_...`
    - `TELEGRAM_BOT_TOKEN=...`
    - `TELEGRAM_CHAT_ID=...`

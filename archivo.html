@@ -77,7 +77,7 @@
     const esc=s=>String(s==null?"":s).replace(/[<>&]/g,x=>({"<":"&lt;",">":"&gt;","&":"&amp;"}[x]));
     function fdate(ts){ try{ return new Date(ts*1000).toLocaleString("es-ES",{day:"2-digit",month:"short",hour:"2-digit",minute:"2-digit"}); }catch(e){ return ""; } }
 
-    const API="https://macmini.tail48b61c.ts.net/council", TOKEN="admira2026";
+    const API="https://macmini.tail48b61c.ts.net/council", TOKEN="";
     const $=id=>document.getElementById(id);
     async function api(path){ const r=await fetch(API+path,{headers:{"X-Council-Token":TOKEN},signal:AbortSignal.timeout(12000)}); if(!r.ok) throw new Error("HTTP "+r.status); return r.json(); }
 

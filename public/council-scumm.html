@@ -3592,13 +3592,10 @@
         const isPaid = el.dataset.paid === "true";
         const name = el.textContent.trim().replace('FREE', '').replace('€', '').trim();
 
-        // Ask confirmation + password for paid models
+        // #4936: sin modelos de pago y sin clave en el navegador.
         if (isPaid) {
-            const pwd = prompt("🔒 " + name + " es un modelo DE PAGO (~€0.003/consulta).\n\nIntroduce la clave de administrador para activarlo:");
-            if (pwd !== "admira2026") {
-                if (pwd !== null) alert("❌ Clave incorrecta. Usa un modelo gratuito.");
-                return;
-            }
+            setActionLine("⚠️ Solo modelos gratuitos. " + name + " queda fuera de esta sesión.");
+            return;
         }
 
         document.querySelectorAll('.llm-option').forEach(i => i.classList.remove('selected'));

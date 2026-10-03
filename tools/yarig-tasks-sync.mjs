@@ -6,7 +6,7 @@ import fs from "node:fs/promises";
 import { chromium } from "playwright-core";
 
 const API_BASE_URL = process.env.COUNCIL_API_BASE_URL || "http://127.0.0.1:8420";
-const API_TOKEN = process.env.COUNCIL_API_TOKEN || "admira2026";
+const API_TOKEN = process.env.COUNCIL_API_TOKEN || "";
 const YARIG_URL = process.env.YARIG_URL || "https://www.yarig.ai/tasks";
 const ONCE = process.argv.includes("--once");
 const DUMP_JSON = process.argv.includes("--dump-json");

@@ -67,8 +67,26 @@
     const e = st && ESTADOS[st];
     return e ? `${e.txt} (${st})` : SIN;
   }
+  /* DeepAgent del nombre Grok Bot (Carlos #5097): «Jobs/Smith: …» en foco/tarea del latido;
+   * si el feed solo trae la silla JobsGrokBot, sacamos el DeepAgent de ahí. */
+  function deepDesdeLatido(s) {
+    const textos = (s.agentes || []).flatMap(a => [a && a.foco, a && a.tarea]).filter(Boolean);
+    for (const t of textos) {
+      const m = String(t).match(/\b([A-Za-zÁÉÍÓÚáéíóúüÜñÑ]+)\/([A-Za-zÁÉÍÓÚáéíóúüÜñÑ]+)\s*:/);
+      if (m) return m[1] + '/' + m[2];
+    }
+    return null;
+  }
   function agentesTxt(s) {
     if (!s || !s.enlazado) return 'sin agente enlazado';
+    const deep = deepDesdeLatido(s);
+    const yaDeep = (s.agentes || []).some(a => a && a.tipo === 'deepagent');
+    if (deep && !yaDeep) {
+      const vivos = (s.agentes || []).map(a => a && a.vivo);
+      const signal = vivos.some(v => v === true) ? ' · en línea' : (vivos.some(v => v === false) ? ' · sin señal' : '');
+      const mac = s.maquina_silla ? ' · ' + s.maquina_silla : '';
+      return deep + signal + mac;
+    }
     const a = (s.agentes || []).map(x => {
       const quien = x.tipo === 'silla' ? 'silla ' + (x.etiqueta || x.persona) : (x.etiqueta || x.persona);
       const extra = [x.maquina, x.runtime].filter(Boolean).join(' · ');
@@ -93,13 +111,15 @@
   function ficha(s, ahoraMs) {
     if (!s) return { estado: null, proyecto: null, filas: [['Misión', SIN], ['Estado', SIN], ['Desde', SIN], ['Deepagent · máquina', SIN], ['Último latido', SIN]] };
     if (!s.enlazado) return { estado: null, proyecto: null, filas: [['Misión', 'sin agente enlazado: sin datos de trabajo'], ['Estado', SIN], ['Desde', SIN], ['Deepagent · máquina', 'sin agente enlazado'], ['Último latido', SIN]] };
-    /* Misión (Carlos, 4-oct-2026): lo que está haciendo. Encargo en curso si lo hay; si no,
-     * la tarea o el foco que declara su latido (yokup_presencia), nunca un texto genérico. */
+    /* Misión (Carlos #5085/#5097): foco del último latido o encargo vivo más reciente;
+     * nunca un texto genérico tipo «Ronda matinal 6 agentes». Preferimos tarea/foco del latido. */
     const latidoTxt = k => (s.agentes || []).map(a => a && a[k]).find(Boolean) || null;
     const tarea = latidoTxt('tarea'), foco = latidoTxt('foco');
+    const tituloEnc = s.encargo && (s.encargo.titulo || '');
+    const encargoGenerico = /ronda\s+matinal|sin\s+descripci[oó]n\s+legible/i.test(String(tituloEnc || ''));
     let mision;
-    if (s.encargo) mision = encargoEnPalabras(s.encargo);
-    else if (tarea || foco) mision = tarea || foco;
+    if (tarea || foco) mision = tarea || foco;
+    else if (s.encargo && !encargoGenerico) mision = encargoEnPalabras(s.encargo);
     else if (s.estado === 'working') mision = 'trabajando según su latido, sin misión declarada';
     else if (s.estado) mision = 'nada en curso';
     else mision = SIN;
@@ -755,5 +775,5 @@
     if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', go); else go();
   }
 
-  root.CouncilEstado = Object.freeze({ ENDPOINT, ocupados, abiertos, alternarGrupo, COLS, siguienteOrden, ordenar, hoja, restablecerHoja, cargar, silla, ficha, encargoEnPalabras, estadoTxt, COLORES, claseEstado, pintarContornos, huella, huellas, cambiados, parpadear, avisarCambios, hace, openBoard, closeBoard, isBoardOpen, mostrarFicha, ocultarFicha, colocarFichas, alternarMesa, cerrarMesa, mesaAbierta });
+  root.CouncilEstado = Object.freeze({ ENDPOINT, ocupados, abiertos, alternarGrupo, COLS, siguienteOrden, ordenar, hoja, restablecerHoja, cargar, silla, ficha, encargoEnPalabras, estadoTxt, deepDesdeLatido, agentesTxt, COLORES, claseEstado, pintarContornos, huella, huellas, cambiados, parpadear, avisarCambios, hace, openBoard, closeBoard, isBoardOpen, mostrarFicha, ocultarFicha, colocarFichas, alternarMesa, cerrarMesa, mesaAbierta });
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -131,3 +131,18 @@ test('ficha: la caja del proyecto lleva la etiqueta «Proyecto:»', async () => 
   assert.match(src, /estado-pill\.working\{color:\$\{COLORES\.working\}\}/);
   assert.match(src, /path\.body-hotspot\[data-estado-color\]:hover/);
 });
+
+test('parpadeo: la primera carga no avisa; cambia estado, misión o foco → avisa solo a ese', () => {
+  const d1 = { mesa: { leyendas: [elon, { persona: 'George Lucas', enlazado: true, estado: 'idle', agentes: [{ foco: 'a' }] }] } };
+  const h1 = E.huellas(d1);
+  assert.deepEqual(E.cambiados(null, h1), []);
+  assert.deepEqual(E.cambiados(h1, E.huellas(d1)), []);
+  const lucasFoco = { mesa: { leyendas: [elon, { persona: 'George Lucas', enlazado: true, estado: 'idle', agentes: [{ foco: 'b' }] }] } };
+  assert.deepEqual(E.cambiados(h1, E.huellas(lucasFoco)), ['georgelucas']);
+  const elonEstado = { mesa: { leyendas: [{ ...elon, estado: 'idle' }, d1.mesa.leyendas[1]] } };
+  assert.deepEqual(E.cambiados(h1, E.huellas(elonEstado)), ['elonmusk']);
+  const elonMision = { mesa: { leyendas: [{ ...elon, encargo: { ...elon.encargo, numero: 5001, titulo: 'Otro' } }, d1.mesa.leyendas[1]] } };
+  assert.deepEqual(E.cambiados(h1, E.huellas(elonMision)), ['elonmusk']);
+  // El último latido por sí solo no es un cambio.
+  assert.deepEqual(E.cambiados(h1, E.huellas({ mesa: { leyendas: [{ ...elon, ultimo_latido: S }, d1.mesa.leyendas[1]] } })), []);
+});

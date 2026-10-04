@@ -15,6 +15,7 @@
   const REUSE_MS = 25000;          // el hover no vuelve a pedir si el dato tiene < 25 s
   const BOARD_REFRESH_MS = 30000;  // tablero abierto y pestaña visible: refresco cada 30 s
   const TIMEOUT_MS = 12000;
+  const SONDEO_MS = 30000;         // sondeo de la mesa (pestaña visible) para el parpadeo de cambios
   const SIN = 'sin datos';
   const ESTADOS = Object.freeze({
     working: { txt: 'trabajando', cls: 'working' },
@@ -117,7 +118,7 @@
     const t = ctl ? setTimeout(() => ctl.abort(), TIMEOUT_MS) : null;
     enVuelo = f(ENDPOINT, { cache: 'no-store', signal: ctl ? ctl.signal : undefined, headers: { accept: 'application/json' } })
       .then(r => { if (!r.ok) throw new Error('HTTP ' + r.status); return r.json(); })
-      .then(d => { if (!d || !d.ok || !d.mesa) throw new Error('respuesta sin mesa'); datos = d; datosAt = Date.now(); ultimoError = null; return d; })
+      .then(d => { if (!d || !d.ok || !d.mesa) throw new Error('respuesta sin mesa'); datos = d; datosAt = Date.now(); ultimoError = null; avisarCambios(d); return d; })
       .catch(e => { ultimoError = String(e && e.message || e); throw e; })
       .finally(() => { if (t) clearTimeout(t); enVuelo = null; });
     return enVuelo;
@@ -130,6 +131,53 @@
       if (s) return s;
     }
     return null;
+  }
+
+  /* ── Parpadeo al actualizarse (Carlos, 4-oct-2026: «cuando haya un cambio tiene que
+   *    parpadear el color de la selección del consejero para saber que se ha actualizado»).
+   *  Huella de cada silla = estado + misión + foco. En cada lectura se compara con la
+   *  anterior; las que cambian parpadean en su color de estado (3 pulsos en ~3 s, aunque no
+   *  estén seleccionadas). La primera carga solo guarda la huella: no parpadea nada. */
+  function huella(s) {
+    if (!s) return 'nodata';
+    const lat = k => (s.agentes || []).map(a => a && a[k]).find(Boolean) || '';
+    const e = s.encargo ? [s.encargo.numero || '', s.encargo.etiqueta || '', s.encargo.titulo || '', s.encargo.estado || ''].join('~') : '';
+    return [claseEstado(s), e, lat('tarea'), lat('foco')].join('|');
+  }
+  function huellas(d) {
+    const m = {};
+    if (d && d.mesa) for (const gen of Object.keys(d.mesa)) for (const s of d.mesa[gen] || []) if (s && s.persona) m[key(s.persona)] = huella(s);
+    return m;
+  }
+  /* Pura: personas (clave normalizada) cuya huella cambió. Sin huella previa → ninguna. */
+  function cambiados(antes, ahora) {
+    if (!antes) return [];
+    return Object.keys(ahora || {}).filter(k => k in antes && antes[k] !== ahora[k]);
+  }
+  let huellaPrev = null;
+  const PARPADEO_MS = 3400;
+  function parpadear(personas, doc) {
+    doc = doc || root.document;
+    if (!doc || !personas || !personas.length) return 0;
+    const c = doc.getElementById('body-hotspots'); if (!c) return 0;
+    pintarContornos(doc);
+    const set = new Set(personas.map(key)); let n = 0;
+    c.querySelectorAll('[data-persona]').forEach(el => {
+      if (!set.has(key(el.getAttribute('data-persona')))) return;
+      el.classList.remove('estado-parpadeo');
+      void (el.getBoundingClientRect && el.getBoundingClientRect());   // reinicia la animación
+      el.classList.add('estado-parpadeo'); n++;
+      clearTimeout(el._parpadeoT);
+      el._parpadeoT = setTimeout(() => el.classList.remove('estado-parpadeo'), PARPADEO_MS);
+    });
+    return n;
+  }
+  function avisarCambios(d) {
+    const ahora = huellas(d);
+    const ch = cambiados(huellaPrev, ahora);
+    huellaPrev = ahora;
+    if (ch.length && root.document) parpadear(ch);
+    return ch;
   }
 
   /* ── Estilos (una sola vez) ──────────────────────────────────────────────── */
@@ -147,6 +195,13 @@
 #body-hotspots path.body-hotspot[data-estado-color]:hover,#body-hotspots path.body-hotspot[data-estado-color].selected{fill:color-mix(in srgb,var(--estado-c) 28%,transparent);stroke:var(--estado-c);filter:drop-shadow(0 0 5px var(--estado-c))}
 #body-hotspots path.body-hotspot[data-estado-color].selected:hover{fill:color-mix(in srgb,var(--estado-c) 36%,transparent);stroke:var(--estado-c);filter:drop-shadow(0 0 7px var(--estado-c))}
 #body-hotspots div.body-hotspot[data-estado-color]:hover,#body-hotspots div.body-hotspot[data-estado-color].selected{background:color-mix(in srgb,var(--estado-c) 28%,transparent);outline:2px solid var(--estado-c);box-shadow:0 0 8px var(--estado-c)}
+@keyframes estado-parpadeo{0%,100%{fill:transparent;stroke:transparent;filter:none}45%,60%{fill:color-mix(in srgb,var(--estado-c,#fff) 42%,transparent);stroke:var(--estado-c,#fff);filter:drop-shadow(0 0 10px var(--estado-c,#fff))}}
+@keyframes estado-parpadeo-caja{0%,100%{background:transparent;outline:2px solid transparent;box-shadow:none}45%,60%{background:color-mix(in srgb,var(--estado-c,#fff) 42%,transparent);outline:2px solid var(--estado-c,#fff);box-shadow:0 0 12px var(--estado-c,#fff)}}
+@keyframes estado-destello{0%,100%{fill:transparent;stroke:transparent;filter:none}30%{fill:color-mix(in srgb,var(--estado-c,#fff) 24%,transparent);stroke:var(--estado-c,#fff);filter:drop-shadow(0 0 5px var(--estado-c,#fff))}}
+@keyframes estado-destello-caja{0%,100%{background:transparent;outline:2px solid transparent;box-shadow:none}30%{background:color-mix(in srgb,var(--estado-c,#fff) 24%,transparent);outline:2px solid var(--estado-c,#fff);box-shadow:0 0 6px var(--estado-c,#fff)}}
+#body-hotspots path.body-hotspot.estado-parpadeo{animation:estado-parpadeo 1s ease-in-out 3}
+#body-hotspots div.body-hotspot.estado-parpadeo{animation:estado-parpadeo-caja 1s ease-in-out 3}
+@media (prefers-reduced-motion:reduce){#body-hotspots path.body-hotspot.estado-parpadeo{animation:estado-destello 1.6s ease-out 1}#body-hotspots div.body-hotspot.estado-parpadeo{animation:estado-destello-caja 1.6s ease-out 1}}
 .estado-board{position:absolute;inset:3%;z-index:60;background:rgba(20,14,6,.96);color:#f3e6c4;border:3px solid #c9a227;box-shadow:6px 6px 0 #000;display:flex;flex-direction:column;font:12px/1.35 system-ui,-apple-system,Segoe UI,sans-serif}
 .estado-board header{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:2px solid #5a4316;background:#2a1d0b}
 .estado-board header b{font:bold 12px/1.2 "Press Start 2P",monospace;color:#ffd75e;flex:1}
@@ -507,6 +562,8 @@
       wireHover();
       // Colores de contorno listos antes del primer hover (una lectura; luego se reutiliza 25 s).
       cargar(false).then(() => pintarContornos(doc), () => {});
+      // Sondeo (pestaña visible) para detectar cambios y hacer parpadear al consejero que se actualiza.
+      setInterval(() => { if (!doc.hidden) cargar(true).then(() => pintarContornos(doc), () => {}); }, SONDEO_MS);
       // Las placas y los cuerpos se repintan al cambiar de generación: el contenedor es el mismo,
       // así que con cablear una vez basta; por si llega tarde, se reintenta al primer movimiento.
       doc.addEventListener('mousemove', function once() { wireHover(); doc.removeEventListener('mousemove', once); });
@@ -514,5 +571,5 @@
     if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', go); else go();
   }
 
-  root.CouncilEstado = Object.freeze({ ENDPOINT, ocupados, abiertos, alternarGrupo, COLS, siguienteOrden, ordenar, hoja, restablecerHoja, cargar, silla, ficha, encargoEnPalabras, estadoTxt, COLORES, claseEstado, pintarContornos, hace, openBoard, closeBoard, isBoardOpen, mostrarFicha, ocultarFicha });
+  root.CouncilEstado = Object.freeze({ ENDPOINT, ocupados, abiertos, alternarGrupo, COLS, siguienteOrden, ordenar, hoja, restablecerHoja, cargar, silla, ficha, encargoEnPalabras, estadoTxt, COLORES, claseEstado, pintarContornos, huella, huellas, cambiados, parpadear, avisarCambios, hace, openBoard, closeBoard, isBoardOpen, mostrarFicha, ocultarFicha });
 })(typeof window !== 'undefined' ? window : globalThis);

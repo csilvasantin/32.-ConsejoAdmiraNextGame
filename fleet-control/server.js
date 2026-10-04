@@ -30,6 +30,7 @@ const { CALLBACK_URI:AUTH_CALLBACK_URI, PUBLIC_ORIGIN:AUTH_PUBLIC_ORIGIN, create
 const { sessionMutationError } = require('./session-csrf');
 const { ACTIVE, REVOKED, UNAVAILABLE, createSessionRegistry, logoutEndpointPolicy, sessionEndpointPolicy } = require('./session-registry');
 const { createSessionCodec, deriveSessionSecret, loadAuthEdgeSecretMaterial, loadSessionSecretMaterial } = require('./session-token');
+const { createYokupTickets } = require('./yokup-ticket');
 const { BridgeError, PERSONAS, canonicalPersona, createGrokBotBridge } = require('./grokbot-bridge');
 const { DesktopBridgeError, createGrokBotDesktop } = require('./grokbot-desktop');
 const { createGrokBotEncargo, createGrokBotRouter } = require('./grokbot-encargo');
@@ -111,22 +112,6 @@ const SESSION_TTL_MS = 12 * 3600 * 1000;
 const CHALLENGE_TTL_MS = 10 * 60 * 1000;
 const SESSION_COOKIE = '__Host-fleet_session';
 const CHALLENGE_COOKIE = '__Host-fleet_challenge';
-// Ticket de un solo uso (60 s) para que Misiones, en admira.live, herede esta sesión
-// sin un segundo login de Google. El worker de Yokup lo consume y luego muere.
-const _yokupTickets = new Map();
-function mintYokupTicket(email) {
-  const now = Date.now();
-  for (const [key, row] of _yokupTickets) if (row.exp <= now) _yokupTickets.delete(key);
-  const ticket = crypto.randomBytes(32).toString('base64url');
-  _yokupTickets.set(ticket, { email, exp: now + 60 * 1000 });
-  return ticket;
-}
-function consumeYokupTicket(ticket) {
-  const row = _yokupTickets.get(String(ticket || ''));
-  if (row) _yokupTickets.delete(ticket);
-  if (!row || row.exp <= Date.now()) return '';
-  return row.email;
-}
 const AUTH_HANDOFF_CONSUME = 'https://www.admira.live/auth/handoff/consume';
 const AUTH_SESSION_API = 'https://www.admira.live/auth/session/';
 const GOOGLE_ISSUERS = new Set(['accounts.google.com', 'https://accounts.google.com']);
@@ -137,6 +122,13 @@ const _challengeStore = createChallengeStore({ ttlMs:CHALLENGE_TTL_MS });
 // Así un restart o un cambio de relay no invalida la cookie del navegador.
 const SESSION_SECRET_MATERIAL = loadSessionSecretMaterial();
 const _sessionCodec = createSessionCodec({secret:deriveSessionSecret(SESSION_SECRET_MATERIAL), ttlMs:SESSION_TTL_MS});
+// Ticket firmado (60 s) para que Misiones herede la sesión de la home. Lo verifica
+// cualquier relay: antes vivía en un Map de un solo proceso y el canje del worker
+// caía en ticket_invalid si no era ese mismo proceso. El worker de Yokup lo cambia
+// por la cookie de api.admira.live. El formato cabe en su regex [A-Za-z0-9_-]{32,128}.
+const _yokupTickets = createYokupTickets({ key: deriveSessionSecret(SESSION_SECRET_MATERIAL) });
+function mintYokupTicket(email) { return _yokupTickets.mint(email); }
+function consumeYokupTicket(ticket) { return _yokupTickets.consume(ticket); }
 const AUTH_EDGE_SHARED_SECRET = loadAuthEdgeSecretMaterial();
 const _sessionRegistry = createSessionRegistry({api:AUTH_SESSION_API, secret:AUTH_EDGE_SHARED_SECRET});
 
@@ -836,7 +828,9 @@ const server = http.createServer(async (req, res) => {
     if(policy.status!==200)return json(res,policy.status||401,{ok:false});
     const mutationError=sessionMutationError(req,auth.session,ALLOW_ORIGINS);
     if(mutationError)return json(res,403,{error:mutationError});
-    return json(res,200,{ok:true,ticket:mintYokupTicket(auth.session.email)});
+    const ticket=mintYokupTicket(auth.session.email);
+    if(!ticket)return json(res,500,{ok:false,error:'ticket'});
+    return json(res,200,{ok:true,ticket});
   }
   // Lo llama el worker de Yokup, sin cookie de navegador: el propio ticket es el secreto.
   if (url === '/api/auth/yokup-ticket/consume' && req.method === 'POST') {

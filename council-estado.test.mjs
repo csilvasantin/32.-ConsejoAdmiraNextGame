@@ -132,6 +132,9 @@ test('ficha: la caja del proyecto lleva la etiqueta «Proyecto:»', async () => 
   assert.match(src, /etq\.textContent = 'Proyecto:'/);
   assert.match(src, /estado-pill\.working\{color:\$\{COLORES\.working\}\}/);
   assert.match(src, /path\.body-hotspot\[data-estado-color\]:hover/);
+  assert.match(src, /path\.body-hotspot\[data-estado-color\]:hover[^}]*fill:transparent/);
+  assert.match(src, /--silla-c:#e74c3c/);
+  assert.match(src, /--silla-c:#3498db/);
 });
 
 test('ficha: «Desde» usa s.desde del feed (libre) con hora de Madrid; «sin datos» solo sin historial', () => {

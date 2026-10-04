@@ -23,10 +23,11 @@
     blocked: { txt: 'bloqueado', cls: 'blocked' },
     idle: { txt: 'sin actividad', cls: 'idle' }
   });
-  /* Color del estado (Carlos, 4-oct-2026): el contorno de la figura al pasar el ratón o
-   * seleccionarla y la píldora de la ficha usan el MISMO color. Paleta del «halo de
-   * colores» (encargo #4678): trabajando = verde; esperando = amarillo (aceptado/ack
-   * y bloqueado); libre y sin datos / sin agente = blanco. */
+  /* Color del estado en la píldora de la ficha y en el parpadeo al cambiar estado,
+   * misión o foco. Paleta del «halo de colores» (encargo #4678): trabajando = verde;
+   * esperando = amarillo (aceptado/ack y bloqueado); libre y sin datos = blanco.
+   * El brillo al pasar el ratón es el color de la silla (--silla-c), fino y
+   * difuminado, sin relleno (encargo #5087). */
   const COLORES = Object.freeze({ working: '#3ddc84', ack: '#ffd60a', blocked: '#ffd60a', idle: '#ffffff', nodata: '#ffffff' });
   /* Clase de color de una silla (o de un estado suelto): 'working' | 'ack' | 'blocked' | 'idle' | 'nodata'. */
   function claseEstado(s) {
@@ -203,9 +204,9 @@
 .estado-pill{display:inline-block;padding:0 5px;border:1px solid currentColor;border-radius:2px;font-weight:600}
 .estado-pill.working{color:${COLORES.working}}.estado-pill.ack{color:${COLORES.ack}}.estado-pill.blocked{color:${COLORES.blocked}}.estado-pill.idle{color:${COLORES.idle}}.estado-pill.nodata{color:${COLORES.nodata}}
 #body-hotspots .body-hotspot[data-estado-color=working]{--estado-c:${COLORES.working}}#body-hotspots .body-hotspot[data-estado-color=ack]{--estado-c:${COLORES.ack}}#body-hotspots .body-hotspot[data-estado-color=blocked]{--estado-c:${COLORES.blocked}}#body-hotspots .body-hotspot[data-estado-color=idle]{--estado-c:${COLORES.idle}}#body-hotspots .body-hotspot[data-estado-color=nodata]{--estado-c:${COLORES.nodata}}
-#body-hotspots path.body-hotspot[data-estado-color]:hover,#body-hotspots path.body-hotspot[data-estado-color].selected{fill:color-mix(in srgb,var(--estado-c) 28%,transparent);stroke:var(--estado-c);filter:drop-shadow(0 0 5px var(--estado-c))}
-#body-hotspots path.body-hotspot[data-estado-color].selected:hover{fill:color-mix(in srgb,var(--estado-c) 36%,transparent);stroke:var(--estado-c);filter:drop-shadow(0 0 7px var(--estado-c))}
-#body-hotspots div.body-hotspot[data-estado-color]:hover,#body-hotspots div.body-hotspot[data-estado-color].selected{background:color-mix(in srgb,var(--estado-c) 28%,transparent);outline:2px solid var(--estado-c);box-shadow:0 0 8px var(--estado-c)}
+#body-hotspots .body-hotspot[data-role=CEO],#body-hotspots .body-hotspot[data-role=CTO],#body-hotspots .body-hotspot[data-role=COO],#body-hotspots .body-hotspot[data-role=CFO]{--silla-c:#e74c3c}#body-hotspots .body-hotspot[data-role=CCO],#body-hotspots .body-hotspot[data-role=CDO],#body-hotspots .body-hotspot[data-role=CXO],#body-hotspots .body-hotspot[data-role=CSO]{--silla-c:#3498db}
+#body-hotspots path.body-hotspot[data-estado-color]:hover,#body-hotspots path.body-hotspot[data-estado-color].selected,#body-hotspots path.body-hotspot[data-estado-color].selected:hover{fill:transparent;stroke:color-mix(in srgb,var(--silla-c,#c9a27a) 42%,transparent);stroke-width:1.5;filter:drop-shadow(0 0 3px var(--silla-c,#c9a27a)) drop-shadow(0 0 12px color-mix(in srgb,var(--silla-c,#c9a27a) 62%,transparent))}
+#body-hotspots div.body-hotspot[data-estado-color]:hover,#body-hotspots div.body-hotspot[data-estado-color].selected{background:transparent;outline:none;box-shadow:0 0 0 1px color-mix(in srgb,var(--silla-c,#c9a27a) 35%,transparent),0 0 14px var(--silla-c,#c9a27a)}
 @keyframes estado-parpadeo{0%,100%{fill:transparent;stroke:transparent;filter:none}45%,60%{fill:color-mix(in srgb,var(--estado-c,#fff) 42%,transparent);stroke:var(--estado-c,#fff);filter:drop-shadow(0 0 10px var(--estado-c,#fff))}}
 @keyframes estado-parpadeo-caja{0%,100%{background:transparent;outline:2px solid transparent;box-shadow:none}45%,60%{background:color-mix(in srgb,var(--estado-c,#fff) 42%,transparent);outline:2px solid var(--estado-c,#fff);box-shadow:0 0 12px var(--estado-c,#fff)}}
 @keyframes estado-destello{0%,100%{fill:transparent;stroke:transparent;filter:none}30%{fill:color-mix(in srgb,var(--estado-c,#fff) 24%,transparent);stroke:var(--estado-c,#fff);filter:drop-shadow(0 0 5px var(--estado-c,#fff))}}
@@ -304,10 +305,10 @@
     clearTimeout(hideT);
     hideT = setTimeout(() => { if (card) card.hidden = true; cardPersona = null; cardAnchor = null; }, 120);
   }
-  /* Contorno por estado: cada silueta (#body-hotspots [data-persona]) lleva data-estado-color
-   * y el CSS pinta su contorno de hover/selección con ese color. Sin dato aún, no se toca
-   * (queda el contorno de siempre); con dato y sin silla/agente, blanco. Las siluetas se
-   * repintan al cambiar de generación, así que se vuelve a marcar en cada hover y carga. */
+  /* Cada silueta (#body-hotspots [data-persona]) lleva data-estado-color para la
+   * píldora y el parpadeo. El brillo de hover usa el color de la silla, no este
+   * atributo. Sin dato aún no se toca; con dato y sin silla/agente, nodata. Las
+   * siluetas se repintan al cambiar de generación, así que se vuelve a marcar. */
   function pintarContornos(doc) {
     doc = doc || root.document;
     if (!doc || !datos) return;

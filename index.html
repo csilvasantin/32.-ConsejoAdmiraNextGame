@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.04.10.2026.r13.19:25" />
+<meta name="admiranext-version" content="AdmiraNeXT v.04.10.2026.r14.19:25" />
     <script src="/auth-gate.js?v=20261004-r15-sinfranja"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1629,31 +1629,33 @@
         .body-hotspot {
             fill: transparent;
             stroke: transparent;
-            stroke-width: 3.5;
+            stroke-width: 1.5;
             stroke-linejoin: round;
             stroke-linecap: round;
             cursor: pointer;
-            transition: fill 0.2s ease, stroke 0.2s ease;
+            filter: drop-shadow(0 0 0 transparent) drop-shadow(0 0 0 transparent);
+            transition: stroke 360ms ease, filter 360ms ease;
         }
+        /* Color de la silla: racional a la izquierda, creativo a la derecha. */
+        #body-hotspots .body-hotspot[data-role="CEO"],
+        #body-hotspots .body-hotspot[data-role="CTO"],
+        #body-hotspots .body-hotspot[data-role="COO"],
+        #body-hotspots .body-hotspot[data-role="CFO"] { --silla-c: #e74c3c; }
+        #body-hotspots .body-hotspot[data-role="CCO"],
+        #body-hotspots .body-hotspot[data-role="CDO"],
+        #body-hotspots .body-hotspot[data-role="CXO"],
+        #body-hotspots .body-hotspot[data-role="CSO"] { --silla-c: #3498db; }
         .body-hotspots.ficha-active .body-hotspot,
         .body-hotspots.preguntar-active .body-hotspot,
         .body-hotspots.entrenar-active .body-hotspot {
             pointer-events: visiblePainted;
         }
-        .body-hotspot:hover {
-            fill: rgba(52, 152, 219, 0.30);
-            stroke: rgba(125, 198, 255, 0.95);
-            filter: drop-shadow(0 0 5px rgba(52, 152, 219, 0.9));
-        }
-        .body-hotspot.selected {
-            fill: rgba(46, 204, 113, 0.28);
-            stroke: rgba(120, 230, 160, 0.95);
-            filter: drop-shadow(0 0 5px rgba(46, 204, 113, 0.9));
-        }
+        .body-hotspot:hover,
+        .body-hotspot.selected,
         .body-hotspot.selected:hover {
-            fill: rgba(46, 204, 113, 0.36);
-            stroke: rgba(170, 255, 200, 1);
-            filter: drop-shadow(0 0 7px rgba(46, 204, 113, 0.95));
+            fill: transparent;
+            stroke: color-mix(in srgb, var(--silla-c, #c9a27a) 42%, transparent);
+            filter: drop-shadow(0 0 3px var(--silla-c, #c9a27a)) drop-shadow(0 0 12px color-mix(in srgb, var(--silla-c, #c9a27a) 62%, transparent));
         }
         /* Vídeo de la presentación — superpuesto a la imagen del consejo, mismo tamaño.
            El poster (primer fotograma) ya muestra el Apple II integrado en la mesa,
@@ -4458,7 +4460,7 @@ body.rail-open{overflow:hidden}
 <script defer src="council-speech.js?v=20260930-flt101302"></script>
 <script defer src="council-grokbot.js?v=20261003-flt101402"></script>
 <script defer src="council-todo.js?v=20260930-flt101302"></script>
-<script defer src="council-estado.js?v=20261004-estado8-desde"></script>
+<script defer src="council-estado.js?v=20261004-5087-brillo"></script>
 <script defer src="assets/council-silhouettes.js?v=20261004-silueta"></script>
 <script defer src="assets/council-recorte.js?v=20261004-recorte1"></script>
 <script defer src="app.flt-100529.js?v=20261004-recortar1"></script>

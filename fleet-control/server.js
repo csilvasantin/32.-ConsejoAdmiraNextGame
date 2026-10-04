@@ -111,6 +111,22 @@ const SESSION_TTL_MS = 12 * 3600 * 1000;
 const CHALLENGE_TTL_MS = 10 * 60 * 1000;
 const SESSION_COOKIE = '__Host-fleet_session';
 const CHALLENGE_COOKIE = '__Host-fleet_challenge';
+// Ticket de un solo uso (60 s) para que Misiones, en admira.live, herede esta sesión
+// sin un segundo login de Google. El worker de Yokup lo consume y luego muere.
+const _yokupTickets = new Map();
+function mintYokupTicket(email) {
+  const now = Date.now();
+  for (const [key, row] of _yokupTickets) if (row.exp <= now) _yokupTickets.delete(key);
+  const ticket = crypto.randomBytes(32).toString('base64url');
+  _yokupTickets.set(ticket, { email, exp: now + 60 * 1000 });
+  return ticket;
+}
+function consumeYokupTicket(ticket) {
+  const row = _yokupTickets.get(String(ticket || ''));
+  if (row) _yokupTickets.delete(ticket);
+  if (!row || row.exp <= Date.now()) return '';
+  return row.email;
+}
 const AUTH_HANDOFF_CONSUME = 'https://www.admira.live/auth/handoff/consume';
 const AUTH_SESSION_API = 'https://www.admira.live/auth/session/';
 const GOOGLE_ISSUERS = new Set(['accounts.google.com', 'https://accounts.google.com']);
@@ -811,6 +827,23 @@ const server = http.createServer(async (req, res) => {
     if(policy.status===503)return json(res,503,{ok:false,error:'registro de sesión no disponible'});
     if(policy.status===401)return json(res,401,{ok:false});
     return json(res,200,{ok:true,email:auth.session.email,csrf:auth.session.csrf});
+  }
+  if (url === '/api/auth/yokup-ticket' && req.method === 'POST') {
+    if (!ALLOW_ORIGINS.includes(String(req.headers.origin || ''))) return json(res,403,{error:'origin no permitido'});
+    const auth=await sessionState(sessionFromReq(req));
+    const policy=sessionEndpointPolicy(auth.state);
+    if(policy.clearCookie)clearSessionCookie(res);
+    if(policy.status!==200)return json(res,policy.status||401,{ok:false});
+    const mutationError=sessionMutationError(req,auth.session,ALLOW_ORIGINS);
+    if(mutationError)return json(res,403,{error:mutationError});
+    return json(res,200,{ok:true,ticket:mintYokupTicket(auth.session.email)});
+  }
+  // Lo llama el worker de Yokup, sin cookie de navegador: el propio ticket es el secreto.
+  if (url === '/api/auth/yokup-ticket/consume' && req.method === 'POST') {
+    const body = await readBody(req);
+    const email = consumeYokupTicket(body && body.ticket);
+    if (!email) return json(res,401,{ok:false,error:'ticket_invalid'});
+    return json(res,200,{ok:true,email});
   }
   if (url === '/api/auth/logout' && req.method === 'POST') {
     if (!ALLOW_ORIGINS.includes(String(req.headers.origin || ''))) return json(res,403,{error:'origin no permitido'});

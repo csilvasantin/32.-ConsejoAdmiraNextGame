@@ -9,16 +9,41 @@
  *    que no hace falta callback propio ni una URI nueva dada de alta en Google.
  *  · fija la cookie de estado en el dominio yokup.com.
  *
- * Lo demás es igual y a propósito: la sesión sigue siendo una cookie HttpOnly de
- * api.yokup.com que este JavaScript NO puede leer, la lista de quién entra la decide el
- * worker, y aquí sólo se decide a qué host se le manda la cookie.
+ * Lo demás es igual y a propósito: la sesión sigue siendo una cookie HttpOnly que este
+ * JavaScript NO puede leer, la lista de quién entra la decide el worker, y aquí sólo se
+ * decide a qué host se le manda la cookie.
+ *
+ * En admira.live (encargo #5063) ese host es api.admira.live, el mismo sitio que la web.
+ * api.yokup.com desde aquí es otro sitio y el navegador no manda su cookie, así que
+ * Misiones volvía a pedir login. Si la home ya tiene sesión de flota, se canjea un
+ * ticket de un solo uso y no hay segundo login de Google.
  *
  * Instalar lo más arriba del <head>:  <script src="/acceso-espejo.js"></script>
  */
 (function () {
   var CLIENT_ID = "861856772040-e1ri6kpu6maagtb6crdfbb923hsaalgb.apps.googleusercontent.com";
-  var WORKER = "https://api.yokup.com";
+  var YOKUP = "https://api.yokup.com";
+  // Mismo sitio que la página: la cookie de api.yokup.com no viaja desde admira.live.
+  var CASA = /(^|\.)admira\.live$/i.test(String(location.hostname || ""));
+  var WORKER = CASA ? "https://api.admira.live" : YOKUP;
   var rawFetch = window.fetch.bind(window);
+
+  function urlDe(input) {
+    if (typeof input === "string") return input;
+    return (input && input.url) || "";
+  }
+  // Las páginas siguen pidiendo api.yokup.com. Desde admira.live esa llamada se queda
+  // en api.admira.live para que la cookie sea del propio sitio.
+  function reescribe(input) {
+    if (!CASA) return input;
+    var u = urlDe(input);
+    if (u.indexOf(YOKUP) !== 0) return input;
+    var c = u.charAt(YOKUP.length);
+    if (c !== "" && c !== "/" && c !== "?" && c !== "#") return input;
+    var siguiente = WORKER + u.slice(YOKUP.length);
+    if (typeof input === "string") return siguiente;
+    try { return new Request(siguiente, input); } catch (e) { return input; }
+  }
 
   // ¿La URL apunta al worker? Sólo ese host recibe la cookie. Prefijo ANCLADO al ORIGEN:
   // tras el host debe venir un límite real (/, ?, # o fin) para que api.yokup.com.evil no
@@ -52,7 +77,8 @@
   // Fontanería: todo lo que va al worker espera a que haya sesión y viaja con la cookie.
   var listo; var sesionLista = new Promise(function (r) { listo = r; });
   window.fetch = function (input, init) {
-    var u = typeof input === "string" ? input : (input && input.url) || "";
+    input = reescribe(input);
+    var u = urlDe(input);
     if (!esDelWorker(u)) return rawFetch(input, init);
     return sesionLista.then(function () {
       init = init || {};
@@ -140,13 +166,40 @@
     document.head.appendChild(s);
   }
 
+  // La home ya entró con Google. Se canjea esa sesión por la cookie de Misiones,
+  // sin pintar la verja de Yokup y sin pedir el login otra vez.
+  function puente() {
+    rawFetch("https://fleet.admira.live/api/auth/session", { credentials: "include", cache: "no-store" })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (d) {
+        if (!d || !d.ok || !d.csrf) { verja(); return { ya: true }; }
+        return rawFetch("https://fleet.admira.live/api/auth/yokup-ticket", {
+          method: "POST", credentials: "include", cache: "no-store",
+          headers: { "content-type": "application/json", "X-Fleet-CSRF": String(d.csrf) },
+          body: "{}"
+        }).then(function (r) { return r.ok ? r.json() : null; });
+      })
+      .then(function (t) {
+        if (!t || t.ya) return;
+        if (!t.ticket) { verja(); return; }
+        return rawFetch(WORKER + "/auth/from-fleet", {
+          method: "POST", credentials: "include", cache: "no-store",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({ ticket: t.ticket })
+        }).then(function (r) { return r.json().catch(function () { return {}; }); })
+          .then(function (d) { if (d && d.ok) location.reload(); else verja(); });
+      })
+      .catch(function () { verja(); });
+  }
+
   rawFetch(WORKER + "/auth/session", { credentials: "include", cache: "no-store" })
     .then(function (r) { return r.ok ? r.json() : null; })
     .then(function (d) {
       if (d && d.ok) { if (d.email) try { localStorage.setItem("yk_email", d.email); } catch (e) {} abrir(); listo(); }
+      else if (CASA) puente();
       else verja();
     })
-    .catch(verja);
+    .catch(function () { if (CASA) puente(); else verja(); });
 
   // Gancho de pruebas: expone SÓLO el predicado del host, como hace acceso.js en yokup.
   try { window.__ykEspejoTest = { esDelWorker: esDelWorker, WORKER: WORKER, CLIENT_ID: CLIENT_ID }; } catch (e) {}

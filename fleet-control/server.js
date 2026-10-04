@@ -38,13 +38,17 @@ const { createServiceBridge } = require('./service-bridge');
 // The desktop adapter shares the native conversation. Never fall back to a
 // routine when it is unavailable: that would silently create a different chat.
 const grokBotLegacy = createGrokBotBridge();
+const grokBotDesktop = createGrokBotDesktop();
 const grokBotBase = process.env.GROKBOT_CHAT_PROVIDER === 'desktop'
-  ? createGrokBotDesktop() : grokBotLegacy;
+  ? grokBotDesktop : grokBotLegacy;
 // Elon (CEO) y Jensen (CTO) no viven en el Grok Bot del Mac Mini: su chat se enruta como
 // encargo MCP de admira.live a su deepagent (Merovingio / Cypher, GrokBotBox), y su
 // respuesta vuelve al chat. El resto de sillas siguen en el proveedor de siempre.
 const grokBotEncargo = createGrokBotEncargo();
 const grokBotBridge = createGrokBotRouter({ base: grokBotBase, encargo: grokBotEncargo, inbox: grokBotLegacy });
+// El chat puede ir por webhook. Ultradetalle igual necesita el escritorio.
+// No se arranca el sondeo del escritorio: start() sigue siendo el del proveedor base.
+if (!grokBotBridge.remote) grokBotBridge.remote = (...a) => grokBotDesktop.remote(...a);
 
 const DIR = __dirname;
 const PORT = parseInt(process.env.FLEET_PORT || '9140', 10);

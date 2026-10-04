@@ -146,6 +146,29 @@ test('ficha: «Desde» usa s.desde del feed (libre) con hora de Madrid; «sin da
   assert.equal(g.filas.find((x) => x[0] === 'Desde')[1], 'sin datos');
 });
 
+test('fichas de toda la mesa: no se pisan ni tapan la cara', () => {
+  const seats = [
+    { ax: 40, ay: 420, aw: 160, ah: 340 },
+    { ax: 200, ay: 340, aw: 140, ah: 280 },
+    { ax: 380, ay: 250, aw: 130, ah: 220 },
+    { ax: 540, ay: 230, aw: 130, ah: 230 },
+    { ax: 720, ay: 220, aw: 140, ah: 220 },
+    { ax: 900, ay: 260, aw: 130, ah: 230 },
+    { ax: 1060, ay: 330, aw: 140, ah: 270 },
+    { ax: 1220, ay: 410, aw: 160, ah: 320 }
+  ].map(s => ({ ...s, w: 176, h: 148 }));
+  const boxes = E.colocarFichas(seats, 1440, 900);
+  assert.equal(boxes.length, 8);
+  const faceOf = s => ({ l: s.ax, t: s.ay, r: s.ax + s.aw, b: s.ay + s.ah * 0.42 });
+  const hit = (a, b) => a.l < b.r && a.r > b.l && a.t < b.b && a.b > b.t;
+  const faces = seats.map(faceOf);
+  for (let i = 0; i < boxes.length; i++) {
+    assert.ok(boxes[i].r > boxes[i].l);
+    for (const f of faces) assert.equal(hit(boxes[i], f), false);
+    for (let j = i + 1; j < boxes.length; j++) assert.equal(hit(boxes[i], boxes[j]), false);
+  }
+});
+
 test('parpadeo: la primera carga no avisa; cambia estado, misión o foco → avisa solo a ese', () => {
   const d1 = { mesa: { leyendas: [elon, { persona: 'George Lucas', enlazado: true, estado: 'idle', agentes: [{ foco: 'a' }] }] } };
   const h1 = E.huellas(d1);

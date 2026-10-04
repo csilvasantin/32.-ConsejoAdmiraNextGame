@@ -3,6 +3,8 @@
  *    descrito en palabras (el número, como mucho, entre paréntesis), estado
  *    (working/idle→«sin actividad»; ack/blocked legacy), desde cuándo, deepagent y máquina, y último latido.
  *    Honestidad #5085: working solo si MCP dice working (latido trabajando ≤10 min).
+ *  · Segunda pulsación de Leyendas o Coetáneos: los ocho contornos a la vez, con el
+ *    mismo brillo de la silla, y la ficha de cada uno junto a él. Otra pulsación o Esc cierra.
  *  · DEBATIR: tablero vivo con todos los consejeros de la mesa.
  * Datos reales de https://mcp.admira.live/consejo/estado (el worker admira-live-mcp junta
  * la presencia y las bandejas públicas de bot.yokup.com, las mismas que agentes_vivos y
@@ -201,11 +203,16 @@
 .estado-card .estado-proyecto .etq{color:#c9a227;margin-right:6px;font:bold 11px/1.3 "Press Start 2P",monospace;font-style:normal}
 .estado-card dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:2px 8px}
 .estado-card dt{color:#c9a227;white-space:nowrap}.estado-card dd{margin:0;word-break:break-word}
+.estado-card.mesa-ficha{width:176px;max-width:176px;min-width:0;padding:4px 6px;font-size:10px;line-height:1.25;z-index:80}
+.estado-card.mesa-ficha h4{font-size:8px;line-height:1.3;letter-spacing:0}
+.estado-card.mesa-ficha .estado-proyecto{font-size:9px;line-height:1.3;margin:0 0 3px;padding:1px 4px}
+.estado-card.mesa-ficha dl{gap:1px 4px}
+.estado-card.mesa-ficha dd{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:118px}
 .estado-pill{display:inline-block;padding:0 5px;border:1px solid currentColor;border-radius:2px;font-weight:600}
 .estado-pill.working{color:${COLORES.working}}.estado-pill.ack{color:${COLORES.ack}}.estado-pill.blocked{color:${COLORES.blocked}}.estado-pill.idle{color:${COLORES.idle}}.estado-pill.nodata{color:${COLORES.nodata}}
 #body-hotspots .body-hotspot[data-estado-color=working]{--estado-c:${COLORES.working}}#body-hotspots .body-hotspot[data-estado-color=ack]{--estado-c:${COLORES.ack}}#body-hotspots .body-hotspot[data-estado-color=blocked]{--estado-c:${COLORES.blocked}}#body-hotspots .body-hotspot[data-estado-color=idle]{--estado-c:${COLORES.idle}}#body-hotspots .body-hotspot[data-estado-color=nodata]{--estado-c:${COLORES.nodata}}
 #body-hotspots .body-hotspot[data-role=CEO],#body-hotspots .body-hotspot[data-role=CTO],#body-hotspots .body-hotspot[data-role=COO],#body-hotspots .body-hotspot[data-role=CFO]{--silla-c:#e74c3c}#body-hotspots .body-hotspot[data-role=CCO],#body-hotspots .body-hotspot[data-role=CDO],#body-hotspots .body-hotspot[data-role=CXO],#body-hotspots .body-hotspot[data-role=CSO]{--silla-c:#3498db}
-#body-hotspots path.body-hotspot[data-estado-color]:hover,#body-hotspots path.body-hotspot[data-estado-color].selected,#body-hotspots path.body-hotspot[data-estado-color].selected:hover{fill:transparent;stroke:color-mix(in srgb,var(--silla-c,#c9a27a) 42%,transparent);stroke-width:1.5;filter:drop-shadow(0 0 3px var(--silla-c,#c9a27a)) drop-shadow(0 0 12px color-mix(in srgb,var(--silla-c,#c9a27a) 62%,transparent))}
+#body-hotspots path.body-hotspot[data-estado-color]:hover,#body-hotspots path.body-hotspot[data-estado-color].selected,#body-hotspots path.body-hotspot[data-estado-color].selected:hover,#body-hotspots path.body-hotspot.silla-brillo{fill:transparent;stroke:color-mix(in srgb,var(--silla-c,#c9a27a) 42%,transparent);stroke-width:1.5;filter:drop-shadow(0 0 3px var(--silla-c,#c9a27a)) drop-shadow(0 0 12px color-mix(in srgb,var(--silla-c,#c9a27a) 62%,transparent))}
 #body-hotspots div.body-hotspot[data-estado-color]:hover,#body-hotspots div.body-hotspot[data-estado-color].selected{background:transparent;outline:none;box-shadow:0 0 0 1px color-mix(in srgb,var(--silla-c,#c9a27a) 35%,transparent),0 0 14px var(--silla-c,#c9a27a)}
 @keyframes estado-parpadeo{0%,100%{fill:transparent;stroke:transparent;filter:none}45%,60%{fill:color-mix(in srgb,var(--estado-c,#fff) 42%,transparent);stroke:var(--estado-c,#fff);filter:drop-shadow(0 0 10px var(--estado-c,#fff))}}
 @keyframes estado-parpadeo-caja{0%,100%{background:transparent;outline:2px solid transparent;box-shadow:none}45%,60%{background:color-mix(in srgb,var(--estado-c,#fff) 42%,transparent);outline:2px solid var(--estado-c,#fff);box-shadow:0 0 12px var(--estado-c,#fff)}}
@@ -248,15 +255,14 @@
 
   /* ── Ficha al pasar el ratón ─────────────────────────────────────────────── */
   let card = null, cardPersona = null, cardAnchor = null, hideT = null;
-  function pintarCard(doc, persona) {
-    if (!card || cardPersona !== persona) return;
+  function rellenar(doc, node, persona) {
     const s = silla(datos, persona);
     const f = datos ? ficha(s, Date.now()) : null;
-    card.replaceChildren();
+    node.replaceChildren();
     const h = doc.createElement('h4');
     const ag = s && s.agentes && s.agentes[0] ? s.agentes[0].persona : '';
     h.textContent = persona + (ag && key(ag) !== key(persona.split(' ').slice(-1)[0]) ? ' · ' + ag : '');
-    card.appendChild(h);
+    node.appendChild(h);
     // Proyecto en el que está, bien visible justo debajo del nombre.
     if (f) {
       // «Proyecto: digitalsignage.ai» (Carlos, 4-oct-2026: la caja lleva su etiqueta).
@@ -264,7 +270,7 @@
       pr.className = 'estado-proyecto' + (f.proyecto ? '' : ' sin');
       const etq = doc.createElement('span'); etq.className = 'etq'; etq.textContent = 'Proyecto:';
       pr.append(etq, f.proyecto || (s && s.enlazado ? 'sin proyecto declarado' : 'sin agente enlazado'));
-      card.appendChild(pr);
+      node.appendChild(pr);
     }
     const dl = doc.createElement('dl');
     const filas = f ? f.filas : [['Misión', enVuelo ? 'mirando…' : SIN + (ultimoError ? ' (no responde el MCP)' : '')]];
@@ -272,9 +278,14 @@
       const dt = doc.createElement('dt'); dt.textContent = k;
       const dd = doc.createElement('dd');
       if (k === 'Estado' && f) dd.appendChild(pill(doc, s && s.enlazado ? f.estado : null)); else dd.textContent = v;
+      if (typeof v === 'string' && v) dd.title = v;
       dl.append(dt, dd);
     }
-    card.appendChild(dl);
+    node.appendChild(dl);
+  }
+  function pintarCard(doc, persona) {
+    if (!card || cardPersona !== persona) return;
+    rellenar(doc, card, persona);
     colocar(doc);
     pintarContornos(doc);
   }
@@ -305,6 +316,162 @@
     clearTimeout(hideT);
     hideT = setTimeout(() => { if (card) card.hidden = true; cardPersona = null; cardAnchor = null; }, 120);
   }
+
+  /* Segunda pulsación del grupo visible: los ocho brillan y cada ficha se sienta
+   * junto a su consejero. La mitad de arriba va al cielo; la de abajo, al borde
+   * de la mesa. Así no se pisan ni tapan las caras. */
+  let mesaOn = false, mesaCards = [], mesaKey = null, mesaResize = false;
+  function solapan(a, b, g) {
+    g = g || 0;
+    return a.l < b.r + g && a.r > b.l - g && a.t < b.b + g && a.b > b.t - g;
+  }
+  function clampN(n, a, b) { return Math.max(a, Math.min(b, n)); }
+  function colocarFichas(items, vw, vh) {
+    const n = items.length;
+    if (!n) return [];
+    const faces = items.map(it => ({
+      l: it.ax - 2, t: it.ay - 2, r: it.ax + it.aw + 2, b: it.ay + Math.max(28, it.ah * 0.42)
+    }));
+    const byY = items.map((it, i) => i).sort((a, b) => items[a].ay - items[b].ay);
+    const half = Math.ceil(n / 2);
+    const backIdx = byY.slice(0, half);
+    const frontIdx = byY.slice(half);
+    const maxH = items.reduce((m, it) => Math.max(m, it.h), 40);
+    const backTop = 56;
+    const frontTop = clampN(vh - maxH - 8, backTop + maxH + 12, Math.max(56, vh - 40));
+    function pack(idxs, top) {
+      const row = idxs.slice().sort((a, b) => (items[a].ax + items[a].aw / 2) - (items[b].ax + items[b].aw / 2));
+      const gap = 8;
+      const boxes = {};
+      if (!row.length) return boxes;
+      row.forEach(i => {
+        const it = items[i];
+        const l = clampN(it.ax + it.aw / 2 - it.w / 2, 6, Math.max(6, vw - it.w - 6));
+        boxes[i] = { l, t: top, w: it.w, h: it.h };
+      });
+      for (let k = 1; k < row.length; k++) {
+        const prev = boxes[row[k - 1]];
+        const cur = boxes[row[k]];
+        if (cur.l < prev.l + prev.w + gap) cur.l = prev.l + prev.w + gap;
+      }
+      const last = boxes[row[row.length - 1]];
+      if (last.l + last.w > vw - 6) {
+        const shift = last.l + last.w - (vw - 6);
+        row.forEach(i => { boxes[i].l -= shift; });
+      }
+      if (boxes[row[0]].l < 6) {
+        const shift = 6 - boxes[row[0]].l;
+        row.forEach(i => { boxes[i].l += shift; });
+      }
+      row.forEach(i => {
+        const b = boxes[i];
+        b.l = clampN(b.l, 6, Math.max(6, vw - b.w - 6));
+        b.t = clampN(top, 6, Math.max(6, vh - b.h - 6));
+        b.r = b.l + b.w;
+        b.b = b.t + b.h;
+      });
+      return boxes;
+    }
+    const map = Object.assign(pack(backIdx, backTop), pack(frontIdx, frontTop));
+    items.forEach((_, i) => {
+      const b = map[i];
+      if (b && faces.some(f => solapan(b, f, 0))) {
+        b.t = frontTop;
+        b.b = b.t + b.h;
+      }
+    });
+    return items.map((_, i) => ({ l: map[i].l, t: map[i].t, r: map[i].r, b: map[i].b }));
+  }
+  function marcarBrillo(doc) {
+    const c = doc && doc.getElementById('body-hotspots');
+    if (!c) return [];
+    const els = [...c.querySelectorAll('path.body-hotspot[data-persona]')];
+    const list = els.length ? els : [...c.querySelectorAll('.body-hotspot[data-persona]')];
+    list.forEach(el => { if (mesaOn) el.classList.add('silla-brillo'); else el.classList.remove('silla-brillo'); });
+    return list;
+  }
+  function colocarMesa(doc) {
+    if (!mesaOn || !mesaCards.length) return;
+    const vw = doc.documentElement.clientWidth || 1440;
+    const vh = doc.documentElement.clientHeight || 900;
+    const items = mesaCards.map(({ el, node }) => {
+      const r = el.getBoundingClientRect();
+      return { w: node.offsetWidth || 176, h: node.offsetHeight || 120, ax: r.left, ay: r.top, aw: r.width, ah: r.height };
+    });
+    const boxes = colocarFichas(items, vw, vh);
+    mesaCards.forEach(({ node }, i) => {
+      node.style.left = boxes[i].l + 'px';
+      node.style.top = boxes[i].t + 'px';
+    });
+  }
+  function ariaMesa(doc) {
+    const gen = String(root.currentGenPublic || 'leyendas');
+    doc.querySelectorAll('[data-council-generation]').forEach(btn => {
+      btn.setAttribute('aria-expanded', mesaOn && btn.dataset.councilGeneration === gen ? 'true' : 'false');
+    });
+  }
+  function refrescarMesa(doc) {
+    if (!mesaOn) return;
+    doc = doc || root.document;
+    if (!doc) return;
+    pintarContornos(doc);
+    marcarBrillo(doc);
+    mesaCards.forEach(({ el, node }) => {
+      if (!el.isConnected) return;
+      rellenar(doc, node, el.getAttribute('data-persona'));
+    });
+    colocarMesa(doc);
+    ariaMesa(doc);
+  }
+  function cerrarMesa(doc) {
+    doc = doc || root.document;
+    mesaOn = false;
+    mesaCards.forEach(x => x.node && x.node.remove());
+    mesaCards = [];
+    if (doc) {
+      marcarBrillo(doc);
+      ariaMesa(doc);
+    }
+    return false;
+  }
+  function abrirMesa(doc) {
+    doc = doc || root.document;
+    if (!doc) return false;
+    cerrarMesa(doc);
+    mesaOn = true;
+    estilos(doc);
+    clearTimeout(hideT);
+    if (card) { card.hidden = true; cardPersona = null; cardAnchor = null; }
+    pintarContornos(doc);
+    const els = marcarBrillo(doc);
+    mesaCards = els.map(el => {
+      const node = doc.createElement('div');
+      node.className = 'estado-card mesa-ficha';
+      node.setAttribute('role', 'tooltip');
+      node.dataset.persona = el.getAttribute('data-persona') || '';
+      doc.body.appendChild(node);
+      rellenar(doc, node, node.dataset.persona);
+      return { el, node };
+    });
+    colocarMesa(doc);
+    ariaMesa(doc);
+    if (!mesaKey) {
+      mesaKey = e => { if (e.key === 'Escape' && mesaOn) { e.preventDefault(); cerrarMesa(doc); } };
+      doc.addEventListener('keydown', mesaKey, true);
+    }
+    if (!mesaResize && root.addEventListener) {
+      mesaResize = true;
+      root.addEventListener('resize', () => { if (mesaOn) colocarMesa(doc); });
+    }
+    cargar(false).then(() => refrescarMesa(doc), () => {});
+    return true;
+  }
+  function alternarMesa() {
+    const doc = root.document;
+    if (mesaOn) return cerrarMesa(doc);
+    return abrirMesa(doc);
+  }
+  const mesaAbierta = () => mesaOn;
   /* Cada silueta (#body-hotspots [data-persona]) lleva data-estado-color para la
    * píldora y el parpadeo. El brillo de hover usa el color de la silla, no este
    * atributo. Sin dato aún no se toca; con dato y sin silla/agente, nodata. Las
@@ -317,6 +484,7 @@
     c.querySelectorAll('[data-persona]').forEach(el => {
       const cls = claseEstado(silla(datos, el.getAttribute('data-persona')));
       if (el.getAttribute('data-estado-color') !== cls) el.setAttribute('data-estado-color', cls);
+      if (mesaOn) el.classList.add('silla-brillo');
     });
   }
   function wireHover() {
@@ -587,5 +755,5 @@
     if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', go); else go();
   }
 
-  root.CouncilEstado = Object.freeze({ ENDPOINT, ocupados, abiertos, alternarGrupo, COLS, siguienteOrden, ordenar, hoja, restablecerHoja, cargar, silla, ficha, encargoEnPalabras, estadoTxt, COLORES, claseEstado, pintarContornos, huella, huellas, cambiados, parpadear, avisarCambios, hace, openBoard, closeBoard, isBoardOpen, mostrarFicha, ocultarFicha });
+  root.CouncilEstado = Object.freeze({ ENDPOINT, ocupados, abiertos, alternarGrupo, COLS, siguienteOrden, ordenar, hoja, restablecerHoja, cargar, silla, ficha, encargoEnPalabras, estadoTxt, COLORES, claseEstado, pintarContornos, huella, huellas, cambiados, parpadear, avisarCambios, hace, openBoard, closeBoard, isBoardOpen, mostrarFicha, ocultarFicha, colocarFichas, alternarMesa, cerrarMesa, mesaAbierta });
 })(typeof window !== 'undefined' ? window : globalThis);

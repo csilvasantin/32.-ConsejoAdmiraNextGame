@@ -2235,6 +2235,17 @@
         const genMatch = text.match(/^\/(leyendas|coet[a\u00e1]neos)$/i);
         if (genMatch) {
             const g = /coet/i.test(genMatch[1]) ? "coetaneos" : "leyendas";
+            // Segunda pulsación del grupo que ya se ve: todas las fichas y el brillo.
+            // Otra pulsación (o Esc, dentro de council-estado) las quita.
+            if (g === currentGen && window.CouncilEstado && typeof window.CouncilEstado.alternarMesa === "function") {
+                const on = window.CouncilEstado.alternarMesa();
+                addUserEntry(text.toLowerCase());
+                setActionLine(on
+                    ? (g === "leyendas" ? "⭐ Fichas de todas las Leyendas" : "🚀 Fichas de todos los Coetáneos")
+                    : "Fichas ocultas");
+                return true;
+            }
+            if (window.CouncilEstado && typeof window.CouncilEstado.cerrarMesa === "function") window.CouncilEstado.cerrarMesa();
             setGen(g);
             addUserEntry(text.toLowerCase());
             setActionLine(g === "leyendas" ? "\u2b50 Mostrando Leyendas" : "\ud83d\ude80 Mostrando Coet\u00e1neos");

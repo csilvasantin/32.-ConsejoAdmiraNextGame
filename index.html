@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.04.10.2026.r22.21:02" />
+<meta name="admiranext-version" content="AdmiraNeXT v.04.10.2026.r23.21:40" />
     <script src="/auth-gate.js?v=20261004-r15-sinfranja"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -3577,6 +3577,19 @@
 .side-rail .legend-chip span{font-size:0.32rem}
 /* Colapsar = ocultar el panel (se re-abre desde el icono del top-bar), como en Control. */
 .side-rail.collapsed{display:none}
+/* #5115 Los rieles FLOTAN sobre el escenario (Carlos, 04-10-2026 21:38: «la selección de los
+   menús de opciones y avanzado no tienen que hacer resize del stage donde están los consejeros»).
+   Antes eran columnas en el flujo flex de .stage-row y la imagen (flex:1 1 0) cedía 158 px por
+   riel: el Consejo encogía (y bajaba de alto por su proporción) y las fichas/recortes, que se
+   colocan con getBoundingClientRect, quedaban desplazadas. Ahora salen del flujo (absolute sobre
+   .stage-row, por encima de la escena): el escenario mide y está igual con menús abiertos o
+   cerrados. En móvil siguen siendo cajón fixed (regla de abajo). */
+@media (min-width:761px){
+  .stage-row{position:relative}
+  .side-rail{position:absolute;top:0;bottom:0;z-index:1000;box-shadow:4px 4px 0 #000}
+  .side-rail.left{left:0}
+  .side-rail.right{right:0}
+}
 /* Backdrop del cajón (solo móvil) */
 .rail-backdrop{position:fixed;inset:0;background:rgba(0,0,0,.55);z-index:1190;display:none}
 .rail-backdrop.on{display:block}

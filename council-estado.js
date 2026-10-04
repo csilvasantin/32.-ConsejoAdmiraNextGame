@@ -21,6 +21,16 @@
     blocked: { txt: 'bloqueado', cls: 'blocked' },
     idle: { txt: 'libre', cls: 'idle' }
   });
+  /* Color del estado (Carlos, 4-oct-2026): el contorno de la figura al pasar el ratón o
+   * seleccionarla y la píldora de la ficha usan el MISMO color. Trabajando = rojo,
+   * libre = verde, sin datos / sin agente = blanco; aceptado (pendiente de empezar) =
+   * azul del tablero; bloqueado = naranja (el rojo del tablero ya es «trabajando»). */
+  const COLORES = Object.freeze({ working: '#ff3b30', ack: '#79c0ff', blocked: '#ffa657', idle: '#3ddc84', nodata: '#ffffff' });
+  /* Clase de color de una silla (o de un estado suelto): 'working' | 'ack' | 'blocked' | 'idle' | 'nodata'. */
+  function claseEstado(s) {
+    const st = s && typeof s === 'object' ? (s.enlazado ? s.estado : null) : s;
+    return ESTADOS[st] ? ESTADOS[st].cls : 'nodata';
+  }
 
   const key = v => String(v || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '');
 
@@ -127,10 +137,15 @@
 .estado-card h4{margin:0 0 4px;font:bold 12px/1.2 "Press Start 2P",monospace;color:#ffd75e;letter-spacing:.5px}
 .estado-card .estado-proyecto{margin:0 0 6px;padding:2px 6px;display:inline-block;background:#2a1d0b;border:1px solid #c9a227;color:#7ee7ff;font:bold 11px/1.3 "Press Start 2P",monospace;letter-spacing:.3px;word-break:break-word}
 .estado-card .estado-proyecto.sin{color:#8b8170;font:italic 11px/1.3 system-ui,-apple-system,Segoe UI,sans-serif}
+.estado-card .estado-proyecto .etq{color:#c9a227;margin-right:6px;font:bold 11px/1.3 "Press Start 2P",monospace;font-style:normal}
 .estado-card dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:2px 8px}
 .estado-card dt{color:#c9a227;white-space:nowrap}.estado-card dd{margin:0;word-break:break-word}
 .estado-pill{display:inline-block;padding:0 5px;border:1px solid currentColor;border-radius:2px;font-weight:600}
-.estado-pill.working{color:#7ee787}.estado-pill.ack{color:#79c0ff}.estado-pill.blocked{color:#ff7b72}.estado-pill.idle{color:#c9c2b0}.estado-pill.nodata{color:#8b8170}
+.estado-pill.working{color:${COLORES.working}}.estado-pill.ack{color:${COLORES.ack}}.estado-pill.blocked{color:${COLORES.blocked}}.estado-pill.idle{color:${COLORES.idle}}.estado-pill.nodata{color:${COLORES.nodata}}
+#body-hotspots .body-hotspot[data-estado-color=working]{--estado-c:${COLORES.working}}#body-hotspots .body-hotspot[data-estado-color=ack]{--estado-c:${COLORES.ack}}#body-hotspots .body-hotspot[data-estado-color=blocked]{--estado-c:${COLORES.blocked}}#body-hotspots .body-hotspot[data-estado-color=idle]{--estado-c:${COLORES.idle}}#body-hotspots .body-hotspot[data-estado-color=nodata]{--estado-c:${COLORES.nodata}}
+#body-hotspots path.body-hotspot[data-estado-color]:hover,#body-hotspots path.body-hotspot[data-estado-color].selected{fill:color-mix(in srgb,var(--estado-c) 28%,transparent);stroke:var(--estado-c);filter:drop-shadow(0 0 5px var(--estado-c))}
+#body-hotspots path.body-hotspot[data-estado-color].selected:hover{fill:color-mix(in srgb,var(--estado-c) 36%,transparent);stroke:var(--estado-c);filter:drop-shadow(0 0 7px var(--estado-c))}
+#body-hotspots div.body-hotspot[data-estado-color]:hover,#body-hotspots div.body-hotspot[data-estado-color].selected{background:color-mix(in srgb,var(--estado-c) 28%,transparent);outline:2px solid var(--estado-c);box-shadow:0 0 8px var(--estado-c)}
 .estado-board{position:absolute;inset:3%;z-index:60;background:rgba(20,14,6,.96);color:#f3e6c4;border:3px solid #c9a227;box-shadow:6px 6px 0 #000;display:flex;flex-direction:column;font:12px/1.35 system-ui,-apple-system,Segoe UI,sans-serif}
 .estado-board header{display:flex;align-items:center;gap:8px;padding:6px 10px;border-bottom:2px solid #5a4316;background:#2a1d0b}
 .estado-board header b{font:bold 12px/1.2 "Press Start 2P",monospace;color:#ffd75e;flex:1}
@@ -158,7 +173,7 @@
   }
   function pill(doc, st) {
     const p = doc.createElement('span');
-    p.className = 'estado-pill ' + (ESTADOS[st] ? ESTADOS[st].cls : 'nodata');
+    p.className = 'estado-pill ' + claseEstado(st);
     p.textContent = estadoTxt(st);
     return p;
   }
@@ -176,9 +191,11 @@
     card.appendChild(h);
     // Proyecto en el que está, bien visible justo debajo del nombre.
     if (f) {
+      // «Proyecto: digitalsignage.ai» (Carlos, 4-oct-2026: la caja lleva su etiqueta).
       const pr = doc.createElement('div');
       pr.className = 'estado-proyecto' + (f.proyecto ? '' : ' sin');
-      pr.textContent = f.proyecto || (s && s.enlazado ? 'sin proyecto declarado' : 'sin agente enlazado');
+      const etq = doc.createElement('span'); etq.className = 'etq'; etq.textContent = 'Proyecto:';
+      pr.append(etq, f.proyecto || (s && s.enlazado ? 'sin proyecto declarado' : 'sin agente enlazado'));
       card.appendChild(pr);
     }
     const dl = doc.createElement('dl');
@@ -186,11 +203,12 @@
     for (const [k, v] of filas) {
       const dt = doc.createElement('dt'); dt.textContent = k;
       const dd = doc.createElement('dd');
-      if (k === 'Estado' && f) dd.appendChild(pill(doc, f.estado)); else dd.textContent = v;
+      if (k === 'Estado' && f) dd.appendChild(pill(doc, s && s.enlazado ? f.estado : null)); else dd.textContent = v;
       dl.append(dt, dd);
     }
     card.appendChild(dl);
     colocar(doc);
+    pintarContornos(doc);
   }
   function colocar(doc) {
     if (!card || !cardAnchor) return;
@@ -219,6 +237,20 @@
     clearTimeout(hideT);
     hideT = setTimeout(() => { if (card) card.hidden = true; cardPersona = null; cardAnchor = null; }, 120);
   }
+  /* Contorno por estado: cada silueta (#body-hotspots [data-persona]) lleva data-estado-color
+   * y el CSS pinta su contorno de hover/selección con ese color. Sin dato aún, no se toca
+   * (queda el contorno de siempre); con dato y sin silla/agente, blanco. Las siluetas se
+   * repintan al cambiar de generación, así que se vuelve a marcar en cada hover y carga. */
+  function pintarContornos(doc) {
+    doc = doc || root.document;
+    if (!doc || !datos) return;
+    const c = doc.getElementById('body-hotspots'); if (!c) return;
+    estilos(doc);
+    c.querySelectorAll('[data-persona]').forEach(el => {
+      const cls = claseEstado(silla(datos, el.getAttribute('data-persona')));
+      if (el.getAttribute('data-estado-color') !== cls) el.setAttribute('data-estado-color', cls);
+    });
+  }
   function wireHover() {
     const doc = root.document; if (!doc) return;
     ['nameplates', 'body-hotspots'].forEach(id => {
@@ -226,6 +258,7 @@
       if (!c || c._estadoWired) return;
       c._estadoWired = true;
       c.addEventListener('mouseover', e => {
+        pintarContornos(doc);
         const el = e.target.closest('[data-persona]');
         if (el && el !== cardAnchor) mostrarFicha(el); else if (el) clearTimeout(hideT);
       });
@@ -427,7 +460,7 @@
   }
   function refrescarBoard(force) {
     pintarBoard();
-    return cargar(force).then(pintarBoard, pintarBoard);
+    return cargar(force).then(() => { pintarBoard(); pintarContornos(); }, pintarBoard);
   }
   function openBoard(opts = {}) {
     const doc = root.document; if (!doc) return null;
@@ -471,6 +504,8 @@
     const doc = root.document;
     const go = () => {
       wireHover();
+      // Colores de contorno listos antes del primer hover (una lectura; luego se reutiliza 25 s).
+      cargar(false).then(() => pintarContornos(doc), () => {});
       // Las placas y los cuerpos se repintan al cambiar de generación: el contenedor es el mismo,
       // así que con cablear una vez basta; por si llega tarde, se reintenta al primer movimiento.
       doc.addEventListener('mousemove', function once() { wireHover(); doc.removeEventListener('mousemove', once); });
@@ -478,5 +513,5 @@
     if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', go); else go();
   }
 
-  root.CouncilEstado = Object.freeze({ ENDPOINT, ocupados, abiertos, alternarGrupo, COLS, siguienteOrden, ordenar, hoja, restablecerHoja, cargar, silla, ficha, encargoEnPalabras, estadoTxt, hace, openBoard, closeBoard, isBoardOpen, mostrarFicha, ocultarFicha });
+  root.CouncilEstado = Object.freeze({ ENDPOINT, ocupados, abiertos, alternarGrupo, COLS, siguienteOrden, ordenar, hoja, restablecerHoja, cargar, silla, ficha, encargoEnPalabras, estadoTxt, COLORES, claseEstado, pintarContornos, hace, openBoard, closeBoard, isBoardOpen, mostrarFicha, ocultarFicha });
 })(typeof window !== 'undefined' ? window : globalThis);

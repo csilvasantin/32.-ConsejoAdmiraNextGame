@@ -160,3 +160,33 @@ test('parpadeo: la primera carga no avisa; cambia estado, misión o foco → avi
   // El último latido por sí solo no es un cambio.
   assert.deepEqual(E.cambiados(h1, E.huellas({ mesa: { leyendas: [{ ...elon, ultimo_latido: S }, d1.mesa.leyendas[1]] } })), []);
 });
+
+test('#5097 ficha Jobs: DeepAgent desde Jobs/Smith en foco; no «silla JobsGrokBot»', () => {
+  const jobs = {
+    persona: 'Steve Jobs', rol: 'CEO', enlazado: true, estado: 'working',
+    proyecto: 'admiranext', encargo: { numero: 5105, etiqueta: '#5105.10.04', titulo: 'Ronda matinal 6 agentes', de: 'status-web', desde: S - 120 },
+    cola: { pending: 0, ack: 2, in_progress: 1, blocked: 0 }, ultimo_latido: S - 5,
+    maquina_silla: 'MacBookAirAzul',
+    agentes: [{ persona: 'Jobs', tipo: 'silla', etiqueta: 'JobsGrokBot', runtime: 'Grok', maquina: 'GrokBot', vivo: true,
+      modo: 'trabajando', foco: 'Jobs/Smith: #5105 prueba bandera ASCII', tarea: '#5105 prueba bandera ASCII', proyecto: 'admiranext' }]
+  };
+  const f = E.ficha(jobs, NOW);
+  const get = k => f.filas.find(x => x[0] === k)[1];
+  assert.equal(get('Estado'), 'trabajando (working)');
+  assert.equal(get('Misión'), '#5105 prueba bandera ASCII');
+  assert.match(get('Deepagent · máquina'), /^Jobs\/Smith/);
+  assert.doesNotMatch(get('Deepagent · máquina'), /silla JobsGrokBot/);
+  assert.match(get('Deepagent · máquina'), /en línea/);
+  assert.match(get('Deepagent · máquina'), /MacBookAirAzul/);
+  assert.equal(E.deepDesdeLatido(jobs), 'Jobs/Smith');
+});
+
+test('#5097 sin latido y encargo «Ronda matinal» no se usa como misión', () => {
+  const jobs = {
+    persona: 'Steve Jobs', enlazado: true, estado: 'idle', encargo: { numero: 1, titulo: 'Ronda matinal 6 agentes' },
+    ultimo_latido: S - 900, agentes: [{ tipo: 'silla', etiqueta: 'JobsGrokBot', vivo: false }]
+  };
+  const f = E.ficha(jobs, NOW);
+  assert.equal(f.filas.find(x => x[0] === 'Misión')[1], 'nada en curso');
+  assert.match(f.filas.find(x => x[0] === 'Deepagent · máquina')[1], /silla JobsGrokBot/);
+});

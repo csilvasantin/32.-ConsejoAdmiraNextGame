@@ -75,6 +75,19 @@ test('mutating Cookie auth fails at edge without exact Origin and CSRF', async (
   assert.equal(hubCalls, 0);
 });
 
+test('el canje del ticket de Misiones llega al hub aunque traiga cookie y no traiga CSRF', async () => {
+  let forwarded;
+  const proxy = createFleetProxy({relays:[relay], fetchImpl:async (_url, init) => { forwarded = init; return Response.json({ok:false, error:'ticket_invalid'}, {status:401}); }});
+  const response = await proxy.fetch(new Request('https://fleet.admira.live/api/auth/yokup-ticket/consume', {
+    method:'POST',
+    headers:{Cookie:'__Host-yk_challenge=heredada', 'Content-Type':'application/json'},
+    body:JSON.stringify({ticket:'a'.repeat(43)})
+  }));
+  assert.equal(response.status, 401);
+  assert.equal(forwarded.headers.get('Cookie'), null);
+  assert.match(await response.text(), /ticket_invalid/);
+});
+
 test('exact Origin Cookie and CSRF reaches hub; machine token without Cookie remains separate', async () => {
   const seen = [];
   const proxy = createFleetProxy({relays:[relay], fetchImpl:async (_url, init) => { seen.push(init.headers); return Response.json({ok:true}); }});

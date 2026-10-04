@@ -130,7 +130,9 @@
 .estado-board header b{font:bold 12px/1.2 "Press Start 2P",monospace;color:#ffd75e;flex:1}
 .estado-board header button{background:#3b2a10;color:#f3e6c4;border:2px solid #c9a227;font:11px system-ui,sans-serif;padding:2px 8px;cursor:pointer}
 .estado-board .estado-body{overflow:auto;padding:6px 10px;flex:1}
-.estado-board h5{margin:8px 0 4px;color:#c9a227;font:bold 11px/1.2 "Press Start 2P",monospace}
+.estado-board h5{margin:8px 0 4px}
+.estado-board .estado-grupo{all:unset;cursor:pointer;color:#c9a227;font:bold 11px/1.2 "Press Start 2P",monospace;padding:4px 2px;display:block;width:100%}
+.estado-board .estado-grupo:hover,.estado-board .estado-grupo:focus-visible{color:#ffd75e;outline:1px dashed #5a4316}
 .estado-board table{width:100%;border-collapse:collapse}
 .estado-board th{text-align:left;color:#c9a227;font-weight:600;border-bottom:1px solid #5a4316;padding:3px 4px;white-space:nowrap}
 .estado-board td{border-bottom:1px solid #2f2410;padding:4px;vertical-align:top}
@@ -216,6 +218,22 @@
   }
 
   /* ── Tablero de DEBATIR ──────────────────────────────────────────────────── */
+  /* Ocupado = working, ack o blocked; libre y «sin datos» no cuentan (Carlos, 4-oct-2026). */
+  const OCUPADO = ['working', 'ack', 'blocked'];
+  function ocupados(sillas) {
+    const l = Array.isArray(sillas) ? sillas : [];
+    return { n: l.filter(s => s && OCUPADO.includes(s.estado)).length, total: l.length };
+  }
+  /* Grupos plegados por defecto; lo abierto se recuerda en localStorage. */
+  const LS_ABIERTOS = 'admira:debatir-grupos-abiertos';
+  function abiertos() {
+    try { const o = JSON.parse(root.localStorage.getItem(LS_ABIERTOS) || '{}'); return o && typeof o === 'object' ? o : {}; } catch (e) { return {}; }
+  }
+  function alternarGrupo(gen) {
+    const o = abiertos(); o[gen] = !o[gen];
+    try { root.localStorage.setItem(LS_ABIERTOS, JSON.stringify(o)); } catch (e) {}
+    return o[gen];
+  }
   let board = null, boardTimer = null, keyH = null;
   const GEN_NOMBRE = { leyendas: 'Leyendas', coetaneos: 'Coetáneos' };
   function pintarBoard() {
@@ -232,7 +250,16 @@
     const actual = String(root.currentGenPublic || 'leyendas');
     const gens = Object.keys(datos.mesa).sort((a, b) => (b === actual) - (a === actual));
     for (const gen of gens) {
-      const h = doc.createElement('h5'); h.textContent = GEN_NOMBRE[gen] || gen; body.appendChild(h);
+      const abierto = !!abiertos()[gen];
+      const c = ocupados(datos.mesa[gen]);
+      const h = doc.createElement('h5');
+      const bt = doc.createElement('button'); bt.type = 'button'; bt.className = 'estado-grupo'; bt.dataset.gen = gen;
+      bt.setAttribute('aria-expanded', String(abierto));
+      bt.title = (abierto ? 'Plegar' : 'Desplegar') + ' · ocupados = trabajando, aceptado o bloqueado';
+      bt.textContent = (abierto ? '▾ ' : '▸ ') + (GEN_NOMBRE[gen] || gen) + ' (' + c.n + ' de ' + c.total + ')';
+      bt.onclick = () => { alternarGrupo(gen); pintarBoard(); };
+      h.appendChild(bt); body.appendChild(h);
+      if (!abierto) continue;
       const tb = doc.createElement('table');
       tb.innerHTML = '<thead><tr><th>Consejero</th><th>Estado</th><th>En qué está ahora</th><th>Desde</th><th>Deepagent · máquina</th><th>Último latido</th></tr></thead>';
       const tbody = doc.createElement('tbody');
@@ -306,5 +333,5 @@
     if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', go); else go();
   }
 
-  root.CouncilEstado = Object.freeze({ ENDPOINT, cargar, silla, ficha, encargoEnPalabras, estadoTxt, hace, openBoard, closeBoard, isBoardOpen, mostrarFicha, ocultarFicha });
+  root.CouncilEstado = Object.freeze({ ENDPOINT, ocupados, abiertos, alternarGrupo, cargar, silla, ficha, encargoEnPalabras, estadoTxt, hace, openBoard, closeBoard, isBoardOpen, mostrarFicha, ocultarFicha });
 })(typeof window !== 'undefined' ? window : globalThis);

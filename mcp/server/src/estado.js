@@ -54,7 +54,7 @@ export function tituloEncargo(texto, max = 120) {
     .filter((l) => !/^soy [^.\n]{1,60}\.?$/i.test(l));
   // «Repo: …» / «Proyecto: …» son metadatos: si hay otra línea, esa describe mejor el encargo.
   if (lineas.length > 1 && /^(repo|repositorio|proyecto|project|rama|branch)\s*:/i.test(lineas[0])) lineas.push(lineas.shift());
-  let t = (lineas[0] || '').replace(/^[^\p{L}\p{N}«"(¿¡#]+/u, '').replace(/\s+/g, ' ').trim();
+  let t = (lineas[0] || '').replace(/^[^\p{L}\p{N}«"(¿¡#[]+/u, '').replace(/\s+/g, ' ').trim();
   if (!t) return null;
   // La bandeja pública recorta el texto a 140: si la línea elegida es la última, va cortada.
   if (String(texto).length >= 139 && lineas.length && lineas[lineas.length - 1] === lineas[0] && t.length < max) t = t.replace(/[\s·,;:.\-–—]+$/u, '') + '…';

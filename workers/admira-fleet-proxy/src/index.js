@@ -120,10 +120,14 @@ export function createFleetProxy({ relays = RELAYS, fetchImpl = fetch } = {}) {
       const handoffPost = request.method === 'POST' && path === '/api/auth/handoff';
       const handoffGet = request.method === 'GET' && path === '/api/auth/handoff';
       const handoffRequest = handoffPost || handoffGet;
+      // El ticket de un solo uso es el secreto. Lo llama el worker de Yokup, a veces
+      // con una cookie heredada del navegador y sin CSRF. Exigir CSRF aquí devolvía
+      // 403 y Misiones volvía a pintar la verja de Yokup.
+      const ticketConsume = request.method === 'POST' && path === '/api/auth/yokup-ticket/consume';
       const mayFailover = retrySafe(request, path, handoffRequest);
       const opaqueHandoff = handoffPost && origin === 'null';
       if (handoffPost && origin !== 'https://www.admira.live' && origin !== 'null') return jsonResponse('', { error:'origin no permitido' }, 403);
-      if (mutating && cookie && !handoffRequest) {
+      if (mutating && cookie && !handoffRequest && !ticketConsume) {
         if (!origin || !ALLOWED_ORIGINS.has(origin)) return jsonResponse(origin, { error:'origin no permitido' }, 403);
         const csrf = String(request.headers.get('X-Fleet-CSRF') || '');
         if (!/^[A-Za-z0-9_-]{16,128}$/.test(csrf)) return jsonResponse(origin, { error:'csrf inválido' }, 403);
@@ -146,6 +150,7 @@ export function createFleetProxy({ relays = RELAYS, fetchImpl = fetch } = {}) {
       }
 
       const outgoingHeaders = headersToHub(request);
+      if (ticketConsume) outgoingHeaders.delete('cookie');
       let body = request.method === 'GET' || request.method === 'HEAD'
         ? undefined
         : await request.arrayBuffer();

@@ -94,9 +94,11 @@ test('ficha: proyecto bajo el nombre y Misión con la tarea del latido si no hay
   assert.equal(sinProyecto.filas[0][1], 'Portada v8.1');
 });
 
-test('color por estado: trabajando rojo, libre verde, sin datos blanco; píldora y contorno iguales', () => {
-  assert.equal(E.COLORES.working, '#ff3b30');
-  assert.equal(E.COLORES.idle, '#3ddc84');
+test('color por estado (#4678): trabajando verde, esperando amarillo, libre/sin datos blanco; píldora y contorno iguales', () => {
+  assert.equal(E.COLORES.working, '#3ddc84');
+  assert.equal(E.COLORES.ack, '#ffd60a');
+  assert.equal(E.COLORES.blocked, '#ffd60a');
+  assert.equal(E.COLORES.idle, '#ffffff');
   assert.equal(E.COLORES.nodata, '#ffffff');
   assert.equal(E.claseEstado({ enlazado: true, estado: 'working' }), 'working');
   assert.equal(E.claseEstado({ enlazado: true, estado: 'idle' }), 'idle');
@@ -139,4 +141,19 @@ test('ficha: «Desde» usa s.desde del feed (libre) con hora de Madrid; «sin da
   assert.equal(f.filas.find((x) => x[0] === 'Desde')[1], 'hace 14 min (19:01)');
   const g = E.ficha({ ...base, desde: null }, ahora);
   assert.equal(g.filas.find((x) => x[0] === 'Desde')[1], 'sin datos');
+});
+
+test('parpadeo: la primera carga no avisa; cambia estado, misión o foco → avisa solo a ese', () => {
+  const d1 = { mesa: { leyendas: [elon, { persona: 'George Lucas', enlazado: true, estado: 'idle', agentes: [{ foco: 'a' }] }] } };
+  const h1 = E.huellas(d1);
+  assert.deepEqual(E.cambiados(null, h1), []);
+  assert.deepEqual(E.cambiados(h1, E.huellas(d1)), []);
+  const lucasFoco = { mesa: { leyendas: [elon, { persona: 'George Lucas', enlazado: true, estado: 'idle', agentes: [{ foco: 'b' }] }] } };
+  assert.deepEqual(E.cambiados(h1, E.huellas(lucasFoco)), ['georgelucas']);
+  const elonEstado = { mesa: { leyendas: [{ ...elon, estado: 'idle' }, d1.mesa.leyendas[1]] } };
+  assert.deepEqual(E.cambiados(h1, E.huellas(elonEstado)), ['elonmusk']);
+  const elonMision = { mesa: { leyendas: [{ ...elon, encargo: { ...elon.encargo, numero: 5001, titulo: 'Otro' } }, d1.mesa.leyendas[1]] } };
+  assert.deepEqual(E.cambiados(h1, E.huellas(elonMision)), ['elonmusk']);
+  // El último latido por sí solo no es un cambio.
+  assert.deepEqual(E.cambiados(h1, E.huellas({ mesa: { leyendas: [{ ...elon, ultimo_latido: S }, d1.mesa.leyendas[1]] } })), []);
 });

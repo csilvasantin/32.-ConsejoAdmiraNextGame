@@ -421,10 +421,11 @@ function arrancaPong(root) {
 export function alternaPong(root = lastRoot || (typeof document !== 'undefined' ? document : null), fetchImpl = lastFetch) {
   if (!root || !visible) return modo;
   lastRoot = root;
-  if (modo === 'pong') { modo = 'logo'; detalleIdx = 0; paraPong(); aplicarModo(root); return modo; }
+  if (modo === 'pong') { modo = 'logo'; detalleIdx = 0; paraPong(); aplicarModo(root); if (focused) pintarDetalle(root); return modo; }
   modo = 'pong';
   paraPaseo(root);
   aplicarModo(root);
+  pararDetalle();
   arrancaPong(root);
   return modo;
 }
@@ -674,6 +675,93 @@ export function startMosaic(root = lastRoot || (typeof document !== 'undefined' 
   return true;
 }
 
+/* Vista de cerca (#5110/#5113). El tubo frontal usa la MISMA celda que el mosaico
+   (mosaicTile): live con credentials, evidencia/último cerrado, placard — nunca
+   SIN SEÑAL vacío. Con consejero elegido, una sola; si no, las seis. */
+let detalleTimer = null;
+let detalleGen = 0;
+
+function detalleHost(root) {
+  return root && root.querySelector ? root.querySelector('#mac-hoy-pantalla') : null;
+}
+
+function pararDetalle() {
+  detalleGen++;
+  if (detalleTimer) { clearInterval(detalleTimer); detalleTimer = null; }
+}
+
+function celdaPantalla(doc, alias) {
+  const tile = doc.createElement('div');
+  tile.className = 'mac-hoy-tile';
+  if (alias) tile.setAttribute('data-seat', alias);
+  tile.setAttribute('role', 'button');
+  tile.tabIndex = 0;
+  tile.setAttribute('aria-label', alias ? ('Abrir computadora de ' + alias) : 'sin historial');
+  const img = doc.createElement('img');
+  img.alt = alias ? ('Pantalla de ' + alias) : '';
+  img.decoding = 'async';
+  const ns = doc.createElement('pre');
+  ns.className = 'mac-hoy-tile-ns';
+  ns.textContent = '';
+  const name = doc.createElement('span');
+  name.className = 'mac-hoy-tile-name';
+  name.textContent = alias ? alias.toUpperCase() : '';
+  tile.appendChild(img); tile.appendChild(ns); tile.appendChild(name);
+  if (alias) {
+    const abrir = (e) => {
+      if (e && e.preventDefault) e.preventDefault();
+      if (e && e.stopPropagation) e.stopPropagation();
+      if (typeof window !== 'undefined' && window.MacRemote && window.MacRemote.open) window.MacRemote.open(alias);
+    };
+    tile.addEventListener('click', abrir);
+    tile.addEventListener('keydown', (e) => { if (e.key === 'Enter' || e.key === ' ') abrir(e); });
+  }
+  return tile;
+}
+
+export function pintarPantallaCrt(host, opts = {}) {
+  if (!host || !host.ownerDocument || !host.ownerDocument.createElement) return false;
+  const doc = host.ownerDocument;
+  const raw = opts.persona == null ? '' : String(opts.persona).trim();
+  const alias = raw ? chairAlias(raw) : '';
+  const sillas = !raw ? MOSAIC_SEATS.slice() : (alias ? [alias] : []);
+  const firma = (sillas.length === 1 ? 'una:' + sillas[0] : (sillas.length ? 'mosaico' : 'sin'));
+  if (host.getAttribute('data-firma') !== firma) {
+    host.textContent = '';
+    host.classList.add('mac-hoy-mosaic', 'mac-hoy-mosaic-frente');
+    host.setAttribute('data-tipo', sillas.length === 1 ? 'una' : 'mosaico');
+    host.setAttribute('data-firma', firma);
+    const celdas = sillas.length ? sillas : [null];
+    celdas.forEach((s) => host.appendChild(celdaPantalla(doc, s)));
+  }
+  const request = opts.fetchImpl || (typeof fetch === 'function' ? fetch : null);
+  const tiles = host.querySelectorAll ? Array.from(host.querySelectorAll('.mac-hoy-tile')) : (host.children || []);
+  Array.from(tiles).forEach((t) => {
+    const seat = t.getAttribute && t.getAttribute('data-seat');
+    if (seat && request) mosaicTile(t, seat, request);
+    else mosaicPlacard(t, seat || 'mesa', 'sin historial', '');
+  });
+  return true;
+}
+
+function pintarDetalle(root) {
+  const front = root && root.querySelector ? root.querySelector('#mac-hoy-front') : null;
+  const host = detalleHost(root);
+  if (!front || !host || !front.classList || !front.classList.contains('on') || modo === 'pong') {
+    pararDetalle();
+    return;
+  }
+  const token = ++detalleGen;
+  if (detalleTimer) { clearInterval(detalleTimer); detalleTimer = null; }
+  const paso = () => {
+    if (token !== detalleGen) return;
+    const persona = (modo === 'remote' && remotePersona) ? remotePersona : null;
+    pintarPantallaCrt(host, { persona, fetchImpl: lastFetch });
+  };
+  paso();
+  detalleTimer = setInterval(paso, MOSAIC_POLL_MS);
+}
+
 export function isVisible() { return visible; }
 export function isFocused() { return focused; }
 
@@ -908,6 +996,7 @@ export function clearRemote(root = lastRoot || (typeof document !== 'undefined' 
 
 export function closeFront(root = lastRoot || (typeof document !== 'undefined' ? document : null)) {
   focused = false;
+  pararDetalle();
   const el = root && root.querySelector('#mac-hoy-front');
   if (el) el.classList.remove('on');
 }
@@ -920,10 +1009,12 @@ export function openFront(root = lastRoot || (typeof document !== 'undefined' ? 
   const el = root.querySelector('#mac-hoy-front');
   if (el) el.classList.add('on');
   fitScreen(root);                // el escenario frontal medía 0 mientras estaba oculto
+  if (modo === 'pong') pararDetalle();
   if (modo === 'pong') { arrancaPong(root); return true; }   // el lienzo frontal acaba de aparecer
   const front = root.querySelector('#mac-hoy-crt-front');
   if (front) paintCrt(front, lastText).then(() => paseaTexto(front));
   draw(root, fetchImpl);
+  pintarDetalle(root);
   return true;
 }
 
@@ -961,6 +1052,7 @@ export function boot(root = document, fetchImpl = fetch) {
   fitScreen(root);
   watchScreen(root);
   startMosaic(root, fetchImpl);   // #5109 mosaico del Consejo en la mesa
+  root.addEventListener && root.addEventListener('mac-screen-mode', () => { if (focused) pintarDetalle(root); });
   // El Mac de la barra SCUMM está SIEMPRE a la vista, así que sus mandos tienen
   // que valer también con el Mac de la mesa apagado: lo encienden y siguen. Los
   // de la mesa y los de la vista grande no lo necesitan —si está apagado, no se
@@ -1072,7 +1164,7 @@ export function boot(root = document, fetchImpl = fetch) {
 }
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-  window.MacHoy = { todayMadrid, isHoy, seatOf, linesFor, IDLE_COPY, ERROR_COPY, paintCrt, fetchHoy, boot, setVisible, toggle, isVisible, isFocused, openFront, closeFront, fitScreen, MAC_ART_W, MODOS, setModo, modoActual, detalleLineas, ultimaMision, ultimasMisiones, envolver, avanzaPantalla, alternaPong, paraPong, mandoPong, estadoPong, DETALLE_ANCHO, chairAlias, CHAIR_ALIAS, SCREEN_JPEG, EVIDENCE_URL, EVIDENCE_POLL_MS, evidencePlacard, showRemote, clearRemote, remoteSeat, MOSAIC_SEATS, buildMosaic, refreshMosaic, tituloCorto, matchesChair, ultimaCerrada, proyectoAnteriorLineas, missionCaptureUrl, mosaicHasWork, mostrarProyectoAnterior };
+  window.MacHoy = { todayMadrid, isHoy, seatOf, linesFor, IDLE_COPY, ERROR_COPY, paintCrt, fetchHoy, boot, setVisible, toggle, isVisible, isFocused, openFront, closeFront, fitScreen, MAC_ART_W, MODOS, setModo, modoActual, detalleLineas, ultimaMision, ultimasMisiones, envolver, avanzaPantalla, alternaPong, paraPong, mandoPong, estadoPong, DETALLE_ANCHO, chairAlias, CHAIR_ALIAS, SCREEN_JPEG, EVIDENCE_URL, EVIDENCE_POLL_MS, evidencePlacard, showRemote, clearRemote, remoteSeat, MOSAIC_SEATS, buildMosaic, refreshMosaic, pintarPantallaCrt, tituloCorto, matchesChair, ultimaCerrada, proyectoAnteriorLineas, missionCaptureUrl, mosaicHasWork, mostrarProyectoAnterior };
   const bootAndMaybeRemote = () => {
     boot();
     try {

@@ -1339,6 +1339,7 @@
             column-gap: 26px;
         }
         .verb-btn { text-align: left; }
+        a.verb-btn { text-decoration: none; display: inline-block; }
         .verb-btn[hidden] { display: none !important; }
         .verb-pager {
             display: flex; flex-direction: column; justify-content: center; gap: 5px;
@@ -1615,27 +1616,44 @@
         .body-hotspots.preguntar-active,
         .body-hotspots.entrenar-active,
         .body-hotspots.ficha-active { pointer-events: auto; }
-        .body-hotspot {
+        /* Silueta por consejero: el SVG cubre la escena (viewBox = píxeles del arte)
+           y el trazo sigue cabeza, hombros y torso. Escala con la imagen. */
+        .silhouette-svg {
             position: absolute;
+            inset: 0;
+            width: 100%;
+            height: 100%;
+            overflow: visible;
+            pointer-events: none;
+        }
+        .body-hotspot {
+            fill: transparent;
+            stroke: transparent;
+            stroke-width: 3.5;
+            stroke-linejoin: round;
+            stroke-linecap: round;
             cursor: pointer;
-            border-radius: 40% 40% 12px 12px;
-            transition: all 0.3s ease;
-            border: 2px solid transparent;
-            background: transparent;
+            transition: fill 0.2s ease, stroke 0.2s ease;
+        }
+        .body-hotspots.ficha-active .body-hotspot,
+        .body-hotspots.preguntar-active .body-hotspot,
+        .body-hotspots.entrenar-active .body-hotspot {
+            pointer-events: visiblePainted;
         }
         .body-hotspot:hover {
-            background: radial-gradient(ellipse at 50% 30%, rgba(52, 152, 219, 0.25), rgba(52, 152, 219, 0.05));
-            border-color: rgba(52, 152, 219, 0.5);
-            box-shadow: 0 0 15px rgba(52, 152, 219, 0.35);
+            fill: rgba(52, 152, 219, 0.30);
+            stroke: rgba(125, 198, 255, 0.95);
+            filter: drop-shadow(0 0 5px rgba(52, 152, 219, 0.9));
         }
         .body-hotspot.selected {
-            background: radial-gradient(ellipse at 50% 30%, rgba(46, 204, 113, 0.25), rgba(46, 204, 113, 0.05));
-            border-color: rgba(46, 204, 113, 0.5);
-            box-shadow: 0 0 15px rgba(46, 204, 113, 0.35);
+            fill: rgba(46, 204, 113, 0.28);
+            stroke: rgba(120, 230, 160, 0.95);
+            filter: drop-shadow(0 0 5px rgba(46, 204, 113, 0.9));
         }
         .body-hotspot.selected:hover {
-            background: radial-gradient(ellipse at 50% 30%, rgba(46, 204, 113, 0.3), rgba(46, 204, 113, 0.08));
-            box-shadow: 0 0 20px rgba(46, 204, 113, 0.45);
+            fill: rgba(46, 204, 113, 0.36);
+            stroke: rgba(170, 255, 200, 1);
+            filter: drop-shadow(0 0 7px rgba(46, 204, 113, 0.95));
         }
         /* Vídeo de la presentación — superpuesto a la imagen del consejo, mismo tamaño.
            El poster (primer fotograma) ya muestra el Apple II integrado en la mesa,
@@ -3892,7 +3910,7 @@ body.rail-open{overflow:hidden}
                     <button class="verb-btn verb-primary" data-verb="debatir" title="El Consejo debate un tema entre todos sus miembros" onclick="selectVerb(this)">Debatir</button>
                     <button class="verb-btn verb-primary" data-verb="entrenar" title="Alimenta a un consejero con URLs y material de referencia" onclick="selectVerb(this)">Entrenar</button>
                     <button class="verb-btn" data-verb="crear" title="Genera una imagen a partir de tu descripción" onclick="selectVerb(this)">Crear</button>
-                    <button class="verb-btn" data-verb="hablar" title="Conecta contexto con Yarig.AI (foco, tareas, estado)" onclick="selectVerb(this)">Yarig.AI</button>
+                    <a class="verb-btn" href="/conversacion" title="Conversaciones del equipo: consejeros, deepagents y Carlos">Conversación</a>
                     <button class="verb-btn" data-verb="leer" title="El Consejo te cuenta el libro/resumen del día (audio)" onclick="selectVerb(this)">Pensar</button>
                     <button class="verb-btn" data-verb="votar" title="Somete una propuesta a votación del Consejo" onclick="selectVerb(this)">Votar</button>
                     <button class="verb-btn" data-verb="analizar" title="Analiza una URL, texto o archivo con el Consejo" onclick="selectVerb(this)">Analizar</button>
@@ -4441,7 +4459,8 @@ body.rail-open{overflow:hidden}
 <script defer src="council-grokbot.js?v=20261003-flt101402"></script>
 <script defer src="council-todo.js?v=20260930-flt101302"></script>
 <script defer src="council-estado.js?v=20261004-estado2"></script>
-<script defer src="app.flt-100529.js?v=20261004-estado1"></script>
+<script defer src="assets/council-silhouettes.js?v=20261004-silueta"></script>
+<script defer src="app.flt-100529.js?v=20261004-silueta"></script>
 <script defer src="council-preview.js?v=20260921-ultra1"></script>
 <script defer src="council-composer.js?v=20260921-composer1"></script>
 <script defer src="council-working.js?v=20260930-flt101302"></script>

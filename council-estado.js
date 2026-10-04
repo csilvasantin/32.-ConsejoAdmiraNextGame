@@ -65,18 +65,22 @@
 
   /* Ficha de una silla, en líneas [etiqueta, valor]. Pura: se prueba en node. */
   function ficha(s, ahoraMs) {
-    if (!s) return { estado: null, filas: [['Ahora', SIN], ['Estado', SIN], ['Desde', SIN], ['Deepagent · máquina', SIN], ['Último latido', SIN]] };
-    if (!s.enlazado) return { estado: null, filas: [['Ahora', 'sin agente enlazado: sin datos de trabajo'], ['Estado', SIN], ['Desde', SIN], ['Deepagent · máquina', 'sin agente enlazado'], ['Último latido', SIN]] };
-    let ahora;
-    if (s.encargo) ahora = encargoEnPalabras(s.encargo);
-    else if (s.estado === 'working') ahora = 'trabajando según su latido, sin encargo en curso en la bandeja';
-    else if (s.estado) ahora = 'nada en curso';
-    else ahora = SIN;
-    const filas = [['Ahora', ahora], ['Estado', estadoTxt(s.estado)],
+    if (!s) return { estado: null, proyecto: null, filas: [['Misión', SIN], ['Estado', SIN], ['Desde', SIN], ['Deepagent · máquina', SIN], ['Último latido', SIN]] };
+    if (!s.enlazado) return { estado: null, proyecto: null, filas: [['Misión', 'sin agente enlazado: sin datos de trabajo'], ['Estado', SIN], ['Desde', SIN], ['Deepagent · máquina', 'sin agente enlazado'], ['Último latido', SIN]] };
+    /* Misión (Carlos, 4-oct-2026): lo que está haciendo. Encargo en curso si lo hay; si no,
+     * la tarea o el foco que declara su latido (yokup_presencia), nunca un texto genérico. */
+    const latidoTxt = k => (s.agentes || []).map(a => a && a[k]).find(Boolean) || null;
+    const tarea = latidoTxt('tarea'), foco = latidoTxt('foco');
+    let mision;
+    if (s.encargo) mision = encargoEnPalabras(s.encargo);
+    else if (tarea || foco) mision = tarea || foco;
+    else if (s.estado === 'working') mision = 'trabajando según su latido, sin misión declarada';
+    else if (s.estado) mision = 'nada en curso';
+    else mision = SIN;
+    const filas = [['Misión', mision], ['Estado', estadoTxt(s.estado)],
       ['Desde', s.encargo ? hace(s.encargo.desde, ahoraMs) : SIN]];
     if (s.encargo && s.encargo.de) filas.push(['Encargado por', s.encargo.de]);
-    const foco = (s.agentes || []).map(a => a.foco).find(Boolean);
-    if (foco) filas.push(['Foco del latido', foco]);
+    if (foco && foco !== mision) filas.push(['Foco del latido', foco]);
     if (s.cola) {
       const c = s.cola, partes = [];
       if (c.pending) partes.push(c.pending + ' pendientes');
@@ -88,7 +92,7 @@
     }
     filas.push(['Deepagent · máquina', agentesTxt(s)]);
     filas.push(['Último latido', hace(s.ultimo_latido, ahoraMs)]);
-    return { estado: s.estado, filas };
+    return { estado: s.estado, proyecto: s.proyecto || latidoTxt('proyecto'), filas };
   }
 
   /* ── Datos ───────────────────────────────────────────────────────────────── */
@@ -121,6 +125,8 @@
   const CSS = `
 .estado-card{position:fixed;z-index:9000;max-width:360px;min-width:250px;background:#140e06;color:#f3e6c4;border:2px solid #c9a227;box-shadow:4px 4px 0 #000;padding:8px 10px;font:12px/1.35 system-ui,-apple-system,Segoe UI,sans-serif;pointer-events:none}
 .estado-card h4{margin:0 0 4px;font:bold 12px/1.2 "Press Start 2P",monospace;color:#ffd75e;letter-spacing:.5px}
+.estado-card .estado-proyecto{margin:0 0 6px;padding:2px 6px;display:inline-block;background:#2a1d0b;border:1px solid #c9a227;color:#7ee7ff;font:bold 11px/1.3 "Press Start 2P",monospace;letter-spacing:.3px;word-break:break-word}
+.estado-card .estado-proyecto.sin{color:#8b8170;font:italic 11px/1.3 system-ui,-apple-system,Segoe UI,sans-serif}
 .estado-card dl{margin:0;display:grid;grid-template-columns:auto 1fr;gap:2px 8px}
 .estado-card dt{color:#c9a227;white-space:nowrap}.estado-card dd{margin:0;word-break:break-word}
 .estado-pill{display:inline-block;padding:0 5px;border:1px solid currentColor;border-radius:2px;font-weight:600}
@@ -168,8 +174,15 @@
     const ag = s && s.agentes && s.agentes[0] ? s.agentes[0].persona : '';
     h.textContent = persona + (ag && key(ag) !== key(persona.split(' ').slice(-1)[0]) ? ' · ' + ag : '');
     card.appendChild(h);
+    // Proyecto en el que está, bien visible justo debajo del nombre.
+    if (f) {
+      const pr = doc.createElement('div');
+      pr.className = 'estado-proyecto' + (f.proyecto ? '' : ' sin');
+      pr.textContent = f.proyecto || (s && s.enlazado ? 'sin proyecto declarado' : 'sin agente enlazado');
+      card.appendChild(pr);
+    }
     const dl = doc.createElement('dl');
-    const filas = f ? f.filas : [['Ahora', enVuelo ? 'mirando…' : SIN + (ultimoError ? ' (no responde el MCP)' : '')]];
+    const filas = f ? f.filas : [['Misión', enVuelo ? 'mirando…' : SIN + (ultimoError ? ' (no responde el MCP)' : '')]];
     for (const [k, v] of filas) {
       const dt = doc.createElement('dt'); dt.textContent = k;
       const dd = doc.createElement('dd');
@@ -249,7 +262,7 @@
   const COLS = Object.freeze([
     { id: 'consejero', label: 'Consejero', min: 90, def: 130, clave: s => key(s.persona) },
     { id: 'estado', label: 'Estado', min: 80, def: 190, clave: s => (s.estado in RANGO_ESTADO ? RANGO_ESTADO[s.estado] : null) },
-    { id: 'ahora', label: 'En qué está ahora', min: 140, def: 220, clave: (s, f) => key(f('Ahora')) },
+    { id: 'ahora', label: 'Misión', min: 140, def: 220, clave: (s, f) => key(f('Misión')) },
     { id: 'desde', label: 'Desde', min: 70, def: 135, clave: s => (s.encargo && Number(s.encargo.desde)) || null },
     { id: 'agente', label: 'Deepagent · máquina', min: 110, def: 120, clave: (s, f) => key(f('Deepagent · máquina')) },
     { id: 'latido', label: 'Último latido', min: 70, def: 135, clave: s => Number(s.ultimo_latido) || null }
@@ -396,7 +409,7 @@
         const quien = doc.createElement('span'); quien.className = 'quien'; quien.textContent = s.persona + ' ';
         const sm = doc.createElement('small'); sm.textContent = s.rol || ''; quien.appendChild(sm);
         const cola = get('Bandeja');
-        const ahoraTxt = get('Ahora') + (cola && cola !== SIN ? ' · bandeja: ' + cola : '');
+        const ahoraTxt = get('Misión') + (cola && cola !== SIN ? ' · bandeja: ' + cola : '');
         tr.append(
           celda(doc, s.persona + (s.rol ? ' · ' + s.rol : ''), quien),
           celda(doc, estadoTxt(s.estado), pill(doc, s.estado)),

@@ -95,6 +95,9 @@ export function estadoSilla(def, { presencia, bandejas }, ahoraMs) {
       vivo: presencia ? !!(r && seg(r.updated) >= ahoraS - VIVO_SEG) : null,
       modo: (r && r.mode) || null,
       foco: r ? (String(r.focus || r.task || '').trim() || null) : null,
+      // Ficha de la mesa (Carlos, 4-oct-2026): proyecto bajo el nombre y Misión = tarea del latido.
+      proyecto: r ? (String(r.project || '').trim() || null) : null,
+      tarea: r ? (String(r.task || '').trim() || null) : null,
       _abiertos: abiertos,
     };
   });
@@ -114,8 +117,11 @@ export function estadoSilla(def, { presencia, bandejas }, ahoraMs) {
     creado: seg(t.x.ts) || null, acuse: seg(t.x.ack_at) || null, desde: seg(t.x.ack_at) || seg(t.x.ts) || null,
   } : null);
   const latidos = agentes.map((a) => a.latido).filter((n) => Number.isFinite(n));
+  // Proyecto de la silla: el del latido más reciente que lo declare (yokup_presencia · proyecto).
+  const conProyecto = agentes.filter((a) => a.proyecto).sort((a, b) => (Number(b.latido) || 0) - (Number(a.latido) || 0));
   return {
     ...base, estado,
+    proyecto: conProyecto.length ? conProyecto[0].proyecto : null,
     encargo: enc(actual),
     ultimo_pendiente: actual ? null : enc(ultimoPendiente),
     cola: sinBandeja ? null : cola,

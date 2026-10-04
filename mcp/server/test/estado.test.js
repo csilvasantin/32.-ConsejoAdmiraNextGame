@@ -39,6 +39,7 @@ function fetchFalso(peticiones, { presenciaCae = false } = {}) {
 test('tituloEncargo: en palabras, sin «Soy X.» ni emojis de cabecera', () => {
   assert.equal(tituloEncargo('Soy Carlos.\n✋ Tablero de estado'), 'Tablero de estado');
   assert.equal(tituloEncargo('Repo: csilvasantin/x\nArreglar el hover'), 'Arreglar el hover');
+  assert.equal(tituloEncargo('[Simple] 15 minutos'), '[Simple] 15 minutos', 'el corchete de cabecera se queda (Wozniak)');
   assert.equal(tituloEncargo(''), null);
 });
 

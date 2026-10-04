@@ -40,3 +40,18 @@ test('silla(): encuentra por nombre en cualquier generación', () => {
   assert.equal(E.silla(d, 'elon musk').persona, 'Elon Musk');
   assert.equal(E.silla(d, 'Jensen Huang'), null);
 });
+
+test('ocupados: working, ack y blocked cuentan; idle y sin datos no', () => {
+  const l = ['working', 'ack', 'blocked', 'idle', null, undefined, 'working', 'idle'].map(estado => ({ estado }));
+  assert.deepEqual(E.ocupados(l), { n: 4, total: 8 });
+  assert.deepEqual(E.ocupados(null), { n: 0, total: 0 });
+});
+
+test('grupos plegados por defecto y el estado se recuerda', () => {
+  const mem = {};
+  globalThis.localStorage = { getItem: k => (k in mem ? mem[k] : null), setItem: (k, v) => { mem[k] = String(v); } };
+  assert.equal(!!E.abiertos().leyendas, false);
+  assert.equal(E.alternarGrupo('leyendas'), true);
+  assert.equal(E.abiertos().leyendas, true);
+  assert.equal(E.alternarGrupo('leyendas'), false);
+});

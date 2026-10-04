@@ -36,6 +36,8 @@ test('capabilities expose true provider limits and no token', t => {
   const {bridge} = setup(t,async () => {throw new Error('must not call upstream');});
   const capabilities = bridge.capabilities();
   assert.equal(capabilities.provider,'webhook');
+  assert.equal(capabilities.mode,'inbox');
+  assert.equal(capabilities.bidirectional,true);
   assert.equal(capabilities.available,true);
   for (const key of ['historyFromDesktop','desktop','attachments','routines','interrupt']) assert.equal(capabilities[key],false);
   assert.equal(capabilities.personas.length,6);
@@ -54,7 +56,9 @@ test('send uses verified session author, existing GrokBot inbox, and no mission'
   assert.deepEqual(JSON.parse(seen[0].init.body),{text:request().prompt,target_persona:'Jobs',target_machine:'grokbot',from:'Admira.live · carlos@example.test',materialize_mission:false});
   assert.equal(message.status,'pending');
   assert.match(message.id,/^gb_[a-f0-9]{48}$/);
-  assert.deepEqual(Object.keys(message).sort(),['createdAt','id','persona','prompt','status','text','updatedAt'].sort());
+  assert.deepEqual(Object.keys(message).sort(),['attachments','createdAt','id','native','persona','prompt','source','status','text','updatedAt'].sort());
+  assert.equal(message.source,'inbox');
+  assert.equal(message.native,true);
   assert.equal(fs.statSync(stateFile).mode & 0o777,0o600);
   assert.doesNotMatch(fs.readFileSync(stateFile,'utf8'),new RegExp(token));
 });

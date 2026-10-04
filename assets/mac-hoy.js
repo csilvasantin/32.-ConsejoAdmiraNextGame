@@ -27,6 +27,8 @@ export function seatOf(mission) {
 export const IDLE_COPY = 'HOY\n…';
 export const ERROR_COPY = 'HOY\nsin cable';
 export const SCREEN_JPEG = 'https://fleet.admira.live/api/grokbot/screen.jpg';
+export const EVIDENCE_URL = '/api/council/evidence';
+export const EVIDENCE_POLL_MS = 5000;
 export const CHAIR_ALIAS = {
   'Steve Jobs': 'Jobs', Jobs: 'Jobs',
   'Steve Wozniak': 'Wozniak', Wozniak: 'Wozniak',
@@ -487,6 +489,22 @@ function paintRemoteError(root, alias, code='capture_unavailable') {
 
 export function remoteSeat() { return remotePersona; }
 
+export function evidencePlacard(title, subtitle = '') {
+  const esc = (v) => String(v || '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/"/g, '&quot;');
+  const head = esc(String(title || 'sin actividad').slice(0, 40));
+  const sub = esc(String(subtitle || '').slice(0, 48));
+  const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="512" height="342"><rect width="100%" height="100%" fill="#1a1208"/><text x="50%" y="46%" fill="#c8a060" font-family="Menlo,monospace" font-size="26" text-anchor="middle">' + head + '</text><text x="50%" y="62%" fill="#886633" font-family="Menlo,monospace" font-size="14" text-anchor="middle">' + sub + '</text></svg>';
+  return 'data:image/svg+xml;charset=utf-8,' + encodeURIComponent(svg);
+}
+
+function formatCaptureAt(ms) {
+  const n = Number(ms);
+  if (!Number.isFinite(n) || n <= 0) return '';
+  try {
+    return new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).format(new Date(n));
+  } catch (_) { return ''; }
+}
+
 export function showRemote(persona, root = lastRoot || (typeof document !== 'undefined' ? document : null), fetchImpl = lastFetch) {
   if (!root) return false;
   lastRoot = root;
@@ -509,44 +527,81 @@ export function showRemote(persona, root = lastRoot || (typeof document !== 'und
   fitScreen(root);
   const generation = remoteGeneration;
   const isCurrent = () => generation === remoteGeneration && remotePersona === alias && modo === 'remote';
-  remoteStatus(root,alias,'connecting','Conectando escritorio de '+alias+'…');
-  const previous=lastRemoteFrames.get(alias);
-  remoteImgs(root).forEach(img=>{img.crossOrigin='use-credentials';if(previous)img.src=previous.url;else if(img.removeAttribute)img.removeAttribute('src');});
-  let loading=false;
-  const tick = () => {
-    if (!isCurrent()||loading||(typeof document!=='undefined'&&document.querySelector('.mac-ultra'))) return;
-    const url = SCREEN_JPEG + '?persona=' + encodeURIComponent(alias) + '&t=' + Date.now();
-    const accept=()=>{
-      loading=false;if(!isCurrent())return;
-      lastRemoteFrames.set(alias,{url,at:Date.now()});
-      remoteImgs(root).forEach(img=>{img.src=url;img.alt='Pantalla de '+alias;});
-      remoteStatus(root,alias,'frame','Captura de '+alias);
-    };
-    const fail=()=>{loading=false;if(isCurrent())paintRemoteError(root,alias);};
-    // Preload before replacing the frame: a failed refresh must not destroy
-    // the last readable image. No extra native selection on any refresh.
-    if(typeof Image==='function'){
-      loading=true;const next=new Image();next.crossOrigin='use-credentials';next.onload=accept;next.onerror=fail;next.src=url;
-    }else accept();
+  remoteStatus(root, alias, 'connecting', 'Buscando evidencia de ' + alias + '…');
+  const previous = lastRemoteFrames.get(alias);
+  remoteImgs(root).forEach(img => {
+    img.crossOrigin = 'anonymous';
+    if (previous) img.src = previous.url;
+    else if (img.removeAttribute) img.removeAttribute('src');
+  });
+  let loading = false;
+  const showUrl = (url, meta) => {
+    loading = false;
+    if (!isCurrent()) return;
+    lastRemoteFrames.set(alias, { url, at: meta?.capturedAt || Date.now(), label: meta?.label || '' });
+    remoteImgs(root).forEach(img => {
+      img.src = url;
+      img.alt = meta?.alt || ('Pantalla de ' + alias);
+      if (img.style) img.style.display = 'block';
+    });
+    const hora = formatCaptureAt(meta?.capturedAt);
+    remoteStatus(root, alias, meta?.code || 'frame', meta?.message || (hora ? ('Captura ' + hora + ' Madrid') : ('Evidencia de ' + alias)));
   };
-  remoteImgs(root).forEach(img=>{img.onerror=()=>{if(isCurrent())paintRemoteError(root,alias);};});
-  // Opening a seat may select it once. JPEG refreshes must stay passive so a
-  // background preview cannot steal the native chat from a web conversation.
+  const showIdle = (label, detail) => {
+    const url = evidencePlacard(label, detail || '');
+    showUrl(url, { label, code: label === 'sin actividad' ? 'idle' : 'waiting', message: detail ? (label + ' · ' + detail) : label, alt: label, capturedAt: Date.now() });
+  };
+  const tick = () => {
+    if (!isCurrent() || loading || (typeof document !== 'undefined' && document.querySelector('.mac-ultra'))) return;
+    const request = fetchImpl || (typeof fetch === 'function' ? fetch : null);
+    if (!request) { showIdle('sin actividad', 'sin red'); return; }
+    loading = true;
+    const url = EVIDENCE_URL + '?persona=' + encodeURIComponent(alias) + '&t=' + Date.now();
+    Promise.resolve()
+      .then(() => request(url, { cache: 'no-store', headers: { accept: 'application/json' } }))
+      .then(async response => {
+        const data = await response.json().catch(() => null);
+        if (!isCurrent()) { loading = false; return; }
+        if (!response.ok || !data?.ok) {
+          loading = false;
+          showIdle('sin actividad', data?.error || ('HTTP ' + response.status));
+          return;
+        }
+        if (!data.live) {
+          showIdle('sin actividad', data.encargo ? String(data.encargo.etiqueta || '') : '');
+          return;
+        }
+        if (!data.image) {
+          const ref = data.encargo?.etiqueta || data.mission?.id || 'encargo vivo';
+          showIdle('sin captura', ref);
+          return;
+        }
+        const imgUrl = data.image + (data.image.includes('?') ? '&' : '?') + 't=' + Date.now();
+        const hora = formatCaptureAt(data.capturedAt);
+        const accept = () => showUrl(imgUrl, {
+          capturedAt: data.capturedAt,
+          label: 'evidencia',
+          code: 'frame',
+          message: hora ? ('Captura ' + hora + ' Madrid') : ('Evidencia de ' + alias),
+          alt: 'Evidencia de ' + alias,
+        });
+        const fail = () => { loading = false; if (isCurrent()) showIdle('sin captura', 'imagen rota'); };
+        if (typeof Image === 'function') {
+          const next = new Image();
+          next.crossOrigin = 'anonymous';
+          next.onload = accept;
+          next.onerror = fail;
+          next.src = imgUrl;
+        } else accept();
+      })
+      .catch(() => { loading = false; if (isCurrent()) showIdle('sin actividad', 'sin cable'); });
+  };
+  remoteImgs(root).forEach(img => {
+    img.onerror = () => { if (isCurrent() && !String(img.src || '').startsWith('data:')) showIdle('sin captura', 'imagen rota'); };
+  });
   if (!remoteImgs(root).length) return true;
-  const request = fetchImpl || (typeof fetch === 'function' ? fetch : null);
-  if (!request) { paintRemoteError(root, alias); return false; }
-  const nativePersona = {Jobs:'Steve Jobs', Wozniak:'Steve Wozniak', Disney:'Walt Disney', Lucas:'George Lucas', Musk:'Elon Musk', Huang:'Jensen Huang'}[alias];
-  Promise.resolve().then(() => request('https://fleet.admira.live/api/grokbot/selection', {
-    method:'POST', credentials:'include', cache:'no-store',
-    headers:{'Content-Type':'application/json','X-Fleet-CSRF':typeof window!=='undefined' ? window.admiraGateCsrf?.() || '' : ''},
-    body:JSON.stringify({persona:nativePersona})
-  }))
-    .then(async response => {
-      const data = await response.json();
-      if (!isCurrent()) return;
-      if (!response.ok || !data?.ok) {const e=new Error('screen_unavailable');e.code=response.status===401?'session_expired':data?.code||data?.error;throw e;}
-      tick(); remoteTimer = setInterval(tick, 2500);
-    }).catch(error => { if (isCurrent()) paintRemoteError(root, alias,error.code||'selection_failed'); });
+  tick();
+  remoteTimer = setInterval(tick, EVIDENCE_POLL_MS);
   return true;
 }
 
@@ -707,7 +762,7 @@ export function boot(root = document, fetchImpl = fetch) {
 }
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-  window.MacHoy = { todayMadrid, isHoy, seatOf, linesFor, IDLE_COPY, ERROR_COPY, paintCrt, fetchHoy, boot, setVisible, toggle, isVisible, isFocused, openFront, closeFront, fitScreen, MAC_ART_W, MODOS, setModo, modoActual, detalleLineas, ultimaMision, ultimasMisiones, envolver, avanzaPantalla, alternaPong, paraPong, mandoPong, estadoPong, DETALLE_ANCHO, chairAlias, CHAIR_ALIAS, SCREEN_JPEG, showRemote, clearRemote, remoteSeat };
+  window.MacHoy = { todayMadrid, isHoy, seatOf, linesFor, IDLE_COPY, ERROR_COPY, paintCrt, fetchHoy, boot, setVisible, toggle, isVisible, isFocused, openFront, closeFront, fitScreen, MAC_ART_W, MODOS, setModo, modoActual, detalleLineas, ultimaMision, ultimasMisiones, envolver, avanzaPantalla, alternaPong, paraPong, mandoPong, estadoPong, DETALLE_ANCHO, chairAlias, CHAIR_ALIAS, SCREEN_JPEG, EVIDENCE_URL, EVIDENCE_POLL_MS, evidencePlacard, showRemote, clearRemote, remoteSeat };
   const bootAndMaybeRemote = () => {
     boot();
     try {

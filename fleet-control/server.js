@@ -33,7 +33,7 @@ const { createSessionCodec, deriveSessionSecret, loadAuthEdgeSecretMaterial, loa
 const { createYokupTickets } = require('./yokup-ticket');
 const { BridgeError, PERSONAS, canonicalPersona, createGrokBotBridge } = require('./grokbot-bridge');
 const { DesktopBridgeError, createGrokBotDesktop } = require('./grokbot-desktop');
-const { createGrokBotEncargo, createGrokBotRouter } = require('./grokbot-encargo');
+const { createGrokBotEncargo, createGrokBotRouter, LEYENDAS_INBOX } = require('./grokbot-encargo');
 const { createServiceBridge } = require('./service-bridge');
 // The desktop adapter shares the native conversation. Never fall back to a
 // routine when it is unavailable: that would silently create a different chat.
@@ -44,7 +44,7 @@ const grokBotBase = process.env.GROKBOT_CHAT_PROVIDER === 'desktop'
 // encargo MCP de admira.live a su deepagent (Merovingio / Cypher, GrokBotBox), y su
 // respuesta vuelve al chat. El resto de sillas siguen en el proveedor de siempre.
 const grokBotEncargo = createGrokBotEncargo();
-const grokBotBridge = createGrokBotRouter({ base: grokBotBase, encargo: grokBotEncargo });
+const grokBotBridge = createGrokBotRouter({ base: grokBotBase, encargo: grokBotEncargo, inbox: grokBotLegacy });
 
 const DIR = __dirname;
 const PORT = parseInt(process.env.FLEET_PORT || '9140', 10);
@@ -963,7 +963,9 @@ const server = http.createServer(async (req, res) => {
         const messages = await grokBotBridge.list(req.fleetSession, persona);
         // Keep previous routine receipts explicitly separate in the UI. Reading
         // the archive is local-only and never resends or polls an old job.
-        if (grokBotBase !== grokBotLegacy && !grokBotEncargo.handles(persona)) messages.push(...grokBotLegacy.list(req.fleetSession, persona));
+        // Leyendas ya van por inbox (= grokBotLegacy): no duplicar la misma bandeja.
+        const alias = canonicalPersona(persona);
+        if (grokBotBase !== grokBotLegacy && !grokBotEncargo.handles(persona) && !(alias && LEYENDAS_INBOX.has(alias))) messages.push(...grokBotLegacy.list(req.fleetSession, persona));
         return json(res,200,{ok:true,messages});
       }
       const match = /^\/api\/grokbot\/messages\/(gb_[a-f0-9]{48})$/.exec(url);

@@ -48,14 +48,17 @@
     const status=$('.council-chat__status'), log=$('.council-chat__messages'), operations=$('.council-chat__operations');
     if(options.mountInside)$('.council-chat__toolbar').append($('.council-chat__connection'));
     const current=epoch=>!destroyed && epoch===selectedEpoch;
-    const desktop=()=>capabilities?.mode==='desktop'||capabilities?.mode==='encargo';
+    const desktop=()=>capabilities?.mode==='desktop'||capabilities?.mode==='encargo'||capabilities?.mode==='inbox';
     const encargo=()=>capabilities?.mode==='encargo';
+    const inbox=()=>capabilities?.mode==='inbox';
     const SCOPE_DESKTOP='Los mismos mensajes visibles en GrokBot, sincronizados a través del Mac Mini. Historial observado en GrokBot; puede faltar contenido antiguo.';
     const agente=()=>capabilities?.agente||'su deepagent';
     const scopeEncargo=()=>(selected||'El consejero')+' contesta a través de su deepagent, '+agente()+'. Si está sin señal responde Grok 4.6. Si pasan 90 segundos sin acuse puedes pedir ese mismo plan B. Solo ves tus propios mensajes.';
     const LIMITS_DESKTOP='El Mac Mini y GrokBot deben estar disponibles. Las aprobaciones y los resultados descargables todavía se gestionan en GrokBot. Adjuntos: un archivo de hasta 4 MB por mensaje.';
     const LIMITS_ENCARGO='Solo texto, sin adjuntos. El plan B es una respuesta de Grok 4.6 por la API del Consejo, no de la sesión del deepagent; puede tener coste y usa hasta 1.000 tokens de salida. La API y el relé deben estar disponibles.';
-    const label=status=>(encargo()?ENCARGO_LABELS:LABELS)[status];
+    const SCOPE_INBOX=(selected||'El consejero')+' recibe tu mensaje como encargo en su bot-inbox (máquina grokbot) y despierta su webhook, igual que agente_encargar. Solo ves tus propios mensajes.';
+    const LIMITS_INBOX='Solo texto, sin adjuntos. El mensaje crea un encargo en bot.yokup.com y despierta la rutina Telegram del consejero.';
+    const label=status=>(encargo()||inbox()?ENCARGO_LABELS:LABELS)[status];
     function say(message){if(destroyed)return;status.textContent=message;options.onStatus?.(message);}
     function rowsFor(name){return histories.get(PEOPLE[name]) || [];}
     const isPending=persona=>pendingSends.has(persona)||rowsFor(persona).some(r=>native(r)&&['pending','in_progress','ack','unknown'].includes(r.status));
@@ -99,7 +102,7 @@
           if(row.text){
             const reply=doc.createElement('p');reply.className='council-chat__reply';
             const botName=doc.createElement('strong');botName.textContent=FULL[row.persona];reply.append(botName);appendText(reply,row.text);item.append(reply);
-          }else if(encargo()&&native(row)&&typing(row.status)){
+          }else if((encargo()||inbox())&&native(row)&&typing(row.status)){
             // Indicador «escribiendo…» mientras su deepagent contesta (como en GrokBot).
             const reply=doc.createElement('p');reply.className='council-chat__reply council-chat__typing';reply.title=FULL[row.persona]+' está escribiendo';
             const botName=doc.createElement('strong');botName.textContent=FULL[row.persona];
@@ -120,7 +123,7 @@
           const meta=doc.createElement('span');meta.className='council-chat__meta';meta.textContent=label(row.status) || 'Estado pendiente';item.append(meta);log.append(item);
         }
       }
-      if(!log.childElementCount){const p=doc.createElement('p');p.textContent=encargo()?'Aún no has hablado con '+selected+'. Escribe y pulsa Enviar: le llega a su deepagent, '+agente()+', y te contesta aquí.':'Aún no se han observado mensajes visibles de este consejero en GrokBot.';log.append(p);}
+      if(!log.childElementCount){const p=doc.createElement('p');p.textContent=encargo()?'Aún no has hablado con '+selected+'. Escribe y pulsa Enviar: le llega a su deepagent, '+agente()+', y te contesta aquí.':inbox()?'Aún no has hablado con '+selected+'. Escribe y pulsa Enviar: crea un encargo en su bot-inbox y despierta su webhook.':'Aún no se han observado mensajes visibles de este consejero en GrokBot.';log.append(p);}
       log.scrollTop=follow?log.scrollHeight:oldTop;
     }
     function connection(available){
@@ -129,14 +132,14 @@
       if($('[data-chat-attach]'))$('[data-chat-attach]').hidden=!available||!capabilities?.attachments;
       if($('[data-chat-routines]'))$('[data-chat-routines]').hidden=!available||!capabilities?.routines;
       if($('[data-chat-stop]'))$('[data-chat-stop]').hidden=!available||!capabilities?.interrupt||capabilities?.status!=='busy'||!capabilities?.runKey;
-      const scope=$('.council-chat__scope');if(scope)scope.textContent=encargo()?scopeEncargo():SCOPE_DESKTOP;
-      const limits=$('.council-chat__limits');if(limits)limits.textContent=encargo()?LIMITS_ENCARGO:LIMITS_DESKTOP;
-      if($('[data-chat-screen]'))$('[data-chat-screen]').hidden=encargo();
-      const nativeLink=$('.council-chat__native');if(nativeLink)nativeLink.hidden=encargo();
+      const scope=$('.council-chat__scope');if(scope)scope.textContent=encargo()?scopeEncargo():inbox()?SCOPE_INBOX:SCOPE_DESKTOP;
+      const limits=$('.council-chat__limits');if(limits)limits.textContent=encargo()?LIMITS_ENCARGO:inbox()?LIMITS_INBOX:LIMITS_DESKTOP;
+      if($('[data-chat-screen]'))$('[data-chat-screen]').hidden=encargo()||inbox();
+      const nativeLink=$('.council-chat__native');if(nativeLink)nativeLink.hidden=encargo()||inbox();
       const node=$('.council-chat__connection');
       const nativePersona=PEOPLE[capabilities?.selectedPersona] || capabilities?.selectedPersona;
       const observedAt=timestamp(capabilities?.lastObservedAt);
-      node.textContent=!available?'· Sincronización desconectada':encargo()&&capabilities?.signal===false?'· '+agente()+' sin señal · Grok 4.6':encargo()?'· Vía '+(capabilities?.destino||agente()):capabilities?.status==='draft'?'· Borrador en GrokBot':!selectionReady?'· Selección pendiente':nativePersona&&nativePersona!==PEOPLE[selected]?'· Chat nativo en otro consejero':!observedAt?'· Esperando observación nativa':Date.now()-observedAt>15000?'· Observación con retraso':'· Sincronización activa';
+      node.textContent=!available?'· Sincronización desconectada':encargo()&&capabilities?.signal===false?'· '+agente()+' sin señal · Grok 4.6':encargo()?'· Vía '+(capabilities?.destino||agente()):inbox()?'· Vía bot-inbox · grokbot':capabilities?.status==='draft'?'· Borrador en GrokBot':!selectionReady?'· Selección pendiente':nativePersona&&nativePersona!==PEOPLE[selected]?'· Chat nativo en otro consejero':!observedAt?'· Esperando observación nativa':Date.now()-observedAt>15000?'· Observación con retraso':'· Sincronización activa';
       node.title=(capabilities?.lastObservedAt?'Última observación: '+capabilities.lastObservedAt:'Aún no hay una observación del chat nativo.')+(nativePersona?' · Chat abierto: '+(FULL[nativePersona]||nativePersona):'');
     }
     function errorMessage(error){

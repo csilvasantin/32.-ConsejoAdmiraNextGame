@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { manejar } from '../src/index.js';
-import { estadoSilla, tituloEncargo, MESA } from '../src/estado.js';
+import { estadoSilla, tituloEncargo, MESA, TRABAJANDO_SEG, ENCARGO_VIVO_SEG } from '../src/estado.js';
 
 // «¿En qué está cada consejero ahora?» (hover y DEBATIR de la mesa, 4-oct-2026). Sin red.
 const AHORA = 1_800_000_000_000;
@@ -51,16 +51,17 @@ test('GET /consejo/estado: Elon lee a Merovingio en la GrokBotBox; datos reales,
   const d = await r.json();
   assert.equal(d.ok, true);
   assert.ok(!peticiones.some((u) => u.includes('/api/bot-inbox')), 'nunca la bandeja privada');
+  assert.equal(d.ventana_trabajando_s, 600);
+  assert.equal(d.ventana_encargo_vivo_s, 48 * 3600);
   const elon = d.mesa.coetaneos.find((s) => s.persona === 'Elon Musk');
-  assert.equal(elon.estado, 'working');
-  assert.equal(elon.encargo.numero, 5000);
-  assert.equal(elon.encargo.titulo, 'Tablero de estado del Consejo en admira.live');
-  assert.equal(elon.encargo.desde, S - 3600);
+  assert.equal(elon.estado, 'idle', 'in_progress no fuerza working sin latido trabajando (#5085)');
+  assert.equal(elon.encargo.numero, 5001, 'misión = id más alto entre abiertos vivos');
+  assert.equal(elon.encargo.titulo, 'Revisar el sello');
   assert.equal(elon.ultimo_latido, S - 40, 'el latido de MacMini no es el de la GrokBotBox');
   assert.equal(elon.agentes[0].maquina, 'GrokBotBox');
   assert.deepEqual(elon.cola, { pending: 1, ack: 0, in_progress: 1, blocked: 0 });
   const jensen = d.mesa.coetaneos.find((s) => s.persona === 'Jensen Huang');
-  assert.equal(jensen.estado, 'working', 'trabajando por latido aunque no haya encargo in_progress');
+  assert.equal(jensen.estado, 'working', 'trabajando por latido fresco mode=trabajando (≤10 min)');
   assert.equal(jensen.encargo, null);
   const ive = d.mesa.coetaneos.find((s) => s.persona === 'Jony Ive');
   assert.equal(ive.estado, 'idle', 'lo de ArquitectoCursorCloud no cuenta para Jony');
@@ -88,4 +89,70 @@ test('OPTIONS /consejo/estado responde CORS', async () => {
 test('estadoSilla: silla sin agente → «sin agente enlazado»', () => {
   const s = estadoSilla({ persona: 'Ryan Reynolds', rol: 'CSO', fuentes: [] }, { presencia: [], bandejas: {} }, AHORA);
   assert.equal(s.motivo, 'sin agente enlazado');
+});
+
+test('estadoSilla #5085: in_progress antiguo no fuerza working; working solo con latido trabajando ≤10 min', () => {
+  const def = { persona: 'Steve Jobs', rol: 'CEO', fuentes: [{ persona: 'Jobs', tipo: 'silla', etiqueta: 'JobsGrokBot', maquina: 'GrokBot' }], maquina_silla: 'GrokBot' };
+  const bandejas = { Jobs: { items: [
+    { id: 3754, ts: S - ENCARGO_VIVO_SEG - 100, target_persona: 'Jobs', status: 'in_progress', text: 'misión del 21-sep' },
+    { id: 5080, ts: S - 3600, target_persona: 'Jobs', status: 'pending', text: 'encargo fresco' },
+  ] } };
+  // Latido hace 11 h, mode trabajando → idle (ventana trabajando = 10 min, no VIVO_SEG)
+  const s1 = estadoSilla(def, {
+    presencia: [{ persona: 'Jobs', machine: 'GrokBot', mode: 'trabajando', updated: S - 11 * 3600, focus: '#3754' }],
+    bandejas,
+  }, AHORA);
+  assert.equal(s1.estado, 'idle');
+  assert.equal(s1.encargo.numero, 5080, 'el 3754 >48h no cuenta; gana el fresco');
+  assert.deepEqual(s1.cola, { pending: 1, ack: 0, in_progress: 0, blocked: 0 });
+
+  // Latido hace 11 min + mode trabajando → idle (umbral 10 min)
+  const s2 = estadoSilla(def, {
+    presencia: [{ persona: 'Jobs', machine: 'GrokBot', mode: 'trabajando', updated: S - (TRABAJANDO_SEG + 60), focus: 'x' }],
+    bandejas,
+  }, AHORA);
+  assert.equal(s2.estado, 'idle', '11 min > TRABAJANDO_SEG');
+
+  // Latido hace 2 min + mode trabajando → working
+  const s3 = estadoSilla(def, {
+    presencia: [{ persona: 'Jobs', machine: 'GrokBot', mode: 'trabajando', updated: S - 120, focus: 'x' }],
+    bandejas,
+  }, AHORA);
+  assert.equal(s3.estado, 'working');
+
+  // Latido fresco pero mode pasivo + in_progress vivo → idle (nunca working por bandeja)
+  const s4 = estadoSilla(def, {
+    presencia: [{ persona: 'Jobs', machine: 'GrokBot', mode: 'pasivo', updated: S - 30 }],
+    bandejas: { Jobs: { items: [
+      { id: 5090, ts: S - 100, target_persona: 'Jobs', status: 'in_progress', text: 'en curso' },
+      { id: 5089, ts: S - 200, target_persona: 'Jobs', status: 'ack', text: 'aceptado' },
+    ] } },
+  }, AHORA);
+  assert.equal(s4.estado, 'idle');
+  assert.equal(s4.encargo.numero, 5090, 'id más alto gana aunque haya varios abiertos');
+  assert.deepEqual(s4.cola, { pending: 0, ack: 1, in_progress: 1, blocked: 0 });
+
+  // Sin ts ni ack_at → excluido de cola/misión
+  const s5 = estadoSilla(def, {
+    presencia: [{ persona: 'Jobs', machine: 'GrokBot', mode: 'pasivo', updated: S - 30 }],
+    bandejas: { Jobs: { items: [
+      { id: 1, target_persona: 'Jobs', status: 'in_progress', text: 'sin fecha' },
+    ] } },
+  }, AHORA);
+  assert.equal(s5.encargo, null);
+  assert.deepEqual(s5.cola, { pending: 0, ack: 0, in_progress: 0, blocked: 0 });
+});
+
+test('estadoSilla #5085: entre abiertos vivos gana el id más reciente', () => {
+  const def = { persona: 'Walt Disney', rol: 'CCO', fuentes: [{ persona: 'Disney', tipo: 'silla', etiqueta: 'DisneyGrokBot' }] };
+  const s = estadoSilla(def, {
+    presencia: [{ persona: 'Disney', mode: 'pasivo', updated: S - 10 }],
+    bandejas: { Disney: { items: [
+      { id: 100, ts: S - 50, target_persona: 'Disney', status: 'in_progress', text: 'viejo id' },
+      { id: 200, ts: S - 500, target_persona: 'Disney', status: 'pending', text: 'nuevo id' },
+    ] } },
+  }, AHORA);
+  assert.equal(s.estado, 'idle');
+  assert.equal(s.encargo.numero, 200);
+  assert.equal(s.encargo.titulo, 'nuevo id');
 });

@@ -75,6 +75,17 @@
     return a.join(' | ') || SIN;
   }
 
+  /* «Desde» (Carlos, 4-oct-2026 19:15): cuándo entró en su estado actual. El feed trae
+   * s.desde (cambio de estado real: fin del último encargo o trabajando:false si está libre,
+   * inicio de la racha si trabaja, acuse si aceptado). Si el feed es antiguo, el encargo.
+   * «sin datos» solo cuando de verdad no hay historial. */
+  function desdeSeg(s) {
+    if (!s) return null;
+    if (Number(s.desde) > 0) return Number(s.desde);
+    return (s.encargo && Number(s.encargo.desde)) || null;
+  }
+  function desdeTxt(s, ahoraMs) { return hace(desdeSeg(s), ahoraMs); }
+
   /* Ficha de una silla, en líneas [etiqueta, valor]. Pura: se prueba en node. */
   function ficha(s, ahoraMs) {
     if (!s) return { estado: null, proyecto: null, filas: [['Misión', SIN], ['Estado', SIN], ['Desde', SIN], ['Deepagent · máquina', SIN], ['Último latido', SIN]] };
@@ -90,7 +101,7 @@
     else if (s.estado) mision = 'nada en curso';
     else mision = SIN;
     const filas = [['Misión', mision], ['Estado', estadoTxt(s.estado)],
-      ['Desde', s.encargo ? hace(s.encargo.desde, ahoraMs) : SIN]];
+      ['Desde', desdeTxt(s, ahoraMs)]];
     if (s.encargo && s.encargo.de) filas.push(['Encargado por', s.encargo.de]);
     if (foco && foco !== mision) filas.push(['Foco del latido', foco]);
     if (s.cola) {
@@ -352,7 +363,7 @@
     { id: 'consejero', label: 'Consejero', min: 90, def: 130, clave: s => key(s.persona) },
     { id: 'estado', label: 'Estado', min: 80, def: 190, clave: s => (s.estado in RANGO_ESTADO ? RANGO_ESTADO[s.estado] : null) },
     { id: 'ahora', label: 'Misión', min: 140, def: 220, clave: (s, f) => key(f('Misión')) },
-    { id: 'desde', label: 'Desde', min: 70, def: 135, clave: s => (s.encargo && Number(s.encargo.desde)) || null },
+    { id: 'desde', label: 'Desde', min: 70, def: 135, clave: s => desdeSeg(s) },
     { id: 'agente', label: 'Deepagent · máquina', min: 110, def: 120, clave: (s, f) => key(f('Deepagent · máquina')) },
     { id: 'latido', label: 'Último latido', min: 70, def: 135, clave: s => Number(s.ultimo_latido) || null }
   ]);

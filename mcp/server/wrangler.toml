@@ -43,6 +43,12 @@ service = "pixer-eleven"
 binding = "TELEGRAM"
 service = "admira-telegram"
 
+# «Desde» de la ficha de la mesa (4-oct-2026, Walt): cambios de estado de consejeros
+# (trabajando true/false de yokup_presencia y estado observado en /consejo/estado).
+[[kv_namespaces]]
+binding = "ADMIRA_LIVE_DESDE"
+id = "6bbd9cae35ca492d8a6c6835a323335c"
+
 [vars]
 # El Consejo (FastAPI, puerto 8420 del Mac Mini) sale por el funnel de Tailscale en
 # /council: el prefijo se quita, así que /council/api/council/models → :8420/api/council/models.
@@ -57,7 +63,7 @@ YOKUP_API = "https://api.yokup.com"
 ADMIRA_TELEGRAM_URL = "https://bot.yokup.com"
 # MCP_KEY (la primera clave, la que ya tiene Wozniak) se mapea a esta persona.
 MCP_KEY_PERSONA = "Wozniak"
-VERSION = "v.04.10.2026.r3.18:55"
+VERSION = "v.04.10.2026.r4.19:30"
 # Cada consejero se representa a sí mismo (Carlos, 7-sep-2026). Estricto = "1" solo cuando cada Bot de GrokBot
 # entre por SU conector: el smoke de las 06:30 demostró que los cuatro Bots seguían saliendo por la clave de Lucas
 # (los conectores son de la cuenta y el Bot no elige solo), así que con "1" Jobs, Disney y Wozniak no podían escribir.

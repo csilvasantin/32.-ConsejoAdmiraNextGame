@@ -18,6 +18,7 @@
 
 import { SILLAS } from './sillas.js';
 import { filasPresencia, norm, seg, ESTADOS_ABIERTOS } from './coordinacion.js';
+import { leerMarcas, guardarCambios, claveAgente, RACHA_ROTA_SEG, REFRESCO_MARCA_SEG } from './desde.js';
 
 export const VIVO_SEG = 900;          // «en línea» = latido en los últimos 15 min (igual que agentes_vivos)
 export const TRABAJANDO_SEG = 600;    // «trabajando» solo con latido mode=trabajando en los últimos 10 min (#5085)
@@ -81,7 +82,7 @@ function encargoEsDe(x, f) {
 }
 
 /** Estado de una silla con las fuentes ya leídas (puro: se prueba sin red). */
-export function estadoSilla(def, { presencia, bandejas }, ahoraMs) {
+export function estadoSilla(def, { presencia, bandejas, trabajando = null, marcas = null }, ahoraMs) {
   const ahoraS = Math.floor(ahoraMs / 1000);
   const base = { persona: def.persona, rol: def.rol, enlazado: def.fuentes.length > 0 };
   if (!def.fuentes.length) return { ...base, estado: null, motivo: 'sin agente enlazado' };
@@ -95,7 +96,17 @@ export function estadoSilla(def, { presencia, bandejas }, ahoraMs) {
       // Sin ts/ack_at: excluir (no inventar frescura). Solo vivos < 48 h (#5085).
       return t && t >= ahoraS - ENCARGO_VIVO_SEG;
     }) : null;
+    // Cerrados: el más reciente con hora de cierre (para «Desde» de una silla libre).
+    const cerrados = b ? b.items.filter((x) => encargoEsDe(x, f) && !ESTADOS_ABIERTOS.includes(String(x.status || 'pending')))
+      .map((x) => ({ x, t: seg(x.done_at) || seg(x.closed_at) || seg(x.updated_at) || 0 })).filter((c) => c.t) : [];
+    const ultimoCerrado = cerrados.sort((p, q) => q.t - p.t)[0] || null;
+    // presence_work (bot.yokup.com/api/presence/trabajando): inicio de la racha trabajando.
+    const ws = trabajando ? trabajando.filter((w) => filaEsDe(w, f)).map((w) => seg(w.working_since)).filter(Boolean) : [];
+    const maquina = (r && r.machine) || f.maquina || null;
     return {
+      _cerrado: ultimoCerrado, _working_since: ws.length ? Math.min(...ws) : null,
+      _marca: marcas && marcas.agentes ? (marcas.agentes[claveAgente(f.persona, maquina)] || null) : null,
+      _clave: claveAgente(f.persona, maquina),
       persona: f.persona, tipo: f.tipo, etiqueta: f.etiqueta, runtime: (r && r.runtime) || f.runtime || null, modelo: f.modelo || (r && r.model) || null,
       maquina: (r && r.machine) || f.maquina || null,
       latido: presencia ? (r ? seg(r.updated) : null) : undefined,
@@ -127,19 +138,71 @@ export function estadoSilla(def, { presencia, bandejas }, ahoraMs) {
     creado: seg(t.x.ts) || null, acuse: seg(t.x.ack_at) || null, desde: seg(t.x.ack_at) || seg(t.x.ts) || null,
   } : null);
   const latidos = agentes.map((a) => a.latido).filter((n) => Number.isFinite(n));
+  const marcaSilla = marcas && marcas.sillas ? (marcas.sillas[def.persona] || null) : null;
+  const { desde, desde_fuente, cambios } = calcularDesde({ estado, agentes, actual, marcaSilla, persona: def.persona }, ahoraS);
   // Proyecto de la silla: el del latido más reciente que lo declare (yokup_presencia · proyecto).
   const conProyecto = agentes.filter((a) => a.proyecto).sort((a, b) => (Number(b.latido) || 0) - (Number(a.latido) || 0));
   return {
     ...base, estado,
+    // «Desde» (Carlos, 4-oct-2026 19:15): cuándo entró en el estado actual. null solo sin historial.
+    desde, desde_fuente,
     proyecto: conProyecto.length ? conProyecto[0].proyecto : null,
     encargo: enc(actual),
     ultimo_pendiente: actual ? null : enc(ultimoPendiente),
     cola: sinBandeja ? null : cola,
     ultimo_latido: latidos.length ? Math.max(...latidos) : null,
     maquina_silla: def.maquina_silla || null,
-    agentes: agentes.map(({ _abiertos, ...a }) => ({ ...a, latido: a.latido === undefined ? null : a.latido })),
+    _cambios: cambios,
+    agentes: agentes.map(({ _abiertos, _cerrado, _working_since, _marca, _clave, ...a }) => ({ ...a, latido: a.latido === undefined ? null : a.latido })),
     sin_datos: { presencia: sinPresencia, bandeja: sinBandeja },
   };
+}
+
+const validos = (xs) => xs.filter((c) => c && Number.isFinite(c.t) && c.t > 0);
+/**
+ * Desde cuándo está la silla en su estado (puro). Devuelve también los cambios a apuntar en el KV.
+ *  · working: el inicio más antiguo de la racha actual (presence_work.working_since, marca del
+ *    agente con trabajando:true, marca observada de la silla, encargo in_progress, latido).
+ *  · idle: lo más reciente entre el último encargo cerrado, el trabajando:false del agente, el
+ *    último latido trabajando ya caducado y la marca observada de la silla.
+ *  · ack: acuse del encargo.
+ */
+export function calcularDesde({ estado, agentes, actual, marcaSilla, persona }, ahoraS) {
+  const cambios = { sillas: {}, agentes: {} };
+  let elegido = null;
+  // Una marca «trabajando» solo vale si se ha refrescado hace ≤10 min: si no, la racha se rompió.
+  const fresca = (m) => m && ahoraS - Number(m.at || m.desde || 0) <= RACHA_ROTA_SEG;
+  const sillaVale = marcaSilla && marcaSilla.estado === estado && (estado !== 'working' || fresca(marcaSilla));
+  if (estado === 'working') {
+    const activos = agentes.filter((a) => Number.isFinite(a.latido) && a.latido >= ahoraS - TRABAJANDO_SEG && norm(a.modo) === 'trabajando');
+    const cands = validos([
+      ...activos.map((a) => ({ t: a._working_since, f: 'presencia_trabajando' })),
+      ...activos.map((a) => (a._marca && a._marca.working && fresca(a._marca) ? { t: Number(a._marca.desde), f: 'cambio_trabajando' } : null)),
+      sillaVale ? { t: Number(marcaSilla.desde), f: 'cambio_observado' } : null,
+      actual && actual.x.status === 'in_progress' ? { t: seg(actual.x.ack_at) || seg(actual.x.ts), f: 'encargo_en_curso' } : null,
+    ]).filter((c) => c.t <= ahoraS);
+    elegido = cands.sort((p, q) => p.t - q.t)[0] || null;
+    if (!elegido) { const l = activos.map((a) => a.latido).sort((p, q) => p - q)[0]; if (l) elegido = { t: l, f: 'latido' }; }
+  } else if (estado === 'ack') {
+    if (actual && seg(actual.x.ack_at)) elegido = { t: seg(actual.x.ack_at), f: 'encargo_acuse' };
+  } else if (estado === 'idle') {
+    const cands = validos([
+      ...agentes.map((a) => (a._cerrado ? { t: a._cerrado.t, f: 'encargo_cerrado' } : null)),
+      ...agentes.map((a) => (a._marca && !a._marca.working ? { t: Number(a._marca.desde), f: 'cambio_trabajando' } : null)),
+      // Latido trabajando que dejó de llegar: paró en su último latido.
+      ...agentes.map((a) => (norm(a.modo) === 'trabajando' && Number.isFinite(a.latido) && a.latido < ahoraS - TRABAJANDO_SEG ? { t: a.latido, f: 'latido_caducado' } : null)),
+      sillaVale ? { t: Number(marcaSilla.desde), f: 'cambio_observado' } : null,
+    ]).filter((c) => c.t <= ahoraS);
+    elegido = cands.sort((p, q) => q.t - p.t)[0] || null;
+    // El agente tenía marca trabajando y ya no trabaja: se apunta la parada (su último latido).
+    for (const a of agentes) {
+      if (a._marca && a._marca.working && Number.isFinite(a.latido) && a.latido < ahoraS - TRABAJANDO_SEG) cambios.agentes[a._clave] = { working: false, desde: a.latido, at: ahoraS, por: 'caducado' };
+    }
+  }
+  const desde = elegido ? elegido.t : null;
+  if (estado && desde && !sillaVale) cambios.sillas[persona] = { estado, desde, at: ahoraS };
+  else if (estado === 'working' && sillaVale && ahoraS - Number(marcaSilla.at || 0) >= REFRESCO_MARCA_SEG) cambios.sillas[persona] = { ...marcaSilla, at: ahoraS };
+  return { desde, desde_fuente: elegido ? elegido.f : null, cambios };
 }
 
 export function crearEstado(env = {}, deps = {}) {
@@ -158,21 +221,35 @@ export function crearEstado(env = {}, deps = {}) {
   async function mesa() {
     const personas = [...new Set(Object.values(MESA).flat().flatMap((d) => d.fuentes.map((f) => f.persona)))];
     const errores = {};
-    const [presencia, ...listas] = await Promise.all([
+    const kv = env.ADMIRA_LIVE_DESDE || null;
+    const [presencia, trabajando, marcas, ...listas] = await Promise.all([
       leer(`${base}/api/presence`).then(filasPresencia).catch((e) => { errores.presencia = String(e.message || e); return null; }),
+      leer(`${base}/api/presence/trabajando`).then((d) => (d && d.items) || []).catch((e) => { errores.trabajando = String(e.message || e); return null; }),
+      leerMarcas(kv),
       ...personas.map((p) => leer(`${base}/api/public/inbox?${new URLSearchParams({ persona: p })}`)
         .then((d) => ({ items: (d && d.items) || [] }))
         .catch((e) => { errores[`bandeja_${p}`] = String(e.message || e); return null; })),
     ]);
     const bandejas = Object.fromEntries(personas.map((p, i) => [p, listas[i]]));
     const ms = ahora();
+    const cambios = { sillas: {}, agentes: {} };
+    const mesaOut = Object.fromEntries(Object.entries(MESA).map(([gen, defs]) => [gen, defs.map((d) => {
+      const { _cambios, ...s } = estadoSilla(d, { presencia, bandejas, trabajando, marcas }, ms);
+      if (_cambios) { Object.assign(cambios.sillas, _cambios.sillas); Object.assign(cambios.agentes, _cambios.agentes); }
+      return s;
+    })]));
+    if (kv && marcas) {
+      const g = guardarCambios(kv, cambios);
+      if (deps.waitUntil) deps.waitUntil(g); else await g;
+    }
     return {
       ok: true, generado: Math.floor(ms / 1000), ventana_vivo_s: VIVO_SEG,
       ventana_trabajando_s: TRABAJANDO_SEG, ventana_encargo_vivo_s: ENCARGO_VIVO_SEG,
       version: env.VERSION || '',
       fuentes: { presencia: presencia ? `ok (${presencia.length})` : 'sin datos', bandejas: `${listas.filter(Boolean).length}/${personas.length} ok`, origen: 'bot.yokup.com (presencia y bandeja públicas, las mismas de agentes_vivos y encargos_listar)' },
       ...(Object.keys(errores).length ? { errores } : {}),
-      mesa: Object.fromEntries(Object.entries(MESA).map(([gen, defs]) => [gen, defs.map((d) => estadoSilla(d, { presencia, bandejas }, ms))])),
+      desde_marcas: kv ? (marcas ? 'ok' : 'KV sin leer') : 'sin KV',
+      mesa: mesaOut,
     };
   }
   return { mesa };

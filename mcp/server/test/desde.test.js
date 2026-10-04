@@ -80,3 +80,12 @@ test('marcarTrabajo escribe en el KV y /consejo/estado expone desde y lo guarda'
   assert.equal(d.desde_marcas, 'ok');
   assert.equal((await leerMarcas(kv)).sillas['Walt Disney'].desde, S - 840);
 });
+
+test('trabajando: una marca de una racha vieja (sin refresco en 10 min) no alarga el Desde', () => {
+  const k = claveAgente('Disney', 'GrokBot');
+  const marcas = { agentes: { [k]: { working: true, desde: S - 7200, at: S - 3600 } }, sillas: { 'Walt Disney': { estado: 'working', desde: S - 7200, at: S - 3600 } } };
+  const trabajando = [{ persona: 'Disney', machine: 'GrokBot', working_since: S - 300 }];
+  const r = estadoSilla(WALT, { presencia: [latido({ mode: 'trabajando' })], bandejas: { Disney: { items: [] } }, trabajando, marcas }, AHORA);
+  assert.equal(r.desde, S - 300);
+  assert.equal(r._cambios.sillas['Walt Disney'].desde, S - 300);
+});

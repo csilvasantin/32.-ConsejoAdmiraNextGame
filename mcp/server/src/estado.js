@@ -18,7 +18,7 @@
 
 import { SILLAS } from './sillas.js';
 import { filasPresencia, norm, seg, ESTADOS_ABIERTOS } from './coordinacion.js';
-import { leerMarcas, guardarCambios, claveAgente } from './desde.js';
+import { leerMarcas, guardarCambios, claveAgente, RACHA_ROTA_SEG, REFRESCO_MARCA_SEG } from './desde.js';
 
 export const VIVO_SEG = 900;          // «en línea» = latido en los últimos 15 min (igual que agentes_vivos)
 export const TRABAJANDO_SEG = 600;    // «trabajando» solo con latido mode=trabajando en los últimos 10 min (#5085)
@@ -170,12 +170,15 @@ const validos = (xs) => xs.filter((c) => c && Number.isFinite(c.t) && c.t > 0);
 export function calcularDesde({ estado, agentes, actual, marcaSilla, persona }, ahoraS) {
   const cambios = { sillas: {}, agentes: {} };
   let elegido = null;
+  // Una marca «trabajando» solo vale si se ha refrescado hace ≤10 min: si no, la racha se rompió.
+  const fresca = (m) => m && ahoraS - Number(m.at || m.desde || 0) <= RACHA_ROTA_SEG;
+  const sillaVale = marcaSilla && marcaSilla.estado === estado && (estado !== 'working' || fresca(marcaSilla));
   if (estado === 'working') {
     const activos = agentes.filter((a) => Number.isFinite(a.latido) && a.latido >= ahoraS - TRABAJANDO_SEG && norm(a.modo) === 'trabajando');
     const cands = validos([
       ...activos.map((a) => ({ t: a._working_since, f: 'presencia_trabajando' })),
-      ...activos.map((a) => (a._marca && a._marca.working ? { t: Number(a._marca.desde), f: 'cambio_trabajando' } : null)),
-      marcaSilla && marcaSilla.estado === 'working' ? { t: Number(marcaSilla.desde), f: 'cambio_observado' } : null,
+      ...activos.map((a) => (a._marca && a._marca.working && fresca(a._marca) ? { t: Number(a._marca.desde), f: 'cambio_trabajando' } : null)),
+      sillaVale ? { t: Number(marcaSilla.desde), f: 'cambio_observado' } : null,
       actual && actual.x.status === 'in_progress' ? { t: seg(actual.x.ack_at) || seg(actual.x.ts), f: 'encargo_en_curso' } : null,
     ]).filter((c) => c.t <= ahoraS);
     elegido = cands.sort((p, q) => p.t - q.t)[0] || null;
@@ -188,7 +191,7 @@ export function calcularDesde({ estado, agentes, actual, marcaSilla, persona }, 
       ...agentes.map((a) => (a._marca && !a._marca.working ? { t: Number(a._marca.desde), f: 'cambio_trabajando' } : null)),
       // Latido trabajando que dejó de llegar: paró en su último latido.
       ...agentes.map((a) => (norm(a.modo) === 'trabajando' && Number.isFinite(a.latido) && a.latido < ahoraS - TRABAJANDO_SEG ? { t: a.latido, f: 'latido_caducado' } : null)),
-      marcaSilla && marcaSilla.estado === 'idle' ? { t: Number(marcaSilla.desde), f: 'cambio_observado' } : null,
+      sillaVale ? { t: Number(marcaSilla.desde), f: 'cambio_observado' } : null,
     ]).filter((c) => c.t <= ahoraS);
     elegido = cands.sort((p, q) => q.t - p.t)[0] || null;
     // El agente tenía marca trabajando y ya no trabaja: se apunta la parada (su último latido).
@@ -197,7 +200,8 @@ export function calcularDesde({ estado, agentes, actual, marcaSilla, persona }, 
     }
   }
   const desde = elegido ? elegido.t : null;
-  if (estado && desde && (!marcaSilla || marcaSilla.estado !== estado)) cambios.sillas[persona] = { estado, desde, at: ahoraS };
+  if (estado && desde && !sillaVale) cambios.sillas[persona] = { estado, desde, at: ahoraS };
+  else if (estado === 'working' && sillaVale && ahoraS - Number(marcaSilla.at || 0) >= REFRESCO_MARCA_SEG) cambios.sillas[persona] = { ...marcaSilla, at: ahoraS };
   return { desde, desde_fuente: elegido ? elegido.f : null, cambios };
 }
 

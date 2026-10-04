@@ -444,7 +444,7 @@ async function draw(root, fetchImpl) {
 
 /* MOSAICO DEL CONSEJO (#5109, Carlos 04-10-2026). Con el Mac 1984 sobre la mesa
    en la vista general, el tubo enseña en vivo las pantallas de los 6 consejeros
-   —la misma evidencia que la pestaña «Computadora»— en una rejilla 3×2. Código
+   —la misma imagen que la pestaña «Computadora» (SCREEN_JPEG), con la evidencia como respaldo— en una rejilla 3×2. Código
    nuevo y aparte: no toca showRemote ni el detalle; reutiliza paintCrt para el
    «sin señal». Sólo vive en el Mac de la mesa (#mac-hoy-glass) y en modo logo. */
 export const MOSAIC_SEATS = ['Jobs', 'Wozniak', 'Lucas', 'Disney', 'Musk', 'Huang'];
@@ -492,32 +492,40 @@ function mosaicNoSignal(tile) {
   if (img && img.removeAttribute) img.removeAttribute('src');
   if (!was) paintCrt(tile.querySelector('.mac-hoy-tile-ns'), MOSAIC_NO_SIGNAL);
 }
+function mosaicLoad(src) {
+  return new Promise((resolve) => {
+    if (typeof Image !== 'function') return resolve(false);
+    const pre = new Image();               // sin crossOrigin: la sesión de fleet viaja como en «Computadora»
+    const kill = setTimeout(() => { pre.src = ''; resolve(false); }, 13000);
+    pre.onload = () => { clearTimeout(kill); resolve(true); };
+    pre.onerror = () => { clearTimeout(kill); resolve(false); };
+    pre.src = src;
+  });
+}
+function mosaicShow(tile, src) {
+  const img = tile.querySelector('img');
+  if (img) img.src = src;
+  tile.classList.remove('sin-senal');
+  return true;
+}
+// 1º la pantalla viva de su computadora (SCREEN_JPEG?persona=, la de «Computadora»);
+// 2º la última evidencia del encargo; si no hay ninguna, «SIN SEÑAL».
 function mosaicTile(tile, alias, request) {
-  const url = EVIDENCE_URL + '?persona=' + encodeURIComponent(alias) + '&t=' + Date.now();
-  const ctrl = typeof AbortController === 'function' ? new AbortController() : null;
-  const kill = ctrl ? setTimeout(() => ctrl.abort(), 9000) : null;
-  return Promise.resolve()
-    .then(() => request(url, { cache: 'no-store', headers: { accept: 'application/json' }, signal: ctrl ? ctrl.signal : undefined }))
-    .then((r) => r.json().catch(() => null))
-    .then((data) => new Promise((resolve) => {
-      if (!data || !data.ok || !data.image) { mosaicNoSignal(tile); return resolve(false); }
-      const src = data.image + (data.image.includes('?') ? '&' : '?') + 't=' + Date.now();
-      const done = (ok) => {
-        if (ok) {
-          const img = tile.querySelector('img');
-          if (img) img.src = src;
-          tile.classList.remove('sin-senal');
-        } else mosaicNoSignal(tile);
-        resolve(ok);
-      };
-      if (typeof Image !== 'function') return done(true);
-      const pre = new Image();
-      pre.onload = () => done(true);
-      pre.onerror = () => done(false);
-      pre.src = src;
-    }))
-    .catch(() => { mosaicNoSignal(tile); return false; })
-    .finally(() => { if (kill) clearTimeout(kill); });
+  const live = SCREEN_JPEG + '?persona=' + encodeURIComponent(alias) + '&t=' + Date.now();
+  return mosaicLoad(live).then((ok) => {
+    if (ok) return mosaicShow(tile, live);
+    const url = EVIDENCE_URL + '?persona=' + encodeURIComponent(alias) + '&t=' + Date.now();
+    return Promise.resolve()
+      .then(() => request(url, { cache: 'no-store', headers: { accept: 'application/json' } }))
+      .then((r) => r.json().catch(() => null))
+      .then((data) => {
+        if (!data || !data.ok || !data.image) return false;
+        const src = data.image + (data.image.includes('?') ? '&' : '?') + 't=' + Date.now();
+        return mosaicLoad(src).then((ok2) => ok2 && mosaicShow(tile, src));
+      })
+      .catch(() => false)
+      .then((shown) => { if (!shown) mosaicNoSignal(tile); return !!shown; });
+  });
 }
 export function refreshMosaic(root = lastRoot || (typeof document !== 'undefined' ? document : null), fetchImpl = lastFetch) {
   if (!visible || modo !== 'logo' || mosaicBusy) return Promise.resolve(false);

@@ -225,7 +225,7 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
     description: `Lista los encargos del bot-inbox de una persona: por defecto la tuya (la de tu clave) y solo los abiertos (${ESTADOS_ABIERTOS.join(', ')}). Sirve a cualquier agente de la flota, deepagent o consejero, no solo a GrokBot. Cada encargo trae número, etiqueta #número.MM.DD, estado, quién lo pidió, máquina, texto y nota. Para contestarlos: encargo_responder. Fuente: vista privada del bot-inbox (texto entero) + vista pública (80 más recientes, texto recortado), fundidas por número.`,
     inputSchema: {
       persona: z.string().min(3).max(40).optional().describe(`De quién (${AGENTES_FLOTA.join(', ')}, ${CONSEJEROS.join(', ')}). Sin valor: tú.`),
-      estado: z.enum(['abiertos', ...ESTADOS_ABIERTOS, 'done', 'todos']).default('abiertos').describe('abiertos (pending+ack+in_progress+blocked), uno concreto, done o todos.'),
+      estado: z.enum(['abiertos', ...ESTADOS_ABIERTOS, 'done', 'cancelled', 'todos']).default('abiertos').describe('abiertos (pending+ack+in_progress+blocked), uno concreto, done, cancelled (anulado) o todos.'),
       maquina: z.string().max(40).optional().describe('Solo los dirigidos a este equipo (MacMini, MacBookProNegro14, GrokBotBox…).'),
       limite: z.number().int().min(1).max(200).default(50).describe('Máximo de encargos devueltos (los más recientes primero).'),
       como: COMO,
@@ -253,6 +253,17 @@ export function crearServidor(env = {}, deps = {}, identidad = null) {
     },
     annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
   }, seguro(async (a) => texto(await crearFlota(env, idDe(a), deps).responder(a))));
+
+  server.registerTool('encargo_anular', {
+    title: 'Anular un encargo',
+    description: 'Pasa un encargo a cancelled (anulado) con nota obligatoria. No hace falta ser el destinatario: puede quien lo encargó o un consejero con la clave del Consejo. La clave del panel también puede, llamando al worker. Un anulado no cuenta como pendiente ni dispara alarmas, y se lee «anulado» con encargo_estado. No borra la fila.',
+    inputSchema: {
+      numero: z.number().int().positive().describe('Número del encargo (el de #4502.09.27 es 4502).'),
+      nota: z.string().min(1).max(1500).describe('Por qué queda anulado. Obligatorio.'),
+      como: COMO,
+    },
+    annotations: { readOnlyHint: false, destructiveHint: false, idempotentHint: true, openWorldHint: true },
+  }, seguro(async (a) => texto(await crearFlota(env, idDe(a), deps).anular(a))));
 
   server.registerTool('consumo_reportar', {
     title: 'Declarar mi consumo de tokens (mandamiento 15)',
@@ -416,7 +427,7 @@ export async function manejar(request, env, deps = {}) {
     return json({ nombre: NOMBRE, version: env.VERSION || '', sitio: env.SITIO || 'https://www.admira.live',
       que_es: 'MCP de admira.live: los consejeros del Consejo de Silicio, la flota y AgoraMatrix como herramientas MCP por HTTP.',
       endpoint_mcp: `${url.origin}/mcp`, transporte: 'streamable-http', autenticacion: 'Authorization: Bearer <MCP_KEY> (o ?key=)',
-      documentacion: 'https://www.admira.live/mcp/', herramientas: ['consejo_consejeros', 'consejo_modelos', 'consejo_preguntar', 'consejero_preguntar', 'consejo_salud', 'consejo_bots', 'flota_estado', 'consejo_tareas', 'agora_decir', 'yokup_quien_soy', 'yokup_presencia', 'yokup_alta', 'yokup_paso', 'yokup_evidencia', 'yokup_informe', 'yokup_ventana', 'yokup_decidir', 'yokup_mis_misiones', 'telegram_bandeja', 'telegram_responder', 'agentes_vivos', 'agente_encargar', 'encargo_estado', 'encargos_listar', 'encargo_responder', 'consumo_reportar'],
+      documentacion: 'https://www.admira.live/mcp/', herramientas: ['consejo_consejeros', 'consejo_modelos', 'consejo_preguntar', 'consejero_preguntar', 'consejo_salud', 'consejo_bots', 'flota_estado', 'consejo_tareas', 'agora_decir', 'yokup_quien_soy', 'yokup_presencia', 'yokup_alta', 'yokup_paso', 'yokup_evidencia', 'yokup_informe', 'yokup_ventana', 'yokup_decidir', 'yokup_mis_misiones', 'telegram_bandeja', 'telegram_responder', 'agentes_vivos', 'agente_encargar', 'encargo_estado', 'encargos_listar', 'encargo_responder', 'encargo_anular', 'consumo_reportar'],
       flota: `Con una clave por consejero (MCP_KEYS), ${CONSEJEROS_GROKBOT.join('/')} trabajan en yokup como ${CONSEJEROS_GROKBOT.map((c) => c + 'GrokBot').join('/')} (equipo GrokBot, runtime Grok). Con una clave por agente y equipo (mcp-conectar.sh), Claude Code, Codex y OpenCode entran identificados (MorfeoMacMini…). Una clave de agente no firma como consejero aunque pase «como».`,
       conectar: { humanos: 'https://www.admira.live/help', silicio: 'https://www.admira.live/mcp/', llms: 'https://www.admira.live/mcp/llms.txt' } });
   }

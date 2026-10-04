@@ -258,7 +258,7 @@ export function crearFlota(env = {}, identidad, deps = {}) {
     const d = await llamar(`${base}/api/bot-inbox/${Number(encargo)}`);
     const x = d && d.item; if (!x) throw new Error(`encargo #${encargo} no encontrado`);
     const st = String(x.status || 'pending');
-    const lectura = { pending: 'pendiente: nadie lo ha cogido aún', ack: 'acusado: lo ha cogido y está en ello', in_progress: 'en curso', blocked: 'bloqueado: mira la nota', done: 'hecho: la respuesta está en «respuesta»' }[st] || st;
+    const lectura = { pending: 'pendiente: nadie lo ha cogido aún', ack: 'acusado: lo ha cogido y está en ello', in_progress: 'en curso', blocked: 'bloqueado: mira la nota', done: 'hecho: la respuesta está en «respuesta»', cancelled: 'anulado' }[st] || st;
     const etiqueta = etiquetaEncargo(x.id, x.ts, x.etiqueta);
     return { encargo: Number(x.id), etiqueta: etiqueta || null, estado: st, lectura, persona: x.target_persona || null, maquina: x.target_machine || null, de: x.from_name || '', cuando: cuando(x.ts),
       acuse: x.ack_at ? cuando(x.ack_at) : null, cierre: x.done_at ? cuando(x.done_at) : null, texto: String(x.text || ''), respuesta: x.note || '', proyecto_id: x.project_id || null, task_id: x.task_id || null };
@@ -301,5 +301,34 @@ export function crearFlota(env = {}, identidad, deps = {}) {
       siguiente: st === 'done' ? 'cerrado: la respuesta queda en la nota del encargo (encargo_estado) y en hilo en Telegram' : 'cuando avances, encargo_responder con in_progress / blocked (motivo) / done (respuesta)' };
   }
 
-  return { vivos, encargar, estado, maquinaDe, reportarConsumo, presenciaCruda, listarEncargos, cargaPorPersona, responder };
+  /** Anula un encargo (Carlos, 4-oct-2026). No hace falta ser el destinatario: puede
+   *  quien lo encargó o un consejero (entra con la clave del Consejo). La escritura
+   *  al worker va con la clave del panel, que es la otra vía autorizada. */
+  function esQuienEncargo(fila) {
+    const de = norm(fila && fila.from_name);
+    if (!de) return false;
+    const candidatos = [identidad && identidad.agent, identidad && identidad.persona, personaCanonica(identidad && identidad.persona)].filter(Boolean);
+    return candidatos.some((c) => {
+      const n = norm(c);
+      return n && (de === n || de.startsWith(n) || n.startsWith(de));
+    });
+  }
+  async function anular({ numero, nota }) {
+    if (!identidad || !identidad.persona) throw new Error('sin identidad: la clave del MCP no dice quién eres y anular se firma con nombre (consejero con clave compartida: pasa como)');
+    const texto = String(nota || '').trim();
+    if (!texto) throw new Error('anular exige nota: por qué queda anulado');
+    const n = Number(numero);
+    const d = await llamar(`${base}/api/bot-inbox/${n}`);
+    const x = d && d.item; if (!x) throw new Error(`encargo #${n} no encontrado`);
+    const consejero = identidad.tipo === 'consejero' || identidad.tipo === 'consejo-compartido' || esConsejero(identidad.persona);
+    if (!consejero && !esQuienEncargo(x)) {
+      const de = x.from_name || 'sin remitente';
+      throw new Error(`anular el encargo #${n} solo puede quien lo encargó (${de}) o un consejero con la clave del Consejo; ${identidad.agent} no es ninguna de las dos cosas`);
+    }
+    const r = await crearTelegram(env, identidad, deps).responder({ encargo: n, estado: 'cancelled', respuesta: texto });
+    return { ...r, etiqueta: etiquetaEncargo(x.id, x.ts, x.etiqueta) || null, estado: 'cancelled', lectura: 'anulado', nota: texto, destinatario: destinatario(x) || null,
+      siguiente: 'anulado: no cuenta como pendiente ni dispara alarmas. encargo_estado devuelve cancelled y la nota.' };
+  }
+
+  return { vivos, encargar, estado, maquinaDe, reportarConsumo, presenciaCruda, listarEncargos, cargaPorPersona, responder, anular };
 }

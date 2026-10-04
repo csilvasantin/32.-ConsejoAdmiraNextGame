@@ -112,7 +112,7 @@ test('el sondeo SSH del Mac Mini busca los mismos runtimes que el MCP', () => {
 });
 
 test('cargaDe cuenta solo abiertos, por estado y por máquina', () => {
-  const c = cargaDe([{ status: 'pending', target_machine: 'macmini' }, { status: 'ack', target_machine: 'MacMini' }, { status: 'blocked', target_machine: 'grokbotbox' }, { status: 'done', target_machine: 'macmini' }]);
+  const c = cargaDe([{ status: 'pending', target_machine: 'macmini' }, { status: 'ack', target_machine: 'MacMini' }, { status: 'blocked', target_machine: 'grokbotbox' }, { status: 'done', target_machine: 'macmini' }, { status: 'cancelled', target_machine: 'macmini' }]);
   assert.deepEqual(c, { abiertos: 3, pending: 1, ack: 1, in_progress: 0, blocked: 1, por_maquina: { macmini: 2, grokbotbox: 1 } });
 });
 
@@ -127,6 +127,7 @@ const INBOX = [
   { id: 4807, ts: S - 300, from_name: 'Carlos', target_persona: 'Neo', target_machine: 'macmini', status: 'pending', text: 'para Neo', note: '' },
   { id: 1043, ts: S - 90000, from_name: 'x', target_persona: '', target_machine: 'macbookair16plata', status: 'pending', text: 'huérfano', note: '' },
   { id: 4808, ts: S - 200, from_name: 'Carlos', target_persona: 'Musk', target_machine: 'grokbot', status: 'ack', text: 'para Elon', note: '' },
+  { id: 4809, ts: S - 100, from_name: 'Carlos', target_persona: 'Merovingio', target_machine: 'grokbotbox', status: 'cancelled', text: 'aviso de consumo', note: 'Anulado por Carlos 4-oct 23:16: aviso de consumo / obsoleto' },
 ];
 
 function fetchFalso(peticiones, { publicaRota = false, saludRota = false } = {}) {
@@ -147,7 +148,7 @@ function fetchFalso(peticiones, { publicaRota = false, saludRota = false } = {})
     }
     if (u.pathname === '/api/bot-inbox' && method === 'GET') {
       if (!auth) return ok({ ok: false, error: 'unauthorized' }, 401);
-      return ok({ ok: true, items: INBOX.filter(deLaPersona).filter((x) => x.status !== 'done') });
+      return ok({ ok: true, items: INBOX.filter(deLaPersona).filter((x) => x.status !== 'done' && x.status !== 'cancelled') });
     }
     const m = u.pathname.match(/^\/api\/bot-inbox\/(\d+)(\/status)?$/);
     if (m && !m[2] && method === 'GET') { const x = INBOX.find((i) => i.id === Number(m[1])); return x ? ok({ ok: true, item: x }) : ok({ ok: false, error: 'no' }, 404); }
@@ -232,6 +233,23 @@ test('encargo_responder: no toca encargos ajenos y exige nota en blocked y done'
   const { client: sinId } = await cliente({ identidad: null });
   const anon = await sinId.callTool({ name: 'encargo_responder', arguments: { numero: 4804, estado: 'ack' } });
   assert.equal(anon.isError, true); assert.match(anon.content[0].text, /sin identidad/);
+});
+
+test('encargo_anular: un consejero anula un encargo ajeno; un agente que no lo encargó, no', async () => {
+  const { client, peticiones } = await cliente({ identidad: identidadPorClave('clave-de-jobs-xxxxxxxxxxxxxxxxxxxx', ENV) });
+  const r = res(await client.callTool({ name: 'encargo_anular', arguments: { numero: 4807, nota: 'Anulado por Carlos 4-oct 23:16: aviso de consumo / obsoleto' } }));
+  assert.equal(r.estado, 'cancelled'); assert.equal(r.lectura, 'anulado');
+  const post = peticiones.find((p) => p.method === 'POST' && p.url.endsWith('/4807/status'));
+  assert.equal(post.body.status, 'cancelled');
+  assert.match(post.body.respuesta, /aviso de consumo/);
+  const { client: agente } = await cliente({ identidad: MEROVINGIO });
+  const no = await agente.callTool({ name: 'encargo_anular', arguments: { numero: 4807, nota: 'me lo quedo' } });
+  assert.equal(no.isError, true); assert.match(no.content[0].text, /quien lo encargó/);
+  const sinNota = await client.callTool({ name: 'encargo_anular', arguments: { numero: 4807, nota: '   ' } });
+  assert.equal(sinNota.isError, true);
+  const e = res(await client.callTool({ name: 'encargo_estado', arguments: { encargo: 4809 } }));
+  assert.equal(e.estado, 'cancelled'); assert.equal(e.lectura, 'anulado');
+  assert.match(e.respuesta, /aviso de consumo/);
 });
 
 test('encargo_responder: un consejero contesta lo suyo (Jobs no puede con lo de Musk)', async () => {

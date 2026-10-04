@@ -47,7 +47,7 @@ export function crearTelegram(env = {}, identidad, deps = {}) {
     // La vista privada de la bandeja devuelve lo dirigido a la MÁQUINA; en GrokBot conviven cuatro
     // consejeros, así que aquí se filtra por persona: cada uno ve solo lo suyo.
     const mios = (d.items || []).filter((x) => String(x.target_persona || '').toLowerCase().replace(/\s+/g, '').startsWith(id.persona.toLowerCase()));
-    const items = mios.filter((x) => x.status !== 'done').map((x) => ({
+    const items = mios.filter((x) => x.status !== 'done' && x.status !== 'cancelled').map((x) => ({
       encargo: Number(x.id), estado: x.status, de: x.from_name || '', cuando: cuando(x.ts), texto: String(x.text || ''),
       tarea: x.task_id || null, nota: x.note || '',
     }));
@@ -86,6 +86,7 @@ export function crearTelegram(env = {}, identidad, deps = {}) {
     const body = { status: estado, persona: id.agent, machine: id.machine, respuesta };
     if (commit) body.commit = commit; if (url) body.url = url; if (verificacion) body.verification = verificacion;
     if (estado === 'done' && !respuesta && !commit && !url && !verificacion) throw new Error('para cerrar hace falta la respuesta (o commit/url/verificación): un done sin nada no contesta a nadie');
+    if (estado === 'cancelled' && !respuesta) throw new Error('anular exige nota');
     const r = await llamar(`${base}/api/bot-inbox/${Number(encargo)}/status`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
     return { ok: !!r.ok, encargo: Number(encargo), firmado_como: id.agent, estado: r.item ? r.item.status : estado, publicado_en_telegram: !!r.ok && r.publicado !== false };  // el worker no publica los chats ([chat-coetaneos])
   }

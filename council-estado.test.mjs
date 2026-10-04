@@ -131,3 +131,12 @@ test('ficha: la caja del proyecto lleva la etiqueta «Proyecto:»', async () => 
   assert.match(src, /estado-pill\.working\{color:\$\{COLORES\.working\}\}/);
   assert.match(src, /path\.body-hotspot\[data-estado-color\]:hover/);
 });
+
+test('ficha: «Desde» usa s.desde del feed (libre) con hora de Madrid; «sin datos» solo sin historial', () => {
+  const ahora = Date.UTC(2026, 9, 4, 17, 15, 0); // 19:15 Madrid
+  const base = { enlazado: true, estado: 'idle', agentes: [], cola: null };
+  const f = E.ficha({ ...base, desde: Math.floor(Date.UTC(2026, 9, 4, 17, 1, 0) / 1000) }, ahora);
+  assert.equal(f.filas.find((x) => x[0] === 'Desde')[1], 'hace 14 min (19:01)');
+  const g = E.ficha({ ...base, desde: null }, ahora);
+  assert.equal(g.filas.find((x) => x[0] === 'Desde')[1], 'sin datos');
+});

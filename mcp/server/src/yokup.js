@@ -20,6 +20,7 @@
  *     el cierre de cada misión llevan un pantallazo de www.admira.live/highscore.
  */
 
+import { marcarTrabajo } from './desde.js';
 import { CONSEJEROS_GROKBOT, sillaCanonica } from './sillas.js';
 
 export const EQUIPO = 'GrokBot';
@@ -152,7 +153,12 @@ export function crearYokup(env = {}, identidad, deps = {}) {
       body.mode = trabajando ? 'trabajando' : 'pasivo';
       if (Number.isInteger(encargo)) body.encargo = encargo;
     }
-    return llamar(`${telegram}/api/presence`, { ...json(body), headers: { 'content-type': 'application/json', ...panel() } }, viaTelegram);
+    const r = await llamar(`${telegram}/api/presence`, { ...json(body), headers: { 'content-type': 'application/json', ...panel() } }, viaTelegram);
+    // «Desde» de la mesa: apunta en el KV solo el CAMBIO del flag trabajando (no cada latido).
+    if (typeof trabajando === 'boolean' && env.ADMIRA_LIVE_DESDE) {
+      await marcarTrabajo(env.ADMIRA_LIVE_DESDE, id, trabajando, Math.floor(ahora() / 1000));
+    }
+    return r;
   }
   /** Latido silencioso en cada acción: si falla no rompe la acción. */
   async function latir(foco) { try { return await presencia({ foco }); } catch (e) { return { ok: false, error: String(e.message || e) }; } }

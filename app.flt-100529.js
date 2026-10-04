@@ -638,14 +638,26 @@
         }).join("");
         applySpeakerTurns();
 
-        // Render body hotspots (clickable zones over character bodies)
+        // Máscaras con la silueta real (cabeza + hombros + torso) de cada consejero.
+        // El viewBox es el tamaño del arte, así el trazo escala con la escena.
         const bhEl = document.getElementById("body-hotspots");
-        bhEl.innerHTML = plates.map(p => {
-            if (!p.body) return '';
-            const b = p.body;
-            return `<div class="body-hotspot" data-persona="${p.persona}" title="Ver ficha de ${p.persona} (${p.role})"
-                style="left:${b.left}%;top:${b.top}%;width:${b.width}%;height:${b.height}%"></div>`;
-        }).join("");
+        const sil = (window.COUNCIL_SILHOUETTES || {})[currentGen];
+        if (sil && sil.paths) {
+            const paths = plates.map(p => {
+                const d = sil.paths[p.persona];
+                if (!d) return '';
+                const title = `Ver ficha de ${p.persona} (${p.role})`;
+                return `<path class="body-hotspot" data-persona="${p.persona}" data-role="${p.role}" d="${d}"><title>${title}</title></path>`;
+            }).join("");
+            bhEl.innerHTML = `<svg class="silhouette-svg" viewBox="0 0 ${sil.width} ${sil.height}" preserveAspectRatio="none" aria-hidden="false">${paths}</svg>`;
+        } else {
+            bhEl.innerHTML = plates.map(p => {
+                if (!p.body) return '';
+                const b = p.body;
+                return `<div class="body-hotspot" data-persona="${p.persona}" title="Ver ficha de ${p.persona} (${p.role})"
+                    style="left:${b.left}%;top:${b.top}%;width:${b.width}%;height:${b.height}%"></div>`;
+            }).join("");
+        }
         // El clic sobre el cuerpo abre la ficha del consejero (salvo en modo preguntar, que selecciona para preguntar).
         bhEl.classList.add("ficha-active");
 
@@ -1562,7 +1574,7 @@
         }
     }
 
-    const VERB_LABELS = { preguntar:"Preguntar", examinar:"Examinar", debatir:"Debatir", entrenar:"Entrenar", crear:"Crear", hablar:"Yarig.AI", leer:"Pensar", votar:"Votar", analizar:"Analizar", presentar:"Presentar", previo:"Ver Previo", reunion:"Reunión" };
+    const VERB_LABELS = { preguntar:"Preguntar", examinar:"Examinar", debatir:"Debatir", entrenar:"Entrenar", crear:"Crear", hablar:"Conversación", leer:"Pensar", votar:"Votar", analizar:"Analizar", presentar:"Presentar", previo:"Ver Previo", reunion:"Reunión" };
     function _slEsc(s) { return String(s).replace(/[&<>"]/g, c => ({ "&":"&amp;", "<":"&lt;", ">":"&gt;", '"':"&quot;" }[c])); }
     function setSentenceHtml(html) { const el = document.getElementById("sentence-line"); if (el) el.innerHTML = html; }
 

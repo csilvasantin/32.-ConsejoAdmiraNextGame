@@ -94,9 +94,11 @@ test('ficha: proyecto bajo el nombre y Misión con la tarea del latido si no hay
   assert.equal(sinProyecto.filas[0][1], 'Portada v8.1');
 });
 
-test('color por estado: trabajando rojo, libre verde, sin datos blanco; píldora y contorno iguales', () => {
-  assert.equal(E.COLORES.working, '#ff3b30');
-  assert.equal(E.COLORES.idle, '#3ddc84');
+test('color por estado (#4678): trabajando verde, esperando amarillo, libre/sin datos blanco; píldora y contorno iguales', () => {
+  assert.equal(E.COLORES.working, '#3ddc84');
+  assert.equal(E.COLORES.ack, '#ffd60a');
+  assert.equal(E.COLORES.blocked, '#ffd60a');
+  assert.equal(E.COLORES.idle, '#ffffff');
   assert.equal(E.COLORES.nodata, '#ffffff');
   assert.equal(E.claseEstado({ enlazado: true, estado: 'working' }), 'working');
   assert.equal(E.claseEstado({ enlazado: true, estado: 'idle' }), 'idle');

@@ -24,10 +24,10 @@
     idle: { txt: 'sin actividad', cls: 'idle' }
   });
   /* Color del estado (Carlos, 4-oct-2026): el contorno de la figura al pasar el ratón o
-   * seleccionarla y la píldora de la ficha usan el MISMO color. Trabajando = rojo,
-   * libre = verde, sin datos / sin agente = blanco; aceptado (pendiente de empezar) =
-   * azul del tablero; bloqueado = naranja (el rojo del tablero ya es «trabajando»). */
-  const COLORES = Object.freeze({ working: '#ff3b30', ack: '#79c0ff', blocked: '#ffa657', idle: '#3ddc84', nodata: '#ffffff' });
+   * seleccionarla y la píldora de la ficha usan el MISMO color. Paleta del «halo de
+   * colores» (encargo #4678): trabajando = verde; esperando = amarillo (aceptado/ack
+   * y bloqueado); libre y sin datos / sin agente = blanco. */
+  const COLORES = Object.freeze({ working: '#3ddc84', ack: '#ffd60a', blocked: '#ffd60a', idle: '#ffffff', nodata: '#ffffff' });
   /* Clase de color de una silla (o de un estado suelto): 'working' | 'ack' | 'blocked' | 'idle' | 'nodata'. */
   function claseEstado(s) {
     const st = s && typeof s === 'object' ? (s.enlazado ? s.estado : null) : s;
@@ -562,6 +562,10 @@
       wireHover();
       // Colores de contorno listos antes del primer hover (una lectura; luego se reutiliza 25 s).
       cargar(false).then(() => pintarContornos(doc), () => {});
+      // Color de estado en el contorno desde la carga (#4678): las siluetas se pintan (y se
+      // repintan al cambiar de generación) después de este script; en cuanto aparecen, se marcan.
+      const bh = doc.getElementById('body-hotspots');
+      if (bh && typeof root.MutationObserver === 'function') new root.MutationObserver(() => pintarContornos(doc)).observe(bh, { childList: true, subtree: true });
       // Sondeo (pestaña visible) para detectar cambios y hacer parpadear al consejero que se actualiza.
       setInterval(() => { if (!doc.hidden) cargar(true).then(() => pintarContornos(doc), () => {}); }, SONDEO_MS);
       // Las placas y los cuerpos se repintan al cambiar de generación: el contenedor es el mismo,

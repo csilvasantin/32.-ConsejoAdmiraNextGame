@@ -1860,7 +1860,7 @@
         addConvEntry('conv-racional', '⌨️', 'CLI', 'Consejo CLI', 'racional',
             '<strong>Comandos disponibles</strong><br>' +
             '/help<br>' +
-            '/recorte <span style="opacity:0.7">(editor manual de la silueta clicable de cada consejero)</span><br>' +
+            '/recorte o /recortar <span style="opacity:0.7">(editor manual de la silueta clicable de cada consejero)</span><br>' +
             '/importar &lt;url&gt; <span style="opacity:0.7">(descarga vídeo y lo sube a Drive)</span><br>' +
             '/google <span style="opacity:0.7">(abre la hoja de enlaces Entrenar)</span><br>' +
             '/diario <span style="opacity:0.7">(muestra el diario operativo)</span><br>' +
@@ -2149,7 +2149,7 @@
         '/admira.app', '/clearchannel.tv', '/pixeria.com', '/equipos', '/control',
         '/scumm', '/top', '/bocas', '/mac', '/motor', '/olvidar', '/menu', '/agoramatrix', '/tareas', '/google',
         '/importar', '/nombres', '/tarea', '/diario', '/leyendas', '/coetaneos', '/agentes', '/comandos', '/sendto',
-        '/marcador', '/flota', '/highscore', '/recorte'
+        '/marcador', '/flota', '/highscore', '/recorte', '/recortar'
     ];
     (function setupCliAutocomplete() {
         const inp = document.getElementById('action-input');
@@ -2221,7 +2221,7 @@
             return true;
         }
         // /recorte: editor manual de las siluetas clicables (assets/council-recorte.js).
-        if (/^\/recorte$/i.test(text)) {
+        if (/^\/recort(e|ar)$/i.test(text)) {
             addUserEntry(text);
             if (window.CouncilRecorte) {
                 window.CouncilRecorte.open(currentGen);

@@ -29,6 +29,7 @@ import { crearTelegram } from './telegram.js';
 import { crearFlota, PERSONAS, AGENTES_FLOTA, CONSEJEROS, SILLAS } from './flota.js';
 import { censoBots, flotaCombinada, RUNTIMES, ESTADOS_ABIERTOS } from './coordinacion.js';
 
+import { crearEstado, CACHE_SEG } from './estado.js';
 const NOMBRE = 'admira-live-mcp';
 
 const texto = (data) => ({ content: [{ type: 'text', text: typeof data === 'string' ? data : JSON.stringify(data, null, 2) }] });
@@ -426,6 +427,21 @@ export async function manejar(request, env, deps = {}) {
     return json({ ok: true, worker: NOMBRE, version: env.VERSION || '', secretos: { MCP_KEY: !!env.MCP_KEY, MCP_KEYS: !!env.MCP_KEYS, MCP_KEY_CONSEJO: !!env.MCP_KEY_CONSEJO, MCP_FIRMA_ESTRICTA: String(env.MCP_FIRMA_ESTRICTA || '') === '1', MCP_FLOTA_SEED: !!env.MCP_FLOTA_SEED, COUNCIL_MACHINE_TOKEN: !!env.COUNCIL_MACHINE_TOKEN, AGORA_SYNC_KEY: !!env.AGORA_SYNC_KEY, ADMIRA_TELEGRAM_PANEL_KEY: !!env.ADMIRA_TELEGRAM_PANEL_KEY }, consejeros_con_carne: CONSEJEROS_GROKBOT, consejo });
   }
 
+  /* «¿En qué está cada consejero ahora?» para la mesa de admira.live (hover y DEBATIR, 4-oct-2026).
+     Pública y de solo lectura: solo junta presencia y bandeja PÚBLICAS de bot.yokup.com (ver estado.js). */
+  if (ruta === '/consejo/estado') {
+    const cors = { 'access-control-allow-origin': '*', 'access-control-allow-methods': 'GET, OPTIONS', 'access-control-max-age': '86400' };
+    if (request.method === 'OPTIONS') return new Response(null, { status: 204, headers: cors });
+    if (request.method !== 'GET') return json({ ok: false, error: 'solo GET' }, 405, cors);
+    const cache = !deps.fetch && typeof caches !== 'undefined' && caches.default ? caches.default : null;
+    const clave = new Request(`${url.origin}/consejo/estado`, { method: 'GET' });
+    if (cache) { const hit = await cache.match(clave).catch(() => null); if (hit) return hit; }
+    const cuerpo = await crearEstado(env, deps).mesa().catch((e) => ({ ok: false, error: String(e.message || e) }));
+    const resp = json(cuerpo, cuerpo.ok ? 200 : 502, { ...cors, 'cache-control': `public, max-age=${CACHE_SEG}` });
+    if (cache && cuerpo.ok) { const guardar = cache.put(clave, resp.clone()).catch(() => {}); if (deps.waitUntil) deps.waitUntil(guardar); }
+    return resp;
+  }
+
   if (ruta === '/mcp') {
     if (!(await claveValida(request, env))) {
       return json({ ok: false, error: 'no autorizado: falta la clave del MCP (Authorization: Bearer … o ?key=…)' }, 401, { 'www-authenticate': 'Bearer realm="admira-live-mcp"' });
@@ -453,7 +469,7 @@ export async function manejar(request, env, deps = {}) {
     }
   }
 
-  return json({ ok: false, error: 'ruta desconocida', rutas: ['/', '/salud', '/mcp'] }, 404);
+  return json({ ok: false, error: 'ruta desconocida', rutas: ['/', '/salud', '/mcp', '/consejo/estado'] }, 404);
 }
 
 // ctx.waitUntil: lo que sigue después de contestar (importación y plan de yokup_alta) no

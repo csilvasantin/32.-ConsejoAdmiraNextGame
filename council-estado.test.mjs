@@ -80,3 +80,16 @@ test('hoja: Estado por ocupación y tiempos reales; «sin datos» siempre al fin
   assert.equal(ids([{ id: 'desde', dir: 'asc' }]), 'DECAB');
   assert.equal(ids([]), 'ABCDE');
 });
+
+test('ficha: proyecto bajo el nombre y Misión con la tarea del latido si no hay encargo', () => {
+  const walt = { persona: 'Walt Disney', rol: 'CCO', enlazado: true, estado: 'working', encargo: null, proyecto: 'digitalsignage.ai', ultimo_latido: S - 30,
+    agentes: [{ persona: 'Disney', tipo: 'silla', etiqueta: 'DisneyGrokBot', vivo: true, foco: 'Portada v8.1', tarea: 'Ficha de la mesa con proyecto y misión', proyecto: 'digitalsignage.ai' }] };
+  const f = E.ficha(walt, NOW);
+  assert.equal(f.proyecto, 'digitalsignage.ai');
+  assert.equal(f.filas[0][0], 'Misión');
+  assert.equal(f.filas[0][1], 'Ficha de la mesa con proyecto y misión');
+  assert.ok(!f.filas.some(x => x[0] === 'Ahora'));
+  const sinProyecto = E.ficha({ ...walt, proyecto: null, agentes: [{ ...walt.agentes[0], proyecto: null, tarea: null }] }, NOW);
+  assert.equal(sinProyecto.proyecto, null);
+  assert.equal(sinProyecto.filas[0][1], 'Portada v8.1');
+});

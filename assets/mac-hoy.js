@@ -572,7 +572,7 @@ export function buildMosaic(root = lastRoot || (typeof document !== 'undefined' 
     const name = doc.createElement('span');
     name.className = 'mac-hoy-tile-name';
     name.textContent = alias.toUpperCase();
-    tile.appendChild(img); tile.appendChild(ns); tile.appendChild(name);
+    tile.appendChild(img); tile.appendChild(ns); tile.appendChild(name); tile.appendChild(mosaicTimeEl(doc));
     grid.appendChild(tile);
   });
   host.appendChild(grid);
@@ -595,21 +595,82 @@ function mosaicShow(tile, src) {
 /** Último recurso visual: placard SVG, NUNCA el CRT vacío «SIN SEÑAL». */
 function mosaicPlacard(tile, alias, title, subtitle) {
   mosaicRevoke(alias);
+  mosaicSetTime(tile, null);
   return mosaicShow(tile, evidencePlacard(title || 'sin historial', subtitle || String(alias || '')));
+}
+/* #5114 — Imagen EN VIVO de la Computadora. Fuente real del ultradetalle/Computadora
+   (assets/mac-remote.js): POST fleet.admira.live/api/grokbot/remote con
+   credentials:'include' + X-Fleet-CSRF, {action:'open'|'frame'} → JSON
+   {frame:{jpeg base64}}. Ese canal NO se sondea desde el mosaico: 'open' activa la
+   app GrokBot en el Mac mini, borra las demás sesiones remotas del mismo usuario
+   (cerraría el ultradetalle abierto) y solo sirve para la silla seleccionada en
+   GrokBot (remote_selection_changed). Por eso el mosaico REUTILIZA los fotogramas
+   que mac-remote.js ya recibe (evento 'mac-remote-frame') y, si no hay, pide el
+   proxy pasivo GET screen.jpg (misma cookie de sesión, GET sin CSRF). */
+export const LIVE_FRAME_TTL_MS = 30000;
+const liveFrames = new Map(); // alias -> { src, at }
+export function noteLiveFrame(persona, src, at = Date.now()) {
+  const alias = chairAlias(persona) || (persona ? String(persona).trim() : '');
+  if (!alias || !src) return false;
+  liveFrames.set(alias, { src: String(src), at: Number(at) || Date.now() });
+  return true;
+}
+export function liveFrameFor(alias, now = Date.now()) {
+  const f = liveFrames.get(chairAlias(alias) || alias);
+  return f && now - f.at <= LIVE_FRAME_TTL_MS ? f : null;
+}
+export function imagenRecibida(ms) {
+  const n = Number(ms);
+  if (!Number.isFinite(n) || n <= 0) return '';
+  try {
+    return 'Imagen recibida ' + new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', hourCycle: 'h23' }).format(new Date(n));
+  } catch (_) { return ''; }
+}
+function mosaicTimeEl(doc) {
+  const t = doc.createElement('span');
+  t.className = 'mac-hoy-tile-time';
+  t.hidden = true;
+  return t;
+}
+function mosaicSetTime(tile, ms) {
+  const el = tile && tile.querySelector ? tile.querySelector('.mac-hoy-tile-time') : null;
+  const txt = imagenRecibida(ms);
+  if (tile && tile.classList && typeof tile.classList.toggle === 'function') tile.classList.toggle('en-vivo', !!txt);
+  if (!el) return;
+  el.textContent = txt;
+  el.hidden = !txt;
+}
+if (typeof document !== 'undefined' && document.addEventListener) {
+  document.addEventListener('mac-remote-frame', (e) => {
+    const d = e && e.detail;
+    if (d && noteLiveFrame(d.persona, d.src, d.at)) {
+      const grid = mosaicHost(lastRoot || document);
+      const tile = grid && grid.querySelector ? grid.querySelector('.mac-hoy-tile[data-seat="' + (chairAlias(d.persona) || d.persona) + '"]') : null;
+      if (tile) { mosaicRevoke(chairAlias(d.persona)); mosaicShow(tile, d.src); mosaicSetTime(tile, d.at); }
+    }
+  });
 }
 /* Sin cookies de flota screen.jpg da 401 (y 404 a sillas sin máquina): no
    martillear cada 12 s llenando la consola; reintentar al cabo de 5 min. */
-export const LIVE_BACKOFF_MS = 5 * 60 * 1000;
+export const LIVE_BACKOFF_MS = 5 * 60 * 1000;   // persona no soportada (400)
+export const LIVE_RETRY_MS = 60 * 1000;         // 401/403 (sin sesión) o 404/424/503 (silla sin escritorio abierto)
 const liveBackoff = new Map(); // alias|'*' -> until ms
 async function mosaicFetchLiveBlob(alias, request) {
   if (!request) return null;
   const now = Date.now();
   if ((liveBackoff.get('*') || 0) > now || (liveBackoff.get(alias) || 0) > now) return null;
+  // Sin sesión de la verja (admiraGateCsrf vacío) el proxy solo daría 401.
+  if (typeof window !== 'undefined' && typeof window.admiraGateCsrf === 'function') {
+    let csrf = '';
+    try { csrf = String(window.admiraGateCsrf() || ''); } catch (_) { csrf = ''; }
+    if (!csrf) return null;
+  }
   const url = SCREEN_JPEG + '?persona=' + encodeURIComponent(alias) + '&t=' + now;
   try {
     const r = await request(url, { credentials: 'include', cache: 'no-store' });
-    if (r && (r.status === 401 || r.status === 403)) liveBackoff.set('*', now + LIVE_BACKOFF_MS);
-    else if (r && r.status === 404) liveBackoff.set(alias, now + LIVE_BACKOFF_MS);
+    if (r && (r.status === 401 || r.status === 403)) liveBackoff.set('*', now + LIVE_RETRY_MS);
+    else if (r && r.status === 400) liveBackoff.set(alias, now + LIVE_BACKOFF_MS);
+    else if (r && (r.status === 404 || r.status === 424 || r.status >= 500)) liveBackoff.set(alias, now + LIVE_RETRY_MS);
     if (!r || !r.ok) return null;
     const ct = String((r.headers && r.headers.get && r.headers.get('content-type')) || '');
     if (ct && /json|text\//i.test(ct)) return null;
@@ -640,13 +701,23 @@ function mosaicEvidenceTitle(data, alias) {
   if (frase && frase !== 'sin titulo') return frase;
   return 'ultimo trabajo';
 }
+// 0º fotograma vivo del ultradetalle (evento mac-remote-frame, <30 s)
 // 1º SCREEN_JPEG con credentials (misma sesión que Computadora / remote)
 // 2º evidencia (imagen aunque live=false = último trabajo)
 // 3º placard con metadatos / misión cerrada
 // NUNCA baldosa vacía SIN SEÑAL.
 async function mosaicTile(tile, alias, request) {
+  // 0º fotograma vivo que el ultradetalle/Computadora (mac-remote.js) ya recibió
+  const live = liveFrameFor(alias);
+  if (live) {
+    mosaicRevoke(alias);
+    mosaicShow(tile, live.src);
+    mosaicSetTime(tile, live.at);
+    return true;
+  }
   const blob = await mosaicFetchLiveBlob(alias, request);
-  if (blob && mosaicShowBlob(tile, alias, blob)) return true;
+  if (blob && mosaicShowBlob(tile, alias, blob)) { mosaicSetTime(tile, Date.now()); return true; }
+  mosaicSetTime(tile, null);
 
   const url = EVIDENCE_URL + '?persona=' + encodeURIComponent(alias) + '&t=' + Date.now();
   let data = null;
@@ -743,7 +814,7 @@ function celdaPantalla(doc, alias) {
   const name = doc.createElement('span');
   name.className = 'mac-hoy-tile-name';
   name.textContent = alias ? alias.toUpperCase() : '';
-  tile.appendChild(img); tile.appendChild(ns); tile.appendChild(name);
+  tile.appendChild(img); tile.appendChild(ns); tile.appendChild(name); tile.appendChild(mosaicTimeEl(doc));
   if (alias) {
     const abrir = (e) => {
       if (e && e.preventDefault) e.preventDefault();

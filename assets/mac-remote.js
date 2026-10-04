@@ -63,6 +63,8 @@ export function openRemote(personaHint){
     const next=new Image();next.src='data:image/jpeg;base64,'+data.frame.jpeg;
     await next.decode();if(closed||version!==generation)return;
     img.src=next.src;frame=data.frame;ready=true;recovering=false;frameFailures=0;hint.hidden=true;say('Conectado · ratón y teclado activos');
+    // #5114: el mosaico del Mac 1984 reutiliza este mismo fotograma (sin abrir otra sesión).
+    try{document.dispatchEvent(new CustomEvent('mac-remote-frame',{detail:{persona:data.persona||persona,src:next.src,at:Date.now()}}));}catch(_){}
   }
   function schedule(){clearTimeout(timer);if(!closed&&(ready||recovering))timer=setTimeout(refresh,1000);}
   async function refresh(){

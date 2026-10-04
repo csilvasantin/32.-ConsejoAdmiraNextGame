@@ -93,3 +93,41 @@ test('ficha: proyecto bajo el nombre y Misión con la tarea del latido si no hay
   assert.equal(sinProyecto.proyecto, null);
   assert.equal(sinProyecto.filas[0][1], 'Portada v8.1');
 });
+
+test('color por estado: trabajando rojo, libre verde, sin datos blanco; píldora y contorno iguales', () => {
+  assert.equal(E.COLORES.working, '#ff3b30');
+  assert.equal(E.COLORES.idle, '#3ddc84');
+  assert.equal(E.COLORES.nodata, '#ffffff');
+  assert.equal(E.claseEstado({ enlazado: true, estado: 'working' }), 'working');
+  assert.equal(E.claseEstado({ enlazado: true, estado: 'idle' }), 'idle');
+  assert.equal(E.claseEstado({ enlazado: true, estado: 'blocked' }), 'blocked');
+  assert.equal(E.claseEstado({ enlazado: true, estado: 'ack' }), 'ack');
+  assert.equal(E.claseEstado({ enlazado: true, estado: null }), 'nodata');
+  assert.equal(E.claseEstado({ enlazado: false, estado: 'working' }), 'nodata');
+  assert.equal(E.claseEstado(null), 'nodata');
+  assert.equal(E.claseEstado('working'), 'working');
+  assert.equal(E.claseEstado(undefined), 'nodata');
+});
+
+test('contornos: cada silueta recibe data-estado-color según su silla', async () => {
+  const mesa = { leyendas: [
+    { persona: 'Walt Disney', enlazado: true, estado: 'working' },
+    { persona: 'Steve Wozniak', enlazado: true, estado: 'idle' },
+    { persona: 'Tim Cook', enlazado: false, estado: null }] };
+  await E.cargar(true, async () => ({ ok: true, json: async () => ({ ok: true, mesa }) }));
+  const mk = p => { const a = { 'data-persona': p }; return { a, getAttribute: k => a[k] ?? null, setAttribute: (k, v) => { a[k] = String(v); } }; };
+  const els = ['Walt Disney', 'Steve Wozniak', 'Tim Cook', 'Nadie Nuevo'].map(mk);
+  const doc = {
+    getElementById: id => id === 'body-hotspots' ? { querySelectorAll: () => els } : (id === 'estado-css' ? {} : null),
+    head: { appendChild() {} }
+  };
+  E.pintarContornos(doc);
+  assert.deepEqual(els.map(e => e.a['data-estado-color']), ['working', 'idle', 'nodata', 'nodata']);
+});
+
+test('ficha: la caja del proyecto lleva la etiqueta «Proyecto:»', async () => {
+  const src = (await import('node:fs')).readFileSync(new URL('./council-estado.js', import.meta.url), 'utf8');
+  assert.match(src, /etq\.textContent = 'Proyecto:'/);
+  assert.match(src, /estado-pill\.working\{color:\$\{COLORES\.working\}\}/);
+  assert.match(src, /path\.body-hotspot\[data-estado-color\]:hover/);
+});

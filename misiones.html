@@ -15,6 +15,7 @@
 <link rel="stylesheet" href="https://www.carlossilva.info/admira-design/tokens.css">
 <link rel="stylesheet" href="/yk-frame.css?v=r21">
 <link rel="stylesheet" href="/yk-misiones.css?v=v.2026.09.07.r1">
+<link rel="stylesheet" href="/yk-quien.css?v=20261004-quien">
 <link rel="stylesheet" href="/yk-cabezal.css?v=r3">
 <style>
 .mission-history{margin:0 0 18px;padding:14px;border:1px solid var(--line);border-radius:10px;background:var(--card)}
@@ -298,6 +299,7 @@ h1{font-size:clamp(23px,3vw,31px);letter-spacing:-.02em;margin:4px 0 10px;displa
        tablero, y se llevaba una línea entera para hacerlo. El histórico completo
        se sigue pidiendo vaciando la fecha del cabezal, que ya lo anuncia en su
        tooltip: «vacío = todas las fechas». -->
+  <div id="quienTrabaja"></div>
   <div class="list" id="list"><div class="empty">Cargando misiones…</div></div>
 
   <!-- Barra de acción en bloque: aparece al seleccionar ≥1 misión (checkbox de la columna ID). -->
@@ -326,6 +328,8 @@ h1{font-size:clamp(23px,3vw,31px);letter-spacing:-.02em;margin:4px 0 10px;displa
 <script src="/yk-agent-identity.js?v=v.2026.08.02.224605"></script>
 <script src="/yk-maquina.js?v=r1"></script>
 <script src="/yk-misiones.js?v=v.2026.09.19.r3"></script>
+<script src="/yk-quien.js?v=20261004-quien"></script>
+<script src="/yk-quien-ui.js?v=20261004-quien"></script>
 <script src="/yk-adjuntos.js?v=r3"></script>
 <script src="/yk-cabezal.js?v=r4"></script>
 <script src="/mission-ledger.js?v=100640-1"></script>
@@ -642,6 +646,14 @@ async function loadBoard(){
     base=base.filter(t=>t.status!=="cancelled" && (t.status!=="resolved" || (missionSource(t) && (Date.now()-_ms(t.resolved_at||t.updated_at))<FRESH)));
   }
   else if(FILTER!=="todas") base=base.filter(t=>(t._members||[t]).some(member=>YkMisiones.coincideEstado(member,FILTER)));
+  // «¿Quién trabaja?» acota el MISMO listado que selAgente (assignee/_agents),
+  // con el nombre normalizado. Un consejero incluye a su deepagent. El selector
+  // de agente sigue cruzando dentro de ese conjunto: no hay un segundo filtro aparte.
+  const quienSel=QUIEN.get();
+  const quienAgents=t=>[...(t._agents||[]),t.assignee,t.executor,t.from_name,t.target_persona];
+  if(quienSel.tipo!=="todos"){
+    base=base.filter(t=>(t._members||[t]).some(member=>YkQuien.itemMatches(member,quienSel,{agents:quienAgents(member),extras:QUIEN.extras()})));
+  }
   // Selectores CRUZADOS y solo con quien TIENE misiones en el contexto actual:
   // agentes según el equipo elegido, equipos según el agente elegido.
   // agentes reales del grupo (una misión difundida agrupa varios): _agents si existe.
@@ -698,7 +710,8 @@ async function loadBoard(){
   if(!list.length){
     el.innerHTML=headHtml()+'<div class="empty" id="missionEmpty"></div>';bindHead(el);wireBulk(el,[]);
     const empty=$("missionEmpty"),stateName={activas:"activas",asignadas:"pendientes",in_progress:"en curso",unconcluded:"no concluidas",resolved:"finalizadas",cancelled:"eliminadas",todas:""}[FILTER]||"";
-    if(empty)empty.textContent="Sin misiones"+(stateName?(" "+stateName):"")+" en "+formatScopeDay(requestedDay)+(PROJECT_SCOPE?(" para "+PROJECT_SCOPE):"")+". "+(requestedDay?"Elige otro día o pulsa Hoy para volver al registro actual.":"✓");
+    if(empty)empty.textContent="Sin misiones"+(stateName?(" "+stateName):"")+" en "+formatScopeDay(requestedDay)+(PROJECT_SCOPE?(" para "+PROJECT_SCOPE):"")+(quienSel.quien?(" de "+quienSel.quien):"")+". "+(requestedDay?"Elige otro día o pulsa Hoy para volver al registro actual.":"✓");
+    pintarQuien(rawTickets);
     notifyMissionsRendered([]);return;
   }
   // Progreso por misión: UNA sola petición /tasks/all (no N+1); done/total REALES del
@@ -721,6 +734,8 @@ async function loadBoard(){
   YkMisiones.bindRows(el);   // click=misión activa + refresco del árbol de tareas
   marcarHalos(el, list, generation, scopeAtStart); // FLT-761: halo sólo para la generación vigente
   wireBulk(el, list);        // checkboxes de selección + barra de cambio de estado en bloque
+  stampQuien(el, list, quienSel);
+  pintarQuien(rawTickets);
   notifyMissionsRendered(list);
 }
 
@@ -770,6 +785,52 @@ STATE_TABS.forEach(button=>button.addEventListener("click",()=>{
 // (el clic en los KPIs lo reenvía yk-cabezal.js a onState → aplicaFiltro)
 if(window.addEventListener) window.addEventListener("yk:mission-deadline",()=>load());
 if(window.addEventListener) window.addEventListener("yk:mission-project",()=>load());
+let INBOX_ITEMS=[], QUIEN_INFORMES=[], QUIEN_INFORMES_KEY="";
+const QUIEN=YkQuienUI.mount($("quienTrabaja"),{onChange:()=>load()});
+function stampQuien(el, list, selection){
+  if(!selection||!selection.quien||!el) return;
+  const by={};
+  (list||[]).forEach(t=>{ by[String(t.id)]=t; });
+  el.querySelectorAll(".tk").forEach(row=>{
+    const t=by[row.dataset.id]; if(!t) return;
+    const via=YkQuien.viaLabel(t, selection, {agents:[...(t._agents||[]), t.assignee, t.executor]});
+    if(!via) return;
+    const cell=row.querySelector(".cel.agc");
+    if(!cell||cell.querySelector(".quien-via")) return;
+    const badge=document.createElement("span");
+    badge.className="quien-via"; badge.textContent=via;
+    cell.appendChild(badge);
+  });
+}
+function pintarQuien(tickets){
+  const sel=QUIEN.get();
+  if(!sel.quien){ QUIEN.panel(null); return; }
+  QUIEN.panel(YkQuien.personView({
+    selection:sel, extras:QUIEN.extras(), now:Date.now(),
+    encargos:INBOX_ITEMS, misiones:tickets||[], informes:QUIEN_INFORMES,
+    agentOf:t=>[t._executor,t.executor,t.agent_identity,t.owner,t.assignee,t.target_persona,t.from_name]
+  }), "misiones");
+  cargarInformesQuien(sel);
+}
+async function cargarInformesQuien(sel){
+  const key=sel.tipo+"|"+sel.quien;
+  if(QUIEN_INFORMES_KEY===key && QUIEN_INFORMES._at && Date.now()-QUIEN_INFORMES._at<20000) return;
+  const now=Date.now(), from=now-30*86400000;
+  try{
+    const r=await ykf("/tasks/all?scope=fleet&paginated=1&limit=50&updated_from="+from+"&updated_to="+now,{cache:"no-store"});
+    const d=await r.json();
+    QUIEN_INFORMES=(d.tasks||[]).filter(t=>t.report&&String(t.report).trim());
+  }catch(e){ QUIEN_INFORMES=[]; }
+  QUIEN_INFORMES._at=Date.now();
+  QUIEN_INFORMES_KEY=key;
+  if(QUIEN.get().quien===sel.quien){
+    QUIEN.panel(YkQuien.personView({
+      selection:QUIEN.get(), extras:QUIEN.extras(), now:Date.now(),
+      encargos:INBOX_ITEMS, misiones:MIS_ALL||[], informes:QUIEN_INFORMES,
+      agentOf:t=>[t._executor,t.executor,t.agent_identity,t.owner,t.assignee,t.target_persona,t.from_name]
+    }), "misiones");
+  }
+}
 load(); setInterval(()=>{if(!BOARD_LOADING)load();},30000);
 
 // ---- ALTA de misiones de flota ---------------------------------------------
@@ -871,7 +932,12 @@ async function radar(){
     }
     YkMisiones.setLiveSurfaces(SURF);
     CARGA_P={}; CARGA_PM={}; CARGA_M={};
-    for(const it of (ib.items||[])){
+    INBOX_ITEMS=ib.items||[];
+    const quienVistos=[];
+    for(const p of (pr.presence||[])) if(p.persona) quienVistos.push(p.persona);
+    for(const it of INBOX_ITEMS){ if(it.target_persona) quienVistos.push(it.target_persona); if(it.from_name) quienVistos.push(it.from_name); }
+    if(typeof QUIEN!=="undefined" && QUIEN.setSeen) QUIEN.setSeen(quienVistos);
+    for(const it of INBOX_ITEMS){
       if(it.status==="done") continue;
       if(it.target_persona) CARGA_P[it.target_persona]=(CARGA_P[it.target_persona]||0)+1;
       if(it.target_machine){
@@ -892,6 +958,7 @@ async function radar(){
     if(!best||menor(key,best.key)) best={p,maq,raw:i.raw,key};
   }
   LIBRE=best?{p:best.p,maq:best.maq,raw:best.raw}:{p:UNIV[0]||"Neo",maq:"",raw:""};
+  if(QUIEN.get().quien) pintarQuien(MIS_ALL);
   // (el selector del ALTA lo pinta ahora yk-cabezal.js con su propio radar)
 }
 

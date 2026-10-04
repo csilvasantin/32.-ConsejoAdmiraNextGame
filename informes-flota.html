@@ -12,6 +12,7 @@
 <link rel="stylesheet" href="https://www.carlossilva.info/admira-design/tokens.css">
 <link rel="stylesheet" href="/yk-frame.css?v=r21">
 <link rel="stylesheet" href="/yk-informes-view.css?v=r3">
+<link rel="stylesheet" href="/yk-quien.css?v=20261004-quien">
 <!-- Retrato de agente compartido con /misiones. Va en el <head> a propósito: el render
      de la tabla lo consulta y tiene que existir ya en el primer pintado. -->
 <script src="/yk-avatar.js?v=r2"></script>
@@ -21,6 +22,8 @@
 <script src="/yk-informes-columns.js?v=r1"></script>
 <script src="/yk-informes-groups.js?v=r2"></script>
 <script src="/yk-informes-view.js?v=r3"></script>
+<script src="/yk-quien.js?v=20261004-quien"></script>
+<script src="/yk-quien-ui.js?v=20261004-quien"></script>
 <style>
 :root{--bg:#02080d;--card:#0a1620;--card2:#0d1c28;--ink:#dff8ff;--mut:#75aab9;--dim:#4d7a88;--brand:#78f3ff;--accent:#ffd866;--good:#88ffaa;--warn:#ff8866;--violet:#aa88ff;--line:rgba(120,243,255,.16);--line2:rgba(120,243,255,.30);--sans:var(--admira-font-sans,-apple-system,BlinkMacSystemFont,"Inter","Segoe UI",Roboto,sans-serif);--mono:var(--admira-font-mono,ui-monospace,SFMono-Regular,"JetBrains Mono",Menlo,monospace)}
 *{box-sizing:border-box;margin:0;padding:0}
@@ -248,6 +251,8 @@ h1{font-size:clamp(23px,3vw,31px);letter-spacing:-.02em;margin:4px 0 4px}
     </div>
   </details>
 
+  <div id="quienTrabaja"></div>
+
   <div class="report-controls">
     <!-- Filtro por FECHA del informe. Por defecto sólo los de HOY (igual que /tareas). -->
     <div class="tfilter" id="tfilter">
@@ -330,7 +335,13 @@ function filterLabel(){ return DFILTER.mode==="hoy"?"de hoy":DFILTER.mode==="aye
 function emptyScopeLabel(){
   const project=PROJECT_SCOPE?PROJECT_SCOPE:"todos los proyectos";
   const period=filterLabel()||"de todas las fechas";
-  return {project,period};
+  const sel=QUIEN.get();
+  const who=sel.quien?sel.quien:(sel.tipo==="consejeros"?"los consejeros":sel.tipo==="deepagents"?"los deepagents":"");
+  return {project:who?who+" · "+project:project,period};
+}
+function viaMark(t){
+  const via=YkQuien.viaLabel(t, QUIEN.get(), {agents:[t._executor,t.executor,reportAgent(t),t.agent_identity,t.owner]});
+  return via?'<span class="quien-via">'+esc(via)+'</span>':'';
 }
 function filterBounds(){
   if(DFILTER.mode==="todas")return [0,Date.now()+86400000];
@@ -343,10 +354,18 @@ function filterBounds(){
 function applyFilter(){
   if(LOAD_STATE==="error"){ renderLoadError(); return; }
   if(LOAD_STATE!=="ready"||!PROJECT_READY){ renderLoading(); return; }
-  const filtered=ALL.filter(t=>!PROJECT_SCOPE||String(t.project||"")===PROJECT_SCOPE).filter(t=>inRange(t.updated_at));
+  let filtered=ALL.filter(t=>!PROJECT_SCOPE||String(t.project||"")===PROJECT_SCOPE).filter(t=>inRange(t.updated_at));
+  const quienSel=QUIEN.get();
+  if(quienSel.tipo!=="todos"){
+    filtered=filtered.filter(t=>YkQuien.itemMatches(t,quienSel,{
+      extras:QUIEN.extras(),
+      agents:[t._executor,t.executor,reportAgent(t),t.agent_identity,t.owner]
+    }));
+  }
   const sorted=YkInformesSort.sort(filtered,SORT.key,SORT.dir,{agentName:reportAgent,missionLast:MLAST});
   const ordered=YkInformesView.canonicalMissionRows?YkInformesView.canonicalMissionRows(sorted):sorted;
   render(ordered);
+  pintarQuien();
 }
 if(window.addEventListener)window.addEventListener("yk:project-change",event=>{
   const next=event.detail&&event.detail.project_id||null,wasReady=PROJECT_READY,changed=next!==PROJECT_SCOPE;
@@ -685,7 +704,7 @@ function renderGrid(list){
         <a class="mid" href="${esc(detail)}" title="Abrir ${kind==="mission"?"misión":"tarea"} · ID técnico ${esc(mission.id)}">🎯 ${esc(mission.primary)}</a>
         <span class="rcode" title="Código de ${kind==="mission"?"informe final":"tarea"}">${kind==="mission"?"Informe de misión":"Tarea"} ${esc(taskCode)}</span>
         ${mission.secondary?`<span class="mref">${esc(mission.secondary)}</span>`:""}${mission.copy?`<button class="mcopy" type="button" data-copy-mission="${esc(mission.id)}" title="Copiar ID técnico ${esc(mission.id)}" aria-label="Copiar ID técnico ${esc(mission.id)}">copiar ID</button>`:""}
-        <span class="rown" title="${esc(agent)}">${own} ${esc(agent)} · ${esc(ROLE_LABEL[role]||role)}</span>
+        <span class="rown" title="${esc(agent)}">${own} ${esc(agent)} · ${esc(ROLE_LABEL[role]||role)} ${viaMark(t)}</span>
       </div>
       <h2 class="rttl" id="${cardId}">${esc(t.title||subject)}</h2>
       <div class="rmeta">${project?`<span class="scr">${esc(project)}</span> · `:""}misión: ${esc(subject)}</div>
@@ -720,7 +739,7 @@ function renderList(list){
       <span class="report-list-ref">${esc(mission.primary)}</span>
       <span class="report-list-title">${esc(subject)}</span>
       <span class="report-list-body">${esc(t.report)}</span>
-      <span class="report-list-agent">${esc(agent)}</span>
+      <span class="report-list-agent">${esc(agent)} ${viaMark(t)}</span>
     </a>`;
   }).join("");
   updatePageState();
@@ -786,7 +805,7 @@ function renderDetail(list){
     const roleText=summary?"DeepAgent":(ROLE_LABEL[role]||role);
     const rollupText=summary?`<span class="mission-rollup"><b>${options.taskCount} tarea${options.taskCount===1?"":"s"}</b>${options.agentCount} agente${options.agentCount===1?"":"s"}</span>`:"";
     return `<div class="grow item${rowClass}" role="row" data-row-key="${esc(YkInformesView.rowKey(t))}"${summary?' data-mission-summary="true"':""}>
-      <div class="gc" role="cell" data-label="Agente">${summary?rollupText:(window.ykAvatar ? ykAvatar.html(agent) : `<span class="who" title="${esc(agent)}">${own} ${esc(agent)}</span>`)}<span class="role-badge role-${esc(role)}">${esc(roleText)}</span></div>
+      <div class="gc" role="cell" data-label="Agente">${summary?rollupText:(window.ykAvatar ? ykAvatar.html(agent) : `<span class="who" title="${esc(agent)}">${own} ${esc(agent)}</span>`)}<span class="role-badge role-${esc(role)}">${esc(roleText)}</span>${viaMark(t)}</div>
       <div class="gc mis" role="cell" data-label="Misión">
         <a class="mid" href="${esc(detail)}" title="Abrir ${kind==="mission"?"misión":"tarea"} · ID técnico ${esc(mission.id)}">🎯 ${esc(mission.primary)}</a>
         <div class="mmeta"><span class="mcode">${summary?"Resumen de misión":kind==="mission"?"Informe de misión":"Tarea "+esc(taskCode)}</span>${mission.secondary?`<span class="mref">${esc(mission.secondary)}</span>`:""}${mission.copy?`<button class="mcopy" type="button" data-copy-mission="${esc(mission.id)}" title="Copiar ID técnico ${esc(mission.id)}" aria-label="Copiar ID técnico ${esc(mission.id)}">copiar ID</button>`:""}</div>
@@ -885,6 +904,35 @@ $("tfDate").onchange=()=>{
   load();
 };
 
+let INBOX_ITEMS=[], TICKETS_QUIEN=[];
+const QUIEN=YkQuienUI.mount($("quienTrabaja"),{onChange:()=>{pintarQuien();applyFilter();}});
+function pintarQuien(){
+  const sel=QUIEN.get();
+  if(!sel.quien){ QUIEN.panel(null); return; }
+  QUIEN.panel(YkQuien.personView({
+    selection:sel, extras:QUIEN.extras(), now:Date.now(),
+    encargos:INBOX_ITEMS, misiones:TICKETS_QUIEN, informes:ALL,
+    agentOf:t=>[t._executor,t.executor,reportAgent(t),t.agent_identity,t.owner,t.assignee,t.target_persona,t.from_name]
+  }), "informes");
+}
+async function cargarLadoQuien(){
+  const day=madridYmd();
+  const [ib, pr, tk]=await Promise.all([
+    fetch("https://bot.yokup.com/api/public/inbox",{cache:"no-store"}).then(r=>r.json()).catch(()=>({items:[]})),
+    fetch("https://bot.yokup.com/api/presence",{cache:"no-store"}).then(r=>r.json()).catch(()=>({presence:[]})),
+    fetch(WORKER+"/tickets?scope=fleet&limit=1000&day="+encodeURIComponent(day),{cache:"no-store"}).then(r=>r.ok?r.json():{tickets:[]}).catch(()=>({tickets:[]}))
+  ]);
+  INBOX_ITEMS=ib.items||[];
+  TICKETS_QUIEN=tk.rows||tk.tickets||[];
+  const seen=[];
+  (pr.presence||[]).forEach(p=>{ if(p.persona) seen.push(p.persona); });
+  INBOX_ITEMS.forEach(it=>{ if(it.target_persona) seen.push(it.target_persona); if(it.from_name) seen.push(it.from_name); });
+  TICKETS_QUIEN.forEach(t=>{ if(t.assignee) seen.push(t.assignee); (t._agents||[]).forEach(a=>seen.push(a)); });
+  QUIEN.setSeen(seen);
+  pintarQuien();
+}
+cargarLadoQuien();
+
 // Datos, catálogo de proyectos (yk-frame) y personalización arrancan en
 // paralelo. La foto no bloquea /tasks/all: al llegar repinta sólo si ya hay datos.
 load();
@@ -896,6 +944,7 @@ setInterval(refresh,15000);
 // Detrás del refresco de datos a propósito: el orden de los temporizadores es
 // contrato para las pruebas, que disparan intervals[0] esperando el refresco.
 setInterval(()=>{cargaHighscore();},120000);
+setInterval(cargarLadoQuien,60000);
 </script>
 <script src="/informe-pdf.js?v=r1"></script>
 <script type="module" src="/avatar-widget.js?v=3"></script>

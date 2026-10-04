@@ -1,0 +1,34 @@
+/* Selector «¿Quién trabaja?» — Misiones e Informes. Chips con scroll horizontal. */
+.quien{width:100%;max-width:100%;min-width:0;margin:0 0 14px}
+.quien-h{font-family:var(--mono,ui-monospace,monospace);font-size:11px;letter-spacing:.08em;text-transform:uppercase;color:var(--brand,#78f3ff);margin:0 0 8px}
+.quien-tabs,.quien-row,.quien-stats{display:flex;gap:8px;max-width:100%;min-width:0;overflow-x:auto;overflow-y:hidden;-webkit-overflow-scrolling:touch;overscroll-behavior-x:contain;scrollbar-width:thin}
+.quien-tabs{flex-wrap:wrap;overflow:visible;margin-bottom:8px}
+.quien-tab,.quien-chip,.quien-stat{
+  flex:0 0 auto;min-height:40px;min-width:40px;padding:8px 14px;
+  border-radius:999px;border:1px solid var(--line,rgba(120,243,255,.16));
+  background:var(--card,#0a1620);color:var(--mut,#75aab9);
+  font:700 13px/1.2 var(--sans,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif);
+  cursor:pointer;text-decoration:none
+}
+.quien-tab[aria-selected="true"],.quien-chip[aria-pressed="true"]{color:#02080d;background:var(--brand,#78f3ff);border-color:var(--brand,#78f3ff)}
+.quien-group{min-width:0;max-width:100%;margin-top:8px}
+.quien-lab{display:block;margin:0 0 6px;font:700 10px/1 var(--mono,ui-monospace,monospace);letter-spacing:.08em;text-transform:uppercase;color:var(--dim,#4d7a88)}
+.quien-panel{min-width:0;max-width:100%;margin-top:12px;padding:12px;border:1px solid var(--line,rgba(120,243,255,.16));border-radius:12px;background:var(--card,#0a1620);overflow-wrap:anywhere}
+.quien-panel[hidden]{display:none}
+.quien-title{margin:0 0 4px;font-size:16px;color:var(--ink,#dff8ff)}
+.quien-sub{margin:0 0 10px;color:var(--mut,#75aab9);font-size:13px}
+.quien-ultima{margin:10px 0 0;font:600 12px/1.4 var(--mono,ui-monospace,monospace);color:var(--accent,#ffd866)}
+.quien-block{margin-top:12px;min-width:0}
+.quien-block h3{margin:0 0 4px;font:700 10px/1 var(--mono,ui-monospace,monospace);letter-spacing:.08em;text-transform:uppercase;color:var(--dim,#4d7a88)}
+.quien-item{display:flex;flex-wrap:wrap;align-items:center;gap:6px;min-height:40px;min-width:0;padding:6px 0;border-top:1px solid var(--line,rgba(120,243,255,.16));color:inherit;text-decoration:none}
+.quien-txt{min-width:0;flex:1 1 160px;color:var(--ink,#dff8ff);font-size:14px;overflow-wrap:anywhere}
+.quien-when{color:var(--dim,#4d7a88);font:11px/1.3 var(--mono,ui-monospace,monospace)}
+.quien-via{display:inline-flex;align-items:center;min-height:22px;padding:2px 7px;border-radius:999px;border:1px solid rgba(170,136,255,.45);color:#aa88ff;background:rgba(170,136,255,.08);font:700 10px/1.2 var(--mono,ui-monospace,monospace);letter-spacing:.03em;white-space:nowrap}
+.quien-stat{cursor:default;font-size:12px}
+.quien-stat b{color:var(--ink,#dff8ff);font-size:14px}
+.quien-empty{margin:4px 0 0;color:var(--dim,#4d7a88);font-size:13px}
+.quien-more{display:inline-flex;align-items:center;min-height:40px;margin-top:8px;color:var(--brand,#78f3ff);font:700 12px/1 var(--mono,ui-monospace,monospace);letter-spacing:.04em;text-transform:uppercase;text-decoration:none}
+@media(max-width:375px){
+  .quien-tabs{flex-wrap:nowrap;overflow-x:auto}
+  .wrap{overflow-x:clip}
+}

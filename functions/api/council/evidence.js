@@ -74,13 +74,13 @@ function mesaSeat(estado, alias) {
   return null;
 }
 
+// Agentes de cada silla además de <Alias>GrokBot (consejo/estado).
+const CHAIR_AGENTS = { Musk: ["musk", "elon", "merovingio"], Huang: ["huang", "jensen", "cypher"] };
 function missionOf(missions, alias) {
-  const agent = alias + "GrokBot";
-  const nAgent = norm(agent);
-  const nAlias = norm(alias);
+  const keys = CHAIR_AGENTS[alias] || [norm(alias)];
   const rows = (missions || []).filter((m) => {
     const who = norm(m.persona || "") + " " + norm(m.assignee || "");
-    return who.includes(nAgent) || who.includes(nAlias);
+    return keys.some((k) => who.includes(k));
   });
   rows.sort((a, b) => Number(b.updated_at || b.created_at || 0) - Number(a.updated_at || a.created_at || 0));
   return rows[0] || null;
@@ -122,19 +122,20 @@ export async function onRequestGet({ request }) {
   const alias = aliasOf(url.searchParams.get("persona") || "");
   if (!alias) return json({ ok: false, error: "unsupported_persona" }, 400, origin);
 
-  const ctrl = AbortSignal.timeout(10000);
-  let estado = null, missions = [];
-  try {
-    const [er, mr] = await Promise.all([
-      fetch(ESTADO, { cache: "no-store", signal: ctrl, headers: { accept: "application/json" } }),
-      fetch(MISSIONS, { cache: "no-store", signal: ctrl, headers: { accept: "application/json", "user-agent": "admira-live-evidence" } }),
-    ]);
-    if (er.ok) estado = await er.json();
-    if (mr.ok) {
-      const d = await mr.json();
-      missions = Array.isArray(d.missions) ? d.missions : [];
-    }
-  } catch (_) {
+  // #5113b: cada fuente con su plazo y allSettled — antes un timeout de
+  // mcp.admira.live (consejo/estado) tumbaba todo con 502 aunque yokup respondiera.
+  const getJson = async (u, ms, extra) => {
+    const r = await fetch(u, { cache: "no-store", signal: AbortSignal.timeout(ms), headers: Object.assign({ accept: "application/json" }, extra || {}) });
+    if (!r.ok) throw new Error("http " + r.status);
+    return r.json();
+  };
+  const [es, ms] = await Promise.allSettled([
+    getJson(ESTADO, 6000),
+    getJson(MISSIONS, 8000, { "user-agent": "admira-live-evidence" }),
+  ]);
+  const estado = es.status === "fulfilled" ? es.value : null;
+  const missions = ms.status === "fulfilled" && Array.isArray(ms.value && ms.value.missions) ? ms.value.missions : [];
+  if (!estado && ms.status !== "fulfilled") {
     return json({ ok: false, error: "upstream_unavailable", persona: alias, live: false, image: null }, 502, origin);
   }
 

@@ -85,13 +85,20 @@ export function tituloCorto(text, max = 8) {
 }
 
 /** Match counselor chair (Jobs…) against mission persona/assignee/role (…GrokBot). */
+/* Agentes que se sientan en cada silla además de «<Alias>GrokBot» (consejo/estado):
+   Musk → Merovingio (deepagent), Huang → Cypher. Sin esto, Musk/Huang nunca tenían
+   «proyecto anterior» aunque su agente hubiera cerrado misiones. */
+export const CHAIR_AGENTS = {
+  Jobs: ['jobs'], Wozniak: ['wozniak'], Lucas: ['lucas'], Disney: ['disney'],
+  Musk: ['musk', 'elon', 'merovingio'], Huang: ['huang', 'jensen', 'cypher'],
+};
 export function matchesChair(mission, alias) {
   const a = chairAlias(alias) || String(alias || '').trim();
   if (!a || !mission) return false;
   const who = [mission.persona, mission.assignee, mission.role].map((x) => String(x || '')).join(' ');
   const n = who.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
-  const key = a.toLowerCase();
-  return n.includes(key + 'grokbot') || n.includes(key);
+  const keys = CHAIR_AGENTS[a] || [a.toLowerCase()];
+  return keys.some((key) => n.includes(key));
 }
 
 /** Last resolved encargo for a chair (any day). Bare id never alone: keep subject words. */
@@ -220,6 +227,31 @@ export async function fetchHoy(fetchImpl = fetch) {
   const res = await fetchImpl('https://api.yokup.com/fleet/missions?limit=80', { cache: 'no-store' });
   const data = await res.json();
   return data.missions || data.items || [];
+}
+
+/* #5113b — `missions?limit=80` solo trae abiertas/en curso (0 resolved), así que
+   ultimaCerrada() nunca encontraba nada: ratón «SIN HISTORIAL» y mosaico sin
+   último cerrado. Las cerradas se piden aparte (públicas, sin cookies de flota). */
+export const CERRADAS_URL = 'https://api.yokup.com/fleet/missions?status=resolved&limit=120';
+export const CERRADAS_TTL_MS = 5 * 60 * 1000;
+let cerradasCache = [];
+let cerradasAt = 0;
+let cerradasPending = null;
+export async function fetchCerradas(fetchImpl = fetch, force = false) {
+  if (!force && cerradasCache.length && Date.now() - cerradasAt < CERRADAS_TTL_MS) return cerradasCache;
+  if (cerradasPending) return cerradasPending;
+  cerradasPending = (async () => {
+    try {
+      const res = await fetchImpl(CERRADAS_URL, { cache: 'no-store' });
+      if (!res || !res.ok) return cerradasCache;
+      const data = await res.json();
+      const rows = data.missions || data.items || [];
+      if (Array.isArray(rows) && rows.length) { cerradasCache = rows; cerradasAt = Date.now(); }
+      return cerradasCache;
+    } catch (_) { return cerradasCache; }
+    finally { cerradasPending = null; }
+  })();
+  return cerradasPending;
 }
 
 let visible = false;
@@ -565,11 +597,19 @@ function mosaicPlacard(tile, alias, title, subtitle) {
   mosaicRevoke(alias);
   return mosaicShow(tile, evidencePlacard(title || 'sin historial', subtitle || String(alias || '')));
 }
+/* Sin cookies de flota screen.jpg da 401 (y 404 a sillas sin máquina): no
+   martillear cada 12 s llenando la consola; reintentar al cabo de 5 min. */
+export const LIVE_BACKOFF_MS = 5 * 60 * 1000;
+const liveBackoff = new Map(); // alias|'*' -> until ms
 async function mosaicFetchLiveBlob(alias, request) {
   if (!request) return null;
-  const url = SCREEN_JPEG + '?persona=' + encodeURIComponent(alias) + '&t=' + Date.now();
+  const now = Date.now();
+  if ((liveBackoff.get('*') || 0) > now || (liveBackoff.get(alias) || 0) > now) return null;
+  const url = SCREEN_JPEG + '?persona=' + encodeURIComponent(alias) + '&t=' + now;
   try {
     const r = await request(url, { credentials: 'include', cache: 'no-store' });
+    if (r && (r.status === 401 || r.status === 403)) liveBackoff.set('*', now + LIVE_BACKOFF_MS);
+    else if (r && r.status === 404) liveBackoff.set(alias, now + LIVE_BACKOFF_MS);
     if (!r || !r.ok) return null;
     const ct = String((r.headers && r.headers.get && r.headers.get('content-type')) || '');
     if (ct && /json|text\//i.test(ct)) return null;
@@ -621,25 +661,22 @@ async function mosaicTile(tile, alias, request) {
     return mosaicShow(tile, src);
   }
 
+  // Última misión cerrada de esa silla (yokup, pública): su captura gana a un
+  // placard de texto; si no hay captura, el placard de la evidencia en curso.
+  let closed = null;
+  try { closed = ultimaCerrada(await fetchCerradas(request), alias); } catch (_) { closed = null; }
+  const cap = closed ? missionCaptureUrl(closed) : '';
+  if (cap) {
+    mosaicRevoke(alias);
+    return mosaicShow(tile, cap);
+  }
+
   if (mosaicHasWork(data)) {
     const sub = formatCaptureAt(data.capturedAt) || (data.live ? 'en curso' : 'cerrado');
     return mosaicPlacard(tile, alias, mosaicEvidenceTitle(data, alias), sub);
   }
 
-  // Última misión cerrada de esa silla (yokup), con captura si la hay
-  try {
-    if (!misionesCacheFull.length) {
-      const ms = await fetchHoy(request);
-      misionesCacheFull = Array.isArray(ms) ? ms : [];
-    }
-  } catch (_) {}
-  const closed = ultimaCerrada(misionesCacheFull, alias);
   if (closed) {
-    const cap = missionCaptureUrl(closed);
-    if (cap) {
-      mosaicRevoke(alias);
-      return mosaicShow(tile, cap + (cap.includes('?') ? '&' : '?') + 't=' + Date.now());
-    }
     const day = String(closed.display_day || '').slice(0, 10);
     const sub = day ? ('cerrado ' + day.slice(8, 10) + '-' + day.slice(5, 7)) : 'cerrado';
     const id = String(closed.id || '').replace(/^FLT-/, '');
@@ -834,13 +871,9 @@ export async function mostrarProyectoAnterior(root = lastRoot || (typeof documen
   paraPong();
   paraPaseo(root);
   stopRemotePoll();
-  try {
-    if (!misionesCacheFull.length && request) {
-      const ms = await fetchHoy(request);
-      misionesCacheFull = Array.isArray(ms) ? ms : [];
-    }
-  } catch (_) {}
-  const closed = ultimaCerrada(misionesCacheFull, alias);
+  let cerradas = [];
+  try { if (request) cerradas = await fetchCerradas(request); } catch (_) { cerradas = []; }
+  const closed = ultimaCerrada(cerradas, alias);
   if (!closed) {
     // Sin selección: el mosaico ya lleva el último trabajo por silla
     if (!alias && modo === 'logo') {
@@ -1164,7 +1197,7 @@ export function boot(root = document, fetchImpl = fetch) {
 }
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-  window.MacHoy = { todayMadrid, isHoy, seatOf, linesFor, IDLE_COPY, ERROR_COPY, paintCrt, fetchHoy, boot, setVisible, toggle, isVisible, isFocused, openFront, closeFront, fitScreen, MAC_ART_W, MODOS, setModo, modoActual, detalleLineas, ultimaMision, ultimasMisiones, envolver, avanzaPantalla, alternaPong, paraPong, mandoPong, estadoPong, DETALLE_ANCHO, chairAlias, CHAIR_ALIAS, SCREEN_JPEG, EVIDENCE_URL, EVIDENCE_POLL_MS, evidencePlacard, showRemote, clearRemote, remoteSeat, MOSAIC_SEATS, buildMosaic, refreshMosaic, pintarPantallaCrt, tituloCorto, matchesChair, ultimaCerrada, proyectoAnteriorLineas, missionCaptureUrl, mosaicHasWork, mostrarProyectoAnterior };
+  window.MacHoy = { todayMadrid, isHoy, seatOf, linesFor, IDLE_COPY, ERROR_COPY, paintCrt, fetchHoy, boot, setVisible, toggle, isVisible, isFocused, openFront, closeFront, fitScreen, MAC_ART_W, MODOS, setModo, modoActual, detalleLineas, ultimaMision, ultimasMisiones, envolver, avanzaPantalla, alternaPong, paraPong, mandoPong, estadoPong, DETALLE_ANCHO, chairAlias, CHAIR_ALIAS, SCREEN_JPEG, EVIDENCE_URL, EVIDENCE_POLL_MS, evidencePlacard, showRemote, clearRemote, remoteSeat, MOSAIC_SEATS, buildMosaic, refreshMosaic, pintarPantallaCrt, tituloCorto, matchesChair, ultimaCerrada, proyectoAnteriorLineas, missionCaptureUrl, mosaicHasWork, mostrarProyectoAnterior, fetchCerradas, CERRADAS_URL, CHAIR_AGENTS };
   const bootAndMaybeRemote = () => {
     boot();
     try {

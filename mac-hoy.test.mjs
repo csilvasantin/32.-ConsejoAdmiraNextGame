@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { todayMadrid, isHoy, linesFor, seatOf, envolver, ultimaMision, ultimasMisiones, detalleLineas, DETALLE_ANCHO, MODOS, chairAlias, CHAIR_ALIAS, SCREEN_JPEG } from './assets/mac-hoy.js';
+import { todayMadrid, isHoy, linesFor, seatOf, envolver, ultimaMision, ultimasMisiones, detalleLineas, DETALLE_ANCHO, MODOS, chairAlias, CHAIR_ALIAS, SCREEN_JPEG, tituloCorto, matchesChair, ultimaCerrada, proyectoAnteriorLineas, missionCaptureUrl, mosaicHasWork } from './assets/mac-hoy.js';
 
 const html = fs.readFileSync(new URL('./index.html', import.meta.url), 'utf8');
 
@@ -203,7 +203,8 @@ test('la vista frontal tiene sus propios mandos de misión', () => {
   assert.match(html, /id="mac-hoy-front-mouse"/);
   const src = fs.readFileSync(new URL('./assets/mac-hoy.js', import.meta.url), 'utf8');
   // Por clase, de una vez: mesa, vista grande y barra llevan las mismas.
-  assert.match(src, /mando\('\.mac-hoy-mouse, \.mac-hoy-front-mouse', \+1\)/);
+  assert.match(src, /mac-hoy-mouse, \.mac-hoy-front-mouse/);
+  assert.match(src, /mostrarProyectoAnterior\(root, fetchImpl, remotePersona\)/);
   assert.match(src, /mando\('\.mac-hoy-keys, \.mac-hoy-front-keys', -1\)/);
   // y al abrirla, la ficha se pasea igual que en la mesa
   assert.match(src, /paintCrt\(front, lastText\)\.then\(\(\) => paseaTexto\(front\)\)/);
@@ -364,4 +365,65 @@ test('FLT-100753: EXAMINAR mapea silla → JPEG GrokBot (Jobs/Wozniak)', () => {
   assert.match(src, /export function showRemote/);
   assert.match(src, /CAPTURA/);
   assert.doesNotMatch(src, /SIN CABLE/);
+});
+
+
+// --- #5113 Mac 1984 ratón=proyecto anterior + mosaico sin SIN SEÑAL vacío -----
+test('#5113 tituloCorto: 3–8 palabras, nunca vacío', () => {
+  assert.equal(tituloCorto('uno dos tres cuatro cinco seis siete ocho nueve'), 'uno dos tres cuatro cinco seis siete ocho');
+  assert.equal(tituloCorto('solo'), 'solo');
+  assert.equal(tituloCorto(''), 'sin titulo');
+});
+
+test('#5113 matchesChair y ultimaCerrada por silla', () => {
+  const rows = [
+    { id: 'FLT-1', status: 'resolved', persona: 'WozniakGrokBot', subject: 'Instalaciones admira.app barra', updated_at: 10 },
+    { id: 'FLT-2', status: 'resolved', persona: 'SmithMacMini', role: 'status · JobsGrokBot', subject: 'Mosaico Mac 1984 consejeros', updated_at: 20 },
+    { id: 'FLT-3', status: 'in_progress', persona: 'WozniakGrokBot', subject: 'Abierto', updated_at: 99 },
+    { id: 'FLT-4', status: 'resolved', persona: 'DisneyGrokBot', subject: 'Retail Media circuito', updated_at: 5 },
+  ];
+  assert.equal(matchesChair(rows[1], 'Jobs'), true);
+  assert.equal(matchesChair(rows[0], 'Wozniak'), true);
+  assert.equal(matchesChair(rows[0], 'Jobs'), false);
+  assert.equal(ultimaCerrada(rows, 'Jobs').id, 'FLT-2');
+  assert.equal(ultimaCerrada(rows, 'Wozniak').id, 'FLT-1');
+  assert.equal(ultimaCerrada(rows, 'Huang'), null);
+});
+
+test('#5113 proyectoAnteriorLineas: número + frase, no id solo', () => {
+  const lines = proyectoAnteriorLineas({
+    id: 'FLT-5113', status: 'resolved', persona: 'Wozniak',
+    subject: 'Mac 1984 ratón proyecto anterior mosaico',
+    updated_at: 1791140000000, display_day: '2026-10-04',
+  });
+  assert.equal(lines[0], 'PROYECTO ANTERIOR');
+  const blob = lines.join(' ');
+  assert.match(blob, /#5113/);
+  assert.match(blob, /Mac/);
+  assert.ok(!/^#\d+$/.test(lines[1]), 'la línea del id lleva palabras');
+});
+
+test('#5113 mosaicHasWork: imagen o metadatos evitan SIN SEÑAL', () => {
+  assert.equal(mosaicHasWork({ ok: true, image: 'https://x/y.png' }), true);
+  assert.equal(mosaicHasWork({ ok: true, live: false, image: 'https://x/y.png' }), true);
+  assert.equal(mosaicHasWork({ ok: true, encargo: { numero: 5113, etiqueta: 'Mac 1984 mosaico' } }), true);
+  assert.equal(mosaicHasWork({ ok: true, mission: { id: 'FLT-1', subject: 'Algo cerrado hoy' } }), true);
+  assert.equal(mosaicHasWork({ ok: true }), false);
+  assert.equal(mosaicHasWork(null), false);
+  assert.equal(missionCaptureUrl({ proof_image: 'https://a.png' }), 'https://a.png');
+});
+
+test('#5113 mosaico usa credentials include y no pinta MOSAIC_NO_SIGNAL vacío', () => {
+  const src = fs.readFileSync(new URL('./assets/mac-hoy.js', import.meta.url), 'utf8');
+  assert.match(src, /credentials:\s*'include'/);
+  assert.match(src, /mosaicFetchLiveBlob/);
+  assert.match(src, /mosaicPlacard/);
+  assert.match(src, /URL\.createObjectURL/);
+  assert.match(src, /URL\.revokeObjectURL/);
+  // el camino de fallback del mosaico no llama paintCrt con MOSAIC_NO_SIGNAL
+  const tileFn = src.slice(src.indexOf('async function mosaicTile'), src.indexOf('export function refreshMosaic'));
+  assert.doesNotMatch(tileFn, /MOSAIC_NO_SIGNAL/);
+  assert.doesNotMatch(tileFn, /mosaicNoSignal/);
+  assert.match(tileFn, /mosaicHasWork|data\.image/);
+  assert.match(src, /export async function mostrarProyectoAnterior/);
 });

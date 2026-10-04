@@ -77,6 +77,64 @@ export function ultimaMision(missions, day = todayMadrid()) {
   return ultimasMisiones(missions, day, 1)[0] || null;
 }
 
+
+export function tituloCorto(text, max = 8) {
+  const words = String(text == null ? '' : text).trim().split(/\s+/).filter(Boolean);
+  if (!words.length) return 'sin titulo';
+  return words.slice(0, Math.max(1, Math.min(max, words.length))).join(' ');
+}
+
+/** Match counselor chair (Jobs…) against mission persona/assignee/role (…GrokBot). */
+export function matchesChair(mission, alias) {
+  const a = chairAlias(alias) || String(alias || '').trim();
+  if (!a || !mission) return false;
+  const who = [mission.persona, mission.assignee, mission.role].map((x) => String(x || '')).join(' ');
+  const n = who.toLowerCase().normalize('NFD').replace(/[\u0300-\u036f]/g, '');
+  const key = a.toLowerCase();
+  return n.includes(key + 'grokbot') || n.includes(key);
+}
+
+/** Last resolved encargo for a chair (any day). Bare id never alone: keep subject words. */
+export function ultimaCerrada(missions, alias = null) {
+  const rows = (Array.isArray(missions) ? missions : [])
+    .filter((m) => m && m.status === 'resolved' && (!alias || matchesChair(m, alias)))
+    .sort((a, b) => Number(b.updated_at || b.created_at || 0) - Number(a.updated_at || a.created_at || 0));
+  return rows[0] || null;
+}
+
+export function proyectoAnteriorLineas(mission) {
+  if (!mission) return ['SIN HISTORIAL', '', 'nada cerrado'];
+  const id = String(mission.id || '????').replace(/^FLT-/, '');
+  const frase = tituloCorto(mission.subject || mission.title || '', 8);
+  const quien = seatOf(mission).split('·')[0].trim().slice(0, DETALLE_ANCHO) || '—';
+  const hora = horaDe(mission);
+  const day = String(mission.display_day || '').slice(0, 10);
+  const fecha = day ? (day.slice(8, 10) + '-' + day.slice(5, 7)) : '';
+  // doctrina «ningún número va solo»: #id + frase corta en la cabecera
+  const head = ('#' + id + ' ' + frase).trim();
+  return [
+    'PROYECTO ANTERIOR',
+    ...envolver(head, DETALLE_ANCHO, 3),
+    quien + (hora ? '  ' + hora : ''),
+    fecha ? ('cerrado ' + fecha) : '',
+  ].filter((l, i, arr) => l || i < arr.length - 1);
+}
+
+export function missionCaptureUrl(mission) {
+  if (!mission) return '';
+  return String(mission.proof_image || mission.process_image || mission.live_shot || '').trim();
+}
+
+/** Pure: should mosaic avoid empty SIN SEÑAL given evidence JSON? */
+export function mosaicHasWork(data) {
+  if (!data || !data.ok) return false;
+  if (data.image) return true;
+  if (data.encargo && (data.encargo.etiqueta || data.encargo.titulo || data.encargo.numero)) return true;
+  if (data.mission && (data.mission.subject || data.mission.id)) return true;
+  return false;
+}
+
+
 function horaDe(m) {
   const ts = Number(m.updated_at || m.created_at || 0);
   if (!ts) return '';
@@ -425,6 +483,7 @@ async function draw(root, fetchImpl) {
   ts.forEach((t) => { t.textContent = cargando; });
   try {
     const ms = await fetchHoy(fetchImpl);
+    misionesCacheFull = Array.isArray(ms) ? ms : [];
     misionesCache = ultimasMisiones(ms);
     lastText = textoDelModo();
     // Si la pantalla ya dice exactamente eso, no se vuelve a teclear: el latido
@@ -443,16 +502,18 @@ async function draw(root, fetchImpl) {
   prop.classList.remove('refreshing');
 }
 
-/* MOSAICO DEL CONSEJO (#5109, Carlos 04-10-2026). Con el Mac 1984 sobre la mesa
-   en la vista general, el tubo enseña en vivo las pantallas de los 6 consejeros
-   —la misma imagen que la pestaña «Computadora» (SCREEN_JPEG), con la evidencia como respaldo— en una rejilla 3×2. Código
-   nuevo y aparte: no toca showRemote ni el detalle; reutiliza paintCrt para el
-   «sin señal». Sólo vive en el Mac de la mesa (#mac-hoy-glass) y en modo logo. */
+/* MOSAICO DEL CONSEJO (#5109/#5113). Rejilla 3×2 en el Mac de la mesa (#mac-hoy-glass),
+   modo logo. Live = SCREEN_JPEG con credentials:'include' (misma sesión que Computadora);
+   si falla → evidencia (imagen aunque no live) → último cerrado yokup → placard.
+   Nunca baldosa vacía «SIN SEÑAL». */
 export const MOSAIC_SEATS = ['Jobs', 'Wozniak', 'Lucas', 'Disney', 'Musk', 'Huang'];
 export const MOSAIC_POLL_MS = 12000;
-export const MOSAIC_NO_SIGNAL = 'SIN\nSEÑAL';
+export const MOSAIC_NO_SIGNAL = 'SIN\nSEÑAL'; // legacy; mosaico ya no pinta esto vacío
 let mosaicTimer = null;
 let mosaicBusy = false;
+const mosaicObjectUrls = new Map(); // alias -> blob: URL
+let misionesCacheFull = [];
+
 function mosaicHost(root) {
   return root && root.querySelector ? root.querySelector('#mac-hoy-glass') : null;
 }
@@ -468,14 +529,14 @@ export function buildMosaic(root = lastRoot || (typeof document !== 'undefined' 
   grid.setAttribute('aria-hidden', 'true');
   MOSAIC_SEATS.forEach((alias) => {
     const tile = doc.createElement('div');
-    tile.className = 'mac-hoy-tile sin-senal';
+    tile.className = 'mac-hoy-tile';
     tile.setAttribute('data-seat', alias);
     const img = doc.createElement('img');
     img.alt = '';
     img.decoding = 'async';
     const ns = doc.createElement('pre');
     ns.className = 'mac-hoy-tile-ns';
-    ns.textContent = MOSAIC_NO_SIGNAL;
+    ns.textContent = '';
     const name = doc.createElement('span');
     name.className = 'mac-hoy-tile-name';
     name.textContent = alias.toUpperCase();
@@ -485,48 +546,108 @@ export function buildMosaic(root = lastRoot || (typeof document !== 'undefined' 
   host.appendChild(grid);
   return grid;
 }
-function mosaicNoSignal(tile) {
-  if (!tile) return;
-  const was = tile.classList.contains('sin-senal');
-  tile.classList.add('sin-senal');
-  const img = tile.querySelector('img');
-  if (img && img.removeAttribute) img.removeAttribute('src');
-  if (!was) paintCrt(tile.querySelector('.mac-hoy-tile-ns'), MOSAIC_NO_SIGNAL);
-}
-function mosaicLoad(src) {
-  return new Promise((resolve) => {
-    if (typeof Image !== 'function') return resolve(false);
-    const pre = new Image();               // sin crossOrigin: la sesión de fleet viaja como en «Computadora»
-    const kill = setTimeout(() => { pre.src = ''; resolve(false); }, 13000);
-    pre.onload = () => { clearTimeout(kill); resolve(true); };
-    pre.onerror = () => { clearTimeout(kill); resolve(false); };
-    pre.src = src;
-  });
+function mosaicRevoke(alias) {
+  const prev = mosaicObjectUrls.get(alias);
+  if (prev && typeof URL !== 'undefined' && URL.revokeObjectURL) {
+    try { URL.revokeObjectURL(prev); } catch (_) {}
+  }
+  mosaicObjectUrls.delete(alias);
 }
 function mosaicShow(tile, src) {
+  if (!tile) return false;
   const img = tile.querySelector('img');
   if (img) img.src = src;
   tile.classList.remove('sin-senal');
   return true;
 }
-// 1º la pantalla viva de su computadora (SCREEN_JPEG?persona=, la de «Computadora»);
-// 2º la última evidencia del encargo; si no hay ninguna, «SIN SEÑAL».
-function mosaicTile(tile, alias, request) {
-  const live = SCREEN_JPEG + '?persona=' + encodeURIComponent(alias) + '&t=' + Date.now();
-  return mosaicLoad(live).then((ok) => {
-    if (ok) return mosaicShow(tile, live);
-    const url = EVIDENCE_URL + '?persona=' + encodeURIComponent(alias) + '&t=' + Date.now();
-    return Promise.resolve()
-      .then(() => request(url, { cache: 'no-store', headers: { accept: 'application/json' } }))
-      .then((r) => r.json().catch(() => null))
-      .then((data) => {
-        if (!data || !data.ok || !data.image) return false;
-        const src = data.image + (data.image.includes('?') ? '&' : '?') + 't=' + Date.now();
-        return mosaicLoad(src).then((ok2) => ok2 && mosaicShow(tile, src));
-      })
-      .catch(() => false)
-      .then((shown) => { if (!shown) mosaicNoSignal(tile); return !!shown; });
-  });
+/** Último recurso visual: placard SVG, NUNCA el CRT vacío «SIN SEÑAL». */
+function mosaicPlacard(tile, alias, title, subtitle) {
+  mosaicRevoke(alias);
+  return mosaicShow(tile, evidencePlacard(title || 'sin historial', subtitle || String(alias || '')));
+}
+async function mosaicFetchLiveBlob(alias, request) {
+  if (!request) return null;
+  const url = SCREEN_JPEG + '?persona=' + encodeURIComponent(alias) + '&t=' + Date.now();
+  try {
+    const r = await request(url, { credentials: 'include', cache: 'no-store' });
+    if (!r || !r.ok) return null;
+    const ct = String((r.headers && r.headers.get && r.headers.get('content-type')) || '');
+    if (ct && /json|text\//i.test(ct)) return null;
+    if (ct && !/image\//i.test(ct) && !/octet-stream/i.test(ct)) return null;
+    const blob = await r.blob();
+    if (!blob || blob.size < 64) return null;
+    if (blob.type && /json|text\//i.test(blob.type)) return null;
+    return blob;
+  } catch (_) { return null; }
+}
+function mosaicShowBlob(tile, alias, blob) {
+  mosaicRevoke(alias);
+  if (typeof URL === 'undefined' || !URL.createObjectURL) return false;
+  const obj = URL.createObjectURL(blob);
+  mosaicObjectUrls.set(alias, obj);
+  return mosaicShow(tile, obj);
+}
+function mosaicEvidenceTitle(data, alias) {
+  const enc = data && data.encargo;
+  const mis = data && data.mission;
+  const raw = (enc && (enc.etiqueta || enc.titulo)) || (mis && mis.subject) || '';
+  const frase = tituloCorto(raw, 8);
+  if (enc && enc.numero != null && frase && frase !== 'sin titulo') return '#' + enc.numero + ' ' + frase;
+  if (mis && mis.id && frase && frase !== 'sin titulo') {
+    const id = String(mis.id).replace(/^FLT-/, '');
+    return '#' + id + ' ' + frase;
+  }
+  if (frase && frase !== 'sin titulo') return frase;
+  return 'ultimo trabajo';
+}
+// 1º SCREEN_JPEG con credentials (misma sesión que Computadora / remote)
+// 2º evidencia (imagen aunque live=false = último trabajo)
+// 3º placard con metadatos / misión cerrada
+// NUNCA baldosa vacía SIN SEÑAL.
+async function mosaicTile(tile, alias, request) {
+  const blob = await mosaicFetchLiveBlob(alias, request);
+  if (blob && mosaicShowBlob(tile, alias, blob)) return true;
+
+  const url = EVIDENCE_URL + '?persona=' + encodeURIComponent(alias) + '&t=' + Date.now();
+  let data = null;
+  try {
+    const r = await request(url, { cache: 'no-store', credentials: 'include', headers: { accept: 'application/json' } });
+    data = await r.json().catch(() => null);
+  } catch (_) { data = null; }
+
+  if (data && data.ok && data.image) {
+    mosaicRevoke(alias);
+    const src = data.image + (String(data.image).includes('?') ? '&' : '?') + 't=' + Date.now();
+    return mosaicShow(tile, src);
+  }
+
+  if (mosaicHasWork(data)) {
+    const sub = formatCaptureAt(data.capturedAt) || (data.live ? 'en curso' : 'cerrado');
+    return mosaicPlacard(tile, alias, mosaicEvidenceTitle(data, alias), sub);
+  }
+
+  // Última misión cerrada de esa silla (yokup), con captura si la hay
+  try {
+    if (!misionesCacheFull.length) {
+      const ms = await fetchHoy(request);
+      misionesCacheFull = Array.isArray(ms) ? ms : [];
+    }
+  } catch (_) {}
+  const closed = ultimaCerrada(misionesCacheFull, alias);
+  if (closed) {
+    const cap = missionCaptureUrl(closed);
+    if (cap) {
+      mosaicRevoke(alias);
+      return mosaicShow(tile, cap + (cap.includes('?') ? '&' : '?') + 't=' + Date.now());
+    }
+    const day = String(closed.display_day || '').slice(0, 10);
+    const sub = day ? ('cerrado ' + day.slice(8, 10) + '-' + day.slice(5, 7)) : 'cerrado';
+    const id = String(closed.id || '').replace(/^FLT-/, '');
+    const title = ('#' + id + ' ' + tituloCorto(closed.subject || closed.title || '', 6)).trim();
+    return mosaicPlacard(tile, alias, title, sub);
+  }
+
+  return mosaicPlacard(tile, alias, 'sin historial', alias);
 }
 export function refreshMosaic(root = lastRoot || (typeof document !== 'undefined' ? document : null), fetchImpl = lastFetch) {
   if (!visible || modo !== 'logo' || mosaicBusy) return Promise.resolve(false);
@@ -547,7 +668,6 @@ export function startMosaic(root = lastRoot || (typeof document !== 'undefined' 
     if (e.detail && e.detail.mode === 'logo') refreshMosaic(lastRoot, lastFetch);
   });
   const prop = root.querySelector('#mac-hoy-prop');
-  // Encender el Mac (clase .on) dispara una pasada inmediata, sin esperar al tic.
   if (prop && typeof MutationObserver !== 'undefined') {
     new MutationObserver(() => { if (prop.classList.contains('on')) refreshMosaic(lastRoot, lastFetch); })
       .observe(prop, { attributes: true, attributeFilter: ['class'] });
@@ -555,9 +675,9 @@ export function startMosaic(root = lastRoot || (typeof document !== 'undefined' 
   return true;
 }
 
-/* Vista de cerca (#5110). El tubo frontal usa la MISMA celda que el mosaico de
-   la mesa (mosaicTile): computadora viva, y si no hay señal el recuadro
-   SIN SEÑAL. Con consejero elegido, una sola; si no, las seis. */
+/* Vista de cerca (#5110/#5113). El tubo frontal usa la MISMA celda que el mosaico
+   (mosaicTile): live con credentials, evidencia/último cerrado, placard — nunca
+   SIN SEÑAL vacío. Con consejero elegido, una sola; si no, las seis. */
 let detalleTimer = null;
 let detalleGen = 0;
 
@@ -572,17 +692,17 @@ function pararDetalle() {
 
 function celdaPantalla(doc, alias) {
   const tile = doc.createElement('div');
-  tile.className = 'mac-hoy-tile sin-senal';
+  tile.className = 'mac-hoy-tile';
   if (alias) tile.setAttribute('data-seat', alias);
   tile.setAttribute('role', 'button');
   tile.tabIndex = 0;
-  tile.setAttribute('aria-label', alias ? ('Abrir computadora de ' + alias) : 'sin señal');
+  tile.setAttribute('aria-label', alias ? ('Abrir computadora de ' + alias) : 'sin historial');
   const img = doc.createElement('img');
   img.alt = alias ? ('Pantalla de ' + alias) : '';
   img.decoding = 'async';
   const ns = doc.createElement('pre');
   ns.className = 'mac-hoy-tile-ns';
-  ns.textContent = MOSAIC_NO_SIGNAL;
+  ns.textContent = '';
   const name = doc.createElement('span');
   name.className = 'mac-hoy-tile-name';
   name.textContent = alias ? alias.toUpperCase() : '';
@@ -619,7 +739,7 @@ export function pintarPantallaCrt(host, opts = {}) {
   Array.from(tiles).forEach((t) => {
     const seat = t.getAttribute && t.getAttribute('data-seat');
     if (seat && request) mosaicTile(t, seat, request);
-    else mosaicNoSignal(t);
+    else mosaicPlacard(t, seat || 'mesa', 'sin historial', '');
   });
   return true;
 }
@@ -703,6 +823,62 @@ function formatCaptureAt(ms) {
   try {
     return new Intl.DateTimeFormat('es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', second: '2-digit', hourCycle: 'h23' }).format(new Date(n));
   } catch (_) { return ''; }
+}
+
+export async function mostrarProyectoAnterior(root = lastRoot || (typeof document !== 'undefined' ? document : null), fetchImpl = lastFetch, persona = remotePersona) {
+  if (!root || !visible) return false;
+  lastRoot = root;
+  lastFetch = fetchImpl;
+  const request = fetchImpl || (typeof fetch === 'function' ? fetch : null);
+  const alias = chairAlias(persona) || (persona ? String(persona) : null);
+  paraPong();
+  paraPaseo(root);
+  stopRemotePoll();
+  try {
+    if (!misionesCacheFull.length && request) {
+      const ms = await fetchHoy(request);
+      misionesCacheFull = Array.isArray(ms) ? ms : [];
+    }
+  } catch (_) {}
+  const closed = ultimaCerrada(misionesCacheFull, alias);
+  if (!closed) {
+    // Sin selección: el mosaico ya lleva el último trabajo por silla
+    if (!alias && modo === 'logo') {
+      refreshMosaic(root, fetchImpl);
+      return true;
+    }
+    modo = 'detalle';
+    aplicarModo(root);
+    lastText = ['SIN HISTORIAL', '', (alias || 'consejo').slice(0, DETALLE_ANCHO), 'nada cerrado'].join('\n');
+    tubos(root).forEach((t) => paintCrt(t, lastText));
+    return false;
+  }
+  const cap = missionCaptureUrl(closed);
+  const frase = tituloCorto(closed.subject || closed.title || '', 8);
+  const id = String(closed.id || '').replace(/^FLT-/, '');
+  const label = ('#' + id + ' ' + frase).trim();
+  if (cap) {
+    if (alias) remotePersona = alias;
+    else remotePersona = chairAlias(closed.persona) || chairAlias(String(closed.role || '').split('·').pop()) || remotePersona;
+    modo = 'remote';
+    aplicarModo(root);
+    fitScreen(root);
+    remoteImgs(root).forEach((img) => {
+      img.crossOrigin = 'anonymous';
+      img.src = cap;
+      img.alt = label;
+      if (img.style) img.style.display = 'block';
+    });
+    lastRemoteFrames.set(remotePersona || 'prev', { url: cap, at: Date.now(), label });
+    remoteStatus(root, remotePersona || alias || 'prev', 'frame', label + ' · proyecto anterior');
+    return true;
+  }
+  modo = 'detalle';
+  detalleIdx = 0;
+  aplicarModo(root);
+  lastText = proyectoAnteriorLineas(closed).join('\n');
+  tubos(root).forEach((t) => paintCrt(t, lastText).then(() => paseaTexto(t)));
+  return true;
 }
 
 export function showRemote(persona, root = lastRoot || (typeof document !== 'undefined' ? document : null), fetchImpl = lastFetch) {
@@ -929,7 +1105,28 @@ export function boot(root = document, fetchImpl = fetch) {
   };
   // Por CLASE: la mesa, la vista grande y el de la barra llevan las mismas y se
   // enganchan los tres de una vez.
-  mando('.mac-hoy-mouse, .mac-hoy-front-mouse', +1);   // ratón   -> siguiente · pala abajo
+  // #5113: el RATÓN enseña el proyecto anterior (última cerrada) de la silla
+  // seleccionada; el TECLADO sigue pasando fichas de detalle. En Pong ambos mueven pala.
+  root.querySelectorAll('.mac-hoy-mouse, .mac-hoy-front-mouse').forEach((el) => {
+    const empuja = (e) => {
+      if (!visible || modo !== 'pong') return;
+      e.preventDefault();
+      jugador = +1;
+    };
+    const suelta = () => { if (jugador === +1) jugador = 0; };
+    el.addEventListener('mouseup', () => { try { el.blur(); } catch (e) {} });
+    el.addEventListener('pointerdown', empuja);
+    el.addEventListener('pointerup', suelta);
+    el.addEventListener('pointerleave', suelta);
+    el.addEventListener('pointercancel', suelta);
+    el.addEventListener('click', (e) => {
+      e.preventDefault();
+      e.stopPropagation();
+      if (!enciende(el)) return;
+      if (modo === 'pong') return;
+      mostrarProyectoAnterior(root, fetchImpl, remotePersona);
+    });
+  });
   mando('.mac-hoy-keys, .mac-hoy-front-keys', -1);     // teclado -> anterior  · pala arriba
   // Y con el teclado de verdad, que para eso es un Pong. Nunca mientras se
   // escribe en un campo: ahí las flechas son del texto.
@@ -967,7 +1164,7 @@ export function boot(root = document, fetchImpl = fetch) {
 }
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-  window.MacHoy = { todayMadrid, isHoy, seatOf, linesFor, IDLE_COPY, ERROR_COPY, paintCrt, fetchHoy, boot, setVisible, toggle, isVisible, isFocused, openFront, closeFront, fitScreen, MAC_ART_W, MODOS, setModo, modoActual, detalleLineas, ultimaMision, ultimasMisiones, envolver, avanzaPantalla, alternaPong, paraPong, mandoPong, estadoPong, DETALLE_ANCHO, chairAlias, CHAIR_ALIAS, SCREEN_JPEG, EVIDENCE_URL, EVIDENCE_POLL_MS, evidencePlacard, showRemote, clearRemote, remoteSeat, MOSAIC_SEATS, buildMosaic, refreshMosaic, pintarPantallaCrt };
+  window.MacHoy = { todayMadrid, isHoy, seatOf, linesFor, IDLE_COPY, ERROR_COPY, paintCrt, fetchHoy, boot, setVisible, toggle, isVisible, isFocused, openFront, closeFront, fitScreen, MAC_ART_W, MODOS, setModo, modoActual, detalleLineas, ultimaMision, ultimasMisiones, envolver, avanzaPantalla, alternaPong, paraPong, mandoPong, estadoPong, DETALLE_ANCHO, chairAlias, CHAIR_ALIAS, SCREEN_JPEG, EVIDENCE_URL, EVIDENCE_POLL_MS, evidencePlacard, showRemote, clearRemote, remoteSeat, MOSAIC_SEATS, buildMosaic, refreshMosaic, pintarPantallaCrt, tituloCorto, matchesChair, ultimaCerrada, proyectoAnteriorLineas, missionCaptureUrl, mosaicHasWork, mostrarProyectoAnterior };
   const bootAndMaybeRemote = () => {
     boot();
     try {

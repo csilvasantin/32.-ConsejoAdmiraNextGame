@@ -35,9 +35,11 @@ const MESSAGES={
   session_expired:'Inicia sesión en admira.live para conectar.'
 };
 let active=null;
-export function openRemote(){
-  if(typeof document==='undefined'||!window.MacHoy||window.MacHoy.modoActual()!=='remote')return;
-  const persona=window.MacHoy.remoteSeat();if(!persona)return;
+export function openRemote(personaHint){
+  if(typeof document==='undefined'||!window.MacHoy)return;
+  const hinted=typeof personaHint==='string'?personaHint.trim():'';
+  if(!hinted&&window.MacHoy.modoActual()!=='remote')return;
+  const persona=hinted||window.MacHoy.remoteSeat();if(!persona)return;
   if(active)return;
   const previousFocus=document.activeElement,overflow=document.body.style.overflow,rootOverflow=document.documentElement.style.overflow;
   const overlay=document.createElement('section');overlay.className='mac-ultra';overlay.setAttribute('role','dialog');overlay.setAttribute('aria-modal','true');overlay.setAttribute('aria-label','Ultradetalle · escritorio de '+persona);

@@ -133,10 +133,18 @@
 .estado-board h5{margin:8px 0 4px}
 .estado-board .estado-grupo{all:unset;cursor:pointer;color:#c9a227;font:bold 11px/1.2 "Press Start 2P",monospace;padding:4px 2px;display:block;width:100%}
 .estado-board .estado-grupo:hover,.estado-board .estado-grupo:focus-visible{color:#ffd75e;outline:1px dashed #5a4316}
-.estado-board table{width:100%;border-collapse:collapse}
-.estado-board th{text-align:left;color:#c9a227;font-weight:600;border-bottom:1px solid #5a4316;padding:3px 4px;white-space:nowrap}
-.estado-board td{border-bottom:1px solid #2f2410;padding:4px;vertical-align:top}
-.estado-board td.quien{white-space:nowrap;font-weight:600}.estado-board td small{color:#b9ab8a;font-weight:400}
+.estado-board table.estado-hoja{table-layout:fixed;border-collapse:separate;border-spacing:0;border-top:1px solid #8a6a22;border-left:1px solid #8a6a22;margin-bottom:6px}
+.estado-hoja th,.estado-hoja td{border-right:1px solid #5a4316;border-bottom:1px solid #5a4316;padding:0;text-align:left;vertical-align:middle;overflow:hidden}
+.estado-hoja th{position:sticky;top:0;z-index:2;background:#3b2a10;color:#ffd75e;font-weight:600;cursor:pointer;user-select:none;border-bottom:2px solid #c9a227;border-right-color:#8a6a22}
+.estado-hoja th:hover{background:#4a3614}
+.estado-hoja .th-txt,.estado-hoja .celda{display:block;padding:4px 6px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.estado-hoja .th-txt{padding-right:10px}
+.estado-hoja tbody tr:nth-child(even) td{background:rgba(255,215,94,.035)}
+.estado-hoja tbody tr:hover td{background:rgba(255,215,94,.09)}
+.estado-hoja .col-resizer{position:absolute;top:0;right:0;width:7px;height:100%;cursor:col-resize;z-index:3}
+.estado-hoja .col-resizer:hover{background:rgba(255,215,94,.35)}
+.estado-hoja th{position:sticky}.estado-hoja .quien{font-weight:600}.estado-hoja small{color:#b9ab8a;font-weight:400}
+.estado-board .estado-body{padding-top:0}
 .estado-board footer{padding:4px 10px;border-top:1px solid #5a4316;color:#b9ab8a;font-size:11px}`;
   function estilos(doc) {
     if (doc.getElementById('estado-css')) return;
@@ -236,10 +244,121 @@
   }
   let board = null, boardTimer = null, keyH = null;
   const GEN_NOMBRE = { leyendas: 'Leyendas', coetaneos: 'Coetáneos' };
+  /* ── La hoja: columnas, orden y anchos (Carlos, 4-oct-2026: «que funcione como una hoja») ── */
+  const RANGO_ESTADO = { blocked: 0, working: 1, ack: 2, idle: 3 };   // sin datos: vacío, siempre al final
+  const COLS = Object.freeze([
+    { id: 'consejero', label: 'Consejero', min: 90, def: 130, clave: s => key(s.persona) },
+    { id: 'estado', label: 'Estado', min: 80, def: 190, clave: s => (s.estado in RANGO_ESTADO ? RANGO_ESTADO[s.estado] : null) },
+    { id: 'ahora', label: 'En qué está ahora', min: 140, def: 220, clave: (s, f) => key(f('Ahora')) },
+    { id: 'desde', label: 'Desde', min: 70, def: 135, clave: s => (s.encargo && Number(s.encargo.desde)) || null },
+    { id: 'agente', label: 'Deepagent · máquina', min: 110, def: 120, clave: (s, f) => key(f('Deepagent · máquina')) },
+    { id: 'latido', label: 'Último latido', min: 70, def: 135, clave: s => Number(s.ultimo_latido) || null }
+  ]);
+  const LS_HOJA = 'admira:debatir-hoja';
+  function hoja() {
+    try {
+      const o = JSON.parse(root.localStorage.getItem(LS_HOJA) || '{}') || {};
+      return { orden: Array.isArray(o.orden) ? o.orden.filter(x => x && COLS.some(c => c.id === x.id)).slice(0, 2) : [], anchos: o.anchos && typeof o.anchos === 'object' ? o.anchos : {} };
+    } catch (e) { return { orden: [], anchos: {} }; }
+  }
+  function guardarHoja(h) { try { root.localStorage.setItem(LS_HOJA, JSON.stringify(h)); } catch (e) {} }
+  function restablecerHoja() { try { root.localStorage.removeItem(LS_HOJA); } catch (e) {} }
+  function anchoDe(h, c) { const w = Number(h.anchos[c.id]); return Number.isFinite(w) && w >= c.min ? Math.round(w) : c.def; }
+  /* Clic: ascendente → descendente en la misma columna; otra columna empieza ascendente.
+     Mayús+clic: añade (o alterna) una segunda columna de orden. */
+  function siguienteOrden(orden, id, mayus) {
+    const o = (orden || []).map(x => ({ ...x }));
+    const i = o.findIndex(x => x.id === id);
+    if (mayus && o.length) {
+      if (i >= 0) o[i].dir = o[i].dir === 'asc' ? 'desc' : 'asc';
+      else o.splice(1, 1, { id, dir: 'asc' });
+      return o.slice(0, 2);
+    }
+    if (i === 0) return [{ id, dir: o[0].dir === 'asc' ? 'desc' : 'asc' }];
+    return [{ id, dir: 'asc' }];
+  }
+  /* Ordena las sillas; los vacíos («sin datos») siempre al final, como en una hoja. */
+  function ordenar(sillas, orden, ahoraMs) {
+    const l = (sillas || []).map((s, i) => {
+      const fl = ficha(s, ahoraMs).filas; const f = k => (fl.find(x => x[0] === k) || [k, SIN])[1];
+      return { s, i, k: Object.fromEntries(COLS.map(c => [c.id, c.clave(s, f)])) };
+    });
+    l.sort((a, b) => {
+      for (const { id, dir } of orden || []) {
+        const x = a.k[id], y = b.k[id];
+        if (x === y) continue;
+        if (x === null || x === undefined || x === '') return 1;
+        if (y === null || y === undefined || y === '') return -1;
+        const r = x < y ? -1 : 1;
+        return dir === 'desc' ? -r : r;
+      }
+      return a.i - b.i;
+    });
+    return l.map(x => x.s);
+  }
+
+  let arrastrando = false, repintarTrasArrastre = false;
+  function celda(doc, texto, extra) {
+    const td = doc.createElement('td');
+    const d = doc.createElement('div'); d.className = 'celda';
+    if (extra) d.appendChild(extra); else d.textContent = texto;
+    td.title = texto; td.appendChild(d);
+    return td;
+  }
+  function autoajustar(tb, idx, c) {
+    let w = c.min;
+    tb.querySelectorAll('tr').forEach(tr => {
+      const cell = tr.children[idx]; if (!cell) return;
+      const inner = cell.querySelector('.celda, .th-txt') || cell;
+      // Ancho del contenido, no de la caja: scrollWidth nunca baja del ancho actual.
+      const rg = tb.ownerDocument.createRange(); rg.selectNodeContents(inner);
+      w = Math.max(w, rg.getBoundingClientRect().width + 24);
+    });
+    return Math.min(900, Math.ceil(w));
+  }
+  function cabecera(doc, tb, cols, idx, h) {
+    const c = COLS[idx];
+    const th = doc.createElement('th'); th.dataset.col = c.id; th.scope = 'col';
+    const pos = h.orden.findIndex(x => x.id === c.id);
+    th.setAttribute('aria-sort', pos === 0 ? (h.orden[0].dir === 'asc' ? 'ascending' : 'descending') : 'none');
+    th.title = 'Ordenar por ' + c.label + ' (clic: ▲/▼ · Mayús+clic: segundo orden)';
+    const t = doc.createElement('span'); t.className = 'th-txt';
+    t.textContent = c.label + (pos >= 0 ? ' ' + (h.orden[pos].dir === 'asc' ? '▲' : '▼') + (h.orden.length > 1 ? (pos + 1) : '') : '');
+    th.appendChild(t);
+    th.addEventListener('click', e => {
+      if (e.target.closest('.col-resizer')) return;
+      const hh = hoja(); hh.orden = siguienteOrden(hh.orden, c.id, e.shiftKey); guardarHoja(hh); pintarBoard();
+    });
+    const r = doc.createElement('span'); r.className = 'col-resizer'; r.title = 'Arrastra para cambiar el ancho · doble clic: autoajustar';
+    r.addEventListener('click', e => e.stopPropagation());
+    r.addEventListener('dblclick', e => {
+      e.stopPropagation();
+      const hh = hoja(); hh.anchos[c.id] = autoajustar(tb, idx, c); guardarHoja(hh); pintarBoard();
+    });
+    r.addEventListener('pointerdown', e => {
+      e.preventDefault(); e.stopPropagation();
+      const col = cols[idx], w0s = col.style.width, x0 = e.clientX, w0 = col.getBoundingClientRect().width || anchoDe(hoja(), c);
+      arrastrando = true; try { r.setPointerCapture(e.pointerId); } catch (err) {}
+      const mover = ev => { const w = Math.max(c.min, Math.round(w0 + ev.clientX - x0)); col.style.width = w + 'px'; tb.style.width = cols.reduce((a, k) => a + (parseFloat(k.style.width) || 0), 0) + 'px'; };
+      const soltar = ev => {
+        r.removeEventListener('pointermove', mover); r.removeEventListener('pointerup', soltar); r.removeEventListener('pointercancel', soltar);
+        arrastrando = false;
+        // Un clic sin mover (o el primero de un doble clic) no repinta: así llega el dblclick.
+        if (Math.abs(ev.clientX - x0) < 3) { col.style.width = w0s; if (repintarTrasArrastre) { repintarTrasArrastre = false; setTimeout(pintarBoard, 450); } return; }
+        const hh = hoja(); hh.anchos[c.id] = Math.max(c.min, Math.round(w0 + ev.clientX - x0)); guardarHoja(hh);
+        repintarTrasArrastre = false; pintarBoard();
+      };
+      r.addEventListener('pointermove', mover); r.addEventListener('pointerup', soltar); r.addEventListener('pointercancel', soltar);
+    });
+    th.appendChild(r);
+    return th;
+  }
   function pintarBoard() {
     const doc = root.document; if (!board || !doc) return;
+    if (arrastrando) { repintarTrasArrastre = true; return; }   // el refresco de 30 s no corta un arrastre
     const body = board.querySelector('.estado-body');
     const foot = board.querySelector('footer');
+    const scroll = body.scrollTop, scrollX = body.scrollLeft;
     body.replaceChildren();
     if (!datos) {
       const p = doc.createElement('p');
@@ -247,38 +366,49 @@
       body.appendChild(p); foot.textContent = 'Fuente: ' + ENDPOINT; return;
     }
     const ahoraMs = Date.now();
+    const h = hoja();
     const actual = String(root.currentGenPublic || 'leyendas');
     const gens = Object.keys(datos.mesa).sort((a, b) => (b === actual) - (a === actual));
     for (const gen of gens) {
       const abierto = !!abiertos()[gen];
       const c = ocupados(datos.mesa[gen]);
-      const h = doc.createElement('h5');
+      const h5 = doc.createElement('h5');
       const bt = doc.createElement('button'); bt.type = 'button'; bt.className = 'estado-grupo'; bt.dataset.gen = gen;
       bt.setAttribute('aria-expanded', String(abierto));
       bt.title = (abierto ? 'Plegar' : 'Desplegar') + ' · ocupados = trabajando, aceptado o bloqueado';
       bt.textContent = (abierto ? '▾ ' : '▸ ') + (GEN_NOMBRE[gen] || gen) + ' (' + c.n + ' de ' + c.total + ')';
       bt.onclick = () => { alternarGrupo(gen); pintarBoard(); };
-      h.appendChild(bt); body.appendChild(h);
+      h5.appendChild(bt); body.appendChild(h5);
       if (!abierto) continue;
-      const tb = doc.createElement('table');
-      tb.innerHTML = '<thead><tr><th>Consejero</th><th>Estado</th><th>En qué está ahora</th><th>Desde</th><th>Deepagent · máquina</th><th>Último latido</th></tr></thead>';
+      const tb = doc.createElement('table'); tb.className = 'estado-hoja'; tb.dataset.gen = gen;
+      const cg = doc.createElement('colgroup');
+      const cols = COLS.map(col => { const k = doc.createElement('col'); k.style.width = anchoDe(h, col) + 'px'; cg.appendChild(k); return k; });
+      tb.style.width = COLS.reduce((a, col) => a + anchoDe(h, col), 0) + 'px';
+      tb.appendChild(cg);
+      const thead = doc.createElement('thead'); const trh = doc.createElement('tr');
+      COLS.forEach((col, i) => trh.appendChild(cabecera(doc, tb, cols, i, h)));
+      thead.appendChild(trh); tb.appendChild(thead);
       const tbody = doc.createElement('tbody');
-      for (const s of datos.mesa[gen] || []) {
+      for (const s of ordenar(datos.mesa[gen], h.orden, ahoraMs)) {
         const f = ficha(s, ahoraMs);
         const get = k => (f.filas.find(x => x[0] === k) || [k, SIN])[1];
         const tr = doc.createElement('tr'); tr.dataset.persona = s.persona;
-        const q = doc.createElement('td'); q.className = 'quien'; q.textContent = s.persona + ' ';
-        const sm = doc.createElement('small'); sm.textContent = s.rol || ''; q.appendChild(sm);
-        const e = doc.createElement('td'); e.appendChild(pill(doc, s.estado));
-        const a = doc.createElement('td'); a.textContent = get('Ahora');
-        const cola = get('Bandeja'); if (cola && cola !== SIN) { const c = doc.createElement('small'); c.textContent = ' · bandeja: ' + cola; a.appendChild(c); }
-        const d = doc.createElement('td'); d.textContent = get('Desde');
-        const m = doc.createElement('td'); m.textContent = get('Deepagent · máquina');
-        const l = doc.createElement('td'); l.textContent = get('Último latido');
-        tr.append(q, e, a, d, m, l); tbody.appendChild(tr);
+        const quien = doc.createElement('span'); quien.className = 'quien'; quien.textContent = s.persona + ' ';
+        const sm = doc.createElement('small'); sm.textContent = s.rol || ''; quien.appendChild(sm);
+        const cola = get('Bandeja');
+        const ahoraTxt = get('Ahora') + (cola && cola !== SIN ? ' · bandeja: ' + cola : '');
+        tr.append(
+          celda(doc, s.persona + (s.rol ? ' · ' + s.rol : ''), quien),
+          celda(doc, estadoTxt(s.estado), pill(doc, s.estado)),
+          celda(doc, ahoraTxt),
+          celda(doc, get('Desde')),
+          celda(doc, get('Deepagent · máquina')),
+          celda(doc, get('Último latido')));
+        tbody.appendChild(tr);
       }
       tb.appendChild(tbody); body.appendChild(tb);
     }
+    body.scrollTop = scroll; body.scrollLeft = scrollX;
     foot.textContent = 'Datos reales del MCP de admira.live (' + ENDPOINT.replace(/^https?:\/\//, '') + ': presencia y bandejas de bot.yokup.com) · leído ' +
       hora(datos.generado, ahoraMs) + ' · se refresca cada 30 s · «sin datos» = la fuente no lo tiene.';
   }
@@ -299,8 +429,10 @@
       const deb = doc.createElement('button'); deb.type = 'button'; deb.textContent = 'Debatir un tema…';
       deb.title = 'Proponer un tema al Consejo (lo de antes: cada consejero responde en su chat de GrokBot)';
       deb.onclick = () => { if (typeof opts.onDebate === 'function') opts.onDebate(); else if (typeof root.lanzarDebateTema === 'function') root.lanzarDebateTema(); };
+      const rs = doc.createElement('button'); rs.type = 'button'; rs.textContent = 'Restablecer columnas'; rs.title = 'Vuelve al orden y los anchos de fábrica';
+      rs.onclick = () => { restablecerHoja(); pintarBoard(); };
       const x = doc.createElement('button'); x.type = 'button'; x.textContent = '✕'; x.title = 'Cerrar (Esc)'; x.onclick = closeBoard;
-      hd.append(t, up, deb, x);
+      hd.append(t, up, rs, deb, x);
       const body = doc.createElement('div'); body.className = 'estado-body';
       const ft = doc.createElement('footer');
       board.append(hd, body, ft);
@@ -333,5 +465,5 @@
     if (doc.readyState === 'loading') doc.addEventListener('DOMContentLoaded', go); else go();
   }
 
-  root.CouncilEstado = Object.freeze({ ENDPOINT, ocupados, abiertos, alternarGrupo, cargar, silla, ficha, encargoEnPalabras, estadoTxt, hace, openBoard, closeBoard, isBoardOpen, mostrarFicha, ocultarFicha });
+  root.CouncilEstado = Object.freeze({ ENDPOINT, ocupados, abiertos, alternarGrupo, COLS, siguienteOrden, ordenar, hoja, restablecerHoja, cargar, silla, ficha, encargoEnPalabras, estadoTxt, hace, openBoard, closeBoard, isBoardOpen, mostrarFicha, ocultarFicha });
 })(typeof window !== 'undefined' ? window : globalThis);

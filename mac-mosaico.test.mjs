@@ -11,13 +11,20 @@ test('hover de consejero ya no abre la ficha (solo contorno)', () => {
   assert.doesNotMatch(hover, /mostrarFicha\(/);
 });
 
-test('mosaico: 6 sillas, refresco 10-15 s, reutiliza paintCrt y no toca showRemote', () => {
+test('mosaico: 6 sillas, refresco 10-15 s, placard no SIN SEÑAL, no toca showRemote', () => {
   assert.deepEqual(mac.MOSAIC_SEATS, ['Jobs', 'Wozniak', 'Lucas', 'Disney', 'Musk', 'Huang']);
   assert.ok(mac.MOSAIC_POLL_MS >= 10000 && mac.MOSAIC_POLL_MS <= 15000);
   const src = readFileSync(new URL('./assets/mac-hoy.js', import.meta.url), 'utf8');
-  assert.match(src, /paintCrt\(tile\.querySelector\('\.mac-hoy-tile-ns'\)/);
+  assert.match(src, /function mosaicPlacard/);
+  assert.match(src, /credentials:\s*'include'/);
+  assert.equal(mac.mosaicHasWork({ ok: true, image: 'x' }), true);
   const show = src.slice(src.indexOf('export function showRemote'), src.indexOf('export function clearRemote'));
   assert.doesNotMatch(show, /Mosaic/);
+});
+
+test('#5113 mosaico: evidencia con imagen no es SIN SEÑAL aunque live=false', () => {
+  assert.equal(mac.mosaicHasWork({ ok: true, live: false, image: 'https://cdn/x.png' }), true);
+  assert.equal(mac.mosaicHasWork({ ok: true, live: false }), false);
 });
 
 test('refreshMosaic no hace nada con el Mac apagado', async () => {

@@ -1,7 +1,8 @@
 /* ¿En qué está cada consejero AHORA? (Carlos, 4-oct-2026)
  *  · Hover sobre un consejero (Leyendas y Coetáneos): ficha con el encargo en curso
  *    descrito en palabras (el número, como mucho, entre paréntesis), estado
- *    (working/ack/blocked/idle), desde cuándo, deepagent y máquina, y último latido.
+ *    (working/idle→«sin actividad»; ack/blocked legacy), desde cuándo, deepagent y máquina, y último latido.
+ *    Honestidad #5085: working solo si MCP dice working (latido trabajando ≤10 min).
  *  · DEBATIR: tablero vivo con todos los consejeros de la mesa.
  * Datos reales de https://mcp.admira.live/consejo/estado (el worker admira-live-mcp junta
  * la presencia y las bandejas públicas de bot.yokup.com, las mismas que agentes_vivos y
@@ -19,7 +20,7 @@
     working: { txt: 'trabajando', cls: 'working' },
     ack: { txt: 'aceptado, por empezar', cls: 'ack' },
     blocked: { txt: 'bloqueado', cls: 'blocked' },
-    idle: { txt: 'libre', cls: 'idle' }
+    idle: { txt: 'sin actividad', cls: 'idle' }
   });
   /* Color del estado (Carlos, 4-oct-2026): el contorno de la figura al pasar el ratón o
    * seleccionarla y la píldora de la ficha usan el MISMO color. Trabajando = rojo,

@@ -4,6 +4,9 @@
  * en curso descrito en palabras, su estado, desde cuándo, su deepagent y máquina y el
  * último latido).
  *
+ * Honestidad de ficha (#5085 / FLT-101528): «trabajando» solo si latido mode=trabajando
+ * en ≤10 min; misión/cola solo encargos abiertos de las últimas 48 h (nunca working por
+ * un in_progress antiguo).
  * GET /consejo/estado — pública y de solo lectura. Junta lo mismo que leen agentes_vivos
  * y encargos_listar, pero SOLO de las fuentes que ya son públicas en bot.yokup.com:
  *   · /api/presence                 latidos (persona, máquina, runtime, foco, updated)
@@ -17,6 +20,8 @@ import { SILLAS } from './sillas.js';
 import { filasPresencia, norm, seg, ESTADOS_ABIERTOS } from './coordinacion.js';
 
 export const VIVO_SEG = 900;          // «en línea» = latido en los últimos 15 min (igual que agentes_vivos)
+export const TRABAJANDO_SEG = 600;    // «trabajando» solo con latido mode=trabajando en los últimos 10 min (#5085)
+export const ENCARGO_VIVO_SEG = 48 * 3600; // misión/cola: solo encargos abiertos de las últimas 48 h (#5085)
 export const CACHE_SEG = 20;          // la mesa lo pide al hover: 20 s de caché en el borde
 const limpiar = (s) => String(s || '').replace(/\/+$/, '');
 
@@ -62,9 +67,6 @@ export function tituloEncargo(texto, max = 120) {
   return t;
 }
 
-const PRIORIDAD = { in_progress: 0, ack: 1, blocked: 2, pending: 3 };
-const ESTADO_MESA = { in_progress: 'working', ack: 'ack', blocked: 'blocked' };
-
 function filaEsDe(r, f) {
   if (norm(r.persona) !== norm(f.persona)) return false;
   if (f.solo_maquina && f.maquina && norm(r.machine) !== norm(f.maquina)) return false;
@@ -87,7 +89,12 @@ export function estadoSilla(def, { presencia, bandejas }, ahoraMs) {
     const filas = presencia ? presencia.filter((r) => filaEsDe(r, f)).sort((a, b) => seg(b.updated) - seg(a.updated)) : null;
     const r = filas && filas[0];
     const b = bandejas[f.persona];
-    const abiertos = b ? b.items.filter((x) => encargoEsDe(x, f) && ESTADOS_ABIERTOS.includes(String(x.status || 'pending'))) : null;
+    const abiertos = b ? b.items.filter((x) => {
+      if (!encargoEsDe(x, f) || !ESTADOS_ABIERTOS.includes(String(x.status || 'pending'))) return false;
+      const t = seg(x.ts) || seg(x.ack_at);
+      // Sin ts/ack_at: excluir (no inventar frescura). Solo vivos < 48 h (#5085).
+      return t && t >= ahoraS - ENCARGO_VIVO_SEG;
+    }) : null;
     return {
       persona: f.persona, tipo: f.tipo, etiqueta: f.etiqueta, runtime: (r && r.runtime) || f.runtime || null, modelo: f.modelo || (r && r.model) || null,
       maquina: (r && r.machine) || f.maquina || null,
@@ -102,15 +109,18 @@ export function estadoSilla(def, { presencia, bandejas }, ahoraMs) {
     };
   });
   const todos = agentes.flatMap((a) => (a._abiertos || []).map((x) => ({ x, a })));
-  todos.sort((p, q) => (PRIORIDAD[p.x.status || 'pending'] - PRIORIDAD[q.x.status || 'pending']) || (Number(q.x.id) - Number(p.x.id)));
-  const actual = todos.find((t) => (t.x.status || 'pending') !== 'pending') || null;
+  // Misión = el abierto más reciente (id desc, luego ts); nunca el más viejo in_progress (#5085).
+  const tsDe = (x) => seg(x.ts) || seg(x.ack_at) || 0;
+  todos.sort((p, q) => (Number(q.x.id) - Number(p.x.id)) || (tsDe(q.x) - tsDe(p.x)));
+  const actual = todos[0] || null;
   const ultimoPendiente = todos.find((t) => (t.x.status || 'pending') === 'pending') || null;
   const cola = { pending: 0, ack: 0, in_progress: 0, blocked: 0 };
   for (const t of todos) cola[t.x.status || 'pending']++;
   const sinBandeja = agentes.every((a) => a._abiertos === null);
   const sinPresencia = presencia === null;
-  const trabajandoPorLatido = agentes.some((a) => a.vivo && norm(a.modo) === 'trabajando');
-  let estado = actual ? ESTADO_MESA[actual.x.status] : (trabajandoPorLatido ? 'working' : (sinBandeja && sinPresencia ? null : 'idle'));
+  // «trabajando» SOLO con latido fresco mode=trabajando (10 min). Nunca por in_progress viejo (#5085).
+  const trabajandoPorLatido = agentes.some((a) => Number.isFinite(a.latido) && a.latido >= ahoraS - TRABAJANDO_SEG && norm(a.modo) === 'trabajando');
+  const estado = trabajandoPorLatido ? 'working' : (sinBandeja && sinPresencia ? null : 'idle');
   const enc = (t) => (t ? {
     numero: Number(t.x.id), etiqueta: t.x.etiqueta || null, estado: String(t.x.status || 'pending'),
     titulo: tituloEncargo(t.x.text), de: t.x.from_name || null, para: t.a.persona,
@@ -157,7 +167,9 @@ export function crearEstado(env = {}, deps = {}) {
     const bandejas = Object.fromEntries(personas.map((p, i) => [p, listas[i]]));
     const ms = ahora();
     return {
-      ok: true, generado: Math.floor(ms / 1000), ventana_vivo_s: VIVO_SEG, version: env.VERSION || '',
+      ok: true, generado: Math.floor(ms / 1000), ventana_vivo_s: VIVO_SEG,
+      ventana_trabajando_s: TRABAJANDO_SEG, ventana_encargo_vivo_s: ENCARGO_VIVO_SEG,
+      version: env.VERSION || '',
       fuentes: { presencia: presencia ? `ok (${presencia.length})` : 'sin datos', bandejas: `${listas.filter(Boolean).length}/${personas.length} ok`, origen: 'bot.yokup.com (presencia y bandeja públicas, las mismas de agentes_vivos y encargos_listar)' },
       ...(Object.keys(errores).length ? { errores } : {}),
       mesa: Object.fromEntries(Object.entries(MESA).map(([gen, defs]) => [gen, defs.map((d) => estadoSilla(d, { presencia, bandejas }, ms))])),

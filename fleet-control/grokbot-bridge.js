@@ -105,7 +105,7 @@ function createPrivateStore(file) {
 }
 
 function publicMessage(record) {
-  return {id:record.id, persona:record.persona, status:record.status, prompt:record.prompt, text:record.text || '', createdAt:record.createdAt, updatedAt:record.updatedAt};
+  return {id:record.id, persona:record.persona, status:record.status, prompt:record.prompt, text:record.text || '', createdAt:record.createdAt, updatedAt:record.updatedAt, source:'inbox', native:true, attachments:[]};
 }
 function iso(value, fallback) {
   const number = Number(value);
@@ -122,7 +122,9 @@ function createGrokBotBridge({environment = process.env, fetchImpl = globalThis.
   function capabilities() {
     let available = true, reason = '';
     try { getToken(); state.read(); } catch (error) { available = false; reason = error.code || 'bridge_unavailable'; }
-    return {provider:'webhook', available, reason, messages:available, personas:Object.entries(PERSONAS).map(([persona,name]) => ({persona,name})), historyFromDesktop:false, desktop:false, attachments:false, routines:false, interrupt:false};
+    // mode inbox: mesa Preguntar → bot-inbox (como agente_encargar). La UI lo trata
+    // como canal nativo de chat (#5088 / FLT-101531).
+    return {provider:'webhook', mode:'inbox', available, bidirectional:available, reason, messages:available, personas:Object.entries(PERSONAS).map(([persona,name]) => ({persona,name})), historyFromDesktop:false, desktop:false, attachments:false, routines:false, interrupt:false, pollingIntervalMs:3000};
   }
   async function upstream(suffix, init = {}) {
     const token = getToken();
@@ -216,7 +218,13 @@ function createGrokBotBridge({environment = process.env, fetchImpl = globalThis.
     return [...state.read().values()].filter(record => record.owner === owner && record.persona === canonical)
       .sort((a,b) => a.createdAt.localeCompare(b.createdAt)).slice(-100).map(publicMessage);
   }
-  return {capabilities, send, get, list};
+  function select(session, persona) {
+    verifiedOwner(session);
+    const p = canonicalPersona(persona);
+    if (!p) throw new BridgeError(400, 'unsupported_persona');
+    return { selectedPersona: p, status: 'idle' };
+  }
+  return {capabilities, select, send, get, list};
 }
 
 module.exports = { BridgeError, PERSONAS, canonicalPersona, createGrokBotBridge, createPrivateStore, loadProviderToken };

@@ -338,28 +338,42 @@ function createGrokBotEncargo({ environment = process.env, fetchImpl = globalThi
   return { handles, capabilities, select, list, get, send, fallback };
 }
 
-// Enruta por persona: las sillas con destino MCP (Elon) van al encargo; el resto, al
-// proveedor de siempre (escritorio AX del Mac Mini o webhook).
-function createGrokBotRouter({ base, encargo }) {
+// Enruta por persona:
+//  · Musk/Huang → encargo MCP a su deepagent (Merovingio/Cypher)
+//  · Jobs/Wozniak/Disney/Lucas → bot-inbox (webhook), igual que agente_encargar
+//    (#5088 / FLT-101531: mesa Preguntar despierta TelegramparaJobs)
+//  · el resto → proveedor base (escritorio AX o webhook)
+const LEYENDAS_INBOX = Object.freeze(new Set(['Jobs', 'Wozniak', 'Disney', 'Lucas']));
+function createGrokBotRouter({ base, encargo, inbox }) {
   const routed = persona => encargo.handles(persona);
+  const viaInbox = persona => !!(inbox && LEYENDAS_INBOX.has(canonicalPersona(persona)));
+  const pick = (persona) => routed(persona) ? encargo : (viaInbox(persona) ? inbox : base);
   const router = {
-    capabilities: (session, persona) => routed(persona) ? encargo.capabilities(session, persona) : base.capabilities(session),
-    list: (session, persona) => routed(persona) ? encargo.list(session, persona) : base.list(session, persona),
-    select: (session, persona) => routed(persona) ? encargo.select(session, persona) : (base.select ? base.select(session, persona) : (() => { throw new BridgeError(503, 'desktop_chat_not_configured'); })()),
-    send: (session, body) => routed(body && body.persona) ? encargo.send(session, body) : base.send(session, body),
+    capabilities: (session, persona) => pick(persona).capabilities(session, persona),
+    list: (session, persona) => pick(persona).list(session, persona),
+    select: (session, persona) => {
+      const p = pick(persona);
+      if (p.select) return p.select(session, persona);
+      throw new BridgeError(503, 'desktop_chat_not_configured');
+    },
+    send: (session, body) => pick(body && body.persona).send(session, body),
     fallback: (session,id) => encargo.fallback(session,id),
     async get(session, id) {
       let mine = null;
       try { mine = await encargo.get(session, id); } catch (error) { if (error.code !== 'bridge_state_unavailable') throw error; }
-      return mine || base.get(session, id);
+      if (mine) return mine;
+      if (inbox) {
+        try { mine = await inbox.get(session, id); if (mine) return mine; } catch (error) { if (error.code !== 'bridge_state_unavailable' && error.code !== 'message_not_found') throw error; }
+      }
+      return base.get(session, id);
     },
     start: () => base.start && base.start(),
     stop: () => base.stop && base.stop(),
   };
   if (base.upload) router.upload = (...args) => base.upload(...args);
   if (base.remote) router.remote = (...args) => base.remote(...args);
-  if (base.controls) router.controls = (session, body) => { if (routed(body && body.persona)) throw new BridgeError(503, 'desktop_controls_unavailable'); return base.controls(session, body); };
+  if (base.controls) router.controls = (session, body) => { if (routed(body && body.persona) || viaInbox(body && body.persona)) throw new BridgeError(503, 'desktop_controls_unavailable'); return base.controls(session, body); };
   return router;
 }
 
-module.exports = { TARGETS, MARCA, createGrokBotEncargo, createGrokBotRouter, createMcpClient, loadMcpKey, encargoText, nombreDe };
+module.exports = { TARGETS, MARCA, LEYENDAS_INBOX, createGrokBotEncargo, createGrokBotRouter, createMcpClient, loadMcpKey, encargoText, nombreDe };

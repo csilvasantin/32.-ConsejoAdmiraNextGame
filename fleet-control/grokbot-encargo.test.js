@@ -88,18 +88,25 @@ test('validación: sin sesión, adjuntos, campos extra, prompt vacío y conflict
   await assert.rejects(provider.send(carlos, { message_id: 'msg-000000001', persona: 'Elon Musk', prompt: 'otra cosa' }), e => e.code === 'message_id_conflict');
 });
 
-test('el router manda Elon al encargo y el resto al proveedor base', async t => {
+test('el router manda Elon al encargo, Jobs al inbox y el resto al proveedor base', async t => {
   const { provider } = setup(t, async () => ({ ok: true, encargo: 7, etiqueta: '#7.10.01' }));
   const seen = [];
   const base = {
-    capabilities: () => ({ mode: 'desktop' }), list: (s, p) => { seen.push(['list', p]); return []; },
-    select: (s, p) => { seen.push(['select', p]); return { selectedPersona: 'Jobs' }; },
-    send: async (s, b) => { seen.push(['send', b.persona]); return { id: 'gb_x' }; }, get: async () => ({ id: 'base' }),
+    capabilities: () => ({ mode: 'desktop' }), list: (s, p) => { seen.push(['base-list', p]); return []; },
+    select: (s, p) => { seen.push(['base-select', p]); return { selectedPersona: 'Cook' }; },
+    send: async (s, b) => { seen.push(['base-send', b.persona]); return { id: 'gb_base' }; }, get: async () => ({ id: 'base' }),
     controls: () => ({ ok: true }), start() { seen.push(['start']); },
   };
-  const router = createGrokBotRouter({ base, encargo: provider });
+  const inbox = {
+    capabilities: () => ({ mode: 'inbox', provider: 'webhook' }),
+    list: (s, p) => { seen.push(['inbox-list', p]); return []; },
+    select: (s, p) => { seen.push(['inbox-select', p]); return { selectedPersona: 'Jobs', status: 'idle' }; },
+    send: async (s, b) => { seen.push(['inbox-send', b.persona]); return { id: 'gb_inbox', source: 'inbox', native: true }; },
+    get: async () => null,
+  };
+  const router = createGrokBotRouter({ base, encargo: provider, inbox });
   assert.equal((await router.capabilities(carlos, 'Elon Musk')).mode, 'encargo');
-  assert.equal(router.capabilities(carlos, 'Steve Jobs').mode, 'desktop');
+  assert.equal(router.capabilities(carlos, 'Steve Jobs').mode, 'inbox');
   assert.equal(router.capabilities(carlos, null).mode, 'desktop');
   assert.deepEqual(router.select(carlos, 'Elon Musk'), { selectedPersona: 'Musk', status: 'idle' });
   router.select(carlos, 'Steve Jobs'); router.list(carlos, 'Steve Jobs');
@@ -109,8 +116,9 @@ test('el router manda Elon al encargo y el resto al proveedor base', async t => 
   assert.equal((await router.get(carlos, elon.id)).encargo, 7);
   assert.equal((await router.get(carlos, 'gb_' + 'a'.repeat(48))).id, 'base');
   assert.throws(() => router.controls(carlos, { persona: 'Elon Musk', action: 'routines' }), e => e.code === 'desktop_controls_unavailable');
+  assert.throws(() => router.controls(carlos, { persona: 'Steve Jobs', action: 'routines' }), e => e.code === 'desktop_controls_unavailable');
   router.start();
-  assert.deepEqual(seen, [['select', 'Steve Jobs'], ['list', 'Steve Jobs'], ['send', 'Steve Jobs'], ['start']]);
+  assert.deepEqual(seen, [['inbox-select', 'Steve Jobs'], ['inbox-list', 'Steve Jobs'], ['inbox-send', 'Steve Jobs'], ['start']]);
 });
 
 test('la lista refresca en segundo plano los encargos abiertos', async t => {

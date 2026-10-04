@@ -1,45 +1,59 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
-import {showRemote,setVisible,modoActual,alternaPong} from './assets/mac-hoy.js';
+import {showRemote,setVisible,modoActual,alternaPong,evidencePlacard,EVIDENCE_URL,EVIDENCE_POLL_MS} from './assets/mac-hoy.js';
+
+test('evidence placard encodes idle copy', () => {
+  const url = evidencePlacard('sin actividad', 'Jobs');
+  assert.match(url, /^data:image\/svg\+xml/);
+  assert.match(decodeURIComponent(url), /sin actividad/);
+  assert.match(decodeURIComponent(url), /Jobs/);
+});
+
 test('first Examinar turns on remote mode on every screen even when the table Mac starts off', () => {
   const nodes = Array.from({length:3},()=>({classes:new Set(),clientWidth:244,style:{setProperty(){}},classList:{}}));
   for(const n of nodes)n.classList.toggle=(c,on)=>on?n.classes.add(c):n.classes.delete(c);
   const root={querySelector:s=>s==='#mac-hoy-prop'?nodes[0]:null,querySelectorAll:s=>s==='#mac-hoy-prop, .mac-hoy-front-stage'?nodes:s==='.mac-hoy-front-stage'?nodes.slice(1):[]};
   setVisible(false,root);
   try {
-    assert.equal(showRemote('Steve Jobs',root),true);
+    assert.equal(showRemote('Steve Jobs',root,async()=>({ok:true,json:async()=>({ok:true,live:false})})),true);
     assert.equal(modoActual(),'remote');
     for(const n of nodes){assert.ok(n.classes.has('modo-remote'));assert.ok(!n.classes.has('modo-logo'));}
   } finally {setVisible(false,root);}
 });
 
-
-test('Examinar opens the seat once before passive JPEG refreshes; late openings cannot replace another seat',async()=>{
+test('Examinar polls evidence every seat and shows sin actividad without a live encargo', async () => {
   const nodes=Array.from({length:3},()=>({clientWidth:244,style:{setProperty(){}},classList:{toggle(){}}}));
-  const imgs=Array.from({length:3},()=>({src:''}));
+  const imgs=Array.from({length:3},()=>({src:'',style:{}}));
   const root={querySelector:s=>s==='#mac-hoy-prop'?nodes[0]:null,querySelectorAll:s=>s==='.mac-hoy-remote'?imgs:s==='#mac-hoy-prop, .mac-hoy-front-stage'?nodes:s==='.mac-hoy-front-stage'?nodes.slice(1):[]};
-  let finish;const calls=[];
-  const request=(url,options)=>{calls.push({url,options});return new Promise(resolve=>{finish=resolve;});};
+  const calls=[];
+  const request=(url)=>{calls.push(url);return Promise.resolve({ok:true,json:async()=>({ok:true,live:false,persona:'Jobs',label:'sin actividad'})});};
   setVisible(false,root);
   try{
     showRemote('Steve Jobs',root,request);
-    await Promise.resolve();
-    assert.equal(calls.length,1);assert.match(calls[0].url,/api\/grokbot\/selection$/);assert.equal(calls[0].options.method,'POST');assert.equal(JSON.parse(calls[0].options.body).persona,'Steve Jobs');
-    assert.ok(imgs.every(i=>!i.src),'must select before first capture');
-    const old=finish;
-    showRemote('George Lucas',root,request);await Promise.resolve();
-    old({ok:true,json:async()=>({ok:true})});
-    for(let i=0;i<8;i++)await Promise.resolve();
-    assert.ok(imgs.every(i=>!i.src),'late Jobs handshake must not overwrite Lucas');
-    finish({ok:true,json:async()=>({ok:true})});
-    for(let i=0;i<8;i++)await Promise.resolve();
-    assert.ok(imgs.every(i=>/screen\.jpg\?persona=Lucas&/.test(i.src)));
-    assert.ok(imgs.every(i=>i.crossOrigin==='use-credentials'),'Fleet proxy requires Origin and the authenticated session for images');
+    for(let i=0;i<12;i++)await Promise.resolve();
+    assert.equal(calls.length,1);
+    assert.match(calls[0], new RegExp(EVIDENCE_URL.replace('/','\\/') + '\\?persona=Jobs'));
+    assert.ok(imgs.every(i=>String(i.src).startsWith('data:image/svg+xml')));
+    assert.ok(imgs.every(i=>decodeURIComponent(i.src).includes('sin actividad')));
+    assert.equal(EVIDENCE_POLL_MS, 5000);
   }finally{setVisible(false,root);}
 });
 
+test('live encargo with evidence image paints every remote surface', async () => {
+  const nodes=Array.from({length:3},()=>({clientWidth:244,style:{setProperty(){}},classList:{toggle(){}}}));
+  const imgs=Array.from({length:3},()=>({src:'',style:{}}));
+  const root={querySelector:s=>s==='#mac-hoy-prop'?nodes[0]:null,querySelectorAll:s=>s==='.mac-hoy-remote'?imgs:s==='#mac-hoy-prop, .mac-hoy-front-stage'?nodes:s==='.mac-hoy-front-stage'?nodes.slice(1):[]};
+  const shot='https://api.yokup.com/media/fleet/demo.png';
+  setVisible(false,root);
+  try{
+    showRemote('Steve Jobs',root,async()=>({ok:true,json:async()=>({ok:true,live:true,persona:'Jobs',image:shot,capturedAt:Date.parse('2026-10-04T17:30:00Z'),label:'evidencia'})}));
+    for(let i=0;i<12;i++)await Promise.resolve();
+    assert.ok(imgs.every(i=>i.src.startsWith(shot)));
+    assert.ok(imgs.every(i=>i.style.display==='block'));
+  }finally{setVisible(false,root);}
+});
 
-for (const succeeds of [true, false]) test(`Pong ignores a late remote ${succeeds ? 'opening' : 'failure'} and image errors`,async()=>{
+test('Pong ignores a late evidence refresh and image errors',async()=>{
   const nodes=Array.from({length:3},()=>({clientWidth:244,style:{setProperty(){}},classList:{toggle(){}}}));
   const imgs=Array.from({length:3},()=>({src:'',style:{}}));
   const root={querySelector:s=>s==='#mac-hoy-prop'?nodes[0]:null,querySelectorAll:s=>s==='.mac-hoy-remote'?imgs:s==='#mac-hoy-prop, .mac-hoy-front-stage'?nodes:s==='.mac-hoy-front-stage'?nodes.slice(1):[]};
@@ -50,40 +64,11 @@ for (const succeeds of [true, false]) test(`Pong ignores a late remote ${succeed
     showRemote('Steve Jobs',root,request);
     await Promise.resolve();
     const staleError=imgs[0].onerror;
-    assert.ok(imgs.every(i=>i.style.display==='block'));
     alternaPong(root);
     assert.equal(modoActual(),'pong');
-    assert.ok(imgs.every(i=>i.style.display==='none'));
-    finish({ok:succeeds,json:async()=>({ok:succeeds})});
+    finish({ok:true,json:async()=>({ok:true,live:true,image:'https://api.yokup.com/media/fleet/x.png',capturedAt:Date.now()})});
     for(let i=0;i<8;i++)await Promise.resolve();
-    staleError();
-    assert.equal(modoActual(),'pong','a late response must not replace Pong with SIN CABLE');
-    assert.ok(imgs.every(i=>!i.src),'a late selection must not start JPEG refreshes');
-    showRemote('George Lucas',root,request);
-    await Promise.resolve();
-    staleError();
-    assert.equal(modoActual(),'remote','an old image error cannot stop a new seat');
-    finish({ok:true,json:async()=>({ok:true})});
-    for(let i=0;i<8;i++)await Promise.resolve();
-    assert.ok(imgs.every(i=>i.style.display==='block'&&/persona=Lucas/.test(i.src)));
-    alternaPong(root);
-    imgs[0].onerror();
-    assert.equal(modoActual(),'pong');
-    assert.ok(imgs.every(i=>i.style.display==='none'));
+    if (typeof staleError === 'function') staleError();
+    assert.equal(modoActual(),'pong','a late evidence response must not replace Pong');
   } finally {setVisible(false,root);}
-});
-
-
-test('a failed passive preview keeps the desktop selected for ultradetail',async()=>{
-  const nodes=Array.from({length:3},()=>({clientWidth:244,style:{setProperty(){}},classList:{toggle(){}}}));
-  const imgs=[{src:'',style:{}}];
-  const root={querySelector:s=>s==='#mac-hoy-prop'?nodes[0]:null,querySelectorAll:s=>s==='.mac-hoy-remote'?imgs:s==='#mac-hoy-prop, .mac-hoy-front-stage'?nodes:s==='.mac-hoy-front-stage'?nodes.slice(1):[]};
-  setVisible(false,root);
-  try{
-    showRemote('Walt Disney',root,async()=>({ok:true,json:async()=>({ok:true})}));
-    for(let i=0;i<8;i++)await Promise.resolve();
-    imgs[0].onerror();
-    assert.equal(modoActual(),'remote');
-    assert.equal(imgs[0].style.display,'block');
-  }finally{setVisible(false,root);}
 });

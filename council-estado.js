@@ -515,8 +515,8 @@
       c._estadoWired = true;
       c.addEventListener('mouseover', e => {
         pintarContornos(doc);
-        const el = e.target.closest('[data-persona]');
-        if (el && el !== cardAnchor) mostrarFicha(el); else if (el) clearTimeout(hideT);
+        // #5109 (Carlos, 04-10-2026): el hover ya NO abre la ficha; solo queda
+        // el recorte con contorno/brillo. La ficha sigue disponible por otras vías.
       });
       c.addEventListener('mouseout', e => {
         const el = e.target.closest('[data-persona]');

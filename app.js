@@ -644,7 +644,8 @@
         const sil = (window.COUNCIL_SILHOUETTES || {})[currentGen];
         if (sil && sil.paths) {
             const paths = plates.map(p => {
-                const d = sil.paths[p.persona];
+                // /recorte: el contorno manual guardado manda sobre el automático.
+                const d = (window.CouncilRecorte && window.CouncilRecorte.pathFor(currentGen, p.persona, sil.width, sil.height)) || sil.paths[p.persona];
                 if (!d) return '';
                 const title = `Ver ficha de ${p.persona} (${p.role})`;
                 return `<path class="body-hotspot" data-persona="${p.persona}" data-role="${p.role}" d="${d}"><title>${title}</title></path>`;
@@ -1859,6 +1860,7 @@
         addConvEntry('conv-racional', '⌨️', 'CLI', 'Consejo CLI', 'racional',
             '<strong>Comandos disponibles</strong><br>' +
             '/help<br>' +
+            '/recorte <span style="opacity:0.7">(editor manual de la silueta clicable de cada consejero)</span><br>' +
             '/importar &lt;url&gt; <span style="opacity:0.7">(descarga vídeo y lo sube a Drive)</span><br>' +
             '/google <span style="opacity:0.7">(abre la hoja de enlaces Entrenar)</span><br>' +
             '/diario <span style="opacity:0.7">(muestra el diario operativo)</span><br>' +
@@ -2147,7 +2149,7 @@
         '/admira.app', '/clearchannel.tv', '/pixeria.com', '/equipos', '/control',
         '/scumm', '/top', '/bocas', '/mac', '/motor', '/olvidar', '/menu', '/agoramatrix', '/tareas', '/google',
         '/importar', '/nombres', '/tarea', '/diario', '/leyendas', '/coetaneos', '/agentes', '/comandos', '/sendto',
-        '/marcador', '/flota', '/highscore'
+        '/marcador', '/flota', '/highscore', '/recorte'
     ];
     (function setupCliAutocomplete() {
         const inp = document.getElementById('action-input');
@@ -2216,6 +2218,17 @@
             addUserEntry(text);
             window.open("/highscore", "_blank");
             setActionLine("\ud83c\udfc6 Abriendo el Highscore de la flota\u2026");
+            return true;
+        }
+        // /recorte: editor manual de las siluetas clicables (assets/council-recorte.js).
+        if (/^\/recorte$/i.test(text)) {
+            addUserEntry(text);
+            if (window.CouncilRecorte) {
+                window.CouncilRecorte.open(currentGen);
+                setActionLine("\u2702\ufe0f Editor de recorte abierto \u2014 elige consejero y marca su contorno");
+            } else {
+                setActionLine("\u26a0\ufe0f El editor de recorte no ha cargado; recarga la p\u00e1gina");
+            }
             return true;
         }
         // ── Generación del Consejo: /leyendas y /coetaneos ──

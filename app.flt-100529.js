@@ -1401,14 +1401,21 @@
         } else if (window.MacHoy && window.MacHoy.clearRemote) {
             window.MacHoy.clearRemote();
         }
+        // DEBATIR enseña primero en qué está cada consejero (Carlos, 4-oct-2026): tablero
+        // vivo con datos del MCP de admira.live (council-estado.js). El debate por tema sigue
+        // en el botón «Debatir un tema…» del tablero, y el mapa de ideas lo lanza directo.
+        if (currentVerb !== 'debatir' && window.CouncilEstado) window.CouncilEstado.closeBoard();
         if (currentVerb === 'debatir') {
-            if (!currentProject) {
-                const tema = (window.prompt("¿Sobre qué quieres que debata el Consejo?", "") || "").trim();
-                if (!tema) { setActionLine("Debate cancelado — escribe un tema para que el Consejo debata"); return; }
-                currentProject = tema;
-                updateActionLine();
+            if (debateDirecto && currentProject) {
+                debateDirecto = false;
+                if (window.CouncilEstado) window.CouncilEstado.closeBoard();
+                executeCouncilVerb(currentVerb);
+            } else if (window.CouncilEstado) {
+                window.CouncilEstado.openBoard({ onDebate: lanzarDebateTema });
+                setActionLine("🗣 Debatir — en qué está cada consejero ahora mismo (datos vivos). «Debatir un tema…» para proponer uno");
+            } else {
+                lanzarDebateTema();
             }
-            executeCouncilVerb(currentVerb);
             unlock('debate');
         }
         if (currentVerb === 'entrenar') {
@@ -4658,10 +4665,23 @@
        el módulo porque `currentProject` es un `let` de este fichero y no vive en
        window. De paso evita el window.prompt() de DEBATIR, que bloquea la pestaña:
        aquí el tema ya viene escrito. */
+    /* El debate por tema de siempre: pide el tema (si no lo hay) y lo manda a las sillas. */
+    let debateDirecto = false;
+    function lanzarDebateTema() {
+        const tema = (window.prompt("¿Sobre qué quieres que debata el Consejo?", currentProject || "") || "").trim();
+        if (!tema) { setActionLine("Debate cancelado — escribe un tema para que el Consejo debata"); return false; }
+        currentProject = tema;
+        updateActionLine();
+        if (window.CouncilEstado) window.CouncilEstado.closeBoard();
+        executeCouncilVerb('debatir');
+        return true;
+    }
+    window.lanzarDebateTema = lanzarDebateTema;
     window.debateIdea = function (tema) {
         const t = String(tema || '').trim();
         if (!t) { setActionLine("Escribe la idea antes de llevarla al Consejo"); return false; }
         currentProject = t;
+        debateDirecto = true;
         const btn = document.querySelector('[data-verb="debatir"]');
         if (btn) selectVerb(btn);
         else { currentVerb = 'debatir'; updateActionLine(); executeCouncilVerb('debatir'); }

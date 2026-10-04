@@ -38,6 +38,10 @@
   var gisReady = false;
   var startTime = 0;
   var rafId = 0;
+  // Si la sesión ya es válida antes de montar la verja, no se monta nunca: antes
+  // unlock() quitaba los estilos y DOMContentLoaded montaba después la verja sin
+  // CSS, que quedaba como franja «CONECTANDO.. 100%» al pie de la home.
+  var unlocked = false;
 
   // Ocultar la página de inmediato (antes de que se pinte el contenido).
   document.documentElement.classList.add("gate-locked");
@@ -131,6 +135,7 @@
 
   // ===== montaje del prehome =====
   function mount() {
+    if (unlocked || document.getElementById("admira-gate")) return;
     var g = document.createElement("div");
     g.id = "admira-gate";
     g.innerHTML =
@@ -265,6 +270,8 @@
   }
 
   function unlock() {
+    unlocked = true;
+    phase = "unlocked";
     if (rafId) cancelAnimationFrame(rafId);
     document.documentElement.classList.remove("gate-locked");
     var g = document.getElementById("admira-gate");

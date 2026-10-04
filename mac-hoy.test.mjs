@@ -427,3 +427,26 @@ test('#5113 mosaico usa credentials include y no pinta MOSAIC_NO_SIGNAL vacío',
   assert.match(tileFn, /mosaicHasWork|data\.image/);
   assert.match(src, /export async function mostrarProyectoAnterior/);
 });
+
+test('#5113b cerradas aparte: ratón/mosaico no dependen de missions?limit=80 (solo abiertas)', async () => {
+  const mod = await import('./assets/mac-hoy.js');
+  assert.match(mod.CERRADAS_URL, /status=resolved/);
+  let calls = 0;
+  const fake = async (url) => { calls++; assert.match(url, /status=resolved/); return { ok: true, json: async () => ({ missions: [
+    { id: 'FLT-9', status: 'resolved', assignee: 'Merovingio', subject: 'Cierre del puente de Musk con evidencia', updated_at: 5 },
+    { id: 'FLT-8', status: 'resolved', assignee: 'JobsGrokBot', subject: 'Parte del consejo', updated_at: 4 },
+  ] }) }; };
+  const rows = await mod.fetchCerradas(fake, true);
+  assert.equal(rows.length, 2);
+  await mod.fetchCerradas(fake); // cacheado (TTL)
+  assert.equal(calls, 1);
+  assert.equal(mod.ultimaCerrada(rows, 'Musk').id, 'FLT-9');
+  assert.equal(mod.ultimaCerrada(rows, 'Jobs').id, 'FLT-8');
+  assert.equal(mod.ultimaCerrada(rows, 'Huang'), null);
+});
+
+test('#5113b matchesChair: Musk=Merovingio, Huang=Cypher', () => {
+  assert.equal(matchesChair({ assignee: 'MerovingioGrokBotBox' }, 'Musk'), true);
+  assert.equal(matchesChair({ assignee: 'CypherGrokBotBox' }, 'Huang'), true);
+  assert.equal(matchesChair({ assignee: 'CypherGrokBotBox' }, 'Musk'), false);
+});

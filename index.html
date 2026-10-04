@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.04.10.2026.r15.19:34" />
+<meta name="admiranext-version" content="AdmiraNeXT v.04.10.2026.r18.19:58" />
     <script src="/auth-gate.js?v=20261004-r15-sinfranja"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -1801,6 +1801,44 @@
         }
         .mac-hoy-logo-front, .mac-hoy-pong-front { mix-blend-mode: screen; }
         .modo-logo .mac-hoy-logo { display: block; }
+        /* #5109 MOSAICO DEL CONSEJO: en la mesa (vista general) el modo logo
+           enseña las 6 pantallas de los consejeros en vez de la marca. */
+        .mac-hoy-mosaic {
+            position: absolute; left: 0; top: 0; width: 512px; height: 342px;
+            display: none; box-sizing: border-box; padding: 14px 16px;
+            grid-template-columns: repeat(3, 1fr); grid-template-rows: repeat(2, 1fr);
+            gap: 8px; pointer-events: none; background: #030806;
+        }
+        .mac-hoy-prop.modo-logo .mac-hoy-mosaic { display: grid; }
+        .mac-hoy-prop.modo-logo .mac-hoy-logo { display: none; }
+        .mac-hoy-tile {
+            position: relative; overflow: hidden; border-radius: 6px;
+            background: #071a0e; box-shadow: inset 0 0 0 1px rgba(126,255,166,.35), 0 0 6px rgba(70,240,132,.35);
+        }
+        .mac-hoy-tile img {
+            position: absolute; inset: 0; width: 100%; height: 100%; object-fit: cover;
+            filter: contrast(1.1) saturate(.75) brightness(.95);
+        }
+        .mac-hoy-tile::after {   /* barrido CRT */
+            content: ""; position: absolute; inset: 0; pointer-events: none;
+            background: repeating-linear-gradient(180deg, rgba(0,0,0,0) 0 2px, rgba(0,0,0,.28) 2px 3px),
+                        radial-gradient(ellipse at center, rgba(0,0,0,0) 55%, rgba(0,0,0,.45) 100%);
+        }
+        .mac-hoy-tile.sin-senal img { display: none; }
+        .mac-hoy-tile-ns {
+            display: none; position: absolute; inset: 0; margin: 0; padding-top: 30%;
+            text-align: center; color: #b9ffc9; font: 13px/1.5 'Press Start 2P', ui-monospace, monospace;
+            text-shadow: 0 0 6px rgba(126,255,166,.9); white-space: pre;
+            background: repeating-linear-gradient(0deg, rgba(185,255,201,.06) 0 1px, transparent 1px 3px);
+            animation: mac-hoy-ns 1.4s steps(2) infinite;
+        }
+        .mac-hoy-tile.sin-senal .mac-hoy-tile-ns { display: block; }
+        @keyframes mac-hoy-ns { 50% { opacity: .7; } }
+        .mac-hoy-tile-name {
+            position: absolute; left: 4px; bottom: 3px; z-index: 2; padding: 1px 4px;
+            font: 9px/1.3 'Press Start 2P', ui-monospace, monospace; color: #b9ffc9;
+            background: rgba(3,8,6,.75); text-shadow: 0 0 4px rgba(126,255,166,.9); border-radius: 2px;
+        }
         /* PONG. Vive DENTRO del plano proyectado, así que la misma matriz lo tumba
            sobre el tubo. Fondo transparente: el plano mezcla en «screen», de modo
            que lo negro no pinta y sólo el verde suma luz, como un fósforo. */
@@ -4461,7 +4499,7 @@ body.rail-open{overflow:hidden}
 <script defer src="council-speech.js?v=20260930-flt101302"></script>
 <script defer src="council-grokbot.js?v=20261004-5088"></script>
 <script defer src="council-todo.js?v=20260930-flt101302"></script>
-<script defer src="council-estado.js?v=20261004-5097-jobs"></script>
+<script defer src="council-estado.js?v=20261004-5109-mosaico"></script>
 <script defer src="assets/council-silhouettes.js?v=20261004-silueta"></script>
 <script defer src="assets/council-recorte.js?v=20261004-recorte1"></script>
 <script defer src="app.flt-100529.js?v=20261004-5090-fichas"></script>
@@ -4469,7 +4507,7 @@ body.rail-open{overflow:hidden}
 <script defer src="council-composer.js?v=20260921-composer1"></script>
 <script defer src="council-working.js?v=20260930-flt101302"></script>
 <script defer src="council-integration.js?v=20261003-flt101402"></script>
-<script type="module" src="assets/mac-hoy.js?v=20261004-5088"></script>
+<script type="module" src="assets/mac-hoy.js?v=20261004-5109-mosaico"></script>
 <script type="module" src="assets/mapa-ideas.js?v=20260920-mapa1"></script>
 <script type="module" src="assets/mesa-paste.js?v=20260920-paste"></script>
 <script src="/consejeros-desk.js?v=20260921-r7-proxy"></script>

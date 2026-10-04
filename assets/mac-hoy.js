@@ -442,6 +442,118 @@ async function draw(root, fetchImpl) {
   prop.classList.remove('refreshing');
 }
 
+/* MOSAICO DEL CONSEJO (#5109, Carlos 04-10-2026). Con el Mac 1984 sobre la mesa
+   en la vista general, el tubo enseña en vivo las pantallas de los 6 consejeros
+   —la misma imagen que la pestaña «Computadora» (SCREEN_JPEG), con la evidencia como respaldo— en una rejilla 3×2. Código
+   nuevo y aparte: no toca showRemote ni el detalle; reutiliza paintCrt para el
+   «sin señal». Sólo vive en el Mac de la mesa (#mac-hoy-glass) y en modo logo. */
+export const MOSAIC_SEATS = ['Jobs', 'Wozniak', 'Lucas', 'Disney', 'Musk', 'Huang'];
+export const MOSAIC_POLL_MS = 12000;
+export const MOSAIC_NO_SIGNAL = 'SIN\nSEÑAL';
+let mosaicTimer = null;
+let mosaicBusy = false;
+function mosaicHost(root) {
+  return root && root.querySelector ? root.querySelector('#mac-hoy-glass') : null;
+}
+export function buildMosaic(root = lastRoot || (typeof document !== 'undefined' ? document : null)) {
+  const host = mosaicHost(root);
+  if (!host) return null;
+  let grid = host.querySelector('.mac-hoy-mosaic');
+  if (grid) return grid;
+  const doc = host.ownerDocument || (typeof document !== 'undefined' ? document : null);
+  if (!doc || !doc.createElement) return null;
+  grid = doc.createElement('div');
+  grid.className = 'mac-hoy-mosaic';
+  grid.setAttribute('aria-hidden', 'true');
+  MOSAIC_SEATS.forEach((alias) => {
+    const tile = doc.createElement('div');
+    tile.className = 'mac-hoy-tile sin-senal';
+    tile.setAttribute('data-seat', alias);
+    const img = doc.createElement('img');
+    img.alt = '';
+    img.decoding = 'async';
+    const ns = doc.createElement('pre');
+    ns.className = 'mac-hoy-tile-ns';
+    ns.textContent = MOSAIC_NO_SIGNAL;
+    const name = doc.createElement('span');
+    name.className = 'mac-hoy-tile-name';
+    name.textContent = alias.toUpperCase();
+    tile.appendChild(img); tile.appendChild(ns); tile.appendChild(name);
+    grid.appendChild(tile);
+  });
+  host.appendChild(grid);
+  return grid;
+}
+function mosaicNoSignal(tile) {
+  if (!tile) return;
+  const was = tile.classList.contains('sin-senal');
+  tile.classList.add('sin-senal');
+  const img = tile.querySelector('img');
+  if (img && img.removeAttribute) img.removeAttribute('src');
+  if (!was) paintCrt(tile.querySelector('.mac-hoy-tile-ns'), MOSAIC_NO_SIGNAL);
+}
+function mosaicLoad(src) {
+  return new Promise((resolve) => {
+    if (typeof Image !== 'function') return resolve(false);
+    const pre = new Image();               // sin crossOrigin: la sesión de fleet viaja como en «Computadora»
+    const kill = setTimeout(() => { pre.src = ''; resolve(false); }, 13000);
+    pre.onload = () => { clearTimeout(kill); resolve(true); };
+    pre.onerror = () => { clearTimeout(kill); resolve(false); };
+    pre.src = src;
+  });
+}
+function mosaicShow(tile, src) {
+  const img = tile.querySelector('img');
+  if (img) img.src = src;
+  tile.classList.remove('sin-senal');
+  return true;
+}
+// 1º la pantalla viva de su computadora (SCREEN_JPEG?persona=, la de «Computadora»);
+// 2º la última evidencia del encargo; si no hay ninguna, «SIN SEÑAL».
+function mosaicTile(tile, alias, request) {
+  const live = SCREEN_JPEG + '?persona=' + encodeURIComponent(alias) + '&t=' + Date.now();
+  return mosaicLoad(live).then((ok) => {
+    if (ok) return mosaicShow(tile, live);
+    const url = EVIDENCE_URL + '?persona=' + encodeURIComponent(alias) + '&t=' + Date.now();
+    return Promise.resolve()
+      .then(() => request(url, { cache: 'no-store', headers: { accept: 'application/json' } }))
+      .then((r) => r.json().catch(() => null))
+      .then((data) => {
+        if (!data || !data.ok || !data.image) return false;
+        const src = data.image + (data.image.includes('?') ? '&' : '?') + 't=' + Date.now();
+        return mosaicLoad(src).then((ok2) => ok2 && mosaicShow(tile, src));
+      })
+      .catch(() => false)
+      .then((shown) => { if (!shown) mosaicNoSignal(tile); return !!shown; });
+  });
+}
+export function refreshMosaic(root = lastRoot || (typeof document !== 'undefined' ? document : null), fetchImpl = lastFetch) {
+  if (!visible || modo !== 'logo' || mosaicBusy) return Promise.resolve(false);
+  if (typeof document !== 'undefined' && document.hidden) return Promise.resolve(false);
+  const grid = buildMosaic(root);
+  const request = fetchImpl || (typeof fetch === 'function' ? fetch : null);
+  if (!grid || !request) return Promise.resolve(false);
+  mosaicBusy = true;
+  const tiles = Array.from(grid.querySelectorAll('.mac-hoy-tile'));
+  return Promise.all(tiles.map((t) => mosaicTile(t, t.getAttribute('data-seat'), request)))
+    .then(() => true)
+    .finally(() => { mosaicBusy = false; });
+}
+export function startMosaic(root = lastRoot || (typeof document !== 'undefined' ? document : null), fetchImpl = lastFetch) {
+  if (!buildMosaic(root)) return false;
+  if (!mosaicTimer) mosaicTimer = setInterval(() => refreshMosaic(lastRoot, lastFetch), MOSAIC_POLL_MS);
+  root.addEventListener && root.addEventListener('mac-screen-mode', (e) => {
+    if (e.detail && e.detail.mode === 'logo') refreshMosaic(lastRoot, lastFetch);
+  });
+  const prop = root.querySelector('#mac-hoy-prop');
+  // Encender el Mac (clase .on) dispara una pasada inmediata, sin esperar al tic.
+  if (prop && typeof MutationObserver !== 'undefined') {
+    new MutationObserver(() => { if (prop.classList.contains('on')) refreshMosaic(lastRoot, lastFetch); })
+      .observe(prop, { attributes: true, attributeFilter: ['class'] });
+  }
+  return true;
+}
+
 export function isVisible() { return visible; }
 export function isFocused() { return focused; }
 
@@ -672,6 +784,7 @@ export function boot(root = document, fetchImpl = fetch) {
   setVisible(false, root, fetchImpl);
   fitScreen(root);
   watchScreen(root);
+  startMosaic(root, fetchImpl);   // #5109 mosaico del Consejo en la mesa
   // El Mac de la barra SCUMM está SIEMPRE a la vista, así que sus mandos tienen
   // que valer también con el Mac de la mesa apagado: lo encienden y siguen. Los
   // de la mesa y los de la vista grande no lo necesitan —si está apagado, no se
@@ -762,7 +875,7 @@ export function boot(root = document, fetchImpl = fetch) {
 }
 
 if (typeof window !== 'undefined' && typeof document !== 'undefined') {
-  window.MacHoy = { todayMadrid, isHoy, seatOf, linesFor, IDLE_COPY, ERROR_COPY, paintCrt, fetchHoy, boot, setVisible, toggle, isVisible, isFocused, openFront, closeFront, fitScreen, MAC_ART_W, MODOS, setModo, modoActual, detalleLineas, ultimaMision, ultimasMisiones, envolver, avanzaPantalla, alternaPong, paraPong, mandoPong, estadoPong, DETALLE_ANCHO, chairAlias, CHAIR_ALIAS, SCREEN_JPEG, EVIDENCE_URL, EVIDENCE_POLL_MS, evidencePlacard, showRemote, clearRemote, remoteSeat };
+  window.MacHoy = { todayMadrid, isHoy, seatOf, linesFor, IDLE_COPY, ERROR_COPY, paintCrt, fetchHoy, boot, setVisible, toggle, isVisible, isFocused, openFront, closeFront, fitScreen, MAC_ART_W, MODOS, setModo, modoActual, detalleLineas, ultimaMision, ultimasMisiones, envolver, avanzaPantalla, alternaPong, paraPong, mandoPong, estadoPong, DETALLE_ANCHO, chairAlias, CHAIR_ALIAS, SCREEN_JPEG, EVIDENCE_URL, EVIDENCE_POLL_MS, evidencePlacard, showRemote, clearRemote, remoteSeat, MOSAIC_SEATS, buildMosaic, refreshMosaic };
   const bootAndMaybeRemote = () => {
     boot();
     try {

@@ -130,8 +130,8 @@ export async function onRequestGet({ request }) {
     return r.json();
   };
   const [es, ms] = await Promise.allSettled([
-    getJson(ESTADO, 6000),
-    getJson(MISSIONS, 8000, { "user-agent": "admira-live-evidence" }),
+    getJson(ESTADO, 15000),
+    getJson(MISSIONS, 15000, { "user-agent": "admira-live-evidence" }),
   ]);
   const estado = es.status === "fulfilled" ? es.value : null;
   const missions = ms.status === "fulfilled" && Array.isArray(ms.value && ms.value.missions) ? ms.value.missions : [];

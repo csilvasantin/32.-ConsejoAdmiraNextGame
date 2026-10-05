@@ -119,7 +119,7 @@ test('ownership checked before any provider read; raw inbox ids cannot be enumer
   await assert.rejects(bridge.get(other,sent.id),rejection('message_not_found'));
   await assert.rejects(bridge.get(user,'12'),rejection('message_not_found'));
   assert.equal(count,1);
-  assert.deepEqual(bridge.list(other,'Jobs'),[]);
+  assert.deepEqual(await bridge.list(other,'Jobs'),[]);
 });
 
 test('progress preserves full response and author association; done is cached', async t => {
@@ -141,7 +141,7 @@ test('provider receipt mismatch is not attributed to the selected counsellor', a
   const {bridge}=setup(t,async (_url,init) => init.method==='POST' ? reply({ok:true,id:13}) : reply({ok:true,item:{id:13,target_persona:'Lucas',target_machine:'grokbot',status:'done',note:'another bot'}}));
   const sent=await bridge.send(user,request());
   await assert.rejects(bridge.get(user,sent.id),rejection('provider_receipt_mismatch'));
-  assert.equal(bridge.list(user,'Jobs')[0].text,'');
+  assert.equal((await bridge.list(user,'Jobs'))[0].text,'');
 });
 
 test('history is filtered by verified email and counsellor with stable public fields', async t => {
@@ -150,9 +150,9 @@ test('history is filtered by verified email and counsellor with stable public fi
   const own=await bridge.send(user,request());
   await bridge.send(other,request());
   await bridge.send(user,request({persona:'Lucas',message_id:'test-message-002'}));
-  assert.deepEqual(bridge.list(user,'Steve Jobs'),[own]);
-  assert.equal(bridge.list(other,'Jobs').length,1);
-  assert.throws(() => bridge.list(user,'Tim Cook'),rejection('unsupported_persona'));
+  assert.deepEqual(await bridge.list(user,'Steve Jobs'),[own]);
+  assert.equal((await bridge.list(other,'Jobs')).length,1);
+  await assert.rejects(bridge.list(user,'Tim Cook'),rejection('unsupported_persona'));
 });
 
 test('private state refuses unsafe modes, symlinks and corrupted data before send', async t => {
@@ -203,4 +203,22 @@ test('browser send requires existing session CSRF and trusted origin; reads rema
   const server=fs.readFileSync(path.join(__dirname,'server.js'),'utf8');
   assert.match(server,/if \(url === '\/api\/grokbot' \|\| url\.startsWith\('\/api\/grokbot\/'\)\) \{\s*if \(!\(await gate\(req, res, ip\)\)\) return;/);
   assert.match(server,/req\.fleetSession = auth\.session/);
+});
+
+test('list polls open bot-inbox receipts so the UI can leave Enviado', async (t) => {
+  let gets = 0;
+  const {bridge} = setup(t, async (_url, init) => {
+    if (init.method === 'POST') return reply({ok:true, id:77});
+    gets += 1;
+    return reply({ok:true, item:{id:77, target_persona:'Jobs', target_machine:'grokbot', status:'done', note:'Aquí Jobs.', done_at:1789700001}});
+  });
+  const user = {email:'carlos@example.test', jti:'session-list-refresh'};
+  const sent = await bridge.send(user, request({prompt:'en qué estás?' }));
+  assert.equal(sent.status, 'pending');
+  const after = await bridge.list(user, 'Jobs');
+  assert.equal(after[0].status, 'done');
+  assert.equal(after[0].text, 'Aquí Jobs.');
+  assert.equal(after[0].source, 'inbox');
+  assert.equal(after[0].native, true);
+  assert.equal(gets, 1);
 });

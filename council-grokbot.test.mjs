@@ -505,3 +505,28 @@ test('sin señal y notas internas: se anuncia el plan B y no se anima la nota',a
  await h.api.select('Elon Musk');assert.match(h.doc.details.querySelector('.council-chat__connection').textContent,/sin señal/);
  assert.doesNotMatch(h.log.textContent,/sin ESTADO/);assert.match(h.log.textContent,/Responder con Grok 4.6/);assert.equal(h.restores.length,0);h.api.destroy();
 });
+
+test('Jobs (leyenda) va por bot-inbox: Enviado nativo, sin «Encargos anteriores», y la respuesta se anuncia', async()=>{
+  const h=harness();
+  h.capabilitiesHandler=call=>call.query.get('persona')==='Jobs'
+    ? response({ok:true,mode:'inbox',provider:'webhook',bidirectional:true,available:true,selectedPersona:'Jobs',status:'idle',lastObservedAt:'2026-09-18T08:00:00.000Z'})
+    : response({ok:false,error:'desktop_owner_required'},403);
+  const row=over=>message({id:'gb_jobs',persona:'Jobs',prompt:'en qué estás?',source:'inbox',native:true,...over});
+  h.postHandler=()=>response({ok:true,message:row({status:'pending'})});
+  assert.equal(await h.api.select('Steve Jobs'),true);
+  assert.match(h.doc.details.querySelector('.council-chat__connection').textContent,/Vía bot-inbox · grokbot/);
+  assert.match(h.doc.details.querySelector('.council-chat__scope').textContent,/bot-inbox/);
+  assert.equal(h.doc.details.querySelector('[data-chat-screen]').hidden,true);
+  assert.equal(await h.api.send('Steve Jobs','en qué estás?'),true);
+  h.histories.set('Steve Jobs',[row({status:'pending'})]);
+  await h.clock.advance(3000);
+  assert.match(h.log.textContent,/Enviado|pensando/);
+  assert.doesNotMatch(h.log.textContent,/Encargos anteriores/);
+  assert.doesNotMatch(h.statuses.at(-1)||'/',/esperando mensajes visibles/);
+  h.histories.set('Steve Jobs',[row({status:'done',text:'Diseñando el próximo producto.',updatedAt:'2026-09-18T08:02:00.000Z'})]);
+  await h.clock.advance(3000);
+  assert.deepEqual(h.answers.map(a=>[a.persona,a.text,a.source]),[['Steve Jobs','Diseñando el próximo producto.','inbox']]);
+  assert.match(h.log.textContent,/Diseñando el próximo producto/);
+  assert.doesNotMatch(h.log.textContent,/Encargos anteriores/);
+  h.api.destroy();
+});

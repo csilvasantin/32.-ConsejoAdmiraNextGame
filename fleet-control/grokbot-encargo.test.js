@@ -14,7 +14,7 @@ function setup(t, mcpImpl) {
   const calls = [];
   let clock = 1790000000000;
   const mcp = { call: async (name, args) => { calls.push({ name, args }); return mcpImpl(name, args, calls); } };
-  const provider = createGrokBotEncargo({ environment: { GROKBOT_ENCARGO_STATE_FILE: path.join(dir, 'state.json') }, keyProvider: () => 'k', mcp, presenceProvider: async () => ({presence:['Merovingio','Cypher'].map(persona=>({persona,machine:'GrokBotBox',runtime:'DeepAgents',updated:clock/1000}))}), now: () => (clock += 10000) });
+  const provider = createGrokBotEncargo({ environment: { GROKBOT_ENCARGO_STATE_FILE: path.join(dir, 'state.json') }, keyProvider: () => 'k', mcp, presenceProvider: async () => ({presence:['Merovingio','Cypher','Trinity'].map(persona=>({persona,machine:'GrokBotBox',runtime:'DeepAgents',updated:clock/1000}))}), now: () => (clock += 10000) });
   return { provider, calls };
 }
 const flush = () => new Promise(r => setImmediate(r));
@@ -26,7 +26,10 @@ test('Elon y Jensen van por encargo; Jobs sigue en su proveedor', () => {
   assert.equal(provider.handles('Steve Jobs'), false);
   assert.equal(provider.handles('Jensen Huang'), true);
   assert.equal(provider.handles('Huang'), true);
+  assert.equal(provider.handles('Gwynne Shotwell'), true);
+  assert.equal(provider.handles('Shotwell'), true);
   assert.equal(provider.handles('Walt Disney'), false);
+  assert.equal(provider.handles('Ryan Reynolds'), false);
 });
 
 test('un mensaje de Joshua crea un encargo MCP para el Merovingio y la respuesta vuelve al chat', async t => {
@@ -106,6 +109,8 @@ test('el router manda Elon al encargo, Jobs al inbox y el resto al proveedor bas
   };
   const router = createGrokBotRouter({ base, encargo: provider, inbox });
   assert.equal((await router.capabilities(carlos, 'Elon Musk')).mode, 'encargo');
+  assert.equal((await router.capabilities(carlos, 'Gwynne Shotwell')).mode, 'encargo');
+  assert.equal((await router.capabilities(carlos, 'Gwynne Shotwell')).agente, 'Trinity');
   assert.equal(router.capabilities(carlos, 'Steve Jobs').mode, 'inbox');
   assert.equal(router.capabilities(carlos, null).mode, 'desktop');
   assert.deepEqual(router.select(carlos, 'Elon Musk'), { selectedPersona: 'Musk', status: 'idle' });
@@ -178,6 +183,23 @@ test('Jensen: encargo a Cypher con la marca común y el historial reciente como 
   // El historial es por persona y por consejero: Elon no hereda lo hablado con Jensen.
   await provider.send(joshua, { message_id: 'msg-elon-0001', persona: 'Elon Musk', prompt: 'Hola Elon' });
   assert.match(calls.filter(c => c.name === 'agente_encargar').at(-1).args.texto, /\(sin historial\)/);
+});
+
+test('Shotwell: encargo a Trinity, mismo hilo, sin heredar el chat de Jensen', async t => {
+  const { provider, calls } = setup(t, async (name) => {
+    if (name === 'agente_encargar') return { ok: true, encargo: 5218, etiqueta: '#5218.10.05' };
+    if (name === 'encargo_estado') return { encargo: 5218, estado: 'done', respuesta: 'En órbita.', cierre: '2026-10-05 21:00 UTC' };
+    throw new Error('unexpected');
+  });
+  assert.equal((await provider.capabilities(carlos, 'Gwynne Shotwell')).agente, 'Trinity');
+  const first = await provider.send(carlos, { message_id: 'msg-shotwell-0001', persona: 'Gwynne Shotwell', prompt: 'Hola Gwynne' });
+  assert.equal((await provider.get(carlos, first.id)).text, 'En órbita.');
+  await provider.send(carlos, { message_id: 'msg-shotwell-0002', persona: 'Shotwell', prompt: '¿Seguimos?' });
+  const encs = calls.filter(c => c.name === 'agente_encargar').map(c => c.args);
+  assert.equal(encs[0].persona, 'Trinity');
+  assert.equal(encs[0].maquina, 'GrokBotBox');
+  assert.match(encs[0].texto, /^\[chat-coetaneos\] Carlos Silva → Gwynne Shotwell\n/);
+  assert.match(encs[1].texto, /Carlos: Hola Gwynne\nGwynne Shotwell: En órbita\./);
 });
 
 test('el texto del encargo nunca supera el límite del bot-inbox', () => {

@@ -8,7 +8,7 @@ const os = require('os');
 const path = require('path');
 
 const PROVIDER = 'https://bot.yokup.com/api/bot-inbox';
-const PERSONAS = Object.freeze({ Jobs:'Steve Jobs', Wozniak:'Steve Wozniak', Disney:'Walt Disney', Lucas:'George Lucas', Musk:'Elon Musk', Huang:'Jensen Huang' });
+const PERSONAS = Object.freeze({ Jobs:'Steve Jobs', Wozniak:'Steve Wozniak', Disney:'Walt Disney', Lucas:'George Lucas', Musk:'Elon Musk', Huang:'Jensen Huang', Shotwell:'Gwynne Shotwell' });
 const MAX_RECORDS = 20000;
 const MAX_PROMPT = 16000;
 const MESSAGE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,119}$/;

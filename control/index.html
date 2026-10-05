@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.05.10.2026.r1.13:50" />
+<meta name="admiranext-version" content="AdmiraNeXT v.05.10.2026.r2.14:21" />
     <script src="/admira-bar.js?v=20260918-r38"></script>
     <script src="/auth-gate.js?v=20261004-r15-sinfranja"></script>
 <meta charset="UTF-8">
@@ -458,9 +458,15 @@
   .hack-topbar{display:flex;align-items:center;gap:12px;padding:8px 10px;margin-bottom:.5rem;border-bottom:1px solid #1a3a1a;color:#00ff41;font-family:'Courier New',monospace;font-size:13px;flex:none}
   .hack-topbar .spacer{flex:1}
   .hack-topbar .hack-title{letter-spacing:2px;font-weight:700}
-  .hack-topbar #hackStatusLine{font-size:11px;color:#0f0;opacity:.85;font-family:'Courier New',monospace}
+  .hack-topbar #hackStatusLine,.hack-topbar #hkSyncLine{font-size:11px;color:#0f0;opacity:.85;font-family:'Courier New',monospace}
   #hackBack{font-family:'Courier New',monospace;background:#0a0a0a;color:#00ff41;border:1px solid #00ff41;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:1px}
   #hackBack:hover{background:#00ff41;color:#000}
+  /* Selectores del HACKEO: velocidad (×1/×4/×10) y guion (intrusión / código real de la web) */
+  .hack-seg{display:inline-flex;border:1px solid #1f6f4a;border-radius:8px;overflow:hidden;flex:none}
+  .hack-seg button{font-family:'Courier New',monospace;background:#0a0a0a;color:#00ff41;border:0;border-left:1px solid #1f6f4a;border-radius:0;padding:7px 11px;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:1px}
+  .hack-seg button:first-child{border-left:0}
+  .hack-seg button:hover{background:#0f2a18}
+  .hack-seg button.on{background:#00ff41;color:#000}
   #hackBody{flex:1;min-height:0;display:flex}
   .hack-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));grid-auto-rows:1fr;gap:.5rem;flex:1 1 auto;min-height:0;width:100%;box-sizing:border-box}
   .hack-grid>.hack-terminal{min-height:0;min-width:0}
@@ -801,6 +807,13 @@
   <div class="hack-topbar">
     <button id="hackBack" title="Volver al panel de control">← Volver al control</button>
     <span class="hack-title">🕶️ HACKEO</span>
+    <span class="hack-seg" id="hkSpeedSeg" title="Velocidad del hackeo en todos los equipos">
+      <button type="button" data-speed="1">×1</button><button type="button" data-speed="4">×4</button><button type="button" data-speed="10">×10</button>
+    </span>
+    <span class="hack-seg" id="hkModeSeg" title="Qué teclean los terminales">
+      <button type="button" data-mode="intrusion" title="Guion de intrusión de siempre">INTRUSIÓN</button><button type="button" data-mode="codigo" title="Código real de www.admira.live, como si se escribiera">CÓDIGO</button>
+    </span>
+    <span id="hkSyncLine"></span>
     <span class="spacer"></span>
     <span id="hackStatusLine"></span>
   </div>
@@ -3153,11 +3166,21 @@ function collapseAllToggle(){
   // equipos elegidos para el hackeo (vacío = toda la flota, como siempre)
   const HK_SEL=new Set();
   window.__HK_SEL=HK_SEL;
+  const HACKEO_API = "https://macmini.tail48b61c.ts.net/demo";
+
+  // Velocidad y guion del hackeo. Persisten entre sesiones y se pueden cambiar en
+  // caliente: la velocidad multiplica el ritmo de tecleo de TODOS los paneles a la vez.
+  const HK_SPEEDS=[1,4,10];
+  let hkSpeed=+(localStorage.getItem("hk_speed")||1); if(HK_SPEEDS.indexOf(hkSpeed)<0) hkSpeed=1;
+  let hkMode=localStorage.getItem("hk_mode")==="codigo"?"codigo":"intrusion";
+  let hkTerms=[];
+
   async function callCouncilHackeo(mode){
-    const HACK_API = "https://macmini.tail48b61c.ts.net/demo";
+    const HACK_API = HACKEO_API;
     const path = mode==="stop" ? "/hackeo/stop" : "/hackeo";
     const only = Array.from(HK_SEL);
-    const body = JSON.stringify({ only_ids: only, exclude_ip: "" });
+    // speed/mode: el backend los usa para que los Terminales reales tecleen al mismo ritmo y guion.
+    const body = JSON.stringify(mode==="stop" ? { only_ids: only, exclude_ip: "" } : { only_ids: only, exclude_ip: "", speed: hkSpeed, mode: hkMode });
     const res = await fetch(HACK_API + path, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -3196,24 +3219,102 @@ function collapseAllToggle(){
       '<div class="hack-terminal hack-style-'+(i%8)+'" id="hack-term-'+m.id+'"><div class="hack-terminal-header"><span>'+m.persona+' \u2014 '+m.host+'</span><span class="hack-role">'+m.role+'</span></div><div class="hack-terminal-body" id="hack-body-'+m.id+'"></div></div>'
     ).join('') + '</div>';
     const SPEEDS=[15,35,8,50,22,12,45,28,18], OFFSETS=[0,7,14,3,21,10,5,18,12];
-    HACK_MACHINES.forEach((m,idx)=>{
-      const b=document.getElementById("hack-body-"+m.id); let li=OFFSETS[idx%OFFSETS.length],ci=0,cur="";
-      const sp=SPEEDS[idx%SPEEDS.length]+Math.random()*10; const L=(m.platform==="win")?HACK_LINES_WIN:HACK_LINES;
-      const iv=setInterval(()=>{ if(!hackMode) return; const line=fillHackLine(L[li%L.length],m);
-        if(ci<=line.length){ const partial=line.substring(0,ci); const disp=cur+partial+(ci<line.length?"\u2588":""); b.textContent=disp; ci++; const lines=disp.split("\n"); const maxV=Math.floor(b.clientHeight/11); if(lines.length>maxV) b.textContent=lines.slice(-maxV).join("\n"); }
-        else { cur+=line+"\n"; li++; ci=0; } }, sp);
-      hackIntervals.push(iv);
-    });
+    // Un panel = un estado de tecleo. ms = ritmo propio (ms por car\u00e1cter a \u00d71);
+    // un \u00fanico reloj reparte el tiempo transcurrido \u00d7 hkSpeed entre todos.
+    hkTerms=HACK_MACHINES.map((m,idx)=>({ m:m, b:document.getElementById("hack-body-"+m.id),
+      role:document.querySelector("#hack-term-"+m.id+" .hack-role"), off:OFFSETS[idx%OFFSETS.length],
+      ms:SPEEDS[idx%SPEEDS.length]+Math.random()*10, acc:0, li:0, ci:0, done:[], L:[], code:false }));
+    applyHkMode();
+    let last=performance.now();
+    hackIntervals.push(setInterval(()=>{ if(!hackMode) return;
+      const now=performance.now(), dt=Math.min(now-last,250); last=now;
+      hkTerms.forEach(t=>{ t.acc+=dt*hkSpeed; const n=Math.floor(t.acc/t.ms); if(n>0){ t.acc-=n*t.ms; stepHkTerm(t,n); } });
+    },16));
     const sl=document.getElementById("hackStatusLine"); if(sl) sl.textContent="lanzando intrusion\u2026";
     try{ const res=await callCouncilHackeo("start"); paintHackeoStatus(res&&res.machines?res:{error:"no response"}); }
     catch(e){ paintHackeoStatus({error:e.message}); }
   }
 
+  function hkTermLine(t){ const l=t.L.length?t.L[t.li%t.L.length]:""; return t.code?l:fillHackLine(l,t.m); }
+  // Avanza n caracteres en un panel y repinta solo las l\u00edneas que caben.
+  function stepHkTerm(t,n){
+    if(!t.L.length||!t.b) return;                  // guion aún descargándose
+    let line=hkTermLine(t);
+    while(n-->0){ if(t.ci<=line.length) t.ci++; else { t.done.push(line); t.li++; t.ci=0; line=hkTermLine(t); } }
+    const maxV=Math.max(1,Math.floor(t.b.clientHeight/11));
+    if(t.done.length>maxV) t.done.splice(0,t.done.length-maxV);
+    const c=Math.min(t.ci,line.length);
+    t.b.textContent=t.done.concat(line.substring(0,c)+(c<line.length?"\u2588":"")).slice(-maxV).join("\n");
+  }
+
+  // Modo C\u00d3DIGO: los paneles teclean el c\u00f3digo real de www.admira.live (la home, sus
+  // scripts y este panel de control), un fichero por panel. Se descarga una vez por sesi\u00f3n.
+  let hkCode=null;
+  function loadHkCode(){
+    if(hkCode) return hkCode;
+    return hkCode=(async()=>{
+      const out=[];
+      const get=async(u)=>{ try{ const r=await fetch(u,{signal:AbortSignal.timeout(8000)}); if(!r.ok) return "";
+        const txt=await r.text();
+        const lines=txt.split("\n").map(l=>l.replace(/\t/g,"  ").replace(/\s+$/,"").slice(0,160)).filter(l=>l.trim());
+        if(lines.length) out.push({ name:u.split("?")[0], lines:lines }); return txt; }catch(e){ return ""; } };
+      const home=await get("/");
+      // solo scripts del propio dominio (los de terceros no son código de admira.live)
+      const srcs=Array.from(home.matchAll(/<script[^>]+src=["']([^"']+)["']/g)).map(x=>new URL(x[1],location.origin+"/"))
+        .filter(u=>u.origin===location.origin).map(u=>u.pathname+u.search);
+      await Promise.all(Array.from(new Set(srcs)).slice(0,24).map(get));
+      await get(location.pathname);
+      return out;
+    })();
+  }
+
+  // Asigna a cada panel su guion seg\u00fan hkMode y lo reinicia (vale al arrancar y en caliente).
+  async function applyHkMode(){
+    const mode=hkMode, files=mode==="codigo"?await loadHkCode():[];
+    if(mode!==hkMode) return;                      // cambiaron de modo mientras descargaba
+    hkTerms.forEach((t,i)=>{
+      const f=files.length?files[i%files.length]:null;
+      t.code=!!f; t.L=f?f.lines:((t.m.platform==="win")?HACK_LINES_WIN:HACK_LINES);
+      t.li=f?Math.floor(Math.random()*f.lines.length):t.off; t.ci=0; t.done=[]; t.acc=0;
+      if(t.role) t.role.textContent=f?f.name:t.m.role;
+      if(t.b) t.b.textContent="";
+    });
+    if(mode==="codigo"&&!files.length){ const sl=document.getElementById("hkSyncLine"); if(sl) sl.textContent="\u26a0 no pude leer el c\u00f3digo de la web \u2014 sigo con el guion"; }
+  }
+
+  // Manda velocidad y guion al backend para los Terminales reales que ya est\u00e1n abiertos.
+  async function pushHkConfig(){
+    const sl=document.getElementById("hkSyncLine"), tag="\u00d7"+hkSpeed+" \u00b7 "+(hkMode==="codigo"?"c\u00f3digo":"intrusi\u00f3n");
+    try{
+      const res=await fetch(HACKEO_API+"/hackeo/config",{ method:"POST", headers:{ "Content-Type":"application/json" },
+        body:JSON.stringify({ speed:hkSpeed, mode:hkMode, only_ids:Array.from(HK_SEL) }), signal:AbortSignal.timeout(8000) });
+      if(!res.ok) throw new Error("HTTP "+res.status);
+      if(sl){ sl.textContent="flota: "+tag; sl.style.color="#0f0"; }
+    }catch(e){ if(sl){ sl.textContent="flota sin actualizar ("+(e.message||e)+") \u2014 solo esta vista va a "+tag; sl.style.color="#ff6"; } }
+  }
+
+  function paintHkSegs(){
+    document.querySelectorAll("#hkSpeedSeg button").forEach(b=>b.classList.toggle("on", +b.dataset.speed===hkSpeed));
+    document.querySelectorAll("#hkModeSeg button").forEach(b=>b.classList.toggle("on", b.dataset.mode===hkMode));
+  }
+  document.getElementById("hkSpeedSeg") && document.getElementById("hkSpeedSeg").addEventListener("click",(e)=>{
+    const b=e.target.closest("button[data-speed]"); if(!b||+b.dataset.speed===hkSpeed) return;
+    hkSpeed=+b.dataset.speed; localStorage.setItem("hk_speed",hkSpeed); paintHkSegs();
+    if(hackMode) pushHkConfig();
+  });
+  document.getElementById("hkModeSeg") && document.getElementById("hkModeSeg").addEventListener("click",(e)=>{
+    const b=e.target.closest("button[data-mode]"); if(!b||b.dataset.mode===hkMode) return;
+    hkMode=b.dataset.mode; localStorage.setItem("hk_mode",hkMode); paintHkSegs();
+    if(hackMode){ applyHkMode(); pushHkConfig(); }
+  });
+  paintHkSegs();
+
   async function stopHack(){
     if(!hackMode) return;
     hackMode=false;
     document.getElementById("hack").classList.remove("visible"); unlockView();
-    hackIntervals.forEach(i=>clearInterval(i)); hackIntervals=[];
+    hackIntervals.forEach(i=>clearInterval(i)); hackIntervals=[]; hkTerms=[];
+    const sy=document.getElementById("hkSyncLine"); if(sy) sy.textContent="";
     try{ await callCouncilHackeo("stop"); }catch(e){}
   }
 

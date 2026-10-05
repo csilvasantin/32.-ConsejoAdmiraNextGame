@@ -434,13 +434,13 @@
    "location": "",
    "platform": "Windows",
    "status": "idle",
-   "note": "Tailscale reuniones-1.tail48b61c.ts.net (100.112.183.17). SSH desde el Mini: Permission denied el 2026-10-05. Grok Bot desconectado. El player DS de Windows va por el executor local navegadores, igual que asusfold.",
+   "note": "Tailscale reuniones-1.tail48b61c.ts.net (100.112.183.17). Usuario Windows: DigitalTwin (Administradores). OpenSSH sshd Running. Clave flota MacMini en authorized_keys usuario; administrators_authorized_keys pendiente elevación 2026-10-05. Player Admira en C:\\admira. Grok Bot desconectado.",
    "ssh": {
     "enabled": true,
-    "user": "csilvasantin",
+    "user": "DigitalTwin",
     "host": "reuniones-1.tail48b61c.ts.net",
     "ip_tailscale": "100.112.183.17",
-    "connect_tailscale": "ssh csilvasantin@100.112.183.17"
+    "connect_tailscale": "ssh DigitalTwin@100.112.183.17"
    },
    "mac_address": ""
   }

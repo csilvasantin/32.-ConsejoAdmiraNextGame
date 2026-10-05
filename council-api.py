@@ -4598,7 +4598,10 @@ def _hk_linux_stop(user: str, host: str) -> tuple:
     patrón con corchete evita que pkill -f se mate a sí mismo."""
     if not user or not host:
         return False, "missing ssh user/host"
-    remote_cmd = 'pkill -f "[h]acksim.py"; true'
+    # En el DGX el terminal corre como csilva y el SSH de sondeo es bitsatoms:
+    # pkill del usuario SSH no ve ese proceso. sudo -n lo cierra; si no hay
+    # sudo, se intenta el pkill del propio usuario (ThinkStation).
+    remote_cmd = 'sudo -n pkill -f "[h]acksim.py" 2>/dev/null || pkill -f "[h]acksim.py"; true'
     ssh_cmd = [
         "ssh", "-o", "StrictHostKeyChecking=no", "-o", "BatchMode=yes",
         "-o", f"ConnectTimeout={_HK_SSH_TIMEOUT}", f"{user}@{host}", remote_cmd,

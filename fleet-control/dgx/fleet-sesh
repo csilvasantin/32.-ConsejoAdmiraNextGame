@@ -7,11 +7,24 @@ set -u
 TARGET=csilva
 # La casa de bitsatoms no es atravesable por csilva (750). El comando gráfico
 # tiene que vivir en /home/csilva, que es quien pinta DISPLAY=:2.
+# council-api deja hacksim.py en la casa de bitsatoms; se copia a /tmp para que
+# la sesión de csilva pueda leerlo.
 if [ "$(id -un)" != "$TARGET" ]; then
   if sudo -n -u "$TARGET" true 2>/dev/null; then
+    args=()
+    for a in "$@"; do
+      case "$a" in
+        /home/bitsatoms/.fleet/hacksim.py)
+          cp -f "$a" /tmp/admira-hacksim.py
+          chmod 644 /tmp/admira-hacksim.py
+          args+=("/tmp/admira-hacksim.py")
+          ;;
+        *) args+=("$a") ;;
+      esac
+    done
     exec sudo -n -u "$TARGET" -H \
       --preserve-env=SIGN_URL,SIGN_SCREEN,SIGN_CIRCUIT,SIGN_TAG,SIGN_MUTED,SIGN_MACHINE \
-      /home/csilva/.fleet/fleet-sesh "$@"
+      /home/csilva/.fleet/fleet-sesh "${args[@]}"
   fi
   echo "fleet-sesh: no puedo entrar en la sesión de ${TARGET}" >&2
   exit 1

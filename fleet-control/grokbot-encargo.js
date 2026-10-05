@@ -1,7 +1,7 @@
 'use strict';
 
-// Chat de coetáneos → encargo MCP de admira.live (Elon Musk → su deepagent, el Merovingio;
-// Jensen Huang → el suyo, Cypher).
+// Chat de coetáneos → encargo MCP de admira.live (Elon Musk → Merovingio,
+// Jensen Huang → Cypher, Gwynne Shotwell → Trinity). No cambia el usuario de GrokBot.
 //
 // Marca común de los encargos de chat (acordada con Jensen, 01-10-2026):
 //   [chat-coetaneos] <remitente> → <consejero>
@@ -35,7 +35,9 @@ const MCP_URL = 'https://mcp.admira.live/mcp';
 const TARGETS = Object.freeze({
   Musk: Object.freeze({ persona: 'Merovingio', maquina: 'GrokBotBox', etiqueta: 'Merovingio · GrokBotBox' }),
   Huang: Object.freeze({ persona: 'Cypher', maquina: 'GrokBotBox', etiqueta: 'Cypher · GrokBotBox' }),
+  Shotwell: Object.freeze({ persona: 'Trinity', maquina: 'GrokBotBox', etiqueta: 'Trinity · GrokBotBox' }),
 });
+const ROL = Object.freeze({ Musk: 'CEO', Huang: 'CTO', Shotwell: 'COO' });
 const MARCA = '[chat-coetaneos]';
 const MAX_TEXTO = 3900;            // el bot-inbox acepta 4000
 const MAX_CONTEXTO = 1600;
@@ -180,7 +182,9 @@ function createGrokBotEncargo({ environment = process.env, fetchImpl = globalThi
         .flatMap(r => [{ role: 'user', content: corto(r.prompt, 300) }, { role: 'assistant', content: corto(r.text, 400) }]);
       if(rec.prompt.length>1000)history.push({role:'user',content:rec.prompt});
       try {
-        const result = await client.call('consejero_preguntar', { rol: rec.persona === 'Musk' ? 'CEO' : 'CTO', mensaje: rec.prompt.length>1000?'Responde al último mensaje del usuario incluido en el contexto.':rec.prompt, generacion: 'coetaneos', llm: 'grok-4.6', max_tokens: 1000, contexto: history }, { budgetMs: 45000 });
+        const rol = ROL[rec.persona];
+        if (!rol) throw new Error('no_fallback_role');
+        const result = await client.call('consejero_preguntar', { rol, mensaje: rec.prompt.length>1000?'Responde al último mensaje del usuario incluido en el contexto.':rec.prompt, generacion: 'coetaneos', llm: 'grok-4.6', max_tokens: 1000, contexto: history }, { budgetMs: 45000 });
         const text = String(typeof result.content === 'string' ? result.content : result.texto || '').replace(/^[^\n]* · [^\n]*\([^\n]*\):\n/, '').trim();
         if (!text || internalNote(text)) throw new Error('empty_council_answer');
         state.transact(records => { const e = records.get(id); e.status = 'done'; e.text = text.slice(0,20000); e.updatedAt = new Date(now()).toISOString(); return e; });
@@ -339,10 +343,9 @@ function createGrokBotEncargo({ environment = process.env, fetchImpl = globalThi
 }
 
 // Enruta por persona:
-//  · Musk/Huang → encargo MCP a su deepagent (Merovingio/Cypher)
-//  · Jobs/Wozniak/Disney/Lucas → bot-inbox (webhook), igual que agente_encargar
-//    (#5088 / FLT-101531: mesa Preguntar despierta TelegramparaJobs)
-//  · el resto → proveedor base (escritorio AX o webhook)
+//  · Musk/Huang/Shotwell → encargo MCP (Merovingio/Cypher/Trinity en GrokBotBox)
+//  · Jobs/Wozniak/Disney/Lucas → bot-inbox con marca [chat-coetaneos] (sin Ágora ni Telegram)
+//  · el resto → proveedor base (escritorio AX). Sin deepagent no se inventa silla.
 const LEYENDAS_INBOX = Object.freeze(new Set(['Jobs', 'Wozniak', 'Disney', 'Lucas']));
 function createGrokBotRouter({ base, encargo, inbox }) {
   const routed = persona => encargo.handles(persona);

@@ -98,3 +98,6 @@ marca `[chat-coetaneos]` y un bloque `Contexto:` de hasta 6 turnos ya contestado
 mismo propietario con esa silla (mismo formato que Musk/Huang por encargo). La UI sigue
 mostrando solo el `prompt` limpio. El worker no publica esos encargos en Ágora/Telegram;
 la rutina del consejero despierta igual y la respuesta vuelve al chat de admira.live.
+Gwynne Shotwell no usa ese inbox: el router la manda al encargo de Trinity en
+GrokBotBox, con la misma marca y el mismo historial, sin cambiar el usuario de GrokBot.
+Porat, Lasseter, Ive, Ratti y Reynolds siguen fuera: no hay deepagent con latido en esa máquina.

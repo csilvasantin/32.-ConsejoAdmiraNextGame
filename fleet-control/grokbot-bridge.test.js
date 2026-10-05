@@ -28,6 +28,8 @@ test('verified council aliases are the GrokBot seats; no arbitrary target or rol
   assert.equal(canonicalPersona('Elon Musk'),'Musk');
   assert.equal(canonicalPersona('Jensen Huang'),'Huang');
   assert.equal(canonicalPersona('Huang'),'Huang');
+  assert.equal(canonicalPersona('Gwynne Shotwell'),'Shotwell');
+  assert.equal(canonicalPersona('Shotwell'),'Shotwell');
   assert.equal(canonicalPersona('CEO'),null);
   assert.equal(canonicalPersona('JobsMacMini'),null);
 });
@@ -40,7 +42,7 @@ test('capabilities expose true provider limits and no token', t => {
   assert.equal(capabilities.bidirectional,true);
   assert.equal(capabilities.available,true);
   for (const key of ['historyFromDesktop','desktop','attachments','routines','interrupt']) assert.equal(capabilities[key],false);
-  assert.equal(capabilities.personas.length,6);
+  assert.equal(capabilities.personas.length,7);
   assert.doesNotMatch(JSON.stringify(capabilities),new RegExp(token));
   assert.equal(createGrokBotBridge({environment:{},store:{read:() => new Map()}}).capabilities().reason,'provider_not_configured');
 });

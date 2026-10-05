@@ -7,7 +7,8 @@
     'Steve Jobs': 'Jobs', 'Steve Wozniak': 'Wozniak',
     'Walt Disney': 'Disney', 'George Lucas': 'Lucas',
     'Elon Musk': 'Musk',
-    'Jensen Huang': 'Huang'
+    'Jensen Huang': 'Huang',
+    'Gwynne Shotwell': 'Shotwell'
   });
   const FULL = Object.fromEntries(Object.entries(PEOPLE).map(([name, alias]) => [alias, name]));
   const LABELS = Object.freeze({pending:'Enviado · esperando al bot',in_progress:'El bot está trabajando',ack:'Recibido por el bot',done:'Respuesta recibida',blocked:'El bot necesita atención',failed:'No se pudo completar',unknown:'Envío sin confirmar · consulta el historial antes de repetir'});
@@ -56,7 +57,7 @@
     const scopeEncargo=()=>(selected||'El consejero')+' contesta a través de su deepagent, '+agente()+'. Si está sin señal responde Grok 4.6. Si pasan 90 segundos sin acuse puedes pedir ese mismo plan B. Solo ves tus propios mensajes.';
     const LIMITS_DESKTOP='El Mac Mini y GrokBot deben estar disponibles. Las aprobaciones y los resultados descargables todavía se gestionan en GrokBot. Adjuntos: un archivo de hasta 4 MB por mensaje.';
     const LIMITS_ENCARGO='Solo texto, sin adjuntos. El plan B es una respuesta de Grok 4.6 por la API del Consejo, no de la sesión del deepagent; puede tener coste y usa hasta 1.000 tokens de salida. La API y el relé deben estar disponibles.';
-    const SCOPE_INBOX=(selected||'El consejero')+' recibe tu mensaje como encargo en su bot-inbox (máquina grokbot) y despierta su webhook, igual que agente_encargar. Historial continuo (Contexto) y sin publicar en Ágora/Telegram. Solo ves tus propios mensajes.';
+    const SCOPE_INBOX=(selected||'El consejero')+' sigue el mismo hilo en la web, con el historial reciente. No cambia el usuario abierto en GrokBot y no se publica en el Ágora ni en Telegram. Solo ves tus propios mensajes.';
     const LIMITS_INBOX='Solo texto, sin adjuntos. El mensaje crea un encargo en bot.yokup.com con marca [chat-coetaneos]; no sale al grupo de Telegram. La rutina del consejero contesta aquí.';
     const label=status=>(encargo()||inbox()?ENCARGO_LABELS:LABELS)[status];
     function say(message){if(destroyed)return;status.textContent=message;options.onStatus?.(message);}
@@ -281,7 +282,7 @@
       if(!selected)return false;
       log.scrollTop=log.scrollHeight;
       connected=false;$('.council-chat__connection').textContent='· Conectando…';
-      renderAttachments();render();say('Abriendo el chat de '+selected+' en GrokBot…');
+      renderAttachments();render();say('Abriendo el chat de '+selected+'…');
       try{
         if(!await connect(epoch)||!current(epoch))return false;
         await api('/selection',{persona});

@@ -56,8 +56,8 @@
     const scopeEncargo=()=>(selected||'El consejero')+' contesta a través de su deepagent, '+agente()+'. Si está sin señal responde Grok 4.6. Si pasan 90 segundos sin acuse puedes pedir ese mismo plan B. Solo ves tus propios mensajes.';
     const LIMITS_DESKTOP='El Mac Mini y GrokBot deben estar disponibles. Las aprobaciones y los resultados descargables todavía se gestionan en GrokBot. Adjuntos: un archivo de hasta 4 MB por mensaje.';
     const LIMITS_ENCARGO='Solo texto, sin adjuntos. El plan B es una respuesta de Grok 4.6 por la API del Consejo, no de la sesión del deepagent; puede tener coste y usa hasta 1.000 tokens de salida. La API y el relé deben estar disponibles.';
-    const SCOPE_INBOX=(selected||'El consejero')+' recibe tu mensaje como encargo en su bot-inbox (máquina grokbot) y despierta su webhook, igual que agente_encargar. Solo ves tus propios mensajes.';
-    const LIMITS_INBOX='Solo texto, sin adjuntos. El mensaje crea un encargo en bot.yokup.com y despierta la rutina Telegram del consejero.';
+    const SCOPE_INBOX=(selected||'El consejero')+' recibe tu mensaje como encargo en su bot-inbox (máquina grokbot) y despierta su webhook, igual que agente_encargar. Historial continuo (Contexto) y sin publicar en Ágora/Telegram. Solo ves tus propios mensajes.';
+    const LIMITS_INBOX='Solo texto, sin adjuntos. El mensaje crea un encargo en bot.yokup.com con marca [chat-coetaneos]; no sale al grupo de Telegram. La rutina del consejero contesta aquí.';
     const label=status=>(encargo()||inbox()?ENCARGO_LABELS:LABELS)[status];
     function say(message){if(destroyed)return;status.textContent=message;options.onStatus?.(message);}
     function rowsFor(name){return histories.get(PEOPLE[name]) || [];}

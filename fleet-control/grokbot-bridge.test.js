@@ -53,7 +53,13 @@ test('send uses verified session author, existing GrokBot inbox, and no mission'
   assert.equal(seen[0].url,'https://bot.yokup.com/api/bot-inbox');
   assert.equal(seen[0].init.headers.authorization,'Bearer '+token);
   assert.equal(seen[0].init.redirect,'error');
-  assert.deepEqual(JSON.parse(seen[0].init.body),{text:request().prompt,target_persona:'Jobs',target_machine:'grokbot',from:'Admira.live · carlos@example.test',materialize_mission:false});
+  const body=JSON.parse(seen[0].init.body);
+  assert.equal(body.target_persona,'Jobs');
+  assert.equal(body.target_machine,'grokbot');
+  assert.equal(body.from,'Admira.live · carlos@example.test');
+  assert.equal(body.materialize_mission,false);
+  assert.match(body.text,/^\[chat-coetaneos\] carlos@example\.test → Steve Jobs\nContexto:\n\(sin historial\)\nMensaje de carlos@example\.test:\nPrepara una propuesta para el Consejo\.$/);
+  assert.equal(message.prompt,request().prompt);
   assert.equal(message.status,'pending');
   assert.match(message.id,/^gb_[a-f0-9]{48}$/);
   assert.deepEqual(Object.keys(message).sort(),['attachments','createdAt','id','native','persona','prompt','source','status','text','updatedAt'].sort());
@@ -222,3 +228,25 @@ test('list polls open bot-inbox receipts so the UI can leave Enviado', async (t)
   assert.equal(after[0].native, true);
   assert.equal(gets, 1);
 });
+
+test('inboxChatText builds quiet mark and Contexto; send keeps UI prompt clean', async t => {
+  const {inboxChatText} = require('./grokbot-bridge');
+  assert.equal(inboxChatText('a@b.c','Jobs','hola'), '[chat-coetaneos] a@b.c → Steve Jobs\nContexto:\n(sin historial)\nMensaje de a@b.c:\nhola');
+  assert.match(inboxChatText('csilva@admira.com','Jobs','segunda',[{prompt:'primera',text:'Hola Carlos'}]), /Contexto:\nCarlos: primera\nSteve Jobs: Hola Carlos\nMensaje de Carlos Silva <csilva@admira.com>:\nsegunda$/);
+  const seen=[];
+  const dir = fs.mkdtempSync(path.join(os.tmpdir(), 'admira-grokbot-hist-'));
+  t.after(() => fs.rmSync(dir,{recursive:true,force:true}));
+  const stateFile = path.join(dir,'state.json');
+  // Seed a prior done turn owned by the same session
+  const store = createPrivateStore(stateFile);
+  store.transact(records => {
+    records.set('gb_' + 'a'.repeat(48), {id:'gb_' + 'a'.repeat(48), owner:user.email, persona:'Jobs', prompt:'Hola Jobs', text:'Qué tal', status:'done', createdAt:'2026-10-05T10:00:00.000Z', updatedAt:'2026-10-05T10:00:01.000Z', upstreamId:1});
+    return null;
+  });
+  const bridge = createGrokBotBridge({environment:{GROKBOT_BRIDGE_STATE_FILE:stateFile}, tokenProvider:() => token, now:() => 1789700000000, fetchImpl:async (_url,init)=>{seen.push(JSON.parse(init.body));return reply({ok:true,id:99});}, store});
+  const message = await bridge.send(user, request({message_id:'hist-002', prompt:'Seguimos el hilo'}));
+  assert.equal(message.prompt,'Seguimos el hilo');
+  assert.match(seen[0].text, /^\[chat-coetaneos\]/);
+  assert.match(seen[0].text, /Contexto:\ncarlos@example\.test: Hola Jobs\nSteve Jobs: Qué tal\nMensaje de carlos@example\.test:\nSeguimos el hilo$/);
+});
+

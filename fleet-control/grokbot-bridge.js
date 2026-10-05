@@ -14,6 +14,13 @@ const MAX_PROMPT = 16000;
 const MESSAGE_ID = /^[A-Za-z0-9][A-Za-z0-9._:-]{7,119}$/;
 const PUBLIC_ID = /^gb_[a-f0-9]{48}$/;
 const STATUS = new Set(['pending', 'in_progress', 'done', 'blocked', 'failed', 'unknown']);
+// Misma marca que grokbot-encargo.js: el worker no publica en Ágora/Telegram; el historial
+// viaja como Contexto para que Jobs/Woz/Disney/Lucas contesten en hilo continuo (FLT · 5-oct-2026).
+const MARCA = '[chat-coetaneos]';
+const MAX_TEXTO = 3900;
+const MAX_CONTEXTO = 1600;
+const TURNOS_CONTEXTO = 6;
+const NOMBRES = Object.freeze({ 'csilva@admira.com': 'Carlos Silva', 'csilvasantin@gmail.com': 'Carlos Silva', 'jsedano@admira.com': 'Joshua' });
 
 class BridgeError extends Error {
   constructor(status, code) { super(code); this.status = status; this.code = code; }
@@ -27,6 +34,29 @@ function verifiedOwner(session) {
   const email = String(session && session.email || '').trim().toLowerCase();
   if (!email || !session.jti) throw new BridgeError(401, 'authenticated_session_required');
   return email;
+}
+function nombreDe(owner) {
+  const n = NOMBRES[String(owner || '').toLowerCase()];
+  return n ? `${n} <${owner}>` : String(owner || 'alguien');
+}
+const corto = (texto, max) => { const t = String(texto || '').replace(/\s+/g, ' ').trim(); return t.length > max ? t.slice(0, max - 1) + '…' : t; };
+// Historial continuo + marca anti-ruido (igual formato que Musk/Huang por encargo).
+function inboxChatText(owner, persona, prompt, history = []) {
+  const consejero = PERSONAS[persona] || persona;
+  const remitente = nombreDe(owner);
+  const pila = (NOMBRES[String(owner || '').toLowerCase()] || String(owner || 'Usuario')).split(/\s+/)[0];
+  const cabecera = `${MARCA} ${remitente.replace(/\s*<.*$/, '')} → ${consejero}`;
+  const mensaje = String(prompt || '').trim();
+  const pie = `Mensaje de ${remitente}:\n${mensaje}`;
+  let presupuesto = Math.min(MAX_CONTEXTO, MAX_TEXTO - cabecera.length - pie.length - 20);
+  const lineas = [];
+  for (const turno of history.slice(-TURNOS_CONTEXTO).reverse()) {
+    const par = [`${pila}: ${corto(turno.prompt, 300)}`, `${consejero}: ${corto(turno.text, 400)}`];
+    const coste = par.join('\n').length + 1;
+    if (coste > presupuesto) break;
+    presupuesto -= coste; lineas.unshift(...par);
+  }
+  return [cabecera, 'Contexto:', lineas.length ? lineas.join('\n') : '(sin historial)', pie].join('\n');
 }
 function loadProviderToken(environment = process.env) {
   let token = '';
@@ -168,10 +198,12 @@ function createGrokBotBridge({environment = process.env, fetchImpl = globalThis.
       records.set(id, entry); isNew = true; return entry;
     });
     if (!isNew) return incoming.has(id) ? incoming.get(id) : publicMessage(record);
+    const history = [...state.read().values()].filter(r => r.owner === owner && r.persona === persona && r.status === 'done' && r.text)
+      .sort((a, b) => a.createdAt.localeCompare(b.createdAt)).slice(-TURNOS_CONTEXTO).map(r => ({ prompt: r.prompt, text: r.text }));
     const operation = (async () => {
       let accepted;
       try {
-        accepted = await upstream('', {method:'POST', body:JSON.stringify({text:prompt, target_persona:persona, target_machine:'grokbot', from:'Admira.live · ' + owner, materialize_mission:false})});
+        accepted = await upstream('', {method:'POST', body:JSON.stringify({text:inboxChatText(owner, persona, prompt, history), target_persona:persona, target_machine:'grokbot', from:('Admira.live · ' + owner).slice(0, 80), materialize_mission:false})});
         if (accepted.ok !== true || !Number.isSafeInteger(Number(accepted.id)) || Number(accepted.id) <= 0) throw new Error('missing_receipt');
       } catch (_) {
         // Ambiguous timeout/network/rejection: preserve the durable id and do not
@@ -266,4 +298,4 @@ function createGrokBotBridge({environment = process.env, fetchImpl = globalThis.
   return {capabilities, select, send, get, list};
 }
 
-module.exports = { BridgeError, PERSONAS, canonicalPersona, createGrokBotBridge, createPrivateStore, loadProviderToken };
+module.exports = { BridgeError, PERSONAS, canonicalPersona, createGrokBotBridge, createPrivateStore, loadProviderToken, inboxChatText, MARCA };

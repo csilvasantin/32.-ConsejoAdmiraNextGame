@@ -36,7 +36,7 @@ export const PERSONAS_FLOTA = ['Morfeo', 'Neo', 'Smith', 'Trinity', 'Oraculo', '
 /** Equipos físicos + CursorCloud (Arquitecto = Cursor cloud; no confundir con Arquitecto Silicio/Ive).
  *  GrokBotBox ya es la caja de Niobe/Cypher; Merovingio (deepagent de Musk) corre ahí, Grok CLI.
  *  Cypher es el deepagent de Huang (DeepAgents, Nemotron 3 Ultra), no el de Ryan Reynolds. */
-export const MAQUINAS_FLOTA = ['MacMini', 'MacBookPro14', 'MacBookPro16', 'MacBookAirAzul', 'MacBookAirRosa', 'MacBookAirCrema', 'MacBookAirPlata', 'CursorCloud', 'GrokBotBox', 'DGX'];
+export const MAQUINAS_FLOTA = ['MacMini', 'MacBookPro14', 'MacBookPro16', 'MacBookAirAzul', 'MacBookAirRosa', 'MacBookAirCrema', 'MacBookAirPlata', 'CursorCloud', 'GrokBotBox', 'DGX', 'Reuniones1', 'Reuniones2'];
 const RUNTIME_POR_DEFECTO = { Oraculo: 'Codex', Trinity: 'Codex', Niobe: 'OpenCode', Persefone: 'OpenCode', Seraph: 'OpenCode', Arquitecto: 'Cursor', Merovingio: 'Grok CLI', Cypher: 'DeepAgents' };
 /** Sin esto, el latido HMAC de Cypher salía con modelo vacío. NVIDIA Nemotron 3 Ultra (integrate.api.nvidia.com). */
 const MODELO_POR_DEFECTO = { Cypher: 'nvidia/nemotron-3-ultra-550b-a55b' };

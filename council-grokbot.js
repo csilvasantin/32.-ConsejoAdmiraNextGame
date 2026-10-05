@@ -17,6 +17,8 @@
   const typing = status => ['pending','ack','in_progress'].includes(status);
   const terminal = status => ['done','blocked','failed','unknown'].includes(status);
   const timestamp = value => Number.isFinite(Number(value)) ? Number(value) : Date.parse(value) || 0;
+  const visitAt = Date.now();
+  const inThisVisit = row => Math.max(timestamp(row?.createdAt), timestamp(row?.updatedAt)) >= visitAt - 5000;
   // encargo: Elon responde por su deepagent (encargo MCP de admira.live), no por el escritorio AX.
   const native = row => row.native === true && (row.source === 'desktop' || row.source === 'encargo' || row.source === 'inbox');
   const signature = row => JSON.stringify([row.prompt || '',row.text || '',row.status,row.source,row.native,row.attachments||[],row.fallbackAvailable,row.notice,row.replyProvider]);
@@ -57,7 +59,7 @@
     const scopeEncargo=()=>(selected||'El consejero')+' contesta a través de su deepagent, '+agente()+'. Si está sin señal responde Grok 4.6. Si pasan 90 segundos sin acuse puedes pedir ese mismo plan B. Solo ves tus propios mensajes.';
     const LIMITS_DESKTOP='El Mac Mini y GrokBot deben estar disponibles. Las aprobaciones y los resultados descargables todavía se gestionan en GrokBot. Adjuntos: un archivo de hasta 4 MB por mensaje.';
     const LIMITS_ENCARGO='Solo texto, sin adjuntos. El plan B es una respuesta de Grok 4.6 por la API del Consejo, no de la sesión del deepagent; puede tener coste y usa hasta 1.000 tokens de salida. La API y el relé deben estar disponibles.';
-    const SCOPE_INBOX=(selected||'El consejero')+' sigue el mismo hilo en la web, con el historial reciente. No cambia el usuario abierto en GrokBot y no se publica en el Ágora ni en Telegram. Solo ves tus propios mensajes.';
+    const SCOPE_INBOX=(selected||'El consejero')+' sigue el hilo en su lado. Esta visita abre el chat en blanco, sin el historial anterior en pantalla. No cambia el usuario abierto en GrokBot y no se publica en el Ágora ni en Telegram.';
     const LIMITS_INBOX='Solo texto, sin adjuntos. El mensaje crea un encargo en bot.yokup.com con marca [chat-coetaneos]; no sale al grupo de Telegram. La rutina del consejero contesta aquí.';
     const label=status=>(encargo()||inbox()?ENCARGO_LABELS:LABELS)[status];
     function say(message){if(destroyed)return;status.textContent=message;options.onStatus?.(message);}
@@ -87,7 +89,7 @@
       log.replaceChildren();
       if(!selected)return;
       $('.council-chat__person').textContent=selected;
-      const rows=rowsFor(selected);
+      const rows=rowsFor(selected).filter(inThisVisit);
       for(const group of [rows.filter(native),rows.filter(row=>!native(row))]){
         if(group.length && !native(group[0])){
           const label=doc.createElement('h4');label.textContent='Encargos anteriores';log.append(label);
@@ -124,7 +126,7 @@
           const meta=doc.createElement('span');meta.className='council-chat__meta';meta.textContent=label(row.status) || 'Estado pendiente';item.append(meta);log.append(item);
         }
       }
-      if(!log.childElementCount){const p=doc.createElement('p');p.textContent=encargo()?'Aún no has hablado con '+selected+'. Escribe y pulsa Enviar: le llega a su deepagent, '+agente()+', y te contesta aquí.':inbox()?'Aún no has hablado con '+selected+'. Escribe y pulsa Enviar: crea un encargo en su bot-inbox y despierta su webhook.':'Aún no se han observado mensajes visibles de este consejero en GrokBot.';log.append(p);}
+      if(!log.childElementCount){const p=doc.createElement('p');p.textContent=encargo()?'Esta visita empieza en blanco con '+selected+'. Escribe y pulsa Enviar: le llega a su deepagent, '+agente()+', y te contesta aquí.':inbox()?'Esta visita empieza en blanco con '+selected+'. Escribe y pulsa Enviar: el consejero sigue su hilo y te contesta aquí, sin publicar en Ágora ni en Telegram.':'Esta visita empieza en blanco. Aún no hay mensajes nuevos de este consejero en GrokBot.';log.append(p);}
       log.scrollTop=follow?log.scrollHeight:oldTop;
     }
     function connection(available){
@@ -246,13 +248,10 @@
           connection(true);
           const rows=rowsFor(name),changes=rows.filter(row=>previous.get(row.id)!==signature(row));
           if(restoreHistory||changes.length)render();
-          const last=rows.filter(native).at(-1);
           if(restoreHistory){
             for(const row of rows)remember(row);
-            if(last?.text)options.onRestore?.({persona:name,text:last.text,messageId:last.id,status:last.status,source:last.source||'desktop',native:true});
-            if(!selectionReady)say(selectionError||'Historial recuperado. Pulsa Enviar para conectar con '+name+'; se conservará tu texto si no puede enviarse.');
-            else if(last)say(label(last.status) || 'Conversación recuperada');
-            else say('Chat de GrokBot · esperando mensajes visibles de '+name+'.');
+            if(!selectionReady)say(selectionError||'Chat limpio. Pulsa Enviar para conectar con '+name+'; se conservará tu texto si no puede enviarse.');
+            else say('Chat limpio. Escribe para empezar con '+name+'.');
           }else{
             for(const row of changes){
               // Scrolling the native app may reveal older cards or more of an
@@ -260,7 +259,7 @@
               if(latestKnown && timestamp(row.createdAt)<timestamp(latestKnown.createdAt))remember(row);
               else report(row,epoch);
             }
-            if(!changes.length && wasDisconnected)say(selectionReady?'Chat de GrokBot · sincronización recuperada.':selectionError||'Historial recuperado. Pulsa Enviar para conectar con el consejero.');
+            if(!changes.length && wasDisconnected)say(selectionReady?'Chat de GrokBot · sincronización recuperada.':selectionError||'Chat limpio. Pulsa Enviar para conectar con el consejero.');
           }
         }catch(e){if(current(epoch)){connection(false);say(errorMessage(e));}}
         finally{if(refreshing===entry)refreshing=null;schedule(epoch);}

@@ -1,15 +1,15 @@
 // Layout controls enhance the existing SCUMM nodes; their actions keep their handlers.
-// v5 (Carlos 2026-10-05 21:57): Accesos INTEGRADO en el continuum del menú SCUMM
-// (fila horizontal Verbos|Accesos), no un segundo panel apilado. Previos oculto
-// por defecto → más espacio para la conversación. Chat limpio aparte (cargaHilos).
+// v6 (Carlos 2026-10-05 21:45, encargo #5223): Verbos arriba, Accesos debajo
+// (columna, no fila). Previos oculto. Un layout guardado en v5 (lado a lado)
+// no se reaplica: esa fila es justo lo que se ve mal.
 export const IDS = ['verbos', 'accesos', 'previos'];
 const LABELS = { verbos: 'Verbos', accesos: 'Accesos', previos: 'Previos' };
-const KEY = 'admira.scumm.layout.v5';
-const PREVIOUS_KEYS = ['admira.scumm.layout.v4', 'admira.scumm.layout.v3', 'admira.scumm.layout.v2', 'admira.scumm.layout.v1'];
-// Continuum: Verbos | Accesos share the row; Previos hidden frees chat space.
-const DEFAULT_WEIGHTS = { verbos: 58, accesos: 42, previos: 40 };
+const KEY = 'admira.scumm.layout.v6';
+const PREVIOUS_KEYS = ['admira.scumm.layout.v5', 'admira.scumm.layout.v4', 'admira.scumm.layout.v3', 'admira.scumm.layout.v2', 'admira.scumm.layout.v1'];
+const STACKED_ORDER = ['verbos', 'accesos', 'previos'];
+const DEFAULT_WEIGHTS = { verbos: 62, accesos: 38, previos: 40 };
 const DEFAULT_HIDDEN = ['previos'];
-const DEFAULT_HEIGHT = 210;
+const DEFAULT_HEIGHT = 236;
 export function normalizeLayout(raw = {}) {
   const order = Array.isArray(raw?.order) ? [...new Set(raw.order.filter(id => IDS.includes(id)))] : [];
   const hiddenSrc = Array.isArray(raw?.hidden) ? raw.hidden : DEFAULT_HIDDEN;
@@ -17,19 +17,16 @@ export function normalizeLayout(raw = {}) {
     order: [...order, ...IDS.filter(id => !order.includes(id))],
     hidden: IDS.filter(id => hiddenSrc.includes(id)),
     weights: Object.fromEntries(IDS.map(id => [id, Number.isFinite(raw?.weights?.[id]) && raw.weights[id] > 0 ? Math.min(100, Math.max(.01, raw.weights[id])) : DEFAULT_WEIGHTS[id]])),
-    height: Number.isFinite(raw?.height) ? Math.min(600, Math.max(120, raw.height)) : DEFAULT_HEIGHT
+    height: Number.isFinite(raw?.height) ? Math.min(600, Math.max(180, raw.height)) : DEFAULT_HEIGHT
   };
 }
 export function migrateLegacyLayout(raw) {
-  // v4 stacked (62/38 column) and old side-by-side thirds → integrated continuum + hide Previos.
-  const layout = normalizeLayout({ ...raw, hidden: DEFAULT_HIDDEN, order: ['verbos', 'accesos', 'previos'] });
-  const w = raw?.weights || {};
-  const wasStacked = w.verbos === 62 && w.accesos === 38;
-  const wasSideBySide = IDS.every(id => w[id] === 1) || (w.verbos === 22 && w.accesos === 22 && w.previos === 56);
-  if (wasStacked || wasSideBySide || !raw?.weights) {
-    layout.weights = { ...DEFAULT_WEIGHTS };
-    layout.height = DEFAULT_HEIGHT;
-  }
+  // Cualquier fila guardada (v5 continuum, tercios, 22/22/56) vuelve a la columna.
+  const layout = normalizeLayout({ ...raw, hidden: DEFAULT_HIDDEN, order: STACKED_ORDER });
+  layout.weights = { ...DEFAULT_WEIGHTS };
+  layout.height = DEFAULT_HEIGHT;
+  layout.order = [...STACKED_ORDER];
+  layout.hidden = [...DEFAULT_HIDDEN];
   return layout;
 }
 // Resize two visible neighbours while conserving their total share of the row.
@@ -68,15 +65,7 @@ function init() {
       state = previous === null ? normalizeLayout() : migrateLegacyLayout(raw);
     }
   } catch { state = normalizeLayout(); }
-  // Guarantee Verbos then Accesos in the continuum (Previos may follow if shown).
-  if (state.order[0] !== 'verbos') {
-    state.order = ['verbos', ...state.order.filter(id => id !== 'verbos')];
-  }
-  if (state.order.indexOf('accesos') !== 1 && state.order.includes('accesos')) {
-    state.order = moveModule(state.order, 'accesos', state.order[1] || 'accesos');
-    // Prefer Accesos immediately after Verbos
-    state.order = ['verbos', 'accesos', ...state.order.filter(id => id !== 'verbos' && id !== 'accesos')];
-  }
+  state.order = [...STACKED_ORDER];
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} };
   const create = (tag, cls, text) => {
     const node = document.createElement(tag); node.className = cls;
@@ -112,9 +101,9 @@ function init() {
     head.append(grip, close);
     const content = create('div', 'scumm-module-content'); content.append(...source[id]);
     const handle = create('div', 'scumm-module-resizer'); handle.tabIndex = 0;
-    handle.setAttribute('role', 'separator'); handle.setAttribute('aria-orientation', 'vertical');
+    handle.setAttribute('role', 'separator'); handle.setAttribute('aria-orientation', 'horizontal');
     handle.setAttribute('aria-label', 'Redimensionar ' + LABELS[id]);
-    handle.title = 'Arrastra para ajustar ancho · flechas para ajustar · doble clic para igualar';
+    handle.title = 'Arrastra para ajustar el alto · flechas arriba/abajo · doble clic para igualar';
     module.append(head, content, handle); row.append(module);
     modules[id] = { module, grip, handle };
     const toggle = button('Mostrar ' + LABELS[id], '+ ' + LABELS[id].toUpperCase());
@@ -127,22 +116,23 @@ function init() {
     handle.addEventListener('pointerdown', e => {
       if (e.button !== 0 || !neighbour()) return;
       const next = neighbour(), a = module.getBoundingClientRect(), b = modules[next].module.getBoundingClientRect();
-      resizing = { next, x: e.clientX, width: a.width, total: a.width + b.width, weights: { ...state.weights } };
+      resizing = { next, y: e.clientY, height: a.height, total: a.height + b.height, weights: { ...state.weights } };
       handle.setPointerCapture(e.pointerId); e.preventDefault();
     });
     handle.addEventListener('pointermove', e => {
       if (!resizing) return;
-      state.weights = resizePair(resizing.weights, id, resizing.next, (resizing.width + e.clientX - resizing.x) / resizing.total);
+      state.weights = resizePair(resizing.weights, id, resizing.next, (resizing.height + e.clientY - resizing.y) / resizing.total);
       render(false);
     });
     const stopResize = () => { if (resizing) { resizing = null; save(); } };
     handle.addEventListener('pointerup', stopResize); handle.addEventListener('pointercancel', stopResize);
     handle.addEventListener('lostpointercapture', stopResize);
     handle.addEventListener('keydown', e => {
-      const next = neighbour(); if (!next || !['ArrowLeft', 'ArrowRight', 'Home'].includes(e.key)) return;
+      const next = neighbour(); if (!next || !['ArrowUp', 'ArrowDown', 'ArrowLeft', 'ArrowRight', 'Home'].includes(e.key)) return;
       e.preventDefault();
       const fraction = state.weights[id] / (state.weights[id] + state.weights[next]);
-      state.weights = resizePair(state.weights, id, next, e.key === 'Home' ? .5 : fraction + (e.key === 'ArrowRight' ? .05 : -.05));
+      const grow = e.key === 'ArrowDown' || e.key === 'ArrowRight';
+      state.weights = resizePair(state.weights, id, next, e.key === 'Home' ? .5 : fraction + (grow ? .05 : -.05));
       render(false); save();
     });
     handle.addEventListener('dblclick', () => {
@@ -170,7 +160,7 @@ function init() {
       if (target) { state.order = moveModule(state.order, id, target); render(); save(); grip.focus(); }
     });
   }
-  const reset = button('Restaurar Verbos|Accesos integrado', '↺ RESTAURAR');
+  const reset = button('Restaurar Verbos arriba y Accesos debajo', '↺ RESTAURAR');
   reset.addEventListener('click', () => { state = normalizeLayout(); render(); save(); menu.open = false; menuToggle.focus(); });
   toolbar.append(reset);
   const heightHandle = create('div', 'scumm-height-resizer'); heightHandle.tabIndex = 0;
@@ -184,7 +174,7 @@ function init() {
     heightDrag = { y: e.clientY, height: row.getBoundingClientRect().height };
     heightHandle.setPointerCapture(e.pointerId); e.preventDefault();
   });
-  const setHeight = value => { state.height = Math.min(600, Math.max(120, value)); render(false); };
+  const setHeight = value => { state.height = Math.min(600, Math.max(180, value)); render(false); };
   heightHandle.addEventListener('pointermove', e => { if (heightDrag) setHeight(heightDrag.height + e.clientY - heightDrag.y); });
   const stopHeight = () => { if (heightDrag) { heightDrag = null; save(); } };
   heightHandle.addEventListener('pointerup', stopHeight); heightHandle.addEventListener('pointercancel', stopHeight);
@@ -194,10 +184,11 @@ function init() {
     e.preventDefault(); setHeight(state.height + (e.key === 'ArrowDown' ? 20 : -20)); save();
   });
   function render(reorder = true) {
+    state.order = [...STACKED_ORDER];
     const visible = state.order.filter(id => !state.hidden.includes(id));
     row.style.setProperty('--scumm-height', state.height + 'px');
     row.hidden = !visible.length; heightHandle.hidden = !visible.length;
-    heightHandle.setAttribute('aria-valuemin', '120'); heightHandle.setAttribute('aria-valuemax', '600');
+    heightHandle.setAttribute('aria-valuemin', '180'); heightHandle.setAttribute('aria-valuemax', '600');
     heightHandle.setAttribute('aria-valuenow', String(Math.round(state.height)));
     for (const id of state.order) {
       const { module, handle } = modules[id];

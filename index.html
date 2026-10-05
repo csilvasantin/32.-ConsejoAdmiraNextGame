@@ -486,21 +486,21 @@
             font-size: 0.8rem;
             margin-bottom: 3px;
         }
-        /* Conversation area below SCUMM bar — más alto (Carlos 2026-10-05 21:57:
-           menú SCUMM integrado compacto libera espacio para el chat). */
+        /* Conversación debajo del SCUMM (Carlos 2026-10-05, encargo #5223):
+           Verbos arriba y Accesos debajo dejan este hueco mucho más alto. */
         .conv-area {
             display: none;
             max-width: 1000px;
             margin: 0.8rem auto 0;
             flex: 1 1 auto;
-            min-height: 42vh;
+            min-height: 62vh;
         }
         .conv-area.active { display: block; }
         .conv-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 0.8rem;
-            min-height: 42vh;
+            min-height: 62vh;
         }
         .conv-panel {
             background: #1a1a2e;
@@ -1210,7 +1210,7 @@
             border-top: 1px solid #2a1a3a;
             border-radius: 0; /* arriba del todo (Carlos 2026-10-05) */
             font-family: 'Press Start 2P', monospace;
-            order: -1; /* SCUMM arriba: menú integrado Verbos|Accesos */
+            order: -1; /* SCUMM arriba del todo: Verbos y, debajo, Accesos */
         }
         .action-line {
             display: flex;
@@ -3682,8 +3682,8 @@ body.rail-open{overflow:hidden}
         (function(){try{var g=JSON.parse(localStorage.getItem('admira_gate')||'null');var e=g&&g.email?String(g.email).toLowerCase():'';if(!e)return;fetch('https://whitelist.admira.store/list',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){if(d&&(d.superusers||[]).indexOf(e)>=0){var u=document.getElementById('home-usuarios');if(u)u.style.display='';}}).catch(function(){});}catch(_){}})();
         </script>
 
-        <!-- SCUMM arriba (Carlos 2026-10-05 21:57): Verbos|Accesos continuum en la misma barra;
-             Accesos integrado (no panel apilado); conversación gana espacio. -->
+        <!-- SCUMM arriba del todo (Carlos 2026-10-05, encargo #5223):
+             Verbos en la franja de arriba, Accesos debajo, nunca en paralelo. -->
         <div class="scumm-bar">
             <div class="action-line">
                 <div class="sentence-line" id="sentence-line"></div>
@@ -4538,7 +4538,7 @@ body.rail-open{overflow:hidden}
 <link rel="stylesheet" href="council-grokbot.css?v=20260921-composer2">
 <script defer src="council-table.js?v=20260918-r5-desk-cors"></script>
 <script defer src="council-speech.js?v=20260930-flt101302"></script>
-<script defer src="council-grokbot.js?v=20261005-chat-hilo"></script>
+<script defer src="council-grokbot.js?v=20261005-chat-limpio"></script>
 <script defer src="council-todo.js?v=20260930-flt101302"></script>
 <script defer src="council-estado.js?v=20261004-5113-anterior"></script>
 <script defer src="assets/council-silhouettes.js?v=20261004-silueta"></script>
@@ -4553,8 +4553,8 @@ body.rail-open{overflow:hidden}
 <script type="module" src="assets/mapa-ideas.js?v=20260920-mapa1"></script>
 <script type="module" src="assets/mesa-paste.js?v=20260920-paste"></script>
 <script src="/consejeros-desk.js?v=20260921-r7-proxy"></script>
-<link rel="stylesheet" href="assets/scumm-layout.css?v=20261005-accesos-int-r1">
-<script type="module" src="assets/scumm-layout.js?v=20261005-accesos-int-r1"></script>
+<link rel="stylesheet" href="assets/scumm-layout.css?v=20261005-verbos-sobre-accesos">
+<script type="module" src="assets/scumm-layout.js?v=20261005-verbos-sobre-accesos"></script>
 </body>
 </html>
 

@@ -3696,10 +3696,11 @@
     let hiloActual = 'mesa';      // los verbos de mesa (debatir, preguntar a todos) van aparte
 
     function cargaHilos() {
-        try {
-            const crudo = JSON.parse(localStorage.getItem(HILOS_KEY) || '{}');
-            hilos = (crudo && typeof crudo === 'object' && !Array.isArray(crudo)) ? crudo : {};
-        } catch (e) { hilos = {}; }
+        // Carlos 2026-10-05: al entrar en admira.live, siempre de cero —
+        // sin historial residual de visitas anteriores (consejoHilos).
+        // Durante la sesión sí se guarda (guardaHilos); al recargar se limpia.
+        hilos = {};
+        try { localStorage.removeItem(HILOS_KEY); } catch (e) {}
     }
     function guardaHilos() {
         // El navegador puede negarse (ventana privada, cuota llena): el hilo en

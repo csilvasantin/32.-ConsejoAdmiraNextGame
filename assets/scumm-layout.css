@@ -1,8 +1,7 @@
-/* SCUMM v7 (Carlos 2026-10-05): UNA barra inferior.
-   Iconos Accesos viven DENTRO del contenido de Verbos (continuum a la derecha
-   de la rejilla de verbos). Sin módulo/cabecera Accesos aparte.
-   No apilado (PR77/#5223). No Verbos|Accesos dos módulos (PR78).
-   Previos oculto. Barra compacta → más conversación. */
+/* SCUMM v8 (Carlos 2026-10-05 23:56):
+   Barra inferior clásica bajo la mesa.
+   [ Verbos + iconos Accesos (continuum) | Previos (mac-scumm / conversación) ]
+   Accesos no es módulo aparte. Previos VISIBLE a la derecha. */
 .scumm-layout-menu { position:relative; flex:0 0 auto; }
 .scumm-layout-menu summary { list-style:none; cursor:pointer; color:#e6c788; border:1px solid #886633; padding:0 7px; font:16px/1.2 monospace; }
 .scumm-layout-menu summary::-webkit-details-marker { display:none; }
@@ -14,12 +13,11 @@
 .scumm-layout-tools button:hover,.scumm-module-head button:hover { color:#fff0b0; background:#79532d; }
 .scumm-bar button:focus-visible,.scumm-module-resizer:focus-visible,.scumm-height-resizer:focus-visible { outline:2px solid #ffe28c; outline-offset:-2px; }
 
-/* Single compact bar (typically only Verbos visible). */
 .scumm-bottom[data-layout-ready] {
   display:flex;
   flex-direction:row;
   gap:0;
-  height:var(--scumm-height,168px);
+  height:var(--scumm-height,220px);
   align-items:stretch;
 }
 .scumm-module {
@@ -29,10 +27,11 @@
   min-height:0;
   display:flex;
   flex-direction:column;
-  border-right:0;
+  border-right:1px solid #291b0c;
   border-bottom:0;
   overflow:hidden;
 }
+.scumm-module:last-child { border-right:0; }
 .scumm-module[data-module="accesos"] { display:none !important; }
 .scumm-module-head {
   display:flex;
@@ -56,14 +55,11 @@
   align-items:stretch;
 }
 .scumm-module[data-module="verbos"] { container-type:inline-size; }
-.scumm-module[data-module="verbos"] .scumm-module-content {
-  /* Continuum: verb grid | pager | inventory icons to the right */
-  gap:0;
-}
+.scumm-module[data-module="verbos"] .scumm-module-content { gap:0; }
 .scumm-module-content .verb-grid {
-  flex:0 1 42%;
+  flex:0 1 48%;
   min-width:0;
-  max-width:520px;
+  max-width:420px;
   align-content:center;
   grid-template-columns:repeat(3,minmax(0,1fr));
 }
@@ -75,26 +71,32 @@
 .scumm-module-content .verb-pager { flex:0 0 auto; align-self:center; }
 .verb-pager[hidden] { display:none!important; }
 
-/* Inventory = Accesos icons, continuation inside Verbos (no Accesos header). */
 .scumm-module-content .inventory {
-  flex:1 1 58%;
+  flex:1 1 52%;
   width:auto;
   min-width:0;
   box-sizing:border-box;
   border:0;
   border-left:1px solid #3a2410;
   justify-content:center;
-  padding:4px 8px;
+  padding:4px 6px;
   overflow:auto;
 }
 .scumm-module-content .inv-objetos {
-  grid-template-columns:repeat(auto-fill,minmax(48px,1fr));
+  grid-template-columns:repeat(auto-fill,minmax(44px,1fr));
   justify-content:center;
   align-content:center;
   width:100%;
   margin-bottom:0;
 }
-.scumm-module[data-module="verbos"] .inventory-list { max-height:48px; }
+.scumm-module[data-module="verbos"] .inventory-list { max-height:44px; }
+
+/* Previos = Mac CRT / conversación con consejeros (tercer bloque). */
+.scumm-module[data-module="previos"] .scumm-module-content {
+  justify-content:center;
+  align-items:center;
+  background:rgba(10,6,2,.25);
+}
 .scumm-module-content .mac-scumm {
   display:flex;
   flex:1;
@@ -102,8 +104,10 @@
   border:0;
   box-sizing:border-box;
   justify-content:center;
+  align-items:center;
+  min-width:0;
 }
-.scumm-module-content .mac-scumm .mac-hoy-front-stage { width:min(200px,100%); }
+.scumm-module-content .mac-scumm .mac-hoy-front-stage { width:min(220px,100%); }
 
 .scumm-module-resizer {
   position:absolute;
@@ -137,10 +141,11 @@
 
 @media(max-width:600px) {
   .scumm-bottom[data-layout-ready] { flex-direction:column; height:auto; max-height:none; }
-  .scumm-module { flex:none!important; width:100%; }
-  .scumm-module[data-module="verbos"] .scumm-module-content { flex-direction:column; max-height:var(--scumm-height,168px); }
+  .scumm-module { flex:none!important; width:100%; border-right:0; border-bottom:1px solid #291b0c; }
+  .scumm-module[data-module="verbos"] .scumm-module-content { flex-direction:column; max-height:180px; }
   .scumm-module-content .verb-grid { flex:none; max-width:none; width:100%; grid-template-columns:repeat(3,max-content); }
   .scumm-module-content .inventory { flex:none; width:100%; border-left:0; border-top:1px solid #3a2410; }
+  .scumm-module[data-module="previos"] .scumm-module-content { min-height:120px; }
   .scumm-module-resizer,.scumm-height-resizer { display:none; }
   .scumm-module-head button { min-height:32px; }
 }

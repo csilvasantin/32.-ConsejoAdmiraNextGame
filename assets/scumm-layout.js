@@ -1,12 +1,13 @@
 // Layout controls enhance the existing SCUMM nodes; their actions keep their handlers.
-// v7 (Carlos 2026-10-05 ~22:34): Accesos ICONS live INSIDE Verbos content — continuum
-// to the right of the verb grid. No separate Accesos module/header (rejected: stacked
-// PR77 / #5223, and Verbos|Accesos two-module row PR78). Previos oculto. Compact bar.
-// IDS still includes accesos for restore/migration; default hides it (icons already in Verbos).
+// v8 (Carlos 2026-10-05 23:56): keep Accesos icons INSIDE Verbos (continuum), AND
+// restore the third block — Previos (mac-scumm / conversación con consejeros) —
+// visible to the right. Accesos module stays hidden (icons already in Verbos).
+// Chat limpio al entrar sigue en cargaHilos(); el bloque Previos nace vacío/usable.
 export const IDS = ['verbos', 'accesos', 'previos'];
 const LABELS = { verbos: 'Verbos', accesos: 'Accesos', previos: 'Previos' };
-const KEY = 'admira.scumm.layout.v7';
+const KEY = 'admira.scumm.layout.v8';
 const PREVIOUS_KEYS = [
+  'admira.scumm.layout.v7',
   'admira.scumm.layout.v6',
   'admira.scumm.layout.v5',
   'admira.scumm.layout.v4',
@@ -15,26 +16,30 @@ const PREVIOUS_KEYS = [
   'admira.scumm.layout.v1'
 ];
 const INTEGRATED_ORDER = ['verbos', 'accesos', 'previos'];
-const DEFAULT_WEIGHTS = { verbos: 100, accesos: 1, previos: 40 };
-const DEFAULT_HIDDEN = ['accesos', 'previos'];
-const DEFAULT_HEIGHT = 168;
+// Classic 22+22 / 56 with Accesos folded into Verbos → ~44 / 56.
+const DEFAULT_WEIGHTS = { verbos: 44, accesos: 1, previos: 56 };
+const DEFAULT_HIDDEN = ['accesos']; // Previos VISIBLE again
+const DEFAULT_HEIGHT = 220;
 export function normalizeLayout(raw = {}) {
   const order = Array.isArray(raw?.order) ? [...new Set(raw.order.filter(id => IDS.includes(id)))] : [];
   const hiddenSrc = Array.isArray(raw?.hidden) ? raw.hidden : DEFAULT_HIDDEN;
   const hidden = IDS.filter(id => hiddenSrc.includes(id));
-  // Accesos stays in IDS for restore, but default (and migration) keeps it hidden:
-  // icons already live inside Verbos.
+  // Accesos module never shows — icons live inside Verbos.
   if (!hidden.includes('accesos')) hidden.push('accesos');
-  if (!hidden.includes('previos') && !Array.isArray(raw?.hidden)) hidden.push('previos');
+  // Strip previos from hidden when using defaults (restore third block).
+  if (!Array.isArray(raw?.hidden)) {
+    const i = hidden.indexOf('previos');
+    if (i >= 0) hidden.splice(i, 1);
+  }
   return {
     order: [...order, ...IDS.filter(id => !order.includes(id))],
     hidden,
     weights: Object.fromEntries(IDS.map(id => [id, Number.isFinite(raw?.weights?.[id]) && raw.weights[id] > 0 ? Math.min(100, Math.max(.01, raw.weights[id])) : DEFAULT_WEIGHTS[id]])),
-    height: Number.isFinite(raw?.height) ? Math.min(600, Math.max(140, raw.height)) : DEFAULT_HEIGHT
+    height: Number.isFinite(raw?.height) ? Math.min(600, Math.max(160, raw.height)) : DEFAULT_HEIGHT
   };
 }
 export function migrateLegacyLayout(raw) {
-  // v4/v6 stacked, v5 two-module row, thirds → single integrated Verbos bar.
+  // Any prior layout → integrated Verbos+icons + visible Previos.
   const layout = normalizeLayout({ ...raw, hidden: DEFAULT_HIDDEN, order: INTEGRATED_ORDER });
   layout.weights = { ...DEFAULT_WEIGHTS };
   layout.height = DEFAULT_HEIGHT;
@@ -42,7 +47,6 @@ export function migrateLegacyLayout(raw) {
   layout.hidden = [...DEFAULT_HIDDEN];
   return layout;
 }
-// Resize two visible neighbours while conserving their total share of the row.
 export function resizePair(weights, left, right, fraction) {
   const share = Math.max(.15, Math.min(.85, fraction));
   const total = weights[left] + weights[right];
@@ -80,10 +84,9 @@ function init() {
   } catch { state = normalizeLayout(); }
   state.order = [...INTEGRATED_ORDER];
   if (!state.hidden.includes('accesos')) state.hidden.push('accesos');
-  if (!state.hidden.includes('previos')) {
-    // Keep Previos hidden unless the user explicitly showed it in a prior v7 save.
-    // Fresh migrate already has it; normalizeLayout for null too.
-  }
+  // Force-show Previos on first paint after migrate (third block restored).
+  state.hidden = state.hidden.filter(id => id !== 'previos');
+  if (!state.hidden.includes('accesos')) state.hidden.push('accesos');
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} };
   const create = (tag, cls, text) => {
     const node = document.createElement(tag); node.className = cls;
@@ -105,7 +108,7 @@ function init() {
   document.addEventListener('click', e => { if (!menu.contains(e.target)) menu.open = false; });
   menu.addEventListener('keydown', e => { if (e.key === 'Escape') { menu.open = false; menuToggle.focus(); } });
   const modules = {}, toggles = {};
-  // Inventory CONTINUES inside Verbos — not a separate Accesos module.
+  // Inventory inside Verbos; Previos = mac-scumm (third block / conversación).
   const source = { verbos: [grid, pager, inventory], accesos: [], previos: [preview] };
   for (const id of IDS) {
     const module = create('section', 'scumm-module'); module.dataset.module = id;
@@ -115,9 +118,8 @@ function init() {
     grip.className = 'scumm-module-grip';
     const close = button('Cerrar ' + LABELS[id], '×'); close.className = 'scumm-module-close';
     close.addEventListener('click', () => {
+      if (id === 'accesos') return;
       if (!state.hidden.includes(id)) state.hidden.push(id);
-      // Accesos must stay hidden — icons live in Verbos.
-      if (id === 'accesos' && !state.hidden.includes('accesos')) state.hidden.push('accesos');
       render(); save(); menuToggle.focus();
     });
     head.append(grip, close);
@@ -131,7 +133,6 @@ function init() {
     modules[id] = { module, grip, handle };
     const toggle = button('Mostrar ' + LABELS[id], '+ ' + LABELS[id].toUpperCase());
     toggle.addEventListener('click', () => {
-      // Accesos is not a free-standing module anymore — icons are in Verbos.
       if (id === 'accesos') { menu.open = false; return; }
       state.hidden = state.hidden.filter(x => x !== id);
       if (!state.hidden.includes('accesos')) state.hidden.push('accesos');
@@ -187,8 +188,8 @@ function init() {
       if (target) { state.order = moveModule(state.order, id, target); render(); save(); grip.focus(); }
     });
   }
-  const reset = button('Restaurar barra única Verbos+iconos', '↺ RESTAURAR');
-  reset.addEventListener('click', () => { state = normalizeLayout(); render(); save(); menu.open = false; menuToggle.focus(); });
+  const reset = button('Restaurar Verbos+iconos | Previos', '↺ RESTAURAR');
+  reset.addEventListener('click', () => { state = normalizeLayout(); state.hidden = [...DEFAULT_HIDDEN]; render(); save(); menu.open = false; menuToggle.focus(); });
   toolbar.append(reset);
   const heightHandle = create('div', 'scumm-height-resizer'); heightHandle.tabIndex = 0;
   heightHandle.setAttribute('role', 'separator'); heightHandle.setAttribute('aria-orientation', 'horizontal');
@@ -201,7 +202,7 @@ function init() {
     heightDrag = { y: e.clientY, height: row.getBoundingClientRect().height };
     heightHandle.setPointerCapture(e.pointerId); e.preventDefault();
   });
-  const setHeight = value => { state.height = Math.min(600, Math.max(140, value)); render(false); };
+  const setHeight = value => { state.height = Math.min(600, Math.max(160, value)); render(false); };
   heightHandle.addEventListener('pointermove', e => { if (heightDrag) setHeight(heightDrag.height + e.clientY - heightDrag.y); });
   const stopHeight = () => { if (heightDrag) { heightDrag = null; save(); } };
   heightHandle.addEventListener('pointerup', stopHeight); heightHandle.addEventListener('pointercancel', stopHeight);
@@ -216,13 +217,12 @@ function init() {
     const visible = state.order.filter(id => !state.hidden.includes(id));
     row.style.setProperty('--scumm-height', state.height + 'px');
     row.hidden = !visible.length; heightHandle.hidden = !visible.length;
-    heightHandle.setAttribute('aria-valuemin', '140'); heightHandle.setAttribute('aria-valuemax', '600');
+    heightHandle.setAttribute('aria-valuemin', '160'); heightHandle.setAttribute('aria-valuemax', '600');
     heightHandle.setAttribute('aria-valuenow', String(Math.round(state.height)));
     for (const id of state.order) {
       const { module, handle } = modules[id];
       if (reorder) row.append(module);
       module.hidden = state.hidden.includes(id);
-      // Never offer "Mostrar Accesos" — icons already integrate in Verbos.
       toggles[id].hidden = !module.hidden || id === 'accesos';
       module.style.flexGrow = state.weights[id];
       const next = visible[visible.indexOf(id) + 1];

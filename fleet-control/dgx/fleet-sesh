@@ -1,0 +1,42 @@
+#!/usr/bin/env bash
+# fleet-sesh del DGX Spark.
+# El sondeo SSH sigue siendo bitsatoms. La sesión gráfica de trabajo (Grok y el
+# player) es el usuario csilva en DISPLAY=:2. Este helper entra en esa sesión
+# y ejecuta el comando ahí.
+set -u
+TARGET=csilva
+# La casa de bitsatoms no es atravesable por csilva (750). El comando gráfico
+# tiene que vivir en /home/csilva, que es quien pinta DISPLAY=:2.
+if [ "$(id -un)" != "$TARGET" ]; then
+  if sudo -n -u "$TARGET" true 2>/dev/null; then
+    exec sudo -n -u "$TARGET" -H \
+      --preserve-env=SIGN_URL,SIGN_SCREEN,SIGN_CIRCUIT,SIGN_TAG,SIGN_MUTED,SIGN_MACHINE \
+      /home/csilva/.fleet/fleet-sesh "$@"
+  fi
+  echo "fleet-sesh: no puedo entrar en la sesión de ${TARGET}" >&2
+  exit 1
+fi
+U=$(id -u)
+export XDG_RUNTIME_DIR="/run/user/${U}"
+export DBUS_SESSION_BUS_ADDRESS="unix:path=${XDG_RUNTIME_DIR}/bus"
+export PULSE_SERVER="unix:${XDG_RUNTIME_DIR}/pulse/native"
+FOUND=""
+for P in $(pgrep -u "$U" gnome-shell 2>/dev/null) $(pgrep -u "$U" Xorg 2>/dev/null); do
+  D=$(tr '\0' '\n' < "/proc/${P}/environ" 2>/dev/null | sed -n 's/^DISPLAY=//p' | head -1)
+  X=$(tr '\0' '\n' < "/proc/${P}/environ" 2>/dev/null | sed -n 's/^XAUTHORITY=//p' | head -1)
+  if [ "$D" = ":2" ]; then
+    export DISPLAY="$D"
+    [ -n "$X" ] && export XAUTHORITY="$X"
+    FOUND=1
+    break
+  fi
+  if [ -n "$D" ] && [ -z "$FOUND" ]; then
+    export DISPLAY="$D"
+    [ -n "$X" ] && export XAUTHORITY="$X"
+    FOUND=1
+  fi
+done
+if [ -z "${DISPLAY:-}" ]; then
+  export DISPLAY=:2
+fi
+exec "$@"

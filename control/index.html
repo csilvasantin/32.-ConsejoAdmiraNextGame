@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.04.10.2026.r23.21:40" />
+<meta name="admiranext-version" content="AdmiraNeXT v.05.10.2026.r1.13:50" />
     <script src="/admira-bar.js?v=20260918-r38"></script>
     <script src="/auth-gate.js?v=20261004-r15-sinfranja"></script>
 <meta charset="UTF-8">
@@ -3121,8 +3121,10 @@ function collapseAllToggle(){
         { id: "admira-pc-runner-01",       role: "QA y validación",      persona: "PC Runner 01",       ip: "pc-runner-01",         host: "PC-RUNNER-01",        user: "csilvasantin", platform: "win" },
         { id: "admira-pc-ocr-01",          role: "Documental · OCR",     persona: "PC OCR 01",          ip: "pc-ocr-01",            host: "PC-OCR-01",           user: "csilvasantin", platform: "win" },
         { id: "admira-pc-bot-01",          role: "Automatización web",   persona: "PC Bot 01",          ip: "pc-bot-01",            host: "PC-BOT-01",           user: "csilvasantin", platform: "win" },
+        { id: "admira-reuniones-1",        role: "Reuniones · Windows",  persona: "REUNIONES-1",        ip: "100.112.183.17",       host: "reuniones-1",         user: "csilvasantin", platform: "win" },
         // ThinkStation Linux (Ubuntu) — usa el guion unix (HACK_LINES); el backend le abre gnome-terminal a pantalla completa.
         { id: "admira-thinkstation",       role: "Sobremesa · Linux",    persona: "ThinkStation PGX",   ip: "100.75.211.23",        host: "thinkstationpgx-e82e", user: "test", platform: "linux" },
+        { id: "admira-dgx-spark",          role: "Player DS · Linux",    persona: "DGX Spark",          ip: "100.119.58.65",        host: "dgx-spark",           user: "bitsatoms", platform: "linux" },
     ];
 
     function fillHackLine(line, machine) {

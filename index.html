@@ -1,8 +1,9 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.04.10.2026.r23.21:40" />
+<meta name="admiranext-version" content="AdmiraNeXT v.05.10.2026.r3.19:40" />
     <script src="/auth-gate.js?v=20261004-r15-sinfranja"></script>
+    <script src="/admira-idioma.js"></script>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <!-- Herramienta interna: NO indexar -->
@@ -30,7 +31,7 @@
             }
         })();
     </script>
-    <title>Consejo de Silicio Admira | AdmiraNext Council</title>
+    <title data-en="Admira Silicon Council | AdmiraNext Council">Consejo de Silicio Admira | AdmiraNext Council</title>
     <link rel="icon" href="/council-icon.ico?v=20260522-r1" sizes="any">
     <link rel="icon" type="image/png" href="/council-icon.png?v=20260522-r1" sizes="64x64">
     <link rel="shortcut icon" href="/council-icon.ico?v=20260522-r1">
@@ -3644,28 +3645,28 @@ body.rail-open{overflow:hidden}
     height="0" width="0" style="display:none;visibility:hidden"></iframe></noscript>
     <div class="container">
         <div class="top-bar">
-            <button type="button" id="pf-ic-opcion" class="pf-ico" onclick="pfToggle('opcion')" title="Opciones · panel izquierdo" aria-label="Opciones · panel izquierdo">
+            <button type="button" id="pf-ic-opcion" class="pf-ico" onclick="pfToggle('opcion')" title="Opciones · panel izquierdo" aria-label="Opciones · panel izquierdo" data-en-title="Options · left panel" data-en-aria-label="Options · left panel">
                 <svg viewBox="0 0 16 14"><rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="1.6" y="1.6" width="4.4" height="10.8" rx="1"/></svg>
             </button>
             <!-- Barra idéntica a admira-bar.js (subpáginas) para consistencia — mantener en sync con var TOP -->
-            <a href="https://www.admira.live/" class="version-badge brand-logo" title="Consejo AdmiraNeXT" aria-label="Consejo AdmiraNeXT"><img src="/admira-logo-retro.svg" alt="admira" width="119" height="25" style="height:22px;width:auto;display:block;image-rendering:pixelated;image-rendering:-moz-crisp-edges"></a>
-            <a href="/dashboard" class="version-badge" title="Dashboard · resumen de actividad">📊 Dashboard</a>
-            <a href="/objetivos" class="version-badge" title="Objetivos · propuestas y progreso">🎯 Objetivos</a>
-            <a href="/decisiones" class="version-badge" title="Decisiones · opciones y resultados">⚖️ Decisiones</a>
-            <a href="/misiones" class="version-badge" title="Misiones · ¿En qué estamos?">🚀 Misiones</a>
-            <a href="/tareas" class="version-badge" title="Tareas · pendiente y en curso">✅ Tareas</a>
-            <a href="/highscore" class="version-badge" title="Highscore completo · actividad y puntuación de la flota">🏆 Highscore</a>
-            <a href="/asignaciones/" class="version-badge" title="Asignaciones · reparto del trabajo">🧩 Asignaciones</a>
-            <a href="/consumos" class="version-badge" title="Consumo · cuánto gastan los agentes">💸 Consumo</a>
+            <a href="https://www.admira.live/" class="version-badge brand-logo" title="Consejo AdmiraNeXT" aria-label="Consejo AdmiraNeXT" data-en-title="AdmiraNeXT Council" data-en-aria-label="AdmiraNeXT Council"><img src="/admira-logo-retro.svg" alt="admira" width="119" height="25" style="height:22px;width:auto;display:block;image-rendering:pixelated;image-rendering:-moz-crisp-edges"></a>
+            <a href="/dashboard" class="version-badge" title="Dashboard · resumen de actividad" data-en-title="Dashboard · activity summary" data-en="📊 Dashboard">📊 Dashboard</a>
+            <a href="/objetivos" class="version-badge" title="Objetivos · propuestas y progreso" data-en-title="Goals · proposals and progress" data-en="🎯 Goals">🎯 Objetivos</a>
+            <a href="/decisiones" class="version-badge" title="Decisiones · opciones y resultados" data-en-title="Decisions · options and outcomes" data-en="⚖️ Decisions">⚖️ Decisiones</a>
+            <a href="/misiones" class="version-badge" title="Misiones · ¿En qué estamos?" data-en-title="Missions · what are we on?" data-en="🚀 Missions">🚀 Misiones</a>
+            <a href="/tareas" class="version-badge" title="Tareas · pendiente y en curso" data-en-title="Tasks · pending and in progress" data-en="✅ Tasks">✅ Tareas</a>
+            <a href="/highscore" class="version-badge" title="Highscore completo · actividad y puntuación de la flota" data-en-title="Full highscore · fleet activity and score" data-en="🏆 Highscore">🏆 Highscore</a>
+            <a href="/asignaciones/" class="version-badge" title="Asignaciones · reparto del trabajo" data-en-title="Assignments · who does what" data-en="🧩 Assignments">🧩 Asignaciones</a>
+            <a href="/consumos" class="version-badge" title="Consumo · cuánto gastan los agentes" data-en-title="Usage · what the agents spend" data-en="💸 Usage">💸 Consumo</a>
             <!-- Control, Players y Diario van al riel AVANZADO (grupo «Sistema»), no al top-bar (Carlos, 18-09-2026). -->
-            <a id="home-usuarios" href="https://www.admira.live/usuarios.html" class="version-badge" style="display:none" title="Usuarios · whitelist (solo superusers)">👥 Usuarios</a>
+            <a id="home-usuarios" href="https://www.admira.live/usuarios.html" class="version-badge" style="display:none" title="Usuarios · whitelist (solo superusers)" data-en-title="Users · whitelist (superusers only)" data-en="👥 Users">👥 Usuarios</a>
             <!-- Los contadores de flota (#summary) viven en el riel AVANZADO (grupo «Flota»)
                  para que el top-bar quepa en UNA fila; los iconos van arriba a la derecha. -->
             <div class="pf-toggles">
-                <button type="button" id="pf-ic-avanzado" class="pf-ico" onclick="pfToggle('avanzado')" title="Avanzado · panel derecho" aria-label="Avanzado · panel derecho">
+                <button type="button" id="pf-ic-avanzado" class="pf-ico" onclick="pfToggle('avanzado')" title="Avanzado · panel derecho" aria-label="Avanzado · panel derecho" data-en-title="Advanced · right panel" data-en-aria-label="Advanced · right panel">
                     <svg viewBox="0 0 16 14"><rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="10" y="1.6" width="4.4" height="10.8" rx="1"/></svg>
                 </button>
-                <button type="button" id="pf-ic-experto" class="pf-ico" onclick="pfToggle('experto')" title="Modo experto · panel inferior" aria-label="Modo experto · panel inferior">
+                <button type="button" id="pf-ic-experto" class="pf-ico" onclick="pfToggle('experto')" title="Modo experto · panel inferior" aria-label="Modo experto · panel inferior" data-en-title="Expert mode · bottom panel" data-en-aria-label="Expert mode · bottom panel">
                     <svg viewBox="0 0 16 14"><rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="1.6" y="8.4" width="12.8" height="4" rx="1"/></svg>
                 </button>
             </div>
@@ -3696,8 +3697,8 @@ body.rail-open{overflow:hidden}
         <div class="council-image" data-generation="leyendas">
             <img id="council-img" src="assets/council-leyendas.jpg?v=20260613-r2" alt="Consejo AdmiraNext" onload="this.closest('.council-image')&&this.closest('.council-image').classList.add('loaded')">
             <nav class="council-generation" aria-label="Generación del Consejo">
-                <button type="button" data-council-generation="leyendas" aria-label="Mostrar Leyendas" aria-pressed="true" title="Mostrar Leyendas · /leyendas"><span>★ Leyendas</span></button>
-                <button type="button" data-council-generation="coetaneos" aria-label="Mostrar Coetáneos" aria-pressed="false" title="Mostrar Coetáneos · /coetaneos"><span>🚀 Coetáneos</span></button>
+                <button type="button" data-council-generation="leyendas" aria-label="Mostrar Leyendas" aria-pressed="true" title="Mostrar Leyendas · /leyendas" data-en-aria-label="Show Legends" data-en-title="Show Legends · /leyendas"><span data-en="★ Legends">★ Leyendas</span></button>
+                <button type="button" data-council-generation="coetaneos" aria-label="Mostrar Coetáneos" aria-pressed="false" title="Mostrar Coetáneos · /coetaneos" data-en-aria-label="Show Contemporaries" data-en-title="Show Contemporaries · /coetaneos"><span data-en="🚀 Contemporaries">🚀 Coetáneos</span></button>
             </nav>
             <!-- Conversation overlays on background windows -->
             <div class="window-overlay racional" id="win-racional">
@@ -3827,21 +3828,21 @@ body.rail-open{overflow:hidden}
         <div class="rail-backdrop" id="rail-backdrop" onclick="window.closeRails&&window.closeRails()" aria-hidden="true"></div>
         <div class="side-rail left collapsed" id="rail-opcion">
             <div class="rail-body">
-                <div class="rail-group">Navega</div>
-                <a class="rail-btn" href="https://www.admira.live/equipos" target="_blank" rel="noopener" title="Equipos · asignación de agentes">🏠 AdmiraNeXT</a>
-                <a class="rail-btn" href="https://www.admira.live/telegram" target="_blank" rel="noopener" title="Espejo en directo del grupo AdmiraNext">💬 Telegram</a>
-                <a class="rail-btn primary" href="/13rue/" title="La Incubadora v1.0 · doce agentes en un edificio, en vivo · futuro ieu.ai">🏢 La Incubadora</a>
-                <a class="rail-btn" href="/control/" title="FleetControl · control de la flota">🖥️ Control</a>
-                <button type="button" class="rail-btn primary" id="consejeros-desk-btn" data-open="consejeros-desk" title="Escritorio 4 MacBook Air · Azul Jobs · Plata Wozniak · Rosa Lucas · Crema Disney">🏛️ Consejeros</button>
-                <a class="rail-btn" href="/game/help" title="Cómo se juega y cómo contribuir">❔ Ayuda</a>
-                <a class="rail-btn" href="/status/" title="Constelación · mapa de agentes">📡 Agentes</a>
-                <div class="rail-group">Consulta</div>
-                <button class="rail-btn primary" onclick="railVerb('preguntar')" title="Pregunta a un consejero">Preguntar</button>
-                <button class="rail-btn" onclick="railVerb('examinar')" title="Examina el perfil de un consejero">Examinar</button>
-                <button class="rail-btn primary" onclick="railVerb('debatir')" title="El Consejo debate un tema">Debatir</button>
-                <button class="rail-btn primary" onclick="railVerb('reunion')" title="Reúnete a solas con un consejero">Reunión</button>
+                <div class="rail-group" data-en="Browse">Navega</div>
+                <a class="rail-btn" href="https://www.admira.live/equipos" target="_blank" rel="noopener" title="Equipos · asignación de agentes" data-en-title="Teams · agent assignment">🏠 AdmiraNeXT</a>
+                <a class="rail-btn" href="https://www.admira.live/telegram" target="_blank" rel="noopener" title="Espejo en directo del grupo AdmiraNext" data-en-title="Live mirror of the AdmiraNext group">💬 Telegram</a>
+                <a class="rail-btn primary" href="/13rue/" title="La Incubadora v1.0 · doce agentes en un edificio, en vivo · futuro ieu.ai" data-en-title="The Incubator v1.0 · twelve agents in one building, live · future ieu.ai" data-en="🏢 The Incubator">🏢 La Incubadora</a>
+                <a class="rail-btn" href="/control/" title="FleetControl · control de la flota" data-en-title="FleetControl · fleet control">🖥️ Control</a>
+                <button type="button" class="rail-btn primary" id="consejeros-desk-btn" data-open="consejeros-desk" title="Escritorio 4 MacBook Air · Azul Jobs · Plata Wozniak · Rosa Lucas · Crema Disney" data-en-title="4 MacBook Air desk · Blue Jobs · Silver Wozniak · Pink Lucas · Cream Disney" data-en="🏛️ Councillors">🏛️ Consejeros</button>
+                <a class="rail-btn" href="/game/help" title="Cómo se juega y cómo contribuir" data-en-title="How to play and how to contribute" data-en="❔ Help">❔ Ayuda</a>
+                <a class="rail-btn" href="/status/" title="Constelación · mapa de agentes" data-en-title="Constellation · agent map" data-en="📡 Agents">📡 Agentes</a>
+                <div class="rail-group" data-en="Consult">Consulta</div>
+                <button class="rail-btn primary" onclick="railVerb('preguntar')" title="Pregunta a un consejero" data-en-title="Ask a councillor" data-en="Ask">Preguntar</button>
+                <button class="rail-btn" onclick="railVerb('examinar')" title="Examina el perfil de un consejero" data-en-title="Examine a councillor's profile" data-en="Examine">Examinar</button>
+                <button class="rail-btn primary" onclick="railVerb('debatir')" title="El Consejo debate un tema" data-en-title="The Council debates a topic" data-en="Debate">Debatir</button>
+                <button class="rail-btn primary" onclick="railVerb('reunion')" title="Reúnete a solas con un consejero" data-en-title="Meet a councillor one-to-one" data-en="Meeting">Reunión</button>
                 <!-- Sello de versión: al PIE del rail de opciones (Carlos: fuera del título) -->
-                <div class="rail-ver" title="Versión de la release">v.2026.07.12.r1</div>
+                <div class="rail-ver" title="Versión de la release" data-en-title="Release version">v.2026.07.12.r1</div>
             </div>
         </div>
 
@@ -3855,41 +3856,41 @@ body.rail-open{overflow:hidden}
                     </div>
                     <div class="legend-grid" id="legend-grid"></div>
                 </div>
-                <div class="rail-group">Crea</div>
-                <button class="rail-btn primary" onclick="railVerb('entrenar')" title="Alimenta a un consejero con URLs y material">Entrenar</button>
-                <button class="rail-btn" onclick="railVerb('analizar')" title="Analiza una URL, texto o archivo">Analizar</button>
-                <button class="rail-btn" onclick="railVerb('presentar')" title="Genera una presentación">Presentar</button>
-                <button class="rail-btn" onclick="railVerb('votar')" title="Somete una propuesta a votación">Votar</button>
-                <button class="rail-btn" onclick="railVerb('crear')" title="Genera una imagen">Crear</button>
-                <button class="rail-btn" onclick="railVerb('leer')" title="El Consejo te cuenta el libro del día">Pensar</button>
-                <div class="rail-group">Sistema</div>
-                <a class="rail-btn" href="https://www.admira.live/control/" target="_blank" rel="noopener" title="FleetControl · control de la flota">🖥️ Control</a>
-                <a class="rail-btn" href="/players/" title="Players · pantallas de emisión">📺 Players</a>
-                <a class="rail-btn" href="/diario.html" title="Diario de Silicio en vivo">📓 Diario</a>
-                <a class="rail-btn" href="https://www.admira.studio/" target="_blank" rel="noopener" title="Abrir ADmiraNeXT Studio">🎬 Demo</a>
-                <button class="rail-btn" onclick="window.toggleDesign&&toggleDesign()" title="Modo diseño (rejilla/reglas)">📐 Diseño</button>
-                <nav class="advanced-fleet-nav" aria-label="Gestión y flota">
-                <div class="rail-group">Gestión</div>
-                <a class="rail-btn" href="/misiones" title="Misiones · seguimiento del trabajo de los agentes">🎯 Misiones</a>
-                <a class="rail-btn" href="/tareas" title="Tareas · trabajo pendiente y en curso">🗂️ Tareas</a>
-                <a class="rail-btn" href="/objetivos" title="Objetivos · propuestas y progreso por proyecto">💡 Objetivos</a>
-                <a class="rail-btn" href="/decisiones" title="Decisiones · opciones y resultados">⚖️ Decisiones</a>
-                <a class="rail-btn" href="/asignaciones/" title="Asignaciones · reparto del trabajo">🧩 Asignaciones</a>
-                <a class="rail-btn" href="/incidencias" title="Incidencias · seguimiento de problemas">⚠️ Incidencias</a>
-                <div class="rail-group">Flota</div>
-                <a class="rail-btn" href="/marcador.html" title="Marcador del día y quién está trabajando (CLI: /marcador)">🏁 Marcador</a>
-                <a class="rail-btn" href="/highscore" title="Highscore completo de la flota (CLI: /highscore)">🏆 Highscore</a>
-                <a class="rail-btn" href="/equipo" title="Equipo · censo de agentes y proyectos">◫ Equipo</a>
-                <a class="rail-btn" href="/navegadores/" title="Navegadores · flota de navegadores Claude-in-Chrome">🌐 Navegadores</a>
-                <a class="rail-btn" href="/status/" title="Estado · mapa de la flota">🖥️ Estado</a>
-                <a class="rail-btn" href="/asistencia" title="Asistencia en vivo: sala de vídeo con el equipo">🎥 Asistencia</a>
-                <div class="rail-group">Seguimiento</div>
-                <a class="rail-btn" href="/informes-flota" title="Informes de la flota · resultados y evidencias">📄 Informes flota</a>
-                <a class="rail-btn" href="/notificaciones" title="Notificaciones · actividad y avisos">🔔 Notificaciones</a>
-                <a class="rail-btn" href="/consumos" title="Consumos · uso de los agentes">📊 Consumos</a>
-                <a class="rail-btn" href="/dashboard" title="Dashboard · resumen de actividad">📈 Dashboard</a>
-                <a class="rail-btn" href="/admira-live" title="Cola de agentes · tareas asignadas a la flota">📥 Cola de agentes</a>
-                <a class="rail-btn" href="/normativa" title="Normativa · reglas de trabajo del equipo">📜 Normativa</a>
+                <div class="rail-group" data-en="Create">Crea</div>
+                <button class="rail-btn primary" onclick="railVerb('entrenar')" title="Alimenta a un consejero con URLs y material" data-en-title="Feed a councillor URLs and material" data-en="Train">Entrenar</button>
+                <button class="rail-btn" onclick="railVerb('analizar')" title="Analiza una URL, texto o archivo" data-en-title="Analyse a URL, text or file" data-en="Analyse">Analizar</button>
+                <button class="rail-btn" onclick="railVerb('presentar')" title="Genera una presentación" data-en-title="Generate a presentation" data-en="Present">Presentar</button>
+                <button class="rail-btn" onclick="railVerb('votar')" title="Somete una propuesta a votación" data-en-title="Put a proposal to the vote" data-en="Vote">Votar</button>
+                <button class="rail-btn" onclick="railVerb('crear')" title="Genera una imagen" data-en-title="Generate an image" data-en="Create">Crear</button>
+                <button class="rail-btn" onclick="railVerb('leer')" title="El Consejo te cuenta el libro del día" data-en-title="The Council tells you the book of the day" data-en="Think">Pensar</button>
+                <div class="rail-group" data-en="System">Sistema</div>
+                <a class="rail-btn" href="https://www.admira.live/control/" target="_blank" rel="noopener" title="FleetControl · control de la flota" data-en-title="FleetControl · fleet control">🖥️ Control</a>
+                <a class="rail-btn" href="/players/" title="Players · pantallas de emisión" data-en-title="Players · broadcast screens">📺 Players</a>
+                <a class="rail-btn" href="/diario.html" title="Diario de Silicio en vivo" data-en-title="Silicon Journal, live" data-en="📓 Journal">📓 Diario</a>
+                <a class="rail-btn" href="https://www.admira.studio/" target="_blank" rel="noopener" title="Abrir ADmiraNeXT Studio" data-en-title="Open ADmiraNeXT Studio">🎬 Demo</a>
+                <button class="rail-btn" onclick="window.toggleDesign&&toggleDesign()" title="Modo diseño (rejilla/reglas)" data-en-title="Design mode (grid/rulers)" data-en="📐 Design">📐 Diseño</button>
+                <nav class="advanced-fleet-nav" aria-label="Gestión y flota" data-en-aria-label="Management and fleet">
+                <div class="rail-group" data-en="Management">Gestión</div>
+                <a class="rail-btn" href="/misiones" title="Misiones · seguimiento del trabajo de los agentes" data-en-title="Missions · tracking the agents' work" data-en="🎯 Missions">🎯 Misiones</a>
+                <a class="rail-btn" href="/tareas" title="Tareas · trabajo pendiente y en curso" data-en-title="Tasks · pending and in-progress work" data-en="🗂️ Tasks">🗂️ Tareas</a>
+                <a class="rail-btn" href="/objetivos" title="Objetivos · propuestas y progreso por proyecto" data-en-title="Goals · proposals and progress per project" data-en="💡 Goals">💡 Objetivos</a>
+                <a class="rail-btn" href="/decisiones" title="Decisiones · opciones y resultados" data-en-title="Decisions · options and outcomes" data-en="⚖️ Decisions">⚖️ Decisiones</a>
+                <a class="rail-btn" href="/asignaciones/" title="Asignaciones · reparto del trabajo" data-en-title="Assignments · who does what" data-en="🧩 Assignments">🧩 Asignaciones</a>
+                <a class="rail-btn" href="/incidencias" title="Incidencias · seguimiento de problemas" data-en-title="Incidents · issue tracking" data-en="⚠️ Incidents">⚠️ Incidencias</a>
+                <div class="rail-group" data-en="Fleet">Flota</div>
+                <a class="rail-btn" href="/marcador.html" title="Marcador del día y quién está trabajando (CLI: /marcador)" data-en-title="Today's scoreboard and who is working (CLI: /marcador)" data-en="🏁 Scoreboard">🏁 Marcador</a>
+                <a class="rail-btn" href="/highscore" title="Highscore completo de la flota (CLI: /highscore)" data-en-title="Full fleet highscore (CLI: /highscore)">🏆 Highscore</a>
+                <a class="rail-btn" href="/equipo" title="Equipo · censo de agentes y proyectos" data-en-title="Team · census of agents and projects" data-en="◫ Team">◫ Equipo</a>
+                <a class="rail-btn" href="/navegadores/" title="Navegadores · flota de navegadores Claude-in-Chrome" data-en-title="Browsers · Claude-in-Chrome browser fleet" data-en="🌐 Browsers">🌐 Navegadores</a>
+                <a class="rail-btn" href="/status/" title="Estado · mapa de la flota" data-en-title="Status · fleet map" data-en="🖥️ Status">🖥️ Estado</a>
+                <a class="rail-btn" href="/asistencia" title="Asistencia en vivo: sala de vídeo con el equipo" data-en-title="Live assistance: video room with the team" data-en="🎥 Assistance">🎥 Asistencia</a>
+                <div class="rail-group" data-en="Tracking">Seguimiento</div>
+                <a class="rail-btn" href="/informes-flota" title="Informes de la flota · resultados y evidencias" data-en-title="Fleet reports · results and evidence" data-en="📄 Fleet reports">📄 Informes flota</a>
+                <a class="rail-btn" href="/notificaciones" title="Notificaciones · actividad y avisos" data-en-title="Notifications · activity and alerts" data-en="🔔 Notifications">🔔 Notificaciones</a>
+                <a class="rail-btn" href="/consumos" title="Consumos · uso de los agentes" data-en-title="Usage · agent consumption" data-en="📊 Usage">📊 Consumos</a>
+                <a class="rail-btn" href="/dashboard" title="Dashboard · resumen de actividad" data-en-title="Dashboard · activity summary">📈 Dashboard</a>
+                <a class="rail-btn" href="/admira-live" title="Cola de agentes · tareas asignadas a la flota" data-en-title="Agent queue · tasks assigned to the fleet" data-en="📥 Agent queue">📥 Cola de agentes</a>
+                <a class="rail-btn" href="/normativa" title="Normativa · reglas de trabajo del equipo" data-en-title="Rules · the team's working norms" data-en="📜 Rules">📜 Normativa</a>
                 </nav>
                 <div class="summary" id="summary"></div>
                 <div class="rail-group">Tareas</div>
@@ -3971,32 +3972,32 @@ body.rail-open{overflow:hidden}
             <div class="action-line">
                 <div class="sentence-line" id="sentence-line"></div>
                 <div class="mesa-img-preview" id="mesa-img-preview" hidden></div>
-                <input class="action-input" id="action-input" type="text" placeholder="escribe aquí · pega una imagen · /help" autocomplete="off" onkeydown="if(event.key==='Enter')sendMessage()">
-                <button class="action-send" onclick="sendMessage()">Enviar</button>
-                <button class="scumm-fold" id="scumm-fold" onclick="toggleScumm()" title="Plegar / desplegar el menú (verbos)" aria-label="Plegar menú">▾</button>
+                <input class="action-input" id="action-input" type="text" placeholder="escribe aquí · pega una imagen · /help" data-en-placeholder="type here · paste an image · /help" autocomplete="off" onkeydown="if(event.key==='Enter')sendMessage()">
+                <button class="action-send" onclick="sendMessage()" data-en="Send">Enviar</button>
+                <button class="scumm-fold" id="scumm-fold" onclick="toggleScumm()" title="Plegar / desplegar el menú (verbos)" aria-label="Plegar menú" data-en-title="Fold / unfold the menu (verbs)" data-en-aria-label="Fold menu">▾</button>
             </div>
             <div class="scumm-bottom">
                 <div class="verb-grid">
-                    <button class="verb-btn verb-primary" data-verb="preguntar" title="Pregunta a un consejero: pulsa Preguntar y haz clic en él" onclick="selectVerb(this)">Preguntar</button>
-                    <button class="verb-btn" data-verb="examinar" title="Examina a un consejero para conocer su perfil y su lore (sin gastar IA)" onclick="selectVerb(this)">Examinar</button>
-                    <button class="verb-btn verb-primary" data-verb="debatir" title="El Consejo debate un tema entre todos sus miembros" onclick="selectVerb(this)">Debatir</button>
-                    <button class="verb-btn verb-primary" data-verb="entrenar" title="Alimenta a un consejero con URLs y material de referencia" onclick="selectVerb(this)">Entrenar</button>
-                    <button class="verb-btn" data-verb="crear" title="Genera una imagen a partir de tu descripción" onclick="selectVerb(this)">Crear</button>
-                    <a class="verb-btn" href="/conversacion" title="Conversaciones del equipo: consejeros, deepagents y Carlos">Conversación</a>
-                    <button class="verb-btn" data-verb="leer" title="El Consejo te cuenta el libro/resumen del día (audio)" onclick="selectVerb(this)">Pensar</button>
-                    <button class="verb-btn" data-verb="votar" title="Somete una propuesta a votación del Consejo" onclick="selectVerb(this)">Votar</button>
-                    <button class="verb-btn" data-verb="analizar" title="Analiza una URL, texto o archivo con el Consejo" onclick="selectVerb(this)">Analizar</button>
-                    <button class="verb-btn" id="btn-mostrar" type="button" title="Macintosh 1984 sobre la mesa · mismo gesto que /mac" onclick="event.stopPropagation(); window.MacHoy && window.MacHoy.toggle()">Mac 1984</button>
-                    <button class="verb-btn" data-verb="presentar" title="Genera una presentación a partir de un tema" onclick="selectVerb(this)">Presentar</button>
-                    <button class="verb-btn verb-primary" data-verb="reunion" title="Reúnete a solas con un consejero (chat 1 a 1)" onclick="selectVerb(this)">Reunión</button>
+                    <button class="verb-btn verb-primary" data-verb="preguntar" title="Pregunta a un consejero: pulsa Preguntar y haz clic en él" data-en-title="Ask a councillor: press Ask, then click on them" data-en="Ask" onclick="selectVerb(this)">Preguntar</button>
+                    <button class="verb-btn" data-verb="examinar" title="Examina a un consejero para conocer su perfil y su lore (sin gastar IA)" data-en-title="Examine a councillor to see their profile and lore (no AI spend)" data-en="Examine" onclick="selectVerb(this)">Examinar</button>
+                    <button class="verb-btn verb-primary" data-verb="debatir" title="El Consejo debate un tema entre todos sus miembros" data-en-title="The whole Council debates a topic" data-en="Debate" onclick="selectVerb(this)">Debatir</button>
+                    <button class="verb-btn verb-primary" data-verb="entrenar" title="Alimenta a un consejero con URLs y material de referencia" data-en-title="Feed a councillor URLs and reference material" data-en="Train" onclick="selectVerb(this)">Entrenar</button>
+                    <button class="verb-btn" data-verb="crear" title="Genera una imagen a partir de tu descripción" data-en-title="Generate an image from your description" data-en="Create" onclick="selectVerb(this)">Crear</button>
+                    <a class="verb-btn" href="/conversacion" title="Conversaciones del equipo: consejeros, deepagents y Carlos" data-en-title="Team conversations: councillors, deepagents and Carlos" data-en="Conversation">Conversación</a>
+                    <button class="verb-btn" data-verb="leer" title="El Consejo te cuenta el libro/resumen del día (audio)" data-en-title="The Council tells you the book/summary of the day (audio)" data-en="Think" onclick="selectVerb(this)">Pensar</button>
+                    <button class="verb-btn" data-verb="votar" title="Somete una propuesta a votación del Consejo" data-en-title="Put a proposal to the Council's vote" data-en="Vote" onclick="selectVerb(this)">Votar</button>
+                    <button class="verb-btn" data-verb="analizar" title="Analiza una URL, texto o archivo con el Consejo" data-en-title="Analyse a URL, text or file with the Council" data-en="Analyse" onclick="selectVerb(this)">Analizar</button>
+                    <button class="verb-btn" id="btn-mostrar" type="button" title="Macintosh 1984 sobre la mesa · mismo gesto que /mac" data-en-title="Macintosh 1984 on the table · same as /mac" onclick="event.stopPropagation(); window.MacHoy && window.MacHoy.toggle()">Mac 1984</button>
+                    <button class="verb-btn" data-verb="presentar" title="Genera una presentación a partir de un tema" data-en-title="Generate a presentation from a topic" data-en="Present" onclick="selectVerb(this)">Presentar</button>
+                    <button class="verb-btn verb-primary" data-verb="reunion" title="Reúnete a solas con un consejero (chat 1 a 1)" data-en-title="Meet a councillor one-to-one (1:1 chat)" data-en="Meeting" onclick="selectVerb(this)">Reunión</button>
                     <!-- PREVIO ya no tiene caja propia (Carlos, 2026-09-20): el previo
                          es el Mac 1984, que ahora está siempre a la vista en la barra.
                          El verbo sigue existiendo —/previo y triggerPrevio()— y el
                          código que lo encendía ya preguntaba si la caja estaba. -->
                 </div>
                 <div class="verb-pager" hidden>
-                    <button class="verb-arrow" id="verb-up" type="button" onclick="verbPage(-1)" title="Verbos anteriores" aria-label="Verbos anteriores">▲</button>
-                    <button class="verb-arrow" id="verb-down" type="button" onclick="verbPage(1)" title="Más verbos" aria-label="Más verbos">▼</button>
+                    <button class="verb-arrow" id="verb-up" type="button" onclick="verbPage(-1)" title="Verbos anteriores" aria-label="Verbos anteriores" data-en-title="Previous verbs" data-en-aria-label="Previous verbs">▲</button>
+                    <button class="verb-arrow" id="verb-down" type="button" onclick="verbPage(1)" title="Más verbos" aria-label="Más verbos" data-en-title="More verbs" data-en-aria-label="More verbs">▼</button>
                 </div>
                 <div class="inventory">
                     <!-- OBJETOS: siempre visibles, pase lo que pase con la página de

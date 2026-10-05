@@ -6,9 +6,26 @@
  * Uso: <script src="/admira-bar.js"></script> en el <head> de cada página.
  */
 (function () {
+  // Sello del despliegue (?v=) de esta barra: deploy.sh lo estampa en cada página.
+  var BAR_SRC = (document.currentScript && document.currentScript.src) || "";
   // No ejecutar en la home (raíz). Cubre "/", "/index.html".
   var path = location.pathname.replace(/index\.html$/, "");
   if (path === "/" || path === "") return;
+
+  // IDIOMA (MorfeoMacMini, 05-10-2026): /idioma ESP | ENG, mismo contrato que admira.store.
+  // El núcleo vive en /admira-idioma.js (la home lo carga en su <head>); aquí se pide con
+  // el MISMO ?v= de la barra, así cada release lo estrena a la vez en las ~60 páginas.
+  // Los rótulos llevan el inglés en data-en*; si el módulo no carga, todo sigue en castellano.
+  function idioma() { return window.AdmiraIdioma && window.AdmiraIdioma.translate ? window.AdmiraIdioma : null; }
+  function T(es, en) { var I = idioma(); return I ? I.t(es, en) : es; }
+  (function cargaIdioma() {
+    if (idioma() || document.querySelector('script[src*="admira-idioma.js"]')) return;
+    var v = ""; try { v = new URL(BAR_SRC, location.href).searchParams.get("v") || ""; } catch (e) {}
+    var s = document.createElement("script");
+    s.src = "/admira-idioma.js" + (v ? "?v=" + encodeURIComponent(v) : "");
+    s.onload = function () { var I = idioma(); if (I) I.translate(document); };
+    (document.head || document.documentElement).appendChild(s);
+  })();
 
   // Nombre del proyecto + versión (v.año.mes.día.release) — a la izquierda del todo.
   // La MARCA enlaza a la home (regla: el nombre del site siempre vuelve a la home).
@@ -21,27 +38,28 @@
   // para que las dos superficies no divergan. Rutas limpias (todas 200 en producción).
   // Cuadratura #4494: menú fijo horizontal; cada grupo se abre en vertical.
   // STATUS sigue fuera de la barra (Carlos, 11-08-2026): vive en /status con su propio cuadro.
+  // en: rótulo en inglés (/idioma ENG). Mismos textos que la barra de la home (index.html).
   var MENU = [
-    { t: "Flujo ▾", items: [
-      { t: "📊 Dashboard",   h: "https://www.admira.live/dashboard" },
-      { t: "🎯 Objetivos",   h: "https://www.admira.live/objetivos" },
-      { t: "⚖️ Decisiones",  h: "https://www.admira.live/decisiones" },
-      { t: "🚀 Misiones",    h: "https://www.admira.live/misiones" },
-      { t: "✅ Tareas",      h: "https://www.admira.live/tareas" }
+    { t: "Flujo ▾", en: "Flow ▾", items: [
+      { t: "📊 Dashboard",   en: "📊 Dashboard",   h: "https://www.admira.live/dashboard" },
+      { t: "🎯 Objetivos",   en: "🎯 Goals",       h: "https://www.admira.live/objetivos" },
+      { t: "⚖️ Decisiones",  en: "⚖️ Decisions",   h: "https://www.admira.live/decisiones" },
+      { t: "🚀 Misiones",    en: "🚀 Missions",    h: "https://www.admira.live/misiones" },
+      { t: "✅ Tareas",      en: "✅ Tasks",       h: "https://www.admira.live/tareas" }
     ]},
-    { t: "Flota ▾", items: [
-      { t: "🏆 Highscore",   h: "https://www.admira.live/highscore" },
-      { t: "🧩 Asignaciones", h: "https://www.admira.live/asignaciones/" },
-      { t: "💸 Consumo",     h: "https://www.admira.live/consumos" }
+    { t: "Flota ▾", en: "Fleet ▾", items: [
+      { t: "🏆 Highscore",   en: "🏆 Highscore",   h: "https://www.admira.live/highscore" },
+      { t: "🧩 Asignaciones", en: "🧩 Assignments", h: "https://www.admira.live/asignaciones/" },
+      { t: "💸 Consumo",     en: "💸 Usage",       h: "https://www.admira.live/consumos" }
     ]}
   ];
   // AVANZADO (Carlos, 18-09-2026): Control, Players y Diario son gestión/infra, no el
   // flujo de trabajo → se recogen tras el botón «Avanzado» para no saturar la barra.
   // Siguen a un clic desde cualquier página; sus páginas no se tocan.
   var ADV = [
-    { t: "🖥️ Control",  h: "https://www.admira.live/control/" },
-    { t: "📺 Players",  h: "https://www.admira.live/players/" },
-    { t: "📓 Diario",   h: "https://www.admira.live/diario.html" }
+    { t: "🖥️ Control",  en: "🖥️ Control", h: "https://www.admira.live/control/" },
+    { t: "📺 Players",  en: "📺 Players", h: "https://www.admira.live/players/" },
+    { t: "📓 Diario",   en: "📓 Journal", h: "https://www.admira.live/diario.html" }
   ];
 
   var css =
@@ -168,6 +186,7 @@
     var nav = document.createElement("nav");
     nav.id = "admira-nav";
     nav.setAttribute("aria-label", "Navegación AdmiraNeXT");
+    nav.setAttribute("data-en-aria-label", "AdmiraNeXT navigation");
     // Resalta el badge de la página actual (orientación) comparando el path.
     var here = location.pathname.replace(/index\.html$/, "").replace(/\/$/, "");
     // Se marca la SECCIÓN, no sólo la portada de la sección. Con la coincidencia
@@ -180,10 +199,11 @@
     }
     function linkHTML(i) {
       var cur = isHere(i.h);
-      return '<a href="' + i.h + '"' + (cur ? ' class="active" aria-current="page"' : "") + ">" + i.t + "</a>";
+      return '<a href="' + i.h + '"' + (cur ? ' class="active" aria-current="page"' : "") +
+        (i.en ? ' data-en="' + i.en + '"' : "") + ">" + i.t + "</a>";
     }
     // Menú horizontal de grupos; cada uno abre un desplegable vertical (#4494).
-    MENU.concat([{ t: "Avanzado ▾", items: ADV }]).forEach(function (group) {
+    MENU.concat([{ t: "Avanzado ▾", en: "Advanced ▾", items: ADV }]).forEach(function (group) {
       var wrap = document.createElement("div");
       wrap.className = "admira-adv";
       var on = group.items.some(function (i) { return isHere(i.h); });
@@ -193,6 +213,7 @@
       btn.setAttribute("aria-haspopup", "true");
       btn.setAttribute("aria-expanded", "false");
       btn.textContent = group.t;
+      if (group.en) btn.setAttribute("data-en", group.en);
       var menu = document.createElement("div");
       menu.className = "admira-adv-menu";
       menu.setAttribute("hidden", "");
@@ -218,7 +239,7 @@
     var burger = document.createElement("button");
     burger.id = "admira-burger";
     burger.type = "button";
-    burger.setAttribute("aria-label", "Abrir menú de navegación");
+    burger.setAttribute("aria-label", T("Abrir menú de navegación", "Open navigation menu"));
     burger.setAttribute("aria-expanded", "false");
     burger.setAttribute("aria-controls", "admira-nav");
     burger.innerHTML = "☰"; // ☰
@@ -227,7 +248,7 @@
       if (open) { nav.removeAttribute("hidden"); }
       else { nav.setAttribute("hidden", ""); }
       burger.setAttribute("aria-expanded", open ? "true" : "false");
-      burger.setAttribute("aria-label", open ? "Cerrar menú de navegación" : "Abrir menú de navegación");
+      burger.setAttribute("aria-label", open ? T("Cerrar menú de navegación", "Close navigation menu") : T("Abrir menú de navegación", "Open navigation menu"));
     };
     top.appendChild(burger);
 
@@ -240,7 +261,7 @@
       if (!narrow) {
         nav.removeAttribute("hidden");
         burger.setAttribute("aria-expanded", "false");
-        burger.setAttribute("aria-label", "Abrir menú de navegación");
+        burger.setAttribute("aria-label", T("Abrir menú de navegación", "Open navigation menu"));
       } else if (!nav.dataset.userToggled) {
         nav.setAttribute("hidden", "");
       }
@@ -264,6 +285,15 @@
     // maybeAddUsuarios inserte «Usuarios» delante de ellos → quedan a su derecha.
     buildToggles(top);
 
+    // Idioma activo: la barra recién montada se traduce ya (si el módulo aún no ha
+    // llegado, su onload traduce todo el documento) y sigue los cambios de /idioma.
+    var I = idioma();
+    if (I) I.translate(top);
+    window.addEventListener("admira:languagechange", function () {
+      burger.setAttribute("aria-label", burger.getAttribute("aria-expanded") === "true"
+        ? T("Cerrar menú de navegación", "Close navigation menu") : T("Abrir menú de navegación", "Open navigation menu"));
+    });
+
     // Enlace "Usuarios" SOLO para superusers (los que acceden a los equipos).
     // Se añade async tras consultar la lista del worker de whitelist.
     maybeAddUsuarios(top);
@@ -286,6 +316,7 @@
     b.type = "button";
     b.className = "pf-ico" + (on ? " on" : "");
     b.title = p.title;
+    if (p.en) b.setAttribute("data-en-title", p.en);
     b.innerHTML = '<svg viewBox="0 0 16 14">' + p.svg + "</svg>";
     b.onclick = function () {
       var off = document.body.classList.toggle(p.cls);
@@ -300,7 +331,7 @@
   //   · OPCIONES (.rail-left) + EXPERTO (abajo) → icono a la DERECHA.
   function buildToggles(top) {
     var left = makeToggle({ sel: ".rail-right", cls: "pf-right-off", ls: "pf_right",
-      title: "Avanzado · panel izquierdo",
+      title: "Avanzado · panel izquierdo", en: "Advanced · left panel",
       svg: '<rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="1.6" y="1.6" width="4.4" height="10.8" rx="1"/>' });
     if (left) {
       var lw = document.createElement("div");
@@ -312,9 +343,9 @@
     box.id = "pf-toggles";
     var any = false;
     [
-      { sel: ".rail-left", cls: "pf-left-off", ls: "pf_left", title: "Opciones · panel derecho",
+      { sel: ".rail-left", cls: "pf-left-off", ls: "pf_left", title: "Opciones · panel derecho", en: "Options · right panel",
         svg: '<rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="10" y="1.6" width="4.4" height="10.8" rx="1"/>' },
-      { sel: ".rail-bottom", cls: "pf-bottom-off", ls: "pf_bottom", title: "Menú avanzado y consola · abajo",
+      { sel: ".rail-bottom", cls: "pf-bottom-off", ls: "pf_bottom", title: "Menú avanzado y consola · abajo", en: "Advanced menu and console · bottom",
         svg: '<rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="1.6" y="8.4" width="12.8" height="4" rx="1"/>' }
     ].forEach(function (p) {
       var b = makeToggle(p);
@@ -341,6 +372,8 @@
         a.id = "admira-link-usuarios";
         a.href = "https://www.admira.live/usuarios.html";
         a.innerHTML = "👥 Usuarios";
+        a.setAttribute("data-en", "👥 Users");
+        if (idioma()) idioma().translate(a);
         // «Usuarios» va DENTRO del nav → se colapsa con los demás enlaces en móvil (☰).
         var nav = document.getElementById("admira-nav");
         if (nav) nav.appendChild(a);
@@ -357,23 +390,44 @@
     var nav = document.createElement("nav");
     nav.className = "cuadratura-hbar";
     nav.setAttribute("aria-label", "Menú avanzado");
+    nav.setAttribute("data-en-aria-label", "Advanced menu");
     nav.innerHTML = ADV.map(linkHTML).join("");
     rail.insertBefore(nav, rail.firstChild);
     if (rail.querySelector("input,textarea")) return;
     var form = document.createElement("form");
     form.className = "cuadratura-cli";
-    form.innerHTML = '<input type="text" aria-label="Línea de comandos de prueba" placeholder="prueba un comando (local)" autocomplete="off">' +
+    form.innerHTML = '<input type="text" aria-label="Línea de comandos de prueba" placeholder="prueba un comando (local) · /help" autocomplete="off"' +
+      ' data-en-aria-label="Test command line" data-en-placeholder="try a command (local) · /help">' +
       '<output aria-live="polite"></output>';
     form.addEventListener("submit", function (e) {
       e.preventDefault();
       var inp = form.querySelector("input");
       var out = form.querySelector("output");
-      var line = (inp.value || "").trim();
-      if (!line) return;
-      out.textContent = "local · " + line + " (no se ejecuta en la flota)";
+      out.textContent = consolaLocal(inp.value);
       inp.value = "";
     });
     rail.insertBefore(form, nav.nextSibling);
+    var I = idioma();
+    if (I) I.translate(rail);
+  }
+
+  // Consola local de la barra (páginas sin CLI propia). Entiende los comandos de
+  // interfaz —/help y /idioma— y no envía nada a la flota. /help lista TODOS los que
+  // entiende (lo vigila idioma-experto.test.mjs).
+  var CONSOLA_LOCAL = ["/help", "/ayuda", "/idioma", "/language"];
+  function consolaLocal(raw) {
+    var line = String(raw || "").trim();
+    if (!line) return "";
+    var I = idioma();
+    var res = I ? I.run(line) : null;
+    if (res) return res.message;
+    if (/^\/(idioma|language)(\s|$)/i.test(line)) return "El selector de idioma no ha cargado; recarga la página.";
+    if (/^\/(help|ayuda)$/i.test(line)) {
+      return T("Consola local · /help (/ayuda) esta ayuda · ", "Local console · /help (/ayuda) this help · ") +
+        (I ? I.helpLine(I.lang()) : "/idioma ESP | ENG — castellano o inglés, sin recargar la página") +
+        T(" (alias /language). La CLI completa está en la home (⌘).", " (alias /language). The full CLI lives on the home page (⌘).");
+    }
+    return T("local · " + line + " (no se ejecuta en la flota) · /help", "local · " + line + " (not run on the fleet) · /help");
   }
 
   if (document.body) mount();

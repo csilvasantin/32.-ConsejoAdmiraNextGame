@@ -10,5 +10,12 @@
     "Accesos integrados en Verbos",
     "Recuperado bloque Previos (Mac / conversación) a la derecha",
     "Tooltip de novedades en el sello"
+  ],
+  "v.06.10.2026.r12.00:15": [
+    "Popover de novedades del sello sin recorte",
+    "Tip visible al hover (sin opacity inline)",
+    "Menú Verbos+Accesos abajo bajo la mesa",
+    "Accesos integrados en Verbos",
+    "Bloque Previos (Mac / conversación) a la derecha"
   ]
 }

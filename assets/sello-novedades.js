@@ -1,7 +1,8 @@
 /* Sello de versión con popover SCUMM de novedades (Carlos 2026-10-05 23:56).
- * Fix r11 (2026-10-06): el tip se porta a document.body con position:fixed
- * anclado al seal (getBoundingClientRect), clamped al viewport, z-index alto —
- * así no lo recorta overflow del rail izquierdo. title nativo = fallback. */
+ * Fix r11 (2026-10-06): tip portal a body, position:fixed, clamp viewport, z alto
+ * (sin recorte del rail). title nativo = fallback.
+ * Fix r12 (2026-10-06): placeTip NO deja opacity/visibility inline — si no, .is-on
+ * no puede ganar y el popover queda invisible al hover. */
 (function () {
   if (window.__admiraSelloNovedades) return;
   window.__admiraSelloNovedades = true;
@@ -33,7 +34,7 @@
       'font-size:7px;line-height:1.55;color:#ffee88;pointer-events:none;',
       'opacity:0;visibility:hidden;transform:translateY(4px);',
       'transition:opacity .12s ease,transform .12s ease,visibility .12s}',
-      '#sello-novedades-tip.is-on{opacity:1;visibility:visible;transform:translateY(0);pointer-events:auto}',
+      '#sello-novedades-tip.is-on{opacity:1!important;visibility:visible!important;transform:translateY(0);pointer-events:auto}',
       '#sello-novedades-tip b{display:block;color:#daa520;margin-bottom:6px;letter-spacing:.5px}',
       '#sello-novedades-tip ul{margin:0;padding:0}',
       '#sello-novedades-tip li{margin:0 0 5px 0;padding:0 0 0 8px;list-style:none;position:relative;color:#e6c788}',
@@ -101,13 +102,16 @@
     var r = anchor.getBoundingClientRect();
     var vw = window.innerWidth || document.documentElement.clientWidth || 0;
     var vh = window.innerHeight || document.documentElement.clientHeight || 0;
-    // Measure after making it measurable but still hidden
+    // Measure with layout size, without leaving inline opacity/visibility that
+    // would beat .is-on (inline > class) and keep the tip forever invisible.
+    tip.classList.add('is-on');
     tip.style.visibility = 'hidden';
     tip.style.opacity = '0';
-    tip.classList.add('is-on'); // so layout has real size
     var tw = tip.offsetWidth || TIP_W;
     var th = tip.offsetHeight || 120;
     tip.classList.remove('is-on');
+    tip.style.visibility = '';
+    tip.style.opacity = '';
 
     var left = r.left;
     if (left + tw > vw - 8) left = Math.max(8, vw - tw - 8);
@@ -134,6 +138,9 @@
     if (!sealEl || !tipEl) return;
     clearTimeout(hideTimer);
     placeTip(sealEl, tipEl);
+    // Ensure no leftover inline hide attrs (belt + suspenders with placeTip clear)
+    tipEl.style.visibility = '';
+    tipEl.style.opacity = '';
     tipEl.classList.add('is-on');
     tipEl.setAttribute('aria-hidden', 'false');
   }

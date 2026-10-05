@@ -4,11 +4,12 @@ import fs from 'node:fs';
 
 const js = fs.readFileSync(new URL('./assets/sello-novedades.js', import.meta.url), 'utf8');
 
-test('novedades.json has r11 unclipped-popover note', () => {
+test('novedades.json has unclipped-popover note on latest sello', () => {
   const raw = JSON.parse(fs.readFileSync(new URL('./novedades.json', import.meta.url), 'utf8'));
-  const key = Object.keys(raw).find(k => k.includes('.r11.'));
-  assert.ok(key, 'need an r11 entry');
-  assert.ok(raw[key].some(l => /[Pp]opover|recorte|sin recorte/i.test(l)));
+  const keys = Object.keys(raw).filter(k => /^v\./.test(k)).sort();
+  const key = keys[keys.length - 1] || Object.keys(raw).find(k => /\.r1[12]\./.test(k));
+  assert.ok(key, 'need a recent sello entry');
+  assert.ok(raw[key].some(l => /[Pp]opover|recorte|sin recorte/i.test(l)), key);
 });
 
 test('deploy.sh embeds novedades into version.json', () => {
@@ -73,4 +74,14 @@ test('placeTip clamps within viewport (jsdom-free harness)', () => {
   assert.ok(pos.left + 300 <= 800 - 8 + 1, 'right clamp: ' + JSON.stringify(pos));
   assert.ok(pos.top >= 8, 'top clamp');
   assert.ok(pos.top + 140 <= 600 - 8 + 1, 'bottom clamp: ' + JSON.stringify(pos));
+  // Critical: must not leave inline opacity/visibility (would beat .is-on)
+  assert.equal(tip.style.opacity, '', 'placeTip clears inline opacity');
+  assert.equal(tip.style.visibility, '', 'placeTip clears inline visibility');
+});
+
+test('is-on CSS uses !important so class wins over leftover inline hide', () => {
+  assert.match(js, /#sello-novedades-tip\.is-on\{[^}]*opacity:1!important/);
+  assert.match(js, /visibility:visible!important/);
+  assert.match(js, /tipEl\.style\.opacity = ''/);
+  assert.match(js, /tipEl\.style\.visibility = ''/);
 });

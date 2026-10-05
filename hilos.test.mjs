@@ -70,6 +70,15 @@ test('streaming: se pinta en vivo, sin duplicar y sin innerHTML del modelo', () 
   assert.match(src, /if \(pintadoEnVivo\) \{ pintaParcial\(panelId, agent, reply\.content\); cierraParcial\(\); \}/);
 });
 
+
+test('al entrar en admira.live el historial local se limpia (cero residual)', () => {
+  const f = src.slice(src.indexOf('function cargaHilos'), src.indexOf('function cargaHilos') + 500);
+  assert.match(f, /localStorage\.removeItem\(HILOS_KEY\)/);
+  assert.match(f, /hilos = \{\}/);
+  assert.ok(!/JSON\.parse\(localStorage\.getItem\(HILOS_KEY\)/.test(f),
+    'cargaHilos ya no restaura el historial de visitas anteriores');
+});
+
 test('la sala privada usa GrokBot cuando la silla lo tiene (no gasta tokens)', () => {
   const f = src.slice(src.indexOf('async function sendPrivateMessage'), src.indexOf('async function sendPrivateMessage') + 1600);
   assert.match(f, /CouncilInterface\?\.has\(meetingAdvisor\.persona\)/);

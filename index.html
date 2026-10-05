@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.05.10.2026.r8.22:40" />
+<meta name="admiranext-version" content="AdmiraNeXT v.05.10.2026.r9.23:55" />
     <script src="/auth-gate.js?v=20261004-r15-sinfranja"></script>
     <script src="/admira-idioma.js"></script>
     <meta charset="UTF-8">
@@ -1204,13 +1204,12 @@
         /* SCUMM BAR */
         .scumm-bar {
             max-width: none; /* CLI a todo el ancho del contenedor (hace caja con el consejo) */
-            margin: 0 auto 0.5rem;
+            margin: 0.5rem auto 0;
             background: #0d0818;
             border: 2px solid #1a1a2e;
             border-top: 1px solid #2a1a3a;
-            border-radius: 0; /* arriba del todo (Carlos 2026-10-05) */
+            border-radius: 0 0 12px 12px; /* debajo de la mesa (Carlos 2026-10-05 23:52) */
             font-family: 'Press Start 2P', monospace;
-            order: -1; /* SCUMM arriba: una barra Verbos+iconos Accesos integrados */
         }
         .action-line {
             display: flex;
@@ -3682,152 +3681,6 @@ body.rail-open{overflow:hidden}
         (function(){try{var g=JSON.parse(localStorage.getItem('admira_gate')||'null');var e=g&&g.email?String(g.email).toLowerCase():'';if(!e)return;fetch('https://whitelist.admira.store/list',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){if(d&&(d.superusers||[]).indexOf(e)>=0){var u=document.getElementById('home-usuarios');if(u)u.style.display='';}}).catch(function(){});}catch(_){}})();
         </script>
 
-        <!-- SCUMM arriba (Carlos 2026-10-05): UNA barra — iconos Accesos dentro
-             del contenido de Verbos (continuum a la derecha). Sin módulo Accesos. -->
-        <div class="scumm-bar">
-            <div class="action-line">
-                <div class="sentence-line" id="sentence-line"></div>
-                <div class="mesa-img-preview" id="mesa-img-preview" hidden></div>
-                <input class="action-input" id="action-input" type="text" placeholder="escribe aquí · pega una imagen · /help" data-en-placeholder="type here · paste an image · /help" autocomplete="off" onkeydown="if(event.key==='Enter')sendMessage()">
-                <button class="action-send" onclick="sendMessage()" data-en="Send">Enviar</button>
-                <button class="scumm-fold" id="scumm-fold" onclick="toggleScumm()" title="Plegar / desplegar el menú (verbos)" aria-label="Plegar menú" data-en-title="Fold / unfold the menu (verbs)" data-en-aria-label="Fold menu">▾</button>
-            </div>
-            <div class="scumm-bottom">
-                <div class="verb-grid">
-                    <button class="verb-btn verb-primary" data-verb="preguntar" title="Pregunta a un consejero: pulsa Preguntar y haz clic en él" data-en-title="Ask a councillor: press Ask, then click on them" data-en="Ask" onclick="selectVerb(this)">Preguntar</button>
-                    <button class="verb-btn" data-verb="examinar" title="Examina a un consejero para conocer su perfil y su lore (sin gastar IA)" data-en-title="Examine a councillor to see their profile and lore (no AI spend)" data-en="Examine" onclick="selectVerb(this)">Examinar</button>
-                    <button class="verb-btn verb-primary" data-verb="debatir" title="El Consejo debate un tema entre todos sus miembros" data-en-title="The whole Council debates a topic" data-en="Debate" onclick="selectVerb(this)">Debatir</button>
-                    <button class="verb-btn verb-primary" data-verb="entrenar" title="Alimenta a un consejero con URLs y material de referencia" data-en-title="Feed a councillor URLs and reference material" data-en="Train" onclick="selectVerb(this)">Entrenar</button>
-                    <button class="verb-btn" data-verb="crear" title="Genera una imagen a partir de tu descripción" data-en-title="Generate an image from your description" data-en="Create" onclick="selectVerb(this)">Crear</button>
-                    <a class="verb-btn" href="/conversacion" title="Conversaciones del equipo: consejeros, deepagents y Carlos" data-en-title="Team conversations: councillors, deepagents and Carlos" data-en="Conversation">Conversación</a>
-                    <button class="verb-btn" data-verb="leer" title="El Consejo te cuenta el libro/resumen del día (audio)" data-en-title="The Council tells you the book/summary of the day (audio)" data-en="Think" onclick="selectVerb(this)">Pensar</button>
-                    <button class="verb-btn" data-verb="votar" title="Somete una propuesta a votación del Consejo" data-en-title="Put a proposal to the Council's vote" data-en="Vote" onclick="selectVerb(this)">Votar</button>
-                    <button class="verb-btn" data-verb="analizar" title="Analiza una URL, texto o archivo con el Consejo" data-en-title="Analyse a URL, text or file with the Council" data-en="Analyse" onclick="selectVerb(this)">Analizar</button>
-                    <button class="verb-btn" id="btn-mostrar" type="button" title="Macintosh 1984 sobre la mesa · mismo gesto que /mac" data-en-title="Macintosh 1984 on the table · same as /mac" onclick="event.stopPropagation(); window.MacHoy && window.MacHoy.toggle()">Mac 1984</button>
-                    <button class="verb-btn" data-verb="presentar" title="Genera una presentación a partir de un tema" data-en-title="Generate a presentation from a topic" data-en="Present" onclick="selectVerb(this)">Presentar</button>
-                    <button class="verb-btn verb-primary" data-verb="reunion" title="Reúnete a solas con un consejero (chat 1 a 1)" data-en-title="Meet a councillor one-to-one (1:1 chat)" data-en="Meeting" onclick="selectVerb(this)">Reunión</button>
-                    <!-- PREVIO ya no tiene caja propia (Carlos, 2026-09-20): el previo
-                         es el Mac 1984, que ahora está siempre a la vista en la barra.
-                         El verbo sigue existiendo —/previo y triggerPrevio()— y el
-                         código que lo encendía ya preguntaba si la caja estaba. -->
-                </div>
-                <div class="verb-pager" hidden>
-                    <button class="verb-arrow" id="verb-up" type="button" onclick="verbPage(-1)" title="Verbos anteriores" aria-label="Verbos anteriores" data-en-title="Previous verbs" data-en-aria-label="Previous verbs">▲</button>
-                    <button class="verb-arrow" id="verb-down" type="button" onclick="verbPage(1)" title="Más verbos" aria-label="Más verbos" data-en-title="More verbs" data-en-aria-label="More verbs">▼</button>
-                </div>
-                <div class="inventory">
-                    <!-- OBJETOS: siempre visibles, pase lo que pase con la página de
-                         verbos. Por eso el Mac vive aquí: se llega a él en cualquier
-                         momento, que es lo que pediste. -->
-                    <div class="inv-objetos" id="inv-objetos">
-                        <button class="obj" type="button" data-obj="next" data-url="https://www.admiranext.com" title="https://www.admiranext.com" aria-label="https://www.admiranext.com"><img src="assets/iconos/next.svg?v=20260919-b" alt="AdmiraNeXT"></button>
-                        <button class="obj" type="button" data-obj="tv" data-url="https://www.admira.tv" title="https://www.admira.tv" aria-label="https://www.admira.tv"><img src="assets/iconos/tv.svg?v=20260919-b" alt="Admira TV"></button>
-                        <button class="obj" type="button" data-obj="yokup" data-url="https://www.yokup.com" title="https://www.yokup.com" aria-label="https://www.yokup.com"><img src="assets/iconos/yokup.svg?v=20260919-b" alt="Yokup"></button>
-                        <button class="obj" type="button" data-obj="studio" data-url="https://www.admira.studio" title="https://www.admira.studio" aria-label="https://www.admira.studio"><img src="assets/iconos/studio.svg?v=20260919-b" alt="Admira Studio"></button>
-                        <button class="obj" type="button" data-obj="store" data-url="https://www.admira.store" title="https://www.admira.store" aria-label="https://www.admira.store"><img src="assets/iconos/store.svg?v=20260919-b" alt="Admira Store"></button>
-                        <button class="obj" type="button" data-obj="app" data-url="https://www.admira.app" title="https://www.admira.app" aria-label="https://www.admira.app"><img src="assets/iconos/app.svg?v=20260919-b" alt="Admira App"></button>
-                        <button class="obj" type="button" data-obj="pixeria" data-url="https://www.pixeria.com" title="https://www.pixeria.com" aria-label="https://www.pixeria.com"><img src="assets/iconos/pixeria.svg?v=20260919-b" alt="Pixeria"></button>
-                        <button class="obj" type="button" data-obj="xpace" data-url="https://www.xpaceos.com" title="https://www.xpaceos.com" aria-label="https://www.xpaceos.com"><img src="assets/iconos/xpace.svg?v=20260919-b" alt="XpaceOS"></button>
-                        <button class="obj" type="button" data-obj="clearchannel" data-url="https://www.clearchannel.tv" title="https://www.clearchannel.tv" aria-label="https://www.clearchannel.tv"><img src="assets/iconos/clearchannel.svg?v=20260919-b" alt="Clear Channel"></button>
-                    </div>
-                    <!-- Panel LLM: por defecto y para verbos que usan modelo (preguntar, debatir, hablar) -->
-                    <div class="inv-panel active" data-panel="llm">
-                        <div class="inventory-title">Motor LLM</div>
-                        <div class="inventory-list" id="llm-list">
-                            <div class="inv-item llm-option selected" data-llm="grok-4.6" onclick="selectLLM(this)">🚀 Grok 4.6 <span class="llm-nim">xAI</span></div>
-                            <div class="inv-item llm-option" data-llm="claude-sonnet" data-paid="true" onclick="selectLLM(this)">💎 Claude Sonnet 4 <span class="llm-paid">€</span></div>
-                            <div class="inv-item llm-option" data-llm="gemini-flash" data-paid="true" onclick="selectLLM(this)">✨ Gemini 2.5 Flash <span class="llm-paid">€ YT</span></div>
-                            <div class="inv-item llm-option" data-llm="nvidia-deepseek-v4-flash" onclick="selectLLM(this)">⚡ NVIDIA DeepSeek V4 Flash <span class="llm-nim">NIM</span></div>
-                            <div class="inv-item llm-option" data-llm="nvidia-glm47" onclick="selectLLM(this)">🧠 NVIDIA GLM 4.7 <span class="llm-nim">NIM</span></div>
-                            <div class="inv-item llm-option" data-llm="nvidia-minimax-m27" onclick="selectLLM(this)">🛠️ NVIDIA MiniMax M2.7 <span class="llm-nim">NIM</span></div>
-                            <div class="inv-item llm-option" data-llm="nvidia-gpt-oss-20b" onclick="selectLLM(this)">🧪 NVIDIA GPT OSS 20B <span class="llm-nim">NIM</span></div>
-                        </div>
-                    </div>
-                    <!-- Panel PENSAR: cómo nos cuenta el libro del día -->
-                    <div class="inv-panel" data-panel="leer">
-                        <div class="inventory-title">Modo de lectura</div>
-                        <div class="inventory-list">
-                            <div class="inv-item leer-option locked" data-leer="texto" title="Próximamente — por ahora usa Audio" onclick="selectSubOption('leer', this)">📄 Texto 🔒</div>
-                            <div class="inv-item leer-option selected" data-leer="audio" onclick="selectSubOption('leer', this)">🔊 Audio</div>
-                            <div class="inv-item leer-option locked" data-leer="video" title="Próximamente — por ahora usa Audio" onclick="selectSubOption('leer', this)">🎬 Vídeo 🔒</div>
-                            <div class="inv-item leer-option locked" data-leer="interactivo" title="Próximamente — por ahora usa Audio" onclick="selectSubOption('leer', this)">💭 Interactivo 🔒</div>
-                        </div>
-                    </div>
-                    <!-- Panel CREAR: opciones de generación de imagen -->
-                    <div class="inv-panel" data-panel="crear">
-                        <div class="inventory-title">Calidad / Tamaño</div>
-                        <div class="inventory-list">
-                            <div class="inv-item crear-option selected" data-crear="standard-square" onclick="selectSubOption('crear', this)">🎨 Estándar · Cuadrada</div>
-                            <div class="inv-item crear-option" data-crear="standard-wide" onclick="selectSubOption('crear', this)">🖼️ Estándar · Apaisada</div>
-                            <div class="inv-item crear-option" data-crear="hd-square" onclick="selectSubOption('crear', this)">💎 HD · Cuadrada</div>
-                            <div class="inv-item crear-option" data-crear="hd-wide" onclick="selectSubOption('crear', this)">💎 HD · Apaisada</div>
-                        </div>
-                    </div>
-                    <!-- Panel VOTAR: sentido del voto -->
-                    <div class="inv-panel" data-panel="votar">
-                        <div class="inventory-title">Sentido del voto</div>
-                        <div class="inventory-list">
-                            <div class="inv-item votar-option selected" data-votar="favor" onclick="selectSubOption('votar', this)">✅ A favor</div>
-                            <div class="inv-item votar-option" data-votar="contra" onclick="selectSubOption('votar', this)">❌ En contra</div>
-                            <div class="inv-item votar-option" data-votar="abstencion" onclick="selectSubOption('votar', this)">🤝 Abstención</div>
-                            <div class="inv-item votar-option" data-votar="posponer" onclick="selectSubOption('votar', this)">🔄 Posponer</div>
-                        </div>
-                    </div>
-                    <!-- Panel ANALIZAR: fuente del análisis -->
-                    <div class="inv-panel" data-panel="analizar">
-                        <div class="inventory-title">Fuente</div>
-                        <div class="inventory-list">
-                            <div class="inv-item analizar-option selected" data-analizar="url" onclick="selectSubOption('analizar', this)">🔗 URL</div>
-                            <div class="inv-item analizar-option" data-analizar="texto" onclick="selectSubOption('analizar', this)">📋 Texto</div>
-                            <div class="inv-item analizar-option" data-analizar="fichero" onclick="selectSubOption('analizar', this)">📄 Fichero</div>
-                        </div>
-                    </div>
-                    <!-- Panel ENTRENAR: corpus de URLs guardadas por consejero -->
-                    <div class="inv-panel" data-panel="entrenar">
-                        <div class="inventory-title">Corpus de entrenamiento</div>
-                        <div class="inventory-list" id="entrenar-list">
-                            <div class="inv-item" style="font-size:0.7rem;opacity:0.7">Pega una URL en la línea superior y pulsa Enviar</div>
-                        </div>
-                    </div>
-                    <!-- Panel PRESENTAR: formato de salida -->
-                    <div class="inv-panel" data-panel="presentar">
-                        <div class="inventory-title">Formato</div>
-                        <div class="inventory-list">
-                            <div class="inv-item presentar-option selected" data-presentar="audio" onclick="selectSubOption('presentar', this)">🎙️ Audio</div>
-                            <div class="inv-item presentar-option" data-presentar="pdf" onclick="selectSubOption('presentar', this)">📄 PDF</div>
-                            <div class="inv-item presentar-option" data-presentar="ambos" onclick="selectSubOption('presentar', this)">🎙️+📄 Ambos</div>
-                            <div class="inv-item presentar-option" data-presentar="slides" onclick="selectSubOption('presentar', this)">📊 Slides</div>
-                        </div>
-                    </div>
-                </div>
-                <!-- ZONA 3 · el Mac 1984, a la derecha de los objetos y de su mismo
-                     tamaño (Carlos, 2026-09-20). Es la MISMA vista frontal que abre
-                     el overlay: misma ilustración, misma homografía y el mismo texto
-                     en el tubo, sólo que medida más pequeña. Por eso lleva la clase
-                     .mac-hoy-front-stage y no una copia de sus reglas: el día que se
-                     retoque el encaje del tubo, se retoca en un sitio. -->
-                <div class="mac-scumm" id="mac-scumm">
-                    <div class="mac-hoy-front-stage mac-scumm-stage">
-                        <img src="assets/mac-1984-front.png?v=20260919-sinhalo" alt="Macintosh 1984">
-                        <pre class="mac-hoy-crt-front" id="mac-hoy-crt-bar">HOY</pre>
-                        <img class="mac-hoy-remote mac-hoy-remote-front" alt="" aria-hidden="true">
-                        <i class="mac-hoy-logo mac-hoy-logo-front" aria-hidden="true"></i>
-                        <div class="mac-hoy-front-shade" aria-hidden="true"></div>
-                        <canvas class="mac-hoy-pong mac-hoy-pong-front" width="512" height="342" aria-hidden="true"></canvas>
-                        <!-- Los mismos cuatro mandos que sobre la mesa. Llevan las
-                             clases de la vista frontal, que es de donde sale el
-                             dibujo, y por eso mac-hoy.js los engancha sin nombrarlos
-                             uno a uno. -->
-                        <button type="button" class="mac-scumm-glass" title="Pantalla · ábrelo en grande"></button>
-                        <button type="button" class="mac-hoy-front-floppy" title="Disquetera · mete y saca el disco del Pong"></button>
-                        <button type="button" class="mac-hoy-front-keys" title="Teclado · misión anterior — con el Pong puesto, sube la pala"></button>
-                        <button type="button" class="mac-hoy-front-mouse" title="Ratón · misión siguiente — con el Pong puesto, baja la pala"></button>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-
         <div class="status-grid" id="status-grid" style="display:none">
             <div class="side-panel racional collapsed" id="panel-racional">
                 <div class="side-title" onclick="togglePanel('panel-racional')">🧠 Racional <span class="collapse-arrow">▼</span> <span class="side-machines">🔴 Sillas rojas · <span id="count-racional">0/4</span></span></div>
@@ -4119,6 +3972,150 @@ body.rail-open{overflow:hidden}
         </div>
         </div>
 
+        <!-- SCUMM abajo (Carlos 2026-10-05 23:52): clásico — mesa/escena arriba,
+             Verbos+iconos Accesos (v7 integrado) debajo. Misma barra que el menú experto. -->
+        <div class="scumm-bar">
+            <div class="action-line">
+                <div class="sentence-line" id="sentence-line"></div>
+                <div class="mesa-img-preview" id="mesa-img-preview" hidden></div>
+                <input class="action-input" id="action-input" type="text" placeholder="escribe aquí · pega una imagen · /help" data-en-placeholder="type here · paste an image · /help" autocomplete="off" onkeydown="if(event.key==='Enter')sendMessage()">
+                <button class="action-send" onclick="sendMessage()" data-en="Send">Enviar</button>
+                <button class="scumm-fold" id="scumm-fold" onclick="toggleScumm()" title="Plegar / desplegar el menú (verbos)" aria-label="Plegar menú" data-en-title="Fold / unfold the menu (verbs)" data-en-aria-label="Fold menu">▾</button>
+            </div>
+            <div class="scumm-bottom">
+                <div class="verb-grid">
+                    <button class="verb-btn verb-primary" data-verb="preguntar" title="Pregunta a un consejero: pulsa Preguntar y haz clic en él" data-en-title="Ask a councillor: press Ask, then click on them" data-en="Ask" onclick="selectVerb(this)">Preguntar</button>
+                    <button class="verb-btn" data-verb="examinar" title="Examina a un consejero para conocer su perfil y su lore (sin gastar IA)" data-en-title="Examine a councillor to see their profile and lore (no AI spend)" data-en="Examine" onclick="selectVerb(this)">Examinar</button>
+                    <button class="verb-btn verb-primary" data-verb="debatir" title="El Consejo debate un tema entre todos sus miembros" data-en-title="The whole Council debates a topic" data-en="Debate" onclick="selectVerb(this)">Debatir</button>
+                    <button class="verb-btn verb-primary" data-verb="entrenar" title="Alimenta a un consejero con URLs y material de referencia" data-en-title="Feed a councillor URLs and reference material" data-en="Train" onclick="selectVerb(this)">Entrenar</button>
+                    <button class="verb-btn" data-verb="crear" title="Genera una imagen a partir de tu descripción" data-en-title="Generate an image from your description" data-en="Create" onclick="selectVerb(this)">Crear</button>
+                    <a class="verb-btn" href="/conversacion" title="Conversaciones del equipo: consejeros, deepagents y Carlos" data-en-title="Team conversations: councillors, deepagents and Carlos" data-en="Conversation">Conversación</a>
+                    <button class="verb-btn" data-verb="leer" title="El Consejo te cuenta el libro/resumen del día (audio)" data-en-title="The Council tells you the book/summary of the day (audio)" data-en="Think" onclick="selectVerb(this)">Pensar</button>
+                    <button class="verb-btn" data-verb="votar" title="Somete una propuesta a votación del Consejo" data-en-title="Put a proposal to the Council's vote" data-en="Vote" onclick="selectVerb(this)">Votar</button>
+                    <button class="verb-btn" data-verb="analizar" title="Analiza una URL, texto o archivo con el Consejo" data-en-title="Analyse a URL, text or file with the Council" data-en="Analyse" onclick="selectVerb(this)">Analizar</button>
+                    <button class="verb-btn" id="btn-mostrar" type="button" title="Macintosh 1984 sobre la mesa · mismo gesto que /mac" data-en-title="Macintosh 1984 on the table · same as /mac" onclick="event.stopPropagation(); window.MacHoy && window.MacHoy.toggle()">Mac 1984</button>
+                    <button class="verb-btn" data-verb="presentar" title="Genera una presentación a partir de un tema" data-en-title="Generate a presentation from a topic" data-en="Present" onclick="selectVerb(this)">Presentar</button>
+                    <button class="verb-btn verb-primary" data-verb="reunion" title="Reúnete a solas con un consejero (chat 1 a 1)" data-en-title="Meet a councillor one-to-one (1:1 chat)" data-en="Meeting" onclick="selectVerb(this)">Reunión</button>
+                    <!-- PREVIO ya no tiene caja propia (Carlos, 2026-09-20): el previo
+                         es el Mac 1984, que ahora está siempre a la vista en la barra.
+                         El verbo sigue existiendo —/previo y triggerPrevio()— y el
+                         código que lo encendía ya preguntaba si la caja estaba. -->
+                </div>
+                <div class="verb-pager" hidden>
+                    <button class="verb-arrow" id="verb-up" type="button" onclick="verbPage(-1)" title="Verbos anteriores" aria-label="Verbos anteriores" data-en-title="Previous verbs" data-en-aria-label="Previous verbs">▲</button>
+                    <button class="verb-arrow" id="verb-down" type="button" onclick="verbPage(1)" title="Más verbos" aria-label="Más verbos" data-en-title="More verbs" data-en-aria-label="More verbs">▼</button>
+                </div>
+                <div class="inventory">
+                    <!-- OBJETOS: siempre visibles, pase lo que pase con la página de
+                         verbos. Por eso el Mac vive aquí: se llega a él en cualquier
+                         momento, que es lo que pediste. -->
+                    <div class="inv-objetos" id="inv-objetos">
+                        <button class="obj" type="button" data-obj="next" data-url="https://www.admiranext.com" title="https://www.admiranext.com" aria-label="https://www.admiranext.com"><img src="assets/iconos/next.svg?v=20260919-b" alt="AdmiraNeXT"></button>
+                        <button class="obj" type="button" data-obj="tv" data-url="https://www.admira.tv" title="https://www.admira.tv" aria-label="https://www.admira.tv"><img src="assets/iconos/tv.svg?v=20260919-b" alt="Admira TV"></button>
+                        <button class="obj" type="button" data-obj="yokup" data-url="https://www.yokup.com" title="https://www.yokup.com" aria-label="https://www.yokup.com"><img src="assets/iconos/yokup.svg?v=20260919-b" alt="Yokup"></button>
+                        <button class="obj" type="button" data-obj="studio" data-url="https://www.admira.studio" title="https://www.admira.studio" aria-label="https://www.admira.studio"><img src="assets/iconos/studio.svg?v=20260919-b" alt="Admira Studio"></button>
+                        <button class="obj" type="button" data-obj="store" data-url="https://www.admira.store" title="https://www.admira.store" aria-label="https://www.admira.store"><img src="assets/iconos/store.svg?v=20260919-b" alt="Admira Store"></button>
+                        <button class="obj" type="button" data-obj="app" data-url="https://www.admira.app" title="https://www.admira.app" aria-label="https://www.admira.app"><img src="assets/iconos/app.svg?v=20260919-b" alt="Admira App"></button>
+                        <button class="obj" type="button" data-obj="pixeria" data-url="https://www.pixeria.com" title="https://www.pixeria.com" aria-label="https://www.pixeria.com"><img src="assets/iconos/pixeria.svg?v=20260919-b" alt="Pixeria"></button>
+                        <button class="obj" type="button" data-obj="xpace" data-url="https://www.xpaceos.com" title="https://www.xpaceos.com" aria-label="https://www.xpaceos.com"><img src="assets/iconos/xpace.svg?v=20260919-b" alt="XpaceOS"></button>
+                        <button class="obj" type="button" data-obj="clearchannel" data-url="https://www.clearchannel.tv" title="https://www.clearchannel.tv" aria-label="https://www.clearchannel.tv"><img src="assets/iconos/clearchannel.svg?v=20260919-b" alt="Clear Channel"></button>
+                    </div>
+                    <!-- Panel LLM: por defecto y para verbos que usan modelo (preguntar, debatir, hablar) -->
+                    <div class="inv-panel active" data-panel="llm">
+                        <div class="inventory-title">Motor LLM</div>
+                        <div class="inventory-list" id="llm-list">
+                            <div class="inv-item llm-option selected" data-llm="grok-4.6" onclick="selectLLM(this)">🚀 Grok 4.6 <span class="llm-nim">xAI</span></div>
+                            <div class="inv-item llm-option" data-llm="claude-sonnet" data-paid="true" onclick="selectLLM(this)">💎 Claude Sonnet 4 <span class="llm-paid">€</span></div>
+                            <div class="inv-item llm-option" data-llm="gemini-flash" data-paid="true" onclick="selectLLM(this)">✨ Gemini 2.5 Flash <span class="llm-paid">€ YT</span></div>
+                            <div class="inv-item llm-option" data-llm="nvidia-deepseek-v4-flash" onclick="selectLLM(this)">⚡ NVIDIA DeepSeek V4 Flash <span class="llm-nim">NIM</span></div>
+                            <div class="inv-item llm-option" data-llm="nvidia-glm47" onclick="selectLLM(this)">🧠 NVIDIA GLM 4.7 <span class="llm-nim">NIM</span></div>
+                            <div class="inv-item llm-option" data-llm="nvidia-minimax-m27" onclick="selectLLM(this)">🛠️ NVIDIA MiniMax M2.7 <span class="llm-nim">NIM</span></div>
+                            <div class="inv-item llm-option" data-llm="nvidia-gpt-oss-20b" onclick="selectLLM(this)">🧪 NVIDIA GPT OSS 20B <span class="llm-nim">NIM</span></div>
+                        </div>
+                    </div>
+                    <!-- Panel PENSAR: cómo nos cuenta el libro del día -->
+                    <div class="inv-panel" data-panel="leer">
+                        <div class="inventory-title">Modo de lectura</div>
+                        <div class="inventory-list">
+                            <div class="inv-item leer-option locked" data-leer="texto" title="Próximamente — por ahora usa Audio" onclick="selectSubOption('leer', this)">📄 Texto 🔒</div>
+                            <div class="inv-item leer-option selected" data-leer="audio" onclick="selectSubOption('leer', this)">🔊 Audio</div>
+                            <div class="inv-item leer-option locked" data-leer="video" title="Próximamente — por ahora usa Audio" onclick="selectSubOption('leer', this)">🎬 Vídeo 🔒</div>
+                            <div class="inv-item leer-option locked" data-leer="interactivo" title="Próximamente — por ahora usa Audio" onclick="selectSubOption('leer', this)">💭 Interactivo 🔒</div>
+                        </div>
+                    </div>
+                    <!-- Panel CREAR: opciones de generación de imagen -->
+                    <div class="inv-panel" data-panel="crear">
+                        <div class="inventory-title">Calidad / Tamaño</div>
+                        <div class="inventory-list">
+                            <div class="inv-item crear-option selected" data-crear="standard-square" onclick="selectSubOption('crear', this)">🎨 Estándar · Cuadrada</div>
+                            <div class="inv-item crear-option" data-crear="standard-wide" onclick="selectSubOption('crear', this)">🖼️ Estándar · Apaisada</div>
+                            <div class="inv-item crear-option" data-crear="hd-square" onclick="selectSubOption('crear', this)">💎 HD · Cuadrada</div>
+                            <div class="inv-item crear-option" data-crear="hd-wide" onclick="selectSubOption('crear', this)">💎 HD · Apaisada</div>
+                        </div>
+                    </div>
+                    <!-- Panel VOTAR: sentido del voto -->
+                    <div class="inv-panel" data-panel="votar">
+                        <div class="inventory-title">Sentido del voto</div>
+                        <div class="inventory-list">
+                            <div class="inv-item votar-option selected" data-votar="favor" onclick="selectSubOption('votar', this)">✅ A favor</div>
+                            <div class="inv-item votar-option" data-votar="contra" onclick="selectSubOption('votar', this)">❌ En contra</div>
+                            <div class="inv-item votar-option" data-votar="abstencion" onclick="selectSubOption('votar', this)">🤝 Abstención</div>
+                            <div class="inv-item votar-option" data-votar="posponer" onclick="selectSubOption('votar', this)">🔄 Posponer</div>
+                        </div>
+                    </div>
+                    <!-- Panel ANALIZAR: fuente del análisis -->
+                    <div class="inv-panel" data-panel="analizar">
+                        <div class="inventory-title">Fuente</div>
+                        <div class="inventory-list">
+                            <div class="inv-item analizar-option selected" data-analizar="url" onclick="selectSubOption('analizar', this)">🔗 URL</div>
+                            <div class="inv-item analizar-option" data-analizar="texto" onclick="selectSubOption('analizar', this)">📋 Texto</div>
+                            <div class="inv-item analizar-option" data-analizar="fichero" onclick="selectSubOption('analizar', this)">📄 Fichero</div>
+                        </div>
+                    </div>
+                    <!-- Panel ENTRENAR: corpus de URLs guardadas por consejero -->
+                    <div class="inv-panel" data-panel="entrenar">
+                        <div class="inventory-title">Corpus de entrenamiento</div>
+                        <div class="inventory-list" id="entrenar-list">
+                            <div class="inv-item" style="font-size:0.7rem;opacity:0.7">Pega una URL en la línea superior y pulsa Enviar</div>
+                        </div>
+                    </div>
+                    <!-- Panel PRESENTAR: formato de salida -->
+                    <div class="inv-panel" data-panel="presentar">
+                        <div class="inventory-title">Formato</div>
+                        <div class="inventory-list">
+                            <div class="inv-item presentar-option selected" data-presentar="audio" onclick="selectSubOption('presentar', this)">🎙️ Audio</div>
+                            <div class="inv-item presentar-option" data-presentar="pdf" onclick="selectSubOption('presentar', this)">📄 PDF</div>
+                            <div class="inv-item presentar-option" data-presentar="ambos" onclick="selectSubOption('presentar', this)">🎙️+📄 Ambos</div>
+                            <div class="inv-item presentar-option" data-presentar="slides" onclick="selectSubOption('presentar', this)">📊 Slides</div>
+                        </div>
+                    </div>
+                </div>
+                <!-- ZONA 3 · el Mac 1984, a la derecha de los objetos y de su mismo
+                     tamaño (Carlos, 2026-09-20). Es la MISMA vista frontal que abre
+                     el overlay: misma ilustración, misma homografía y el mismo texto
+                     en el tubo, sólo que medida más pequeña. Por eso lleva la clase
+                     .mac-hoy-front-stage y no una copia de sus reglas: el día que se
+                     retoque el encaje del tubo, se retoca en un sitio. -->
+                <div class="mac-scumm" id="mac-scumm">
+                    <div class="mac-hoy-front-stage mac-scumm-stage">
+                        <img src="assets/mac-1984-front.png?v=20260919-sinhalo" alt="Macintosh 1984">
+                        <pre class="mac-hoy-crt-front" id="mac-hoy-crt-bar">HOY</pre>
+                        <img class="mac-hoy-remote mac-hoy-remote-front" alt="" aria-hidden="true">
+                        <i class="mac-hoy-logo mac-hoy-logo-front" aria-hidden="true"></i>
+                        <div class="mac-hoy-front-shade" aria-hidden="true"></div>
+                        <canvas class="mac-hoy-pong mac-hoy-pong-front" width="512" height="342" aria-hidden="true"></canvas>
+                        <!-- Los mismos cuatro mandos que sobre la mesa. Llevan las
+                             clases de la vista frontal, que es de donde sale el
+                             dibujo, y por eso mac-hoy.js los engancha sin nombrarlos
+                             uno a uno. -->
+                        <button type="button" class="mac-scumm-glass" title="Pantalla · ábrelo en grande"></button>
+                        <button type="button" class="mac-hoy-front-floppy" title="Disquetera · mete y saca el disco del Pong"></button>
+                        <button type="button" class="mac-hoy-front-keys" title="Teclado · misión anterior — con el Pong puesto, sube la pala"></button>
+                        <button type="button" class="mac-hoy-front-mouse" title="Ratón · misión siguiente — con el Pong puesto, baja la pala"></button>
+                    </div>
+                </div>
+            </div>
+        </div>
 
         <!-- ── MAPA DEL TESORO ──────────────────────────────────────────────
              Lo abre el verbo CREAR. El pergamino es un SVG dibujado a mano en
@@ -4239,7 +4236,7 @@ body.rail-open{overflow:hidden}
             </div>
         </div>
 
-        <!-- Conversation area below SCUMM bar -->
+        <!-- Conversation area below SCUMM bar (barra ya va bajo la mesa) -->
         <div class="conv-area" id="conv-area">
             <div class="conv-grid">
                 <div class="conv-panel racional">
@@ -4553,8 +4550,8 @@ body.rail-open{overflow:hidden}
 <script type="module" src="assets/mapa-ideas.js?v=20260920-mapa1"></script>
 <script type="module" src="assets/mesa-paste.js?v=20260920-paste"></script>
 <script src="/consejeros-desk.js?v=20260921-r7-proxy"></script>
-<link rel="stylesheet" href="assets/scumm-layout.css?v=20261005-accesos-en-verbos">
-<script type="module" src="assets/scumm-layout.js?v=20261005-accesos-en-verbos"></script>
+<link rel="stylesheet" href="assets/scumm-layout.css?v=20261005-menu-abajo">
+<script type="module" src="assets/scumm-layout.js?v=20261005-menu-abajo"></script>
 </body>
 </html>
 

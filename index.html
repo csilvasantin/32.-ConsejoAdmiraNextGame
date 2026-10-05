@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.05.10.2026.r3.19:40" />
+<meta name="admiranext-version" content="AdmiraNeXT v.05.10.2026.r8.22:40" />
     <script src="/auth-gate.js?v=20261004-r15-sinfranja"></script>
     <script src="/admira-idioma.js"></script>
     <meta charset="UTF-8">
@@ -486,21 +486,21 @@
             font-size: 0.8rem;
             margin-bottom: 3px;
         }
-        /* Conversación debajo del SCUMM (Carlos 2026-10-05, encargo #5223):
-           Verbos arriba y Accesos debajo dejan este hueco mucho más alto. */
+        /* Conversación debajo del SCUMM (Carlos 2026-10-05): barra única compacta
+           (Verbos + iconos Accesos integrados) libera alto para el chat. */
         .conv-area {
             display: none;
             max-width: 1000px;
             margin: 0.8rem auto 0;
             flex: 1 1 auto;
-            min-height: 62vh;
+            min-height: 48vh;
         }
         .conv-area.active { display: block; }
         .conv-grid {
             display: grid;
             grid-template-columns: 1fr 1fr;
             gap: 0.8rem;
-            min-height: 62vh;
+            min-height: 48vh;
         }
         .conv-panel {
             background: #1a1a2e;
@@ -1210,7 +1210,7 @@
             border-top: 1px solid #2a1a3a;
             border-radius: 0; /* arriba del todo (Carlos 2026-10-05) */
             font-family: 'Press Start 2P', monospace;
-            order: -1; /* SCUMM arriba del todo: Verbos y, debajo, Accesos */
+            order: -1; /* SCUMM arriba: una barra Verbos+iconos Accesos integrados */
         }
         .action-line {
             display: flex;
@@ -3682,8 +3682,8 @@ body.rail-open{overflow:hidden}
         (function(){try{var g=JSON.parse(localStorage.getItem('admira_gate')||'null');var e=g&&g.email?String(g.email).toLowerCase():'';if(!e)return;fetch('https://whitelist.admira.store/list',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){if(d&&(d.superusers||[]).indexOf(e)>=0){var u=document.getElementById('home-usuarios');if(u)u.style.display='';}}).catch(function(){});}catch(_){}})();
         </script>
 
-        <!-- SCUMM arriba del todo (Carlos 2026-10-05, encargo #5223):
-             Verbos en la franja de arriba, Accesos debajo, nunca en paralelo. -->
+        <!-- SCUMM arriba (Carlos 2026-10-05): UNA barra — iconos Accesos dentro
+             del contenido de Verbos (continuum a la derecha). Sin módulo Accesos. -->
         <div class="scumm-bar">
             <div class="action-line">
                 <div class="sentence-line" id="sentence-line"></div>
@@ -4553,8 +4553,8 @@ body.rail-open{overflow:hidden}
 <script type="module" src="assets/mapa-ideas.js?v=20260920-mapa1"></script>
 <script type="module" src="assets/mesa-paste.js?v=20260920-paste"></script>
 <script src="/consejeros-desk.js?v=20260921-r7-proxy"></script>
-<link rel="stylesheet" href="assets/scumm-layout.css?v=20261005-verbos-sobre-accesos">
-<script type="module" src="assets/scumm-layout.js?v=20261005-verbos-sobre-accesos"></script>
+<link rel="stylesheet" href="assets/scumm-layout.css?v=20261005-accesos-en-verbos">
+<script type="module" src="assets/scumm-layout.js?v=20261005-accesos-en-verbos"></script>
 </body>
 </html>
 

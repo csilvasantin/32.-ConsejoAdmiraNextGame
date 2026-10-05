@@ -91,9 +91,9 @@
                 var body=r.querySelector('.rail-body');
                 if(body && !r.querySelector('.rail-close')){
                     var head=document.createElement('div'); head.className='rail-close';
-                    head.innerHTML='<span>'+(id==='rail-opcion'?'OPCIÓN':'AVANZADO')+'</span>';
+                    head.innerHTML=id==='rail-opcion'?'<span data-en="OPTION">OPCIÓN</span>':'<span data-en="ADVANCED">AVANZADO</span>';
                     var btn=document.createElement('button'); btn.type='button';
-                    btn.setAttribute('aria-label','Cerrar'); btn.textContent='✕';
+                    btn.setAttribute('aria-label','Cerrar'); btn.setAttribute('data-en-aria-label','Close'); btn.textContent='✕';
                     btn.addEventListener('click', function(){ window.closeRails(); });
                     head.appendChild(btn); r.insertBefore(head, body);
                 }
@@ -1463,7 +1463,7 @@
         document.getElementById("nameplates").classList.add("preguntar-active");
         document.getElementById("body-hotspots").classList.add("preguntar-active");
         _applyPreguntarStyles();
-        setActionLine("Preguntar · haz clic en un consejero de la mesa");
+        setActionLine(cliT('Preguntar · haz clic en un consejero de la mesa', 'Ask · click a councillor at the table'));
     }
 
     function exitPreguntarMode() {
@@ -1612,7 +1612,7 @@
         try { if (localStorage.getItem("council_onboarded")) return; } catch (e) {}
         const ceo = COUNCIL.find(m => m.gen === currentGen && m.name === "CEO") || COUNCIL[0];
         if (ceo && typeof showSpeechBubble === "function") showSpeechBubble(ceo.persona, ceo.name, "Bienvenido al Consejo. Pulsa un VERBO abajo y luego haz clic en un consejero para actuar. Empieza por PREGUNTAR.");
-        setSentenceHtml('<span class="sl-verb">Bienvenido</span> — pulsa un verbo y luego un consejero');
+        setSentenceHtml(cliT('<span class="sl-verb">Bienvenido</span> — pulsa un verbo y luego un consejero', '<span class="sl-verb">Welcome</span> — press a verb, then a councillor'));
         try { localStorage.setItem("council_onboarded", "1"); } catch (e) {}
     }
     // /sendto <equipo> <mensaje> — entrega el mensaje al Claude Code (Terminal) de
@@ -1807,85 +1807,102 @@
         restoreOverlayOriginals();
     }
 
+    // Textos del intérprete en el idioma activo (admira-idioma.js · /idioma ESP | ENG).
+    // Sin el módulo, castellano: la CLI nunca se queda muda por un fallo de carga.
+    function cliT(es, en) { return window.AdmiraIdioma ? window.AdmiraIdioma.t(es, en) : es; }
+
+    // /help: cada comando de CLI_COMMANDS tiene que salir aquí (lo vigila idioma-experto.test.mjs).
     function showCliHelp() {
         cliHelpVisible = true;
         captureOverlayOriginals();
+        const T = cliT;
+        const li = (cmd, es, en) => '<li>' + cmd + ' — ' + T(es, en) + '</li>';
         document.getElementById('win-racional').innerHTML =
-            '<div class="window-overlay-title">CLI · GENERAL</div>' +
+            '<div class="window-overlay-title">' + T('CLI · GENERAL', 'CLI · GENERAL') + '</div>' +
             '<ol class="analizar-list">' +
-            '<li><strong>/help</strong> — muestra u oculta esta ayuda</li>' +
-            '<li><strong>/comandos</strong> — abre la p\u00e1gina con todos los comandos</li>' +
-            '<li><strong>/leyendas</strong> · <strong>/coetaneos</strong> — cambia la generación del Consejo</li>' +
-            '<li><strong>/agentes</strong> — muestra u oculta el panel de Agentes (AgoraMatrix)</li>' +
-            '<li><strong>/importar &lt;url&gt;</strong> — descarga vídeo y lo sube a Drive</li>' +
-            '<li><strong>/nombres on|off|toggle</strong> — enseña u oculta los consejeros</li>' +
-            '<li><strong>/google</strong> — abre la hoja Drive de enlaces Entrenar</li>' +
-            '<li><strong>/diario</strong> — muestra el diario operativo del Consejo</li>' +
-            '<li><strong>/diario &lt;texto&gt;</strong> — registra una decisión en el diario</li>' +
-            '<li><strong>/agora</strong> o <strong>/codex</strong> — muestra mi estado Codex/Oráculo en AgoraMatrix</li>' +
-            '<li><strong>/agoramatrix on|off|toggle</strong> — muestra/oculta el panel AgoraMatrix (movible · redimensionable)</li>' +
-            '<li><strong>/tareas on|off|toggle</strong> — panel de Tareas del Consejo: reparto + seguimiento (crear, asignar, entregar, estado)</li>' +
-            '<li><strong>/menu on|off|toggle</strong> — oculta/enseña los menús de arriba (más espacio)</li>' +
-            '<li><strong>/scumm on|off|toggle</strong> — pliega/despliega el menú intermedio (verbos) — o el botón ▾</li>' +
-            '<li><strong>/top on|off|toggle</strong> — pliega/despliega el menú superior (botón ▾)</li>' +
-            '<li><strong>/bocas on|off|toggle</strong> — los consejeros vivos mueven la boca (hablan)</li>' +
-            '<li><strong>/mac on|off|toggle</strong> — muestra u oculta el Macintosh 1984 (HOY + 3 FLT hechas)</li>' +
-            '<li><strong>/motor on|off|toggle</strong> — abre la lista de modelos (Grok, Claude, Gemini…)</li>' +
-            '<li><strong>/olvidar [todo]</strong> — borra el hilo con el consejero actual (o el de toda la mesa)</li>' +
-            '<li><strong>/yarig on|off|toggle</strong> — fija u oculta Yarig en la mesa</li>' +
-            '<li><strong>/yarig login</strong> — abre la sesión persistente de Yarig</li>' +
-            '<li><strong>/yarig estado</strong> — comprueba watcher y frescura del sync</li>' +
+            li('<strong>/help</strong>', 'muestra u oculta esta ayuda', 'shows or hides this help') +
+            li('<strong>/idioma ESP | ENG</strong>', 'castellano o inglés, sin recargar la página (también /language)', 'Spanish or English without reloading the page (also /language)') +
+            li('<strong>/comandos</strong>', 'abre la página con todos los comandos', 'opens the page with every command') +
+            li('<strong>/leyendas · /coetaneos</strong>', 'cambia la generación del Consejo', 'switches the Council generation') +
+            li('<strong>/agentes</strong>', 'muestra u oculta el panel de Agentes (AgoraMatrix)', 'shows or hides the Agents panel (AgoraMatrix)') +
+            li('<strong>/importar &lt;url&gt;</strong>', 'descarga vídeo y lo sube a Drive', 'downloads a video and uploads it to Drive') +
+            li('<strong>/nombres on|off|toggle</strong>', 'enseña u oculta los consejeros', 'shows or hides the councillors') +
+            li('<strong>/google</strong>', 'abre la hoja Drive de enlaces Entrenar', 'opens the Train links Drive sheet') +
+            li('<strong>/diario</strong>', 'muestra el diario operativo del Consejo', 'shows the Council operations journal') +
+            li('<strong>/diario &lt;texto&gt;</strong>', 'registra una decisión en el diario', 'records a decision in the journal') +
+            li('<strong>/agora · /codex</strong>', 'muestra mi estado Codex/Oráculo en AgoraMatrix', 'shows my Codex/Oracle status in AgoraMatrix') +
+            li('<strong>/agoramatrix on|off|toggle</strong>', 'muestra/oculta el panel AgoraMatrix (movible · redimensionable)', 'shows/hides the AgoraMatrix panel (movable · resizable)') +
+            li('<strong>/tareas on|off|toggle</strong>', 'panel de Tareas del Consejo: reparto + seguimiento (crear, asignar, entregar, estado)', 'Council Tasks panel: split + tracking (create, assign, deliver, status)') +
+            li('<strong>/menu on|off|toggle</strong>', 'oculta/enseña los menús de arriba (más espacio)', 'hides/shows the top menus (more room)') +
+            li('<strong>/scumm on|off|toggle</strong>', 'pliega/despliega el menú intermedio (verbos) — o el botón ▾', 'folds/unfolds the middle menu (verbs) — or the ▾ button') +
+            li('<strong>/top on|off|toggle</strong>', 'pliega/despliega el menú superior (botón ▾)', 'folds/unfolds the top menu (▾ button)') +
+            li('<strong>/bocas on|off|toggle</strong>', 'los consejeros vivos mueven la boca (hablan)', 'live councillors move their mouths (talk)') +
+            li('<strong>/mac on|off|toggle</strong>', 'muestra u oculta el Macintosh 1984 (HOY + 3 FLT hechas)', 'shows or hides the Macintosh 1984 (TODAY + 3 FLT done)') +
+            li('<strong>/motor on|off|toggle</strong>', 'abre la lista de modelos (Grok, Claude, Gemini…)', 'opens the model list (Grok, Claude, Gemini…)') +
+            li('<strong>/olvidar [todo]</strong>', 'borra el hilo con el consejero actual (o el de toda la mesa)', 'clears the thread with the current councillor (or the whole table)') +
+            li('<strong>/yarig on|off|toggle</strong>', 'fija u oculta Yarig en la mesa', 'pins or hides Yarig at the table') +
+            li('<strong>/yarig login</strong>', 'abre la sesión persistente de Yarig', 'opens the persistent Yarig session') +
+            li('<strong>/yarig estado</strong>', 'comprueba watcher y frescura del sync', 'checks the watcher and sync freshness') +
             '</ol>';
         document.getElementById('win-proceso').innerHTML =
-            '<div class="window-overlay-title">CLI · YARIG</div>' +
+            '<div class="window-overlay-title">' + T('CLI · FLOTA Y SITES', 'CLI · FLEET AND SITES') + '</div>' +
             '<ol class="analizar-list">' +
-            '<li><strong>/yarig logout</strong> — cierra la sesión persistente de Yarig</li>' +
-            '<li><strong>/yarig sincro</strong> — importa tareas desde Yarig.ai</li>' +
-            '<li><strong>Finalizar / Pausar / Cancelar</strong> — actúan sobre la tarea en curso</li>' +
-            '<li><strong>sync automático</strong> — refresco cada 60 segundos</li>' +
+            li('<strong>/marcador · /flota</strong>', 'abre el marcador de la flota', 'opens the fleet scoreboard') +
+            li('<strong>/highscore</strong>', 'abre el Highscore de la flota', 'opens the fleet Highscore') +
+            li('<strong>/sendto &lt;equipo&gt; &lt;mensaje&gt;</strong>', 'entrega el mensaje al Claude Code de ese equipo', 'delivers the message to that machine\'s Claude Code') +
+            li('<strong>/sites</strong>', 'lista los sites de Admira', 'lists the Admira sites') +
+            li('<strong>/admira.live · /admira.studio · /admiranext.com · /admira.app · /clearchannel.tv · /pixeria.com</strong>', 'abre ese site (/admira.live recarga)', 'opens that site (/admira.live reloads)') +
+            li('<strong>/equipos · /control</strong>', 'asignación de equipos · FleetControl', 'team assignment · FleetControl') +
+            li('<strong>/yarig logout</strong>', 'cierra la sesión persistente de Yarig', 'closes the persistent Yarig session') +
+            li('<strong>/yarig sincro</strong>', 'importa tareas desde Yarig.ai', 'imports tasks from Yarig.ai') +
+            li('<strong>' + T('Finalizar / Pausar / Cancelar', 'Finish / Pause / Cancel') + '</strong>', 'actúan sobre la tarea en curso', 'act on the task in progress') +
+            li('<strong>' + T('sync automático', 'automatic sync') + '</strong>', 'refresco cada 60 segundos', 'refresh every 60 seconds') +
             '</ol>';
         document.getElementById('win-creativo').innerHTML =
-            '<div class="window-overlay-title">CLI · CONTEXTO</div>' +
+            '<div class="window-overlay-title">' + T('CLI · CONTEXTO', 'CLI · CONTEXT') + '</div>' +
             '<ol class="analizar-list">' +
-            '<li><strong>/tarea &lt;texto&gt;</strong> — añade una tarea al contexto</li>' +
-            '<li><strong>/finalizada &lt;texto&gt;</strong> — marca una tarea acabada</li>' +
-            '<li><strong>foco:</strong> define el objetivo actual</li>' +
-            '<li><strong>ayuda:</strong> pide al Consejo qué vigilar</li>' +
+            li('<strong>/tarea &lt;texto&gt;</strong>', 'añade una tarea al contexto', 'adds a task to the context') +
+            li('<strong>/finalizada &lt;texto&gt;</strong>', 'marca una tarea acabada', 'marks a task as done') +
+            li('<strong>/recorte · /recortar</strong>', 'editor manual de la silueta clicable de cada consejero', 'manual editor of each councillor\'s clickable outline') +
+            li('<strong>foco:</strong>', 'define el objetivo actual', 'sets the current goal') +
+            li('<strong>ayuda:</strong>', 'pide al Consejo qué vigilar', 'asks the Council what to watch') +
             '</ol>';
         document.getElementById('win-racional').classList.add('active');
         document.getElementById('win-proceso').classList.add('active');
         document.getElementById('win-creativo').classList.add('active');
         enterConversation();
         addUserEntry('/help');
-        addConvEntry('conv-racional', '⌨️', 'CLI', 'Consejo CLI', 'racional',
-            '<strong>Comandos disponibles</strong><br>' +
+        const note = (es, en) => ' <span style="opacity:0.7">(' + T(es, en) + ')</span>';
+        addConvEntry('conv-racional', '⌨️', 'CLI', T('Consejo CLI', 'Council CLI'), 'racional',
+            '<strong>' + T('Comandos disponibles', 'Available commands') + '</strong><br>' +
             '/help<br>' +
-            '/recorte o /recortar <span style="opacity:0.7">(editor manual de la silueta clicable de cada consejero)</span><br>' +
-            '/importar &lt;url&gt; <span style="opacity:0.7">(descarga vídeo y lo sube a Drive)</span><br>' +
-            '/google <span style="opacity:0.7">(abre la hoja de enlaces Entrenar)</span><br>' +
-            '/diario <span style="opacity:0.7">(muestra el diario operativo)</span><br>' +
-            '/diario &lt;texto&gt; <span style="opacity:0.7">(registra una decisión del Consejo)</span><br>' +
-            '/agora <span style="opacity:0.7">(mi estado Codex/Oráculo en AgoraMatrix)</span><br>' +
-            '/codex <span style="opacity:0.7">(alias centrado en Codex/Oráculo)</span><br>' +
-            '/oraculo &lt;orden&gt; <span style="opacity:0.7">(desde Telegram hacia Codex/Oráculo)</span><br>' +
+            '/idioma ESP | ENG' + note('castellano o inglés · /language es | en', 'Spanish or English · /language es | en') + '<br>' +
+            '/recorte o /recortar' + note('editor manual de la silueta clicable de cada consejero', 'manual editor of each councillor\'s clickable outline') + '<br>' +
+            '/importar &lt;url&gt;' + note('descarga vídeo y lo sube a Drive', 'downloads a video and uploads it to Drive') + '<br>' +
+            '/google' + note('abre la hoja de enlaces Entrenar', 'opens the Train links sheet') + '<br>' +
+            '/diario' + note('muestra el diario operativo', 'shows the operations journal') + '<br>' +
+            '/diario &lt;texto&gt;' + note('registra una decisión del Consejo', 'records a Council decision') + '<br>' +
+            '/agora' + note('mi estado Codex/Oráculo en AgoraMatrix', 'my Codex/Oracle status in AgoraMatrix') + '<br>' +
+            '/codex' + note('alias centrado en Codex/Oráculo', 'alias focused on Codex/Oracle') + '<br>' +
+            '/oraculo &lt;orden&gt;' + note('desde Telegram hacia Codex/Oráculo', 'from Telegram to Codex/Oracle') + '<br>' +
             '/nombres on<br>' +
             '/nombres off<br>' +
             '/nombres toggle<br>' +
             '/tarea &lt;texto&gt;<br>' +
             '/finalizada &lt;texto&gt;<br>' +
-            '/yarig login <span style="opacity:0.7">(alias de /yarig.ai login)</span><br>' +
-            '/yarig estado <span style="opacity:0.7">(watcher y frescura del sync)</span><br>' +
-            '/yarig logout <span style="opacity:0.7">(alias de /yarig.ai logout)</span><br>' +
-            '/yarig sincro <span style="opacity:0.7">(alias de /yarig.ai sincro)</span><br>' +
-            '/yarig on <span style="opacity:0.7">(alias de /yarig.ai on)</span><br>' +
-            '/yarig off <span style="opacity:0.7">(alias de /yarig.ai off)</span>');
+            '/yarig login' + note('alias de /yarig.ai login', 'alias of /yarig.ai login') + '<br>' +
+            '/yarig estado' + note('watcher y frescura del sync', 'watcher and sync freshness') + '<br>' +
+            '/yarig logout' + note('alias de /yarig.ai logout', 'alias of /yarig.ai logout') + '<br>' +
+            '/yarig sincro' + note('alias de /yarig.ai sincro', 'alias of /yarig.ai sincro') + '<br>' +
+            '/yarig on' + note('alias de /yarig.ai on', 'alias of /yarig.ai on') + '<br>' +
+            '/yarig off' + note('alias de /yarig.ai off', 'alias of /yarig.ai off'));
         addConvEntry('conv-creativo', '🧭', 'Yarig.AI', 'Yarig.AI', 'creativo',
-            '<strong>Atajos de contexto</strong><br>' +
-            'foco: &lt;objetivo&gt;<br>' +
-            'finalizada: &lt;tarea ya terminada&gt;<br>' +
-            'tarea: &lt;tarea&gt;<br>' +
-            'ayuda: &lt;qué debe vigilar el Consejo&gt;');
-        setActionLine('⌨️ CLI visible — repite /help para ocultarla');
+            '<strong>' + T('Atajos de contexto', 'Context shortcuts') + '</strong><br>' +
+            T('foco: &lt;objetivo&gt;', 'foco: &lt;goal&gt;') + '<br>' +
+            T('finalizada: &lt;tarea ya terminada&gt;', 'finalizada: &lt;task already done&gt;') + '<br>' +
+            T('tarea: &lt;tarea&gt;', 'tarea: &lt;task&gt;') + '<br>' +
+            T('ayuda: &lt;qué debe vigilar el Consejo&gt;', 'ayuda: &lt;what the Council should watch&gt;'));
+        setActionLine(T('⌨️ CLI visible — repite /help para ocultarla', '⌨️ CLI visible — repeat /help to hide it'));
     }
 
     function showAgoraMatrixHelp(command) {
@@ -2149,7 +2166,7 @@
         '/admira.app', '/clearchannel.tv', '/pixeria.com', '/equipos', '/control',
         '/scumm', '/top', '/bocas', '/mac', '/motor', '/olvidar', '/menu', '/agoramatrix', '/tareas', '/google',
         '/importar', '/nombres', '/tarea', '/diario', '/leyendas', '/coetaneos', '/agentes', '/comandos', '/sendto',
-        '/marcador', '/flota', '/highscore', '/recorte', '/recortar'
+        '/marcador', '/flota', '/highscore', '/recorte', '/recortar', '/idioma', '/language'
     ];
     (function setupCliAutocomplete() {
         const inp = document.getElementById('action-input');
@@ -2178,12 +2195,20 @@
     function handleCliCommand(raw) {
         const text = String(raw || '').trim();
         if (!text) return false;
+        // /idioma ESP | ENG (alias /language): mismo contrato que admira.store (admira-idioma.js).
+        // Es local: cambia la interfaz sin recargar y nunca llega al Consejo ni a la flota.
+        if (/^\/(idioma|language)(\s|$)/i.test(text)) {
+            addUserEntry(text);
+            const res = window.AdmiraIdioma ? window.AdmiraIdioma.run(text) : null;
+            setActionLine(res ? '🌐 ' + res.message : '⚠️ El selector de idioma no ha cargado; recarga la página');
+            return true;
+        }
         const helpMatch = text.match(/^\/help$/i);
         if (helpMatch) {
             if (cliHelpVisible) {
                 addUserEntry('/help');
                 hideCliHelpWindows();
-                setActionLine('⌨️ CLI oculta — usa /help para volver a verla');
+                setActionLine(cliT('⌨️ CLI oculta — usa /help para volver a verla', '⌨️ CLI hidden — use /help to see it again'));
                 return true;
             }
             showCliHelp();
@@ -2549,7 +2574,7 @@
         // olvidarlo de verdad está /olvidar.
         abreHilo('mesa');
         exitPreguntarMode();
-        setActionLine("Escribe aquí o usa /help...");
+        setActionLine(cliT('Escribe aquí o usa /help...', 'Type here or use /help...'));
     }
 
     // ─── Private Meeting Room (Sala de Reuniones Privada) ───
@@ -2629,7 +2654,7 @@
         document.getElementById("meeting-overlay").classList.remove("visible");
         meetingAdvisor = null;
         document.getElementById("meeting-chat").innerHTML = "";
-        setActionLine("Escribe aquí o usa /help...");
+        setActionLine(cliT('Escribe aquí o usa /help...', 'Type here or use /help...'));
     }
 
     function addMeetingMsg(agent, text, isUser = false) {

@@ -95,7 +95,8 @@ test('se abre desde el CLI con /marcador y con /flota', () => {
 });
 
 test('y desde el riel AVANZADO, en el grupo Flota', () => {
-  const riel = index.slice(index.indexOf('<div class="rail-group">Flota</div>'));
+  // El rótulo lleva su inglés (data-en, /idioma ENG): se busca el grupo, no el atributo exacto.
+  const riel = index.slice(index.search(/<div class="rail-group"[^>]*>Flota<\/div>/));
   assert.match(riel.slice(0, 400), /href="\/marcador\.html"/);
   assert.match(riel.slice(0, 400), /CLI: \/marcador/);
 });

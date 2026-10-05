@@ -72,7 +72,9 @@ import pathlib, re, sys
 raiz, sello = pathlib.Path(sys.argv[1]), sys.argv[2]
 # el sello va en un query param: fuera los dos puntos (norma de sellos en atributos)
 version = sello.lstrip("v.").replace(":", "")
-ASSETS = ("admira-bar.js", "casa-nav.css")
+# admira-idioma.js (05-10-2026): la home lo enlaza; las subpáginas lo piden desde admira-bar.js
+# con el mismo ?v= de la barra, así que basta con sellar aquí su referencia de la home.
+ASSETS = ("admira-bar.js", "casa-nav.css", "admira-idioma.js")
 rx = re.compile(r'((?:src|href)=")([^"]*(?:%s))(?:\?[^"]*)?(")'
                 % "|".join(a.replace(".", r"\.") for a in ASSETS))
 tocados = sellados = 0

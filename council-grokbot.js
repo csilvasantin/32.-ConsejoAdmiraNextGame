@@ -17,7 +17,7 @@
   const terminal = status => ['done','blocked','failed','unknown'].includes(status);
   const timestamp = value => Number.isFinite(Number(value)) ? Number(value) : Date.parse(value) || 0;
   // encargo: Elon responde por su deepagent (encargo MCP de admira.live), no por el escritorio AX.
-  const native = row => row.native === true && (row.source === 'desktop' || row.source === 'encargo');
+  const native = row => row.native === true && (row.source === 'desktop' || row.source === 'encargo' || row.source === 'inbox');
   const signature = row => JSON.stringify([row.prompt || '',row.text || '',row.status,row.source,row.native,row.attachments||[],row.fallbackAvailable,row.notice,row.replyProvider]);
   function reconcile(previous, incoming) {
     const rows = new Map((previous || []).map(row => [row.id, row]));
@@ -213,7 +213,7 @@
       const recent=recentSends.get(FULL[row.persona]);if(recent&&recent.prompt===row.prompt&&(['done','ack'].includes(row.status)||(row.status==='in_progress'&&row.replyProvider!=='council-api')))recent.confirmed=true;
       say(row.notice || label(row.status) || 'Esperando al bot');
       if(animate && row.text && announced.get(row.id)!==row.text){
-        announced.set(row.id,row.text);options.onAnswer?.({persona:FULL[row.persona],text:row.text,messageId:row.id,status:row.status,source:'desktop',native:true});
+        announced.set(row.id,row.text);options.onAnswer?.({persona:FULL[row.persona],text:row.text,messageId:row.id,status:row.status,source:row.source||'desktop',native:true});
       }
       if(terminal(row.status) && settled.get(row.id)!==signature(row)){
         settled.set(row.id,signature(row));
@@ -248,7 +248,7 @@
           const last=rows.filter(native).at(-1);
           if(restoreHistory){
             for(const row of rows)remember(row);
-            if(last?.text)options.onRestore?.({persona:name,text:last.text,messageId:last.id,status:last.status,source:'desktop',native:true});
+            if(last?.text)options.onRestore?.({persona:name,text:last.text,messageId:last.id,status:last.status,source:last.source||'desktop',native:true});
             if(!selectionReady)say(selectionError||'Historial recuperado. Pulsa Enviar para conectar con '+name+'; se conservará tu texto si no puede enviarse.');
             else if(last)say(label(last.status) || 'Conversación recuperada');
             else say('Chat de GrokBot · esperando mensajes visibles de '+name+'.');

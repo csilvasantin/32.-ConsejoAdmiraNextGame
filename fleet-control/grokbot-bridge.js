@@ -118,6 +118,9 @@ function createGrokBotBridge({environment = process.env, fetchImpl = globalThis.
   const getToken = tokenProvider || (() => loadProviderToken(environment));
   const incoming = new Map();
   const reads = new Map();
+  const lastRefresh = new Map();
+  const softReads = new Map();
+  const REFRESH_MS = 2500;
 
   function capabilities() {
     let available = true, reason = '';
@@ -185,6 +188,34 @@ function createGrokBotBridge({environment = process.env, fetchImpl = globalThis.
     try { return await operation; } finally { incoming.delete(id); }
   }
 
+  async function refreshOpen(id) {
+    if (softReads.has(id)) return softReads.get(id);
+    if (reads.has(id)) return reads.get(id);
+    const operation = (async () => {
+      lastRefresh.set(id, now());
+      const record = state.read().get(id);
+      if (!record || !record.upstreamId || ['done', 'failed', 'blocked'].includes(record.status)) return record ? publicMessage(record) : null;
+      let data;
+      try { data = await upstream('/' + record.upstreamId); }
+      catch (_) { return publicMessage(record); }
+      const item = data.item;
+      if (!item || Number(item.id) !== record.upstreamId || canonicalPersona(item.target_persona) !== record.persona || String(item.target_machine || '').toLowerCase() !== 'grokbot') return publicMessage(record);
+      const mapped = {pending:'pending', ack:'in_progress', in_progress:'in_progress', done:'done', blocked:'blocked', failed:'failed'}[item.status];
+      if (!mapped) return publicMessage(record);
+      return state.transact(records => {
+        const entry = records.get(id);
+        if (!entry) return null;
+        const text = typeof item.note === 'string' ? item.note.slice(0,200000) : '';
+        if (entry.status !== mapped || entry.text !== text) entry.updatedAt = iso(item.done_at || item.updated_at || item.ack_at, new Date(now()).toISOString());
+        entry.status = mapped; entry.text = text;
+        return publicMessage(entry);
+      });
+    })();
+    softReads.set(id, operation);
+    try { return await operation; } finally { softReads.delete(id); }
+  }
+
+
   async function get(session, id) {
     const owner = verifiedOwner(session);
     if (!PUBLIC_ID.test(String(id))) throw new BridgeError(404, 'message_not_found');
@@ -193,6 +224,7 @@ function createGrokBotBridge({environment = process.env, fetchImpl = globalThis.
     if (!record.upstreamId || ['done', 'failed'].includes(record.status)) return publicMessage(record);
     if (reads.has(id)) return reads.get(id);
     const operation = (async () => {
+      lastRefresh.set(id, now());
       let data;
       try { data = await upstream('/' + record.upstreamId); }
       catch (_) { throw new BridgeError(502, 'provider_unavailable'); }
@@ -212,9 +244,16 @@ function createGrokBotBridge({environment = process.env, fetchImpl = globalThis.
     reads.set(id, operation);
     try { return await operation; } finally { reads.delete(id); }
   }
-  function list(session, persona) {
+  async function list(session, persona) {
     const owner = verifiedOwner(session), canonical = canonicalPersona(persona);
     if (!canonical) throw new BridgeError(400, 'unsupported_persona');
+    const rows = [...state.read().values()].filter(record => record.owner === owner && record.persona === canonical)
+      .sort((a,b) => a.createdAt.localeCompare(b.createdAt)).slice(-100);
+    // El poll de la UI solo hace GET /messages?persona=. Sin refrescar aquí, Jobs
+    // se queda en «Enviado» aunque el webhook ya haya contestado (bug 5-oct-2026).
+    const open = rows.filter(r => r.upstreamId && !['done', 'failed', 'blocked'].includes(r.status)
+      && now() - (lastRefresh.get(r.id) || 0) >= REFRESH_MS);
+    if (open.length) await Promise.all(open.map(r => refreshOpen(r.id).catch(() => null)));
     return [...state.read().values()].filter(record => record.owner === owner && record.persona === canonical)
       .sort((a,b) => a.createdAt.localeCompare(b.createdAt)).slice(-100).map(publicMessage);
   }

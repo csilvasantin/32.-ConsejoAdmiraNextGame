@@ -89,3 +89,12 @@ node --check fleet-control/server.js
 
 Las pruebas usan un proveedor simulado y ficheros temporales: no despiertan bots,
 no leen credenciales reales y no crean encargos externos.
+
+
+## Historial continuo y silencio Ágora/Telegram (5-oct-2026)
+
+Las sillas leyendas (Jobs, Wozniak, Disney, Lucas) envían el texto al bot-inbox con la
+marca `[chat-coetaneos]` y un bloque `Contexto:` de hasta 6 turnos ya contestados del
+mismo propietario con esa silla (mismo formato que Musk/Huang por encargo). La UI sigue
+mostrando solo el `prompt` limpio. El worker no publica esos encargos en Ágora/Telegram;
+la rutina del consejero despierta igual y la respuesta vuelve al chat de admira.live.

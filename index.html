@@ -486,8 +486,8 @@
             font-size: 0.8rem;
             margin-bottom: 3px;
         }
-        /* Conversation area below SCUMM bar — más alto (Carlos 2026-10-05:
-           Verbos↑ Accesos↓ compactos liberan espacio para el chat). */
+        /* Conversation area below SCUMM bar — más alto (Carlos 2026-10-05 21:57:
+           menú SCUMM integrado compacto libera espacio para el chat). */
         .conv-area {
             display: none;
             max-width: 1000px;
@@ -1210,7 +1210,7 @@
             border-top: 1px solid #2a1a3a;
             border-radius: 0; /* arriba del todo (Carlos 2026-10-05) */
             font-family: 'Press Start 2P', monospace;
-            order: -1; /* por si el contenedor es flex: Verbos siempre arriba */
+            order: -1; /* SCUMM arriba: menú integrado Verbos|Accesos */
         }
         .action-line {
             display: flex;
@@ -3682,8 +3682,8 @@ body.rail-open{overflow:hidden}
         (function(){try{var g=JSON.parse(localStorage.getItem('admira_gate')||'null');var e=g&&g.email?String(g.email).toLowerCase():'';if(!e)return;fetch('https://whitelist.admira.store/list',{cache:'no-store'}).then(function(r){return r.ok?r.json():null;}).then(function(d){if(d&&(d.superusers||[]).indexOf(e)>=0){var u=document.getElementById('home-usuarios');if(u)u.style.display='';}}).catch(function(){});}catch(_){}})();
         </script>
 
-        <!-- SCUMM arriba del todo (Carlos 2026-10-05): Verbos↑ + Accesos↓;
-             la conversación gana el espacio que antes ocupaba la barra abajo. -->
+        <!-- SCUMM arriba (Carlos 2026-10-05 21:57): Verbos|Accesos continuum en la misma barra;
+             Accesos integrado (no panel apilado); conversación gana espacio. -->
         <div class="scumm-bar">
             <div class="action-line">
                 <div class="sentence-line" id="sentence-line"></div>
@@ -4553,8 +4553,8 @@ body.rail-open{overflow:hidden}
 <script type="module" src="assets/mapa-ideas.js?v=20260920-mapa1"></script>
 <script type="module" src="assets/mesa-paste.js?v=20260920-paste"></script>
 <script src="/consejeros-desk.js?v=20260921-r7-proxy"></script>
-<link rel="stylesheet" href="assets/scumm-layout.css?v=20261005-verbos-accesos-r2">
-<script type="module" src="assets/scumm-layout.js?v=20261005-verbos-accesos-r2"></script>
+<link rel="stylesheet" href="assets/scumm-layout.css?v=20261005-accesos-int-r1">
+<script type="module" src="assets/scumm-layout.js?v=20261005-accesos-int-r1"></script>
 </body>
 </html>
 

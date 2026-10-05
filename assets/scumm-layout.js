@@ -1,15 +1,15 @@
 // Layout controls enhance the existing SCUMM nodes; their actions keep their handlers.
-// v4 (Carlos 2026-10-05): Accesos DEBAJO de Verbos (columna), Verbos arriba,
-// Previos oculto por defecto → más espacio para la conversación.
+// v5 (Carlos 2026-10-05 21:57): Accesos INTEGRADO en el continuum del menú SCUMM
+// (fila horizontal Verbos|Accesos), no un segundo panel apilado. Previos oculto
+// por defecto → más espacio para la conversación. Chat limpio aparte (cargaHilos).
 export const IDS = ['verbos', 'accesos', 'previos'];
 const LABELS = { verbos: 'Verbos', accesos: 'Accesos', previos: 'Previos' };
-const KEY = 'admira.scumm.layout.v4';
-const PREVIOUS_KEY = 'admira.scumm.layout.v3';
-const LEGACY_KEYS = ['admira.scumm.layout.v2', 'admira.scumm.layout.v1'];
-// Compact stack: Verbos then Accesos share the column; Previos hidden frees chat space.
-const DEFAULT_WEIGHTS = { verbos: 62, accesos: 38, previos: 40 };
+const KEY = 'admira.scumm.layout.v5';
+const PREVIOUS_KEYS = ['admira.scumm.layout.v4', 'admira.scumm.layout.v3', 'admira.scumm.layout.v2', 'admira.scumm.layout.v1'];
+// Continuum: Verbos | Accesos share the row; Previos hidden frees chat space.
+const DEFAULT_WEIGHTS = { verbos: 58, accesos: 42, previos: 40 };
 const DEFAULT_HIDDEN = ['previos'];
-const DEFAULT_HEIGHT = 260;
+const DEFAULT_HEIGHT = 210;
 export function normalizeLayout(raw = {}) {
   const order = Array.isArray(raw?.order) ? [...new Set(raw.order.filter(id => IDS.includes(id)))] : [];
   const hiddenSrc = Array.isArray(raw?.hidden) ? raw.hidden : DEFAULT_HIDDEN;
@@ -21,17 +21,18 @@ export function normalizeLayout(raw = {}) {
   };
 }
 export function migrateLegacyLayout(raw) {
-  // Old side-by-side defaults (equal thirds / 22-22-56) become the new stack + hide Previos.
+  // v4 stacked (62/38 column) and old side-by-side thirds → integrated continuum + hide Previos.
   const layout = normalizeLayout({ ...raw, hidden: DEFAULT_HIDDEN, order: ['verbos', 'accesos', 'previos'] });
   const w = raw?.weights || {};
+  const wasStacked = w.verbos === 62 && w.accesos === 38;
   const wasSideBySide = IDS.every(id => w[id] === 1) || (w.verbos === 22 && w.accesos === 22 && w.previos === 56);
-  if (wasSideBySide || !raw?.weights) {
+  if (wasStacked || wasSideBySide || !raw?.weights) {
     layout.weights = { ...DEFAULT_WEIGHTS };
     layout.height = DEFAULT_HEIGHT;
   }
   return layout;
 }
-// Resize two visible neighbours while conserving their total share of the stack/row.
+// Resize two visible neighbours while conserving their total share of the row.
 export function resizePair(weights, left, right, fraction) {
   const share = Math.max(.15, Math.min(.85, fraction));
   const total = weights[left] + weights[right];
@@ -58,21 +59,23 @@ function init() {
     const saved = localStorage.getItem(KEY);
     if (saved !== null) state = normalizeLayout(JSON.parse(saved));
     else {
-      const v3 = localStorage.getItem(PREVIOUS_KEY);
-      let previous = v3;
-      if (previous === null) {
-        for (const k of LEGACY_KEYS) {
-          previous = localStorage.getItem(k);
-          if (previous !== null) break;
-        }
+      let previous = null;
+      for (const k of PREVIOUS_KEYS) {
+        previous = localStorage.getItem(k);
+        if (previous !== null) break;
       }
       const raw = previous === null ? null : JSON.parse(previous);
       state = previous === null ? normalizeLayout() : migrateLegacyLayout(raw);
     }
   } catch { state = normalizeLayout(); }
-  // Guarantee Verbos is first in the default stack (Accesos below).
-  if (!state.order.includes('verbos') || state.order[0] !== 'verbos') {
+  // Guarantee Verbos then Accesos in the continuum (Previos may follow if shown).
+  if (state.order[0] !== 'verbos') {
     state.order = ['verbos', ...state.order.filter(id => id !== 'verbos')];
+  }
+  if (state.order.indexOf('accesos') !== 1 && state.order.includes('accesos')) {
+    state.order = moveModule(state.order, 'accesos', state.order[1] || 'accesos');
+    // Prefer Accesos immediately after Verbos
+    state.order = ['verbos', 'accesos', ...state.order.filter(id => id !== 'verbos' && id !== 'accesos')];
   }
   const save = () => { try { localStorage.setItem(KEY, JSON.stringify(state)); } catch {} };
   const create = (tag, cls, text) => {
@@ -109,9 +112,9 @@ function init() {
     head.append(grip, close);
     const content = create('div', 'scumm-module-content'); content.append(...source[id]);
     const handle = create('div', 'scumm-module-resizer'); handle.tabIndex = 0;
-    handle.setAttribute('role', 'separator'); handle.setAttribute('aria-orientation', 'horizontal');
+    handle.setAttribute('role', 'separator'); handle.setAttribute('aria-orientation', 'vertical');
     handle.setAttribute('aria-label', 'Redimensionar ' + LABELS[id]);
-    handle.title = 'Arrastra para ajustar alto · flechas para ajustar · doble clic para igualar';
+    handle.title = 'Arrastra para ajustar ancho · flechas para ajustar · doble clic para igualar';
     module.append(head, content, handle); row.append(module);
     modules[id] = { module, grip, handle };
     const toggle = button('Mostrar ' + LABELS[id], '+ ' + LABELS[id].toUpperCase());
@@ -124,22 +127,22 @@ function init() {
     handle.addEventListener('pointerdown', e => {
       if (e.button !== 0 || !neighbour()) return;
       const next = neighbour(), a = module.getBoundingClientRect(), b = modules[next].module.getBoundingClientRect();
-      resizing = { next, y: e.clientY, height: a.height, total: a.height + b.height, weights: { ...state.weights } };
+      resizing = { next, x: e.clientX, width: a.width, total: a.width + b.width, weights: { ...state.weights } };
       handle.setPointerCapture(e.pointerId); e.preventDefault();
     });
     handle.addEventListener('pointermove', e => {
       if (!resizing) return;
-      state.weights = resizePair(resizing.weights, id, resizing.next, (resizing.height + e.clientY - resizing.y) / resizing.total);
+      state.weights = resizePair(resizing.weights, id, resizing.next, (resizing.width + e.clientX - resizing.x) / resizing.total);
       render(false);
     });
     const stopResize = () => { if (resizing) { resizing = null; save(); } };
     handle.addEventListener('pointerup', stopResize); handle.addEventListener('pointercancel', stopResize);
     handle.addEventListener('lostpointercapture', stopResize);
     handle.addEventListener('keydown', e => {
-      const next = neighbour(); if (!next || !['ArrowUp', 'ArrowDown', 'Home'].includes(e.key)) return;
+      const next = neighbour(); if (!next || !['ArrowLeft', 'ArrowRight', 'Home'].includes(e.key)) return;
       e.preventDefault();
       const fraction = state.weights[id] / (state.weights[id] + state.weights[next]);
-      state.weights = resizePair(state.weights, id, next, e.key === 'Home' ? .5 : fraction + (e.key === 'ArrowDown' ? .05 : -.05));
+      state.weights = resizePair(state.weights, id, next, e.key === 'Home' ? .5 : fraction + (e.key === 'ArrowRight' ? .05 : -.05));
       render(false); save();
     });
     handle.addEventListener('dblclick', () => {
@@ -160,14 +163,14 @@ function init() {
     });
     grip.addEventListener('pointercancel', () => { moving = null; });
     grip.addEventListener('keydown', e => {
-      if (!['ArrowUp', 'ArrowDown'].includes(e.key)) return;
+      if (!['ArrowLeft', 'ArrowRight'].includes(e.key)) return;
       e.preventDefault();
       const visible = state.order.filter(x => !state.hidden.includes(x));
-      const target = visible[visible.indexOf(id) + (e.key === 'ArrowUp' ? -1 : 1)];
+      const target = visible[visible.indexOf(id) + (e.key === 'ArrowLeft' ? -1 : 1)];
       if (target) { state.order = moveModule(state.order, id, target); render(); save(); grip.focus(); }
     });
   }
-  const reset = button('Restaurar Verbos↑ Accesos↓', '↺ RESTAURAR');
+  const reset = button('Restaurar Verbos|Accesos integrado', '↺ RESTAURAR');
   reset.addEventListener('click', () => { state = normalizeLayout(); render(); save(); menu.open = false; menuToggle.focus(); });
   toolbar.append(reset);
   const heightHandle = create('div', 'scumm-height-resizer'); heightHandle.tabIndex = 0;

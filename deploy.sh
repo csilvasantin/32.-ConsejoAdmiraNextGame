@@ -17,12 +17,26 @@ git archive --format=tar HEAD | tar -x -C "$TMP"
 SELLO="$(sed -n 's/.*admiranext-version" content="AdmiraNeXT \(v\.[^"]*\)".*/\1/p' control/index.html | head -1)"
 [ -n "$SELLO" ] || { echo "✗ falta el <meta admiranext-version> en control/index.html" >&2; exit 1; }
 GIT="$(git rev-parse HEAD)"; SUCIO=true; [ -z "$(git status --porcelain)" ] && SUCIO=false
+# Novedades del sello (Carlos 2026-10-05): novedades.json[sello] o .default → version.json
+NOVEDADES_JSON='[]'
+if [ -f novedades.json ]; then
+  NOVEDADES_JSON="$(jq -c --arg v "$SELLO" '
+    if type=="object" then
+      (.[$v] // .default // .novedades // [])
+    elif type=="array" then .
+    else [] end
+    | if type=="array" then . else [] end
+    | map(tostring) | map(select(length>0)) | .[0:6]
+  ' novedades.json 2>/dev/null || echo '[]')"
+fi
+[ -n "$NOVEDADES_JSON" ] || NOVEDADES_JSON='[]'
 jq -n --arg v "$SELLO" --arg t "$(date -u +%Y-%m-%dT%H:%M:%SZ)" \
    --arg a "$ADMIRA_RELEASE_AGENT" --arg m "$ADMIRA_RELEASE_MACHINE" \
-   --arg g "$GIT" --argjson d "$SUCIO" \
-   '{version:$v,deployedAt:$t,deployer:$a,machine:$m,signature:($a+" · "+$m),git:$g,gitShort:($g[0:7]),gitFull:$g,dirty:$d}' \
+   --arg g "$GIT" --argjson d "$SUCIO" --argjson n "$NOVEDADES_JSON" \
+   '{version:$v,deployedAt:$t,deployer:$a,machine:$m,signature:($a+" · "+$m),git:$g,gitShort:($g[0:7]),gitFull:$g,dirty:$d,novedades:$n}' \
    > "$TMP/version.json"
 echo "  ✓ $SELLO · $ADMIRA_RELEASE_AGENT · $ADMIRA_RELEASE_MACHINE"
+if [ "$NOVEDADES_JSON" != "[]" ]; then echo "  ✓ novedades: $NOVEDADES_JSON"; fi
 
 # UN SITIO PUBLICADO, UN SOLO SELLO (MorfeoMacMini, 11-08-2026 · normas 07/09).
 # El sello de /version.json se leia de control/index.html, pero quien entra en / ve el

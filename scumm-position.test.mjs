@@ -11,7 +11,6 @@ test('SCUMM bar DOM order: mesa/stage arriba, Verbos+Accesos debajo (clásico)',
   assert.ok(stage > 0 && council > 0 && scumm > 0);
   assert.ok(stage < scumm, 'stage-row must precede scumm-bar');
   assert.ok(council < scumm, 'council-image/mesa must precede scumm-bar');
-  // Exactly one scumm-bar
   assert.equal((html.match(/<div class="scumm-bar">/g) || []).length, 1);
 });
 
@@ -21,11 +20,13 @@ test('SCUMM CSS: sin order:-1 (ya no fuerza arriba); radio inferior clásico', (
   assert.match(html, /SCUMM abajo/);
 });
 
-test('v7 integration still wired (Accesos en Verbos assets)', () => {
-  assert.match(html, /assets\/scumm-layout\.js\?v=20261005-menu-abajo/);
-  assert.match(html, /assets\/scumm-layout\.css\?v=20261005-menu-abajo/);
+test('v8: Accesos en Verbos + Previos third block wired', () => {
+  assert.match(html, /assets\/scumm-layout\.js\?v=20261005-sello-previos/);
+  assert.match(html, /assets\/scumm-layout\.css\?v=20261005-sello-previos/);
+  assert.match(html, /assets\/sello-novedades\.js/);
   const js = fs.readFileSync(new URL('./assets/scumm-layout.js', import.meta.url), 'utf8');
-  assert.match(js, /layout\.v7/);
+  assert.match(js, /layout\.v8/);
   assert.match(js, /grid, pager, inventory/);
-  assert.match(js, /DEFAULT_HIDDEN = \['accesos', 'previos'\]/);
+  assert.match(js, /DEFAULT_HIDDEN = \['accesos'\]/);
+  assert.match(js, /previos: \[preview\]/);
 });

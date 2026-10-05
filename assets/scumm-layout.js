@@ -7,9 +7,9 @@ const KEY = 'admira.scumm.layout.v4';
 const PREVIOUS_KEY = 'admira.scumm.layout.v3';
 const LEGACY_KEYS = ['admira.scumm.layout.v2', 'admira.scumm.layout.v1'];
 // Compact stack: Verbos then Accesos share the column; Previos hidden frees chat space.
-const DEFAULT_WEIGHTS = { verbos: 55, accesos: 45, previos: 40 };
+const DEFAULT_WEIGHTS = { verbos: 62, accesos: 38, previos: 40 };
 const DEFAULT_HIDDEN = ['previos'];
-const DEFAULT_HEIGHT = 176;
+const DEFAULT_HEIGHT = 260;
 export function normalizeLayout(raw = {}) {
   const order = Array.isArray(raw?.order) ? [...new Set(raw.order.filter(id => IDS.includes(id)))] : [];
   const hiddenSrc = Array.isArray(raw?.hidden) ? raw.hidden : DEFAULT_HIDDEN;

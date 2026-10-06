@@ -393,6 +393,21 @@
     nav.setAttribute("data-en-aria-label", "Advanced menu");
     nav.innerHTML = ADV.map(linkHTML).join("");
     rail.insertBefore(nav, rail.firstChild);
+    // /idioma en la consola PROPIA de la página (Control y Fleet: «comando shell…», Vista previa,
+    // Players…). Antes la orden seguía su camino —en Control se mandaba como comando de shell a la
+    // máquina— y el idioma no cambiaba. Se intercepta antes que la página (captura) y es local.
+    rail.addEventListener("keydown", function (e) {
+      if (e.key !== "Enter" || e.isComposing) return;
+      var t = e.target;
+      if (!t || !/^(INPUT|TEXTAREA)$/.test(t.tagName) || (t.closest && t.closest(".cuadratura-cli"))) return;
+      var I = idioma(), orden = String(t.value || "");
+      var res = I ? I.command(orden, I.lang()) : null;
+      if (!res) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+      t.value = "";
+      avisoIdioma(rail, (I.run(orden) || res).message);
+    }, true);
     if (rail.querySelector("input,textarea")) return;
     var form = document.createElement("form");
     form.className = "cuadratura-cli";
@@ -409,6 +424,24 @@
     rail.insertBefore(form, nav.nextSibling);
     var I = idioma();
     if (I) I.translate(rail);
+  }
+
+  // Respuesta de /idioma cuando la consola es de la página: un aviso breve encima del raíl.
+  function avisoIdioma(rail, texto) {
+    var a = document.getElementById("admira-idioma-aviso");
+    if (!a) {
+      a = document.createElement("output");
+      a.id = "admira-idioma-aviso";
+      a.setAttribute("aria-live", "polite");
+      a.style.cssText = "position:fixed;left:50%;transform:translateX(-50%);bottom:calc(var(--bottom-h,180px) + 12px);" +
+        "z-index:2147483000;background:#1b130a;color:#ffdd66;border:2px solid #8b5a14;padding:6px 12px;" +
+        "font:12px/1.4 monospace;box-shadow:0 3px 0 #000;pointer-events:none";
+      document.body.appendChild(a);
+    }
+    a.textContent = "🌐 " + texto;
+    a.hidden = false;
+    clearTimeout(avisoIdioma.t);
+    avisoIdioma.t = setTimeout(function () { a.hidden = true; }, 3500);
   }
 
   // Consola local de la barra (páginas sin CLI propia). Entiende los comandos de

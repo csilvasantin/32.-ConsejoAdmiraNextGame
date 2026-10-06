@@ -29,5 +29,9 @@
     "HACKEO: ×1 / ×4 / ×10 cambia el ritmo en los Terminales reales de la flota, en caliente",
     "HACKEO · CÓDIGO: cada equipo teclea un fichero real de www.admira.live",
     "La barra del hackeo dice a cuántos equipos llegó el cambio"
+  ],
+  "v.06.10.2026.r15.09:28": [
+    "/idioma ENG|ESP (y /language) también en la consola propia de Control, Fleet, Vista previa y Players: cambia el idioma y ya no se manda como comando a la máquina",
+    "El popover del sello pasa de NOVEDADES a WHAT'S NEW al momento con /idioma"
   ]
 }

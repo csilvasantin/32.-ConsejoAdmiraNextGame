@@ -696,3 +696,14 @@ html.yk-framed body{ padding-top: var(--yk-bar-h); }
 .yk-pc-densb{ font-family:inherit; font-size:9.5px; letter-spacing:.1em; background:transparent;
   color:var(--yk-ink); border:1px solid var(--yk-line2); padding:6px 10px; cursor:pointer }
 .yk-pc-densb.on{ background:var(--yk-brand); color:#02080d; border-color:var(--yk-brand); font-weight:700 }
+
+/* Línea de órdenes del EXPERTO (06-10-2026): siempre visible y activa, con o sin PTY conectado */
+.yk-expert-cmd{display:grid;gap:4px;padding:8px 10px;margin:0 0 8px;border:1px solid #2c3a52;border-radius:6px;background:#0b1220}
+.yk-expert-cmd-form{display:grid;grid-template-columns:auto minmax(0,1fr) auto;gap:8px;align-items:center}
+.yk-expert-cmd-label{color:#7fd1ff;font:700 14px/1 ui-monospace,SFMono-Regular,Menlo,monospace}
+.yk-slot .yk-expert-cmd-input{width:100%;min-width:0;min-height:34px;padding:6px 10px;border:1px solid #3d5275;border-radius:4px;background:#050a14;color:#eef3fb;font:13px/1.3 ui-monospace,SFMono-Regular,Menlo,monospace;caret-color:#7fd1ff}
+.yk-slot .yk-expert-cmd-input::placeholder{color:#9aabc4}
+.yk-slot .yk-expert-cmd-input:focus-visible{outline:2px solid #7fd1ff;outline-offset:1px}
+.yk-expert-cmd-send{min-height:34px;padding:0 12px;border:1px solid #3d5275;border-radius:4px;background:#14233b;color:#eef3fb;cursor:pointer}
+.yk-expert-cmd-out{display:block;min-height:1.3em;color:#c9d6e8;font:12px/1.35 ui-monospace,SFMono-Regular,Menlo,monospace;white-space:pre-wrap}
+.yk-expert-cmd-out.err{color:#ffb4a8}

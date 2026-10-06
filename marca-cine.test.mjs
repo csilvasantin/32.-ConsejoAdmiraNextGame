@@ -55,7 +55,7 @@ test('/81 … /89: atajos de /marca en el intérprete, autocompletado y /help (a
   const ayuda = SERVIDA.slice(SERVIDA.indexOf('function showCliHelp()'), SERVIDA.indexOf('function showAgoraMatrixHelp'));
   assert.ok(ayuda.includes('/81 · /82 · /83 · /84 · /85 · /86 · /87 · /88 · /89'));
   // el script servido es el que index.html carga
-  assert.match(leer('index.html'), /<script defer src="app\.flt-100529\.js\?v=20261006-r18-cine"><\/script>/);
+  assert.match(leer('index.html'), /<script defer src="app\.flt-100529\.js\?v=20261006-r19-bilingue"><\/script>/);
 });
 
 test('marca-blanca.css: un bloque por piel 81–89 y versión nueva en marca-blanca.js e index.html', () => {

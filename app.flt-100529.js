@@ -1823,6 +1823,7 @@
             li('<strong>/help</strong>', 'muestra u oculta esta ayuda', 'shows or hides this help') +
             li('<strong>/idioma [ESP | ENG]</strong>', 'alterna o fija castellano/inglés sin recargar (también /language, /languague, /idiomaESP)', 'toggles or sets Spanish/English without reloading (also /language, /languague, /idiomaENG)') +
             li('<strong>/marca &lt;id&gt; | off | lista</strong>', 'marca blanca del catálogo de admiranext.com (p. ej. /marca starbucks), como en las plataformas', 'white label from the admiranext.com catalogue (e.g. /marca starbucks), as on the platforms') +
+            li('<strong>ES ⇄ EN</strong>', 'cada verbo vale en castellano o en inglés y pone la web en ese idioma: /ayuda · /help, /comandos · /commands, /marca · /brand (y /marca84 · /brand84, /marcaoff · /brandoff), /marcador · /scoreboard, /flota · /fleet, /recorte · /crop, /recortar · /cut, /leyendas · /legends, /coetaneos · /peers, /agentes · /agents, /tareas · /tasks, /tarea · /task, /finalizada · /done, /olvidar · /forget, /motor · /engine, /bocas · /mouths, /nombres · /names, /diario · /journal, /importar · /import, /verbos · /verbs, /sitios · /sites, /oraculo · /oracle', 'every verb works in Spanish or English and switches the site to that language: /ayuda · /help, /comandos · /commands, /marca · /brand (and /marca84 · /brand84, /marcaoff · /brandoff), /marcador · /scoreboard, /flota · /fleet, /recorte · /crop, /recortar · /cut, /leyendas · /legends, /coetaneos · /peers, /agentes · /agents, /tareas · /tasks, /tarea · /task, /finalizada · /done, /olvidar · /forget, /motor · /engine, /bocas · /mouths, /nombres · /names, /diario · /journal, /importar · /import, /verbos · /verbs, /sitios · /sites, /oraculo · /oracle') +
             li('<strong>/81 · /82 · /83 · /84 · /85 · /86 · /87 · /88 · /89</strong>', 'pieles de cine 1981–1989 (atajo de /marca 81 … /marca 89); /marca off vuelve a Admira', '1981–1989 movie skins (shortcut for /marca 81 … /marca 89); /marca off returns to Admira') +
             li('<strong>⌘ EXPERTO · CLI</strong>', 'consola de la suite AdmiraNeXT anclada abajo: /help, /marca, /idioma, /estado, /version', 'AdmiraNeXT suite console docked at the bottom: /help, /marca, /idioma, /estado, /version') +
             li('<strong>/comandos</strong>', 'abre la página con todos los comandos', 'opens the page with every command') +
@@ -2171,7 +2172,11 @@
         '/importar', '/nombres', '/tarea', '/diario', '/leyendas', '/coetaneos', '/agentes', '/comandos', '/sendto',
         '/marcador', '/flota', '/highscore', '/recorte', '/recortar', '/idioma', '/language', '/marca',
         // Pieles de cine (FLT-101666 c): /81 … /89 = /marca 81 … /marca 89
-        '/81', '/82', '/83', '/84', '/85', '/86', '/87', '/88', '/89'
+        '/81', '/82', '/83', '/84', '/85', '/86', '/87', '/88', '/89',
+        // Parejas en inglés / castellano (assets/cli-bilingue.js): el idioma del verbo es el de la web
+        '/ayuda', '/commands', '/brand', '/scoreboard', '/fleet', '/crop', '/cut', '/legends', '/peers',
+        '/agents', '/tasks', '/task', '/done', '/forget', '/engine', '/mouths', '/names', '/journal', '/import',
+        '/verbs', '/sitios', '/oracle'
     ];
     (function setupCliAutocomplete() {
         const inp = document.getElementById('action-input');
@@ -2227,7 +2232,17 @@
         });
     }
 
+    // Verbos bilingües (Carlos, 06-10-2026 10:58 · assets/cli-bilingue.js): /brand84 = /marca 84 en
+    // inglés, /fleet = /flota, /ayuda = /help… El idioma del verbo pasa a ser el de la web antes de
+    // ejecutar la orden (así la respuesta sale ya en ese idioma). Los atajos /81…/89 no lo tocan.
     function handleCliCommand(raw) {
+        const B = window.AdmiraCliBilingue;
+        const n = B ? B.normalizar(String(raw || '').trim(), CLI_COMMANDS) : null;
+        if (n && n.idioma) B.ponerIdioma(n.idioma);
+        return handleCliCommandBase(n ? n.texto : raw);
+    }
+
+    function handleCliCommandBase(raw) {
         const text = String(raw || '').trim();
         if (!text) return false;
         // /idioma ESP | ENG (alias /language): mismo contrato que admira.store (admira-idioma.js).
@@ -2626,7 +2641,7 @@
         // olvidarlo de verdad está /olvidar.
         abreHilo('mesa');
         exitPreguntarMode();
-        setActionLine(cliT('Escribe aquí o usa /help...', 'Type here or use /help...'));
+        setActionLine(cliT('Escribe aquí o usa /ayuda...', 'Type here or use /help...'));
     }
 
     // ─── Private Meeting Room (Sala de Reuniones Privada) ───
@@ -2706,7 +2721,7 @@
         document.getElementById("meeting-overlay").classList.remove("visible");
         meetingAdvisor = null;
         document.getElementById("meeting-chat").innerHTML = "";
-        setActionLine(cliT('Escribe aquí o usa /help...', 'Type here or use /help...'));
+        setActionLine(cliT('Escribe aquí o usa /ayuda...', 'Type here or use /help...'));
     }
 
     function addMeetingMsg(agent, text, isUser = false) {
@@ -5060,7 +5075,7 @@
     // Wire del click del hotspot y del fin de vídeo
     document.addEventListener("DOMContentLoaded", () => {
         document.querySelectorAll("[data-council-generation]").forEach(button => {
-            button.addEventListener("click", () => handleCliCommand("/" + button.dataset.councilGeneration));
+            button.addEventListener("click", () => handleCliCommandBase("/" + button.dataset.councilGeneration)); // un botón no cambia el idioma
         });
         try { if (localStorage.getItem('councilMenuHidden') === '1') document.body.classList.add('cli-menu-hidden'); } catch (e) {}
         // La barra de verbos arranca EXPANDIDA por defecto (Carlos, 19-09-2026): solo queda

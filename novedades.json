@@ -1,4 +1,10 @@
 {
+  "v.06.10.2026.r19.11:12": [
+    "Cada verbo de la línea de órdenes vale en castellano y en inglés: /marca = /brand, /ayuda = /help, /flota = /fleet, /tareas = /tasks… El verbo castellano pone la web en castellano y el inglés en inglés (como /idioma ESP · /language ENG); /81 … /89 no tocan el idioma",
+    "Formas compactas: /marca84, /brand84, /marcaoff, /brandoff",
+    "Dashboard: el panel EXPERTO trae siempre su línea de órdenes (⌘) aunque no haya ningún PTY conectado; acepta /marca, /brand, /idioma, /language y /ayuda · /help",
+    "Estas novedades salen, como siempre, en el popover del sello (sin recorte del riel)"
+  ],
   "v.06.10.2026.r18.10:45": [
     "Pieles de cine 81–89 también en admira.live: /81 … /89 en la línea de órdenes (atajo de /marca 81 … /marca 89) y en el autocompletado; /marca off vuelve a Admira",
     "Cada piel tiñe la página, la barra superior y la línea de órdenes SCUMM con su paleta propia; el texto de la línea de órdenes y de los verbos va a >= 7:1 de contraste (test marca-cine.test.mjs)",

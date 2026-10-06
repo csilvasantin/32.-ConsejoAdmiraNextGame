@@ -1,4 +1,9 @@
 {
+  "v.06.10.2026.r16.10:25": [
+    "/idioma ENG traduce ya el texto fijo de Control, Vista previa y Players (botones, paneles, filtros, leyenda, avisos y tooltips); /idioma ESP vuelve al original exacto",
+    "Nombres de equipos, tareas y misiones siguen tal cual",
+    "El popover del sello (NOVEDADES / WHAT'S NEW) sigue el idioma activo"
+  ],
   "v.05.10.2026.r11.00:05": [
     "Popover de novedades del sello sin recorte",
     "Menú Verbos+Accesos abajo bajo la mesa",

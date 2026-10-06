@@ -130,7 +130,11 @@
     "Sin mensajes todavía. Escribe abajo y pulsa Enviar.": "No messages yet. Type below and press Send.",
     "sin equipos disponibles": "no machines available", "sin equipos en el grupo": "no machines in the group", "ejecuta 🧪 Preflight DS": "run 🧪 Preflight DS",
     "inicia sesión Google": "sign in with Google", "sesión caducada — toca para re-entrar": "session expired — tap to sign in again",
-    "sin ruta de control": "no control route", "sesión terminada": "session ended", "sin imagen": "no image", "sin relay": "no relay", "carbono": "carbon", "silicio": "silicon"
+    "sin ruta de control": "no control route", "sesión terminada": "session ended", "sin imagen": "no image", "sin relay": "no relay", "carbono": "carbon", "silicio": "silicon", "pendientes": "pending",
+    // Players · botones de cada canal DS y tarjetas
+    "abrir": "open", "recargar": "reload", "navegar": "navigate", "encender": "power on", "apagar": "power off",
+    "reiniciar": "restart", "emergencia": "emergency", "brillo": "brightness", "canal cerrado": "channel closed", "canal abierto": "channel open",
+    "sin telemetría": "no telemetry", "sin telemetría —": "no telemetry —", "ahora": "now"
   };
 
   var reglas = [
@@ -151,6 +155,8 @@
     [/^(\d+) sin captura$/, "$1 without capture"],
     [/^arreglar todas \((\d+)\)$/, "fix all ($1)"],
     [/^Ningún equipo encendido de (\d+) \(desmarca «solo encendidos» para ver los apagados\)\.$/, "No powered-on machine out of $1 (untick «only powered on» to see the powered-off ones)."],
+    [/^pantalla (\S+)$/, "screen $1"],
+    [/^executores · (\d+) online$/, "executors · $1 online"],
     [/^fijado por (\S+)$/, "set by $1"]
   ];
 

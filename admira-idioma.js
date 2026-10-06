@@ -136,7 +136,7 @@
   // tareas, equipos) no están en el diccionario y no cambian.
   var DICC = {}, REGLAS = [], hayDicc = false, pedido = false, vigia = null;
   var MIO = (function () { try { return doc.currentScript && doc.currentScript.src || ""; } catch (_) { return ""; } })();
-  var FUERA = "script,style,textarea,code,pre,[contenteditable],[data-en],[data-no-traducir],.xterm,#out,.cli-out";
+  var FUERA = "script,style,textarea,code,pre,[contenteditable],[data-en],[data-no-traducir],.xterm,.cli-out";
   var FUERA_ATR = "script,style,[contenteditable],[data-no-traducir]";
   var memo = typeof WeakMap === "function" ? new WeakMap() : null;
   function tieneK(o, k) { return Object.prototype.hasOwnProperty.call(o, k); }
@@ -160,12 +160,13 @@
   function traduceTexto(s) {
     var m = String(s == null ? "" : s).match(/^([^A-Za-z\u00C0-\u024F0-9¿¡]*)([\s\S]*?)(\s*)$/);
     if (!m || !m[2]) return null;
-    var t = frase(m[2]), fin = "";
+    var core = m[2].replace(/\s+/g, " ");   // frases partidas en varias líneas del HTML
+    var t = frase(core), fin = "";
     if (t == null) {
-      var c = m[2].match(/^([\s\S]*?[^.»"”:…!?·\s])([\s.»"”:…!?·]+)$/);
+      var c = core.match(/^([\s\S]*?[^.»"”:…!?·\s])([\s.»"”:…!?·]+)$/);
       if (c) { t = frase(c[1]); fin = c[2]; }
     }
-    return t == null || t + fin === m[2] ? null : m[1] + t + fin + m[3];
+    return t == null || t + fin === core ? null : m[1] + t + fin + m[3];
   }
   function fuera(e) { return !e || (e.closest && e.closest(FUERA)); }
   function nodoTexto(n, en) {

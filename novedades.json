@@ -1,4 +1,8 @@
 {
+  "v.06.10.2026.r17.10:35": [
+    "/idioma ENG también en los botones de cada canal DS de Players (abrir, cerrar, recargar, encender, brillo…) y en «canal cerrado», «sin telemetría» y «pantalla …»",
+    "Control: el aviso vacío de la consola y las frases partidas en varias líneas cambian de idioma; el popover del sello sigue el idioma activo"
+  ],
   "v.06.10.2026.r16.10:25": [
     "/idioma ENG traduce ya el texto fijo de Control, Vista previa y Players (botones, paneles, filtros, leyenda, avisos y tooltips); /idioma ESP vuelve al original exacto",
     "Nombres de equipos, tareas y misiones siguen tal cual",

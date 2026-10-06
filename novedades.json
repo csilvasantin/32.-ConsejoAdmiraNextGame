@@ -1,4 +1,9 @@
 {
+  "v.06.10.2026.r18.10:45": [
+    "Pieles de cine 81–89 también en admira.live: /81 … /89 en la línea de órdenes (atajo de /marca 81 … /marca 89) y en el autocompletado; /marca off vuelve a Admira",
+    "Cada piel tiñe la página, la barra superior y la línea de órdenes SCUMM con su paleta propia; el texto de la línea de órdenes y de los verbos va a >= 7:1 de contraste (test marca-cine.test.mjs)",
+    "Estas novedades salen, como siempre, en el popover del sello (sin recorte del riel)"
+  ],
   "v.06.10.2026.r17.10:35": [
     "/idioma ENG también en los botones de cada canal DS de Players (abrir, cerrar, recargar, encender, brillo…) y en «canal cerrado», «sin telemetría» y «pantalla …»",
     "Control: el aviso vacío de la consola y las frases partidas en varias líneas cambian de idioma; el popover del sello sigue el idioma activo"

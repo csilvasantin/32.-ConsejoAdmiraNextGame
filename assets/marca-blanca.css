@@ -57,3 +57,64 @@
   font:600 12px var(--mb-fuente-texto);cursor:pointer;box-shadow:2px 2px 0 #000;
 }
 :root[data-mb-marca] .mb-volver:hover{background:var(--mbx-brand);color:var(--mbx-on-brand)}
+
+/* ─── Pieles de cine 81–89 (FLT-101666 c) ───────────────────────────────────────────────
+   Las mismas pieles del catálogo único de admiranext.com (/marca 81 … /marca 89, o el atajo
+   /81 … /89 en la línea de órdenes). Estética propia: paleta, tipografía del sistema y
+   degradados CSS; sin logotipos, fotogramas, carteles ni títulos. Contraste vigilado en
+   marca-cine.test.mjs: >= 4.5:1 en general y >= 7:1 en la línea de órdenes SCUMM. */
+:root:is([data-mb-marca="81"],[data-mb-marca="82"],[data-mb-marca="83"],[data-mb-marca="84"],[data-mb-marca="85"],[data-mb-marca="86"],[data-mb-marca="87"],[data-mb-marca="88"],[data-mb-marca="89"]){
+  --cine-cli-fondo:var(--mb-fondo);
+  --cine-cli-panel:var(--mb-superficie);
+  --cine-cli-texto:var(--mb-texto);
+  --cine-cli-suave:var(--mb-texto-suave);
+  --cine-cli-tecla:var(--mb-superficie-alt);
+}
+:root:is([data-mb-marca="81"],[data-mb-marca="82"],[data-mb-marca="83"],[data-mb-marca="84"],[data-mb-marca="85"],[data-mb-marca="86"],[data-mb-marca="87"],[data-mb-marca="88"],[data-mb-marca="89"]) body{background-color:var(--mb-fondo)!important;background-attachment:fixed!important}
+/* Línea de órdenes: texto de la marca sobre su fondo (>= 7:1), verbos sobre su superficie */
+:root:is([data-mb-marca="81"],[data-mb-marca="82"],[data-mb-marca="83"],[data-mb-marca="84"],[data-mb-marca="85"],[data-mb-marca="86"],[data-mb-marca="87"],[data-mb-marca="88"],[data-mb-marca="89"]) .scumm-bar{background:var(--cine-cli-panel)!important;border-color:var(--mb-borde)!important}
+:root:is([data-mb-marca="81"],[data-mb-marca="82"],[data-mb-marca="83"],[data-mb-marca="84"],[data-mb-marca="85"],[data-mb-marca="86"],[data-mb-marca="87"],[data-mb-marca="88"],[data-mb-marca="89"]) .scumm-bar .action-line{background:var(--cine-cli-fondo)!important;border-bottom-color:var(--mb-borde)!important}
+:root:is([data-mb-marca="81"],[data-mb-marca="82"],[data-mb-marca="83"],[data-mb-marca="84"],[data-mb-marca="85"],[data-mb-marca="86"],[data-mb-marca="87"],[data-mb-marca="88"],[data-mb-marca="89"]) .scumm-bar .action-input{color:var(--cine-cli-texto)!important;text-shadow:none!important;caret-color:var(--mbx-brand)!important;font-family:var(--mb-fuente-mono),monospace!important;font-size:12px!important}
+:root:is([data-mb-marca="81"],[data-mb-marca="82"],[data-mb-marca="83"],[data-mb-marca="84"],[data-mb-marca="85"],[data-mb-marca="86"],[data-mb-marca="87"],[data-mb-marca="88"],[data-mb-marca="89"]) .scumm-bar .action-input::placeholder{color:var(--cine-cli-suave)!important}
+:root:is([data-mb-marca="81"],[data-mb-marca="82"],[data-mb-marca="83"],[data-mb-marca="84"],[data-mb-marca="85"],[data-mb-marca="86"],[data-mb-marca="87"],[data-mb-marca="88"],[data-mb-marca="89"]) .sentence-line{color:var(--cine-cli-texto)!important;border-right-color:var(--mb-borde)!important}
+:root:is([data-mb-marca="81"],[data-mb-marca="82"],[data-mb-marca="83"],[data-mb-marca="84"],[data-mb-marca="85"],[data-mb-marca="86"],[data-mb-marca="87"],[data-mb-marca="88"],[data-mb-marca="89"]) .sentence-line :is(.sl-verb,.sl-obj){color:var(--cine-cli-texto)!important}
+:root:is([data-mb-marca="81"],[data-mb-marca="82"],[data-mb-marca="83"],[data-mb-marca="84"],[data-mb-marca="85"],[data-mb-marca="86"],[data-mb-marca="87"],[data-mb-marca="88"],[data-mb-marca="89"]) .sentence-line .sl-verb{text-decoration:underline 2px var(--mbx-brand);text-underline-offset:3px}
+:root:is([data-mb-marca="81"],[data-mb-marca="82"],[data-mb-marca="83"],[data-mb-marca="84"],[data-mb-marca="85"],[data-mb-marca="86"],[data-mb-marca="87"],[data-mb-marca="88"],[data-mb-marca="89"]) .sentence-line:empty::before{color:var(--cine-cli-suave)!important}
+:root:is([data-mb-marca="81"],[data-mb-marca="82"],[data-mb-marca="83"],[data-mb-marca="84"],[data-mb-marca="85"],[data-mb-marca="86"],[data-mb-marca="87"],[data-mb-marca="88"],[data-mb-marca="89"]) .scumm-bar .verb-btn{background:var(--cine-cli-tecla)!important;border-color:var(--mb-borde)!important;color:var(--cine-cli-texto)!important;text-shadow:none!important}
+:root:is([data-mb-marca="81"],[data-mb-marca="82"],[data-mb-marca="83"],[data-mb-marca="84"],[data-mb-marca="85"],[data-mb-marca="86"],[data-mb-marca="87"],[data-mb-marca="88"],[data-mb-marca="89"]) .scumm-bar .verb-btn:is(:hover,.active){background:var(--mbx-brand)!important;color:var(--mbx-on-brand)!important}
+:root:is([data-mb-marca="81"],[data-mb-marca="82"],[data-mb-marca="83"],[data-mb-marca="84"],[data-mb-marca="85"],[data-mb-marca="86"],[data-mb-marca="87"],[data-mb-marca="88"],[data-mb-marca="89"]) .scumm-bar .verb-arrow{background:var(--cine-cli-tecla)!important;border-color:var(--mb-borde)!important;color:var(--cine-cli-texto)!important}
+:root:is([data-mb-marca="81"],[data-mb-marca="82"],[data-mb-marca="83"],[data-mb-marca="84"],[data-mb-marca="85"],[data-mb-marca="86"],[data-mb-marca="87"],[data-mb-marca="88"],[data-mb-marca="89"]) .scumm-bar .verb-arrow:disabled{color:var(--cine-cli-suave)!important;opacity:.85}
+:root:is([data-mb-marca="81"],[data-mb-marca="82"],[data-mb-marca="83"],[data-mb-marca="84"],[data-mb-marca="85"],[data-mb-marca="86"],[data-mb-marca="87"],[data-mb-marca="88"],[data-mb-marca="89"]) .scumm-bar .action-input:focus-visible{outline:2px solid var(--mbx-brand);outline-offset:2px}
+
+/* 81 · aventura de época: arena, ámbar y polvo de excavación */
+:root[data-mb-marca="81"] body{background:repeating-radial-gradient(circle at 18% 28%,rgba(224,168,79,.05) 0 1px,transparent 1px 22px),radial-gradient(90% 50% at 50% 110%,rgba(224,168,79,.16),transparent 70%),var(--mb-fondo)!important}
+:root[data-mb-marca="81"] .top-bar{border-bottom:2px solid var(--mb-secundario)!important;box-shadow:0 3px 0 color-mix(in srgb,var(--mb-primario) 45%,transparent)}
+/* 82 · neón bajo la lluvia: cian y magenta sobre noche húmeda */
+:root[data-mb-marca="82"] body{background:repeating-linear-gradient(100deg,rgba(45,226,230,.035) 0 1px,transparent 1px 9px),radial-gradient(60% 45% at 10% 100%,rgba(255,61,184,.16),transparent 70%),radial-gradient(50% 40% at 95% 0%,rgba(45,226,230,.12),transparent 70%),var(--mb-fondo)!important}
+:root[data-mb-marca="82"] .top-bar{border-bottom:1px solid var(--mb-primario)!important;box-shadow:0 0 16px color-mix(in srgb,var(--mb-primario) 40%,transparent),0 2px 0 color-mix(in srgb,var(--mb-secundario) 50%,transparent)}
+:root[data-mb-marca="82"] .scumm-bar{box-shadow:0 0 18px color-mix(in srgb,var(--mb-secundario) 25%,transparent)}
+/* 83 · cielo nocturno de bicicleta: luna, estrellas y horizonte cálido */
+:root[data-mb-marca="83"] body{background:radial-gradient(circle at 82% 14%,rgba(255,230,168,.16) 0 70px,rgba(255,230,168,.05) 71px 140px,transparent 141px),radial-gradient(1px 1px at 20% 30%,rgba(255,255,255,.5),transparent),radial-gradient(1px 1px at 60% 12%,rgba(255,255,255,.4),transparent),radial-gradient(70% 40% at 50% 110%,rgba(255,106,77,.14),transparent 70%),var(--mb-fondo)!important}
+:root[data-mb-marca="83"] .top-bar{border-bottom:2px solid var(--mb-secundario)!important;box-shadow:0 4px 18px color-mix(in srgb,var(--mb-primario) 25%,transparent)}
+/* 84 · máquina del futuro: acero frío, rojo de sensor y líneas de barrido */
+:root[data-mb-marca="84"] body{background:repeating-linear-gradient(0deg,rgba(255,255,255,.025) 0 1px,transparent 1px 3px),radial-gradient(120% 70% at 50% -10%,rgba(255,68,51,.16),transparent 60%),var(--mb-fondo)!important}
+:root[data-mb-marca="84"] .top-bar{border-bottom:2px solid var(--mb-primario)!important;box-shadow:0 2px 14px color-mix(in srgb,var(--mb-primario) 30%,transparent)}
+:root[data-mb-marca="84"] .scumm-bar{border-top:2px solid var(--mb-primario)!important}
+/* 85 · viaje en el tiempo: naranja de motor y cian eléctrico */
+:root[data-mb-marca="85"] body{background:radial-gradient(90% 55% at 50% 115%,rgba(255,122,0,.22),transparent 65%),radial-gradient(60% 40% at 85% -5%,rgba(56,217,255,.14),transparent 70%),var(--mb-fondo)!important}
+:root[data-mb-marca="85"] .top-bar{border-bottom:2px solid var(--mb-acento)!important;box-shadow:0 3px 0 color-mix(in srgb,var(--mb-primario) 55%,transparent)}
+:root[data-mb-marca="85"] .scumm-bar .action-input{caret-color:var(--mb-acento)!important}
+/* 86 · aviación al atardecer: oro de piloto y cielo de poniente */
+:root[data-mb-marca="86"] body{background:linear-gradient(180deg,transparent 55%,rgba(255,122,77,.16) 85%,rgba(242,179,61,.20)),var(--mb-fondo)!important}
+:root[data-mb-marca="86"] .top-bar{border-bottom:2px solid var(--mb-primario)!important;box-shadow:0 3px 16px color-mix(in srgb,var(--mb-acento) 30%,transparent)}
+/* 87 · cromo y azul patrulla: rejilla de HUD */
+:root[data-mb-marca="87"] body{background:linear-gradient(rgba(92,225,230,.05) 1px,transparent 1px) 0 0/32px 32px,linear-gradient(90deg,rgba(92,225,230,.05) 1px,transparent 1px) 0 0/32px 32px,radial-gradient(100% 60% at 50% 0%,rgba(77,159,255,.14),transparent 65%),var(--mb-fondo)!important}
+:root[data-mb-marca="87"] .top-bar{border-bottom:2px solid var(--mb-acento)!important;box-shadow:0 2px 0 color-mix(in srgb,var(--mb-primario) 50%,transparent)}
+:root[data-mb-marca="87"] .scumm-bar{box-shadow:inset 0 1px 0 color-mix(in srgb,var(--mb-acento) 45%,transparent)}
+/* 88 · cine negro con viñeta: rojos cálidos y trazo grueso */
+:root[data-mb-marca="88"] body{background:repeating-linear-gradient(115deg,rgba(255,240,220,.035) 0 18px,transparent 18px 44px),radial-gradient(70% 55% at 30% 20%,rgba(255,92,92,.14),transparent 70%),var(--mb-fondo)!important}
+:root[data-mb-marca="88"] .top-bar{border-bottom:3px solid var(--mb-primario)!important;box-shadow:0 4px 0 rgba(0,0,0,.55)}
+:root[data-mb-marca="88"] .scumm-bar .action-send{box-shadow:3px 3px 0 rgba(0,0,0,.6)}
+/* 89 · gótico nocturno: negro de catedral y haz amarillo en el cielo */
+:root[data-mb-marca="89"] body{background:radial-gradient(28% 22% at 50% 6%,rgba(255,204,26,.16),transparent 70%),conic-gradient(from 168deg at 50% 100%,transparent 0deg,rgba(255,204,26,.05) 12deg,transparent 24deg),repeating-linear-gradient(90deg,rgba(255,255,255,.02) 0 1px,transparent 1px 64px),var(--mb-fondo)!important}
+:root[data-mb-marca="89"] .top-bar{border-bottom:2px solid var(--mb-primario)!important;box-shadow:0 6px 22px rgba(0,0,0,.7)}

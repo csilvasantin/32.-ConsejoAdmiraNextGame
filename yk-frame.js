@@ -1762,7 +1762,7 @@
       }
       m = t.match(/^\/(?:marca|brand|marcablanca)(?:\s+([\s\S]*))?$/i) || t.match(/^\/(8[1-9])$/);
       if (!m) { say(expertT("Orden desconocida: ", "Unknown command: ") + text + expertT(" · escribe /ayuda", " · type /help"), true); return; }
-      return expertScript("/assets/marca-blanca.js?v=06.10.2026.r19-bilingue", "AdmiraMarca").then(function (M) {
+      return expertScript("/assets/marca-blanca.js?v=06.10.2026.r20-escenas", "AdmiraMarca").then(function (M) {
         if (!M) { say(expertT("⚠️ La marca blanca no ha cargado", "⚠️ White label did not load"), true); return; }
         var p = M.parseArg((m[1] || "").trim()), tail = cambio ? " · 🌐 " + cambio : "";
         if (p.kind === "status") { var cur = M.actual(); say((cur ? expertT("🏷️ Marca activa: ", "🏷️ Active brand: ") + cur.nombre + " (" + cur.id + ")" : expertT("🏷️ Sin marca (Admira). Prueba /marca 84", "🏷️ No brand (Admira). Try /brand 84")) + tail); return; }

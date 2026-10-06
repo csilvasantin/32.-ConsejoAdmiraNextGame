@@ -67,8 +67,8 @@ test('marca-blanca.css: un bloque por piel 81–89 y versión nueva en marca-bla
   assert.ok(CSS.includes('.scumm-bar .action-input{color:var(--cine-cli-texto)!important'));
   assert.ok(CSS.includes('.scumm-bar .verb-btn{background:var(--cine-cli-tecla)!important'));
   assert.ok(CSS.includes('--cine-cli-tecla:var(--mb-superficie-alt);'));
-  assert.match(leer('assets/marca-blanca.js'), /LOCAL_CSS = '\/assets\/marca-blanca\.css\?v=06\.10\.2026\.r18-cine'/);
-  assert.match(leer('index.html'), /src="\/assets\/marca-blanca\.js\?v=06\.10\.2026\.r18-cine"/);
+  assert.match(leer('assets/marca-blanca.js'), /LOCAL_CSS = '\/assets\/marca-blanca\.css\?v=06\.10\.2026\.r20-escenas'/);
+  assert.match(leer('index.html'), /src="\/assets\/marca-blanca\.js\?v=06\.10\.2026\.r20-escenas"/);
   // estética propia: sin imágenes externas en los bloques de cine
   const cine = CSS.slice(CSS.indexOf('Pieles de cine 81–89'));
   assert.doesNotMatch(cine, /url\(/);

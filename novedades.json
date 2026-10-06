@@ -24,5 +24,10 @@
     "/idioma alterna ESP↔ENG; /language ESP|ENG, /languague, /idiomaESP",
     "Idioma guardado en admiranext_expert_lang (compartido con la suite)",
     "Interfaz traducida: Verbos/Accesos/Previos, rieles, tareas y popover de novedades"
+  ],
+  "v.06.10.2026.r14.09:20": [
+    "HACKEO: ×1 / ×4 / ×10 cambia el ritmo en los Terminales reales de la flota, en caliente",
+    "HACKEO · CÓDIGO: cada equipo teclea un fichero real de www.admira.live",
+    "La barra del hackeo dice a cuántos equipos llegó el cambio"
   ]
 }

@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.06.10.2026.r13.08:00" />
+<meta name="admiranext-version" content="AdmiraNeXT v.06.10.2026.r14.09:20" />
     <script src="/admira-bar.js?v=20260918-r38"></script>
     <script src="/auth-gate.js?v=20261004-r15-sinfranja"></script>
 <meta charset="UTF-8">
@@ -3287,9 +3287,11 @@ function collapseAllToggle(){
     const sl=document.getElementById("hkSyncLine"), tag="\u00d7"+hkSpeed+" \u00b7 "+(hkMode==="codigo"?"c\u00f3digo":"intrusi\u00f3n");
     try{
       const res=await fetch(HACKEO_API+"/hackeo/config",{ method:"POST", headers:{ "Content-Type":"application/json" },
-        body:JSON.stringify({ speed:hkSpeed, mode:hkMode, only_ids:Array.from(HK_SEL) }), signal:AbortSignal.timeout(8000) });
+        body:JSON.stringify({ speed:hkSpeed, mode:hkMode, only_ids:Array.from(HK_SEL) }), signal:AbortSignal.timeout(15000) });
       if(!res.ok) throw new Error("HTTP "+res.status);
-      if(sl){ sl.textContent="flota: "+tag; sl.style.color="#0f0"; }
+      const d=await res.json().catch(()=>null), s=d&&d.summary;
+      if(d&&d.ok===false) throw new Error(d.error||"sin equipos");
+      if(sl){ sl.textContent="flota: "+tag+(s?" \u00b7 "+s.updated+"/"+s.online+" equipos":""); sl.style.color=(s&&s.updated<s.online)?"#ff6":"#0f0"; }
     }catch(e){ if(sl){ sl.textContent="flota sin actualizar ("+(e.message||e)+") \u2014 solo esta vista va a "+tag; sl.style.color="#ff6"; } }
   }
 

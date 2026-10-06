@@ -4145,11 +4145,60 @@ import os, shutil
 # una línea con solo «%»). Sin lenguaje o sin fichero → hackeo clásico en bucle.
 LANG = sys.argv[1] if len(sys.argv) > 1 else ""
 HOBBIT_DIR = os.path.expanduser("~/.fleet/hobbit")
+# Velocidad y guion EN CALIENTE (Carlos, 2026-10-06): el panel deja «<velocidad>
+# <guion>» en hack.conf y aquí se relee sobre la marcha. Se busca JUNTO a este
+# script y no en ~: en el DGX el terminal corre con otro usuario que el del SSH.
+# Guion «codigo» = teclear hack-code.txt (código real de www.admira.live, que
+# viaja con cada lanzamiento; 1ª línea = nombre del fichero).
+HERE = os.path.dirname(os.path.abspath(__file__))
+CONF = os.path.join(HERE, "hack.conf")
+SPEED, MODE = 1.0, "intrusion"
+_visto = _deuda = 0.0
+try:
+    sys.stdout.reconfigure(errors="replace")
+except Exception:
+    pass
+
+def conf():
+    global SPEED, MODE, _visto
+    now = time.time()
+    if now - _visto < 0.25:
+        return
+    _visto = now
+    try:
+        with open(CONF) as f:
+            p = f.read().split()
+        SPEED = min(20.0, max(0.25, float(p[0])))
+        MODE = "codigo" if p[1:2] == ["codigo"] else "intrusion"
+    except (OSError, ValueError, IndexError):
+        pass
+
+def duerme(s):
+    # Por debajo de ~4 ms time.sleep se pasa de largo: la espera se acumula y
+    # se duerme de una vez, descontando lo dormido de verdad → ×10 es ×10.
+    global _deuda
+    _deuda += s / SPEED
+    if _deuda >= 0.004:
+        t = time.time()
+        time.sleep(_deuda)
+        _deuda = max(-0.05, _deuda - (time.time() - t))
+
+def pausa(lo, hi):
+    # A trozos: un cambio de velocidad se nota sin esperar al final de la pausa.
+    quedan = random.uniform(lo, hi)
+    while quedan > 0:
+        conf()
+        duerme(min(quedan, 0.05))
+        quedan -= 0.05
 
 def teclea(line, lo=0.005, hi=0.04):
+    modo = MODE
     for c in line:
         sys.stdout.write(c); sys.stdout.flush()
-        time.sleep(random.uniform(lo, hi))
+        duerme(random.uniform(lo, hi))
+        conf()
+        if MODE != modo:
+            break                      # cambio de guion: la línea se corta ahí
     sys.stdout.write("\n"); sys.stdout.flush()
 
 def lee(nombre):
@@ -4159,39 +4208,59 @@ def lee(nombre):
     except OSError:
         return ""
 
-def fase_hobbit():
-    codigo = [l.rstrip("\n") for l in lee(LANG + ".txt").splitlines()]
-    if not any(l.strip() for l in codigo):
-        return False
-    dibujos = [b.strip("\n") for b in lee("ascii.txt").split("\n%\n") if b.strip()]
-    teclea("")
-    j, hasta_dibujo = 0, random.randint(6, 15)
-    while True:
-        teclea(codigo[j % len(codigo)], 0.01, 0.05)
-        j += 1
-        hasta_dibujo -= 1
-        if dibujos and hasta_dibujo <= 0:
-            sys.stdout.write("\n")
-            for l in random.choice(dibujos).splitlines():
-                sys.stdout.write(l + "\n"); sys.stdout.flush()
-                time.sleep(0.04)
-            sys.stdout.write("\n")
-            hasta_dibujo = random.randint(6, 15)
-        time.sleep(random.uniform(0.05, 0.35))
+def lee_codigo():
+    try:
+        with open(os.path.join(HERE, "hack-code.txt"), encoding="utf-8", errors="replace") as f:
+            return [l.rstrip("\n") for l in f if l.strip()]
+    except OSError:
+        return []
 
-i = 0
+i = j = k = 0            # líneas tecleadas de intrusión, de The Hobbit y de código
+hobbit = None            # None = aún no toca · [] = este equipo no lo tiene
+dibujos, hasta_dibujo = [], 0
+codigo, modo = [], None
 try:
     while True:
+        conf()
+        if MODE != modo:
+            if modo is not None:       # cambio en caliente: pantalla limpia
+                sys.stdout.write("\033[2J\033[3J\033[H"); sys.stdout.flush()
+            modo = MODE
+            i, hobbit = 0, None
+            codigo = lee_codigo() if modo == "codigo" else []
+            if len(codigo) > 1:
+                teclea("== " + codigo[0] + " ==")
+                k = random.randrange(len(codigo) - 1)
+        if len(codigo) > 1:            # sin fichero de código se sigue con el guion
+            teclea(codigo[1 + k % (len(codigo) - 1)])
+            k += 1
+            pausa(0.05, 0.25)
+            continue
         # La altura se mide en cada vuelta: la ventana se maximiza DESPUÉS de
         # arrancar el script y al principio aún mide 24 filas.
-        if LANG and i >= shutil.get_terminal_size((80, 48)).lines // 2:
-            if fase_hobbit():
-                break
-            LANG = ""
-        line = LINES[i % len(LINES)]
-        teclea(line)
-        i += 1
-        time.sleep(random.uniform(0.15, 0.5))
+        if LANG and hobbit is None and i >= shutil.get_terminal_size((80, 48)).lines // 2:
+            hobbit = [l.rstrip("\n") for l in lee(LANG + ".txt").splitlines()]
+            if not any(l.strip() for l in hobbit):
+                hobbit = []
+            dibujos = [b.strip("\n") for b in lee("ascii.txt").split("\n%\n") if b.strip()]
+            hasta_dibujo = random.randint(6, 15)
+            teclea("")
+        if hobbit:
+            teclea(hobbit[j % len(hobbit)], 0.01, 0.05)
+            j += 1
+            hasta_dibujo -= 1
+            if dibujos and hasta_dibujo <= 0:
+                sys.stdout.write("\n")
+                for l in random.choice(dibujos).splitlines():
+                    sys.stdout.write(l + "\n"); sys.stdout.flush()
+                    duerme(0.04)
+                sys.stdout.write("\n")
+                hasta_dibujo = random.randint(6, 15)
+            pausa(0.05, 0.35)
+        else:
+            teclea(LINES[i % len(LINES)])
+            i += 1
+            pausa(0.15, 0.5)
 except (KeyboardInterrupt, BrokenPipeError):
     pass
 '''
@@ -4330,7 +4399,101 @@ def _hk_hobbit_files(lang: str) -> dict:
     return out
 
 
-def _hk_ssh_launch(user: str, host: str, profile: str = "", lang: str = "") -> tuple:
+# Velocidad y guion del simulacro (Carlos, 2026-10-06). El panel manda speed
+# (×1/×4/×10) y mode (intrusion | codigo) al lanzar y, en caliente, a
+# /hackeo/config. A cada equipo le llega como una línea «<velocidad> <guion>» en
+# hack.conf, junto al simulacro, que la relee mientras teclea.
+_HK_MODES = ("intrusion", "codigo")
+
+
+def _hk_cfg(body) -> tuple:
+    """(speed, mode) saneados a partir del cuerpo de la petición."""
+    body = body if isinstance(body, dict) else {}
+    try:
+        speed = float(body.get("speed") or 1)
+    except (TypeError, ValueError):
+        speed = 1.0
+    if not (speed == speed):          # NaN
+        speed = 1.0
+    speed = min(20.0, max(0.25, speed))
+    mode = str(body.get("mode") or "").strip().lower()
+    return speed, (mode if mode in _HK_MODES else "intrusion")
+
+
+def _hk_cfg_line(cfg: tuple) -> str:
+    """La línea de hack.conf. Solo dígitos, punto y un guion de la lista: se
+    puede incrustar tal cual en un comando remoto."""
+    return f"{cfg[0]:g} {cfg[1]}"
+
+
+# Guion CÓDIGO: cada equipo teclea un fichero REAL de www.admira.live — la home,
+# sus scripts propios y el control, el mismo criterio que loadHkCode() en el
+# panel. Se lee del repo del sitio (este directorio) y viaja con el lanzamiento.
+_HK_SITE_DIR = Path(__file__).parent
+_HK_CODE_EXT = (".html", ".js", ".css")
+_HK_CODE_MAX_LINES = 1500
+
+
+def _hk_code_files() -> list:
+    """Rutas (relativas al sitio) de los ficheros que se pueden teclear."""
+    names = ["index.html"]
+    try:
+        home = (_HK_SITE_DIR / "index.html").read_text(encoding="utf-8", errors="replace")
+        for src in re.findall(r"<script[^>]+src=[\"']([^\"']+)[\"']", home):
+            if re.match(r"^(?:[a-zA-Z][a-zA-Z0-9+.-]*:)?//", src):
+                continue              # scripts de terceros: no son código de admira.live
+            names.append(re.split(r"[?#]", src)[0].lstrip("/"))
+    except OSError:
+        pass
+    names.append("control/index.html")
+    root, out = _HK_SITE_DIR.resolve(), []
+    for n in names:
+        if not n or n in out:
+            continue
+        f = (root / n).resolve()
+        # Solo lo que el sitio ya publica: nada fuera del repo ni de otro tipo
+        # (aquí al lado viven .env y este mismo fichero).
+        # (y nada de ficheros de cuatro líneas o minificados en una: en bucle se nota).
+        if root in f.parents and f.suffix.lower() in _HK_CODE_EXT and f.is_file() and f.read_bytes().count(b"\n") >= 40:
+            out.append(n)
+    return out
+
+
+def _hk_code_b64(idx: int) -> str:
+    """Fichero de código que le toca al equipo nº idx, listo para viajar:
+    gzip+base64 de «www.admira.live/<fichero>» y hasta _HK_CODE_MAX_LINES líneas
+    (sin vacías, recortadas a 160 columnas). '' si no hay nada que mandar."""
+    import base64 as _b64, gzip as _gzip, random as _random
+    files = _hk_code_files()
+    if not files:
+        return ""
+    name = files[idx % len(files)]
+    try:
+        raw = (_HK_SITE_DIR / name).read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return ""
+    lines = [l.replace("\t", "  ").rstrip()[:160] for l in raw.splitlines()]
+    lines = [l for l in lines if l.strip()]
+    if not lines:
+        return ""
+    if len(lines) > _HK_CODE_MAX_LINES:   # fichero largo: un tramo distinto cada vez
+        a = _random.randrange(len(lines) - _HK_CODE_MAX_LINES + 1)
+        lines = lines[a:a + _HK_CODE_MAX_LINES]
+    text = "www.admira.live/" + name + "\n" + "\n".join(lines) + "\n"
+    return _b64.b64encode(_gzip.compress(text.encode("utf-8"))).decode("ascii")
+
+
+def _hk_code_index(machine: dict) -> int:
+    """Posición estable del equipo en el consejo → qué fichero teclea."""
+    ids = [m.get("id") for m in _hk_load_council()]
+    try:
+        return ids.index(machine.get("id"))
+    except ValueError:
+        return 0
+
+
+def _hk_ssh_launch(user: str, host: str, profile: str = "", lang: str = "",
+                   cfg: tuple = (1.0, "intrusion"), code: str = "") -> tuple:
     """Lanza la simulación de hackeo en el Terminal del Mac remoto.
 
     Usa osascript para abrir Terminal.app y arranca el script Python
@@ -4359,6 +4522,9 @@ def _hk_ssh_launch(user: str, host: str, profile: str = "", lang: str = "") -> t
         "killall ScreenSaverEngine 2>/dev/null; "
         "caffeinate -u -t 2 && sleep 1 && mkdir -p \"$HOME/.fleet\" && "
         f"echo {payload} | base64 -D > \"$HOME/.fleet/hacksim.py\" && "
+        f"printf '%s\\n' '{_hk_cfg_line(cfg)}' > \"$HOME/.fleet/hack.conf\" && "
+        # El código es un extra: si no se pudiera escribir, el simulacro sale igual.
+        + (f"(echo {code} | base64 -D | gunzip > \"$HOME/.fleet/hack-code.txt\" || true) && " if code else "")
         + "".join(
             f"mkdir -p \"$HOME/.fleet/hobbit\" && echo {b64} | base64 -D > \"$HOME/.fleet/hobbit/{name}\" && "
             for name, b64 in _hk_hobbit_files(lang).items()
@@ -4452,6 +4618,32 @@ def _hk_ssh_stop(user: str, host: str) -> tuple:
         return False, f"ssh stop error: {e}"
 
 
+def _hk_ssh_config(user: str, host: str, cfg: tuple) -> tuple:
+    """Cambia velocidad y guion EN CALIENTE en un Mac o Linux: reescribe
+    hack.conf, que el simulacro relee mientras teclea. No abre ni cierra nada;
+    si no hay simulacro en marcha, el fichero simplemente espera al siguiente."""
+    if not user or not host:
+        return False, "missing ssh user/host"
+    remote_cmd = (
+        'mkdir -p "$HOME/.fleet" && '
+        f"printf '%s\\n' '{_hk_cfg_line(cfg)}' > \"$HOME/.fleet/hack.conf\""
+    )
+    ssh_cmd = [
+        "ssh", "-o", "StrictHostKeyChecking=no", "-o", "BatchMode=yes",
+        "-o", f"ConnectTimeout={_HK_SSH_TIMEOUT}", f"{user}@{host}", remote_cmd,
+    ]
+    try:
+        r = subprocess.run(ssh_cmd, capture_output=True, timeout=_HK_SSH_TIMEOUT + 2)
+        if r.returncode == 0:
+            return True, "config ok"
+        err = (r.stderr or b"").decode("utf-8", "ignore").strip()[:200]
+        return False, f"ssh rc={r.returncode}: {err or 'no stderr'}"
+    except subprocess.TimeoutExpired:
+        return False, "ssh timeout"
+    except Exception as e:
+        return False, f"ssh error: {e}"
+
+
 # ─────────────────────────────────────────────────────────────
 # HACKEO en Windows (PC de la flota) — PREPARADO, requiere OpenSSH Server
 # activado en cada PC (hoy ssh.enabled:false en todos) + la clave del Mini
@@ -4490,20 +4682,36 @@ $lines = @(
  'C:\> wevtutil cl Security',
  'Registros de eventos borrados.'
 )
+$cf = Join-Path $PSScriptRoot 'admirahack.conf'; $sp = 1.0; $md = ''; $code = $null; $tr = $false
 $i = 0
 while ($true) {
-  $l = $lines[$i % $lines.Count]
-  foreach ($c in $l.ToCharArray()) { [Console]::Write($c); Start-Sleep -Milliseconds (Get-Random -Minimum 5 -Maximum 40) }
+  try { $q = (Get-Content $cf -TotalCount 1 -ErrorAction Stop).Split(' '); $sp = [Math]::Max(0.25, [Math]::Min(20.0, [double]$q[0])); $md = $q[1] } catch {}
+  if ($md -eq 'codigo' -and -not $tr) { $tr = $true; try { $code = @((Invoke-WebRequest -UseBasicParsing 'https://www.admira.live/app.js').Content -split "`n" | Where-Object { $_.Trim() }) } catch {} }
+  $src = $lines; if ($md -eq 'codigo' -and $code) { $src = $code }
+  $l = [string]$src[$i % $src.Count]; if ($l.Length -gt 160) { $l = $l.Substring(0, 160) }
+  $n = [int][Math]::Ceiling($sp)
+  for ($k = 0; $k -lt $l.Length; $k += $n) { [Console]::Write($l.Substring($k, [Math]::Min($n, $l.Length - $k))); Start-Sleep -Milliseconds (Get-Random -Minimum 5 -Maximum 40) }
   [Console]::Write([Environment]::NewLine)
   $i++
-  Start-Sleep -Milliseconds (Get-Random -Minimum 150 -Maximum 500)
+  Start-Sleep -Milliseconds ([int]((Get-Random -Minimum 150 -Maximum 500) / $sp))
 }
 '@
 $p = Join-Path $env:TEMP 'admirahack.ps1'
 Set-Content -Path $p -Value $sim -Encoding UTF8
+Set-Content -Path (Join-Path $env:TEMP 'admirahack.conf') -Value '__HK_CFG__' -Encoding ASCII
 $tr = 'powershell -NoProfile -ExecutionPolicy Bypass -WindowStyle Maximized -File "' + $p + '"'
 schtasks /Create /TN AdmiraHack /TR $tr /SC ONCE /ST 23:59 /RL HIGHEST /IT /F | Out-Null
 schtasks /Run /TN AdmiraHack | Out-Null
+"""
+
+# Cambio en caliente en Windows: misma línea «<velocidad> <guion>», en el fichero
+# que el simulacro relee antes de cada línea. Como no se puede esperar menos que
+# un tic del reloj de Windows, allí la velocidad se consigue escribiendo N
+# caracteres por tic; el guion «codigo» lo baja el propio PC de www.admira.live
+# (no cabe en la línea de comandos). Igual que el resto del bloque: sin probar.
+_HK_WIN_CONFIG_PS = r"""
+$ErrorActionPreference = 'SilentlyContinue'
+Set-Content -Path (Join-Path $env:TEMP 'admirahack.conf') -Value '__HK_CFG__' -Encoding ASCII
 """
 
 _HK_WIN_STOP_PS = r"""
@@ -4542,8 +4750,12 @@ def _hk_win_ssh(user: str, host: str, ps_script: str, what: str) -> tuple:
         return False, f"win {what} error: {e}"
 
 
-def _hk_win_launch(user: str, host: str) -> tuple:
-    return _hk_win_ssh(user, host, _HK_WIN_LAUNCH_PS, "launch")
+def _hk_win_launch(user: str, host: str, cfg: tuple = (1.0, "intrusion")) -> tuple:
+    return _hk_win_ssh(user, host, _HK_WIN_LAUNCH_PS.replace("__HK_CFG__", _hk_cfg_line(cfg)), "launch")
+
+
+def _hk_win_config(user: str, host: str, cfg: tuple) -> tuple:
+    return _hk_win_ssh(user, host, _HK_WIN_CONFIG_PS.replace("__HK_CFG__", _hk_cfg_line(cfg)), "config")
 
 
 def _hk_win_stop(user: str, host: str) -> tuple:
@@ -4558,7 +4770,7 @@ def _hk_is_linux(machine: dict) -> bool:
     return str(machine.get("platform") or "").lower().startswith("linux")
 
 
-def _hk_linux_launch(user: str, host: str) -> tuple:
+def _hk_linux_launch(user: str, host: str, cfg: tuple = (1.0, "intrusion"), code: str = "") -> tuple:
     """Lanza la simulación de hackeo en un terminal a pantalla completa del
     equipo Linux remoto. Usa gnome-terminal vía ~/.fleet/fleet-sesh (que inyecta
     DISPLAY/DBUS de la sesión gráfica, igual que para la captura). Devuelve
@@ -4573,6 +4785,8 @@ def _hk_linux_launch(user: str, host: str) -> tuple:
     remote_cmd = (
         'mkdir -p "$HOME/.fleet" && '
         f'echo {payload} | base64 -d > "$HOME/.fleet/hacksim.py" && '
+        f"printf '%s\\n' '{_hk_cfg_line(cfg)}' > \"$HOME/.fleet/hack.conf\" && "
+        + (f'(echo {code} | base64 -d | gunzip > "$HOME/.fleet/hack-code.txt" || true) && ' if code else "") +
         '"$HOME/.fleet/fleet-sesh" gnome-terminal --full-screen -- '
         'python3 "$HOME/.fleet/hacksim.py"'
     )
@@ -4757,7 +4971,7 @@ def _hk_send_wol(mac: str) -> tuple:
         return False, f"wol error: {e}"
 
 
-def _hk_process_one(machine: dict, action: str) -> dict:
+def _hk_process_one(machine: dict, action: str, cfg: tuple = (1.0, "intrusion")) -> dict:
     ssh = machine.get("ssh") or {}
     host = ssh.get("host", "")
     user = ssh.get("user", "")
@@ -4791,6 +5005,19 @@ def _hk_process_one(machine: dict, action: str) -> dict:
             result["ok"] = True
         return result
 
+    if action == "config":
+        # Solo toca el fichero de ajustes: ni lanza, ni cierra, ni despierta.
+        if alive:
+            cfg_fn = _hk_win_config if is_win else _hk_ssh_config
+            ok, detail = cfg_fn(user, host, cfg)
+            result["action"] = "config"
+            result["ok"] = ok
+            result["detail"] = detail
+        else:
+            result["action"] = "skipped"
+            result["detail"] = "offline"
+        return result
+
     if alive:
         # Si está encendida y aún no tenemos su MAC, la descubrimos ahora
         # (ARP local + SSH ifconfig) para poder hacerle WoL la próxima vez
@@ -4809,9 +5036,11 @@ def _hk_process_one(machine: dict, action: str) -> dict:
             lang = _hk_hobbit_lang(machine)
             if lang:
                 result["hobbit_lang"] = lang
-            ok, detail = launch_fn(user, host, profile, lang)
+            ok, detail = launch_fn(user, host, profile, lang, cfg, _hk_code_b64(_hk_code_index(machine)))
+        elif is_linux:
+            ok, detail = launch_fn(user, host, cfg, _hk_code_b64(_hk_code_index(machine)))
         else:
-            ok, detail = launch_fn(user, host)
+            ok, detail = launch_fn(user, host, cfg)
         result["action"] = "ssh_launched"
         result["ok"] = ok
         result["detail"] = detail
@@ -4840,9 +5069,11 @@ async def council_hackeo(request: Request, _rate=Depends(check_rate_limit), _aut
         return {"ok": False, "error": "no council machines", "machines": []}
 
     excluded = None
+    cfg = (1.0, "intrusion")
     try:
         _raw = await request.body()
         _body = json.loads(_raw.decode("utf-8")) if _raw else {}
+        cfg = _hk_cfg(_body)
         exclude_ip = str((_body or {}).get("exclude_ip") or "").strip()
         # GRANULAR (Carlos, 2026-07-21): si el panel manda only_ids, el hackeo
         # actúa SOLO sobre esos equipos. Lista vacía o ausente = toda la flota.
@@ -4872,7 +5103,7 @@ async def council_hackeo(request: Request, _rate=Depends(check_rate_limit), _aut
 
     results: list = []
     with _HkPool(max_workers=min(8, len(machines))) as pool:
-        for r in pool.map(lambda m: _hk_process_one(m, "start"), machines):
+        for r in pool.map(lambda m: _hk_process_one(m, "start", cfg), machines):
             results.append(r)
 
     # Persistir las MACs que se hayan descubierto en este lanzamiento.
@@ -4895,6 +5126,8 @@ async def council_hackeo(request: Request, _rate=Depends(check_rate_limit), _aut
         "summary": summary,
         "machines": results,
         "excluded": excluded,
+        "speed": cfg[0],
+        "mode": cfg[1],
     }
 
 
@@ -4924,6 +5157,46 @@ async def council_hackeo_stop(request: Request, _auth=Depends(verify_hack_token)
         "ok": True,
         "version": "Admira v.26.05.07.r6",
         "ts": datetime.utcnow().isoformat() + "Z",
+        "machines": results,
+    }
+
+
+@app.post("/api/council/hackeo/config")
+async def council_hackeo_config(request: Request, _auth=Depends(verify_hack_token)):
+    """Cambia en caliente la velocidad y el guion del simulacro ya en marcha.
+
+    Cuerpo: {speed, mode, only_ids} — los mismos only_ids que al lanzar. No abre
+    ni cierra terminales: deja el ajuste en cada equipo vivo y el simulacro lo
+    recoge mientras teclea (y el siguiente lanzamiento, si no hay ninguno).
+    """
+    machines = _hk_load_council()
+    cfg = (1.0, "intrusion")
+    try:
+        _raw = await request.body()
+        _body = json.loads(_raw.decode("utf-8")) if _raw else {}
+        cfg = _hk_cfg(_body)
+        _only = (_body if isinstance(_body, dict) else {}).get("only_ids") or []
+        if isinstance(_only, list) and _only:
+            _keep = {_hk_norm_id(x) for x in _only}
+            machines = [m for m in machines if _hk_ids_de(m) & _keep]
+    except Exception:
+        return {"ok": False, "error": "cuerpo no válido", "machines": []}
+    if not machines:
+        return {"ok": False, "error": "no hay equipos a los que avisar", "machines": []}
+    results: list = []
+    with _HkPool(max_workers=min(8, len(machines))) as pool:
+        for r in pool.map(lambda m: _hk_process_one(m, "config", cfg), machines):
+            results.append(r)
+    return {
+        "ok": True,
+        "ts": datetime.utcnow().isoformat() + "Z",
+        "speed": cfg[0],
+        "mode": cfg[1],
+        "summary": {
+            "total": len(results),
+            "online": sum(1 for r in results if r["online"]),
+            "updated": sum(1 for r in results if r["action"] == "config" and r["ok"]),
+        },
         "machines": results,
     }
 

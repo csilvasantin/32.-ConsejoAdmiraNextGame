@@ -56,25 +56,43 @@ test('contrato de admira.store: ESP/ENG, es/en y /language, sin distinguir mayú
   assert.equal(I.command('hola', 'es'), null);
 });
 
-test('argumento inválido: mensaje claro con el uso y no cambia nada (español/english tampoco valen en admira.store)', () => {
+test('como el ⌘ EXPERTO · CLI de la suite: typos, pegados y nombres largos también valen', () => {
+  const { I } = browser();
+  for (const [line, lang] of [['/idiomaESP', 'es'], ['/idiomaENG', 'en'], ['/languague eng', 'en'], ['/languageENG', 'en'],
+    ['/language_es', 'es'], ['/idioma español', 'es'], ['/idioma english', 'en'], ['/idioma Inglés', 'en'], ['/idioma castellano', 'es']]) {
+    const r = I.command(line, 'es');
+    assert.equal(r && r.ok, true, line); assert.equal(r.language, lang, line);
+  }
+  // Sin barra es chat con el Consejo, no una orden.
+  assert.equal(I.command('idioma ENG', 'es'), null);
+});
+
+test('argumento inválido: mensaje claro con el uso y no cambia nada', () => {
   const { I, storage, doc } = browser();
-  for (const bad of ['/idioma xx', '/idioma español', '/idioma english', '/idioma ENG ESP']) {
+  for (const bad of ['/idioma xx', '/idioma ENG ESP', '/language klingon']) {
     const r = I.run(bad);
     assert.equal(r.ok, false, bad);
-    assert.match(r.message, /no es un idioma\. Usa \/idioma ESP \(castellano\) o \/idioma ENG \(inglés\)\./, bad);
+    assert.match(r.message, /no es un idioma\. Usa \/idioma \(alterna\) o \/idioma ESP \(castellano\) \| ENG \(inglés\)\./, bad);
   }
   assert.equal(storage.size, 0);
   assert.equal(doc.documentElement.lang, 'es');
-  assert.match(I.command('/idioma xx', 'en').message, /is not a language\. Use \/idioma ESP \(Spanish\) or \/idioma ENG \(English\)\./);
+  assert.match(I.command('/idioma xx', 'en').message, /is not a language\. Use \/idioma \(toggle\) or \/idioma ESP \(Spanish\) \| ENG \(English\)\./);
 });
 
-test('/idioma sin argumento dice el idioma actual y cómo cambiarlo', () => {
-  const { I } = browser();
-  const es = I.run('/idioma');
-  assert.equal(es.ok, true); assert.equal(es.query, true);
-  assert.equal(es.message, 'Idioma actual: castellano. Usa /idioma ESP (castellano) o /idioma ENG (inglés).');
-  I.run('/idioma ENG');
-  assert.equal(I.run('/idioma').message, 'Current language: English. Use /idioma ESP (Spanish) or /idioma ENG (English).');
+test('/idioma sin argumento alterna ESP↔ENG (contrato de experto.js)', () => {
+  const { I, storage } = browser();
+  const a = I.run('/idioma');
+  assert.equal(a.ok, true); assert.equal(a.toggled, true); assert.equal(a.language, 'en');
+  assert.equal(I.lang(), 'en'); assert.equal(storage.get('admiranext_expert_lang'), 'en');
+  const b = I.run('/language');
+  assert.equal(b.language, 'es'); assert.equal(I.lang(), 'es');
+  assert.equal(storage.get('admiranext_expert_lang'), 'es');
+});
+
+test('la preferencia de la suite (admiranext_expert_lang) manda sobre xtanco_lang', () => {
+  const storage = new Map([['admiranext_expert_lang', 'en'], ['xtanco_lang', 'es']]);
+  const { I, doc } = browser({ storage });
+  assert.equal(I.lang(), 'en'); assert.equal(doc.documentElement.lang, 'en');
 });
 
 test('persistencia: xtanco_lang, ?lang= en la URL, <html lang>, evento y traducción declarativa', () => {
@@ -83,6 +101,7 @@ test('persistencia: xtanco_lang, ?lang= en la URL, <html lang>, evento y traducc
   const input = el('', { placeholder: 'escribe aquí', 'data-en-placeholder': 'type here' });
   const a = browser({ storage, nodes: [link, input] });
   a.I.run('/idioma ENG');
+  assert.equal(storage.get('admiranext_expert_lang'), 'en');
   assert.equal(storage.get('xtanco_lang'), 'en');
   assert.equal(a.doc.documentElement.lang, 'en');
   assert.equal(new URL(a.ctx.location.href).searchParams.get('lang'), 'en');
@@ -122,11 +141,11 @@ function between(src, from, to) {
   return src.slice(a, b);
 }
 
-test('home: cada comando de CLI_COMMANDS sale en /help (y /idioma está registrado)', () => {
+test('home: cada comando de CLI_COMMANDS sale en /help (y /idioma y /marca están registrados)', () => {
   const list = APP.match(/const CLI_COMMANDS = \[([\s\S]*?)\];/);
   assert.ok(list, 'falta CLI_COMMANDS');
   const cmds = [...list[1].matchAll(/'(\/[^']+)'/g)].map(m => m[1]);
-  assert.ok(cmds.includes('/idioma') && cmds.includes('/language'));
+  assert.ok(cmds.includes('/idioma') && cmds.includes('/language') && cmds.includes('/marca'));
   const help = between(APP, 'function showCliHelp()', 'function showAgoraMatrixHelp');
   const missing = cmds.filter(c => !help.includes(c));
   assert.deepEqual(missing, [], 'comandos registrados que no salen en /help: ' + missing.join(' '));
@@ -146,7 +165,7 @@ test('consola local de la barra: /help nombra todo lo que entiende', () => {
 
 test('el intérprete de la home despacha /idioma en local, antes que /help y sin red', () => {
   const fn = between(APP, 'function handleCliCommand(raw)', 'const helpMatch');
-  assert.match(fn, /\/\^\\\/\(idioma\|language\)\(\\s\|\$\)\/i/);
+  assert.match(fn, /\/\^\\\/\(idioma\|language\|languague\)\/i/);
   assert.match(fn, /window\.AdmiraIdioma\.run\(text\)/);
   assert.doesNotMatch(fn, /fetch\(|sendMessage|telegram/i);
 });
@@ -185,4 +204,46 @@ test('carga: la home pide el módulo en el <head> y la barra lo pide con su mism
   assert.match(BAR, /"\/admira-idioma\.js" \+ \(v \? "\?v=" \+ encodeURIComponent\(v\) : ""\)/);
   assert.match(read('deploy.sh'), /ASSETS = \("admira-bar\.js", "casa-nav\.css", "admira-idioma\.js"\)/);
   assert.match(read('_headers'), /\/admira-idioma\.js\n  Cache-Control: public, max-age=300, must-revalidate/);
+});
+
+// ── ⌘ EXPERTO · CLI de la suite, montado como en las plataformas (06-10-2026) ──
+test('home: carga la piel compartida experto.js/css de admiranext.com en modo propio, sin pisar el ⌘ del SCUMM', () => {
+  assert.match(HOME, /<link rel="stylesheet" href="https:\/\/www\.admiranext\.com\/suite\/experto\.css\?v=[^"]+">/);
+  const tag = HOME.match(/<script defer src="https:\/\/www\.admiranext\.com\/suite\/experto\.js\?v=[^"]+"([^>]*)><\/script>/);
+  assert.ok(tag, 'falta experto.js');
+  assert.match(tag[1], /data-mount="#ax-live-experto"/);
+  assert.match(tag[1], /data-mount-body="\.ax-live-bd"/);
+  assert.match(tag[1], /data-pata="admira\.live"/);
+  assert.match(tag[1], /data-toggle=""/);
+  assert.match(HOME, /<section id="ax-live-experto"[^>]*><div class="ax-live-bd"><\/div><\/section>/);
+  // AdmiraMarca antes que experto.js: /marca del dock usa la marca blanca real.
+  assert.ok(HOME.indexOf('<script defer src="/assets/marca-blanca.js') < HOME.indexOf('<script defer src="https://www.admiranext.com/suite/experto.js'));
+});
+
+test('el dock de la suite traduce la página: admiranext:lang → AdmiraIdioma.set', () => {
+  const storage = new Map();
+  const listeners = {};
+  const nodes = [el('Verbos', { 'data-en': 'Verbs' })];
+  const doc = { readyState: 'complete', documentElement: { lang: 'es' }, addEventListener() {},
+    querySelectorAll: sel => nodes.filter(n => sel.split(',').some(s => n.hasAttribute(s.trim().slice(1, -1)))) };
+  const ctx = { document: doc, URL, localStorage: { getItem: k => (storage.has(k) ? storage.get(k) : null), setItem: (k, v) => storage.set(k, String(v)) },
+    location: { href: 'https://www.admira.live/' }, history: { state: null, replaceState(_s, _t, url) { ctx.location.href = url; } },
+    addEventListener: (t, fn) => { listeners[t] = fn; }, dispatchEvent() {},
+    CustomEvent: class { constructor(type, init) { this.type = type; this.detail = init && init.detail; } } };
+  vm.createContext(ctx); vm.runInContext(SRC, ctx);
+  assert.equal(typeof listeners['admiranext:lang'], 'function');
+  listeners['admiranext:lang']({ detail: { lang: 'en' } });
+  assert.equal(nodes[0].textContent, 'Verbs');
+  assert.equal(storage.get('admiranext_expert_lang'), 'en');
+});
+
+test('/marca en la línea SCUMM usa AdmiraMarca, en local', () => {
+  const fn = between(APP, 'function runMarcaCommand(arg)', 'function handleCliCommand(raw)');
+  assert.match(fn, /window\.AdmiraMarca/);
+  assert.match(fn, /M\.activar\(p\.id\)/);
+  assert.match(fn, /M\.desactivar\(\)/);
+  assert.doesNotMatch(fn, /sendMessage|telegram/i);
+  const mb = read('assets/marca-blanca.js');
+  assert.match(mb, /SESSION_KEY = 'mb:marca'/);
+  assert.match(mb, /\.top-bar > a\.brand-logo/);
 });

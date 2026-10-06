@@ -5,6 +5,14 @@
 // Chat limpio al entrar sigue en cargaHilos(); el bloque Previos nace vacío/usable.
 export const IDS = ['verbos', 'accesos', 'previos'];
 const LABELS = { verbos: 'Verbos', accesos: 'Accesos', previos: 'Previos' };
+// Inglés para /idioma ENG (admira-idioma.js traduce los data-en / data-en-*; 06-10-2026).
+export const LABELS_EN = { verbos: 'Verbs', accesos: 'Shortcuts', previos: 'Previews' };
+const en = (node, { text, label, title } = {}) => {
+  if (text != null) node.setAttribute('data-en', text);
+  if (label != null) node.setAttribute('data-en-aria-label', label);
+  if (title != null) node.setAttribute('data-en-title', title);
+  return node;
+};
 const KEY = 'admira.scumm.layout.v8';
 const PREVIOUS_KEYS = [
   'admira.scumm.layout.v7',
@@ -101,8 +109,10 @@ function init() {
   const menuToggle = create('summary', '', '⋯');
   menuToggle.setAttribute('aria-label', 'Opciones de los bloques SCUMM');
   menuToggle.title = 'Restaurar o mostrar bloques SCUMM';
+  en(menuToggle, { label: 'SCUMM block options', title: 'Restore or show SCUMM blocks' });
   const toolbar = create('div', 'scumm-layout-tools');
   toolbar.setAttribute('aria-label', 'Bloques del menú SCUMM');
+  en(toolbar, { label: 'SCUMM menu blocks' });
   menu.append(menuToggle, toolbar);
   row.parentElement.querySelector('.action-line').insertBefore(menu, document.getElementById('scumm-fold'));
   document.addEventListener('click', e => { if (!menu.contains(e.target)) menu.open = false; });
@@ -113,10 +123,13 @@ function init() {
   for (const id of IDS) {
     const module = create('section', 'scumm-module'); module.dataset.module = id;
     module.setAttribute('aria-label', LABELS[id]);
+    en(module, { label: LABELS_EN[id] });
     const head = create('div', 'scumm-module-head');
     const grip = button('Mover ' + LABELS[id] + ' · arrastra o usa las flechas', '⠿ ' + LABELS[id].toUpperCase());
     grip.className = 'scumm-module-grip';
+    en(grip, { text: '⠿ ' + LABELS_EN[id].toUpperCase(), label: 'Move ' + LABELS_EN[id] + ' · drag or use the arrows', title: 'Move ' + LABELS_EN[id] + ' · drag or use the arrows' });
     const close = button('Cerrar ' + LABELS[id], '×'); close.className = 'scumm-module-close';
+    en(close, { label: 'Close ' + LABELS_EN[id], title: 'Close ' + LABELS_EN[id] });
     close.addEventListener('click', () => {
       if (id === 'accesos') return;
       if (!state.hidden.includes(id)) state.hidden.push(id);
@@ -129,9 +142,11 @@ function init() {
     handle.setAttribute('role', 'separator'); handle.setAttribute('aria-orientation', 'vertical');
     handle.setAttribute('aria-label', 'Redimensionar ' + LABELS[id]);
     handle.title = 'Arrastra para ajustar · flechas · doble clic para igualar';
+    en(handle, { label: 'Resize ' + LABELS_EN[id], title: 'Drag to adjust · arrows · double-click to even out' });
     module.append(head, content, handle); row.append(module);
     modules[id] = { module, grip, handle };
     const toggle = button('Mostrar ' + LABELS[id], '+ ' + LABELS[id].toUpperCase());
+    en(toggle, { text: '+ ' + LABELS_EN[id].toUpperCase(), label: 'Show ' + LABELS_EN[id], title: 'Show ' + LABELS_EN[id] });
     toggle.addEventListener('click', () => {
       if (id === 'accesos') { menu.open = false; return; }
       state.hidden = state.hidden.filter(x => x !== id);
@@ -189,12 +204,14 @@ function init() {
     });
   }
   const reset = button('Restaurar Verbos+iconos | Previos', '↺ RESTAURAR');
+  en(reset, { text: '↺ RESTORE', label: 'Restore Verbs+icons | Previews', title: 'Restore Verbs+icons | Previews' });
   reset.addEventListener('click', () => { state = normalizeLayout(); state.hidden = [...DEFAULT_HIDDEN]; render(); save(); menu.open = false; menuToggle.focus(); });
   toolbar.append(reset);
   const heightHandle = create('div', 'scumm-height-resizer'); heightHandle.tabIndex = 0;
   heightHandle.setAttribute('role', 'separator'); heightHandle.setAttribute('aria-orientation', 'horizontal');
   heightHandle.setAttribute('aria-label', 'Redimensionar altura del menú SCUMM');
   heightHandle.title = 'Arrastra para ajustar la altura · flechas arriba/abajo';
+  en(heightHandle, { label: 'Resize SCUMM menu height', title: 'Drag to adjust the height · up/down arrows' });
   row.after(heightHandle);
   let heightDrag = null;
   heightHandle.addEventListener('pointerdown', e => {
@@ -233,5 +250,6 @@ function init() {
   }
   render();
   save();
+  try { window.AdmiraIdioma?.translate?.(row.parentElement); } catch {}
 }
 if (typeof document !== 'undefined') init();

@@ -173,6 +173,7 @@
     el.setAttribute('aria-describedby', 'sello-novedades-tip');
 
     fillTip(d || {}, sello);
+    el.__selloDatos = { d: d || {}, sello: sello };
 
     if (!el.__selloTipBound) {
       el.__selloTipBound = true;
@@ -185,6 +186,11 @@
       }, true);
       window.addEventListener('resize', function () {
         if (tipEl && tipEl.classList.contains('is-on')) placeTip(sealEl, tipEl);
+      });
+      // /idioma: «NOVEDADES» ↔ «WHAT'S NEW» al momento, no solo al recargar.
+      window.addEventListener('admira:languagechange', function () {
+        var x = sealEl && sealEl.__selloDatos;
+        if (x) fillTip(x.d, x.sello);
       });
     }
   }

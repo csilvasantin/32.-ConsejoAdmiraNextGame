@@ -69,7 +69,8 @@
     var lines = linesFrom(d);
     tip.innerHTML = '';
     var head = document.createElement('b');
-    head.textContent = 'NOVEDADES · ' + sello;
+    var I = window.AdmiraIdioma, T = function (es, en) { return I && I.t ? I.t(es, en) : es; };
+    head.textContent = T('NOVEDADES · ', 'WHAT\'S NEW · ') + sello;
     tip.appendChild(head);
     if (lines.length) {
       var ul = document.createElement('ul');
@@ -81,7 +82,7 @@
       tip.appendChild(ul);
     } else {
       var empty = document.createElement('div');
-      empty.textContent = 'Sin notas en este sello.';
+      empty.textContent = T('Sin notas en este sello.', 'No notes for this release.');
       empty.style.color = '#886633';
       tip.appendChild(empty);
     }

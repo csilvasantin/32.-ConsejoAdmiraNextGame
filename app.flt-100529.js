@@ -1821,7 +1821,9 @@
             '<div class="window-overlay-title">' + T('CLI · GENERAL', 'CLI · GENERAL') + '</div>' +
             '<ol class="analizar-list">' +
             li('<strong>/help</strong>', 'muestra u oculta esta ayuda', 'shows or hides this help') +
-            li('<strong>/idioma ESP | ENG</strong>', 'castellano o inglés, sin recargar la página (también /language)', 'Spanish or English without reloading the page (also /language)') +
+            li('<strong>/idioma [ESP | ENG]</strong>', 'alterna o fija castellano/inglés sin recargar (también /language, /languague, /idiomaESP)', 'toggles or sets Spanish/English without reloading (also /language, /languague, /idiomaENG)') +
+            li('<strong>/marca &lt;id&gt; | off | lista</strong>', 'marca blanca del catálogo de admiranext.com (p. ej. /marca starbucks), como en las plataformas', 'white label from the admiranext.com catalogue (e.g. /marca starbucks), as on the platforms') +
+            li('<strong>⌘ EXPERTO · CLI</strong>', 'consola de la suite AdmiraNeXT anclada abajo: /help, /marca, /idioma, /estado, /version', 'AdmiraNeXT suite console docked at the bottom: /help, /marca, /idioma, /estado, /version') +
             li('<strong>/comandos</strong>', 'abre la página con todos los comandos', 'opens the page with every command') +
             li('<strong>/leyendas · /coetaneos</strong>', 'cambia la generación del Consejo', 'switches the Council generation') +
             li('<strong>/agentes</strong>', 'muestra u oculta el panel de Agentes (AgoraMatrix)', 'shows or hides the Agents panel (AgoraMatrix)') +
@@ -2166,7 +2168,7 @@
         '/admira.app', '/clearchannel.tv', '/pixeria.com', '/equipos', '/control',
         '/scumm', '/top', '/bocas', '/mac', '/motor', '/olvidar', '/menu', '/agoramatrix', '/tareas', '/google',
         '/importar', '/nombres', '/tarea', '/diario', '/leyendas', '/coetaneos', '/agentes', '/comandos', '/sendto',
-        '/marcador', '/flota', '/highscore', '/recorte', '/recortar', '/idioma', '/language'
+        '/marcador', '/flota', '/highscore', '/recorte', '/recortar', '/idioma', '/language', '/marca'
     ];
     (function setupCliAutocomplete() {
         const inp = document.getElementById('action-input');
@@ -2192,15 +2194,55 @@
         });
     })();
 
+    function runMarcaCommand(arg) {
+        const M = window.AdmiraMarca;
+        if (!M) { setActionLine(cliT('⚠️ La marca blanca no ha cargado; recarga la página', '⚠️ White label did not load; reload the page')); return; }
+        const p = M.parseArg(arg);
+        if (p.kind === 'status') {
+            const cur = M.actual();
+            setActionLine(cur ? cliT('🏷️ Marca activa: ', '🏷️ Active brand: ') + cur.nombre + ' (' + cur.id + ') · /marca off'
+                              : cliT('🏷️ Sin marca (Admira). Prueba /marca starbucks · /marca lista', '🏷️ No brand (Admira). Try /marca starbucks · /marca lista'));
+            return;
+        }
+        if (p.kind === 'off') { M.desactivar(); setActionLine(cliT('🏷️ Vuelves a la identidad de serie (Admira).', '🏷️ Back to the default identity (Admira).')); return; }
+        if (p.kind === 'id' && p.id === 'lista') {
+            M.listar().then(list => setActionLine(cliT('🏷️ Marcas: ', '🏷️ Brands: ') + list.map(c => c.id).join(' · ')))
+                .catch(() => setActionLine(cliT('⚠️ El catálogo de marcas no responde.', '⚠️ The brand catalogue is not answering.')));
+            return;
+        }
+        if (p.kind === 'web') {
+            const r = M.analizar(p.url);
+            setActionLine(r.ok ? cliT('🔎 Analizando la web en admiranext.com → ', '🔎 Analysing the site on admiranext.com → ') + r.href : cliT('⚠️ Web no válida', '⚠️ Invalid site'));
+            return;
+        }
+        if (p.kind !== 'id') { setActionLine(cliT('⚠️ Usa /marca <id> | off | lista', '⚠️ Use /marca <id> | off | lista')); return; }
+        setActionLine(cliT('🏷️ Aplicando la marca ', '🏷️ Applying brand ') + p.id + '…');
+        M.activar(p.id).then(r => {
+            if (r && r.ok) setActionLine(cliT('🏷️ Marca ', '🏷️ Brand ') + r.nombre + ' (' + r.id + cliT(') activa · /marca off vuelve a Admira', ') active · /marca off returns to Admira'));
+            else if (r && r.reason === 'unknown') setActionLine(cliT('⚠️ No hay marca «', '⚠️ No brand «') + p.id + cliT('» en el catálogo · /marca lista', '» in the catalogue · /marca lista'));
+            else setActionLine(cliT('⚠️ No se pudo aplicar ', '⚠️ Could not apply ') + p.id + cliT(' (admiranext.com no responde)', ' (admiranext.com is not answering)'));
+        });
+    }
+
     function handleCliCommand(raw) {
         const text = String(raw || '').trim();
         if (!text) return false;
         // /idioma ESP | ENG (alias /language): mismo contrato que admira.store (admira-idioma.js).
         // Es local: cambia la interfaz sin recargar y nunca llega al Consejo ni a la flota.
-        if (/^\/(idioma|language)(\s|$)/i.test(text)) {
+        // Como en el ⌘ EXPERTO · CLI de la suite: /idioma sin argumento alterna; typo /languague
+        // y argumento pegado (/idiomaESP, /languageENG) también valen.
+        if (/^\/(idioma|language|languague)/i.test(text) && (!window.AdmiraIdioma || window.AdmiraIdioma.command(text, window.AdmiraIdioma.lang()))) {
             addUserEntry(text);
             const res = window.AdmiraIdioma ? window.AdmiraIdioma.run(text) : null;
             setActionLine(res ? '🌐 ' + res.message : '⚠️ El selector de idioma no ha cargado; recarga la página');
+            return true;
+        }
+        // /marca <id> | off | lista: marca blanca del catálogo único de admiranext.com, el mismo
+        // AdmiraMarca (assets/marca-blanca.js) que usa el ⌘ EXPERTO · CLI. Local: no va al Consejo.
+        const marcaMatch = text.match(/^\/(?:marca|brand|marcablanca)(?:\s+([\s\S]*))?$/i);
+        if (marcaMatch) {
+            addUserEntry(text);
+            runMarcaCommand((marcaMatch[1] || '').trim());
             return true;
         }
         const helpMatch = text.match(/^\/help$/i);

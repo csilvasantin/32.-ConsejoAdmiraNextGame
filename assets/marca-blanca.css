@@ -1,0 +1,59 @@
+/* Marca blanca · www.admira.live (Consejo de Silicio). Solo se carga con marca activa
+   (assets/marca-blanca.js). Plataforma del cargador común: store (el catálogo no tiene «live»).
+   Viste el chrome SCUMM: barra de madera (.top-bar), rieles, línea de órdenes y sello. */
+
+:root[data-mb-marca]{color-scheme:normal}
+
+/* Barra superior */
+:root[data-mb-marca] .top-bar{
+  background:var(--mb-superficie)!important;
+  border-color:var(--mb-borde)!important;border-top-color:var(--mbx-brand)!important;
+}
+:root[data-mb-marca] .top-bar .version-badge,
+:root[data-mb-marca] .top-bar .pf-ico{
+  background:var(--mb-fondo)!important;border-color:var(--mb-borde)!important;color:var(--mbx-brand)!important;
+}
+:root[data-mb-marca] .top-bar .version-badge:hover,
+:root[data-mb-marca] .top-bar .pf-ico:hover{
+  background:var(--mbx-brand)!important;color:var(--mbx-on-brand)!important;border-color:var(--mbx-brand)!important;
+}
+:root[data-mb-marca] .top-bar .pf-ico .frame{stroke:var(--mbx-mut)}
+:root[data-mb-marca] .top-bar .pf-ico .panel{fill:var(--mbx-mut)}
+:root[data-mb-marca] .top-bar .pf-ico.on .frame{stroke:var(--mbx-brand)}
+:root[data-mb-marca] .top-bar .pf-ico.on .panel{fill:var(--mbx-brand)}
+/* El logo Admira queda como «powered by»: atenuado detrás del logo del cliente. */
+:root[data-mb-marca] .top-bar a.brand-logo{opacity:.4;filter:grayscale(1)}
+:root[data-mb-marca] .top-bar a.brand-logo:hover{opacity:.8}
+:root[data-mb-marca] .mb-bar-logo{
+  display:inline-flex!important;align-items:center;align-self:stretch;flex:0 0 auto;
+  height:auto;min-height:28px;max-width:170px;padding:2px 10px;
+  background:var(--mb-fondo);border:2px solid var(--mbx-brand);box-shadow:2px 2px 0 #000;
+  color:var(--mbx-brand);font:800 13px/1 var(--mb-fuente-titulos);text-decoration:none;white-space:nowrap;overflow:hidden;
+}
+:root[data-mb-marca] .mb-bar-logo :is(img,svg,.mb-logo-img,.mb-logo-svg){height:24px;width:auto;max-width:100%;object-fit:contain;display:block}
+:root[data-mb-marca] .mb-bar-logo[data-mb-propuesta]{border-style:dashed}
+:root[data-mb-marca] .mb-powered{
+  display:inline-flex;align-items:center;padding:0 8px;border-left:1px solid var(--mb-borde);
+  color:var(--mbx-mut);font:600 9px/1.3 var(--mb-fuente-mono);letter-spacing:.12em;text-transform:uppercase;
+}
+:root[data-mb-marca] .mb-powered::before{content:"powered by\00a0";font-weight:400;text-transform:none;letter-spacing:.04em}
+
+/* Rieles (Opciones / Avanzado) y su sello */
+:root[data-mb-marca] .side-rail .rail-body{background:var(--mb-superficie)!important;border-color:var(--mb-borde)!important}
+:root[data-mb-marca] .side-rail .rail-group{color:var(--mbx-mut)!important;border-color:var(--mb-borde)!important}
+:root[data-mb-marca] .side-rail .rail-btn{background:var(--mb-fondo)!important;border-color:var(--mb-borde)!important;color:var(--mbx-ink)!important}
+:root[data-mb-marca] .side-rail .rail-btn.primary{color:var(--mbx-brand)!important}
+:root[data-mb-marca] .side-rail .rail-btn:hover{background:var(--mbx-brand)!important;color:var(--mbx-on-brand)!important}
+:root[data-mb-marca] .rail-ver{color:var(--mbx-brand)!important;border-color:var(--mbx-brand)!important}
+
+/* Línea de órdenes SCUMM: la acción principal toma el color de la marca */
+:root[data-mb-marca] .scumm-bar .action-send{background:var(--mbx-brand)!important;color:var(--mbx-on-brand)!important;border-color:var(--mbx-brand)!important}
+:root[data-mb-marca] .scumm-bar .action-input{border-color:var(--mbx-brand)!important}
+
+/* «Volver a Admira» en el riel de Opciones */
+:root[data-mb-marca] .mb-volver{
+  display:block;width:calc(100% - 8px);margin:4px;padding:8px 10px;border-radius:0;
+  border:2px solid var(--mbx-brand);background:var(--mb-fondo);color:var(--mbx-brand);
+  font:600 12px var(--mb-fuente-texto);cursor:pointer;box-shadow:2px 2px 0 #000;
+}
+:root[data-mb-marca] .mb-volver:hover{background:var(--mbx-brand);color:var(--mbx-on-brand)}

@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.06.10.2026.r12.00:15" />
+<meta name="admiranext-version" content="AdmiraNeXT v.06.10.2026.r13.08:00" />
     <script src="/auth-gate.js?v=20261004-r15-sinfranja"></script>
     <script src="/admira-idioma.js"></script>
     <meta charset="UTF-8">
@@ -3683,14 +3683,14 @@ body.rail-open{overflow:hidden}
 
         <div class="status-grid" id="status-grid" style="display:none">
             <div class="side-panel racional collapsed" id="panel-racional">
-                <div class="side-title" onclick="togglePanel('panel-racional')">🧠 Racional <span class="collapse-arrow">▼</span> <span class="side-machines">🔴 Sillas rojas · <span id="count-racional">0/4</span></span></div>
+                <div class="side-title" onclick="togglePanel('panel-racional')"><span data-en="🧠 Rational">🧠 Racional</span> <span class="collapse-arrow">▼</span> <span class="side-machines"><span data-en="🔴 Red chairs ·">🔴 Sillas rojas ·</span> <span id="count-racional">0/4</span></span></div>
                 <div class="panel-body">
                     <div id="racional-members"></div>
                     <div class="board-content" id="board-racional"></div>
                 </div>
             </div>
             <div class="side-panel creativo collapsed" id="panel-creativo">
-                <div class="side-title" onclick="togglePanel('panel-creativo')">🎨 Creativo <span class="collapse-arrow">▼</span> <span class="side-machines">🔵 Sillas azules · <span id="count-creativo">0/4</span></span></div>
+                <div class="side-title" onclick="togglePanel('panel-creativo')"><span data-en="🎨 Creative">🎨 Creativo</span> <span class="collapse-arrow">▼</span> <span class="side-machines"><span data-en="🔵 Blue chairs ·">🔵 Sillas azules ·</span> <span id="count-creativo">0/4</span></span></div>
                 <div class="panel-body">
                     <div id="creativo-members"></div>
                     <div class="board-content" id="board-creativo"></div>
@@ -3747,7 +3747,7 @@ body.rail-open{overflow:hidden}
                 <button type="button" class="mac-hoy-floppy" id="mac-hoy-floppy" title="Disquetera · mete y saca el disco del Pong"></button>
             </div>
             <div class="mac-hoy-front" id="mac-hoy-front">
-                <button type="button" class="mac-hoy-front-close" id="mac-hoy-front-close">Cerrar</button>
+                <button type="button" class="mac-hoy-front-close" id="mac-hoy-front-close" data-en="Close">Cerrar</button>
                 <div class="mac-hoy-front-stage">
                     <img src="assets/mac-1984-front.png?v=20260919-sinhalo" alt="Macintosh 1984 vista frontal">
                     <pre class="mac-hoy-crt-front" id="mac-hoy-crt-front">HOY</pre>
@@ -3847,7 +3847,7 @@ body.rail-open{overflow:hidden}
                 <button class="rail-btn primary" onclick="railVerb('debatir')" title="El Consejo debate un tema" data-en-title="The Council debates a topic" data-en="Debate">Debatir</button>
                 <button class="rail-btn primary" onclick="railVerb('reunion')" title="Reúnete a solas con un consejero" data-en-title="Meet a councillor one-to-one" data-en="Meeting">Reunión</button>
                 <!-- Sello de versión: al PIE del rail de opciones (Carlos: fuera del título) -->
-                <div class="rail-ver" title="Versión de la release" data-en-title="Release version">v.05.10.2026.r11.00:05</div>
+                <div class="rail-ver" title="Versión de la release" data-en-title="Release version">v.06.10.2026.r13.08:00</div>
             </div>
         </div>
 
@@ -3855,7 +3855,7 @@ body.rail-open{overflow:hidden}
             <div class="rail-body">
                 <div class="legend-strip" id="legend-strip">
                     <div class="legend-head">
-                        <div class="legend-kicker">⭐ LEYENDAS · CONSEJO BASE</div>
+                        <div class="legend-kicker" data-en="⭐ LEGENDS · CORE COUNCIL">⭐ LEYENDAS · CONSEJO BASE</div>
                         <div class="legend-active" id="legend-active">Selecciona una leyenda</div>
                         <div class="legend-focus" id="legend-focus">Criterio, memoria larga y oficio fundador.</div>
                     </div>
@@ -3898,13 +3898,13 @@ body.rail-open{overflow:hidden}
                 <a class="rail-btn" href="/normativa" title="Normativa · reglas de trabajo del equipo" data-en-title="Rules · the team's working norms" data-en="📜 Rules">📜 Normativa</a>
                 </nav>
                 <div class="summary" id="summary"></div>
-                <div class="rail-group">Tareas</div>
+                <div class="rail-group" data-en="Tasks">Tareas</div>
                 <div id="task-panel" aria-label="Tareas del Consejo">
-                  <div id="tk-head"><span class="tk-dot"></span><b>🗂️ Tareas del Consejo</b><span class="tk-count" id="tk-count"></span><span class="tk-toggle">▾</span></div>
+                  <div id="tk-head"><span class="tk-dot"></span><b data-en="🗂️ Council tasks">🗂️ Tareas del Consejo</b><span class="tk-count" id="tk-count"></span><span class="tk-toggle">▾</span></div>
                   <div id="tk-body">
-                    <button type="button" id="tk-form-toggle" class="tk-form-toggle" title="Mostrar / ocultar el formulario de crear tarea">➕ Nueva tarea<span class="tk-fc" id="tk-form-caret">▸</span></button>
+                    <button type="button" id="tk-form-toggle" class="tk-form-toggle" title="Mostrar / ocultar el formulario de crear tarea" data-en-title="Show / hide the new-task form"><span data-en="➕ New task">➕ Nueva tarea</span><span class="tk-fc" id="tk-form-caret">▸</span></button>
                     <form id="tk-form" autocomplete="off">
-                      <input id="tk-title" placeholder="Nueva tarea… (qué hay que hacer)" maxlength="280" required>
+                      <input id="tk-title" placeholder="Nueva tarea… (qué hay que hacer)" data-en-placeholder="New task… (what needs doing)" maxlength="280" required>
                       <div class="tk-row">
                         <select id="tk-assignee" title="Asignar a"><option value="">Asignar a…</option></select>
                         <select id="tk-priority" title="Prioridad">
@@ -3953,21 +3953,21 @@ body.rail-open{overflow:hidden}
                         <span id="tk-img-prev" style="font-size:0.4rem;color:#ffdd66"></span>
                       </div>
                       <div class="tk-row">
-                        <label class="tk-send-now"><input type="checkbox" id="tk-now" checked> entregar ya</label>
-                        <button type="submit" class="tk-create" id="tk-create">+ Crear</button>
+                        <label class="tk-send-now"><input type="checkbox" id="tk-now" checked> <span data-en="deliver now">entregar ya</span></label>
+                        <button type="submit" class="tk-create" id="tk-create" data-en="+ Create">+ Crear</button>
                       </div>
                     </form>
-                    <button type="button" id="tk-hist-toggle" class="tk-form-toggle" title="Mostrar / ocultar bots y el histórico de tareas">🗂️ Histórico (bots y tareas)<span class="tk-fc" id="tk-hist-caret">▸</span></button>
+                    <button type="button" id="tk-hist-toggle" class="tk-form-toggle" title="Mostrar / ocultar bots y el histórico de tareas" data-en-title="Show / hide bots and the task history"><span data-en="🗂️ History (bots and tasks)">🗂️ Histórico (bots y tareas)</span><span class="tk-fc" id="tk-hist-caret">▸</span></button>
                     <div class="tk-row" id="tk-bulk" style="flex-direction:row;gap:5px;justify-content:flex-start;flex-wrap:wrap;margin:2px 0 4px">
-                      <button type="button" id="tk-clear-done" class="tk-skynet-audit" style="width:auto">🧹 Limpiar hechas</button>
+                      <button type="button" id="tk-clear-done" class="tk-skynet-audit" style="width:auto" data-en="🧹 Clear done">🧹 Limpiar hechas</button>
                       <button type="button" id="tk-toggle-arch" class="tk-skynet-audit" style="width:auto">📦 Ver archivadas</button>
                     </div>
                     <div id="tk-health" title="Salud de los bots"></div>
                     <div id="tk-list"><div id="tk-empty">Cargando tareas…</div></div>
-                    <div id="tk-foot">reparto + seguimiento · persistente</div>
+                    <div id="tk-foot" data-en="assignment + tracking · persistent">reparto + seguimiento · persistente</div>
                   </div>
                 </div>
-                <div id="rail-estado">Estado en tiempo real del Consejo de Dirección · <span class="live">● LIVE</span> · <span id="last-check-inline">comprobando...</span> · Última comprobación: <span id="last-check">—</span></div>
+                <div id="rail-estado"><span data-en="Live status of the Board Council ·">Estado en tiempo real del Consejo de Dirección ·</span> <span class="live">● LIVE</span> · <span id="last-check-inline">comprobando...</span> · <span data-en="Last check:">Última comprobación:</span> <span id="last-check">—</span></div>
             </div>
         </div>
         </div>
@@ -4022,7 +4022,7 @@ body.rail-open{overflow:hidden}
                     </div>
                     <!-- Panel LLM: por defecto y para verbos que usan modelo (preguntar, debatir, hablar) -->
                     <div class="inv-panel active" data-panel="llm">
-                        <div class="inventory-title">Motor LLM</div>
+                        <div class="inventory-title" data-en="LLM engine">Motor LLM</div>
                         <div class="inventory-list" id="llm-list">
                             <div class="inv-item llm-option selected" data-llm="grok-4.6" onclick="selectLLM(this)">🚀 Grok 4.6 <span class="llm-nim">xAI</span></div>
                             <div class="inv-item llm-option" data-llm="claude-sonnet" data-paid="true" onclick="selectLLM(this)">💎 Claude Sonnet 4 <span class="llm-paid">€</span></div>
@@ -4035,57 +4035,57 @@ body.rail-open{overflow:hidden}
                     </div>
                     <!-- Panel PENSAR: cómo nos cuenta el libro del día -->
                     <div class="inv-panel" data-panel="leer">
-                        <div class="inventory-title">Modo de lectura</div>
+                        <div class="inventory-title" data-en="Reading mode">Modo de lectura</div>
                         <div class="inventory-list">
-                            <div class="inv-item leer-option locked" data-leer="texto" title="Próximamente — por ahora usa Audio" onclick="selectSubOption('leer', this)">📄 Texto 🔒</div>
+                            <div class="inv-item leer-option locked" data-leer="texto" title="Próximamente — por ahora usa Audio" onclick="selectSubOption('leer', this)" data-en="📄 Text 🔒" data-en-title="Coming soon — use Audio for now">📄 Texto 🔒</div>
                             <div class="inv-item leer-option selected" data-leer="audio" onclick="selectSubOption('leer', this)">🔊 Audio</div>
-                            <div class="inv-item leer-option locked" data-leer="video" title="Próximamente — por ahora usa Audio" onclick="selectSubOption('leer', this)">🎬 Vídeo 🔒</div>
-                            <div class="inv-item leer-option locked" data-leer="interactivo" title="Próximamente — por ahora usa Audio" onclick="selectSubOption('leer', this)">💭 Interactivo 🔒</div>
+                            <div class="inv-item leer-option locked" data-leer="video" title="Próximamente — por ahora usa Audio" onclick="selectSubOption('leer', this)" data-en="🎬 Video 🔒" data-en-title="Coming soon — use Audio for now">🎬 Vídeo 🔒</div>
+                            <div class="inv-item leer-option locked" data-leer="interactivo" title="Próximamente — por ahora usa Audio" onclick="selectSubOption('leer', this)" data-en="💭 Interactive 🔒" data-en-title="Coming soon — use Audio for now">💭 Interactivo 🔒</div>
                         </div>
                     </div>
                     <!-- Panel CREAR: opciones de generación de imagen -->
                     <div class="inv-panel" data-panel="crear">
-                        <div class="inventory-title">Calidad / Tamaño</div>
+                        <div class="inventory-title" data-en="Quality / Size">Calidad / Tamaño</div>
                         <div class="inventory-list">
-                            <div class="inv-item crear-option selected" data-crear="standard-square" onclick="selectSubOption('crear', this)">🎨 Estándar · Cuadrada</div>
-                            <div class="inv-item crear-option" data-crear="standard-wide" onclick="selectSubOption('crear', this)">🖼️ Estándar · Apaisada</div>
-                            <div class="inv-item crear-option" data-crear="hd-square" onclick="selectSubOption('crear', this)">💎 HD · Cuadrada</div>
-                            <div class="inv-item crear-option" data-crear="hd-wide" onclick="selectSubOption('crear', this)">💎 HD · Apaisada</div>
+                            <div class="inv-item crear-option selected" data-crear="standard-square" onclick="selectSubOption('crear', this)" data-en="🎨 Standard · Square">🎨 Estándar · Cuadrada</div>
+                            <div class="inv-item crear-option" data-crear="standard-wide" onclick="selectSubOption('crear', this)" data-en="🖼️ Standard · Landscape">🖼️ Estándar · Apaisada</div>
+                            <div class="inv-item crear-option" data-crear="hd-square" onclick="selectSubOption('crear', this)" data-en="💎 HD · Square">💎 HD · Cuadrada</div>
+                            <div class="inv-item crear-option" data-crear="hd-wide" onclick="selectSubOption('crear', this)" data-en="💎 HD · Landscape">💎 HD · Apaisada</div>
                         </div>
                     </div>
                     <!-- Panel VOTAR: sentido del voto -->
                     <div class="inv-panel" data-panel="votar">
-                        <div class="inventory-title">Sentido del voto</div>
+                        <div class="inventory-title" data-en="Vote">Sentido del voto</div>
                         <div class="inventory-list">
-                            <div class="inv-item votar-option selected" data-votar="favor" onclick="selectSubOption('votar', this)">✅ A favor</div>
-                            <div class="inv-item votar-option" data-votar="contra" onclick="selectSubOption('votar', this)">❌ En contra</div>
-                            <div class="inv-item votar-option" data-votar="abstencion" onclick="selectSubOption('votar', this)">🤝 Abstención</div>
-                            <div class="inv-item votar-option" data-votar="posponer" onclick="selectSubOption('votar', this)">🔄 Posponer</div>
+                            <div class="inv-item votar-option selected" data-votar="favor" onclick="selectSubOption('votar', this)" data-en="✅ For">✅ A favor</div>
+                            <div class="inv-item votar-option" data-votar="contra" onclick="selectSubOption('votar', this)" data-en="❌ Against">❌ En contra</div>
+                            <div class="inv-item votar-option" data-votar="abstencion" onclick="selectSubOption('votar', this)" data-en="🤝 Abstain">🤝 Abstención</div>
+                            <div class="inv-item votar-option" data-votar="posponer" onclick="selectSubOption('votar', this)" data-en="🔄 Postpone">🔄 Posponer</div>
                         </div>
                     </div>
                     <!-- Panel ANALIZAR: fuente del análisis -->
                     <div class="inv-panel" data-panel="analizar">
-                        <div class="inventory-title">Fuente</div>
+                        <div class="inventory-title" data-en="Source">Fuente</div>
                         <div class="inventory-list">
                             <div class="inv-item analizar-option selected" data-analizar="url" onclick="selectSubOption('analizar', this)">🔗 URL</div>
-                            <div class="inv-item analizar-option" data-analizar="texto" onclick="selectSubOption('analizar', this)">📋 Texto</div>
-                            <div class="inv-item analizar-option" data-analizar="fichero" onclick="selectSubOption('analizar', this)">📄 Fichero</div>
+                            <div class="inv-item analizar-option" data-analizar="texto" onclick="selectSubOption('analizar', this)" data-en="📋 Text">📋 Texto</div>
+                            <div class="inv-item analizar-option" data-analizar="fichero" onclick="selectSubOption('analizar', this)" data-en="📄 File">📄 Fichero</div>
                         </div>
                     </div>
                     <!-- Panel ENTRENAR: corpus de URLs guardadas por consejero -->
                     <div class="inv-panel" data-panel="entrenar">
-                        <div class="inventory-title">Corpus de entrenamiento</div>
+                        <div class="inventory-title" data-en="Training corpus">Corpus de entrenamiento</div>
                         <div class="inventory-list" id="entrenar-list">
                             <div class="inv-item" style="font-size:0.7rem;opacity:0.7">Pega una URL en la línea superior y pulsa Enviar</div>
                         </div>
                     </div>
                     <!-- Panel PRESENTAR: formato de salida -->
                     <div class="inv-panel" data-panel="presentar">
-                        <div class="inventory-title">Formato</div>
+                        <div class="inventory-title" data-en="Format">Formato</div>
                         <div class="inventory-list">
                             <div class="inv-item presentar-option selected" data-presentar="audio" onclick="selectSubOption('presentar', this)">🎙️ Audio</div>
                             <div class="inv-item presentar-option" data-presentar="pdf" onclick="selectSubOption('presentar', this)">📄 PDF</div>
-                            <div class="inv-item presentar-option" data-presentar="ambos" onclick="selectSubOption('presentar', this)">🎙️+📄 Ambos</div>
+                            <div class="inv-item presentar-option" data-presentar="ambos" onclick="selectSubOption('presentar', this)" data-en="🎙️+📄 Both">🎙️+📄 Ambos</div>
                             <div class="inv-item presentar-option" data-presentar="slides" onclick="selectSubOption('presentar', this)">📊 Slides</div>
                         </div>
                     </div>
@@ -4125,10 +4125,10 @@ body.rail-open{overflow:hidden}
         <div class="mt-overlay" id="mapa-tesoro" hidden>
             <div class="mt-marco">
                 <div class="mt-barra">
-                    <b class="mt-titulo">Mapa del Tesoro</b>
+                    <b class="mt-titulo" data-en="Treasure Map">Mapa del Tesoro</b>
                     <span class="mt-contaje"></span>
-                    <span class="mt-ayuda">pulsa el pergamino para escribir · arrastra el número para mover</span>
-                    <button type="button" class="mt-cerrar" title="Cerrar el mapa (Esc)">Cerrar</button>
+                    <span class="mt-ayuda" data-en="click the parchment to write · drag the number to move it">pulsa el pergamino para escribir · arrastra el número para mover</span>
+                    <button type="button" class="mt-cerrar" title="Cerrar el mapa (Esc)" data-en-title="Close the map (Esc)" data-en="Close">Cerrar</button>
                 </div>
                 <div class="mt-lienzo">
                     <img src="assets/mapa-tesoro.svg?v=20260920-r3" alt="Mapa del tesoro del Consejo de Silicio">
@@ -4228,11 +4228,11 @@ body.rail-open{overflow:hidden}
                 </div>
                 <div class="meeting-chat" id="meeting-chat"></div>
                 <div class="meeting-input-area">
-                    <input class="meeting-input" id="meeting-input" type="text" placeholder="Escribe tu mensaje..." autocomplete="off" onkeydown="if(event.key==='Enter')sendPrivateMessage()">
-                    <button class="meeting-send" onclick="sendPrivateMessage()">ENVIAR</button>
+                    <input class="meeting-input" id="meeting-input" type="text" placeholder="Escribe tu mensaje..." data-en-placeholder="Type your message..." autocomplete="off" onkeydown="if(event.key==='Enter')sendPrivateMessage()">
+                    <button class="meeting-send" onclick="sendPrivateMessage()" data-en="SEND">ENVIAR</button>
                 </div>
                 <div class="meeting-typing" id="meeting-typing" style="display:none;"></div>
-                <button class="meeting-close" onclick="exitPrivateMeeting()">← SALIR DE LA REUNIÓN</button>
+                <button class="meeting-close" onclick="exitPrivateMeeting()" data-en="← LEAVE THE MEETING">← SALIR DE LA REUNIÓN</button>
             </div>
         </div>
 
@@ -4240,16 +4240,16 @@ body.rail-open{overflow:hidden}
         <div class="conv-area" id="conv-area">
             <div class="conv-grid">
                 <div class="conv-panel racional">
-                    <div class="conv-panel-title">🧠 Racional</div>
+                    <div class="conv-panel-title" data-en="🧠 Rational">🧠 Racional</div>
                     <div class="conv-content" id="conv-racional"></div>
                 </div>
                 <div class="conv-panel creativo">
-                    <div class="conv-panel-title">🎨 Creativo</div>
+                    <div class="conv-panel-title" data-en="🎨 Creative">🎨 Creativo</div>
                     <div class="conv-content" id="conv-creativo"></div>
                 </div>
             </div>
             <div class="back-status-wrap" style="text-align:center;margin-top:0.5rem;">
-                <button class="back-status" id="back-status" onclick="exitConversation()" style="display:inline-block;">← Limpiar conversación</button>
+                <button class="back-status" id="back-status" onclick="exitConversation()" style="display:inline-block;" data-en="← Clear conversation">← Limpiar conversación</button>
             </div>
         </div>
 
@@ -4394,10 +4394,10 @@ body.rail-open{overflow:hidden}
     <div id="agm-presence"></div>
     <div id="agm-brief"><div class="agm-agent empty">Pide estado para ver aqui que hace cada agente.</div></div>
     <div id="agm-feed"><div class="agm-msg"><span class="tx">Conectando con AgoraMatrix…</span></div></div>
-    <div id="agm-actions"><button id="agm-ask-status" type="button" title="Pedir a todos los agentes que contesten con persona, maquina y tarea actual">Pedir estado a todos</button></div>
+    <div id="agm-actions"><button id="agm-ask-status" type="button" title="Pedir a todos los agentes que contesten con persona, maquina y tarea actual" data-en-title="Ask every agent to reply with persona, machine and current task" data-en="Ask everyone for status">Pedir estado a todos</button></div>
     <div id="agm-wr"><span class="wr-rabbit">🐇</span><span id="agm-wr-text"></span><span class="wr-dots"><i></i><i></i><i></i></span></div>
-    <div id="agm-chat"><input id="agm-input" placeholder="escribe al canal AgoraMatrix…" maxlength="600" autocomplete="off"><button id="agm-send" title="Enviar">➤</button></div>
-    <div id="agm-foot">coetáneos ⇄ agentes Matrix · en vivo</div>
+    <div id="agm-chat"><input id="agm-input" placeholder="escribe al canal AgoraMatrix…" data-en-placeholder="write to the AgoraMatrix channel…" maxlength="600" autocomplete="off"><button id="agm-send" title="Enviar" data-en-title="Send">➤</button></div>
+    <div id="agm-foot" data-en="contemporaries ⇄ Matrix agents · live">coetáneos ⇄ agentes Matrix · en vivo</div>
   </div>
 </div>
 
@@ -4540,19 +4540,31 @@ body.rail-open{overflow:hidden}
 <script defer src="council-estado.js?v=20261004-5113-anterior"></script>
 <script defer src="assets/council-silhouettes.js?v=20261004-silueta"></script>
 <script defer src="assets/council-recorte.js?v=20261004-recorte1"></script>
-<script defer src="app.flt-100529.js?v=20261005-verbos-accesos-r2"></script>
+<script defer src="app.flt-100529.js?v=20261006-r13-experto"></script>
 <script defer src="council-preview.js?v=20260921-ultra1"></script>
 <script defer src="council-composer.js?v=20260921-composer1"></script>
 <script defer src="council-working.js?v=20260930-flt101302"></script>
 <script defer src="council-integration.js?v=20261003-flt101402"></script>
 <script type="module" src="assets/mac-hoy.js?v=20261004-5114-vivo"></script>
 <script defer src="assets/aviso-version.js?v=20261004-5113c"></script>
-<script defer src="assets/sello-novedades.js?v=20261006-r11"></script>
+<script defer src="assets/sello-novedades.js?v=20261006-r13"></script>
 <script type="module" src="assets/mapa-ideas.js?v=20260920-mapa1"></script>
 <script type="module" src="assets/mesa-paste.js?v=20260920-paste"></script>
 <script src="/consejeros-desk.js?v=20260921-r7-proxy"></script>
 <link rel="stylesheet" href="assets/scumm-layout.css?v=20261005-sello-previos">
-<script type="module" src="assets/scumm-layout.js?v=20261005-sello-previos"></script>
+<script type="module" src="assets/scumm-layout.js?v=20261006-r13-idioma"></script>
+<!-- ⌘ EXPERTO · CLI (06-10-2026): admira.live no es una de las cinco plataformas, pero lleva el mismo
+     modo experto de la suite AdmiraNeXT (www.admiranext.com/suite/experto.js), montado como en
+     admira.tv (modo propio: la piel crea su CLI en #ax-live-experto y queda anclada abajo,
+     minimizada a una línea «› /help»). Verbos de la suite: /help, /marca <id>|off|lista,
+     /idioma [ESP|ENG] (/language, /languague, /idiomaESP…), /estado, /version, /limpiar, /avatar…
+     /marca usa AdmiraMarca (assets/marca-blanca.js: catálogo único de admiranext.com, sessionStorage
+     «mb:marca»); /idioma guarda admiranext_expert_lang y admira-idioma.js traduce la página.
+     data-toggle="": el ⌘ del top-bar sigue plegando el menú SCUMM (no se pisa). -->
+<link rel="stylesheet" href="https://www.admiranext.com/suite/experto.css?v=20261005-experto-idioma-2">
+<section id="ax-live-experto" class="ax-live-experto" aria-label="Modo experto · CLI" data-en-aria-label="Expert mode · CLI"><div class="ax-live-bd"></div></section>
+<script defer src="/assets/marca-blanca.js?v=06.10.2026.r13"></script>
+<script defer src="https://www.admiranext.com/suite/experto.js?v=20261005-experto-idioma-2" data-mount="#ax-live-experto" data-mount-body=".ax-live-bd" data-pata="admira.live" data-cli="admira.live" data-engine="ADMIRA LIVE ENGINE" data-toggle="" data-version-url="/version.json"></script>
 </body>
 </html>
 

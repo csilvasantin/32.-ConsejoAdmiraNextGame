@@ -17,5 +17,12 @@
     "Menú Verbos+Accesos abajo bajo la mesa",
     "Accesos integrados en Verbos",
     "Bloque Previos (Mac / conversación) a la derecha"
+  ],
+  "v.06.10.2026.r13.08:00": [
+    "⌘ EXPERTO · CLI de la suite AdmiraNeXT anclado abajo (como en las plataformas)",
+    "/marca <id> | off | lista: marca blanca del catálogo admiranext.com en la barra",
+    "/idioma alterna ESP↔ENG; /language ESP|ENG, /languague, /idiomaESP",
+    "Idioma guardado en admiranext_expert_lang (compartido con la suite)",
+    "Interfaz traducida: Verbos/Accesos/Previos, rieles, tareas y popover de novedades"
   ]
 }

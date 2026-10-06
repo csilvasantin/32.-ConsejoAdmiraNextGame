@@ -1823,6 +1823,7 @@
             li('<strong>/help</strong>', 'muestra u oculta esta ayuda', 'shows or hides this help') +
             li('<strong>/idioma [ESP | ENG]</strong>', 'alterna o fija castellano/inglés sin recargar (también /language, /languague, /idiomaESP)', 'toggles or sets Spanish/English without reloading (also /language, /languague, /idiomaENG)') +
             li('<strong>/marca &lt;id&gt; | off | lista</strong>', 'marca blanca del catálogo de admiranext.com (p. ej. /marca starbucks), como en las plataformas', 'white label from the admiranext.com catalogue (e.g. /marca starbucks), as on the platforms') +
+            li('<strong>/81 · /82 · /83 · /84 · /85 · /86 · /87 · /88 · /89</strong>', 'pieles de cine 1981–1989 (atajo de /marca 81 … /marca 89); /marca off vuelve a Admira', '1981–1989 movie skins (shortcut for /marca 81 … /marca 89); /marca off returns to Admira') +
             li('<strong>⌘ EXPERTO · CLI</strong>', 'consola de la suite AdmiraNeXT anclada abajo: /help, /marca, /idioma, /estado, /version', 'AdmiraNeXT suite console docked at the bottom: /help, /marca, /idioma, /estado, /version') +
             li('<strong>/comandos</strong>', 'abre la página con todos los comandos', 'opens the page with every command') +
             li('<strong>/leyendas · /coetaneos</strong>', 'cambia la generación del Consejo', 'switches the Council generation') +
@@ -2168,7 +2169,9 @@
         '/admira.app', '/clearchannel.tv', '/pixeria.com', '/equipos', '/control',
         '/scumm', '/top', '/bocas', '/mac', '/motor', '/olvidar', '/menu', '/agoramatrix', '/tareas', '/google',
         '/importar', '/nombres', '/tarea', '/diario', '/leyendas', '/coetaneos', '/agentes', '/comandos', '/sendto',
-        '/marcador', '/flota', '/highscore', '/recorte', '/recortar', '/idioma', '/language', '/marca'
+        '/marcador', '/flota', '/highscore', '/recorte', '/recortar', '/idioma', '/language', '/marca',
+        // Pieles de cine (FLT-101666 c): /81 … /89 = /marca 81 … /marca 89
+        '/81', '/82', '/83', '/84', '/85', '/86', '/87', '/88', '/89'
     ];
     (function setupCliAutocomplete() {
         const inp = document.getElementById('action-input');
@@ -2243,6 +2246,13 @@
         if (marcaMatch) {
             addUserEntry(text);
             runMarcaCommand((marcaMatch[1] || '').trim());
+            return true;
+        }
+        // /81 … /89: atajos de las pieles de cine del catálogo único (FLT-101666 c) = /marca 81 … /marca 89.
+        const pielCine = text.match(/^\/(8[1-9])$/);
+        if (pielCine) {
+            addUserEntry(text);
+            runMarcaCommand(pielCine[1]);
             return true;
         }
         const helpMatch = text.match(/^\/help$/i);

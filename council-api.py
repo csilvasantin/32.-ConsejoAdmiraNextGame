@@ -4428,54 +4428,110 @@ def _hk_cfg_line(cfg: tuple) -> str:
 
 # Guion CÓDIGO: cada equipo teclea un fichero REAL de www.admira.live — la home,
 # sus scripts propios y el control, el mismo criterio que loadHkCode() en el
-# panel. Se lee del repo del sitio (este directorio) y viaja con el lanzamiento.
+# panel. Se lee de la web publicada (el checkout del Mini puede ir meses por
+# detrás y traer solo la home); si la web no contesta, del repo de este
+# directorio. Viaja con cada lanzamiento.
+_HK_SITE_URL = "https://www.admira.live"
 _HK_SITE_DIR = Path(__file__).parent
 _HK_CODE_EXT = (".html", ".js", ".css")
 _HK_CODE_MAX_LINES = 1500
+_HK_CODE_MIN_LINES = 40          # ni ficheros de cuatro líneas ni minificados en una
+_HK_CODE_TTL = 600               # s que vale lo descargado
+_HK_CODE_CACHE = {"ts": 0.0, "files": []}
+_HK_CODE_LOCK = threading.Lock()
+
+
+def _hk_code_lines(raw: str) -> list:
+    """Líneas listas para teclear: sin vacías, sin tabuladores, a 160 columnas."""
+    lines = [l.replace("\t", "  ").rstrip()[:160] for l in raw.splitlines()]
+    return [l for l in lines if l.strip()]
+
+
+def _hk_code_names(home: str) -> list:
+    """La home, sus scripts del propio sitio y el control — sin repetir."""
+    names = ["index.html", "control/index.html"]
+    for src in re.findall(r"<script[^>]+src=[\"']([^\"']+)[\"']", home):
+        if re.match(r"^(?:[a-zA-Z][a-zA-Z0-9+.-]*:)?//", src):
+            continue                  # scripts de terceros: no son código de admira.live
+        names.append(re.split(r"[?#]", src)[0].lstrip("/"))
+    out = []
+    for n in names:
+        # Solo código del sitio y sin salir de él (nada de «..»).
+        if n and n not in out and ".." not in n and Path(n).suffix.lower() in _HK_CODE_EXT:
+            out.append(n)
+    return out[:26]
+
+
+def _hk_code_from_web() -> list:
+    """[(nombre, líneas)] leídos de la web publicada. [] si no contesta."""
+    import urllib.request as _rq
+
+    def get(name: str) -> str:
+        url = _HK_SITE_URL + "/" + ("" if name == "index.html" else name[:-len("index.html")] if name.endswith("/index.html") else name)
+        # Cloudflare corta el agente de usuario por defecto de Python.
+        req = _rq.Request(url, headers={"User-Agent": "Mozilla/5.0 (AdmiraNeXT council-api)"})
+        with _rq.urlopen(req, timeout=6) as r:
+            return r.read(2_000_000).decode("utf-8", "replace")
+
+    try:
+        home = get("index.html")
+    except Exception:
+        return []
+    names = _hk_code_names(home)
+
+    def one(name: str):
+        try:
+            return name, _hk_code_lines(home if name == "index.html" else get(name))
+        except Exception:
+            return name, []
+
+    with _HkPool(max_workers=8) as pool:
+        got = list(pool.map(one, names))
+    return [(n, l) for n, l in got if len(l) >= _HK_CODE_MIN_LINES]
+
+
+def _hk_code_from_repo() -> list:
+    """Lo mismo, del repo de este directorio. Solo .html/.js/.css de dentro del
+    sitio: aquí al lado viven .env y este mismo fichero."""
+    root, out = _HK_SITE_DIR.resolve(), []
+    try:
+        home = (root / "index.html").read_text(encoding="utf-8", errors="replace")
+    except OSError:
+        return out
+    for n in _hk_code_names(home):
+        f = (root / n).resolve()
+        if root not in f.parents or not f.is_file():
+            continue
+        try:
+            lines = _hk_code_lines(f.read_text(encoding="utf-8", errors="replace"))
+        except OSError:
+            continue
+        if len(lines) >= _HK_CODE_MIN_LINES:
+            out.append((n, lines))
+    return out
 
 
 def _hk_code_files() -> list:
-    """Rutas (relativas al sitio) de los ficheros que se pueden teclear."""
-    names = ["index.html"]
-    try:
-        home = (_HK_SITE_DIR / "index.html").read_text(encoding="utf-8", errors="replace")
-        for src in re.findall(r"<script[^>]+src=[\"']([^\"']+)[\"']", home):
-            if re.match(r"^(?:[a-zA-Z][a-zA-Z0-9+.-]*:)?//", src):
-                continue              # scripts de terceros: no son código de admira.live
-            names.append(re.split(r"[?#]", src)[0].lstrip("/"))
-    except OSError:
-        pass
-    names.append("control/index.html")
-    root, out = _HK_SITE_DIR.resolve(), []
-    for n in names:
-        if not n or n in out:
-            continue
-        f = (root / n).resolve()
-        # Solo lo que el sitio ya publica: nada fuera del repo ni de otro tipo
-        # (aquí al lado viven .env y este mismo fichero).
-        # (y nada de ficheros de cuatro líneas o minificados en una: en bucle se nota).
-        if root in f.parents and f.suffix.lower() in _HK_CODE_EXT and f.is_file() and f.read_bytes().count(b"\n") >= 40:
-            out.append(n)
-    return out
+    """[(nombre, líneas)] que se pueden teclear, con caché de _HK_CODE_TTL s. El
+    candado evita que los equipos de un mismo lanzamiento descarguen a la vez."""
+    with _HK_CODE_LOCK:
+        if _HK_CODE_CACHE["files"] and time.time() - _HK_CODE_CACHE["ts"] < _HK_CODE_TTL:
+            return _HK_CODE_CACHE["files"]
+        files = _hk_code_from_web() or _hk_code_from_repo()
+        if files:
+            _HK_CODE_CACHE.update(ts=time.time(), files=files)
+        return files
 
 
 def _hk_code_b64(idx: int) -> str:
     """Fichero de código que le toca al equipo nº idx, listo para viajar:
-    gzip+base64 de «www.admira.live/<fichero>» y hasta _HK_CODE_MAX_LINES líneas
-    (sin vacías, recortadas a 160 columnas). '' si no hay nada que mandar."""
+    gzip+base64 de «www.admira.live/<fichero>» y hasta _HK_CODE_MAX_LINES líneas.
+    '' si no hay nada que mandar."""
     import base64 as _b64, gzip as _gzip, random as _random
     files = _hk_code_files()
     if not files:
         return ""
-    name = files[idx % len(files)]
-    try:
-        raw = (_HK_SITE_DIR / name).read_text(encoding="utf-8", errors="replace")
-    except OSError:
-        return ""
-    lines = [l.replace("\t", "  ").rstrip()[:160] for l in raw.splitlines()]
-    lines = [l for l in lines if l.strip()]
-    if not lines:
-        return ""
+    name, lines = files[idx % len(files)]
     if len(lines) > _HK_CODE_MAX_LINES:   # fichero largo: un tramo distinto cada vez
         a = _random.randrange(len(lines) - _HK_CODE_MAX_LINES + 1)
         lines = lines[a:a + _HK_CODE_MAX_LINES]

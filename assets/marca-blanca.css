@@ -118,3 +118,15 @@
 /* 89 · gótico nocturno: negro de catedral y haz amarillo en el cielo */
 :root[data-mb-marca="89"] body{background:radial-gradient(28% 22% at 50% 6%,rgba(255,204,26,.16),transparent 70%),conic-gradient(from 168deg at 50% 100%,transparent 0deg,rgba(255,204,26,.05) 12deg,transparent 24deg),repeating-linear-gradient(90deg,rgba(255,255,255,.02) 0 1px,transparent 1px 64px),var(--mb-fondo)!important}
 :root[data-mb-marca="89"] .top-bar{border-bottom:2px solid var(--mb-primario)!important;box-shadow:0 6px 22px rgba(0,0,0,.7)}
+
+/* ─── Escenas ilustradas de las pieles 81–89 (06-10-2026 · Carlos, parte 2) ─────────────
+   La escena propia de cada piel (www.admiranext.com/marcablanca/escenas/<id>.svg, vectores originales
+   de Admira: sin fotogramas, carteles, logos ni personajes) es el fondo de la página. La pone el
+   cargador común (marcablanca.js): --mb-escena y data-mb-escena en la raíz; /marca off los quita.
+   Un velo del fondo de la piel la apaga para que no compita con el contenido; la línea de órdenes
+   no cambia (sus paneles son opacos), así que su texto sigue >= 7:1 (marca-cine.test.mjs). */
+:root[data-mb-escena] body{
+  background-color:var(--mb-fondo)!important;
+  background-image:linear-gradient(color-mix(in srgb,var(--mb-fondo) 35%,transparent),color-mix(in srgb,var(--mb-fondo) 60%,transparent)),var(--mb-escena)!important;
+  background-size:cover!important;background-position:center!important;background-repeat:no-repeat!important;background-attachment:fixed!important;
+}

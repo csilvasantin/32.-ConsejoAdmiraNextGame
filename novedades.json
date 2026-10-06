@@ -1,4 +1,9 @@
 {
+  "v.06.10.2026.r20.11:29": [
+    "Pieles de cine 81–89 con escena propia de fondo de página: ilustración vectorial original del catálogo de admiranext.com (sin fotogramas, carteles, logos ni personajes)",
+    "La línea de órdenes no cambia: sigue opaca y a >= 7:1 sobre la escena; /marca off quita la escena",
+    "Estas novedades salen, como siempre, en el popover del sello (sin recorte del riel)"
+  ],
   "v.06.10.2026.r19.11:12": [
     "Cada verbo de la línea de órdenes vale en castellano y en inglés: /marca = /brand, /ayuda = /help, /flota = /fleet, /tareas = /tasks… El verbo castellano pone la web en castellano y el inglés en inglés (como /idioma ESP · /language ENG); /81 … /89 no tocan el idioma",
     "Formas compactas: /marca84, /brand84, /marcaoff, /brandoff",

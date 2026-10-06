@@ -80,7 +80,7 @@ test('EXPERTO de Yokup: línea de órdenes arriba, activa sin PTY', () => {
   assert.doesNotMatch(fn, /disabled/);
   assert.match(fn, /placeholder", "\/ayuda · \/help · \/idioma ENG · \/language ESP · \/marca 84 · \/brand84"/);
   assert.match(leer('yk-frame.css'), /\.yk-expert-cmd\{/);
-  for (const f of ['dashboard.html', 'misiones.html']) assert.match(leer(f), /yk-frame\.js\?v=r35-cmd/, f);
+  for (const f of ['dashboard.html', 'misiones.html']) assert.match(leer(f), /yk-frame\.js\?v=r36-escenas/, f);
 });
 
 test('EXPERTO de Yokup: /language ENG, /brand84, /marcaoff y /ayuda funcionan con los módulos compartidos', async () => {

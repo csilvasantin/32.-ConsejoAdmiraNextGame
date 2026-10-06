@@ -1715,6 +1715,104 @@
     return {section:section,head:head,body:body};
   }
 
+  // ── Línea de órdenes del EXPERTO (Carlos, 06-10-2026 11:01) ─────────────────
+  // El EXPERTO de Yokup solo traía el control de CLIs y el visor PTY: sin PTY conectado no había dónde
+  // escribir /idioma, /language, /marca o /brand. Esta línea va siempre arriba, activa con o sin PTY, y
+  // es local (no escribe en ningún agente). Habla con los mismos módulos que la home: admira-idioma.js
+  // (idioma), assets/marca-blanca.js (marca blanca) y assets/cli-bilingue.js (verbos ES/EN, /marca84).
+  var EXPERT_CMD_V = "20261006-r19-bilingue";
+  var expertScripts = {};
+  function expertScript(src, global) {
+    if (window[global]) return Promise.resolve(window[global]);
+    if (!expertScripts[src]) expertScripts[src] = new Promise(function (resolve) {
+      var s = document.createElement("script");
+      s.src = src; s.async = true;
+      s.onload = function () { resolve(window[global] || null); };
+      s.onerror = function () { delete expertScripts[src]; resolve(null); };
+      (document.head || document.documentElement).appendChild(s);
+    });
+    return expertScripts[src];
+  }
+  function expertLang() { return String(document.documentElement.lang || "es").slice(0, 2) === "en" ? "en" : "es"; }
+  function expertT(es, en) { return expertLang() === "en" ? en : es; }
+  var EXPERT_CMD_VERBS = ["/ayuda", "/help", "/idioma", "/language", "/marca", "/brand", "/81", "/82", "/83", "/84", "/85", "/86", "/87", "/88", "/89"];
+  function expertCommand(raw, say) {
+    var text = String(raw || "").trim();
+    if (!text) return Promise.resolve();
+    return Promise.all([
+      expertScript("/assets/cli-bilingue.js?v=" + EXPERT_CMD_V, "AdmiraCliBilingue"),
+      expertScript("/admira-idioma.js?v=" + EXPERT_CMD_V, "AdmiraIdioma")
+    ]).then(function (mods) {
+      var B = mods[0], I = mods[1];
+      if (!/^\//.test(text)) text = "/" + text;
+      // /idioma · /language (y /idiomaESP, /languageENG…): el contrato de admira-idioma.js.
+      if (/^\/(idioma|language|languague)/i.test(text)) {
+        if (!I) { say(expertT("⚠️ El selector de idioma no ha cargado; recarga la página", "⚠️ The language selector did not load; reload the page"), true); return; }
+        var res = I.run(text);
+        say("🌐 " + (res && res.message ? res.message : text), !(res && res.ok !== false));
+        return;
+      }
+      var n = B ? B.normalizar(text, EXPERT_CMD_VERBS) : {texto: text, idioma: null};
+      var cambio = n.idioma && B ? B.ponerIdioma(n.idioma) : "";
+      var t = n.texto, m;
+      if (/^\/(help|\?)$/i.test(t)) {
+        say(expertT("Órdenes: /ayuda · /help, /idioma ESP|ENG · /language, /marca <id>|off|lista · /brand (y /marca84 · /brand84, /marcaoff · /brandoff), /81 … /89. Castellano pone la web en castellano; inglés, en inglés.",
+                    "Commands: /ayuda · /help, /idioma ESP|ENG · /language, /marca <id>|off|lista · /brand (and /marca84 · /brand84, /marcaoff · /brandoff), /81 … /89. Spanish switches the site to Spanish; English, to English.") + (cambio ? " · 🌐 " + cambio : ""));
+        return;
+      }
+      m = t.match(/^\/(?:marca|brand|marcablanca)(?:\s+([\s\S]*))?$/i) || t.match(/^\/(8[1-9])$/);
+      if (!m) { say(expertT("Orden desconocida: ", "Unknown command: ") + text + expertT(" · escribe /ayuda", " · type /help"), true); return; }
+      return expertScript("/assets/marca-blanca.js?v=06.10.2026.r19-bilingue", "AdmiraMarca").then(function (M) {
+        if (!M) { say(expertT("⚠️ La marca blanca no ha cargado", "⚠️ White label did not load"), true); return; }
+        var p = M.parseArg((m[1] || "").trim()), tail = cambio ? " · 🌐 " + cambio : "";
+        if (p.kind === "status") { var cur = M.actual(); say((cur ? expertT("🏷️ Marca activa: ", "🏷️ Active brand: ") + cur.nombre + " (" + cur.id + ")" : expertT("🏷️ Sin marca (Admira). Prueba /marca 84", "🏷️ No brand (Admira). Try /brand 84")) + tail); return; }
+        if (p.kind === "off") { M.desactivar(); say(expertT("🏷️ Vuelves a Admira.", "🏷️ Back to Admira.") + tail); return; }
+        if (p.kind === "id" && p.id === "lista") { return M.listar().then(function (l) { say(expertT("🏷️ Marcas: ", "🏷️ Brands: ") + l.map(function (c) { return c.id; }).join(" · ") + tail); }); }
+        if (p.kind !== "id") { say(expertT("⚠️ Usa /marca <id> | off | lista", "⚠️ Use /brand <id> | off | list"), true); return; }
+        say(expertT("🏷️ Aplicando la marca ", "🏷️ Applying brand ") + p.id + "…");
+        return M.activar(p.id).then(function (r) {
+          say(r && r.ok ? expertT("🏷️ Marca ", "🏷️ Brand ") + (r.nombre || p.id) + " (" + (r.id || p.id) + expertT(") activa · /marca off vuelve a Admira", ") active · /brand off returns to Admira") + tail
+                        : expertT("⚠️ No se pudo aplicar ", "⚠️ Could not apply ") + p.id, !(r && r.ok));
+        });
+      });
+    }).catch(function (e) { say("⚠️ " + (e && e.message || e), true); });
+  }
+  function buildExpertCommand() {
+    var section = el("section", "yk-expert-cmd");
+    section.setAttribute("aria-label", "Línea de órdenes del Experto");
+    var form = el("form", "yk-expert-cmd-form");
+    form.setAttribute("autocomplete", "off");
+    var label = el("label", "yk-expert-cmd-label", "⌘");
+    var input = el("input", "yk-expert-cmd-input");
+    input.type = "text"; input.id = "ykExpertCmd"; input.spellcheck = false;
+    input.setAttribute("autocapitalize", "off");
+    input.setAttribute("placeholder", "/ayuda · /help · /idioma ENG · /language ESP · /marca 84 · /brand84");
+    input.setAttribute("aria-label", "Orden para el Experto (/idioma, /language, /marca, /brand…)");
+    label.setAttribute("for", "ykExpertCmd");
+    var send = fleetText("button", "yk-expert-cmd-send", "↵"); send.type = "submit"; send.setAttribute("aria-label", "Ejecutar orden");
+    var outLine = fleetText("output", "yk-expert-cmd-out", "Escribe /ayuda o /help · funciona sin PTY conectado");
+    outLine.setAttribute("role", "status"); outLine.setAttribute("aria-live", "polite");
+    form.appendChild(label); form.appendChild(input); form.appendChild(send);
+    section.appendChild(form); section.appendChild(outLine);
+    var hist = [], cur = 0;
+    function say(msg, err) { outLine.textContent = msg; outLine.classList.toggle("err", !!err); }
+    form.addEventListener("submit", function (event) {
+      event.preventDefault();
+      var t = input.value; if (!t.trim()) return;
+      hist.push(t); hist = hist.slice(-30); cur = hist.length; input.value = "";
+      say("› " + t);
+      expertCommand(t, say);
+    });
+    input.addEventListener("keydown", function (event) {
+      event.stopPropagation(); // los atajos de la página no se comen lo que se escribe aquí
+      if (event.key === "ArrowUp" && hist.length) { event.preventDefault(); cur = Math.max(0, cur - 1); input.value = hist[cur] || ""; }
+      else if (event.key === "ArrowDown" && hist.length) { event.preventDefault(); cur = Math.min(hist.length, cur + 1); input.value = hist[cur] || ""; }
+      else if (event.key === "Escape") { input.blur(); }
+    });
+    return section;
+  }
+  window.YkExpertCommand = {run: expertCommand, verbs: EXPERT_CMD_VERBS.slice()};
+
   function buildCliConsole() {
     var section=el("section","yk-cli-console"),side=el("div","yk-cli-side");
     FLEET.cliCount=fleetText("span","yk-expert-fold-count","…");var cliFold=buildExpertFold("Control de CLIs",FLEET.cliCount);
@@ -1883,6 +1981,7 @@
     expertHead.appendChild(expertVer);
     expert.appendChild(expertHead);
     var slotB = el("div", "yk-slot"); expert.appendChild(slotB);
+    slotB.appendChild(buildExpertCommand());
     slotB.appendChild(buildCliConsole());
     railB.appendChild(expertResize);
     railB.appendChild(expert);

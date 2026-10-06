@@ -1,4 +1,9 @@
 {
+  "v.06.10.2026.r21.13:16": [
+    "⌘ Experto: al cargar, como mucho el asa de una línea «› /help» abajo; nunca el Experto abierto",
+    "Abierto o cerrado se recuerda solo en la pestaña: ya no se reabre solo en cada visita",
+    "Estas novedades salen, como siempre, en el popover del sello (sin recorte del riel)"
+  ],
   "v.06.10.2026.r20.11:29": [
     "Pieles de cine 81–89 con escena propia de fondo de página: ilustración vectorial original del catálogo de admiranext.com (sin fotogramas, carteles, logos ni personajes)",
     "La línea de órdenes no cambia: sigue opaca y a >= 7:1 sobre la escena; /marca off quita la escena",

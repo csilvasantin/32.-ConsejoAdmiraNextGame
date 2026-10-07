@@ -4214,9 +4214,79 @@ def _lee_rotulo():
 ROTULO = _lee_rotulo()
 TOP, _tam, _pintado = 0, None, 0.0
 
+# CICLO DE COLOR + SONIDO 8-bit (Carlos, 2026-10-07): cuando una ventana acaba de teclear
+# TODO su proyecto, el rótulo cambia de color y suena un efecto de videojuego; luego vuelve
+# a empezar. Paleta de códigos ANSI de primer plano y un índice que avanza en cada vuelta.
+_PAL = ["1;92", "1;93", "1;95", "1;96", "1;91", "1;94", "1;32", "1;33"]
+_COLI = [0]
+_LAST_SND = [0.0]
+
+
+def _gen_sonidos():
+    """Escribe en HERE unos WAV 8-bit minúsculos (onda cuadrada, 8 kHz, 8-bit, bajo
+    volumen) sin dependencias. Devuelve sus rutas; [] si no se pueden crear."""
+    import wave, struct, random as _r
+    defs = [("coin", [(988, 0.06), (1319, 0.14)]),
+            ("power", [(523, 0.05), (659, 0.05), (784, 0.05), (1047, 0.12)]),
+            ("level", [(392, 0.07), (523, 0.07), (659, 0.07), (784, 0.13)]),
+            ("blip", [(440, 0.05), (880, 0.08)]),
+            ("jump", [(262, 0.04), (392, 0.04), (523, 0.10)])]
+    outs = []
+    for name, notes in defs:
+        path = os.path.join(HERE, "hk-%s.wav" % name)
+        try:
+            w = wave.open(path, "w"); w.setnchannels(1); w.setsampwidth(1); w.setframerate(8000)
+            frames = bytearray()
+            for f, d in notes:
+                N = int(8000 * d)
+                for i in range(N):
+                    v = 40 if (int(2 * f * i / 8000) % 2) else -40
+                    frames.append((128 + v) & 0xff)
+            w.writeframes(bytes(frames)); w.close(); outs.append(path)
+        except Exception:
+            pass
+    return outs
+
+
+_SONIDOS = _gen_sonidos()
+
+
+def _reproduce():
+    """Reproduce un efecto 8-bit al azar, sin bloquear y a bajo volumen. afplay en Mac,
+    paplay/aplay en Linux; si no hay reproductor, la campana del terminal (\a)."""
+    import shutil as _sh, subprocess as _sp, random as _r
+    if _SONIDOS:
+        f = _r.choice(_SONIDOS)
+        for cmd in (["afplay", "-v", "0.3", f], ["paplay", f], ["aplay", "-q", f]):
+            if _sh.which(cmd[0]):
+                try:
+                    _sp.Popen(cmd, stdout=_sp.DEVNULL, stderr=_sp.DEVNULL); return
+                except Exception:
+                    pass
+    try:
+        sys.stdout.write("\a"); sys.stdout.flush()
+    except Exception:
+        pass
+
+
+def _fin_de_proyecto():
+    """Vuelta entera al proyecto: cambia el color del rótulo y suena un efecto (con un
+    freno para no saturar a ×1000)."""
+    _COLI[0] += 1
+    try:
+        pinta_rotulo()
+    except Exception:
+        pass
+    now = time.time()
+    if now - _LAST_SND[0] > 0.8:
+        _LAST_SND[0] = now
+        _reproduce()
+
+
 def _filas_rotulo(cols):
     banner, cab = ROTULO[1:], ROTULO[:1]
-    filas = ["\033[1;92m" + l[:cols - 1] + "\033[0m" for l in banner]
+    _c = _PAL[_COLI[0] % len(_PAL)]
+    filas = ["\033[%sm" % _c + l[:cols - 1] + "\033[0m" for l in banner]
     filas += ["\033[1;97m" + (c[:cols - 1]) + "\033[0m" for c in cab]
     filas.append("\033[2;32m" + "\u2500" * (cols - 1) + "\033[0m")
     return filas
@@ -4308,6 +4378,8 @@ try:
         if len(codigo) > 1:            # sin fichero de código se sigue con el guion
             teclea(codigo[1 + k % (len(codigo) - 1)])
             k += 1
+            if k % (len(codigo) - 1) == 0:   # vuelta entera al proyecto: color + sonido
+                _fin_de_proyecto()
             pausa(0.05, 0.25)
             continue
         # La altura se mide en cada vuelta: la ventana se maximiza DESPUÉS de
@@ -4627,7 +4699,7 @@ def _hk_code_b64(idx: int) -> str:
 # 3 del ecosistema (admiranext.com, ainimation.studio, digitalavatar.ai). Es la lista de
 # reserva: manda la del índice del corpus publicado (_hk_claves).
 _HK_PROY_ORDEN = ("studio", "store", "tv", "app", "biz", "pixeria", "xpaceos", "clearchannel", "yokup",
-                  "admiranext", "ainimation", "digitalavatar")
+                  "admiranext", "ainimation", "digitalavatar", "admiralive")
 _HK_CLAVE_OK = re.compile(r"^[a-z][a-z0-9]{1,23}$")     # va incrustada en comandos remotos
 _HK_PROY_MAP: dict = {}
 _HK_CORPUS_URL = _HK_SITE_URL + "/control/hackeo-corpus/"
@@ -5040,10 +5112,13 @@ $ban = @(); if ($j -and $j.banner) { $ban = @($j.banner) + @($j.project + ' - ' 
 # devuelve el cursor a su sitio; el codigo corre por debajo. Sin VT: vale en conhost.
 function Pin-Rotulo { if (-not $ban.Count) { return }
   try { $cx = [Console]::CursorLeft; $cy = [Console]::CursorTop; $w = [Math]::Max(10, [Console]::WindowWidth - 1); $top = [Console]::WindowTop
-    $fg = [Console]::ForegroundColor; [Console]::ForegroundColor = 'Green'
+    $fg = [Console]::ForegroundColor; [Console]::ForegroundColor = $script:RotColor
     for ($r = 0; $r -lt $ban.Count; $r++) { [Console]::SetCursorPosition(0, $top + $r); $t = [string]$ban[$r]; if ($t.Length -gt $w) { $t = $t.Substring(0, $w) }; [Console]::Write($t.PadRight($w)) }
     [Console]::SetCursorPosition(0, $top + $ban.Count); [Console]::Write(('-' * $w))
     [Console]::ForegroundColor = $fg; [Console]::SetCursorPosition($cx, $cy) } catch {} }
+# Paleta para el rótulo y efecto 8-bit al acabar el proyecto (Carlos, 2026-10-07).
+$pal = @('Green','Yellow','Magenta','Cyan','Red','Blue','DarkGreen','DarkYellow'); $ci = 0
+$script:RotColor = $pal[0]
 if ($ban.Count) { Clear-Host; [Console]::Write(([Environment]::NewLine * ($ban.Count + 1))); Pin-Rotulo }
 $i = 0
 while ($true) {
@@ -5057,6 +5132,10 @@ while ($true) {
   [Console]::Write((($i + 1) * 10).ToString().PadLeft(6) + ' ')
   for ($k = 0; $k -lt $l.Length; $k += $n) { [Console]::Write($l.Substring($k, [Math]::Min($n, $l.Length - $k))); Start-Sleep -Milliseconds (Get-Random -Minimum 5 -Maximum 40) }
   [Console]::Write([Environment]::NewLine)
+  if ($src.Count -gt 1 -and (($i + 1) % $src.Count) -eq 0) {   # vuelta entera al proyecto
+    $ci = ($ci + 1) % $pal.Count; $script:RotColor = $pal[$ci]
+    try { [Console]::Beep((Get-Random -Minimum 600 -Maximum 1200), 120) } catch {}
+  }
   Pin-Rotulo
   $i++
   Start-Sleep -Milliseconds ([int]((Get-Random -Minimum 150 -Maximum 500) / $sp))

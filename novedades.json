@@ -1,4 +1,12 @@
 {
+  "v.07.10.2026.r31.21:38": [
+    "HACKEO: nuevo proyecto admira.live (este panel) en el corpus y en el Σ sin duplicar; entra en el reparto aleatorio con su propia máquina",
+    "Cuando una ventana termina de teclear todo su proyecto: cambia el color del rótulo ASCII, suena un efecto de videojuego de 8 bits (distinto por ventana) y el listado vuelve a empezar; en los Terminales Mac/Linux también suena y cambia el color",
+    "En la barra, a la derecha de los contadores, el número de proyectos (p. ej. «13 proyectos»)",
+    "Pulsar el título HACKEO pausa TODO (velocidad 0) para leer el código; otro clic lo reanuda (la pausa por ventana sigue igual)",
+    "«Volver al control» cierra los Terminales de todas las máquinas lanzadas y lo confirma en pantalla",
+    "Estas novedades salen, como siempre, en el popover del sello (sin recorte del riel)"
+  ],
   "v.07.10.2026.r30.21:08": [
     "HACKEO: la cabecera reparte el espacio entre equipo, fichero y estado; un estado largo («? not in machines.json») ya no se come el nombre del equipo",
     "Estas novedades salen, como siempre, en el popover del sello (sin recorte del riel)"

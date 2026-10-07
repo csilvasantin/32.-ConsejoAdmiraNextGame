@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.07.10.2026.r27.20:55" />
+<meta name="admiranext-version" content="AdmiraNeXT v.07.10.2026.r28.21:01" />
     <script src="/admira-bar.js?v=20260918-r38"></script>
     <script src="/auth-gate.js?v=20261004-r15-sinfranja"></script>
 <meta charset="UTF-8">
@@ -478,6 +478,13 @@
   /* Rótulo ASCII del proyecto, fijo arriba de la ventana; el código corre debajo (Carlos, 07-10-2026) */
   .hk-banner{display:none;flex:none;margin:0 0 .35rem;padding:0 0 .3rem;border-bottom:1px dashed currentColor;line-height:1;white-space:pre;overflow:hidden;font-family:'Courier New',monospace;opacity:.95;text-shadow:0 0 4px currentColor}
   .hk-banner.on{display:block}
+  /* La cabecera en UNA línea (Carlos, 07-10-2026): si el nombre del fichero partía en dos o
+     tres líneas, el rótulo bajaba y subía al cambiar de fichero o de modo. Ahora se recorta
+     con «…» y el rótulo no se mueve nunca. */
+  .hack-terminal-header{white-space:nowrap;gap:6px;min-width:0}
+  .hack-terminal-header>span{overflow:hidden;text-overflow:ellipsis;min-width:0}
+  .hack-terminal-header>span:first-child{flex:0 1 auto}
+  .hack-terminal-header>.hack-role{flex:1 1 0;text-align:right}
   /* Σ de todos los proyectos arriba y, DEBAJO, las líneas mostradas ahora (Carlos, 07-10-2026) */
   .hack-topbar .hk-contadores{display:inline-flex;flex-direction:column;align-items:stretch;gap:3px;flex:none;text-align:center}
   .hack-topbar .hk-contadores>span{padding:2px 9px!important;font-size:11px!important}

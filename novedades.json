@@ -1,4 +1,10 @@
 {
+  "v.07.10.2026.r23.20:09": [
+    "HACKEO: velocidades ×1 ×10 ×50 ×100 ×1000 (fuera ×4), en el panel y en los terminales reales",
+    "×1000 sin colgar el navegador: el tecleo salta líneas enteras y los paneles se pintan por lotes (~20 fps) con el DOM acotado",
+    "Fuera de la pantalla el bloque de estado («flota: … equipos» y «[council-api] total=… online=…»)",
+    "Estas novedades salen, como siempre, en el popover del sello (sin recorte del riel)"
+  ],
   "v.07.10.2026.r22.20:03": [
     "HACKEO (Control): velocidades ×50 y ×100 junto a ×10, en el panel y en los terminales reales de la flota",
     "Cada línea tecleada lleva su numeral de 10 en 10 (10, 20, 30…), estilo BASIC, para ver la evolución",

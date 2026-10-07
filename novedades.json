@@ -1,4 +1,8 @@
 {
+  "v.07.10.2026.r28.21:01": [
+    "HACKEO: la cabecera de cada ventana va en una sola línea (recorta con «…»), así el rótulo ASCII del proyecto ya no sube ni baja al cambiar de fichero o de modo",
+    "Estas novedades salen, como siempre, en el popover del sello (sin recorte del riel)"
+  ],
   "v.07.10.2026.r27.20:55": [
     "HACKEO: el nombre del proyecto en ASCII se queda SIEMPRE arriba de cada ventana, en INTRUSIÓN y en CÓDIGO, al cambiar de fichero, al pausar y al redimensionar",
     "En los Terminales reales (Mac y Linux) el rótulo queda fijo arriba con una región de scroll y el código corre por debajo; en Windows se repinta arriba tras cada línea",

@@ -4586,7 +4586,9 @@ def _hk_cfg(body) -> tuple:
     """(speed, mode) saneados a partir del cuerpo de la petición."""
     body = body if isinstance(body, dict) else {}
     try:
-        speed = float(body.get("speed") or 1)
+        # OJO: 0 es «falsy», así que `body.get("speed") or 1` convertía la PAUSA (0) en ×1.
+        _sp = body.get("speed")
+        speed = float(_sp) if _sp is not None else 1.0
     except (TypeError, ValueError):
         speed = 1.0
     if not (speed == speed):          # NaN

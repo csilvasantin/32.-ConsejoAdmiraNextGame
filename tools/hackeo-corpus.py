@@ -2,7 +2,7 @@
 """Corpus del HACKEO · modo CÓDIGO (Carlos, 07-10-2026).
 
 Cada panel del HACKEO teclea código REAL de un proyecto AdmiraNeXT. Este script
-clona (superficial) los repos públicos de los 9 proyectos (5 Admira + 4 startup) y escribe, en el
+clona (superficial) los repos públicos de los 12 proyectos (5 Admira + 4 startup + 3 ecosistema) y escribe, en el
 directorio de salida:
 
   index.json        totales por proyecto (ficheros y líneas de código) + suma
@@ -23,8 +23,10 @@ Uso:  python3 tools/hackeo-corpus.py <dir_salida>
 import hashlib, json, os, re, subprocess, sys, tempfile, time
 from pathlib import Path
 
-# Orden = orden de asignación a los paneles: 1-5 Admira, 6-9 sus versiones startup
-# (Carlos, 07-10-2026), y vuelta a empezar. «par» = el proyecto Admira equivalente.
+# El orden ya NO decide qué ordenador lleva qué proyecto: desde la r27 el reparto es
+# ALEATORIO por sesión de hackeo (semilla del servidor, ver council-api.py). El orden solo
+# decide a quién se atribuye un fichero idéntico en el Σ sin duplicar (al primero que lo
+# tiene). «par» = el proyecto Admira equivalente de una versión startup.
 # admira.tv no tiene versión startup con repo propio: se omite.
 PROYECTOS = [
     {"key": "studio", "project": "admira.studio", "repo": "csilvasantin/admira-studio", "familia": "admira"},
@@ -38,6 +40,11 @@ PROYECTOS = [
     # mismo repo que admira.biz: sus líneas NO se suman otra vez
     {"key": "clearchannel", "project": "clearchannel.tv", "repo": "csilvasantin/clearchannel-tv", "familia": "startup", "par": "biz"},
     {"key": "yokup",        "project": "yokup.com",       "repo": "csilvasantin/tool",           "familia": "startup", "par": "app"},
+    # Ecosistema AdmiraNeXT (Carlos, 07-10-2026): la web corporativa, el editor de interactivos
+    # y los avatares digitales. Mismo filtro de secretos y mismo Σ sin duplicar.
+    {"key": "admiranext",   "project": "admiranext.com",    "repo": "csilvasantin/admira-next-web",   "familia": "ecosistema"},
+    {"key": "ainimation",   "project": "ainimation.studio", "repo": "csilvasantin/ainimation",        "familia": "ecosistema"},
+    {"key": "digitalavatar","project": "digitalavatar.ai",  "repo": "csilvasantin/digitalavatar.ai",  "familia": "ecosistema"},
 ]
 
 EXT = {".html", ".htm", ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".css", ".scss",
@@ -187,7 +194,8 @@ def main():
             (out / f"{p['key']}.json").write_text(json.dumps(d, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
             resumen = {k: d.get(k) for k in ("key", "project", "domain", "repo", "commit", "familia", "par",
                                              "files_total", "lines_total", "files_unique", "lines_unique",
-                                             "shares_repo_with", "shares_lines_with", "sample_files", "sample_lines")}
+                                             "shares_repo_with", "shares_lines_with", "sample_files", "sample_lines",
+                                             "banner")}
             idx.append(resumen)
             print(f"  ✓ {d['project']:<16} {d['repo']:<30} {d['files_total']:>5} fich · {d['lines_total']:>7} lín"
                   f" · únicas {d['lines_unique']:>7}" + (f" · comparte repo con {d['shares_repo_with']}" if d['shares_repo_with'] else "")

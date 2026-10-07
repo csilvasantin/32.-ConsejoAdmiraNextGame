@@ -1,4 +1,11 @@
 {
+  "v.07.10.2026.r27.20:55": [
+    "HACKEO: el nombre del proyecto en ASCII se queda SIEMPRE arriba de cada ventana, en INTRUSIÓN y en CÓDIGO, al cambiar de fichero, al pausar y al redimensionar",
+    "En los Terminales reales (Mac y Linux) el rótulo queda fijo arriba con una región de scroll y el código corre por debajo; en Windows se repinta arriba tras cada línea",
+    "Reparto ALEATORIO de proyectos en cada hackeo, con semilla del servidor: la web y los Terminales coinciden y no se repite proyecto mientras haya proyectos de sobra (con más equipos, se repite lo mínimo)",
+    "Tres proyectos nuevos: admiranext.com, ainimation.studio y digitalavatar.ai — mismo filtro de secretos y mismo Σ sin duplicar",
+    "Estas novedades salen, como siempre, en el popover del sello (sin recorte del riel)"
+  ],
   "v.07.10.2026.r26.20:36": [
     "HACKEO · CÓDIGO: del 6º ordenador en adelante, las versiones startup: pixeria.com, xpaceos.com, clearchannel.tv y yokup.com; luego vuelve a empezar el ciclo",
     "Cada ventana lleva fijo arriba el nombre del proyecto en letras ASCII grandes y el código corre debajo; en los Terminales reales sale al inicio de cada bloque",

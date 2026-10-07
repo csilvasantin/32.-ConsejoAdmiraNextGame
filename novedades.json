@@ -1,4 +1,10 @@
 {
+  "v.07.10.2026.r22.20:03": [
+    "HACKEO (Control): velocidades ×50 y ×100 junto a ×10, en el panel y en los terminales reales de la flota",
+    "Cada línea tecleada lleva su numeral de 10 en 10 (10, 20, 30…), estilo BASIC, para ver la evolución",
+    "Arriba, junto a la velocidad, el contador total de líneas tecleadas entre todos los paneles",
+    "Estas novedades salen, como siempre, en el popover del sello (sin recorte del riel)"
+  ],
   "v.06.10.2026.r21.13:16": [
     "⌘ Experto: al cargar, como mucho el asa de una línea «› /help» abajo; nunca el Experto abierto",
     "Abierto o cerrado se recuerda solo en la pestaña: ya no se reabre solo en cada visita",

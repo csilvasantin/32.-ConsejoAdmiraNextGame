@@ -4168,7 +4168,7 @@ def conf():
     try:
         with open(CONF) as f:
             p = f.read().split()
-        SPEED = min(20.0, max(0.25, float(p[0])))
+        SPEED = min(100.0, max(0.25, float(p[0])))
         MODE = "codigo" if p[1:2] == ["codigo"] else "intrusion"
     except (OSError, ValueError, IndexError):
         pass
@@ -4191,8 +4191,14 @@ def pausa(lo, hi):
         duerme(min(quedan, 0.05))
         quedan -= 0.05
 
+NUM = 0                  # numeral BASIC de 10 en 10 (Carlos, 2026-10-07)
+
 def teclea(line, lo=0.005, hi=0.04):
+    global NUM
     modo = MODE
+    if line:
+        NUM += 1
+        sys.stdout.write("%6d " % (NUM * 10))
     for c in line:
         sys.stdout.write(c); sys.stdout.flush()
         duerme(random.uniform(lo, hi))
@@ -4400,7 +4406,7 @@ def _hk_hobbit_files(lang: str) -> dict:
 
 
 # Velocidad y guion del simulacro (Carlos, 2026-10-06). El panel manda speed
-# (×1/×4/×10) y mode (intrusion | codigo) al lanzar y, en caliente, a
+# (×1/×4/×10/×50/×100) y mode (intrusion | codigo) al lanzar y, en caliente, a
 # /hackeo/config. A cada equipo le llega como una línea «<velocidad> <guion>» en
 # hack.conf, junto al simulacro, que la relee mientras teclea.
 _HK_MODES = ("intrusion", "codigo")
@@ -4415,7 +4421,7 @@ def _hk_cfg(body) -> tuple:
         speed = 1.0
     if not (speed == speed):          # NaN
         speed = 1.0
-    speed = min(20.0, max(0.25, speed))
+    speed = min(100.0, max(0.25, speed))
     mode = str(body.get("mode") or "").strip().lower()
     return speed, (mode if mode in _HK_MODES else "intrusion")
 
@@ -4741,11 +4747,12 @@ $lines = @(
 $cf = Join-Path $PSScriptRoot 'admirahack.conf'; $sp = 1.0; $md = ''; $code = $null; $tr = $false
 $i = 0
 while ($true) {
-  try { $q = (Get-Content $cf -TotalCount 1 -ErrorAction Stop).Split(' '); $sp = [Math]::Max(0.25, [Math]::Min(20.0, [double]$q[0])); $md = $q[1] } catch {}
+  try { $q = (Get-Content $cf -TotalCount 1 -ErrorAction Stop).Split(' '); $sp = [Math]::Max(0.25, [Math]::Min(100.0, [double]$q[0])); $md = $q[1] } catch {}
   if ($md -eq 'codigo' -and -not $tr) { $tr = $true; try { $code = @((Invoke-WebRequest -UseBasicParsing 'https://www.admira.live/app.js').Content -split "`n" | Where-Object { $_.Trim() }) } catch {} }
   $src = $lines; if ($md -eq 'codigo' -and $code) { $src = $code }
   $l = [string]$src[$i % $src.Count]; if ($l.Length -gt 160) { $l = $l.Substring(0, 160) }
   $n = [int][Math]::Ceiling($sp)
+  [Console]::Write((($i + 1) * 10).ToString().PadLeft(6) + ' ')
   for ($k = 0; $k -lt $l.Length; $k += $n) { [Console]::Write($l.Substring($k, [Math]::Min($n, $l.Length - $k))); Start-Sleep -Milliseconds (Get-Random -Minimum 5 -Maximum 40) }
   [Console]::Write([Environment]::NewLine)
   $i++

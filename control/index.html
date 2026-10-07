@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.06.10.2026.r21.13:16" />
+<meta name="admiranext-version" content="AdmiraNeXT v.07.10.2026.r22.20:03" />
     <script src="/admira-bar.js?v=20260918-r38"></script>
     <script src="/auth-gate.js?v=20261004-r15-sinfranja"></script>
 <meta charset="UTF-8">
@@ -461,12 +461,14 @@
   .hack-topbar #hackStatusLine,.hack-topbar #hkSyncLine{font-size:11px;color:#0f0;opacity:.85;font-family:'Courier New',monospace}
   #hackBack{font-family:'Courier New',monospace;background:#0a0a0a;color:#00ff41;border:1px solid #00ff41;border-radius:8px;padding:7px 14px;font-size:13px;font-weight:700;cursor:pointer;letter-spacing:1px}
   #hackBack:hover{background:#00ff41;color:#000}
-  /* Selectores del HACKEO: velocidad (×1/×4/×10) y guion (intrusión / código real de la web) */
+  /* Selectores del HACKEO: velocidad (×1/×4/×10/×50/×100) y guion (intrusión / código real de la web) */
   .hack-seg{display:inline-flex;border:1px solid #1f6f4a;border-radius:8px;overflow:hidden;flex:none}
   .hack-seg button{font-family:'Courier New',monospace;background:#0a0a0a;color:#00ff41;border:0;border-left:1px solid #1f6f4a;border-radius:0;padding:7px 11px;font-size:12px;font-weight:700;cursor:pointer;letter-spacing:1px}
   .hack-seg button:first-child{border-left:0}
   .hack-seg button:hover{background:#0f2a18}
   .hack-seg button.on{background:#00ff41;color:#000}
+  /* Contador total de líneas tecleadas (Carlos, 07-10-2026) */
+  .hack-topbar #hkLineCount{font-size:12px;font-weight:700;color:#000;background:#00ff41;border-radius:6px;padding:4px 9px;letter-spacing:1px;font-variant-numeric:tabular-nums;white-space:nowrap}
   #hackBody{flex:1;min-height:0;display:flex}
   .hack-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));grid-auto-rows:1fr;gap:.5rem;flex:1 1 auto;min-height:0;width:100%;box-sizing:border-box}
   .hack-grid>.hack-terminal{min-height:0;min-width:0}
@@ -808,11 +810,12 @@
     <button id="hackBack" title="Volver al panel de control">← Volver al control</button>
     <span class="hack-title">🕶️ HACKEO</span>
     <span class="hack-seg" id="hkSpeedSeg" title="Velocidad del hackeo en todos los equipos">
-      <button type="button" data-speed="1">×1</button><button type="button" data-speed="4">×4</button><button type="button" data-speed="10">×10</button>
+      <button type="button" data-speed="1">×1</button><button type="button" data-speed="4">×4</button><button type="button" data-speed="10">×10</button><button type="button" data-speed="50">×50</button><button type="button" data-speed="100">×100</button>
     </span>
     <span class="hack-seg" id="hkModeSeg" title="Qué teclean los terminales">
       <button type="button" data-mode="intrusion" title="Guion de intrusión de siempre">INTRUSIÓN</button><button type="button" data-mode="codigo" title="Código real de www.admira.live, como si se escribiera">CÓDIGO</button>
     </span>
+    <span id="hkLineCount" title="Líneas tecleadas entre todos los paneles desde que empezó este hackeo (cada línea lleva su numeral de 10 en 10)">0 líneas</span>
     <span id="hkSyncLine"></span>
     <span class="spacer"></span>
     <span id="hackStatusLine"></span>
@@ -3170,10 +3173,20 @@ function collapseAllToggle(){
 
   // Velocidad y guion del hackeo. Persisten entre sesiones y se pueden cambiar en
   // caliente: la velocidad multiplica el ritmo de tecleo de TODOS los paneles a la vez.
-  const HK_SPEEDS=[1,4,10];
+  // ×50 y ×100 (Carlos, 07-10-2026): mismo reloj, solo multiplica más.
+  const HK_SPEEDS=[1,4,10,50,100];
   let hkSpeed=+(localStorage.getItem("hk_speed")||1); if(HK_SPEEDS.indexOf(hkSpeed)<0) hkSpeed=1;
   let hkMode=localStorage.getItem("hk_mode")==="codigo"?"codigo":"intrusion";
   let hkTerms=[];
+  // Numerales estilo BASIC (Carlos, 07-10-2026): cada línea va precedida de su número de
+  // 10 en 10 (10, 20, 30…) por panel, y arriba se ve el total de líneas de toda la flota.
+  let hkTotal=0, hkTotalPintado=-1;
+  function hkNum(n){ return String(n*10).padStart(6," ")+" "; }
+  function paintHkTotal(){
+    if(hkTotal===hkTotalPintado) return; hkTotalPintado=hkTotal;
+    const el=document.getElementById("hkLineCount"); if(!el) return;
+    el.textContent=hkTotal.toLocaleString("es-ES")+(hkTotal===1?" línea":" líneas");
+  }
 
   async function callCouncilHackeo(mode){
     const HACK_API = HACKEO_API;
@@ -3223,12 +3236,14 @@ function collapseAllToggle(){
     // un \u00fanico reloj reparte el tiempo transcurrido \u00d7 hkSpeed entre todos.
     hkTerms=HACK_MACHINES.map((m,idx)=>({ m:m, b:document.getElementById("hack-body-"+m.id),
       role:document.querySelector("#hack-term-"+m.id+" .hack-role"), off:OFFSETS[idx%OFFSETS.length],
-      ms:SPEEDS[idx%SPEEDS.length]+Math.random()*10, acc:0, li:0, ci:0, done:[], L:[], code:false }));
+      ms:SPEEDS[idx%SPEEDS.length]+Math.random()*10, acc:0, li:0, ci:0, n:0, done:[], L:[], code:false }));
+    hkTotal=0; hkTotalPintado=-1; paintHkTotal();
     applyHkMode();
     let last=performance.now();
     hackIntervals.push(setInterval(()=>{ if(!hackMode) return;
       const now=performance.now(), dt=Math.min(now-last,250); last=now;
       hkTerms.forEach(t=>{ t.acc+=dt*hkSpeed; const n=Math.floor(t.acc/t.ms); if(n>0){ t.acc-=n*t.ms; stepHkTerm(t,n); } });
+      paintHkTotal();
     },16));
     const sl=document.getElementById("hackStatusLine"); if(sl) sl.textContent="lanzando intrusion\u2026";
     try{ const res=await callCouncilHackeo("start"); paintHackeoStatus(res&&res.machines?res:{error:"no response"}); }
@@ -3240,11 +3255,14 @@ function collapseAllToggle(){
   function stepHkTerm(t,n){
     if(!t.L.length||!t.b) return;                  // guion aún descargándose
     let line=hkTermLine(t);
-    while(n-->0){ if(t.ci<=line.length) t.ci++; else { t.done.push(line); t.li++; t.ci=0; line=hkTermLine(t); } }
     const maxV=Math.max(1,Math.floor(t.b.clientHeight/11));
+    while(n-->0){ if(t.ci<=line.length) t.ci++; else {
+      t.n++; hkTotal++; t.done.push(hkNum(t.n)+line); t.li++; t.ci=0; line=hkTermLine(t);
+      if(t.done.length>maxV*2) t.done.splice(0,t.done.length-maxV);   // a ×100 caen cientos por tick
+    } }
     if(t.done.length>maxV) t.done.splice(0,t.done.length-maxV);
     const c=Math.min(t.ci,line.length);
-    t.b.textContent=t.done.concat(line.substring(0,c)+(c<line.length?"\u2588":"")).slice(-maxV).join("\n");
+    t.b.textContent=t.done.concat(hkNum(t.n+1)+line.substring(0,c)+(c<line.length?"\u2588":"")).slice(-maxV).join("\n");
   }
 
   // Modo C\u00d3DIGO: los paneles teclean el c\u00f3digo real de www.admira.live (la home, sus
@@ -3275,6 +3293,7 @@ function collapseAllToggle(){
     hkTerms.forEach((t,i)=>{
       const f=files.length?files[i%files.length]:null;
       t.code=!!f; t.L=f?f.lines:((t.m.platform==="win")?HACK_LINES_WIN:HACK_LINES);
+      // el numeral NO vuelve a 10 al cambiar de guion: cuenta todo lo tecleado en el panel
       t.li=f?Math.floor(Math.random()*f.lines.length):t.off; t.ci=0; t.done=[]; t.acc=0;
       if(t.role) t.role.textContent=f?f.name:t.m.role;
       if(t.b) t.b.textContent="";
@@ -3291,7 +3310,8 @@ function collapseAllToggle(){
       if(!res.ok) throw new Error("HTTP "+res.status);
       const d=await res.json().catch(()=>null), s=d&&d.summary;
       if(d&&d.ok===false) throw new Error(d.error||"sin equipos");
-      if(sl){ sl.textContent="flota: "+tag+(s?" \u00b7 "+s.updated+"/"+s.online+" equipos":""); sl.style.color=(s&&s.updated<s.online)?"#ff6":"#0f0"; }
+      const real=d&&+d.speed, corto=real&&real<hkSpeed;   // backend antiguo: tope ×20
+      if(sl){ sl.textContent="flota: "+tag+(corto?" (terminales a \u00d7"+real+")":"")+(s?" \u00b7 "+s.updated+"/"+s.online+" equipos":""); sl.style.color=(corto||(s&&s.updated<s.online))?"#ff6":"#0f0"; }
     }catch(e){ if(sl){ sl.textContent="flota sin actualizar ("+(e.message||e)+") \u2014 solo esta vista va a "+tag; sl.style.color="#ff6"; } }
   }
 

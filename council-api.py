@@ -4153,6 +4153,7 @@ HOBBIT_DIR = os.path.expanduser("~/.fleet/hobbit")
 HERE = os.path.dirname(os.path.abspath(__file__))
 CONF = os.path.join(HERE, "hack.conf")
 SPEED, MODE = 1.0, "intrusion"
+PAUSED = False          # velocidad 0 en hack.conf = en pausa (Carlos, 2026-10-07)
 _visto = _deuda = 0.0
 try:
     sys.stdout.reconfigure(errors="replace")
@@ -4160,7 +4161,7 @@ except Exception:
     pass
 
 def conf():
-    global SPEED, MODE, _visto
+    global SPEED, MODE, _visto, PAUSED
     now = time.time()
     if now - _visto < 0.25:
         return
@@ -4172,15 +4173,34 @@ def conf():
     try:
         with open(CONF) as f:
             p = f.read().split()
-        SPEED = min(1000.0, max(0.25, float(p[0])))
+        sp = float(p[0])
+        PAUSED = (sp <= 0.0)              # 0 = pausa; se mantiene la última velocidad > 0
+        if sp > 0.0:
+            SPEED = min(1000.0, max(0.25, sp))
         MODE = "codigo" if p[1:2] == ["codigo"] else "intrusion"
     except (OSError, ValueError, IndexError):
         pass
+
+def espera_si_pausa():
+    # Mientras esté en pausa, el Terminal se queda quieto (sin teclear), pero sigue
+    # releyendo hack.conf y repintando el rótulo fijo; al reanudar, vuelve a la velocidad
+    # de antes. El freno de 0.25 s de conf() marca la latencia de reanudar (imperceptible).
+    while True:
+        conf()
+        if not PAUSED:
+            return
+        try:
+            vigila_rotulo()
+        except Exception:
+            pass
+        time.sleep(0.12)
 
 def duerme(s):
     # Por debajo de ~4 ms time.sleep se pasa de largo: la espera se acumula y
     # se duerme de una vez, descontando lo dormido de verdad → ×10 es ×10.
     global _deuda
+    if PAUSED:
+        espera_si_pausa(); return
     _deuda += s / SPEED
     if _deuda >= 0.004:
         t = time.time()
@@ -4340,6 +4360,8 @@ def teclea(line, lo=0.005, hi=0.04):
         sys.stdout.write(trozo); sys.stdout.flush()
         duerme(sum(random.uniform(lo, hi) for _ in trozo))
         conf()
+        if PAUSED:
+            espera_si_pausa()          # pausa a mitad de línea: espera y sigue donde iba
         if MODE != modo:
             break                      # cambio de guion: la línea se corta ahí
     sys.stdout.write("\n"); sys.stdout.flush()
@@ -4366,6 +4388,9 @@ try:
     fija_rotulo(limpia=True)
     while True:
         conf()
+        if PAUSED:
+            espera_si_pausa()
+            continue
         if MODE != modo:
             if modo is not None:       # cambio en caliente: pantalla limpia, rótulo fijo
                 fija_rotulo(limpia=True)
@@ -4566,7 +4591,9 @@ def _hk_cfg(body) -> tuple:
         speed = 1.0
     if not (speed == speed):          # NaN
         speed = 1.0
-    speed = min(1000.0, max(0.25, speed))
+    # 0 = PAUSA (Carlos, 2026-10-07): velocidad 0 congela el Terminal; al reanudar llega la
+    # velocidad anterior. Por eso el mínimo baja de 0.25 a 0.
+    speed = min(1000.0, max(0.0, speed))
     mode = str(body.get("mode") or "").strip().lower()
     return speed, (mode if mode in _HK_MODES else "intrusion")
 
@@ -5122,7 +5149,9 @@ $script:RotColor = $pal[0]
 if ($ban.Count) { Clear-Host; [Console]::Write(([Environment]::NewLine * ($ban.Count + 1))); Pin-Rotulo }
 $i = 0
 while ($true) {
-  try { $q = (Get-Content $cf -TotalCount 1 -ErrorAction Stop).Split(' '); $sp = [Math]::Max(0.25, [Math]::Min(1000.0, [double]$q[0])); $md = $q[1] } catch {}
+  try { $q = (Get-Content $cf -TotalCount 1 -ErrorAction Stop).Split(' '); $raw = [double]$q[0]; $md = $q[1] } catch { $raw = 1.0 }
+  if ($raw -le 0) { Pin-Rotulo; Start-Sleep -Milliseconds 150; continue }   # 0 = pausa: quieto, rótulo fijo
+  $sp = [Math]::Max(0.25, [Math]::Min(1000.0, $raw))
   if ($md -eq 'codigo' -and -not $tr) { $tr = $true
     if ($j -and $j.files) { $code = @($j.files | ForEach-Object { '== ' + $j.project + '/' + $_.path + ' =='; $_.lines }) }
     if (-not $code) { try { $code = @((Invoke-WebRequest -UseBasicParsing 'https://www.admira.live/app.js').Content -split "`n" | Where-Object { $_.Trim() }) } catch {} } }

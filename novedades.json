@@ -1,4 +1,9 @@
 {
+  "v.07.10.2026.r32.21:47": [
+    "HACKEO: la pausa también congela los Terminales reales. Pulsar el título pausa/reanuda TODAS las máquinas lanzadas; pulsar una ventana pausa/reanuda solo esa máquina",
+    "Se reanuda a la velocidad anterior (velocidad 0 = pausa en council-api y en los simulacros de Mac/Linux y Windows); el rótulo sigue fijo arriba mientras está en pausa",
+    "Estas novedades salen, como siempre, en el popover del sello (sin recorte del riel)"
+  ],
   "v.07.10.2026.r31.21:38": [
     "HACKEO: nuevo proyecto admira.live (este panel) en el corpus y en el Σ sin duplicar; entra en el reparto aleatorio con su propia máquina",
     "Cuando una ventana termina de teclear todo su proyecto: cambia el color del rótulo ASCII, suena un efecto de videojuego de 8 bits (distinto por ventana) y el listado vuelve a empezar; en los Terminales Mac/Linux también suena y cambia el color",

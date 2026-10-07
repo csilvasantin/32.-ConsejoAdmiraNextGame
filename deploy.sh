@@ -8,7 +8,7 @@ TMP="$(mktemp -d)"
 # Solo el contenido versionado de HEAD (sin .git ni basura del working tree)
 git archive --format=tar HEAD | tar -x -C "$TMP"
 
-# CORPUS DEL HACKEO · modo CÓDIGO (GrokBot, 07-10-2026). Código real de los 12 proyectos AdmiraNeXT
+# CORPUS DEL HACKEO · modo CÓDIGO (GrokBot, 07-10-2026). Código real de los 13 proyectos AdmiraNeXT
 # (repos públicos, sin secretos: ver tools/hackeo-corpus.py) generado en
 # cada despliegue en control/hackeo-corpus/. No se versiona. Si falla, el HACKEO cae al
 # código de la propia web, como antes, y el despliegue sigue.

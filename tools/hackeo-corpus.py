@@ -2,7 +2,7 @@
 """Corpus del HACKEO · modo CÓDIGO (Carlos, 07-10-2026).
 
 Cada panel del HACKEO teclea código REAL de un proyecto AdmiraNeXT. Este script
-clona (superficial) los repos públicos de los 12 proyectos (5 Admira + 4 startup + 3 ecosistema) y escribe, en el
+clona (superficial) los repos públicos de los 13 proyectos (5 Admira + 4 startup + 4 ecosistema) y escribe, en el
 directorio de salida:
 
   index.json        totales por proyecto (ficheros y líneas de código) + suma
@@ -45,6 +45,9 @@ PROYECTOS = [
     {"key": "admiranext",   "project": "admiranext.com",    "repo": "csilvasantin/admira-next-web",   "familia": "ecosistema"},
     {"key": "ainimation",   "project": "ainimation.studio", "repo": "csilvasantin/ainimation",        "familia": "ecosistema"},
     {"key": "digitalavatar","project": "digitalavatar.ai",  "repo": "csilvasantin/digitalavatar.ai",  "familia": "ecosistema"},
+    # admira.live = ESTE repo (el consejo/panel de control). Se clona igual que los demás y su
+    # código sale en la máquina que le toque. Mismo filtro de secretos y mismo Σ sin duplicar.
+    {"key": "admiralive",   "project": "admira.live",       "repo": "csilvasantin/32.-ConsejoAdmiraNextGame", "familia": "ecosistema"},
 ]
 
 EXT = {".html", ".htm", ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".css", ".scss",

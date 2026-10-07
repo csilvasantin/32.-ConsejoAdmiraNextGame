@@ -1,4 +1,11 @@
 {
+  "v.07.10.2026.r24.20:21": [
+    "HACKEO · CÓDIGO: cada ventana teclea código real de un proyecto AdmiraNeXT (admira.studio, .store, .tv, .app y .biz), por orden y en bucle; la cabecera lleva el fichero real",
+    "Al pasar el ratón: proyecto, páginas (ficheros) y líneas de código de ese proyecto; un clic en una ventana la pausa para leer y otro la reanuda",
+    "Junto al contador, el Σ de líneas de todos los proyectos AdmiraNeXT; el título HACKEO ya no lleva el icono",
+    "Al abrir el HACKEO desde una pestaña antigua se recarga sola a la versión nueva",
+    "Estas novedades salen, como siempre, en el popover del sello (sin recorte del riel)"
+  ],
   "v.07.10.2026.r23.20:09": [
     "HACKEO: velocidades ×1 ×10 ×50 ×100 ×1000 (fuera ×4), en el panel y en los terminales reales",
     "×1000 sin colgar el navegador: el tecleo salta líneas enteras y los paneles se pintan por lotes (~20 fps) con el DOM acotado",

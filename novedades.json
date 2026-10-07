@@ -1,4 +1,8 @@
 {
+  "v.07.10.2026.r33.21:50": [
+    "HACKEO: arreglada la pausa de los Terminales reales — la velocidad 0 ya no se interpretaba como ×1, así que ahora sí congela de verdad",
+    "Estas novedades salen, como siempre, en el popover del sello (sin recorte del riel)"
+  ],
   "v.07.10.2026.r32.21:47": [
     "HACKEO: la pausa también congela los Terminales reales. Pulsar el título pausa/reanuda TODAS las máquinas lanzadas; pulsar una ventana pausa/reanuda solo esa máquina",
     "Se reanuda a la velocidad anterior (velocidad 0 = pausa en council-api y en los simulacros de Mac/Linux y Windows); el rótulo sigue fijo arriba mientras está en pausa",

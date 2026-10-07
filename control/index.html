@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.07.10.2026.r23.20:09" />
+<meta name="admiranext-version" content="AdmiraNeXT v.07.10.2026.r24.20:21" />
     <script src="/admira-bar.js?v=20260918-r38"></script>
     <script src="/auth-gate.js?v=20261004-r15-sinfranja"></script>
 <meta charset="UTF-8">
@@ -473,6 +473,15 @@
   .hack-seg button.on{background:#00ff41;color:#000}
   /* Contador total de líneas tecleadas (Carlos, 07-10-2026) */
   .hack-topbar #hkLineCount{font-size:12px;font-weight:700;color:#000;background:#00ff41;border-radius:6px;padding:4px 9px;letter-spacing:1px;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .hack-topbar #hkCorpusTotal{font-size:12px;font-weight:700;color:#00ff41;border:1px solid #00ff41;border-radius:6px;padding:3px 9px;letter-spacing:1px;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .hack-topbar #hkCorpusTotal:empty{display:none}
+  /* Pausa por panel (Carlos, 07-10-2026): un clic congela el panel para leerlo; otro lo reanuda */
+  .hack-terminal{cursor:pointer}
+  .hack-terminal.hk-paused{outline:2px dashed #ffd400;outline-offset:-2px}
+  .hack-terminal.hk-paused .hack-terminal-body{opacity:1;cursor:text}
+  .hack-terminal.hk-paused::after{content:"\23F8  PAUSA \00B7  pulsa para seguir";position:absolute;top:6px;right:8px;background:#ffd400;color:#000;font:700 10px 'Courier New',monospace;letter-spacing:1px;padding:2px 6px;border-radius:4px;pointer-events:none;z-index:2}
+  #hkTip{position:fixed;z-index:2147483647;display:none;pointer-events:none;max-width:420px;background:#001a08;color:#bfffd0;border:1px solid #00ff41;border-radius:6px;padding:8px 10px;font:12px/1.45 'Courier New',monospace;box-shadow:0 6px 24px rgba(0,0,0,.6);white-space:pre-line}
+  #hkTip b{color:#00ff41}
   #hackBody{flex:1;min-height:0;display:flex}
   .hack-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));grid-auto-rows:1fr;gap:.5rem;flex:1 1 auto;min-height:0;width:100%;box-sizing:border-box}
   .hack-grid>.hack-terminal{min-height:0;min-width:0}
@@ -812,7 +821,7 @@
 <div id="hack" class="hack-overlay">
   <div class="hack-topbar">
     <button id="hackBack" title="Volver al panel de control">← Volver al control</button>
-    <span class="hack-title">🕶️ HACKEO</span>
+    <span class="hack-title">HACKEO</span>
     <span class="hack-seg" id="hkSpeedSeg" title="Velocidad del hackeo en todos los equipos">
       <button type="button" data-speed="1">×1</button><button type="button" data-speed="10">×10</button><button type="button" data-speed="50">×50</button><button type="button" data-speed="100">×100</button><button type="button" data-speed="1000">×1000</button>
     </span>
@@ -820,11 +829,13 @@
       <button type="button" data-mode="intrusion" title="Guion de intrusión de siempre">INTRUSIÓN</button><button type="button" data-mode="codigo" title="Código real de www.admira.live, como si se escribiera">CÓDIGO</button>
     </span>
     <span id="hkLineCount" title="Líneas tecleadas entre todos los paneles desde que empezó este hackeo (cada línea lleva su numeral de 10 en 10)">0 líneas</span>
+    <span id="hkCorpusTotal" title="Total de líneas de código de todos los proyectos AdmiraNeXT juntos (admira.studio, admira.store, admira.tv, admira.app y admira.biz)"></span>
     <span id="hkSyncLine"></span>
     <span class="spacer"></span>
     <span id="hackStatusLine"></span>
   </div>
   <div id="hackBody"></div>
+  <div id="hkTip"></div>
 </div>
 
 <script>
@@ -3193,12 +3204,15 @@ function collapseAllToggle(){
     el.textContent=hkTotal.toLocaleString("es-ES")+(hkTotal===1?" línea":" líneas");
   }
 
+  // Proyecto de cada ordenador para los Terminales reales: el mismo reparto que los paneles.
+  const HK_PROY_ORDEN=["studio","store","tv","app","biz"];
+  function hkProyectosMap(){ const o={}; HACK_MACHINES.forEach((m,i)=>{ o[m.id]=HK_PROY_ORDEN[i%HK_PROY_ORDEN.length]; }); return o; }
   async function callCouncilHackeo(mode){
     const HACK_API = HACKEO_API;
     const path = mode==="stop" ? "/hackeo/stop" : "/hackeo";
     const only = Array.from(HK_SEL);
     // speed/mode: el backend los usa para que los Terminales reales tecleen al mismo ritmo y guion.
-    const body = JSON.stringify(mode==="stop" ? { only_ids: only, exclude_ip: "" } : { only_ids: only, exclude_ip: "", speed: hkSpeed, mode: hkMode });
+    const body = JSON.stringify(mode==="stop" ? { only_ids: only, exclude_ip: "" } : { only_ids: only, exclude_ip: "", speed: hkSpeed, mode: hkMode, proyectos: hkProyectosMap() });
     const res = await fetch(HACK_API + path, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -3242,12 +3256,13 @@ function collapseAllToggle(){
     hkTerms=HACK_MACHINES.map((m,idx)=>({ m:m, b:document.getElementById("hack-body-"+m.id),
       role:document.querySelector("#hack-term-"+m.id+" .hack-role"), off:OFFSETS[idx%OFFSETS.length],
       ms:SPEEDS[idx%SPEEDS.length]+Math.random()*10, acc:0, li:0, ci:0, n:0, done:[], L:[], code:false }));
-    hkTotal=0; hkTotalPintado=-1; paintHkTotal();
+    hkTotal=0; hkTotalPintado=-1; paintHkTotal(); paintHkCorpusTotal();
+    hkTerms.forEach(wireHkTerm);
     applyHkMode();
     let last=performance.now();
     hackIntervals.push(setInterval(()=>{ if(!hackMode) return;
       const now=performance.now(), dt=Math.min(now-last,250); last=now;
-      hkTerms.forEach(t=>{ t.acc+=dt*hkSpeed; const n=Math.floor(t.acc/t.ms); if(n>0){ t.acc-=n*t.ms; stepHkTerm(t,n); } });
+      hkTerms.forEach(t=>{ if(t.paused) return; t.acc+=dt*hkSpeed; const n=Math.floor(t.acc/t.ms); if(n>0){ t.acc-=n*t.ms; stepHkTerm(t,n); } });
       if(now-hkPaintAt>=HK_PAINT_MS){ hkPaintAt=now; paintHkTerms(); paintHkTotal(); }
     },16));
     const sl=document.getElementById("hackStatusLine"); if(sl) sl.textContent="lanzando intrusion\u2026";
@@ -3256,6 +3271,15 @@ function collapseAllToggle(){
   }
 
   function hkTermLine(t){ const l=t.L.length?t.L[t.li%t.L.length]:""; return t.code?l:fillHackLine(l,t.m); }
+  // Siguiente línea. En modo CÓDIGO con proyecto: al acabar un fichero pasa al siguiente
+  // fichero real del proyecto (en bucle) y la cabecera del panel cambia de nombre.
+  function hkNextLine(t){
+    t.li++;
+    if(t.pj&&t.li>=t.L.length){
+      t.fi=(t.fi+1)%t.pj.files.length; t.L=t.pj.files[t.fi].lines; t.li=0; t.roleDirty=true;
+      t.done.push("        \u2500\u2500 "+t.pj.files[t.fi].path+" \u2500\u2500");
+    }
+  }
   // Avanza n caracteres en un panel. Solo toca estado (sin DOM): salta líneas enteras de
   // golpe, así ×1000 cuesta lo mismo por línea que ×1. El buffer guarda como mucho
   // HK_KEEP líneas, más de las que caben en cualquier panel.
@@ -3267,7 +3291,7 @@ function collapseAllToggle(){
     while(n>0){
       const falta=line.length+1-t.ci;              // +1 = el salto de línea
       if(n<falta){ t.ci+=n; break; }
-      n-=falta; t.n++; hkTotal++; t.done.push(hkNum(t.n)+line); t.li++; t.ci=0; line=hkTermLine(t);
+      n-=falta; t.n++; hkTotal++; t.done.push(hkNum(t.n)+line); hkNextLine(t); t.ci=0; line=hkTermLine(t);
       if(t.done.length>HK_KEEP*2) t.done.splice(0,t.done.length-HK_KEEP);
     }
     if(t.done.length>HK_KEEP) t.done.splice(0,t.done.length-HK_KEEP);
@@ -3278,6 +3302,7 @@ function collapseAllToggle(){
     const sucios=hkTerms.filter(t=>t.dirty&&t.b);
     const alto=sucios.map(t=>Math.max(1,Math.floor(t.b.clientHeight/11)));
     sucios.forEach((t,i)=>{
+      if(t.roleDirty&&t.role){ t.role.textContent=hkRoleText(t); t.roleDirty=false; if(hkTipT===t) paintHkTip(); }
       const maxV=alto[i], line=t.cur||"", c=Math.min(t.ci,line.length);
       t.b.textContent=(maxV>1?t.done.slice(-(maxV-1)):[]).concat(hkNum(t.n+1)+line.substring(0,c)+(c<line.length?"\u2588":"")).join("\n");
       t.dirty=false;
@@ -3306,18 +3331,86 @@ function collapseAllToggle(){
   }
 
   // Asigna a cada panel su guion seg\u00fan hkMode y lo reinicia (vale al arrancar y en caliente).
+  // CÓDIGO REAL DE LOS PROYECTOS AdmiraNeXT (Carlos, 07-10-2026). El build (deploy.sh →
+  // tools/hackeo-corpus.py) deja en /control/hackeo-corpus/ un índice con los totales de cada
+  // proyecto y una muestra de sus ficheros fuente reales, sin secretos. Los 5 proyectos van a
+  // los 5 primeros ordenadores, en orden, y se repiten en bucle en los siguientes.
+  const HK_CORPUS="/control/hackeo-corpus/";
+  let hkCorpus=null, hkCorpusIdx=null;
+  function loadHkCorpusIdx(){
+    return hkCorpusIdx||(hkCorpusIdx=fetch(HK_CORPUS+"index.json",{cache:"no-cache",signal:AbortSignal.timeout(8000)})
+      .then(r=>r.ok?r.json():null).catch(()=>null));
+  }
+  function loadHkCorpus(){
+    return hkCorpus||(hkCorpus=(async()=>{
+      const idx=await loadHkCorpusIdx(); if(!idx||!idx.projects) return [];
+      const got=await Promise.all(idx.projects.map(p=>fetch(HK_CORPUS+p.key+".json",{cache:"no-cache",signal:AbortSignal.timeout(15000)})
+        .then(r=>r.ok?r.json():null).catch(()=>null)));
+      return got.filter(p=>p&&p.files&&p.files.length);
+    })());
+  }
+  function hkFmt(n){ return (+n||0).toLocaleString("es-ES"); }
+  async function paintHkCorpusTotal(){
+    const idx=await loadHkCorpusIdx(), el=document.getElementById("hkCorpusTotal"); if(!el) return;
+    el.textContent=idx?("\u03a3 AdmiraNeXT "+hkFmt(idx.lines_total_all)+" l\u00edneas"):"";
+    if(idx) el.title="Total de l\u00edneas de c\u00f3digo de todos los proyectos AdmiraNeXT juntos\n"+
+      idx.projects.map(p=>p.project+": "+hkFmt(p.lines_total)+" l\u00edneas \u00b7 "+hkFmt(p.files_total)+" ficheros").join("\n")+
+      "\nTotal: "+hkFmt(idx.lines_total_all)+" l\u00edneas \u00b7 "+hkFmt(idx.files_total_all)+" ficheros";
+  }
+  function hkRoleText(t){ return t.pj?(t.pj.project+"/"+t.pj.files[t.fi].path):t.code?t.codeName:t.m.role; }
+  // Tooltip al pasar el ratón: proyecto, páginas (ficheros) y líneas; el panel sigue tecleando.
+  let hkTipT=null;
+  function paintHkTip(){
+    const tip=document.getElementById("hkTip"), t=hkTipT; if(!tip) return;
+    if(!t||!t.pj){ tip.style.display="none"; return; }
+    const f=t.pj.files[t.fi];
+    tip.innerHTML="<b>"+t.pj.project+"</b> \u00b7 "+t.pj.repo+" @"+t.pj.commit+"\n"+
+      hkFmt(t.pj.files_total)+" p\u00e1ginas (ficheros) \u00b7 "+hkFmt(t.pj.lines_total)+" l\u00edneas de c\u00f3digo\n"+
+      "Ahora: "+f.path+" ("+hkFmt(f.lines_total)+" l\u00edneas)"+(t.paused?"\n\u23f8 en pausa":"");
+    tip.style.display="block";
+  }
+  function moveHkTip(e){
+    const tip=document.getElementById("hkTip"); if(!tip||tip.style.display!=="block") return;
+    const w=tip.offsetWidth, h=tip.offsetHeight;
+    tip.style.left=Math.min(e.clientX+14, innerWidth-w-8)+"px"; tip.style.top=Math.min(e.clientY+16, innerHeight-h-8)+"px";
+  }
+  function wireHkTerm(t){
+    const el=document.getElementById("hack-term-"+t.m.id); if(!el) return;
+    el.addEventListener("click",(e)=>{
+      if(window.getSelection&&String(window.getSelection())) return;   // seleccionando texto para leer
+      t.paused=!t.paused; el.classList.toggle("hk-paused",t.paused);
+      if(!t.paused) t.acc=0;                       // reanuda a la velocidad actual, sin acelerón
+      if(hkTipT===t) paintHkTip();
+    });
+    el.addEventListener("mouseenter",(e)=>{ hkTipT=t; paintHkTip(); moveHkTip(e); });
+    el.addEventListener("mousemove",moveHkTip);
+    el.addEventListener("mouseleave",()=>{ if(hkTipT===t){ hkTipT=null; paintHkTip(); } });
+  }
+
   async function applyHkMode(){
-    const mode=hkMode, files=mode==="codigo"?await loadHkCode():[];
+    const mode=hkMode, pjs=mode==="codigo"?await loadHkCorpus():[];
+    const files=(mode==="codigo"&&!pjs.length)?await loadHkCode():[];   // sin corpus: la web, como antes
     if(mode!==hkMode) return;                      // cambiaron de modo mientras descargaba
     hkTerms.forEach((t,i)=>{
+      const pj=pjs.length?pjs[i%pjs.length]:null;
+      t.pj=pj;
+      if(pj){
+        // varios paneles con el mismo proyecto empiezan en ficheros distintos
+        t.fi=(Math.floor(i/pjs.length)*7+Math.floor(Math.random()*pj.files.length))%pj.files.length;
+        t.L=pj.files[t.fi].lines; t.code=true; t.li=0; t.ci=0; t.done=[]; t.acc=0; t.cur=null;
+        if(t.role) t.role.textContent=hkRoleText(t);
+        if(t.b) t.b.textContent="";
+        return;
+      }
       const f=files.length?files[i%files.length]:null;
-      t.code=!!f; t.L=f?f.lines:((t.m.platform==="win")?HACK_LINES_WIN:HACK_LINES);
+      t.code=!!f; t.codeName=f?f.name:""; t.L=f?f.lines:((t.m.platform==="win")?HACK_LINES_WIN:HACK_LINES);
       // el numeral NO vuelve a 10 al cambiar de guion: cuenta todo lo tecleado en el panel
       t.li=f?Math.floor(Math.random()*f.lines.length):t.off; t.ci=0; t.done=[]; t.acc=0; t.cur=null;
-      if(t.role) t.role.textContent=f?f.name:t.m.role;
+      if(t.role) t.role.textContent=hkRoleText(t);
       if(t.b) t.b.textContent="";
     });
-    if(mode==="codigo"&&!files.length){ const sl=document.getElementById("hkSyncLine"); if(sl) sl.textContent="\u26a0 no pude leer el c\u00f3digo de la web \u2014 sigo con el guion"; }
+    if(hkTipT) paintHkTip();
+    if(mode==="codigo"&&!pjs.length&&!files.length){ const sl=document.getElementById("hkSyncLine"); if(sl) sl.textContent="\u26a0 no pude leer el c\u00f3digo de la web \u2014 sigo con el guion"; }
   }
 
   // Manda velocidad y guion al backend para los Terminales reales que ya est\u00e1n abiertos.
@@ -3355,6 +3448,7 @@ function collapseAllToggle(){
     hackMode=false;
     document.getElementById("hack").classList.remove("visible"); unlockView();
     hackIntervals.forEach(i=>clearInterval(i)); hackIntervals=[]; hkTerms=[];
+    hkTipT=null; const tip=document.getElementById("hkTip"); if(tip) tip.style.display="none";
     const sy=document.getElementById("hkSyncLine"); if(sy) sy.textContent="";
     try{ await callCouncilHackeo("stop"); }catch(e){}
   }
@@ -3365,7 +3459,22 @@ function collapseAllToggle(){
       onchange:function(){ const b=document.getElementById('hackOpen');
         if(b) b.textContent='🕶️ HACKEO'+(HK_SEL.size?(' · '+HK_SEL.size+' elegidos'):''); }});
   }
-  document.getElementById("hackOpen") && document.getElementById("hackOpen").addEventListener("click", startHack);
+  // Versión servida (Carlos, 07-10-2026: seguía viendo ×4 con una pestaña de la versión anterior).
+  // Al abrir el HACKEO se compara el sello de la página con /version.json; si hay uno nuevo,
+  // se recarga y el HACKEO se abre solo en la versión nueva.
+  async function hkOpenFresh(){
+    try{
+      const mt=document.querySelector('meta[name="admiranext-version"]'), mio=((mt&&mt.content)||"").replace(/^AdmiraNeXT\s*/,"");
+      const r=await fetch("/version.json",{cache:"no-store",signal:AbortSignal.timeout(2500)}), v=r.ok?(await r.json()).version:"";
+      if(v&&mio&&v!==mio&&sessionStorage.getItem("hk_recargado")!==v){
+        sessionStorage.setItem("hk_autoopen","1"); sessionStorage.setItem("hk_recargado",v); location.reload(); return;
+      }
+    }catch(e){}
+    startHack();
+  }
+  if(sessionStorage.getItem("hk_autoopen")){ sessionStorage.removeItem("hk_autoopen"); setTimeout(startHack,600); }
+  else sessionStorage.removeItem("hk_recargado");
+  document.getElementById("hackOpen") && document.getElementById("hackOpen").addEventListener("click", hkOpenFresh);
   document.getElementById("hackBack") && document.getElementById("hackBack").addEventListener("click", stopHack);
   window.addEventListener("keydown",(e)=>{ if(e.key==="Escape"&&hackMode) stopHack(); });
 

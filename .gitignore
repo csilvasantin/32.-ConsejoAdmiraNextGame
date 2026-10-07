@@ -18,3 +18,6 @@ hackeo-audit.log
 
 # identidad local por-máquina del tablero Vista Previa (no compartir)
 vista-previa/quien.json
+
+# corpus del HACKEO: se genera en deploy.sh
+control/hackeo-corpus/

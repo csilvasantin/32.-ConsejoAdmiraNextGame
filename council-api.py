@@ -4549,6 +4549,81 @@ def _hk_code_b64(idx: int) -> str:
     return _b64.b64encode(_gzip.compress(text.encode("utf-8"))).decode("ascii")
 
 
+# CÓDIGO DE LOS PROYECTOS AdmiraNeXT (Carlos, 2026-10-07). Cada equipo teclea
+# código real de un proyecto: admira.studio, .store, .tv, .app y .biz, por orden
+# (los 5 primeros ordenadores, y en bucle). El panel manda «proyectos» {id: clave}
+# con el MISMO reparto que sus ventanas; sin él, el orden del consejo. El corpus
+# (sin secretos) lo genera el build de admira.live en /control/hackeo-corpus/.
+_HK_PROY_ORDEN = ("studio", "store", "tv", "app", "biz")
+_HK_PROY_MAP: dict = {}
+_HK_CORPUS_URL = _HK_SITE_URL + "/control/hackeo-corpus/"
+_HK_CORPUS_CACHE: dict = {}
+_HK_CORPUS_MAX_LINES = 3000
+
+
+def _hk_set_proyectos(m) -> None:
+    """Guarda el reparto {id: clave} que manda el panel (ids normalizados)."""
+    _HK_PROY_MAP.clear()
+    if isinstance(m, dict):
+        for k, v in m.items():
+            if str(v) in _HK_PROY_ORDEN:
+                _HK_PROY_MAP[_hk_norm_id(k)] = str(v)
+
+
+def _hk_proyecto_de(machine: dict) -> str:
+    for i in _hk_ids_de(machine):
+        if i in _HK_PROY_MAP:
+            return _HK_PROY_MAP[i]
+    return _HK_PROY_ORDEN[_hk_code_index(machine) % len(_HK_PROY_ORDEN)]
+
+
+def _hk_corpus(key: str):
+    """Corpus del proyecto (dict) con caché de _HK_CODE_TTL s. None si no hay."""
+    import urllib.request as _rq
+    with _HK_CODE_LOCK:
+        c = _HK_CORPUS_CACHE.get(key)
+        if c and time.time() - c[0] < _HK_CODE_TTL:
+            return c[1]
+        try:
+            req = _rq.Request(_HK_CORPUS_URL + key + ".json",
+                              headers={"User-Agent": "Mozilla/5.0 (AdmiraNeXT council-api)"})
+            with _rq.urlopen(req, timeout=8) as r:
+                d = json.loads(r.read(3_000_000).decode("utf-8", "replace"))
+            if not d.get("files"):
+                raise ValueError("corpus vacío")
+        except Exception:
+            return c[1] if c else None
+        _HK_CORPUS_CACHE[key] = (time.time(), d)
+        return d
+
+
+def _hk_code_b64_proyecto(machine: dict) -> str:
+    """gzip+base64 del código real del proyecto del equipo: 1ª línea = nombre
+    (proyecto · repo), luego sus ficheros con «== ruta ==» delante de cada uno,
+    empezando en uno al azar y hasta _HK_CORPUS_MAX_LINES. '' si no hay corpus."""
+    import base64 as _b64, gzip as _gzip, random as _random
+    d = _hk_corpus(_hk_proyecto_de(machine))
+    if not d:
+        return ""
+    files = d["files"]
+    a = _random.randrange(len(files))
+    out = []
+    for f in files[a:] + files[:a]:
+        out.append("== %s/%s ==" % (d.get("project", ""), f.get("path", "")))
+        out.extend(str(l)[:160] for l in f.get("lines", []))
+        if len(out) >= _HK_CORPUS_MAX_LINES:
+            break
+    head = "%s · %s · %s ficheros · %s líneas" % (d.get("project", ""), d.get("repo", ""),
+                                                  d.get("files_total", "?"), d.get("lines_total", "?"))
+    text = head + "\n" + "\n".join(out[:_HK_CORPUS_MAX_LINES]) + "\n"
+    return _b64.b64encode(_gzip.compress(text.encode("utf-8"))).decode("ascii")
+
+
+def _hk_code_para(machine: dict) -> str:
+    """Código que viaja con el lanzamiento: el del proyecto; si no, el de la web."""
+    return _hk_code_b64_proyecto(machine) or _hk_code_b64(_hk_code_index(machine))
+
+
 def _hk_code_index(machine: dict) -> int:
     """Posición estable del equipo en el consejo → qué fichero teclea."""
     ids = [m.get("id") for m in _hk_load_council()]
@@ -4752,7 +4827,9 @@ $cf = Join-Path $PSScriptRoot 'admirahack.conf'; $sp = 1.0; $md = ''; $code = $n
 $i = 0
 while ($true) {
   try { $q = (Get-Content $cf -TotalCount 1 -ErrorAction Stop).Split(' '); $sp = [Math]::Max(0.25, [Math]::Min(1000.0, [double]$q[0])); $md = $q[1] } catch {}
-  if ($md -eq 'codigo' -and -not $tr) { $tr = $true; try { $code = @((Invoke-WebRequest -UseBasicParsing 'https://www.admira.live/app.js').Content -split "`n" | Where-Object { $_.Trim() }) } catch {} }
+  if ($md -eq 'codigo' -and -not $tr) { $tr = $true
+    try { $j = Invoke-RestMethod -UseBasicParsing 'https://www.admira.live/control/hackeo-corpus/__HK_PROJ__.json'; $code = @($j.files | ForEach-Object { '== ' + $j.project + '/' + $_.path + ' =='; $_.lines }) } catch {}
+    if (-not $code) { try { $code = @((Invoke-WebRequest -UseBasicParsing 'https://www.admira.live/app.js').Content -split "`n" | Where-Object { $_.Trim() }) } catch {} } }
   $src = $lines; if ($md -eq 'codigo' -and $code) { $src = $code }
   $l = [string]$src[$i % $src.Count]; if ($l.Length -gt 160) { $l = $l.Substring(0, 160) }
   $n = [int][Math]::Ceiling($sp)
@@ -4817,8 +4894,10 @@ def _hk_win_ssh(user: str, host: str, ps_script: str, what: str) -> tuple:
         return False, f"win {what} error: {e}"
 
 
-def _hk_win_launch(user: str, host: str, cfg: tuple = (1.0, "intrusion")) -> tuple:
-    return _hk_win_ssh(user, host, _HK_WIN_LAUNCH_PS.replace("__HK_CFG__", _hk_cfg_line(cfg)), "launch")
+def _hk_win_launch(user: str, host: str, cfg: tuple = (1.0, "intrusion"), proj: str = "studio") -> tuple:
+    proj = proj if proj in _HK_PROY_ORDEN else "studio"     # va incrustado: solo claves conocidas
+    ps = _HK_WIN_LAUNCH_PS.replace("__HK_CFG__", _hk_cfg_line(cfg)).replace("__HK_PROJ__", proj)
+    return _hk_win_ssh(user, host, ps, "launch")
 
 
 def _hk_win_config(user: str, host: str, cfg: tuple) -> tuple:
@@ -5103,11 +5182,12 @@ def _hk_process_one(machine: dict, action: str, cfg: tuple = (1.0, "intrusion"))
             lang = _hk_hobbit_lang(machine)
             if lang:
                 result["hobbit_lang"] = lang
-            ok, detail = launch_fn(user, host, profile, lang, cfg, _hk_code_b64(_hk_code_index(machine)))
+            ok, detail = launch_fn(user, host, profile, lang, cfg, _hk_code_para(machine))
         elif is_linux:
-            ok, detail = launch_fn(user, host, cfg, _hk_code_b64(_hk_code_index(machine)))
+            ok, detail = launch_fn(user, host, cfg, _hk_code_para(machine))
         else:
-            ok, detail = launch_fn(user, host, cfg)
+            ok, detail = launch_fn(user, host, cfg, _hk_proyecto_de(machine))
+        result["proyecto"] = _hk_proyecto_de(machine)
         result["action"] = "ssh_launched"
         result["ok"] = ok
         result["detail"] = detail
@@ -5141,6 +5221,7 @@ async def council_hackeo(request: Request, _rate=Depends(check_rate_limit), _aut
         _raw = await request.body()
         _body = json.loads(_raw.decode("utf-8")) if _raw else {}
         cfg = _hk_cfg(_body)
+        _hk_set_proyectos((_body or {}).get("proyectos"))
         exclude_ip = str((_body or {}).get("exclude_ip") or "").strip()
         # GRANULAR (Carlos, 2026-07-21): si el panel manda only_ids, el hackeo
         # actúa SOLO sobre esos equipos. Lista vacía o ausente = toda la flota.

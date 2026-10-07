@@ -1,4 +1,8 @@
 {
+  "v.07.10.2026.r30.21:08": [
+    "HACKEO: la cabecera reparte el espacio entre equipo, fichero y estado; un estado largo («? not in machines.json») ya no se come el nombre del equipo",
+    "Estas novedades salen, como siempre, en el popover del sello (sin recorte del riel)"
+  ],
   "v.07.10.2026.r29.21:04": [
     "HACKEO: en la cabecera de una línea, el equipo ocupa como mucho la mitad y el resto es para el fichero que se está tecleando",
     "Estas novedades salen, como siempre, en el popover del sello (sin recorte del riel)"

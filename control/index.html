@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.07.10.2026.r25.20:24" />
+<meta name="admiranext-version" content="AdmiraNeXT v.07.10.2026.r26.20:36" />
     <script src="/admira-bar.js?v=20260918-r38"></script>
     <script src="/auth-gate.js?v=20261004-r15-sinfranja"></script>
 <meta charset="UTF-8">
@@ -475,6 +475,12 @@
   .hack-topbar #hkLineCount{font-size:12px;font-weight:700;color:#000;background:#00ff41;border-radius:6px;padding:4px 9px;letter-spacing:1px;font-variant-numeric:tabular-nums;white-space:nowrap}
   .hack-topbar #hkCorpusTotal{font-size:12px;font-weight:700;color:#00ff41;border:1px solid #00ff41;border-radius:6px;padding:3px 9px;letter-spacing:1px;font-variant-numeric:tabular-nums;white-space:nowrap}
   .hack-topbar #hkCorpusTotal:empty{display:none}
+  /* Rótulo ASCII del proyecto, fijo arriba de la ventana; el código corre debajo (Carlos, 07-10-2026) */
+  .hk-banner{display:none;flex:none;margin:0 0 .35rem;padding:0 0 .3rem;border-bottom:1px dashed currentColor;line-height:1;white-space:pre;overflow:hidden;font-family:'Courier New',monospace;opacity:.95;text-shadow:0 0 4px currentColor}
+  .hk-banner.on{display:block}
+  /* Σ de todos los proyectos arriba y, DEBAJO, las líneas mostradas ahora (Carlos, 07-10-2026) */
+  .hack-topbar .hk-contadores{display:inline-flex;flex-direction:column;align-items:stretch;gap:3px;flex:none;text-align:center}
+  .hack-topbar .hk-contadores>span{padding:2px 9px!important;font-size:11px!important}
   /* Pausa por panel (Carlos, 07-10-2026): un clic congela el panel para leerlo; otro lo reanuda */
   .hack-terminal{cursor:pointer}
   .hack-terminal.hk-paused{outline:2px dashed #ffd400;outline-offset:-2px}
@@ -828,8 +834,10 @@
     <span class="hack-seg" id="hkModeSeg" title="Qué teclean los terminales">
       <button type="button" data-mode="intrusion" title="Guion de intrusión de siempre">INTRUSIÓN</button><button type="button" data-mode="codigo" title="Código real de www.admira.live, como si se escribiera">CÓDIGO</button>
     </span>
-    <span id="hkLineCount" title="Líneas tecleadas entre todos los paneles desde que empezó este hackeo (cada línea lleva su numeral de 10 en 10)">0 líneas</span>
-    <span id="hkCorpusTotal" title="Total de líneas de código de todos los proyectos AdmiraNeXT juntos (admira.studio, admira.store, admira.tv, admira.app y admira.biz)"></span>
+    <span class="hk-contadores">
+      <span id="hkCorpusTotal" title="Total de líneas de código de todos los proyectos AdmiraNeXT juntos, sin duplicar"></span>
+      <span id="hkLineCount" title="Líneas tecleadas entre todos los paneles desde que empezó este hackeo (cada línea lleva su numeral de 10 en 10)">0 líneas</span>
+    </span>
     <span id="hkSyncLine"></span>
     <span class="spacer"></span>
     <span id="hackStatusLine"></span>
@@ -3205,7 +3213,8 @@ function collapseAllToggle(){
   }
 
   // Proyecto de cada ordenador para los Terminales reales: el mismo reparto que los paneles.
-  const HK_PROY_ORDEN=["studio","store","tv","app","biz"];
+  // 1-5 Admira, 6-9 sus versiones startup, y vuelta a empezar (mismo orden que el corpus).
+  const HK_PROY_ORDEN=["studio","store","tv","app","biz","pixeria","xpaceos","clearchannel","yokup"];
   function hkProyectosMap(){ const o={}; HACK_MACHINES.forEach((m,i)=>{ o[m.id]=HK_PROY_ORDEN[i%HK_PROY_ORDEN.length]; }); return o; }
   async function callCouncilHackeo(mode){
     const HACK_API = HACKEO_API;
@@ -3248,7 +3257,7 @@ function collapseAllToggle(){
     const overlay=document.getElementById("hack"), body=document.getElementById("hackBody");
     overlay.classList.add("visible"); lockView();
     body.innerHTML = '<div class="hack-grid">' + HACK_MACHINES.map((m,i)=>
-      '<div class="hack-terminal hack-style-'+(i%8)+'" id="hack-term-'+m.id+'"><div class="hack-terminal-header"><span>'+m.persona+' \u2014 '+m.host+'</span><span class="hack-role">'+m.role+'</span></div><div class="hack-terminal-body" id="hack-body-'+m.id+'"></div></div>'
+      '<div class="hack-terminal hack-style-'+(i%8)+'" id="hack-term-'+m.id+'"><div class="hack-terminal-header"><span>'+m.persona+' \u2014 '+m.host+'</span><span class="hack-role">'+m.role+'</span></div><pre class="hk-banner" id="hack-banner-'+m.id+'"></pre><div class="hack-terminal-body" id="hack-body-'+m.id+'"></div></div>'
     ).join('') + '</div>';
     const SPEEDS=[15,35,8,50,22,12,45,28,18], OFFSETS=[0,7,14,3,21,10,5,18,12];
     // Un panel = un estado de tecleo. ms = ritmo propio (ms por car\u00e1cter a \u00d71);
@@ -3353,10 +3362,22 @@ function collapseAllToggle(){
   async function paintHkCorpusTotal(){
     const idx=await loadHkCorpusIdx(), el=document.getElementById("hkCorpusTotal"); if(!el) return;
     el.textContent=idx?("\u03a3 AdmiraNeXT "+hkFmt(idx.lines_total_all)+" l\u00edneas"):"";
-    if(idx) el.title="Total de l\u00edneas de c\u00f3digo de todos los proyectos AdmiraNeXT juntos\n"+
-      idx.projects.map(p=>p.project+": "+hkFmt(p.lines_total)+" l\u00edneas \u00b7 "+hkFmt(p.files_total)+" ficheros").join("\n")+
-      "\nTotal: "+hkFmt(idx.lines_total_all)+" l\u00edneas \u00b7 "+hkFmt(idx.files_total_all)+" ficheros";
+    if(idx) el.title="Todas las l\u00edneas de c\u00f3digo de todos los proyectos AdmiraNeXT, SIN duplicar\n"+
+      "(un fichero id\u00e9ntico en dos repos cuenta una vez; un repo compartido no suma dos veces)\n\n"+
+      idx.projects.map(p=>p.project+": "+hkFmt(p.lines_total)+" l\u00edneas \u00b7 aporta "+hkFmt(p.lines_unique!=null?p.lines_unique:p.lines_total)+
+        (p.shares_repo_with?" (mismo repo que "+p.shares_repo_with+")":"")).join("\n")+
+      "\n\nTotal: "+hkFmt(idx.lines_total_all)+" l\u00edneas \u00b7 "+hkFmt(idx.files_total_all)+" ficheros";
   }
+  // Rótulo: el texto viene del corpus (pj.banner, 3 filas); el tamaño se ajusta al ancho del panel.
+  function paintHkBanner(t){
+    const el=document.getElementById("hack-banner-"+t.m.id); if(!el) return;
+    const b=t.pj&&t.pj.banner; el.classList.toggle("on",!!(b&&b.length));
+    if(!b||!b.length){ el.textContent=""; return; }
+    if(el.dataset.k!==t.pj.key){ el.textContent=b.join("\n"); el.dataset.k=t.pj.key; }
+    const cols=Math.max.apply(null,b.map(l=>l.length))||1, w=el.clientWidth||el.parentNode.clientWidth;
+    el.style.fontSize=Math.max(3,Math.min(11,(w-2)/(cols*0.6)))+"px";
+  }
+  window.addEventListener("resize",()=>{ if(hackMode) hkTerms.forEach(paintHkBanner); });
   function hkRoleText(t){ return t.pj?(t.pj.project+"/"+t.pj.files[t.fi].path):t.code?t.codeName:t.m.role; }
   // Tooltip al pasar el ratón: proyecto, páginas (ficheros) y líneas; el panel sigue tecleando.
   let hkTipT=null;
@@ -3364,8 +3385,14 @@ function collapseAllToggle(){
     const tip=document.getElementById("hkTip"), t=hkTipT; if(!tip) return;
     if(!t||!t.pj){ tip.style.display="none"; return; }
     const f=t.pj.files[t.fi];
-    tip.innerHTML="<b>"+t.pj.project+"</b> \u00b7 "+t.pj.repo+" @"+t.pj.commit+"\n"+
-      hkFmt(t.pj.files_total)+" p\u00e1ginas (ficheros) \u00b7 "+hkFmt(t.pj.lines_total)+" l\u00edneas de c\u00f3digo\n"+
+    const pj=t.pj, sh=pj.shares_lines_with||{}, shk=Object.keys(sh);
+    const PAR={studio:"admira.studio",store:"admira.store",tv:"admira.tv",app:"admira.app",biz:"admira.biz"};
+    tip.innerHTML="<b>"+pj.project+"</b>"+(pj.familia==="startup"?" \u00b7 startup"+(pj.par?" (\u2194 "+(PAR[pj.par]||pj.par)+")":""):"")+
+      " \u00b7 "+pj.repo+" @"+pj.commit+"\n"+
+      hkFmt(pj.files_total)+" p\u00e1ginas (ficheros) \u00b7 "+hkFmt(pj.lines_total)+" l\u00edneas de c\u00f3digo\n"+
+      (pj.shares_repo_with?"\u21c4 Comparte repo con "+pj.shares_repo_with+": no suma otra vez en el \u03a3\n":
+        shk.length?"\u21c4 "+shk.map(k=>hkFmt(sh[k])+" l\u00edneas id\u00e9nticas a "+k).join(", ")+" (cuentan una vez)\n":"")+
+      (pj.lines_unique!=null?"Aporta al \u03a3: "+hkFmt(pj.lines_unique)+" l\u00edneas\n":"")+
       "Ahora: "+f.path+" ("+hkFmt(f.lines_total)+" l\u00edneas)"+(t.paused?"\n\u23f8 en pausa":"");
     tip.style.display="block";
   }
@@ -3400,6 +3427,7 @@ function collapseAllToggle(){
         t.L=pj.files[t.fi].lines; t.code=true; t.li=0; t.ci=0; t.done=[]; t.acc=0; t.cur=null;
         if(t.role) t.role.textContent=hkRoleText(t);
         if(t.b) t.b.textContent="";
+        paintHkBanner(t);
         return;
       }
       const f=files.length?files[i%files.length]:null;
@@ -3408,6 +3436,7 @@ function collapseAllToggle(){
       t.li=f?Math.floor(Math.random()*f.lines.length):t.off; t.ci=0; t.done=[]; t.acc=0; t.cur=null;
       if(t.role) t.role.textContent=hkRoleText(t);
       if(t.b) t.b.textContent="";
+      t.pj=null; paintHkBanner(t);
     });
     if(hkTipT) paintHkTip();
     if(mode==="codigo"&&!pjs.length&&!files.length){ const sl=document.getElementById("hkSyncLine"); if(sl) sl.textContent="\u26a0 no pude leer el c\u00f3digo de la web \u2014 sigo con el guion"; }

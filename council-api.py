@@ -4554,7 +4554,8 @@ def _hk_code_b64(idx: int) -> str:
 # (los 5 primeros ordenadores, y en bucle). El panel manda «proyectos» {id: clave}
 # con el MISMO reparto que sus ventanas; sin él, el orden del consejo. El corpus
 # (sin secretos) lo genera el build de admira.live en /control/hackeo-corpus/.
-_HK_PROY_ORDEN = ("studio", "store", "tv", "app", "biz")
+# 1-5 Admira, 6-9 versiones startup (pixeria.com, xpaceos.com, clearchannel.tv, yokup.com)
+_HK_PROY_ORDEN = ("studio", "store", "tv", "app", "biz", "pixeria", "xpaceos", "clearchannel", "yokup")
 _HK_PROY_MAP: dict = {}
 _HK_CORPUS_URL = _HK_SITE_URL + "/control/hackeo-corpus/"
 _HK_CORPUS_CACHE: dict = {}
@@ -4608,7 +4609,10 @@ def _hk_code_b64_proyecto(machine: dict) -> str:
     files = d["files"]
     a = _random.randrange(len(files))
     out = []
+    banner = [str(l)[:160] for l in (d.get("banner") or [])][:3]
     for f in files[a:] + files[:a]:
+        # Rótulo ASCII del proyecto al inicio de cada bloque (Carlos, 2026-10-07)
+        out.extend(banner)
         out.append("== %s/%s ==" % (d.get("project", ""), f.get("path", "")))
         out.extend(str(l)[:160] for l in f.get("lines", []))
         if len(out) >= _HK_CORPUS_MAX_LINES:

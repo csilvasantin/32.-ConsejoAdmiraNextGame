@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.07.10.2026.r31.21:38" />
+<meta name="admiranext-version" content="AdmiraNeXT v.07.10.2026.r32.21:47" />
     <script src="/admira-bar.js?v=20260918-r38"></script>
     <script src="/auth-gate.js?v=20261004-r15-sinfranja"></script>
 <meta charset="UTF-8">
@@ -3260,6 +3260,7 @@ function collapseAllToggle(){
     const el=document.querySelector(".hack-title");
     if(el){ el.classList.toggle("hk-allpaused",hkAllPaused); el.textContent=hkAllPaused?"HACKEO \u23f8":"HACKEO"; el.title=hkAllPaused?"Todo en pausa \u00b7 pulsa para reanudar":"Pulsa para pausar todo y leer el c\u00f3digo"; }
     if(!hkAllPaused) hkTerms.forEach(t=>{ t.acc=0; });   // reanuda sin acel\u00f3n
+    if(hackMode){ const ids=(window.__HK_LAUNCHED&&window.__HK_LAUNCHED.length)?window.__HK_LAUNCHED.slice():Array.from(HK_SEL); hkPushPausa(ids, hkAllPaused); }
   }
   async function hkPideAsignacion(claves){
     const ids=hkIdsPrioridad();
@@ -3539,6 +3540,7 @@ function collapseAllToggle(){
       if(window.getSelection&&String(window.getSelection())) return;   // seleccionando texto para leer
       t.paused=!t.paused; el.classList.toggle("hk-paused",t.paused);
       if(!t.paused) t.acc=0;                       // reanuda a la velocidad actual, sin acelerón
+      if(hackMode) hkPushPausa([t.m.id], t.paused);   // congela/reanuda SU Terminal real
       if(hkTipT===t) paintHkTip();
     });
     el.addEventListener("mouseenter",(e)=>{ hkTipT=t; paintHkTip(); moveHkTip(e); });
@@ -3577,11 +3579,26 @@ function collapseAllToggle(){
   }
 
   // Manda velocidad y guion al backend para los Terminales reales que ya est\u00e1n abiertos.
+  // PAUSA/REANUDACIÓN de los Terminales REALES (Carlos, 2026-10-07). speed 0 = pausa; al
+  // reanudar, la velocidad anterior (hkSpeed). ids vacío = toda la flota (título); un id =
+  // una sola máquina (clic en su ventana). No bloquea la UI; la pausa web funciona igual
+  // aunque la flota no conteste.
+  async function hkPushPausa(ids, paused){
+    const sl=document.getElementById("hkSyncLine");
+    try{
+      const r=await fetch(HACKEO_API+"/hackeo/config",{ method:"POST", headers:{ "Content-Type":"application/json" },
+        body:JSON.stringify({ speed:paused?0:hkSpeed, mode:hkMode, only_ids:(ids||[]) }), signal:AbortSignal.timeout(12000) });
+      const d=r.ok?await r.json().catch(()=>null):null, s=d&&d.summary;
+      if(sl){ const q=ids&&ids.length?(ids.length+" equipo"+(ids.length===1?"":"s")):"la flota"; 
+        sl.textContent=(paused?"\u23f8 pausando ":"\u25b6 reanudando ")+q+(s?" \u00b7 "+s.updated+"/"+s.online:""); sl.style.color="#0f0"; }
+    }catch(e){ if(sl){ sl.textContent="flota sin actualizar ("+(e.message||e)+") \u2014 pausa solo en esta vista"; sl.style.color="#ff6"; } }
+  }
+
   async function pushHkConfig(){
     const sl=document.getElementById("hkSyncLine"), tag="\u00d7"+hkSpeed+" \u00b7 "+(hkMode==="codigo"?"c\u00f3digo":"intrusi\u00f3n");
     try{
       const res=await fetch(HACKEO_API+"/hackeo/config",{ method:"POST", headers:{ "Content-Type":"application/json" },
-        body:JSON.stringify({ speed:hkSpeed, mode:hkMode, only_ids:Array.from(HK_SEL) }), signal:AbortSignal.timeout(15000) });
+        body:JSON.stringify({ speed:hkAllPaused?0:hkSpeed, mode:hkMode, only_ids:Array.from(HK_SEL) }), signal:AbortSignal.timeout(15000) });
       if(!res.ok) throw new Error("HTTP "+res.status);
       const d=await res.json().catch(()=>null), s=d&&d.summary;
       if(d&&d.ok===false) throw new Error(d.error||"sin equipos");

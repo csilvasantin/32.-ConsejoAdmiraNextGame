@@ -1,4 +1,8 @@
 {
+  "v.07.10.2026.r25.20:24": [
+    "HACKEO: el aviso ⏸ PAUSA va abajo a la derecha y ya no tapa el nombre del fichero en la cabecera",
+    "Estas novedades salen, como siempre, en el popover del sello (sin recorte del riel)"
+  ],
   "v.07.10.2026.r24.20:21": [
     "HACKEO · CÓDIGO: cada ventana teclea código real de un proyecto AdmiraNeXT (admira.studio, .store, .tv, .app y .biz), por orden y en bucle; la cabecera lleva el fichero real",
     "Al pasar el ratón: proyecto, páginas (ficheros) y líneas de código de ese proyecto; un clic en una ventana la pausa para leer y otro la reanuda",

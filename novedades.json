@@ -1,4 +1,8 @@
 {
+  "v.07.10.2026.r29.21:04": [
+    "HACKEO: en la cabecera de una línea, el equipo ocupa como mucho la mitad y el resto es para el fichero que se está tecleando",
+    "Estas novedades salen, como siempre, en el popover del sello (sin recorte del riel)"
+  ],
   "v.07.10.2026.r28.21:01": [
     "HACKEO: la cabecera de cada ventana va en una sola línea (recorta con «…»), así el rótulo ASCII del proyecto ya no sube ni baja al cambiar de fichero o de modo",
     "Estas novedades salen, como siempre, en el popover del sello (sin recorte del riel)"

@@ -4166,6 +4166,10 @@ def conf():
         return
     _visto = now
     try:
+        vigila_rotulo()
+    except Exception:
+        pass
+    try:
         with open(CONF) as f:
             p = f.read().split()
         SPEED = min(1000.0, max(0.25, float(p[0])))
@@ -4192,6 +4196,65 @@ def pausa(lo, hi):
         quedan -= 0.05
 
 NUM = 0                  # numeral BASIC de 10 en 10 (Carlos, 2026-10-07)
+
+# RÓTULO FIJO ARRIBA (Carlos, 2026-10-07: «el nombre del proyecto se tiene que quedar
+# SIEMPRE arriba»). hack-rotulo.txt viaja con el lanzamiento: 3 filas ASCII del proyecto
+# y una línea «proyecto · repo · ficheros · líneas». Se pinta en las primeras filas y se
+# fija con una región de scroll ANSI (DECSTBM, ESC[top;bottom r): el código corre por
+# debajo y el rótulo no se va nunca. Por si un terminal ignora la región o la pierde al
+# redimensionar, se vuelve a fijar cuando cambia el tamaño y se repinta cada 1,5 s
+# (guardando y restaurando el cursor) — en el peor caso, se repite muy a menudo.
+def _lee_rotulo():
+    try:
+        with open(os.path.join(HERE, "hack-rotulo.txt"), encoding="utf-8", errors="replace") as f:
+            return [l.rstrip("\n") for l in f if l.strip()][:4]
+    except OSError:
+        return []
+
+ROTULO = _lee_rotulo()
+TOP, _tam, _pintado = 0, None, 0.0
+
+def _filas_rotulo(cols):
+    banner, cab = ROTULO[1:], ROTULO[:1]
+    filas = ["\033[1;92m" + l[:cols - 1] + "\033[0m" for l in banner]
+    filas += ["\033[1;97m" + (c[:cols - 1]) + "\033[0m" for c in cab]
+    filas.append("\033[2;32m" + "\u2500" * (cols - 1) + "\033[0m")
+    return filas
+
+def pinta_rotulo():
+    """Repinta el rótulo en sus filas sin mover el cursor (DECSC/DECRC)."""
+    global _pintado
+    _pintado = time.time()
+    if not TOP:
+        return
+    out = "\0337"
+    for r, l in enumerate(_filas_rotulo(_tam[0])):
+        out += "\033[%d;1H\033[2K%s" % (r + 1, l)
+    sys.stdout.write(out + "\0338"); sys.stdout.flush()
+
+def fija_rotulo(limpia=False):
+    """Pinta el rótulo y deja el scroll SOLO por debajo (DECSTBM)."""
+    global TOP, _tam
+    cols, rows = shutil.get_terminal_size((80, 24))
+    _tam = (cols, rows)
+    filas = _filas_rotulo(cols) if ROTULO else []
+    if not filas or rows - len(filas) < 6:      # sin rótulo o ventana diminuta
+        TOP = 0
+        sys.stdout.write("\033[r" + ("\033[2J\033[3J\033[H" if limpia else "")); sys.stdout.flush()
+        return
+    TOP = len(filas)
+    sys.stdout.write("\033[r" + ("\033[2J\033[3J" if limpia else ""))
+    pinta_rotulo()
+    # DECSTBM manda el cursor a 1;1: se baja a la última fila de la región
+    sys.stdout.write("\033[%d;%dr\033[%d;1H" % (TOP + 1, rows, rows)); sys.stdout.flush()
+
+def vigila_rotulo():
+    if not ROTULO:
+        return
+    if shutil.get_terminal_size((80, 24)) != _tam:
+        fija_rotulo()                            # redimensionado: región nueva
+    elif time.time() - _pintado > 1.5:
+        pinta_rotulo()
 
 def teclea(line, lo=0.005, hi=0.04):
     global NUM
@@ -4230,11 +4293,12 @@ hobbit = None            # None = aún no toca · [] = este equipo no lo tiene
 dibujos, hasta_dibujo = [], 0
 codigo, modo = [], None
 try:
+    fija_rotulo(limpia=True)
     while True:
         conf()
         if MODE != modo:
-            if modo is not None:       # cambio en caliente: pantalla limpia
-                sys.stdout.write("\033[2J\033[3J\033[H"); sys.stdout.flush()
+            if modo is not None:       # cambio en caliente: pantalla limpia, rótulo fijo
+                fija_rotulo(limpia=True)
             modo = MODE
             i, hobbit = 0, None
             codigo = lee_codigo() if modo == "codigo" else []
@@ -4273,6 +4337,11 @@ try:
             pausa(0.15, 0.5)
 except (KeyboardInterrupt, BrokenPipeError):
     pass
+finally:
+    try:
+        sys.stdout.write("\033[r"); sys.stdout.flush()   # devuelve el scroll a toda la ventana
+    except Exception:
+        pass
 '''
 
 
@@ -4554,8 +4623,12 @@ def _hk_code_b64(idx: int) -> str:
 # (los 5 primeros ordenadores, y en bucle). El panel manda «proyectos» {id: clave}
 # con el MISMO reparto que sus ventanas; sin él, el orden del consejo. El corpus
 # (sin secretos) lo genera el build de admira.live en /control/hackeo-corpus/.
-# 1-5 Admira, 6-9 versiones startup (pixeria.com, xpaceos.com, clearchannel.tv, yokup.com)
-_HK_PROY_ORDEN = ("studio", "store", "tv", "app", "biz", "pixeria", "xpaceos", "clearchannel", "yokup")
+# 5 Admira, 4 versiones startup (pixeria.com, xpaceos.com, clearchannel.tv, yokup.com) y
+# 3 del ecosistema (admiranext.com, ainimation.studio, digitalavatar.ai). Es la lista de
+# reserva: manda la del índice del corpus publicado (_hk_claves).
+_HK_PROY_ORDEN = ("studio", "store", "tv", "app", "biz", "pixeria", "xpaceos", "clearchannel", "yokup",
+                  "admiranext", "ainimation", "digitalavatar")
+_HK_CLAVE_OK = re.compile(r"^[a-z][a-z0-9]{1,23}$")     # va incrustada en comandos remotos
 _HK_PROY_MAP: dict = {}
 _HK_CORPUS_URL = _HK_SITE_URL + "/control/hackeo-corpus/"
 _HK_CORPUS_CACHE: dict = {}
@@ -4563,11 +4636,11 @@ _HK_CORPUS_MAX_LINES = 3000
 
 
 def _hk_set_proyectos(m) -> None:
-    """Guarda el reparto {id: clave} que manda el panel (ids normalizados)."""
+    """Guarda el reparto {id: clave} (ids normalizados, solo claves seguras)."""
     _HK_PROY_MAP.clear()
     if isinstance(m, dict):
         for k, v in m.items():
-            if str(v) in _HK_PROY_ORDEN:
+            if _HK_CLAVE_OK.match(str(v)):
                 _HK_PROY_MAP[_hk_norm_id(k)] = str(v)
 
 
@@ -4575,7 +4648,123 @@ def _hk_proyecto_de(machine: dict) -> str:
     for i in _hk_ids_de(machine):
         if i in _HK_PROY_MAP:
             return _HK_PROY_MAP[i]
-    return _HK_PROY_ORDEN[_hk_code_index(machine) % len(_HK_PROY_ORDEN)]
+    claves = _hk_claves()
+    return claves[_hk_code_index(machine) % len(claves)]
+
+
+# REPARTO ALEATORIO POR SESIÓN (Carlos, 2026-10-07). Cada hackeo baraja qué proyecto
+# lleva cada ordenador, con una semilla que pone ESTE servidor: el panel la pide al abrir
+# (/hackeo/config con «asignar»), pinta sus ventanas con el reparto que le devolvemos y lo
+# reenvía al lanzar → web y Terminales reales coinciden. Sin repetir mientras haya tantos
+# proyectos como ordenadores; con más ordenadores, se usan todos y se repite lo mínimo
+# (cada proyecto sale ⌊n/k⌋ o ⌈n/k⌉ veces). Mismo algoritmo que hkReparto() del panel:
+# mulberry32 + Fisher-Yates por vueltas.
+_HK_SESION: dict = {"seed": None, "ts": 0.0, "map": {}, "claves": []}
+_HK_SESION_TTL = 6 * 3600
+
+
+def _hk_claves() -> list:
+    """Claves de proyecto del índice del corpus publicado; si no, la lista de reserva."""
+    import urllib.request as _rq
+    with _HK_CODE_LOCK:
+        c = _HK_CORPUS_CACHE.get("__index__")
+        if c and time.time() - c[0] < _HK_CODE_TTL:
+            return c[1]
+        try:
+            req = _rq.Request(_HK_CORPUS_URL + "index.json",
+                              headers={"User-Agent": "Mozilla/5.0 (AdmiraNeXT council-api)"})
+            with _rq.urlopen(req, timeout=6) as r:
+                idx = json.loads(r.read(500_000).decode("utf-8", "replace"))
+            claves = [str(p.get("key")) for p in idx.get("projects", []) if _HK_CLAVE_OK.match(str(p.get("key") or ""))]
+            if not claves:
+                raise ValueError("índice vacío")
+        except Exception:
+            return c[1] if c else list(_HK_PROY_ORDEN)
+        _HK_CORPUS_CACHE["__index__"] = (time.time(), claves)
+        return claves
+
+
+def _hk_rng(seed: int):
+    """mulberry32 — bit a bit igual que el del panel (Math.imul de 32 bits)."""
+    M = 0xFFFFFFFF
+    st = [seed & M]
+
+    def imul(a, b):
+        return (a * b) & M
+
+    def nxt() -> float:
+        st[0] = (st[0] + 0x6D2B79F5) & M
+        a = st[0]
+        t = imul(a ^ (a >> 15), a | 1)
+        t = ((t + imul(t ^ (t >> 7), t | 61)) & M) ^ t
+        return ((t ^ (t >> 14)) & M) / 4294967296.0
+    return nxt
+
+
+def _hk_reparto(claves: list, ids: list, seed: int) -> dict:
+    """{id: clave}: vueltas de la lista barajada hasta cubrir todos los ids."""
+    rnd, seq = _hk_rng(seed), []
+    claves = list(claves)
+    while claves and len(seq) < len(ids):
+        b = list(claves)
+        for i in range(len(b) - 1, 0, -1):
+            j = int(rnd() * (i + 1))
+            b[i], b[j] = b[j], b[i]
+        seq.extend(b)
+    return {ids[i]: seq[i] for i in range(len(ids))} if claves else {}
+
+
+def _hk_ids_prioridad(ids_panel, machines: list) -> list:
+    """Orden de reparto: lo que manda el panel (sus ventanas, en orden de prioridad);
+    si no manda nada, el consejo con los que abren Terminal real primero."""
+    if isinstance(ids_panel, list) and ids_panel:
+        out = []
+        for x in ids_panel[:200]:
+            x = str(x)[:80]
+            if x and x not in out:
+                out.append(x)
+        return out
+    reales = [m.get("id") for m in machines if not _hk_is_windows(m)]
+    return reales + [m.get("id") for m in machines if _hk_is_windows(m)]
+
+
+def _hk_nueva_sesion(ids: list) -> dict:
+    import secrets as _secrets
+    claves = _hk_claves()
+    seed = _secrets.randbits(32)
+    mapa = _hk_reparto(claves, ids, seed)
+    _HK_SESION.update(seed=seed, ts=time.time(), map=mapa, claves=claves)
+    _hk_set_proyectos(mapa)
+    return _hk_sesion_publica()
+
+
+def _hk_sesion_publica() -> dict:
+    return {"seed": _HK_SESION["seed"], "claves": _HK_SESION["claves"], "map": _HK_SESION["map"],
+            "ts": datetime.utcfromtimestamp(_HK_SESION["ts"]).isoformat() + "Z" if _HK_SESION["ts"] else None,
+            "origen": _HK_SESION.get("origen", "servidor")}
+
+
+def _hk_sesion_para_lanzar(body: dict) -> dict:
+    """Reparto con el que se lanza: el de la sesión que pidió el panel (misma semilla);
+    si el panel no pudo pedirla, el suyo (para que al menos coincidan); si no manda
+    nada (panel antiguo), una sesión nueva del servidor."""
+    body = body if isinstance(body, dict) else {}
+    try:
+        seed = int(body.get("seed")) if body.get("seed") is not None else None
+    except (TypeError, ValueError):
+        seed = None
+    if seed is not None and seed == _HK_SESION["seed"] and time.time() - _HK_SESION["ts"] < _HK_SESION_TTL:
+        _hk_set_proyectos(_HK_SESION["map"])
+        _HK_SESION["origen"] = "servidor"
+        return _hk_sesion_publica()
+    prop = body.get("proyectos")
+    if isinstance(prop, dict) and prop:
+        _hk_set_proyectos(prop)
+        _HK_SESION.update(seed=seed, ts=time.time(), origen="panel",
+                          map={str(k)[:80]: str(v) for k, v in prop.items() if _HK_CLAVE_OK.match(str(v))})
+        return _hk_sesion_publica()
+    _HK_SESION["origen"] = "servidor"
+    return _hk_nueva_sesion(_hk_ids_prioridad(body.get("ids"), _hk_load_council()))
 
 
 def _hk_corpus(key: str):
@@ -4609,10 +4798,9 @@ def _hk_code_b64_proyecto(machine: dict) -> str:
     files = d["files"]
     a = _random.randrange(len(files))
     out = []
-    banner = [str(l)[:160] for l in (d.get("banner") or [])][:3]
+    # El rótulo ASCII ya no va al inicio de cada bloque: viaja aparte (hack-rotulo.txt)
+    # y se queda FIJO arriba del Terminal (región de scroll), ver _hk_rotulo_b64.
     for f in files[a:] + files[:a]:
-        # Rótulo ASCII del proyecto al inicio de cada bloque (Carlos, 2026-10-07)
-        out.extend(banner)
         out.append("== %s/%s ==" % (d.get("project", ""), f.get("path", "")))
         out.extend(str(l)[:160] for l in f.get("lines", []))
         if len(out) >= _HK_CORPUS_MAX_LINES:
@@ -4620,6 +4808,19 @@ def _hk_code_b64_proyecto(machine: dict) -> str:
     head = "%s · %s · %s ficheros · %s líneas" % (d.get("project", ""), d.get("repo", ""),
                                                   d.get("files_total", "?"), d.get("lines_total", "?"))
     text = head + "\n" + "\n".join(out[:_HK_CORPUS_MAX_LINES]) + "\n"
+    return _b64.b64encode(_gzip.compress(text.encode("utf-8"))).decode("ascii")
+
+
+def _hk_rotulo_b64(machine: dict) -> str:
+    """gzip+base64 de hack-rotulo.txt: «proyecto · repo · ficheros · líneas» y las 3
+    filas del rótulo ASCII de su proyecto. '' si no hay corpus."""
+    import base64 as _b64, gzip as _gzip
+    d = _hk_corpus(_hk_proyecto_de(machine))
+    if not d or not d.get("banner"):
+        return ""
+    cab = "%s · %s · %s ficheros · %s líneas" % (d.get("project", ""), d.get("repo", ""),
+                                                 d.get("files_total", "?"), d.get("lines_total", "?"))
+    text = "\n".join([cab[:160]] + [str(l)[:160] for l in d["banner"][:3]]) + "\n"
     return _b64.b64encode(_gzip.compress(text.encode("utf-8"))).decode("ascii")
 
 
@@ -4638,7 +4839,7 @@ def _hk_code_index(machine: dict) -> int:
 
 
 def _hk_ssh_launch(user: str, host: str, profile: str = "", lang: str = "",
-                   cfg: tuple = (1.0, "intrusion"), code: str = "") -> tuple:
+                   cfg: tuple = (1.0, "intrusion"), code: str = "", rotulo: str = "") -> tuple:
     """Lanza la simulación de hackeo en el Terminal del Mac remoto.
 
     Usa osascript para abrir Terminal.app y arranca el script Python
@@ -4670,6 +4871,9 @@ def _hk_ssh_launch(user: str, host: str, profile: str = "", lang: str = "",
         f"printf '%s\\n' '{_hk_cfg_line(cfg)}' > \"$HOME/.fleet/hack.conf\" && "
         # El código es un extra: si no se pudiera escribir, el simulacro sale igual.
         + (f"(echo {code} | base64 -D | gunzip > \"$HOME/.fleet/hack-code.txt\" || true) && " if code else "")
+        # Rótulo fijo del proyecto; sin él (o si falla) se borra el de un hackeo anterior.
+        + (f"(echo {rotulo} | base64 -D | gunzip > \"$HOME/.fleet/hack-rotulo.txt\" || true) && " if rotulo
+           else "rm -f \"$HOME/.fleet/hack-rotulo.txt\" && ")
         + "".join(
             f"mkdir -p \"$HOME/.fleet/hobbit\" && echo {b64} | base64 -D > \"$HOME/.fleet/hobbit/{name}\" && "
             for name, b64 in _hk_hobbit_files(lang).items()
@@ -4828,11 +5032,24 @@ $lines = @(
  'Registros de eventos borrados.'
 )
 $cf = Join-Path $PSScriptRoot 'admirahack.conf'; $sp = 1.0; $md = ''; $code = $null; $tr = $false
+# Proyecto del equipo (reparto aleatorio de la sesión) y su rótulo ASCII, en los dos guiones.
+$j = $null; try { $j = Invoke-RestMethod -UseBasicParsing 'https://www.admira.live/control/hackeo-corpus/__HK_PROJ__.json' } catch {}
+$ban = @(); if ($j -and $j.banner) { $ban = @($j.banner) + @($j.project + ' - ' + $j.repo + ' - ' + $j.files_total + ' ficheros - ' + $j.lines_total + ' lineas') }
+# ROTULO FIJO ARRIBA (equivalente Windows de la region de scroll): tras cada linea se
+# repinta en las primeras filas de la VENTANA visible con la API de consola y se
+# devuelve el cursor a su sitio; el codigo corre por debajo. Sin VT: vale en conhost.
+function Pin-Rotulo { if (-not $ban.Count) { return }
+  try { $cx = [Console]::CursorLeft; $cy = [Console]::CursorTop; $w = [Math]::Max(10, [Console]::WindowWidth - 1); $top = [Console]::WindowTop
+    $fg = [Console]::ForegroundColor; [Console]::ForegroundColor = 'Green'
+    for ($r = 0; $r -lt $ban.Count; $r++) { [Console]::SetCursorPosition(0, $top + $r); $t = [string]$ban[$r]; if ($t.Length -gt $w) { $t = $t.Substring(0, $w) }; [Console]::Write($t.PadRight($w)) }
+    [Console]::SetCursorPosition(0, $top + $ban.Count); [Console]::Write(('-' * $w))
+    [Console]::ForegroundColor = $fg; [Console]::SetCursorPosition($cx, $cy) } catch {} }
+if ($ban.Count) { Clear-Host; [Console]::Write(([Environment]::NewLine * ($ban.Count + 1))); Pin-Rotulo }
 $i = 0
 while ($true) {
   try { $q = (Get-Content $cf -TotalCount 1 -ErrorAction Stop).Split(' '); $sp = [Math]::Max(0.25, [Math]::Min(1000.0, [double]$q[0])); $md = $q[1] } catch {}
   if ($md -eq 'codigo' -and -not $tr) { $tr = $true
-    try { $j = Invoke-RestMethod -UseBasicParsing 'https://www.admira.live/control/hackeo-corpus/__HK_PROJ__.json'; $code = @($j.files | ForEach-Object { '== ' + $j.project + '/' + $_.path + ' =='; $_.lines }) } catch {}
+    if ($j -and $j.files) { $code = @($j.files | ForEach-Object { '== ' + $j.project + '/' + $_.path + ' =='; $_.lines }) }
     if (-not $code) { try { $code = @((Invoke-WebRequest -UseBasicParsing 'https://www.admira.live/app.js').Content -split "`n" | Where-Object { $_.Trim() }) } catch {} } }
   $src = $lines; if ($md -eq 'codigo' -and $code) { $src = $code }
   $l = [string]$src[$i % $src.Count]; if ($l.Length -gt 160) { $l = $l.Substring(0, 160) }
@@ -4840,6 +5057,7 @@ while ($true) {
   [Console]::Write((($i + 1) * 10).ToString().PadLeft(6) + ' ')
   for ($k = 0; $k -lt $l.Length; $k += $n) { [Console]::Write($l.Substring($k, [Math]::Min($n, $l.Length - $k))); Start-Sleep -Milliseconds (Get-Random -Minimum 5 -Maximum 40) }
   [Console]::Write([Environment]::NewLine)
+  Pin-Rotulo
   $i++
   Start-Sleep -Milliseconds ([int]((Get-Random -Minimum 150 -Maximum 500) / $sp))
 }
@@ -4899,7 +5117,7 @@ def _hk_win_ssh(user: str, host: str, ps_script: str, what: str) -> tuple:
 
 
 def _hk_win_launch(user: str, host: str, cfg: tuple = (1.0, "intrusion"), proj: str = "studio") -> tuple:
-    proj = proj if proj in _HK_PROY_ORDEN else "studio"     # va incrustado: solo claves conocidas
+    proj = proj if _HK_CLAVE_OK.match(str(proj or "")) else "studio"   # va incrustado: solo [a-z0-9]
     ps = _HK_WIN_LAUNCH_PS.replace("__HK_CFG__", _hk_cfg_line(cfg)).replace("__HK_PROJ__", proj)
     return _hk_win_ssh(user, host, ps, "launch")
 
@@ -4920,7 +5138,7 @@ def _hk_is_linux(machine: dict) -> bool:
     return str(machine.get("platform") or "").lower().startswith("linux")
 
 
-def _hk_linux_launch(user: str, host: str, cfg: tuple = (1.0, "intrusion"), code: str = "") -> tuple:
+def _hk_linux_launch(user: str, host: str, cfg: tuple = (1.0, "intrusion"), code: str = "", rotulo: str = "") -> tuple:
     """Lanza la simulación de hackeo en un terminal a pantalla completa del
     equipo Linux remoto. Usa gnome-terminal vía ~/.fleet/fleet-sesh (que inyecta
     DISPLAY/DBUS de la sesión gráfica, igual que para la captura). Devuelve
@@ -4936,7 +5154,9 @@ def _hk_linux_launch(user: str, host: str, cfg: tuple = (1.0, "intrusion"), code
         'mkdir -p "$HOME/.fleet" && '
         f'echo {payload} | base64 -d > "$HOME/.fleet/hacksim.py" && '
         f"printf '%s\\n' '{_hk_cfg_line(cfg)}' > \"$HOME/.fleet/hack.conf\" && "
-        + (f'(echo {code} | base64 -d | gunzip > "$HOME/.fleet/hack-code.txt" || true) && ' if code else "") +
+        + (f'(echo {code} | base64 -d | gunzip > "$HOME/.fleet/hack-code.txt" || true) && ' if code else "")
+        + (f'(echo {rotulo} | base64 -d | gunzip > "$HOME/.fleet/hack-rotulo.txt" || true) && ' if rotulo
+           else 'rm -f "$HOME/.fleet/hack-rotulo.txt" && ') +
         '"$HOME/.fleet/fleet-sesh" gnome-terminal --full-screen -- '
         'python3 "$HOME/.fleet/hacksim.py"'
     )
@@ -5186,9 +5406,9 @@ def _hk_process_one(machine: dict, action: str, cfg: tuple = (1.0, "intrusion"))
             lang = _hk_hobbit_lang(machine)
             if lang:
                 result["hobbit_lang"] = lang
-            ok, detail = launch_fn(user, host, profile, lang, cfg, _hk_code_para(machine))
+            ok, detail = launch_fn(user, host, profile, lang, cfg, _hk_code_para(machine), _hk_rotulo_b64(machine))
         elif is_linux:
-            ok, detail = launch_fn(user, host, cfg, _hk_code_para(machine))
+            ok, detail = launch_fn(user, host, cfg, _hk_code_para(machine), _hk_rotulo_b64(machine))
         else:
             ok, detail = launch_fn(user, host, cfg, _hk_proyecto_de(machine))
         result["proyecto"] = _hk_proyecto_de(machine)
@@ -5220,12 +5440,13 @@ async def council_hackeo(request: Request, _rate=Depends(check_rate_limit), _aut
         return {"ok": False, "error": "no council machines", "machines": []}
 
     excluded = None
+    asignacion = None
     cfg = (1.0, "intrusion")
     try:
         _raw = await request.body()
         _body = json.loads(_raw.decode("utf-8")) if _raw else {}
         cfg = _hk_cfg(_body)
-        _hk_set_proyectos((_body or {}).get("proyectos"))
+        asignacion = _hk_sesion_para_lanzar(_body)
         exclude_ip = str((_body or {}).get("exclude_ip") or "").strip()
         # GRANULAR (Carlos, 2026-07-21): si el panel manda only_ids, el hackeo
         # actúa SOLO sobre esos equipos. Lista vacía o ausente = toda la flota.
@@ -5280,6 +5501,7 @@ async def council_hackeo(request: Request, _rate=Depends(check_rate_limit), _aut
         "excluded": excluded,
         "speed": cfg[0],
         "mode": cfg[1],
+        "asignacion": asignacion,
     }
 
 
@@ -5326,6 +5548,12 @@ async def council_hackeo_config(request: Request, _auth=Depends(verify_hack_toke
     try:
         _raw = await request.body()
         _body = json.loads(_raw.decode("utf-8")) if _raw else {}
+        # «asignar» (Carlos, 2026-10-07): el panel pide al abrir el HACKEO la semilla y el
+        # reparto aleatorio de proyectos de esta sesión. No toca ninguna máquina. Va por
+        # /hackeo/config porque es la ruta que ya reenvía el proxy del demo-server.
+        if isinstance(_body, dict) and _body.get("asignar"):
+            return {"ok": True, "asignacion": _hk_nueva_sesion(_hk_ids_prioridad(_body.get("ids"), machines)),
+                    "ts": datetime.utcnow().isoformat() + "Z"}
         cfg = _hk_cfg(_body)
         _only = (_body if isinstance(_body, dict) else {}).get("only_ids") or []
         if isinstance(_only, list) and _only:

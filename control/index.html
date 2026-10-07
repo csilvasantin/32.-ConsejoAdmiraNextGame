@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.07.10.2026.r26.20:36" />
+<meta name="admiranext-version" content="AdmiraNeXT v.07.10.2026.r27.20:55" />
     <script src="/admira-bar.js?v=20260918-r38"></script>
     <script src="/auth-gate.js?v=20261004-r15-sinfranja"></script>
 <meta charset="UTF-8">
@@ -832,7 +832,7 @@
       <button type="button" data-speed="1">×1</button><button type="button" data-speed="10">×10</button><button type="button" data-speed="50">×50</button><button type="button" data-speed="100">×100</button><button type="button" data-speed="1000">×1000</button>
     </span>
     <span class="hack-seg" id="hkModeSeg" title="Qué teclean los terminales">
-      <button type="button" data-mode="intrusion" title="Guion de intrusión de siempre">INTRUSIÓN</button><button type="button" data-mode="codigo" title="Código real de www.admira.live, como si se escribiera">CÓDIGO</button>
+      <button type="button" data-mode="intrusion" title="Guion de intrusión de siempre">INTRUSIÓN</button><button type="button" data-mode="codigo" title="Código real de los proyectos AdmiraNeXT, como si se escribiera">CÓDIGO</button>
     </span>
     <span class="hk-contadores">
       <span id="hkCorpusTotal" title="Total de líneas de código de todos los proyectos AdmiraNeXT juntos, sin duplicar"></span>
@@ -3212,16 +3212,49 @@ function collapseAllToggle(){
     el.textContent=hkTotal.toLocaleString("es-ES")+(hkTotal===1?" línea":" líneas");
   }
 
-  // Proyecto de cada ordenador para los Terminales reales: el mismo reparto que los paneles.
-  // 1-5 Admira, 6-9 sus versiones startup, y vuelta a empezar (mismo orden que el corpus).
-  const HK_PROY_ORDEN=["studio","store","tv","app","biz","pixeria","xpaceos","clearchannel","yokup"];
-  function hkProyectosMap(){ const o={}; HACK_MACHINES.forEach((m,i)=>{ o[m.id]=HK_PROY_ORDEN[i%HK_PROY_ORDEN.length]; }); return o; }
+  // REPARTO ALEATORIO POR SESIÓN (Carlos, 07-10-2026). Cada hackeo baraja qué proyecto lleva
+  // cada ordenador. La semilla la pone el servidor (council-api, vía /hackeo/config «asignar»)
+  // y el reparto que devuelve es el que pintan estas ventanas y el que reciben los Terminales
+  // reales al lanzar → coinciden. Sin repetir mientras haya tantos proyectos como ordenadores;
+  // con más ordenadores, se usan todos y se repite lo mínimo. Si el servidor no contesta, la
+  // misma receta (mulberry32 + Fisher-Yates por vueltas, idéntica a _hk_reparto) con semilla
+  // local, y se manda al lanzar para que los Terminales usen el mismo reparto.
+  function hkRng(a){ return function(){ a|=0; a=a+0x6D2B79F5|0; let t=Math.imul(a^a>>>15,1|a); t=t+Math.imul(t^t>>>7,61|t)^t; return ((t^t>>>14)>>>0)/4294967296; }; }
+  function hkReparto(claves,ids,seed){
+    const rnd=hkRng(seed>>>0), seq=[];
+    while(claves.length&&seq.length<ids.length){ const b=claves.slice();
+      for(let i=b.length-1;i>0;i--){ const j=Math.floor(rnd()*(i+1)), x=b[i]; b[i]=b[j]; b[j]=x; }
+      seq.push.apply(seq,b); }
+    const o={}; ids.forEach((id,i)=>{ if(seq[i]) o[id]=seq[i]; }); return o;
+  }
+  window.__hkReparto=hkReparto;
+  function hkNorm(x){ const s=String(x||"").toLowerCase().replace(/[^a-z0-9]/g,""); return s.indexOf("admira")===0?s.slice(6):s; }
+  // Prioridad del reparto: los equipos elegidos, luego los que abren Terminal real (Mac/Linux)
+  // y al final los PC Windows. Así los que de verdad hacen la demo no repiten proyecto.
+  function hkIdsPrioridad(){
+    const sel=new Set(Array.from(HK_SEL).map(hkNorm)), es=m=>sel.has(hkNorm(m.id))||sel.has(hkNorm(m.host));
+    const a=HACK_MACHINES.filter(es), r=HACK_MACHINES.filter(m=>!es(m));
+    return a.concat(r.filter(m=>m.platform!=="win"), r.filter(m=>m.platform==="win")).map(m=>m.id);
+  }
+  let hkAsig=null, hkSes=0;                        // {seed, map, origen} de la sesión en curso
+  async function hkPideAsignacion(claves){
+    const ids=hkIdsPrioridad();
+    try{
+      const r=await fetch(HACKEO_API+"/hackeo/config",{ method:"POST", headers:{ "Content-Type":"application/json" },
+        body:JSON.stringify({ asignar:true, ids:ids }), signal:AbortSignal.timeout(3500) });
+      const d=r.ok?await r.json():null, a=d&&d.asignacion;
+      if(a&&a.map&&Object.keys(a.map).length) return { seed:a.seed, map:a.map, claves:a.claves||claves, origen:"servidor" };
+    }catch(e){}
+    const seed=crypto.getRandomValues(new Uint32Array(1))[0];
+    return { seed:seed, map:hkReparto(claves,ids,seed), claves:claves, origen:"local" };
+  }
   async function callCouncilHackeo(mode){
     const HACK_API = HACKEO_API;
     const path = mode==="stop" ? "/hackeo/stop" : "/hackeo";
     const only = Array.from(HK_SEL);
     // speed/mode: el backend los usa para que los Terminales reales tecleen al mismo ritmo y guion.
-    const body = JSON.stringify(mode==="stop" ? { only_ids: only, exclude_ip: "" } : { only_ids: only, exclude_ip: "", speed: hkSpeed, mode: hkMode, proyectos: hkProyectosMap() });
+    const body = JSON.stringify(mode==="stop" ? { only_ids: only, exclude_ip: "" } : { only_ids: only, exclude_ip: "", speed: hkSpeed, mode: hkMode, ids: hkIdsPrioridad(),
+        seed: hkAsig?hkAsig.seed:null, proyectos: hkAsig?hkAsig.map:{} });
     const res = await fetch(HACK_API + path, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -3267,7 +3300,7 @@ function collapseAllToggle(){
       ms:SPEEDS[idx%SPEEDS.length]+Math.random()*10, acc:0, li:0, ci:0, n:0, done:[], L:[], code:false }));
     hkTotal=0; hkTotalPintado=-1; paintHkTotal(); paintHkCorpusTotal();
     hkTerms.forEach(wireHkTerm);
-    applyHkMode();
+    const ses=++hkSes;
     let last=performance.now();
     hackIntervals.push(setInterval(()=>{ if(!hackMode) return;
       const now=performance.now(), dt=Math.min(now-last,250); last=now;
@@ -3275,8 +3308,22 @@ function collapseAllToggle(){
       if(now-hkPaintAt>=HK_PAINT_MS){ hkPaintAt=now; paintHkTerms(); paintHkTotal(); }
     },16));
     const sl=document.getElementById("hackStatusLine"); if(sl) sl.textContent="lanzando intrusion\u2026";
-    try{ const res=await callCouncilHackeo("start"); paintHackeoStatus(res&&res.machines?res:{error:"no response"}); }
+    // Primero el reparto (semilla del servidor) y los rótulos; luego el guion y el lanzamiento.
+    await hkAsignar(ses); if(!hackMode||ses!==hkSes) return;
+    applyHkMode();
+    try{ const res=await callCouncilHackeo("start"); paintHackeoStatus(res&&res.machines?res:{error:"no response"});
+      if(res&&res.asignacion&&res.asignacion.origen) window.__HK_ASIG_LANZADA=res.asignacion; }
     catch(e){ paintHackeoStatus({error:e.message}); }
+  }
+  // Reparte proyectos a las ventanas (t.pkey) y pinta los rótulos ya, en los dos guiones.
+  async function hkAsignar(ses){
+    const idx=await loadHkCorpusIdx(), byKey={};
+    ((idx&&idx.projects)||[]).forEach(p=>{ byKey[p.key]=p; });
+    const claves=Object.keys(byKey);
+    hkAsig=claves.length?await hkPideAsignacion(claves):null;
+    if(ses!==hkSes) return;
+    window.__HK_ASIG=hkAsig;
+    hkTerms.forEach(t=>{ t.pkey=hkAsig?hkAsig.map[t.m.id]:null; t.pinfo=t.pkey?byKey[t.pkey]||null:null; paintHkBanner(t); });
   }
 
   function hkTermLine(t){ const l=t.L.length?t.L[t.li%t.L.length]:""; return t.code?l:fillHackLine(l,t.m); }
@@ -3369,31 +3416,46 @@ function collapseAllToggle(){
       "\n\nTotal: "+hkFmt(idx.lines_total_all)+" l\u00edneas \u00b7 "+hkFmt(idx.files_total_all)+" ficheros";
   }
   // Rótulo: el texto viene del corpus (pj.banner, 3 filas); el tamaño se ajusta al ancho del panel.
+  // SIEMPRE ARRIBA (Carlos, 07-10-2026): el rótulo es del ordenador, no del guion. Sale en
+  // INTRUSIÓN y en CÓDIGO, no se toca al cambiar de fichero, al pausar ni al cambiar de modo
+  // (vive fuera del cuerpo que se desplaza) y se reajusta al redimensionar (ResizeObserver).
+  const hkBannerRO=(typeof ResizeObserver==="function")?new ResizeObserver(es=>{ es.forEach(e=>{ const t=e.target.__hkT; if(t&&hackMode) hkFitBanner(t); }); }):null;
   function paintHkBanner(t){
     const el=document.getElementById("hack-banner-"+t.m.id); if(!el) return;
-    const b=t.pj&&t.pj.banner; el.classList.toggle("on",!!(b&&b.length));
+    const info=t.pinfo||t.pj, b=(t.pinfo&&t.pinfo.banner)||(t.pj&&t.pj.banner);
+    el.classList.toggle("on",!!(b&&b.length));
     if(!b||!b.length){ el.textContent=""; return; }
-    if(el.dataset.k!==t.pj.key){ el.textContent=b.join("\n"); el.dataset.k=t.pj.key; }
+    if(el.dataset.k!==info.key){ el.textContent=b.join("\n"); el.dataset.k=info.key;
+      el.title=info.project+(hkAsig?" \u00b7 reparto aleatorio de esta sesi\u00f3n (semilla "+hkAsig.seed+", "+hkAsig.origen+")":""); }
+    el.__b=b;
+    if(hkBannerRO&&!el.__ro){ el.__ro=1; el.parentNode.__hkT=t; hkBannerRO.observe(el.parentNode); }
+    hkFitBanner(t);
+  }
+  function hkFitBanner(t){
+    const el=document.getElementById("hack-banner-"+t.m.id), b=el&&el.__b; if(!b) return;
     const cols=Math.max.apply(null,b.map(l=>l.length))||1, w=el.clientWidth||el.parentNode.clientWidth;
     el.style.fontSize=Math.max(3,Math.min(11,(w-2)/(cols*0.6)))+"px";
   }
-  window.addEventListener("resize",()=>{ if(hackMode) hkTerms.forEach(paintHkBanner); });
+  window.addEventListener("resize",()=>{ if(hackMode) hkTerms.forEach(hkFitBanner); });
   function hkRoleText(t){ return t.pj?(t.pj.project+"/"+t.pj.files[t.fi].path):t.code?t.codeName:t.m.role; }
   // Tooltip al pasar el ratón: proyecto, páginas (ficheros) y líneas; el panel sigue tecleando.
   let hkTipT=null;
   function paintHkTip(){
     const tip=document.getElementById("hkTip"), t=hkTipT; if(!tip) return;
-    if(!t||!t.pj){ tip.style.display="none"; return; }
-    const f=t.pj.files[t.fi];
-    const pj=t.pj, sh=pj.shares_lines_with||{}, shk=Object.keys(sh);
+    const pj=t&&(t.pj||t.pinfo);
+    if(!pj){ tip.style.display="none"; return; }
+    const f=t.pj?t.pj.files[t.fi]:null;
+    const sh=pj.shares_lines_with||{}, shk=Object.keys(sh);
     const PAR={studio:"admira.studio",store:"admira.store",tv:"admira.tv",app:"admira.app",biz:"admira.biz"};
-    tip.innerHTML="<b>"+pj.project+"</b>"+(pj.familia==="startup"?" \u00b7 startup"+(pj.par?" (\u2194 "+(PAR[pj.par]||pj.par)+")":""):"")+
+    tip.innerHTML="<b>"+pj.project+"</b>"+(pj.familia==="startup"?" \u00b7 startup"+(pj.par?" (\u2194 "+(PAR[pj.par]||pj.par)+")":""):
+      pj.familia==="ecosistema"?" \u00b7 ecosistema AdmiraNeXT":"")+
       " \u00b7 "+pj.repo+" @"+pj.commit+"\n"+
       hkFmt(pj.files_total)+" p\u00e1ginas (ficheros) \u00b7 "+hkFmt(pj.lines_total)+" l\u00edneas de c\u00f3digo\n"+
       (pj.shares_repo_with?"\u21c4 Comparte repo con "+pj.shares_repo_with+": no suma otra vez en el \u03a3\n":
         shk.length?"\u21c4 "+shk.map(k=>hkFmt(sh[k])+" l\u00edneas id\u00e9nticas a "+k).join(", ")+" (cuentan una vez)\n":"")+
       (pj.lines_unique!=null?"Aporta al \u03a3: "+hkFmt(pj.lines_unique)+" l\u00edneas\n":"")+
-      "Ahora: "+f.path+" ("+hkFmt(f.lines_total)+" l\u00edneas)"+(t.paused?"\n\u23f8 en pausa":"");
+      (f?"Ahora: "+f.path+" ("+hkFmt(f.lines_total)+" l\u00edneas)":"Guion INTRUSI\u00d3N (en C\u00d3DIGO teclea este proyecto)")+
+      (hkAsig?"\n\ud83c\udfb2 Reparto aleatorio de esta sesi\u00f3n \u00b7 semilla "+hkAsig.seed+" ("+hkAsig.origen+")":"")+(t.paused?"\n\u23f8 en pausa":"");
     tip.style.display="block";
   }
   function moveHkTip(e){
@@ -3418,12 +3480,14 @@ function collapseAllToggle(){
     const mode=hkMode, pjs=mode==="codigo"?await loadHkCorpus():[];
     const files=(mode==="codigo"&&!pjs.length)?await loadHkCode():[];   // sin corpus: la web, como antes
     if(mode!==hkMode) return;                      // cambiaron de modo mientras descargaba
+    const vez={};
     hkTerms.forEach((t,i)=>{
-      const pj=pjs.length?pjs[i%pjs.length]:null;
+      const pj=pjs.length?(pjs.find(p=>p.key===t.pkey)||null):null;
       t.pj=pj;
       if(pj){
         // varios paneles con el mismo proyecto empiezan en ficheros distintos
-        t.fi=(Math.floor(i/pjs.length)*7+Math.floor(Math.random()*pj.files.length))%pj.files.length;
+        const n=vez[pj.key]=(vez[pj.key]||0)+1;
+        t.fi=((n-1)*7+Math.floor(Math.random()*pj.files.length))%pj.files.length;
         t.L=pj.files[t.fi].lines; t.code=true; t.li=0; t.ci=0; t.done=[]; t.acc=0; t.cur=null;
         if(t.role) t.role.textContent=hkRoleText(t);
         if(t.b) t.b.textContent="";
@@ -3477,7 +3541,8 @@ function collapseAllToggle(){
     hackMode=false;
     document.getElementById("hack").classList.remove("visible"); unlockView();
     hackIntervals.forEach(i=>clearInterval(i)); hackIntervals=[]; hkTerms=[];
-    hkTipT=null; const tip=document.getElementById("hkTip"); if(tip) tip.style.display="none";
+    hkTipT=null; hkSes++; const tip=document.getElementById("hkTip"); if(tip) tip.style.display="none";
+    if(hkBannerRO) hkBannerRO.disconnect();
     const sy=document.getElementById("hkSyncLine"); if(sy) sy.textContent="";
     try{ await callCouncilHackeo("stop"); }catch(e){}
   }

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { esCanonica, normalizarLectura, anadir, resumirSerie, resumirTodo, recomendar, semaforo, cupoDiario, bloques12h, proyectar, repartir, resumirCuentas, recomendarCuentas, CUENTAS } from "./consumos-lecturas-lib.mjs";
+import { agente, esCanonica, normalizarLectura, anadir, resumirSerie, resumirTodo, recomendar, semaforo, cupoDiario, bloques12h, proyectar, repartir, resumirCuentas, recomendarCuentas, CUENTAS } from "./consumos-lecturas-lib.mjs";
 import { onRequestGet, onRequestPost, KEY } from "./functions/api/consumos/lecturas.js";
 
 const L = (ts, pct, extra = {}) => ({ id: ts + extra.agente, ts: new Date(ts).toISOString(), cuenta: "csilva@admira.com", agente: "Jobs", grupo: "leyendas", pct, fuente: "manual", autor: "Carlos", canonica: esCanonica(ts), ...extra });
@@ -161,8 +161,8 @@ test("tarjetas: manda el límite más alto; coetáneos sin lectura; recomendaci�
   assert.match(c[1].pista, /1 % el 4 de octubre/);
   const r = recomendarCuentas(c);
   assert.match(r.texto, /les sobra 73 %/);
-  assert.match(r.texto, /Sin lectura: Coetáneos, Neo · Claude Code, Cursor Pro/);
-  assert.deepEqual(r.ranking.map((x) => x.id), ["leyendas", "coetaneos", "neo-claude", "cursor"]);
+  assert.match(r.texto, /Sin lectura: Coetáneos, Neo · Claude Code, Trinity · Codex, Cursor Pro/);
+  assert.deepEqual(r.ranking.map((x) => x.id), ["leyendas", "coetaneos", "neo-claude", "trinity-codex", "cursor"]);
 });
 
 test("Neo · Claude Code: tarjeta propia, manda el semanal, la sesión de 5 h va de secundario y entra en el ranking", () => {
@@ -172,7 +172,7 @@ test("Neo · Claude Code: tarjeta propia, manda el semanal, la sesión de 5 h va
     N("2026-10-09T07:46:00Z", 9, "Claude Code semanal", "2026-10-11T13:00:00.000Z"),
     N("2026-10-09T07:46:00Z", 0, "Claude Code sesión 5 h", "2026-10-09T12:10:00.000Z")];
   const cs = resumirCuentas(ls, [], { ahora });
-  assert.deepEqual(cs.map((c) => c.id), ["leyendas", "coetaneos", "neo-claude", "cursor"]);
+  assert.deepEqual(cs.map((c) => c.id), ["leyendas", "coetaneos", "neo-claude", "trinity-codex", "cursor"]);
   const neo = cs.find((c) => c.id === "neo-claude");
   assert.equal(neo.nombre, "Neo · Claude Code");
   assert.equal(neo.plan, "Claude Max (20x)");
@@ -206,4 +206,29 @@ test("la página /consumos pinta la tarjeta de Neo (Claude) con su medidor secun
   assert.match(js, /c\.secundario/);
   assert.match(js, /c\.proveedor/);
   assert.ok(CUENTAS.some((c) => c.id === "neo-claude" && c.cuenta === "Neo · Claude Max" && c.principal === "Claude Code semanal"));
+});
+
+test("Trinity · Codex: cuarta tarjeta, manda «Codex semanal», entra en el ranking como ChatGPT", () => {
+  const ahora = Date.parse("2026-10-09T07:50:00Z");
+  const ls = [L("2026-10-09T07:46:00Z", 9, { cuenta: "Neo · Claude Max", grupo: "neo-claude", agente: "Claude Code semanal", reset: "2026-10-11T13:00:00.000Z" }),
+    L("2026-10-09T07:48:00Z", 23, { cuenta: "Trinity · ChatGPT Pro", grupo: "trinity-codex", agente: "Codex semanal", reset: "2026-10-14T06:51:00.000Z" })];
+  const cs = resumirCuentas(ls, [], { ahora });
+  const tri = cs.find((c) => c.id === "trinity-codex");
+  assert.equal(tri.nombre, "Trinity · Codex");
+  assert.equal(tri.plan, "ChatGPT Pro 200");
+  assert.equal(tri.proveedor, "ChatGPT");
+  assert.equal(tri.pct, 23);
+  assert.equal(tri.manda, "Codex semanal");
+  assert.equal(tri.reset, "2026-10-14T06:51:00.000Z");
+  assert.equal(tri.cupoDia, Math.round((77 / ((Date.parse("2026-10-14T06:51:00Z") - ahora) / 864e5)) * 100) / 100);
+  assert.equal(tri.secundario, null);
+  assert.equal(tri.semaforo, "verde");
+  const r = recomendarCuentas(cs);
+  assert.deepEqual(r.ranking.slice(0, 2).map((x) => [x.id, x.proveedor]), [["neo-claude", "Claude"], ["trinity-codex", "ChatGPT"]]);
+  assert.equal(r.ranking[1].nombre, "Trinity · Codex (ChatGPT Pro de Trinity, no Grok)");
+});
+
+test("añadir una cuenta es una línea: agente() rellena etiqueta y medidores", () => {
+  const c = agente("x", "Morfeo · Gemini", "Morfeo · Google AI Ultra", "Google AI Ultra", "Gemini", "Gemini semanal");
+  assert.deepEqual([c.etiqueta, c.principal, c.secundario, c.consejeros], ["Morfeo · Gemini (Google AI Ultra de Morfeo, no Grok)", "Gemini semanal", null, []]);
 });

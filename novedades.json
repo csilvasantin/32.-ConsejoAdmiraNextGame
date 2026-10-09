@@ -1,4 +1,11 @@
 {
+  "v.09.10.2026.r13.09:52": [
+    "/consumos: cuarta tarjeta «Trinity · Codex» (Trinity · ChatGPT Pro, plan ChatGPT Pro 200) junto a «Neo · Claude Code» (Claude Max 20x), Leyendas y Coetáneos",
+    "Cada una manda con su medidor semanal (Codex semanal / Claude Code semanal): cupo diario, bloques de 12 h y proyección «se agota»; la sesión de 5 h de Neo sale aparte",
+    "Neo y Trinity entran en el ranking y la recomendación con etiqueta propia (Claude / ChatGPT, no Grok); añadir otra cuenta es una línea en CUENTAS",
+    "Volver atrás: publicar otra vez c1fe8cd (v.09.10.2026.r11.09:37)",
+    "Estas novedades salen en el popover del sello, sin recorte del riel"
+  ],
   "v.09.10.2026.r12.09:48": [
     "/consumos: nueva tarjeta «Neo · Claude Code» (Neo · Claude Max, plan Claude Max 20x) junto a Leyendas y Coetáneos — es la cuenta de Claude de Neo, no de Grok",
     "Manda el medidor «Claude Code semanal» (reset los domingos 15:00 de Madrid) con cupo diario, bloques de 12 h y proyección «se agota»; la sesión de 5 h sale aparte como secundario",

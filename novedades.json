@@ -1,4 +1,7 @@
 {
+  "v.09.10.2026.r26.14:49": [
+    "/consumos · nuevos rótulos: título «Consumo Agentes AdmiraNeXT» (pestaña «Consumo Agentes AdmiraNeXT · admira.live»), sin el subtítulo de las tarjetas; la tarjeta de los diales se llama «Tokens por hora» y los diales «Agente ·» (el desplegable sigue empezando en «Toda la flota») y «Proyecto ·»; en inglés: AdmiraNeXT Agents Usage · Tokens per hour · Agent · Project"
+  ],
   "v.09.10.2026.r25.13:56": [
     "/consumos · la nota del orquestador junto a la píldora de margen dice ya el motivo real: «⚠ al ritmo actual se agota antes del reset (se agota sáb 10 oct 14:27)» — /api/orquestar pasa agotaAntes y la proyección de cada cuenta",
     "Un agente fuera del reparto (p. ej. Neo «ocupado con Carlos») conserva su % de margen en el desplegable: /api/orquestar lo incluye también en excluidos"

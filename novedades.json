@@ -1,4 +1,8 @@
 {
+  "v.09.10.2026.r24.13:51": [
+    "/consumos · desplegable de agentes: la píldora de margen se colorea por el MARGEN (verde ≥ 50 %, amarillo 20–49 %, rojo < 20 %) — antes tomaba el semáforo del orquestador y Trinity con 71 % salía en rojo",
+    "Si el orquestador marca la cuenta por otro motivo (p. ej. al ritmo actual se agota antes del reset), sale como nota aparte «⚠ …» junto a la píldora; /api/orquestar expone agotaAntes y proyeccionTexto por candidato"
+  ],
   "v.09.10.2026.r23.13:45": [
     "/consumos · los dos desplegables de los velocímetros son ahora propios (no el menú nativo de macOS, que no deja colorear): punto de estado en cada fila y en el botón cerrado — VERDE activo ahora (tok/h > 0), AMARILLO con tokens hoy pero parado, ROJO sin datos hoy; teclado (↑/↓, Inicio/Fin, Enter, Escape), clic fuera cierra; en móvil se abre como hoja inferior",
     "Proyecto: mismo orden (tok/h → tokens de hoy → sin datos), con tok/h, tokens de hoy y máquinas por fila; «Automático: el que más gasta ahora» arriba diciendo a quién sigue; el botón marca «auto»",

@@ -99,3 +99,18 @@ test("desplegable de agentes: todos los conocidos aunque no tengan datos hoy (al
   assert.equal(pf.find((p) => p.agente === "Neo").email, "csilva@admira.com");
   assert.equal(pf.find((p) => p.agente === "Oráculo").email, "csilvasantin@gmail.com");
 });
+
+test("r24 · píldora de margen por el margen (verde ≥ 50 · amarillo 20–49 · rojo < 20); el semáforo del orquestador va aparte", () => {
+  assert.equal(E.colorMargen(71), "verde");
+  assert.equal(E.colorMargen(50), "verde");
+  assert.equal(E.colorMargen(49), "amarillo");
+  assert.equal(E.colorMargen(20), "amarillo");
+  assert.equal(E.colorMargen(19), "rojo");
+  assert.equal(E.colorMargen(null), "sin");
+  // Trinity 71 % en rojo por el ritmo: píldora verde + nota aparte.
+  const n = E.notaOrquestador({ pct: 71, semaforo: "rojo", agotaAntes: true, proyeccionTexto: "se agota el domingo" });
+  assert.match(n.texto, /se agota antes del reset \(se agota el domingo\)/);
+  assert.match(E.notaOrquestador({ pct: 71, semaforo: "rojo" }).texto, /rojo/);
+  assert.equal(E.notaOrquestador({ pct: 90, semaforo: "verde" }), null);
+  assert.equal(E.notaOrquestador({ pct: 30, semaforo: "ambar" }), null, "ámbar con 30 % ya lo dice la píldora amarilla");
+});

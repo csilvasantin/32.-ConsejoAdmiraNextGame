@@ -78,7 +78,7 @@ test("no aptos (<0,4) fuera, salvo que no quede nadie; margen desconocido no exc
 test("salida pública sin secretos: solo campos conocidos", () => {
   const r = orquestar({ tipo: "web", cuentas: CUENTAS, presencia: vivos("Neo"), bandeja: [], ahora: AHORA, personas: PERSONAS });
   const keys = Object.keys(r.candidatos[0]).sort();
-  assert.deepEqual(keys, ["apto", "conCarlos", "cuenta", "despierta", "encargosEnCurso", "encargosIds", "grupo", "libre", "maquina", "margenPct", "modelo", "motivo", "persona", "puntuacion", "semaforo", "ultimoLatido"]);
+  assert.deepEqual(keys, ["agotaAntes", "apto", "conCarlos", "cuenta", "despierta", "encargosEnCurso", "encargosIds", "grupo", "libre", "maquina", "margenPct", "modelo", "motivo", "persona", "proyeccionTexto", "puntuacion", "semaforo", "ultimoLatido"]);
 });
 
 test("consejeros GrokBot: se despiertan por webhook; un latido viejo no los deja «no libre», un encargo en curso sí", () => {

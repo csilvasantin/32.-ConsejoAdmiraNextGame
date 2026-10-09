@@ -113,6 +113,8 @@ export function orquestar({ tipo, cuentas = [], presencia = [], bandeja = [], ah
       cuenta: cfg.cuenta ? (c ? c.nombre + (c.cuenta ? " (" + c.cuenta + ")" : "") : cfg.cuenta) : "desconocida",
       grupo: cfg.cuenta || null,
       apto, libre: { libre: lib.libre, why: lib.why }, conCarlos: cc, despierta: cfg.despierta || null, margenPct, semaforo: c ? c.semaforo : "sin",
+      // r24: por qué el semáforo de la cuenta no es solo el margen (p. ej. al ritmo actual se agota antes del reset).
+      agotaAntes: !!(c && c.agotaAntes), proyeccionTexto: c && c.proyeccion && c.proyeccion.texto ? c.proyeccion.texto : null,
       ultimoLatido: lat === null ? null : new Date(lat * 1000).toISOString(),
       encargosEnCurso: enCurso.length, encargosIds: enCurso, puntuacion: punt, motivo: partes.join(" · "),
     };

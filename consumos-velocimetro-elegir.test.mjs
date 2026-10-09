@@ -80,3 +80,22 @@ test("aguja analógica: vibración 0 a 0 tok/h o sin datos; 0,5° → 1,5° seg�
   assert.ok(amp(0.01, false) >= 0.5 && amp(0.01, false) < 0.6);
   assert.equal(amp(1, false), 1.5);
 });
+
+// r23: desplegables con estado (verde / amarillo / rojo) y agentes conocidos sin datos.
+import { perfilesFlota } from "./consumos-perfiles.mjs";
+test("estado de fila: verde = tok/h > 0 · amarillo = tokens hoy y 0 tok/h · rojo = sin datos hoy", () => {
+  assert.equal(E.estadoFila(1200, 5), "verde");
+  assert.equal(E.estadoFila(0, 4592231), "amarillo");
+  assert.equal(E.estadoFila(null, 300), "amarillo");
+  assert.equal(E.estadoFila(null, null), "rojo");
+  assert.equal(E.estadoFila(0, 0), "rojo");
+});
+test("desplegable de agentes: todos los conocidos aunque no tengan datos hoy (al final), sin duplicar", () => {
+  const l = E.agentesConConocidos([{ agente: "Trinity", tokHora: 5, tokHoy: 9 }, { agente: "Neo", tokHora: 0, tokHoy: 3 }], perfilesFlota());
+  assert.deepEqual(Array.from(l, (a) => a.agente), ["Trinity", "Neo", "Morfeo", "Oráculo", "Smith"]);
+  assert.equal(l[4].sinDatos, true);
+  const pf = perfilesFlota();
+  assert.ok(!pf.some((p) => p.maquina === "GrokBot"), "los consejeros GrokBot no van (sin pulso de tokens)");
+  assert.equal(pf.find((p) => p.agente === "Neo").email, "csilva@admira.com");
+  assert.equal(pf.find((p) => p.agente === "Oráculo").email, "csilvasantin@gmail.com");
+});

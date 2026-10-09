@@ -181,31 +181,69 @@
   function eleccion(d) { return E.elegirProyecto((d && d.porProyecto) || [], estado.proyecto); }
   function proyectoActual(d) { return eleccion(d).proyecto; }
   function nomP(p) { return p === 'otros' ? T('otros (sin proyecto)', 'others (no project)') : p; }
+  /* r23 (Carlos): desplegables propios (assets/consumos-desplegable.js) en vez de <select> nativos — el menú nativo de
+   * macOS no deja colorear. Punto de estado por fila: verde = tok/h > 0 ahora · amarillo = tokens hoy, 0 tok/h ·
+   * rojo = sin datos hoy (E.estadoFila). Agentes: tok/h, hoy, máquina, proyecto, modelo/cuenta, % de margen y «con Carlos». */
+  var DD = { proy: null, ag: null }, ORQ = { margen: {}, leido: 0 };
+  function punto(est) { return '<i class="dd-punto dd-' + (est || 'rojo') + '" aria-hidden="true"></i>'; }
+  function txtEstado(est) { return est === 'verde' ? T('activo ahora', 'active now') : est === 'amarillo' ? T('hoy sí, ahora parado', 'today yes, idle now') : T('sin datos hoy', 'no data today'); }
   function pintaSelector(d) {
-    var sel = document.getElementById('vel-proy-sel');
-    if (!sel || document.activeElement === sel) return; // no cerrar el desplegable mientras se elige
+    if (!DD.proy) return;
     var lista = E.ordenarProyectos((d && d.porProyecto) || []), vistos = {}, opts = [];
     lista.forEach(function (p) { vistos[p.proyecto] = 1; opts.push(p); });
-    GALAXIA.forEach(function (p) { if (!vistos[p]) opts.push({ proyecto: p, tokHoy: null }); });
-    var el = eleccion(d);
-    var txt = function (o) {
-      return o.tokHoy == null ? T('sin datos hoy', 'no data today') : (o.tokHora != null ? fmt(o.tokHora) + ' tok/h · ' : '') + fmt(o.tokHoy) + T(' hoy', ' today');
-    };
-    sel.innerHTML = '<option value="' + AUTO + '">' + T('Automático: el que más gasta ahora', 'Automatic: top spender right now') + '</option>' +
-      opts.map(function (o) {
-        var sele = o.proyecto === el.proyecto;
-        return '<option value="' + esc(o.proyecto) + '"' + (sele ? ' selected' : '') + '>' + esc(nomP(o.proyecto)) + (sele && el.auto ? ' (auto)' : '') + ' — ' + txt(o) + '</option>';
-      }).join('');
-    sel.classList.toggle('vel-auto', el.auto);
+    GALAXIA.forEach(function (p) { if (!vistos[p]) opts.push({ proyecto: p, tokHoy: null, tokHora: null }); });
+    var el = eleccion(d), elegido = opts.filter(function (o) { return o.proyecto === el.proyecto; })[0];
+    var items = [{ valor: AUTO, estado: elegido ? E.estadoFila(elegido.tokHora, elegido.tokHoy) : '',
+      html: '<span class="dd-fila"><span class="dd-tit"><i class="dd-punto dd-auto" aria-hidden="true"></i>' + T('Automático: el que más gasta ahora', 'Automatic: top spender right now') + '</span>' +
+        (el.auto && el.proyecto ? '<small>' + T('ahora sigue a ', 'now following ') + '<b>' + esc(nomP(el.proyecto)) + '</b></small>' : '') + '</span>' }];
+    opts.forEach(function (o) {
+      var est = o.tokHoy == null ? 'rojo' : E.estadoFila(o.tokHora, o.tokHoy);
+      var cifras = o.tokHoy == null ? T('sin datos hoy', 'no data today') : '<b>' + (o.tokHora != null ? fmt(o.tokHora) : '—') + ' tok/h</b> · ' + fmt(o.tokHoy) + T(' hoy', ' today') + (o.maquinas && o.maquinas.length ? ' · ' + esc(o.maquinas.join(', ')) : '');
+      items.push({ valor: o.proyecto, estado: est, titulo: esc(txtEstado(est)),
+        html: '<span class="dd-fila"><span class="dd-tit">' + punto(est) + esc(nomP(o.proyecto)) + '</span><small>' + cifras + '</small></span>',
+        boton: punto(est) + '<span class="dd-bt">' + esc(nomP(o.proyecto)) + (el.auto ? ' <em class="dd-autotag">auto</em>' : '') + (o.tokHora != null ? ' · ' + fmt(o.tokHora) + ' tok/h' : '') + '</span>' });
+    });
+    DD.proy.pon(items, el.auto ? (elegido ? elegido.proyecto : AUTO) : el.proyecto);
+    if (el.auto) DD.proy.valor = AUTO; // el botón enseña el proyecto seguido; la opción marcada es «Automático»
+    var lis = DD.proy.l.children;
+    for (var k = 0; k < lis.length; k++) lis[k].setAttribute('aria-selected', String(el.auto ? k === 0 : DD.proy.items[k].valor === el.proyecto));
+  }
+  function perfilDe(d, nombre) { return ((d && d.conocidos) || []).filter(function (c) { return c.agente === nombre; })[0] || null; }
+  function filaAgenteInfo(a, pf) {
+    var est = a.sinDatos ? 'rojo' : E.estadoFila(a.tokHora, a.tokHoy);
+    var motor = a.motor ? (a.motor === 'claude' ? 'Claude' : a.motor === 'codex' ? 'Codex' : a.motor) : '';
+    var modelo = pf && pf.modelo ? pf.modelo : motor;
+    var cuenta = pf ? (pf.email || pf.plan || '') : '';
+    var m = ORQ.margen[a.agente];
+    var lin1 = a.sinDatos ? T('sin datos hoy', 'no data today') :
+      '<b>' + (a.tokHora == null ? T('parado', 'stopped') : fmt(a.tokHora) + ' tok/h') + '</b> · ' + fmt(a.tokHoy) + T(' hoy', ' today') +
+      (a.maquina || (pf && pf.maquina) ? ' · ' + esc(a.maquina || pf.maquina) : '') + (a.proyectoAhora ? ' · ' + esc(nomP(a.proyectoAhora)) : '');
+    var lin2 = [modelo ? esc(modelo) : '', cuenta ? esc(cuenta) : '', m && m.pct != null ? '<span class="dd-margen dd-m-' + esc(m.semaforo || 'sin') + '">' + T('margen ', 'margin ') + m.pct + ' %</span>' : (pf ? '<span class="dd-margen dd-m-sin">' + T('margen sin lectura', 'margin not read') + '</span>' : '')].filter(Boolean).join(' · ');
+    return { est: est, html: '<span class="dd-fila"><span class="dd-tit">' + punto(est) + esc(a.agente) + (a.conCarlos ? ' <em class="con-carlos">' + T('con Carlos', 'with Carlos') + '</em>' : '') + '</span><small>' + lin1 + '</small>' + (lin2 ? '<small class="dd-sub">' + lin2 + '</small>' : '') + '</span>' };
   }
   function pintaSelectorAgente(d) {
-    var sel = document.getElementById('vel-ag-sel');
-    if (!sel || document.activeElement === sel) return;
-    var ags = ((d && d.porAgente) || []).map(function (a) { return a.agente; }).filter(function (a, i, arr) { return a && arr.indexOf(a) === i; });
-    if (estado.agente && ags.indexOf(estado.agente) < 0) ags.push(estado.agente);
-    sel.innerHTML = '<option value="">' + T('Toda la flota', 'Whole fleet') + '</option>' + ags.map(function (a) {
-      return '<option value="' + esc(a) + '"' + (a === estado.agente ? ' selected' : '') + '>' + esc(a) + '</option>';
-    }).join('');
+    if (!DD.ag) return;
+    var ags = E.agentesConConocidos((d && d.porAgente) || [], (d && d.conocidos) || []);
+    if (estado.agente && !ags.some(function (a) { return a.agente === estado.agente; })) ags.push({ agente: estado.agente, tokHora: null, tokHoy: 0, sinDatos: true });
+    var activos = ags.filter(function (a) { return a.tokHora > 0; }).length, conDatos = ags.filter(function (a) { return !a.sinDatos && a.tokHoy > 0; }).length;
+    var estF = d && d.tokHora != null ? E.estadoFila(d.tokHora, d.tokHoy) : 'rojo';
+    var items = [{ valor: '', estado: estF,
+      html: '<span class="dd-fila"><span class="dd-tit">' + punto(estF) + T('Toda la flota', 'Whole fleet') + '</span><small><b>' + (d && d.tokHora != null ? fmt(d.tokHora) + ' tok/h' : T('sin datos', 'no data')) + '</b>' + (d && d.tokHoy != null ? ' · ' + fmt(d.tokHoy) + T(' hoy', ' today') : '') + ' · ' + activos + ' ' + T(activos === 1 ? 'agente activo' : 'agentes activos', activos === 1 ? 'active agent' : 'active agents') + ' ' + T('de ', 'of ') + ags.length + (conDatos > activos ? ' (' + (conDatos - activos) + T(' parados con tokens hoy', ' idle with tokens today') + ')' : '') + '</small></span>',
+      boton: punto(estF) + '<span class="dd-bt">' + T('Toda la flota', 'Whole fleet') + '</span>' }];
+    ags.forEach(function (a) {
+      var f = filaAgenteInfo(a, perfilDe(d, a.agente));
+      items.push({ valor: a.agente, estado: f.est, titulo: esc(txtEstado(f.est)), html: f.html, boton: punto(f.est) + '<span class="dd-bt">' + esc(a.agente) + '</span>' });
+    });
+    DD.ag.pon(items, estado.agente || '');
+  }
+  function leerMargen() {
+    return fetch('/api/orquestar', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (o) {
+      if (!o) return;
+      var m = {};
+      (o.candidatos || []).concat(o.excluidos || []).forEach(function (c) { if (c && c.persona) m[c.persona] = { pct: c.margenPct == null ? null : Math.round(c.margenPct), semaforo: c.semaforo || 'sin' }; });
+      ORQ.margen = m; ORQ.leido = Date.now();
+      if (estado.datos) pintaSelectorAgente(estado.datos);
+    }).catch(function () {});
   }
   /* Dial izquierdo: toda la flota o el agente elegido. */
   function pintaIzquierdo(d, sin) {
@@ -287,8 +325,7 @@
   function eligeAgente(nombre) {
     estado.agente = nombre || '';
     lsSet(LS_AG, estado.agente);
-    var selA = document.getElementById('vel-ag-sel');
-    if (selA) { pintaSelectorAgente(estado.datos); selA.value = estado.agente; }
+    pintaSelectorAgente(estado.datos);
     pintaIzquierdo(estado.datos, !estado.datos);
     pintaRanking(estado.datos);
   }
@@ -331,16 +368,15 @@
   root.ConsumosVelocimetro = { leer: leer, fmt: fmt, escala: escala };
   function arranca() {
     if (!document.getElementById('velocimetro')) return;
-    var sel = document.getElementById('vel-proy-sel');
-    if (sel) sel.addEventListener('change', function () {
-      estado.proyecto = sel.value === AUTO ? null : sel.value;
+    var D = root.ConsumosDesplegable;
+    var rp = document.getElementById('vel-proy-dd'), ra = document.getElementById('vel-ag-dd');
+    if (D && rp) DD.proy = new D(rp, { etiqueta: T('Proyecto', 'Project'), alCambiar: function (v) {
+      estado.proyecto = v === AUTO ? null : v;
       lsSet(LS_PROY, estado.proyecto);
-      sel.blur();
       pintaSelector(estado.datos);
       if (estado.datos) pintaProyecto(estado.datos, false);
-    });
-    var selA = document.getElementById('vel-ag-sel');
-    if (selA) selA.addEventListener('change', function () { eligeAgente(selA.value || ''); });
+    } });
+    if (D && ra) DD.ag = new D(ra, { etiqueta: T('Agente', 'Agent'), alCambiar: function (v) { eligeAgente(v || ''); } });
     var rk = document.getElementById('vel-agentes');
     if (rk) {
       var desdeFila = function (ev) {
@@ -355,7 +391,9 @@
       rk.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); desdeFila(ev); } });
     }
     leer();
+    leerMargen();
     setInterval(function () { if (!document.hidden) leer(); }, POLL);
+    setInterval(function () { if (!document.hidden) leerMargen(); }, 60000);
     setInterval(function () { var t = textoMetodo(), m = document.getElementById('vel-metodo'); if (t && m) m.innerHTML = t; }, 1000);
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arranca); else arranca();

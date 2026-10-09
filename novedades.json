@@ -1,4 +1,10 @@
 {
+  "v.09.10.2026.r23.13:45": [
+    "/consumos · los dos desplegables de los velocímetros son ahora propios (no el menú nativo de macOS, que no deja colorear): punto de estado en cada fila y en el botón cerrado — VERDE activo ahora (tok/h > 0), AMARILLO con tokens hoy pero parado, ROJO sin datos hoy; teclado (↑/↓, Inicio/Fin, Enter, Escape), clic fuera cierra; en móvil se abre como hoja inferior",
+    "Proyecto: mismo orden (tok/h → tokens de hoy → sin datos), con tok/h, tokens de hoy y máquinas por fila; «Automático: el que más gasta ahora» arriba diciendo a quién sigue; el botón marca «auto»",
+    "Agente: cada fila con tok/h ahora, tokens de hoy, máquina, proyecto actual, modelo y cuenta (Claude/Codex + email), % de margen de su cuenta (lecturas de consumos vía orquestador) y la insignia «con Carlos»; «Toda la flota» con los totales y cuántos agentes están activos; salen todos los agentes conocidos aunque hoy no tengan datos (en rojo, p. ej. Smith)",
+    "/api/consumos/velocidad: conocidos[] (agente, máquina, modelo, cuenta, email) desde orquestar-config + cuentas de consumos"
+  ],
   "v.09.10.2026.r22.12:10": [
     "/consumos · VELOCIDAD POR AGENTE bajo los dos velocímetros: ranking en vivo por tok/h (cada 10 s), barra relativa al líder (★ resaltado), tokens de hoy, máquina, proyecto en el que trabaja ahora y la insignia «con Carlos»; clic (o Enter) en una fila = verlo en el velocímetro de la izquierda, segundo clic vuelve a toda la flota",
     "Arreglo: un proyecto ya no puede marcar más tok/h que la flota (a las 12:07 admira.studio 26,8 M frente a 13,0 M de la flota). Flota, agentes y proyectos usan la MISMA ventana (15 min) y fórmula: los tokens de cada agente se reparten entre sus proyectos (las bajadas por re-atribución del colector ya no cuentan como «día nuevo»); Σ proyectos = Σ agentes = flota, con test",

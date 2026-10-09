@@ -31,7 +31,20 @@
     (porAgente || []).forEach(function (a) { if (a && a.agente === nombre && !fila) fila = a; });
     return { agente: nombre, fila: fila };
   }
+  /** r23: estado de una fila (proyecto o agente): verde = tok/h > 0 ahora · amarillo = tokens hoy pero 0 tok/h · rojo = sin datos hoy. */
+  function estadoFila(tokHora, tokHoy) {
+    if (Number(tokHora) > 0) return 'verde';
+    if (Number(tokHoy) > 0) return 'amarillo';
+    return 'rojo';
+  }
+  /** r23: lista completa del desplegable de agentes: los de porAgente (en su orden) + los conocidos sin datos hoy (rojo). */
+  function agentesConConocidos(porAgente, conocidos) {
+    var vistos = {}, out = [];
+    (porAgente || []).forEach(function (a) { if (a && a.agente && !vistos[a.agente]) { vistos[a.agente] = 1; out.push(a); } });
+    (conocidos || []).forEach(function (c) { if (c && c.agente && !vistos[c.agente]) { vistos[c.agente] = 1; out.push({ agente: c.agente, tokHora: null, tokHoy: 0, sinDatos: true }); } });
+    return out;
+  }
   function nombreProyecto(p) { return p === OTROS ? 'otros (sin proyecto)' : p; }
-  var api = { ordenarProyectos: ordenarProyectos, proyectoPorDefecto: proyectoPorDefecto, elegirProyecto: elegirProyecto, elegirAgente: elegirAgente, nombreProyecto: nombreProyecto };
+  var api = { ordenarProyectos: ordenarProyectos, proyectoPorDefecto: proyectoPorDefecto, elegirProyecto: elegirProyecto, elegirAgente: elegirAgente, nombreProyecto: nombreProyecto, estadoFila: estadoFila, agentesConConocidos: agentesConConocidos };
   root.ConsumosElegir = api;
 })(typeof window !== 'undefined' ? window : globalThis);

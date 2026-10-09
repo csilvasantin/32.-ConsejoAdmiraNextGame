@@ -4,7 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <link rel="icon" href="/favicon.ico" sizes="any">
-<title>Qué estamos gastando · admira.live</title>
+<title>Consumo Agentes AdmiraNeXT · admira.live</title>
 <meta name="description" content="Lo que cuestan las cuentas del equipo, en español claro, con la fecha de cada lectura.">
 <meta name="robots" content="noindex, nofollow">
 <meta name="theme-color" content="#02080d">
@@ -177,18 +177,17 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
     <a href="/consumos-proyectos">Gasto por proyecto</a>
     <a href="/orquestar/">Orquestador</a>
   </nav>
-  <h1>Qué estamos gastando</h1>
-  <p class="lead">Una tarjeta por cuenta. El color dice si hay que actuar. La fecha es el momento de la lectura, no de ahora mismo.</p>
+  <h1>Consumo Agentes AdmiraNeXT</h1>
   <section class="vel" id="velocimetro" aria-live="polite">
-    <h2>Tokens por hora · ahora mismo</h2>
+    <h2 id="vel-titulo">Tokens por hora</h2>
     <div class="vel-par">
       <div class="vel-g" id="vel-g-total">
-        <h3><span id="vel-ag-titulo">Toda la flota</span> · <span class="vel-sel" id="vel-ag-dd"></span></h3>
+        <h3><span id="vel-ag-titulo">Agente</span> · <span class="vel-sel" id="vel-ag-dd"></span></h3>
         <div class="vel-dial"><div class="vel-dial-svg"></div><div class="odo" title="Tokens acumulados hoy (Madrid)"></div><p class="odo-rotulo" id="vel-ag-rotulo">tokens hoy</p></div>
         <div class="vel-lectura"><span class="vel-cifra" id="vel-cifra">…</span><span class="vel-unidad" id="vel-unidad">tok/h</span><p class="vel-extra" id="vel-ag-metodo"></p></div>
       </div>
       <div class="vel-g" id="vel-g-proy">
-        <h3>Por proyecto · <span class="vel-sel" id="vel-proy-dd"></span></h3>
+        <h3><span id="vel-proy-titulo">Proyecto</span> · <span class="vel-sel" id="vel-proy-dd"></span></h3>
         <div class="vel-dial"><div class="vel-dial-svg"></div><div class="odo" title="Tokens del proyecto hoy (Madrid)"></div><p class="odo-rotulo"><span id="vel-proy-nombre">…</span> · tokens hoy</p></div>
         <div class="vel-lectura"><span class="vel-cifra">…</span><span class="vel-unidad">tok/h</span><p class="vel-extra" id="vel-proy-metodo"></p></div>
       </div>
@@ -279,7 +278,7 @@ fetch("/consumos-plataformas.json", { cache: "no-store" })
 </script>
 <script src="/assets/consumos-velocimetro-elegir.js?v=r24-margen"></script>
 <script src="/assets/consumos-desplegable.js?v=r23"></script>
-<script src="/assets/consumos-velocimetro.js?v=r24-margen"></script>
+<script src="/assets/consumos-velocimetro.js?v=r26-textos"></script>
 <script src="/assets/live-velocidad.js?v=r18-tiempo-real"></script>
 <script src="/consumos-lecturas.js?v=r2-cuentas"></script>
 <script src="/orquestar-widget.js?v=r2-con-carlos"></script>

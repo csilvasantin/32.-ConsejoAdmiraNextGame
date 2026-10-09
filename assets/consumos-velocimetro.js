@@ -259,7 +259,7 @@
     if (!r.agente) {
       max = sin ? (estado.d1.max || 50e6) : (d.escalaMax || 50e6);
       estado.d1.pinta(sin ? 0 : d.tokHora, max, sin ? null : d.tokHoy, sin);
-      if (tit) tit.textContent = T('Toda la flota', 'Whole fleet');
+      if (tit) tit.textContent = T('Agente', 'Agent'); // r26: rótulo fijo «Agente ·»; el desplegable dice «Toda la flota»
       if (rot) rot.textContent = T('tokens hoy', 'tokens today');
       if (met) met.textContent = '';
       return max;
@@ -269,7 +269,7 @@
     max = escala(maxAg, 5e6);
     var sinA = sin || !f;
     estado.d1.pinta(f ? (f.tokHora || 0) : 0, max, f ? f.tokHoy : null, sinA);
-    if (tit) tit.textContent = r.agente;
+    if (tit) tit.textContent = T('Agente', 'Agent');
     if (rot) rot.textContent = r.agente + ' · ' + T('tokens hoy', 'tokens today');
     if (met) met.innerHTML = !f ? T('Este agente no aparece ahora en el pulso ni en Yokup: sin cifra.', 'This agent is not in the pulse or Yokup right now: no number.') :
       (f.tokHora == null ? T('parado (sin pulso reciente)', 'stopped (no recent pulse)') : (f.motor ? esc(f.motor) + ' · ' : '') + (f.maquina ? esc(f.maquina) + ' · ' : '') + (f.tokUltimos5min != null ? '5 min: <b>' + fmt(f.tokUltimos5min) + '</b> tok' : esc(f.metodo || '')));
@@ -372,6 +372,12 @@
   root.ConsumosVelocimetro = { leer: leer, fmt: fmt, escala: escala };
   function arranca() {
     if (!document.getElementById('velocimetro')) return;
+    // r26 (Carlos): rótulos «Tokens por hora» · «Agente ·» · «Proyecto ·» (en inglés: Tokens per hour · Agent · Project).
+    var tv = document.getElementById('vel-titulo'), tp = document.getElementById('vel-proy-titulo'), ta = document.getElementById('vel-ag-titulo');
+    if (tv) tv.textContent = T('Tokens por hora', 'Tokens per hour');
+    if (tp) tp.textContent = T('Proyecto', 'Project');
+    if (ta) ta.textContent = T('Agente', 'Agent');
+    if (en()) { var h1 = document.querySelector('h1'); if (h1 && /Consumo Agentes/.test(h1.textContent)) h1.textContent = 'AdmiraNeXT Agents Usage'; if (/Consumo Agentes/.test(document.title)) document.title = 'AdmiraNeXT Agents Usage · admira.live'; }
     var D = root.ConsumosDesplegable;
     var rp = document.getElementById('vel-proy-dd'), ra = document.getElementById('vel-ag-dd');
     if (D && rp) DD.proy = new D(rp, { etiqueta: T('Proyecto', 'Project'), alCambiar: function (v) {

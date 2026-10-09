@@ -1,4 +1,8 @@
 {
+  "v.09.10.2026.r28.15:35": [
+    "Consumos: franja «Trabajando ahora» arriba del todo en /consumos — una tarjeta por consejero/agente con su retrato (recortes de las ilustraciones del Consejo; iniciales o avatar para la flota), máquina · motor/modelo, foco/tarea, proyecto y encargo. Verde = trabajando (tokens en los últimos 15 min, latido «trabajando» de < 2 min o proceso con CPU), amarillo = con Carlos, gris = «parado · hace X min · último: …» o «sin latido». Siempre los seis consejeros Grok. Cada 10 s.",
+    "Nuevo GET /api/flota/trabajando: une bot.yokup.com/api/presence con /api/consumos/velocidad; un agente en varias máquinas sale una vez (manda lo más fresco)."
+  ],
   "v.09.10.2026.r27.15:02": [
     "/consumos · Grok Bot entra en la flota: «Grok Bot (Consejo)» = la cuenta Cursor Pro (Jobs, Wozniak, Lucas y Disney juntos; Cursor no separa por consejero), medida con el export CSV de cursor.com → velocímetro, ranking, desplegable (Grok Bot / Cursor Pro · Cursor · datos con ~X h de retraso) y proyecto admiranext.com",
     "Misma métrica que Claude y Codex: entrada + escritura de caché + salida; la lectura de caché va aparte (el «Total Tokens» del CSV la incluye y es ~95 %)",

@@ -48,6 +48,28 @@
     if(options.mountInside){options.container.append(details);details.open=true;}
     else options.container.insertAdjacentElement('afterend',details);
     const $=s=>details.querySelector(s);
+    /* Hilo compartido (Jobs): el panel muestra y usa el MISMO hilo que GrokBot y /chat/jobs/
+       (GET /api/chat/hilo + POST /api/chat/enviar vía assets/chat-hilo-client.js). Los demás
+       consejeros siguen por el puente de GrokBot sin cambios. */
+    const hilo=options.sharedThread===false?null:(options.hilo||root.ChatHiloClient||null);
+    const sharedOf=name=>hilo&&name?hilo.personaDe(name):null;
+    const sh={timer:null,tic:null,busy:false,again:false,sending:false,turnos:[],locales:[],firma:'',loaded:false,seen:new Set(),auth:true,epoch:-1};
+    // Aviso de acceso al hilo privado: se construye al pedirlo por primera vez (askSignin).
+    let signin=null;
+    function signinBox(){
+      if(signin)return signin;
+      signin=doc.createElement('div');signin.className='council-chat__signin';
+      const p=doc.createElement('p');p.textContent='Este hilo es privado. Entra con tu cuenta de Google de admira.live para ver y continuar la conversación con Steve Jobs (la misma que en Grok Bot).';
+      const btn=doc.createElement('button');btn.type='button';btn.textContent='Entrar con Google';
+      const gbtn=doc.createElement('div');gbtn.className='council-chat__gbtn';
+      const err=doc.createElement('p');err.className='council-chat__signin-error';err.hidden=true;
+      signin.append(p,btn,gbtn,err);signin.err=err;
+      btn.addEventListener('click',()=>{
+        hilo.cargarGoogle(gbtn,()=>{if(sharedOf(selected)){signin.hidden=true;sh.auth=true;sharedRefresh();}},m=>{err.hidden=false;err.textContent=m;});
+      });
+      const messages=$('.council-chat__messages');messages.parentNode?messages.parentNode.insertBefore(signin,messages):details.append(signin);
+      return signin;
+    }
     const status=$('.council-chat__status'), log=$('.council-chat__messages'), operations=$('.council-chat__operations');
     if(options.mountInside)$('.council-chat__toolbar').append($('.council-chat__connection'));
     const current=epoch=>!destroyed && epoch===selectedEpoch;
@@ -64,7 +86,7 @@
     const label=status=>(encargo()||inbox()?ENCARGO_LABELS:LABELS)[status];
     function say(message){if(destroyed)return;status.textContent=message;options.onStatus?.(message);}
     function rowsFor(name){return histories.get(PEOPLE[name]) || [];}
-    const isPending=persona=>pendingSends.has(persona)||rowsFor(persona).some(r=>native(r)&&['pending','in_progress','ack','unknown'].includes(r.status));
+    const isPending=persona=>sharedOf(persona)?sh.sending:pendingSends.has(persona)||rowsFor(persona).some(r=>native(r)&&['pending','in_progress','ack','unknown'].includes(r.status));
     function syncPending(){options.onPendingChange?.({persona:selected,pending:isPending(selected)});}
     function merge(rows){
       for(const alias of Object.values(PEOPLE)) histories.set(alias,reconcile(histories.get(alias),rows.filter(r=>r?.persona===alias)));
@@ -86,6 +108,7 @@
       const oldTop=log.scrollTop;
       const follow=renderedPersona!==selected || !options.mountInside || log.scrollHeight-log.clientHeight-oldTop<48;
       renderedPersona=selected;syncPending();
+      if(sharedOf(selected)){$('.council-chat__person').textContent=selected;renderShared(follow,oldTop);return;}
       log.replaceChildren();
       if(!selected)return;
       $('.council-chat__person').textContent=selected;
@@ -225,11 +248,13 @@
     }
     function schedule(epoch){
       if(!current(epoch)||!selected)return;
+      if(sharedOf(selected))return sharedSchedule();
       clearTimeout(pollTimer);
       pollTimer=setTimeout(()=>{pollTimer=null;return refresh({restore:false});},3000);
     }
     function refresh({restore=true}={}){
       if(!selected||destroyed)return Promise.resolve();
+      if(sharedOf(selected))return sharedRefresh();
       const name=selected,epoch=selectedEpoch,wasDisconnected=!connected;
       if(refreshing?.epoch===epoch)return refreshing.promise;
       clearTimeout(pollTimer);pollTimer=null;
@@ -275,10 +300,11 @@
     async function selectNative(persona){
       if(destroyed)return false;
       const epoch=++selectedEpoch;selected=PEOPLE[persona]?persona:null;selectionReady=false;selectionError=null;
-      clearTimeout(pollTimer);pollTimer=null;options.onSelect?.(selected);
-      details.hidden=!selected;
+      clearTimeout(pollTimer);pollTimer=null;stopShared();options.onSelect?.(selected);
+      details.hidden=!selected;details.classList?.toggle('council-chat--hilo',!!sharedOf(selected));if(signin)signin.hidden=true;
       if(operations){operations.hidden=true;operations.replaceChildren();}
       if(!selected)return false;
+      if(sharedOf(selected))return startShared(epoch);
       log.scrollTop=log.scrollHeight;
       connected=false;$('.council-chat__connection').textContent='· Conectando…';
       renderAttachments();render();say('Abriendo el chat de '+selected+'…');
@@ -293,6 +319,7 @@
     async function send(persona,prompt){
       if(!PEOPLE[persona]||destroyed)return false;
       if(selected!==persona){say('Selecciona el consejero antes de enviar.');return false;}
+      if(sharedOf(persona))return sharedSend(persona,prompt);
       if(uploading.has(persona)){say('Espera a que termine la subida del adjunto.');return false;}
       const recent=recentSends.get(persona);
       if(recent&&recent.prompt===prompt.trim()&&Date.now()-recent.at<120000&&!recent.confirmed){say('Este mensaje ya está pendiente de confirmación.');return true;}
@@ -330,6 +357,115 @@
       }finally{pendingSends.delete(persona);if(!submitted)recentSends.delete(persona);if(submitted)attachments.delete(persona);renderAttachments();syncPending();}
       return submitted;
     }
+    // ── Hilo compartido ─────────────────────────────────────────────────────
+    const SCOPE_HILO='Es la misma conversación que en Grok Bot y en /chat/jobs/: un solo hilo compartido (App, admira.live y rutina). Lo que escribes aquí le llega a Jobs como encargo privado; no se publica en el Ágora ni en Telegram.';
+    const LIMITS_HILO='Solo texto, sin adjuntos. Se actualiza cada 2 s mientras esperas respuesta (hasta 3 min) y cada 10 s en reposo, solo con este panel visible.';
+    const horaHilo=new Intl.DateTimeFormat('es-ES',{timeZone:'Europe/Madrid',day:'2-digit',month:'2-digit',hour:'2-digit',minute:'2-digit'});
+    const shortName=name=>PEOPLE[name]||name;
+    const panelVisible=()=>!destroyed&&!doc.hidden&&!details.hidden&&details.getClientRects().length>0;
+    function stopShared(){if(sh.timer){clearTimeout(sh.timer);sh.timer=null;}if(sh.tic){clearInterval(sh.tic);sh.tic=null;}sh.again=false;}
+    function sharedChrome(){
+      for(const sel of ['[data-chat-attach]','[data-chat-routines]','[data-chat-stop]','[data-chat-screen]','.council-chat__native'])if($(sel))$(sel).hidden=true;
+      const scope=$('.council-chat__scope');if(scope)scope.textContent=SCOPE_HILO;
+      const limits=$('.council-chat__limits');if(limits)limits.textContent=LIMITS_HILO;
+      const node=$('.council-chat__connection');node.textContent=sh.auth?'· Hilo compartido con Grok Bot':'· Hilo privado · entra con Google';node.title='GET /api/chat/hilo · POST /api/chat/enviar';
+    }
+    function startShared(epoch){
+      sh.epoch=epoch;sh.turnos=[];sh.locales=[];sh.firma='';sh.loaded=false;sh.seen=new Set();sh.auth=true;
+      sharedChrome();render();say('Cargando la conversación con '+selected+' (la misma que en Grok Bot)…');
+      sharedRefresh();return Promise.resolve(true);
+    }
+    function askSignin(message){
+      stopShared();sh.auth=false;sharedChrome();const box=signinBox();box.hidden=false;log.replaceChildren();sh.firma='';
+      box.err.hidden=!message;box.err.textContent=message||'';
+      say('Entra con tu cuenta de Google para ver la conversación con '+selected+'.');
+    }
+    function sharedSchedule(){
+      clearTimeout(sh.timer);sh.timer=null;
+      if(destroyed||!sharedOf(selected)||!sh.auth)return;
+      // Fuera de vista (otra pestaña del panel o pestaña del navegador oculta) no se pide nada.
+      const wait=hilo.intervaloSondeo(hilo.fundir(sh.turnos,sh.locales).turnos,Date.now());
+      sh.timer=setTimeout(()=>{sh.timer=null;if(panelVisible())sharedRefresh();else sharedSchedule();},panelVisible()?wait:hilo.RAPIDO_MS);
+    }
+    function sharedRefresh(){
+      const name=selected,persona=sharedOf(name),epoch=selectedEpoch;
+      if(!persona||destroyed)return Promise.resolve();
+      if(sh.busy){sh.again=true;return Promise.resolve();}
+      clearTimeout(sh.timer);sh.timer=null;
+      if(!hilo.credencial()){askSignin('');return Promise.resolve();}
+      sh.busy=true;
+      return hilo.leerHilo(persona,{fetch:request}).then(r=>{
+        if(!current(epoch))return;
+        if(r.status===401){askSignin('Tu sesión no está autorizada o ha caducado. Vuelve a entrar.');return;}
+        if(!r.ok){say('No se pudo leer el hilo compartido. Se reintentará.');return;}
+        sh.auth=true;if(signin)signin.hidden=true;sharedChrome();
+        const first=!sh.loaded;sh.turnos=r.turnos;sh.loaded=true;
+        for(const t of r.turnos){
+          if(t.rol!=='carlos'&&!sh.seen.has(t.id)&&!first)options.onAnswer?.({persona:name,text:String(t.texto||''),messageId:t.id,status:'done',source:'hilo',native:true});
+          sh.seen.add(t.id);
+        }
+        render();
+        if(first)say('Conversación con '+name+': es la misma que en Grok Bot. Escribe y pulsa Enviar.');
+      }).catch(()=>{if(current(epoch))say('Sin conexión con el hilo compartido. Se reintentará.');})
+      .finally(()=>{sh.busy=false;if(!current(epoch))return;if(sh.again){sh.again=false;sharedRefresh();}else sharedSchedule();});
+    }
+    function renderShared(follow,oldTop){
+      const m=hilo.fundir(sh.turnos,sh.locales);sh.locales=m.locales;
+      if(!sh.auth)return;
+      const typingText=hilo.textoEscribiendo(m.turnos,Date.now(),shortName(selected));
+      if(m.firma!==sh.firma||!log.childElementCount){
+        sh.firma=m.firma;log.replaceChildren();
+        if(!m.turnos.length){
+          const p=doc.createElement('p');
+          p.textContent=sh.loaded?'Aún no hay mensajes. Esta conversación es la misma que en Grok Bot: escribe y pulsa Enviar; '+selected+' te contesta aquí.':'Cargando la conversación…';
+          log.append(p);
+        }
+        for(const t of m.turnos){
+          const carlos=t.rol==='carlos';
+          const item=doc.createElement('article');item.className='council-chat__turn council-chat__hilo '+(carlos?'council-chat__hilo--carlos':'council-chat__hilo--persona');
+          const body=doc.createElement('p');body.className=carlos?'council-chat__user':'council-chat__reply';
+          const who=doc.createElement('strong');who.textContent=carlos?'Tú':selected;body.append(who);appendText(body,String(t.texto||''));item.append(body);
+          const meta=doc.createElement('span');meta.className='council-chat__meta';
+          const ts=Date.parse(t.ts);meta.textContent=Number.isFinite(ts)?horaHilo.format(new Date(ts)):'';
+          const tag=doc.createElement('span');tag.className='council-chat__origen council-chat__origen--'+String(t.origen||'').replace(/[^a-z]/g,'');tag.textContent=hilo.ORIGEN[t.origen]||t.origen||'';meta.append(tag);
+          const est=hilo.textoEstado(t,shortName(selected));if(est){const e=doc.createElement('span');e.className='council-chat__estado';e.textContent=' · '+est;meta.append(e);}
+          item.append(meta);log.append(item);
+        }
+      }
+      let node=sh.typingNode&&log.children&&[...log.children].includes(sh.typingNode)?sh.typingNode:null;
+      if(!typingText){node?.remove();if(sh.tic){clearInterval(sh.tic);sh.tic=null;}}
+      else{
+        if(!node){
+          node=doc.createElement('article');node.className='council-chat__turn council-chat__hilo council-chat__hilo--persona council-chat__typing-hilo';
+          const reply=doc.createElement('p');reply.className='council-chat__reply council-chat__typing';
+          const txt=doc.createElement('span');txt.className='council-chat__typing-text';
+          const dots=doc.createElement('span');dots.className='council-chat__dots';for(let i=0;i<3;i++){const d=doc.createElement('i');d.textContent='.';dots.append(d);}
+          reply.append(txt,dots);node.append(reply);node.typingText=txt;sh.typingNode=node;
+        }
+        if(log.lastElementChild!==node)log.append(node);
+        node.typingText.textContent=typingText;
+        if(!sh.tic)sh.tic=setInterval(()=>{if(sharedOf(selected))renderShared(false,log.scrollTop);else{clearInterval(sh.tic);sh.tic=null;}},1000);
+      }
+      log.scrollTop=follow?log.scrollHeight:oldTop;
+    }
+    function sharedSend(persona,prompt){
+      const name=persona,api_persona=sharedOf(persona),epoch=selectedEpoch,texto=String(prompt||'').trim();
+      if(!texto)return Promise.resolve(false);
+      if(sh.sending){say('El mensaje anterior aún se está enviando.');return Promise.resolve(false);}
+      if(!hilo.credencial()){askSignin('Entra con Google para enviar; tu texto se conserva.');return Promise.resolve(false);}
+      const id=hilo.nuevoId();
+      const local={id,rol:'carlos',origen:'live',texto,ts:new Date().toISOString(),entrega:'enviando'};
+      sh.locales.push(local);sh.sending=true;syncPending();sh.firma='';render();log.scrollTop=log.scrollHeight;say('Enviando a '+name+'…');
+      let accepted=true;
+      return hilo.enviarTurno(api_persona,texto,id,{fetch:request}).then(x=>{
+        if(x.status===401){accepted=false;sh.locales=sh.locales.filter(l=>l!==local);if(current(epoch))askSignin('Tu sesión ha caducado. Vuelve a entrar; el mensaje no se envió.');return;}
+        local.entrega=x.turno&&x.turno.entrega?x.turno.entrega:'error';local.encargo=x.turno&&x.turno.encargo;
+        if(local.entrega==='error'){accepted=false;sh.locales=sh.locales.filter(l=>l!==local);if(current(epoch))say('No se pudo enviar a '+name+'. Tu texto se conserva.');}
+        else if(current(epoch))say('Enviado a '+name+' · mismo hilo que en Grok Bot.');
+      }).catch(()=>{local.entrega='sin_confirmar';if(current(epoch))say('Envío sin confirmar · revisa el hilo antes de repetir.');})
+      .then(()=>{sh.sending=false;syncPending();if(current(epoch)){sh.firma='';render();sharedRefresh();}return accepted;});
+    }
+    doc.addEventListener?.('visibilitychange',()=>{if(!doc.hidden&&sharedOf(selected)&&sh.auth&&!sh.busy)sharedRefresh();});
     function renderAttachments(){
       const node=$('.council-chat__attachments');if(!node)return;
       node.replaceChildren();const files=attachments.get(selected)||[];node.hidden=!files.length;
@@ -340,6 +476,7 @@
     }
     async function attachDataURL(dataURL,name='imagen.png',type){
       const persona=selected,epoch=selectedEpoch;
+      if(sharedOf(persona)){say('El hilo compartido con '+persona+' admite solo texto.');return false;}
       if(!persona||pendingSends.has(persona)||uploading.has(persona))return false;
       if((attachments.get(persona)||[]).length){say('Quita el adjunto actual antes de añadir otro.');return false;}
       const match=/^data:([^;,]*);base64,([A-Za-z0-9+/=]+)$/.exec(dataURL||'');
@@ -404,7 +541,7 @@
     });
     $('[data-chat-refresh]').addEventListener('click',()=>refresh());
     $('[data-chat-screen]').addEventListener('click',()=>options.onDesktop?.({persona:selected,capabilities}));
-    return {select,send,refresh,attachDataURL,hasAttachments:persona=>(attachments.get(persona)||[]).length>0,has:persona=>Boolean(PEOPLE[persona]),openHistory(){if(destroyed)return;details.open=true;options.onOpenHistory?.();details.scrollIntoView({block:'nearest',behavior:'smooth'});},isPending,get selected(){return selected;},get capabilities(){return capabilities;},destroy(){destroyed=true;selectedEpoch++;clearTimeout(pollTimer);pollTimer=null;for(const ctl of requests)ctl.abort();requests.clear();details.remove();}};
+    return {select,send,refresh,attachDataURL,hasAttachments:persona=>(attachments.get(persona)||[]).length>0,has:persona=>Boolean(PEOPLE[persona]),openHistory(){if(destroyed)return;details.open=true;options.onOpenHistory?.();details.scrollIntoView({block:'nearest',behavior:'smooth'});},isPending,get selected(){return selected;},get capabilities(){return capabilities;},destroy(){destroyed=true;selectedEpoch++;stopShared();clearTimeout(pollTimer);pollTimer=null;for(const ctl of requests)ctl.abort();requests.clear();details.remove();}};
   }
   root.CouncilGrokBot={mount,PEOPLE,FULL,reconcile,terminal,LABELS};
 })(typeof window!=='undefined'?window:globalThis);

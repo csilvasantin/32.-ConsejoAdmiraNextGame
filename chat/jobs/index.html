@@ -66,54 +66,19 @@
     <button type="submit" id="boton">Enviar</button>
   </div>
 </form>
+<script src="/assets/chat-hilo-client.js?v=r7"></script>
 <script>
 (function () {
   "use strict";
   var PERSONA = "jobs", NOMBRE = "Steve Jobs";
-  /*sondeo:inicio*/
-  // Sondeo adaptativo: 2 s mientras el último turno es de Carlos sin respuesta posterior
-  // (hasta 3 min), 10 s en reposo. El indicador «escribiendo…» se muestra hasta 30 min.
-  var RAPIDO_MS = 2000, REPOSO_MS = 10000, VENTANA_RAPIDA_MS = 180000, VENTANA_ESCRIBIENDO_MS = 1800000;
-  function esperaDesde(turnos) {
-    var u = turnos && turnos.length ? turnos[turnos.length - 1] : null;
-    if (!u || u.rol !== "carlos" || u.entrega === "error") return null;
-    var t = Date.parse(u.ts);
-    return isNaN(t) ? null : t;
-  }
-  function intervaloSondeo(turnos, ahora) {
-    var d = esperaDesde(turnos);
-    return d !== null && ahora - d < VENTANA_RAPIDA_MS ? RAPIDO_MS : REPOSO_MS;
-  }
-  function textoEscribiendo(turnos, ahora) {
-    var d = esperaDesde(turnos);
-    if (d === null || ahora - d >= VENTANA_ESCRIBIENDO_MS) return "";
-    var s = Math.max(0, Math.floor((ahora - d) / 1000));
-    return "Jobs está escribiendo… · " + (s < 60 ? s + " s" : Math.floor(s / 60) + " min " + String(s % 60).padStart(2, "0") + " s");
-  }
-  /*sondeo:fin*/
-  var CLIENT_ID = "861856772040-e1ri6kpu6maagtb6crdfbb923hsaalgb.apps.googleusercontent.com";
-  var CLAVE = "chat-hilo-google";
-  var ORIGEN = { app: "App", live: "admira.live", rutina: "rutina" };
+  // Lógica y red compartidas con el panel «Conversación» de la home: /assets/chat-hilo-client.js
+  var C = window.ChatHiloClient;
+  var RAPIDO_MS = C.RAPIDO_MS, REPOSO_MS = C.REPOSO_MS;
+  var intervaloSondeo = C.intervaloSondeo, textoEscribiendo = C.textoEscribiendo;
+  var CLAVE = C.CLAVE, ORIGEN = C.ORIGEN, credencial = C.credencial, guardar = C.guardar;
   var $ = function (id) { return document.getElementById(id); };
   var hora = new Intl.DateTimeFormat("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
   var temporizador = null, activo = false, enCurso = false, otraVez = false, ultimaSalud = 0, tic = null, firmaPintada = "", ultimosTurnos = [], locales = [];
-  var ESTADO = { enviando: "enviando…", entregado: "entregado", error: "error", sin_confirmar: "sin confirmar" };
-
-  function credencial() {
-    try {
-      var d = JSON.parse(sessionStorage.getItem(CLAVE) || "null");
-      if (d && d.jwt && d.exp * 1000 > Date.now() + 60000) return d.jwt;
-    } catch (e) {}
-    sessionStorage.removeItem(CLAVE);
-    return "";
-  }
-  function guardar(jwt) {
-    try {
-      var p = JSON.parse(atob(jwt.split(".")[1].replace(/-/g, "+").replace(/_/g, "/")));
-      sessionStorage.setItem(CLAVE, JSON.stringify({ jwt: jwt, exp: p.exp }));
-    } catch (e) {}
-  }
-
   function pintarSalud(s) {
     var caja = $("salud"), txt = $("salud-texto");
     if (!s || !s.ok) { caja.className = ""; txt.textContent = "Salud del hilo no disponible."; return; }
@@ -159,14 +124,8 @@
       meta.appendChild(document.createTextNode((esCarlos ? "Carlos" : NOMBRE) + " · " + hora.format(new Date(t.ts))));
       var ins = document.createElement("span"); ins.className = "insignia " + t.origen; ins.textContent = ORIGEN[t.origen] || t.origen;
       meta.appendChild(ins);
-      if (esCarlos && t.origen === "live" && t.entrega) {
-        var est = document.createElement("span"); est.className = "estado " + t.entrega;
-        var txt = ESTADO[t.entrega] || t.entrega;
-        if (t.encargo) txt += " · encargo #" + t.encargo;
-        if (t.encargo_estado === "done") txt += " · respondido";
-        else if (t.encargo_estado === "ack" || t.encargo_estado === "in_progress") txt += " · Jobs trabajando";
-        est.textContent = txt; meta.appendChild(est);
-      }
+      var estado = C.textoEstado(t);
+      if (estado) { var est = document.createElement("span"); est.className = "estado " + t.entrega; est.textContent = estado; meta.appendChild(est); }
       art.appendChild(b); art.appendChild(meta); log.appendChild(art);
     });
     pintarEscribiendo();
@@ -194,19 +153,7 @@
     activo = false; clearTimeout(temporizador); temporizador = null; clearInterval(tic); tic = null;
     $("hilo").hidden = true; $("pie").hidden = true; $("enviar").hidden = true; $("acceso").hidden = false;
     var e = $("acceso-error"); e.hidden = !msg; e.textContent = msg || "";
-    if (window.google && google.accounts && google.accounts.id) return iniciarGoogle();
-    var s = document.createElement("script"); s.src = "https://accounts.google.com/gsi/client"; s.async = true; s.defer = true;
-    s.onload = iniciarGoogle;
-    s.onerror = function () { e.hidden = false; e.textContent = "No se pudo cargar el login de Google."; };
-    document.head.appendChild(s);
-  }
-  function iniciarGoogle() {
-    google.accounts.id.initialize({
-      client_id: CLIENT_ID, auto_select: true, cancel_on_tap_outside: false,
-      callback: function (r) { if (r && r.credential) { guardar(r.credential); arrancar(); } }
-    });
-    google.accounts.id.renderButton($("gbtn"), { theme: "filled_black", size: "large", text: "signin_with", shape: "pill", width: 240 });
-    google.accounts.id.prompt();
+    C.cargarGoogle($("gbtn"), arrancar, function (m) { e.hidden = false; e.textContent = m; });
   }
 
   function programar() {
@@ -272,8 +219,7 @@
   });
   $("enviar").addEventListener("submit", function (e) { e.preventDefault(); enviar(); });
   $("salir").addEventListener("click", function () {
-    sessionStorage.removeItem(CLAVE); firmaPintada = ""; $("hilo").replaceChildren();
-    try { google.accounts.id.disableAutoSelect(); } catch (e) {}
+    C.salirGoogle(); firmaPintada = ""; $("hilo").replaceChildren();
     pedirAcceso("");
   });
   document.addEventListener("visibilitychange", function () {

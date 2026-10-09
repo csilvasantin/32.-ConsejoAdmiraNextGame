@@ -97,7 +97,7 @@ raiz, sello = pathlib.Path(sys.argv[1]), sys.argv[2]
 version = sello.lstrip("v.").replace(":", "")
 # admira-idioma.js (05-10-2026): la home lo enlaza; las subpáginas lo piden desde admira-bar.js
 # con el mismo ?v= de la barra, así que basta con sellar aquí su referencia de la home.
-ASSETS = ("admira-bar.js", "casa-nav.css", "admira-idioma.js")
+ASSETS = ("admira-bar.js", "casa-nav.css", "admira-idioma.js", "auth-gate.js", "live-demo-lectura.js", "fleet-mesh.js")
 rx = re.compile(r'((?:src|href)=")([^"]*(?:%s))(?:\?[^"]*)?(")'
                 % "|".join(a.replace(".", r"\.") for a in ASSETS))
 tocados = sellados = 0

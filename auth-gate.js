@@ -312,10 +312,97 @@
     };
     (document.head || document.documentElement).appendChild(s);
   }
-  // Una cookie válida desbloquea sin exponer el token a JavaScript. Si no existe,
-  // se monta el login interactivo; nunca se lanza One Tap/FedCM silencioso.
+  // Botones que disparan /api/run, /api/action o un mando equivalente.
+  // En solo lectura se apagan; el login de persona no entra por aquí.
+  var ACTION_SEL = "#csRun,#acNow,#hackOpen,#dsPreflight,#dsAll,#dsStop,#fleetScreens,#fleetPowerOff,#fleetPowerOn,#ssToggle,#playersStandby,#msgAll,#fixAll,#crtCopy,#crtPaste,#crtCtl,#batchSend,#carbCliSend,button[data-a],button[data-fix],button[data-cmd],button[data-dsa],button[data-st],button[data-take],button.cd-adj,button.modo-opt";
+  var soloLectura = false;
+
+  function sesionAgenteLectura(d) {
+    return !!(d && d.ok === true && d.agent === true && d.readOnly === true);
+  }
+  function sesionPersona(d) {
+    return !!(d && d.ok === true && d.csrf && d.agent !== true);
+  }
+  function congelarAcciones() {
+    if (!soloLectura) return;
+    var nodes = document.querySelectorAll(ACTION_SEL);
+    for (var i = 0; i < nodes.length; i++) {
+      var b = nodes[i];
+      if (b.getAttribute("data-admira-ro") === "1" && b.disabled) continue;
+      b.disabled = true;
+      b.setAttribute("aria-disabled", "true");
+      b.setAttribute("data-admira-ro", "1");
+      var titulo = b.getAttribute("title") || "";
+      if (titulo.indexOf("solo lectura") < 0) b.setAttribute("title", (titulo ? titulo + " · " : "") + "solo lectura");
+    }
+  }
+  function entrarAgente(d) {
+    // Sin csrf: un agente no recibe credencial de escritura.
+    gateCsrf = "";
+    gateUser = {
+      email: String(d.email || "").toLowerCase(),
+      name: String(d.name || "agente"),
+      agent: true,
+      readOnly: true
+    };
+    ready(function () { unlock(); modoSoloLectura(); });
+  }
+  function modoSoloLectura() {
+    if (soloLectura) { congelarAcciones(); return; }
+    soloLectura = true;
+    var name = (gateUser && gateUser.name) || "agente";
+    document.documentElement.classList.add("admira-agent-readonly");
+    document.documentElement.setAttribute("data-admira-agent", name);
+    if (!document.getElementById("admira-ro-style")) {
+      var st = document.createElement("style");
+      st.id = "admira-ro-style";
+      st.textContent = "html.admira-agent-readonly [data-admira-ro='1']{opacity:.45;cursor:not-allowed!important}";
+      (document.head || document.documentElement).appendChild(st);
+    }
+    var pill = document.getElementById("tokenPill");
+    if (pill) {
+      pill.textContent = "👁 " + name + " · solo lectura";
+      pill.title = "Sesión de agente, solo lectura";
+    }
+    congelarAcciones();
+    var obs = new MutationObserver(function () { congelarAcciones(); });
+    obs.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["disabled"] });
+    document.addEventListener("click", function (e) {
+      if (!soloLectura) return;
+      var n = e.target && e.target.closest && e.target.closest(ACTION_SEL);
+      if (!n) return;
+      e.preventDefault();
+      e.stopPropagation();
+      e.stopImmediatePropagation();
+    }, true);
+    document.addEventListener("keydown", function (e) {
+      if (!soloLectura || e.key !== "Enter" || e.isComposing) return;
+      var t = e.target;
+      if (!t || t.id !== "csCmd") return;
+      if (/^\/?demo\s+(lectura|verja|agente|solo[- ]lectura|readonly)\b/i.test(String(t.value || "").trim())) return;
+      e.preventDefault();
+      e.stopImmediatePropagation();
+    }, true);
+    try {
+      window.dispatchEvent(new CustomEvent("admira:sesion", { detail: { agent: true, readOnly: true, name: name } }));
+    } catch (err) {}
+  }
+
+  // Una cookie válida desbloquea sin exponer el token a JavaScript.
+  // Persona: hace falta csrf. Agente: solo si agent && readOnly, y sin csrf.
+  // Si no hay sesión, se monta el login de Google. Nunca One Tap/FedCM silencioso.
   fetch(AUTH_API + "/auth/session", { credentials:"include", cache:"no-store" })
-    .then(function(r){return r.ok?r.json():null;})
-    .then(function(d){if(d&&d.ok&&d.csrf){gateCsrf=String(d.csrf);gateUser={email:String(d.email||"").toLowerCase()};ready(unlock);}else loadGoogle();})
+    .then(function (r) { return r.ok ? r.json() : null; })
+    .then(function (d) {
+      if (sesionAgenteLectura(d)) { entrarAgente(d); return; }
+      if (d && d.ok === true && d.agent === true) { loadGoogle(); return; }
+      if (sesionPersona(d)) {
+        gateCsrf = String(d.csrf);
+        gateUser = { email: String(d.email || "").toLowerCase(), agent: false, readOnly: false };
+        ready(unlock);
+        return;
+      }
+      loadGoogle();
+    })
     .catch(loadGoogle);
 })();

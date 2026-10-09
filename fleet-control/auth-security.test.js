@@ -68,6 +68,9 @@ test('CORS, mutaciones, logout y CSP fallan cerrados', () => {
   assert.match(server, /sessionMutationError/);
   assert.match(csrf, /csrf inválido/);
   assert.match(mesh, /X-Fleet-CSRF/);
+  assert.match(mesh, /agente sin lectura/);
+  assert.match(mesh, /solo lectura/);
+  assert.match(gate, /sesionAgenteLectura/);
   assert.match(server, /\/api\/auth\/logout/);
   assert.match(server, /clearSessionCookie\(res\)/);
   assert.match(server, /_sessionRegistry\.revoke/);

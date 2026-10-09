@@ -4,6 +4,8 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Misiones · AdmiraNeXT</title>
+<script src="/auth-gate.js?v=20261009-r10-lectura"></script>
+<script src="/assets/live-demo-lectura.js?v=20261009-r10-lectura"></script>
 <script src="/admira-bar.js?v=20260918-r38"></script>
 <script src="https://accounts.google.com/gsi/client" async></script>
 <style>
@@ -283,7 +285,9 @@
       ts.sort(function(a,b){ var oa=order[a.status]==null?9:order[a.status], ob=order[b.status]==null?9:order[b.status]; return oa-ob || (a.id-b.id); });
       var yo=yoName(), canW=!!cred();
       var open=ts.filter(function(t){return t.status!=='done';});
-      var c=document.getElementById('tabCount'); if(c) c.textContent='· '+open.length+' abiertas'+(canW?'':' · entra con Google para editar');
+      var c=document.getElementById('tabCount');
+      var solo=document.documentElement.classList.contains('admira-agent-readonly');
+      if(c) c.textContent='· '+open.length+' abiertas'+(canW?'':(solo?' · solo lectura':' · entra con Google para editar'));
       if(!ts.length){ box.innerHTML='<div class="empty">Sin tareas en el tablero.</div>'; return; }
       var acts=function(t){
         if(!canW) return '';

@@ -12,15 +12,18 @@ export const VENTANA_LATIDO_S = 120;
 export const CPU_MIN = 5;
 export const CONSEJEROS_GROK = ["Jobs", "Wozniak", "Lucas", "Disney", "Musk", "Huang"];
 // Retratos: recortes de las ilustraciones del Consejo (mismas coordenadas que consejero.html, solo la cabeza).
+// «cara»: recorte cuadrado (en píxeles) centrado en la cara, en % de la imagen. Leyendas 1360×768: cabeza = parte alta del
+// recorte de cuerpo de consejero.html. Coetáneos 1280×720: Musk y Huang recalibrados a ojo sobre la imagen (r29).
+const cabeza = (c) => ({ l: c.l, t: c.t, w: c.w, h: +(c.h * 0.42).toFixed(2) });
 export const RETRATOS = {
-  Jobs: { img: "/assets/council-leyendas.jpg", crop: { l: 7, t: 44, w: 7, h: 17 } },
-  Wozniak: { img: "/assets/council-leyendas.jpg", crop: { l: 18, t: 36, w: 8, h: 21 } },
-  Disney: { img: "/assets/council-leyendas.jpg", crop: { l: 55, t: 27, w: 8, h: 26 } },
-  Lucas: { img: "/assets/council-leyendas.jpg", crop: { l: 88, t: 41, w: 9, h: 17 } },
-  Musk: { img: "/assets/council-coetaneos.jpg", crop: { l: 7, t: 44, w: 7, h: 17 } },
-  Huang: { img: "/assets/council-coetaneos.jpg", crop: { l: 18, t: 36, w: 8, h: 21 } },
+  Jobs: { img: "/assets/council-leyendas.jpg", cara: cabeza({ l: 7, t: 44, w: 7, h: 17 }) },
+  Wozniak: { img: "/assets/council-leyendas.jpg", cara: cabeza({ l: 18, t: 36, w: 8, h: 21 }) },
+  Disney: { img: "/assets/council-leyendas.jpg", cara: cabeza({ l: 55, t: 27, w: 8, h: 26 }) },
+  Lucas: { img: "/assets/council-leyendas.jpg", cara: cabeza({ l: 88, t: 41, w: 9, h: 17 }) },
+  Musk: { img: "/assets/council-coetaneos.jpg", cara: { l: 9, t: 44, w: 9, h: 16 } },
+  Huang: { img: "/assets/council-coetaneos.jpg", cara: { l: 21.65, t: 44.5, w: 8.5, h: 15.1 } },
 };
-const AVATARES = { neo: "/avatars/neo.jpg", trinity: "/avatars/trinity.jpg", morfeo: "/avatars/morfeo.jpg", smith: "/avatars/smith.jpg" };
+const AVATARES = { neo: "/avatars/neo.jpg", trinity: "/avatars/trinity.jpg", morfeo: "/avatars/morfeo.jpg", smith: "/avatars/smith.jpg", oraculo: "/avatars/oraculo.png" };
 const CANON = ["Jobs", "Wozniak", "Lucas", "Disney", "Musk", "Huang", "Neo", "Trinity", "Morfeo", "Oráculo", "Smith", "Niobe", "Cypher", "Merovingio", "Link", "Grok Bot"];
 
 const sinTilde = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -91,17 +94,22 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
     const ultimo = Math.max(l ? Number(l.declared_updated || l.updated) || 0 : 0, ultPulso);
     // Manda el pulso si está quemando tokens o es más reciente que el último latido (Neo: latido viejo del MBP14, pulso del MBP16).
     const enPulso = !!(p && (Number(p.tokHora) > 0 || ultPulso > (l ? Number(l.declared_updated || l.updated) || 0 : 0)));
+    // Gris: «hace X» y máquina salen de la MISMA fuente, la más fresca de latido / proceso / pulso de tokens.
+    let fresca = null;
+    for (const e of x.latidos) { const ts = Number(e.declared_updated || e.updated) || 0; if (ts && (!fresca || ts > fresca.ts)) fresca = { ts, maquina: e.machine || null, fuente: e.source || "heartbeat" }; }
+    if (ultPulso && (!fresca || ultPulso > fresca.ts)) fresca = { ts: ultPulso, maquina: (p && p.maquina) || null, fuente: "pulso" };
+    const gris = st.estado === "gris" && fresca;
     const motor = p && p.motor ? (p.motor === "claude" ? "Claude Code" : p.motor === "codex" ? "Codex" : p.motor) : (l && l.runtime) || null;
     const r = RETRATOS[x.agente];
     out.push({
       agente: x.agente, estado: st.estado, motivo: st.motivo,
-      maquina: (enPulso && p.maquina) || (l && l.machine) || (p && p.maquina) || (pf && pf.maquina) || null,
+      maquina: (gris && fresca.maquina) || (enPulso && p.maquina) || (l && l.machine) || (p && p.maquina) || (pf && pf.maquina) || null,
       motor, modelo: (l && l.model) || (pf && pf.modelo) || null,
       foco: limpio(l && l.focus), tarea: limpio(l && l.task, 120),
       proyecto: (enPulso && p.proyectoAhora) || (l && l.project) || (p && p.proyectoAhora) || null,
       encargo: encargoDe(l && l.task, l && l.focus),
       tokHora: p && p.tokHora != null ? p.tokHora : null, tokHoy: p ? p.tokHoy || 0 : null,
-      haceS: ultimo ? Math.max(0, ahoraS - ultimo) : null, fuente: l ? l.source : (p ? "pulso" : null),
+      haceS: gris ? Math.max(0, ahoraS - fresca.ts) : ultimo ? Math.max(0, ahoraS - ultimo) : null, fuente: gris ? fresca.fuente : l ? l.source : (p ? "pulso" : null),
       maquinas: [...new Set(x.latidos.map((e) => e.machine).filter(Boolean))],
       retrato: r ? r : (AVATARES[sinTilde(x.agente)] ? { img: AVATARES[sinTilde(x.agente)] } : null),
       consejero: CONSEJEROS_GROK.includes(x.agente),

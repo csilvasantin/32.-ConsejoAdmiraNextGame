@@ -20,9 +20,9 @@
   }
   function retrato(t) {
     var r = t.retrato, ini = esc(String(t.agente || '?').slice(0, 2));
-    if (r && r.crop) {
-      // Recorte de la ilustración del Consejo: solo la cabeza (40 % superior del cuerpo).
-      var c = r.crop, h = c.h * 0.42, w = c.w;
+    if (r && (r.cara || r.crop)) {
+      // Recorte de la cara en la ilustración del Consejo («cara» del servidor; «crop» antiguo = cuerpo → 42 % de arriba).
+      var c = r.cara || r.crop, h = r.cara ? c.h : c.h * 0.42, w = c.w;
       var sx = (10000 / w).toFixed(1), sy = (10000 / h).toFixed(1), px = (c.l / (100 - w) * 100).toFixed(2), py = (c.t / (100 - h) * 100).toFixed(2);
       return '<span class="tr-foto" role="img" aria-label="' + esc(t.agente) + '" style="background-image:url(\'' + esc(r.img) + '\');background-size:' + sx + '% ' + sy + '%;background-position:' + px + '% ' + py + '%"></span>';
     }

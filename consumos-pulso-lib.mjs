@@ -221,7 +221,10 @@ export function medirAgente(a, ahora) {
     const v = ventanaAgente(a, ahora);
     const tok60 = tokensEnVentana(serie, v.desde, v.hasta);
     return {
-      tokHora: !stale && serie.length >= 2 ? tok60 : null, tokUltimos5min: null, tokUltimos15min: null, tokUltimaHora: tok60,
+      // r39 (Carlos): datos con horas de retraso NO son «ahora»: tokHora = null (no cuentan en la velocidad de la flota,
+      // la aguja, el pronóstico del cuentakilómetros ni el verde de «Trabajando ahora»). La última hora con datos queda
+      // como tokHoraRetraso, solo informativa. Sus tokens de hoy SÍ cuentan en los totales.
+      tokHora: null, tokHoraRetraso: !stale && serie.length >= 2 ? tok60 : null, tokUltimos5min: null, tokUltimos15min: null, tokUltimaHora: tok60,
       ventanaMin: 60, stale, haceS: a.ultimoPulso ? Math.max(0, Math.round((ahora - a.ultimoPulso) / 1000)) : null,
       conRetraso: true, retrasoS: Math.max(0, Math.round((ahora - v.hasta) / 1000)), datosHasta: new Date(v.hasta).toISOString(),
     };
@@ -334,10 +337,11 @@ export function mezclar(yk, docs, ahora) {
   const medidos = porAgente.filter((a) => Number.isFinite(a.tokHora));
   if (!frescos.length && !yk) return { sinDatos: true, tokHora: null, porAgente, metodo: null, porProyecto: proyectosDePulso(docs, ahora).map((p) => ({ ...p, tokHora: null })), proyectoTop: null };
   const tokHora = medidos.reduce((s, a) => s + a.tokHora, 0);
+  const vivos = frescos.filter((a) => !a.conRetraso); // r39: solo fuentes en vivo para lo que es «ahora»
   const tokHoy = porAgente.reduce((s, a) => s + (Number(a.tokHoy) || 0), 0);
-  const suma = (k) => frescos.reduce((s, a) => s + (a[k] || 0), 0);
+  const suma = (k) => vivos.reduce((s, a) => s + (a[k] || 0), 0);
   const ultimo = frescos.reduce((m, a) => Math.max(m, Date.parse(a.ultimoPulso) || 0), 0);
-  const conSerie = pulso.filter((a) => !a.stale).map((a) => ({ serie: a._serie }));
+  const conSerie = pulso.filter((a) => !a.stale && !a.conRetraso).map((a) => ({ serie: a._serie }));
   const conRet = frescos.filter((a) => a.conRetraso);
   const etqRet = conRet.length ? " + Cursor (datos con ~" + Math.max(1, Math.round(Math.max(...conRet.map((a) => a.retrasoS || 0)) / 3600)) + " h de retraso)" : "";
   const picoRT = picoPulso(conSerie, ahora);
@@ -358,7 +362,7 @@ export function mezclar(yk, docs, ahora) {
     pico24h: frescos.length ? Math.max(picoRT || 0, Math.round(tokHora)) : (yk ? yk.pico24h : null),
     porProyecto: proys,
     proyectoTop: proys.length ? proys[0].proyecto : null,
-    agentesTiempoReal: frescos.length, agentesParados: pulso.filter((a) => a.stale).map((a) => a.agente),
+    agentesTiempoReal: vivos.length, agentesParados: pulso.filter((a) => a.stale).map((a) => a.agente),
     agentesConRetraso: conRet.map((a) => ({ agente: a.agente, retrasoS: a.retrasoS, datosHasta: a.datosHasta })), excluidosYokup,
   };
 }

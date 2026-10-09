@@ -88,12 +88,14 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
     const l = x.latidos[0] || null, p = x.pulso, pf = x.perfil || null;
     // Fuera: entradas del pulso sin tokens hoy, sin latido y sin perfil conocido (p. ej. «Anónimo»), salvo los consejeros.
     if (!x.latidos.length && !CONSEJEROS_GROK.includes(x.agente) && !(p && Number(p.tokHoy) > 0) && !pf) continue;
-    const st = estadoTrabajo({ tokHora: p ? p.tokHora : null, conCarlos: !!(p && p.conCarlos), latidos: x.latidos, ahoraS });
+    // r39: un pulso con retraso (Cursor) nunca pone en verde; los consejeros Grok, solo por su latido en vivo.
+    const tokVivo = p && !p.conRetraso ? p.tokHora : null;
+    const st = estadoTrabajo({ tokHora: tokVivo, conCarlos: !!(p && p.conCarlos), latidos: x.latidos, ahoraS });
     if (st.motivo === "sin latido" && p && Number(p.tokHoy) > 0) st.motivo = "parado";
     const ultPulso = p && p.ultimoEvento ? Math.floor(Date.parse(p.ultimoEvento) / 1000) : 0;
     const ultimo = Math.max(l ? Number(l.declared_updated || l.updated) || 0 : 0, ultPulso);
     // Manda el pulso si está quemando tokens o es más reciente que el último latido (Neo: latido viejo del MBP14, pulso del MBP16).
-    const enPulso = !!(p && (Number(p.tokHora) > 0 || ultPulso > (l ? Number(l.declared_updated || l.updated) || 0 : 0)));
+    const enPulso = !!(p && (Number(tokVivo) > 0 || ultPulso > (l ? Number(l.declared_updated || l.updated) || 0 : 0)));
     // Gris: «hace X» y máquina salen de la MISMA fuente, la más fresca de latido / proceso / pulso de tokens.
     let fresca = null;
     for (const e of x.latidos) { const ts = Number(e.declared_updated || e.updated) || 0; if (ts && (!fresca || ts > fresca.ts)) fresca = { ts, maquina: e.machine || null, fuente: e.source || "heartbeat" }; }

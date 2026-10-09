@@ -22,6 +22,9 @@
   if (lista) {
     Promise.all(TIPOS.map(function (t) { return pedir("tipo=" + t[0]).catch(function () { return {}; }); })).then(function (rs) {
       lista.innerHTML = rs.map(function (d, i) { return fila(TIPOS[i][1], d); }).join("");
+      // r37 (/consumos plegado): una línea con el elegido de cada tipo — «Código Neo · Web Neo · …».
+      var res = document.getElementById("orquestar-resumen");
+      if (res) res.innerHTML = rs.map(function (d, i) { var e = d.elegido; var n = e ? (e.persona || e.agente || String(e.motivo || "").split(":")[0]) : "nadie"; return esc(TIPOS[i][1]) + " <b>" + esc(n) + "</b>"; }).join(" · ");
       var g = document.getElementById("orquestar-generado");
       if (g && rs[0] && rs[0].generado) g.textContent = "Calculado " + new Date(rs[0].generado).toLocaleString("es-ES", { timeZone: "Europe/Madrid" }) + " (Madrid) · " + (rs[0].regla || "");
     });

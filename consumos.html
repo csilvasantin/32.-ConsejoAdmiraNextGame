@@ -234,6 +234,12 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
 .planes .ranking{padding:0}.planes.cu-zona .plg-sum{color:var(--mut)}.cu-zona.plg-abierto .plg-dentro{padding-top:4px}
 @media (min-width:561px){.gs-filas li{grid-template-columns:14px minmax(150px,260px) 110px minmax(0,1fr)}}.gs-uni{font-size:12.5px;color:var(--dim);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 .planes.gs-zona .plg-sum{color:var(--mut)}
+/* r37: «Lo urgente» y «¿A quién va la siguiente tarea?» plegables */
+.resumen.plg{padding:6px 6px 6px}.resumen.plg > .plg-h{margin-bottom:0}.resumen.plg .plg-dentro{padding:0 12px}.resumen.plg .plg-tit{color:#ffb4b4;font-size:15px}
+.resumen.plg .plg-sum{flex:1 1 0;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#ffd0d0}
+.resumen.plg .plg-boton:hover,.resumen.plg .plg-boton:focus-visible{border-color:rgba(255,90,90,.5)}
+.resumen.plg .plg-chev{border-color:rgba(255,140,140,.6);color:#ffb4b4}
+.planes.orq-zona .plg-sum{color:var(--mut)}.orq-zona .plg-sum b{color:var(--ink);font-weight:600}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
 .odo{display:flex;justify-content:center;gap:2px;margin:-14px auto 0;width:max-content;padding:4px 6px;background:linear-gradient(#000,#111 45%,#000);border:2px solid #3a4a52;border-radius:8px;box-shadow:inset 0 2px 6px rgba(0,0,0,.9),0 0 14px rgba(120,243,255,.12);position:relative;z-index:1}
 .odo-rueda{display:inline-block;width:1.05em;height:1.45em;overflow:hidden;background:linear-gradient(#1b1b1b,#f4f1e8 22%,#fffdf6 50%,#f4f1e8 78%,#1b1b1b);color:#111;border-radius:2px;font:700 clamp(15px,3.6vw,20px)/1.45em ui-monospace,SFMono-Regular,Menlo,Consolas,monospace;text-align:center}
@@ -329,14 +335,21 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
     <ul class="cu-filas plg-solo-cerrado" id="cuentas-filas" aria-label="Resumen por cuenta"></ul>
     <div class="plg-cuerpo" id="cuentas-cuerpo"><div class="plg-dentro"><div class="grid" id="cuentas"></div></div></div>
   </section>
-  <section class="orquestar" id="orquestar" style="background:#0a1620;border:1px solid rgba(120,243,255,.16);border-radius:16px;padding:14px 16px 4px;margin:0 0 18px">
-    <h2 style="font-size:15px;letter-spacing:.04em;text-transform:uppercase;color:#78f3ff;margin-bottom:8px">¿A quién va la siguiente tarea? <a href="/orquestar/" style="font-size:13px;text-transform:none">orquestador →</a></h2>
-    <ul id="orquestar-tipos" style="padding-left:18px;line-height:1.4"><li>Calculando…</li></ul>
-    <p class="nota" id="orquestar-generado" style="color:#4d7a88;font-size:13px;margin:6px 0 10px"></p>
+  <section class="planes orq-zona plg" id="orquestar" data-plegable="orquestar">
+    <h2 class="plg-h"><button type="button" class="plg-boton" aria-expanded="false" aria-controls="orquestar-cuerpo">
+      <span class="plg-fila"><span class="plg-tit">¿A quién va la siguiente tarea?</span><span class="plg-sum" id="orquestar-resumen">Calculando…</span><span class="plg-chev" aria-hidden="true"></span></span>
+    </button></h2>
+    <div class="plg-cuerpo" id="orquestar-cuerpo"><div class="plg-dentro">
+      <ul id="orquestar-tipos" style="padding-left:18px;line-height:1.4;margin:4px 0 0"><li>Calculando…</li></ul>
+      <p class="nota" id="orquestar-generado" style="color:#4d7a88;font-size:13px;margin:6px 0 4px"></p>
+      <p style="margin:0 0 6px;font-size:13px"><a href="/orquestar/">orquestador →</a></p>
+    </div></div>
   </section>
-  <section class="resumen" id="resumen" hidden>
-    <h2>Lo urgente</h2>
-    <ol id="lineas"></ol>
+  <section class="resumen plg" id="resumen" data-plegable="urgente" hidden>
+    <h2 class="plg-h"><button type="button" class="plg-boton" aria-expanded="false" aria-controls="urgente-cuerpo">
+      <span class="plg-fila"><span class="plg-tit">Lo urgente</span><span class="plg-sum" id="urgente-resumen"></span><span class="plg-chev" aria-hidden="true"></span></span>
+    </button></h2>
+    <div class="plg-cuerpo" id="urgente-cuerpo"><div class="plg-dentro"><ol id="lineas"></ol></div></div>
   </section>
   <section class="planes gs-zona plg" id="gasto" data-plegable="gasto">
     <h2 class="plg-h"><button type="button" class="plg-boton" aria-expanded="false" aria-controls="gasto-cuerpo">
@@ -381,6 +394,9 @@ function pinta(datos) {
   const resumen = document.getElementById("resumen");
   if (lineas.length) {
     document.getElementById("lineas").innerHTML = lineas.map((t) => "<li>" + esc(t) + "</li>").join("");
+    // r37: plegado = cuántos avisos + el primero recortado (el marco rojo se queda para que siga llamando la atención).
+    const ur = document.getElementById("urgente-resumen");
+    if (ur) { ur.textContent = lineas.length + (lineas.length === 1 ? " aviso · " : " avisos · ") + lineas[0]; ur.title = lineas.join("\n"); }
     resumen.hidden = false;
   }
   const plats = Array.isArray(datos.plataformas) ? datos.plataformas : [];
@@ -429,7 +445,7 @@ fetch("/consumos-plataformas.json", { cache: "no-store" })
 <script src="/assets/consumos-velocimetro.js?v=r36"></script>
 <script src="/assets/live-velocidad.js?v=r18-tiempo-real"></script>
 <script src="/consumos-lecturas.js?v=r35"></script>
-<script src="/orquestar-widget.js?v=r2-con-carlos"></script>
+<script src="/orquestar-widget.js?v=r37-r2-con-carlos"></script>
 <script src="/yk-frame.js?v=r33-min"></script>
 </body>
 </html>

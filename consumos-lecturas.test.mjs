@@ -278,3 +278,11 @@ test("r27: lectura SOLO DE TOKENS (Cursor Pro, sin %) — válida, fuera de las 
   assert.ok(c.nota && /Jobs/.test(c.nota));
   assert.equal(cs.find((x) => x.id === "leyendas").pct, 10);
 });
+
+test("r37 · ranking estrictamente por margen descendente (las rojas no bajan al final); la recomendación salta las rojas", async () => {
+  const { recomendarCuentas } = await import("./consumos-lecturas-lib.mjs");
+  const c = (id, margen, semaforo) => ({ id, nombre: id, pct: 100 - margen, margen, semaforo, cupoDia: null, proyeccion: null });
+  const r = recomendarCuentas([c("a", 61, "verde"), c("b", 73, "rojo"), c("c", 90, "verde"), c("d", 71, "rojo"), { id: "e", nombre: "e", pct: null, margen: null, semaforo: "sin" }]);
+  assert.deepEqual(r.ranking.map((x) => x.id), ["c", "b", "d", "a", "e"]);
+  assert.match(r.texto, /^Mover encargos pesados a c:/);
+});

@@ -161,6 +161,49 @@ test("tarjetas: manda el límite más alto; coetáneos sin lectura; recomendaci�
   assert.match(c[1].pista, /1 % el 4 de octubre/);
   const r = recomendarCuentas(c);
   assert.match(r.texto, /les sobra 73 %/);
-  assert.match(r.texto, /Sin lectura: Coetáneos, Cursor Pro/);
-  assert.deepEqual(r.ranking.map((x) => x.id), ["leyendas", "coetaneos", "cursor"]);
+  assert.match(r.texto, /Sin lectura: Coetáneos, Neo · Claude Code, Cursor Pro/);
+  assert.deepEqual(r.ranking.map((x) => x.id), ["leyendas", "coetaneos", "neo-claude", "cursor"]);
+});
+
+test("Neo · Claude Code: tarjeta propia, manda el semanal, la sesión de 5 h va de secundario y entra en el ranking", () => {
+  const ahora = Date.parse("2026-10-09T07:46:00Z");
+  const N = (ts, pct, agente, reset) => L(ts, pct, { cuenta: "Neo · Claude Max", grupo: "neo-claude", agente, reset });
+  const ls = [L("2026-10-09T03:58:00Z", 27, { agente: "SuperGrok Heavy semanal", reset: "2026-10-15T18:31:00.000Z" }),
+    N("2026-10-09T07:46:00Z", 9, "Claude Code semanal", "2026-10-11T13:00:00.000Z"),
+    N("2026-10-09T07:46:00Z", 0, "Claude Code sesión 5 h", "2026-10-09T12:10:00.000Z")];
+  const cs = resumirCuentas(ls, [], { ahora });
+  assert.deepEqual(cs.map((c) => c.id), ["leyendas", "coetaneos", "neo-claude", "cursor"]);
+  const neo = cs.find((c) => c.id === "neo-claude");
+  assert.equal(neo.nombre, "Neo · Claude Code");
+  assert.equal(neo.plan, "Claude Max (20x)");
+  assert.equal(neo.proveedor, "Claude");
+  assert.equal(neo.pct, 9);
+  assert.equal(neo.margen, 91);
+  assert.equal(neo.manda, "Claude Code semanal");
+  assert.equal(neo.reset, "2026-10-11T13:00:00.000Z"); // domingo 15:00 de Madrid
+  assert.equal(neo.cupoDia, Math.round((91 / ((Date.parse("2026-10-11T13:00:00Z") - ahora) / 864e5)) * 100) / 100);
+  assert.equal(neo.proyeccion.base, "semana");
+  assert.equal(neo.semaforo, "verde");
+  assert.deepEqual(neo.secundario, { agente: "Claude Code sesión 5 h", pct: 0, reset: "2026-10-09T12:10:00.000Z", ts: "2026-10-09T07:46:00.000Z" });
+  // la sesión de 5 h no manda aunque suba por encima del semanal
+  const alta = resumirCuentas([...ls, N("2026-10-09T07:50:00Z", 80, "Claude Code sesión 5 h", "2026-10-09T12:10:00.000Z")], [], { ahora: ahora + 5 * 60e3 }).find((c) => c.id === "neo-claude");
+  assert.equal(alta.manda, "Claude Code semanal");
+  assert.equal(alta.pct, 9);
+  assert.equal(alta.secundario.pct, 80);
+  // los demás no cambian
+  assert.equal(cs[0].manda, "SuperGrok Heavy semanal");
+  assert.equal(cs[0].proveedor, undefined);
+  const r = recomendarCuentas(cs);
+  assert.equal(r.ranking[0].id, "neo-claude");
+  assert.equal(r.ranking[0].proveedor, "Claude");
+  assert.match(r.ranking[0].nombre, /Claude Max de Neo, no Grok/);
+  assert.match(r.texto, /Mover encargos pesados a Neo · Claude Code \(Claude Max de Neo, no Grok\): les sobra 91 %/);
+  assert.equal(r.ranking[1].nombre, "Leyendas");
+});
+
+test("la página /consumos pinta la tarjeta de Neo (Claude) con su medidor secundario", () => {
+  const js = readFileSync(new URL("./consumos-lecturas.js", import.meta.url), "utf8");
+  assert.match(js, /c\.secundario/);
+  assert.match(js, /c\.proveedor/);
+  assert.ok(CUENTAS.some((c) => c.id === "neo-claude" && c.cuenta === "Neo · Claude Max" && c.principal === "Claude Code semanal"));
 });

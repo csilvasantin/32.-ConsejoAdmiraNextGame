@@ -130,3 +130,43 @@ export async function emailGoogle(request, env, fetchImpl = fetch, ahora = Date.
   cacheGoogle.set(jwt, { email, exp });
   return email;
 }
+
+// ── Entrega 2 (09-10-2026): enviar desde admira.live al consejero por el bot-inbox ──
+export const BOT_INBOX = "https://bot.yokup.com/api/bot-inbox";
+export const MARCA_CHAT = "[chat-coetaneos]";
+export const NOMBRES = { jobs: "Steve Jobs", wozniak: "Steve Wozniak", disney: "Walt Disney", lucas: "George Lucas", musk: "Elon Musk", huang: "Jensen Huang" };
+export const PERSONA_INBOX = { jobs: "Jobs", wozniak: "Wozniak", disney: "Disney", lucas: "Lucas", musk: "Musk", huang: "Huang" };
+export const idRespuesta = (encargo) => `enc-${Number(encargo)}-resp`;
+const corto = (t, n) => { const s = String(t || "").replace(/\s+/g, " ").trim(); return s.length > n ? s.slice(0, n - 1) + "…" : s; };
+
+/** Texto del encargo: marca [chat-coetaneos] (no sale a Ágora/Telegram), contexto del hilo e instrucciones. */
+export function textoEncargo(persona, turnos, turno, sitio = "https://www.admira.live") {
+  const nombre = NOMBRES[persona] || persona;
+  const previos = (turnos || []).filter((t) => t.id !== turno.id).slice(-6);
+  const contexto = previos.map((t) => `${t.rol === "carlos" ? "Carlos" : nombre} (${t.origen}): ${corto(t.texto, 220)}`);
+  const cabecera = `${MARCA_CHAT} Carlos Silva → ${nombre} · hilo compartido admira.live`;
+  const instruccion = `Lee el hilo ${sitio}/api/chat/hilo?persona=${persona} antes de contestar (hilo-jobs.sh leer 20) y responde EN EL HILO con rol ${persona}, origen rutina, msg_id enc-<número de este encargo>-resp (POST /api/chat/hilo). Cierra también este encargo con telegram_responder (done + la misma respuesta). Mensaje: msg_id ${turno.id}.`;
+  const pie = `Mensaje de Carlos Silva desde admira.live:\n${turno.texto}`;
+  let lineas = contexto;
+  const montar = () => [cabecera, "Contexto:", lineas.length ? lineas.join("\n") : "(sin historial)", instruccion, pie].join("\n");
+  while (montar().length > 3900 && lineas.length) lineas = lineas.slice(1);
+  let txt = montar();
+  if (txt.length > 3900) txt = txt.slice(0, 3899) + "…";
+  return txt;
+}
+
+/** Turnos de Carlos desde admira.live cuyo encargo aún no tiene respuesta en el hilo (máx. 3, últimas 72 h). */
+export function porSincronizar(turnos, persona, ahora = Date.now()) {
+  const ids = new Set((turnos || []).map((t) => t.id));
+  return (turnos || []).filter((t) => t.rol === "carlos" && t.origen === "live" && Number(t.encargo) > 0
+    && !ids.has(idRespuesta(t.encargo)) && !["done", "cancelled"].includes(t.encargo_estado)
+    && ahora - Date.parse(t.ts) < 72 * 3600 * 1000).slice(-3);
+}
+/** Respuesta del encargo (bot-inbox) → turno del consejero en el hilo, origen rutina. */
+export function turnoDeEncargo(persona, item, ahora = Date.now()) {
+  const texto = String(item && item.note || "").trim().slice(0, MAX_TEXTO);
+  if (!item || item.status !== "done" || !texto) return null;
+  let ts = Date.parse(String(item.done_at || item.updated_at || ""));
+  if (!Number.isFinite(ts)) { const n = Number(item.done_at || item.updated_at); ts = Number.isFinite(n) && n > 0 ? (n < 1e11 ? n * 1000 : n) : ahora; }
+  return { id: idRespuesta(item.id), persona, rol: persona, origen: "rutina", texto, ts: new Date(Math.min(ts, ahora)).toISOString(), recibido: new Date(ahora).toISOString(), encargo: Number(item.id), via: "bot-inbox" };
+}

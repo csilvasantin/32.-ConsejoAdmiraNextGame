@@ -13,6 +13,8 @@
 import { resumirCuentas } from "../../consumos-lecturas-lib.mjs";
 import { KEY as KEY_LECTURAS } from "./consumos/lecturas.js";
 import { inferirTipo, orquestar, LATIDO_VIVO_S } from "../../orquestar-lib.mjs";
+import { conCarlosDePulso } from "../../consumos-pulso-lib.mjs";
+import { leerPulsos } from "./consumos/pulso.js";
 
 export const PRESENCIA = "https://bot.yokup.com/api/presence";
 export const BANDEJA = "https://bot.yokup.com/api/public/inbox";
@@ -39,18 +41,20 @@ export async function onRequestGet({ request, env, fetchImpl }) {
   const texto = (url.searchParams.get("texto") || url.searchParams.get("text") || "").slice(0, 500);
   const { tipo, inferido } = inferirTipo((url.searchParams.get("tipo") || url.searchParams.get("type") || "").slice(0, 40), texto);
   const ahora = Date.now();
-  const [lecturas, pres, band] = await Promise.all([leerLecturas(env), leerJson(PRESENCIA, f), leerJson(BANDEJA, f)]);
+  const [lecturas, pres, band, docs] = await Promise.all([leerLecturas(env), leerJson(PRESENCIA, f), leerJson(BANDEJA, f), leerPulsos(kv(env)).catch(() => [])]);
+  const conCarlos = conCarlosDePulso(docs, ahora);
   const cuentas = lecturas ? resumirCuentas(lecturas, null, { ahora }).map(({ id, nombre, cuenta, margen, semaforo }) => ({ id, nombre, cuenta, margen, semaforo })) : [];
   const presencia = pres && Array.isArray(pres.presence) ? pres.presence : [];
   const bandeja = band && Array.isArray(band.items) ? band.items : [];
-  const r = orquestar({ tipo, cuentas, presencia, bandeja, ahora });
+  const r = orquestar({ tipo, cuentas, presencia, bandeja, ahora, conCarlos: conCarlos.map((x) => x.agente) });
   return new Response(JSON.stringify({
     ok: true, tipo: r.tipo, tipoInferido: inferido, texto: texto || null,
-    elegido: r.elegido, candidatos: r.candidatos, excluidos: r.excluidos,
-    regla: "aptitud (≥0,4) → libre (flota: latido <" + LATIDO_VIVO_S / 60 + " min y sin encargo ack/in_progress; consejeros GrokBot: se despiertan al recibir encargo, solo cuenta el encargo en curso) → más margen de uso; sin lectura de margen penaliza",
+    elegido: r.elegido, candidatos: r.candidatos, excluidos: r.excluidos, conCarlos,
+    regla: "aptitud (≥0,4) → libre (flota: latido <" + LATIDO_VIVO_S / 60 + " min y sin encargo ack/in_progress; consejeros GrokBot: se despiertan al recibir encargo, solo cuenta el encargo en curso) → más margen de uso; sin lectura de margen penaliza; quien está con Carlos queda excluido («ocupado con Carlos») salvo que no haya nadie más apto",
     fuentes: {
       margen: lecturas ? "consumos-lecturas (" + lecturas.length + " lecturas)" : "sin KV",
       presencia: pres ? "bot.yokup.com/api/presence (" + presencia.length + " filas)" : "no responde",
+      conCarlos: "pulso de cada Mac (/api/flota/con-carlos, " + conCarlos.length + " ahora)",
       encargos: band ? "bot.yokup.com/api/public/inbox (" + bandeja.length + " últimos)" : "no responde",
     },
     generado: new Date(ahora).toISOString(),

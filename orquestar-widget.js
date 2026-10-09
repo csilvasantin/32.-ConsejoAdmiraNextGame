@@ -4,13 +4,18 @@
   "use strict";
   var TIPOS = [["codigo", "Código"], ["web", "Web"], ["demo", "Demo"], ["investigacion", "Investigación"], ["consejo", "Consejo"], ["creativo", "Creativo"]];
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  var BADGE = ' <em class="con-carlos" title="Carlos está trabajando con este agente: no se le inyectan encargos">con Carlos</em>';
+  function conCarlos(d) {
+    var ex = (d.excluidos || []).filter(function (x) { return x.conCarlos; }).map(function (x) { return esc(x.persona) + BADGE; });
+    return ex.length ? ' · <small>excluido: </small>' + ex.join(", ") : "";
+  }
   function top3(d) {
     return (d.candidatos || []).slice(0, 3).map(function (c, i) {
-      return (i + 1) + ". " + esc(c.persona) + " <small>(" + (c.libre && c.libre.libre ? "libre" : "no libre") + ", " + (c.margenPct == null ? "margen ?" : Math.round(c.margenPct) + " %") + ", " + c.puntuacion + ")</small>";
+      return (i + 1) + ". " + esc(c.persona) + (c.conCarlos ? BADGE : "") + " <small>(" + (c.libre && c.libre.libre ? "libre" : "no libre") + ", " + (c.margenPct == null ? "margen ?" : Math.round(c.margenPct) + " %") + ", " + c.puntuacion + ")</small>";
     }).join(" · ");
   }
   function fila(etiqueta, d) {
-    return '<li><strong>' + esc(etiqueta) + ':</strong> ' + esc(d.elegido ? d.elegido.motivo : "nadie") + '<br><span class="orq-top">' + top3(d) + '</span></li>';
+    return '<li><strong>' + esc(etiqueta) + ':</strong> ' + esc(d.elegido ? d.elegido.motivo : "nadie") + '<br><span class="orq-top">' + top3(d) + conCarlos(d) + '</span></li>';
   }
   function pedir(q) { return fetch("/api/orquestar?" + q, { cache: "no-store" }).then(function (r) { return r.json(); }); }
   var lista = document.getElementById("orquestar-tipos");

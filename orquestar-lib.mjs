@@ -83,7 +83,19 @@ const fmt = (x) => String(Math.round(x)).replace(".", ",") + " %";
  * @param {number} p.ahora    ms
  * @param {Array} [p.personas]
  */
-export function orquestar({ tipo, cuentas = [], presencia = [], bandeja = [], ahora = Date.now(), personas = PERSONAS }) {
+export const OCUPADO_CON_CARLOS = "ocupado con Carlos";
+
+/** ¿La persona está ahora con Carlos? conCarlos = lista de nombres (agente del pulso) o Set. */
+export function estaConCarlos(cfg, conCarlos) {
+  const nombres = new Set([...(conCarlos || [])].map(plano));
+  return [cfg.persona, ...(cfg.alias || [])].some((n) => nombres.has(plano(n)));
+}
+
+/**
+ * @param {Array|Set} [p.conCarlos] agentes con los que Carlos trabaja ahora (pulso r20): se excluyen
+ *   («ocupado con Carlos») salvo que no quede ningún otro apto.
+ */
+export function orquestar({ tipo, cuentas = [], presencia = [], bandeja = [], ahora = Date.now(), personas = PERSONAS, conCarlos = [] }) {
   const ahoraS = Math.floor(ahora / 1000);
   const porId = new Map((cuentas || []).map((c) => [c.id, c]));
   const todos = personas.map((cfg) => {
@@ -92,28 +104,33 @@ export function orquestar({ tipo, cuentas = [], presencia = [], bandeja = [], ah
     const apto = aptitud(cfg.perfil, tipo);
     const lat = ultimoLatido(cfg, presencia);
     const enCurso = encargosEnCurso(cfg, bandeja, ahoraS);
-    const lib = libre(lat, enCurso, ahoraS, { despierta: cfg.despierta || null });
+    const cc = estaConCarlos(cfg, conCarlos);
+    const lib = cc ? { libre: false, why: OCUPADO_CON_CARLOS } : libre(lat, enCurso, ahoraS, { despierta: cfg.despierta || null });
     const punt = puntuacion({ apto, esLibre: lib.libre, margenPct });
     const partes = [tipo + " " + apto.toFixed(2), lib.libre ? "libre" : "ocupado/ausente", margenPct === null ? (c ? "sin lectura de margen" : "margen desconocido") : fmt(margenPct) + " de margen"];
     return {
       persona: cfg.persona, maquina: cfg.maquina, modelo: cfg.modelo,
       cuenta: cfg.cuenta ? (c ? c.nombre + (c.cuenta ? " (" + c.cuenta + ")" : "") : cfg.cuenta) : "desconocida",
       grupo: cfg.cuenta || null,
-      apto, libre: { libre: lib.libre, why: lib.why }, despierta: cfg.despierta || null, margenPct, semaforo: c ? c.semaforo : "sin",
+      apto, libre: { libre: lib.libre, why: lib.why }, conCarlos: cc, despierta: cfg.despierta || null, margenPct, semaforo: c ? c.semaforo : "sin",
       ultimoLatido: lat === null ? null : new Date(lat * 1000).toISOString(),
       encargosEnCurso: enCurso.length, encargosIds: enCurso, puntuacion: punt, motivo: partes.join(" · "),
     };
   });
   const aptos = todos.filter((x) => x.apto >= UMBRAL_APTO);
-  const pool = aptos.length ? aptos : todos;
+  const base = aptos.length ? aptos : todos;
+  // Regla de Carlos (r20): quien está con Carlos no recibe encargos, salvo que no haya nadie más apto.
+  const sinCarlos = base.filter((x) => !x.conCarlos);
+  const pool = sinCarlos.length ? sinCarlos : base;
   const orden = (a, b) => b.puntuacion - a.puntuacion || (b.margenPct ?? -1) - (a.margenPct ?? -1) || (Date.parse(b.ultimoLatido || 0) || 0) - (Date.parse(a.ultimoLatido || 0) || 0) || a.persona.localeCompare(b.persona);
   const candidatos = [...pool].sort(orden);
-  const excluidos = todos.filter((x) => !pool.includes(x)).map((x) => ({ persona: x.persona, apto: x.apto, motivo: "no apto para " + tipo + " (<" + UMBRAL_APTO + ")" }));
+  const excluidos = todos.filter((x) => !pool.includes(x)).map((x) => ({ persona: x.persona, apto: x.apto, conCarlos: x.conCarlos,
+    motivo: x.conCarlos && base.includes(x) ? OCUPADO_CON_CARLOS : "no apto para " + tipo + " (<" + UMBRAL_APTO + ")" }));
   const top = candidatos[0] || null;
   const etiquetaTipo = { codigo: "código", investigacion: "investigación", creativo: "creativo", consejo: "consejo", web: "web", demo: "demo", estrategia: "estrategia" }[tipo] || tipo;
   const elegido = top ? {
     persona: top.persona,
-    motivo: top.persona + ": " + etiquetaTipo + ", " + (top.libre.libre ? "libre" : "no libre (" + top.libre.why + ")") + ", " + (top.margenPct === null ? (top.grupo ? "sin lectura de margen" : "margen desconocido") : fmt(top.margenPct) + " de margen"),
+    motivo: top.persona + ": " + etiquetaTipo + ", " + (top.conCarlos ? "ocupado con Carlos pero no queda nadie más apto, " : "") + (top.libre.libre ? "libre" : "no libre (" + top.libre.why + ")") + ", " + (top.margenPct === null ? (top.grupo ? "sin lectura de margen" : "margen desconocido") : fmt(top.margenPct) + " de margen"),
   } : null;
-  return { tipo, candidatos, excluidos, elegido };
+  return { tipo, candidatos, excluidos, elegido, conCarlos: todos.filter((x) => x.conCarlos).map((x) => x.persona) };
 }

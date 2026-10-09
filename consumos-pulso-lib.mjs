@@ -12,6 +12,9 @@
  * r19 (por proyecto): cada agente puede mandar porProyecto:{proyecto: tokHoy} (cwd → git remote → uno de los 13
  * proyectos de la Galaxia, tools/hackeo-corpus.py; sin casar → «otros»). El punto de la serie lleva un 4.º campo
  * {proyecto: tokHoy} y de ahí sale tokHora por proyecto con el mismo método (15 min × 4).
+ * r20 (con Carlos): cada agente puede mandar conCarlos (bool), conCarlosMotivo (señales, sin contenido) y
+ * conCarlosDesde (ISO). Regla de Carlos: si está trabajando directamente con un agente, nadie le inyecta encargos.
+ * Un agente sin pulso fresco (>3 min) nunca cuenta como «con Carlos» (no se inventa).
  */
 import { incremento } from "./consumos-velocidad-lib.mjs";
 
@@ -50,7 +53,10 @@ export function normalizarPulso(body) {
       porProyecto = {};
       for (const [k, v] of Object.entries(a.porProyecto).slice(0, 30)) { const n = texto(k, 60), t = entero(v); if (n && t !== null) porProyecto[n] = t; }
     }
-    agentes.push({ agente, motor, cuenta: texto(a.cuenta, 80), tokHoy, cacheHoy: entero(a.cacheHoy) || 0, ultimoEvento: Number.isFinite(ev) ? new Date(ev).toISOString() : null, porProyecto });
+    const desde = a.conCarlosDesde ? Date.parse(a.conCarlosDesde) : NaN;
+    const conCarlos = a.conCarlos === true;
+    agentes.push({ agente, motor, cuenta: texto(a.cuenta, 80), tokHoy, cacheHoy: entero(a.cacheHoy) || 0, ultimoEvento: Number.isFinite(ev) ? new Date(ev).toISOString() : null, porProyecto,
+      conCarlos, conCarlosMotivo: texto(a.conCarlosMotivo, 240) || null, conCarlosDesde: conCarlos && Number.isFinite(desde) ? new Date(desde).toISOString() : null });
   }
   return { ok: true, pulso: { maquina, agentes } };
 }
@@ -65,7 +71,8 @@ export function aplicarPulso(doc, pulso, ahora) {
     const prev = d.agentes[a.agente] || { serie: [] };
     const serie = (prev.serie || []).filter((p) => Array.isArray(p) && p[0] >= corte);
     serie.push(a.porProyecto ? [t, a.tokHoy, a.cacheHoy, a.porProyecto] : [t, a.tokHoy, a.cacheHoy]);
-    d.agentes[a.agente] = { motor: a.motor, cuenta: a.cuenta, tokHoy: a.tokHoy, cacheHoy: a.cacheHoy, ultimoEvento: a.ultimoEvento, ultimoPulso: ahora, serie, porProyecto: a.porProyecto || null };
+    d.agentes[a.agente] = { motor: a.motor, cuenta: a.cuenta, tokHoy: a.tokHoy, cacheHoy: a.cacheHoy, ultimoEvento: a.ultimoEvento, ultimoPulso: ahora, serie, porProyecto: a.porProyecto || null,
+      conCarlos: !!a.conCarlos, conCarlosMotivo: a.conCarlosMotivo || null, conCarlosDesde: a.conCarlosDesde || null };
   }
   for (const [n, a] of Object.entries(d.agentes)) if (!a.ultimoPulso || ahora - a.ultimoPulso > RETENCION_MS) delete d.agentes[n];
   d.maquina = pulso.maquina;
@@ -161,10 +168,24 @@ export function agentesDePulso(docs, ahora) {
     for (const [agente, a] of Object.entries(doc.agentes)) {
       out.push({ agente, maquina: doc.maquina, motor: a.motor, cuenta: a.cuenta, tokHoy: a.tokHoy, cacheHoy: a.cacheHoy || 0,
         porProyecto: a.porProyecto || null, ultimoEvento: a.ultimoEvento || null, ultimoPulso: a.ultimoPulso ? new Date(a.ultimoPulso).toISOString() : null,
-        metodo: "tiempo real", ...medirAgente(a, ahora), _serie: a.serie || [] });
+        metodo: "tiempo real", ...medirAgente(a, ahora), ...estadoConCarlos(a, ahora), _serie: a.serie || [] });
     }
   }
   return out;
+}
+
+/** «Con Carlos» de un agente: solo con pulso fresco (≤3 min); si no, false con el porqué. */
+export function estadoConCarlos(a, ahora) {
+  const fresco = a && a.ultimoPulso && ahora - a.ultimoPulso <= STALE_MS;
+  if (!fresco) return { conCarlos: false, conCarlosMotivo: a && a.conCarlos ? "sin pulso fresco: no se da por bueno" : (a && a.conCarlosMotivo) || null, conCarlosDesde: null };
+  return { conCarlos: !!a.conCarlos, conCarlosMotivo: a.conCarlosMotivo || null, conCarlosDesde: a.conCarlos ? a.conCarlosDesde || null : null };
+}
+
+/** Lista pública (sin contenido ni motivo): [{ agente, maquina, desde }] de los agentes con Carlos ahora. */
+export function conCarlosDePulso(docs, ahora) {
+  return agentesDePulso(docs, ahora).filter((a) => a.conCarlos)
+    .map((a) => ({ agente: a.agente, maquina: a.maquina || null, desde: a.conCarlosDesde || null }))
+    .sort((x, y) => x.agente.localeCompare(y.agente));
 }
 
 /**

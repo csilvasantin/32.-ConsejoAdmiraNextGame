@@ -1,4 +1,11 @@
 {
+  "v.09.10.2026.r20.11:55": [
+    "Regla de Carlos: si está trabajando directamente con un agente, NADIE le inyecta encargos (ni el orquestador, ni otros agentes, ni formularios)",
+    "El colector de cada Mac (pulso, cada 60 s) evalúa «con Carlos» por agente: reposo del Mac < 5 min Y (a) app de Claude/Codex al frente con sesión activa, (b) su tmux con cliente adjunto y un terminal al frente, o (c) su último turno es un prompt tecleado por una persona hace < 5 min (no un aviso inyectado); motivo y «desde» en el pulso",
+    "Los vigilantes de bot-inbox (agent-inbox-watcher.sh e inbox-watcher.sh) consultan ~/.fleet/con-carlos.json antes de inyectar: si Carlos está con el agente, el encargo se queda pending y se reintenta («retenido: Carlos está con <agente>»)",
+    "Nuevo GET /api/flota/con-carlos (público: solo nombres y desde); /api/consumos/velocidad lo da por agente; el orquestador excluye a quien está «ocupado con Carlos» salvo que no quede nadie más apto",
+    "Insignia «con Carlos» en las filas de agentes de /consumos y en /orquestar"
+  ],
   "v.09.10.2026.r19.11:43": [
     "/consumos · SEGUNDO velocímetro: TOKENS POR PROYECTO (por defecto el que más ha gastado hoy; selector con los 13 proyectos de la Galaxia + «otros»), mismo método en tiempo real (15 min × 4)",
     "CUENTAKILÓMETROS de rodillos en el centro de los dos diales: tokens acumulados hoy de toda la flota y del proyecto elegido",

@@ -1,4 +1,7 @@
 {
+  "v.09.10.2026.r39.22:20": [
+    "Consumos: los datos con retraso (Cursor de Grok Bot, horas atrás) ya no cuentan como «ahora»: fuera de los tokens/hora de la flota, la aguja, el pronóstico del cuentakilómetros y el verde de «Trabajando ahora»; en el ranking se dice «datos con ~X h de retraso». Sus tokens siguen en los totales de hoy."
+  ],
   "v.09.10.2026.r38.22:03": [
     "Consumos: el cuentakilómetros ya no se para. Antes se re-anclaba en cada lectura al total del servidor (que sube a saltos) y se quedaba quieto esperando; ahora pronostica el final de la hora (real + tokens/hora × lo que queda de hora), gira a velocidad constante hacia ahí, alcanza en ~30 s si el real va por delante, frena sin retroceder si se pasó y solo se detiene si todo está a 0 y nadie trabaja. Sigue contando con la pestaña en segundo plano."
   ],

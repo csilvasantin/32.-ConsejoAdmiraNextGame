@@ -81,3 +81,12 @@ test("retratos: Musk y Huang con recorte de cara propio; Oráculo con avatar de 
   assert.deepEqual(t.find((x) => x.agente === "Musk").retrato.cara, { l: 9, t: 44, w: 9, h: 16 });
   assert.equal(t.find((x) => x.agente === "Oráculo").retrato.img, "/avatars/oraculo.png");
 });
+
+test("r39 · un pulso con retraso (Cursor) nunca pone en verde: los consejeros Grok solo por su latido en vivo", async () => {
+  const { tarjetas } = await import("./flota-trabajando-lib.mjs");
+  const ahoraS = 1760000000;
+  const velocidad = { porAgente: [{ agente: "Grok Bot (Consejo)", conRetraso: true, tokHora: 380000, tokHoy: 1000000, maquina: "GrokBotBox", ultimoEvento: new Date((ahoraS - 9000) * 1000).toISOString() }] };
+  const t = tarjetas({ presencia: [], velocidad, ahoraS }).find((x) => x.agente === "Grok Bot (Consejo)");
+  assert.ok(t, "sale la tarjeta");
+  assert.notEqual(t.estado, "verde");
+});

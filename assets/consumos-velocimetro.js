@@ -121,7 +121,7 @@
     return Math.max(v, minimo);
   }
   function Odometro(el) { this.el = el; this.real = null; this.objetivo = null; this.ritmo = 0; this.activo = false; this.finHora = 0; this.mostrado = null; this.dia = ''; this.tPrev = 0; this.vel = 0; this.corre = false; }
-  Odometro.prototype.pon = function (n, tokHora, activo) {
+  Odometro.prototype.pon = function (n, tokHora, activo, nVivo) {
     var el = this.el;
     if (!el.querySelector('.odo-rueda')) el.innerHTML = odometroHTML();
     var sin = n == null || !isFinite(n);
@@ -130,7 +130,8 @@
     var ahora = Date.now(), rel = relojMadrid(ahora);
     if (rel.dia !== this.dia || this.mostrado == null) { this.mostrado = n; this.dia = rel.dia; } // primer valor o día nuevo
     this.real = n; this.activo = !!activo;
-    this.ritmo = ritmoPronostico(Number(tokHora) || 0, n, this.activo, rel.s);
+    // r39: la media del día de reserva sale solo de fuentes en vivo (sin los tokens con retraso de Cursor).
+    this.ritmo = ritmoPronostico(Number(tokHora) || 0, nVivo == null ? n : nVivo, this.activo, rel.s);
     var seg = segundosFinHora(ahora);
     this.finHora = ahora + seg * 1000;
     this.objetivo = n + this.ritmo * seg;
@@ -174,10 +175,10 @@
       ruedas[i].firstChild.style.transform = 'translateY(' + (-pos[i] * 100 / 11).toFixed(3) + '%)';
     }
   };
-  function odometro(el, n, tokHora, activo) {
+  function odometro(el, n, tokHora, activo, nVivo) {
     if (!el) return;
     if (!el._odo) el._odo = new Odometro(el);
-    el._odo.pon(n, tokHora, activo);
+    el._odo.pon(n, tokHora, activo, nVivo);
   }
   /** Ritmo medio del día en tokens/s (tokens de hoy / segundos desde la medianoche de Madrid; mínimo 10 min). */
   function ritmoMedio(tokHoy) { if (tokHoy == null || !isFinite(tokHoy)) return 0; return Math.max(0, tokHoy) / Math.max(600, relojMadrid(Date.now()).s); }
@@ -229,7 +230,7 @@
     var self = this;
     requestAnimationFrame(function (t) { self.cuadro(t); });
   };
-  Dial.prototype.pinta = function (tokHora, max, tokHoy, sin) {
+  Dial.prototype.pinta = function (tokHora, max, tokHoy, sin, tokHoyVivo) {
     var b = this.box;
     b.classList.toggle('sin-datos', !!sin);
     if (max !== this.max || !b.querySelector('.vel-svg')) {
@@ -244,7 +245,7 @@
     b.querySelector('.vel-unidad').textContent = sin ? '' : T('tokens/hora', 'tokens/hour');
     this.arranca();
     var rm = ritmoMedio(sin ? null : tokHoy);
-    odometro(b.querySelector('.odo'), tokHoy, v, v > 0 || hayVerdes());
+    odometro(b.querySelector('.odo'), tokHoy, v, v > 0 || hayVerdes(), tokHoyVivo);
     // r36: qué es la cifra grande, explícito.
     var que = b.querySelector('.vel-que');
     if (que) que.innerHTML = sin ? '' : T('tokens/hora ahora (últimos 15 min)', 'tokens/hour now (last 15 min)') + ' · ' + T('media del día ', 'day average ') + '<b>' + fmt(rm * 3600) + '</b> ' + T('tokens/hora', 'tokens/hour');
@@ -419,7 +420,7 @@
     var cuenta = (a.motor === 'cursor' || a.motor === 'grok') && a.cuenta ? a.cuenta : pf ? (pf.email || pf.plan || '') : '';
     var m = ORQ.margen[a.agente];
     var lin1 = a.sinDatos ? T('sin datos hoy', 'no data today') :
-      '<b>' + (a.tokHora == null ? T('parado', 'stopped') : fmt(a.tokHora) + ' ' + T('tokens/hora', 'tokens/hour')) + '</b> · ' + fmt(a.tokHoy) + T(' hoy', ' today') +
+      '<b>' + (a.conRetraso ? T('sin cifra en vivo', 'no live figure') : a.tokHora == null ? T('parado', 'stopped') : fmt(a.tokHora) + ' ' + T('tokens/hora', 'tokens/hour')) + '</b> · ' + fmt(a.tokHoy) + T(' hoy', ' today') +
       (a.maquina || (pf && pf.maquina) ? ' · ' + esc(a.maquina || pf.maquina) : '') + (a.proyectoAhora ? ' · ' + esc(nomP(a.proyectoAhora)) : '') +
       (a.conRetraso ? ' · <span class="dd-retraso">' + esc(txtRetraso(a)) + '</span>' : '');
     if (a.sinDatos && pf && pf.nota) lin1 += ' · ' + esc(pf.nota);
@@ -451,6 +452,9 @@
     }).catch(function () {});
   }
   /* Dial izquierdo: toda la flota o el agente elegido. */
+  /** r39: tokens de hoy solo de fuentes en vivo (sin los agentes con retraso, p. ej. Cursor). */
+  function tokHoyVivo(d) { var r = ((d && d.porAgente) || []).filter(function (a) { return a.conRetraso; }).reduce(function (s, a) { return s + (Number(a.tokHoy) || 0); }, 0); return Math.max(0, (Number(d && d.tokHoy) || 0) - r); }
+  function retrasoEnProyecto(d, proy) { return ((d && d.porAgente) || []).filter(function (a) { return a.conRetraso && a.porProyecto; }).reduce(function (s, a) { return s + (Number(a.porProyecto[proy]) || 0); }, 0); }
   function pintaIzquierdo(d, sin) {
     var g1 = document.getElementById('vel-g-total');
     if (!estado.d1) estado.d1 = new Dial(g1, 'vg1', T('Velocímetro de tokens por hora', 'Tokens per hour speedometer'));
@@ -459,7 +463,7 @@
     var max;
     if (!r.agente) {
       max = sin ? (estado.d1.max || 50e6) : (d.escalaMax || 50e6);
-      estado.d1.pinta(sin ? 0 : d.tokHora, max, sin ? null : d.tokHoy, sin);
+      estado.d1.pinta(sin ? 0 : d.tokHora, max, sin ? null : d.tokHoy, sin, sin ? null : tokHoyVivo(d));
       if (tit) tit.textContent = T('Agente', 'Agent'); // r26: rótulo fijo «Agente ·»; el desplegable dice «Toda la flota»
       if (rot) rot.textContent = T('tokens hoy', 'tokens today');
       if (met) met.textContent = '';
@@ -469,11 +473,12 @@
     var maxAg = ((d && d.porAgente) || []).reduce(function (m, a) { return Math.max(m, a.tokHora || 0); }, 0);
     max = escala(maxAg, 5e6);
     var sinA = sin || !f;
-    estado.d1.pinta(f ? (f.tokHora || 0) : 0, max, f ? f.tokHoy : null, sinA);
+    estado.d1.pinta(f ? (f.tokHora || 0) : 0, max, f ? f.tokHoy : null, sinA, f ? (f.conRetraso ? 0 : f.tokHoy) : null);
     if (tit) tit.textContent = T('Agente', 'Agent');
     if (rot) rot.textContent = r.agente + ' · ' + T('tokens hoy', 'tokens today');
     if (met) met.innerHTML = !f ? T('Este agente no aparece ahora en el pulso ni en Yokup: sin cifra.', 'This agent is not in the pulse or Yokup right now: no number.') :
-      (f.tokHora == null ? T('parado (sin pulso reciente)', 'stopped (no recent pulse)') : (f.motor ? esc(nombreMotor(f.motor)) + ' · ' : '') + (f.maquina ? esc(f.maquina) + ' · ' : '') +
+      (f.conRetraso ? (f.motor ? esc(nombreMotor(f.motor)) + ' · ' : '') + '<b>' + esc(txtRetraso(f)) + '</b> · ' + T('sin cifra en vivo: la aguja no la cuenta', 'no live figure: not on the needle') + (f.tokHoraRetraso != null ? ' · ' + T('última hora con datos ', 'last hour with data ') + fmt(f.tokHoraRetraso) : '') :
+       f.tokHora == null ? T('parado (sin pulso reciente)', 'stopped (no recent pulse)') : (f.motor ? esc(nombreMotor(f.motor)) + ' · ' : '') + (f.maquina ? esc(f.maquina) + ' · ' : '') +
         (f.conRetraso ? '<b>' + esc(txtRetraso(f)) + '</b> · ' + T('tokens/hora de la última hora con datos', 'tokens/hour of the last hour with data') : f.tokUltimos5min != null ? '5 min: <b>' + fmt(f.tokUltimos5min) + '</b> tok' : esc(f.metodo || '')));
     return d && d.escalaMax || max;
   }
@@ -491,7 +496,7 @@
     var rate = p ? p.tokHora : (hayPulso ? 0 : null);
     var hoy = p ? p.tokHoy : (lista.length ? 0 : null);
     var sinP = sin || rate == null;
-    estado.d2.pinta(rate, escala(maxRate, 5e6), hoy, sinP);
+    estado.d2.pinta(rate, escala(maxRate, 5e6), hoy, sinP, hoy == null ? null : Math.max(0, hoy - retrasoEnProyecto(d, nombre)));
     var nom = document.getElementById('vel-proy-nombre');
     if (nom) nom.textContent = (nombre && nomP(nombre)) || T('ningún proyecto con datos', 'no project with data');
     var met = document.getElementById('vel-proy-metodo');
@@ -516,7 +521,7 @@
     var lider = ags.length && ags[0].tokHora > 0 ? ags[0] : null;
     var maxR = lider ? lider.tokHora : 0;
     lista.innerHTML = ags.map(function (a, i) {
-      var parado = a.tokHora == null;
+      var parado = a.tokHora == null && !a.conRetraso; // r39: con retraso no es «parado» ni «ahora»: se dice el retraso
       var w = maxR > 0 && !parado ? Math.max(a.tokHora > 0 ? 2 : 0, Math.round(100 * a.tokHora / maxR)) : 0;
       var origen = a.conRetraso ? (a.stale ? T('sin export de Cursor ', 'no Cursor export ') + hace(a.haceS) : esc(txtRetraso(a))) :
         a.metodo === 'tiempo real' ? (a.stale ? T('sin pulso ', 'no pulse ') + hace(a.haceS) : T('tiempo real', 'real time')) : esc(a.metodo || T('partes Yokup', 'Yokup reports'));
@@ -524,7 +529,7 @@
       return '<li' + (cls ? ' class="' + cls + '"' : '') + ' role="button" tabindex="0" data-agente="' + esc(a.agente) + '" title="' + esc(T('Ver ', 'Show ') + a.agente + T(' en el velocímetro', ' on the gauge')) + '">' +
         '<span class="vel-ag"><span class="vel-pos">' + (i + 1) + '</span>' + (a === lider ? '<span class="vel-corona" aria-label="' + T('el que más trabaja ahora', 'top worker now') + '">★</span> ' : '') + esc(a.agente) + (a.motor ? ' · ' + esc(nombreMotor(a.motor)) : '') +
         (a.conCarlos ? ' <em class="con-carlos" title="' + esc(T('Carlos está trabajando con este agente: no se le inyectan encargos', 'Carlos is working with this agent: no tasks are injected') + (a.conCarlosMotivo ? ' · ' + a.conCarlosMotivo : '')) + '">' + T('con Carlos', 'with Carlos') + '</em>' : '') + '</span>' +
-        '<span class="vel-bar"><i style="width:' + w + '%"></i></span><b>' + (parado ? T('parado', 'stopped') : fmt(a.tokHora) + ' ' + T('tokens/hora', 'tokens/hour')) + '</b>' +
+        '<span class="vel-bar"><i style="width:' + w + '%"></i></span><b>' + (a.conRetraso ? '<span class="dd-retraso">' + esc(txtRetraso(a)) + '</span>' : parado ? T('parado', 'stopped') : fmt(a.tokHora) + ' ' + T('tokens/hora', 'tokens/hour')) + '</b>' +
         '<small>' + T('hoy ', 'today ') + '<b>' + fmt(a.tokHoy) + '</b>' + (a.maquina ? ' · ' + esc(a.maquina) : '') + (a.proyectoAhora ? ' · ' + T('proyecto ', 'project ') + '<b>' + esc(nomP(a.proyectoAhora)) + '</b>' : '') +
         (a.tokUltimos5min != null ? ' · 5 min ' + fmt(a.tokUltimos5min) : '') + ' · ' + origen + '</small></li>';
     }).join('');

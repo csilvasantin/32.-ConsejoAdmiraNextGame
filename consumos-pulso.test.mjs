@@ -215,11 +215,13 @@ test("r27 cursor: serie en hora del evento validada; re-mandar el mismo CSV no c
   ({ doc } = aplicarPulso(doc, p, AHORA));
   assert.equal(JSON.stringify(doc.agentes["Grok Bot (Consejo)"].serie), antes, "misma serie: la nueva sustituye a la vieja");
   const m = medirAgente(doc.agentes["Grok Bot (Consejo)"], AHORA);
-  assert.equal(m.tokHora, 600000, "tok/h = tokens de la última hora CON DATOS (04:40 → 05:40)");
+  // r39: datos con retraso no son «ahora» → tokHora null; la última hora con datos va aparte (informativa).
+  assert.equal(m.tokHora, null, "con retraso: sin cifra en vivo");
+  assert.equal(m.tokHoraRetraso, 600000, "última hora CON DATOS (04:40 → 05:40)");
   assert.equal(m.stale, false);
   assert.equal(m.conRetraso, true);
   assert.equal(m.retrasoS, 5 * 3600 + 20 * 60);
-  assert.equal(medirAgente(doc.agentes["Grok Bot (Consejo)"], AHORA + STALE_CURSOR_MS + 1000).tokHora, null, "sin export en 2,5 h → parado");
+  assert.equal(medirAgente(doc.agentes["Grok Bot (Consejo)"], AHORA + STALE_CURSOR_MS + 1000).tokHoraRetraso, null, "sin export en 2,5 h → parado");
 });
 
 test("r27 cursor: la ESTIMACIÓN de Yokup de un consejero cubierto no se suma encima del total real; Σ proyectos = Σ agentes = flota", () => {
@@ -242,5 +244,9 @@ test("r27 cursor: la ESTIMACIÓN de Yokup de un consejero cubierto no se suma en
   assert.match(m.etiqueta, /Cursor \(datos con ~5 h de retraso\)/);
   const g = m.porAgente.find((a) => a.agente === "Grok Bot (Consejo)");
   assert.equal(g.modelo, "Grok Bot / Cursor Pro");
+  // r39: Cursor (retraso) fuera de todo lo «en vivo»: ni en la velocidad de la flota ni en los agentes en tiempo real; sí en tokHoy.
+  assert.equal(g.tokHora, null);
+  assert.equal(m.tokHora, m.porAgente.filter((a) => !a.conRetraso).reduce((t, a) => t + (a.tokHora || 0), 0));
+  assert.equal(m.agentesTiempoReal, 1, "solo Smith es en vivo");
   assert.equal(g.proyectoAhora, "admiranext.com");
 });

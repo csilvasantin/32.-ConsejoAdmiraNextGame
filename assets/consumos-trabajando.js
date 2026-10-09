@@ -47,8 +47,15 @@
     var ts = d && d.ok ? d.tarjetas || [] : null;
     if (!ts) { ul.innerHTML = '<li class="tr-vacio">Sin datos de presencia ni de pulso ahora: no se enseña nadie.</li>'; return; }
     ul.innerHTML = ts.map(tarjeta).join('');
+    // r31: fila compacta (zona plegada): fichas con nombre para verde/amarillo, caras apiladas para los parados.
+    var ch = document.getElementById('trabajando-chips');
+    if (ch) {
+      var vivos = ts.filter(function (t) { return t.estado !== 'gris'; }), grises = ts.filter(function (t) { return t.estado === 'gris'; });
+      ch.innerHTML = vivos.map(function (t) { return '<span class="tr-chipa tr-' + esc(t.estado) + '" title="' + esc(t.agente + ' · ' + (t.estado === 'amarillo' ? 'con Carlos' : 'trabajando')) + '">' + retrato(t) + '<i></i>' + esc(t.agente) + '</span>'; }).join('') +
+        (grises.length ? '<span class="tr-grises" title="' + esc(grises.map(function (t) { return t.agente; }).join(', ')) + '">' + grises.map(retrato).join('') + '<small>' + grises.length + ' parados</small></span>' : '');
+    }
     var v = ts.filter(function (t) { return t.estado === 'verde'; }).length, a = ts.filter(function (t) { return t.estado === 'amarillo'; }).length;
-    if (res) res.textContent = v + ' trabajando · ' + a + ' con Carlos · ' + (ts.length - v - a) + ' parados';
+    if (res) res.innerHTML = '<b>' + v + '</b> trabajando · <b>' + a + '</b> con Carlos · <b>' + (ts.length - v - a) + '</b> parados';
     if (pie) pie.innerHTML = 'Actualizado ' + new Date(d.generado).toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid' }) + ' (Madrid) · verde = tokens en los últimos 15 min, latido «trabajando» de &lt; 2 min o proceso con CPU · amarillo = con Carlos · gris = parado · fuentes: <a href="https://bot.yokup.com/api/presence">presencia de Yokup</a> + <a href="/api/consumos/velocidad">pulso de tokens</a>' + (d.presencia !== 'ok' ? ' · ⚠ presencia sin respuesta' : '') + ' · cada 10 s';
   }
   function leer() { return fetch(API, { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }).then(pinta); }

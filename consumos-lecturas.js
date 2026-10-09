@@ -5,6 +5,7 @@
   const API = "/api/consumos/lecturas";
   const caja = document.getElementById("lecturas-cuerpo");
   if (!caja) return;
+  const res = document.getElementById("lecturas-resumen"); // r31: resumen siempre visible (Más margen + píldoras de %)
   const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const pct = (x) => (x === null || x === undefined ? "—" : String(Math.round(Number(x) * 100) / 100).replace(".", ",") + " %");
   const fecha = (ts) => new Intl.DateTimeFormat("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(ts)).replace(",", "");
@@ -75,9 +76,13 @@
   function pinta(d) {
     pintaCuentas(d);
     const series = Array.isArray(d.series) ? d.series : [];
-    if (!series.length) { caja.innerHTML = '<p class="nota">Sin lecturas todavía.</p>'; return; }
+    if (!series.length) { caja.innerHTML = '<p class="nota">Sin lecturas todavía.</p>'; if (res) res.innerHTML = '<p class="nota">Sin lecturas del plan todavía.</p>'; return; }
     let h = "";
-    if (d.recomendacion) h += '<p class="reco">' + esc(d.recomendacion.texto) + "</p>";
+    const reco = d.recomendacion ? '<p class="reco">' + esc(d.recomendacion.texto) + "</p>" : "";
+    // Píldoras: % USADO de cada plan, color por el margen que queda (verde ≥ 50 %, amarillo 20–49 %, rojo < 20 %).
+    const color = (u) => (u === null || u === undefined ? "" : u <= 50 ? "p-verde" : u <= 80 ? "p-amarillo" : "p-rojo");
+    const pills = '<div class="lect-pills">' + series.map((se) => '<span class="lect-pill ' + color(se.pct) + '" title="' + esc((se.agente ? se.agente + " · " : "") + se.cuenta + " — quema " + pct(se.quema12h) + " / 12 h") + '"><i></i>' + esc((se.agente || se.cuenta) + (se.grupo ? " · " + se.grupo : "")) + " <b>" + pct(se.pct) + "</b></span>").join("") + "</div>";
+    if (res) res.innerHTML = reco + pills; else h += reco;
     h += '<div class="leyenda">' + series.map((se, i) => '<span><i style="background:' + COLORES[i % COLORES.length] + '"></i>' + esc((se.agente ? se.agente + " · " : "") + se.cuenta + (se.grupo ? " (" + se.grupo + ")" : "")) + "</span>").join("") + "</div>";
     h += grafica(series, d.dias || 14);
     h += '<div class="tabla-wrap"><table class="tabla"><thead><tr><th>Cuenta · agente</th><th>Último %</th><th>Quema / 12 h</th><th>Llega al 100 %</th><th>Última lectura</th></tr></thead><tbody>';

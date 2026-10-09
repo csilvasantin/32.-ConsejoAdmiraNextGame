@@ -1,4 +1,10 @@
 {
+  "v.09.10.2026.r31.18:19": [
+    "Consumos compacto por defecto: «Trabajando ahora» plegado es una fila de fichas (verde trabajando, amarillo con Carlos, caras grises de los parados) con el resumen; al clic, las tarjetas completas.",
+    "Bajo los velocímetros, «Velocidad por agente · gráficas» plegado en una línea (líder y tok/h, tokens de hoy, líneas de hoy y tok/línea); al clic, ranking, gráficas de tokens y líneas, y fuentes.",
+    "«Lecturas del plan» plegado: solo la recomendación «Más margen» y una píldora de % por cuenta (verde/amarillo/rojo por el margen); al clic, leyenda, gráfica y tabla.",
+    "Desplegables accesibles (botón con aria-expanded, Enter/Espacio, animación suave, sin animación con «reducir movimiento»); cada zona recuerda si la dejaste abierta, y ?abierto=todo lo abre todo."
+  ],
   "v.09.10.2026.r30.15:55": [
     "Consumos: debajo de la gráfica de tokens, una SEGUNDA gráfica con las LÍNEAS DE CÓDIGO que escriben los agentes, en el mismo eje de tiempo, y un selector 1 h / 24 h / 7 d que cambia las dos a la vez.",
     "Fuente fina: tools/lineas-commits.py lee cada 15 min los commits de la rama principal de los 12 repos de la Galaxia (mismos ficheros que el HACKEO) y atribuye cada commit a su agente por autor y Co-authored-by; sin esa fuente, Δ entre las fotos 00:00/12:00 de /api/control/lineas, escalonado. Nuevo GET/POST /api/consumos/lineas.",

@@ -231,11 +231,27 @@
     var ratio = tok > 0 && lin > 0 ? Math.round(tok / lin) : null;
     el.innerHTML = T('Hoy', 'Today') + ': <b>' + fmt(lin) + '</b> ' + T('líneas de código', 'lines of code') + (ratio ? ' · <b>' + fmt(ratio) + '</b> tok/' + T('línea', 'line') : '');
   }
+  /* r31: resumen de una línea de la zona plegada «Velocidad por agente · gráficas». */
+  function pintaResumen() {
+    var el = document.getElementById('vel-resumen'), d = estado.datos;
+    if (!el) return;
+    if (!d || d.sinDatos) { el.textContent = T('Sin pulso ahora', 'No pulse right now'); return; }
+    var ags = (d.porAgente || []).filter(function (a) { return a.tokHora > 0; }).sort(function (x, y) { return y.tokHora - x.tokHora; });
+    var p = [];
+    if (ags.length) p.push('★ <b>' + esc(ags[0].agente) + '</b> ' + fmt(ags[0].tokHora) + ' tok/h');
+    else p.push(T('nadie quemando ahora', 'nobody burning now'));
+    p.push(T('hoy ', 'today ') + '<b>' + fmt(d.tokHoy) + '</b> tok');
+    if (LIN.d && LIN.d.fuente === 'commits') {
+      var r = LIN.d.hoy.total > 0 && d.tokHoy > 0 ? Math.round(d.tokHoy / LIN.d.hoy.total) : null;
+      p.push('<b>' + fmt(LIN.d.hoy.total) + '</b> ' + T('líneas hoy', 'lines today') + (r ? ' · ' + fmt(r) + ' tok/' + T('línea', 'line') : ''));
+    }
+    el.innerHTML = p.join(' · ');
+  }
   function leerLineas() {
     var r = LIN.rango;
     return fetch(API_LIN + r, { cache: 'no-store' }).then(function (x) { return x.ok ? x.json() : null; }).catch(function () { return null; }).then(function (d) {
       if (d && d.ok && d.rango === LIN.rango) { LIN.d = d; LIN.leido = Date.now(); }
-      pintaLineas(); pintaRatio();
+      pintaLineas(); pintaRatio(); pintaResumen();
       var sp = document.getElementById('vel-spark');
       if (sp && estado.datos && !estado.datos.sinDatos) sp.innerHTML = sparkline(estado.datos.serie60);
     });
@@ -447,6 +463,7 @@
     if (sp) sp.innerHTML = sin ? '' : sparkline(d.serie60);
     pintaRanking(sin ? null : d);
     pintaRatio();
+    pintaResumen();
     var pie = document.getElementById('vel-pie');
     pie.innerHTML = (d && d.generado ? T('Actualizado ', 'Updated ') + new Date(d.generado).toLocaleTimeString(en() ? 'en-GB' : 'es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' (Madrid) · ' : '') +
       T('Fuente: pulso de cada Mac (logs de Claude Code, Codex y Grok CLI, cada 60 s, ', 'Source: each Mac\'s pulse (Claude Code, Codex and Grok CLI logs, every 60 s, ') + '<a href="/api/consumos/pulso">/api/consumos/pulso</a>) + ' +

@@ -360,7 +360,10 @@ export function resumirTokens(lecturas) {
 export function recomendarCuentas(cuentas) {
   const con = cuentas.filter((c) => c.pct !== null).sort((a, b) => (a.semaforo === "rojo") - (b.semaforo === "rojo") || b.margen - a.margen);
   const sin = cuentas.filter((c) => c.pct === null);
-  const ranking = [...con, ...sin].map((c, i) => ({ puesto: i + 1, id: c.id, nombre: c.etiqueta || c.nombre, margen: c.margen, semaforo: c.semaforo, ...(c.proveedor ? { proveedor: c.proveedor } : {}) }));
+  // r37 (Carlos): el ranking va estrictamente por margen de mayor a menor (las rojas ya no bajan al final: el rojo se ve en
+  // su punto); la recomendación de arriba sigue saltándose las rojas (con[0] = la mejor que no va en rojo).
+  const porMargen = [...con].sort((a, b) => b.margen - a.margen);
+  const ranking = [...porMargen, ...sin].map((c, i) => ({ puesto: i + 1, id: c.id, nombre: c.etiqueta || c.nombre, margen: c.margen, semaforo: c.semaforo, ...(c.proveedor ? { proveedor: c.proveedor } : {}) }));
   const quien = (c) => (c.etiqueta ? c.etiqueta : c.nombre.toLowerCase());
   let texto;
   const cupo = (c) => (c.cupoDia !== null ? " (" + fmtPct(c.cupoDia) + " al día hasta el reset)" : "");

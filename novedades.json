@@ -1,4 +1,7 @@
 {
+  "v.09.10.2026.r37.19:17": [
+    "Consumos: «¿A quién va la siguiente tarea?» y «Lo urgente» también se pliegan (plegados: una línea con el elegido de cada tipo; nº de avisos + el primero, con su marco rojo). «Margen por cuenta» va estrictamente de mayor a menor margen."
+  ],
   "v.09.10.2026.r36.19:05": [
     "Consumos: los cuentakilómetros (flota y proyecto) ruedan sin parar al ritmo medio del día (tokens de hoy / horas desde la medianoche de Madrid) y se re-anclan al valor real en cada lectura sin ir nunca hacia atrás; fuera la cabecera «TOKENS POR HORA»; «tok/h» pasa a «tokens/hora» en todas partes, con «tokens/hora ahora (últimos 15 min) · media del día X tokens/hora» bajo la cifra; y las tarjetas de gasto (Cloudflare, Grok, Cursor, consejeros, consolas…) en su propia sección plegable «Gasto y servicios» (plegada: una fila por tarjeta)."
   ],

@@ -1,4 +1,7 @@
 {
+  "v.09.10.2026.r35.18:53": [
+    "Consumos: las tarjetas de cuenta son su propia categoría plegable «Cuentas» (plegada: una fila por cuenta con punto de estado · % usado · «se agota …»; abierta: las tarjetas a 3 columnas), separada de «Margen» (recomendación en una línea; abierta, la recomendación completa y el margen por cuenta). Recuerdan su estado; ?abierto=todo o ?abierto=cuentas."
+  ],
   "v.09.10.2026.r34.18:44": [
     "Consumos: la zona «Cuentas» también se pliega y nace plegada — cerrada, la recomendación en una línea y una fila por cuenta (punto de estado · % usado · margen · «se agota …» si lo hay); abierta, la recomendación completa, «Margen por cuenta» y las tarjetas. Recuerda su estado y entra en ?abierto=todo."
   ],

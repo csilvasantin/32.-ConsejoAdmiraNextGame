@@ -39,21 +39,22 @@
     const fl = document.getElementById("cuentas-filas");
     if (fl) {
       const fT = (n) => (n >= 1e6 ? (Math.round(n / 1e5) / 10).toLocaleString("es-ES") + " M" : n >= 1e3 ? Math.round(n / 1e3).toLocaleString("es-ES") + " k" : String(n));
-      const marg = {}; (d.ranking || []).forEach((r) => { marg[String(r.nombre).split(" (")[0]] = r.margen; });
       fl.innerHTML = (d.cuentas || []).map((c) => {
         const luz = LUZ[c.semaforo] ? c.semaforo : "sin";
         const ag = (luz === "rojo" || luz === "ambar") ? (c.series || []).find((x) => x.proy && x.proy.agotaAntes) : null;
-        const m = c.nombre in marg ? marg[c.nombre] : (c.pct === null ? null : 100 - c.pct);
         const usado = c.pct === null ? (c.pulso && c.pulso.tokHoy ? fT(c.pulso.tokHoy) + " tok" : "sin lectura") : pct(c.pct);
-        return '<li><span class="cu-dot ' + luz + '" title="' + LUZ[luz] + '"></span><b title="' + esc(c.cuenta + " · " + c.plan) + '">' + esc(c.nombre) + '</b><span class="cu-pct' + (c.pct === null ? " cu-sin" : "") + '">' + usado + '</span><span class="cu-mar">' + (m === null || m === undefined ? "" : "margen " + pct(m)) + '</span><span class="cu-por ' + luz + '">' + (ag ? esc((ag.agente || ag.cuenta) + " " + ag.proy.texto) : "") + "</span></li>";
+        return '<li><span class="cu-dot ' + luz + '" title="' + LUZ[luz] + '"></span><b title="' + esc(c.cuenta + " · " + c.plan) + '">' + esc(c.nombre) + '</b><span class="cu-pct' + (c.pct === null ? " cu-sin" : "") + '">' + usado + '</span><span class="cu-por ' + luz + '">' + (ag ? esc((ag.agente || ag.cuenta) + " " + ag.proy.texto) : "") + "</span></li>";
       }).join("");
     }
+    // r35: resumen de la zona «Cuentas» (plegada): cuántas y cuántas en rojo/ámbar.
+    const cs = document.getElementById("cuentas-resumen");
+    if (cs) { const cc = d.cuentas || [], nr = cc.filter((c) => c.semaforo === "rojo").length, na = cc.filter((c) => c.semaforo === "ambar").length; cs.textContent = cc.length + " cuentas" + (nr ? " · " + nr + " en rojo" : "") + (na ? " · " + na + " en ámbar" : "") + " · % usado de cada plan"; }
     // r33 (Walt): una fila por cuenta, cifra de margen a la derecha (color por el margen: verde ≥ 50, amarillo 20–49, rojo < 20).
     const mcol = (m) => (m === null || m === undefined ? "m-sin" : m >= 50 ? "m-verde" : m >= 20 ? "m-amarillo" : "m-rojo");
     const partes = (n) => { const i = String(n).indexOf(" ("); return i > 0 ? [String(n).slice(0, i), String(n).slice(i + 1)] : [String(n), ""]; };
     rk.innerHTML = (d.ranking || []).map((r) => { const [nom, det] = partes(r.nombre); return '<li><span class="rk-n">' + r.puesto + '</span><span class="rk-nom" title="' + esc(r.nombre) + '"><b>' + esc(nom) + "</b>" + (det ? "<small>" + esc(det) + "</small>" : "") + '</span><span class="rk-prov">' + esc(r.proveedor || "") + '</span><span class="rk-cifra ' + mcol(r.margen) + '">' + (r.margen === null ? "sin lectura" : "margen " + pct(r.margen)) + "</span></li>"; }).join("");
     const rs = document.getElementById("ranking-resumen"), r1 = (d.ranking || [])[0];
-    if (rs) rs.innerHTML = r1 ? "más margen: <b>" + esc(partes(r1.nombre)[0]) + "</b> " + (r1.margen === null ? "sin lectura" : pct(r1.margen)) + " · " + (d.ranking || []).length + " cuentas" : "sin lecturas";
+    if (rs) rs.textContent = (d.ranking || []).length ? "· " + (d.ranking || []).length + " cuentas" : "";
     grid.innerHTML = (d.cuentas || []).map((c) => {
       const luz = LUZ[c.semaforo] ? c.semaforo : "sin";
       // r33 (Walt): si el semáforo va en rojo/ámbar porque un límite SE AGOTA antes del reset, el motivo va junto a la píldora.

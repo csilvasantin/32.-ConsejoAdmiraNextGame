@@ -37,6 +37,12 @@
   #enviar button { padding:10px 16px; border-radius:14px; border:0; background:var(--carlos); color:#fff; font:inherit; font-weight:600; cursor:pointer; }
   #enviar button:disabled { opacity:.5; cursor:default; }
   .estado { margin-left:6px; } .estado.error { color:#f85149; } .estado.entregado { color:var(--ok); }
+  .turno.escribiendo .burbuja { color:var(--suave); font-style:italic; border-bottom-left-radius:5px; }
+  .puntos { display:inline-flex; gap:3px; margin-left:6px; vertical-align:middle; }
+  .puntos i { width:5px; height:5px; border-radius:50%; background:var(--suave); opacity:.35; animation:latido 1.2s infinite ease-in-out; }
+  .puntos i:nth-child(2) { animation-delay:.2s; } .puntos i:nth-child(3) { animation-delay:.4s; }
+  @keyframes latido { 0%, 80%, 100% { opacity:.25; transform:translateY(0); } 40% { opacity:1; transform:translateY(-2px); } }
+  @media (prefers-reduced-motion: reduce) { .puntos i { animation:none; opacity:.6; } }
   button.enlace { background:none; border:0; color:var(--suave); text-decoration:underline; cursor:pointer; font:inherit; }
 </style>
 </head>
@@ -52,7 +58,7 @@
     <p id="acceso-error" hidden></p>
   </section>
   <section id="hilo" role="log" aria-live="polite" aria-label="Conversación con Steve Jobs" hidden></section>
-  <p id="pie" hidden>Mismo hilo en la app de Grok Bot, admira.live y la rutina. Lo que escribes aquí le llega a Jobs como encargo privado (no sale a Ágora ni a Telegram). Se actualiza cada 20 s. · <button class="enlace" id="salir" type="button">Salir</button></p>
+  <p id="pie" hidden>Mismo hilo en la app de Grok Bot, admira.live y la rutina. Lo que escribes aquí le llega a Jobs como encargo privado (no sale a Ágora ni a Telegram). Se actualiza al instante mientras espera respuesta (cada 2 s) y cada 10 s en reposo. · <button class="enlace" id="salir" type="button">Salir</button></p>
 </main>
 <form id="enviar" hidden autocomplete="off">
   <div class="fila">
@@ -63,13 +69,34 @@
 <script>
 (function () {
   "use strict";
-  var PERSONA = "jobs", NOMBRE = "Steve Jobs", CADA_MS = 20000;
+  var PERSONA = "jobs", NOMBRE = "Steve Jobs";
+  /*sondeo:inicio*/
+  // Sondeo adaptativo: 2 s mientras el último turno es de Carlos sin respuesta posterior
+  // (hasta 3 min), 10 s en reposo. El indicador «escribiendo…» se muestra hasta 30 min.
+  var RAPIDO_MS = 2000, REPOSO_MS = 10000, VENTANA_RAPIDA_MS = 180000, VENTANA_ESCRIBIENDO_MS = 1800000;
+  function esperaDesde(turnos) {
+    var u = turnos && turnos.length ? turnos[turnos.length - 1] : null;
+    if (!u || u.rol !== "carlos" || u.entrega === "error") return null;
+    var t = Date.parse(u.ts);
+    return isNaN(t) ? null : t;
+  }
+  function intervaloSondeo(turnos, ahora) {
+    var d = esperaDesde(turnos);
+    return d !== null && ahora - d < VENTANA_RAPIDA_MS ? RAPIDO_MS : REPOSO_MS;
+  }
+  function textoEscribiendo(turnos, ahora) {
+    var d = esperaDesde(turnos);
+    if (d === null || ahora - d >= VENTANA_ESCRIBIENDO_MS) return "";
+    var s = Math.max(0, Math.floor((ahora - d) / 1000));
+    return "Jobs está escribiendo… · " + (s < 60 ? s + " s" : Math.floor(s / 60) + " min " + String(s % 60).padStart(2, "0") + " s");
+  }
+  /*sondeo:fin*/
   var CLIENT_ID = "861856772040-e1ri6kpu6maagtb6crdfbb923hsaalgb.apps.googleusercontent.com";
   var CLAVE = "chat-hilo-google";
   var ORIGEN = { app: "App", live: "admira.live", rutina: "rutina" };
   var $ = function (id) { return document.getElementById(id); };
   var hora = new Intl.DateTimeFormat("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-  var temporizador = null, firmaPintada = "", ultimosTurnos = [], locales = [];
+  var temporizador = null, activo = false, enCurso = false, otraVez = false, ultimaSalud = 0, tic = null, firmaPintada = "", ultimosTurnos = [], locales = [];
   var ESTADO = { enviando: "enviando…", entregado: "entregado", error: "error", sin_confirmar: "sin confirmar" };
 
   function credencial() {
@@ -142,11 +169,29 @@
       }
       art.appendChild(b); art.appendChild(meta); log.appendChild(art);
     });
+    pintarEscribiendo();
     if (abajo) window.scrollTo(0, document.body.scrollHeight);
   }
 
+  function todosLosTurnos() { return ultimosTurnos.concat(locales); }
+  function pintarEscribiendo() {
+    var log = $("hilo"), nodo = $("escribiendo"), txt = textoEscribiendo(todosLosTurnos(), Date.now());
+    if (!txt) { if (nodo) nodo.remove(); clearInterval(tic); tic = null; return; }
+    if (!nodo) {
+      nodo = document.createElement("article"); nodo.id = "escribiendo"; nodo.className = "turno persona escribiendo";
+      var b = document.createElement("div"); b.className = "burbuja";
+      var t = document.createElement("span"); t.className = "texto";
+      var p = document.createElement("span"); p.className = "puntos"; p.setAttribute("aria-hidden", "true");
+      p.innerHTML = "<i></i><i></i><i></i>";
+      b.appendChild(t); b.appendChild(p); nodo.appendChild(b);
+    }
+    if (nodo.parentNode !== log || log.lastElementChild !== nodo) log.appendChild(nodo);
+    nodo.querySelector(".texto").textContent = txt;
+    if (!tic) tic = setInterval(pintarEscribiendo, 1000);
+  }
+
   function pedirAcceso(msg) {
-    clearInterval(temporizador); temporizador = null;
+    activo = false; clearTimeout(temporizador); temporizador = null; clearInterval(tic); tic = null;
     $("hilo").hidden = true; $("pie").hidden = true; $("enviar").hidden = true; $("acceso").hidden = false;
     var e = $("acceso-error"); e.hidden = !msg; e.textContent = msg || "";
     if (window.google && google.accounts && google.accounts.id) return iniciarGoogle();
@@ -164,24 +209,41 @@
     google.accounts.id.prompt();
   }
 
+  function programar() {
+    clearTimeout(temporizador); temporizador = null;
+    if (!activo || document.hidden) return;
+    temporizador = setTimeout(refrescar, intervaloSondeo(todosLosTurnos(), Date.now()));
+  }
+
   function refrescar() {
-    fetch("/api/chat/salud?persona=" + PERSONA, { cache: "no-store" })
-      .then(function (r) { return r.json(); }).then(pintarSalud).catch(function () { pintarSalud(null); });
+    if (enCurso) { otraVez = true; return; }
+    clearTimeout(temporizador); temporizador = null;
+    if (Date.now() - ultimaSalud >= REPOSO_MS || !activo) {
+      ultimaSalud = Date.now();
+      fetch("/api/chat/salud?persona=" + PERSONA, { cache: "no-store" })
+        .then(function (r) { return r.json(); }).then(pintarSalud).catch(function () { pintarSalud(null); });
+    }
     var jwt = credencial();
     if (!jwt) return pedirAcceso("");
+    enCurso = true;
     return fetch("/api/chat/hilo?persona=" + PERSONA + "&limite=200", { cache: "no-store", headers: { Authorization: "Bearer " + jwt } })
       .then(function (r) {
         if (r.status === 401) { sessionStorage.removeItem(CLAVE); pedirAcceso("Tu sesión no está autorizada o ha caducado. Vuelve a entrar."); return null; }
         return r.json();
       })
       .then(function (d) { if (d && d.ok) pintarHilo(d.turnos || []); })
-      .catch(function () {});
+      .catch(function () {})
+      .then(function () {
+        enCurso = false;
+        if (otraVez && activo) { otraVez = false; return refrescar(); }
+        otraVez = false; programar();
+      });
   }
 
   function arrancar() {
     $("acceso").hidden = true; $("hilo").hidden = false; $("pie").hidden = false; $("enviar").hidden = false;
+    activo = true; ultimaSalud = 0;
     refrescar();
-    if (!temporizador) temporizador = setInterval(refrescar, CADA_MS);
   }
 
   function enviar() {
@@ -192,7 +254,7 @@
     var local = { id: id, rol: "carlos", origen: "live", texto: texto, ts: new Date().toISOString(), entrega: "enviando" };
     locales.push(local); caja.value = ""; ajustar(); firmaPintada = ""; pintarHilo(ultimosTurnos);
     window.scrollTo(0, document.body.scrollHeight);
-    $("boton").disabled = true;
+    $("boton").disabled = true; programar();
     fetch("/api/chat/enviar", { method: "POST", cache: "no-store", headers: { "content-type": "application/json", Authorization: "Bearer " + jwt }, body: JSON.stringify({ persona: PERSONA, texto: texto, msg_id: id }) })
       .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { r: r, d: d }; }); })
       .then(function (x) {
@@ -201,7 +263,7 @@
         local.entrega = t && t.entrega ? t.entrega : "error"; local.encargo = t && t.encargo;
       })
       .catch(function () { local.entrega = "sin_confirmar"; })
-      .then(function () { $("boton").disabled = false; firmaPintada = ""; pintarHilo(ultimosTurnos); if (temporizador) refrescar(); });
+      .then(function () { $("boton").disabled = false; firmaPintada = ""; pintarHilo(ultimosTurnos); if (activo) refrescar(); });
   }
   function ajustar() { var c = $("caja"); c.style.height = "auto"; c.style.height = Math.min(180, c.scrollHeight) + "px"; }
   $("caja").addEventListener("input", ajustar);
@@ -214,7 +276,10 @@
     try { google.accounts.id.disableAutoSelect(); } catch (e) {}
     pedirAcceso("");
   });
-  document.addEventListener("visibilitychange", function () { if (!document.hidden && temporizador) refrescar(); });
+  document.addEventListener("visibilitychange", function () {
+    if (document.hidden) { clearTimeout(temporizador); temporizador = null; return; }
+    if (activo) refrescar();
+  });
   if (credencial()) arrancar();
   else { refrescar(); }
 })();

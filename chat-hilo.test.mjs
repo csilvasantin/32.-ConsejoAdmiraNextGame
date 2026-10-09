@@ -147,3 +147,32 @@ test("texto del encargo cabe en 4000 y sincronizar ignora lo ya respondido", () 
   assert.deepEqual(porSincronizar(lista, "jobs", ahora).map((t) => t.id), ["a1"]);
   assert.equal(turnoDeEncargo("jobs", { id: 3, status: "ack", note: "x" }), null);
 });
+
+// Sondeo adaptativo de /chat/jobs/ (lógica pura extraída del propio HTML: una sola fuente).
+import { readFileSync } from "node:fs";
+function sondeo() {
+  const html = readFileSync(new URL("./chat/jobs/index.html", import.meta.url), "utf8");
+  const src = html.split("/*sondeo:inicio*/")[1].split("/*sondeo:fin*/")[0];
+  return new Function(src + "; return { intervaloSondeo, textoEscribiendo, esperaDesde };")();
+}
+test("sondeo: 2 s mientras espera respuesta (hasta 3 min), 10 s en reposo", () => {
+  const { intervaloSondeo } = sondeo();
+  const t0 = Date.parse("2026-10-09T05:00:00Z");
+  const carlos = { rol: "carlos", ts: new Date(t0).toISOString(), entrega: "entregado" };
+  const jobs = { rol: "persona", ts: new Date(t0 + 5000).toISOString() };
+  assert.equal(intervaloSondeo([], t0), 10000);
+  assert.equal(intervaloSondeo([carlos], t0 + 1000), 2000);
+  assert.equal(intervaloSondeo([carlos], t0 + 179000), 2000);
+  assert.equal(intervaloSondeo([carlos], t0 + 181000), 10000);
+  assert.equal(intervaloSondeo([carlos, jobs], t0 + 6000), 10000);
+  assert.equal(intervaloSondeo([{ ...carlos, entrega: "error" }], t0 + 1000), 10000);
+});
+test("sondeo: indicador «escribiendo» con segundos y caducidad", () => {
+  const { textoEscribiendo } = sondeo();
+  const t0 = Date.parse("2026-10-09T05:00:00Z");
+  const carlos = { rol: "carlos", ts: new Date(t0).toISOString() };
+  assert.equal(textoEscribiendo([carlos], t0 + 12400), "Jobs está escribiendo… · 12 s");
+  assert.equal(textoEscribiendo([carlos], t0 + 185000), "Jobs está escribiendo… · 3 min 05 s");
+  assert.equal(textoEscribiendo([carlos], t0 + 1800000), "");
+  assert.equal(textoEscribiendo([carlos, { rol: "persona", ts: new Date(t0 + 1).toISOString() }], t0 + 2000), "");
+});

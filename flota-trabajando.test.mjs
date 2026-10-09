@@ -62,3 +62,22 @@ test("/api/flota/trabajando: une la presencia; sin pulso ni Yokup sigue enseñan
   assert.equal(r.tarjetas[0].estado, "verde");
   assert.equal(r.tarjetas.filter((t) => CONSEJEROS_GROK.includes(t.agente)).length, 6);
 });
+
+test("gris: «hace X» y máquina de la fuente más fresca (latido, proceso o pulso)", () => {
+  const presencia = [
+    hb({ persona: "NeoMBP14", machine: "MacBookProNegro14", updated: T - 3000 }),
+    { persona: "Neo", machine: "MacBook Pro 16", source: "process_snapshot", cpu: 1, updated: T - 900, declared_updated: T - 400 },
+  ];
+  const velocidad = { porAgente: [{ agente: "Neo", tokHora: 0, tokHoy: 9, maquina: "MacMini", ultimoEvento: new Date((T - 200) * 1000).toISOString() }] };
+  let neo = tarjetas({ presencia, velocidad, ahoraS: T }).find((x) => x.agente === "Neo");
+  assert.deepEqual([neo.estado, neo.maquina, neo.haceS, neo.fuente], ["gris", "MacMini", 200, "pulso"]);
+  velocidad.porAgente[0].ultimoEvento = new Date((T - 5000) * 1000).toISOString();
+  neo = tarjetas({ presencia, velocidad, ahoraS: T }).find((x) => x.agente === "Neo");
+  assert.deepEqual([neo.maquina, neo.haceS, neo.fuente], ["MacBook Pro 16", 400, "process_snapshot"]);
+});
+
+test("retratos: Musk y Huang con recorte de cara propio; Oráculo con avatar de iniciales PNG", () => {
+  const t = tarjetas({ presencia: [], velocidad: { porAgente: [{ agente: "Oráculo", tokHora: 0, tokHoy: 1 }] }, ahoraS: T });
+  assert.deepEqual(t.find((x) => x.agente === "Musk").retrato.cara, { l: 9, t: 44, w: 9, h: 16 });
+  assert.equal(t.find((x) => x.agente === "Oráculo").retrato.img, "/avatars/oraculo.png");
+});

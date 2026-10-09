@@ -1,4 +1,7 @@
 {
+  "v.09.10.2026.r32.18:36": [
+    "Consumos: «Lecturas del plan» va en la misma tarjeta que «Trabajando ahora» y los velocímetros."
+  ],
   "v.09.10.2026.r31.18:19": [
     "Consumos compacto por defecto: «Trabajando ahora» plegado es una fila de fichas (verde trabajando, amarillo con Carlos, caras grises de los parados) con el resumen; al clic, las tarjetas completas.",
     "Bajo los velocímetros, «Velocidad por agente · gráficas» plegado en una línea (líder y tok/h, tokens de hoy, líneas de hoy y tok/línea); al clic, ranking, gráficas de tokens y líneas, y fuentes.",

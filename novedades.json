@@ -1,4 +1,7 @@
 {
+  "v.09.10.2026.r33.18:41": [
+    "Consumos, revisión de diseño de Walt: el Experto nace minimizado en una línea «› /help» con su asa; «Margen por cuenta» en su propia tarjeta plegable, una fila por cuenta con la cifra a la derecha; columna de 1180 px con rejillas de 3 columnas (1 en móvil); la foto tras los velocímetros al 10 %; «sin lectura» en gris y a media altura, sin barra vacía; y el motivo del rojo junto a la píldora."
+  ],
   "v.09.10.2026.r32.18:36": [
     "Consumos: «Lecturas del plan» va en la misma tarjeta que «Trabajando ahora» y los velocímetros."
   ],

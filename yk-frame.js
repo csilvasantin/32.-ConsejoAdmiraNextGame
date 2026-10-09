@@ -1989,6 +1989,20 @@
 
     root.appendChild(bar);
     root.appendChild(railL); root.appendChild(railR); root.appendChild(railB);
+    // Experto MINIMIZADO (opt-in por página: <html data-yk-expert-min>). Compactado, el
+    // panel deja una sola línea «› /help» con su asa, como la consola de la suite en la
+    // home; un clic (o Enter) lo abre y pone el foco en la orden. Sin el atributo, nada cambia.
+    if (document.documentElement.hasAttribute("data-yk-expert-min")) {
+      var expertMin = el("button", "yk-expert-min");
+      expertMin.type = "button";
+      expertMin.setAttribute("aria-label", "Abrir el modo Experto (consola · /help)");
+      expertMin.innerHTML = '<span class="yk-expert-min-asa" aria-hidden="true"></span><span class="yk-expert-min-cmd">› /help</span><span class="yk-expert-min-tit">EXPERTO</span>';
+      expertMin.addEventListener("click", function () {
+        setOpen("bottom", true);
+        setTimeout(function () { var i = document.getElementById("ykExpertCmd"); if (i) try { i.focus(); } catch (e) {} }, 60);
+      });
+      root.appendChild(expertMin);
+    }
     document.body.appendChild(root);
 
     // --- MOVER los nodos marcados a su slot ---

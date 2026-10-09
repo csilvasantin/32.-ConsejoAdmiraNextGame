@@ -84,3 +84,17 @@ body.mouths-off .council-speech-mouth{display:none!important}
 
 /* Modo encargo: indicador «escribiendo…» (chat de coetáneos vía deepagent) */
 .council-chat__typing .council-chat__dots{color:#bcae92;font-style:italic}.council-chat__typing .council-chat__dots i{font-style:normal;animation:council-chat-dot 1.2s infinite both}.council-chat__typing .council-chat__dots i:nth-child(2){animation-delay:.2s}.council-chat__typing .council-chat__dots i:nth-child(3){animation-delay:.4s}@keyframes council-chat-dot{0%,80%,100%{opacity:.2}40%{opacity:1}}@media (prefers-reduced-motion:reduce){.council-chat__typing .council-chat__dots i{animation:none}}
+
+/* Hilo compartido (Jobs): mismo hilo que Grok Bot y /chat/jobs/ — Carlos a la derecha, el consejero a la izquierda. */
+.council-chat__hilo{display:flex;flex-direction:column;max-width:88%}
+.council-chat__hilo--carlos{margin-left:auto;align-items:flex-end}
+.council-chat__hilo--carlos .council-chat__user{background:#1d3550;border-color:#2f5a86}
+.council-chat__hilo--persona{margin-right:auto;align-items:flex-start}
+.council-chat__hilo .council-chat__meta{font:11px/1.4 system-ui,sans-serif;color:#b9a87f}
+.council-chat__origen{display:inline-block;margin-left:6px;padding:0 6px;border:1px solid #6b5a3a;border-radius:8px;font-size:10px}
+.council-chat__origen--app{color:#c4a7ff;border-color:#5b3fa0}.council-chat__origen--live{color:#7ee2b8;border-color:#2a7a58}.council-chat__origen--rutina{color:#f0b46a;border-color:#8a5a1d}
+.council-chat__typing-hilo .council-chat__reply{font-style:italic;color:#c9ba9c}
+.council-chat__signin{padding:10px 14px;font:14px/1.5 system-ui,sans-serif;color:#eee2b5;flex:none}
+.council-chat__signin[hidden]{display:none!important}
+.council-chat__signin p{margin:0 0 8px}.council-chat__signin .council-chat__gbtn{margin-top:8px}
+.council-chat__signin-error{color:#ff8a7a}

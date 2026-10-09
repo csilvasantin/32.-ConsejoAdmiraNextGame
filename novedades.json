@@ -161,5 +161,11 @@
     "Chat con Steve Jobs más rápido: mientras esperas respuesta, /chat/jobs/ consulta el hilo cada 2 s (hasta 3 min) y cada 10 s en reposo; se pausa con la pestaña oculta y refresca al volver",
     "Nuevo indicador «Jobs está escribiendo…» con puntos animados y segundos de espera; desaparece al llegar su respuesta",
     "Estas novedades salen en el popover del sello, sin recorte del riel"
+  ],
+  "v.09.10.2026.r7.07:44": [
+    "Chat con Steve Jobs directamente en la home: en modo Experto, el panel Conversación con Steve Jobs seleccionado muestra y usa el MISMO hilo que Grok Bot y /chat/jobs/ (tú a la derecha, Jobs a la izquierda, con etiqueta App, admira.live o rutina)",
+    "Enviar desde la home le llega a Jobs como encargo privado [chat-coetaneos]; se actualiza cada 2 s mientras esperas (hasta 3 min) y cada 10 s en reposo, solo con el panel visible, con «Jobs está escribiendo…»",
+    "Si no has entrado con Google para el hilo privado, el panel lo pide en línea; el resto de consejeros sigue igual",
+    "Estas novedades salen en el popover del sello, sin recorte del riel"
   ]
 }

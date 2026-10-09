@@ -148,13 +148,16 @@ test("texto del encargo cabe en 4000 y sincronizar ignora lo ya respondido", () 
   assert.equal(turnoDeEncargo("jobs", { id: 3, status: "ack", note: "x" }), null);
 });
 
-// Sondeo adaptativo de /chat/jobs/ (lógica pura extraída del propio HTML: una sola fuente).
+// Sondeo adaptativo compartido por /chat/jobs/ y el panel Conversación de la home
+// (assets/chat-hilo-client.js: una sola fuente).
 import { readFileSync } from "node:fs";
-function sondeo() {
-  const html = readFileSync(new URL("./chat/jobs/index.html", import.meta.url), "utf8");
-  const src = html.split("/*sondeo:inicio*/")[1].split("/*sondeo:fin*/")[0];
-  return new Function(src + "; return { intervaloSondeo, textoEscribiendo, esperaDesde };")();
+function cliente() {
+  const src = readFileSync(new URL("./assets/chat-hilo-client.js", import.meta.url), "utf8");
+  const w = {};
+  new Function("window", src)(w);
+  return w.ChatHiloClient;
 }
+function sondeo() { return cliente(); }
 test("sondeo: 2 s mientras espera respuesta (hasta 3 min), 10 s en reposo", () => {
   const { intervaloSondeo } = sondeo();
   const t0 = Date.parse("2026-10-09T05:00:00Z");
@@ -175,4 +178,39 @@ test("sondeo: indicador «escribiendo» con segundos y caducidad", () => {
   assert.equal(textoEscribiendo([carlos], t0 + 185000), "Jobs está escribiendo… · 3 min 05 s");
   assert.equal(textoEscribiendo([carlos], t0 + 1800000), "");
   assert.equal(textoEscribiendo([carlos, { rol: "persona", ts: new Date(t0 + 1).toISOString() }], t0 + 2000), "");
+});
+
+test("cliente compartido: /chat/jobs/ y la home cargan el mismo módulo", () => {
+  const jobs = readFileSync(new URL("./chat/jobs/index.html", import.meta.url), "utf8");
+  const home = readFileSync(new URL("./index.html", import.meta.url), "utf8");
+  assert.match(jobs, /src="\/assets\/chat-hilo-client\.js/);
+  assert.match(home, /src="assets\/chat-hilo-client\.js[^"]*"><\/script>\s*<script defer src="council-grokbot\.js/);
+  assert.doesNotMatch(jobs, /\/\*sondeo:inicio\*\//);
+});
+test("cliente compartido: personaDe solo activa el hilo para Steve Jobs", () => {
+  const C = cliente();
+  assert.equal(C.personaDe("Steve Jobs"), "jobs");
+  assert.equal(C.personaDe("Steve Wozniak"), null);
+  assert.equal(C.personaDe("toString"), null);
+  assert.equal(C.personaDe(null), null);
+});
+test("cliente compartido: textoEstado y fundir", () => {
+  const C = cliente();
+  assert.equal(C.textoEstado({ rol: "carlos", origen: "live", entrega: "entregado", encargo: 12, encargo_estado: "done" }), "entregado · encargo #12 · respondido");
+  assert.equal(C.textoEstado({ rol: "carlos", origen: "live", entrega: "entregado", encargo: 3, encargo_estado: "ack" }, "Jobs"), "entregado · encargo #3 · Jobs trabajando");
+  assert.equal(C.textoEstado({ rol: "carlos", origen: "app", entrega: "entregado" }), "");
+  assert.equal(C.textoEstado({ rol: "persona", origen: "live", entrega: "entregado" }), "");
+  const srv = [{ id: "a", rol: "carlos" }, { id: "b", rol: "persona" }];
+  const m = C.fundir(srv, [{ id: "b", entrega: "enviando" }, { id: "c", rol: "carlos", entrega: "enviando" }]);
+  assert.deepEqual(m.turnos.map((t) => t.id), ["a", "b", "c"]);
+  assert.deepEqual(m.locales.map((t) => t.id), ["c"]);
+  assert.equal(m.firma, "a:::|b:::|c:enviando::");
+  assert.equal(C.textoEscribiendo([{ rol: "carlos", ts: "2026-10-09T05:00:00Z" }], Date.parse("2026-10-09T05:00:05Z"), "Jobs"), "Jobs está escribiendo… · 5 s");
+});
+test("cliente compartido: leerHilo sin credencial no llama a la red (pide login)", async () => {
+  const C = cliente();
+  let llamadas = 0;
+  const r = await C.leerHilo("jobs", { fetch: () => { llamadas++; } });
+  assert.equal(r.status, 401);
+  assert.equal(llamadas, 0);
 });

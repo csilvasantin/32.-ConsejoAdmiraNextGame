@@ -6,6 +6,9 @@
  * r19: DOS diales lado a lado (apilados en móvil): 1) toda la flota · 2) TOKENS POR PROYECTO (por defecto el que más
  * ha gastado hoy; selector para cambiar). En el centro de cada dial, un CUENTAKILÓMETROS de rodillos con los tokens
  * acumulados del día (flota / proyecto).
+ * r21 (Carlos): selector de AGENTE junto a «Toda la flota» (aguja = tok/h del agente, cuentakilómetros = sus tokens de
+ * hoy); el dial de proyecto SIGUE en auto al que más quema ahora (max tok/h 15 min; si todos a 0, el que más lleva hoy)
+ * hasta que se elige uno a mano; las elecciones manuales se guardan en localStorage. Criterio: consumos-velocimetro-elegir.js.
  * Si no hay pulso ni partes: dial en gris y «sin datos» — nunca números inventados. */
 (function (root) {
   'use strict';
@@ -82,36 +85,73 @@
     el.setAttribute('aria-label', sin ? T('sin datos', 'no data') : (Math.round(n).toLocaleString(en() ? 'en-US' : 'es-ES') + ' ' + T('tokens hoy', 'tokens today')));
   }
 
-  /* ---------- Un dial (aguja + arco + cifra + cuentakilómetros) ---------- */
+  /* ---------- Un dial (aguja + arco + cifra + cuentakilómetros) ----------
+   * r21 (Carlos): aguja ANALÓGICA — muelle amortiguado (un pelín de sobreimpulso al cambiar de valor) y una vibración
+   * continua de carretera (±0,5–1,5°, ruido nuevo ~15 Hz suavizado, por requestAnimationFrame) cuya amplitud crece con
+   * los tok/h; a 0 tok/h (o sin datos) queda quieta. prefers-reduced-motion: sin muelle ni vibración. */
+  function menosMovimiento() { try { return !!(root.matchMedia && root.matchMedia('(prefers-reduced-motion: reduce)').matches); } catch (e) { return false; } }
   function Dial(box, pfx, etiqueta) {
     this.box = box; this.pfx = pfx; this.etiqueta = etiqueta;
-    this.max = 0; this.frac = 0; this.valor = 0; this.anim = 0;
+    this.max = 0; this.frac = 0; this.vel = 0; this.destino = 0; this.valor = 0; this.v = 0; this.sin = true;
+    this.ruido = 0; this.ruidoObj = 0; this.tRuido = 0; this.tPrev = 0; this.corriendo = false;
   }
+  /** Amplitud de la vibración (grados) para una fracción de escala: 0 si parada; 0,5° → 1,5° a fondo. */
+  function amplitud(frac, sin) { return sin || !(frac > 0.002) ? 0 : 0.5 + Math.min(1, frac * 1.6); }
+  Dial.prototype.cuadro = function (t) {
+    var self = this, dt = Math.min(0.05, Math.max(0.001, ((t - (this.tPrev || t)) / 1000) || 0.016));
+    this.tPrev = t;
+    var quieto = menosMovimiento();
+    if (quieto) { this.frac = this.destino; this.vel = 0; this.valor = this.v; this.ruido = 0; }
+    else {
+      // Muelle subamortiguado (ζ≈0,55): llega con un pequeño sobreimpulso y se asienta en ~1 s.
+      var k = 38, c = 2 * Math.sqrt(k) * 0.55;
+      this.vel += (k * (this.destino - this.frac) - c * this.vel) * dt;
+      this.frac += this.vel * dt;
+      this.valor += (this.v - this.valor) * Math.min(1, dt * 6);
+      var amp = amplitud(this.destino, this.sin);
+      if (t - this.tRuido > 66) { this.tRuido = t; this.ruidoObj = (Math.random() * 2 - 1) * amp; }
+      this.ruido += (this.ruidoObj - this.ruido) * Math.min(1, dt * 22);
+      if (!amp) this.ruido *= 0.8;
+    }
+    var b = this.box, ag = b.querySelector('.vel-aguja'), val = b.querySelector('.vel-valor'), cifra = b.querySelector('.vel-cifra');
+    var f = Math.max(-0.02, Math.min(1.03, this.frac));
+    if (ag) ag.style.transform = 'rotate(' + (-90 + 180 * f + this.ruido).toFixed(2) + 'deg)';
+    if (val) val.style.strokeDashoffset = String(1 - Math.max(0, Math.min(1, f)));
+    if (cifra && !this.sin) cifra.textContent = fmt(Math.abs(this.valor - this.v) < 1 ? this.v : this.valor);
+    var asentado = Math.abs(this.destino - this.frac) < 0.0005 && Math.abs(this.vel) < 0.001;
+    var vibra = !quieto && amplitud(this.destino, this.sin) > 0;
+    if (!asentado || vibra || Math.abs(this.ruido) > 0.01) requestAnimationFrame(function (tt) { self.cuadro(tt); });
+    else this.corriendo = false;
+  };
+  Dial.prototype.arranca = function () {
+    if (this.corriendo) return;
+    this.corriendo = true; this.tPrev = 0;
+    var self = this;
+    requestAnimationFrame(function (t) { self.cuadro(t); });
+  };
   Dial.prototype.pinta = function (tokHora, max, tokHoy, sin) {
     var b = this.box;
     b.classList.toggle('sin-datos', !!sin);
-    if (max !== this.max || !b.querySelector('.vel-svg')) { b.querySelector('.vel-dial-svg').innerHTML = svg(max, this.pfx, this.etiqueta); this.max = max; this.frac = 0; }
-    var v = sin ? 0 : tokHora;
-    var destino = Math.max(0, Math.min(1, v / max));
-    var ag = b.querySelector('.vel-aguja'), val = b.querySelector('.vel-valor'), cifra = b.querySelector('.vel-cifra');
+    if (max !== this.max || !b.querySelector('.vel-svg')) {
+      var fracVieja = this.max ? (this.frac * this.max) / max : 0;
+      b.querySelector('.vel-dial-svg').innerHTML = svg(max, this.pfx, this.etiqueta); this.max = max; this.frac = Math.max(0, Math.min(1, fracVieja));
+    }
+    var v = sin ? 0 : (Number(tokHora) || 0);
+    this.sin = !!sin; this.v = v;
+    this.destino = Math.max(0, Math.min(1, v / max));
+    var cifra = b.querySelector('.vel-cifra');
     if (sin) cifra.textContent = T('sin datos', 'no data');
     b.querySelector('.vel-unidad').textContent = sin ? '' : 'tok/h';
-    var self = this, f0 = this.frac, v0 = this.valor, t0 = performance.now(), dur = 1600, id = ++this.anim;
-    function paso(t) {
-      if (id !== self.anim) return;
-      var k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
-      self.frac = f0 + (destino - f0) * e;
-      self.valor = v0 + (v - v0) * e;
-      if (ag) ag.style.transform = 'rotate(' + (-90 + 180 * self.frac).toFixed(2) + 'deg)';
-      if (val) val.style.strokeDashoffset = String(1 - self.frac);
-      if (cifra && !sin) cifra.textContent = fmt(self.valor);
-      if (k < 1) requestAnimationFrame(paso);
-    }
-    requestAnimationFrame(paso);
+    this.arranca();
     odometro(b.querySelector('.odo'), tokHoy);
   };
+  root.ConsumosVelocimetroAguja = { amplitud: amplitud };
 
-  var estado = { datos: null, recibido: 0, proyecto: null, elegido: false, d1: null, d2: null };
+  var LS_PROY = 'consumos.vel.proyecto', LS_AG = 'consumos.vel.agente', AUTO = '__auto__';
+  function lsGet(k) { try { return root.localStorage ? root.localStorage.getItem(k) || '' : ''; } catch (e) { return ''; } }
+  function lsSet(k, v) { try { if (!root.localStorage) return; if (v) root.localStorage.setItem(k, v); else root.localStorage.removeItem(k); } catch (e) {} }
+  var E = root.ConsumosElegir;
+  var estado = { datos: null, recibido: 0, proyecto: lsGet(LS_PROY) || null, agente: lsGet(LS_AG) || '', d1: null, d2: null };
   function hace(s) {
     if (s == null || !isFinite(s)) return '';
     if (s < 90) return T('hace ', '') + Math.round(s) + ' s' + T('', ' ago');
@@ -137,22 +177,61 @@
       '<p class="vel-spark-pie"><span>−60 min</span><span>' + T('pico ', 'peak ') + fmt(max) + ' tok/min</span><span>' + T('ahora', 'now') + '</span></p>';
   }
 
-  /** Proyecto a enseñar: el elegido por el usuario o, por defecto, el que más tokens lleva hoy. */
-  function proyectoActual(d) {
-    var lista = (d && d.porProyecto) || [];
-    if (estado.elegido && estado.proyecto) return estado.proyecto;
-    return (d && d.proyectoTop) || (lista[0] && lista[0].proyecto) || null;
-  }
+  /** Proyecto a enseñar: el elegido a mano (guardado) o, en AUTO, el que más quema ahora (se reevalúa cada 10 s). */
+  function eleccion(d) { return E.elegirProyecto((d && d.porProyecto) || [], estado.proyecto); }
+  function proyectoActual(d) { return eleccion(d).proyecto; }
+  function nomP(p) { return p === 'otros' ? T('otros (sin proyecto)', 'others (no project)') : p; }
   function pintaSelector(d) {
     var sel = document.getElementById('vel-proy-sel');
     if (!sel || document.activeElement === sel) return; // no cerrar el desplegable mientras se elige
-    var lista = (d && d.porProyecto) || [], vistos = {}, opts = [];
-    lista.forEach(function (p) { vistos[p.proyecto] = 1; opts.push({ p: p.proyecto, t: p.tokHoy }); });
-    GALAXIA.forEach(function (p) { if (!vistos[p]) opts.push({ p: p, t: null }); });
-    var actual = proyectoActual(d);
-    sel.innerHTML = opts.map(function (o) {
-      return '<option value="' + esc(o.p) + '"' + (o.p === actual ? ' selected' : '') + '>' + esc(o.p) + ' — ' + (o.t == null ? T('sin datos hoy', 'no data today') : fmt(o.t) + ' tok') + '</option>';
+    var lista = E.ordenarProyectos((d && d.porProyecto) || []), vistos = {}, opts = [];
+    lista.forEach(function (p) { vistos[p.proyecto] = 1; opts.push(p); });
+    GALAXIA.forEach(function (p) { if (!vistos[p]) opts.push({ proyecto: p, tokHoy: null }); });
+    var el = eleccion(d);
+    var txt = function (o) {
+      return o.tokHoy == null ? T('sin datos hoy', 'no data today') : (o.tokHora != null ? fmt(o.tokHora) + ' tok/h · ' : '') + fmt(o.tokHoy) + T(' hoy', ' today');
+    };
+    sel.innerHTML = '<option value="' + AUTO + '">' + T('Automático: el que más gasta ahora', 'Automatic: top spender right now') + '</option>' +
+      opts.map(function (o) {
+        var sele = o.proyecto === el.proyecto;
+        return '<option value="' + esc(o.proyecto) + '"' + (sele ? ' selected' : '') + '>' + esc(nomP(o.proyecto)) + (sele && el.auto ? ' (auto)' : '') + ' — ' + txt(o) + '</option>';
+      }).join('');
+    sel.classList.toggle('vel-auto', el.auto);
+  }
+  function pintaSelectorAgente(d) {
+    var sel = document.getElementById('vel-ag-sel');
+    if (!sel || document.activeElement === sel) return;
+    var ags = ((d && d.porAgente) || []).map(function (a) { return a.agente; }).filter(function (a, i, arr) { return a && arr.indexOf(a) === i; });
+    if (estado.agente && ags.indexOf(estado.agente) < 0) ags.push(estado.agente);
+    sel.innerHTML = '<option value="">' + T('Toda la flota', 'Whole fleet') + '</option>' + ags.map(function (a) {
+      return '<option value="' + esc(a) + '"' + (a === estado.agente ? ' selected' : '') + '>' + esc(a) + '</option>';
     }).join('');
+  }
+  /* Dial izquierdo: toda la flota o el agente elegido. */
+  function pintaIzquierdo(d, sin) {
+    var g1 = document.getElementById('vel-g-total');
+    if (!estado.d1) estado.d1 = new Dial(g1, 'vg1', T('Velocímetro de tokens por hora', 'Tokens per hour speedometer'));
+    var r = E.elegirAgente(sin ? [] : d.porAgente, estado.agente);
+    var tit = document.getElementById('vel-ag-titulo'), rot = document.getElementById('vel-ag-rotulo'), met = document.getElementById('vel-ag-metodo');
+    var max;
+    if (!r.agente) {
+      max = sin ? (estado.d1.max || 50e6) : (d.escalaMax || 50e6);
+      estado.d1.pinta(sin ? 0 : d.tokHora, max, sin ? null : d.tokHoy, sin);
+      if (tit) tit.textContent = T('Toda la flota', 'Whole fleet');
+      if (rot) rot.textContent = T('tokens hoy', 'tokens today');
+      if (met) met.textContent = '';
+      return max;
+    }
+    var f = r.fila;
+    var maxAg = ((d && d.porAgente) || []).reduce(function (m, a) { return Math.max(m, a.tokHora || 0); }, 0);
+    max = escala(maxAg, 5e6);
+    var sinA = sin || !f;
+    estado.d1.pinta(f ? (f.tokHora || 0) : 0, max, f ? f.tokHoy : null, sinA);
+    if (tit) tit.textContent = r.agente;
+    if (rot) rot.textContent = r.agente + ' · ' + T('tokens hoy', 'tokens today');
+    if (met) met.innerHTML = !f ? T('Este agente no aparece ahora en el pulso ni en Yokup: sin cifra.', 'This agent is not in the pulse or Yokup right now: no number.') :
+      (f.tokHora == null ? T('parado (sin pulso reciente)', 'stopped (no recent pulse)') : (f.motor ? esc(f.motor) + ' · ' : '') + (f.maquina ? esc(f.maquina) + ' · ' : '') + (f.tokUltimos5min != null ? '5 min: <b>' + fmt(f.tokUltimos5min) + '</b> tok' : esc(f.metodo || '')));
+    return d && d.escalaMax || max;
   }
   function pintaProyecto(d, sin) {
     var box = document.getElementById('vel-g-proy');
@@ -170,12 +249,12 @@
     var sinP = sin || rate == null;
     estado.d2.pinta(rate, escala(maxRate, 5e6), hoy, sinP);
     var nom = document.getElementById('vel-proy-nombre');
-    if (nom) nom.textContent = nombre || T('ningún proyecto con datos', 'no project with data');
+    if (nom) nom.textContent = (nombre && nomP(nombre)) || T('ningún proyecto con datos', 'no project with data');
     var met = document.getElementById('vel-proy-metodo');
     if (met) met.innerHTML = !nombre ? T('Aún no llega el desglose por proyecto de ningún Mac.', 'No per-project breakdown from any Mac yet.') :
       sinP ? T('Sin pulso fresco que lo mida: no se enseña ninguna cifra.', 'No fresh pulse measuring it: no number is shown.') :
       (p ? T('15 min', '15 min') + ': <b>' + fmt(p.tokUltimos15min) + '</b> tok' + (p.maquinas && p.maquinas.length ? ' · ' + esc(p.maquinas.join(', ')) : '') +
-        (!estado.elegido ? ' · ' + T('el que más gasta hoy', 'top spender today') : '') : T('0 tokens hoy en los Macs con pulso', '0 tokens today on the Macs with a pulse'));
+        (eleccion(d).auto ? ' · ' + T('auto: el que más gasta ahora', 'auto: top spender right now') : '') : T('0 tokens hoy en los Macs con pulso', '0 tokens today on the Macs with a pulse'));
   }
 
   function pinta(d) {
@@ -186,10 +265,9 @@
     estado.recibido = Date.now();
     box.classList.toggle('sin-datos', sin);
     box.classList.toggle('rt', !sin && d.metodo === 'tiempo real');
-    var g1 = document.getElementById('vel-g-total');
-    if (!estado.d1) estado.d1 = new Dial(g1, 'vg1', T('Velocímetro de tokens por hora', 'Tokens per hour speedometer'));
-    var max = sin ? (estado.d1.max || 50e6) : (d.escalaMax || 50e6);
-    estado.d1.pinta(sin ? 0 : d.tokHora, max, sin ? null : d.tokHoy, sin);
+    pintaSelectorAgente(d);
+    pintaIzquierdo(d, sin);
+    var max = sin ? 50e6 : (d.escalaMax || 50e6);
     pintaSelector(d);
     pintaProyecto(d, sin);
     var met = document.getElementById('vel-metodo');
@@ -226,8 +304,17 @@
     if (!document.getElementById('velocimetro')) return;
     var sel = document.getElementById('vel-proy-sel');
     if (sel) sel.addEventListener('change', function () {
-      estado.proyecto = sel.value; estado.elegido = true;
+      estado.proyecto = sel.value === AUTO ? null : sel.value;
+      lsSet(LS_PROY, estado.proyecto);
+      sel.blur();
+      pintaSelector(estado.datos);
       if (estado.datos) pintaProyecto(estado.datos, false);
+    });
+    var selA = document.getElementById('vel-ag-sel');
+    if (selA) selA.addEventListener('change', function () {
+      estado.agente = selA.value || '';
+      lsSet(LS_AG, estado.agente);
+      pintaIzquierdo(estado.datos, !estado.datos);
     });
     leer();
     setInterval(function () { if (!document.hidden) leer(); }, POLL);

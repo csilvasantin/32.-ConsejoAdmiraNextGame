@@ -187,3 +187,14 @@ export function nombreAgente(owner, datos = {}) {
   const equipo = datos.equipo || "";
   return persona + (datos.runtime ? " · " + datos.runtime : "") + (equipo && persona === "Anónimo" ? " (" + equipo + ")" : "");
 }
+
+/**
+ * r20: proyecto que más consume AHORA (max tokHora de los últimos 15 min); si todos a 0, el que más lleva hoy;
+ * a igualdad, un proyecto real antes que «otros». Mismo criterio que assets/consumos-velocimetro-elegir.js.
+ */
+export function proyectoAhora(porProyecto) {
+  const n = (x) => (Number.isFinite(Number(x)) && Number(x) > 0 ? Number(x) : 0);
+  const o = (porProyecto || []).filter((p) => p && p.proyecto).slice()
+    .sort((a, b) => n(b.tokHora) - n(a.tokHora) || n(b.tokHoy) - n(a.tokHoy) || (a.proyecto === "otros") - (b.proyecto === "otros"));
+  return o.length ? o[0].proyecto : null;
+}

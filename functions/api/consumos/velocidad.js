@@ -13,11 +13,13 @@
  * tokUltimaHora, serie60 (tokens por minuto, 60 min), haceS. Yokup solo para los agentes sin pulso. Un agente sin
  * pulso hace >3 min queda «parado» (sin velocidad). La respuesta se cachea 8 s en el borde (menos lecturas de KV).
  * r19: porProyecto:[{proyecto, tokHoy, tokHora, tokUltimos15min, maquinas}] (orden tokHoy) + proyectoTop, del desglose del pulso.
+ * r23: conocidos:[{agente, maquina, modelo, cuentaId, plan, email}] (consumos-perfiles.mjs) para los desplegables.
  * r20: proyectoAhora = el que más quema AHORA (max tokHora; si todos a 0, max tokHoy) — el dial de proyecto lo sigue en auto.
  */
 import { calcularVelocidad, partesDeHoy, serieAInstantaneas, unir, podar, tocaGuardar, escala, proyectoAhora } from "../../../consumos-velocidad-lib.mjs";
 import { mezclar } from "../../../consumos-pulso-lib.mjs";
 import { leerPulsos } from "./pulso.js";
+import { perfilesFlota } from "../../../consumos-perfiles.mjs";
 
 export const FUENTE = "https://api.yokup.com/fleet/consumo?dias=1";
 export const KEY = "consumos:vel:snaps:v1";
@@ -80,6 +82,6 @@ export async function calcular({ env, fetchImpl }) {
   }
   const m = mezclar(yk, docs, ahora);
   const base = { fuente: FUENTE, fuentePulso: "/api/consumos/pulso", yokup: d ? "ok" : "sin respuesta", instantaneasKV: propias.length, instantaneasYokup: deYokup.length, almacen: store ? "kv" : "ninguno", generado: new Date(ahora).toISOString() };
-  if (m.sinDatos) return { ok: false, sinDatos: true, tokHora: null, metodo: null, porAgente: [], pico24h: null, error: "ni pulso en tiempo real ni partes de Yokup", ...base };
-  return { ok: true, ...m, proyectoAhora: proyectoAhora(m.porProyecto), escalaMax: escala(Math.max(m.pico24h || 0, m.tokHora || 0)), ...base };
+  if (m.sinDatos) return { ok: false, sinDatos: true, conocidos: perfilesFlota(), tokHora: null, metodo: null, porAgente: [], pico24h: null, error: "ni pulso en tiempo real ni partes de Yokup", ...base };
+  return { ok: true, ...m, conocidos: perfilesFlota(), proyectoAhora: proyectoAhora(m.porProyecto), escalaMax: escala(Math.max(m.pico24h || 0, m.tokHora || 0)), ...base };
 }

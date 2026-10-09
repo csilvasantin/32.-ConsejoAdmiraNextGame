@@ -10,7 +10,19 @@
  * Canónicas: 00:00 y 12:00 de Madrid. Una sola clave KV (barata: una lectura por visita).
  * KV: binding CONSUMOS_KV si existe; si no, el RECORTE_KV ya enlazado al proyecto (prefijo propio).
  */
-import { normalizarLectura, anadir, resumirTodo, recomendar } from "../../../consumos-lecturas-lib.mjs";
+import { normalizarLectura, anadir, resumirTodo, recomendar, resumirCuentas, recomendarCuentas } from "../../../consumos-lecturas-lib.mjs";
+
+/* Partes de tokens (mandamiento 15): la lista pública de Notificaciones de Yokup, sin secretos.
+   Solo trae las abiertas (una por agente y día); si no responde, el reparto queda «pendiente». */
+export const YOKUP_PARTES = "https://api.yokup.com/fleet/notificaciones?kind=consumo";
+export async function leerPartes(fetchImpl = fetch) {
+  try {
+    const r = await fetchImpl(YOKUP_PARTES, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(4000), cf: { cacheTtl: 300, cacheEverything: true } });
+    if (!r.ok) return null;
+    const d = await r.json();
+    return Array.isArray(d && d.notificaciones) ? d.notificaciones.filter((n) => n && n.kind === "consumo").map((n) => ({ kind: n.kind, last_at_ms: n.last_at_ms || n.last_at, owner: n.owner, datos: typeof n.datos === "object" && n.datos ? { persona: n.datos.persona, total: n.datos.total, runtime: n.datos.runtime } : {} })) : null;
+  } catch (e) { return null; }
+}
 
 export const KEY = "consumos:lecturas:v1";
 const ALLOW = new Set(["https://www.admira.live", "https://admira.live", "https://admira-live.pages.dev"]);
@@ -54,18 +66,21 @@ export function onRequestOptions({ request }) {
   return new Response(null, { status: 204, headers: headers(request.headers.get("Origin") || "") });
 }
 
-export async function onRequestGet({ request, env }) {
+export async function onRequestGet({ request, env, fetchImpl }) {
   const origin = request.headers.get("Origin") || "";
   const url = new URL(request.url);
   const dias = Math.min(120, Math.max(1, Number(url.searchParams.get("dias")) || 14));
   const cuenta = (url.searchParams.get("cuenta") || "").trim();
-  if (!kv(env)) return json({ ok: true, lecturas: [], series: [], recomendacion: null, almacen: "ninguno" }, 200, origin);
+  if (!kv(env)) return json({ ok: true, lecturas: [], series: [], cuentas: [], recomendacion: null, almacen: "ninguno" }, 200, origin);
   const doc = await cargar(env);
   const ahora = Date.now();
   const corte = ahora - dias * 24 * 3600 * 1000;
   const lecturas = doc.lecturas.filter((l) => Date.parse(l.ts) >= corte && (!cuenta || l.cuenta === cuenta));
   const series = resumirTodo(lecturas, { ahora });
-  return json({ ok: true, dias, zona: "Europe/Madrid", canonicas: ["00:00", "12:00"], lecturas, series: series.map(({ deltas, ...s }) => ({ ...s, deltas })), recomendacion: recomendar(series), actualizado: doc.actualizado, generado: new Date(ahora).toISOString() }, 200, origin);
+  const partes = await leerPartes(fetchImpl || fetch);
+  const cuentas = resumirCuentas(lecturas, partes, { ahora });
+  const reparto = recomendarCuentas(cuentas);
+  return json({ ok: true, cuentas, recomendacionCuentas: reparto.texto, ranking: reparto.ranking, partesYokup: partes ? partes.length : null, dias, zona: "Europe/Madrid", canonicas: ["00:00", "12:00"], lecturas, series: series.map(({ deltas, ...s }) => ({ ...s, deltas })), recomendacion: recomendar(series), actualizado: doc.actualizado, generado: new Date(ahora).toISOString() }, 200, origin);
 }
 
 export async function onRequestPost({ request, env }) {

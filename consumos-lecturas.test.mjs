@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { esCanonica, normalizarLectura, anadir, resumirSerie, resumirTodo, recomendar } from "./consumos-lecturas-lib.mjs";
+import { esCanonica, normalizarLectura, anadir, resumirSerie, resumirTodo, recomendar, semaforo, cupoDiario, bloques12h, proyectar, repartir, resumirCuentas, recomendarCuentas, CUENTAS } from "./consumos-lecturas-lib.mjs";
 import { onRequestGet, onRequestPost, KEY } from "./functions/api/consumos/lecturas.js";
 
 const L = (ts, pct, extra = {}) => ({ id: ts + extra.agente, ts: new Date(ts).toISOString(), cuenta: "csilva@admira.com", agente: "Jobs", grupo: "leyendas", pct, fuente: "manual", autor: "Carlos", canonica: esCanonica(ts), ...extra });
@@ -83,11 +83,17 @@ test("POST exige el token del Consejo y guarda; GET devuelve series", async () =
   const r2 = await onRequestPost({ request: post({ ...cuerpo, agente: "Wozniak", pct: 3 }, { Authorization: "Bearer s3creto" }), env });
   assert.equal(r2.status, 200);
   assert.equal(JSON.parse(env.RECORTE_KV.m.get(KEY)).lecturas.length, 2);
-  const g = await (await onRequestGet({ request: new Request("https://www.admira.live/api/consumos/lecturas?dias=14"), env })).json();
+  const g = await (await onRequestGet({ request: new Request("https://www.admira.live/api/consumos/lecturas?dias=14"), env, fetchImpl: async () => new Response(JSON.stringify({ notificaciones: [{ kind: "consumo", last_at_ms: Date.now() - 3600e3, datos: { persona: "Jobs", total: 3000 } }, { kind: "consumo", last_at_ms: Date.now() - 3600e3, datos: { persona: "Disney", total: 1000 } }, { kind: "bloqueo", datos: {} }] })) })).json();
   assert.equal(g.ok, true);
   assert.equal(g.series.length, 2);
   assert.equal(g.lecturas[0].pct, 1);
   assert.match(g.recomendacion.texto, /Jobs/);
+  const ley = g.cuentas.find((c) => c.id === "leyendas");
+  assert.equal(ley.pct, 3);
+  assert.equal(ley.reparto.estado, "ok");
+  assert.deepEqual(ley.reparto.filas.map((f) => [f.consejero, f.pct]), [["Jobs", 2.25], ["Wozniak", 0], ["Lucas", 0], ["Walt", 0.75]]);
+  assert.equal(g.cuentas.find((c) => c.id === "coetaneos").semaforo, "sin");
+  assert.match(g.recomendacionCuentas, /Mover encargos pesados a leyendas: les sobra 97 %/);
 });
 
 test("la página /consumos pinta las lecturas desde la API", () => {
@@ -97,4 +103,64 @@ test("la página /consumos pinta las lecturas desde la API", () => {
   assert.match(html, /consumos-lecturas\.js/);
   assert.match(js, /\/api\/consumos\/lecturas/);
   assert.match(js, /X-Council-Token/);
+});
+
+test("semáforo: verde <60, ámbar 60-85, rojo >85 o si se agota antes del reset", () => {
+  assert.equal(semaforo(59), "verde");
+  assert.equal(semaforo(60), "ambar");
+  assert.equal(semaforo(85), "ambar");
+  assert.equal(semaforo(85.5), "rojo");
+  assert.equal(semaforo(10, true), "rojo");
+  assert.equal(semaforo(null), "sin");
+});
+
+test("cupo diario = (100 − pct) / días al reset, sin pasar del margen", () => {
+  const ahora = Date.parse("2026-10-09T04:00:00Z");
+  assert.equal(cupoDiario(30, "2026-10-16T04:00:00Z", ahora), 10);
+  assert.equal(cupoDiario(73, "2026-10-09T16:00:00Z", ahora), 27); // medio día: el cupo es el margen
+  assert.equal(cupoDiario(30, "2026-10-08T00:00:00Z", ahora), null);
+  assert.equal(cupoDiario(30, null, ahora), null);
+});
+
+test("bloques de 12 h entre canónicas, con reset", () => {
+  const b = bloques12h([L("2026-10-08T22:00:00Z", 10), L("2026-10-09T03:44:00Z", 12), L("2026-10-09T10:00:00Z", 25), L("2026-10-09T22:00:00Z", 4)]);
+  assert.deepEqual(b.map((x) => [x.gasto, x.reinicio, x.horas]), [[15, false, 12], [4, true, 12]]);
+});
+
+test("proyección: con una lectura y reset semanal usa la media de la semana; avisa si se agota antes", () => {
+  const ahora = Date.parse("2026-10-09T04:00:00Z");
+  const s = resumirSerie([L("2026-10-09T03:58:00Z", 27, { reset: "2026-10-09T18:31:00.000Z" })], { ahora });
+  const p = proyectar(s, ahora);
+  assert.equal(p.base, "semana");
+  assert.equal(p.agotaAntes, false);
+  const s2 = resumirSerie([L("2026-10-08T10:00:00Z", 40, { reset: "2026-10-12T10:00:00.000Z" }), L("2026-10-08T22:00:00Z", 70, { reset: "2026-10-12T10:00:00.000Z" })], { ahora });
+  const p2 = proyectar(s2, ahora);
+  assert.equal(p2.llega100, "2026-10-09T10:00:00.000Z");
+  assert.equal(p2.agotaAntes, true);
+  assert.equal(p2.texto, 'se agota vie 9 oct 12:00');
+});
+
+test("reparto: sin partes en la semana queda pendiente, sin inventar cifras", () => {
+  const ley = CUENTAS[0];
+  assert.equal(repartir(ley, null, 27, { desde: 0 }).estado, "pendiente de partes de tokens");
+  const viejo = [{ kind: "consumo", last_at_ms: 1, datos: { persona: "Jobs", total: 5000 } }];
+  const r = repartir(ley, viejo, 27, { desde: 1000, hasta: 2000 });
+  assert.equal(r.estado, "pendiente de partes de tokens");
+  assert.ok(r.filas.every((f) => f.pct === null));
+});
+
+test("tarjetas: manda el límite más alto; coetáneos sin lectura; recomendación y ranking", () => {
+  const ahora = Date.parse("2026-10-09T04:00:00Z");
+  const ls = [L("2026-10-09T03:44:00Z", 1), L("2026-10-09T03:58:00Z", 27, { agente: "SuperGrok Heavy semanal", reset: "2026-10-09T18:31:00.000Z" }), L("2026-10-09T03:58:00Z", 0, { agente: "Grok Bot semanal", reset: "2026-10-15T20:58:00.000Z" })];
+  const c = resumirCuentas(ls, [], { ahora });
+  assert.equal(c[0].pct, 27);
+  assert.equal(c[0].manda, "SuperGrok Heavy semanal");
+  assert.equal(c[0].semaforo, "verde");
+  assert.equal(c[0].reset, "2026-10-09T18:31:00.000Z");
+  assert.equal(c[1].pct, null);
+  assert.match(c[1].pista, /1 % el 4 de octubre/);
+  const r = recomendarCuentas(c);
+  assert.match(r.texto, /les sobra 73 %/);
+  assert.match(r.texto, /Sin lectura: Coetáneos, Cursor Pro/);
+  assert.deepEqual(r.ranking.map((x) => x.id), ["leyendas", "coetaneos", "cursor"]);
 });

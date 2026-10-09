@@ -26,7 +26,38 @@
     return s + "</svg>";
   }
 
+
+  const LUZ = { rojo: "Rojo", ambar: "Ámbar", verde: "Verde", sin: "Sin lectura" };
+  function pintaCuentas(d) {
+    const top = document.getElementById("reco-top"), rk = document.getElementById("ranking"), grid = document.getElementById("cuentas");
+    if (!top || !grid) return;
+    top.textContent = d.recomendacionCuentas || "Sin lecturas todavía.";
+    rk.innerHTML = (d.ranking || []).map((r) => "<li>" + r.puesto + ". <b>" + esc(r.nombre) + "</b> · " + (r.margen === null ? "sin lectura" : "margen " + pct(r.margen)) + "</li>").join("");
+    grid.innerHTML = (d.cuentas || []).map((c) => {
+      const luz = LUZ[c.semaforo] ? c.semaforo : "sin";
+      let h = '<article class="card"><div class="top"><div><h2 class="nombre">' + esc(c.nombre) + '</h2><p class="cuenta">' + esc(c.cuenta + " · " + c.plan + (c.consejeros.length ? " · " + c.consejeros.join(", ") : "")) + '</p></div><span class="luz ' + luz + '">' + LUZ[luz] + "</span></div>";
+      if (c.pct === null) {
+        h += '<p class="cifra">sin lectura</p>' + (c.pista ? '<p class="frase">' + esc(c.pista) + "</p>" : "") + "</article>";
+        return h;
+      }
+      const p = c.proyeccion || {};
+      h += '<p class="cifra">' + pct(c.pct) + '</p><p class="unidad">usado · manda «' + esc(c.manda) + "»</p>";
+      h += '<p class="frase">' + (c.reset ? "Reset: " + esc(fecha(c.reset)) + (c.cupoDia !== null ? " · cupo " + pct(c.cupoDia) + " al día" : "") : "Sin hora de reset en la lectura") + "</p>";
+      h += '<p class="cta">' + (p.agotaAntes ? '<span class="agota">' + esc(p.texto) + "</span>, antes del reset" : p.llega100 ? "Al ritmo actual (" + pct(p.ritmoDia) + "/día" + (p.base === "semana" ? ", media de la semana" : "") + ") llegaría al 100 % el " + esc(fecha(p.llega100)) : "Falta otra lectura para saber el ritmo") + "</p>";
+      h += '<ul class="limites">' + c.series.map((s) => "<li><b>" + esc(s.agente || s.cuenta) + "</b>: " + pct(s.pct) + (s.ultima.reset ? " · reset " + esc(fecha(s.ultima.reset)) : "") + " · " + esc(fecha(s.ultima.ts)) + (s.proy && s.proy.agotaAntes ? ' · <span class="agota">' + esc(s.proy.texto) + "</span>" : "") + "</li>").join("") + "</ul>";
+      const bl = (c.series.find((s) => (s.agente || s.cuenta) === c.manda) || {}).bloques || [];
+      if (bl.length) {
+        const mx = Math.max(5, ...bl.map((b) => b.gasto));
+        h += '<div class="barras" title="% gastado por bloque de 12 h">' + bl.slice(-28).map((b) => '<span class="' + (b.reinicio ? "rei" : "") + '" style="height:' + Math.max(3, (b.gasto / mx) * 100) + '%" title="' + esc(fecha(b.desde) + " → " + fecha(b.hasta) + ": " + pct(b.gasto) + (b.reinicio ? " (tras reset)" : "")) + '"></span>').join("") + "</div>";
+      } else h += '<p class="cuando">Bloques de 12 h: aún no hay dos lecturas de las 00:00/12:00.</p>';
+      const r = c.reparto || {};
+      if (r.estado === "ok") h += '<div class="reparto">Reparto por partes de tokens (' + r.partes + ' partes de Yokup):<table>' + r.filas.map((f) => "<tr><td>" + esc(f.consejero) + "</td><td>" + pct(f.pct) + "</td><td>" + f.cuota + " % de los tokens</td></tr>").join("") + "</table></div>";
+      else if (r.estado !== "no aplica") h += '<p class="reparto">Reparto por consejero: ' + esc(r.estado) + (r.motivo ? " (" + esc(r.motivo) + ")" : "") + ".</p>";
+      return h + "</article>";
+    }).join("");
+  }
   function pinta(d) {
+    pintaCuentas(d);
     const series = Array.isArray(d.series) ? d.series : [];
     if (!series.length) { caja.innerHTML = '<p class="nota">Sin lecturas todavía.</p>'; return; }
     let h = "";

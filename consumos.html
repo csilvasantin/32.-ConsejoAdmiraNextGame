@@ -46,6 +46,20 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
 .nota{color:var(--mut);font-size:16px;line-height:1.45;padding:16px;border:1px dashed var(--line);border-radius:14px}
 .pie{margin-top:22px;color:var(--dim);font-size:14px;line-height:1.45}
 .pie a{color:var(--brand)}
+.planes{margin-bottom:22px}
+.ranking{display:flex;flex-wrap:wrap;gap:8px 18px;list-style:none;color:var(--mut);font-size:15px;margin:6px 0 12px}
+.ranking b{color:var(--ink)}
+.cta{font-size:15px;color:var(--mut);margin-top:6px}
+.cta b{color:var(--ink)}
+.agota{color:#ff8a8a;font-weight:700}
+.limites{margin:10px 0 0;list-style:none;font-size:14px;color:var(--mut)}
+.limites li{margin-top:4px}
+.barras{display:flex;align-items:flex-end;gap:3px;height:70px;margin-top:10px;border-bottom:1px solid var(--line)}
+.barras span{flex:1;max-width:22px;background:var(--brand);border-radius:3px 3px 0 0;min-height:2px}
+.barras span.rei{background:#ffd866}
+.reparto{margin-top:10px;font-size:14px;color:var(--mut)}
+.reparto table{width:100%;border-collapse:collapse;margin-top:4px}
+.reparto td{padding:3px 4px;border-bottom:1px solid var(--line)}
 .lect{margin-top:26px}
 .lect h2{font-size:22px;margin-bottom:6px}
 .lect .lead{font-size:15px}
@@ -83,6 +97,11 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
   </nav>
   <h1>Qué estamos gastando</h1>
   <p class="lead">Una tarjeta por cuenta. El color dice si hay que actuar. La fecha es el momento de la lectura, no de ahora mismo.</p>
+  <section class="planes" id="planes">
+    <p class="reco" id="reco-top">Cargando quién tiene margen…</p>
+    <ol class="ranking" id="ranking"></ol>
+    <div class="grid" id="cuentas"></div>
+  </section>
   <section class="resumen" id="resumen" hidden>
     <h2>Lo urgente</h2>
     <ol id="lineas"></ol>
@@ -151,7 +170,7 @@ fetch("/consumos-plataformas.json", { cache: "no-store" })
     document.getElementById("grid").innerHTML = '<p class="nota">Sin lectura todavía. No se ha podido abrir el archivo de lecturas.</p>';
   });
 </script>
-<script src="/consumos-lecturas.js?v=r1-lecturas"></script>
+<script src="/consumos-lecturas.js?v=r2-cuentas"></script>
 <script src="/yk-frame.js?v=r36-escenas"></script>
 </body>
 </html>

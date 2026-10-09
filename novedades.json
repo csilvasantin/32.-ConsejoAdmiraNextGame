@@ -1,4 +1,9 @@
 {
+  "v.09.10.2026.r2.06:04": [
+    "/consumos: una tarjeta por cuenta (leyendas, coetáneos, Cursor Pro) con % usado, hora de reset, cupo diario hasta el reset y semáforo (verde <60, ámbar 60-85, rojo >85 o si se agota antes del reset)",
+    "Barras del gasto por bloque de 12 h (00:00/12:00 de Madrid), proyección «se agota …», reparto por consejero según sus partes de tokens en Yokup y recomendación arriba con ranking por margen",
+    "Estas novedades salen, como siempre, en el popover del sello (sin recorte del riel)"
+  ],
   "v.09.10.2026.r1.05:48": [
     "/consumos: nuevas «Lecturas del plan» — el % gastado de cada cuenta y agente, dos veces al día (00:00 y 12:00 de Madrid), con la quema cada 12 h, cuándo llega al 100 % y quién tiene más margen para coger trabajo",
     "API: GET y POST /api/consumos/lecturas (POST con X-Council-Token); primera lectura: Jobs al 1 % (csilva@admira.com, leyendas)",

@@ -1,4 +1,9 @@
 {
+  "v.09.10.2026.r1.05:48": [
+    "/consumos: nuevas «Lecturas del plan» — el % gastado de cada cuenta y agente, dos veces al día (00:00 y 12:00 de Madrid), con la quema cada 12 h, cuándo llega al 100 % y quién tiene más margen para coger trabajo",
+    "API: GET y POST /api/consumos/lecturas (POST con X-Council-Token); primera lectura: Jobs al 1 % (csilva@admira.com, leyendas)",
+    "Estas novedades salen, como siempre, en el popover del sello (sin recorte del riel)"
+  ],
   "v.07.10.2026.r33.21:50": [
     "HACKEO: arreglada la pausa de los Terminales reales — la velocidad 0 ya no se interpretaba como ×1, así que ahora sí congela de verdad",
     "Estas novedades salen, como siempre, en el popover del sello (sin recorte del riel)"

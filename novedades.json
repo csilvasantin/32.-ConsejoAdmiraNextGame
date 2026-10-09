@@ -1,4 +1,7 @@
 {
+  "v.09.10.2026.r38.22:03": [
+    "Consumos: el cuentakilómetros ya no se para. Antes se re-anclaba en cada lectura al total del servidor (que sube a saltos) y se quedaba quieto esperando; ahora pronostica el final de la hora (real + tokens/hora × lo que queda de hora), gira a velocidad constante hacia ahí, alcanza en ~30 s si el real va por delante, frena sin retroceder si se pasó y solo se detiene si todo está a 0 y nadie trabaja. Sigue contando con la pestaña en segundo plano."
+  ],
   "v.09.10.2026.r37.19:17": [
     "Consumos: «¿A quién va la siguiente tarea?» y «Lo urgente» también se pliegan (plegados: una línea con el elegido de cada tipo; nº de avisos + el primero, con su marco rojo). «Margen por cuenta» va estrictamente de mayor a menor margen."
   ],

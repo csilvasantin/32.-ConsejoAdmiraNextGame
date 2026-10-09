@@ -93,29 +93,77 @@
     }
     return out;
   }
-  function Odometro(el) { this.el = el; this.base = null; this.tBase = 0; this.ritmo = 0; this.mostrado = null; this.dia = ''; this.corre = false; }
-  Odometro.prototype.pon = function (n, ritmoPorS) {
+  /* r38 (Carlos: «el cuentakilómetros se para»). Causa: en cada lectura (cada 10 s) se re-anclaba la extrapolación al
+   * valor del servidor y al instante de la lectura; como el total del servidor sube a saltos (los colectores lo mandan al
+   * cerrar turnos, Cursor llega con horas de retraso), el valor mostrado iba por delante y se quedaba QUIETO esperando.
+   * Modelo nuevo — PRONÓSTICO a fin de hora: en cada lectura, objetivo = real + ritmo × segundos que quedan de la hora,
+   * con ritmo = tokens/hora ahora (15 min) si > 0; si no, la media del día si hay algún agente trabajando (verde); si no, 0.
+   * Se gira a velocidad constante para llegar al objetivo al acabar la hora; si el real va por delante, se alcanza en ~30 s;
+   * si el mostrado se pasó del objetivo, NO retrocede: frena hasta un mínimo (nunca 0 mientras haya actividad).
+   * Solo se para del todo si todo está a 0 tokens/hora y nadie trabaja. Reinicio a la medianoche de Madrid.
+   * Reloj de pared (no frames): en segundo plano el navegador pausa la animación; al volver se suma el tiempo pasado. */
+  var ALCANCE_S = 30, MIN_FRAC = 0.05, MIN_TOK_S = 1;
+  /** Segundos que quedan para acabar la hora en curso (mínimo 30 para no dividir por casi 0 al filo de la hora). */
+  function segundosFinHora(ms) { var r = 3600 - (relojMadrid(ms).s % 3600); return Math.max(ALCANCE_S, r); }
+  /** Ritmo del pronóstico (tokens/s): tokens/hora de ahora si > 0; si no, la media del día si hay alguien activo; si no, 0. */
+  function ritmoPronostico(tokHora, tokHoy, activo, segDia) {
+    if (tokHora > 0) return tokHora / 3600;
+    if (activo && tokHoy > 0) return tokHoy / Math.max(600, segDia);
+    return 0;
+  }
+  /** Velocidad de giro (tokens/s ≥ 0) del cuentakilómetros: nunca negativa; nunca 0 mientras haya actividad. */
+  function velocidadOdometro(o) {
+    var mostrado = o.mostrado, real = o.real, objetivo = o.objetivo, seg = Math.max(1, o.segundosRestantes), ritmo = o.ritmo || 0;
+    var activo = ritmo > 0 || !!o.activo;
+    var minimo = activo ? Math.max(MIN_TOK_S, ritmo * MIN_FRAC) : 0;
+    var v = objetivo > mostrado ? (objetivo - mostrado) / seg : 0;           // llegar al objetivo justo a fin de hora
+    if (real > mostrado) v = Math.max(v, (real - mostrado) / ALCANCE_S);      // el real va por delante: alcanzarlo en ~30 s
+    return Math.max(v, minimo);
+  }
+  function Odometro(el) { this.el = el; this.real = null; this.objetivo = null; this.ritmo = 0; this.activo = false; this.finHora = 0; this.mostrado = null; this.dia = ''; this.tPrev = 0; this.vel = 0; this.corre = false; }
+  Odometro.prototype.pon = function (n, tokHora, activo) {
     var el = this.el;
     if (!el.querySelector('.odo-rueda')) el.innerHTML = odometroHTML();
     var sin = n == null || !isFinite(n);
     el.classList.toggle('odo-sin', sin);
-    if (sin) { this.base = null; this.mostrado = null; this.dibuja(null); return; }
-    var ahora = Date.now(), dia = relojMadrid(ahora).dia;
-    if (dia !== this.dia || this.mostrado == null) { this.mostrado = n; this.dia = dia; } // primer valor o día nuevo: sin animar
-    this.base = n; this.tBase = ahora; this.ritmo = Math.max(0, ritmoPorS || 0);
+    if (sin) { this.real = null; this.mostrado = null; this.dibuja(null); return; }
+    var ahora = Date.now(), rel = relojMadrid(ahora);
+    if (rel.dia !== this.dia || this.mostrado == null) { this.mostrado = n; this.dia = rel.dia; } // primer valor o día nuevo
+    this.real = n; this.activo = !!activo;
+    this.ritmo = ritmoPronostico(Number(tokHora) || 0, n, this.activo, rel.s);
+    var seg = segundosFinHora(ahora);
+    this.finHora = ahora + seg * 1000;
+    this.objetivo = n + this.ritmo * seg;
     el.setAttribute('aria-label', Math.round(n).toLocaleString(en() ? 'en-US' : 'es-ES') + ' ' + T('tokens hoy', 'tokens today'));
-    if (!this.corre) { this.corre = true; var self = this, tp = 0;
-      var paso = function (t) {
-        if (self.base == null) { self.corre = false; return; }
-        var dt = tp ? Math.min(0.25, (t - tp) / 1000) : 0; tp = t;
-        var obj = self.base + self.ritmo * (Date.now() - self.tBase) / 1000;
-        if (obj > self.mostrado) self.mostrado += Math.max(self.ritmo * dt, (obj - self.mostrado) * Math.min(1, dt * 2.5));
-        if (self.mostrado > obj && self.mostrado - obj < 1) self.mostrado = Math.max(self.mostrado, obj);
-        self.dibuja(menosMovimiento() ? Math.floor(self.mostrado) : self.mostrado);
-        if (menosMovimiento()) setTimeout(function () { requestAnimationFrame(paso); }, 1000); else requestAnimationFrame(paso);
-      };
-      requestAnimationFrame(paso);
+    this.arranca();
+  };
+  Odometro.prototype.avanza = function (ahora) {
+    if (this.real == null) return;
+    var dt = this.tPrev ? Math.max(0, Math.min(86400, (ahora - this.tPrev) / 1000)) : 0;
+    this.tPrev = ahora;
+    var rel = relojMadrid(ahora);
+    if (rel.dia !== this.dia) { this.dia = rel.dia; this.mostrado = 0; this.real = 0; this.objetivo = this.ritmo * segundosFinHora(ahora); this.finHora = ahora + segundosFinHora(ahora) * 1000; }
+    // Pasó la hora sin lectura nueva (pestaña en segundo plano, red caída): el pronóstico se alarga otra hora.
+    while (ahora >= this.finHora) { this.finHora += 3600e3; this.objetivo += this.ritmo * 3600; }
+    // Paso en trozos de ≤ 1 s para que, al volver de segundo plano, la velocidad se recalcule por el camino.
+    while (dt > 0) {
+      var h = Math.min(1, dt); dt -= h;
+      this.vel = velocidadOdometro({ mostrado: this.mostrado, real: this.real, objetivo: this.objetivo, segundosRestantes: (this.finHora - ahora) / 1000, ritmo: this.ritmo, activo: this.activo });
+      this.mostrado += this.vel * h;
     }
+  };
+  Odometro.prototype.arranca = function () {
+    if (this.corre) return;
+    this.corre = true; this.tPrev = Date.now();
+    var self = this;
+    var paso = function () {
+      if (self.real == null) { self.corre = false; return; }
+      self.avanza(Date.now());
+      self.dibuja(menosMovimiento() ? Math.floor(self.mostrado) : self.mostrado);
+      if (menosMovimiento() || document.hidden) setTimeout(paso, 1000); else requestAnimationFrame(paso);
+    };
+    if (!this.visto) { this.visto = true; document.addEventListener && document.addEventListener('visibilitychange', function () { if (self.real != null) { self.avanza(Date.now()); self.dibuja(self.mostrado); } }); }
+    requestAnimationFrame(paso);
   };
   Odometro.prototype.dibuja = function (v) {
     var ruedas = this.el.querySelectorAll('.odo-rueda');
@@ -126,14 +174,16 @@
       ruedas[i].firstChild.style.transform = 'translateY(' + (-pos[i] * 100 / 11).toFixed(3) + '%)';
     }
   };
-  function odometro(el, n, ritmoPorS) {
+  function odometro(el, n, tokHora, activo) {
     if (!el) return;
     if (!el._odo) el._odo = new Odometro(el);
-    el._odo.pon(n, ritmoPorS);
+    el._odo.pon(n, tokHora, activo);
   }
-  /** Ritmo medio del día en tokens/s (tokens de hoy / segundos desde la medianoche de Madrid; mínimo 10 min para no disparar a las 00:0x). */
+  /** Ritmo medio del día en tokens/s (tokens de hoy / segundos desde la medianoche de Madrid; mínimo 10 min). */
   function ritmoMedio(tokHoy) { if (tokHoy == null || !isFinite(tokHoy)) return 0; return Math.max(0, tokHoy) / Math.max(600, relojMadrid(Date.now()).s); }
-  root.ConsumosOdometro = { posicionesRuedas: posicionesRuedas, ritmoMedio: ritmoMedio, relojMadrid: relojMadrid };
+  /** ¿Hay algún agente trabajando (tarjeta verde en «Trabajando ahora»)? */
+  function hayVerdes() { try { return !!document.querySelector('#trabajando-lista .tr-verde, #trabajando-chips .tr-verde'); } catch (e) { return false; } }
+  root.ConsumosOdometro = { posicionesRuedas: posicionesRuedas, ritmoMedio: ritmoMedio, relojMadrid: relojMadrid, ritmoPronostico: ritmoPronostico, velocidadOdometro: velocidadOdometro, Odometro: Odometro };
 
   /* ---------- Un dial (aguja + arco + cifra + cuentakilómetros) ----------
    * r21 (Carlos): aguja ANALÓGICA — muelle amortiguado (un pelín de sobreimpulso al cambiar de valor) y una vibración
@@ -194,7 +244,7 @@
     b.querySelector('.vel-unidad').textContent = sin ? '' : T('tokens/hora', 'tokens/hour');
     this.arranca();
     var rm = ritmoMedio(sin ? null : tokHoy);
-    odometro(b.querySelector('.odo'), tokHoy, rm);
+    odometro(b.querySelector('.odo'), tokHoy, v, v > 0 || hayVerdes());
     // r36: qué es la cifra grande, explícito.
     var que = b.querySelector('.vel-que');
     if (que) que.innerHTML = sin ? '' : T('tokens/hora ahora (últimos 15 min)', 'tokens/hour now (last 15 min)') + ' · ' + T('media del día ', 'day average ') + '<b>' + fmt(rm * 3600) + '</b> ' + T('tokens/hora', 'tokens/hour');

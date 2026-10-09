@@ -1,4 +1,9 @@
 {
+  "v.09.10.2026.r30.15:55": [
+    "Consumos: debajo de la gráfica de tokens, una SEGUNDA gráfica con las LÍNEAS DE CÓDIGO que escriben los agentes, en el mismo eje de tiempo, y un selector 1 h / 24 h / 7 d que cambia las dos a la vez.",
+    "Fuente fina: tools/lineas-commits.py lee cada 15 min los commits de la rama principal de los 12 repos de la Galaxia (mismos ficheros que el HACKEO) y atribuye cada commit a su agente por autor y Co-authored-by; sin esa fuente, Δ entre las fotos 00:00/12:00 de /api/control/lineas, escalonado. Nuevo GET/POST /api/consumos/lineas.",
+    "Junto al cuentakilómetros: líneas de código de hoy y tokens por línea (flota o agente elegido)."
+  ],
   "v.09.10.2026.r29.15:43": [
     "Consumos · «Trabajando ahora»: retratos de Musk y Huang recalibrados sobre council-coetaneos.jpg (la cara centrada); Oráculo estrena avatar de iniciales (avatars/oraculo.jpg era una página HTML, no una imagen).",
     "En las tarjetas grises, «hace X» y la máquina salen de la misma fuente: la más fresca entre latido, proceso del vigilante y pulso de tokens."

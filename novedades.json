@@ -1,4 +1,9 @@
 {
+  "v.09.10.2026.r3.06:18": [
+    "/arquitectura (castellano) y /architecture (inglés) abren el organigrama tecnológico de admiranext.com desde la línea SCUMM de la home, las consolas de Control, Fleet, Vista previa y Players, el EXPERTO de Yokup y el ⌘ Experto de la suite",
+    "/idioma y /language sin argumento siguen alternando ESP↔ENG en todas las consolas",
+    "Estas novedades salen en el popover del sello, sin recorte del riel"
+  ],
   "v.09.10.2026.r2.06:04": [
     "/consumos: una tarjeta por cuenta (leyendas, coetáneos, Cursor Pro) con % usado, hora de reset, cupo diario hasta el reset y semáforo (verde <60, ámbar 60-85, rojo >85 o si se agota antes del reset)",
     "Barras del gasto por bloque de 12 h (00:00/12:00 de Madrid), proyección «se agota …», reparto por consejero según sus partes de tokens en Yokup y recomendación arriba con ranking por margen",

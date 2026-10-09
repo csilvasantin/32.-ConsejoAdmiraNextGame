@@ -1720,7 +1720,7 @@
   // escribir /idioma, /language, /marca o /brand. Esta línea va siempre arriba, activa con o sin PTY, y
   // es local (no escribe en ningún agente). Habla con los mismos módulos que la home: admira-idioma.js
   // (idioma), assets/marca-blanca.js (marca blanca) y assets/cli-bilingue.js (verbos ES/EN, /marca84).
-  var EXPERT_CMD_V = "20261006-r19-bilingue";
+  var EXPERT_CMD_V = "20261009-arquitectura-1";
   var expertScripts = {};
   function expertScript(src, global) {
     if (window[global]) return Promise.resolve(window[global]);
@@ -1746,7 +1746,7 @@
       var B = mods[0], I = mods[1];
       if (!/^\//.test(text)) text = "/" + text;
       // /idioma · /language (y /idiomaESP, /languageENG…): el contrato de admira-idioma.js.
-      if (/^\/(idioma|language|languague)/i.test(text)) {
+      if (/^\/(idioma|language|languague)/i.test(text) || (I && I.arquitectura && I.arquitectura(text))) {
         if (!I) { say(expertT("⚠️ El selector de idioma no ha cargado; recarga la página", "⚠️ The language selector did not load; reload the page"), true); return; }
         var res = I.run(text);
         say("🌐 " + (res && res.message ? res.message : text), !(res && res.ok !== false));

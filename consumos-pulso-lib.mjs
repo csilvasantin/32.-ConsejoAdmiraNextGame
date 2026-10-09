@@ -15,6 +15,14 @@
  * r20 (con Carlos): cada agente puede mandar conCarlos (bool), conCarlosMotivo (señales, sin contenido) y
  * conCarlosDesde (ISO). Regla de Carlos: si está trabajando directamente con un agente, nadie le inyecta encargos.
  * Un agente sin pulso fresco (>3 min) nunca cuenta como «con Carlos» (no se inventa).
+ * r27 (Cursor / Grok Bot, 09-10-2026 — Carlos: «¿por qué no sales en la flota, Jobs?»): motores nuevos
+ *  - «cursor»: uso de la cuenta Cursor Pro (export CSV de cursor.com/dashboard/usage, fleet/cursor-uso.py en GrokBotBox).
+ *    El CSV llega con HORAS de retraso, así que el agente manda su propia SERIE EN HORA DEL EVENTO (`serie`, puntos
+ *    acumulados de hoy cada 5 min) que sustituye a la anterior: re-mandar el mismo CSV no crea picos falsos. tok/h =
+ *    tokens de la ÚLTIMA HORA CON DATOS (no «ahora») y `retrasoS` = cuánto van atrás los datos; fresco si el último
+ *    envío tiene < 2,5 h (el job es horario). `cubre`: personas cuyo consumo ya va dentro de este total (consejeros Grok
+ *    Bot): sus partes de Yokup (p. ej. la ESTIMACIÓN de Woz por consumo_reportar) se quitan de la suma → sin doble conteo.
+ *  - «grok»: Grok CLI local (Smith en el Mac mini, ~/.grok/sessions/<cwd>/<id>/usage.json), mismo pulso de 60 s que Claude/Codex.
  */
 import { incremento } from "./consumos-velocidad-lib.mjs";
 
@@ -25,7 +33,11 @@ export const MIN_ESCRITURA_MS = 50 * 1000;
 export const STALE_MS = 3 * 60 * 1000;
 export const VENTANA_MS = 15 * 60 * 1000;
 const M = 60000;
-const MOTORES = new Set(["claude", "codex"]);
+const MOTORES = new Set(["claude", "codex", "cursor", "grok"]);
+export const STALE_CURSOR_MS = 150 * 60 * 1000;
+export const VENTANA_CURSOR_MS = 60 * 60 * 1000;
+/** ¿Este agente manda su serie en hora del evento (datos con retraso)? */
+export const conRetraso = (a) => !!a && (a.motor === "cursor" || a.serieEventos === true);
 
 const texto = (s, n) => String(s == null ? "" : s).replace(/[\u0000-\u001f<>]/g, "").trim().slice(0, n);
 const entero = (x) => { const n = Number(x); return Number.isFinite(n) && n >= 0 && n < 1e13 ? Math.round(n) : null; };
@@ -46,7 +58,7 @@ export function normalizarPulso(body) {
     const agente = texto(a && a.agente, 40);
     const motor = texto(a && a.motor, 12).toLowerCase();
     const tokHoy = entero(a && a.tokHoy);
-    if (!agente || !MOTORES.has(motor) || tokHoy === null) return { ok: false, error: "cada agente necesita agente, motor (claude|codex) y tokHoy ≥ 0" };
+    if (!agente || !MOTORES.has(motor) || tokHoy === null) return { ok: false, error: "cada agente necesita agente, motor (claude|codex|cursor|grok) y tokHoy ≥ 0" };
     const ev = a.ultimoEvento ? Date.parse(a.ultimoEvento) : NaN;
     let porProyecto = null;
     if (a.porProyecto && typeof a.porProyecto === "object") {
@@ -55,10 +67,36 @@ export function normalizarPulso(body) {
     }
     const desde = a.conCarlosDesde ? Date.parse(a.conCarlosDesde) : NaN;
     const conCarlos = a.conCarlos === true;
+    const extra = {};
+    if (a.modelo) extra.modelo = texto(a.modelo, 80);
+    if (a.fuente) extra.fuente = texto(a.fuente, 30);
+    if (Array.isArray(a.cubre)) extra.cubre = a.cubre.slice(0, 12).map((x) => texto(x, 40)).filter(Boolean);
+    if (a.nota) extra.nota = texto(a.nota, 240);
+    if (motor === "cursor" && Array.isArray(a.serie)) {
+      const sr = normalizarSerie(a.serie);
+      if (!sr) return { ok: false, error: "serie: lista de [tsSeg, tokHoy, cacheHoy, {proyecto: tok}?] creciente en el tiempo (≤ 400 puntos)" };
+      extra.serie = sr;
+    }
     agentes.push({ agente, motor, cuenta: texto(a.cuenta, 80), tokHoy, cacheHoy: entero(a.cacheHoy) || 0, ultimoEvento: Number.isFinite(ev) ? new Date(ev).toISOString() : null, porProyecto,
-      conCarlos, conCarlosMotivo: texto(a.conCarlosMotivo, 240) || null, conCarlosDesde: conCarlos && Number.isFinite(desde) ? new Date(desde).toISOString() : null });
+      conCarlos, conCarlosMotivo: texto(a.conCarlosMotivo, 240) || null, conCarlosDesde: conCarlos && Number.isFinite(desde) ? new Date(desde).toISOString() : null, ...extra });
   }
   return { ok: true, pulso: { maquina, agentes } };
+}
+
+/** r27: serie en hora del evento (Cursor) → puntos validados, ordenados, ts únicos; null si no vale. */
+export function normalizarSerie(serie) {
+  if (!Array.isArray(serie) || serie.length > 400) return null;
+  const out = [];
+  for (const p of serie) {
+    if (!Array.isArray(p)) return null;
+    const t = entero(p[0]), tok = entero(p[1]), cache = entero(p[2]) || 0;
+    if (t === null || tok === null || t < 1e9 || t > 1e10) return null;
+    let pp = null;
+    if (p[3] && typeof p[3] === "object") { pp = {}; for (const [k, v] of Object.entries(p[3]).slice(0, 30)) { const n = texto(k, 60), x = entero(v); if (n && x !== null) pp[n] = x; } }
+    if (out.length && t <= out[out.length - 1][0]) return null;
+    out.push(pp ? [t, tok, cache, pp] : [t, tok, cache]);
+  }
+  return out;
 }
 
 /** Aplica un pulso al documento de la máquina. Devuelve { doc, guardar } (guardar=false si llegó antes de 50 s). */
@@ -69,10 +107,15 @@ export function aplicarPulso(doc, pulso, ahora) {
   const corte = Math.floor((ahora - RETENCION_MS) / 1000);
   for (const a of pulso.agentes) {
     const prev = d.agentes[a.agente] || { serie: [] };
-    const serie = (prev.serie || []).filter((p) => Array.isArray(p) && p[0] >= corte);
-    serie.push(a.porProyecto ? [t, a.tokHoy, a.cacheHoy, a.porProyecto] : [t, a.tokHoy, a.cacheHoy]);
+    let serie = (prev.serie || []).filter((p) => Array.isArray(p) && p[0] >= corte);
+    if (a.serie) {
+      // r27: serie en hora del evento — la nueva SUSTITUYE a la vieja desde su primer punto (idempotente).
+      const ini = a.serie.length ? a.serie[0][0] : Infinity;
+      serie = [...serie.filter((p) => p[0] < ini), ...a.serie.filter((p) => p[0] >= corte)];
+    } else serie.push(a.porProyecto ? [t, a.tokHoy, a.cacheHoy, a.porProyecto] : [t, a.tokHoy, a.cacheHoy]);
     d.agentes[a.agente] = { motor: a.motor, cuenta: a.cuenta, tokHoy: a.tokHoy, cacheHoy: a.cacheHoy, ultimoEvento: a.ultimoEvento, ultimoPulso: ahora, serie, porProyecto: a.porProyecto || null,
-      conCarlos: !!a.conCarlos, conCarlosMotivo: a.conCarlosMotivo || null, conCarlosDesde: a.conCarlosDesde || null };
+      conCarlos: !!a.conCarlos, conCarlosMotivo: a.conCarlosMotivo || null, conCarlosDesde: a.conCarlosDesde || null,
+      ...(a.modelo ? { modelo: a.modelo } : {}), ...(a.fuente ? { fuente: a.fuente } : {}), ...(a.cubre ? { cubre: a.cubre } : {}), ...(a.nota ? { nota: a.nota } : {}), ...(a.serie ? { serieEventos: true } : {}) };
   }
   for (const [n, a] of Object.entries(d.agentes)) if (!a.ultimoPulso || ahora - a.ultimoPulso > RETENCION_MS) delete d.agentes[n];
   d.maquina = pulso.maquina;
@@ -144,13 +187,14 @@ export function proyectosDePulso(docs, ahora) {
       if (doc.maquina && !p.agentes.includes(doc.maquina)) p.agentes.push(doc.maquina);
     }
     if (m.tokHora === null) continue;
-    const factor = m.tokUltimos15min > 0 ? m.tokHora / m.tokUltimos15min : 0;
     for (const proy of Object.keys(hoy)) { const p = de(proy); if (p.tokHora === null) p.tokHora = 0; }
-    const r = repartoVentana(serie, ahora - VENTANA_MS, ahora);
+    const v = ventanaAgente(a, ahora);
+    const r = repartoVentana(serie, v.desde, v.hasta);
+    const factor = r.total > 0 ? m.tokHora / r.total : 0;
     for (const [proy, t] of Object.entries(r.porProyecto)) {
       const p = de(proy);
       if (doc.maquina && !p.agentes.includes(doc.maquina)) p.agentes.push(doc.maquina);
-      p.tokUltimos15min += t;
+      if (!conRetraso(a)) p.tokUltimos15min += t;
       p.tokHora = (p.tokHora || 0) + t * factor;
     }
   }
@@ -158,9 +202,30 @@ export function proyectosDePulso(docs, ahora) {
     .sort((a, b) => b.tokHoy - a.tokHoy || (b.tokHora || 0) - (a.tokHora || 0));
 }
 
+/** r27: ventana con la que se mide la velocidad: últimos 15 min (pulso) o la última hora CON DATOS (Cursor). */
+export function ventanaAgente(a, ahora) {
+  if (!conRetraso(a)) return { desde: ahora - VENTANA_MS, hasta: ahora };
+  const s = a.serie || [];
+  const fin = s.length ? Math.max(...s.map((p) => p[0])) * 1000 : ahora;
+  const ev = a.ultimoEvento ? Date.parse(a.ultimoEvento) : NaN;
+  const hasta = Number.isFinite(ev) ? Math.max(fin, Math.min(ev, ahora)) : fin;
+  return { desde: hasta - VENTANA_CURSOR_MS, hasta };
+}
+
 /** Medidas de un agente: tokUltimos5min, tokUltimos15min, tokUltimaHora, tokHora (15 min × 4), stale. */
 export function medirAgente(a, ahora) {
   const serie = (a.serie || []).slice().sort((x, y) => x[0] - y[0]);
+  if (conRetraso(a)) {
+    // r27 (Cursor): tok/h = tokens de la última hora con datos; retrasoS = lo que van atrás los datos.
+    const stale = !a.ultimoPulso || ahora - a.ultimoPulso > STALE_CURSOR_MS;
+    const v = ventanaAgente(a, ahora);
+    const tok60 = tokensEnVentana(serie, v.desde, v.hasta);
+    return {
+      tokHora: !stale && serie.length >= 2 ? tok60 : null, tokUltimos5min: null, tokUltimos15min: null, tokUltimaHora: tok60,
+      ventanaMin: 60, stale, haceS: a.ultimoPulso ? Math.max(0, Math.round((ahora - a.ultimoPulso) / 1000)) : null,
+      conRetraso: true, retrasoS: Math.max(0, Math.round((ahora - v.hasta) / 1000)), datosHasta: new Date(v.hasta).toISOString(),
+    };
+  }
   const stale = !a.ultimoPulso || ahora - a.ultimoPulso > STALE_MS;
   const primero = serie.length ? serie[0][0] * 1000 : ahora;
   const cubierto = Math.min(VENTANA_MS, ahora - primero); // si el agente acaba de empezar, la ventana real es menor
@@ -203,7 +268,8 @@ export function picoPulso(agentes, ahora) {
 export function proyectoDeAgente(a, ahora) {
   const serie = (a && a.serie || []).slice().sort((x, y) => x[0] - y[0]);
   const top = (o) => Object.entries(o || {}).filter(([, v]) => Number(v) > 0).sort((x, y) => y[1] - x[1] || (x[0] === "otros") - (y[0] === "otros"))[0];
-  const r = top(repartoVentana(serie, ahora - VENTANA_MS, ahora).porProyecto) || top(a && a.porProyecto);
+  const v = ventanaAgente(a || {}, ahora);
+  const r = top(repartoVentana(serie, v.desde, v.hasta).porProyecto) || top(a && a.porProyecto);
   return r ? r[0] : null;
 }
 
@@ -213,9 +279,11 @@ export function agentesDePulso(docs, ahora) {
   for (const doc of docs || []) {
     if (!doc || !doc.agentes) continue;
     for (const [agente, a] of Object.entries(doc.agentes)) {
+      const ret = conRetraso(a);
       out.push({ agente, maquina: doc.maquina, motor: a.motor, cuenta: a.cuenta, tokHoy: a.tokHoy, cacheHoy: a.cacheHoy || 0,
         porProyecto: a.porProyecto || null, ultimoEvento: a.ultimoEvento || null, ultimoPulso: a.ultimoPulso ? new Date(a.ultimoPulso).toISOString() : null,
-        metodo: "tiempo real", ...medirAgente(a, ahora), ...estadoConCarlos(a, ahora), proyectoAhora: proyectoDeAgente(a, ahora), _serie: a.serie || [] });
+        ...(a.modelo ? { modelo: a.modelo } : {}), ...(a.fuente ? { fuente: a.fuente } : {}), ...(a.cubre ? { cubre: a.cubre } : {}), ...(a.nota ? { nota: a.nota } : {}),
+        metodo: ret ? "cursor (con retraso)" : "tiempo real", ...medirAgente(a, ahora), ...estadoConCarlos(a, ahora), proyectoAhora: proyectoDeAgente(a, ahora), _serie: a.serie || [] });
     }
   }
   return out;
@@ -246,9 +314,14 @@ export function mezclar(yk, docs, ahora) {
   const frescos = pulso.filter((a) => !a.stale);
   const personas = new Set(frescos.map((a) => persona(a.agente)));
   const maqMotor = new Set(frescos.map((a) => String(a.maquina).toLowerCase() + "|" + a.motor));
+  // r27: personas cuyo consumo ya va dentro de un total real (p. ej. los consejeros Grok Bot dentro de Cursor Pro).
+  const cubiertas = new Map();
+  for (const a of frescos) for (const c of a.cubre || []) cubiertas.set(persona(c), a.agente);
+  const excluidosYokup = [];
   const deYokup = ((yk && yk.porAgente) || []).filter((a) => {
     const p = persona(a.agente);
     if (personas.has(p)) return false;
+    if (cubiertas.has(p)) { excluidosYokup.push({ agente: a.agente, tokHoy: a.tokHoy || 0, motivo: "va dentro del total real de " + cubiertas.get(p) + " (sin doble conteo)" }); return false; }
     const m = /^an[oó]nimo\s*·\s*(\w+)\s*\(([^)]+)\)/i.exec(a.agente);
     if (m && maqMotor.has(m[2].toLowerCase() + "|" + m[1].toLowerCase())) return false;
     return true;
@@ -265,13 +338,15 @@ export function mezclar(yk, docs, ahora) {
   const suma = (k) => frescos.reduce((s, a) => s + (a[k] || 0), 0);
   const ultimo = frescos.reduce((m, a) => Math.max(m, Date.parse(a.ultimoPulso) || 0), 0);
   const conSerie = pulso.filter((a) => !a.stale).map((a) => ({ serie: a._serie }));
+  const conRet = frescos.filter((a) => a.conRetraso);
+  const etqRet = conRet.length ? " + Cursor (datos con ~" + Math.max(1, Math.round(Math.max(...conRet.map((a) => a.retrasoS || 0)) / 3600)) + " h de retraso)" : "";
   const picoRT = picoPulso(conSerie, ahora);
   const proys = proyectosDePulso(docs, ahora);
   return {
     sinDatos: false,
     tokHora: Math.round(tokHora),
     metodo: frescos.length ? "tiempo real" : yk.metodo,
-    etiqueta: frescos.length ? (deYokup.length ? "tiempo real + partes Yokup" : "tiempo real") : yk.etiqueta,
+    etiqueta: frescos.length ? (deYokup.length ? "tiempo real + partes Yokup" : "tiempo real") + etqRet : yk.etiqueta,
     ventanaMin: frescos.length ? 15 : yk.ventanaMin,
     tokUltimos5min: frescos.length ? suma("tokUltimos5min") : null,
     tokUltimos15min: frescos.length ? suma("tokUltimos15min") : null,
@@ -284,5 +359,6 @@ export function mezclar(yk, docs, ahora) {
     porProyecto: proys,
     proyectoTop: proys.length ? proys[0].proyecto : null,
     agentesTiempoReal: frescos.length, agentesParados: pulso.filter((a) => a.stale).map((a) => a.agente),
+    agentesConRetraso: conRet.map((a) => ({ agente: a.agente, retrasoS: a.retrasoS, datosHasta: a.datosHasta })), excluidosYokup,
   };
 }

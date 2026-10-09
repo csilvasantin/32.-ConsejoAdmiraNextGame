@@ -30,8 +30,9 @@ export const PERSONAS = [
   { persona: "Trinity", maquina: "MacBook Pro 16", modelo: "Codex", cuenta: "trinity-codex", perfil: "codex", alias: ["Trinity", "TrinityMacBookPro16"] },
   // Oráculo: Codex en el Mac Mini con csilvasantin@gmail.com (confirmado por Carlos, 09-10-2026) → tarjeta oraculo-codex.
   { persona: "Oráculo", maquina: "MacMini", modelo: "Codex", cuenta: "oraculo-codex", perfil: "codex", alias: ["Oraculo", "Oráculo", "OraculoMacMini"] },
-  // Smith: Grok 4.7 vía cursor-agent; «la otra cuenta de GrokBot» (app.js). Se mide con la tarjeta Cursor Pro.
-  { persona: "Smith", maquina: "MacMini", modelo: "Grok 4.7 (cursor-agent)", cuenta: "cursor", perfil: "grok-cursor", alias: ["Smith", "SmithMacMini"] },
+  // Smith: Grok 4.7 en el Grok CLI del Mac mini (~/.grok, sesión tmux «smith»; comprobado 09-10-2026: grok-4.7-build,
+  // no cursor-agent). Sus tokens salen de ~/.grok/sessions/<cwd>/<id>/usage.json (pulso-tokens.py, motor «grok»).
+  { persona: "Smith", maquina: "MacMini", modelo: "Grok 4.7 (Grok CLI)", cuenta: "cursor", perfil: "grok-cursor", alias: ["Smith", "SmithMacMini"] },
   { persona: "Jobs", maquina: "GrokBot", modelo: "Grok Heavy", cuenta: "leyendas", perfil: "grok-heavy", despierta: "webhook", alias: ["Jobs", "JobsGrokBot", "Steve Jobs"] },
   { persona: "Wozniak", maquina: "GrokBot", modelo: "Grok Heavy", cuenta: "leyendas", perfil: "grok-heavy", despierta: "webhook", alias: ["Wozniak", "WozniakGrokBot", "Steve Wozniak"] },
   { persona: "Lucas", maquina: "GrokBot", modelo: "Grok Heavy", cuenta: "leyendas", perfil: "grok-heavy-creativo", despierta: "webhook", alias: ["Lucas", "LucasGrokBot", "George Lucas"] },

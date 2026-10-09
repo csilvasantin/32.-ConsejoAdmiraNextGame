@@ -9,7 +9,9 @@
  * r21 (Carlos): selector de AGENTE junto a «Toda la flota» (aguja = tok/h del agente, cuentakilómetros = sus tokens de
  * hoy); el dial de proyecto SIGUE en auto al que más quema ahora (max tok/h 15 min; si todos a 0, el que más lleva hoy)
  * hasta que se elige uno a mano; las elecciones manuales se guardan en localStorage. Criterio: consumos-velocimetro-elegir.js.
- * Si no hay pulso ni partes: dial en gris y «sin datos» — nunca números inventados. */
+ * Si no hay pulso ni partes: dial en gris y «sin datos» — nunca números inventados.
+ * r27 (Carlos: «¿por qué no sales en la flota, Jobs?»): motores «cursor» (Grok Bot (Consejo), cuenta Cursor Pro, export CSV
+ * con horas de retraso: tok/h = última hora CON DATOS y aviso «Cursor · datos con ~X h de retraso») y «grok» (Smith, Grok CLI). */
 (function (root) {
   'use strict';
   var API = '/api/consumos/velocidad';
@@ -186,6 +188,14 @@
    * rojo = sin datos hoy (E.estadoFila). Agentes: tok/h, hoy, máquina, proyecto, modelo/cuenta, % de margen y «con Carlos». */
   var DD = { proy: null, ag: null }, ORQ = { margen: {}, leido: 0 };
   function punto(est) { return '<i class="dd-punto dd-' + (est || 'rojo') + '" aria-hidden="true"></i>'; }
+  /** r27: «Cursor · datos con ~X h de retraso» (o min si < 1 h). */
+  function txtRetraso(a) {
+    if (!a || !a.conRetraso) return '';
+    var s = Number(a.retrasoS) || 0, h = s / 3600;
+    var cuanto = h >= 1 ? '~' + (h >= 10 ? Math.round(h) : Math.round(h * 10) / 10).toString().replace('.', en() ? '.' : ',') + ' h' : '~' + Math.max(1, Math.round(s / 60)) + ' min';
+    return T('Cursor · datos con ' + cuanto + ' de retraso', 'Cursor · data ' + cuanto + ' behind');
+  }
+  function nombreMotor(m) { return m === 'claude' ? 'Claude' : m === 'codex' ? 'Codex' : m === 'cursor' ? 'Cursor' : m === 'grok' ? 'Grok CLI' : (m || ''); }
   function txtEstado(est) { return est === 'verde' ? T('activo ahora', 'active now') : est === 'amarillo' ? T('hoy sí, ahora parado', 'today yes, idle now') : T('sin datos hoy', 'no data today'); }
   function pintaSelector(d) {
     if (!DD.proy) return;
@@ -215,13 +225,15 @@
   }
   function filaAgenteInfo(a, pf) {
     var est = a.sinDatos ? 'rojo' : E.estadoFila(a.tokHora, a.tokHoy);
-    var motor = a.motor ? (a.motor === 'claude' ? 'Claude' : a.motor === 'codex' ? 'Codex' : a.motor) : '';
-    var modelo = pf && pf.modelo ? pf.modelo : motor;
-    var cuenta = pf ? (pf.email || pf.plan || '') : '';
+    var motor = nombreMotor(a.motor);
+    var modelo = a.modelo || (pf && pf.modelo ? pf.modelo : motor);
+    var cuenta = (a.motor === 'cursor' || a.motor === 'grok') && a.cuenta ? a.cuenta : pf ? (pf.email || pf.plan || '') : '';
     var m = ORQ.margen[a.agente];
     var lin1 = a.sinDatos ? T('sin datos hoy', 'no data today') :
       '<b>' + (a.tokHora == null ? T('parado', 'stopped') : fmt(a.tokHora) + ' tok/h') + '</b> · ' + fmt(a.tokHoy) + T(' hoy', ' today') +
-      (a.maquina || (pf && pf.maquina) ? ' · ' + esc(a.maquina || pf.maquina) : '') + (a.proyectoAhora ? ' · ' + esc(nomP(a.proyectoAhora)) : '');
+      (a.maquina || (pf && pf.maquina) ? ' · ' + esc(a.maquina || pf.maquina) : '') + (a.proyectoAhora ? ' · ' + esc(nomP(a.proyectoAhora)) : '') +
+      (a.conRetraso ? ' · <span class="dd-retraso">' + esc(txtRetraso(a)) + '</span>' : '');
+    if (a.sinDatos && pf && pf.nota) lin1 += ' · ' + esc(pf.nota);
     var lin2 = [modelo ? esc(modelo) : '', cuenta ? esc(cuenta) : '', m && m.pct != null ? '<span class="dd-margen dd-m-' + E.colorMargen(m.pct) + '">' + T('margen ', 'margin ') + m.pct + ' %</span>' + notaHtml(m) : (pf ? '<span class="dd-margen dd-m-sin">' + T('margen sin lectura', 'margin not read') + '</span>' : '')].filter(Boolean).join(' · ');
     return { est: est, html: '<span class="dd-fila"><span class="dd-tit">' + punto(est) + esc(a.agente) + (a.conCarlos ? ' <em class="con-carlos">' + T('con Carlos', 'with Carlos') + '</em>' : '') + '</span><small>' + lin1 + '</small>' + (lin2 ? '<small class="dd-sub">' + lin2 + '</small>' : '') + '</span>' };
   }
@@ -272,7 +284,8 @@
     if (tit) tit.textContent = T('Agente', 'Agent');
     if (rot) rot.textContent = r.agente + ' · ' + T('tokens hoy', 'tokens today');
     if (met) met.innerHTML = !f ? T('Este agente no aparece ahora en el pulso ni en Yokup: sin cifra.', 'This agent is not in the pulse or Yokup right now: no number.') :
-      (f.tokHora == null ? T('parado (sin pulso reciente)', 'stopped (no recent pulse)') : (f.motor ? esc(f.motor) + ' · ' : '') + (f.maquina ? esc(f.maquina) + ' · ' : '') + (f.tokUltimos5min != null ? '5 min: <b>' + fmt(f.tokUltimos5min) + '</b> tok' : esc(f.metodo || '')));
+      (f.tokHora == null ? T('parado (sin pulso reciente)', 'stopped (no recent pulse)') : (f.motor ? esc(nombreMotor(f.motor)) + ' · ' : '') + (f.maquina ? esc(f.maquina) + ' · ' : '') +
+        (f.conRetraso ? '<b>' + esc(txtRetraso(f)) + '</b> · ' + T('tok/h de la última hora con datos', 'tok/h of the last hour with data') : f.tokUltimos5min != null ? '5 min: <b>' + fmt(f.tokUltimos5min) + '</b> tok' : esc(f.metodo || '')));
     return d && d.escalaMax || max;
   }
   function pintaProyecto(d, sin) {
@@ -316,10 +329,11 @@
     lista.innerHTML = ags.map(function (a, i) {
       var parado = a.tokHora == null;
       var w = maxR > 0 && !parado ? Math.max(a.tokHora > 0 ? 2 : 0, Math.round(100 * a.tokHora / maxR)) : 0;
-      var origen = a.metodo === 'tiempo real' ? (a.stale ? T('sin pulso ', 'no pulse ') + hace(a.haceS) : T('tiempo real', 'real time')) : esc(a.metodo || T('partes Yokup', 'Yokup reports'));
+      var origen = a.conRetraso ? (a.stale ? T('sin export de Cursor ', 'no Cursor export ') + hace(a.haceS) : esc(txtRetraso(a))) :
+        a.metodo === 'tiempo real' ? (a.stale ? T('sin pulso ', 'no pulse ') + hace(a.haceS) : T('tiempo real', 'real time')) : esc(a.metodo || T('partes Yokup', 'Yokup reports'));
       var cls = [parado ? 'parado' : '', a === lider ? 'lider' : '', a.agente === estado.agente ? 'sel' : ''].filter(Boolean).join(' ');
       return '<li' + (cls ? ' class="' + cls + '"' : '') + ' role="button" tabindex="0" data-agente="' + esc(a.agente) + '" title="' + esc(T('Ver ', 'Show ') + a.agente + T(' en el velocímetro', ' on the gauge')) + '">' +
-        '<span class="vel-ag"><span class="vel-pos">' + (i + 1) + '</span>' + (a === lider ? '<span class="vel-corona" aria-label="' + T('el que más trabaja ahora', 'top worker now') + '">★</span> ' : '') + esc(a.agente) + (a.motor ? ' · ' + esc(a.motor) : '') +
+        '<span class="vel-ag"><span class="vel-pos">' + (i + 1) + '</span>' + (a === lider ? '<span class="vel-corona" aria-label="' + T('el que más trabaja ahora', 'top worker now') + '">★</span> ' : '') + esc(a.agente) + (a.motor ? ' · ' + esc(nombreMotor(a.motor)) : '') +
         (a.conCarlos ? ' <em class="con-carlos" title="' + esc(T('Carlos está trabajando con este agente: no se le inyectan encargos', 'Carlos is working with this agent: no tasks are injected') + (a.conCarlosMotivo ? ' · ' + a.conCarlosMotivo : '')) + '">' + T('con Carlos', 'with Carlos') + '</em>' : '') + '</span>' +
         '<span class="vel-bar"><i style="width:' + w + '%"></i></span><b>' + (parado ? T('parado', 'stopped') : fmt(a.tokHora) + ' tok/h') + '</b>' +
         '<small>' + T('hoy ', 'today ') + '<b>' + fmt(a.tokHoy) + '</b>' + (a.maquina ? ' · ' + esc(a.maquina) : '') + (a.proyectoAhora ? ' · ' + T('proyecto ', 'project ') + '<b>' + esc(nomP(a.proyectoAhora)) + '</b>' : '') +
@@ -362,7 +376,9 @@
     pintaRanking(sin ? null : d);
     var pie = document.getElementById('vel-pie');
     pie.innerHTML = (d && d.generado ? T('Actualizado ', 'Updated ') + new Date(d.generado).toLocaleTimeString(en() ? 'en-GB' : 'es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' (Madrid) · ' : '') +
-      T('Fuente: pulso de cada Mac (logs de Claude Code y Codex, cada 60 s, ', 'Source: each Mac\'s pulse (Claude Code and Codex logs, every 60 s, ') + '<a href="/api/consumos/pulso">/api/consumos/pulso</a>) + ' +
+      T('Fuente: pulso de cada Mac (logs de Claude Code, Codex y Grok CLI, cada 60 s, ', 'Source: each Mac\'s pulse (Claude Code, Codex and Grok CLI logs, every 60 s, ') + '<a href="/api/consumos/pulso">/api/consumos/pulso</a>) + ' +
+      T('Cursor Pro (Grok Bot) por el export CSV de cursor.com, cada hora y con retraso', 'Cursor Pro (Grok Bot) from the cursor.com CSV export, hourly and delayed') +
+      (d && d.excluidosYokup && d.excluidosYokup.length ? ' (' + T('no se suman aparte: ', 'not added twice: ') + esc(d.excluidosYokup.map(function (x) { return x.agente; }).join(', ')) + ')' : '') + ' + ' +
       T('partes de Yokup para el resto (', 'Yokup reports for the rest (') + '<a href="https://api.yokup.com/fleet/consumo?dias=1">fleet/consumo</a>) · ' +
       T('proyecto = carpeta de trabajo → repo git → uno de los 13 de la Galaxia · ', 'project = working folder → git repo → one of the 13 Galaxy projects · ') + T('se refresca cada 10 s', 'refreshes every 10 s');
   }

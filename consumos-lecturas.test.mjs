@@ -262,3 +262,19 @@ test("Mac mini: «Morfeo · Claude» sin lectura y «Oráculo · Codex» al 40 %
   const CL = CUENTAS.find((c) => c.id === "morfeo-claude");
   assert.deepEqual([CL.principal, CL.secundario], ["Claude Code semanal", "Claude Code sesión 5 h"]);
 });
+
+test("r27: lectura SOLO DE TOKENS (Cursor Pro, sin %) — válida, fuera de las series de %, en cuenta.tokens", async () => {
+  const L = await import("./consumos-lecturas-lib.mjs");
+  assert.ok(L.normalizarLectura({ cuenta: "x", autor: "y" }).error, "sin pct ni tokens → error");
+  const { lectura } = L.normalizarLectura({ cuenta: "cursor-pro", agente: "Tokens Grok Bot (Consejo)", tokens: { total: 7630456, entrada: 7000000, salida: 630456, cache: 1 }, fuente: "auto", autor: "GrokBotBox", ts: "2026-10-09T00:00:00+02:00" }, Date.parse("2026-10-09T15:00:00+02:00"));
+  assert.equal(lectura.pct, null);
+  assert.equal(lectura.canonica, true);
+  const otra = L.normalizarLectura({ cuenta: "csilva@admira.com", agente: "SuperGrok Heavy semanal", pct: 10, fuente: "auto", autor: "Jobs", ts: "2026-10-09T00:00:00+02:00" }, Date.parse("2026-10-09T15:00:00+02:00")).lectura;
+  assert.equal(L.resumirTodo([lectura, otra]).length, 1, "las de tokens no hacen serie de %");
+  const cs = L.resumirCuentas([lectura, otra], [], { ahora: Date.parse("2026-10-09T15:00:00+02:00") });
+  const c = cs.find((x) => x.id === "cursor");
+  assert.equal(c.pct, null);
+  assert.equal(c.tokens.ultima.total, 7630456);
+  assert.ok(c.nota && /Jobs/.test(c.nota));
+  assert.equal(cs.find((x) => x.id === "leyendas").pct, 10);
+});

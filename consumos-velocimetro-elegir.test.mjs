@@ -92,10 +92,13 @@ test("estado de fila: verde = tok/h > 0 · amarillo = tokens hoy y 0 tok/h · ro
 });
 test("desplegable de agentes: todos los conocidos aunque no tengan datos hoy (al final), sin duplicar", () => {
   const l = E.agentesConConocidos([{ agente: "Trinity", tokHora: 5, tokHoy: 9 }, { agente: "Neo", tokHora: 0, tokHoy: 3 }], perfilesFlota());
-  assert.deepEqual(Array.from(l, (a) => a.agente), ["Trinity", "Neo", "Morfeo", "Oráculo", "Smith"]);
+  assert.deepEqual(Array.from(l, (a) => a.agente), ["Trinity", "Neo", "Morfeo", "Oráculo", "Smith", "Grok Bot (Consejo)"]);
   assert.equal(l[4].sinDatos, true);
   const pf = perfilesFlota();
-  assert.ok(!pf.some((p) => p.maquina === "GrokBot"), "los consejeros GrokBot no van (sin pulso de tokens)");
+  assert.ok(!pf.some((p) => p.maquina === "GrokBot"), "los consejeros GrokBot no van uno a uno (no se pueden separar)");
+  const gb = pf.find((p) => p.agente === "Grok Bot (Consejo)");
+  assert.equal(gb.modelo, "Grok Bot / Cursor Pro");
+  assert.deepEqual(gb.cubre, ["Jobs", "Wozniak", "Lucas", "Disney"]);
   assert.equal(pf.find((p) => p.agente === "Neo").email, "csilva@admira.com");
   assert.equal(pf.find((p) => p.agente === "Oráculo").email, "csilvasantin@gmail.com");
 });

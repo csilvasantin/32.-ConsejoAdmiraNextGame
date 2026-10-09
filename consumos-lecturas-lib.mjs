@@ -5,6 +5,10 @@
  * Una lectura: { id, ts (ISO UTC), cuenta, grupo, agente, pct 0-100, tokens|null,
  *                fuente "manual"|"auto", autor, nota, canonica }
  * Canónicas: las de las 00:00 y las 12:00 hora de Madrid (±30 min).
+ * r27 (Cursor Pro): una lectura puede ser SOLO DE TOKENS (pct null + tokens): Cursor Pro no publica un % del plan, así
+ * que fleet/cursor-uso.py anota a las 00:00 y 12:00 los tokens del bloque de 12 h que acaba (re-escribe la misma lectura
+ * — mismo id — cuando el CSV trae más datos). No entran en las series de % (ni margen, ni ritmo, ni recomendación):
+ * van aparte en cuenta.tokens.
  */
 export const ZONA = "Europe/Madrid";
 export const VENTANA_CANONICA_MIN = 30;
@@ -51,7 +55,9 @@ export function normalizarLectura(body, ahora = Date.now()) {
   const cuenta = txt(body.cuenta, 120);
   if (!cuenta) return { error: "falta cuenta (p. ej. csilva@admira.com)" };
   const pct = num(body.pct);
-  if (pct === null || !Number.isFinite(pct) || pct < 0 || pct > 100) return { error: "pct debe ser un número entre 0 y 100" };
+  const hayTokens = body.tokens !== undefined && body.tokens !== null && body.tokens !== "";
+  if (pct === null && !hayTokens) return { error: "pct debe ser un número entre 0 y 100 (o manda tokens para una lectura solo de tokens)" };
+  if (pct !== null && (!Number.isFinite(pct) || pct < 0 || pct > 100)) return { error: "pct debe ser un número entre 0 y 100" };
   let ts = ahora;
   if (body.ts !== undefined && body.ts !== null && body.ts !== "") {
     ts = Date.parse(body.ts);
@@ -92,7 +98,7 @@ export function normalizarLectura(body, ahora = Date.now()) {
     cuenta,
     grupo: txt(body.grupo, 40),
     agente: txt(body.agente, 40),
-    pct: Math.round(pct * 100) / 100,
+    pct: pct === null ? null : Math.round(pct * 100) / 100,
     tokens,
     fuente,
     autor,
@@ -101,6 +107,7 @@ export function normalizarLectura(body, ahora = Date.now()) {
     canonica: esCanonica(ts),
   };
   if (/[<>]/.test(lectura.cuenta + lectura.agente + lectura.grupo + lectura.autor)) return { error: "caracteres no permitidos" };
+  if (pct === null && !tokens) return { error: "una lectura sin pct necesita tokens" };
   return { lectura };
 }
 
@@ -166,9 +173,11 @@ export function resumirSerie(lecturas, { ventanaH = 48, ahora = Date.now() } = {
 }
 
 /** Agrupa por cuenta·agente y resume cada serie. */
+export const esDeTokens = (l) => !!l && (l.pct === null || l.pct === undefined);
 export function resumirTodo(lecturas, opts = {}) {
   const grupos = new Map();
   for (const l of lecturas || []) {
+    if (esDeTokens(l)) continue; // r27: las lecturas solo de tokens no son una serie de %
     const k = claveSerie(l);
     if (!grupos.has(k)) grupos.set(k, []);
     grupos.get(k).push(l);
@@ -223,7 +232,10 @@ export const CUENTAS = [
   // Mac mini (confirmado por Carlos en las máquinas, 09-10-2026): Morfeo = Claude y Oráculo = Codex, los dos con csilvasantin@gmail.com.
   agente("morfeo-claude", "Morfeo · Claude", "Morfeo · Claude (csilvasantin@gmail.com)", "Claude (csilvasantin@gmail.com)", "Claude", "Claude Code semanal", { secundario: "Claude Code sesión 5 h" }),
   agente("oraculo-codex", "Oráculo · Codex", "Oráculo · Codex (csilvasantin@gmail.com)", "ChatGPT Pro (csilvasantin@gmail.com)", "ChatGPT", "Codex semanal"),
-  { id: "cursor", nombre: "Cursor Pro", cuenta: "cursor-pro", plan: "Cursor Pro", consejeros: [] },
+  // r27: Cursor Pro de Carlos = los consejeros Grok Bot (Jobs, Wozniak, Lucas, Disney) juntos. Sin % del plan: lecturas solo
+  // de tokens (fleet/cursor-uso.py, 00:00/12:00) + tokens de hoy del pulso. Smith NO va aquí (Grok CLI, otra cuenta).
+  { id: "cursor", nombre: "Cursor Pro", cuenta: "cursor-pro", plan: "Cursor Pro", consejeros: [], soloTokens: true,
+    nota: "Grok Bot (Consejo): Jobs, Wozniak, Lucas y Disney juntos. Cursor no da un % del plan ni separa por consejero; los tokens salen del export CSV de cursor.com con horas de retraso." },
 ];
 
 const DIA = 24 * H;
@@ -315,6 +327,7 @@ export function repartir(cuenta, partes, pct, { desde, hasta = Date.now() } = {}
 export function resumirCuentas(lecturas, partes, { ahora = Date.now() } = {}) {
   return CUENTAS.map((c) => {
     const propias = (lecturas || []).filter((l) => l.cuenta === c.cuenta);
+    const deTokens = propias.filter(esDeTokens).sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts));
     const series = resumirTodo(propias, { ahora }).map((s) => ({ ...s, proy: proyectar(s, ahora), bloques: bloques12h(s.deltas) }));
     const fija = c.principal ? series.find((s) => s.agente === c.principal) || null : null;
     const manda = c.principal ? fija : series.length ? [...series].sort((a, b) => b.pct - a.pct || Date.parse(b.ultima.ts) - Date.parse(a.ultima.ts))[0] : null;
@@ -329,10 +342,18 @@ export function resumirCuentas(lecturas, partes, { ahora = Date.now() } = {}) {
       proyeccion: manda ? manda.proy : null, agotaAntes: agota,
       series: series.map(({ deltas, ...s }) => ({ ...s, lecturas: deltas })),
       reparto: repartir(c, partes, pct, { desde, hasta: ahora }),
+      ...(deTokens.length || c.soloTokens ? { tokens: resumirTokens(deTokens), nota: c.nota || null } : {}),
       ...(c.proveedor ? { proveedor: c.proveedor, etiqueta: c.etiqueta, email: c.email || null, resetSemanal: c.resetSemanal || null,
         secundario: c.secundario ? { agente: c.secundario, pct: sec ? sec.pct : null, reset: sec ? sec.ultima.reset || null : null, ts: sec ? sec.ultima.ts : null } : null } : {}),
     };
   });
+}
+
+/** r27: lecturas solo de tokens de una cuenta → { ultima, bloques:[{ts, total, entrada, salida, cache, canonica, nota}] }. */
+export function resumirTokens(lecturas) {
+  const tot = (t) => (t ? (t.total ?? (t.entrada || 0) + (t.salida || 0)) : 0);
+  const bloques = (lecturas || []).filter((l) => l.tokens).map((l) => ({ ts: l.ts, total: tot(l.tokens), entrada: l.tokens.entrada ?? null, salida: l.tokens.salida ?? null, cache: l.tokens.cache ?? null, canonica: !!l.canonica, agente: l.agente || "", nota: l.nota || "" }));
+  return { ultima: bloques.length ? bloques[bloques.length - 1] : null, bloques: bloques.slice(-28) };
 }
 
 /** Ranking por margen y la línea de recomendación de arriba. */

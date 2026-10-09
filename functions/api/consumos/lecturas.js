@@ -11,6 +11,16 @@
  * KV: binding CONSUMOS_KV si existe; si no, el RECORTE_KV ya enlazado al proyecto (prefijo propio).
  */
 import { normalizarLectura, anadir, resumirTodo, recomendar, resumirCuentas, recomendarCuentas } from "../../../consumos-lecturas-lib.mjs";
+import { agentesDePulso } from "../../../consumos-pulso-lib.mjs";
+import { leerPulsos } from "./pulso.js";
+
+/** r27: tokens de hoy del pulso para la tarjeta Cursor Pro (agentes con motor «cursor»). */
+export function tokensPulsoCursor(docs, ahora) {
+  const ags = agentesDePulso(docs, ahora).filter((a) => a.motor === "cursor");
+  if (!ags.length) return null;
+  return { tokHoy: ags.reduce((s, a) => s + (Number(a.tokHoy) || 0), 0), cacheHoy: ags.reduce((s, a) => s + (Number(a.cacheHoy) || 0), 0),
+    agentes: ags.map((a) => ({ agente: a.agente, tokHoy: a.tokHoy, retrasoS: a.retrasoS ?? null, datosHasta: a.datosHasta || null, cubre: a.cubre || [] })) };
+}
 
 /* Partes de tokens (mandamiento 15): la lista pública de Notificaciones de Yokup, sin secretos.
    Solo trae las abiertas (una por agente y día); si no responde, el reparto queda «pendiente». */
@@ -79,6 +89,11 @@ export async function onRequestGet({ request, env, fetchImpl }) {
   const series = resumirTodo(lecturas, { ahora });
   const partes = await leerPartes(fetchImpl || fetch);
   const cuentas = resumirCuentas(lecturas, partes, { ahora });
+  try {
+    const tp = tokensPulsoCursor(await leerPulsos(kv(env)), ahora);
+    const c = cuentas.find((x) => x.id === "cursor");
+    if (c && tp) c.pulso = tp;
+  } catch (e) {}
   const reparto = recomendarCuentas(cuentas);
   return json({ ok: true, cuentas, recomendacionCuentas: reparto.texto, ranking: reparto.ranking, partesYokup: partes ? partes.length : null, dias, zona: "Europe/Madrid", canonicas: ["00:00", "12:00"], lecturas, series: series.map(({ deltas, ...s }) => ({ ...s, deltas })), recomendacion: recomendar(series), actualizado: doc.actualizado, generado: new Date(ahora).toISOString() }, 200, origin);
 }

@@ -200,10 +200,12 @@ export function fmtPct(x) {
 /* ───────── Entrega 2 (09-10-2026): una tarjeta por cuenta, reset semanal, bloques de 12 h, reparto ───────── */
 
 /** Cuenta de un agente con su medidor semanal fijo: «Neo · Claude Code» → etiqueta «Neo · Claude Code (Claude Max de Neo, no Grok)». */
-export function agente(id, nombre, cuenta, plan, proveedor, principal, { secundario = null, resetSemanal = null, consejeros = [] } = {}) {
+export function agente(id, nombre, cuenta, plan, proveedor, principal, { secundario = null, resetSemanal = null, consejeros = [], email = null } = {}) {
   const quien = nombre.split(" · ")[0];
-  return { id, nombre, cuenta, plan, proveedor, principal, secundario, resetSemanal, consejeros,
-    etiqueta: nombre + " (" + plan.replace(/\s*\(.*\)$/, "").replace(/\s+\d+$/, "") + " de " + quien + ", no Grok)" };
+  // Correo de la cuenta (09-10-2026): el de la opción o el que va entre paréntesis en el plan / la cuenta.
+  const mail = email || ((String(plan) + " " + String(cuenta)).match(/[\w.+-]+@[\w-]+(?:\.[\w-]+)+/) || [null])[0];
+  return { id, nombre, cuenta, plan, proveedor, principal, secundario, resetSemanal, consejeros, email: mail,
+    etiqueta: nombre + " (" + plan.replace(/\s*\(.*\)$/, "").replace(/\s+\d+x?$/, "") + " de " + quien + (mail ? ", " + mail : "") + ", no Grok)" };
 }
 
 /** Las cuentas del Consejo. `personas`: cómo firman los consejeros sus partes de tokens en Yokup. */
@@ -216,8 +218,11 @@ export const CUENTAS = [
   /* Cuentas de agentes fuera de Grok (09-10-2026, GrokBotBox): una línea por cuenta con agente().
      Manda siempre el medidor `principal` (el semanal); el `secundario` (p. ej. la sesión de 5 h) se
      enseña aparte y no decide semáforo ni proyección. La etiqueta deja claro de quién es y que no es Grok. */
-  agente("neo-claude", "Neo · Claude Code", "Neo · Claude Max", "Claude Max (20x)", "Claude", "Claude Code semanal", { secundario: "Claude Code sesión 5 h", resetSemanal: "domingos 15:00 (Madrid)" }),
+  agente("neo-claude", "Neo · Claude Code", "Neo · Claude Max", "Claude Max 20x (csilva@admira.com)", "Claude", "Claude Code semanal", { secundario: "Claude Code sesión 5 h", resetSemanal: "domingos 15:00 (Madrid)", email: "csilva@admira.com" }),
   agente("trinity-codex", "Trinity · Codex", "Trinity · ChatGPT Pro", "ChatGPT Pro 200", "ChatGPT", "Codex semanal"),
+  // Mac mini (confirmado por Carlos en las máquinas, 09-10-2026): Morfeo = Claude y Oráculo = Codex, los dos con csilvasantin@gmail.com.
+  agente("morfeo-claude", "Morfeo · Claude", "Morfeo · Claude (csilvasantin@gmail.com)", "Claude (csilvasantin@gmail.com)", "Claude", "Claude Code semanal", { secundario: "Claude Code sesión 5 h" }),
+  agente("oraculo-codex", "Oráculo · Codex", "Oráculo · Codex (csilvasantin@gmail.com)", "ChatGPT Pro (csilvasantin@gmail.com)", "ChatGPT", "Codex semanal"),
   { id: "cursor", nombre: "Cursor Pro", cuenta: "cursor-pro", plan: "Cursor Pro", consejeros: [] },
 ];
 
@@ -324,7 +329,7 @@ export function resumirCuentas(lecturas, partes, { ahora = Date.now() } = {}) {
       proyeccion: manda ? manda.proy : null, agotaAntes: agota,
       series: series.map(({ deltas, ...s }) => ({ ...s, lecturas: deltas })),
       reparto: repartir(c, partes, pct, { desde, hasta: ahora }),
-      ...(c.proveedor ? { proveedor: c.proveedor, etiqueta: c.etiqueta, resetSemanal: c.resetSemanal || null,
+      ...(c.proveedor ? { proveedor: c.proveedor, etiqueta: c.etiqueta, email: c.email || null, resetSemanal: c.resetSemanal || null,
         secundario: c.secundario ? { agente: c.secundario, pct: sec ? sec.pct : null, reset: sec ? sec.ultima.reset || null : null, ts: sec ? sec.ultima.ts : null } : null } : {}),
     };
   });

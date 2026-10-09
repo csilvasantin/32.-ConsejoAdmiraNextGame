@@ -47,7 +47,7 @@ export async function onRequestGet({ request, env, fetchImpl }) {
   return new Response(JSON.stringify({
     ok: true, tipo: r.tipo, tipoInferido: inferido, texto: texto || null,
     elegido: r.elegido, candidatos: r.candidatos, excluidos: r.excluidos,
-    regla: "aptitud (≥0,4) → libre (latido <" + LATIDO_VIVO_S / 60 + " min y sin encargo ack/in_progress) → más margen de uso; margen desconocido penaliza",
+    regla: "aptitud (≥0,4) → libre (flota: latido <" + LATIDO_VIVO_S / 60 + " min y sin encargo ack/in_progress; consejeros GrokBot: se despiertan al recibir encargo, solo cuenta el encargo en curso) → más margen de uso; sin lectura de margen penaliza",
     fuentes: {
       margen: lecturas ? "consumos-lecturas (" + lecturas.length + " lecturas)" : "sin KV",
       presencia: pres ? "bot.yokup.com/api/presence (" + presencia.length + " filas)" : "no responde",

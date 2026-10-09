@@ -47,7 +47,14 @@ export function encargosEnCurso(cfg, bandeja, ahoraS) {
   return (bandeja || []).filter((e) => e && alias.has(plano(e.target_persona)) && ESTADOS_EN_CURSO.has(String(e.status)) && (!e.ts || ahoraS - Number(e.ts) <= VENTANA_ENCARGO_S)).map((e) => e.id);
 }
 
-export function libre(latido, enCurso, ahoraS) {
+export const POR_WEBHOOK = "se despierta al recibir encargo";
+
+export function libre(latido, enCurso, ahoraS, { despierta = null } = {}) {
+  // Consejeros GrokBot (09-10-2026): se despiertan por webhook al recibir el encargo; el latido no cuenta.
+  if (despierta === "webhook") {
+    if (enCurso.length) return { libre: false, why: "con encargo en curso #" + enCurso.join(", #") };
+    return { libre: true, why: POR_WEBHOOK };
+  }
   if (latido === null) return { libre: false, why: "sin latido en la presencia" };
   const edad = Math.max(0, ahoraS - latido);
   const min = Math.round(edad / 60);
@@ -85,14 +92,14 @@ export function orquestar({ tipo, cuentas = [], presencia = [], bandeja = [], ah
     const apto = aptitud(cfg.perfil, tipo);
     const lat = ultimoLatido(cfg, presencia);
     const enCurso = encargosEnCurso(cfg, bandeja, ahoraS);
-    const lib = libre(lat, enCurso, ahoraS);
+    const lib = libre(lat, enCurso, ahoraS, { despierta: cfg.despierta || null });
     const punt = puntuacion({ apto, esLibre: lib.libre, margenPct });
-    const partes = [tipo + " " + apto.toFixed(2), lib.libre ? "libre" : "ocupado/ausente", margenPct === null ? "margen desconocido" : fmt(margenPct) + " de margen"];
+    const partes = [tipo + " " + apto.toFixed(2), lib.libre ? "libre" : "ocupado/ausente", margenPct === null ? (c ? "sin lectura de margen" : "margen desconocido") : fmt(margenPct) + " de margen"];
     return {
       persona: cfg.persona, maquina: cfg.maquina, modelo: cfg.modelo,
       cuenta: cfg.cuenta ? (c ? c.nombre + (c.cuenta ? " (" + c.cuenta + ")" : "") : cfg.cuenta) : "desconocida",
       grupo: cfg.cuenta || null,
-      apto, libre: { libre: lib.libre, why: lib.why }, margenPct, semaforo: c ? c.semaforo : "sin",
+      apto, libre: { libre: lib.libre, why: lib.why }, despierta: cfg.despierta || null, margenPct, semaforo: c ? c.semaforo : "sin",
       ultimoLatido: lat === null ? null : new Date(lat * 1000).toISOString(),
       encargosEnCurso: enCurso.length, encargosIds: enCurso, puntuacion: punt, motivo: partes.join(" · "),
     };
@@ -106,7 +113,7 @@ export function orquestar({ tipo, cuentas = [], presencia = [], bandeja = [], ah
   const etiquetaTipo = { codigo: "código", investigacion: "investigación", creativo: "creativo", consejo: "consejo", web: "web", demo: "demo", estrategia: "estrategia" }[tipo] || tipo;
   const elegido = top ? {
     persona: top.persona,
-    motivo: top.persona + ": " + etiquetaTipo + ", " + (top.libre.libre ? "libre" : "no libre (" + top.libre.why + ")") + ", " + (top.margenPct === null ? "margen desconocido" : fmt(top.margenPct) + " de margen"),
+    motivo: top.persona + ": " + etiquetaTipo + ", " + (top.libre.libre ? "libre" : "no libre (" + top.libre.why + ")") + ", " + (top.margenPct === null ? (top.grupo ? "sin lectura de margen" : "margen desconocido") : fmt(top.margenPct) + " de margen"),
   } : null;
   return { tipo, candidatos, excluidos, elegido };
 }

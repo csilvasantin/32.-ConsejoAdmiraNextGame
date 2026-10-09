@@ -199,6 +199,13 @@ export function fmtPct(x) {
 
 /* ───────── Entrega 2 (09-10-2026): una tarjeta por cuenta, reset semanal, bloques de 12 h, reparto ───────── */
 
+/** Cuenta de un agente con su medidor semanal fijo: «Neo · Claude Code» → etiqueta «Neo · Claude Code (Claude Max de Neo, no Grok)». */
+export function agente(id, nombre, cuenta, plan, proveedor, principal, { secundario = null, resetSemanal = null, consejeros = [] } = {}) {
+  const quien = nombre.split(" · ")[0];
+  return { id, nombre, cuenta, plan, proveedor, principal, secundario, resetSemanal, consejeros,
+    etiqueta: nombre + " (" + plan.replace(/\s*\(.*\)$/, "").replace(/\s+\d+$/, "") + " de " + quien + ", no Grok)" };
+}
+
 /** Las cuentas del Consejo. `personas`: cómo firman los consejeros sus partes de tokens en Yokup. */
 export const CUENTAS = [
   { id: "leyendas", nombre: "Leyendas", cuenta: "csilva@admira.com", plan: "SuperGrok Heavy",
@@ -206,12 +213,11 @@ export const CUENTAS = [
   { id: "coetaneos", nombre: "Coetáneos", cuenta: "csilvasantin@gmail.com", plan: "SuperGrok",
     consejeros: [["Elon / Merovingio", ["Musk", "Elon", "Elon Musk", "Merovingio"]], ["Jensen / Cypher", ["Huang", "Jensen", "Jensen Huang", "Cypher"]]],
     pista: "Última conocida por Carlos: 1 % el 4 de octubre (no está guardada como lectura)." },
-  /* Neo (09-10-2026, GrokBotBox): su Claude Code en el plan Claude Max (20x). Es una cuenta de Claude,
-     no de Grok. Manda siempre el medidor semanal (reset los domingos 15:00 de Madrid); la sesión de
-     5 h se enseña aparte, como secundario, y no decide el semáforo ni la proyección. */
-  { id: "neo-claude", nombre: "Neo · Claude Code", cuenta: "Neo · Claude Max", plan: "Claude Max (20x)", proveedor: "Claude",
-    etiqueta: "Neo · Claude Code (Claude Max de Neo, no Grok)", principal: "Claude Code semanal", secundario: "Claude Code sesión 5 h",
-    resetSemanal: "domingos 15:00 (Madrid)", consejeros: [] },
+  /* Cuentas de agentes fuera de Grok (09-10-2026, GrokBotBox): una línea por cuenta con agente().
+     Manda siempre el medidor `principal` (el semanal); el `secundario` (p. ej. la sesión de 5 h) se
+     enseña aparte y no decide semáforo ni proyección. La etiqueta deja claro de quién es y que no es Grok. */
+  agente("neo-claude", "Neo · Claude Code", "Neo · Claude Max", "Claude Max (20x)", "Claude", "Claude Code semanal", { secundario: "Claude Code sesión 5 h", resetSemanal: "domingos 15:00 (Madrid)" }),
+  agente("trinity-codex", "Trinity · Codex", "Trinity · ChatGPT Pro", "ChatGPT Pro 200", "ChatGPT", "Codex semanal"),
   { id: "cursor", nombre: "Cursor Pro", cuenta: "cursor-pro", plan: "Cursor Pro", consejeros: [] },
 ];
 

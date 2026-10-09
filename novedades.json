@@ -1,4 +1,7 @@
 {
+  "v.09.10.2026.r36.19:05": [
+    "Consumos: los cuentakilómetros (flota y proyecto) ruedan sin parar al ritmo medio del día (tokens de hoy / horas desde la medianoche de Madrid) y se re-anclan al valor real en cada lectura sin ir nunca hacia atrás; fuera la cabecera «TOKENS POR HORA»; «tok/h» pasa a «tokens/hora» en todas partes, con «tokens/hora ahora (últimos 15 min) · media del día X tokens/hora» bajo la cifra; y las tarjetas de gasto (Cloudflare, Grok, Cursor, consejeros, consolas…) en su propia sección plegable «Gasto y servicios» (plegada: una fila por tarjeta)."
+  ],
   "v.09.10.2026.r35.18:53": [
     "Consumos: las tarjetas de cuenta son su propia categoría plegable «Cuentas» (plegada: una fila por cuenta con punto de estado · % usado · «se agota …»; abierta: las tarjetas a 3 columnas), separada de «Margen» (recomendación en una línea; abierta, la recomendación completa y el margen por cuenta). Recuerdan su estado; ?abierto=todo o ?abierto=cuentas."
   ],

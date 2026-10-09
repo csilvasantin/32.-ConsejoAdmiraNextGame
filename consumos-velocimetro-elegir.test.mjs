@@ -117,3 +117,20 @@ test("r24 · píldora de margen por el margen (verde ≥ 50 · amarillo 20–49 
   assert.equal(E.notaOrquestador({ pct: 90, semaforo: "verde" }), null);
   assert.equal(E.notaOrquestador({ pct: 30, semaforo: "ambar" }), null, "ámbar con 30 % ya lo dice la píldora amarilla");
 });
+
+test("r36 cuentakilómetros rodante: ruedas continuas y ritmo medio del día", () => {
+  const w = { document: { readyState: "complete", getElementById: () => null, documentElement: { lang: "es" } }, Intl, Date, Math };
+  w.window = w;
+  vm.runInNewContext(readFileSync(new URL("./assets/consumos-velocimetro.js", import.meta.url), "utf8"), w);
+  const O = w.ConsumosOdometro;
+  // 1234,5 → última rueda 4,5 (gira); las demás quietas en su cifra.
+  assert.deepEqual(Array.from(O.posicionesRuedas(1234.5, 4)), [1, 2, 3, 4.5]);
+  // 1299,5 → la de las decenas va a medio camino de 9 a 0 (arrastrada); las centenas igual (99,5 > 99).
+  const p = Array.from(O.posicionesRuedas(1299.5, 4));
+  assert.equal(p[3], 9.5); assert.equal(p[2], 9.5); assert.equal(p[1], 2.5); assert.equal(p[0], 1);
+  // Ritmo medio: tokens de hoy / segundos desde la medianoche de Madrid (10 M a 10 h → ~278 tokens/s).
+  const s = O.relojMadrid(Date.now()).s;
+  assert.ok(Math.abs(O.ritmoMedio(10e6) - 10e6 / Math.max(600, s)) < 1);
+  assert.equal(O.ritmoMedio(null), 0);
+  const h10 = 10 * 3600; assert.ok(Math.abs(10e6 / h10 - 277.78) < 0.01);
+});

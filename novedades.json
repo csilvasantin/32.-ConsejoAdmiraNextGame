@@ -1,4 +1,12 @@
 {
+  "v.09.10.2026.r21.12:03": [
+    "/consumos · selector de AGENTE junto a «Toda la flota» (Neo, Trinity, Oráculo, Morfeo…): la aguja enseña los tok/h de ese agente y el cuentakilómetros sus tokens de hoy («NEO · TOKENS HOY»); «Toda la flota» vuelve al total",
+    "Dial POR PROYECTO en AUTO: sigue al proyecto que más quema AHORA (máx. tok/h de los últimos 15 min; si todos a 0, el que más lleva hoy), reevaluado en cada refresco de 10 s y marcado «(auto)»; antes se quedaba en admira.store (el que más llevaba hoy) marcando 0. Opciones ordenadas por tok/h y luego tokens de hoy; «otros (sin proyecto)» solo si de verdad es el que más quema",
+    "Las elecciones manuales de agente y proyecto se guardan en el navegador (localStorage); «Automático» vuelve a seguir al que más gasta",
+    "/api/consumos/velocidad expone proyectoAhora (mismo criterio que el dial)",
+    "Colector (~/.fleet/pulso-tokens.py, MacMini y MacBookPro16): el proyecto sale de la RUTA DE TRABAJO REAL — rutas que tocan las herramientas de Claude y cwd de cada comando de Codex — no del cwd con el que arrancó la sesión; reglas por carpeta (metahuman/unreal → admiranext.com, pixeria/Adaptador → admira.studio, xpaceos-mcp → xpaceos.com…); sesiones de Codex abiertas desde días anteriores ya cuentan (Trinity: 0,6 M → 3,6 M hoy); lo que cae en «otros» queda en ~/.fleet/pulso-otros.json con su ruta",
+    "Aguja ANALÓGICA en los dos diales: muelle amortiguado con un pelín de sobreimpulso al cambiar y vibración de carretera (±0,5–1,5° según los tok/h; quieta a 0); respeta «reducir movimiento»"
+  ],
   "v.09.10.2026.r20.11:55": [
     "Regla de Carlos: si está trabajando directamente con un agente, NADIE le inyecta encargos (ni el orquestador, ni otros agentes, ni formularios)",
     "El colector de cada Mac (pulso, cada 60 s) evalúa «con Carlos» por agente: reposo del Mac < 5 min Y (a) app de Claude/Codex al frente con sesión activa, (b) su tmux con cliente adjunto y un terminal al frente, o (c) su último turno es un prompt tecleado por una persona hace < 5 min (no un aviso inyectado); motivo y «desde» en el pulso",

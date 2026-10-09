@@ -17,6 +17,14 @@ r20 (con Carlos): regla de Carlos — si trabaja directamente con un agente, nad
 pasada se evalúa, por agente, conCarlos (ver con_carlos() más abajo: reposo del Mac < 5 min Y una señal a/b/c) y se
 escribe ~/.fleet/con-carlos.json (lo lee el vigilante agent-inbox-watcher.sh antes de inyectar; sin red) y se manda
 conCarlos + conCarlosMotivo + conCarlosDesde en el pulso. Nunca se envía contenido de las conversaciones.
+r21 (Carlos, 09-10-2026 — «no salen los proyectos en los que trabajo»): el cwd de la sesión no basta (Neo arranca en
+~/Claude/xpaceos-pub y trabaja en ~/Projects/csilvasantin/digitalavatar-metahuman-58; Trinity arranca en
+~/Documents/ChatGPT/Yokup.com y trabaja en worktrees /tmp/trinity-* del repo pixeria). Ahora manda la RUTA DE TRABAJO
+REAL: Claude → rutas que tocan las herramientas de ese mensaje (Bash/Read/Edit…), si no la última del mismo fichero
+(≤ 30 min), si no el cwd; Codex → cwd de cada CommandExecution (file://…), si no session_meta/turn_context. Reglas por
+carpeta (metahuman/unreal → admiranext.com) antes que el git remote; pixeria/pixer-worker → admira.studio (Adaptador).
+Codex: sesiones de días anteriores que siguen vivas hoy (cualquier carpeta AAAA/MM/DD con mtime de hoy).
+«otros» no se cachea (se reevalúa) y cada ruta que cae en «otros» queda en ~/.fleet/pulso-otros.json con sus tokens.
 Uso: pulso-tokens.py [--dry-run] [--maquina NOMBRE] [--con-carlos]   (--con-carlos: solo evalúa e imprime)
 """
 import glob, json, os, re, sys, time, socket, subprocess, urllib.request, urllib.error
@@ -26,7 +34,8 @@ from zoneinfo import ZoneInfo
 MADRID = ZoneInfo("Europe/Madrid")
 HOME = os.path.expanduser("~")
 CACHE = os.path.join(HOME, ".fleet", "pulso-cache.json")
-CACHE_PROY = os.path.join(HOME, ".fleet", "pulso-proyectos.json")
+CACHE_PROY = os.path.join(HOME, ".fleet", "pulso-proyectos-v2.json")
+LOG_OTROS = os.path.join(HOME, ".fleet", "pulso-otros.json")
 
 # repo (sin dueño, en minúsculas) → proyecto. Misma lista que tools/hackeo-corpus.py (13 proyectos de la Galaxia).
 # clearchannel-tv sirve admira.biz y clearchannel.tv: como en el corpus, cuenta para el primero (admira.biz).
@@ -35,7 +44,28 @@ REPOS = {
     "clearchannel-tv": "admira.biz", "pixeria": "pixeria.com", "xpaceos": "xpaceos.com", "tool": "yokup.com",
     "admira-next-web": "admiranext.com", "ainimation": "ainimation.studio", "digitalavatar.ai": "digitalavatar.ai",
     "32.-consejoadmiranextgame": "admira.live",
+    # r20: el Adaptador / Admira Studio vive en el repo pixeria (y su worker); pixeria.com.git aloja el MetaHuman.
+    "pixeria.com": "admira.studio", "pixer-worker": "admira.studio", "admira-telegram": "admira.live",
 }
+REPOS["pixeria"] = "admira.studio"
+# r20: reglas por nombre de carpeta, ANTES que el git remote (el repo no siempre dice el proyecto).
+REGLAS_RUTA = [
+    (re.compile(r"metahuman|unreal|ue_5"), "admiranext.com"),
+    (re.compile(r"consejoadmiranextgame|admira-live|admira-telegram|^admira-vault$"), "admira.live"),
+    (re.compile(r"admira-next-web|admiranext-web|admira-presentation|admira-remote-presentation"), "admiranext.com"),
+    (re.compile(r"admira-studio|pixeria|pixer-|adaptador|adapter"), "admira.studio"),
+    (re.compile(r"admira-store|^store-"), "admira.store"),
+    (re.compile(r"admira-tv|^tv-"), "admira.tv"),
+    (re.compile(r"clearchannel|admira-biz|^biz-"), "admira.biz"),
+    (re.compile(r"admira-app|^app-"), "admira.app"),
+    (re.compile(r"xpaceos|xpacio"), "xpaceos.com"),
+    (re.compile(r"yokup"), "yokup.com"),
+    (re.compile(r"ainimation"), "ainimation.studio"),
+    (re.compile(r"digitalavatar"), "digitalavatar.ai"),
+]
+# Rutas que NO dicen nada del proyecto (logs, memorias, scratch de las apps): se ignoran al buscar la ruta de trabajo.
+RUTA_NEUTRA = re.compile(r"/(\.claude|\.codex|\.fleet|\.config|\.agents-comms|\.local|library|claude-\d+)(/|$)|/admira-vault(/|$)", re.I)
+RX_RUTA = re.compile(r"(?:file://)?((?:/Users/[^/\s\"'`]+|/private/tmp|/tmp|~)/[^\s\"'`;|&<>()$*]+)")
 OTROS = "otros"
 _proy_cache = None
 
@@ -43,6 +73,14 @@ _proy_cache = None
 def _repo_de_url(url):
     m = re.search(r"[/:]([^/:]+?)(?:\.git)?/?$", (url or "").strip())
     return m.group(1).lower() if m else ""
+
+
+def _por_regla(cwd):
+    for parte in reversed(re.split(r"[/\\]", (cwd or "").lower())):
+        for rx, proy in REGLAS_RUTA:
+            if parte and rx.search(parte):
+                return proy
+    return None
 
 
 def _por_ruta(cwd):
@@ -66,19 +104,70 @@ def proyecto_de(cwd):
             _proy_cache = {}
     if not cwd:
         return OTROS
+    cwd = str(cwd)
+    if cwd.startswith("file://"):
+        cwd = cwd[7:]
     if cwd in _proy_cache:
         return _proy_cache[cwd]
-    proy = None
-    if os.path.isdir(cwd):
+    proy = _por_regla(cwd)
+    if not proy and os.path.isdir(cwd):
         try:
             r = subprocess.run(["git", "-C", cwd, "remote", "get-url", "origin"], capture_output=True, text=True, timeout=4)
             repo = _repo_de_url(r.stdout) if r.returncode == 0 else ""
-            proy = REPOS.get(repo) if repo else None
+            proy = (REPOS.get(repo) or _por_regla(repo)) if repo else None  # r20: xpaceos-mcp → xpaceos.com
         except Exception:
             proy = None
     proy = proy or _por_ruta(cwd)
-    _proy_cache[cwd] = proy
+    if proy != OTROS:
+        _proy_cache[cwd] = proy  # «otros» no se cachea: se reevalúa (carpetas nuevas, reglas nuevas)
     return proy
+
+
+def _dir_trabajo(ruta):
+    """Ruta de fichero/carpeta → carpeta de trabajo (hasta 6 niveles) para preguntar a git y a las reglas."""
+    r = os.path.expanduser(ruta.rstrip("/.,:"))
+    if r.startswith("/private/tmp/"):
+        r = r[8:]
+    partes = r.split("/")
+    r = "/".join(partes[:7]) if r.startswith(("/Users/", "/home/")) else "/".join(partes[:4])
+    if os.path.isfile(r):
+        r = os.path.dirname(r)
+    return r
+
+
+def proyecto_de_rutas(texto):
+    """Primer proyecto (≠ otros) de las rutas que aparecen en el texto de una herramienta; None si ninguna casa."""
+    vistos = set()
+    for m in RX_RUTA.finditer(texto or ""):
+        ruta = m.group(1)
+        if RUTA_NEUTRA.search(ruta.lower()):
+            continue
+        d = _dir_trabajo(ruta)
+        if not d or d in vistos or d.count("/") < 3:
+            continue
+        vistos.add(d)
+        pr = proyecto_de(d)
+        if pr != OTROS:
+            return pr
+    return None
+
+
+_otros = {}
+
+
+def anota_otros(ruta, tok):
+    if tok > 0:
+        k = (ruta or "(sin cwd)")[:200]
+        _otros[k] = _otros.get(k, 0) + tok
+
+
+def guardar_otros():
+    try:
+        with open(LOG_OTROS, "w") as f:
+            json.dump({"actualizado": datetime.now(MADRID).isoformat(timespec="seconds"),
+                       "rutas": dict(sorted(_otros.items(), key=lambda x: -x[1])[:60])}, f, ensure_ascii=False, indent=1)
+    except OSError:
+        pass
 
 
 def guardar_proyectos():
@@ -121,11 +210,12 @@ def cargar_cache(dia):
     try:
         with open(CACHE) as f:
             c = json.load(f)
-        if c.get("dia") == dia and c.get("v") == 3:
+        if c.get("dia") == dia and c.get("v") == 4:
             return c
     except Exception:
         pass
-    return {"v": 3, "dia": dia, "claude": {"files": {}, "msgs": {}}, "codex": {"files": {}}}
+    # v4 (r20): se reprocesa el día con la atribución por ruta de trabajo real.
+    return {"v": 4, "dia": dia, "claude": {"files": {}, "msgs": {}, "ult": {}}, "codex": {"files": {}}}
 
 
 def guardar_cache(c):
@@ -181,6 +271,15 @@ def claude(cache, dia, inicio_dia):
             dt = ts_de(d.get("timestamp"))
             if not es_hoy(dt, dia):
                 continue
+            # r20: ruta de trabajo real = la que tocan las herramientas de este mensaje; si no, la última del fichero (≤ 30 min).
+            usos = [json.dumps(x.get("input"), ensure_ascii=False) for x in (msg.get("content") or []) if isinstance(x, dict) and x.get("type") == "tool_use"]
+            pr_tool = proyecto_de_rutas(" ".join(usos)) if usos else None
+            ult = st.setdefault("ult", {})
+            if pr_tool:
+                ult[path] = [pr_tool, int(dt.timestamp())]
+            elif path in ult and int(dt.timestamp()) - ult[path][1] <= 1800:
+                pr_tool = ult[path][0]
+            pr = pr_tool or proyecto_de(d.get("cwd"))
             clave = (msg.get("id") or "") + "|" + (d.get("requestId") or "")
             if clave == "|":
                 clave = d.get("uuid") or ""
@@ -189,7 +288,7 @@ def claude(cache, dia, inicio_dia):
             prev = st["msgs"].get(clave)
             # La misma respuesta aparece en varias líneas (una por bloque): nos quedamos con la mayor.
             if prev is None or sum(vals) > sum(prev[:4]):
-                st["msgs"][clave] = vals + [int(dt.timestamp()), proyecto_de(d.get("cwd"))]
+                st["msgs"][clave] = vals + [int(dt.timestamp()), pr, d.get("cwd") or ""]
             if ultimo is None or dt > ultimo:
                 ultimo = dt
         st["files"][path] = nuevo
@@ -200,6 +299,8 @@ def claude(cache, dia, inicio_dia):
     for v in st["msgs"].values():
         pr = v[5] if len(v) > 5 else OTROS
         pp[pr] = pp.get(pr, 0) + v[0] + v[1] + v[2]
+        if pr == OTROS:
+            anota_otros("claude:" + (v[6] if len(v) > 6 else ""), v[0] + v[1] + v[2])
     return tok, cache_r, (datetime.fromtimestamp(ult, timezone.utc).isoformat().replace("+00:00", "Z") if ult else None), pp
 
 
@@ -207,7 +308,9 @@ def codex(cache, dia, inicio_dia):
     st = cache["codex"]
     hoy = datetime.now(MADRID)
     rutas = set()
-    for delta in (0, 1):  # las sesiones de ayer que siguen vivas hoy están en la carpeta de ayer
+    # r20: una sesión de Codex vive en la carpeta del día en que EMPEZÓ (Trinity lleva desde el 07-10): se miran
+    # las de los últimos 14 días y se filtran por mtime de hoy.
+    for delta in range(0, 15):
         d = hoy - timedelta(days=delta)
         rutas.update(glob.glob(os.path.join(HOME, ".codex", "sessions", d.strftime("%Y/%m/%d"), "*.jsonl")))
     for path in rutas:
@@ -222,7 +325,8 @@ def codex(cache, dia, inicio_dia):
             f.update({"prev": None, "tok": 0, "cache": 0})
         for raw in lineas:
             es_ctx = b'"session_meta"' in raw or b'"turn_context"' in raw
-            if b'"token_count"' not in raw and not es_ctx:
+            es_exec = b'"CommandExecution"' in raw and b'"cwd"' in raw
+            if b'"token_count"' not in raw and not es_ctx and not es_exec:
                 continue
             try:
                 d = json.loads(raw)
@@ -230,7 +334,19 @@ def codex(cache, dia, inicio_dia):
                 continue
             p = d.get("payload") or {}
             if d.get("type") in ("session_meta", "turn_context") and p.get("cwd"):
-                f["cwd"] = p.get("cwd")
+                if not f.get("cwd_exec"):
+                    f["cwd"] = p.get("cwd")
+                f["cwd_sesion"] = p.get("cwd")
+                continue
+            it = p.get("item") or {}
+            if p.get("type") == "item_completed" and it.get("type") == "CommandExecution" and it.get("cwd"):
+                # r20: el cwd del comando es donde trabaja de verdad (worktrees /tmp/trinity-*, ~/Projects/*).
+                c = str(it.get("cwd"))
+                c = c[7:] if c.startswith("file://") else c
+                if not RUTA_NEUTRA.search(c.lower()):
+                    if c != f.get("cwd_sesion") or not f.get("cwd_exec"):
+                        f["cwd"] = c
+                        f["cwd_exec"] = True
                 continue
             if p.get("type") != "token_count":
                 continue
@@ -247,6 +363,9 @@ def codex(cache, dia, inicio_dia):
                 if d_in or d_out:
                     pr = proyecto_de(f.get("cwd"))
                     f.setdefault("pp", {})[pr] = f["pp"].get(pr, 0) + max(0, d_in - d_cache) + d_out
+                    if pr == OTROS:
+                        po = f.setdefault("otros", {})
+                        po[f.get("cwd") or ""] = po.get(f.get("cwd") or "", 0) + max(0, d_in - d_cache) + d_out
                     f["tok"] += max(0, d_in - d_cache) + d_out
                     f["cache"] += d_cache
                     f["ult"] = dt.astimezone(timezone.utc).isoformat().replace("+00:00", "Z")
@@ -258,6 +377,8 @@ def codex(cache, dia, inicio_dia):
     for f in files:
         for pr, t in (f.get("pp") or {}).items():
             pp[pr] = pp.get(pr, 0) + t
+        for c, t in (f.get("otros") or {}).items():
+            anota_otros("codex:" + c, t)
     return sum(f["tok"] for f in files), sum(f["cache"] for f in files), ult, pp
 
 
@@ -556,6 +677,7 @@ def main():
                         "conCarlos": bool(x.get("conCarlos")), "conCarlosMotivo": x.get("motivo"), "conCarlosDesde": x.get("desde")})
     guardar_cache(cache)
     guardar_proyectos()
+    guardar_otros()
     cuerpo = {"maquina": maq, "agentes": agentes, "ts": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")}
     resumen = " · ".join("%s/%s %s tok (+%s cache) %s" % (a["agente"], a["motor"], format(a["tokHoy"], ","), format(a["cacheHoy"], ","),
                           json.dumps(a["porProyecto"], ensure_ascii=False)) for a in agentes)

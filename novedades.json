@@ -167,5 +167,12 @@
     "Enviar desde la home le llega a Jobs como encargo privado [chat-coetaneos]; se actualiza cada 2 s mientras esperas (hasta 3 min) y cada 10 s en reposo, solo con el panel visible, con «Jobs está escribiendo…»",
     "Si no has entrado con Google para el hilo privado, el panel lo pide en línea; el resto de consejeros sigue igual",
     "Estas novedades salen en el popover del sello, sin recorte del riel"
+  ],
+  "v.09.10.2026.r8.08:02": [
+    "Arreglado: en la home ya se puede escribir a Steve Jobs — el cuadro de texto y Enviar quedan fijos abajo del panel Conversación y solo los mensajes hacen scroll (antes el histórico lo empujaba fuera de la vista)",
+    "La home empieza en blanco en cada visita: sin el histórico (que sigue en /chat/jobs/, enlace «Ver histórico»); ves solo lo que envías ahora y las respuestas de Jobs, con «Jobs está escribiendo… · N s» y comprobación cada 2 s mientras esperas",
+    "Lo que escribes desde la home (panel o barra «Preguntar a Steve Jobs … Enviar») le llega a Jobs y se guarda en la misma conversación que en Grok Bot",
+    "Sin sesión puedes escribir igual: al enviar aparece «Entrar con Google», tu texto se conserva y se envía al entrar",
+    "Estas novedades salen en el popover del sello, sin recorte del riel"
   ]
 }

@@ -1584,6 +1584,10 @@
         if (v && !preguntarMode) {
             const p = currentProject ? ' <span class="sl-obj">"' + _slEsc(currentProject) + '"</span>' : "";
             setSentenceHtml('<span class="sl-verb">' + v + '</span>' + p + " …");
+        } else if (preguntarMode && selectedAgent) {
+            // Al salir el ratón de otro consejero, la barra vuelve a nombrar al SELECCIONADO
+            // (antes se quedaba «Preguntar a George Lucas» con Jobs elegido en el panel).
+            setSentenceHtml('<span class="sl-verb">' + cliT("Preguntar", "Ask") + '</span> a <span class="sl-obj">' + _slEsc(selectedAgent.persona) + '</span> · ' + cliT("escribe y pulsa Enviar", "type and press Send"));
         }
     }
 

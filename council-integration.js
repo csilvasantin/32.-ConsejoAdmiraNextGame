@@ -89,6 +89,8 @@
     container:preview?.chatHost||dock,mountInside:!!preview,onDraft(text){const input=document.getElementById('action-input');if(!input||input.value.trim())return false;writeDraft(text);if(inlineComposer)inlineComposer.focus();else input.focus();return true;},onOpenHistory(){preview?.open();},csrf:()=>window.admiraGateCsrf?.()||'',
     onSelect(persona){if(window.__consejoDeskPoll){clearInterval(window.__consejoDeskPoll);window.__consejoDeskPoll=null;}selectDraft(persona);activePersona=persona;preview?.select(persona);speech.select(persona||'');table.close();close({dismiss:false});},
     onPendingChange(){syncComposer();},
+    // Hilo compartido (Jobs): tras entrar con Google se envía el texto conservado en el compositor.
+    onAuthReady(persona){const text=typeof drafts[persona]==='string'?drafts[persona]:'';if(persona===draftPersona&&text.trim())sendPreview(text);},
     onPending({persona}){if(activePersona!==persona)return;dismissed=false;activeTurn=null;prepare(persona,'GrokBot');speech.begin({persona,turnId:'pending'});bubble.querySelector('.speech-text').textContent='Enviando al bot…';},
     onAnswer({persona,text,messageId,status}){if(activePersona===persona&&!dismissed)show(persona,'GrokBot',text,{animate:true,messageId,status});},
     onRestore({persona,text,messageId,status='done'}){if(activePersona===persona){dismissed=false;show(persona,'GrokBot',text,{messageId,status});}},
@@ -109,7 +111,16 @@
   window.CouncilInterface={
     select(persona){return bridge.select(persona);},
     has:persona=>bridge.has(persona),
-    send(persona,text){saveDraft();return bridge.send(persona,text);},
+    // La barra «Preguntar a <X> … Enviar» usa el mismo camino que el panel (para Jobs, el hilo
+    // compartido). Si no se acepta (p. ej. falta entrar con Google) el texto vuelve al compositor.
+    async send(persona,text){
+      saveDraft();
+      if(bridge.selected!==persona&&bridge.has(persona))await bridge.select(persona);
+      let ok=false;
+      try{ok=await bridge.send(persona,text);}
+      finally{if(!ok&&String(text||'').trim()&&!String(drafts[persona]||'').includes(String(text).trim()))restoreDraft(persona,text);}
+      return ok;
+    },
     attachDataURL:(...args)=>bridge.attachDataURL(...args),
     hasAttachments:persona=>bridge.hasAttachments(persona),
     restoreDraft,

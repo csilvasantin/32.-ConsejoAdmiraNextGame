@@ -72,14 +72,38 @@
   }
   function selectDraft(name){saveDraft();draftPersona=name;if(composer){composer.value=typeof drafts[name]==='string'?drafts[name]:'';mirroredValue=composer.value;}syncComposer();}
   composer?.addEventListener('input',saveDraft);
-  async function sendPreview(text){
+  function downscaleImageFile(file,maxSide=1280,quality=0.72){
+    return new Promise(resolve=>{
+      if(!file||!(file.type||'').startsWith('image/'))return resolve(null);
+      const url=URL.createObjectURL(file);
+      const img=new Image();
+      img.onload=()=>{
+        let w=img.naturalWidth||img.width,h=img.naturalHeight||img.height;
+        const scale=Math.min(1,maxSide/Math.max(w,h||1));
+        w=Math.max(1,Math.round(w*scale));h=Math.max(1,Math.round(h*scale));
+        const canvas=document.createElement('canvas');canvas.width=w;canvas.height=h;
+        const ctx=canvas.getContext('2d');ctx.drawImage(img,0,0,w,h);
+        URL.revokeObjectURL(url);
+        try{resolve({url:canvas.toDataURL('image/jpeg',quality),name:(file.name||'imagen').replace(/\.[^.]+$/,'')+'.jpg',type:'image/jpeg'});}
+        catch(e){resolve(null);}
+      };
+      img.onerror=()=>{URL.revokeObjectURL(url);resolve(null);};
+      img.src=url;
+    });
+  }
+  async function sendPreview(text,meta){
     const persona=draftPersona;
     if(!persona||sendingDrafts.has(persona))return;
-    let prompt=text.trim();
-    if(!prompt&&bridge.hasAttachments(persona))prompt='Adjunto este archivo.';
+    let prompt=String(text||'').trim();
+    const imgMeta=meta&&meta.image;
+    if(imgMeta&&imgMeta.url&&bridge&&!bridge.hasAttachments(persona)){
+      await bridge.attachDataURL(imgMeta.url,imgMeta.name||'imagen.jpg',imgMeta.type||'image/jpeg');
+    }
+    if(!prompt&&bridge.hasAttachments(persona))prompt='🖼 Imagen adjunta';
     if(!prompt)return;
     sendingDrafts.add(persona);
     writeDraft('');
+    if(inlineComposer&&inlineComposer.clearImage)inlineComposer.clearImage();
     let accepted=false;
     try{accepted=await bridge.send(persona,prompt);}
     finally{if(!accepted)restoreDraft(persona,text||prompt);sendingDrafts.delete(persona);syncComposer();}
@@ -104,7 +128,15 @@
   });
   if(preview&&window.CouncilComposer){
     const host=preview.chatHost.querySelector('.council-chat');
-    if(host)inlineComposer=CouncilComposer.mount({container:host,onInput:writeDraft,onSend:sendPreview});
+    if(host)inlineComposer=CouncilComposer.mount({
+      container:host,onInput:writeDraft,onSend:sendPreview,
+      onPasteImage:async(file)=>{
+        const info=await downscaleImageFile(file);
+        if(!info){if(typeof setActionLine==='function')setActionLine('No pude leer la imagen pegada');return null;}
+        if(bridge&&draftPersona)await bridge.attachDataURL(info.url,info.name,info.type);
+        return info;
+      }
+    });
     syncComposer();
   }
   const working=window.CouncilWorking?CouncilWorking.create({speech,generation}):null;

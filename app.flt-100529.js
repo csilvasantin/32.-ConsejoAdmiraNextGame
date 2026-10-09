@@ -19,8 +19,13 @@
             window.pfSyncIcons = function(){
                 var oi=document.getElementById('pf-ic-opcion');   if(oi) oi.classList.toggle('on', !railCollapsed('rail-opcion'));
                 var ai=document.getElementById('pf-ic-avanzado'); if(ai) ai.classList.toggle('on', !railCollapsed('rail-avanzado'));
-                var ei=document.getElementById('pf-ic-experto');  var bar=document.querySelector('.scumm-bar');
-                if(ei && bar) ei.classList.toggle('on', !bar.classList.contains('scumm-collapsed'));
+                var ei=document.getElementById('pf-ic-experto');
+                // FLT-101758: el icono Experto refleja AdmiraExperto (barra oculta por defecto), no el SCUMM.
+                if(ei){
+                  var axOn=false;
+                  try{ axOn=!!(window.AdmiraExperto&&typeof window.AdmiraExperto.isOpen==='function'&&window.AdmiraExperto.isOpen()); }catch(e){}
+                  ei.classList.toggle('on', axOn);
+                }
                 // Backdrop del cajón: solo en móvil y solo si hay algún riel abierto.
                 var bd=document.getElementById('rail-backdrop');
                 var anyOpen=(!railCollapsed('rail-opcion')||!railCollapsed('rail-avanzado'));
@@ -54,10 +59,16 @@
                 if (kind === 'opcion')   { window.toggleRail('rail-opcion');   return; }
                 if (kind === 'avanzado') { window.toggleRail('rail-avanzado'); return; }
                 if (kind === 'experto') {
-                    var b = document.querySelector('.scumm-bar');
-                    if (typeof setScummCollapsed === 'function') setScummCollapsed(!(b && b.classList.contains('scumm-collapsed')));
-                    else if (b) b.classList.toggle('scumm-collapsed');
+                    // FLT-101758: el icono Experto abre/cierra el ⌘ EXPERTO · CLI (oculto por defecto).
+                    try{
+                      if(window.AdmiraExperto&&typeof window.AdmiraExperto.toggle==='function'){
+                        window.AdmiraExperto.toggle();
+                      }
+                    }catch(e){}
                     window.pfSyncIcons();
+                    // Re-sync when the dock animates / paints.
+                    setTimeout(window.pfSyncIcons, 50);
+                    setTimeout(window.pfSyncIcons, 300);
                 }
             };
             window.railVerb = function(v){
@@ -2960,6 +2971,17 @@
 
         // If in "preguntar" mode with a selected agent, ask only that one
         if (preguntarMode && selectedAgent) {
+            // FLT-101758: si el consejero usa el hilo compartido (Jobs), la imagen pegada
+            // viaja por Conversación → /api/chat/adjunto → texto con URL, no por visión ask-one.
+            if (imageForSend && window.CouncilInterface?.has(selectedAgent.persona) && window.CouncilInterface.attachDataURL) {
+                (async function(){
+                  try{
+                    await window.CouncilInterface.attachDataURL(imageForSend,'imagen.jpg','image/jpeg');
+                    await window.CouncilInterface.send(selectedAgent.persona, text || '🖼 Imagen adjunta');
+                  }catch(e){ setActionLine('No se pudo enviar la imagen a '+selectedAgent.persona); }
+                })();
+                return;
+            }
             // Con imagen: visión por ask-one (+imageData), no solo bridge texto GrokBot
             if (imageForSend) {
                 if (consejeroPendiente(selectedAgent) && !window.CouncilInterface?.has(selectedAgent.persona)) {

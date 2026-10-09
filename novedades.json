@@ -174,5 +174,12 @@
     "Lo que escribes desde la home (panel o barra «Preguntar a Steve Jobs … Enviar») le llega a Jobs y se guarda en la misma conversación que en Grok Bot",
     "Sin sesión puedes escribir igual: al enviar aparece «Entrar con Google», tu texto se conserva y se envía al entrar",
     "Estas novedades salen en el popover del sello, sin recorte del riel"
+  ],
+  "v.09.10.2026.r9.08:30": [
+    "Portada: la barra ⌘ Experto ya no aparece por defecto (data-min=hide); se abre con el icono Experto del top-bar",
+    "Conversación en la home: puedes pegar una imagen (Ctrl/Cmd-V) en el cuadro y se envía a Jobs (misma conversación que Grok Bot)",
+    "La imagen se sube a /api/chat/adjunto y el mensaje lleva la URL pública para que Jobs la vea",
+    "/demo o /demo portada en Experto enseña en vivo estas dos mejoras (FLT-101758)",
+    "Estas novedades salen en el popover del sello, sin recorte del riel"
   ]
 }

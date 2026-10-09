@@ -115,3 +115,11 @@ body.mouths-off .council-speech-mouth{display:none!important}
 .council-preview:not(.is-expanded) .council-chat__signin>p:first-child{display:none}
 .council-preview:not(.is-expanded) .council-chat__signin button{padding:4px 8px;font:12px/1.4 system-ui,sans-serif}
 .council-preview:not(.is-expanded) .council-chat__signin .council-chat__gbtn{margin:0}
+
+/* FLT-101758 · paste imagen en Conversación */
+.council-composer__thumbs{display:flex;align-items:center;gap:8px;margin:0 0 6px;padding:4px 0;flex-wrap:wrap}
+.council-composer__thumbs[hidden]{display:none!important}
+.council-composer__thumbs img{height:48px;width:auto;border:1px solid #a7803c;border-radius:4px;background:#110d08}
+.council-composer__thumbs span{font:12px/1.3 system-ui,sans-serif;color:#eee2b5}
+.council-composer__thumb-x{background:#3a2410;color:#ffb4b4;border:1px solid #9c7326;border-radius:4px;padding:2px 8px;cursor:pointer;font:14px system-ui,sans-serif}
+.council-chat__attach-preview{display:block;max-height:72px;width:auto;margin:0 0 6px;border:1px solid #a7803c;border-radius:4px}

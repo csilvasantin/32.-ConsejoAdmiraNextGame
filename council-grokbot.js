@@ -364,7 +364,7 @@
     }
     // ── Hilo compartido (home: visita en blanco) ───────────────────────────
     const SCOPE_HILO='Esta visita empieza en blanco. Lo que escribes le llega a Jobs y se guarda en la misma conversación que en Grok Bot y en /chat/jobs/ (allí está el histórico). No se publica en el Ágora ni en Telegram.';
-    const LIMITS_HILO='Solo texto, sin adjuntos. Mientras esperas respuesta se comprueba cada 2 s (hasta 3 min), solo con este panel visible.';
+    const LIMITS_HILO='Texto e imagen pegada (Ctrl/Cmd-V). Mientras esperas respuesta se comprueba cada 2 s (hasta 3 min). El histórico está en «Ver histórico».';
     const horaHilo=new Intl.DateTimeFormat('es-ES',{timeZone:'Europe/Madrid',hour:'2-digit',minute:'2-digit'});
     const shortName=name=>PEOPLE[name]||name;
     const panelVisible=()=>!destroyed&&!doc.hidden&&!details.hidden&&details.getClientRects().length>0;
@@ -454,46 +454,97 @@
       }
       log.scrollTop=follow?log.scrollHeight:oldTop;
     }
+    function dataURLtoBlob(dataURL){
+      const m=/^data:([^;,]+);base64,([A-Za-z0-9+/=]+)$/.exec(dataURL||'');
+      if(!m)return null;
+      const bin=atob(m[2]);const out=new Uint8Array(bin.length);
+      for(let i=0;i<bin.length;i++)out[i]=bin.charCodeAt(i);
+      return new Blob([out],{type:m[1]||'image/png'});
+    }
+    async function subirAdjuntoHilo(fileOrBlob,type){
+      const cred=hilo.credencial();
+      if(!cred)return {ok:false,error:'sin sesión'};
+      const r=await request('/api/chat/adjunto',{method:'POST',headers:{'content-type':type||fileOrBlob.type||'image/png','authorization':'Bearer '+cred},body:fileOrBlob});
+      const d=await r.json().catch(()=>null);
+      if(!r.ok||!d||!d.ok||!d.url)return {ok:false,error:(d&&d.error)||('HTTP '+r.status)};
+      return {ok:true,url:d.url,id:d.id};
+    }
     function sharedSend(persona,prompt){
-      const name=persona,api_persona=sharedOf(persona),epoch=selectedEpoch,texto=String(prompt||'').trim();
+      const name=persona,api_persona=sharedOf(persona),epoch=selectedEpoch;
+      let texto=String(prompt||'').trim();
+      const staged=(attachments.get(persona)||[])[0];
+      if(!texto&&staged)texto='🖼 Imagen adjunta';
       if(!texto)return Promise.resolve(false);
       if(sh.sending){say('El mensaje anterior aún se está enviando.');return Promise.resolve(false);}
       // Sin sesión: se puede escribir igual; al enviar se pide entrar y el texto se conserva
       // (council-integration lo devuelve al compositor y lo reenvía en onAuthReady).
       if(!hilo.credencial()){askSignin('');return Promise.resolve(false);}
       if(signin)signin.hidden=true;
-      const id=hilo.nuevoId(),firstOfVisit=sh.desde===null;
-      const local={id,rol:'carlos',origen:'live',texto,ts:new Date().toISOString(),entrega:'enviando'};
-      sh.enviados[id]=1;if(firstOfVisit){sh.primero=id;sh.desde=Date.now()-1000;}
-      const undo=()=>{sh.locales=sh.locales.filter(l=>l!==local);delete sh.enviados[id];if(firstOfVisit&&sh.primero===id&&!Object.keys(sh.enviados).length){sh.primero=null;sh.desde=null;}};
-      sh.locales.push(local);sh.sending=true;syncPending();sh.firma='';render();log.scrollTop=log.scrollHeight;say('Enviando a '+name+'…');
-      let accepted=true;
-      return hilo.enviarTurno(api_persona,texto,id,{fetch:request}).then(x=>{
-        if(x.status===401){accepted=false;undo();if(current(epoch))askSignin('Tu sesión ha caducado. Vuelve a entrar; el mensaje no se envió y se conserva.');return;}
-        local.entrega=x.turno&&x.turno.entrega?x.turno.entrega:'error';local.encargo=x.turno&&x.turno.encargo;
-        if(local.entrega==='error'){accepted=false;undo();if(current(epoch))say('No se pudo enviar a '+name+'. Tu texto se conserva.');return;}
-        if(x.turno&&x.turno.id&&x.turno.id!==id){sh.enviados[x.turno.id]=1;if(sh.primero===id)sh.primero=x.turno.id;}
-        if(x.turno&&x.turno.ts){local.ts=x.turno.ts;adoptarDesde(x.turno.id||id,x.turno.ts);}
-        if(current(epoch))say('Enviado a '+name+' · guardado en la misma conversación que en Grok Bot.');
-      }).catch(()=>{local.entrega='sin_confirmar';if(current(epoch))say('Envío sin confirmar · revisa «Ver histórico» antes de repetir.');})
-      .then(()=>{sh.sending=false;syncPending();if(current(epoch)){sh.firma='';render();if(accepted)sharedRefresh();}return accepted;});
+      sh.sending=true;syncPending();
+      const start=async()=>{
+        if(staged&&staged.dataURL){
+          say('Subiendo imagen para '+name+'…');
+          const blob=dataURLtoBlob(staged.dataURL);
+          if(!blob){say('No se pudo leer la imagen pegada.');return false;}
+          const up=await subirAdjuntoHilo(blob,staged.type||blob.type);
+          if(!up.ok){say('No se pudo subir la imagen'+(up.error?': '+up.error:'.'));return false;}
+          texto=(texto.replace(/\s*$/,'')+'\n\n🖼 '+up.url).trim();
+          attachments.delete(persona);renderAttachments();
+        }
+        if(texto.length>3000){say('El mensaje con la imagen supera 3000 caracteres. Acorta el texto.');return false;}
+        const id=hilo.nuevoId(),firstOfVisit=sh.desde===null;
+        const local={id,rol:'carlos',origen:'live',texto,ts:new Date().toISOString(),entrega:'enviando'};
+        sh.enviados[id]=1;if(firstOfVisit){sh.primero=id;sh.desde=Date.now()-1000;}
+        const undo=()=>{sh.locales=sh.locales.filter(l=>l!==local);delete sh.enviados[id];if(firstOfVisit&&sh.primero===id&&!Object.keys(sh.enviados).length){sh.primero=null;sh.desde=null;}};
+        sh.locales.push(local);sh.firma='';render();log.scrollTop=log.scrollHeight;say('Enviando a '+name+'…');
+        let accepted=true;
+        try{
+          const x=await hilo.enviarTurno(api_persona,texto,id,{fetch:request});
+          if(x.status===401){accepted=false;undo();if(current(epoch))askSignin('Tu sesión ha caducado. Vuelve a entrar; el mensaje no se envió y se conserva.');return false;}
+          local.entrega=x.turno&&x.turno.entrega?x.turno.entrega:'error';local.encargo=x.turno&&x.turno.encargo;
+          if(local.entrega==='error'){accepted=false;undo();if(current(epoch))say('No se pudo enviar a '+name+'. Tu texto se conserva.');return false;}
+          if(x.turno&&x.turno.id&&x.turno.id!==id){sh.enviados[x.turno.id]=1;if(sh.primero===id)sh.primero=x.turno.id;}
+          if(x.turno&&x.turno.ts){local.ts=x.turno.ts;adoptarDesde(x.turno.id||id,x.turno.ts);}
+          if(current(epoch))say('Enviado a '+name+' · guardado en la misma conversación que en Grok Bot.');
+          return accepted;
+        }catch(e){
+          local.entrega='sin_confirmar';if(current(epoch))say('Envío sin confirmar · revisa «Ver histórico» antes de repetir.');
+          return accepted;
+        }
+      };
+      return start().then(accepted=>{
+        sh.sending=false;syncPending();
+        if(current(epoch)){sh.firma='';render();if(accepted)sharedRefresh();}
+        return !!accepted;
+      }).catch(()=>{sh.sending=false;syncPending();return false;});
     }
     doc.addEventListener?.('visibilitychange',()=>{if(!doc.hidden&&sharedOf(selected)&&sh.desde!==null&&!sh.busy)sharedRefresh();});
     function renderAttachments(){
       const node=$('.council-chat__attachments');if(!node)return;
       node.replaceChildren();const files=attachments.get(selected)||[];node.hidden=!files.length;
       for(const file of files){
-        const label=doc.createElement('span');label.textContent='📎 '+file.name+' · '+Math.ceil(file.size/1024)+' KB';
+        if(file.dataURL){
+          const img=doc.createElement('img');img.className='council-chat__attach-preview';img.alt=file.name||'imagen';img.src=file.dataURL;
+          node.append(img);
+        }
+        const label=doc.createElement('span');label.textContent='📎 '+(file.name||'imagen')+' · '+Math.ceil((file.size||0)/1024)+' KB';
         node.append(label,operationButton('Quitar adjunto',()=>{attachments.delete(selected);renderAttachments();}));
       }
     }
     async function attachDataURL(dataURL,name='imagen.png',type){
       const persona=selected,epoch=selectedEpoch;
-      if(sharedOf(persona)){say('El hilo compartido con '+persona+' admite solo texto.');return false;}
-      if(!persona||pendingSends.has(persona)||uploading.has(persona))return false;
+      if(!persona||pendingSends.has(persona)||uploading.has(persona)||sh.sending)return false;
       if((attachments.get(persona)||[]).length){say('Quita el adjunto actual antes de añadir otro.');return false;}
       const match=/^data:([^;,]*);base64,([A-Za-z0-9+/=]+)$/.exec(dataURL||'');
       if(!match){say('No se ha podido leer el archivo.');return false;}
+      // Hilo compartido (Jobs): se guarda en local, se sube a /api/chat/adjunto al enviar y la URL va en el texto.
+      if(sharedOf(persona)){
+        const bytes=Math.ceil((match[2].length*3)/4);
+        if(bytes>1_500_000){say('La imagen supera 1,5 MB tras comprimir. Prueba otra más pequeña.');return false;}
+        attachments.set(persona,[{id:'local-'+Date.now(),name:name||'imagen.png',type:type||match[1]||'image/png',dataURL,size:bytes}]);
+        if(current(epoch)){renderAttachments();say('Imagen pegada · se enviará a '+persona+' con tu mensaje.');}
+        return true;
+      }
       uploading.add(persona);
       try{
         if(!await connect(epoch)||!current(epoch))return false;

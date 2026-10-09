@@ -1,7 +1,7 @@
 <!DOCTYPE html>
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.09.10.2026.r8.08:02" />
+<meta name="admiranext-version" content="AdmiraNeXT v.09.10.2026.r9.08:30" />
     <script src="/auth-gate.js?v=20261004-r15-sinfranja"></script>
     <script src="/admira-idioma.js"></script>
     <meta charset="UTF-8">
@@ -3671,7 +3671,7 @@ body.rail-open{overflow:hidden}
                 <button type="button" id="pf-ic-avanzado" class="pf-ico" onclick="pfToggle('avanzado')" title="Avanzado · panel derecho" aria-label="Avanzado · panel derecho" data-en-title="Advanced · right panel" data-en-aria-label="Advanced · right panel">
                     <svg viewBox="0 0 16 14"><rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="10" y="1.6" width="4.4" height="10.8" rx="1"/></svg>
                 </button>
-                <button type="button" id="pf-ic-experto" class="pf-ico" onclick="pfToggle('experto')" title="Modo experto · panel inferior" aria-label="Modo experto · panel inferior" data-en-title="Expert mode · bottom panel" data-en-aria-label="Expert mode · bottom panel">
+                <button type="button" id="pf-ic-experto" class="pf-ico" onclick="pfToggle('experto')" title="Modo experto · CLI (oculto por defecto)" aria-label="Modo experto · CLI" data-en-title="Expert mode · CLI (hidden by default)" data-en-aria-label="Expert mode · CLI">
                     <svg viewBox="0 0 16 14"><rect class="frame" x="1" y="1" width="14" height="12" rx="1.5"/><rect class="panel" x="1.6" y="8.4" width="12.8" height="4" rx="1"/></svg>
                 </button>
             </div>
@@ -4532,11 +4532,11 @@ body.rail-open{overflow:hidden}
 <!-- El markup del panel vive DENTRO del riel AVANZADO (#rail-avanzado), sección
      «Tareas» — reubicado ahí para respetar el metaestilo SCUMM de la home. -->
 <link rel="stylesheet" href="council-table.css?v=20260918-r5-desk-cors">
-<link rel="stylesheet" href="council-grokbot.css?v=20261009-r8-visita">
+<link rel="stylesheet" href="council-grokbot.css?v=20261009-r9-paste">
 <script defer src="council-table.js?v=20260918-r5-desk-cors"></script>
 <script defer src="council-speech.js?v=20260930-flt101302"></script>
-<script defer src="assets/chat-hilo-client.js?v=20261009-r8-visita"></script>
-<script defer src="council-grokbot.js?v=20261009-r8-visita"></script>
+<script defer src="assets/chat-hilo-client.js?v=20261009-r9-paste"></script>
+<script defer src="council-grokbot.js?v=20261009-r9-paste"></script>
 <script defer src="council-todo.js?v=20260930-flt101302"></script>
 <script defer src="council-estado.js?v=20261004-5113-anterior"></script>
 <script defer src="assets/council-silhouettes.js?v=20261004-silueta"></script>
@@ -4544,9 +4544,9 @@ body.rail-open{overflow:hidden}
 <script defer src="/assets/cli-bilingue.js?v=20261006-r19-bilingue"></script>
 <script defer src="app.flt-100529.js?v=20261009-r8-visita"></script>
 <script defer src="council-preview.js?v=20260921-ultra1"></script>
-<script defer src="council-composer.js?v=20260921-composer1"></script>
+<script defer src="council-composer.js?v=20261009-r9-paste"></script>
 <script defer src="council-working.js?v=20260930-flt101302"></script>
-<script defer src="council-integration.js?v=20261009-r8-visita"></script>
+<script defer src="council-integration.js?v=20261009-r9-paste"></script>
 <script type="module" src="assets/mac-hoy.js?v=20261004-5114-vivo"></script>
 <script defer src="assets/aviso-version.js?v=20261004-5113c"></script>
 <script defer src="assets/sello-novedades.js?v=20261006-r15-idioma"></script>
@@ -4562,13 +4562,15 @@ body.rail-open{overflow:hidden}
      /idioma [ESP|ENG] (/language, /languague, /idiomaESP…), /estado, /version, /limpiar, /avatar…
      /marca usa AdmiraMarca (assets/marca-blanca.js: catálogo único de admiranext.com, sessionStorage
      «mb:marca»); /idioma guarda admiranext_expert_lang y admira-idioma.js traduce la página.
-     data-toggle="": el ⌘ del top-bar sigue plegando el menú SCUMM (no se pisa).
-     data-min="line" (Carlos, 6-oct-2026): cerrado queda como mucho el asa de una línea «› /help»; nunca abierto al
-     cargar (abierto solo se recuerda en la pestaña). Sin él, la piel lo ocultaría del todo en las demás patas. -->
+     data-toggle="": el ⌘ del top-bar NO dispara el Experto (Carlos 9-oct-2026 / FLT-101758): el icono
+     pf-ic-experto abre/cierra AdmiraExperto; el SCUMM se pliega con su propio ▾.
+     data-min="hide" (Carlos, 9-oct-2026): la barra Experto NO aparece por defecto en la portada; solo al abrirla
+     a propósito (icono Experto del top-bar o AdmiraExperto.open()). Abierto solo se recuerda en la pestaña. -->
 <link rel="stylesheet" href="https://www.admiranext.com/suite/experto.css?v=20261006-experto-cerrado-1">
 <section id="ax-live-experto" class="ax-live-experto" aria-label="Modo experto · CLI" data-en-aria-label="Expert mode · CLI"><div class="ax-live-bd"></div></section>
 <script defer src="/assets/marca-blanca.js?v=06.10.2026.r20-escenas"></script>
-<script defer src="https://www.admiranext.com/suite/experto.js?v=20261006-experto-cerrado-1" data-min="line" data-mount="#ax-live-experto" data-mount-body=".ax-live-bd" data-pata="admira.live" data-cli="admira.live" data-engine="ADMIRA LIVE ENGINE" data-toggle="" data-version-url="/version.json"></script>
+<script defer src="https://www.admiranext.com/suite/experto.js?v=20261006-experto-cerrado-1" data-min="hide" data-mount="#ax-live-experto" data-mount-body=".ax-live-bd" data-pata="admira.live" data-cli="admira.live" data-engine="ADMIRA LIVE ENGINE" data-toggle="" data-version-url="/version.json"></script>
+<script defer src="/assets/live-demo-portada.js?v=20261009-r9-portada"></script>
 </body>
 </html>
 

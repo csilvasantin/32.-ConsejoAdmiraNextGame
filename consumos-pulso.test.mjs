@@ -1,7 +1,7 @@
 // Pulso de tokens en tiempo real (GrokBotBox, 09-10-2026): consumos-pulso-lib.mjs + /api/consumos/pulso + mezcla en /velocidad.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { normalizarPulso, aplicarPulso, medirAgente, tokensEnVentana, seriePorMinuto, mezclar, persona, picoPulso, STALE_MS, KEY_PREFIX, KEY_INDICE } from "./consumos-pulso-lib.mjs";
+import { normalizarPulso, aplicarPulso, medirAgente, tokensEnVentana, seriePorMinuto, mezclar, persona, picoPulso, STALE_MS, STALE_CURSOR_MS, KEY_PREFIX, KEY_INDICE } from "./consumos-pulso-lib.mjs";
 import { onRequestPost, onRequestGet as getPulso } from "./functions/api/consumos/pulso.js";
 import { calcular } from "./functions/api/consumos/velocidad.js";
 
@@ -14,7 +14,8 @@ const cuerpo = (tokM, tokO) => ({ maquina: "MacMini", agentes: [{ agente: "Morfe
 
 test("normalizarPulso: valida motor, tokHoy y lista; limpia la máquina", () => {
   assert.equal(normalizarPulso(cuerpo(1, 2)).ok, true);
-  assert.equal(normalizarPulso({ maquina: "x", agentes: [{ agente: "A", motor: "grok", tokHoy: 1 }] }).ok, false);
+  assert.equal(normalizarPulso({ maquina: "x", agentes: [{ agente: "A", motor: "gemini", tokHoy: 1 }] }).ok, false);
+  assert.equal(normalizarPulso({ maquina: "x", agentes: [{ agente: "Smith", motor: "grok", tokHoy: 1 }] }).ok, true, "r27: Grok CLI (Smith)");
   assert.equal(normalizarPulso({ maquina: "x", agentes: [{ agente: "A", motor: "claude", tokHoy: -1 }] }).ok, false);
   assert.equal(normalizarPulso({ maquina: "", agentes: [] }).ok, false);
   assert.equal(normalizarPulso({ maquina: "Mac Mini<script>", agentes: [{ agente: "A", motor: "claude", tokHoy: 0 }] }).pulso.maquina, "MacMiniscript");
@@ -196,4 +197,50 @@ test("Σ proyectos == Σ agentes == flota (re-atribución del colector y dos má
   assert.equal(Math.round(Object.values(r.porProyecto).reduce((a, b) => a + b, 0)), r.total);
   assert.equal(proyectoDeAgente(docs[1].agentes.Trinity, AHORA), "admira.studio");
   assert.equal(proyectoDeAgente(docs[1].agentes.Neo, AHORA), "otros");
+});
+
+/* ───── r27 · Cursor Pro (Grok Bot (Consejo)) con datos con retraso + Smith (Grok CLI) ───── */
+const INI = Math.floor(Date.parse("2026-10-09T00:00:00+02:00") / 1000);
+const cursorCuerpo = (serie, extra = {}) => ({ maquina: "GrokBotBox", agentes: [{ agente: "Grok Bot (Consejo)", motor: "cursor", fuente: "cursor", cuenta: "Cursor Pro (Carlos Silva Santin)", modelo: "Grok Bot / Cursor Pro",
+  tokHoy: serie[serie.length - 1][1], cacheHoy: serie[serie.length - 1][2], ultimoEvento: new Date(serie[serie.length - 1][0] * 1000).toISOString(), porProyecto: { "admiranext.com": serie[serie.length - 1][1] },
+  cubre: ["Jobs", "Wozniak", "Lucas", "Disney"], serie, ...extra }] });
+// Datos hasta las 05:40 de Madrid (AHORA = 11:00): 5 h 20 min de retraso.
+const SERIE_C = [[INI, 0, 0, { "admiranext.com": 0 }], [INI + 4 * 3600, 400000, 9, { "admiranext.com": 400000 }], [INI + 5 * 3600, 700000, 9, { "admiranext.com": 700000 }], [INI + 5 * 3600 + 40 * 60, 1000000, 9, { "admiranext.com": 1000000 }]];
+
+test("r27 cursor: serie en hora del evento validada; re-mandar el mismo CSV no cambia nada (idempotente, sin picos)", () => {
+  assert.equal(normalizarPulso(cursorCuerpo([[INI, 5, 0], [INI, 6, 0]])).ok, false, "ts repetido o hacia atrás → no");
+  const p = normalizarPulso(cursorCuerpo(SERIE_C)).pulso;
+  let { doc } = aplicarPulso(null, p, AHORA - 3600e3);
+  const antes = JSON.stringify(doc.agentes["Grok Bot (Consejo)"].serie);
+  ({ doc } = aplicarPulso(doc, p, AHORA));
+  assert.equal(JSON.stringify(doc.agentes["Grok Bot (Consejo)"].serie), antes, "misma serie: la nueva sustituye a la vieja");
+  const m = medirAgente(doc.agentes["Grok Bot (Consejo)"], AHORA);
+  assert.equal(m.tokHora, 600000, "tok/h = tokens de la última hora CON DATOS (04:40 → 05:40)");
+  assert.equal(m.stale, false);
+  assert.equal(m.conRetraso, true);
+  assert.equal(m.retrasoS, 5 * 3600 + 20 * 60);
+  assert.equal(medirAgente(doc.agentes["Grok Bot (Consejo)"], AHORA + STALE_CURSOR_MS + 1000).tokHora, null, "sin export en 2,5 h → parado");
+});
+
+test("r27 cursor: la ESTIMACIÓN de Yokup de un consejero cubierto no se suma encima del total real; Σ proyectos = Σ agentes = flota", () => {
+  const p = normalizarPulso(cursorCuerpo(SERIE_C)).pulso;
+  const { doc } = aplicarPulso(null, p, AHORA - 60000);
+  const mac = { maquina: "MacMini", agentes: { Smith: { motor: "grok", ultimoPulso: AHORA - 20000, porProyecto: { "admira.live": 50000 }, tokHoy: 50000, serie: [[s(16), 10000, 0, { "admira.live": 10000 }], [s(0), 50000, 0, { "admira.live": 50000 }]] } } };
+  const yk = { metodo: "media-hoy", porAgente: [{ agente: "Wozniak · Grok", tokHora: 900000, tokHoy: 13300000 }, { agente: "Musk · Grok", tokHora: 1000, tokHoy: 2000 }] };
+  const m = mezclar(yk, [doc, mac], AHORA);
+  const nombres = m.porAgente.map((a) => a.agente);
+  assert.ok(nombres.includes("Grok Bot (Consejo)") && nombres.includes("Smith"));
+  assert.ok(!nombres.includes("Wozniak · Grok"), "Woz va dentro de Cursor Pro: su estimación no se suma");
+  assert.ok(nombres.includes("Musk · Grok"), "los no cubiertos siguen");
+  assert.deepEqual(m.excluidosYokup.map((x) => x.agente), ["Wozniak · Grok"]);
+  assert.equal(m.tokHoy, 1000000 + 50000 + 2000);
+  const sumaAg = m.porAgente.reduce((t, a) => t + (a.tokHora || 0), 0);
+  const sumaPr = m.porProyecto.reduce((t, x) => t + (x.tokHora || 0), 0);
+  assert.equal(sumaAg, m.tokHora);
+  assert.ok(Math.abs(sumaPr - (m.tokHora - 1000)) <= m.porProyecto.length + 1, `Σ proyectos del pulso (${sumaPr}) = Σ agentes con pulso`);
+  assert.equal(m.porProyecto.find((x) => x.proyecto === "admiranext.com").tokHoy, 1000000);
+  assert.match(m.etiqueta, /Cursor \(datos con ~5 h de retraso\)/);
+  const g = m.porAgente.find((a) => a.agente === "Grok Bot (Consejo)");
+  assert.equal(g.modelo, "Grok Bot / Cursor Pro");
+  assert.equal(g.proyectoAhora, "admiranext.com");
 });

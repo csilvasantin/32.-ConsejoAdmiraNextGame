@@ -25,6 +25,13 @@ REAL: Claude → rutas que tocan las herramientas de ese mensaje (Bash/Read/Edit
 carpeta (metahuman/unreal → admiranext.com) antes que el git remote; pixeria/pixer-worker → admira.studio (Adaptador).
 Codex: sesiones de días anteriores que siguen vivas hoy (cualquier carpeta AAAA/MM/DD con mtime de hoy).
 «otros» no se cachea (se reevalúa) y cada ruta que cae en «otros» queda en ~/.fleet/pulso-otros.json con sus tokens.
+r27 (Smith, 09-10-2026): Smith corre el Grok CLI (~/.grok/bin/grok, sesión tmux «smith», modelo grok-4.7-build), NO
+cursor-agent ni la cuenta Cursor Pro. Cada sesión deja ~/.grok/sessions/<cwd>/<id>/usage.json con turns[] (endedAt,
+inputTokens [incluye la caché], cachedReadTokens, cacheCreationTokens, outputTokens). tokHoy = (input − cachedRead) +
+cacheCreation + output de los turnos que ACABAN hoy (Madrid); cacheHoy = cachedRead (misma métrica que Claude/Codex).
+Granularidad: por turno (un turno largo cae entero al acabar). Proyecto por turno: rutas y repos de GitHub que salen en
+los logs de terminal de ese turno (terminal/*.log con mtime dentro del turno), si no el del turno anterior (≤ 30 min), si
+no el cwd de la sesión.
 Uso: pulso-tokens.py [--dry-run] [--maquina NOMBRE] [--con-carlos]   (--con-carlos: solo evalúa e imprime)
 """
 import glob, json, os, re, sys, time, socket, subprocess, urllib.request, urllib.error
@@ -64,7 +71,7 @@ REGLAS_RUTA = [
     (re.compile(r"digitalavatar"), "digitalavatar.ai"),
 ]
 # Rutas que NO dicen nada del proyecto (logs, memorias, scratch de las apps): se ignoran al buscar la ruta de trabajo.
-RUTA_NEUTRA = re.compile(r"/(\.claude|\.codex|\.fleet|\.config|\.agents-comms|\.local|library|claude-\d+)(/|$)|/admira-vault(/|$)", re.I)
+RUTA_NEUTRA = re.compile(r"/(\.claude|\.codex|\.grok|\.fleet|\.config|\.agents-comms|\.local|library|claude-\d+)(/|$)|/admira-vault(/|$)", re.I)
 RX_RUTA = re.compile(r"(?:file://)?((?:/Users/[^/\s\"'`]+|/private/tmp|/tmp|~)/[^\s\"'`;|&<>()$*]+)")
 OTROS = "otros"
 _proy_cache = None
@@ -185,7 +192,7 @@ ENDPOINT = os.environ.get("PULSO_ENDPOINT", "https://www.admira.live/api/consumo
 
 # Atribución por máquina (encargo de Carlos, 09-10-2026). Clave: nombre corto de la máquina.
 MAPA = {
-    "MacMini": {"claude": ("Morfeo", "csilvasantin@gmail.com"), "codex": ("Oráculo", "csilvasantin@gmail.com")},
+    "MacMini": {"claude": ("Morfeo", "csilvasantin@gmail.com"), "codex": ("Oráculo", "csilvasantin@gmail.com"), "grok": ("Smith", "Grok CLI (grok-4.7)")},
     "MacBookPro16": {"claude": ("Neo", "csilva@admira.com"), "codex": ("Trinity", "ChatGPT Pro")},
 }
 
@@ -380,6 +387,93 @@ def codex(cache, dia, inicio_dia):
         for c, t in (f.get("otros") or {}).items():
             anota_otros("codex:" + c, t)
     return sum(f["tok"] for f in files), sum(f["cache"] for f in files), ult, pp
+
+
+RX_GITHUB = re.compile(r"github\.com[/:]csilvasantin/([A-Za-z0-9._-]+?)(?:\.git)?(?:[/\s\"'#?]|$)")
+
+
+def proyecto_de_texto(texto):
+    """r27: proyecto por rutas (como Claude) y, si no, por repos de GitHub que salen en el texto. None si nada casa."""
+    pr = proyecto_de_rutas(texto)
+    if pr:
+        return pr
+    for m in RX_GITHUB.finditer(texto or ""):
+        repo = m.group(1).lower()
+        pr = REPOS.get(repo) or _por_regla(repo)
+        if pr:
+            return pr
+    return None
+
+
+def turnos_grok(usage, ini_dia, fin_dia):
+    """Pura: turnos de un usage.json del Grok CLI que acaban en [ini_dia, fin_dia) → [(n, ts_fin, tok, cache, ts_ini)]."""
+    out, prev = [], None
+    for t in sorted(usage.get("turns") or [], key=lambda x: x.get("turnNumber") or 0):
+        dt = ts_de(t.get("endedAt"))
+        if dt is None:
+            continue
+        fin = dt.timestamp()
+        if ini_dia <= fin < fin_dia:
+            i, c = int(t.get("inputTokens") or 0), int(t.get("cachedReadTokens") or 0)
+            tok = max(0, i - c) + int(t.get("cacheCreationTokens") or 0) + int(t.get("outputTokens") or 0)
+            out.append((int(t.get("turnNumber") or 0), fin, tok, c, prev if prev is not None else fin - 3600))
+        prev = fin
+    return out
+
+
+def grok(cache, dia, inicio_dia):
+    import urllib.parse
+    st = cache.setdefault("grok", {"turnos": {}, "ult": {}})
+    base = os.path.join(HOME, ".grok", "sessions")
+    for path in glob.glob(os.path.join(base, "*", "*", "usage.json")):
+        try:
+            if os.path.getmtime(path) < inicio_dia:
+                continue
+            with open(path) as f:
+                usage = json.load(f)
+        except Exception:
+            continue
+        sdir = os.path.dirname(path)
+        cwd = urllib.parse.unquote(os.path.basename(os.path.dirname(sdir)))
+        logs = None
+        for n, fin, tok, cr, ini in turnos_grok(usage, inicio_dia, inicio_dia + 86400 + 7200):
+            clave = sdir + "#" + str(n)
+            if clave in st["turnos"]:
+                continue
+            if logs is None:
+                logs = []
+                for lg in glob.glob(os.path.join(sdir, "terminal", "*.log")):
+                    try:
+                        mt = os.path.getmtime(lg)
+                    except OSError:
+                        continue
+                    if mt >= inicio_dia - 3600:
+                        logs.append((mt, lg))
+            texto = []
+            for mt, lg in sorted(logs):
+                if ini < mt <= fin + 5 and len(texto) < 60:
+                    try:
+                        with open(lg, "rb") as h:
+                            texto.append(h.read(4096).decode("utf-8", "replace"))
+                    except OSError:
+                        pass
+            pr = proyecto_de_texto("\n".join(texto))
+            u = st["ult"].get(sdir)
+            if pr:
+                st["ult"][sdir] = [pr, fin]
+            elif u and fin - u[1] <= 1800:
+                pr = u[0]
+            pr = pr or proyecto_de(cwd if cwd not in ("/", HOME) else None)
+            st["turnos"][clave] = [tok, cr, int(fin), pr, cwd]
+    vals = [v for v in st["turnos"].values() if es_hoy(datetime.fromtimestamp(v[2], timezone.utc), dia)]
+    pp = {}
+    for v in vals:
+        pp[v[3]] = pp.get(v[3], 0) + v[0]
+        if v[3] == OTROS:
+            anota_otros("grok:" + (v[4] or ""), v[0])
+    ult = max((v[2] for v in vals), default=None)
+    return (sum(v[0] for v in vals), sum(v[1] for v in vals),
+            datetime.fromtimestamp(ult, timezone.utc).isoformat().replace("+00:00", "Z") if ult else None, pp)
 
 
 # ───────────────────────── r20 · ¿Está Carlos trabajando con este agente? ─────────────────────────
@@ -668,7 +762,9 @@ def main():
         return 0
     cache = cargar_cache(dia)
     agentes = []
-    for motor, fn in (("claude", claude), ("codex", codex)):
+    for motor, fn in (("claude", claude), ("codex", codex), ("grok", grok)):
+        if motor not in MAPA[maq]:
+            continue
         tok, cache_r, ult, pp = fn(cache, dia, inicio)
         nombre, cuenta = MAPA[maq][motor]
         x = (cc.get("agentes") or {}).get(nombre) or {}

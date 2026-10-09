@@ -36,6 +36,21 @@
     grid.innerHTML = (d.cuentas || []).map((c) => {
       const luz = LUZ[c.semaforo] ? c.semaforo : "sin";
       let h = '<article class="card"><div class="top"><div><h2 class="nombre">' + esc(c.nombre) + (c.proveedor ? ' <span class="prov" title="' + esc(c.etiqueta || "") + '">' + esc(c.proveedor) + "</span>" : "") + '</h2><p class="cuenta">' + esc(c.cuenta + " · " + c.plan + (c.consejeros.length ? " · " + c.consejeros.join(", ") : "")) + '</p></div><span class="luz ' + luz + '">' + LUZ[luz] + "</span></div>";
+      if (c.pct === null && (c.tokens || c.pulso)) {
+        // r27: Cursor Pro — sin % del plan; tokens de hoy (pulso) y por bloque de 12 h (lecturas solo de tokens).
+        const fmtT = (n) => (n == null ? "—" : n >= 1e6 ? (Math.round(n / 1e5) / 10).toLocaleString("es-ES") + " M" : n >= 1e3 ? Math.round(n / 1e3).toLocaleString("es-ES") + " k" : String(n));
+        const pu = c.pulso, ret = pu && pu.agentes.length ? Math.max(...pu.agentes.map((a) => a.retrasoS || 0)) : null;
+        h += '<p class="cifra">' + (pu ? fmtT(pu.tokHoy) : "—") + '</p><p class="unidad">tokens hoy' + (pu ? " · " + esc(pu.agentes.map((a) => a.agente).join(", ")) : " · sin export de Cursor hoy") + "</p>";
+        if (ret != null) h += '<p class="unidad sec">Cursor · datos con ~' + (ret >= 3600 ? (Math.round(ret / 360) / 10).toLocaleString("es-ES") + " h" : Math.max(1, Math.round(ret / 60)) + " min") + " de retraso · + " + fmtT(pu.cacheHoy) + " de lectura de caché aparte</p>";
+        if (c.nota) h += '<p class="frase">' + esc(c.nota) + "</p>";
+        const bl = (c.tokens && c.tokens.bloques) || [];
+        if (bl.length) {
+          const mx = Math.max(1, ...bl.map((b) => b.total));
+          h += '<div class="barras" title="tokens por bloque de 12 h">' + bl.map((b) => '<span style="height:' + Math.max(3, (b.total / mx) * 100) + '%" title="' + esc(fecha(b.ts) + ": " + fmtT(b.total) + " tokens" + (b.nota ? " · " + b.nota : "")) + '"></span>').join("") + "</div>";
+          h += '<p class="tok-cursor">Último bloque de 12 h (' + esc(fecha(bl[bl.length - 1].ts)) + "): <b>" + fmtT(bl[bl.length - 1].total) + "</b> tokens" + (bl[bl.length - 1].nota ? " · " + esc(bl[bl.length - 1].nota) : "") + "</p>";
+        } else h += '<p class="cuando">Bloques de 12 h: aún no hay lecturas de tokens de las 00:00/12:00.</p>';
+        return h + "</article>";
+      }
       if (c.pct === null) {
         h += '<p class="cifra">sin lectura</p>' + (c.pista ? '<p class="frase">' + esc(c.pista) + "</p>" : "") + (c.resetSemanal ? '<p class="frase">Reset semanal: ' + esc(c.resetSemanal) + "</p>" : "") + "</article>";
         return h;

@@ -1,4 +1,11 @@
 {
+  "v.09.10.2026.r27.15:02": [
+    "/consumos · Grok Bot entra en la flota: «Grok Bot (Consejo)» = la cuenta Cursor Pro (Jobs, Wozniak, Lucas y Disney juntos; Cursor no separa por consejero), medida con el export CSV de cursor.com → velocímetro, ranking, desplegable (Grok Bot / Cursor Pro · Cursor · datos con ~X h de retraso) y proyecto admiranext.com",
+    "Misma métrica que Claude y Codex: entrada + escritura de caché + salida; la lectura de caché va aparte (el «Total Tokens» del CSV la incluye y es ~95 %)",
+    "Sin doble conteo: con dato real de Cursor, los partes de Yokup de Jobs/Wozniak/Lucas/Disney (p. ej. la ESTIMACIÓN de Woz por consumo_reportar) no se suman a la flota",
+    "Smith (Mac mini) medido por fin: Grok CLI (~/.grok/sessions, grok-4.7-build) en el pulso de 60 s, con reparto por proyecto",
+    "Lecturas 00:00/12:00: Cursor Pro anota tokens por bloque de 12 h (sin % del plan) y su tarjeta enseña los tokens de hoy"
+  ],
   "v.09.10.2026.r26.14:49": [
     "/consumos · nuevos rótulos: título «Consumo Agentes AdmiraNeXT» (pestaña «Consumo Agentes AdmiraNeXT · admira.live»), sin el subtítulo de las tarjetas; la tarjeta de los diales se llama «Tokens por hora» y los diales «Agente ·» (el desplegable sigue empezando en «Toda la flota») y «Proyecto ·»; en inglés: AdmiraNeXT Agents Usage · Tokens per hour · Agent · Project"
   ],

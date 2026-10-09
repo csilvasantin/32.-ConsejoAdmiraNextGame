@@ -94,28 +94,67 @@ export function tokensEnVentana(serie, desdeMs, hastaMs, valor = (p) => p[1]) {
 export const valorProyecto = (proy) => (p) => (p[3] && typeof p[3] === "object" ? Number(p[3][proy]) || 0 : undefined);
 
 /**
+ * r22 (Carlos: «un proyecto no puede superar a la flota»): reparto de los tokens de UN agente en (desde, hasta] por
+ * proyecto, con la MISMA cuenta que su total (incremento del acumulado del agente). Por cada paso: Δagente =
+ * incremento(total); Δproyecto = subida de su acumulado (bajadas = tokens re-atribuidos por el colector → 0; día nuevo
+ * → el valor nuevo). Si Σ Δproyecto > Δagente se escala hacia abajo; si es menor, el resto va a «otros». Así
+ * Σ proyectos == agente siempre, y Σ agentes == flota.
+ */
+export function repartoVentana(serie, desdeMs, hastaMs) {
+  const por = {};
+  let total = 0;
+  for (let i = 1; i < serie.length; i++) {
+    const ts = serie[i][0] * 1000;
+    if (!(ts > desdeMs && ts <= hastaMs)) continue;
+    const prev = serie[i - 1], cur = serie[i];
+    const dA = incremento(prev[1], cur[1]);
+    total += dA;
+    if (!dA) continue;
+    const reinicio = Number(cur[1]) < Number(prev[1]);
+    const pc = cur[3] && typeof cur[3] === "object" ? cur[3] : null;
+    const pp = prev[3] && typeof prev[3] === "object" ? prev[3] : {};
+    const d = {};
+    let suma = 0;
+    if (pc) for (const [k, v] of Object.entries(pc)) {
+      const x = reinicio ? Math.max(0, Number(v) || 0) : Math.max(0, (Number(v) || 0) - (Number(pp[k]) || 0));
+      if (x > 0) { d[k] = x; suma += x; }
+    }
+    const f = suma > dA ? dA / suma : 1;
+    for (const [k, x] of Object.entries(d)) por[k] = (por[k] || 0) + x * f;
+    if (suma < dA) por.otros = (por.otros || 0) + (dA - suma);
+  }
+  return { total, porProyecto: por };
+}
+
+/**
  * Proyectos de todos los agentes con pulso: tokHoy = suma del último desglose de cada agente (también de los parados:
- * es un hecho); tokHora = (tokens de los últimos 15 min × 4) solo de los agentes NO parados. Ordenado por tokHoy.
+ * es un hecho); tokHora = reparto (repartoVentana) de los tokens de los últimos 15 min de cada agente NO parado,
+ * escalado con la MISMA ventana que su tok/h → Σ tokHora de proyectos == Σ tokHora de agentes. Ordenado por tokHoy.
  */
 export function proyectosDePulso(docs, ahora) {
   const acc = {};
+  const de = (proy) => acc[proy] || (acc[proy] = { proyecto: proy, tokHoy: 0, tokHora: null, tokUltimos15min: 0, agentes: [] });
   for (const doc of docs || []) for (const a of Object.values((doc && doc.agentes) || {})) {
-    if (!a.porProyecto) continue;
     const serie = (a.serie || []).slice().sort((x, y) => x[0] - y[0]);
     const m = medirAgente(a, ahora);
-    const cubierto = Math.min(VENTANA_MS, ahora - (serie.length ? serie[0][0] * 1000 : ahora));
-    for (const [proy, tok] of Object.entries(a.porProyecto)) {
-      const p = acc[proy] || (acc[proy] = { proyecto: proy, tokHoy: 0, tokHora: null, tokUltimos15min: 0, agentes: [] });
+    const hoy = a.porProyecto && typeof a.porProyecto === "object" ? a.porProyecto : { otros: Number(a.tokHoy) || 0 };
+    for (const [proy, tok] of Object.entries(hoy)) {
+      const p = de(proy);
       p.tokHoy += Number(tok) || 0;
       if (doc.maquina && !p.agentes.includes(doc.maquina)) p.agentes.push(doc.maquina);
-      if (!m.stale && serie.length >= 2 && cubierto >= 2 * M) {
-        const t15 = tokensEnVentana(serie, ahora - VENTANA_MS, ahora, valorProyecto(proy));
-        p.tokUltimos15min += t15;
-        p.tokHora = (p.tokHora || 0) + Math.round(t15 * (3600000 / cubierto));
-      }
+    }
+    if (m.tokHora === null) continue;
+    const factor = m.tokUltimos15min > 0 ? m.tokHora / m.tokUltimos15min : 0;
+    for (const proy of Object.keys(hoy)) { const p = de(proy); if (p.tokHora === null) p.tokHora = 0; }
+    const r = repartoVentana(serie, ahora - VENTANA_MS, ahora);
+    for (const [proy, t] of Object.entries(r.porProyecto)) {
+      const p = de(proy);
+      if (doc.maquina && !p.agentes.includes(doc.maquina)) p.agentes.push(doc.maquina);
+      p.tokUltimos15min += t;
+      p.tokHora = (p.tokHora || 0) + t * factor;
     }
   }
-  return Object.values(acc).map(({ agentes, ...p }) => ({ ...p, maquinas: agentes.filter(Boolean) }))
+  return Object.values(acc).map(({ agentes, ...p }) => ({ ...p, tokUltimos15min: Math.round(p.tokUltimos15min), tokHora: p.tokHora === null ? null : Math.round(p.tokHora), maquinas: agentes.filter(Boolean) }))
     .sort((a, b) => b.tokHoy - a.tokHoy || (b.tokHora || 0) - (a.tokHora || 0));
 }
 
@@ -160,6 +199,14 @@ export function picoPulso(agentes, ahora) {
   return pico;
 }
 
+/** r22: proyecto en el que trabaja AHORA un agente: el que más tokens se lleva en los últimos 15 min; si nada, el que más lleva hoy. */
+export function proyectoDeAgente(a, ahora) {
+  const serie = (a && a.serie || []).slice().sort((x, y) => x[0] - y[0]);
+  const top = (o) => Object.entries(o || {}).filter(([, v]) => Number(v) > 0).sort((x, y) => y[1] - x[1] || (x[0] === "otros") - (y[0] === "otros"))[0];
+  const r = top(repartoVentana(serie, ahora - VENTANA_MS, ahora).porProyecto) || top(a && a.porProyecto);
+  return r ? r[0] : null;
+}
+
 /** Documentos de máquina → lista plana de agentes con sus medidas. */
 export function agentesDePulso(docs, ahora) {
   const out = [];
@@ -168,7 +215,7 @@ export function agentesDePulso(docs, ahora) {
     for (const [agente, a] of Object.entries(doc.agentes)) {
       out.push({ agente, maquina: doc.maquina, motor: a.motor, cuenta: a.cuenta, tokHoy: a.tokHoy, cacheHoy: a.cacheHoy || 0,
         porProyecto: a.porProyecto || null, ultimoEvento: a.ultimoEvento || null, ultimoPulso: a.ultimoPulso ? new Date(a.ultimoPulso).toISOString() : null,
-        metodo: "tiempo real", ...medirAgente(a, ahora), ...estadoConCarlos(a, ahora), _serie: a.serie || [] });
+        metodo: "tiempo real", ...medirAgente(a, ahora), ...estadoConCarlos(a, ahora), proyectoAhora: proyectoDeAgente(a, ahora), _serie: a.serie || [] });
     }
   }
   return out;

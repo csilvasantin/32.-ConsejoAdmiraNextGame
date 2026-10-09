@@ -167,3 +167,33 @@ test("aplicarPulso guarda el desglose como 4.º campo del punto", () => {
   assert.deepEqual(doc.agentes.Morfeo.serie[0].slice(1), [10, 9, { "admira.live": 10 }]);
   assert.equal(doc.agentes["Oráculo"].serie[0].length, 3);
 });
+
+// r22 (Carlos, 12:07: flota 13,0 M tok/h y admira.studio 26,8 M): misma ventana y fórmula para flota, agentes y proyectos.
+import { repartoVentana, proyectoDeAgente } from "./consumos-pulso-lib.mjs";
+test("Σ proyectos == Σ agentes == flota (re-atribución del colector y dos máquinas, sin doble conteo)", () => {
+  const docs = [
+    // MacMini: el colector re-atribuye a mitad de ventana (admira.biz baja de 4,2 M a 1,2 M, admira.studio sube 3 M).
+    { maquina: "MacMini", agentes: {
+      Morfeo: { motor: "claude", ultimoPulso: AHORA - 20000, porProyecto: { "admira.biz": 1200000, "admira.studio": 3100000 },
+        serie: [[s(16), 4200000, 0, { "admira.biz": 4200000 }], [s(10), 4250000, 0, { "admira.biz": 4250000 }], [s(5), 4280000, 0, { "admira.biz": 1200000, "admira.studio": 3080000 }], [s(0), 4300000, 0, { "admira.biz": 1200000, "admira.studio": 3100000 }]] },
+      "Oráculo": { motor: "codex", ultimoPulso: AHORA - 20000, porProyecto: { "admira.store": 900 },
+        serie: [[s(16), 0, 0, {}], [s(0), 900, 0, { "admira.store": 900 }]] } } },
+    // MacBookPro16: el colector empieza a contar una sesión vieja (salto del total y del proyecto a la vez).
+    { maquina: "MacBookPro16", agentes: {
+      Trinity: { motor: "codex", ultimoPulso: AHORA - 10000, porProyecto: { "admira.studio": 3000000, "yokup.com": 600000 },
+        serie: [[s(16), 600000, 0, { "yokup.com": 600000 }], [s(8), 3500000, 0, { "admira.studio": 2900000, "yokup.com": 600000 }], [s(0), 3600000, 0, { "admira.studio": 3000000, "yokup.com": 600000 }]] },
+      Neo: { motor: "claude", ultimoPulso: AHORA - 10000, tokHoy: 5000, serie: [[s(16), 1000], [s(0), 5000]] } } },
+  ];
+  const m = mezclar(null, docs, AHORA);
+  const sumaAg = m.porAgente.reduce((t, a) => t + (a.tokHora || 0), 0);
+  const sumaPr = m.porProyecto.reduce((t, p) => t + (p.tokHora || 0), 0);
+  assert.ok(Math.abs(sumaAg - m.tokHora) <= m.porAgente.length, "flota = Σ agentes");
+  assert.ok(Math.abs(sumaPr - m.tokHora) <= m.porProyecto.length + 1, `Σ proyectos (${sumaPr}) = flota (${m.tokHora})`);
+  for (const p of m.porProyecto) assert.ok((p.tokHora || 0) <= m.tokHora + 1, p.proyecto + " no supera a la flota");
+  const st = m.porProyecto.find((p) => p.proyecto === "admira.studio");
+  assert.ok(st.tokHora < m.tokHora);
+  const r = repartoVentana(docs[0].agentes.Morfeo.serie, AHORA - 15 * M, AHORA);
+  assert.equal(Math.round(Object.values(r.porProyecto).reduce((a, b) => a + b, 0)), r.total);
+  assert.equal(proyectoDeAgente(docs[1].agentes.Trinity, AHORA), "admira.studio");
+  assert.equal(proyectoDeAgente(docs[1].agentes.Neo, AHORA), "otros");
+});

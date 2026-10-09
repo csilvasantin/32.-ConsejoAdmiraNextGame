@@ -214,3 +214,19 @@ test("cliente compartido: leerHilo sin credencial no llama a la red (pide login)
   assert.equal(r.status, 401);
   assert.equal(llamadas, 0);
 });
+test("cliente compartido: turnosDeVisita — la home solo enseña lo enviado en esta visita y las respuestas posteriores", () => {
+  const C = cliente();
+  const t0 = Date.parse("2026-10-09T06:00:00Z");
+  const iso = (d) => new Date(t0 + d).toISOString();
+  const turnos = [
+    { id: "viejo-c", rol: "carlos", origen: "app", ts: iso(-60000) },
+    { id: "viejo-j", rol: "persona", origen: "rutina", ts: iso(-50000) },
+    { id: "live-1", rol: "carlos", origen: "live", ts: iso(0) },
+    { id: "app-x", rol: "carlos", origen: "app", ts: iso(1000) },
+    { id: "resp", rol: "persona", origen: "rutina", ts: iso(5000) },
+  ];
+  assert.deepEqual(C.turnosDeVisita(turnos, {}, null), [], "sin envío en esta visita no hay nada (sin histórico)");
+  assert.deepEqual(C.turnosDeVisita(turnos, { "live-1": 1 }, t0).map((t) => t.id), ["live-1", "resp"]);
+  assert.deepEqual(C.turnosDeVisita(turnos, { "live-1": 1 }, NaN), []);
+  assert.deepEqual(C.turnosDeVisita([null, { id: "r", rol: "persona", ts: "x" }], {}, t0), []);
+});

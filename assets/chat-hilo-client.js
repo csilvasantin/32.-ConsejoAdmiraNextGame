@@ -48,6 +48,19 @@
     var firma = todos.map(function (t) { return [t.id, t.entrega || "", t.encargo || "", t.encargo_estado || ""].join(":"); }).join("|");
     return { turnos: todos, locales: pend, firma: firma };
   }
+  // Home («modo menú inicial»): cada visita empieza en blanco. Solo se ven los turnos enviados en ESTA
+  // visita (por id) y las respuestas del consejero posteriores al primer envío (ts >= desde).
+  // Sin envío todavía (desde null) no hay nada que mostrar: el histórico vive en /chat/jobs/.
+  function turnosDeVisita(turnos, enviados, desde) {
+    if (desde === null || desde === undefined || isNaN(desde)) return [];
+    return (turnos || []).filter(function (t) {
+      if (!t) return false;
+      if (enviados && Object.prototype.hasOwnProperty.call(enviados, t.id)) return true;
+      if (t.rol === "carlos") return false;
+      var ts = Date.parse(t.ts);
+      return !isNaN(ts) && ts >= desde;
+    });
+  }
   function personaDe(nombre) { return Object.prototype.hasOwnProperty.call(PERSONAS, nombre) ? PERSONAS[nombre] : null; }
   function nuevoId() { return "live-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8); }
 
@@ -115,7 +128,7 @@
     RAPIDO_MS: RAPIDO_MS, REPOSO_MS: REPOSO_MS, VENTANA_RAPIDA_MS: VENTANA_RAPIDA_MS, VENTANA_ESCRIBIENDO_MS: VENTANA_ESCRIBIENDO_MS,
     CLIENT_ID: CLIENT_ID, CLAVE: CLAVE, ORIGEN: ORIGEN, ESTADO: ESTADO, PERSONAS: PERSONAS,
     esperaDesde: esperaDesde, intervaloSondeo: intervaloSondeo, textoEscribiendo: textoEscribiendo, textoEstado: textoEstado,
-    fundir: fundir, personaDe: personaDe, nuevoId: nuevoId,
+    fundir: fundir, turnosDeVisita: turnosDeVisita, personaDe: personaDe, nuevoId: nuevoId,
     credencial: credencial, guardar: guardar, olvidar: olvidar,
     leerHilo: leerHilo, enviarTurno: enviarTurno, cargarGoogle: cargarGoogle, salirGoogle: salirGoogle
   };

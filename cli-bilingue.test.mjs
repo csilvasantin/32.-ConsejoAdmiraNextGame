@@ -71,7 +71,7 @@ test('SCUMM: handleCliCommand normaliza, cambia el idioma y llama al intérprete
     assert.ok(CONOCIDOS.includes('/' + en) || CONOCIDOS.includes('/' + en.replace(/s$/, '')) || ['sites', 'help'].includes(en), 'autocompletado: /' + en);
     assert.ok(CONOCIDOS.includes('/' + es) || ['coetaneos', 'oraculo', 'importar', 'diario', 'tarea', 'finalizada', 'olvidar', 'motor', 'bocas', 'nombres', 'agentes', 'tareas', 'verbos'].includes(es), 'autocompletado: /' + es);
   }
-  assert.match(leer('index.html'), /<script defer src="\/assets\/cli-bilingue\.js\?v=20261006-r19-bilingue"><\/script>\n<script defer src="app\.flt-100529\.js\?v=20261006-r19-bilingue"><\/script>/);
+  assert.match(leer('index.html'), /<script defer src="\/assets\/cli-bilingue\.js\?v=20261006-r19-bilingue"><\/script>\n<script defer src="app\.flt-100529\.js\?v=20261009-r8-visita"><\/script>/);
 });
 
 test('EXPERTO de Yokup: línea de órdenes arriba, activa sin PTY', () => {

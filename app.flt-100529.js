@@ -2245,6 +2245,14 @@
     function handleCliCommandBase(raw) {
         const text = String(raw || '').trim();
         if (!text) return false;
+        // /arquitectura · /architecture (9-oct-2026): abre el organigrama tecnológico de admiranext.com
+        // (admira-idioma.js: castellano → ?lang=es, inglés → ?lang=en). Local: no va al Consejo.
+        if (/^\/(arquitectura|architecture|organigrama-tecnologico|tech-chart)\s*$/i.test(text) && window.AdmiraIdioma && window.AdmiraIdioma.arquitectura) {
+            addUserEntry(text);
+            const resArq = window.AdmiraIdioma.run(text);
+            setActionLine('🧭 ' + resArq.message);
+            return true;
+        }
         // /idioma ESP | ENG (alias /language): mismo contrato que admira.store (admira-idioma.js).
         // Es local: cambia la interfaz sin recargar y nunca llega al Consejo ni a la flota.
         // Como en el ⌘ EXPERTO · CLI de la suite: /idioma sin argumento alterna; typo /languague

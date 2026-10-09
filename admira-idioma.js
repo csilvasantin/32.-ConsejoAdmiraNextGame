@@ -56,8 +56,24 @@
   function message(lang) {
     return lang === "en" ? "Interface language: English." : "Idioma de la interfaz: castellano.";
   }
-  // Decide qué hace una línea de CLI; null si no es /idioma, /language ni /languague.
+  // /arquitectura · /architecture (Carlos, 9-oct-2026 06:12): abre el organigrama tecnológico de
+  // admiranext.com en la misma pestaña; el verbo castellano lo abre en castellano y el inglés en inglés
+  // (el idioma viaja en ?lang=, el localStorage no cruza de dominio). Lo atienden todas las líneas de
+  // órdenes que ya pasan por aquí (/idioma): SCUMM de la home, consolas de Control, Fleet, Vista previa,
+  // Players… (admira-bar.js) y el EXPERTO de Yokup (yk-frame.js).
+  var ARQ_URL = "https://www.admiranext.com/arquitectura";
+  var ARQ_RE = /^\/(arquitectura|architecture|organigrama-tecnologico|tech-chart)$/i;
+  function arquitectura(text) {
+    var m = String(text == null ? "" : text).trim().match(ARQ_RE);
+    if (!m) return null;
+    var l = /^(architecture|tech-chart)$/i.test(m[1]) ? "en" : "es";
+    return { ok: true, change: false, arquitectura: true, language: l, url: ARQ_URL + "?lang=" + l,
+      message: l === "en" ? "Opening the technology org chart · " + ARQ_URL : "Abriendo el organigrama tecnológico · " + ARQ_URL };
+  }
+  // Decide qué hace una línea de CLI; null si no es /idioma, /language ni /languague (ni /arquitectura).
   function command(text, current) {
+    var a = arquitectura(text);
+    if (a) return a;
     var p = parse(text);
     if (!p || VERBS.indexOf(p.verb) < 0) return null;
     var cur = langOf(current);
@@ -262,6 +278,11 @@
   // Ejecuta una línea de CLI: null si no es suya; si cambia el idioma, lo aplica ya.
   function run(text) {
     var res = command(text, current);
+    if (res && res.arquitectura) {
+      remember(res.language);
+      setTimeout(function () { root.location.assign(res.url); }, 250);
+      return res;
+    }
     if (res && res.change) set(res.language);
     return res;
   }
@@ -271,6 +292,7 @@
   api.translate = translate;
   api.set = set;
   api.run = run;
+  api.arquitectura = arquitectura;
 
   // El ⌘ EXPERTO · CLI de la suite (experto.js) cambia <html lang>, guarda admiranext_expert_lang
   // y emite «admiranext:lang»: aquí se traduce la página entera con el mismo idioma.

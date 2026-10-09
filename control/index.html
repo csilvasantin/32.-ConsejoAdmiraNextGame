@@ -11,9 +11,10 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.09.10.2026.r9.08:30" />
+<meta name="admiranext-version" content="AdmiraNeXT v.09.10.2026.r10.09:20" />
     <script src="/admira-bar.js?v=20260918-r38"></script>
-    <script src="/auth-gate.js?v=20261004-r15-sinfranja"></script>
+    <script src="/auth-gate.js?v=20261009-r10-lectura"></script>
+    <script src="/assets/live-demo-lectura.js?v=20261009-r10-lectura"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="/failover.js"></script>
@@ -21,7 +22,7 @@
      el .js con cache-control de 4 h, así que una cadena vieja deja al navegador
      con el mesh anterior aunque el HTML ya sea nuevo (cazado el 11-ago-2026: el
      panel decía r9 y el mesh cargado seguía siendo el r8). -->
-<script src="/control/fleet-mesh.js?v=20260903-r1-a5f1fb9fb49d"></script>
+<script src="/control/fleet-mesh.js?v=20261009-r10-lectura"></script>
 <title>Control · AdmiraNext Fleet</title>
 <style>
   :root{
@@ -1057,6 +1058,15 @@ async function ensureSession(){
   SESSION='';
   return false;
 }
+function esSoloLectura(){
+  try{
+    if(document.documentElement.classList.contains('admira-agent-readonly')) return true;
+    var g=window.admiraGateUser&&window.admiraGateUser();
+    if(g&&g.agent===true&&g.readOnly===true) return true;
+    if(FLEET_MESH.agentReadOnly&&FLEET_MESH.agentReadOnly()) return true;
+  }catch(e){}
+  return false;
+}
 // Órdenes a bot.yokup y navegadores POR EL RELAY (23-sep-2026). Desde el login por
 // redirect (11-ago) la sesión es una cookie HttpOnly del relay y el navegador ya no
 // tiene id_token que mandar como Bearer: el mando, la captura por watcher, los
@@ -1664,6 +1674,7 @@ async function refreshDsPreflight(machine){
 // equipos online (es solo lectura, no arranca nada). Si la red falla, refreshDsPreflight ya
 // degrada en silencio y las tarjetas quedan como hasta ahora.
 function autoPreflight(){
+  if(esSoloLectura()) return;
   const online=(MACHINES||[]).filter(m=>m.online);
   if(!online.length) return;
   try{ refreshDsPreflight(); }catch(e){/* degradación silenciosa: se mantiene el comportamiento actual */}
@@ -2674,6 +2685,7 @@ async function runSignage(turnOn){
    sessionStorage) y en segundo plano — ni bloquea el arranque ni repite. */
 let _capArranqueHecho=false;
 function _capturaDeArranque(){
+  if(esSoloLectura()){ _capArranqueHecho=true; return; }
   if(_capArranqueHecho) return;
   try{ if(sessionStorage.getItem('fleet_cap_arranque')==='1'){ _capArranqueHecho=true; return; } }catch(e){}
   const online=(MACHINES||[]).filter(m=>m.online);
@@ -2973,7 +2985,12 @@ function collapseAllToggle(){
   bootSkeleton();
   fase('🔑 abriendo sesión…', 'warn');
   await ensureSession();
-  if(SESSION){ const e=whoami(); const tp=$('#tokenPill'); if(tp&&e){ tp.textContent='🔒 '+e; tp.title='Cerrar sesión'; } }
+  if(SESSION){
+    const g=(window.admiraGateUser&&window.admiraGateUser())||{};
+    const tp=$('#tokenPill');
+    if(tp&&esSoloLectura()){ tp.textContent='👁 '+(g.name||'agente')+' · solo lectura'; tp.title='Sesión de agente, solo lectura'; }
+    else if(tp&&g.email){ tp.textContent='🔒 '+g.email; tp.title='Cerrar sesión'; }
+  }
   applyAutoCap();
   await refresh();
   autoPreflight();  // preflight AUTOMÁTICO al cargar (solo lectura) para no nacer con «preflight pendiente»

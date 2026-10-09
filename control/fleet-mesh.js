@@ -164,8 +164,15 @@
         if (!r.ok) throw new Error('auth HTTP ' + r.status);
         var d = await r.json();
         if (!d || !d.ok) throw new Error('auth sin sesión');
-        sessions[relay.id] = String(d.csrf || '');
-        if (!sessions[relay.id]) throw new Error('auth sin CSRF');
+        // Agente: la API responde ok+agent+readOnly y no trae csrf de escritura.
+        // Si además viniera un csrf, no se guarda: el agente no escribe.
+        if (d.agent === true && d.readOnly === true) {
+          sessions[relay.id] = { csrf: '', readOnly: true, agent: true, name: String(d.name || ''), email: String(d.email || '') };
+          return true;
+        }
+        if (d.agent === true) throw new Error('agente sin lectura');
+        sessions[relay.id] = { csrf: String(d.csrf || ''), readOnly: false, agent: false };
+        if (!sessions[relay.id].csrf) throw new Error('auth sin CSRF');
         return true;
       } catch (err) { throw timed.explain(err); }
       finally { timed.cancel(); }
@@ -174,8 +181,11 @@
       opts = Object.assign({}, opts || {});
       var headers = Object.assign({}, opts.headers || {});
       if (opts.auth !== false) await mint(relay, false);
+      var ses = sessions[relay.id] || null;
+      var method = String(opts.method || 'GET');
+      if (ses && ses.readOnly && !/^(GET|HEAD|OPTIONS)$/i.test(method)) throw new Error('solo lectura');
       if (commandId) headers['X-Fleet-Command-Id'] = commandId;
-      if (!/^(GET|HEAD|OPTIONS)$/i.test(String(opts.method || 'GET'))) headers['X-Fleet-CSRF'] = sessions[relay.id] || '';
+      if (!/^(GET|HEAD|OPTIONS)$/i.test(method)) headers['X-Fleet-CSRF'] = (ses && ses.csrf) || '';
       opts.headers = headers;
       opts.credentials = 'include';
       delete opts.auth;
@@ -272,6 +282,13 @@
       await Promise.all(relays.map(function(relay){return fetchFn(relay.base+'/auth/logout',{method:'POST',credentials:'include',cache:'no-store'}).catch(function(){});}));
       sessions={}; active=null;
     }
+    function agentReadOnly() {
+      for (var i = 0; i < relays.length; i++) {
+        var ses = sessions[relays[i].id];
+        if (ses && ses.agent === true && ses.readOnly === true) return true;
+      }
+      return false;
+    }
     function snapshot() {
       return {
         version: VERSION,
@@ -286,6 +303,7 @@
       request: request,
       json: json,
       ensureAnySession: ensureAnySession,
+      agentReadOnly: agentReadOnly,
       probeAll: probeAll,
       logoutAll: logoutAll,
       snapshot: snapshot,

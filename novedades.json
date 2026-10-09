@@ -175,6 +175,13 @@
     "Sin sesión puedes escribir igual: al enviar aparece «Entrar con Google», tu texto se conserva y se envía al entrar",
     "Estas novedades salen en el popover del sello, sin recorte del riel"
   ],
+  "v.09.10.2026.r10.09:20": [
+    "Con la cookie de agente, Control, Vista previa y Players muestran los datos sin la verja de Google y con el nombre del agente y la etiqueta «solo lectura» en la barra",
+    "Los botones de ejecutar y de acción quedan desactivados. El agente no recibe csrf de escritura. Quien entra sin sesión sigue viendo «ENTRAR CON GOOGLE»",
+    "En la consola o en Experto, /demo lectura enseña en vivo qué sesión hay y si esos botones están apagados",
+    "Volver atrás: publicar otra vez el commit 8cf773b (sello v.09.10.2026.r9.08:30)",
+    "Estas novedades salen en el popover del sello, sin recorte del riel"
+  ],
   "v.09.10.2026.r9.08:30": [
     "Portada: la barra ⌘ Experto ya no aparece por defecto (data-min=hide); se abre con el icono Experto del top-bar",
     "Conversación en la home: puedes pegar una imagen (Ctrl/Cmd-V) en el cuadro y se envía a Jobs (misma conversación que Grok Bot)",

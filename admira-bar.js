@@ -114,6 +114,9 @@
     "#pf-toggle-left{order:-3;display:flex;align-items:center;align-self:center;margin-right:6px;flex:0 0 auto}" +
     /* iconos AVANZADO + EXPERTO: a la derecha del todo, tras el usuario */
     "#pf-toggles{order:100;display:flex;gap:5px;align-items:center;align-self:center;flex:0 0 auto}" +
+    "#admira-ro{order:90;display:flex;align-items:center;align-self:center;flex:0 0 auto;max-width:42vw;overflow:hidden;text-overflow:ellipsis;" +
+    "font-family:'Press Start 2P',monospace;font-size:7px;line-height:1.4;letter-spacing:.4px;color:#1b130a;background:#ffb454;" +
+    "border:2px solid #8b5a14;box-shadow:2px 2px 0 #000;padding:6px 8px;white-space:nowrap}" +
     ".pf-ico{width:27px;height:25px;display:flex;align-items:center;justify-content:center;cursor:pointer;" +
     "border:2px solid #8b5a14;border-radius:0;background:#2a1a08;box-shadow:2px 2px 0 #000;padding:0}" +
     ".pf-ico svg{width:15px;height:14px;display:block}" +
@@ -302,7 +305,29 @@
     // la versión ya no se muestra en la barra. Se conserva en código (console) para
     // trazabilidad interna, sin ocupar el DOM visible.
     try { console.log("[admira-bar] " + PROJECT + " " + VERSION); } catch (e) {}
+    pintarSoloLectura(top);
   }
+
+  // Sesión de agente (auth-gate): nombre + «solo lectura» en la barra. Sin csrf.
+  function pintarSoloLectura(top) {
+    top = top || document.getElementById("admira-topbar");
+    if (!top) return;
+    var g = null;
+    try { g = window.admiraGateUser && window.admiraGateUser(); } catch (e) {}
+    if (!g || g.agent !== true || g.readOnly !== true) return;
+    var nombre = String(g.name || "agente");
+    var badge = document.getElementById("admira-ro");
+    if (!badge) {
+      badge = document.createElement("span");
+      badge.id = "admira-ro";
+      badge.setAttribute("role", "status");
+      var toggles = document.getElementById("pf-toggles");
+      if (toggles && toggles.parentNode === top) top.insertBefore(badge, toggles);
+      else top.appendChild(badge);
+    }
+    badge.textContent = nombre + " · solo lectura";
+  }
+  window.addEventListener("admira:sesion", function () { pintarSoloLectura(); });
 
   // Crea un icono toggle SCUMM para un panel; null si el panel no existe en la página.
   function makeToggle(p) {

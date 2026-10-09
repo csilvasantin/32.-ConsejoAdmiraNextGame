@@ -209,6 +209,10 @@
     for (var k = 0; k < lis.length; k++) lis[k].setAttribute('aria-selected', String(el.auto ? k === 0 : DD.proy.items[k].valor === el.proyecto));
   }
   function perfilDe(d, nombre) { return ((d && d.conocidos) || []).filter(function (c) { return c.agente === nombre; })[0] || null; }
+  function notaHtml(m) {
+    var n = E.notaOrquestador(m);
+    return n ? ' <span class="dd-nota dd-n-' + esc(n.semaforo || 'rojo') + '" title="' + esc(T('Semáforo del orquestador (no es el margen)', 'Orchestrator status (not the margin)')) + '">⚠ ' + esc(n.texto) + '</span>' : '';
+  }
   function filaAgenteInfo(a, pf) {
     var est = a.sinDatos ? 'rojo' : E.estadoFila(a.tokHora, a.tokHoy);
     var motor = a.motor ? (a.motor === 'claude' ? 'Claude' : a.motor === 'codex' ? 'Codex' : a.motor) : '';
@@ -218,7 +222,7 @@
     var lin1 = a.sinDatos ? T('sin datos hoy', 'no data today') :
       '<b>' + (a.tokHora == null ? T('parado', 'stopped') : fmt(a.tokHora) + ' tok/h') + '</b> · ' + fmt(a.tokHoy) + T(' hoy', ' today') +
       (a.maquina || (pf && pf.maquina) ? ' · ' + esc(a.maquina || pf.maquina) : '') + (a.proyectoAhora ? ' · ' + esc(nomP(a.proyectoAhora)) : '');
-    var lin2 = [modelo ? esc(modelo) : '', cuenta ? esc(cuenta) : '', m && m.pct != null ? '<span class="dd-margen dd-m-' + esc(m.semaforo || 'sin') + '">' + T('margen ', 'margin ') + m.pct + ' %</span>' : (pf ? '<span class="dd-margen dd-m-sin">' + T('margen sin lectura', 'margin not read') + '</span>' : '')].filter(Boolean).join(' · ');
+    var lin2 = [modelo ? esc(modelo) : '', cuenta ? esc(cuenta) : '', m && m.pct != null ? '<span class="dd-margen dd-m-' + E.colorMargen(m.pct) + '">' + T('margen ', 'margin ') + m.pct + ' %</span>' + notaHtml(m) : (pf ? '<span class="dd-margen dd-m-sin">' + T('margen sin lectura', 'margin not read') + '</span>' : '')].filter(Boolean).join(' · ');
     return { est: est, html: '<span class="dd-fila"><span class="dd-tit">' + punto(est) + esc(a.agente) + (a.conCarlos ? ' <em class="con-carlos">' + T('con Carlos', 'with Carlos') + '</em>' : '') + '</span><small>' + lin1 + '</small>' + (lin2 ? '<small class="dd-sub">' + lin2 + '</small>' : '') + '</span>' };
   }
   function pintaSelectorAgente(d) {
@@ -240,7 +244,7 @@
     return fetch('/api/orquestar', { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).then(function (o) {
       if (!o) return;
       var m = {};
-      (o.candidatos || []).concat(o.excluidos || []).forEach(function (c) { if (c && c.persona) m[c.persona] = { pct: c.margenPct == null ? null : Math.round(c.margenPct), semaforo: c.semaforo || 'sin' }; });
+      (o.candidatos || []).concat(o.excluidos || []).forEach(function (c) { if (c && c.persona) m[c.persona] = { pct: c.margenPct == null ? null : Math.round(c.margenPct), semaforo: c.semaforo || 'sin', agotaAntes: !!c.agotaAntes, proyeccionTexto: c.proyeccionTexto || null }; });
       ORQ.margen = m; ORQ.leido = Date.now();
       if (estado.datos) pintaSelectorAgente(estado.datos);
     }).catch(function () {});

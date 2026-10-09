@@ -44,7 +44,22 @@
     (conocidos || []).forEach(function (c) { if (c && c.agente && !vistos[c.agente]) { vistos[c.agente] = 1; out.push({ agente: c.agente, tokHora: null, tokHoy: 0, sinDatos: true }); } });
     return out;
   }
+  /** r24 (Carlos): color de la píldora de margen por el MARGEN mismo: verde ≥ 50 % · amarillo 20–49 % · rojo < 20 %. */
+  function colorMargen(pct) {
+    if (pct === null || pct === undefined || !isFinite(Number(pct))) return 'sin';
+    var m = Number(pct);
+    return m >= 50 ? 'verde' : m >= 20 ? 'amarillo' : 'rojo';
+  }
+  /** r24: nota aparte cuando el orquestador marca la cuenta por OTRO motivo que el margen (null si no hay nada que decir). */
+  function notaOrquestador(o) {
+    if (!o) return null;
+    if (o.agotaAntes) return { semaforo: o.semaforo || 'rojo', texto: 'al ritmo actual se agota antes del reset' + (o.proyeccionTexto ? ' (' + o.proyeccionTexto + ')' : '') };
+    var c = colorMargen(o.pct), s = o.semaforo === 'ambar' ? 'amarillo' : o.semaforo;
+    var orden = { verde: 0, amarillo: 1, rojo: 2 };
+    if (s in orden && c in orden && orden[s] > orden[c]) return { semaforo: o.semaforo, texto: 'el orquestador la marca en ' + (s === 'rojo' ? 'rojo' : 'ámbar') };
+    return null;
+  }
   function nombreProyecto(p) { return p === OTROS ? 'otros (sin proyecto)' : p; }
-  var api = { ordenarProyectos: ordenarProyectos, proyectoPorDefecto: proyectoPorDefecto, elegirProyecto: elegirProyecto, elegirAgente: elegirAgente, nombreProyecto: nombreProyecto, estadoFila: estadoFila, agentesConConocidos: agentesConConocidos };
+  var api = { ordenarProyectos: ordenarProyectos, proyectoPorDefecto: proyectoPorDefecto, elegirProyecto: elegirProyecto, elegirAgente: elegirAgente, nombreProyecto: nombreProyecto, estadoFila: estadoFila, colorMargen: colorMargen, notaOrquestador: notaOrquestador, agentesConConocidos: agentesConConocidos };
   root.ConsumosElegir = api;
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -142,7 +142,8 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
 .dd-lista li[data-estado="rojo"] .dd-tit{color:#ffb4b4}.dd-lista li[data-estado="amarillo"] .dd-tit{color:#ffe29a}.dd-lista li[data-estado="verde"] .dd-tit{color:#b8ffd2}
 .dd-punto{display:inline-block;flex:none;width:10px;height:10px;border-radius:50%;background:#ff5a5a;box-shadow:0 0 6px rgba(255,90,90,.6)}
 .dd-punto.dd-verde{background:#3ddc84;box-shadow:0 0 7px rgba(61,220,132,.8)}.dd-punto.dd-amarillo{background:#ffd067;box-shadow:0 0 6px rgba(255,208,103,.6)}.dd-punto.dd-auto{background:conic-gradient(#3ddc84,#78f3ff,#3ddc84);box-shadow:none}
-.dd-margen{border-radius:6px;padding:0 5px;font-weight:700}.dd-m-verde{color:#04210c;background:#88ffaa}.dd-m-ambar{color:#2a1c00;background:#ffd866}.dd-m-rojo{color:#2a0000;background:#ff8a8a}.dd-m-sin{color:var(--dim);border:1px solid var(--line)}
+.dd-margen{border-radius:6px;padding:0 5px;font-weight:700}.dd-m-verde{color:#04210c;background:#88ffaa}.dd-m-amarillo{color:#2a1c00;background:#ffd866}.dd-m-rojo{color:#2a0000;background:#ff8a8a}
+.dd-nota{display:inline-block;font-size:11px;color:#ffb4b4;border:1px dashed rgba(255,138,138,.55);border-radius:6px;padding:0 5px}.dd-nota.dd-n-ambar{color:#ffe29a;border-color:rgba(255,216,102,.55)}.dd-m-sin{color:var(--dim);border:1px solid var(--line)}
 #vel-ag-dd .dd-lista{left:0;transform:none}#vel-proy-dd .dd-lista{left:auto;right:0;transform:none}
 @media (max-width:640px){.dd .dd-lista,#vel-ag-dd .dd-lista,#vel-proy-dd .dd-lista{position:fixed;top:auto;bottom:10px;left:3vw;right:3vw;width:auto;transform:none;max-height:70vh}}
 .sr{position:absolute;width:1px;height:1px;overflow:hidden;clip:rect(0 0 0 0)}
@@ -276,9 +277,9 @@ fetch("/consumos-plataformas.json", { cache: "no-store" })
     document.getElementById("grid").innerHTML = '<p class="nota">Sin lectura todavía. No se ha podido abrir el archivo de lecturas.</p>';
   });
 </script>
-<script src="/assets/consumos-velocimetro-elegir.js?v=r23-estado"></script>
+<script src="/assets/consumos-velocimetro-elegir.js?v=r24-margen"></script>
 <script src="/assets/consumos-desplegable.js?v=r23"></script>
-<script src="/assets/consumos-velocimetro.js?v=r23-desplegables"></script>
+<script src="/assets/consumos-velocimetro.js?v=r24-margen"></script>
 <script src="/assets/live-velocidad.js?v=r18-tiempo-real"></script>
 <script src="/consumos-lecturas.js?v=r2-cuentas"></script>
 <script src="/orquestar-widget.js?v=r2-con-carlos"></script>

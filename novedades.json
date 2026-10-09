@@ -1,4 +1,11 @@
 {
+  "v.09.10.2026.r14.10:15": [
+    "Orquestador: GET /api/orquestar?tipo=…&texto=… responde «¿a quién va esta tarea?» — aptitud para el tipo, luego quién está libre ahora y luego quién tiene más margen de uso",
+    "Margen de las cuentas de /consumos (Neo · Claude Max, Trinity · ChatGPT Pro, Leyendas, Coetáneos, Cursor Pro); libre = latido de menos de 10 min en la presencia y sin encargo ack/in_progress en la bandeja",
+    "/consumos enseña la recomendación por tipo (código, web, demo, investigación, consejo, creativo) y hay página /orquestar/ con un cuadro para describir la tarea",
+    "CLI Experto: /orquestar <texto> · /orchestrate <text> pinta el elegido y el top 3 (el verbo pone el idioma)",
+    "Volver atrás: publicar otra vez c77dbd3 (v.09.10.2026.r13.09:52)"
+  ],
   "v.09.10.2026.r13.09:52": [
     "/consumos: cuarta tarjeta «Trinity · Codex» (Trinity · ChatGPT Pro, plan ChatGPT Pro 200) junto a «Neo · Claude Code» (Claude Max 20x), Leyendas y Coetáneos",
     "Cada una manda con su medidor semanal (Codex semanal / Claude Code semanal): cupo diario, bloques de 12 h y proyección «se agota»; la sesión de 5 h de Neo sale aparte",

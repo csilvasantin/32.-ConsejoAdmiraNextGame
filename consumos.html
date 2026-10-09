@@ -96,6 +96,7 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
     <a href="/">Inicio</a>
     <a href="/consumo">Agentes</a>
     <a href="/consumos-proyectos">Gasto por proyecto</a>
+    <a href="/orquestar/">Orquestador</a>
   </nav>
   <h1>Qué estamos gastando</h1>
   <p class="lead">Una tarjeta por cuenta. El color dice si hay que actuar. La fecha es el momento de la lectura, no de ahora mismo.</p>
@@ -103,6 +104,11 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
     <p class="reco" id="reco-top">Cargando quién tiene margen…</p>
     <ol class="ranking" id="ranking"></ol>
     <div class="grid" id="cuentas"></div>
+  </section>
+  <section class="orquestar" id="orquestar" style="background:#0a1620;border:1px solid rgba(120,243,255,.16);border-radius:16px;padding:14px 16px 4px;margin:0 0 18px">
+    <h2 style="font-size:15px;letter-spacing:.04em;text-transform:uppercase;color:#78f3ff;margin-bottom:8px">¿A quién va la siguiente tarea? <a href="/orquestar/" style="font-size:13px;text-transform:none">orquestador →</a></h2>
+    <ul id="orquestar-tipos" style="padding-left:18px;line-height:1.4"><li>Calculando…</li></ul>
+    <p class="nota" id="orquestar-generado" style="color:#4d7a88;font-size:13px;margin:6px 0 10px"></p>
   </section>
   <section class="resumen" id="resumen" hidden>
     <h2>Lo urgente</h2>
@@ -173,6 +179,7 @@ fetch("/consumos-plataformas.json", { cache: "no-store" })
   });
 </script>
 <script src="/consumos-lecturas.js?v=r2-cuentas"></script>
+<script src="/orquestar-widget.js?v=r1"></script>
 <script src="/yk-frame.js?v=r36-escenas"></script>
 </body>
 </html>

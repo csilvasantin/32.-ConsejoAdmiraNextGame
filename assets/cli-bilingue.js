@@ -18,7 +18,7 @@
     ['finalizada', 'done', 'finalizada'], ['olvidar', 'forget', 'olvidar'], ['motor', 'engine', 'motor'],
     ['bocas', 'mouths', 'bocas'], ['nombres', 'names', 'nombres'], ['diario', 'journal', 'diario'],
     ['importar', 'import', 'importar'], ['verbos', 'verbs', 'verbos'], ['sitios', 'sites', 'sites'],
-    ['oraculo', 'oracle', 'oraculo']
+    ['oraculo', 'oracle', 'oraculo'], ['orquestar', 'orchestrate', 'orquestar']
   ];
   // Adjetivos de la primera palabra tras el verbo: [castellano, inglés]; el intérprete entiende el castellano.
   // Solo en los verbos con adjetivo fijo (no en /tarea, /diario… que llevan texto libre).

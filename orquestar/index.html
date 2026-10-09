@@ -1,0 +1,31 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="admiranext-version" content="AdmiraNeXT v.09.10.2026.r14.10:15" />
+<title>Orquestador · ¿a quién va esta tarea? · admira.live</title>
+<meta name="robots" content="noindex, nofollow">
+<style>
+body{background:#02080d;color:#dff8ff;font-family:-apple-system,BlinkMacSystemFont,Inter,sans-serif;margin:0}
+.wrap{max-width:880px;margin:0 auto;padding:20px 16px 60px}
+a{color:#78f3ff} h1{font-size:clamp(26px,6vw,36px);margin:8px 0} .lead{color:#75aab9;line-height:1.45}
+ul{padding-left:18px} li{margin:0 0 12px;line-height:1.4} small,.orq-top{color:#75aab9}
+input{background:#0a1620;color:#dff8ff;border:1px solid rgba(120,243,255,.3);border-radius:8px;padding:8px;width:min(520px,100%)}
+button{background:#78f3ff;color:#02080d;border:0;border-radius:8px;padding:8px 14px;font-weight:600}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav><a href="/">Inicio</a> · <a href="/consumos">Consumos</a> · <a href="/api/orquestar?tipo=codigo">API</a></nav>
+  <h1>¿A quién va esta tarea?</h1>
+  <p class="lead">Cuando Carlos no decide: primero quién sabe hacerlo, luego quién está libre ahora (latido de menos de 10 min y sin encargo en curso) y luego quién tiene más margen de uso. Nunca se gasta de quien tiene menos margen si hay alguien apto con más.</p>
+  <form id="orquestar-form"><input name="texto" placeholder="Describe la tarea (p. ej. arreglar un bug en la home)" required> <button>Orquestar</button></form>
+  <div id="orquestar-salida"></div>
+  <h2>Ahora mismo, por tipo</h2>
+  <ul id="orquestar-tipos"><li>Calculando…</li></ul>
+  <p class="lead" id="orquestar-generado"></p>
+</div>
+<script src="/orquestar-widget.js?v=r1"></script>
+</body>
+</html>

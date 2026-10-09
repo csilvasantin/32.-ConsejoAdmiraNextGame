@@ -1,4 +1,10 @@
 {
+  "v.09.10.2026.r17.11:05": [
+    "/control · HACKEO: clic en «13 proyectos» → HISTÓRICO de líneas de código de la Galaxia AdmiraNeXT, estilo terminal verde: gráfica del Σ (sin duplicar) o por proyecto y tabla hoy · ayer · Δ día · Δ semana · aporta Σ",
+    "Fotos dos veces al día, 00:00 y 12:00 de Madrid (las horas de las lecturas de consumos), con el MISMO conteo que el Σ del HACKEO (tools/hackeo-corpus.py: líneas no vacías de fuentes, sin duplicar); con una sola foto: «el histórico empieza hoy», nunca se inventan días",
+    "Nuevo /api/control/lineas: GET público (historia + resumen) · POST con X-Council-Token (CONSUMOS_LECTURAS_TOKEN); KV una clave por foto + índice",
+    "Experto · CLI: /lineas (castellano) · /lines (inglés) imprime el Σ y cada proyecto con su Δ; /demo lineas · /demo lines abre el histórico"
+  ],
   "v.09.10.2026.r16.10:54": [
     "/consumos: velocímetro de TOKENS POR HORA de la flota ahora mismo — dial semicircular tipo test de velocidad, aguja y cifra grande (p. ej. «12,4 M tok/h»), escala 0 → max(50 M, 1,5 × pico 24 h), top de agentes por tok/h y la ventana usada",
     "Datos reales: partes de consumo que cada agente declara en Yokup (api.yokup.com/fleet/consumo); «última hora» medida con instantáneas cada 5 min (KV, 26 h, reinicio de medianoche Madrid), o «media de hoy» (estimado) si aún no hay ventana; si Yokup no responde, dial en gris y «sin datos»",

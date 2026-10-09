@@ -19,6 +19,7 @@ SIN SECRETOS, por construcción:
 css, py, sh…), sin node_modules, dist, vendor ni minificados.
 
 Uso:  python3 tools/hackeo-corpus.py <dir_salida>
+      HACKEO_REPOS_DIR=/ruta  → clones persistentes (fetch superficial) en vez de temporales
 """
 import hashlib, json, os, re, subprocess, sys, tempfile, time
 from pathlib import Path
@@ -132,10 +133,20 @@ def elegibles(raiz: Path):
         yield rel, llenas, hashlib.sha1("\n".join(llenas).encode("utf-8", "replace")).hexdigest()
 
 
+_AL_DIA = set()   # repos ya puestos al día en esta pasada
+
+
 def proyecto(p: dict, tmp: Path) -> dict:
     dst = tmp / p["repo"].replace("/", "__")
-    if not dst.exists():                           # un repo compartido se clona una vez
+    if (dst / ".git").exists() and p["repo"] not in _AL_DIA:
+        # HACKEO_REPOS_DIR (lineas-galaxia.sh, GrokBotBox 09-10-2026): clon persistente →
+        # se pone al día (superficial) en vez de clonar de cero. Mismo árbol que un clon nuevo.
+        sh("git", "fetch", "-q", "--depth", "1", "origin", "HEAD", cwd=dst)
+        sh("git", "reset", "-q", "--hard", "FETCH_HEAD", cwd=dst)
+        sh("git", "clean", "-qfdx", cwd=dst)
+    elif not dst.exists():                         # un repo compartido se clona una vez
         sh("git", "clone", "-q", "--depth", "1", f"https://github.com/{p['repo']}.git", str(dst))
+    _AL_DIA.add(p["repo"])
     commit = sh("git", "rev-parse", "--short", "HEAD", cwd=dst).strip()
     con_hash = list(elegibles(dst))
     p["_hashes"] = {h: len(l) for _, l, h in con_hash}
@@ -177,9 +188,13 @@ def main():
     # primer proyecto (por orden) que lo tiene. Así ni un repo compartido (clearchannel.tv =
     # admira.biz) ni un espejo (admira.store ← xpaceos) inflan el total.
     visto, repo_de = {}, {}
+    persistente = os.environ.get("HACKEO_REPOS_DIR", "").strip()
+    if persistente:
+        Path(persistente).mkdir(parents=True, exist_ok=True)
     with tempfile.TemporaryDirectory() as t:
+        base = Path(persistente) if persistente else Path(t)
         for p in PROYECTOS:
-            d = proyecto(dict(p), Path(t))
+            d = proyecto(dict(p), base)
             hashes = d.pop("_hashes")
             d["generated"] = ahora
             propios = {h: n for h, n in hashes.items() if h not in visto}

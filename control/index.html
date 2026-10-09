@@ -11,10 +11,11 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.09.10.2026.r16.10:54" />
+<meta name="admiranext-version" content="AdmiraNeXT v.09.10.2026.r17.11:05" />
     <script src="/admira-bar.js?v=20260918-r38"></script>
     <script src="/auth-gate.js?v=20261009-r10-lectura"></script>
     <script src="/assets/live-demo-lectura.js?v=20261009-r10-lectura"></script>
+    <script defer src="/assets/control-lineas.js?v=r17-lineas"></script>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <script src="/failover.js"></script>
@@ -853,7 +854,7 @@
       <span id="hkCorpusTotal" title="Total de líneas de código de todos los proyectos AdmiraNeXT juntos, sin duplicar"></span>
       <span id="hkLineCount" title="Líneas tecleadas entre todos los paneles desde que empezó este hackeo (cada línea lleva su numeral de 10 en 10)">0 líneas</span>
     </span>
-    <span id="hkProjCount" title="Número de proyectos AdmiraNeXT en el hackeo"></span>
+    <span id="hkProjCount" role="button" tabindex="0" title="Proyectos AdmiraNeXT · clic: histórico diario de líneas de código"></span>
     <span id="hkSyncLine"></span>
     <span class="spacer"></span>
     <span id="hackStatusLine"></span>
@@ -2460,6 +2461,8 @@ function pushHist(cmd){ if(!cmd) return; if(CMD_HIST[CMD_HIST.length-1]===cmd){}
 async function runCmd(){
   const machine=$('#csMachine').value, cmd=$('#csCmd').value.trim(); if(!cmd) return;
   pushHist(cmd);
+  // /lineas · /lines · /demo lineas (GrokBotBox, 09-10-2026): histórico de líneas de código, sin tocar ninguna máquina.
+  if(window.ControlLineas&&window.ControlLineas.cli(cmd,(t,txt)=>pushResult('__lineas__','📈 '+t,{rc:0,stdout:txt}))){ $('#csCmd').value=''; _histIdx=-1; return; }
   // Petición a un LLM del DGX Spark, enrutada por el MacMini (nodo tailnet); prompt en base64.
   //   ollama → curl http://dgx-spark:11434/api/generate  (devuelve {"response"})
   //   claude → SSH AUTENTICADO (identidad tailnet + ACL): `claude -p` con el prompt por stdin.
@@ -3495,7 +3498,7 @@ function collapseAllToggle(){
   async function paintHkCorpusTotal(){
     const idx=await loadHkCorpusIdx(), el=document.getElementById("hkCorpusTotal"); if(!el) return;
     const pc=document.getElementById("hkProjCount"); const n=idx&&idx.projects?idx.projects.length:0;
-    if(pc){ pc.textContent=n?(n+" proyecto"+(n===1?"":"s")):""; pc.title=n+" proyectos AdmiraNeXT en el hackeo"; }
+    if(pc){ pc.textContent=n?(n+" proyecto"+(n===1?"":"s")):""; pc.title=n+" proyectos AdmiraNeXT en el hackeo \u00b7 clic: hist\u00f3rico diario de l\u00edneas de c\u00f3digo"; }
     el.textContent=idx?("\u03a3 AdmiraNeXT "+hkFmt(idx.lines_total_all)+" l\u00edneas"):"";
     if(idx) el.title="Todas las l\u00edneas de c\u00f3digo de todos los proyectos AdmiraNeXT, SIN duplicar\n"+
       "(un fichero id\u00e9ntico en dos repos cuenta una vez; un repo compartido no suma dos veces)\n\n"+

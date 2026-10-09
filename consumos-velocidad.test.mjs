@@ -116,13 +116,15 @@ test("endpoint: guarda instantánea en KV (como mucho cada 5 min) y responde la 
   assert.equal(d1.porAgente[0].tokHoy, 26.1e6);
 });
 
-test("/consumos sirve el velocímetro y sondea cada 60 s", () => {
+test("/consumos sirve el velocímetro y sondea cada 10 s (tiempo real)", () => {
   const html = readFileSync(new URL("./consumos.html", import.meta.url), "utf8");
   assert.match(html, /id="velocimetro"/);
   assert.match(html, /\/assets\/consumos-velocimetro\.js/);
   const js = readFileSync(new URL("./assets/consumos-velocimetro.js", import.meta.url), "utf8");
   assert.match(js, /\/api\/consumos\/velocidad/);
-  assert.match(js, /60000/);
+  assert.match(js, /POLL = 10000/);
+  assert.match(js, /tiempo real/);
+  assert.match(html, /id="vel-spark"/);
   assert.match(js, /sin datos/);
 });
 

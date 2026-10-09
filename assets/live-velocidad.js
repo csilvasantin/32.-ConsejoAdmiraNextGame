@@ -21,10 +21,11 @@
   }
   /** Texto de la respuesta (puro: se prueba en Node). */
   function texto(d, en) {
-    if (!d || d.ok === false || d.tokHora == null) return en ? '⏱ Tokens/hour: no data (the Yokup usage-report source is not answering).' : '⏱ Tokens/hora: sin datos (la fuente de partes de Yokup no responde).';
-    var met = d.metodo === 'ultima-hora' ? (en ? 'last hour, measured over ' + d.ventanaMin + ' min' : 'última hora, medido en ' + d.ventanaMin + ' min')
+    if (!d || d.ok === false || d.tokHora == null) return en ? '⏱ Tokens/hour: no data (no real-time pulse and the Yokup reports are not answering).' : '⏱ Tokens/hora: sin datos (ni pulso en tiempo real ni partes de Yokup).';
+    var met = d.metodo === 'tiempo real' ? (en ? 'real time (last 15 min × 4)' + (d.haceS != null ? ', ' + d.haceS + ' s ago' : '') : 'tiempo real (últimos 15 min × 4)' + (d.haceS != null ? ', hace ' + d.haceS + ' s' : ''))
+      : d.metodo === 'ultima-hora' ? (en ? 'last hour, measured over ' + d.ventanaMin + ' min' : 'última hora, medido en ' + d.ventanaMin + ' min')
       : (en ? "today's average (estimated)" : 'media de hoy (estimado)');
-    var top = (d.porAgente || []).slice(0, 3).map(function (a, i) { return (i + 1) + '. ' + a.agente + ' — ' + fmt(a.tokHora, en) + ' tok/h'; });
+    var top = (d.porAgente || []).slice(0, 3).map(function (a, i) { return (i + 1) + '. ' + a.agente + ' — ' + (a.tokHora == null ? (en ? 'stopped' : 'parado') : fmt(a.tokHora, en) + ' tok/h'); });
     return '⏱ ' + fmt(d.tokHora, en) + ' tok/h · ' + met + (d.pico24h != null ? ' · ' + (en ? '24 h peak ' : 'pico 24 h ') + fmt(d.pico24h, en) + ' tok/h' : '') +
       (top.length ? '\n' + top.join('\n') : '') + '\n' + (en ? 'Speedometer: ' : 'Velocímetro: ') + 'https://www.admira.live/consumos';
   }

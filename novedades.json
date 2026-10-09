@@ -144,5 +144,10 @@
   "v.06.10.2026.r15.09:28": [
     "/idioma ENG|ESP (y /language) también en la consola propia de Control, Fleet, Vista previa y Players: cambia el idioma y ya no se manda como comando a la máquina",
     "El popover del sello pasa de NOVEDADES a WHAT'S NEW al momento con /idioma"
+  ],
+  "v.09.10.2026.r4.06:30": [
+    "Hilo compartido con Steve Jobs: un único chat para la app de Grok Bot, admira.live y su rutina, en /chat/jobs/ (privado, con tu cuenta de Google)",
+    "Salud del hilo en /api/chat/salud: último turno por origen y aviso si un mensaje de admira.live lleva más de 10 min sin respuesta",
+    "Primera entrega: solo lectura; el envío desde admira.live llega en la siguiente"
   ]
 }

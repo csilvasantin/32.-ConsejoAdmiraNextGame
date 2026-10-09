@@ -175,6 +175,13 @@
     "Sin sesión puedes escribir igual: al enviar aparece «Entrar con Google», tu texto se conserva y se envía al entrar",
     "Estas novedades salen en el popover del sello, sin recorte del riel"
   ],
+  "v.09.10.2026.r11.09:37": [
+    "La barra muestra el nombre del agente y «solo lectura» en Control, Vista previa y Players cuando la sesión es de agente",
+    "Los datos de esas tres pantallas se ven sin la verja. Los botones de ejecutar y de acción siguen apagados y no hay csrf de escritura",
+    "Quien entra sin sesión sigue viendo «ENTRAR CON GOOGLE». /demo lectura enseña el estado real de la visita",
+    "Volver atrás: publicar otra vez el commit 0c866ae (sello v.09.10.2026.r10.09:20) o, un paso antes, 8cf773b (v.09.10.2026.r9.08:30)",
+    "Estas novedades salen en el popover del sello, sin recorte del riel"
+  ],
   "v.09.10.2026.r10.09:20": [
     "Con la cookie de agente, Control, Vista previa y Players muestran los datos sin la verja de Google y con el nombre del agente y la etiqueta «solo lectura» en la barra",
     "Los botones de ejecutar y de acción quedan desactivados. El agente no recibe csrf de escritura. Quien entra sin sesión sigue viendo «ENTRAR CON GOOGLE»",

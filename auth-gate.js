@@ -347,6 +347,24 @@
     };
     ready(function () { unlock(); modoSoloLectura(); });
   }
+  function pintarEtiqueta() {
+    var name = (gateUser && gateUser.name) || "agente";
+    var texto = name + " · solo lectura";
+    var top = document.getElementById("admira-topbar");
+    var badge = document.getElementById("admira-ro");
+    if (top && !badge) {
+      badge = document.createElement("span");
+      badge.id = "admira-ro";
+      badge.setAttribute("role", "status");
+      top.appendChild(badge);
+    }
+    if (badge) badge.textContent = texto;
+    var pill = document.getElementById("tokenPill");
+    if (pill) {
+      pill.textContent = "👁 " + texto;
+      pill.title = "Sesión de agente, solo lectura";
+    }
+  }
   function modoSoloLectura() {
     if (soloLectura) { congelarAcciones(); return; }
     soloLectura = true;
@@ -356,14 +374,21 @@
     if (!document.getElementById("admira-ro-style")) {
       var st = document.createElement("style");
       st.id = "admira-ro-style";
-      st.textContent = "html.admira-agent-readonly [data-admira-ro='1']{opacity:.45;cursor:not-allowed!important}";
+      st.textContent = "html.admira-agent-readonly [data-admira-ro='1']{opacity:.45;cursor:not-allowed!important}" +
+        "#admira-ro{order:90;display:flex;align-items:center;align-self:center;flex:0 0 auto;max-width:46vw;overflow:hidden;" +
+        "text-overflow:ellipsis;font-family:'Press Start 2P',monospace;font-size:7px;line-height:1.4;letter-spacing:.4px;" +
+        "color:#1b130a;background:#ffb454;border:2px solid #8b5a14;box-shadow:2px 2px 0 #000;padding:6px 8px;white-space:nowrap}";
       (document.head || document.documentElement).appendChild(st);
     }
-    var pill = document.getElementById("tokenPill");
-    if (pill) {
-      pill.textContent = "👁 " + name + " · solo lectura";
-      pill.title = "Sesión de agente, solo lectura";
-    }
+    pintarEtiqueta();
+    var intentos = 0;
+    var reloj = setInterval(function () {
+      pintarEtiqueta();
+      intentos++;
+      var top = document.getElementById("admira-topbar");
+      var badge = document.getElementById("admira-ro");
+      if ((top && badge && top.contains(badge) && intentos > 8) || intentos > 25) clearInterval(reloj);
+    }, 200);
     congelarAcciones();
     var obs = new MutationObserver(function () { congelarAcciones(); });
     obs.observe(document.documentElement, { childList: true, subtree: true, attributes: true, attributeFilter: ["disabled"] });

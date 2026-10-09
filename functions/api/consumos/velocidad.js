@@ -12,6 +12,7 @@
  * Codex) — preferente, metodo «tiempo real»: tokHora = tokens de los últimos 15 min × 4, + tokUltimos5min,
  * tokUltimaHora, serie60 (tokens por minuto, 60 min), haceS. Yokup solo para los agentes sin pulso. Un agente sin
  * pulso hace >3 min queda «parado» (sin velocidad). La respuesta se cachea 8 s en el borde (menos lecturas de KV).
+ * r19: porProyecto:[{proyecto, tokHoy, tokHora, tokUltimos15min, maquinas}] (orden tokHoy) + proyectoTop, del desglose del pulso.
  */
 import { calcularVelocidad, partesDeHoy, serieAInstantaneas, unir, podar, tocaGuardar, escala } from "../../../consumos-velocidad-lib.mjs";
 import { mezclar } from "../../../consumos-pulso-lib.mjs";

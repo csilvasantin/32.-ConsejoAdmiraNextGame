@@ -1,4 +1,11 @@
 {
+  "v.09.10.2026.r19.11:43": [
+    "/consumos · SEGUNDO velocímetro: TOKENS POR PROYECTO (por defecto el que más ha gastado hoy; selector con los 13 proyectos de la Galaxia + «otros»), mismo método en tiempo real (15 min × 4)",
+    "CUENTAKILÓMETROS de rodillos en el centro de los dos diales: tokens acumulados hoy de toda la flota y del proyecto elegido",
+    "El colector de cada Mac reparte los tokens por proyecto: carpeta de trabajo (cwd de Claude Code / Codex) → git remote → proyecto (lista de tools/hackeo-corpus.py); sin casar → «otros»",
+    "/api/consumos/velocidad expone porProyecto:[{proyecto, tokHoy, tokHora}] y proyectoTop; un proyecto sin pulso fresco queda «sin datos», nunca inventado",
+    "Fondo de la sección de velocímetros: portada de Super Hang-On (SEGA Mega Drive) con velo oscuro para que diales y cuentakilómetros se lean perfectos"
+  ],
   "v.09.10.2026.r18.11:38": [
     "/consumos · velocímetro en TIEMPO REAL: cada Mac envía un pulso cada 60 s con los tokens de hoy leídos de sus logs locales (Claude Code y Codex) → tok/h = tokens de los últimos 15 min × 4; antes marcaba 0 porque solo había partes esporádicos de Yokup",
     "Nuevo POST /api/consumos/pulso (X-Council-Token = CONSUMOS_LECTURAS_TOKEN): último pulso + serie de ~1 punto/min durante 26 h por agente, una clave KV por máquina, como mucho 1 escritura/min",

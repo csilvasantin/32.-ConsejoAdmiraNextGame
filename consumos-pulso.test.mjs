@@ -125,3 +125,45 @@ test("velocidad: con pulso y Yokup caído sigue respondiendo (tiempo real); sin 
   assert.equal(vacio.sinDatos, true);
   assert.equal(vacio.tokHora, null);
 });
+
+// r19 — por proyecto
+import { proyectosDePulso, valorProyecto } from "./consumos-pulso-lib.mjs";
+
+test("normalizarPulso: porProyecto opcional, limpio (texto, enteros ≥ 0)", () => {
+  const c = cuerpo(10, 5);
+  c.agentes[0].porProyecto = { "admira.live": 7, "otros": 3, "malo": -1 };
+  const p = normalizarPulso(c).pulso;
+  assert.deepEqual(p.agentes[0].porProyecto, { "admira.live": 7, otros: 3 });
+  assert.equal(p.agentes[1].porProyecto, null);
+});
+
+test("proyectosDePulso: tokHoy = suma de agentes, tokHora = 15 min × 4 del desglose; parado → sin velocidad; ordenado por tokHoy", () => {
+  const docs = [
+    { maquina: "MacMini", agentes: { Morfeo: { motor: "claude", ultimoPulso: AHORA - 10000, porProyecto: { "admira.live": 9000, otros: 100 },
+      serie: [[s(16), 0, 0, { "admira.live": 0 }], [s(15), 1000, 0, { "admira.live": 1000 }], [s(0), 9100, 0, { "admira.live": 9000, otros: 100 }]] } } },
+    { maquina: "MacBookPro16", agentes: { Neo: { motor: "claude", ultimoPulso: AHORA - 20000, porProyecto: { "admira.live": 500, "yokup.com": 20000 },
+      serie: [[s(15), 0, 0, { "yokup.com": 20000 }], [s(0), 20500, 0, { "admira.live": 500, "yokup.com": 20000 }]] },
+      Trinity: { motor: "codex", ultimoPulso: AHORA - 10 * M, porProyecto: { "pixeria.com": 50 }, serie: [[s(20), 0, 0, {}], [s(10), 50, 0, { "pixeria.com": 50 }]] } } },
+  ];
+  const p = proyectosDePulso(docs, AHORA);
+  assert.deepEqual(p.map((x) => x.proyecto), ["yokup.com", "admira.live", "otros", "pixeria.com"]);
+  const live = p.find((x) => x.proyecto === "admira.live");
+  assert.equal(live.tokHoy, 9500);
+  assert.equal(live.tokUltimos15min, 8000 + 500);
+  assert.equal(live.tokHora, 34000);
+  assert.deepEqual(live.maquinas, ["MacMini", "MacBookPro16"]);
+  assert.equal(p.find((x) => x.proyecto === "yokup.com").tokHora, 0, "con pulso fresco y sin actividad: 0 medido");
+  assert.equal(p.find((x) => x.proyecto === "pixeria.com").tokHora, null, "solo agentes parados: sin datos");
+  assert.equal(valorProyecto("x")([1, 2, 3]), undefined, "punto sin desglose: desconocido");
+  const m = mezclar(null, docs, AHORA);
+  assert.equal(m.proyectoTop, "yokup.com");
+  assert.equal(m.porProyecto.length, 4);
+});
+
+test("aplicarPulso guarda el desglose como 4.º campo del punto", () => {
+  const c = cuerpo(10, 5);
+  c.agentes[0].porProyecto = { "admira.live": 10 };
+  const { doc } = aplicarPulso(null, normalizarPulso(c).pulso, AHORA);
+  assert.deepEqual(doc.agentes.Morfeo.serie[0].slice(1), [10, 9, { "admira.live": 10 }]);
+  assert.equal(doc.agentes["Oráculo"].serie[0].length, 3);
+});

@@ -1,14 +1,18 @@
-/* Velocímetro de tokens/hora en /consumos (GrokBotBox, 09-10-2026).
+/* Velocímetros de tokens/hora en /consumos (GrokBotBox, 09-10-2026).
  * Lee /api/consumos/velocidad cada 10 s (datos REALES: pulso en tiempo real de cada Mac — logs locales de Claude Code
  * y Codex, POST /api/consumos/pulso cada 60 s — y, para los agentes sin pulso, partes de consumo de Yokup).
  * r18: aguja animada con requestAnimationFrame (sin saltos), «tiempo real · hace N s» que corre cada segundo y
  * minigráfica de los últimos 60 min (tokens por minuto).
- * Dial semicircular tipo test de velocidad: aguja, cifra grande «12,4 M tok/h», escala 0 → max(50 M, 1,5 × pico 24 h).
+ * r19: DOS diales lado a lado (apilados en móvil): 1) toda la flota · 2) TOKENS POR PROYECTO (por defecto el que más
+ * ha gastado hoy; selector para cambiar). En el centro de cada dial, un CUENTAKILÓMETROS de rodillos con los tokens
+ * acumulados del día (flota / proyecto).
  * Si no hay pulso ni partes: dial en gris y «sin datos» — nunca números inventados. */
 (function (root) {
   'use strict';
   var API = '/api/consumos/velocidad';
-  var R = 120, CX = 150, CY = 150, POLL = 10000;
+  var R = 120, CX = 150, CY = 150, POLL = 10000, DIGITOS = 10;
+  // Los 13 proyectos de la Galaxia (tools/hackeo-corpus.py) + «otros»: el selector los ofrece todos, con o sin datos.
+  var GALAXIA = ['admiranext.com', 'admira.live', 'admira.studio', 'admira.store', 'admira.tv', 'admira.app', 'admira.biz', 'yokup.com', 'pixeria.com', 'xpaceos.com', 'clearchannel.tv', 'ainimation.studio', 'digitalavatar.ai', 'otros'];
   function en() { return (document.documentElement.lang || 'es').slice(0, 2) === 'en'; }
   function T(es, ing) { return en() ? ing : es; }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
@@ -21,44 +25,93 @@
     if (n >= 1e3) return f(n / 1e3, 0) + ' k';
     return f(n, 0);
   }
+  /** Escala «bonita» del dial: max(mínimo, 1,5 × pico). */
+  function escala(pico, minimo) {
+    var bruto = Math.max(minimo, 1.5 * (Number(pico) || 0));
+    var mag = Math.pow(10, Math.floor(Math.log10(bruto)));
+    var ms = [1, 2, 2.5, 5, 10];
+    for (var i = 0; i < ms.length; i++) if (ms[i] * mag >= bruto) return ms[i] * mag;
+    return 10 * mag;
+  }
   function pt(frac, r) { var a = Math.PI * (1 - frac); return [CX + r * Math.cos(a), CY - r * Math.sin(a)]; }
   function arco(f0, f1, r) {
     var a = pt(f0, r), b = pt(f1, r);
     return 'M' + a[0].toFixed(1) + ' ' + a[1].toFixed(1) + ' A' + r + ' ' + r + ' 0 0 1 ' + b[0].toFixed(1) + ' ' + b[1].toFixed(1);
   }
-  function svg(max) {
+  function svg(max, pfx, etiqueta) {
     var ticks = '', i;
     for (i = 0; i <= 20; i++) {
       var f = i / 20, a = pt(f, R + 8), b = pt(f, R + (i % 5 ? 14 : 20));
       ticks += '<line x1="' + a[0].toFixed(1) + '" y1="' + a[1].toFixed(1) + '" x2="' + b[0].toFixed(1) + '" y2="' + b[1].toFixed(1) + '" class="vel-tick' + (i % 5 ? '' : ' mayor') + '"/>';
       if (i % 5 === 0) { var l = pt(f, R - 22); ticks += '<text x="' + l[0].toFixed(1) + '" y="' + (l[1] + 4).toFixed(1) + '" class="vel-num">' + fmt(max * f).replace(/\s/g, '') + '</text>'; }
     }
-    return '<svg viewBox="0 0 300 175" class="vel-svg" role="img" aria-label="' + T('Velocímetro de tokens por hora', 'Tokens per hour speedometer') + '">' +
-      '<defs><linearGradient id="vel-grad" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#88ffaa"/><stop offset=".55" stop-color="#78f3ff"/><stop offset=".8" stop-color="#ffd866"/><stop offset="1" stop-color="#ff5a5a"/></linearGradient></defs>' +
+    return '<svg viewBox="0 0 300 175" class="vel-svg" role="img" aria-label="' + esc(etiqueta) + '">' +
+      '<defs><linearGradient id="' + pfx + '-grad" x1="0" x2="1" y1="0" y2="0"><stop offset="0" stop-color="#88ffaa"/><stop offset=".55" stop-color="#78f3ff"/><stop offset=".8" stop-color="#ffd866"/><stop offset="1" stop-color="#ff5a5a"/></linearGradient></defs>' +
       '<path d="' + arco(0, 1, R) + '" class="vel-pista"/>' +
-      '<path d="' + arco(0, 1, R) + '" class="vel-valor" pathLength="1" id="vel-valor"/>' +
+      '<path d="' + arco(0, 1, R) + '" class="vel-valor" pathLength="1" style="stroke:url(#' + pfx + '-grad)"/>' +
       ticks +
-      '<g class="vel-aguja" id="vel-aguja"><polygon points="' + CX + ',' + (CY - R + 18) + ' ' + (CX - 5) + ',' + CY + ' ' + (CX + 5) + ',' + CY + '"/></g>' +
+      '<g class="vel-aguja"><polygon points="' + CX + ',' + (CY - R + 18) + ' ' + (CX - 5) + ',' + CY + ' ' + (CX + 5) + ',' + CY + '"/></g>' +
       '<circle cx="' + CX + '" cy="' + CY + '" r="10" class="vel-eje"/>' +
       '</svg>';
   }
-  var estado = { max: 0, valor: 0, frac: 0, anim: 0, datos: null, recibido: 0 };
-  /* Aguja + arco + cifra interpolados juntos (ease-out cúbico, 1,6 s): si llega un dato a mitad de animación, sigue desde donde está. */
-  function animar(fracDestino, valorDestino, sin) {
-    var ag = document.getElementById('vel-aguja'), val = document.getElementById('vel-valor'), cifra = document.getElementById('vel-cifra');
-    var f0 = estado.frac, v0 = estado.valor, t0 = performance.now(), dur = 1600, id = ++estado.anim;
+
+  /* ---------- Cuentakilómetros de rodillos ---------- */
+  function odometroHTML() {
+    var h = '';
+    for (var i = 0; i < DIGITOS; i++) {
+      var col = '';
+      for (var k = 0; k <= 9; k++) col += '<span>' + k + '</span>';
+      h += (i && (DIGITOS - i) % 3 === 0 ? '<i class="odo-sep"></i>' : '') + '<span class="odo-rueda"><span class="odo-tira">' + col + '</span></span>';
+    }
+    return h;
+  }
+  function odometro(el, n) {
+    if (!el) return;
+    if (!el.querySelector('.odo-rueda')) el.innerHTML = odometroHTML();
+    var sin = n == null || !isFinite(n);
+    el.classList.toggle('odo-sin', sin);
+    var s = sin ? '' : String(Math.max(0, Math.round(n)));
+    if (s.length > DIGITOS) s = s.slice(-DIGITOS);
+    var pad = DIGITOS - s.length;
+    var ruedas = el.querySelectorAll('.odo-rueda');
+    for (var i = 0; i < ruedas.length; i++) {
+      var d = i < pad ? 0 : Number(s[i - pad]);
+      ruedas[i].classList.toggle('odo-cero', i < pad);
+      ruedas[i].firstChild.style.transform = 'translateY(' + (-d * 10) + '%)';
+    }
+    el.setAttribute('aria-label', sin ? T('sin datos', 'no data') : (Math.round(n).toLocaleString(en() ? 'en-US' : 'es-ES') + ' ' + T('tokens hoy', 'tokens today')));
+  }
+
+  /* ---------- Un dial (aguja + arco + cifra + cuentakilómetros) ---------- */
+  function Dial(box, pfx, etiqueta) {
+    this.box = box; this.pfx = pfx; this.etiqueta = etiqueta;
+    this.max = 0; this.frac = 0; this.valor = 0; this.anim = 0;
+  }
+  Dial.prototype.pinta = function (tokHora, max, tokHoy, sin) {
+    var b = this.box;
+    b.classList.toggle('sin-datos', !!sin);
+    if (max !== this.max || !b.querySelector('.vel-svg')) { b.querySelector('.vel-dial-svg').innerHTML = svg(max, this.pfx, this.etiqueta); this.max = max; this.frac = 0; }
+    var v = sin ? 0 : tokHora;
+    var destino = Math.max(0, Math.min(1, v / max));
+    var ag = b.querySelector('.vel-aguja'), val = b.querySelector('.vel-valor'), cifra = b.querySelector('.vel-cifra');
+    if (sin) cifra.textContent = T('sin datos', 'no data');
+    b.querySelector('.vel-unidad').textContent = sin ? '' : 'tok/h';
+    var self = this, f0 = this.frac, v0 = this.valor, t0 = performance.now(), dur = 1600, id = ++this.anim;
     function paso(t) {
-      if (id !== estado.anim) return;
+      if (id !== self.anim) return;
       var k = Math.min(1, (t - t0) / dur), e = 1 - Math.pow(1 - k, 3);
-      estado.frac = f0 + (fracDestino - f0) * e;
-      estado.valor = v0 + (valorDestino - v0) * e;
-      if (ag) ag.style.transform = 'rotate(' + (-90 + 180 * estado.frac).toFixed(2) + 'deg)';
-      if (val) val.style.strokeDashoffset = String(1 - estado.frac);
-      if (cifra && !sin) cifra.textContent = fmt(estado.valor);
+      self.frac = f0 + (destino - f0) * e;
+      self.valor = v0 + (v - v0) * e;
+      if (ag) ag.style.transform = 'rotate(' + (-90 + 180 * self.frac).toFixed(2) + 'deg)';
+      if (val) val.style.strokeDashoffset = String(1 - self.frac);
+      if (cifra && !sin) cifra.textContent = fmt(self.valor);
       if (k < 1) requestAnimationFrame(paso);
     }
     requestAnimationFrame(paso);
-  }
+    odometro(b.querySelector('.odo'), tokHoy);
+  };
+
+  var estado = { datos: null, recibido: 0, proyecto: null, elegido: false, d1: null, d2: null };
   function hace(s) {
     if (s == null || !isFinite(s)) return '';
     if (s < 90) return T('hace ', '') + Math.round(s) + ' s' + T('', ' ago');
@@ -83,6 +136,48 @@
       '<path d="' + area + '" class="vel-spark-area"/><path d="' + linea + '" class="vel-spark-linea"/></svg>' +
       '<p class="vel-spark-pie"><span>−60 min</span><span>' + T('pico ', 'peak ') + fmt(max) + ' tok/min</span><span>' + T('ahora', 'now') + '</span></p>';
   }
+
+  /** Proyecto a enseñar: el elegido por el usuario o, por defecto, el que más tokens lleva hoy. */
+  function proyectoActual(d) {
+    var lista = (d && d.porProyecto) || [];
+    if (estado.elegido && estado.proyecto) return estado.proyecto;
+    return (d && d.proyectoTop) || (lista[0] && lista[0].proyecto) || null;
+  }
+  function pintaSelector(d) {
+    var sel = document.getElementById('vel-proy-sel');
+    if (!sel || document.activeElement === sel) return; // no cerrar el desplegable mientras se elige
+    var lista = (d && d.porProyecto) || [], vistos = {}, opts = [];
+    lista.forEach(function (p) { vistos[p.proyecto] = 1; opts.push({ p: p.proyecto, t: p.tokHoy }); });
+    GALAXIA.forEach(function (p) { if (!vistos[p]) opts.push({ p: p, t: null }); });
+    var actual = proyectoActual(d);
+    sel.innerHTML = opts.map(function (o) {
+      return '<option value="' + esc(o.p) + '"' + (o.p === actual ? ' selected' : '') + '>' + esc(o.p) + ' — ' + (o.t == null ? T('sin datos hoy', 'no data today') : fmt(o.t) + ' tok') + '</option>';
+    }).join('');
+  }
+  function pintaProyecto(d, sin) {
+    var box = document.getElementById('vel-g-proy');
+    if (!box) return;
+    if (!estado.d2) estado.d2 = new Dial(box, 'vg2', T('Velocímetro de tokens por hora del proyecto', 'Project tokens per hour speedometer'));
+    var nombre = proyectoActual(d);
+    var lista = (d && d.porProyecto) || [];
+    var p = null;
+    for (var i = 0; i < lista.length; i++) if (lista[i].proyecto === nombre) p = lista[i];
+    var maxRate = lista.reduce(function (m, x) { return Math.max(m, x.tokHora || 0); }, 0);
+    var hayPulso = d && d.agentesTiempoReal > 0;
+    // tok/h del proyecto: medido (p.tokHora), 0 si hay pulso fresco y el proyecto no aparece (medido: nadie trabaja en él), si no «sin datos».
+    var rate = p ? p.tokHora : (hayPulso ? 0 : null);
+    var hoy = p ? p.tokHoy : (lista.length ? 0 : null);
+    var sinP = sin || rate == null;
+    estado.d2.pinta(rate, escala(maxRate, 5e6), hoy, sinP);
+    var nom = document.getElementById('vel-proy-nombre');
+    if (nom) nom.textContent = nombre || T('ningún proyecto con datos', 'no project with data');
+    var met = document.getElementById('vel-proy-metodo');
+    if (met) met.innerHTML = !nombre ? T('Aún no llega el desglose por proyecto de ningún Mac.', 'No per-project breakdown from any Mac yet.') :
+      sinP ? T('Sin pulso fresco que lo mida: no se enseña ninguna cifra.', 'No fresh pulse measuring it: no number is shown.') :
+      (p ? T('15 min', '15 min') + ': <b>' + fmt(p.tokUltimos15min) + '</b> tok' + (p.maquinas && p.maquinas.length ? ' · ' + esc(p.maquinas.join(', ')) : '') +
+        (!estado.elegido ? ' · ' + T('el que más gasta hoy', 'top spender today') : '') : T('0 tokens hoy en los Macs con pulso', '0 tokens today on the Macs with a pulse'));
+  }
+
   function pinta(d) {
     var box = document.getElementById('velocimetro');
     if (!box) return;
@@ -91,14 +186,12 @@
     estado.recibido = Date.now();
     box.classList.toggle('sin-datos', sin);
     box.classList.toggle('rt', !sin && d.metodo === 'tiempo real');
-    var max = sin ? (estado.max || 50e6) : (d.escalaMax || 50e6);
-    if (max !== estado.max || !box.querySelector('.vel-svg')) { box.querySelector('.vel-dial').innerHTML = svg(max); estado.max = max; estado.frac = 0; }
-    var v = sin ? 0 : d.tokHora;
-    var frac = Math.max(0, Math.min(1, v / max));
-    var cifra = document.getElementById('vel-cifra');
-    if (sin) cifra.textContent = T('sin datos', 'no data');
-    animar(frac, v, sin);
-    document.getElementById('vel-unidad').textContent = sin ? '' : 'tok/h';
+    var g1 = document.getElementById('vel-g-total');
+    if (!estado.d1) estado.d1 = new Dial(g1, 'vg1', T('Velocímetro de tokens por hora', 'Tokens per hour speedometer'));
+    var max = sin ? (estado.d1.max || 50e6) : (d.escalaMax || 50e6);
+    estado.d1.pinta(sin ? 0 : d.tokHora, max, sin ? null : d.tokHoy, sin);
+    pintaSelector(d);
+    pintaProyecto(d, sin);
     var met = document.getElementById('vel-metodo');
     if (sin) met.textContent = T('Sin pulso en tiempo real y sin partes de Yokup. No se enseña ninguna cifra.', 'No real-time pulse and no Yokup reports. No number is shown.');
     else if (d.metodo === 'tiempo real') met.innerHTML = textoMetodo();
@@ -122,14 +215,20 @@
     var pie = document.getElementById('vel-pie');
     pie.innerHTML = (d && d.generado ? T('Actualizado ', 'Updated ') + new Date(d.generado).toLocaleTimeString(en() ? 'en-GB' : 'es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' (Madrid) · ' : '') +
       T('Fuente: pulso de cada Mac (logs de Claude Code y Codex, cada 60 s, ', 'Source: each Mac\'s pulse (Claude Code and Codex logs, every 60 s, ') + '<a href="/api/consumos/pulso">/api/consumos/pulso</a>) + ' +
-      T('partes de Yokup para el resto (', 'Yokup reports for the rest (') + '<a href="https://api.yokup.com/fleet/consumo?dias=1">fleet/consumo</a>) · ' + T('se refresca cada 10 s', 'refreshes every 10 s');
+      T('partes de Yokup para el resto (', 'Yokup reports for the rest (') + '<a href="https://api.yokup.com/fleet/consumo?dias=1">fleet/consumo</a>) · ' +
+      T('proyecto = carpeta de trabajo → repo git → uno de los 13 de la Galaxia · ', 'project = working folder → git repo → one of the 13 Galaxy projects · ') + T('se refresca cada 10 s', 'refreshes every 10 s');
   }
   function leer() {
     return fetch(API, { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }).then(function (d) { pinta(d); return d; });
   }
-  root.ConsumosVelocimetro = { leer: leer, fmt: fmt };
+  root.ConsumosVelocimetro = { leer: leer, fmt: fmt, escala: escala };
   function arranca() {
     if (!document.getElementById('velocimetro')) return;
+    var sel = document.getElementById('vel-proy-sel');
+    if (sel) sel.addEventListener('change', function () {
+      estado.proyecto = sel.value; estado.elegido = true;
+      if (estado.datos) pintaProyecto(estado.datos, false);
+    });
     leer();
     setInterval(function () { if (!document.hidden) leer(); }, POLL);
     setInterval(function () { var t = textoMetodo(), m = document.getElementById('vel-metodo'); if (t && m) m.innerHTML = t; }, 1000);

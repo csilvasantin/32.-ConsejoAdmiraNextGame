@@ -125,6 +125,9 @@ test("/consumos sirve el velocímetro y sondea cada 10 s (tiempo real)", () => {
   assert.match(js, /POLL = 10000/);
   assert.match(js, /tiempo real/);
   assert.match(html, /id="vel-spark"/);
+  assert.match(html, /id="vel-g-proy"/);
+  assert.match(html, /id="vel-proy-sel"/);
+  assert.match(js, /odometro/);
   assert.match(js, /sin datos/);
 });
 

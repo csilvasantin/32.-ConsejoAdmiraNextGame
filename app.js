@@ -1867,6 +1867,7 @@
             '<div class="window-overlay-title">' + T('CLI · FLOTA Y SITES', 'CLI · FLEET AND SITES') + '</div>' +
             '<ol class="analizar-list">' +
             li('<strong>/marcador · /flota</strong>', 'abre el marcador de la flota', 'opens the fleet scoreboard') +
+            li('<strong>/orquestar · /orchestrate &lt;texto&gt;</strong>', '¿a quién va esta tarea? aptitud → libre → margen (elegido y top 3)', 'who should take this task? fit → free → usage margin (pick and top 3)') +
             li('<strong>/highscore</strong>', 'abre el Highscore de la flota', 'opens the fleet Highscore') +
             li('<strong>/sendto &lt;equipo&gt; &lt;mensaje&gt;</strong>', 'entrega el mensaje al Claude Code de ese equipo', 'delivers the message to that machine\'s Claude Code') +
             li('<strong>/sites</strong>', 'lista los sites de Admira', 'lists the Admira sites') +
@@ -2191,7 +2192,9 @@
         // Parejas en inglés / castellano (assets/cli-bilingue.js): el idioma del verbo es el de la web
         '/ayuda', '/commands', '/brand', '/scoreboard', '/fleet', '/crop', '/cut', '/legends', '/peers',
         '/agents', '/tasks', '/task', '/done', '/forget', '/engine', '/mouths', '/names', '/journal', '/import',
-        '/verbs', '/sitios', '/oracle'
+        '/verbs', '/sitios', '/oracle',
+        // Orquestador (09-10-2026): /orquestar <texto> · /orchestrate <text> → /api/orquestar
+        '/orquestar', '/orchestrate'
     ];
     (function setupCliAutocomplete() {
         const inp = document.getElementById('action-input');
@@ -2534,6 +2537,25 @@
             const vis = window.tkSetVisible(action === 'on' ? true : action === 'off' ? false : null);
             addUserEntry(text);
             setActionLine('🗂️ Panel Tareas del Consejo ' + (vis ? 'visible' : 'oculto') + ' — /tareas on · off · toggle');
+            return true;
+        }
+        // /orquestar <texto> · /orchestrate <text> (GrokBotBox, 09-10-2026): ¿a quién va esta tarea?
+        // Pregunta a /api/orquestar (aptitud → libre → margen) y pinta el elegido y el top 3. Local: no va al Consejo.
+        const orqMatch = text.match(/^\/(?:orquestar|orchestrate)(?:\s+([\s\S]*))?$/i);
+        if (orqMatch) {
+            addUserEntry(text);
+            const orqTexto = (orqMatch[1] || '').trim();
+            setActionLine(cliT('🎯 Orquestando…', '🎯 Orchestrating…'));
+            fetch('/api/orquestar?' + (orqTexto ? 'texto=' + encodeURIComponent(orqTexto) : 'tipo=codigo'), { cache: 'no-store' })
+                .then(r => r.json())
+                .then(d => {
+                    const esc = s => String(s == null ? '' : s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+                    const top = (d.candidatos || []).slice(0, 3).map((c, i) => (i + 1) + '. ' + esc(c.persona) + ' — ' + esc(c.motivo) + ' (' + c.puntuacion + ')').join('<br>');
+                    addConvEntry('conv-racional', '🎯', cliT('Orquestador', 'Orchestrator'), 'admira.live', 'racional',
+                        '<strong>' + cliT('Tipo', 'Type') + ':</strong> ' + esc(d.tipo) + '<br><strong>' + cliT('Elegido', 'Pick') + ':</strong> ' + esc(d.elegido ? d.elegido.motivo : '—') + '<br>' + top);
+                    setActionLine('🎯 ' + (d.elegido ? d.elegido.motivo : cliT('nadie apto', 'nobody fit')));
+                })
+                .catch(() => setActionLine(cliT('⚠️ /api/orquestar no responde', '⚠️ /api/orquestar is not answering')));
             return true;
         }
         const agoraMatch = text.match(/^\/(?:agora|agoramatrix|codex|oraculo|oráculo)(?:\s+(estado|status|help|ayuda))?$/i);

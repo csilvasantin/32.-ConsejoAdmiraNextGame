@@ -127,6 +127,8 @@ export function orquestar({ tipo, cuentas = [], presencia = [], bandeja = [], ah
   const orden = (a, b) => b.puntuacion - a.puntuacion || (b.margenPct ?? -1) - (a.margenPct ?? -1) || (Date.parse(b.ultimoLatido || 0) || 0) - (Date.parse(a.ultimoLatido || 0) || 0) || a.persona.localeCompare(b.persona);
   const candidatos = [...pool].sort(orden);
   const excluidos = todos.filter((x) => !pool.includes(x)).map((x) => ({ persona: x.persona, apto: x.apto, conCarlos: x.conCarlos,
+    // r24: también el margen de su cuenta (lo enseña /consumos aunque el agente esté fuera del reparto).
+    margenPct: x.margenPct, semaforo: x.semaforo, agotaAntes: x.agotaAntes, proyeccionTexto: x.proyeccionTexto,
     motivo: x.conCarlos && base.includes(x) ? OCUPADO_CON_CARLOS : "no apto para " + tipo + " (<" + UMBRAL_APTO + ")" }));
   const top = candidatos[0] || null;
   const etiquetaTipo = { codigo: "código", investigacion: "investigación", creativo: "creativo", consejo: "consejo", web: "web", demo: "demo", estrategia: "estrategia" }[tipo] || tipo;

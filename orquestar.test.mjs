@@ -117,3 +117,11 @@ test("config real: Morfeo → morfeo-claude y Oráculo → oraculo-codex; los se
   const mor = r.candidatos.find((c) => c.persona === "Morfeo");
   assert.equal(mor.margenPct, null); assert.match(mor.motivo, /sin lectura de margen/);
 });
+
+test("r24 · excluidos (p. ej. ocupado con Carlos) llevan también el margen de su cuenta y el motivo del semáforo", () => {
+  const r = orquestar({ tipo: "web", cuentas: [{ id: "neo-claude", nombre: "Neo", cuenta: "x", margen: 90, semaforo: "verde", agotaAntes: false, proyeccion: null }], presencia: vivos("Neo"), bandeja: [], ahora: AHORA, personas: PERSONAS, conCarlos: ["Neo"] });
+  const todos = [...r.candidatos, ...r.excluidos];
+  const neo = todos.find((c) => c.persona === "Neo");
+  assert.equal(neo.margenPct, 90);
+  assert.equal(neo.agotaAntes, false);
+});

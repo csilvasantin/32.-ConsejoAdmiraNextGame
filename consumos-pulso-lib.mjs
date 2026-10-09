@@ -9,6 +9,9 @@
  * una nueva. Como mucho 1 escritura/min por máquina.
  * Velocidad: tokHora = tokens de los últimos 15 min × 4. Un agente sin pulso hace >3 min está «parado» (stale):
  * no aporta velocidad (nunca se inventa). Una bajada del acumulado = día nuevo (cuenta el valor nuevo).
+ * r19 (por proyecto): cada agente puede mandar porProyecto:{proyecto: tokHoy} (cwd → git remote → uno de los 13
+ * proyectos de la Galaxia, tools/hackeo-corpus.py; sin casar → «otros»). El punto de la serie lleva un 4.º campo
+ * {proyecto: tokHoy} y de ahí sale tokHora por proyecto con el mismo método (15 min × 4).
  */
 import { incremento } from "./consumos-velocidad-lib.mjs";
 
@@ -42,7 +45,12 @@ export function normalizarPulso(body) {
     const tokHoy = entero(a && a.tokHoy);
     if (!agente || !MOTORES.has(motor) || tokHoy === null) return { ok: false, error: "cada agente necesita agente, motor (claude|codex) y tokHoy ≥ 0" };
     const ev = a.ultimoEvento ? Date.parse(a.ultimoEvento) : NaN;
-    agentes.push({ agente, motor, cuenta: texto(a.cuenta, 80), tokHoy, cacheHoy: entero(a.cacheHoy) || 0, ultimoEvento: Number.isFinite(ev) ? new Date(ev).toISOString() : null });
+    let porProyecto = null;
+    if (a.porProyecto && typeof a.porProyecto === "object") {
+      porProyecto = {};
+      for (const [k, v] of Object.entries(a.porProyecto).slice(0, 30)) { const n = texto(k, 60), t = entero(v); if (n && t !== null) porProyecto[n] = t; }
+    }
+    agentes.push({ agente, motor, cuenta: texto(a.cuenta, 80), tokHoy, cacheHoy: entero(a.cacheHoy) || 0, ultimoEvento: Number.isFinite(ev) ? new Date(ev).toISOString() : null, porProyecto });
   }
   return { ok: true, pulso: { maquina, agentes } };
 }
@@ -56,8 +64,8 @@ export function aplicarPulso(doc, pulso, ahora) {
   for (const a of pulso.agentes) {
     const prev = d.agentes[a.agente] || { serie: [] };
     const serie = (prev.serie || []).filter((p) => Array.isArray(p) && p[0] >= corte);
-    serie.push([t, a.tokHoy, a.cacheHoy]);
-    d.agentes[a.agente] = { motor: a.motor, cuenta: a.cuenta, tokHoy: a.tokHoy, cacheHoy: a.cacheHoy, ultimoEvento: a.ultimoEvento, ultimoPulso: ahora, serie };
+    serie.push(a.porProyecto ? [t, a.tokHoy, a.cacheHoy, a.porProyecto] : [t, a.tokHoy, a.cacheHoy]);
+    d.agentes[a.agente] = { motor: a.motor, cuenta: a.cuenta, tokHoy: a.tokHoy, cacheHoy: a.cacheHoy, ultimoEvento: a.ultimoEvento, ultimoPulso: ahora, serie, porProyecto: a.porProyecto || null };
   }
   for (const [n, a] of Object.entries(d.agentes)) if (!a.ultimoPulso || ahora - a.ultimoPulso > RETENCION_MS) delete d.agentes[n];
   d.maquina = pulso.maquina;
@@ -66,13 +74,42 @@ export function aplicarPulso(doc, pulso, ahora) {
 }
 
 /** Tokens entre (desde, hasta] de una serie [[tsSeg, tok], …] sumando incrementos (reinicio = día nuevo). */
-export function tokensEnVentana(serie, desdeMs, hastaMs) {
+export function tokensEnVentana(serie, desdeMs, hastaMs, valor = (p) => p[1]) {
   let total = 0;
   for (let i = 1; i < serie.length; i++) {
     const ts = serie[i][0] * 1000;
-    if (ts > desdeMs && ts <= hastaMs) total += incremento(serie[i - 1][1], serie[i][1]);
+    if (ts > desdeMs && ts <= hastaMs) total += incremento(valor(serie[i - 1]), valor(serie[i]));
   }
   return total;
+}
+
+/** Acumulado de un proyecto en un punto: sin desglose en ese punto → desconocido (no cuenta); con desglose → 0 si no sale. */
+export const valorProyecto = (proy) => (p) => (p[3] && typeof p[3] === "object" ? Number(p[3][proy]) || 0 : undefined);
+
+/**
+ * Proyectos de todos los agentes con pulso: tokHoy = suma del último desglose de cada agente (también de los parados:
+ * es un hecho); tokHora = (tokens de los últimos 15 min × 4) solo de los agentes NO parados. Ordenado por tokHoy.
+ */
+export function proyectosDePulso(docs, ahora) {
+  const acc = {};
+  for (const doc of docs || []) for (const a of Object.values((doc && doc.agentes) || {})) {
+    if (!a.porProyecto) continue;
+    const serie = (a.serie || []).slice().sort((x, y) => x[0] - y[0]);
+    const m = medirAgente(a, ahora);
+    const cubierto = Math.min(VENTANA_MS, ahora - (serie.length ? serie[0][0] * 1000 : ahora));
+    for (const [proy, tok] of Object.entries(a.porProyecto)) {
+      const p = acc[proy] || (acc[proy] = { proyecto: proy, tokHoy: 0, tokHora: null, tokUltimos15min: 0, agentes: [] });
+      p.tokHoy += Number(tok) || 0;
+      if (doc.maquina && !p.agentes.includes(doc.maquina)) p.agentes.push(doc.maquina);
+      if (!m.stale && serie.length >= 2 && cubierto >= 2 * M) {
+        const t15 = tokensEnVentana(serie, ahora - VENTANA_MS, ahora, valorProyecto(proy));
+        p.tokUltimos15min += t15;
+        p.tokHora = (p.tokHora || 0) + Math.round(t15 * (3600000 / cubierto));
+      }
+    }
+  }
+  return Object.values(acc).map(({ agentes, ...p }) => ({ ...p, maquinas: agentes.filter(Boolean) }))
+    .sort((a, b) => b.tokHoy - a.tokHoy || (b.tokHora || 0) - (a.tokHora || 0));
 }
 
 /** Medidas de un agente: tokUltimos5min, tokUltimos15min, tokUltimaHora, tokHora (15 min × 4), stale. */
@@ -123,7 +160,7 @@ export function agentesDePulso(docs, ahora) {
     if (!doc || !doc.agentes) continue;
     for (const [agente, a] of Object.entries(doc.agentes)) {
       out.push({ agente, maquina: doc.maquina, motor: a.motor, cuenta: a.cuenta, tokHoy: a.tokHoy, cacheHoy: a.cacheHoy || 0,
-        ultimoEvento: a.ultimoEvento || null, ultimoPulso: a.ultimoPulso ? new Date(a.ultimoPulso).toISOString() : null,
+        porProyecto: a.porProyecto || null, ultimoEvento: a.ultimoEvento || null, ultimoPulso: a.ultimoPulso ? new Date(a.ultimoPulso).toISOString() : null,
         metodo: "tiempo real", ...medirAgente(a, ahora), _serie: a.serie || [] });
     }
   }
@@ -154,13 +191,14 @@ export function mezclar(yk, docs, ahora) {
   const porAgente = [...frescos.map(limpia), ...deYokup, ...parados.map(limpia)]
     .sort((a, b) => (b.tokHora || 0) - (a.tokHora || 0) || (b.tokHoy || 0) - (a.tokHoy || 0));
   const medidos = porAgente.filter((a) => Number.isFinite(a.tokHora));
-  if (!frescos.length && !yk) return { sinDatos: true, tokHora: null, porAgente, metodo: null };
+  if (!frescos.length && !yk) return { sinDatos: true, tokHora: null, porAgente, metodo: null, porProyecto: proyectosDePulso(docs, ahora).map((p) => ({ ...p, tokHora: null })), proyectoTop: null };
   const tokHora = medidos.reduce((s, a) => s + a.tokHora, 0);
   const tokHoy = porAgente.reduce((s, a) => s + (Number(a.tokHoy) || 0), 0);
   const suma = (k) => frescos.reduce((s, a) => s + (a[k] || 0), 0);
   const ultimo = frescos.reduce((m, a) => Math.max(m, Date.parse(a.ultimoPulso) || 0), 0);
   const conSerie = pulso.filter((a) => !a.stale).map((a) => ({ serie: a._serie }));
   const picoRT = picoPulso(conSerie, ahora);
+  const proys = proyectosDePulso(docs, ahora);
   return {
     sinDatos: false,
     tokHora: Math.round(tokHora),
@@ -175,6 +213,8 @@ export function mezclar(yk, docs, ahora) {
     serie60: frescos.length ? seriePorMinuto(conSerie, ahora, 60) : [],
     porAgente, tokHoy,
     pico24h: frescos.length ? Math.max(picoRT || 0, Math.round(tokHora)) : (yk ? yk.pico24h : null),
+    porProyecto: proys,
+    proyectoTop: proys.length ? proys[0].proyecto : null,
     agentesTiempoReal: frescos.length, agentesParados: pulso.filter((a) => a.stale).map((a) => a.agente),
   };
 }

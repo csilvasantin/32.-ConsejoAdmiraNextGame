@@ -206,6 +206,12 @@ export const CUENTAS = [
   { id: "coetaneos", nombre: "Coetáneos", cuenta: "csilvasantin@gmail.com", plan: "SuperGrok",
     consejeros: [["Elon / Merovingio", ["Musk", "Elon", "Elon Musk", "Merovingio"]], ["Jensen / Cypher", ["Huang", "Jensen", "Jensen Huang", "Cypher"]]],
     pista: "Última conocida por Carlos: 1 % el 4 de octubre (no está guardada como lectura)." },
+  /* Neo (09-10-2026, GrokBotBox): su Claude Code en el plan Claude Max (20x). Es una cuenta de Claude,
+     no de Grok. Manda siempre el medidor semanal (reset los domingos 15:00 de Madrid); la sesión de
+     5 h se enseña aparte, como secundario, y no decide el semáforo ni la proyección. */
+  { id: "neo-claude", nombre: "Neo · Claude Code", cuenta: "Neo · Claude Max", plan: "Claude Max (20x)", proveedor: "Claude",
+    etiqueta: "Neo · Claude Code (Claude Max de Neo, no Grok)", principal: "Claude Code semanal", secundario: "Claude Code sesión 5 h",
+    resetSemanal: "domingos 15:00 (Madrid)", consejeros: [] },
   { id: "cursor", nombre: "Cursor Pro", cuenta: "cursor-pro", plan: "Cursor Pro", consejeros: [] },
 ];
 
@@ -299,9 +305,11 @@ export function resumirCuentas(lecturas, partes, { ahora = Date.now() } = {}) {
   return CUENTAS.map((c) => {
     const propias = (lecturas || []).filter((l) => l.cuenta === c.cuenta);
     const series = resumirTodo(propias, { ahora }).map((s) => ({ ...s, proy: proyectar(s, ahora), bloques: bloques12h(s.deltas) }));
-    const manda = series.length ? [...series].sort((a, b) => b.pct - a.pct || Date.parse(b.ultima.ts) - Date.parse(a.ultima.ts))[0] : null;
+    const fija = c.principal ? series.find((s) => s.agente === c.principal) || null : null;
+    const manda = c.principal ? fija : series.length ? [...series].sort((a, b) => b.pct - a.pct || Date.parse(b.ultima.ts) - Date.parse(a.ultima.ts))[0] : null;
     const pct = manda ? manda.pct : null;
-    const agota = series.some((s) => s.proy.agotaAntes);
+    const agota = c.principal ? !!(manda && manda.proy.agotaAntes) : series.some((s) => s.proy.agotaAntes);
+    const sec = c.secundario ? series.find((s) => s.agente === c.secundario) || null : null;
     const desde = manda && manda.proy.reset ? Date.parse(manda.proy.reset) - 7 * DIA : ahora - 7 * DIA;
     return {
       id: c.id, nombre: c.nombre, cuenta: c.cuenta, plan: c.plan, consejeros: c.consejeros.map(([n]) => n), pista: c.pista || null,
@@ -310,6 +318,8 @@ export function resumirCuentas(lecturas, partes, { ahora = Date.now() } = {}) {
       proyeccion: manda ? manda.proy : null, agotaAntes: agota,
       series: series.map(({ deltas, ...s }) => ({ ...s, lecturas: deltas })),
       reparto: repartir(c, partes, pct, { desde, hasta: ahora }),
+      ...(c.proveedor ? { proveedor: c.proveedor, etiqueta: c.etiqueta, resetSemanal: c.resetSemanal || null,
+        secundario: c.secundario ? { agente: c.secundario, pct: sec ? sec.pct : null, reset: sec ? sec.ultima.reset || null : null, ts: sec ? sec.ultima.ts : null } : null } : {}),
     };
   });
 }
@@ -318,14 +328,15 @@ export function resumirCuentas(lecturas, partes, { ahora = Date.now() } = {}) {
 export function recomendarCuentas(cuentas) {
   const con = cuentas.filter((c) => c.pct !== null).sort((a, b) => (a.semaforo === "rojo") - (b.semaforo === "rojo") || b.margen - a.margen);
   const sin = cuentas.filter((c) => c.pct === null);
-  const ranking = [...con, ...sin].map((c, i) => ({ puesto: i + 1, id: c.id, nombre: c.nombre, margen: c.margen, semaforo: c.semaforo }));
+  const ranking = [...con, ...sin].map((c, i) => ({ puesto: i + 1, id: c.id, nombre: c.etiqueta || c.nombre, margen: c.margen, semaforo: c.semaforo, ...(c.proveedor ? { proveedor: c.proveedor } : {}) }));
+  const quien = (c) => (c.etiqueta ? c.etiqueta : c.nombre.toLowerCase());
   let texto;
   const cupo = (c) => (c.cupoDia !== null ? " (" + fmtPct(c.cupoDia) + " al día hasta el reset)" : "");
   if (!con.length) texto = "Sin lecturas: anota una por cuenta para poder repartir el trabajo.";
   else {
     const top = con[0];
-    texto = (top.semaforo === "rojo" ? "Todas las cuentas con lectura van justas. " : "Mover encargos pesados a " + top.nombre.toLowerCase() + ": les sobra " + fmtPct(top.margen) + cupo(top) + ".");
-    const rojas = con.filter((c) => c.semaforo === "rojo").map((c) => c.nombre + (c.proyeccion && c.proyeccion.texto ? " (" + c.proyeccion.texto + ")" : ""));
+    texto = (top.semaforo === "rojo" ? "Todas las cuentas con lectura van justas. " : "Mover encargos pesados a " + quien(top) + ": les sobra " + fmtPct(top.margen) + cupo(top) + ".");
+    const rojas = con.filter((c) => c.semaforo === "rojo").map((c) => (c.etiqueta || c.nombre) + (c.proyeccion && c.proyeccion.texto ? " (" + c.proyeccion.texto + ")" : ""));
     if (rojas.length) texto += " Frenar " + rojas.join(", ") + ".";
     if (sin.length) texto += " Sin lectura: " + sin.map((c) => c.nombre).join(", ") + ".";
   }

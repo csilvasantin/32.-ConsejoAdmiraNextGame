@@ -32,16 +32,17 @@
     const top = document.getElementById("reco-top"), rk = document.getElementById("ranking"), grid = document.getElementById("cuentas");
     if (!top || !grid) return;
     top.textContent = d.recomendacionCuentas || "Sin lecturas todavía.";
-    rk.innerHTML = (d.ranking || []).map((r) => "<li>" + r.puesto + ". <b>" + esc(r.nombre) + "</b> · " + (r.margen === null ? "sin lectura" : "margen " + pct(r.margen)) + "</li>").join("");
+    rk.innerHTML = (d.ranking || []).map((r) => "<li>" + r.puesto + ". <b>" + esc(r.nombre) + "</b> · " + (r.margen === null ? "sin lectura" : "margen " + pct(r.margen)) + (r.proveedor ? " · " + esc(r.proveedor) : "") + "</li>").join("");
     grid.innerHTML = (d.cuentas || []).map((c) => {
       const luz = LUZ[c.semaforo] ? c.semaforo : "sin";
-      let h = '<article class="card"><div class="top"><div><h2 class="nombre">' + esc(c.nombre) + '</h2><p class="cuenta">' + esc(c.cuenta + " · " + c.plan + (c.consejeros.length ? " · " + c.consejeros.join(", ") : "")) + '</p></div><span class="luz ' + luz + '">' + LUZ[luz] + "</span></div>";
+      let h = '<article class="card"><div class="top"><div><h2 class="nombre">' + esc(c.nombre) + (c.proveedor ? ' <span class="prov" title="' + esc(c.etiqueta || "") + '">' + esc(c.proveedor) + "</span>" : "") + '</h2><p class="cuenta">' + esc(c.cuenta + " · " + c.plan + (c.consejeros.length ? " · " + c.consejeros.join(", ") : "")) + '</p></div><span class="luz ' + luz + '">' + LUZ[luz] + "</span></div>";
       if (c.pct === null) {
-        h += '<p class="cifra">sin lectura</p>' + (c.pista ? '<p class="frase">' + esc(c.pista) + "</p>" : "") + "</article>";
+        h += '<p class="cifra">sin lectura</p>' + (c.pista ? '<p class="frase">' + esc(c.pista) + "</p>" : "") + (c.resetSemanal ? '<p class="frase">Reset semanal: ' + esc(c.resetSemanal) + "</p>" : "") + "</article>";
         return h;
       }
       const p = c.proyeccion || {};
       h += '<p class="cifra">' + pct(c.pct) + '</p><p class="unidad">usado · manda «' + esc(c.manda) + "»</p>";
+      if (c.secundario) h += '<p class="unidad sec">' + esc(c.secundario.agente) + ": " + (c.secundario.pct === null ? "sin lectura" : pct(c.secundario.pct)) + (c.secundario.reset ? " · reset " + esc(fecha(c.secundario.reset)) : "") + "</p>";
       h += '<p class="frase">' + (c.reset ? "Reset: " + esc(fecha(c.reset)) + (c.cupoDia !== null ? " · cupo " + pct(c.cupoDia) + " al día" : "") : "Sin hora de reset en la lectura") + "</p>";
       h += '<p class="cta">' + (p.agotaAntes ? '<span class="agota">' + esc(p.texto) + "</span>, antes del reset" : p.llega100 ? "Al ritmo actual (" + pct(p.ritmoDia) + "/día" + (p.base === "semana" ? ", media de la semana" : "") + ") llegaría al 100 % el " + esc(fecha(p.llega100)) : "Falta otra lectura para saber el ritmo") + "</p>";
       h += '<ul class="limites">' + c.series.map((s) => "<li><b>" + esc(s.agente || s.cuenta) + "</b>: " + pct(s.pct) + (s.ultima.reset ? " · reset " + esc(fecha(s.ultima.reset)) : "") + " · " + esc(fecha(s.ultima.ts)) + (s.proy && s.proy.agotaAntes ? ' · <span class="agota">' + esc(s.proy.texto) + "</span>" : "") + "</li>").join("") + "</ul>";

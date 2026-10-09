@@ -30,6 +30,13 @@
   .burbuja a { color:inherit; }
   #vacio { color:var(--suave); text-align:center; padding:32px 0; }
   #pie { font-size:12px; color:var(--suave); text-align:center; margin-top:20px; }
+  main { padding-bottom:120px; }
+  #enviar { position:fixed; left:0; right:0; bottom:0; background:rgba(13,15,18,.97); border-top:1px solid #222a33; padding:10px 12px; }
+  #enviar .fila { max-width:820px; margin:0 auto; display:flex; gap:8px; align-items:flex-end; }
+  #caja { flex:1; resize:none; min-height:42px; max-height:180px; padding:10px 12px; border-radius:14px; border:1px solid #39424d; background:var(--tarjeta); color:var(--texto); font:inherit; }
+  #enviar button { padding:10px 16px; border-radius:14px; border:0; background:var(--carlos); color:#fff; font:inherit; font-weight:600; cursor:pointer; }
+  #enviar button:disabled { opacity:.5; cursor:default; }
+  .estado { margin-left:6px; } .estado.error { color:#f85149; } .estado.entregado { color:var(--ok); }
   button.enlace { background:none; border:0; color:var(--suave); text-decoration:underline; cursor:pointer; font:inherit; }
 </style>
 </head>
@@ -45,8 +52,14 @@
     <p id="acceso-error" hidden></p>
   </section>
   <section id="hilo" role="log" aria-live="polite" aria-label="Conversación con Steve Jobs" hidden></section>
-  <p id="pie" hidden>Mismo hilo en la app de Grok Bot, admira.live y la rutina. Se actualiza cada 20 s. · <button class="enlace" id="salir" type="button">Salir</button></p>
+  <p id="pie" hidden>Mismo hilo en la app de Grok Bot, admira.live y la rutina. Lo que escribes aquí le llega a Jobs como encargo privado (no sale a Ágora ni a Telegram). Se actualiza cada 20 s. · <button class="enlace" id="salir" type="button">Salir</button></p>
 </main>
+<form id="enviar" hidden autocomplete="off">
+  <div class="fila">
+    <textarea id="caja" rows="1" maxlength="3000" placeholder="Escribe a Steve Jobs… (Enter envía, Mayús+Enter nueva línea)" aria-label="Mensaje para Steve Jobs"></textarea>
+    <button type="submit" id="boton">Enviar</button>
+  </div>
+</form>
 <script>
 (function () {
   "use strict";
@@ -56,7 +69,8 @@
   var ORIGEN = { app: "App", live: "admira.live", rutina: "rutina" };
   var $ = function (id) { return document.getElementById(id); };
   var hora = new Intl.DateTimeFormat("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit" });
-  var temporizador = null, firmaPintada = "";
+  var temporizador = null, firmaPintada = "", ultimosTurnos = [], locales = [];
+  var ESTADO = { enviando: "enviando…", entregado: "entregado", error: "error", sin_confirmar: "sin confirmar" };
 
   function credencial() {
     try {
@@ -100,7 +114,11 @@
   }
 
   function pintarHilo(turnos) {
-    var firma = turnos.map(function (t) { return t.id; }).join("|");
+    ultimosTurnos = turnos;
+    var ids = {}; turnos.forEach(function (t) { ids[t.id] = 1; });
+    locales = locales.filter(function (l) { return !ids[l.id]; });
+    turnos = turnos.concat(locales);
+    var firma = turnos.map(function (t) { return [t.id, t.entrega || "", t.encargo || "", t.encargo_estado || ""].join(":"); }).join("|");
     if (firma === firmaPintada) return;
     firmaPintada = firma;
     var log = $("hilo"), abajo = log.childElementCount === 0 || window.innerHeight + window.scrollY >= document.body.scrollHeight - 80;
@@ -114,6 +132,14 @@
       meta.appendChild(document.createTextNode((esCarlos ? "Carlos" : NOMBRE) + " · " + hora.format(new Date(t.ts))));
       var ins = document.createElement("span"); ins.className = "insignia " + t.origen; ins.textContent = ORIGEN[t.origen] || t.origen;
       meta.appendChild(ins);
+      if (esCarlos && t.origen === "live" && t.entrega) {
+        var est = document.createElement("span"); est.className = "estado " + t.entrega;
+        var txt = ESTADO[t.entrega] || t.entrega;
+        if (t.encargo) txt += " · encargo #" + t.encargo;
+        if (t.encargo_estado === "done") txt += " · respondido";
+        else if (t.encargo_estado === "ack" || t.encargo_estado === "in_progress") txt += " · Jobs trabajando";
+        est.textContent = txt; meta.appendChild(est);
+      }
       art.appendChild(b); art.appendChild(meta); log.appendChild(art);
     });
     if (abajo) window.scrollTo(0, document.body.scrollHeight);
@@ -121,7 +147,7 @@
 
   function pedirAcceso(msg) {
     clearInterval(temporizador); temporizador = null;
-    $("hilo").hidden = true; $("pie").hidden = true; $("acceso").hidden = false;
+    $("hilo").hidden = true; $("pie").hidden = true; $("enviar").hidden = true; $("acceso").hidden = false;
     var e = $("acceso-error"); e.hidden = !msg; e.textContent = msg || "";
     if (window.google && google.accounts && google.accounts.id) return iniciarGoogle();
     var s = document.createElement("script"); s.src = "https://accounts.google.com/gsi/client"; s.async = true; s.defer = true;
@@ -153,11 +179,36 @@
   }
 
   function arrancar() {
-    $("acceso").hidden = true; $("hilo").hidden = false; $("pie").hidden = false;
+    $("acceso").hidden = true; $("hilo").hidden = false; $("pie").hidden = false; $("enviar").hidden = false;
     refrescar();
     if (!temporizador) temporizador = setInterval(refrescar, CADA_MS);
   }
 
+  function enviar() {
+    var caja = $("caja"), texto = caja.value.trim(), jwt = credencial();
+    if (!texto || $("boton").disabled) return;
+    if (!jwt) return pedirAcceso("Vuelve a entrar para enviar.");
+    var id = "live-" + Date.now().toString(36) + "-" + Math.random().toString(36).slice(2, 8);
+    var local = { id: id, rol: "carlos", origen: "live", texto: texto, ts: new Date().toISOString(), entrega: "enviando" };
+    locales.push(local); caja.value = ""; ajustar(); firmaPintada = ""; pintarHilo(ultimosTurnos);
+    window.scrollTo(0, document.body.scrollHeight);
+    $("boton").disabled = true;
+    fetch("/api/chat/enviar", { method: "POST", cache: "no-store", headers: { "content-type": "application/json", Authorization: "Bearer " + jwt }, body: JSON.stringify({ persona: PERSONA, texto: texto, msg_id: id }) })
+      .then(function (r) { return r.json().catch(function () { return {}; }).then(function (d) { return { r: r, d: d }; }); })
+      .then(function (x) {
+        if (x.r.status === 401) { local.entrega = "error"; caja.value = texto; pedirAcceso("Tu sesión ha caducado. Vuelve a entrar; el mensaje no se envió."); return; }
+        var t = x.d && x.d.turno;
+        local.entrega = t && t.entrega ? t.entrega : "error"; local.encargo = t && t.encargo;
+      })
+      .catch(function () { local.entrega = "sin_confirmar"; })
+      .then(function () { $("boton").disabled = false; firmaPintada = ""; pintarHilo(ultimosTurnos); if (temporizador) refrescar(); });
+  }
+  function ajustar() { var c = $("caja"); c.style.height = "auto"; c.style.height = Math.min(180, c.scrollHeight) + "px"; }
+  $("caja").addEventListener("input", ajustar);
+  $("caja").addEventListener("keydown", function (e) {
+    if (e.key === "Enter" && !e.shiftKey && !e.isComposing) { e.preventDefault(); enviar(); }
+  });
+  $("enviar").addEventListener("submit", function (e) { e.preventDefault(); enviar(); });
   $("salir").addEventListener("click", function () {
     sessionStorage.removeItem(CLAVE); firmaPintada = ""; $("hilo").replaceChildren();
     try { google.accounts.id.disableAutoSelect(); } catch (e) {}

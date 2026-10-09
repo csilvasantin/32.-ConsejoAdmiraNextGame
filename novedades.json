@@ -148,6 +148,13 @@
   "v.09.10.2026.r4.06:30": [
     "Hilo compartido con Steve Jobs: un único chat para la app de Grok Bot, admira.live y su rutina, en /chat/jobs/ (privado, con tu cuenta de Google)",
     "Salud del hilo en /api/chat/salud: último turno por origen y aviso si un mensaje de admira.live lleva más de 10 min sin respuesta",
-    "Primera entrega: solo lectura; el envío desde admira.live llega en la siguiente"
+    "Primera entrega: solo lectura; el envío desde admira.live llega en la siguiente",
+    "Estas novedades salen en el popover del sello, sin recorte del riel"
+  ],
+  "v.09.10.2026.r5.06:35": [
+    "Chat con Steve Jobs en /chat/jobs/: ya puedes escribirle desde admira.live (Enter envía, Mayús+Enter nueva línea)",
+    "Cada mensaje le llega a Jobs como encargo privado [chat-coetaneos] que despierta su rutina; no sale a Ágora ni a Telegram",
+    "Su respuesta vuelve al mismo hilo; el mensaje muestra enviando…, entregado (con número de encargo) o error",
+    "Estas novedades salen en el popover del sello, sin recorte del riel"
   ]
 }

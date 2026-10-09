@@ -112,6 +112,14 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
 .vel-spark-area{fill:rgba(120,243,255,.14)}.vel-spark-linea{fill:none;stroke:#78f3ff;stroke-width:1.6;vector-effect:non-scaling-stroke}
 .vel-spark-pie{display:flex;justify-content:space-between;color:var(--dim);font-size:11px;margin-top:2px}
 .vel-agentes li.parado{opacity:.55}
+.vel-rank-tit{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--brand);margin:16px 0 0;font-weight:700}.vel-rank-tit small{color:var(--dim);text-transform:none;letter-spacing:0;font-weight:400;margin-left:6px}
+.vel-agentes li{cursor:pointer;border-radius:10px;padding:6px 8px;border:1px solid transparent;transition:background .2s}
+.vel-agentes li:hover,.vel-agentes li:focus-visible{background:rgba(120,243,255,.08);outline:none}
+.vel-agentes li.sel{border-color:rgba(120,243,255,.55);background:rgba(120,243,255,.10)}
+.vel-agentes li.lider{background:linear-gradient(90deg,rgba(255,216,102,.16),rgba(255,216,102,.02));border-color:rgba(255,216,102,.5)}
+.vel-agentes li.lider .vel-bar i{background:linear-gradient(90deg,#ffd866,#ffb347)}.vel-agentes li.lider > b{color:#ffd866}
+.vel-pos{display:inline-block;min-width:1.4em;color:var(--dim);font-variant-numeric:tabular-nums}.vel-corona{color:#ffd866}
+.vel-agentes small b{color:var(--mut);font-weight:700}
 .vel{background:linear-gradient(180deg,rgba(4,12,18,.86) 0%,rgba(4,12,18,.74) 38%,rgba(4,12,18,.84) 70%,rgba(4,12,18,.93) 100%),radial-gradient(120% 90% at 50% 45%,rgba(13,38,51,.25),rgba(6,15,22,.6)),url(/assets/consumos-hangon.webp) center 42%/cover no-repeat,#060f16;overflow:hidden}
 .vel h2,.vel h3,.vel-metodo,.vel-extra,.vel-pie,.odo-rotulo,.vel-agentes{text-shadow:0 1px 3px rgba(0,0,0,.95)}
 .vel-g{background:radial-gradient(closest-side,rgba(2,8,13,.55),rgba(2,8,13,0));border-radius:18px}
@@ -168,9 +176,10 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
         <div class="vel-lectura"><span class="vel-cifra">…</span><span class="vel-unidad">tok/h</span><p class="vel-extra" id="vel-proy-metodo"></p></div>
       </div>
     </div>
+    <h3 class="vel-rank-tit">Velocidad por agente <small>tok/h ahora · clic = verlo en el velocímetro</small></h3>
+    <ol class="vel-agentes" id="vel-agentes" aria-label="Velocidad por agente"></ol>
     <div class="vel-lectura"><p class="vel-metodo" id="vel-metodo">Midiendo…</p><p class="vel-extra" id="vel-extra"></p></div>
     <div class="vel-spark-box" id="vel-spark"></div>
-    <ol class="vel-agentes" id="vel-agentes"></ol>
     <p class="vel-pie" id="vel-pie"></p>
   </section>
   <section class="planes" id="planes">
@@ -252,7 +261,7 @@ fetch("/consumos-plataformas.json", { cache: "no-store" })
   });
 </script>
 <script src="/assets/consumos-velocimetro-elegir.js?v=r21-auto"></script>
-<script src="/assets/consumos-velocimetro.js?v=r21-agente-auto"></script>
+<script src="/assets/consumos-velocimetro.js?v=r22-ranking"></script>
 <script src="/assets/live-velocidad.js?v=r18-tiempo-real"></script>
 <script src="/consumos-lecturas.js?v=r2-cuentas"></script>
 <script src="/orquestar-widget.js?v=r2-con-carlos"></script>

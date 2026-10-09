@@ -257,6 +257,42 @@
         (eleccion(d).auto ? ' · ' + T('auto: el que más gasta ahora', 'auto: top spender right now') : '') : T('0 tokens hoy en los Macs con pulso', '0 tokens today on the Macs with a pulse'));
   }
 
+  /* r22 (Carlos: «falta la velocidad por hora por agente para ver qué agente trabaja más»): ranking en vivo por tok/h,
+   * barra relativa al líder, tokens de hoy, máquina, proyecto actual y «con Carlos»; clic = elegir el agente en el dial. */
+  function ordenAgentes(lista) {
+    return (lista || []).slice().sort(function (a, b) {
+      var x = a.tokHora == null ? -1 : a.tokHora, y = b.tokHora == null ? -1 : b.tokHora;
+      return y - x || (b.tokHoy || 0) - (a.tokHoy || 0);
+    });
+  }
+  function pintaRanking(d) {
+    var lista = document.getElementById('vel-agentes');
+    if (!lista) return;
+    var ags = d ? ordenAgentes(d.porAgente).slice(0, 12) : [];
+    var lider = ags.length && ags[0].tokHora > 0 ? ags[0] : null;
+    var maxR = lider ? lider.tokHora : 0;
+    lista.innerHTML = ags.map(function (a, i) {
+      var parado = a.tokHora == null;
+      var w = maxR > 0 && !parado ? Math.max(a.tokHora > 0 ? 2 : 0, Math.round(100 * a.tokHora / maxR)) : 0;
+      var origen = a.metodo === 'tiempo real' ? (a.stale ? T('sin pulso ', 'no pulse ') + hace(a.haceS) : T('tiempo real', 'real time')) : esc(a.metodo || T('partes Yokup', 'Yokup reports'));
+      var cls = [parado ? 'parado' : '', a === lider ? 'lider' : '', a.agente === estado.agente ? 'sel' : ''].filter(Boolean).join(' ');
+      return '<li' + (cls ? ' class="' + cls + '"' : '') + ' role="button" tabindex="0" data-agente="' + esc(a.agente) + '" title="' + esc(T('Ver ', 'Show ') + a.agente + T(' en el velocímetro', ' on the gauge')) + '">' +
+        '<span class="vel-ag"><span class="vel-pos">' + (i + 1) + '</span>' + (a === lider ? '<span class="vel-corona" aria-label="' + T('el que más trabaja ahora', 'top worker now') + '">★</span> ' : '') + esc(a.agente) + (a.motor ? ' · ' + esc(a.motor) : '') +
+        (a.conCarlos ? ' <em class="con-carlos" title="' + esc(T('Carlos está trabajando con este agente: no se le inyectan encargos', 'Carlos is working with this agent: no tasks are injected') + (a.conCarlosMotivo ? ' · ' + a.conCarlosMotivo : '')) + '">' + T('con Carlos', 'with Carlos') + '</em>' : '') + '</span>' +
+        '<span class="vel-bar"><i style="width:' + w + '%"></i></span><b>' + (parado ? T('parado', 'stopped') : fmt(a.tokHora) + ' tok/h') + '</b>' +
+        '<small>' + T('hoy ', 'today ') + '<b>' + fmt(a.tokHoy) + '</b>' + (a.maquina ? ' · ' + esc(a.maquina) : '') + (a.proyectoAhora ? ' · ' + T('proyecto ', 'project ') + '<b>' + esc(nomP(a.proyectoAhora)) + '</b>' : '') +
+        (a.tokUltimos5min != null ? ' · 5 min ' + fmt(a.tokUltimos5min) : '') + ' · ' + origen + '</small></li>';
+    }).join('');
+  }
+  function eligeAgente(nombre) {
+    estado.agente = nombre || '';
+    lsSet(LS_AG, estado.agente);
+    var selA = document.getElementById('vel-ag-sel');
+    if (selA) { pintaSelectorAgente(estado.datos); selA.value = estado.agente; }
+    pintaIzquierdo(estado.datos, !estado.datos);
+    pintaRanking(estado.datos);
+  }
+
   function pinta(d) {
     var box = document.getElementById('velocimetro');
     if (!box) return;
@@ -282,14 +318,7 @@
       ' · ' + T('Pico 24 h', '24 h peak') + ': <b>' + (d.pico24h == null ? '—' : fmt(d.pico24h) + ' tok/h') + '</b> · ' + T('Escala', 'Scale') + ' 0 → ' + fmt(max);
     var sp = document.getElementById('vel-spark');
     if (sp) sp.innerHTML = sin ? '' : sparkline(d.serie60);
-    var lista = document.getElementById('vel-agentes');
-    var top = sin ? [] : (d.porAgente || []).slice(0, 8);
-    lista.innerHTML = top.map(function (a) {
-      var parado = a.tokHora == null;
-      var w = d.tokHora > 0 && !parado ? Math.round(100 * a.tokHora / d.tokHora) : 0;
-      var origen = a.metodo === 'tiempo real' ? (a.stale ? T('sin pulso ', 'no pulse ') + hace(a.haceS) : T('tiempo real', 'real time') + (a.maquina ? ' · ' + esc(a.maquina) : '')) : esc(a.metodo || T('partes Yokup', 'Yokup reports'));
-      return '<li' + (parado ? ' class="parado"' : '') + '><span class="vel-ag">' + esc(a.agente) + (a.motor ? ' · ' + esc(a.motor) : '') + (a.conCarlos ? ' <em class="con-carlos" title="' + esc(T('Carlos está trabajando con este agente: no se le inyectan encargos', 'Carlos is working with this agent: no tasks are injected') + (a.conCarlosMotivo ? ' · ' + a.conCarlosMotivo : '')) + '">' + T('con Carlos', 'with Carlos') + '</em>' : '') + '</span><span class="vel-bar"><i style="width:' + w + '%"></i></span><b>' + (parado ? T('parado', 'stopped') : fmt(a.tokHora) + ' tok/h') + '</b><small>' + T('hoy ', 'today ') + fmt(a.tokHoy) + (a.tokUltimos5min != null ? ' · 5 min ' + fmt(a.tokUltimos5min) : '') + ' · ' + origen + '</small></li>';
-    }).join('');
+    pintaRanking(sin ? null : d);
     var pie = document.getElementById('vel-pie');
     pie.innerHTML = (d && d.generado ? T('Actualizado ', 'Updated ') + new Date(d.generado).toLocaleTimeString(en() ? 'en-GB' : 'es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' (Madrid) · ' : '') +
       T('Fuente: pulso de cada Mac (logs de Claude Code y Codex, cada 60 s, ', 'Source: each Mac\'s pulse (Claude Code and Codex logs, every 60 s, ') + '<a href="/api/consumos/pulso">/api/consumos/pulso</a>) + ' +
@@ -311,11 +340,20 @@
       if (estado.datos) pintaProyecto(estado.datos, false);
     });
     var selA = document.getElementById('vel-ag-sel');
-    if (selA) selA.addEventListener('change', function () {
-      estado.agente = selA.value || '';
-      lsSet(LS_AG, estado.agente);
-      pintaIzquierdo(estado.datos, !estado.datos);
-    });
+    if (selA) selA.addEventListener('change', function () { eligeAgente(selA.value || ''); });
+    var rk = document.getElementById('vel-agentes');
+    if (rk) {
+      var desdeFila = function (ev) {
+        var li = ev.target && ev.target.closest ? ev.target.closest('li[data-agente]') : null;
+        if (!li) return;
+        var n = li.getAttribute('data-agente');
+        eligeAgente(n === estado.agente ? '' : n); // segundo clic en el mismo: vuelve a toda la flota
+        var g = document.getElementById('vel-g-total');
+        if (g && g.scrollIntoView && g.getBoundingClientRect().top < 0) g.scrollIntoView({ behavior: 'smooth', block: 'start' });
+      };
+      rk.addEventListener('click', desdeFila);
+      rk.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); desdeFila(ev); } });
+    }
     leer();
     setInterval(function () { if (!document.hidden) leer(); }, POLL);
     setInterval(function () { var t = textoMetodo(), m = document.getElementById('vel-metodo'); if (t && m) m.innerHTML = t; }, 1000);

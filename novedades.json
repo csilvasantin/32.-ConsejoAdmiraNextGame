@@ -1,4 +1,9 @@
 {
+  "v.09.10.2026.r22.12:10": [
+    "/consumos · VELOCIDAD POR AGENTE bajo los dos velocímetros: ranking en vivo por tok/h (cada 10 s), barra relativa al líder (★ resaltado), tokens de hoy, máquina, proyecto en el que trabaja ahora y la insignia «con Carlos»; clic (o Enter) en una fila = verlo en el velocímetro de la izquierda, segundo clic vuelve a toda la flota",
+    "Arreglo: un proyecto ya no puede marcar más tok/h que la flota (a las 12:07 admira.studio 26,8 M frente a 13,0 M de la flota). Flota, agentes y proyectos usan la MISMA ventana (15 min) y fórmula: los tokens de cada agente se reparten entre sus proyectos (las bajadas por re-atribución del colector ya no cuentan como «día nuevo»); Σ proyectos = Σ agentes = flota, con test",
+    "/api/consumos/velocidad: porAgente[].proyectoAhora (el proyecto que más tokens se lleva de ese agente en los últimos 15 min)"
+  ],
   "v.09.10.2026.r21.12:03": [
     "/consumos · selector de AGENTE junto a «Toda la flota» (Neo, Trinity, Oráculo, Morfeo…): la aguja enseña los tok/h de ese agente y el cuentakilómetros sus tokens de hoy («NEO · TOKENS HOY»); «Toda la flota» vuelve al total",
     "Dial POR PROYECTO en AUTO: sigue al proyecto que más quema AHORA (máx. tok/h de los últimos 15 min; si todos a 0, el que más lleva hoy), reevaluado en cada refresco de 10 s y marcado «(auto)»; antes se quedaba en admira.store (el que más llevaba hoy) marcando 0. Opciones ordenadas por tok/h y luego tokens de hoy; «otros (sin proyecto)» solo si de verdad es el que más quema",

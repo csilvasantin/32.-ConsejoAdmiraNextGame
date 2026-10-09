@@ -46,6 +46,24 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
 .nota{color:var(--mut);font-size:16px;line-height:1.45;padding:16px;border:1px dashed var(--line);border-radius:14px}
 .pie{margin-top:22px;color:var(--dim);font-size:14px;line-height:1.45}
 .pie a{color:var(--brand)}
+.lect{margin-top:26px}
+.lect h2{font-size:22px;margin-bottom:6px}
+.lect .lead{font-size:15px}
+.reco{background:#08210f;border:1px solid rgba(136,255,170,.45);border-radius:14px;padding:12px 14px;font-size:17px;line-height:1.4;margin:10px 0}
+.leyenda{display:flex;flex-wrap:wrap;gap:12px;color:var(--mut);font-size:14px;margin:8px 0}
+.leyenda i{display:inline-block;width:12px;height:12px;border-radius:3px;margin-right:6px;vertical-align:-1px}
+.graf{width:100%;height:auto;background:var(--card);border:1px solid var(--line);border-radius:14px}
+.graf .rej{stroke:rgba(120,243,255,.12)}
+.graf .eje{fill:var(--dim);font-size:11px}
+.tabla-wrap{overflow-x:auto;margin-top:12px}
+.tabla{width:100%;border-collapse:collapse;font-size:14px;font-variant-numeric:tabular-nums}
+.tabla th,.tabla td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);white-space:nowrap}
+.tabla th{color:var(--mut);font-weight:600}
+.hist{margin-top:12px;color:var(--mut)}
+.hist summary{cursor:pointer;color:var(--brand)}
+.form-lect{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px;align-items:center}
+.form-lect input{background:var(--card);color:var(--ink);border:1px solid var(--line);border-radius:10px;padding:8px 10px;font-size:14px;min-width:0}
+.form-lect button{background:var(--brand);color:#02080d;border:0;border-radius:10px;padding:9px 14px;font-weight:700;cursor:pointer}
 @media (min-width:720px){
   .wrap{padding:32px 24px 80px}
   .grid{grid-template-columns:1fr 1fr}
@@ -71,6 +89,24 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
   </section>
   <div class="grid" id="grid"><p class="nota">Cargando las lecturas…</p></div>
   <p class="pie" id="pie"></p>
+  <section class="lect" id="lecturas">
+    <h2>Lecturas del plan</h2>
+    <p class="lead">El % gastado de cada plan, leído dos veces al día: las de las 00:00 y las 12:00 (hora de Madrid) son las que cuentan (●). Entre dos lecturas sale lo que se quema cada 12 horas y, a ese ritmo, cuándo se llega al 100 %. Últimos 14 días.</p>
+    <div id="lecturas-cuerpo"><p class="nota">Cargando las lecturas del plan…</p></div>
+    <details class="hist"><summary>Anotar una lectura a mano</summary>
+      <form class="form-lect" id="lectura-form">
+        <input name="cuenta" placeholder="Cuenta (csilva@admira.com)" required>
+        <input name="grupo" placeholder="Grupo (leyendas)">
+        <input name="agente" placeholder="Agente (Jobs)">
+        <input name="pct" placeholder="% usado (0-100)" inputmode="decimal" required size="10">
+        <input name="tokens" placeholder="Tokens (opcional)" inputmode="numeric" size="12">
+        <input name="autor" placeholder="Quién (Carlos)" required size="10">
+        <input name="token" type="password" placeholder="Clave del Consejo" required size="14">
+        <button type="submit">Guardar</button>
+        <span id="lectura-msg"></span>
+      </form>
+    </details>
+  </section>
 </div>
 <script>
 const LUZ = { rojo: "Rojo", ambar: "Ámbar", verde: "Verde", sin: "Sin lectura" };
@@ -115,6 +151,7 @@ fetch("/consumos-plataformas.json", { cache: "no-store" })
     document.getElementById("grid").innerHTML = '<p class="nota">Sin lectura todavía. No se ha podido abrir el archivo de lecturas.</p>';
   });
 </script>
+<script src="/consumos-lecturas.js?v=r1-lecturas"></script>
 <script src="/yk-frame.js?v=r36-escenas"></script>
 </body>
 </html>

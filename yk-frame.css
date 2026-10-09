@@ -421,6 +421,16 @@ html.yk-framed body{ padding-top: var(--yk-bar-h); }
   display:flex;flex-direction:column;overflow:hidden;
 }
 .yk-open-bottom .yk-rail-bottom{ transform: translateY(0) }
+/* Experto minimizado (solo páginas con <html data-yk-expert-min>): una línea «› /help» con asa */
+.yk-expert-min{position:fixed;left:0;right:0;bottom:0;z-index:calc(var(--yk-z) + 2);height:30px;display:flex;align-items:center;gap:12px;padding:0 16px;
+  background:rgba(2,8,13,.94);border:0;border-top:1px solid var(--yk-line2,rgba(120,243,255,.25));color:var(--yk-dim,#8aa3b0);
+  font:12px/1 var(--yk-mono);cursor:pointer;text-align:left;backdrop-filter:blur(6px)}
+.yk-expert-min:hover,.yk-expert-min:focus-visible{color:var(--yk-ink,#dff8ff);outline:none;border-top-color:var(--yk-brand)}
+.yk-expert-min-asa{width:34px;height:4px;border-radius:2px;background:var(--yk-line2,rgba(120,243,255,.35));flex:none}
+.yk-expert-min-cmd{color:var(--yk-brand)}.yk-expert-min-tit{margin-left:auto;font-size:10px;letter-spacing:.14em;color:var(--yk-dim,#8aa3b0)}
+.yk-open-bottom .yk-expert-min{display:none}
+html[data-yk-expert-min] body{padding-bottom:34px}
+@media (max-width:520px){.yk-expert-min{display:none!important}html[data-yk-expert-min] body{padding-bottom:0}}
 
 /* --- cabeceras de panel --- */
 .yk-hd{

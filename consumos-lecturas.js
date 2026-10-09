@@ -33,10 +33,19 @@
     const top = document.getElementById("reco-top"), rk = document.getElementById("ranking"), grid = document.getElementById("cuentas");
     if (!top || !grid) return;
     top.textContent = d.recomendacionCuentas || "Sin lecturas todavía.";
-    rk.innerHTML = (d.ranking || []).map((r) => "<li>" + r.puesto + ". <b>" + esc(r.nombre) + "</b> · " + (r.margen === null ? "sin lectura" : "margen " + pct(r.margen)) + (r.proveedor ? " · " + esc(r.proveedor) : "") + "</li>").join("");
+    // r33 (Walt): una fila por cuenta, cifra de margen a la derecha (color por el margen: verde ≥ 50, amarillo 20–49, rojo < 20).
+    const mcol = (m) => (m === null || m === undefined ? "m-sin" : m >= 50 ? "m-verde" : m >= 20 ? "m-amarillo" : "m-rojo");
+    const partes = (n) => { const i = String(n).indexOf(" ("); return i > 0 ? [String(n).slice(0, i), String(n).slice(i + 1)] : [String(n), ""]; };
+    rk.innerHTML = (d.ranking || []).map((r) => { const [nom, det] = partes(r.nombre); return '<li><span class="rk-n">' + r.puesto + '</span><span class="rk-nom" title="' + esc(r.nombre) + '"><b>' + esc(nom) + "</b>" + (det ? "<small>" + esc(det) + "</small>" : "") + '</span><span class="rk-prov">' + esc(r.proveedor || "") + '</span><span class="rk-cifra ' + mcol(r.margen) + '">' + (r.margen === null ? "sin lectura" : "margen " + pct(r.margen)) + "</span></li>"; }).join("");
+    const rs = document.getElementById("ranking-resumen"), r1 = (d.ranking || [])[0];
+    if (rs) rs.innerHTML = r1 ? "más margen: <b>" + esc(partes(r1.nombre)[0]) + "</b> " + (r1.margen === null ? "sin lectura" : pct(r1.margen)) + " · " + (d.ranking || []).length + " cuentas" : "sin lecturas";
     grid.innerHTML = (d.cuentas || []).map((c) => {
       const luz = LUZ[c.semaforo] ? c.semaforo : "sin";
-      let h = '<article class="card"><div class="top"><div><h2 class="nombre">' + esc(c.nombre) + (c.proveedor ? ' <span class="prov" title="' + esc(c.etiqueta || "") + '">' + esc(c.proveedor) + "</span>" : "") + '</h2><p class="cuenta">' + esc(c.cuenta + " · " + c.plan + (c.consejeros.length ? " · " + c.consejeros.join(", ") : "")) + '</p></div><span class="luz ' + luz + '">' + LUZ[luz] + "</span></div>";
+      // r33 (Walt): si el semáforo va en rojo/ámbar porque un límite SE AGOTA antes del reset, el motivo va junto a la píldora.
+      const agota = (luz === "rojo" || luz === "ambar") ? (c.series || []).find((x) => x.proy && x.proy.agotaAntes) : null;
+      const pild = '<span class="luz ' + luz + '">' + LUZ[luz] + "</span>";
+      let h = '<article class="card"><div class="top"><div><h2 class="nombre">' + esc(c.nombre) + (c.proveedor ? ' <span class="prov" title="' + esc(c.etiqueta || "") + '">' + esc(c.proveedor) + "</span>" : "") + '</h2><p class="cuenta">' + esc(c.cuenta + " · " + c.plan + (c.consejeros.length ? " · " + c.consejeros.join(", ") : "")) + "</p></div>" + (agota ? "" : pild) + "</div>" +
+        (agota ? '<p class="luz-linea">' + pild + '<span class="luz-por ' + luz + '" title="' + esc((agota.agente || agota.cuenta) + ": " + agota.proy.texto) + '">' + esc((agota.agente || agota.cuenta) + " " + agota.proy.texto) + "</span></p>" : "");
       if (c.pct === null && (c.tokens || c.pulso)) {
         // r27: Cursor Pro — sin % del plan; tokens de hoy (pulso) y por bloque de 12 h (lecturas solo de tokens).
         const fmtT = (n) => (n == null ? "—" : n >= 1e6 ? (Math.round(n / 1e5) / 10).toLocaleString("es-ES") + " M" : n >= 1e3 ? Math.round(n / 1e3).toLocaleString("es-ES") + " k" : String(n));
@@ -53,7 +62,7 @@
         return h + "</article>";
       }
       if (c.pct === null) {
-        h += '<p class="cifra">sin lectura</p>' + (c.pista ? '<p class="frase">' + esc(c.pista) + "</p>" : "") + (c.resetSemanal ? '<p class="frase">Reset semanal: ' + esc(c.resetSemanal) + "</p>" : "") + "</article>";
+        h += '<p class="cifra cifra-sin">sin lectura</p>'  + (c.pista ? '<p class="frase">' + esc(c.pista) + "</p>" : "") + (c.resetSemanal ? '<p class="frase">Reset semanal: ' + esc(c.resetSemanal) + "</p>" : "") + "</article>";
         return h;
       }
       const p = c.proyeccion || {};
@@ -63,7 +72,7 @@
       h += '<p class="cta">' + (p.agotaAntes ? '<span class="agota">' + esc(p.texto) + "</span>, antes del reset" : p.llega100 ? "Al ritmo actual (" + pct(p.ritmoDia) + "/día" + (p.base === "semana" ? ", media de la semana" : "") + ") llegaría al 100 % el " + esc(fecha(p.llega100)) : "Falta otra lectura para saber el ritmo") + "</p>";
       h += '<ul class="limites">' + c.series.map((s) => "<li><b>" + esc(s.agente || s.cuenta) + "</b>: " + pct(s.pct) + (s.ultima.reset ? " · reset " + esc(fecha(s.ultima.reset)) : "") + " · " + esc(fecha(s.ultima.ts)) + (s.proy && s.proy.agotaAntes ? ' · <span class="agota">' + esc(s.proy.texto) + "</span>" : "") + "</li>").join("") + "</ul>";
       const bl = (c.series.find((s) => (s.agente || s.cuenta) === c.manda) || {}).bloques || [];
-      if (bl.length) {
+      if (bl.length >= 2) { // r33: con un solo bloque la barra salía vacía al pie de la tarjeta
         const mx = Math.max(5, ...bl.map((b) => b.gasto));
         h += '<div class="barras" title="% gastado por bloque de 12 h">' + bl.slice(-28).map((b) => '<span class="' + (b.reinicio ? "rei" : "") + '" style="height:' + Math.max(3, (b.gasto / mx) * 100) + '%" title="' + esc(fecha(b.desde) + " → " + fecha(b.hasta) + ": " + pct(b.gasto) + (b.reinicio ? " (tras reset)" : "")) + '"></span>').join("") + "</div>";
       } else h += '<p class="cuando">Bloques de 12 h: aún no hay dos lecturas de las 00:00/12:00.</p>';

@@ -134,3 +134,32 @@ test("r36 cuentakilómetros rodante: ruedas continuas y ritmo medio del día", (
   assert.equal(O.ritmoMedio(null), 0);
   const h10 = 10 * 3600; assert.ok(Math.abs(10e6 / h10 - 277.78) < 0.01);
 });
+
+test("r38 · cuentakilómetros con pronóstico a fin de hora: nunca 0 con actividad, nunca hacia atrás", () => {
+  const w = { document: { readyState: "complete", getElementById: () => null, documentElement: { lang: "es" } }, Intl, Date, Math };
+  w.window = w;
+  vm.runInNewContext(readFileSync(new URL("./assets/consumos-velocimetro.js", import.meta.url), "utf8"), w);
+  const O = w.ConsumosOdometro;
+  // Ritmo: tokens/hora de ahora; si 0, media del día solo si hay alguien trabajando; si no, 0.
+  assert.equal(O.ritmoPronostico(3600e3, 10e6, false, 36000), 1000);
+  assert.ok(Math.abs(O.ritmoPronostico(0, 10e6, true, 36000) - 277.78) < 0.01);
+  assert.equal(O.ritmoPronostico(0, 10e6, false, 36000), 0);
+  const v = O.velocidadOdometro;
+  // 60 por hora, 3600 s por delante → 1 cada minuto (1/60 por s; el mínimo absoluto es 1 tok/s con actividad).
+  assert.ok(Math.abs(v({ mostrado: 0, real: 0, objetivo: 360000, segundosRestantes: 3600, ritmo: 100 }) - 100) < 1e-9);
+  // Real por delante → alcanzarlo en ~30 s.
+  assert.ok(v({ mostrado: 0, real: 3000, objetivo: 3000, segundosRestantes: 3600, ritmo: 1 }) >= 100);
+  // Pronóstico pasado (mostrado > objetivo y > real): frena pero NUNCA a 0 mientras haya actividad.
+  assert.ok(v({ mostrado: 5000, real: 1000, objetivo: 2000, segundosRestantes: 600, ritmo: 100 }) >= 5);
+  assert.ok(v({ mostrado: 5000, real: 1000, objetivo: 2000, segundosRestantes: 600, ritmo: 0, activo: true }) >= 1);
+  // Todo a 0 y nadie trabajando, ya alcanzado → quieto.
+  assert.equal(v({ mostrado: 5000, real: 5000, objetivo: 5000, segundosRestantes: 600, ritmo: 0, activo: false }), 0);
+  // Simulación: servidor con el total CONGELADO 20 min (colectores a saltos) y 300 k tokens/hora → sube cada segundo.
+  let m = 1e6, prev = m; const real = 1e6, ritmo = 300e3 / 3600;
+  for (let t = 0; t < 1200; t++) {
+    const seg = Math.max(30, 3600 - ((t + 600) % 3600));
+    const obj = real + ritmo * (3600 - ((Math.floor(t / 10) * 10 + 600) % 3600)); // re-pronóstico cada 10 s
+    m += v({ mostrado: m, real, objetivo: obj, segundosRestantes: seg, ritmo });
+    assert.ok(m > prev, "sube en el segundo " + t); prev = m;
+  }
+});

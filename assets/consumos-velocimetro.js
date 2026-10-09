@@ -166,17 +166,88 @@
     return '<b class="vel-rt"><i class="vel-punto"></i>' + T('tiempo real', 'real time') + '</b> · ' + hace(s) + ' · ' + T('últimos 15 min × 4', 'last 15 min × 4') +
       (d.etiqueta && d.etiqueta !== 'tiempo real' ? ' · <span>' + esc(T('+ partes de Yokup para el resto', '+ Yokup reports for the rest')) + '</span>' : '');
   }
-  /* Minigráfica: tokens por minuto de los últimos 60 min (solo pulso en tiempo real). */
+  /* r30: segunda gráfica — LÍNEAS DE CÓDIGO escritas por los agentes, mismo eje que los tokens (1 h / 24 h / 7 d).
+   * /api/consumos/lineas?rango= da los cubos de líneas (barras escalonadas) y, para 24 h y 7 d, los de tokens. */
+  var LS_RANGO = 'consumos.rango.v1', API_LIN = '/api/consumos/lineas?rango=';
+  var LIN = { rango: lsGet(LS_RANGO) || '1h', d: null, leido: 0 };
+  if (!/^(1h|24h|7d)$/.test(LIN.rango)) LIN.rango = '1h';
+  function rotuloRango(r) { return r === '7d' ? T('−7 d', '−7 d') : r === '24h' ? '−24 h' : '−60 min'; }
+  function unidadPaso(r) { return r === '7d' ? '4 h' : r === '24h' ? '30 min' : 'min'; }
+  function grafica(vals, o) {
+    // vals: números o null (sin datos). o: { barras, clase, aria, unidad, rango }
+    if (!vals || vals.length < 2) return '';
+    var W = 300, Hh = 46, n = vals.length, max = 0, i;
+    for (i = 0; i < n; i++) if (vals[i] != null) max = Math.max(max, vals[i]);
+    var y = function (v) { return Hh - 4 - (max > 0 ? (v / max) * (Hh - 10) : 0); };
+    var cuerpo = '';
+    if (o.barras) {
+      var bw = W / n;
+      for (i = 0; i < n; i++) if (vals[i] > 0) cuerpo += '<rect x="' + (i * bw + bw * 0.12).toFixed(2) + '" y="' + y(vals[i]).toFixed(2) + '" width="' + (bw * 0.76).toFixed(2) + '" height="' + (Hh - y(vals[i])).toFixed(2) + '" class="' + o.clase + '-barra"/>';
+    } else {
+      var trozos = [], cur = [];
+      for (i = 0; i < n; i++) { if (vals[i] == null) { if (cur.length) trozos.push(cur); cur = []; } else cur.push([(i / (n - 1)) * W, y(vals[i])]); }
+      if (cur.length) trozos.push(cur);
+      trozos.forEach(function (t) {
+        if (t.length === 1) t.push([t[0][0] + 0.01, t[0][1]]);
+        var l = t.map(function (p, j) { return (j ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ');
+        cuerpo += '<path d="' + l + ' L' + t[t.length - 1][0].toFixed(1) + ' ' + Hh + ' L' + t[0][0].toFixed(1) + ' ' + Hh + ' Z" class="vel-spark-area"/><path d="' + l + '" class="vel-spark-linea"/>';
+      });
+      var primero = vals.findIndex(function (v) { return v != null; });
+      if (primero > 0) cuerpo = '<rect x="0" y="0" width="' + ((primero / (n - 1)) * W).toFixed(1) + '" height="' + Hh + '" class="vel-spark-sin"/>' + cuerpo;
+    }
+    return '<svg viewBox="0 0 ' + W + ' ' + Hh + '" class="vel-spark" preserveAspectRatio="none" role="img" aria-label="' + esc(o.aria) + '">' + cuerpo + '</svg>' +
+      '<p class="vel-spark-pie"><span>' + rotuloRango(o.rango) + '</span><span>' + o.titulo + ' · ' + T('pico ', 'peak ') + fmt(max) + ' ' + o.unidad + '</span><span>' + T('ahora', 'now') + '</span></p>';
+  }
+  /* Minigráfica: tokens (1 h: por minuto, del velocímetro; 24 h/7 d: por cubo, de /api/consumos/lineas). */
   function sparkline(serie) {
+    if (LIN.rango !== '1h') {
+      var t = LIN.d && LIN.d.rango === LIN.rango ? LIN.d.tokens : null;
+      return t ? grafica(t.map(function (x) { return x.tok; }), { rango: LIN.rango, unidad: 'tok/' + unidadPaso(LIN.rango), titulo: T('tokens', 'tokens'), aria: T('Tokens por cubo', 'Tokens per bucket') }) : '';
+    }
     if (!serie || serie.length < 2) return '';
-    var W = 300, Hh = 46, max = 0, i;
-    for (i = 0; i < serie.length; i++) max = Math.max(max, serie[i].tok || 0);
-    var pts = serie.map(function (p, j) { return [(j / (serie.length - 1)) * W, Hh - 4 - (max > 0 ? (p.tok / max) * (Hh - 10) : 0)]; });
-    var linea = pts.map(function (p, j) { return (j ? 'L' : 'M') + p[0].toFixed(1) + ' ' + p[1].toFixed(1); }).join(' ');
-    var area = linea + ' L' + W + ' ' + Hh + ' L0 ' + Hh + ' Z';
-    return '<svg viewBox="0 0 ' + W + ' ' + Hh + '" class="vel-spark" preserveAspectRatio="none" role="img" aria-label="' + T('Tokens por minuto, últimos 60 min', 'Tokens per minute, last 60 min') + '">' +
-      '<path d="' + area + '" class="vel-spark-area"/><path d="' + linea + '" class="vel-spark-linea"/></svg>' +
-      '<p class="vel-spark-pie"><span>−60 min</span><span>' + T('pico ', 'peak ') + fmt(max) + ' tok/min</span><span>' + T('ahora', 'now') + '</span></p>';
+    return grafica(serie.map(function (p) { return p.tok || 0; }), { rango: '1h', unidad: 'tok/min', titulo: T('tokens', 'tokens'), aria: T('Tokens por minuto, últimos 60 min', 'Tokens per minute, last 60 min') });
+  }
+  function pintaLineas() {
+    var box = document.getElementById('vel-lineas'), d = LIN.d;
+    if (!box) return;
+    if (!d || d.rango !== LIN.rango) { box.innerHTML = '<p class="vel-spark-pie"><span>' + T('Leyendo líneas de código…', 'Reading lines of code…') + '</span></p>'; return; }
+    if (d.fuente === 'ninguna') { box.innerHTML = '<p class="vel-spark-pie"><span>' + T('Sin datos de líneas de código todavía.', 'No lines-of-code data yet.') + '</span></p>'; return; }
+    var ags = (d.lineas.porAgente || []).slice(0, 6).map(function (a) { return esc(a.agente) + ' <b>' + fmt(a.lineas) + '</b>'; }).join(' · ');
+    box.innerHTML = grafica(d.lineas.serie.map(function (x) { return x.lineas; }), { barras: true, clase: 'vel-lin', rango: d.rango, unidad: T('líneas', 'lines') + '/' + unidadPaso(d.rango), titulo: T('líneas de código', 'lines of code'), aria: T('Líneas de código escritas por los agentes', 'Lines of code written by the agents') }) +
+      '<p class="vel-lin-pie">' + T('Líneas añadidas en el rango', 'Lines added in range') + ': <b>' + fmt(d.lineas.total) + '</b>' + (ags ? ' · ' + ags : '') +
+      ' · <span title="' + esc(d.metodo || '') + '">' + (d.fuente === 'commits' ? T('commits de la rama principal', 'main-branch commits') + (d.actualizado ? ' · ' + T('leídos ', 'read ') + new Date(d.actualizado).toLocaleTimeString(en() ? 'en-GB' : 'es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit' }) : '') : T('fotos 00:00/12:00 (escalonado)', '00:00/12:00 snapshots (stepped)')) + '</span></p>';
+  }
+  function canonAg(n) { return String(n || '').replace(/\s*\(.*\)\s*$/, '').toLowerCase(); }
+  function pintaRatio() {
+    var el = document.getElementById('vel-ag-lineas'), d = LIN.d, v = estado.datos;
+    if (!el) return;
+    if (!d || d.fuente !== 'commits' || !v) { el.textContent = ''; return; }
+    var lin, tok;
+    if (estado.agente) {
+      var a = (d.hoy.porAgente || []).find(function (x) { return canonAg(x.agente) === canonAg(estado.agente); });
+      var f = (v.porAgente || []).find(function (x) { return x.agente === estado.agente; });
+      lin = a ? a.lineas : 0; tok = f ? f.tokHoy : null;
+    } else { lin = d.hoy.total; tok = v.tokHoy; }
+    var ratio = tok > 0 && lin > 0 ? Math.round(tok / lin) : null;
+    el.innerHTML = T('Hoy', 'Today') + ': <b>' + fmt(lin) + '</b> ' + T('líneas de código', 'lines of code') + (ratio ? ' · <b>' + fmt(ratio) + '</b> tok/' + T('línea', 'line') : '');
+  }
+  function leerLineas() {
+    var r = LIN.rango;
+    return fetch(API_LIN + r, { cache: 'no-store' }).then(function (x) { return x.ok ? x.json() : null; }).catch(function () { return null; }).then(function (d) {
+      if (d && d.ok && d.rango === LIN.rango) { LIN.d = d; LIN.leido = Date.now(); }
+      pintaLineas(); pintaRatio();
+      var sp = document.getElementById('vel-spark');
+      if (sp && estado.datos && !estado.datos.sinDatos) sp.innerHTML = sparkline(estado.datos.serie60);
+    });
+  }
+  function ponRango(r) {
+    LIN.rango = r; lsSet(LS_RANGO, r);
+    var b = document.querySelectorAll('#vel-rango button');
+    for (var i = 0; i < b.length; i++) b[i].setAttribute('aria-pressed', b[i].getAttribute('data-r') === r ? 'true' : 'false');
+    var sp = document.getElementById('vel-spark');
+    if (sp && estado.datos && !estado.datos.sinDatos) sp.innerHTML = sparkline(estado.datos.serie60);
+    pintaLineas();
+    leerLineas();
   }
 
   /** Proyecto a enseñar: el elegido a mano (guardado) o, en AUTO, el que más quema ahora (se reevalúa cada 10 s). */
@@ -343,6 +414,7 @@
   function eligeAgente(nombre) {
     estado.agente = nombre || '';
     lsSet(LS_AG, estado.agente);
+    setTimeout(pintaRatio, 0);
     pintaSelectorAgente(estado.datos);
     pintaIzquierdo(estado.datos, !estado.datos);
     pintaRanking(estado.datos);
@@ -374,6 +446,7 @@
     var sp = document.getElementById('vel-spark');
     if (sp) sp.innerHTML = sin ? '' : sparkline(d.serie60);
     pintaRanking(sin ? null : d);
+    pintaRatio();
     var pie = document.getElementById('vel-pie');
     pie.innerHTML = (d && d.generado ? T('Actualizado ', 'Updated ') + new Date(d.generado).toLocaleTimeString(en() ? 'en-GB' : 'es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' (Madrid) · ' : '') +
       T('Fuente: pulso de cada Mac (logs de Claude Code, Codex y Grok CLI, cada 60 s, ', 'Source: each Mac\'s pulse (Claude Code, Codex and Grok CLI logs, every 60 s, ') + '<a href="/api/consumos/pulso">/api/consumos/pulso</a>) + ' +
@@ -416,8 +489,12 @@
       rk.addEventListener('click', desdeFila);
       rk.addEventListener('keydown', function (ev) { if (ev.key === 'Enter' || ev.key === ' ') { ev.preventDefault(); desdeFila(ev); } });
     }
+    var rg = document.getElementById('vel-rango');
+    if (rg) rg.addEventListener('click', function (ev) { var b = ev.target && ev.target.closest ? ev.target.closest('button[data-r]') : null; if (b) ponRango(b.getAttribute('data-r')); });
+    ponRango(LIN.rango);
     leer();
     leerMargen();
+    setInterval(function () { if (!document.hidden) leerLineas(); }, 60000);
     setInterval(function () { if (!document.hidden) leer(); }, POLL);
     setInterval(function () { if (!document.hidden) leerMargen(); }, 60000);
     setInterval(function () { var t = textoMetodo(), m = document.getElementById('vel-metodo'); if (t && m) m.innerHTML = t; }, 1000);

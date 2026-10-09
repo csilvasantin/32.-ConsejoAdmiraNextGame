@@ -110,6 +110,11 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
 @keyframes vel-late{0%,100%{opacity:1}50%{opacity:.25}}
 .vel-spark-box{max-width:520px;margin:10px auto 0}.vel-spark{width:100%;height:46px;display:block}
 .vel-spark-area{fill:rgba(120,243,255,.14)}.vel-spark-linea{fill:none;stroke:#78f3ff;stroke-width:1.6;vector-effect:non-scaling-stroke}
+.vel-graficas{max-width:520px;margin:10px auto 0}.vel-graficas .vel-spark-box{margin-top:6px}
+.vel-rango{display:flex;justify-content:flex-end;gap:4px}.vel-rango button{font:inherit;font-size:11px;color:var(--mut);background:#06121a;border:1px solid var(--line);border-radius:7px;padding:2px 9px;cursor:pointer}
+.vel-rango button[aria-pressed="true"]{color:#02222a;background:var(--brand);border-color:var(--brand);font-weight:700}.vel-rango button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.vel-lin-barra{fill:#ffd067;opacity:.85}.vel-spark-sin{fill:rgba(255,255,255,.035)}.vel-lin-box .vel-spark{border-top:1px dashed rgba(255,208,103,.25)}
+.vel-lin-pie{color:var(--dim);font-size:11px;margin-top:2px;line-height:1.4}.vel-lin-pie b{color:#ffe29a}.vel-ag-lineas b{color:#ffe29a}
 .vel-spark-pie{display:flex;justify-content:space-between;color:var(--dim);font-size:11px;margin-top:2px}
 .vel-agentes li.parado{opacity:.55}
 .vel-rank-tit{font-size:13px;letter-spacing:.06em;text-transform:uppercase;color:var(--brand);margin:16px 0 0;font-weight:700}.vel-rank-tit small{color:var(--dim);text-transform:none;letter-spacing:0;font-weight:400;margin-left:6px}
@@ -206,7 +211,7 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
       <div class="vel-g" id="vel-g-total">
         <h3><span id="vel-ag-titulo">Agente</span> · <span class="vel-sel" id="vel-ag-dd"></span></h3>
         <div class="vel-dial"><div class="vel-dial-svg"></div><div class="odo" title="Tokens acumulados hoy (Madrid)"></div><p class="odo-rotulo" id="vel-ag-rotulo">tokens hoy</p></div>
-        <div class="vel-lectura"><span class="vel-cifra" id="vel-cifra">…</span><span class="vel-unidad" id="vel-unidad">tok/h</span><p class="vel-extra" id="vel-ag-metodo"></p></div>
+        <div class="vel-lectura"><span class="vel-cifra" id="vel-cifra">…</span><span class="vel-unidad" id="vel-unidad">tok/h</span><p class="vel-extra" id="vel-ag-metodo"></p><p class="vel-extra vel-ag-lineas" id="vel-ag-lineas"></p></div>
       </div>
       <div class="vel-g" id="vel-g-proy">
         <h3><span id="vel-proy-titulo">Proyecto</span> · <span class="vel-sel" id="vel-proy-dd"></span></h3>
@@ -217,7 +222,11 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
     <h3 class="vel-rank-tit">Velocidad por agente <small>tok/h ahora · clic = verlo en el velocímetro</small></h3>
     <ol class="vel-agentes" id="vel-agentes" aria-label="Velocidad por agente"></ol>
     <div class="vel-lectura"><p class="vel-metodo" id="vel-metodo">Midiendo…</p><p class="vel-extra" id="vel-extra"></p></div>
-    <div class="vel-spark-box" id="vel-spark"></div>
+    <div class="vel-graficas">
+      <div class="vel-rango" id="vel-rango" role="group" aria-label="Rango de las gráficas"><button type="button" data-r="1h" aria-pressed="true">1 h</button><button type="button" data-r="24h" aria-pressed="false">24 h</button><button type="button" data-r="7d" aria-pressed="false">7 d</button></div>
+      <div class="vel-spark-box" id="vel-spark"></div>
+      <div class="vel-spark-box vel-lin-box" id="vel-lineas"></div>
+    </div>
     <p class="vel-pie" id="vel-pie"></p>
   </section>
   <section class="planes" id="planes">
@@ -301,7 +310,7 @@ fetch("/consumos-plataformas.json", { cache: "no-store" })
 <script src="/assets/consumos-velocimetro-elegir.js?v=r24-margen"></script>
 <script src="/assets/consumos-trabajando.js?v=r29"></script>
 <script src="/assets/consumos-desplegable.js?v=r23"></script>
-<script src="/assets/consumos-velocimetro.js?v=r27-cursor"></script>
+<script src="/assets/consumos-velocimetro.js?v=r30-r27-cursor"></script>
 <script src="/assets/live-velocidad.js?v=r18-tiempo-real"></script>
 <script src="/consumos-lecturas.js?v=r3-cursor"></script>
 <script src="/orquestar-widget.js?v=r2-con-carlos"></script>

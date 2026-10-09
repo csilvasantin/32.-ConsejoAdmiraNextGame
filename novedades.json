@@ -1,4 +1,8 @@
 {
+  "v.09.10.2026.r25.13:56": [
+    "/consumos · la nota del orquestador junto a la píldora de margen dice ya el motivo real: «⚠ al ritmo actual se agota antes del reset (se agota sáb 10 oct 14:27)» — /api/orquestar pasa agotaAntes y la proyección de cada cuenta",
+    "Un agente fuera del reparto (p. ej. Neo «ocupado con Carlos») conserva su % de margen en el desplegable: /api/orquestar lo incluye también en excluidos"
+  ],
   "v.09.10.2026.r24.13:51": [
     "/consumos · desplegable de agentes: la píldora de margen se colorea por el MARGEN (verde ≥ 50 %, amarillo 20–49 %, rojo < 20 %) — antes tomaba el semáforo del orquestador y Trinity con 71 % salía en rojo",
     "Si el orquestador marca la cuenta por otro motivo (p. ej. al ritmo actual se agota antes del reset), sale como nota aparte «⚠ …» junto a la píldora; /api/orquestar expone agotaAntes y proyeccionTexto por candidato"

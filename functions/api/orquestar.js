@@ -43,7 +43,7 @@ export async function onRequestGet({ request, env, fetchImpl }) {
   const ahora = Date.now();
   const [lecturas, pres, band, docs] = await Promise.all([leerLecturas(env), leerJson(PRESENCIA, f), leerJson(BANDEJA, f), leerPulsos(kv(env)).catch(() => [])]);
   const conCarlos = conCarlosDePulso(docs, ahora);
-  const cuentas = lecturas ? resumirCuentas(lecturas, null, { ahora }).map(({ id, nombre, cuenta, margen, semaforo }) => ({ id, nombre, cuenta, margen, semaforo })) : [];
+  const cuentas = lecturas ? resumirCuentas(lecturas, null, { ahora }).map(({ id, nombre, cuenta, margen, semaforo, agotaAntes, proyeccion }) => ({ id, nombre, cuenta, margen, semaforo, agotaAntes, proyeccion: proyeccion && proyeccion.texto ? { texto: proyeccion.texto } : null })) : [];
   const presencia = pres && Array.isArray(pres.presence) ? pres.presence : [];
   const bandeja = band && Array.isArray(band.items) ? band.items : [];
   const r = orquestar({ tipo, cuentas, presencia, bandeja, ahora, conCarlos: conCarlos.map((x) => x.agente) });

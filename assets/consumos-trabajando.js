@@ -34,7 +34,7 @@
     var que = t.tarea || t.foco || '';
     var linea;
     if (t.estado === 'gris') linea = t.motivo === 'sin latido' ? '<span class="tr-est">sin latido</span>' : '<span class="tr-est">parado · ' + esc(hace(t.haceS)) + '</span>' + (que ? ' · último: ' + esc(que) : '');
-    else linea = '<span class="tr-est">' + (t.estado === 'amarillo' ? 'con Carlos' : 'trabajando') + (t.tokHora > 0 ? ' · ' + fmt(t.tokHora) + ' tok/h' : '') + '</span>' + (que ? ' · ' + esc(que) : '');
+    else linea = '<span class="tr-est">' + (t.estado === 'amarillo' ? 'con Carlos' : 'trabajando') + (t.tokHora > 0 ? ' · ' + fmt(t.tokHora) + ' tokens/hora' : '') + '</span>' + (que ? ' · ' + esc(que) : '');
     var chips = (t.proyecto ? '<span class="tr-chip">' + esc(t.proyecto) + '</span>' : '') + (t.encargo ? '<span class="tr-chip tr-enc">' + esc(t.encargo) + '</span>' : '');
     return '<li class="tr-card tr-' + esc(t.estado) + '" title="' + esc(t.motivo + (t.foco ? ' — ' + t.foco : '')) + '">' + retrato(t) +
       '<span class="tr-txt"><b class="tr-nom"><i class="tr-punto" aria-hidden="true"></i>' + esc(t.agente) + '</b>' +

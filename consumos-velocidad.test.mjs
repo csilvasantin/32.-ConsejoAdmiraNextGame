@@ -154,7 +154,8 @@ test("r26 · rótulos de /consumos: «Consumo Agentes AdmiraNeXT», «Tokens por
   const html = readFileSync(new URL("./consumos.html", import.meta.url), "utf8");
   assert.match(html, /<title>Consumo Agentes AdmiraNeXT · admira\.live<\/title>/);
   assert.match(html, /<h1>Consumo Agentes AdmiraNeXT<\/h1>/);
-  assert.match(html, /<h2 id="vel-titulo">Tokens por hora<\/h2>/);
+  // r36 (Carlos): sin cabecera visible «TOKENS POR HORA»; queda solo para lectores de pantalla.
+  assert.match(html, /<h2 id="vel-titulo" class="sr">Tokens por hora<\/h2>/);
   assert.match(html, /<span id="vel-ag-titulo">Agente<\/span> · /);
   assert.match(html, /<span id="vel-proy-titulo">Proyecto<\/span> · /);
   assert.doesNotMatch(html, /Qué estamos gastando|Una tarjeta por cuenta|ahora mismo<\/h2>|Por proyecto ·/);

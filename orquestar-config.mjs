@@ -7,6 +7,9 @@
  * - alias: cómo firma la persona en la presencia (bot.yokup.com/api/presence → persona) y en la bandeja
  *   (bot.yokup.com/api/public/inbox → target_persona).
  * - perfil: clave de APTITUD (aptitud 0-1 por tipo de tarea).
+ * - despierta: "webhook" = consejero GrokBot que se despierta al recibir un encargo; un latido viejo no lo
+ *   deja «no libre», solo un encargo ack/in_progress de las últimas 48 h. Sin «despierta» (flota: Neo,
+ *   Morfeo, Trinity, Oráculo, Smith…) manda el latido de <10 min + sin encargo en curso.
  */
 export const APTITUD = {
   // Claude / Codex: código y web.
@@ -22,19 +25,19 @@ export const APTITUD = {
 
 export const PERSONAS = [
   { persona: "Neo", maquina: "MacBook Pro 16", modelo: "Claude Opus (Claude Code)", cuenta: "neo-claude", perfil: "claude", alias: ["Neo", "NeoMBP16"] },
-  // Morfeo: Claude en el Mac Mini. El repo no dice que comparta la Claude Max de Neo → margen desconocido.
-  { persona: "Morfeo", maquina: "MacMini", modelo: "Claude (Claude Code)", cuenta: null, perfil: "claude", alias: ["Morfeo", "MorfeoMacMini"] },
+  // Morfeo: Claude en el Mac Mini con csilvasantin@gmail.com (confirmado por Carlos, 09-10-2026) → tarjeta morfeo-claude.
+  { persona: "Morfeo", maquina: "MacMini", modelo: "Claude (Claude Code)", cuenta: "morfeo-claude", perfil: "claude", alias: ["Morfeo", "MorfeoMacMini"] },
   { persona: "Trinity", maquina: "MacBook Pro 16", modelo: "Codex", cuenta: "trinity-codex", perfil: "codex", alias: ["Trinity", "TrinityMacBookPro16"] },
-  // Oráculo: Codex en el Mac Mini; el repo no dice de qué cuenta → margen desconocido.
-  { persona: "Oráculo", maquina: "MacMini", modelo: "Codex", cuenta: null, perfil: "codex", alias: ["Oraculo", "Oráculo", "OraculoMacMini"] },
+  // Oráculo: Codex en el Mac Mini con csilvasantin@gmail.com (confirmado por Carlos, 09-10-2026) → tarjeta oraculo-codex.
+  { persona: "Oráculo", maquina: "MacMini", modelo: "Codex", cuenta: "oraculo-codex", perfil: "codex", alias: ["Oraculo", "Oráculo", "OraculoMacMini"] },
   // Smith: Grok 4.7 vía cursor-agent; «la otra cuenta de GrokBot» (app.js). Se mide con la tarjeta Cursor Pro.
   { persona: "Smith", maquina: "MacMini", modelo: "Grok 4.7 (cursor-agent)", cuenta: "cursor", perfil: "grok-cursor", alias: ["Smith", "SmithMacMini"] },
-  { persona: "Jobs", maquina: "GrokBot", modelo: "Grok Heavy", cuenta: "leyendas", perfil: "grok-heavy", alias: ["Jobs", "JobsGrokBot", "Steve Jobs"] },
-  { persona: "Wozniak", maquina: "GrokBot", modelo: "Grok Heavy", cuenta: "leyendas", perfil: "grok-heavy", alias: ["Wozniak", "WozniakGrokBot", "Steve Wozniak"] },
-  { persona: "Lucas", maquina: "GrokBot", modelo: "Grok Heavy", cuenta: "leyendas", perfil: "grok-heavy-creativo", alias: ["Lucas", "LucasGrokBot", "George Lucas"] },
-  { persona: "Disney", maquina: "GrokBot", modelo: "Grok Heavy", cuenta: "leyendas", perfil: "grok-heavy-creativo", alias: ["Disney", "DisneyGrokBot", "Walt Disney", "Walt"] },
-  { persona: "Musk", maquina: "GrokBot", modelo: "SuperGrok", cuenta: "coetaneos", perfil: "grok-heavy", alias: ["Musk", "MuskGrokBot", "Elon Musk"] },
-  { persona: "Huang", maquina: "GrokBot", modelo: "SuperGrok", cuenta: "coetaneos", perfil: "grok-heavy", alias: ["Huang", "HuangGrokBot", "Jensen Huang"] },
+  { persona: "Jobs", maquina: "GrokBot", modelo: "Grok Heavy", cuenta: "leyendas", perfil: "grok-heavy", despierta: "webhook", alias: ["Jobs", "JobsGrokBot", "Steve Jobs"] },
+  { persona: "Wozniak", maquina: "GrokBot", modelo: "Grok Heavy", cuenta: "leyendas", perfil: "grok-heavy", despierta: "webhook", alias: ["Wozniak", "WozniakGrokBot", "Steve Wozniak"] },
+  { persona: "Lucas", maquina: "GrokBot", modelo: "Grok Heavy", cuenta: "leyendas", perfil: "grok-heavy-creativo", despierta: "webhook", alias: ["Lucas", "LucasGrokBot", "George Lucas"] },
+  { persona: "Disney", maquina: "GrokBot", modelo: "Grok Heavy", cuenta: "leyendas", perfil: "grok-heavy-creativo", despierta: "webhook", alias: ["Disney", "DisneyGrokBot", "Walt Disney", "Walt"] },
+  { persona: "Musk", maquina: "GrokBot", modelo: "SuperGrok", cuenta: "coetaneos", perfil: "grok-heavy", despierta: "webhook", alias: ["Musk", "MuskGrokBot", "Elon Musk"] },
+  { persona: "Huang", maquina: "GrokBot", modelo: "SuperGrok", cuenta: "coetaneos", perfil: "grok-heavy", despierta: "webhook", alias: ["Huang", "HuangGrokBot", "Jensen Huang"] },
 ];
 
 /** Palabras clave → tipo (para ?texto= sin ?tipo=). La primera regla que casa gana. */

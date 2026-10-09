@@ -1,4 +1,11 @@
 {
+  "v.09.10.2026.r15.10:30": [
+    "/consumos: dos tarjetas nuevas del Mac mini — «Morfeo · Claude» (Claude, csilvasantin@gmail.com; medidor Claude Code semanal + sesión 5 h, de momento sin lectura) y «Oráculo · Codex» (ChatGPT Pro, csilvasantin@gmail.com; Codex semanal al 40 %)",
+    "«Neo · Claude Code» enseña ya su cuenta: Claude Max 20x (csilva@admira.com)",
+    "Orquestador: Morfeo y Oráculo miden su margen en sus tarjetas (morfeo-claude, oraculo-codex) en vez de «margen desconocido»",
+    "Orquestador: los consejeros GrokBot (Jobs, Wozniak, Lucas, Disney, Musk, Huang) se despiertan al recibir el encargo — un latido viejo ya no los deja «no libre»; solo un encargo ack/in_progress de las últimas 48 h. La flota sigue con latido <10 min",
+    "Volver atrás: publicar otra vez 270f855 (v.09.10.2026.r14.10:15)"
+  ],
   "v.09.10.2026.r14.10:15": [
     "Orquestador: GET /api/orquestar?tipo=…&texto=… responde «¿a quién va esta tarea?» — aptitud para el tipo, luego quién está libre ahora y luego quién tiene más margen de uso",
     "Margen de las cuentas de /consumos (Neo · Claude Max, Trinity · ChatGPT Pro, Leyendas, Coetáneos, Cursor Pro); libre = latido de menos de 10 min en la presencia y sin encargo ack/in_progress en la bandeja",

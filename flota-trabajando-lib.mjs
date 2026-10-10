@@ -97,7 +97,7 @@ export function colocarPorAppGrokBot(out, apps) {
     t.maquinas = [app.maquina];
     t.app = { nombre: "Grok Bot", cuenta, alFrente: !!app.alFrente, reposoS: app.reposoS ?? null };
     if (delante(app)) {
-      t.estado = t.estado === "verde" ? "verde" : "amarillo";
+      t.estado = "amarillo"; // como estadoTrabajo: «con Carlos» manda sobre verde
       t.conCarlosEn = maquinaCorta(app.maquina);
       t.motivo = "con Carlos: app Grok Bot al frente en " + maquinaCorta(app.maquina) + (t.via ? " · tokens vía " + t.via : "");
     } else {

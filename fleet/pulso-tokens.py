@@ -212,6 +212,47 @@ GROKBOT_CUENTA_FILE = os.path.join(HOME, ".config", "admiranext", "grokbot-cuent
 GROKBOT_STATUS_FILE = os.path.join(HOME, "Library", "Application Support", "Grok Bot", "desktop-status.json")
 
 
+# r17 (Carlos, 15:33): la cuenta REAL, sin leer secretos. La app guarda el estado de cada cuenta en
+# sand-client-persistence/ con el NOMBRE del fichero = base32("sand.client.slice.account.<proveedor>|<id>.<trozo>").
+# Solo se leen los NOMBRES (nunca el contenido) y la hora de modificación: qué cuentas hay en esta app y cuál se ha
+# usado hace poco. El id de usuario se traduce a correo con esta tabla (ids de cuenta, no credenciales).
+GROKBOT_PERSIST_DIR = os.path.join(HOME, "Library", "Application Support", "Grok Bot", "sand-client-persistence")
+GROKBOT_ID_CUENTA = {
+    "google-oauth2|user_01KHVSC087HDVRMEM8MPDTRMF3": "csilvasantin@gmail.com",  # la cuenta de Merovingio (SAND_BOX_AUTH_ID de su caja)
+    "grok|user_01M1GH27YEBQCPDJEDPDY7K2ZW": "csilva@admira.com",  # la otra cuenta de Carlos en la app (Smith, Jobs, Wozniak)
+}
+
+
+def grokbot_cuentas(ahora=None):
+    """[{cuenta, id, haceS}] de las cuentas con estado en la app, la usada más recientemente primero."""
+    import base64
+    ahora = ahora or time.time()
+    vistas = {}
+    try:
+        nombres = os.listdir(GROKBOT_PERSIST_DIR)
+    except OSError:
+        return []
+    for f in nombres:
+        if not f.endswith(".blob"):
+            continue
+        n = f[:-5].upper()
+        try:
+            clave = base64.b32decode(n + "=" * ((8 - len(n) % 8) % 8)).decode("utf-8")
+        except Exception:
+            continue
+        m = re.match(r"sand\.client\.slice\.account\.([^.]+)\.", clave)
+        if not m:
+            continue
+        ident = m.group(1).replace("%7C", "|").replace("%7c", "|")
+        try:
+            t = os.path.getmtime(os.path.join(GROKBOT_PERSIST_DIR, f))
+        except OSError:
+            continue
+        vistas[ident] = max(vistas.get(ident, 0), t)
+    out = [{"cuenta": GROKBOT_ID_CUENTA.get(i), "id": i.split("|")[0], "haceS": int(max(0, ahora - t))} for i, t in vistas.items()]
+    return sorted(out, key=lambda x: x["haceS"])
+
+
 def grokbot_app(reposo=None, frente=None):
     estado = {}
     try:
@@ -221,14 +262,20 @@ def grokbot_app(reposo=None, frente=None):
         estado = {}
     # pgrep -f no ve la app desde un LaunchAgent en algunos macOS: se mira la lista de procesos (solo nombres).
     abierta = any(l.strip().endswith("Grok Bot.app/Contents/MacOS/Grok Bot") for l in _cmd(["ps", "-axo", "comm="]).splitlines())
-    cuenta = None
+    # El fichero manual queda solo como forzado (una dirección válida); «desconocida» o vacío = no fuerza nada.
+    forzada = None
     try:
         with open(GROKBOT_CUENTA_FILE) as f:
-            cuenta = (f.read().strip().splitlines() or [""])[0].strip().lower() or None
+            forzada = (f.read().strip().splitlines() or [""])[0].strip().lower() or None
     except OSError:
         pass
+    if forzada and "@" not in forzada:
+        forzada = None
+    cuentas = [c for c in grokbot_cuentas() if c["cuenta"]] if abierta else []
+    cuenta = forzada or (cuentas[0]["cuenta"] if cuentas and cuentas[0]["haceS"] < 3600 else None)
     return {"abierta": abierta, "firmada": estado.get("signedIn") if isinstance(estado.get("signedIn"), bool) else None,
-            "cuenta": cuenta, "alFrente": abierta and (frente or "") == "Grok Bot", "reposoS": reposo,
+            "cuenta": cuenta, "cuentas": [{"cuenta": c["cuenta"], "haceS": c["haceS"]} for c in cuentas], "forzada": bool(forzada),
+            "alFrente": abierta and (frente or "") == "Grok Bot", "reposoS": reposo,
             "version": str(estado.get("appVersion") or "")[:20] or None}
 
 
@@ -823,8 +870,9 @@ def main():
         app = None
     if app and app["abierta"]:
         cuerpo["grokbotApp"] = app
-        print("%s grokbotApp %s · cuenta %s · al frente %s · reposo %ss" % (ahora.strftime("%H:%M:%S"), "abierta" if app["abierta"] else "cerrada",
-              app["cuenta"] or "¿? (falta %s)" % GROKBOT_CUENTA_FILE, "sí" if app["alFrente"] else "no", app["reposoS"]))
+        print("%s grokbotApp %s · cuenta en uso %s · cuentas %s · al frente %s · reposo %ss" % (ahora.strftime("%H:%M:%S"), "abierta" if app["abierta"] else "cerrada",
+              app["cuenta"] or "desconocida", ", ".join("%s (hace %d min)" % (c["cuenta"], c["haceS"] // 60) for c in app["cuentas"]) or "—",
+              "sí" if app["alFrente"] else "no", app["reposoS"]))
     if not agentes and "grokbotApp" not in cuerpo:
         print("%s %s sin agentes ni app Grok Bot abierta: nada que mandar" % (ahora.strftime("%H:%M:%S"), maq))
         return 0

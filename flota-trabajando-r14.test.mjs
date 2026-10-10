@@ -38,7 +38,7 @@ test("r14: sin app de su cuenta, se queda como estaba", () => {
 test("r14: el pulso acepta grokbotApp (también sin agentes) y lo guarda con ts; appsGrokBot solo frescas", () => {
   const n = normalizarPulso({ maquina: "MacBookProNegro14", agentes: [], grokbotApp: { abierta: true, firmada: true, cuenta: "CSILVA@admira.com", alFrente: true, reposoS: 12, version: "0.68.1", token: "x" } });
   assert.equal(n.ok, true);
-  assert.deepEqual(n.pulso.grokbotApp, { abierta: true, firmada: true, cuenta: "csilva@admira.com", alFrente: true, reposoS: 12, version: "0.68.1" });
+  assert.deepEqual(n.pulso.grokbotApp, { abierta: true, firmada: true, cuenta: "csilva@admira.com", cuentas: [], forzada: false, alFrente: true, reposoS: 12, version: "0.68.1" });
   assert.equal(normalizarPulso({ maquina: "X", agentes: [] }).ok, false);
   const r = aplicarPulso(null, n.pulso, 1_000_000);
   assert.equal(r.doc.grokbotApp.ts, 1_000_000);

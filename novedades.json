@@ -1,4 +1,9 @@
 {
+  "v.10.10.2026.r17.15:40": [
+    "Cuenta REAL de la app Grok Bot en cada Mac: el pulso lee solo los nombres de su persistencia por cuenta (nunca el contenido ni tokens) y sabe qué cuentas hay y cuál se ha usado hace poco; un Mac con las dos cuentas en uso pone a sus consejeros de las dos. El fichero manual grokbot-cuenta queda solo como forzado.",
+    "App abierta sin cuenta en uso reciente (p. ej. el Mac Mini) = «cuenta desconocida»: no se atribuye a ningún consejero. /api/flota/trabajando enseña appsGrokBot por Mac.",
+    "Matriz de agentes en inglés: «Grok Bot (pool de Merovingio)» → «Grok Bot (Merovingio's pool)», «(por defecto)» → «(default)»."
+  ],
   "v.10.10.2026.r16.15:28": [
     "Consejeros con la app Grok Bot abierta en varios Macs a la vez: salen todos («MBP14 + MBA16», alternando con el runtime en la franja), «con Carlos» en el que está al frente y activo; una sola ficha y los tokens siguen en Smith/Merovingio.",
     "Pulso + cuenta de la app Grok Bot también en el MBP16 y el Mac Mini (los cuatro Macs tienen la app abierta).",

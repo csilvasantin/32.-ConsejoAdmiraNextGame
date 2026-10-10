@@ -69,7 +69,8 @@ export const RETRATOS = {
 // r44 (Carlos, 13:14): Merovingio tiene SU cara (el Merovingio de Matrix, /avatars/merovingio.jpg); Musk, la suya.
 RETRATOS.Merovingio = { img: "/avatars/merovingio.jpg" };
 /** r44: dualidad Elon ↔ Merovingio (Elon hace las cosas a través de Merovingio): consejero que se enseña con el estado de su agente. */
-export const DUALIDAD = { Musk: "Merovingio" };
+// r45 (Carlos, 13:23): Huang igual que Musk (su consumo ya iba en el pool de Merovingio).
+export const DUALIDAD = { Musk: "Merovingio", Huang: "Merovingio" };
 const AVATARES = { neo: "/avatars/neo.jpg", trinity: "/avatars/trinity.jpg", morfeo: "/avatars/morfeo.jpg", smith: "/avatars/smith.jpg", oraculo: "/avatars/oraculo.png" };
 const CANON = ["Jobs", "Wozniak", "Lucas", "Disney", "Musk", "Huang", "Neo", "Trinity", "Morfeo", "Oráculo", "Smith", "Niobe", "Cypher", "Merovingio", "Link", "Grok Bot"];
 

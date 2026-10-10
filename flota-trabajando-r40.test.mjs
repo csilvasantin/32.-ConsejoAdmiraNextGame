@@ -310,3 +310,16 @@ test("r44 · front: «activo vía Merovingio» y «tokens en la ficha de Merovin
   assert.ok(fs.statSync(new URL("./avatars/merovingio.jpg", import.meta.url)).size > 2000);
   void vm;
 });
+
+test("r45 · Huang como Musk: activo vía Merovingio en Consejeros, su cara, mismo estado (y con Carlos), tokens solo en Merovingio", () => {
+  const t = tarjetas({ presencia: [{ persona: "Merovingio", machine: "MacBookAir16plata", source: "heartbeat", con_carlos: true, updated: T - 5 }],
+    velocidad: { porAgente: [{ agente: "Huang", maquina: "GrokBotBox", tokHoy: 700, tokHora: 80, tokUltimaHora: 40 }] }, ahoraS: T });
+  const m = de(t, "Merovingio"), h = de(t, "Huang");
+  assert.equal(t.filter((x) => x.agente === "Huang").length, 1);
+  assert.deepEqual([h.estado, h.conCarlosEn, h.maquina, h.grupo, h.via], [m.estado, m.conCarlosEn, m.maquina, "consejeros", "Merovingio"]);
+  assert.match(h.motivo, /^activo vía Merovingio/);
+  assert.deepEqual(h.retrato.cara, { l: 21.65, t: 44.5, w: 8.5, h: 15.1 });
+  assert.equal(h.tokHoy, null); assert.equal(m.tokHoy, 700);
+  const g = tarjetas({ presencia: [], velocidad: null, ahoraS: T });
+  assert.equal(de(g, "Huang").estado, "gris"); assert.match(de(g, "Huang").motivo, /^parado vía Merovingio/);
+});

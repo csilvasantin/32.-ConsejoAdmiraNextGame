@@ -41,9 +41,10 @@ test("tarjetas: dedupe por agente (manda el latido más fresco), siempre los 6 c
   const velocidad = { porAgente: [{ agente: "Morfeo", tokHora: 0, tokHoy: 5, conCarlos: true, maquina: "MacMini" }, { agente: "Trinity", tokHora: 3e6, tokHoy: 7e6, maquina: "MacBookPro16", proyectoAhora: "admira.studio" }] };
   const t = tarjetas({ presencia, velocidad, ahoraS: T });
   const n = t.map((x) => x.agente);
-  // r6: el consumo de Musk y Huang va dentro de Merovingio (pool de Grok Bot de csilvasantin); Huang no sale aparte.
-  // r44: Musk SÍ sale (Consejeros), activo vía Merovingio.
-  for (const c of CONSEJEROS_GROK) assert.ok(c === "Huang" ? !n.includes(c) : n.includes(c), c);
+  // r6: el consumo de Musk y Huang va dentro de Merovingio (pool de Grok Bot de csilvasantin).
+  // r44/r45: los dos SÍ salen (Consejeros), activos vía Merovingio: están los 6 consejeros Grok.
+  for (const c of CONSEJEROS_GROK) assert.ok(n.includes(c), c);
+  for (const c of ["Musk", "Huang"]) assert.equal(t.find((x) => x.agente === c).via, "Merovingio", c);
   assert.deepEqual(t.find((x) => x.agente === "Merovingio").incluye.sort(), ["Huang", "Musk"]);
   assert.equal(n.filter((x) => x === "Neo").length, 1);
   const neo = t.find((x) => x.agente === "Neo");
@@ -67,7 +68,7 @@ test("/api/flota/trabajando: une la presencia; sin pulso ni Yokup sigue enseñan
   assert.equal(r.presencia, "ok");
   assert.equal(r.tarjetas[0].agente, "Jobs");
   assert.equal(r.tarjetas[0].estado, "verde");
-  assert.equal(r.tarjetas.filter((t) => CONSEJEROS_GROK.includes(t.agente)).length, 5); // r44: + Musk vía Merovingio
+  assert.equal(r.tarjetas.filter((t) => CONSEJEROS_GROK.includes(t.agente)).length, 6); // r44/r45: + Musk y Huang vía Merovingio
   assert.ok(r.tarjetas.find((t) => t.agente === "Merovingio"));
 });
 

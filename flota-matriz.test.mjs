@@ -66,8 +66,8 @@ test("r6: modelo de pago fuera de las 6 → en rojo; el pool de Grok Bot va bajo
   assert.equal(resumen.fuera, 2);
   const vel = { porAgente: [{ agente: "Grok Bot (Consejo)", maquina: "GrokBotBox", motor: "cursor", tokHoy: 2000000, conRetraso: true }] };
   const t = tarjetas({ presencia: p2, velocidad: vel, ahoraS: T, carga });
-  assert.equal(t.find((x) => /Grok Bot|Huang/.test(x.agente)), undefined);
-  assert.equal(t.find((x) => x.agente === "Musk").via, "Merovingio"); // r44: Musk sale, vía Merovingio
+  assert.equal(t.find((x) => /Grok Bot/.test(x.agente)), undefined);
+  for (const c of ["Musk", "Huang"]) assert.equal(t.find((x) => x.agente === c).via, "Merovingio", c); // r44/r45
   const m = t.find((x) => x.agente === "Merovingio");
   assert.equal(m.tokHoy, 2000000); assert.ok(m.incluye.includes("Huang"));
   assert.ok(t.find((x) => x.agente === "Cypher").fuera.length > 0);

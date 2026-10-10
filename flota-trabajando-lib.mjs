@@ -19,6 +19,13 @@
  *    medición de tokens (sin pulso, o pulso a 0 todo el día) para no pintar «0» como si fuera un dato.
  */
 export const VENTANA_LATIDO_S = 120;
+/** r4 (Jensen, 10-10-2026 · Carlos: «no veo al Merovingio ni a Oráculo»): trabajando también = latido de < 15 min Y
+ *  encargo in_progress en su bandeja, sea cual sea el runtime y aunque sea el plan C gratis (OpenCode/Nemotron no
+ *  reporta tokens: 0 tok/h no es «parado»). Merovingio (deepagent de Musk) cuenta como trabajando con latido vivo. */
+export const VENTANA_VIVO_S = 900;
+export const VIVO_SIEMPRE = ["Merovingio"];
+/** Modelo principal (de pago) cuando la instancia que late es la del plan C gratis. */
+export const PRINCIPAL = { Merovingio: "Grok CLI", "Oráculo": "Codex", Morfeo: "Claude Code", Trinity: "Codex", Smith: "Grok", Neo: "Claude Code" };
 export const CPU_MIN = 5;
 export const CONSEJEROS_GROK = ["Jobs", "Wozniak", "Lucas", "Disney", "Musk", "Huang"];
 /** Siempre en la franja aunque no haya latido (r40: Merovingio es el agente Grok principal de Carlos). */
@@ -40,6 +47,10 @@ export const RETRATOS = {
 const AVATARES = { neo: "/avatars/neo.jpg", trinity: "/avatars/trinity.jpg", morfeo: "/avatars/morfeo.jpg", smith: "/avatars/smith.jpg", oraculo: "/avatars/oraculo.png" };
 const CANON = ["Jobs", "Wozniak", "Lucas", "Disney", "Musk", "Huang", "Neo", "Trinity", "Morfeo", "Oráculo", "Smith", "Niobe", "Cypher", "Merovingio", "Link", "Grok Bot"];
 
+/** OpenCode / DeepAgents / Nemotron / NVIDIA free → plan C gratis. */
+export const esGratis = (runtime, model) => /opencode|deepagents|nemotron|nvidia|:free/i.test(String(runtime || "") + " " + String(model || ""));
+/** «Oráculo» → «Oraculo» (clave de persona de la bandeja / del MCP). */
+const personaCenso = (n) => (n === "Oráculo" ? "Oraculo" : n);
 const sinTilde = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
 /** «NeoMBP16» → «Neo», «Oraculo» → «Oráculo», «TrinityMacBookPro16» → «Trinity», «Steve Jobs» → «Jobs». */
 export function canonico(persona) {
@@ -126,11 +137,16 @@ export function conCarlosPorPresencia(latidos, activas, ahoraS) {
 }
 
 /** Estado de una tarjeta: { estado:'amarillo'|'verde'|'gris', motivo }. */
-export function estadoTrabajo({ tokHora = null, conCarlos = false, latidos = [], ahoraS }) {
+export function estadoTrabajo({ tokHora = null, conCarlos = false, latidos = [], ahoraS, enCurso = 0, siempreVivo = false }) {
   if (conCarlos) return { estado: "amarillo", motivo: typeof conCarlos === "string" ? conCarlos : "con Carlos" };
   if (Number(tokHora) > 0) return { estado: "verde", motivo: "tokens en los últimos 15 min" };
   const l = (latidos || []).find((e) => latidoTrabajando(e, ahoraS));
   if (l) return { estado: "verde", motivo: l.source === "process_snapshot" ? "proceso activo (cpu " + l.cpu + " %)" : "latido «trabajando»" };
+  // r4: latido de < 15 min + encargo en curso (o Merovingio con latido) → trabajando, sin mirar runtime ni coste.
+  const ult = Math.max(0, ...(latidos || []).map((e) => Number(e && (e.declared_updated || e.updated)) || 0));
+  const vivo = ult > 0 && ahoraS - ult < VENTANA_VIVO_S;
+  if (vivo && Number(enCurso) > 0) return { estado: "verde", motivo: "latido de hace " + Math.max(0, ahoraS - ult) + " s y " + enCurso + " encargo" + (enCurso > 1 ? "s" : "") + " en curso" };
+  if (vivo && siempreVivo) return { estado: "verde", motivo: "latido vivo (deepagent de Musk)" };
   return { estado: "gris", motivo: (latidos || []).length ? "parado" : "sin latido" };
 }
 
@@ -141,7 +157,7 @@ const limpio = (s, n = 140) => String(s || "").replace(/<[^>]*>/g, " ").replace(
  * Tarjetas: presencia (lista) + velocidad (respuesta de /api/consumos/velocidad) → [{ agente, estado, … }] ordenado
  * verde → amarillo → gris (y dentro, por tok/h y frescura). Siempre los 6 consejeros Grok y Merovingio (SIEMPRE).
  */
-export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 24 * 3600 }) {
+export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 24 * 3600, carga = null }) {
   const porAg = new Map();
   const de = (n) => porAg.get(n) || (porAg.set(n, { agente: n, latidos: [], pulso: null }), porAg.get(n));
   for (const e of presencia || []) {
@@ -164,7 +180,13 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
     // r39: un pulso con retraso (Cursor) nunca pone en verde; los consejeros Grok, solo por su latido en vivo.
     const tokVivo = p && !p.conRetraso ? p.tokHora : null;
     const ccPres = p && p.conCarlos ? null : conCarlosPorPresencia(x.latidos, activas, ahoraS);
-    const st = estadoTrabajo({ tokHora: tokVivo, conCarlos: (p && p.conCarlos) ? true : ccPres ? ccPres.motivo : false, latidos: x.latidos, ahoraS });
+    const cg = carga && typeof carga.get === "function" ? carga.get(personaCenso(x.agente)) || null : null;
+    const enCurso = cg ? Number(cg.in_progress) || 0 : 0;
+    const st = estadoTrabajo({ tokHora: tokVivo, conCarlos: (p && p.conCarlos) ? true : ccPres ? ccPres.motivo : false, latidos: x.latidos, ahoraS, enCurso, siempreVivo: VIVO_SIEMPRE.includes(x.agente) });
+    // r4: instancias vivas (< 15 min) por máquina+runtime; las de OpenCode/DeepAgents/Nemotron son el plan C gratis.
+    const inst = new Map();
+    for (const e of x.latidos) if (ahoraS - (Number(e.declared_updated || e.updated) || 0) < VENTANA_VIVO_S) inst.set(claveMaquina(e.machine) + "|" + sinTilde(e.runtime), esGratis(e.runtime, e.model));
+    const nGratis = [...inst.values()].filter(Boolean).length, nPago = inst.size - nGratis;
     if (st.motivo === "sin latido" && p && Number(p.tokHoy) > 0) st.motivo = "parado";
     const ultPulso = p && p.ultimoEvento ? Math.floor(Date.parse(p.ultimoEvento) / 1000) : 0;
     const ultimo = Math.max(l ? Number(l.declared_updated || l.updated) || 0 : 0, ultPulso);
@@ -175,12 +197,19 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
     for (const e of x.latidos) { const ts = Number(e.declared_updated || e.updated) || 0; if (ts && (!fresca || ts > fresca.ts)) fresca = { ts, maquina: e.machine || null, fuente: e.source || "heartbeat" }; }
     if (ultPulso && (!fresca || ultPulso > fresca.ts)) fresca = { ts: ultPulso, maquina: (p && p.maquina) || null, fuente: "pulso" };
     const gris = st.estado === "gris" && fresca;
-    const motor = p && p.motor ? (p.motor === "claude" ? "Claude Code" : p.motor === "codex" ? "Codex" : p.motor) : (l && l.runtime) || null;
+    let motor = p && p.motor ? (p.motor === "claude" ? "Claude Code" : p.motor === "codex" ? "Codex" : p.motor) : (l && l.runtime) || null;
+    let modeloCard = (l && l.model) || (pf && pf.modelo) || null;
+    // r4: cada agente una vez con su modelo principal real; el plan C gratis va como nota (planC), no como su motor.
+    if (PRINCIPAL[x.agente] && (!motor || esGratis(motor, modeloCard))) { motor = PRINCIPAL[x.agente]; modeloCard = null; }
+    const soloGratis = inst.size > 0 && !nPago && !PRINCIPAL[x.agente];
+    // Merovingio late por DeepAgents pero su modelo es Grok CLI de pago: sin nota de plan C.
+    const planC = nGratis > 0 && !soloGratis && !VIVO_SIEMPRE.includes(x.agente);
     const r = RETRATOS[x.agente];
     out.push({
       agente: x.agente, estado: st.estado, motivo: st.motivo,
       maquina: (ccPres && ccPres.maquina) || (gris && fresca.maquina) || (enPulso && p.maquina) || (l && l.machine) || (p && p.maquina) || (pf && pf.maquina) || null,
-      motor, modelo: (l && l.model) || (pf && pf.modelo) || null,
+      motor, modelo: modeloCard,
+      enCurso, instancias: inst.size, planC, gratis: soloGratis,
       foco: limpio(l && l.focus), tarea: limpio(l && l.task, 120),
       proyecto: (enPulso && p.proyectoAhora) || (l && l.project) || (p && p.proyectoAhora) || null,
       encargo: encargoDe(l && l.task, l && l.focus),

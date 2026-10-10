@@ -1,4 +1,10 @@
 {
+  "v.10.10.2026.r4.12:45": [
+    "Consumos · «Trabajando ahora»: ya salen todos los agentes que trabajan de verdad. Cuenta como trabajando quien tiene latido de menos de 15 min y un encargo en curso, sea cual sea su motor y aunque vaya con el plan C gratis (OpenCode/Nemotron no reporta tokens). Ya aparecen Oráculo y el Merovingio.",
+    "Cada agente sale una sola vez con su modelo principal real (Oráculo = Codex, Merovingio = Grok CLI); si además tiene una instancia gratuita se apunta «+ plan C gratis».",
+    "Nueva «Matriz de agentes» al final de /consumos, en vivo con los datos de agentes_vivos: de quién depende, equipo, modelo y dónde corre, abierto o cerrado y coste. Resumen «N de M de pago · K gratis». Los agentes nuevos aparecen solos y deben ser gratuitos.",
+    "Integra el arreglo de Merovingio (presencia con 10 s y caché, con Carlos por presencia, tokens honestos) y conserva /reparto."
+  ],
   "v.10.10.2026.r3.11:29": [
     "Reparto del finde: en el tablero (/teamwork) la tira de los 5 pilares sale arriba, justo debajo de la barra, y no al final de la página.",
     "El sello de /reparto sigue mostrando sus novedades en un popover al pasar el ratón."

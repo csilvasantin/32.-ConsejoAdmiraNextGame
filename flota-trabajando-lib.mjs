@@ -77,6 +77,35 @@ export const DUALIDAD = { Musk: "Merovingio", Huang: "Merovingio", Jobs: "Smith"
 // está vivo, salen «activo vía Smith» con el estado de Smith (tokens en la ficha de Smith). Con latido propio vivo,
 // manda el suyo.
 
+/** r14: cuenta de Grok Bot de cada consejero principal (la app de escritorio donde Carlos los tiene abiertos). */
+export const CUENTA_GROKBOT = { Jobs: "csilva@admira.com", Wozniak: "csilva@admira.com", Musk: "csilvasantin@gmail.com", Huang: "csilvasantin@gmail.com" };
+export const REPOSO_CON_CARLOS_S = 300;
+/** r14: coloca a cada consejero en el Mac donde su app Grok Bot está abierta (la más fresca; al frente gana). */
+export function colocarPorAppGrokBot(out, apps) {
+  if (!Array.isArray(apps) || !apps.length) return out;
+  for (const t of out) {
+    const cuenta = CUENTA_GROKBOT[t.agente];
+    if (!cuenta || (!t.via && t.estado !== "gris")) continue; // con latido propio vivo, manda el suyo
+    const conCuenta = apps.filter((a) => a && a.cuenta === cuenta);
+    if (!conCuenta.length) continue;
+    const delante = (a) => a.alFrente && a.reposoS != null && a.reposoS < REPOSO_CON_CARLOS_S;
+    const app = [...conCuenta].sort((a, b) => delante(b) - delante(a) || (a.reposoS ?? 1e9) - (b.reposoS ?? 1e9) || (a.haceS || 0) - (b.haceS || 0))[0];
+    t.maquina = app.maquina;
+    t.maquinas = [app.maquina];
+    t.app = { nombre: "Grok Bot", cuenta, alFrente: !!app.alFrente, reposoS: app.reposoS ?? null };
+    if (delante(app)) {
+      t.estado = t.estado === "verde" ? "verde" : "amarillo";
+      t.conCarlosEn = maquinaCorta(app.maquina);
+      t.motivo = "con Carlos: app Grok Bot al frente en " + maquinaCorta(app.maquina) + (t.via ? " · tokens vía " + t.via : "");
+    } else {
+      if (t.conCarlosEn && t.estado === "amarillo") t.estado = t.via ? "verde" : "gris";
+      t.conCarlosEn = null;
+      t.motivo = (t.motivo || "") + " · app Grok Bot abierta en " + maquinaCorta(app.maquina);
+    }
+  }
+  return out;
+}
+
 /** r11: runtime corto de una ficha para la franja: cerrados «Grok» / «Codex» / «Claude»; abiertos «OpenCode · Nemotron 3 Ultra»
  *  (o el runtime y el modelo abierto reales). */
 export function runtimeCorto({ motor = null, modelo = null, gratis = false } = {}) {
@@ -346,6 +375,10 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
       tokHora: null, tokHoy: null, tokUltimaHora: null, tokHoraMetodo: null, sinMedicion: false,
       retrato: RETRATOS[consejero] || null, consejero: true, grupo: "consejeros" });
   }
+  // r14 (Carlos, 14:39): la máquina de un consejero es la del Mac donde está ABIERTA su app Grok Bot (por cuenta), no la
+  // de Smith/Merovingio. App al frente y Mac con reposo < 5 min → «con Carlos» en ese Mac. Los tokens siguen en la ficha
+  // de Smith/Merovingio. Sin app abierta con su cuenta en ningún Mac → se queda como antes (máquina del agente).
+  colocarPorAppGrokBot(out, velocidad && velocidad.grokbotApps);
   // r11: la franja alterna cada 10 s máquina ↔ runtime: se mandan ya cortos.
   for (const t of out) { t.maqCorta = maquinaCorta(t.maquina); t.runtime = runtimeCorto(t); }
   const ord = { verde: 0, amarillo: 1, gris: 2 };

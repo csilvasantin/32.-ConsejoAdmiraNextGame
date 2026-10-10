@@ -53,7 +53,9 @@ export function normalizarPulso(body) {
   if (!body || typeof body !== "object") return { ok: false, error: "cuerpo JSON requerido" };
   const maquina = texto(body.maquina, 60).replace(/[^\w.\-]/g, "");
   if (!maquina) return { ok: false, error: "maquina requerida" };
-  if (!Array.isArray(body.agentes) || !body.agentes.length || body.agentes.length > 8) return { ok: false, error: "agentes: lista de 1 a 8" };
+  // r14: un Mac sin agentes de tokens propios (MacBookProNegro14) manda solo grokbotApp: agentes puede ir vacío entonces.
+  const grokbotApp = normalizarGrokbotApp(body.grokbotApp);
+  if (!Array.isArray(body.agentes) || (!body.agentes.length && !grokbotApp) || body.agentes.length > 8) return { ok: false, error: "agentes: lista de 1 a 8" };
   const agentes = [];
   for (const a of body.agentes) {
     const agente = texto(a && a.agente, 40);
@@ -81,7 +83,28 @@ export function normalizarPulso(body) {
     agentes.push({ agente, motor, cuenta: texto(a.cuenta, 80), tokHoy, cacheHoy: entero(a.cacheHoy) || 0, ultimoEvento: Number.isFinite(ev) ? new Date(ev).toISOString() : null, porProyecto,
       conCarlos, conCarlosMotivo: texto(a.conCarlosMotivo, 240) || null, conCarlosDesde: conCarlos && Number.isFinite(desde) ? new Date(desde).toISOString() : null, ...extra });
   }
-  return { ok: true, pulso: { maquina, agentes } };
+  return { ok: true, pulso: { maquina, agentes, ...(grokbotApp ? { grokbotApp } : {}) } };
+}
+
+/**
+ * r14 (Carlos, 14:39): la app de escritorio Grok Bot de cada Mac → { abierta, firmada, cuenta, alFrente, reposoS, version }.
+ * Sin secretos: proceso vivo, desktop-status.json (signedIn, appVersion), la cuenta de ~/.config/admiranext/grokbot-cuenta
+ * (la app no la guarda en claro fuera de su sesión), app al frente (lsappinfo) y reposo HID (ioreg).
+ */
+export function normalizarGrokbotApp(g) {
+  if (!g || typeof g !== "object") return null;
+  const cuenta = texto(g.cuenta, 80).toLowerCase();
+  const reposo = entero(g.reposoS);
+  return { abierta: g.abierta === true, firmada: g.firmada === true ? true : g.firmada === false ? false : null,
+    cuenta: /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/.test(cuenta) ? cuenta : null, alFrente: g.alFrente === true,
+    reposoS: reposo, version: texto(g.version, 20) || null };
+}
+
+/** r14: apps Grok Bot abiertas con pulso fresco → [{ maquina, cuenta, alFrente, reposoS, haceS }]. */
+export function appsGrokBot(docs, ahora) {
+  return (docs || []).filter((d) => d && d.grokbotApp && d.grokbotApp.abierta && d.grokbotApp.ts && ahora - d.grokbotApp.ts < STALE_MS)
+    .map((d) => ({ maquina: d.maquina, cuenta: d.grokbotApp.cuenta || null, alFrente: !!d.grokbotApp.alFrente, reposoS: d.grokbotApp.reposoS,
+      firmada: d.grokbotApp.firmada, haceS: Math.round((ahora - d.grokbotApp.ts) / 1000) }));
 }
 
 /** r27: serie en hora del evento (Cursor) → puntos validados, ordenados, ts únicos; null si no vale. */
@@ -118,6 +141,7 @@ export function aplicarPulso(doc, pulso, ahora) {
       conCarlos: !!a.conCarlos, conCarlosMotivo: a.conCarlosMotivo || null, conCarlosDesde: a.conCarlosDesde || null,
       ...(a.modelo ? { modelo: a.modelo } : {}), ...(a.fuente ? { fuente: a.fuente } : {}), ...(a.cubre ? { cubre: a.cubre } : {}), ...(a.nota ? { nota: a.nota } : {}), ...(a.serie ? { serieEventos: true } : {}) };
   }
+  if (pulso.grokbotApp) d.grokbotApp = { ...pulso.grokbotApp, ts: ahora };
   for (const [n, a] of Object.entries(d.agentes)) if (!a.ultimoPulso || ahora - a.ultimoPulso > RETENCION_MS) delete d.agentes[n];
   d.maquina = pulso.maquina;
   d.ultimoPulso = ahora;

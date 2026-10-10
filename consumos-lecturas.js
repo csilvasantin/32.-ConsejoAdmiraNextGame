@@ -6,7 +6,8 @@
   const caja = document.getElementById("lecturas-cuerpo");
   if (!caja) return;
   const res = document.getElementById("lecturas-resumen"); // r31: resumen siempre visible (Más margen + píldoras de %)
-  const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
+  // r20: «Grok Bot» (también en nombres de cupo guardados en las lecturas, p. ej. «Grok Bot semanal») se pinta «GrokBot».
+  const esc = (s) => String(s ?? "").replace(/\bGrok Bot\b/g, "GrokBot").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
   const pct = (x) => (x === null || x === undefined ? "—" : String(Math.round(Number(x) * 100) / 100).replace(".", ",") + " %");
   const fecha = (ts) => new Intl.DateTimeFormat("es-ES", { timeZone: "Europe/Madrid", day: "2-digit", month: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).format(new Date(ts)).replace(",", "");
   const COLORES = ["#78f3ff", "#ffd866", "#88ffaa", "#ff9ad5", "#b9a7ff", "#ffb38a"];

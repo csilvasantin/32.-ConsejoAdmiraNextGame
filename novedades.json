@@ -1,4 +1,10 @@
 {
+  "v.10.10.2026.r14.14:52": [
+    "Consejeros en el Mac de su app Grok Bot: Jobs y Wozniak (csilva@admira.com) salen en el MBP14 negro y Musk y Huang (csilvasantin) en el MBA16, donde Carlos tiene abierta la app; ya no copian la máquina de Smith/Merovingio. Los tokens siguen en la ficha de Smith/Merovingio.",
+    "«Con Carlos» de un consejero = su app Grok Bot al frente y el Mac con reposo < 5 min.",
+    "El pulso de cada Mac (fleet/pulso-tokens.py) manda grokbotApp {abierta, firmada, cuenta, alFrente, reposoS} sin leer secretos: la cuenta sale de ~/.config/admiranext/grokbot-cuenta.",
+    "Retoque r14: un latido de Jobs/Wozniak desde «GrokBot» (la nube) no dice en qué Mac está la app → manda la app; el pulso detecta la app con ps (pgrep no la veía)."
+  ],
   "v.10.10.2026.r14.14:43": [
     "Consejeros en el Mac de su app Grok Bot: Jobs y Wozniak (csilva@admira.com) salen en el MBP14 negro y Musk y Huang (csilvasantin) en el MBA16, donde Carlos tiene abierta la app; ya no copian la máquina de Smith/Merovingio. Los tokens siguen en la ficha de Smith/Merovingio.",
     "«Con Carlos» de un consejero = su app Grok Bot al frente y el Mac con reposo < 5 min.",

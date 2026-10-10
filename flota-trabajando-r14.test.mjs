@@ -46,3 +46,13 @@ test("r14: el pulso acepta grokbotApp (también sin agentes) y lo guarda con ts;
   assert.equal(appsGrokBot([r.doc], 1_000_000 + 10 * 60_000).length, 0);
   assert.equal(normalizarPulso({ maquina: "X", agentes: [], grokbotApp: { abierta: true, cuenta: "no es un mail" } }).pulso.grokbotApp.cuenta, null);
 });
+
+test("r14: latido propio desde «GrokBot» (la nube) → manda la app; desde un Mac real → manda el latido", () => {
+  const out = colocarPorAppGrokBot([
+    { agente: "Jobs", estado: "verde", motivo: "latido «trabajando»", maquina: "GrokBot", conCarlosEn: null },
+    { agente: "Wozniak", estado: "verde", motivo: "latido", maquina: "MacMini", conCarlosEn: null },
+  ], apps);
+  assert.equal(out[0].maquina, "MacBookProNegro14");
+  assert.equal(out[0].conCarlosEn, "MBP14");
+  assert.equal(out[1].maquina, "MacMini");
+});

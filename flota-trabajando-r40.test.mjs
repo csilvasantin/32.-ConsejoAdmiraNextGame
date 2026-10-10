@@ -168,7 +168,12 @@ test("maquinaCorta: MBP16, MBA16, MBP14, Mini; desconocida tal cual", () => {
 });
 
 test("caso de Carlos (12:49): Neo y Trinity con él en el MBP16 → «con Carlos · MBP16» los dos, no en el Air", () => {
-  const t = tarjetas({ presencia: [...air(14), ...mbp16Activo], velocidad: vel1249, ahoraS: T });
+  // r23-sup (Carlos, 17:29): la app abierta y «adjunta» con Firefox al frente ya NO es estar con Carlos: hace falta que el
+  // pulso del MBP16 diga que Carlos USA esa app (enUso). Sin esa señal, ni amarillo.
+  const sinUso = tarjetas({ presencia: [...air(14), ...mbp16Activo], velocidad: vel1249, ahoraS: T });
+  for (const n of ["Neo", "Trinity"]) assert.notEqual(de(sinUso, n).estado, "amarillo", n + " (app abierta sin uso)");
+  const enUso = { ...vel1249, superficies: [{ maquina: "MacBookPro16", tipo: "app", app: "Claude", agente: "Neo", enUso: true }, { maquina: "MacBookPro16", tipo: "app", app: "Codex", agente: "Trinity", enUso: true }] };
+  const t = tarjetas({ presencia: [...air(14), ...mbp16Activo], velocidad: enUso, ahoraS: T });
   for (const n of ["Neo", "Trinity"]) {
     assert.equal(de(t, n).estado, "amarillo", n);
     assert.equal(de(t, n).conCarlosEn, "MBP16", n);

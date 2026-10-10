@@ -8,7 +8,7 @@
  */
 import { tarjetas, retratoDe } from "../../../flota-trabajando-lib.mjs";
 import { calcular } from "../consumos/velocidad.js";
-import { matriz, cargaDe, persona as personaCenso, AGENTES_FLOTA, CONSEJEROS } from "../../../flota-matriz-lib.mjs";
+import { matriz, cargaDe, persona as personaCenso, AGENTES_FLOTA, CONSEJEROS, llave } from "../../../flota-matriz-lib.mjs";
 
 /** r4 (Jensen, 10-10-2026): carga de encargos por persona, la MISMA fuente que agentes_vivos (bandeja pública de Yokup,
  *  los 80 más recientes por persona). Con ella: trabajando = latido < 15 min + encargo in_progress. */
@@ -94,6 +94,13 @@ export function conRetratos(m) {
   return { ...m, filas: m.filas.map((f) => { const r = retratoDe(f.persona || f.agente); return r ? { ...f, retrato: r } : f; }) };
 }
 
+/** r28-sup: columna «Superficie» de la matriz = las superficies de la ficha de esa persona (Terminal (CLI) / app / asistente). */
+export function conSuperficies(m, ts) {
+  if (!m || !Array.isArray(m.filas)) return m;
+  const por = new Map((ts || []).map((t) => [llave(t.agente), t.superficies || []]));
+  return { ...m, filas: m.filas.map((f) => ({ ...f, superficies: por.get(llave(f.persona || f.agente)) || [] })) };
+}
+
 export async function construir({ env, fetchImpl, ahoraMs: ahoraFijo, cache }) {
   const ahoraMs = ahoraFijo || Date.now();
   const [pr, v] = await Promise.all([leerPresencia(fetchImpl || fetch, ahoraMs, cache === undefined ? cacheBorde() : cache), calcular({ env, fetchImpl }).catch(() => null)]);
@@ -102,9 +109,10 @@ export async function construir({ env, fetchImpl, ahoraMs: ahoraFijo, cache }) {
   const pres = p ? p.presence : [];
   const nombres = [...AGENTES_FLOTA, ...CONSEJEROS, ...pres.map((e) => e && e.persona && personaCenso(e.persona))];
   const carga = await leerCarga(fetchImpl || fetch, nombres).catch(() => new Map());
+  const ts = tarjetas({ presencia: pres, velocidad: v, ahoraS, carga });
   return {
-    ok: true, tarjetas: tarjetas({ presencia: pres, velocidad: v, ahoraS, carga }),
-    matriz: conRetratos(matriz({ presencia: pres, carga, ahoraS })), carga: carga.size ? "ok" : "sin datos",
+    ok: true, tarjetas: ts,
+    matriz: conSuperficies(conRetratos(matriz({ presencia: pres, carga, ahoraS })), ts), carga: carga.size ? "ok" : "sin datos",
     // r17: qué cuenta(s) tiene en uso la app Grok Bot de cada Mac (cuenta null = app abierta, cuenta desconocida).
     appsGrokBot: (v && Array.isArray(v.grokbotApps) ? v.grokbotApps : []).map((a) => ({ maquina: a.maquina, cuenta: a.cuenta || null,
       alFrente: !!a.alFrente, usoS: a.usoS ?? null, fuente: a.fuente || null })),

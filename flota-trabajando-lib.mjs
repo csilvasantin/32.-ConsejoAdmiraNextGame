@@ -115,6 +115,45 @@ export function colocarPorAppGrokBot(out, apps) {
   return out;
 }
 
+/** r28-sup: consejeros principales de GrokBot: viven en el asistente de GrokBot (nube), despertados por rutinas/webhooks. */
+export const CONSEJEROS_ASISTENTE = ["Jobs", "Wozniak", "Musk", "Huang"];
+export const RUNTIME_ASISTENTE = "GrokBot (asistente)";
+/** r28-sup: cuenta de la app GrokBot donde Carlos habla con cada uno (Merovingio = Elon, en la cuenta csilvasantin). */
+export const CUENTA_APP_GROKBOT = { ...CUENTA_GROKBOT, Merovingio: "csilvasantin@gmail.com" };
+const RT_CLI = (rt) => { const t = sinTilde(rt); return /opencode/.test(t) ? "OpenCode" : /deepagents/.test(t) ? "DeepAgents" : /grok/.test(t) ? "GrokBot CLI" : /codex/.test(t) ? "Codex CLI" : /claude/.test(t) ? "Claude Code" : rt || null; };
+/**
+ * r28-sup — superficies de una ficha, por Mac: [{ tipo:"cli"|"app"|"asistente", maquina, corta, runtime|app, enUso, fuente }].
+ *  · cli: sesión tmux viva (pulso) o latido de presencia host «cli» de < 15 min. Es el canal de trabajo del agente.
+ *  · app: app de escritorio abierta (pulso o latido host «app»). La usa SOLO Carlos: enUso = el pulso de ese Mac dice que
+ *    está al frente o con prompt tecleado < 5 min (reposo < 5 min). Abierta sin uso: enUso false (nunca es trabajo).
+ *    GrokBot: por cuenta (apps de /api/consumos/velocidad): enUso = al frente con reposo < 5 min.
+ *  · asistente: consejeros principales (GrokBot en la nube), sin CLI.
+ * Orden: cli, asistente, app en uso, app sin uso. Sin datos de un Mac no se inventa nada.
+ */
+export function superficiesDe(t, { latidos = [], supPulso = [], apps = [], ahoraS } = {}) {
+  const out = [];
+  const add = (x) => {
+    const i = out.findIndex((o) => o.tipo === x.tipo && claveMaquina(o.maquina) === claveMaquina(x.maquina) && (o.app || "") === (x.app || ""));
+    if (i < 0) out.push(x); else if (x.fuente === "pulso") out[i] = { ...out[i], ...x };
+  };
+  const yo = t.agente, asistente = CONSEJEROS_ASISTENTE.includes(yo);
+  const vivo = (e) => ahoraS - (Number(e.declared_updated || e.updated) || 0) < VENTANA_VIVO_S;
+  if (asistente) out.push({ tipo: "asistente", maquina: null, corta: null, runtime: RUNTIME_ASISTENTE, fuente: "mapa" });
+  else {
+    for (const e of latidos) if (e && e.machine && vivo(e) && e.host === "cli" && canonico(e.persona) === yo) add({ tipo: "cli", maquina: e.machine, corta: maquinaCorta(e.machine), runtime: RT_CLI(e.runtime), sesion: e.session_id || null, fuente: "latido" });
+    for (const s of supPulso) if (s && s.tipo === "cli" && canonico(s.agente) === yo) add({ tipo: "cli", maquina: s.maquina, corta: maquinaCorta(s.maquina), runtime: s.runtime || RT_CLI(s.motor), sesion: s.sesion || null, fuente: "pulso" });
+    // Merovingio (Elon): su sesión de terminal es la del Grok CLI del servidor GrokBot (latido-merovingio), siempre vivo.
+    if (yo === "Merovingio" && !out.some((o) => o.tipo === "cli")) out.push({ tipo: "cli", maquina: t.maquina || "GrokBot", corta: maquinaCorta(t.maquina || "GrokBot"), runtime: "GrokBot CLI", fuente: "latido" });
+    // Apps Claude / Codex: latidos host «app» (abierta) + pulso (abierta y si Carlos la usa).
+    for (const e of latidos) if (e && e.machine && vivo(e) && (e.host === "app" || String(e.session_id || "").startsWith("desktop:")) && canonico(e.persona) === yo) add({ tipo: "app", maquina: e.machine, corta: maquinaCorta(e.machine), app: claveApp(e.runtime) === "codex" ? "Codex" : claveApp(e.runtime) === "claude" ? "Claude" : e.runtime || "app", enUso: false, fuente: "latido" });
+  }
+  for (const s of supPulso) if (s && s.tipo === "app" && s.app !== "GrokBot" && s.agente && canonico(s.agente) === yo && !asistente) add({ tipo: "app", maquina: s.maquina, corta: maquinaCorta(s.maquina), app: s.app, enUso: !!s.enUso, alFrente: !!s.alFrente, fuente: "pulso" });
+  const cuenta = CUENTA_APP_GROKBOT[yo];
+  if (cuenta) for (const a of apps) if (a && a.cuenta === cuenta && a.maquina) add({ tipo: "app", maquina: a.maquina, corta: maquinaCorta(a.maquina), app: "GrokBot", enUso: !!(a.alFrente && a.reposoS != null && a.reposoS < REPOSO_CON_CARLOS_S), alFrente: !!a.alFrente, fuente: "pulso" });
+  const ord = (x) => (x.tipo === "cli" ? 0 : x.tipo === "asistente" ? 1 : x.enUso ? 2 : 3);
+  return out.sort((a, b) => ord(a) - ord(b) || String(a.corta || "").localeCompare(String(b.corta || "")));
+}
+
 /** r11: runtime corto de una ficha para la franja: cerrados «GrokBot» (o «GrokBot CLI») / «Codex» / «Claude»; abiertos «OpenCode · Nemotron 3 Ultra»
  *  (o el runtime y el modelo abierto reales). */
 export function runtimeCorto({ motor = null, modelo = null, gratis = false } = {}) {
@@ -247,12 +286,24 @@ export function superficieDeCarlos(e) {
   return false;
 }
 
-/** «con Carlos» por presencia: superficie de Carlos, fresca, en una máquina que Carlos está usando. → motivo | null. */
-export function conCarlosPorPresencia(latidos, activas, ahoraS) {
+/** r28-sup: «Claude» / «Codex» / «Grok Bot»… (runtime de presencia o app del pulso) → clave de app de escritorio. */
+export const claveApp = (x) => { const t = sinTilde(x).replace(/[^a-z]/g, ""); return /claude/.test(t) ? "claude" : /codex|chatgpt|openai/.test(t) ? "codex" : /grok/.test(t) ? "grokbot" : /opencode/.test(t) ? "opencode" : t; };
+/** r28-sup: «maquina|app» de las apps de escritorio que Carlos está USANDO ahora según el pulso (al frente / prompt < 5 min). */
+export function appsEnUso(superficies) {
+  return new Set((superficies || []).filter((x) => x && x.tipo === "app" && x.enUso).map((x) => claveMaquina(x.maquina) + "|" + claveApp(x.app)));
+}
+
+/** «con Carlos» por presencia: superficie de Carlos, fresca, en una máquina que Carlos está usando. → motivo | null.
+ *  r28-sup (Carlos, 17:29 — «la app de escritorio solo la uso yo y puede quedarse abierta»): una app de escritorio solo
+ *  cuenta si el pulso de ese Mac dice que Carlos la está USANDO (enUso); abierta y adjunta ya no basta. Sin pulso con
+ *  superficies (Mac con pulso-tokens viejo) la app no cuenta: no se inventa. */
+export function conCarlosPorPresencia(latidos, activas, ahoraS, enUso = new Set()) {
   for (const e of latidos || []) {
     if (!fresco(e, ahoraS) || !superficieDeCarlos(e)) continue;
     const k = claveMaquina(e.machine);
     if (!activas || !activas.has(k)) continue;
+    const esApp = e.host === "app" || String(e.session_id || "").startsWith("desktop:");
+    if (esApp && !(e.con_carlos === true || e.conCarlos === true) && !enUso.has(k + "|" + claveApp(e.runtime || String(e.session_id || "").slice(8)))) continue;
     const sup = e.host === "app" || String(e.session_id || "").startsWith("desktop:") ? "app de escritorio" : "tmux «" + (e.session_id || "?") + "»";
     return { motivo: "con Carlos (" + sup + " en " + e.machine + ")", maquina: e.machine };
   }
@@ -310,6 +361,8 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
   for (const a of (velocidad && velocidad.porAgente) || []) if (a && a.agente) de(canonico(a.agente)).pulsos.push(a);
   for (const c of (velocidad && velocidad.conocidos) || []) if (c && c.agente) { const x = de(canonico(c.agente)); x.perfil = c; }
   for (const n of SIEMPRE) de(n);
+  // r28-sup: un agente con sesión de terminal viva (pulso fresco) sale aunque aún no haya latido.
+  for (const sp of (velocidad && velocidad.superficies) || []) if (sp && sp.tipo === "cli" && sp.agente && canonico(sp.agente)) de(canonico(sp.agente)).cli = true;
   // r6 (Carlos): los asistentes de Grok Bot de csilvasantin (Musk, Huang, Mouse, «Grok Bot (Consejo)»…) tiran del MISMO
   // pool de Grok que Merovingio: su consumo y sus latidos van en la ficha de Merovingio, no como fichas aparte.
   const mero = de("Merovingio"); mero.incluye = [];
@@ -324,16 +377,18 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
     porAg.delete(n);
   }
   const activas = maquinasConCarlos({ presencia, velocidad, ahoraS });
+  const supPulso = (velocidad && velocidad.superficies) || [];
+  const enUso = appsEnUso(supPulso);
   const out = [];
   for (const x of porAg.values()) {
     // Dedupe: varias máquinas → manda el latido más fresco (y, si alguno dice «trabajando», ese).
     x.latidos.sort((a, b) => (latidoTrabajando(b, ahoraS) - latidoTrabajando(a, ahoraS)) || ((Number(b.declared_updated || b.updated) || 0) - (Number(a.declared_updated || a.updated) || 0)));
     const l = x.latidos[0] || null, p = unirPulsos(x.pulsos), pf = x.perfil || null;
     // Fuera: entradas del pulso sin tokens hoy, sin latido y sin perfil conocido (p. ej. «Anónimo»), salvo los consejeros.
-    if (!x.latidos.length && !SIEMPRE.includes(x.agente) && !(p && Number(p.tokHoy) > 0) && !pf) continue;
+    if (!x.latidos.length && !SIEMPRE.includes(x.agente) && !(p && Number(p.tokHoy) > 0) && !pf && !x.cli) continue;
     // r39: un pulso con retraso (Cursor) nunca pone en verde; los consejeros Grok, solo por su latido en vivo.
     const tokVivo = p && !p.conRetraso ? p.tokHora : null;
-    const ccPres = p && p.conCarlos ? null : conCarlosPorPresencia(x.latidos, activas, ahoraS);
+    const ccPres = p && p.conCarlos ? null : conCarlosPorPresencia(x.latidos, activas, ahoraS, enUso);
     const conCarlosEn = p && p.conCarlos ? maquinaCorta(p.maquina) : ccPres ? maquinaCorta(ccPres.maquina) : null;
     const cg = carga && typeof carga.get === "function" ? carga.get(personaCenso(x.agente)) || null : null;
     const enCurso = cg ? Number(cg.in_progress) || 0 : 0;
@@ -406,6 +461,12 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
   colocarPorAppGrokBot(out, velocidad && velocidad.grokbotApps);
   // r11: la franja alterna cada 10 s máquina ↔ runtime: se mandan ya cortos.
   for (const t of out) { t.maqCorta = t.appMaquinas ? t.appMaquinas.map((m) => m.corta).join(" + ") : maquinaCorta(t.maquina); t.runtime = runtimeCorto(t); }
+  // r28-sup (Carlos, 17:28/17:36): superficie de cada instancia, por Mac. Los consejeros principales corren en el
+  // asistente de GrokBot en la nube (rutinas / webhooks), no en una CLI: «GrokBot (asistente)», nunca «GrokBot CLI».
+  for (const t of out) {
+    if (CONSEJEROS_ASISTENTE.includes(t.agente)) { t.motor = RUNTIME_ASISTENTE; t.modelo = null; t.runtime = RUNTIME_ASISTENTE; }
+    t.superficies = superficiesDe(t, { latidos: (porAg.get(t.agente) || {}).latidos || [], supPulso, apps: (velocidad && velocidad.grokbotApps) || [], ahoraS });
+  }
   const ord = { verde: 0, amarillo: 1, gris: 2 };
   return out.sort((a, b) => ord[a.estado] - ord[b.estado] || (b.tokHora || 0) - (a.tokHora || 0) || (a.haceS ?? 1e12) - (b.haceS ?? 1e12) || a.agente.localeCompare(b.agente));
 }

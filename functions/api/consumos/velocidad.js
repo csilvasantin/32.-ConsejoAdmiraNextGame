@@ -17,7 +17,7 @@
  * r20: proyectoAhora = el que más quema AHORA (max tokHora; si todos a 0, max tokHoy) — el dial de proyecto lo sigue en auto.
  */
 import { calcularVelocidad, partesDeHoy, serieAInstantaneas, unir, podar, tocaGuardar, escala, proyectoAhora } from "../../../consumos-velocidad-lib.mjs";
-import { mezclar, appsGrokBot } from "../../../consumos-pulso-lib.mjs";
+import { mezclar, appsGrokBot, superficiesDePulso } from "../../../consumos-pulso-lib.mjs";
 import { leerPulsos } from "./pulso.js";
 import { perfilesFlota } from "../../../consumos-perfiles.mjs";
 
@@ -81,7 +81,7 @@ export async function calcular({ env, fetchImpl }) {
     yk = calcularVelocidad({ snaps: unir(deYokup, propias, ahora), hoy, ahora });
   }
   const m = mezclar(yk, docs, ahora);
-  const base = { grokbotApps: appsGrokBot(docs, ahora), fuente: FUENTE, fuentePulso: "/api/consumos/pulso", yokup: d ? "ok" : "sin respuesta", instantaneasKV: propias.length, instantaneasYokup: deYokup.length, almacen: store ? "kv" : "ninguno", generado: new Date(ahora).toISOString() };
+  const base = { grokbotApps: appsGrokBot(docs, ahora), superficies: superficiesDePulso(docs, ahora), fuente: FUENTE, fuentePulso: "/api/consumos/pulso", yokup: d ? "ok" : "sin respuesta", instantaneasKV: propias.length, instantaneasYokup: deYokup.length, almacen: store ? "kv" : "ninguno", generado: new Date(ahora).toISOString() };
   if (m.sinDatos) return { ok: false, sinDatos: true, conocidos: perfilesFlota(), tokHora: null, metodo: null, porAgente: [], pico24h: null, error: "ni pulso en tiempo real ni partes de Yokup", ...base };
   return { ok: true, ...m, conocidos: perfilesFlota(), proyectoAhora: proyectoAhora(m.porProyecto), escalaMax: escala(Math.max(m.pico24h || 0, m.tokHora || 0)), ...base };
 }

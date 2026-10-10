@@ -55,7 +55,8 @@ export function normalizarPulso(body) {
   if (!maquina) return { ok: false, error: "maquina requerida" };
   // r14: un Mac sin agentes de tokens propios (MacBookProNegro14) manda solo grokbotApp: agentes puede ir vacío entonces.
   const grokbotApp = normalizarGrokbotApp(body.grokbotApp);
-  if (!Array.isArray(body.agentes) || (!body.agentes.length && !grokbotApp) || body.agentes.length > 8) return { ok: false, error: "agentes: lista de 1 a 8" };
+  const superficies = normalizarSuperficies(body.superficies);
+  if (!Array.isArray(body.agentes) || (!body.agentes.length && !grokbotApp && !(superficies && superficies.length)) || body.agentes.length > 8) return { ok: false, error: "agentes: lista de 1 a 8" };
   const agentes = [];
   for (const a of body.agentes) {
     const agente = texto(a && a.agente, 40);
@@ -83,7 +84,44 @@ export function normalizarPulso(body) {
     agentes.push({ agente, motor, cuenta: texto(a.cuenta, 80), tokHoy, cacheHoy: entero(a.cacheHoy) || 0, ultimoEvento: Number.isFinite(ev) ? new Date(ev).toISOString() : null, porProyecto,
       conCarlos, conCarlosMotivo: texto(a.conCarlosMotivo, 240) || null, conCarlosDesde: conCarlos && Number.isFinite(desde) ? new Date(desde).toISOString() : null, ...extra });
   }
-  return { ok: true, pulso: { maquina, agentes, ...(grokbotApp ? { grokbotApp } : {}) } };
+  return { ok: true, pulso: { maquina, agentes, ...(grokbotApp ? { grokbotApp } : {}), ...(superficies ? { superficies } : {}) } };
+}
+
+/**
+ * r28-sup (Carlos, 10-10-2026 17:28): superficies de un Mac — cómo corre cada agente. Sin contenido ni secretos.
+ *  · { agente, tipo:"cli", sesion, motor, runtime, adjunto } — sesión tmux viva: canal de trabajo del agente.
+ *  · { agente|null, tipo:"app", app:"Claude"|"Codex"|"GrokBot"|"OpenCode", alFrente, enUso, cuenta? } — app de escritorio:
+ *    la usa SOLO Carlos; enUso = al frente o prompt tecleado < 5 min con reposo < 5 min. Abierta sin uso ≠ trabajo.
+ * null si no viene (Mac con pulso-tokens viejo): entonces no se sabe nada de ese Mac (no se inventa).
+ */
+export function normalizarSuperficies(l) {
+  if (!Array.isArray(l)) return null;
+  const out = [];
+  const correo = (c) => { const x = texto(c, 80).toLowerCase(); return /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/.test(x) ? x : null; };
+  for (const x of l.slice(0, 16)) {
+    if (!x || typeof x !== "object") continue;
+    if (x.tipo === "cli") {
+      const agente = texto(x.agente, 40), sesion = texto(x.sesion, 40);
+      if (!agente || !sesion) continue;
+      out.push({ agente, tipo: "cli", sesion, motor: texto(x.motor, 12).toLowerCase() || null, runtime: texto(x.runtime, 30) || null, adjunto: x.adjunto === true });
+    } else if (x.tipo === "app") {
+      const app = texto(x.app, 20);
+      if (!/^(Claude|Codex|GrokBot|OpenCode)$/.test(app)) continue;
+      out.push({ agente: texto(x.agente, 40) || null, tipo: "app", app, alFrente: x.alFrente === true, enUso: x.enUso === true, cuenta: correo(x.cuenta) });
+    }
+  }
+  return out;
+}
+
+/** r28-sup: superficies frescas (pulso < 3 min) de todos los Macs → [{ maquina, …superficie }]. */
+export function superficiesDePulso(docs, ahora) {
+  const out = [];
+  for (const d of docs || []) {
+    const s = d && d.superficies;
+    if (!s || !Array.isArray(s.lista) || !s.ts || ahora - s.ts >= STALE_MS) continue;
+    for (const x of s.lista) out.push({ maquina: d.maquina, ...x });
+  }
+  return out;
 }
 
 /**
@@ -160,6 +198,7 @@ export function aplicarPulso(doc, pulso, ahora) {
       ...(a.modelo ? { modelo: a.modelo } : {}), ...(a.fuente ? { fuente: a.fuente } : {}), ...(a.cubre ? { cubre: a.cubre } : {}), ...(a.nota ? { nota: a.nota } : {}), ...(a.serie ? { serieEventos: true } : {}) };
   }
   if (pulso.grokbotApp) d.grokbotApp = { ...pulso.grokbotApp, ts: ahora };
+  if (pulso.superficies) d.superficies = { lista: pulso.superficies, ts: ahora };
   for (const [n, a] of Object.entries(d.agentes)) if (!a.ultimoPulso || ahora - a.ultimoPulso > RETENCION_MS) delete d.agentes[n];
   d.maquina = pulso.maquina;
   d.ultimoPulso = ahora;

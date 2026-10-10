@@ -99,7 +99,8 @@
   }
   /** r11: «MBA16 · +C» ↔ «Claude» (o «OpenCode · Nemotron 3 Ultra»); si falta un lado, se repite el otro. */
   function altChip(t) {
-    var a = [t.estado === 'amarillo' && t.conCarlosEn ? t.conCarlosEn : t.maqCorta, t.gratis ? T('gratis', 'free') : t.planC ? '+C' : ''].filter(Boolean).join(' · ');
+    // r16: con la app Grok Bot en varios Macs se enseñan todos («MBP14 + MBA16»); el de «con Carlos» va el primero.
+    var a = [t.appMaquinas && t.appMaquinas.length > 1 ? t.maqCorta : t.estado === 'amarillo' && t.conCarlosEn ? t.conCarlosEn : t.maqCorta, t.gratis ? T('gratis', 'free') : t.planC ? '+C' : ''].filter(Boolean).join(' · ');
     var b = t.runtime || '';
     if (!a && !b) return '';
     return ' <small class="tr-alt" title="' + esc(T('Cada 10 s: máquina ↔ runtime', 'Every 10 s: machine ↔ runtime')) + '"><span class="tr-a">' + esc(a || b) + '</span><span class="tr-b">' + esc(b || a) + '</span></small>';

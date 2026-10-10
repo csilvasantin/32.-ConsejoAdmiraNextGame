@@ -89,21 +89,27 @@ export function colocarPorAppGrokBot(out, apps) {
     // en qué Mac está la app: entonces manda la app.
     const nube = !t.maquina || /^(grokbot|grokbotbox|box)$/.test(claveMaquina(t.maquina));
     if (!cuenta || (!t.via && t.estado !== "gris" && !nube)) continue;
-    const conCuenta = apps.filter((a) => a && a.cuenta === cuenta);
+    // r16 (Carlos, 15:20): la app puede estar abierta en VARIOS Macs a la vez → salen todos (una sola ficha, sin duplicar);
+    // «con Carlos» en el que está al frente y activo; el resto, «abierta».
+    const vistos = new Set();
+    const conCuenta = apps.filter((a) => a && a.cuenta === cuenta && a.maquina && !vistos.has(claveMaquina(a.maquina)) && vistos.add(claveMaquina(a.maquina)));
     if (!conCuenta.length) continue;
     const delante = (a) => a.alFrente && a.reposoS != null && a.reposoS < REPOSO_CON_CARLOS_S;
-    const app = [...conCuenta].sort((a, b) => delante(b) - delante(a) || (a.reposoS ?? 1e9) - (b.reposoS ?? 1e9) || (a.haceS || 0) - (b.haceS || 0))[0];
+    const orden = [...conCuenta].sort((a, b) => delante(b) - delante(a) || (a.reposoS ?? 1e9) - (b.reposoS ?? 1e9) || (a.haceS || 0) - (b.haceS || 0));
+    const app = orden[0], conCarlos = delante(app);
     t.maquina = app.maquina;
-    t.maquinas = [app.maquina];
+    t.maquinas = orden.map((a) => a.maquina);
+    t.appMaquinas = orden.map((a) => ({ maquina: a.maquina, corta: maquinaCorta(a.maquina), conCarlos: a === app && conCarlos, alFrente: !!a.alFrente, reposoS: a.reposoS ?? null }));
     t.app = { nombre: "Grok Bot", cuenta, alFrente: !!app.alFrente, reposoS: app.reposoS ?? null };
-    if (delante(app)) {
+    const todas = t.appMaquinas.map((m) => m.corta).join(" + ");
+    if (conCarlos) {
       t.estado = "amarillo"; // como estadoTrabajo: «con Carlos» manda sobre verde
       t.conCarlosEn = maquinaCorta(app.maquina);
-      t.motivo = "con Carlos: app Grok Bot al frente en " + maquinaCorta(app.maquina) + (t.via ? " · tokens vía " + t.via : "");
+      t.motivo = "con Carlos: app Grok Bot al frente en " + t.conCarlosEn + (orden.length > 1 ? " · abierta también en " + t.appMaquinas.slice(1).map((m) => m.corta).join(" + ") : "") + (t.via ? " · tokens vía " + t.via : "");
     } else {
       if (t.conCarlosEn && t.estado === "amarillo") t.estado = t.via ? "verde" : "gris";
       t.conCarlosEn = null;
-      t.motivo = (t.motivo || "") + " · app Grok Bot abierta en " + maquinaCorta(app.maquina);
+      t.motivo = (t.motivo || "") + " · app Grok Bot abierta en " + todas;
     }
   }
   return out;
@@ -127,7 +133,19 @@ export function runtimeCorto({ motor = null, modelo = null, gratis = false } = {
   if (/grok|cursor/.test(t)) return "Grok";
   return m || null;
 }
-const AVATARES = { neo: "/avatars/neo.jpg", trinity: "/avatars/trinity.jpg", morfeo: "/avatars/morfeo.jpg", smith: "/avatars/smith.jpg", oraculo: "/avatars/oraculo.png" };
+// r16 (Carlos, 15:21): cada agente con nombre de Matrix lleva la cara de su personaje (como Merovingio = Lambert Wilson);
+// antes Oráculo, Niobe, Cypher, WhiteRabbit… salían con iniciales. Los consejeros conservan sus caras reales (RETRATOS).
+// Fuentes y derechos: avatars/FUENTES.md. Mismo mapa en yk-avatar.js y yk-misiones.js.
+export const AVATARES_MATRIX = ["neo", "trinity", "morfeo", "smith", "oraculo", "niobe", "cypher", "link", "switch", "seraph", "persefone", "arquitecto", "whiterabbit", "merovingio"];
+const AVATARES = Object.fromEntries(AVATARES_MATRIX.map((n) => [n, "/avatars/" + n + ".jpg"]));
+/** r16: retrato para cualquier nombre (fichas, matriz): consejero → su cara real; agente Matrix → su personaje. */
+export function retratoDe(nombre) {
+  const c = canonico(nombre), k = sinTilde(c).replace(/[^a-z0-9]/g, "");
+  if (RETRATOS[c]) return RETRATOS[c];
+  if (AVATARES[k]) return { img: AVATARES[k] };
+  const alias = { oracle: "oraculo", persephone: "persefone", architect: "arquitecto", elarquitecto: "arquitecto", dujour: "whiterabbit" };
+  return alias[k] ? { img: AVATARES[alias[k]] } : null;
+}
 const CANON = ["Jobs", "Wozniak", "Lucas", "Disney", "Musk", "Huang", "Neo", "Trinity", "Morfeo", "Oráculo", "Smith", "Niobe", "Cypher", "Merovingio", "Link", "Grok Bot"];
 
 /** OpenCode / DeepAgents / Nemotron / NVIDIA free → plan C gratis. */
@@ -358,7 +376,7 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
       sinMedicion: !p || (!Number(p.tokHoy) && !Number(p.tokHora) && !Number(p.tokUltimaHora)),
       haceS: gris ? Math.max(0, ahoraS - fresca.ts) : ultimo ? Math.max(0, ahoraS - ultimo) : null, fuente: gris ? fresca.fuente : l ? l.source : (p ? "pulso" : null),
       maquinas: [...new Set(x.latidos.map((e) => e.machine).filter(Boolean))],
-      retrato: r ? r : (AVATARES[sinTilde(x.agente)] ? { img: AVATARES[sinTilde(x.agente)] } : null),
+      retrato: r ? r : retratoDe(x.agente),
       consejero: esConsejero(x.agente), grupo: grupoDe(x.agente),
     });
   }
@@ -383,7 +401,7 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
   // de Smith/Merovingio. Sin app abierta con su cuenta en ningún Mac → se queda como antes (máquina del agente).
   colocarPorAppGrokBot(out, velocidad && velocidad.grokbotApps);
   // r11: la franja alterna cada 10 s máquina ↔ runtime: se mandan ya cortos.
-  for (const t of out) { t.maqCorta = maquinaCorta(t.maquina); t.runtime = runtimeCorto(t); }
+  for (const t of out) { t.maqCorta = t.appMaquinas ? t.appMaquinas.map((m) => m.corta).join(" + ") : maquinaCorta(t.maquina); t.runtime = runtimeCorto(t); }
   const ord = { verde: 0, amarillo: 1, gris: 2 };
   return out.sort((a, b) => ord[a.estado] - ord[b.estado] || (b.tokHora || 0) - (a.tokHora || 0) || (a.haceS ?? 1e12) - (b.haceS ?? 1e12) || a.agente.localeCompare(b.agente));
 }

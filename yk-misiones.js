@@ -42,7 +42,8 @@
   // Los CONSEJEROS también tienen cara (Carlos, 2026-09-19): en el tablero se
   // reconoce antes a Wozniak por su foto que leyendo «WozniakGrokBot». Retratos en
   // avatars/, mismo formato 240x240 que los agentes; origen en avatars/FUENTES.md.
-  var AVATARES = { neo: 1, morfeo: 1, smith: 1, trinity: 1, wozniak: 1, jobs: 1, disney: 1, lucas: 1, merovingio: 1 }; // r44: merovingio
+  var AVATARES = { neo: 1, morfeo: 1, smith: 1, trinity: 1, wozniak: 1, jobs: 1, disney: 1, lucas: 1, merovingio: 1, // r44: merovingio
+    oraculo: 1, link: 1, niobe: 1, cypher: 1, "switch": 1, seraph: 1, persefone: 1, arquitecto: 1, whiterabbit: 1 }; // r16: caras de Matrix
   function avatarOn() { try { return localStorage.getItem("yk_pref_avatars") !== "0"; } catch (e) { return true; } }
   function avSlug(n) {
     return String(n || "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "")

@@ -23,7 +23,9 @@
   // Consejeros incluidos (Carlos, 2026-09-19): sus retratos viven en avatars/ con
   // el mismo formato que los agentes. Origen y licencias, en avatars/FUENTES.md.
   // r44 (Carlos, 10-10-2026): merovingio = el Merovingio de Matrix, no la cara de Elon (Elon/Musk usa la suya).
-  var AVATARES = { link: 1, neo: 1, morfeo: 1, smith: 1, trinity: 1, oraculo: 1, wozniak: 1, jobs: 1, disney: 1, lucas: 1, merovingio: 1 };
+  // r16: + caras de Matrix (Niobe, Cypher, Switch, Seraph, Persefone, Arquitecto, WhiteRabbit); fuentes en avatars/FUENTES.md.
+  var AVATARES = { link: 1, neo: 1, morfeo: 1, smith: 1, trinity: 1, oraculo: 1, wozniak: 1, jobs: 1, disney: 1, lucas: 1, merovingio: 1,
+    niobe: 1, cypher: 1, "switch": 1, seraph: 1, persefone: 1, arquitecto: 1, whiterabbit: 1 };
   var CUSTOM = { agents: {}, machines: {} };
 
   var esc = function (x) {

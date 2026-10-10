@@ -85,7 +85,7 @@
   function supCorta(t) {
     var l = t.superficies || [], p = [];
     if (l.some(function (x) { return x.tipo === 'cli'; })) p.push('CLI');
-    if (l.some(function (x) { return x.tipo === 'asistente'; })) p.push(T('asistente', 'assistant'));
+    // r24: el asistente ya va en el runtime («GrokBot (asistente)»): no se repite.
     if (l.some(function (x) { return x.tipo === 'app' && x.enUso; })) p.push('App · Carlos');
     return p.join(' + ');
   }
@@ -133,10 +133,16 @@
     if (!a && !b) return '';
     return ' <small class="tr-alt" title="' + esc(T('Cada 10 s: máquina ↔ runtime', 'Every 10 s: machine ↔ runtime')) + '"><span class="tr-a">' + esc(a || b) + '</span><span class="tr-b">' + esc(b || a) + '</span></small>';
   }
+  /** r24 (Carlos, 18:00 — «Trinity ni siquiera sale»): todos con nombre. Primero los que trabajan / con Carlos; después
+   *  los parados como chips atenuados «Trinity · Codex · CLI · en espera» (antes, caras anónimas en un montón). */
   function chipsDe(l) {
     var vivos = l.filter(function (t) { return t.estado !== 'gris'; }), grises = l.filter(function (t) { return t.estado === 'gris'; });
-    return vivos.map(function (t) { return '<span class="tr-chipa tr-' + esc(t.estado) + (t.fuera && t.fuera.length ? ' tr-rojo' : '') + '" title="' + esc(t.agente + ' · ' + (t.estado === 'amarillo' ? cc(t) : T('trabajando', 'working')) + (t.via ? ' · ' + T('vía ', 'via ') + t.via : '') + ' · ' + rt(t.motor || '') + (supCorta(t) ? ' · ' + supCorta(t) : '') + (t.planC ? T(' + plan C gratis', ' + free plan C') : t.gratis ? T(' · gratis', ' · free') : '')) + '">' + retrato(t) + '<i></i>' + esc(t.agente) + altChip(t) + '</span>'; }).join('') +
-      (grises.length ? '<span class="tr-grises" title="' + esc(grises.map(function (t) { return t.agente; }).join(', ')) + '">' + grises.map(retrato).join('') + '<small>' + grises.length + ' ' + T('parados', 'idle') + '</small></span>' : '');
+    function chip(t) {
+      var gris = t.estado === 'gris';
+      var est = gris ? T('en espera', 'idle') : t.estado === 'amarillo' ? cc(t) : T('trabajando', 'working');
+      return '<span class="tr-chipa tr-' + esc(t.estado) + (t.fuera && t.fuera.length ? ' tr-rojo' : '') + '" title="' + esc(t.agente + ' · ' + est + (t.via ? ' · ' + T('vía ', 'via ') + t.via : '') + ' · ' + rt(t.motor || '') + (supCorta(t) ? ' · ' + supCorta(t) : '') + (t.planC ? T(' + plan C gratis', ' + free plan C') : t.gratis ? T(' · gratis', ' · free') : '') + (gris && t.haceS != null ? ' · ' + hace(t.haceS) : '')) + '">' + retrato(t) + '<i></i>' + esc(t.agente) + altChip(t) + (gris ? ' <small class="tr-espera">' + esc(T('en espera', 'idle')) + '</small>' : '') + '</span>';
+    }
+    return vivos.map(chip).join('') + grises.map(chip).join('');
   }
   function pinta(d) {
     var ul = document.getElementById('trabajando-lista'), pie = document.getElementById('trabajando-pie'), res = document.getElementById('trabajando-resumen');
@@ -167,7 +173,7 @@
     setInterval(function () { if (!document.hidden) leer(); }, POLL);
     setInterval(alterna, 1000);
   }
-  root.ConsumosTrabajando = { grupos: grupos, supTexto: supTexto, supCorta: supCorta, leer: leer, ultimo: function () { return ultimo; } };
+  root.ConsumosTrabajando = { grupos: grupos, chipsDe: chipsDe, supTexto: supTexto, supCorta: supCorta, leer: leer, ultimo: function () { return ultimo; } };
   root.addEventListener && root.addEventListener('admira:languagechange', function () { if (ultimo) pinta(ultimo); });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arranca); else arranca();
 })(typeof window !== 'undefined' ? window : globalThis);

@@ -19,6 +19,7 @@
   var PROV = { grok: 'Grok', codex: 'Codex', claude: 'Claude' };
   function coste(f) {
     if (!f.coste) return T('sin datos', 'no data');
+    if (f.porDefecto) return T('Gratis · Nemotron Ultra (por defecto)', 'Free · Nemotron Ultra (default)');
     if (f.coste === 'incluido') return T('Incluido en la suscripción ', 'Included in ') + (f.incluidoEn ? (en() ? f.incluidoEn + "'s " : '') + (PROV[f.sub] || f.sub) + (en() ? ' subscription' : ' de ' + f.incluidoEn) : '');
     var b = T(COSTE[f.coste][0], COSTE[f.coste][1]);
     return f.titular ? b + ' · ' + (PROV[f.sub] || f.sub) : b;
@@ -47,6 +48,7 @@
     var r = m.resumen;
     var sb = r.subs || {};
     if (res) res.innerHTML = '<b>' + r.suscripciones + '</b> ' + T('suscripciones de pago', 'paid subscriptions') + ' (' + (sb.grok || 0) + ' Grok · ' + (sb.codex || 0) + ' Codex · ' + (sb.claude || 0) + ' Claude) · <b>' + r.gratis + '</b> ' + T('gratis', 'free') +
+      (r.consejerosGratis ? ' (' + r.consejerosGratis + ' ' + T('consejeros en Nemotron Ultra por defecto', 'councillors on Nemotron Ultra by default') + ')' : '') +
       ' · ' + r.incluidos + ' ' + T('incluidos en una suscripción Grok', 'included in a Grok subscription') + (r.conPlanC ? ' · ' + r.conPlanC + ' ' + T('con plan C gratis', 'with free plan C') : '') +
       ' · ' + r.vivos + ' ' + T('con señal', 'live') + (r.sinDatos ? ' · ' + r.sinDatos + ' ' + T('sin clasificar', 'unclassified') : '') +
       (r.fuera ? ' · <b class="mz-rojo">⚠ ' + r.fuera + ' ' + T('fuera de las 6 (regla rota)', 'outside the 6 (rule broken)') + '</b>' : ' · <span class="mz-ok">' + T('ninguna instancia de pago fuera de las 6', 'no paid instance outside the 6') + '</span>');

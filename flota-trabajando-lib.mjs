@@ -23,7 +23,7 @@
  *    medición de tokens (sin pulso, o pulso a 0 todo el día) para no pintar «0» como si fuera un dato.
  */
 import { CONSEJEROS as CONSEJO, GENERACIONES } from "./mcp/server/src/consejo.js";
-import { POOL_MEROVINGIO, fueraDeLas6 } from "./flota-matriz-lib.mjs";
+import { POOL_MEROVINGIO, fueraDeLas6, CONSEJEROS_GRATIS } from "./flota-matriz-lib.mjs";
 export const VENTANA_LATIDO_S = 120;
 /** r4 (Jensen, 10-10-2026 · Carlos: «no veo al Merovingio ni a Oráculo»): trabajando también = latido de < 15 min Y
  *  encargo in_progress en su bandeja, sea cual sea el runtime y aunque sea el plan C gratis (OpenCode/Nemotron no
@@ -280,14 +280,17 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
     const fuera = [...new Set(x.latidos.filter((e) => ahoraS - (Number(e.declared_updated || e.updated) || 0) < VENTANA_VIVO_S).map((e) => fueraDeLas6(e.persona || x.agente, e.runtime, e.model)).filter(Boolean))];
     const soloGratis = inst.size > 0 && !nPago && !PRINCIPAL[x.agente];
     // Merovingio late por DeepAgents pero su modelo es Grok CLI de pago: sin nota de plan C.
-    const planC = nGratis > 0 && !soloGratis && !VIVO_SIEMPRE.includes(x.agente);
+    let planC = nGratis > 0 && !soloGratis && !VIVO_SIEMPRE.includes(x.agente);
+    // r6 (Carlos, 13:01): consejeros no principales → Nemotron 3 Ultra gratis por defecto (salvo que late de pago: rojo).
+    let gratisDef = soloGratis;
+    if (CONSEJEROS_GRATIS.includes(x.agente) && !fuera.length) { motor = "Nemotron 3 Ultra"; modeloCard = "gratis · por defecto"; gratisDef = true; planC = false; }
     const r = RETRATOS[x.agente];
     out.push({
       agente: x.agente, estado: st.estado, motivo: st.motivo,
       conCarlosEn,
       maquina: (p && p.conCarlos && p.maquina) || (ccPres && ccPres.maquina) || (gris && fresca.maquina) || (enPulso && p.maquina) || (l && l.machine) || (p && p.maquina) || (pf && pf.maquina) || null,
       motor, modelo: modeloCard,
-      enCurso, instancias: inst.size, planC, gratis: soloGratis, fuera, incluye: x.incluye || null,
+      enCurso, instancias: inst.size, planC, gratis: gratisDef, fuera, incluye: x.incluye || null,
       foco: limpio(l && l.focus), tarea: limpio(l && l.task, 120),
       proyecto: (enPulso && p.proyectoAhora) || (l && l.project) || (p && p.proyectoAhora) || null,
       encargo: encargoDe(l && l.task, l && l.focus),

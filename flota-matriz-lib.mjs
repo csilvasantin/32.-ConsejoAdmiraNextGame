@@ -7,9 +7,11 @@
  * r6: 6 suscripciones de pago (2 Grok · 2 Codex · 2 Claude); en rojo toda instancia con modelo de pago fuera de ellas.
  * Regla: los agentes nuevos deben ser gratuitos y se reservan para trabajos menos prioritarios.
  */
+import { CONSEJEROS as CONSEJO } from "./mcp/server/src/consejo.js";
 /** Mismo censo que el MCP (mcp/server/src/flota.js AGENTES_FLOTA) + consejeros de GrokBot. */
 export const AGENTES_FLOTA = ["Neo", "Morfeo", "Trinity", "Oraculo", "Smith", "Cypher", "Switch", "Niobe", "Link", "Persefone", "Seraph", "Arquitecto", "Merovingio"];
 export const CONSEJEROS = ["Wozniak", "Jobs", "Lucas", "Disney", "Musk", "Huang"];
+const PERSONAS_EXTRA = () => Object.keys(MAPA);
 export const VIVO_S = 900;
 
 const COET = { es: "Coetáneos (csilvasantin)", en: "Contemporaries (csilvasantin)" };
@@ -31,16 +33,25 @@ export const MAPA = {
   Morfeo: { depende: "Musk", equipo: COET, modelo: "Claude + OpenCode/Nemotron (MacMini)", abierto: false, coste: "mixto", sub: "claude", titular: true },
   Neo: { depende: "Jobs", equipo: LEY, modelo: "Claude", abierto: false, coste: "pago", sub: "claude", titular: true },
   Huang: { depende: "Carlos", equipo: COET, modelo: "Grok Bot (pool de Merovingio)", abierto: false, coste: "incluido", sub: "grok", incluidoEn: "Merovingio" },
-  Mouse: { depende: "Carlos", equipo: COET, modelo: "Grok Bot (pool de Merovingio)", abierto: false, coste: "incluido", sub: "grok", incluidoEn: "Merovingio" },
   Jobs: { depende: "Carlos", equipo: LEY, modelo: "Grok Bot", abierto: false, coste: "incluido", sub: "grok", incluidoEn: "Smith" },
   Wozniak: { depende: "Carlos", equipo: LEY, modelo: "Grok Bot", abierto: false, coste: "incluido", sub: "grok", incluidoEn: "Smith" },
-  Lucas: { depende: "Carlos", equipo: LEY, modelo: "Grok Bot", abierto: false, coste: "incluido", sub: "grok", incluidoEn: "Smith" },
-  Disney: { depende: "Carlos", equipo: LEY, modelo: "Grok Bot", abierto: false, coste: "incluido", sub: "grok", incluidoEn: "Smith" },
   Cypher: { depende: "Huang", equipo: COET, modelo: "Nemotron 3 Ultra (DeepAgents)", abierto: true, coste: "gratis" },
   Niobe: { depende: "Jobs", equipo: LEY, modelo: "OpenCode + DeepAgents", abierto: true, coste: "gratis" },
 };
 /** Asistentes de Grok Bot de csilvasantin: su consumo se enseña bajo Merovingio (un solo pool, no son líneas de pago). */
-export const POOL_MEROVINGIO = ["Musk", "Huang", "Mouse", "Grok Bot (Consejo)", "Grok Bot"];
+export const POOL_MEROVINGIO = ["Musk", "Huang", "Grok Bot (Consejo)", "Grok Bot"];
+/** r6 (Carlos, 13:01): solo 2 consejeros principales por cuenta van en Grok Bot de pago: Musk + Huang (csilvasantin,
+ *  pool de Merovingio) y Jobs + Wozniak (csilva@admira.com, Grok de Smith). TODOS los demás del Consejo (Shotwell,
+ *  Porat, Lasseter, Ive, Ratti, Reynolds, Cook, Buffett, Disney, Rams, Schultz, Lucas… y cualquiera nuevo en
+ *  mcp/server/src/consejo.js) van por defecto en Nemotron 3 Ultra GRATIS; si consumen Grok Bot de pago, en rojo. */
+export const CONSEJEROS_PRINCIPALES = ["Musk", "Huang", "Jobs", "Wozniak"];
+const apellido = (n) => String(n || "").trim().split(/\s+/).pop();
+for (const c of CONSEJO) for (const gen of ["leyendas", "coetaneos"]) {
+  const ap = apellido(c[gen]);
+  if (!ap || CONSEJEROS_PRINCIPALES.includes(ap) || MAPA[ap]) continue;
+  MAPA[ap] = { nombre: c[gen], depende: "Carlos", equipo: gen === "leyendas" ? LEY : COET, modelo: "Nemotron 3 Ultra (por defecto)", abierto: true, coste: "gratis", porDefecto: true, consejero: true, rol: c.rol };
+}
+export const CONSEJEROS_GRATIS = Object.keys(MAPA).filter((k) => MAPA[k].porDefecto);
 /** Proveedor de pago de una instancia (runtime + modelo), o null si es gratis. */
 export function proveedor(runtime, model) {
   const t = String(runtime || "") + " " + String(model || "");
@@ -58,7 +69,7 @@ export function fueraDeLas6(p, runtime, model) {
   const k = persona(p) === "Musk" ? "Merovingio" : persona(p);
   const m = MAPA[k];
   if (m && m.sub === pr) return null;
-  return (runtime || pr) + (model ? " · " + model : "") + " es de pago y " + k + (m && m.sub ? " solo puede usar " + m.sub : " no tiene suscripción de pago");
+  return (runtime || pr) + (model ? " · " + model : "") + " es de pago y " + k + (m && m.sub ? " solo puede usar " + m.sub : m && m.porDefecto ? " va por defecto en Nemotron Ultra gratis" : " no tiene suscripción de pago");
 }
 export const RE_GRATIS = /opencode|deepagents|nemotron|nvidia|:free|ollama|llama|qwen|mistral/i;
 export const RE_PAGO = /claude|codex|gpt|grok|gemini|cursor|openai|anthropic/i;
@@ -72,7 +83,10 @@ export function persona(n) {
   if (/merovingio/.test(k)) return "Merovingio";
   if (/^elon/.test(k)) return "Musk";
   if (/^jensen/.test(k)) return "Huang";
-  return PERSONAS.find((p) => k === llave(p)) || PERSONAS.find((p) => k.startsWith(llave(p))) || String(n).trim();
+  const todas = [...PERSONAS, ...PERSONAS_EXTRA()];
+  // «Gwynne Shotwell», «Ryan Reynolds» → apellido del Consejo.
+  const ap = llave(apellido(n));
+  return todas.find((p) => k === llave(p)) || (ap && String(n).trim().includes(" ") && todas.find((p) => llave(p) === ap)) || todas.find((p) => k.startsWith(llave(p))) || String(n).trim();
 }
 /** ¿Esta instancia (runtime + modelo) es gratuita? */
 export const gratis = (runtime, model) => RE_GRATIS.test(String(runtime || "") + " " + String(model || ""));
@@ -123,6 +137,7 @@ export function matriz({ presencia = [], carga = new Map(), ahoraS }) {
       depende: (m && m.depende) || null, equipo: (m && m.equipo) || null, mapeado: !!m,
       modelo, donde: [...new Set(inst.map((i) => i.maquina + (i.runtime ? " (" + i.runtime + (i.gratis ? ", gratis" : "") + ")" : "")))],
       instancias: inst.length, abierto, coste, vivo, carga: carga.get(p) || null,
+      porDefecto: !!(m && m.porDefecto), consejero: !!(m && m.consejero) || CONSEJEROS_PRINCIPALES.includes(p) || p === "Merovingio",
       sub: (m && m.sub) || null, titular: !!(m && m.titular), incluidoEn: (m && m.incluidoEn) || null,
       incluye: p === "Merovingio" ? POOL_MEROVINGIO.filter((n) => MAPA[n] || n === "Musk") : null,
       infracciones, fuera: infracciones.length > 0,
@@ -137,6 +152,7 @@ export function matriz({ presencia = [], carga = new Map(), ahoraS }) {
     gratis: filas.filter((f) => f.coste === "gratis").length, incluidos: filas.filter((f) => f.coste === "incluido").length,
     sinDatos: filas.filter((f) => !f.coste).length, vivos: filas.filter((f) => f.vivo).length,
     fuera: filas.filter((f) => f.fuera).length, conPlanC: filas.filter((f) => f.coste === "mixto").length,
+    consejerosGratis: filas.filter((f) => f.porDefecto).length,
   };
   return { filas, resumen };
 }

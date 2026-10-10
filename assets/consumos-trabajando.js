@@ -75,22 +75,41 @@
       '<small class="tr-maq">' + esc([t.maquina, motor].filter(Boolean).join(' · ') || '—') + '</small>' +
       '<small class="tr-que">' + linea + '</small>' + (chips ? '<span class="tr-chips">' + chips + '</span>' : '') + '</span></li>';
   }
+  /** r43 (Carlos, 12:59): dos grupos, AGENTES y CONSEJEROS, cada uno con sus cuentas. Puro (testeable). */
+  function grupos(ts) {
+    var g = { agentes: [], consejeros: [] };
+    (ts || []).forEach(function (t) { (t.grupo === 'consejeros' || (!t.grupo && t.consejero) ? g.consejeros : g.agentes).push(t); });
+    function cuenta(l) {
+      var v = l.filter(function (t) { return t.estado === 'verde'; }).length, a = l.filter(function (t) { return t.estado === 'amarillo'; }).length;
+      return { trabajando: v, conCarlos: a, parados: l.length - v - a, total: l.length };
+    }
+    return [{ id: 'agentes', titulo: T('Agentes', 'Agents'), tarjetas: g.agentes, n: cuenta(g.agentes) },
+            { id: 'consejeros', titulo: T('Consejeros', 'Councillors'), tarjetas: g.consejeros, n: cuenta(g.consejeros) }];
+  }
+  function cifras(n) {
+    return '<b>' + n.trabajando + '</b> ' + T('trabajando', 'working') + ' · <b>' + n.conCarlos + '</b> ' + T('con Carlos', 'with Carlos') + ' · <b>' + n.parados + '</b> ' + T('parados', 'idle');
+  }
+  function chipsDe(l) {
+    var vivos = l.filter(function (t) { return t.estado !== 'gris'; }), grises = l.filter(function (t) { return t.estado === 'gris'; });
+    return vivos.map(function (t) { return '<span class="tr-chipa tr-' + esc(t.estado) + '" title="' + esc(t.agente + ' · ' + (t.estado === 'amarillo' ? cc(t) : T('trabajando', 'working')) + ' · ' + (t.motor || '') + (t.planC ? T(' + plan C gratis', ' + free plan C') : t.gratis ? T(' · gratis', ' · free') : '')) + '">' + retrato(t) + '<i></i>' + esc(t.agente) + (t.estado === 'amarillo' && t.conCarlosEn ? ' <small>' + esc(t.conCarlosEn) + '</small>' : '') + (t.gratis || t.planC ? '<small class="tr-c">' + (t.gratis ? T('gratis', 'free') : '+C') + '</small>' : '') + '</span>'; }).join('') +
+      (grises.length ? '<span class="tr-grises" title="' + esc(grises.map(function (t) { return t.agente; }).join(', ')) + '">' + grises.map(retrato).join('') + '<small>' + grises.length + ' ' + T('parados', 'idle') + '</small></span>' : '');
+  }
   function pinta(d) {
     var ul = document.getElementById('trabajando-lista'), pie = document.getElementById('trabajando-pie'), res = document.getElementById('trabajando-resumen');
     if (!ul) return;
     var ts = d && d.ok ? d.tarjetas || [] : null;
     if (!ts) { ul.innerHTML = '<li class="tr-vacio">Sin datos de presencia ni de pulso ahora: no se enseña nadie.</li>'; return; }
-    ul.innerHTML = ts.map(tarjeta).join('');
-    // r31: fila compacta (zona plegada): fichas con nombre para verde/amarillo, caras apiladas para los parados.
+    var gs = grupos(ts);
+    // r43: una cabecera por grupo (ocupa toda la fila de la rejilla) con sus cuentas, y debajo sus tarjetas.
+    ul.innerHTML = gs.map(function (g) {
+      return '<li class="tr-grupo" id="trabajando-' + g.id + '"><b>' + esc(g.titulo) + '</b> <small>' + cifras(g.n) + '</small></li>' +
+        (g.tarjetas.length ? g.tarjetas.map(tarjeta).join('') : '<li class="tr-vacio">' + T('Nadie en este grupo ahora.', 'Nobody in this group right now.') + '</li>');
+    }).join('');
+    // r31/r43: fila compacta (zona plegada), también por grupo.
     var ch = document.getElementById('trabajando-chips');
-    if (ch) {
-      var vivos = ts.filter(function (t) { return t.estado !== 'gris'; }), grises = ts.filter(function (t) { return t.estado === 'gris'; });
-      ch.innerHTML = vivos.map(function (t) { return '<span class="tr-chipa tr-' + esc(t.estado) + '" title="' + esc(t.agente + ' · ' + (t.estado === 'amarillo' ? cc(t) : T('trabajando', 'working')) + ' · ' + (t.motor || '') + (t.planC ? T(' + plan C gratis', ' + free plan C') : t.gratis ? T(' · gratis', ' · free') : '')) + '">' + retrato(t) + '<i></i>' + esc(t.agente) + (t.estado === 'amarillo' && t.conCarlosEn ? ' <small>' + esc(t.conCarlosEn) + '</small>' : '') + (t.gratis || t.planC ? '<small class="tr-c">' + (t.gratis ? T('gratis', 'free') : '+C') + '</small>' : '') + '</span>'; }).join('') +
-        (grises.length ? '<span class="tr-grises" title="' + esc(grises.map(function (t) { return t.agente; }).join(', ')) + '">' + grises.map(retrato).join('') + '<small>' + grises.length + ' ' + T('parados', 'idle') + '</small></span>' : '');
-    }
-    var v = ts.filter(function (t) { return t.estado === 'verde'; }).length, a = ts.filter(function (t) { return t.estado === 'amarillo'; }).length;
-    if (res) res.innerHTML = '<b>' + v + '</b> ' + T('trabajando', 'working') + ' · <b>' + a + '</b> ' + T('con Carlos', 'with Carlos') + ' · <b>' + (ts.length - v - a) + '</b> ' + T('parados', 'idle') + aviso(d);
-    if (pie) pie.innerHTML = 'Actualizado ' + new Date(d.generado).toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid' }) + ' (Madrid) · verde = tokens en los últimos 15 min, latido «trabajando» de &lt; 2 min, CPU del propio proceso o latido de &lt; 15 min con encargo en curso (cualquier runtime, también el plan C gratis) · amarillo = con Carlos (pulso, o app de escritorio / tmux adjunto en el Mac que estás usando) · gris = parado · fuentes: <a href="https://bot.yokup.com/api/presence">presencia de Yokup</a> + <a href="/api/consumos/velocidad">pulso de tokens</a>' + (d.presencia === 'cache' ? ' · ⚠ presencia de caché (hace ' + esc(String(d.presenciaEdadS)) + ' s)' : d.presencia !== 'ok' ? ' · ⚠ presencia sin respuesta' : '') + ' · cada 10 s';
+    if (ch) ch.innerHTML = gs.map(function (g) { return '<span class="tr-chipgrupo"><b class="tr-chiptit">' + esc(g.titulo) + '</b>' + chipsDe(g.tarjetas) + '</span>'; }).join('');
+    if (res) res.innerHTML = gs.map(function (g) { return '<span class="tr-resgrupo">' + esc(g.titulo) + ': ' + cifras(g.n) + '</span>'; }).join(' — ') + aviso(d);
+    if (pie) pie.innerHTML = 'Actualizado ' + new Date(d.generado).toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid' }) + ' (Madrid) · verde = tokens en los últimos 15 min, latido «trabajando» de &lt; 2 min, CPU del propio proceso o latido de &lt; 15 min con encargo en curso (cualquier runtime, también el plan C gratis) · amarillo = con Carlos (pulso, o app de escritorio / tmux adjunto en el Mac que estás usando) · gris = parado · consejeros = los 16 del Consejo (leyendas y coetáneos) · fuentes: <a href="https://bot.yokup.com/api/presence">presencia de Yokup</a> + <a href="/api/consumos/velocidad">pulso de tokens</a>' + (d.presencia === 'cache' ? ' · ⚠ presencia de caché (hace ' + esc(String(d.presenciaEdadS)) + ' s)' : d.presencia !== 'ok' ? ' · ⚠ presencia sin respuesta' : '') + ' · cada 10 s';
   }
   function avisa(d) { ultimo = d; try { root.dispatchEvent(new CustomEvent('flota:trabajando', { detail: d })); } catch (e) {} return d; }
   function leer() { return fetch(API, { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }).then(avisa).then(pinta); }
@@ -99,7 +118,7 @@
     leer();
     setInterval(function () { if (!document.hidden) leer(); }, POLL);
   }
-  root.ConsumosTrabajando = { leer: leer, ultimo: function () { return ultimo; } };
+  root.ConsumosTrabajando = { grupos: grupos, leer: leer, ultimo: function () { return ultimo; } };
   root.addEventListener && root.addEventListener('admira:languagechange', function () { if (ultimo) pinta(ultimo); });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arranca); else arranca();
 })(typeof window !== 'undefined' ? window : globalThis);

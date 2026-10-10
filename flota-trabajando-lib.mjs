@@ -22,6 +22,7 @@
  *  · Tokens honestos: tokHora es «≈ 15 min × 4»; se manda también tokUltimaHora (real) y sinMedicion cuando no hay
  *    medición de tokens (sin pulso, o pulso a 0 todo el día) para no pintar «0» como si fuera un dato.
  */
+import { CONSEJEROS as CONSEJO, GENERACIONES } from "./mcp/server/src/consejo.js";
 export const VENTANA_LATIDO_S = 120;
 /** r4 (Jensen, 10-10-2026 · Carlos: «no veo al Merovingio ni a Oráculo»): trabajando también = latido de < 15 min Y
  *  encargo in_progress en su bandeja, sea cual sea el runtime y aunque sea el plan C gratis (OpenCode/Nemotron no
@@ -32,6 +33,22 @@ export const VIVO_SIEMPRE = ["Merovingio"];
 export const PRINCIPAL = { Merovingio: "Grok CLI", "Oráculo": "Codex", Morfeo: "Claude Code", Trinity: "Codex", Smith: "Grok", Neo: "Claude Code" };
 export const CPU_MIN = 5;
 export const CONSEJEROS_GROK = ["Jobs", "Wozniak", "Lucas", "Disney", "Musk", "Huang"];
+/**
+ * r43 (Carlos, 12:59): la franja separa AGENTES de CONSEJEROS. Fuente de verdad del Consejo: los 16 de
+ * mcp/server/src/consejo.js (leyendas y coetáneos: Jobs, Wozniak, Cook, Buffett, Disney, Rams, Schultz, Lucas, Musk,
+ * Huang, Shotwell, Porat, Lasseter, Ive, Ratti, Reynolds), por apellido. Merovingio, Cypher, Trinity… son agentes aunque
+ * un consejero dependa de ellos.
+ */
+export const APELLIDOS_CONSEJO = [...new Set(CONSEJO.flatMap((c) => GENERACIONES.map((g) => String(c[g] || "").trim().split(/\s+/).pop())).filter(Boolean))];
+const CLAVES_CONSEJO = new Set([...APELLIDOS_CONSEJO, ...CONSEJEROS_GROK].map((n) => String(n).normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()));
+/** ¿Es un consejero (leyenda o coetáneo)? Acepta «Jobs», «Steve Jobs», «Gwynne Shotwell», «Ive»… */
+export function esConsejero(nombre) {
+  const k = String(nombre || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  if (!k || /merovingio/.test(k)) return false;
+  return CLAVES_CONSEJO.has(k) || CLAVES_CONSEJO.has(k.split(/\s+/).pop());
+}
+/** Grupo de una tarjeta: «consejeros» | «agentes». */
+export const grupoDe = (nombre) => (esConsejero(nombre) ? "consejeros" : "agentes");
 /** Siempre en la franja aunque no haya latido (r40: Merovingio es el agente Grok principal de Carlos). */
 export const SIEMPRE = [...CONSEJEROS_GROK, "Merovingio"];
 /** Reposo HID (s) por debajo del cual Carlos está usando esa máquina. */
@@ -70,6 +87,10 @@ export function canonico(persona) {
   }
   if (/^(walt|walt disney)$/.test(base)) return "Disney";
   if (/^jensen/.test(base)) return "Huang";
+  // r43: «Gwynne Shotwell», «Jony Ive»… → apellido del Consejo (mcp/server/src/consejo.js).
+  const ap = base.split(/\s+/).pop();
+  const c = APELLIDOS_CONSEJO.find((x) => sinTilde(x) === ap);
+  if (c && base.includes(" ")) return c;
   return p;
 }
 
@@ -258,7 +279,7 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
       haceS: gris ? Math.max(0, ahoraS - fresca.ts) : ultimo ? Math.max(0, ahoraS - ultimo) : null, fuente: gris ? fresca.fuente : l ? l.source : (p ? "pulso" : null),
       maquinas: [...new Set(x.latidos.map((e) => e.machine).filter(Boolean))],
       retrato: r ? r : (AVATARES[sinTilde(x.agente)] ? { img: AVATARES[sinTilde(x.agente)] } : null),
-      consejero: CONSEJEROS_GROK.includes(x.agente),
+      consejero: esConsejero(x.agente), grupo: grupoDe(x.agente),
     });
   }
   const ord = { verde: 0, amarillo: 1, gris: 2 };

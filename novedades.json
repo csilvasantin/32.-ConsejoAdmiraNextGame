@@ -1,4 +1,11 @@
 {
+  "v.10.10.2026.r6.13:10": [
+    "Consumos · «Trabajando ahora» separa AGENTES (Morfeo, Neo, Trinity, Oráculo, Smith, Merovingio, Niobe, Cypher…) de CONSEJEROS (los 16 del Consejo, leyendas y coetáneos), cada grupo con sus cuentas: trabajando · con Carlos · parados. La fila plegada también va por grupos.",
+    "«Con Carlos» dice en qué Mac: «con Carlos · MBP16». Una app de escritorio solo cuenta si el vigilante la ve adjunta en el Mac que Carlos está usando.",
+    "La bolsa de Grok Bot de la cuenta (Merovingio, Mouse y los consejeros) sale siempre con el nombre de Merovingio: desaparece la tarjeta «Grok Bot (Consejo)».",
+    "Merovingio aparece también desde su bucle en el MacBookAir16plata (su latido se guardaba pero el vigilante del Mac lo tapaba).",
+    "El sello sigue enseñando estas novedades en un popover sin recorte."
+  ],
   "v.10.10.2026.r5.12:51": [
     "/consumos respeta ?lang=en: «Trabajando ahora» y la nueva «Matriz de agentes» salen en inglés (Working now · Agent matrix) sin tener que abrir el modo experto.",
     "Sigue lo de la r4: Oráculo y el Merovingio salen trabajando (latido < 15 min + encargo en curso, cualquier motor, también el plan C gratis) y la Matriz de agentes viva al final de la página. /reparto se conserva."
@@ -9,7 +16,7 @@
     "Nueva «Matriz de agentes» al final de /consumos, en vivo con los datos de agentes_vivos: de quién depende, equipo, modelo y dónde corre, abierto o cerrado y coste. Resumen «N de M de pago · K gratis». Los agentes nuevos aparecen solos y deben ser gratuitos.",
     "Integra el arreglo de Merovingio (presencia con 10 s y caché, con Carlos por presencia, tokens honestos) y conserva /reparto."
   ],
-    "v.09.10.2026.r39.22:20": [
+  "v.09.10.2026.r39.22:20": [
     "Consumos: los datos con retraso (Cursor de Grok Bot, horas atrás) ya no cuentan como «ahora»: fuera de los tokens/hora de la flota, la aguja, el pronóstico del cuentakilómetros y el verde de «Trabajando ahora»; en el ranking se dice «datos con ~X h de retraso». Sus tokens siguen en los totales de hoy."
   ],
   "v.09.10.2026.r38.22:03": [

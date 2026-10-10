@@ -228,3 +228,50 @@ test("r42 · pulso de Cursor guardado como «Grok Bot (Consejo)» sale en veloci
   assert.ok(!t.some((x) => x.agente === "Grok Bot (Consejo)"));
   assert.equal(t.find((x) => x.agente === "Merovingio").tokHoy, 2109695);
 });
+
+// ── r43 (Carlos, 12:59): AGENTES y CONSEJEROS por separado, cada grupo con sus cuentas ──
+import { esConsejero, grupoDe, APELLIDOS_CONSEJO } from "./flota-trabajando-lib.mjs";
+import { CONSEJEROS as CONSEJO_MCP } from "./mcp/server/src/consejo.js";
+import { readFileSync } from "node:fs";
+import vm from "node:vm";
+
+test("r43 · consejeros = los 16 del Consejo (mcp/server/src/consejo.js) por apellido; los agentes no", () => {
+  assert.equal(APELLIDOS_CONSEJO.length, CONSEJO_MCP.length * 2);
+  for (const n of ["Jobs", "Disney", "Wozniak", "Lucas", "Huang", "Musk", "Shotwell", "Porat", "Lasseter", "Ive", "Ratti", "Reynolds", "Gwynne Shotwell", "Steve Jobs"]) assert.equal(esConsejero(n), true, n);
+  for (const n of ["Morfeo", "Neo", "Trinity", "Oráculo", "Smith", "Merovingio", "Niobe", "Cypher", "Elon / Merovingio", "Grok Bot (Consejo)", "Mouse", "Link"]) assert.equal(esConsejero(n), false, n);
+  assert.equal(canonico("Gwynne Shotwell"), "Shotwell");
+  assert.equal(canonico("Jony Ive"), "Ive");
+});
+
+test("r43 · cada tarjeta trae su grupo; la bolsa Grok Bot es de Merovingio (agente), no una tarjeta de consejero", () => {
+  const t = tarjetas({ presencia: [{ persona: "Ryan Reynolds", machine: "GrokBot", source: "heartbeat", host: "app", updated: T - 30 }],
+    velocidad: { porAgente: [{ agente: "Merovingio", maquina: "GrokBotBox", motor: "cursor", conRetraso: true, tokHoy: 2109695 }] }, ahoraS: T });
+  assert.equal(de(t, "Reynolds").grupo, "consejeros");
+  assert.equal(de(t, "Jobs").grupo, "consejeros");
+  assert.equal(de(t, "Merovingio").grupo, "agentes");
+  assert.ok(!t.some((x) => x.agente === "Grok Bot (Consejo)"));
+  assert.equal(grupoDe("Cypher"), "agentes");
+});
+
+function cargaFront() {
+  const ctx = { document: { readyState: "complete", documentElement: { getAttribute: () => "es" }, getElementById: () => null, addEventListener() {} }, location: { search: "", href: "https://www.admira.live/consumos" }, navigator: { language: "es" }, localStorage: { getItem: () => null }, setInterval() {}, fetch: async () => ({ ok: false }), CustomEvent: class {}, console };
+  ctx.window = ctx; ctx.globalThis = ctx; ctx.addEventListener = () => {}; ctx.dispatchEvent = () => {};
+  vm.createContext(ctx);
+  vm.runInContext(readFileSync(new URL("./assets/consumos-trabajando.js", import.meta.url), "utf8"), ctx);
+  return ctx.ConsumosTrabajando;
+}
+
+test("r43 · front: grupos() separa Agentes y Consejeros con cuentas propias (trabajando / con Carlos / parados)", () => {
+  const ct = cargaFront();
+  const ts = [
+    { agente: "Neo", estado: "amarillo", grupo: "agentes" }, { agente: "Trinity", estado: "amarillo", grupo: "agentes" },
+    { agente: "Morfeo", estado: "verde", grupo: "agentes" }, { agente: "Cypher", estado: "gris", grupo: "agentes" },
+    { agente: "Jobs", estado: "gris", grupo: "consejeros" }, { agente: "Disney", estado: "verde", grupo: "consejeros" },
+    { agente: "Musk", estado: "gris", consejero: true }, // API vieja sin «grupo»
+  ];
+  const g = JSON.parse(JSON.stringify(ct.grupos(ts)));
+  assert.deepEqual(g.map((x) => x.id), ["agentes", "consejeros"]);
+  assert.deepEqual({ ...g[0].n }, { trabajando: 1, conCarlos: 2, parados: 1, total: 4 });
+  assert.deepEqual({ ...g[1].n }, { trabajando: 1, conCarlos: 0, parados: 2, total: 3 });
+  assert.deepEqual(Array.from(g[1].tarjetas, (t) => t.agente), ["Jobs", "Disney", "Musk"]);
+});

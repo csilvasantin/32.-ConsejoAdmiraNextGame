@@ -1,4 +1,7 @@
 {
+  "v.10.10.2026.r12.14:12": [
+    "/consumos en inglés: «Agente», «Proyecto», «Tokens por hora» y el título se repintan al cambiar de idioma (antes se quedaban en castellano si el idioma llegaba después, o en inglés al volver con /idioma ESP); «Bucle de encargos» → «Task loop»."
+  ],
   "v.10.10.2026.r11.14:05": [
     "Consumos: Jobs y Wozniak (los 2 consejeros principales de csilva@admira.com, incluidos en el Grok de Smith) salen en Consejeros «activo vía Smith» con el estado de Smith y los tokens en su ficha, igual que Musk y Huang vía Merovingio. Antes Jobs, sin latido propio, quedaba en gris entre los «parados».",
     "El dato junto a cada chip de «Trabajando ahora» alterna cada 10 s entre máquina/equipo (MBP16, MBA16, gratis, +C) y el runtime (Grok, Codex, Claude u OpenCode · Nemotron 3 Ultra), con fundido; sin animación si el sistema pide menos movimiento.",

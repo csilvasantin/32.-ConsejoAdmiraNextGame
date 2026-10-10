@@ -26,7 +26,7 @@ export function agenteVisible(nombre) {
 export const CUBRE_CURSOR = ["Jobs", "Wozniak", "Lucas", "Disney"];
 export const EXTRA = [
   { agente: POOL_GROKBOT, maquina: "GrokBotBox", modelo: "Grok Bot / Cursor Pro", cuentaId: "cursor", plan: "Cursor Pro (Carlos Silva Santin)", email: null,
-    nota: "Bolsa de Grok Bot de la cuenta csilvasantin: Merovingio, Mouse y los consejeros (Jobs, Wozniak, Lucas, Disney…) · Cursor · datos del export CSV, con horas de retraso", cubre: CUBRE_CURSOR },
+    nota: "Bolsa de GrokBot de la cuenta csilvasantin: Merovingio, Mouse y los consejeros (Jobs, Wozniak, Lucas, Disney…) · Cursor · datos del export CSV, con horas de retraso", cubre: CUBRE_CURSOR },
 ];
 
 export function perfilesFlota(personas = PERSONAS, cuentas = CUENTAS, extra = EXTRA) {

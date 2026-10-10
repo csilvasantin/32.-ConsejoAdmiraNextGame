@@ -61,7 +61,7 @@ test('home · Jobs: visita en blanco — no carga el histórico, envía por /api
   assert.deepEqual(h.net, [], 'no toca el puente de GrokBot');
   assert.deepEqual(h.hiloCalls, [], 'al seleccionar no se lee el hilo (sin histórico en la home)');
   let txt = h.log().textContent;
-  assert.match(txt, /Chat limpio/); assert.match(txt, /le llega a Jobs y se guarda en la misma conversación que en Grok Bot/);
+  assert.match(txt, /Chat limpio/); assert.match(txt, /le llega a Jobs y se guarda en la misma conversación que en GrokBot/);
   assert.doesNotMatch(txt, /Hola desde la app|Hola, Carlos/);
   const toolbar = h.doc.details.querySelector('.council-chat__toolbar');
   const link = toolbar.children.find(n => n.className === 'council-chat__historico');

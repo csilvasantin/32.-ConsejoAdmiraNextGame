@@ -363,12 +363,12 @@
       return submitted;
     }
     // ── Hilo compartido (home: visita en blanco) ───────────────────────────
-    const SCOPE_HILO='Esta visita empieza en blanco. Lo que escribes le llega a Jobs y se guarda en la misma conversación que en Grok Bot y en /chat/jobs/ (allí está el histórico). No se publica en el Ágora ni en Telegram.';
+    const SCOPE_HILO='Esta visita empieza en blanco. Lo que escribes le llega a Jobs y se guarda en la misma conversación que en GrokBot y en /chat/jobs/ (allí está el histórico). No se publica en el Ágora ni en Telegram.';
     const LIMITS_HILO='Texto e imagen pegada (Ctrl/Cmd-V). Mientras esperas respuesta se comprueba cada 2 s (hasta 3 min). El histórico está en «Ver histórico».';
     const horaHilo=new Intl.DateTimeFormat('es-ES',{timeZone:'Europe/Madrid',hour:'2-digit',minute:'2-digit'});
     const shortName=name=>PEOPLE[name]||name;
     const panelVisible=()=>!destroyed&&!doc.hidden&&!details.hidden&&details.getClientRects().length>0;
-    const introHilo=name=>'Chat limpio. Escribe a '+name+' y pulsa Enviar: le llega a Jobs y se guarda en la misma conversación que en Grok Bot.';
+    const introHilo=name=>'Chat limpio. Escribe a '+name+' y pulsa Enviar: le llega a Jobs y se guarda en la misma conversación que en GrokBot.';
     function stopShared(){if(sh.timer){clearTimeout(sh.timer);sh.timer=null;}if(sh.tic){clearInterval(sh.tic);sh.tic=null;}sh.again=false;}
     function visibles(){const m=hilo.fundir(sh.turnos,sh.locales);sh.locales=m.locales;const t=hilo.turnosDeVisita(m.turnos,sh.enviados,sh.desde);return {turnos:t,firma:t.map(x=>[x.id,x.entrega||'',x.encargo||'',x.encargo_estado||''].join(':')).join('|')};}
     function sharedChrome(){
@@ -376,7 +376,7 @@
       historico.href='/chat/'+sharedOf(selected)+'/';historico.hidden=false;
       const scope=$('.council-chat__scope');if(scope)scope.textContent=SCOPE_HILO;
       const limits=$('.council-chat__limits');if(limits)limits.textContent=LIMITS_HILO;
-      const node=$('.council-chat__connection');node.textContent='· Misma conversación que en Grok Bot';node.title='POST /api/chat/enviar · respuestas por GET /api/chat/hilo';
+      const node=$('.council-chat__connection');node.textContent='· Misma conversación que en GrokBot';node.title='POST /api/chat/enviar · respuestas por GET /api/chat/hilo';
     }
     function startShared(epoch){
       // Sin red al seleccionar: la home no carga el histórico.
@@ -505,7 +505,7 @@
           if(local.entrega==='error'){accepted=false;undo();if(current(epoch))say('No se pudo enviar a '+name+'. Tu texto se conserva.');return false;}
           if(x.turno&&x.turno.id&&x.turno.id!==id){sh.enviados[x.turno.id]=1;if(sh.primero===id)sh.primero=x.turno.id;}
           if(x.turno&&x.turno.ts){local.ts=x.turno.ts;adoptarDesde(x.turno.id||id,x.turno.ts);}
-          if(current(epoch))say('Enviado a '+name+' · guardado en la misma conversación que en Grok Bot.');
+          if(current(epoch))say('Enviado a '+name+' · guardado en la misma conversación que en GrokBot.');
           return accepted;
         }catch(e){
           local.entrega='sin_confirmar';if(current(epoch))say('Envío sin confirmar · revisa «Ver histórico» antes de repetir.');

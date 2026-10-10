@@ -15,9 +15,9 @@ test("el resumen urgente son tres líneas y cada tarjeta trae lectura", () => {
   const porNombre = Object.fromEntries(datos.plataformas.map((p) => [p.nombre, p]));
   assert.equal(porNombre.Cloudflare.semaforo, "rojo");
   assert.equal(porNombre.Cloudflare.cifra, "253,85");
-  assert.equal(porNombre["Grok, la cuenta de Smith"].cifra, "7,39");
+  assert.equal(porNombre["GrokBot, la cuenta de Smith"].cifra, "7,39");
   assert.equal(porNombre["Cursor, El Arquitecto"].semaforo, "ambar");
-  assert.equal(porNombre["Consejeros de Grok"].semaforo, "verde");
+  assert.equal(porNombre["Consejeros de GrokBot"].semaforo, "verde");
   assert.equal(porNombre["Consolas de Anthropic"].cifra, "");
   assert.equal(porNombre["Consolas de OpenAI"].leido, "sin lectura todavía");
 });

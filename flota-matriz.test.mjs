@@ -28,7 +28,7 @@ test("Oráculo (OpenCode gratis + Codex, 0 tokens, 9 en curso) sale trabajando, 
 test("Merovingio con latido sale trabajando, con Grok CLI y sin nota de plan C", () => {
   const m = de(tarjetas({ presencia, velocidad: null, ahoraS: T, carga }), "Merovingio");
   assert.equal(m.estado, "verde");
-  assert.equal(m.motor, "Grok Bot · Grok CLI");
+  assert.equal(m.motor, "GrokBot · GrokBot CLI");
   assert.equal(m.planC, false);
 });
 test("latido sin encargo en curso ni tokens (Cypher) sigue parado; latido de > 15 min no cuenta", () => {

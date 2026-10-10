@@ -26,15 +26,15 @@ const LEY = { es: "Leyendas (csilva@admira.com)", en: "Legends (csilva@admira.co
  *  sub: proveedor de la suscripción que usa (titular o incluido); incluidoEn: titular de esa suscripción. */
 export const MAPA = {
   // Musk y su deepagent Merovingio son UNA fila (Carlos: «Musk/Merovingio»).
-  Merovingio: { nombre: "Musk / Merovingio", depende: "Carlos", equipo: COET, modelo: "Grok Bot · Grok CLI (pool csilvasantin)", abierto: false, coste: "pago", sub: "grok", titular: true },
-  Smith: { depende: "Jobs", equipo: LEY, modelo: "Grok (Grok CLI)", abierto: false, coste: "pago", sub: "grok", titular: true },
+  Merovingio: { nombre: "Musk / Merovingio", depende: "Carlos", equipo: COET, modelo: "GrokBot · GrokBot CLI (pool csilvasantin)", abierto: false, coste: "pago", sub: "grok", titular: true },
+  Smith: { depende: "Jobs", equipo: LEY, modelo: "GrokBot CLI", abierto: false, coste: "pago", sub: "grok", titular: true },
   Oraculo: { nombre: "Oráculo", depende: "Musk", equipo: COET, modelo: "Codex + OpenCode/Nemotron (MacMini)", abierto: false, coste: "mixto", sub: "codex", titular: true },
   Trinity: { depende: "Jobs", equipo: LEY, modelo: "Codex (+ DeepAgents)", abierto: false, coste: "pago", sub: "codex", titular: true },
   Morfeo: { depende: "Musk", equipo: COET, modelo: "Claude + OpenCode/Nemotron (MacMini)", abierto: false, coste: "mixto", sub: "claude", titular: true },
   Neo: { depende: "Jobs", equipo: LEY, modelo: "Claude", abierto: false, coste: "pago", sub: "claude", titular: true },
-  Huang: { depende: "Carlos", equipo: COET, modelo: "Grok Bot (pool de Merovingio)", abierto: false, coste: "incluido", sub: "grok", incluidoEn: "Merovingio" },
-  Jobs: { depende: "Carlos", equipo: LEY, modelo: "Grok Bot", abierto: false, coste: "incluido", sub: "grok", incluidoEn: "Smith" },
-  Wozniak: { depende: "Carlos", equipo: LEY, modelo: "Grok Bot", abierto: false, coste: "incluido", sub: "grok", incluidoEn: "Smith" },
+  Huang: { depende: "Carlos", equipo: COET, modelo: "GrokBot (pool de Merovingio)", abierto: false, coste: "incluido", sub: "grok", incluidoEn: "Merovingio" },
+  Jobs: { depende: "Carlos", equipo: LEY, modelo: "GrokBot", abierto: false, coste: "incluido", sub: "grok", incluidoEn: "Smith" },
+  Wozniak: { depende: "Carlos", equipo: LEY, modelo: "GrokBot", abierto: false, coste: "incluido", sub: "grok", incluidoEn: "Smith" },
   Cypher: { depende: "Huang", equipo: COET, modelo: "Nemotron 3 Ultra (DeepAgents)", abierto: true, coste: "gratis" },
   Niobe: { depende: "Jobs", equipo: LEY, modelo: "OpenCode + DeepAgents", abierto: true, coste: "gratis" },
 };

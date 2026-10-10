@@ -385,7 +385,9 @@
     var cuanto = h >= 1 ? '~' + (h >= 10 ? Math.round(h) : Math.round(h * 10) / 10).toString().replace('.', en() ? '.' : ',') + ' h' : '~' + Math.max(1, Math.round(s / 60)) + ' min';
     return T('Cursor · datos con ' + cuanto + ' de retraso', 'Cursor · data ' + cuanto + ' behind');
   }
-  function nombreMotor(m) { return m === 'claude' ? 'Claude' : m === 'codex' ? 'Codex' : m === 'cursor' ? 'Cursor' : m === 'grok' ? 'Grok CLI' : (m || ''); }
+  // r18: familia visible «GrokBot» (igual que consumos-trabajando.js / consumos-matriz.js).
+  function gb(s) { return s == null ? s : String(s).replace(/\bGrok Bot\b/g, 'GrokBot').replace(/\bGrok CLI\b/g, 'GrokBot CLI').replace(/\bGrok\b(?![\s-]*(?:\d|Heavy|Imagine|Fast|Code|Mini|Beta))/g, 'GrokBot'); }
+  function nombreMotor(m) { return m === 'claude' ? 'Claude' : m === 'codex' ? 'Codex' : m === 'cursor' ? 'Cursor' : m === 'grok' ? 'GrokBot CLI' : (m || ''); }
   function txtEstado(est) { return est === 'verde' ? T('activo ahora', 'active now') : est === 'amarillo' ? T('hoy sí, ahora parado', 'today yes, idle now') : T('sin datos hoy', 'no data today'); }
   function pintaSelector(d) {
     if (!DD.proy) return;
@@ -416,7 +418,7 @@
   function filaAgenteInfo(a, pf) {
     var est = a.sinDatos ? 'rojo' : E.estadoFila(a.tokHora, a.tokHoy);
     var motor = nombreMotor(a.motor);
-    var modelo = a.modelo || (pf && pf.modelo ? pf.modelo : motor);
+    var modelo = gb(a.modelo || (pf && pf.modelo ? pf.modelo : motor));
     var cuenta = (a.motor === 'cursor' || a.motor === 'grok') && a.cuenta ? a.cuenta : pf ? (pf.email || pf.plan || '') : '';
     var m = ORQ.margen[a.agente];
     var lin1 = a.sinDatos ? T('sin datos hoy', 'no data today') :
@@ -573,8 +575,8 @@
     pintaResumen();
     var pie = document.getElementById('vel-pie');
     pie.innerHTML = (d && d.generado ? T('Actualizado ', 'Updated ') + new Date(d.generado).toLocaleTimeString(en() ? 'en-GB' : 'es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' (Madrid) · ' : '') +
-      T('Fuente: pulso de cada Mac (logs de Claude Code, Codex y Grok CLI, cada 60 s, ', 'Source: each Mac\'s pulse (Claude Code, Codex and Grok CLI logs, every 60 s, ') + '<a href="/api/consumos/pulso">/api/consumos/pulso</a>) + ' +
-      T('Merovingio (bolsa de Grok Bot · Cursor Pro) por el export CSV de cursor.com, cada hora y con retraso', 'Merovingio (Grok Bot pool · Cursor Pro) from the cursor.com CSV export, hourly and delayed') +
+      T('Fuente: pulso de cada Mac (logs de Claude Code, Codex y GrokBot CLI, cada 60 s, ', 'Source: each Mac\'s pulse (Claude Code, Codex and GrokBot CLI logs, every 60 s, ') + '<a href="/api/consumos/pulso">/api/consumos/pulso</a>) + ' +
+      T('Merovingio (bolsa de GrokBot · Cursor Pro) por el export CSV de cursor.com, cada hora y con retraso', 'Merovingio (GrokBot pool · Cursor Pro) from the cursor.com CSV export, hourly and delayed') +
       (d && d.excluidosYokup && d.excluidosYokup.length ? ' (' + T('no se suman aparte: ', 'not added twice: ') + esc(d.excluidosYokup.map(function (x) { return x.agente; }).join(', ')) + ')' : '') + ' + ' +
       T('partes de Yokup para el resto (', 'Yokup reports for the rest (') + '<a href="https://api.yokup.com/fleet/consumo?dias=1">fleet/consumo</a>) · ' +
       T('proyecto = carpeta de trabajo → repo git → uno de los 13 de la Galaxia · ', 'project = working folder → git repo → one of the 13 Galaxy projects · ') + T('se refresca cada 10 s', 'refreshes every 10 s');

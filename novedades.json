@@ -1,4 +1,8 @@
 {
+  "v.10.10.2026.r18.16:00": [
+    "«Grok» a secas pasa a «GrokBot» en /consumos (franja que alterna máquina ↔ runtime, fichas, matriz de agentes, leyenda, tarjetas de plataformas, ES/EN y títulos); el Grok CLI en terminal (Smith, Merovingio) sale «GrokBot CLI». Se respetan versiones de modelo («Grok 4.7», «Grok Heavy», «grok-4.7»).",
+    "Móviles (iPhone de csilvasantin, Galaxy Fold de csilva@admira.com): la franja ya sabe nombrarlos («MBA16 + iPhone»), pero hoy la app GrokBot móvil no deja ninguna señal real (no aparece como máquina ni en la presencia de yokup), así que no se pintan: no se inventa presencia."
+  ],
   "v.10.10.2026.r17.15:40": [
     "Cuenta REAL de la app Grok Bot en cada Mac: el pulso lee solo los nombres de su persistencia por cuenta (nunca el contenido ni tokens) y sabe qué cuentas hay y cuál se ha usado hace poco; un Mac con las dos cuentas en uso pone a sus consejeros de las dos. El fichero manual grokbot-cuenta queda solo como forzado.",
     "App abierta sin cuenta en uso reciente (p. ej. el Mac Mini) = «cuenta desconocida»: no se atribuye a ningún consejero. /api/flota/trabajando enseña appsGrokBot por Mac.",

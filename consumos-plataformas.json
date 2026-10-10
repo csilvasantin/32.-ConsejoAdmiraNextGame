@@ -2,7 +2,7 @@
   "como_actualizar": "Edita este archivo, consumos-plataformas.json, y publica el sitio con deploy.sh. No hace falta tocar la página. Una visita no lee la base de datos.",
   "resumen": [
     "Cloudflare va en rojo: 253,85 dólares en diez días, y a este ritmo el ciclo cerraría en 692,31. Casi todo son lecturas de la base de datos.",
-    "La cuenta de Grok que usa Smith va en rojo: quedan 7,39 dólares. Hay que recargar.",
+    "La cuenta de GrokBot que usa Smith va en rojo: quedan 7,39 dólares. Hay que recargar.",
     "Cursor va en ámbar, con los modelos de fuera al 87,5 %. Morfeo declaró hoy 137 millones de tokens, casi todos de memoria guardada."
   ],
   "plataformas": [
@@ -22,7 +22,7 @@
       ]
     },
     {
-      "nombre": "Grok, la cuenta de Smith",
+      "nombre": "GrokBot, la cuenta de Smith",
       "cuenta": "Equipo AdmiraNeXT",
       "leido": "25 de septiembre de 2026, 20:47",
       "semaforo": "rojo",
@@ -44,7 +44,7 @@
       ]
     },
     {
-      "nombre": "Consejeros de Grok",
+      "nombre": "Consejeros de GrokBot",
       "cuenta": "Jobs, Wozniak, Lucas y Disney, en la aplicación de Carlos",
       "leido": "25 de septiembre de 2026, 20:37",
       "semaforo": "verde",
@@ -88,7 +88,7 @@
     "como_actualizar": "Edit this file, consumos-plataformas.json, and publish the site with deploy.sh. No need to touch the page. A visit doesn't read the database.",
     "resumen": [
       "Cloudflare is in the red: $253.85 in ten days, and at this pace the cycle would close at $692.31. Almost all of it is database reads.",
-      "The Grok account Smith uses is in the red: $7.39 left. It needs topping up.",
+      "The GrokBot account Smith uses is in the red: $7.39 left. It needs topping up.",
       "Cursor is amber, with outside models at 87.5 %. Morfeo declared 137 million tokens today, almost all saved memory."
     ],
     "plataformas": [
@@ -107,7 +107,7 @@
         ]
       },
       {
-        "nombre": "Grok, Smith's account",
+        "nombre": "GrokBot, Smith's account",
         "cuenta": "AdmiraNeXT team",
         "leido": "25 September 2026, 20:47",
         "cifra": "7.39",
@@ -127,7 +127,7 @@
         ]
       },
       {
-        "nombre": "Grok councillors",
+        "nombre": "GrokBot councillors",
         "cuenta": "Jobs, Wozniak, Lucas and Disney, in Carlos's app",
         "leido": "25 September 2026, 20:37",
         "cifra": "28 %",

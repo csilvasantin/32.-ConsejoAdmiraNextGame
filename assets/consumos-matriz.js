@@ -16,7 +16,7 @@
   }
   function T(es, en_) { return en() ? en_ : es; }
   var COSTE = { pago: ['Pago', 'Paid'], gratis: ['Gratis', 'Free'], mixto: ['Pago + plan C gratis', 'Paid + free plan C'], incluido: ['Incluido', 'Included'] };
-  var PROV = { grok: 'Grok', codex: 'Codex', claude: 'Claude' };
+  var PROV = { grok: 'GrokBot', codex: 'Codex', claude: 'Claude' };
   function coste(f) {
     if (!f.coste) return T('sin datos', 'no data');
     if (f.porDefecto) return T('Gratis · Nemotron Ultra (por defecto)', 'Free · Nemotron Ultra (default)');
@@ -31,8 +31,13 @@
     return '<span class="mz-cara" style="background-image:url(\'' + esc(r.img) + '\')"></span>';
   }
   // r17: el modelo viene en castellano del mapa del servidor: en inglés se traduce lo que no es nombre propio.
+  // r18 (Carlos, 15:55): la familia visible es «GrokBot», nunca «Grok» a secas; «Grok CLI» → «GrokBot CLI». Se respetan
+  // los nombres de modelo con versión («Grok 4.7», «Grok Heavy», «grok-4.7») y los nombres de consejeros/URLs (no llevan «Grok»).
+  function gb(s) { return s == null ? s : String(s).replace(/\bGrok Bot\b/g, 'GrokBot').replace(/\bGrok CLI\b/g, 'GrokBot CLI').replace(/\bGrok\b(?![\s-]*(?:\d|Heavy|Imagine|Fast|Code|Mini|Beta))/g, 'GrokBot'); }
   function modelo(m) {
-    if (!en() || !m) return m;
+    if (!m) return m;
+    m = gb(m);
+    if (!en()) return m;
     return String(m).replace(/\(pool de ([^)]+)\)/g, "($1's pool)").replace(/\(pool ([^)]+)\)/g, '($1 pool)').replace(/\(por defecto\)/g, '(default)').replace(/\bgratis\b/g, 'free');
   }
   function fila(f) {
@@ -58,9 +63,9 @@
     tb.innerHTML = m.filas.map(fila).join('');
     var r = m.resumen;
     var sb = r.subs || {};
-    if (res) res.innerHTML = '<b>' + r.suscripciones + '</b> ' + T('suscripciones de pago', 'paid subscriptions') + ' (' + (sb.grok || 0) + ' Grok · ' + (sb.codex || 0) + ' Codex · ' + (sb.claude || 0) + ' Claude) · <b>' + r.gratis + '</b> ' + T('gratis', 'free') +
+    if (res) res.innerHTML = '<b>' + r.suscripciones + '</b> ' + T('suscripciones de pago', 'paid subscriptions') + ' (' + (sb.grok || 0) + ' GrokBot · ' + (sb.codex || 0) + ' Codex · ' + (sb.claude || 0) + ' Claude) · <b>' + r.gratis + '</b> ' + T('gratis', 'free') +
       (r.consejerosGratis ? ' (' + r.consejerosGratis + ' ' + T('consejeros en Nemotron Ultra por defecto', 'councillors on Nemotron Ultra by default') + ')' : '') +
-      ' · ' + r.incluidos + ' ' + T('incluidos en una suscripción Grok', 'included in a Grok subscription') + (r.conPlanC ? ' · ' + r.conPlanC + ' ' + T('con plan C gratis', 'with free plan C') : '') +
+      ' · ' + r.incluidos + ' ' + T('incluidos en una suscripción GrokBot', 'included in a GrokBot subscription') + (r.conPlanC ? ' · ' + r.conPlanC + ' ' + T('con plan C gratis', 'with free plan C') : '') +
       ' · ' + r.vivos + ' ' + T('con señal', 'live') + (r.sinDatos ? ' · ' + r.sinDatos + ' ' + T('sin clasificar', 'unclassified') : '') +
       (r.fuera ? ' · <b class="mz-rojo">⚠ ' + r.fuera + ' ' + T('fuera de las 6 (regla rota)', 'outside the 6 (rule broken)') + '</b>' : ' · <span class="mz-ok">' + T('ninguna instancia de pago fuera de las 6', 'no paid instance outside the 6') + '</span>');
   }

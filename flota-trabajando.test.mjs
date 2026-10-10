@@ -16,10 +16,12 @@ test("estado: con Carlos (amarillo) > trabajando (verde) > parado/sin latido (gr
   assert.deepEqual(estadoTrabajo({ ahoraS: T }), { estado: "gris", motivo: "sin latido" });
 });
 
-test("process_snapshot: cpu > 5 y declarado hace < 2 min = trabajando", () => {
-  assert.equal(latidoTrabajando({ source: "process_snapshot", cpu: 24, declared_updated: T - 20, updated: T - 500 }, T), true);
-  assert.equal(latidoTrabajando({ source: "process_snapshot", cpu: 3, declared_updated: T - 20 }, T), false);
-  assert.equal(latidoTrabajando({ source: "process_snapshot", cpu: 40, declared_updated: T - 600 }, T), false);
+test("process_snapshot: CPU DEL PROCESO > 5 y declarado hace < 2 min = trabajando (r40: la cpu de la máquina no vale)", () => {
+  assert.equal(latidoTrabajando({ source: "process_snapshot", proc_cpu: 24, declared_updated: T - 20, updated: T - 500 }, T), true);
+  assert.equal(latidoTrabajando({ source: "process_snapshot", cpu: 24, cpu_scope: "process", declared_updated: T - 20 }, T), true);
+  assert.equal(latidoTrabajando({ source: "process_snapshot", proc_cpu: 3, declared_updated: T - 20 }, T), false);
+  assert.equal(latidoTrabajando({ source: "process_snapshot", proc_cpu: 40, declared_updated: T - 600 }, T), false);
+  assert.equal(latidoTrabajando({ source: "process_snapshot", cpu: 27, idle: 61946, declared_updated: T - 20 }, T), false, "cpu de toda la máquina");
 });
 
 test("nombres canónicos: NeoMBP16 → Neo, Oraculo → Oráculo, TrinityMacBookPro16 → Trinity, Steve Jobs → Jobs", () => {
@@ -56,7 +58,7 @@ test("/api/flota/trabajando: une la presencia; sin pulso ni Yokup sigue enseñan
   const fetchImpl = async (url) => String(url).includes("presence")
     ? new Response(JSON.stringify({ ok: true, presence: [{ persona: "Jobs", machine: "GrokBot", runtime: "Grok", model: "Grok Heavy", source: "heartbeat", mode: "trabajando", updated: ahora - 5, task: "FLT-101758 a/b/c" }] }))
     : new Response("no", { status: 503 });
-  const r = await construir({ env: {}, fetchImpl });
+  const r = await construir({ env: {}, fetchImpl, cache: null });
   assert.equal(r.presencia, "ok");
   assert.equal(r.tarjetas[0].agente, "Jobs");
   assert.equal(r.tarjetas[0].estado, "verde");

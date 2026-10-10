@@ -1,4 +1,8 @@
 {
+  "v.10.10.2026.r2.09:43": [
+    "Consumos: nueva zona «Equipos» (plegada, arriba). Dos equipos, uno por cuenta: AdmiraNeXT (csilva@admira.com: Jobs, Woz, Lucas, Walt, Neo, Trinity) y admira.live (csilvasantin@gmail.com: Elon, Jensen, Morfeo, Oráculo). Cada tarjeta dice quién lo lleva hoy (hoy: Carlos admira.live, Jobs AdmiraNeXT), tokens de hoy, cupo del día (margen de las 00:00 ÷ días al reset) con semáforo, tokens por línea y encargos activos. GET /api/equipos; POST /api/equipos/hoy (con clave) fija quién lo lleva.",
+    "Orquestador: ?equipo=admiranext|admiralive (o ?de=<persona>) solo reparte dentro del equipo y su cuenta — nunca se cruzan cuentas."
+  ],
   "v.09.10.2026.r39.22:20": [
     "Consumos: los datos con retraso (Cursor de Grok Bot, horas atrás) ya no cuentan como «ahora»: fuera de los tokens/hora de la flota, la aguja, el pronóstico del cuentakilómetros y el verde de «Trabajando ahora»; en el ranking se dice «datos con ~X h de retraso». Sus tokens siguen en los totales de hoy."
   ],

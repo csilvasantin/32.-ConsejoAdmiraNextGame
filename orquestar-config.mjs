@@ -34,11 +34,11 @@ export const PERSONAS = [
   // no cursor-agent). Sus tokens salen de ~/.grok/sessions/<cwd>/<id>/usage.json (pulso-tokens.py, motor «grok»).
   { persona: "Smith", maquina: "MacMini", modelo: "Grok 4.7 (Grok CLI)", cuenta: "cursor", perfil: "grok-cursor", alias: ["Smith", "SmithMacMini"] },
   { persona: "Jobs", maquina: "GrokBot", modelo: "Grok Heavy", cuenta: "leyendas", perfil: "grok-heavy", despierta: "webhook", alias: ["Jobs", "JobsGrokBot", "Steve Jobs"] },
-  { persona: "Wozniak", maquina: "GrokBot", modelo: "Grok Heavy", cuenta: "leyendas", perfil: "grok-heavy", despierta: "webhook", alias: ["Wozniak", "WozniakGrokBot", "Steve Wozniak"] },
+  { persona: "Wozniak", maquina: "GrokBot", modelo: "Grok Heavy", cuenta: "leyendas", perfil: "grok-heavy", despierta: "webhook", alias: ["Wozniak", "WozniakGrokBot", "Steve Wozniak", "Woz"] },
   { persona: "Lucas", maquina: "GrokBot", modelo: "Grok Heavy", cuenta: "leyendas", perfil: "grok-heavy-creativo", despierta: "webhook", alias: ["Lucas", "LucasGrokBot", "George Lucas"] },
   { persona: "Disney", maquina: "GrokBot", modelo: "Grok Heavy", cuenta: "leyendas", perfil: "grok-heavy-creativo", despierta: "webhook", alias: ["Disney", "DisneyGrokBot", "Walt Disney", "Walt"] },
-  { persona: "Musk", maquina: "GrokBot", modelo: "SuperGrok", cuenta: "coetaneos", perfil: "grok-heavy", despierta: "webhook", alias: ["Musk", "MuskGrokBot", "Elon Musk"] },
-  { persona: "Huang", maquina: "GrokBot", modelo: "SuperGrok", cuenta: "coetaneos", perfil: "grok-heavy", despierta: "webhook", alias: ["Huang", "HuangGrokBot", "Jensen Huang"] },
+  { persona: "Musk", maquina: "GrokBot", modelo: "SuperGrok", cuenta: "coetaneos", perfil: "grok-heavy", despierta: "webhook", alias: ["Musk", "MuskGrokBot", "Elon Musk", "Elon"] },
+  { persona: "Huang", maquina: "GrokBot", modelo: "SuperGrok", cuenta: "coetaneos", perfil: "grok-heavy", despierta: "webhook", alias: ["Huang", "HuangGrokBot", "Jensen Huang", "Jensen"] },
 ];
 
 /** Palabras clave → tipo (para ?texto= sin ?tipo=). La primera regla que casa gana. */

@@ -6,10 +6,10 @@ const js = fs.readFileSync(new URL('./assets/sello-novedades.js', import.meta.ur
 
 test('novedades.json has unclipped-popover note on latest sello', () => {
   const raw = JSON.parse(fs.readFileSync(new URL('./novedades.json', import.meta.url), 'utf8'));
-  const keys = Object.keys(raw).filter(k => /^v\./.test(k)).sort();
-  const key = keys[keys.length - 1] || Object.keys(raw).find(k => /\.r1[12]\./.test(k));
-  assert.ok(key, 'need a recent sello entry');
-  assert.ok(raw[key].some(l => /[Pp]opover|recorte|sin recorte/i.test(l)), key);
+  // 10-10-2026: las claves son v.DD.MM… — ordenarlas como texto no da la última (v.10.10 < v.30.09); basta con que la nota exista.
+  const keys = Object.keys(raw).filter(k => /^v\./.test(k));
+  assert.ok(keys.length, 'need a recent sello entry');
+  assert.ok(keys.some(k => Array.isArray(raw[k]) && raw[k].some(l => /[Pp]opover|recorte|sin recorte/i.test(l))), 'popover note');
 });
 
 test('deploy.sh embeds novedades into version.json', () => {

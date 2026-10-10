@@ -266,6 +266,34 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
 .dd-retraso{color:#ffd866}
 .tok-cursor{margin-top:8px;color:var(--mut);font-size:14px}.tok-cursor b{color:var(--ink)}
 .con-carlos{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:9px;background:#ffcf5a;color:#1a1200;font-size:11px;font-style:normal;font-weight:700;vertical-align:middle}
+/* r40 (Carlos, 10-10-2026): «Equipos» — dos equipos, uno por cuenta; quién lo lleva hoy y su cupo del día */
+.eq-zona.plg .plg-sum{color:var(--mut)}.eq-zona .plg-sum b{color:var(--ink);font-weight:600}
+.eq-lista{display:grid;grid-template-columns:1fr;gap:12px;padding:4px 0 4px}
+@media (min-width:860px){.eq-lista{grid-template-columns:1fr 1fr}}
+.eq-card{background:#06121a;border:1px solid var(--line);border-radius:16px;padding:14px;min-width:0}
+.eq-nom{font-size:19px;line-height:1.2}.eq-cuenta{color:var(--dim);font-size:13px;margin-top:2px}
+.eq-lleva{display:flex;gap:12px;align-items:center;margin:12px 0 8px;padding:10px;border-radius:12px;background:rgba(120,243,255,.06);border:1px solid rgba(120,243,255,.2)}
+.eq-lleva.eq-carlos{background:rgba(255,216,102,.09);border-color:rgba(255,216,102,.45)}
+.eq-lleva small{display:block;color:var(--mut);font-size:11px;letter-spacing:.06em;text-transform:uppercase}.eq-lleva b{font-size:20px}.eq-lleva p{color:var(--mut);font-size:13px;line-height:1.35;margin-top:2px}
+.eq-lleva .eq-orq{color:var(--dim);font-size:12px}
+.tr-foto.eq-foto{width:58px;height:58px;font-size:18px;border-color:#78f3ff}.eq-carlos .tr-foto.eq-foto{border-color:#ffd866;box-shadow:0 0 10px rgba(255,216,102,.45)}
+.eq-rot{color:var(--brand);font-size:11.5px;letter-spacing:.08em;text-transform:uppercase;font-weight:700;margin:10px 0 4px}.eq-rot small{color:var(--dim);text-transform:none;letter-spacing:0;font-weight:400}
+.eq-ms{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+.eq-m{display:inline-flex;align-items:center;gap:6px;padding:2px 9px 2px 2px;border-radius:999px;border:1px solid var(--line);font-size:13px;white-space:nowrap}.eq-m small,.eq-plan{color:var(--dim);font-size:11.5px}
+.tr-foto.eq-mini{width:24px;height:24px;border-width:1.5px;font-size:10px}
+.eq-kpis{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-top:12px}
+@media (max-width:520px){.eq-kpis{grid-template-columns:1fr}}
+.eq-kpi{background:#0a1620;border:1px solid var(--line);border-radius:12px;padding:8px 10px;min-width:0}
+.eq-kpi small,.eq-cupo-cab small{display:block;color:var(--mut);font-size:11.5px}.eq-kpi p{color:var(--dim);font-size:11.5px;line-height:1.35;margin-top:2px;overflow-wrap:anywhere}
+.eq-big{display:block;font-size:26px;font-weight:800;letter-spacing:-.02em;font-variant-numeric:tabular-nums;line-height:1.15}
+.eq-verde{color:#88ffaa}.eq-amarillo{color:#ffd866}.eq-rojo{color:#ff7a7a}.eq-sin{color:var(--dim)}
+.eq-cupo-box{margin-top:10px}.eq-cupo-cab{display:flex;align-items:baseline;gap:10px;flex-wrap:wrap}.eq-cupo-cab .eq-big{font-size:30px}
+.eq-cuentas{list-style:none;margin:6px 0 0;padding:0}
+.eq-cuentas li{display:grid;grid-template-columns:12px minmax(0,1fr) auto;gap:4px 8px;align-items:center;padding:6px 0;border-top:1px solid var(--line);font-size:13px;color:var(--mut)}
+.eq-cn{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.eq-cn b{color:var(--ink)}.eq-cn small{color:var(--dim)}
+.eq-cupo{font-weight:700;color:var(--ink);font-variant-numeric:tabular-nums}.eq-ct{grid-column:2 / -1;font-size:12px;color:var(--dim)}
+.eq-pie{color:var(--dim);font-size:11.5px;margin:6px 0 4px}
+.eq-cupo-cab small.eq-prev{flex-basis:100%;color:var(--mut)}
 </style>
 </head>
 <body>
@@ -277,6 +305,15 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
     <a href="/orquestar/">Orquestador</a>
   </nav>
   <h1>Consumo Agentes AdmiraNeXT</h1>
+  <section class="planes eq-zona plg" id="equipos" data-plegable="equipos">
+    <h2 class="plg-h"><button type="button" class="plg-boton" aria-expanded="false" aria-controls="equipos-cuerpo">
+      <span class="plg-fila"><span class="plg-tit">Equipos</span><span class="plg-sum" id="equipos-resumen" aria-live="polite">Cargando quién lleva cada equipo…</span><span class="plg-chev" aria-hidden="true"></span></span>
+    </button></h2>
+    <div class="plg-cuerpo" id="equipos-cuerpo"><div class="plg-dentro">
+      <div class="eq-lista" id="equipos-lista"><p class="nota">Cargando los equipos…</p></div>
+      <p class="eq-pie" id="equipos-pie"></p>
+    </div></div>
+  </section>
   <section class="trab plg" id="trabajando" data-plegable="trabajando">
     <h2 class="plg-h"><button type="button" class="plg-boton" aria-expanded="false" aria-controls="trabajando-cuerpo">
       <span class="plg-fila"><span class="plg-tit">Trabajando ahora</span><span class="plg-sum" id="trabajando-resumen" aria-live="polite"></span><span class="plg-chev" aria-hidden="true"></span></span>
@@ -439,6 +476,7 @@ fetch("/consumos-plataformas.json", { cache: "no-store" })
   });
 </script>
 <script src="/assets/consumos-plegable.js?v=r31"></script>
+<script src="/assets/consumos-equipos.js?v=r40"></script>
 <script src="/assets/consumos-velocimetro-elegir.js?v=r24-margen"></script>
 <script src="/assets/consumos-trabajando.js?v=r36"></script>
 <script src="/assets/consumos-desplegable.js?v=r23"></script>

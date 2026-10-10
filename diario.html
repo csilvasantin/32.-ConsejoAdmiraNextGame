@@ -136,8 +136,10 @@ async function loadMachines(){
 
 async function loadDiary(){
   try{
-    const r = await fetch(API+"/api/diary?limit=200", {cache:"no-store"});
+    // Público: /api/diary exige bearer (401). El feed de Silicio usa /api/public/diary · FLT-101817 / TG#5523
+    const r = await fetch(API+"/api/public/diary?limit=200", {cache:"no-store"});
     const d = await r.json();
+    if(!r.ok || d.ok===false){ throw new Error((d&&d.error)||("HTTP "+r.status)); }
     entries = d.entries || [];
     maxId = entries.reduce((m,e)=>Math.max(m,e.id), 0);
     entries.forEach(e => { if(e.machine){ seenKeys.add(noteMachine(e.machine)); } });

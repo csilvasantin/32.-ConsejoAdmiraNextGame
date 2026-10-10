@@ -1720,7 +1720,7 @@
   // escribir /idioma, /language, /marca o /brand. Esta línea va siempre arriba, activa con o sin PTY, y
   // es local (no escribe en ningún agente). Habla con los mismos módulos que la home: admira-idioma.js
   // (idioma), assets/marca-blanca.js (marca blanca) y assets/cli-bilingue.js (verbos ES/EN, /marca84).
-  var EXPERT_CMD_V = "20261009-arquitectura-1";
+  var EXPERT_CMD_V = "20261010-i18n-1";
   var expertScripts = {};
   function expertScript(src, global) {
     if (window[global]) return Promise.resolve(window[global]);
@@ -1735,6 +1735,12 @@
   }
   function expertLang() { return String(document.documentElement.lang || "es").slice(0, 2) === "en" ? "en" : "es"; }
   function expertT(es, en) { return expertLang() === "en" ? en : es; }
+  // IDIOMA EN TODA LA PÁGINA (Carlos, 10-10-2026): «si cambio a ENG la mayoría de los textos siguen en
+  // castellano». El selector solo se descargaba al usar el EXPERTO, así que ?lang=en o la preferencia
+  // guardada no traducían nada en las páginas con el marco de Yokup. Se pide ya al cargar.
+  if (!window.AdmiraIdioma && !document.querySelector('script[src*="admira-idioma.js"]')) {
+    expertScript("/admira-idioma.js?v=" + EXPERT_CMD_V, "AdmiraIdioma");
+  }
   var EXPERT_CMD_VERBS = ["/ayuda", "/help", "/idioma", "/language", "/marca", "/brand", "/81", "/82", "/83", "/84", "/85", "/86", "/87", "/88", "/89"];
   function expertCommand(raw, say) {
     var text = String(raw || "").trim();

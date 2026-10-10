@@ -1,4 +1,10 @@
 {
+  "v.10.10.2026.r10.13:39": [
+    "Inglés en todo el sitio: con ?lang=en, /idioma ENG o la preferencia guardada, la barra común, el EXPERTO (control de CLIs y Desktop Apps, visor PTY, línea de órdenes), el acceso con Google y el texto fijo de cada página pública salen en inglés. El castellano no cambia.",
+    "Las páginas con el marco de Yokup cargan el selector de idioma al abrir (antes solo al usar el EXPERTO) y las páginas sueltas (status, telegram/bots, orquestar, game, chat/jobs, navegadores/beacon, ubicacion/invitado, adcelerate…) lo enlazan en el <head>.",
+    "Nuevo diccionario admira-idioma-sitio.js (≈2.300 frases + reglas para máquinas, contadores y «hace X min»); /consumos suma el suyo (admira-idioma-consumos.js). También el título de la pestaña.",
+    "Con inglés, números y fechas pedidos en «es-ES» salen en formato inglés (en-GB). Los datos (agentes, encargos, mensajes) no se traducen. Pendiente: el cuerpo de /normativa."
+  ],
   "v.10.10.2026.r9.13:39": [
     "Reparto del finde largo (10-12 oct) vuelve a la rama: /reparto con los 5 pilares y la tira arriba en /teamwork y /status (REPARTO FINDE, sobre Consumos r45)."
   ],

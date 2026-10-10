@@ -213,13 +213,14 @@ GROKBOT_STATUS_FILE = os.path.join(HOME, "Library", "Application Support", "Grok
 
 
 def grokbot_app(reposo=None, frente=None):
-    abierta = bool(_cmd(["pgrep", "-f", "Grok Bot.app/Contents/MacOS/Grok Bot"]).strip())
     estado = {}
     try:
         with open(GROKBOT_STATUS_FILE) as f:
             estado = json.load(f) or {}
     except Exception:
         estado = {}
+    # pgrep -f no ve la app desde un LaunchAgent en algunos macOS: se mira la lista de procesos (solo nombres).
+    abierta = any(l.strip().endswith("Grok Bot.app/Contents/MacOS/Grok Bot") for l in _cmd(["ps", "-axo", "comm="]).splitlines())
     cuenta = None
     try:
         with open(GROKBOT_CUENTA_FILE) as f:

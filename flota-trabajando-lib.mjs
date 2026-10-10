@@ -85,7 +85,10 @@ export function colocarPorAppGrokBot(out, apps) {
   if (!Array.isArray(apps) || !apps.length) return out;
   for (const t of out) {
     const cuenta = CUENTA_GROKBOT[t.agente];
-    if (!cuenta || (!t.via && t.estado !== "gris")) continue; // con latido propio vivo, manda el suyo
+    // Con latido propio vivo desde un Mac real, manda el suyo; un latido del propio Grok Bot (máquina «GrokBot»/caja) no dice
+    // en qué Mac está la app: entonces manda la app.
+    const nube = !t.maquina || /^(grokbot|grokbotbox|box)$/.test(claveMaquina(t.maquina));
+    if (!cuenta || (!t.via && t.estado !== "gris" && !nube)) continue;
     const conCuenta = apps.filter((a) => a && a.cuenta === cuenta);
     if (!conCuenta.length) continue;
     const delante = (a) => a.alFrente && a.reposoS != null && a.reposoS < REPOSO_CON_CARLOS_S;

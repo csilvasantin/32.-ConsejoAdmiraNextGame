@@ -1,4 +1,8 @@
 {
+  "v.10.10.2026.r24.18:13": [
+    "«Trabajando ahora» plegado: todos los agentes y consejeros salen por su nombre. Primero los que trabajan o están con Carlos; los parados, como chips atenuados «Trinity · Codex · CLI · en espera» (EN «idle»), en vez de caras anónimas en un montón.",
+    "Consejeros: «GrokBot (asistente)» / «GrokBot (assistant)» sin repetir «asistente»; «· App · Carlos» solo si Carlos usa su chat."
+  ],
   "v.10.10.2026.r23.17:42": [
     "/consumos distingue Terminal (CLI) de app de escritorio, por Mac, en las fichas de «Trabajando ahora» y en la nueva columna «Superficie» de la Matriz (ES/EN). La terminal es el canal de trabajo del agente; la app de escritorio solo la usa Carlos: «App de escritorio · Carlos» si la está usando (al frente o escribiendo, reposo < 5 min) y «App abierta, sin uso» atenuado si solo está abierta — ya no pone a nadie «con Carlos».",
     "Consejeros principales (Musk, Huang, Jobs, Wozniak) como «GrokBot (asistente)» en vez de «GrokBot CLI»; Merovingio: Terminal (CLI) + app GrokBot con Carlos. pulso-tokens.py manda las superficies de cada Mac (sesiones tmux y apps abiertas, sin contenido ni secretos)."

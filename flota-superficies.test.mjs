@@ -103,3 +103,20 @@ test("Cliente: textos ES/EN de superficie", () => {
   const mz = readFileSync(new URL("./assets/consumos-matriz.js", import.meta.url), "utf8");
   assert.ok(mz.includes("'GrokBot (assistant)'") && mz.includes("colspan=\"7\""));
 });
+
+test("r24: fila plegada con todos por nombre (parados atenuados «en espera») y sin «asistente» repetido", () => {
+  const js = readFileSync(new URL("./assets/consumos-trabajando.js", import.meta.url), "utf8");
+  const win = { addEventListener() {}, dispatchEvent() {} };
+  const doc = { readyState: "complete", documentElement: { getAttribute: () => "es" }, getElementById: () => null };
+  new Function("window", "document", "location", "localStorage", "URL", js.replace(/\(typeof window !== 'undefined' \? window : globalThis\)\s*;?\s*$/, "(window);"))(win, doc, { href: "https://x/consumos" }, { getItem: () => null }, URL);
+  const { chipsDe } = win.ConsumosTrabajando;
+  const html = chipsDe([
+    { agente: "Trinity", estado: "gris", motor: "Codex", runtime: "Codex", maqCorta: "MBP16", superficies: [{ tipo: "cli", corta: "MBP16" }] },
+    { agente: "Musk", estado: "amarillo", conCarlosEn: "MBP16", motor: "GrokBot (asistente)", runtime: "GrokBot (asistente)", maqCorta: "MBP16", superficies: [{ tipo: "asistente" }, { tipo: "app", enUso: true }] },
+  ]);
+  assert.ok(html.indexOf("Musk") < html.indexOf("Trinity"), "los vivos primero");
+  assert.match(html, /tr-chipa tr-gris[^>]*>.*Trinity.*Codex · CLI.*en espera/);
+  assert.doesNotMatch(html, /tr-grises/);
+  assert.match(html, /GrokBot \(asistente\) · App · Carlos</);
+  assert.doesNotMatch(html, /asistente\) · asistente/);
+});

@@ -66,7 +66,10 @@ export const RETRATOS = {
   Musk: { img: "/assets/council-coetaneos.jpg", cara: { l: 9, t: 44, w: 9, h: 16 } },
   Huang: { img: "/assets/council-coetaneos.jpg", cara: { l: 21.65, t: 44.5, w: 8.5, h: 15.1 } },
 };
-RETRATOS.Merovingio = RETRATOS.Musk; // r6: «Musk / Merovingio», una sola ficha
+// r44 (Carlos, 13:14): Merovingio tiene SU cara (el Merovingio de Matrix, /avatars/merovingio.jpg); Musk, la suya.
+RETRATOS.Merovingio = { img: "/avatars/merovingio.jpg" };
+/** r44: dualidad Elon ↔ Merovingio (Elon hace las cosas a través de Merovingio): consejero que se enseña con el estado de su agente. */
+export const DUALIDAD = { Musk: "Merovingio" };
 const AVATARES = { neo: "/avatars/neo.jpg", trinity: "/avatars/trinity.jpg", morfeo: "/avatars/morfeo.jpg", smith: "/avatars/smith.jpg", oraculo: "/avatars/oraculo.png" };
 const CANON = ["Jobs", "Wozniak", "Lucas", "Disney", "Musk", "Huang", "Neo", "Trinity", "Morfeo", "Oráculo", "Smith", "Niobe", "Cypher", "Merovingio", "Link", "Grok Bot"];
 
@@ -236,10 +239,8 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
     if (!x || n === "Merovingio") continue;
     mero.incluye.push(n);
     mero.latidos.push(...x.latidos);
-    if (x.pulso) {
-      if (!mero.pulso) mero.pulso = { ...x.pulso, agente: "Merovingio" };
-      else for (const k of ["tokHoy", "tokHora", "tokUltimaHora"]) if (x.pulso[k] != null) mero.pulso[k] = (Number(mero.pulso[k]) || 0) + Number(x.pulso[k]);
-    }
+    // r44: los pulsos van en «pulsos» (r41) y se suman con unirPulsos; «x.pulso» ya no existía y se perdían.
+    mero.pulsos.push(...x.pulsos.map((a) => ({ ...a, agente: "Merovingio" })));
     if (x.perfil && !mero.perfil) mero.perfil = x.perfil;
     porAg.delete(n);
   }
@@ -303,6 +304,18 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
       retrato: r ? r : (AVATARES[sinTilde(x.agente)] ? { img: AVATARES[sinTilde(x.agente)] } : null),
       consejero: esConsejero(x.agente), grupo: grupoDe(x.agente),
     });
+  }
+  // r44 (Carlos, 13:14): Merovingio arriba (Agentes) y Elon/Musk abajo (Consejeros), A LA VEZ y con el mismo estado
+  // (y el mismo «con Carlos»): Musk está activo vía Merovingio. Sus tokens están en la ficha de Merovingio (no se duplican).
+  for (const [consejero, agente] of Object.entries(DUALIDAD)) {
+    const a = out.find((t) => t.agente === agente);
+    if (!a || out.some((t) => t.agente === consejero)) continue;
+    const i = a.estado === "gris";
+    out.push({ ...a, agente: consejero, via: agente,
+      motivo: (i ? "parado vía " : "activo vía ") + agente + " (" + a.motivo + ")",
+      incluye: null, fuera: [], planC: false, gratis: false,
+      tokHora: null, tokHoy: null, tokUltimaHora: null, tokHoraMetodo: null, sinMedicion: false,
+      retrato: RETRATOS[consejero] || null, consejero: true, grupo: "consejeros" });
   }
   const ord = { verde: 0, amarillo: 1, gris: 2 };
   return out.sort((a, b) => ord[a.estado] - ord[b.estado] || (b.tokHora || 0) - (a.tokHora || 0) || (a.haceS ?? 1e12) - (b.haceS ?? 1e12) || a.agente.localeCompare(b.agente));

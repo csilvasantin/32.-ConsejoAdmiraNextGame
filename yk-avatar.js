@@ -22,7 +22,8 @@
   // firma misiones e informes ya cerrados que deben seguir enseñando su cara.
   // Consejeros incluidos (Carlos, 2026-09-19): sus retratos viven en avatars/ con
   // el mismo formato que los agentes. Origen y licencias, en avatars/FUENTES.md.
-  var AVATARES = { link: 1, neo: 1, morfeo: 1, smith: 1, trinity: 1, oraculo: 1, wozniak: 1, jobs: 1, disney: 1, lucas: 1 };
+  // r44 (Carlos, 10-10-2026): merovingio = el Merovingio de Matrix, no la cara de Elon (Elon/Musk usa la suya).
+  var AVATARES = { link: 1, neo: 1, morfeo: 1, smith: 1, trinity: 1, oraculo: 1, wozniak: 1, jobs: 1, disney: 1, lucas: 1, merovingio: 1 };
   var CUSTOM = { agents: {}, machines: {} };
 
   var esc = function (x) {
@@ -56,6 +57,8 @@
     var s = slug(name), cu = CUSTOM.agents[s] || {};
     if (cu.img) return cu.img;
     if (AVATARES[s]) return "/avatars/" + s + ".jpg";
+    // r44: «Elon / Merovingio», «MerovingioMBA16», «GrokBot-Merovingio»… → el Merovingio (su cara, no la de Elon).
+    if (s.indexOf("merovingio") >= 0) { var cm = CUSTOM.agents.merovingio || {}; return cm.img || "/avatars/merovingio.jpg"; }
     // La identidad visible lleva apellido de equipo (OraculoMacMini, MorfeoMBP14,
     // NeoMBAAzul). El retrato pertenece a la persona base.
     try {

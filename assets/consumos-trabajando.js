@@ -50,6 +50,8 @@
   }
   /** r40: «≈ 2,5 M tok/h (15 min × 4) · 868 k última hora»; «sin medición» si no hay medición de tokens. */
   function tokens(t) {
+    // r44: Musk activo vía Merovingio: sus tokens van en la ficha de Merovingio (no se cuentan dos veces).
+    if (t.via) return ' · <small class="tr-via">' + esc(T('tokens en la ficha de ', 'tokens on the card of ') + t.via) + '</small>';
     if (t.sinMedicion) return ' · <span class="tr-sinmed" title="' + esc(T('Este agente no tiene medición de tokens (sin pulso o a 0 todo el día): no es un 0 real', 'No token measurement for this agent: not a real 0')) + '">' + T('sin medición de tokens', 'no token measurement') + '</span>';
     var r = '';
     if (t.tokHora > 0) r += ' · ≈ ' + fmt(t.tokHora) + ' tok/h <small>(15 min × 4)</small>';
@@ -58,6 +60,8 @@
   }
   /** r41: «con Carlos · MBP16». */
   function cc(t) { return T('con Carlos', 'with Carlos') + (t.conCarlosEn ? ' · ' + t.conCarlosEn : ''); }
+  /** r44: «· activo vía Merovingio» (dualidad Elon ↔ Merovingio). */
+  function via(t) { return t.via ? ' · <span class="tr-via">' + esc((t.estado === 'gris' ? T('parado vía ', 'idle via ') : T('activo vía ', 'active via ')) + t.via) + '</span>' : ''; }
   function aviso(d) {
     if (!d || d.presencia === 'ok') return '';
     if (d.presencia === 'cache') return ' · <span class="tr-aviso" title="Yokup no ha respondido: se usa la última presencia buena">⚠ presencia de hace ' + esc(hace(d.presenciaEdadS || 0).replace('hace ', '')) + '</span>';
@@ -67,8 +71,8 @@
     var motor = [t.motor, t.modelo && t.modelo !== t.motor ? t.modelo : ''].filter(Boolean).join(' · ');
     var que = t.tarea || t.foco || '';
     var linea;
-    if (t.estado === 'gris') linea = t.motivo === 'sin latido' ? '<span class="tr-est">' + T('sin latido', 'no heartbeat') + '</span>' : '<span class="tr-est">' + T('parado', 'idle') + ' · ' + esc(hace(t.haceS)) + '</span>' + (que ? ' · ' + T('último', 'last') + ': ' + esc(que) : '');
-    else linea = '<span class="tr-est">' + (t.estado === 'amarillo' ? esc(cc(t)) : T('trabajando', 'working')) + '</span>' + (t.enCurso > 0 ? ' · ' + t.enCurso + ' ' + T('en curso', 'in progress') : '') + tokens(t) + (que ? ' · ' + esc(que) : '');
+    if (t.estado === 'gris') linea = t.motivo === 'sin latido' ? '<span class="tr-est">' + T('sin latido', 'no heartbeat') + '</span>' : '<span class="tr-est">' + T('parado', 'idle') + ' · ' + esc(hace(t.haceS)) + '</span>' + via(t) + (que ? ' · ' + T('último', 'last') + ': ' + esc(que) : '');
+    else linea = '<span class="tr-est">' + (t.estado === 'amarillo' ? esc(cc(t)) : T('trabajando', 'working')) + '</span>' + via(t) + (t.enCurso > 0 ? ' · ' + t.enCurso + ' ' + T('en curso', 'in progress') : '') + tokens(t) + (que ? ' · ' + esc(que) : '');
     var fuera = t.fuera && t.fuera.length ? '<span class="tr-chip tr-fuera" title="' + esc(t.fuera.join(' · ')) + '">⚠ ' + T('de pago fuera de las 6', 'paid outside the 6') + '</span>' : '';
     var chips = fuera + notaCoste(t) + (t.proyecto ? '<span class="tr-chip">' + esc(t.proyecto) + '</span>' : '') + (t.encargo ? '<span class="tr-chip tr-enc">' + esc(t.encargo) + '</span>' : '');
     return '<li class="tr-card tr-' + esc(t.estado) + (t.fuera && t.fuera.length ? ' tr-rojo' : '') + '" title="' + esc(t.motivo + (t.foco ? ' — ' + t.foco : '') + (t.incluye && t.incluye.length ? ' · ' + T('incluye el consumo de ', 'includes the usage of ') + t.incluye.join(', ') : '')) + '">' + retrato(t) +
@@ -92,7 +96,7 @@
   }
   function chipsDe(l) {
     var vivos = l.filter(function (t) { return t.estado !== 'gris'; }), grises = l.filter(function (t) { return t.estado === 'gris'; });
-    return vivos.map(function (t) { return '<span class="tr-chipa tr-' + esc(t.estado) + (t.fuera && t.fuera.length ? ' tr-rojo' : '') + '" title="' + esc(t.agente + ' · ' + (t.estado === 'amarillo' ? cc(t) : T('trabajando', 'working')) + ' · ' + (t.motor || '') + (t.planC ? T(' + plan C gratis', ' + free plan C') : t.gratis ? T(' · gratis', ' · free') : '')) + '">' + retrato(t) + '<i></i>' + esc(t.agente) + (t.estado === 'amarillo' && t.conCarlosEn ? ' <small>' + esc(t.conCarlosEn) + '</small>' : '') + (t.gratis || t.planC ? '<small class="tr-c">' + (t.gratis ? T('gratis', 'free') : '+C') + '</small>' : '') + '</span>'; }).join('') +
+    return vivos.map(function (t) { return '<span class="tr-chipa tr-' + esc(t.estado) + (t.fuera && t.fuera.length ? ' tr-rojo' : '') + '" title="' + esc(t.agente + ' · ' + (t.estado === 'amarillo' ? cc(t) : T('trabajando', 'working')) + (t.via ? ' · ' + T('vía ', 'via ') + t.via : '') + ' · ' + (t.motor || '') + (t.planC ? T(' + plan C gratis', ' + free plan C') : t.gratis ? T(' · gratis', ' · free') : '')) + '">' + retrato(t) + '<i></i>' + esc(t.agente) + (t.estado === 'amarillo' && t.conCarlosEn ? ' <small>' + esc(t.conCarlosEn) + '</small>' : '') + (t.gratis || t.planC ? '<small class="tr-c">' + (t.gratis ? T('gratis', 'free') : '+C') + '</small>' : '') + '</span>'; }).join('') +
       (grises.length ? '<span class="tr-grises" title="' + esc(grises.map(function (t) { return t.agente; }).join(', ')) + '">' + grises.map(retrato).join('') + '<small>' + grises.length + ' ' + T('parados', 'idle') + '</small></span>' : '');
   }
   function pinta(d) {

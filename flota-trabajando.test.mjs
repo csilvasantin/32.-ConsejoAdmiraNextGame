@@ -41,8 +41,9 @@ test("tarjetas: dedupe por agente (manda el latido más fresco), siempre los 6 c
   const velocidad = { porAgente: [{ agente: "Morfeo", tokHora: 0, tokHoy: 5, conCarlos: true, maquina: "MacMini" }, { agente: "Trinity", tokHora: 3e6, tokHoy: 7e6, maquina: "MacBookPro16", proyectoAhora: "admira.studio" }] };
   const t = tarjetas({ presencia, velocidad, ahoraS: T });
   const n = t.map((x) => x.agente);
-  // r6: Musk y Huang van dentro de Merovingio (pool de Grok Bot de csilvasantin); los leyenda, aparte.
-  for (const c of CONSEJEROS_GROK) assert.ok(["Musk", "Huang"].includes(c) ? !n.includes(c) : n.includes(c), c);
+  // r6: el consumo de Musk y Huang va dentro de Merovingio (pool de Grok Bot de csilvasantin); Huang no sale aparte.
+  // r44: Musk SÍ sale (Consejeros), activo vía Merovingio.
+  for (const c of CONSEJEROS_GROK) assert.ok(c === "Huang" ? !n.includes(c) : n.includes(c), c);
   assert.deepEqual(t.find((x) => x.agente === "Merovingio").incluye.sort(), ["Huang", "Musk"]);
   assert.equal(n.filter((x) => x === "Neo").length, 1);
   const neo = t.find((x) => x.agente === "Neo");
@@ -51,7 +52,9 @@ test("tarjetas: dedupe por agente (manda el latido más fresco), siempre los 6 c
   assert.deepEqual(t.slice(0, 3).map((x) => [x.agente, x.estado]), [["Trinity", "verde"], ["Jobs", "verde"], ["Morfeo", "amarillo"]]);
   assert.equal(t.find((x) => x.agente === "Jobs").encargo, "FLT-101758");
   assert.equal(t.find((x) => x.agente === "Lucas").motivo, "sin latido");
-  assert.ok(t.find((x) => x.agente === "Merovingio").retrato.img.includes("coetaneos"));
+  // r44: Merovingio con su cara (Matrix); la de la ilustración de coetáneos es de Musk.
+  assert.equal(t.find((x) => x.agente === "Merovingio").retrato.img, "/avatars/merovingio.jpg");
+  assert.ok(t.find((x) => x.agente === "Musk").retrato.img.includes("coetaneos"));
 });
 
 test("/api/flota/trabajando: une la presencia; sin pulso ni Yokup sigue enseñando a los consejeros", async () => {
@@ -64,7 +67,7 @@ test("/api/flota/trabajando: une la presencia; sin pulso ni Yokup sigue enseñan
   assert.equal(r.presencia, "ok");
   assert.equal(r.tarjetas[0].agente, "Jobs");
   assert.equal(r.tarjetas[0].estado, "verde");
-  assert.equal(r.tarjetas.filter((t) => CONSEJEROS_GROK.includes(t.agente)).length, 4);
+  assert.equal(r.tarjetas.filter((t) => CONSEJEROS_GROK.includes(t.agente)).length, 5); // r44: + Musk vía Merovingio
   assert.ok(r.tarjetas.find((t) => t.agente === "Merovingio"));
 });
 
@@ -81,9 +84,10 @@ test("gris: «hace X» y máquina de la fuente más fresca (latido, proceso o pu
   assert.deepEqual([neo.maquina, neo.haceS, neo.fuente], ["MacBook Pro 16", 400, "process_snapshot"]);
 });
 
-test("retratos: Musk y Huang con recorte de cara propio; Oráculo con avatar de iniciales PNG", () => {
+test("retratos: Musk con recorte de cara propio, Merovingio con la suya (Matrix, r44); Oráculo con avatar de iniciales PNG", () => {
   const t = tarjetas({ presencia: [], velocidad: { porAgente: [{ agente: "Oráculo", tokHora: 0, tokHoy: 1 }] }, ahoraS: T });
-  assert.deepEqual(t.find((x) => x.agente === "Merovingio").retrato.cara, { l: 9, t: 44, w: 9, h: 16 });
+  assert.deepEqual(t.find((x) => x.agente === "Musk").retrato.cara, { l: 9, t: 44, w: 9, h: 16 });
+  assert.deepEqual(t.find((x) => x.agente === "Merovingio").retrato, { img: "/avatars/merovingio.jpg" });
   assert.equal(t.find((x) => x.agente === "Oráculo").retrato.img, "/avatars/oraculo.png");
 });
 

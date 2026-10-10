@@ -44,8 +44,9 @@ test("Merovingio sale SIEMPRE (aunque no haya latido ni pulso), sin marcarse com
   assert.deepEqual([m.estado, m.motivo, m.consejero], ["gris", "sin latido", false]);
   const t = tarjetas({ presencia: [{ persona: "Elon / Merovingio", machine: "MacBookAir16plata", runtime: "Grok", host: "cli", source: "heartbeat", mode: "pasivo", updated: T - 5 }], ahoraS: T });
   assert.equal(t.filter((x) => x.agente === "Merovingio").length, 1);
-  // r6: Musk va en la ficha de Merovingio (un solo pool de Grok Bot), no como ficha aparte.
-  assert.equal(de(t, "Musk"), undefined);
+  // r6: el consumo de Musk va en la ficha de Merovingio (un solo pool de Grok Bot); r44: Musk sale en Consejeros vía Merovingio.
+  assert.equal(t.filter((x) => x.agente === "Musk").length, 1);
+  assert.equal(de(t, "Musk").via, "Merovingio");
 });
 
 test("superficieDeCarlos (r41): app de escritorio ADJUNTA o tmux adjunto sí; ranura desktop sin adjuntar, tmux sin cliente o latido de la mesa Grok no", () => {
@@ -275,4 +276,37 @@ test("r43 · front: grupos() separa Agentes y Consejeros con cuentas propias (tr
   assert.deepEqual({ ...g[0].n }, { trabajando: 1, conCarlos: 2, parados: 1, total: 4 });
   assert.deepEqual({ ...g[1].n }, { trabajando: 1, conCarlos: 0, parados: 2, total: 3 });
   assert.deepEqual(Array.from(g[1].tarjetas, (t) => t.agente), ["Jobs", "Disney", "Musk"]);
+});
+
+// r44 (Carlos, 13:14): dualidad Elon ↔ Merovingio. Elon hace las cosas a través de Merovingio: los dos activos a la vez,
+// Merovingio en Agentes (con la cara del Merovingio de Matrix) y Musk en Consejeros (con la suya), mismo estado.
+test("r44 · Merovingio trabajando → Musk activo vía Merovingio en Consejeros, mismo estado, tokens solo en Merovingio", () => {
+  const t = tarjetas({ presencia: [{ persona: "Elon / Merovingio", machine: "MacBookAir16plata", runtime: "Grok", host: "cli", source: "heartbeat", mode: "pasivo", updated: T - 5 }],
+    velocidad: { porAgente: [{ agente: "Grok Bot (Consejo)", maquina: "GrokBotBox", motor: "cursor", tokHoy: 1000, tokHora: 400, tokUltimaHora: 300 }, { agente: "Musk", maquina: "GrokBotBox", tokHoy: 500, tokHora: 100, tokUltimaHora: 50 }] }, ahoraS: T });
+  const m = de(t, "Merovingio"), k = de(t, "Musk");
+  assert.equal(m.estado, "verde"); assert.equal(m.grupo, "agentes");
+  assert.deepEqual([k.estado, k.grupo, k.consejero, k.via, k.maquina], ["verde", "consejeros", true, "Merovingio", m.maquina]);
+  assert.match(k.motivo, /^activo vía Merovingio/);
+  assert.equal(m.tokHoy, 1500, "el pulso de Musk se suma al pool de Merovingio (antes se perdía)");
+  assert.equal(k.tokHoy, null); assert.equal(k.sinMedicion, false);
+  assert.deepEqual(m.retrato, { img: "/avatars/merovingio.jpg" });
+  assert.equal(k.retrato.img, "/assets/council-coetaneos.jpg");
+});
+
+test("r44 · Merovingio con Carlos → Musk también «con Carlos» en la misma máquina; Merovingio parado → Musk parado", () => {
+  const h = tarjetas({ presencia: [{ persona: "Merovingio", machine: "MacBookAir16plata", source: "heartbeat", con_carlos: true, updated: T - 5 }], ahoraS: T });
+  assert.deepEqual([de(h, "Musk").estado, de(h, "Musk").conCarlosEn], [de(h, "Merovingio").estado, de(h, "Merovingio").conCarlosEn]);
+  assert.equal(de(h, "Musk").estado, "amarillo");
+  const g = tarjetas({ presencia: [], velocidad: null, ahoraS: T });
+  assert.equal(de(g, "Musk").estado, "gris"); assert.equal(de(g, "Musk").via, "Merovingio");
+  assert.equal(g.filter((x) => x.agente === "Musk").length, 1);
+});
+
+test("r44 · front: «activo vía Merovingio» y «tokens en la ficha de Merovingio» en la tarjeta de Musk", async () => {
+  const fs = await import("node:fs"); const vm = await import("node:vm");
+  const src = fs.readFileSync(new URL("./assets/consumos-trabajando.js", import.meta.url), "utf8");
+  assert.match(src, /activo vía /); assert.match(src, /tokens en la ficha de /);
+  for (const f of ["yk-avatar.js", "yk-misiones.js"]) assert.match(fs.readFileSync(new URL("./" + f, import.meta.url), "utf8"), /merovingio: 1/, f);
+  assert.ok(fs.statSync(new URL("./avatars/merovingio.jpg", import.meta.url)).size > 2000);
+  void vm;
 });

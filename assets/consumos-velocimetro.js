@@ -583,14 +583,26 @@
     return fetch(API, { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }).then(function (d) { pinta(d); return d; });
   }
   root.ConsumosVelocimetro = { leer: leer, fmt: fmt, escala: escala };
-  function arranca() {
-    if (!document.getElementById('velocimetro')) return;
-    // r26 (Carlos): rótulos «Tokens por hora» · «Agente ·» · «Proyecto ·» (en inglés: Tokens per hour · Agent · Project).
+  var H1_ES = null, TIT_ES = null;
+  function rotulos() {
     var tv = document.getElementById('vel-titulo'), tp = document.getElementById('vel-proy-titulo'), ta = document.getElementById('vel-ag-titulo');
     if (tv) tv.textContent = T('Tokens por hora', 'Tokens per hour');
     if (tp) tp.textContent = T('Proyecto', 'Project');
     if (ta) ta.textContent = T('Agente', 'Agent');
-    if (en()) { var h1 = document.querySelector('h1'); if (h1 && /Consumo Agentes/.test(h1.textContent)) h1.textContent = 'AdmiraNeXT Agents Usage'; if (/Consumo Agentes/.test(document.title)) document.title = 'AdmiraNeXT Agents Usage · admira.live'; }
+    var h1 = document.querySelector('h1');
+    if (h1 && H1_ES == null && /Consumo Agentes/.test(h1.textContent)) H1_ES = h1.textContent;
+    if (TIT_ES == null && /Consumo Agentes/.test(document.title)) TIT_ES = document.title;
+    if (h1 && H1_ES != null) h1.textContent = en() ? 'AdmiraNeXT Agents Usage' : H1_ES;
+    if (TIT_ES != null) document.title = en() ? 'AdmiraNeXT Agents Usage · admira.live' : TIT_ES;
+  }
+  function arranca() {
+    if (!document.getElementById('velocimetro')) return;
+    // r26 (Carlos): rótulos «Tokens por hora» · «Agente ·» · «Proyecto ·» (en inglés: Tokens per hour · Agent · Project).
+    rotulos();
+    // r11: se repintan al cambiar de idioma (antes solo al arrancar: «AGENTE» seguía en castellano con ?lang=en si el
+    // idioma llegaba después, y el título se quedaba en inglés al volver a ESP).
+    root.addEventListener && root.addEventListener('admira:languagechange', function () { setTimeout(rotulos, 0); });
+    try { new MutationObserver(function () { setTimeout(rotulos, 0); }).observe(document.documentElement, { attributes: true, attributeFilter: ['lang'] }); } catch (e) {}
     var D = root.ConsumosDesplegable;
     var rp = document.getElementById('vel-proy-dd'), ra = document.getElementById('vel-ag-dd');
     if (D && rp) DD.proy = new D(rp, { etiqueta: T('Proyecto', 'Project'), alCambiar: function (v) {

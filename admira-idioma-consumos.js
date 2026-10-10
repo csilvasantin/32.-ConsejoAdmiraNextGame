@@ -125,7 +125,8 @@
     [/^(\S+) · ranura disponible$/, "$1 · free slot"],
     [/^(\d+)\/(\d+) vivas$/, "$1/$2 alive"],
     [/^· (\d+) in progress · (.+) última hora$/, "· $1 in progress · $2 last hour"],
-    [/^· (.+) última hora$/, "· $1 last hour"]
+    [/^· (.+) última hora$/, "· $1 last hour"],
+    [/^Bucle de encargos \((.+)\)$/, "Task loop ($1)"]
   ];
   var I = G.AdmiraIdioma;
   if (I && I.extra) I.extra(dicc, reglas);

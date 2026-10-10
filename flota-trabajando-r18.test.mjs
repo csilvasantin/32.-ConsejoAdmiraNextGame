@@ -28,3 +28,14 @@ test("r18: móviles con nombre corto, sin presencia inventada", () => {
   assert.equal(maquinaCorta("iPhone"), "iPhone");
   assert.equal(maquinaCorta("Galaxy Fold"), "Fold");
 });
+
+test("r19: gb() también el motor «grok» suelto, nombres de agente «Grok Bot» y la nota «no GrokBot»", () => {
+  const js = readFileSync(new URL("./assets/consumos-velocimetro.js", import.meta.url), "utf8");
+  const gb = new Function(js.match(/function gb\(s\) \{[^\n]+\}/)[0] + "; return gb;")();
+  assert.equal(gb("MacBook Pro 16 · grok · Grok 4.6"), "MacBook Pro 16 · GrokBot CLI · Grok 4.6");
+  assert.equal(gb("Wozniak · Grok, Disney · Grok"), "Wozniak · GrokBot, Disney · GrokBot");
+  assert.equal(gb("Grok Bot"), "GrokBot");
+  assert.equal(gb("grok-4.7"), "grok-4.7");
+  const lib = readFileSync(new URL("./consumos-lecturas-lib.mjs", import.meta.url), "utf8");
+  assert.match(lib, /", no GrokBot\)"/); assert.match(lib, /Merovingio · GrokBot \(Cursor Pro\)/);
+});

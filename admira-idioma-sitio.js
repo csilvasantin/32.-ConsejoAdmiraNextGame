@@ -16,6 +16,7 @@
   var dicc = {
   "% del plan gastado, últimos 14 días": "% of the plan spent, last 14 days",
   "(ChatGPT Pro de Trinity, no Grok)": "(Trinity's ChatGPT Pro, not Grok)",
+  "(ChatGPT Pro de Trinity, no GrokBot)": "(Trinity's ChatGPT Pro, not GrokBot)",
   "(datos mock · metodología validada tipo Deloitte)": "(mock data · Deloitte-style validated methodology)",
   "(datos mock, sin cookies)": "(mock data, no cookies)",
   "(demo con datos mock)": "(demo with mock data)",
@@ -1739,6 +1740,7 @@
   "Trabajando en algo": "Working on something",
   "Trabajo activo por familia canónica": "Active work per canonical family",
   "Trinity · Codex (ChatGPT Pro de Trinity, no Grok)": "Trinity · Codex (Trinity's ChatGPT Pro, not Grok)",
+  "Trinity · Codex (ChatGPT Pro de Trinity, no GrokBot)": "Trinity · Codex (Trinity's ChatGPT Pro, not GrokBot)",
   "Tu acceso a repos y GitHub CLI ya funciona.": "Your access to repos and GitHub CLI already works.",
   "Tu bandeja de encargos y la respuesta que se publica en hilo en Telegram.": "Your task inbox and the reply posted as a thread in Telegram.",
   "Tu equipo, conectado.": "Your team, connected.",

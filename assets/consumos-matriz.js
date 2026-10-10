@@ -33,7 +33,7 @@
   // r17: el modelo viene en castellano del mapa del servidor: en inglés se traduce lo que no es nombre propio.
   // r18 (Carlos, 15:55): la familia visible es «GrokBot», nunca «Grok» a secas; «Grok CLI» → «GrokBot CLI». Se respetan
   // los nombres de modelo con versión («Grok 4.7», «Grok Heavy», «grok-4.7») y los nombres de consejeros/URLs (no llevan «Grok»).
-  function gb(s) { return s == null ? s : String(s).replace(/\bGrok Bot\b/g, 'GrokBot').replace(/\bGrok CLI\b/g, 'GrokBot CLI').replace(/\bGrok\b(?![\s-]*(?:\d|Heavy|Imagine|Fast|Code|Mini|Beta))/g, 'GrokBot'); }
+  function gb(s) { return s == null ? s : String(s).replace(/\bGrok Bot\b/g, 'GrokBot').replace(/\bGrok CLI\b/g, 'GrokBot CLI').replace(/\bGrok\b(?![\s-]*(?:\d|Heavy|Imagine|Fast|Code|Mini|Beta))/g, 'GrokBot').replace(/(^|· )grok(?= ·|$)/g, '$1GrokBot CLI'); }
   function modelo(m) {
     if (!m) return m;
     m = gb(m);
@@ -45,8 +45,8 @@
     var ab = f.abierto == null ? '—' : f.abierto ? T('Abierto', 'Open') : T('Cerrado', 'Closed');
     var co = coste(f);
     var inf = f.fuera ? '<small class="mz-inf">⚠ ' + T('modelo de pago fuera de las 6 suscripciones: ', 'paid model outside the 6 subscriptions: ') + esc(f.infracciones.join(' · ')) + '</small>' : '';
-    var inc = f.incluye && f.incluye.length ? '<small class="mz-donde">' + T('incluye el consumo de ', 'includes the usage of ') + esc(f.incluye.join(', ')) + T(' (un solo pool de Grok Bot)', ' (one Grok Bot pool)') + '</small>' : '';
-    var donde = f.donde && f.donde.length ? '<small class="mz-donde">' + esc(f.donde.join(' · ').replace(/, gratis\)/g, en() ? ', free)' : ', gratis)')) + '</small>' : '';
+    var inc = f.incluye && f.incluye.length ? '<small class="mz-donde">' + T('incluye el consumo de ', 'includes the usage of ') + esc(f.incluye.join(', ')) + T(' (un solo pool de GrokBot)', ' (one GrokBot pool)') + '</small>' : '';
+    var donde = f.donde && f.donde.length ? '<small class="mz-donde">' + esc(gb(f.donde.join(' · ')).replace(/, gratis\)/g, en() ? ', free)' : ', gratis)')) + '</small>' : '';
     var c = f.carga, carga = c && c.in_progress ? ' <small class="mz-enc">' + c.in_progress + ' ' + T('en curso', 'in progress') + '</small>' : '';
     var est = f.vivo ? T('con señal (latido < 15 min)', 'live (heartbeat < 15 min)') : T('sin señal', 'no signal');
     return '<tr class="' + (f.vivo ? 'mz-vivo' : 'mz-off') + (f.fuera ? ' mz-fuera' : '') + '" title="' + esc(est) + '">' +

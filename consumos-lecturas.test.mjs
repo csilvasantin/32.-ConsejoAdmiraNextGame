@@ -161,7 +161,7 @@ test("tarjetas: manda el límite más alto; coetáneos sin lectura; recomendaci�
   assert.match(c[1].pista, /1 % el 4 de octubre/);
   const r = recomendarCuentas(c);
   assert.match(r.texto, /les sobra 73 %/);
-  assert.match(r.texto, /Sin lectura: Coetáneos, Neo · Claude Code, Trinity · Codex, Morfeo · Claude, Oráculo · Codex, Merovingio · Grok Bot \(Cursor Pro\)/);
+  assert.match(r.texto, /Sin lectura: Coetáneos, Neo · Claude Code, Trinity · Codex, Morfeo · Claude, Oráculo · Codex, Merovingio · GrokBot \(Cursor Pro\)/);
   assert.deepEqual(r.ranking.map((x) => x.id), ["leyendas", "coetaneos", "neo-claude", "trinity-codex", "morfeo-claude", "oraculo-codex", "cursor"]);
 });
 
@@ -198,7 +198,7 @@ test("Neo · Claude Code: tarjeta propia, manda el semanal, la sesión de 5 h va
   assert.equal(r.ranking[0].id, "neo-claude");
   assert.equal(r.ranking[0].proveedor, "Claude");
   assert.match(r.ranking[0].nombre, /Claude Max de Neo, csilva@admira.com, no Grok/);
-  assert.match(r.texto, /Mover encargos pesados a Neo · Claude Code \(Claude Max de Neo, csilva@admira\.com, no Grok\): les sobra 91 %/);
+  assert.match(r.texto, /Mover encargos pesados a Neo · Claude Code \(Claude Max de Neo, csilva@admira\.com, no GrokBot\): les sobra 91 %/);
   assert.equal(r.ranking[1].nombre, "Leyendas");
 });
 
@@ -226,12 +226,12 @@ test("Trinity · Codex: cuarta tarjeta, manda «Codex semanal», entra en el ran
   assert.equal(tri.semaforo, "verde");
   const r = recomendarCuentas(cs);
   assert.deepEqual(r.ranking.slice(0, 2).map((x) => [x.id, x.proveedor]), [["neo-claude", "Claude"], ["trinity-codex", "ChatGPT"]]);
-  assert.equal(r.ranking[1].nombre, "Trinity · Codex (ChatGPT Pro de Trinity, no Grok)");
+  assert.equal(r.ranking[1].nombre, "Trinity · Codex (ChatGPT Pro de Trinity, no GrokBot)");
 });
 
 test("añadir una cuenta es una línea: agente() rellena etiqueta y medidores", () => {
   const c = agente("x", "Morfeo · Gemini", "Morfeo · Google AI Ultra", "Google AI Ultra", "Gemini", "Gemini semanal");
-  assert.deepEqual([c.etiqueta, c.principal, c.secundario, c.consejeros], ["Morfeo · Gemini (Google AI Ultra de Morfeo, no Grok)", "Gemini semanal", null, []]);
+  assert.deepEqual([c.etiqueta, c.principal, c.secundario, c.consejeros], ["Morfeo · Gemini (Google AI Ultra de Morfeo, no GrokBot)", "Gemini semanal", null, []]);
 });
 
 test("Mac mini: «Morfeo · Claude» sin lectura y «Oráculo · Codex» al 40 % (gana la lectura más reciente)", () => {
@@ -247,7 +247,7 @@ test("Mac mini: «Morfeo · Claude» sin lectura y «Oráculo · Codex» al 40 %
   assert.equal(mor.proveedor, "Claude");
   assert.equal(mor.pct, null); assert.equal(mor.margen, null); assert.equal(mor.semaforo, "sin");
   assert.deepEqual(mor.secundario, { agente: "Claude Code sesión 5 h", pct: null, reset: null, ts: null });
-  assert.equal(mor.etiqueta, "Morfeo · Claude (Claude de Morfeo, csilvasantin@gmail.com, no Grok)");
+  assert.equal(mor.etiqueta, "Morfeo · Claude (Claude de Morfeo, csilvasantin@gmail.com, no GrokBot)");
   const ora = cs.find((c) => c.id === "oraculo-codex");
   assert.equal(ora.nombre, "Oráculo · Codex");
   assert.equal(ora.plan, "ChatGPT Pro (csilvasantin@gmail.com)");

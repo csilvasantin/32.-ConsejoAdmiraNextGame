@@ -30,6 +30,11 @@
     if (r.cara) { var c = r.cara, sx = (10000 / c.w).toFixed(1), sy = (10000 / c.h).toFixed(1), px = (c.l / (100 - c.w) * 100).toFixed(2), py = (c.t / (100 - c.h) * 100).toFixed(2); return '<span class="mz-cara" style="background-image:url(\'' + esc(r.img) + '\');background-size:' + sx + '% ' + sy + '%;background-position:' + px + '% ' + py + '%"></span>'; }
     return '<span class="mz-cara" style="background-image:url(\'' + esc(r.img) + '\')"></span>';
   }
+  // r17: el modelo viene en castellano del mapa del servidor: en inglés se traduce lo que no es nombre propio.
+  function modelo(m) {
+    if (!en() || !m) return m;
+    return String(m).replace(/\(pool de ([^)]+)\)/g, "($1's pool)").replace(/\(pool ([^)]+)\)/g, '($1 pool)').replace(/\(por defecto\)/g, '(default)').replace(/\bgratis\b/g, 'free');
+  }
   function fila(f) {
     var eq = f.equipo ? (en() ? f.equipo.en : f.equipo.es) : '<i class="mz-sc">' + T('sin clasificar', 'unclassified') + '</i>';
     var ab = f.abierto == null ? '—' : f.abierto ? T('Abierto', 'Open') : T('Cerrado', 'Closed');
@@ -42,7 +47,7 @@
     return '<tr class="' + (f.vivo ? 'mz-vivo' : 'mz-off') + (f.fuera ? ' mz-fuera' : '') + '" title="' + esc(est) + '">' +
       '<td><i class="mz-p" aria-hidden="true"></i>' + cara(f) + esc(en() ? f.agenteEn : f.agente) + carga + '</td>' +
       '<td>' + esc(f.depende || '—') + '</td><td>' + (f.equipo ? esc(eq) : eq) + '</td>' +
-      '<td>' + esc(f.modelo) + donde + inc + inf + '</td><td>' + esc(ab) + '</td>' +
+      '<td>' + esc(modelo(f.modelo)) + donde + inc + inf + '</td><td>' + esc(ab) + '</td>' +
       '<td><span class="mz-co mz-' + esc(f.fuera ? 'fuera' : (f.coste || 'nd')) + '">' + esc(co) + '</span></td></tr>';
   }
   function pinta(d) {

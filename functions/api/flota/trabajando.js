@@ -105,6 +105,9 @@ export async function construir({ env, fetchImpl, ahoraMs: ahoraFijo, cache }) {
   return {
     ok: true, tarjetas: tarjetas({ presencia: pres, velocidad: v, ahoraS, carga }),
     matriz: conRetratos(matriz({ presencia: pres, carga, ahoraS })), carga: carga.size ? "ok" : "sin datos",
+    // r17: qué cuenta(s) tiene en uso la app Grok Bot de cada Mac (cuenta null = app abierta, cuenta desconocida).
+    appsGrokBot: (v && Array.isArray(v.grokbotApps) ? v.grokbotApps : []).map((a) => ({ maquina: a.maquina, cuenta: a.cuenta || null,
+      alFrente: !!a.alFrente, usoS: a.usoS ?? null, fuente: a.fuente || null })),
     presencia: pr.estado, presenciaEdadS: pr.edadS, pulso: v && v.ok ? "ok" : "sin datos",
     fuentes: [PRESENCIA, "/api/consumos/velocidad"], generado: new Date(ahoraMs).toISOString(),
   };

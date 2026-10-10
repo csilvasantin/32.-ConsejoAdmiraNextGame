@@ -95,16 +95,34 @@ export function normalizarGrokbotApp(g) {
   if (!g || typeof g !== "object") return null;
   const cuenta = texto(g.cuenta, 80).toLowerCase();
   const reposo = entero(g.reposoS);
+  const esCorreo = (c) => /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/.test(c);
+  // r17: cuentas REALES de la app (de los nombres de su persistencia por cuenta), la usada más recientemente primero.
+  const cuentas = Array.isArray(g.cuentas) ? g.cuentas.slice(0, 6).map((c) => ({ cuenta: texto(c && c.cuenta, 80).toLowerCase(), haceS: entero(c && c.haceS) }))
+    .filter((c) => esCorreo(c.cuenta) && c.haceS !== null) : [];
   return { abierta: g.abierta === true, firmada: g.firmada === true ? true : g.firmada === false ? false : null,
-    cuenta: /^[^\s@]+@[^\s@]+\.[a-z]{2,}$/.test(cuenta) ? cuenta : null, alFrente: g.alFrente === true,
+    cuenta: esCorreo(cuenta) ? cuenta : null, cuentas, forzada: g.forzada === true, alFrente: g.alFrente === true,
     reposoS: reposo, version: texto(g.version, 20) || null };
 }
 
-/** r14: apps Grok Bot abiertas con pulso fresco → [{ maquina, cuenta, alFrente, reposoS, haceS }]. */
+/** r17: una cuenta cuenta como «abierta en ese Mac» si la app la ha usado en la última hora. */
+export const USO_CUENTA_S = 3600;
+/** r14/r17: apps Grok Bot abiertas con pulso fresco → una entrada por (Mac, cuenta en uso):
+ *  [{ maquina, cuenta, alFrente, reposoS, haceS, usoS, fuente }]. Solo la cuenta usada más recientemente es la que
+ *  está a la vista (alFrente/«con Carlos»). Sin cuenta reciente → una entrada con cuenta null: app abierta, cuenta
+ *  desconocida, no se atribuye a ningún consejero. */
 export function appsGrokBot(docs, ahora) {
-  return (docs || []).filter((d) => d && d.grokbotApp && d.grokbotApp.abierta && d.grokbotApp.ts && ahora - d.grokbotApp.ts < STALE_MS)
-    .map((d) => ({ maquina: d.maquina, cuenta: d.grokbotApp.cuenta || null, alFrente: !!d.grokbotApp.alFrente, reposoS: d.grokbotApp.reposoS,
-      firmada: d.grokbotApp.firmada, haceS: Math.round((ahora - d.grokbotApp.ts) / 1000) }));
+  const out = [];
+  for (const d of docs || []) {
+    const g = d && d.grokbotApp;
+    if (!g || !g.abierta || !g.ts || ahora - g.ts >= STALE_MS) continue;
+    const base = { maquina: d.maquina, reposoS: g.reposoS, firmada: g.firmada, haceS: Math.round((ahora - g.ts) / 1000) };
+    const reales = (g.cuentas || []).filter((c) => c.haceS < USO_CUENTA_S);
+    if (g.forzada && g.cuenta) out.push({ ...base, cuenta: g.cuenta, alFrente: !!g.alFrente, usoS: null, fuente: "forzada" });
+    else if (reales.length) reales.forEach((c, i) => out.push({ ...base, cuenta: c.cuenta, alFrente: i === 0 && !!g.alFrente, usoS: c.haceS, fuente: "app" }));
+    else if (!(g.cuentas || []).length && g.cuenta) out.push({ ...base, cuenta: g.cuenta, alFrente: !!g.alFrente, usoS: null, fuente: "fichero" });
+    else out.push({ ...base, cuenta: null, alFrente: !!g.alFrente, usoS: null, fuente: "desconocida" });
+  }
+  return out;
 }
 
 /** r27: serie en hora del evento (Cursor) → puntos validados, ordenados, ts únicos; null si no vale. */

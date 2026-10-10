@@ -9,6 +9,11 @@
 (function (root) {
   'use strict';
   var API = '/api/flota/trabajando', POLL = 10000, ultimo = null;
+  // r11 (Carlos, 13:57): el dato de cada chip alterna cada 10 s entre máquina/equipo y runtime (Grok · Codex · Claude ·
+  // OpenCode · Nemotron 3 Ultra). La fase sale del reloj, así un repintado no la reinicia.
+  var ALTERNA_MS = 10000;
+  function faseB() { return Math.floor(Date.now() / ALTERNA_MS) % 2 === 1; }
+  function alterna() { var ch = document.getElementById('trabajando-chips'); if (ch) ch.classList.toggle('tr-fase-b', faseB()); }
   function en() {
     // r5: /consumos no carga admira-idioma.js al entrar: se mira también ?lang= y la preferencia guardada de la suite.
     var h = (document.documentElement.getAttribute('lang') || '').toLowerCase();
@@ -27,15 +32,13 @@
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function fmt(n) {
     if (n == null || !isFinite(n)) return '—';
-    function f(x, d) { return x.toLocaleString('es-ES', { minimumFractionDigits: d, maximumFractionDigits: d }); }
+    function f(x, d) { return x.toLocaleString(en() ? 'en-GB' : 'es-ES', { minimumFractionDigits: d, maximumFractionDigits: d }); }
     if (n >= 1e6) return f(n / 1e6, 1) + ' M'; if (n >= 1e3) return f(n / 1e3, 0) + ' k'; return f(n, 0);
   }
   function hace(s) {
     if (s == null) return '';
-    if (s < 90) return 'hace ' + Math.round(s) + ' s';
-    if (s < 5400) return 'hace ' + Math.round(s / 60) + ' min';
-    if (s < 172800) return 'hace ' + Math.round(s / 3600) + ' h';
-    return 'hace ' + Math.round(s / 86400) + ' d';
+    var v = s < 90 ? Math.round(s) + ' s' : s < 5400 ? Math.round(s / 60) + ' min' : s < 172800 ? Math.round(s / 3600) + ' h' : Math.round(s / 86400) + ' d';
+    return en() ? v + ' ago' : 'hace ' + v;
   }
   function retrato(t) {
     var r = t.retrato, ini = esc(String(t.agente || '?').slice(0, 2));
@@ -55,7 +58,7 @@
     if (t.sinMedicion) return ' · <span class="tr-sinmed" title="' + esc(T('Este agente no tiene medición de tokens (sin pulso o a 0 todo el día): no es un 0 real', 'No token measurement for this agent: not a real 0')) + '">' + T('sin medición de tokens', 'no token measurement') + '</span>';
     var r = '';
     if (t.tokHora > 0) r += ' · ≈ ' + fmt(t.tokHora) + ' tok/h <small>(15 min × 4)</small>';
-    if (t.tokUltimaHora != null && (t.tokHora > 0 || t.tokUltimaHora > 0)) r += ' · ' + fmt(t.tokUltimaHora) + ' última hora';
+    if (t.tokUltimaHora != null && (t.tokHora > 0 || t.tokUltimaHora > 0)) r += ' · ' + fmt(t.tokUltimaHora) + ' ' + T('última hora', 'last hour');
     return r;
   }
   /** r41: «con Carlos · MBP16». */
@@ -64,8 +67,8 @@
   function via(t) { return t.via ? ' · <span class="tr-via">' + esc((t.estado === 'gris' ? T('parado vía ', 'idle via ') : T('activo vía ', 'active via ')) + t.via) + '</span>' : ''; }
   function aviso(d) {
     if (!d || d.presencia === 'ok') return '';
-    if (d.presencia === 'cache') return ' · <span class="tr-aviso" title="Yokup no ha respondido: se usa la última presencia buena">⚠ presencia de hace ' + esc(hace(d.presenciaEdadS || 0).replace('hace ', '')) + '</span>';
-    return ' · <span class="tr-aviso" title="Yokup no ha respondido y no hay presencia reciente: solo salen agentes con pulso de tokens">⚠ presencia sin respuesta: pueden faltar agentes</span>';
+    if (d.presencia === 'cache') return ' · <span class="tr-aviso" title="' + esc(T('Yokup no ha respondido: se usa la última presencia buena', 'Yokup did not answer: using the last good presence')) + '">⚠ ' + esc(T('presencia de ', 'presence from ') + hace(d.presenciaEdadS || 0)) + '</span>';
+    return ' · <span class="tr-aviso" title="' + esc(T('Yokup no ha respondido y no hay presencia reciente: solo salen agentes con pulso de tokens', 'Yokup did not answer and there is no recent presence: only agents with a token pulse are shown')) + '">⚠ ' + T('presencia sin respuesta: pueden faltar agentes', 'no presence answer: agents may be missing') + '</span>';
   }
   function tarjeta(t) {
     var motor = [t.motor, t.modelo && t.modelo !== t.motor ? t.modelo : ''].filter(Boolean).join(' · ');
@@ -94,16 +97,23 @@
   function cifras(n) {
     return '<b>' + n.trabajando + '</b> ' + T('trabajando', 'working') + ' · <b>' + n.conCarlos + '</b> ' + T('con Carlos', 'with Carlos') + ' · <b>' + n.parados + '</b> ' + T('parados', 'idle');
   }
+  /** r11: «MBA16 · +C» ↔ «Claude» (o «OpenCode · Nemotron 3 Ultra»); si falta un lado, se repite el otro. */
+  function altChip(t) {
+    var a = [t.estado === 'amarillo' && t.conCarlosEn ? t.conCarlosEn : t.maqCorta, t.gratis ? T('gratis', 'free') : t.planC ? '+C' : ''].filter(Boolean).join(' · ');
+    var b = t.runtime || '';
+    if (!a && !b) return '';
+    return ' <small class="tr-alt" title="' + esc(T('Cada 10 s: máquina ↔ runtime', 'Every 10 s: machine ↔ runtime')) + '"><span class="tr-a">' + esc(a || b) + '</span><span class="tr-b">' + esc(b || a) + '</span></small>';
+  }
   function chipsDe(l) {
     var vivos = l.filter(function (t) { return t.estado !== 'gris'; }), grises = l.filter(function (t) { return t.estado === 'gris'; });
-    return vivos.map(function (t) { return '<span class="tr-chipa tr-' + esc(t.estado) + (t.fuera && t.fuera.length ? ' tr-rojo' : '') + '" title="' + esc(t.agente + ' · ' + (t.estado === 'amarillo' ? cc(t) : T('trabajando', 'working')) + (t.via ? ' · ' + T('vía ', 'via ') + t.via : '') + ' · ' + (t.motor || '') + (t.planC ? T(' + plan C gratis', ' + free plan C') : t.gratis ? T(' · gratis', ' · free') : '')) + '">' + retrato(t) + '<i></i>' + esc(t.agente) + (t.estado === 'amarillo' && t.conCarlosEn ? ' <small>' + esc(t.conCarlosEn) + '</small>' : '') + (t.gratis || t.planC ? '<small class="tr-c">' + (t.gratis ? T('gratis', 'free') : '+C') + '</small>' : '') + '</span>'; }).join('') +
+    return vivos.map(function (t) { return '<span class="tr-chipa tr-' + esc(t.estado) + (t.fuera && t.fuera.length ? ' tr-rojo' : '') + '" title="' + esc(t.agente + ' · ' + (t.estado === 'amarillo' ? cc(t) : T('trabajando', 'working')) + (t.via ? ' · ' + T('vía ', 'via ') + t.via : '') + ' · ' + (t.motor || '') + (t.planC ? T(' + plan C gratis', ' + free plan C') : t.gratis ? T(' · gratis', ' · free') : '')) + '">' + retrato(t) + '<i></i>' + esc(t.agente) + altChip(t) + '</span>'; }).join('') +
       (grises.length ? '<span class="tr-grises" title="' + esc(grises.map(function (t) { return t.agente; }).join(', ')) + '">' + grises.map(retrato).join('') + '<small>' + grises.length + ' ' + T('parados', 'idle') + '</small></span>' : '');
   }
   function pinta(d) {
     var ul = document.getElementById('trabajando-lista'), pie = document.getElementById('trabajando-pie'), res = document.getElementById('trabajando-resumen');
     if (!ul) return;
     var ts = d && d.ok ? d.tarjetas || [] : null;
-    if (!ts) { ul.innerHTML = '<li class="tr-vacio">Sin datos de presencia ni de pulso ahora: no se enseña nadie.</li>'; return; }
+    if (!ts) { ul.innerHTML = '<li class="tr-vacio">' + T('Sin datos de presencia ni de pulso ahora: no se enseña nadie.', 'No presence or pulse data right now: nobody is shown.') + '</li>'; return; }
     var gs = grupos(ts);
     // r43: una cabecera por grupo (ocupa toda la fila de la rejilla) con sus cuentas, y debajo sus tarjetas.
     ul.innerHTML = gs.map(function (g) {
@@ -112,9 +122,13 @@
     }).join('');
     // r31/r43: fila compacta (zona plegada), también por grupo.
     var ch = document.getElementById('trabajando-chips');
-    if (ch) ch.innerHTML = gs.map(function (g) { return '<span class="tr-chipgrupo"><b class="tr-chiptit">' + esc(g.titulo) + '</b>' + chipsDe(g.tarjetas) + '</span>'; }).join('');
+    if (ch) { ch.classList.toggle('tr-fase-b', faseB()); } if (ch) ch.innerHTML = gs.map(function (g) { return '<span class="tr-chipgrupo"><b class="tr-chiptit">' + esc(g.titulo) + '</b>' + chipsDe(g.tarjetas) + '</span>'; }).join('');
     if (res) res.innerHTML = gs.map(function (g) { return '<span class="tr-resgrupo">' + esc(g.titulo) + ': ' + cifras(g.n) + '</span>'; }).join(' — ') + aviso(d);
-    if (pie) pie.innerHTML = 'Actualizado ' + new Date(d.generado).toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid' }) + ' (Madrid) · verde = tokens en los últimos 15 min, latido «trabajando» de &lt; 2 min, CPU del propio proceso o latido de &lt; 15 min con encargo en curso (cualquier runtime, también el plan C gratis) · amarillo = con Carlos (pulso, o app de escritorio / tmux adjunto en el Mac que estás usando) · gris = parado · consejeros = los 16 del Consejo (leyendas y coetáneos) · fuentes: <a href="https://bot.yokup.com/api/presence">presencia de Yokup</a> + <a href="/api/consumos/velocidad">pulso de tokens</a>' + (d.presencia === 'cache' ? ' · ⚠ presencia de caché (hace ' + esc(String(d.presenciaEdadS)) + ' s)' : d.presencia !== 'ok' ? ' · ⚠ presencia sin respuesta' : '') + ' · cada 10 s';
+    if (pie) pie.innerHTML = T('Actualizado ', 'Updated ') + new Date(d.generado).toLocaleTimeString(en() ? 'en-GB' : 'es-ES', { timeZone: 'Europe/Madrid' }) + ' (Madrid) · ' +
+      T('verde = tokens en los últimos 15 min, latido «trabajando» de &lt; 2 min, CPU del propio proceso o latido de &lt; 15 min con encargo en curso (cualquier runtime, también el plan C gratis) · amarillo = con Carlos (pulso, o app de escritorio / tmux adjunto en el Mac que estás usando) · gris = parado · consejeros = los 16 del Consejo (leyendas y coetáneos) · fuentes: ',
+        'green = tokens in the last 15 min, «working» heartbeat &lt; 2 min old, the process\'s own CPU or a heartbeat &lt; 15 min old with a task in progress (any runtime, also the free plan C) · yellow = with Carlos (pulse, or desktop app / attached tmux on the Mac you are using) · grey = idle · councillors = the 16 of the Council (legends and contemporaries) · sources: ') +
+      '<a href="https://bot.yokup.com/api/presence">' + T('presencia de Yokup', 'Yokup presence') + '</a> + <a href="/api/consumos/velocidad">' + T('pulso de tokens', 'token pulse') + '</a>' +
+      (d.presencia === 'cache' ? ' · ⚠ ' + T('presencia de caché (hace ', 'cached presence (') + esc(String(d.presenciaEdadS)) + T(' s)', ' s ago)') : d.presencia !== 'ok' ? ' · ⚠ ' + T('presencia sin respuesta', 'no presence answer') : '') + ' · ' + T('cada 10 s', 'every 10 s');
   }
   function avisa(d) { ultimo = d; try { root.dispatchEvent(new CustomEvent('flota:trabajando', { detail: d })); } catch (e) {} return d; }
   function leer() { return fetch(API, { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }).then(avisa).then(pinta); }
@@ -122,6 +136,7 @@
     if (!document.getElementById('trabajando')) return;
     leer();
     setInterval(function () { if (!document.hidden) leer(); }, POLL);
+    setInterval(alterna, 1000);
   }
   root.ConsumosTrabajando = { grupos: grupos, leer: leer, ultimo: function () { return ultimo; } };
   root.addEventListener && root.addEventListener('admira:languagechange', function () { if (ultimo) pinta(ultimo); });

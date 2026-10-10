@@ -70,7 +70,31 @@ export const RETRATOS = {
 RETRATOS.Merovingio = { img: "/avatars/merovingio.jpg" };
 /** r44: dualidad Elon ↔ Merovingio (Elon hace las cosas a través de Merovingio): consejero que se enseña con el estado de su agente. */
 // r45 (Carlos, 13:23): Huang igual que Musk (su consumo ya iba en el pool de Merovingio).
-export const DUALIDAD = { Musk: "Merovingio", Huang: "Merovingio" };
+export const DUALIDAD = { Musk: "Merovingio", Huang: "Merovingio", Jobs: "Smith", Wozniak: "Smith" };
+// r11 (Carlos, 13:57 · «Jobs no sale en CONSEJEROS»): Jobs y Wozniak, los 2 consejeros principales de csilva@admira.com,
+// van incluidos en el Grok de Smith (flota-matriz-lib MAPA: incluidoEn «Smith»), igual que Musk y Huang en el pool de
+// Merovingio. Sin latido propio salían en gris, escondidos entre los «parados»: ahora, si su ficha está parada y Smith
+// está vivo, salen «activo vía Smith» con el estado de Smith (tokens en la ficha de Smith). Con latido propio vivo,
+// manda el suyo.
+
+/** r11: runtime corto de una ficha para la franja: cerrados «Grok» / «Codex» / «Claude»; abiertos «OpenCode · Nemotron 3 Ultra»
+ *  (o el runtime y el modelo abierto reales). */
+export function runtimeCorto({ motor = null, modelo = null, gratis = false } = {}) {
+  const m = String(motor || ""), mo = String(modelo || ""), t = (m + " " + mo).toLowerCase();
+  if (gratis || esGratis(m, mo) || /nemotron|llama|qwen|deepseek|mistral|gemma|kimi|glm/.test(t)) {
+    const rt = /deepagents/.test(t) ? "DeepAgents" : "OpenCode";
+    let mod = "Nemotron 3 Ultra";
+    if (!/nemotron/.test(t)) {
+      const x = (mo || m).replace(/:free\b/gi, "").replace(/\b(gratis|por defecto|free)\b/gi, "").split(/[·(]/)[0].trim().split("/").pop().replace(/:free$/i, "");
+      if (x && !/^(opencode|deepagents)$/i.test(x)) mod = x;
+    }
+    return rt + " · " + mod;
+  }
+  if (/claude/.test(t)) return "Claude";
+  if (/codex|chatgpt|openai/.test(t)) return "Codex";
+  if (/grok|cursor/.test(t)) return "Grok";
+  return m || null;
+}
 const AVATARES = { neo: "/avatars/neo.jpg", trinity: "/avatars/trinity.jpg", morfeo: "/avatars/morfeo.jpg", smith: "/avatars/smith.jpg", oraculo: "/avatars/oraculo.png" };
 const CANON = ["Jobs", "Wozniak", "Lucas", "Disney", "Musk", "Huang", "Neo", "Trinity", "Morfeo", "Oráculo", "Smith", "Niobe", "Cypher", "Merovingio", "Link", "Grok Bot"];
 
@@ -310,7 +334,11 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
   // (y el mismo «con Carlos»): Musk está activo vía Merovingio. Sus tokens están en la ficha de Merovingio (no se duplican).
   for (const [consejero, agente] of Object.entries(DUALIDAD)) {
     const a = out.find((t) => t.agente === agente);
-    if (!a || out.some((t) => t.agente === consejero)) continue;
+    if (!a) continue;
+    const propia = out.findIndex((t) => t.agente === consejero);
+    // r11: con ficha propia, solo se sustituye si está parada y su agente no (Jobs gris + Smith vivo → activo vía Smith).
+    if (propia >= 0 && !(out[propia].estado === "gris" && a.estado !== "gris")) continue;
+    if (propia >= 0) out.splice(propia, 1);
     const i = a.estado === "gris";
     out.push({ ...a, agente: consejero, via: agente,
       motivo: (i ? "parado vía " : "activo vía ") + agente + " (" + a.motivo + ")",
@@ -318,6 +346,8 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
       tokHora: null, tokHoy: null, tokUltimaHora: null, tokHoraMetodo: null, sinMedicion: false,
       retrato: RETRATOS[consejero] || null, consejero: true, grupo: "consejeros" });
   }
+  // r11: la franja alterna cada 10 s máquina ↔ runtime: se mandan ya cortos.
+  for (const t of out) { t.maqCorta = maquinaCorta(t.maquina); t.runtime = runtimeCorto(t); }
   const ord = { verde: 0, amarillo: 1, gris: 2 };
   return out.sort((a, b) => ord[a.estado] - ord[b.estado] || (b.tokHora || 0) - (a.tokHora || 0) || (a.haceS ?? 1e12) - (b.haceS ?? 1e12) || a.agente.localeCompare(b.agente));
 }

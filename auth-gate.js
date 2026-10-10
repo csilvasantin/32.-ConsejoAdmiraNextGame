@@ -245,11 +245,18 @@
     }
   }
 
+  // r11 (10-10-2026): el botón oficial de Google sale en el idioma de la página («Sign in with Google» con ?lang=en).
+  function gateLang() {
+    try { var q = new URL(location.href).searchParams.get("lang"); if (q) return /^en/i.test(q) ? "en" : "es"; } catch (e) {}
+    if (window.AdmiraIdioma && typeof AdmiraIdioma.lang === "function") return AdmiraIdioma.lang() === "en" ? "en" : "es";
+    try { var s = localStorage.getItem("admiranext_expert_lang") || localStorage.getItem("xtanco_lang"); if (s) return /^en/i.test(s) ? "en" : "es"; } catch (e) {}
+    return /^en/i.test(document.documentElement.lang || "") ? "en" : "es";
+  }
   function renderGoogleButton() {
     var el = document.getElementById("admira-gbtn");
     if (!el || !window.google || !google.accounts || !google.accounts.id) return;
     try {
-      google.accounts.id.renderButton(el, { theme: "filled_black", size: "large", text: "signin_with", shape: "pill", width: 240, state:redirectState });
+      google.accounts.id.renderButton(el, { theme: "filled_black", size: "large", text: "signin_with", shape: "pill", width: 240, state:redirectState, locale: gateLang() });
     } catch (e) {}
   }
 
@@ -298,7 +305,7 @@
 
   function loadGoogle() {
     var s = document.createElement("script");
-    s.src = "https://accounts.google.com/gsi/client";
+    s.src = "https://accounts.google.com/gsi/client" + (gateLang() === "en" ? "?hl=en" : "");
     s.async = true; s.defer = true;
     s.onload = function () { ready(initGis); };
     s.onerror = function () {

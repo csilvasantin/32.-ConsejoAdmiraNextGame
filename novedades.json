@@ -1,4 +1,9 @@
 {
+  "v.10.10.2026.r11.14:05": [
+    "Consumos: Jobs y Wozniak (los 2 consejeros principales de csilva@admira.com, incluidos en el Grok de Smith) salen en Consejeros «activo vía Smith» con el estado de Smith y los tokens en su ficha, igual que Musk y Huang vía Merovingio. Antes Jobs, sin latido propio, quedaba en gris entre los «parados».",
+    "El dato junto a cada chip de «Trabajando ahora» alterna cada 10 s entre máquina/equipo (MBP16, MBA16, gratis, +C) y el runtime (Grok, Codex, Claude u OpenCode · Nemotron 3 Ultra), con fundido; sin animación si el sistema pide menos movimiento.",
+    "Inglés en /consumos: «última hora», «hace X», pie de leyenda, márgenes y recomendación de cuentas, tablas de lecturas, menú (Incidencias, Asistencia), Orquestador; números en formato inglés. El botón de Google del acceso sale en inglés con ?lang=en."
+  ],
   "v.10.10.2026.r10.13:39": [
     "Inglés en todo el sitio: con ?lang=en, /idioma ENG o la preferencia guardada, la barra común, el EXPERTO (control de CLIs y Desktop Apps, visor PTY, línea de órdenes), el acceso con Google y el texto fijo de cada página pública salen en inglés. El castellano no cambia.",
     "Las páginas con el marco de Yokup cargan el selector de idioma al abrir (antes solo al usar el EXPERTO) y las páginas sueltas (status, telegram/bots, orquestar, game, chat/jobs, navegadores/beacon, ubicacion/invitado, adcelerate…) lo enlazan en el <head>.",

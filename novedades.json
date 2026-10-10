@@ -1,4 +1,9 @@
 {
+  "v.10.10.2026.r25.20:35": [
+    "/consumos · Cuentas: lecturas «web-uso» de la pantalla de uso del plan (claude.ai / chatgpt.com): sesión 5 h y semana con su hora de reinicio, insignia «Reinicio gratis disponible · vence 22 oct» (o «3 reinicios gratis · el primero vence 22 oct») y créditos.",
+    "Lecturas de más de 6 h salen como «dato de hace X h» en vez de pasar por frescas.",
+    "Trinity · Codex: el plan es ChatGPT Business (espacio IoT Incubator, csilva@admira.com), no ChatGPT Pro."
+  ],
   "v.10.10.2026.r24.18:13": [
     "«Trabajando ahora» plegado: todos los agentes y consejeros salen por su nombre. Primero los que trabajan o están con Carlos; los parados, como chips atenuados «Trinity · Codex · CLI · en espera» (EN «idle»), en vez de caras anónimas en un montón.",
     "Consejeros: «GrokBot (asistente)» / «GrokBot (assistant)» sin repetir «asistente»; «· App · Carlos» solo si Carlos usa su chat."

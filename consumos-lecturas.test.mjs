@@ -216,17 +216,17 @@ test("Trinity · Codex: cuarta tarjeta, manda «Codex semanal», entra en el ran
   const cs = resumirCuentas(ls, [], { ahora });
   const tri = cs.find((c) => c.id === "trinity-codex");
   assert.equal(tri.nombre, "Trinity · Codex");
-  assert.equal(tri.plan, "ChatGPT Pro 200");
+  assert.equal(tri.plan, "ChatGPT Business · IoT Incubator (csilva@admira.com)"); // r25: lecturas viejas «Trinity · ChatGPT Pro» entran por alias
   assert.equal(tri.proveedor, "ChatGPT");
   assert.equal(tri.pct, 23);
   assert.equal(tri.manda, "Codex semanal");
   assert.equal(tri.reset, "2026-10-14T06:51:00.000Z");
   assert.equal(tri.cupoDia, Math.round((77 / ((Date.parse("2026-10-14T06:51:00Z") - ahora) / 864e5)) * 100) / 100);
-  assert.equal(tri.secundario, null);
+  assert.deepEqual(tri.secundario, { agente: "Codex sesión 5 h", pct: null, reset: null, ts: null });
   assert.equal(tri.semaforo, "verde");
   const r = recomendarCuentas(cs);
   assert.deepEqual(r.ranking.slice(0, 2).map((x) => [x.id, x.proveedor]), [["neo-claude", "Claude"], ["trinity-codex", "ChatGPT"]]);
-  assert.equal(r.ranking[1].nombre, "Trinity · Codex (ChatGPT Pro de Trinity, no GrokBot)");
+  assert.equal(r.ranking[1].nombre, "Trinity · Codex (ChatGPT Business · IoT Incubator de Trinity, csilva@admira.com, no GrokBot)");
 });
 
 test("añadir una cuenta es una línea: agente() rellena etiqueta y medidores", () => {
@@ -285,4 +285,58 @@ test("r37 · ranking estrictamente por margen descendente (las rojas no bajan al
   const r = recomendarCuentas([c("a", 61, "verde"), c("b", 73, "rojo"), c("c", 90, "verde"), c("d", 71, "rojo"), { id: "e", nombre: "e", pct: null, margen: null, semaforo: "sin" }]);
   assert.deepEqual(r.ranking.map((x) => x.id), ["c", "b", "d", "a", "e"]);
   assert.match(r.texto, /^Mover encargos pesados a c:/);
+});
+
+
+/* ───── r25 · lecturas web-uso (pantalla de uso del plan) ───── */
+import { normalizarUso, expandirLectura, resumirUso, textoReinicios, textoEdad, VIEJA_H } from "./consumos-lecturas-lib.mjs";
+
+test("r25 · web-uso: cuenta por id, pct/agente/reset salen de uso.semana; la sesión se guarda como serie secundaria", () => {
+  const ahora = Date.parse("2026-10-10T18:31:00Z");
+  const { lectura, error } = normalizarLectura({ cuenta: "neo-claude", fuente: "web-uso", autor: "GrokBotBox", ts: "2026-10-10T20:27:00+02:00",
+    uso: { plan: "Max (20x)", url: "https://claude.ai/settings/usage", sesion: { pct: 2, reset: "2026-10-10T21:40:00+02:00" }, semana: { pct: 12, reset: "2026-10-11T15:00:00+02:00" },
+      extras: [{ nombre: "Fable esta semana", pct: 0, reset: "2026-10-11T15:00:00+02:00" }], reiniciosGratis: [{ vence: "2026-10-22", alcance: "completo" }],
+      creditos: { restante: 250, total: 250, unidad: "USD", vence: "2026-11-05T08:59:00+01:00" } } }, ahora);
+  assert.equal(error, undefined);
+  assert.equal(lectura.cuenta, "Neo · Claude Max");
+  assert.equal(lectura.agente, "Claude Code semanal");
+  assert.equal(lectura.pct, 12);
+  assert.equal(lectura.reset, "2026-10-11T13:00:00.000Z");
+  assert.equal(lectura.uso.reiniciosGratis[0].vence, "2026-10-22");
+  const dos = expandirLectura(lectura);
+  assert.equal(dos.length, 2);
+  assert.equal(dos[1].agente, "Claude Code sesión 5 h");
+  assert.equal(dos[1].pct, 2);
+  assert.equal(dos[1].uso, undefined);
+  const neo = resumirCuentas(dos, [], { ahora }).find((c) => c.id === "neo-claude");
+  assert.equal(neo.pct, 12);
+  assert.equal(neo.secundario.pct, 2);
+  assert.equal(neo.uso.semana.pct, 12);
+  assert.equal(neo.uso.creditos.restante, 250);
+  assert.equal(neo.vieja, false);
+  assert.equal(textoReinicios(neo.uso.reiniciosGratis), "Reinicio gratis disponible · vence 22 oct");
+});
+
+test("r25 · web-uso: validación de uso (url, pct, fechas) y fuente", () => {
+  assert.match(normalizarUso({ url: "https://evil.example/x" }).error, /uso\.url/);
+  assert.match(normalizarUso({ semana: { pct: 140 } }).error, /pct/);
+  assert.match(normalizarUso({ reiniciosGratis: [{ vence: "mañana" }] }).error, /vence/);
+  assert.ok(normalizarUso({ url: "app:Claude · Ajustes → Uso" }).uso);
+  assert.match(normalizarLectura({ cuenta: "x", pct: 1, autor: "a", fuente: "scrape" }).error, /fuente/);
+});
+
+test("r25 · más de 6 h → «dato de hace X h»; reinicios vencidos fuera; límites con reset pasado se dan por renovados", () => {
+  const ls = [L("2026-10-09T10:05:00Z", 10, { cuenta: "Neo · Claude Max", agente: "Claude Code semanal", reset: "2026-10-11T13:00:00.000Z" })];
+  const ahora = Date.parse("2026-10-10T18:30:00Z");
+  const neo = resumirCuentas(ls, [], { ahora }).find((c) => c.id === "neo-claude");
+  assert.equal(neo.vieja, true);
+  assert.equal(neo.edadTexto, "dato de hace 32 h");
+  assert.equal(textoEdad(60), "dato de hace 2 días");
+  assert.equal(VIEJA_H, 6);
+  const u = resumirUso([{ ...ls[0], ts: "2026-10-10T10:00:00Z", uso: { sesion: { pct: 40, reset: "2026-10-10T12:00:00.000Z" }, reiniciosGratis: [{ vence: "2026-10-09" }, { vence: "2026-10-22T21:06:00.000Z" }, { vence: "2026-10-29T19:37:00.000Z" }] } }], ahora);
+  assert.equal(u.sesion.pct, 0);
+  assert.equal(u.sesion.renovado, true);
+  assert.equal(u.reiniciosGratis.length, 2);
+  assert.equal(textoReinicios(u.reiniciosGratis), "2 reinicios gratis · el primero vence 22 oct");
+  assert.equal(u.edadTexto, "dato de hace 9 h");
 });

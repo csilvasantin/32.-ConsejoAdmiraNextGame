@@ -30,6 +30,49 @@
 
 
   const LUZ = { rojo: "Rojo", ambar: "Ámbar", verde: "Verde", sin: "Sin lectura" };
+  /* r25 · lecturas web-uso (pantalla de uso del plan): sesión, semana, reinicios gratis, créditos y edad del dato. */
+  const DIAS = ["dom", "lun", "mar", "mié", "jue", "vie", "sáb"];
+  const partesMadrid = (ts) => { const p = new Intl.DateTimeFormat("en-CA", { timeZone: "Europe/Madrid", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", hourCycle: "h23" }).formatToParts(new Date(ts)); const v = (t) => (p.find((x) => x.type === t) || {}).value; return { dia: v("year") + "-" + v("month") + "-" + v("day"), hm: v("hour") + ":" + v("minute") }; };
+  function cuandoReset(v) {
+    if (!v) return "";
+    const diaSolo = !/T/.test(v);
+    const t = diaSolo ? Date.parse(v + "T12:00:00Z") : Date.parse(v);
+    const a = partesMadrid(t), hoy = partesMadrid(Date.now()), man = partesMadrid(Date.now() + 864e5);
+    const dm = new Intl.DateTimeFormat("es-ES", { timeZone: "Europe/Madrid", day: "numeric", month: "short" }).format(new Date(t)).replace(".", "");
+    if (diaSolo) return dm;
+    if (a.dia === hoy.dia) return "hoy " + a.hm;
+    if (a.dia === man.dia) return "mañana " + a.hm;
+    if (t - Date.now() < 6.5 * 864e5 && t > Date.now()) return DIAS[new Date(a.dia + "T12:00:00Z").getUTCDay()] + " " + a.hm;
+    return dm + " " + a.hm;
+  }
+  function textoReinicios(l) {
+    if (!l || !l.length) return "";
+    const v = l[0].vence ? cuandoReset(l[0].vence.slice(0, 10)) : "";
+    return l.length === 1 ? "Reinicio gratis disponible" + (v ? " · vence " + v : "") : l.length + " reinicios gratis" + (v ? " · el primero vence " + v : "");
+  }
+  const lim = (x) => pct(x.pct) + (x.renovado ? " (renovado)" : "") + (x.reset && !x.renovado ? " · " + cuandoReset(x.reset) : "");
+  const edadSpan = (t) => (t ? '<span class="cu-edad" title="La última lectura tiene más de 6 h">' + esc(t) + "</span>" : "");
+  function usoCorto(u) {
+    if (!u) return "";
+    const b = [];
+    if (u.sesion) b.push("sesión " + lim(u.sesion));
+    if (u.semana) b.push("semana " + lim(u.semana));
+    let h = b.length ? '<span class="cu-uso">' + esc(b.join(" · ")) + "</span>" : "";
+    if (u.reiniciosGratis && u.reiniciosGratis.length) h += '<span class="cu-badge" title="' + esc(u.reiniciosGratis.map((r) => (r.vence ? fecha(/T/.test(r.vence) ? r.vence : r.vence + "T12:00:00Z").slice(0, /T/.test(r.vence) ? 11 : 5) : "sin fecha")).join(" · ")) + '">' + esc(textoReinicios(u.reiniciosGratis)) + "</span>";
+    return h;
+  }
+  function usoLargo(u) {
+    if (!u) return "";
+    const fila = (n, x) => "<li><b>" + esc(n) + "</b>: " + pct(x.pct) + " usado" + (x.renovado ? " · ya se renovó" : x.reset ? " · se restablece " + esc(cuandoReset(x.reset)) : "") + "</li>";
+    let h = '<div class="uso-plan">';
+    if (u.reiniciosGratis && u.reiniciosGratis.length) h += '<p><span class="cu-badge">' + esc(textoReinicios(u.reiniciosGratis)) + "</span>" + (u.reiniciosGratis.length > 1 ? ' <small class="uso-rg">vencen ' + esc(u.reiniciosGratis.map((r) => cuandoReset(r.vence)).join(", ")) + "</small>" : "") + "</p>";
+    h += '<ul class="limites">' + (u.sesion ? fila("Sesión (5 h)", u.sesion) : "") + (u.semana ? fila("Esta semana", u.semana) : "") + (u.extras || []).map((x) => fila(x.nombre || "Otro límite", x)).join("") + "</ul>";
+    const c = u.creditos;
+    if (c && (c.restante !== null || c.total !== null)) h += '<p class="unidad sec">Créditos: ' + esc((c.unidad ? c.unidad + " " : "") + (c.restante ?? "—") + (c.total !== null && c.total !== undefined ? " de " + c.total : "")) + (c.vence ? " · vencen " + esc(cuandoReset(c.vence)) : "") + "</p>";
+    const origen = u.url ? u.url.replace(/^https:\/\//, "").replace(/\?.*$/, "") : "";
+    h += '<p class="cuando">Pantalla de uso' + (u.plan ? " · plan " + esc(u.plan) : "") + " · " + esc(u.fuente === "web-uso" ? "lectura web" : u.fuente === "manual" ? "lectura manual" : u.fuente) + (origen ? " (" + esc(origen) + ")" : "") + " · " + esc(fecha(u.ts)) + (u.nota ? " · " + esc(u.nota) : "") + (u.edadTexto ? " · " + edadSpan(u.edadTexto) : "") + "</p>";
+    return h + "</div>";
+  }
   function pintaCuentas(d) {
     const top = document.getElementById("reco-top"), rk = document.getElementById("ranking"), grid = document.getElementById("cuentas");
     if (!top || !grid) return;
@@ -44,7 +87,9 @@
         const luz = LUZ[c.semaforo] ? c.semaforo : "sin";
         const ag = (luz === "rojo" || luz === "ambar") ? (c.series || []).find((x) => x.proy && x.proy.agotaAntes) : null;
         const usado = c.pct === null ? (c.pulso && c.pulso.tokHoy ? fT(c.pulso.tokHoy) + " tok" : "sin lectura") : pct(c.pct);
-        return '<li><span class="cu-dot ' + luz + '" title="' + LUZ[luz] + '"></span><b title="' + esc(c.cuenta + " · " + c.plan) + '">' + esc(c.nombre) + '</b><span class="cu-pct' + (c.pct === null ? " cu-sin" : "") + '">' + usado + '</span><span class="cu-por ' + luz + '">' + (ag ? esc((ag.agente || ag.cuenta) + " " + ag.proy.texto) : "") + "</span></li>";
+        // r25: sesión/semana con su reset, insignia de reinicios gratis y «dato de hace X h» si la lectura pasa de 6 h.
+        const extra = (ag ? '<span class="cu-agota">' + esc((ag.agente || ag.cuenta) + " " + ag.proy.texto) + "</span>" : "") + usoCorto(c.uso) + edadSpan(c.edadTexto);
+        return '<li><span class="cu-dot ' + luz + '" title="' + LUZ[luz] + '"></span><b title="' + esc(c.cuenta + " · " + c.plan) + '">' + esc(c.nombre) + '</b><span class="cu-pct' + (c.pct === null ? " cu-sin" : "") + (c.vieja ? " cu-viejo" : "") + '">' + usado + '</span><span class="cu-por ' + luz + '">' + extra + "</span></li>";
       }).join("");
     }
     // r35: resumen de la zona «Cuentas» (plegada): cuántas y cuántas en rojo/ámbar.
@@ -83,7 +128,8 @@
         return h;
       }
       const p = c.proyeccion || {};
-      h += '<p class="cifra">' + pct(c.pct) + '</p><p class="unidad">usado · manda «' + esc(c.manda) + "»</p>";
+      h += '<p class="cifra' + (c.vieja ? " cifra-vieja" : "") + '">' + pct(c.pct) + (c.edadTexto ? " " + edadSpan(c.edadTexto) : "") + '</p><p class="unidad">usado · manda «' + esc(c.manda) + "»</p>";
+      h += usoLargo(c.uso);
       if (c.secundario) h += '<p class="unidad sec">' + esc(c.secundario.agente) + ": " + (c.secundario.pct === null ? "sin lectura" : pct(c.secundario.pct)) + (c.secundario.reset ? " · reset " + esc(fecha(c.secundario.reset)) : "") + "</p>";
       h += '<p class="frase">' + (c.reset ? "Reset: " + esc(fecha(c.reset)) + (c.cupoDia !== null ? " · cupo " + pct(c.cupoDia) + " al día" : "") : "Sin hora de reset en la lectura") + "</p>";
       h += '<p class="cta">' + (p.agotaAntes ? '<span class="agota">' + esc(p.texto) + "</span>, antes del reset" : p.llega100 ? "Al ritmo actual (" + pct(p.ritmoDia) + "/día" + (p.base === "semana" ? ", media de la semana" : "") + ") llegaría al 100 % el " + esc(fecha(p.llega100)) : "Falta otra lectura para saber el ritmo") + "</p>";

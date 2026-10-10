@@ -2,7 +2,10 @@
  * /api/consumos/lecturas — lecturas del % del plan gastado por cuenta/agente (GrokBotBox, 09-10-2026).
  *
  * GET  ?dias=14[&cuenta=…]  → { ok, lecturas, series, recomendacion, generado }   (público, solo lectura)
- * POST { cuenta, grupo?, agente?, pct, tokens?, fuente: "manual"|"auto", autor, ts?, nota? }
+ * POST { cuenta, grupo?, agente?, pct, tokens?, fuente: "manual"|"auto"|"web-uso", autor, ts?, nota?, uso? }
+ *      r25: `cuenta` puede ser el id de la tarjeta (neo-claude, morfeo-claude, trinity-codex, oraculo-codex) y una
+ *      lectura web-uso puede omitir pct/agente: van de uso.semana y del medidor principal; uso.sesion se guarda
+ *      además como lectura del medidor secundario (sesión 5 h). Esquema de `uso` en consumos-lecturas-lib.mjs.
  *      con X-Council-Token: <token>  (o Authorization: Bearer <token>), igual que las escrituras
  *      máquina-a-máquina del Consejo. El token es el secreto CONSUMOS_LECTURAS_TOKEN del proyecto
  *      Pages (o COUNCIL_MACHINE_TOKEN si algún día se pone aquí).
@@ -10,7 +13,7 @@
  * Canónicas: 00:00 y 12:00 de Madrid. Una sola clave KV (barata: una lectura por visita).
  * KV: binding CONSUMOS_KV si existe; si no, el RECORTE_KV ya enlazado al proyecto (prefijo propio).
  */
-import { normalizarLectura, anadir, resumirTodo, recomendar, resumirCuentas, recomendarCuentas } from "../../../consumos-lecturas-lib.mjs";
+import { normalizarLectura, expandirLectura, anadir, resumirTodo, recomendar, resumirCuentas, recomendarCuentas } from "../../../consumos-lecturas-lib.mjs";
 import { agentesDePulso } from "../../../consumos-pulso-lib.mjs";
 import { leerPulsos } from "./pulso.js";
 
@@ -105,14 +108,15 @@ export async function onRequestPost({ request, env }) {
   if (!ok) return json({ ok: false, error: "no autorizado: manda X-Council-Token" }, 401, origin);
   if (!kv(env)) return json({ ok: false, error: "sin almacenamiento" }, 503, origin);
   const texto = await request.text();
-  if (texto.length > 4000) return json({ ok: false, error: "cuerpo demasiado grande" }, 413, origin);
+  if (texto.length > 6000) return json({ ok: false, error: "cuerpo demasiado grande" }, 413, origin);
   let body;
   try { body = JSON.parse(texto || "{}"); } catch (e) { return json({ ok: false, error: "json inválido" }, 400, origin); }
   const { lectura, error } = normalizarLectura(body);
   if (error) return json({ ok: false, error }, 400, origin);
   const doc = await cargar(env);
-  doc.lecturas = anadir(doc.lecturas, lectura);
+  const nuevas = expandirLectura(lectura);
+  for (const l of nuevas) doc.lecturas = anadir(doc.lecturas, l);
   doc.actualizado = new Date().toISOString();
   await kv(env).put(KEY, JSON.stringify(doc));
-  return json({ ok: true, lectura, total: doc.lecturas.length }, 200, origin);
+  return json({ ok: true, lectura, guardadas: nuevas.length, total: doc.lecturas.length }, 200, origin);
 }

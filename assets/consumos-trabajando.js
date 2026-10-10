@@ -64,6 +64,31 @@
   // r18 (Carlos, 15:55): la familia visible es «GrokBot», nunca «Grok» a secas; «Grok CLI» → «GrokBot CLI». Se respetan
   // los nombres de modelo con versión («Grok 4.7», «Grok Heavy», «grok-4.7») y los nombres de consejeros/URLs (no llevan «Grok»).
   function gb(s) { return s == null ? s : String(s).replace(/\bGrok Bot\b/g, 'GrokBot').replace(/\bGrok CLI\b/g, 'GrokBot CLI').replace(/\bGrok\b(?![\s-]*(?:\d|Heavy|Imagine|Fast|Code|Mini|Beta))/g, 'GrokBot').replace(/(^|· )grok(?= ·|$)/g, '$1GrokBot CLI'); }
+  /** r28-sup: «GrokBot (asistente)» → 'GrokBot (assistant)' en inglés. */
+  function rt(s) { s = gb(s); return s && en() ? String(s).replace(/\(asistente\)/g, '(assistant)') : s; }
+  /** r28-sup (Carlos, 17:28/17:29): superficie de una instancia. Terminal (CLI) = canal de trabajo del agente; la app de
+   *  escritorio solo la usa Carlos: «App de escritorio · Carlos» si la está usando, si no «App abierta, sin uso» (atenuado). */
+  function supTexto(x) {
+    if (x.tipo === 'cli') return T('Terminal (CLI)', 'Terminal (CLI)') + (x.corta ? ' · ' + x.corta : '') + (x.runtime ? ' · ' + rt(x.runtime) : '');
+    if (x.tipo === 'asistente') return rt(x.runtime || 'GrokBot (asistente)');
+    return (x.enUso ? T('App de escritorio · Carlos', 'Desktop app · Carlos') : T('App abierta, sin uso', 'App open, not in use')) + (x.corta ? ' · ' + x.corta : '') + (x.app ? ' (' + gb(x.app) + ')' : '');
+  }
+  function superficies(t) {
+    var l = t.superficies || [];
+    if (!l.length) return '';
+    return '<span class="tr-sups">' + l.map(function (x) {
+      var off = x.tipo === 'app' && !x.enUso;
+      return '<span class="tr-sup tr-sup-' + esc(x.tipo) + (off ? ' tr-sup-off' : '') + '" title="' + esc(off ? T('La app de escritorio solo la usa Carlos: abierta sin uso no cuenta como trabajo del agente', 'Only Carlos uses the desktop app: open but unused never counts as the agent working') : x.tipo === 'cli' ? T('Canal de trabajo del agente (sesión de terminal)', "The agent's working channel (terminal session)") + (x.sesion ? ' · tmux «' + x.sesion + '»' : '') : x.tipo === 'asistente' ? T('Corre en el asistente de GrokBot (nube), lo despiertan rutinas y webhooks', 'Runs in the GrokBot assistant (cloud), woken by routines and webhooks') : T('Carlos la está usando ahora (al frente o escribiendo, reposo < 5 min)', 'Carlos is using it now (frontmost or typing, idle < 5 min)')) + '">' + esc(supTexto(x)) + '</span>';
+    }).join('') + '</span>';
+  }
+  /** r28-sup: resumen corto para la fila plegada: «CLI», «asistente», «+ App · Carlos». */
+  function supCorta(t) {
+    var l = t.superficies || [], p = [];
+    if (l.some(function (x) { return x.tipo === 'cli'; })) p.push('CLI');
+    if (l.some(function (x) { return x.tipo === 'asistente'; })) p.push(T('asistente', 'assistant'));
+    if (l.some(function (x) { return x.tipo === 'app' && x.enUso; })) p.push('App · Carlos');
+    return p.join(' + ');
+  }
   /** r41: «con Carlos · MBP16». */
   function cc(t) { return T('con Carlos', 'with Carlos') + (t.conCarlosEn ? ' · ' + t.conCarlosEn : ''); }
   /** r44: «· activo vía Merovingio» (dualidad Elon ↔ Merovingio). */
@@ -74,7 +99,7 @@
     return ' · <span class="tr-aviso" title="' + esc(T('Yokup no ha respondido y no hay presencia reciente: solo salen agentes con pulso de tokens', 'Yokup did not answer and there is no recent presence: only agents with a token pulse are shown')) + '">⚠ ' + T('presencia sin respuesta: pueden faltar agentes', 'no presence answer: agents may be missing') + '</span>';
   }
   function tarjeta(t) {
-    var motor = gb([t.motor, t.modelo && t.modelo !== t.motor ? t.modelo : ''].filter(Boolean).join(' · '));
+    var motor = rt([t.motor, t.modelo && t.modelo !== t.motor ? t.modelo : ''].filter(Boolean).join(' · '));
     var que = t.tarea || t.foco || '';
     var linea;
     if (t.estado === 'gris') linea = t.motivo === 'sin latido' ? '<span class="tr-est">' + T('sin latido', 'no heartbeat') + '</span>' : '<span class="tr-est">' + T('parado', 'idle') + ' · ' + esc(hace(t.haceS)) + '</span>' + via(t) + (que ? ' · ' + T('último', 'last') + ': ' + esc(que) : '');
@@ -84,7 +109,7 @@
     return '<li class="tr-card tr-' + esc(t.estado) + (t.fuera && t.fuera.length ? ' tr-rojo' : '') + '" title="' + esc(gb(t.motivo) + (t.foco ? ' — ' + t.foco : '') + (t.incluye && t.incluye.length ? ' · ' + T('incluye el consumo de ', 'includes the usage of ') + t.incluye.join(', ') : '')) + '">' + retrato(t) +
       '<span class="tr-txt"><b class="tr-nom"><i class="tr-punto" aria-hidden="true"></i>' + esc(t.agente) + '</b>' +
       '<small class="tr-maq">' + esc([t.maquina, motor].filter(Boolean).join(' · ') || '—') + '</small>' +
-      '<small class="tr-que">' + linea + '</small>' + (chips ? '<span class="tr-chips">' + chips + '</span>' : '') + '</span></li>';
+      '<small class="tr-que">' + linea + '</small>' + superficies(t) + (chips ? '<span class="tr-chips">' + chips + '</span>' : '') + '</span></li>';
   }
   /** r43 (Carlos, 12:59): dos grupos, AGENTES y CONSEJEROS, cada uno con sus cuentas. Puro (testeable). */
   function grupos(ts) {
@@ -104,13 +129,13 @@
   function altChip(t) {
     // r16: con la app Grok Bot en varios Macs se enseñan todos («MBP14 + MBA16»); el de «con Carlos» va el primero.
     var a = [t.appMaquinas && t.appMaquinas.length > 1 ? t.maqCorta : t.estado === 'amarillo' && t.conCarlosEn ? t.conCarlosEn : t.maqCorta, t.gratis ? T('gratis', 'free') : t.planC ? '+C' : ''].filter(Boolean).join(' · ');
-    var b = gb(t.runtime || '');
+    var b = [rt(t.runtime || ''), supCorta(t)].filter(Boolean).join(' · ');
     if (!a && !b) return '';
     return ' <small class="tr-alt" title="' + esc(T('Cada 10 s: máquina ↔ runtime', 'Every 10 s: machine ↔ runtime')) + '"><span class="tr-a">' + esc(a || b) + '</span><span class="tr-b">' + esc(b || a) + '</span></small>';
   }
   function chipsDe(l) {
     var vivos = l.filter(function (t) { return t.estado !== 'gris'; }), grises = l.filter(function (t) { return t.estado === 'gris'; });
-    return vivos.map(function (t) { return '<span class="tr-chipa tr-' + esc(t.estado) + (t.fuera && t.fuera.length ? ' tr-rojo' : '') + '" title="' + esc(t.agente + ' · ' + (t.estado === 'amarillo' ? cc(t) : T('trabajando', 'working')) + (t.via ? ' · ' + T('vía ', 'via ') + t.via : '') + ' · ' + gb(t.motor || '') + (t.planC ? T(' + plan C gratis', ' + free plan C') : t.gratis ? T(' · gratis', ' · free') : '')) + '">' + retrato(t) + '<i></i>' + esc(t.agente) + altChip(t) + '</span>'; }).join('') +
+    return vivos.map(function (t) { return '<span class="tr-chipa tr-' + esc(t.estado) + (t.fuera && t.fuera.length ? ' tr-rojo' : '') + '" title="' + esc(t.agente + ' · ' + (t.estado === 'amarillo' ? cc(t) : T('trabajando', 'working')) + (t.via ? ' · ' + T('vía ', 'via ') + t.via : '') + ' · ' + rt(t.motor || '') + (supCorta(t) ? ' · ' + supCorta(t) : '') + (t.planC ? T(' + plan C gratis', ' + free plan C') : t.gratis ? T(' · gratis', ' · free') : '')) + '">' + retrato(t) + '<i></i>' + esc(t.agente) + altChip(t) + '</span>'; }).join('') +
       (grises.length ? '<span class="tr-grises" title="' + esc(grises.map(function (t) { return t.agente; }).join(', ')) + '">' + grises.map(retrato).join('') + '<small>' + grises.length + ' ' + T('parados', 'idle') + '</small></span>' : '');
   }
   function pinta(d) {
@@ -129,8 +154,8 @@
     if (ch) { ch.classList.toggle('tr-fase-b', faseB()); } if (ch) ch.innerHTML = gs.map(function (g) { return '<span class="tr-chipgrupo"><b class="tr-chiptit">' + esc(g.titulo) + '</b>' + chipsDe(g.tarjetas) + '</span>'; }).join('');
     if (res) res.innerHTML = gs.map(function (g) { return '<span class="tr-resgrupo">' + esc(g.titulo) + ': ' + cifras(g.n) + '</span>'; }).join(' — ') + aviso(d);
     if (pie) pie.innerHTML = T('Actualizado ', 'Updated ') + new Date(d.generado).toLocaleTimeString(en() ? 'en-GB' : 'es-ES', { timeZone: 'Europe/Madrid' }) + ' (Madrid) · ' +
-      T('verde = tokens en los últimos 15 min, latido «trabajando» de &lt; 2 min, CPU del propio proceso o latido de &lt; 15 min con encargo en curso (cualquier runtime, también el plan C gratis) · amarillo = con Carlos (pulso, o app de escritorio / tmux adjunto en el Mac que estás usando) · gris = parado · consejeros = los 16 del Consejo (leyendas y coetáneos) · fuentes: ',
-        'green = tokens in the last 15 min, «working» heartbeat &lt; 2 min old, the process\'s own CPU or a heartbeat &lt; 15 min old with a task in progress (any runtime, also the free plan C) · yellow = with Carlos (pulse, or desktop app / attached tmux on the Mac you are using) · grey = idle · councillors = the 16 of the Council (legends and contemporaries) · sources: ') +
+      T('verde = tokens en los últimos 15 min, latido «trabajando» de &lt; 2 min, CPU del propio proceso o latido de &lt; 15 min con encargo en curso (cualquier runtime, también el plan C gratis) · amarillo = con Carlos (pulso, o app de escritorio / tmux adjunto en el Mac que estás usando) · gris = parado · consejeros = los 16 del Consejo (leyendas y coetáneos) · Terminal (CLI) = canal de trabajo del agente; la app de escritorio solo la usa Carlos («App de escritorio · Carlos» si la está usando; «App abierta, sin uso», atenuado, nunca cuenta como trabajo) · fuentes: ',
+        'green = tokens in the last 15 min, «working» heartbeat &lt; 2 min old, the process\'s own CPU or a heartbeat &lt; 15 min old with a task in progress (any runtime, also the free plan C) · yellow = with Carlos (pulse, or desktop app / attached tmux on the Mac you are using) · grey = idle · councillors = the 16 of the Council (legends and contemporaries) · Terminal (CLI) = the agent\'s working channel; only Carlos uses the desktop app («Desktop app · Carlos» when he is using it; «App open, not in use», dimmed, never counts as work) · sources: ') +
       '<a href="https://bot.yokup.com/api/presence">' + T('presencia de Yokup', 'Yokup presence') + '</a> + <a href="/api/consumos/velocidad">' + T('pulso de tokens', 'token pulse') + '</a>' +
       (d.presencia === 'cache' ? ' · ⚠ ' + T('presencia de caché (hace ', 'cached presence (') + esc(String(d.presenciaEdadS)) + T(' s)', ' s ago)') : d.presencia !== 'ok' ? ' · ⚠ ' + T('presencia sin respuesta', 'no presence answer') : '') + ' · ' + T('cada 10 s', 'every 10 s');
   }
@@ -142,7 +167,7 @@
     setInterval(function () { if (!document.hidden) leer(); }, POLL);
     setInterval(alterna, 1000);
   }
-  root.ConsumosTrabajando = { grupos: grupos, leer: leer, ultimo: function () { return ultimo; } };
+  root.ConsumosTrabajando = { grupos: grupos, supTexto: supTexto, supCorta: supCorta, leer: leer, ultimo: function () { return ultimo; } };
   root.addEventListener && root.addEventListener('admira:languagechange', function () { if (ultimo) pinta(ultimo); });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arranca); else arranca();
 })(typeof window !== 'undefined' ? window : globalThis);

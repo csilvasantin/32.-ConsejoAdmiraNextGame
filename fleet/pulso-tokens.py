@@ -34,6 +34,14 @@ los logs de terminal de ese turno (terminal/*.log con mtime dentro del turno), s
 no el cwd de la sesión.
 Uso: pulso-tokens.py [--dry-run] [--maquina NOMBRE] [--con-carlos]   (--con-carlos: solo evalúa e imprime)
 r40: MacBookAir16plata en MAPA; PULSO_MAQUINA=<nombre> fuerza la máquina si el hostname no la delata.
+r28-sup (Carlos, 10-10-2026 17:28 — «distinguir los agentes por CLI de los de app de escritorio»): el pulso manda
+`superficies` de este Mac, sin contenido ni secretos:
+  - tipo «cli»: cada sesión tmux viva con un agente dentro (claude / codex / grok / opencode / deepagents, por la línea
+    de comandos de los procesos hijos del panel), su persona (AGENT_PERSONA de agent-inbox-*.plist o el nombre de la
+    sesión) y si tiene un cliente adjunto. La terminal es el canal de trabajo del agente.
+  - tipo «app»: apps de escritorio abiertas (Claude, Codex/ChatGPT, GrokBot) con alFrente y enUso. La app la usa SOLO
+    Carlos: enUso = reposo HID < 5 min Y (app al frente o prompt tecleado en esa app hace < 5 min). Abierta sin uso
+    nunca cuenta como trabajo del agente. Claude/Codex se resuelven al agente del motor (MAPA); GrokBot, por cuenta.
 """
 import glob, json, os, re, sys, time, socket, subprocess, urllib.request, urllib.error
 from datetime import datetime, timedelta, timezone
@@ -825,6 +833,125 @@ def con_carlos(maq):
     return doc
 
 
+# ───────────────────────── r28-sup · superficies: terminal (CLI) vs app de escritorio ─────────────────────────
+RUNTIMES_CLI = [  # (regex sobre la línea de comandos, motor, etiqueta) — el primero que casa manda
+    (re.compile(r"(^|/)opencode(\s|$)|opencode-ai", re.I), "opencode", "OpenCode"),
+    (re.compile(r"deepagents", re.I), "deepagents", "DeepAgents"),
+    (re.compile(r"(^|/)grok(\s|$)|/\.grok/bin/", re.I), "grok", "GrokBot CLI"),
+    (re.compile(r"(^|/)codex(\s|$)", re.I), "codex", "Codex CLI"),
+    (re.compile(r"(^|/)claude(\s|$)|/claude/versions/", re.I), "claude", "Claude Code"),
+]
+APPS_ESCRITORIO = [  # (sufijo del ejecutable principal, app, nombres al frente, motor del MAPA)
+    ("/Claude.app/Contents/MacOS/Claude", "Claude", {"claude"}, "claude"),
+    ("/ChatGPT.app/Contents/MacOS/ChatGPT", "Codex", {"chatgpt", "codex"}, "codex"),
+    ("/Codex.app/Contents/MacOS/Codex", "Codex", {"chatgpt", "codex"}, "codex"),
+    ("/Grok Bot.app/Contents/MacOS/Grok Bot", "GrokBot", {"grok bot", "grokbot"}, None),
+    ("/OpenCode.app/Contents/MacOS/OpenCode", "OpenCode", {"opencode"}, None),
+]
+
+
+def runtime_de_comando(cmd):
+    """Puro: línea de comandos → (motor, etiqueta) o None."""
+    for rx, motor, etq in RUNTIMES_CLI:
+        if rx.search(cmd or ""):
+            return motor, etq
+    return None
+
+
+def procesos():
+    """[(pid, ppid, comando)] de este Mac (solo nombres y argumentos; se usa para clasificar)."""
+    out = []
+    for l in _cmd(["ps", "-axo", "pid=,ppid=,command="]).splitlines():
+        p = l.strip().split(None, 2)
+        if len(p) >= 3 and p[0].isdigit() and p[1].isdigit():
+            out.append((int(p[0]), int(p[1]), p[2]))
+    return out
+
+
+def runtime_de_panel(pid, procs):
+    """Puro: motor del agente que corre bajo el panel tmux `pid` (él mismo o sus descendientes)."""
+    hijos = {}
+    for p, pp, c in procs:
+        hijos.setdefault(pp, []).append((p, c))
+    cmd = {p: c for p, _pp, c in procs}
+    cola, vistos = [pid], set()
+    while cola:
+        x = cola.pop(0)
+        if x in vistos or len(vistos) > 200:
+            continue
+        vistos.add(x)
+        r = runtime_de_comando(cmd.get(x, ""))
+        if r:
+            return r
+        cola.extend(h for h, _c in hijos.get(x, []))
+    return None
+
+
+def superficies_cli(procs, persona_de_sesion, clientes, ahora):
+    """[{agente, tipo:'cli', sesion, motor, runtime, adjunto}] de las sesiones tmux vivas con un agente dentro."""
+    out = []
+    for l in _cmd(["tmux", "list-panes", "-a", "-F", "#{session_name}\t#{pane_pid}"]).splitlines():
+        p = l.split("\t")
+        if len(p) != 2 or not p[1].isdigit():
+            continue
+        ses = p[0]
+        r = runtime_de_panel(int(p[1]), procs)
+        if not r or any(x["sesion"] == ses for x in out):
+            continue
+        ag = persona_de_sesion.get(ses) or re.sub(r"[-_](opencode|nemotron|deepagents?)$", "", ses).capitalize()
+        out.append({"agente": ag, "tipo": "cli", "sesion": ses[:40], "motor": r[0], "runtime": r[1],
+                    "adjunto": bool(clientes.get(ses) and ahora - clientes[ses] < VENTANA_CC_S)})
+    return out
+
+
+def en_uso_app(idle, frente, nombres_frente, humano_app_ts, ahora, ventana=VENTANA_CC_S):
+    """Puro: ¿Carlos está usando esta app de escritorio? Reposo < 5 min Y (al frente o prompt tecleado en ella < 5 min)."""
+    if idle is None or idle >= ventana:
+        return False
+    if (frente or "").strip().lower() in nombres_frente:
+        return True
+    return bool(humano_app_ts and ahora - humano_app_ts < ventana)
+
+
+def superficies_app(maq, procs, idle, frente, act, grokbot):
+    """[{agente|None, tipo:'app', app, alFrente, enUso, cuenta?}] de las apps de escritorio abiertas."""
+    out, ahora = [], time.time()
+    comandos = [c.split(" --")[0] for _p, _pp, c in procs]
+    for sufijo, app, nombres, motor in APPS_ESCRITORIO:
+        if not any(c.endswith(sufijo) for c in comandos) or any(x["app"] == app for x in out):
+            continue
+        hu = (act.get(motor) or {}).get("humano") if motor else None
+        hu_ts = hu[0] if hu and "app de" in (hu[1] or "") else None
+        al = (frente or "").strip().lower() in nombres
+        x = {"agente": (MAPA[maq].get(motor) or (None,))[0] if motor else None, "tipo": "app", "app": app,
+             "alFrente": al, "enUso": en_uso_app(idle, frente, nombres, hu_ts, ahora)}
+        if app == "GrokBot" and grokbot:
+            x["cuenta"] = grokbot.get("cuenta")
+        out.append(x)
+    return out
+
+
+def superficies(maq, cc):
+    procs = procesos()
+    ahora = time.time()
+    per_ses = {}
+    for per, sesiones in sesiones_tmux_por_agente().items():
+        for s in sesiones:
+            per_ses[s] = per.split()[0]  # «Smith Gris» → «Smith»
+    idle, frente = cc.get("reposoS"), cc.get("alFrente")
+    act = {}
+    if idle is not None and idle < VENTANA_CC_S:
+        try:
+            act = {"claude": actividad_claude(ahora), "codex": actividad_codex(ahora)}
+        except Exception:
+            act = {}
+    try:
+        gb = grokbot_app(idle, frente)
+    except Exception:
+        gb = None
+    return superficies_cli(procs, per_ses, clientes_tmux(), ahora) + superficies_app(maq, procs, idle, frente, act, gb)
+
+
 def persona_simple(n):
     import unicodedata
     return "".join(c for c in unicodedata.normalize("NFD", str(n or "")) if unicodedata.category(c) != "Mn").lower()
@@ -870,10 +997,20 @@ def main():
         app = None
     if app and app["abierta"]:
         cuerpo["grokbotApp"] = app
+    try:
+        sup = superficies(maq, cc)
+    except Exception as e:  # nunca tumba el pulso
+        sup = None
+        print("  superficies: error %s" % str(e)[:120], file=sys.stderr)
+    if sup is not None:
+        cuerpo["superficies"] = sup[:16]
+        print("%s superficies %s" % (ahora.strftime("%H:%M:%S"), " · ".join(
+            "%s=%s%s" % (x.get("agente") or x.get("cuenta") or "?", "CLI(%s:%s)" % (x["sesion"], x["runtime"]) if x["tipo"] == "cli" else
+                         "app %s%s" % (x["app"], " EN USO" if x["enUso"] else " abierta sin uso"), "") for x in sup) or "—"))
         print("%s grokbotApp %s · cuenta en uso %s · cuentas %s · al frente %s · reposo %ss" % (ahora.strftime("%H:%M:%S"), "abierta" if app["abierta"] else "cerrada",
               app["cuenta"] or "desconocida", ", ".join("%s (hace %d min)" % (c["cuenta"], c["haceS"] // 60) for c in app["cuentas"]) or "—",
               "sí" if app["alFrente"] else "no", app["reposoS"]))
-    if not agentes and "grokbotApp" not in cuerpo:
+    if not agentes and "grokbotApp" not in cuerpo and not cuerpo.get("superficies"):
         print("%s %s sin agentes ni app Grok Bot abierta: nada que mandar" % (ahora.strftime("%H:%M:%S"), maq))
         return 0
     resumen = " · ".join("%s/%s %s tok (+%s cache) %s" % (a["agente"], a["motor"], format(a["tokHoy"], ","), format(a["cacheHoy"], ","),

@@ -1,4 +1,8 @@
 {
+  "v.10.10.2026.r23.17:42": [
+    "/consumos distingue Terminal (CLI) de app de escritorio, por Mac, en las fichas de «Trabajando ahora» y en la nueva columna «Superficie» de la Matriz (ES/EN). La terminal es el canal de trabajo del agente; la app de escritorio solo la usa Carlos: «App de escritorio · Carlos» si la está usando (al frente o escribiendo, reposo < 5 min) y «App abierta, sin uso» atenuado si solo está abierta — ya no pone a nadie «con Carlos».",
+    "Consejeros principales (Musk, Huang, Jobs, Wozniak) como «GrokBot (asistente)» en vez de «GrokBot CLI»; Merovingio: Terminal (CLI) + app GrokBot con Carlos. pulso-tokens.py manda las superficies de cada Mac (sesiones tmux y apps abiertas, sin contenido ni secretos)."
+  ],
   "v.10.10.2026.r22.17:24": [
     "«Grok Bot» (con espacio) → «GrokBot» en textos de UI de /help y /chat/jobs (ES y EN), en el chat del Consejo (home) y en notas/etiquetas visibles restantes. No se tocan claves de datos, mensajes guardados ni títulos de encargos."
   ],

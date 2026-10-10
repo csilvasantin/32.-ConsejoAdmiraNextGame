@@ -164,6 +164,8 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
 .tr-punto{width:9px;height:9px;border-radius:50%;background:#6b7b82;flex:none}.tr-verde .tr-punto{background:#3ddc84;box-shadow:0 0 7px #3ddc84;animation:vel-late 1.6s ease-in-out infinite}.tr-amarillo .tr-punto{background:#ffd067}
 .tr-maq{color:var(--dim);font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.tr-que{color:var(--mut);font-size:12px;line-height:1.3;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
 .tr-est{font-weight:700;color:var(--ink)}.tr-aviso{color:#ffb86b;font-weight:700}.tr-sinmed{opacity:.7;font-style:italic}.tr-via{color:#9fd3ff;font-weight:600}.tr-verde .tr-est{color:#b8ffd2}.tr-amarillo .tr-est{color:#ffe29a}
+.tr-sups{display:flex;flex-wrap:wrap;gap:4px;margin-top:3px}.tr-sup{font-size:11px;border-radius:7px;padding:0 6px;border:1px solid rgba(120,200,255,.35);color:#cfe9ff}.tr-sup-app{border-color:rgba(255,213,107,.55);color:#ffe2a0}.tr-sup-asistente{border-color:rgba(190,160,255,.45);color:#e0d4ff}.tr-sup-off{opacity:.45;border-style:dashed;color:var(--mut)}
+.mz-sup{display:block;font-size:12px;white-space:nowrap}.mz-sup-off{opacity:.45;font-style:italic}.mz-sup-nd{color:var(--dim)}
 .tr-chips{display:flex;flex-wrap:wrap;gap:4px;margin-top:2px}.tr-chip{font-size:11px;border:1px solid var(--line);border-radius:7px;padding:0 6px;color:var(--mut)}.tr-enc{color:var(--brand);border-color:rgba(120,243,255,.4)}
 .tr-gratis{color:#9be7b0;border-color:rgba(61,220,132,.35)}.tr-c{font-size:10px;color:#9be7b0;margin-left:4px;font-weight:600}
 .mz{background:#0a1620;border:1px solid rgba(120,243,255,.25);border-radius:18px;padding:14px;margin:18px 0}
@@ -400,9 +402,10 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
     <h2 id="matriz-tit" data-en="Agent matrix">Matriz de agentes</h2>
     <p class="mz-sum" id="matriz-resumen" aria-live="polite">…</p>
     <div class="mz-tabla"><table>
-      <thead><tr><th data-en="Agent">Agente</th><th data-en="Reports to">Depende de</th><th data-en="Team">Equipo</th><th data-en="Model (where it runs)">Modelo (dónde corre)</th><th data-en="Open/Closed">Abierto/Cerrado</th><th data-en="Cost">Coste</th></tr></thead>
-      <tbody id="matriz-filas"><tr><td colspan="6" class="mz-vacio" data-en="Reading the live census…">Leyendo el censo vivo…</td></tr></tbody>
+      <thead><tr><th data-en="Agent">Agente</th><th data-en="Reports to">Depende de</th><th data-en="Team">Equipo</th><th data-en="Model (where it runs)">Modelo (dónde corre)</th><th data-en="Surface">Superficie</th><th data-en="Open/Closed">Abierto/Cerrado</th><th data-en="Cost">Coste</th></tr></thead>
+      <tbody id="matriz-filas"><tr><td colspan="7" class="mz-vacio" data-en="Reading the live census…">Leyendo el censo vivo…</td></tr></tbody>
     </table></div>
+    <p class="mz-nota mz-leyenda-sup" data-en="Surface: Terminal (CLI) is the agent's working channel (tmux session). Only Carlos uses the desktop app: «Desktop app · Carlos» when he is using it (frontmost or typing, idle &lt; 5 min); «App open, not in use» (dimmed) never counts as the agent working. Main councillors run in the GrokBot assistant (cloud), not in a CLI.">Superficie: Terminal (CLI) es el canal de trabajo del agente (sesión tmux). La app de escritorio solo la usa Carlos: «App de escritorio · Carlos» si la está usando (al frente o escribiendo, reposo &lt; 5 min); «App abierta, sin uso» (atenuado) nunca cuenta como trabajo del agente. Los consejeros principales corren en el asistente de GrokBot (nube), no en una CLI.</p>
     <p class="mz-nota" data-en="New agents must be free and are reserved for lower-priority work.">Los agentes nuevos deben ser gratuitos y se reservan para trabajos menos prioritarios.</p>
     <p class="mz-nota" data-en="Only 2 principal councillors per account run on paid GrokBot: Musk + Huang (csilvasantin, Merovingio's pool) and Jobs + Wozniak (csilva@admira.com, Smith's GrokBot). Every other councillor runs on free Nemotron 3 Ultra by default; red = paid model outside the 6 subscriptions.">Solo 2 consejeros principales por cuenta van en GrokBot de pago: Musk + Huang (csilvasantin, pool de Merovingio) y Jobs + Wozniak (csilva@admira.com, GrokBot de Smith). El resto de consejeros va por defecto en Nemotron 3 Ultra gratis; en rojo = modelo de pago fuera de las 6 suscripciones.</p>
     <p class="mz-nota" data-en="Live from the same data as agentes_vivos: Yokup presence (heartbeat < 15 min) + each agent's inbox. Greyed out = no signal. A new agent shows up on its own, «unclassified» until it is mapped.">En vivo, con los mismos datos que agentes_vivos: presencia de Yokup (latido &lt; 15 min) + la bandeja de cada agente. En gris = sin señal. Un agente nuevo aparece solo, «sin clasificar» hasta mapearlo.</p>
@@ -476,8 +479,8 @@ fetch("/consumos-plataformas.json", { cache: "no-store" })
 </script>
 <script src="/assets/consumos-plegable.js?v=r31"></script>
 <script src="/assets/consumos-velocimetro-elegir.js?v=r24-margen"></script>
-<script src="/assets/consumos-matriz.js?v=20261010-r19"></script>
-<script src="/assets/consumos-trabajando.js?v=20261010-r19"></script>
+<script src="/assets/consumos-matriz.js?v=20261010-r23-sup"></script>
+<script src="/assets/consumos-trabajando.js?v=20261010-r23-sup"></script>
 <script src="/assets/consumos-desplegable.js?v=r23"></script>
 <script src="/assets/consumos-velocimetro.js?v=20261010-r19"></script>
 <script src="/assets/live-velocidad.js?v=r18-tiempo-real"></script>

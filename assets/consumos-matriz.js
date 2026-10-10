@@ -40,6 +40,18 @@
     if (!en()) return m;
     return String(m).replace(/\(pool de ([^)]+)\)/g, "($1's pool)").replace(/\(pool ([^)]+)\)/g, '($1 pool)').replace(/\(por defecto\)/g, '(default)').replace(/\bgratis\b/g, 'free');
   }
+  /** r28-sup: columna «Superficie»: Terminal (CLI) por Mac, asistente GrokBot, y app de escritorio (solo la usa Carlos). */
+  function superficie(f) {
+    var l = f.superficies || [];
+    if (!l.length) return '<span class="mz-sup-nd">—</span>';
+    return l.map(function (x) {
+      var t;
+      if (x.tipo === 'cli') t = T('Terminal (CLI)', 'Terminal (CLI)') + (x.corta ? ' · ' + x.corta : '');
+      else if (x.tipo === 'asistente') t = en() ? 'GrokBot (assistant)' : 'GrokBot (asistente)';
+      else t = (x.enUso ? T('App de escritorio · Carlos', 'Desktop app · Carlos') : T('App abierta, sin uso', 'App open, not in use')) + (x.corta ? ' · ' + x.corta : '') + (x.app ? ' (' + gb(x.app) + ')' : '');
+      return '<span class="mz-sup' + (x.tipo === 'app' && !x.enUso ? ' mz-sup-off' : '') + '">' + esc(t) + '</span>';
+    }).join('');
+  }
   function fila(f) {
     var eq = f.equipo ? (en() ? f.equipo.en : f.equipo.es) : '<i class="mz-sc">' + T('sin clasificar', 'unclassified') + '</i>';
     var ab = f.abierto == null ? '—' : f.abierto ? T('Abierto', 'Open') : T('Cerrado', 'Closed');
@@ -52,14 +64,14 @@
     return '<tr class="' + (f.vivo ? 'mz-vivo' : 'mz-off') + (f.fuera ? ' mz-fuera' : '') + '" title="' + esc(est) + '">' +
       '<td><i class="mz-p" aria-hidden="true"></i>' + cara(f) + esc(en() ? f.agenteEn : f.agente) + carga + '</td>' +
       '<td>' + esc(f.depende || '—') + '</td><td>' + (f.equipo ? esc(eq) : eq) + '</td>' +
-      '<td>' + esc(modelo(f.modelo)) + donde + inc + inf + '</td><td>' + esc(ab) + '</td>' +
+      '<td>' + esc(modelo(f.modelo)) + donde + inc + inf + '</td><td>' + superficie(f) + '</td><td>' + esc(ab) + '</td>' +
       '<td><span class="mz-co mz-' + esc(f.fuera ? 'fuera' : (f.coste || 'nd')) + '">' + esc(co) + '</span></td></tr>';
   }
   function pinta(d) {
     var tb = document.getElementById('matriz-filas'), res = document.getElementById('matriz-resumen');
     if (!tb) return;
     var m = d && d.ok && d.matriz;
-    if (!m) { tb.innerHTML = '<tr><td colspan="6" class="mz-vacio">' + T('Sin datos del censo ahora: no se enseña nadie.', 'No census data right now: nobody is shown.') + '</td></tr>'; return; }
+    if (!m) { tb.innerHTML = '<tr><td colspan="7" class="mz-vacio">' + T('Sin datos del censo ahora: no se enseña nadie.', 'No census data right now: nobody is shown.') + '</td></tr>'; return; }
     tb.innerHTML = m.filas.map(fila).join('');
     var r = m.resumen;
     var sb = r.subs || {};
@@ -78,6 +90,7 @@
     if (t) { if (!t.hasAttribute('data-es')) t.setAttribute('data-es', t.textContent); t.textContent = l ? t.getAttribute('data-en') : t.getAttribute('data-es'); }
   }
   function recibe(d) { ult = d; pinta(d); }
+  root.ConsumosMatriz = { superficie: superficie };
   root.addEventListener('flota:trabajando', function (e) { recibe(e.detail); });
   root.addEventListener('admira:languagechange', function () { rotulos(); if (ult) pinta(ult); });
   function arranca() { rotulos(); var u = root.ConsumosTrabajando && root.ConsumosTrabajando.ultimo && root.ConsumosTrabajando.ultimo(); if (u) recibe(u); }

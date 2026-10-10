@@ -83,5 +83,86 @@
       "frase": "Todavía no hay una lectura de estas consolas. Cuando llegue, se escribe en el archivo de datos.",
       "detalle": []
     }
-  ]
+  ],
+  "en": {
+    "como_actualizar": "Edit this file, consumos-plataformas.json, and publish the site with deploy.sh. No need to touch the page. A visit doesn't read the database.",
+    "resumen": [
+      "Cloudflare is in the red: $253.85 in ten days, and at this pace the cycle would close at $692.31. Almost all of it is database reads.",
+      "The Grok account Smith uses is in the red: $7.39 left. It needs topping up.",
+      "Cursor is amber, with outside models at 87.5 %. Morfeo declared 137 million tokens today, almost all saved memory."
+    ],
+    "plataformas": [
+      {
+        "nombre": "Cloudflare",
+        "cuenta": "csilvasantin@gmail.com",
+        "leido": "25 September 2026",
+        "cifra": "253.85",
+        "unidad": "dollars in 10 days",
+        "frase": "The 15 September – 14 October cycle is already at $253.85 and, if it keeps going like this, would close at $692.31. Database reads must come down.",
+        "detalle": [
+          "84 % are database row reads: 238,820 million rows, $213.82.",
+          "Then: key-store reads, $14.50. Always-on memory, $12.50. Key-store writes, $5. File-store reads, $3.60. Program requests, $3.60.",
+          "Previous invoices: June 5.15 · July 75.76 · August 443.23 · September 486.55 dollars.",
+          "Investigation in progress: task 4350."
+        ]
+      },
+      {
+        "nombre": "Grok, Smith's account",
+        "cuenta": "AdmiraNeXT team",
+        "leido": "25 September 2026, 20:47",
+        "cifra": "7.39",
+        "unidad": "dollars left",
+        "frase": "In 30 days $169.52 has been spent, with 8,720,856 tokens and 12,949 requests. Very little balance left: it needs topping up.",
+        "detalle": []
+      },
+      {
+        "nombre": "Cursor, The Architect",
+        "cuenta": "$20/month plan, 19 September to 19 October",
+        "leido": "25 September 2026, 20:53",
+        "cifra": "87.5 %",
+        "unidad": "of the outside-models quota",
+        "frase": "No extra spend: $0, and that billing is disabled. Cursor's own-models quota is at 16 %. The outside-models one is at 87.5 %, so it's worth watching.",
+        "detalle": [
+          "On 25 September it used 53.6 million tokens. About 25 million were with Grok 4.7."
+        ]
+      },
+      {
+        "nombre": "Grok councillors",
+        "cuenta": "Jobs, Wozniak, Lucas and Disney, in Carlos's app",
+        "leido": "25 September 2026, 20:37",
+        "cifra": "28 %",
+        "unidad": "of the plan used",
+        "frase": "The councillors' plan has plenty of room.",
+        "detalle": []
+      },
+      {
+        "nombre": "Declared today",
+        "cuenta": "Figures the agents themselves have logged today in admira.live",
+        "leido": "25 September 2026",
+        "cifra": "137 million",
+        "unidad": "tokens declared by Morfeo",
+        "frase": "Almost all that volume is saved memory from a long conversation, and it is out of proportion. It is being fixed in task 4336. Oráculo declared 759 thousand tokens.",
+        "detalle": []
+      },
+      {
+        "nombre": "Anthropic consoles",
+        "cuenta": "Morfeo and Neo",
+        "leido": "no reading yet",
+        "cifra": "",
+        "unidad": "",
+        "frase": "There is no reading from these consoles yet. When it arrives, it is written to the data file.",
+        "detalle": []
+      },
+      {
+        "nombre": "OpenAI consoles",
+        "cuenta": "Oráculo and Trinity",
+        "leido": "no reading yet",
+        "cifra": "",
+        "unidad": "",
+        "frase": "There is no reading from these consoles yet. When it arrives, it is written to the data file.",
+        "detalle": []
+      }
+    ]
+  },
+  "en_nota": "r11/r13: «en» = el mismo contenido en inglés, en el mismo orden (?lang=en / /idioma ENG). Si cambias una lectura, cambia también su línea en «en»."
 }

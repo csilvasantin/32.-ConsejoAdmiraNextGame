@@ -13,6 +13,7 @@
   "Cargando quién tiene margen…": "Loading who has margin…",
   "Claude Code sesión 5 h": "Claude Code 5 h session",
   "Clave del Consejo": "Council key",
+  "Coetáneos": "Contemporaries",
   "Consejo:": "Council:",
   "Consumo Agentes AdmiraNeXT": "AdmiraNeXT agent usage",
   "Cuenta · agente": "Account · agent",
@@ -29,6 +30,7 @@
   "Hoy:": "Today:",
   "Investigación": "Research",
   "Lecturas del plan": "Plan readings",
+  "Leyendas": "Legends",
   "Llega al 100 %": "Reaches 100 %",
   "Lo urgente": "What's urgent",
   "Líneas de código escritas por los agentes": "Lines of code written by the agents",
@@ -41,6 +43,7 @@
   "Quién (Carlos)": "Who (Carlos)",
   "Rango de las gráficas": "Chart range",
   "Reparto por consejero: pendiente de partes de tokens (ningún consejero de la cuenta ha declarado tokens en Yokup en esta semana).": "Split by councillor: pending token reports (no councillor on the account has declared tokens in Yokup this week).",
+  "Reset semanal:": "Weekly reset:",
   "Resumen de gasto y servicios": "Spend and services summary",
   "Resumen por cuenta": "Summary per account",
   "Rojo": "Red",
@@ -63,6 +66,8 @@
   "ahora sigue a": "now following",
   "antes del reset": "before the reset",
   "cada 10 s": "every 10 s",
+  "coetaneos": "contemporaries",
+  "coetáneos": "contemporaries",
   "del plan usado": "of the plan used",
   "el que más trabaja ahora": "the one working hardest right now",
   "falta otra lectura": "needs another reading",
@@ -71,6 +76,7 @@
   "gratis · por defecto": "free · default",
   "hoy sí, ahora parado": "today yes, stopped now",
   "latido vivo (deepagent de Musk)": "live heartbeat (Musk's deepagent)",
+  "leyendas": "legends",
   "margen sin lectura": "headroom without a reading",
   "no sube": "not rising",
   "otros (sin proyecto)": "others (no project)",
@@ -115,7 +121,6 @@
     [/^(\d+\/\d+) (\d\d:\d\d) \(en (\d+) h\)$/, "$1 $2 (in $3 h)"],
     [/^(.+) · gratis · por defecto$/, "$1 · free · default"],
     [/^usado · manda «(.+)»$/, "used · governed by «$1»"],
-    [/^Mover encargos pesados a (.+?): les sobra (.+?)\.(.*)$/, "Move heavy tasks to $1: $2 to spare.$3"],
     [/^margen (\d+ %|\?)$/, "margin $1"],
     [/^\(libre, (.+)\)$/, function (m) { return "(free, " + m[1].replace(/^margen \?/, "margin ?") + ")"; }],
     [/^(\S+): (código|web|demo|investigación|consejo|creativo), libre, (\d+) % de margen$/, function (m) { var k = { "código": "code", web: "web", demo: "demo", "investigación": "research", consejo: "council", creativo: "creative" }; return m[1] + ": " + k[m[2]] + ", free, " + m[3] + " % margin"; }],
@@ -126,7 +131,22 @@
     [/^(\d+)\/(\d+) vivas$/, "$1/$2 alive"],
     [/^· (\d+) in progress · (.+) última hora$/, "· $1 in progress · $2 last hour"],
     [/^· (.+) última hora$/, "· $1 last hour"],
-    [/^Bucle de encargos \((.+)\)$/, "Task loop ($1)"]
+    [/^Bucle de encargos \((.+)\)$/, "Task loop ($1)"],
+    // r13: el traductor quita la puntuación inicial («(»), así que estas reglas aceptan con o sin ella.
+    [/^(\(?)([^()]+?) de ([^,()]+)((?:, [^,()]+)*), no Grok\)$/, "$1$3's $2$4, not Grok)"],
+    [/^(\(?)(no )?libre, (.+)\)$/, function (m) { return m[1] + (m[2] ? "not free, " : "free, ") + m[3].replace(/^margen \?/, "margin ?") + ")"; }],
+    [/^(.+) semanal$/, "$1 weekly"],
+    [/^(.+) \((leyendas|coetaneos|coetáneos)\)$/, function (m) { return m[1] + " (" + (m[2] === "leyendas" ? "legends" : "contemporaries") + ")"; }],
+    [/^Mover encargos pesados a ([\s\S]+?): les sobra ([^.(]+?)( \(([^)]+) al día hasta el reset\))?\.([\s\S]*)$/, function (m, t) {
+      var q = m[1].replace(/\(([^()]+?) de ([^,()]+)((?:, [^,()]+)*), no Grok\)/, "($2's $1$3, not Grok)");
+      var resto = m[5].replace(/ Frenar /, " Slow down ").replace(/ Sin lectura: /, " No reading: ").replace(/ al día hasta el reset/g, " a day until the reset");
+      return "Move heavy tasks to " + q + ": " + m[2] + " to spare" + (m[3] ? " (" + m[4] + " a day until the reset)" : "") + "." + resto;
+    }],
+    [/^Más margen: ([\s\S]+?) — ([^,]+) usado, ([\s\S]+?)\. Que coja la siguiente carga\.([\s\S]*)$/, function (m) {
+      var r = m[3].replace("sin ritmo todavía (falta una segunda lectura)", "no pace yet (needs a second reading)").replace(/^quema (.+) cada 12 h/, "burns $1 every 12 h").replace(/, llegaría al 100 % el (.+) \(Madrid\)/, ", would reach 100 % on $1 (Madrid)");
+      return "Most margin: " + m[1] + " — " + m[2] + " used, " + r + ". Let it take the next load." + m[4].replace(" Ojo: su última lectura tiene más de 36 h.", " Careful: its last reading is more than 36 h old.");
+    }],
+    [/^Sin lecturas: anota una por cuenta para poder repartir el trabajo\.$/, "No readings: log one per account to be able to split the work."]
   ];
   var I = G.AdmiraIdioma;
   if (I && I.extra) I.extra(dicc, reglas);

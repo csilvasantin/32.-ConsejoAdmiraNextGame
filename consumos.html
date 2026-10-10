@@ -408,50 +408,63 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
   </section>
 </div>
 <script>
-const LUZ = { rojo: "Rojo", ambar: "Ámbar", verde: "Verde", sin: "Sin lectura" };
+// r13: con inglés se pinta el bloque «en» del archivo (mismo orden) y los rótulos en inglés; se repinta al cambiar de idioma.
+const enModo = () => /^en/i.test(document.documentElement.lang || "");
+const TT = (es, en) => (enModo() ? en : es);
+const LUZ_ES = { rojo: "Rojo", ambar: "Ámbar", verde: "Verde", sin: "Sin lectura" }, LUZ_EN = { rojo: "Red", ambar: "Amber", verde: "Green", sin: "No reading" };
+let LUZ = LUZ_ES, DATOS = null;
+function enIngles(d) {
+  const e = d && d.en; if (!enModo() || !e) return d;
+  return { ...d, como_actualizar: e.como_actualizar || d.como_actualizar, resumen: e.resumen || d.resumen,
+    plataformas: (d.plataformas || []).map((p, i) => ({ ...p, ...((e.plataformas || [])[i] || {}), semaforo: p.semaforo })) };
+}
 const esc = (s) => String(s ?? "").replace(/[&<>"']/g, (c) => ({ "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;", "'": "&#39;" }[c]));
 
-function pinta(datos) {
+function pinta(original) {
+  DATOS = original; LUZ = enModo() ? LUZ_EN : LUZ_ES;
+  const datos = enIngles(original);
   const lineas = Array.isArray(datos.resumen) ? datos.resumen.slice(0, 3) : [];
   const resumen = document.getElementById("resumen");
   if (lineas.length) {
     document.getElementById("lineas").innerHTML = lineas.map((t) => "<li>" + esc(t) + "</li>").join("");
     // r37: plegado = cuántos avisos + el primero recortado (el marco rojo se queda para que siga llamando la atención).
     const ur = document.getElementById("urgente-resumen");
-    if (ur) { ur.textContent = lineas.length + (lineas.length === 1 ? " aviso · " : " avisos · ") + lineas[0]; ur.title = lineas.join("\n"); }
+    if (ur) { ur.textContent = lineas.length + (lineas.length === 1 ? TT(" aviso · ", " alert · ") : TT(" avisos · ", " alerts · ")) + lineas[0]; ur.title = lineas.join("\n"); }
     resumen.hidden = false;
   }
   const plats = Array.isArray(datos.plataformas) ? datos.plataformas : [];
   const grid = document.getElementById("grid");
   if (!plats.length) {
-    grid.innerHTML = '<p class="nota">Sin lectura todavía.</p>';
+    grid.innerHTML = '<p class="nota">' + TT('Sin lectura todavía.', 'No reading yet.') + '</p>';
     return;
   }
   // r36 (Carlos): «Gasto y servicios» plegable; plegada = una fila por tarjeta (estado · nombre · cifra).
   const filas = document.getElementById("gasto-filas"), gres = document.getElementById("gasto-resumen");
   if (filas) filas.innerHTML = plats.map((p) => {
     const luz = LUZ[p.semaforo] ? p.semaforo : "sin", cifra = String(p.cifra || "").trim();
-    return '<li><span class="cu-dot ' + luz + '" title="' + LUZ[luz] + '"></span><b>' + esc(p.nombre) + '</b><span class="cu-pct' + (cifra ? '' : ' cu-sin') + '">' + esc(cifra || "sin lectura") + '</span><span class="gs-uni">' + esc(p.unidad || "") + '</span></li>';
+    return '<li><span class="cu-dot ' + luz + '" title="' + LUZ[luz] + '"></span><b>' + esc(p.nombre) + '</b><span class="cu-pct' + (cifra ? '' : ' cu-sin') + '">' + esc(cifra || TT("sin lectura", "no reading")) + '</span><span class="gs-uni">' + esc(p.unidad || "") + '</span></li>';
   }).join("");
-  if (gres) { const nr = plats.filter((p) => p.semaforo === "rojo").length, na = plats.filter((p) => p.semaforo === "ambar").length; gres.textContent = plats.length + " tarjetas" + (nr ? " · " + nr + " en rojo" : "") + (na ? " · " + na + " en ámbar" : ""); }
+  if (gres) { const nr = plats.filter((p) => p.semaforo === "rojo").length, na = plats.filter((p) => p.semaforo === "ambar").length; gres.textContent = plats.length + TT(" tarjetas", " cards") + (nr ? " · " + nr + TT(" en rojo", " in red") : "") + (na ? " · " + na + TT(" en ámbar", " in amber") : ""); }
   grid.innerHTML = plats.map((p) => {
     const luz = LUZ[p.semaforo] ? p.semaforo : "sin";
-    const cifra = String(p.cifra || "").trim() || "sin lectura todavía";
+    const cifra = String(p.cifra || "").trim() || TT("sin lectura todavía", "no reading yet");
     const detalle = (p.detalle || []).map((t) => "<li>" + esc(t) + "</li>").join("");
     const ancho = (p.detalle || []).length > 1 ? " ancho" : "";
     return '<article class="card' + ancho + '">' +
       '<div class="top"><div><h2 class="nombre">' + esc(p.nombre) + '</h2><p class="cuenta">' + esc(p.cuenta) + '</p></div>' +
       '<span class="luz ' + luz + '">' + LUZ[luz] + '</span></div>' +
-      '<p class="cifra' + (/^sin lectura/i.test(cifra) ? ' cifra-sin' : '') + '">' + esc(cifra) + '</p>' +
+      '<p class="cifra' + (/^(sin lectura|no reading)/i.test(cifra) ? ' cifra-sin' : '') + '">' + esc(cifra) + '</p>' +
       (p.unidad ? '<p class="unidad">' + esc(p.unidad) + '</p>' : '') +
       '<p class="frase">' + esc(p.frase) + '</p>' +
       (detalle ? '<ul class="detalle">' + detalle + '</ul>' : '') +
-      '<p class="cuando">Lectura: ' + esc(p.leido || "sin lectura todavía") + '</p>' +
+      '<p class="cuando">' + TT('Lectura: ', 'Reading: ') + esc(p.leido || TT("sin lectura todavía", "no reading yet")) + '</p>' +
       '</article>';
   }).join("");
   const pie = document.getElementById("pie");
-  pie.innerHTML = esc(datos.como_actualizar || "") + ' <a href="/consumos-plataformas.json">Archivo de lecturas</a>.';
+  pie.innerHTML = esc(datos.como_actualizar || "") + ' <a href="/consumos-plataformas.json">' + TT('Archivo de lecturas', 'Readings file') + '</a>.';
 }
+window.addEventListener("admira:languagechange", () => { if (DATOS) setTimeout(() => pinta(DATOS), 0); });
+try { new MutationObserver(() => { if (DATOS) pinta(DATOS); }).observe(document.documentElement, { attributes: true, attributeFilter: ["lang"] }); } catch (e) {}
 
 fetch("/consumos-plataformas.json", { cache: "no-store" })
   .then((r) => { if (!r.ok) throw new Error("sin archivo"); return r.json(); })
@@ -469,7 +482,7 @@ fetch("/consumos-plataformas.json", { cache: "no-store" })
 <script src="/assets/live-velocidad.js?v=r18-tiempo-real"></script>
 <script src="/consumos-lecturas.js?v=r35"></script>
 <script src="/orquestar-widget.js?v=r37-r2-con-carlos"></script>
-<script src="/admira-idioma-consumos.js?v=20261010-r11"></script><!-- inglés del texto fijo de /consumos (10-10-2026) -->
+<script src="/admira-idioma-consumos.js?v=20261010-r13"></script><!-- inglés del texto fijo de /consumos (10-10-2026) -->
 <script src="/yk-frame.js?v=r33-min"></script>
 </body>
 </html>

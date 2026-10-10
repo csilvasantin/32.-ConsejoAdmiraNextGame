@@ -28,3 +28,12 @@ test("la página lee el archivo estático y no la base de datos", () => {
   assert.equal(JSON.stringify(datos).includes("D1"), false);
   assert.equal(JSON.stringify(datos).includes(" KV"), false);
 });
+
+test("r13: bloque «en» en el mismo orden y la página lo pinta con inglés", () => {
+  assert.ok(datos.en && datos.en.resumen.length === datos.resumen.length);
+  assert.equal(datos.en.plataformas.length, datos.plataformas.length);
+  for (const p of datos.en.plataformas) assert.ok(p.nombre && p.frase && p.leido);
+  assert.equal(datos.en.plataformas[0].cifra, "253.85");
+  assert.match(html, /function enIngles\(d\)/);
+  assert.match(html, /admira:languagechange/);
+});

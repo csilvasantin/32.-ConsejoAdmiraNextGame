@@ -48,12 +48,107 @@ export function claveSerie(l) {
 
 const num = (x) => (x === null || x === undefined || x === "" ? null : Number(x));
 
+/* ───────── r25 (10-10-2026) · lecturas «web-uso»: la pantalla de uso del plan (claude.ai/settings/usage,
+   chatgpt.com/codex/settings/usage) o Ajustes → Uso de la app, leída por un navegador (rutina horaria o 00/12)
+   o a mano de una captura. Una sola POST lleva todo:
+   uso: { plan, url,
+          sesion:  { pct, reset },                 límite de 5 h
+          semana:  { pct, reset },                 límite semanal (= pct de la serie principal)
+          extras:  [{ nombre, pct, reset }],       p. ej. «Fable esta semana»
+          reiniciosGratis: [{ vence, alcance }],   «Restablecer gratis» / «Free full resets» (vence ISO o AAAA-MM-DD)
+          creditos: { restante, total, unidad, vence } }
+   ───────── */
+export const FUENTES = ["manual", "auto", "web-uso"];
+export const VIEJA_H = 6; // r25 (Carlos): más de 6 h → «dato de hace X h», nunca en silencio
+
+function fechaUso(v, campo) {
+  if (v === undefined || v === null || v === "") return { v: null };
+  const s = String(v).trim();
+  if (/^\d{4}-\d{2}-\d{2}$/.test(s)) return { v: s }; // solo día (la pantalla no da hora)
+  const t = Date.parse(s);
+  if (!Number.isFinite(t)) return { error: campo + " inválido (ISO 8601 con zona o AAAA-MM-DD)" };
+  return { v: new Date(t).toISOString() };
+}
+
+/** Valida el bloque `uso` de una lectura web-uso. Devuelve { uso } o { error }. */
+export function normalizarUso(u) {
+  if (!u || typeof u !== "object" || Array.isArray(u)) return { error: "uso debe ser un objeto" };
+  const txt = (v, max) => String(v ?? "").trim().slice(0, max);
+  const out = {};
+  if (u.plan) out.plan = txt(u.plan, 60);
+  if (u.url) { const url = txt(u.url, 160); if (!/^(https:\/\/(claude\.ai|chatgpt\.com)\/|app:)/.test(url)) return { error: "uso.url: solo https://claude.ai/…, https://chatgpt.com/… o app:<pantalla>" }; out.url = url; }
+  const limite = (x, campo) => {
+    if (x === undefined || x === null) return { v: null };
+    if (typeof x !== "object") return { error: campo + " debe ser { pct, reset }" };
+    const p = num(x.pct);
+    if (p !== null && (!Number.isFinite(p) || p < 0 || p > 100)) return { error: campo + ".pct entre 0 y 100" };
+    const r = fechaUso(x.reset, campo + ".reset");
+    if (r.error) return r;
+    const o = { pct: p === null ? null : Math.round(p * 100) / 100, reset: r.v };
+    if (x.nombre) o.nombre = txt(x.nombre, 50);
+    return { v: o };
+  };
+  for (const k of ["sesion", "semana"]) { const r = limite(u[k], "uso." + k); if (r.error) return { error: r.error }; if (r.v) out[k] = r.v; }
+  if (u.extras !== undefined && u.extras !== null) {
+    if (!Array.isArray(u.extras)) return { error: "uso.extras debe ser una lista" };
+    out.extras = [];
+    for (const [i, x] of u.extras.slice(0, 4).entries()) { const r = limite(x, "uso.extras[" + i + "]"); if (r.error) return { error: r.error }; if (r.v) out.extras.push(r.v); }
+  }
+  if (u.reiniciosGratis !== undefined && u.reiniciosGratis !== null) {
+    if (!Array.isArray(u.reiniciosGratis)) return { error: "uso.reiniciosGratis debe ser una lista de { vence, alcance }" };
+    out.reiniciosGratis = [];
+    for (const [i, x] of u.reiniciosGratis.slice(0, 8).entries()) {
+      const r = fechaUso(x && x.vence, "uso.reiniciosGratis[" + i + "].vence");
+      if (r.error) return { error: r.error };
+      out.reiniciosGratis.push({ vence: r.v, ...(x && x.alcance ? { alcance: txt(x.alcance, 40) } : {}) });
+    }
+    out.reiniciosGratis.sort((a, b) => String(a.vence || "9").localeCompare(String(b.vence || "9")));
+  }
+  if (u.creditos !== undefined && u.creditos !== null) {
+    const c = u.creditos;
+    if (typeof c !== "object") return { error: "uso.creditos debe ser { restante, total, unidad, vence }" };
+    const rest = num(c.restante), tot = num(c.total);
+    if ((rest !== null && !Number.isFinite(rest)) || (tot !== null && !Number.isFinite(tot))) return { error: "uso.creditos inválido" };
+    const v = fechaUso(c.vence, "uso.creditos.vence");
+    if (v.error) return { error: v.error };
+    out.creditos = { restante: rest, total: tot, unidad: txt(c.unidad || "", 20), vence: v.v };
+  }
+  if (/[<>]/.test(JSON.stringify(out))) return { error: "caracteres no permitidos en uso" };
+  return { uso: out };
+}
+
+/**
+ * Una POST web-uso → las lecturas que guarda: la principal (semanal, con `uso`) y, si la tarjeta tiene medidor
+ * secundario y la pantalla da la sesión de 5 h, otra lectura de esa serie con el mismo instante (para la gráfica).
+ */
+export function expandirLectura(l) {
+  const out = [l];
+  const c = CUENTAS.find((x) => x.cuenta === l.cuenta);
+  if (c && c.secundario && l.uso && l.uso.sesion && l.uso.sesion.pct !== null && l.agente !== c.secundario) {
+    out.push({ ...l, id: l.ts + "·" + l.cuenta + "·" + c.secundario, agente: c.secundario, pct: l.uso.sesion.pct, reset: /T/.test(l.uso.sesion.reset || "") ? l.uso.sesion.reset : null, uso: undefined });
+    delete out[1].uso;
+  }
+  return out;
+}
+
 /** Valida y normaliza el cuerpo de un POST. Devuelve { lectura } o { error }. */
 export function normalizarLectura(body, ahora = Date.now()) {
   if (!body || typeof body !== "object") return { error: "cuerpo vacío" };
   const txt = (v, max) => String(v ?? "").trim().slice(0, max);
-  const cuenta = txt(body.cuenta, 120);
+  // r25 (web-uso): la cuenta puede venir por su id de tarjeta («neo-claude», «trinity-codex»…).
+  const porId = CUENTAS.find((c) => c.id === txt(body.cuenta, 120));
+  const cuenta = porId ? porId.cuenta : txt(body.cuenta, 120);
   if (!cuenta) return { error: "falta cuenta (p. ej. csilva@admira.com)" };
+  let uso = null;
+  if (body.uso !== undefined && body.uso !== null) {
+    const u = normalizarUso(body.uso);
+    if (u.error) return { error: u.error };
+    uso = u.uso;
+  }
+  // Una lectura web-uso trae el % semanal dentro de uso.semana: es el pct de la serie principal.
+  if ((body.pct === undefined || body.pct === null || body.pct === "") && uso && uso.semana && uso.semana.pct !== null) body = { ...body, pct: uso.semana.pct, reset: body.reset || uso.semana.reset };
+  const tarjeta = porId || CUENTAS.find((c) => c.cuenta === cuenta || (c.alias || []).includes(cuenta));
+  if (!txt(body.agente, 40) && tarjeta && tarjeta.principal) body = { ...body, agente: tarjeta.principal };
   const pct = num(body.pct);
   const hayTokens = body.tokens !== undefined && body.tokens !== null && body.tokens !== "";
   if (pct === null && !hayTokens) return { error: "pct debe ser un número entre 0 y 100 (o manda tokens para una lectura solo de tokens)" };
@@ -65,7 +160,7 @@ export function normalizarLectura(body, ahora = Date.now()) {
     if (ts > ahora + 10 * 60 * 1000) return { error: "ts en el futuro" };
   }
   const fuente = txt(body.fuente || "manual", 10);
-  if (!["manual", "auto"].includes(fuente)) return { error: "fuente debe ser manual o auto" };
+  if (!FUENTES.includes(fuente)) return { error: "fuente debe ser " + FUENTES.join(", ") };
   const autor = txt(body.autor, 60);
   if (!autor) return { error: "falta autor (quién la registra)" };
   let tokens = null;
@@ -105,6 +200,7 @@ export function normalizarLectura(body, ahora = Date.now()) {
     nota: txt(body.nota, 300),
     reset,
     canonica: esCanonica(ts),
+    ...(uso ? { uso } : {}),
   };
   if (/[<>]/.test(lectura.cuenta + lectura.agente + lectura.grupo + lectura.autor)) return { error: "caracteres no permitidos" };
   if (pct === null && !tokens) return { error: "una lectura sin pct necesita tokens" };
@@ -228,10 +324,12 @@ export const CUENTAS = [
      Manda siempre el medidor `principal` (el semanal); el `secundario` (p. ej. la sesión de 5 h) se
      enseña aparte y no decide semáforo ni proyección. La etiqueta deja claro de quién es y que no es Grok. */
   agente("neo-claude", "Neo · Claude Code", "Neo · Claude Max", "Claude Max 20x (csilva@admira.com)", "Claude", "Claude Code semanal", { secundario: "Claude Code sesión 5 h", resetSemanal: "domingos 15:00 (Madrid)", email: "csilva@admira.com" }),
-  agente("trinity-codex", "Trinity · Codex", "Trinity · ChatGPT Pro", "ChatGPT Pro 200", "ChatGPT", "Codex semanal"),
+  // r25 (10-10-2026, lectura web de chatgpt.com/settings/usage): el plan de Trinity es ChatGPT Business del espacio
+  // «IoT Incubator» con csilva@admira.com, NO ChatGPT Pro. Las lecturas viejas («Trinity · ChatGPT Pro») siguen por alias.
+  { ...agente("trinity-codex", "Trinity · Codex", "Trinity · ChatGPT Business", "ChatGPT Business · IoT Incubator (csilva@admira.com)", "ChatGPT", "Codex semanal", { secundario: "Codex sesión 5 h", email: "csilva@admira.com" }), alias: ["Trinity · ChatGPT Pro"] },
   // Mac mini (confirmado por Carlos en las máquinas, 09-10-2026): Morfeo = Claude y Oráculo = Codex, los dos con csilvasantin@gmail.com.
   agente("morfeo-claude", "Morfeo · Claude", "Morfeo · Claude (csilvasantin@gmail.com)", "Claude (csilvasantin@gmail.com)", "Claude", "Claude Code semanal", { secundario: "Claude Code sesión 5 h" }),
-  agente("oraculo-codex", "Oráculo · Codex", "Oráculo · Codex (csilvasantin@gmail.com)", "ChatGPT Pro (csilvasantin@gmail.com)", "ChatGPT", "Codex semanal"),
+  agente("oraculo-codex", "Oráculo · Codex", "Oráculo · Codex (csilvasantin@gmail.com)", "ChatGPT Pro (csilvasantin@gmail.com)", "ChatGPT", "Codex semanal", { secundario: "Codex sesión 5 h" }),
   // r27: Cursor Pro de Carlos = los consejeros Grok Bot (Jobs, Wozniak, Lucas, Disney) juntos. Sin % del plan: lecturas solo
   // de tokens (fleet/cursor-uso.py, 00:00/12:00) + tokens de hoy del pulso. Smith NO va aquí (Grok CLI, otra cuenta).
   { id: "cursor", nombre: "Merovingio · GrokBot (Cursor Pro)", cuenta: "cursor-pro", plan: "Cursor Pro", consejeros: [], soloTokens: true,
@@ -326,7 +424,8 @@ export function repartir(cuenta, partes, pct, { desde, hasta = Date.now() } = {}
 /** Una tarjeta por cuenta: la serie que manda es la de % más alto (el límite que antes ata). */
 export function resumirCuentas(lecturas, partes, { ahora = Date.now() } = {}) {
   return CUENTAS.map((c) => {
-    const propias = (lecturas || []).filter((l) => l.cuenta === c.cuenta);
+    const alias = c.alias || [];
+    const propias = (lecturas || []).filter((l) => l.cuenta === c.cuenta || alias.includes(l.cuenta)).map((l) => (l.cuenta === c.cuenta ? l : { ...l, cuenta: c.cuenta }));
     const deTokens = propias.filter(esDeTokens).sort((a, b) => Date.parse(a.ts) - Date.parse(b.ts));
     const series = resumirTodo(propias, { ahora }).map((s) => ({ ...s, proy: proyectar(s, ahora), bloques: bloques12h(s.deltas) }));
     const fija = c.principal ? series.find((s) => s.agente === c.principal) || null : null;
@@ -334,12 +433,18 @@ export function resumirCuentas(lecturas, partes, { ahora = Date.now() } = {}) {
     const pct = manda ? manda.pct : null;
     const agota = c.principal ? !!(manda && manda.proy.agotaAntes) : series.some((s) => s.proy.agotaAntes);
     const sec = c.secundario ? series.find((s) => s.agente === c.secundario) || null : null;
+    const uso = resumirUso(propias, ahora);
+    const tsManda = manda ? Date.parse(manda.ultima.ts) : null;
+    const edadH = tsManda === null ? null : Math.round(((ahora - tsManda) / H) * 10) / 10;
     const desde = manda && manda.proy.reset ? Date.parse(manda.proy.reset) - 7 * DIA : ahora - 7 * DIA;
     return {
       id: c.id, nombre: c.nombre, cuenta: c.cuenta, plan: c.plan, consejeros: c.consejeros.map(([n]) => n), pista: c.pista || null,
       pct, margen: pct === null ? null : Math.round((100 - pct) * 100) / 100, manda: manda ? manda.agente || manda.cuenta : null,
       semaforo: semaforo(pct, agota), reset: manda ? manda.proy.reset : null, cupoDia: manda ? manda.proy.cupoDia : null,
       proyeccion: manda ? manda.proy : null, agotaAntes: agota,
+      ts: manda ? manda.ultima.ts : null, fuente: manda ? manda.ultima.fuente : null, edadH, vieja: edadH !== null && edadH > VIEJA_H,
+      edadTexto: edadH !== null && edadH > VIEJA_H ? textoEdad(edadH) : null,
+      ...(uso ? { uso } : {}),
       series: series.map(({ deltas, ...s }) => ({ ...s, lecturas: deltas })),
       reparto: repartir(c, partes, pct, { desde, hasta: ahora }),
       ...(deTokens.length || c.soloTokens ? { tokens: resumirTokens(deTokens), nota: c.nota || null } : {}),
@@ -347,6 +452,35 @@ export function resumirCuentas(lecturas, partes, { ahora = Date.now() } = {}) {
         secundario: c.secundario ? { agente: c.secundario, pct: sec ? sec.pct : null, reset: sec ? sec.ultima.reset || null : null, ts: sec ? sec.ultima.ts : null } : null } : {}),
     };
   });
+}
+
+/** «dato de hace 26 h» / «dato de hace 2 días». */
+export function textoEdad(h) {
+  if (h === null || h === undefined) return null;
+  return "dato de hace " + (h >= 48 ? Math.floor(h / 24) + " días" : Math.round(h) + " h");
+}
+
+/** r25: la lectura con `uso` más reciente de una cuenta, con su edad y los reinicios gratis que no han vencido. */
+export function resumirUso(lecturas, ahora = Date.now()) {
+  const u = [...(lecturas || [])].filter((l) => l.uso).sort((a, b) => Date.parse(b.ts) - Date.parse(a.ts))[0];
+  if (!u) return null;
+  const finDia = (v) => (/T/.test(v) ? Date.parse(v) : Date.parse(v + "T23:59:59+01:00"));
+  const reinicios = (u.uso.reiniciosGratis || []).filter((r) => !r.vence || finDia(r.vence) > ahora);
+  const edadH = Math.round(((ahora - Date.parse(u.ts)) / H) * 10) / 10;
+  // Los límites cuyo reset ya pasó desde la lectura se dan por renovados (0 %), marcados como «renovado».
+  const vivo = (x) => (x && x.reset && /T/.test(x.reset) && Date.parse(x.reset) <= ahora ? { ...x, pct: 0, renovado: true } : x);
+  return { ...u.uso, sesion: vivo(u.uso.sesion) || null, semana: vivo(u.uso.semana) || null, extras: (u.uso.extras || []).map(vivo),
+    reiniciosGratis: reinicios, ts: u.ts, fuente: u.fuente, autor: u.autor, nota: u.nota, edadH, vieja: edadH > VIEJA_H, edadTexto: edadH > VIEJA_H ? textoEdad(edadH) : null };
+}
+
+/** Texto de la insignia de reinicios gratis: «Reinicio gratis disponible · vence 22 oct» / «3 reinicios gratis · el primero vence 22 oct». */
+export function textoReinicios(lista) {
+  const l = lista || [];
+  if (!l.length) return null;
+  const v = l[0].vence;
+  const dia = v ? new Intl.DateTimeFormat("es-ES", { timeZone: ZONA, day: "numeric", month: "short" }).format(new Date(/T/.test(v) ? v : v + "T12:00:00Z")).replace(".", "") : null;
+  if (l.length === 1) return "Reinicio gratis disponible" + (dia ? " · vence " + dia : "");
+  return l.length + " reinicios gratis" + (dia ? " · el primero vence " + dia : "");
 }
 
 /** r27: lecturas solo de tokens de una cuenta → { ultima, bloques:[{ts, total, entrada, salida, cache, canonica, nota}] }. */

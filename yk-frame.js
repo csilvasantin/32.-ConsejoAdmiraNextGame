@@ -862,7 +862,9 @@
     desktopWrite:{controller:null,token:0,key:"",target:null},
     cliExpanded:"", structureKey:"", appActions:{}, bulk:{runtime:"",action:"",token:0}, appBulkState:{runtime:"",action:"",token:0}, pty:{term:null,fit:null,socket:null,key:"",loaded:null,resize:null,retry:null,manual:true,explicit:false} };
 
-  function fleetText(tag, cls, value) { var node=el(tag,cls); node.textContent=String(value == null ? "" : value); return node; }
+  function fleetText(tag, cls, value) { var node=el(tag,cls); node.textContent=familiaGrokBot(String(value == null ? "" : value)); return node; }
+  /* r21 (Carlos): la familia visible es «GrokBot»; el Grok CLI de la flota sale «GrokBot CLI». Versiones de modelo intactas. */
+  function familiaGrokBot(s) { return s.replace(/\bGrok Bot\b/g, "GrokBot").replace(/\bGrok CLI\b/g, "GrokBot CLI").replace(/\bGrok\b(?![\s-]*(?:\d|Heavy|Imagine|Fast|Code|Mini|Beta|CLI))/g, "GrokBot CLI"); }
 
   function fleetKey(item) {
     return [item.machine,item.persona,item.runtime,item.host,item.session_id].map(function (value) {
@@ -1401,9 +1403,9 @@
     FLEET.cliBulk.appendChild(fleetText("b","yk-cli-bulk-title","Control global por agente"));
     ["Claude","Codex","Grok"].forEach(function(runtime){
       var groups=bulkCliGroups(runtime),active=groups.filter(function(group){return group.some(function(item){return item.active;});}).length,pending=FLEET.bulk.runtime===runtime,row=el("div","yk-cli-bulk-row");
-      var copy=el("span","yk-cli-bulk-copy");copy.appendChild(fleetText("b",null,runtime));copy.appendChild(fleetText("small",active?"live":"",active+"/"+groups.length+" activos"));row.appendChild(copy);
-      var start=fleetButton("","yk-cli-bulk-action",function(){bulkFleetControl(runtime,"start");});setFleetIcon(start,"play");start.title="Arrancar todos los "+runtime;start.setAttribute("aria-label",start.title);start.disabled=FLEET.busy||pending||active===groups.length;row.appendChild(start);
-      var stop=fleetButton("","yk-cli-bulk-action danger",function(){bulkFleetControl(runtime,"stop");});setFleetIcon(stop,"power");stop.title="Detener todos los "+runtime;stop.setAttribute("aria-label",stop.title);stop.disabled=FLEET.busy||pending||active===0;row.appendChild(stop);
+      var nom=runtime==="Grok"?"GrokBot CLI":runtime;/* r21: familia visible GrokBot */var copy=el("span","yk-cli-bulk-copy");copy.appendChild(fleetText("b",null,nom));copy.appendChild(fleetText("small",active?"live":"",active+"/"+groups.length+" activos"));row.appendChild(copy);
+      var start=fleetButton("","yk-cli-bulk-action",function(){bulkFleetControl(runtime,"start");});setFleetIcon(start,"play");start.title="Arrancar todos los "+nom;start.setAttribute("aria-label",start.title);start.disabled=FLEET.busy||pending||active===groups.length;row.appendChild(start);
+      var stop=fleetButton("","yk-cli-bulk-action danger",function(){bulkFleetControl(runtime,"stop");});setFleetIcon(stop,"power");stop.title="Detener todos los "+nom;stop.setAttribute("aria-label",stop.title);stop.disabled=FLEET.busy||pending||active===0;row.appendChild(stop);
       FLEET.cliBulk.appendChild(row);
     });
   }

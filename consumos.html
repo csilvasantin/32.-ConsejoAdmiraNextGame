@@ -200,6 +200,10 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
 .tr-chipa{display:inline-flex;align-items:center;gap:6px;padding:3px 10px 3px 3px;border-radius:999px;background:#06121a;border:1px solid var(--line);font-size:13px;color:var(--ink);white-space:nowrap}
 .tr-chipa.tr-verde{border-color:rgba(61,220,132,.6);background:rgba(61,220,132,.1)}.tr-chipa.tr-amarillo{border-color:rgba(255,208,103,.6);background:rgba(255,208,103,.1)}
 .tr-chipa .tr-foto{width:24px;height:24px;border-width:1.5px;font-size:10px;box-shadow:none}
+/* r11 (Carlos, 13:57): el dato junto a cada chip alterna cada 10 s máquina/equipo ↔ runtime, con fundido */
+.tr-alt{display:inline-grid;margin-left:2px;font-size:10px;font-weight:600;color:#9fb3bd}.tr-alt>span{grid-area:1/1;transition:opacity .6s ease;white-space:nowrap}
+.tr-alt .tr-b{opacity:0;color:#9fd3ff}.tr-fase-b .tr-alt .tr-a{opacity:0}.tr-fase-b .tr-alt .tr-b{opacity:1}
+@media (prefers-reduced-motion:reduce){.tr-alt>span{transition:none}}
 .tr-chipa i{width:7px;height:7px;border-radius:50%;background:#6b7b82;flex:none}.tr-chipa.tr-verde i{background:#3ddc84;box-shadow:0 0 6px #3ddc84}.tr-chipa.tr-amarillo i{background:#ffd067}
 .tr-grises{display:inline-flex;align-items:center;padding-left:6px}.tr-grises .tr-foto{width:24px;height:24px;margin-left:-6px;border:1.5px solid #0a1620;filter:grayscale(1);opacity:.75;font-size:9px}
 .tr-grises small{color:var(--dim);font-size:12px;margin-left:6px}
@@ -459,13 +463,13 @@ fetch("/consumos-plataformas.json", { cache: "no-store" })
 <script src="/assets/consumos-plegable.js?v=r31"></script>
 <script src="/assets/consumos-velocimetro-elegir.js?v=r24-margen"></script>
 <script src="/assets/consumos-matriz.js?v=r6-subs"></script>
-<script src="/assets/consumos-trabajando.js?v=r8-merovingio-huang"></script>
+<script src="/assets/consumos-trabajando.js?v=20261010-r11"></script>
 <script src="/assets/consumos-desplegable.js?v=r23"></script>
 <script src="/assets/consumos-velocimetro.js?v=r42-merovingio"></script>
 <script src="/assets/live-velocidad.js?v=r18-tiempo-real"></script>
 <script src="/consumos-lecturas.js?v=r35"></script>
 <script src="/orquestar-widget.js?v=r37-r2-con-carlos"></script>
-<script src="/admira-idioma-consumos.js?v=20261010-i18n-1"></script><!-- inglés del texto fijo de /consumos (10-10-2026) -->
+<script src="/admira-idioma-consumos.js?v=20261010-r11"></script><!-- inglés del texto fijo de /consumos (10-10-2026) -->
 <script src="/yk-frame.js?v=r33-min"></script>
 </body>
 </html>

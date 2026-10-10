@@ -39,3 +39,10 @@ test("r19: gb() también el motor «grok» suelto, nombres de agente «Grok Bot�
   const lib = readFileSync(new URL("./consumos-lecturas-lib.mjs", import.meta.url), "utf8");
   assert.match(lib, /", no GrokBot\)"/); assert.match(lib, /Merovingio · GrokBot \(Cursor Pro\)/);
 });
+
+test("r20: «Grok Bot» con espacio → «GrokBot» en cupos de lecturas y en la nota de Merovingio", () => {
+  const js = readFileSync(new URL("./consumos-lecturas.js", import.meta.url), "utf8");
+  assert.match(js, /replace\(\/\\bGrok Bot\\b\/g, "GrokBot"\)/);
+  const lib = readFileSync(new URL("./consumos-lecturas-lib.mjs", import.meta.url), "utf8");
+  assert.match(lib, /bolsa de GrokBot de csilvasantin/); assert.doesNotMatch(lib, /bolsa de Grok Bot/);
+});

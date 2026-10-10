@@ -25,6 +25,7 @@
   "El % gastado de cada plan, leído dos veces al día: las de las 00:00 y las 12:00 (hora de Madrid) son las que cuentan (●). Entre dos lecturas sale lo que se quema cada 12 horas y, a ese ritmo, cuándo se llega al 100 %. Últimos 14 días.": "The % spent of each plan, read twice a day: the 00:00 and 12:00 readings (Madrid time) are the ones that count (●). Between two readings you get what is burnt every 12 hours and, at that pace, when 100 % is reached. Last 14 days.",
   "Fuente · quién": "Source · who",
   "Gasto y servicios": "Spend and services",
+  "Merovingio · bolsa de GrokBot de csilvasantin (Merovingio, Mouse y los consejeros Jobs, Wozniak, Lucas, Disney…) juntos. Cursor no da un % del plan ni separa por consejero; los tokens salen del export CSV de cursor.com con horas de retraso.": "Merovingio · csilvasantin's GrokBot pool (Merovingio, Mouse and councillors Jobs, Wozniak, Lucas, Disney…) together. Cursor gives no plan % and doesn't split by councillor; tokens come from the cursor.com CSV export, hours behind.",
   "Grok Bot (Consejo): Jobs, Wozniak, Lucas y Disney juntos. Cursor no da un % del plan ni separa por consejero; los tokens salen del export CSV de cursor.com con horas de retraso.": "Grok Bot (Council): Jobs, Wozniak, Lucas and Disney together. Cursor gives no plan % and does not split by counsellor; the tokens come from the cursor.com CSV export, hours late.",
   "Guardar": "Save",
   "Hoy:": "Today:",

@@ -41,7 +41,9 @@ test("tarjetas: dedupe por agente (manda el latido más fresco), siempre los 6 c
   const velocidad = { porAgente: [{ agente: "Morfeo", tokHora: 0, tokHoy: 5, conCarlos: true, maquina: "MacMini" }, { agente: "Trinity", tokHora: 3e6, tokHoy: 7e6, maquina: "MacBookPro16", proyectoAhora: "admira.studio" }] };
   const t = tarjetas({ presencia, velocidad, ahoraS: T });
   const n = t.map((x) => x.agente);
-  for (const c of CONSEJEROS_GROK) assert.ok(n.includes(c), c);
+  // r6: Musk y Huang van dentro de Merovingio (pool de Grok Bot de csilvasantin); los leyenda, aparte.
+  for (const c of CONSEJEROS_GROK) assert.ok(["Musk", "Huang"].includes(c) ? !n.includes(c) : n.includes(c), c);
+  assert.deepEqual(t.find((x) => x.agente === "Merovingio").incluye.sort(), ["Huang", "Musk"]);
   assert.equal(n.filter((x) => x === "Neo").length, 1);
   const neo = t.find((x) => x.agente === "Neo");
   assert.equal(neo.maquina, "MacBook Pro 16");
@@ -49,7 +51,7 @@ test("tarjetas: dedupe por agente (manda el latido más fresco), siempre los 6 c
   assert.deepEqual(t.slice(0, 3).map((x) => [x.agente, x.estado]), [["Trinity", "verde"], ["Jobs", "verde"], ["Morfeo", "amarillo"]]);
   assert.equal(t.find((x) => x.agente === "Jobs").encargo, "FLT-101758");
   assert.equal(t.find((x) => x.agente === "Lucas").motivo, "sin latido");
-  assert.ok(t.find((x) => x.agente === "Musk").retrato.img.includes("coetaneos"));
+  assert.ok(t.find((x) => x.agente === "Merovingio").retrato.img.includes("coetaneos"));
 });
 
 test("/api/flota/trabajando: une la presencia; sin pulso ni Yokup sigue enseñando a los consejeros", async () => {
@@ -62,7 +64,8 @@ test("/api/flota/trabajando: une la presencia; sin pulso ni Yokup sigue enseñan
   assert.equal(r.presencia, "ok");
   assert.equal(r.tarjetas[0].agente, "Jobs");
   assert.equal(r.tarjetas[0].estado, "verde");
-  assert.equal(r.tarjetas.filter((t) => CONSEJEROS_GROK.includes(t.agente)).length, 6);
+  assert.equal(r.tarjetas.filter((t) => CONSEJEROS_GROK.includes(t.agente)).length, 4);
+  assert.ok(r.tarjetas.find((t) => t.agente === "Merovingio"));
 });
 
 test("gris: «hace X» y máquina de la fuente más fresca (latido, proceso o pulso)", () => {
@@ -80,7 +83,7 @@ test("gris: «hace X» y máquina de la fuente más fresca (latido, proceso o pu
 
 test("retratos: Musk y Huang con recorte de cara propio; Oráculo con avatar de iniciales PNG", () => {
   const t = tarjetas({ presencia: [], velocidad: { porAgente: [{ agente: "Oráculo", tokHora: 0, tokHoy: 1 }] }, ahoraS: T });
-  assert.deepEqual(t.find((x) => x.agente === "Musk").retrato.cara, { l: 9, t: 44, w: 9, h: 16 });
+  assert.deepEqual(t.find((x) => x.agente === "Merovingio").retrato.cara, { l: 9, t: 44, w: 9, h: 16 });
   assert.equal(t.find((x) => x.agente === "Oráculo").retrato.img, "/avatars/oraculo.png");
 });
 
@@ -88,7 +91,9 @@ test("r39 · un pulso con retraso (Cursor) nunca pone en verde: los consejeros G
   const { tarjetas } = await import("./flota-trabajando-lib.mjs");
   const ahoraS = 1760000000;
   const velocidad = { porAgente: [{ agente: "Grok Bot (Consejo)", conRetraso: true, tokHora: 380000, tokHoy: 1000000, maquina: "GrokBotBox", ultimoEvento: new Date((ahoraS - 9000) * 1000).toISOString() }] };
-  const t = tarjetas({ presencia: [], velocidad, ahoraS }).find((x) => x.agente === "Grok Bot (Consejo)");
+  // r6: el pulso del pool de Grok Bot se apunta a Merovingio.
+  const t = tarjetas({ presencia: [], velocidad, ahoraS }).find((x) => x.agente === "Merovingio");
+  assert.equal(t.tokHoy, 1000000);
   assert.ok(t, "sale la tarjeta");
   assert.notEqual(t.estado, "verde");
 });

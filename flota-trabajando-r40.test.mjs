@@ -44,7 +44,8 @@ test("Merovingio sale SIEMPRE (aunque no haya latido ni pulso), sin marcarse com
   assert.deepEqual([m.estado, m.motivo, m.consejero], ["gris", "sin latido", false]);
   const t = tarjetas({ presencia: [{ persona: "Elon / Merovingio", machine: "MacBookAir16plata", runtime: "Grok", host: "cli", source: "heartbeat", mode: "pasivo", updated: T - 5 }], ahoraS: T });
   assert.equal(t.filter((x) => x.agente === "Merovingio").length, 1);
-  assert.equal(de(t, "Musk").motivo, "sin latido", "el latido de Merovingio no se le apunta a Musk");
+  // r6: Musk va en la ficha de Merovingio (un solo pool de Grok Bot), no como ficha aparte.
+  assert.equal(de(t, "Musk"), undefined);
 });
 
 test("superficieDeCarlos: app de escritorio o tmux adjunto sí; tmux sin cliente o latido de la mesa Grok no", () => {

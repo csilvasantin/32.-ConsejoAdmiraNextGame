@@ -1,4 +1,10 @@
 {
+  "v.10.10.2026.r6.13:00": [
+    "Matriz de agentes: hay exactamente 6 suscripciones de pago, dos por proveedor — Grok: Merovingio (pool de Grok Bot de csilvasantin) y Smith (Grok de Jobs, leyendas) · Codex: Oráculo y Trinity · Claude: Morfeo y Neo. Todo lo demás es gratis.",
+    "El resumen dice «6 suscripciones de pago (2 Grok · 2 Codex · 2 Claude) · K gratis» y marca en rojo cualquier instancia con un modelo de pago fuera de esas 6 (regla rota).",
+    "Huang, Mouse y los demás consejeros coetáneos van «incluidos en la suscripción Grok de Merovingio»; Jobs, Wozniak, Lucas y Disney, en la Grok de Smith. No cuentan como pagos aparte.",
+    "«Trabajando ahora»: el consumo de los asistentes de Grok Bot de csilvasantin (Musk, Huang, Grok Bot del Consejo) se enseña en la ficha de Merovingio. Smith pasa a depender de Jobs (leyendas). /reparto se conserva."
+  ],
   "v.10.10.2026.r5.12:51": [
     "/consumos respeta ?lang=en: «Trabajando ahora» y la nueva «Matriz de agentes» salen en inglés (Working now · Agent matrix) sin tener que abrir el modo experto.",
     "Sigue lo de la r4: Oráculo y el Merovingio salen trabajando (latido < 15 min + encargo en curso, cualquier motor, también el plan C gratis) y la Matriz de agentes viva al final de la página. /reparto se conserva."

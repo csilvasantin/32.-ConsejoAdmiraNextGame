@@ -8,6 +8,23 @@
  */
 import { tarjetas } from "../../../flota-trabajando-lib.mjs";
 import { calcular } from "../consumos/velocidad.js";
+import { matriz, cargaDe, persona as personaCenso, AGENTES_FLOTA, CONSEJEROS } from "../../../flota-matriz-lib.mjs";
+
+/** r4 (Jensen, 10-10-2026): carga de encargos por persona, la MISMA fuente que agentes_vivos (bandeja pública de Yokup,
+ *  los 80 más recientes por persona). Con ella: trabajando = latido < 15 min + encargo in_progress. */
+export const BANDEJA = "https://bot.yokup.com/api/public/inbox";
+export async function leerCarga(fetchImpl, personas) {
+  const unicas = [...new Set(personas.filter(Boolean))];
+  const filas = await Promise.all(unicas.map(async (p) => {
+    try {
+      const r = await fetchImpl(BANDEJA + "?persona=" + encodeURIComponent(p), { headers: { accept: "application/json" }, signal: AbortSignal.timeout(6000) });
+      if (!r.ok) return [p, null];
+      const d = await r.json();
+      return [p, cargaDe((d && d.items) || [], p)];
+    } catch (e) { return [p, null]; }
+  }));
+  return new Map(filas.filter(([, c]) => c));
+}
 
 export const PRESENCIA = "https://bot.yokup.com/api/presence";
 /** r40: Yokup tarda 6-7 s en responder; con 5 s la franja perdía la presencia 3 de cada 4 veces (y con ella a
@@ -76,8 +93,12 @@ export async function construir({ env, fetchImpl, ahoraMs: ahoraFijo, cache }) {
   const [pr, v] = await Promise.all([leerPresencia(fetchImpl || fetch, ahoraMs, cache === undefined ? cacheBorde() : cache), calcular({ env, fetchImpl }).catch(() => null)]);
   const p = pr.d;
   const ahoraS = Math.floor(ahoraMs / 1000);
+  const pres = p ? p.presence : [];
+  const nombres = [...AGENTES_FLOTA, ...CONSEJEROS, ...pres.map((e) => e && e.persona && personaCenso(e.persona))];
+  const carga = await leerCarga(fetchImpl || fetch, nombres).catch(() => new Map());
   return {
-    ok: true, tarjetas: tarjetas({ presencia: p ? p.presence : [], velocidad: v, ahoraS }),
+    ok: true, tarjetas: tarjetas({ presencia: pres, velocidad: v, ahoraS, carga }),
+    matriz: matriz({ presencia: pres, carga, ahoraS }), carga: carga.size ? "ok" : "sin datos",
     presencia: pr.estado, presenciaEdadS: pr.edadS, pulso: v && v.ok ? "ok" : "sin datos",
     fuentes: [PRESENCIA, "/api/consumos/velocidad"], generado: new Date(ahoraMs).toISOString(),
   };

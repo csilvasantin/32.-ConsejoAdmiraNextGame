@@ -124,8 +124,8 @@
     [/^margen (\d+ %|\?)$/, "margin $1"],
     [/^\(libre, (.+)\)$/, function (m) { return "(free, " + m[1].replace(/^margen \?/, "margin ?") + ")"; }],
     [/^(\S+): (código|web|demo|investigación|consejo|creativo), libre, (\d+) % de margen$/, function (m) { var k = { "código": "code", web: "web", demo: "demo", "investigación": "research", consejo: "council", creativo: "creative" }; return m[1] + ": " + k[m[2]] + ", free, " + m[3] + " % margin"; }],
-    [/^\((.+) de (\S+), (.+), no Grok\)$/, "($2's $1, $3, not Grok)"],
-    [/^\((.+) de (\S+), no Grok\)$/, "($2's $1, not Grok)"],
+    [/^\((.+) de (\S+), (.+), no GrokBot\)$/, "($2's $1, $3, not GrokBot)"],
+    [/^\((.+) de (\S+), no GrokBot\)$/, "($2's $1, not GrokBot)"],
     [/^Todas las lecturas \((\d+)\)$/, "All readings ($1)"],
     [/^(\S+) · ranura disponible$/, "$1 · free slot"],
     [/^(\d+)\/(\d+) vivas$/, "$1/$2 alive"],
@@ -133,12 +133,12 @@
     [/^· (.+) última hora$/, "· $1 last hour"],
     [/^Bucle de encargos \((.+)\)$/, "Task loop ($1)"],
     // r13: el traductor quita la puntuación inicial («(»), así que estas reglas aceptan con o sin ella.
-    [/^(\(?)([^()]+?) de ([^,()]+)((?:, [^,()]+)*), no Grok\)$/, "$1$3's $2$4, not Grok)"],
+    [/^(\(?)([^()]+?) de ([^,()]+)((?:, [^,()]+)*), no GrokBot\)$/, "$1$3's $2$4, not GrokBot)"],
     [/^(\(?)(no )?libre, (.+)\)$/, function (m) { return m[1] + (m[2] ? "not free, " : "free, ") + m[3].replace(/^margen \?/, "margin ?") + ")"; }],
     [/^(.+) semanal$/, "$1 weekly"],
     [/^(.+) \((leyendas|coetaneos|coetáneos)\)$/, function (m) { return m[1].replace(/ semanal\b/g, " weekly") + " (" + (m[2] === "leyendas" ? "legends" : "contemporaries") + ")"; }],
     [/^Mover encargos pesados a ([\s\S]+?): les sobra ([^.(]+?)( \(([^)]+) al día hasta el reset\))?\.([\s\S]*)$/, function (m, t) {
-      var q = m[1].replace(/\(([^()]+?) de ([^,()]+)((?:, [^,()]+)*), no Grok\)/, "($2's $1$3, not Grok)");
+      var q = m[1].replace(/\(([^()]+?) de ([^,()]+)((?:, [^,()]+)*), no GrokBot\)/, "($2's $1$3, not GrokBot)");
       var resto = m[5].replace(/ Frenar /, " Slow down ").replace(/ Sin lectura: /, " No reading: ").replace(/ al día hasta el reset/g, " a day until the reset");
       var dec = function (x) { return String(x).replace(/(\d),(\d)/g, "$1.$2"); };
       return "Move heavy tasks to " + q + ": " + dec(m[2]) + " to spare" + (m[3] ? " (" + dec(m[4]) + " a day until the reset)" : "") + "." + dec(resto);

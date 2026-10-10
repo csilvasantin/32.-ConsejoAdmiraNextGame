@@ -315,7 +315,7 @@
     if (!box) return;
     if (!d || d.rango !== LIN.rango) { box.innerHTML = '<p class="vel-spark-pie"><span>' + T('Leyendo líneas de código…', 'Reading lines of code…') + '</span></p>'; return; }
     if (d.fuente === 'ninguna') { box.innerHTML = '<p class="vel-spark-pie"><span>' + T('Sin datos de líneas de código todavía.', 'No lines-of-code data yet.') + '</span></p>'; return; }
-    var ags = (d.lineas.porAgente || []).slice(0, 6).map(function (a) { return esc(a.agente) + ' <b>' + fmt(a.lineas) + '</b>'; }).join(' · ');
+    var ags = (d.lineas.porAgente || []).slice(0, 6).map(function (a) { return esc(gb(a.agente)) + ' <b>' + fmt(a.lineas) + '</b>'; }).join(' · ');
     box.innerHTML = grafica(d.lineas.serie.map(function (x) { return x.lineas; }), { barras: true, clase: 'vel-lin', rango: d.rango, unidad: T('líneas', 'lines') + '/' + unidadPaso(d.rango), titulo: T('líneas de código', 'lines of code'), aria: T('Líneas de código escritas por los agentes', 'Lines of code written by the agents') }) +
       '<p class="vel-lin-pie">' + T('Líneas añadidas en el rango', 'Lines added in range') + ': <b>' + fmt(d.lineas.total) + '</b>' + (ags ? ' · ' + ags : '') +
       ' · <span title="' + esc(d.metodo || '') + '">' + (d.fuente === 'commits' ? T('commits de la rama principal', 'main-branch commits') + (d.actualizado ? ' · ' + T('leídos ', 'read ') + new Date(d.actualizado).toLocaleTimeString(en() ? 'en-GB' : 'es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit' }) : '') : T('fotos 00:00/12:00 (escalonado)', '00:00/12:00 snapshots (stepped)')) + '</span></p>';
@@ -386,7 +386,7 @@
     return T('Cursor · datos con ' + cuanto + ' de retraso', 'Cursor · data ' + cuanto + ' behind');
   }
   // r18: familia visible «GrokBot» (igual que consumos-trabajando.js / consumos-matriz.js).
-  function gb(s) { return s == null ? s : String(s).replace(/\bGrok Bot\b/g, 'GrokBot').replace(/\bGrok CLI\b/g, 'GrokBot CLI').replace(/\bGrok\b(?![\s-]*(?:\d|Heavy|Imagine|Fast|Code|Mini|Beta))/g, 'GrokBot'); }
+  function gb(s) { return s == null ? s : String(s).replace(/\bGrok Bot\b/g, 'GrokBot').replace(/\bGrok CLI\b/g, 'GrokBot CLI').replace(/\bGrok\b(?![\s-]*(?:\d|Heavy|Imagine|Fast|Code|Mini|Beta))/g, 'GrokBot').replace(/(^|· )grok(?= ·|$)/g, '$1GrokBot CLI'); }
   function nombreMotor(m) { return m === 'claude' ? 'Claude' : m === 'codex' ? 'Codex' : m === 'cursor' ? 'Cursor' : m === 'grok' ? 'GrokBot CLI' : (m || ''); }
   function txtEstado(est) { return est === 'verde' ? T('activo ahora', 'active now') : est === 'amarillo' ? T('hoy sí, ahora parado', 'today yes, idle now') : T('sin datos hoy', 'no data today'); }
   function pintaSelector(d) {
@@ -529,7 +529,7 @@
         a.metodo === 'tiempo real' ? (a.stale ? T('sin pulso ', 'no pulse ') + hace(a.haceS) : T('tiempo real', 'real time')) : esc(a.metodo || T('partes Yokup', 'Yokup reports'));
       var cls = [parado ? 'parado' : '', a === lider ? 'lider' : '', a.agente === estado.agente ? 'sel' : ''].filter(Boolean).join(' ');
       return '<li' + (cls ? ' class="' + cls + '"' : '') + ' role="button" tabindex="0" data-agente="' + esc(a.agente) + '" title="' + esc(T('Ver ', 'Show ') + a.agente + T(' en el velocímetro', ' on the gauge')) + '">' +
-        '<span class="vel-ag"><span class="vel-pos">' + (i + 1) + '</span>' + (a === lider ? '<span class="vel-corona" aria-label="' + T('el que más trabaja ahora', 'top worker now') + '">★</span> ' : '') + esc(a.agente) + (a.motor ? ' · ' + esc(nombreMotor(a.motor)) : '') +
+        '<span class="vel-ag"><span class="vel-pos">' + (i + 1) + '</span>' + (a === lider ? '<span class="vel-corona" aria-label="' + T('el que más trabaja ahora', 'top worker now') + '">★</span> ' : '') + esc(gb(a.agente)) + (a.motor ? ' · ' + esc(nombreMotor(a.motor)) : '') +
         (a.conCarlos ? ' <em class="con-carlos" title="' + esc(T('Carlos está trabajando con este agente: no se le inyectan encargos', 'Carlos is working with this agent: no tasks are injected') + (a.conCarlosMotivo ? ' · ' + a.conCarlosMotivo : '')) + '">' + T('con Carlos', 'with Carlos') + '</em>' : '') + '</span>' +
         '<span class="vel-bar"><i style="width:' + w + '%"></i></span><b>' + (a.conRetraso ? '<span class="dd-retraso">' + esc(txtRetraso(a)) + '</span>' : parado ? T('parado', 'stopped') : fmt(a.tokHora) + ' ' + T('tokens/hora', 'tokens/hour')) + '</b>' +
         '<small>' + T('hoy ', 'today ') + '<b>' + fmt(a.tokHoy) + '</b>' + (a.maquina ? ' · ' + esc(a.maquina) : '') + (a.proyectoAhora ? ' · ' + T('proyecto ', 'project ') + '<b>' + esc(nomP(a.proyectoAhora)) + '</b>' : '') +
@@ -577,7 +577,7 @@
     pie.innerHTML = (d && d.generado ? T('Actualizado ', 'Updated ') + new Date(d.generado).toLocaleTimeString(en() ? 'en-GB' : 'es-ES', { timeZone: 'Europe/Madrid', hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' (Madrid) · ' : '') +
       T('Fuente: pulso de cada Mac (logs de Claude Code, Codex y GrokBot CLI, cada 60 s, ', 'Source: each Mac\'s pulse (Claude Code, Codex and GrokBot CLI logs, every 60 s, ') + '<a href="/api/consumos/pulso">/api/consumos/pulso</a>) + ' +
       T('Merovingio (bolsa de GrokBot · Cursor Pro) por el export CSV de cursor.com, cada hora y con retraso', 'Merovingio (GrokBot pool · Cursor Pro) from the cursor.com CSV export, hourly and delayed') +
-      (d && d.excluidosYokup && d.excluidosYokup.length ? ' (' + T('no se suman aparte: ', 'not added twice: ') + esc(d.excluidosYokup.map(function (x) { return x.agente; }).join(', ')) + ')' : '') + ' + ' +
+      (d && d.excluidosYokup && d.excluidosYokup.length ? ' (' + T('no se suman aparte: ', 'not added twice: ') + esc(gb(d.excluidosYokup.map(function (x) { return x.agente; }).join(', '))) + ')' : '') + ' + ' +
       T('partes de Yokup para el resto (', 'Yokup reports for the rest (') + '<a href="https://api.yokup.com/fleet/consumo?dias=1">fleet/consumo</a>) · ' +
       T('proyecto = carpeta de trabajo → repo git → uno de los 13 de la Galaxia · ', 'project = working folder → git repo → one of the 13 Galaxy projects · ') + T('se refresca cada 10 s', 'refreshes every 10 s');
   }

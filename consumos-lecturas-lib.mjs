@@ -208,13 +208,13 @@ export function fmtPct(x) {
 
 /* ───────── Entrega 2 (09-10-2026): una tarjeta por cuenta, reset semanal, bloques de 12 h, reparto ───────── */
 
-/** Cuenta de un agente con su medidor semanal fijo: «Neo · Claude Code» → etiqueta «Neo · Claude Code (Claude Max de Neo, no Grok)». */
+/** Cuenta de un agente con su medidor semanal fijo: «Neo · Claude Code» → etiqueta «Neo · Claude Code (Claude Max de Neo, no GrokBot)». */
 export function agente(id, nombre, cuenta, plan, proveedor, principal, { secundario = null, resetSemanal = null, consejeros = [], email = null } = {}) {
   const quien = nombre.split(" · ")[0];
   // Correo de la cuenta (09-10-2026): el de la opción o el que va entre paréntesis en el plan / la cuenta.
   const mail = email || ((String(plan) + " " + String(cuenta)).match(/[\w.+-]+@[\w-]+(?:\.[\w-]+)+/) || [null])[0];
   return { id, nombre, cuenta, plan, proveedor, principal, secundario, resetSemanal, consejeros, email: mail,
-    etiqueta: nombre + " (" + plan.replace(/\s*\(.*\)$/, "").replace(/\s+\d+x?$/, "") + " de " + quien + (mail ? ", " + mail : "") + ", no Grok)" };
+    etiqueta: nombre + " (" + plan.replace(/\s*\(.*\)$/, "").replace(/\s+\d+x?$/, "") + " de " + quien + (mail ? ", " + mail : "") + ", no GrokBot)" };
 }
 
 /** Las cuentas del Consejo. `personas`: cómo firman los consejeros sus partes de tokens en Yokup. */
@@ -234,7 +234,7 @@ export const CUENTAS = [
   agente("oraculo-codex", "Oráculo · Codex", "Oráculo · Codex (csilvasantin@gmail.com)", "ChatGPT Pro (csilvasantin@gmail.com)", "ChatGPT", "Codex semanal"),
   // r27: Cursor Pro de Carlos = los consejeros Grok Bot (Jobs, Wozniak, Lucas, Disney) juntos. Sin % del plan: lecturas solo
   // de tokens (fleet/cursor-uso.py, 00:00/12:00) + tokens de hoy del pulso. Smith NO va aquí (Grok CLI, otra cuenta).
-  { id: "cursor", nombre: "Merovingio · Grok Bot (Cursor Pro)", cuenta: "cursor-pro", plan: "Cursor Pro", consejeros: [], soloTokens: true,
+  { id: "cursor", nombre: "Merovingio · GrokBot (Cursor Pro)", cuenta: "cursor-pro", plan: "Cursor Pro", consejeros: [], soloTokens: true,
     nota: "Merovingio · bolsa de Grok Bot de csilvasantin (Merovingio, Mouse y los consejeros Jobs, Wozniak, Lucas, Disney…) juntos. Cursor no da un % del plan ni separa por consejero; los tokens salen del export CSV de cursor.com con horas de retraso." },
 ];
 

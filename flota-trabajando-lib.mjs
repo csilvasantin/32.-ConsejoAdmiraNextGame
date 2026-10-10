@@ -23,6 +23,7 @@
  *    medición de tokens (sin pulso, o pulso a 0 todo el día) para no pintar «0» como si fuera un dato.
  */
 import { CONSEJEROS as CONSEJO, GENERACIONES } from "./mcp/server/src/consejo.js";
+import { POOL_MEROVINGIO, fueraDeLas6 } from "./flota-matriz-lib.mjs";
 export const VENTANA_LATIDO_S = 120;
 /** r4 (Jensen, 10-10-2026 · Carlos: «no veo al Merovingio ni a Oráculo»): trabajando también = latido de < 15 min Y
  *  encargo in_progress en su bandeja, sea cual sea el runtime y aunque sea el plan C gratis (OpenCode/Nemotron no
@@ -30,7 +31,7 @@ export const VENTANA_LATIDO_S = 120;
 export const VENTANA_VIVO_S = 900;
 export const VIVO_SIEMPRE = ["Merovingio"];
 /** Modelo principal (de pago) cuando la instancia que late es la del plan C gratis. */
-export const PRINCIPAL = { Merovingio: "Grok CLI", "Oráculo": "Codex", Morfeo: "Claude Code", Trinity: "Codex", Smith: "Grok", Neo: "Claude Code" };
+export const PRINCIPAL = { Merovingio: "Grok Bot · Grok CLI", "Oráculo": "Codex", Morfeo: "Claude Code", Trinity: "Codex", Smith: "Grok", Neo: "Claude Code" };
 export const CPU_MIN = 5;
 export const CONSEJEROS_GROK = ["Jobs", "Wozniak", "Lucas", "Disney", "Musk", "Huang"];
 /**
@@ -65,6 +66,7 @@ export const RETRATOS = {
   Musk: { img: "/assets/council-coetaneos.jpg", cara: { l: 9, t: 44, w: 9, h: 16 } },
   Huang: { img: "/assets/council-coetaneos.jpg", cara: { l: 21.65, t: 44.5, w: 8.5, h: 15.1 } },
 };
+RETRATOS.Merovingio = RETRATOS.Musk; // r6: «Musk / Merovingio», una sola ficha
 const AVATARES = { neo: "/avatars/neo.jpg", trinity: "/avatars/trinity.jpg", morfeo: "/avatars/morfeo.jpg", smith: "/avatars/smith.jpg", oraculo: "/avatars/oraculo.png" };
 const CANON = ["Jobs", "Wozniak", "Lucas", "Disney", "Musk", "Huang", "Neo", "Trinity", "Morfeo", "Oráculo", "Smith", "Niobe", "Cypher", "Merovingio", "Link", "Grok Bot"];
 
@@ -226,6 +228,21 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
   for (const a of (velocidad && velocidad.porAgente) || []) if (a && a.agente) de(canonico(a.agente)).pulsos.push(a);
   for (const c of (velocidad && velocidad.conocidos) || []) if (c && c.agente) { const x = de(canonico(c.agente)); x.perfil = c; }
   for (const n of SIEMPRE) de(n);
+  // r6 (Carlos): los asistentes de Grok Bot de csilvasantin (Musk, Huang, Mouse, «Grok Bot (Consejo)»…) tiran del MISMO
+  // pool de Grok que Merovingio: su consumo y sus latidos van en la ficha de Merovingio, no como fichas aparte.
+  const mero = de("Merovingio"); mero.incluye = [];
+  for (const n of POOL_MEROVINGIO) {
+    const x = porAg.get(n);
+    if (!x || n === "Merovingio") continue;
+    mero.incluye.push(n);
+    mero.latidos.push(...x.latidos);
+    if (x.pulso) {
+      if (!mero.pulso) mero.pulso = { ...x.pulso, agente: "Merovingio" };
+      else for (const k of ["tokHoy", "tokHora", "tokUltimaHora"]) if (x.pulso[k] != null) mero.pulso[k] = (Number(mero.pulso[k]) || 0) + Number(x.pulso[k]);
+    }
+    if (x.perfil && !mero.perfil) mero.perfil = x.perfil;
+    porAg.delete(n);
+  }
   const activas = maquinasConCarlos({ presencia, velocidad, ahoraS });
   const out = [];
   for (const x of porAg.values()) {
@@ -258,7 +275,9 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
     let motor = p && p.motor ? (p.motor === "claude" ? "Claude Code" : p.motor === "codex" ? "Codex" : p.motor) : (l && l.runtime) || null;
     let modeloCard = (l && l.model) || (pf && pf.modelo) || null;
     // r4: cada agente una vez con su modelo principal real; el plan C gratis va como nota (planC), no como su motor.
-    if (PRINCIPAL[x.agente] && (!motor || esGratis(motor, modeloCard))) { motor = PRINCIPAL[x.agente]; modeloCard = null; }
+    if (PRINCIPAL[x.agente] && (!motor || esGratis(motor, modeloCard) || x.agente === "Merovingio")) { motor = PRINCIPAL[x.agente]; modeloCard = x.agente === "Merovingio" ? "pool Grok Bot csilvasantin" : null; }
+    // r6: instancias vivas con modelo de pago fuera de las 6 suscripciones → regla rota (en rojo).
+    const fuera = [...new Set(x.latidos.filter((e) => ahoraS - (Number(e.declared_updated || e.updated) || 0) < VENTANA_VIVO_S).map((e) => fueraDeLas6(e.persona || x.agente, e.runtime, e.model)).filter(Boolean))];
     const soloGratis = inst.size > 0 && !nPago && !PRINCIPAL[x.agente];
     // Merovingio late por DeepAgents pero su modelo es Grok CLI de pago: sin nota de plan C.
     const planC = nGratis > 0 && !soloGratis && !VIVO_SIEMPRE.includes(x.agente);
@@ -268,7 +287,7 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
       conCarlosEn,
       maquina: (p && p.conCarlos && p.maquina) || (ccPres && ccPres.maquina) || (gris && fresca.maquina) || (enPulso && p.maquina) || (l && l.machine) || (p && p.maquina) || (pf && pf.maquina) || null,
       motor, modelo: modeloCard,
-      enCurso, instancias: inst.size, planC, gratis: soloGratis,
+      enCurso, instancias: inst.size, planC, gratis: soloGratis, fuera, incluye: x.incluye || null,
       foco: limpio(l && l.focus), tarea: limpio(l && l.task, 120),
       proyecto: (enPulso && p.proyectoAhora) || (l && l.project) || (p && p.proyectoAhora) || null,
       encargo: encargoDe(l && l.task, l && l.focus),

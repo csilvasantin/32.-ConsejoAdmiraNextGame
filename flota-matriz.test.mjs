@@ -28,7 +28,7 @@ test("Oráculo (OpenCode gratis + Codex, 0 tokens, 9 en curso) sale trabajando, 
 test("Merovingio con latido sale trabajando, con Grok CLI y sin nota de plan C", () => {
   const m = de(tarjetas({ presencia, velocidad: null, ahoraS: T, carga }), "Merovingio");
   assert.equal(m.estado, "verde");
-  assert.equal(m.motor, "Grok CLI");
+  assert.equal(m.motor, "Grok Bot · Grok CLI");
   assert.equal(m.planC, false);
 });
 test("latido sin encargo en curso ni tokens (Cypher) sigue parado; latido de > 15 min no cuenta", () => {
@@ -45,11 +45,29 @@ test("Matriz: mapa fijo + agente nuevo sin clasificar y gratis; sin señal en gr
   assert.equal(filas.filter((f) => /Merovingio/.test(f.agente)).length, 1);
   assert.equal(filas.find((f) => f.persona === "Neo").vivo, false);
   assert.equal(filas.find((f) => f.persona === "Link").coste, null);
-  assert.equal(resumen.dePago, resumen.pago + resumen.mixto);
-  assert.equal(resumen.clasificados, resumen.pago + resumen.mixto + resumen.gratis);
+  assert.equal(resumen.suscripciones, 6);
+  assert.deepEqual(resumen.subs, { grok: 2, codex: 2, claude: 2 });
+  assert.equal(filas.find((f) => f.persona === "Smith").depende, "Jobs");
+  assert.equal(filas.find((f) => f.persona === "Huang").coste, "incluido");
+  assert.equal(filas.find((f) => f.persona === "Jobs").incluidoEn, "Smith");
+  assert.equal(resumen.fuera, 0);
 });
 test("cargaDe cuenta solo los de la persona; persona() normaliza", () => {
   assert.equal(persona("Oráculo"), "Oraculo"); assert.equal(persona("Elon / Merovingio"), "Merovingio"); assert.equal(persona("JensenHuang"), "Huang");
   const c = cargaDe([{ target_persona: "Oraculo", status: "in_progress" }, { target_persona: "Neo", status: "in_progress" }, { target_persona: "oraculo", status: "done" }], "Oraculo");
   assert.equal(c.in_progress, 1); assert.equal(c.abiertos, 1);
+});
+
+test("r6: modelo de pago fuera de las 6 → en rojo; el pool de Grok Bot va bajo Merovingio", () => {
+  const p2 = [...presencia, lat({ persona: "Cypher", machine: "MacMini", runtime: "Claude" }), lat({ persona: "Oraculo", machine: "MacMini", runtime: "Claude" })];
+  const { filas, resumen } = matriz({ presencia: p2, carga, ahoraS: T });
+  assert.equal(filas.find((f) => f.persona === "Cypher").fuera, true);
+  assert.equal(filas.find((f) => f.persona === "Oraculo").fuera, true, "Oráculo es Codex: Claude es de otra suscripción");
+  assert.equal(resumen.fuera, 2);
+  const vel = { porAgente: [{ agente: "Grok Bot (Consejo)", maquina: "GrokBotBox", motor: "cursor", tokHoy: 2000000, conRetraso: true }] };
+  const t = tarjetas({ presencia: p2, velocidad: vel, ahoraS: T, carga });
+  assert.equal(t.find((x) => /Grok Bot|Huang|Musk/.test(x.agente)), undefined);
+  const m = t.find((x) => x.agente === "Merovingio");
+  assert.equal(m.tokHoy, 2000000); assert.ok(m.incluye.includes("Huang"));
+  assert.ok(t.find((x) => x.agente === "Cypher").fuera.length > 0);
 });

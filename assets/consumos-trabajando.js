@@ -9,7 +9,14 @@
 (function (root) {
   'use strict';
   var API = '/api/flota/trabajando', POLL = 10000, ultimo = null;
-  function en() { return (document.documentElement.getAttribute('lang') || '').toLowerCase().indexOf('en') === 0; }
+  function en() {
+    // r5: /consumos no carga admira-idioma.js al entrar: se mira también ?lang= y la preferencia guardada de la suite.
+    var h = (document.documentElement.getAttribute('lang') || '').toLowerCase();
+    if (root.AdmiraIdioma) return h.indexOf('en') === 0;
+    try { var q = new URL(location.href).searchParams.get('lang'); if (q) return /^en/i.test(q); } catch (e) {}
+    try { var s = localStorage.getItem('admiranext_expert_lang') || localStorage.getItem('xtanco_lang'); if (s) return /^en/i.test(s); } catch (e) {}
+    return h.indexOf('en') === 0;
+  }
   function T(es, en_) { return en() ? en_ : es; }
   /** r4: nota de coste secundaria: el modelo principal manda; el plan C gratis solo se apunta. */
   function notaCoste(t) {

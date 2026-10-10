@@ -120,7 +120,7 @@
     [/^commits de la rama principal · leídos (\d\d:\d\d)$/, "main-branch commits · read $1"],
     [/^(\d+\/\d+) (\d\d:\d\d) \(en (\d+) h\)$/, "$1 $2 (in $3 h)"],
     [/^(.+) · gratis · por defecto$/, "$1 · free · default"],
-    [/^usado · manda «(.+)»$/, "used · governed by «$1»"],
+    [/^usado · manda «(.+)»$/, function (m) { return "used · governed by «" + m[1].replace(/ semanal\b/g, " weekly") + "»"; }],
     [/^margen (\d+ %|\?)$/, "margin $1"],
     [/^\(libre, (.+)\)$/, function (m) { return "(free, " + m[1].replace(/^margen \?/, "margin ?") + ")"; }],
     [/^(\S+): (código|web|demo|investigación|consejo|creativo), libre, (\d+) % de margen$/, function (m) { var k = { "código": "code", web: "web", demo: "demo", "investigación": "research", consejo: "council", creativo: "creative" }; return m[1] + ": " + k[m[2]] + ", free, " + m[3] + " % margin"; }],
@@ -136,11 +136,12 @@
     [/^(\(?)([^()]+?) de ([^,()]+)((?:, [^,()]+)*), no Grok\)$/, "$1$3's $2$4, not Grok)"],
     [/^(\(?)(no )?libre, (.+)\)$/, function (m) { return m[1] + (m[2] ? "not free, " : "free, ") + m[3].replace(/^margen \?/, "margin ?") + ")"; }],
     [/^(.+) semanal$/, "$1 weekly"],
-    [/^(.+) \((leyendas|coetaneos|coetáneos)\)$/, function (m) { return m[1] + " (" + (m[2] === "leyendas" ? "legends" : "contemporaries") + ")"; }],
+    [/^(.+) \((leyendas|coetaneos|coetáneos)\)$/, function (m) { return m[1].replace(/ semanal\b/g, " weekly") + " (" + (m[2] === "leyendas" ? "legends" : "contemporaries") + ")"; }],
     [/^Mover encargos pesados a ([\s\S]+?): les sobra ([^.(]+?)( \(([^)]+) al día hasta el reset\))?\.([\s\S]*)$/, function (m, t) {
       var q = m[1].replace(/\(([^()]+?) de ([^,()]+)((?:, [^,()]+)*), no Grok\)/, "($2's $1$3, not Grok)");
       var resto = m[5].replace(/ Frenar /, " Slow down ").replace(/ Sin lectura: /, " No reading: ").replace(/ al día hasta el reset/g, " a day until the reset");
-      return "Move heavy tasks to " + q + ": " + m[2] + " to spare" + (m[3] ? " (" + m[4] + " a day until the reset)" : "") + "." + resto;
+      var dec = function (x) { return String(x).replace(/(\d),(\d)/g, "$1.$2"); };
+      return "Move heavy tasks to " + q + ": " + dec(m[2]) + " to spare" + (m[3] ? " (" + dec(m[4]) + " a day until the reset)" : "") + "." + dec(resto);
     }],
     [/^Más margen: ([\s\S]+?) — ([^,]+) usado, ([\s\S]+?)\. Que coja la siguiente carga\.([\s\S]*)$/, function (m) {
       var r = m[3].replace("sin ritmo todavía (falta una segunda lectura)", "no pace yet (needs a second reading)").replace(/^quema (.+) cada 12 h/, "burns $1 every 12 h").replace(/, llegaría al 100 % el (.+) \(Madrid\)/, ", would reach 100 % on $1 (Madrid)");

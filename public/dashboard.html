@@ -356,7 +356,7 @@ async function refreshPresence(){
     el.innerHTML = arr.map(p => {
       const age = now - Number(p.updated||0);
       const st = age < 180 ? "on" : age < 1800 ? "idle" : "off";
-      const run = p.runtime ? `<span class="p-run">${esc(p.runtime)}</span>` : "";
+      const run = p.runtime ? `<span class="p-run">${esc(p.runtime === "Grok" ? "GrokBot" : p.runtime)}</span>` : "";
       const focus = p.focus ? `<span class="p-focus">${esc(String(p.focus).slice(0,110))}</span>` : `<span class="p-focus"></span>`;
       return `<div class="presence-row">
         <span class="pdot ${st}"></span>

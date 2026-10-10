@@ -591,7 +591,7 @@ function renderAgentCard(r, now){
     +(r.av?('<img class="ag-av" src="'+r.av+'" alt="" onerror="this.style.visibility=\'hidden\'">'):'<div class="ag-av"></div>')
     +'<div class="ag-body"><div class="ag-top"><span class="ag-dot '+(online?'on':'off')+'"></span>'
     +'<span class="ag-name">'+_agEsc(p.persona||'?')+_nameSfx+'</span>'+estado+(r.mine?'<span class="ag-you">TÚ</span>':'')+'</div>'
-    +'<div class="ag-meta">'+_agEsc(p.runtime||'')+' · '+_agEsc(p.machine||'')+' · '+fmtAge2(r.age)+'</div>'
+    +'<div class="ag-meta">'+_agEsc((p.runtime==='Grok'?'GrokBot':p.runtime)||'')+' · '+_agEsc(p.machine||'')+' · '+fmtAge2(r.age)+'</div>'
     +proyecto
     +'<div class="ag-focus'+(p.focus?'':' none')+'">'+r.foco+'</div>'+contador+'</div></div>';
 }

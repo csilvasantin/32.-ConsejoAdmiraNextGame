@@ -228,7 +228,7 @@
     {
       "id": "SmithMBP16",
       "persona": "Smith",
-      "runtime": "Grok",
+      "runtime": "GrokBot",
       "casa": "xAI",
       "maquina": "MacBook Pro 16",
       "color": "#a6372f"

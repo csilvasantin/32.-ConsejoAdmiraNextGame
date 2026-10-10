@@ -26,7 +26,7 @@
   "Fuente · quién": "Source · who",
   "Gasto y servicios": "Spend and services",
   "Merovingio · bolsa de GrokBot de csilvasantin (Merovingio, Mouse y los consejeros Jobs, Wozniak, Lucas, Disney…) juntos. Cursor no da un % del plan ni separa por consejero; los tokens salen del export CSV de cursor.com con horas de retraso.": "Merovingio · csilvasantin's GrokBot pool (Merovingio, Mouse and councillors Jobs, Wozniak, Lucas, Disney…) together. Cursor gives no plan % and doesn't split by councillor; tokens come from the cursor.com CSV export, hours behind.",
-  "Grok Bot (Consejo): Jobs, Wozniak, Lucas y Disney juntos. Cursor no da un % del plan ni separa por consejero; los tokens salen del export CSV de cursor.com con horas de retraso.": "Grok Bot (Council): Jobs, Wozniak, Lucas and Disney together. Cursor gives no plan % and does not split by counsellor; the tokens come from the cursor.com CSV export, hours late.",
+  "GrokBot (Consejo): Jobs, Wozniak, Lucas y Disney juntos. Cursor no da un % del plan ni separa por consejero; los tokens salen del export CSV de cursor.com con horas de retraso.": "GrokBot (Council): Jobs, Wozniak, Lucas and Disney together. Cursor gives no plan % and does not split by counsellor; the tokens come from the cursor.com CSV export, hours late.",
   "Guardar": "Save",
   "Hoy:": "Today:",
   "Investigación": "Research",

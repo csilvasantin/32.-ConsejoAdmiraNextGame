@@ -44,7 +44,9 @@ corría en el Mac. El script manda un latido **pasivo** (vivo, no «trabajando»
 ```bash
 cp fleet/latido-merovingio.sh ~/.fleet/latido-merovingio.sh && chmod +x ~/.fleet/latido-merovingio.sh
 LATIDO_MAQUINA=MacBookAir16plata ~/.fleet/latido-merovingio.sh --dry-run   # cuerpo, sin mandar
-# Opción A — dentro del propio bucle de la sesión tmux «merovingio», antes del sleep 20:
+# En MacBookAir16plata el bucle NO es tmux: es ~/Claude/vista/merovingio-vivo.sh en una ventana de Terminal
+# (LATIDO_PROCESO=merovingio-vivo.sh, valor por defecto).
+# Opción A — dentro del propio bucle, antes del sleep 20:
 #   ~/.fleet/latido-merovingio.sh >/dev/null 2>&1 &
 # Opción B — LaunchAgent aparte (igual que el de arriba, Label com.admiranext.latido-merovingio,
 #   ProgramArguments /bin/bash $HOME/.fleet/latido-merovingio.sh, LATIDO_MAQUINA=MacBookAir16plata, StartInterval 60).

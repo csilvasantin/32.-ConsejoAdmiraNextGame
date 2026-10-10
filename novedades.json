@@ -1,4 +1,8 @@
 {
+  "v.10.10.2026.r5.12:51": [
+    "/consumos respeta ?lang=en: «Trabajando ahora» y la nueva «Matriz de agentes» salen en inglés (Working now · Agent matrix) sin tener que abrir el modo experto.",
+    "Sigue lo de la r4: Oráculo y el Merovingio salen trabajando (latido < 15 min + encargo en curso, cualquier motor, también el plan C gratis) y la Matriz de agentes viva al final de la página. /reparto se conserva."
+  ],
   "v.10.10.2026.r4.12:45": [
     "Consumos · «Trabajando ahora»: ya salen todos los agentes que trabajan de verdad. Cuenta como trabajando quien tiene latido de menos de 15 min y un encargo en curso, sea cual sea su motor y aunque vaya con el plan C gratis (OpenCode/Nemotron no reporta tokens). Ya aparecen Oráculo y el Merovingio.",
     "Cada agente sale una sola vez con su modelo principal real (Oráculo = Codex, Merovingio = Grok CLI); si además tiene una instancia gratuita se apunta «+ plan C gratis».",

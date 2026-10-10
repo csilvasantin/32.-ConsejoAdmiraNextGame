@@ -24,6 +24,8 @@
  */
 (function (root) {
   "use strict";
+  // Una sola instancia por página (admira-bar.js y yk-frame.js pueden pedirlo los dos, 10-10-2026).
+  if (root.AdmiraIdioma && typeof root.AdmiraIdioma.lang === "function") return;
   var KEY = "xtanco_lang";
   var EXPERT_KEY = "admiranext_expert_lang";
   var EVENT = "admira:languagechange";
@@ -115,6 +117,40 @@
   var current = urlLang() || stored() || "es";
   if (urlLang()) remember(current);   // la URL explícita también queda como preferencia
 
+  // ── Números y fechas (10-10-2026) ──
+  // Las páginas formatean con toLocaleString("es-ES") / Intl.*Format("es-ES") en ~130 sitios. Con el
+  // inglés activo, cualquier locale «es…» pedido explícitamente se sirve como «en-GB» (24 h, día/mes,
+  // 1,234.5); sin locale, o en castellano, nada cambia. Lo ya pintado se actualiza en el siguiente refresco.
+  function localeEn(loc) {
+    if (current !== "en") return loc;
+    if (typeof loc === "string") return /^es\b/i.test(loc) ? "en-GB" : loc;
+    if (Array.isArray(loc) && loc.length && /^es\b/i.test(String(loc[0]))) return ["en-GB"];
+    return loc;
+  }
+  (function parcheaLocale() {
+    try {
+      [[root.Number && root.Number.prototype, ["toLocaleString"]],
+       [root.Date && root.Date.prototype, ["toLocaleString", "toLocaleDateString", "toLocaleTimeString"]]].forEach(function (par) {
+        var proto = par[0]; if (!proto) return;
+        par[1].forEach(function (name) {
+          var orig = proto[name]; if (typeof orig !== "function" || orig.__admiraIdioma) return;
+          var f = function (loc, opts) { return orig.call(this, localeEn(loc), opts); };
+          f.__admiraIdioma = true; proto[name] = f;
+        });
+      });
+      var Intl_ = root.Intl;
+      if (Intl_ && typeof root.Proxy === "function") ["NumberFormat", "DateTimeFormat", "RelativeTimeFormat"].forEach(function (k) {
+        var C = Intl_[k]; if (typeof C !== "function" || C.__admiraIdioma) return;
+        var P = new root.Proxy(C, {
+          construct: function (t, args) { args = Array.prototype.slice.call(args); args[0] = localeEn(args[0]); return new t(args[0], args[1]); },
+          apply: function (t, self, args) { args = Array.prototype.slice.call(args); args[0] = localeEn(args[0]); return t(args[0], args[1]); },
+          get: function (t, prop) { return prop === "__admiraIdioma" ? true : t[prop]; }
+        });
+        Intl_[k] = P;
+      });
+    } catch (_) {}
+  })();
+
   function swap(el, attr, lang) {
     var en = el.getAttribute("data-en" + (attr ? "-" + attr : ""));
     if (en == null) return;
@@ -160,7 +196,10 @@
     if (tieneK(DICC, c)) return DICC[c];
     for (var i = 0; i < REGLAS.length; i++) {
       var m = c.match(REGLAS[i][0]);
-      if (m) return typeof REGLAS[i][1] === "function" ? REGLAS[i][1](m, frase) : c.replace(REGLAS[i][0], REGLAS[i][1]);
+      if (!m) continue;
+      if (typeof REGLAS[i][1] !== "function") return c.replace(REGLAS[i][0], REGLAS[i][1]);
+      var r = REGLAS[i][1](m, frase);
+      if (r != null) return r;                      // una regla-función puede declinar (null) y sigue la siguiente
     }
     return null;
   }
@@ -235,6 +274,17 @@
     });
     vigia.observe(doc.body, { childList: true, subtree: true, characterData: true, attributes: true, attributeFilter: ATRS });
   }
+  // El <title> de la pestaña también (10-10-2026): vive en el <head>, fuera del recorrido del <body>.
+  var tituloMemo = null;
+  function titulo(en) {
+    try {
+      var v = doc.title;
+      if (tituloMemo && v !== tituloMemo.o && v !== tituloMemo.t) tituloMemo = null;
+      if (!tituloMemo) { if (!en) return; var t = traduceTexto(v); if (t == null) return; tituloMemo = { o: v, t: t }; }
+      var quiero = en ? tituloMemo.t : tituloMemo.o;
+      if (doc.title !== quiero) doc.title = quiero;
+    } catch (_) {}
+  }
   function paginas(lang) {
     try {
       if (!memo || !doc.body || !doc.createTreeWalker) return;
@@ -242,16 +292,22 @@
       if (en && !hayDicc) { pedirDiccionario(); return; }
       if (!hayDicc) return;
       recorrer(doc.body, en);
+      titulo(en);
       vigilar(en);
     } catch (_) {}
   }
+  // Dos diccionarios (10-10-2026): el de Control/Players/Vista previa y el del sitio entero
+  // (barra de plataforma, EXPERTO, login, y el texto fijo de cada página pública).
+  var DICCS = ["/admira-idioma-paginas.js", "/admira-idioma-sitio.js"];
   function pedirDiccionario() {
     if (pedido || !doc.createElement) return;
     pedido = true;
     var v = ""; try { v = new URL(MIO, root.location.href).searchParams.get("v") || ""; } catch (_) {}
-    var s = doc.createElement("script");
-    s.src = "/admira-idioma-paginas.js" + (v ? "?v=" + encodeURIComponent(v) : "");
-    (doc.head || html).appendChild(s);
+    DICCS.forEach(function (src) {
+      var s = doc.createElement("script");
+      s.src = src + (v ? "?v=" + encodeURIComponent(v) : "");
+      (doc.head || html).appendChild(s);
+    });
   }
   // Lo llama admira-idioma-paginas.js al cargar.
   api.diccionario = function (dicc, reglas) {
@@ -260,6 +316,15 @@
     hayDicc = true;
     paginas(current);
   };
+  // Diccionarios propios de una página (p. ej. /consumos): se suman sin contar como el general,
+  // así el general se sigue pidiendo. Pueden llegar antes que este fichero por
+  // window.AdmiraIdiomaExtra = [[dicc, reglas], …].
+  api.extra = function (dicc, reglas) {
+    Object.keys(dicc || {}).forEach(function (k) { DICC[k] = dicc[k]; });
+    (reglas || []).forEach(function (r) { if (r && r[0] instanceof RegExp) REGLAS.push(r); });
+    if (hayDicc) paginas(current);
+  };
+  try { (root.AdmiraIdiomaExtra || []).forEach(function (x) { api.extra(x[0], x[1]); }); } catch (_) {}
   api.traducirTexto = function (s) { var t = traduceTexto(s); return t == null ? String(s) : t; };
   function set(lang) {
     var next = normalize(lang);

@@ -1,4 +1,9 @@
 {
+  "v.10.10.2026.r14.14:43": [
+    "Consejeros en el Mac de su app Grok Bot: Jobs y Wozniak (csilva@admira.com) salen en el MBP14 negro y Musk y Huang (csilvasantin) en el MBA16, donde Carlos tiene abierta la app; ya no copian la máquina de Smith/Merovingio. Los tokens siguen en la ficha de Smith/Merovingio.",
+    "«Con Carlos» de un consejero = su app Grok Bot al frente y el Mac con reposo < 5 min.",
+    "El pulso de cada Mac (fleet/pulso-tokens.py) manda grokbotApp {abierta, firmada, cuenta, alFrente, reposoS} sin leer secretos: la cuenta sale de ~/.config/admiranext/grokbot-cuenta."
+  ],
   "v.10.10.2026.r13.14:26": [
     "/consumos en inglés, lo que faltaba: notas de cuenta «(Claude Max de Neo, …, no Grok)» → «(Neo's Claude Max, …, not Grok)», «(libre/no libre, N %, …)», cupos «… semanal» → «… weekly», leyendas/coetáneos, la línea «Más margen» y la recomendación de reparto.",
     "Gasto y servicios: consumos-plataformas.json trae un bloque «en» con los avisos y las tarjetas en inglés (mismo orden); la página lo pinta con ?lang=en y se repinta al cambiar de idioma. Semáforos y rótulos (Rojo/Ámbar/Verde, Lectura, tarjetas) también.",

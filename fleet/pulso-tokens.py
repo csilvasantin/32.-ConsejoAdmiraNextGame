@@ -201,7 +201,34 @@ MAPA = {
     # «oraculo»). Atribuir Claude→Neo y Codex→Trinity aquí ponía a Neo «con Carlos» en el Air estando en el MBP16.
     # Los tokens de la app de escritorio de este Mac (si la hay) cuentan para el mismo motor: Morfeo / Oráculo.
     "MacBookAir16plata": {"claude": ("Morfeo", "por confirmar (MacBookAir16plata)"), "codex": ("Oráculo", "por confirmar (MacBookAir16plata)")},
+    # r14 (Carlos, 14:39): el MBP14 negro no tiene agentes de tokens propios; manda solo «grokbotApp» (Jobs y Wozniak).
+    "MacBookProNegro14": {},
 }
+
+# r14: la app de escritorio Grok Bot de este Mac. Sin secretos: proceso vivo, desktop-status.json (signedIn,
+# appVersion) y la cuenta de un fichero de config NO secreto, porque la app no guarda la cuenta en claro fuera de su
+# sesión (cookies/tokens, que no se leen). Una línea: csilva@admira.com (Jobs + Wozniak) o csilvasantin@gmail.com (Musk + Huang).
+GROKBOT_CUENTA_FILE = os.path.join(HOME, ".config", "admiranext", "grokbot-cuenta")
+GROKBOT_STATUS_FILE = os.path.join(HOME, "Library", "Application Support", "Grok Bot", "desktop-status.json")
+
+
+def grokbot_app(reposo=None, frente=None):
+    abierta = bool(_cmd(["pgrep", "-f", "Grok Bot.app/Contents/MacOS/Grok Bot"]).strip())
+    estado = {}
+    try:
+        with open(GROKBOT_STATUS_FILE) as f:
+            estado = json.load(f) or {}
+    except Exception:
+        estado = {}
+    cuenta = None
+    try:
+        with open(GROKBOT_CUENTA_FILE) as f:
+            cuenta = (f.read().strip().splitlines() or [""])[0].strip().lower() or None
+    except OSError:
+        pass
+    return {"abierta": abierta, "firmada": estado.get("signedIn") if isinstance(estado.get("signedIn"), bool) else None,
+            "cuenta": cuenta, "alFrente": abierta and (frente or "") == "Grok Bot", "reposoS": reposo,
+            "version": str(estado.get("appVersion") or "")[:20] or None}
 
 
 def maquina_local():
@@ -209,6 +236,8 @@ def maquina_local():
     if forzada:
         return forzada
     n = (socket.gethostname() or "").lower()
+    if "negro14" in n:
+        return "MacBookProNegro14"
     if "air16plata" in n or "air-16-plata" in n:
         return "MacBookAir16plata"
     if "mini" in n:
@@ -787,6 +816,17 @@ def main():
     guardar_proyectos()
     guardar_otros()
     cuerpo = {"maquina": maq, "agentes": agentes, "ts": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")}
+    try:
+        app = grokbot_app(cc.get("reposoS"), cc.get("alFrente"))
+    except Exception:
+        app = None
+    if app and app["abierta"]:
+        cuerpo["grokbotApp"] = app
+        print("%s grokbotApp %s · cuenta %s · al frente %s · reposo %ss" % (ahora.strftime("%H:%M:%S"), "abierta" if app["abierta"] else "cerrada",
+              app["cuenta"] or "¿? (falta %s)" % GROKBOT_CUENTA_FILE, "sí" if app["alFrente"] else "no", app["reposoS"]))
+    if not agentes and "grokbotApp" not in cuerpo:
+        print("%s %s sin agentes ni app Grok Bot abierta: nada que mandar" % (ahora.strftime("%H:%M:%S"), maq))
+        return 0
     resumen = " · ".join("%s/%s %s tok (+%s cache) %s" % (a["agente"], a["motor"], format(a["tokHoy"], ","), format(a["cacheHoy"], ","),
                           json.dumps(a["porProyecto"], ensure_ascii=False)) for a in agentes)
     print("%s %s %s [%.1fs]" % (ahora.strftime("%H:%M:%S"), maq, resumen, time.time() - t0))

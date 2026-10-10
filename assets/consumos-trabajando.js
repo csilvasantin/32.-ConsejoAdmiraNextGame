@@ -1,7 +1,9 @@
 /* «Trabajando ahora» — franja en lo alto de /consumos (GrokBotBox, 09-10-2026 · r28).
  * Lee /api/flota/trabajando cada 10 s: una tarjeta por consejero/agente con retrato, nombre, máquina · motor/modelo,
  * foco/tarea, proyecto y encargo. Color: VERDE trabajando · AMARILLO con Carlos · GRIS parado («parado · hace X min ·
- * último: …») o «sin latido». Orden: verde, amarillo, gris. Sin datos: lo dice, nunca inventa. */
+ * último: …») o «sin latido». Orden: verde, amarillo, gris. Sin datos: lo dice, nunca inventa.
+ * r40: tokens honestos («≈ X tok/h (15 min × 4)» + real de la última hora; «sin medición» en vez de 0) y aviso en la
+ * fila de resumen cuando la presencia viene de caché o no responde (faltan agentes). */
 (function (root) {
   'use strict';
   var API = '/api/flota/trabajando', POLL = 10000;
@@ -29,12 +31,25 @@
     if (r && r.img) return '<span class="tr-foto" role="img" aria-label="' + esc(t.agente) + '" style="background-image:url(\'' + esc(r.img) + '\');background-size:cover;background-position:center 25%"></span>';
     return '<span class="tr-foto tr-ini" aria-hidden="true">' + ini + '</span>';
   }
+  /** r40: «≈ 2,5 M tok/h (15 min × 4) · 868 k última hora»; «sin medición» si no hay medición de tokens. */
+  function tokens(t) {
+    if (t.sinMedicion) return ' · <span class="tr-sinmed" title="Este agente no tiene medición de tokens (sin pulso o a 0 todo el día): no es un 0 real">sin medición de tokens</span>';
+    var r = '';
+    if (t.tokHora > 0) r += ' · ≈ ' + fmt(t.tokHora) + ' tok/h <small>(15 min × 4)</small>';
+    if (t.tokUltimaHora != null && (t.tokHora > 0 || t.tokUltimaHora > 0)) r += ' · ' + fmt(t.tokUltimaHora) + ' última hora';
+    return r;
+  }
+  function aviso(d) {
+    if (!d || d.presencia === 'ok') return '';
+    if (d.presencia === 'cache') return ' · <span class="tr-aviso" title="Yokup no ha respondido: se usa la última presencia buena">⚠ presencia de hace ' + esc(hace(d.presenciaEdadS || 0).replace('hace ', '')) + '</span>';
+    return ' · <span class="tr-aviso" title="Yokup no ha respondido y no hay presencia reciente: solo salen agentes con pulso de tokens">⚠ presencia sin respuesta: pueden faltar agentes</span>';
+  }
   function tarjeta(t) {
     var motor = [t.motor, t.modelo && t.modelo !== t.motor ? t.modelo : ''].filter(Boolean).join(' · ');
     var que = t.tarea || t.foco || '';
     var linea;
     if (t.estado === 'gris') linea = t.motivo === 'sin latido' ? '<span class="tr-est">sin latido</span>' : '<span class="tr-est">parado · ' + esc(hace(t.haceS)) + '</span>' + (que ? ' · último: ' + esc(que) : '');
-    else linea = '<span class="tr-est">' + (t.estado === 'amarillo' ? 'con Carlos' : 'trabajando') + (t.tokHora > 0 ? ' · ' + fmt(t.tokHora) + ' tokens/hora' : '') + '</span>' + (que ? ' · ' + esc(que) : '');
+    else linea = '<span class="tr-est">' + (t.estado === 'amarillo' ? 'con Carlos' : 'trabajando') + '</span>' + tokens(t) + (que ? ' · ' + esc(que) : '');
     var chips = (t.proyecto ? '<span class="tr-chip">' + esc(t.proyecto) + '</span>' : '') + (t.encargo ? '<span class="tr-chip tr-enc">' + esc(t.encargo) + '</span>' : '');
     return '<li class="tr-card tr-' + esc(t.estado) + '" title="' + esc(t.motivo + (t.foco ? ' — ' + t.foco : '')) + '">' + retrato(t) +
       '<span class="tr-txt"><b class="tr-nom"><i class="tr-punto" aria-hidden="true"></i>' + esc(t.agente) + '</b>' +
@@ -55,8 +70,8 @@
         (grises.length ? '<span class="tr-grises" title="' + esc(grises.map(function (t) { return t.agente; }).join(', ')) + '">' + grises.map(retrato).join('') + '<small>' + grises.length + ' parados</small></span>' : '');
     }
     var v = ts.filter(function (t) { return t.estado === 'verde'; }).length, a = ts.filter(function (t) { return t.estado === 'amarillo'; }).length;
-    if (res) res.innerHTML = '<b>' + v + '</b> trabajando · <b>' + a + '</b> con Carlos · <b>' + (ts.length - v - a) + '</b> parados';
-    if (pie) pie.innerHTML = 'Actualizado ' + new Date(d.generado).toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid' }) + ' (Madrid) · verde = tokens en los últimos 15 min, latido «trabajando» de &lt; 2 min o proceso con CPU · amarillo = con Carlos · gris = parado · fuentes: <a href="https://bot.yokup.com/api/presence">presencia de Yokup</a> + <a href="/api/consumos/velocidad">pulso de tokens</a>' + (d.presencia !== 'ok' ? ' · ⚠ presencia sin respuesta' : '') + ' · cada 10 s';
+    if (res) res.innerHTML = '<b>' + v + '</b> trabajando · <b>' + a + '</b> con Carlos · <b>' + (ts.length - v - a) + '</b> parados' + aviso(d);
+    if (pie) pie.innerHTML = 'Actualizado ' + new Date(d.generado).toLocaleTimeString('es-ES', { timeZone: 'Europe/Madrid' }) + ' (Madrid) · verde = tokens en los últimos 15 min, latido «trabajando» de &lt; 2 min o CPU del propio proceso · amarillo = con Carlos (pulso, o app de escritorio / tmux adjunto en el Mac que estás usando) · gris = parado · fuentes: <a href="https://bot.yokup.com/api/presence">presencia de Yokup</a> + <a href="/api/consumos/velocidad">pulso de tokens</a>' + (d.presencia === 'cache' ? ' · ⚠ presencia de caché (hace ' + esc(String(d.presenciaEdadS)) + ' s)' : d.presencia !== 'ok' ? ' · ⚠ presencia sin respuesta' : '') + ' · cada 10 s';
   }
   function leer() { return fetch(API, { cache: 'no-store' }).then(function (r) { return r.ok ? r.json() : null; }).catch(function () { return null; }).then(pinta); }
   function arranca() {

@@ -3,38 +3,64 @@
  * real quién trabaja?»). Une bot.yokup.com/api/presence (latidos y process_snapshot) con /api/consumos/velocidad
  * (tok/h de los últimos 15 min y «con Carlos»). Criterio en flota-trabajando-lib.mjs.
  * GET → { ok, tarjetas:[{agente, estado:'verde'|'amarillo'|'gris', motivo, maquina, motor, modelo, foco, tarea, proyecto,
- *         encargo, tokHora, tokHoy, haceS, retrato}], presencia:'ok'|'sin respuesta', generado }. Caché de borde 8 s.
+ *         encargo, tokHora, tokUltimaHora, sinMedicion, tokHoy, haceS, retrato}], presencia:'ok'|'cache'|'sin respuesta',
+ *         presenciaEdadS, generado }. Caché de borde 8 s.
  */
 import { tarjetas } from "../../../flota-trabajando-lib.mjs";
 import { calcular } from "../consumos/velocidad.js";
 
 export const PRESENCIA = "https://bot.yokup.com/api/presence";
+/** r40: Yokup tarda 6-7 s en responder; con 5 s la franja perdía la presencia 3 de cada 4 veces (y con ella a
+ *  Merovingio, Cypher, Niobe…). Ahora 10 s y, si aun así falla, la última presencia buena de hace ≤ 2 min. */
+export const TIMEOUT_PRESENCIA_MS = 10000;
+export const MAX_EDAD_PRESENCIA_S = 120;
 const cab = { "content-type": "application/json; charset=utf-8", "cache-control": "no-store", "access-control-allow-origin": "*" };
+const CLAVE_ULTIMA = "https://admira.live/api/flota/trabajando?_presencia_ultima=1";
+let ultimaBuena = null; // { d, ts } en memoria del isolate (además de la caché de borde)
 
-async function leerPresencia(fetchImpl) {
+/** Solo para tests. */
+export function _olvidarPresencia() { ultimaBuena = null; }
+
+async function leerPresenciaViva(fetchImpl) {
   try {
-    const r = await fetchImpl(PRESENCIA, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(5000) });
+    const r = await fetchImpl(PRESENCIA, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(TIMEOUT_PRESENCIA_MS) });
     if (!r.ok) return null;
     const d = await r.json();
     return d && Array.isArray(d.presence) ? d : null;
   } catch (e) { return null; }
 }
 
-export async function construir({ env, fetchImpl }) {
-  const ahoraMs = Date.now();
-  const [p, v] = await Promise.all([leerPresencia(fetchImpl || fetch), calcular({ env, fetchImpl }).catch(() => null)]);
+function cacheBorde() { try { return typeof caches !== "undefined" && caches.default ? caches.default : null; } catch (e) { return null; } }
+
+/** Presencia viva, o la última buena (≤ 2 min) marcada como caché. → { d, estado:'ok'|'cache'|'sin respuesta', edadS } */
+export async function leerPresencia(fetchImpl, ahoraMs = Date.now(), cache = cacheBorde()) {
+  const d = await leerPresenciaViva(fetchImpl);
+  if (d) {
+    ultimaBuena = { d, ts: ahoraMs };
+    if (cache) { try { await cache.put(new Request(CLAVE_ULTIMA), new Response(JSON.stringify(ultimaBuena), { headers: { "content-type": "application/json", "cache-control": "public, max-age=" + MAX_EDAD_PRESENCIA_S } })); } catch (e) {} }
+    return { d, estado: "ok", edadS: 0 };
+  }
+  let u = ultimaBuena;
+  if (cache) { try { const hit = await cache.match(new Request(CLAVE_ULTIMA)); if (hit) { const c = await hit.json(); if (c && c.d && (!u || c.ts > u.ts)) u = c; } } catch (e) {} }
+  if (u && ahoraMs - u.ts <= MAX_EDAD_PRESENCIA_S * 1000) return { d: u.d, estado: "cache", edadS: Math.round((ahoraMs - u.ts) / 1000) };
+  return { d: null, estado: "sin respuesta", edadS: null };
+}
+
+export async function construir({ env, fetchImpl, ahoraMs: ahoraFijo, cache }) {
+  const ahoraMs = ahoraFijo || Date.now();
+  const [pr, v] = await Promise.all([leerPresencia(fetchImpl || fetch, ahoraMs, cache === undefined ? cacheBorde() : cache), calcular({ env, fetchImpl }).catch(() => null)]);
+  const p = pr.d;
   const ahoraS = Math.floor(ahoraMs / 1000);
   return {
     ok: true, tarjetas: tarjetas({ presencia: p ? p.presence : [], velocidad: v, ahoraS }),
-    presencia: p ? "ok" : "sin respuesta", pulso: v && v.ok ? "ok" : "sin datos",
+    presencia: pr.estado, presenciaEdadS: pr.edadS, pulso: v && v.ok ? "ok" : "sin datos",
     fuentes: [PRESENCIA, "/api/consumos/velocidad"], generado: new Date(ahoraMs).toISOString(),
   };
 }
 
 export async function onRequestGet(ctx) {
-  let cache = null;
+  const cache = cacheBorde();
   const ck = new Request(new URL(ctx.request.url).origin + "/api/flota/trabajando?_c=1");
-  try { cache = typeof caches !== "undefined" && caches.default ? caches.default : null; } catch (e) {}
   if (cache) { try { const hit = await cache.match(ck); if (hit) return new Response(await hit.text(), { status: 200, headers: cab }); } catch (e) {} }
   const cuerpo = JSON.stringify(await construir(ctx));
   if (cache) {

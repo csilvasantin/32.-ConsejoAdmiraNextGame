@@ -16,10 +16,12 @@ test("estado: con Carlos (amarillo) > trabajando (verde) > parado/sin latido (gr
   assert.deepEqual(estadoTrabajo({ ahoraS: T }), { estado: "gris", motivo: "sin latido" });
 });
 
-test("process_snapshot: cpu > 5 y declarado hace < 2 min = trabajando", () => {
-  assert.equal(latidoTrabajando({ source: "process_snapshot", cpu: 24, declared_updated: T - 20, updated: T - 500 }, T), true);
-  assert.equal(latidoTrabajando({ source: "process_snapshot", cpu: 3, declared_updated: T - 20 }, T), false);
-  assert.equal(latidoTrabajando({ source: "process_snapshot", cpu: 40, declared_updated: T - 600 }, T), false);
+test("process_snapshot: CPU DEL PROCESO > 5 y declarado hace < 2 min = trabajando (r40: la cpu de la máquina no vale)", () => {
+  assert.equal(latidoTrabajando({ source: "process_snapshot", proc_cpu: 24, declared_updated: T - 20, updated: T - 500 }, T), true);
+  assert.equal(latidoTrabajando({ source: "process_snapshot", cpu: 24, cpu_scope: "process", declared_updated: T - 20 }, T), true);
+  assert.equal(latidoTrabajando({ source: "process_snapshot", proc_cpu: 3, declared_updated: T - 20 }, T), false);
+  assert.equal(latidoTrabajando({ source: "process_snapshot", proc_cpu: 40, declared_updated: T - 600 }, T), false);
+  assert.equal(latidoTrabajando({ source: "process_snapshot", cpu: 27, idle: 61946, declared_updated: T - 20 }, T), false, "cpu de toda la máquina");
 });
 
 test("nombres canónicos: NeoMBP16 → Neo, Oraculo → Oráculo, TrinityMacBookPro16 → Trinity, Steve Jobs → Jobs", () => {
@@ -39,7 +41,11 @@ test("tarjetas: dedupe por agente (manda el latido más fresco), siempre los 6 c
   const velocidad = { porAgente: [{ agente: "Morfeo", tokHora: 0, tokHoy: 5, conCarlos: true, maquina: "MacMini" }, { agente: "Trinity", tokHora: 3e6, tokHoy: 7e6, maquina: "MacBookPro16", proyectoAhora: "admira.studio" }] };
   const t = tarjetas({ presencia, velocidad, ahoraS: T });
   const n = t.map((x) => x.agente);
+  // r6: el consumo de Musk y Huang va dentro de Merovingio (pool de Grok Bot de csilvasantin).
+  // r44/r45: los dos SÍ salen (Consejeros), activos vía Merovingio: están los 6 consejeros Grok.
   for (const c of CONSEJEROS_GROK) assert.ok(n.includes(c), c);
+  for (const c of ["Musk", "Huang"]) assert.equal(t.find((x) => x.agente === c).via, "Merovingio", c);
+  assert.deepEqual(t.find((x) => x.agente === "Merovingio").incluye.sort(), ["Huang", "Musk"]);
   assert.equal(n.filter((x) => x === "Neo").length, 1);
   const neo = t.find((x) => x.agente === "Neo");
   assert.equal(neo.maquina, "MacBook Pro 16");
@@ -47,6 +53,8 @@ test("tarjetas: dedupe por agente (manda el latido más fresco), siempre los 6 c
   assert.deepEqual(t.slice(0, 3).map((x) => [x.agente, x.estado]), [["Trinity", "verde"], ["Jobs", "verde"], ["Morfeo", "amarillo"]]);
   assert.equal(t.find((x) => x.agente === "Jobs").encargo, "FLT-101758");
   assert.equal(t.find((x) => x.agente === "Lucas").motivo, "sin latido");
+  // r44: Merovingio con su cara (Matrix); la de la ilustración de coetáneos es de Musk.
+  assert.equal(t.find((x) => x.agente === "Merovingio").retrato.img, "/avatars/merovingio.jpg");
   assert.ok(t.find((x) => x.agente === "Musk").retrato.img.includes("coetaneos"));
 });
 
@@ -56,11 +64,12 @@ test("/api/flota/trabajando: une la presencia; sin pulso ni Yokup sigue enseñan
   const fetchImpl = async (url) => String(url).includes("presence")
     ? new Response(JSON.stringify({ ok: true, presence: [{ persona: "Jobs", machine: "GrokBot", runtime: "Grok", model: "Grok Heavy", source: "heartbeat", mode: "trabajando", updated: ahora - 5, task: "FLT-101758 a/b/c" }] }))
     : new Response("no", { status: 503 });
-  const r = await construir({ env: {}, fetchImpl });
+  const r = await construir({ env: {}, fetchImpl, cache: null });
   assert.equal(r.presencia, "ok");
   assert.equal(r.tarjetas[0].agente, "Jobs");
   assert.equal(r.tarjetas[0].estado, "verde");
-  assert.equal(r.tarjetas.filter((t) => CONSEJEROS_GROK.includes(t.agente)).length, 6);
+  assert.equal(r.tarjetas.filter((t) => CONSEJEROS_GROK.includes(t.agente)).length, 6); // r44/r45: + Musk y Huang vía Merovingio
+  assert.ok(r.tarjetas.find((t) => t.agente === "Merovingio"));
 });
 
 test("gris: «hace X» y máquina de la fuente más fresca (latido, proceso o pulso)", () => {
@@ -76,9 +85,10 @@ test("gris: «hace X» y máquina de la fuente más fresca (latido, proceso o pu
   assert.deepEqual([neo.maquina, neo.haceS, neo.fuente], ["MacBook Pro 16", 400, "process_snapshot"]);
 });
 
-test("retratos: Musk y Huang con recorte de cara propio; Oráculo con avatar de iniciales PNG", () => {
+test("retratos: Musk con recorte de cara propio, Merovingio con la suya (Matrix, r44); Oráculo con avatar de iniciales PNG", () => {
   const t = tarjetas({ presencia: [], velocidad: { porAgente: [{ agente: "Oráculo", tokHora: 0, tokHoy: 1 }] }, ahoraS: T });
   assert.deepEqual(t.find((x) => x.agente === "Musk").retrato.cara, { l: 9, t: 44, w: 9, h: 16 });
+  assert.deepEqual(t.find((x) => x.agente === "Merovingio").retrato, { img: "/avatars/merovingio.jpg" });
   assert.equal(t.find((x) => x.agente === "Oráculo").retrato.img, "/avatars/oraculo.png");
 });
 
@@ -86,7 +96,9 @@ test("r39 · un pulso con retraso (Cursor) nunca pone en verde: los consejeros G
   const { tarjetas } = await import("./flota-trabajando-lib.mjs");
   const ahoraS = 1760000000;
   const velocidad = { porAgente: [{ agente: "Grok Bot (Consejo)", conRetraso: true, tokHora: 380000, tokHoy: 1000000, maquina: "GrokBotBox", ultimoEvento: new Date((ahoraS - 9000) * 1000).toISOString() }] };
-  const t = tarjetas({ presencia: [], velocidad, ahoraS }).find((x) => x.agente === "Grok Bot (Consejo)");
+  // r6: el pulso del pool de Grok Bot se apunta a Merovingio.
+  const t = tarjetas({ presencia: [], velocidad, ahoraS }).find((x) => x.agente === "Merovingio");
+  assert.equal(t.tokHoy, 1000000);
   assert.ok(t, "sale la tarjeta");
   assert.notEqual(t.estado, "verde");
 });

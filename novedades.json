@@ -1,4 +1,41 @@
 {
+  "v.10.10.2026.r9.13:39": [
+    "Reparto del finde largo (10-12 oct) vuelve a la rama: /reparto con los 5 pilares y la tira arriba en /teamwork y /status (REPARTO FINDE, sobre Consumos r45)."
+  ],
+  "v.10.10.2026.r8.13:30": [
+    "Jensen Huang, como Musk: sale activo vía Merovingio en Consejeros, con su propia cara y el mismo estado que el Merovingio (y el mismo «con Carlos»); su consumo se cuenta una sola vez, en la ficha de Merovingio."
+  ],
+  "v.10.10.2026.r7.13:25": [
+    "Merovingio y Elon (Musk) son una dualidad: cuando el Merovingio trabaja, Musk sale activo a la vez en Consejeros con el mismo estado (y el mismo «con Carlos»), marcado «activo vía Merovingio»; sus tokens se cuentan una sola vez, en la ficha de Merovingio.",
+    "El Merovingio tiene su propia cara (el Merovingio de Matrix) en «Trabajando ahora», en los chips y en los retratos compartidos de la suite (misiones, equipo, informes); Musk conserva la suya.",
+    "Arreglado: el consumo de Musk/Huang que va al pool de Merovingio ya no se pierde al juntarlo (se suman sus pulsos)."
+  ],
+  "v.10.10.2026.r6.13:05": [
+    "Matriz de agentes: exactamente 6 suscripciones de pago, dos por proveedor — Grok: Merovingio (pool de Grok Bot de csilvasantin) y Smith (Grok de Jobs, leyendas) · Codex: Oráculo y Trinity · Claude: Morfeo y Neo. El resumen dice «6 suscripciones de pago (2 Grok · 2 Codex · 2 Claude) · K gratis».",
+    "En rojo cualquier instancia con un modelo de pago fuera de esas 6 (regla rota): hoy sale WhiteRabbit con Claude en el Mac Mini.",
+    "Solo 2 consejeros principales por cuenta van en Grok Bot de pago: Musk + Huang (incluidos en el pool de Merovingio) y Jobs + Wozniak (incluidos en el Grok de Smith). El resto del Consejo va por defecto en Nemotron 3 Ultra gratis; si consume Grok Bot de pago, en rojo.",
+    "«Trabajando ahora» separa Agentes y Consejeros, cada grupo con sus cuentas (Merovingio, r43). El consumo de Musk, Huang y Grok Bot del Consejo va en la ficha de Merovingio; «con Carlos» dice en qué Mac.",
+    "/reparto se conserva."
+  ],
+  "v.10.10.2026.r5.12:51": [
+    "/consumos respeta ?lang=en: «Trabajando ahora» y la nueva «Matriz de agentes» salen en inglés (Working now · Agent matrix) sin tener que abrir el modo experto.",
+    "Sigue lo de la r4: Oráculo y el Merovingio salen trabajando (latido < 15 min + encargo en curso, cualquier motor, también el plan C gratis) y la Matriz de agentes viva al final de la página. /reparto se conserva."
+  ],
+  "v.10.10.2026.r4.12:45": [
+    "Consumos · «Trabajando ahora»: ya salen todos los agentes que trabajan de verdad. Cuenta como trabajando quien tiene latido de menos de 15 min y un encargo en curso, sea cual sea su motor y aunque vaya con el plan C gratis (OpenCode/Nemotron no reporta tokens). Ya aparecen Oráculo y el Merovingio.",
+    "Cada agente sale una sola vez con su modelo principal real (Oráculo = Codex, Merovingio = Grok CLI); si además tiene una instancia gratuita se apunta «+ plan C gratis».",
+    "Nueva «Matriz de agentes» al final de /consumos, en vivo con los datos de agentes_vivos: de quién depende, equipo, modelo y dónde corre, abierto o cerrado y coste. Resumen «N de M de pago · K gratis». Los agentes nuevos aparecen solos y deben ser gratuitos.",
+    "Integra el arreglo de Merovingio (presencia con 10 s y caché, con Carlos por presencia, tokens honestos) y conserva /reparto."
+  ],
+  "v.10.10.2026.r3.11:29": [
+    "Reparto del finde: en el tablero (/teamwork) la tira de los 5 pilares sale arriba, justo debajo de la barra, y no al final de la página.",
+    "El sello de /reparto sigue mostrando sus novedades en un popover al pasar el ratón."
+  ],
+  "v.10.10.2026.r2.11:22": [
+    "Reparto del finde largo (10, 11 y 12 de octubre) visible en admira.live: nueva página /reparto con los 5 pilares, su responsable y su encargo — admira.store Morfeo (#5492), admira.tv Neo (#5493), admira.app Smith (#5494), admira.studio Oráculo (#5503) y admira.biz Trinity (#5504); Jobs supervisa a Oráculo y a Trinity.",
+    "La misma tira del reparto sale arriba en el tablero (/teamwork) y en /status, con el estado vivo de cada encargo. Se oculta sola al acabar el lunes 12.",
+    "El sello de /reparto enseña estas novedades en un popover al pasar el ratón."
+  ],
   "v.09.10.2026.r39.22:20": [
     "Consumos: los datos con retraso (Cursor de Grok Bot, horas atrás) ya no cuentan como «ahora»: fuera de los tokens/hora de la flota, la aguja, el pronóstico del cuentakilómetros y el verde de «Trabajando ahora»; en el ranking se dice «datos con ~X h de retraso». Sus tokens siguen en los totales de hoy."
   ],

@@ -161,7 +161,7 @@ test("tarjetas: manda el límite más alto; coetáneos sin lectura; recomendaci�
   assert.match(c[1].pista, /1 % el 4 de octubre/);
   const r = recomendarCuentas(c);
   assert.match(r.texto, /les sobra 73 %/);
-  assert.match(r.texto, /Sin lectura: Coetáneos, Neo · Claude Code, Trinity · Codex, Morfeo · Claude, Oráculo · Codex, Cursor Pro/);
+  assert.match(r.texto, /Sin lectura: Coetáneos, Neo · Claude Code, Trinity · Codex, Morfeo · Claude, Oráculo · Codex, Merovingio · Grok Bot \(Cursor Pro\)/);
   assert.deepEqual(r.ranking.map((x) => x.id), ["leyendas", "coetaneos", "neo-claude", "trinity-codex", "morfeo-claude", "oraculo-codex", "cursor"]);
 });
 

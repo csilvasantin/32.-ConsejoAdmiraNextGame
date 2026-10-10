@@ -33,6 +33,7 @@ Granularidad: por turno (un turno largo cae entero al acabar). Proyecto por turn
 los logs de terminal de ese turno (terminal/*.log con mtime dentro del turno), si no el del turno anterior (≤ 30 min), si
 no el cwd de la sesión.
 Uso: pulso-tokens.py [--dry-run] [--maquina NOMBRE] [--con-carlos]   (--con-carlos: solo evalúa e imprime)
+r40: MacBookAir16plata en MAPA; PULSO_MAQUINA=<nombre> fuerza la máquina si el hostname no la delata.
 """
 import glob, json, os, re, sys, time, socket, subprocess, urllib.request, urllib.error
 from datetime import datetime, timedelta, timezone
@@ -194,11 +195,22 @@ ENDPOINT = os.environ.get("PULSO_ENDPOINT", "https://www.admira.live/api/consumo
 MAPA = {
     "MacMini": {"claude": ("Morfeo", "csilvasantin@gmail.com"), "codex": ("Oráculo", "csilvasantin@gmail.com"), "grok": ("Smith", "Grok CLI (grok-4.7)")},
     "MacBookPro16": {"claude": ("Neo", "csilva@admira.com"), "codex": ("Trinity", "ChatGPT Pro")},
+    # r40 (Carlos, 10-10-2026): el Mac donde trabaja Carlos no mandaba pulso (máquina no reconocida → salía con código 2).
+    # r41 (Carlos, 12:48 — «Neo está conmigo en el MBP16, no en el Air»): el pulso atribuye por MOTOR, y en el Air los
+    # agentes que viven ahí son los de tmux con bot-inbox: Morfeo (Claude, tmux «morfeo») y Oráculo (Codex, tmux
+    # «oraculo»). Atribuir Claude→Neo y Codex→Trinity aquí ponía a Neo «con Carlos» en el Air estando en el MBP16.
+    # Los tokens de la app de escritorio de este Mac (si la hay) cuentan para el mismo motor: Morfeo / Oráculo.
+    "MacBookAir16plata": {"claude": ("Morfeo", "por confirmar (MacBookAir16plata)"), "codex": ("Oráculo", "por confirmar (MacBookAir16plata)")},
 }
 
 
 def maquina_local():
+    forzada = os.environ.get("PULSO_MAQUINA")
+    if forzada:
+        return forzada
     n = (socket.gethostname() or "").lower()
+    if "air16plata" in n or "air-16-plata" in n:
+        return "MacBookAir16plata"
     if "mini" in n:
         return "MacMini"
     if "pro-16" in n or "pro16" in n:
@@ -745,7 +757,7 @@ def main():
     dry = "--dry-run" in sys.argv
     maq = sys.argv[sys.argv.index("--maquina") + 1] if "--maquina" in sys.argv else maquina_local()
     if maq not in MAPA:
-        print("pulso: máquina no reconocida (%r); usa --maquina MacMini|MacBookPro16" % maq, file=sys.stderr)
+        print("pulso: máquina no reconocida (%r); usa --maquina %s (o PULSO_MAQUINA)" % (maq, "|".join(MAPA)), file=sys.stderr)
         return 2
     ahora = datetime.now(MADRID)
     dia = ahora.strftime("%Y-%m-%d")

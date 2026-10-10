@@ -231,7 +231,7 @@ test("r27 cursor: la ESTIMACIÓN de Yokup de un consejero cubierto no se suma en
   const yk = { metodo: "media-hoy", porAgente: [{ agente: "Wozniak · Grok", tokHora: 900000, tokHoy: 13300000 }, { agente: "Musk · Grok", tokHora: 1000, tokHoy: 2000 }] };
   const m = mezclar(yk, [doc, mac], AHORA);
   const nombres = m.porAgente.map((a) => a.agente);
-  assert.ok(nombres.includes("Grok Bot (Consejo)") && nombres.includes("Smith"));
+  assert.ok(nombres.includes("Merovingio") && !nombres.includes("Grok Bot (Consejo)") && nombres.includes("Smith"));
   assert.ok(!nombres.includes("Wozniak · Grok"), "Woz va dentro de Cursor Pro: su estimación no se suma");
   assert.ok(nombres.includes("Musk · Grok"), "los no cubiertos siguen");
   assert.deepEqual(m.excluidosYokup.map((x) => x.agente), ["Wozniak · Grok"]);
@@ -242,7 +242,7 @@ test("r27 cursor: la ESTIMACIÓN de Yokup de un consejero cubierto no se suma en
   assert.ok(Math.abs(sumaPr - (m.tokHora - 1000)) <= m.porProyecto.length + 1, `Σ proyectos del pulso (${sumaPr}) = Σ agentes con pulso`);
   assert.equal(m.porProyecto.find((x) => x.proyecto === "admiranext.com").tokHoy, 1000000);
   assert.match(m.etiqueta, /Cursor \(datos con ~5 h de retraso\)/);
-  const g = m.porAgente.find((a) => a.agente === "Grok Bot (Consejo)");
+  const g = m.porAgente.find((a) => a.agente === "Merovingio");
   assert.equal(g.modelo, "Grok Bot / Cursor Pro");
   // r39: Cursor (retraso) fuera de todo lo «en vivo»: ni en la velocidad de la flota ni en los agentes en tiempo real; sí en tokHoy.
   assert.equal(g.tokHora, null);

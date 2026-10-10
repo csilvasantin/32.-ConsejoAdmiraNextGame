@@ -1,0 +1,72 @@
+{
+  "id": "reparto-finde-10-12-oct-2026",
+  "titulo": "Reparto del finde largo",
+  "desde": "2026-10-10",
+  "hasta": "2026-10-12",
+  "dias": "sábado 10, domingo 11 y lunes 12 de octubre de 2026",
+  "orden": "Carlos Silva Santin",
+  "registro": "Merovingio · Elon Musk (CEO) — encargos #5495, #5502 y #5506",
+  "actualizado": "2026-10-10T11:22:00+02:00",
+  "pilares": [
+    {
+      "pilar": "admira.store",
+      "url": "https://admira.store",
+      "que": "gemelos digitales Xpacio, modo experto, demos",
+      "agente": "Morfeo",
+      "persona": "Morfeo",
+      "maquina": "MacMini",
+      "supervisa": "",
+      "encargo": 5492,
+      "etiqueta": "#5492.10.10",
+      "fin": "2026-10-12 20:00 Madrid"
+    },
+    {
+      "pilar": "admira.tv",
+      "url": "https://admira.tv",
+      "que": "playlists por dispositivo, hilo musical, gestor de colas, emisión",
+      "agente": "Neo",
+      "persona": "Neo",
+      "maquina": "MacBookProNegro14",
+      "supervisa": "",
+      "encargo": 5493,
+      "etiqueta": "#5493.10.10",
+      "fin": "2026-10-12 20:00 Madrid"
+    },
+    {
+      "pilar": "admira.app",
+      "url": "https://admira.app",
+      "que": "inventario ITIL, incidencias y tickets, Mi comercio",
+      "agente": "Smith",
+      "persona": "Smith",
+      "maquina": "MacMini",
+      "supervisa": "",
+      "encargo": 5494,
+      "etiqueta": "#5494.10.10",
+      "fin": "2026-10-12 20:00 Madrid"
+    },
+    {
+      "pilar": "admira.studio",
+      "url": "https://admira.studio",
+      "que": "",
+      "agente": "Oráculo",
+      "persona": "Oraculo",
+      "maquina": "MacMini",
+      "supervisa": "Jobs",
+      "encargo": 5503,
+      "etiqueta": "#5503.10.10",
+      "fin": "2026-10-12 20:00 Madrid"
+    },
+    {
+      "pilar": "admira.biz",
+      "url": "https://admira.biz",
+      "que": "",
+      "agente": "Trinity",
+      "persona": "Trinity",
+      "maquina": "MacBookProNegro14",
+      "supervisa": "Jobs",
+      "encargo": 5504,
+      "etiqueta": "#5504.10.10",
+      "fin": "2026-10-12 20:00 Madrid"
+    }
+  ]
+}

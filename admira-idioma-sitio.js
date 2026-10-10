@@ -20,6 +20,7 @@
   "(datos mock, sin cookies)": "(mock data, no cookies)",
   "(demo con datos mock)": "(demo with mock data)",
   "(o 8767/8768) en esa máquina. Si curl responde y aquí falla, es el permiso del navegador, no el daemon.": "(or 8767/8768) on that machine. If curl responds and it fails here, it is the browser permission, not the daemon.",
+  "(por asignar)": "(unassigned)",
   ", no en un panel externo": ", not in an external panel",
   ", no por agente: Trinity ×2 aparece más de una vez porque la misma persona trabaja en varias máquinas. Sus puntos no se suman entre sí.": ", not by agent: Trinity ×2 appears more than once because the same persona works on several machines. Its points are not added together.",
   ", sin cookies y sin intermediarios.": ", without cookies and without intermediaries.",
@@ -62,6 +63,7 @@
   "30 días ↗": "30 days ↗",
   "30 s o humo detectado": "30 s or smoke detected",
   "401 al conectar": "401 when connecting",
+  "5 pilares": "5 pillars",
   "7 días": "7 days",
   "7 días: entrada muerta, plegada abajo": "7 days: dead entry, collapsed below",
   "8 roles · nombre y alias editables · 3 rasgos por rol · color:": "8 roles · editable name and alias · 3 traits per role · colour:",
@@ -1503,6 +1505,7 @@
   "Relojes de decisión": "Decision clocks",
   "Reparte las viviendas, vigila que cada vecino deje constancia en Yokup y publica lo que sale.": "Splits the homes, makes sure each neighbour logs a record in Yokup and publishes what ships.",
   "Reparto del finde": "Weekend split",
+  "Reparto del finde · 5 pilares · admira.live": "Weekend split · 5 pillars · admira.live",
   "Reproducir vídeo (solo Contenido)": "Play video (Content only)",
   "Reproductor": "Player",
   "Reproductor nativo de emisión sobre macOS para la flota de pantallas.": "Native macOS broadcast player for the screen fleet.",
@@ -1664,6 +1667,8 @@
   "Subir periodo del ranking": "Next ranking period",
   "Superficie de reporte de los": "Reporting surface of the",
   "SÓTANO": "BASEMENT",
+  "Sábado 10, domingo 11 y lunes 12 de octubre de 2026 · orden de Carlos Silva Santin. Cada pilar tiene un responsable y su encargo en admira.live. Jobs supervisa a Oráculo y a Trinity. Registro: Merovingio · Elon Musk (CEO) — encargos #5495, #5502 y #5506.": "Saturday 10, Sunday 11 and Monday 12 October 2026 · ordered by Carlos Silva Santin. Each pillar has an owner and its task in admira.live. Jobs supervises Oráculo and Trinity. Logged by: Merovingio · Elon Musk (CEO) — tasks #5495, #5502 and #5506.",
+  "Sábado 10, domingo 11 y lunes 12 de octubre de 2026 · orden de Carlos. Cada pilar tiene un responsable y su encargo en admira.live. Jobs supervisa a Oráculo y a Trinity.": "Saturday 10, Sunday 11 and Monday 12 October 2026 · ordered by Carlos. Each pillar has an owner and its task in admira.live. Jobs supervises Oráculo and Trinity.",
   "Sí sale": "Yes, it ships",
   "Sí · abrir cronograma": "Yes · open schedule",
   "Sólo nodos vivos": "Only live nodes",
@@ -2674,7 +2679,10 @@
     [/^(.+) \/tasks\/all\?scope=fleet → (\d+)\. El marcador sale con lo que sí llegó, no con datos inventados\.$/, "$1 /tasks/all?scope=fleet → $2. The scoreboard shows what did arrive, not invented data."],
     [/^y hay (\d+) sesión\(es\) abierta\(s\)\. Yokup ve los procesos, pero no puede atarlos a una misión o tarea\. Motivos que declara: (.+)$/, "and there are $1 open session(s). Yokup sees the processes, but cannot tie them to a mission or task. Declared reasons: $2"],
     [/^· (\d+) agentes? activos? de (\d+)$/, "· $1 active agent(s) of $2"],
-    [/^(Proyecto en curso · sale de su trabajo de las últimas horas|Proyecto principal estructural · asignado en el censo; hoy no se declaró otro|Sin proyecto concreto del día · Galaxia Admira, el default de la flota) · (.+)$/, function (m, t) { return t(m[1]) + " · " + m[2]; }]
+    [/^(Proyecto en curso · sale de su trabajo de las últimas horas|Proyecto principal estructural · asignado en el censo; hoy no se declaró otro|Sin proyecto concreto del día · Galaxia Admira, el default de la flota) · (.+)$/, function (m, t) { return t(m[1]) + " · " + m[2]; }],
+    [/^(.+) \(supervisa ([^)]+)\) · encargo (#[\d.]+)$/, "$1 (supervises $2) · task $3"],
+    [/^\(por asignar\) · (.+)$/, "(unassigned) · $1"],
+    [/^datos hace (\d+) ?(s|min|h)$/, "data $1$2 ago"]
   ];
   I.diccionario(dicc, reglas);
 })(typeof globalThis !== "undefined" ? globalThis : this);

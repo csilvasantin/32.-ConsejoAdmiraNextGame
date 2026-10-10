@@ -11,12 +11,15 @@
 # Uso:  latido-merovingio.sh            # un latido y sale (para un LaunchAgent con StartInterval 60)
 #       latido-merovingio.sh --bucle    # late cada $LATIDO_CADA s (60) mientras viva
 #       latido-merovingio.sh --dry-run  # imprime el cuerpo sin mandar nada
-# Variables: LATIDO_PERSONA (Merovingio) · LATIDO_MAQUINA (hostname corto) · LATIDO_TMUX (merovingio) ·
+# Vivo = hay un proceso que casa con $LATIDO_PROCESO (por defecto merovingio-vivo.sh, el bucle «sleep 20» que corre en
+# una ventana de Terminal, no en tmux) o existe la sesión tmux $LATIDO_TMUX.
+# Variables: LATIDO_PERSONA (Merovingio) · LATIDO_MAQUINA (hostname corto) · LATIDO_PROCESO · LATIDO_TMUX (merovingio) ·
 #            LATIDO_MODELO (Grok) · LATIDO_URL · LATIDO_KEY_FILE · LATIDO_CADA (60)
 set -uo pipefail
 PERSONA="${LATIDO_PERSONA:-Merovingio}"
 MAQUINA="${LATIDO_MAQUINA:-$(scutil --get LocalHostName 2>/dev/null || hostname -s)}"
 SESION="${LATIDO_TMUX:-merovingio}"
+PROCESO="${LATIDO_PROCESO:-merovingio-vivo.sh}"
 MODELO="${LATIDO_MODELO:-Grok}"
 URL="${LATIDO_URL:-https://bot.yokup.com/api/presence}"
 KEY_FILE="${LATIDO_KEY_FILE:-$HOME/.agents-comms/panel.key}"
@@ -25,25 +28,30 @@ CADA="${LATIDO_CADA:-60}"
 json_str() { python3 -c 'import json,sys; print(json.dumps(sys.argv[1]))' "$1"; }
 
 cuerpo() {
-  local vivo="false" adjunto="false" foco
-  if command -v tmux >/dev/null 2>&1 && tmux has-session -t "$SESION" 2>/dev/null; then
-    vivo="true"
-    [ -n "$(tmux list-clients -t "$SESION" 2>/dev/null)" ] && adjunto="true"
+  local vivo="false" adjunto="false" foco sid
+  if [ -n "${PROCESO}" ] && pgrep -f "${PROCESO}" >/dev/null 2>&1; then
+    vivo="true"; sid="${PROCESO}"; foco="Bucle de encargos (${PROCESO})"
+    # Una ventana de Terminal con el bucle: hay un tty de usuario delante.
+    ps -o tty= -p "$(pgrep -f "${PROCESO}" | head -1)" 2>/dev/null | grep -q "ttys" && adjunto="true"
+  elif command -v tmux >/dev/null 2>&1 && tmux has-session -t "${SESION}" 2>/dev/null; then
+    vivo="true"; sid="${SESION}"; foco="Bucle de encargos en tmux (${SESION})"
+    [ -n "$(tmux list-clients -t "${SESION}" 2>/dev/null)" ] && adjunto="true"
+  else
+    sid="${PROCESO:-${SESION}}"; foco="Bucle de Merovingio no encontrado"
   fi
-  if [ "$vivo" = "true" ]; then foco="Bucle de encargos en tmux «$SESION»"; else foco="Sin sesión tmux «$SESION»"; fi
   # Pasivo: un bucle que lee encargos está vivo pero no «trabajando»; así no infla el verde de /consumos.
-  printf '{"persona":%s,"machine":%s,"runtime":"Grok","host":"cli","model":%s,"focus":%s,"session_id":%s,"attached":%s,"mode":"pasivo","working":false}\n' \
-    "$(json_str "$PERSONA")" "$(json_str "$MAQUINA")" "$(json_str "$MODELO")" "$(json_str "$foco")" "$(json_str "$SESION")" "$adjunto"
+  printf '{"persona":%s,"machine":%s,"runtime":"Grok","host":"cli","model":%s,"focus":%s,"session_id":%s,"attached":%s,"alive":%s,"mode":"pasivo","working":false}\n' \
+    "$(json_str "${PERSONA}")" "$(json_str "${MAQUINA}")" "$(json_str "${MODELO}")" "$(json_str "${foco}")" "$(json_str "${sid}")" "${adjunto}" "${vivo}"
 }
 
 latir() {
   local b; b="$(cuerpo)"
   if [ "${1:-}" = "--dry-run" ]; then echo "$b"; return 0; fi
-  [ -r "$KEY_FILE" ] || { echo "latido: falta $KEY_FILE (clave de panel de admira-telegram)" >&2; return 3; }
+  [ -r "$KEY_FILE" ] || { echo "latido: falta ${KEY_FILE} (clave de panel de admira-telegram)" >&2; return 3; }
   local code
   code="$(curl -sS -m 15 -o /dev/null -w '%{http_code}' -X POST "$URL" \
     -H 'content-type: application/json' -H "authorization: Bearer $(tr -d '\r\n' < "$KEY_FILE")" --data "$b")" || code="000"
-  echo "$(date '+%H:%M:%S') latido $PERSONA@$MAQUINA → HTTP $code"
+  echo "$(date '+%H:%M:%S') latido ${PERSONA}@${MAQUINA} → HTTP ${code}"
   [ "$code" = "200" ] || [ "$code" = "201" ] || [ "$code" = "204" ]
 }
 

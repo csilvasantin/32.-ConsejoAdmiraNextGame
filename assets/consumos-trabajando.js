@@ -61,6 +61,9 @@
     if (t.tokUltimaHora != null && (t.tokHora > 0 || t.tokUltimaHora > 0)) r += ' · ' + fmt(t.tokUltimaHora) + ' ' + T('última hora', 'last hour');
     return r;
   }
+  // r18 (Carlos, 15:55): la familia visible es «GrokBot», nunca «Grok» a secas; «Grok CLI» → «GrokBot CLI». Se respetan
+  // los nombres de modelo con versión («Grok 4.7», «Grok Heavy», «grok-4.7») y los nombres de consejeros/URLs (no llevan «Grok»).
+  function gb(s) { return s == null ? s : String(s).replace(/\bGrok Bot\b/g, 'GrokBot').replace(/\bGrok CLI\b/g, 'GrokBot CLI').replace(/\bGrok\b(?![\s-]*(?:\d|Heavy|Imagine|Fast|Code|Mini|Beta))/g, 'GrokBot'); }
   /** r41: «con Carlos · MBP16». */
   function cc(t) { return T('con Carlos', 'with Carlos') + (t.conCarlosEn ? ' · ' + t.conCarlosEn : ''); }
   /** r44: «· activo vía Merovingio» (dualidad Elon ↔ Merovingio). */
@@ -71,14 +74,14 @@
     return ' · <span class="tr-aviso" title="' + esc(T('Yokup no ha respondido y no hay presencia reciente: solo salen agentes con pulso de tokens', 'Yokup did not answer and there is no recent presence: only agents with a token pulse are shown')) + '">⚠ ' + T('presencia sin respuesta: pueden faltar agentes', 'no presence answer: agents may be missing') + '</span>';
   }
   function tarjeta(t) {
-    var motor = [t.motor, t.modelo && t.modelo !== t.motor ? t.modelo : ''].filter(Boolean).join(' · ');
+    var motor = gb([t.motor, t.modelo && t.modelo !== t.motor ? t.modelo : ''].filter(Boolean).join(' · '));
     var que = t.tarea || t.foco || '';
     var linea;
     if (t.estado === 'gris') linea = t.motivo === 'sin latido' ? '<span class="tr-est">' + T('sin latido', 'no heartbeat') + '</span>' : '<span class="tr-est">' + T('parado', 'idle') + ' · ' + esc(hace(t.haceS)) + '</span>' + via(t) + (que ? ' · ' + T('último', 'last') + ': ' + esc(que) : '');
     else linea = '<span class="tr-est">' + (t.estado === 'amarillo' ? esc(cc(t)) : T('trabajando', 'working')) + '</span>' + via(t) + (t.enCurso > 0 ? ' · ' + t.enCurso + ' ' + T('en curso', 'in progress') : '') + tokens(t) + (que ? ' · ' + esc(que) : '');
     var fuera = t.fuera && t.fuera.length ? '<span class="tr-chip tr-fuera" title="' + esc(t.fuera.join(' · ')) + '">⚠ ' + T('de pago fuera de las 6', 'paid outside the 6') + '</span>' : '';
     var chips = fuera + notaCoste(t) + (t.proyecto ? '<span class="tr-chip">' + esc(t.proyecto) + '</span>' : '') + (t.encargo ? '<span class="tr-chip tr-enc">' + esc(t.encargo) + '</span>' : '');
-    return '<li class="tr-card tr-' + esc(t.estado) + (t.fuera && t.fuera.length ? ' tr-rojo' : '') + '" title="' + esc(t.motivo + (t.foco ? ' — ' + t.foco : '') + (t.incluye && t.incluye.length ? ' · ' + T('incluye el consumo de ', 'includes the usage of ') + t.incluye.join(', ') : '')) + '">' + retrato(t) +
+    return '<li class="tr-card tr-' + esc(t.estado) + (t.fuera && t.fuera.length ? ' tr-rojo' : '') + '" title="' + esc(gb(t.motivo) + (t.foco ? ' — ' + t.foco : '') + (t.incluye && t.incluye.length ? ' · ' + T('incluye el consumo de ', 'includes the usage of ') + t.incluye.join(', ') : '')) + '">' + retrato(t) +
       '<span class="tr-txt"><b class="tr-nom"><i class="tr-punto" aria-hidden="true"></i>' + esc(t.agente) + '</b>' +
       '<small class="tr-maq">' + esc([t.maquina, motor].filter(Boolean).join(' · ') || '—') + '</small>' +
       '<small class="tr-que">' + linea + '</small>' + (chips ? '<span class="tr-chips">' + chips + '</span>' : '') + '</span></li>';
@@ -101,13 +104,13 @@
   function altChip(t) {
     // r16: con la app Grok Bot en varios Macs se enseñan todos («MBP14 + MBA16»); el de «con Carlos» va el primero.
     var a = [t.appMaquinas && t.appMaquinas.length > 1 ? t.maqCorta : t.estado === 'amarillo' && t.conCarlosEn ? t.conCarlosEn : t.maqCorta, t.gratis ? T('gratis', 'free') : t.planC ? '+C' : ''].filter(Boolean).join(' · ');
-    var b = t.runtime || '';
+    var b = gb(t.runtime || '');
     if (!a && !b) return '';
     return ' <small class="tr-alt" title="' + esc(T('Cada 10 s: máquina ↔ runtime', 'Every 10 s: machine ↔ runtime')) + '"><span class="tr-a">' + esc(a || b) + '</span><span class="tr-b">' + esc(b || a) + '</span></small>';
   }
   function chipsDe(l) {
     var vivos = l.filter(function (t) { return t.estado !== 'gris'; }), grises = l.filter(function (t) { return t.estado === 'gris'; });
-    return vivos.map(function (t) { return '<span class="tr-chipa tr-' + esc(t.estado) + (t.fuera && t.fuera.length ? ' tr-rojo' : '') + '" title="' + esc(t.agente + ' · ' + (t.estado === 'amarillo' ? cc(t) : T('trabajando', 'working')) + (t.via ? ' · ' + T('vía ', 'via ') + t.via : '') + ' · ' + (t.motor || '') + (t.planC ? T(' + plan C gratis', ' + free plan C') : t.gratis ? T(' · gratis', ' · free') : '')) + '">' + retrato(t) + '<i></i>' + esc(t.agente) + altChip(t) + '</span>'; }).join('') +
+    return vivos.map(function (t) { return '<span class="tr-chipa tr-' + esc(t.estado) + (t.fuera && t.fuera.length ? ' tr-rojo' : '') + '" title="' + esc(t.agente + ' · ' + (t.estado === 'amarillo' ? cc(t) : T('trabajando', 'working')) + (t.via ? ' · ' + T('vía ', 'via ') + t.via : '') + ' · ' + gb(t.motor || '') + (t.planC ? T(' + plan C gratis', ' + free plan C') : t.gratis ? T(' · gratis', ' · free') : '')) + '">' + retrato(t) + '<i></i>' + esc(t.agente) + altChip(t) + '</span>'; }).join('') +
       (grises.length ? '<span class="tr-grises" title="' + esc(grises.map(function (t) { return t.agente; }).join(', ')) + '">' + grises.map(retrato).join('') + '<small>' + grises.length + ' ' + T('parados', 'idle') + '</small></span>' : '');
   }
   function pinta(d) {

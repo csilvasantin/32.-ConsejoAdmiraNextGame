@@ -18,14 +18,14 @@ const apps = [
 test("r14: Jobs y Wozniak en el Mac de su app Grok Bot (MBP14) y con Carlos si está al frente", () => {
   const out = colocarPorAppGrokBot(fichas(), apps);
   const j = out.find((t) => t.agente === "Jobs"), w = out.find((t) => t.agente === "Wozniak");
-  for (const t of [j, w]) { assert.equal(t.maquina, "MacBookProNegro14"); assert.equal(t.conCarlosEn, "MBP14"); assert.match(t.motivo, /app Grok Bot al frente en MBP14/); }
+  for (const t of [j, w]) { assert.equal(t.maquina, "MacBookProNegro14"); assert.equal(t.conCarlosEn, "MBP14"); assert.match(t.motivo, /app GrokBot al frente en MBP14/); }
   assert.equal(j.estado, "amarillo"); // r15: «con Carlos» manda sobre verde, como en estadoTrabajo
   assert.equal(out.find((t) => t.agente === "Smith").maquina, "MacMini"); // Smith no se mueve
 });
 
 test("r14: Musk y Huang en el MBA16 (app abierta, no al frente → sin «con Carlos» copiado de Merovingio)", () => {
   const out = colocarPorAppGrokBot(fichas(), apps);
-  for (const n of ["Musk", "Huang"]) { const t = out.find((x) => x.agente === n); assert.equal(t.maquina, "MacBookAir16plata"); assert.equal(t.conCarlosEn, null); assert.match(t.motivo, /app Grok Bot abierta en MBA16/); }
+  for (const n of ["Musk", "Huang"]) { const t = out.find((x) => x.agente === n); assert.equal(t.maquina, "MacBookAir16plata"); assert.equal(t.conCarlosEn, null); assert.match(t.motivo, /app GrokBot abierta en MBA16/); }
   assert.equal(out.find((t) => t.agente === "Musk").estado, "verde");
 });
 

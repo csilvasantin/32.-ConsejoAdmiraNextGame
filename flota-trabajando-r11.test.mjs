@@ -40,7 +40,7 @@ test("Smith parado → Jobs sigue saliendo (gris), nunca desaparece", () => {
 test("runtime corto: cerrados Grok/Codex/Claude; abiertos OpenCode · Nemotron 3 Ultra (o el real)", () => {
   assert.equal(runtimeCorto({ motor: "Claude Code" }), "Claude");
   assert.equal(runtimeCorto({ motor: "Codex" }), "Codex");
-  assert.equal(runtimeCorto({ motor: "Grok Bot · Grok CLI", modelo: "pool Grok Bot csilvasantin" }), "Grok");
+  assert.equal(runtimeCorto({ motor: "Grok Bot · Grok CLI", modelo: "pool Grok Bot csilvasantin" }), "GrokBot CLI");
   assert.equal(runtimeCorto({ motor: "OpenCode", modelo: "nvidia/nvidia/nemotron-3-ultra-550b-a55b" }), "OpenCode · Nemotron 3 Ultra");
   assert.equal(runtimeCorto({ motor: "DeepAgents", modelo: "nvidia/nemotron-3-ultra-550b-a55b:free" }), "DeepAgents · Nemotron 3 Ultra");
   assert.equal(runtimeCorto({ motor: "Nemotron 3 Ultra", modelo: "gratis · por defecto", gratis: true }), "OpenCode · Nemotron 3 Ultra");
@@ -50,7 +50,7 @@ test("runtime corto: cerrados Grok/Codex/Claude; abiertos OpenCode · Nemotron 3
 test("cada ficha trae maqCorta y runtime", () => {
   const t = tarjetas({ presencia: [smithVivo], ahoraS: T });
   assert.equal(de(t, "Smith").maqCorta, "MBP16");
-  assert.equal(de(t, "Smith").runtime, "Grok");
+  assert.equal(de(t, "Smith").runtime, "GrokBot CLI");
   assert.equal(de(t, "Disney").runtime, "OpenCode · Nemotron 3 Ultra");
 });
 

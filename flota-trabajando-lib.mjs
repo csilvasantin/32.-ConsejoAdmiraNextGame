@@ -31,7 +31,7 @@ export const VENTANA_LATIDO_S = 120;
 export const VENTANA_VIVO_S = 900;
 export const VIVO_SIEMPRE = ["Merovingio"];
 /** Modelo principal (de pago) cuando la instancia que late es la del plan C gratis. */
-export const PRINCIPAL = { Merovingio: "Grok Bot · Grok CLI", "Oráculo": "Codex", Morfeo: "Claude Code", Trinity: "Codex", Smith: "Grok", Neo: "Claude Code" };
+export const PRINCIPAL = { Merovingio: "GrokBot · GrokBot CLI", "Oráculo": "Codex", Morfeo: "Claude Code", Trinity: "Codex", Smith: "GrokBot CLI", Neo: "Claude Code" };
 export const CPU_MIN = 5;
 export const CONSEJEROS_GROK = ["Jobs", "Wozniak", "Lucas", "Disney", "Musk", "Huang"];
 /**
@@ -100,22 +100,22 @@ export function colocarPorAppGrokBot(out, apps) {
     t.maquina = app.maquina;
     t.maquinas = orden.map((a) => a.maquina);
     t.appMaquinas = orden.map((a) => ({ maquina: a.maquina, corta: maquinaCorta(a.maquina), conCarlos: a === app && conCarlos, alFrente: !!a.alFrente, reposoS: a.reposoS ?? null }));
-    t.app = { nombre: "Grok Bot", cuenta, alFrente: !!app.alFrente, reposoS: app.reposoS ?? null };
+    t.app = { nombre: "GrokBot", cuenta, alFrente: !!app.alFrente, reposoS: app.reposoS ?? null };
     const todas = t.appMaquinas.map((m) => m.corta).join(" + ");
     if (conCarlos) {
       t.estado = "amarillo"; // como estadoTrabajo: «con Carlos» manda sobre verde
       t.conCarlosEn = maquinaCorta(app.maquina);
-      t.motivo = "con Carlos: app Grok Bot al frente en " + t.conCarlosEn + (orden.length > 1 ? " · abierta también en " + t.appMaquinas.slice(1).map((m) => m.corta).join(" + ") : "") + (t.via ? " · tokens vía " + t.via : "");
+      t.motivo = "con Carlos: app GrokBot al frente en " + t.conCarlosEn + (orden.length > 1 ? " · abierta también en " + t.appMaquinas.slice(1).map((m) => m.corta).join(" + ") : "") + (t.via ? " · tokens vía " + t.via : "");
     } else {
       if (t.conCarlosEn && t.estado === "amarillo") t.estado = t.via ? "verde" : "gris";
       t.conCarlosEn = null;
-      t.motivo = (t.motivo || "") + " · app Grok Bot abierta en " + todas;
+      t.motivo = (t.motivo || "") + " · app GrokBot abierta en " + todas;
     }
   }
   return out;
 }
 
-/** r11: runtime corto de una ficha para la franja: cerrados «Grok» / «Codex» / «Claude»; abiertos «OpenCode · Nemotron 3 Ultra»
+/** r11: runtime corto de una ficha para la franja: cerrados «GrokBot» (o «GrokBot CLI») / «Codex» / «Claude»; abiertos «OpenCode · Nemotron 3 Ultra»
  *  (o el runtime y el modelo abierto reales). */
 export function runtimeCorto({ motor = null, modelo = null, gratis = false } = {}) {
   const m = String(motor || ""), mo = String(modelo || ""), t = (m + " " + mo).toLowerCase();
@@ -130,7 +130,9 @@ export function runtimeCorto({ motor = null, modelo = null, gratis = false } = {
   }
   if (/claude/.test(t)) return "Claude";
   if (/codex|chatgpt|openai/.test(t)) return "Codex";
-  if (/grok|cursor/.test(t)) return "Grok";
+  // r18 (Carlos, 15:55): la familia visible es «GrokBot» («Grok» a secas confunde); en terminal (Grok CLI, motor «grok» del pulso) «GrokBot CLI».
+  if (/grok(bot)? cli/.test(t) || m === "grok") return "GrokBot CLI";
+  if (/grok|cursor/.test(t)) return "GrokBot";
   return m || null;
 }
 // r16 (Carlos, 15:21): cada agente con nombre de Matrix lleva la cara de su personaje (como Merovingio = Lambert Wilson);
@@ -198,7 +200,9 @@ export function cpuProceso(e) {
 export function claveMaquina(m) {
   return sinTilde(m).replace(/\.local$/, "").replace(/[^a-z0-9]/g, "");
 }
-const CORTAS = { macbookpro16: "MBP16", macbookair16plata: "MBA16", macbookpronegro14: "MBP14", macbookpro14: "MBP14", macmini: "Mini", grokbotbox: "Box", grokbot: "GrokBot" };
+const CORTAS = { macbookpro16: "MBP16", macbookair16plata: "MBA16", macbookpronegro14: "MBP14", macbookpro14: "MBP14", macmini: "Mini", grokbotbox: "Box", grokbot: "GrokBot",
+  // r18: los móviles con la app GrokBot (solo si llega una señal real con esa máquina; hoy no hay ninguna, ver novedades r18).
+  iphone: "iPhone", galaxyfold: "Fold", samsunggalaxyfold: "Fold" };
 /** «MacBook Pro 16» → «MBP16», «MacBookAir16plata» → «MBA16», «MacMini» → «Mini»; desconocida → tal cual. */
 export function maquinaCorta(m) {
   if (!m) return null;
@@ -351,7 +355,7 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
     let motor = p && p.motor ? (p.motor === "claude" ? "Claude Code" : p.motor === "codex" ? "Codex" : p.motor) : (l && l.runtime) || null;
     let modeloCard = (l && l.model) || (pf && pf.modelo) || null;
     // r4: cada agente una vez con su modelo principal real; el plan C gratis va como nota (planC), no como su motor.
-    if (PRINCIPAL[x.agente] && (!motor || esGratis(motor, modeloCard) || x.agente === "Merovingio")) { motor = PRINCIPAL[x.agente]; modeloCard = x.agente === "Merovingio" ? "pool Grok Bot csilvasantin" : null; }
+    if (PRINCIPAL[x.agente] && (!motor || esGratis(motor, modeloCard) || x.agente === "Merovingio")) { motor = PRINCIPAL[x.agente]; modeloCard = x.agente === "Merovingio" ? "pool GrokBot csilvasantin" : null; }
     // r6: instancias vivas con modelo de pago fuera de las 6 suscripciones → regla rota (en rojo).
     const fuera = [...new Set(x.latidos.filter((e) => ahoraS - (Number(e.declared_updated || e.updated) || 0) < VENTANA_VIVO_S).map((e) => fueraDeLas6(e.persona || x.agente, e.runtime, e.model)).filter(Boolean))];
     const soloGratis = inst.size > 0 && !nPago && !PRINCIPAL[x.agente];

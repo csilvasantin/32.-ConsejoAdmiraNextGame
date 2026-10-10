@@ -1,4 +1,9 @@
 {
+  "v.10.10.2026.r15.14:58": [
+    "/normativa en inglés de verdad: traducción completa de las 27 normas (assets/normativa-en.html, misma estructura, enlaces y anclas #n01…#n27); con ?lang=en o /idioma ENG se cambia el cuerpo entero y al volver a castellano se repone.",
+    "Las normas tienen ancla propia (#n01…#n27): los enlaces «norma 07», «norma 15»… ya llevan a su sitio.",
+    "Consejeros: con su app Grok Bot al frente, salen en amarillo «con Carlos» (como el resto de fichas), no en verde."
+  ],
   "v.10.10.2026.r14.14:52": [
     "Consejeros en el Mac de su app Grok Bot: Jobs y Wozniak (csilva@admira.com) salen en el MBP14 negro y Musk y Huang (csilvasantin) en el MBA16, donde Carlos tiene abierta la app; ya no copian la máquina de Smith/Merovingio. Los tokens siguen en la ficha de Smith/Merovingio.",
     "«Con Carlos» de un consejero = su app Grok Bot al frente y el Mac con reposo < 5 min.",

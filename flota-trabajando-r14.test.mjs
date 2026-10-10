@@ -19,7 +19,7 @@ test("r14: Jobs y Wozniak en el Mac de su app Grok Bot (MBP14) y con Carlos si e
   const out = colocarPorAppGrokBot(fichas(), apps);
   const j = out.find((t) => t.agente === "Jobs"), w = out.find((t) => t.agente === "Wozniak");
   for (const t of [j, w]) { assert.equal(t.maquina, "MacBookProNegro14"); assert.equal(t.conCarlosEn, "MBP14"); assert.match(t.motivo, /app Grok Bot al frente en MBP14/); }
-  assert.equal(j.estado, "verde"); // ya estaba verde (tokens de Smith): no baja
+  assert.equal(j.estado, "amarillo"); // r15: «con Carlos» manda sobre verde, como en estadoTrabajo
   assert.equal(out.find((t) => t.agente === "Smith").maquina, "MacMini"); // Smith no se mueve
 });
 

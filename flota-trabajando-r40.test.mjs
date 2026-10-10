@@ -202,3 +202,29 @@ test("latidosOcultos: el latido de Merovingio@Air (guardado, oculto por el vigil
   const t = tarjetas({ presencia: [...d.presence, ...x, { persona: "Merovingio", machine: "GrokBotBox", source: "heartbeat", runtime: "DeepAgents", updated: T - 55 }], ahoraS: T });
   assert.equal(de(t, "Merovingio").maquinas.includes("MacBookAir16plata"), true);
 });
+
+// ── r42 (Carlos, 12:51): la bolsa de Grok Bot de csilvasantin se enseña SIEMPRE como Merovingio ──
+import { agenteVisible, POOL_GROKBOT, perfilesFlota } from "./consumos-perfiles.mjs";
+import { normalizarPulso, aplicarPulso, mezclar } from "./consumos-pulso-lib.mjs";
+
+test("r42 · «Grok Bot (Consejo)» (y variantes) → Merovingio; el resto tal cual", () => {
+  assert.equal(POOL_GROKBOT, "Merovingio");
+  for (const n of ["Grok Bot (Consejo)", "Grok Bot", "grokbot", "Tokens Grok Bot (Consejo)"]) assert.equal(agenteVisible(n), "Merovingio", n);
+  for (const n of ["Neo", "Smith", "Grok CLI", "Trinity"]) assert.equal(agenteVisible(n), n);
+  assert.equal(canonico("Grok Bot (Consejo)"), "Merovingio");
+});
+
+test("r42 · pulso de Cursor guardado como «Grok Bot (Consejo)» sale en velocidad, desplegable y franja como Merovingio, sin duplicar", () => {
+  const ahora = Date.parse("2026-10-10T12:50:00+02:00");
+  const p = normalizarPulso({ maquina: "GrokBotBox", agentes: [{ agente: "Grok Bot (Consejo)", motor: "cursor", fuente: "cursor", cuenta: "Cursor Pro (Carlos Silva Santin)", tokHoy: 2109695, ultimoEvento: new Date(ahora - 3600e3).toISOString() }] }).pulso;
+  const { doc } = aplicarPulso(null, p, ahora - 60000);
+  assert.ok(doc.agentes["Grok Bot (Consejo)"], "el KV no cambia de clave");
+  const m = mezclar(null, [doc], ahora);
+  assert.deepEqual(m.porAgente.map((a) => a.agente), ["Merovingio"]);
+  assert.equal(perfilesFlota().filter((x) => x.agente === "Merovingio").length, 1);
+  assert.ok(!perfilesFlota().some((x) => x.agente === "Grok Bot (Consejo)"));
+  const t = tarjetas({ presencia: [{ persona: "Merovingio", machine: "GrokBotBox", source: "heartbeat", runtime: "DeepAgents", updated: Math.floor(ahora / 1000) - 30 }], velocidad: { porAgente: m.porAgente, conocidos: perfilesFlota() }, ahoraS: Math.floor(ahora / 1000) });
+  assert.equal(t.filter((x) => x.agente === "Merovingio").length, 1);
+  assert.ok(!t.some((x) => x.agente === "Grok Bot (Consejo)"));
+  assert.equal(t.find((x) => x.agente === "Merovingio").tokHoy, 2109695);
+});

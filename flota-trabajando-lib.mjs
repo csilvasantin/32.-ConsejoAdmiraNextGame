@@ -51,7 +51,8 @@ export function canonico(persona) {
   if (!p) return "";
   const base = sinTilde(p).split("·")[0].trim();
   // r40: «Elon / Merovingio», «Elon», «MerovingioMBA16»… → Merovingio (el Grok principal), nunca el consejero Musk.
-  if (/(^|[^a-z])merovingio/.test(base) || /^elon(\s*\/.*)?$/.test(base) || /^elon(mba\d*|mbp\d*|macbook.*|grokbot|box)$/.test(base)) return "Merovingio";
+  // r42: la bolsa de Grok Bot de la cuenta («Grok Bot (Consejo)», «Grok Bot») se enseña como Merovingio.
+  if (/^(tokens\s+)?grok\s*bot(\s*\((consejo|pool|cursor[^)]*)\))?$/.test(base) || /(^|[^a-z])merovingio/.test(base) || /^elon(\s*\/.*)?$/.test(base) || /^elon(mba\d*|mbp\d*|macbook.*|grokbot|box)$/.test(base)) return "Merovingio";
   for (const c of CANON) {
     const k = sinTilde(c);
     if (base === k || base.endsWith(" " + k) || (base.startsWith(k) && /^(mbp\d*|macbook.*|macmini|mini|grokbot|box|mba.*|\d+)$/.test(base.slice(k.length)))) return c;

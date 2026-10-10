@@ -234,8 +234,8 @@ export const CUENTAS = [
   agente("oraculo-codex", "Oráculo · Codex", "Oráculo · Codex (csilvasantin@gmail.com)", "ChatGPT Pro (csilvasantin@gmail.com)", "ChatGPT", "Codex semanal"),
   // r27: Cursor Pro de Carlos = los consejeros Grok Bot (Jobs, Wozniak, Lucas, Disney) juntos. Sin % del plan: lecturas solo
   // de tokens (fleet/cursor-uso.py, 00:00/12:00) + tokens de hoy del pulso. Smith NO va aquí (Grok CLI, otra cuenta).
-  { id: "cursor", nombre: "Cursor Pro", cuenta: "cursor-pro", plan: "Cursor Pro", consejeros: [], soloTokens: true,
-    nota: "Grok Bot (Consejo): Jobs, Wozniak, Lucas y Disney juntos. Cursor no da un % del plan ni separa por consejero; los tokens salen del export CSV de cursor.com con horas de retraso." },
+  { id: "cursor", nombre: "Merovingio · Grok Bot (Cursor Pro)", cuenta: "cursor-pro", plan: "Cursor Pro", consejeros: [], soloTokens: true,
+    nota: "Merovingio · bolsa de Grok Bot de csilvasantin (Merovingio, Mouse y los consejeros Jobs, Wozniak, Lucas, Disney…) juntos. Cursor no da un % del plan ni separa por consejero; los tokens salen del export CSV de cursor.com con horas de retraso." },
 ];
 
 const DIA = 24 * H;

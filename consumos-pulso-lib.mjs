@@ -25,6 +25,7 @@
  *  - «grok»: Grok CLI local (Smith en el Mac mini, ~/.grok/sessions/<cwd>/<id>/usage.json), mismo pulso de 60 s que Claude/Codex.
  */
 import { incremento } from "./consumos-velocidad-lib.mjs";
+import { agenteVisible } from "./consumos-perfiles.mjs";
 
 export const KEY_PREFIX = "consumos:pulso:v1:";
 export const KEY_INDICE = "consumos:pulso:v1:_maquinas";
@@ -283,7 +284,8 @@ export function agentesDePulso(docs, ahora) {
     if (!doc || !doc.agentes) continue;
     for (const [agente, a] of Object.entries(doc.agentes)) {
       const ret = conRetraso(a);
-      out.push({ agente, maquina: doc.maquina, motor: a.motor, cuenta: a.cuenta, tokHoy: a.tokHoy, cacheHoy: a.cacheHoy || 0,
+      // r42: la bolsa de Grok Bot («Grok Bot (Consejo)») se enseña como Merovingio.
+      out.push({ agente: agenteVisible(agente), maquina: doc.maquina, motor: a.motor, cuenta: a.cuenta, tokHoy: a.tokHoy, cacheHoy: a.cacheHoy || 0,
         porProyecto: a.porProyecto || null, ultimoEvento: a.ultimoEvento || null, ultimoPulso: a.ultimoPulso ? new Date(a.ultimoPulso).toISOString() : null,
         ...(a.modelo ? { modelo: a.modelo } : {}), ...(a.fuente ? { fuente: a.fuente } : {}), ...(a.cubre ? { cubre: a.cubre } : {}), ...(a.nota ? { nota: a.nota } : {}),
         metodo: ret ? "cursor (con retraso)" : "tiempo real", ...medirAgente(a, ahora), ...estadoConCarlos(a, ahora), proyectoAhora: proyectoDeAgente(a, ahora), _serie: a.serie || [] });

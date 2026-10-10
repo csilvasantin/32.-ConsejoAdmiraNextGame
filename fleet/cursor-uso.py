@@ -138,7 +138,7 @@ def main(argv):
         return 2
     path = args[0]
     opt = lambda k, d: args[args.index(k) + 1] if k in args else d
-    proyecto, agente = opt("--proyecto", "admiranext.com"), opt("--agente", "Grok Bot (Consejo)")
+    proyecto, agente = opt("--proyecto", "admiranext.com"), opt("--agente", "Grok Bot (Consejo)")  # r42: /consumos lo enseña como «Merovingio» (agenteVisible) — no cambiar la clave del KV
     dry = "--dry-run" in args
     ahora = datetime.now(timezone.utc)
     ev = leer_csv(path)

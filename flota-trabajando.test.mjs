@@ -88,7 +88,7 @@ test("r39 · un pulso con retraso (Cursor) nunca pone en verde: los consejeros G
   const { tarjetas } = await import("./flota-trabajando-lib.mjs");
   const ahoraS = 1760000000;
   const velocidad = { porAgente: [{ agente: "Grok Bot (Consejo)", conRetraso: true, tokHora: 380000, tokHoy: 1000000, maquina: "GrokBotBox", ultimoEvento: new Date((ahoraS - 9000) * 1000).toISOString() }] };
-  const t = tarjetas({ presencia: [], velocidad, ahoraS }).find((x) => x.agente === "Grok Bot (Consejo)");
+  const t = tarjetas({ presencia: [], velocidad, ahoraS }).find((x) => x.agente === "Merovingio");
   assert.ok(t, "sale la tarjeta");
   assert.notEqual(t.estado, "verde");
 });

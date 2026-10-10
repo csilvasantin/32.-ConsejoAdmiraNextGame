@@ -15,6 +15,10 @@
  *  · La CPU de los process_snapshot es la de TODA la máquina (todas las filas de un Mac traen la misma cpu/idle): ya no
  *    pone a nadie en verde. Solo cuenta proc_cpu (o cpu_scope «process»).
  *  · Merovingio (Elon / Merovingio, el Grok principal) siempre sale, como los consejeros; «Elon» → Merovingio, no Musk.
+ *  · r41 (Carlos, 12:48): «con Carlos · MBP16» (máquina corta en conCarlosEn); una app de escritorio solo cuenta si el
+ *    vigilante la ve adjunta (attached / terminal_visible) — la mera sesión «desktop:*» no; varios pulsos del mismo
+ *    agente en varias máquinas ya no se pisan (antes ganaba el último); un Mac también está «en uso» si su pulso dice
+ *    «reposo Ns» con N < 5 min.
  *  · Tokens honestos: tokHora es «≈ 15 min × 4»; se manda también tokUltimaHora (real) y sinMedicion cuando no hay
  *    medición de tokens (sin pulso, o pulso a 0 todo el día) para no pintar «0» como si fuera un dato.
  */
@@ -81,6 +85,12 @@ export function cpuProceso(e) {
 export function claveMaquina(m) {
   return sinTilde(m).replace(/\.local$/, "").replace(/[^a-z0-9]/g, "");
 }
+const CORTAS = { macbookpro16: "MBP16", macbookair16plata: "MBA16", macbookpronegro14: "MBP14", macbookpro14: "MBP14", macmini: "Mini", grokbotbox: "Box", grokbot: "GrokBot" };
+/** «MacBook Pro 16» → «MBP16», «MacBookAir16plata» → «MBA16», «MacMini» → «Mini»; desconocida → tal cual. */
+export function maquinaCorta(m) {
+  if (!m) return null;
+  return CORTAS[claveMaquina(m)] || String(m);
+}
 const fresco = (e, ahoraS) => ahoraS - (Number(e && (e.declared_updated || e.updated)) || 0) < VENTANA_LATIDO_S;
 
 /**
@@ -91,7 +101,13 @@ const fresco = (e, ahoraS) => ahoraS - (Number(e && (e.declared_updated || e.upd
  */
 export function maquinasConCarlos({ presencia = [], velocidad = null, ahoraS }) {
   const m = new Map();
-  for (const a of (velocidad && velocidad.porAgente) || []) if (a && a.conCarlos && a.maquina) m.set(claveMaquina(a.maquina), "pulso: " + (a.conCarlosMotivo || "con Carlos"));
+  for (const a of (velocidad && velocidad.porAgente) || []) {
+    if (!a || !a.maquina) continue;
+    if (a.conCarlos) { m.set(claveMaquina(a.maquina), "pulso: " + (a.conCarlosMotivo || "con Carlos")); continue; }
+    // «Mac activo (reposo 150s, Firefox al frente) pero sin señal de este agente»: el Mac está en uso (no el agente).
+    const r = String(a.conCarlosMotivo || "").match(/reposo (\d+)\s*s\b/);
+    if (r && Number(r[1]) < REPOSO_ACTIVO_S && !a.stale && !m.has(claveMaquina(a.maquina))) m.set(claveMaquina(a.maquina), "pulso: reposo " + r[1] + " s");
+  }
   for (const e of presencia || []) {
     if (!e || !e.machine || !fresco(e, ahoraS)) continue;
     const k = claveMaquina(e.machine);
@@ -107,9 +123,10 @@ export function maquinasConCarlos({ presencia = [], velocidad = null, ahoraS }) 
 export function superficieDeCarlos(e) {
   if (!e) return false;
   if (e.con_carlos === true || e.conCarlos === true) return true;
-  if (e.host === "app" && e.source === "process_snapshot") return true;
-  if (String(e.session_id || "").startsWith("desktop:")) return true;
-  if (e.host === "cli" && (e.attached === true || e.terminal_visible === true)) return true;
+  // r41: la ranura «desktop:*» existe aunque nadie la mire (en el Air salían Neo y Trinity sin estar con Carlos): solo
+  // cuenta si el vigilante la ve adjunta/visible. Igual para tmux: cliente adjunto.
+  const app = e.host === "app" || String(e.session_id || "").startsWith("desktop:");
+  if ((app || e.host === "cli") && (e.attached === true || e.terminal_visible === true)) return true;
   return false;
 }
 
@@ -138,19 +155,37 @@ const encargoDe = (...t) => { for (const x of t) { const m = String(x || "").mat
 const limpio = (s, n = 140) => String(s || "").replace(/<[^>]*>/g, " ").replace(/\s+/g, " ").trim().slice(0, n);
 
 /**
+ * Varios pulsos del mismo agente (uno por máquina) → uno: manda el que está con Carlos, si no el que más tok/h quema,
+ * si no el más reciente; las cifras de tokens se suman (son de máquinas distintas). null si no hay ninguno.
+ */
+export function unirPulsos(ps) {
+  const v = (ps || []).filter(Boolean);
+  if (!v.length) return null;
+  if (v.length === 1) return v[0];
+  const t = (a) => Date.parse(a.ultimoEvento || a.ultimoPulso || 0) || 0;
+  const base = [...v].sort((a, b) => (!!b.conCarlos - !!a.conCarlos) || ((Number(b.tokHora) || 0) - (Number(a.tokHora) || 0)) || (t(b) - t(a)))[0];
+  const suma = (k) => v.some((a) => a[k] != null) ? v.reduce((n, a) => n + (Number(a[k]) || 0), 0) : null;
+  const vivos = v.filter((a) => !a.conRetraso);
+  return { ...base, tokHoy: suma("tokHoy"), tokUltimaHora: suma("tokUltimaHora"),
+    tokHora: vivos.some((a) => a.tokHora != null) ? vivos.reduce((n, a) => n + (Number(a.tokHora) || 0), 0) : base.tokHora,
+    maquinasPulso: v.map((a) => a.maquina).filter(Boolean) };
+}
+
+/**
  * Tarjetas: presencia (lista) + velocidad (respuesta de /api/consumos/velocidad) → [{ agente, estado, … }] ordenado
  * verde → amarillo → gris (y dentro, por tok/h y frescura). Siempre los 6 consejeros Grok y Merovingio (SIEMPRE).
  */
 export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 24 * 3600 }) {
   const porAg = new Map();
-  const de = (n) => porAg.get(n) || (porAg.set(n, { agente: n, latidos: [], pulso: null }), porAg.get(n));
+  const de = (n) => porAg.get(n) || (porAg.set(n, { agente: n, latidos: [], pulsos: [] }), porAg.get(n));
   for (const e of presencia || []) {
     if (!e || !e.persona) continue;
     const upd = Number(e.declared_updated || e.updated) || 0;
     if (ahoraS - upd > maxEdadS) continue;
     de(canonico(e.persona)).latidos.push(e);
   }
-  for (const a of (velocidad && velocidad.porAgente) || []) if (a && a.agente) de(canonico(a.agente)).pulso = a;
+  // r41: un agente puede tener pulso en varias máquinas (Neo en el MBP16 y en el Air): se juntan, no se pisan.
+  for (const a of (velocidad && velocidad.porAgente) || []) if (a && a.agente) de(canonico(a.agente)).pulsos.push(a);
   for (const c of (velocidad && velocidad.conocidos) || []) if (c && c.agente) { const x = de(canonico(c.agente)); x.perfil = c; }
   for (const n of SIEMPRE) de(n);
   const activas = maquinasConCarlos({ presencia, velocidad, ahoraS });
@@ -158,12 +193,13 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
   for (const x of porAg.values()) {
     // Dedupe: varias máquinas → manda el latido más fresco (y, si alguno dice «trabajando», ese).
     x.latidos.sort((a, b) => (latidoTrabajando(b, ahoraS) - latidoTrabajando(a, ahoraS)) || ((Number(b.declared_updated || b.updated) || 0) - (Number(a.declared_updated || a.updated) || 0)));
-    const l = x.latidos[0] || null, p = x.pulso, pf = x.perfil || null;
+    const l = x.latidos[0] || null, p = unirPulsos(x.pulsos), pf = x.perfil || null;
     // Fuera: entradas del pulso sin tokens hoy, sin latido y sin perfil conocido (p. ej. «Anónimo»), salvo los consejeros.
     if (!x.latidos.length && !SIEMPRE.includes(x.agente) && !(p && Number(p.tokHoy) > 0) && !pf) continue;
     // r39: un pulso con retraso (Cursor) nunca pone en verde; los consejeros Grok, solo por su latido en vivo.
     const tokVivo = p && !p.conRetraso ? p.tokHora : null;
     const ccPres = p && p.conCarlos ? null : conCarlosPorPresencia(x.latidos, activas, ahoraS);
+    const conCarlosEn = p && p.conCarlos ? maquinaCorta(p.maquina) : ccPres ? maquinaCorta(ccPres.maquina) : null;
     const st = estadoTrabajo({ tokHora: tokVivo, conCarlos: (p && p.conCarlos) ? true : ccPres ? ccPres.motivo : false, latidos: x.latidos, ahoraS });
     if (st.motivo === "sin latido" && p && Number(p.tokHoy) > 0) st.motivo = "parado";
     const ultPulso = p && p.ultimoEvento ? Math.floor(Date.parse(p.ultimoEvento) / 1000) : 0;
@@ -179,7 +215,8 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
     const r = RETRATOS[x.agente];
     out.push({
       agente: x.agente, estado: st.estado, motivo: st.motivo,
-      maquina: (ccPres && ccPres.maquina) || (gris && fresca.maquina) || (enPulso && p.maquina) || (l && l.machine) || (p && p.maquina) || (pf && pf.maquina) || null,
+      conCarlosEn,
+      maquina: (p && p.conCarlos && p.maquina) || (ccPres && ccPres.maquina) || (gris && fresca.maquina) || (enPulso && p.maquina) || (l && l.machine) || (p && p.maquina) || (pf && pf.maquina) || null,
       motor, modelo: (l && l.model) || (pf && pf.modelo) || null,
       foco: limpio(l && l.focus), tarea: limpio(l && l.task, 120),
       proyecto: (enPulso && p.proyectoAhora) || (l && l.project) || (p && p.proyectoAhora) || null,

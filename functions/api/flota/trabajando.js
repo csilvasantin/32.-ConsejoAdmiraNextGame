@@ -21,13 +21,38 @@ let ultimaBuena = null; // { d, ts } en memoria del isolate (además de la cach�
 /** Solo para tests. */
 export function _olvidarPresencia() { ultimaBuena = null; }
 
-async function leerPresenciaViva(fetchImpl) {
+async function leerJson(fetchImpl, url) {
   try {
-    const r = await fetchImpl(PRESENCIA, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(TIMEOUT_PRESENCIA_MS) });
+    const r = await fetchImpl(url, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(TIMEOUT_PRESENCIA_MS) });
     if (!r.ok) return null;
     const d = await r.json();
     return d && Array.isArray(d.presence) ? d : null;
   } catch (e) { return null; }
+}
+
+/**
+ * r41 (Merovingio en el Air): Yokup guarda el latido por persona|máquina, pero el GET normal TIRA los latidos de una
+ * máquina con vigilante de procesos fresco y solo enseña las ranuras de su snapshot. El bucle de Merovingio no es una
+ * ranura del vigilante del Air → su latido (que sí se guarda: sale en ?all=1) nunca se veía. Se recuperan del histórico
+ * (?all=1) SOLO los latidos frescos (< 2 min) de una persona que el vigilante de esa máquina no declara: donde el
+ * vigilante tiene opinión, manda él.
+ */
+export function latidosOcultos(d, todo, ahoraS) {
+  if (!d || !todo || !Array.isArray(todo.presence)) return [];
+  const norm = (v) => String(v || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+  const visto = new Set((d.presence || []).map((e) => norm(e.persona) + "|" + norm(e.machine)));
+  const ranuras = new Set();
+  for (const m of d.control_machines || []) for (const sl of m.slots || []) ranuras.add(norm(sl.persona) + "|" + norm(m.machine));
+  return todo.presence.filter((e) => e && e.persona && e.machine && ahoraS - (Number(e.updated) || 0) < 120)
+    .filter((e) => { const k = norm(e.persona) + "|" + norm(e.machine); return !visto.has(k) && !ranuras.has(k); })
+    .map((e) => ({ ...e, source: e.source || "heartbeat", oculto: true }));
+}
+
+async function leerPresenciaViva(fetchImpl) {
+  const [d, todo] = await Promise.all([leerJson(fetchImpl, PRESENCIA), leerJson(fetchImpl, PRESENCIA + "?all=1")]);
+  if (!d) return null;
+  const extra = latidosOcultos(d, todo, Number(d.now) || Math.floor(Date.now() / 1000));
+  return extra.length ? { ...d, presence: [...d.presence, ...extra] } : d;
 }
 
 function cacheBorde() { try { return typeof caches !== "undefined" && caches.default ? caches.default : null; } catch (e) { return null; } }

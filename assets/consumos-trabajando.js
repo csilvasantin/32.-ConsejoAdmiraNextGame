@@ -39,6 +39,8 @@
     if (t.tokUltimaHora != null && (t.tokHora > 0 || t.tokUltimaHora > 0)) r += ' · ' + fmt(t.tokUltimaHora) + ' última hora';
     return r;
   }
+  /** r41: «con Carlos · MBP16». */
+  function cc(t) { return 'con Carlos' + (t.conCarlosEn ? ' · ' + t.conCarlosEn : ''); }
   function aviso(d) {
     if (!d || d.presencia === 'ok') return '';
     if (d.presencia === 'cache') return ' · <span class="tr-aviso" title="Yokup no ha respondido: se usa la última presencia buena">⚠ presencia de hace ' + esc(hace(d.presenciaEdadS || 0).replace('hace ', '')) + '</span>';
@@ -49,7 +51,7 @@
     var que = t.tarea || t.foco || '';
     var linea;
     if (t.estado === 'gris') linea = t.motivo === 'sin latido' ? '<span class="tr-est">sin latido</span>' : '<span class="tr-est">parado · ' + esc(hace(t.haceS)) + '</span>' + (que ? ' · último: ' + esc(que) : '');
-    else linea = '<span class="tr-est">' + (t.estado === 'amarillo' ? 'con Carlos' : 'trabajando') + '</span>' + tokens(t) + (que ? ' · ' + esc(que) : '');
+    else linea = '<span class="tr-est">' + (t.estado === 'amarillo' ? esc(cc(t)) : 'trabajando') + '</span>' + tokens(t) + (que ? ' · ' + esc(que) : '');
     var chips = (t.proyecto ? '<span class="tr-chip">' + esc(t.proyecto) + '</span>' : '') + (t.encargo ? '<span class="tr-chip tr-enc">' + esc(t.encargo) + '</span>' : '');
     return '<li class="tr-card tr-' + esc(t.estado) + '" title="' + esc(t.motivo + (t.foco ? ' — ' + t.foco : '')) + '">' + retrato(t) +
       '<span class="tr-txt"><b class="tr-nom"><i class="tr-punto" aria-hidden="true"></i>' + esc(t.agente) + '</b>' +
@@ -66,7 +68,7 @@
     var ch = document.getElementById('trabajando-chips');
     if (ch) {
       var vivos = ts.filter(function (t) { return t.estado !== 'gris'; }), grises = ts.filter(function (t) { return t.estado === 'gris'; });
-      ch.innerHTML = vivos.map(function (t) { return '<span class="tr-chipa tr-' + esc(t.estado) + '" title="' + esc(t.agente + ' · ' + (t.estado === 'amarillo' ? 'con Carlos' : 'trabajando')) + '">' + retrato(t) + '<i></i>' + esc(t.agente) + '</span>'; }).join('') +
+      ch.innerHTML = vivos.map(function (t) { return '<span class="tr-chipa tr-' + esc(t.estado) + '" title="' + esc(t.agente + ' · ' + (t.estado === 'amarillo' ? cc(t) : 'trabajando')) + '">' + retrato(t) + '<i></i>' + esc(t.agente) + (t.estado === 'amarillo' && t.conCarlosEn ? ' <small>' + esc(t.conCarlosEn) + '</small>' : '') + '</span>'; }).join('') +
         (grises.length ? '<span class="tr-grises" title="' + esc(grises.map(function (t) { return t.agente; }).join(', ')) + '">' + grises.map(retrato).join('') + '<small>' + grises.length + ' parados</small></span>' : '');
     }
     var v = ts.filter(function (t) { return t.estado === 'verde'; }).length, a = ts.filter(function (t) { return t.estado === 'amarillo'; }).length;

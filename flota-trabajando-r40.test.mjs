@@ -47,8 +47,9 @@ test("Merovingio sale SIEMPRE (aunque no haya latido ni pulso), sin marcarse com
   assert.equal(de(t, "Musk").motivo, "sin latido", "el latido de Merovingio no se le apunta a Musk");
 });
 
-test("superficieDeCarlos: app de escritorio o tmux adjunto sí; tmux sin cliente o latido de la mesa Grok no", () => {
-  assert.equal(superficieDeCarlos(air(30)[0]), true);
+test("superficieDeCarlos (r41): app de escritorio ADJUNTA o tmux adjunto sí; ranura desktop sin adjuntar, tmux sin cliente o latido de la mesa Grok no", () => {
+  assert.equal(superficieDeCarlos(air(30)[0]), false, "la ranura desktop:claude del Air existe, pero nadie la mira");
+  assert.equal(superficieDeCarlos(mbp16[0]), true);
   assert.equal(superficieDeCarlos(air(30)[2]), true);
   assert.equal(superficieDeCarlos(mbp16[2]), false);
   assert.equal(superficieDeCarlos({ source: "heartbeat", host: "app", persona: "Jobs", machine: "GrokBot" }), false);
@@ -62,16 +63,14 @@ test("maquinasConCarlos: reposo HID medido < 5 min sí; MBP16 a 490 s no; idle 0
   assert.ok(porPulso.has("macbookair16plata"));
 });
 
-test("caso de Carlos (12:19): Trinity y Neo en la app del Air → «con Carlos» = 2, aunque el pulso del MBP16 diga «reposo»", () => {
+test("Air activo: solo cuenta lo adjunto (tmux «oraculo»); las ranuras desktop sin adjuntar del Air no", () => {
   const t = tarjetas({ presencia: [...air(30), ...mbp16], velocidad: velocidadReal, ahoraS: T });
-  assert.equal(de(t, "Trinity").estado, "amarillo");
-  assert.match(de(t, "Trinity").motivo, /app de escritorio en MacBookAir16plata/);
-  assert.equal(de(t, "Trinity").maquina, "MacBookAir16plata");
-  assert.equal(de(t, "Neo").estado, "amarillo");
   assert.equal(de(t, "Oráculo").estado, "amarillo", "tmux con cliente adjunto en el Mac activo");
   assert.match(de(t, "Oráculo").motivo, /tmux «oraculo»/);
+  assert.equal(de(t, "Oráculo").conCarlosEn, "MBA16");
+  assert.notEqual(de(t, "Neo").estado, "amarillo", "MBP16 en reposo 490 s y la app del Air sin adjuntar");
   assert.equal(de(t, "Morfeo").estado, "gris", "Morfeo en el MBP16 en reposo, sin cpu propia: parado, no «trabajando»");
-  assert.equal(resumen(t).a, 3);
+  assert.equal(resumen(t).a, 1);
 });
 
 test("sin señal de que Carlos use el Mac, una app abierta NO es «con Carlos» (no se inventa)", () => {
@@ -148,4 +147,58 @@ test("/api/flota/trabajando: presencia de caché → presencia «cache» con su 
   assert.deepEqual([r.presencia, r.presenciaEdadS], ["cache", 20]);
   assert.ok(r.tarjetas.some((x) => x.agente === "Merovingio"));
   _olvidarPresencia();
+});
+
+// ── r41 (Carlos, 12:48): «con Carlos · MBP16», Neo y Trinity con él en el MBP16, varios pulsos por agente ──
+import { unirPulsos, maquinaCorta } from "./flota-trabajando-lib.mjs";
+import { latidosOcultos } from "./functions/api/flota/trabajando.js";
+
+// Captura de las 12:49: MBP16 activo (reposo 150 s, Firefox al frente), apps adjuntas; el pulso del MBP16 dice «sin señal».
+const mbp16Activo = mbp16.map((e) => ({ ...e, idle: 150, cpu: 11 }));
+const vel1249 = { porAgente: [
+  { agente: "Neo", maquina: "MacBookAir16plata", motor: "claude", tokHoy: 641587, tokHora: 170778, tokUltimaHora: 200000, conCarlos: false, conCarlosMotivo: "Mac activo (reposo 14s, Grok Bot al frente) pero sin señal de este agente", ultimoEvento: "2026-10-10T10:49:00Z" },
+  { agente: "Trinity", maquina: "MacBookPro16", motor: "codex", tokHoy: 1381712, tokHora: 0, conCarlos: false, conCarlosMotivo: "Mac activo (reposo 150s, Firefox al frente) pero sin señal de este agente" },
+  { agente: "Neo", maquina: "MacBookPro16", motor: "claude", tokHoy: 0, tokHora: 0, conCarlos: false, conCarlosMotivo: "Mac activo (reposo 150s, Firefox al frente) pero sin señal de este agente" },
+] };
+
+test("maquinaCorta: MBP16, MBA16, MBP14, Mini; desconocida tal cual", () => {
+  assert.deepEqual(["MacBook Pro 16", "MacBookPro16", "MacBookAir16plata", "MacBookProNegro14", "MacMini", "Spark"].map(maquinaCorta), ["MBP16", "MBP16", "MBA16", "MBP14", "Mini", "Spark"]);
+});
+
+test("caso de Carlos (12:49): Neo y Trinity con él en el MBP16 → «con Carlos · MBP16» los dos, no en el Air", () => {
+  const t = tarjetas({ presencia: [...air(14), ...mbp16Activo], velocidad: vel1249, ahoraS: T });
+  for (const n of ["Neo", "Trinity"]) {
+    assert.equal(de(t, n).estado, "amarillo", n);
+    assert.equal(de(t, n).conCarlosEn, "MBP16", n);
+    assert.equal(de(t, n).maquina, "MacBook Pro 16", n);
+  }
+});
+
+test("un Mac está en uso si su pulso dice «reposo Ns» < 5 min, aunque el vigilante no mida idle", () => {
+  const sinIdle = mbp16.map((e) => ({ ...e, idle: 0, cpu: 0 }));
+  const m = maquinasConCarlos({ presencia: sinIdle, velocidad: vel1249, ahoraS: T });
+  assert.ok(m.has("macbookpro16"));
+  assert.equal(maquinasConCarlos({ presencia: [], velocidad: { porAgente: [{ agente: "X", maquina: "MacMini", conCarlosMotivo: "Mac en reposo 1061 min" }] }, ahoraS: T }).size, 0);
+});
+
+test("unirPulsos: dos pulsos de Neo (Air y MBP16) no se pisan: manda el con Carlos, tokens sumados", () => {
+  const u = unirPulsos([{ agente: "Neo", maquina: "MacBookPro16", tokHoy: 10, tokHora: 0, conCarlos: true }, { agente: "Neo", maquina: "MacBookAir16plata", tokHoy: 5, tokHora: 7 }]);
+  assert.deepEqual([u.maquina, u.conCarlos, u.tokHoy, u.tokHora, u.maquinasPulso], ["MacBookPro16", true, 15, 7, ["MacBookPro16", "MacBookAir16plata"]]);
+  const t = tarjetas({ presencia: [], velocidad: { porAgente: [{ agente: "Neo", maquina: "MacBookPro16", tokHoy: 10, tokHora: 0, conCarlos: true, conCarlosMotivo: "x" }, { agente: "Neo", maquina: "MacBookAir16plata", tokHoy: 5, tokHora: 0 }] }, ahoraS: T });
+  assert.deepEqual([de(t, "Neo").estado, de(t, "Neo").conCarlosEn, de(t, "Neo").tokHoy], ["amarillo", "MBP16", 15]);
+});
+
+test("latidosOcultos: el latido de Merovingio@Air (guardado, oculto por el vigilante del Air) se recupera; lo que el vigilante declara, no", () => {
+  const d = { now: T, presence: [snap({ persona: "Neo", machine: "MacBookAir16plata" })], control_machines: [{ machine: "MacBookAir16plata", slots: [{ persona: "Morfeo" }, { persona: "Neo" }] }] };
+  const todo = { presence: [
+    { persona: "Merovingio", machine: "MacBookAir16plata", runtime: "Grok", host: "cli", mode: "pasivo", updated: T - 25 },
+    { persona: "Morfeo", machine: "MacBookAir16plata", runtime: "Claude", host: "cli", updated: T - 10 },
+    { persona: "Neo", machine: "MacBookAir16plata", updated: T - 10 },
+    { persona: "Merovingio", machine: "MacMini", updated: T - 795325 },
+  ] };
+  const x = latidosOcultos(d, todo, T);
+  assert.deepEqual(x.map((e) => e.persona + "@" + e.machine), ["Merovingio@MacBookAir16plata"]);
+  assert.equal(x[0].source, "heartbeat");
+  const t = tarjetas({ presencia: [...d.presence, ...x, { persona: "Merovingio", machine: "GrokBotBox", source: "heartbeat", runtime: "DeepAgents", updated: T - 55 }], ahoraS: T });
+  assert.equal(de(t, "Merovingio").maquinas.includes("MacBookAir16plata"), true);
 });

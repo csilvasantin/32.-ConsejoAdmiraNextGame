@@ -195,11 +195,12 @@ ENDPOINT = os.environ.get("PULSO_ENDPOINT", "https://www.admira.live/api/consumo
 MAPA = {
     "MacMini": {"claude": ("Morfeo", "csilvasantin@gmail.com"), "codex": ("Oráculo", "csilvasantin@gmail.com"), "grok": ("Smith", "Grok CLI (grok-4.7)")},
     "MacBookPro16": {"claude": ("Neo", "csilva@admira.com"), "codex": ("Trinity", "ChatGPT Pro")},
-    # r40 (Carlos, 10-10-2026): el Mac donde trabaja Carlos no mandaba pulso (máquina no reconocida → salía con código 2),
-    # así que /consumos nunca podía ver que Trinity y Neo de la app de escritorio estaban «con Carlos».
-    # Ojo: el pulso atribuye por MOTOR; en este Mac los tokens de Claude (app + tmux «morfeo») cuentan como Neo y los de
-    # Codex (app + tmux «oraculo») como Trinity. El «con Carlos» sí va por persona (app al frente / tmux adjunto / prompt).
-    "MacBookAir16plata": {"claude": ("Neo", "por confirmar (MacBookAir16plata)"), "codex": ("Trinity", "por confirmar (MacBookAir16plata)")},
+    # r40 (Carlos, 10-10-2026): el Mac donde trabaja Carlos no mandaba pulso (máquina no reconocida → salía con código 2).
+    # r41 (Carlos, 12:48 — «Neo está conmigo en el MBP16, no en el Air»): el pulso atribuye por MOTOR, y en el Air los
+    # agentes que viven ahí son los de tmux con bot-inbox: Morfeo (Claude, tmux «morfeo») y Oráculo (Codex, tmux
+    # «oraculo»). Atribuir Claude→Neo y Codex→Trinity aquí ponía a Neo «con Carlos» en el Air estando en el MBP16.
+    # Los tokens de la app de escritorio de este Mac (si la hay) cuentan para el mismo motor: Morfeo / Oráculo.
+    "MacBookAir16plata": {"claude": ("Morfeo", "por confirmar (MacBookAir16plata)"), "codex": ("Oráculo", "por confirmar (MacBookAir16plata)")},
 }
 
 

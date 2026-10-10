@@ -33,7 +33,7 @@ launchctl bootout gui/$(id -u)/com.admiranext.pulso-tokens 2>/dev/null; launchct
 La detección «con Carlos» lee el reposo HID con `ioreg`, la app al frente con `lsappinfo` y los clientes de tmux.
 Con el Mac en reposo ≥ 5 min nunca marca «con Carlos» (a propósito). Comprueba en `--dry-run` que las líneas
 `conCarlos` no dicen «reposo del Mac desconocido».
-Atribución en el Air: por motor, Claude → Neo y Codex → Trinity (ver comentario en MAPA).
+Atribución en el Air: por motor, Claude → Morfeo y Codex → Oráculo (los agentes tmux de ese Mac; ver MAPA).
 
 ## 2. Latido de Merovingio desde su tmux (`fleet/latido-merovingio.sh`)
 

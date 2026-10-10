@@ -6,7 +6,7 @@
  *         encargo, tokHora, tokUltimaHora, sinMedicion, tokHoy, haceS, retrato}], presencia:'ok'|'cache'|'sin respuesta',
  *         presenciaEdadS, generado }. Caché de borde 8 s.
  */
-import { tarjetas } from "../../../flota-trabajando-lib.mjs";
+import { tarjetas, retratoDe } from "../../../flota-trabajando-lib.mjs";
 import { calcular } from "../consumos/velocidad.js";
 import { matriz, cargaDe, persona as personaCenso, AGENTES_FLOTA, CONSEJEROS } from "../../../flota-matriz-lib.mjs";
 
@@ -88,6 +88,12 @@ export async function leerPresencia(fetchImpl, ahoraMs = Date.now(), cache = cac
   return { d: null, estado: "sin respuesta", edadS: null };
 }
 
+/** r16: cada fila de la matriz lleva su retrato (mismo mapa que las fichas). */
+export function conRetratos(m) {
+  if (!m || !Array.isArray(m.filas)) return m;
+  return { ...m, filas: m.filas.map((f) => { const r = retratoDe(f.persona || f.agente); return r ? { ...f, retrato: r } : f; }) };
+}
+
 export async function construir({ env, fetchImpl, ahoraMs: ahoraFijo, cache }) {
   const ahoraMs = ahoraFijo || Date.now();
   const [pr, v] = await Promise.all([leerPresencia(fetchImpl || fetch, ahoraMs, cache === undefined ? cacheBorde() : cache), calcular({ env, fetchImpl }).catch(() => null)]);
@@ -98,7 +104,7 @@ export async function construir({ env, fetchImpl, ahoraMs: ahoraFijo, cache }) {
   const carga = await leerCarga(fetchImpl || fetch, nombres).catch(() => new Map());
   return {
     ok: true, tarjetas: tarjetas({ presencia: pres, velocidad: v, ahoraS, carga }),
-    matriz: matriz({ presencia: pres, carga, ahoraS }), carga: carga.size ? "ok" : "sin datos",
+    matriz: conRetratos(matriz({ presencia: pres, carga, ahoraS })), carga: carga.size ? "ok" : "sin datos",
     presencia: pr.estado, presenciaEdadS: pr.edadS, pulso: v && v.ok ? "ok" : "sin datos",
     fuentes: [PRESENCIA, "/api/consumos/velocidad"], generado: new Date(ahoraMs).toISOString(),
   };

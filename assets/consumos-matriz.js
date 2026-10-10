@@ -24,6 +24,12 @@
     var b = T(COSTE[f.coste][0], COSTE[f.coste][1]);
     return f.titular ? b + ' · ' + (PROV[f.sub] || f.sub) : b;
   }
+  // r16: cara del personaje (o del consejero) delante del nombre, del mismo mapa que las fichas.
+  function cara(f) {
+    var r = f.retrato; if (!r || !r.img) return '';
+    if (r.cara) { var c = r.cara, sx = (10000 / c.w).toFixed(1), sy = (10000 / c.h).toFixed(1), px = (c.l / (100 - c.w) * 100).toFixed(2), py = (c.t / (100 - c.h) * 100).toFixed(2); return '<span class="mz-cara" style="background-image:url(\'' + esc(r.img) + '\');background-size:' + sx + '% ' + sy + '%;background-position:' + px + '% ' + py + '%"></span>'; }
+    return '<span class="mz-cara" style="background-image:url(\'' + esc(r.img) + '\')"></span>';
+  }
   function fila(f) {
     var eq = f.equipo ? (en() ? f.equipo.en : f.equipo.es) : '<i class="mz-sc">' + T('sin clasificar', 'unclassified') + '</i>';
     var ab = f.abierto == null ? '—' : f.abierto ? T('Abierto', 'Open') : T('Cerrado', 'Closed');
@@ -34,7 +40,7 @@
     var c = f.carga, carga = c && c.in_progress ? ' <small class="mz-enc">' + c.in_progress + ' ' + T('en curso', 'in progress') + '</small>' : '';
     var est = f.vivo ? T('con señal (latido < 15 min)', 'live (heartbeat < 15 min)') : T('sin señal', 'no signal');
     return '<tr class="' + (f.vivo ? 'mz-vivo' : 'mz-off') + (f.fuera ? ' mz-fuera' : '') + '" title="' + esc(est) + '">' +
-      '<td><i class="mz-p" aria-hidden="true"></i>' + esc(en() ? f.agenteEn : f.agente) + carga + '</td>' +
+      '<td><i class="mz-p" aria-hidden="true"></i>' + cara(f) + esc(en() ? f.agenteEn : f.agente) + carga + '</td>' +
       '<td>' + esc(f.depende || '—') + '</td><td>' + (f.equipo ? esc(eq) : eq) + '</td>' +
       '<td>' + esc(f.modelo) + donde + inc + inf + '</td><td>' + esc(ab) + '</td>' +
       '<td><span class="mz-co mz-' + esc(f.fuera ? 'fuera' : (f.coste || 'nd')) + '">' + esc(co) + '</span></td></tr>';

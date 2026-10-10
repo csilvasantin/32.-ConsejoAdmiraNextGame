@@ -30,8 +30,13 @@
   function pinta(d, estados) {
     var el = document.getElementById("reparto-finde");
     if (!el) { el = document.createElement("div"); el.id = "reparto-finde"; el.setAttribute("role", "note");
+      // Siempre arriba del todo del <body>. Si la barra compartida es fija (p. ej. /teamwork),
+      // se deja su alto de margen para que la tira no quede debajo de ella.
+      document.body.insertBefore(el, document.body.firstChild);
       var top = document.getElementById("admira-topbar");
-      if (top && top.parentNode) top.parentNode.insertBefore(el, top.nextSibling); else document.body.insertBefore(el, document.body.firstChild); }
+      if (top) { var cs = getComputedStyle(top); if (cs.position === "fixed" || cs.position === "sticky") {
+        var falta = Math.round(top.getBoundingClientRect().height - (el.getBoundingClientRect().top + (window.scrollY || 0)));
+        if (falta > 0) el.style.marginTop = (falta + 4) + "px"; } } }
     var chips = (d.pilares || []).map(function (p) {
       var st = estados[p.encargo] || "";
       return '<a class="rf-c" href="/reparto/#e' + esc(p.encargo) + '" title="' + esc(p.pilar + " · " + p.agente + (p.supervisa ? " (supervisa " + p.supervisa + ")" : "") + " · encargo " + p.etiqueta) + '">' +

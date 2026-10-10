@@ -1,4 +1,8 @@
 {
+  "v.10.10.2026.r3.11:29": [
+    "Reparto del finde: en el tablero (/teamwork) la tira de los 5 pilares sale arriba, justo debajo de la barra, y no al final de la página.",
+    "El sello de /reparto sigue mostrando sus novedades en un popover al pasar el ratón."
+  ],
   "v.10.10.2026.r2.11:22": [
     "Reparto del finde largo (10, 11 y 12 de octubre) visible en admira.live: nueva página /reparto con los 5 pilares, su responsable y su encargo — admira.store Morfeo (#5492), admira.tv Neo (#5493), admira.app Smith (#5494), admira.studio Oráculo (#5503) y admira.biz Trinity (#5504); Jobs supervisa a Oráculo y a Trinity.",
     "La misma tira del reparto sale arriba en el tablero (/teamwork) y en /status, con el estado vivo de cada encargo. Se oculta sola al acabar el lunes 12.",

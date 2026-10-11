@@ -143,6 +143,22 @@ def _mision(persona):
     return {"reciente": _txt(rec), "abierto": {"txt": _txt(a), "t": _t(a), "id": a.get("id")} if a else None}
 
 
+RELAJADOS = os.path.join(HOME, ".config", "admiranext", "relajados")
+
+
+def relajado(persona):
+    """Misma lista de modo ahorro que la cuadratura y los vigilantes locales."""
+    try:
+        with open(RELAJADOS, encoding="utf-8") as f:
+            txt = f.read()
+    except OSError:
+        return False
+    def norm(x):
+        return re.sub(r"[^a-z0-9]", "", unicodedata.normalize("NFKD", x or "").encode("ascii", "ignore").decode().lower())
+    nombres = {norm(x) for l in txt.splitlines() if not l.strip().startswith("#") for x in re.split(r"[,;\s]+", l) if x.strip()}
+    return bool(persona) and norm(persona) in nombres
+
+
 def decidir(ses, persona=None, ahora=None):
     """Decide y guarda (con lock) el estado de la sesión. Devuelve dict: estado, etiqueta, mision, cambio, desde, pantalla."""
     ahora = time.time() if ahora is None else ahora
@@ -203,6 +219,7 @@ def decidir(ses, persona=None, ahora=None):
     if ab and est not in ("vivo", "pendiente"):
         viejo = "#%s abierto desde %s" % (ab.get("id"), time.strftime("%d/%m %H:%M", time.localtime(ab.get("t", 0))))
     return {"estado": est, "etiqueta": ETIQUETA[est], "mision": mision, "linea": linea, "viejo": viejo,
+            "relajado": relajado(persona or persona_de(ses)),
             "cambio": int(st.get("cambio", 0) * 1000), "desde": int(st.get("desde", ahora) * 1000), "pantalla": txt}
 
 

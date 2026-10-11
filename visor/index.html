@@ -45,6 +45,8 @@
   .ficha.login .idle .palabra, .ficha.pendiente .idle .palabra { color:#ffb347; }
   .idle .viejo { margin-top:.35em; color:#5c5c5c; font-size:10px; font-style:italic; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .cab .mis { font-size:11px; color:#8a8a8a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; }
+  .banda-relajado { flex:0 0 auto; padding:5px 8px; background:#666; color:#fff; font-size:13px; font-weight:700; text-align:center; letter-spacing:.12em; }
+  .banda-relajado[hidden] { display:none; }
   #pie { position:fixed; left:0; right:0; bottom:0; height:18px; font-size:10px; color:#777; display:flex; justify-content:space-between; padding:2px 8px; background:#000; }
   #pie b { color:#aaa; font-weight:500; }
   #puntos { display:none; gap:6px; }
@@ -149,7 +151,7 @@
   function crear(f) {
     var el = document.createElement("section");
     el.className = "ficha"; el.style.setProperty("--c", SKINS[f.skin] || "#e0e0e0");
-    el.innerHTML = '<div class="cab"><pre class="rotulo"></pre><div class="sub"><span class="modelo"></span><span class="hora"></span></div><div class="mis"></div></div><div class="term"><pre></pre></div>';
+    el.innerHTML = '<div class="banda-relajado" hidden>RELAJADO</div><div class="cab"><pre class="rotulo"></pre><div class="sub"><span class="modelo"></span><span class="hora"></span></div><div class="mis"></div></div><div class="term"><pre></pre></div>';
     // r34: un solo toque (sin moverse > 10 px, para no saltar al deslizar) alterna pantalla completa ↔ mosaico
     var p0 = null;
     el.addEventListener("pointerdown", function (e) { p0 = { x: e.clientX, y: e.clientY, t: Date.now() }; });
@@ -200,6 +202,7 @@
   function pintar(f) {
     var k = f.host + "/" + f.sesion, el = fichas[k] || (fichas[k] = crear(f));
     el.className = "ficha " + f.estado + (grande === k ? " grande" : "");
+    el.querySelector(".banda-relajado").hidden = !(f.relajado === true && f.agente && f.agente !== "vivo");
     el.querySelector(".cab").dataset.nombre = nombreDe(f) + " · " + (f.etiqueta || "");
     if (pedidoT && f.sesion === pedidoT) { pedidoT = null; history.replaceState({ visorGrande: k }, "", urlCon(f.sesion)); grande = k; el.classList.add("grande"); }
     el.style.setProperty("--c", SKINS[f.skin] || "#e0e0e0");

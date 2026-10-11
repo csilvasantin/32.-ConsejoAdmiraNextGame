@@ -184,7 +184,7 @@ def main():
                 modelo, mac = EST.etiquetas(c["titulo"], c["host"])
                 d = EST.decidir(ses, EST.persona_de(nombre))
                 ficha = {"estado": d["estado"], "etiqueta": d["etiqueta"], "mision": tapar(d["mision"]), "linea": tapar(d["linea"]), "viejo": tapar(d["viejo"]), "modelo": modelo, "mac": mac,
-                         "arte": EST.arte(nombre) or [], "cambio": d["cambio"] or int(t0 * 1000), "desde": d["desde"]}
+                         "arte": EST.arte(nombre) or [], "cambio": d["cambio"] or int(t0 * 1000), "desde": d["desde"], "relajado": d.get("relajado") is True}
                 if d["estado"] == "vivo":
                     cap = capturar(ses)
                     if cap is None:

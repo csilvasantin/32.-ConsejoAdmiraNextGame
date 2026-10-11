@@ -5,7 +5,7 @@
 # ⭐ MÁXIMAS de AdmiraNeXT
 # Filosofía COMÚN a carbono (humanos) + silicio (IAs). Por encima de todo. Las leen TODOS.
 # (Los PRINCIPIOS de silicio —s:CUPULA_PRINCIPIOS_SILICIO— son el desarrollo operativo solo para agentes.)
-# Mantenido por el equipo. Creado 2026-07-06 (Neo · Fable, PUT autorizado por Carlos) · 2026-07-06 renombrado Capa 3 subsub→infra (orden de Carlos) · 2026-07-08 máxima 10 arranque en pantalla partida (Morfeo, orden de Carlos). · 2026-07-23 máxima 11 apellido=color de máquina (Morfeo Negro, orden de Carlos) · 2026-07-23 mandamiento 11 report cada 5 min (Morfeo Negro) · 2026-08-02 máxima 11: el apellido es el NOMBRE de la máquina, no el color — NeoMini / NeoMBP16 (NeoMini, orden de Carlos) · 2026-08-02 diccionario alineado con www.admiranext.com/normativa (NeoMini) · 2026-08-04 máxima 11: el apellido del Mac Mini pasa de `Mini` a `MacMini` — NeoMacMini (NeoMacMini, orden de Carlos) · 2026-08-07 máxima 12: límite activo de 60 minutos y continuidad sin bloqueo (SubOraculoMacMini, orden de Carlos) · 2026-10-01 máxima 13: todo CLI identificado por el deepagent que lo usa (MerovingioGrokBotBox, orden de Carlos; pendiente de volcar a la fuente viva s:MAXIMAS_ADMIRANEXT) · 2026-10-01 máxima 14: todo CLI y su modelo, siempre en la última versión (MerovingioGrokBotBox, orden de Carlos; pendiente de volcar a s:MAXIMAS_ADMIRANEXT) · 2026-10-01 máxima 15: nunca hablar a Carlos de un encargo solo por su número (MerovingioGrokBotBox, orden de Carlos; pendiente de volcar a s:MAXIMAS_ADMIRANEXT).
+# Mantenido por el equipo. Creado 2026-07-06 (Neo · Fable, PUT autorizado por Carlos) · 2026-07-06 renombrado Capa 3 subsub→infra (orden de Carlos) · 2026-07-08 máxima 10 arranque en pantalla partida (Morfeo, orden de Carlos). · 2026-07-23 máxima 11 apellido=color de máquina (Morfeo Negro, orden de Carlos) · 2026-07-23 mandamiento 11 report cada 5 min (Morfeo Negro) · 2026-08-02 máxima 11: el apellido es el NOMBRE de la máquina, no el color — NeoMini / NeoMBP16 (NeoMini, orden de Carlos) · 2026-08-02 diccionario alineado con www.admiranext.com/normativa (NeoMini) · 2026-08-04 máxima 11: el apellido del Mac Mini pasa de `Mini` a `MacMini` — NeoMacMini (NeoMacMini, orden de Carlos) · 2026-08-07 máxima 12: límite activo de 60 minutos y continuidad sin bloqueo (SubOraculoMacMini, orden de Carlos) · 2026-10-01 máxima 13: todo CLI identificado por el deepagent que lo usa (MerovingioGrokBotBox, orden de Carlos; pendiente de volcar a la fuente viva s:MAXIMAS_ADMIRANEXT) · 2026-10-01 máxima 14: todo CLI y su modelo, siempre en la última versión (MerovingioGrokBotBox, orden de Carlos; pendiente de volcar a s:MAXIMAS_ADMIRANEXT) · 2026-10-01 máxima 15: nunca hablar a Carlos de un encargo solo por su número (MerovingioGrokBotBox, orden de Carlos; pendiente de volcar a s:MAXIMAS_ADMIRANEXT) · 2026-10-11 §18 Modelos de imagen: FLUX local y cuota gratuita de Cloudflare (GrokBotBox, orden de Carlos 11:15; pendiente de volcar a la fuente viva s:CUPULA_PRINCIPIOS_SILICIO: el box no tiene acceso de escritura a la bóveda).
 
 ## MÁXIMA SUPREMA
 **INDEPENDENCIA MÁXIMA, SIEMPRE.** Todo lo que el equipo pueda hacer SIN humanos, mejor.
@@ -122,3 +122,35 @@ Cadena de escalado: agota tus herramientas → consulta al equipo de silicio (§
 - **MÁXIMAS** (este doc, s:MAXIMAS_ADMIRANEXT) = filosofía común carbono + silicio.
 - **PRINCIPIOS de silicio** (s:CUPULA_PRINCIPIOS_SILICIO) = desarrollo operativo §1-§17 +
   los 13 Mandamientos, solo agentes.
+
+## PRINCIPIOS de silicio · añadidos pendientes de volcar a s:CUPULA_PRINCIPIOS_SILICIO
+
+### §18 · Modelos de imagen: FLUX local y cuota gratuita de Cloudflare (Carlos, 2026-10-11)
+
+1. **FLUX local para los fondos de las cápsulas de conocimiento.** El 10-oct-2026 el equipo de
+   admira.live (Y, consejero CTO) generó los 100 fondos de las cápsulas con FLUX **en local en el
+   MacBook Pro 16**: unos 18 s por imagen y 0 € de coste. A las 18:30 de Madrid aún no estaban
+   publicados porque el Mac se desconectó a las 18:17.
+   **SIN CONFIRMAR:** el modelo y la versión exactos de FLUX, la herramienta y el número de
+   encargo. Se le han preguntado a Smith en el MacBook Pro 16 (#5631). Como referencia, el plan del
+   8-oct (`admira-store/admira-xp/docs/altadis-piezas-especiales.md`) recomienda FLUX.1 [schnell]
+   con mflux (Apache-2.0) y excluye FLUX.1 [dev] y FLUX.1 Fill [dev] porque su licencia no permite
+   uso comercial.
+2. **Cuota gratuita de Cloudflare Workers AI.** El contador del equipo marcaba «0 de 55», así que
+   cuentan 55 imágenes gratis al día. **SIN CONFIRMAR:** qué modelo de Cloudflare hay detrás de esas
+   55; hoy ningún Worker ni ninguna Pages Function nuestra llama a `@cf/black-forest-labs/*`.
+   Referencia oficial (developers.cloudflare.com/workers-ai/platform/pricing, consultada el 11-oct):
+   10.000 neuronas gratis al día por cuenta, que se reinician a las 00:00 UTC (02:00 en Madrid).
+   - flux-1-schnell: 4,80 neuronas por tesela de 512² más 9,60 por paso.
+     - 1024² con 4 pasos = 57,6 neuronas → unas 173 imágenes al día.
+     - 1024² con 8 pasos = 96 neuronas → unas 104 al día.
+   - flux-2-klein-4b: 26,05 neuronas por tesela de salida de 512².
+     - 1024² = 104,2 neuronas → unas 95 al día.
+     - 1080×1920 = unas 206 neuronas → unas 48 al día.
+   - flux-2-klein-9b: 1.363,64 neuronas por el primer MP → unas 7 al día.
+   - flux-2-dev: 37,5 neuronas por tesela de salida y por paso; 1024² con 25 pasos → 2 al día.
+3. **Gratis primero en pruebas.** En las pruebas se usa primero lo gratuito: FLUX local (0 €) y,
+   después, la cuota gratuita de Cloudflare. El servicio de pago se usa solo con un OK explícito
+   de Carlos.
+4. **Toda instalación de un modelo o herramienta en una máquina de AdmiraNeXT se documenta en la
+   Cúpula el mismo día: qué, versión, máquina, quién y número de encargo.**

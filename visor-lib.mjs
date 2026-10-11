@@ -64,8 +64,8 @@ function normalizarConf(c) {
 }
 
 /** Estados del agente (r31): los decide estado-agente.py en el Mac, la MISMA pieza que la cuadrícula (panel-agente.sh). */
-export const ESTADOS_AGENTE = ["vivo", "idle", "login", "nosesion"];
-export const ETIQUETAS = { vivo: "en misión", idle: "Idle", login: "Login pendiente", nosesion: "Sin sesión" };
+export const ESTADOS_AGENTE = ["vivo", "idle", "pendiente", "login", "nosesion"];
+export const ETIQUETAS = { vivo: "en misión", idle: "Idle", pendiente: "Pendiente sin trabajar", login: "Login pendiente", nosesion: "Sin sesión" };
 
 /** POST { maquina, ts, completo, conf?, agentes:{ <sesion>: { lineas:[…], ancho, alto, cmd, rotulo:[…], sub, cambio,
  *        estado, mision, modelo, mac, arte:[…], desde } }, vivas:[sesiones] }   (estado… desde r31; sin estado = publicador viejo) */
@@ -89,6 +89,7 @@ export function normalizarPane(body, ahora = Date.now()) {
       const ag = agentes[ses];
       ag.agente = a.estado;
       ag.mision = tapar(limpio(a.mision, 240));
+      ag.linea = tapar(limpio(a.linea, 260)); ag.viejo = tapar(limpio(a.viejo, 120)); // r33b: línea de misión y «abierto desde»
       ag.modelo = limpio(a.modelo, 40); ag.mac = limpio(a.mac, 40);
       ag.arte = (Array.isArray(a.arte) ? a.arte : []).slice(0, 10).map((l) => limpio(l, 120));
       ag.desde = Number.isFinite(Number(a.desde)) ? Math.min(Number(a.desde), ahora) : ahora;
@@ -125,7 +126,7 @@ export function vista(docs, ahora = Date.now(), opciones = {}) {
     const publicadorVivo = haceS != null && haceS < 120;
     let estado = "esperando";
     if (a && publicadorVivo) estado = "vivo"; else if (a) estado = "congelado";
-    const extra = a && a.agente ? { agente: a.agente, etiqueta: ETIQUETAS[a.agente], mision: a.mision, modelo: a.modelo, mac: a.mac, arte: a.arte, desde: a.desde } : {};
+    const extra = a && a.agente ? { agente: a.agente, etiqueta: ETIQUETAS[a.agente], mision: a.mision, linea: a.linea, viejo: a.viejo, modelo: a.modelo, mac: a.mac, arte: a.arte, desde: a.desde } : {};
     return { ...c, estado, maquinaHaceS: haceS, ...(a ? { lineas: a.lineas, ancho: a.ancho, alto: a.alto, cmd: a.cmd, sub: a.sub, rotulo: a.rotulo, cambio: a.cambio, ...extra } : {}) };
   });
   return { fichas, fuenteConf: conf ? conf.maquina : "defecto" };

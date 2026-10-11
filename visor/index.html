@@ -35,7 +35,8 @@
   .idle .palabra { margin-top:1.0em; font-weight:700; color:#e8e8e8; font-size:15px; }
   .idle .info, .idle .mis { margin-top:.35em; color:#8a8a8a; font-size:11px; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .idle .info { margin-top:1.0em; }
-  .ficha.login .idle .palabra { color:#ffb347; }
+  .ficha.login .idle .palabra, .ficha.pendiente .idle .palabra { color:#ffb347; }
+  .idle .viejo { margin-top:.35em; color:#5c5c5c; font-size:10px; font-style:italic; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .cab .mis { font-size:11px; color:#8a8a8a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; }
   #pie { position:fixed; left:0; right:0; bottom:0; height:18px; font-size:10px; color:#777; display:flex; justify-content:space-between; padding:2px 8px; background:#000; }
   #pie b { color:#aaa; font-weight:500; }
@@ -181,7 +182,7 @@
       if (f.agente !== "vivo") { pintarIdle(el, f, k, nombre, cong); return; }
       el.classList.remove("ficha-idle", "login", "nosesion");
       modelo = (f.modelo || "") + " · " + (f.mac || maq) + " · en misión · " + hm() + cong;
-      el.querySelector(".cab .mis").textContent = "▶ " + (f.mision || "");
+      el.querySelector(".cab .mis").textContent = f.linea || ("▶ " + (f.mision || ""));
     } else { el.querySelector(".cab .mis").textContent = ""; el.classList.remove("ficha-idle"); }
     el.querySelector(".modelo").innerHTML = '<span class="punto"></span>' + esc(modelo);
     el.querySelector(".hora").textContent = f.estado === "esperando" ? "" : (f.estado === "congelado" ? "congelado · " : "") + "cambio " + hora(f.cambio);
@@ -199,17 +200,18 @@
     ajustar(el);
   }
   function pintarIdle(el, f, k, nombre, cong) {
-    el.classList.add("ficha-idle"); el.classList.toggle("login", f.agente === "login"); el.classList.toggle("nosesion", f.agente === "nosesion");
+    el.classList.add("ficha-idle"); el.classList.toggle("login", f.agente === "login"); el.classList.toggle("nosesion", f.agente === "nosesion"); el.classList.toggle("pendiente", f.agente === "pendiente");
     var arte = (f.arte && f.arte.length ? f.arte : ROTULOS[claveRot(nombre)] || (f.rotulo && f.rotulo.length ? f.rotulo : null)) || [nombre.toUpperCase()];
-    var palabra = f.etiqueta || (f.agente === "login" ? "Login pendiente" : f.agente === "nosesion" ? "Sin sesión" : "Idle");
+    var palabra = f.etiqueta || (f.agente === "login" ? "Login pendiente" : f.agente === "nosesion" ? "Sin sesión" : f.agente === "pendiente" ? "Pendiente sin trabajar" : "Idle");
     var info = (f.modelo || "") + " · " + (f.mac || MAQUINAS[f.host] || f.host) + " · " + palabra + " · " + hm() + cong;
-    var mis = "última misión: " + (f.mision || "sin misiones registradas");
-    var firma = "idle:" + palabra + ":" + info + ":" + mis + ":" + arte.join("|");
+    var mis = f.linea || ("última misión: " + (f.mision || "sin misiones registradas"));
+    var viejo = f.viejo || "";
+    var firma = "idle:" + palabra + ":" + info + ":" + mis + ":" + viejo + ":" + arte.join("|");
     if (ultimo[k] === firma) return; ultimo[k] = firma;
     el.dataset.acols = Math.max.apply(null, arte.map(function (l) { return l.length; })); el.dataset.afilas = arte.length;
-    el.querySelector(".term").innerHTML = '<div class="idle"><pre class="arte"></pre><div class="palabra"></div><div class="info"></div><div class="mis"></div></div>';
+    el.querySelector(".term").innerHTML = '<div class="idle"><pre class="arte"></pre><div class="palabra"></div><div class="info"></div><div class="mis"></div><div class="viejo"></div></div>';
     var q = function (c) { return el.querySelector(".idle " + c); };
-    q(".arte").textContent = arte.join("\n"); q(".palabra").textContent = palabra; q(".info").textContent = info; q(".mis").textContent = mis;
+    q(".arte").textContent = arte.join("\n"); q(".palabra").textContent = palabra; q(".info").textContent = info; q(".mis").textContent = mis; q(".viejo").textContent = viejo;
     q(".info").title = info; q(".mis").title = mis;
     ajustarIdle(el);
   }

@@ -110,3 +110,13 @@ test("r33: ?g=6 añade Smith (MBP16) y Merovingio (caja de GrokBot) con su estad
   assert.equal(g.grupo, 6); assert.equal(g.fichas.length, 6);
   assert.equal(g.fichas[5].agente, "login"); assert.deepEqual(g.fichas[5].lineas, []);
 });
+
+// r33b (Carlos 13:43): última misión = la más reciente; terminal quieta + encargo abierto = «Pendiente sin trabajar»; viejo tenue
+test("r33b: pendiente sin trabajar y «abierto desde» viajan tal cual", () => {
+  const p = normalizarPane({ maquina: "macbook-pro-16", vivas: ["neo", "trinity"], agentes: {
+    neo: { estado: "idle", mision: "#5645 · done · insignia", linea: "última misión: #5645 · done · insignia", viejo: "#5493 abierto desde 10/10 09:19" },
+    trinity: { estado: "pendiente", mision: "#5620 · in_progress · biz", linea: "pendiente: #5620 · in_progress · biz", lineas: ["x"] } } }, 9000).pane;
+  const [neo, , trinity] = vista([fundir(null, p)], 9500).fichas;
+  assert.equal(neo.linea, "última misión: #5645 · done · insignia"); assert.equal(neo.viejo, "#5493 abierto desde 10/10 09:19");
+  assert.equal(trinity.agente, "pendiente"); assert.equal(trinity.etiqueta, "Pendiente sin trabajar"); assert.deepEqual(trinity.lineas, []);
+});

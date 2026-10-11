@@ -5,7 +5,7 @@
 # ⭐ MÁXIMAS de AdmiraNeXT
 # Filosofía COMÚN a carbono (humanos) + silicio (IAs). Por encima de todo. Las leen TODOS.
 # (Los PRINCIPIOS de silicio —s:CUPULA_PRINCIPIOS_SILICIO— son el desarrollo operativo solo para agentes.)
-# Mantenido por el equipo. Creado 2026-07-06 (Neo · Fable, PUT autorizado por Carlos) · 2026-07-06 renombrado Capa 3 subsub→infra (orden de Carlos) · 2026-07-08 máxima 10 arranque en pantalla partida (Morfeo, orden de Carlos). · 2026-07-23 máxima 11 apellido=color de máquina (Morfeo Negro, orden de Carlos) · 2026-07-23 mandamiento 11 report cada 5 min (Morfeo Negro) · 2026-08-02 máxima 11: el apellido es el NOMBRE de la máquina, no el color — NeoMini / NeoMBP16 (NeoMini, orden de Carlos) · 2026-08-02 diccionario alineado con www.admiranext.com/normativa (NeoMini) · 2026-08-04 máxima 11: el apellido del Mac Mini pasa de `Mini` a `MacMini` — NeoMacMini (NeoMacMini, orden de Carlos) · 2026-08-07 máxima 12: límite activo de 60 minutos y continuidad sin bloqueo (SubOraculoMacMini, orden de Carlos) · 2026-10-01 máxima 13: todo CLI identificado por el deepagent que lo usa (MerovingioGrokBotBox, orden de Carlos; pendiente de volcar a la fuente viva s:MAXIMAS_ADMIRANEXT) · 2026-10-01 máxima 14: todo CLI y su modelo, siempre en la última versión (MerovingioGrokBotBox, orden de Carlos; pendiente de volcar a s:MAXIMAS_ADMIRANEXT) · 2026-10-01 máxima 15: nunca hablar a Carlos de un encargo solo por su número (MerovingioGrokBotBox, orden de Carlos; pendiente de volcar a s:MAXIMAS_ADMIRANEXT) · 2026-10-11 §18 Modelos de imagen: FLUX local y cuota gratuita de Cloudflare (GrokBotBox, orden de Carlos 11:15; pendiente de volcar a la fuente viva s:CUPULA_PRINCIPIOS_SILICIO: el box no tiene acceso de escritura a la bóveda).
+# Mantenido por el equipo. Creado 2026-07-06 (Neo · Fable, PUT autorizado por Carlos) · 2026-07-06 renombrado Capa 3 subsub→infra (orden de Carlos) · 2026-07-08 máxima 10 arranque en pantalla partida (Morfeo, orden de Carlos). · 2026-07-23 máxima 11 apellido=color de máquina (Morfeo Negro, orden de Carlos) · 2026-07-23 mandamiento 11 report cada 5 min (Morfeo Negro) · 2026-08-02 máxima 11: el apellido es el NOMBRE de la máquina, no el color — NeoMini / NeoMBP16 (NeoMini, orden de Carlos) · 2026-08-02 diccionario alineado con www.admiranext.com/normativa (NeoMini) · 2026-08-04 máxima 11: el apellido del Mac Mini pasa de `Mini` a `MacMini` — NeoMacMini (NeoMacMini, orden de Carlos) · 2026-08-07 máxima 12: límite activo de 60 minutos y continuidad sin bloqueo (SubOraculoMacMini, orden de Carlos) · 2026-10-01 máxima 13: todo CLI identificado por el deepagent que lo usa (MerovingioGrokBotBox, orden de Carlos; pendiente de volcar a la fuente viva s:MAXIMAS_ADMIRANEXT) · 2026-10-01 máxima 14: todo CLI y su modelo, siempre en la última versión (MerovingioGrokBotBox, orden de Carlos; pendiente de volcar a s:MAXIMAS_ADMIRANEXT) · 2026-10-01 máxima 15: nunca hablar a Carlos de un encargo solo por su número (MerovingioGrokBotBox, orden de Carlos; pendiente de volcar a s:MAXIMAS_ADMIRANEXT) · 2026-10-11 §19 Modelos de imagen: FLUX local y cuota gratuita de Cloudflare (SmithMacMini, orden de Carlos 11:15; volcado a s:CUPULA_PRINCIPIOS_SILICIO).
 
 ## MÁXIMA SUPREMA
 **INDEPENDENCIA MÁXIMA, SIEMPRE.** Todo lo que el equipo pueda hacer SIN humanos, mejor.
@@ -120,12 +120,12 @@ Cadena de escalado: agota tus herramientas → consulta al equipo de silicio (§
 
 ## Taxonomía
 - **MÁXIMAS** (este doc, s:MAXIMAS_ADMIRANEXT) = filosofía común carbono + silicio.
-- **PRINCIPIOS de silicio** (s:CUPULA_PRINCIPIOS_SILICIO) = desarrollo operativo §1-§17 +
+- **PRINCIPIOS de silicio** (s:CUPULA_PRINCIPIOS_SILICIO) = desarrollo operativo §1-§19 +
   los 13 Mandamientos, solo agentes.
 
-## PRINCIPIOS de silicio · añadidos pendientes de volcar a s:CUPULA_PRINCIPIOS_SILICIO
+## PRINCIPIOS de silicio · §19 volcado a s:CUPULA_PRINCIPIOS_SILICIO (2026-10-11)
 
-### §18 · Modelos de imagen: FLUX local y cuota gratuita de Cloudflare (Carlos, 2026-10-11)
+### §19 · Modelos de imagen: FLUX local y cuota gratuita de Cloudflare (Carlos, 2026-10-11)
 
 1. **FLUX local para los fondos de las cápsulas de conocimiento.** El 10-oct-2026 el equipo de
    admira.live (Y, consejero CTO) generó los 100 fondos de las cápsulas con FLUX **en local en el

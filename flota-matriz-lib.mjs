@@ -107,6 +107,17 @@ export function cargaDe(items, p) {
  * → { filas:[{ agente, depende, equipo:{es,en}|null, modelo, donde, instancias, abierto, coste, vivo, carga, mapeado }],
  *     resumen:{ total, pago, gratis, mixto, vivos } }
  */
+/**
+ * Insignia PAGO / GRATIS de una fila (encargo #5645, Carlos vía Musk, 11-10-2026). Binaria y a la vista: PAGO son los
+ * titulares de las 6 suscripciones (Merovingio y Smith en Grok, Oráculo y Trinity en Codex, Neo y Morfeo en Claude) y
+ * cualquier instancia que esté gastando un modelo de pago fuera de ellas (la fila en rojo, o un agente sin mapear que
+ * late con runtime de pago). Todo lo demás es GRATIS: los incluidos en el pool de otro no pagan suscripción propia.
+ * Merovingio corre con Grok CLI (grok-4.7): es PAGO aunque su caja también tenga OpenRouter gratis.
+ */
+export function insignia(f) {
+  if (!f) return "gratis";
+  return f.titular || f.fuera || (!f.mapeado && f.coste === "pago") ? "pago" : "gratis";
+}
 export function matriz({ presencia = [], carga = new Map(), ahoraS }) {
   const vivas = new Map();
   for (const e of presencia || []) {
@@ -132,7 +143,9 @@ export function matriz({ presencia = [], carga = new Map(), ahoraS }) {
     else if (!inst.length) { coste = null; abierto = null; }
     else { coste = pagos ? "pago" : "gratis"; abierto = coste === "gratis"; }
     const modelo = (m && m.modelo) || [...new Set(inst.map((i) => i.runtime + (i.modelo ? " · " + i.modelo : "")))].join(" + ") || "—";
+    const fuera = infracciones.length > 0;
     return {
+      insignia: insignia({ titular: !!(m && m.titular), fuera, mapeado: !!m, coste }),
       agente: (m && m.nombre) || p, agenteEn: (m && (m.nombreEn || m.nombre)) || p, persona: p,
       depende: (m && m.depende) || null, equipo: (m && m.equipo) || null, mapeado: !!m,
       modelo, donde: [...new Set(inst.map((i) => i.maquina + (i.runtime ? " (" + i.runtime + (i.gratis ? ", gratis" : "") + ")" : "")))],
@@ -153,6 +166,7 @@ export function matriz({ presencia = [], carga = new Map(), ahoraS }) {
     sinDatos: filas.filter((f) => !f.coste).length, vivos: filas.filter((f) => f.vivo).length,
     fuera: filas.filter((f) => f.fuera).length, conPlanC: filas.filter((f) => f.coste === "mixto").length,
     consejerosGratis: filas.filter((f) => f.porDefecto).length,
+    insigniaPago: filas.filter((f) => f.insignia === "pago").length, insigniaGratis: filas.filter((f) => f.insignia === "gratis").length,
   };
   return { filas, resumen };
 }

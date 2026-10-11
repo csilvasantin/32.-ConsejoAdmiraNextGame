@@ -24,6 +24,12 @@
     var b = T(COSTE[f.coste][0], COSTE[f.coste][1]);
     return f.titular ? b + ' · ' + (PROV[f.sub] || f.sub) : b;
   }
+  // #5645: insignia binaria PAGO (ámbar) / GRATIS (verde) delante del detalle del coste. Llega calculada de la
+  // función (flota-matriz-lib insignia()); si la respuesta es anterior, se aplica aquí la misma regla.
+  function insignia(f) {
+    var v = f.insignia || (f.titular || f.fuera || (!f.mapeado && f.coste === 'pago') ? 'pago' : 'gratis');
+    return '<b class="mz-ins mz-ins-' + v + '">' + (v === 'pago' ? T('PAGO', 'PAID') : T('GRATIS', 'FREE')) + '</b>';
+  }
   // r16: cara del personaje (o del consejero) delante del nombre, del mismo mapa que las fichas.
   function cara(f) {
     var r = f.retrato; if (!r || !r.img) return '';
@@ -65,7 +71,7 @@
       '<td><i class="mz-p" aria-hidden="true"></i>' + cara(f) + esc(en() ? f.agenteEn : f.agente) + carga + '</td>' +
       '<td>' + esc(f.depende || '—') + '</td><td>' + (f.equipo ? esc(eq) : eq) + '</td>' +
       '<td>' + esc(modelo(f.modelo)) + donde + inc + inf + '</td><td>' + superficie(f) + '</td><td>' + esc(ab) + '</td>' +
-      '<td><span class="mz-co mz-' + esc(f.fuera ? 'fuera' : (f.coste || 'nd')) + '">' + esc(co) + '</span></td></tr>';
+      '<td class="mz-td-co">' + insignia(f) + '<span class="mz-co mz-' + esc(f.fuera ? 'fuera' : (f.coste || 'nd')) + '">' + esc(co) + '</span></td></tr>';
   }
   function pinta(d) {
     var tb = document.getElementById('matriz-filas'), res = document.getElementById('matriz-resumen');

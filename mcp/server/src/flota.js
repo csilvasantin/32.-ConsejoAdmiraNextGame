@@ -56,6 +56,10 @@ export function personaCanonica(nombre) {
   if (ALIAS_FLOTA[n]) return ALIAS_FLOTA[n];
   return PERSONAS.find((p) => n === norm(p)) || PERSONAS.find((p) => n.startsWith(norm(p))) || null;
 }
+// EQUIPO DE CASA de un agente (Carlos, 11-10-2026: Morfeo trabaja en su terminal «morfeo» del MacBook Pro 16,
+// no en el Mac Mini). Un encargo sin máquina va ahí aunque la persona también lata en otros equipos.
+export const CASA_AGENTE = { Morfeo: 'macbookpro16' };
+
 export const esConsejero = (persona) => CONSEJEROS.includes(personaCanonica(persona));
 
 export function crearFlota(env = {}, identidad, deps = {}) {
@@ -210,8 +214,9 @@ export function crearFlota(env = {}, identidad, deps = {}) {
     };
   }
 
-  /** Máquina donde late la persona (una sola, o la de latido más reciente). */
+  /** Máquina donde late la persona (una sola, o la de latido más reciente). Primero, su equipo de casa. */
   async function maquinaDe(persona) {
+    if (CASA_AGENTE[persona]) return CASA_AGENTE[persona];
     const filas = (await presenciaViva()).filter((r) => personaCanonica(r.persona) === persona).sort((a, b) => seg(b.updated) - seg(a.updated));
     return filas[0] ? norm(filas[0].machine) : '';
   }
@@ -236,7 +241,7 @@ export function crearFlota(env = {}, identidad, deps = {}) {
     if (esConsejero(p)) { destino = MAQUINA_CONSEJEROS; nota = `consejero de GrokBot (silla ${SILLAS[p].rol} · ${SILLAS[p].maquina}): el worker lo despierta por su webhook; suele contestar en 1-3 min`; }
     else if (!destino) {
       destino = await maquinaDe(p);
-      nota = destino ? `en cola para ${p} en ${destino} (la máquina donde late ahora); su vigilante lo inyecta en su sesión en ≤15 s` : `${p} no late en ningún equipo desde hace 15 min: el encargo queda en cola y lo cogerá al despertar; a los 30 min sin acuse se reasigna`;
+      nota = destino ? `en cola para ${p} en ${destino} (${CASA_AGENTE[p] ? 'su equipo de casa' : 'la máquina donde late ahora'}); su vigilante lo inyecta en su sesión en ≤15 s` : `${p} no late en ningún equipo desde hace 15 min: el encargo queda en cola y lo cogerá al despertar; a los 30 min sin acuse se reasigna`;
     } else nota = `en cola para ${p} en ${destino}; si allí no late, a los 30 min se reasigna`;
     const firma = de || (identidad ? identidad.agent : 'MCP admira.live');
     // Contrato del bot-inbox: con proyecto el encargo nace como misión FLT en yokup; sin proyecto

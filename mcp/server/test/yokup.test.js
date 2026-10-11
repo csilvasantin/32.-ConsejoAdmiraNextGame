@@ -384,10 +384,11 @@ test('yokup_presencia reenvía working y mode solo cuando llega trabajando', asy
   assert.equal(stopped.working, false);
   assert.equal(stopped.mode, 'pasivo');
   assert.equal(stopped.encargo, 101302);
-  const plain = res(await client.callTool({ name: 'yokup_presencia', arguments: { foco: 'solo foco', tarea: 't', proyecto: 'yokup' } }));
+  const plain = res(await client.callTool({ name: 'yokup_presencia', arguments: { foco: 'solo foco', tarea: 't', proyecto: 'yokup', proveedor: 'OpenRouter' } }));
+  assert.equal(peticiones.filter((p) => p.url.endsWith('/api/presence')).at(-1).body.proveedor, 'OpenRouter');
   assert.equal(plain.ok, true);
   assert.deepEqual(peticiones.filter((p) => p.url.endsWith('/api/presence')).at(-1).body, {
-    persona: 'Wozniak', machine: 'GrokBot', runtime: 'Grok', focus: 'solo foco', host: 'app', model: 'Grok Heavy', task: 't', project: 'yokup'
+    persona: 'Wozniak', machine: 'GrokBot', runtime: 'Grok', focus: 'solo foco', host: 'app', model: 'Grok Heavy', task: 't', project: 'yokup', proveedor: 'OpenRouter'
   });
 });
 

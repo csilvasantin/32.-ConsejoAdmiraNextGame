@@ -11,24 +11,26 @@ const presencia = [
   lat({ persona: "Oraculo", machine: "MacBookAir16plata", runtime: "Codex", model: "gpt-6-astra", session_id: "oraculo" }),
   { persona: "Merovingio", machine: "GrokBotBox", runtime: "DeepAgents", source: "heartbeat", mode: "pasivo", updated: T - 39, declared_updated: T - 39 },
   { persona: "Cypher", machine: "GrokBotBox", runtime: "DeepAgents", source: "heartbeat", mode: "pasivo", updated: T - 39 },
-  lat({ persona: "Agente Nuevo", machine: "MacMini", runtime: "OpenCode", model: "nemotron" }),
+  lat({ persona: "Agente Nuevo", machine: "MacMini", runtime: "OpenCode", model: "nvidia/nemotron" }),
 ];
 const carga = new Map([["Oraculo", { in_progress: 9, abiertos: 28 }], ["Merovingio", { in_progress: 0, abiertos: 5 }], ["Cypher", { in_progress: 0 }]]);
 const de = (t, n) => t.find((x) => x.agente === n);
 
-test("Oráculo (OpenCode gratis + Codex, 0 tokens, 9 en curso) sale trabajando, una vez, con Codex y nota plan C", () => {
+test("Oráculo (OpenCode gratis + Codex, 0 tokens, 9 en curso) sale trabajando, una vez, con el runtime real y nota plan C", () => {
   const t = tarjetas({ presencia, velocidad: null, ahoraS: T, carga });
   const o = t.filter((x) => x.agente === "Oráculo");
   assert.equal(o.length, 1);
   assert.equal(o[0].estado, "verde");
-  assert.equal(o[0].motor, "Codex");
+  assert.equal(o[0].motor, "OpenCode");
+  assert.equal(o[0].coste, "pago");
   assert.equal(o[0].planC, true);
   assert.equal(o[0].enCurso, 9);
 });
-test("Merovingio con latido sale trabajando, con Grok CLI y sin nota de plan C", () => {
+test("Merovingio con latido sale trabajando, con DeepAgents real y coste desconocido si falta proveedor", () => {
   const m = de(tarjetas({ presencia, velocidad: null, ahoraS: T, carga }), "Merovingio");
   assert.equal(m.estado, "verde");
-  assert.equal(m.motor, "GrokBot · GrokBot CLI");
+  assert.equal(m.motor, "DeepAgents");
+  assert.equal(m.coste, "desconocido");
   assert.equal(m.planC, false);
 });
 test("latido sin encargo en curso ni tokens (Cypher) sigue parado; latido de > 15 min no cuenta", () => {
@@ -39,16 +41,16 @@ test("latido sin encargo en curso ni tokens (Cypher) sigue parado; latido de > 1
 test("Matriz: mapa fijo + agente nuevo sin clasificar y gratis; sin señal en gris; resumen N de M de pago", () => {
   const { filas, resumen } = matriz({ presencia, carga, ahoraS: T });
   const o = filas.find((f) => f.persona === "Oraculo");
-  assert.equal(o.coste, "mixto"); assert.equal(o.depende, "Musk"); assert.equal(o.vivo, true);
+  assert.equal(o.coste, "pago"); assert.equal(o.coste_plan, "mixto"); assert.equal(o.depende, "Musk"); assert.equal(o.vivo, true);
   const n = filas.find((f) => f.persona === "Agente Nuevo");
   assert.equal(n.mapeado, false); assert.equal(n.coste, "gratis"); assert.equal(n.abierto, true); assert.equal(n.equipo, null);
   assert.equal(filas.filter((f) => /Merovingio/.test(f.agente)).length, 1);
   assert.equal(filas.find((f) => f.persona === "Neo").vivo, false);
-  assert.equal(filas.find((f) => f.persona === "Link").coste, null);
+  assert.equal(filas.find((f) => f.persona === "Link").coste, "desconocido");
   assert.equal(resumen.suscripciones, 6);
   assert.deepEqual(resumen.subs, { grok: 2, codex: 2, claude: 2 });
   assert.equal(filas.find((f) => f.persona === "Smith").depende, "Jobs");
-  assert.equal(filas.find((f) => f.persona === "Huang").coste, "incluido");
+  assert.equal(filas.find((f) => f.persona === "Huang").coste_plan, "incluido");
   assert.equal(filas.find((f) => f.persona === "Jobs").incluidoEn, "Smith");
   assert.equal(resumen.fuera, 0);
 });
@@ -77,10 +79,10 @@ test("r6 · 13:01: solo Musk, Huang, Jobs y Wozniak en Grok Bot de pago; el rest
   const { filas, resumen } = matriz({ presencia, carga, ahoraS: T });
   for (const n of ["Shotwell", "Porat", "Lasseter", "Ive", "Ratti", "Reynolds", "Lucas", "Disney", "Cook"]) {
     const f = filas.find((x) => x.persona === n);
-    assert.ok(f, n); assert.equal(f.coste, "gratis", n); assert.equal(f.porDefecto, true, n);
+    assert.ok(f, n); assert.equal(f.coste_plan, "gratis", n); assert.equal(f.coste, "desconocido", n); assert.equal(f.porDefecto, true, n);
   }
-  assert.equal(filas.find((f) => f.persona === "Jobs").coste, "incluido");
-  assert.equal(filas.find((f) => f.persona === "Wozniak").coste, "incluido");
+  assert.equal(filas.find((f) => f.persona === "Jobs").coste_plan, "incluido");
+  assert.equal(filas.find((f) => f.persona === "Wozniak").coste_plan, "incluido");
   assert.equal(resumen.suscripciones, 6);
   const lucasGrok = [...presencia, lat({ persona: "Lucas", machine: "GrokBot", runtime: "Grok", model: "Grok Heavy" }), lat({ persona: "Jobs", machine: "GrokBot", runtime: "Grok" })];
   const r = matriz({ presencia: lucasGrok, carga, ahoraS: T });

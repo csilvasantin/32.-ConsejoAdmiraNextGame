@@ -9,7 +9,7 @@
  *    el latido del Mac Mini queda como dato secundario.
  *  · el proxy del Mac Mini (src/server.js anterior a 6e3afaf) seguía publicando
  *    «Smith · CEO / Elon Musk». El CEO coetáneo Elon Musk es MuskGrokBot y su
- *    deepagent es Merovingio (Grok CLI en la GrokBotBox); Smith es del otro GrokBot.
+ *    deepagent es Merovingio (DeepAgents dcode en la GrokBotBox); Smith es del otro GrokBot.
  *    La tabla buena es la de app.js / council-todo.js (MATRIX_LINKS) y vive aquí
  *    también, para que el MCP corrija aunque el Mac Mini sirva código viejo.
  *  · flota_estado solo sabía de Claude Code. Ahora reconoce Codex, Grok CLI,
@@ -19,6 +19,7 @@
  * Todo son funciones puras: la red la pone flota.js / consejo.js.
  */
 
+import { costeDePresencia } from './coste.js';
 import { SILLAS } from './sillas.js';
 
 export const VIVO_SEG = 900;
@@ -74,7 +75,7 @@ export function censoBots({ salud = null, presencia = [], ahoraMs = Date.now(), 
   const correcciones = [];
   for (const b of viejos) {
     if (norm(b.persona) === norm('Elon Musk') && b.id !== 'Merovingio') {
-      correcciones.push({ id: b.id, antes: `${b.label || b.id} (${b.persona})`, ahora: 'CEO Elon Musk = MuskGrokBot + deepagent Merovingio (Grok CLI, GrokBotBox). ' + (norm(b.id) === 'smith' ? 'Smith queda como Soporte (otro GrokBot).' : `${b.id} no es la silla CEO.`), motivo: 'el proxy del Mac Mini sirve un src/server.js anterior a 6e3afaf' });
+      correcciones.push({ id: b.id, antes: `${b.label || b.id} (${b.persona})`, ahora: 'CEO Elon Musk = MuskGrokBot + deepagent Merovingio (DeepAgents dcode, GrokBotBox). ' + (norm(b.id) === 'smith' ? 'Smith queda como Soporte (otro GrokBot).' : `${b.id} no es la silla CEO.`), motivo: 'el proxy del Mac Mini sirve un src/server.js anterior a 6e3afaf' });
     }
     if (norm(b.persona) === norm('Jensen Huang') && b.id !== 'Cypher') {
       correcciones.push({ id: b.id, antes: `${b.label || b.id} (${b.persona})`, ahora: 'CTO Jensen Huang = HuangGrokBot + deepagent Cypher (DeepAgents, GrokBotBox). ' + (norm(b.id) === 'arquitectocursorcloud' ? 'ArquitectoCursorCloud queda como orquestador de Cursor Cloud.' : `${b.id} no es la silla CTO.`), motivo: 'el proxy del Mac Mini sigue mapeando Jensen a ArquitectoCursorCloud' });
@@ -91,8 +92,8 @@ export function censoBots({ salud = null, presencia = [], ahoraMs = Date.now(), 
     const filas = presencia.filter((r) => fresca(r, ahoraMs) && filaEsDe(bot, r)).sort((x, y) => seg(y.updated) - seg(x.updated));
     const maquinas = [];
     for (const r of filas) {
-      if (maquinas.some((x) => norm(x.maquina) === norm(r.machine))) continue;
-      maquinas.push({ maquina: String(r.machine || ''), runtime: r.runtime || '', modelo: r.model || '', foco: r.focus || r.task || '', ultimo_latido: hace(r.updated, ahoraMs) });
+      if (maquinas.some((x) => norm(x.maquina) === norm(r.machine) && x.runtime === (r.runtime || '') && x.session_id === (r.session_id || ''))) continue;
+      maquinas.push({ maquina: String(r.machine || ''), runtime: r.runtime || '', modelo: r.model || '', session_id: r.session_id || '', ...costeDePresencia(r), foco: r.focus || r.task || '', ultimo_latido: hace(r.updated, ahoraMs) });
     }
     const v = viejoDe(bot.id);
     const conLatido = v.find((x) => x.lastSeen) || v[0] || null;
@@ -156,7 +157,7 @@ export function flotaCombinada({ estado = null, presencia = [], ahoraMs = Date.n
   const vivas = presencia.filter((r) => fresca(r, ahoraMs) && r.machine && norm(r.machine) !== 'grokbot');
   const extra = new Map();
   for (const m of maquinas) m.agentes = [];
-  for (const r of vivas) {
+  for (const r of [...vivas].sort((a, b) => seg(b.updated) - seg(a.updated))) {
     const k = claveMaquina(r.machine);
     let i = claves.findIndex((s) => s.has(k));
     let m;
@@ -165,8 +166,8 @@ export function flotaCombinada({ estado = null, presencia = [], ahoraMs = Date.n
       if (!extra.has(k)) extra.set(k, { id: k, name: String(r.machine), online: true, claude: null, fuente: 'presencia', nota: k === 'grokbotbox' ? 'GrokBotBox (caja de los deepagents: Merovingio, Niobe, Cypher): sin SSH desde el Mac Mini, el estado sale de la presencia' : 'sin sondeo SSH: estado por presencia', agentes: [] });
       m = extra.get(k);
     }
-    if (m.agentes.some((a) => norm(a.persona) === norm(r.persona) && norm(a.runtime) === norm(r.runtime))) continue;
-    m.agentes.push({ persona: r.persona, runtime: r.runtime || '', modelo: r.model || '', ultimo_latido: hace(r.updated, ahoraMs) });
+    if (m.agentes.some((a) => norm(a.persona) === norm(r.persona) && norm(a.runtime) === norm(r.runtime) && a.session_id === (r.session_id || ''))) continue;
+    m.agentes.push({ persona: r.persona, runtime: r.runtime || '', modelo: r.model || '', session_id: r.session_id || '', ...costeDePresencia(r), ultimo_latido: hace(r.updated, ahoraMs) });
   }
   const todas = [...maquinas, ...extra.values()];
   const resumen = { total: todas.length, online: 0, con_cuenta_claude: 0 };

@@ -7,6 +7,7 @@
  * r6: 6 suscripciones de pago (2 Grok · 2 Codex · 2 Claude); en rojo toda instancia con modelo de pago fuera de ellas.
  * Regla: los agentes nuevos deben ser gratuitos y se reservan para trabajos menos prioritarios.
  */
+import { costeDePresencia, costeConjunto } from "./mcp/server/src/coste.js";
 import { CONSEJEROS as CONSEJO } from "./mcp/server/src/consejo.js";
 /** Mismo censo que el MCP (mcp/server/src/flota.js AGENTES_FLOTA) + consejeros de GrokBot. */
 export const AGENTES_FLOTA = ["Neo", "Morfeo", "Trinity", "Oraculo", "Smith", "Cypher", "Switch", "Niobe", "Link", "Persefone", "Seraph", "Arquitecto", "Merovingio"];
@@ -18,11 +19,11 @@ const COET = { es: "Coetáneos (csilvasantin)", en: "Contemporaries (csilvasanti
 const LEY = { es: "Leyendas (csilva@admira.com)", en: "Legends (csilva@admira.com)" };
 /** Mapa fijo (Carlos, 10-10-2026 · r6). Hay EXACTAMENTE 6 suscripciones de pago, dos por proveedor:
  *  Grok: Merovingio (pool de Grok Bot de csilvasantin, coetáneos) y Smith (Grok de Jobs, csilva@admira.com, leyendas) ·
- *  Codex: Oráculo y Trinity · Claude: Morfeo y Neo. Todo lo demás (OpenCode, DeepAgents, Cypher, Niobe…) es gratis.
+ *  Codex: Oráculo y Trinity · Claude: Morfeo y Neo. Este es el mapa contable r6, no una prueba del coste real.
  *  Los asistentes de Grok Bot de csilvasantin (Musk/Merovingio, Huang, Mouse y demás consejeros coetáneos) tiran del
  *  MISMO pool: su consumo va en la fila/ficha de Merovingio. Los consejeros leyenda (Jobs, Wozniak, Lucas, Disney) van
  *  incluidos en el Grok de su equipo (el de Smith).
- *  coste: pago (titular de una de las 6) | mixto (titular + plan C gratis) | incluido | gratis.
+ *  MAPA.coste (se expone como coste_plan): pago (titular de una de las 6) | mixto (titular + plan C gratis) | incluido | gratis.
  *  sub: proveedor de la suscripción que usa (titular o incluido); incluidoEn: titular de esa suscripción. */
 export const MAPA = {
   // Musk y su deepagent Merovingio son UNA fila (Carlos: «Musk/Merovingio»).
@@ -52,27 +53,21 @@ for (const c of CONSEJO) for (const gen of ["leyendas", "coetaneos"]) {
   MAPA[ap] = { nombre: c[gen], depende: "Carlos", equipo: gen === "leyendas" ? LEY : COET, modelo: "Nemotron 3 Ultra (por defecto)", abierto: true, coste: "gratis", porDefecto: true, consejero: true, rol: c.rol };
 }
 export const CONSEJEROS_GRATIS = Object.keys(MAPA).filter((k) => MAPA[k].porDefecto);
-/** Proveedor de pago de una instancia (runtime + modelo), o null si es gratis. */
-export function proveedor(runtime, model) {
-  const t = String(runtime || "") + " " + String(model || "");
-  if (RE_GRATIS.test(t)) return null;
-  if (/claude|anthropic/i.test(t)) return "claude";
-  if (/codex|gpt|openai/i.test(t)) return "codex";
-  if (/grok/i.test(t)) return "grok";
-  if (/cursor|gemini/i.test(t)) return "otro";
-  return null;
+/** Proveedor de pago de una instancia (runtime + modelo), o null si no se conoce un proveedor de pago. */
+export function proveedor(runtime, model, proveedorReal) {
+  const dato = costeDePresencia({ runtime, model, proveedor: proveedorReal });
+  if (dato.coste !== "pago") return null;
+  return ({ OpenAI: "codex", Anthropic: "claude", xAI: "grok" })[dato.proveedor] || "otro";
 }
 /** ¿Esta instancia usa un modelo de pago FUERA de las 6 suscripciones? (regla rota) → motivo | null. */
-export function fueraDeLas6(p, runtime, model) {
-  const pr = proveedor(runtime, model);
+export function fueraDeLas6(p, runtime, model, proveedorReal) {
+  const pr = proveedor(runtime, model, proveedorReal);
   if (!pr) return null;
   const k = persona(p) === "Musk" ? "Merovingio" : persona(p);
   const m = MAPA[k];
   if (m && m.sub === pr) return null;
   return (runtime || pr) + (model ? " · " + model : "") + " es de pago y " + k + (m && m.sub ? " solo puede usar " + m.sub : m && m.porDefecto ? " va por defecto en Nemotron Ultra gratis" : " no tiene suscripción de pago");
 }
-export const RE_GRATIS = /opencode|deepagents|nemotron|nvidia|:free|ollama|llama|qwen|mistral/i;
-export const RE_PAGO = /claude|codex|gpt|grok|gemini|cursor|openai|anthropic/i;
 
 export const llave = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]+/g, "");
 const PERSONAS = [...AGENTES_FLOTA, ...CONSEJEROS];
@@ -89,7 +84,7 @@ export function persona(n) {
   return todas.find((p) => k === llave(p)) || (ap && String(n).trim().includes(" ") && todas.find((p) => llave(p) === ap)) || todas.find((p) => k.startsWith(llave(p))) || String(n).trim();
 }
 /** ¿Esta instancia (runtime + modelo) es gratuita? */
-export const gratis = (runtime, model) => RE_GRATIS.test(String(runtime || "") + " " + String(model || ""));
+export const gratis = (runtime, model, proveedor) => costeDePresencia({ runtime, model, proveedor }).coste === "gratis";
 
 /** Carga de una bandeja: { abiertos, pending, ack, in_progress, blocked }. */
 export function cargaDe(items, p) {
@@ -107,45 +102,36 @@ export function cargaDe(items, p) {
  * → { filas:[{ agente, depende, equipo:{es,en}|null, modelo, donde, instancias, abierto, coste, vivo, carga, mapeado }],
  *     resumen:{ total, pago, gratis, mixto, vivos } }
  */
-/**
- * Insignia PAGO / GRATIS de una fila (encargo #5645, Carlos vía Musk, 11-10-2026). Binaria y a la vista: PAGO son los
- * titulares de las 6 suscripciones (Merovingio y Smith en Grok, Oráculo y Trinity en Codex, Neo y Morfeo en Claude) y
- * cualquier instancia que esté gastando un modelo de pago fuera de ellas (la fila en rojo, o un agente sin mapear que
- * late con runtime de pago). Todo lo demás es GRATIS: los incluidos en el pool de otro no pagan suscripción propia.
- * Merovingio corre con Grok CLI (grok-4.7): es PAGO aunque su caja también tenga OpenRouter gratis.
- */
+/** Coste del proveedor real; los titulares/pools r6 siguen siendo datos contables aparte. */
 export function insignia(f) {
-  if (!f) return "gratis";
-  return f.titular || f.fuera || (!f.mapeado && f.coste === "pago") ? "pago" : "gratis";
+  return f && ['pago', 'gratis', 'desconocido'].includes(f.coste) ? f.coste : 'desconocido';
 }
 export function matriz({ presencia = [], carga = new Map(), ahoraS }) {
   const vivas = new Map();
-  for (const e of presencia || []) {
+  for (const e of [...(presencia || [])].sort((a, b) => Number(b.updated) - Number(a.updated))) {
     if (!e || !e.persona) continue;
     const ts = Number(e.declared_updated || e.updated) || 0;
-    if (ahoraS - ts > VIVO_S) continue;
+    if (ahoraS - ts > 86400) continue;
     const p = persona(e.persona) === "Musk" ? "Merovingio" : persona(e.persona);
     if (!vivas.has(p)) vivas.set(p, new Map());
-    const k = llave(e.machine) + "|" + llave(e.runtime);
-    if (!vivas.get(p).has(k)) vivas.get(p).set(k, { maquina: e.machine || "", runtime: e.runtime || "", modelo: e.model || "", gratis: gratis(e.runtime, e.model) });
+    const k = llave(e.machine) + "|" + llave(e.runtime) + "|" + (e.session_id || "");
+    if (!vivas.get(p).has(k)) vivas.get(p).set(k, { agente: persona(e.persona), maquina: e.machine || "", runtime: e.runtime || "", modelo: e.model || "", session_id: e.session_id || "", ...costeDePresencia(e), vivo: ahoraS - ts <= VIVO_S, updated: ts, gratis: gratis(e.runtime, e.model, e.proveedor || e.provider) });
   }
   const nombres = [...new Set([...Object.keys(MAPA), ...AGENTES_FLOTA, ...vivas.keys()])];
   const filas = nombres.map((p) => {
     const m = MAPA[p] || null;
     const inst = [...((vivas.get(p) && vivas.get(p).values()) || [])];
     // Huang es consejero (lo despierta su webhook): cuenta como vivo si late su deepagent Cypher.
-    const vivo = inst.length > 0 || (p === "Huang" && vivas.has("Cypher"));
-    const libres = inst.filter((i) => i.gratis).length, pagos = inst.length - libres;
-    const infracciones = inst.map((i) => fueraDeLas6(p, i.runtime, i.modelo)).filter(Boolean);
-    let abierto, coste;
-    if (m) { abierto = m.abierto; coste = m.coste; }
-    // Sin mapa: se deduce del runtime que late; sin latido no hay runtime → «sin datos» (no se inventa).
-    else if (!inst.length) { coste = null; abierto = null; }
-    else { coste = pagos ? "pago" : "gratis"; abierto = coste === "gratis"; }
-    const modelo = (m && m.modelo) || [...new Set(inst.map((i) => i.runtime + (i.modelo ? " · " + i.modelo : "")))].join(" + ") || "—";
+    const vivo = inst.some((i) => i.vivo) || (p === "Huang" && [...(vivas.get("Cypher")?.values() || [])].some((i) => i.vivo));
+    const infracciones = inst.filter((i) => i.vivo).map((i) => fueraDeLas6(p, i.runtime, i.modelo, i.proveedor)).filter(Boolean);
+    const coste_plan = m ? m.coste : null;
+    const costes = inst.filter((i) => i.agente === p);
+    const coste = costeConjunto(costes);
+    const abierto = m ? m.abierto : costes.length && coste !== 'desconocido' ? coste === 'gratis' : null;
+    const modelo = [...new Set(costes.map((i) => i.runtime + (i.modelo ? " · " + i.modelo : "")))].join(" + ") || "—";
     const fuera = infracciones.length > 0;
     return {
-      insignia: insignia({ titular: !!(m && m.titular), fuera, mapeado: !!m, coste }),
+      insignia: insignia({ coste }), costes, coste_plan,
       agente: (m && m.nombre) || p, agenteEn: (m && (m.nombreEn || m.nombre)) || p, persona: p,
       depende: (m && m.depende) || null, equipo: (m && m.equipo) || null, mapeado: !!m,
       modelo, donde: [...new Set(inst.map((i) => i.maquina + (i.runtime ? " (" + i.runtime + (i.gratis ? ", gratis" : "") + ")" : "")))],
@@ -162,10 +148,11 @@ export function matriz({ presencia = [], carga = new Map(), ahoraS }) {
   for (const m of Object.values(MAPA)) if (m.titular && m.sub in subs) subs[m.sub]++;
   const resumen = {
     total: filas.length, suscripciones: subs.grok + subs.codex + subs.claude, subs,
-    gratis: filas.filter((f) => f.coste === "gratis").length, incluidos: filas.filter((f) => f.coste === "incluido").length,
-    sinDatos: filas.filter((f) => !f.coste).length, vivos: filas.filter((f) => f.vivo).length,
-    fuera: filas.filter((f) => f.fuera).length, conPlanC: filas.filter((f) => f.coste === "mixto").length,
+    gratis: filas.filter((f) => f.coste === "gratis").length, incluidos: filas.filter((f) => f.coste_plan === "incluido").length,
+    sinDatos: filas.filter((f) => f.coste === "desconocido").length, vivos: filas.filter((f) => f.vivo).length,
+    fuera: filas.filter((f) => f.fuera).length, conPlanC: filas.filter((f) => f.coste_plan === "mixto").length,
     consejerosGratis: filas.filter((f) => f.porDefecto).length,
+    insigniaDesconocido: filas.filter((f) => f.insignia === "desconocido").length,
     insigniaPago: filas.filter((f) => f.insignia === "pago").length, insigniaGratis: filas.filter((f) => f.insignia === "gratis").length,
   };
   return { filas, resumen };

@@ -10,12 +10,12 @@
  * `maquina: 'GrokBot'` dice dónde vive el bot. Ese mismo nombre es el equipo
  * de despertar de TODAS las sillas, así que flota.js no lo trata como silla
  * exclusiva al resolver «encargar a esta máquina».
- * Su deepagent es Merovingio (Grok CLI en la GrokBot box): no es Smith.
+ * Su deepagent es Merovingio (DeepAgents dcode vía OpenRouter en la GrokBot box): no es Smith.
  *
  * Huang (Jensen Huang, CTO, lado racional, generación coetáneos) tampoco tiene
  * MacBook. Su deepagent es Cypher (DeepAgents en la GrokBot box; modelo
- * nvidia/nemotron-3-ultra-550b-a55b, NVIDIA Nemotron 3 Ultra en
- * integrate.api.nvidia.com). No es ArquitectoCursorCloud.
+ * nvidia/nemotron-3-ultra-550b-a55b:free vía OpenRouter).
+ * Son valores canónicos de respaldo; los latidos reales tienen prioridad. No es ArquitectoCursorCloud.
  */
 
 export const SILLAS = {
@@ -23,8 +23,8 @@ export const SILLAS = {
   Jobs:    { rol: 'CEO', lado: 'racional', generacion: 'leyendas',  maquina: 'MacBookAirAzul',  fleet_id: 'admira-macbookairazul',  alias: ['MBAAzul', 'MBA Azul', 'Luna', 'admira-macbookairluna'] },
   Lucas:   { rol: 'CSO', lado: 'creativo', generacion: 'leyendas',  maquina: 'MacBookAirRosa',  fleet_id: 'admira-macbookairrosa',  alias: ['MBARosa', 'MBA Rosa'] },
   Disney:  { rol: 'CCO', lado: 'creativo', generacion: 'leyendas',  maquina: 'MacBookAirCrema', fleet_id: 'admira-macbookaircrema', alias: ['MBACrema', 'MBA Crema', 'Carla', 'admira-macbook-carla'] },
-  Musk:    { rol: 'CEO', lado: 'racional', generacion: 'coetaneos', maquina: 'GrokBot', fleet_id: '', alias: ['Elon', 'Elon Musk'], deepagent: 'Merovingio', deepagent_maquina: 'GrokBotBox', deepagent_runtime: 'Grok CLI' },
-  Huang:   { rol: 'CTO', lado: 'racional', generacion: 'coetaneos', maquina: 'GrokBot', fleet_id: '', alias: ['Jensen', 'Jensen Huang'], deepagent: 'Cypher', deepagent_maquina: 'GrokBotBox', deepagent_runtime: 'DeepAgents', deepagent_model: 'nvidia/nemotron-3-ultra-550b-a55b' },
+  Musk:    { rol: 'CEO', lado: 'racional', generacion: 'coetaneos', maquina: 'GrokBot', fleet_id: '', alias: ['Elon', 'Elon Musk'], deepagent: 'Merovingio', deepagent_maquina: 'GrokBotBox', deepagent_runtime: 'DeepAgents dcode', deepagent_proveedor: 'OpenRouter', deepagent_model: 'nvidia/nemotron-3-ultra-550b-a55b:free' },
+  Huang:   { rol: 'CTO', lado: 'racional', generacion: 'coetaneos', maquina: 'GrokBot', fleet_id: '', alias: ['Jensen', 'Jensen Huang'], deepagent: 'Cypher', deepagent_maquina: 'GrokBotBox', deepagent_runtime: 'DeepAgents', deepagent_proveedor: 'OpenRouter', deepagent_model: 'nvidia/nemotron-3-ultra-550b-a55b:free' },
 };
 
 /** Orden estable: el de este objeto. Lo consumen yokup, flota y telegram. */

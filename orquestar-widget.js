@@ -4,23 +4,30 @@
   "use strict";
   var TIPOS = [["codigo", "Código"], ["web", "Web"], ["demo", "Demo"], ["investigacion", "Investigación"], ["consejo", "Consejo"], ["creativo", "Creativo"]];
   function esc(s) { return String(s == null ? "" : s).replace(/[&<>"]/g, function (c) { return { "&": "&amp;", "<": "&lt;", ">": "&gt;", '"': "&quot;" }[c]; }); }
+  function badge(c) { return window.CosteDistintivo.html(c); }
+  function costes(d) {
+    var zona = document.getElementById('orquestar-costes');
+    if (!zona) return;
+    zona.innerHTML = (d.costes || []).map(function (r) { return '<li>' + esc(r.persona + ' · ' + r.maquina + ' · ' + r.runtime + ' · ' + r.proveedor) + ' ' + badge(r.coste) + (r.vivo ? '' : ' <small>último dato, sin señal</small>') + '</li>'; }).join('') || '<li>' + badge('desconocido') + ' Sin presencia</li>';
+  }
   var BADGE = ' <em class="con-carlos" title="Carlos está trabajando con este agente: no se le inyectan encargos">con Carlos</em>';
   function conCarlos(d) {
-    var ex = (d.excluidos || []).filter(function (x) { return x.conCarlos; }).map(function (x) { return esc(x.persona) + BADGE; });
+    var ex = (d.excluidos || []).filter(function (x) { return x.conCarlos; }).map(function (x) { return esc(x.persona) + " " + badge(x.coste) + BADGE; });
     return ex.length ? ' · <small>excluido: </small>' + ex.join(", ") : "";
   }
   function top3(d) {
     return (d.candidatos || []).slice(0, 3).map(function (c, i) {
-      return (i + 1) + ". " + esc(c.persona) + (c.conCarlos ? BADGE : "") + " <small>(" + (c.libre && c.libre.libre ? "libre" : "no libre") + ", " + (c.margenPct == null ? "margen ?" : Math.round(c.margenPct) + " %") + ", " + c.puntuacion + ")</small>";
+      return (i + 1) + ". " + esc(c.persona) + " " + badge(c.coste) + (c.conCarlos ? BADGE : "") + " <small>(" + (c.libre && c.libre.libre ? "libre" : "no libre") + ", " + (c.margenPct == null ? "margen ?" : Math.round(c.margenPct) + " %") + ", " + c.puntuacion + ")</small>";
     }).join(" · ");
   }
   function fila(etiqueta, d) {
-    return '<li><strong>' + esc(etiqueta) + ':</strong> ' + esc(d.elegido ? d.elegido.motivo : "nadie") + '<br><span class="orq-top">' + top3(d) + conCarlos(d) + '</span></li>';
+    return '<li><strong>' + esc(etiqueta) + ':</strong> ' + esc(d.elegido ? d.elegido.motivo : "nadie") + ' ' + badge(d.elegido && d.elegido.coste) + '<br><span class="orq-top">' + top3(d) + conCarlos(d) + '</span></li>';
   }
   function pedir(q) { return fetch("/api/orquestar?" + q, { cache: "no-store" }).then(function (r) { return r.json(); }); }
   var lista = document.getElementById("orquestar-tipos");
   if (lista) {
     Promise.all(TIPOS.map(function (t) { return pedir("tipo=" + t[0]).catch(function () { return {}; }); })).then(function (rs) {
+      costes(rs[0] || {});
       lista.innerHTML = rs.map(function (d, i) { return fila(TIPOS[i][1], d); }).join("");
       // r37 (/consumos plegado): una línea con el elegido de cada tipo — «Código Neo · Web Neo · …».
       var res = document.getElementById("orquestar-resumen");

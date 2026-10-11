@@ -17,6 +17,7 @@
  * encargo_estado.
  */
 
+import { costeDePresencia } from './coste.js';
 import { SILLAS, CONSEJEROS_GROKBOT, sillaCanonica } from './sillas.js';
 import { crearTelegram } from './telegram.js';
 import { filasPresencia, cargaDe, ESTADOS_ABIERTOS } from './coordinacion.js';
@@ -181,12 +182,12 @@ export function crearFlota(env = {}, identidad, deps = {}) {
   async function vivos() {
     const filas = await presenciaViva();
     const porPersona = new Map();
-    for (const r of filas) {
+    for (const r of [...filas].sort((a, b) => seg(b.updated) - seg(a.updated))) {
       const p = personaCanonica(r.persona);
       if (!porPersona.has(p)) porPersona.set(p, []);
       const lista = porPersona.get(p);
-      if (lista.some((x) => norm(x.maquina) === norm(r.machine))) continue;
-      lista.push({ maquina: String(r.machine || ''), runtime: r.runtime || '', foco: r.focus || r.task || '', ultimo_latido: hace(r.updated) });
+      if (lista.some((x) => norm(x.maquina) === norm(r.machine) && x.runtime === (r.runtime || '') && x.session_id === (r.session_id || ''))) continue;
+      lista.push({ maquina: String(r.machine || ''), runtime: r.runtime || '', modelo: r.model || '', session_id: r.session_id || '', ...costeDePresencia(r), foco: r.focus || r.task || '', ultimo_latido: hace(r.updated) });
     }
     const sinSenal = AGENTES_FLOTA.filter((p) => !porPersona.has(p));
     // Carga: encargos abiertos (pending/ack/in_progress/blocked) de cada persona. Si la bandeja no
@@ -204,7 +205,13 @@ export function crearFlota(env = {}, identidad, deps = {}) {
         const fila = { persona, equipo: 'GrokBot', silla: s.rol, lado: s.lado, maquina: s.maquina, disponibilidad: 'siempre: se le despierta por webhook, contesta en 1-3 min', carga: resumenCarga(carga.get(persona)) };
         if (s.deepagent) {
           fila.deepagent = s.deepagent; fila.deepagent_maquina = s.deepagent_maquina; fila.deepagent_runtime = s.deepagent_runtime; fila.deepagent_vivo = porPersona.has(s.deepagent);
-          if (s.deepagent_model) fila.deepagent_model = s.deepagent_model;
+          const real = (porPersona.get(s.deepagent) || []).find((x) => norm(x.maquina) === norm(s.deepagent_maquina));
+          fila.deepagent_runtime = real ? real.runtime : s.deepagent_runtime;
+          fila.deepagent_model = real ? real.modelo : s.deepagent_model;
+          fila.deepagent_proveedor = real ? real.proveedor : s.deepagent_proveedor;
+          fila.deepagent_coste = real ? real.coste : 'desconocido';
+          fila.deepagent_distintivo = fila.deepagent_coste.toUpperCase();
+          fila.deepagent_fuente = real ? 'presencia' : 'configuración canónica, sin señal';
         }
         return fila;
       }),

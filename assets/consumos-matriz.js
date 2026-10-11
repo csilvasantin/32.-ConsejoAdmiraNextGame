@@ -18,17 +18,16 @@
   var COSTE = { pago: ['Pago', 'Paid'], gratis: ['Gratis', 'Free'], mixto: ['Pago + plan C gratis', 'Paid + free plan C'], incluido: ['Incluido', 'Included'] };
   var PROV = { grok: 'GrokBot', codex: 'Codex', claude: 'Claude' };
   function coste(f) {
-    if (!f.coste) return T('sin datos', 'no data');
-    if (f.porDefecto) return T('Gratis · Nemotron Ultra (por defecto)', 'Free · Nemotron Ultra (default)');
-    if (f.coste === 'incluido') return T('Incluido en la suscripción ', 'Included in ') + (f.incluidoEn ? (en() ? f.incluidoEn + "'s " : '') + (PROV[f.sub] || f.sub) + (en() ? ' subscription' : ' de ' + f.incluidoEn) : '');
-    var b = T(COSTE[f.coste][0], COSTE[f.coste][1]);
-    return f.titular ? b + ' · ' + (PROV[f.sub] || f.sub) : b;
+    var proveedores = [...new Set((f.costes || []).map(function (x) { return x.proveedor; }))];
+    return proveedores.join(' · ') || T('Proveedor desconocido', 'Unknown provider');
   }
-  // #5645: insignia binaria PAGO (ámbar) / GRATIS (verde) delante del detalle del coste. Llega calculada de la
-  // función (flota-matriz-lib insignia()); si la respuesta es anterior, se aplica aquí la misma regla.
-  function insignia(f) {
-    var v = f.insignia || (f.titular || f.fuera || (!f.mapeado && f.coste === 'pago') ? 'pago' : 'gratis');
-    return '<b class="mz-ins mz-ins-' + v + '">' + (v === 'pago' ? T('PAGO', 'PAID') : T('GRATIS', 'FREE')) + '</b>';
+  function insignia(f) { return root.CosteDistintivo.html(f.coste, en()); }
+  function superficiesCoste(f) {
+    return (f.costes || []).map(function (x) {
+      return '<small class="coste-superficie' + (x.vivo ? '' : ' coste-sin-senal') + '">' +
+        root.CosteDistintivo.html(x.coste, en()) + esc(x.maquina + ' · ' + x.runtime + ' · ' + x.proveedor) +
+        (x.vivo ? '' : ' · ' + T('último dato, sin señal', 'last report, no signal')) + '</small>';
+    }).join('');
   }
   // r16: cara del personaje (o del consejero) delante del nombre, del mismo mapa que las fichas.
   function cara(f) {
@@ -70,7 +69,7 @@
     return '<tr class="' + (f.vivo ? 'mz-vivo' : 'mz-off') + (f.fuera ? ' mz-fuera' : '') + '" title="' + esc(est) + '">' +
       '<td><i class="mz-p" aria-hidden="true"></i>' + cara(f) + esc(en() ? f.agenteEn : f.agente) + carga + '</td>' +
       '<td>' + esc(f.depende || '—') + '</td><td>' + (f.equipo ? esc(eq) : eq) + '</td>' +
-      '<td>' + esc(modelo(f.modelo)) + donde + inc + inf + '</td><td>' + superficie(f) + '</td><td>' + esc(ab) + '</td>' +
+      '<td>' + esc(modelo(f.modelo)) + donde + inc + inf + superficiesCoste(f) + '</td><td>' + superficie(f) + '</td><td>' + esc(ab) + '</td>' +
       '<td class="mz-td-co">' + insignia(f) + '<span class="mz-co mz-' + esc(f.fuera ? 'fuera' : (f.coste || 'nd')) + '">' + esc(co) + '</span></td></tr>';
   }
   function pinta(d) {
@@ -82,7 +81,7 @@
     var r = m.resumen;
     var sb = r.subs || {};
     if (res) res.innerHTML = '<b>' + r.suscripciones + '</b> ' + T('suscripciones de pago', 'paid subscriptions') + ' (' + (sb.grok || 0) + ' GrokBot · ' + (sb.codex || 0) + ' Codex · ' + (sb.claude || 0) + ' Claude) · <b>' + r.gratis + '</b> ' + T('gratis', 'free') +
-      (r.consejerosGratis ? ' (' + r.consejerosGratis + ' ' + T('consejeros en Nemotron Ultra por defecto', 'councillors on Nemotron Ultra by default') + ')' : '') +
+      ' · <b>' + (r.insigniaDesconocido || 0) + '</b> ' + T('desconocidos', 'unknown') +
       ' · ' + r.incluidos + ' ' + T('incluidos en una suscripción GrokBot', 'included in a GrokBot subscription') + (r.conPlanC ? ' · ' + r.conPlanC + ' ' + T('con plan C gratis', 'with free plan C') : '') +
       ' · ' + r.vivos + ' ' + T('con señal', 'live') + (r.sinDatos ? ' · ' + r.sinDatos + ' ' + T('sin clasificar', 'unclassified') : '') +
       (r.fuera ? ' · <b class="mz-rojo">⚠ ' + r.fuera + ' ' + T('fuera de las 6 (regla rota)', 'outside the 6 (rule broken)') + '</b>' : ' · <span class="mz-ok">' + T('ninguna instancia de pago fuera de las 6', 'no paid instance outside the 6') + '</span>');

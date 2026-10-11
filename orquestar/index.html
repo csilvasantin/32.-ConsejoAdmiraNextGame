@@ -16,6 +16,7 @@ button{background:#78f3ff;color:#02080d;border:0;border-radius:8px;padding:8px 1
 .con-carlos{display:inline-block;margin-left:4px;padding:1px 7px;border-radius:9px;background:#ffcf5a;color:#1a1200;font-size:11px;font-style:normal;font-weight:700}
 </style>
 <script src="/admira-idioma.js"></script><!-- idioma ES/EN · ?lang=en · /idioma ENG (10-10-2026) -->
+<link rel="stylesheet" href="/assets/coste-distintivo.css?v=5670">
 </head>
 <body>
 <div class="wrap">
@@ -27,7 +28,10 @@ button{background:#78f3ff;color:#02080d;border:0;border-radius:8px;padding:8px 1
   <h2>Ahora mismo, por tipo</h2>
   <ul id="orquestar-tipos"><li>Calculando…</li></ul>
   <p class="lead" id="orquestar-generado"></p>
+  <h2>Proveedor por superficie</h2><p class="lead">Coste del último dato de presencia. No mide gasto facturado; sin proveedor reconocido aparece DESCONOCIDO.</p>
+  <ul id="orquestar-costes"><li>Cargando…</li></ul>
 </div>
-<script src="/orquestar-widget.js?v=r2-con-carlos"></script>
+<script src="/assets/coste-distintivo.js?v=5670"></script>
+<script src="/orquestar-widget.js?v=5670-proveedor"></script>
 </body>
 </html>

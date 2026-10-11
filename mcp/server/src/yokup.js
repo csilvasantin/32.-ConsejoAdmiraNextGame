@@ -140,12 +140,13 @@ export function crearYokup(env = {}, identidad, deps = {}) {
   /** Latido de presencia: es lo que pone al consejero en yokup.com/equipo y da la «vía».
    *  `trabajando` es opt-in: el latido automático de las demás yokup_* no lo manda,
    *  y el worker solo abre presence_work si `working` llega como booleano real. */
-  async function presencia({ foco = '', tarea = '', proyecto = '', trabajando, encargo } = {}) {
+  async function presencia({ foco = '', tarea = '', proyecto = '', trabajando, encargo, proveedor } = {}) {
     const id = exigir();
     // La presencia se indexa por persona BASE + máquina (yokup.com/mcp). Latir con
     // apellido (WozniakGrokBot) crea una fila que no lee nadie; el carné completo
     // va en owner de misiones, no aquí.
     const body = { persona: id.persona, machine: id.machine, runtime: id.runtime, focus: foco, host: 'app', model: id.model };
+    if (proveedor) body.proveedor = proveedor;
     if (tarea) body.task = tarea;
     if (proyecto) body.project = proyecto;
     if (typeof trabajando === 'boolean') {

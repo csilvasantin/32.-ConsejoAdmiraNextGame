@@ -1,0 +1,4 @@
+/* Ámbar = proveedor de pago; verde = gratuito; gris = proveedor desconocido. */
+.mz-ins{display:inline-block;min-width:54px;margin:2px 6px 2px 0;padding:2px 7px;border-radius:7px;font-size:11px;font-weight:800;letter-spacing:.06em;text-align:center;vertical-align:middle;font-style:normal;white-space:nowrap}
+.mz-ins-pago{background:#ffb020;color:#1a1200}.mz-ins-gratis{background:#3ddc84;color:#04170c}.mz-ins-desconocido{background:#334650;color:#e6f2f6}
+.coste-superficie{display:block;margin:5px 0;font-size:12px;line-height:1.5;overflow-wrap:anywhere}.coste-superficies{margin:8px 0;line-height:1.5}.coste-sin-senal{opacity:.75}

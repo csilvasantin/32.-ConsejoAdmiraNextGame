@@ -22,6 +22,7 @@
  *  · Tokens honestos: tokHora es «≈ 15 min × 4»; se manda también tokUltimaHora (real) y sinMedicion cuando no hay
  *    medición de tokens (sin pulso, o pulso a 0 todo el día) para no pintar «0» como si fuera un dato.
  */
+import { costeDePresencia, costeConjunto } from "./mcp/server/src/coste.js";
 import { CONSEJEROS as CONSEJO, GENERACIONES } from "./mcp/server/src/consejo.js";
 import { POOL_MEROVINGIO, fueraDeLas6, CONSEJEROS_GRATIS } from "./flota-matriz-lib.mjs";
 export const VENTANA_LATIDO_S = 120;
@@ -190,7 +191,7 @@ export function retratoDe(nombre) {
 const CANON = ["Jobs", "Wozniak", "Lucas", "Disney", "Musk", "Huang", "Neo", "Trinity", "Morfeo", "Oráculo", "Smith", "Niobe", "Cypher", "Merovingio", "Link", "Grok Bot"];
 
 /** OpenCode / DeepAgents / Nemotron / NVIDIA free → plan C gratis. */
-export const esGratis = (runtime, model) => /opencode|deepagents|nemotron|nvidia|:free/i.test(String(runtime || "") + " " + String(model || ""));
+export const esGratis = (runtime, model, proveedor) => costeDePresencia({ runtime, model, proveedor }).coste === "gratis";
 /** «Oráculo» → «Oraculo» (clave de persona de la bandeja / del MCP). */
 const personaCenso = (n) => (n === "Oráculo" ? "Oraculo" : n);
 const sinTilde = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase();
@@ -395,7 +396,7 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
     const st = estadoTrabajo({ tokHora: tokVivo, conCarlos: (p && p.conCarlos) ? true : ccPres ? ccPres.motivo : false, latidos: x.latidos, ahoraS, enCurso, siempreVivo: VIVO_SIEMPRE.includes(x.agente) });
     // r4: instancias vivas (< 15 min) por máquina+runtime; las de OpenCode/DeepAgents/Nemotron son el plan C gratis.
     const inst = new Map();
-    for (const e of x.latidos) if (ahoraS - (Number(e.declared_updated || e.updated) || 0) < VENTANA_VIVO_S) inst.set(claveMaquina(e.machine) + "|" + sinTilde(e.runtime), esGratis(e.runtime, e.model));
+    for (const e of x.latidos) if (ahoraS - (Number(e.declared_updated || e.updated) || 0) < VENTANA_VIVO_S) inst.set(claveMaquina(e.machine) + "|" + sinTilde(e.runtime), esGratis(e.runtime, e.model, e.proveedor || e.provider));
     const nGratis = [...inst.values()].filter(Boolean).length, nPago = inst.size - nGratis;
     if (st.motivo === "sin latido" && p && Number(p.tokHoy) > 0) st.motivo = "parado";
     const ultPulso = p && p.ultimoEvento ? Math.floor(Date.parse(p.ultimoEvento) / 1000) : 0;
@@ -412,19 +413,27 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
     // r4: cada agente una vez con su modelo principal real; el plan C gratis va como nota (planC), no como su motor.
     if (PRINCIPAL[x.agente] && (!motor || esGratis(motor, modeloCard) || x.agente === "Merovingio")) { motor = PRINCIPAL[x.agente]; modeloCard = x.agente === "Merovingio" ? "pool GrokBot csilvasantin" : null; }
     // r6: instancias vivas con modelo de pago fuera de las 6 suscripciones → regla rota (en rojo).
-    const fuera = [...new Set(x.latidos.filter((e) => ahoraS - (Number(e.declared_updated || e.updated) || 0) < VENTANA_VIVO_S).map((e) => fueraDeLas6(e.persona || x.agente, e.runtime, e.model)).filter(Boolean))];
+    const fuera = [...new Set(x.latidos.filter((e) => ahoraS - (Number(e.declared_updated || e.updated) || 0) < VENTANA_VIVO_S).map((e) => fueraDeLas6(e.persona || x.agente, e.runtime, e.model, e.proveedor || e.provider)).filter(Boolean))];
     const soloGratis = inst.size > 0 && !nPago && !PRINCIPAL[x.agente];
     // Merovingio late por DeepAgents pero su modelo es Grok CLI de pago: sin nota de plan C.
     let planC = nGratis > 0 && !soloGratis && !VIVO_SIEMPRE.includes(x.agente);
     // r6 (Carlos, 13:01): consejeros no principales → Nemotron 3 Ultra gratis por defecto (salvo que late de pago: rojo).
     let gratisDef = soloGratis;
     if (CONSEJEROS_GRATIS.includes(x.agente) && !fuera.length) { motor = "Nemotron 3 Ultra"; modeloCard = "gratis · por defecto"; gratisDef = true; planC = false; }
+    // Coste por superficie de ESTA identidad; el pool de suscripción r6 no cambia el proveedor.
+    const costes = x.latidos.filter((e) => canonico(e.persona) === x.agente).map((e) => ({
+      maquina: e.machine || '', runtime: e.runtime || '', modelo: e.model || '', session_id: e.session_id || '',
+      ...costeDePresencia(e), vivo: ahoraS - Number(e.updated) <= VENTANA_VIVO_S,
+    }));
+    const coste = costeConjunto(costes);
+    if (costes.length) { motor = costes[0].runtime; modeloCard = costes[0].modelo; }
+    gratisDef = coste === 'gratis';
     const r = RETRATOS[x.agente];
     out.push({
       agente: x.agente, estado: st.estado, motivo: st.motivo,
       conCarlosEn,
       maquina: (p && p.conCarlos && p.maquina) || (ccPres && ccPres.maquina) || (gris && fresca.maquina) || (enPulso && p.maquina) || (l && l.machine) || (p && p.maquina) || (pf && pf.maquina) || null,
-      motor, modelo: modeloCard,
+      motor, modelo: modeloCard, coste, distintivo: coste.toUpperCase(), costes,
       enCurso, abiertos: cg ? Number(cg.abiertos) || 0 : null, bloqueados: cg ? Number(cg.blocked) || 0 : null, instancias: inst.size, planC, gratis: gratisDef, fuera, incluye: x.incluye || null,
       foco: limpio(l && l.focus), tarea: limpio(l && l.task, 120),
       proyecto: (enPulso && p.proyectoAhora) || (l && l.project) || (p && p.proyectoAhora) || null,
@@ -455,12 +464,23 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
       tokHora: null, tokHoy: null, tokUltimaHora: null, tokHoraMetodo: null, sinMedicion: false,
       retrato: RETRATOS[consejero] || null, consejero: true, grupo: "consejeros" });
   }
+  // La dualidad y el pool transmiten actividad/tokens, nunca el proveedor de otra identidad.
+  for (const t of out) {
+    const vistas = new Set();
+    t.costes = presencia.filter((e) => canonico(e.persona) === t.agente && ahoraS - Number(e.updated) <= maxEdadS)
+      .sort((a, b) => Number(b.updated) - Number(a.updated)).filter((e) => {
+        const key = [e.machine, e.runtime, e.session_id || ''].join('|');
+        if (vistas.has(key)) return false; vistas.add(key); return true;
+      }).map((e) => ({ maquina: e.machine || '', runtime: e.runtime || '', modelo: e.model || '',
+        ...costeDePresencia(e), vivo: ahoraS - Number(e.updated) <= VENTANA_VIVO_S }));
+    t.coste = costeConjunto(t.costes); t.distintivo = t.coste.toUpperCase(); t.gratis = t.coste === 'gratis';
+  }
   // r14 (Carlos, 14:39): la máquina de un consejero es la del Mac donde está ABIERTA su app Grok Bot (por cuenta), no la
   // de Smith/Merovingio. App al frente y Mac con reposo < 5 min → «con Carlos» en ese Mac. Los tokens siguen en la ficha
   // de Smith/Merovingio. Sin app abierta con su cuenta en ningún Mac → se queda como antes (máquina del agente).
   colocarPorAppGrokBot(out, velocidad && velocidad.grokbotApps);
   // r11: la franja alterna cada 10 s máquina ↔ runtime: se mandan ya cortos.
-  for (const t of out) { t.maqCorta = t.appMaquinas ? t.appMaquinas.map((m) => m.corta).join(" + ") : maquinaCorta(t.maquina); t.runtime = runtimeCorto(t); }
+  for (const t of out) { if (!t.coste) { t.coste = 'desconocido'; t.distintivo = 'DESCONOCIDO'; t.costes = []; } t.maqCorta = t.appMaquinas ? t.appMaquinas.map((m) => m.corta).join(" + ") : maquinaCorta(t.maquina); t.runtime = runtimeCorto(t); }
   // r28-sup (Carlos, 17:28/17:36): superficie de cada instancia, por Mac. Los consejeros principales corren en el
   // asistente de GrokBot en la nube (rutinas / webhooks), no en una CLI: «GrokBot (asistente)», nunca «GrokBot CLI».
   for (const t of out) {

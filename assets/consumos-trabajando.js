@@ -26,11 +26,13 @@
     return h.indexOf('en') === 0;
   }
   function T(es, en_) { return en() ? en_ : es; }
-  /** r4: nota de coste secundaria: el modelo principal manda; el plan C gratis solo se apunta. */
   function notaCoste(t) {
-    if (t.gratis) return '<span class="tr-chip tr-gratis" title="' + esc(T('Solo late en runtimes gratuitos (OpenCode / DeepAgents / Nemotron): no reporta tokens', 'Only free runtimes (OpenCode / DeepAgents / Nemotron): no token reporting')) + '">' + T('gratis', 'free') + '</span>';
-    if (t.planC) return '<span class="tr-chip tr-gratis" title="' + esc(T('Además tiene una instancia en el plan C gratis (OpenCode / Nemotron)', 'Also runs an instance on free plan C (OpenCode / Nemotron)')) + '">' + T('+ plan C gratis', '+ free plan C') + '</span>';
-    return '';
+    var costes = t.costes || [];
+    if (!costes.length) return root.CosteDistintivo.html(t.coste, en());
+    return costes.map(function (x) {
+      return '<span class="coste-superficie">' + root.CosteDistintivo.html(x.coste, en()) +
+        esc(x.maquina + ' · ' + x.proveedor) + (x.vivo ? '' : ' · ' + T('último dato, sin señal', 'last report, no signal')) + '</span>';
+    }).join('');
   }
   function esc(s) { return String(s == null ? '' : s).replace(/[&<>"']/g, function (c) { return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]; }); }
   function fmt(n) {
@@ -158,7 +160,7 @@
     function chip(t) {
       var gris = t.estado === 'gris';
       var est = gris ? T('en espera', 'idle') : t.estado === 'amarillo' ? cc(t) : T('trabajando', 'working');
-      return '<span class="tr-chipa tr-' + esc(t.estado) + (t.fuera && t.fuera.length ? ' tr-rojo' : '') + '" title="' + esc(t.agente + ' · ' + est + (t.via ? ' · ' + T('vía ', 'via ') + t.via : '') + ' · ' + rt(t.motor || '') + (supCorta(t) ? ' · ' + supCorta(t) : '') + (t.planC ? T(' + plan C gratis', ' + free plan C') : t.gratis ? T(' · gratis', ' · free') : '') + (gris && t.haceS != null ? ' · ' + hace(t.haceS) : '')) + '">' + retrato(t) + '<i></i>' + esc(t.agente) + altChip(t) + (gris ? ' <small class="tr-espera">' + esc(T('en espera', 'idle')) + '</small>' : '') + '</span>';
+      return '<span class="tr-chipa tr-' + esc(t.estado) + (t.fuera && t.fuera.length ? ' tr-rojo' : '') + '" title="' + esc(t.agente + ' · ' + est + (t.via ? ' · ' + T('vía ', 'via ') + t.via : '') + ' · ' + rt(t.motor || '') + (supCorta(t) ? ' · ' + supCorta(t) : '') + (t.planC ? T(' + plan C gratis', ' + free plan C') : t.gratis ? T(' · gratis', ' · free') : '') + (gris && t.haceS != null ? ' · ' + hace(t.haceS) : '')) + '">' + retrato(t) + '<i></i>' + esc(t.agente) + root.CosteDistintivo.html(t.coste, en()) + altChip(t) + (gris ? ' <small class="tr-espera">' + esc(T('en espera', 'idle')) + '</small>' : '') + '</span>';
     }
     return vivos.map(chip).join('') + grises.map(chip).join('');
   }

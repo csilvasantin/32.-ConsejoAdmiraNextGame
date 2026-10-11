@@ -291,6 +291,7 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
 .tok-cursor{margin-top:8px;color:var(--mut);font-size:14px}.tok-cursor b{color:var(--ink)}
 .con-carlos{display:inline-block;margin-left:6px;padding:1px 7px;border-radius:9px;background:#ffcf5a;color:#1a1200;font-size:11px;font-style:normal;font-weight:700;vertical-align:middle}
 </style>
+<link rel="stylesheet" href="/assets/coste-distintivo.css?v=5670">
 </head>
 <body>
 <div class="wrap">
@@ -416,6 +417,7 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
       <tbody id="matriz-filas"><tr><td colspan="7" class="mz-vacio" data-en="Reading the live census…">Leyendo el censo vivo…</td></tr></tbody>
     </table></div>
     <p class="mz-nota mz-leyenda-sup" data-en="Surface: Terminal (CLI) is the agent's working channel (tmux session). Only Carlos uses the desktop app: «Desktop app · Carlos» when he is using it (frontmost or typing, idle &lt; 5 min); «App open, not in use» (dimmed) never counts as the agent working. Main councillors run in the GrokBot assistant (cloud), not in a CLI.">Superficie: Terminal (CLI) es el canal de trabajo del agente (sesión tmux). La app de escritorio solo la usa Carlos: «App de escritorio · Carlos» si la está usando (al frente o escribiendo, reposo &lt; 5 min); «App abierta, sin uso» (atenuado) nunca cuenta como trabajo del agente. Los consejeros principales corren en el asistente de GrokBot (nube), no en una CLI.</p>
+    <p class="mz-nota">PAGO y GRATIS describen el proveedor de cada superficie según su último dato de presencia; DESCONOCIDO indica que falta el proveedor. No son una factura ni el estado de trabajo. El mapa de suscripciones y cuentas compartidas sigue separado.</p>
     <p class="mz-nota" data-en="New agents must be free and are reserved for lower-priority work.">Los agentes nuevos deben ser gratuitos y se reservan para trabajos menos prioritarios.</p>
     <p class="mz-nota" data-en="Only 2 principal councillors per account run on paid GrokBot: Musk + Huang (csilvasantin, Merovingio's pool) and Jobs + Wozniak (csilva@admira.com, Smith's GrokBot). Every other councillor runs on free Nemotron 3 Ultra by default; red = paid model outside the 6 subscriptions.">Solo 2 consejeros principales por cuenta van en GrokBot de pago: Musk + Huang (csilvasantin, pool de Merovingio) y Jobs + Wozniak (csilva@admira.com, GrokBot de Smith). El resto de consejeros va por defecto en Nemotron 3 Ultra gratis; en rojo = modelo de pago fuera de las 6 suscripciones.</p>
     <p class="mz-nota" data-en="Live from the same data as agentes_vivos: Yokup presence (heartbeat < 15 min) + each agent's inbox. Greyed out = no signal. A new agent shows up on its own, «unclassified» until it is mapped.">En vivo, con los mismos datos que agentes_vivos: presencia de Yokup (latido &lt; 15 min) + la bandeja de cada agente. En gris = sin señal. Un agente nuevo aparece solo, «sin clasificar» hasta mapearlo.</p>
@@ -489,13 +491,14 @@ fetch("/consumos-plataformas.json", { cache: "no-store" })
 </script>
 <script src="/assets/consumos-plegable.js?v=r31"></script>
 <script src="/assets/consumos-velocimetro-elegir.js?v=r24-margen"></script>
-<script src="/assets/consumos-matriz.js?v=20261011-r29-insignia"></script>
-<script src="/assets/consumos-trabajando.js?v=20261011-r26-foco"></script>
+<script src="/assets/coste-distintivo.js?v=5670"></script>
+<script src="/assets/consumos-matriz.js?v=20261011-5670-proveedor"></script>
+<script src="/assets/consumos-trabajando.js?v=20261011-5670-proveedor"></script>
 <script src="/assets/consumos-desplegable.js?v=r23"></script>
 <script src="/assets/consumos-velocimetro.js?v=20261010-r19"></script>
 <script src="/assets/live-velocidad.js?v=r18-tiempo-real"></script>
 <script src="/consumos-lecturas.js?v=20261010-r25"></script>
-<script src="/orquestar-widget.js?v=r37-r2-con-carlos"></script>
+<script src="/orquestar-widget.js?v=5670-proveedor"></script>
 <script src="/admira-idioma-consumos.js?v=20261010-r20"></script><!-- inglés del texto fijo de /consumos (10-10-2026) -->
 <script src="/yk-frame.js?v=r33-min"></script>
 </body>

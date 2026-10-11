@@ -4,6 +4,7 @@
  * uso; nunca gastar de quien tiene menos margen si hay alguien apto con más.
  * Funciones puras: sin red ni KV (los datos los trae functions/api/orquestar.js).
  */
+import { costeDePresencia } from "./mcp/server/src/coste.js";
 import { PERSONAS, APTITUD, PALABRAS, TIPO_POR_DEFECTO } from "./orquestar-config.mjs";
 
 export const UMBRAL_APTO = 0.4;
@@ -108,8 +109,18 @@ export function orquestar({ tipo, cuentas = [], presencia = [], bandeja = [], ah
     const lib = cc ? { libre: false, why: OCUPADO_CON_CARLOS } : libre(lat, enCurso, ahoraS, { despierta: cfg.despierta || null });
     const punt = puntuacion({ apto, esLibre: lib.libre, margenPct });
     const partes = [tipo + " " + apto.toFixed(2), lib.libre ? "libre" : "ocupado/ausente", margenPct === null ? (c ? "sin lectura de margen" : "margen desconocido") : fmt(margenPct) + " de margen"];
+    const alias = new Set(cfg.alias.map(plano));
+    const costes = presencia.filter((r) => alias.has(plano(r.persona || r.agent))).map((r) => ({
+      maquina: r.machine || '', runtime: r.runtime || '', modelo: r.model || '', ...costeDePresencia(r),
+      vivo: ahoraS - (Number(r.updated) > 4102444800 ? Number(r.updated) / 1000 : Number(r.updated)) <= LATIDO_VIVO_S,
+      updated: Number(r.updated) || 0,
+    })).sort((a, b) => b.updated - a.updated);
+    const clave = (s) => plano(s).replace(/[^a-z0-9]/g, '');
+    const real = costes.find((r) => r.vivo && clave(r.maquina) === clave(cfg.maquina)) || costes.find((r) => r.vivo);
+    const coste = real ? real.coste : 'desconocido';
     return {
-      persona: cfg.persona, maquina: cfg.maquina, modelo: cfg.modelo,
+      persona: cfg.persona, maquina: real ? real.maquina : cfg.maquina, modelo: real ? real.modelo : cfg.modelo,
+      coste, distintivo: coste.toUpperCase(), proveedor: real ? real.proveedor : 'desconocido', costes,
       cuenta: cfg.cuenta ? (c ? c.nombre + (c.cuenta ? " (" + c.cuenta + ")" : "") : cfg.cuenta) : "desconocida",
       grupo: cfg.cuenta || null,
       apto, libre: { libre: lib.libre, why: lib.why }, conCarlos: cc, despierta: cfg.despierta || null, margenPct, semaforo: c ? c.semaforo : "sin",
@@ -126,15 +137,17 @@ export function orquestar({ tipo, cuentas = [], presencia = [], bandeja = [], ah
   const pool = sinCarlos.length ? sinCarlos : base;
   const orden = (a, b) => b.puntuacion - a.puntuacion || (b.margenPct ?? -1) - (a.margenPct ?? -1) || (Date.parse(b.ultimoLatido || 0) || 0) - (Date.parse(a.ultimoLatido || 0) || 0) || a.persona.localeCompare(b.persona);
   const candidatos = [...pool].sort(orden);
-  const excluidos = todos.filter((x) => !pool.includes(x)).map((x) => ({ persona: x.persona, apto: x.apto, conCarlos: x.conCarlos,
+  const excluidos = todos.filter((x) => !pool.includes(x)).map((x) => ({ persona: x.persona, apto: x.apto, conCarlos: x.conCarlos, coste: x.coste, proveedor: x.proveedor, costes: x.costes,
     // r24: también el margen de su cuenta (lo enseña /consumos aunque el agente esté fuera del reparto).
     margenPct: x.margenPct, semaforo: x.semaforo, agotaAntes: x.agotaAntes, proyeccionTexto: x.proyeccionTexto,
     motivo: x.conCarlos && base.includes(x) ? OCUPADO_CON_CARLOS : "no apto para " + tipo + " (<" + UMBRAL_APTO + ")" }));
   const top = candidatos[0] || null;
   const etiquetaTipo = { codigo: "código", investigacion: "investigación", creativo: "creativo", consejo: "consejo", web: "web", demo: "demo", estrategia: "estrategia" }[tipo] || tipo;
   const elegido = top ? {
-    persona: top.persona,
+    persona: top.persona, coste: top.coste, distintivo: top.distintivo, proveedor: top.proveedor,
     motivo: top.persona + ": " + etiquetaTipo + ", " + (top.conCarlos ? "ocupado con Carlos pero no queda nadie más apto, " : "") + (top.libre.libre ? "libre" : "no libre (" + top.libre.why + ")") + ", " + (top.margenPct === null ? (top.grupo ? "sin lectura de margen" : "margen desconocido") : fmt(top.margenPct) + " de margen"),
   } : null;
-  return { tipo, candidatos, excluidos, elegido, conCarlos: todos.filter((x) => x.conCarlos).map((x) => x.persona) };
+  return { tipo, candidatos, excluidos, elegido,
+    costes: presencia.map((r) => ({ persona: r.persona, maquina: r.machine, runtime: r.runtime, modelo: r.model, ...costeDePresencia(r),
+      vivo: ahoraS - (Number(r.updated) > 4102444800 ? Number(r.updated) / 1000 : Number(r.updated)) <= LATIDO_VIVO_S })), conCarlos: todos.filter((x) => x.conCarlos).map((x) => x.persona) };
 }

@@ -57,6 +57,7 @@
       if (d0 === undefined) return { ok: false, error: 'dispositivo', valor: p[1] };
       return { ok: true, accion: 'off', grid: g, dispositivo: d0 };
     }
+    if (a === '2' || a === '4') { p.unshift('terminal'); a = 'terminal'; } // forma corta: /interface 4 · /interface 2 fold (6 ya arriba)
     if (a === 'terminal' || a === 'terminales') {
       var n = p[1];
       if (n !== '2' && n !== '4' && n !== '6') return { ok: false, error: 'grid', valor: n };
@@ -68,14 +69,27 @@
   }
 
   function ayuda() {
-    return T('/interface terminal 4 [dispositivo] — cuadratura Neo·Morfeo·Trinity·Oráculo · /interface terminal 2 [dispositivo] — Smith·Merovingio · /interface 6 [Fold|Iphone] — los 6 en 3x2 · ',
-             '/interface terminal 4 [device] — Neo·Morph·Trinity·Oracle grid · /interface terminal 2 [device] — Smith·Merovingio · /interface 6 [Fold|Iphone] — all 6 in 3x2 · ') +
+    return T('/interface [terminal] 4 [dispositivo] — cuadratura Neo·Morfeo·Trinity·Oráculo · /interface [terminal] 2 [dispositivo] — Smith·Merovingio · /interface 6 [Fold|Iphone] — los 6 en 3x2 · ',
+             '/interface [terminal] 4 [device] — Neo·Morph·Trinity·Oracle grid · /interface [terminal] 2 [device] — Smith·Merovingio · /interface 6 [Fold|Iphone] — all 6 in 3x2 · ') +
       T('sin dispositivo se abre aquí; dispositivos: Fold, Iphone, Air, MBP16, MBP14 · /interface off [dispositivo] la cierra',
         'no device opens it here; devices: Fold, Iphone, Air, MBP16, MBP14 · /interface off [device] closes it');
   }
 
   // ── Panel cuadrado en esta misma pantalla ───────────────────────────────
-  function cerrarPanel() { var el = document.getElementById('admira-interface'); if (el) el.remove(); }
+  var encajeActual = null;
+  function cerrarPanel() {
+    var el = document.getElementById('admira-interface'); if (el) el.remove();
+    if (encajeActual) { root.removeEventListener('resize', encajeActual); encajeActual = null; }
+  }
+  // El panel cuadrado NO tapa el ⌘ EXPERTO · CLI anclado abajo: se encaja en el hueco que queda encima,
+  // para poder seguir escribiendo (/interface off) mientras se ve. Sigue al alto del dock (experto-dock.js avisa con resize).
+  function encajar(w) {
+    var lim = root.innerHeight, d = document.querySelector('.ax-dock');
+    if (d && d.offsetHeight && getComputedStyle(d).display !== 'none') { var r = d.getBoundingClientRect(); if (r.top > 160) lim = r.top; }
+    var lado = Math.max(140, Math.floor(Math.min(root.innerWidth * 0.94, lim - 12)));
+    w.style.width = w.style.height = lado + 'px';
+    w.style.top = Math.round(lim / 2) + 'px';
+  }
   function abrirPanel(grid) {
     cerrarPanel();
     var url = grid === 6 ? GRID6_URL : grid === 4 ? GRID4_URL : GRID2_URL;
@@ -102,6 +116,9 @@
     w.lastChild.textContent = nota;
     w.querySelector('button').onclick = cerrarPanel;
     document.body.appendChild(w);
+    encajar(w);
+    encajeActual = function () { encajar(w); };
+    root.addEventListener('resize', encajeActual);
     var esc = function (e) { if (e.key === 'Escape' && document.getElementById('admira-interface')) { e.stopPropagation(); cerrarPanel(); document.removeEventListener('keydown', esc, true); } };
     document.addEventListener('keydown', esc, true);
     return true;
@@ -182,7 +199,77 @@
     return true;
   }
 
-  var api = { parse: parse, run: run, ayuda: ayuda, abrirPanel: abrirPanel, cerrarPanel: cerrarPanel, ordenMac: ordenMac, DISPOSITIVOS: DISPOSITIVOS, GRID2_URL: GRID2_URL, GRID4_URL: GRID4_URL, GRID6_URL: GRID6_URL };
+  // ── /demo interface: recorrido guiado que se ejecuta solo ────────────────
+  var PASOS = [
+    ['/interface help', 'Así se pide ayuda: el comando y los dispositivos.', 'This is how you ask for help: the command and the devices.', 2600],
+    ['/interface 4', 'Terminal 4 aquí mismo: la cuadratura de Neo, Morfeo, Trinity y Oráculo (visor privado con llave).', 'Terminal 4 right here: the Neo, Morph, Trinity and Oracle grid (private keyed viewer).', 6500],
+    ['/interface off', 'La cierro con /interface off (o Esc).', 'Closing it with /interface off (or Esc).', 1800],
+    ['/interface 2', 'Terminal 2: Smith y Merovingio (Grok), solo dentro del tailnet de Carlos.', 'Terminal 2: Smith and Merovingio (Grok), only inside Carlos\'s tailnet.', 6500],
+    ['/interface off', 'Y la cierro. Con dispositivo: /interface 2 Fold, /interface 4 MBP16…', 'And close it. With a device: /interface 2 Fold, /interface 4 MBP16…', 1200]
+  ];
+  var demoEnCurso = null;
+  /** demo(decir) — decir(texto, esOrden) escribe en el registro del CLI que la lanzó. */
+  function demo(decir) {
+    decir = decir || function () {};
+    if (demoEnCurso) clearTimeout(demoEnCurso);
+    decir('▶ ' + T('Demo /interface · 5 pasos (se ejecutan solos)', 'Demo /interface · 5 steps (they run by themselves)'));
+    var i = 0;
+    function paso() {
+      if (i >= PASOS.length) { demoEnCurso = null; decir('✓ ' + T('Fin de la demo /interface.', 'End of the /interface demo.')); try { document.dispatchEvent(new CustomEvent('admira:demo', { detail: { id: 'interface', ok: true } })); } catch (e) {} return; }
+      var s = PASOS[i++];
+      decir('— ' + i + '/' + PASOS.length + ' · ' + T(s[1], s[2]));
+      decir('› ' + s[0], true);
+      run(s[0], function (t) { decir(t); });
+      demoEnCurso = setTimeout(paso, s[3]);
+    }
+    paso();
+    return PASOS.length;
+  }
+  var RE_DEMO = /^\/?demo\s+(interface|interfaz|terminal|terminales)\s*$/i;
+  var RE_DEMO_HELP = /^\/?demo(\s+(help|ayuda|lista|list|\?))?\s*$/i;
+  var DEMOS_LIVE = '/demo portada · /demo lectura · /demo velocidad · /demo interface';
+
+  // ── Registro en el ⌘ EXPERTO · CLI de la suite (www.admiranext.com/suite/experto.js) ──
+  function li(log, t, cls) {
+    if (!log || !root.document) return;
+    String(t).split('\n').forEach(function (l) { var e = document.createElement('li'); e.className = cls || ''; e.textContent = l; log.appendChild(e); });
+    log.scrollTop = log.scrollHeight;
+  }
+  function registrarExperto() {
+    var E = root.AdmiraExperto;
+    if (!E || typeof E.verb !== 'function') return false;
+    if (E.has && E.has('interface')) return true;
+    E.verb({ name: 'interface', alias: ['interfaz'], args: '[terminal] 4|2|6 [dispositivo] · off [dispositivo] · help',
+      desc: ['terminales en vivo de los deepagents: 4 = Neo·Morfeo·Trinity·Oráculo, 2 = Smith·Merovingio, 6 = los seis; sin dispositivo aquí, o Fold/Iphone/Air/MBP16/MBP14 · /demo interface',
+             'live deepagent terminals: 4 = Neo·Morph·Trinity·Oracle, 2 = Smith·Merovingio, 6 = all six; no device = here, or Fold/Iphone/Air/MBP16/MBP14 · /demo interface'],
+      run: function (parts, log) { run('/interface ' + (parts || []).join(' '), function (t) { li(log, t, /^⚠/.test(t) ? 'err' : ''); }); } });
+    return true;
+  }
+  function engancharDemo() {
+    // Igual que assets/live-demo-portada.js: se captura el submit del CLI antes que la suite.
+    document.addEventListener('submit', function (e) {
+      var form = e.target && e.target.closest && e.target.closest('form');
+      if (!form || (!form.classList.contains('ax-cli-form') && !form.classList.contains('ax-own-form'))) return;
+      var input = form.querySelector('input, textarea');
+      var t = String((input && input.value) || '').trim();
+      var log = (form.closest('.ax-cli') || document).querySelector('.ax-cli-out');
+      if (RE_DEMO.test(t)) {
+        e.preventDefault(); e.stopPropagation();
+        if (input) input.value = '';
+        li(log, '› ' + t, 'cmd');
+        demo(function (x, orden) { li(log, x, orden ? 'cmd' : (/^⚠/.test(x) ? 'err' : '')); });
+        return;
+      }
+      if (RE_DEMO_HELP.test(t)) setTimeout(function () { li(log, T('Demos de admira.live: ', 'admira.live demos: ') + DEMOS_LIVE); }, 0);
+    }, true);
+  }
+  if (root.document) {
+    var intentos = 0;
+    (function esperar() { if (!registrarExperto() && intentos++ < 120) setTimeout(esperar, 250); })();
+    if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', engancharDemo); else engancharDemo();
+  }
+
+  var api = { parse: parse, demo: demo, PASOS: PASOS, RE_DEMO: RE_DEMO, registrarExperto: registrarExperto, run: run, ayuda: ayuda, abrirPanel: abrirPanel, cerrarPanel: cerrarPanel, ordenMac: ordenMac, DISPOSITIVOS: DISPOSITIVOS, GRID2_URL: GRID2_URL, GRID4_URL: GRID4_URL, GRID6_URL: GRID6_URL };
   root.AdmiraInterface = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

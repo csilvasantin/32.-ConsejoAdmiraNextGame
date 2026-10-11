@@ -59,4 +59,28 @@ test('parse: /interface 6 y terminal 6, aquí o en el móvil', () => {
   assert.equal(I.GRID6_URL, '/visor/?g=6');
   assert.equal(normalizarOrden({ dispositivo: 'fold', accion: 'terminal', grid: 6 }).orden.grid, 6);
   assert.equal(normalizarOrden({ dispositivo: 'fold', accion: 'terminal', grid: 5 }).ok, false);
+
+test('forma corta: /interface 4 · /interface 2 fold · /interfaz 4 mbp16', () => {
+  const I = globalThis.AdmiraInterface;
+  assert.deepEqual(I.parse('/interface 4'), { ok: true, accion: 'terminal', grid: 4, dispositivo: null });
+  assert.equal(I.parse('/interface 2 fold').dispositivo, 'fold');
+  assert.equal(I.parse('/interfaz 4 MBP16').grid, 4);
+  assert.equal(I.parse('/interface 3').ok, false);
+});
+
+test('/demo interface: help → 4 aquí → off → 2 aquí → off, todo con parse válido', () => {
+  const I = globalThis.AdmiraInterface;
+  assert.deepEqual(I.PASOS.map(p => p[0]), ['/interface help', '/interface 4', '/interface off', '/interface 2', '/interface off']);
+  I.PASOS.forEach(p => { assert.equal(I.parse(p[0]).ok, true); assert.ok(p[1] && p[2]); });
+  assert.ok(I.RE_DEMO.test('/demo interface') && I.RE_DEMO.test('/demo interfaz') && !I.RE_DEMO.test('/demo portada'));
+});
+
+test('la barra (páginas sin CLI propia) usa la misma implementación y la home carga el dock redimensionable', async () => {
+  const fs = await import('node:fs');
+  const bar = fs.readFileSync(new URL('./admira-bar.js', import.meta.url), 'utf8');
+  assert.match(bar, /\/assets\/interface-cli\.js\?v=/);
+  assert.match(bar, /"\/interface", "\/interfaz"/);
+  const home = fs.readFileSync(new URL('./index.html', import.meta.url), 'utf8');
+  assert.match(home, /\/assets\/experto-dock\.js\?v=/);
+  assert.match(home, /\/assets\/interface-cli\.js\?v=/);
 });

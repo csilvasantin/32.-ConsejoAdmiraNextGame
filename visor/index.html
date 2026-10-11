@@ -43,6 +43,11 @@
   .idle .info, .idle .mis { margin-top:.35em; color:#8a8a8a; font-size:11px; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   .idle .info { margin-top:1.0em; }
   .ficha.login .idle .palabra, .ficha.pendiente .idle .palabra { color:#ffb347; }
+  /* r43 (#5697): sin latido de la sesión en su máquina = gris, sin estado inventado; encargo en otra máquina = azul */
+  .ficha.sindatos { border-color:#444; }
+  .ficha.sindatos .idle .arte { color:#555; }
+  .ficha.sindatos .idle .palabra { color:#8a8a8a; font-weight:500; }
+  .ficha.otra .idle .palabra { color:#7fb2ff; }
   .idle .viejo { margin-top:.35em; color:#5c5c5c; font-size:10px; font-style:italic; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
   /* r42: aviso de la ficha (sesión en otra máquina, terminal que no publica en el panel) */
   .aviso { flex:0 0 auto; display:none; padding:2px 6px; font-size:11px; color:#ffcc4d; background:#1a1400; border-top:1px solid #4d3d00; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
@@ -220,6 +225,8 @@
     var maq = MAQUINAS[f.host] || f.maquinaNombre || f.host;
     pintarAviso(el, f);
     var modelo = f.sub || ((f.titulo || "").split(" · ")[1] || "") + " · " + maq + " · deepagent de pago";
+    // r43 (#5697): sin latido de esa sesión en esa máquina → «sin datos de <máquina> desde HH:MM», en gris
+    if (f.estado !== "vivo" && f.sinDatos) { pintarIdle(el, f, k, nombre, ""); return; }
     // r31: si el Mac manda el estado (estado-agente.py, el mismo que la cuadrícula), se pinta igual que allí
     if (f.agente) {
       var cong = f.estado === "congelado" ? " · congelado" : "";
@@ -249,12 +256,15 @@
     if ($a.textContent !== txt) { $a.textContent = txt; $a.title = txt; $a.classList.toggle("on", !!txt); }
   }
   function pintarIdle(el, f, k, nombre, cong) {
+    var sd = f.estado !== "vivo" && !!f.sinDatos;
+    el.classList.toggle("sindatos", sd); el.classList.toggle("otra", f.agente === "otra");
     el.classList.add("ficha-idle"); el.classList.toggle("login", f.agente === "login"); el.classList.toggle("nosesion", f.agente === "nosesion"); el.classList.toggle("pendiente", f.agente === "pendiente");
     var arte = (f.arte && f.arte.length ? f.arte : ROTULOS[claveRot(nombre)] || (f.rotulo && f.rotulo.length ? f.rotulo : null)) || [nombre.toUpperCase()];
     var palabra = f.etiqueta || (f.agente === "login" ? "Login pendiente" : f.agente === "nosesion" ? "Sin sesión" : f.agente === "pendiente" ? "Pendiente sin trabajar" : "Idle");
     var info = (f.modelo || "") + " · " + (f.mac || MAQUINAS[f.host] || f.maquinaNombre || f.host) + " · " + palabra + " · " + hm() + cong;
     var mis = f.linea || ("última misión: " + (f.mision || "sin misiones registradas"));
     var viejo = f.viejo || "";
+    if (sd) { palabra = f.sinDatos; info = ((f.titulo || "").split(" · ")[1] || "") + " · " + (f.maquinaNombre || f.host) + " · " + hm(); mis = f.encargoFuera || ""; viejo = ""; }
     var firma = "idle:" + palabra + ":" + info + ":" + mis + ":" + viejo + ":" + arte.join("|");
     if (ultimo[k] === firma) return; ultimo[k] = firma;
     el.dataset.acols = Math.max.apply(null, arte.map(function (l) { return l.length; })); el.dataset.afilas = arte.length;

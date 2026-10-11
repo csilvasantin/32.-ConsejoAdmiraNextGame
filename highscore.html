@@ -1027,6 +1027,23 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     grid-template-columns:28px minmax(52px,auto) 28px}
   .score-divider .ranking-period button{width:28px;height:28px;font-size:12px}
   .score-divider .ranking-period-value{font-size:12px}
+  /* RANKING, igual que HIGHSCORE: el título solo y centrado, y ↑ DÍA ↓ en la
+     fila de debajo. En absoluto, a la derecha, el periodo ocupa la misma línea
+     y el rótulo deja de leerse centrado. */
+  .rank-divider{flex-wrap:wrap;align-items:center;justify-content:center;row-gap:6px;min-height:0;padding:8px 4px}
+  .rank-divider .ranking-toggle{order:0;flex:1 0 100%;text-align:center}
+  .rank-divider .ranking-period{order:1;position:static;right:auto;top:auto;transform:none;margin-left:auto;font-size:12px;
+    grid-template-columns:28px minmax(52px,auto) 28px}
+  .rank-divider .ranking-period button{width:28px;height:28px;font-size:12px}
+  .rank-divider .ranking-period-value{font-size:12px}
+  /* En Agentes la calle vacía mide ~70 px y el octágono (clip-path) más el
+     max-width de esa pista reducen READY/SET/GO a un pico. Aquí el botón es
+     una pastilla legible, centrada en la carrera, sin recorte. */
+  .refresh-race{min-height:56px}
+  .refresh-race.phase-ready,.refresh-race.phase-set,.refresh-race.phase-go{min-height:64px}
+  .race-call{clip-path:none;border-radius:6px;min-width:112px;max-width:calc(100% - 24px);
+    padding:6px 16px;font-size:16px;line-height:20px;letter-spacing:.14em}
+  .race-call::before,.race-call::after{display:none}
   .refresh-lane-empty[data-race-warmup="true"]{display:block;width:100%;min-height:0}
   .refresh-lane-empty[data-race-warmup="true"] .refresh-track{display:block;width:100%;min-height:0;padding:8px 12px}
   .refresh-lane-empty[data-race-warmup="true"] .refresh-mission{position:static;left:auto;right:auto;top:auto;display:block;width:100%;max-width:none;margin:0;text-align:center;transform:none;font-size:12px;line-height:16px}
@@ -6095,9 +6112,19 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     var meta = trackRect.right - raceRect.left - finishWidth;
     if (!(Number.isFinite(start) && Number.isFinite(meta)) || meta <= start) return false;
     var centro = (start + meta) / 2;
+    var alto = trackRect.top - raceRect.top + trackRect.height / 2;
+    var anchoUtil = meta - start;
+    // Calle vacía en tres columnas: la pista queda bajo el ancho de READY/SET/GO
+    // y el max-width inline, con el clip octogonal, deja solo un pico. La
+    // llamada pasa a centrarse en la carrera entera.
+    if (!(anchoUtil >= 140)) {
+      centro = raceRect.width / 2;
+      alto = raceRect.height / 2;
+      anchoUtil = Math.max(0, raceRect.width - 16);
+    }
     aviso.style.left = centro + "px";
-    aviso.style.top = (trackRect.top - raceRect.top + trackRect.height / 2) + "px";
-    aviso.style.maxWidth = Math.max(0, meta - start - 8) + "px";
+    aviso.style.top = alto + "px";
+    aviso.style.maxWidth = Math.max(140, anchoUtil - 8) + "px";
     aviso.dataset.trackStart = String(start);
     aviso.dataset.trackFinish = String(meta);
     aviso.dataset.trackCenter = String(centro);

@@ -54,6 +54,9 @@
   }
   /* Apaisado bajo (desplegado tumbado): 4 en fila si no caben 2x2 */
   @media (min-width: 1300px) and (max-height: 700px) { #rejilla { grid-template-columns: repeat(4, 1fr); grid-template-rows: 1fr; } }
+  /* r33 · /interface 6: 3x2 (apaisado) o 2x3 (vertical); plegado sigue siendo una por pantalla */
+  .g6 #rejilla { grid-template-columns: repeat(3, 1fr); grid-template-rows: 1fr 1fr; }
+  @media (orientation: portrait) and (min-width: 641px) { .g6 #rejilla { grid-template-columns: 1fr 1fr; grid-template-rows: repeat(3, 1fr); } }
 </style>
 </head>
 <body>
@@ -64,14 +67,19 @@
 (function () {
   "use strict";
   // Colores = los perfiles de Terminal de la cuadratura del Mac (cuadratura.conf, 4.º campo)
-  var SKINS = { "Homebrew": "#28fe14", "Red Sands": "#ff5f4a", "Ocean": "#3aa0ff", "Grass": "#39d353", "Novel": "#c9a66b", "Pro": "#e0e0e0" };
+  var SKINS = { "Homebrew": "#28fe14", "Red Sands": "#ff5f4a", "Ocean": "#3aa0ff", "Grass": "#39d353", "Novel": "#c9a66b", "Pro": "#e0e0e0", "Smith": "#b4ff3c", "Merovingio": "#36d7e6" };
+  // r33 (/interface 6): ?g=6 → rejilla 3x2 con Smith y Merovingio (Grok) además de los 4 de pago
+  var G6 = /[?&]g=6\b/.test(location.search);
+  if (G6) document.documentElement.classList.add("g6");
   var ROTULOS = {
     "NEO": [" _  _ ___ ___  ", "| \\| | __/ _ \\ ", "| .` | _| (_) |", "|_|\\_|___\\___/ "],
     "MORFEO": [" __  __  ___  ___ ___ ___ ___  ", "|  \\/  |/ _ \\| _ \\ __| __/ _ \\ ", "| |\\/| | (_) |   / _|| _| (_) |", "|_|  |_|\\___/|_|_\\_| |___\\___/ "],
     "TRINITY": [" _____ ___ ___ _  _ ___ _______   __", "|_   _| _ \\_ _| \\| |_ _|_   _\\ \\ / /", "  | | |   /| || .` || |  | |  \\ V / ", "  |_| |_|_\\___|_|\\_|___| |_|   |_|  "],
+    "SMITH": [" ___ __  __ ___ _____ _  _ ", "/ __|  \\/  |_ _|_   _| || |", "\\__ \\ |\\/| || |  | | | __ |", "|___/_|  |_|___| |_| |_||_|"],
+    "MEROVINGIO": [" __  __ ___ ___  _____   _____ _  _  ___ ___ ___  ", "|  \\/  | __| _ \\/ _ \\ \\ / /_ _| \\| |/ __|_ _/ _ \\ ", "| |\\/| | _||   / (_) \\ V / | || .` | (_ || | (_) |", "|_|  |_|___|_|_\\\\___/ \\_/ |___|_|\\_|\\___|___\\___/ "],
     "ORACULO": ["  ___  ___    _   ___ _   _ _    ___  ", " / _ \\| _ \\  /_\\ / __| | | | |  / _ \\ ", "| (_) |   / / _ \\ (__| |_| | |_| (_) |", " \\___/|_|_\\/_/ \\_\\___|\\___/|____\\___/ "]
   };
-  var MAQUINAS = { "macbook-pro-16": "MacBook Pro 16", "macmini": "Mac Mini", "macbookpronegro14": "MacBook Pro 14", "macbookair16plata": "MacBook Air 16" };
+  var MAQUINAS = { "grokbotbox": "GrokBotBox", "macbook-pro-16": "MacBook Pro 16", "macmini": "Mac Mini", "macbookpronegro14": "MacBook Pro 14", "macbookair16plata": "MacBook Air 16" };
   var CADA_MS = 3000;
 
   // Llave: viene en el #fragmento (no viaja al servidor ni a los logs), se guarda en este navegador y se limpia de la URL
@@ -192,7 +200,7 @@
   }
   function pintarIdle(el, f, k, nombre, cong) {
     el.classList.add("ficha-idle"); el.classList.toggle("login", f.agente === "login"); el.classList.toggle("nosesion", f.agente === "nosesion");
-    var arte = (f.arte && f.arte.length ? f.arte : (f.rotulo && f.rotulo.length ? f.rotulo : ROTULOS[claveRot(nombre)])) || [nombre.toUpperCase()];
+    var arte = (f.arte && f.arte.length ? f.arte : ROTULOS[claveRot(nombre)] || (f.rotulo && f.rotulo.length ? f.rotulo : null)) || [nombre.toUpperCase()];
     var palabra = f.etiqueta || (f.agente === "login" ? "Login pendiente" : f.agente === "nosesion" ? "Sin sesión" : "Idle");
     var info = (f.modelo || "") + " · " + (f.mac || MAQUINAS[f.host] || f.host) + " · " + palabra + " · " + hm() + cong;
     var mis = "última misión: " + (f.mision || "sin misiones registradas");
@@ -216,7 +224,7 @@
   var fallos = 0, t0;
   function tick() {
     t0 = Date.now();
-    fetch("/api/visor/pane", { headers: { "X-Visor-Key": llave }, cache: "no-store" }).then(function (r) {
+    fetch("/api/visor/pane" + (G6 ? "?g=6" : ""), { headers: { "X-Visor-Key": llave }, cache: "no-store" }).then(function (r) {
       if (r.status === 401) { try { localStorage.removeItem("visorLlave"); } catch (e) {} document.getElementById("llave").innerHTML = "<div class=\"msg\">La llave de este visor ya no vale (revocada o caducada).<br/>Pide un enlace nuevo a GrokBot.</div>"; document.getElementById("llave").style.display = "flex"; throw new Error("401"); }
       return r.json();
     }).then(function (d) {

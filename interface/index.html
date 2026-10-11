@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
 <meta name="robots" content="noindex, nofollow" />
 <meta name="referrer" content="no-referrer" />
-<meta name="admiranext-version" content="AdmiraNeXT v.11.10.2026.r32.13:24" />
+<meta name="admiranext-version" content="AdmiraNeXT v.11.10.2026.r33.13:36" />
 <title>admira.live · interface</title>
 <!-- r29 · Jensen Huang · Carlos 11-10-2026 12:51: el móvil deja esta página abierta y `/interface terminal 2|4 Fold`
      desde el modo experto de admira.live le hace enseñar la cuadrícula. Privada: la misma llave del visor (localStorage
@@ -29,7 +29,7 @@
 <div id="vista"><div id="barra"><span id="titulo"></span><a id="aparte" target="_blank" rel="noopener">abrir aparte ↗</a></div><iframe id="marco" referrerpolicy="no-referrer" allow="local-network-access; local-network; clipboard-write"></iframe><div id="nota"></div></div>
 <script>
 (function () {
-  var GRID2 = "https://macbookair16plata.tail48b61c.ts.net/", GRID4 = "/visor/";
+  var GRID2 = "https://macbookair16plata.tail48b61c.ts.net/", GRID4 = "/visor/", GRID6 = "/visor/?g=6";
   var q = new URLSearchParams(location.search), d = (q.get("d") || "fold").toLowerCase();
   var nombres = { fold: "Samsung Fold", iphone: "iPhone" };
   var $ = function (id) { return document.getElementById(id); };
@@ -49,9 +49,9 @@
     var clave = o.grid + ":" + o.id;
     if (clave === actual) return;
     actual = clave;
-    var url = o.grid === 4 ? GRID4 : GRID2;
-    $("titulo").textContent = o.grid === 4 ? "⌨ TERMINAL 4 · Neo · Morfeo · Trinity · Oráculo" : "⌨ TERMINAL 2 · Smith · Merovingio";
-    $("nota").textContent = o.grid === 4 ? "Visor privado de admira.live · solo lectura" : "Solo dentro del tailnet de Carlos (MacBook Air · ttyd de solo lectura). Si no carga, activa Tailscale en este móvil.";
+    var url = o.grid === 6 ? GRID6 : o.grid === 4 ? GRID4 : GRID2;
+    $("titulo").textContent = o.grid === 6 ? "⌨ TERMINAL 6 · Neo · Morfeo · Trinity · Oráculo · Smith · Merovingio" : o.grid === 4 ? "⌨ TERMINAL 4 · Neo · Morfeo · Trinity · Oráculo" : "⌨ TERMINAL 2 · Smith · Merovingio";
+    $("nota").textContent = o.grid >= 4 ? "Visor privado de admira.live · solo lectura" : "Solo dentro del tailnet de Carlos (MacBook Air · ttyd de solo lectura). Si no carga, activa Tailscale en este móvil.";
     $("aparte").href = url; $("marco").src = url;
     $("espera").style.display = "none"; $("vista").style.display = "flex";
   }

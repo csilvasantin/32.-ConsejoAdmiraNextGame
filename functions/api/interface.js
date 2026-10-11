@@ -34,8 +34,8 @@ export function normalizarOrden(body, ahora = Date.now()) {
   const accion = String((body && body.accion) || "");
   if (accion !== "terminal" && accion !== "off") return { ok: false, error: "accion: terminal | off" };
   const grid = Number(body && body.grid) || 0;
-  if (accion === "terminal" && grid !== 2 && grid !== 4) return { ok: false, error: "grid: 2 | 4" };
-  return { ok: true, orden: { dispositivo: d, accion, grid: accion === "off" ? (grid === 2 || grid === 4 ? grid : 0) : grid, ts: ahora, id: ahora.toString(36) + Math.random().toString(36).slice(2, 6) } };
+  if (accion === "terminal" && grid !== 2 && grid !== 4 && grid !== 6) return { ok: false, error: "grid: 2 | 4 | 6" };
+  return { ok: true, orden: { dispositivo: d, accion, grid: accion === "off" ? (grid === 2 || grid === 4 || grid === 6 ? grid : 0) : grid, ts: ahora, id: ahora.toString(36) + Math.random().toString(36).slice(2, 6) } };
 }
 
 export async function onRequestPost({ request, env }) {

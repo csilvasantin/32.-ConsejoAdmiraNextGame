@@ -19,6 +19,10 @@ import hashlib, importlib.util, json, os, re, subprocess, sys, time, urllib.requ
 
 HOME = os.path.expanduser("~")
 CONF = os.path.join(HOME, ".config", "admiranext", "cuadratura.conf")
+# r33 (/interface 6): los 2 de Grok (Smith en el MBP16, Merovingio en la caja de GrokBot) — misma forma, aparte para no
+# tocar la cuadrícula 2x2 del Mac (cuadratura.sh lee solo las 4 primeras líneas de cuadratura.conf)
+CONF_GROK = os.environ.get("VISOR_CONF_GROK", os.path.join(HOME, ".config", "admiranext", "visor-grok.conf"))
+DEFECTO_GROK = ["Smith · Grok|macbook-pro-16|smith|Smith", "Merovingio · Grok|grokbotbox|merovingio|Merovingio"]
 URL = os.environ.get("VISOR_URL", "https://www.admira.live/api/visor/pane")
 CADA = float(os.environ.get("VISOR_CADA", "3"))
 LATIDO = 60
@@ -86,19 +90,21 @@ def token():
 
 
 def yo():
+    if os.environ.get("VISOR_MAQUINA"):  # la caja de GrokBot (Linux, sin scutil) se presenta como «grokbotbox»
+        return os.environ["VISOR_MAQUINA"].strip().lower()
     try:
         return subprocess.run(["scutil", "--get", "LocalHostName"], capture_output=True, text=True, timeout=5).stdout.strip().lower()
     except Exception:
         return os.uname().nodename.split(".")[0].lower()
 
 
-def leer_conf():
+def leer_conf(ruta=CONF, defecto=DEFECTO, n=4):
     try:
-        lineas = [l.strip() for l in open(CONF, encoding="utf-8") if l.strip() and not l.lstrip().startswith("#") and "|" in l]
+        lineas = [l.strip() for l in open(ruta, encoding="utf-8") if l.strip() and not l.lstrip().startswith("#") and "|" in l]
     except OSError:
-        lineas = DEFECTO
+        lineas = defecto
     out = []
-    for l in lineas[:4]:
+    for l in lineas[:n]:
         p = (l.split("|") + ["", "", "", ""])[:4]
         out.append({"titulo": p[0].strip(), "host": p[1].strip().lower(), "sesion": p[2].strip(), "skin": p[3].strip() or "Pro"})
     return out
@@ -169,7 +175,8 @@ def main():
         t0 = time.time()
         try:
             conf = leer_conf()
-            mias = [c for c in conf if c["host"] == maquina]
+            grok = leer_conf(CONF_GROK, DEFECTO_GROK, 2)
+            mias = [c for c in conf + grok if c["host"] == maquina]
             agentes, vivas, nuevas = {}, [], {}
             for c in mias:
                 ses = c["sesion"]
@@ -199,7 +206,7 @@ def main():
                     agentes[ses] = cap
             cambio_vivas = set(vivas) != set(huellas)
             if mias and (agentes or cambio_vivas or forzar or t0 - ultimo_envio >= LATIDO):
-                cuerpo = {"maquina": maquina, "completo": forzar, "conf": conf, "agentes": agentes, "vivas": vivas, "ts": int(t0 * 1000)}
+                cuerpo = {"maquina": maquina, "completo": forzar, "conf": conf, "grok": grok, "agentes": agentes, "vivas": vivas, "ts": int(t0 * 1000)}
                 r = enviar(cuerpo, tok, dry)
                 ultimo_envio = t0
                 huellas = nuevas

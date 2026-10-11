@@ -49,3 +49,14 @@ test('home: /interface registrado, en /help y despachado antes que /help', () =>
   assert.ok(APP.indexOf('AdmiraInterface.run') < APP.indexOf('const helpMatch'));
   assert.match(readFileSync('index.html', 'utf8'), /assets\/interface-cli\.js/);
 });
+
+// r33 (Carlos 13:30): /interface 6 = 3x2 con los 4 de pago + Smith y Merovingio
+test('parse: /interface 6 y terminal 6, aquí o en el móvil', () => {
+  assert.deepEqual(I.parse('/interface 6'), { ok: true, accion: 'terminal', grid: 6, dispositivo: null });
+  assert.deepEqual(I.parse('/interface terminal 6 fold'), { ok: true, accion: 'terminal', grid: 6, dispositivo: 'fold' });
+  assert.equal(I.parse('/interface 6 iphone').dispositivo, 'iphone');
+  assert.equal(I.parse('/interface off 6').grid, 6);
+  assert.equal(I.GRID6_URL, '/visor/?g=6');
+  assert.equal(normalizarOrden({ dispositivo: 'fold', accion: 'terminal', grid: 6 }).orden.grid, 6);
+  assert.equal(normalizarOrden({ dispositivo: 'fold', accion: 'terminal', grid: 5 }).ok, false);
+});

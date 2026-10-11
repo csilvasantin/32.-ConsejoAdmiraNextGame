@@ -94,3 +94,19 @@ test("r31: la página pinta Idle / Login pendiente / Sin sesión como el Mac", (
   const h = readFileSync(new URL("./visor/index.html", import.meta.url), "utf8");
   for (const s of ["f.agente", "última misión: ", "ficha-idle", "Login pendiente"]) assert.ok(h.includes(s), s);
 });
+
+// r33 (Carlos 11-10-2026 13:30 «/interface 6»): 3x2 = los 4 de pago + Smith y Merovingio
+test("r33: ?g=6 añade Smith (MBP16) y Merovingio (caja de GrokBot) con su estado; sin g siguen siendo 4", async () => {
+  const A = 3_000_000;
+  const mbp = fundir(null, normalizarPane({ maquina: "macbook-pro-16", conf: CONF_DEFECTO, vivas: ["smith"], agentes: { smith: { estado: "idle", mision: "#5600 · done · x", modelo: "Grok CLI", mac: "MacBook Pro 16" } } }, A).pane);
+  const caja = fundir(null, normalizarPane({ maquina: "grokbotbox", vivas: ["merovingio"], agentes: { merovingio: { estado: "vivo", lineas: ["• Working (2s)"] } } }, A).pane);
+  assert.equal(vista([mbp, caja], A + 1000).fichas.length, 4);
+  const v6 = vista([mbp, caja], A + 1000, { grupo: 6 }).fichas;
+  assert.deepEqual(v6.map((f) => f.sesion), ["neo", "morfeo", "trinity", "oraculo", "smith", "merovingio"]);
+  assert.equal(v6[4].agente, "idle"); assert.equal(v6[5].agente, "vivo"); assert.equal(v6[5].host, "grokbotbox");
+  const env = { RECORTE_KV: kvMem(), CONSUMOS_LECTURAS_TOKEN: "maquina-123", VISOR_VIEW_TOKEN: "v".repeat(43) };
+  await onRequestPost({ request: req("POST", { maquina: "grokbotbox", vivas: ["merovingio"], agentes: { merovingio: { estado: "login", lineas: ["https://claude.com/cai/oauth/authorize?client_id=1"] } } }, { "X-Council-Token": "maquina-123" }), env });
+  const g = await (await onRequestGet({ request: new Request("https://www.admira.live/api/visor/pane?g=6", { headers: { "X-Visor-Key": "v".repeat(43) } }), env })).json();
+  assert.equal(g.grupo, 6); assert.equal(g.fichas.length, 6);
+  assert.equal(g.fichas[5].agente, "login"); assert.deepEqual(g.fichas[5].lineas, []);
+});

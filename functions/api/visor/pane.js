@@ -96,5 +96,6 @@ export async function onRequestGet({ request, env }) {
     if (c && k) return c.ts >= k.ts ? c : k;
     return c || k;
   }));
-  return json({ ok: true, ...vista(docs, ahora), generado: new Date(ahora).toISOString(), ahora }, 200, origin);
+  const grupo = Number(new URL(request.url).searchParams.get("g")) === 6 ? 6 : 4; // r33: /visor/?g=6 → + Smith y Merovingio
+  return json({ ok: true, ...vista(docs, ahora, { grupo }), grupo, generado: new Date(ahora).toISOString(), ahora }, 200, origin);
 }

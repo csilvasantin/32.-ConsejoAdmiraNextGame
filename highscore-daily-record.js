@@ -28,6 +28,7 @@
     var record = records[0] || null;
     var todayRow = days.filter(function (day) { return day && String(day.day || "") === today; })[0] || null;
     var leader = topRows(todayRow)[0] || null;
+    if (leader && leader.points <= 0) leader = null;
     if (!record) return { available:false, today:today, record:null, leader:leader };
     var target = record.points + 1, current = leader ? leader.points : 0;
     return { available:true, today:today, record:record, leader:leader, target:target,
@@ -80,6 +81,7 @@
     }
     records.sort(function (a,b) { return b.points-a.points || String(a.day || a.start).localeCompare(String(b.day || b.start)) || a.agent.localeCompare(b.agent,"es"); });
     var record = records[0] || null, leader = current[0] || null;
+    if (leader && leader.points <= 0) leader = null;
     if (!record) return {available:false,sourceAvailable:sourceAvailable,period:period,record:null,leader:leader,coverage:coverage};
     var target=record.points+1, points=leader?leader.points:0;
     return {available:true,sourceAvailable:sourceAvailable,period:period,record:record,leader:leader,coverage:coverage,

@@ -149,7 +149,8 @@ test("el HTML declara el puente presencia→carriles", () => {
   assert.match(html, /function unaFilaPorPersona\(/);
   assert.match(html, /function pistaEnVivo\(/);
   assert.match(html, /active-work no bloquea el primer pintado/);
-  assert.match(html, /Carriles desde presencia verificada \+ focus/);
+  assert.match(html, /hsText\("workPresence"\)/);
+  assert.match(fs.readFileSync(new URL("./admira-idioma-highscore.js", import.meta.url), "utf8"), /Carriles desde presencia verificada \+ focus/);
 });
 
 

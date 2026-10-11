@@ -86,9 +86,18 @@
   function encajar(w) {
     var lim = root.innerHeight, d = document.querySelector('.ax-dock');
     if (d && d.offsetHeight && getComputedStyle(d).display !== 'none') { var r = d.getBoundingClientRect(); if (r.top > 160) lim = r.top; }
-    var lado = Math.max(140, Math.floor(Math.min(root.innerWidth * 0.94, lim - 12)));
-    w.style.width = w.style.height = lado + 'px';
+    // Responsive: en pantallas estrechas o en vertical (iPhone, Fold, tablet en vertical) ocupa TODO el ancho y todo
+    // el alto libre; en pantallas anchas, el cuadrado de siempre.
+    var estrecho = root.innerWidth < 820 || root.innerWidth < (lim - 12) * 1.15;
+    if (estrecho) {
+      w.style.width = (root.innerWidth - 8) + 'px';
+      w.style.height = Math.max(160, Math.floor(lim - 8)) + 'px';
+    } else {
+      var lado = Math.max(140, Math.floor(Math.min(root.innerWidth * 0.94, lim - 12)));
+      w.style.width = w.style.height = lado + 'px';
+    }
     w.style.top = Math.round(lim / 2) + 'px';
+    w.style.borderWidth = estrecho ? '1px' : '2px';
   }
   function abrirPanel(grid) {
     cerrarPanel();

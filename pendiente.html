@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="es" data-yk-expert-min>
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Cuadrante de carga · AdmiraNeXT</title>
+  <meta name="description" content="Misiones de hoy y encargos abiertos por agente: carga, plazos y avisos del equipo AdmiraNeXT.">
+  <meta name="robots" content="noindex, nofollow">
+  <meta name="theme-color" content="#02080d">
+  <link rel="icon" href="/favicon.ico" sizes="any">
+  <link rel="manifest" href="/manifest.webmanifest">
+  <link rel="stylesheet" href="https://www.carlossilva.info/admira-design/tokens.css">
+  <link rel="stylesheet" href="/yk-frame.css?v=r33-min">
+  <link rel="stylesheet" href="/pendiente.css?v=20261011-5754">
+</head>
+<body>
+  <a class="skip-link" href="#contenido">Ir al cuadrante</a>
+  <main class="wrap" id="contenido">
+    <nav aria-label="Navegación principal">
+      <a href="/">Inicio</a>
+      <a href="/consumos">Consumos</a>
+      <a href="/highscore">Misiones</a>
+      <a href="/orquestar/">Orquestador</a>
+    </nav>
+    <header class="page-header">
+      <div>
+        <p class="eyebrow">AdmiraNeXT · Equipo</p>
+        <h1>Cuadrante de carga</h1>
+        <p class="lead">Lo que hemos resuelto hoy y lo que cada agente tiene por delante.</p>
+      </div>
+      <button class="refresh-button" id="refresh" type="button">Actualizar</button>
+    </header>
+
+    <section class="day-score" aria-labelledby="day-title" id="day-score" aria-busy="true">
+      <div class="section-heading">
+        <div>
+          <h2 id="day-title">Marcador del día</h2>
+      <p class="score-context" id="score-context">Misiones creadas hoy · toda la flota · Madrid</p>
+        </div>
+        <span class="day-date" id="day-date">Consultando…</span>
+      </div>
+      <div class="score-metrics" id="score-metrics">
+        <div class="metric"><strong>—</strong><span>Total de misiones</span></div>
+        <div class="metric metric-done"><strong>—</strong><span>Realizadas</span></div>
+        <div class="metric metric-open"><strong>—</strong><span>Pendientes · abiertas</span></div>
+        <div class="metric metric-cancelled"><strong>—</strong><span>Anuladas</span></div>
+      </div>
+      <div id="day-progress"><p class="loading-copy">Consultando las misiones de hoy…</p></div>
+    </section>
+
+    <div class="reading-bar">
+      <p class="reading-status" id="reading-status" role="status" aria-live="polite">Conectando con el bot-inbox…</p>
+      <span class="refresh-note">Se actualiza cada 60 s</span>
+    </div>
+    <div id="notices" aria-live="polite"></div>
+
+    <section class="workload" aria-labelledby="workload-title">
+      <div class="workload-heading">
+        <div>
+          <h2 id="workload-title">Carga por agente</h2>
+          <p class="section-copy">Encargos abiertos de hoy y los 2 días anteriores. Los más antiguos quedan plegados.</p>
+        </div>
+        <div class="legend" aria-label="Estados de los encargos">
+          <span class="status status-in_progress">En curso</span>
+          <span class="status status-pending">Pendiente</span>
+          <span class="status status-blocked">Bloqueado</span>
+        </div>
+      </div>
+      <div class="agent-grid" id="agents" aria-busy="true">
+        <p class="empty-state initial-loading">Leyendo la carga del equipo…</p>
+      </div>
+    </section>
+
+    <details class="source-notes">
+      <summary>Cómo leer este cuadrante</summary>
+      <div class="source-notes-body">
+        <p>El marcador cuenta las misiones de toda la flota creadas hoy, con el día de Madrid, incluidos consejeros que no tienen tarjeta. La barra divide realizadas entre el total, incluidas las anuladas. La carga de cada tarjeta cuenta encargos que siguen abiertos, incluidos los antiguos; por eso ambos totales pueden ser distintos.</p>
+        <p>«Posible repetido» señala textos públicos similares; conviene confirmar que piden el mismo trabajo. «Otra máquina» destaca un destino distinto del MacBook Pro 16. Las máquinas de la tarjeta reúnen presencia y destinos publicados, sin implicar ejecución en todas. «Parcial» indica que la fuente pública no permite confirmar todos los datos.</p>
+        <p>Fuente: marcador de misiones de Yokup y encargos públicos del bot-inbox. Si una consulta falla, se conserva la última lectura disponible durante esta sesión y se indica su fecha.</p>
+      </div>
+    </details>
+    <footer class="page-footer">AdmiraNeXT · <a href="/consumos">Consumos del equipo</a> · <a href="/highscore">Marcador de misiones</a></footer>
+    <noscript><p class="notice notice-error">Activa JavaScript para consultar los encargos y las misiones en vivo.</p></noscript>
+  </main>
+  <script type="module" src="/pendiente-page.js?v=20261011-5754"></script>
+  <script src="/yk-frame.js?v=r33-min"></script>
+</body>
+</html>

@@ -1,0 +1,71 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="referrer" content="no-referrer" />
+<meta name="admiranext-version" content="AdmiraNeXT v.11.10.2026.r32.13:24" />
+<title>admira.live · interface</title>
+<!-- r29 · Jensen Huang · Carlos 11-10-2026 12:51: el móvil deja esta página abierta y `/interface terminal 2|4 Fold`
+     desde el modo experto de admira.live le hace enseñar la cuadrícula. Privada: la misma llave del visor (localStorage
+     visorLlave, cabecera X-Visor-Key). terminal 4 = /visor/ · terminal 2 = ttyd del MacBook Air SOLO en el tailnet. -->
+<style>
+  html, body { margin:0; height:100%; background:#000; color:#28fe14; font:14px/1.4 ui-monospace, Menlo, Consolas, monospace; }
+  #espera { position:fixed; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:24px; gap:10px; }
+  #espera b { font-size:20px; letter-spacing:.08em; }
+  #espera small { color:#7a7; }
+  #vista { position:fixed; inset:0; display:none; flex-direction:column; }
+  #barra { display:flex; gap:8px; align-items:center; padding:4px 8px; background:#061; color:#cfc; font-size:12px; }
+  #barra span { flex:1; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  #barra a { color:#cfc; }
+  iframe { flex:1; border:0; width:100%; background:#000; }
+  #nota { padding:3px 8px; color:#7a7; font-size:11px; }
+</style>
+</head>
+<body>
+<div id="espera"><b>⌨ ADMIRA · INTERFACE</b><span id="quien"></span><small id="estado">conectando…</small>
+  <small>Desde el modo experto de admira.live: <code>/interface terminal 4 <span class="dev"></span></code> o <code>/interface terminal 2 <span class="dev"></span></code></small></div>
+<div id="vista"><div id="barra"><span id="titulo"></span><a id="aparte" target="_blank" rel="noopener">abrir aparte ↗</a></div><iframe id="marco" referrerpolicy="no-referrer" allow="local-network-access; local-network; clipboard-write"></iframe><div id="nota"></div></div>
+<script>
+(function () {
+  var GRID2 = "https://macbookair16plata.tail48b61c.ts.net/", GRID4 = "/visor/";
+  var q = new URLSearchParams(location.search), d = (q.get("d") || "fold").toLowerCase();
+  var nombres = { fold: "Samsung Fold", iphone: "iPhone" };
+  var $ = function (id) { return document.getElementById(id); };
+  $("quien").textContent = "Dispositivo: " + (nombres[d] || d);
+  [].forEach.call(document.querySelectorAll(".dev"), function (s) { s.textContent = d === "iphone" ? "Iphone" : "Fold"; });
+  var m = location.hash.match(/k=([A-Za-z0-9_\-]{20,})/);
+  if (m) { try { localStorage.setItem("visorLlave", m[1]); } catch (e) {} history.replaceState(null, "", location.pathname + location.search); }
+  var llave = ""; try { llave = localStorage.getItem("visorLlave") || ""; } catch (e) {}
+  if (!llave) { $("estado").innerHTML = "Falta la llave del visor en este navegador.<br/>Abre una vez el enlace privado del visor (lleva <code>#k=…</code>) y vuelve aquí."; return; }
+  var actual = "";
+  function mostrar(o) {
+    if (!o || o.accion === "off") {
+      if (actual) { $("marco").src = "about:blank"; $("vista").style.display = "none"; $("espera").style.display = "flex"; actual = ""; }
+      $("estado").textContent = "esperando una orden · " + new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
+      return;
+    }
+    var clave = o.grid + ":" + o.id;
+    if (clave === actual) return;
+    actual = clave;
+    var url = o.grid === 4 ? GRID4 : GRID2;
+    $("titulo").textContent = o.grid === 4 ? "⌨ TERMINAL 4 · Neo · Morfeo · Trinity · Oráculo" : "⌨ TERMINAL 2 · Smith · Merovingio";
+    $("nota").textContent = o.grid === 4 ? "Visor privado de admira.live · solo lectura" : "Solo dentro del tailnet de Carlos (MacBook Air · ttyd de solo lectura). Si no carga, activa Tailscale en este móvil.";
+    $("aparte").href = url; $("marco").src = url;
+    $("espera").style.display = "none"; $("vista").style.display = "flex";
+  }
+  function sondear() {
+    fetch("/api/interface?d=" + encodeURIComponent(d), { headers: { "X-Visor-Key": llave }, cache: "no-store" })
+      .then(function (r) {
+        if (r.status === 401) { try { localStorage.removeItem("visorLlave"); } catch (e) {} $("estado").textContent = "La llave del visor ya no vale (revocada). Pide un enlace nuevo."; throw new Error("401"); }
+        return r.json();
+      })
+      .then(function (j) { mostrar(j && j.ok ? j.orden : null); setTimeout(sondear, 4000); })
+      .catch(function (e) { if (String(e && e.message) !== "401") { $("estado").textContent = "sin conexión con admira.live · reintento…"; setTimeout(sondear, 8000); } });
+  }
+  sondear();
+})();
+</script>
+</body>
+</html>

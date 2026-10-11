@@ -1842,6 +1842,7 @@
             li('<strong>/81 · /82 · /83 · /84 · /85 · /86 · /87 · /88 · /89</strong>', 'pieles de cine 1981–1989 (atajo de /marca 81 … /marca 89); /marca off vuelve a Admira', '1981–1989 movie skins (shortcut for /marca 81 … /marca 89); /marca off returns to Admira') +
             li('<strong>⌘ EXPERTO · CLI</strong>', 'consola de la suite AdmiraNeXT anclada abajo: /help, /marca, /idioma, /estado, /version', 'AdmiraNeXT suite console docked at the bottom: /help, /marca, /idioma, /estado, /version') +
             li('<strong>/comandos</strong>', 'abre la página con todos los comandos', 'opens the page with every command') +
+            li('<strong>/interface terminal 4 | 2 [dispositivo] · /interfaz</strong>', 'terminales en vivo de los deepagents (4 = Neo·Morfeo·Trinity·Oráculo · 2 = Smith·Merovingio): sin dispositivo aquí; Fold, Iphone, Air, MBP16, MBP14 allí · /interface off [dispositivo] · /interface help', 'live deepagent terminals (4 = Neo·Morph·Trinity·Oracle · 2 = Smith·Merovingio): no device = here; Fold, Iphone, Air, MBP16, MBP14 there · /interface off [device] · /interface help') +
             li('<strong>/leyendas · /coetaneos</strong>', 'cambia la generación del Consejo', 'switches the Council generation') +
             li('<strong>/agentes</strong>', 'muestra u oculta el panel de Agentes (AgoraMatrix)', 'shows or hides the Agents panel (AgoraMatrix)') +
             li('<strong>/importar &lt;url&gt;</strong>', 'descarga vídeo y lo sube a Drive', 'downloads a video and uploads it to Drive') +
@@ -2194,7 +2195,9 @@
         '/agents', '/tasks', '/task', '/done', '/forget', '/engine', '/mouths', '/names', '/journal', '/import',
         '/verbs', '/sitios', '/oracle',
         // Orquestador (09-10-2026): /orquestar <texto> · /orchestrate <text> → /api/orquestar
-        '/orquestar', '/orchestrate'
+        '/orquestar', '/orchestrate',
+        // /interface (r29 · Jensen Huang, 11-10-2026): terminales de los deepagents aquí o en otro dispositivo
+        '/interface', '/interfaz'
     ];
     (function setupCliAutocomplete() {
         const inp = document.getElementById('action-input');
@@ -2294,6 +2297,14 @@
         if (pielCine) {
             addUserEntry(text);
             runMarcaCommand(pielCine[1]);
+            return true;
+        }
+        // /interface terminal 4|2 [dispositivo] · off · help (r29 · Jensen Huang · assets/interface-cli.js).
+        // Local o al dispositivo elegido; nunca va al Consejo. Sin el módulo, aviso en vez de mandarlo a la mesa.
+        if (/^\/(interface|interfaz)(\s|$)/i.test(text)) {
+            addUserEntry(text);
+            if (window.AdmiraInterface) window.AdmiraInterface.run(text, setActionLine);
+            else setActionLine(cliT('⚠️ /interface no ha cargado; recarga la página', '⚠️ /interface did not load; reload the page'));
             return true;
         }
         const helpMatch = text.match(/^\/help$/i);

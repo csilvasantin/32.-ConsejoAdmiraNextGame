@@ -1,4 +1,10 @@
 {
+  "v.11.10.2026.r32.13:24": [
+    "Nuevo /interface en el modo experto: «/interface terminal 4» abre aquí mismo, en un panel cuadrado, la cuadratura de Neo, Morfeo, Trinity y Oráculo (el /visor/ privado con su llave); «/interface terminal 2» abre Smith y Merovingio (Grok). «/interface help» y «/interface off» para cerrar.",
+    "Con dispositivo («/interface terminal 2 Fold», «… 4 MBP16», Air, MBP14, Iphone): en un Mac la orden va por el relay de /control (sesión Google) y abre la cuadrícula en su Terminal; en el móvil, la página admira.live/interface/?d=fold que dejas abierta la enseña sola.",
+    "Privado: la cuadrícula de 2 es una terminal de solo lectura del MacBook Air que solo se ve dentro del tailnet de Carlos (Tailscale; Chrome pide una vez permiso de «red local»); la web pública solo enseña el enlace y nunca lleva claves. Las órdenes al móvil usan la misma llave revocable del visor.",
+    "Estas novedades salen en el popover del sello (pasa el ratón por la versión), sin recorte del riel."
+  ],
   "v.11.10.2026.r31.13:23": [
     "/visor/ y la cuadrícula del Mac dicen lo mismo: el estado de cada deepagent (en misión / Idle / Login pendiente / Sin sesión) y su última misión salen de una sola pieza, estado-agente.py, que comparten panel-agente.sh y el publicador del visor, con la misma histéresis (en vivo al primer indicio, Idle tras 80 s quieto).",
     "En el visor, un agente en Idle se ve como en el Mac: nombre grande, línea de modelo · Mac · estado · hora, «Idle» y «última misión: #NNNN · estado · título». Si pide iniciar sesión sale «Login pendiente», sin enseñar nunca el enlace OAuth (también tapado en servidor, aunque venga partido en varias líneas).",

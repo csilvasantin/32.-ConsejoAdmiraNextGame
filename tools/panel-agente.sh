@@ -1,16 +1,16 @@
 #!/bin/bash
-# panel-agente — un panel de la cuadratura para UN deepagent (bash 3.2, macOS).
-#  · Idle      → terminal limpio: nombre en ASCII grande centrado + «Idle» + línea tenue (modelo · Mac).
-#  · En misión → espejo en vivo SIN cliente tmux (capture-pane cada 1 s, con colores). Ni attach ni attach -r:
-#                en tmux 3.7 cualquier cliente de solo lectura en el servidor hace fallar TODOS los send-keys
-#                de los vigilantes («client is read-only»), sea cual sea la sesión.
-#  · Sin sesión → nombre + «Sin sesión».   · Login pendiente → nombre + «Login pendiente» (sin enseñar el enlace OAuth).
-# r31 (Carlos 11-10-2026 13:13 «¿por qué no coinciden?»): el ESTADO y la última misión los decide UNA sola pieza,
-# estado-agente.py (junto a este script), que comparte con visor-publicar.py (admira.live/visor) el estado guardado en
-# ~/.cache/admiranext/estado-agentes/ → la cuadrícula del Mac y el visor del Fold dicen lo mismo, con la misma histéresis
-# (vivo al primer indicio, Idle tras IDLE_TRAS=80 s quieto). r33b: «Pendiente sin trabajar» (ámbar) si la terminal está quieta
-# con un encargo abierto de < 24 h; la línea de misión ($LINEA) y el «abierto desde» tenue ($VIEJO) también vienen de allí. Si cambia este script o estado-agente.py, el panel se recarga solo.
-# Nunca escribe en la sesión del agente, ni la redimensiona ni la interrumpe.
+# panel-agente — un panel de la cuadratura para UN deepagent (bash 3.2, macOS · también Linux).
+# r35 (Carlos 11-10-2026 14:04 «que se lea como la web»): SIEMPRE el mismo formato, sin pantalla de Idle:
+#   ┌ línea de ESTADO grande y en color: TRABAJANDO (verde) · PENDIENTE SIN TRABAJAR (ámbar) · PARADO (gris)
+#   │                                    · LOGIN PENDIENTE (ámbar) · SIN SESIÓN (gris) — y el nombre en ASCII compacto
+#   ├ encargo en curso o último: «#NNNN · titular corto · HH:MM»  (+ «#NNNN abierto desde …» tenue si lo hay)
+#   └ la terminal del agente debajo, en espejo (capture-pane cada 1 s, con colores; parado = su último contenido)
+# El estado sale de estado-agente.py (junto a este script), la MISMA pieza que alimenta admira.live/visor
+# (campo «agente» de cada ficha en GET /api/visor/pane) → la cuadrícula y el visor nunca se contradicen.
+# Ni attach ni attach -r (en tmux 3.7 un cliente de solo lectura hace fallar los send-keys de los vigilantes).
+# Nunca escribe en la sesión del agente, ni la redimensiona ni la interrumpe. El enlace OAuth del login se tapa.
+# Sin parpadeo: solo repinta si cambia algo (cabecera o pantalla) y sin borrar la pantalla entera.
+# Si cambia este script o estado-agente.py, el panel se recarga solo.
 # Uso: panel-agente.sh <Nombre> <host|local> <sesión> "<modelo>" "<Mac>"
 #      host ≠ local → se ejecuta a sí mismo en ese host por ssh (copia atómica previa) y reintenta si cae.
 #      env: PANEL_SSH_KEY (clave ssh opcional), PANEL_USER (por defecto csilvasantin)
@@ -37,103 +37,100 @@ if [ "$HOST" != "local" ]; then
 fi
 
 T="$(command -v tmux)"
-YO=$(scutil --get LocalHostName 2>/dev/null | tr 'A-Z' 'a-z'); [ -n "$YO" ] || YO=$(hostname -s)
 ASCII=$(printf '%s' "$N" | sed 's/[Áá]/A/g;s/[Éé]/E/g;s/[Íí]/I/g;s/[Óó]/O/g;s/[Úú]/U/g;s/[Ññ]/N/g' | tr 'a-z' 'A-Z')
-
 DIRP="$(cd "$(dirname "$SELF")" && pwd)"; ESTADO="$DIRP/estado-agente.py"
-PER="$(printf '%s' "${ASCII:0:1}")$(printf '%s' "${ASCII:1}" | tr 'A-Z' 'a-z')"
-# decide: deja en $E vivo|idle|login|nosesion, $ETQ la palabra («Idle», «Login pendiente», «Sin sesión») y $MIS la última
-# misión — todo de estado-agente.py, la misma fuente que el visor (sin subshell para E/MIS: eval de su salida --sh)
-E=nosesion; ETQ="Sin sesión"; MIS="sin misiones registradas"; LINEA="última misión: sin misiones registradas"; VIEJO=""
-decide(){ local o; o=$(/usr/bin/python3 "$ESTADO" --sh "$SES" "$PER" 2>/dev/null) && [ -n "$o" ] && eval "$o"
-  [ "$E" = vivo ] && E=ocupado; [ -n "$MIS" ] || MIS="sin misiones registradas"; }
-mision(){ :; }  # la trae decide() (cacheada 60 s en estado-agente.py)
-# recarga en caliente: si cambia este script o estado-agente.py, el panel se reemplaza a sí mismo (sin cerrar la ventana)
+PY=/usr/bin/python3; [ -x "$PY" ] || PY="$(command -v python3)"
+PER="$(printf '%s' "${ASCII:0:1}")$(printf '%s' "${ASCII:1}" | tr 'a-z' 'A-Z' | tr 'A-Z' 'a-z')"
+E=nosesion; ETQ="Sin sesión"; MIS=""; LINEA=""; VIEJO=""; ENC="sin encargos"; REL=0; VOK=0
+# PANEL_REMOTO=1: la sesión vive en otra máquina sin ssh desde aquí (Merovingio en la caja) → estado y terminal del
+# relevo del visor (GET /api/visor/pane?g=6, llave de ~/.config/admira/visor-enlace.txt) y, si no lo hay, por sus encargos
+decide(){ local o; o=$("$PY" "$ESTADO" --sh "$SES" "$PER" ${PANEL_REMOTO:+--visor} 2>/dev/null) && [ -n "$o" ] && eval "$o"; }
+VTXT="$HOME/.cache/admiranext/estado-agentes/visor-$(printf '%s' "$SES" | tr -c 'A-Za-z0-9._-' '_').txt"
 firma(){ cat "$SELF" "$ESTADO" 2>/dev/null | cksum; }
 FIRMA=$(firma); FT=0
-recarga(){ FT=$((FT+1)); [ $FT -ge 10 ] || return; FT=0
+recarga(){ FT=$((FT+1)); [ $FT -ge 30 ] || return; FT=0
   [ "$(firma)" = "$FIRMA" ] || { limpia; exec /bin/bash "$SELF" "$N" "$HOST" "$SES" "$MOD" "$MAC"; }; }
-
-pinta(){ # pinta <estado>  — mismo formato de cabecera: nombre grande · línea info (modelo · Mac · estado · hora) · última misión
-  local cols filas art n top i w m
-  cols=$(tput cols 2>/dev/null || echo 80); filas=$(tput lines 2>/dev/null || echo 24)
-  mision
-  art=""
-  if command -v figlet >/dev/null; then
-    for f in big standard small; do
-      art=$(figlet -w "$cols" -c -f "$f" "$ASCII" 2>/dev/null)
-      w=$(printf '%s\n' "$art" | awk '{ if (length($0)>m) m=length($0) } END{print m+0}')
-      [ "$w" -lt "$cols" ] && break
-    done
-  fi
-  [ -n "$art" ] || art=$(printf '%*s' $(( (cols + ${#ASCII}) / 2 )) "$ASCII")
-  n=$(printf '%s\n' "$art" | wc -l | tr -d ' ')
-  top=$(( (filas - n - 6) / 2 )); [ "$top" -ge 0 ] || top=0
-  m="$LINEA"; [ ${#m} -lt $((cols - 2)) ] || m="${m:0:$((cols - 3))}…"
-  local v="$VIEJO"; [ ${#v} -lt $((cols - 2)) ] || v="${v:0:$((cols - 3))}…"
-  local col=1; [ "$E" = pendiente ] && col="1;33"; [ "$E" = login ] && col="1;33"
-  { printf '\033[H'; tput civis 2>/dev/null
-    i=0; while [ $i -lt $top ]; do printf '\033[K\n'; i=$((i+1)); done
-    printf '%s\n' "$art" | while IFS= read -r l; do printf '\033[1m%s\033[0m\033[K\n' "$l"; done
-    printf '\033[K\n'
-    centra "$1" "$col"
-    printf '\033[K\n'
-    centra "$MOD · $MAC · $1 · $(date +%H:%M)" 2
-    centra "$m" 2
-    [ -n "$v" ] && centra "$v" "2;3"
-    printf '\033[0m\033[J'; }
-}
-centra(){ local s="$1" c pad; c=$(tput cols 2>/dev/null || echo 80)
-  pad=$(( (c - ${#s}) / 2 )); [ $pad -ge 0 ] || pad=0
-  printf '%*s\033[%sm%s\033[0m\033[K\n' "$pad" "" "$2" "$s"; }
-
 ESC=$(printf '\033')
-limpia(){ printf '\033[?7h'; tput cnorm 2>/dev/null; }
+limpia(){ printf '\033[?7h\033[0m'; tput cnorm 2>/dev/null; }
 trap 'limpia; exit 0' INT TERM HUP
 trap limpia EXIT
 # restos de visores de este mismo origen que quedaron huérfanos (sin cliente)
 for s in $($T list-sessions -F '#{session_name} #{session_attached}' 2>/dev/null | awk -v p="$SES-visor-" 'index($1,p)==1 && $2==0 {print $1}'); do $T kill-session -t "=$s" 2>/dev/null; done
 
-vivo(){ # espejo SIN cliente tmux: capture-pane cada segundo (no hay attach -r, así que nunca bloquea send-keys)
-  local cols filas cab h hv=x t=0 hdr n
-  printf '\033[?7l'; tput civis 2>/dev/null
-  while :; do
-    t=$((t+1))
-    if [ $t -ge $CADA ]; then t=0; decide; [ "$E" = ocupado ] || break; recarga; fi
-    cols=$(tput cols 2>/dev/null || echo 80); filas=$(tput lines 2>/dev/null || echo 24)
-    cuerpo=$($T capture-pane -e -p -t "=$SES:" 2>/dev/null) || break
-    h=$(printf '%s%s%s' "$cols" "$filas" "$cuerpo" | cksum)
-    if [ "$h" != "$hv" ] || [ -n "$REPINTA" ]; then
-      hv="$h"; REPINTA=""
-      if command -v figlet >/dev/null; then hdr=$(figlet -w "$cols" -f small "$ASCII" 2>/dev/null); else hdr=" $ASCII"; fi
-      n=$(printf '%s\n' "$hdr" | wc -l | tr -d ' '); n=$((n+2)); mision
-      cuerpo=$(printf '%s\n' "$cuerpo" | tail -n $((filas - n)))
-      { printf '\033[H\033[1m%s\033[0m\033[K\n' "$(printf '%s\n' "$hdr" | sed "s/\$/${ESC}[K/")"
-        printf '\033[2m %s · %s · en misión · %s\033[0m\033[K\n' "$MOD" "$MAC" "$(date +%H:%M)"
-        printf '\033[2m %s\033[0m\033[K\n' "${LINEA:0:$((cols - 4))}"
-        printf '%s\n' "$cuerpo" | sed "s/\$/${ESC}[0m${ESC}[K/"
-        printf '\033[0m\033[J'; } 2>/dev/null
-    fi
-    sleep 1 & wait $!
-  done
-  printf '\033[?7h'
+# estado → palabra grande y color (fondo) de la banda
+banda(){ # modo ahorro: los de ~/.config/admiranext/relajados salen RELAJADO (gris) salvo que estén trabajando
+  if [ "$REL" = 1 ] && [ "$E" != vivo ]; then PAL="RELAJADO"; BC="97;100"; NC="1;37"; return; fi
+  case "$E" in
+  vivo)      PAL="TRABAJANDO";             BC="30;42";  NC="1;32" ;;
+  pendiente) PAL="PENDIENTE SIN TRABAJAR"; BC="30;43";  NC="1;33" ;;
+  login)     PAL="LOGIN PENDIENTE";        BC="30;43";  NC="1;33" ;;
+  nosesion)  PAL="SIN SESIÓN";             BC="97;100"; NC="2" ;;
+  *)         PAL="PARADO";                 BC="97;100"; NC="1;37" ;;
+esac; }
+ART=""; ARTW=0
+arte(){ local c="$1"; [ "$ARTW" = "$c" ] && return; ARTW="$c"
+  ART=""; command -v figlet >/dev/null && ART=$(figlet -w "$c" -f small "$ASCII" 2>/dev/null | sed -e :a -e '/^[[:space:]]*$/{$d;N;ba' -e '}')
+  local w; w=$(printf '%s\n' "$ART" | awk '{ if (length($0)>m) m=length($0) } END{print m+0}')
+  { [ -n "$ART" ] && [ "$w" -le "$c" ]; } || ART=" $ASCII"; }
+# r35b: la censura del enlace OAuth y el recorte van en awk (el sed BSD de macOS se atragantaba con la «/» del patrón)
+OAUTH='code_challenge|redirect_uri=|client_id=|response_type=|[?&]state=|%3A%2F|oauth.authorize|[.]com.oauth'
+cabecera(){ # pinta la cabecera en $CAB (líneas) y su alto en $NCAB
+  local cols="$1" t enc v izq der pad
+  banda; arte "$cols"; t=$(date +%H:%M)
+  izq="  ● $PAL  "; der=" $N · $MOD · $MAC · $t "
+  pad=$(( cols - ${#izq} - ${#der} )); [ $pad -ge 1 ] || { der=" $N · $t "; pad=$(( cols - ${#izq} - ${#der} )); }; [ $pad -ge 0 ] || pad=0
+  enc=" $ENC"; [ ${#enc} -le $((cols - 1)) ] || enc="${enc:0:$((cols - 2))}…"
+  v=""; [ -n "$VIEJO" ] && v="   $VIEJO"; [ ${#v} -le $((cols - 1)) ] || v="${v:0:$((cols - 2))}…"
+  CAB="$(printf '%s\n' "$ART" | while IFS= read -r l; do printf '\033[%sm%s\033[0m\033[K\n' "$NC" "$l"; done)"
+  CAB="$CAB
+$(printf '\033[1;%sm%s%*s%s\033[0m\033[K' "$BC" "$izq" "$pad" "" "$der")
+$(printf '\033[1m%s\033[0m\033[K' "$enc")"
+  [ -n "$v" ] && CAB="$CAB
+$(printf '\033[2;3m%s\033[0m\033[K' "$v")"
+  CAB="$CAB
+$(printf '\033[2m%s\033[0m\033[K' "$(printf '%*s' "$cols" '' | tr ' ' '-')")"
+  NCAB=$(printf '%s\n' "$CAB" | wc -l | tr -d ' ')
 }
 
-EST=""; PINTADO=""; REPINTA=""
-trap 'PINTADO=""; REPINTA=1' WINCH
+printf '\033[?7l\033[2J'; tput civis 2>/dev/null
+exec 2>/dev/null   # ningún error puede ensuciar el panel
+REPINTA=1; trap 'REPINTA=1; ARTW=0; printf "\033[2J"' WINCH
+hv=""; t=$CADA
 while :; do
-  decide
-  if [ "$E" = ocupado ]; then
-    EST=ocupado; PINTADO=""; REPINTA=1
-    vivo
-    [ "$E" = ocupado ] && continue
+  t=$((t+1))
+  if [ $t -ge $CADA ]; then t=0; decide; recarga; fi
+  # tamaño real del panel (stty sobre /dev/tty: tput en $(…) con stderr a /dev/null cae a 80x24)
+  set -- $(stty size </dev/tty 2>/dev/null); filas=${1:-24}; cols=${2:-80}
+  cabecera "$cols"
+  if [ -n "$PANEL_REMOTO" ] && ! $T has-session -t "=$SES" 2>/dev/null; then
+    if [ "$VOK" = 1 ] && [ -s "$VTXT" ]; then cuerpo=$(cat "$VTXT")   # su terminal, vía el relevo del visor
+    else cuerpo=$(printf '\n   \033[2m%s vive en %s · sin espejo de su terminal en este Mac (el relevo del visor no la trae)\033[0m' "$N" "$MAC"); fi
+  elif [ "$E" = nosesion ]; then
+    cuerpo=$(printf '\n   \033[2mla sesión tmux «%s» no está en marcha en este Mac\033[0m' "$SES")
+  else
+    cuerpo=$($T capture-pane -e -p -t "=$SES:" 2>/dev/null)
   fi
-  EST="$E"
-  if [ "$PINTADO" != "$E" ] || [ "$(date +%H:%M)" != "$PMIN" ]; then
-    PMIN=$(date +%H:%M)
-    pinta "$ETQ"
-    PINTADO="$E"
+  h=$(printf '%s|%s|%s|%s' "$cols" "$filas" "$CAB" "$cuerpo" | cksum)
+  if [ "$h" != "$hv" ] || [ -n "$REPINTA" ]; then
+    hv="$h"; REPINTA=""
+    resto=$((filas - NCAB)); [ $resto -ge 1 ] || resto=1
+    # cabecera SIEMPRE fija en las filas 1..NCAB; la terminal solo en las filas de debajo, posicionada fila a fila
+    # (cursor absoluto, sin autowrap): nada la puede empujar ni hacer scroll
+    { printf '\033[H%s' "$CAB"
+      printf '%s\n' "$cuerpo" | awk -v ini=$((NCAB + 1)) -v n="$resto" -v re="$OAUTH" '
+        { l[NR] = $0 }
+        END {
+          m = NR
+          while (m > 0) { s = l[m]; gsub(/\033\[[0-9;?]*[A-Za-z]/, "", s); if (s ~ /[^[:space:]]/) break; m-- }
+          d = m - n + 1; if (d < 1) d = 1
+          k = m - d + 1; off = n - k            # pegado abajo, como en el visor
+          for (r = 0; r < off; r++) printf "\033[%d;1H\033[0m\033[2K", ini + r
+          for (i = d; i <= m; i++) {
+            x = l[i]; if (x ~ re) x = "   [enlace de login oculto]"
+            printf "\033[%d;1H\033[0m\033[2K%s\033[0m", ini + off + i - d, x
+          }
+        }'
+      printf '\033[0m'; } 2>/dev/null
   fi
-  recarga
-  sleep $CADA & wait $!
+  sleep 1 & wait $!
 done

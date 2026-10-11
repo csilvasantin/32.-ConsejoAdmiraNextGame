@@ -123,22 +123,25 @@ Cadena de escalado: agota tus herramientas → consulta al equipo de silicio (§
 - **PRINCIPIOS de silicio** (s:CUPULA_PRINCIPIOS_SILICIO) = desarrollo operativo §1-§19 +
   los 13 Mandamientos, solo agentes.
 
-## PRINCIPIOS de silicio · §19 volcado a s:CUPULA_PRINCIPIOS_SILICIO (2026-10-11)
+## PRINCIPIOS de silicio · §19 volcado desde s:CUPULA_PRINCIPIOS_SILICIO (2026-10-11)
 
-### §19 · Modelos de imagen: FLUX local y cuota gratuita de Cloudflare (Carlos, 2026-10-11)
+## 19. Modelos de imagen: FLUX local y cuota gratuita de Cloudflare (Carlos, 2026-10-11)
 
 1. **FLUX local para los fondos de las cápsulas de conocimiento.** El 10-oct-2026 el equipo de
    admira.live (Y, consejero CTO) generó los 100 fondos de las cápsulas con FLUX **en local en el
-   MacBook Pro 16**: unos 18 s por imagen y 0 € de coste. A las 18:30 de Madrid aún no estaban
-   publicados porque el Mac se desconectó a las 18:17.
-   **SIN CONFIRMAR:** el modelo y la versión exactos de FLUX, la herramienta y el número de
-   encargo. Se le han preguntado a Smith en el MacBook Pro 16 (#5631). Como referencia, el plan del
-   8-oct (`admira-store/admira-xp/docs/altadis-piezas-especiales.md`) recomienda FLUX.1 [schnell]
-   con mflux (Apache-2.0) y excluye FLUX.1 [dev] y FLUX.1 Fill [dev] porque su licencia no permite
-   uso comercial.
+   MacBook Pro 16**. Jensen lo confirmó el 11-oct-2026: FLUX.1 [schnell] cuantizado a 8 bits
+   (`mflux-community/flux-1-schnell-mflux-q8`), mediante mflux (`mflux-generate`), en 4 pasos,
+   a 576×960 y reducidos después a 480×800. Unos 17,9 s por imagen en este MacBook Pro 16
+   (M5 Max, 48 GB). Pesos en
+   `~/.cache/huggingface/hub/models--mflux-community--flux-1-schnell-mflux-q8` de ese Mac.
+   Script `admira-xp/tools/capsulas-fondos.py` (admira-store), con `--engine mflux|cloudflare|auto`.
+   A las 18:30 de Madrid aún no estaban publicados porque el Mac se desconectó a las 18:17.
+   FLUX.1 [dev] y FLUX.1 Fill [dev] quedan fuera: su licencia no permite uso comercial. El plan
+   del 8-oct (`admira-store/admira-xp/docs/altadis-piezas-especiales.md`) ya recomendaba
+   FLUX.1 [schnell] con mflux (Apache-2.0).
 2. **Cuota gratuita de Cloudflare Workers AI.** El contador del equipo marcaba «0 de 55», así que
-   cuentan 55 imágenes gratis al día. **SIN CONFIRMAR:** qué modelo de Cloudflare hay detrás de esas
-   55; hoy ningún Worker ni ninguna Pages Function nuestra llama a `@cf/black-forest-labs/*`.
+   cuentan 55 imágenes gratis al día. El modelo que se usará es
+   `@cf/black-forest-labs/flux-1-schnell`. Todavía no se ha probado: el token responde 403.
    Referencia oficial (developers.cloudflare.com/workers-ai/platform/pricing, consultada el 11-oct):
    10.000 neuronas gratis al día por cuenta, que se reinician a las 00:00 UTC (02:00 en Madrid).
    - flux-1-schnell: 4,80 neuronas por tesela de 512² más 9,60 por paso.

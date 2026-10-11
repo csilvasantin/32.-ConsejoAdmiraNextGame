@@ -27,3 +27,10 @@
   X-Robots-Tag: noindex, nofollow
   Referrer-Policy: no-referrer
   X-Content-Type-Options: nosniff
+
+# r29 · /interface/ (Jensen Huang): escucha de órdenes `/interface` en el móvil; privada con la llave del visor
+/interface/*
+  Cache-Control: no-store
+  X-Robots-Tag: noindex, nofollow
+  Referrer-Policy: no-referrer
+  X-Content-Type-Options: nosniff

@@ -1,4 +1,10 @@
 {
+  "v.11.10.2026.r30.13:13": [
+    "Nuevo /interface en el modo experto: «/interface terminal 4» abre aquí mismo, en un panel cuadrado, la cuadratura de Neo, Morfeo, Trinity y Oráculo (el /visor/ privado con su llave); «/interface terminal 2» abre Smith y Merovingio (Grok). «/interface help» y «/interface off» para cerrar.",
+    "Con dispositivo («/interface terminal 2 Fold», «… 4 MBP16», Air, MBP14, Iphone): en un Mac la orden va por el relay de /control (sesión Google) y abre la cuadrícula en su Terminal; en el móvil, la página admira.live/interface/?d=fold que dejas abierta la enseña sola.",
+    "Privado: la cuadrícula de 2 es una terminal de solo lectura del MacBook Air que solo se ve dentro del tailnet de Carlos (Tailscale; Chrome pide una vez permiso de «red local»); la web pública solo enseña el enlace y nunca lleva claves. Las órdenes al móvil usan la misma llave revocable del visor.",
+    "Estas novedades salen en el popover del sello (pasa el ratón por la versión), sin recorte del riel."
+  ],
   "v.11.10.2026.r29.13:07": [
     "/consumos · Matriz de agentes: cada fila lleva una insignia PAGO (ámbar) o GRATIS (verde) delante del detalle del coste.",
     "De pago son los seis titulares: Merovingio y Smith (Grok), Oráculo y Trinity (Codex), Neo y Morfeo (Claude). El resto, gratis; un agente nuevo que lata con un modelo de pago sale PAGO.",

@@ -224,3 +224,13 @@ test('la silla del Consejo se puede nombrar por su MacBook Air: agente_encargar(
   const mal = await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Wozniak', maquina: 'MacBookAirAzul', texto: 'esto no es tuyo' } });
   assert.equal(mal.isError, true); assert.match(mal.content[0].text, /MacBookAirAzul es la silla de Jobs, no de Wozniak/);
 });
+
+test('agente_encargar a Morfeo sin máquina va a su equipo de casa, el MacBook Pro 16 (aunque lata en el Mac Mini)', async () => {
+  const { client, peticiones } = await cliente('clave-que-no-existe');
+  const r = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Morfeo', texto: 'Prueba de encaminado a su casa.' } }));
+  assert.equal(r.maquina, 'macbookpro16');
+  const post = peticiones.find((x) => x.url.endsWith('/api/bot-inbox') && x.method === 'POST');
+  assert.equal(post.body.target_machine, 'macbookpro16');
+  const mm = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Morfeo', maquina: 'MacMini', texto: 'Con máquina explícita manda la máquina.' } }));
+  assert.equal(mm.maquina, 'macmini');
+});

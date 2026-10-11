@@ -72,7 +72,7 @@ test('forma corta: /interface 4 · /interface 2 fold · /interfaz 4 mbp16', () =
 test('/demo interface: help → 4 → off → 2 → off → 2 claude · codex · grok · Neo Trinity → error → off', () => {
   const I = globalThis.AdmiraInterface;
   assert.deepEqual(I.PASOS.map(p => p[0]), ['/interface help', '/interface 4', '/interface off', '/interface 2', '/interface off',
-    '/interface 2 claude', '/interface 2 codex', '/interface 2 grok', '/interface 2 Neo Trinity', '/interface 2 Neo Cypher', '/interface off']);
+    '/interface 2 claude', '/interface 2 codex', '/interface off', '/interface 2 grok', '/interface 2 Neo Trinity', '/interface 2 Neo Cypher', '/interface off']);
   // todos parsean, salvo el caso de error a propósito (Cypher no tiene panel)
   I.PASOS.forEach(p => { assert.equal(I.parse(p[0]).ok, !/Cypher/.test(p[0]), p[0]); assert.ok(p[1] && p[2]); });
   assert.ok(I.RE_DEMO.test('/demo interface') && I.RE_DEMO.test('/demo interfaz') && !I.RE_DEMO.test('/demo portada'));

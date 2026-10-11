@@ -286,6 +286,7 @@
     // #5707: el 2 con selector (modelo sacado de la presencia real; sin dato = desconocido, fuera de los grupos)
     ['/interface 2 claude', 'Ahora escojo qué 2: los 2 vivos con Claude, por latido más reciente (visor con llave, 2x1).', 'Now I pick which 2: the 2 live agents on Claude, most recent heartbeat first (keyed viewer, 2x1).', 6500],
     ['/interface 2 codex', 'Los 2 vivos con Codex.', 'The 2 live agents on Codex.', 6500],
+    ['/interface off', 'La cierro antes del siguiente, para que se vea que no abre nada.', 'Closing it before the next one, so you can see nothing opens.', 1500],
     ['/interface 2 grok', 'Los 2 con Grok. Si hay menos de 2 vivos con ese modelo, no abre un panel vacío: lo dice y sugiere otra cosa.', 'The 2 on Grok. With fewer than 2 live on that model it never opens an empty panel: it says so and suggests something else.', 6500],
     ['/interface 2 Neo Trinity', 'Por nombre: Neo y Trinity, sin importar mayúsculas ni tildes.', 'By name: Neo and Trinity, case and accents ignored.', 6500],
     ['/interface 2 Neo Cypher', 'Un caso de error: Cypher no tiene panel, así que no hay 2 → mensaje con sugerencias.', 'An error case: Cypher has no panel, so there are no 2 → message with suggestions.', 3500],

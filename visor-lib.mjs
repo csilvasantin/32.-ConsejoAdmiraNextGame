@@ -5,6 +5,7 @@
  * → POST /api/visor/pane (token de máquina). El visor /visor/ la lee con una llave de visor (revocable).
  * Una sola lista: cuadratura.conf (Título|host|sesión|skin). El publicador la manda y el visor la pinta en ese orden.
  */
+import { normalizarTerminales } from './terminal-lib.mjs';
 export const CONF_DEFECTO = [
   { titulo: "Neo · Claude", host: "macbook-pro-16", sesion: "neo", skin: "Homebrew" },
   { titulo: "Morfeo · Claude", host: "macbook-pro-16", sesion: "morfeo", skin: "Red Sands" },
@@ -97,7 +98,10 @@ export function normalizarPane(body, ahora = Date.now()) {
     }
   }
   const vivas = (Array.isArray(body.vivas) ? body.vivas : Object.keys(agentes)).map(idSesion).filter(Boolean).slice(0, 20);
-  return { ok: true, pane: { maquina, completo: body.completo !== false, conf: normalizarConf(body.conf), grok: normalizarConf(body.grok), agentes, vivas, ts: ahora } };
+  const terminales = normalizarTerminales(body.terminales);
+  if (terminales) for (const t of terminales) { t.encargo = tapar(t.encargo); t.mision = tapar(t.mision); }
+  const terminalesTs = Number(body.terminalesTs);
+  return { ok: true, pane: { maquina, completo: body.completo !== false, conf: normalizarConf(body.conf), grok: normalizarConf(body.grok), agentes, vivas, terminales, terminalesTs: Number.isFinite(terminalesTs) && terminalesTs > 0 ? Math.min(terminalesTs, ahora) : 0, ts: ahora } };
 }
 
 /** Funde un envío (solo lo que cambió) sobre el último estado de esa máquina. */
@@ -105,7 +109,7 @@ export function fundir(prev, pane) {
   const base = pane.completo || !prev ? {} : { ...(prev.agentes || {}) };
   const agentes = { ...base, ...pane.agentes };
   for (const s of Object.keys(agentes)) if (!pane.vivas.includes(s)) delete agentes[s];
-  return { maquina: pane.maquina, ts: pane.ts, conf: pane.conf || (prev && prev.conf) || null, grok: pane.grok || (prev && prev.grok) || null, agentes, vivas: pane.vivas, kvTs: (prev && prev.kvTs) || 0 };
+  return { maquina: pane.maquina, ts: pane.ts, conf: pane.conf || (prev && prev.conf) || null, grok: pane.grok || (prev && prev.grok) || null, agentes, terminales: pane.terminales, terminalesTs: pane.terminalesTs, vivas: pane.vivas, kvTs: (prev && prev.kvTs) || 0 };
 }
 
 /** Vista para el visor: una ficha por línea de la conf (la más reciente que haya llegado). */

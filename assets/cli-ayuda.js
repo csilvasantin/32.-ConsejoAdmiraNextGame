@@ -20,6 +20,7 @@
 
   // [orden, fecha AAAA-MM-DD | null, castellano, inglés, origen]
   var CATALOGO = [
+    ['/demo terminal', '2026-10-11', 'simulación del inventario y las dos confirmaciones de cierre, sin matar sesiones reales', 'simulated inventory and both close confirmations, without killing real sessions', 'admira.live'],
     ['/demo interface', '2026-10-11', 'terminales en vivo de los deepagents: help → 4 aquí → off → 2 aquí → off, sola', 'live deepagent terminals: help → 4 here → off → 2 here → off, by itself', 'admira.live'],
     ['/demo velocidad', '2026-10-09', 'velocímetro de tokens/hora de la flota (/demo speed en inglés)', 'fleet tokens/hour speedometer (/demo speed)', 'admira.live'],
     ['/demo lectura', '2026-10-09', 'qué ve una sesión de agente de solo lectura', 'what a read-only agent session sees', 'admira.live'],
@@ -88,7 +89,7 @@
   function verbosConocidos() {
     var E = root.AdmiraExperto, out = [];
     try { (E && E.list ? E.list() : []).forEach(function (v) { out.push(v.name); (v.alias || []).forEach(function (a) { out.push(a); }); }); } catch (e) {}
-    return out.concat(['velocidad', 'speed', 'interface', 'interfaz', 'demo']);
+    return out.concat(['velocidad', 'speed', 'interface', 'interfaz', 'terminal', 'demo']);
   }
   function demosConocidas() { return CATALOGO.map(function (d) { return d[0].replace(/^\/demo /, ''); }).concat(['home', 'live', 'speed', 'interfaz', 'today', 'language', 'projects', 'brands', 'roadmap', 'marcas', 'lista', 'siguiente']); }
 

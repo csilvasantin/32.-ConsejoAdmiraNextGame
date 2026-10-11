@@ -212,6 +212,9 @@
       var mutating = !/^(GET|HEAD|OPTIONS)$/.test(method);
       var commandId = opts.commandId || (mutating ? randomId() : '');
       var candidates = ordered(opts.relayId);
+      // Una confirmación /terminal pertenece al relay que emitió su nonce.
+      // Sin reintentos automáticos: un timeout de una mutación nunca repite el kill.
+      if (opts.retry === false) candidates = candidates.slice(0, 1);
       var attempts = [];
       var lastError = null;
 

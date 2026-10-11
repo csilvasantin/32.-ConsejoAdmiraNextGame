@@ -236,7 +236,7 @@
     paso();
     return PASOS.length;
   }
-  var RE_DEMO = /^\/?demo\s+(interface|interfaz|terminal|terminales)\s*$/i;
+  var RE_DEMO = /^\/?demo\s+(interface|interfaz|terminales)\s*$/i;
 
   // ── Registro en el ⌘ EXPERTO · CLI de la suite (www.admiranext.com/suite/experto.js) ──
   function li(log, t, cls) {

@@ -446,6 +446,15 @@
       var orden = inp.value;
       inp.value = "";
       // /interface y /demo interface: la MISMA implementación que la home (assets/interface-cli.js), cargada al vuelo.
+      if (/^\/terminal(\s|$)|^\/?demo\s+terminal\s*$/i.test(String(orden).trim())) {
+        out.textContent = '…';
+        terminalCli(function (I) {
+          out.textContent = '';
+          var decir = function (t) { out.textContent += (out.textContent ? '\n' : '') + t; };
+          if (/^\/?demo\s/i.test(orden)) I.demo(decir); else I.run(String(orden).trim(), decir);
+        }, function () { out.textContent = T('/terminal no ha cargado; recarga la página.', '/terminal did not load; reload the page.'); });
+        return;
+      }
       if (/^\/(interface|interfaz)(\s|$)|^\/?demo\s+(interface|interfaz|terminal|terminales)\s*$/i.test(String(orden).trim())) {
         out.textContent = "…";
         interfaceCli(function (I) {
@@ -517,11 +526,19 @@
     sc.onerror = ko;
     document.head.appendChild(sc);
   }
+  function terminalCli(ok, ko) {
+    if (window.AdmiraTerminal) return ok(window.AdmiraTerminal);
+    var sc = document.createElement('script');
+    sc.src = '/assets/terminal-cli.js?v=5704-terminal';
+    sc.onload = function () { window.AdmiraTerminal ? ok(window.AdmiraTerminal) : ko(); };
+    sc.onerror = ko;
+    document.head.appendChild(sc);
+  }
 
   // Consola local de la barra (páginas sin CLI propia). Entiende los comandos de
   // interfaz —/help y /idioma— y no envía nada a la flota. /help lista TODOS los que
   // entiende (lo vigila idioma-experto.test.mjs).
-  var CONSOLA_LOCAL = ["/help", "/ayuda", "/idioma", "/language", "/interface", "/interfaz"];
+  var CONSOLA_LOCAL = ["/help", "/ayuda", "/idioma", "/language", "/interface", "/interfaz", "/terminal"];
   function consolaLocal(raw) {
     var line = String(raw || "").trim();
     if (!line) return "";
@@ -532,8 +549,8 @@
     if (/^\/(help|ayuda)$/i.test(line)) {
       return T("Consola local · /help (/ayuda) esta ayuda · ", "Local console · /help (/ayuda) this help · ") +
         (I ? I.helpLine(I.lang()) : "/idioma ESP | ENG — castellano o inglés, sin recargar la página") +
-        T(" (alias /language) · /interface (/interfaz) [terminal] 4|2 [dispositivo] · off · help — terminales de los deepagents (/demo interface). La CLI completa está en la home (⌘).",
-          " (alias /language) · /interface (/interfaz) [terminal] 4|2 [device] · off · help — deepagent terminals (/demo interface). The full CLI lives on the home page (⌘).");
+        T(" (alias /language) · /interface (/interfaz) [terminal] 4|2 [dispositivo] · off · help — terminales de los deepagents (/demo interface) · /terminal [kill [equipo] [--si]] · confirmar · cancelar · help — inventario y cierre seguro (/demo terminal). La CLI completa está en la home (⌘).",
+          " (alias /language) · /interface (/interfaz) [terminal] 4|2 [device] · off · help — deepagent terminals (/demo interface) · /terminal [kill [machine] [--si]] · confirm · cancel · help — inventory and safe close (/demo terminal). The full CLI lives on the home page (⌘).");
     }
     return T("local · " + line + " (no se ejecuta en la flota) · /help", "local · " + line + " (not run on the fleet) · /help");
   }

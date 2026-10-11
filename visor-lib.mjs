@@ -1,5 +1,5 @@
 /**
- * visor-lib.mjs — visor de los 4 deepagents de pago (r27 · Carlos 11-10-2026 12:16).
+ * visor-lib.mjs — visor de los 4 deepagents de pago (r27 · Carlos 11-10-2026 12:16 · r31 estado único 13:13).
  * «Lo mismo que pasa en el MBP16 (cuadratura) en el Samsung Fold»: cada Mac que aloja sesiones tmux publica
  * cada 3 s la pantalla (capture-pane con colores) de los agentes de ~/.config/admiranext/cuadratura.conf
  * → POST /api/visor/pane (token de máquina). El visor /visor/ la lee con una llave de visor (revocable).
@@ -36,8 +36,14 @@ const PATRONES = [
   /\b(\d{8,10}:AA[A-Za-z0-9_\-]{30,})/g,
   /\b(eyJ[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{10,}\.[A-Za-z0-9_\-]{5,})/g,
 ];
+// r31: enlaces de login (OAuth) nunca al visor; la URL de Claude se parte en varias líneas → se tapa la línea entera
+const RX_OAUTH_TROZO = /code_challenge|redirect_uri=|client_id=|response_type=|[?&]state=|%3A%2F|%3A[a-z_]+\+|scope=[a-z%]/i;
+const RX_TROZO_LARGO = /^\s*[A-Za-z0-9_\-=%&.+]{40,}\s*$/;
+const RX_OAUTH_URL = /https?:\/\/\S*(?:oauth|authorize|\/login|signin|sign-in|device)\S*/gi;
 export function tapar(s) {
   let t = String(s == null ? "" : s);
+  if (RX_OAUTH_TROZO.test(t) || RX_TROZO_LARGO.test(t.replace(/\u001b\[[0-9;]*m/g, ""))) return "[enlace de login oculto]";
+  t = t.replace(RX_OAUTH_URL, "[enlace de login oculto]");
   for (const rx of PATRONES) t = t.replace(rx, "[oculto]");
   t = t.replace(/\b(Bearer|Basic|token)\s+[A-Za-z0-9._~+\/=\-]{12,}/gi, "$1 [oculto]");
   t = t.replace(/((?:pass(?:word|wd)?|pwd|contrase(?:ñ|n)a|clave|secret|api[_-]?key|access[_-]?key|token)[A-Za-z_\-]*["']?\s*[:=]\s*["']?)([^\s"'\u001b]{4,})/gi, "$1[oculto]");
@@ -51,7 +57,12 @@ function normalizarConf(c) {
   return out.length ? out : null;
 }
 
-/** POST { maquina, ts, completo, conf?, agentes:{ <sesion>: { lineas:[…], ancho, alto, cmd, rotulo:[…], sub, cambio } }, vivas:[sesiones] } */
+/** Estados del agente (r31): los decide estado-agente.py en el Mac, la MISMA pieza que la cuadrícula (panel-agente.sh). */
+export const ESTADOS_AGENTE = ["vivo", "idle", "login", "nosesion"];
+export const ETIQUETAS = { vivo: "en misión", idle: "Idle", login: "Login pendiente", nosesion: "Sin sesión" };
+
+/** POST { maquina, ts, completo, conf?, agentes:{ <sesion>: { lineas:[…], ancho, alto, cmd, rotulo:[…], sub, cambio,
+ *        estado, mision, modelo, mac, arte:[…], desde } }, vivas:[sesiones] }   (estado… desde r31; sin estado = publicador viejo) */
 export function normalizarPane(body, ahora = Date.now()) {
   if (!body || typeof body !== "object") return { ok: false, error: "cuerpo vacío" };
   const maquina = idMaquina(body.maquina);
@@ -68,6 +79,15 @@ export function normalizarPane(body, ahora = Date.now()) {
       rotulo: (Array.isArray(a.rotulo) ? a.rotulo : []).slice(0, 8).map((l) => limpio(l, 80)),
       cambio: Number.isFinite(Number(a.cambio)) ? Math.min(Number(a.cambio), ahora) : ahora,
     };
+    if (ESTADOS_AGENTE.includes(a.estado)) {
+      const ag = agentes[ses];
+      ag.agente = a.estado;
+      ag.mision = tapar(limpio(a.mision, 240));
+      ag.modelo = limpio(a.modelo, 40); ag.mac = limpio(a.mac, 40);
+      ag.arte = (Array.isArray(a.arte) ? a.arte : []).slice(0, 10).map((l) => limpio(l, 120));
+      ag.desde = Number.isFinite(Number(a.desde)) ? Math.min(Number(a.desde), ahora) : ahora;
+      if (a.estado !== "vivo") ag.lineas = []; // en Idle / Login / Sin sesión el visor no enseña la terminal (ni el enlace de login)
+    }
   }
   const vivas = (Array.isArray(body.vivas) ? body.vivas : Object.keys(agentes)).map(idSesion).filter(Boolean).slice(0, 20);
   return { ok: true, pane: { maquina, completo: body.completo !== false, conf: normalizarConf(body.conf), agentes, vivas, ts: ahora } };
@@ -94,7 +114,8 @@ export function vista(docs, ahora = Date.now()) {
     const publicadorVivo = haceS != null && haceS < 120;
     let estado = "esperando";
     if (a && publicadorVivo) estado = "vivo"; else if (a) estado = "congelado";
-    return { ...c, estado, maquinaHaceS: haceS, ...(a ? { lineas: a.lineas, ancho: a.ancho, alto: a.alto, cmd: a.cmd, sub: a.sub, rotulo: a.rotulo, cambio: a.cambio } : {}) };
+    const extra = a && a.agente ? { agente: a.agente, etiqueta: ETIQUETAS[a.agente], mision: a.mision, modelo: a.modelo, mac: a.mac, arte: a.arte, desde: a.desde } : {};
+    return { ...c, estado, maquinaHaceS: haceS, ...(a ? { lineas: a.lineas, ancho: a.ancho, alto: a.alto, cmd: a.cmd, sub: a.sub, rotulo: a.rotulo, cambio: a.cambio, ...extra } : {}) };
   });
   return { fichas, fuenteConf: conf ? conf.maquina : "defecto" };
 }

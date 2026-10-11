@@ -60,3 +60,37 @@ test("la página no lleva llaves ni tokens y manda la llave solo por cabecera", 
   assert.ok(h.includes("noindex"));
   assert.ok(!/\?k=/.test(h));
 });
+
+// r31 (Carlos 11-10-2026 13:13 «¿por qué no coinciden?»): estado único Mac ↔ visor
+test("r31: el estado del Mac viaja tal cual (idle / login / nosesion) y fuera de vivo no viaja la terminal", () => {
+  const A = 2_000_000;
+  const p = normalizarPane({ maquina: "macbook-pro-16", vivas: ["neo", "morfeo", "trinity"], agentes: {
+    neo: { estado: "idle", lineas: ["no debería verse"], mision: "#5645 · done · Insignia PAGO/GRATIS", modelo: "Claude Code", mac: "MacBook Pro 16", arte: [" _ _ "] },
+    morfeo: { estado: "login", lineas: ["https://claude.com/cai/oauth/authorize?code=true&client_id=9d1c"], mision: "#5647 · ack · admira.store" },
+    trinity: { estado: "vivo", lineas: ["• Working (3s · esc to interrupt)"], mision: "#5648 · in_progress · admira.biz" },
+  } }, A).pane;
+  const v = vista([fundir(null, p)], A + 1000);
+  const [neo, morfeo, trinity, oraculo] = v.fichas;
+  assert.equal(neo.agente, "idle"); assert.equal(neo.etiqueta, "Idle"); assert.deepEqual(neo.lineas, []); assert.match(neo.mision, /#5645/);
+  assert.equal(morfeo.agente, "login"); assert.equal(morfeo.etiqueta, "Login pendiente"); assert.deepEqual(morfeo.lineas, []);
+  assert.equal(trinity.agente, "vivo"); assert.equal(trinity.lineas.length, 1);
+  assert.equal(oraculo.estado, "esperando"); assert.equal(oraculo.agente, undefined);
+});
+
+test("r31: el enlace OAuth del login nunca sale, ni partido en varias líneas", () => {
+  for (const l of ["https://claude.com/cai/oauth/authorize?code=true&client_id=9d1c250a", "type=code&redirect_uri=https%3A%2F%2Fplatform.claude.com%2Foauth", "user%3Aplugins&code_challenge=rmos4BPtdyuCuP&code_challenge_method=S256&stat", "e=QYGTzTNQJnudxAUjgIKTSf8a7ZSsfeKYitj_TToukJ0"])
+    assert.equal(tapar(l), "[enlace de login oculto]", l);
+  assert.equal(tapar("   Paste code here if prompted >"), "   Paste code here if prompted >");
+  assert.equal(tapar("PR https://github.com/csilvasantin/32.-ConsejoAdmiraNextGame/pull/169 fusionado"), "PR https://github.com/csilvasantin/32.-ConsejoAdmiraNextGame/pull/169 fusionado");
+});
+
+test("r31: un publicador viejo (sin estado) sigue viéndose como antes", () => {
+  const p = normalizarPane({ maquina: "macmini", vivas: ["oraculo"], agentes: { oraculo: { lineas: ["hola"] } } }, 5000).pane;
+  const f = vista([fundir(null, p)], 6000).fichas[3];
+  assert.equal(f.estado, "vivo"); assert.equal(f.agente, undefined); assert.deepEqual(f.lineas, ["hola"]);
+});
+
+test("r31: la página pinta Idle / Login pendiente / Sin sesión como el Mac", () => {
+  const h = readFileSync(new URL("./visor/index.html", import.meta.url), "utf8");
+  for (const s of ["f.agente", "última misión: ", "ficha-idle", "Login pendiente"]) assert.ok(h.includes(s), s);
+});

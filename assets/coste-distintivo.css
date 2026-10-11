@@ -2,3 +2,12 @@
 .mz-ins{display:inline-block;min-width:54px;margin:2px 6px 2px 0;padding:2px 7px;border-radius:7px;font-size:11px;font-weight:800;letter-spacing:.06em;text-align:center;vertical-align:middle;font-style:normal;white-space:nowrap}
 .mz-ins-pago{background:#ffb020;color:#1a1200}.mz-ins-gratis{background:#3ddc84;color:#04170c}.mz-ins-desconocido{background:#334650;color:#e6f2f6}
 .coste-superficie{display:block;margin:5px 0;font-size:12px;line-height:1.5;overflow-wrap:anywhere}.coste-superficies{margin:8px 0;line-height:1.5}.coste-sin-senal{opacity:.75}
+/* En móvil cada agente conserva todos sus campos y costes visibles sin desplazar la tabla. */
+@media(max-width:700px){
+  .mz-tabla{overflow:visible}.mz table,.mz tbody{display:block;width:100%;min-width:0}.mz thead{display:none}
+  .mz tr{display:block;border:1px solid rgba(120,243,255,.2);border-radius:10px;margin:12px 0;padding:8px}
+  .mz td{display:block;min-width:0;width:100%;padding:6px 4px;overflow-wrap:anywhere}
+  .mz td[data-label]::before{content:attr(data-label);display:block;color:#75aab9;font-size:11px;font-weight:700;margin-bottom:4px}
+  .mz td:first-child{font-size:16px;font-weight:700}.mz td.mz-td-co{min-width:0}
+  .mz .coste-superficie{font-size:13px}.mz .coste-superficie .mz-ins{opacity:1}
+}

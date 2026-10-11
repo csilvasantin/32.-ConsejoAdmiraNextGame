@@ -68,9 +68,9 @@
     var est = f.vivo ? T('con señal (latido < 15 min)', 'live (heartbeat < 15 min)') : T('sin señal', 'no signal');
     return '<tr class="' + (f.vivo ? 'mz-vivo' : 'mz-off') + (f.fuera ? ' mz-fuera' : '') + '" title="' + esc(est) + '">' +
       '<td><i class="mz-p" aria-hidden="true"></i>' + cara(f) + esc(en() ? f.agenteEn : f.agente) + carga + '</td>' +
-      '<td>' + esc(f.depende || '—') + '</td><td>' + (f.equipo ? esc(eq) : eq) + '</td>' +
-      '<td>' + esc(modelo(f.modelo)) + donde + inc + inf + superficiesCoste(f) + '</td><td>' + superficie(f) + '</td><td>' + esc(ab) + '</td>' +
-      '<td class="mz-td-co">' + insignia(f) + '<span class="mz-co mz-' + esc(f.fuera ? 'fuera' : (f.coste || 'nd')) + '">' + esc(co) + '</span></td></tr>';
+      '<td data-label="' + T('Depende de', 'Reports to') + '">' + esc(f.depende || '—') + '</td><td data-label="' + T('Equipo', 'Team') + '">' + (f.equipo ? esc(eq) : eq) + '</td>' +
+      '<td data-label="' + T('Modelo y proveedor por superficie', 'Model and provider by surface') + '">' + esc(modelo(f.modelo)) + donde + inc + inf + superficiesCoste(f) + '</td><td data-label="' + T('Superficie', 'Surface') + '">' + superficie(f) + '</td><td data-label="' + T('Abierto/Cerrado', 'Open/Closed') + '">' + esc(ab) + '</td>' +
+      '<td class="mz-td-co" data-label="' + T('Coste', 'Cost') + '">' + insignia(f) + '<span class="mz-co mz-' + esc(f.fuera ? 'fuera' : (f.coste || 'nd')) + '">' + esc(co) + '</span></td></tr>';
   }
   function pinta(d) {
     var tb = document.getElementById('matriz-filas'), res = document.getElementById('matriz-resumen');

@@ -170,12 +170,27 @@ def main():
         time.sleep(60)
         return 1
     print("visor-publicar r31: estado de %s (%s)" % (EST._ruta, time.strftime("%H:%M:%S")), file=sys.stderr, flush=True)
+    inv_path = os.path.join(os.path.dirname(os.path.abspath(__file__)), 'terminal-inventory.py')
+    inv_spec = importlib.util.spec_from_file_location('terminal_inventory', inv_path)
+    inv = importlib.util.module_from_spec(inv_spec)
+    inv_spec.loader.exec_module(inv)
     huellas, ultimo_envio, rotulos, forzar = {}, 0.0, {}, True
+    terminales, terminales_ts, ultimo_inventario, firma_sesiones = None, 0, 0, None
     while True:
         t0 = time.time()
         try:
             conf = leer_conf()
             grok = leer_conf(CONF_GROK, DEFECTO_GROK, 2)
+            rc, sesiones = tmux('list-sessions', '-F', '#{session_id}\t#{session_name}\t#{session_created}')
+            refrescar_inventario = sesiones != firma_sesiones or t0 - ultimo_inventario >= LATIDO
+            if refrescar_inventario:
+                try:
+                    terminales = inv.collect(tmux=tmux, estado=EST)
+                    terminales_ts = int(time.time() * 1000)
+                    firma_sesiones = sesiones
+                except Exception:
+                    terminales, terminales_ts = None, 0
+                ultimo_inventario = t0
             mias = [c for c in conf + grok if c["host"] == maquina]
             agentes, vivas, nuevas = {}, [], {}
             for c in mias:
@@ -205,8 +220,8 @@ def main():
                 if forzar or huellas.get(ses) != h:
                     agentes[ses] = cap
             cambio_vivas = set(vivas) != set(huellas)
-            if mias and (agentes or cambio_vivas or forzar or t0 - ultimo_envio >= LATIDO):
-                cuerpo = {"maquina": maquina, "completo": forzar, "conf": conf, "grok": grok, "agentes": agentes, "vivas": vivas, "ts": int(t0 * 1000)}
+            if agentes or cambio_vivas or forzar or refrescar_inventario or t0 - ultimo_envio >= LATIDO:
+                cuerpo = {"maquina": maquina, "completo": forzar, "conf": conf, "grok": grok, "agentes": agentes, "vivas": vivas, "terminales": terminales, "terminalesTs": terminales_ts, "ts": int(t0 * 1000)}
                 r = enviar(cuerpo, tok, dry)
                 ultimo_envio = t0
                 huellas = nuevas

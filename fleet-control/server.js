@@ -672,6 +672,47 @@ async function gate(req, res, ip, allowToken) {
 function readBody(req) {
   return new Promise((resolve) => { let b = ''; req.on('data', d => { b += d; if (b.length > 1e6) b = b.slice(0, 1e6); }); req.on('end', () => { try { resolve(b ? JSON.parse(b) : {}); } catch (e) { resolve({}); } }); });
 }
+
+// /terminal: metadatos reales del publicador; jamás ejecuta shell enviado por la web.
+const { createTerminalControl } = require('./terminal-control');
+const terminalControl = createTerminalControl({
+  machines: () => FLEET.machines,
+  inventory: async () => {
+    let token = process.env.COUNCIL_MACHINE_TOKEN || '';
+    if (!token) for (const file of ['.config/admira/consumos-lecturas.token','.fleet/council-machine.token']) { try { token = fs.readFileSync(path.join(os.homedir(), file), 'utf8').trim(); } catch (_) {} if (token) break; }
+    if (!token) throw Object.assign(new Error('sin credencial del publicador; inventario no disponible'), { status:503 });
+    const r = await fetch('https://www.admira.live/api/visor/pane?inventario=1', { headers:{'X-Council-Token':token}, signal:AbortSignal.timeout(8000) });
+    if (!r.ok) throw Object.assign(new Error('inventario del visor no disponible'), { status:503 });
+    const d = await r.json();
+    if (!d.ok || !Array.isArray(d.maquinas)) throw Object.assign(new Error('inventario inválido'), {status:503});
+    const k = x => String(x || '').toLowerCase().split('.')[0].replace(/[^a-z0-9]/g,'');
+    const maquinas = FLEET.machines.map(m => {
+      const row = d.maquinas.find(x => [m.id,m.host,m.name].some(v => k(v) === k(x.maquina)));
+      return row ? {...row,nombre:m.name || m.id} : {maquina:k(m.host || m.id),nombre:m.name || m.id,disponible:false,ultimoLatido:null,terminales:[],motivo:'sin datos'};
+    });
+    return {ok:true,ahora:d.ahora,maquinas:[...maquinas,...d.maquinas.filter(x => !maquinas.some(m => m.maquina===x.maquina))]};
+  },
+  execute: async (machine, body) => {
+    const m = machineById(machine);
+    if (!m || !['macos','linux'].includes(platOf(m))) return {ok:false,error:'equipo sin ejecutor tmux'};
+    const executor = fs.readFileSync(path.join(DIR,'terminal-local.py'),'utf8');
+    const inventorySource = fs.readFileSync(path.join(DIR,'../tools/terminal-inventory.py'),'utf8');
+    const payload = Buffer.from(JSON.stringify({...body,inventorySource})).toString('base64');
+    const script = Buffer.from(executor).toString('base64');
+    const cmd = "python3 -c " + sh("import base64; exec(compile(base64.b64decode('"+script+"'), 'terminal-local.py', 'exec'))") + ' ' + sh(payload);
+    const result = await run(m,cmd,60000);
+    try { return JSON.parse(result.stdout); } catch (_) { return {ok:false,error:result.rc===124?'timeout; revisa registro antes de repetir':'ejecutor no disponible',rc:result.rc}; }
+  },
+  audit
+});
+
+function terminalActor(req) {
+  const s = req.fleetSession;
+  // Sesión web autenticada y Origin del gate: la CLI web no tiene sesión tmux emisora.
+  // Para emisores tmux sólo se acepta un vínculo del servidor, nunca un campo del body.
+  const source = ALLOW_ORIGINS.includes(req.headers.origin) ? {kind:'browser'} : null;
+  return {admin:!!s && SUPERS.has(s.email),email:s && s.email,jti:s && s.jti,source:s && s.terminalOrigin || source};
+}
 function readRawBody(req, limit=20000) {
   return new Promise((resolve) => { let body='', tooLarge=false; req.on('data', chunk => { if (tooLarge) return; body += chunk; if (body.length > limit) { tooLarge=true; body=''; } }); req.on('end', () => resolve(tooLarge ? null : body)); req.on('error', () => resolve(null)); });
 }
@@ -1101,6 +1142,18 @@ const server = http.createServer(async (req, res) => {
   }
 
   // ejecutar comando libre
+  if (url === '/api/terminal/inventory' || url === '/api/terminal/plan' || url === '/api/terminal/confirm') {
+    if (!(await gate(req,res,ip))) return;
+    try {
+      const actor = terminalActor(req);
+      if (url === '/api/terminal/inventory' && req.method === 'GET') return json(res,200,await terminalControl.list(actor));
+      if (req.method !== 'POST') return json(res,405,{ok:false,error:'método no permitido'});
+      const body = await readBody(req);
+      const result = url === '/api/terminal/plan' ? await terminalControl.plan(actor,body) : await terminalControl.confirm(actor,body);
+      return json(res,200,result);
+    } catch (e) { return json(res,e.status || 503,{ok:false,error:e.message}); }
+  }
+
   if (url === '/api/run' && req.method === 'POST') {
     if (!(await gate(req, res, ip))) return;
     const body = await readBody(req);

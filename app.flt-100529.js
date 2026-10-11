@@ -1843,6 +1843,7 @@
             li('<strong>⌘ EXPERTO · CLI</strong>', 'consola de la suite AdmiraNeXT anclada abajo: /help, /marca, /idioma, /estado, /version', 'AdmiraNeXT suite console docked at the bottom: /help, /marca, /idioma, /estado, /version') +
             li('<strong>/comandos</strong>', 'abre la página con todos los comandos', 'opens the page with every command') +
             li('<strong>/interface terminal 4 | 2 [dispositivo] · /interface 6 · /interfaz</strong>', 'terminales en vivo de los deepagents (4 = Neo·Morfeo·Trinity·Oráculo · 2 = Smith·Merovingio · 6 = los seis en 3x2): sin dispositivo aquí; Fold, Iphone, Air, MBP16, MBP14 allí · /interface off [dispositivo] · /interface help', 'live deepagent terminals (4 = Neo·Morph·Trinity·Oracle · 2 = Smith·Merovingio · 6 = all six in 3x2): no device = here; Fold, Iphone, Air, MBP16, MBP14 there · /interface off [device] · /interface help') +
+            li('<strong>/terminal [kill [equipo] [--si]]</strong>', 'inventario vivo de todas las terminales de agente · cierre sólo administrador, con copia y dos confirmaciones si hay encargos en curso · /terminal confirmar · /terminal cancelar · /demo terminal', 'live inventory of every agent terminal · administrator close with backups and two confirmations for active assignments · /terminal confirm · /terminal cancel · /demo terminal') +
             li('<strong>/leyendas · /coetaneos</strong>', 'cambia la generación del Consejo', 'switches the Council generation') +
             li('<strong>/agentes</strong>', 'muestra u oculta el panel de Agentes (AgoraMatrix)', 'shows or hides the Agents panel (AgoraMatrix)') +
             li('<strong>/importar &lt;url&gt;</strong>', 'descarga vídeo y lo sube a Drive', 'downloads a video and uploads it to Drive') +
@@ -2197,7 +2198,7 @@
         // Orquestador (09-10-2026): /orquestar <texto> · /orchestrate <text> → /api/orquestar
         '/orquestar', '/orchestrate',
         // /interface (r29 · Jensen Huang, 11-10-2026): terminales de los deepagents aquí o en otro dispositivo
-        '/interface', '/interfaz'
+        '/interface', '/interfaz', '/terminal'
     ];
     (function setupCliAutocomplete() {
         const inp = document.getElementById('action-input');
@@ -2297,6 +2298,17 @@
         if (pielCine) {
             addUserEntry(text);
             runMarcaCommand(pielCine[1]);
+            return true;
+        }
+        if (/^\/terminal(\s|$)/i.test(text)) {
+            addUserEntry(text);
+            if (window.AdmiraTerminal) window.AdmiraTerminal.run(text, function(t) {window.AdmiraTerminal.show(t);setActionLine(t.split('\n')[0]);});
+            else setActionLine('⚠️ /terminal no ha cargado; recarga la página');
+            return true;
+        }
+        if (/^\/?demo\s+terminal\s*$/i.test(text)) {
+            addUserEntry(text);
+            if (window.AdmiraTerminal) window.AdmiraTerminal.demo(function(t) {window.AdmiraTerminal.show(t);setActionLine(t.split('\n')[0]);});
             return true;
         }
         // /interface terminal 4|2 [dispositivo] · off · help (r29 · Jensen Huang · assets/interface-cli.js).

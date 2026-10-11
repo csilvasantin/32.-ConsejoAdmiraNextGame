@@ -11,6 +11,7 @@ mkdir -p "$HOME/.fleet/logs" "$HOME/.config/admiranext" "$HOME/Claude/vista"
 # estado-agente.py: la fuente única del estado (vivo/idle/login/nosesion) que comparten la cuadrícula y el visor
 install -m 755 "$D/estado-agente.py" "$HOME/Claude/vista/.estado-agente.tmp" && mv -f "$HOME/Claude/vista/.estado-agente.tmp" "$HOME/Claude/vista/estado-agente.py"
 install -m 755 "$D/visor-publicar.py" "$HOME/.fleet/.visor-publicar.tmp" && mv -f "$HOME/.fleet/.visor-publicar.tmp" "$HOME/.fleet/visor-publicar.py"
+install -m 755 "$D/terminal-inventory.py" "$HOME/.fleet/.terminal-inventory.tmp" && mv -f "$HOME/.fleet/.terminal-inventory.tmp" "$HOME/.fleet/terminal-inventory.py"
 [ -f "$HOME/.config/admiranext/cuadratura.conf" ] || cat > "$HOME/.config/admiranext/cuadratura.conf" <<'C'
 Neo · Claude|macbook-pro-16|neo|Homebrew
 Morfeo · Claude|macbook-pro-16|morfeo|Red Sands

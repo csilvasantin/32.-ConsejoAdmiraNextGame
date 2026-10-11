@@ -6,6 +6,7 @@
  * Almacén: Cache API del colo (al instante, gratis) + RECORTE_KV como respaldo (≤ 1 escritura / 20 s / máquina).
  */
 import { autorizado } from "../consumos/lecturas.js";
+import { inventarioTerminales } from '../../../terminal-lib.mjs';
 import { normalizarPane, fundir, vista, sha256, iguales, KEY_MAQ, KEY_INDICE, KEY_LLAVES, KV_CADA_MS } from "../../../visor-lib.mjs";
 
 const ALLOW = new Set(["https://www.admira.live", "https://admira.live", "https://admira-live.pages.dev"]);
@@ -16,16 +17,15 @@ function headers(origin) {
 }
 const json = (obj, status, origin) => new Response(JSON.stringify(obj), { status, headers: headers(origin) });
 const kv = (env) => (env && (env.CONSUMOS_KV || env.RECORTE_KV)) || null;
-let CACHE_BASE = "https://www.admira.live/__visor-cache/v1/";
-function fijarBase(request) { try { CACHE_BASE = new URL("/__visor-cache/v1/", request.url).toString(); } catch (e) {} }
+function cacheBase(request) { return new URL("/__visor-cache/v1/", request.url).toString(); }
 function cache() { try { return (typeof caches !== "undefined" && caches.default) || null; } catch (e) { return null; } }
-async function cacheGet(clave) {
+async function cacheGet(clave, base) {
   const c = cache(); if (!c) return null;
-  try { const r = await c.match(CACHE_BASE + encodeURIComponent(clave)); return r ? await r.json() : null; } catch (e) { return null; }
+  try { const r = await c.match(base + encodeURIComponent(clave)); return r ? await r.json() : null; } catch (e) { return null; }
 }
-async function cachePut(clave, obj) {
+async function cachePut(clave, obj, base) {
   const c = cache(); if (!c) return;
-  try { await c.put(CACHE_BASE + encodeURIComponent(clave), new Response(JSON.stringify(obj), { headers: { "content-type": "application/json", "cache-control": "public, max-age=900" } })); } catch (e) {}
+  try { await c.put(base + encodeURIComponent(clave), new Response(JSON.stringify(obj), { headers: { "content-type": "application/json", "cache-control": "public, max-age=900" } })); } catch (e) {}
 }
 async function kvGet(store, clave) { if (!store) return null; try { const r = await store.get(clave); return r ? JSON.parse(r) : null; } catch (e) { return null; } }
 
@@ -46,7 +46,7 @@ export function onRequestOptions({ request }) {
 }
 
 export async function onRequestPost({ request, env }) {
-  fijarBase(request);
+  const base = cacheBase(request);
   const origin = request.headers.get("Origin") || "";
   const auth = autorizado(request, env);
   if (auth === null) return json({ ok: false, error: "escrituras cerradas: falta token de máquina" }, 503, origin);
@@ -58,9 +58,9 @@ export async function onRequestPost({ request, env }) {
   if (!n.ok) return json(n, 400, origin);
   const store = kv(env);
   const clave = KEY_MAQ + n.pane.maquina;
-  let prev = await cacheGet(clave);
-  let base = !!prev;
-  if (!prev && !n.pane.completo) { prev = await kvGet(store, clave); base = !!prev; }
+  let prev = await cacheGet(clave, base);
+  let tieneBase = !!prev;
+  if (!prev && !n.pane.completo) { prev = await kvGet(store, clave); tieneBase = !!prev; }
   const doc = fundir(prev, n.pane);
   const tareas = [];
   let kvGuardado = false;
@@ -69,33 +69,36 @@ export async function onRequestPost({ request, env }) {
     tareas.push(store.put(clave, JSON.stringify(doc), { expirationTtl: 86400 }).catch(() => {}));
     tareas.push((async () => {
       const idx = (await kvGet(store, KEY_INDICE)) || [];
-      if (Array.isArray(idx) && !idx.includes(doc.maquina)) await store.put(KEY_INDICE, JSON.stringify([...idx, doc.maquina].slice(-10)));
+      if (Array.isArray(idx) && !idx.includes(doc.maquina)) await store.put(KEY_INDICE, JSON.stringify([...idx, doc.maquina].slice(-100)));
     })().catch(() => {}));
   }
-  tareas.push(cachePut(clave, doc));
-  const idxC = (await cacheGet(KEY_INDICE)) || [];
-  if (!idxC.includes(doc.maquina)) tareas.push(cachePut(KEY_INDICE, [...idxC, doc.maquina].slice(-10)));
+  tareas.push(cachePut(clave, doc, base));
+  const idxC = (await cacheGet(KEY_INDICE, base)) || [];
+  if (!idxC.includes(doc.maquina)) tareas.push(cachePut(KEY_INDICE, [...idxC, doc.maquina].slice(-100), base));
   await Promise.all(tareas);
   // completo:false sin base → el publicador manda todo en el siguiente envío
-  return json({ ok: true, maquina: doc.maquina, agentes: Object.keys(doc.agentes), necesitaCompleto: !n.pane.completo && !base, kv: kvGuardado }, 200, origin);
+  return json({ ok: true, maquina: doc.maquina, agentes: Object.keys(doc.agentes), necesitaCompleto: !n.pane.completo && !tieneBase, kv: kvGuardado }, 200, origin);
 }
 
 export async function onRequestGet({ request, env }) {
-  fijarBase(request);
+  const base = cacheBase(request);
   const origin = request.headers.get("Origin") || "";
-  if (!(await llaveValida(request, env))) return json({ ok: false, error: "llave del visor ausente o revocada" }, 401, origin);
+  const inventario = new URL(request.url).searchParams.get('inventario') === '1';
+  // Token de publicador: sólo metadatos del inventario, nunca contenido de panes.
+  if (!(inventario && autorizado(request, env) === true) && !(await llaveValida(request, env))) return json({ ok: false, error: "llave del visor ausente o revocada" }, 401, origin);
   const store = kv(env);
   const ahora = Date.now();
-  let idx = await cacheGet(KEY_INDICE);
+  let idx = await cacheGet(KEY_INDICE, base);
   const idxKv = await kvGet(store, KEY_INDICE);
-  idx = [...new Set([...(Array.isArray(idx) ? idx : []), ...(Array.isArray(idxKv) ? idxKv : [])])].slice(0, 10);
+  idx = [...new Set([...(Array.isArray(idx) ? idx : []), ...(Array.isArray(idxKv) ? idxKv : [])])].slice(0, 100);
   const docs = await Promise.all(idx.map(async (m) => {
-    const c = await cacheGet(KEY_MAQ + m);
+    const c = await cacheGet(KEY_MAQ + m, base);
     if (c && ahora - c.ts < 15000) return c;
     const k = await kvGet(store, KEY_MAQ + m);
     if (c && k) return c.ts >= k.ts ? c : k;
     return c || k;
   }));
+  if (inventario) return json({ ok: true, ...inventarioTerminales(docs, ahora) }, 200, origin);
   const grupo = Number(new URL(request.url).searchParams.get("g")) === 6 ? 6 : 4; // r33: /visor/?g=6 → + Smith y Merovingio
   return json({ ok: true, ...vista(docs, ahora, { grupo }), grupo, generado: new Date(ahora).toISOString(), ahora }, 200, origin);
 }

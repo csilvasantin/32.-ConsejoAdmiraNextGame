@@ -117,6 +117,12 @@ test("fija una sesión interactiva al relay indicado", async () => {
   assert.equal(out.data._mesh.relay.id, "backup");
   assert.ok(calls.every((url) => url.startsWith("https://backup.test")));
 });
+test('confirmación terminal con retry=false no pasa a otro relay tras error ambiguo', async()=>{
+  const calls=[];
+  const mesh=create({relays:RELAYS,store:store(),fetch:async(url)=>{calls.push(url);if(url.endsWith('/auth/session'))return json({ok:true,email:'admin@example.test',csrf:'csrf-value'});throw new Error('network after commit');}});
+  await assert.rejects(mesh.json('/terminal/confirm',{method:'POST',relayId:'backup',retry:false,body:'{}'}),/network after commit/);
+  assert.ok(calls.every(url=>url.startsWith('https://backup.test')));
+});
 
 // «signal is aborted without reason» era lo único que veía Carlos en el control
 // remoto cuando un relay no contestaba, y el mensaje de arriba lo achacaba a la

@@ -7,7 +7,7 @@
 <meta name="referrer" content="no-referrer" />
 <meta name="theme-color" content="#000000" />
 <meta name="mobile-web-app-capable" content="yes" />
-<meta name="admiranext-version" content="AdmiraNeXT v.11.10.2026.r30.13:20" />
+<meta name="admiranext-version" content="AdmiraNeXT v.11.10.2026.r31.13:23" />
 <title>Visor · deepagents de pago · admira.live</title>
 <style>
   :root { --bg:#000; --fg:#d0d0d0; --gap:4px; }
@@ -28,6 +28,15 @@
   .term pre { margin:0; white-space:pre; line-height:1.15; color:#d0d0d0; }
   .espera { flex:1; display:flex; align-items:center; justify-content:center; text-align:center; color:#888; font-size:14px; padding:12px; }
   .ficha.grande { position:fixed; inset:0; z-index:5; border-radius:0; }
+  /* r31: Idle / Login pendiente / Sin sesión = la misma pantalla que la cuadrícula del Mac (panel-agente.sh) */
+  .ficha-idle .cab { display:none; }
+  .idle { flex:1; min-height:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:6px; overflow:hidden; }
+  .idle .arte { margin:0; color:var(--c); font-weight:700; white-space:pre; line-height:1.0; text-align:left; }
+  .idle .palabra { margin-top:1.0em; font-weight:700; color:#e8e8e8; font-size:15px; }
+  .idle .info, .idle .mis { margin-top:.35em; color:#8a8a8a; font-size:11px; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .idle .info { margin-top:1.0em; }
+  .ficha.login .idle .palabra { color:#ffb347; }
+  .cab .mis { font-size:11px; color:#8a8a8a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; }
   #pie { position:fixed; left:0; right:0; bottom:0; height:18px; font-size:10px; color:#777; display:flex; justify-content:space-between; padding:2px 8px; background:#000; }
   #pie b { color:#aaa; font-weight:500; }
   #puntos { display:none; gap:6px; }
@@ -124,13 +133,22 @@
   function crear(f) {
     var el = document.createElement("section");
     el.className = "ficha"; el.style.setProperty("--c", SKINS[f.skin] || "#e0e0e0");
-    el.innerHTML = '<div class="cab"><pre class="rotulo"></pre><div class="sub"><span class="modelo"></span><span class="hora"></span></div></div><div class="term"><pre></pre></div>';
+    el.innerHTML = '<div class="cab"><pre class="rotulo"></pre><div class="sub"><span class="modelo"></span><span class="hora"></span></div><div class="mis"></div></div><div class="term"><pre></pre></div>';
     el.addEventListener("dblclick", function () { el.classList.toggle("grande"); ajustar(el); });
     var t0 = 0; el.addEventListener("touchend", function (e) { var t = Date.now(); if (t - t0 < 320) { el.classList.toggle("grande"); ajustar(el); e.preventDefault(); } t0 = t; });
     $rej.appendChild(el); return el;
   }
   function hora(ms) { if (!ms) return "—"; var d = new Date(ms); return d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Europe/Madrid" }); }
+  function hm() { return new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Madrid" }); }
+  function ajustarIdle(el) {
+    var a = el.querySelector(".idle .arte"); if (!a) return;
+    var box = el.querySelector(".term"), w = box.clientWidth - 16, h = box.clientHeight;
+    var cols = +el.dataset.acols || 40, filas = +el.dataset.afilas || 6;
+    var fs = Math.max(5, Math.min(22, w / (cols * 0.602), (h * 0.5) / (filas * 1.0)));
+    a.style.fontSize = fs.toFixed(2) + "px";
+  }
   function ajustar(el) {
+    if (el.classList.contains("ficha-idle")) return ajustarIdle(el);
     var pre = el.querySelector(".term pre"), box = el.querySelector(".term"), cols = +el.dataset.cols || 120;
     var w = box.clientWidth - 6; if (w <= 0) return;
     var fs = Math.max(4, Math.min(16, w / (cols * 0.602)));
@@ -149,9 +167,18 @@
     if ($rot.textContent !== txtRot) { $rot.textContent = txtRot; el.dataset.rcols = Math.max.apply(null, rot.map(function (l) { return l.length; })); }
     var maq = MAQUINAS[f.host] || f.host;
     var modelo = f.sub || ((f.titulo || "").split(" · ")[1] || "") + " · " + maq + " · deepagent de pago";
+    // r31: si el Mac manda el estado (estado-agente.py, el mismo que la cuadrícula), se pinta igual que allí
+    if (f.agente) {
+      var cong = f.estado === "congelado" ? " · congelado" : "";
+      if (f.agente !== "vivo") { pintarIdle(el, f, k, nombre, cong); return; }
+      el.classList.remove("ficha-idle", "login", "nosesion");
+      modelo = (f.modelo || "") + " · " + (f.mac || maq) + " · en misión · " + hm() + cong;
+      el.querySelector(".cab .mis").textContent = "▶ " + (f.mision || "");
+    } else { el.querySelector(".cab .mis").textContent = ""; el.classList.remove("ficha-idle"); }
     el.querySelector(".modelo").innerHTML = '<span class="punto"></span>' + esc(modelo);
     el.querySelector(".hora").textContent = f.estado === "esperando" ? "" : (f.estado === "congelado" ? "congelado · " : "") + "cambio " + hora(f.cambio);
     var box = el.querySelector(".term");
+    if (box.querySelector(".idle")) { box.innerHTML = "<pre></pre>"; delete ultimo[k]; }
     if (f.estado === "esperando" || !f.lineas) {
       box.innerHTML = '<div class="espera">esperando sesión<br/>«' + esc(f.sesion) + "» en " + esc(maq) + "…</div>";
       delete ultimo[k]; return;
@@ -162,6 +189,21 @@
     el.dataset.cols = f.ancho || 120;
     box.querySelector("pre").innerHTML = f.lineas.map(ansi).join("\n");
     ajustar(el);
+  }
+  function pintarIdle(el, f, k, nombre, cong) {
+    el.classList.add("ficha-idle"); el.classList.toggle("login", f.agente === "login"); el.classList.toggle("nosesion", f.agente === "nosesion");
+    var arte = (f.arte && f.arte.length ? f.arte : (f.rotulo && f.rotulo.length ? f.rotulo : ROTULOS[claveRot(nombre)])) || [nombre.toUpperCase()];
+    var palabra = f.etiqueta || (f.agente === "login" ? "Login pendiente" : f.agente === "nosesion" ? "Sin sesión" : "Idle");
+    var info = (f.modelo || "") + " · " + (f.mac || MAQUINAS[f.host] || f.host) + " · " + palabra + " · " + hm() + cong;
+    var mis = "última misión: " + (f.mision || "sin misiones registradas");
+    var firma = "idle:" + palabra + ":" + info + ":" + mis + ":" + arte.join("|");
+    if (ultimo[k] === firma) return; ultimo[k] = firma;
+    el.dataset.acols = Math.max.apply(null, arte.map(function (l) { return l.length; })); el.dataset.afilas = arte.length;
+    el.querySelector(".term").innerHTML = '<div class="idle"><pre class="arte"></pre><div class="palabra"></div><div class="info"></div><div class="mis"></div></div>';
+    var q = function (c) { return el.querySelector(".idle " + c); };
+    q(".arte").textContent = arte.join("\n"); q(".palabra").textContent = palabra; q(".info").textContent = info; q(".mis").textContent = mis;
+    q(".info").title = info; q(".mis").title = mis;
+    ajustarIdle(el);
   }
   function puntos() {
     if (getComputedStyle($pts).display === "none") return;

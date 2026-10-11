@@ -54,10 +54,10 @@ test("cada ficha trae maqCorta y runtime", () => {
   assert.equal(de(t, "Disney").runtime, "OpenCode · Nemotron 3 Ultra");
 });
 
-test("franja: alterna cada 10 s, con fundido y respetando prefers-reduced-motion", () => {
+test("franja: alterna cada 15 s (r26, antes 10 s), con fundido y respetando prefers-reduced-motion", () => {
   const js = readFileSync(new URL("./assets/consumos-trabajando.js", import.meta.url), "utf8");
   const html = readFileSync(new URL("./consumos.html", import.meta.url), "utf8");
-  assert.match(js, /ALTERNA_MS = 10000/);
+  assert.match(js, /ALTERNA_MS = 15000/);
   assert.match(js, /tr-alt/);
   assert.match(html, /prefers-reduced-motion[^}]*\{[^}]*\.tr-alt/);
 });

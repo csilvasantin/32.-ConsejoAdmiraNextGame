@@ -206,7 +206,9 @@ h1{font-size:clamp(28px,7vw,40px);letter-spacing:-.03em;line-height:1.1;margin:0
 /* r11 (Carlos, 13:57): el dato junto a cada chip alterna cada 10 s máquina/equipo ↔ runtime, con fundido */
 .tr-alt{display:inline-grid;margin-left:2px;font-size:10px;font-weight:600;color:#9fb3bd}.tr-alt>span{grid-area:1/1;transition:opacity .6s ease;white-space:nowrap}
 .tr-alt .tr-b{opacity:0;color:#9fd3ff}.tr-fase-b .tr-alt .tr-a{opacity:0}.tr-fase-b .tr-alt .tr-b{opacity:1}
-@media (prefers-reduced-motion:reduce){.tr-alt>span{transition:none}}
+.tr-alt .tr-c{opacity:0;color:#ffd38a}.tr-fase-c .tr-alt .tr-a,.tr-fase-c .tr-alt .tr-b{opacity:0}.tr-fase-c .tr-alt .tr-c{opacity:1}
+.tr-rot{display:grid}.tr-rot>span{grid-area:1/1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;transition:opacity .6s ease}.tr-rot .tr-c{opacity:0;color:#ffd38a}.tr-fase-c .tr-rot .tr-a{opacity:0}.tr-fase-c .tr-rot .tr-c{opacity:1}
+@media (prefers-reduced-motion:reduce){.tr-alt>span,.tr-rot>span{transition:none}}
 .tr-chipa i{width:7px;height:7px;border-radius:50%;background:#6b7b82;flex:none}.tr-chipa.tr-verde i{background:#3ddc84;box-shadow:0 0 6px #3ddc84}.tr-chipa.tr-amarillo i{background:#ffd067}
 .tr-chipa.tr-gris{opacity:.6;border-style:dashed}.tr-chipa.tr-gris .tr-foto{filter:grayscale(1)}.tr-chipa .tr-espera{color:var(--dim);font-size:11px;font-weight:600}
 .tr-grises{display:inline-flex;align-items:center;padding-left:6px}.tr-grises .tr-foto{width:24px;height:24px;margin-left:-6px;border:1.5px solid #0a1620;filter:grayscale(1);opacity:.75;font-size:9px}
@@ -488,7 +490,7 @@ fetch("/consumos-plataformas.json", { cache: "no-store" })
 <script src="/assets/consumos-plegable.js?v=r31"></script>
 <script src="/assets/consumos-velocimetro-elegir.js?v=r24-margen"></script>
 <script src="/assets/consumos-matriz.js?v=20261010-r23-sup"></script>
-<script src="/assets/consumos-trabajando.js?v=20261010-r24-espera"></script>
+<script src="/assets/consumos-trabajando.js?v=20261011-r26-foco"></script>
 <script src="/assets/consumos-desplegable.js?v=r23"></script>
 <script src="/assets/consumos-velocimetro.js?v=20261010-r19"></script>
 <script src="/assets/live-velocidad.js?v=r18-tiempo-real"></script>

@@ -11,9 +11,12 @@
   var API = '/api/flota/trabajando', POLL = 10000, ultimo = null;
   // r11 (Carlos, 13:57): el dato de cada chip alterna cada 10 s entre máquina/equipo y runtime (Grok · Codex · Claude ·
   // OpenCode · Nemotron 3 Ultra). La fase sale del reloj, así un repintado no la reinicia.
-  var ALTERNA_MS = 10000;
-  function faseB() { return Math.floor(Date.now() / ALTERNA_MS) % 2 === 1; }
-  function alterna() { var ch = document.getElementById('trabajando-chips'); if (ch) ch.classList.toggle('tr-fase-b', faseB()); }
+  // r26 (Carlos, 11-10-2026 11:31): rota cada 15 s en tres fases: máquina → runtime → foco («admira.live · Morfeo»).
+  var ALTERNA_MS = 15000;
+  function fase() { return Math.floor(Date.now() / ALTERNA_MS) % 3; }
+  function faseB() { return fase() === 1; }
+  function ponFase(el) { if (!el) return; var f = fase(); el.classList.toggle('tr-fase-b', f === 1); el.classList.toggle('tr-fase-c', f === 2); }
+  function alterna() { ponFase(document.getElementById('trabajando-chips')); ponFase(document.getElementById('trabajando-lista')); }
   function en() {
     // r5: /consumos no carga admira-idioma.js al entrar: se mira también ?lang= y la preferencia guardada de la suite.
     var h = (document.documentElement.getAttribute('lang') || '').toLowerCase();
@@ -108,7 +111,7 @@
     var chips = fuera + notaCoste(t) + (t.proyecto ? '<span class="tr-chip">' + esc(t.proyecto) + '</span>' : '') + (t.encargo ? '<span class="tr-chip tr-enc">' + esc(t.encargo) + '</span>' : '');
     return '<li class="tr-card tr-' + esc(t.estado) + (t.fuera && t.fuera.length ? ' tr-rojo' : '') + '" title="' + esc(gb(t.motivo) + (t.foco ? ' — ' + t.foco : '') + (t.incluye && t.incluye.length ? ' · ' + T('incluye el consumo de ', 'includes the usage of ') + t.incluye.join(', ') : '')) + '">' + retrato(t) +
       '<span class="tr-txt"><b class="tr-nom"><i class="tr-punto" aria-hidden="true"></i>' + esc(t.agente) + '</b>' +
-      '<small class="tr-maq">' + esc([t.maquina, motor].filter(Boolean).join(' · ') || '—') + '</small>' +
+      '<small class="tr-maq tr-rot"><span class="tr-a">' + esc([t.maquina, motor].filter(Boolean).join(' · ') || '—') + '</span><span class="tr-c" title="' + esc(focoTitulo(t)) + '">' + esc(focoTxt(t) || [t.maquina, motor].filter(Boolean).join(' · ') || '—') + '</span></small>' +
       '<small class="tr-que">' + linea + '</small>' + superficies(t) + (chips ? '<span class="tr-chips">' + chips + '</span>' : '') + '</span></li>';
   }
   /** r43 (Carlos, 12:59): dos grupos, AGENTES y CONSEJEROS, cada uno con sus cuentas. Puro (testeable). */
@@ -126,12 +129,27 @@
     return '<b>' + n.trabajando + '</b> ' + T('trabajando', 'working') + ' · <b>' + n.conCarlos + '</b> ' + T('con Carlos', 'with Carlos') + ' · <b>' + n.parados + '</b> ' + T('parados', 'idle');
   }
   /** r11: «MBA16 · +C» ↔ «Claude» (o «OpenCode · Nemotron 3 Ultra»); si falta un lado, se repite el otro. */
+  /** r26: foco de la ficha: «admira.live · Morfeo» (consejero: proyecto principal · deepagent; agente: proyecto actual). */
+  function focoTxt(t) {
+    var f = t.foco; if (!f || !f.proyecto) return '';
+    return f.proyecto + (f.deepagent ? ' · ' + f.deepagent : '') + (f.defecto ? ' · ' + T('por defecto', 'default') : '');
+  }
+  function focoTitulo(t) {
+    var f = t.foco; if (!f) return '';
+    var de = { consejero: T('fijado por el consejero', 'set by the councillor'), agente: T('fijado por el agente', 'set by the agent'), latido: T('de su latido', 'from its heartbeat'),
+      ahora: T('proyecto en el que trabaja ahora', 'project it is working on now'), reparto: T('pilar del reparto del finde', 'weekend split pillar'), defecto: T('valor por defecto (aún no lo ha fijado)', 'default value (not set yet)'), training: T('sin proyecto reportado', 'no project reported') }[f.fuente] || '';
+    return (t.consejero ? T('Proyecto principal · deepagent', 'Main project · deepagent') : T('Proyecto', 'Project')) + ': ' + focoTxt(t) + (de ? ' (' + de + ')' : '');
+  }
   function altChip(t) {
     // r16: con la app Grok Bot en varios Macs se enseñan todos («MBP14 + MBA16»); el de «con Carlos» va el primero.
     var a = [t.appMaquinas && t.appMaquinas.length > 1 ? t.maqCorta : t.estado === 'amarillo' && t.conCarlosEn ? t.conCarlosEn : t.maqCorta, t.gratis ? T('gratis', 'free') : t.planC ? '+C' : ''].filter(Boolean).join(' · ');
-    var b = [rt(t.runtime || ''), supCorta(t)].filter(Boolean).join(' · ');
-    if (!a && !b) return '';
-    return ' <small class="tr-alt" title="' + esc(T('Cada 10 s: máquina ↔ runtime', 'Every 10 s: machine ↔ runtime')) + '"><span class="tr-a">' + esc(a || b) + '</span><span class="tr-b">' + esc(b || a) + '</span></small>';
+    // r26: sin «GrokBot CLI · CLI»: si el runtime ya dice CLI, no se repite.
+    var sc = supCorta(t), r = rt(t.runtime || '');
+    if (/\bCLI\b/.test(r)) sc = sc.replace(/^CLI( \+ )?/, '');
+    var b = [r, sc].filter(Boolean).join(' · ');
+    var c = focoTxt(t);
+    if (!a && !b && !c) return '';
+    return ' <small class="tr-alt" title="' + esc(T('Cada 15 s: máquina → runtime → proyecto', 'Every 15 s: machine → runtime → project') + (c ? ' · ' + focoTitulo(t) : '')) + '"><span class="tr-a">' + esc(a || b || c) + '</span><span class="tr-b">' + esc(b || a || c) + '</span><span class="tr-c">' + esc(c || a || b) + '</span></small>';
   }
   /** r24 (Carlos, 18:00 — «Trinity ni siquiera sale»): todos con nombre. Primero los que trabajan / con Carlos; después
    *  los parados como chips atenuados «Trinity · Codex · CLI · en espera» (antes, caras anónimas en un montón). */
@@ -157,7 +175,7 @@
     }).join('');
     // r31/r43: fila compacta (zona plegada), también por grupo.
     var ch = document.getElementById('trabajando-chips');
-    if (ch) { ch.classList.toggle('tr-fase-b', faseB()); } if (ch) ch.innerHTML = gs.map(function (g) { return '<span class="tr-chipgrupo"><b class="tr-chiptit">' + esc(g.titulo) + '</b>' + chipsDe(g.tarjetas) + '</span>'; }).join('');
+    ponFase(ch); ponFase(ul); if (ch) ch.innerHTML = gs.map(function (g) { return '<span class="tr-chipgrupo"><b class="tr-chiptit">' + esc(g.titulo) + '</b>' + chipsDe(g.tarjetas) + '</span>'; }).join('');
     if (res) res.innerHTML = gs.map(function (g) { return '<span class="tr-resgrupo">' + esc(g.titulo) + ': ' + cifras(g.n) + '</span>'; }).join(' — ') + aviso(d);
     if (pie) pie.innerHTML = T('Actualizado ', 'Updated ') + new Date(d.generado).toLocaleTimeString(en() ? 'en-GB' : 'es-ES', { timeZone: 'Europe/Madrid' }) + ' (Madrid) · ' +
       T('verde = tokens en los últimos 15 min, latido «trabajando» de &lt; 2 min, CPU del propio proceso o latido de &lt; 15 min con encargo en curso (cualquier runtime, también el plan C gratis) · amarillo = con Carlos (pulso, o app de escritorio / tmux adjunto en el Mac que estás usando) · gris = parado · consejeros = los 16 del Consejo (leyendas y coetáneos) · Terminal (CLI) = canal de trabajo del agente; la app de escritorio solo la usa Carlos («App de escritorio · Carlos» si la está usando; «App abierta, sin uso», atenuado, nunca cuenta como trabajo) · fuentes: ',
@@ -173,7 +191,7 @@
     setInterval(function () { if (!document.hidden) leer(); }, POLL);
     setInterval(alterna, 1000);
   }
-  root.ConsumosTrabajando = { grupos: grupos, chipsDe: chipsDe, supTexto: supTexto, supCorta: supCorta, leer: leer, ultimo: function () { return ultimo; } };
+  root.ConsumosTrabajando = { grupos: grupos, focoTxt: focoTxt, altChip: altChip, chipsDe: chipsDe, supTexto: supTexto, supCorta: supCorta, leer: leer, ultimo: function () { return ultimo; } };
   root.addEventListener && root.addEventListener('admira:languagechange', function () { if (ultimo) pinta(ultimo); });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', arranca); else arranca();
 })(typeof window !== 'undefined' ? window : globalThis);

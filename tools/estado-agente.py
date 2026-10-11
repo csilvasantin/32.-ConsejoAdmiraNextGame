@@ -86,7 +86,8 @@ def etiquetas(titulo, host):
     mod = "Claude Code" if resto.startswith("Claude") else "Codex CLI" if resto.startswith("Codex") else "Grok CLI" if resto.startswith("Grok") else resto
     h = (host or "").lower()
     mac = ("MacBook Pro 16" if h.startswith("macbook-pro-16") else "MacBook Pro 14" if h.startswith(("macbookpronegro14", "macbook-pro-14"))
-           else "Mac mini" if h.startswith("macmini") else "MacBook Air 16" if h.startswith("macbookair16") else host)
+           else "Mac mini" if h.startswith("macmini") else "MacBook Air 16" if h.startswith("macbookair16")
+           else "GrokBotBox" if h.startswith("grokbotbox") else host)
     return mod, mac
 
 

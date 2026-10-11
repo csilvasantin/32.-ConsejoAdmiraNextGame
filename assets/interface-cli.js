@@ -2,6 +2,9 @@
  *
  *   /interface terminal 4 [dispositivo]   cuadratura 2x2 de los deepagents de pago (Neo, Morfeo, Trinity, Oráculo)
  *   /interface terminal 2 [dispositivo]   los 2 de Grok (Smith + Merovingio · cuadratura-grok)
+ *   /interface 6 · terminal 6 [fold|iphone]  r33 (Carlos 13:30): 3x2 = los 4 de pago + Smith y Merovingio (Grok), del mismo
+ *                                         visor /visor/?g=6 (llave del visor), con los mismos estados Idle / Login pendiente /
+ *                                         Sin sesión / en misión que la cuadrícula del Mac (estado-agente.py)
  *   /interface off [dispositivo]          la cierra
  *   /interface help                       esta ayuda
  *
@@ -23,6 +26,7 @@
   'use strict';
   var GRID2_URL = 'https://macbookair16plata.tail48b61c.ts.net/';
   var GRID4_URL = '/visor/';
+  var GRID6_URL = '/visor/?g=6';
   var DISPOSITIVOS = {
     fold:   { tipo: 'movil', nombre: 'Samsung Fold', alias: ['fold', 'samsung', 'galaxy', 'zfold'] },
     iphone: { tipo: 'movil', nombre: 'iPhone', alias: ['iphone', 'ios'] },
@@ -44,17 +48,18 @@
     var m = String(text || '').trim().match(/^\/(?:interface|interfaz)(?:\s+([\s\S]*))?$/i);
     if (!m) return null;
     var p = String(m[1] || '').trim().split(/\s+/).filter(Boolean);
+    if (p[0] === '6') p.unshift('terminal'); // r33: «/interface 6 [dispositivo]» = «/interface terminal 6 [dispositivo]»
     var a = (p[0] || 'help').toLowerCase();
     if (a === 'help' || a === 'ayuda' || a === '?') return { ok: true, accion: 'help' };
     if (a === 'off' || a === 'cerrar' || a === 'close') {
-      var g = /^[24]$/.test(p[1] || '') ? +p.splice(1, 1)[0] : 0;
+      var g = /^[246]$/.test(p[1] || '') ? +p.splice(1, 1)[0] : 0;
       var d0 = dispositivo(p[1]);
       if (d0 === undefined) return { ok: false, error: 'dispositivo', valor: p[1] };
       return { ok: true, accion: 'off', grid: g, dispositivo: d0 };
     }
     if (a === 'terminal' || a === 'terminales') {
       var n = p[1];
-      if (n !== '2' && n !== '4') return { ok: false, error: 'grid', valor: n };
+      if (n !== '2' && n !== '4' && n !== '6') return { ok: false, error: 'grid', valor: n };
       var d = dispositivo(p[2]);
       if (d === undefined) return { ok: false, error: 'dispositivo', valor: p[2] };
       return { ok: true, accion: 'terminal', grid: +n, dispositivo: d };
@@ -63,8 +68,8 @@
   }
 
   function ayuda() {
-    return T('/interface terminal 4 [dispositivo] — cuadratura Neo·Morfeo·Trinity·Oráculo · /interface terminal 2 [dispositivo] — Smith·Merovingio · ',
-             '/interface terminal 4 [device] — Neo·Morph·Trinity·Oracle grid · /interface terminal 2 [device] — Smith·Merovingio · ') +
+    return T('/interface terminal 4 [dispositivo] — cuadratura Neo·Morfeo·Trinity·Oráculo · /interface terminal 2 [dispositivo] — Smith·Merovingio · /interface 6 [Fold|Iphone] — los 6 en 3x2 · ',
+             '/interface terminal 4 [device] — Neo·Morph·Trinity·Oracle grid · /interface terminal 2 [device] — Smith·Merovingio · /interface 6 [Fold|Iphone] — all 6 in 3x2 · ') +
       T('sin dispositivo se abre aquí; dispositivos: Fold, Iphone, Air, MBP16, MBP14 · /interface off [dispositivo] la cierra',
         'no device opens it here; devices: Fold, Iphone, Air, MBP16, MBP14 · /interface off [device] closes it');
   }
@@ -73,16 +78,16 @@
   function cerrarPanel() { var el = document.getElementById('admira-interface'); if (el) el.remove(); }
   function abrirPanel(grid) {
     cerrarPanel();
-    var url = grid === 4 ? GRID4_URL : GRID2_URL;
-    var titulo = grid === 4 ? '⌨ TERMINAL 4 · Neo · Morfeo · Trinity · Oráculo' : '⌨ TERMINAL 2 · Smith · Merovingio (Grok)';
-    var nota = grid === 4
+    var url = grid === 6 ? GRID6_URL : grid === 4 ? GRID4_URL : GRID2_URL;
+    var titulo = grid === 6 ? '⌨ TERMINAL 6 · Neo · Morfeo · Trinity · Oráculo · Smith · Merovingio' : grid === 4 ? '⌨ TERMINAL 4 · Neo · Morfeo · Trinity · Oráculo' : '⌨ TERMINAL 2 · Smith · Merovingio (Grok)';
+    var nota = grid >= 4
       ? T('Visor privado de admira.live (llave del visor en este navegador). Solo lectura.', 'admira.live private viewer (viewer key in this browser). Read only.')
       : T('Solo dentro del tailnet de Carlos (ttyd de solo lectura en el MacBook Air). Si no carga, este equipo no está en Tailscale.', 'Only inside Carlos\'s tailnet (read-only ttyd on the MacBook Air). If it does not load, this device is not on Tailscale.');
     var w = document.createElement('div');
     w.id = 'admira-interface';
     w.setAttribute('role', 'dialog');
     w.style.cssText = 'position:fixed;z-index:2147483200;left:50%;top:50%;transform:translate(-50%,-50%);' +
-      'width:min(94vw,calc(94vh - 8px));height:min(94vw,calc(94vh - 8px));background:#000;border:2px solid #28fe14;' +
+      (grid === 6 ? 'width:min(96vw,calc((94vh - 8px) * 1.5));height:min(94vh,calc(96vw / 1.5));' : 'width:min(94vw,calc(94vh - 8px));height:min(94vw,calc(94vh - 8px));') + 'background:#000;border:2px solid #28fe14;' +
       'box-shadow:0 0 0 4px #000,0 8px 30px rgba(0,0,0,.7);display:flex;flex-direction:column;font:12px/1.3 monospace;color:#28fe14';
     w.innerHTML = '<div style="display:flex;align-items:center;gap:8px;padding:4px 8px;background:#061;color:#cfc;flex:0 0 auto">' +
       '<b style="flex:1;white-space:nowrap;overflow:hidden;text-overflow:ellipsis"></b>' +
@@ -160,7 +165,7 @@
     if (!o) return false;
     decir = decir || function () {};
     if (!o.ok) {
-      decir('⚠️ ' + (o.error === 'dispositivo' ? T('Dispositivo desconocido: ', 'Unknown device: ') + o.valor + ' · ' : o.error === 'grid' ? T('Usa terminal 2 o terminal 4 · ', 'Use terminal 2 or terminal 4 · ') : '') + ayuda());
+      decir('⚠️ ' + (o.error === 'dispositivo' ? T('Dispositivo desconocido: ', 'Unknown device: ') + o.valor + ' · ' : o.error === 'grid' ? T('Usa terminal 2, 4 o 6 · ', 'Use terminal 2, 4 or 6 · ') : '') + ayuda());
       return true;
     }
     if (o.accion === 'help') { decir('⌨ ' + ayuda()); return true; }
@@ -169,11 +174,15 @@
       else { abrirPanel(o.grid); decir('⌨ ' + T('Terminal ', 'Terminal ') + o.grid + T(' aquí · Esc o /interface off para cerrar', ' here · Esc or /interface off to close')); }
       return true;
     }
+    if (o.grid === 6 && o.accion === 'terminal' && DISPOSITIVOS[o.dispositivo].tipo === 'mac') {
+      decir('⚠️ ' + T('La 6 de momento es aquí o en Fold/Iphone (en los Mac: terminal 4 y terminal 2) · ', 'The 6 is here or on Fold/Iphone for now (on Macs: terminal 4 and terminal 2) · ') + ayuda());
+      return true;
+    }
     (DISPOSITIVOS[o.dispositivo].tipo === 'mac' ? enviarMac : enviarMovil)(o, decir);
     return true;
   }
 
-  var api = { parse: parse, run: run, ayuda: ayuda, abrirPanel: abrirPanel, cerrarPanel: cerrarPanel, ordenMac: ordenMac, DISPOSITIVOS: DISPOSITIVOS, GRID2_URL: GRID2_URL, GRID4_URL: GRID4_URL };
+  var api = { parse: parse, run: run, ayuda: ayuda, abrirPanel: abrirPanel, cerrarPanel: cerrarPanel, ordenMac: ordenMac, DISPOSITIVOS: DISPOSITIVOS, GRID2_URL: GRID2_URL, GRID4_URL: GRID4_URL, GRID6_URL: GRID6_URL };
   root.AdmiraInterface = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

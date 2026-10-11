@@ -11,6 +11,12 @@ export const CONF_DEFECTO = [
   { titulo: "Trinity · Codex", host: "macbook-pro-16", sesion: "trinity", skin: "Ocean" },
   { titulo: "Oráculo · Codex", host: "macmini", sesion: "oraculo", skin: "Grass" },
 ];
+/** r33 (Carlos 13:30 «/interface 6»): los 2 de Grok, para la rejilla 3x2 (/visor/?g=6). Smith publica desde el MBP16
+ *  (visor-grok.conf) y Merovingio desde la caja de GrokBot (box-visor-keep.sh). Misma forma que la conf de la cuadratura. */
+export const CONF_GROK = [
+  { titulo: "Smith · Grok", host: "macbook-pro-16", sesion: "smith", skin: "Smith" },
+  { titulo: "Merovingio · Grok", host: "grokbotbox", sesion: "merovingio", skin: "Merovingio" },
+];
 export const MAX_LINEAS = 80;
 export const MAX_CHARS_LINEA = 1200;
 export const MAX_AGENTES = 8;
@@ -90,7 +96,7 @@ export function normalizarPane(body, ahora = Date.now()) {
     }
   }
   const vivas = (Array.isArray(body.vivas) ? body.vivas : Object.keys(agentes)).map(idSesion).filter(Boolean).slice(0, 20);
-  return { ok: true, pane: { maquina, completo: body.completo !== false, conf: normalizarConf(body.conf), agentes, vivas, ts: ahora } };
+  return { ok: true, pane: { maquina, completo: body.completo !== false, conf: normalizarConf(body.conf), grok: normalizarConf(body.grok), agentes, vivas, ts: ahora } };
 }
 
 /** Funde un envío (solo lo que cambió) sobre el último estado de esa máquina. */
@@ -98,14 +104,19 @@ export function fundir(prev, pane) {
   const base = pane.completo || !prev ? {} : { ...(prev.agentes || {}) };
   const agentes = { ...base, ...pane.agentes };
   for (const s of Object.keys(agentes)) if (!pane.vivas.includes(s)) delete agentes[s];
-  return { maquina: pane.maquina, ts: pane.ts, conf: pane.conf || (prev && prev.conf) || null, agentes, vivas: pane.vivas, kvTs: (prev && prev.kvTs) || 0 };
+  return { maquina: pane.maquina, ts: pane.ts, conf: pane.conf || (prev && prev.conf) || null, grok: pane.grok || (prev && prev.grok) || null, agentes, vivas: pane.vivas, kvTs: (prev && prev.kvTs) || 0 };
 }
 
 /** Vista para el visor: una ficha por línea de la conf (la más reciente que haya llegado). */
-export function vista(docs, ahora = Date.now()) {
+export function vista(docs, ahora = Date.now(), opciones = {}) {
   const conDoc = docs.filter(Boolean);
   const conf = conDoc.filter((d) => d.conf).sort((a, b) => b.ts - a.ts)[0];
-  const lista = (conf && conf.conf) || CONF_DEFECTO;
+  let lista = (conf && conf.conf) || CONF_DEFECTO;
+  if (opciones.grupo === 6) { // r33: + los 2 de Grok (la lista más reciente que haya publicado algún Mac, o la de serie)
+    const g = conDoc.filter((d) => d.grok).sort((a, b) => b.ts - a.ts)[0];
+    const extra = ((g && g.grok) || CONF_GROK).filter((x) => !lista.some((c) => c.sesion === x.sesion && c.host === x.host));
+    lista = [...lista, ...extra].slice(0, MAX_AGENTES);
+  }
   const porMaq = Object.fromEntries(conDoc.map((d) => [d.maquina, d]));
   const fichas = lista.map((c) => {
     const d = porMaq[c.host];

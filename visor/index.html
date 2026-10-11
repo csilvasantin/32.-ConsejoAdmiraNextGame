@@ -65,6 +65,9 @@
   /* r33 · /interface 6: 3x2 (apaisado) o 2x3 (vertical); plegado sigue siendo una por pantalla */
   .g6 #rejilla { grid-template-columns: repeat(3, 1fr); grid-template-rows: 1fr 1fr; }
   @media (orientation: portrait) and (min-width: 641px) { .g6 #rejilla { grid-template-columns: 1fr 1fr; grid-template-rows: repeat(3, 1fr); } }
+  /* #5707 · /interface 2 claude · /interface 2 Neo Trinity: ?a=Neo,Trinity → 2x1 (1x2 en vertical); plegado, una por pantalla */
+  .g2 #rejilla { grid-template-columns: 1fr 1fr; grid-template-rows: 1fr; }
+  @media (orientation: portrait) and (min-width: 641px) { .g2 #rejilla { grid-template-columns: 1fr; grid-template-rows: 1fr 1fr; } }
 </style>
 </head>
 <body>
@@ -79,6 +82,9 @@
   // r33 (/interface 6): ?g=6 → rejilla 3x2 con Smith y Merovingio (Grok) además de los 4 de pago
   var G6 = /[?&]g=6\b/.test(location.search);
   if (G6) document.documentElement.classList.add("g6");
+  // #5707: ?a=Neo,Trinity → solo esos 2 (los elige /interface 2 <claude|codex|grok|Nombre Nombre>); sin claves en la URL
+  var A2 = (new URLSearchParams(location.search).get("a") || "").split(",").map(function (x) { return x.replace(/[^A-Za-z\u00c0-\u017f]/g, ""); }).filter(Boolean).slice(0, 2);
+  if (A2.length) document.documentElement.classList.add("g2");
   var ROTULOS = {
     "NEO": [" _  _ ___ ___  ", "| \\| | __/ _ \\ ", "| .` | _| (_) |", "|_|\\_|___\\___/ "],
     "MORFEO": [" __  __  ___  ___ ___ ___ ___  ", "|  \\/  |/ _ \\| _ \\ __| __/ _ \\ ", "| |\\/| | (_) |   / _|| _| (_) |", "|_|  |_|\\___/|_|_\\_| |___\\___/ "],
@@ -259,7 +265,7 @@
   var fallos = 0, t0;
   function tick() {
     t0 = Date.now();
-    fetch("/api/visor/pane" + (G6 ? "?g=6" : ""), { headers: { "X-Visor-Key": llave }, cache: "no-store" }).then(function (r) {
+    fetch("/api/visor/pane" + (A2.length ? "?a=" + encodeURIComponent(A2.join(",")) : G6 ? "?g=6" : ""), { headers: { "X-Visor-Key": llave }, cache: "no-store" }).then(function (r) {
       if (r.status === 401) { try { localStorage.removeItem("visorLlave"); } catch (e) {} document.getElementById("llave").innerHTML = "<div class=\"msg\">La llave de este visor ya no vale (revocada o caducada).<br/>Pide un enlace nuevo a GrokBot.</div>"; document.getElementById("llave").style.display = "flex"; throw new Error("401"); }
       return r.json();
     }).then(function (d) {

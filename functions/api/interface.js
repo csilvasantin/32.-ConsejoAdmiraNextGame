@@ -10,6 +10,9 @@
 import { llaveValida } from "./visor/pane.js";
 
 export const DISPOSITIVOS_MOVIL = ["fold", "iphone"];
+/** #5707: con «/interface 2 claude|Neo Trinity» la orden lleva los 2 nombres (solo nombres de los 6 del visor, nunca URLs). */
+export const AGENTES_VISOR = ["Neo", "Morfeo", "Trinity", "Oraculo", "Smith", "Merovingio"];
+const agenteVisor = (s) => AGENTES_VISOR.find((a) => a.toLowerCase() === String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim()) || null;
 const KEY = "interface:v1:dev:";
 const TTL = 3600;
 const json = (obj, status) => new Response(JSON.stringify(obj), { status: status || 200, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store, private", "x-robots-tag": "noindex" } });
@@ -35,7 +38,13 @@ export function normalizarOrden(body, ahora = Date.now()) {
   if (accion !== "terminal" && accion !== "off") return { ok: false, error: "accion: terminal | off" };
   const grid = Number(body && body.grid) || 0;
   if (accion === "terminal" && grid !== 2 && grid !== 4 && grid !== 6) return { ok: false, error: "grid: 2 | 4 | 6" };
-  return { ok: true, orden: { dispositivo: d, accion, grid: accion === "off" ? (grid === 2 || grid === 4 || grid === 6 ? grid : 0) : grid, ts: ahora, id: ahora.toString(36) + Math.random().toString(36).slice(2, 6) } };
+  const orden = { dispositivo: d, accion, grid: accion === "off" ? (grid === 2 || grid === 4 || grid === 6 ? grid : 0) : grid, ts: ahora, id: ahora.toString(36) + Math.random().toString(36).slice(2, 6) };
+  if (accion === "terminal" && grid === 2 && body.agentes != null) {
+    const a = Array.isArray(body.agentes) ? body.agentes.map(agenteVisor) : [];
+    if (a.length !== 2 || !a[0] || !a[1] || a[0] === a[1]) return { ok: false, error: "agentes: 2 distintos de " + AGENTES_VISOR.join(", ") };
+    orden.agentes = a;
+  }
+  return { ok: true, orden };
 }
 
 export async function onRequestPost({ request, env }) {

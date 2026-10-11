@@ -6,7 +6,7 @@
  * Almacén: Cache API del colo (al instante, gratis) + RECORTE_KV como respaldo (≤ 1 escritura / 20 s / máquina).
  */
 import { autorizado } from "../consumos/lecturas.js";
-import { normalizarPane, fundir, vista, sha256, iguales, KEY_MAQ, KEY_INDICE, KEY_LLAVES, KV_CADA_MS } from "../../../visor-lib.mjs";
+import { normalizarPane, fundir, vista, filtrarAgentes, sha256, iguales, KEY_MAQ, KEY_INDICE, KEY_LLAVES, KV_CADA_MS } from "../../../visor-lib.mjs";
 
 const ALLOW = new Set(["https://www.admira.live", "https://admira.live", "https://admira-live.pages.dev"]);
 function headers(origin) {
@@ -96,6 +96,8 @@ export async function onRequestGet({ request, env }) {
     if (c && k) return c.ts >= k.ts ? c : k;
     return c || k;
   }));
-  const grupo = Number(new URL(request.url).searchParams.get("g")) === 6 ? 6 : 4; // r33: /visor/?g=6 → + Smith y Merovingio
-  return json({ ok: true, ...vista(docs, ahora, { grupo }), grupo, generado: new Date(ahora).toISOString(), ahora }, 200, origin);
+  const q = new URL(request.url).searchParams;
+  const a = String(q.get("a") || "").split(",").filter(Boolean); // #5707: ?a=Neo,Trinity → esos 2 (de los 6)
+  const grupo = a.length || Number(q.get("g")) === 6 ? 6 : 4; // r33: /visor/?g=6 → + Smith y Merovingio
+  return json({ ok: true, ...filtrarAgentes(vista(docs, ahora, { grupo }), a), grupo, generado: new Date(ahora).toISOString(), ahora }, 200, origin);
 }

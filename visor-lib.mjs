@@ -132,6 +132,17 @@ export function vista(docs, ahora = Date.now(), opciones = {}) {
   return { fichas, fuenteConf: conf ? conf.maquina : "defecto" };
 }
 
+/** #5707 (/interface 2 claude · /interface 2 Neo Trinity): ?a=Neo,Trinity → solo esas fichas (de la lista de 6), en el
+ *  orden pedido. El nombre es lo que va antes de « · » en el título; sin tildes ni mayúsculas. Nombres que no estén
+ *  en la lista se ignoran: el visor nunca inventa una ficha. */
+export function filtrarAgentes(v, nombres) {
+  const k = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+  const pedidos = [...new Set((nombres || []).map(k).filter(Boolean))].slice(0, 2);
+  if (!pedidos.length) return v;
+  const fichas = pedidos.map((n) => v.fichas.find((f) => k(String(f.titulo || f.sesion).split(" · ")[0]) === n)).filter(Boolean);
+  return { ...v, fichas };
+}
+
 /** SHA-256 hex (WebCrypto, igual en Workers y en Node ≥ 20). */
 export async function sha256(s) {
   const b = await crypto.subtle.digest("SHA-256", new TextEncoder().encode(String(s)));

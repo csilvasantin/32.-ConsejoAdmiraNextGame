@@ -46,12 +46,14 @@
       $("estado").textContent = "esperando una orden · " + new Date().toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit" });
       return;
     }
-    var clave = o.grid + ":" + o.id;
+    var clave = o.grid + ":" + o.id + (o.agentes ? ":" + o.agentes.join(",") : "");
     if (clave === actual) return;
     actual = clave;
-    var url = o.grid === 6 ? GRID6 : o.grid === 4 ? GRID4 : GRID2;
-    $("titulo").textContent = o.grid === 6 ? "⌨ TERMINAL 6 · Neo · Morfeo · Trinity · Oráculo · Smith · Merovingio" : o.grid === 4 ? "⌨ TERMINAL 4 · Neo · Morfeo · Trinity · Oráculo" : "⌨ TERMINAL 2 · Smith · Merovingio";
-    $("nota").textContent = o.grid >= 4 ? "Visor privado de admira.live · solo lectura" : "Solo dentro del tailnet de Carlos (MacBook Air · ttyd de solo lectura). Si no carga, activa Tailscale en este móvil.";
+    // #5707: «/interface 2 claude|Neo Trinity» → visor con llave filtrado a esos 2 (?a=), no el ttyd
+    var dos = o.grid === 2 && o.agentes && o.agentes.length === 2;
+    var url = dos ? GRID4 + "?a=" + o.agentes.join(",") : o.grid === 6 ? GRID6 : o.grid === 4 ? GRID4 : GRID2;
+    $("titulo").textContent = dos ? "⌨ TERMINAL 2 · " + o.agentes.join(" · ") : o.grid === 6 ? "⌨ TERMINAL 6 · Neo · Morfeo · Trinity · Oráculo · Smith · Merovingio" : o.grid === 4 ? "⌨ TERMINAL 4 · Neo · Morfeo · Trinity · Oráculo" : "⌨ TERMINAL 2 · Smith · Merovingio";
+    $("nota").textContent = o.grid >= 4 || dos ? "Visor privado de admira.live · solo lectura" : "Solo dentro del tailnet de Carlos (MacBook Air · ttyd de solo lectura). Si no carga, activa Tailscale en este móvil.";
     $("aparte").href = url; $("marco").src = url;
     $("espera").style.display = "none"; $("vista").style.display = "flex";
   }

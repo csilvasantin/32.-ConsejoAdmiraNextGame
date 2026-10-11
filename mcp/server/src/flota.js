@@ -58,7 +58,8 @@ export function personaCanonica(nombre) {
 }
 // EQUIPO DE CASA de un agente (Carlos, 11-10-2026: Morfeo trabaja en su terminal «morfeo» del MacBook Pro 16,
 // no en el Mac Mini). Un encargo sin máquina va ahí aunque la persona también lata en otros equipos.
-export const CASA_AGENTE = { Morfeo: 'macbookpro16' };
+// Smith (Grok CLI, equipo de Jobs) igual desde el 11-10-2026: Carlos solo quiere deepagents en Macs que ve.
+export const CASA_AGENTE = { Morfeo: 'macbookpro16', Smith: 'macbookpro16' };
 
 export const esConsejero = (persona) => CONSEJEROS.includes(personaCanonica(persona));
 

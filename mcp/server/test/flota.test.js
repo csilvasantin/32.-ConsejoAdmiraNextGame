@@ -234,3 +234,11 @@ test('agente_encargar a Morfeo sin máquina va a su equipo de casa, el MacBook P
   const mm = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Morfeo', maquina: 'MacMini', texto: 'Con máquina explícita manda la máquina.' } }));
   assert.equal(mm.maquina, 'macmini');
 });
+
+test('agente_encargar a Smith sin máquina va a su equipo de casa, el MacBook Pro 16 (no el Mac Mini)', async () => {
+  const { client, peticiones } = await cliente('clave-que-no-existe');
+  const r = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Smith', texto: 'Prueba de encaminado a su casa.' } }));
+  assert.equal(r.maquina, 'macbookpro16');
+  const post = peticiones.find((x) => x.url.endsWith('/api/bot-inbox') && x.method === 'POST');
+  assert.equal(post.body.target_machine, 'macbookpro16');
+});

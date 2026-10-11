@@ -247,8 +247,8 @@ export const VOCES_ELEVEN = Object.freeze({
   jobs: "cjVigY5qzO86Huf0OWal",     // Eric · sereno, persuasivo
   wozniak: "TX3LPaxmHKxFdv7VOQHJ",  // Liam · enérgico, entusiasta
   cook: "CwhRBWXzGAHq8TQ4Fs17",     // Roger · calmado, sureño tranquilo
-  buffett: "pqHfZKP75CyOlX2KQs5n",  // Bill · mayor, de confianza
-  disney: "nPczCjzI2devNBz1zQrW",   // Brian · grave, narrador showman
+  buffett: "N2lVS1w4EtoT3dr4eOWO",  // Callum · ronco, pausado (Bill no lo acepta la cuenta: 502)
+  disney: "IKne3meq5aSn9XLyUdCD",   // Charlie · cálido, narrador (Brian no lo acepta la cuenta: 502)
   rams: "onwK4e9ZLuTAKqWW03F9",     // Daniel · europeo, sobrio, autoridad
   schultz: "iP95p4xoKVk53GoZ742B",  // Chris · cercano, de barra
   lucas: "JBFqnCBsd6RMkjVDRZzb",    // George · cálido, cuentacuentos

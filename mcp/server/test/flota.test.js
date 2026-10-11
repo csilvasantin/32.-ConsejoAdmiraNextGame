@@ -146,6 +146,25 @@ test('a un consejero va al equipo grokbot y avisa de que se le despierta por web
   assert.equal(r.maquina, 'grokbot'); assert.match(r.nota, /webhook/);
 });
 
+test('a un consejero NO principal no se le despierta el Grok Bot: va sin equipo, por su apellido, y la nota dice Nemotron (encargo 5674)', async () => {
+  const { client, peticiones } = await cliente('clave-de-morfeo-macmini-xxxxxxxxxx');
+  for (const [dicho, apellido, nombre] of [['Shotwell', 'Shotwell', 'Gwynne Shotwell'], ['Ruth Porat', 'Porat', 'Ruth Porat'], ['Jony', 'Ive', 'Jony Ive'], ['Lucas', 'Lucas', 'George Lucas'], ['Walt Disney', 'Disney', 'Walt Disney']]) {
+    const r = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: dicho, texto: '¿Qué harías tú con la red de pantallas?' } }));
+    assert.equal(r.persona, apellido, dicho); assert.equal(r.consejero, nombre); assert.equal(r.grokbot, false); assert.equal(r.maquina, null);
+    assert.match(r.nota, /no se despierta su Grok Bot/); assert.match(r.nota, /Nemotron 3 Ultra \(gratis\)/); assert.doesNotMatch(r.nota, /webhook/);
+  }
+  const post = peticiones.filter((p) => p.method === 'POST' && String(p.url).endsWith('/api/bot-inbox'));
+  assert.deepEqual(post.map((p) => p.body.target_persona), ['Shotwell', 'Porat', 'Ive', 'Lucas', 'Disney']);
+  assert.ok(post.every((p) => p.body.target_machine === '' && p.body.grokbot === undefined), 'sin equipo grokbot y sin pedir Grok Bot');
+});
+
+test('los doce no principales están definidos y ningún principal se cuela', async () => {
+  const { CONSEJEROS_NEMOTRON, consejeroNemotron } = await import('../src/flota.js');
+  assert.equal(CONSEJEROS_NEMOTRON.length, 12);
+  for (const n of ['Musk', 'Elon', 'Huang', 'Jensen', 'Jobs', 'Steve', 'Wozniak', 'Woz', 'Neo', 'Cypher', 'Carlos', '']) assert.equal(consejeroNemotron(n), null, n);
+  for (const n of ['Cook', 'Buffett', 'Rams', 'Schultz', 'Lasseter', 'Ratti', 'Reynolds', 'carlo ratti']) assert.ok(consejeroNemotron(n), n);
+});
+
 test('encargo_estado devuelve el estado legible y la respuesta cuando está hecho', async () => {
   const { client, estado } = await cliente('clave-de-morfeo-macmini-xxxxxxxxxx');
   const r = res(await client.callTool({ name: 'agente_encargar', arguments: { persona: 'Smith', texto: 'Dime la versión de control.' } }));

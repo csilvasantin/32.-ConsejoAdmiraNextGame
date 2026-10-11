@@ -18,6 +18,7 @@
  */
 
 import { SILLAS, CONSEJEROS_GROKBOT, sillaCanonica } from './sillas.js';
+import { CONSEJEROS as CONSEJO_16 } from './consejo.js';
 import { crearTelegram } from './telegram.js';
 import { filasPresencia, cargaDe, ESTADOS_ABIERTOS } from './coordinacion.js';
 
@@ -64,6 +65,19 @@ export function personaCanonica(nombre) {
 export const CASA_AGENTE = { Morfeo: 'macbookpro16', Smith: 'macbookpro16', Oraculo: 'macbookpro16' };
 
 export const esConsejero = (persona) => CONSEJEROS.includes(personaCanonica(persona));
+// CONSEJEROS NO PRINCIPALES (orden de Carlos, encargo 5674): solo Musk, Huang, Jobs y Wozniak despiertan su Grok Bot
+// de pago. Un encargo a cualquiera de los otros doce (Shotwell, Porat, Lasseter, Ive, Ratti, Reynolds, Lucas,
+// Disney, Cook, Buffett, Rams, Schultz) lo contesta Cypher en la GrokBotBox con Nemotron 3 Ultra gratis, firmando
+// como ese consejero: el bot-inbox hace el desvío, aquí solo se le reconoce y se dice la verdad en la nota.
+export const CONSEJEROS_PRINCIPALES = ['Musk', 'Huang', 'Jobs', 'Wozniak'];
+export const CONSEJEROS_NEMOTRON = CONSEJO_16.flatMap((c) => ['leyendas', 'coetaneos'].map((gen) => ({ nombre: c[gen], apellido: c[gen].split(' ').pop(), rol: c.rol, gen })))
+  .filter((c) => !CONSEJEROS_PRINCIPALES.includes(c.apellido));
+/** «Shotwell», «Gwynne Shotwell», «gwynne», «Walt» → el consejero no principal; null si es principal o no es consejero. */
+export function consejeroNemotron(nombre) {
+  const n = norm(nombre);
+  if (n.length < 3) return null;
+  return CONSEJEROS_NEMOTRON.find((c) => n === norm(c.apellido) || n === norm(c.nombre) || n === norm(c.nombre.split(' ')[0])) || null;
+}
 
 export function crearFlota(env = {}, identidad, deps = {}) {
   const doFetch = deps.fetch || globalThis.fetch;
@@ -227,12 +241,13 @@ export function crearFlota(env = {}, identidad, deps = {}) {
   /** Crear un encargo para una persona (agente de la flota o consejero). */
   async function encargar({ persona, maquina = '', texto, proyecto_id = '', de = '', deadline = '', criterio = '' }) {
     // Silla por máquina: agente_encargar(persona:'', maquina:'MacBookAirAzul') o persona = la máquina → Jobs.
-    let p = personaCanonica(persona);
+    const libre = consejeroNemotron(persona);
+    let p = libre ? libre.apellido : personaCanonica(persona);
     if (!p && consejeroDeMaquina(persona)) p = consejeroDeMaquina(persona);
     if (!p && maquina && consejeroDeMaquina(maquina)) p = consejeroDeMaquina(maquina);
     const maquinasSilla = Object.values(SILLAS).filter((x) => x.fleet_id).map((x) => x.maquina);
-    if (!p) throw new Error(`persona desconocida «${persona}»: vale ${PERSONAS.join(', ')} (o la máquina de una silla: ${maquinasSilla.join(', ')}, o Elon / Elon Musk → Musk, Jensen / Jensen Huang → Huang)`);
-    if (esConsejero(p) && maquina && consejeroDeMaquina(maquina) && consejeroDeMaquina(maquina) !== p) throw new Error(`${maquina} es la silla de ${consejeroDeMaquina(maquina)}, no de ${p}`);
+    if (!p) throw new Error(`persona desconocida «${persona}»: vale ${PERSONAS.join(', ')}, cualquier consejero no principal (${CONSEJEROS_NEMOTRON.map((c) => c.apellido).join(', ')}) (o la máquina de una silla: ${maquinasSilla.join(', ')}, o Elon / Elon Musk → Musk, Jensen / Jensen Huang → Huang)`);
+    if (!libre && esConsejero(p) && maquina && consejeroDeMaquina(maquina) && consejeroDeMaquina(maquina) !== p) throw new Error(`${maquina} es la silla de ${consejeroDeMaquina(maquina)}, no de ${p}`);
     let cuerpo = String(texto || '').trim();
     if (cuerpo.length < 5) throw new Error('el encargo necesita texto (qué hay que hacer y para qué)');
     // Fecha límite y criterio de hecho: viajan en el texto (lo que el agente lee en su sesión) y
@@ -241,7 +256,8 @@ export function crearFlota(env = {}, identidad, deps = {}) {
     if (limite || hecho) cuerpo += `${limite ? `\n⏰ Fecha límite: ${limite}` : ''}${hecho ? `\n✅ Criterio de hecho: ${hecho}` : ''}`;
     let destino = maquina ? norm(maquina) : '';
     let nota = '';
-    if (esConsejero(p)) { destino = MAQUINA_CONSEJEROS; nota = `consejero de GrokBot (silla ${SILLAS[p].rol} · ${SILLAS[p].maquina}): el worker lo despierta por su webhook; suele contestar en 1-3 min`; }
+    if (libre) { destino = ''; nota = `${libre.nombre} (${libre.rol} · ${libre.gen}) es consejero no principal: no se despierta su Grok Bot. Lo contesta Cypher en la GrokBotBox con Nemotron 3 Ultra (gratis) firmando como ${libre.nombre}; suele tardar 1-3 min y atiende de uno en uno`; }
+    else if (esConsejero(p)) { destino = MAQUINA_CONSEJEROS; nota = `consejero de GrokBot (silla ${SILLAS[p].rol} · ${SILLAS[p].maquina}): el worker lo despierta por su webhook; suele contestar en 1-3 min`; }
     else if (!destino) {
       destino = await maquinaDe(p);
       nota = destino ? `en cola para ${p} en ${destino} (${CASA_AGENTE[p] ? 'su equipo de casa' : 'la máquina donde late ahora'}); su vigilante lo inyecta en su sesión en ≤15 s` : `${p} no late en ningún equipo desde hace 15 min: el encargo queda en cola y lo cogerá al despertar; a los 30 min sin acuse se reasigna`;
@@ -256,7 +272,7 @@ export function crearFlota(env = {}, identidad, deps = {}) {
     const r = await llamar(`${base}/api/bot-inbox`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) });
     if (!r || !r.ok) throw new Error(`el bot-inbox no aceptó el encargo: ${JSON.stringify(r)}`);
     const etiqueta = etiquetaEncargo(r.id, r.ts, r.etiqueta);
-    return { ok: true, encargo: Number(r.id), etiqueta: etiqueta || null, task_id: r.task_id || null, persona: p, publicado_en_telegram: r.posted !== false, maquina: destino || null, de: firma, proyecto_id: r.project_id || proyecto_id || null, mision_en_yokup: !!proyecto_id,
+    return { ok: true, encargo: Number(r.id), etiqueta: etiqueta || null, task_id: r.task_id || null, persona: p, ...(libre ? { consejero: libre.nombre, via: 'Nemotron 3 Ultra (gratis)', atiende: 'Cypher · grokbotbox', grokbot: false } : {}), publicado_en_telegram: r.posted !== false, maquina: destino || null, de: firma, proyecto_id: r.project_id || proyecto_id || null, mision_en_yokup: !!proyecto_id,
       ...(limite ? { deadline: limite } : {}), ...(hecho ? { criterio: hecho } : {}),
       nota, siguiente: `encargo_estado con encargo=${r.id} para leer el acuse y la respuesta. La etiqueta visible es ${etiqueta || ("#" + r.id)} (se publica también en hilo en Telegram y en admira.live/telegram).` };
   }

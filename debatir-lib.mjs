@@ -239,12 +239,27 @@ export async function llamarModelo({ nivel, env, messages, fetchImpl = fetch, ma
 }
 
 // ── Voces ElevenLabs (nivel pago + audio) ─────────────────────────────────
-// Voces «premade» públicas de ElevenLabs; DEBATIR_VOCES (JSON {persona: voice_id}) las sustituye.
+// Una voz premade de ElevenLabs por consejero (multilingüe: hablan castellano e inglés). Son las mismas que
+// admite la allowlist `counselorVoiceIds` de pixer-eleven (AnnouncementTts, PR pixer-worker#14).
+// Distintas dentro de cada vista, y también de Jobs, que modera en las dos. DEBATIR_VOCES (JSON) las sustituye
+// en la vía de clave propia.
 export const VOCES_ELEVEN = Object.freeze({
-  jobs: "pNInz6obpgDQGcFmaJgB", wozniak: "TxGEqnHWrfWFTfGW9XjX", cook: "ErXwobaYiN019PkySvjV", buffett: "2EiwWnXFnvU5JabPnv8n",
-  disney: "VR6AewLTigWG4xSOukaG", rams: "D38z5RcWu1voky8WS1ja", schultz: "CYw3kZ02Hs0563khs1Fj", lucas: "yoZ06aMxZJJ28mfd3POQ",
-  musk: "TxGEqnHWrfWFTfGW9XjX", huang: "ErXwobaYiN019PkySvjV", shotwell: "21m00Tcm4TlvDq8ikWAM", porat: "EXAVITQu4vr4xnSDxMaL",
-  lasseter: "VR6AewLTigWG4xSOukaG", ive: "D38z5RcWu1voky8WS1ja", ratti: "CYw3kZ02Hs0563khs1Fj", reynolds: "pNInz6obpgDQGcFmaJgB",
+  jobs: "cjVigY5qzO86Huf0OWal",     // Eric · sereno, persuasivo
+  wozniak: "TX3LPaxmHKxFdv7VOQHJ",  // Liam · enérgico, entusiasta
+  cook: "CwhRBWXzGAHq8TQ4Fs17",     // Roger · calmado, sureño tranquilo
+  buffett: "pqHfZKP75CyOlX2KQs5n",  // Bill · mayor, de confianza
+  disney: "nPczCjzI2devNBz1zQrW",   // Brian · grave, narrador showman
+  rams: "onwK4e9ZLuTAKqWW03F9",     // Daniel · europeo, sobrio, autoridad
+  schultz: "iP95p4xoKVk53GoZ742B",  // Chris · cercano, de barra
+  lucas: "JBFqnCBsd6RMkjVDRZzb",    // George · cálido, cuentacuentos
+  musk: "N2lVS1w4EtoT3dr4eOWO",     // Callum · intenso, ronco
+  huang: "bIHbv24MWmeRgasZH58o",    // Will · afable, optimista
+  shotwell: "EXAVITQu4vr4xnSDxMaL", // Sarah · segura, ejecutiva
+  porat: "XrExE9yKIg1WjnnlVkGX",    // Matilda · profesional, precisa
+  lasseter: "IKne3meq5aSn9XLyUdCD", // Charlie · alegre, natural
+  ive: "onwK4e9ZLuTAKqWW03F9",      // Daniel · británico, pausado
+  ratti: "iP95p4xoKVk53GoZ742B",    // Chris · cercano
+  reynolds: "TX3LPaxmHKxFdv7VOQHJ", // Liam · rápido, con chispa
 });
 export function vozEleven(persona, env = {}) {
   let extra = {};
@@ -265,6 +280,9 @@ export const VOZ_PIXER = Object.freeze({
 });
 export function vozPixer(persona) {
   const v = VOZ_PIXER[persona];
-  return v ? { voice: v[0], tono: v[1] } : null;
+  if (!v) return null;
+  const voiceId = VOCES_ELEVEN[persona] || null;
+  // Con voz propia (allowlist de pixer-eleven) suena tal cual: sin cambio de tono.
+  return { voice: v[0], voiceId, tono: voiceId ? 1 : v[1], tonoSinVoz: v[1] };
 }
 export const ELEVEN_USD_POR_1000 = 0.22; // orientativo (plan Creator ≈ 22 $ / 100k caracteres)

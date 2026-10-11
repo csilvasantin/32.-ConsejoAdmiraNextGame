@@ -3,7 +3,8 @@
  * { persona, texto, lang } → audio/mpeg. Ninguna clave toca el navegador. Dos vías, por orden:
  *   1) ELEVENLABS_API_KEY del proyecto (si algún día existe): voice_id propio por consejero.
  *   2) Service Binding PIXER_TTS → worker pixer-eleven, entrypoint AnnouncementTts.generate (RPC interno de la
- *      cuenta; la clave vive solo en pixer-eleven). Voz male/female + «tono» por consejero (X-Debatir-Tono).
+ *      cuenta; la clave vive solo en pixer-eleven) con voiceId propio por consejero (allowlist de pixer-eleven,
+ *      pixer-worker#14). Un worker sin allowlist ignora voiceId y suena male/female: para eso queda VOZ_PIXER.
  * Sin ninguna: 503 { falta: "ELEVENLABS_API_KEY" } y el navegador cae a speechSynthesis.
  */
 import { CONSEJEROS, vozEleven, vozPixer, ELEVEN_MODELO, ELEVEN_USD_POR_1000, idiomaValido } from "../../../debatir-lib.mjs";
@@ -50,13 +51,13 @@ export async function onRequestPost({ request, env, fetchImpl }) {
     const v = vozPixer(persona);
     let r;
     try {
-      r = await env.PIXER_TTS.generate({ text: texto, voice: v.voice, language: idiomaValido(b.lang) });
+      r = await env.PIXER_TTS.generate({ text: texto, voice: v.voice, voiceId: v.voiceId || undefined, language: idiomaValido(b.lang) });
     } catch (e) { return json({ ok: false, error: "pixer-eleven no responde" }, 502, o); }
     if (!r || !r.ok) {
       const st = r ? r.status : 502;
       return json({ ok: false, error: "pixer-eleven " + st, falta: st === 503 ? "ELEVENLABS_KEY (pixer-eleven)" : undefined }, 502, o);
     }
-    return new Response(r.body, { status: 200, headers: meta("pixer-eleven", v.voice, v.tono) });
+    return new Response(r.body, { status: 200, headers: meta("pixer-eleven", v.voiceId || v.voice, v.tono) });
   }
 
   return json({ ok: false, falta: "ELEVENLABS_API_KEY", error: "falta clave ElevenLabs" }, 503, o);

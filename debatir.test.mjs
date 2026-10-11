@@ -193,14 +193,23 @@ test("voz vía Service Binding pixer-eleven (AnnouncementTts): sin clave en admi
   assert.equal(r.status, 200);
   assert.equal(r.headers.get("x-debatir-via"), "pixer-eleven");
   assert.equal(r.headers.get("x-debatir-caracteres"), "18");
-  assert.equal(Number(r.headers.get("x-debatir-tono")), 0.83);
-  assert.deepEqual(llamadas[0], { text: "La historia manda.", voice: "male", language: "es" });
+  assert.equal(Number(r.headers.get("x-debatir-tono")), 1, "voz real: sin cambio de tono");
+  assert.equal(r.headers.get("x-debatir-voz"), L.VOCES_ELEVEN.lucas);
+  assert.deepEqual(llamadas[0], { text: "La historia manda.", voice: "male", voiceId: "JBFqnCBsd6RMkjVDRZzb", language: "es" });
   assert.equal((await r.arrayBuffer()).byteLength, 4);
   // cada consejero de una vista suena distinto (voz + tono)
   for (const g of ["leyendas", "coetaneos"]) {
-    const firmas = L.participantes(g, true).map((p) => { const v = L.vozPixer(p); return v.voice + v.tono; });
-    assert.equal(new Set(firmas).size, 8, g);
+    const mesa = [...new Set(L.participantes(g, true).concat(["jobs"]))];
+    assert.equal(new Set(mesa.map((p) => L.vozPixer(p).voiceId)).size, mesa.length, g + ": una voz distinta por silla (Jobs modera en las dos)");
+    const firmas = L.participantes(g, true).map((p) => { const v = L.vozPixer(p); return v.voice + v.tonoSinVoz; });
+    assert.equal(new Set(firmas).size, 8, g + " (respaldo male/female + tono)");
   }
   const fallo = await vozPost({ request: req({ persona: "porat", texto: "x" }, { url: PREVIEW + "/api/consejo/voz" }), env: { ...ENV, PIXER_TTS: { generate: async () => new Response("{}", { status: 503 }) } }, fetchImpl: fakeFetch([]) });
   assert.equal(fallo.status, 502);
+});
+
+test("las voces de consejero coinciden con la allowlist desplegada en pixer-eleven", () => {
+  const allow = ["cjVigY5qzO86Huf0OWal","TX3LPaxmHKxFdv7VOQHJ","CwhRBWXzGAHq8TQ4Fs17","pqHfZKP75CyOlX2KQs5n","nPczCjzI2devNBz1zQrW","onwK4e9ZLuTAKqWW03F9","iP95p4xoKVk53GoZ742B","JBFqnCBsd6RMkjVDRZzb","N2lVS1w4EtoT3dr4eOWO","bIHbv24MWmeRgasZH58o","EXAVITQu4vr4xnSDxMaL","XrExE9yKIg1WjnnlVkGX","IKne3meq5aSn9XLyUdCD"];
+  for (const [p, v] of Object.entries(L.VOCES_ELEVEN)) assert.ok(allow.includes(v), p);
+  assert.ok(new Set(Object.values(L.VOCES_ELEVEN)).size >= 8);
 });

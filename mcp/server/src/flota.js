@@ -181,6 +181,7 @@ export function crearFlota(env = {}, identidad, deps = {}) {
   /** Quién está vivo ahora: agentes por persona y máquina; los consejeros, siempre. */
   async function vivos() {
     const filas = await presenciaViva();
+    const crudas = await presenciaCruda();
     const porPersona = new Map();
     for (const r of [...filas].sort((a, b) => seg(b.updated) - seg(a.updated))) {
       const p = personaCanonica(r.persona);
@@ -202,7 +203,8 @@ export function crearFlota(env = {}, identidad, deps = {}) {
     return {
       consejeros: CONSEJEROS.map((persona) => {
         const s = SILLAS[persona];
-        const fila = { persona, equipo: 'GrokBot', silla: s.rol, lado: s.lado, maquina: s.maquina, disponibilidad: 'siempre: se le despierta por webhook, contesta en 1-3 min', carga: resumenCarga(carga.get(persona)) };
+        const realConsejero = crudas.filter((r) => personaCanonica(r.persona) === persona && norm(r.machine) === 'grokbot' && seg(r.updated) >= Math.floor(ahora() / 1000) - VIVO_SEG).sort((a, b) => seg(b.updated) - seg(a.updated))[0];
+        const fila = { ...costeDePresencia(realConsejero || {}), persona, equipo: 'GrokBot', silla: s.rol, lado: s.lado, maquina: s.maquina, disponibilidad: 'siempre: se le despierta por webhook, contesta en 1-3 min', carga: resumenCarga(carga.get(persona)) };
         if (s.deepagent) {
           fila.deepagent = s.deepagent; fila.deepagent_maquina = s.deepagent_maquina; fila.deepagent_runtime = s.deepagent_runtime; fila.deepagent_vivo = porPersona.has(s.deepagent);
           const real = (porPersona.get(s.deepagent) || []).find((x) => norm(x.maquina) === norm(s.deepagent_maquina));

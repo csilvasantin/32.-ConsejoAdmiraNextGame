@@ -39,12 +39,15 @@ test('MCP: misma persona en MacBooks y GrokBotBox conserva costes y cambia las s
     { persona: 'Smith', machine: 'MacMini', runtime: 'Grok', updated },
     { persona: 'Link', machine: 'MacMini', runtime: 'Otro', model: 'nemotron', updated },
   ];
+  presencia.push({ persona: 'Jobs', machine: 'GrokBot', runtime: 'Grok', updated });
   const f = flotaCombinada({ presencia, ahoraMs: now });
   for (const m of f.machines) for (const a of m.agentes) {
     assert.equal(a.coste, a.persona === 'Link' ? 'desconocido' : m.name === 'GrokBotBox' ? 'gratis' : 'pago');
   }
   const flota = crearFlota({}, null, { now: () => now, fetch: async (url) => new Response(JSON.stringify(String(url).endsWith('/api/presence') ? { presence: presencia } : { items: [] })) });
   const v = await flota.vivos();
+  assert.equal(v.consejeros.find((c) => c.persona === 'Jobs').coste, 'pago');
+  assert.equal(v.consejeros.find((c) => c.persona === 'Lucas').coste, 'desconocido');
   assert.deepEqual(v.agentes.find((a) => a.persona === 'Trinity').maquinas.map((a) => a.distintivo), ['PAGO', 'PAGO', 'GRATIS']);
   for (const nombre of ['Musk', 'Huang']) {
     const c = v.consejeros.find((x) => x.persona === nombre);

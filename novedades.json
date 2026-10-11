@@ -1,4 +1,8 @@
 {
+  "v.11.10.2026.r27.12:23": [
+    "Nuevo /visor/: la cuadratura de los 4 deepagents de pago (Neo y Morfeo · Claude Code, Trinity y Oráculo · Codex) en cualquier pantalla sin instalar nada, pensada para el Samsung Fold: 2x2 desplegado, una por pantalla con deslizar plegado. Rótulo ASCII y colores de cada agente, terminal en vivo con colores, refresco cada 3 s.",
+    "Privado: /api/visor/pane solo con llave del visor (enlace #k=…, revocable al momento con tools/visor-llave.sh); los Macs publican con su token de máquina y tapan secretos antes de enviar. Misma lista que la cuadratura: ~/.config/admiranext/cuadratura.conf."
+  ],
   "v.11.10.2026.r26.11:35": [
     "«Trabajando ahora» rota cada 15 s en tres fases: máquina → runtime → foco. Consejeros: proyecto principal · deepagent (Musk «admira.live · Morfeo», por defecto); sin foco reportado, «Training». Agentes: su proyecto actual (pulso/latido) o su pilar del reparto del finde (Trinity «admira.biz»). ES/EN.",
     "Nuevo /api/consejo/foco: cada consejero fija su proyecto y deepagent (POST con token del Consejo; GET público). Merovingio ya no sale «GrokBot CLI · CLI»."

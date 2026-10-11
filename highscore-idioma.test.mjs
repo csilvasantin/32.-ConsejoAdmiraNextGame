@@ -88,7 +88,7 @@ test("READY/SET/GO countdown, pause and finish announce the selected language", 
   }
 });
 
-test("the complete rendered scoring formula and partial-data warning stay in the chosen language", () => {
+test("the complete rendered scoring formula stays in the chosen language without repeating the unified data warning", () => {
   for (const language of ["es", "en"]) {
     for (const failures of [
       ["/tasks/all?scope=fleet → 401", "/tickets?scope=fleet → 401"],
@@ -124,11 +124,9 @@ test("the complete rendered scoring formula and partial-data warning stay in the
         assert.match(body, /Identidad normativa/);
         assert.ok(!/Free Bonus Track|20 minutes|Identity policy|Some data could not be read/.test(body));
       }
-      for (const failure of failures) assert.ok(body.includes(failure), "Diagnostic endpoint remains verbatim");
-      if (failures.length) {
-        assert.ok(body.includes(I.t("partialDataHeading", language)));
-        assert.ok(body.includes(I.t("partialDataExplanation", language)));
-      } else assert.ok(!body.includes(I.t("partialDataHeading", language)));
+      for (const failure of failures) assert.ok(!body.includes(failure), "Endpoint diagnostics belong to the unified warning tooltip");
+      assert.ok(!body.includes(I.t("partialDataHeading", language)), "The formula does not add a second failure heading");
+      assert.ok(!body.includes(I.t("partialDataExplanation", language)), "The formula does not repeat the data warning");
     }
   }
 });

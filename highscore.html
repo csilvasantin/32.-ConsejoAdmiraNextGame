@@ -117,6 +117,8 @@ h1{font-size:clamp(20px,3.2vw,31px);font-weight:900;letter-spacing:.08em;margin:
 .ranking-scope-summary{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:0 0 8px;color:var(--mut);font-size:11px;line-height:1.5}
 .ranking-scope-summary button{font:inherit;color:var(--ink);background:transparent;border:1px solid rgba(120,243,255,.3);border-radius:5px;padding:5px 8px;cursor:pointer}
 .ranking-scope-summary button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.ranking-data-warning,.ranking-work-status{flex-basis:100%;font-size:10px;line-height:1.5}
+.ranking-data-warning{color:var(--warn)}
 .work-observations{margin:6px 0 10px;color:var(--mut);font-size:11px;line-height:1.5}
 .work-observations summary{cursor:pointer;color:var(--ink)}
 .work-observations ul{display:flex;flex-wrap:wrap;gap:4px 18px;padding:4px 0 0;list-style:none;margin:0}
@@ -448,6 +450,7 @@ h1{font-size:clamp(20px,3.2vw,31px);font-weight:900;letter-spacing:.08em;margin:
 .refresh-lane[data-work-state="last_work"] .runner-finish-lose{display:none;animation:none}
 .refresh-lane.finished.race-winner .runner-finish-win{display:block;animation:none;opacity:1}
 .refresh-lane.finished.race-loser .runner-finish-lose{display:block;animation:none;opacity:1}
+.refresh-lane.finished[data-race-points="0"] .runner-standing{display:block;animation:none;opacity:1}
 .refresh-lane.cosmetic-finished .runner-run-a,.refresh-lane.cosmetic-finished .runner-run-b,
 .refresh-lane.cosmetic-finished .runner-run-c,.refresh-lane.cosmetic-finished .runner-pose-ready,
 .refresh-lane.cosmetic-finished .runner-pose-set,.refresh-lane.cosmetic-finished .runner-pose-go,
@@ -1131,6 +1134,8 @@ html:lang(en) .score-formula[open] .score-formula-toggle::before{content:"Hide  
   <div class="ranking-scope-summary" aria-label="Filtro de agentes del ranking y la carrera">
     <span id="rankingScopeSummary" role="status" aria-live="polite">Agentes: comprobando selección…</span>
     <button id="rankingScopeAll" type="button" hidden>Ver todos los agentes</button>
+    <span class="ranking-data-warning" id="rankingDataWarning" data-highscore-warning role="status" aria-live="polite" hidden></span>
+    <span class="ranking-work-status" id="rankingWorkStatus" role="status" aria-live="polite" hidden></span>
   </div>
   <div class="table-scroll" id="rankingScroll">
     <table class="tabla" id="rankingTable">
@@ -1157,7 +1162,6 @@ html:lang(en) .score-formula[open] .score-formula-toggle::before{content:"Hide  
     <div class="score-formula-body" id="formulaBody" data-no-traducir></div>
   </details>
   <p id="raceBonusStatus" role="status" aria-live="polite">Bonus Track gratuito: +1 por victoria para la misión del ganador.</p>
-  <p class="race-evidence-status" id="raceEvidenceStatus" role="status" aria-live="polite">Comprobando trabajo registrado…</p>
   <details class="work-observations" id="workObservations" hidden>
     <summary id="workObservationsSummary">Actividad sin verificar</summary>
     <ul id="workObservationsList"></ul>
@@ -1194,7 +1198,7 @@ html:lang(en) .score-formula[open] .score-formula-toggle::before{content:"Hide  
 <script src="/highscore-race.js?v=v.11.10.2026.r38.advisor-work"></script>
 <script src="/highscore-work-clock.js?v=20260905-duration-r1"></script>
 <script src="/highscore-desktop-app.js?v=v.2026.08.11.active-default-2"></script>
-<script src="/highscore-daily-record.js?v=v.2026.09.05.periods1"></script>
+<script src="/highscore-daily-record.js?v=5703-no-zero-leader"></script>
 <script>
 (function () {
   "use strict";
@@ -1344,28 +1348,29 @@ html:lang(en) .score-formula[open] .score-formula-toggle::before{content:"Hide  
     var chase = api && api.periodRecord ? api.periodRecord(datos.historial,period,Date.now(),rows,claveAgentePeriodo) : null;
     var label = rotuloPeriodoRanking(period).toLowerCase(), leader = chase && chase.leader;
     var fresh = period === "hour" || period === "day" ? datos.actividadFresh : datos.historialFresh;
-    var sourceNote = !fresh || !datos.historialFresh ? hsT(" · Datos pendientes de actualizar", " · Data awaiting update") : "";
+    if (!fresh || !leader || !(Number(leader.points) > 0)) leader = null;
     box.hidden = false; box.dataset.period=period;
     box.setAttribute("aria-label",hsT("Récord de ", "Record for ") + label + hsT(" y líder ", " and leader ") + rotuloPeriodoPodio(period));
-    box.classList.toggle("record-beaten",!!(chase && chase.available && chase.remaining === 0));
+    var comparisonFresh = !!(fresh && datos.historialFresh);
+    box.classList.toggle("record-beaten",!!(comparisonFresh && leader && chase && chase.available && chase.remaining === 0));
     var currentHtml = '<div class="record-cell record-chase"><span class="record-kicker">' + hsT("Líder ", "Leader ") + esc(rotuloPeriodoPodio(period)) + '</span><span class="record-value">' +
-      (leader ? '<strong>' + esc(leader.points.toLocaleString("es-ES")) + '</strong> · ' + esc(nombreAgenteVisible(leader.agent)) : hsT('Sin puntos verificados', 'No verified points')) + '</span></div>';
+      (leader ? '<strong>' + esc(leader.points.toLocaleString("es-ES")) + '</strong> · ' + esc(nombreAgenteVisible(leader.agent)) : esc(hsText("noLeaderYet"))) + '</span></div>';
     if (!chase || !chase.available) {
       box.innerHTML='<div class="record-cell record-record"><span class="record-kicker">' + hsT("Récord de ", "Record for ") + esc(label) + '</span><span class="record-value">' +
         esc(chase && chase.sourceAvailable ? hsT("Sin periodos anteriores registrados", "No earlier periods recorded") : hsT("Histórico no disponible", "History unavailable")) + '</span></div>' + currentHtml +
-        '<div class="record-cell record-gap"><span class="record-kicker">' + esc(sourceNote || hsT("Carrera en directo", "Live race")) + '</span></div>';
+        '<div class="record-cell record-gap"><span class="record-kicker">' + esc(hsText("beatRecord")) + '</span><span class="record-value">—</span></div>';
       return;
     }
-    var record=chase.record, won=chase.remaining===0;
+    var record=chase.record, won=comparisonFresh && !!leader && chase.remaining===0;
     var stamp=period === "hour" ? new Intl.DateTimeFormat("es-ES",{timeZone:TIME_ZONE,day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",timeZoneName:"shortOffset"}).format(new Date(record.start)) : fechaRecord(record.day);
     var recordLabel={hour:hsT("Mejor hora registrada", "Best recorded hour"),day:hsT("Récord diario registrado", "Recorded daily record"),week:hsT("Mejor semana registrada", "Best recorded week"),month:hsT("Mejor mes registrado", "Best recorded month")}[period];
     var coverage=chase.coverage||{}, from=coverage.start_day || (coverage.start_at ? claveDia(coverage.start_at) : "");
-    var coverageTitle=hsT("Datos registrados", "Recorded data") + (from ? hsT(" desde ", " since ") + from : "") + hsT(". Periodo actual excluido.", ". Current period excluded.") + sourceNote;
+    var coverageTitle=hsT("Datos registrados", "Recorded data") + (from ? hsT(" desde ", " since ") + from : "") + hsT(". Periodo actual excluido.", ". Current period excluded.");
     box.innerHTML='<div class="record-cell record-record" title="' + esc(coverageTitle) + '"><span class="record-kicker">' + esc(recordLabel) + '</span>' +
       '<span class="record-value"><strong>' + esc(record.points.toLocaleString("es-ES")) + '</strong> pts · ' + esc(nombreAgenteVisible(record.agent)) + ' · ' + esc(stamp) + '</span></div>' + currentHtml +
-      '<div class="record-cell record-gap"><span class="record-kicker">' + esc((won ? "+" + chase.beatenBy.toLocaleString("es-ES") + hsT(" sobre la marca", " above the record") : hsT("para batirlo", "to beat it")) + sourceNote) + '</span>' +
-      '<span class="record-value"><strong>' + esc(won ? hsT("NUEVO RÉCORD", "NEW RECORD") : chase.remaining.toLocaleString("es-ES") + " pts") + '</strong></span></div>' +
-      '<div class="record-progress" aria-hidden="true"><i style="width:' + chase.progress.toFixed(2) + '%"></i></div>';
+      '<div class="record-cell record-gap"><span class="record-kicker">' + esc(hsText("beatRecord")) + '</span>' +
+      '<span class="record-value"><strong>' + esc(!comparisonFresh ? "—" : won ? hsT("NUEVO RÉCORD", "NEW RECORD") : chase.remaining.toLocaleString("es-ES") + " pts") + '</strong></span></div>' +
+      '<div class="record-progress" aria-hidden="true"><i style="width:' + (comparisonFresh ? chase.progress : 0).toFixed(2) + '%"></i></div>';
   }
 
   function esHoy(epoch) { return claveDia(epoch) === claveDia(Date.now()); }
@@ -1431,7 +1436,7 @@ html:lang(en) .score-formula[open] .score-formula-toggle::before{content:"Hide  
     declaracionesPrincipales: [], controlMachines: [], presenceNow: 0, presenceAvailable: false,
     trabajos: [], workObservations: [], trabajosAvailable: false, trabajosGeneratedAt: 0, trabajosClientAt: 0,
     trabajando: [], trabajandoClientAt: 0, trabajandoVentana: 90, tiempos: [],
-    trabajosMode: "unavailable", turnos: null, historial: null, historialFresh: false };
+    trabajosMode: "unavailable", turnos: null, historial: null, historialFresh: false, partialSources:null, raceEvidence:null };
   var WORK_POLL_MS = 20000, WORK_TIMEOUT_MS = 8000, workRequestSequence = 0, workRequest = null;
   var DAILY_CACHE_KEY = "yokup.highscore.daily.v1";
   function guardaActividadDiaria(payload) {
@@ -1493,6 +1498,7 @@ html:lang(en) .score-formula[open] .score-formula-toggle::before{content:"Hide  
       datos.declaracionesPrincipales = r[6] && r[6].declarations || [];
       datos.historial = r[8] || null; datos.historialFresh = !!r[8]; diasCache = datos.historial;
       datos.turnos = r[7] || null;
+      datos.partialSources = fallos.slice();
 
       pon(76, "OBJETIVOS · VENTANAS · MISIONES · " + ((a && a.recorded && a.recorded.objectives) || 0) + " / " + ((a && a.recorded && a.recorded.windows) || 0) + " / " + ((a && a.recorded && a.recorded.missions) || 0));
       pon(94, "PRESENCIA · " + datos.presencia.length + " AGENTES");
@@ -4077,13 +4083,36 @@ html:lang(en) .score-formula[open] .score-formula-toggle::before{content:"Hide  
     if (!dailyFresh) return hsText("dailyStale");
     return "";
   }
+  function hsUnifiedDataWarning(options) {
+    var o = options || {}, scoreStale = !o.dailyFresh || !o.historyFresh;
+    // The historical record remains visible even for Hour/Day, so freshness
+    // follows both displays rather than only the ranking's selected period.
+    if (scoreStale && !o.workAvailable) return hsText("scoreAndWorkPartial");
+    if (!o.dailyFresh && !o.historyFresh) return hsText("scoresStale");
+    if (!o.dailyFresh) return hsText("dailyStale");
+    if (!o.historyFresh) return hsText("historyStale");
+    if (!o.workAvailable) return hsText(o.workFallback ? "workQueryPartial" : "workUnavailable");
+    return o.failures && o.failures.length ? hsText("partialDataStatus") : "";
+  }
+  function hsRenderDataStatus() {
+    var warning = document.getElementById("rankingDataWarning"), info = document.getElementById("rankingWorkStatus");
+    var race = datos.raceEvidence || null;
+    if (warning) {
+      var text = hsUnifiedDataWarning({period:RANKING_PERIOD,podiumPeriod:PODIUM_PERIOD,
+        dailyFresh:datos.actividadFresh,historyFresh:datos.historialFresh,failures:datos.partialSources || fallos,
+        workAvailable:datos.trabajosAvailable,workFallback:!!(race && race.fallback)});
+      warning.textContent = text; warning.hidden = !text;
+      warning.title = (datos.partialSources || fallos || []).join(" · ");
+    }
+    if (info) { info.textContent = race ? [race.scopeNotice, race.info].filter(Boolean).join(" · ") : ""; info.hidden = !info.textContent; }
+  }
   function hsRenderRankingScope(visibleRows, compactShown) {
     var summary = document.getElementById("rankingScopeSummary"), all = document.getElementById("rankingScopeAll");
     var total = colapsaFilasRanking((listaCompletaCache || []).filter(hsBandoFila), RANKING_PERIOD).length;
     if (summary) {
-      var warning = hsRankingSourceWarning(RANKING_PERIOD, datos.actividadFresh, datos.historialFresh);
-      summary.textContent = hsRankingScopeSummary(AGENT_SCOPE_MODE, visibleRows.length, total, filtroSoloVivos, compactShown) + (warning ? " · " + warning : "");
+      summary.textContent = hsRankingScopeSummary(AGENT_SCOPE_MODE, visibleRows.length, total, filtroSoloVivos, compactShown);
     }
+    hsRenderDataStatus();
     if (all) all.hidden = HS_BANDO === "consejeros" || (AGENT_SCOPE_MODE === "all" && !filtroSoloVivos);
   }
   function hsShowAllAgents() {
@@ -5666,6 +5695,15 @@ html:lang(en) .score-formula[open] .score-formula-toggle::before{content:"Hide  
     if (!hsLaneDeepEligible(work.key) && !trabajandoDe(work)) return false;
     return correDeVerdad(work);
   }
+  function hsRacePoints(row) {
+    return Math.max(0, Number(metricaHoraDia(row, "points").day) || 0);
+  }
+  function hsRacePlace(row, index, dailyFresh) {
+    return dailyFresh !== false && hsRacePoints(row) > 0 ? index + 1 : 0;
+  }
+  function hsLaneHasScore(lane) {
+    return Number(lane.getAttribute("data-race-points")) > 0;
+  }
   function actualizaCarreraPodio() {
     var contenedor = document.getElementById("refreshLanes");
     var focused = document.activeElement, focusedLane = focused && focused.getAttribute && focused.getAttribute("data-race-role") === "agent" && focused.closest ? focused.closest(".refresh-lane") : null;
@@ -5725,9 +5763,14 @@ html:lang(en) .score-formula[open] .score-formula-toggle::before{content:"Hide  
       if (!previo || puntuaFaena(work) > puntuaFaena(previo.trabajo)) mejorPersona[persona] = enlace;
     });
     parrilla = Object.keys(mejorPersona).map(function (persona) { return mejorPersona[persona]; });
+    parrilla.sort(function (a, b) {
+      return (datos.actividadFresh ? hsRacePoints(b.fila) - hsRacePoints(a.fila) : 0) ||
+        (Number(a.fila.posicion) || 9999) - (Number(b.fila.posicion) || 9999);
+    });
     corredores = parrilla.map(function (enlace, indice) {
       var fila = enlace.fila, clave = enlace.clave, resumen = enlace.resumen;
-      var puesto = indice + 1, agente = normaliza(fila.agente), responsable = normaliza(resumen.responsible || agente);
+      var racePoints = datos.actividadFresh ? hsRacePoints(fila) : 0;
+      var puesto = hsRacePlace(fila, indice, datos.actividadFresh), agente = normaliza(fila.agente), responsable = normaliza(resumen.responsible || agente);
       var identidadVisible = identidadVisualCorredor(responsable, fila);
       var contextoVisible = contextoVisualCorredor(identidadVisible, enlace.trabajo, fila);
       // Sólo el proyecto principal; la faena o el directorio no lo sustituyen.
@@ -5739,7 +5782,7 @@ html:lang(en) .score-formula[open] .score-formula-toggle::before{content:"Hide  
       var executor = normaliza(resumen.executor || responsable);
       var variant = typeof YkHighscoreRace !== "undefined" ? YkHighscoreRace.runnerVariant(fila)
         : (clave.split("").reduce(function (n, c) { return n + c.charCodeAt(0); }, 0) % 2 ? "dark" : "light");
-      var clasePuesto = puesto <= 3 ? "refresh-lane-p" + puesto : "refresh-lane-rank";
+      var clasePuesto = puesto > 0 && puesto <= 3 ? "refresh-lane-p" + puesto : "refresh-lane-rank";
       var isLast = enlace.trabajo.state === "last_work";
       var staleState = enlace.trabajo.state === "assigned_stale" ? estadoCarreraStale(enlace.trabajo) : null;
       var heartbeat = resumen.state.toLowerCase() + (resumen.reachable ? hsT(" · alcanzable", " · reachable") : "") + (enlace.conservado ? hsT(" · conservado hasta el final de la carrera", " · kept until the end of the race") : "");
@@ -5770,6 +5813,7 @@ html:lang(en) .score-formula[open] .score-formula-toggle::before{content:"Hide  
         '" role="listitem" data-place="' + puesto + '" data-agent-key="' + esc(clave) + '" ' +
         'data-race-mission="' + esc(enlace.trabajo.reference || '') + '" data-work-state="' + esc(isLast ? "last_work" : resumen.idle ? "assigned_stale" : "running") + '" ' +
         'data-race-basis="' + esc(enlace.trabajo.raceBasis || '') + '" ' +
+        'data-race-points="' + racePoints + '" ' +
         (!isLast&&(enlace.trabajo.cliPaused||["session_unverified","service_activity_unverified","awaiting_decision"].includes(enlace.trabajo.activityReason))?'data-race-held="true" ':'') +
         (staleState && enlace.trabajo.raceRevision ? 'data-race-revision="' + esc(enlace.trabajo.raceRevision) + '" data-stale-anchor="' +
           Number(staleState.record.server_started_at) + '" data-stale-cycles="' + Number(staleState.record.cycles) + '" ' : '') +
@@ -5805,8 +5849,11 @@ html:lang(en) .score-formula[open] .score-formula-toggle::before{content:"Hide  
     var evidenceMode = datos.trabajosAvailable ? datos.trabajosMode : (presenceLaneCount ? "presence" : advisorLaneCount ? "active" : datos.trabajosMode);
     if (HS_BANDO === "consejeros" && advisorLaneCount) evidenceMode = "advisors";
     var evidence = hsWorkEvidenceStatus(raceWorkAvailable, todosTrabajos.length, corredores.length, evidenceMode);
-    var evidenceNode = document.getElementById("raceEvidenceStatus");
-    if (evidenceNode) evidenceNode.textContent = evidence.text + (pendientesCarrera ? " · " + pendientesCarrera + (pendientesCarrera === 1 ? hsT(" participante espera", " participant waits") : hsT(" participantes esperan", " participants wait")) + hsT(" a la próxima carrera", " for the next race") : "");
+    var waitingNotice = pendientesCarrera ? pendientesCarrera + (pendientesCarrera === 1 ? hsT(" participante espera", " participant waits") : hsT(" participantes esperan", " participants wait")) + hsT(" a la próxima carrera", " for the next race") : "";
+    datos.raceEvidence = {fallback:!!(presenceLaneCount || advisorLaneCount),
+      scopeNotice:evidence.label === hsText("workOutsideLabel") ? evidence.text : "",
+      info:!evidence.label ? evidence.text + (waitingNotice ? " · " + waitingNotice : "") : waitingNotice};
+    hsRenderDataStatus();
     var etiquetaVacia = evidence.label || hsText("workEmptyLabel");
     // CALENTANDO (Carlos, 7-sep-2026): si no hay ningún agente corriendo, la pista vacía no
     // grita una etiqueta técnica ni la corta en «TRABAJO FUERA DE LA SE…»: dice que todos
@@ -5866,13 +5913,7 @@ html:lang(en) .score-formula[open] .score-formula-toggle::before{content:"Hide  
       '<p style="margin-top:10px">' + hsText("formulaCounters", values) +
       (values.unattributed ? hsText("formulaUnattributed", values) : "") + hsText("formulaInventory", values) + '</p>' +
       '<p style="margin-top:8px">' + hsText("formulaIdentity") + '</p>';
-    if (fallos.length) {
-      formula.className = "nota score-formula err";
-      html += '<h2 style="margin-top:14px">' + esc(hsText("partialDataHeading")) + '</h2><p>' + esc(fallos.join(" · ")) +
-              '. ' + esc(hsText("partialDataExplanation")) + '</p>';
-    } else {
-      formula.className = "nota score-formula";
-    }
+    formula.className = "nota score-formula";
     n.innerHTML = html;
   }
 
@@ -5982,6 +6023,7 @@ html:lang(en) .score-formula[open] .score-formula-toggle::before{content:"Hide  
   }
   function sorteaOrdenLlegada(forzar) {
     var carriles = Array.from(document.querySelectorAll('.refresh-lane[data-agent-key][data-work-state="running"]'));
+    var neutralOrder = Math.max(3, carriles.filter(hsLaneHasScore).length + 1);
     var claves = carriles.map(function (carril) { return carril.getAttribute("data-agent-key") || ""; });
     var firma = claves.slice().sort().join("|");
     if (!carriles.length) {
@@ -6004,14 +6046,19 @@ html:lang(en) .score-formula[open] .score-formula-toggle::before{content:"Hide  
         var official=bonusCarrera.order(clave,carril.getAttribute("data-race-mission"));
         if(official!==null && !(official===999 && carril.getAttribute("data-race-basis")==="advisor_daily"))orden=official;
       }
+      // Bonus order belongs to the server. A participant with no verified
+      // points still moves, without a podium place or an early visual finish.
+      carril.setAttribute("data-race-bonus-order", String(orden));
+      if (!hsLaneHasScore(carril)) orden = neutralOrder;
       carril.setAttribute("data-race-order", String(orden));
-      carril.classList.toggle("race-winner", orden === 1);
-      carril.classList.toggle("race-loser", orden !== 1);
+      carril.classList.toggle("race-winner", hsLaneHasScore(carril) && orden === 1);
+      carril.classList.toggle("race-loser", hsLaneHasScore(carril) && orden !== 1);
     });
   }
   function actualizaMarcador() {
     if (refrescando) return Promise.resolve();
     refrescando = true;
+    fallos = [];
     var presenceRequestSequence = hsBeginPresenceRequest();
     document.getElementById("refreshCount").textContent = "ACT.";
     hsRefreshWork(true);
@@ -6058,7 +6105,7 @@ html:lang(en) .score-formula[open] .score-formula-toggle::before{content:"Hide  
       if (r[7]) datos.turnos = r[7];
       datos.historialFresh = !!r[8];
       if (r[8]) { datos.historial = r[8]; diasCache = r[8]; }
-      fallos = [];
+      datos.partialSources = fallos.slice();
       var listaCompleta = calcula(), l = aplicaAgentScope(listaCompleta);
       var cambioLider = listaCache && l[0] && listaCache[0] && l[0].agente !== listaCache[0].agente;
       listaCompletaCache = listaCompleta;
@@ -6081,6 +6128,8 @@ html:lang(en) .score-formula[open] .score-formula-toggle::before{content:"Hide  
     document.querySelectorAll(".refresh-lane").forEach(function (carril) {
       var puesto = Number(carril.getAttribute("data-place")) || 3;
       var ordenLlegada = Number(carril.getAttribute("data-race-order")) || puesto;
+      var hasScore = hsLaneHasScore(carril);
+      if (!hasScore) ordenLlegada = Math.max(3, ordenLlegada);
       var estadoTrabajo = carril.getAttribute("data-work-state") || "";
       var carreraCosmetica = estadoTrabajo === "assigned_stale" && carril.getAttribute("data-race-held")!=="true";
       var trabajoFinalizado = estadoTrabajo === "last_work";
@@ -6133,9 +6182,10 @@ html:lang(en) .score-formula[open] .score-formula-toggle::before{content:"Hide  
       carril.classList.toggle("cruzando", centroAtleta + RADIO_CORREDOR_PX >= metaLinea);
       carril.classList.toggle("finished", !carreraCosmetica && progresoAtleta >= 1);
       carril.classList.toggle("cosmetic-finished", carreraCosmetica && progresoAtleta >= 1);
-      carril.classList.toggle("race-winner", !carreraCosmetica && ordenLlegada === 1);
-      carril.classList.toggle("race-loser", !carreraCosmetica && ordenLlegada !== 1);
-      if(!carreraCosmetica && progresoAtleta>=1 && ordenLlegada===1 && typeof confirmaBonusCarrera==="function")
+      carril.classList.toggle("race-winner", hasScore && !carreraCosmetica && ordenLlegada === 1);
+      carril.classList.toggle("race-loser", hasScore && !carreraCosmetica && ordenLlegada !== 1);
+      var bonusOrder = Number(carril.getAttribute("data-race-bonus-order")) || ordenLlegada;
+      if(!carreraCosmetica && progresoAtleta>=1 && bonusOrder===1 && typeof confirmaBonusCarrera==="function")
         confirmaBonusCarrera(carril);
       if (relleno) {
         var avancePista = Math.max(0, Math.min(metaLinea - inicioPista, centroAtleta - inicioPista));

@@ -129,10 +129,10 @@ export function sistemaPersona(clave, lang) {
   return L === "en"
     ? `You are ${c.nombre}, debating in character at a round table. ${CASA.en} Your lens: ${c.en}. ` +
       "Speak in English, in first person, with your real voice and convictions. 1 to 3 short sentences, 45 words max. " +
-      "Build on what the previous speaker said: name them, agree or push back, and add one NEW idea. No greetings, no emojis, no markdown, no stage directions, never say you are an AI."
+      "Build on what the previous speaker said: name them, agree or push back, and add one NEW idea. Vary how you open: no formulas like 'My idea:' or 'My proposal:'. No greetings, no emojis, no markdown, no stage directions, never say you are an AI."
     : `Eres ${c.nombre}, debatiendo en personaje en una mesa redonda. ${CASA.es} Tu mirada: ${c.es}. ` +
       "Habla en castellano, en primera persona, con tu voz y convicciones reales. De 1 a 3 frases cortas, 45 palabras como máximo. " +
-      "Construye sobre lo que dijo el anterior: nómbralo, dale la razón o rebátele, y aporta UNA idea NUEVA. Sin saludos, sin emojis, sin markdown, sin acotaciones, nunca digas que eres una IA.";
+      "Construye sobre lo que dijo el anterior: nómbralo, dale la razón o rebátele, y aporta UNA idea NUEVA. Varía cómo empiezas: nada de fórmulas como «Mi idea:» o «Mi propuesta:». Sin saludos, sin emojis, sin markdown, sin acotaciones, nunca digas que eres una IA.";
 }
 function bloqueContexto(tema, contexto, lang) {
   const en = lang === "en";
@@ -179,7 +179,7 @@ export function mensajesResumen({ lang, titulo, texto, url }) {
 }
 
 // ── Limpieza del bocadillo ─────────────────────────────────────────────────
-export function limpiarBocadillo(t, { maxFrases = 3, maxChars = 340, nombre = "" } = {}) {
+export function limpiarBocadillo(t, { maxFrases = 3, maxChars = 280, nombre = "" } = {}) {
   let s = String(t || "")
     .replace(/<think>[\s\S]*?<\/think>/gi, " ")
     .replace(/[*_#`>]+/g, "")
@@ -187,8 +187,10 @@ export function limpiarBocadillo(t, { maxFrases = 3, maxChars = 340, nombre = ""
     .replace(/\s+/g, " ").trim();
   if (nombre) s = s.replace(new RegExp("^" + nombre.replace(/[.*+?^${}()|[\]\\]/g, "\\$&") + "\\s*[:：-]\\s*", "i"), "");
   s = s.replace(/^["“”«»']+|["“”«»']+$/g, "").trim();
-  const frases = s.match(/[^.!?…]+[.!?…]+["”»]?|[^.!?…]+$/g) || [s];
-  s = frases.slice(0, maxFrases).join(" ").replace(/\s+/g, " ").trim();
+  const frases = s.split(/(?<=[.!?…]["”»]?)\s+(?=\S)/).filter(Boolean);
+  let out = frases.slice(0, maxFrases);
+  while (out.length > 1 && out.join(" ").length > maxChars) out.pop(); // mejor una frase menos que una cortada
+  s = out.join(" ").replace(/\s+/g, " ").trim();
   if (s.length > maxChars) { s = s.slice(0, maxChars - 1).replace(/\s+\S*$/, "") + "…"; }
   return s;
 }
@@ -217,7 +219,7 @@ export function costeUsd(p, d) {
   const u = (d && d.usage) || {};
   return ((Number(u.prompt_tokens) || 0) * 2 + (Number(u.completion_tokens) || 0) * 15) / 1e6; // estimación grok-4.x
 }
-export async function llamarModelo({ nivel, env, messages, fetchImpl = fetch, maxTokens = 220, timeoutMs }) {
+export async function llamarModelo({ nivel, env, messages, fetchImpl = fetch, maxTokens = 160, timeoutMs }) {
   const p = proveedor(nivel, env);
   if (!p) {
     const falta = nivelValido(nivel) === "pago" ? "XAI_API_KEY" : "NVIDIA_API_KEY";

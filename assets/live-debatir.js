@@ -126,6 +126,7 @@
       '.debate-bubble.conclusion .db-quien{color:#ffdf73}' +
       '.debate-bubble.centro{left:50%!important;transform:translateX(-50%);top:24%!important;bottom:auto!important;width:clamp(260px,42%,560px)}' +
       '.debate-bubble.centro.on{transform:translateX(-50%)}.debate-bubble.centro::after{display:none}' +
+      'body.debate-on #speech-bubble,body.debate-on .speech-bubble.grokbot-bubble{display:none!important}' +
       '.np.debate-habla{outline:2px solid #ffdf73;outline-offset:2px;box-shadow:0 0 12px #ffdf73}' +
       '.ax-cli-out .debatir-linea{margin:2px 0;white-space:pre-wrap}.ax-cli-out .debatir-linea b{color:#daa520}';
     document.head.appendChild(s);
@@ -158,6 +159,7 @@
     lay.querySelector('.debate-x').addEventListener('click', function () { parar(); });
     sc.appendChild(lay);
     st.layer = lay;
+    document.body.classList.add('debate-on'); // el bocadillo de bienvenida del Consejo no tapa el debate
   }
   function cab(st, sel, txt) { var n = st.layer && st.layer.querySelector(sel); if (n) { n.textContent = txt; n.hidden = !txt; } }
   function nota(st, txt) { var n = st.layer && st.layer.querySelector('.dt-nota'); if (!n) return; n.textContent = (n.textContent ? n.textContent + ' · ' : '') + txt; n.hidden = false; }
@@ -290,6 +292,7 @@
     try { if (st.audio && st.audio.pause) st.audio.pause(); } catch (e) {}
     document.querySelectorAll('.np.debate-habla').forEach(function (n) { n.classList.remove('debate-habla'); });
     if (st.layer) st.layer.remove();
+    document.body.classList.remove('debate-on');
   }
 
   async function run(opts) {
@@ -331,7 +334,7 @@
         if (st.parado) return null;
         if (!d.ok) throw new Error(d.error || 'HTTP ' + d.status);
         if (d.coste_usd) { st.coste += d.coste_usd; }
-        pintaCoste(st); cab(st, '.dt-modelo', d.modelo || '');
+        pintaCoste(st); cab(st, '.dt-modelo', String(d.etiqueta || d.modelo || '').replace(/^[^·]*·\s*/, ''));
         st.historial.push({ persona: persona, texto: d.texto });
         // Mientras este habla, el siguiente ya piensa (con lo que acaba de decir este).
         if (i < turnos.length) siguiente = pedir(i + 1);

@@ -179,3 +179,9 @@ test("voz ElevenLabs: sin clave → 503 falta; con clave → audio y nunca expon
   const voces = (gen) => L.participantes(gen, true).map((p) => L.vozEleven(p, {}));
   for (const g of ["leyendas", "coetaneos"]) assert.equal(new Set(voces(g)).size, 8, "voz distinta por consejero en " + g);
 });
+
+test("limpiarBocadillo: no corta números y prefiere quitar una frase a cortarla", () => {
+  assert.equal(L.limpiarBocadillo("Tenemos 40.000 pantallas. Bien."), "Tenemos 40.000 pantallas. Bien.");
+  const largo = "Frase corta uno. " + "palabra ".repeat(60) + "fin.";
+  assert.equal(L.limpiarBocadillo(largo), "Frase corta uno.");
+});

@@ -59,6 +59,7 @@ test('parse: /interface 6 y terminal 6, aquí o en el móvil', () => {
   assert.equal(I.GRID6_URL, '/visor/?g=6');
   assert.equal(normalizarOrden({ dispositivo: 'fold', accion: 'terminal', grid: 6 }).orden.grid, 6);
   assert.equal(normalizarOrden({ dispositivo: 'fold', accion: 'terminal', grid: 5 }).ok, false);
+});
 
 test('forma corta: /interface 4 · /interface 2 fold · /interfaz 4 mbp16', () => {
   const I = globalThis.AdmiraInterface;

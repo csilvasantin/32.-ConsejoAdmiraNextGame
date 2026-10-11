@@ -1,5 +1,5 @@
 {
-  "v.11.10.2026.r1.11:24": [
+  "v.11.10.2026.r37.15:14": [
     "Highscore: interruptor «Agentes / Consejeros» en la barra superior, frente al selector de periodo. En Agentes salen solo los DeepAgents; en Consejeros, solo las sillas (Wozniak, Jobs, Lucas, Disney, Musk, Huang).",
     "El interruptor se combina con Hora / Día / Semana / Mes y alcanza ranking, podio, récord, carriles, tiempos por encargo y el modal de días.",
     "Experto: /demo enseña el cambio; /agentes y /consejeros (o /agents y /advisors) cambian la vista. Sigue la marca blanca y el idioma ES/EN."

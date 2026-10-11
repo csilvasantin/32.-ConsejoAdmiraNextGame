@@ -1,4 +1,10 @@
 {
+  "v.11.10.2026.r35.14:18": [
+    "/interface ya funciona en el ⌘ EXPERTO · CLI de la portada (sale en /help) y también en la barra de las demás páginas; vale la forma corta: «/interface 4», «/interface 2 Fold», «/interface 6».",
+    "Nuevo /demo interface: un recorrido que se hace solo (ayuda → terminal 4 aquí → cerrar → terminal 2 aquí → cerrar) con subtítulos en castellano o inglés; /demo help lo lista junto a portada, lectura y velocidad.",
+    "El panel del modo experto se puede redimensionar siempre: asa arriba para el alto y separador entre la ficha del motor y el registro; con ratón o con el dedo, se recuerda en este navegador y doble clic lo deja de serie.",
+    "En móvil y Fold plegado la ficha se apila encima del CLI y se pliega con «▾ ficha del motor»; el panel de /interface ocupa todo el ancho y ya no tapa la línea de órdenes."
+  ],
   "v.11.10.2026.r34.13:50": [
     "/visor/ (y /interface): un toque en una ficha la pone a pantalla completa y otro toque vuelve al mosaico (2, 4 o 6); Esc y el botón atrás de Android también. Sin saltos al deslizar (solo cuenta un toque sin moverse). En grande la cabecera se compacta y la letra se ajusta para leerse en el Fold.",
     "Cuadrícula del Mac, /visor/ e /interface 6: «última misión» es ahora el encargo más reciente (no el in_progress más viejo); los cancelados no cuentan.",

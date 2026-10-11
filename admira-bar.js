@@ -482,7 +482,7 @@
   function interfaceCli(ok, ko) {
     if (window.AdmiraInterface) return ok(window.AdmiraInterface);
     var sc = document.createElement("script");
-    sc.src = "/assets/interface-cli.js?v=20261011-r33-experto";
+    sc.src = "/assets/interface-cli.js?v=20261011-r35-experto";
     sc.onload = function () { window.AdmiraInterface ? ok(window.AdmiraInterface) : ko(); };
     sc.onerror = ko;
     document.head.appendChild(sc);

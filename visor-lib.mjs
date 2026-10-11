@@ -121,6 +121,10 @@ export const LATIDO_VIVO_S = 900;
 export const normMaq = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
 export const NOMBRES_MAQ = { macbookpro16: "MacBook Pro 16", macbookpronegro14: "MacBook Pro 14", macmini: "Mac mini", macbookair16plata: "MacBook Air 16", grokbotbox: "GrokBotBox", grokbot: "GrokBot" };
 export const nombreMaq = (m) => NOMBRES_MAQ[normMaq(m)] || String(m || "");
+export const NOMBRES_CORTOS = { macbookpro16: "MBP16", macbookpronegro14: "MBP14", macmini: "Mac mini", macbookair16plata: "MBA16" };
+export const nombreCorto = (m) => NOMBRES_CORTOS[normMaq(m)] || nombreMaq(m);
+/** HH:MM en hora de Madrid (la del equipo), igual en Workers y en Node. */
+export const horaMadrid = (ms) => new Intl.DateTimeFormat("es-ES", { timeZone: "Europe/Madrid", hour: "2-digit", minute: "2-digit", hour12: false }).format(new Date(ms));
 export const personaDe = (titulo) => normMaq(String(titulo || "").split(" · ")[0]);
 
 /** Terminales de un agente según la presencia: [{ maquina (norm), nombre, sesion, tarea, declarado, latido }]. */
@@ -189,29 +193,45 @@ export function vista(docs, ahora = Date.now(), opciones = {}) {
   const fichas = lista.map((c) => {
     const u = ubicar(c, conDoc, ahora, opciones);
     const nombre = String(c.titulo || c.sesion).split(" · ")[0];
-    // lo que se enseña: el panel de la máquina elegida; si esa no publica, el mejor panel que haya (con aviso)
-    const elegido = u.pubs.find((p) => p.m === u.maquina) || [...u.pubs].sort((x, y) => (x.a.agente === "nosesion") - (y.a.agente === "nosesion") || (y.a.agente === "vivo") - (x.a.agente === "vivo") || y.doc.ts - x.doc.ts)[0] || null;
+    // r43 (#5697): máquina, estado y encargo de la ficha salen de la MISMA fuente: el panel (latido) de esa sesión en
+    // la máquina donde trabaja. Nunca se pinta el panel de otra máquina como si fuera el suyo.
+    const elegido = u.pubs.find((p) => p.m === u.maquina) || null;
     const d = elegido && elegido.doc, a = elegido && elegido.a;
     const haceS = d ? Math.round((ahora - d.ts) / 1000) : null;
     let estado = "esperando";
     if (a && haceS < 120) estado = "vivo"; else if (a) estado = "congelado";
-    const extra = a && a.agente ? { agente: a.agente, etiqueta: ETIQUETAS[a.agente], mision: a.mision, linea: a.linea, viejo: a.viejo, modelo: a.modelo, mac: a.mac, arte: a.arte, desde: a.desde } : {};
-    const enseña = d ? normMaq(d.maquina) : u.maquina;
+    const nomMaq = nombreMaq((d && d.maquina) || u.maquina);
+    const enc = u.encargo;
+    const encFuera = enc && enc.maquina && enc.maquina !== u.maquina ? "trabajando en " + nombreCorto(enc.maquina) + " · #" + enc.numero : "";
+    let extra = {};
+    if (estado === "vivo" && a.agente) {
+      extra = { agente: a.agente, etiqueta: ETIQUETAS[a.agente], mision: a.mision, linea: a.linea, viejo: a.viejo, modelo: a.modelo, mac: nomMaq, arte: a.arte, desde: a.desde };
+      if (encFuera) { // el estado del Mac se calcula con la bandeja de la persona: su encargo de otra máquina no es suyo
+        const nota = "#" + enc.numero + " en curso en " + nombreCorto(enc.maquina);
+        const deOtra = (t) => new RegExp("#" + enc.numero + "\\b").test(String(t || ""));
+        if (deOtra(extra.linea)) extra.linea = nota;
+        if (deOtra(extra.mision)) extra.mision = nota;
+        if (a.agente !== "vivo") { extra.agente = "otra"; extra.etiqueta = encFuera; }
+      }
+    } else if (estado !== "vivo") {
+      // sin latido de esa sesión en esa máquina: ni «Pendiente sin trabajar» ni el último estado, solo desde cuándo no hay datos
+      extra = { sinDatos: "sin datos de " + nomMaq + (d ? " desde " + horaMadrid(d.ts) : " (no publica en el panel)"), sinDatosDesde: d ? d.ts : null };
+    }
+    if (encFuera) extra.encargoFuera = encFuera;
     // todas las máquinas donde tiene sesión (panel o terminal según Yokup)
     const maqs = new Map();
     for (const p of u.pubs) if (p.a.agente !== "nosesion" || p === elegido) maqs.set(p.m, { maquina: p.m, nombre: nombreMaq(p.doc.maquina), panel: true, terminal: false, agente: p.a.agente || "", panelVivo: p.vivo });
     for (const t of u.terms) { const x = maqs.get(t.maquina) || { maquina: t.maquina, nombre: t.nombre, panel: false, agente: "", panelVivo: false }; maqs.set(t.maquina, { ...x, terminal: true, tarea: t.tarea }); }
-    const otras = [...maqs.values()].filter((x) => x.maquina !== enseña);
+    const otras = [...maqs.values()].filter((x) => x.maquina !== u.maquina);
     const avisosF = [];
     for (const x of maqs.values()) if (x.terminal && !(x.panel && x.panelVivo)) avisosF.push(nombre + " tiene terminal en " + x.nombre + " que no publica en el panel");
-    if (enseña !== u.maquina) avisosF.unshift(nombre + " trabaja en " + nombreMaq(u.maquina) + " (" + u.motivo + "), pero esa máquina no publica: se enseña " + nombreMaq(enseña));
-    const conPanel = otras.filter((x) => x.panel && x.panelVivo); // las que no publican ya llevan su aviso arriba
-    if (enseña === u.maquina && conPanel.length) avisosF.push(nombre + " también tiene sesión en " + conPanel.map((x) => x.nombre).join(", "));
+    if (estado !== "vivo" && u.motivo !== "conf" && u.motivo !== "único panel") avisosF.unshift(nombre + " trabaja en " + nomMaq + " (" + u.motivo + "), pero esa máquina no publica su panel");
+    const conPanel = otras.filter((x) => x.panel && x.panelVivo);
+    if (conPanel.length) avisosF.push(nombre + " también tiene sesión en " + conPanel.map((x) => x.nombre).join(", "));
     avisos.push(...avisosF.filter((t) => !avisos.includes(t)));
     const base = { ...c, host: d ? d.maquina : (conDoc.find((x) => normMaq(x.maquina) === u.maquina) || {}).maquina || (normMaq(c.host) === u.maquina ? c.host : u.maquina), hostConf: c.host };
-    const donde = { maquinaReal: u.maquina, maquinaNombre: nombreMaq(base.host), motivoMaquina: u.motivo, otras, avisos: avisosF, ...(u.encargo ? { encargo: u.encargo.numero } : {}) };
-    if (a && a.agente) extra.mac = nombreMaq(base.host); // el Mac de la ficha es donde está la sesión que se enseña, no el de la conf
-    return { ...base, estado, maquinaHaceS: haceS, ...donde, ...(a ? { lineas: a.lineas, ancho: a.ancho, alto: a.alto, cmd: a.cmd, sub: a.sub, rotulo: a.rotulo, cambio: a.cambio, ...extra } : {}) };
+    const donde = { maquinaReal: u.maquina, maquinaNombre: nomMaq, motivoMaquina: u.motivo, otras, avisos: avisosF, ...(enc ? { encargo: enc.numero } : {}) };
+    return { ...base, estado, maquinaHaceS: haceS, ...donde, ...(estado === "vivo" ? { lineas: a.lineas, ancho: a.ancho, alto: a.alto, cmd: a.cmd, sub: a.sub, rotulo: a.rotulo, cambio: a.cambio } : {}), ...extra };
   });
   return { fichas, avisos, fuenteConf: conf ? conf.maquina : "defecto", ubicacion: opciones.presencia ? "presencia" + (opciones.encargos ? "+encargos" : "") : "solo paneles" };
 }

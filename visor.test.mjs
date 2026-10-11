@@ -168,18 +168,20 @@ test("r42 sin encargo manda el latido con tarea más reciente; sin presencia, el
   assert.equal(ubicar(CONF_DEFECTO[2], [docs[0]], T0, {}).maquina, "macbookpro16");
 });
 
-test("r42 terminal que no publica → aviso; la ficha avisa y enseña el panel que sí hay", () => {
+test("r42/r43 terminal que no publica → aviso; la ficha se queda en su máquina real y no toma el panel de otra", () => {
   const docs = [docDe("macbook-pro-16", { trinity: ag("vivo", "Hoy132"), neo: ag("vivo", "neo") })]; // el MBP14 no publica
   const v = vista(docs, T0, { presencia: PRES, encargos: ENC });
   const f = v.fichas[2];
-  assert.equal(f.maquinaReal, "macbookpronegro14"); assert.equal(f.host, "macbook-pro-16");
+  assert.equal(f.maquinaReal, "macbookpronegro14"); assert.equal(f.host, "macbookpronegro14", "r43: nunca el panel del MBP16");
+  assert.equal(f.lineas, undefined); assert.equal(f.sinDatos, "sin datos de MacBook Pro 14 (no publica en el panel)");
+  assert.deepEqual(f.otras.map((x) => x.nombre), ["MacBook Pro 16"], "la sesión del MBP16 se ve como otra");
   assert.match(f.avisos[0], /trabaja en MacBook Pro 14 .*no publica/);
   assert.ok(f.avisos.some((a) => /terminal en MacBook Pro 14 que no publica/.test(a)));
   assert.ok(v.avisos.some((a) => /Trinity tiene terminal en MacBook Pro 14/.test(a)), "aviso general");
   assert.equal(v.fichas[0].avisos.length, 0, "Neo sin avisos");
   // nadie publica a Trinity: ficha esperando en la máquina real, con aviso
   const solo = vista([docDe("macbook-pro-16", { neo: ag("vivo", "neo") })], T0, { presencia: PRES, encargos: ENC }).fichas[2];
-  assert.equal(solo.estado, "esperando"); assert.equal(solo.maquinaReal, "macbookpronegro14");
+  assert.equal(solo.estado, "esperando"); assert.equal(solo.maquinaReal, "macbookpronegro14"); assert.match(solo.sinDatos, /^sin datos de MacBook Pro 14/);
   assert.ok(solo.avisos.length >= 2);
 });
 
@@ -212,4 +214,41 @@ test("r42 el Mac de la conf sin la sesión (nosesion) no se cuenta como «otra s
   const docs = [docDe("macbook-pro-16", { trinity: ag("nosesion", "") }), docDe("macbookpronegro14", { trinity: ag("vivo", "aquí") })];
   const f = vista(docs, T0, {}).fichas[2];
   assert.equal(f.host, "macbookpronegro14"); assert.deepEqual(f.otras, []); assert.deepEqual(f.avisos, []);
+});
+
+// ── r43 (#5697, Carlos: ni falsos positivos ni datos falsos) ──
+// Caso real: la ficha de Trinity decía «Codex CLI · MacBook Pro 16 · Pendiente sin trabajar · #5689 in_progress»,
+// con el #5689 en curso en el MBP14: máquina del conf, estado de otro sitio.
+const ENC_5689 = { trinity: [{ id: 5689, status: "in_progress", target_persona: "Trinity", target_machine: "macbookpronegro14" }] };
+const PEND_16 = () => ({ ...ag("pendiente", "pendiente: #5689 · in_progress · admira.live"), mision: "#5689 · in_progress · admira.live" });
+
+test("r43 #5697: encargo in_progress en otra máquina → «trabajando en MBP14 · #5689», nunca «Pendiente sin trabajar»", () => {
+  const docs = [docDe("macbook-pro-16", { trinity: PEND_16(), neo: ag("vivo", "neo") })]; // el MBP14 no publica y Yokup no lo ve
+  const f = vista(docs, T0, { presencia: [], encargos: ENC_5689 }).fichas[2];
+  assert.equal(f.host, "macbook-pro-16"); assert.equal(f.mac, "MacBook Pro 16"); assert.equal(f.estado, "vivo");
+  assert.notEqual(f.etiqueta, "Pendiente sin trabajar"); assert.notEqual(f.agente, "pendiente");
+  assert.equal(f.etiqueta, "trabajando en MBP14 · #5689"); assert.equal(f.encargoFuera, "trabajando en MBP14 · #5689");
+  assert.ok(!/#5689 · in_progress/.test(f.linea + f.mision), "el encargo del MBP14 no se pinta como del MBP16");
+  assert.equal(f.linea, "#5689 en curso en MBP14");
+});
+
+test("r43 #5697: con la terminal del MBP14 en Yokup, la ficha va al MBP14 y, sin su panel, dice «sin datos», no el estado del MBP16", () => {
+  const presencia = [pres("Trinity", "MacBookProNegro14", { task: "#5689", declared_updated: S0 - 60 })];
+  const viejo14 = docDe("macbookpronegro14", { trinity: ag("pendiente", "pendiente: #5689") }, T0 - 30 * 60000); // último panel del MBP14: 14:46
+  for (const [docs, texto] of [
+    [[docDe("macbook-pro-16", { trinity: PEND_16() })], "sin datos de MacBook Pro 14 (no publica en el panel)"],
+    [[docDe("macbook-pro-16", { trinity: PEND_16() }), viejo14], "sin datos de MacBook Pro 14 desde 14:46"],
+  ]) {
+    const f = vista(docs, T0, { presencia, encargos: ENC_5689 }).fichas[2];
+    assert.equal(f.maquinaReal, "macbookpronegro14"); assert.equal(f.maquinaNombre, "MacBook Pro 14");
+    assert.equal(f.sinDatos, texto);
+    for (const k of ["agente", "etiqueta", "mision", "linea", "lineas", "mac"]) assert.equal(f[k], undefined, k + " no viene de otra fuente");
+    assert.equal(f.encargo, 5689); assert.equal(f.encargoFuera, undefined, "el encargo es de su misma máquina");
+  }
+});
+
+test("r43 #5697: sin latido fresco de la sesión en su máquina (panel parado) tampoco hay «Pendiente sin trabajar»", () => {
+  const f = vista([docDe("macbook-pro-16", { trinity: PEND_16() }, T0 - 10 * 60000)], T0, {}).fichas[2];
+  assert.equal(f.estado, "congelado"); assert.equal(f.etiqueta, undefined); assert.equal(f.agente, undefined);
+  assert.equal(f.sinDatos, "sin datos de MacBook Pro 16 desde 15:06");
 });

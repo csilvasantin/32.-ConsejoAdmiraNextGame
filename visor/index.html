@@ -1,0 +1,199 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+<meta name="robots" content="noindex, nofollow" />
+<meta name="referrer" content="no-referrer" />
+<meta name="theme-color" content="#000000" />
+<meta name="mobile-web-app-capable" content="yes" />
+<meta name="admiranext-version" content="AdmiraNeXT v.11.10.2026.r27.12:23" />
+<title>Visor · deepagents de pago · admira.live</title>
+<style>
+  :root { --bg:#000; --fg:#d0d0d0; --gap:4px; }
+  * { box-sizing: border-box; }
+  html, body { margin:0; height:100%; background:var(--bg); color:var(--fg); font-family: ui-monospace, "SF Mono", Menlo, "Roboto Mono", "DejaVu Sans Mono", monospace; overflow:hidden; }
+  #rejilla { position:fixed; inset:0; display:grid; gap:var(--gap); padding:var(--gap); padding-bottom: calc(var(--gap) + 18px);
+    grid-template-columns: 1fr 1fr; grid-template-rows: 1fr 1fr; }
+  .ficha { position:relative; min-width:0; min-height:0; display:flex; flex-direction:column; border:2px solid var(--c); border-radius:6px; background:#000; overflow:hidden; }
+  .cab { flex:0 0 auto; padding:4px 6px 3px; border-bottom:1px solid color-mix(in srgb, var(--c) 45%, transparent); background:#000; }
+  .rotulo { margin:0; color:var(--c); font-weight:700; white-space:pre; line-height:1.0; overflow:hidden; }
+  .sub { display:flex; justify-content:space-between; gap:6px; font-size:11px; color:var(--c); margin-top:2px; white-space:nowrap; overflow:hidden; }
+  .sub .hora { color:#8a8a8a; flex:0 0 auto; }
+  .sub .modelo { overflow:hidden; text-overflow:ellipsis; }
+  .punto { display:inline-block; width:7px; height:7px; border-radius:50%; background:#555; margin-right:4px; vertical-align:middle; }
+  .vivo .punto { background:#2ecc40; box-shadow:0 0 6px #2ecc40; }
+  .congelado .punto { background:#ff9f1a; }
+  .term { flex:1 1 auto; min-height:0; overflow:hidden; display:flex; flex-direction:column; justify-content:flex-end; padding:2px 3px; }
+  .term pre { margin:0; white-space:pre; line-height:1.15; color:#d0d0d0; }
+  .espera { flex:1; display:flex; align-items:center; justify-content:center; text-align:center; color:#888; font-size:14px; padding:12px; }
+  .ficha.grande { position:fixed; inset:0; z-index:5; border-radius:0; }
+  #pie { position:fixed; left:0; right:0; bottom:0; height:18px; font-size:10px; color:#777; display:flex; justify-content:space-between; padding:2px 8px; background:#000; }
+  #pie b { color:#aaa; font-weight:500; }
+  #puntos { display:none; gap:6px; }
+  #puntos i { width:7px; height:7px; border-radius:50%; background:#444; display:inline-block; margin-top:3px; }
+  #puntos i.on { background:#ddd; }
+  #llave { position:fixed; inset:0; display:none; align-items:center; justify-content:center; text-align:center; padding:24px; color:#bbb; font-size:15px; line-height:1.5; z-index:10; background:#000; }
+  /* Plegado / vertical estrecho: una ficha por pantalla, se pasa con el dedo */
+  @media (max-width: 640px) {
+    #rejilla { display:flex; overflow-x:auto; scroll-snap-type:x mandatory; gap:0; padding:0; padding-bottom:18px; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
+    #rejilla::-webkit-scrollbar { display:none; }
+    .ficha { flex:0 0 100%; scroll-snap-align:start; border-radius:0; border-width:2px; }
+    #puntos { display:flex; }
+  }
+  /* Apaisado bajo (desplegado tumbado): 4 en fila si no caben 2x2 */
+  @media (min-width: 1300px) and (max-height: 700px) { #rejilla { grid-template-columns: repeat(4, 1fr); grid-template-rows: 1fr; } }
+</style>
+</head>
+<body>
+<div id="rejilla"></div>
+<div id="pie"><span id="estado">conectando…</span><span id="puntos"></span><span><b>admira.live/visor</b> · solo lectura</span></div>
+<div id="llave">Este visor necesita su llave.<br/>Ábrelo desde el enlace privado que te pasó GrokBot<br/>(lleva <code>#k=…</code> al final).</div>
+<script>
+(function () {
+  "use strict";
+  // Colores = los perfiles de Terminal de la cuadratura del Mac (cuadratura.conf, 4.º campo)
+  var SKINS = { "Homebrew": "#28fe14", "Red Sands": "#ff5f4a", "Ocean": "#3aa0ff", "Grass": "#39d353", "Novel": "#c9a66b", "Pro": "#e0e0e0" };
+  var ROTULOS = {
+    "NEO": [" _  _ ___ ___  ", "| \\| | __/ _ \\ ", "| .` | _| (_) |", "|_|\\_|___\\___/ "],
+    "MORFEO": [" __  __  ___  ___ ___ ___ ___  ", "|  \\/  |/ _ \\| _ \\ __| __/ _ \\ ", "| |\\/| | (_) |   / _|| _| (_) |", "|_|  |_|\\___/|_|_\\_| |___\\___/ "],
+    "TRINITY": [" _____ ___ ___ _  _ ___ _______   __", "|_   _| _ \\_ _| \\| |_ _|_   _\\ \\ / /", "  | | |   /| || .` || |  | |  \\ V / ", "  |_| |_|_\\___|_|\\_|___| |_|   |_|  "],
+    "ORACULO": ["  ___  ___    _   ___ _   _ _    ___  ", " / _ \\| _ \\  /_\\ / __| | | | |  / _ \\ ", "| (_) |   / / _ \\ (__| |_| | |_| (_) |", " \\___/|_|_\\/_/ \\_\\___|\\___/|____\\___/ "]
+  };
+  var MAQUINAS = { "macbook-pro-16": "MacBook Pro 16", "macmini": "Mac Mini", "macbookpronegro14": "MacBook Pro 14", "macbookair16plata": "MacBook Air 16" };
+  var CADA_MS = 3000;
+
+  // Llave: viene en el #fragmento (no viaja al servidor ni a los logs), se guarda en este navegador y se limpia de la URL
+  var m = /[#&]k=([A-Za-z0-9_\-]{20,})/.exec(location.hash || "");
+  if (m) { try { localStorage.setItem("visorLlave", m[1]); } catch (e) {} history.replaceState(null, "", location.pathname + location.search); }
+  var llave = ""; try { llave = localStorage.getItem("visorLlave") || ""; } catch (e) {}
+  var $rej = document.getElementById("rejilla"), $est = document.getElementById("estado"), $pts = document.getElementById("puntos");
+  if (!llave) { document.getElementById("llave").style.display = "flex"; return; }
+
+  // ---------- ANSI (SGR) → HTML ----------
+  var BASE16 = ["#000000","#cd3131","#0dbc79","#e5e510","#2472c8","#bc3fbc","#11a8cd","#e5e5e5","#666666","#f14c4c","#23d18b","#f5f543","#3b8eea","#d670d6","#29b8db","#ffffff"];
+  function c256(n) {
+    if (n < 16) return BASE16[n];
+    if (n >= 232) { var g = 8 + (n - 232) * 10; return "rgb(" + g + "," + g + "," + g + ")"; }
+    n -= 16; var r = Math.floor(n / 36), gg = Math.floor(n / 6) % 6, b = n % 6;
+    var v = function (x) { return x ? 55 + x * 40 : 0; };
+    return "rgb(" + v(r) + "," + v(gg) + "," + v(b) + ")";
+  }
+  function esc(s) { return s.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+  function ansi(linea) {
+    var st = { fg: null, bg: null, b: false, d: false, i: false, u: false, inv: false };
+    var out = "", rx = /\x1b\[([0-9;:?]*)([A-Za-z])|\x1b\][^\x07\x1b]*(?:\x07|\x1b\\)|\x1b[()][A-Z0-9]|\x1b./g, last = 0, mm;
+    function span(txt) {
+      if (!txt) return;
+      var fg = st.fg, bg = st.bg; if (st.inv) { var t = fg; fg = bg || "#000"; bg = t || "#d0d0d0"; }
+      var css = "";
+      if (fg) css += "color:" + fg + ";"; if (bg) css += "background:" + bg + ";";
+      if (st.b) css += "font-weight:700;"; if (st.d) css += "opacity:.6;"; if (st.i) css += "font-style:italic;"; if (st.u) css += "text-decoration:underline;";
+      out += css ? '<span style="' + css + '">' + esc(txt) + "</span>" : esc(txt);
+    }
+    while ((mm = rx.exec(linea))) {
+      span(linea.slice(last, mm.index)); last = rx.lastIndex;
+      if (mm[2] !== "m") continue;
+      var p = (mm[1] || "0").split(/[;:]/).map(function (x) { return x === "" ? 0 : +x; });
+      for (var k = 0; k < p.length; k++) {
+        var c = p[k];
+        if (c === 0) st = { fg: null, bg: null, b: false, d: false, i: false, u: false, inv: false };
+        else if (c === 1) st.b = true; else if (c === 2) st.d = true; else if (c === 3) st.i = true; else if (c === 4) st.u = true; else if (c === 7) st.inv = true;
+        else if (c === 22) { st.b = false; st.d = false; } else if (c === 23) st.i = false; else if (c === 24) st.u = false; else if (c === 27) st.inv = false;
+        else if (c >= 30 && c <= 37) st.fg = BASE16[c - 30]; else if (c >= 90 && c <= 97) st.fg = BASE16[c - 82];
+        else if (c >= 40 && c <= 47) st.bg = BASE16[c - 40]; else if (c >= 100 && c <= 107) st.bg = BASE16[c - 92];
+        else if (c === 39) st.fg = null; else if (c === 49) st.bg = null;
+        else if (c === 38 || c === 48) {
+          var col = null;
+          if (p[k + 1] === 5) { col = c256(p[k + 2] || 0); k += 2; }
+          else if (p[k + 1] === 2) { col = "rgb(" + (p[k + 2] || 0) + "," + (p[k + 3] || 0) + "," + (p[k + 4] || 0) + ")"; k += 4; }
+          if (c === 38) st.fg = col; else st.bg = col;
+        }
+      }
+    }
+    span(linea.slice(last));
+    return out;
+  }
+
+  // ---------- fichas ----------
+  var fichas = {}, orden = [], ultimo = {};
+  function nombreDe(f) { return (f.titulo || f.sesion).split(" · ")[0]; }
+  function claveRot(n) { return n.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toUpperCase(); }
+  function crear(f) {
+    var el = document.createElement("section");
+    el.className = "ficha"; el.style.setProperty("--c", SKINS[f.skin] || "#e0e0e0");
+    el.innerHTML = '<div class="cab"><pre class="rotulo"></pre><div class="sub"><span class="modelo"></span><span class="hora"></span></div></div><div class="term"><pre></pre></div>';
+    el.addEventListener("dblclick", function () { el.classList.toggle("grande"); ajustar(el); });
+    var t0 = 0; el.addEventListener("touchend", function (e) { var t = Date.now(); if (t - t0 < 320) { el.classList.toggle("grande"); ajustar(el); e.preventDefault(); } t0 = t; });
+    $rej.appendChild(el); return el;
+  }
+  function hora(ms) { if (!ms) return "—"; var d = new Date(ms); return d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Europe/Madrid" }); }
+  function ajustar(el) {
+    var pre = el.querySelector(".term pre"), box = el.querySelector(".term"), cols = +el.dataset.cols || 120;
+    var w = box.clientWidth - 6; if (w <= 0) return;
+    var fs = Math.max(4, Math.min(16, w / (cols * 0.602)));
+    pre.style.fontSize = fs.toFixed(2) + "px";
+    var rot = el.querySelector(".rotulo"), rc = +el.dataset.rcols || 40;
+    var cw = el.querySelector(".cab").clientWidth - 12;
+    rot.style.fontSize = Math.max(6, Math.min(18, cw / (rc * 0.602), (el.clientHeight * 0.16) / 4.2)).toFixed(2) + "px";
+  }
+  function pintar(f) {
+    var k = f.host + "/" + f.sesion, el = fichas[k] || (fichas[k] = crear(f));
+    el.className = "ficha " + f.estado + (el.classList.contains("grande") ? " grande" : "");
+    el.style.setProperty("--c", SKINS[f.skin] || "#e0e0e0");
+    var nombre = nombreDe(f), rot = (f.rotulo && f.rotulo.length ? f.rotulo : ROTULOS[claveRot(nombre)]) || [nombre.toUpperCase()];
+    rot = rot.filter(function (l) { return l.trim(); });
+    var $rot = el.querySelector(".rotulo"), txtRot = rot.join("\n");
+    if ($rot.textContent !== txtRot) { $rot.textContent = txtRot; el.dataset.rcols = Math.max.apply(null, rot.map(function (l) { return l.length; })); }
+    var maq = MAQUINAS[f.host] || f.host;
+    var modelo = f.sub || ((f.titulo || "").split(" · ")[1] || "") + " · " + maq + " · deepagent de pago";
+    el.querySelector(".modelo").innerHTML = '<span class="punto"></span>' + esc(modelo);
+    el.querySelector(".hora").textContent = f.estado === "esperando" ? "" : (f.estado === "congelado" ? "congelado · " : "") + "cambio " + hora(f.cambio);
+    var box = el.querySelector(".term");
+    if (f.estado === "esperando" || !f.lineas) {
+      box.innerHTML = '<div class="espera">esperando sesión<br/>«' + esc(f.sesion) + "» en " + esc(maq) + "…</div>";
+      delete ultimo[k]; return;
+    }
+    if (!box.querySelector("pre")) box.innerHTML = "<pre></pre>";
+    var firma = f.cambio + ":" + f.lineas.length + ":" + (f.lineas[f.lineas.length - 1] || "");
+    if (ultimo[k] === firma) return; ultimo[k] = firma;
+    el.dataset.cols = f.ancho || 120;
+    box.querySelector("pre").innerHTML = f.lineas.map(ansi).join("\n");
+    ajustar(el);
+  }
+  function puntos() {
+    if (getComputedStyle($pts).display === "none") return;
+    var i = Math.round($rej.scrollLeft / Math.max(1, $rej.clientWidth));
+    $pts.innerHTML = orden.map(function (_, j) { return "<i" + (j === i ? ' class="on"' : "") + "></i>"; }).join("");
+  }
+  $rej.addEventListener("scroll", puntos, { passive: true });
+  window.addEventListener("resize", function () { Object.keys(fichas).forEach(function (k) { ajustar(fichas[k]); }); puntos(); });
+
+  var fallos = 0, t0;
+  function tick() {
+    t0 = Date.now();
+    fetch("/api/visor/pane", { headers: { "X-Visor-Key": llave }, cache: "no-store" }).then(function (r) {
+      if (r.status === 401) { try { localStorage.removeItem("visorLlave"); } catch (e) {} document.getElementById("llave").innerHTML = "La llave de este visor ya no vale (revocada o caducada).<br/>Pide un enlace nuevo a GrokBot."; document.getElementById("llave").style.display = "flex"; throw new Error("401"); }
+      return r.json();
+    }).then(function (d) {
+      if (!d || !d.ok) throw new Error("respuesta");
+      fallos = 0;
+      var claves = d.fichas.map(function (f) { return f.host + "/" + f.sesion; });
+      Object.keys(fichas).forEach(function (k) { if (claves.indexOf(k) < 0) { fichas[k].remove(); delete fichas[k]; } });
+      d.fichas.forEach(pintar); orden = claves;
+      claves.forEach(function (k) { $rej.appendChild(fichas[k]); });
+      var vivos = d.fichas.filter(function (f) { return f.estado === "vivo"; }).length;
+      $est.textContent = vivos + "/" + d.fichas.length + " en vivo · " + hora(d.ahora) + " · " + (Date.now() - t0) + " ms";
+      puntos();
+      setTimeout(tick, document.hidden ? 15000 : CADA_MS);
+    }).catch(function (e) {
+      if (String(e && e.message) === "401") return;
+      fallos++; $est.textContent = "sin conexión (reintento)…";
+      setTimeout(tick, Math.min(30000, CADA_MS * (1 + fallos)));
+    });
+  }
+  tick();
+})();
+</script>
+</body>
+</html>

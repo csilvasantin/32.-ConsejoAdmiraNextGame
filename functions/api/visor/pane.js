@@ -6,7 +6,34 @@
  * Almacén: Cache API del colo (al instante, gratis) + RECORTE_KV como respaldo (≤ 1 escritura / 20 s / máquina).
  */
 import { autorizado } from "../consumos/lecturas.js";
-import { normalizarPane, fundir, vista, sha256, iguales, KEY_MAQ, KEY_INDICE, KEY_LLAVES, KV_CADA_MS } from "../../../visor-lib.mjs";
+import { normalizarPane, fundir, vista, sha256, iguales, personaDe, CONF_DEFECTO, CONF_GROK, KEY_MAQ, KEY_INDICE, KEY_LLAVES, KV_CADA_MS } from "../../../visor-lib.mjs";
+
+/* r42: ¿dónde trabaja cada agente? Presencia y bandeja públicas de Yokup (las de agentes_vivos). El visor pide cada 3 s:
+ * se lee como mucho cada 20 s por isolate, con tope de 4 s; si Yokup no contesta, vale lo último bueno (≤ 2 min) y, sin
+ * eso, la vista cae al modo de antes (solo paneles). */
+export const PRESENCIA = "https://bot.yokup.com/api/presence";
+export const BANDEJA = "https://bot.yokup.com/api/public/inbox";
+const UBIC_CADA_MS = 20000, UBIC_MAX_MS = 120000, UBIC_TOPE_MS = 4000;
+let ubic = null; // { presencia, encargos, ts }
+export function _olvidarUbicacion() { ubic = null; }
+async function jsonDe(fetchImpl, url) {
+  try {
+    const r = await fetchImpl(url, { headers: { accept: "application/json" }, signal: AbortSignal.timeout(UBIC_TOPE_MS) });
+    return r.ok ? await r.json() : null;
+  } catch (e) { return null; }
+}
+export async function leerUbicacion(fetchImpl, lista, ahora = Date.now()) {
+  if (ubic && ahora - ubic.ts < UBIC_CADA_MS) return ubic;
+  const personas = [...new Set(lista.map((c) => personaDe(c.titulo)).filter(Boolean))];
+  const [p, ...bandejas] = await Promise.all([jsonDe(fetchImpl, PRESENCIA), ...personas.map((x) => jsonDe(fetchImpl, BANDEJA + "?persona=" + encodeURIComponent(x.charAt(0).toUpperCase() + x.slice(1))))]);
+  if (p && Array.isArray(p.presence)) {
+    const encargos = {};
+    personas.forEach((x, i) => { const b = bandejas[i]; if (b && Array.isArray(b.items)) encargos[x] = b.items.filter((it) => it && it.status === "in_progress"); });
+    ubic = { presencia: p.presence, encargos: Object.keys(encargos).length ? encargos : null, ts: ahora, ahoraYokup: Number(p.now) || null };
+    return ubic;
+  }
+  return ubic && ahora - ubic.ts < UBIC_MAX_MS ? ubic : null;
+}
 
 const ALLOW = new Set(["https://www.admira.live", "https://admira.live", "https://admira-live.pages.dev"]);
 function headers(origin) {
@@ -80,7 +107,7 @@ export async function onRequestPost({ request, env }) {
   return json({ ok: true, maquina: doc.maquina, agentes: Object.keys(doc.agentes), necesitaCompleto: !n.pane.completo && !base, kv: kvGuardado }, 200, origin);
 }
 
-export async function onRequestGet({ request, env }) {
+export async function onRequestGet({ request, env, fetchImpl }) {
   fijarBase(request);
   const origin = request.headers.get("Origin") || "";
   if (!(await llaveValida(request, env))) return json({ ok: false, error: "llave del visor ausente o revocada" }, 401, origin);
@@ -97,5 +124,7 @@ export async function onRequestGet({ request, env }) {
     return c || k;
   }));
   const grupo = Number(new URL(request.url).searchParams.get("g")) === 6 ? 6 : 4; // r33: /visor/?g=6 → + Smith y Merovingio
-  return json({ ok: true, ...vista(docs, ahora, { grupo }), grupo, generado: new Date(ahora).toISOString(), ahora }, 200, origin);
+  const conf = docs.filter((d) => d && d.conf).sort((a, b) => b.ts - a.ts)[0];
+  const u = await leerUbicacion(fetchImpl || fetch, [...((conf && conf.conf) || CONF_DEFECTO), ...CONF_GROK], ahora).catch(() => null);
+  return json({ ok: true, ...vista(docs, ahora, { grupo, presencia: u && u.presencia, encargos: u && u.encargos }), grupo, generado: new Date(ahora).toISOString(), ahora }, 200, origin);
 }

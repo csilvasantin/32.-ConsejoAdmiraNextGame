@@ -44,6 +44,9 @@
   .idle .info { margin-top:1.0em; }
   .ficha.login .idle .palabra, .ficha.pendiente .idle .palabra { color:#ffb347; }
   .idle .viejo { margin-top:.35em; color:#5c5c5c; font-size:10px; font-style:italic; max-width:100%; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  /* r42: aviso de la ficha (sesión en otra máquina, terminal que no publica en el panel) */
+  .aviso { flex:0 0 auto; display:none; padding:2px 6px; font-size:11px; color:#ffcc4d; background:#1a1400; border-top:1px solid #4d3d00; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .aviso.on { display:block; }
   .cab .mis { font-size:11px; color:#8a8a8a; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; margin-top:1px; }
   #pie { position:fixed; left:0; right:0; bottom:0; height:18px; font-size:10px; color:#777; display:flex; justify-content:space-between; padding:2px 8px; background:#000; }
   #pie b { color:#aaa; font-weight:500; }
@@ -87,6 +90,7 @@
     "MEROVINGIO": [" __  __ ___ ___  _____   _____ _  _  ___ ___ ___  ", "|  \\/  | __| _ \\/ _ \\ \\ / /_ _| \\| |/ __|_ _/ _ \\ ", "| |\\/| | _||   / (_) \\ V / | || .` | (_ || | (_) |", "|_|  |_|___|_|_\\\\___/ \\_/ |___|_|\\_|\\___|___\\___/ "],
     "ORACULO": ["  ___  ___    _   ___ _   _ _    ___  ", " / _ \\| _ \\  /_\\ / __| | | | |  / _ \\ ", "| (_) |   / / _ \\ (__| |_| | |_| (_) |", " \\___/|_|_\\/_/ \\_\\___|\\___/|____\\___/ "]
   };
+  // r42: la ficha sigue a la máquina donde trabaja el agente (el servidor manda host, maquinaNombre, otras y avisos)
   var MAQUINAS = { "grokbotbox": "GrokBotBox", "macbook-pro-16": "MacBook Pro 16", "macmini": "Mac Mini", "macbookpronegro14": "MacBook Pro 14", "macbookair16plata": "MacBook Air 16" };
   var CADA_MS = 3000;
 
@@ -149,7 +153,7 @@
   function crear(f) {
     var el = document.createElement("section");
     el.className = "ficha"; el.style.setProperty("--c", SKINS[f.skin] || "#e0e0e0");
-    el.innerHTML = '<div class="cab"><pre class="rotulo"></pre><div class="sub"><span class="modelo"></span><span class="hora"></span></div><div class="mis"></div></div><div class="term"><pre></pre></div>';
+    el.innerHTML = '<div class="cab"><pre class="rotulo"></pre><div class="sub"><span class="modelo"></span><span class="hora"></span></div><div class="mis"></div></div><div class="term"><pre></pre></div><div class="aviso"></div>';
     // r34: un solo toque (sin moverse > 10 px, para no saltar al deslizar) alterna pantalla completa ↔ mosaico
     var p0 = null;
     el.addEventListener("pointerdown", function (e) { p0 = { x: e.clientX, y: e.clientY, t: Date.now() }; });
@@ -207,7 +211,8 @@
     rot = rot.filter(function (l) { return l.trim(); });
     var $rot = el.querySelector(".rotulo"), txtRot = rot.join("\n");
     if ($rot.textContent !== txtRot) { $rot.textContent = txtRot; el.dataset.rcols = Math.max.apply(null, rot.map(function (l) { return l.length; })); }
-    var maq = MAQUINAS[f.host] || f.host;
+    var maq = MAQUINAS[f.host] || f.maquinaNombre || f.host;
+    pintarAviso(el, f);
     var modelo = f.sub || ((f.titulo || "").split(" · ")[1] || "") + " · " + maq + " · deepagent de pago";
     // r31: si el Mac manda el estado (estado-agente.py, el mismo que la cuadrícula), se pinta igual que allí
     if (f.agente) {
@@ -232,11 +237,16 @@
     box.querySelector("pre").innerHTML = f.lineas.map(ansi).join("\n");
     ajustar(el);
   }
+  function pintarAviso(el, f) {
+    var $a = el.querySelector(".aviso"), av = f.avisos || [];
+    var txt = av.length ? "⚠ " + av.join(" · ") : "";
+    if ($a.textContent !== txt) { $a.textContent = txt; $a.title = txt; $a.classList.toggle("on", !!txt); }
+  }
   function pintarIdle(el, f, k, nombre, cong) {
     el.classList.add("ficha-idle"); el.classList.toggle("login", f.agente === "login"); el.classList.toggle("nosesion", f.agente === "nosesion"); el.classList.toggle("pendiente", f.agente === "pendiente");
     var arte = (f.arte && f.arte.length ? f.arte : ROTULOS[claveRot(nombre)] || (f.rotulo && f.rotulo.length ? f.rotulo : null)) || [nombre.toUpperCase()];
     var palabra = f.etiqueta || (f.agente === "login" ? "Login pendiente" : f.agente === "nosesion" ? "Sin sesión" : f.agente === "pendiente" ? "Pendiente sin trabajar" : "Idle");
-    var info = (f.modelo || "") + " · " + (f.mac || MAQUINAS[f.host] || f.host) + " · " + palabra + " · " + hm() + cong;
+    var info = (f.modelo || "") + " · " + (f.mac || MAQUINAS[f.host] || f.maquinaNombre || f.host) + " · " + palabra + " · " + hm() + cong;
     var mis = f.linea || ("última misión: " + (f.mision || "sin misiones registradas"));
     var viejo = f.viejo || "";
     var firma = "idle:" + palabra + ":" + info + ":" + mis + ":" + viejo + ":" + arte.join("|");
@@ -270,7 +280,9 @@
       d.fichas.forEach(pintar); orden = claves;
       claves.forEach(function (k) { $rej.appendChild(fichas[k]); });
       var vivos = d.fichas.filter(function (f) { return f.estado === "vivo"; }).length;
-      $est.textContent = vivos + "/" + d.fichas.length + " en vivo · " + hora(d.ahora) + " · " + (Date.now() - t0) + " ms";
+      var av = d.avisos || [];
+      $est.textContent = vivos + "/" + d.fichas.length + " en vivo · " + hora(d.ahora) + " · " + (Date.now() - t0) + " ms" + (av.length ? " · ⚠ " + av.length + (av.length === 1 ? " aviso" : " avisos") : "");
+      $est.title = av.join("\n");
       puntos();
       setTimeout(tick, document.hidden ? 15000 : CADA_MS);
     }).catch(function (e) {

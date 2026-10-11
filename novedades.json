@@ -1,5 +1,6 @@
 {
-  "v.11.10.2026.r34.13:48": [
+  "v.11.10.2026.r34.13:50": [
+    "/visor/ (y /interface): un toque en una ficha la pone a pantalla completa y otro toque vuelve al mosaico (2, 4 o 6); Esc y el botón atrás de Android también. Sin saltos al deslizar (solo cuenta un toque sin moverse). En grande la cabecera se compacta y la letra se ajusta para leerse en el Fold.",
     "Cuadrícula del Mac, /visor/ e /interface 6: «última misión» es ahora el encargo más reciente (no el in_progress más viejo); los cancelados no cuentan.",
     "Terminal quieta con un encargo abierto de menos de 24 h → «Pendiente sin trabajar» en ámbar, con ese encargo. Un encargo abierto de hace más de 24 h sin actividad sale tenue como «#NNNN abierto desde dd/mm hh:mm», no como misión actual.",
     "Incluye la r33: /interface 6 (los 4 de pago + Smith y Merovingio en 3x2) y los deploys largos cuentan como en misión."

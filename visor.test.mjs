@@ -120,3 +120,9 @@ test("r33b: pendiente sin trabajar y «abierto desde» viajan tal cual", () => {
   assert.equal(neo.linea, "última misión: #5645 · done · insignia"); assert.equal(neo.viejo, "#5493 abierto desde 10/10 09:19");
   assert.equal(trinity.agente, "pendiente"); assert.equal(trinity.etiqueta, "Pendiente sin trabajar"); assert.deepEqual(trinity.lineas, []);
 });
+
+test("r34: un toque = pantalla completa (sin doble toque), con history para Esc / atrás de Android", () => {
+  const h = readFileSync(new URL("./visor/index.html", import.meta.url), "utf8");
+  for (const s of ["pointerup", "popstate", "pushState", "visorMosaico", '"Escape"', "> 10"]) assert.ok(h.includes(s), s);
+  assert.ok(!h.includes("dblclick") && !h.includes("touchend"), "fuera el doble toque");
+});

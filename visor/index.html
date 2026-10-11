@@ -28,6 +28,13 @@
   .term pre { margin:0; white-space:pre; line-height:1.15; color:#d0d0d0; }
   .espera { flex:1; display:flex; align-items:center; justify-content:center; text-align:center; color:#888; font-size:14px; padding:12px; }
   .ficha.grande { position:fixed; inset:0; z-index:5; border-radius:0; }
+  /* r34 (Carlos 13:48): un toque = pantalla completa, otro toque = vuelve al mosaico. Cabecera compacta: sin rótulo
+     ASCII, solo el nombre en la línea de info, para dejar sitio a la terminal; la letra se ajusta para leerse en el Fold */
+  .ficha { touch-action: pan-x pan-y; -webkit-tap-highlight-color: transparent; cursor: zoom-in; }
+  .ficha.grande { cursor: zoom-out; }
+  .ficha.grande .rotulo { display:none; }
+  .ficha.grande .cab::before { content: attr(data-nombre); display:block; color:var(--c); font-weight:700; font-size:14px; letter-spacing:.08em; }
+  .ficha.grande .term { overflow-x:auto; overflow-y:hidden; }
   /* r31: Idle / Login pendiente / Sin sesión = la misma pantalla que la cuadrícula del Mac (panel-agente.sh) */
   .ficha-idle .cab { display:none; }
   .idle { flex:1; min-height:0; display:flex; flex-direction:column; align-items:center; justify-content:center; text-align:center; padding:6px; overflow:hidden; }
@@ -143,8 +150,16 @@
     var el = document.createElement("section");
     el.className = "ficha"; el.style.setProperty("--c", SKINS[f.skin] || "#e0e0e0");
     el.innerHTML = '<div class="cab"><pre class="rotulo"></pre><div class="sub"><span class="modelo"></span><span class="hora"></span></div><div class="mis"></div></div><div class="term"><pre></pre></div>';
-    el.addEventListener("dblclick", function () { el.classList.toggle("grande"); ajustar(el); });
-    var t0 = 0; el.addEventListener("touchend", function (e) { var t = Date.now(); if (t - t0 < 320) { el.classList.toggle("grande"); ajustar(el); e.preventDefault(); } t0 = t; });
+    // r34: un solo toque (sin moverse > 10 px, para no saltar al deslizar) alterna pantalla completa ↔ mosaico
+    var p0 = null;
+    el.addEventListener("pointerdown", function (e) { p0 = { x: e.clientX, y: e.clientY, t: Date.now() }; });
+    el.addEventListener("pointermove", function (e) { if (p0 && (Math.abs(e.clientX - p0.x) > 10 || Math.abs(e.clientY - p0.y) > 10)) p0 = null; });
+    el.addEventListener("pointercancel", function () { p0 = null; });
+    el.addEventListener("pointerup", function (e) {
+      if (!p0 || Math.abs(e.clientX - p0.x) > 10 || Math.abs(e.clientY - p0.y) > 10 || Date.now() - p0.t > 700) { p0 = null; return; }
+      p0 = null; if (e.target && e.target.closest && e.target.closest("a")) return;
+      if (el.classList.contains("grande")) salirGrande(); else entrarGrande(f.host + "/" + f.sesion);
+    });
     $rej.appendChild(el); return el;
   }
   function hora(ms) { if (!ms) return "—"; var d = new Date(ms); return d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", second: "2-digit", timeZone: "Europe/Madrid" }); }
@@ -156,11 +171,27 @@
     var fs = Math.max(5, Math.min(22, w / (cols * 0.602), (h * 0.5) / (filas * 1.0)));
     a.style.fontSize = fs.toFixed(2) + "px";
   }
+  // ---------- pantalla completa (r34): ?t=<sesión> en la URL + history → Esc y «atrás» de Android vuelven al mosaico ----------
+  var MOSAICO = G6 ? "6" : "4"; try { localStorage.setItem("visorMosaico", MOSAICO); } catch (e) {}
+  var grande = null;
+  function urlCon(t) { var q = new URLSearchParams(location.search); if (t) q.set("t", t); else q.delete("t"); var s = q.toString(); return location.pathname + (s ? "?" + s : ""); }
+  function aplicarGrande(k) {
+    grande = k || null;
+    Object.keys(fichas).forEach(function (j) { var e = fichas[j], on = j === grande; if (e.classList.contains("grande") !== on) { e.classList.toggle("grande", on); delete ultimo[j]; } ajustar(e); });
+  }
+  function entrarGrande(k) { if (grande === k) return; history.pushState({ visorGrande: k }, "", urlCon(k.split("/")[1])); aplicarGrande(k); }
+  function salirGrande() { if (!grande) return; if (history.state && history.state.visorGrande) history.back(); else { history.replaceState(null, "", urlCon(null)); aplicarGrande(null); } }
+  window.addEventListener("popstate", function (e) { aplicarGrande(e.state && e.state.visorGrande || null); });
+  document.addEventListener("keydown", function (e) { if (e.key === "Escape" && grande) { e.preventDefault(); salirGrande(); } });
+  var pedidoT = new URLSearchParams(location.search).get("t"); // al recargar con ?t=… se vuelve a abrir esa ficha en grande
   function ajustar(el) {
     if (el.classList.contains("ficha-idle")) return ajustarIdle(el);
     var pre = el.querySelector(".term pre"), box = el.querySelector(".term"), cols = +el.dataset.cols || 120;
     var w = box.clientWidth - 6; if (w <= 0) return;
     var fs = Math.max(4, Math.min(16, w / (cols * 0.602)));
+    if (el.classList.contains("grande")) { // legible en el Fold: a lo ancho, pero nunca por debajo de 9 px (se desliza en horizontal)
+      fs = Math.max(9, Math.min(20, w / (cols * 0.602)));
+    }
     pre.style.fontSize = fs.toFixed(2) + "px";
     var rot = el.querySelector(".rotulo"), rc = +el.dataset.rcols || 40;
     var cw = el.querySelector(".cab").clientWidth - 12;
@@ -168,7 +199,9 @@
   }
   function pintar(f) {
     var k = f.host + "/" + f.sesion, el = fichas[k] || (fichas[k] = crear(f));
-    el.className = "ficha " + f.estado + (el.classList.contains("grande") ? " grande" : "");
+    el.className = "ficha " + f.estado + (grande === k ? " grande" : "");
+    el.querySelector(".cab").dataset.nombre = nombreDe(f) + " · " + (f.etiqueta || "");
+    if (pedidoT && f.sesion === pedidoT) { pedidoT = null; history.replaceState({ visorGrande: k }, "", urlCon(f.sesion)); grande = k; el.classList.add("grande"); }
     el.style.setProperty("--c", SKINS[f.skin] || "#e0e0e0");
     var nombre = nombreDe(f), rot = (f.rotulo && f.rotulo.length ? f.rotulo : ROTULOS[claveRot(nombre)]) || [nombre.toUpperCase()];
     rot = rot.filter(function (l) { return l.trim(); });

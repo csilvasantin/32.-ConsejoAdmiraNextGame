@@ -1,4 +1,9 @@
 {
+  "v.11.10.2026.r40.19:37": [
+    "Highscore: interfaz completa en ES/EN y carrera de consejeros basada en trabajo verificado o en curso.",
+    "Sin líder todavía cuando todos tienen cero puntos; título Para batirlo y un único aviso de datos junto al recuento.",
+    "/pendiente sigue disponible. Consulta estas novedades en el popover del sello, sin recorte."
+  ],
   "v.11.10.2026.r39.19:12": [
     "/pendiente: cuadrante de carga publicado con el marcador diario de misiones de Madrid y tarjetas de encargos por agente.",
     "Encargos recientes a la vista, antiguos plegados y avisos de posibles repetidos, otras máquinas y carga parcial cuando se alcanza el límite público. Actualización cada 60 s.",

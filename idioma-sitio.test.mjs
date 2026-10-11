@@ -45,6 +45,16 @@ test("sitio: ninguna clave vacía ni traducción idéntica", () => {
   for (const [k, v] of Object.entries(D)) { assert.ok(k && v, k); assert.notEqual(k, v); }
 });
 
+test("Highscore: la fórmula traduce nodos con puntuación y las cabeceras compartidas", () => {
+  const { frase } = carga("./admira-idioma-sitio.js");
+  assert.equal(frase("La apertura automática admite una sola ventana cada 60 minutos; una ventana por hora suma"), "Automatic opening allows a single window every 60 minutes; one window per hour adds");
+  assert.equal(frase("Ordenador"), "Computer");
+  assert.equal(frase("objetivos,"), "goals,");
+  for (const heading of ["OBJETIVOS", "DECISIONES", "INCIDENCIAS", "INFORMES", "NOTIFICACIONES", "Desconectar"]) assert.ok(frase(heading), heading);
+  assert.equal(frase("6/14 vivas"), "6/14 live");
+  assert.equal(frase("14/25 vivos"), "14/25 live");
+});
+
 test("consumos: se suma con extra() y también si llega antes que el selector", () => {
   const { frase } = carga("./admira-idioma-sitio.js", "./admira-idioma-consumos.js");
   assert.equal(frase("Velocidad por agente"), "Speed per agent");

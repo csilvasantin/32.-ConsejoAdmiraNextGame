@@ -14,6 +14,19 @@
   var I = G.AdmiraIdioma;
   if (!I || !I.diccionario) return;
   var dicc = {
+  "OBJETIVOS": "GOALS",
+  "DECISIONES": "DECISIONS",
+  "INCIDENCIAS": "ISSUES",
+  "INFORMES": "REPORTS",
+  "NOTIFICACIONES": "NOTIFICATIONS",
+  "Desconectar": "Disconnect",
+  "Activar sonido": "Enable sound",
+  "Desactivar sonido": "Disable sound",
+  "Sonido activado": "Sound enabled",
+  "Sonido desactivado": "Sound disabled",
+  "Ordenador": "Computer",
+  "objetivos,": "goals,",
+  "La apertura automática admite una sola ventana cada 60 minutos; una ventana por hora suma": "Automatic opening allows a single window every 60 minutes; one window per hour adds",
   "% del plan gastado, últimos 14 días": "% of the plan spent, last 14 days",
   "(ChatGPT Pro de Trinity, no Grok)": "(Trinity's ChatGPT Pro, not Grok)",
   "(ChatGPT Pro de Trinity, no GrokBot)": "(Trinity's ChatGPT Pro, not GrokBot)",
@@ -2651,6 +2664,7 @@
     [/^Claude Code sesión 5 h: (\S+) % · reset (.+)$/, "Claude Code 5 h session: $1 % · reset $2"],
     [/^Cargando misiones de (.+)…$/, "Loading missions for $1…"],
     [/^(\d+) agentes$/, "$1 agents"],
+    [/^(\d+)\/(\d+) viv[oa]s$/, "$1/$2 live"],
     [/^(\d+) tarjetas · (\d+) en rojo · (\d+) en ámbar$/, "$1 cards · $2 in red · $3 in amber"],
     [/^(\d+) cuentas · (\d+) en rojo · % usado de cada plan$/, "$1 accounts · $2 in red · % used of each plan"],
     [/^Agentes: Todos · (\d+)\/(\d+)$/, "Agents: All · $1/$2"],

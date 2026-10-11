@@ -29,6 +29,76 @@
     return key(row && (row.agente || row.persona || row.agent));
   }
 
+  /* Las sillas no publican el latido de una terminal de la flota. Su carrera
+     representa el trabajo diario de Yokup o un encargo/misión en curso, nunca
+     la mera presencia. La identidad de silla une Wozniak y WozniakGrokBot sin
+     sumar ni modificar los puntos de las fuentes. */
+  function advisorRows(sources, options) {
+    sources = sources || {}; options = options || {};
+    var advisor = options.advisor || function () { return null; };
+    var best = Object.create(null);
+    function epoch(value) { var n = Number(value) || 0; return n > 0 && n < 1e11 ? n * 1000 : n; }
+    function name(row) { return row && (row.agent || row.agente || row.assignee || row.persona || row.owner); }
+    function add(row, reason, priority, kind, title, reference, startedAt, at) {
+      var seat = advisor(name(row)); if (!seat || row.cli_paused === true || row.cliPaused === true) return;
+      var identity = options.identity ? options.identity(row, seat) : {agent:seat, machine:row.machine || row.loc || row.maquina || "", key:key(seat)};
+      if (!identity || !identity.key) return;
+      var previous = best[seat], stamp = epoch(at);
+      if (previous && (previous.racePriority > priority || previous.racePriority === priority && previous.at >= stamp)) return;
+      best[seat] = {
+        key:identity.key, agente:identity.agent, machine:identity.machine, executor:identity.agent,
+        reference:String(reference || ""), projectId:row.project_id || row.projectId || "",
+        projectName:row.project_name || row.projectName || row.project || "", projectSource:"",
+        detailUrl:row.detail_url || row.detailUrl || "/highscoreDetail?agent=" + encodeURIComponent(identity.agent) + "&period=today&type=all",
+        kind:kind, title:String(title || options.dailyTitle || ""), state:"running", reachable:row.reachable === true,
+        raceBasis:reason, racePriority:priority, raceRevision:"", assignmentAt:0, assignmentBasis:reason,
+        startedAt:epoch(startedAt), at:stamp, endedAt:0, elapsedMs:null, timingBasis:reason,
+        presenceAt:0, sessionDedicatedMs:null, sessionState:"unknown", sessionBasis:"", sessionSurface:"",
+        runtime:row.runtime || "", activityExpiresAt:0, cliPaused:false, activityReason:reason, operationalState:""
+      };
+    }
+    var daily = sources.daily || {};
+    // El cambio de semana/mes del ranking nunca convierte trabajo antiguo en
+    // trabajo de hoy; tampoco un bonus de carrera por sí solo activa otra.
+    if (daily.day && daily.day === options.day) (daily.scores || []).forEach(function (row) {
+      if (!row) return;
+      var counts = ["objectives", "windows", "missions", "tasks"].some(function (field) { return Number(row[field]) > 0; });
+      var points = ["objective_points", "window_points", "mission_points", "task_points"].reduce(function (sum, field) { return sum + (Number(row[field]) || 0); }, 0);
+      if (counts || points > 0 || Number(row.points) - (Number(row.race_bonus_points) || 0) > 0)
+        add(row, "advisor_daily", 1, "daily", options.dailyTitle, "", 0, 0);
+    });
+    (sources.tasks || []).forEach(function (row) {
+      if (!row) return;
+      var owner = String(row.owner || "").trim();
+      var executor = options.taskAgent ? options.taskAgent(row) : (/^(infra|sub)(?:agente)?$/i.test(owner) ? row.assignee : owner || row.assignee || row.agent || row.persona);
+      row = Object.assign({}, row, {agent:executor});
+      var at = epoch(row && row.updated_at), state = String(row && (row.visible_state || row.status) || "");
+      if (row && at > 0 && options.dayOf && options.dayOf(at) === options.day && ["in_progress", "done"].indexOf(String(row.status)) >= 0)
+        add(row, "advisor_daily", 2, "daily", row.title || options.dailyTitle, "", 0, at);
+      if (row && state === "in_progress") add(row, "advisor_in_progress", 4, "task", row.title || row.code,
+        row.mission_id ? row.mission_id + ":" + (row.code || "") : "", row.work_started_at || row.started_at, at);
+    });
+    (sources.activeWork || []).forEach(function (row) {
+      if (row && row.state === "running" && !(row.ended_at || row.endedAt) && ["mission", "task"].indexOf(row.kind) >= 0)
+        add(row, "advisor_in_progress", 5, row.kind, row.activity_text || row.work_description || row.title,
+          row.reference, row.work_started_at || row.startedAt, row.work_progress_at || row.at);
+    });
+    (sources.missions || []).forEach(function (row) {
+      if (!row || String(row.visible_state || row.status) !== "in_progress") return;
+      var reference = row.id || row.reference;
+      var linked = (sources.activeWork || []).find(function (work) { return work && work.reference === reference; }) || {};
+      add(row, "advisor_in_progress", 6, "mission", row.subject || row.title, reference,
+        row.work_started_at || row.started_at || row.startedAt || row.live_at || linked.work_started_at || linked.startedAt,
+        row.updated_at || row.work_progress_at || row.at || row.live_at || row.started_at || linked.work_progress_at || linked.at);
+    });
+    (sources.inbox || []).forEach(function (row) {
+      if (row && !row.fin && String(row.estado || row.status) === "in_progress")
+        add(row, "advisor_in_progress", 3, "inbox", row.subject || row.title || (options.orderTitle || "") + " #" + row.id,
+          "#" + row.id, row.inicio, row.inicio);
+    });
+    return Object.keys(best).map(function (seat) { return best[seat]; });
+  }
+
   /* Trabajo que AVANZA frente a máquina ENCENDIDA. La calle las confundía: el
      12-ago-2026 NeoMBP14 llevaba 330 minutos sin que su tarea se moviera y
      TrinityMBP14 499, y los dos salían corriendo con su título porque su proceso
@@ -179,7 +249,7 @@
     return next;
   }
 
-  var api = { key:key, activeMissionRows:activeMissionRows, raceRows:raceRows, laneKey:laneKey, runnerVariant:runnerVariant,
+  var api = { key:key, activeMissionRows:activeMissionRows, raceRows:raceRows, laneKey:laneKey, advisorRows:advisorRows, runnerVariant:runnerVariant,
     IDLE_AFTER_MS:IDLE_AFTER_MS, workIdle:workIdle, sinceLabel:sinceLabel, durationLabel:durationLabel,
     clockDurationLabel:clockDurationLabel, workClock:workClock,
     STALE_RACE_MAX_CYCLES:STALE_RACE_MAX_CYCLES, staleRaceStorageKey:staleRaceStorageKey,

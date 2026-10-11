@@ -3982,6 +3982,9 @@ body.rail-open{overflow:hidden}
                 <button class="action-send" onclick="sendMessage()" data-en="Send">Enviar</button>
                 <button class="scumm-fold" id="scumm-fold" onclick="toggleScumm()" title="Plegar / desplegar el menú (verbos)" aria-label="Plegar menú" data-en-title="Fold / unfold the menu (verbs)" data-en-aria-label="Fold menu">▾</button>
             </div>
+            <!-- r41 (11-10-2026): carril de AGENTES — estado + encargos abiertos + % de cuota y hora de reinicio de cada
+                 uno (assets/barra-agentes.js ← /api/flota/trabajando). Fuera de .scumm-bottom: sigue a la vista con el menú plegado. -->
+            <div class="agentes-rail" id="agentes-rail" aria-live="polite"></div>
             <div class="scumm-bottom">
                 <div class="verb-grid">
                     <button class="verb-btn verb-primary" data-verb="preguntar" title="Pregunta a un consejero: pulsa Preguntar y haz clic en él" data-en-title="Ask a councillor: press Ask, then click on them" data-en="Ask" onclick="selectVerb(this)">Preguntar</button>
@@ -4577,6 +4580,7 @@ body.rail-open{overflow:hidden}
 <script defer src="/assets/live-demo-lectura.js?v=20261009-r10-lectura"></script>
 <script defer src="/assets/live-velocidad.js?v=r18-tiempo-real"></script>
 <script defer src="/assets/control-lineas.js?v=r17-lineas"></script>
+<script defer src="/assets/barra-agentes.js?v=20261011-r41-agentes"></script>
 </body>
 </html>
 

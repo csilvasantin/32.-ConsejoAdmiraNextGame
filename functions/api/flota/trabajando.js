@@ -3,13 +3,14 @@
  * real quién trabaja?»). Une bot.yokup.com/api/presence (latidos y process_snapshot) con /api/consumos/velocidad
  * (tok/h de los últimos 15 min y «con Carlos»). Criterio en flota-trabajando-lib.mjs.
  * GET → { ok, tarjetas:[{agente, estado:'verde'|'amarillo'|'gris', motivo, maquina, motor, modelo, foco, tarea, proyecto,
- *         encargo, tokHora, tokUltimaHora, sinMedicion, tokHoy, haceS, retrato}], presencia:'ok'|'cache'|'sin respuesta',
+ *         encargo, abiertos, limite:{pct, reinicio, ventana, ventanas}|null (r41), tokHora, tokUltimaHora, sinMedicion, tokHoy, haceS, retrato}], presencia:'ok'|'cache'|'sin respuesta',
  *         presenciaEdadS, generado }. Caché de borde 8 s.
  */
 import { tarjetas, retratoDe } from "../../../flota-trabajando-lib.mjs";
 import { calcular } from "../consumos/velocidad.js";
 import { leerFocos, kv as kvFoco } from "../consejo/foco.js";
 import { focoDe } from "../../../consejo-foco-lib.mjs";
+import { persona as personaPulso } from "../../../consumos-pulso-lib.mjs";
 import { matriz, cargaDe, persona as personaCenso, AGENTES_FLOTA, CONSEJEROS, llave } from "../../../flota-matriz-lib.mjs";
 
 /** r4 (Jensen, 10-10-2026): carga de encargos por persona, la MISMA fuente que agentes_vivos (bandeja pública de Yokup,
@@ -115,6 +116,13 @@ export async function construir({ env, fetchImpl, ahoraMs: ahoraFijo, cache }) {
   // r26: foco (proyecto principal · deepagent) de cada ficha; el de los consejeros lo fijan ellos (POST /api/consejo/foco).
   const focos = await leerFocos(kvFoco(env)).catch(() => ({ focos: {} }));
   for (const t of ts) t.foco = focoDe(t, focos, ahoraMs);
+  // r41 barra de agentes: cuota de su cuenta (% usado + reinicio) del pulso de tokens; sin dato fresco → null.
+  const lims = new Map(((v && v.limites) || []).map((l) => [l.persona, l]));
+  for (const t of ts) {
+    const l = lims.get(personaPulso(t.agente));
+    t.limite = l ? { pct: l.pct, reinicio: new Date(l.reinicio * 1000).toISOString(), ventana: l.ventana, motor: l.motor, haceS: l.haceS,
+      ventanas: l.ventanas.map((w) => ({ ventana: w.ventana, pct: w.pct, reinicio: new Date(w.reinicio * 1000).toISOString() })) } : null;
+  }
   return {
     ok: true, tarjetas: ts,
     matriz: conSuperficies(conRetratos(matriz({ presencia: pres, carga, ahoraS })), ts), carga: carga.size ? "ok" : "sin datos",

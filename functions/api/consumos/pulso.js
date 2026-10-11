@@ -4,12 +4,13 @@
  * POST { maquina, agentes:[{agente, motor:'claude'|'codex', cuenta, tokHoy, cacheHoy, ultimoEvento}], ts }
  *      con X-Council-Token: <CONSUMOS_LECTURAS_TOKEN> (o Authorization: Bearer), igual que /api/consumos/lecturas.
  *      Lo envía ~/.fleet/pulso-tokens.py (LaunchAgent com.admiranext.pulso-tokens, cada 60 s).
- * GET  → { ok, maquinas:[…], agentes:[{agente, maquina, motor, tokHoy, tokHora, stale, haceS, …}] } (público, sin series).
+ * GET  → { ok, maquinas:[…], agentes:[{agente, maquina, motor, tokHoy, tokHora, stale, haceS, …}], limites:[…] } (público, sin series).
+ *      r41: limites = % usado y reinicio de la cuota de cada cuenta (limitesDePulso).
  * KV: RECORTE_KV, una clave por máquina (consumos:pulso:v1:<maquina>) + índice consumos:pulso:v1:_maquinas.
  * Como mucho 1 escritura/min por máquina: un pulso que llega <50 s después del anterior no se guarda (202).
  */
 import { autorizado } from "./lecturas.js";
-import { normalizarPulso, aplicarPulso, agentesDePulso, KEY_PREFIX, KEY_INDICE } from "../../../consumos-pulso-lib.mjs";
+import { normalizarPulso, aplicarPulso, agentesDePulso, limitesDePulso, KEY_PREFIX, KEY_INDICE } from "../../../consumos-pulso-lib.mjs";
 
 const ALLOW = new Set(["https://www.admira.live", "https://admira.live", "https://admira-live.pages.dev"]);
 function headers(origin) {
@@ -69,5 +70,5 @@ export async function onRequestGet({ request, env }) {
   const ahora = Date.now();
   const docs = await leerPulsos(kv(env));
   const agentes = agentesDePulso(docs, ahora).map(({ _serie, ...a }) => a);
-  return json({ ok: true, maquinas: docs.map((d) => d.maquina), agentes, generado: new Date(ahora).toISOString() }, 200, origin);
+  return json({ ok: true, maquinas: docs.map((d) => d.maquina), agentes, limites: limitesDePulso(docs, ahora), generado: new Date(ahora).toISOString() }, 200, origin);
 }

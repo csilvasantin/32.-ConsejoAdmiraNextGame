@@ -1,4 +1,8 @@
 {
+  "v.11.10.2026.r36.14:42": [
+    "Barra de AGENTES en la portada, bajo la línea de acción: por cada agente su estado (verde trabajando · amarillo con Carlos · gris parado), sus encargos abiertos (📋) y el % de cuota de su cuenta con la hora de reinicio (🔄). Se ve también con el menú plegado y en móvil.",
+    "La cuota es la real de cada CLI (Claude Code: 5 h y semana · Codex: semana); sin dato fresco pone «cuota s/d» y los motores gratis «gratis»: nunca un número inventado. Fuente: /api/flota/trabajando (campos abiertos y limite)."
+  ],
   "v.11.10.2026.r35.14:25": [
     "/interface ya funciona en el ⌘ EXPERTO · CLI de la portada (sale en /help) y también en la barra de las demás páginas; vale la forma corta: «/interface 4», «/interface 2 Fold», «/interface 6».",
     "Nuevo /demo interface: un recorrido que se hace solo (ayuda → terminal 4 aquí → cerrar → terminal 2 aquí → cerrar) con subtítulos en castellano o inglés; /demo help lo lista junto a portada, lectura y velocidad.",

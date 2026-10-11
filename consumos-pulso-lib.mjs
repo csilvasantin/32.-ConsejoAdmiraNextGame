@@ -56,7 +56,8 @@ export function normalizarPulso(body) {
   // r14: un Mac sin agentes de tokens propios (MacBookProNegro14) manda solo grokbotApp: agentes puede ir vacío entonces.
   const grokbotApp = normalizarGrokbotApp(body.grokbotApp);
   const superficies = normalizarSuperficies(body.superficies);
-  if (!Array.isArray(body.agentes) || (!body.agentes.length && !grokbotApp && !(superficies && superficies.length)) || body.agentes.length > 8) return { ok: false, error: "agentes: lista de 1 a 8" };
+  const limites = normalizarLimites(body.limites);
+  if (!Array.isArray(body.agentes) || (!body.agentes.length && !grokbotApp && !(superficies && superficies.length) && !(limites && limites.length)) || body.agentes.length > 8) return { ok: false, error: "agentes: lista de 1 a 8" };
   const agentes = [];
   for (const a of body.agentes) {
     const agente = texto(a && a.agente, 40);
@@ -84,7 +85,64 @@ export function normalizarPulso(body) {
     agentes.push({ agente, motor, cuenta: texto(a.cuenta, 80), tokHoy, cacheHoy: entero(a.cacheHoy) || 0, ultimoEvento: Number.isFinite(ev) ? new Date(ev).toISOString() : null, porProyecto,
       conCarlos, conCarlosMotivo: texto(a.conCarlosMotivo, 240) || null, conCarlosDesde: conCarlos && Number.isFinite(desde) ? new Date(desde).toISOString() : null, ...extra });
   }
-  return { ok: true, pulso: { maquina, agentes, ...(grokbotApp ? { grokbotApp } : {}), ...(superficies ? { superficies } : {}) } };
+  return { ok: true, pulso: { maquina, agentes, ...(grokbotApp ? { grokbotApp } : {}), ...(superficies ? { superficies } : {}), ...(limites ? { limites } : {}) } };
+}
+
+/**
+ * r41 barra de agentes (11-10-2026 — criterio: «estado + encargos abiertos + % de tokens usados y hora de reinicio»):
+ * cuota de cada CUENTA, tal y como la da su propio CLI. Claude Code: rate_limits de la statusline (five_hour /
+ * seven_day: used_percentage, resets_at). Codex: rate_limits del último token_count (primary/secondary).
+ *   [{ agente, motor, ventanas:[{ ventana:'5h'|'7d'|…, pct 0-100, reinicio:tsSeg }], medido:tsSeg, plan?, fuente? }]
+ * Una ventana ya reiniciada no se acepta (su % caducó): sin dato fresco no hay número (normativa: nunca aproximado).
+ */
+export function normalizarLimites(l, ahoraS = Math.floor(Date.now() / 1000)) {
+  if (!Array.isArray(l)) return null;
+  const out = [];
+  for (const x of l.slice(0, 12)) {
+    const agente = texto(x && x.agente, 40);
+    const motor = texto(x && x.motor, 12).toLowerCase();
+    if (!agente || !MOTORES.has(motor) || !Array.isArray(x.ventanas)) continue;
+    const ventanas = [];
+    for (const v of x.ventanas.slice(0, 4)) {
+      const pct = Number(v && v.pct), reinicio = entero(v && v.reinicio);
+      const ventana = texto(v && v.ventana, 6).replace(/[^\w]/g, "");
+      if (!ventana || !Number.isFinite(pct) || pct < 0 || pct > 100 || !reinicio || reinicio <= ahoraS || reinicio > ahoraS + 31 * 86400) continue;
+      ventanas.push({ ventana, pct: Math.round(pct * 10) / 10, reinicio });
+    }
+    if (!ventanas.length) continue;
+    const medido = entero(x.medido);
+    out.push({ agente, motor, ventanas, medido: medido && medido <= ahoraS + 300 ? medido : ahoraS,
+      ...(x.plan ? { plan: texto(x.plan, 20) } : {}), ...(x.fuente ? { fuente: texto(x.fuente, 40) } : {}) });
+  }
+  return out;
+}
+
+/** Edad máxima de un dato de cuota para enseñarlo (la statusline solo se refresca mientras el agente trabaja). */
+export const LIMITE_MAX_EDAD_MS = 6 * 3600 * 1000;
+
+/**
+ * Cuotas de todos los Macs → una por persona (la medición más reciente), sin ventanas ya reiniciadas.
+ * La ventana «manda» = la más gastada (la que antes corta al agente): pct + reinicio de esa.
+ *   [{ agente, persona, motor, maquina, ventanas, pct, reinicio, ventana, medido, haceS, plan?, fuente? }]
+ */
+export function limitesDePulso(docs, ahora) {
+  const ahoraS = Math.floor(ahora / 1000);
+  const por = new Map();
+  for (const d of docs || []) {
+    const lim = d && d.limites;
+    if (!lim || !Array.isArray(lim.lista) || !lim.ts || ahora - lim.ts > LIMITE_MAX_EDAD_MS) continue;
+    for (const x of lim.lista) {
+      const ventanas = (x.ventanas || []).filter((v) => v.reinicio > ahoraS);
+      if (!ventanas.length || ahoraS - (x.medido || 0) > LIMITE_MAX_EDAD_MS / 1000) continue;
+      const manda = ventanas.slice().sort((a, b) => b.pct - a.pct || a.reinicio - b.reinicio)[0];
+      const p = persona(x.agente);
+      const fila = { agente: x.agente, persona: p, motor: x.motor, maquina: d.maquina, ventanas, pct: manda.pct, reinicio: manda.reinicio,
+        ventana: manda.ventana, medido: x.medido, haceS: Math.max(0, ahoraS - x.medido), ...(x.plan ? { plan: x.plan } : {}), ...(x.fuente ? { fuente: x.fuente } : {}) };
+      const prev = por.get(p);
+      if (!prev || fila.medido > prev.medido) por.set(p, fila);
+    }
+  }
+  return [...por.values()];
 }
 
 /**
@@ -199,6 +257,7 @@ export function aplicarPulso(doc, pulso, ahora) {
   }
   if (pulso.grokbotApp) d.grokbotApp = { ...pulso.grokbotApp, ts: ahora };
   if (pulso.superficies) d.superficies = { lista: pulso.superficies, ts: ahora };
+  if (pulso.limites) d.limites = { lista: pulso.limites, ts: ahora };
   for (const [n, a] of Object.entries(d.agentes)) if (!a.ultimoPulso || ahora - a.ultimoPulso > RETENCION_MS) delete d.agentes[n];
   d.maquina = pulso.maquina;
   d.ultimoPulso = ahora;

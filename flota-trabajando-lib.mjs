@@ -425,7 +425,7 @@ export function tarjetas({ presencia = [], velocidad = null, ahoraS, maxEdadS = 
       conCarlosEn,
       maquina: (p && p.conCarlos && p.maquina) || (ccPres && ccPres.maquina) || (gris && fresca.maquina) || (enPulso && p.maquina) || (l && l.machine) || (p && p.maquina) || (pf && pf.maquina) || null,
       motor, modelo: modeloCard,
-      enCurso, instancias: inst.size, planC, gratis: gratisDef, fuera, incluye: x.incluye || null,
+      enCurso, abiertos: cg ? Number(cg.abiertos) || 0 : null, bloqueados: cg ? Number(cg.blocked) || 0 : null, instancias: inst.size, planC, gratis: gratisDef, fuera, incluye: x.incluye || null,
       foco: limpio(l && l.focus), tarea: limpio(l && l.task, 120),
       proyecto: (enPulso && p.proyectoAhora) || (l && l.project) || (p && p.proyectoAhora) || null,
       encargo: encargoDe(l && l.task, l && l.focus),

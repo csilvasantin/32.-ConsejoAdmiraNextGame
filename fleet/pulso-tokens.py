@@ -34,6 +34,8 @@ los logs de terminal de ese turno (terminal/*.log con mtime dentro del turno), s
 no el cwd de la sesión.
 Uso: pulso-tokens.py [--dry-run] [--maquina NOMBRE] [--con-carlos]   (--con-carlos: solo evalúa e imprime)
 r40: MacBookAir16plata en MAPA; PULSO_MAQUINA=<nombre> fuerza la máquina si el hostname no la delata.
+r41 (barra de agentes, 11-10-2026): «limites» por cuenta = % usado y hora de reinicio de la cuota (Claude: statusline →
+~/.fleet/limites/claude-<carpeta>.json; Codex: rate_limits del último token_count). Sin dato fresco no se manda nada.
 r28-sup (Carlos, 10-10-2026 17:28 — «distinguir los agentes por CLI de los de app de escritorio»): el pulso manda
 `superficies` de este Mac, sin contenido ni secretos:
   - tipo «cli»: cada sesión tmux viva con un agente dentro (claude / codex / grok / opencode / deepagents, por la línea
@@ -957,6 +959,103 @@ def persona_simple(n):
     return "".join(c for c in unicodedata.normalize("NFD", str(n or "")) if unicodedata.category(c) != "Mn").lower()
 
 
+LIMITES_DIR = os.path.join(HOME, ".fleet", "limites")
+# Cuenta de cada carpeta de config → agente. La carpeta por defecto (~/.claude, ~/.codex) es la del MAPA de la máquina.
+AGENTE_CARPETA = {"morfeo": "Morfeo", "oraculo": "Oráculo", "trinity": "Trinity", "smith": "Smith", "neo": "Neo"}
+
+
+def _ventana_claude(nombre, v, ahora_s):
+    if not isinstance(v, dict) or v.get("used_percentage") is None:
+        return None
+    reinicio = int(v.get("resets_at") or 0)
+    # Pasada la hora de reinicio el porcentaje guardado ya no vale: no se manda (no se inventa un 0 %).
+    if not reinicio or reinicio <= ahora_s:
+        return None
+    return {"ventana": nombre, "pct": round(float(v["used_percentage"]), 1), "reinicio": reinicio}
+
+
+def limites_claude(maq, ahora_s):
+    """r1 barra de agentes (11-10-2026): % usado y reinicio de la cuota de cada cuenta de Claude Code. Fuente: el JSON que
+    Claude Code pasa a su statusline (rate_limits.five_hour / seven_day), guardado por fleet/statusline-consumo.sh en
+    ~/.fleet/limites/claude-<carpeta>.json. Sin statusline (o dato caducado) no hay entrada: «sin dato», nunca un número."""
+    out = []
+    for path in glob.glob(os.path.join(LIMITES_DIR, "claude-*.json")):
+        carpeta = os.path.basename(path)[len("claude-"):-len(".json")]
+        agente = AGENTE_CARPETA.get(carpeta) or (MAPA.get(maq, {}).get("claude", (None,))[0] if carpeta == "claude" else None)
+        if not agente:
+            continue
+        try:
+            medido = int(os.path.getmtime(path))
+            with open(path) as f:
+                rl = (json.load(f) or {}).get("rate_limits") or {}
+        except (OSError, ValueError):
+            continue
+        vs = [x for x in (_ventana_claude("5h", rl.get("five_hour"), ahora_s), _ventana_claude("7d", rl.get("seven_day"), ahora_s)) if x]
+        if vs:
+            out.append({"agente": agente, "motor": "claude", "ventanas": vs, "medido": medido, "fuente": "statusline Claude Code"})
+    return out
+
+
+def limites_codex(maq, ahora_s):
+    """Ídem para Codex: último evento token_count con rate_limits (primary/secondary: used_percent, window_minutes,
+    resets_at) de la sesión más reciente de cada CODEX_HOME (~/.codex, ~/.codex-<agente>)."""
+    out = []
+    for home in glob.glob(os.path.join(HOME, ".codex")) + glob.glob(os.path.join(HOME, ".codex-*")):
+        carpeta = os.path.basename(home)[len(".codex-"):] if os.path.basename(home) != ".codex" else ""
+        agente = AGENTE_CARPETA.get(carpeta) if carpeta else MAPA.get(maq, {}).get("codex", (None,))[0]
+        if not agente:
+            continue
+        hoy = datetime.now(MADRID)
+        sesiones = []
+        for delta in range(0, 8):
+            sesiones += glob.glob(os.path.join(home, "sessions", (hoy - timedelta(days=delta)).strftime("%Y/%m/%d"), "*.jsonl"))
+        sesiones.sort(key=lambda p: os.path.getmtime(p), reverse=True)
+        for path in sesiones[:3]:
+            rl, medido = None, None
+            try:
+                for raw in _cola(path, 2 * 1024 * 1024):
+                    if b'"rate_limits"' not in raw:
+                        continue
+                    try:
+                        d = json.loads(raw)
+                    except Exception:
+                        continue
+                    x = (d.get("payload") or {}).get("rate_limits")
+                    if isinstance(x, dict):
+                        rl, medido = x, ts_de(d.get("timestamp"))
+            except OSError:
+                continue
+            if not rl:
+                continue
+            vs = []
+            for clave in ("primary", "secondary"):
+                v = rl.get(clave)
+                if not isinstance(v, dict) or v.get("used_percent") is None:
+                    continue
+                reinicio = int(v.get("resets_at") or 0)
+                if not reinicio or reinicio <= ahora_s:
+                    continue
+                mins = int(v.get("window_minutes") or 0)
+                nombre = "7d" if mins >= 10000 else "5h" if 250 <= mins <= 350 else ("%dh" % round(mins / 60) if mins else "?")
+                vs.append({"ventana": nombre, "pct": round(float(v["used_percent"]), 1), "reinicio": reinicio})
+            if vs:
+                out.append({"agente": agente, "motor": "codex", "ventanas": vs, "plan": rl.get("plan_type"),
+                            "medido": int(medido.timestamp()) if medido else int(os.path.getmtime(path)), "fuente": "sesión Codex"})
+            break
+    return out
+
+
+def limites(maq):
+    ahora_s = int(time.time())
+    out = []
+    for fn in (limites_claude, limites_codex):
+        try:
+            out += fn(maq, ahora_s)
+        except Exception as e:  # nunca tumba el pulso
+            print("  limites: error %s" % str(e)[:120], file=sys.stderr)
+    return out[:12]
+
+
 def main():
     dry = "--dry-run" in sys.argv
     maq = sys.argv[sys.argv.index("--maquina") + 1] if "--maquina" in sys.argv else maquina_local()
@@ -991,6 +1090,11 @@ def main():
     guardar_proyectos()
     guardar_otros()
     cuerpo = {"maquina": maq, "agentes": agentes, "ts": datetime.now(timezone.utc).isoformat().replace("+00:00", "Z")}
+    lim = limites(maq)
+    if lim:
+        cuerpo["limites"] = lim
+        print("%s limites %s" % (ahora.strftime("%H:%M:%S"), " · ".join("%s/%s %s" % (x["agente"], x["motor"], " ".join(
+            "%s %s%% → %s" % (v["ventana"], v["pct"], datetime.fromtimestamp(v["reinicio"], MADRID).strftime("%d %H:%M")) for v in x["ventanas"])) for x in lim)))
     try:
         app = grokbot_app(cc.get("reposoS"), cc.get("alFrente"))
     except Exception:
@@ -1010,7 +1114,7 @@ def main():
         print("%s grokbotApp %s · cuenta en uso %s · cuentas %s · al frente %s · reposo %ss" % (ahora.strftime("%H:%M:%S"), "abierta" if app["abierta"] else "cerrada",
               app["cuenta"] or "desconocida", ", ".join("%s (hace %d min)" % (c["cuenta"], c["haceS"] // 60) for c in app["cuentas"]) or "—",
               "sí" if app["alFrente"] else "no", app["reposoS"]))
-    if not agentes and "grokbotApp" not in cuerpo and not cuerpo.get("superficies"):
+    if not agentes and "grokbotApp" not in cuerpo and not cuerpo.get("superficies") and not cuerpo.get("limites"):
         print("%s %s sin agentes ni app Grok Bot abierta: nada que mandar" % (ahora.strftime("%H:%M:%S"), maq))
         return 0
     resumen = " · ".join("%s/%s %s tok (+%s cache) %s" % (a["agente"], a["motor"], format(a["tokHoy"], ","), format(a["cacheHoy"], ","),

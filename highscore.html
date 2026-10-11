@@ -84,6 +84,11 @@ h1{font-size:clamp(20px,3.2vw,31px);font-weight:900;letter-spacing:.08em;margin:
 .ranking-toggle{font-size:.78em;opacity:1;letter-spacing:.18em;color:#ffe14a;text-shadow:0 0 8px rgba(255,225,74,.45)}
 .ranking-toggle:hover,.ranking-toggle:focus-visible{opacity:1;color:#ffe14a}
 .ranking-toggle.on{opacity:1;color:#ffe14a}
+#rankingToggle.ranking-toggle,
+#rankingToggle.ranking-toggle.on,
+#rankingToggle.ranking-toggle[aria-expanded="true"],
+#rankingToggle.ranking-toggle:hover,
+#rankingToggle.ranking-toggle:focus-visible{color:#ffe14a;opacity:1}
 .ranking-toggle:disabled{opacity:.28;cursor:default;text-shadow:none}
 .ranking-toggle:disabled:hover{color:inherit;text-shadow:none}
 .ranking-period{position:absolute;right:4px;top:50%;transform:translateY(-50%);display:grid;
@@ -1014,11 +1019,11 @@ body.resizing-columns{cursor:col-resize;user-select:none}
    calentamiento ocupa su propia calle, centrado, sin tapar RANKING. */
 @media (max-width:560px){
   .score-divider{flex-wrap:wrap;align-items:center;justify-content:center;row-gap:6px;min-height:0;padding:8px 4px;column-gap:8px}
-  .score-divider .podium-toggle{flex:1 0 100%;text-align:center}
+  .score-divider .podium-toggle{order:0;flex:1 0 100%;text-align:center}
   .score-divider .sonido{position:absolute;right:6px;top:8px}
-  .score-divider .hs-bando{position:static;left:auto;top:auto;transform:none;display:flex;width:100%;flex:1 1 100%}
+  .score-divider .hs-bando{order:1;position:static;left:auto;top:auto;transform:none;display:flex;width:100%;flex:1 1 100%}
   .score-divider .hs-bando button{flex:1 1 50%;height:28px;padding:0 6px;font-size:12px}
-  .score-divider .ranking-period{position:static;right:auto;top:auto;transform:none;margin-left:auto;font-size:12px;
+  .score-divider .ranking-period{order:2;position:static;right:auto;top:auto;transform:none;margin-left:auto;font-size:12px;
     grid-template-columns:28px minmax(52px,auto) 28px}
   .score-divider .ranking-period button{width:28px;height:28px;font-size:12px}
   .score-divider .ranking-period-value{font-size:12px}
@@ -2069,7 +2074,10 @@ body.resizing-columns{cursor:col-resize;user-select:none}
           var f = por[k];
           return window.HsBando.silla(f && (f.base || f.agente)) === nombre;
         });
-        if (!ya) fila(nombre, ficha.maquina || "");
+        if (!ya) {
+          var f = fila(nombre, ficha.maquina || "");
+          if (f && ficha.maquina && f.maquinas.indexOf(ficha.maquina) < 0) f.maquinas.push(ficha.maquina);
+        }
       });
     }
     var lista = Object.keys(por).map(function (k) {

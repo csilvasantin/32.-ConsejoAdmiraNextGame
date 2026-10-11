@@ -246,24 +246,26 @@ test('dos ids simultáneos con igual texto para la misma silla crean un único e
   h.advance(2);await h.provider.send(carlos,{persona:'Huang',prompt:'Hola Jensen',message_id:'duplicate-0004'});assert.equal(h.calls.filter(c=>c.name==='agente_encargar').length,2);
 });
 
-test('plan B se ofrece a 90s sin acuse, es privado e ignora el cierre tardío del deepagent',async t=>{
+test('plan B arranca SOLO a los 90s sin acuse, una sola vez, es privado e ignora el cierre tardío del deepagent',async t=>{
   const h=controlled(t,{handler:async name=>name==='agente_encargar'?{encargo:5003}:name==='encargo_estado'?{estado:'pending'}:{texto:'Respuesta alternativa.'}});
   const a=await h.provider.send(carlos,{persona:'Huang',prompt:'Pregunta Jensen',message_id:'plan-b-00001'});
-  h.advance(89999);assert.equal((await h.provider.get(carlos,a.id)).fallbackAvailable,false);
+  h.advance(89999);const antes=await h.provider.get(carlos,a.id);assert.equal(antes.fallbackAvailable,false);assert.equal(antes.replyProvider,'deepagent');
   await assert.rejects(async()=>h.provider.fallback(carlos,a.id),e=>e.code==='fallback_not_ready');
-  h.advance(1);assert.equal((await h.provider.get(carlos,a.id)).fallbackAvailable,true);
+  assert.equal(h.calls.filter(c=>c.name==='consejero_preguntar').length,0,'antes de 90 s no se gasta el plan B');
+  h.advance(1);const salta=await h.provider.get(carlos,a.id);
+  assert.equal(salta.replyProvider,'council-api','a los 90 s contesta la API del Consejo sin que nadie pulse nada');assert.match(salta.notice,/Cypher sin acuse en 90 s · respuesta por Grok 4\.6/);assert.equal(salta.fallbackAvailable,false);
   await assert.rejects(async()=>h.provider.fallback(joshua,a.id),e=>e.code==='message_not_found');
-  h.provider.fallback(carlos,a.id);h.provider.fallback(carlos,a.id);await flush();h.advance(3000);
-  const done=await h.provider.get(carlos,a.id);assert.equal(done.text,'Respuesta alternativa.');assert.equal(done.fallbackAvailable,false);
-  assert.equal(h.calls.filter(c=>c.name==='consejero_preguntar').length,1);assert.equal(h.calls.find(c=>c.name==='consejero_preguntar').args.rol,'CTO');
+  await h.provider.get(carlos,a.id);h.provider.list(carlos,'Huang');h.provider.fallback(carlos,a.id);await flush();h.advance(3000);
+  const done=await h.provider.get(carlos,a.id);assert.equal(done.text,'Respuesta alternativa.');assert.equal(done.status,'done');assert.equal(done.fallbackAvailable,false);
+  assert.equal(h.calls.filter(c=>c.name==='consejero_preguntar').length,1,'un solo plan B por pregunta');assert.equal(h.calls.find(c=>c.name==='consejero_preguntar').args.rol,'CTO');
 });
 
-test('el acuse cancela la oferta a 90s; las notas internas jamás son respuestas',async t=>{
+test('el acuse cancela el plan B de los 90s; las notas internas jamás son respuestas y disparan el plan B',async t=>{
   let state='ack';const h=controlled(t,{handler:async name=>name==='agente_encargar'?{encargo:5004}:{estado:state,respuesta:'sin ESTADO: done · nota interna',acuse:'2026-10-03 14:00 UTC'}});
   const a=await h.provider.send(carlos,{persona:'Musk',prompt:'Pregunta Elon',message_id:'internal-0001'});
   h.advance(3000);assert.equal((await h.provider.get(carlos,a.id)).status,'in_progress');h.advance(90000);
   assert.equal((await h.provider.get(carlos,a.id)).fallbackAvailable,false);
-  state='done';h.advance(3000);const bad=await h.provider.get(carlos,a.id);assert.equal(bad.text,'');assert.equal(bad.fallbackAvailable,true);
+  state='done';h.advance(3000);const bad=await h.provider.get(carlos,a.id);assert.doesNotMatch(bad.text,/ESTADO/);assert.equal(bad.replyProvider,'council-api','la nota interna dispara sola el plan B');assert.match(bad.notice,/Merovingio no ha dado una respuesta válida · respuesta por Grok 4\.6/);
 });
 
 test('fallo del plan B acaba con aviso visible y no presenta una excepción como respuesta',async t=>{

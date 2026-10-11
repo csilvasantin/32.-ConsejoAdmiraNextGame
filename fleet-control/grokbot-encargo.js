@@ -196,6 +196,16 @@ function createGrokBotEncargo({ environment = process.env, fetchImpl = globalThi
     op.finally(() => fallbackRuns.delete(id));
     return op;
   }
+  // PLAN B AUTOMÁTICO (encargo 5675): a los 90 s sin acuse, o si lo que llegó fue una nota interna, la respuesta
+  // por la API del Consejo arranca sola. Antes solo se ofrecía un botón y la pregunta se quedaba sin contestar
+  // si nadie lo pulsaba. El aviso dice por qué contesta otro.
+  function autoFallback(r) {
+    if (!r || r.replyProvider || !fallbackEligible(r) || !ROL[r.persona]) return r;
+    const agente = targets[r.persona] ? targets[r.persona].persona : 'El deepagent';
+    state.transact(records => { const e = records.get(r.id); if (e && !e.notice) e.notice = (r.responseUnavailable ? agente + ' no ha dado una respuesta válida' : agente + ' sin acuse en 90 s') + ' · respuesta por Grok 4.6'; return e; });
+    runFallback(r.id);
+    return state.read().get(r.id);
+  }
   function fallback(session, id) {
     const owner = verifiedOwner(session), r = state.read().get(id);
     if (!r || r.owner !== owner) throw new BridgeError(404, 'message_not_found');
@@ -267,7 +277,7 @@ function createGrokBotEncargo({ environment = process.env, fetchImpl = globalThi
     const owner = verifiedOwner(session), p = target(persona);
     const rows = [...state.read().values()].filter(r => r.owner === owner && r.persona === p).sort((a, b) => a.createdAt.localeCompare(b.createdAt)).slice(-100);
     refreshStale(rows);
-    return rows.map(publicMessage);
+    return rows.map(r => publicMessage(autoFallback(r)));
   }
 
   async function get(session, id) {
@@ -276,8 +286,8 @@ function createGrokBotEncargo({ environment = process.env, fetchImpl = globalThi
     const rec = state.read().get(id);
     if (!rec) return null;
     if (rec.owner !== owner) throw new BridgeError(404, 'message_not_found');
-    if (now() - (lastRefresh.get(id) || 0) >= REFRESH_MS) return publicMessage(await refreshOne(id) || rec);
-    return publicMessage(rec);
+    if (now() - (lastRefresh.get(id) || 0) >= REFRESH_MS) return publicMessage(autoFallback(await refreshOne(id) || rec));
+    return publicMessage(autoFallback(rec));
   }
 
   async function send(session, body) {

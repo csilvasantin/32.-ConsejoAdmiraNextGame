@@ -1,4 +1,7 @@
 {
+  "v.11.10.2026.r28.12:39": [
+    "/visor/ plegado: el pie ya no se monta sobre los puntos de deslizar. El publicador marca «cambio» solo cuando la pantalla cambia de verdad (antes un reenvío lo adelantaba) y deja en su log cuándo el servidor pide envío completo."
+  ],
   "v.11.10.2026.r27.12:23": [
     "Nuevo /visor/: la cuadratura de los 4 deepagents de pago (Neo y Morfeo · Claude Code, Trinity y Oráculo · Codex) en cualquier pantalla sin instalar nada, pensada para el Samsung Fold: 2x2 desplegado, una por pantalla con deslizar plegado. Rótulo ASCII y colores de cada agente, terminal en vivo con colores, refresco cada 3 s.",
     "Privado: /api/visor/pane solo con llave del visor (enlace #k=…, revocable al momento con tools/visor-llave.sh); los Macs publican con su token de máquina y tapan secretos antes de enviar. Misma lista que la cuadratura: ~/.config/admiranext/cuadratura.conf."

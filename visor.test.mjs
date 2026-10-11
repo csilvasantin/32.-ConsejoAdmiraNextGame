@@ -3,7 +3,8 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import { tapar, normalizarPane, fundir, vista, CONF_DEFECTO, sha256 } from "./visor-lib.mjs";
-import { onRequestPost, onRequestGet } from "./functions/api/visor/pane.js";
+import { onRequestPost, onRequestGet, _olvidarUbicacion } from "./functions/api/visor/pane.js";
+const sinYokup = async () => new Response("no", { status: 503 }); // los tests no salen a la red
 import { onRequestPost as llavePost } from "./functions/api/visor/llave.js";
 
 test("tapa secretos y deja el resto", () => {
@@ -45,13 +46,13 @@ test("POST con token de máquina; GET exige llave del visor (no es público) y l
   assert.ok(lr.llave.length >= 40);
   assert.ok(!env.RECORTE_KV.m.get("visor:v1:llaves").includes(lr.llave), "en KV solo el hash");
   assert.ok(env.RECORTE_KV.m.get("visor:v1:llaves").includes(await sha256(lr.llave)));
-  const g = await onRequestGet({ request: req("GET", null, { "X-Visor-Key": lr.llave }), env });
+  const g = await onRequestGet({ request: req("GET", null, { "X-Visor-Key": lr.llave }), env, fetchImpl: sinYokup });
   assert.equal(g.status, 200);
   const d = await g.json();
   assert.equal(d.fichas[0].estado, "vivo");
   assert.ok(d.fichas[0].lineas[0].includes("hola") && !d.fichas[0].lineas[0].includes("sk-ant-abc"), "el servidor también tapa");
   await llavePost({ request: new Request("https://www.admira.live/api/visor/llave", { method: "POST", headers: { "X-Council-Token": "maquina-123" }, body: JSON.stringify({ accion: "revocar" }) }), env });
-  assert.equal((await onRequestGet({ request: req("GET", null, { "X-Visor-Key": lr.llave }), env })).status, 401, "revocada");
+  assert.equal((await onRequestGet({ request: req("GET", null, { "X-Visor-Key": lr.llave }), env, fetchImpl: sinYokup })).status, 401, "revocada");
 });
 
 test("la página no lleva llaves ni tokens y manda la llave solo por cabecera", () => {
@@ -106,7 +107,7 @@ test("r33: ?g=6 añade Smith (MBP16) y Merovingio (caja de GrokBot) con su estad
   assert.equal(v6[4].agente, "idle"); assert.equal(v6[5].agente, "vivo"); assert.equal(v6[5].host, "grokbotbox");
   const env = { RECORTE_KV: kvMem(), CONSUMOS_LECTURAS_TOKEN: "maquina-123", VISOR_VIEW_TOKEN: "v".repeat(43) };
   await onRequestPost({ request: req("POST", { maquina: "grokbotbox", vivas: ["merovingio"], agentes: { merovingio: { estado: "login", lineas: ["https://claude.com/cai/oauth/authorize?client_id=1"] } } }, { "X-Council-Token": "maquina-123" }), env });
-  const g = await (await onRequestGet({ request: new Request("https://www.admira.live/api/visor/pane?g=6", { headers: { "X-Visor-Key": "v".repeat(43) } }), env })).json();
+  const g = await (await onRequestGet({ request: new Request("https://www.admira.live/api/visor/pane?g=6", { headers: { "X-Visor-Key": "v".repeat(43) } }), env, fetchImpl: sinYokup })).json();
   assert.equal(g.grupo, 6); assert.equal(g.fichas.length, 6);
   assert.equal(g.fichas[5].agente, "login"); assert.deepEqual(g.fichas[5].lineas, []);
 });
@@ -125,4 +126,90 @@ test("r34: un toque = pantalla completa (sin doble toque), con history para Esc 
   const h = readFileSync(new URL("./visor/index.html", import.meta.url), "utf8");
   for (const s of ["pointerup", "popstate", "pushState", "visorMosaico", '"Escape"', "> 10"]) assert.ok(h.includes(s), s);
   assert.ok(!h.includes("dblclick") && !h.includes("touchend"), "fuera el doble toque");
+});
+
+// ── r42 (tras #5681): la ficha sigue a la máquina donde trabaja el agente; varias sesiones; terminal sin panel = aviso ──
+import { ubicar, terminalesDe, normMaq } from "./visor-lib.mjs";
+const T0 = 1_791_724_600_000, S0 = T0 / 1000;
+const docDe = (maquina, agentes, ts = T0 - 2000) => ({ maquina, ts, conf: CONF_DEFECTO, agentes, vivas: Object.keys(agentes) });
+const ag = (agente, linea) => ({ lineas: agente === "vivo" ? [linea] : [], ancho: 120, alto: 30, cmd: "codex", sub: "", rotulo: [], cambio: T0 - 5000, agente, mision: linea, linea, viejo: "", modelo: "Codex CLI", mac: "MacBook Pro 16", arte: [], desde: T0 - 9000 });
+const pres = (persona, machine, extra = {}) => ({ persona, machine, host: "cli", session_id: persona.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, ""), updated: S0 - 5, declared_updated: 0, source: "process_snapshot", ...extra });
+const PRES = [
+  pres("Trinity", "MacBookProNegro14", { task: "Admira Visor #5655", declared_updated: S0 - 150 }),
+  pres("Trinity", "MacBook Pro 16", { task: "Hoy132 · Paso1", declared_updated: S0 - 10 }),
+  { persona: "Trinity", machine: "MacBook Pro 16", host: "app", session_id: "desktop:codex", updated: S0 - 5 },
+  pres("Neo", "MacBook Pro 16", { task: "#5664", declared_updated: S0 - 20 }),
+  pres("Trinity", "GrokBotBox", { updated: S0 - 5641 }),
+];
+const ENC = { trinity: [{ id: 5670, status: "in_progress", target_persona: "Trinity", target_machine: "macbookpronegro14" }] };
+
+test("r42 terminales: solo CLI (tmux), sin desktop:, latido ≤ 15 min, una por máquina", () => {
+  const t = terminalesDe(PRES, "trinity", "trinity", S0);
+  assert.deepEqual(t.map((x) => x.maquina).sort(), ["macbookpro16", "macbookpronegro14"]);
+  assert.equal(normMaq("MacBook Pro 16"), normMaq("macbook-pro-16"));
+});
+
+test("r42 la ficha sigue al encargo in_progress (Trinity en el MBP14), no a la conf (MBP16)", () => {
+  const docs = [docDe("macbook-pro-16", { trinity: ag("vivo", "Hoy132"), neo: ag("vivo", "neo") }), docDe("macbookpronegro14", { trinity: ag("vivo", "#5670 coste real") })];
+  const u = ubicar(CONF_DEFECTO[2], docs, T0, { presencia: PRES, encargos: ENC });
+  assert.equal(u.maquina, "macbookpronegro14"); assert.match(u.motivo, /5670/);
+  const f = vista(docs, T0, { presencia: PRES, encargos: ENC }).fichas[2];
+  assert.equal(f.host, "macbookpronegro14"); assert.equal(f.mac, "MacBook Pro 14"); assert.equal(f.hostConf, "macbook-pro-16");
+  assert.deepEqual(f.lineas, ["#5670 coste real"]);
+  assert.deepEqual(f.otras.map((x) => x.nombre), ["MacBook Pro 16"], "la otra sesión se ve");
+  assert.ok(f.avisos.some((a) => /también tiene sesión en MacBook Pro 16/.test(a)));
+  assert.equal(vista(docs, T0, { presencia: PRES, encargos: ENC }).fichas[0].host, "macbook-pro-16", "Neo sigue donde está");
+});
+
+test("r42 sin encargo manda el latido con tarea más reciente; sin presencia, el panel en misión", () => {
+  const docs = [docDe("macbook-pro-16", { trinity: ag("idle", "") }), docDe("macbookpronegro14", { trinity: ag("vivo", "trabajando") })];
+  assert.equal(ubicar(CONF_DEFECTO[2], docs, T0, { presencia: PRES }).maquina, "macbookpro16");
+  assert.equal(ubicar(CONF_DEFECTO[2], docs, T0, {}).maquina, "macbookpronegro14", "sin Yokup: el que está en misión");
+  assert.equal(ubicar(CONF_DEFECTO[2], [docs[0]], T0, {}).maquina, "macbookpro16");
+});
+
+test("r42 terminal que no publica → aviso; la ficha avisa y enseña el panel que sí hay", () => {
+  const docs = [docDe("macbook-pro-16", { trinity: ag("vivo", "Hoy132"), neo: ag("vivo", "neo") })]; // el MBP14 no publica
+  const v = vista(docs, T0, { presencia: PRES, encargos: ENC });
+  const f = v.fichas[2];
+  assert.equal(f.maquinaReal, "macbookpronegro14"); assert.equal(f.host, "macbook-pro-16");
+  assert.match(f.avisos[0], /trabaja en MacBook Pro 14 .*no publica/);
+  assert.ok(f.avisos.some((a) => /terminal en MacBook Pro 14 que no publica/.test(a)));
+  assert.ok(v.avisos.some((a) => /Trinity tiene terminal en MacBook Pro 14/.test(a)), "aviso general");
+  assert.equal(v.fichas[0].avisos.length, 0, "Neo sin avisos");
+  // nadie publica a Trinity: ficha esperando en la máquina real, con aviso
+  const solo = vista([docDe("macbook-pro-16", { neo: ag("vivo", "neo") })], T0, { presencia: PRES, encargos: ENC }).fichas[2];
+  assert.equal(solo.estado, "esperando"); assert.equal(solo.maquinaReal, "macbookpronegro14");
+  assert.ok(solo.avisos.length >= 2);
+});
+
+test("r42 GET: lee presencia y bandeja (cacheadas) y no se cae si Yokup no contesta", async () => {
+  _olvidarUbicacion();
+  const env = { RECORTE_KV: kvMem(), CONSUMOS_LECTURAS_TOKEN: "maquina-123", VISOR_VIEW_TOKEN: "v".repeat(43) };
+  const post = (b) => onRequestPost({ request: req("POST", b, { "X-Council-Token": "maquina-123" }), env });
+  await post({ maquina: "macbook-pro-16", agentes: { trinity: ag("vivo", "Hoy132") }, vivas: ["trinity"], conf: CONF_DEFECTO });
+  const pedidas = [];
+  const yokup = async (url) => {
+    pedidas.push(String(url));
+    if (String(url).includes("/presence")) return Response.json({ ok: true, now: Math.floor(Date.now() / 1000), presence: PRES.map((e) => ({ ...e, updated: Math.floor(Date.now() / 1000) - 5, declared_updated: e.declared_updated ? Math.floor(Date.now() / 1000) - (S0 - e.declared_updated) : 0 })) });
+    if (String(url).includes("persona=Trinity")) return Response.json({ items: ENC.trinity });
+    return Response.json({ items: [] });
+  };
+  const g = await (await onRequestGet({ request: req("GET", null, { "X-Visor-Key": "v".repeat(43) }), env, fetchImpl: yokup })).json();
+  assert.equal(g.ubicacion, "presencia+encargos");
+  const f = g.fichas.find((x) => x.sesion === "trinity");
+  assert.equal(f.maquinaReal, "macbookpronegro14"); assert.ok(g.avisos.length > 0);
+  const n = pedidas.length;
+  await onRequestGet({ request: req("GET", null, { "X-Visor-Key": "v".repeat(43) }), env, fetchImpl: yokup });
+  assert.equal(pedidas.length, n, "caché de 20 s: no vuelve a Yokup en cada refresco");
+  _olvidarUbicacion();
+  const g2 = await (await onRequestGet({ request: req("GET", null, { "X-Visor-Key": "v".repeat(43) }), env, fetchImpl: sinYokup })).json();
+  assert.equal(g2.ok, true); assert.equal(g2.ubicacion, "solo paneles");
+  assert.ok(!JSON.stringify(g).includes("maquina-123"), "el token nunca sale");
+});
+
+test("r42 el Mac de la conf sin la sesión (nosesion) no se cuenta como «otra sesión»", () => {
+  const docs = [docDe("macbook-pro-16", { trinity: ag("nosesion", "") }), docDe("macbookpronegro14", { trinity: ag("vivo", "aquí") })];
+  const f = vista(docs, T0, {}).fichas[2];
+  assert.equal(f.host, "macbookpronegro14"); assert.deepEqual(f.otras, []); assert.deepEqual(f.avisos, []);
 });

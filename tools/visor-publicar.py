@@ -14,6 +14,11 @@ compartido en ~/.cache/admiranext/estado-agentes/, misma histéresis de 80 s). S
 está en vivo; en Idle / Login pendiente / Sin sesión va la ficha (nombre, línea de info, palabra y última misión), nunca el
 enlace OAuth del login. Para actualizar: sustituir ESTE fichero y `launchctl kickstart -k gui/$UID/com.admiranext.visor-publicar`
 (no reescribir el plist: cada reescritura saca el aviso de actividad en segundo plano de macOS).
+
+r42 (Carlos 11-10-2026, tras #5681): cada Mac publica TODAS las sesiones tmux de agente que tenga de verdad, no solo
+las que la conf le asigna (Trinity trabaja en el MBP14 aunque la conf la ponga en el MBP16). Por cada línea de la lista:
+si el host es este Mac o aquí existe esa sesión tmux, se publica (con el Mac real en la ficha). A qué máquina sigue
+cada ficha lo decide el servidor con el latido y el encargo in_progress (visor-lib.mjs · ubicar).
 """
 import hashlib, importlib.util, json, os, re, subprocess, sys, time, urllib.request, urllib.error
 
@@ -133,6 +138,25 @@ def rotulo(ses):
     return lineas, sub
 
 
+def hay_sesion(ses):
+    try:
+        return tmux("has-session", "-t", "=%s" % ses)[0] == 0
+    except Exception:
+        return False
+
+
+def mias_de(lista, maquina, hay=hay_sesion):
+    """r42: las líneas de la lista que este Mac publica: las suyas por conf y las que tienen aquí su sesión tmux."""
+    out, vistas = [], set()
+    for c in lista:
+        if c["sesion"] in vistas:
+            continue
+        if c["host"] == maquina or hay(c["sesion"]):
+            out.append(c)
+            vistas.add(c["sesion"])
+    return out
+
+
 def capturar(ses):
     rc, txt = tmux("capture-pane", "-p", "-e", "-t", "=%s:" % ses, "-S", "-%d" % LINEAS)
     if rc != 0:
@@ -150,7 +174,7 @@ def enviar(cuerpo, tok, dry):
     if dry:
         print("dry-run:", len(datos), "bytes", list(cuerpo["agentes"]), "vivas", cuerpo["vivas"])
         return {"ok": True}
-    req = urllib.request.Request(URL, data=datos, method="POST", headers={"content-type": "application/json", "X-Council-Token": tok, "user-agent": "visor-publicar/r31"})
+    req = urllib.request.Request(URL, data=datos, method="POST", headers={"content-type": "application/json", "X-Council-Token": tok, "user-agent": "visor-publicar/r42"})
     with urllib.request.urlopen(req, timeout=15) as r:
         return json.loads(r.read() or b"{}")
 
@@ -169,19 +193,19 @@ def main():
         print("visor-publicar: falta ~/Claude/vista/estado-agente.py (la fuente única del estado); no publico", file=sys.stderr, flush=True)
         time.sleep(60)
         return 1
-    print("visor-publicar r31: estado de %s (%s)" % (EST._ruta, time.strftime("%H:%M:%S")), file=sys.stderr, flush=True)
+    print("visor-publicar r42: estado de %s (%s)" % (EST._ruta, time.strftime("%H:%M:%S")), file=sys.stderr, flush=True)
     huellas, ultimo_envio, rotulos, forzar = {}, 0.0, {}, True
     while True:
         t0 = time.time()
         try:
             conf = leer_conf()
             grok = leer_conf(CONF_GROK, DEFECTO_GROK, 2)
-            mias = [c for c in conf + grok if c["host"] == maquina]
+            mias = mias_de(conf + grok, maquina)
             agentes, vivas, nuevas = {}, [], {}
             for c in mias:
                 ses = c["sesion"]
                 nombre = c["titulo"].split(" · ")[0]
-                modelo, mac = EST.etiquetas(c["titulo"], c["host"])
+                modelo, mac = EST.etiquetas(c["titulo"], maquina)  # r42: el Mac donde está la sesión, no el de la conf
                 d = EST.decidir(ses, EST.persona_de(nombre))
                 ficha = {"estado": d["estado"], "etiqueta": d["etiqueta"], "mision": tapar(d["mision"]), "linea": tapar(d["linea"]), "viejo": tapar(d["viejo"]), "modelo": modelo, "mac": mac,
                          "arte": EST.arte(nombre) or [], "cambio": d["cambio"] or int(t0 * 1000), "desde": d["desde"]}

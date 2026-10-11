@@ -108,7 +108,74 @@ export function fundir(prev, pane) {
   return { maquina: pane.maquina, ts: pane.ts, conf: pane.conf || (prev && prev.conf) || null, grok: pane.grok || (prev && prev.grok) || null, agentes, vivas: pane.vivas, kvTs: (prev && prev.kvTs) || 0 };
 }
 
-/** Vista para el visor: una ficha por línea de la conf (la más reciente que haya llegado). */
+/**
+ * r42 (Carlos 11-10-2026, tras #5681): la ficha sigue a la máquina donde el agente trabaja DE VERDAD, no a la de la conf.
+ * Fuentes (las mismas que agentes_vivos): presencia de bot.yokup.com (latido ≤ 15 min; una terminal = host «cli» con
+ * session_id de tmux, no «desktop:…») y la bandeja (encargo in_progress con su target_machine).
+ * Orden: 1) máquina del encargo in_progress más reciente, si el agente tiene allí terminal o panel · 2) terminal con la
+ * declaración (latido con tarea) más reciente · 3) panel que lo enseña en misión · 4) host de la conf · 5) cualquier panel.
+ * Si tiene sesiones en varias máquinas, la ficha lleva `otras` (todas) y un aviso. Una terminal que Yokup ve y que
+ * ningún publicador manda al panel → aviso («terminal sin panel»).
+ */
+export const LATIDO_VIVO_S = 900;
+export const normMaq = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z0-9]/g, "");
+export const NOMBRES_MAQ = { macbookpro16: "MacBook Pro 16", macbookpronegro14: "MacBook Pro 14", macmini: "Mac mini", macbookair16plata: "MacBook Air 16", grokbotbox: "GrokBotBox", grokbot: "GrokBot" };
+export const nombreMaq = (m) => NOMBRES_MAQ[normMaq(m)] || String(m || "");
+export const personaDe = (titulo) => normMaq(String(titulo || "").split(" · ")[0]);
+
+/** Terminales de un agente según la presencia: [{ maquina (norm), nombre, sesion, tarea, declarado, latido }]. */
+export function terminalesDe(presencia, persona, sesion, ahoraS) {
+  const vistas = new Map();
+  for (const e of Array.isArray(presencia) ? presencia : []) {
+    if (!e || normMaq(e.persona) !== persona || String(e.host || "") !== "cli") continue;
+    const sid = String(e.session_id || "");
+    if (sid.startsWith("desktop:") || (sid && idSesion(sid) !== sesion)) continue;
+    const latido = Number(e.updated) || 0;
+    if (ahoraS - latido >= LATIDO_VIVO_S) continue;
+    const m = normMaq(e.machine);
+    if (!m) continue;
+    const t = { maquina: m, nombre: nombreMaq(e.machine), sesion: sid || sesion, tarea: limpio(e.task || e.focus || "", 160), declarado: Number(e.declared_updated) || 0, latido };
+    const prev = vistas.get(m);
+    if (!prev || t.declarado > prev.declarado || (t.declarado === prev.declarado && t.latido > prev.latido)) vistas.set(m, t);
+  }
+  return [...vistas.values()];
+}
+
+/** Encargo in_progress más reciente de un agente con máquina: { numero, maquina (norm) } | null. */
+export function encargoEnCurso(encargos, persona) {
+  const lista = (encargos && (encargos instanceof Map ? encargos.get(persona) : encargos[persona])) || [];
+  const ok = lista.filter((x) => x && String(x.status) === "in_progress" && normMaq(x.target_machine) && normMaq(x.target_persona || persona) === persona)
+    .sort((a, b) => (Number(b.id) || 0) - (Number(a.id) || 0));
+  return ok.length ? { numero: Number(ok[0].id) || null, maquina: normMaq(ok[0].target_machine) } : null;
+}
+
+/** ¿Dónde se pinta la ficha de c? → { maquina (norm), motivo, pubs:[{doc,a,vivo}], terms, encargo } */
+export function ubicar(c, docs, ahora, { presencia = null, encargos = null } = {}) {
+  const ahoraS = Math.floor(ahora / 1000);
+  const persona = personaDe(c.titulo);
+  const pubs = docs.filter((d) => d && d.agentes && d.agentes[c.sesion])
+    .map((d) => ({ doc: d, a: d.agentes[c.sesion], m: normMaq(d.maquina), vivo: ahora - d.ts < 120000 }));
+  const terms = presencia ? terminalesDe(presencia, persona, c.sesion, ahoraS) : [];
+  const enc = encargos ? encargoEnCurso(encargos, persona) : null;
+  const hay = new Set([...pubs.filter((p) => p.vivo && p.a.agente !== "nosesion").map((p) => p.m), ...terms.map((t) => t.maquina)]);
+  let maquina = "", motivo = "";
+  if (enc && hay.has(enc.maquina)) { maquina = enc.maquina; motivo = "encargo #" + enc.numero + " en curso"; }
+  const conTarea = terms.filter((t) => t.declarado > 0); // un proceso sin tarea declarada no decide (late, pero no dice qué hace)
+  if (!maquina && conTarea.length) {
+    const t = [...conTarea].sort((x, y) => y.declarado - x.declarado || y.latido - x.latido)[0];
+    maquina = t.maquina; motivo = "latido con tarea";
+  }
+  if (!maquina) {
+    const p = pubs.filter((x) => x.vivo && x.a.agente === "vivo").sort((x, y) => y.doc.ts - x.doc.ts)[0];
+    if (p) { maquina = p.m; motivo = "en misión en el panel"; }
+  }
+  if (!maquina && pubs.some((p) => p.m === normMaq(c.host))) { maquina = normMaq(c.host); motivo = "conf"; }
+  if (!maquina && pubs.length) { const p = [...pubs].sort((x, y) => (x.a.agente === "nosesion") - (y.a.agente === "nosesion") || y.doc.ts - x.doc.ts)[0]; maquina = p.m; motivo = "único panel"; }
+  if (!maquina) { maquina = normMaq(c.host); motivo = "conf"; }
+  return { maquina, motivo, pubs, terms, encargo: enc };
+}
+
+/** Vista para el visor: una ficha por línea de la conf, en la máquina donde trabaja ese agente (r42). */
 export function vista(docs, ahora = Date.now(), opciones = {}) {
   const conDoc = docs.filter(Boolean);
   const conf = conDoc.filter((d) => d.conf).sort((a, b) => b.ts - a.ts)[0];
@@ -118,18 +185,35 @@ export function vista(docs, ahora = Date.now(), opciones = {}) {
     const extra = ((g && g.grok) || CONF_GROK).filter((x) => !lista.some((c) => c.sesion === x.sesion && c.host === x.host));
     lista = [...lista, ...extra].slice(0, MAX_AGENTES);
   }
-  const porMaq = Object.fromEntries(conDoc.map((d) => [d.maquina, d]));
+  const avisos = [];
   const fichas = lista.map((c) => {
-    const d = porMaq[c.host];
-    const a = d && d.agentes && d.agentes[c.sesion];
+    const u = ubicar(c, conDoc, ahora, opciones);
+    const nombre = String(c.titulo || c.sesion).split(" · ")[0];
+    // lo que se enseña: el panel de la máquina elegida; si esa no publica, el mejor panel que haya (con aviso)
+    const elegido = u.pubs.find((p) => p.m === u.maquina) || [...u.pubs].sort((x, y) => (x.a.agente === "nosesion") - (y.a.agente === "nosesion") || (y.a.agente === "vivo") - (x.a.agente === "vivo") || y.doc.ts - x.doc.ts)[0] || null;
+    const d = elegido && elegido.doc, a = elegido && elegido.a;
     const haceS = d ? Math.round((ahora - d.ts) / 1000) : null;
-    const publicadorVivo = haceS != null && haceS < 120;
     let estado = "esperando";
-    if (a && publicadorVivo) estado = "vivo"; else if (a) estado = "congelado";
+    if (a && haceS < 120) estado = "vivo"; else if (a) estado = "congelado";
     const extra = a && a.agente ? { agente: a.agente, etiqueta: ETIQUETAS[a.agente], mision: a.mision, linea: a.linea, viejo: a.viejo, modelo: a.modelo, mac: a.mac, arte: a.arte, desde: a.desde } : {};
-    return { ...c, estado, maquinaHaceS: haceS, ...(a ? { lineas: a.lineas, ancho: a.ancho, alto: a.alto, cmd: a.cmd, sub: a.sub, rotulo: a.rotulo, cambio: a.cambio, ...extra } : {}) };
+    const enseña = d ? normMaq(d.maquina) : u.maquina;
+    // todas las máquinas donde tiene sesión (panel o terminal según Yokup)
+    const maqs = new Map();
+    for (const p of u.pubs) if (p.a.agente !== "nosesion" || p === elegido) maqs.set(p.m, { maquina: p.m, nombre: nombreMaq(p.doc.maquina), panel: true, terminal: false, agente: p.a.agente || "", panelVivo: p.vivo });
+    for (const t of u.terms) { const x = maqs.get(t.maquina) || { maquina: t.maquina, nombre: t.nombre, panel: false, agente: "", panelVivo: false }; maqs.set(t.maquina, { ...x, terminal: true, tarea: t.tarea }); }
+    const otras = [...maqs.values()].filter((x) => x.maquina !== enseña);
+    const avisosF = [];
+    for (const x of maqs.values()) if (x.terminal && !(x.panel && x.panelVivo)) avisosF.push(nombre + " tiene terminal en " + x.nombre + " que no publica en el panel");
+    if (enseña !== u.maquina) avisosF.unshift(nombre + " trabaja en " + nombreMaq(u.maquina) + " (" + u.motivo + "), pero esa máquina no publica: se enseña " + nombreMaq(enseña));
+    const conPanel = otras.filter((x) => x.panel && x.panelVivo); // las que no publican ya llevan su aviso arriba
+    if (enseña === u.maquina && conPanel.length) avisosF.push(nombre + " también tiene sesión en " + conPanel.map((x) => x.nombre).join(", "));
+    avisos.push(...avisosF.filter((t) => !avisos.includes(t)));
+    const base = { ...c, host: d ? d.maquina : (conDoc.find((x) => normMaq(x.maquina) === u.maquina) || {}).maquina || (normMaq(c.host) === u.maquina ? c.host : u.maquina), hostConf: c.host };
+    const donde = { maquinaReal: u.maquina, maquinaNombre: nombreMaq(base.host), motivoMaquina: u.motivo, otras, avisos: avisosF, ...(u.encargo ? { encargo: u.encargo.numero } : {}) };
+    if (a && a.agente) extra.mac = nombreMaq(base.host); // el Mac de la ficha es donde está la sesión que se enseña, no el de la conf
+    return { ...base, estado, maquinaHaceS: haceS, ...donde, ...(a ? { lineas: a.lineas, ancho: a.ancho, alto: a.alto, cmd: a.cmd, sub: a.sub, rotulo: a.rotulo, cambio: a.cambio, ...extra } : {}) };
   });
-  return { fichas, fuenteConf: conf ? conf.maquina : "defecto" };
+  return { fichas, avisos, fuenteConf: conf ? conf.maquina : "defecto", ubicacion: opciones.presencia ? "presencia" + (opciones.encargos ? "+encargos" : "") : "solo paneles" };
 }
 
 /** #5707 (/interface 2 claude · /interface 2 Neo Trinity): ?a=Neo,Trinity → solo esas fichas (de la lista de 6), en el

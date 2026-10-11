@@ -1,4 +1,8 @@
 {
+  "v.11.10.2026.r26.11:35": [
+    "«Trabajando ahora» rota cada 15 s en tres fases: máquina → runtime → foco. Consejeros: proyecto principal · deepagent (Musk «admira.live · Morfeo», por defecto); sin foco reportado, «Training». Agentes: su proyecto actual (pulso/latido) o su pilar del reparto del finde (Trinity «admira.biz»). ES/EN.",
+    "Nuevo /api/consejo/foco: cada consejero fija su proyecto y deepagent (POST con token del Consejo; GET público). Merovingio ya no sale «GrokBot CLI · CLI»."
+  ],
   "v.10.10.2026.r25.20:35": [
     "/consumos · Cuentas: lecturas «web-uso» de la pantalla de uso del plan (claude.ai / chatgpt.com): sesión 5 h y semana con su hora de reinicio, insignia «Reinicio gratis disponible · vence 22 oct» (o «3 reinicios gratis · el primero vence 22 oct») y créditos.",
     "Lecturas de más de 6 h salen como «dato de hace X h» en vez de pasar por frescas.",

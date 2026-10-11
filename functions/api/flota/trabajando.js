@@ -8,6 +8,8 @@
  */
 import { tarjetas, retratoDe } from "../../../flota-trabajando-lib.mjs";
 import { calcular } from "../consumos/velocidad.js";
+import { leerFocos, kv as kvFoco } from "../consejo/foco.js";
+import { focoDe } from "../../../consejo-foco-lib.mjs";
 import { matriz, cargaDe, persona as personaCenso, AGENTES_FLOTA, CONSEJEROS, llave } from "../../../flota-matriz-lib.mjs";
 
 /** r4 (Jensen, 10-10-2026): carga de encargos por persona, la MISMA fuente que agentes_vivos (bandeja pública de Yokup,
@@ -110,6 +112,9 @@ export async function construir({ env, fetchImpl, ahoraMs: ahoraFijo, cache }) {
   const nombres = [...AGENTES_FLOTA, ...CONSEJEROS, ...pres.map((e) => e && e.persona && personaCenso(e.persona))];
   const carga = await leerCarga(fetchImpl || fetch, nombres).catch(() => new Map());
   const ts = tarjetas({ presencia: pres, velocidad: v, ahoraS, carga });
+  // r26: foco (proyecto principal · deepagent) de cada ficha; el de los consejeros lo fijan ellos (POST /api/consejo/foco).
+  const focos = await leerFocos(kvFoco(env)).catch(() => ({ focos: {} }));
+  for (const t of ts) t.foco = focoDe(t, focos, ahoraMs);
   return {
     ok: true, tarjetas: ts,
     matriz: conSuperficies(conRetratos(matriz({ presencia: pres, carga, ahoraS })), ts), carga: carga.size ? "ok" : "sin datos",

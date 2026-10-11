@@ -185,3 +185,22 @@ test("limpiarBocadillo: no corta números y prefiere quitar una frase a cortarla
   const largo = "Frase corta uno. " + "palabra ".repeat(60) + "fin.";
   assert.equal(L.limpiarBocadillo(largo), "Frase corta uno.");
 });
+
+test("voz vía Service Binding pixer-eleven (AnnouncementTts): sin clave en admira.live, tono por consejero", async () => {
+  const llamadas = [];
+  const PIXER_TTS = { generate: async (input) => { llamadas.push(input); return new Response(new Uint8Array([9, 9, 9, 9]), { status: 200, headers: { "content-type": "audio/mpeg" } }); } };
+  const r = await vozPost({ request: req({ persona: "lucas", texto: "La historia manda.", lang: "es" }, { url: PREVIEW + "/api/consejo/voz" }), env: { ...ENV, PIXER_TTS }, fetchImpl: fakeFetch([]) });
+  assert.equal(r.status, 200);
+  assert.equal(r.headers.get("x-debatir-via"), "pixer-eleven");
+  assert.equal(r.headers.get("x-debatir-caracteres"), "18");
+  assert.equal(Number(r.headers.get("x-debatir-tono")), 0.83);
+  assert.deepEqual(llamadas[0], { text: "La historia manda.", voice: "male", language: "es" });
+  assert.equal((await r.arrayBuffer()).byteLength, 4);
+  // cada consejero de una vista suena distinto (voz + tono)
+  for (const g of ["leyendas", "coetaneos"]) {
+    const firmas = L.participantes(g, true).map((p) => { const v = L.vozPixer(p); return v.voice + v.tono; });
+    assert.equal(new Set(firmas).size, 8, g);
+  }
+  const fallo = await vozPost({ request: req({ persona: "porat", texto: "x" }, { url: PREVIEW + "/api/consejo/voz" }), env: { ...ENV, PIXER_TTS: { generate: async () => new Response("{}", { status: 503 }) } }, fetchImpl: fakeFetch([]) });
+  assert.equal(fallo.status, 502);
+});

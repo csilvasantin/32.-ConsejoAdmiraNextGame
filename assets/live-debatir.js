@@ -257,11 +257,17 @@
         if (r.status === 503) return r.json().then(function (d) { throw Object.assign(new Error('falta'), { falta: d && d.falta }); });
         if (!r.ok) throw new Error('voz ' + r.status);
         var c = parseFloat(r.headers.get('X-Debatir-Coste-Usd') || '0'); if (c > 0) { st.coste += c; pintaCoste(st); }
-        return r.blob();
+        st.vozChars = (st.vozChars || 0) + (parseInt(r.headers.get('X-Debatir-Caracteres') || '0', 10) || 0);
+        st.vozBytes = st.vozBytes || 0;
+        var tono = parseFloat(r.headers.get('X-Debatir-Tono') || '1') || 1, via = r.headers.get('X-Debatir-Via') || '';
+        return r.blob().then(function (blob) { st.vozBytes += blob.size; st.vozVia = via; return { blob: blob, tono: tono }; });
       })
-      .then(function (blob) {
+      .then(function (x) {
+        var blob = x.blob;
         return new Promise(function (res) {
-          var url = URL.createObjectURL(blob), au = new Audio(url); st.audio = au;
+          var url = URL.createObjectURL(blob), au = new Audio(url); st.player = au;
+          // Tono propio del consejero (vía pixer-eleven solo hay voz de hombre/mujer): sin conservar el tono.
+          try { au.preservesPitch = false; au.mozPreservesPitch = false; au.webkitPreservesPitch = false; au.playbackRate = Math.max(0.7, Math.min(1.3, x.tono)); } catch (e) {}
           var fin = function () { el.textContent = texto; URL.revokeObjectURL(url); res(); };
           au.ontimeupdate = function () { if (au.duration) el.textContent = texto.slice(0, Math.ceil(texto.length * (au.currentTime / au.duration))); };
           au.onended = fin; au.onerror = fin;
@@ -289,7 +295,7 @@
     st.timers.forEach(clearTimeout);
     try { st.ctrl.abort(); } catch (e) {}
     try { if (root.speechSynthesis) root.speechSynthesis.cancel(); } catch (e) {}
-    try { if (st.audio && st.audio.pause) st.audio.pause(); } catch (e) {}
+    try { if (st.player && st.player.pause) st.player.pause(); } catch (e) {}
     document.querySelectorAll('.np.debate-habla').forEach(function (n) { n.classList.remove('debate-habla'); });
     if (st.layer) st.layer.remove();
     document.body.classList.remove('debate-on');
@@ -343,7 +349,7 @@
         if (st.parado) return null;
         if (!esFin) await espera(st.audio ? 450 : Math.max(1800, d.texto.split(/\s+/).length * 230), st);
       }
-      log('✓ ' + T(st, 'Debate cerrado', 'Debate closed') + (st.nivel === 'pago' ? ' · ≈ $' + st.coste.toFixed(3) : ' · 0 €') + ' · /debatir stop ' + T(st, 'lo quita de la escena', 'removes it from the scene'));
+      log('✓ ' + T(st, 'Debate cerrado', 'Debate closed') + (st.nivel === 'pago' ? ' · ≈ $' + st.coste.toFixed(3) : ' · 0 €') + (st.vozChars ? ' · 🔊 ' + st.vozChars + T(st, ' caracteres de voz', ' voice chars') + (st.vozVia ? ' (' + st.vozVia + ')' : '') : '') + ' · /debatir stop ' + T(st, 'lo quita de la escena', 'removes it from the scene'));
       st.terminado = true;
       return { historial: st.historial, coste_usd: st.coste, nivel: st.nivel };
     } catch (e) {

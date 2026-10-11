@@ -253,4 +253,18 @@ export function vozEleven(persona, env = {}) {
   return /^[A-Za-z0-9]{10,40}$/.test(v) ? v : null;
 }
 export const ELEVEN_MODELO = "eleven_multilingual_v2";
+
+// Vía worker pixer-eleven (Service Binding PIXER_TTS → entrypoint AnnouncementTts, sin clave en admira.live):
+// esa vía solo expone 2 voces ElevenLabs por idioma (male/female, modelo eleven_v4). Cada consejero se distingue
+// con su voz (hombre/mujer) + un «tono» propio que el navegador aplica como playbackRate sin conservar el tono.
+export const VOZ_PIXER = Object.freeze({
+  jobs: ["male", 1.0], wozniak: ["male", 1.1], cook: ["male", 0.95], buffett: ["male", 0.87], disney: ["male", 1.05],
+  rams: ["male", 0.91], schultz: ["male", 1.03], lucas: ["male", 0.83],
+  musk: ["male", 0.93], huang: ["male", 1.07], shotwell: ["female", 1.0], porat: ["female", 0.9], lasseter: ["male", 1.12],
+  ive: ["male", 0.88], ratti: ["male", 1.02], reynolds: ["male", 1.16],
+});
+export function vozPixer(persona) {
+  const v = VOZ_PIXER[persona];
+  return v ? { voice: v[0], tono: v[1] } : null;
+}
 export const ELEVEN_USD_POR_1000 = 0.22; // orientativo (plan Creator ≈ 22 $ / 100k caracteres)

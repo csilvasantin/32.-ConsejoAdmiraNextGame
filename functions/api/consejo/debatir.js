@@ -24,7 +24,7 @@ export function onRequestGet({ request, env }) {
   return json({
     ok: true, servicio: "debatir", dmz: true, max_rondas: MAX_RONDAS,
     niveles: { gratis: g ? g.etiqueta : null, pago: p ? p.etiqueta : null },
-    voz: { navegador: true, elevenlabs: !!(env && env.ELEVENLABS_API_KEY) },
+    voz: { navegador: true, elevenlabs: env && env.ELEVENLABS_API_KEY ? "clave propia" : env && env.PIXER_TTS ? "pixer-eleven (service binding)" : null },
   }, 200, o);
 }
 

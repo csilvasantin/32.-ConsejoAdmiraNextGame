@@ -7,7 +7,7 @@
 <meta name="referrer" content="no-referrer" />
 <meta name="theme-color" content="#000000" />
 <meta name="mobile-web-app-capable" content="yes" />
-<meta name="admiranext-version" content="AdmiraNeXT v.11.10.2026.r28.12:39" />
+<meta name="admiranext-version" content="AdmiraNeXT v.11.10.2026.r30.13:20" />
 <title>Visor · deepagents de pago · admira.live</title>
 <style>
   :root { --bg:#000; --fg:#d0d0d0; --gap:4px; }
@@ -34,6 +34,7 @@
   #puntos i { width:7px; height:7px; border-radius:50%; background:#444; display:inline-block; margin-top:3px; }
   #puntos i.on { background:#ddd; }
   #llave { position:fixed; inset:0; display:none; align-items:center; justify-content:center; text-align:center; padding:24px; color:#bbb; font-size:15px; line-height:1.5; z-index:10; background:#000; }
+  #llave .msg { max-width:34rem; }
   /* Plegado / vertical estrecho: una ficha por pantalla, se pasa con el dedo */
   @media (max-width: 640px) {
     #rejilla { display:flex; overflow-x:auto; scroll-snap-type:x mandatory; gap:0; padding:0; padding-bottom:18px; -webkit-overflow-scrolling:touch; scrollbar-width:none; }
@@ -49,7 +50,7 @@
 <body>
 <div id="rejilla"></div>
 <div id="pie"><span id="estado">conectando…</span><span id="puntos"></span><span><b>admira.live/visor</b> · solo lectura</span></div>
-<div id="llave">Este visor necesita su llave.<br/>Ábrelo desde el enlace privado que te pasó GrokBot<br/>(lleva <code>#k=…</code> al final).</div>
+<div id="llave"><div class="msg">Este visor necesita su llave.<br/>Ábrelo desde el enlace privado que te pasó GrokBot<br/>(lleva <code>#k=…</code> al final).</div></div>
 <script>
 (function () {
   "use strict";
@@ -174,7 +175,7 @@
   function tick() {
     t0 = Date.now();
     fetch("/api/visor/pane", { headers: { "X-Visor-Key": llave }, cache: "no-store" }).then(function (r) {
-      if (r.status === 401) { try { localStorage.removeItem("visorLlave"); } catch (e) {} document.getElementById("llave").innerHTML = "La llave de este visor ya no vale (revocada o caducada).<br/>Pide un enlace nuevo a GrokBot."; document.getElementById("llave").style.display = "flex"; throw new Error("401"); }
+      if (r.status === 401) { try { localStorage.removeItem("visorLlave"); } catch (e) {} document.getElementById("llave").innerHTML = "<div class=\"msg\">La llave de este visor ya no vale (revocada o caducada).<br/>Pide un enlace nuevo a GrokBot.</div>"; document.getElementById("llave").style.display = "flex"; throw new Error("401"); }
       return r.json();
     }).then(function (d) {
       if (!d || !d.ok) throw new Error("respuesta");

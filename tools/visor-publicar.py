@@ -129,7 +129,7 @@ def main():
         time.sleep(60)
         return 1
     maquina = yo()
-    huellas, ultimo_envio, rotulos, forzar = {}, 0.0, {}, True
+    huellas, ultimo_envio, rotulos, forzar, cambios = {}, 0.0, {}, True, {}
     while True:
         t0 = time.time()
         try:
@@ -146,8 +146,10 @@ def main():
                 cap["rotulo"], cap["sub"] = rotulos[c["sesion"]]
                 h = hashlib.sha1(json.dumps(cap, sort_keys=True).encode()).hexdigest()
                 nuevas[c["sesion"]] = h
+                if huellas.get(c["sesion"]) != h or c["sesion"] not in cambios:
+                    cambios[c["sesion"]] = int(t0 * 1000)  # «cambio» = cuándo cambió de verdad la pantalla, no cuándo se reenvió
                 if forzar or huellas.get(c["sesion"]) != h:
-                    cap["cambio"] = int(t0 * 1000)
+                    cap["cambio"] = cambios[c["sesion"]]
                     agentes[c["sesion"]] = cap
             cambio_vivas = set(vivas) != set(huellas)
             if mias and (agentes or cambio_vivas or forzar or t0 - ultimo_envio >= LATIDO):
@@ -156,12 +158,14 @@ def main():
                 ultimo_envio = t0
                 huellas = nuevas
                 forzar = bool(r.get("necesitaCompleto"))
+                if forzar:
+                    print("visor-publicar: el servidor pide envío completo (%s)" % time.strftime("%H:%M:%S"), file=sys.stderr, flush=True)
         except urllib.error.HTTPError as e:
-            print("visor-publicar: HTTP %s" % e.code, file=sys.stderr)
+            print("visor-publicar: HTTP %s (%s)" % (e.code, time.strftime("%H:%M:%S")), file=sys.stderr, flush=True)
             forzar = True
             time.sleep(10)
         except Exception as e:  # noqa: BLE001
-            print("visor-publicar: %s" % type(e).__name__, file=sys.stderr)
+            print("visor-publicar: %s (%s)" % (type(e).__name__, time.strftime("%H:%M:%S")), file=sys.stderr, flush=True)
             forzar = True
             time.sleep(5)
         if una:

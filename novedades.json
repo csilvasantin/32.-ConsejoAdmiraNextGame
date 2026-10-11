@@ -1,4 +1,9 @@
 {
+  "v.11.10.2026.r31.13:23": [
+    "/visor/ y la cuadrícula del Mac dicen lo mismo: el estado de cada deepagent (en misión / Idle / Login pendiente / Sin sesión) y su última misión salen de una sola pieza, estado-agente.py, que comparten panel-agente.sh y el publicador del visor, con la misma histéresis (en vivo al primer indicio, Idle tras 80 s quieto).",
+    "En el visor, un agente en Idle se ve como en el Mac: nombre grande, línea de modelo · Mac · estado · hora, «Idle» y «última misión: #NNNN · estado · título». Si pide iniciar sesión sale «Login pendiente», sin enseñar nunca el enlace OAuth (también tapado en servidor, aunque venga partido en varias líneas).",
+    "Los agentes en misión siguen mostrando su terminal en vivo, ahora con la misión en curso bajo el rótulo."
+  ],
   "v.11.10.2026.r30.13:20": [
     "/visor/ sin llave: el aviso se lee entero. Antes el recuadro era flex y partía la frase en piezas sueltas."
   ],

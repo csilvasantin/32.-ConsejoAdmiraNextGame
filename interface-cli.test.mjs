@@ -85,3 +85,26 @@ test('la barra (páginas sin CLI propia) usa la misma implementación y la home 
   assert.match(home, /\/assets\/experto-dock\.js\?v=/);
   assert.match(home, /\/assets\/interface-cli\.js\?v=/);
 });
+
+test('cli-ayuda: /demo help cuenta, ordena por fecha (interface arriba) y admite antiguas / alfabético', async () => {
+  await import('./assets/cli-ayuda.js');
+  const A = globalThis.AdmiraCliAyuda;
+  const h = A.demoHelp('', false).split('\n');
+  assert.match(h[0], new RegExp('^Hay ' + A.CATALOGO.length + ' demos'));
+  assert.match(h[1], /^11-10-2026 {2}\/demo interface/);
+  const old = A.demoHelp('antiguas', false).split('\n');
+  assert.match(old[1], /07-10-2026/);
+  const az = A.demoHelp('--orden alfabetico', true).split('\n');
+  assert.match(az[0], /^There are \d+ demos · by name/);
+  assert.match(az[1], /\/demo app/);
+  assert.ok(A.RE_DEMO_HELP.test('/demo help antiguas') && A.RE_DEMO_HELP.test('/demo ayuda') && !A.RE_DEMO_HELP.test('/demo lista'));
+});
+
+test('cli-ayuda: ¿quisiste decir…? (transposición, prefijo, nada si no se parece)', async () => {
+  const A = globalThis.AdmiraCliAyuda;
+  assert.equal(A.sugerir('hlep', ['help', 'ayuda']), 'help');
+  assert.equal(A.sugerir('interfase', ['interface', 'idioma']), 'interface');
+  assert.equal(A.sugerir('interf', ['interface', 'idioma']), 'interface');
+  assert.equal(A.sugerir('zzzz', ['help', 'demo']), '');
+  assert.equal(globalThis.AdmiraInterface.run('/interface termnal 4', (t) => { assert.match(t, /Did you mean terminal|Quisiste decir terminal/); }), true);
+});

@@ -191,7 +191,9 @@
     if (!o) return false;
     decir = decir || function () {};
     if (!o.ok) {
-      decir('⚠️ ' + (o.error === 'dispositivo' ? T('Dispositivo desconocido: ', 'Unknown device: ') + o.valor + ' · ' : o.error === 'grid' ? T('Usa terminal 2, 4 o 6 · ', 'Use terminal 2, 4 or 6 · ') : '') + ayuda());
+      var A = root.AdmiraCliAyuda, sug = A && o.valor ? A.sugerir(o.valor, o.error === 'dispositivo' ? Object.keys(DISPOSITIVOS) : ['terminal', 'help', 'ayuda', 'off', 'cerrar']) : '';
+      decir('⚠️ ' + (o.error === 'dispositivo' ? T('Dispositivo desconocido: ', 'Unknown device: ') + o.valor + ' · ' : o.error === 'grid' ? T('Usa terminal 2, 4 o 6 · ', 'Use terminal 2, 4 or 6 · ') : T('No entiendo «', 'I do not understand «') + o.valor + '» · ') +
+        (sug ? T('¿Quisiste decir ', 'Did you mean ') + sug + '? · ' : '') + ayuda());
       return true;
     }
     if (o.accion === 'help') { decir('⌨ ' + ayuda()); return true; }
@@ -235,8 +237,6 @@
     return PASOS.length;
   }
   var RE_DEMO = /^\/?demo\s+(interface|interfaz|terminal|terminales)\s*$/i;
-  var RE_DEMO_HELP = /^\/?demo(\s+(help|ayuda|lista|list|\?))?\s*$/i;
-  var DEMOS_LIVE = '/demo portada · /demo lectura · /demo velocidad · /demo interface';
 
   // ── Registro en el ⌘ EXPERTO · CLI de la suite (www.admiranext.com/suite/experto.js) ──
   function li(log, t, cls) {
@@ -269,7 +269,7 @@
         demo(function (x, orden) { li(log, x, orden ? 'cmd' : (/^⚠/.test(x) ? 'err' : '')); });
         return;
       }
-      if (RE_DEMO_HELP.test(t)) setTimeout(function () { li(log, T('Demos de admira.live: ', 'admira.live demos: ') + DEMOS_LIVE); }, 0);
+      // /demo help: lo contesta assets/cli-ayuda.js (catálogo con fechas, orden reciente/antiguas/alfabético)
     }, true);
   }
   if (root.document) {

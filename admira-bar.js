@@ -438,7 +438,7 @@
     form.className = "cuadratura-cli";
     form.innerHTML = '<input type="text" aria-label="Línea de comandos de prueba" placeholder="prueba un comando (local) · /help" autocomplete="off"' +
       ' data-en-aria-label="Test command line" data-en-placeholder="try a command (local) · /help">' +
-      '<output aria-live="polite"></output>';
+      '<output aria-live="polite" style="white-space:pre-wrap;display:block;max-height:40vh;overflow:auto"></output>';
     form.addEventListener("submit", function (e) {
       e.preventDefault();
       var inp = form.querySelector("input");
@@ -454,7 +454,15 @@
         }, function () { out.textContent = T("/interface no ha cargado; recarga la página.", "/interface did not load; reload the page."); });
         return;
       }
-      out.textContent = consolaLocal(orden);
+      var res = consolaLocal(orden);
+      // Mal escrita o desconocida → «¿Quisiste decir …?» + la ayuda que toca; /demo help → catálogo con fechas.
+      // Misma pieza que la portada: assets/cli-ayuda.js, cargada al vuelo.
+      if (res && res.indexOf("local · ") === 0 || /^\/?demo(\s|$)/i.test(String(orden).trim())) {
+        out.textContent = res;
+        cliAyuda(function (A) { out.textContent = ayudaLocal(A, String(orden).trim()); }, function () {});
+        return;
+      }
+      out.textContent = res;
     });
     rail.insertBefore(form, nav.nextSibling);
     var I = idioma();
@@ -477,6 +485,28 @@
     a.hidden = false;
     clearTimeout(avisoIdioma.t);
     avisoIdioma.t = setTimeout(function () { a.hidden = true; }, 3500);
+  }
+
+  function cliAyuda(ok, ko) {
+    if (window.AdmiraCliAyuda) return ok(window.AdmiraCliAyuda);
+    var sc = document.createElement("script");
+    sc.src = "/assets/cli-ayuda.js?v=20261011-r35-ayuda";
+    sc.onload = function () { window.AdmiraCliAyuda ? ok(window.AdmiraCliAyuda) : ko(); };
+    sc.onerror = ko;
+    document.head.appendChild(sc);
+  }
+  function ayudaLocal(A, line) {
+    var md = /^\/?demo(?:\s+(.*))?$/i.exec(line);
+    if (md) {
+      var arg = String(md[1] || "").trim(), h = /^(help|ayuda|\?)(\s|$)/i.exec(arg);
+      if (!arg || h) return A.demoHelp(h ? arg.slice(h[0].length) : "");
+      var sd = A.sugerir(arg, A.CATALOGO.map(function (d) { return d[0].replace(/^\/demo /, ""); }));
+      return T("Demo desconocida en esta página: ", "Unknown demo on this page: ") + arg + (sd ? T(" · ¿Quisiste decir /demo ", " · Did you mean /demo ") + sd + "?" : "") +
+        T(" (aquí solo /demo interface; las demás, en la home ⌘)\n", " (only /demo interface here; the rest on the home page ⌘)\n") + A.demoHelp("");
+    }
+    var v = (/^\/?(\S+)/.exec(line) || [])[1] || "";
+    var s = A.sugerir(v, CONSOLA_LOCAL.map(function (c) { return c.slice(1); }).concat(["demo"]));
+    return T("Orden desconocida: ", "Unknown command: ") + line + (s ? T(" · ¿Quisiste decir /", " · Did you mean /") + s + "?" : "") + "\n" + consolaLocal("/help");
   }
 
   function interfaceCli(ok, ko) {

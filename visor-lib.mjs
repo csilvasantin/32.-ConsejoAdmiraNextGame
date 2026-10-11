@@ -88,6 +88,7 @@ export function normalizarPane(body, ahora = Date.now()) {
     if (ESTADOS_AGENTE.includes(a.estado)) {
       const ag = agentes[ses];
       ag.agente = a.estado;
+      ag.relajado = a.relajado === true; // modo ahorro: dato de estado-agente.py, independiente de actividad
       ag.mision = tapar(limpio(a.mision, 240));
       ag.linea = tapar(limpio(a.linea, 260)); ag.viejo = tapar(limpio(a.viejo, 120)); // r33b: línea de misión y «abierto desde»
       ag.modelo = limpio(a.modelo, 40); ag.mac = limpio(a.mac, 40);
@@ -126,7 +127,7 @@ export function vista(docs, ahora = Date.now(), opciones = {}) {
     const publicadorVivo = haceS != null && haceS < 120;
     let estado = "esperando";
     if (a && publicadorVivo) estado = "vivo"; else if (a) estado = "congelado";
-    const extra = a && a.agente ? { agente: a.agente, etiqueta: ETIQUETAS[a.agente], mision: a.mision, linea: a.linea, viejo: a.viejo, modelo: a.modelo, mac: a.mac, arte: a.arte, desde: a.desde } : {};
+    const extra = a && a.agente ? { agente: a.agente, relajado: a.relajado === true, etiqueta: ETIQUETAS[a.agente], mision: a.mision, linea: a.linea, viejo: a.viejo, modelo: a.modelo, mac: a.mac, arte: a.arte, desde: a.desde } : {};
     return { ...c, estado, maquinaHaceS: haceS, ...(a ? { lineas: a.lineas, ancho: a.ancho, alto: a.alto, cmd: a.cmd, sub: a.sub, rotulo: a.rotulo, cambio: a.cambio, ...extra } : {}) };
   });
   return { fichas, fuenteConf: conf ? conf.maquina : "defecto" };

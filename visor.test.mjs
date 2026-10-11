@@ -6,6 +6,31 @@ import { tapar, normalizarPane, fundir, vista, CONF_DEFECTO, sha256 } from "./vi
 import { onRequestPost, onRequestGet } from "./functions/api/visor/pane.js";
 import { onRequestPost as llavePost } from "./functions/api/visor/llave.js";
 
+test("modo ahorro: el booleano relajado llega del publicador al visor sin cambiar actividad", () => {
+  const A = 4_000_000;
+  const conf = [{ titulo: "Smith · Grok", host: "macbook-pro-16", sesion: "smith", skin: "Smith" }];
+  for (const estado of ["idle", "pendiente", "login", "nosesion", "vivo"]) {
+    const p = normalizarPane({ maquina: "macbook-pro-16", conf, agentes: { smith: { estado, relajado: true, lineas: ["trabajo"] } } }, A).pane;
+    const f = vista([fundir(null, p)], A + 1000).fichas[0];
+    assert.equal(f.relajado, true);
+    assert.equal(f.agente, estado);
+    assert.deepEqual(f.lineas, estado === "vivo" ? ["trabajo"] : []);
+  }
+  for (const relajado of [false, undefined, "false", "true", 1]) {
+    const p = normalizarPane({ maquina: "macbook-pro-16", conf, agentes: { smith: { estado: "idle", relajado } } }, A).pane;
+    assert.equal(vista([fundir(null, p)], A).fichas[0].relajado, false);
+  }
+});
+
+test("modo ahorro: un envío parcial conserva o retira relajado conforme cambia la fuente", () => {
+  const body = { maquina: "macbook-pro-16", vivas: ["neo", "smith"], agentes: { smith: { estado: "idle", relajado: true } } };
+  let d = fundir(null, normalizarPane(body, 5000).pane);
+  d = fundir(d, normalizarPane({ ...body, completo: false, agentes: { neo: { estado: "vivo" } } }, 6000).pane);
+  assert.equal(d.agentes.smith.relajado, true);
+  d = fundir(d, normalizarPane({ ...body, completo: false, agentes: { smith: { estado: "idle", relajado: false } } }, 7000).pane);
+  assert.equal(d.agentes.smith.relajado, false);
+});
+
 test("tapa secretos y deja el resto", () => {
   const s = tapar("export OPENAI_API_KEY=sk-proj-abcdefghijklmnopqrstuv ghp_abcdefghijklmnopqrstuvwxyz12 Authorization: Bearer abc.def.ghijklmnopqrst password: hunter22");
   for (const malo of ["sk-proj-abc", "ghp_abc", "abc.def.ghij", "hunter22"]) assert.ok(!s.includes(malo), malo);

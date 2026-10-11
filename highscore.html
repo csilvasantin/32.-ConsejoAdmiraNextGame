@@ -65,7 +65,7 @@ html.con-presite #carga{background:#000 url("/img/highscore-presite-decathlon.we
 header.cab{position:relative;display:block;min-height:44px;margin:0}
 /* La cabecera es sólo la carrera. El titular va después de la última pista para
    actuar como divisor horizontal antes del ranking. */
-.score-divider{position:relative;min-height:40px;display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin:7px 0 8px;padding:7px 0;
+.score-divider{position:relative;min-height:46px;display:flex;align-items:center;justify-content:center;gap:7px;width:100%;margin:7px 0 8px;padding:8px 0;
   border-top:1px solid var(--line2);border-bottom:1px solid var(--line2)}
 h1{font-size:clamp(20px,3.2vw,31px);font-weight:900;letter-spacing:.08em;margin:0;color:var(--brand);
   text-shadow:3px 3px 0 #0a4a58}
@@ -81,19 +81,39 @@ h1{font-size:clamp(20px,3.2vw,31px);font-weight:900;letter-spacing:.08em;margin:
    aquella titula la página, esta titula una tabla. */
 .rank-divider{position:relative;display:flex;align-items:center;justify-content:center;width:100%;margin:14px 0 6px;padding:6px 0;
   border-top:1px solid rgba(120,243,255,.14);border-bottom:1px solid rgba(120,243,255,.14)}
-.ranking-toggle{font-size:.78em;opacity:.82;letter-spacing:.18em}
-.ranking-toggle:hover,.ranking-toggle:focus-visible{opacity:1}
-.ranking-toggle.on{opacity:1;color:var(--brand)}
+.ranking-toggle{font-size:.78em;opacity:1;letter-spacing:.18em;color:#ffe14a;text-shadow:0 0 8px rgba(255,225,74,.45)}
+.ranking-toggle:hover,.ranking-toggle:focus-visible{opacity:1;color:#ffe14a}
+.ranking-toggle.on{opacity:1;color:#ffe14a}
+#rankingToggle.ranking-toggle,
+#rankingToggle.ranking-toggle.on,
+#rankingToggle.ranking-toggle[aria-expanded="true"],
+#rankingToggle.ranking-toggle:hover,
+#rankingToggle.ranking-toggle:focus-visible{color:#ffe14a;opacity:1}
 .ranking-toggle:disabled{opacity:.28;cursor:default;text-shadow:none}
 .ranking-toggle:disabled:hover{color:inherit;text-shadow:none}
 .ranking-period{position:absolute;right:4px;top:50%;transform:translateY(-50%);display:grid;
-  grid-template-columns:24px minmax(48px,auto) 24px;align-items:center;gap:2px;color:var(--mut);font-size:8px;
+  grid-template-columns:28px minmax(52px,auto) 28px;align-items:center;gap:2px;color:var(--mut);font-size:12px;
   font-weight:900;letter-spacing:.08em;text-shadow:none}
-.ranking-period button{width:24px;height:24px;padding:0;border:1px solid rgba(120,243,255,.2);border-radius:4px;
-  background:rgba(3,12,18,.78);color:var(--brand);font:900 11px/1 ui-monospace,SFMono-Regular,Menlo,monospace;cursor:pointer}
+.ranking-period button{width:28px;height:28px;padding:0;border:1px solid rgba(120,243,255,.2);border-radius:4px;
+  background:rgba(3,12,18,.78);color:var(--brand);font:900 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;cursor:pointer}
 .ranking-period button:hover,.ranking-period button:focus-visible{border-color:var(--brand);color:var(--ink);outline:none;
   box-shadow:0 0 0 1px rgba(120,243,255,.2),0 0 9px rgba(120,243,255,.2)}
-.ranking-period-value{min-width:48px;text-align:center;color:var(--ink);font-size:8px;letter-spacing:.12em}
+.ranking-period-value{min-width:52px;text-align:center;color:var(--ink);font-size:12px;letter-spacing:.12em}
+/* Interruptor Agentes / Consejeros: gemelo del selector de periodo, al otro lado
+   de la barra. Sigue la marca blanca (--mbx-*) cuando /marca está activa. */
+.hs-bando{position:absolute;left:4px;top:50%;transform:translateY(-50%);display:inline-flex;overflow:hidden;
+  border:1px solid rgba(120,243,255,.2);border-color:color-mix(in srgb,var(--mbx-brand,var(--brand)) 30%,transparent);border-radius:4px;background:rgba(3,12,18,.78);text-shadow:none}
+.hs-bando button{height:28px;padding:0 10px;border:0;background:transparent;color:var(--mbx-mut,var(--mut));
+  font:900 12px/1 ui-monospace,SFMono-Regular,Menlo,monospace;letter-spacing:.12em;text-transform:uppercase;cursor:pointer}
+.hs-bando button:hover,.hs-bando button:focus-visible{color:var(--mbx-ink,var(--ink));outline:none}
+.hs-bando button:focus-visible{box-shadow:inset 0 0 0 1px var(--mbx-brand,var(--brand))}
+.hs-bando button[aria-pressed="true"]{background:var(--mbx-brand,var(--brand));color:var(--mbx-on-brand,#02080d)}
+.hs-bando.demo{animation:hsBandoDemo 1s ease-in-out 3}
+@keyframes hsBandoDemo{50%{box-shadow:0 0 0 2px var(--mbx-brand,var(--brand)),0 0 16px var(--mbx-brand,var(--brand))}}
+@media (prefers-reduced-motion:reduce){.hs-bando.demo{animation:none;box-shadow:0 0 0 2px var(--mbx-brand,var(--brand))}}
+/* Por debajo de 380 px no caben los tres en una línea: los dos mandos suben a
+   su propia fila, a la misma altura, y el título queda centrado debajo. */
+@media (max-width:379px){.score-divider{padding-top:34px}.score-divider .hs-bando,.score-divider .ranking-period{top:17px}}
 .ranking-scope-summary{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:0 0 8px;color:var(--mut);font-size:11px;line-height:1.5}
 .ranking-scope-summary button{font:inherit;color:var(--ink);background:transparent;border:1px solid rgba(120,243,255,.3);border-radius:5px;padding:5px 8px;cursor:pointer}
 .ranking-scope-summary button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
@@ -287,7 +307,8 @@ h1{font-size:clamp(20px,3.2vw,31px);font-weight:900;letter-spacing:.08em;margin:
   .dg-lista .l-est{grid-column:3;grid-row:1}
   .dg-lista .l-que{grid-column:2/4;grid-row:2}
 }
-@media (max-width:620px){.score-divider{justify-content:flex-start;padding-right:108px;font-size:15px;gap:5px}.daily-record{grid-template-columns:1fr 1fr}.record-cell{padding:8px 9px}
+@media (max-width:620px){.score-divider{justify-content:center;font-size:15px;gap:5px}
+  .hs-bando{left:2px}.hs-bando button{padding:0 8px;font-size:12px;letter-spacing:.1em}.daily-record{grid-template-columns:1fr 1fr}.record-cell{padding:8px 9px}
   .record-record{grid-column:1/-1}.record-gap{text-align:left}.record-value{font-size:10px}.record-value strong{font-size:14px}
   .podio-total{left:3%;top:2%;width:27%;padding:4.5px 6px}
   .podio-total .pts{font-size:12.6px}.podio-total .tot-rot{font-size:7.2px}
@@ -682,7 +703,8 @@ h1{font-size:clamp(20px,3.2vw,31px);font-weight:900;letter-spacing:.08em;margin:
 body.resizing-columns{cursor:col-resize;user-select:none}
 .tabla .n{color:var(--dim);width:38px}
 .tabla .ag{font-weight:700;white-space:nowrap}
-.tabla .maqs{flex-wrap:nowrap;gap:2px}
+.tabla .maqs{flex-wrap:wrap;gap:2px}
+.tabla td:nth-child(3){overflow:visible}
 .tabla .maq-b{padding:2px 4px;font-size:9px;letter-spacing:0}
 .tabla .num{text-align:right;font-variant-numeric:tabular-nums}
 .tabla .tot{text-align:right;font-weight:900;color:var(--accent);font-variant-numeric:tabular-nums}
@@ -952,8 +974,8 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   .refresh-started,.refresh-ended{font-size:7px}.refresh-timing{gap:2px}
   .refresh-track{padding-left:var(--track-start);padding-right:var(--finish-width)}
   .refresh-mission{font-size:8px;line-height:12px}.refresh-mission-title{font-size:8px}
-  .ranking-period{right:2px;grid-template-columns:24px minmax(43px,auto) 24px;gap:1px;font-size:7px}
-  .ranking-period button{width:24px;height:24px;font-size:10px}.ranking-period-value{min-width:43px;font-size:7px}
+  .ranking-period{right:2px;grid-template-columns:28px minmax(52px,auto) 28px;gap:1px;font-size:12px}
+  .ranking-period button{width:28px;height:28px;font-size:12px}.ranking-period-value{min-width:52px;font-size:12px}
   .race-call{min-width:min(96px,calc(100% - var(--track-start) - var(--finish-width) - 8px));
     padding:2px clamp(5px,1.8vw,11px);font-size:clamp(13px,4.2vw,18px);line-height:20px;letter-spacing:.1em}
   .score-progress td{padding-left:5px;padding-right:5px}.progression{grid-template-columns:88px repeat(6,76px);min-width:580px;gap:4px}
@@ -991,6 +1013,42 @@ body.resizing-columns{cursor:col-resize;user-select:none}
 .race-bonus{position:absolute;left:50%;top:28px;transform:translateX(-50%);color:#bcff62;background:#15240a;border:1px solid #8bc34a;border-radius:4px;padding:1px 5px;font:900 12px/14px monospace;z-index:8;text-shadow:none}
 .race-bonus[hidden]{display:none}
 #raceBonusStatus{font-size:12px;color:#b7d68d;min-height:1.5em;text-align:center}
+/* A 390 px (y por debajo de 560, donde el interruptor de 12 px ya no cabe en la
+   misma línea que el título): HIGHSCORE centrado arriba, el interruptor a todo
+   el ancho en dos mitades y DÍA a la derecha de la fila siguiente. El aviso de
+   calentamiento ocupa su propia calle, centrado, sin tapar RANKING. */
+@media (max-width:560px){
+  .score-divider{flex-wrap:wrap;align-items:center;justify-content:center;row-gap:6px;min-height:0;padding:8px 4px;column-gap:8px}
+  .score-divider .podium-toggle{order:0;flex:1 0 100%;text-align:center}
+  .score-divider .sonido{position:absolute;right:6px;top:8px}
+  .score-divider .hs-bando{order:1;position:static;left:auto;top:auto;transform:none;display:flex;width:100%;flex:1 1 100%}
+  .score-divider .hs-bando button{flex:1 1 50%;height:28px;padding:0 6px;font-size:12px}
+  .score-divider .ranking-period{order:2;position:static;right:auto;top:auto;transform:none;margin-left:auto;font-size:12px;
+    grid-template-columns:28px minmax(52px,auto) 28px}
+  .score-divider .ranking-period button{width:28px;height:28px;font-size:12px}
+  .score-divider .ranking-period-value{font-size:12px}
+  /* RANKING, igual que HIGHSCORE: el título solo y centrado, y ↑ DÍA ↓ en la
+     fila de debajo. En absoluto, a la derecha, el periodo ocupa la misma línea
+     y el rótulo deja de leerse centrado. */
+  .rank-divider{flex-wrap:wrap;align-items:center;justify-content:center;row-gap:6px;min-height:0;padding:8px 4px}
+  .rank-divider .ranking-toggle{order:0;flex:1 0 100%;text-align:center}
+  .rank-divider .ranking-period{order:1;position:static;right:auto;top:auto;transform:none;margin-left:auto;font-size:12px;
+    grid-template-columns:28px minmax(52px,auto) 28px}
+  .rank-divider .ranking-period button{width:28px;height:28px;font-size:12px}
+  .rank-divider .ranking-period-value{font-size:12px}
+  /* En Agentes la calle vacía mide ~70 px y el octágono (clip-path) más el
+     max-width de esa pista reducen READY/SET/GO a un pico. Aquí el botón es
+     una pastilla legible, centrada en la carrera, sin recorte. */
+  .refresh-race{min-height:56px}
+  .refresh-race.phase-ready,.refresh-race.phase-set,.refresh-race.phase-go{min-height:64px}
+  .race-call{clip-path:none;border-radius:6px;min-width:112px;max-width:calc(100% - 24px);
+    padding:6px 16px;font-size:16px;line-height:20px;letter-spacing:.14em}
+  .race-call::before,.race-call::after{display:none}
+  .refresh-lane-empty[data-race-warmup="true"]{display:block;width:100%;min-height:0}
+  .refresh-lane-empty[data-race-warmup="true"] .refresh-track{display:block;width:100%;min-height:0;padding:8px 12px}
+  .refresh-lane-empty[data-race-warmup="true"] .refresh-mission{position:static;left:auto;right:auto;top:auto;display:block;width:100%;max-width:none;margin:0;text-align:center;transform:none;font-size:12px;line-height:16px}
+  .refresh-lane-empty[data-race-warmup="true"] .refresh-mission-title{display:block;width:100%;white-space:normal;overflow:visible;text-overflow:clip;text-align:center}
+}
 </style>
 <link rel="stylesheet" href="/highscore-runner-state.css?v=20260901-static-last-work-runner">
 </head>
@@ -1012,7 +1070,9 @@ body.resizing-columns{cursor:col-resize;user-select:none}
        deja sus dos mandos a mano antes de mirar nada.
        Son DOS botones y cada uno hace UNA cosa: HIGHSCORE abre el podio (lo que
        ya hacía, aunque el rótulo no lo dijera) y RANKING gobierna la tabla. -->
-  <h1 class="score-divider" id="scoreDivider"><button class="podium-toggle" id="podiumToggle" type="button" aria-expanded="false" aria-controls="podio"
+  <h1 class="score-divider" id="scoreDivider"><span class="hs-bando" id="hsBando" role="group" aria-label="Ver agentes o consejeros" data-en-aria-label="Show agents or advisors" data-bando="agentes">
+      <button type="button" data-bando="agentes" aria-pressed="true" aria-controls="dailyRecord podio filas" data-en="Agents">Agentes</button><button type="button" data-bando="consejeros" aria-pressed="false" aria-controls="dailyRecord podio filas" data-en="Advisors">Consejeros</button>
+    </span><button class="podium-toggle" id="podiumToggle" type="button" aria-expanded="false" aria-controls="podio"
     title="Mostrar podio">HIGHSCORE</button>
     <button class="sonido" id="btnSonido" type="button" aria-pressed="false" title="Activar sonido">
       <span aria-hidden="true">♪</span><span class="sr-only" id="estadoSonido">Sonido desactivado</span>
@@ -1078,14 +1138,14 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       </colgroup>
       <thead><tr>
         <th class="n"><button class="rank-filter" id="lifeFilter" type="button" aria-pressed="false" aria-label="Mostrar solo agentes con vida" title="Mostrar solo agentes con vida">#</button></th>
-        <th data-sort-col="agente" aria-sort="none"><button class="sort-head" type="button" data-sort="agente">Agente<span class="sort-arrow" aria-hidden="true"></span></button></th>
-        <th data-sort-col="ordenador" aria-sort="none"><button class="sort-head" type="button" data-sort="ordenador">Ordenador<span class="sort-arrow" aria-hidden="true"></span></button></th>
-        <th data-sort-col="proyecto" aria-sort="none"><button class="sort-head" type="button" data-sort="proyecto">Proyecto<span class="sort-arrow" aria-hidden="true"></span></button></th>
-        <th class="num" data-sort-col="objetivos" aria-sort="none"><button class="sort-head" type="button" data-sort="objetivos">Objetivos<span class="sort-arrow" aria-hidden="true"></span></button></th>
-        <th class="num" data-sort-col="ventanas" aria-sort="none" title="Acumulado del día; las ventanas automáticas respetan una única apertura cada 60 minutos"><button class="sort-head" type="button" data-sort="ventanas" aria-label="Ordenar por ventanas de decisión"><span class="sort-label-stack"><span>Ventana</span><span>Decisión</span></span><span class="sort-arrow" aria-hidden="true"></span></button></th>
-        <th class="num" data-sort-col="misiones" aria-sort="none"><button class="sort-head" type="button" data-sort="misiones">Misiones<span class="sort-arrow" aria-hidden="true"></span></button></th>
-        <th class="num" data-sort-col="tareas" aria-sort="none"><button class="sort-head" type="button" data-sort="tareas">Tareas<span class="sort-arrow" aria-hidden="true"></span></button></th>
-        <th class="num" data-sort-col="puntos" aria-sort="none"><button class="sort-head" type="button" data-sort="puntos">Puntos<span class="sort-arrow" aria-hidden="true"></span></button></th>
+        <th data-sort-col="agente" aria-sort="none"><button class="sort-head" type="button" data-sort="agente"><span class="sort-label" id="hsColPersona" data-es="Agente" data-en="Agent">Agente</span><span class="sort-arrow" aria-hidden="true"></span></button></th>
+        <th data-sort-col="ordenador" aria-sort="none"><button class="sort-head" type="button" data-sort="ordenador"><span class="sort-label" data-es="Ordenador" data-en="Computer">Ordenador</span><span class="sort-arrow" aria-hidden="true"></span></button></th>
+        <th data-sort-col="proyecto" aria-sort="none"><button class="sort-head" type="button" data-sort="proyecto"><span class="sort-label" data-es="Proyecto" data-en="Project">Proyecto</span><span class="sort-arrow" aria-hidden="true"></span></button></th>
+        <th class="num" data-sort-col="objetivos" aria-sort="none"><button class="sort-head" type="button" data-sort="objetivos"><span class="sort-label" data-es="Objetivos" data-en="Goals">Objetivos</span><span class="sort-arrow" aria-hidden="true"></span></button></th>
+        <th class="num" data-sort-col="ventanas" aria-sort="none" title="Acumulado del día; las ventanas automáticas respetan una única apertura cada 60 minutos"><button class="sort-head" type="button" data-sort="ventanas" aria-label="Ordenar por ventanas de decisión"><span class="sort-label-stack"><span data-es="Ventana" data-en="Window">Ventana</span><span data-es="Decisión" data-en="Decision">Decisión</span></span><span class="sort-arrow" aria-hidden="true"></span></button></th>
+        <th class="num" data-sort-col="misiones" aria-sort="none"><button class="sort-head" type="button" data-sort="misiones"><span class="sort-label" data-es="Misiones" data-en="Missions">Misiones</span><span class="sort-arrow" aria-hidden="true"></span></button></th>
+        <th class="num" data-sort-col="tareas" aria-sort="none"><button class="sort-head" type="button" data-sort="tareas"><span class="sort-label" data-es="Tareas" data-en="Tasks">Tareas</span><span class="sort-arrow" aria-hidden="true"></span></button></th>
+        <th class="num" data-sort-col="puntos" aria-sort="none"><button class="sort-head" type="button" data-sort="puntos"><span class="sort-label" data-es="Puntos" data-en="Points">Puntos</span><span class="sort-arrow" aria-hidden="true"></span></button></th>
       </tr></thead>
       <tbody id="filas"></tbody>
     </table>
@@ -1103,7 +1163,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   <details class="work-observations encargo-tiempos" id="encargoTiempos" hidden>
     <summary id="encargoTiemposSummary">Tiempos por encargo</summary>
     <div class="encargo-tiempos-wrap"><table>
-      <thead><tr><th scope="col">Encargo</th><th scope="col">Quién</th><th scope="col">Máquina</th><th scope="col">Inicio</th><th scope="col">Fin</th><th scope="col">Duración</th></tr></thead>
+      <thead><tr><th scope="col" data-es="Encargo" data-en="Order">Encargo</th><th scope="col" data-es="Quién" data-en="Who">Quién</th><th scope="col" data-es="Máquina" data-en="Machine">Máquina</th><th scope="col" data-es="Inicio" data-en="Start">Inicio</th><th scope="col" data-es="Fin" data-en="End">Fin</th><th scope="col" data-es="Duración" data-en="Duration">Duración</th></tr></thead>
       <tbody id="encargoTiemposFilas"></tbody>
     </table></div>
   </details>
@@ -1125,6 +1185,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
 </section>
 
 <script src="/yk-agent-identity.js?v=v.24.09.2026.r12.cursorcloud"></script>
+<script src="/highscore-bando.js?v=v.11.10.2026.r37.15:14"></script>
 <script src="/highscore-race-bonus.js?v=20260905-bonus1"></script>
 <script src="/highscore-race.js?v=v.12.08.2026.r1.trabajo-parado"></script>
 <script src="/highscore-work-clock.js?v=20260905-duration-r1"></script>
@@ -1134,7 +1195,17 @@ body.resizing-columns{cursor:col-resize;user-select:none}
 (function () {
   "use strict";
   // Dominio propio: LaLiga bloquea workers.dev en horas de fútbol (FLT-1633); workers.dev sigue vivo como respaldo.
-  var TG = "https://bot.yokup.com";
+  // En www.admira.live el bot ya admite el origen. En la vista previa de Pages
+  // (*.pages.dev) ese CORS rechaza la página y el ranking sale a medias: allí
+  // se lee por el proxy del mismo dominio. Producción no cambia de host.
+  var TG = (function () {
+    try {
+      var h = String(location.hostname || "").toLowerCase();
+      if (h === "www.admira.live" || h === "admira.live" || h === "bot.yokup.com") return "https://bot.yokup.com";
+      if (location.protocol === "https:" || location.protocol === "http:") return location.origin + "/api/yokup-bot";
+    } catch (e) {}
+    return "https://bot.yokup.com";
+  })();
   var YK = "https://api.yokup.com";
 
   /* ── Banda sonora exclusiva del presite: corte descargado el 3-ago-2026,
@@ -2011,6 +2082,21 @@ body.resizing-columns{cursor:col-resize;user-select:none}
         label:claveProyecto(web) || normaliza(fila.project_name || (proyecto && proyecto.name) || fila.project_id),
         url:web ? (/^https?:\/\//i.test(web) ? web : "https://" + web) : "" };
     }
+    // Cada silla de sillas.js sale en Consejeros aunque hoy no haya puntuado
+    // ni latido (Huang/Jensen, Y). Si ya hay fila de esa silla, no se duplica.
+    if (window.HsBando && Array.isArray(window.HsBando.CONSEJEROS)) {
+      window.HsBando.CONSEJEROS.forEach(function (nombre) {
+        var ficha = window.HsBando.SILLAS[nombre] || {};
+        var ya = Object.keys(por).some(function (k) {
+          var f = por[k];
+          return window.HsBando.silla(f && (f.base || f.agente)) === nombre;
+        });
+        if (!ya) {
+          var f = fila(nombre, ficha.maquina || "");
+          if (f && ficha.maquina && f.maquinas.indexOf(ficha.maquina) < 0) f.maquinas.push(ficha.maquina);
+        }
+      });
+    }
     var lista = Object.keys(por).map(function (k) {
       var f = por[k];
       f.agente = id ? id.display(f.base, f.suffix) : f.base;
@@ -2348,7 +2434,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       // El podio del periodo se RECALCULA sumando a cada agente. Quedarse con
       // los tres de cada día daría un podio falso: el cuarto de todos los días
       // puede ser el primero de la semana.
-      (x.top || []).forEach(function (t) { fila.por[t.agent] = (fila.por[t.agent] || 0) + t.points; });
+      (x.top || []).forEach(function (t) { if (hsBandoAdmite(t.agent)) fila.por[t.agent] = (fila.por[t.agent] || 0) + t.points; });
       mapa.set(clave, fila);
     });
     return [...mapa.values()].map(function (f) {
@@ -2374,7 +2460,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     // agrupa sobre los días CON actividad, porque una semana sin ninguno no
     // llegó a existir para la flota.
     var dias = diasGrano === "dia"
-      ? ((d.evolution && d.evolution.days) || []).map(function (x) { return { clave: x.day, points: x.points, dias: 1, top: x.top || [] }; })
+      ? ((d.evolution && d.evolution.days) || []).map(function (x) { return { clave: x.day, points: x.points, dias: 1, top: (x.top || []).filter(function (t) { return hsBandoAdmite(t && t.agent); }) }; })
       : agrupaDias(d.all_days, diasGrano, conf[2]);
     if (!dias.length) return '<p class="dias-sub">Sin días que dibujar.</p>';
     var W = 720, H = 210, base = H - 22, pad = 26;
@@ -2495,7 +2581,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   function listaMisionesHtml(fila, d) {
     // El Worker ya entrega ASC, pero el orden visible no puede depender de la
     // estabilidad de una respuesta intermedia o de una caché antigua.
-    var m = (d.missions || []).slice().sort(function (a, b) {
+    var m = (d.missions || []).filter(function (x) { return !x || !x.agent || hsBandoAdmite(x.agent); }).sort(function (a, b) {
       return (Number(a.at) || 0) - (Number(b.at) || 0) || String(a.id || "").localeCompare(String(b.id || ""));
     });
     if (!m.length) {
@@ -3824,11 +3910,30 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     if (typeof RANKING_PERIOD !== "undefined") return metricasRanking(fila, RANKING_PERIOD).points > 0;
     return (Number(fila && fila.total) || 0) > 0;
   }
+  /* Encargo #5630: interruptor Agentes / Consejeros. Los consejeros puntúan como
+     cualquiera pero el marcador los dejaba fuera (FLT-100883) y no había forma
+     de ver qué hizo cada silla. La vista manda sobre el censo de agentes: en
+     «consejeros» solo quedan las sillas, en «agentes» nunca entra una. Nace en
+     «agentes» en cada carga; ?bando=consejeros abre la otra para enlazarla. */
+  var HS_BANDO = (function () {
+    try { return new URLSearchParams(location.search).get("bando") === "consejeros" ? "consejeros" : "agentes"; }
+    catch (_) { return "agentes"; }
+  })();
+  function hsBandoAdmite(nombre) { return window.HsBando ? window.HsBando.admite(HS_BANDO, nombre) : HS_BANDO === "agentes"; }
+  function hsBandoFila(fila) { return hsBandoAdmite(fila && (fila.base || fila.agente)); }
+  function hsRenumera(filas) {
+    return filas.map(function (fila, indice) { var copia = Object.assign({}, fila); copia.posicion = indice + 1; return copia; });
+  }
   function aplicaAgentScope(lista, requestedScope) {
+    if (HS_BANDO === "consejeros") return hsRenumera((lista || []).filter(hsBandoFila));
     var effective = arguments.length > 1 ? requestedScope :
       (typeof AGENT_SCOPE_MODE === "undefined" ? AGENT_SCOPE : hsEffectiveAgentScope());
     var porDefecto = arguments.length < 2 && typeof AGENT_SCOPE_MODE !== "undefined" && AGENT_SCOPE_MODE === "active";
     var filtrada = (lista || []).filter(function (fila) {
+      if (!hsBandoFila(fila)) return false;
+      // Niobe, Link, Switch y Mouse son DeepAgents de la lista aunque el censo
+      // canónico (hsIsDeepAgentKey) no los cuente.
+      if (AGENT_SCOPE_MODE === "deepagents" && window.HsBando && window.HsBando.deepagent(fila && (fila.base || fila.agente))) return true;
       // DeepAgents sin selección guardada: el censo aún no sembró el Set y un
       // Set vacío ocultaba a todos, puntos incluidos.
       if (AGENT_SCOPE_MODE === "deepagents" && !(effective instanceof Set && effective.size)) {
@@ -3958,7 +4063,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
 
   function hsRankingScopeSummary(mode, shown, total, lifeOnly, compactShown) {
     var label = mode === "manual" ? "Selección manual" : mode === "active" ? "Activos" : "Todos";
-    var text = "Agentes: " + label + " · " + shown + "/" + total;
+    var text = (HS_BANDO === "consejeros" ? "Consejeros: Todos" : "Agentes: " + label) + " · " + shown + "/" + total;
     if (lifeOnly) text += " · filtro con vida";
     if (compactShown < shown) text += " · " + compactShown + (compactShown === 1 ? " fila visible (compacto)" : " filas visibles (compacto)");
     return text;
@@ -3970,12 +4075,12 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   }
   function hsRenderRankingScope(visibleRows, compactShown) {
     var summary = document.getElementById("rankingScopeSummary"), all = document.getElementById("rankingScopeAll");
-    var total = colapsaFilasRanking(listaCompletaCache || [], RANKING_PERIOD).length;
+    var total = colapsaFilasRanking((listaCompletaCache || []).filter(hsBandoFila), RANKING_PERIOD).length;
     if (summary) {
       var warning = hsRankingSourceWarning(RANKING_PERIOD, datos.actividadFresh, datos.historialFresh);
       summary.textContent = hsRankingScopeSummary(AGENT_SCOPE_MODE, visibleRows.length, total, filtroSoloVivos, compactShown) + (warning ? " · " + warning : "");
     }
-    if (all) all.hidden = AGENT_SCOPE_MODE === "all" && !filtroSoloVivos;
+    if (all) all.hidden = HS_BANDO === "consejeros" || (AGENT_SCOPE_MODE === "all" && !filtroSoloVivos);
   }
   function hsShowAllAgents() {
     AGENT_SCOPE = null; AGENT_SCOPE_MODE = "all"; filtroSoloVivos = false;
@@ -5388,7 +5493,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   function hsPintaTiempos() {
     var box = document.getElementById("encargoTiempos"), filas = document.getElementById("encargoTiemposFilas"), resumen = document.getElementById("encargoTiemposSummary");
     if (!box || !filas || !resumen) return;
-    var items = (datos.tiempos || []).slice(0, 40);
+    var items = (datos.tiempos || []).filter(function (it) { return hsBandoAdmite(it && it.persona); }).slice(0, 40);
     box.hidden = !items.length;
     var hechos = items.filter(function (it) { return it.duracion !== null && it.duracion !== undefined; });
     resumen.textContent = "Tiempos por encargo · " + items.length + " en 48 h" + (hechos.length ? " · mediana " +
@@ -5418,7 +5523,8 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       if (!item || item.process_state !== "open" || item.activity_state !== "unverified" || item.reason !== "no_linked_work") return false;
       var at = Number(item.observed_at) || 0, host = normaliza(item.host).toLowerCase(), identity = hsWorkIdentity(item);
       if (!now || !at || now - at > 30000 || now - at < -5000 || !identity.machine || ["app", "cli"].indexOf(host) < 0) return false;
-      if (scope instanceof Set && !scope.has(identity.key)) return false;
+      if (typeof hsBandoAdmite === "function" && !hsBandoAdmite(identity.agent)) return false;
+      if (scope instanceof Set && HS_BANDO !== "consejeros" && !scope.has(identity.key)) return false;
       var key = identity.key + "|" + host + "|" + normaliza(item.runtime).toLowerCase();
       if (seen.has(key)) return false; seen.add(key); return true;
     });
@@ -5502,6 +5608,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     // Sólo el modo manual (selección explícita, incl. «ninguno») puede ocultarlos.
     todosTrabajos.forEach(function(work){
       if(!pistaEnVivo(work))return;
+      if(!hsBandoAdmite(work.agente||work.agent||work.key))return;
       if(AGENT_SCOPE_MODE==="manual" && effectiveScope instanceof Set && !effectiveScope.has(work.key))return;
       scopeKeys.add(work.key);
     });
@@ -5631,7 +5738,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     // tooltip y en la línea de evidencia de debajo. Solo si el trabajo NO SE PUDO CONSULTAR
     // se dice tal cual: eso no es calentar, es no saber (mandamiento 2).
     var calentando = !!(datos.trabajosAvailable || presenceLaneCount);
-    var textoVacio = calentando ? "Todos nuestros agentes están calentando 🙂" : etiquetaVacia;
+    var textoVacio = calentando ? hsT("Todos nuestros agentes están calentando 🙂", "All our agents are warming up 🙂") : etiquetaVacia;
     var corredorSinMision = '<div class="refresh-lane refresh-lane-empty" role="listitem" data-race-empty="true" ' +
       'data-race-warmup="' + (calentando ? 'true' : 'false') + '" data-race-reason="' + esc(etiquetaVacia) + '" aria-label="' + etiquetaVacia.toLowerCase() + '"><div class="refresh-track">' +
       '<span class="refresh-mission" data-race-role="mission" title="' + esc(etiquetaVacia) + '"><span class="refresh-mission-title">' + esc(textoVacio) + '</span></span></div></div>';
@@ -6005,9 +6112,19 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     var meta = trackRect.right - raceRect.left - finishWidth;
     if (!(Number.isFinite(start) && Number.isFinite(meta)) || meta <= start) return false;
     var centro = (start + meta) / 2;
+    var alto = trackRect.top - raceRect.top + trackRect.height / 2;
+    var anchoUtil = meta - start;
+    // Calle vacía en tres columnas: la pista queda bajo el ancho de READY/SET/GO
+    // y el max-width inline, con el clip octogonal, deja solo un pico. La
+    // llamada pasa a centrarse en la carrera entera.
+    if (!(anchoUtil >= 140)) {
+      centro = raceRect.width / 2;
+      alto = raceRect.height / 2;
+      anchoUtil = Math.max(0, raceRect.width - 16);
+    }
     aviso.style.left = centro + "px";
-    aviso.style.top = (trackRect.top - raceRect.top + trackRect.height / 2) + "px";
-    aviso.style.maxWidth = Math.max(0, meta - start - 8) + "px";
+    aviso.style.top = alto + "px";
+    aviso.style.maxWidth = Math.max(140, anchoUtil - 8) + "px";
     aviso.dataset.trackStart = String(start);
     aviso.dataset.trackFinish = String(meta);
     aviso.dataset.trackCenter = String(centro);
@@ -6165,6 +6282,91 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     event.preventDefault(); cambiaPeriodoHighscore(step,absolute);
   });
   actualizaPeriodoHighscore();
+  var hsBandoControl = document.getElementById("hsBando");
+  function hsCabeceraPersona() {
+    var el = document.getElementById("hsColPersona");
+    if (!el) return;
+    var consejero = HS_BANDO === "consejeros";
+    var es = consejero ? "Consejero" : "Agente";
+    var en = consejero ? "Advisor" : "Agent";
+    el.setAttribute("data-es", es);
+    el.setAttribute("data-en", en);
+    el.textContent = (window.AdmiraIdioma && window.AdmiraIdioma.lang && window.AdmiraIdioma.lang() === "en") ? en : es;
+  }
+  function hsPintaBando() {
+    if (!hsBandoControl) return;
+    hsBandoControl.dataset.bando = HS_BANDO;
+    hsBandoControl.querySelectorAll("button[data-bando]").forEach(function (b) {
+      b.setAttribute("aria-pressed", b.getAttribute("data-bando") === HS_BANDO ? "true" : "false");
+    });
+    hsCabeceraPersona();
+  }
+  function hsCambiaBando(vista) {
+    HS_BANDO = vista === "consejeros" ? "consejeros" : "agentes";
+    hsPintaBando();
+    if (typeof hsRenderAgentScope === "function") hsRenderAgentScope(listaCompletaCache || []);
+    pintaVistaFiltrada();
+    if (typeof hsPintaTiempos === "function") hsPintaTiempos();
+    document.dispatchEvent(new CustomEvent("admira:bando", { detail: { bando: HS_BANDO } }));
+  }
+  if (hsBandoControl) {
+    hsBandoControl.addEventListener("click", function (event) {
+      var b = event.target.closest && event.target.closest("button[data-bando]");
+      if (b) hsCambiaBando(b.getAttribute("data-bando"));
+    });
+    hsBandoControl.addEventListener("keydown", function (event) {
+      if (event.key !== "ArrowLeft" && event.key !== "ArrowRight") return;
+      event.preventDefault(); hsCambiaBando(event.key === "ArrowRight" ? "consejeros" : "agentes");
+      var b = hsBandoControl.querySelector('button[aria-pressed="true"]'); if (b) b.focus();
+    });
+  }
+  hsPintaBando();
+  document.addEventListener("admiranext:lang", hsCabeceraPersona);
+  document.addEventListener("admira:languagechange", hsCabeceraPersona);
+  /* Órdenes de esta página en la línea del Experto (yk-frame no tiene registro de
+     órdenes por página: se atiende el formulario en fase de captura y lo que no
+     es nuestro sigue su camino). /demo enseña el interruptor combinado con el
+     selector de periodo y deja la página como estaba. */
+  var hsDemoRelojes = [];
+  function hsT(es, en) { return window.AdmiraIdioma && window.AdmiraIdioma.lang && window.AdmiraIdioma.lang() === "en" ? en : es; }
+  function hsDemoBando(say) {
+    hsDemoRelojes.forEach(clearTimeout); hsDemoRelojes = [];
+    var bandoAntes = HS_BANDO, periodoAntes = PODIUM_PERIOD, rankingAntes = RANKING_PERIOD;
+    function ranking(periodo) { while (RANKING_PERIOD !== periodo) cambiaPeriodoRanking(1); }
+    function cuenta() { return colapsaFilasRanking(aplicaAgentScope(listaCompletaCache || []), RANKING_PERIOD).length; }
+    var pasos = [
+      function () { hsCambiaBando("agentes"); cambiaPeriodoHighscore(0, "day"); ranking("day");
+        say(hsT("Demo 1/4 · AGENTES · hoy: " + cuenta() + " DeepAgents en el ranking", "Demo 1/4 · AGENTS · today: " + cuenta() + " DeepAgents in the ranking")); },
+      function () { hsCambiaBando("consejeros");
+        say(hsT("Demo 2/4 · CONSEJEROS · hoy: " + cuenta() + " sillas; ranking, podio y tiempos por encargo solo de consejeros", "Demo 2/4 · ADVISORS · today: " + cuenta() + " seats; ranking, podium and order times for advisors only")); },
+      function () { cambiaPeriodoHighscore(0, "week"); ranking("week");
+        say(hsT("Demo 3/4 · CONSEJEROS + SEMANA: " + cuenta() + " sillas; el periodo se combina con el interruptor", "Demo 3/4 · ADVISORS + WEEK: " + cuenta() + " seats; the period combines with the switch")); },
+      function () { hsCambiaBando(bandoAntes); cambiaPeriodoHighscore(0, periodoAntes); ranking(rankingAntes);
+        if (hsBandoControl) hsBandoControl.classList.remove("demo");
+        say(hsT("Demo 4/4 · todo como estaba. /agentes y /consejeros cambian la vista desde aquí", "Demo 4/4 · back as it was. /agents and /advisors switch the view from here")); }
+    ];
+    if (hsBandoControl) { hsBandoControl.classList.remove("demo"); void hsBandoControl.offsetWidth; hsBandoControl.classList.add("demo"); }
+    pasos.forEach(function (paso, i) { hsDemoRelojes.push(setTimeout(paso, i * 2600)); });
+    return pasos.length;
+  }
+  function hsOrdenExperto(raw, say) {
+    var m = /^\/?(demo|agentes|agents|deepagents|consejeros|advisors|sillas)\s*$/i.exec(String(raw || "").trim());
+    if (!m) return false;
+    var orden = m[1].toLowerCase();
+    if (orden === "demo") hsDemoBando(say);
+    else if (/^(consejeros|advisors|sillas)$/.test(orden)) { hsCambiaBando("consejeros"); say(hsT("Vista: CONSEJEROS", "View: ADVISORS")); }
+    else { hsCambiaBando("agentes"); say(hsT("Vista: AGENTES", "View: AGENTS")); }
+    return true;
+  }
+  document.addEventListener("submit", function (event) {
+    var form = event.target;
+    if (!form || !form.classList || !form.classList.contains("yk-expert-cmd-form")) return;
+    var input = form.querySelector("input"), out = form.parentNode && form.parentNode.querySelector(".yk-expert-cmd-out");
+    function say(msg) { if (out) { out.textContent = msg; out.classList.remove("err"); } }
+    if (!input || !hsOrdenExperto(input.value, say)) return;
+    event.preventDefault(); event.stopPropagation(); input.value = "";
+  }, true);
+  window.HsBandoVista = { get: function () { return HS_BANDO; }, set: hsCambiaBando, demo: hsDemoBando, orden: hsOrdenExperto };
   var rankingPeriodControl = document.getElementById("rankingPeriod");
   document.querySelectorAll("[data-ranking-period-step]").forEach(function (button) {
     button.addEventListener("click", function () {
@@ -6247,6 +6449,14 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   });
   pintaControlPodio();
 })();
+</script>
+<script>
+/* Inglés de lo que añade el interruptor Agentes / Consejeros y de los periodos
+   que el diccionario del sitio no traía (solo sabía DÍA). */
+(window.AdmiraIdiomaExtra = window.AdmiraIdiomaExtra || []).push([
+  { "HORA": "HOUR", "SEMANA": "WEEK", "MES": "MONTH" },
+  [[/^Consejeros: Todos · (\d+)\/(\d+)(.*)$/, "Advisors: All · $1/$2$3"]]
+]);
 </script>
 <script src="/yk-frame.js?v=r36-escenas"></script>
 </body>

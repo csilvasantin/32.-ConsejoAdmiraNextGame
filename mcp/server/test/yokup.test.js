@@ -222,7 +222,7 @@ test('el enum como incluye a Musk', async () => {
   const { client } = await cliente();
   const tool = (await client.listTools()).tools.find((t) => t.name === 'yokup_quien_soy');
   const blob = JSON.stringify(tool.inputSchema);
-  for (const nombre of ['Wozniak', 'Jobs', 'Lucas', 'Disney', 'Musk', 'Huang']) assert.match(blob, new RegExp(nombre));
+  for (const nombre of ['Wozniak', 'Jobs', 'Lucas', 'Disney', 'Musk', 'Huang', 'Y']) assert.match(blob, new RegExp(nombre));
 });
 
 test('una clave de agente de la flota no firma como consejero con como (ni en modo estricto ni sin él)', async () => {
@@ -338,7 +338,7 @@ test('ventana, misiones, marcador y quién soy', async () => {
 test('/salud declara los secretos nuevos y los consejeros con carné', async () => {
   const salud = await (await manejar(new Request('https://mcp.test/salud'), ENV, { fetch: fetchFalso([]) })).json();
   assert.equal(salud.secretos.MCP_KEYS, true); assert.equal(salud.secretos.ADMIRA_TELEGRAM_PANEL_KEY, true);
-  assert.deepEqual(salud.consejeros_con_carne, ['Wozniak', 'Jobs', 'Lucas', 'Disney', 'Musk', 'Huang']);
+  assert.deepEqual(salud.consejeros_con_carne, ['Wozniak', 'Jobs', 'Lucas', 'Disney', 'Musk', 'Huang', 'Y']);
 });
 
 test('crearYokup sin identidad falla legible en todo menos en construirse', async () => {

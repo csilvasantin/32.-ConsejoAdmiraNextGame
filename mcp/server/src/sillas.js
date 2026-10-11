@@ -16,6 +16,11 @@
  * MacBook. Su deepagent es Cypher (DeepAgents en la GrokBot box; modelo
  * nvidia/nemotron-3-ultra-550b-a55b, NVIDIA Nemotron 3 Ultra en
  * integrate.api.nvidia.com). No es ArquitectoCursorCloud.
+ *
+ * Y (CTO de admira.live, lado racional, generación coetáneos) tampoco tiene
+ * MacBook. El 10-oct generó los fondos de las cápsulas con FLUX en el MacBook
+ * Pro 16. Entra en el censo del marcador. Sin deepagent publicado y sin
+ * webhook: no se inventa ninguno.
  */
 
 export const SILLAS = {
@@ -25,6 +30,7 @@ export const SILLAS = {
   Disney:  { rol: 'CCO', lado: 'creativo', generacion: 'leyendas',  maquina: 'MacBookAirCrema', fleet_id: 'admira-macbookaircrema', alias: ['MBACrema', 'MBA Crema', 'Carla', 'admira-macbook-carla'] },
   Musk:    { rol: 'CEO', lado: 'racional', generacion: 'coetaneos', maquina: 'GrokBot', fleet_id: '', alias: ['Elon', 'Elon Musk'], deepagent: 'Merovingio', deepagent_maquina: 'GrokBotBox', deepagent_runtime: 'Grok CLI' },
   Huang:   { rol: 'CTO', lado: 'racional', generacion: 'coetaneos', maquina: 'GrokBot', fleet_id: '', alias: ['Jensen', 'Jensen Huang'], deepagent: 'Cypher', deepagent_maquina: 'GrokBotBox', deepagent_runtime: 'DeepAgents', deepagent_model: 'nvidia/nemotron-3-ultra-550b-a55b' },
+  Y:       { rol: 'CTO', lado: 'racional', generacion: 'coetaneos', maquina: 'GrokBot', fleet_id: '', alias: [] },
 };
 
 /** Orden estable: el de este objeto. Lo consumen yokup, flota y telegram. */
@@ -42,7 +48,12 @@ export function sillaCanonica(persona) {
   const crudo = String(persona || '').trim();
   if (!crudo) return null;
   const n = crudo.toLowerCase();
-  const porNombre = CONSEJEROS_GROKBOT.find((c) => n === c.toLowerCase() || n.includes(c.toLowerCase()));
+  // Un nombre de una letra («Y») solo casa entero: si no, «Trinity» y «Cypher»
+  // contienen esa letra y se los tragaría la silla.
+  const porNombre = CONSEJEROS_GROKBOT.find((c) => {
+    const clave = c.toLowerCase();
+    return n === clave || (clave.length >= 3 && n.includes(clave));
+  });
   if (porNombre) return porNombre;
   const p = plano(crudo);
   for (const [nombre, s] of Object.entries(SILLAS)) {

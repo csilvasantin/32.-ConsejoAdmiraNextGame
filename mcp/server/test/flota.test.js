@@ -5,6 +5,7 @@ import { InMemoryTransport } from '@modelcontextprotocol/sdk/inMemory.js';
 import { crearServidor } from '../src/index.js';
 import { identidadPorClave } from '../src/yokup.js';
 import { personaCanonica, esConsejero } from '../src/flota.js';
+import { sillaCanonica } from '../src/sillas.js';
 
 // FLT-2038: hablar con la flota desde el MCP. Sin red: el worker admira-telegram se
 // sustituye por un fetch falso que guarda el encargo y devuelve su estado.
@@ -65,7 +66,13 @@ test('la persona se reconoce con o sin apellido y con acento', () => {
   assert.equal(personaCanonica('neo'), 'Neo');
   assert.equal(personaCanonica('Steve Jobs'), null);   // el diccionario usa el apellido
   assert.equal(personaCanonica('jobs'), 'Jobs');
-  assert.ok(esConsejero('Wozniak') && !esConsejero('Morfeo'));
+  assert.equal(personaCanonica('Y'), 'Y');
+  assert.equal(personaCanonica('yokup'), null);
+  assert.equal(sillaCanonica('Y'), 'Y');
+  assert.equal(sillaCanonica('Trinity'), null);
+  assert.equal(sillaCanonica('Cypher'), null);
+  assert.equal(sillaCanonica('Disney'), 'Disney');
+  assert.ok(esConsejero('Wozniak') && esConsejero('Y') && !esConsejero('Morfeo'));
 });
 
 test('una clave de agente de la flota identifica persona, equipo y runtime sin declarar nada', () => {
@@ -81,8 +88,8 @@ test('agentes_vivos agrupa por persona y equipo, deja fuera los latidos viejos y
   assert.deepEqual(v.agentes.map((a) => a.persona), ['Morfeo', 'Oraculo', 'Smith']);
   assert.deepEqual(v.agentes.find((a) => a.persona === 'Smith').maquinas.map((m) => m.maquina), ['MacMini', 'MacBookPro16']);
   assert.ok(v.sin_senal.includes('Neo') && v.sin_senal.includes('Trinity'));
-  assert.equal(v.consejeros.length, 6);
-  assert.deepEqual(v.consejeros.map((c) => [c.persona, c.silla, c.maquina]), [['Wozniak', 'CTO', 'MacBookAirPlata'], ['Jobs', 'CEO', 'MacBookAirAzul'], ['Lucas', 'CSO', 'MacBookAirRosa'], ['Disney', 'CCO', 'MacBookAirCrema'], ['Musk', 'CEO', 'GrokBot'], ['Huang', 'CTO', 'GrokBot']], 'silla ↔ MacBook Air, y Musk y Huang sin Mac');
+  assert.equal(v.consejeros.length, 7);
+  assert.deepEqual(v.consejeros.map((c) => [c.persona, c.silla, c.maquina]), [['Wozniak', 'CTO', 'MacBookAirPlata'], ['Jobs', 'CEO', 'MacBookAirAzul'], ['Lucas', 'CSO', 'MacBookAirRosa'], ['Disney', 'CCO', 'MacBookAirCrema'], ['Musk', 'CEO', 'GrokBot'], ['Huang', 'CTO', 'GrokBot'], ['Y', 'CTO', 'GrokBot']], 'silla ↔ MacBook Air, y Musk, Huang e Y sin Mac');
   assert.deepEqual(v.consejeros.find((c) => c.persona === 'Musk').deepagent, 'Merovingio');
   assert.equal(v.consejeros.find((c) => c.persona === 'Musk').deepagent_maquina, 'GrokBotBox');
   assert.equal(v.consejeros.find((c) => c.persona === 'Huang').deepagent, 'Cypher');

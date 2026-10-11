@@ -54,7 +54,8 @@ export function personaCanonica(nombre) {
   const n = norm(nombre);
   if (!n) return null;
   if (ALIAS_FLOTA[n]) return ALIAS_FLOTA[n];
-  return PERSONAS.find((p) => n === norm(p)) || PERSONAS.find((p) => n.startsWith(norm(p))) || null;
+  // El prefijo corto («Y») no vale: «yokup» empezaría por esa silla.
+  return PERSONAS.find((p) => n === norm(p)) || PERSONAS.find((p) => norm(p).length >= 3 && n.startsWith(norm(p))) || null;
 }
 // EQUIPO DE CASA de un agente (Carlos, 11-10-2026: Morfeo trabaja en su terminal «morfeo» del MacBook Pro 16,
 // no en el Mac Mini). Un encargo sin máquina va ahí aunque la persona también lata en otros equipos.

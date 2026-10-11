@@ -183,7 +183,7 @@ def main():
                 nombre = c["titulo"].split(" · ")[0]
                 modelo, mac = EST.etiquetas(c["titulo"], c["host"])
                 d = EST.decidir(ses, EST.persona_de(nombre))
-                ficha = {"estado": d["estado"], "etiqueta": d["etiqueta"], "mision": tapar(d["mision"]), "modelo": modelo, "mac": mac,
+                ficha = {"estado": d["estado"], "etiqueta": d["etiqueta"], "mision": tapar(d["mision"]), "linea": tapar(d["linea"]), "viejo": tapar(d["viejo"]), "modelo": modelo, "mac": mac,
                          "arte": EST.arte(nombre) or [], "cambio": d["cambio"] or int(t0 * 1000), "desde": d["desde"]}
                 if d["estado"] == "vivo":
                     cap = capturar(ses)

@@ -15,7 +15,10 @@ Estados:
 Histéresis: entra en vivo al primer indicio; vuelve a idle tras IDLE_TRAS s quieto.
 Indicios también: «shell still running», «background terminal(s) running», «Running», spinner… y, si su encargo está
 in_progress, sigue en misión mientras la pantalla cambió hace < EN_CURSO_S (10 min): un deploy largo deja la pantalla quieta.
-Última misión: admira.live/Yokup (en curso > acusada > última hecha), cacheada 60 s: «#NNNN · estado · título».
+Misión (r33b · Carlos 13:43 «Idle + última misión in_progress confunde»), de admira.live/Yokup, cacheada 60 s:
+  · última misión = el encargo MÁS RECIENTE por tiempo (creado/acusado/hecho; los cancelados no cuentan)
+  · pendiente     = terminal quieta pero con un encargo abierto (in_progress/ack) de < 24 h → ámbar «Pendiente sin trabajar»
+  · viejo         = encargo abierto de hace > 24 h y terminal quieta → «#NNNN abierto desde dd/mm hh:mm», tenue, no es misión
 Solo lee: capture-pane / list-sessions. Nunca escribe en la sesión del agente. Solo stdlib (Python 3.9 de macOS).
 """
 import fcntl, json, os, re, subprocess, sys, time, unicodedata, urllib.request, zlib
@@ -36,7 +39,9 @@ RX_TRABAJO = re.compile(r"esc to interrupt|Working \(|esc to cancel|ctrl\+c to (
 # r31: un encargo in_progress con la pantalla quieta < EN_CURSO_S cuenta como en misión (deploys largos en segundo plano)
 EN_CURSO_S = int(os.environ.get("EN_CURSO_S", "600"))
 RX_LOGIN = re.compile(r"Not logged in|Login expired|Paste code here|Run /login|Please run /login|run /login|Sign in with ChatGPT|Browser didn't open\? Use the url below to sign in|OAuth (token|error)", re.I)
-ETIQUETA = {"vivo": "en misión", "idle": "Idle", "login": "Login pendiente", "nosesion": "Sin sesión"}
+ETIQUETA = {"vivo": "en misión", "idle": "Idle", "pendiente": "Pendiente sin trabajar", "login": "Login pendiente", "nosesion": "Sin sesión"}
+ABIERTOS = ("in_progress", "ack")
+VIEJO_S = 24 * 3600  # un encargo abierto de hace > 24 h sin actividad en la terminal no es «la misión actual»
 
 
 def _tmux(*args):
@@ -113,20 +118,29 @@ def arte(nombre):
     return a
 
 
+def _t(i):
+    return max(i.get("ts") or 0, i.get("ack_at") or 0, i.get("done_at") or 0)
+
+
+def _txt(i):
+    return "#%s · %s · %s" % (i.get("id"), i.get("status"), " ".join((i.get("text") or "").split()))
+
+
 def _mision(persona):
+    """{reciente, abierto:{txt,t}|None} o None si no se pudo leer."""
     try:
         req = urllib.request.Request(INBOX + persona, headers={"user-agent": "estado-agente/" + VERSION})
         with urllib.request.urlopen(req, timeout=5) as r:
             it = json.loads(r.read() or b"{}").get("items", [])
     except Exception:
         return None
-    k = lambda x: -max(x.get("ts") or 0, x.get("ack_at") or 0, x.get("done_at") or 0)
-    for st in ("in_progress", "ack", "done"):
-        xs = sorted([i for i in it if i.get("status") == st], key=k)
-        if xs:
-            i = xs[0]
-            return "#%s · %s · %s" % (i.get("id"), st, " ".join((i.get("text") or "").split()))
-    return "sin misiones registradas"
+    it = [i for i in it if i.get("status") != "cancelled"]
+    if not it:
+        return {"reciente": "sin misiones registradas", "abierto": None}
+    rec = max(it, key=_t)
+    ab = [i for i in it if i.get("status") in ABIERTOS]
+    a = max(ab, key=_t) if ab else None
+    return {"reciente": _txt(rec), "abierto": {"txt": _txt(a), "t": _t(a), "id": a.get("id")} if a else None}
 
 
 def decidir(ses, persona=None, ahora=None):
@@ -141,12 +155,14 @@ def decidir(ses, persona=None, ahora=None):
         except Exception:
             st = {}
         persona = persona or persona_de(ses)
-        if ahora - st.get("mis_t", 0) >= MISION_CADA:
+        if ahora - st.get("mis_t", 0) >= MISION_CADA or not isinstance(st.get("mis"), dict):
             st["mis_t"] = ahora
             m = _mision(persona)
             if m:
                 st["mis"] = m
-        en_curso = " · in_progress · " in (st.get("mis") or "")
+        mis = st.get("mis") if isinstance(st.get("mis"), dict) else {"reciente": "sin misiones registradas", "abierto": None}
+        ab = mis.get("abierto")
+        en_curso = bool(ab) and ahora - ab.get("t", 0) < VIEJO_S
         txt = pantalla(ses) if existe(ses) else None
         if txt is None:
             est = "nosesion"
@@ -165,6 +181,8 @@ def decidir(ses, persona=None, ahora=None):
                 est = "login"  # una pantalla de login que cambia (código pegado, etc.) no es una misión
             elif ahora - st.get("cambio", 0) < (EN_CURSO_S if en_curso else IDLE_TRAS):
                 est = "vivo"
+            elif en_curso:
+                est = "pendiente"  # terminal quieta con un encargo abierto de < 24 h
             else:
                 est = "idle"
         if est != st.get("est"):
@@ -173,7 +191,18 @@ def decidir(ses, persona=None, ahora=None):
         with open(tmp, "w") as f:
             json.dump({k: v for k, v in st.items() if k != "pantalla"}, f)
         os.replace(tmp, ruta)
-    return {"estado": est, "etiqueta": ETIQUETA[est], "mision": st.get("mis") or "sin misiones registradas",
+    # qué misión enseñar y cómo (igual en la cuadrícula y en el visor)
+    if est == "vivo" and ab:
+        mision, linea = ab["txt"], "▶ " + ab["txt"]
+    elif est == "pendiente":
+        mision, linea = ab["txt"], "pendiente: " + ab["txt"]
+    else:
+        mision = mis.get("reciente") or "sin misiones registradas"
+        linea = ("▶ " if est == "vivo" else "última misión: ") + mision
+    viejo = ""
+    if ab and est not in ("vivo", "pendiente"):
+        viejo = "#%s abierto desde %s" % (ab.get("id"), time.strftime("%d/%m %H:%M", time.localtime(ab.get("t", 0))))
+    return {"estado": est, "etiqueta": ETIQUETA[est], "mision": mision, "linea": linea, "viejo": viejo,
             "cambio": int(st.get("cambio", 0) * 1000), "desde": int(st.get("desde", ahora) * 1000), "pantalla": txt}
 
 
@@ -188,7 +217,7 @@ def main(argv):
             r.pop("pantalla", None)
             print(json.dumps(r, ensure_ascii=False))
         else:
-            print("E=%s; ETQ=%s; MIS=%s" % (_q(r["estado"]), _q(r["etiqueta"]), _q(r["mision"])))
+            print("E=%s; ETQ=%s; MIS=%s; LINEA=%s; VIEJO=%s" % (_q(r["estado"]), _q(r["etiqueta"]), _q(r["mision"]), _q(r["linea"]), _q(r["viejo"])))
         return 0
     print("uso: estado-agente.py --sh|--json <sesión-tmux> [Persona]", file=sys.stderr)
     return 2

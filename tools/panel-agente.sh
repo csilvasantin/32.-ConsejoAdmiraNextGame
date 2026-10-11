@@ -8,7 +8,8 @@
 # r31 (Carlos 11-10-2026 13:13 «¿por qué no coinciden?»): el ESTADO y la última misión los decide UNA sola pieza,
 # estado-agente.py (junto a este script), que comparte con visor-publicar.py (admira.live/visor) el estado guardado en
 # ~/.cache/admiranext/estado-agentes/ → la cuadrícula del Mac y el visor del Fold dicen lo mismo, con la misma histéresis
-# (vivo al primer indicio, Idle tras IDLE_TRAS=80 s quieto). Si cambia este script o estado-agente.py, el panel se recarga solo.
+# (vivo al primer indicio, Idle tras IDLE_TRAS=80 s quieto). r33b: «Pendiente sin trabajar» (ámbar) si la terminal está quieta
+# con un encargo abierto de < 24 h; la línea de misión ($LINEA) y el «abierto desde» tenue ($VIEJO) también vienen de allí. Si cambia este script o estado-agente.py, el panel se recarga solo.
 # Nunca escribe en la sesión del agente, ni la redimensiona ni la interrumpe.
 # Uso: panel-agente.sh <Nombre> <host|local> <sesión> "<modelo>" "<Mac>"
 #      host ≠ local → se ejecuta a sí mismo en ese host por ssh (copia atómica previa) y reintenta si cae.
@@ -43,7 +44,7 @@ DIRP="$(cd "$(dirname "$SELF")" && pwd)"; ESTADO="$DIRP/estado-agente.py"
 PER="$(printf '%s' "${ASCII:0:1}")$(printf '%s' "${ASCII:1}" | tr 'A-Z' 'a-z')"
 # decide: deja en $E vivo|idle|login|nosesion, $ETQ la palabra («Idle», «Login pendiente», «Sin sesión») y $MIS la última
 # misión — todo de estado-agente.py, la misma fuente que el visor (sin subshell para E/MIS: eval de su salida --sh)
-E=nosesion; ETQ="Sin sesión"; MIS="sin misiones registradas"
+E=nosesion; ETQ="Sin sesión"; MIS="sin misiones registradas"; LINEA="última misión: sin misiones registradas"; VIEJO=""
 decide(){ local o; o=$(/usr/bin/python3 "$ESTADO" --sh "$SES" "$PER" 2>/dev/null) && [ -n "$o" ] && eval "$o"
   [ "$E" = vivo ] && E=ocupado; [ -n "$MIS" ] || MIS="sin misiones registradas"; }
 mision(){ :; }  # la trae decide() (cacheada 60 s en estado-agente.py)
@@ -68,15 +69,18 @@ pinta(){ # pinta <estado>  — mismo formato de cabecera: nombre grande · líne
   [ -n "$art" ] || art=$(printf '%*s' $(( (cols + ${#ASCII}) / 2 )) "$ASCII")
   n=$(printf '%s\n' "$art" | wc -l | tr -d ' ')
   top=$(( (filas - n - 6) / 2 )); [ "$top" -ge 0 ] || top=0
-  m="última misión: $MIS"; [ ${#m} -lt $((cols - 2)) ] || m="${m:0:$((cols - 3))}…"
+  m="$LINEA"; [ ${#m} -lt $((cols - 2)) ] || m="${m:0:$((cols - 3))}…"
+  local v="$VIEJO"; [ ${#v} -lt $((cols - 2)) ] || v="${v:0:$((cols - 3))}…"
+  local col=1; [ "$E" = pendiente ] && col="1;33"; [ "$E" = login ] && col="1;33"
   { printf '\033[H'; tput civis 2>/dev/null
     i=0; while [ $i -lt $top ]; do printf '\033[K\n'; i=$((i+1)); done
     printf '%s\n' "$art" | while IFS= read -r l; do printf '\033[1m%s\033[0m\033[K\n' "$l"; done
     printf '\033[K\n'
-    centra "$1" 1
+    centra "$1" "$col"
     printf '\033[K\n'
     centra "$MOD · $MAC · $1 · $(date +%H:%M)" 2
     centra "$m" 2
+    [ -n "$v" ] && centra "$v" "2;3"
     printf '\033[0m\033[J'; }
 }
 centra(){ local s="$1" c pad; c=$(tput cols 2>/dev/null || echo 80)
@@ -106,7 +110,7 @@ vivo(){ # espejo SIN cliente tmux: capture-pane cada segundo (no hay attach -r, 
       cuerpo=$(printf '%s\n' "$cuerpo" | tail -n $((filas - n)))
       { printf '\033[H\033[1m%s\033[0m\033[K\n' "$(printf '%s\n' "$hdr" | sed "s/\$/${ESC}[K/")"
         printf '\033[2m %s · %s · en misión · %s\033[0m\033[K\n' "$MOD" "$MAC" "$(date +%H:%M)"
-        printf '\033[2m ▶ %s\033[0m\033[K\n' "${MIS:0:$((cols - 4))}"
+        printf '\033[2m %s\033[0m\033[K\n' "${LINEA:0:$((cols - 4))}"
         printf '%s\n' "$cuerpo" | sed "s/\$/${ESC}[0m${ESC}[K/"
         printf '\033[0m\033[J'; } 2>/dev/null
     fi

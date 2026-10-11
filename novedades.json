@@ -1,4 +1,9 @@
 {
+  "v.11.10.2026.r34.13:48": [
+    "Cuadrícula del Mac, /visor/ e /interface 6: «última misión» es ahora el encargo más reciente (no el in_progress más viejo); los cancelados no cuentan.",
+    "Terminal quieta con un encargo abierto de menos de 24 h → «Pendiente sin trabajar» en ámbar, con ese encargo. Un encargo abierto de hace más de 24 h sin actividad sale tenue como «#NNNN abierto desde dd/mm hh:mm», no como misión actual.",
+    "Incluye la r33: /interface 6 (los 4 de pago + Smith y Merovingio en 3x2) y los deploys largos cuentan como en misión."
+  ],
   "v.11.10.2026.r33.13:36": [
     "/interface 6 en el modo experto: rejilla 3x2 con los 4 deepagents de pago (Neo, Morfeo, Trinity, Oráculo) y los 2 de Grok (Smith y Merovingio), aquí o en el Fold/iPhone (/interface 6 fold). Sale de /visor/?g=6 con la llave del visor.",
     "Los seis con los mismos estados y cabecera que la cuadrícula del Mac: en misión (terminal en vivo), Idle, Login pendiente o Sin sesión, con su última misión. Smith publica desde el MacBook Pro 16 y Merovingio desde la caja de GrokBot.",

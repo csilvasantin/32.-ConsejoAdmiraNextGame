@@ -12,12 +12,13 @@
   "use strict";
   // Copia de SILLAS (nombre → alias y deepagent). El orden es el de sillas.js.
   var SILLAS = {
-    Wozniak: { alias: ["MBAPlata", "MBA Plata"], deepagent: "" },
-    Jobs:    { alias: ["MBAAzul", "MBA Azul", "Luna", "admira-macbookairluna"], deepagent: "" },
-    Lucas:   { alias: ["MBARosa", "MBA Rosa"], deepagent: "" },
-    Disney:  { alias: ["MBACrema", "MBA Crema", "Carla", "admira-macbook-carla"], deepagent: "" },
-    Musk:    { alias: ["Elon", "Elon Musk"], deepagent: "Merovingio" },
-    Huang:   { alias: ["Jensen", "Jensen Huang"], deepagent: "Cypher" }
+    Wozniak: { alias: ["MBAPlata", "MBA Plata"], deepagent: "", maquina: "MacBookAirPlata" },
+    Jobs:    { alias: ["MBAAzul", "MBA Azul", "Luna", "admira-macbookairluna"], deepagent: "", maquina: "MacBookAirAzul" },
+    Lucas:   { alias: ["MBARosa", "MBA Rosa"], deepagent: "", maquina: "MacBookAirRosa" },
+    Disney:  { alias: ["MBACrema", "MBA Crema", "Carla", "admira-macbook-carla"], deepagent: "", maquina: "MacBookAirCrema" },
+    Musk:    { alias: ["Elon", "Elon Musk"], deepagent: "Merovingio", maquina: "GrokBot" },
+    Huang:   { alias: ["Jensen", "Jensen Huang"], deepagent: "Cypher", maquina: "GrokBot" },
+    Y:       { alias: [], deepagent: "", maquina: "GrokBot" }
   };
   // Nombres de pila con los que el marcador ya nombraba a dos sillas (Woz, Walt).
   var APODOS = { woz: "Wozniak", walt: "Disney" };
@@ -41,7 +42,10 @@
     var p = persona(nombre);
     if (!p) return null;
     var nombres = Object.keys(SILLAS), i, j;
-    for (i = 0; i < nombres.length; i++) if (p.indexOf(plano(nombres[i])) >= 0) return nombres[i];
+    for (i = 0; i < nombres.length; i++) {
+      var clave = plano(nombres[i]);
+      if (p === clave || (clave.length >= 3 && p.indexOf(clave) >= 0)) return nombres[i];
+    }
     for (i = 0; i < nombres.length; i++) {
       var alias = SILLAS[nombres[i]].alias || [];
       for (j = 0; j < alias.length; j++) if (plano(alias[j]) === p) return nombres[i];

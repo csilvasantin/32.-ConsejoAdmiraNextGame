@@ -6,6 +6,7 @@ import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
 import vm from "node:vm";
 import { SILLAS } from "./mcp/server/src/sillas.js";
+import { rutaPermitida } from "./functions/api/yokup-bot/[[path]].js";
 
 const lee = (f) => readFileSync(new URL("./" + f, import.meta.url), "utf8");
 const ventana = {};
@@ -77,4 +78,35 @@ test("el Experto atiende /demo, /agentes y /consejeros sin tocar yk-frame, y dej
 test("inglés: el resumen de Consejeros y los periodos que faltaban tienen traducción", () => {
   assert.ok(html.includes('"HORA": "HOUR", "SEMANA": "WEEK", "MES": "MONTH"'));
   assert.ok(html.includes('"Advisors: All · $1/$2$3"'));
+});
+
+test("Y es consejero y un nombre de una letra no se traga a Trinity ni a Cypher", () => {
+  assert.equal(B.bando("Y"), "consejeros");
+  assert.equal(B.bando("YGrokBot"), "consejeros");
+  assert.equal(B.silla("Trinity"), null);
+  assert.equal(B.silla("TrinityGrokBotBox"), null);
+  assert.equal(B.silla("Cypher"), null);
+  assert.equal(B.silla("CypherGrokBotBox"), null);
+  assert.equal(B.bando("Trinity"), "agentes");
+  assert.equal(B.bando("CypherGrokBotBox"), "agentes");
+  assert.equal(B.silla("Disney"), "Disney");
+});
+
+test("cabeceras en inglés, interruptor de 28 px, proxy y semilla de todas las sillas", () => {
+  for (const en of ["Agent", "Computer", "Project", "Goals", "Window", "Decision", "Missions", "Tasks", "Points", "Order", "Who", "Machine", "Start", "End", "Duration"]) {
+    assert.ok(html.includes('data-en="' + en + '"'), en);
+  }
+  assert.match(html, /id="hsColPersona"/);
+  assert.ok(html.includes('"Advisor"'));
+  assert.match(html, /Consejero/);
+  assert.match(html, /\.hs-bando button\{height:28px/);
+  assert.match(html, /\.ranking-period button\{width:28px;height:28px/);
+  assert.match(html, /\/api\/yokup-bot/);
+  assert.match(html, /HsBando\.CONSEJEROS\.forEach/);
+  assert.equal(rutaPermitida("api/presence"), true);
+  assert.equal(rutaPermitida("api/presence/trabajando"), true);
+  assert.equal(rutaPermitida("api/bot-inbox/tiempos"), true);
+  assert.equal(rutaPermitida("api/public/inbox"), true);
+  assert.equal(rutaPermitida("api/bot-inbox"), false);
+  assert.equal(rutaPermitida("api/../presence"), false);
 });

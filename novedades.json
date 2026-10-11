@@ -1,5 +1,5 @@
 {
-  "v.11.10.2026.r29.12:52": [
+  "v.11.10.2026.r29.13:07": [
     "/consumos · Matriz de agentes: cada fila lleva una insignia PAGO (ámbar) o GRATIS (verde) delante del detalle del coste.",
     "De pago son los seis titulares: Merovingio y Smith (Grok), Oráculo y Trinity (Codex), Neo y Morfeo (Claude). El resto, gratis; un agente nuevo que lata con un modelo de pago sale PAGO.",
     "La insignia se lee también en las filas sin señal (ya no se atenúa) y en inglés (PAID / FREE)."

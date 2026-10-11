@@ -1,4 +1,9 @@
 {
+  "v.11.10.2026.r39.19:12": [
+    "/pendiente: cuadrante de carga publicado con el marcador diario de misiones de Madrid y tarjetas de encargos por agente.",
+    "Encargos recientes a la vista, antiguos plegados y avisos de posibles repetidos, otras máquinas y carga parcial cuando se alcanza el límite público. Actualización cada 60 s.",
+    "Acceso directo al cuadrante desde /consumos. Estas novedades aparecen en el popover del sello, sin recorte."
+  ],
   "v.11.10.2026.r38.15:33": [
     "/normativa: orden vigente de congelación de los clones (pixeria.com, xpaceos.com, yokup.com y clearchannel.tv) desde el 10-oct 09:24 y hasta nueva orden, en castellano e inglés, con ancla #congelacion-clones.",
     "Informe de vigilancia del 11-oct: xpaceos.com sin novedad, pixeria.com con orden expresa (encargo 5634), yokup.com y clearchannel.tv a aclarar porque comparten despliegue o repositorio con su pilar. No se revierte nada."

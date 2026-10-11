@@ -1,4 +1,9 @@
 {
+  "v.11.10.2026.r1.11:24": [
+    "Highscore: interruptor «Agentes / Consejeros» en la barra superior, frente al selector de periodo. En Agentes salen solo los DeepAgents; en Consejeros, solo las sillas (Wozniak, Jobs, Lucas, Disney, Musk, Huang).",
+    "El interruptor se combina con Hora / Día / Semana / Mes y alcanza ranking, podio, récord, carriles, tiempos por encargo y el modal de días.",
+    "Experto: /demo enseña el cambio; /agentes y /consejeros (o /agents y /advisors) cambian la vista. Sigue la marca blanca y el idioma ES/EN."
+  ],
   "v.11.10.2026.r36.14:42": [
     "Barra de AGENTES en la portada, bajo la línea de acción: por cada agente su estado (verde trabajando · amarillo con Carlos · gris parado), sus encargos abiertos (📋) y el % de cuota de su cuenta con la hora de reinicio (🔄). Se ve también con el menú plegado y en móvil.",
     "La cuota es la real de cada CLI (Claude Code: 5 h y semana · Codex: semana); sin dato fresco pone «cuota s/d» y los motores gratis «gratis»: nunca un número inventado. Fuente: /api/flota/trabajando (campos abiertos y limite)."

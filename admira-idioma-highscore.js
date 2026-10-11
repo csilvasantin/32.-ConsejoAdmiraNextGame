@@ -51,7 +51,7 @@
       formulaEmpty:'<b>No aparece corredor:</b> no hay una asignación demostrable en la última hora, una sesión exacta abierta ni un cierre elegible de las últimas 24 horas. Si la fuente de trabajo no responde se indica “trabajo no disponible”; no se conserva una carrera antigua como si siguiera viva.',
       formulaComputer:'<b>Ordenador:</b> en verde el que late ahora, apagado el conocido sin latido reciente. Un mismo agente corre en varios a la vez.',
       formulaProject:'<b>Proyecto:</b> manda el <b>proyecto principal declarado para hoy</b> — la asignación de Carlos. Si ese día se ha tocado además otra cosa, se dice en el detalle de la pastilla. Sin declaración, manda la tarea activa (ventana, misión u objetivo) y sólo después el proyecto estructural del censo.',
-      formulaActivity:'El <b>número verde que parpadea</b> señala qué hace el agente ahora: objetivo, ventana, misión o tarea. Si ninguno parpadea, está <b>idle</b>. Solo se muestra una señal, priorizando la tarea activa.',
+      formulaActivity:'El <b>número verde que parpadea</b> señala qué hace el agente ahora: objetivo, ventana, misión o tarea. Si ninguno parpadea, está <b>inactivo</b>. Solo se muestra una señal, priorizando la tarea activa.',
       formulaCounters:'Hoy puntúan <b>{tasks}</b> tareas. La bitácora ha anotado <b>{objectives}</b> objetivos, <b>{windows}</b> ventanas y <b>{missions}</b> misiones; ',
       formulaUnattributed:'<b>{unattributed}</b> eventos automáticos o sin agente no reparten puntos. ',
       formulaInventory:'Se comprueban además <b>{presence}</b> registros de presencia y <b>{machines}</b> inventarios de equipo para distinguir 0 de — y registrado de encendido, sin alterar la puntuación.',

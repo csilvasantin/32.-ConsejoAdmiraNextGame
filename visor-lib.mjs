@@ -103,6 +103,10 @@ export function aplicarPerfil(f, vivo, ultimoS) {
   const modeloReal = vivo && vivo.modeloTxt ? vivo.modeloTxt : null;
   out.latidoMaquina = maqReal; out.latidoModelo = modeloReal;
   if (pf.modo === "edge") {
+    // El equipo de un edge lo manda Carlos; un latido de OTRA máquina (p. ej. una sesión CLI en el MBP16) no es su equipo
+    // y no se enseña como máquina real de su tarjeta (falso positivo #5803).
+    const norm = (x) => String(x || "").toLowerCase().replace(/[^a-z0-9]/g, "").replace(/macbookpro/, "mbp").replace(/macbookair/, "mba");
+    if (maqReal && !norm(maqReal).includes(norm(pf.equipo))) { out.latidoIgnorado = maqReal; out.latidoMaquina = null; out.latidoModelo = null; }
     // DESKTOP APP: sin terminal (la que llegara por pane es el falso positivo del MBP16) y nunca «pendiente sin trabajar».
     delete out.agente; delete out.etiqueta; delete out.lineas; delete out.arte; delete out.sub; delete out.mision; delete out.linea;
     Object.assign(out, { desktop: true, control: "CONTROL CARLOS", noMolestar: true, foco: pf.foco, terminalMaquina: pf.equipo });

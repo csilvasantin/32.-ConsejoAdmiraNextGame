@@ -181,6 +181,8 @@ test("#5803/#5801/#5802 mosaico de 6 por modo: edge sin falsos positivos, deskto
   }
   assert.equal(neo.etiquetaModo, "EDGE · MBP14 · Carlos al mando · NO MOLESTAR · admira.tv");
   assert.equal(neo.estado, "desktop"); assert.equal(neo.latidoMaquina, "MBP14");
+  const neo16 = vista([], A, { grupo: 6, vivos: [{ agente: "Neo", maquinas: ["MacBook Pro 16"], latido: S, modeloTxt: "Fable 5" }] }).fichas.find((x) => x.sesion === "neo");
+  assert.equal(neo16.latidoMaquina, null); assert.equal(neo16.latidoIgnorado, "MacBook Pro 16"); assert.equal(neo16.latidoModelo, null);
   assert.equal(tri.etiquetaModo, "EDGE · MBA16 · Carlos al mando · NO MOLESTAR · vigilante de incidencias de admira.app");
   assert.equal(tri.estado, "sin_datos"); assert.match(tri.sinDatos, /^sin datos de MBA16 desde \d\d:\d\d$/);
   const mer = v.fichas.find((f) => f.sesion === "merovingio");

@@ -290,7 +290,7 @@
       Object.keys(fichas).forEach(function (k) { if (claves.indexOf(k) < 0) { fichas[k].remove(); delete fichas[k]; } });
       d.fichas.forEach(pintar); orden = claves;
       claves.forEach(function (k) { $rej.appendChild(fichas[k]); });
-      var vivos = d.fichas.filter(function (f) { return f.estado === "vivo"; }).length;
+      var vivos = d.fichas.filter(function (f) { return f.estado === "vivo" || f.estado === "desktop"; }).length;
       $est.textContent = vivos + "/" + d.fichas.length + " en vivo · " + hora(d.ahora) + " · " + (Date.now() - t0) + " ms" + ((d.avisos && d.avisos.length) ? " · ⚠ " + d.avisos.join(" · ") : "");
       puntos();
       setTimeout(tick, document.hidden ? 15000 : CADA_MS);

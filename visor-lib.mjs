@@ -65,7 +65,7 @@ function normalizarConf(c) {
 
 /** Estados del agente (r31): los decide estado-agente.py en el Mac, la MISMA pieza que la cuadrícula (panel-agente.sh). */
 export const ESTADOS_AGENTE = ["vivo", "idle", "pendiente", "login", "nosesion"];
-export const ETIQUETAS = { vivo: "en misión", idle: "Idle", pendiente: "Pendiente sin trabajar", login: "Login pendiente", nosesion: "Sin sesión" };
+export const ETIQUETAS = { vivo: "en misión", idle: "Idle", pendiente: "Pendiente sin trabajar", login: "Login pendiente", nosesion: "Sin sesión", sinterminal: "sin terminal, solo encargo" };
 
 /** POST { maquina, ts, completo, conf?, agentes:{ <sesion>: { lineas:[…], ancho, alto, cmd, rotulo:[…], sub, cambio,
  *        estado, mision, modelo, mac, arte:[…], desde } }, vivas:[sesiones] }   (estado… desde r31; sin estado = publicador viejo) */
@@ -145,6 +145,23 @@ export function terminalesDe(presencia, persona, sesion, ahoraS) {
   return [...vistas.values()];
 }
 
+/** #5788 (3): sesiones de la app de escritorio (host «app» o session_id «desktop:*») con latido vivo. No tienen
+ *  terminal: la ficha no puede enseñar pantalla, solo el encargo. [{ maquina (norm), nombre, app, tarea, latido }] */
+export function appsDe(presencia, persona, ahoraS) {
+  const vistas = new Map();
+  for (const e of Array.isArray(presencia) ? presencia : []) {
+    if (!e || normMaq(e.persona) !== persona) continue;
+    if (String(e.host || "") !== "app" && !String(e.session_id || "").startsWith("desktop:")) continue;
+    const latido = Number(e.updated) || 0, m = normMaq(e.machine);
+    if (!m || ahoraS - latido >= LATIDO_VIVO_S) continue;
+    const rt = String(e.runtime || e.session_id || "").toLowerCase();
+    const app = /codex/.test(rt) ? "Codex" : /claude/.test(rt) ? "Claude" : "app";
+    const prev = vistas.get(m);
+    if (!prev || latido > prev.latido) vistas.set(m, { maquina: m, nombre: nombreMaq(e.machine), app, tarea: limpio(e.task || e.focus || "", 160), latido });
+  }
+  return [...vistas.values()];
+}
+
 /** Encargo in_progress más reciente de un agente con máquina: { numero, maquina (norm) } | null. */
 export function encargoEnCurso(encargos, persona) {
   const lista = (encargos && (encargos instanceof Map ? encargos.get(persona) : encargos[persona])) || [];
@@ -161,6 +178,7 @@ export function ubicar(c, docs, ahora, { presencia = null, encargos = null } = {
     .map((d) => ({ doc: d, a: d.agentes[c.sesion], m: normMaq(d.maquina), vivo: ahora - d.ts < 120000 }));
   const terms = presencia ? terminalesDe(presencia, persona, c.sesion, ahoraS) : [];
   const enc = encargos ? encargoEnCurso(encargos, persona) : null;
+  const apps = presencia ? appsDe(presencia, persona, ahoraS) : [];
   const hay = new Set([...pubs.filter((p) => p.vivo && p.a.agente !== "nosesion").map((p) => p.m), ...terms.map((t) => t.maquina)]);
   let maquina = "", motivo = "";
   if (enc && hay.has(enc.maquina)) { maquina = enc.maquina; motivo = "encargo #" + enc.numero + " en curso"; }
@@ -173,10 +191,14 @@ export function ubicar(c, docs, ahora, { presencia = null, encargos = null } = {
     const p = pubs.filter((x) => x.vivo && x.a.agente === "vivo").sort((x, y) => y.doc.ts - x.doc.ts)[0];
     if (p) { maquina = p.m; motivo = "en misión en el panel"; }
   }
+  if (!maquina && !terms.length && apps.length) { // #5788 (3): solo app de escritorio → su máquina (la del encargo si coincide)
+    const a = apps.find((x) => enc && x.maquina === enc.maquina) || [...apps].sort((x, y) => y.latido - x.latido)[0];
+    maquina = a.maquina; motivo = "app de escritorio";
+  }
   if (!maquina && pubs.some((p) => p.m === normMaq(c.host))) { maquina = normMaq(c.host); motivo = "conf"; }
   if (!maquina && pubs.length) { const p = [...pubs].sort((x, y) => (x.a.agente === "nosesion") - (y.a.agente === "nosesion") || y.doc.ts - x.doc.ts)[0]; maquina = p.m; motivo = "único panel"; }
   if (!maquina) { maquina = normMaq(c.host); motivo = "conf"; }
-  return { maquina, motivo, pubs, terms, encargo: enc };
+  return { maquina, motivo, pubs, terms, apps, encargo: enc };
 }
 
 /** Vista para el visor: una ficha por línea de la conf, en la máquina donde trabaja ese agente (r42). */
@@ -204,7 +226,15 @@ export function vista(docs, ahora = Date.now(), opciones = {}) {
     const enc = u.encargo;
     const encFuera = enc && enc.maquina && enc.maquina !== u.maquina ? "trabajando en " + nombreCorto(enc.maquina) + " · #" + enc.numero : "";
     let extra = {};
-    if (estado === "vivo" && a.agente) {
+    // #5788 (3): sin terminal en ninguna máquina (según Yokup) pero con la app de escritorio viva → no está parado:
+    // trabaja donde el visor no puede mirar. Se marca «sin terminal, solo encargo» en vez de gris/sin datos. Un encargo
+    // sin esa sesión no basta (puede ser una terminal que Yokup no ve: ahí sigue el «sin datos»/«trabajando en» de r43).
+    const app = u.apps.find((x) => x.maquina === u.maquina) || u.apps[0] || null;
+    const sinTerminal = !!opciones.presencia && !u.terms.length && !!app && !(estado === "vivo" && a.agente === "vivo");
+    if (sinTerminal) {
+      const mision = enc ? "#" + enc.numero + " en curso" + (enc.maquina && enc.maquina !== u.maquina ? " en " + nombreCorto(enc.maquina) : "") : (app && app.tarea) || "";
+      extra = { agente: "sinterminal", etiqueta: ETIQUETAS.sinterminal, sinTerminal: true, mision, linea: mision, viejo: "", modelo: app ? app.app + " (app de escritorio)" : "", mac: nomMaq, arte: (a && a.arte) || [] };
+    } else if (estado === "vivo" && a.agente) {
       extra = { agente: a.agente, etiqueta: ETIQUETAS[a.agente], mision: a.mision, linea: a.linea, viejo: a.viejo, modelo: a.modelo, mac: nomMaq, arte: a.arte, desde: a.desde };
       if (encFuera) { // el estado del Mac se calcula con la bandeja de la persona: su encargo de otra máquina no es suyo
         const nota = "#" + enc.numero + " en curso en " + nombreCorto(enc.maquina);
@@ -217,7 +247,7 @@ export function vista(docs, ahora = Date.now(), opciones = {}) {
       // sin latido de esa sesión en esa máquina: ni «Pendiente sin trabajar» ni el último estado, solo desde cuándo no hay datos
       extra = { sinDatos: "sin datos de " + nomMaq + (d ? " desde " + horaMadrid(d.ts) : " (no publica en el panel)"), sinDatosDesde: d ? d.ts : null };
     }
-    if (encFuera) extra.encargoFuera = encFuera;
+    if (encFuera && !sinTerminal) extra.encargoFuera = encFuera;
     // todas las máquinas donde tiene sesión (panel o terminal según Yokup)
     const maqs = new Map();
     for (const p of u.pubs) if (p.a.agente !== "nosesion" || p === elegido) maqs.set(p.m, { maquina: p.m, nombre: nombreMaq(p.doc.maquina), panel: true, terminal: false, agente: p.a.agente || "", panelVivo: p.vivo });
@@ -225,7 +255,7 @@ export function vista(docs, ahora = Date.now(), opciones = {}) {
     const otras = [...maqs.values()].filter((x) => x.maquina !== u.maquina);
     const avisosF = [];
     for (const x of maqs.values()) if (x.terminal && !(x.panel && x.panelVivo)) avisosF.push(nombre + " tiene terminal en " + x.nombre + " que no publica en el panel");
-    if (estado !== "vivo" && u.motivo !== "conf" && u.motivo !== "único panel") avisosF.unshift(nombre + " trabaja en " + nomMaq + " (" + u.motivo + "), pero esa máquina no publica su panel");
+    if (estado !== "vivo" && !sinTerminal && u.motivo !== "conf" && u.motivo !== "único panel") avisosF.unshift(nombre + " trabaja en " + nomMaq + " (" + u.motivo + "), pero esa máquina no publica su panel");
     const conPanel = otras.filter((x) => x.panel && x.panelVivo);
     if (conPanel.length) avisosF.push(nombre + " también tiene sesión en " + conPanel.map((x) => x.nombre).join(", "));
     avisos.push(...avisosF.filter((t) => !avisos.includes(t)));

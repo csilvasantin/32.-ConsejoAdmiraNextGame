@@ -252,3 +252,32 @@ test("r43 #5697: sin latido fresco de la sesión en su máquina (panel parado) t
   assert.equal(f.estado, "congelado"); assert.equal(f.etiqueta, undefined); assert.equal(f.agente, undefined);
   assert.equal(f.sinDatos, "sin datos de MacBook Pro 16 desde 15:06");
 });
+
+// ── #5788 (3): lo que corre en la app de escritorio no tiene terminal → «sin terminal, solo encargo», no parado ──
+test("#5788 app de escritorio sin terminal: «sin terminal, solo encargo» en vez de sin datos, y sin aviso de panel", () => {
+  const presApp = [{ persona: "Morfeo", machine: "MacBook Pro 16", host: "app", session_id: "desktop:claude", runtime: "claude", updated: S0 - 30 }];
+  const enc = { morfeo: [{ id: 5788, status: "in_progress", target_persona: "Morfeo", target_machine: "macbookpro16" }] };
+  const docs = [docDe("macbook-pro-16", { neo: ag("vivo", "neo") }, T0 - 10 * 60000)]; // el panel no tiene sesión de Morfeo
+  const v = vista(docs, T0, { presencia: presApp, encargos: enc });
+  const f = v.fichas.find((x) => /^Morfeo/.test(x.titulo));
+  assert.equal(f.agente, "sinterminal"); assert.equal(f.etiqueta, "sin terminal, solo encargo"); assert.equal(f.sinTerminal, true);
+  assert.equal(f.sinDatos, undefined, "no se pinta parado"); assert.equal(f.mision, "#5788 en curso");
+  assert.equal(f.maquinaReal, "macbookpro16"); assert.match(f.modelo, /Claude \(app de escritorio\)/);
+  assert.ok(!v.avisos.some((a) => /^Morfeo/.test(a)), "no es una terminal sin panel: sin aviso");
+});
+
+test("#5788 sin presencia de Yokup no se adivina; con terminal CLI viva no se marca sin terminal", () => {
+  const enc = { morfeo: [{ id: 5788, status: "in_progress", target_persona: "Morfeo", target_machine: "macbookpro16" }] };
+  const docs = [docDe("macbook-pro-16", { neo: ag("vivo", "neo") }, T0 - 10 * 60000)];
+  const f0 = vista(docs, T0, { encargos: enc }).fichas.find((x) => /^Morfeo/.test(x.titulo));
+  assert.notEqual(f0.agente, "sinterminal");
+  const conCli = [pres("Morfeo", "MacBook Pro 16", { task: "#5788", declared_updated: S0 - 20 }), { persona: "Morfeo", machine: "MacBook Pro 16", host: "app", session_id: "desktop:claude", updated: S0 - 5 }];
+  const f1 = vista(docs, T0, { presencia: conCli, encargos: enc }).fichas.find((x) => /^Morfeo/.test(x.titulo));
+  assert.notEqual(f1.agente, "sinterminal");
+});
+
+test("#5788 sin la sesión de la app en Yokup, un encargo solo no marca «sin terminal»", () => {
+  const enc = { morfeo: [{ id: 5788, status: "in_progress", target_persona: "Morfeo", target_machine: "macbookpro16" }] };
+  const f = vista([docDe("macbook-pro-16", { neo: ag("vivo", "neo") })], T0, { presencia: [], encargos: enc }).fichas.find((x) => /^Morfeo/.test(x.titulo));
+  assert.notEqual(f.agente, "sinterminal");
+});

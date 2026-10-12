@@ -201,7 +201,7 @@ test('visor: ?a=Neo,Trinity filtra a esas 2 fichas en ese orden y no inventa nin
   assert.equal(filtrarAgentes(v, []).fichas.length, v.fichas.length);
   const html = readFileSync('visor/index.html', 'utf8');
   assert.match(html, /\.g2 #rejilla \{ grid-template-columns: 1fr 1fr; grid-template-rows: 1fr; \}/);
-  assert.match(readFileSync('functions/api/visor/pane.js', 'utf8'), /filtrarAgentes\(vista\(docs, ahora, \{ grupo \}\), a\)/);
+  assert.match(readFileSync('functions/api/visor/pane.js', 'utf8'), /filtrarAgentes\(vista\(docs, ahora, \{ grupo, vivos \}\), a\)/);
 });
 
 test('móvil: la orden del 2 con selector lleva solo 2 nombres válidos', () => {

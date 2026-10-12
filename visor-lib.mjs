@@ -80,6 +80,46 @@ export function etiquetaModo(f) {
   return null;
 }
 
+/** #5803/#5801/#5802 (Carlos 12-oct): el mosaico de 6 va agrupado por modo. Lo que es orden de Carlos (el modo, el foco)
+ *  se declara aquí; la máquina y el modelo que se enseñan salen SOLO del latido real: sin latido → «sin datos de <equipo> desde HH:MM». */
+export const PERFILES = {
+  smith: { nombre: "Smith", modo: "nube", equipo: "GrokBotBox", orden: 0 },
+  merovingio: { nombre: "Merovingio", modo: "nube", equipo: "GrokBotBox", orden: 1 },
+  oraculo: { nombre: "Oráculo", modo: "hibrido", equipo: "MBP16", terminalMaquina: "MBP16", orden: 2 },
+  morfeo: { nombre: "Morfeo", modo: "hibrido", equipo: "MBP16", terminalMaquina: "MBP16", orden: 3 },
+  neo: { nombre: "Neo", modo: "edge", equipo: "MBP14", foco: "admira.tv", orden: 4 },
+  trinity: { nombre: "Trinity", modo: "edge", equipo: "MBA16", foco: "vigilante de incidencias de admira.app", orden: 5 },
+};
+const kPerfil = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+export const perfilDe = (f) => PERFILES[kPerfil(String((f && f.titulo) || (f && f.sesion) || "").split(" · ")[0])] || null;
+const hhmm = (ts) => { if (!ts) return null; const d = new Date(Number(ts) * (Number(ts) > 4102444800 ? 1 : 1000)); return d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Madrid" }); };
+
+/** Aplica el perfil de modo a una ficha ya construida. vivo = fila de vivosPorAgente (latido en ventana); ultimoS = último latido (s). */
+export function aplicarPerfil(f, vivo, ultimoS) {
+  const pf = perfilDe(f);
+  if (!pf) return f;
+  const out = { ...f, modo: pf.modo, equipoDeclarado: pf.equipo, ordenModo: pf.orden };
+  const maqReal = vivo && vivo.maquinas && vivo.maquinas[0] ? String(vivo.maquinas[0]) : null;
+  const modeloReal = vivo && vivo.modeloTxt ? vivo.modeloTxt : null;
+  out.latidoMaquina = maqReal; out.latidoModelo = modeloReal;
+  if (pf.modo === "edge") {
+    // DESKTOP APP: sin terminal (la que llegara por pane es el falso positivo del MBP16) y nunca «pendiente sin trabajar».
+    delete out.agente; delete out.etiqueta; delete out.lineas; delete out.arte; delete out.sub; delete out.mision; delete out.linea;
+    Object.assign(out, { desktop: true, control: "CONTROL CARLOS", noMolestar: true, foco: pf.foco, terminalMaquina: pf.equipo });
+    out.estado = vivo ? "desktop" : "sin_datos";
+    out.etiquetaModo = `EDGE · ${pf.equipo} · Carlos al mando · NO MOLESTAR · ${pf.foco}`;
+  } else {
+    out.terminalMaquina = pf.terminalMaquina || null;
+    out.etiquetaModo = etiquetaModo({ modo: pf.modo, terminalMaquina: pf.terminalMaquina });
+    if (!f.lineas && !vivo) out.estado = "sin_datos"; // no publica terminal ni late
+  }
+  if (out.estado === "sin_datos") {
+    const desde = hhmm(ultimoS);
+    out.sinDatos = `sin datos de ${pf.equipo}${desde ? " desde " + desde : ""}`;
+  }
+  return out;
+}
+
 /** POST { maquina, ts, completo, conf?, agentes:{ <sesion>: { lineas:[…], ancho, alto, cmd, rotulo:[…], sub, cambio,
  *        estado, mision, modelo, mac, arte:[…], desde } }, vivas:[sesiones] }   (estado… desde r31; sin estado = publicador viejo) */
 export function normalizarPane(body, ahora = Date.now()) {
@@ -141,7 +181,8 @@ export function vista(docs, ahora = Date.now(), opciones = {}) {
   // a la máquina REAL del latido y no a la fija de la conf; varias máquinas → una ficha por cada una + aviso;
   // late pero ninguna máquina publica su terminal → aviso (no se inventa una terminal).
   const avisos = [];
-  if (Array.isArray(opciones.vivos)) {
+  const mosaico = opciones.grupo === 6;
+  if (Array.isArray(opciones.vivos) && !mosaico) {
     const k = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
     const vivoDe = (c) => opciones.vivos.find((v) => k(v.agente) === k(String(c.titulo).split(" · ")[0]));
     const real = [];
@@ -175,6 +216,23 @@ export function vista(docs, ahora = Date.now(), opciones = {}) {
     modoExtra.etiquetaModo = etiquetaModo({ ...modoExtra, host: c.host });
     return { ...c, estado, maquinaHaceS: haceS, ...modoExtra, ...(a ? { lineas: a.lineas, ancho: a.ancho, alto: a.alto, cmd: a.cmd, sub: a.sub, rotulo: a.rotulo, cambio: a.cambio, ...extra } : {}) };
   });
+  if (mosaico) { // #5803: 6 paneles agrupados por modo, con máquina/modelo del latido y sin falsos positivos del conf
+    const vivosL = Array.isArray(opciones.vivos) ? opciones.vivos : [];
+    const ult = opciones.ultimos || {};
+    const hechos = fichas.map((f) => {
+      const pf = perfilDe(f);
+      if (!pf) return f;
+      const vivo = vivosL.find((v) => kPerfil(v.agente) === kPerfil(pf.nombre));
+      let base = f;
+      if (pf.modo !== "edge" && !f.lineas) { // la terminal de la nube/híbrido puede estar publicada desde otra máquina
+        const d2 = conDoc.find((d) => d.agentes && d.agentes[f.sesion]);
+        if (d2) { const a2 = d2.agentes[f.sesion]; base = { ...f, host: d2.maquina, estado: ahora - d2.ts < 120000 ? "vivo" : "congelado", lineas: a2.lineas, ancho: a2.ancho, alto: a2.alto, cmd: a2.cmd, sub: a2.sub, rotulo: a2.rotulo, cambio: a2.cambio }; }
+      }
+      return aplicarPerfil(base, vivo, ult[pf.nombre] || ult[kPerfil(pf.nombre)]);
+    });
+    hechos.sort((a, b) => (a.ordenModo ?? 9) - (b.ordenModo ?? 9));
+    return { fichas: hechos, fuenteConf: conf ? conf.maquina : "defecto", avisos };
+  }
   return { fichas, fuenteConf: conf ? conf.maquina : "defecto", avisos };
 }
 

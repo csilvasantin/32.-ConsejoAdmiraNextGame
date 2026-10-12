@@ -216,6 +216,19 @@
     var maq = MAQUINAS[f.host] || f.host;
     var modelo = f.sub || ((f.titulo || "").split(" · ")[1] || "") + " · " + maq + " · deepagent de pago";
     if (f.etiquetaModo) { modelo = f.etiquetaModo + " · " + ((f.titulo || "").split(" · ")[1] || ""); } // #5794: modo real (GrokBot / GrokBot → MBP16 / MBP14…)
+    // #5803/#5801/#5802: edge = DESKTOP APP + CONTROL CARLOS en grande; sin latido = «sin datos de <equipo> desde HH:MM»
+    if (f.estado === "desktop" || f.estado === "sin_datos") {
+      el.classList.remove("ficha-idle");
+      el.querySelector(".cab .mis").textContent = f.control ? f.etiquetaModo : "";
+      var lat = f.latidoModelo || f.latidoMaquina ? [f.latidoModelo, f.latidoMaquina].filter(Boolean).join(" · ") : "";
+      el.querySelector(".modelo").innerHTML = '<span class="punto"></span>' + esc(f.sinDatos || (f.etiquetaModo ? f.etiquetaModo : lat));
+      el.querySelector(".hora").textContent = "";
+      var bx = el.querySelector(".term"); delete ultimo[k];
+      bx.innerHTML = f.control
+        ? '<div class="idle"><div style="font-size:22px;font-weight:700;color:var(--c);letter-spacing:.08em">CONTROL CARLOS</div><div style="margin-top:6px">DESKTOP APP · NO MOLESTAR</div><div style="margin-top:6px;opacity:.8">' + esc(f.equipoDeclarado || "") + " · " + esc(f.foco || "") + "</div>" + (lat ? '<div style="margin-top:6px;opacity:.7">latido: ' + esc(lat) + "</div>" : "") + (f.sinDatos ? '<div style="margin-top:6px;color:#e0a040">' + esc(f.sinDatos) + "</div>" : "") + "</div>"
+        : '<div class="espera">' + esc(f.sinDatos || "sin datos") + "</div>";
+      return;
+    }
     if (f.estado === "sin_terminal") { el.querySelector(".cab .mis").textContent = ""; el.querySelector(".modelo").innerHTML = '<span class="punto"></span>' + esc(modelo); return; }
     // r31: si el Mac manda el estado (estado-agente.py, el mismo que la cuadrícula), se pinta igual que allí
     if (f.agente) {

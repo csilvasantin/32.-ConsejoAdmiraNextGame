@@ -63,6 +63,7 @@ export function vivosPorAgente(presencia = [], ahoraS = Date.now() / 1000, venta
     const ts = Number(r && r.updated) || 0;
     if (!agente || ahoraS - ts > ventanaS) continue;
     const x = out.get(agente) || { agente, latido: 0, modelos: {}, fuentes: {}, maquinas: [] };
+    if (ts >= x.latido) x.modeloTxt = String(r.model_spec || r.model || r.runtime || "").slice(0, 60); // #5803: modelo real del último latido
     x.latido = Math.max(x.latido, ts);
     if (r.machine && !x.maquinas.includes(r.machine)) x.maquinas.push(String(r.machine));
     const { modelo, fuente } = modeloDeFila(r);

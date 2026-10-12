@@ -490,7 +490,7 @@
   function cliAyuda(ok, ko) {
     if (window.AdmiraCliAyuda) return ok(window.AdmiraCliAyuda);
     var sc = document.createElement("script");
-    sc.src = "/assets/cli-ayuda.js?v=20261011-r35-ayuda";
+    sc.src = "/assets/cli-ayuda.js?v=20261011-5707-selector";
     sc.onload = function () { window.AdmiraCliAyuda ? ok(window.AdmiraCliAyuda) : ko(); };
     sc.onerror = ko;
     document.head.appendChild(sc);
@@ -512,7 +512,7 @@
   function interfaceCli(ok, ko) {
     if (window.AdmiraInterface) return ok(window.AdmiraInterface);
     var sc = document.createElement("script");
-    sc.src = "/assets/interface-cli.js?v=20261011-r35-experto";
+    sc.src = "/assets/interface-cli.js?v=20261011-5707-selector2";
     sc.onload = function () { window.AdmiraInterface ? ok(window.AdmiraInterface) : ko(); };
     sc.onerror = ko;
     document.head.appendChild(sc);

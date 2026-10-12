@@ -5,6 +5,11 @@
  *   /interface 6 · terminal 6 [fold|iphone]  r33 (Carlos 13:30): 3x2 = los 4 de pago + Smith y Merovingio (Grok), del mismo
  *                                         visor /visor/?g=6 (llave del visor), con los mismos estados Idle / Login pendiente /
  *                                         Sin sesión / en misión que la cuadrícula del Mac (estado-agente.py)
+ *   /interface 2 claude|codex|grok [Fold|Iphone]   #5707: los 2 agentes vivos de ese modelo (latido más reciente)
+ *   /interface 2 Neo Trinity [Fold|Iphone]         #5707: esos dos (Neo, Morfeo, Trinity, Oráculo, Smith, Merovingio)
+ *                                         → visor con llave filtrado /visor/?a=Neo,Trinity en 2x1. El modelo sale de la
+ *                                         presencia real vía /api/visor/seleccion (interface-seleccion.mjs); sin dato,
+ *                                         «desconocido» y fuera de los grupos. Menos de 2 vivos → mensaje, nunca panel vacío.
  *   /interface off [dispositivo]          la cierra
  *   /interface help                       esta ayuda
  *
@@ -34,6 +39,11 @@
     mbp16:  { tipo: 'mac', nombre: 'MacBook Pro 16', alias: ['mbp16', 'mbp', 'pro16', 'macbookpro16'], rx: /pro\s*16/i },
     mbp14:  { tipo: 'mac', nombre: 'MacBook Pro Negro 14', alias: ['mbp14', 'pro14', 'negro', 'negro14', 'macbookpronegro14'], rx: /(negro|pro)\s*14/i }
   };
+  // #5707: selector detrás del «2» (sin mayúsculas ni tildes). Los nombres son los 6 del visor.
+  var MODELOS = ['claude', 'codex', 'grok'];
+  var AGENTES = ['Neo', 'Morfeo', 'Trinity', 'Oráculo', 'Smith', 'Merovingio'];
+  function sinTilde(s) { return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().trim(); }
+  function agente(s) { var k = sinTilde(s); if (!k) return null; for (var i = 0; i < AGENTES.length; i++) if (sinTilde(AGENTES[i]) === k) return AGENTES[i]; return null; }
   function T(es, en) { return root.AdmiraIdioma ? root.AdmiraIdioma.t(es, en) : es; }
 
   function dispositivo(s) {
@@ -61,9 +71,20 @@
     if (a === 'terminal' || a === 'terminales') {
       var n = p[1];
       if (n !== '2' && n !== '4' && n !== '6') return { ok: false, error: 'grid', valor: n };
-      var d = dispositivo(p[2]);
-      if (d === undefined) return { ok: false, error: 'dispositivo', valor: p[2] };
-      return { ok: true, accion: 'terminal', grid: +n, dispositivo: d };
+      var resto = p.slice(2).join(' ').split(/[\s,]+/).filter(Boolean), sel = null;
+      if (n === '2' && resto.length) { // #5707: /interface 2 claude · /interface 2 Neo Trinity [dispositivo]
+        if (MODELOS.indexOf(sinTilde(resto[0])) >= 0) sel = { modelo: sinTilde(resto.shift()) };
+        else if (agente(resto[0])) {
+          var a1 = agente(resto[0]), a2 = agente(resto[1]);
+          if (!a2 || a2 === a1) return { ok: false, error: 'selector', valor: resto[1] || '', agente: a1, grid: 2 };
+          sel = { agentes: [a1, a2] }; resto.splice(0, 2);
+        }
+      }
+      var d = dispositivo(resto[0]);
+      if (d === undefined) return { ok: false, error: 'dispositivo', valor: resto[0], grid: +n };
+      var o = { ok: true, accion: 'terminal', grid: +n, dispositivo: d };
+      if (sel) o.seleccion = sel;
+      return o;
     }
     return { ok: false, error: 'accion', valor: a };
   }
@@ -71,6 +92,8 @@
   function ayuda() {
     return T('/interface [terminal] 4 [dispositivo] — cuadratura Neo·Morfeo·Trinity·Oráculo · /interface [terminal] 2 [dispositivo] — Smith·Merovingio · /interface 6 [Fold|Iphone] — los 6 en 3x2 · ',
              '/interface [terminal] 4 [device] — Neo·Morph·Trinity·Oracle grid · /interface [terminal] 2 [device] — Smith·Merovingio · /interface 6 [Fold|Iphone] — all 6 in 3x2 · ') +
+      T('/interface 2 claude|codex|grok [Fold|Iphone] — los 2 vivos de ese modelo · /interface 2 Neo Trinity — esos dos · ',
+        '/interface 2 claude|codex|grok [Fold|Iphone] — the 2 live agents on that model · /interface 2 Neo Trinity — those two · ') +
       T('sin dispositivo se abre aquí; dispositivos: Fold, Iphone, Air, MBP16, MBP14 · /interface off [dispositivo] la cierra',
         'no device opens it here; devices: Fold, Iphone, Air, MBP16, MBP14 · /interface off [device] closes it');
   }
@@ -89,7 +112,10 @@
     // Responsive: en pantallas estrechas o en vertical (iPhone, Fold, tablet en vertical) ocupa TODO el ancho y todo
     // el alto libre; en pantallas anchas, el cuadrado de siempre.
     var estrecho = root.innerWidth < 820 || root.innerWidth < (lim - 12) * 1.15;
-    if (estrecho) {
+    if (w.dataset.dos && !estrecho) { // #5707: 2x1 apaisado, cada ficha casi cuadrada
+      var alto = Math.max(140, Math.floor(Math.min(lim - 12, root.innerWidth * 0.96 / 1.6)));
+      w.style.height = alto + 'px'; w.style.width = Math.floor(Math.min(root.innerWidth * 0.96, alto * 2)) + 'px';
+    } else if (estrecho) {
       w.style.width = (root.innerWidth - 8) + 'px';
       w.style.height = Math.max(160, Math.floor(lim - 8)) + 'px';
     } else {
@@ -99,15 +125,18 @@
     w.style.top = Math.round(lim / 2) + 'px';
     w.style.borderWidth = estrecho ? '1px' : '2px';
   }
-  function abrirPanel(grid) {
+  /** abrirPanel(grid, eleccion?) — eleccion = respuesta de /api/visor/seleccion ({ agentes, modelo, url }) → visor filtrado 2x1. */
+  function abrirPanel(grid, eleccion) {
     cerrarPanel();
-    var url = grid === 6 ? GRID6_URL : grid === 4 ? GRID4_URL : GRID2_URL;
-    var titulo = grid === 6 ? '⌨ TERMINAL 6 · Neo · Morfeo · Trinity · Oráculo · Smith · Merovingio' : grid === 4 ? '⌨ TERMINAL 4 · Neo · Morfeo · Trinity · Oráculo' : '⌨ TERMINAL 2 · Smith · Merovingio (Grok)';
-    var nota = grid >= 4
+    var url = eleccion ? urlSeleccion(eleccion.agentes) : grid === 6 ? GRID6_URL : grid === 4 ? GRID4_URL : GRID2_URL;
+    var titulo = eleccion ? '⌨ TERMINAL 2 · ' + eleccion.agentes.join(' · ') + (eleccion.modelo ? ' (' + eleccion.modelo + ')' : '') :
+      grid === 6 ? '⌨ TERMINAL 6 · Neo · Morfeo · Trinity · Oráculo · Smith · Merovingio' : grid === 4 ? '⌨ TERMINAL 4 · Neo · Morfeo · Trinity · Oráculo' : '⌨ TERMINAL 2 · Smith · Merovingio (Grok)';
+    var nota = grid >= 4 || eleccion
       ? T('Visor privado de admira.live (llave del visor en este navegador). Solo lectura.', 'admira.live private viewer (viewer key in this browser). Read only.')
       : T('Solo dentro del tailnet de Carlos (ttyd de solo lectura en el MacBook Air). Si no carga, este equipo no está en Tailscale.', 'Only inside Carlos\'s tailnet (read-only ttyd on the MacBook Air). If it does not load, this device is not on Tailscale.');
     var w = document.createElement('div');
     w.id = 'admira-interface';
+    if (eleccion) w.dataset.dos = '1';
     w.setAttribute('role', 'dialog');
     w.style.cssText = 'position:fixed;z-index:2147483200;left:50%;top:50%;transform:translate(-50%,-50%);' +
       (grid === 6 ? 'width:min(96vw,calc((94vh - 8px) * 1.5));height:min(94vh,calc(96vw / 1.5));' : 'width:min(94vw,calc(94vh - 8px));height:min(94vw,calc(94vh - 8px));') + 'background:#000;border:2px solid #28fe14;' +
@@ -131,6 +160,40 @@
     var esc = function (e) { if (e.key === 'Escape' && document.getElementById('admira-interface')) { e.stopPropagation(); cerrarPanel(); document.removeEventListener('keydown', esc, true); } };
     document.addEventListener('keydown', esc, true);
     return true;
+  }
+
+  // ── #5707: /interface 2 <claude|codex|grok|Nombre Nombre> ─────────────────
+  /** ['Neo','Oráculo'] → '/visor/?a=Neo,Oraculo' (solo nombres; la llave sigue en la cabecera del visor). */
+  function urlSeleccion(agentes) { return GRID4_URL + '?a=' + agentes.map(function (a) { return sinTilde(a).replace(/^./, function (c) { return c.toUpperCase(); }); }).join(','); }
+  /** Pregunta al servidor quién encaja (presencia real) → { ok, agentes, modelo, aviso } | { ok:false, mensaje, sugerencias }. */
+  function consultarSeleccion(sel) {
+    var q = sel.modelo ? 'modelo=' + sel.modelo : 'a=' + encodeURIComponent(sel.agentes.join(','));
+    return fetch('/api/visor/seleccion?' + q, { cache: 'no-store' })
+      .then(function (r) { return r.json(); })
+      .catch(function () { return { ok: false, mensaje: T('admira.live no responde (presencia)', 'admira.live is not answering (presence)'), sugerencias: [] }; });
+  }
+  function conSeleccion(o, decir) {
+    var etiqueta = o.seleccion.modelo || o.seleccion.agentes.join(' + ');
+    if (o.dispositivo && DISPOSITIVOS[o.dispositivo].tipo === 'mac') {
+      decir('⚠️ ' + T('El 2 con selector de momento es aquí o en Fold/Iphone (en los Mac: /interface 2 a secas) · ', 'The 2 with a selector is here or on Fold/Iphone for now (on Macs: plain /interface 2) · ') + ayuda());
+      return Promise.resolve();
+    }
+    decir('🔎 ' + T('Buscando en la presencia: ', 'Looking up presence: ') + etiqueta + '…');
+    return consultarSeleccion(o.seleccion).then(function (r) {
+      if (!r || !r.ok || !r.agentes || r.agentes.length !== 2) {
+        decir('⚠️ ' + ((r && r.mensaje) || T('No hay 2 agentes para ', 'There are no 2 agents for ') + etiqueta) + T(' · no abro un panel vacío', ' · not opening an empty panel') +
+          (r && r.sugerencias && r.sugerencias.length ? T(' · prueba: ', ' · try: ') + r.sugerencias.join(' · ') : ''));
+        return;
+      }
+      if (r.aviso) decir('ℹ️ ' + r.aviso);
+      if (r.desconocidos && r.desconocidos.length && o.seleccion.modelo) decir('· ' + T('Modelo desconocido (fuera de los grupos): ', 'Unknown model (left out of the groups): ') + r.desconocidos.join(', '));
+      if (!o.dispositivo) {
+        abrirPanel(2, r);
+        decir('⌨ ' + T('Terminal 2 aquí · ', 'Terminal 2 here · ') + r.agentes.join(' · ') + (r.modelo ? ' (' + r.modelo + ')' : '') + T(' · Esc o /interface off para cerrar', ' · Esc or /interface off to close'));
+        return;
+      }
+      return enviarMovil({ accion: 'terminal', grid: 2, dispositivo: o.dispositivo, agentes: r.agentes }, decir);
+    });
   }
 
   // ── Mac: Fleet Mesh /run (sesión Google del relay) ───────────────────────
@@ -176,10 +239,10 @@
     var D = DISPOSITIVOS[o.dispositivo], k = llave();
     if (!k) { decir('🔑 ' + T('Este navegador no tiene la llave del visor: ábrelo una vez con el enlace privado (#k=…) y repite.', 'This browser has no viewer key: open the private link (#k=…) once and retry.')); return Promise.resolve(); }
     return fetch('/api/interface', { method: 'POST', cache: 'no-store', headers: { 'Content-Type': 'application/json', 'X-Visor-Key': k },
-      body: JSON.stringify({ dispositivo: o.dispositivo, accion: o.accion, grid: o.grid || 0 }) })
+      body: JSON.stringify({ dispositivo: o.dispositivo, accion: o.accion, grid: o.grid || 0, agentes: o.agentes || undefined }) })
       .then(function (r) { return r.json().catch(function () { return { ok: false, error: 'HTTP ' + r.status }; }); })
       .then(function (d) {
-        if (d && d.ok) decir('📱 ' + D.nombre + ' · ' + (o.accion === 'off' ? T('cerrando', 'closing') : T('terminal ', 'terminal ') + o.grid) +
+        if (d && d.ok) decir('📱 ' + D.nombre + ' · ' + (o.accion === 'off' ? T('cerrando', 'closing') : T('terminal ', 'terminal ') + o.grid + (o.agentes ? ' · ' + o.agentes.join(' · ') : '')) +
           T(' · lo verás en admira.live/interface/?d=', ' · you will see it at admira.live/interface/?d=') + o.dispositivo + T(' (déjala abierta en el móvil)', ' (keep it open on the phone)'));
         else decir('⚠️ ' + D.nombre + ' · ' + ((d && d.error) || 'error'));
       }).catch(function () { decir('⚠️ ' + D.nombre + ' · ' + T('admira.live no responde', 'admira.live is not answering')); });
@@ -191,12 +254,15 @@
     if (!o) return false;
     decir = decir || function () {};
     if (!o.ok) {
-      var A = root.AdmiraCliAyuda, sug = A && o.valor ? A.sugerir(o.valor, o.error === 'dispositivo' ? Object.keys(DISPOSITIVOS) : ['terminal', 'help', 'ayuda', 'off', 'cerrar']) : '';
-      decir('⚠️ ' + (o.error === 'dispositivo' ? T('Dispositivo desconocido: ', 'Unknown device: ') + o.valor + ' · ' : o.error === 'grid' ? T('Usa terminal 2, 4 o 6 · ', 'Use terminal 2, 4 or 6 · ') : T('No entiendo «', 'I do not understand «') + o.valor + '» · ') +
+      var dispos = o.grid === 2 ? Object.keys(DISPOSITIVOS).concat(MODELOS, AGENTES.map(sinTilde)) : Object.keys(DISPOSITIVOS);
+      var A = root.AdmiraCliAyuda, sug = A && o.valor ? A.sugerir(sinTilde(o.valor), o.error === 'selector' ? AGENTES.map(sinTilde) : o.error === 'dispositivo' ? dispos : ['terminal', 'help', 'ayuda', 'off', 'cerrar']) : '';
+      decir('⚠️ ' + (o.error === 'selector' ? T('Con nombres hacen falta dos agentes distintos (', 'Names need two different agents (') + AGENTES.join(', ') + '): ' + o.agente + ' + ' + (o.valor || '?') + ' · ' :
+        o.error === 'dispositivo' ? (o.grid === 2 ? T('No reconozco «', 'I do not recognise «') + o.valor + T('» (modelo claude|codex|grok, agente o dispositivo) · ', '» (model claude|codex|grok, agent or device) · ') : T('Dispositivo desconocido: ', 'Unknown device: ') + o.valor + ' · ') : o.error === 'grid' ? T('Usa terminal 2, 4 o 6 · ', 'Use terminal 2, 4 or 6 · ') : T('No entiendo «', 'I do not understand «') + o.valor + '» · ') +
         (sug ? T('¿Quisiste decir ', 'Did you mean ') + sug + '? · ' : '') + ayuda());
       return true;
     }
     if (o.accion === 'help') { decir('⌨ ' + ayuda()); return true; }
+    if (o.seleccion) { conSeleccion(o, decir); return true; }
     if (!o.dispositivo) {
       if (o.accion === 'off') { cerrarPanel(); decir('⌨ ' + T('Interface cerrada', 'Interface closed')); }
       else { abrirPanel(o.grid); decir('⌨ ' + T('Terminal ', 'Terminal ') + o.grid + T(' aquí · Esc o /interface off para cerrar', ' here · Esc or /interface off to close')); }
@@ -216,14 +282,22 @@
     ['/interface 4', 'Terminal 4 aquí mismo: la cuadratura de Neo, Morfeo, Trinity y Oráculo (visor privado con llave).', 'Terminal 4 right here: the Neo, Morph, Trinity and Oracle grid (private keyed viewer).', 6500],
     ['/interface off', 'La cierro con /interface off (o Esc).', 'Closing it with /interface off (or Esc).', 1800],
     ['/interface 2', 'Terminal 2: Smith y Merovingio (Grok), solo dentro del tailnet de Carlos.', 'Terminal 2: Smith and Merovingio (Grok), only inside Carlos\'s tailnet.', 6500],
-    ['/interface off', 'Y la cierro. Con dispositivo: /interface 2 Fold, /interface 4 MBP16…', 'And close it. With a device: /interface 2 Fold, /interface 4 MBP16…', 1200]
+    ['/interface off', 'Y la cierro. Con dispositivo: /interface 2 Fold, /interface 4 MBP16…', 'And close it. With a device: /interface 2 Fold, /interface 4 MBP16…', 1800],
+    // #5707: el 2 con selector (modelo sacado de la presencia real; sin dato = desconocido, fuera de los grupos)
+    ['/interface 2 claude', 'Ahora escojo qué 2: los 2 vivos con Claude, por latido más reciente (visor con llave, 2x1).', 'Now I pick which 2: the 2 live agents on Claude, most recent heartbeat first (keyed viewer, 2x1).', 6500],
+    ['/interface 2 codex', 'Los 2 vivos con Codex.', 'The 2 live agents on Codex.', 6500],
+    ['/interface off', 'La cierro antes del siguiente, para que se vea que no abre nada.', 'Closing it before the next one, so you can see nothing opens.', 1500],
+    ['/interface 2 grok', 'Los 2 con Grok. Si hay menos de 2 vivos con ese modelo, no abre un panel vacío: lo dice y sugiere otra cosa.', 'The 2 on Grok. With fewer than 2 live on that model it never opens an empty panel: it says so and suggests something else.', 6500],
+    ['/interface 2 Neo Trinity', 'Por nombre: Neo y Trinity, sin importar mayúsculas ni tildes.', 'By name: Neo and Trinity, case and accents ignored.', 6500],
+    ['/interface 2 Neo Cypher', 'Un caso de error: Cypher no tiene panel, así que no hay 2 → mensaje con sugerencias.', 'An error case: Cypher has no panel, so there are no 2 → message with suggestions.', 3500],
+    ['/interface off', 'Y la cierro. /interface 2 a secas sigue siendo Smith y Merovingio.', 'And close it. Plain /interface 2 is still Smith and Merovingio.', 1200]
   ];
   var demoEnCurso = null;
   /** demo(decir) — decir(texto, esOrden) escribe en el registro del CLI que la lanzó. */
   function demo(decir) {
     decir = decir || function () {};
     if (demoEnCurso) clearTimeout(demoEnCurso);
-    decir('▶ ' + T('Demo /interface · 5 pasos (se ejecutan solos)', 'Demo /interface · 5 steps (they run by themselves)'));
+    decir('▶ ' + T('Demo /interface · ', 'Demo /interface · ') + PASOS.length + T(' pasos (se ejecutan solos)', ' steps (they run by themselves)'));
     var i = 0;
     function paso() {
       if (i >= PASOS.length) { demoEnCurso = null; decir('✓ ' + T('Fin de la demo /interface.', 'End of the /interface demo.')); try { document.dispatchEvent(new CustomEvent('admira:demo', { detail: { id: 'interface', ok: true } })); } catch (e) {} return; }
@@ -248,9 +322,9 @@
     var E = root.AdmiraExperto;
     if (!E || typeof E.verb !== 'function') return false;
     if (E.has && E.has('interface')) return true;
-    E.verb({ name: 'interface', alias: ['interfaz'], args: '[terminal] 4|2|6 [dispositivo] · off [dispositivo] · help',
-      desc: ['terminales en vivo de los deepagents: 4 = Neo·Morfeo·Trinity·Oráculo, 2 = Smith·Merovingio, 6 = los seis; sin dispositivo aquí, o Fold/Iphone/Air/MBP16/MBP14 · /demo interface',
-             'live deepagent terminals: 4 = Neo·Morph·Trinity·Oracle, 2 = Smith·Merovingio, 6 = all six; no device = here, or Fold/Iphone/Air/MBP16/MBP14 · /demo interface'],
+    E.verb({ name: 'interface', alias: ['interfaz'], args: '[terminal] 4|2|6 [dispositivo] · 2 claude|codex|grok · 2 <agente> <agente> · off [dispositivo] · help',
+      desc: ['terminales en vivo de los deepagents: 4 = Neo·Morfeo·Trinity·Oráculo, 2 = Smith·Merovingio, 6 = los seis; 2 claude|codex|grok = los 2 vivos de ese modelo; 2 Neo Trinity = esos dos; sin dispositivo aquí, o Fold/Iphone/Air/MBP16/MBP14 · /demo interface',
+             'live deepagent terminals: 4 = Neo·Morph·Trinity·Oracle, 2 = Smith·Merovingio, 6 = all six; 2 claude|codex|grok = the 2 live on that model; 2 Neo Trinity = those two; no device = here, or Fold/Iphone/Air/MBP16/MBP14 · /demo interface'],
       run: function (parts, log) { run('/interface ' + (parts || []).join(' '), function (t) { li(log, t, /^⚠/.test(t) ? 'err' : ''); }); } });
     return true;
   }
@@ -278,7 +352,7 @@
     if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', engancharDemo); else engancharDemo();
   }
 
-  var api = { parse: parse, demo: demo, PASOS: PASOS, RE_DEMO: RE_DEMO, registrarExperto: registrarExperto, run: run, ayuda: ayuda, abrirPanel: abrirPanel, cerrarPanel: cerrarPanel, ordenMac: ordenMac, DISPOSITIVOS: DISPOSITIVOS, GRID2_URL: GRID2_URL, GRID4_URL: GRID4_URL, GRID6_URL: GRID6_URL };
+  var api = { MODELOS: MODELOS, AGENTES: AGENTES, urlSeleccion: urlSeleccion, conSeleccion: conSeleccion, parse: parse, demo: demo, PASOS: PASOS, RE_DEMO: RE_DEMO, registrarExperto: registrarExperto, run: run, ayuda: ayuda, abrirPanel: abrirPanel, cerrarPanel: cerrarPanel, ordenMac: ordenMac, DISPOSITIVOS: DISPOSITIVOS, GRID2_URL: GRID2_URL, GRID4_URL: GRID4_URL, GRID6_URL: GRID6_URL };
   root.AdmiraInterface = api;
   if (typeof module !== 'undefined' && module.exports) module.exports = api;
 })(typeof globalThis !== 'undefined' ? globalThis : this);

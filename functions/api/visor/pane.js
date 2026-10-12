@@ -6,7 +6,8 @@
  * Almacén: Cache API del colo (al instante, gratis) + RECORTE_KV como respaldo (≤ 1 escritura / 20 s / máquina).
  */
 import { autorizado } from "../consumos/lecturas.js";
-import { normalizarPane, fundir, vista, sha256, iguales, KEY_MAQ, KEY_INDICE, KEY_LLAVES, KV_CADA_MS } from "../../../visor-lib.mjs";
+import { normalizarPane, fundir, vista, filtrarAgentes, sha256, iguales, KEY_MAQ, KEY_INDICE, KEY_LLAVES, KV_CADA_MS } from "../../../visor-lib.mjs";
+import { vivosPorAgente, PRESENCIA_URL } from "../../../interface-seleccion.mjs";
 
 const ALLOW = new Set(["https://www.admira.live", "https://admira.live", "https://admira-live.pages.dev"]);
 function headers(origin) {
@@ -96,6 +97,18 @@ export async function onRequestGet({ request, env }) {
     if (c && k) return c.ts >= k.ts ? c : k;
     return c || k;
   }));
-  const grupo = Number(new URL(request.url).searchParams.get("g")) === 6 ? 6 : 4; // r33: /visor/?g=6 → + Smith y Merovingio
-  return json({ ok: true, ...vista(docs, ahora, { grupo }), grupo, generado: new Date(ahora).toISOString(), ahora }, 200, origin);
+  const q = new URL(request.url).searchParams;
+  const a = String(q.get("a") || "").split(",").filter(Boolean); // #5707: ?a=Neo,Trinity → esos 2 (de los 6)
+  const grupo = a.length || Number(q.get("g")) !== 4 ? 6 : 4; // #5803: por defecto el mosaico de 6 // r33: /visor/?g=6 → + Smith y Merovingio
+  const ultimos = {};
+  let vivos; // #5794: presencia real (latido + máquina); si no responde, el panel sigue con la conf como antes
+  try {
+    const r = await fetch(PRESENCIA_URL, { headers: { "user-agent": "admira.live/visor" }, cf: { cacheTtl: 0 } });
+    const d = await r.json();
+    const ahoraS = Number(d && d.now) ? (Number(d.now) > 4102444800 ? Number(d.now) / 1000 : Number(d.now)) : ahora / 1000;
+    const filas = Array.isArray(d && d.presence) ? d.presence : [];
+    vivos = vivosPorAgente(filas, ahoraS);
+    for (const r of filas) { const t = Number(r && r.updated) || 0; const n = String(r && r.persona || ""); if (n && t > (ultimos[n] || 0)) ultimos[n] = t; }
+  } catch (e) { vivos = undefined; }
+  return json({ ok: true, ...filtrarAgentes(vista(docs, ahora, { grupo, vivos, ultimos }), a), grupo, generado: new Date(ahora).toISOString(), ahora }, 200, origin);
 }

@@ -20,7 +20,7 @@
 
   // [orden, fecha AAAA-MM-DD | null, castellano, inglés, origen]
   var CATALOGO = [
-    ['/demo interface', '2026-10-11', 'terminales en vivo de los deepagents: help → 4 aquí → off → 2 aquí → off, sola', 'live deepagent terminals: help → 4 here → off → 2 here → off, by itself', 'admira.live'],
+    ['/demo interface', '2026-10-11', 'terminales en vivo de los deepagents: help → 4 aquí → off → 2 aquí → off → 2 claude · codex · grok · Neo Trinity → error con menos de 2, sola', 'live deepagent terminals: help → 4 here → off → 2 here → off → 2 claude · codex · grok · Neo Trinity → fewer-than-2 error, by itself', 'admira.live'],
     ['/demo velocidad', '2026-10-09', 'velocímetro de tokens/hora de la flota (/demo speed en inglés)', 'fleet tokens/hour speedometer (/demo speed)', 'admira.live'],
     ['/demo lectura', '2026-10-09', 'qué ve una sesión de agente de solo lectura', 'what a read-only agent session sees', 'admira.live'],
     ['/demo portada', '2026-10-09', 'la portada en vivo: conversación, paste e imagen (también /demo home)', 'the live home page: conversation, paste and image (also /demo home)', 'admira.live'],

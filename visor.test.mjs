@@ -2,7 +2,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { tapar, normalizarPane, fundir, vista, CONF_DEFECTO, sha256 } from "./visor-lib.mjs";
+import { tapar, normalizarPane, fundir, vista, etiquetaModo, CONF_DEFECTO, sha256 } from "./visor-lib.mjs";
 import { onRequestPost, onRequestGet } from "./functions/api/visor/pane.js";
 import { onRequestPost as llavePost } from "./functions/api/visor/llave.js";
 
@@ -146,4 +146,21 @@ test("#5794 vista sigue a la máquina real del latido: varias máquinas, y termi
   assert.equal(morfeo.estado, "sin_publicar");
   assert.equal(v.avisos.length, 2);
   assert.deepEqual(vista(docs, A, {}).avisos, []);
+});
+
+test("#5794 etiquetas de modo: nube, híbrido, edge y sin terminal (nunca «parado»)", () => {
+  const A = 1_000_000;
+  assert.equal(etiquetaModo({ modo: "nube" }), "GrokBot");
+  assert.equal(etiquetaModo({ modo: "hibrido" }), "GrokBot → MBP16");
+  assert.equal(etiquetaModo({ modo: "edge", terminalMaquina: "MBA16" }), "MBA16");
+  assert.equal(etiquetaModo({ modo: "sin_terminal", encargo: "5794", encargoEstado: "in_progress" }), "sin terminal, solo encargo · #5794 in_progress");
+  assert.equal(etiquetaModo({}), null);
+  const p = normalizarPane({ maquina: "macbook-pro-16", agentes: { trinity: { lineas: ["x"], modo_agente: "edge", terminal_maquina: "MBP14" } }, vivas: ["trinity"] }, A).pane;
+  const f = vista([fundir(null, p)], A + 1000).fichas.find((x) => x.sesion === "trinity");
+  assert.equal(f.etiquetaModo, "MBP14");
+  const v = vista([], A, { vivos: [{ agente: "Neo", maquinas: ["mba16"], modo: "sin_terminal", encargo: "5801", encargoEstado: "in_progress" }] });
+  const neo = v.fichas.find((x) => x.sesion === "neo");
+  assert.equal(neo.estado, "sin_terminal");
+  assert.equal(neo.etiquetaModo, "sin terminal, solo encargo · #5801 in_progress");
+  assert.deepEqual(v.avisos, []);
 });

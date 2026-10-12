@@ -215,6 +215,8 @@
     if ($rot.textContent !== txtRot) { $rot.textContent = txtRot; el.dataset.rcols = Math.max.apply(null, rot.map(function (l) { return l.length; })); }
     var maq = MAQUINAS[f.host] || f.host;
     var modelo = f.sub || ((f.titulo || "").split(" · ")[1] || "") + " · " + maq + " · deepagent de pago";
+    if (f.etiquetaModo) { modelo = f.etiquetaModo + " · " + ((f.titulo || "").split(" · ")[1] || ""); } // #5794: modo real (GrokBot / GrokBot → MBP16 / MBP14…)
+    if (f.estado === "sin_terminal") { el.querySelector(".cab .mis").textContent = ""; el.querySelector(".modelo").innerHTML = '<span class="punto"></span>' + esc(modelo); return; }
     // r31: si el Mac manda el estado (estado-agente.py, el mismo que la cuadrícula), se pinta igual que allí
     if (f.agente) {
       var cong = f.estado === "congelado" ? " · congelado" : "";
@@ -276,7 +278,7 @@
       d.fichas.forEach(pintar); orden = claves;
       claves.forEach(function (k) { $rej.appendChild(fichas[k]); });
       var vivos = d.fichas.filter(function (f) { return f.estado === "vivo"; }).length;
-      $est.textContent = vivos + "/" + d.fichas.length + " en vivo · " + hora(d.ahora) + " · " + (Date.now() - t0) + " ms";
+      $est.textContent = vivos + "/" + d.fichas.length + " en vivo · " + hora(d.ahora) + " · " + (Date.now() - t0) + " ms" + ((d.avisos && d.avisos.length) ? " · ⚠ " + d.avisos.join(" · ") : "");
       puntos();
       setTimeout(tick, document.hidden ? 15000 : CADA_MS);
     }).catch(function (e) {

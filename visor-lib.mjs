@@ -67,6 +67,19 @@ function normalizarConf(c) {
 export const ESTADOS_AGENTE = ["vivo", "idle", "pendiente", "login", "nosesion"];
 export const ETIQUETAS = { vivo: "en misión", idle: "Idle", pendiente: "Pendiente sin trabajar", login: "Login pendiente", nosesion: "Sin sesión" };
 
+/** #5794 (3) Modo de cada agente: lo manda el publicador (Morfeo #5788), el visor no lo supone.
+ *  nube → «GrokBot» · hibrido → «GrokBot → MBP16» · edge → la máquina real de la terminal (MBP14, MBA16…)
+ *  sin_terminal (app de escritorio) → «sin terminal, solo encargo» (+ encargo y estado), nunca «parado». */
+export const MODOS = ["nube", "hibrido", "edge", "sin_terminal"];
+export function etiquetaModo(f) {
+  const m = f && f.modo;
+  if (m === "nube") return "GrokBot";
+  if (m === "hibrido") return "GrokBot → " + (f.terminalMaquina || "MBP16");
+  if (m === "edge") return f.terminalMaquina || f.host || null;
+  if (m === "sin_terminal") return "sin terminal, solo encargo" + (f.encargo ? " · #" + f.encargo + (f.encargoEstado ? " " + f.encargoEstado : "") : "");
+  return null;
+}
+
 /** POST { maquina, ts, completo, conf?, agentes:{ <sesion>: { lineas:[…], ancho, alto, cmd, rotulo:[…], sub, cambio,
  *        estado, mision, modelo, mac, arte:[…], desde } }, vivas:[sesiones] }   (estado… desde r31; sin estado = publicador viejo) */
 export function normalizarPane(body, ahora = Date.now()) {
@@ -85,6 +98,11 @@ export function normalizarPane(body, ahora = Date.now()) {
       rotulo: (Array.isArray(a.rotulo) ? a.rotulo : []).slice(0, 8).map((l) => limpio(l, 80)),
       cambio: Number.isFinite(Number(a.cambio)) ? Math.min(Number(a.cambio), ahora) : ahora,
     };
+    if (MODOS.includes(a.modo_agente)) { // #5794: modo y terminal real del publicador local
+      agentes[ses].modoAgente = a.modo_agente;
+      agentes[ses].terminalMaquina = limpio(a.terminal_maquina, 20);
+      if (a.encargo != null) { agentes[ses].encargo = limpio(a.encargo, 12); agentes[ses].encargoEstado = limpio(a.encargo_estado, 20); }
+    }
     if (ESTADOS_AGENTE.includes(a.estado)) {
       const ag = agentes[ses];
       ag.agente = a.estado;
@@ -135,6 +153,8 @@ export function vista(docs, ahora = Date.now(), opciones = {}) {
       if (conPane.length) {
         if (conPane.length > 1) avisos.push(`${v.agente} tiene sesión en ${conPane.length} máquinas (${conPane.join(", ")}): se ven todas.`);
         for (const m of conPane) real.push({ ...c, host: m, enCurso: v.enCurso });
+      } else if (v.modo === "sin_terminal") {
+        real.push({ ...c, host: maqs[0] || c.host, enCurso: v.enCurso, modo: "sin_terminal", encargo: v.encargo, encargoEstado: v.encargoEstado, sinTerminal: true });
       } else {
         avisos.push(`${v.agente} late${maqs.length ? " en " + maqs.join(", ") : ""} pero su terminal no está publicada (sin publicador para la sesión «${c.sesion}»).`);
         real.push({ ...c, host: maqs[0] || c.host, enCurso: v.enCurso, sinPublicar: true });
@@ -148,9 +168,12 @@ export function vista(docs, ahora = Date.now(), opciones = {}) {
     const haceS = d ? Math.round((ahora - d.ts) / 1000) : null;
     const publicadorVivo = haceS != null && haceS < 120;
     let estado = "esperando";
-    if (a && publicadorVivo) estado = "vivo"; else if (a) estado = "congelado"; else if (c.sinPublicar) estado = "sin_publicar";
+    if (a && publicadorVivo) estado = "vivo"; else if (a) estado = "congelado"; else if (c.sinTerminal) estado = "sin_terminal"; else if (c.sinPublicar) estado = "sin_publicar";
     const extra = a && a.agente ? { agente: a.agente, etiqueta: ETIQUETAS[a.agente], mision: a.mision, linea: a.linea, viejo: a.viejo, modelo: a.modelo, mac: a.mac, arte: a.arte, desde: a.desde } : {};
-    return { ...c, estado, maquinaHaceS: haceS, ...(a ? { lineas: a.lineas, ancho: a.ancho, alto: a.alto, cmd: a.cmd, sub: a.sub, rotulo: a.rotulo, cambio: a.cambio, ...extra } : {}) };
+    const modo = c.modo || (a && a.modoAgente) || null;
+    const modoExtra = { modo, terminalMaquina: (a && a.terminalMaquina) || c.terminalMaquina || null, encargo: c.encargo || (a && a.encargo) || null, encargoEstado: c.encargoEstado || (a && a.encargoEstado) || null };
+    modoExtra.etiquetaModo = etiquetaModo({ ...modoExtra, host: c.host });
+    return { ...c, estado, maquinaHaceS: haceS, ...modoExtra, ...(a ? { lineas: a.lineas, ancho: a.ancho, alto: a.alto, cmd: a.cmd, sub: a.sub, rotulo: a.rotulo, cambio: a.cambio, ...extra } : {}) };
   });
   return { fichas, fuenteConf: conf ? conf.maquina : "defecto", avisos };
 }

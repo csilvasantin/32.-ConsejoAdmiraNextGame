@@ -126,6 +126,18 @@ def _txt(i):
     return "#%s · %s · %s" % (i.get("id"), i.get("status"), " ".join((i.get("text") or "").split()))
 
 
+def _corto(i):
+    """«#NNNN · titular corto · HH:MM» (r35 · cabecera de la cuadrícula del Mac y del visor)."""
+    tx = " ".join((i.get("text") or "").split())
+    sin = re.sub(r"^(?:[^():]{0,30}\([^)]*\)|[^():]{0,40}):\s+", "", tx, count=1)  # fuera «Orden de Carlos (11-oct, 13:53):» y similares
+    tit = re.split(r"(?<=[.;!?])\s|\s[—–]\s", sin or tx, maxsplit=1)[0]
+    tit = tit if len(tit) <= 64 else tit[:63].rstrip() + "…"
+    t = _t(i)
+    lt = time.localtime(t)
+    cuando = time.strftime("%H:%M" if time.strftime("%Y%m%d", lt) == time.strftime("%Y%m%d") else "%d/%m %H:%M", lt)
+    return "#%s · %s · %s" % (i.get("id"), tit, cuando)
+
+
 def _mision(persona):
     """{reciente, abierto:{txt,t}|None} o None si no se pudo leer."""
     try:
@@ -136,14 +148,55 @@ def _mision(persona):
         return None
     it = [i for i in it if i.get("status") != "cancelled"]
     if not it:
-        return {"reciente": "sin misiones registradas", "abierto": None}
+        return {"reciente": "sin misiones registradas", "reciente_c": "sin encargos", "abierto": None}
     rec = max(it, key=_t)
     ab = [i for i in it if i.get("status") in ABIERTOS]
     a = max(ab, key=_t) if ab else None
-    return {"reciente": _txt(rec), "abierto": {"txt": _txt(a), "t": _t(a), "id": a.get("id")} if a else None}
+    return {"reciente": _txt(rec), "reciente_c": _corto(rec),
+            "abierto": {"txt": _txt(a), "c": _corto(a), "t": _t(a), "id": a.get("id")} if a else None}
 
 
-def decidir(ses, persona=None, ahora=None):
+RELAJADOS = os.path.join(HOME, ".config", "admiranext", "relajados")
+
+
+def _norm(x):
+    return re.sub(r"[^a-z0-9]", "", unicodedata.normalize("NFKD", x or "").encode("ascii", "ignore").decode().lower())
+
+
+def relajado(persona):
+    """Modo ahorro (Carlos 11-10-2026 14:41): ~/.config/admiranext/relajados («Smith,Merovingio») = sin encargos.
+    El mismo fichero lo miran los vigilantes (agent-inbox-watcher.sh, vigilante.py)."""
+    try:
+        txt = open(RELAJADOS, encoding="utf-8").read()
+    except Exception:
+        return False
+    nombres = {_norm(x) for l in txt.splitlines() if not l.strip().startswith("#") for x in re.split(r"[,;\s]+", l) if x.strip()}
+    return bool(persona) and _norm(persona) in nombres
+
+
+def visor_ficha(ses, timeout=6):
+    """Ficha de la sesión en el relevo del visor (GET /api/visor/pane?g=6, X-Visor-Key de ~/.config/admira/visor-enlace.txt).
+    Para agentes que viven en otra máquina sin ssh (Merovingio en la caja, visto desde el Air). None si no hay llave o falla."""
+    try:
+        raw = open(os.path.join(HOME, ".config", "admira", "visor-enlace.txt"), encoding="utf-8").read().strip()
+    except Exception:
+        return None
+    m = re.search(r"[?&#]k=([A-Za-z0-9_\-]+)", raw)
+    llave = m.group(1) if m else raw.split()[0] if raw else ""
+    if not llave:
+        return None
+    try:
+        rq = urllib.request.Request("https://www.admira.live/api/visor/pane?g=6", headers={"X-Visor-Key": llave, "User-Agent": "estado-agente/1"})
+        d = json.loads(urllib.request.urlopen(rq, timeout=timeout).read().decode("utf-8"))
+    except Exception:
+        return None
+    for f in d.get("fichas") or []:
+        if f.get("sesion") == ses:
+            return f
+    return None
+
+
+def decidir(ses, persona=None, ahora=None, remoto=False):
     """Decide y guarda (con lock) el estado de la sesión. Devuelve dict: estado, etiqueta, mision, cambio, desde, pantalla."""
     ahora = time.time() if ahora is None else ahora
     os.makedirs(DIR, exist_ok=True)
@@ -165,7 +218,9 @@ def decidir(ses, persona=None, ahora=None):
         en_curso = bool(ab) and ahora - ab.get("t", 0) < VIEJO_S
         txt = pantalla(ses) if existe(ses) else None
         if txt is None:
-            est = "nosesion"
+            # remoto: la sesión vive en otra máquina sin espejo desde aquí (Merovingio en la caja, visto desde el Air):
+            # se decide solo por sus encargos, con la misma regla de «pendiente» que el resto
+            est = ("pendiente" if en_curso else "idle") if remoto else "nosesion"
         else:
             h = huella(txt)
             visto = st.get("visto", 0)
@@ -199,10 +254,15 @@ def decidir(ses, persona=None, ahora=None):
     else:
         mision = mis.get("reciente") or "sin misiones registradas"
         linea = ("▶ " if est == "vivo" else "última misión: ") + mision
+    if (est in ("vivo", "pendiente")) and ab and ahora - (ab.get("t") or 0) < VIEJO_S:  # uno de hace semanas no es «el de ahora»
+        encargo = ab.get("c") or ab["txt"]
+    else:
+        encargo = mis.get("reciente_c") or mis.get("reciente") or "sin encargos"
     viejo = ""
     if ab and est not in ("vivo", "pendiente"):
         viejo = "#%s abierto desde %s" % (ab.get("id"), time.strftime("%d/%m %H:%M", time.localtime(ab.get("t", 0))))
-    return {"estado": est, "etiqueta": ETIQUETA[est], "mision": mision, "linea": linea, "viejo": viejo,
+    return {"estado": est, "etiqueta": ETIQUETA[est], "mision": mision, "linea": linea, "viejo": viejo, "encargo": encargo,
+            "relajado": relajado(persona or persona_de(ses)),
             "cambio": int(st.get("cambio", 0) * 1000), "desde": int(st.get("desde", ahora) * 1000), "pantalla": txt}
 
 
@@ -211,13 +271,27 @@ def _q(s):
 
 
 def main(argv):
+    remoto = "--remoto" in argv
+    por_visor = "--visor" in argv
+    argv = [a for a in argv if a not in ("--remoto", "--visor")]
     if len(argv) >= 2 and argv[0] in ("--sh", "--json"):
-        r = decidir(argv[1], argv[2] if len(argv) > 2 else None)
+        r = decidir(argv[1], argv[2] if len(argv) > 2 else None, remoto=remoto or por_visor)
+        vok = 0
+        if por_visor:  # el estado y la terminal los manda la máquina donde vive el agente, vía relevo del visor
+            f = visor_ficha(argv[1])
+            if f and f.get("estado") == "vivo" and f.get("agente") in ETIQUETA:
+                r["estado"] = f["agente"]; r["etiqueta"] = ETIQUETA[f["agente"]]
+                vok = 1
+            ruta = os.path.join(DIR, "visor-" + re.sub(r"[^A-Za-z0-9._-]", "_", argv[1]) + ".txt")
+            with open(ruta + ".tmp", "w", encoding="utf-8") as fh:
+                fh.write("\n".join((f or {}).get("lineas") or []) if vok else "")
+            os.replace(ruta + ".tmp", ruta)
+        r["visor"] = vok
         if argv[0] == "--json":
             r.pop("pantalla", None)
             print(json.dumps(r, ensure_ascii=False))
         else:
-            print("E=%s; ETQ=%s; MIS=%s; LINEA=%s; VIEJO=%s" % (_q(r["estado"]), _q(r["etiqueta"]), _q(r["mision"]), _q(r["linea"]), _q(r["viejo"])))
+            print("E=%s; ETQ=%s; MIS=%s; LINEA=%s; VIEJO=%s; ENC=%s; REL=%s; VOK=%s" % (_q(r["estado"]), _q(r["etiqueta"]), _q(r["mision"]), _q(r["linea"]), _q(r["viejo"]), _q(r["encargo"]), 1 if r.get("relajado") else 0, r.get("visor", 0)))
         return 0
     print("uso: estado-agente.py --sh|--json <sesión-tmux> [Persona]", file=sys.stderr)
     return 2

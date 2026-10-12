@@ -1,4 +1,9 @@
 {
+  "v.12.10.2026.r41.12:45": [
+    "Visor /visor/: mosaico de 6 agrupado por modo (GrokBot, GrokBot → MBP16, EDGE) con máquina y modelo del latido real; sin latido, «sin datos de <equipo> desde HH:MM».",
+    "Neo (MBP14, admira.tv) y Trinity (MBA16, vigilante de admira.app): DESKTOP APP, CONTROL CARLOS y NO MOLESTAR en su tarjeta, sin terminal ni «Pendiente sin trabajar» falsos.",
+    "/diario en el modo experto: partes horarios de los 6 agentes por día (hoy, ayer o DD.MM.AA); POST /api/diario con token del Consejo."
+  ],
   "v.11.10.2026.r40.19:37": [
     "Highscore: interfaz completa en ES/EN y carrera de consejeros basada en trabajo verificado o en curso.",
     "Sin líder todavía cuando todos tienen cero puntos; título Para batirlo y un único aviso de datos junto al recuento.",

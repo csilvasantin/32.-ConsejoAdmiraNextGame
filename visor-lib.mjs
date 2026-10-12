@@ -23,6 +23,7 @@ export const MAX_AGENTES = 8;
 export const KEY_MAQ = "visor:v1:m:";
 export const KEY_INDICE = "visor:v1:_maquinas";
 export const KEY_LLAVES = "visor:v1:llaves";
+export const KEY_ESPERA = "visor:v1:espera"; // #5804: { items: { Agente: "motivo" } } lo que espera a Carlos
 export const KV_CADA_MS = 20000; // KV como respaldo entre colos: como mucho 1 escritura / 20 s / máquina
 
 const limpio = (s, n) => String(s == null ? "" : s).replace(/[\u0000-\u0008\u000b-\u001a\u001c-\u001f\u007f]/g, "").slice(0, n);
@@ -93,6 +94,52 @@ export const PERFILES = {
 const kPerfil = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
 export const perfilDe = (f) => PERFILES[kPerfil(String((f && f.titulo) || (f && f.sesion) || "").split(" · ")[0])] || null;
 const hhmm = (ts) => { if (!ts) return null; const d = new Date(Number(ts) * (Number(ts) > 4102444800 ? 1 : 1000)); return d.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit", timeZone: "Europe/Madrid" }); };
+
+/** #5804 (Jobs 11:50, orden de Carlos): estado de 3 valores por panel, SOLO del latido y del encargo reales.
+ *  OK = trabajando · KO = sin hacer nada (sin latido, o late sin tarea) · ESPERA CARLOS = algo depende de él, con qué en una línea.
+ *  `espera` ({ agente: motivo }) lo publica quien sabe qué depende de Carlos (POST /api/visor/pane { espera }); el visor no lo supone. */
+export const ESTADOS_VISOR = ["OK", "KO", "ESPERA CARLOS"];
+const RX_MODO_ESPERA = /espera|bloquead|blocked/;
+const RX_MODO_TRABAJA = /trabaj|working|activ/;
+export function estadoVisor({ nombre, vivo, espera, ahoraS, ultimoS, encargoEstado, hayTerminalVivo } = {}) {
+  const k = kPerfil(nombre);
+  const motivoEsp = espera && Object.entries(espera).find(([n]) => kPerfil(n) === k);
+  if (motivoEsp && motivoEsp[1]) return { valor: "ESPERA CARLOS", motivo: limpio(motivoEsp[1], 140) };
+  if (!vivo) {
+    const desde = hhmm(ultimoS);
+    return { valor: "KO", motivo: "sin latido" + (desde ? " desde " + desde : "") };
+  }
+  if (RX_MODO_ESPERA.test(vivo.modo || "")) return { valor: "ESPERA CARLOS", motivo: limpio(vivo.tarea || "espera una decisión", 140) };
+  const enCurso = encargoEstado === "in_progress" || encargoEstado === "ack";
+  if (RX_MODO_TRABAJA.test(vivo.modo || "") || vivo.tarea || enCurso || hayTerminalVivo) {
+    return { valor: "OK", motivo: limpio(vivo.tarea || "", 140) };
+  }
+  return { valor: "KO", motivo: "late pero sin tarea" };
+}
+
+const LETRAS = {
+  O: ["█▀█", "█ █", "▀▀▀"], K: ["█ █", "█▀▄", "▀ ▀"], E: ["█▀▀", "█▀▀", "▀▀▀"], S: ["█▀▀", "▀▀█", "▀▀▀"],
+  P: ["█▀█", "█▀▀", "▀  "], R: ["█▀█", "█▀▄", "▀ ▀"], A: ["█▀█", "█▀█", "▀ ▀"], C: ["█▀▀", "█  ", "▀▀▀"], L: ["█  ", "█  ", "▀▀▀"],
+};
+const palabraAscii = (w) => [0, 1, 2].map((r) => [...w].map((c) => (LETRAS[c] || ["   ", "   ", "   "])[r]).join(" "));
+/** ASCII grande (3 filas por palabra) del estado, para ponerlo al lado del nombre. */
+export function rotuloEstado(valor) {
+  if (valor === "ESPERA CARLOS") return [...palabraAscii("ESPERA"), ...palabraAscii("CARLOS")];
+  return palabraAscii(valor === "OK" ? "OK" : "KO");
+}
+
+/** Normaliza { espera: { Agente: "motivo" | "" } } (vacío = ya no espera). Solo nombres de PERFILES. */
+export function normalizarEspera(body) {
+  const src = body && typeof body === "object" && body.espera && typeof body.espera === "object" ? body.espera : null;
+  if (!src) return null;
+  const items = {};
+  for (const [n, m] of Object.entries(src).slice(0, 16)) {
+    const pf = PERFILES[kPerfil(n)];
+    const motivo = tapar(limpio(m, 140)).trim();
+    if (pf && motivo) items[pf.nombre] = motivo;
+  }
+  return items;
+}
 
 /** Aplica el perfil de modo a una ficha ya construida. vivo = fila de vivosPorAgente (latido en ventana); ultimoS = último latido (s). */
 export function aplicarPerfil(f, vivo, ultimoS) {
@@ -207,6 +254,15 @@ export function vista(docs, ahora = Date.now(), opciones = {}) {
     }
     lista = real.slice(0, MAX_AGENTES * 2);
   }
+  // #5804: estado OK / KO / ESPERA CARLOS de cada panel (latido + encargo reales + lo que espera a Carlos)
+  const vivosE = Array.isArray(opciones.vivos) ? opciones.vivos : [];
+  const conEstado = (f) => {
+    const nombre = String(f.titulo || f.sesion || "").split(" · ")[0];
+    const vivo = vivosE.find((v) => kPerfil(v.agente) === kPerfil(nombre));
+    const ultimos = opciones.ultimos || {};
+    const e = estadoVisor({ nombre, vivo, espera: opciones.espera, ahoraS: ahora / 1000, ultimoS: ultimos[nombre] || ultimos[kPerfil(nombre)], encargoEstado: f.encargoEstado, hayTerminalVivo: f.agente === "vivo" });
+    return { ...f, estadoVisor: e.valor, estadoMotivo: e.motivo, estadoAscii: rotuloEstado(e.valor) };
+  };
   const fichas = lista.map((c) => {
     const d = porMaq[c.host];
     const a = d && d.agentes && d.agentes[c.sesion];
@@ -235,9 +291,9 @@ export function vista(docs, ahora = Date.now(), opciones = {}) {
       return aplicarPerfil(base, vivo, ult[pf.nombre] || ult[kPerfil(pf.nombre)]);
     });
     hechos.sort((a, b) => (a.ordenModo ?? 9) - (b.ordenModo ?? 9));
-    return { fichas: hechos, fuenteConf: conf ? conf.maquina : "defecto", avisos };
+    return { fichas: hechos.map(conEstado), fuenteConf: conf ? conf.maquina : "defecto", avisos };
   }
-  return { fichas, fuenteConf: conf ? conf.maquina : "defecto", avisos };
+  return { fichas: fichas.map(conEstado), fuenteConf: conf ? conf.maquina : "defecto", avisos };
 }
 
 /** #5707 (/interface 2 claude · /interface 2 Neo Trinity): ?a=Neo,Trinity → solo esas fichas (de la lista de 6), en el

@@ -18,6 +18,11 @@
   .ficha { position:relative; min-width:0; min-height:0; display:flex; flex-direction:column; border:2px solid var(--c); border-radius:6px; background:#000; overflow:hidden; }
   .cab { flex:0 0 auto; padding:4px 6px 3px; border-bottom:1px solid color-mix(in srgb, var(--c) 45%, transparent); background:#000; }
   .rotulo { margin:0; color:var(--c); font-weight:700; white-space:pre; line-height:1.0; overflow:hidden; }
+  .fila { display:flex; justify-content:space-between; align-items:flex-start; gap:8px; }
+  .est { margin:0; font-weight:700; white-space:pre; line-height:1.0; text-align:right; flex:0 0 auto; }
+  .est.OK { color:#2ecc40; } .est.KO { color:#ff4136; } .est.ESPERA { color:#ffb347; }
+  .motivo { font-size:11px; color:#ffb347; margin-top:2px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ficha.grande .est { font-size:20px; }
   .sub { display:flex; justify-content:space-between; gap:6px; font-size:11px; color:var(--c); margin-top:2px; white-space:nowrap; overflow:hidden; }
   .sub .hora { color:#8a8a8a; flex:0 0 auto; }
   .sub .modelo { overflow:hidden; text-overflow:ellipsis; }
@@ -155,7 +160,7 @@
   function crear(f) {
     var el = document.createElement("section");
     el.className = "ficha"; el.style.setProperty("--c", SKINS[f.skin] || "#e0e0e0");
-    el.innerHTML = '<div class="cab"><pre class="rotulo"></pre><div class="sub"><span class="modelo"></span><span class="hora"></span></div><div class="mis"></div></div><div class="term"><pre></pre></div>';
+    el.innerHTML = '<div class="cab"><div class="fila"><pre class="rotulo"></pre><pre class="est"></pre></div><div class="motivo"></div><div class="sub"><span class="modelo"></span><span class="hora"></span></div><div class="mis"></div></div><div class="term"><pre></pre></div>';
     // r34: un solo toque (sin moverse > 10 px, para no saltar al deslizar) alterna pantalla completa ↔ mosaico
     var p0 = null;
     el.addEventListener("pointerdown", function (e) { p0 = { x: e.clientX, y: e.clientY, t: Date.now() }; });
@@ -200,8 +205,10 @@
     }
     pre.style.fontSize = fs.toFixed(2) + "px";
     var rot = el.querySelector(".rotulo"), rc = +el.dataset.rcols || 40;
-    var cw = el.querySelector(".cab").clientWidth - 12;
-    rot.style.fontSize = Math.max(6, Math.min(18, cw / (rc * 0.602), (el.clientHeight * 0.16) / 4.2)).toFixed(2) + "px";
+    var cw = el.querySelector(".cab").clientWidth - 12, ec = +el.dataset.ecols || 0; // #5804: el estado comparte la fila con el nombre
+    var fsr = Math.max(6, Math.min(18, cw / ((rc + ec + (ec ? 2 : 0)) * 0.602), (el.clientHeight * 0.16) / 4.2));
+    rot.style.fontSize = fsr.toFixed(2) + "px";
+    if (!el.classList.contains("grande")) el.querySelector(".est").style.fontSize = fsr.toFixed(2) + "px";
   }
   function pintar(f) {
     var k = f.host + "/" + f.sesion, el = fichas[k] || (fichas[k] = crear(f));
@@ -213,6 +220,12 @@
     rot = rot.filter(function (l) { return l.trim(); });
     var $rot = el.querySelector(".rotulo"), txtRot = rot.join("\n");
     if ($rot.textContent !== txtRot) { $rot.textContent = txtRot; el.dataset.rcols = Math.max.apply(null, rot.map(function (l) { return l.length; })); }
+    // #5804: OK / KO / ESPERA CARLOS en grande al lado del nombre, del latido y del encargo reales
+    var $est = el.querySelector(".est"), ea = f.estadoAscii || [];
+    $est.className = "est " + (f.estadoVisor === "ESPERA CARLOS" ? "ESPERA" : (f.estadoVisor || ""));
+    if ($est.textContent !== ea.join("\n")) { $est.textContent = ea.join("\n"); el.dataset.ecols = ea.length ? Math.max.apply(null, ea.map(function (l) { return l.length; })) : 0; }
+    $est.title = (f.estadoVisor || "") + (f.estadoMotivo ? " · " + f.estadoMotivo : "");
+    var $mot = el.querySelector(".motivo"); $mot.textContent = f.estadoVisor && f.estadoVisor !== "OK" && f.estadoMotivo ? f.estadoMotivo : "";
     var maq = MAQUINAS[f.host] || f.host;
     var modelo = f.sub || ((f.titulo || "").split(" · ")[1] || "") + " · " + maq + " · deepagent de pago";
     if (f.etiquetaModo) { modelo = f.etiquetaModo + " · " + ((f.titulo || "").split(" · ")[1] || ""); } // #5794: modo real (GrokBot / GrokBot → MBP16 / MBP14…)

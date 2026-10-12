@@ -117,6 +117,8 @@ h1{font-size:clamp(20px,3.2vw,31px);font-weight:900;letter-spacing:.08em;margin:
 .ranking-scope-summary{display:flex;align-items:center;justify-content:space-between;gap:8px;flex-wrap:wrap;margin:0 0 8px;color:var(--mut);font-size:11px;line-height:1.5}
 .ranking-scope-summary button{font:inherit;color:var(--ink);background:transparent;border:1px solid rgba(120,243,255,.3);border-radius:5px;padding:5px 8px;cursor:pointer}
 .ranking-scope-summary button:focus-visible{outline:2px solid var(--brand);outline-offset:2px}
+.ranking-data-warning,.ranking-work-status{flex-basis:100%;font-size:10px;line-height:1.5}
+.ranking-data-warning{color:var(--warn)}
 .work-observations{margin:6px 0 10px;color:var(--mut);font-size:11px;line-height:1.5}
 .work-observations summary{cursor:pointer;color:var(--ink)}
 .work-observations ul{display:flex;flex-wrap:wrap;gap:4px 18px;padding:4px 0 0;list-style:none;margin:0}
@@ -448,6 +450,7 @@ h1{font-size:clamp(20px,3.2vw,31px);font-weight:900;letter-spacing:.08em;margin:
 .refresh-lane[data-work-state="last_work"] .runner-finish-lose{display:none;animation:none}
 .refresh-lane.finished.race-winner .runner-finish-win{display:block;animation:none;opacity:1}
 .refresh-lane.finished.race-loser .runner-finish-lose{display:block;animation:none;opacity:1}
+.refresh-lane.finished[data-race-points="0"] .runner-standing{display:block;animation:none;opacity:1}
 .refresh-lane.cosmetic-finished .runner-run-a,.refresh-lane.cosmetic-finished .runner-run-b,
 .refresh-lane.cosmetic-finished .runner-run-c,.refresh-lane.cosmetic-finished .runner-pose-ready,
 .refresh-lane.cosmetic-finished .runner-pose-set,.refresh-lane.cosmetic-finished .runner-pose-go,
@@ -797,6 +800,8 @@ body.resizing-columns{cursor:col-resize;user-select:none}
 .score-formula-toggle{flex:0 0 auto;color:var(--dim);font-size:9px;font-weight:900;letter-spacing:.1em;text-transform:uppercase}
 .score-formula-toggle::before{content:"Mostrar  ▸"}
 .score-formula[open] .score-formula-toggle::before{content:"Ocultar  ▾"}
+html:lang(en) .score-formula-toggle::before{content:"Show  ▸"}
+html:lang(en) .score-formula[open] .score-formula-toggle::before{content:"Hide  ▾"}
 .score-formula-body{padding:0 18px 16px;border-top:1px solid rgba(120,243,255,.08)}
 .score-formula-body>ul{margin-top:12px}
 .err{border-color:rgba(255,136,102,.4);background:rgba(255,136,102,.07)}
@@ -1129,6 +1134,8 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   <div class="ranking-scope-summary" aria-label="Filtro de agentes del ranking y la carrera">
     <span id="rankingScopeSummary" role="status" aria-live="polite">Agentes: comprobando selección…</span>
     <button id="rankingScopeAll" type="button" hidden>Ver todos los agentes</button>
+    <span class="ranking-data-warning" id="rankingDataWarning" data-highscore-warning role="status" aria-live="polite" hidden></span>
+    <span class="ranking-work-status" id="rankingWorkStatus" role="status" aria-live="polite" hidden></span>
   </div>
   <div class="table-scroll" id="rankingScroll">
     <table class="tabla" id="rankingTable">
@@ -1152,10 +1159,9 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   </div>
   <details class="nota score-formula" id="formula">
     <summary><span class="score-formula-title">Cómo se puntúa</span><span class="score-formula-toggle" aria-hidden="true"></span></summary>
-    <div class="score-formula-body" id="formulaBody"></div>
+    <div class="score-formula-body" id="formulaBody" data-no-traducir></div>
   </details>
   <p id="raceBonusStatus" role="status" aria-live="polite">Bonus Track gratuito: +1 por victoria para la misión del ganador.</p>
-  <p class="race-evidence-status" id="raceEvidenceStatus" role="status" aria-live="polite">Comprobando trabajo registrado…</p>
   <details class="work-observations" id="workObservations" hidden>
     <summary id="workObservationsSummary">Actividad sin verificar</summary>
     <ul id="workObservationsList"></ul>
@@ -1184,13 +1190,15 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   </div>
 </section>
 
+<script src="/admira-idioma.js?v=highscore-5703"></script>
+<script src="/admira-idioma-highscore.js?v=highscore-5703"></script>
 <script src="/yk-agent-identity.js?v=v.24.09.2026.r12.cursorcloud"></script>
 <script src="/highscore-bando.js?v=v.11.10.2026.r37.15:14"></script>
 <script src="/highscore-race-bonus.js?v=20260905-bonus1"></script>
-<script src="/highscore-race.js?v=v.12.08.2026.r1.trabajo-parado"></script>
+<script src="/highscore-race.js?v=v.11.10.2026.r38.advisor-work"></script>
 <script src="/highscore-work-clock.js?v=20260905-duration-r1"></script>
 <script src="/highscore-desktop-app.js?v=v.2026.08.11.active-default-2"></script>
-<script src="/highscore-daily-record.js?v=v.2026.09.05.periods1"></script>
+<script src="/highscore-daily-record.js?v=5703-no-zero-leader"></script>
 <script>
 (function () {
   "use strict";
@@ -1235,8 +1243,8 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   function pintaSonido(activo) {
     var boton = document.getElementById("btnSonido"), estado = document.getElementById("estadoSonido");
     boton.setAttribute("aria-pressed", activo ? "true" : "false");
-    boton.title = activo ? "Desactivar sonido" : "Activar sonido";
-    estado.textContent = activo ? "Sonido activado" : "Sonido desactivado";
+    boton.title = activo ? hsT("Desactivar sonido", "Disable sound") : hsT("Activar sonido", "Enable sound");
+    estado.textContent = activo ? hsT("Sonido activado", "Sound enabled") : hsT("Sonido desactivado", "Sound disabled");
   }
   function arranca() {
     sonando = true; pintaSonido(true);
@@ -1338,31 +1346,31 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     var period = typeof PODIUM_PERIOD === "string" ? PODIUM_PERIOD : "day";
     var rows = (listaCache || []).map(function (a) { return {agent:a.agente,points:puntosPodioPeriodo(a)}; });
     var chase = api && api.periodRecord ? api.periodRecord(datos.historial,period,Date.now(),rows,claveAgentePeriodo) : null;
-    var labels = {hour:"hora",day:"día",week:"semana",month:"mes"};
-    var label = labels[period], leader = chase && chase.leader;
+    var label = rotuloPeriodoRanking(period).toLowerCase(), leader = chase && chase.leader;
     var fresh = period === "hour" || period === "day" ? datos.actividadFresh : datos.historialFresh;
-    var sourceNote = !fresh || !datos.historialFresh ? " · Datos pendientes de actualizar" : "";
+    if (!fresh || !leader || !(Number(leader.points) > 0)) leader = null;
     box.hidden = false; box.dataset.period=period;
-    box.setAttribute("aria-label","Récord de " + label + " y líder " + rotuloPeriodoPodio(period));
-    box.classList.toggle("record-beaten",!!(chase && chase.available && chase.remaining === 0));
-    var currentHtml = '<div class="record-cell record-chase"><span class="record-kicker">Líder ' + esc(rotuloPeriodoPodio(period)) + '</span><span class="record-value">' +
-      (leader ? '<strong>' + esc(leader.points.toLocaleString("es-ES")) + '</strong> · ' + esc(nombreAgenteVisible(leader.agent)) : 'Sin puntos verificados') + '</span></div>';
+    box.setAttribute("aria-label",hsT("Récord de ", "Record for ") + label + hsT(" y líder ", " and leader ") + rotuloPeriodoPodio(period));
+    var comparisonFresh = !!(fresh && datos.historialFresh);
+    box.classList.toggle("record-beaten",!!(comparisonFresh && leader && chase && chase.available && chase.remaining === 0));
+    var currentHtml = '<div class="record-cell record-chase"><span class="record-kicker">' + hsT("Líder ", "Leader ") + esc(rotuloPeriodoPodio(period)) + '</span><span class="record-value">' +
+      (leader ? '<strong>' + esc(leader.points.toLocaleString("es-ES")) + '</strong> · ' + esc(nombreAgenteVisible(leader.agent)) : esc(hsText("noLeaderYet"))) + '</span></div>';
     if (!chase || !chase.available) {
-      box.innerHTML='<div class="record-cell record-record"><span class="record-kicker">Récord de ' + esc(label) + '</span><span class="record-value">' +
-        esc(chase && chase.sourceAvailable ? "Sin periodos anteriores registrados" : "Histórico no disponible") + '</span></div>' + currentHtml +
-        '<div class="record-cell record-gap"><span class="record-kicker">' + esc(sourceNote || "Carrera en directo") + '</span></div>';
+      box.innerHTML='<div class="record-cell record-record"><span class="record-kicker">' + hsT("Récord de ", "Record for ") + esc(label) + '</span><span class="record-value">' +
+        esc(chase && chase.sourceAvailable ? hsT("Sin periodos anteriores registrados", "No earlier periods recorded") : hsT("Histórico no disponible", "History unavailable")) + '</span></div>' + currentHtml +
+        '<div class="record-cell record-gap"><span class="record-kicker">' + esc(hsText("beatRecord")) + '</span><span class="record-value">—</span></div>';
       return;
     }
-    var record=chase.record, won=chase.remaining===0;
+    var record=chase.record, won=comparisonFresh && !!leader && chase.remaining===0;
     var stamp=period === "hour" ? new Intl.DateTimeFormat("es-ES",{timeZone:TIME_ZONE,day:"numeric",month:"short",hour:"2-digit",minute:"2-digit",timeZoneName:"shortOffset"}).format(new Date(record.start)) : fechaRecord(record.day);
-    var recordLabel={hour:"Mejor hora registrada",day:"Récord diario registrado",week:"Mejor semana registrada",month:"Mejor mes registrado"}[period];
+    var recordLabel={hour:hsT("Mejor hora registrada", "Best recorded hour"),day:hsT("Récord diario registrado", "Recorded daily record"),week:hsT("Mejor semana registrada", "Best recorded week"),month:hsT("Mejor mes registrado", "Best recorded month")}[period];
     var coverage=chase.coverage||{}, from=coverage.start_day || (coverage.start_at ? claveDia(coverage.start_at) : "");
-    var coverageTitle="Datos registrados" + (from ? " desde " + from : "") + ". Periodo actual excluido." + sourceNote;
+    var coverageTitle=hsT("Datos registrados", "Recorded data") + (from ? hsT(" desde ", " since ") + from : "") + hsT(". Periodo actual excluido.", ". Current period excluded.");
     box.innerHTML='<div class="record-cell record-record" title="' + esc(coverageTitle) + '"><span class="record-kicker">' + esc(recordLabel) + '</span>' +
       '<span class="record-value"><strong>' + esc(record.points.toLocaleString("es-ES")) + '</strong> pts · ' + esc(nombreAgenteVisible(record.agent)) + ' · ' + esc(stamp) + '</span></div>' + currentHtml +
-      '<div class="record-cell record-gap"><span class="record-kicker">' + esc((won ? "+" + chase.beatenBy.toLocaleString("es-ES") + " sobre la marca" : "para batirlo") + sourceNote) + '</span>' +
-      '<span class="record-value"><strong>' + esc(won ? "NUEVO RÉCORD" : chase.remaining.toLocaleString("es-ES") + " pts") + '</strong></span></div>' +
-      '<div class="record-progress" aria-hidden="true"><i style="width:' + chase.progress.toFixed(2) + '%"></i></div>';
+      '<div class="record-cell record-gap"><span class="record-kicker">' + esc(hsText("beatRecord")) + '</span>' +
+      '<span class="record-value"><strong>' + esc(!comparisonFresh ? "—" : won ? hsT("NUEVO RÉCORD", "NEW RECORD") : chase.remaining.toLocaleString("es-ES") + " pts") + '</strong></span></div>' +
+      '<div class="record-progress" aria-hidden="true"><i style="width:' + (comparisonFresh ? chase.progress : 0).toFixed(2) + '%"></i></div>';
   }
 
   function esHoy(epoch) { return claveDia(epoch) === claveDia(Date.now()); }
@@ -1424,11 +1432,11 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   }
 
   var datos = { tareas: [], tareasFresh: false, actividad: [], actividadMeta: null, actividadFresh: false,
-    presencia: [], misiones: [], ideas: [], decisiones: [], proyectos: [],
+    presencia: [], misiones: [], misionesConsejeros: [], ideas: [], decisiones: [], proyectos: [],
     declaracionesPrincipales: [], controlMachines: [], presenceNow: 0, presenceAvailable: false,
     trabajos: [], workObservations: [], trabajosAvailable: false, trabajosGeneratedAt: 0, trabajosClientAt: 0,
     trabajando: [], trabajandoClientAt: 0, trabajandoVentana: 90, tiempos: [],
-    trabajosMode: "unavailable", turnos: null, historial: null, historialFresh: false };
+    trabajosMode: "unavailable", turnos: null, historial: null, historialFresh: false, partialSources:null, raceEvidence:null };
   var WORK_POLL_MS = 20000, WORK_TIMEOUT_MS = 8000, workRequestSequence = 0, workRequest = null;
   var DAILY_CACHE_KEY = "yokup.highscore.daily.v1";
   function guardaActividadDiaria(payload) {
@@ -1490,6 +1498,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       datos.declaracionesPrincipales = r[6] && r[6].declarations || [];
       datos.historial = r[8] || null; datos.historialFresh = !!r[8]; diasCache = datos.historial;
       datos.turnos = r[7] || null;
+      datos.partialSources = fallos.slice();
 
       pon(76, "OBJETIVOS · VENTANAS · MISIONES · " + ((a && a.recorded && a.recorded.objectives) || 0) + " / " + ((a && a.recorded && a.recorded.windows) || 0) + " / " + ((a && a.recorded && a.recorded.missions) || 0));
       pon(94, "PRESENCIA · " + datos.presencia.length + " AGENTES");
@@ -2240,7 +2249,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     var control=document.getElementById("highscorePeriod"),value=document.getElementById("highscorePeriodValue");
     var label=rotuloPeriodoRanking(PODIUM_PERIOD);
     if(value)value.textContent=label.toUpperCase();
-    if(control){control.dataset.period=PODIUM_PERIOD;control.setAttribute("aria-label","Periodo de Highscore: "+label+". Carrera en directo");}
+    if(control){control.dataset.period=PODIUM_PERIOD;control.setAttribute("aria-label",hsText("highscorePeriod", {period:label}));}
   }
 
   function cambiaPeriodoHighscore(step, absolute) {
@@ -2251,7 +2260,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   }
 
   function rotuloPeriodoPodio(periodo) {
-    return ({ hour:"esta hora", day:"hoy", week:"esta semana", month:"este mes" })[periodo] || "hoy";
+    return hsT(({ hour:"esta hora", day:"hoy", week:"esta semana", month:"este mes" })[periodo] || "hoy", ({ hour:"this hour", day:"today", week:"this week", month:"this month" })[periodo] || "today");
   }
 
   /* Semilla del histórico (Semana/Mes). /highscore/history trae «CypherGrokBotBox» SIN
@@ -2307,7 +2316,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   }
 
   function rotuloPeriodoRanking(periodo) {
-    return ({ hour:"Hora", day:"Día", week:"Semana", month:"Mes" })[periodo] || "Día";
+    return hsText(["hour","day","week","month"].indexOf(periodo) >= 0 ? periodo : "day");
   }
 
   function cambiaPeriodoRanking(paso) {
@@ -2322,7 +2331,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     var control = document.getElementById("rankingPeriod"), value = document.getElementById("rankingPeriodValue");
     var label = rotuloPeriodoRanking(RANKING_PERIOD);
     if (value) value.textContent = label.toUpperCase();
-    if (control) { control.dataset.period = RANKING_PERIOD; control.setAttribute("aria-label", "Periodo del ranking: " + label); }
+    if (control) { control.dataset.period = RANKING_PERIOD; control.setAttribute("aria-label", hsText("rankingPeriod", {period:label})); }
     var table = document.getElementById("rankingTable");
     if (table) table.dataset.period = RANKING_PERIOD;
   }
@@ -2964,11 +2973,12 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   };
   function proyectoHtml(a) {
     if (!a.proyecto) return '<span class="project-empty">—</span>';
-    var origen = a.proyectoOrigen || "trabajo", label = esc(a.proyecto);
-    var title = (TITULO_PROYECTO[origen] || TITULO_PROYECTO.trabajo) + " · " + label;
+    var origen = a.proyectoOrigen || "trabajo", name = hsProject(a.proyecto, a.proyectoId), label = esc(name);
+    var projectKey = {trabajo:"projectWorking", declarado:"projectDeclared", principal:"projectStructural", defecto:"projectDefault"};
+    var title = hsText(projectKey[origen] || "projectWorking") + " · " + name;
     // Si hoy ha tocado además otra cosa, se dice aquí: la columna anuncia la
     // asignación, pero el trabajo real no se esconde.
-    if (a.proyectoFaena) title += " · hoy además ha tocado " + a.proyectoFaena;
+    if (a.proyectoFaena) title += " · " + hsText("projectAlso", {project:hsProject(a.proyectoFaena)});
     var clase = "project-chip" + (["declarado","principal"].indexOf(origen) >= 0 ? " principal" : "") +
       (origen === "defecto" ? " defecto" : "");
     return a.proyectoUrl
@@ -3050,8 +3060,8 @@ body.resizing-columns{cursor:col-resize;user-select:none}
 
   function metricaRankingHtml(a, key) {
     var value = metricasRanking(a, RANKING_PERIOD)[key] || 0;
-    var label = METRIC_LABELS[key] || key, period = rotuloPeriodoRanking(RANKING_PERIOD).toLowerCase();
-    return '<span class="ranking-period-metric" role="text" aria-label="' + esc(value + " " + label + " en " + period) + '">' +
+    var label = hsT(METRIC_LABELS[key] || key, ({objectives:"goals",windows:"decision windows",missions:"missions",tasks:"tasks",points:"points"})[key] || key), period = rotuloPeriodoRanking(RANKING_PERIOD).toLowerCase();
+    return '<span class="ranking-period-metric" role="text" aria-label="' + esc(value + " " + label + hsT(" en ", " in ") + period) + '">' +
       '<span class="score-number">' + esc(value) + '</span><span class="score-period" aria-hidden="true">' +
       esc(period) + '</span></span>';
   }
@@ -3366,7 +3376,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     }
     return '<div class="score-mission-list">' + missions.map(function (mission) {
       var ref = mission.display_ref || mission.id || "Misión", duration = scoreMissionDuration(mission.duration_ms);
-      var missionState = scoreMissionStatusLabel(mission.status), project = mission.project_name || mission.project_id || "Proyecto no indicado";
+      var missionState = scoreMissionStatusLabel(mission.status), project = hsProject(mission.project_name || mission.project_id) || hsText("projectUnknown");
       var tasks = Array.isArray(mission.tasks) ? mission.tasks : [];
       var taskHtml = tasks.length ? '<ul class="score-mission-tasks" aria-label="Tareas de ' + esc(ref) + '">' + tasks.map(function (task) {
         var summary = normaliza(task.summary), taskDuration = scoreMissionDuration(task.duration_ms);
@@ -4062,24 +4072,47 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   }
 
   function hsRankingScopeSummary(mode, shown, total, lifeOnly, compactShown) {
-    var label = mode === "manual" ? "Selección manual" : mode === "active" ? "Activos" : "Todos";
-    var text = (HS_BANDO === "consejeros" ? "Consejeros: Todos" : "Agentes: " + label) + " · " + shown + "/" + total;
-    if (lifeOnly) text += " · filtro con vida";
-    if (compactShown < shown) text += " · " + compactShown + (compactShown === 1 ? " fila visible (compacto)" : " filas visibles (compacto)");
+    var label = hsText(mode === "manual" ? "manual" : mode === "active" ? "active" : "all");
+    var text = hsText("scopeSummary", {people:hsText(HS_BANDO === "consejeros" ? "advisors" : "agents"), mode:HS_BANDO === "consejeros" ? hsText("all") : label, shown:shown, total:total});
+    if (lifeOnly) text += " · " + hsText("lifeFilter");
+    if (compactShown < shown) text += " · " + hsText(compactShown === 1 ? "compactRow" : "compactRows", {count:compactShown});
     return text;
   }
   function hsRankingSourceWarning(period, dailyFresh, historyFresh) {
-    if ((period === "week" || period === "month") && !historyFresh) return "Histórico sin actualizar; pueden faltar agentes o puntos.";
-    if (!dailyFresh) return "Puntuación del día sin actualizar; pueden faltar agentes o puntos.";
+    if ((period === "week" || period === "month") && !historyFresh) return hsText("historyStale");
+    if (!dailyFresh) return hsText("dailyStale");
     return "";
+  }
+  function hsUnifiedDataWarning(options) {
+    var o = options || {}, scoreStale = !o.dailyFresh || !o.historyFresh;
+    // The historical record remains visible even for Hour/Day, so freshness
+    // follows both displays rather than only the ranking's selected period.
+    if (scoreStale && !o.workAvailable) return hsText("scoreAndWorkPartial");
+    if (!o.dailyFresh && !o.historyFresh) return hsText("scoresStale");
+    if (!o.dailyFresh) return hsText("dailyStale");
+    if (!o.historyFresh) return hsText("historyStale");
+    if (!o.workAvailable) return hsText(o.workFallback ? "workQueryPartial" : "workUnavailable");
+    return o.failures && o.failures.length ? hsText("partialDataStatus") : "";
+  }
+  function hsRenderDataStatus() {
+    var warning = document.getElementById("rankingDataWarning"), info = document.getElementById("rankingWorkStatus");
+    var race = datos.raceEvidence || null;
+    if (warning) {
+      var text = hsUnifiedDataWarning({period:RANKING_PERIOD,podiumPeriod:PODIUM_PERIOD,
+        dailyFresh:datos.actividadFresh,historyFresh:datos.historialFresh,failures:datos.partialSources || fallos,
+        workAvailable:datos.trabajosAvailable,workFallback:!!(race && race.fallback)});
+      warning.textContent = text; warning.hidden = !text;
+      warning.title = (datos.partialSources || fallos || []).join(" · ");
+    }
+    if (info) { info.textContent = race ? [race.scopeNotice, race.info].filter(Boolean).join(" · ") : ""; info.hidden = !info.textContent; }
   }
   function hsRenderRankingScope(visibleRows, compactShown) {
     var summary = document.getElementById("rankingScopeSummary"), all = document.getElementById("rankingScopeAll");
     var total = colapsaFilasRanking((listaCompletaCache || []).filter(hsBandoFila), RANKING_PERIOD).length;
     if (summary) {
-      var warning = hsRankingSourceWarning(RANKING_PERIOD, datos.actividadFresh, datos.historialFresh);
-      summary.textContent = hsRankingScopeSummary(AGENT_SCOPE_MODE, visibleRows.length, total, filtroSoloVivos, compactShown) + (warning ? " · " + warning : "");
+      summary.textContent = hsRankingScopeSummary(AGENT_SCOPE_MODE, visibleRows.length, total, filtroSoloVivos, compactShown);
     }
+    hsRenderDataStatus();
     if (all) all.hidden = HS_BANDO === "consejeros" || (AGENT_SCOPE_MODE === "all" && !filtroSoloVivos);
   }
   function hsShowAllAgents() {
@@ -4384,8 +4417,8 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     var sobran = Math.max(0, total - RANKING_COMPACTO_FILAS);
     boton.disabled = !sobran;
     boton.setAttribute("aria-expanded", String(!rankingCompacto));
-    boton.title = !sobran ? "No hay más agentes que mostrar"
-      : rankingCompacto ? "Ver los " + total + " agentes" : "Ver solo los " + RANKING_COMPACTO_FILAS + " primeros";
+    boton.title = !sobran ? hsText("noMorePeople")
+      : rankingCompacto ? hsText("showAllPeople", {count:total}) : hsText("showFirstPeople", {count:RANKING_COMPACTO_FILAS});
     boton.classList.toggle("on", !rankingCompacto);
   }
 
@@ -5184,6 +5217,8 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   // Gana la faena real; el latido sin texto no ocupa calle.
   function personaCarrera(work) {
     var k = normaliza(work && (work.agente || work.key));
+    var silla = window.HsBando && window.HsBando.silla(k);
+    if (silla) return silla.toLowerCase();
     var base = k.replace(/SINMAQ|SinMaq|CursorCloud|GrokBot|MacMini|Mini|MBA(?:Azul|Plata|Rosa|Crema|16)|MBP(?:14|16|Negro14)?|Negro14|Air16/gi, " ");
     base = base.replace(/[^a-zA-ZáéíóúñÁÉÍÓÚÑ]/g, " ").trim().split(/\s+/)[0] || k;
     return base.toLowerCase();
@@ -5234,6 +5269,8 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   }
   function correDeVerdad(work) {
     if (!work || work.cliPaused === true) return false;
+    if (["advisor_daily", "advisor_in_progress"].indexOf(work.raceBasis) >= 0 &&
+        window.HsBando && window.HsBando.silla(work.agente || work.key)) return true;
     return !!trabajandoDe(work);
   }
   function faenaReal(work) {
@@ -5241,7 +5278,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   }
   function puntuaFaena(work) {
     var deTrabajo = work.kind !== "presence" && work.state === "running";
-    return (deTrabajo ? 100 : 0) + (work.state === "running" ? 10 : 0) + ((Number(work.at) || 0) / 1e15);
+    return (Number(work.racePriority) || 0) * 1000 + (deTrabajo ? 100 : 0) + (work.state === "running" ? 10 : 0) + ((Number(work.at) || 0) / 1e15);
   }
   function unaFilaPorPersona(rows) {
     var best = Object.create(null);
@@ -5272,6 +5309,31 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     }
     return { key:storageKey, record:record };
   }
+  function trabajosConsejeros() {
+    if (typeof YkHighscoreRace === "undefined" || !YkHighscoreRace.advisorRows || !window.HsBando) return [];
+    return YkHighscoreRace.advisorRows({
+      daily:datos.actividadMeta, tasks:datos.tareas, missions:(datos.misiones || []).concat(datos.misionesConsejeros || []),
+      activeWork:datos.trabajos, inbox:datos.tiempos
+    }, {
+      day:claveDia(Date.now()), dayOf:claveDia, advisor:window.HsBando.silla,
+      dailyTitle:hsText("advisorDailyWork"), orderTitle:hsT("Encargo", "Order"),
+      taskAgent:function (row) {
+        var owner = normaliza(row.owner), role = /^infra(?:agente)?$/i.test(owner) ? "infra" : /^sub(?:agente)?$/i.test(owner) ? "sub" : "";
+        return role && window.ykAgentIdentity ? window.ykAgentIdentity.scoped(row.assignee, row.loc, role) : owner || row.assignee;
+      },
+      identity:function (row, seat) {
+        var original = hsWorkIdentity({agent:row.agent || row.agente || row.assignee || row.persona || row.owner,
+          machine:row.machine || row.loc || row.maquina});
+        if (!original.machine) {
+          var known = (datos.actividad || []).concat(datos.trabajos || []).find(function (item) {
+            return window.HsBando.silla(item.agent || item.persona) === seat && normaliza(item.machine || item.loc);
+          });
+          if (known) original.machine = known.machine || known.loc;
+        }
+        return hsWorkIdentity({agent:seat, machine:original.machine});
+      }
+    });
+  }
   function trabajosCarrera() {
     var rows = trabajosEnCurso().filter(function (trabajo) {
       if(trabajo.cliPaused||["session_unverified","service_activity_unverified","awaiting_decision"].includes(trabajo.activityReason))return true;
@@ -5279,7 +5341,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       var state = estadoCarreraStale(trabajo);
       return state && YkHighscoreRace.staleRaceVisible(state.record);
     });
-    return unaFilaPorPersona(rows);
+    return unaFilaPorPersona(rows.concat(trabajosConsejeros()));
   }
   function completaCicloStale() {
     if (document.hidden) return;
@@ -5349,7 +5411,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     if (host === "app" || host === "cli") return identidad.machine + " · " + host.toUpperCase();
     var known = Array.from(new Set(((fila && fila.interfaces) || []).map(function(value){return normaliza(value).toLowerCase();})))
       .filter(function(value){return value === "app" || value === "cli";}).sort();
-    return identidad.machine + (known.length ? " · interfaces conocidas: " + known.map(function(value){return value.toUpperCase();}).join(" / ") + " · sesión sin vincular" : " · interfaz sin verificar");
+    return identidad.machine + (known.length ? hsT(" · interfaces conocidas: ", " · known interfaces: ") + known.map(function(value){return value.toUpperCase();}).join(" / ") + hsT(" · sesión sin vincular", " · unlinked session") : hsT(" · interfaz sin verificar", " · unverified interface"));
   }
   function nombreCorredorHtml(identidad, contexto, tooltipId) {
     return '<span class="refresh-agent-identity"><span class="refresh-agent" data-race-role="agent" tabindex="0" title="' + esc(contexto) +
@@ -5372,7 +5434,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       ? YkHighscoreRace.clockDurationLabel(reloj.sessionDurationMs) : "—";
     var sessionLabel = trabajo.sessionDedicatedMs === null
       ? "Horas operando no disponibles" : "Horas operando del agente";
-    var stateLabel = trabajo.activityReason==="presence_focus" ? "Presencia + focus verificados" : trabajo.activityReason==="presence_live" ? "Latido en vivo" : trabajo.activityReason==="awaiting_decision" ? "Esperando decisión · sin ejecución verificada" : trabajo.kind==="session" ? "Actividad Desktop APP verificada" : trabajo.cliPaused ? "CLI pausado por Carlos" : ["session_unverified","service_activity_unverified"].includes(trabajo.activityReason) ? "Trabajo registrado · sesión sin vincular" : trabajo.state === "running" ? "Trabajo activo" : trabajo.state === "last_work" ? "Trabajo finalizado" : "Trabajo en curso · actividad sin confirmar";
+    var stateLabel = trabajo.raceBasis === "advisor_daily" ? hsText("advisorDailyWork") : trabajo.activityReason==="presence_focus" ? hsT("Presencia + focus verificados", "Verified presence + focus") : trabajo.activityReason==="presence_live" ? hsT("Latido en vivo", "Live heartbeat") : trabajo.activityReason==="awaiting_decision" ? hsT("Esperando decisión · sin ejecución verificada", "Awaiting decision · execution unverified") : trabajo.kind==="session" ? hsT("Actividad Desktop APP verificada", "Verified Desktop APP activity") : trabajo.cliPaused ? hsT("CLI pausado por Carlos", "CLI paused by Carlos") : ["session_unverified","service_activity_unverified"].includes(trabajo.activityReason) ? hsT("Trabajo registrado · sesión sin vincular", "Registered work · unlinked session") : trabajo.state === "running" ? hsT("Trabajo activo", "Active work") : trabajo.state === "last_work" ? hsT("Trabajo finalizado", "Completed work") : hsT("Trabajo en curso · actividad sin confirmar", "Work in progress · activity unverified");
     return { reference:trabajo.reference || "", etiqueta:trabajo.etiqueta || "", title:trabajo.title, state:stateLabel,
       project:trabajo.projectName || "", projectId:trabajo.projectId || "", detailUrl:trabajo.detailUrl || "",
       executor:trabajo.executor, responsible:trabajo.agente, kind:trabajo.kind, reachable:trabajo.reachable,
@@ -5437,6 +5499,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       timeout = setTimeout(function () { controller.abort(); resolve(null); }, WORK_TIMEOUT_MS);
     });
     hsRefreshTiempos();
+    hsRefreshAdvisorMissions();
     workRequest = Promise.all([Promise.race([request, deadline]), Promise.race([hsRefreshTrabajando(), deadline])]).then(function (res) {
       var payload = res[0];
       if (sequence !== workRequestSequence) return null;
@@ -5458,6 +5521,38 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   }
   // FLT-101047: quién trabaja ahora (latido de terminal) y los tiempos por encargo.
   var trabajandoRequest = null, tiemposRequest = null, tiemposPedidoAt = 0;
+  var advisorMissionsRequest;
+  // /tickets y /tasks/all necesitan autenticación; este listado público conserva
+  // el estado factual incluso cuando active-work dice assigned_stale por no
+  // encontrar una terminal. Sólo las misiones in_progress de sillas son carriles.
+  function hsRefreshAdvisorMissions() {
+    if (advisorMissionsRequest) return advisorMissionsRequest;
+    var collected = [];
+    function page(offset) {
+      return pedirDesde(YK, "/fleet/missions?status=in_progress&limit=500&offset=" + offset).then(function (payload) {
+        if (!payload || !Array.isArray(payload.missions)) throw new Error("mission_snapshot_unavailable");
+        var rows = payload.missions, next = offset + rows.length, total = Number(payload.total) || next;
+        collected = collected.concat(rows.filter(function (row) {
+          return row && row.status === "in_progress" && window.HsBando && window.HsBando.silla(row.assignee || row.persona || row.agent);
+        }));
+        if (next < total) {
+          if (!rows.length) throw new Error("mission_snapshot_incomplete");
+          return page(next);
+        }
+        return collected;
+      });
+    }
+    advisorMissionsRequest = page(0).then(function (rows) {
+      datos.misionesConsejeros = rows;
+      if (listaCompletaCache) actualizaCarreraPodio();
+      return rows;
+    }).catch(function () {
+      datos.misionesConsejeros = [];
+      if (listaCompletaCache) actualizaCarreraPodio();
+      return null;
+    }).finally(function () { advisorMissionsRequest = null; });
+    return advisorMissionsRequest;
+  }
   function hsRefreshTrabajando() {
     if (trabajandoRequest) return trabajandoRequest;
     trabajandoRequest = fetch(TG + "/api/presence/trabajando", { cache:"no-store" })
@@ -5479,7 +5574,10 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       .then(function (response) { return response.ok ? response.json() : null; })
       .catch(function () { return null; })
       .then(function (payload) {
-        if (payload && payload.ok && Array.isArray(payload.items)) { datos.tiempos = payload.items; hsPintaTiempos(); }
+        if (payload && payload.ok && Array.isArray(payload.items)) {
+          datos.tiempos = payload.items; hsPintaTiempos();
+          if (listaCompletaCache) actualizaCarreraPodio();
+        }
       }).finally(function () { tiemposRequest = null; });
   }
   function hsDuracion(segundos) {
@@ -5556,11 +5654,12 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   }
 
   function hsWorkEvidenceStatus(available, total, shown, mode) {
-    if (!available) return { label:"TRABAJO NO DISPONIBLE", text:"No se pudo consultar el trabajo registrado. La ausencia de carriles no indica inactividad." };
-    if (total > shown) return { label:"TRABAJO FUERA DE LA SELECCIÓN", text:shown + " de " + total + " participantes verificados en esta selección. Revisa el filtro de agentes para ver los demás." };
-    if (!shown) return { label:"SIN TRABAJO VERIFICADO", text:"No hay trabajo verificado visible en este ámbito. Puede existir actividad todavía sin vincular a Yokup." };
-    if (mode === "presence") return { label:"", text:"Carriles desde presencia verificada + focus (active-work no disponible o incompleto). Ranking y podio no cambian." };
-    return { label:"", text:mode === "recent" ? "Últimos trabajos finalizados. La actividad actual de otras sesiones no está verificada." : "Carriles de trabajo registrado, presencia+focus o actividad Desktop APP verificada. La ausencia de otro agente no confirma inactividad." };
+    if (!available) return { label:hsText("workUnavailableLabel"), text:hsText("workUnavailable") };
+    if (total > shown) return { label:hsText("workOutsideLabel"), text:hsText("workOutside", {shown:shown,total:total}) };
+    if (!shown) return { label:hsText("workEmptyLabel"), text:hsText("workEmpty") };
+    if (mode === "advisors") return { label:"", text:hsText("workAdvisors") };
+    if (mode === "presence") return { label:"", text:hsText("workPresence") };
+    return { label:"", text:hsText(mode === "recent" ? "workRecent" : "workRegistered") };
   }
 
   // PARRILLA FIJA (Carlos, 6-sep-2026): una carrera dura 42 s pero el trabajo activo se
@@ -5592,8 +5691,18 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   // Un agente de caja (GrokBot) no es DeepAgent, pero si su terminal trabaja, corre.
   function pistaEnVivo(work) {
     if (!work || !work.key) return false;
+    if (work.raceBasis) return correDeVerdad(work);
     if (!hsLaneDeepEligible(work.key) && !trabajandoDe(work)) return false;
     return correDeVerdad(work);
+  }
+  function hsRacePoints(row) {
+    return Math.max(0, Number(metricaHoraDia(row, "points").day) || 0);
+  }
+  function hsRacePlace(row, index, dailyFresh) {
+    return dailyFresh !== false && hsRacePoints(row) > 0 ? index + 1 : 0;
+  }
+  function hsLaneHasScore(lane) {
+    return Number(lane.getAttribute("data-race-points")) > 0;
   }
   function actualizaCarreraPodio() {
     var contenedor = document.getElementById("refreshLanes");
@@ -5603,13 +5712,13 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     var completas=listaVisible(aplicaAgentScope(listaCompletaCache||[])),byKey=Object.create(null);
     var scopeKeys=new Set(completas.map(function(row){return claveAgenteCarrera(row.agente);}));
     var effectiveScope=typeof hsEffectiveAgentScope==="function"?hsEffectiveAgentScope():null;
-    var todosTrabajos=trabajosCarrera();
+    var todosTrabajos=trabajosCarrera().filter(function(work){return hsBandoAdmite(work.agente||work.agent||work.key);});
     // Presencia+focus: DeepAgents entran al carril aunque el censo/ranking aún no los tenga.
     // Sólo el modo manual (selección explícita, incl. «ninguno») puede ocultarlos.
     todosTrabajos.forEach(function(work){
       if(!pistaEnVivo(work))return;
       if(!hsBandoAdmite(work.agente||work.agent||work.key))return;
-      if(AGENT_SCOPE_MODE==="manual" && effectiveScope instanceof Set && !effectiveScope.has(work.key))return;
+      if(HS_BANDO!=="consejeros" && AGENT_SCOPE_MODE==="manual" && effectiveScope instanceof Set && !effectiveScope.has(work.key))return;
       scopeKeys.add(work.key);
     });
     var trabajos=todosTrabajos.filter(function(work){return scopeKeys.has(work.key);});
@@ -5648,14 +5757,20 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     parrilla.forEach(function (enlace) {
       var work = enlace && enlace.trabajo;
       if (!faenaReal(work)) return;
+      if (!hsBandoAdmite(work.agente || work.agent || work.key)) return;
       var persona = personaCarrera(work);
       var previo = mejorPersona[persona];
       if (!previo || puntuaFaena(work) > puntuaFaena(previo.trabajo)) mejorPersona[persona] = enlace;
     });
     parrilla = Object.keys(mejorPersona).map(function (persona) { return mejorPersona[persona]; });
+    parrilla.sort(function (a, b) {
+      return (datos.actividadFresh ? hsRacePoints(b.fila) - hsRacePoints(a.fila) : 0) ||
+        (Number(a.fila.posicion) || 9999) - (Number(b.fila.posicion) || 9999);
+    });
     corredores = parrilla.map(function (enlace, indice) {
       var fila = enlace.fila, clave = enlace.clave, resumen = enlace.resumen;
-      var puesto = indice + 1, agente = normaliza(fila.agente), responsable = normaliza(resumen.responsible || agente);
+      var racePoints = datos.actividadFresh ? hsRacePoints(fila) : 0;
+      var puesto = hsRacePlace(fila, indice, datos.actividadFresh), agente = normaliza(fila.agente), responsable = normaliza(resumen.responsible || agente);
       var identidadVisible = identidadVisualCorredor(responsable, fila);
       var contextoVisible = contextoVisualCorredor(identidadVisible, enlace.trabajo, fila);
       // Sólo el proyecto principal; la faena o el directorio no lo sustituyen.
@@ -5663,13 +5778,14 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       if ((!proyectoResponsable || proyectoResponsable === "—") && normaliza(enlace.trabajo.projectName)) {
         proyectoResponsable = normaliza(enlace.trabajo.projectName);
       }
+      proyectoResponsable = hsProject(proyectoResponsable, enlace.trabajo.projectId || fila.proyectoId);
       var executor = normaliza(resumen.executor || responsable);
       var variant = typeof YkHighscoreRace !== "undefined" ? YkHighscoreRace.runnerVariant(fila)
         : (clave.split("").reduce(function (n, c) { return n + c.charCodeAt(0); }, 0) % 2 ? "dark" : "light");
-      var clasePuesto = puesto <= 3 ? "refresh-lane-p" + puesto : "refresh-lane-rank";
+      var clasePuesto = puesto > 0 && puesto <= 3 ? "refresh-lane-p" + puesto : "refresh-lane-rank";
       var isLast = enlace.trabajo.state === "last_work";
       var staleState = enlace.trabajo.state === "assigned_stale" ? estadoCarreraStale(enlace.trabajo) : null;
-      var heartbeat = resumen.state.toLowerCase() + (resumen.reachable ? " · alcanzable" : "") + (enlace.conservado ? " · conservado hasta el final de la carrera" : "");
+      var heartbeat = resumen.state.toLowerCase() + (resumen.reachable ? hsT(" · alcanzable", " · reachable") : "") + (enlace.conservado ? hsT(" · conservado hasta el final de la carrera", " · kept until the end of the race") : "");
       var runner = '<span class="refresh-runner runner-' + variant + ' runner-skin-' + variant + '" data-race-role="runner" aria-hidden="true">' +
         '<span class="race-bonus" hidden>+1</span>' +
         '<svg class="runner-standing" viewBox="0 0 24 24" fill="#b8c0c5"><use href="#runnerStanding" fill="#b8c0c5"></use></svg>' +
@@ -5681,32 +5797,34 @@ body.resizing-columns{cursor:col-resize;user-select:none}
         '<svg class="runner-run-c" viewBox="0 0 24 24"><use href="#runnerRunC"></use></svg>' +
         '<svg class="runner-finish-win" viewBox="0 0 24 24"><use class="gesto-a" href="#runnerWinner"></use><use class="gesto-b" href="#runnerWinnerB"></use></svg>' +
         '<svg class="runner-finish-lose" viewBox="0 0 24 24"><use class="gesto-a" href="#runnerLoser"></use><use class="gesto-b" href="#runnerLoserB"></use></svg></span>';
-      var timingAria = isLast ? '. Duración final ' + resumen.duration + '. Finalizó a las ' + resumen.finishedClock
-        : resumen.idle ? '. Transcurrido registrado ' + resumen.duration + '. Actividad sin verificar'
-          : '. Tiempo transcurrido ' + resumen.duration;
-      var timingTitle=(isLast?'Duración final':resumen.idle?'Transcurrido hasta la última consulta; actividad sin verificar':'Tiempo transcurrido')+' · Inicio '+resumen.startedClock+(isLast?' · Final '+resumen.finishedClock:'');
+      var timingAria = isLast ? hsT('. Duración final ', '. Final duration ') + resumen.duration + hsT('. Finalizó a las ', '. Finished at ') + resumen.finishedClock
+        : resumen.idle ? hsT('. Transcurrido registrado ', '. Registered elapsed time ') + resumen.duration + hsT('. Actividad sin verificar', '. Unverified activity')
+          : hsT('. Tiempo transcurrido ', '. Elapsed time ') + resumen.duration;
+      var timingTitle=(isLast?hsT('Duración final','Final duration'):resumen.idle?hsT('Transcurrido hasta la última consulta; actividad sin verificar','Elapsed time at the last check; activity unverified'):hsT('Tiempo transcurrido','Elapsed time'))+hsT(' · Inicio ',' · Start ')+resumen.startedClock+(isLast?hsT(' · Final ',' · Finish ')+resumen.finishedClock:'');
       var marcaTemporal = isLast
-        ? '<strong class="refresh-ended" data-race-time="end" data-work-state="last_work" tabindex="0" title="'+esc(timingTitle)+'" aria-label="Finalizó a las '+esc(resumen.finishedClock)+' · Duración '+esc(resumen.duration)+'">'+esc(resumen.finishedClock)+'</strong>'
+        ? '<strong class="refresh-ended" data-race-time="end" data-work-state="last_work" tabindex="0" title="'+esc(timingTitle)+'" aria-label="'+hsT('Finalizó a las ','Finished at ')+esc(resumen.finishedClock)+hsT(' · Duración ',' · Duration ')+esc(resumen.duration)+'">'+esc(resumen.finishedClock)+'</strong>'
         : '<strong class="refresh-ended'+(!resumen.idle?' refresh-elapsed':'')+'" data-race-time="duration" data-work-state="'+(isLast?'last_work':resumen.idle?'assigned_stale':resumen.clockRunning?'running':'unverified')+'" data-work-start="'+
         (Number(enlace.trabajo.startedAt)||0)+'" data-work-elapsed="'+(enlace.trabajo.elapsedMs===null||enlace.trabajo.elapsedMs===undefined?'':Number(enlace.trabajo.elapsedMs))+'" tabindex="0" title="'+esc(timingTitle)+'" aria-label="'+esc(timingTitle+' · '+resumen.duration)+'">'+esc(resumen.duration)+'</strong>';
       var marcaInicio = resumen.startedAt
         ? '<time class="refresh-started" data-race-time="start" datetime="' + new Date(resumen.startedAt).toISOString() +
-          '" title="Inició a las ' + esc(resumen.startedClock) + '">' + esc(resumen.startedClock) + '</time>'
-        : '<span class="refresh-started" data-race-time="start" title="Hora de inicio no disponible">—</span>';
+          '" title="' + hsT("Inició a las ", "Started at ") + esc(resumen.startedClock) + '">' + esc(resumen.startedClock) + '</time>'
+        : '<span class="refresh-started" data-race-time="start" title="' + hsText("noStartTime") + '">—</span>';
       return '<div class="refresh-lane ' + clasePuesto + (resumen.idle ? " refresh-lane-idle" : "") + (isLast ? " refresh-lane-last" : "") +
         '" role="listitem" data-place="' + puesto + '" data-agent-key="' + esc(clave) + '" ' +
         'data-race-mission="' + esc(enlace.trabajo.reference || '') + '" data-work-state="' + esc(isLast ? "last_work" : resumen.idle ? "assigned_stale" : "running") + '" ' +
+        'data-race-basis="' + esc(enlace.trabajo.raceBasis || '') + '" ' +
+        'data-race-points="' + racePoints + '" ' +
         (!isLast&&(enlace.trabajo.cliPaused||["session_unverified","service_activity_unverified","awaiting_decision"].includes(enlace.trabajo.activityReason))?'data-race-held="true" ':'') +
         (staleState && enlace.trabajo.raceRevision ? 'data-race-revision="' + esc(enlace.trabajo.raceRevision) + '" data-stale-anchor="' +
           Number(staleState.record.server_started_at) + '" data-stale-cycles="' + Number(staleState.record.cycles) + '" ' : '') +
         (resumen.idle ? 'data-race-idle="true" ' : '') + (enlace.conservado ? 'data-race-kept="true" ' : '') +
-        'data-heartbeat="' + heartbeat.replace(/ /g, "-") + '" aria-label="Responsable ' + esc(identidadVisible.nombre) + '. Proyecto responsable ' + esc(proyectoResponsable) + '. Hora de inicio ' + esc(resumen.startedClock) + esc(timingAria) +
-        (executor !== responsable ? '. Ejecuta ' + esc(executor) : '') + '. ' + heartbeat + '. ' +
-        esc(rotuloMisionCarrera(resumen)) + (enlace.trabajo.kind==='session'?'. Tiempo de actividad ':'. Tiempo de misión ') + esc(resumen.duration) +
-        '. Tiempo de sesión ' + esc(resumen.sessionDuration) + '">' +
+        'data-heartbeat="' + heartbeat.replace(/ /g, "-") + '" aria-label="' + hsT("Responsable ", "Responsible ") + esc(identidadVisible.nombre) + hsT('. Proyecto responsable ', '. Responsible project ') + esc(proyectoResponsable) + hsT('. Hora de inicio ', '. Start time ') + esc(resumen.startedClock) + esc(timingAria) +
+        (executor !== responsable ? hsT('. Ejecuta ', '. Executed by ') + esc(executor) : '') + '. ' + heartbeat + '. ' +
+        esc(rotuloMisionCarrera(resumen)) + (enlace.trabajo.kind==='session'?hsT('. Tiempo de actividad ','. Activity time '):hsT('. Tiempo de misión ','. Mission time ')) + esc(resumen.duration) +
+        hsT('. Tiempo de sesión ', '. Session time ') + esc(resumen.sessionDuration) + '">' +
         '<span class="refresh-agent-meta">' + nombreCorredorHtml(identidadVisible, contextoVisible, "race-agent-context-" + indice) +
-          '<span class="refresh-agent-project" data-race-role="project" title="Proyecto responsable: ' +
-          esc(proyectoResponsable) + '" aria-label="Proyecto responsable ' + esc(proyectoResponsable) + '">// ' +
+          '<span class="refresh-agent-project" data-race-role="project" title="' + hsT("Proyecto responsable: ", "Responsible project: ") +
+          esc(proyectoResponsable) + '" aria-label="' + hsT("Proyecto responsable ", "Responsible project ") + esc(proyectoResponsable) + '">// ' +
           esc(proyectoResponsable) + '</span></span>' +
         '<div class="refresh-lane-center"><div class="refresh-track">' +
         '<i class="refresh-fill" data-race-role="fill"></i>' +
@@ -5723,22 +5841,28 @@ body.resizing-columns{cursor:col-resize;user-select:none}
           '<span class="refresh-mission" data-race-role="mission" title="' + esc(rotuloMisionCarrera(resumen)) +
           '"><span class="refresh-mission-title">' + esc(rotuloMisionCarrera(resumen)) + '</span></span>') +
         runner + '<span class="refresh-finish" aria-hidden="true"></span></div></div>' +
-        '<span class="refresh-timing" aria-label="Hora de inicio ' + esc(resumen.startedClock) + esc(timingAria) + '">' +
+        '<span class="refresh-timing" aria-label="' + hsT("Hora de inicio ", "Start time ") + esc(resumen.startedClock) + esc(timingAria) + '">' +
           marcaInicio + marcaTemporal + '</span></div>';
     }).filter(Boolean);
-    var evidenceMode = datos.trabajosAvailable ? datos.trabajosMode : (presenceLaneCount ? "presence" : datos.trabajosMode);
-    var evidence = hsWorkEvidenceStatus(!!(datos.trabajosAvailable || presenceLaneCount), todosTrabajos.length, corredores.length, evidenceMode);
-    var evidenceNode = document.getElementById("raceEvidenceStatus");
-    if (evidenceNode) evidenceNode.textContent = evidence.text + (pendientesCarrera ? " · " + pendientesCarrera + (pendientesCarrera === 1 ? " agente espera" : " agentes esperan") + " a la próxima carrera" : "");
-    var etiquetaVacia = evidence.label || "SIN TRABAJO VERIFICADO";
+    var advisorLaneCount = todosTrabajos.filter(function(work){return !!work.raceBasis;}).length;
+    var raceWorkAvailable = !!(datos.trabajosAvailable || presenceLaneCount || advisorLaneCount);
+    var evidenceMode = datos.trabajosAvailable ? datos.trabajosMode : (presenceLaneCount ? "presence" : advisorLaneCount ? "active" : datos.trabajosMode);
+    if (HS_BANDO === "consejeros" && advisorLaneCount) evidenceMode = "advisors";
+    var evidence = hsWorkEvidenceStatus(raceWorkAvailable, todosTrabajos.length, corredores.length, evidenceMode);
+    var waitingNotice = pendientesCarrera ? pendientesCarrera + (pendientesCarrera === 1 ? hsT(" participante espera", " participant waits") : hsT(" participantes esperan", " participants wait")) + hsT(" a la próxima carrera", " for the next race") : "";
+    datos.raceEvidence = {fallback:!!(presenceLaneCount || advisorLaneCount),
+      scopeNotice:evidence.label === hsText("workOutsideLabel") ? evidence.text : "",
+      info:!evidence.label ? evidence.text + (waitingNotice ? " · " + waitingNotice : "") : waitingNotice};
+    hsRenderDataStatus();
+    var etiquetaVacia = evidence.label || hsText("workEmptyLabel");
     // CALENTANDO (Carlos, 7-sep-2026): si no hay ningún agente corriendo, la pista vacía no
     // grita una etiqueta técnica ni la corta en «TRABAJO FUERA DE LA SE…»: dice que todos
     // nuestros agentes están calentando 🙂, sin Running Man. El motivo real (fuera de la
     // selección, sin trabajo verificado) queda en data-race-reason, en el aria-label, en el
     // tooltip y en la línea de evidencia de debajo. Solo si el trabajo NO SE PUDO CONSULTAR
     // se dice tal cual: eso no es calentar, es no saber (mandamiento 2).
-    var calentando = !!(datos.trabajosAvailable || presenceLaneCount);
-    var textoVacio = calentando ? hsT("Todos nuestros agentes están calentando 🙂", "All our agents are warming up 🙂") : etiquetaVacia;
+    var calentando = raceWorkAvailable;
+    var textoVacio = calentando ? hsText(HS_BANDO === "consejeros" ? "warmupAdvisors" : "warmupAgents") : etiquetaVacia;
     var corredorSinMision = '<div class="refresh-lane refresh-lane-empty" role="listitem" data-race-empty="true" ' +
       'data-race-warmup="' + (calentando ? 'true' : 'false') + '" data-race-reason="' + esc(etiquetaVacia) + '" aria-label="' + etiquetaVacia.toLowerCase() + '"><div class="refresh-track">' +
       '<span class="refresh-mission" data-race-role="mission" title="' + esc(etiquetaVacia) + '"><span class="refresh-mission-title">' + esc(textoVacio) + '</span></span></div></div>';
@@ -5752,11 +5876,11 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     carrera.setAttribute("data-lanes", String(corredores.length || 1));
     carrera.setAttribute("data-participants", String(corredores.length));
     carrera.setAttribute("data-running", String(corredores.filter(function (c) { return c.indexOf('data-work-state="running"') >= 0; }).length));
-    carrera.setAttribute("data-work-available", datos.trabajosAvailable ? "true" : "false");
-    carrera.setAttribute("aria-label", corredores.length + (corredores.length === 1 ? " agente en liza. " : " agentes en liza. ") +
-      (datos.trabajosAvailable ? "" : "Datos de trabajo no disponibles. ") +
-      (datos.trabajosMode === "recent" ? "Últimos trabajos finalizados, sin animación. " : "Carrera de puntuación: 24 segundos hasta la meta. ") +
-      "Pulsa para parar la carrera.");
+    carrera.setAttribute("data-work-available", raceWorkAvailable ? "true" : "false");
+    carrera.setAttribute("aria-label", corredores.length + (corredores.length === 1 ? hsT(" participante en liza. ", " participant in the race. ") : hsT(" participantes en liza. ", " participants in the race. ")) +
+      (raceWorkAvailable ? "" : hsT("Datos de trabajo no disponibles. ", "Work data unavailable. ")) +
+      (datos.trabajosMode === "recent" ? hsT("Últimos trabajos finalizados, sin animación. ", "Most recently completed work, without animation. ") : hsT("Carrera de puntuación: 24 segundos hasta la meta. ", "Score race: 24 seconds to the finish. ")) +
+      hsT("Pulsa para parar la carrera.", "Click to pause the race."));
     carrera.classList.toggle("empty", corredores.length === 0);
     if (typeof centraLlamadaCarrera === "function") centraLlamadaCarrera();
     if (typeof sorteaOrdenLlegada === "function" && typeof ordenLlegadaFirma !== "undefined" && ordenLlegadaFirma)
@@ -5774,51 +5898,22 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     var cicloSeg = Math.round((Number(CICLO_MS) || 42 * 1000) / 1000);
     var grisTotalSeg = ciclosGrises * cicloSeg;
     var grisTotal = Math.floor(grisTotalSeg / 60) + ':' + String(grisTotalSeg % 60).padStart(2, "0");
-    var html = '<ul>' +
-      '<li>Solo cuenta la actividad del <b>día actual en Madrid</b>; el marcador vuelve a cero cada medianoche.</li>' +
-      '<li><b>Periodos del podio:</b> Hora es la hora natural actual; Día va desde las 00:00; Semana va desde el lunes; ' +
-      'Mes va desde el día 1. Todos terminan en el momento actual. Semana y Mes pueden dar la misma cifra al comienzo del mes ' +
-      'si no hubo puntos en los días de esa semana anteriores al día 1.</li>' +
-      '<li>Cada <b>objetivo creado hoy</b> por un agente identificado: <b>' + pesos.objective + '</b>.</li>' +
-      '<li>Cada <b>ventana de decisión generada</b>: <b>' + pesos.window + '</b>. La apertura automática admite una sola ventana cada 60 minutos; ' +
-      'una ventana por hora suma <b>240 puntos en 24 horas</b>. Es un <b>acumulado diario, no ventanas simultáneas</b>; ' +
-      'cerrarla o generar misiones no vuelve a sumarla.</li>' +
-      '<li>Cada <b>misión ejecutada hoy</b> —su primera entrada real en curso—: <b>' + pesos.mission + '</b>. Los reintentos no duplican puntos.</li>' +
-      '<li>Cada <b>tarea A·B·C trabajada hoy</b>: <b>15</b>, y <b>+10</b> si está en curso. ' +
-      'La actividad del agente, subagente e infraagente se reúne en su familia sin duplicar A1…C3.</li>' +
-      '<li><b>Bonus Track gratuito:</b> cada victoria confirmada por Yokup suma <b>+1</b> a la misión del Running Man ganador y a su marcador. La carrera es compartida: recargar o abrir otra pestaña no repite el premio. Solo participa trabajo en curso vinculado a una misión; los trabajos sin actividad confirmada y las sesiones sin misión no reciben bonus.</li>' +
-      '<li><b>El latido no da puntos.</b> El propio <b>número de posición parpadea en verde</b> cuando recibió uno hace menos de 15 minutos. ' +
-      'Los cinco indicadores muestran siempre una pareja numérica <b>hora / total del día</b>; una hora sin actividad se representa con <b>0</b>.</li>' +
-      '<li><b>Running Man en color:</b> existe trabajo canónico abierto y su última marca de avance material tiene como máximo <b>' +
-      sinAvanceMin + ' minutos</b>. Tener el proceso o la máquina conectados no basta: la presencia nunca hace correr ni colorea por sí sola.</li>' +
-      '<li><b>Running Man ámbar · trabajo en curso sin actividad confirmada:</b> la misión o tarea continúa asignada, pero no tiene una marca fiable o lleva más de <b>' +
-      sinAvanceMin + ' minutos</b> sin progreso material. Recorre la pista sólo como aviso, sin puesto ni puntos extra, durante <b>' +
-      ciclosGrises + ' ciclos de ' + cicloSeg + ' segundos</b> —como máximo <b>' + grisTotal + '</b>— y después desaparece hasta que cambie el trabajo o vuelva a registrar avance.</li>' +
-      '<li><b>Running Man gris quieto · trabajo finalizado:</b> la misión o tarea ya terminó. Sólo rellena una calle libre cuando hay menos de tres ' +
-      'trabajos activos; puede seguir visible hasta <b>24 horas desde el cierre</b>, pero desaparece antes si lo sustituye un trabajo activo o un cierre más reciente.</li>' +
-      '<li><b>No aparece corredor:</b> no hay una asignación demostrable en la última hora, una sesión exacta abierta ni un cierre elegible de las últimas 24 horas. ' +
-      'Si la fuente de trabajo no responde se indica “trabajo no disponible”; no se conserva una carrera antigua como si siguiera viva.</li>' +
-      '<li><b>Ordenador:</b> en verde el que late ahora, apagado el conocido sin latido reciente. ' +
-      'Un mismo agente corre en varios a la vez.</li>' +
-      '<li><b>Proyecto:</b> manda el <b>proyecto principal declarado para hoy</b> — la asignación de Carlos. Si ese día se ha tocado además otra cosa, se dice en el detalle de la pastilla. Sin declaración, manda la tarea activa (ventana, misión u objetivo) y sólo después el proyecto estructural del censo.</li>' +
-      '<li>El <b>número verde que parpadea</b> señala qué hace el agente ahora: objetivo, ventana, misión o tarea. ' +
-      'Si ninguno parpadea, está <b>idle</b>. Solo se muestra una señal, priorizando la tarea activa.</li></ul>' +
-      '<p style="margin-top:10px">Hoy puntúan <b>' + hoyTareas.length + '</b> tareas. La bitácora ha anotado <b>' +
-      registrados.objectives + '</b> objetivos, <b>' + registrados.windows + '</b> ventanas y <b>' +
-      registrados.missions + '</b> misiones; ' + ((sinAutor.objectives || sinAutor.windows || sinAutor.missions) ? '<b>' +
-      (sinAutor.objectives + sinAutor.windows + sinAutor.missions) + '</b> eventos automáticos o sin agente no reparten puntos. ' : '') +
-      'Se comprueban además <b>' + datos.presencia.length + '</b> registros de presencia y <b>' +
-      (datos.controlMachines || []).length + '</b> inventarios de equipo para distinguir 0 de — y registrado de encendido, sin alterar la puntuación.</p>' +
-      '<p style="margin-top:8px"><b>Identidad normativa:</b> cada rótulo une agente y máquina: ' +
-      '<b>NeoMBP16</b>, <b>MorfeoMBA16</b>… Si una actividad antigua no trae equipo, hereda el último equipo ' +
-      'observado de esa familia; sin ninguna evidencia se marca <b>SINMAQ</b>. <a href="/normativa">Ver normativa →</a></p>';
-    if (fallos.length) {
-      formula.className = "nota score-formula err";
-      html += '<h2 style="margin-top:14px">No pude leer todo</h2><p>' + esc(fallos.join(" · ")) +
-              '. El marcador sale con lo que sí llegó, no con datos inventados.</p>';
-    } else {
-      formula.className = "nota score-formula";
-    }
+    var values = {
+      objective:Number(pesos.objective) || 0, window:Number(pesos.window) || 0, mission:Number(pesos.mission) || 0,
+      idleMinutes:sinAvanceMin, cycles:ciclosGrises, cycleSeconds:cicloSeg, maxDuration:grisTotal,
+      tasks:hoyTareas.length, objectives:Number(registrados.objectives) || 0,
+      windows:Number(registrados.windows) || 0, missions:Number(registrados.missions) || 0,
+      unattributed:(Number(sinAutor.objectives) || 0) + (Number(sinAutor.windows) || 0) + (Number(sinAutor.missions) || 0),
+      presence:datos.presencia.length, machines:(datos.controlMachines || []).length
+    };
+    var sections = ["formulaDay", "formulaPeriods", "formulaObjective", "formulaWindow", "formulaMission",
+      "formulaTask", "formulaBonus", "formulaHeartbeat", "formulaRunning", "formulaStale", "formulaFinished",
+      "formulaEmpty", "formulaComputer", "formulaProject", "formulaActivity"];
+    var html = '<ul>' + sections.map(function (key) { return '<li>' + hsText(key, values) + '</li>'; }).join("") + '</ul>' +
+      '<p style="margin-top:10px">' + hsText("formulaCounters", values) +
+      (values.unattributed ? hsText("formulaUnattributed", values) : "") + hsText("formulaInventory", values) + '</p>' +
+      '<p style="margin-top:8px">' + hsText("formulaIdentity") + '</p>';
+    formula.className = "nota score-formula";
     n.innerHTML = html;
   }
 
@@ -5911,6 +6006,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   }
   function confirmaBonusCarrera(carril) {
     if(!bonusCarrera || carril.getAttribute("data-work-state")!=="running")return;
+    if(carril.getAttribute("data-race-basis")==="advisor_daily")return;
     var badge=carril.querySelector(".race-bonus");
     if(badge && !badge.hidden)return;
     var generation=bonusCarreraGeneracion;
@@ -5927,6 +6023,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   }
   function sorteaOrdenLlegada(forzar) {
     var carriles = Array.from(document.querySelectorAll('.refresh-lane[data-agent-key][data-work-state="running"]'));
+    var neutralOrder = Math.max(3, carriles.filter(hsLaneHasScore).length + 1);
     var claves = carriles.map(function (carril) { return carril.getAttribute("data-agent-key") || ""; });
     var firma = claves.slice().sort().join("|");
     if (!carriles.length) {
@@ -5947,16 +6044,21 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       var clave = claves[indice], orden = Number(ordenLlegadaPorAgente[clave]) || indice + 1;
       if (typeof bonusCarrera !== "undefined" && bonusCarrera) {
         var official=bonusCarrera.order(clave,carril.getAttribute("data-race-mission"));
-        if(official!==null)orden=official;
+        if(official!==null && !(official===999 && carril.getAttribute("data-race-basis")==="advisor_daily"))orden=official;
       }
+      // Bonus order belongs to the server. A participant with no verified
+      // points still moves, without a podium place or an early visual finish.
+      carril.setAttribute("data-race-bonus-order", String(orden));
+      if (!hsLaneHasScore(carril)) orden = neutralOrder;
       carril.setAttribute("data-race-order", String(orden));
-      carril.classList.toggle("race-winner", orden === 1);
-      carril.classList.toggle("race-loser", orden !== 1);
+      carril.classList.toggle("race-winner", hsLaneHasScore(carril) && orden === 1);
+      carril.classList.toggle("race-loser", hsLaneHasScore(carril) && orden !== 1);
     });
   }
   function actualizaMarcador() {
     if (refrescando) return Promise.resolve();
     refrescando = true;
+    fallos = [];
     var presenceRequestSequence = hsBeginPresenceRequest();
     document.getElementById("refreshCount").textContent = "ACT.";
     hsRefreshWork(true);
@@ -6003,7 +6105,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       if (r[7]) datos.turnos = r[7];
       datos.historialFresh = !!r[8];
       if (r[8]) { datos.historial = r[8]; diasCache = r[8]; }
-      fallos = [];
+      datos.partialSources = fallos.slice();
       var listaCompleta = calcula(), l = aplicaAgentScope(listaCompleta);
       var cambioLider = listaCache && l[0] && listaCache[0] && l[0].agente !== listaCache[0].agente;
       listaCompletaCache = listaCompleta;
@@ -6026,6 +6128,8 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     document.querySelectorAll(".refresh-lane").forEach(function (carril) {
       var puesto = Number(carril.getAttribute("data-place")) || 3;
       var ordenLlegada = Number(carril.getAttribute("data-race-order")) || puesto;
+      var hasScore = hsLaneHasScore(carril);
+      if (!hasScore) ordenLlegada = Math.max(3, ordenLlegada);
       var estadoTrabajo = carril.getAttribute("data-work-state") || "";
       var carreraCosmetica = estadoTrabajo === "assigned_stale" && carril.getAttribute("data-race-held")!=="true";
       var trabajoFinalizado = estadoTrabajo === "last_work";
@@ -6078,9 +6182,10 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       carril.classList.toggle("cruzando", centroAtleta + RADIO_CORREDOR_PX >= metaLinea);
       carril.classList.toggle("finished", !carreraCosmetica && progresoAtleta >= 1);
       carril.classList.toggle("cosmetic-finished", carreraCosmetica && progresoAtleta >= 1);
-      carril.classList.toggle("race-winner", !carreraCosmetica && ordenLlegada === 1);
-      carril.classList.toggle("race-loser", !carreraCosmetica && ordenLlegada !== 1);
-      if(!carreraCosmetica && progresoAtleta>=1 && ordenLlegada===1 && typeof confirmaBonusCarrera==="function")
+      carril.classList.toggle("race-winner", hasScore && !carreraCosmetica && ordenLlegada === 1);
+      carril.classList.toggle("race-loser", hasScore && !carreraCosmetica && ordenLlegada !== 1);
+      var bonusOrder = Number(carril.getAttribute("data-race-bonus-order")) || ordenLlegada;
+      if(!carreraCosmetica && progresoAtleta>=1 && bonusOrder===1 && typeof confirmaBonusCarrera==="function")
         confirmaBonusCarrera(carril);
       if (relleno) {
         var avancePista = Math.max(0, Math.min(metaLinea - inicioPista, centroAtleta - inicioPista));
@@ -6096,7 +6201,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     });
     var quedan = Math.max(0, Math.ceil((1 - progreso) * REFRESCO_MS / 1000));
     document.getElementById("refreshCount").textContent = quedan + " S";
-    document.getElementById("refreshRace").setAttribute("aria-label", "Próxima actualización de puntuación en " + quedan + " segundos. Pulsa para parar la carrera.");
+    document.getElementById("refreshRace").setAttribute("aria-label", hsText("raceCountdown", {seconds:quedan}));
   }
   function centraLlamadaCarrera() {
     var carrera = document.getElementById("refreshRace"), aviso = document.getElementById("raceCall");
@@ -6157,7 +6262,7 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       pintaCarrera(0);
       fijaFaseSalida(fases[paso], llamadas[paso]);
       document.getElementById("refreshCount").textContent = llamadas[paso];
-      document.getElementById("refreshRace").setAttribute("aria-label", llamadas[paso] + " · salida en " + (3 - paso) + " segundos. Pulsa para parar la carrera.");
+      document.getElementById("refreshRace").setAttribute("aria-label", hsText("raceStart", {phase:llamadas[paso], seconds:3-paso}));
       return;
     }
     fijaFaseSalida("", "");
@@ -6166,8 +6271,8 @@ body.resizing-columns{cursor:col-resize;user-select:none}
       return;
     }
     pintaCarrera(1);
-    document.getElementById("refreshCount").textContent = "META";
-    document.getElementById("refreshRace").setAttribute("aria-label", "Meta · celebrando el resultado. Pulsa para parar la carrera.");
+    document.getElementById("refreshCount").textContent = hsT("META", "FINISH");
+    document.getElementById("refreshRace").setAttribute("aria-label", hsText("raceFinish"));
   }
   function limpiaTimersCarreraReducida() {
     carreraTimersReducidos.forEach(clearTimeout);
@@ -6202,15 +6307,15 @@ body.resizing-columns{cursor:col-resize;user-select:none}
   function pintaControlCarrera() {
     var carrera = document.getElementById("refreshRace");
     carrera.setAttribute("aria-pressed", carreraPausada ? "true" : "false");
-    carrera.title = carreraPausada ? "Reanudar carrera desde el punto de pausa" : "Pausar carrera para leer las misiones";
-    if (carreraPausada) carrera.setAttribute("aria-label", "Carrera pausada. Pulsa para reanudarla.");
+    carrera.title = hsText(carreraPausada ? "resumeRace" : "pauseRace");
+    if (carreraPausada) carrera.setAttribute("aria-label", hsText("racePaused"));
     carrera.classList.toggle("paused", carreraPausada);
   }
   function pintaControlPodio() {
     var boton = document.getElementById("podiumToggle"), podio = document.getElementById("podio");
     var visible = !podio.hidden;
     boton.setAttribute("aria-expanded", visible ? "true" : "false");
-    boton.title = visible ? "Ocultar podio" : "Mostrar podio";
+    boton.title = hsText(visible ? "hidePodium" : "showPodium");
   }
   function alternaPodio() {
     var podio = document.getElementById("podio");
@@ -6302,7 +6407,9 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     hsCabeceraPersona();
   }
   function hsCambiaBando(vista) {
-    HS_BANDO = vista === "consejeros" ? "consejeros" : "agentes";
+    var siguiente = vista === "consejeros" ? "consejeros" : "agentes";
+    if (siguiente !== HS_BANDO) liberaParrilla();
+    HS_BANDO = siguiente;
     hsPintaBando();
     if (typeof hsRenderAgentScope === "function") hsRenderAgentScope(listaCompletaCache || []);
     pintaVistaFiltrada();
@@ -6321,14 +6428,22 @@ body.resizing-columns{cursor:col-resize;user-select:none}
     });
   }
   hsPintaBando();
-  document.addEventListener("admiranext:lang", hsCabeceraPersona);
-  document.addEventListener("admira:languagechange", hsCabeceraPersona);
+  function hsActualizaIdioma() {
+    hsCabeceraPersona(); actualizaPeriodoHighscore(); actualizaPeriodoRanking();
+    pintaSonido(sonando); pintaControlPodio(); actualizaFiltroVida();
+    hsRenderAgentScope(listaCompletaCache || []); pintaVistaFiltrada();
+    pintaFormula(listaCache || []);
+    hsPintaTiempos(); hsRenderWorkObservations(); pintaControlCarrera();
+  }
+  window.addEventListener("admira:languagechange", hsActualizaIdioma);
   /* Órdenes de esta página en la línea del Experto (yk-frame no tiene registro de
      órdenes por página: se atiende el formulario en fase de captura y lo que no
      es nuestro sigue su camino). /demo enseña el interruptor combinado con el
      selector de periodo y deja la página como estaba. */
   var hsDemoRelojes = [];
   function hsT(es, en) { return window.AdmiraIdioma && window.AdmiraIdioma.lang && window.AdmiraIdioma.lang() === "en" ? en : es; }
+  function hsText(key, params) { return window.HsIdioma.t(key, null, params); }
+  function hsProject(name) { return window.HsIdioma.project(name); }
   function hsDemoBando(say) {
     hsDemoRelojes.forEach(clearTimeout); hsDemoRelojes = [];
     var bandoAntes = HS_BANDO, periodoAntes = PODIUM_PERIOD, rankingAntes = RANKING_PERIOD;

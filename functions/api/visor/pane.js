@@ -6,7 +6,7 @@
  * Almacén: Cache API del colo (al instante, gratis) + RECORTE_KV como respaldo (≤ 1 escritura / 20 s / máquina).
  */
 import { autorizado } from "../consumos/lecturas.js";
-import { normalizarPane, fundir, vista, filtrarAgentes, sha256, iguales, KEY_MAQ, KEY_INDICE, KEY_LLAVES, KV_CADA_MS } from "../../../visor-lib.mjs";
+import { normalizarPane, fundir, vista, filtrarAgentes, sha256, iguales, KEY_MAQ, KEY_INDICE, KEY_LLAVES, KEY_ESPERA, normalizarEspera, KV_CADA_MS } from "../../../visor-lib.mjs";
 import { vivosPorAgente, PRESENCIA_URL } from "../../../interface-seleccion.mjs";
 
 const ALLOW = new Set(["https://www.admira.live", "https://admira.live", "https://admira-live.pages.dev"]);
@@ -55,6 +55,13 @@ export async function onRequestPost({ request, env }) {
   let body;
   try { body = await request.json(); } catch (e) { return json({ ok: false, error: "JSON inválido" }, 400, origin); }
   const ahora = Date.now();
+  if (body && body.espera && typeof body.espera === "object" && !body.maquina) { // #5804: lo que espera a Carlos
+    const items = normalizarEspera(body) || {};
+    const st = kv(env);
+    if (!st) return json({ ok: false, error: "sin almacén" }, 503, origin);
+    await st.put(KEY_ESPERA, JSON.stringify({ items, ts: ahora }), { expirationTtl: 7 * 86400 });
+    return json({ ok: true, espera: items }, 200, origin);
+  }
   const n = normalizarPane(body, ahora);
   if (!n.ok) return json(n, 400, origin);
   const store = kv(env);
@@ -101,6 +108,8 @@ export async function onRequestGet({ request, env }) {
   const a = String(q.get("a") || "").split(",").filter(Boolean); // #5707: ?a=Neo,Trinity → esos 2 (de los 6)
   const grupo = a.length || Number(q.get("g")) !== 4 ? 6 : 4; // #5803: por defecto el mosaico de 6 // r33: /visor/?g=6 → + Smith y Merovingio
   const ultimos = {};
+  const esperaDoc = await kvGet(store, KEY_ESPERA);
+  const espera = (esperaDoc && esperaDoc.items) || {};
   let vivos; // #5794: presencia real (latido + máquina); si no responde, el panel sigue con la conf como antes
   try {
     const r = await fetch(PRESENCIA_URL, { headers: { "user-agent": "admira.live/visor" }, cf: { cacheTtl: 0 } });
@@ -110,5 +119,5 @@ export async function onRequestGet({ request, env }) {
     vivos = vivosPorAgente(filas, ahoraS);
     for (const r of filas) { const t = Number(r && r.updated) || 0; const n = String(r && r.persona || ""); if (n && t > (ultimos[n] || 0)) ultimos[n] = t; }
   } catch (e) { vivos = undefined; }
-  return json({ ok: true, ...filtrarAgentes(vista(docs, ahora, { grupo, vivos, ultimos }), a), grupo, generado: new Date(ahora).toISOString(), ahora }, 200, origin);
+  return json({ ok: true, ...filtrarAgentes(vista(docs, ahora, { grupo, vivos, ultimos, espera }), a), grupo, generado: new Date(ahora).toISOString(), ahora }, 200, origin);
 }

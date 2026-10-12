@@ -188,3 +188,22 @@ test("#5803/#5801/#5802 mosaico de 6 por modo: edge sin falsos positivos, deskto
   assert.equal(v.fichas.find((f) => f.sesion === "morfeo").etiquetaModo, "GrokBot → MBP16");
   assert.equal(v.fichas.find((f) => f.sesion === "smith").etiquetaModo, "GrokBot");
 });
+
+test("#5804 estado OK / KO / ESPERA CARLOS sale del latido y del encargo reales", async () => {
+  const { estadoVisor, rotuloEstado, vista, normalizarEspera } = await import("./visor-lib.mjs");
+  const ahoraS = 1791800000;
+  assert.deepEqual(estadoVisor({ nombre: "Neo", vivo: { modo: "autonomo", tarea: "Fetch Telegram" }, ahoraS }).valor, "OK");
+  assert.equal(estadoVisor({ nombre: "Trinity", vivo: { modo: "pasivo", tarea: "" }, ahoraS }).valor, "KO");
+  const sin = estadoVisor({ nombre: "Oráculo", vivo: undefined, ahoraS, ultimoS: ahoraS - 600 });
+  assert.equal(sin.valor, "KO"); assert.match(sin.motivo, /^sin latido desde \d\d:\d\d$/);
+  const esp = estadoVisor({ nombre: "Morfeo", vivo: { modo: "trabajando", tarea: "x" }, espera: { Morfeo: "reiniciar tmux de Morfeo" }, ahoraS });
+  assert.equal(esp.valor, "ESPERA CARLOS"); assert.equal(esp.motivo, "reiniciar tmux de Morfeo");
+  assert.equal(rotuloEstado("OK").length, 3); assert.equal(rotuloEstado("ESPERA CARLOS").length, 6);
+  assert.deepEqual(normalizarEspera({ espera: { smith: "poner UBICACION_KEY_PARTE", nadie: "x", Neo: "" } }), { Smith: "poner UBICACION_KEY_PARTE" });
+  const v = vista([], 1791800000000, { grupo: 6, vivos: [{ agente: "Smith", maquinas: ["GrokBotBox"], latido: ahoraS, modo: "trabajando", tarea: "x" }], ultimos: {}, espera: { Merovingio: "secreto UBICACION_KEY_PARTE" } });
+  assert.equal(v.fichas.length, 6);
+  assert.ok(v.fichas.every((f) => ["OK", "KO", "ESPERA CARLOS"].includes(f.estadoVisor) && f.estadoAscii.length >= 3));
+  assert.equal(v.fichas.find((f) => f.sesion === "smith").estadoVisor, "OK");
+  assert.equal(v.fichas.find((f) => f.sesion === "merovingio").estadoVisor, "ESPERA CARLOS");
+  assert.equal(v.fichas.find((f) => f.sesion === "neo").estadoVisor, "KO");
+});

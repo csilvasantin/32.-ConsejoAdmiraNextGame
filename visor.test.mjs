@@ -6,6 +6,10 @@ import { tapar, normalizarPane, fundir, vista, CONF_DEFECTO, sha256 } from "./vi
 import { onRequestPost, onRequestGet } from "./functions/api/visor/pane.js";
 import { onRequestPost as llavePost } from "./functions/api/visor/llave.js";
 
+// #5794: pane.js lee la presencia real; en test, sin red: presencia vacía (los tests viejos siguen con la conf).
+const fetchReal = globalThis.fetch;
+globalThis.fetch = async (u, ...r) => String(u).includes("/api/presence") ? new Response(JSON.stringify({ presence: [] })) : fetchReal(u, ...r);
+
 test("tapa secretos y deja el resto", () => {
   const s = tapar("export OPENAI_API_KEY=sk-proj-abcdefghijklmnopqrstuv ghp_abcdefghijklmnopqrstuvwxyz12 Authorization: Bearer abc.def.ghijklmnopqrst password: hunter22");
   for (const malo of ["sk-proj-abc", "ghp_abc", "abc.def.ghij", "hunter22"]) assert.ok(!s.includes(malo), malo);
@@ -125,4 +129,21 @@ test("r34: un toque = pantalla completa (sin doble toque), con history para Esc 
   const h = readFileSync(new URL("./visor/index.html", import.meta.url), "utf8");
   for (const s of ["pointerup", "popstate", "pushState", "visorMosaico", '"Escape"', "> 10"]) assert.ok(h.includes(s), s);
   assert.ok(!h.includes("dblclick") && !h.includes("touchend"), "fuera el doble toque");
+});
+
+test("#5794 vista sigue a la máquina real del latido: varias máquinas, y terminal sin publicar avisa", () => {
+  const A = 1_000_000;
+  const mk = (maquina, sesion) => fundir(null, normalizarPane({ maquina, agentes: { [sesion]: { lineas: ["x"] } }, vivas: [sesion] }, A).pane);
+  const docs = [mk("macmini", "neo"), mk("macbook-pro-16", "neo")];
+  const v = vista(docs, A + 1000, { vivos: [
+    { agente: "Neo", maquinas: ["macmini", "macbook-pro-16"], latido: 1 },
+    { agente: "Morfeo", maquinas: ["macmini"], latido: 1 },
+  ] });
+  const neo = v.fichas.filter((f) => f.sesion === "neo").map((f) => f.host).sort();
+  assert.deepEqual(neo, ["macbook-pro-16", "macmini"]);
+  const morfeo = v.fichas.find((f) => f.sesion === "morfeo");
+  assert.equal(morfeo.host, "macmini");
+  assert.equal(morfeo.estado, "sin_publicar");
+  assert.equal(v.avisos.length, 2);
+  assert.deepEqual(vista(docs, A, {}).avisos, []);
 });

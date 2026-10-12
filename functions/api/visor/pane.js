@@ -7,6 +7,7 @@
  */
 import { autorizado } from "../consumos/lecturas.js";
 import { normalizarPane, fundir, vista, filtrarAgentes, sha256, iguales, KEY_MAQ, KEY_INDICE, KEY_LLAVES, KV_CADA_MS } from "../../../visor-lib.mjs";
+import { vivosPorAgente, PRESENCIA_URL } from "../../../interface-seleccion.mjs";
 
 const ALLOW = new Set(["https://www.admira.live", "https://admira.live", "https://admira-live.pages.dev"]);
 function headers(origin) {
@@ -99,5 +100,12 @@ export async function onRequestGet({ request, env }) {
   const q = new URL(request.url).searchParams;
   const a = String(q.get("a") || "").split(",").filter(Boolean); // #5707: ?a=Neo,Trinity → esos 2 (de los 6)
   const grupo = a.length || Number(q.get("g")) === 6 ? 6 : 4; // r33: /visor/?g=6 → + Smith y Merovingio
-  return json({ ok: true, ...filtrarAgentes(vista(docs, ahora, { grupo }), a), grupo, generado: new Date(ahora).toISOString(), ahora }, 200, origin);
+  let vivos; // #5794: presencia real (latido + máquina); si no responde, el panel sigue con la conf como antes
+  try {
+    const r = await fetch(PRESENCIA_URL, { headers: { "user-agent": "admira.live/visor" }, cf: { cacheTtl: 0 } });
+    const d = await r.json();
+    const ahoraS = Number(d && d.now) ? (Number(d.now) > 4102444800 ? Number(d.now) / 1000 : Number(d.now)) : ahora / 1000;
+    vivos = vivosPorAgente(Array.isArray(d && d.presence) ? d.presence : [], ahoraS);
+  } catch (e) { vivos = undefined; }
+  return json({ ok: true, ...filtrarAgentes(vista(docs, ahora, { grupo, vivos }), a), grupo, generado: new Date(ahora).toISOString(), ahora }, 200, origin);
 }

@@ -119,17 +119,40 @@ export function vista(docs, ahora = Date.now(), opciones = {}) {
     lista = [...lista, ...extra].slice(0, MAX_AGENTES);
   }
   const porMaq = Object.fromEntries(conDoc.map((d) => [d.maquina, d]));
+  // #5794: con `opciones.vivos` (vivosPorAgente de la presencia: { agente, maquinas[], latido, enCurso? }) el panel sigue
+  // a la máquina REAL del latido y no a la fija de la conf; varias máquinas → una ficha por cada una + aviso;
+  // late pero ninguna máquina publica su terminal → aviso (no se inventa una terminal).
+  const avisos = [];
+  if (Array.isArray(opciones.vivos)) {
+    const k = (s) => String(s || "").normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase().trim();
+    const vivoDe = (c) => opciones.vivos.find((v) => k(v.agente) === k(String(c.titulo).split(" · ")[0]));
+    const real = [];
+    for (const c of lista) {
+      const v = vivoDe(c);
+      if (!v) { real.push(c); continue; }
+      const maqs = [...new Set((v.maquinas || []).map(idMaquina).filter(Boolean))];
+      const conPane = maqs.filter((m) => porMaq[m] && porMaq[m].agentes && porMaq[m].agentes[c.sesion]);
+      if (conPane.length) {
+        if (conPane.length > 1) avisos.push(`${v.agente} tiene sesión en ${conPane.length} máquinas (${conPane.join(", ")}): se ven todas.`);
+        for (const m of conPane) real.push({ ...c, host: m, enCurso: v.enCurso });
+      } else {
+        avisos.push(`${v.agente} late${maqs.length ? " en " + maqs.join(", ") : ""} pero su terminal no está publicada (sin publicador para la sesión «${c.sesion}»).`);
+        real.push({ ...c, host: maqs[0] || c.host, enCurso: v.enCurso, sinPublicar: true });
+      }
+    }
+    lista = real.slice(0, MAX_AGENTES * 2);
+  }
   const fichas = lista.map((c) => {
     const d = porMaq[c.host];
     const a = d && d.agentes && d.agentes[c.sesion];
     const haceS = d ? Math.round((ahora - d.ts) / 1000) : null;
     const publicadorVivo = haceS != null && haceS < 120;
     let estado = "esperando";
-    if (a && publicadorVivo) estado = "vivo"; else if (a) estado = "congelado";
+    if (a && publicadorVivo) estado = "vivo"; else if (a) estado = "congelado"; else if (c.sinPublicar) estado = "sin_publicar";
     const extra = a && a.agente ? { agente: a.agente, etiqueta: ETIQUETAS[a.agente], mision: a.mision, linea: a.linea, viejo: a.viejo, modelo: a.modelo, mac: a.mac, arte: a.arte, desde: a.desde } : {};
     return { ...c, estado, maquinaHaceS: haceS, ...(a ? { lineas: a.lineas, ancho: a.ancho, alto: a.alto, cmd: a.cmd, sub: a.sub, rotulo: a.rotulo, cambio: a.cambio, ...extra } : {}) };
   });
-  return { fichas, fuenteConf: conf ? conf.maquina : "defecto" };
+  return { fichas, fuenteConf: conf ? conf.maquina : "defecto", avisos };
 }
 
 /** #5707 (/interface 2 claude · /interface 2 Neo Trinity): ?a=Neo,Trinity → solo esas fichas (de la lista de 6), en el

@@ -25,6 +25,15 @@ export const KEY_INDICE = "visor:v1:_maquinas";
 export const KEY_LLAVES = "visor:v1:llaves";
 export const KEY_ESPERA = "visor:v1:espera"; // #5804: { items: { Agente: "motivo" } } lo que espera a Carlos
 export const KV_CADA_MS = 20000; // KV como respaldo entre colos: como mucho 1 escritura / 20 s / máquina
+const HOSTS_PROD = new Set(["www.admira.live", "admira.live"]);
+/** #5822: un preview (*.pages.dev) no comparte KV con producción. En www la clave no cambia. */
+export function claveVisor(request, base) {
+  let host = "";
+  try { host = new URL(request.url).hostname.toLowerCase(); } catch (e) {}
+  if (HOSTS_PROD.has(host)) return base;
+  const h = (host || "preview").replace(/[^a-z0-9.-]/g, "").slice(0, 80) || "preview";
+  return "visor:preview:" + h + ":" + base;
+}
 
 const limpio = (s, n) => String(s == null ? "" : s).replace(/[\u0000-\u0008\u000b-\u001a\u001c-\u001f\u007f]/g, "").slice(0, n);
 export const idMaquina = (s) => String(s || "").trim().toLowerCase().replace(/[^a-z0-9._-]/g, "").slice(0, 60);

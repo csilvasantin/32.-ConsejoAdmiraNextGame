@@ -5,7 +5,7 @@
  * POST { accion: "listar" }          → { ok, llaves:[{nombre, creada, pista}] }
  */
 import { autorizado } from "../consumos/lecturas.js";
-import { sha256, llaveNueva, KEY_LLAVES } from "../../../visor-lib.mjs";
+import { sha256, llaveNueva, claveVisor, KEY_LLAVES } from "../../../visor-lib.mjs";
 
 const json = (obj, status) => new Response(JSON.stringify(obj), { status, headers: { "content-type": "application/json; charset=utf-8", "cache-control": "no-store, private" } });
 const kv = (env) => (env && (env.CONSUMOS_KV || env.RECORTE_KV)) || null;
@@ -18,18 +18,19 @@ export async function onRequestPost({ request, env }) {
   if (!store) return json({ ok: false, error: "sin almacén KV" }, 503);
   let body = {};
   try { body = await request.json(); } catch (e) {}
+  const clave = claveVisor(request, KEY_LLAVES);
   let doc = null;
-  try { const r = await store.get(KEY_LLAVES); doc = r ? JSON.parse(r) : null; } catch (e) {}
+  try { const r = await store.get(clave); doc = r ? JSON.parse(r) : null; } catch (e) {}
   const llaves = doc && Array.isArray(doc.llaves) ? doc.llaves : [];
   const accion = String(body.accion || "");
   if (accion === "nueva") {
     const llave = llaveNueva();
     const nueva = { hash: await sha256(llave), nombre: String(body.nombre || "visor").slice(0, 40), creada: new Date().toISOString(), pista: llave.slice(0, 4) };
-    await store.put(KEY_LLAVES, JSON.stringify({ llaves: [...llaves, nueva].slice(-5) }));
+    await store.put(clave, JSON.stringify({ llaves: [...llaves, nueva].slice(-5) }));
     return json({ ok: true, llave, nombre: nueva.nombre });
   }
   if (accion === "revocar") {
-    await store.put(KEY_LLAVES, JSON.stringify({ llaves: [] }));
+    await store.put(clave, JSON.stringify({ llaves: [] }));
     return json({ ok: true, revocadas: llaves.length });
   }
   if (accion === "listar") return json({ ok: true, llaves: llaves.map(({ nombre, creada, pista }) => ({ nombre, creada, pista })) });

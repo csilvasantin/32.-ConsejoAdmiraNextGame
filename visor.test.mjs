@@ -209,3 +209,45 @@ test("#5804 estado OK / KO / ESPERA CARLOS sale del latido y del encargo reales"
   assert.equal(v.fichas.find((f) => f.sesion === "merovingio").estadoVisor, "ESPERA CARLOS");
   assert.equal(v.fichas.find((f) => f.sesion === "neo").estadoVisor, "KO");
 });
+
+test("#5822 la etiqueta de modo sigue visible cuando el agente está en misión", () => {
+  const h = readFileSync(new URL("./visor/index.html", import.meta.url), "utf8");
+  assert.match(h, /etiquetaModo \? \(f\.etiquetaModo \+ " · " \+ enMision\)/);
+});
+
+test("#5822 el preview no escribe las claves de producción", async () => {
+  const env = { RECORTE_KV: kvMem(), CONSUMOS_LECTURAS_TOKEN: "maquina-123" };
+  const url = "https://flt-102038.admira-live.pages.dev/api/visor/pane";
+  const r = await onRequestPost({
+    request: new Request(url, {
+      method: "POST",
+      headers: { "content-type": "application/json", "X-Council-Token": "maquina-123" },
+      body: JSON.stringify({
+        maquina: "grokbotbox", completo: true, vivas: ["merovingio"],
+        agentes: { merovingio: { lineas: ["hola"], modo_agente: "nube", estado: "vivo" } },
+        grok: [{ titulo: "Merovingio · Grok", host: "grokbotbox", sesion: "merovingio", skin: "Merovingio" }],
+      }),
+    }),
+    env,
+  });
+  assert.equal(r.status, 200);
+  const keys = [...env.RECORTE_KV.m.keys()];
+  assert.ok(keys.length > 0);
+  assert.ok(keys.every((k) => k.startsWith("visor:preview:flt-102038.admira-live.pages.dev:")));
+  assert.equal(env.RECORTE_KV.m.has("visor:v1:m:grokbotbox"), false);
+  assert.equal(env.RECORTE_KV.m.has("visor:v1:_maquinas"), false);
+  const lr = await llavePost({
+    request: new Request("https://flt-102038.admira-live.pages.dev/api/visor/llave", {
+      method: "POST",
+      headers: { "X-Council-Token": "maquina-123", "content-type": "application/json" },
+      body: JSON.stringify({ accion: "nueva", nombre: "preview" }),
+    }),
+    env,
+  });
+  assert.equal(lr.status, 200);
+  assert.ok([...env.RECORTE_KV.m.keys()].every((k) => k.startsWith("visor:preview:")));
+  assert.equal(env.RECORTE_KV.m.has("visor:v1:llaves"), false);
+  const body = await lr.json();
+  const g = await (await onRequestGet({ request: new Request(url + "?g=6", { headers: { "X-Visor-Key": body.llave } }), env })).json();
+  assert.equal(g.fichas.find((f) => f.sesion === "merovingio").etiquetaModo, "GrokBot");
+});

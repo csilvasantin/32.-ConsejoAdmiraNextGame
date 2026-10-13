@@ -79,12 +79,16 @@ export const ESTADOS_AGENTE = ["vivo", "idle", "pendiente", "login", "nosesion"]
 export const ETIQUETAS = { vivo: "en misión", idle: "Idle", pendiente: "Pendiente sin trabajar", login: "Login pendiente", nosesion: "Sin sesión" };
 
 /** #5794 (3) Modo de cada agente: lo manda el publicador (Morfeo #5788), el visor no lo supone.
- *  nube → «GrokBot» · hibrido → «GrokBot → MBP16» · edge → la máquina real de la terminal (MBP14, MBA16…)
+ *  nube → «GrokBot → GrokBotBox» (#5831, la caja donde corre) · hibrido → «GrokBot → MBP14»
+ *  edge → la máquina real de la terminal (MBP14, MBA16…)
  *  sin_terminal (app de escritorio) → «sin terminal, solo encargo» (+ encargo y estado), nunca «parado». */
 export const MODOS = ["nube", "hibrido", "edge", "sin_terminal"];
 export function etiquetaModo(f) {
   const m = f && f.modo;
-  if (m === "nube") return "GrokBot";
+  if (m === "nube") {
+    const eq = f.equipo || f.terminalMaquina;
+    return eq ? "GrokBot → " + eq : "GrokBot";
+  }
   if (m === "hibrido") return "GrokBot → " + (f.terminalMaquina || "MBP16");
   if (m === "edge") return f.terminalMaquina || f.host || null;
   if (m === "sin_terminal") return "sin terminal, solo encargo" + (f.encargo ? " · #" + f.encargo + (f.encargoEstado ? " " + f.encargoEstado : "") : "");
@@ -223,10 +227,14 @@ export function aplicarPerfil(f, vivo, ultimoS) {
     } else {
       out.terminalMaquina = pf.terminalMaquina || null;
     }
+  } else if (pf.modo === "nube") {
+    // #5831: modo cloud. Misma forma que el híbrido («GrokBot → MBP14»): «GrokBot → GrokBotBox».
+    out.terminalMaquina = pf.equipo;
+    if (!out.mac) out.mac = pf.equipo;
   } else {
     out.terminalMaquina = pf.terminalMaquina || null;
   }
-  out.etiquetaModo = etiquetaModo({ modo: pf.modo, terminalMaquina: out.terminalMaquina });
+  out.etiquetaModo = etiquetaModo({ modo: pf.modo, terminalMaquina: out.terminalMaquina, equipo: pf.modo === "nube" ? pf.equipo : null });
   if (!f.lineas && !vivo) out.estado = "sin_datos"; // no publica terminal ni late
   if (out.estado === "sin_datos") {
     const desde = hhmm(ultimoS);

@@ -152,6 +152,7 @@ test("#5794 vista sigue a la máquina real del latido: varias máquinas, y termi
 test("#5794 etiquetas de modo: nube, híbrido, edge y sin terminal (nunca «parado»)", () => {
   const A = 1_000_000;
   assert.equal(etiquetaModo({ modo: "nube" }), "GrokBot");
+  assert.equal(etiquetaModo({ modo: "nube", equipo: "GrokBotBox" }), "GrokBot → GrokBotBox");
   assert.equal(etiquetaModo({ modo: "hibrido" }), "GrokBot → MBP16");
   assert.equal(etiquetaModo({ modo: "edge", terminalMaquina: "MBA16" }), "MBA16");
   assert.equal(etiquetaModo({ modo: "sin_terminal", encargo: "5794", encargoEstado: "in_progress" }), "sin terminal, solo encargo · #5794 in_progress");
@@ -193,7 +194,8 @@ test("#5803/#5801/#5802 mosaico de 6 por modo: edge sin falsos positivos, deskto
   const mer = v.fichas.find((f) => f.sesion === "merovingio");
   assert.equal(mer.estado, "sin_datos"); assert.match(mer.sinDatos, /^sin datos de GrokBotBox/);
   assert.equal(v.fichas.find((f) => f.sesion === "morfeo").etiquetaModo, "GrokBot → MBP16");
-  assert.equal(v.fichas.find((f) => f.sesion === "smith").etiquetaModo, "GrokBot");
+  assert.equal(v.fichas.find((f) => f.sesion === "smith").etiquetaModo, "GrokBot → GrokBotBox");
+  assert.equal(v.fichas.find((f) => f.sesion === "smith").mac, "GrokBotBox");
 });
 
 test("#5824 Trinity pinta la máquina de la app de escritorio, nunca un MBA16 fijo", async () => {
@@ -249,10 +251,12 @@ test("#5822 híbrido pinta el MBP14 del latido más reciente; Smith y Merovingio
   assert.equal(mor.equipoDeclarado, "MBP14");
   assert.equal(ora.etiquetaModo, "GrokBot → MBP14");
   assert.equal(ora.host, "macbookpronegro14");
-  assert.equal(v.fichas.find((f) => f.sesion === "smith").etiquetaModo, "GrokBot");
+  assert.equal(v.fichas.find((f) => f.sesion === "smith").etiquetaModo, "GrokBot → GrokBotBox");
   assert.equal(v.fichas.find((f) => f.sesion === "smith").equipoDeclarado, "GrokBotBox");
-  assert.equal(v.fichas.find((f) => f.sesion === "merovingio").etiquetaModo, "GrokBot");
+  assert.equal(v.fichas.find((f) => f.sesion === "smith").mac, "GrokBotBox");
+  assert.equal(v.fichas.find((f) => f.sesion === "merovingio").etiquetaModo, "GrokBot → GrokBotBox");
   assert.equal(v.fichas.find((f) => f.sesion === "merovingio").equipoDeclarado, "GrokBotBox");
+  assert.equal(v.fichas.find((f) => f.sesion === "merovingio").mac, "GrokBotBox");
   const vacio = vista([], A, { grupo: 6, vivos: [] }).fichas.find((f) => f.sesion === "morfeo");
   assert.equal(vacio.etiquetaModo, "GrokBot → MBP16");
 });
@@ -279,6 +283,20 @@ test("#5804 estado OK / KO / ESPERA CARLOS sale del latido y del encargo reales"
 test("#5822 la etiqueta de modo sigue visible cuando el agente está en misión", () => {
   const h = readFileSync(new URL("./visor/index.html", import.meta.url), "utf8");
   assert.match(h, /etiquetaModo \? \(f\.etiquetaModo \+ " · " \+ enMision\)/);
+});
+
+test("#5831 Smith y Merovingio enseñan GrokBotBox en la línea, como el híbrido enseña el MBP14", () => {
+  const h = readFileSync(new URL("./visor/index.html", import.meta.url), "utf8");
+  assert.match(h, /f\.modo === "nube" \? \[f\.etiquetaModo, parte, donde\]\.filter\(Boolean\)\.join\(" · "\)/);
+  const A = 5_000_000;
+  const smith = vista([], A, { grupo: 6, vivos: [] }).fichas.find((f) => f.sesion === "smith");
+  const mer = vista([], A, { grupo: 6, vivos: [] }).fichas.find((f) => f.sesion === "merovingio");
+  assert.equal(smith.etiquetaModo, "GrokBot → GrokBotBox");
+  assert.equal(mer.etiquetaModo, "GrokBot → GrokBotBox");
+  assert.equal(mer.mac, "GrokBotBox");
+  const linea = [smith.etiquetaModo, "Grok", smith.mac].join(" · ");
+  assert.equal(linea, "GrokBot → GrokBotBox · Grok · GrokBotBox");
+  assert.match(linea, /GrokBotBox/);
 });
 
 test("#5822 el preview no escribe las claves de producción", async () => {
@@ -315,7 +333,8 @@ test("#5822 el preview no escribe las claves de producción", async () => {
   assert.equal(env.RECORTE_KV.m.has("visor:v1:llaves"), false);
   const body = await lr.json();
   const g = await (await onRequestGet({ request: new Request(url + "?g=6", { headers: { "X-Visor-Key": body.llave } }), env })).json();
-  assert.equal(g.fichas.find((f) => f.sesion === "merovingio").etiquetaModo, "GrokBot");
+  assert.equal(g.fichas.find((f) => f.sesion === "merovingio").etiquetaModo, "GrokBot → GrokBotBox");
+  assert.equal(g.fichas.find((f) => f.sesion === "merovingio").mac, "GrokBotBox");
 });
 
 test("#5822 la preview lee los paneles de producción y no los escribe", async () => {

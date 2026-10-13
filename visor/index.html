@@ -243,7 +243,12 @@
     var $mot = el.querySelector(".motivo"); $mot.textContent = f.estadoVisor && f.estadoVisor !== "OK" && f.estadoMotivo ? f.estadoMotivo : "";
     var maq = MAQUINAS[f.host] || f.host;
     var modelo = f.sub || ((f.titulo || "").split(" · ")[1] || "") + " · " + maq + " · deepagent de pago";
-    if (f.etiquetaModo) { modelo = f.etiquetaModo + " · " + ((f.titulo || "").split(" · ")[1] || ""); } // #5794: modo real (GrokBot / GrokBot → MBP16 / MBP14…)
+    if (f.etiquetaModo) {
+      var parte = ((f.titulo || "").split(" · ")[1] || "");
+      var donde = f.mac || maq || "";
+      // #5831: Smith y Merovingio (nube) enseñan la caja, como el híbrido enseña «MBP14 Negro».
+      modelo = f.modo === "nube" ? [f.etiquetaModo, parte, donde].filter(Boolean).join(" · ") : f.etiquetaModo + " · " + parte;
+    }
     // #5803/#5801/#5802: edge = DESKTOP APP + CONTROL CARLOS en grande; sin latido = «sin datos de <equipo> desde HH:MM»
     if (f.estado === "desktop" || f.estado === "sin_datos") {
       el.classList.remove("ficha-idle");

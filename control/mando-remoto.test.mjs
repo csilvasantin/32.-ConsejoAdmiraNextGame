@@ -49,6 +49,52 @@ test("sin equipo no se inventa nada", () => {
   assert.equal(fabrica({})({}), "");
 });
 
+// 13-oct-2026: el relé manda `host`, no `fqdn`. El Mac Studio estaba de alta como
+// «Mac Studio» (id macstudio) y su watcher publicaba «Mac Studio de Carlos»: la tarjeta
+// decía «falta el watcher» con el watcher publicando.
+const fichaStudio = { id: "macstudio", name: "Mac Studio", host: "macstudio-de-carlos.tail48b61c.ts.net" };
+const mandoStudio = { macstudiodecarlos: { slots: [{ persona: "Neo", runtime: "Claude", host: "app", session_id: "desktop:claude" }], updated: 1, age: 5 } };
+
+test("la ficha del relé casa con su watcher por la primera etiqueta del host", () => {
+  const h = fabrica(mandoStudio)(fichaStudio);
+  assert.match(h, /mando <b>1<\/b>/);
+  assert.match(h, /watcher hace 5s/);
+  // en modo degradado el mismo dato llega como `fqdn`, y tiene que seguir valiendo
+  assert.match(fabrica(mandoStudio)({ id: "macstudio", name: "Mac Studio", fqdn: fichaStudio.host }), /mando <b>1<\/b>/);
+});
+
+test("la orden viaja a nombre del WATCHER, no de la ficha: el worker casa por el nombre del watcher", () => {
+  const h = fabrica(mandoStudio)(fichaStudio);
+  assert.equal((h.match(/data-wk="macstudiodecarlos"/g) || []).length, 2, "▶ y ⏹ llevan la clave del watcher");
+  assert.match(h, /data-maq="Mac Studio"/, "el nombre de la ficha se queda para leerlo en el aviso");
+  assert.match(h, /data-mk="macstudio"/, "el pliegue se sigue recordando por la ficha");
+  assert.match(html, /mandoAgente\(b\.dataset\.maq, JSON\.parse\(b\.dataset\.slot\), b\.dataset\.mando, b\.dataset\.wk\)/);
+  assert.match(html, /machine:wk\|\|_norm\(machine\)/);
+});
+
+test("el mando NO casa por prefijo: una orden va al equipo exacto o no va", () => {
+  // sin host, «macstudio» es prefijo de «macstudiodecarlos» y aun así no vale
+  assert.match(fabrica(mandoStudio)({ id: "macstudio", name: "Mac Studio" }), /sin mando remoto/);
+  // ni al revés: el watcher del segundo Luna no es el del primero
+  const luna = { macbookairluna1: { slots: [{ persona: "Neo", runtime: "Claude", host: "app" }], updated: 1, age: 5 } };
+  assert.match(fabrica(luna)({ id: "macbookairluna", name: "MacBook Air Luna", host: "macbookairluna.tail48b61c.ts.net" }), /sin mando remoto/);
+  assert.match(fabrica(luna)({ id: "macbookairluna1", name: "MacBook Air Luna (2)", host: "macbookairluna-1.tail48b61c.ts.net" }), /mando <b>1<\/b>/);
+});
+
+test("el nombre y el id de la ficha mandan sobre el host, y `localhost` no es el nombre de nadie", () => {
+  const dos = { macmini: { slots: [{ persona: "Morfeo", runtime: "Claude", host: "app" }], updated: 1, age: 3 },
+                otro:    { slots: [{ persona: "Smith", runtime: "Grok", host: "cli" }, { persona: "Neo", runtime: "Claude", host: "cli" }], updated: 1, age: 3 } };
+  assert.match(fabrica(dos)({ id: "macmini", name: "Mac Mini", host: "otro.tail48b61c.ts.net" }), /mando <b>1<\/b>/);
+  const local = { localhost: { slots: [{ persona: "Smith", runtime: "Grok", host: "cli" }], updated: 1, age: 3 } };
+  assert.match(fabrica(local)({ id: "macmini", name: "Mac Mini", host: "localhost" }), /sin mando remoto/);
+});
+
+test("la captura por el watcher resuelve el equipo igual que la tarjeta", () => {
+  assert.match(html, /function ranuraCaptura\(machine\)\{\s*const g=MANDO_BY_MACHINE\[mandoKeyDeId\(machine\)\]/);
+  assert.match(html, /const cuerpo=\{ machine:mandoKeyDeId\(machine\)\|\|_norm\(machine\),/);
+  assert.doesNotMatch(html, /MANDO_BY_MACHINE\[_norm\(machine\)\]/);
+});
+
 test("con watcher fresco salen los botones de cada ranura", () => {
   const h = fabrica({ macmini: { slots: [{ persona: "Morfeo", runtime: "Claude", host: "app", session_id: "desktop:claude" },
                                          { persona: "Oraculo", runtime: "Codex", host: "cli", session_id: "tmux:ora" }],

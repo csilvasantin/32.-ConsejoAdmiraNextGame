@@ -2,7 +2,7 @@
 """Corpus del HACKEO · modo CÓDIGO (Carlos, 07-10-2026).
 
 Cada panel del HACKEO teclea código REAL de un proyecto AdmiraNeXT. Este script
-clona (superficial) los repos públicos de los 13 proyectos (5 Admira + 4 startup + 4 ecosistema) y escribe, en el
+clona (superficial) los repos públicos de los 14 proyectos (5 Admira + 4 startup + 5 ecosistema) y escribe, en el
 directorio de salida:
 
   index.json        totales por proyecto (ficheros y líneas de código) + suma
@@ -30,26 +30,31 @@ from pathlib import Path
 # tiene). «par» = el proyecto Admira equivalente de una versión startup.
 # admira.tv no tiene versión startup con repo propio: se omite.
 PROYECTOS = [
-    {"key": "studio", "project": "admira.studio", "repo": "csilvasantin/admira-studio", "familia": "admira"},
-    {"key": "store",  "project": "admira.store",  "repo": "csilvasantin/admira-store",  "familia": "admira"},
-    {"key": "tv",     "project": "admira.tv",     "repo": "csilvasantin/admira-tv",     "familia": "admira"},
-    {"key": "app",    "project": "admira.app",    "repo": "csilvasantin/admira-app",    "familia": "admira"},
+    {"key": "studio", "num": 1, "project": "admira.studio", "repo": "csilvasantin/admira-studio", "familia": "admira"},
+    {"key": "store",  "num": 2, "project": "admira.store",  "repo": "csilvasantin/admira-store",  "familia": "admira"},
+    {"key": "tv",     "num": 3, "project": "admira.tv",     "repo": "csilvasantin/admira-tv",     "familia": "admira"},
+    {"key": "app",    "num": 4, "project": "admira.app",    "repo": "csilvasantin/admira-app",    "familia": "admira"},
     # admira.biz se sirve desde el proyecto Pages clearchannel-tv (multi-dominio)
-    {"key": "biz",    "project": "admira.biz",    "repo": "csilvasantin/clearchannel-tv", "familia": "admira"},
-    {"key": "pixeria",      "project": "pixeria.com",     "repo": "csilvasantin/pixeria",        "familia": "startup", "par": "studio"},
-    {"key": "xpaceos",      "project": "xpaceos.com",     "repo": "csilvasantin/xpaceos",        "familia": "startup", "par": "store"},
+    {"key": "biz",    "num": 5, "project": "admira.biz",    "repo": "csilvasantin/clearchannel-tv", "familia": "admira"},
+    {"key": "pixeria",      "num": 6, "project": "pixeria.com",     "repo": "csilvasantin/pixeria",        "familia": "startup", "par": "studio"},
+    {"key": "xpaceos",      "num": 7, "project": "xpaceos.com",     "repo": "csilvasantin/xpaceos",        "familia": "startup", "par": "store"},
     # mismo repo que admira.biz: sus líneas NO se suman otra vez
-    {"key": "clearchannel", "project": "clearchannel.tv", "repo": "csilvasantin/clearchannel-tv", "familia": "startup", "par": "biz"},
-    {"key": "yokup",        "project": "yokup.com",       "repo": "csilvasantin/tool",           "familia": "startup", "par": "app"},
+    {"key": "clearchannel", "num": 8, "project": "clearchannel.tv", "repo": "csilvasantin/clearchannel-tv", "familia": "startup", "par": "biz"},
+    {"key": "yokup",        "num": 9, "project": "yokup.com",       "repo": "csilvasantin/tool",           "familia": "startup", "par": "app"},
     # Ecosistema AdmiraNeXT (Carlos, 07-10-2026): la web corporativa, el editor de interactivos
     # y los avatares digitales. Mismo filtro de secretos y mismo Σ sin duplicar.
-    {"key": "admiranext",   "project": "admiranext.com",    "repo": "csilvasantin/admira-next-web",   "familia": "ecosistema"},
-    {"key": "ainimation",   "project": "ainimation.studio", "repo": "csilvasantin/ainimation",        "familia": "ecosistema"},
-    {"key": "digitalavatar","project": "digitalavatar.ai",  "repo": "csilvasantin/digitalavatar.ai",  "familia": "ecosistema"},
+    {"key": "admiranext",   "num": 10, "project": "admiranext.com",    "repo": "csilvasantin/admira-next-web",   "familia": "ecosistema"},
+    {"key": "ainimation",   "num": 11, "project": "ainimation.studio", "repo": "csilvasantin/ainimation",        "familia": "ecosistema"},
+    {"key": "digitalavatar","num": 12, "project": "digitalavatar.ai",  "repo": "csilvasantin/digitalavatar.ai",  "familia": "ecosistema"},
     # admira.live = ESTE repo (el consejo/panel de control). Se clona igual que los demás y su
     # código sale en la máquina que le toque. Mismo filtro de secretos y mismo Σ sin duplicar.
-    {"key": "admiralive",   "project": "admira.live",       "repo": "csilvasantin/32.-ConsejoAdmiraNextGame", "familia": "ecosistema"},
+    {"key": "admiralive",   "num": 13, "project": "admira.live",       "repo": "csilvasantin/32.-ConsejoAdmiraNextGame", "familia": "ecosistema"},
+    # admira.farm (Carlos, 13-10-2026): sitio estático en Cloudflare Pages (proyecto admira-farm).
+    {"key": "farm", "num": 14, "project": "admira.farm", "repo": "csilvasantin/admira-farm", "familia": "ecosistema"},
 ]
+# NÚMERO DE PROYECTO (Carlos, 13-10-2026): «num» es fijo y único; sale arriba a la derecha de
+# cada ventana del HACKEO (#01…). Un proyecto nuevo coge el siguiente libre; NUNCA se renumera.
+assert len({p["num"] for p in PROYECTOS}) == len(PROYECTOS), "num de proyecto repetido"
 
 EXT = {".html", ".htm", ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx", ".css", ".scss",
        ".py", ".sh", ".swift", ".kt", ".java", ".go", ".rs", ".php", ".rb", ".sql",
@@ -194,7 +199,11 @@ def main():
     with tempfile.TemporaryDirectory() as t:
         base = Path(persistente) if persistente else Path(t)
         for p in PROYECTOS:
-            d = proyecto(dict(p), base)
+            try:
+                d = proyecto(dict(p), base)
+            except subprocess.CalledProcessError as e:   # repo aún no publicado: no tumba el corpus
+                print(f"  ✗ {p['project']:<16} {p['repo']:<30} sin clonar ({(e.stderr or '').strip()[:120]})")
+                continue
             hashes = d.pop("_hashes")
             d["generated"] = ahora
             propios = {h: n for h, n in hashes.items() if h not in visto}
@@ -210,7 +219,7 @@ def main():
             nombre = {q["key"]: q["project"] for q in PROYECTOS}
             d["shares_lines_with"] = {nombre[k]: v for k, v in sorted(comparte.items(), key=lambda kv: -kv[1])}
             (out / f"{p['key']}.json").write_text(json.dumps(d, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
-            resumen = {k: d.get(k) for k in ("key", "project", "domain", "repo", "commit", "familia", "par",
+            resumen = {k: d.get(k) for k in ("key", "num", "project", "domain", "repo", "commit", "familia", "par",
                                              "files_total", "lines_total", "files_unique", "lines_unique",
                                              "shares_repo_with", "shares_lines_with", "sample_files", "sample_lines",
                                              "banner")}

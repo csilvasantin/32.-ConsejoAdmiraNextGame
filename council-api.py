@@ -4725,10 +4725,10 @@ def _hk_code_b64(idx: int) -> str:
 # con el MISMO reparto que sus ventanas; sin él, el orden del consejo. El corpus
 # (sin secretos) lo genera el build de admira.live en /control/hackeo-corpus/.
 # 5 Admira, 4 versiones startup (pixeria.com, xpaceos.com, clearchannel.tv, yokup.com) y
-# 3 del ecosistema (admiranext.com, ainimation.studio, digitalavatar.ai). Es la lista de
+# 5 del ecosistema (admiranext.com, ainimation.studio, digitalavatar.ai, admira.live, admira.farm). Es la lista de
 # reserva: manda la del índice del corpus publicado (_hk_claves).
 _HK_PROY_ORDEN = ("studio", "store", "tv", "app", "biz", "pixeria", "xpaceos", "clearchannel", "yokup",
-                  "admiranext", "ainimation", "digitalavatar", "admiralive")
+                  "admiranext", "ainimation", "digitalavatar", "admiralive", "farm")
 _HK_CLAVE_OK = re.compile(r"^[a-z][a-z0-9]{1,23}$")     # va incrustada en comandos remotos
 _HK_PROY_MAP: dict = {}
 _HK_CORPUS_URL = _HK_SITE_URL + "/control/hackeo-corpus/"

@@ -237,8 +237,9 @@
       el.querySelector(".modelo").innerHTML = '<span class="punto"></span>' + esc(f.sinDatos || (f.etiquetaModo ? f.etiquetaModo : lat));
       el.querySelector(".hora").textContent = "";
       var bx = el.querySelector(".term"); delete ultimo[k];
+      var lineaEq = [f.equipoDeclarado, f.foco].filter(Boolean).join(" · "); // #5824: máquina en vivo, o solo el foco si no hay
       bx.innerHTML = f.control
-        ? '<div class="idle"><div style="font-size:22px;font-weight:700;color:var(--c);letter-spacing:.08em">CONTROL CARLOS</div><div style="margin-top:6px">DESKTOP APP · NO MOLESTAR</div><div style="margin-top:6px;opacity:.8">' + esc(f.equipoDeclarado || "") + " · " + esc(f.foco || "") + "</div>" + (lat ? '<div style="margin-top:6px;opacity:.7">latido: ' + esc(lat) + "</div>" : "") + (f.sinDatos ? '<div style="margin-top:6px;color:#e0a040">' + esc(f.sinDatos) + "</div>" : "") + "</div>"
+        ? '<div class="idle"><div style="font-size:22px;font-weight:700;color:var(--c);letter-spacing:.08em">CONTROL CARLOS</div><div style="margin-top:6px">DESKTOP APP · NO MOLESTAR</div><div style="margin-top:6px;opacity:.8">' + esc(lineaEq) + "</div>" + (lat ? '<div style="margin-top:6px;opacity:.7">latido: ' + esc(lat) + "</div>" : "") + (f.sinDatos ? '<div style="margin-top:6px;color:#e0a040">' + esc(f.sinDatos) + "</div>" : "") + "</div>"
         : '<div class="espera">' + esc(f.sinDatos || "sin datos") + "</div>";
       return;
     }

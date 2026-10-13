@@ -178,10 +178,11 @@ def main():
             grok = leer_conf(CONF_GROK, DEFECTO_GROK, 2)
             mias = [c for c in conf + grok if c["host"] == maquina]
             agentes, vivas, nuevas = {}, [], {}
+            cruda = EST.leer_maquina_viva()  # #5824: la máquina del rótulo es la de ahora, no un host fijo de la conf
             for c in mias:
                 ses = c["sesion"]
                 nombre = c["titulo"].split(" · ")[0]
-                modelo, mac = EST.etiquetas(c["titulo"], c["host"])
+                modelo, mac = EST.etiquetas(c["titulo"], cruda or c["host"])
                 d = EST.decidir(ses, EST.persona_de(nombre))
                 ficha = {"estado": d["estado"], "etiqueta": d["etiqueta"], "mision": tapar(d["mision"]), "linea": tapar(d["linea"]), "viejo": tapar(d["viejo"]), "modelo": modelo, "mac": mac,
                          "arte": EST.arte(nombre) or [], "cambio": d["cambio"] or int(t0 * 1000), "desde": d["desde"]}

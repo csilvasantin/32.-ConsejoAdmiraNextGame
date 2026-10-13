@@ -11,7 +11,8 @@ const PROJECTS = [
   { key: "clearchannel", project: "clearchannel.tv", domain: "www.clearchannel.tv", repo: "csilvasantin/clearchannel-tv", commit: "bbbbbbb" },
   { key: "pixeria", project: "pixeria.com", domain: "www.pixeria.com", repo: "csilvasantin/pixeria", commit: "ccccccc" },
   { key: "yokup", project: "yokup.com", domain: "www.yokup.com", repo: "csilvasantin/tool", commit: "ddddddd" },
-  { key: "admiralive", project: "admira.live", domain: "www.admira.live", repo: "csilvasantin/32.-ConsejoAdmiraNextGame", commit: "eeeeeee", commit_full: "eeeeeee0123456789" },
+  { key: "admiralive", num: 13, project: "admira.live", domain: "www.admira.live", repo: "csilvasantin/32.-ConsejoAdmiraNextGame", commit: "eeeeeee", commit_full: "eeeeeee0123456789" },
+  { key: "farm", num: 14, project: "admira.farm", domain: "www.admira.farm", repo: "csilvasantin/admira-farm", commit: "9999999" },
 ];
 const AHORA_S = 1791885500, AHORA_MS = AHORA_S * 1000;
 const snap = (extra) => ({ persona: "Neo", machine: "MacBookProNegro14", source: "process_snapshot", updated: AHORA_S - 2, ...extra });
@@ -55,6 +56,8 @@ test("clavesDe: dominio, repo y raíz inequívoca; «admira», «otros» y desco
   assert.deepEqual(clavesDe("pixeria", al), ["pixeria"]);
   assert.deepEqual(clavesDe("yokup", al), ["yokup"]);
   assert.deepEqual(clavesDe("clearchannel-tv", al).sort(), ["biz", "clearchannel"]);
+  assert.deepEqual(clavesDe("admira.farm", al), ["farm"]);
+  assert.deepEqual(clavesDe("admira-farm", al), ["farm"]);
   assert.deepEqual(clavesDe("admira", al), []);
   assert.deepEqual(clavesDe("otros", al), []);
   assert.deepEqual(clavesDe("tool", al), []);      // nombre de repo demasiado genérico
@@ -90,6 +93,7 @@ test("actividadProyectos: agentes por proyecto, commit < 15 min, repo compartido
   };
   const a = actividadProyectos({ projects: PROJECTS, presencia, commits, ahoraMs: AHORA_MS });
   assert.deepEqual(Object.keys(a).sort(), ["biz", "clearchannel", "tv"]);
+  assert.equal(a.tv.num, null);                    // sin «num» en el corpus → null, no se inventa
   assert.equal(a.tv.motivos.length, 1); assert.equal(a.tv.motivos[0].agente, "Neo");
   assert.equal(a.biz.motivos[0].tipo, "commit"); assert.equal(a.biz.motivos[0].haceS, 300);
   assert.deepEqual(actividadProyectos({ projects: PROJECTS, presencia: [], commits: {}, ahoraMs: AHORA_MS }), {});
@@ -120,6 +124,7 @@ test("API construir: une corpus, presencia, Atom y diff (cacheado en KV); GitHub
   const d = await construir({ env, fetchImpl, origin: "https://x.pages.dev", ahoraMs: AHORA_MS, cache: null });
   assert.equal(d.ok, true);
   assert.deepEqual(Object.keys(d.activos).sort(), ["admiralive", "tv"]);
+  assert.equal(d.activos.admiralive.num, 13);       // reenvía el nº fijo del corpus (PR #198)
   assert.equal(d.lineas.porRepo["csilvasantin/admira-tv"].neto, 0);
   assert.deepEqual([d.lineas.porRepo["csilvasantin/32.-ConsejoAdmiraNextGame"].anadidas, d.lineas.porRepo["csilvasantin/32.-ConsejoAdmiraNextGame"].quitadas], [2, 1]);
   assert.equal(d.lineas.porRepo["csilvasantin/pixeria"], null);

@@ -286,7 +286,9 @@ export function motivoPresencia(e, ahoraS) {
  */
 export function actividadProyectos({ projects = [], presencia = [], commits = {}, ahoraMs = Date.now() } = {}) {
   const ahoraS = Math.floor(ahoraMs / 1000), alias = mapaAlias(projects), out = {};
-  const marca = (k, m) => { (out[k] || (out[k] = { motivos: [] })).motivos.push(m); };
+  // Nº de proyecto: el «num» fijo del corpus (#01…#14, PR #198); aquí no se numera nada, solo se reenvía.
+  const num = new Map(projects.map((p) => [p.key, Number.isInteger(p.num) ? p.num : null]));
+  const marca = (k, m) => { (out[k] || (out[k] = { num: num.get(k) ?? null, motivos: [] })).motivos.push(m); };
   const vistos = new Set();
   for (const e of presencia || []) {
     const motivo = motivoPresencia(e, ahoraS);

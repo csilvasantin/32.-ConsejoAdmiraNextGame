@@ -41,6 +41,13 @@ function deModelSpec(m) {
 }
 const verificada = (r) => r && (r.verified === 1 || r.verified === true || r.verified === "1");
 
+/** App de escritorio (no el CLI de otra máquina). La usa el mosaico #5824 para la máquina del recuadro. */
+const esEscritorio = (r) => {
+  const host = String((r && r.host) || "").toLowerCase();
+  const sid = String((r && r.session_id) || "");
+  return host === "app" || sid.startsWith("desktop:");
+};
+
 /** Modelo (claude|codex|grok) de UNA fila de presencia → { modelo|null, fuente }. */
 export function modeloDeFila(r = {}) {
   const prov = String(r.proveedor || r.provider || "").trim();
@@ -62,14 +69,19 @@ export function vivosPorAgente(presencia = [], ahoraS = Date.now() / 1000, venta
     const agente = agenteCanonico(r && r.persona);
     const ts = Number(r && r.updated) || 0;
     if (!agente || ahoraS - ts > ventanaS) continue;
-    const x = out.get(agente) || { agente, latido: 0, modelos: {}, fuentes: {}, maquinas: [] };
+    const x = out.get(agente) || { agente, latido: 0, modelos: {}, fuentes: {}, maquinas: [], tieneEscritorio: false };
     if (ts >= x.latido) { // #5803: modelo real del último latido · #5804: lo que dice que hace (modo del latido + tarea/foco)
       x.modeloTxt = String(r.model_spec || r.model || r.runtime || "").slice(0, 60);
       x.modo = String(r.mode || "").toLowerCase();
       x.tarea = String(r.task || r.focus || "").slice(0, 120);
     }
     x.latido = Math.max(x.latido, ts);
-    if (r.machine && !x.maquinas.includes(r.machine)) x.maquinas.push(String(r.machine));
+    if (r.machine) {
+      const nombre = String(r.machine);
+      if (!x.maquinas.includes(nombre)) x.maquinas.push(nombre);
+      if (ts >= (x.maquinaTs || 0)) { x.maquinaFresca = nombre; x.maquinaTs = ts; } // #5824: la más reciente, no la primera vista
+      if (esEscritorio(r) && ts >= (x.escritorioTs || 0)) { x.maquinaEscritorio = nombre; x.escritorioTs = ts; x.tieneEscritorio = true; }
+    }
     const { modelo, fuente } = modeloDeFila(r);
     if (modelo && ts > (x.modelos[modelo] || 0)) { x.modelos[modelo] = ts; x.fuentes[modelo] = fuente; }
     out.set(agente, x);

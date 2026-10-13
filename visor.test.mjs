@@ -2,7 +2,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync } from "node:fs";
-import { tapar, normalizarPane, fundir, vista, etiquetaModo, CONF_DEFECTO, sha256 } from "./visor-lib.mjs";
+import { tapar, normalizarPane, fundir, vista, etiquetaModo, CONF_DEFECTO, sha256, cortaMaquina, lineaEscritorio } from "./visor-lib.mjs";
 import { onRequestPost, onRequestGet } from "./functions/api/visor/pane.js";
 import { onRequestPost as llavePost } from "./functions/api/visor/llave.js";
 
@@ -180,15 +180,81 @@ test("#5803/#5801/#5802 mosaico de 6 por modo: edge sin falsos positivos, deskto
     assert.equal(f.control, "CONTROL CARLOS"); assert.equal(f.noMolestar, true); assert.equal(f.desktop, true);
   }
   assert.equal(neo.etiquetaModo, "EDGE · MBP14 · Carlos al mando · NO MOLESTAR · admira.tv");
-  assert.equal(neo.estado, "desktop"); assert.equal(neo.latidoMaquina, "MBP14");
-  const neo16 = vista([], A, { grupo: 6, vivos: [{ agente: "Neo", maquinas: ["MacBook Pro 16"], latido: S, modeloTxt: "Fable 5" }] }).fichas.find((x) => x.sesion === "neo");
+  assert.equal(neo.estado, "desktop"); assert.equal(neo.latidoMaquina, "MBP14"); assert.equal(lineaEscritorio(neo), "MBP14 · admira.tv");
+  // Un CLI en el Pro 16 no es la app de escritorio y no revive un equipo fijo.
+  const neo16 = vista([], A, { grupo: 6, vivos: [{ agente: "Neo", maquinas: ["MacBook Pro 16"], maquinaFresca: "MacBook Pro 16", tieneEscritorio: false, latido: S, modeloTxt: "Fable 5" }] }).fichas.find((x) => x.sesion === "neo");
   assert.equal(neo16.latidoMaquina, null); assert.equal(neo16.latidoIgnorado, "MacBook Pro 16"); assert.equal(neo16.latidoModelo, null);
-  assert.equal(tri.etiquetaModo, "EDGE · MBA16 · Carlos al mando · NO MOLESTAR · vigilante de incidencias de admira.app");
-  assert.equal(tri.estado, "sin_datos"); assert.match(tri.sinDatos, /^sin datos de MBA16 desde \d\d:\d\d$/);
+  assert.equal(neo16.equipoDeclarado, null); assert.equal(neo16.lineas, undefined);
+  assert.ok(!/MBP14|MBA16/.test(neo16.etiquetaModo));
+  assert.equal(tri.etiquetaModo, "EDGE · Carlos al mando · NO MOLESTAR · vigilante de incidencias de admira.app");
+  assert.equal(tri.equipoDeclarado, null);
+  assert.equal(tri.estado, "sin_datos"); assert.match(tri.sinDatos, /^sin máquina en vivo desde \d\d:\d\d$/);
+  assert.ok(!/MBA16|MBP14/.test(tri.etiquetaModo + tri.sinDatos));
   const mer = v.fichas.find((f) => f.sesion === "merovingio");
   assert.equal(mer.estado, "sin_datos"); assert.match(mer.sinDatos, /^sin datos de GrokBotBox/);
   assert.equal(v.fichas.find((f) => f.sesion === "morfeo").etiquetaModo, "GrokBot → MBP16");
   assert.equal(v.fichas.find((f) => f.sesion === "smith").etiquetaModo, "GrokBot");
+});
+
+test("#5824 Trinity pinta la máquina de la app de escritorio, nunca un MBA16 fijo", async () => {
+  const { vivosPorAgente } = await import("./interface-seleccion.mjs");
+  const { maquinaCorta } = await import("./flota-trabajando-lib.mjs");
+  for (const n of ["MacBook Pro 16", "MacBookPro16", "MacBookAir16plata", "MacBookProNegro14", "MacMini", "MBP14"]) {
+    assert.equal(cortaMaquina(n), maquinaCorta(n), n);
+  }
+  const ahora = 1_000_000;
+  const t = vivosPorAgente([
+    { persona: "Trinity", machine: "GrokBotBox", runtime: "DeepAgents", updated: ahora - 10, source: "heartbeat" },
+    { persona: "Trinity", machine: "MacBookProNegro14", runtime: "Codex", host: "app", session_id: "desktop:codex", updated: ahora - 30, source: "process_snapshot" },
+    { persona: "Trinity", machine: "MacBookAir16plata", runtime: "Codex", host: "app", updated: ahora - 5000, source: "heartbeat" },
+  ], ahora).find((x) => x.agente === "Trinity");
+  assert.equal(t.maquinaEscritorio, "MacBookProNegro14");
+  assert.equal(t.maquinaFresca, "GrokBotBox");
+  assert.equal(t.tieneEscritorio, true);
+  const A = 5_000_000;
+  const tri = vista([], A, { grupo: 6, vivos: [t] }).fichas.find((f) => f.sesion === "trinity");
+  assert.equal(tri.equipoDeclarado, "MBP14");
+  assert.equal(tri.terminalMaquina, "MBP14");
+  assert.equal(tri.host, "macbookpronegro14");
+  assert.equal(tri.estado, "desktop");
+  assert.equal(tri.lineas, undefined);
+  assert.equal(lineaEscritorio(tri), "MBP14 · vigilante de incidencias de admira.app");
+  assert.equal(tri.etiquetaModo, "EDGE · MBP14 · Carlos al mando · NO MOLESTAR · vigilante de incidencias de admira.app");
+  // La misma función, con la app en el Air, dice MBA16: no hay un MBP14 escrito a mano.
+  const air = vista([], A, { grupo: 6, vivos: [{ agente: "Trinity", maquinaEscritorio: "MacBookAir16plata", tieneEscritorio: true, maquinas: ["MacBookAir16plata"] }] }).fichas.find((f) => f.sesion === "trinity");
+  assert.equal(lineaEscritorio(air), "MBA16 · vigilante de incidencias de admira.app");
+  const html = readFileSync(new URL("./visor/index.html", import.meta.url), "utf8");
+  assert.match(html, /\[f\.equipoDeclarado, f\.foco\]\.filter\(Boolean\)\.join\(" · "\)/);
+  const { onRequestGet: etiquetaGet } = await import("./functions/api/visor/etiqueta.js");
+  const d = await (await etiquetaGet()).json();
+  const api = d.fichas.find((f) => f.sesion === "trinity");
+  // La línea sigue a la app que haya ahora. Sin app no se inventa MBA16 ni MBP14 (el null fijo de un momento no es el contrato).
+  assert.equal(api.linea, [api.equipoDeclarado, "vigilante de incidencias de admira.app"].filter(Boolean).join(" · "));
+  if (!api.equipoDeclarado) assert.ok(!/MBA16|MBP14/.test(JSON.stringify(api)));
+});
+
+test("#5822 híbrido pinta el MBP14 del latido más reciente; Smith y Merovingio siguen en GrokBot", () => {
+  const A = 5_000_000, S = A / 1000;
+  const vivos = [
+    { agente: "Morfeo", maquinaFresca: "MacBookProNegro14", maquinas: ["MacMini", "MacBookProNegro14"], tieneEscritorio: true, maquinaEscritorio: "MacMini", latido: S },
+    { agente: "Oráculo", maquinaFresca: "MacBookProNegro14", maquinas: ["MacBookProNegro14"], latido: S },
+    { agente: "Smith", maquinaFresca: "MacMini", maquinas: ["MacMini", "GrokBotBox"], latido: S },
+    { agente: "Merovingio", maquinaFresca: "GrokBotBox", maquinas: ["GrokBotBox"], latido: S },
+  ];
+  const v = vista([], A, { grupo: 6, vivos });
+  const mor = v.fichas.find((f) => f.sesion === "morfeo");
+  const ora = v.fichas.find((f) => f.sesion === "oraculo");
+  assert.equal(mor.etiquetaModo, "GrokBot → MBP14");
+  assert.equal(mor.host, "macbookpronegro14");
+  assert.equal(mor.equipoDeclarado, "MBP14");
+  assert.equal(ora.etiquetaModo, "GrokBot → MBP14");
+  assert.equal(ora.host, "macbookpronegro14");
+  assert.equal(v.fichas.find((f) => f.sesion === "smith").etiquetaModo, "GrokBot");
+  assert.equal(v.fichas.find((f) => f.sesion === "smith").equipoDeclarado, "GrokBotBox");
+  assert.equal(v.fichas.find((f) => f.sesion === "merovingio").etiquetaModo, "GrokBot");
+  assert.equal(v.fichas.find((f) => f.sesion === "merovingio").equipoDeclarado, "GrokBotBox");
+  const vacio = vista([], A, { grupo: 6, vivos: [] }).fichas.find((f) => f.sesion === "morfeo");
+  assert.equal(vacio.etiquetaModo, "GrokBot → MBP16");
 });
 
 test("#5804 estado OK / KO / ESPERA CARLOS sale del latido y del encargo reales", async () => {
@@ -208,4 +274,104 @@ test("#5804 estado OK / KO / ESPERA CARLOS sale del latido y del encargo reales"
   assert.equal(v.fichas.find((f) => f.sesion === "smith").estadoVisor, "OK");
   assert.equal(v.fichas.find((f) => f.sesion === "merovingio").estadoVisor, "ESPERA CARLOS");
   assert.equal(v.fichas.find((f) => f.sesion === "neo").estadoVisor, "KO");
+});
+
+test("#5822 la etiqueta de modo sigue visible cuando el agente está en misión", () => {
+  const h = readFileSync(new URL("./visor/index.html", import.meta.url), "utf8");
+  assert.match(h, /etiquetaModo \? \(f\.etiquetaModo \+ " · " \+ enMision\)/);
+});
+
+test("#5822 el preview no escribe las claves de producción", async () => {
+  const env = { RECORTE_KV: kvMem(), CONSUMOS_LECTURAS_TOKEN: "maquina-123" };
+  const url = "https://flt-102038.admira-live.pages.dev/api/visor/pane";
+  const r = await onRequestPost({
+    request: new Request(url, {
+      method: "POST",
+      headers: { "content-type": "application/json", "X-Council-Token": "maquina-123" },
+      body: JSON.stringify({
+        maquina: "grokbotbox", completo: true, vivas: ["merovingio"],
+        agentes: { merovingio: { lineas: ["hola"], modo_agente: "nube", estado: "vivo" } },
+        grok: [{ titulo: "Merovingio · Grok", host: "grokbotbox", sesion: "merovingio", skin: "Merovingio" }],
+      }),
+    }),
+    env,
+  });
+  assert.equal(r.status, 200);
+  const keys = [...env.RECORTE_KV.m.keys()];
+  assert.ok(keys.length > 0);
+  assert.ok(keys.every((k) => k.startsWith("visor:preview:flt-102038.admira-live.pages.dev:")));
+  assert.equal(env.RECORTE_KV.m.has("visor:v1:m:grokbotbox"), false);
+  assert.equal(env.RECORTE_KV.m.has("visor:v1:_maquinas"), false);
+  const lr = await llavePost({
+    request: new Request("https://flt-102038.admira-live.pages.dev/api/visor/llave", {
+      method: "POST",
+      headers: { "X-Council-Token": "maquina-123", "content-type": "application/json" },
+      body: JSON.stringify({ accion: "nueva", nombre: "preview" }),
+    }),
+    env,
+  });
+  assert.equal(lr.status, 200);
+  assert.ok([...env.RECORTE_KV.m.keys()].every((k) => k.startsWith("visor:preview:")));
+  assert.equal(env.RECORTE_KV.m.has("visor:v1:llaves"), false);
+  const body = await lr.json();
+  const g = await (await onRequestGet({ request: new Request(url + "?g=6", { headers: { "X-Visor-Key": body.llave } }), env })).json();
+  assert.equal(g.fichas.find((f) => f.sesion === "merovingio").etiquetaModo, "GrokBot");
+});
+
+test("#5822 la preview lee los paneles de producción y no los escribe", async () => {
+  const env = { RECORTE_KV: kvMem(), VISOR_VIEW_TOKEN: "preview-view-token-1234567890" };
+  const ahora = Date.now();
+  const prod = fundir(null, normalizarPane({
+    maquina: "macbookpronegro14", completo: true,
+    conf: [
+      { titulo: "Morfeo · Claude", host: "macbookpronegro14", sesion: "morfeo", skin: "Red Sands" },
+      { titulo: "Oráculo · Codex", host: "macbookpronegro14", sesion: "oraculo", skin: "Grass" },
+      { titulo: "Neo · Claude", host: "macbookpronegro14", sesion: "neo", skin: "Homebrew" },
+      { titulo: "Trinity · Codex", host: "macbookpronegro14", sesion: "trinity", skin: "Ocean" },
+    ],
+    vivas: ["morfeo", "oraculo"],
+    agentes: {
+      morfeo: { lineas: ["morfeo-en-vivo"], estado: "vivo", modo_agente: "hibrido" },
+      oraculo: { lineas: ["no-sale"], estado: "idle", modo_agente: "hibrido" },
+    },
+  }, ahora).pane);
+  const viejo = fundir(null, normalizarPane({
+    maquina: "macbookpronegro14", completo: true, vivas: ["morfeo"],
+    agentes: { morfeo: { lineas: ["preview-viejo"], estado: "vivo" } },
+  }, ahora - 60_000).pane);
+  await env.RECORTE_KV.put("visor:v1:_maquinas", JSON.stringify(["macbookpronegro14"]));
+  await env.RECORTE_KV.put("visor:v1:m:macbookpronegro14", JSON.stringify(prod));
+  const pref = "visor:preview:preview-flt-102038.admira-live.pages.dev:";
+  await env.RECORTE_KV.put(pref + "visor:v1:_maquinas", JSON.stringify(["macbookpronegro14"]));
+  await env.RECORTE_KV.put(pref + "visor:v1:m:macbookpronegro14", JSON.stringify(viejo));
+  const antes = [...env.RECORTE_KV.m.keys()];
+  const g = await (await onRequestGet({
+    request: new Request("https://preview-flt-102038.admira-live.pages.dev/api/visor/pane?g=6", {
+      headers: { "X-Visor-Key": "preview-view-token-1234567890" },
+    }),
+    env,
+  })).json();
+  const mor = g.fichas.find((f) => f.sesion === "morfeo");
+  const ora = g.fichas.find((f) => f.sesion === "oraculo");
+  assert.equal(mor.estado, "vivo");
+  assert.equal(mor.host, "macbookpronegro14");
+  assert.ok(mor.lineas.some((l) => l.includes("morfeo-en-vivo")));
+  assert.ok(!mor.lineas.some((l) => l.includes("preview-viejo")));
+  assert.equal(ora.agente, "idle");
+  assert.notEqual(ora.estado, "esperando");
+  assert.deepEqual(ora.lineas, []);
+  assert.deepEqual([...env.RECORTE_KV.m.keys()].sort(), antes.sort());
+  const fresco = fundir(null, normalizarPane({
+    maquina: "macbookpronegro14", completo: true, vivas: ["morfeo"],
+    agentes: { morfeo: { lineas: ["preview-fresco"], estado: "vivo" } },
+  }, ahora + 1000).pane);
+  await env.RECORTE_KV.put(pref + "visor:v1:m:macbookpronegro14", JSON.stringify(fresco));
+  const g2 = await (await onRequestGet({
+    request: new Request("https://preview-flt-102038.admira-live.pages.dev/api/visor/pane?g=6", {
+      headers: { "X-Visor-Key": "preview-view-token-1234567890" },
+    }),
+    env,
+  })).json();
+  assert.ok(g2.fichas.find((f) => f.sesion === "morfeo").lineas.some((l) => l.includes("preview-fresco")));
+  assert.equal(env.RECORTE_KV.m.has("visor:v1:m:grokbotbox"), false);
 });

@@ -6,7 +6,7 @@
  * Almacén: Cache API del colo (al instante, gratis) + RECORTE_KV como respaldo (≤ 1 escritura / 20 s / máquina).
  */
 import { autorizado } from "../consumos/lecturas.js";
-import { normalizarPane, fundir, vista, filtrarAgentes, sha256, iguales, KEY_MAQ, KEY_INDICE, KEY_LLAVES, KEY_ESPERA, normalizarEspera, KV_CADA_MS } from "../../../visor-lib.mjs";
+import { normalizarPane, fundir, vista, filtrarAgentes, sha256, iguales, claveVisor, KEY_MAQ, KEY_INDICE, KEY_LLAVES, KEY_ESPERA, normalizarEspera, KV_CADA_MS } from "../../../visor-lib.mjs";
 import { vivosPorAgente, PRESENCIA_URL } from "../../../interface-seleccion.mjs";
 
 const ALLOW = new Set(["https://www.admira.live", "https://admira.live", "https://admira-live.pages.dev"]);
@@ -36,7 +36,7 @@ export async function llaveValida(request, env) {
   if (cand.length < 20) return false;
   const fija = String((env && env.VISOR_VIEW_TOKEN) || "").trim();
   if (fija && iguales(cand, fija)) return true;
-  const doc = await kvGet(kv(env), KEY_LLAVES);
+  const doc = await kvGet(kv(env), claveVisor(request, KEY_LLAVES));
   if (!doc || !Array.isArray(doc.llaves)) return false;
   const h = await sha256(cand);
   return doc.llaves.some((l) => l && iguales(l.hash, h));
@@ -59,13 +59,13 @@ export async function onRequestPost({ request, env }) {
     const items = normalizarEspera(body) || {};
     const st = kv(env);
     if (!st) return json({ ok: false, error: "sin almacén" }, 503, origin);
-    await st.put(KEY_ESPERA, JSON.stringify({ items, ts: ahora }), { expirationTtl: 7 * 86400 });
+    await st.put(claveVisor(request, KEY_ESPERA), JSON.stringify({ items, ts: ahora }), { expirationTtl: 7 * 86400 });
     return json({ ok: true, espera: items }, 200, origin);
   }
   const n = normalizarPane(body, ahora);
   if (!n.ok) return json(n, 400, origin);
   const store = kv(env);
-  const clave = KEY_MAQ + n.pane.maquina;
+  const clave = claveVisor(request, KEY_MAQ) + n.pane.maquina;
   let prev = await cacheGet(clave);
   let base = !!prev;
   if (!prev && !n.pane.completo) { prev = await kvGet(store, clave); base = !!prev; }
@@ -76,16 +76,44 @@ export async function onRequestPost({ request, env }) {
     doc.kvTs = ahora; kvGuardado = true;
     tareas.push(store.put(clave, JSON.stringify(doc), { expirationTtl: 86400 }).catch(() => {}));
     tareas.push((async () => {
-      const idx = (await kvGet(store, KEY_INDICE)) || [];
-      if (Array.isArray(idx) && !idx.includes(doc.maquina)) await store.put(KEY_INDICE, JSON.stringify([...idx, doc.maquina].slice(-10)));
+      const idxKey = claveVisor(request, KEY_INDICE);
+      const idx = (await kvGet(store, idxKey)) || [];
+      if (Array.isArray(idx) && !idx.includes(doc.maquina)) await store.put(idxKey, JSON.stringify([...idx, doc.maquina].slice(-10)));
     })().catch(() => {}));
   }
   tareas.push(cachePut(clave, doc));
-  const idxC = (await cacheGet(KEY_INDICE)) || [];
-  if (!idxC.includes(doc.maquina)) tareas.push(cachePut(KEY_INDICE, [...idxC, doc.maquina].slice(-10)));
+  const idxCache = claveVisor(request, KEY_INDICE);
+  const idxC = (await cacheGet(idxCache)) || [];
+  if (!idxC.includes(doc.maquina)) tareas.push(cachePut(idxCache, [...idxC, doc.maquina].slice(-10)));
   await Promise.all(tareas);
   // completo:false sin base → el publicador manda todo en el siguiente envío
   return json({ ok: true, maquina: doc.maquina, agentes: Object.keys(doc.agentes), necesitaCompleto: !n.pane.completo && !base, kv: kvGuardado }, 200, origin);
+}
+
+/** Documentos de paneles de un prefijo (preview o producción). No escribe. */
+async function leerDocs(store, ahora, idxKey, maqKey) {
+  let idx = await cacheGet(idxKey);
+  const idxKv = await kvGet(store, idxKey);
+  idx = [...new Set([...(Array.isArray(idx) ? idx : []), ...(Array.isArray(idxKv) ? idxKv : [])])].slice(0, 10);
+  const docs = await Promise.all(idx.map(async (m) => {
+    const c = await cacheGet(maqKey + m);
+    if (c && ahora - c.ts < 15000) return c;
+    const k = await kvGet(store, maqKey + m);
+    if (c && k) return c.ts >= k.ts ? c : k;
+    return c || k;
+  }));
+  return docs.filter(Boolean);
+}
+
+/** Misma máquina en los dos almacenes: manda el documento más reciente. A igual tiempo, el del propio host. */
+function fundirMaquinas(propios, ajenos) {
+  const porMaq = new Map();
+  for (const d of [...ajenos, ...propios]) {
+    if (!d || !d.maquina) continue;
+    const prev = porMaq.get(d.maquina);
+    if (!prev || (d.ts || 0) >= (prev.ts || 0)) porMaq.set(d.maquina, d);
+  }
+  return [...porMaq.values()];
 }
 
 export async function onRequestGet({ request, env }) {
@@ -94,21 +122,17 @@ export async function onRequestGet({ request, env }) {
   if (!(await llaveValida(request, env))) return json({ ok: false, error: "llave del visor ausente o revocada" }, 401, origin);
   const store = kv(env);
   const ahora = Date.now();
-  let idx = await cacheGet(KEY_INDICE);
-  const idxKv = await kvGet(store, KEY_INDICE);
-  idx = [...new Set([...(Array.isArray(idx) ? idx : []), ...(Array.isArray(idxKv) ? idxKv : [])])].slice(0, 10);
-  const docs = await Promise.all(idx.map(async (m) => {
-    const c = await cacheGet(KEY_MAQ + m);
-    if (c && ahora - c.ts < 15000) return c;
-    const k = await kvGet(store, KEY_MAQ + m);
-    if (c && k) return c.ts >= k.ts ? c : k;
-    return c || k;
-  }));
+  const idxKey = claveVisor(request, KEY_INDICE);
+  const maqKey = claveVisor(request, KEY_MAQ);
+  const propios = await leerDocs(store, ahora, idxKey, maqKey);
+  // #5822: Morfeo y Oráculo los publica el MBP14 contra www. La preview no escribe ese KV;
+  // lo lee para no dejarlos en «esperando sesión». Smith/Merovingio del preview ganan si su doc es más nuevo.
+  const docs = maqKey === KEY_MAQ ? propios : fundirMaquinas(propios, await leerDocs(store, ahora, KEY_INDICE, KEY_MAQ));
   const q = new URL(request.url).searchParams;
   const a = String(q.get("a") || "").split(",").filter(Boolean); // #5707: ?a=Neo,Trinity → esos 2 (de los 6)
   const grupo = a.length || Number(q.get("g")) !== 4 ? 6 : 4; // #5803: por defecto el mosaico de 6 // r33: /visor/?g=6 → + Smith y Merovingio
   const ultimos = {};
-  const esperaDoc = await kvGet(store, KEY_ESPERA);
+  const esperaDoc = await kvGet(store, claveVisor(request, KEY_ESPERA));
   const espera = (esperaDoc && esperaDoc.items) || {};
   let vivos; // #5794: presencia real (latido + máquina); si no responde, el panel sigue con la conf como antes
   try {

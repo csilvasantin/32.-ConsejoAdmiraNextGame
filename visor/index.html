@@ -87,6 +87,21 @@
   // r33 (/interface 6): ?g=6 → rejilla 3x2 con Smith y Merovingio (Grok) además de los 4 de pago
   var G6 = /[?&]g=6\b/.test(location.search);
   if (G6) document.documentElement.classList.add("g6");
+  // Preview: la dirección va en el pie (Chrome headless no enseña la barra). En www el pie no cambia.
+  if (/\.pages\.dev$/i.test(location.hostname)) {
+    var marca = document.querySelector("#pie span:last-child");
+    if (marca) {
+      var dir = location.protocol + "//" + location.host + location.pathname + location.search;
+      marca.textContent = "";
+      var b = document.createElement("b");
+      b.textContent = dir;
+      marca.appendChild(b);
+      var pie = document.getElementById("pie");
+      pie.style.height = "22px";
+      pie.style.fontSize = "13px";
+      pie.style.color = "#d0d0d0";
+    }
+  }
   // #5707: ?a=Neo,Trinity → solo esos 2 (los elige /interface 2 <claude|codex|grok|Nombre Nombre>); sin claves en la URL
   var A2 = (new URLSearchParams(location.search).get("a") || "").split(",").map(function (x) { return x.replace(/[^A-Za-z\u00c0-\u017f]/g, ""); }).filter(Boolean).slice(0, 2);
   if (A2.length) document.documentElement.classList.add("g2");
@@ -237,8 +252,9 @@
       el.querySelector(".modelo").innerHTML = '<span class="punto"></span>' + esc(f.sinDatos || (f.etiquetaModo ? f.etiquetaModo : lat));
       el.querySelector(".hora").textContent = "";
       var bx = el.querySelector(".term"); delete ultimo[k];
+      var lineaEq = [f.equipoDeclarado, f.foco].filter(Boolean).join(" · "); // #5824: máquina en vivo, o solo el foco si no hay
       bx.innerHTML = f.control
-        ? '<div class="idle"><div style="font-size:22px;font-weight:700;color:var(--c);letter-spacing:.08em">CONTROL CARLOS</div><div style="margin-top:6px">DESKTOP APP · NO MOLESTAR</div><div style="margin-top:6px;opacity:.8">' + esc(f.equipoDeclarado || "") + " · " + esc(f.foco || "") + "</div>" + (lat ? '<div style="margin-top:6px;opacity:.7">latido: ' + esc(lat) + "</div>" : "") + (f.sinDatos ? '<div style="margin-top:6px;color:#e0a040">' + esc(f.sinDatos) + "</div>" : "") + "</div>"
+        ? '<div class="idle"><div style="font-size:22px;font-weight:700;color:var(--c);letter-spacing:.08em">CONTROL CARLOS</div><div style="margin-top:6px">DESKTOP APP · NO MOLESTAR</div><div style="margin-top:6px;opacity:.8">' + esc(lineaEq) + "</div>" + (lat ? '<div style="margin-top:6px;opacity:.7">latido: ' + esc(lat) + "</div>" : "") + (f.sinDatos ? '<div style="margin-top:6px;color:#e0a040">' + esc(f.sinDatos) + "</div>" : "") + "</div>"
         : '<div class="espera">' + esc(f.sinDatos || "sin datos") + "</div>";
       return;
     }
@@ -248,7 +264,8 @@
       var cong = f.estado === "congelado" ? " · congelado" : "";
       if (f.agente !== "vivo") { pintarIdle(el, f, k, nombre, cong); return; }
       el.classList.remove("ficha-idle", "login", "nosesion");
-      modelo = (f.modelo || "") + " · " + (f.mac || maq) + " · en misión · " + hm() + cong;
+      var enMision = (f.modelo || "") + " · " + (f.mac || maq) + " · en misión · " + hm() + cong;
+      modelo = f.etiquetaModo ? (f.etiquetaModo + " · " + enMision) : enMision;
       el.querySelector(".cab .mis").textContent = f.linea || ("▶ " + (f.mision || ""));
     } else { el.querySelector(".cab .mis").textContent = ""; el.classList.remove("ficha-idle"); }
     el.querySelector(".modelo").innerHTML = '<span class="punto"></span>' + esc(modelo);
@@ -270,7 +287,7 @@
     el.classList.add("ficha-idle"); el.classList.toggle("login", f.agente === "login"); el.classList.toggle("nosesion", f.agente === "nosesion"); el.classList.toggle("pendiente", f.agente === "pendiente");
     var arte = (f.arte && f.arte.length ? f.arte : ROTULOS[claveRot(nombre)] || (f.rotulo && f.rotulo.length ? f.rotulo : null)) || [nombre.toUpperCase()];
     var palabra = f.etiqueta || (f.agente === "login" ? "Login pendiente" : f.agente === "nosesion" ? "Sin sesión" : f.agente === "pendiente" ? "Pendiente sin trabajar" : "Idle");
-    var info = (f.modelo || "") + " · " + (f.mac || MAQUINAS[f.host] || f.host) + " · " + palabra + " · " + hm() + cong;
+    var info = (f.etiquetaModo ? f.etiquetaModo + " · " : "") + (f.modelo || "") + " · " + (f.mac || MAQUINAS[f.host] || f.host) + " · " + palabra + " · " + hm() + cong;
     var mis = f.linea || ("última misión: " + (f.mision || "sin misiones registradas"));
     var viejo = f.viejo || "";
     var firma = "idle:" + palabra + ":" + info + ":" + mis + ":" + viejo + ":" + arte.join("|");

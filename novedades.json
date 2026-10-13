@@ -1,4 +1,7 @@
 {
+  "v.13.10.2026.r44.12:56": [
+    "HACKEO: junto a «N proyectos», «x de N proyectos» = los que se están trabajando AHORA (mismo criterio que el destello EN VIVO); el tooltip los lista con su #NN."
+  ],
   "v.13.10.2026.r43.12:05": [
     "HACKEO en vivo (Woz, MBP14): destella la ventana del proyecto en el que un agente interviene AHORA (latido o terminal real de Yokup) o con commit de < 15 min; nada fijo, sin señal no destella.",
     "El Σ AdmiraNeXT suma en vivo las líneas de código que entran en la rama principal desde el corpus del despliegue, y las nuevas durante la sesión se suman también al contador de la sesión (/api/control/actividad)."

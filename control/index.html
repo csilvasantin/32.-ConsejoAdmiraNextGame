@@ -11,7 +11,7 @@
 <!-- control-fleet-mesh · v.03.09.2026.r1.13:08 · CONTROL DESCENTRALIZADO: /fleet conmuta entre relays con sesión Google compartida, comandos idempotentes anclados al objetivo y diagnóstico que separa equipo, telemetría y ruta de control. -->
 <html lang="es">
 <head>
-<meta name="admiranext-version" content="AdmiraNeXT v.13.10.2026.r43.12:05" />
+<meta name="admiranext-version" content="AdmiraNeXT v.13.10.2026.r44.12:56" />
     <script src="/admira-bar.js?v=20260918-r38"></script>
     <script src="/auth-gate.js?v=20261009-r10-lectura"></script>
     <script src="/assets/live-demo-lectura.js?v=20261009-r10-lectura"></script>
@@ -483,6 +483,9 @@
   /* Nº de proyectos, a la derecha de los contadores (Carlos, 07-10-2026) */
   .hack-topbar #hkProjCount{font-size:12px;font-weight:700;color:#0a0a0a;background:#9fe6b0;border-radius:6px;padding:4px 9px;letter-spacing:1px;white-space:nowrap}
   .hack-topbar #hkProjCount:empty{display:none}
+  /* «x de N proyectos» trabajándose AHORA, mismo criterio que el destello EN VIVO (Woz, 13-10-2026 · Carlos) */
+  .hack-topbar #hkVivoCount{font-size:12px;font-weight:700;color:#000;background:#ffd400;border-radius:6px;padding:4px 9px;letter-spacing:1px;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .hack-topbar #hkVivoCount:empty{display:none}
   /* Rótulo ASCII del proyecto, fijo arriba de la ventana; el código corre debajo (Carlos, 07-10-2026) */
   .hk-banner{display:none;flex:none;margin:0 0 .35rem;padding:0 0 .3rem;border-bottom:1px dashed currentColor;line-height:1;white-space:pre;overflow:hidden;font-family:'Courier New',monospace;opacity:.95;text-shadow:0 0 4px currentColor}
   .hk-banner.on{display:block}
@@ -867,6 +870,7 @@
       <span id="hkLineCount" title="Líneas tecleadas entre todos los paneles desde que empezó este hackeo (cada línea lleva su numeral de 10 en 10)">0 líneas</span>
     </span>
     <span id="hkProjCount" role="button" tabindex="0" title="Proyectos AdmiraNeXT · clic: histórico diario de líneas de código"></span>
+    <span id="hkVivoCount" title="Proyectos que se están trabajando ahora (mismo criterio que el destello EN VIVO)"></span>
     <span id="hkSyncLine"></span>
     <span class="spacer"></span>
     <span id="hackStatusLine"></span>
@@ -3375,7 +3379,7 @@ function collapseAllToggle(){
     // Primero el reparto (semilla del servidor) y los rótulos; luego el guion y el lanzamiento.
     await hkAsignar(ses); if(!hackMode||ses!==hkSes) return;
     applyHkMode();
-    hkVivo=null; hkSesBase=null; hkSesNuevas=0; hkSigmaPintado=null;
+    hkVivo=null; hkSesBase=null; hkSesNuevas=0; hkSigmaPintado=null; paintHkVivoCount();
     hkPollVivo(ses); hackIntervals.push(setInterval(()=>hkPollVivo(ses),HK_VIVO_MS));
     try{ const res=await callCouncilHackeo("start"); paintHackeoStatus(res&&res.machines?res:{error:"no response"});
       if(res&&res.asignacion&&res.asignacion.origen) window.__HK_ASIG_LANZADA=res.asignacion;
@@ -3555,7 +3559,21 @@ function collapseAllToggle(){
     v.motivos.forEach(m=>{ if(m.tipo==="agente"){ if(ag.indexOf(m.agente)<0) ag.push(m.agente); } else cm.push(m); });
     return ag.length?ag.join(", "):cm.length?("commit "+cm[0].sha):"";
   }
+  // «x de N proyectos»: x = proyectos del corpus con señal EN VIVO ahora. Sin respuesta del endpoint no se
+  // pinta nada (no se inventa un 0).
+  async function paintHkVivoCount(){
+    const el=document.getElementById("hkVivoCount"); if(!el) return;
+    const idx=await loadHkCorpusIdx(), ps=(idx&&idx.projects)||[];
+    if(!hkVivo||!ps.length){ el.textContent=""; return; }
+    const act=hkVivo.activos||{}, vivos=ps.filter(p=>act[p.key]), x=vivos.length;
+    if(el.textContent&&el.dataset.x!==String(x)) hkFlash(el);
+    el.dataset.x=String(x);
+    el.textContent=x+" de "+ps.length+" proyecto"+(ps.length===1?"":"s");
+    el.title="Proyectos que se est\u00e1n trabajando AHORA (agente con latido o terminal real, o commit de < 15 min)"+
+      (x?"\n\n"+vivos.map(p=>(p.num!=null?hkNumTxt(p)+" ":"")+p.project+" \u00b7 "+hkVivoTexto(act[p.key])).join("\n"):"\n\nNinguno ahora mismo");
+  }
   function paintHkVivo(){
+    paintHkVivoCount();
     const act=(hkVivo&&hkVivo.activos)||{};
     hkTerms.forEach(t=>{
       const el=document.getElementById("hack-term-"+t.m.id); if(!el) return;

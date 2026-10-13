@@ -72,6 +72,7 @@ test("motivoPresencia: sin falsos positivos (fila vieja, declaración vieja, buc
   assert.equal(motivoPresencia(snap({ project: "admira.tv", declared_updated: 0 }), AHORA_S), null);
   const hb = { persona: "Merovingio", machine: "GrokBotBox", source: "heartbeat", updated: AHORA_S - 10, project: "pixeria" };
   assert.equal(motivoPresencia({ ...hb, mode: "pasivo" }, AHORA_S), null);
+  assert.equal(motivoPresencia({ ...hb, mode: "autonomo" }, AHORA_S), null);
   assert.match(motivoPresencia({ ...hb, mode: "trabajando" }, AHORA_S), /trabajando/);
   assert.equal(motivoPresencia({ ...hb, mode: "trabajando", updated: AHORA_S - 500 }, AHORA_S), null);
 });

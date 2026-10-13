@@ -254,15 +254,17 @@ function turnoActivo(e) {
  *  · la fila tiene que estar viva (< 2 min);
  *  · process_snapshot (vigilante del Mac): declaró ese proyecto hace < 5 min, o hace < 15 min con turno de app
  *    activo o CPU del propio proceso > 5 (la CPU de la máquina no vale: es de todos);
- *  · heartbeat: solo con señal explícita de trabajo (trabajando/working o modo trabajando/autónomo); un bucle
- *    que late en pasivo con un proyecto viejo NO destella.
+ *  · heartbeat: solo con señal explícita de trabajo (trabajando/working o modo «trabajando»); un bucle que late
+ *    en pasivo o autónomo NO destella.
  */
 export function motivoPresencia(e, ahoraS) {
   if (!e || !e.persona) return null;
   const upd = Number(e.updated) || 0;
   if (!(ahoraS - upd < VENTANA_FILA_S) || upd > ahoraS + 60) return null;
   const modo = String(e.mode || "").toLowerCase();
-  const explicito = e.trabajando === true || e.working === true || modo === "trabajando" || modo === "autonomo" || modo === "autónomo";
+  // Mismo criterio que flota-trabajando-lib (r40): solo «trabajando» cuenta; «autónomo»/«pasivo» es un bucle que late
+  // aunque no esté tocando código → no destella.
+  const explicito = e.trabajando === true || e.working === true || modo === "trabajando";
   if (e.source === "process_snapshot") {
     const decl = Number(e.declared_updated) || 0, edad = ahoraS - decl;
     if (!decl || edad < -60) return null;
